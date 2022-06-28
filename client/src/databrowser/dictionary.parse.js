@@ -1,4 +1,3 @@
-import { sayerror } from '../../dom/error'
 /*
 ------ EXPORTED ------ 
 parseDictionary()
@@ -14,7 +13,7 @@ Phenotree parsing:
     2. trackMissingTerms
 */
 
-export function parseDictionary(div, input) {
+export function parseDictionary(input) {
 	// Returns terms array for appInit({state.vocab.terms})
 	const terms = {}
 
@@ -25,15 +24,14 @@ export function parseDictionary(div, input) {
 
 	const term_idIndex = header.findIndex(l => l.toLowerCase().includes('term_id'))
 	const varNameIndex = header.findIndex(l => l.toLowerCase().includes('variable name'))
-	if (term_idIndex != -1) parseDataDictionary(div, lines, header)
-	if (varNameIndex != -1) parsePhenotree(div, lines, header)
+	if (term_idIndex != -1) parseDataDictionary(lines, header)
+	if (varNameIndex != -1) parsePhenotree(lines, header)
 	if (varNameIndex == -1 && term_idIndex == -1) {
-		sayerror(div, `Unrecognized file format. Please check the header names.`)
-		throw 'Unrecognized file format'
+		throw `Unrecognized file format. Please check the header names.`
 	}
 	// if (varNameIndex != -1 && term_idIndex != -1) throw 'Unrecognized file format'
 
-	function parseDataDictionary(div, lines, header) {
+	function parseDataDictionary(lines, header) {
 		/*
         Parses data dictionary in a term_id to parent_id format
             - Parses tab delim data arranged in required cols: term_id, parent_id, name, type, values
@@ -44,19 +42,19 @@ export function parseDictionary(div, input) {
         */
 		const parIdIndex = header.findIndex(l => l.toLowerCase().includes('parent_id'))
 		if (parIdIndex == -1) {
-			sayerror(div, `Missing required 'parent_id' header`)
+			throw `Missing required 'parent_id' header`
 		}
 		const nameIndex = header.findIndex(l => l.toLowerCase().includes('name'))
 		if (nameIndex == -1) {
-			sayerror(div, `Missing required 'Name' header`)
+			throw `Missing required 'Name' header`
 		}
 		const typeIndex = header.findIndex(l => l.toLowerCase().includes('type'))
 		if (typeIndex == -1) {
-			sayerror(div, `Missing required 'Type' header`)
+			throw `Missing required 'Type' header`
 		}
 		const valuesIndex = header.findIndex(l => l.toLowerCase().includes('values'))
 		if (valuesIndex == -1) {
-			sayerror(div, `Missing required 'Values' header`)
+			throw `Missing required 'Values' header`
 		}
 		if (parIdIndex == -1 || nameIndex == -1 || typeIndex == -1 || valuesIndex == -1) {
 			throw `Missing required header(s)`
@@ -78,7 +76,7 @@ export function parseDictionary(div, input) {
 					if (i == valuesIndex) continue //values can be blank
 					if (c == '' || c == '-') {
 						foundProblem = true
-						sayerror(div, `Blank or '-' entered for line ${lineNum}, column ${colNum}`)
+						throw `Blank or '-' entered for line ${lineNum}, column ${colNum}`
 					}
 					if (foundProblem == true) throw `Invalid entry for line ${lineNum}, column ${colNum}`
 				}
@@ -110,7 +108,7 @@ export function parseDictionary(div, input) {
 					const segments = v.split('=')
 					const key = segments.shift()
 					const label = segments.join('=')
-					if (!label) sayerror(div, `Values="${v}" in line ${lineNum} not in a key = value format.`)
+					if (!label) throw `Values="${v}" in line ${lineNum} not in a key = value format.`
 					if (!terms[termId].values) terms[termId].values = {}
 					terms[termId].values[key] = { label: label }
 				}
@@ -126,7 +124,7 @@ export function parseDictionary(div, input) {
 		console.log('dictionary parsing')
 	}
 
-	function parsePhenotree(div, lines, header) {
+	function parsePhenotree(lines, header) {
 		/* 
         Parses phenotree:
             - Parses tab delim data arranged in cols: levels(n), ID (i.e. Variable name), Configuration (i.e. Variable note).
@@ -141,12 +139,12 @@ export function parseDictionary(div, input) {
                 5. All non-leaf names/ids must be unique. 
         */
 		if (varNameIndex == -1) {
-			sayerror(div, `Missing required 'Variable Name' header`)
+			throw `Missing required 'Variable Name' header`
 		}
 
 		const configIndex = header.findIndex(l => l.toLowerCase().includes('variable note'))
 		if (configIndex == -1) {
-			sayerror(div, `Missing required 'Variable Note' header`)
+			throw `Missing required 'Variable Note' header`
 		}
 
 		if (configIndex == -1 || varNameIndex == -1) {
@@ -169,30 +167,26 @@ export function parseDictionary(div, input) {
 				const cols = line.split('\t')
 				const levelNames = levelColIndexes.map(i => cols[i].trim().replace(/"/g, '')).filter(c => c != '-')
 				if (levelNames.length != new Set(levelNames).size) {
-					sayerror(div, `Non-unique levels in line ${lineNum}: ${JSON.stringify(levelNames)}`)
-					continue
+					throw `Non-unique levels in line ${lineNum}: ${JSON.stringify(levelNames)}`
 				}
 				const name = levelNames.pop()
 				const firstDashIndex = cols.indexOf('-')
 				if (firstDashIndex != -1 && firstDashIndex < cols.indexOf(name)) {
-					sayerror(div, `Blank or '-' value detected between levels in line ${lineNum}`)
-					continue
+					throw `Blank or '-' value detected between levels in line ${lineNum}`
 				}
 
-				const term = parseConfig(div, lineNum, cols[configIndex], name)
+				const term = parseConfig(lineNum, cols[configIndex], name)
 				if (!term) continue
 				// error handled in parseConfig()
 				else if (!Object.keys(term).length) {
 					// is it possible to have an empty term?
-					sayerror(div, `Error: empty config column for term.id='${name}'.`)
-					continue
+					throw `Error: empty config column for term.id='${name}'.`
 				}
 
 				const id = cols[varNameIndex] || name
 				if (id in terms) {
 					const orig = terms[id]
-					sayerror(div, `Error: Multiple config rows for term.id='${id}': lines# ${orig.lineNum} and ${lineNum}`)
-					continue
+					throw `Error: Multiple config rows for term.id='${id}': lines# ${orig.lineNum} and ${lineNum}`
 				}
 
 				//Create term object
@@ -217,7 +211,7 @@ export function parseDictionary(div, input) {
 			}
 		}
 		// some parent term levels may not have entries
-		trackMissingTerms(termNameToId, terms, parentTermNames, div)
+		trackMissingTerms(termNameToId, terms, parentTermNames)
 
 		for (const id in terms) {
 			const term = terms[id]
@@ -237,13 +231,12 @@ export function parseDictionary(div, input) {
  **** Parsing Functions for Phenotree ****
  */
 
-function parseConfig(div, lineNum, str, varName) {
+function parseConfig(lineNum, str, varName) {
 	//NOT using uncomputable values in this iteration
 	// const uncomputable_categories = new Set(['-994', '-995', '-996', '-997', '-998', '-999'])
 	const configStr = str.replace('"', '').trim()
 	if (!configStr) {
-		sayerror(div, `Missing Variable Note string, line=${lineNum}, term='${varName}'`)
-		return
+		throw `Missing Variable Note string, line=${lineNum}, term='${varName}'`
 	}
 
 	const term = {}
@@ -274,10 +267,7 @@ function parseConfig(div, lineNum, str, varName) {
 				const key = segments.shift()
 				const label = segments.join('=')
 				if (!label)
-					sayerror(
-						div,
-						`Variable note is not an integer/float/string and not k=v. line=${lineNum} variable note='${config}'`
-					)
+					throw `Variable note is not an integer/float/string and not k=v. line=${lineNum} variable note='${config}'`
 				term.values[key] = { label: label }
 			}
 		}
@@ -291,7 +281,7 @@ function parseConfig(div, lineNum, str, varName) {
 				const segments = field.split('=') //Fix for Safari not supporting regex look behinds
 				const key = segments.shift()
 				const label = segments.join('=')
-				if (!label) sayerror(div, 'field ' + (i + 1) + ' is not k=v: ' + field)
+				if (!label) throw 'field ' + (i + 1) + ' is not k=v: ' + field
 				if (!term.values) term.values = {}
 				term.values[key] = { label: label }
 			}
@@ -314,7 +304,7 @@ function parseConfig(div, lineNum, str, varName) {
 	return term
 }
 
-function trackMissingTerms(termNameToId, terms, parentTermNames, div) {
+function trackMissingTerms(termNameToId, terms, parentTermNames) {
 	for (const id in terms) {
 		const term = terms[id]
 		for (const [i, name] of term.ancestry.entries()) {
@@ -327,7 +317,7 @@ function trackMissingTerms(termNameToId, terms, parentTermNames, div) {
                 OR if this ancestor another level above it,
                 check that it is the same parent_term as previousy processed */
 				if ((i - 1 < 0 && ancestor.parent_name) || ancestor.parent_name != term.ancestry[i - 1]) {
-					sayerror(div, `Different parents for term=${name}, '${term.ancestry[i - 1]}' and '${ancestor.parent_name}'`)
+					throw `Different parents for term=${name}, '${term.ancestry[i - 1]}' and '${ancestor.parent_name}'`
 				}
 				continue
 			}

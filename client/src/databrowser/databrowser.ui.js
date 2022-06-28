@@ -157,10 +157,10 @@ function makeTextEntryFilePathInput(holder, div, obj) {
 		.on('keyup', async () => {
 			const data = filepath.property('value').trim()
 			if (uiutils.isURL(data)) {
-				fetch(data)
+				const txt = await fetch(data)
 					.then(req => req.text())
 					.then(txt => {
-						obj.data = parseDictionary(holder, txt)
+						obj.data = parseDictionary(txt)
 					})
 			} else {
 				//TODO: implement serverside filepaths(?)
@@ -176,7 +176,7 @@ function makeFileUpload(holder, div, obj) {
 		const file = d3event.target.files[0]
 		const reader = new FileReader()
 		reader.onload = event => {
-			obj.data = parseDictionary(holder, event.target.result)
+			obj.data = parseDictionary(event.target.result)
 		}
 		reader.readAsText(file, 'utf8')
 	})
@@ -190,7 +190,7 @@ function makeCopyPasteInput(holder, div, obj) {
 		.style('border', '1px solid rgb(138, 177, 212)')
 		.style('margin', '0px 0px 0px 20px')
 		.on('keyup', async () => {
-			obj.data = parseDictionary(holder, paste.property('value').trim())
+			obj.data = parseDictionary(paste.property('value').trim())
 		})
 }
 
