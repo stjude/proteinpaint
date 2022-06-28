@@ -4,7 +4,7 @@ const path = require('path')
 const { initGDCdictionary } = require('./termdb.gdc')
 const { variant2samples_getresult } = require('./mds3.variant2samples')
 const utils = require('./utils')
-const compute_mclass = require('./termdb.snp').compute_mclass
+const compute_mclass = require('./vcf.mclass').compute_mclass
 const serverconfig = require('./serverconfig')
 const { dtfusionrna, dtsv, mclassfusionrna, mclasssv } = require('../shared/common')
 const { server_init_db_queries } = require('./termdb.sql')
@@ -477,7 +477,7 @@ export async function snvindelByRangeGetter_bcf(ds, genome) {
 				// [6] is format fields, [7 and on] for samples
 
 				const m0 = {} // temp obj, modified by compute_mclass()
-				compute_mclass(q._tk, refallele, altalleles, m0, infoStr, id)
+				compute_mclass(q._tk, refallele, altalleles, m0, infoStr, id, param.isoform)
 				// make a m{} for every alt allele
 				for (const alt in m0.alt2csq) {
 					const m = m0.alt2csq[alt]
