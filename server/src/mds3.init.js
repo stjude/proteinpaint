@@ -7,7 +7,7 @@ const utils = require('./utils')
 const compute_mclass = require('./vcf.mclass').compute_mclass
 const serverconfig = require('./serverconfig')
 const { dtfusionrna, dtsv, mclassfusionrna, mclasssv } = require('#shared/common')
-const { server_init_db_queries } = require('./termdb.sql')
+const { get_samples, server_init_db_queries } = require('./termdb.sql')
 const { makeTempSqliteDb } = require('./tempdb')
 
 /*
@@ -512,7 +512,7 @@ input:
 param={}
 	.tid2value = { term1id: v1, term2id:v2, ... }
 	if present, return list of samples matching the given k/v pairs, assuming AND
-	later to replace with filter
+	TODO replace with filter
 allSamples = [ {name}, ... ] array of parsed samples e.g. from a bcf file header
 ds={}
 
@@ -523,6 +523,11 @@ function mayLimitSamples(param, allSamples, ds) {
 	if (!allSamples || allSamples.length == 0) return null // no samples from this bcf file
 	if (!param.tid2value) return null // no limit, use all samples
 	if (typeof param.tid2value != 'object') throw 'q.tid2value{} not object'
+	const filter = tid2value2filter(param.tid2value, ds)
+	// note it returns integer ids but bcf header is still string
+	// TODO with termdb/buildTermdb.js, output sampleidmap, and use it to reheader bcf/gz file
+	return get_samples(filter, ds)
+	/*
 	const limitSamples = []
 	for (const s of allSamples) {
 		let skip = false
@@ -537,6 +542,31 @@ function mayLimitSamples(param, allSamples, ds) {
 		limitSamples.push(s)
 	}
 	return limitSamples
+	*/
+}
+
+function tid2value2filter(t, ds) {
+	// convert tid2value={} to filter, can delete later when it's replaced by filter
+	const f = {
+		type: 'tvslst',
+		in: true,
+		join: 'and',
+		lst: []
+	}
+	for (const k in t) {
+		const term = ds.cohort.termdb.q.termjsonByOneid(k)
+		if (!term) continue
+		const v = t[k]
+		f.lst.push({
+			type: 'tvs',
+			tvs: {
+				term,
+				// assuming only categorical
+				values: [{ key: v }]
+			}
+		})
+	}
+	return f
 }
 
 /* 
