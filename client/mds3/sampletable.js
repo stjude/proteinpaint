@@ -437,7 +437,7 @@ function samples2rows(samples, tk) {
 					}
 				} else if (m.dt == dtsv || m.dt == dtfusionrna) {
 					const p = m.pairlst[0]
-					ssm.html = `${p.a.name || ''} ${p.a.chr}:${p.a.pos} ${p.a.strand == '+' ? 'forward' : 'reverse'} > ${p.a
+					ssm.html = `${p.a.name || ''} ${p.a.chr}:${p.a.pos} ${p.a.strand == '+' ? 'forward' : 'reverse'} > ${p.b
 						.name || ''} ${p.b.chr}:${p.b.pos} ${p.b.strand == '+' ? 'forward' : 'reverse'}`
 				} else {
 					throw 'unknown dt'
