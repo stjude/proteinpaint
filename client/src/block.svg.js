@@ -1,5 +1,5 @@
 import * as client from './client'
-import * as common from '../shared/common'
+import * as common from '#shared/common'
 
 const ypad = 20
 const xpad = 2

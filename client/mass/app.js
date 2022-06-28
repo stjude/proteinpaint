@@ -49,18 +49,23 @@ class MassApp {
 			api.tip = new Menu({ padding: '5px' })
 			api.printError = e => this.printError(e)
 
+			const vocab = this.opts.state.vocab
+
 			// TODO: only pass state.genome, dslabel to vocabInit
 			api.vocabApi = await vocabInit({
 				app: api,
 				state: {
 					vocab: {
-						genome: this.opts.state.vocab?.genome || this.opts.state.genome,
-						dslabel: this.opts.state.vocab?.dslabel || this.opts.state.dslabel
+						// either (genome + dslabel) XOR (terms) can be undefined
+						genome: vocab?.genome || this.opts.state.genome,
+						dslabel: vocab?.dslabel || this.opts.state.dslabel,
+						terms: vocab?.terms
 					}
 				},
 				fetchOpts: this.opts.fetchOpts
 			})
 
+			// the vocabApi's vocab may be reprocessed from the original input
 			this.opts.state.vocab = api.vocabApi.vocab
 		} catch (e) {
 			throw e

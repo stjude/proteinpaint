@@ -1,11 +1,11 @@
 import * as client from './client'
 import { string2pos, invalidcoord } from './coord'
 import { event as d3event } from 'd3-selection'
-import * as common from '../shared/common'
+import * as common from '#shared/common'
 import { scaleLinear, scaleOrdinal, schemeCategory10 } from 'd3-scale'
 import { showMenu_isgenevalue, showMenu_iscnv, showMenu_isloh, showMenu_ismutation } from './samplematrix.featuremenu'
 import { may_add_kmplotbutton } from './samplematrix.kmplot'
-import { vcfparsemeta } from '../shared/vcf'
+import { vcfparsemeta } from '#shared/vcf'
 
 /*
 build a sample by feature matrix

@@ -1,5 +1,5 @@
 import { select as d3select, event as d3event } from 'd3-selection'
-import * as common from '../shared/common'
+import * as common from '#shared/common'
 import * as client from './client'
 import { init as init_legend } from './block.mds2.legend'
 import { may_setup_numerical_axis } from './block.mds2.vcf.numericaxis'

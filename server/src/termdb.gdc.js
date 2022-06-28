@@ -1,5 +1,5 @@
 const got = require('got')
-const isUsableTerm = require('../shared/termdb.usecase').isUsableTerm
+const isUsableTerm = require('#shared/termdb.usecase').isUsableTerm
 
 /*
 HARDCODED LOGIC, does not need any dataset configuration

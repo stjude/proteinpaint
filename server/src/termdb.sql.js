@@ -1,11 +1,11 @@
 const app = require('./app')
-const binsmodule = require('../shared/termdb.bins')
+const binsmodule = require('#shared/termdb.bins')
 const getFilterCTEs = require('./termdb.filter').getFilterCTEs
 const numericSql = require('./termdb.sql.numeric')
 const categoricalSql = require('./termdb.sql.categorical')
 const conditionSql = require('./termdb.sql.condition')
 const connect_db = require('./utils').connect_db
-const isUsableTerm = require('../shared/termdb.usecase').isUsableTerm
+const isUsableTerm = require('#shared/termdb.usecase').isUsableTerm
 /*
 
 ********************** EXPORTED

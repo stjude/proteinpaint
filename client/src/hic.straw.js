@@ -3,7 +3,7 @@ import { select as d3select, selectAll as d3selectAll, event as d3event, mouse a
 import { scaleLinear } from 'd3-scale'
 import * as client from './client'
 import { format as d3format } from 'd3-format'
-import * as common from '../shared/common'
+import * as common from '#shared/common'
 import blocklazyload from './block.lazyload'
 
 /*

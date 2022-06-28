@@ -1,7 +1,7 @@
 import { scaleOrdinal, schemeCategory20 } from 'd3-scale'
 import * as client from './client'
 import { legend_newrow } from './block.legend'
-import * as common from '../shared/common'
+import * as common from '#shared/common'
 import { loadTk } from './block.mds.svcnv'
 import { event as d3event } from 'd3-selection'
 import { rgb as d3rgb } from 'd3-color'

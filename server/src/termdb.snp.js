@@ -7,6 +7,7 @@ const readline = require('readline')
 const serverconfig = require('./serverconfig')
 const { compute_mclass } = require('./vcf.mclass')
 
+
 /*
 cache file has a header line, with one line per valid snp. columns: 
 1. snpid

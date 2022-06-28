@@ -1,8 +1,8 @@
 import { event as d3event } from 'd3-selection'
 import * as client from './client'
-import { init_bulk_flag } from '../shared/bulk'
+import { init_bulk_flag } from '#shared/bulk'
 import * as bulkui from './bulk.ui'
-import * as common from '../shared/common'
+import * as common from '#shared/common'
 import blocklazyload from './block.lazyload'
 import blockinit from './block.init'
 

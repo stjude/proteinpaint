@@ -1,6 +1,6 @@
 import { scaleTime, scaleLinear, scaleLog, scaleOrdinal, schemeCategory10 } from 'd3-scale'
 import * as client from './client'
-import * as common from '../shared/common'
+import * as common from '#shared/common'
 import { select as d3select, event as d3event } from 'd3-selection'
 import { timeFormat, timeParse } from 'd3-time-format'
 import { axisLeft, axisBottom } from 'd3-axis'
