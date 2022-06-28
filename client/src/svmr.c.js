@@ -1,7 +1,7 @@
 import { select as d3select, event as d3event } from 'd3-selection'
 import * as client from './client'
 import { genomic2gm } from './coord'
-import { bplen as bplength } from '../shared/common'
+import { bplen as bplength } from '#shared/common'
 import * as unload from './svmr.unload'
 import { scaleLinear } from 'd3-scale'
 import { axisTop } from 'd3-axis'

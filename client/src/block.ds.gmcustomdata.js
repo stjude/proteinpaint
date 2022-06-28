@@ -1,5 +1,5 @@
 import * as client from './client'
-import * as common from '../shared/common'
+import * as common from '#shared/common'
 import * as coord from './coord'
 import { bulkui } from './bulk.ui'
 

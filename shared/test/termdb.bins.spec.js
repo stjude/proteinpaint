@@ -1,5 +1,5 @@
 const tape = require('tape')
-const b = require('../../shared/termdb.bins')
+const b = require('../termdb.bins')
 
 /*************************
  reusable helper functions

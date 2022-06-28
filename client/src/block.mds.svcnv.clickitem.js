@@ -2,7 +2,7 @@ import { select as d3select, event as d3event } from 'd3-selection'
 import { axisTop } from 'd3-axis'
 import { scaleLinear } from 'd3-scale'
 import * as client from './client'
-import * as common from '../shared/common'
+import * as common from '#shared/common'
 import {
 	loadTk,
 	focus_singlesample,
@@ -2484,11 +2484,10 @@ export async function make_svgraph(p, holder) {
 }
 
 function getisoform(p, chr, pos) {
-	return client.dofetch3(`isoformbycoord?genome=${p.block.genome.name}&chr=${chr}&pos=${pos}`)
-		.then(data => {
-			if (data.error) throw data.error
-			return data.lst
-		})
+	return client.dofetch3(`isoformbycoord?genome=${p.block.genome.name}&chr=${chr}&pos=${pos}`).then(data => {
+		if (data.error) throw data.error
+		return data.lst
+	})
 }
 
 async function may_findmatchingsnp_printintable(m, block, table) {

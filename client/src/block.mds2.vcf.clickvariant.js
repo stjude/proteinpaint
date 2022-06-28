@@ -1,4 +1,4 @@
-import * as common from '../shared/common'
+import * as common from '#shared/common'
 import * as client from './client'
 import { make_ui as mafcovplot_makeui } from './block.mds2.vcf.mafcovplot'
 import { termdb_bygenotype, make_phewas } from './block.mds2.vcf.termdb'

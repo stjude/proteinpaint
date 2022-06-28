@@ -1,7 +1,7 @@
 import { event as d3event } from 'd3-selection'
 import * as client from './client'
-import * as common from '../shared/common'
-import * as vcf from '../shared/vcf'
+import * as common from '#shared/common'
+import * as vcf from '#shared/vcf'
 import * as path from 'path'
 import { stratify } from 'd3-hierarchy'
 

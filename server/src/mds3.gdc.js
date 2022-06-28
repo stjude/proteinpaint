@@ -1,4 +1,4 @@
-const common = require('../shared/common')
+const common = require('#shared/common')
 const got = require('got')
 const { get_crosstabCombinations } = require('./mds3.variant2samples')
 const serverconfig = require('./serverconfig')
