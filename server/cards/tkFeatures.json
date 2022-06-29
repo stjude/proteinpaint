@@ -60,7 +60,7 @@
                 ]
             },
             "testSpec": {
-                "expected": {"circle": 15, "line": 15}
+                "expected": {"image": 2}
             }
         },
         {
@@ -85,7 +85,7 @@
                 ]
             },
             "testSpec": {
-                "expected": {"circle": 15, "line": 15}
+                "expected": {"image": 2}
             }
         }
     ],

@@ -99,7 +99,7 @@ function makeSectionHeader(div, text) {
 		.style('opacity', '0.4')
 }
 
-function makeDataDictionaryTabs(holder, tabs_div, obj) {
+function makeDataDictionaryTabs(tabs_div, obj) {
 	// Creates the horizontal top tabs and callbacks for the data dictionary section
 	// Rendering code and callback to the same parseDictionary().
 	// All data parsed in client and returned to obj.data
@@ -111,7 +111,7 @@ function makeDataDictionaryTabs(holder, tabs_div, obj) {
 					div.style('border', 'none').style('display', 'block')
 					appear(div)
 					div.append('div').html(`<p style="margin-left: 10px; opacity: 0.65;">Select a file from your computer.</p>`)
-					makeFileUpload(holder, div, obj)
+					makeFileUpload(div, obj)
 					tabs[1].rendered = true
 				}
 			}
@@ -127,7 +127,7 @@ function makeDataDictionaryTabs(holder, tabs_div, obj) {
 						.html(
 							`<p style="margin-left: 10px; opacity: 0.65;">Paste data dictionary or phenotree in a tab delimited format.</p>`
 						)
-					makeCopyPasteInput(holder, div, obj)
+					makeCopyPasteInput(div, obj)
 					tabs[2].rendered = true
 				}
 			}
@@ -140,7 +140,7 @@ function makeDataDictionaryTabs(holder, tabs_div, obj) {
 					appear(div)
 					div.append('div').html(`<p style="margin-left: 10px; opacity: 0.65;">Provide a URL file path.</p>`)
 					uiutils.makePrompt(div, 'URL')
-					makeTextEntryFilePathInput(holder, div, obj)
+					makeTextEntryFilePathInput(div, obj)
 					tabs[0].rendered = true
 				}
 			}
@@ -149,7 +149,7 @@ function makeDataDictionaryTabs(holder, tabs_div, obj) {
 	init_tabs({ holder: tabs_div, tabs })
 }
 
-function makeTextEntryFilePathInput(holder, div, obj) {
+function makeTextEntryFilePathInput(div, obj) {
 	// Renders the file path input div and callback.
 	const filepath_div = div.append('div').style('display', 'inline-block')
 	const filepath = uiutils
@@ -169,7 +169,7 @@ function makeTextEntryFilePathInput(holder, div, obj) {
 		})
 }
 
-function makeFileUpload(holder, div, obj) {
+function makeFileUpload(div, obj) {
 	// Renders the select file div and callback.
 	const upload_div = div.append('div').style('display', 'inline-block')
 	const upload = uiutils.makeFileUpload(upload_div)
@@ -183,7 +183,7 @@ function makeFileUpload(holder, div, obj) {
 	})
 }
 
-function makeCopyPasteInput(holder, div, obj) {
+function makeCopyPasteInput(div, obj) {
 	// Renders the copy/paste div and callback.
 	const paste_div = div.append('div').style('display', 'block')
 	const paste = uiutils
