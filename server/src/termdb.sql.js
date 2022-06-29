@@ -741,21 +741,17 @@ thus less things to worry about...
 	const q = ds.cohort.termdb.q
 
 	if (tables.sampleidmap) {
-		const s = cn.prepare('SELECT * FROM sampleidmap')
-		let id2name
-		// new method added to ds{}, under same name of table
-		// the method could be defined indepenent of db
-		ds.sampleidmap = {
-			get: id => {
-				if (!id2name) {
-					id2name = new Map()
-					// k: sample id, v: sample name
-					for (const { id, name } of s.all()) {
-						id2name.set(id, name)
-					}
+		let cache
+		q.id2sampleName = id => {
+			if (!cache) {
+				const s = cn.prepare('SELECT * FROM sampleidmap')
+				cache = new Map()
+				// k: sample id, v: sample name
+				for (const { id, name } of s.all()) {
+					cache.set(id, name)
 				}
-				return id2name.get(id) || id
 			}
+			return cache.get(id) || id
 		}
 	}
 

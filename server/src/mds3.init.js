@@ -94,14 +94,13 @@ async function validate_termdb(ds) {
 	ds.cohort = {}
 	ds.cohort.termdb = {}
 
-	if (tdb.dictionary) {
-		if (tdb.dictionary.gdcapi) {
-			await initGDCdictionary(ds)
-		} else if (tdb.dictionary.dbFile) {
-			initTermdb(ds)
-		} else {
-			throw 'unknown method to initiate dictionary'
-		}
+	if (!tdb.dictionary) throw 'termdb.dictionary{} missing'
+	if (tdb.dictionary.gdcapi) {
+		await initGDCdictionary(ds)
+	} else if (tdb.dictionary.dbFile) {
+		initTermdb(ds)
+	} else {
+		throw 'unknown method to initiate dictionary'
 	}
 
 	if (tdb.termid2totalsize2) {
@@ -247,7 +246,11 @@ async function validate_query_snvindel(ds, genome) {
 			q.byrange.bcffile = path.join(serverconfig.tpmasterdir, q.byrange.bcffile)
 			q.byrange._tk = { file: q.byrange.bcffile }
 			q.byrange.get = await snvindelByRangeGetter_bcf(ds, genome)
-			console.log(q.byrange._tk.samples.length, 'samples from snvindel.byrange.bcffile of ' + ds.label)
+			if (!q.byrange._tk.samples.length) {
+				// vcf header parsing returns blank array when file has no sample
+				delete q.byrange._tk.samples
+			}
+			mayValidateSampleHeader(ds, q.byrange._tk.samples, 'snvindel.byrange.bcffile')
 		} else {
 			throw 'unknown query method for queries.snvindel.byrange'
 		}
@@ -272,6 +275,23 @@ async function validate_query_snvindel(ds, genome) {
 			throw 'unknown query method for queries.snvindel.m2csq'
 		}
 	}
+}
+
+function mayValidateSampleHeader(ds, samples, where) {
+	if (!samples) return
+	// samples[] elements: {name:str}
+	let useint
+	if (ds.termdb && ds.termdb.dictionary && ds.termdb.dictionary.dbFile) {
+		// using sqlite3 db
+		// as samples are kept as integer ids in termdb, cast name into integers
+		for (const s of samples) {
+			const id = Number(s.name)
+			if (!Number.isInteger(id)) throw 'non-integer sample id from ' + where
+			s.name = id
+		}
+		useint = ', all integer IDs'
+	}
+	console.log(samples.length, 'samples from ' + where + ' of ' + ds.label + useint)
 }
 
 function validate_ssm2canonicalisoform(ds) {
@@ -362,7 +382,7 @@ export async function snvindelByRangeGetter_bcf(ds, genome) {
 
 		const limitSamples = mayLimitSamples(param, q._tk.samples, ds)
 		if (limitSamples) {
-			bcfArgs.push('-s', limitSamples.map(i => i.name).join(','))
+			bcfArgs.push('-s', limitSamples.join(','))
 		}
 
 		const variants = []
@@ -418,40 +438,32 @@ param={}
 	.tid2value = { term1id: v1, term2id:v2, ... }
 	if present, return list of samples matching the given k/v pairs, assuming AND
 	TODO replace with filter
-allSamples = [ {name}, ... ] array of parsed samples e.g. from a bcf file header
+allSamples=[]
+	whole list of samples, each ele: {name: int}
+	presumably the set of samples from a bcf file or tabix file
 ds={}
 
 output:
 array of {name}, same elements from allSamples, null if not filtering
 */
 function mayLimitSamples(param, allSamples, ds) {
-	if (!allSamples || allSamples.length == 0) return null // no samples from this bcf file
+	if (!allSamples) return null // no samples from this big file
+
+	// later should be param.filter, no need for conversion
 	if (!param.tid2value) return null // no limit, use all samples
 	if (typeof param.tid2value != 'object') throw 'q.tid2value{} not object'
 	const filter = tid2value2filter(param.tid2value, ds)
-	// note it returns integer ids but bcf header is still string
-	// TODO with termdb/buildTermdb.js, output sampleidmap, and use it to reheader bcf/gz file
-	return get_samples(filter, ds)
-	/*
-	const limitSamples = []
-	for (const s of allSamples) {
-		let skip = false
-		for (const tid in param.tid2value) {
-			const v = ds.cohort.termdb.q.getSample2value(tid, s.name)
-			if (!v[0] || (v[0] && v[0].value != param.tid2value[tid])) {
-				skip = true
-				break
-			}
-		}
-		if (skip) continue
-		limitSamples.push(s)
-	}
-	return limitSamples
-	*/
+
+	const filterSamples = get_samples(filter, ds)
+	// filterSamples is the list of samples retrieved from termdb that are matching filter
+	// as allSamples (from bcf etc) may be a subset of what's in termdb
+	// must only use those from allSamples
+	const set = new Set(allSamples.map(i => i.name))
+	return filterSamples.filter(i => set.has(i))
 }
 
+// temporary function to convert tid2value={} to filter, can delete later when it's replaced by filter
 function tid2value2filter(t, ds) {
-	// convert tid2value={} to filter, can delete later when it's replaced by filter
 	const f = {
 		type: 'tvslst',
 		in: true,
@@ -588,7 +600,7 @@ async function validate_query_svfusion(ds, genome) {
 		if (q.byrange.file) {
 			q.byrange.file = path.join(serverconfig.tpmasterdir, q.byrange.file)
 			q.byrange.get = await svfusionByRangeGetter_file(ds, genome)
-			console.log(q.byrange.samples.length, 'samples from svfusion.byrange.file of ' + ds.label)
+			mayValidateSampleHeader(ds, q.byrange.samples, 'svfusion.byrange')
 		} else {
 			throw 'unknown query method for svfusion.byrange'
 		}
@@ -634,9 +646,7 @@ export async function svfusionByRangeGetter_file(ds, genome) {
 		let limitSamples
 		{
 			const lst = mayLimitSamples(param, q.samples, ds)
-			if (lst) {
-				limitSamples = new Set(lst.map(i => i.name))
-			}
+			if (lst) limitSamples = new Set(lst)
 		}
 
 		const key2variants = new Map()

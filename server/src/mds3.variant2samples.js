@@ -1,5 +1,5 @@
 const { stratinput } = require('#shared/tree')
-const gdc = require('./mds3.gdc')
+const { querySamples_gdcapi } = require('./mds3.gdc')
 const { get_densityplot } = require('./mds3.densityPlot')
 const { ssmIdFieldsSeparator } = require('./mds3.init')
 const utils = require('./utils')
@@ -8,7 +8,8 @@ const { dtfusionrna, dtsv } = require('#shared/common')
 /*
 ***************** exported
 variant2samples_getresult()
-	get_samples
+	querySamples
+		querySamples_gdcapi
 		queryServerFileBySsmid
 		queryServerFileByRglst
 get_crosstabCombinations()
@@ -35,22 +36,28 @@ export async function variant2samples_getresult(q, ds) {
 	// query sample details for list of terms in request parameter
 
 	// each sample obj has keys from .terms[].id
-	const samples = await get_samples(q, ds)
+	const samples = await querySamples(q, ds)
 
-	if (q.get == ds.variant2samples.type_samples) return samples
+	if (q.get == ds.variant2samples.type_samples) {
+		// return list of samples
+		if (ds?.cohort?.termdb?.q?.id2sampleName) {
+			samples.forEach(i => (i.sample_id = ds.cohort.termdb.q.id2sampleName(i.sample_id)))
+		}
+		return samples
+	}
 	if (q.get == ds.variant2samples.type_sunburst) return await make_sunburst(samples, ds, q)
 	if (q.get == ds.variant2samples.type_summary) return await make_summary(samples, ds, q)
 	throw 'unknown get type'
 }
 
-async function get_samples(q, ds) {
+async function querySamples(q, ds) {
 	const termidlst = q.termidlst ? q.termidlst.split(',') : []
 	if (q.get == ds.variant2samples.type_samples && ds.variant2samples.extra_termids_samples) {
 		// extra term ids to add for get=samples query
 		termidlst.push(...ds.variant2samples.extra_termids_samples)
 	}
 	if (ds.variant2samples.gdcapi) {
-		return await gdc.getSamples_gdcapi(q, termidlst, ds)
+		return await querySamples_gdcapi(q, termidlst, ds)
 	}
 
 	/* from server-side files
@@ -144,25 +151,6 @@ async function queryServerFileBySsmid(q, termidlst, ds) {
 			continue
 		}
 		throw 'unknown format of ssm id'
-	}
-
-	if (q.tid2value) {
-		// this should not be needed once using `bcf query -s sample1,sample2,...` based on tid2value{}
-		// filter sample to only keep those matching given tid=value pairs
-		const lst = [] // samples meeting filter
-		for (const s of samples) {
-			let skip = false
-			for (const tid in q.tid2value) {
-				const v = ds.cohort.termdb.q.getSample2value(tid, s.sample_id)
-				if (v[0] && v[0].value != q.tid2value[tid]) {
-					skip = true
-					break
-				}
-			}
-			if (skip) continue
-			lst.push(s)
-		}
-		samples = lst
 	}
 
 	if (termidlst && termidlst.length) {
@@ -284,7 +272,7 @@ async function make_sunburst(samples, ds, q) {
 
 	if (ds.termdb && ds.termdb.termid2totalsize2) {
 		const combinations = await get_crosstabCombinations(termidlst, ds, q, nodes)
-		await gdc.addCrosstabCount_tonodes(nodes, combinations)
+		await addCrosstabCount_tonodes(nodes, combinations)
 		// .cohortsize=int is added to applicable elements of nodes[]
 	}
 	return nodes
@@ -490,4 +478,45 @@ export async function get_crosstabCombinations(termidlst, ds, q, nodes) {
 		}
 	}
 	return combinations
+}
+
+/* for an ele of nodes[], find matching ele from combinations[]
+and assign total as node.cohortsize
+*/
+async function addCrosstabCount_tonodes(nodes, combinations) {
+	for (const node of nodes) {
+		if (!node.id0) continue // root
+
+		if (!node.v0) {
+			continue
+		}
+		const v0 = node.v0.toLowerCase()
+		if (!node.id1) {
+			const n = combinations.find(i => i.id1 == undefined && i.v0 == v0)
+			if (n) node.cohortsize = n.count
+			continue
+		}
+
+		if (!node.v1) {
+			// e.g. {"id":"root...HCMI-CMDC...","parentId":"root...HCMI-CMDC","value":1,"name":"","id0":"project","v0":"HCMI-CMDC","id1":"disease"}
+			continue
+		}
+		const v1 = node.v1.toLowerCase()
+		if (!node.id2) {
+			// second level, use crosstabL1
+			const n = combinations.find(i => i.id2 == undefined && i.v0 == v0 && i.v1 == v1)
+			if (n) node.cohortsize = n.count
+			continue
+		}
+
+		if (!node.v2) {
+			continue
+		}
+		const v2 = node.v2.toLowerCase()
+		if (!node.id3) {
+			// third level, use crosstabL2
+			const n = crosstabL2.find(i => i.v0 == v0 && i.v1 == v1 && i.v2 == v2)
+			if (n) node.cohortsize = n.count
+		}
+	}
 }

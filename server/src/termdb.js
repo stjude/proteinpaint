@@ -104,10 +104,7 @@ function trigger_getsamples(q, res, ds) {
 	// ds may allow it as a whole
 	// individual term may allow getting from it
 	const lst = termdbsql.get_samples(q.filter, ds)
-	let samples = lst
-	if (ds.sampleidmap) {
-		samples = lst.map(i => ds.sampleidmap.get(i))
-	}
+	const samples = lst.map(i => ds.cohort.termdb.q.id2sampleName(i))
 	res.send({ samples })
 }
 
