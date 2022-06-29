@@ -76,26 +76,40 @@ args <- commandArgs(trailingOnly = T)
 if (length(args) != 1) stop("Usage: Rscript regression.R in.json > results")
 infile <- args[1]
 
+benchmark <- list()
+
 
 ################
 # PREPARE DATA #
 ################
 
 # read in json input
+stime <- Sys.time()
 input <- fromJSON(infile)
+etime <- Sys.time()
+dtime <- etime - stime
+benchmark[["read_json_input"]] <- unbox(paste(round(as.numeric(dtime), 4), attr(dtime, "units")))
 
 # import regression utilities
 source(paste0(input$binpath, "/utils/regression.utils.R"))
 
 # prepare data table
+stime <- Sys.time()
 dat <- prepareDataTable(input$data, input$independent)
+etime <- Sys.time()
+dtime <- etime - stime
+benchmark[["prepareDataTable"]] <- unbox(paste(round(as.numeric(dtime), 4), attr(dtime, "units")))
 
 
 ##################
 # BUILD FORMULAS #
 ##################
 
+stime <- Sys.time()
 formulas <- buildFormulas(input$outcome, input$independent)
+etime <- Sys.time()
+dtime <- etime - stime
+benchmark[["buildFormulas"]] <- unbox(paste(round(as.numeric(dtime), 4), attr(dtime, "units")))
 
 
 ##################
@@ -103,7 +117,8 @@ formulas <- buildFormulas(input$outcome, input$independent)
 ##################
 
 # Run a separate regression analysis for each formula
-out <- list()
+stime <- Sys.time()
+outdata <- vector(mode = "list", length = length(formulas))
 for (i in 1:length(formulas)) {
   formula <- formulas[[i]]
   id <- formula$id
@@ -118,8 +133,13 @@ for (i in 1:length(formulas)) {
   results <- runRegression(input$regressionType, formula, fdat, input$outcome)
   results$coefficients <- formatCoefficients(results$coefficients, results$res, input$regressionType)
   results$type3 <- formatType3(results$type3)
-  out[[length(out)+1]] <- list("id" = unbox(id), "data" = results[names(results) != "res"])
+  outdata[[i]] <- list("id" = unbox(id), "data" = results[names(results) != "res"])
 }
+etime <- Sys.time()
+dtime <- etime - stime
+benchmark[["runRegression"]] <- unbox(paste(round(as.numeric(dtime), 4), attr(dtime, "units")))
+
+out <- list(data = outdata, benchmark = benchmark)
 
 
 ##################
@@ -127,4 +147,4 @@ for (i in 1:length(formulas)) {
 ##################
 
 # Export results as json to stdout
-cat(toJSON(out, digits = NA, na = "string"), file = "", sep = "")
+toJSON(out, digits = NA, na = "string")
