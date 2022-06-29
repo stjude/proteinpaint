@@ -8,7 +8,6 @@ const compute_mclass = require('./vcf.mclass').compute_mclass
 const serverconfig = require('./serverconfig')
 const { dtfusionrna, dtsv, mclassfusionrna, mclasssv } = require('#shared/common')
 const { get_samples, server_init_db_queries } = require('./termdb.sql')
-const { makeTempSqliteDb } = require('./tempdb')
 
 /*
 ********************** EXPORTED
@@ -17,8 +16,7 @@ client_copy
 	copy_queries
 ********************** INTERNAL
 validate_termdb
-	initTermdb_termsAndFile
-		loadAnnotationFile
+	initTermdb
 validate_query_snvindel
 	snvindelByRangeGetter_bcf
 		mayLimitSamples
@@ -99,15 +97,11 @@ async function validate_termdb(ds) {
 	if (tdb.dictionary) {
 		if (tdb.dictionary.gdcapi) {
 			await initGDCdictionary(ds)
+		} else if (tdb.dictionary.dbFile) {
+			initTermdb(ds)
 		} else {
 			throw 'unknown method to initiate dictionary'
 		}
-	} else if (tdb.terms) {
-		// array of terms, directly coded up in js file
-		// also need tdb.annotationFile
-		await initTermdb_termsAndFile(ds)
-	} else {
-		throw 'unknown source of termdb vocabulary'
 	}
 
 	if (tdb.termid2totalsize2) {
@@ -141,98 +135,9 @@ async function validate_termdb(ds) {
 	}
 }
 
-async function initTermdb_termsAndFile(ds) {
-	/* requires ds.termdb.terms[],
-	and ds.termdb.annotationFile = 'path to server-side tabular text file of sample annotation for these terms'
-	generate termdb api methods at ds.cohort.termdb.q{}
-
-	file:
-	sample \t term1 \t term2 \t ...
-	aaa    \t v1    \t v2    \t ...
-	bbb    \t v3    \t v4    \t ...
-
-	1. first line must be header, each field is term id
-	2. first column must be sample id
-	*/
-	const terms = ds.termdb.terms
-	for (const t of terms) {
-		if (!t.id) throw 'id missing from a term'
-		if (!t.name) t.name = t.id
-		if (t.type == 'categorical') {
-			if (!t.values) {
-				// while reading file, missing categories are filled into values{}
-				t.values = {}
-			}
-		} else if (t.type == 'integer' || t.type == 'float') {
-		} else {
-			throw 'invalid term type of ' + t.id
-		}
-	}
-	if (!ds.termdb.annotationFile) throw 'termdb.annotationFile missing when .terms[] used'
-	const annotationFile = path.join(serverconfig.tpmasterdir, ds.termdb.annotationFile)
-
-	const annotations = await loadAnnotationFile(annotationFile, ds)
-	// map{}, k: sample id
-	// v: map{}, k: term id, v: value
-
-	// to on-the-fly create sqlite db file at this location
-	const dbfile = annotationFile + '.db'
-	makeTempSqliteDb({ terms, annotations, dbfile })
-	// sqlite db is created
-
-	ds.cohort.db = { file_fullpath: dbfile }
+function initTermdb(ds) {
+	ds.cohort.db = { file: ds.termdb.dictionary.dbFile } // termdb is hardcoded to look for db here
 	server_init_db_queries(ds)
-	// ds.cohort.termdb.q{} initiated
-}
-
-async function loadAnnotationFile(file, ds) {
-	const lines = (await fs.promises.readFile(file, { encoding: 'utf8' })).trim().split('\n')
-	const hterms = [] // array of term objs by order of file columns
-	const headerfields = lines[0].split('\t')
-	for (let i = 1; i < headerfields.length; i++) {
-		const tid = headerfields[i]
-		if (!tid) throw `blank field at column ${i + 1} in file header`
-		const t = ds.termdb.terms.find(j => j.id == tid)
-		if (!t) throw `header field is not a term id: ${tid}`
-		hterms.push(t)
-	}
-
-	const annotations = new Map()
-	// k: sample id
-	// v: map{}, k: term id, v: value
-
-	for (let i = 1; i < lines.length; i++) {
-		const l = lines[i].split('\t')
-		const sample_id = l[0]
-		if (!sample_id) throw `blank sample id at line ${i + 1}`
-		if (annotations.has(sample_id)) throw `duplicate sample id: ${sample_id}`
-		annotations.set(sample_id, new Map())
-		for (const [j, term] of hterms.entries()) {
-			const v = l[j + 1]
-			if (!v) {
-				// blank, no value for this term
-				continue
-			}
-			if (term.type == 'categorical') {
-				annotations.get(sample_id).set(term.id, v)
-				if (!(v in term.values)) {
-					// auto add
-					term.values[v] = { label: v }
-				}
-			} else if (term.type == 'float') {
-				const n = Number(v)
-				if (Number.isNaN(n)) throw `value=${v} not number for type=float, term=${term.id}, line=${i + 1}`
-				annotations.get(sample_id).set(term.id, n)
-			} else if (term.type == 'integer') {
-				const n = Number(v)
-				if (Number.isInteger(n)) throw `value=${v} not integer for type=integer, term=${term.id}, line=${i + 1}`
-				annotations.get(sample_id).set(term.id, n)
-			} else {
-				throw 'unknown term type'
-			}
-		}
-	}
-	return annotations
 }
 
 function validate_variant2samples(ds) {
