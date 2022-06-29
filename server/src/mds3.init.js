@@ -382,7 +382,7 @@ export async function snvindelByRangeGetter_bcf(ds, genome) {
 
 		const limitSamples = mayLimitSamples(param, q._tk.samples, ds)
 		if (limitSamples) {
-			bcfArgs.push('-s', limitSamples.join(','))
+			bcfArgs.push('-s', limitSamples.map(i => i.name).join(','))
 		}
 
 		const variants = []
@@ -459,7 +459,11 @@ function mayLimitSamples(param, allSamples, ds) {
 	// as allSamples (from bcf etc) may be a subset of what's in termdb
 	// must only use those from allSamples
 	const set = new Set(allSamples.map(i => i.name))
-	return filterSamples.filter(i => set.has(i))
+	return filterSamples
+		.filter(i => set.has(i))
+		.map(i => {
+			return { name: i }
+		})
 }
 
 // temporary function to convert tid2value={} to filter, can delete later when it's replaced by filter
@@ -646,7 +650,7 @@ export async function svfusionByRangeGetter_file(ds, genome) {
 		let limitSamples
 		{
 			const lst = mayLimitSamples(param, q.samples, ds)
-			if (lst) limitSamples = new Set(lst)
+			if (lst) limitSamples = new Set(lst.map(i => i.name))
 		}
 
 		const key2variants = new Map()
