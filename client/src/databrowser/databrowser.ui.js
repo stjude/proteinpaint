@@ -4,6 +4,7 @@ import { init_tabs } from '../../dom/toggleButtons'
 import { event as d3event } from 'd3-selection'
 import { appInit } from '../../mass/app'
 import { parseDictionary } from './dictionary.parse'
+import { sayerror } from '../client'
 
 /* 
 Launches MASS UI by uploading a custom data dictionary
@@ -204,12 +205,10 @@ function submitButton(div, obj, holder) {
 		.style('margin', '40px 20px 40px 130px')
 		.style('font-size', '16px')
 		.on('click', () => {
-			// if (!obj.data) {
-			// 	alert('Please provide data')
-			// }
-			// if (!obj.data.length || obj.data == undefined) {
-			// 	throw 'No data provided' // Show user error with alert above and prevent form from disappearing
-			// }
+			if (!obj.data || obj.data == undefined) {
+				alert('Please provide data')
+				throw 'No data provided'
+			}
 			div.remove()
 			console.log(449, obj.data.terms)
 			appInit({
