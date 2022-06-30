@@ -18,7 +18,7 @@ module.exports = {
 		// not to be used on server-side!
 
 		// list of term ids as sample details
-		termidlst: ['Lineage', 'Primary_subtype', 'Secondary_subtype', 'Sex', 'Age'],
+		termidlst: ['Lineage', 'Primary_subtype', 'Secondary_subtype', 'Sex', 'Age', 'race'],
 
 		// small list of terms for sunburst rings
 		sunburst_ids: ['Lineage', 'Primary_subtype'],
