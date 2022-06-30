@@ -48,8 +48,8 @@
 #
 #
 # Output JSON specifications:
-# [
-#   {
+# [{
+#   data: {
 #     "id": id of snplocus term (empty when no snplocus terms are present)
 #     "data": {
 #       "sampleSize": sample size of analysis,
@@ -62,7 +62,8 @@
 #       "warnings": [] warning messages
 #     },
 #   }
-# ]
+#   benchmark: {} benchmarking results
+# }]
 
 
 ###########
@@ -71,6 +72,7 @@
 
 library(jsonlite)
 library(survival)
+library(parallel)
 
 args <- commandArgs(trailingOnly = T)
 if (length(args) != 1) stop("Usage: Rscript regression.R in.json > results")
@@ -116,30 +118,17 @@ benchmark[["buildFormulas"]] <- unbox(paste(round(as.numeric(dtime), 4), attr(dt
 # RUN REGRESSION #
 ##################
 
-# Run a separate regression analysis for each formula
+# run a separate regression analysis for each formula
+# run the analyses in parallel using multiple cores
 stime <- Sys.time()
-outdata <- vector(mode = "list", length = length(formulas))
-for (i in 1:length(formulas)) {
-  formula <- formulas[[i]]
-  id <- formula$id
-  # extract columns from data table that will be used in the analysis
-  subdat <- dat[,c(formula$outcomeIds, formula$independentIds)]
-  # discard samples that have missing values for any variable
-  # NOTE: while regression functions (i.e. lm, glm, coxph) perform
-  # this step by default, computation of cox type III statistics will
-  # break if this step is not done prior to regression analysis.
-  fdat <- subdat[complete.cases(subdat),]
-  # run regression
-  results <- runRegression(input$regressionType, formula, fdat, input$outcome)
-  results$coefficients <- formatCoefficients(results$coefficients, results$res, input$regressionType)
-  results$type3 <- formatType3(results$type3)
-  outdata[[i]] <- list("id" = unbox(id), "data" = results[names(results) != "res"])
-}
+cores <- detectCores()
+if (is.na(cores)) stop("unable to detect number of cores")
+reg_results <- mclapply(X = formulas, FUN = runRegression, regtype = input$regressionType, dat = dat, outcome = input$outcome, mc.cores = cores)
 etime <- Sys.time()
 dtime <- etime - stime
 benchmark[["runRegression"]] <- unbox(paste(round(as.numeric(dtime), 4), attr(dtime, "units")))
 
-out <- list(data = outdata, benchmark = benchmark)
+out <- list(data = reg_results, benchmark = benchmark)
 
 
 ##################

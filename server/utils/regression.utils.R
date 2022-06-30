@@ -307,7 +307,15 @@ coxRegression <- function(formula, fdat) {
 }
 
 # run regression analysis
-runRegression <- function(regtype, formula, fdat, outcome) {
+runRegression <- function(formula, regtype, dat, outcome) {
+  id <- formula$id
+  # extract columns from data table that will be used in the analysis
+  subdat <- dat[,c(formula$outcomeIds, formula$independentIds)]
+  # discard samples that have missing values for any variable
+  # NOTE: while regression functions (i.e. lm, glm, coxph) perform
+  # this step by default, computation of cox type III statistics will
+  # break if this step is not done prior to regression analysis.
+  fdat <- subdat[complete.cases(subdat),]
   warns <- vector(mode = "character")
   handleWarns <- function(w) {
     # handler for warning messages
@@ -337,7 +345,10 @@ runRegression <- function(regtype, formula, fdat, outcome) {
     }
   }
   if (length(warns) > 0) results[["warnings"]] <- warns
-  return(results)
+  results$coefficients <- formatCoefficients(results$coefficients, results$res, input$regressionType)
+  results$type3 <- formatType3(results$type3)
+  out <- list("id" = unbox(id), "data" = results[names(results) != "res"])
+  return(out)
 }
 
 # generate cubic spline plot spline
