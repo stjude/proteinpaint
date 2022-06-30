@@ -5,7 +5,8 @@ module.exports = {
 	// termdb as a generic interface
 	// getters will be added to abstract the detailed implementations
 	termdb: {
-		dictionary: { dbFile: 'files/hg38/ash/db' }
+		dictionary: { dbFile: 'files/hg38/ash/db' },
+		termid2totalsize2: {}
 	},
 
 	variant2samples: {

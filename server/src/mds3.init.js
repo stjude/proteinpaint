@@ -8,6 +8,7 @@ const compute_mclass = require('./vcf.mclass').compute_mclass
 const serverconfig = require('./serverconfig')
 const { dtfusionrna, dtsv, mclassfusionrna, mclasssv } = require('#shared/common')
 const { get_samples, server_init_db_queries } = require('./termdb.sql')
+const { barchart_data } = require('./termdb.barsql')
 
 /*
 ********************** EXPORTED
@@ -20,6 +21,7 @@ validate_termdb
 validate_query_snvindel
 	snvindelByRangeGetter_bcf
 		mayLimitSamples
+			tid2value2filter
 		addSamplesFromBcfLine
 			vcfFormat2sample
 validate_query_svfusion
@@ -111,7 +113,7 @@ async function validate_termdb(ds) {
 			if (!gdcapi.keys && !gdcapi.keys.length) throw 'termid2totalsize2 missing keys[]'
 			if (typeof gdcapi.filters != 'function') throw '.filters is not in termid2totalsize2'
 		} else {
-			throw 'unknown method for termid2totalsize2'
+			// query through termdb methods
 		}
 
 		/* add getter
@@ -121,7 +123,7 @@ async function validate_termdb(ds) {
 				.tid2value={id1:v1, ...}
 				.ssm_id_lst=str
 			combination={}
-				optional,
+				optional, not used for computing
 		output:
 			a map, key is termid, value is array, each element: [category, total]
 		*/
@@ -129,9 +131,39 @@ async function validate_termdb(ds) {
 			if (tdb.termid2totalsize2.gdcapi) {
 				return await gdc.get_termlst2size(termidlst, q, combination, ds)
 			}
-			throw 'unknown method for termid2totalsize2'
+			return await getBarchartData(termidlst, q, combination, ds)
 		}
 	}
+}
+
+async function getBarchartData(termidlst, q, combination, ds) {
+	const termid2values = new Map()
+	for (const tid of termidlst) {
+		const term = ds.cohort.termdb.q.termjsonByOneid(tid)
+		if (term.type == 'categorical') {
+			const _q = {
+				term1_id: tid,
+				term1_q: { type: 'values' }
+			}
+			if (q.tid2value) {
+				_q.filter = tid2value2filter(q.tid2value, ds)
+			}
+			const out = await barchart_data(_q, ds, ds.cohort.termdb)
+
+			if (!out.charts[0]) {
+				// no data
+				continue
+			}
+
+			const lst = []
+			for (const s of out.charts[0].serieses) {
+				lst.push([s.seriesId, s.total])
+			}
+			termid2values.set(tid, lst)
+		}
+	}
+	if (combination) return [termid2values, combination]
+	return termid2values
 }
 
 function initTermdb(ds) {

@@ -10,6 +10,7 @@ const termdbsql = require('./termdb.sql')
 ********************** EXPORTED
 handle_request_closure
 getOrderedLabels
+barchart_data
 **********************
 */
 
@@ -36,8 +37,8 @@ export function handle_request_closure(genomes) {
 			const tdb = ds.cohort.termdb
 			if (!tdb) throw 'no termdb for this dataset'
 
-			// process triggers
-			await barchart_data(q, ds, res, tdb)
+			const data = await barchart_data(q, ds, tdb)
+			res.send(data)
 		} catch (e) {
 			res.send({ error: e.message || e })
 			if (e.stack) console.log(e.stack)
@@ -45,13 +46,35 @@ export function handle_request_closure(genomes) {
 	}
 }
 
-async function barchart_data(q, ds, res, tdb) {
-	/*
-  q: objectified URL query string
-  ds: dataset
-  res: express route callback's response argument
-  tdb: cohort termdb tree 
+/*
+inputs:
+q={}
+	objectified URL query string
+	.term1_id=str
+	.term1_q={}
+		termsetting obj for term1
+	.term2_id=str
+	.term2_q={}
+		termsetting obj for term2
+	.term0_id=str
+	.term0_q={}
+		termsetting obj for term0
+	.filter=stringified filter json obj
+ds={}
+	server-side dataset obj
+tdb={}
+	ds.cohort.termdb
+
+output an object:
+.charts=[]
+	.serieses=[]
+		.seriesId=str // key of term1 category
+		.total=int // total of this category
+		.data=[]
+			.dataId=str // key of term2 category, '' if no term2
+			.total=int // size of this term1-term2 combination
 */
+export async function barchart_data(q, ds, tdb) {
 	if (!ds.cohort) throw 'cohort missing from ds'
 	q.ds = ds
 
@@ -71,7 +94,8 @@ async function barchart_data(q, ds, res, tdb) {
 			pj: pj.times
 		}
 	}
-	res.send(pj.tree.results)
+	//console.log(JSON.stringify(pj.tree.results,null,2))
+	return pj.tree.results
 }
 
 // template for partjson, already stringified so that it does not
