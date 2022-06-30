@@ -6,6 +6,7 @@ const { parseDictionary } = require('../../client/src/databrowser/dictionary.par
 requires SQL scripts e.g. "create.sql" to be found under current dir
 
 TODO
+- support parent-child; right now there's no hierarchies
 - support new term types: condition, survival, time series
 - support annotation3Col
 */
@@ -15,11 +16,27 @@ Usage: $ node buildTermdb.js [arg=value] [more arguments] ...
 
 List of arguments:
 
-phenotree=path
-	Required. Value is path/to/phenotreeFile
+phenotree=path/to/file
+	Optional. Value is path/to/phenotreeFile
+	This format supports categorical, integer and float term types. It does not support survival type.
 	Format: https://docs.google.com/document/d/19RwEbWi7Q1bGemz3XpcgylvGh2brT06GFcXxM6rWjI0/edit#heading=h.yskgvu6d9wag
 
-annotation=path
+terms=path/to/file
+	Optional. Value is path/to/termsFile
+	The file is tab-delimited text file, with 7 columns. File does not have a header line.
+	This format supports categorical/integer/float/survival term types.
+
+	Column 1: id character varying(100) not null,
+	name character varying(100) not null,
+	parent_id character varying(100),
+	jsondata json not null,
+	child_order integer not null,
+	type text,
+	isleaf int
+
+	Either "phenotree" or "terms" is needed.
+
+annotation=path/to/file
 	Optional. Provide path to annotation file as a sample-by-term matrix
 	1st line must be header, each field is term id
 	1st column must be sample id
@@ -28,16 +45,25 @@ annotation=path
 	aaa    \\t v1    \\t v2    \\t ...
 	bbb    \\t v3    \\t v4    \\t ...
 
-annotation3Col=path
+annotation3Col=path/to/file
 	Optional. Provide path to annotation file in 3-column format
 	File has no header line
 	1st column is sample name, 2nd column is term ID, 3rd column is value
 
-dbfile=path
+survival=path/to/file
+	Optional. Provide path to survival data.
+	File has 4 columns. Does not contain a header line.
+
+	Column 1: sample name
+	Column 2: survival term ID
+	Column 3: time to event
+	Column 4: exit code, 0=death, 1=censored (TODO verify)
+
+dbfile=path/to/file
 	Optional. Provide path to output db file
 	If missing, creates "./db"
 
-sqlite3=path
+sqlite3=path/to/sqlite3
 	Optional. Supply path to a "sqlite3" binary file.
 	If missing, "sqlite3" must exist in current environment.
 `
@@ -52,7 +78,13 @@ const runId = Math.ceil(Math.random() * 100000)
 const termdbFile = 'termdb.' + runId,
 	sampleidFile = 'sampleidmap.' + runId,
 	annotationFile = 'annotation.' + runId,
+	survivalFile = 'survival.' + runId,
 	loadScript = 'load.sql.' + runId
+
+const sampleCollect = {
+	name2id: new Map(), // k: sample name, v: integer id
+	id: 1 // sample id enumerator
+}
 
 //////////////////////////////////// main sequence
 
@@ -61,16 +93,24 @@ try {
 	const scriptArg = getScriptArg()
 	// map{}: key=str, value=str
 
-	const terms = loadPhenotree(scriptArg)
+	const terms = loadDictionary(scriptArg)
 
-	const annotations = loadAnnotationFile(scriptArg, terms)
-	// sampleidFile and annotationFile written
+	const annotationData = loadAnnotationFile(scriptArg, terms, sampleCollect)
+	// annotationFile written, if data is available
+
+	const survivalData = loadSurvival(scriptArg, terms, sampleCollect)
+	// survivalFile written, if data is available
+
+	// write sampleidmap file after loading all annotation files
+	const lines = []
+	for (const [s, i] of sampleCollect.name2id) lines.push(i + '\t' + s)
+	fs.writeFileSync(sampleidFile, lines.join('\n') + '\n')
 
 	// load annotations first, in order to populate .values{} for categorical terms
 	// then write termdbFile
 	writeTermsFile(terms)
 
-	buildDb(terms, annotations, scriptArg)
+	buildDb(annotationData, survivalData, scriptArg)
 	// dbfile is created
 } catch (e) {
 	console.log(`Error: ${e.message || e}`)
@@ -90,9 +130,9 @@ function getScriptArg() {
 	}
 
 	if (arg.size == 0) throw 'no arguments'
-
-	if (!arg.has('phenotree')) throw 'missing "phenotree=" argument'
-	if (!arg.has('annotation')) throw 'missing "annotation=" argument'
+	if (!arg.has('phenotree') && !arg.has('terms')) throw '"phenotree=" and "terms=" both missing'
+	if (!arg.has('annotation') && !arg.has('annotation3Col') && !arg.has('survival'))
+		throw '"annotation=" and "annotation3Col=" and "survival=" all missing'
 	if (!arg.has('dbfile')) arg.set('dbfile', 'db.' + runId)
 	if (!arg.has('sqlite3')) arg.set('sqlite3', 'sqlite3')
 	try {
@@ -104,77 +144,57 @@ function getScriptArg() {
 	return arg
 }
 
-function loadPhenotree(scriptArg) {
-	const out = parseDictionary(fs.readFileSync(scriptArg.get('phenotree'), { encoding: 'utf8' }))
+function loadDictionary(scriptArg) {
+	if (scriptArg.has('phenotree')) {
+		const out = parseDictionary(fs.readFileSync(scriptArg.get('phenotree'), { encoding: 'utf8' }))
 
-	return out.terms
+		return out.terms
+	}
+	/* use "terms" file
+	id character varying(100) not null,
+	  name character varying(100) not null,
+	  parent_id character varying(100),
+	  jsondata json not null,
+	  child_order integer not null,
+	  type text,
+	  isleaf integer
+
+	  */
+	const terms = []
+	for (const line of fs
+		.readFileSync(scriptArg.get('terms'), { encoding: 'utf8' })
+		.trim()
+		.split('\n')) {
+		const l = line.split('\t')
+		const termid = l[0]
+		if (!termid) throw 'termid missing from terms file'
+		const parent_id = l[2] // TODO capture parent-child
+		const jsontext = l[3]
+		if (!jsontext) {
+			continue
+		}
+		const term = JSON.parse(jsontext)
+		term.id = termid
+		terms.push(term)
+	}
+	return terms
 }
 
-function loadAnnotationFile(scriptArg, terms) {
-	const lines = fs
-		.readFileSync(scriptArg.get('annotation'), { encoding: 'utf8' })
-		.trim()
-		.split('\n')
-	const hterms = [] // array of term objs by order of file columns
-	const headerfields = lines[0].split('\t')
-	for (let i = 1; i < headerfields.length; i++) {
-		const tid = headerfields[i]
-		if (!tid) throw `blank field at column ${i + 1} in file header`
-		const t = terms.find(j => j.id == tid)
-		if (!t) throw `header field is not a term id: ${tid}`
-		hterms.push(t)
-	}
+function loadAnnotationFile(scriptArg, terms, sampleCollect) {
+	if (!scriptArg.has('annotation') && !scriptArg.has('annotation3Col')) return
 
 	const annotations = new Map()
 	// k: sample integer id
 	// v: map{}, k: term id, v: value
 
-	const sample2id = new Map()
-	// k: sample name
-	// v: integer id
-	let _id = 1
-
-	for (let i = 1; i < lines.length; i++) {
-		const l = lines[i].split('\t')
-		const sample = l[0]
-		if (!sample) throw `blank sample name at line ${i + 1}`
-		if (sample2id.has(sample)) throw `duplicate sample at line ${i + 1}`
-		const sampleId = _id++
-		sample2id.set(sample, sampleId)
-
-		annotations.set(sampleId, new Map())
-
-		for (const [j, term] of hterms.entries()) {
-			const v = l[j + 1]
-			if (!v) {
-				// blank, no value for this term
-				continue
-			}
-			if (term.type == 'categorical') {
-				annotations.get(sampleId).set(term.id, v)
-				if (!(v in term.values)) {
-					// auto add
-					term.values[v] = { label: v }
-				}
-			} else if (term.type == 'float') {
-				const n = Number(v)
-				if (Number.isNaN(n)) throw `value=${v} not number for type=float, term=${term.id}, line=${i + 1}`
-				annotations.get(sampleId).set(term.id, n)
-			} else if (term.type == 'integer') {
-				const n = Number(v)
-				if (Number.isInteger(n)) throw `value=${v} not integer for type=integer, term=${term.id}, line=${i + 1}`
-				annotations.get(sampleId).set(term.id, n)
-			} else {
-				throw `unknown term type: ${JSON.stringify(term)}`
-			}
-		}
+	if (scriptArg.has('annotation')) {
+		loadMatrix()
+	} else {
+		load3Col()
 	}
+	// contents are loaded to annotations{}
 
-	{
-		const lines = []
-		for (const [s, i] of sample2id) lines.push(i + '\t' + s)
-		fs.writeFileSync(sampleidFile, lines.join('\n') + '\n')
-	}
+	// write annotation file for db loading
 	{
 		const lines = []
 		for (const [s, o] of annotations) {
@@ -186,6 +206,131 @@ function loadAnnotationFile(scriptArg, terms) {
 	}
 
 	return annotations
+
+	/******* helpers
+	load3Col()
+	loadMatrix()
+	loadValue()
+	*/
+
+	function load3Col() {
+		for (const line of fs
+			.readFileSync(scriptArg.get('annotation3Col'), { encoding: 'utf8' })
+			.trim()
+			.split('\n')) {
+			const [sample, termid, value] = line.split('\t')
+			if (!sample || !termid || !value) continue
+
+			let sampleId
+			if (sampleCollect.name2id.has(sample)) {
+				sampleId = sampleCollect.name2id.get(sample)
+			} else {
+				sampleId = sampleCollect.id++
+				sampleCollect.name2id.set(sample, sampleId)
+			}
+
+			const term = terms.find(i => i.id == termid)
+			if (!term) throw 'annotation3Col invalid term id: ' + termid
+			loadValue(sampleId, term, value)
+		}
+	}
+
+	function loadMatrix() {
+		const lines = fs
+			.readFileSync(scriptArg.get('annotation'), { encoding: 'utf8' })
+			.trim()
+			.split('\n')
+		const hterms = [] // array of term objs by order of file columns
+		const headerfields = lines[0].split('\t')
+		for (let i = 1; i < headerfields.length; i++) {
+			const tid = headerfields[i]
+			if (!tid) throw `blank field at column ${i + 1} in file header`
+			const t = terms.find(j => j.id == tid)
+			if (!t) throw `header field is not a term id: ${tid}`
+			hterms.push(t)
+		}
+		for (let i = 1; i < lines.length; i++) {
+			const l = lines[i].split('\t')
+			const sample = l[0]
+			if (!sample) throw `blank sample name at line ${i + 1}`
+			if (sampleCollect.name2id.has(sample)) throw `duplicate sample at line ${i + 1}`
+			const sampleId = sampleCollect.id++
+			sampleCollect.name2id.set(sample, sampleId)
+
+			for (const [j, term] of hterms.entries()) {
+				const v = l[j + 1]
+				if (!v) {
+					// blank, no value for this term
+					continue
+				}
+				loadValue(sampleId, term, v)
+			}
+		}
+	}
+
+	function loadValue(sampleId, term, v) {
+		if (!annotations.has(sampleId)) annotations.set(sampleId, new Map())
+
+		if (term.type == 'categorical') {
+			annotations.get(sampleId).set(term.id, v)
+			if (!(v in term.values)) {
+				// the category is missing from .values{}, auto add
+				term.values[v] = { label: v }
+			}
+		} else if (term.type == 'float') {
+			const n = Number(v)
+			if (Number.isNaN(n)) throw `value=${v} not number for type=float, term=${term.id}, line=${i + 1}`
+			annotations.get(sampleId).set(term.id, n)
+		} else if (term.type == 'integer') {
+			const n = Number(v)
+			if (Number.isInteger(n)) throw `value=${v} not integer for type=integer, term=${term.id}, line=${i + 1}`
+			annotations.get(sampleId).set(term.id, n)
+		} else {
+			throw `unknown term type: ${JSON.stringify(term)}`
+		}
+	}
+}
+
+function loadSurvival(scriptArg, terms, sampleCollect) {
+	if (!scriptArg.has('survival')) return
+	const survivalData = new Map() // k: sample id, v: map( termid=>[v1,v2])
+	for (const line of fs
+		.readFileSync(scriptArg.get('survival'), { encoding: 'utf8' })
+		.trim()
+		.split('\n')) {
+		const [sample, termid, v1, v2] = line.split('\t')
+		if (!sample || !termid || !v1 || !v2) continue
+
+		let sampleId
+		if (sampleCollect.name2id.has(sample)) {
+			sampleId = sampleCollect.name2id.get(sample)
+		} else {
+			sampleId = sampleCollect.id++
+			sampleCollect.name2id.set(sample, sampleId)
+		}
+
+		const term = terms.find(i => i.id == termid)
+		if (!term) throw 'survival invalid term id: ' + termid
+		if (term.type != 'survival') throw 'term id ' + termid + ' type!=survival'
+
+		const tte = Number(v1),
+			ec = Number(v2)
+		if (Number.isNaN(tte)) throw 'time-to-event not a number'
+		if (!Number.isInteger(ec)) throw 'exit code not integer'
+
+		if (!survivalData.has(sampleId)) survivalData.set(sampleId, new Map())
+		survivalData.get(sampleId).set(termid, [tte, ec])
+	}
+
+	const lines = []
+	for (const [s, o] of survivalData) {
+		for (const [tid, l] of o) {
+			lines.push(`${s}\t${tid}\t${l[0]}\t${l[1]}`)
+		}
+	}
+	fs.writeFileSync(survivalFile, lines.join('\n') + '\n')
+
+	return survivalData
 }
 
 function writeTermsFile(terms) {
@@ -196,20 +341,19 @@ function writeTermsFile(terms) {
 	fs.writeFileSync(termdbFile, lines.join('\n') + '\n')
 }
 
-function buildDb(terms, annotations, scriptArg) {
+function buildDb(annotationData, survivalData, scriptArg) {
 	const cmd = scriptArg.get('sqlite3') + ' ' + scriptArg.get('dbfile')
 
 	// create db with blank tables
 	exec(cmd + ' < ./create.sql')
 
+	// ".import" commands
+	const importLines = ['.mode tab', `.import ${termdbFile} terms`, `.import ${sampleidFile} sampleidmap`]
+	if (annotationData) importLines.push(`.import ${annotationFile} annotations`)
+	if (survivalData) importLines.push(`.import ${survivalFile} survival`)
+
 	// temp script to load tables
-	fs.writeFileSync(
-		loadScript,
-		`.mode tab
-.import ${termdbFile} terms
-.import ${annotationFile} annotations
-.import ${sampleidFile} sampleidmap\n`
-	)
+	fs.writeFileSync(loadScript, importLines.join('\n'))
 
 	// load db
 	exec(cmd + ' < ' + loadScript)
