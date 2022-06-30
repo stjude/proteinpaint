@@ -376,7 +376,7 @@ for specific type of query mode, send additional info
 	if (q.exportgenotype) {
 		result.exportgenotype =
 			'variant\tSNP\t' +
-			tk.samples.map(i => (ds.sampleidmap ? ds.sampleidmap.get(i.name) : i.name)).join('\t') +
+			tk.samples.map(i => ds.cohort.termdb.id2sampleName(i.name)).join('\t') +
 			'\n' +
 			result.mlst.join('\n')
 		delete result.mlst

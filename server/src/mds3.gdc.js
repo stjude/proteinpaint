@@ -11,14 +11,12 @@ validate_variant2sample
 validate_query_snvindel_byrange
 	makeSampleObj
 validate_query_snvindel_byisoform
-	getSamples_gdcapi
 	snvindel_byisoform
 validate_query_snvindel_byisoform_2
 validate_query_genecnv
-getSamples_gdcapi
+querySamples_gdcapi
 	flattenCaseByFields
 get_termlst2size
-addCrosstabCount_tonodes
 validate_m2csq
 validate_ssm2canonicalisoform
 getheaders
@@ -600,7 +598,7 @@ termidlst[]
 	and to parse out as sample attributes
 ds{}
 */
-export async function getSamples_gdcapi(q, termidlst, ds) {
+export async function querySamples_gdcapi(q, termidlst, ds) {
 	const api = ds.variant2samples.gdcapi
 
 	const termObjs = []
@@ -780,48 +778,6 @@ export async function get_termlst2size(termidlst, q, combination, ds) {
 
 	if (combination) return [tv2counts, combination]
 	return tv2counts
-}
-
-/* for an ele of nodes[], find matching ele from combinations[], and assign total as node.cohortsize
-why this function is gdc-specific?
-if not move to mds3.init.js
-*/
-export async function addCrosstabCount_tonodes(nodes, combinations) {
-	for (const node of nodes) {
-		if (!node.id0) continue // root
-
-		if (!node.v0) {
-			continue
-		}
-		const v0 = node.v0.toLowerCase()
-		if (!node.id1) {
-			const n = combinations.find(i => i.id1 == undefined && i.v0 == v0)
-			if (n) node.cohortsize = n.count
-			continue
-		}
-
-		if (!node.v1) {
-			// e.g. {"id":"root...HCMI-CMDC...","parentId":"root...HCMI-CMDC","value":1,"name":"","id0":"project","v0":"HCMI-CMDC","id1":"disease"}
-			continue
-		}
-		const v1 = node.v1.toLowerCase()
-		if (!node.id2) {
-			// second level, use crosstabL1
-			const n = combinations.find(i => i.id2 == undefined && i.v0 == v0 && i.v1 == v1)
-			if (n) node.cohortsize = n.count
-			continue
-		}
-
-		if (!node.v2) {
-			continue
-		}
-		const v2 = node.v2.toLowerCase()
-		if (!node.id3) {
-			// third level, use crosstabL2
-			const n = crosstabL2.find(i => i.v0 == v0 && i.v1 == v1 && i.v2 == v2)
-			if (n) node.cohortsize = n.count
-		}
-	}
 }
 
 export function validate_m2csq(ds) {

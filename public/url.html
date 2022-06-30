@@ -8,7 +8,7 @@
 
 <!-- 
 by running makeURL(), rows of URLs are added to this <div>
-url host is window.location.origin, allowing url.html to work on ppr/prp1 to test thingg on that server
+url host is window.location.origin, allowing to work as ppr.stjude.org/url.html and test things there
 -->
 <div id='div' style='margin:10px;display:grid;grid-template-columns:150px 80vw;gap:5px;word-break:break-word'></div>
 
@@ -123,6 +123,11 @@ function __cuminc({t1,t2,t0,grade,hidden}) {
 	})
 }
 
+
+
+
+
+
 ///////////// main ////////////////////
 
 /*
@@ -136,6 +141,8 @@ argument is an array; each element defines a set of example URLs showing in a ro
           [1]: URL path name
 */
 makeURL([
+
+
 { name: 'BAM',
 	links: [
 		[ 'TP53 18bp del', '?genome=hg19&block=1&position=chr17:7578191-7578591&bamfile=Test,proteinpaint_demo/hg19/bam/TP53_del.bam' ],
@@ -178,6 +185,10 @@ makeURL([
 		['wrong index','?genome=hg19&block=1&bamfile=test,proteinpaint_demo/hg19/bam/wrongIndex.bam'],
 	]
 },
+
+
+
+
 { name:'GDC BAM UI',
 	links:[
 		['GBM EGFR by case id','?gdcbamslice=1&gdc_id=TCGA-06-0211&gdc_pos=chr7:55153818-55156225'],
@@ -199,10 +210,16 @@ makeURL([
 		['PTPN4 X605 mnv','?gdcbamslice=1&gdc_id=8577ef8a-f071-49cc-8158-05dfc52f3c70&gdc_var=chr2:g.119955155_119955159delinsTTTTT'],
 
 		['Skipped by workflow','?gdcbamslice=1&gdc_id=e2d8ca95-6a3d-48e3-abfc-ce5ee294e954'],
+		['6 ssm','?gdcbamslice=1&gdc_id=TCGA-4V-A9QQ'],
 		['No ssm','?gdcbamslice=1&gdc_id=DLBCL10969'],
 		['disableSSM','?gdcbamslice=1&disableSSM=1']
+		// TODO hypermutator
 	]
 },
+
+
+
+
 {name:'GDC lollipop',
 	links:[
 		['AKT1','?genome=hg38&gene=ENST00000407796&mds3=GDC'],

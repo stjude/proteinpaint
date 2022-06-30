@@ -1,11 +1,3 @@
-const terms = [
-	{ id: 'Lineage', type: 'categorical' },
-	{ id: 'Primary_subtype', name: 'Primary subtype', type: 'categorical' },
-	{ id: 'Secondary_subtype', name: 'Secondary subtype', type: 'categorical' },
-	{ id: 'Sex', type: 'categorical' },
-	{ id: 'Age', name: 'Age of diagnosis', type: 'float' }
-]
-
 module.exports = {
 	isMds3: true,
 	genome: 'hg38',
@@ -13,8 +5,8 @@ module.exports = {
 	// termdb as a generic interface
 	// getters will be added to abstract the detailed implementations
 	termdb: {
-		terms,
-		annotationFile: 'files/hg38/ash/panall.sample'
+		dictionary: { dbFile: 'files/hg38/ash/db' },
+		termid2totalsize2: {}
 	},
 
 	variant2samples: {
@@ -26,7 +18,7 @@ module.exports = {
 		// not to be used on server-side!
 
 		// list of term ids as sample details
-		termidlst: terms.map(i => i.id),
+		termidlst: ['Lineage', 'Primary_subtype', 'Secondary_subtype', 'Sex', 'Age'],
 
 		// small list of terms for sunburst rings
 		sunburst_ids: ['Lineage', 'Primary_subtype'],
