@@ -210,7 +210,6 @@ else
 	mv server/utils $APP/
 	mv server/cards $APP/
 	mv server/src/serverconfig.js $APP/src
-	mv server/shared $APP/
 	if [[ "$SUBDOMAIN" == "ppr" ]]; then
 		# may need to support cohort.db.refresh,
 		# as set via serverconfig dataset updateAttr

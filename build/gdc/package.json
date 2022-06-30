@@ -27,7 +27,6 @@
     "server/utils/*.R",
     "server/utils/rust/*.*",
     "server/utils/rust/src",
-    "server/shared",
     "utils/install.pp.js"
   ],
   "bugs": {
