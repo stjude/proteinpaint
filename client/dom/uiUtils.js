@@ -107,13 +107,13 @@ export function makeFileUpload(div) {
 	return upload
 }
 
-export function makeBtn(div, text, color, backgroundColor, border) {
-	const btn = div
+export function makeBtn(args) {
+	const btn = args.div
 		.append('button')
-		.text(text)
-		.style('color', color ? color : 'black')
-		.style('background-color', backgroundColor ? backgroundColor : '#F2F2F2')
-		.style('border', border ? border : '2px solid #999')
+		.text(args.text)
+		.style('color', args.color ? args.color : 'black')
+		.style('background-color', args.backgroundColor ? args.backgroundColor : '#F2F2F2')
+		.style('border', args.border ? args.border : '2px solid #999')
 		.style('padding', '5px 10px')
 		.style('cursor', 'pointer')
 

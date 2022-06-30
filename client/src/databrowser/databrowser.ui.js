@@ -4,6 +4,7 @@ import { init_tabs } from '../../dom/toggleButtons'
 import { event as d3event } from 'd3-selection'
 import { appInit } from '../../mass/app'
 import { parseDictionary } from './dictionary.parse'
+import { sayerror } from '../client'
 
 /* 
 Launches MASS UI by uploading a custom data dictionary
@@ -50,7 +51,7 @@ export function init_dictionaryUI(holder, debugmode) {
 	//Data dictionary section
 	makeSectionHeader(wrapper, 'Data Dictionary')
 	const tabs_div = wrapper.append('div').style('margin-left', '2vw')
-	makeDataDictionaryTabs(holder, tabs_div, obj)
+	makeDataDictionaryTabs(tabs_div, obj)
 
 	//Submit button
 	submitButton(wrapper, obj, holder)
@@ -98,7 +99,7 @@ function makeSectionHeader(div, text) {
 		.style('opacity', '0.4')
 }
 
-function makeDataDictionaryTabs(holder, tabs_div, obj) {
+function makeDataDictionaryTabs(tabs_div, obj) {
 	// Creates the horizontal top tabs and callbacks for the data dictionary section
 	// Rendering code and callback to the same parseDictionary().
 	// All data parsed in client and returned to obj.data
@@ -110,7 +111,7 @@ function makeDataDictionaryTabs(holder, tabs_div, obj) {
 					div.style('border', 'none').style('display', 'block')
 					appear(div)
 					div.append('div').html(`<p style="margin-left: 10px; opacity: 0.65;">Select a file from your computer.</p>`)
-					makeFileUpload(holder, div, obj)
+					makeFileUpload(div, obj)
 					tabs[1].rendered = true
 				}
 			}
@@ -126,7 +127,7 @@ function makeDataDictionaryTabs(holder, tabs_div, obj) {
 						.html(
 							`<p style="margin-left: 10px; opacity: 0.65;">Paste data dictionary or phenotree in a tab delimited format.</p>`
 						)
-					makeCopyPasteInput(holder, div, obj)
+					makeCopyPasteInput(div, obj)
 					tabs[2].rendered = true
 				}
 			}
@@ -139,7 +140,7 @@ function makeDataDictionaryTabs(holder, tabs_div, obj) {
 					appear(div)
 					div.append('div').html(`<p style="margin-left: 10px; opacity: 0.65;">Provide a URL file path.</p>`)
 					uiutils.makePrompt(div, 'URL')
-					makeTextEntryFilePathInput(holder, div, obj)
+					makeTextEntryFilePathInput(div, obj)
 					tabs[0].rendered = true
 				}
 			}
@@ -148,7 +149,7 @@ function makeDataDictionaryTabs(holder, tabs_div, obj) {
 	init_tabs({ holder: tabs_div, tabs })
 }
 
-function makeTextEntryFilePathInput(holder, div, obj) {
+function makeTextEntryFilePathInput(div, obj) {
 	// Renders the file path input div and callback.
 	const filepath_div = div.append('div').style('display', 'inline-block')
 	const filepath = uiutils
@@ -157,10 +158,10 @@ function makeTextEntryFilePathInput(holder, div, obj) {
 		.on('keyup', async () => {
 			const data = filepath.property('value').trim()
 			if (uiutils.isURL(data)) {
-				fetch(data)
+				const txt = await fetch(data)
 					.then(req => req.text())
 					.then(txt => {
-						obj.data = parseDictionary(holder, txt)
+						obj.data = parseDictionary(txt)
 					})
 			} else {
 				//TODO: implement serverside filepaths(?)
@@ -168,7 +169,7 @@ function makeTextEntryFilePathInput(holder, div, obj) {
 		})
 }
 
-function makeFileUpload(holder, div, obj) {
+function makeFileUpload(div, obj) {
 	// Renders the select file div and callback.
 	const upload_div = div.append('div').style('display', 'inline-block')
 	const upload = uiutils.makeFileUpload(upload_div)
@@ -176,13 +177,13 @@ function makeFileUpload(holder, div, obj) {
 		const file = d3event.target.files[0]
 		const reader = new FileReader()
 		reader.onload = event => {
-			obj.data = parseDictionary(holder, event.target.result)
+			obj.data = parseDictionary(event.target.result)
 		}
 		reader.readAsText(file, 'utf8')
 	})
 }
 
-function makeCopyPasteInput(holder, div, obj) {
+function makeCopyPasteInput(div, obj) {
 	// Renders the copy/paste div and callback.
 	const paste_div = div.append('div').style('display', 'block')
 	const paste = uiutils
@@ -190,7 +191,7 @@ function makeCopyPasteInput(holder, div, obj) {
 		.style('border', '1px solid rgb(138, 177, 212)')
 		.style('margin', '0px 0px 0px 20px')
 		.on('keyup', async () => {
-			obj.data = parseDictionary(holder, paste.property('value').trim())
+			obj.data = parseDictionary(paste.property('value').trim())
 		})
 }
 
@@ -199,17 +200,22 @@ function makeCopyPasteInput(holder, div, obj) {
  */
 
 function submitButton(div, obj, holder) {
-	const submit = uiutils.makeBtn(div, 'Create Data Browser', 'white', '#001aff', '2px solid #001aff')
+	const submit = uiutils.makeBtn({
+		div,
+		text: 'Create Data Browser',
+		color: 'white',
+		backgroundColor: '#001aff',
+		border: '2px solid #001aff'
+	})
 	submit
 		.style('margin', '40px 20px 40px 130px')
 		.style('font-size', '16px')
+		.classed('sjpp-ui-submitBtn', true)
 		.on('click', () => {
-			// if (!obj.data) {
-			// 	alert('Please provide data')
-			// }
-			// if (!obj.data.length || obj.data == undefined) {
-			// 	throw 'No data provided' // Show user error with alert above and prevent form from disappearing
-			// }
+			if (!obj.data || obj.data == undefined) {
+				alert('Please provide data')
+				throw 'No data provided'
+			}
 			div.remove()
 			console.log(449, obj.data.terms)
 			appInit({
