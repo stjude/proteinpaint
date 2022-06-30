@@ -162,7 +162,10 @@ app.use((req, res, next) => {
 	log(req)
 
 	res.header('Access-Control-Allow-Origin', '*')
-	res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization')
+	res.header(
+		'Access-Control-Allow-Headers',
+		'Origin, X-Requested-With, Content-Type, Accept, Authorization, X-Auth-Token, x-auth-token'
+	)
 	if (req.method == 'GET' && !req.path.includes('.')) {
 		// immutable response before expiration, client must revalidate after max-age;
 		// by convention, any path that has a dot will be treated as
