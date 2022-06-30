@@ -790,7 +790,7 @@ thus less things to worry about...
 		}
 	}
 	{
-		const s = cn.prepare('SELECT jsondata FROM terms WHERE id=?')
+		const s = cn.prepare('SELECT name, jsondata FROM terms WHERE id=?')
 		const cache = new Map()
 		/* should only cache result for valid term id, not for invalid ids
 		as invalid id is arbitrary and indefinite
@@ -802,6 +802,7 @@ thus less things to worry about...
 			if (t) {
 				const j = JSON.parse(t.jsondata)
 				j.id = id
+				j.name = t.name || j.name
 				cache.set(id, j)
 				return j
 			}
@@ -824,7 +825,7 @@ thus less things to worry about...
 
 	{
 		const sql = cn.prepare(
-			`SELECT id, jsondata, s.included_types, s.child_types
+			`SELECT id, name, jsondata, s.included_types, s.child_types
 			FROM terms t
 			JOIN subcohort_terms s ON s.term_id = t.id AND s.cohort=?
 			WHERE parent_id is null
@@ -839,6 +840,7 @@ thus less things to worry about...
 			const re = tmp.map(i => {
 				const t = JSON.parse(i.jsondata)
 				t.id = i.id
+				t.name = i.name || t.name
 				t.included_types = i.included_types ? i.included_types.split(',') : ['TO-DO-PLACEHOLDER']
 				t.child_types = i.child_types ? i.child_types.split(',') : []
 				return t
@@ -892,7 +894,7 @@ thus less things to worry about...
 	*/
 	{
 		const sql = cn.prepare(
-			`SELECT id, type, jsondata, s.included_types, s.child_types 
+			`SELECT id, name, type, jsondata, s.included_types, s.child_types 
 			FROM terms t
 			JOIN subcohort_terms s ON s.term_id = t.id AND s.cohort=? 
 			WHERE id IN (SELECT id FROM terms WHERE parent_id=?)
@@ -910,6 +912,7 @@ thus less things to worry about...
 				re = tmp.map(i => {
 					const j = JSON.parse(i.jsondata)
 					j.id = i.id
+					j.name = i.name || j.name
 					j.included_types = i.included_types ? i.included_types.split(',') : []
 					j.child_types = i.child_types ? i.child_types.split(',') : []
 					return j
@@ -938,6 +941,7 @@ thus less things to worry about...
 					const name = i.name.toLowerCase()
 					const j = JSON.parse(i.jsondata)
 					j.id = i.id
+					j.name = i.name || j.name
 					j.included_types = i.included_types ? i.included_types.split(',') : []
 					if (!usecase || isUsableTerm(j, usecase).has('plot')) {
 						if (n === 'se') console.log(name, n)
