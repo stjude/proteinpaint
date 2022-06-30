@@ -1,5 +1,6 @@
 const fs = require('fs')
 const exec = require('child_process').execSync
+const { parseDictionary } = require('../../client/src/databrowser/dictionary.parse')
 
 /*
 requires SQL scripts e.g. "create.sql" to be found under current dir
@@ -7,7 +8,6 @@ requires SQL scripts e.g. "create.sql" to be found under current dir
 TODO
 - support new term types: condition, survival, time series
 - support annotation3Col
-- import new phenotree parser
 */
 
 const usageNote = `
@@ -105,45 +105,9 @@ function getScriptArg() {
 }
 
 function loadPhenotree(scriptArg) {
-	// temp method
-	const terms = parsePhenotreeLines(
-		fs
-			.readFileSync(scriptArg.get('phenotree'), { encoding: 'utf8' })
-			.trim()
-			.split('\n')
-	)
-	return terms
-}
+	const out = parseDictionary(fs.readFileSync(scriptArg.get('phenotree'), { encoding: 'utf8' }))
 
-function parsePhenotreeLines(lines) {
-	// quick fix! later replace with colleen's function
-	// assuming 'variable name \t Level 1 \t variable note'
-	const header = lines[0]
-	const terms = []
-	for (let i = 1; i < lines.length; i++) {
-		const l = lines[i].split('\t')
-		const id = l[0],
-			termName = l[1],
-			type = l[2]
-		if (!id) throw 'term id missing'
-		const term = {
-			id,
-			name: termName || id,
-			type
-		}
-		switch (type) {
-			case 'string':
-				term.type = 'categorical'
-				term.values = {}
-				break
-			case 'integer':
-			case 'float':
-				break
-				throw 'unknown type for a term'
-		}
-		terms.push(term)
-	}
-	return terms
+	return out.terms
 }
 
 function loadAnnotationFile(scriptArg, terms) {
