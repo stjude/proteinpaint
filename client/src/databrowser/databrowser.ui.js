@@ -51,7 +51,7 @@ export function init_dictionaryUI(holder, debugmode) {
 	//Data dictionary section
 	makeSectionHeader(wrapper, 'Data Dictionary')
 	const tabs_div = wrapper.append('div').style('margin-left', '2vw')
-	makeDataDictionaryTabs(holder, tabs_div, obj)
+	makeDataDictionaryTabs(tabs_div, obj)
 
 	//Submit button
 	submitButton(wrapper, obj, holder)
@@ -200,10 +200,17 @@ function makeCopyPasteInput(div, obj) {
  */
 
 function submitButton(div, obj, holder) {
-	const submit = uiutils.makeBtn(div, 'Create Data Browser', 'white', '#001aff', '2px solid #001aff')
+	const submit = uiutils.makeBtn({
+		div,
+		text: 'Create Data Browser',
+		color: 'white',
+		backgroundColor: '#001aff',
+		border: '2px solid #001aff'
+	})
 	submit
 		.style('margin', '40px 20px 40px 130px')
 		.style('font-size', '16px')
+		.classed('sjpp-ui-submitBtn', true)
 		.on('click', () => {
 			if (!obj.data || obj.data == undefined) {
 				alert('Please provide data')

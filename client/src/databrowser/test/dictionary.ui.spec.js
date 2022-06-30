@@ -1,6 +1,8 @@
 const tape = require('tape')
 const parseDictionary = require('../dictionary.parse').parseDictionary
 const d3s = require('d3-selection')
+const init_dictionaryUI = require('../databrowser.ui').init_dictionaryUI
+const helpers = require('../../../test/front.helpers.js')
 
 /***********************************
  reusable helper vars and functions
@@ -13,7 +15,6 @@ function getHolder() {
 		.style('border', '1px solid #aaa')
 		.style('padding', '5px')
 		.style('margin', '5px')
-	//.node()
 }
 
 /**************
@@ -36,7 +37,7 @@ tape('levels before name+note, no gaps', function(test) {
 	].join('\n')
 
 	const holder = getHolder()
-	const results = parseDictionary(tsv) //console.log(JSON.stringify(results.terms))
+	const results = parseDictionary(tsv)
 	const expected = [
 		{
 			id: 'A1a',
@@ -606,3 +607,32 @@ tape('missing k=v in values (dictionary format)', function(test) {
 	}
 	test.end()
 })
+
+//TODO
+// tape('\n', function(test) {
+// 	test.pass('-***- databrowser UI -***-')
+// 	test.end()
+// })
+
+// tape('Render UI', test => {
+// 	test.timeoutAfter(1000)
+// 	renderUI()
+
+// 	function renderUI() {
+// 		const holder = getHolder()
+// 		const args ={
+// 			holder,
+// 			host: window.location.origin,
+// 			noheader: true,
+// 			parseurl: true,
+// 			nobox: true,
+// 			tkui: "databrowser"
+// 		}
+// 		runproteinpaint(Object.assign(args))
+// 	}
+
+// 	// testClick = (test) => {
+
+// 	// }
+// 	test.end()
+// })
