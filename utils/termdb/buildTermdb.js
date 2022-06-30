@@ -2,11 +2,12 @@ const fs = require('fs')
 const exec = require('child_process').execSync
 
 /*
-still looks for ./create.sql etc under current dir
+requires SQL scripts e.g. "create.sql" to be found under current dir
 
 TODO
-support new term types: condition, survival, time series
-support annotation3Col
+- support new term types: condition, survival, time series
+- support annotation3Col
+- import new phenotree parser
 */
 
 const usageNote = `
@@ -61,10 +62,13 @@ try {
 	// map{}: key=str, value=str
 
 	const terms = loadPhenotree(scriptArg)
-	// termdbFile written
 
 	const annotations = loadAnnotationFile(scriptArg, terms)
 	// sampleidFile and annotationFile written
+
+	// load annotations first, in order to populate .values{} for categorical terms
+	// then write termdbFile
+	writeTermsFile(terms)
 
 	buildDb(terms, annotations, scriptArg)
 	// dbfile is created
@@ -108,13 +112,6 @@ function loadPhenotree(scriptArg) {
 			.trim()
 			.split('\n')
 	)
-
-	const lines = []
-	for (const t of terms) {
-		lines.push(`${t.id}\t${t.name}\t${t.parent_id || null}\t${JSON.stringify(t)}\t1\t${t.type}\t1`)
-	}
-	fs.writeFileSync(termdbFile, lines.join('\n') + '\n')
-
 	return terms
 }
 
@@ -225,6 +222,14 @@ function loadAnnotationFile(scriptArg, terms) {
 	}
 
 	return annotations
+}
+
+function writeTermsFile(terms) {
+	const lines = []
+	for (const t of terms) {
+		lines.push(`${t.id}\t${t.name}\t${t.parent_id || null}\t${JSON.stringify(t)}\t1\t${t.type}\t1`)
+	}
+	fs.writeFileSync(termdbFile, lines.join('\n') + '\n')
 }
 
 function buildDb(terms, annotations, scriptArg) {
