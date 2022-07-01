@@ -171,7 +171,7 @@ do not directly hand over the term object to client; many attr to be kept on ser
 
 async function trigger_findterm(q, res, termdb, ds) {
 	// TODO also search categories
-	const flagset = await get_flagset(ds.cohort, q.genome) //console.log(flagset)
+	const flagset = await get_flagset(ds, q.genome) //console.log(flagset)
 	const matches = { equals: [], startsWith: [], startsWord: [], includes: [] }
 	const str = q.findterm.toUpperCase()
 	// harcoded gene name length limit to exclude fusion/comma-separated gene names

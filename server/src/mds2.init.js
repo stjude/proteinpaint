@@ -33,6 +33,7 @@ export async function init_db(ds, app = null, basepath = null) {
 	if (!ds.cohort.termdb) throw 'cohort.termdb missing when cohort.db is used'
 	await validate_termdbconfig(ds.cohort.termdb)
 	server_init_db_queries(ds)
+	setSampleIdMap(ds)
 	// the "refresh" attribute on ds.cohort.db should be set in serverconfig.json
 	// for a genome dataset, using "updateAttr: [[...]]
 	if (ds.cohort.db.refresh && app) setDbRefreshRoute(ds, app, basepath)
@@ -378,6 +379,25 @@ function may_sum_samples(tk) {
 	}
 	if (samples.size) {
 		tk.samples = [...samples]
+	}
+}
+
+function setSampleIdMap(ds) {
+	ds.sampleName2Id = new Map()
+	ds.sampleId2Name = new Map()
+	const sql = 'SELECT * FROM sampleidmap'
+	const rows = ds.cohort.db.connection.prepare(sql).all()
+	for (const r of rows) {
+		ds.sampleId2Name.set(r.id, r.name)
+		ds.sampleName2Id.set(r.name, r.id)
+	}
+
+	ds.getSampleIdMap = samples => {
+		const bySampleId = {}
+		for (const sampleId in samples) {
+			bySampleId[sampleId] = ds.sampleId2Name.get(+sampleId)
+		}
+		return bySampleId
 	}
 }
 

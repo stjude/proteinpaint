@@ -4,7 +4,7 @@ const write_file = require('./utils').write_file
 const fs = require('fs')
 const serverconfig = require('./serverconfig')
 const lines2R = require('./lines2R')
-const get_flagset = require('./bulk.mset').get_flagset
+const getGeneVariantData = require('./bulk.mset').getGeneVariantData
 
 export async function get_survival(q, ds) {
 	try {
@@ -52,6 +52,7 @@ export async function get_survival(q, ds) {
 		results.lst.sort((a, b) => (a[vNum] < b[vNum] ? -1 : 1))
 
 		if (q.term2?.type == 'geneVariant') {
+			console.log(54)
 			await addGeneData(q, results.lst)
 		}
 
@@ -162,25 +163,17 @@ function getOrderedLabels(term, bins = []) {
 
 async function addGeneData(q, rows) {
 	const termq = q.term2_q
+	const bySampleId = await getGeneVariantData({ term: q.term2, q: termq }, q)
 	if (!termq.exclude) termq.exclude = []
-	const classes = new Set()
-	const flagset = await get_flagset(q.ds.cohort, q.genome)
+	const tname = q.term2.name
 	for (const row of rows) {
-		let matched = 0
-		for (const flagname in flagset) {
-			const flag = flagset[flagname]
-			const gene = q.term2.name
-			if (gene in flag.data) {
-				for (const d of flag.data[gene]) {
-					// TODO: fix the sample names in the PNET mutation text files
-					const sname = d.sample.split(';')[0].trim()
-					// only create a sample entry/row when it is not already filtered out by not having any dictionary term values
-					if (sname == row.sample) {
-						// TODO: may finetune matching based on dt# or mutation class
-						if (!termq.exclude.includes(d.class)) matched++
-						classes.add(d.class)
-						break
-					}
+		let matched = false
+		const sampleData = bySampleId.get(row.sample)
+		if (sampleData && tname in sampleData) {
+			for (const d of sampleData[tname].values) {
+				if (!termq.exclude.includes(d.class)) {
+					matched++
+					break
 				}
 			}
 		}

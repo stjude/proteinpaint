@@ -21,14 +21,58 @@ const handlers = {
 	truncation: bulktrunc
 }
 
-async function get_flagset(cohort, genome) {
+/*
+	tw: {
+		term: {
+			type: 'geneVariant', 
+			name: '...'
+		}
+	}
+
+	q: {
+		ds, 
+		genome
+	}
+
+
+*/
+exports.getGeneVariantData = async function(tw, q) {
+	const tname = tw.term.name
+	const flagset = await get_flagset(q.ds, q.genome)
+	const bySampleId = new Map()
+	for (const flagname in flagset) {
+		const flag = flagset[flagname]
+		if (!(tname in flag.data)) continue
+		for (const d of flag.data[tname]) {
+			const sid = d._SAMPLEID_
+			if (!bySampleId.has(sid)) bySampleId.set(sid, { sample: sid })
+			const sampleData = bySampleId.get(sid)
+			sampleData[tname] = { key: tname, values: [], label: tname }
+			sampleData[tname].values.push(d)
+		}
+	}
+	return bySampleId
+}
+
+async function get_flagset(ds, genome) {
+	const cohort = ds.cohort
 	try {
 		if (cohort.mutationFlagSet) return cohort.mutationFlagSet
 		if (!cohort.mutationset) return
 		const flagset = {}
+		const smap = ds.sampleName2Id
+
 		for (const [index, mset] of cohort.mutationset.entries()) {
 			const flag = await process_mset(index, mset, genome)
 			flagset[Math.random()] = flag
+			for (const gene in flag.data) {
+				for (const d of flag.data[gene]) {
+					// TODO: fix the sample names in all mutation text files (PNET may use sample0;sample1; aliases)
+					// if there is no semicolon in d.sample, then d.sample === d._SAMPLENAME_
+					d._SAMPLENAME_ = d.sample.split(';')[0].trim()
+					d._SAMPLEID_ = smap.get(d._SAMPLENAME_) || d._SAMPLENAME_
+				}
+			}
 		}
 		cohort.mutationFlagSet = flagset
 		return flagset

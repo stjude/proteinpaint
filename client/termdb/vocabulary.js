@@ -541,7 +541,7 @@ class TermdbVocab {
 		const filter = getNormalRoot(opts.filter)
 		const isNewFilter = !deepEqual(this.currAnnoData.lastFilter, filter)
 		if (isNewFilter) {
-			this.currAnnoData = { samples: {}, refs: { byTermId: {} }, lastTerms: [], lastFilter: {} }
+			this.currAnnoData = { samples: {}, refs: { byTermId: {}, bySampleId: {} }, lastTerms: [], lastFilter: {} }
 		}
 		const termsToUpdate = opts.terms.filter(tw => {
 			const lastTw = this.currAnnoData.lastTerms.find(lt => lt.$id === tw.$id)
@@ -583,6 +583,10 @@ class TermdbVocab {
 								row[tw.$id] = sample[tw.idn]
 							}
 						}
+					}
+
+					for (const sampleId in data.refs.bySampleId) {
+						this.currAnnoData.refs.bySampleId[sampleId] = data.refs.bySampleId[sampleId]
 					}
 
 					for (const tw of copies) {

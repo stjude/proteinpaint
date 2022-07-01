@@ -3,7 +3,6 @@ const get_flagset = require('./bulk.mset').get_flagset
 export async function getData(q, ds) {
 	try {
 		const ids = JSON.parse(q.ids)
-		console.log(3, ids)
 		const qmarks = ids.map(() => '?').join(',')
 		const sql = `SELECT id, name, type, jsondata, parent_id FROM terms WHERE id IN (${qmarks}) OR name IN (${qmarks})`
 		const rows = ds.cohort.db.connection.prepare(sql).all([...ids, ...ids])
@@ -14,7 +13,7 @@ export async function getData(q, ds) {
 		}
 
 		const remainingIds = ids.filter(id => !terms[id])
-		const flagset = await get_flagset(ds.cohort, q.genome)
+		const flagset = await get_flagset(ds, q.genome)
 		for (const flagname in flagset) {
 			const flag = flagset[flagname]
 			if (!flag.data) continue

@@ -275,7 +275,8 @@ class Matrix {
 					prevGrpTotalIndex: total,
 					totalIndex: total + index,
 					totalHtAdjustments: 0,
-					grpHtAdjustments: 0
+					grpHtAdjustments: 0,
+					_SAMPLENAME_: data.refs.bySampleId[row.sample]
 				})
 			}
 			total += grp.lst.length
@@ -608,7 +609,7 @@ class Matrix {
 	}
 
 	sampleLabel(series) {
-		return series.row.sample
+		return series._SAMPLENAME_ || series.row.sample
 	}
 
 	sampleGrpKey(s) {
