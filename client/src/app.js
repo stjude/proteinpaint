@@ -983,7 +983,8 @@ async function launchgeneview(arg, app) {
 		mset: arg.mset,
 		tklst: arg.tracks,
 		gmmode: arg.gmmode,
-		mclassOverride: arg.mclassOverride
+		mclassOverride: arg.mclassOverride,
+		onloadalltk_always: arg.onloadalltk_always
 	}
 	let ds = null
 	if (arg.dataset) {

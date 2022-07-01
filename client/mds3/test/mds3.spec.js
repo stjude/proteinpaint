@@ -35,6 +35,7 @@ tape('Run GDC dataset via gene symbol, ensembl ID and RefSeq ID', async test => 
 	const holder = getHolder()
 
 	await callGDCByGene(test)
+	await callGDCByGene2(test)
 	await callGDCByEnsembl(test)
 	await callGDCByRefSeq(test)
 
@@ -57,6 +58,30 @@ tape('Run GDC dataset via gene symbol, ensembl ID and RefSeq ID', async test => 
 		if (!geneFound) test.fail('Should render default AKT1 track')
 		else {
 			test.equal(geneFound, true, 'Rendered AKT1 default track')
+		}
+	}
+
+	async function callGDCByGene2(test) {
+		runproteinpaint({
+			holder,
+			noheader: true,
+			nobox: true,
+			genome: 'hg38',
+			gene: 'ccnd1',
+			tracks: [
+				{
+					type: 'mds3',
+					dslabel: 'GDC'
+				}
+			],
+			onloadalltk_always: checker
+		})
+		function checker() {
+			const geneFound = [...holder.querySelectorAll('span')].some(elem => elem.innerText == 'CCND1')
+			if (!geneFound) test.fail('Should render default CCND1 track')
+			else {
+				test.equal(geneFound, true, 'Rendered CCND1 default track')
+			}
 		}
 	}
 
@@ -140,7 +165,7 @@ tape('Launch GDC dataset by SSM ID', async test => {
 	test.end()
 })
 
-tape.only('Render gene track from search box', async test => {
+tape('Render gene track from search box', async test => {
 	test.timeoutAfter(3000)
 	const holder = getHolder()
 
