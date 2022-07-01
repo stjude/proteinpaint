@@ -69,7 +69,7 @@ os.system('bcftools view -l 1 --no-version -O b -o x1.bcf.gz x.bcf.gz')
 os.system('bcftools index x1.bcf.gz')
 os.system('mv x1.bcf.gz '+args.out_bcf)
 os.system('mv x1.bcf.gz.csi '+args.out_bcf+'.csi')
-
+os.system('rm -f x.bcf.gz')
 
 #reheader fusion file
 fh = gzip.open(fusionfile)
