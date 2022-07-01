@@ -53,7 +53,7 @@ fusionfile = args.fusion
 samfh = open(sampleidmap)
 NAMatch = {} #dictionary with sample name as key and intger ID as value
 for line in samfh:
-	l = line.strip().split('\t')
+	l = line.strip().split(' ')
 	NAMatch[l[0]] = l[1]
 samfh.close()
 
@@ -72,6 +72,7 @@ os.system('mv x1.bcf.gz.csi '+args.out_bcf+'.csi')
 os.system('rm -f x.bcf.gz')
 
 #reheader fusion file
+print('reheadering fusion file')
 fh = gzip.open(fusionfile)
 out = open('fusion.rename','w')
 #change the sample name in header line
