@@ -383,8 +383,10 @@ function buildDb(annotationData, survivalData, scriptArg) {
 	fs.unlink(loadScript, () => {})
 
 	// finish up
-	exec(cmd + ' < ./indexing.sql')
+	// TODO purpose of each step, as well as order
+	exec(cmd + ' < ./setancestry.sql')
 	exec(cmd + ' < ./set-default-subcohort.sql')
 	exec(cmd + ' < ./set-included-types.sql')
 	exec(cmd + ' < ./anno-by-type.sql')
+	exec(cmd + ' < ./indexing.sql')
 }
