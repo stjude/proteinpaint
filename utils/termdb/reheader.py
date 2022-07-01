@@ -72,6 +72,7 @@ os.system('mv x1.bcf.gz.csi '+args.out_bcf+'.csi')
 os.system('rm -f x.bcf.gz')
 
 #reheader fusion file
+print('reheadering fusion file')
 fh = gzip.open(fusionfile)
 out = open('fusion.rename','w')
 #change the sample name in header line
