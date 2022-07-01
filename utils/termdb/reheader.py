@@ -53,7 +53,7 @@ fusionfile = args.fusion
 samfh = open(sampleidmap)
 NAMatch = {} #dictionary with sample name as key and intger ID as value
 for line in samfh:
-	l = line.strip().split('\t')
+	l = line.strip().split(' ')
 	NAMatch[l[0]] = l[1]
 samfh.close()
 
