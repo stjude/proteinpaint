@@ -101,14 +101,10 @@ try {
 	const survivalData = loadSurvival(scriptArg, terms, sampleCollect)
 	// survivalFile written, if data is available
 
-	// write sampleidmap file after loading all annotation files
-	const lines = []
-	for (const [s, i] of sampleCollect.name2id) lines.push(i + '\t' + s)
-	fs.writeFileSync(sampleidFile, lines.join('\n') + '\n')
-
 	// load annotations first, in order to populate .values{} for categorical terms
-	// then write termdbFile
-	writeTermsFile(terms)
+	// and convert all samples to integer ids
+	// then write termdbFile, sampleidmap
+	writeFiles(terms)
 
 	buildDb(annotationData, survivalData, scriptArg)
 	// dbfile is created
@@ -150,31 +146,45 @@ function loadDictionary(scriptArg) {
 
 		return out.terms
 	}
-	/* use "terms" file
-	id character varying(100) not null,
-	  name character varying(100) not null,
-	  parent_id character varying(100),
-	  jsondata json not null,
-	  child_order integer not null,
-	  type text,
-	  isleaf integer
+	return loadTermsFile(scriptArg)
+}
 
-	  */
+function loadTermsFile(scriptArg) {
+	/* use "terms" file
+	 */
 	const terms = []
 	for (const line of fs
 		.readFileSync(scriptArg.get('terms'), { encoding: 'utf8' })
 		.trim()
 		.split('\n')) {
-		const l = line.split('\t')
-		const termid = l[0]
+		const [termid, termname, parent_id, jsontext, child_order, type, isleaf] = line.split('\t')
+
 		if (!termid) throw 'termid missing from terms file'
-		const parent_id = l[2] // TODO capture parent-child
-		const jsontext = l[3]
-		if (!jsontext) {
-			continue
-		}
+		if (!jsontext) throw 'jsontext missing from terms file'
 		const term = JSON.parse(jsontext)
 		term.id = termid
+		term.name = termname || termid
+		if (type) {
+			term.type = type
+			switch (term.type) {
+				case 'categorical':
+					if (!term.values) term.values = {}
+					break
+				case 'integer':
+				case 'float':
+				case 'survival':
+					break
+				default:
+					throw 'unknown term type: ' + type
+			}
+		} else {
+			// no type, should be non-graphable branch
+		}
+
+		// !!!!!!quick fix to assign _parent_id!!!! need to see how parseDictionary() generate these attributes
+		term._parent_id = parent_id
+		term._child_order = child_order
+		term._isleaf = isleaf
 		terms.push(term)
 	}
 	return terms
@@ -333,12 +343,25 @@ function loadSurvival(scriptArg, terms, sampleCollect) {
 	return survivalData
 }
 
-function writeTermsFile(terms) {
-	const lines = []
-	for (const t of terms) {
-		lines.push(`${t.id}\t${t.name}\t${t.parent_id || null}\t${JSON.stringify(t)}\t1\t${t.type}\t1`)
+function writeFiles(terms) {
+	{
+		const lines = []
+		for (const t of terms) {
+			const parent_id = t._parent_id || ''
+			delete t._parent_id
+			const child_order = t._child_order
+			delete t._child_order
+			const isleaf = t._isleaf
+			delete t._isleaf
+			lines.push(`${t.id}\t${t.name}\t${parent_id}\t${JSON.stringify(t)}\t${child_order}\t${t.type || ''}\t${isleaf}`)
+		}
+		fs.writeFileSync(termdbFile, lines.join('\n') + '\n')
 	}
-	fs.writeFileSync(termdbFile, lines.join('\n') + '\n')
+	{
+		const lines = []
+		for (const [s, i] of sampleCollect.name2id) lines.push(i + '\t' + s)
+		fs.writeFileSync(sampleidFile, lines.join('\n') + '\n')
+	}
 }
 
 function buildDb(annotationData, survivalData, scriptArg) {
@@ -360,6 +383,7 @@ function buildDb(annotationData, survivalData, scriptArg) {
 	fs.unlink(loadScript, () => {})
 
 	// finish up
+	exec(cmd + ' < ./indexing.sql')
 	exec(cmd + ' < ./set-default-subcohort.sql')
 	exec(cmd + ' < ./set-included-types.sql')
 	exec(cmd + ' < ./anno-by-type.sql')

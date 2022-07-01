@@ -4,7 +4,6 @@ create table sampleidmap (
   id integer not null,
   name character varying(100) not null
 );
-create index sidmap_id on sampleidmap(id);
 
 
 drop index if exists terms_id;
@@ -20,11 +19,6 @@ create table terms (
   type text,
   isleaf integer
 );
-update terms set parent_id=null where parent_id='';
-create index terms_id on terms(id);
-create index terms_p on terms(parent_id);
-create index terms_n on terms(name);
-
 
 drop index if exists ancestry_tid;
 drop index if exists ancestry_pid;
@@ -34,8 +28,6 @@ create table ancestry (
   ancestor_id character varying(100) not null
 );
 
-create index ancestry_tid on ancestry(term_id);
-create index ancestry_pid on ancestry(ancestor_id);
 
 
 -- may add term group and color etc
@@ -52,7 +44,6 @@ CREATE TABLE termhtmldef (
   id character not null,
   jsonhtml json not null
 );
-CREATE INDEX termhtmldef_id on termhtmldef(id);
 
 
 drop table if exists category2vcfsample;
@@ -75,9 +66,6 @@ create table annotations (
   term_id character varying(100) not null,
   value character varying(255) not null
 );
-create index a_sample on annotations(sample);
-create index a_termid on annotations(term_id);
-create index a_value on annotations(value);
 
 drop table if exists chronicevents;
 drop index if exists c_sample;
@@ -90,10 +78,6 @@ create table chronicevents (
   age_graded real not null,
   years_to_event real not null
 );
-
-create index c_sample on chronicevents(sample);
-create index c_termid on chronicevents(term_id);
-create index c_grade on chronicevents(grade);
 
 
 DROP TABLE IF EXISTS precomputed;
@@ -110,9 +94,6 @@ CREATE TABLE precomputed(
   most_recent integer
 );
 
-CREATE INDEX p_sample on precomputed(sample);
-CREATE INDEX p_termid on precomputed(term_id);
-CREATE INDEX p_value_for on precomputed(value_for);
 
 
 ---------------------------------------------
@@ -131,8 +112,6 @@ CREATE TABLE subcohort_terms (
  child_types TEXT
 );
 
-CREATE INDEX subcohort_terms_cohort ON subcohort_terms(cohort);
-CREATE INDEX subcohort_terms_termid ON subcohort_terms(term_id);
 
 
 DROP TABLE IF EXISTS survival;
@@ -144,5 +123,3 @@ CREATE TABLE survival(
  tte INT, -- time-to-event
  exit_code INT -- cohort defined exit code, may be 0=death, 1=censored, or similar
 );
-CREATE INDEX survival_term ON survival(term_id);
-CREATE INDEX survival_sample ON survival(sample);
