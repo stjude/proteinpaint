@@ -1,7 +1,9 @@
 create index sidmap_id on sampleidmap(id);
 
 
+-- TODO how to load up a field as "null" from flatfile so no need to run this line
 update terms set parent_id=null where parent_id='';
+
 create index terms_id on terms(id);
 create index terms_p on terms(parent_id);
 create index terms_n on terms(name);

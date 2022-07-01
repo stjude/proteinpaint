@@ -1,6 +1,7 @@
 const fs = require('fs')
 const exec = require('child_process').execSync
 const { parseDictionary } = require('../../client/src/databrowser/dictionary.parse')
+const initBinConfig = require('../../shared/termdb.initbinconfig')
 
 /*
 requires SQL scripts e.g. "create.sql" to be found under current dir
@@ -103,6 +104,9 @@ try {
 
 	// load annotations first, in order to populate .values{} for categorical terms
 	// and convert all samples to integer ids
+
+	finalizeTerms(terms)
+
 	// then write termdbFile, sampleidmap
 	writeFiles(terms)
 
@@ -141,12 +145,30 @@ function getScriptArg() {
 }
 
 function loadDictionary(scriptArg) {
+	let terms // array of term objects
 	if (scriptArg.has('phenotree')) {
 		const out = parseDictionary(fs.readFileSync(scriptArg.get('phenotree'), { encoding: 'utf8' }))
 
-		return out.terms
+		terms = out.terms
+	} else {
+		terms = loadTermsFile(scriptArg)
 	}
-	return loadTermsFile(scriptArg)
+
+	// fill missing attributes and placeholders in term objects
+	for (const term of terms) {
+		if (!term.type) continue // not graphable
+		if (term.type == 'categorical') {
+			if (!term.values) term.values = {}
+			if (!term.groupsetting) term.groupsetting = { disabled: true }
+		} else if (term.type == 'integer' || term.type == 'float') {
+			if (!term.values) term.values = {}
+			term.__all_values = [] // placeholder to collect all sample values and make binconfig
+		} else if (term.type == 'survival') {
+		} else {
+			throw 'loadDictionary: unknown term type'
+		}
+	}
+	return terms
 }
 
 function loadTermsFile(scriptArg) {
@@ -166,22 +188,12 @@ function loadTermsFile(scriptArg) {
 		term.name = termname || termid
 		if (type) {
 			term.type = type
-			switch (term.type) {
-				case 'categorical':
-					if (!term.values) term.values = {}
-					break
-				case 'integer':
-				case 'float':
-				case 'survival':
-					break
-				default:
-					throw 'unknown term type: ' + type
-			}
 		} else {
 			// no type, should be non-graphable branch
 		}
 
-		// !!!!!!quick fix to assign _parent_id!!!! need to see how parseDictionary() generate these attributes
+		// !!!!!!quick fix to assign _parent_id!!!!
+		// need to see how parseDictionary() generate these attributes
 		term._parent_id = parent_id
 		term._child_order = child_order
 		term._isleaf = isleaf
@@ -291,10 +303,12 @@ function loadAnnotationFile(scriptArg, terms, sampleCollect) {
 			const n = Number(v)
 			if (Number.isNaN(n)) throw `value=${v} not number for type=float, term=${term.id}, line=${i + 1}`
 			annotations.get(sampleId).set(term.id, n)
+			term.__all_values.push(n)
 		} else if (term.type == 'integer') {
 			const n = Number(v)
 			if (Number.isInteger(n)) throw `value=${v} not integer for type=integer, term=${term.id}, line=${i + 1}`
 			annotations.get(sampleId).set(term.id, n)
+			term.__all_values.push(n)
 		} else {
 			throw `unknown term type: ${JSON.stringify(term)}`
 		}
@@ -341,6 +355,30 @@ function loadSurvival(scriptArg, terms, sampleCollect) {
 	fs.writeFileSync(survivalFile, lines.join('\n') + '\n')
 
 	return survivalData
+}
+
+function finalizeTerms(terms) {
+	for (const term of terms) {
+		if (!term.type) continue
+		if (term.type == 'categorical') {
+			// to do: add checking
+		} else if (term.type == 'integer' || term.type == 'float') {
+			const computableValues = []
+			for (const v of term.__all_values) {
+				if (!term.values[v] || !term.values[v].uncomputable) {
+					computableValues.push(v)
+				}
+			}
+			if (!term.bins) term.bins = {}
+			if (!term.bins.default) {
+				term.bins.default = initBinConfig(computableValues)
+			}
+			delete term.__all_values
+		} else if (term.type == 'survival') {
+		} else {
+			throw 'finalizeTerms: unknown term type'
+		}
+	}
 }
 
 function writeFiles(terms) {
