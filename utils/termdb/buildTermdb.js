@@ -4,18 +4,23 @@ const { parseDictionary } = require('../../client/src/databrowser/dictionary.par
 const initBinConfig = require('../../shared/termdb.initbinconfig')
 
 /*
-requires SQL scripts e.g. "create.sql" to be found under current dir
-
 TODO
-- support parent-child; right now there's no hierarchies
-- support new term types: condition, survival, time series
-- support annotation3Col
+- support new term types: condition, time series
+- do not throw upon any data error; collect all errors and output at the end, so data curator can work through them
 */
 
 const usageNote = `
 Usage: $ node buildTermdb.js [arg=value] [more arguments] ...
 
-List of arguments:
+*** Dependencies ***
+
+1. node.js version 12 or above. No NPM packages needed.
+2. sqlite3
+3. SQL scripts found at working directory:
+   anno-by-type.sql  indexing.sql              set-included-types.sql
+   create.sql        set-default-subcohort.sql setancestry.sql
+
+*** List of arguments ***
 
 phenotree=path/to/file
 	Optional. Value is path/to/phenotreeFile
@@ -36,6 +41,7 @@ terms=path/to/file
 	isleaf int
 
 	Either "phenotree" or "terms" is needed.
+	All the rest of arguments can be missing.
 
 annotation=path/to/file
 	Optional. Provide path to annotation file as a sample-by-term matrix
@@ -62,11 +68,17 @@ survival=path/to/file
 
 dbfile=path/to/file
 	Optional. Provide path to output db file
-	If missing, creates "./db"
+	If missing, creates "./db.runID"
 
 sqlite3=path/to/sqlite3
 	Optional. Supply path to a "sqlite3" binary file.
 	If missing, "sqlite3" must exist in current environment.
+
+
+*** Output ***
+
+Following files are created at current directory, suffixed by a random number.
+    db, termdb, sampleidmap, annotation, survival
 `
 
 const runId = Math.ceil(Math.random() * 100000)
@@ -131,8 +143,12 @@ function getScriptArg() {
 
 	if (arg.size == 0) throw 'no arguments'
 	if (!arg.has('phenotree') && !arg.has('terms')) throw '"phenotree=" and "terms=" both missing'
+	/*
+	allow annotation files to be missing, and process only dictionary without sample info
+
 	if (!arg.has('annotation') && !arg.has('annotation3Col') && !arg.has('survival'))
 		throw '"annotation=" and "annotation3Col=" and "survival=" all missing'
+	*/
 	if (!arg.has('dbfile')) arg.set('dbfile', 'db.' + runId)
 	if (!arg.has('sqlite3')) arg.set('sqlite3', 'sqlite3')
 	try {
@@ -395,7 +411,8 @@ function writeFiles(terms) {
 		}
 		fs.writeFileSync(termdbFile, lines.join('\n') + '\n')
 	}
-	{
+
+	if (sampleCollect.name2id.size) {
 		const lines = []
 		for (const [s, i] of sampleCollect.name2id) lines.push(i + '\t' + s)
 		fs.writeFileSync(sampleidFile, lines.join('\n') + '\n')
@@ -409,9 +426,10 @@ function buildDb(annotationData, survivalData, scriptArg) {
 	exec(cmd + ' < ./create.sql')
 
 	// ".import" commands
-	const importLines = ['.mode tab', `.import ${termdbFile} terms`, `.import ${sampleidFile} sampleidmap`]
+	const importLines = ['.mode tab', `.import ${termdbFile} terms`]
 	if (annotationData) importLines.push(`.import ${annotationFile} annotations`)
 	if (survivalData) importLines.push(`.import ${survivalFile} survival`)
+	if (sampleCollect.name2id.size) importLines.push(`.import ${sampleidFile} sampleidmap`)
 
 	// temp script to load tables
 	fs.writeFileSync(loadScript, importLines.join('\n'))
@@ -420,8 +438,7 @@ function buildDb(annotationData, survivalData, scriptArg) {
 	exec(cmd + ' < ' + loadScript)
 	fs.unlink(loadScript, () => {})
 
-	// finish up
-	// TODO purpose of each step, as well as order
+	// populate ancestry table
 	exec(cmd + ' < ./setancestry.sql')
 	exec(cmd + ' < ./set-default-subcohort.sql')
 	exec(cmd + ' < ./set-included-types.sql')

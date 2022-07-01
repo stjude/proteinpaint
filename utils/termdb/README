@@ -1,1 +1,18 @@
-general purpose termdb pipeline, for building server-side sqlite3 db files
+Files under this folder:
+
+- buildTermdb.js: a general purpose pipeline to build SQLite database,
+  using input files for dictionary and sample anntation contents.
+- *.sql: various SQL scripts that fully define the database table structure and indexing
+
+To run the pipeline, first generate webpack bundle:
+
+$ ../../node_modules/.bin/webpack --config=webpack.config.js
+
+This yields script "buildTermdb.bundle.js".
+Copy this script, along with *.sql scripts, to where you want to run it, e.g. hpc:~/tp/your/path/
+
+Build your db:
+
+$ node buildTermdb.bundle.js terms=path/to/terms.txt annotation3Col=path/to/annotations.txt survival=path/to/survival.txt
+
+This generates a database file named "db.runId"
