@@ -81,8 +81,6 @@ out.write(' '.join([namlinel[0]]+newnamlinel)+'\n')
 for line in fh:
 	l = line.decode('utf-8').strip().split('\t')
 	JS = json.loads(l[3])
-	if JS['dt'] != 2:
-		continue
 	if JS['sample'] in NAMatch: 
 		JS['sample'] = int(NAMatch[JS['sample']])
 	out.write('\t'.join(l[0:3]+[json.dumps(JS, sort_keys=True)])+'\n')
