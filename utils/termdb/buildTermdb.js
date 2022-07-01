@@ -7,6 +7,7 @@ const initBinConfig = require('../../shared/termdb.initbinconfig')
 TODO
 - support new term types: condition, time series
 - do not throw upon any data error; collect all errors and output at the end, so data curator can work through them
+- support subcohorts, right now only works for dataset without subchort
 */
 
 const usageNote = `
@@ -438,9 +439,19 @@ function buildDb(annotationData, survivalData, scriptArg) {
 	fs.unlink(loadScript, () => {})
 
 	// populate ancestry table
+	// TODO need to be able to generate full lineage
 	exec(cmd + ' < ./setancestry.sql')
+
+	// populate cohort,term_id,count fields from subcohort_terms table
+	// only works for dataset without subcohort, fill blank string to cohort
 	exec(cmd + ' < ./set-default-subcohort.sql')
+
+	// populate included_types and child_types fields from subcohort_terms table
 	exec(cmd + ' < ./set-included-types.sql')
+
+	// create 3 separate tables anno-categorical/integer/float
 	exec(cmd + ' < ./anno-by-type.sql')
+
+	// index all tables
 	exec(cmd + ' < ./indexing.sql')
 }

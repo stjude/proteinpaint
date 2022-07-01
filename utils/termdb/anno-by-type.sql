@@ -7,15 +7,17 @@ create table anno_integer (
   term_id character varying(100) not null,
   value integer not null
 );
-create index a_int_sample on anno_integer(sample);
-create index a_int_termid on anno_integer(term_id);
-create index a_int_value on anno_integer(value);
 
 -- copy entries from the annotations table
 insert into anno_integer (sample, term_id, value) 
 select sample, term_id, CAST(value as integer) 
 from annotations a 
 join terms t on t.id=a.term_id and t.type='integer';
+
+create index a_int_sample on anno_integer(sample);
+create index a_int_termid on anno_integer(term_id);
+create index a_int_value on anno_integer(value);
+
 
 -- compare the unique sample and term counts to verify
 select '----   #annotated samples, #terms   ------';
@@ -40,15 +42,17 @@ create table anno_float (
   term_id character varying(100) not null,
   value REAL not null
 );
-create index a_float_sample on anno_float(sample);
-create index a_float_termid on anno_float(term_id);
-create index a_float_value on anno_float(value);
-
 -- copy entries from the annotations table
 insert into anno_float (sample, term_id, value) 
 select sample, term_id, CAST(value as real) 
 from annotations a 
 join terms t on t.id=a.term_id and t.type='float';
+
+create index a_float_sample on anno_float(sample);
+create index a_float_termid on anno_float(term_id);
+create index a_float_value on anno_float(value);
+
+
 
 -- compare the unique sample and term counts to verify
 select '----   #annotated samples, #terms   ------';
@@ -70,15 +74,16 @@ create table anno_categorical (
   term_id character varying(100) not null,
   value character varying(255) not null
 );
-create index a_cat_sample on anno_categorical(sample);
-create index a_cat_termid on anno_categorical(term_id);
-create index a_cat_value on anno_categorical(value);
 
 -- copy entries from the annotations table
 insert into anno_categorical (sample, term_id, value) 
 select sample, term_id, value 
 from annotations a 
 join terms t on t.id=a.term_id and t.type='categorical';
+
+create index a_cat_sample on anno_categorical(sample);
+create index a_cat_termid on anno_categorical(term_id);
+create index a_cat_value on anno_categorical(value);
 
 -- compare the unique sample and term counts to verify
 select '----   #annotated samples, #terms   ------';
