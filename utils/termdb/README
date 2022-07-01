@@ -3,6 +3,7 @@ Files under this folder:
 - buildTermdb.js: a general purpose pipeline to build SQLite database,
   using input files for dictionary and sample anntation contents.
 - *.sql: various SQL scripts that fully define the database table structure and indexing
+- reheader.py: used for datasets with BCF/tabix files
 
 To run the pipeline, first generate webpack bundle:
 
@@ -11,8 +12,21 @@ $ ../../node_modules/.bin/webpack --config=webpack.config.js
 This yields script "buildTermdb.bundle.js".
 Copy this script, along with *.sql scripts, to where you want to run it, e.g. hpc:~/tp/your/path/
 
-Build your db:
+
+
+Usage 1: Build db with dictionary and sample annotation.
 
 $ node buildTermdb.bundle.js terms=path/to/terms.txt annotation3Col=path/to/annotations.txt survival=path/to/survival.txt
 
-This generates a database file named "db.runId"
+This generates a database file named "db.runId", and integer-to-string sample name mapping "sampleidmap.runId"
+
+If the dataset has BCF or tabix files that contains string sample names, must reheader these files using "sampleidmap", to generate new BCF/tabix files using integer sample IDs.
+
+$ python3 reheader.py --bcf path/to/bcf_file --fusion path/to/fusion_file --sample path/to/sampleIdMatchFile --out_bcf reheadered_bcf --out_fusion reheadered_fusion
+
+
+Usage 2: Build dictionary-only db.
+
+$ node buildTermdb.bundle.js phenotree=path/to/phenotree.txt
+
+This generates only a db file.
