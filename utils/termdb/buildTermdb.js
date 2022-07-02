@@ -385,7 +385,8 @@ function finalizeTerms(terms) {
 				}
 			}
 			if (!term.bins) term.bins = {}
-			if (!term.bins.default) {
+			if (!term.bins.default && computableValues.length) {
+				// missing bin config and has data, generate default config
 				term.bins.default = initBinConfig(computableValues)
 			}
 			delete term.__all_values
