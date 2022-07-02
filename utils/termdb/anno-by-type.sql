@@ -25,8 +25,11 @@ select 'anno_integer', count(*), count(distinct(term_id))
 from anno_integer;
 select 'subcohort_term integer', sum(s.count), count(distinct(term_id)) 
 from subcohort_terms s 
-join terms t on t.id = s.term_id 
-where t.type = 'integer' and cohort != 'CCSS,SJLIFE' ;
+join terms t on t.id = s.term_id
+-- exclude combined cohorts that will cause sample double counting
+-- assumes combined cohort names have a comma-separator
+-- !!! TODO: need a guaranteed way to detect combined cohorts !!!
+where t.type = 'integer' and cohort not like '%,%';
 
 
 
@@ -61,7 +64,10 @@ from anno_float;
 select 'subcohort_term float', sum(s.count), count(distinct(term_id))
 from subcohort_terms s 
 join terms t on t.id = s.term_id 
-where t.type = 'float' and cohort != 'CCSS,SJLIFE' ;
+-- exclude combined cohorts that will cause sample double counting
+-- assumes combined cohort names have a comma-separator
+-- !!! TODO: need a guaranteed way to detect combined cohorts !!!
+where t.type = 'float' and cohort not like '%,%';
 
 ----------------------------------
 
@@ -92,5 +98,8 @@ from anno_categorical;
 select 'subcohort_term categorical', sum(s.count), count(distinct(term_id)) 
 from subcohort_terms s 
 join terms t on t.id = s.term_id 
-where t.type = 'categorical' and cohort != 'CCSS,SJLIFE' ;
+-- exclude combined cohorts that will cause sample double counting
+-- assumes combined cohort names have a comma-separator
+-- !!! TODO: need a guaranteed way to detect combined cohorts !!!
+where t.type = 'categorical' and cohort not like '%,%';
 
