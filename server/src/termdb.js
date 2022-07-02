@@ -10,7 +10,6 @@ const regression = require('./termdb.regression')
 const termdbsnp = require('./termdb.snp')
 const LDoverlay = require('./mds2.load.ld').overlay
 const getOrderedLabels = require('./termdb.barsql').getOrderedLabels
-const get_flagset = require('./bulk.mset').get_flagset
 const isUsableTerm = require('#shared/termdb.usecase').isUsableTerm
 
 /*
@@ -84,9 +83,12 @@ export function handle_request_closure(genomes) {
 			if (q.getvariantfilter) return trigger_getvariantfilter(res, ds)
 			if (q.getLDdata) return trigger_getLDdata(q, res, ds)
 
-			// generic data getter, instead of using flags
-			if (q.for) {
-				const data = await require(`./termdb.${q.for}.js`).getData(q, ds)
+			// TODO: use trigger flags like above?
+			if (q.for == 'termTypes') {
+				res.send(await ds.getTermTypes(q))
+				return
+			} else if (q.for == 'matrix') {
+				const data = await require(`./termdb.matrix.js`).getData(q, ds)
 				res.send(data)
 				return
 			}
@@ -171,25 +173,12 @@ do not directly hand over the term object to client; many attr to be kept on ser
 
 async function trigger_findterm(q, res, termdb, ds) {
 	// TODO also search categories
-	const flagset = await get_flagset(ds, q.genome) //console.log(flagset)
 	const matches = { equals: [], startsWith: [], startsWord: [], includes: [] }
 	const str = q.findterm.toUpperCase()
 	// harcoded gene name length limit to exclude fusion/comma-separated gene names
 	/* TODO: improve the logic for excluding concatenated gene names */
-	const maxGeneNameLength = 25
 	if (isUsableTerm({ type: 'geneVariant' }, q.usecase).has('plot')) {
-		for (const flagname in flagset) {
-			const flag = flagset[flagname]
-			for (const gene in flag.data) {
-				if (gene.length > maxGeneNameLength) continue
-				if (!flag.data[gene]?.length) continue
-				const d = { name: gene, type: 'geneVariant', isleaf: true }
-				if (gene === str) matches.equals.push(d)
-				else if (gene.startsWith(str)) matches.startsWith.push(d)
-				else if (gene.includes(' ' + str)) matches.startsWord.push(d)
-				else if (gene.includes(str)) matches.includes.push(d)
-			}
-		}
+		await ds.mayGetMatchingGeneNames(matches, str, q)
 	}
 
 	if (typeof q.cohortStr !== 'string') q.cohortStr = ''

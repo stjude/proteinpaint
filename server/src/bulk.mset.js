@@ -36,10 +36,14 @@ const handlers = {
 
 
 */
-exports.getGeneVariantData = async function(tw, q) {
+exports.mayGetGeneVariantData = async function(tw, q) {
+	// assumes this function will get attached as a method of a dataset bootstrap object
+	const ds = this
 	const tname = tw.term.name
-	const flagset = await get_flagset(q.ds, q.genome)
+	const flagset = await get_flagset(ds, q.genome)
 	const bySampleId = new Map()
+	if (!flagset) return bySampleId
+
 	for (const flagname in flagset) {
 		const flag = flagset[flagname]
 		if (!(tname in flag.data)) continue
@@ -51,7 +55,74 @@ exports.getGeneVariantData = async function(tw, q) {
 			sampleData[tname].values.push(d)
 		}
 	}
+
 	return bySampleId
+}
+
+exports.getTermTypes = async function getData(q) {
+	// assumes this function will get attached as a method of a dataset bootstrap object
+	const ds = this
+	try {
+		const ids = JSON.parse(q.ids)
+		const qmarks = ids.map(() => '?').join(',')
+		const sql = `SELECT id, name, type, jsondata, parent_id FROM terms WHERE id IN (${qmarks}) OR name IN (${qmarks})`
+		const rows = ds.cohort.db.connection.prepare(sql).all([...ids, ...ids])
+		const terms = {}
+		for (const r of rows) {
+			if (r.jsondata) Object.assign(r, JSON.parse(r.jsondata))
+			terms[r.id] = r
+		}
+
+		const remainingIds = ids.filter(id => !terms[id])
+		const flagset = await get_flagset(ds, q.genome)
+		if (flagset) {
+			for (const flagname in flagset) {
+				const flag = flagset[flagname]
+				if (!flag.data) continue
+				for (const name of remainingIds) {
+					if (name in flag.data && !(name in terms)) terms[name] = { name, type: 'geneVariant' }
+				}
+			}
+		}
+
+		return terms
+	} catch (e) {
+		if (e.stack) console.log(e.stack)
+		return { error: e.message || e }
+	}
+}
+
+/*
+	matches: object to track matching gene names
+		{ equals: [], startsWith: [], startsWord: [], includes: [] }
+
+	str: substring to match against gene name
+
+	q: hydrated request object
+
+	maxGeneNameLength: optional, useful to avoid long fused gene strings
+*/
+exports.mayGetMatchingGeneNames = async function(matches, str, q, maxGeneNameLength = 25) {
+	// assumes this function will get attached as a method of a dataset bootstrap object
+	const ds = this
+	let unmatched = 0
+	const flagset = await get_flagset(ds, q.genome)
+	if (!flagset) return
+	for (const flagname in flagset) {
+		const flag = flagset[flagname]
+		for (const gene in flag.data) {
+			if (gene.length > maxGeneNameLength) continue
+			if (!flag.data[gene]?.length) continue
+			const d = { name: gene, type: 'geneVariant', isleaf: true }
+			if (gene === str) matches.equals.push(d)
+			else if (gene.startsWith(str)) matches.startsWith.push(d)
+			else if (gene.includes(' ' + str)) matches.startsWord.push(d)
+			else if (gene.includes(str)) matches.includes.push(d)
+			else {
+				if (gene == 'TP53') unmatched++
+			}
+		}
+	}
 }
 
 async function get_flagset(ds, genome) {

@@ -7,7 +7,6 @@ const imagesize = require('image-size')
 const serverconfig = require('./serverconfig')
 const utils = require('./utils')
 const termdbsql = require('./termdb.sql')
-const getGeneVariantData = require('./bulk.mset').getGeneVariantData
 
 /*
 q {}
@@ -108,7 +107,7 @@ async function getSampleData(q, terms) {
 		// for each non dictionary term type
 		// query sample data with its own method and append results to "samples"
 		if (tw.term.type == 'geneVariant') {
-			const bySampleId = await getGeneVariantData(tw, q)
+			const bySampleId = await q.ds.mayGetGeneVariantData(tw, q)
 			for (const [sampleId, value] of bySampleId.entries()) {
 				if (!(tw.term.name in value)) continue
 				if (!dictTerms.length) {

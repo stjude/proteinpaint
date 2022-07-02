@@ -4,7 +4,6 @@ const write_file = require('./utils').write_file
 const fs = require('fs')
 const serverconfig = require('./serverconfig')
 const lines2R = require('./lines2R')
-const getGeneVariantData = require('./bulk.mset').getGeneVariantData
 
 export async function get_survival(q, ds) {
 	try {
@@ -52,8 +51,7 @@ export async function get_survival(q, ds) {
 		results.lst.sort((a, b) => (a[vNum] < b[vNum] ? -1 : 1))
 
 		if (q.term2?.type == 'geneVariant') {
-			console.log(54)
-			await addGeneData(q, results.lst)
+			await mayAddGeneVariantData(q, results.lst)
 		}
 
 		const byChartSeries = {}
@@ -161,9 +159,9 @@ function getOrderedLabels(term, bins = []) {
 	return bins.map(bin => (bin.name ? bin.name : bin.label))
 }
 
-async function addGeneData(q, rows) {
+async function mayAddGeneVariantData(q, rows) {
 	const termq = q.term2_q
-	const bySampleId = await getGeneVariantData({ term: q.term2, q: termq }, q)
+	const bySampleId = await q.ds.mayGetGeneVariantData({ term: q.term2, q: termq }, q)
 	if (!termq.exclude) termq.exclude = []
 	const tname = q.term2.name
 	for (const row of rows) {

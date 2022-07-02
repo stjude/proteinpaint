@@ -34,6 +34,15 @@ export async function init_db(ds, app = null, basepath = null) {
 	await validate_termdbconfig(ds.cohort.termdb)
 	server_init_db_queries(ds)
 	setSampleIdMap(ds)
+
+	// !!! TODO !!!
+	// handle different sources/formats for gene variant data
+	// instead of assumed mutation text files
+	const { mayGetGeneVariantData, getTermTypes, mayGetMatchingGeneNames } = require('./bulk.mset')
+	ds.mayGetGeneVariantData = mayGetGeneVariantData
+	ds.getTermTypes = getTermTypes
+	ds.mayGetMatchingGeneNames = mayGetMatchingGeneNames
+
 	// the "refresh" attribute on ds.cohort.db should be set in serverconfig.json
 	// for a genome dataset, using "updateAttr: [[...]]
 	if (ds.cohort.db.refresh && app) setDbRefreshRoute(ds, app, basepath)
