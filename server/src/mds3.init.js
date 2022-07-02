@@ -114,6 +114,7 @@ async function validate_termdb(ds) {
 			if (typeof gdcapi.filters != 'function') throw '.filters is not in termid2totalsize2'
 		} else {
 			// query through termdb methods
+			// since termdb.dictionary is a required attribute
 		}
 
 		/* add getter
@@ -204,17 +205,12 @@ function validate_variant2samples(ds) {
 		// look for server-side vcf/bcf/tabix file
 		// file header should already been parsed and samples obtain if any
 		let hasSamples = false
-		if (ds.queries.snvindel) {
-			// has snvindel
-			if (ds.queries.snvindel.byrange) {
-				if (ds.queries.snvindel.byrange._tk) {
-					if (ds.queries.snvindel.byrange._tk.samples) {
-						// this file has samples
-						hasSamples = true
-					}
-				}
-			}
-			// expand later
+		if (ds.queries?.snvindel?.byrange?._tk?.samples) {
+			// this file has samples
+			hasSamples = true
+		}
+		if (ds.queries?.svfusion?.byrange?.samples) {
+			hasSamples = true
 		}
 		if (!hasSamples) throw 'cannot find a sample source from ds.queries{}'
 	}

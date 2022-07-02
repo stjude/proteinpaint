@@ -88,9 +88,12 @@ that contains chromsome position for querying snvindel or svfusion file
 thus can extract coordinate from  to query
 
 snvindel id has 4 fields, svfusion id has 6 fields, thus be able to differentiate
+
+TODO no need to collect ssm_id_lst for each sample e.g. doing sunburst
 */
 async function queryServerFileBySsmid(q, termidlst, ds) {
-	let samples = [] // array can be modified by q.tid2value
+	const samples = new Map() // must use sample id in map to dedup samples from multiple variants
+	// k: sample_id, v: {ssm_id_lst:[], ...}
 
 	for (const ssmid of q.ssm_id_lst.split(',')) {
 		const l = ssmid.split(ssmIdFieldsSeparator)
@@ -109,8 +112,8 @@ async function queryServerFileBySsmid(q, termidlst, ds) {
 			for (const m of mlst) {
 				if (m.pos != pos || m.ref != ref || m.alt != alt) continue
 				for (const s of m.samples) {
-					s.ssm_id = ssmid
-					samples.push(s)
+					if (!samples.has(s.sample_id)) samples.set(s.sample_id, { sample_id: s.sample_id, ssm_id_lst: [] })
+					samples.get(s.sample_id).ssm_id_lst.push(ssmid)
 				}
 			}
 			continue
@@ -132,23 +135,13 @@ async function queryServerFileBySsmid(q, termidlst, ds) {
 			const mlst = await ds.queries.svfusion.byrange.get(param)
 
 			for (const m of mlst) {
-				if (m.dt != dt || m.pos != pos || m.strand != strand || m.pairlstIdx != pairlstIdx || m.mname != mname) continue
+				if (m.dt != dt || m.pos != pos || m.strand != strand || m.pairlstIdx != pairlstIdx || m.mname != mname) {
+					// not this fusion event
+					continue
+				}
 				for (const s of m.samples) {
-					// if this sample is already found from snvindel
-					const s2 = samples.find(i => i.sample_id == s.sample_id)
-					if (s2) {
-						// this sample is already found; record ssmid on this s2
-						if (s2.ssm_id_lst) {
-							s2.ssm_id_lst.push(ssmid)
-						} else {
-							s2.ssm_id_lst = [s2.ssm_id, ssmid]
-							delete s2.ssm_id
-						}
-					} else {
-						// this sample is not found yet
-						s.ssm_id = ssmid
-						samples.push(s)
-					}
+					if (!samples.has(s.sample_id)) samples.set(s.sample_id, { sample_id: s.sample_id, ssm_id_lst: [] })
+					samples.get(s.sample_id).ssm_id_lst.push(ssmid)
 				}
 			}
 			continue
@@ -158,7 +151,7 @@ async function queryServerFileBySsmid(q, termidlst, ds) {
 
 	if (termidlst && termidlst.length) {
 		// append term values to each sample
-		for (const s of samples) {
+		for (const s of samples.values()) {
 			for (const tid of termidlst) {
 				const v = ds.cohort.termdb.q.getSample2value(tid, s.sample_id)
 				if (v[0]) {
@@ -168,21 +161,21 @@ async function queryServerFileBySsmid(q, termidlst, ds) {
 		}
 	}
 
-	return samples
+	return [...samples.values()]
 }
 
 /*
 get list of samples that harbor any variant in rglst[]
 */
 async function queryServerFileByRglst(q, termidlst, ds) {
-	const samples = []
+	const samples = new Map() // same as in previous function
 
 	if (ds.queries.snvindel) {
 		const mlst = await ds.queries.snvindel.byrange.get(q)
 		for (const m of mlst) {
 			for (const s of m.samples) {
-				s.ssm_id = m.ssm_id
-				samples.push(s)
+				if (!samples.has(s.sample_id)) samples.set(s.sample_id, { sample_id: s.sample_id, ssm_id_lst: [] })
+				samples.get(s.sample_id).ssm_id_lst.push(m.ssm_id)
 			}
 		}
 	}
@@ -191,28 +184,15 @@ async function queryServerFileByRglst(q, termidlst, ds) {
 
 		for (const m of mlst) {
 			for (const s of m.samples) {
-				// if this sample is already found from snvindel
-				const s2 = samples.find(i => i.sample_id == s.sample_id)
-				if (s2) {
-					// this sample is already found; record ssmid on this s2
-					if (s2.ssm_id_lst) {
-						s2.ssm_id_lst.push(m.ssm_id)
-					} else {
-						s2.ssm_id_lst = [s2.ssm_id, m.ssm_id]
-						delete s2.ssm_id
-					}
-				} else {
-					// this sample is not found yet
-					s.ssm_id = m.ssm_id
-					samples.push(s)
-				}
+				if (!samples.has(s.sample_id)) samples.set(s.sample_id, { sample_id: s.sample_id, ssm_id_lst: [] })
+				samples.get(s.sample_id).ssm_id_lst.push(m.ssm_id)
 			}
 		}
 	}
 
 	if (termidlst && termidlst.length) {
 		// append term values to each sample
-		for (const s of samples) {
+		for (const s of samples.values()) {
 			for (const tid of termidlst) {
 				const v = ds.cohort.termdb.q.getSample2value(tid, s.sample_id)
 				if (v[0]) {
@@ -222,7 +202,7 @@ async function queryServerFileByRglst(q, termidlst, ds) {
 		}
 	}
 
-	return samples
+	return [...samples.values()]
 }
 
 async function make_sunburst(samples, ds, q) {
