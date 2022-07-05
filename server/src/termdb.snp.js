@@ -35,7 +35,7 @@ validateInputCreateCache_by_coord
 const bcfformat_snplst = '%CHROM\t%POS\t%REF\t%ALT[\t%TGT]\n'
 const bcfformat_snplocus = '%POS\t%ID\t%REF\t%ALT\t%INFO[\t%TGT]\n'
 const missing_gt = '.'
-const snplocusMaxVariantCount = 100
+const snplocusMaxVariantCount = 500
 
 export async function validate(q, tdb, ds, genome) {
 	try {

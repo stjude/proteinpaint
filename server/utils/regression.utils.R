@@ -66,9 +66,7 @@ buildFormulas <- function(outcome, independent) {
   # first, format variables for building formulas
   
   # declare new objects
-  outcomeIds <- vector(mode = "character") # ids of outcome variables
   formula_outcome <- vector(mode = "character") # outcome variables formatted for formula
-  independentIds <- vector(mode = "character") # ids of independent variables
   formula_independent <- vector(mode = "character") # independent variables formatted for formula
   formula_interaction <- vector(mode = "character") # interacting variables formatted for formula
   snpLocusSnps <- independent[0,] # snplocus snps
@@ -82,19 +80,16 @@ buildFormulas <- function(outcome, independent) {
     if (outcome$timeToEvent$timeScale == "time") {
       outcomeTimeId <- outcome$timeToEvent$timeId
       formula_outcome <- paste0("Surv(",outcomeTimeId,", ",outcomeEventId,")")
-      outcomeIds <- c(outcomeIds, outcomeTimeId, outcomeEventId)
     } else if (outcome$timeToEvent$timeScale == "age") {
       outcomeAgeStartId <- outcome$timeToEvent$agestartId
       outcomeAgeEndId <- outcome$timeToEvent$ageendId
       formula_outcome <- paste0("Surv(",outcomeAgeStartId,", ",outcomeAgeEndId,", ",outcomeEventId,")")
-      outcomeIds <- c(outcomeIds, outcomeAgeStartId, outcomeAgeEndId, outcomeEventId)
     } else {
       stop ("unknown cox regression time scale")
     }
   } else {
     # other outcome variable
     formula_outcome <- outcome$id
-    outcomeIds <- c(outcomeIds, outcome$id)
   }
   
   # independent variables
@@ -103,7 +98,6 @@ buildFormulas <- function(outcome, independent) {
     if (variable$type == "spline") {
       # cubic spline variable
       # use call to cubic spline function in regression formula
-      independentIds <- c(independentIds, variable$id)
       splineCmd <- paste0("cubic_spline(", variable$id, ", ", paste0("c(", paste(variable$spline$knots[[1]],collapse = ","), ")"), ")")
       formula_independent <- c(formula_independent, splineCmd)
       splineVariables <- rbind(splineVariables, variable)
@@ -115,7 +109,6 @@ buildFormulas <- function(outcome, independent) {
     } else {
       # other independent variable
       formula_independent <- c(formula_independent, variable$id)
-      independentIds <- c(independentIds, variable$id)
     }
     if ("interactions" %in% names(variable) & length(variable$interactions[[1]]) > 0) {
       # interactions
@@ -140,11 +133,9 @@ buildFormulas <- function(outcome, independent) {
     # snplocus snps present
     # build separate formula for each snplocus snp
     for (r in 1:nrow(snpLocusSnps)) {
-      tempIndependentIds <- independentIds
       temp_formula_independent <- formula_independent
       temp_formula_interaction <- formula_interaction
       snp <- snpLocusSnps[r,]
-      tempIndependentIds <- c(tempIndependentIds, snp$id)
       temp_formula_independent <- c(temp_formula_independent, snp$id)
       if ("interactions" %in% names(snp) & length(snp$interactions[[1]]) > 0) {
         # interactions
@@ -160,7 +151,7 @@ buildFormulas <- function(outcome, independent) {
       }
       formula <- as.formula(paste(formula_outcome, paste(c(temp_formula_independent, temp_formula_interaction), collapse = "+"), sep = "~"))
       entry <- length(formulas) + 1
-      formulas[[entry]] <- list("id" = snp$id, "formula" = formula, "outcomeIds" = outcomeIds, "independentIds" = tempIndependentIds)
+      formulas[[entry]] <- list("id" = snp$id, "formula" = formula)
       if (nrow(splineVariables) > 0) {
         formulas[[entry]][["splineVariables"]] = splineVariables
       }
@@ -169,7 +160,7 @@ buildFormulas <- function(outcome, independent) {
     # no snplocus snps
     # use single formula for all variables
     formula <- as.formula(paste(formula_outcome, paste(c(formula_independent, formula_interaction), collapse = "+"), sep = "~"))
-    formulas[[1]] <- list("id" = "", "formula" = formula, "outcomeIds" = outcomeIds, "independentIds" = independentIds)
+    formulas[[1]] <- list("id" = "", "formula" = formula)
     if (nrow(splineVariables) > 0) {
       formulas[[1]][["splineVariables"]] = splineVariables
     }
@@ -178,13 +169,15 @@ buildFormulas <- function(outcome, independent) {
 }
 
 # linear regression
-linearRegression <- function(formula, fdat) {
-  res <- lm(formula$formula, data = fdat)
+linearRegression <- function(formula, dat) {
+  res <- lm(formula$formula, data = dat)
   sampleSize <- res$df.residual + length(res$coefficients[!is.na(res$coefficients)])
   res_summ <- summary(res)
-  # prepare residuals table
+  
+  # residuals table
   residuals_table <- list("header" = c("Minimum","1st quartile","Median","3rd quartile","Maximum"), "rows" = unname(round(fivenum(res_summ$residuals),3)))
-  # prepare coefficients table
+  
+  # coefficients table
   coefficients_table <- build_coef_table(res_summ)
   colnames(coefficients_table)[1] <- "Beta"
   # compute confidence intervals of beta values
@@ -192,12 +185,14 @@ linearRegression <- function(formula, fdat) {
   colnames(ci) <- c("95% CI (low)","95% CI (high)")
   coefficients_table <- cbind(coefficients_table, ci)
   coefficients_table <- coefficients_table[,c(1,5,6,2,3,4)]
-  # prepare type III statistics table
+  
+  # type III statistics table
   type3_table <- as.matrix(drop1(res, scope = ~., test = "F"))
   type3_table[,c("Sum of Sq","RSS","AIC")] <- round(type3_table[,c("Sum of Sq","RSS","AIC")], 1)
   type3_table[,"F value"] <- round(type3_table[,"F value"], 3)
   type3_table[,"Pr(>F)"] <- signif(type3_table[,"Pr(>F)"], 4)
-  # prepare other summary stats table
+  
+  # other summary stats table
   other_table <- list(
     "header" = c("Residual standard error", "Residual degrees of freedom", "R-squared", "Adjusted R-squared", "F-statistic", "P-value"),
     "rows" = c(round(res_summ$sigma, 2), round(res$df.residual, 0), round(res_summ$r.squared, 5), round(res_summ$adj.r.squared, 5))
@@ -209,19 +204,22 @@ linearRegression <- function(formula, fdat) {
   } else {
     other_table[["rows"]] <- c(other_table[["rows"]], NA, NA)
   }
+  
   # export the results tables
   out <- list("res" = res, "sampleSize" = unbox(sampleSize), "residuals" = residuals_table, "coefficients" = coefficients_table, "type3" = type3_table, "other" = other_table)
   return(out)
 }
 
 # logistic regression
-logisticRegression <- function(formula, fdat) {
-  res <- glm(formula$formula, family = binomial(link='logit'), data = fdat)
+logisticRegression <- function(formula, dat) {
+  res <- glm(formula$formula, family = binomial(link='logit'), data = dat)
   sampleSize <- res$df.residual + length(res$coefficients[!is.na(res$coefficients)])
   res_summ <- summary(res)
-  # prepare residuals table
+  
+  # residuals table
   residuals_table <- list("header" = c("Minimum","1st quartile","Median","3rd quartile","Maximum"), "rows" = unname(round(fivenum(res_summ$deviance.resid),3)))
-  # prepare coefficients table
+  
+  # coefficients table
   coefficients_table <- build_coef_table(res_summ)
   colnames(coefficients_table)[1] <- "Log odds"
   # compute odds ratio
@@ -229,8 +227,8 @@ logisticRegression <- function(formula, fdat) {
   # compute confidence intervals of odds ratios
   ci <- try(exp(suppressMessages(confint(res))), silent = T)
   if (identical(class(ci), "try-error")) {
-    # confidence interval computation failed
-    # likely because of small sample sizes of coefficients.
+    # computation of confidence intervals might fail
+    # because of small sample sizes of coefficients.
     # use custom confidence interval computation instead
     low <- coefficients_table[,"Log odds"] - (1.96 * coefficients_table[,"Std. Error"])
     up <- coefficients_table[,"Log odds"] + (1.96 * coefficients_table[,"Std. Error"])
@@ -241,24 +239,27 @@ logisticRegression <- function(formula, fdat) {
   colnames(ci) <- c("95% CI (low)","95% CI (high)")
   coefficients_table <- cbind(coefficients_table, ci)
   coefficients_table <- coefficients_table[,c(1,6,7,2,3,4,5)]
-  # prepare type III statistics table
+  
+  # type III statistics table
   type3_table <- as.matrix(drop1(res, scope = ~., test = "LRT"))
   type3_table[,c("Deviance","AIC")] <- round(type3_table[,c("Deviance","AIC")], 1)
   type3_table[,"LRT"] <- round(type3_table[,"LRT"], 3)
   type3_table[,"Pr(>Chi)"] <- signif(type3_table[,"Pr(>Chi)"], 4)
-  # prepare other summary stats table
+  
+  # other summary stats table
   other_table <- list(
     "header" = c("Dispersion parameter", "Null deviance", "Null deviance degrees of freedom", "Residual deviance", "Residual deviance degrees of freedom", "AIC"),
     "rows" = round(c(res_summ$dispersion, res_summ$null.deviance, res_summ$df.null, res_summ$deviance, res_summ$df.residual, res_summ$aic), 1)
   )
+  
   # export the results tables
   out <- list("res" = res, "sampleSize" = unbox(sampleSize), "residuals" = residuals_table, "coefficients" = coefficients_table, "type3" = type3_table, "other" = other_table)
   return(out)
 }
 
 # cox regression
-coxRegression <- function(formula, fdat) {  
-  res <- coxph(formula$formula, data = fdat, model = T)
+coxRegression <- function(formula, dat) {  
+  res <- coxph(formula$formula, data = dat, model = T)
   
   # extract summary object
   res_summ <- summary(res)
@@ -281,10 +282,10 @@ coxRegression <- function(formula, fdat) {
   coefficients_table <- coefficients_table[, c(2,6,7,1,3,4,5), drop = F]
   
   # type III statistics table
-  type3_table <- as.matrix(drop1(res, scope = ~., test = "Chisq"))
-  type3_table[,"AIC"] <- round(type3_table[,"AIC"], 1)
-  type3_table[,"LRT"] <- round(type3_table[,"LRT"], 3)
-  type3_table[,"Pr(>Chi)"] <- signif(type3_table[,"Pr(>Chi)"], 4)
+  type3_table <- as.matrix(anova(res, test = "Chisq"))
+  type3_table[,"loglik"] <- round(type3_table[,"loglik"], 1)
+  type3_table[,"Chisq"] <- round(type3_table[,"Chisq"], 3)
+  type3_table[,"Pr(>|Chi|)"] <- signif(type3_table[,"Pr(>|Chi|)"], 4)
   
   # statistical tests table
   tests_table <- rbind(res_summ$logtest, res_summ$waldtest, res_summ$sctest)
@@ -307,7 +308,8 @@ coxRegression <- function(formula, fdat) {
 }
 
 # run regression analysis
-runRegression <- function(regtype, formula, fdat, outcome) {
+runRegression <- function(formula, regtype, dat, outcome) {
+  id <- formula$id
   warns <- vector(mode = "character")
   handleWarns <- function(w) {
     # handler for warning messages
@@ -315,11 +317,11 @@ runRegression <- function(regtype, formula, fdat, outcome) {
     invokeRestart("muffleWarning")
   }
   if (regtype == "linear") {
-    results <- withCallingHandlers(linearRegression(formula, fdat), warning = handleWarns)
+    results <- withCallingHandlers(linearRegression(formula, dat), warning = handleWarns)
   } else if (regtype == "logistic") {
-    results <- withCallingHandlers(logisticRegression(formula, fdat), warning = handleWarns)
+    results <- withCallingHandlers(logisticRegression(formula, dat), warning = handleWarns)
   } else if (regtype == "cox") {
-    results <- withCallingHandlers(coxRegression(formula, fdat), warning = handleWarns)
+    results <- withCallingHandlers(coxRegression(formula, dat), warning = handleWarns)
   } else {
     stop("unknown regression type")
   }
@@ -332,42 +334,53 @@ runRegression <- function(regtype, formula, fdat, outcome) {
     for (r in 1:nrow(splineVariables)) {
       splineVariable <- splineVariables[r,]
       if ("plotfile" %in% names(splineVariable$spline)) {
-        plot_spline(splineVariable, fdat, outcome, formula$independentIds, results$res, regtype)
+        plot_spline(splineVariable, dat, outcome, results$res, regtype)
       }
     }
   }
   if (length(warns) > 0) results[["warnings"]] <- warns
-  return(results)
+  results$coefficients <- formatCoefficients(results$coefficients, results$res, input$regressionType)
+  results$type3 <- formatType3(results$type3)
+  out <- list("id" = unbox(id), "data" = results[names(results) != "res"])
+  return(out)
 }
 
 # generate cubic spline plot spline
-plot_spline <- function(splineVariable, fdat, outcome, independentIds, res, regtype) {
-  ## prepare test data
+plot_spline <- function(splineVariable, dat, outcome, res, regtype) {
   sampleSize <- 1000
-  # newdat: test data table for predicting model outcome values
+  
+  # prepare test data table for predicting model outcome values
   # columns are all independent variables
   # for the spline variable, use regularly spaced data; for continuous variables, use data median; for categorical variables, use reference category
-  newdat <- fdat[1:sampleSize, independentIds, drop = F]
-  # newdat2: test data table for adjusting model outcome values
+  if (regtype == "cox") {
+    outcomeIds <- c(outcome$timeToEvent$timeId, outcome$timeToEvent$eventId)
+  } else {
+    outcomeIds <- outcome$id
+  }
+  independentIds <- colnames(dat)[!colnames(dat) %in% outcomeIds]
+  newdat <- dat[1:sampleSize, independentIds, drop = F]
+  
+  # prepare test data table for adjusting model outcome values
   # columns are the proportions and effect sizes of non-reference categorical coefficients 
   newdat2 <- matrix(data = NA, nrow = 0, ncol = 2, dimnames = list(c(),c("prop", "effectSize")))
+  
   # populate the test data tables
   for (term in colnames(newdat)) {
     if (term == splineVariable$id) {
-      newdat[,term] <- seq(from = min(fdat[,term]), to = max(fdat[,term]), length.out = sampleSize)
-    } else if (is.factor(fdat[,term])) {
-      ref <- levels(fdat[,term])[1]
+      newdat[,term] <- seq(from = min(dat[,term]), to = max(dat[,term]), length.out = sampleSize)
+    } else if (is.factor(dat[,term])) {
+      ref <- levels(dat[,term])[1]
       newdat[,term] <- ref
-      props <- table(fdat[,term], exclude = ref)/length(fdat[,term])
+      props <- table(dat[,term], exclude = ref)/length(dat[,term])
       for (category in names(props)) {
         newdat2 <- rbind(newdat2, c(props[category], res$coefficients[paste0(term,category)]))
       }
     } else {
-      newdat[,term] <- median(fdat[,term])
+      newdat[,term] <- median(dat[,term])
     }
   }
   
-  ## test model
+  # test model
   # predict outcome values of the model using the test data
   preddat <- predict(res, newdata = newdat, se.fit = T)
   # compute 95% confidence intervals
@@ -378,7 +391,7 @@ plot_spline <- function(splineVariable, fdat, outcome, independentIds, res, regt
   # adjusted predicted values = predicted values + ((prop category A * coef category A) + (prop category B * coef category B) + etc.)
   preddat_ci_adj <- preddat_ci + sum(apply(newdat2, 1, prod), na.rm = T)
   
-  ## plot data
+  # plot data
   plotfile <- splineVariable$spline$plotfile
   png(filename = plotfile, width = 950, height = 550, res = 200)
   par(mar = c(3, 2.5, 1, 5), mgp = c(1, 0.5, 0), xpd = T)
@@ -397,14 +410,14 @@ plot_spline <- function(splineVariable, fdat, outcome, independentIds, res, regt
     }
     # first plot actual (not predicted) data
     # predicted data will be overlayed later
-    plot(fdat[,splineVariable$id],
-         fdat[,outcome$id],
+    plot(dat[,splineVariable$id],
+         dat[,outcome$id],
          cex.axis = 0.5,
          ann = F,
          type = "n"
     )
-    points(fdat[,splineVariable$id],
-           fdat[,outcome$id],
+    points(dat[,splineVariable$id],
+           dat[,outcome$id],
            pch = pointtype,
            cex = pointsize
     )

@@ -90,17 +90,25 @@ const regressionTypes = ['linear', 'logistic', 'cox']
 // minimum number of samples to run analysis
 const minimumSample = 1
 
+let stime, etime
+const benchmark = { NodeJS: {}, 'regression.R': {} }
 export async function get_regression(q, ds) {
 	try {
 		parse_q(q, ds)
 
+		stime = new Date().getTime()
 		const sampledata = await getSampleData(q, [q.outcome, ...q.independent], ds)
 		/* each element is one sample with a key-val map for all its annotations:
 		{sample, id2value:Map( tid => {key,value}) }
 		*/
+		etime = new Date().getTime()
+		benchmark['NodeJS']['getSampleData'] = (etime - stime) / 1000 + ' sec'
 
+		stime = new Date().getTime()
 		// build the input for R script
 		const Rinput = makeRinput(q, sampledata)
+		etime = new Date().getTime()
+		benchmark['NodeJS']['makeRinput'] = (etime - stime) / 1000 + ' sec'
 
 		validateRinput(Rinput)
 		const [id2originalId, originalId2id] = replaceTermId(Rinput)
@@ -120,6 +128,8 @@ export async function get_regression(q, ds) {
 			runRegression(Rinput, id2originalId, q, result),
 			snplocusPostprocess(q, sampledata, Rinput, result)
 		])
+
+		console.log('benchmark:', benchmark)
 
 		return result
 	} catch (e) {
@@ -570,36 +580,23 @@ function validateRinput(Rinput) {
 
 async function runRegression(Rinput, id2originalId, q, result) {
 	// run regression analysis in R
+	stime = new Date().getTime()
 	const Rinputfile = path.join(serverconfig.cachedir, Math.random().toString() + '.json')
 	await utils.write_file(Rinputfile, JSON.stringify(Rinput))
 	const Routput = await lines2R(path.join(serverconfig.binpath, 'utils', 'regression.R'), [], [Rinputfile])
 	fs.unlink(Rinputfile, () => {})
 	await parseRoutput(Rinput, Routput, id2originalId, q, result)
+	etime = new Date().getTime()
+	benchmark['NodeJS']['runRegression'] = (etime - stime) / 1000 + ' sec'
 }
 
 async function parseRoutput(Rinput, Routput, id2originalId, q, result) {
 	if (Routput.length != 1) throw 'expected 1 json line in R output'
 	const out = JSON.parse(Routput[0])
+	const outdata = out.data
+	benchmark['regression.R'] = out.benchmark
 
-	/*
-	out (linear/logistic) 
-	[
-	  {
-		id: snpid from a snplocus term (empty if no snplocus terms)
-		data: { sampleSize, residuals: {}, coefficients: {}, type3: {}, other: {}, warnings: [] }
-	  }
-	]
-
-	out (cox) 
-	[
-	  {
-		id: snpid from a snplocus term (empty if no snplocus terms)
-		data: { sampleSize, eventCnt, coefficients: {}, type3: {}, tests: {}, other: {}, warnings: [] }
-	  }
-	]
-	*/
-
-	for (const analysis of out) {
+	for (const analysis of outdata) {
 		// convert "analysis" to "analysisResult", then push latter to resultLst
 		const analysisResult = {
 			data: {
@@ -742,6 +739,7 @@ async function parseRoutput(Rinput, Routput, id2originalId, q, result) {
 }
 
 async function snplocusPostprocess(q, sampledata, Rinput, result) {
+	stime = new Date().getTime()
 	const tw = q.independent.find(i => i.type == 'snplocus')
 	if (!tw) return
 	addResult4monomorphic(tw, result)
@@ -758,6 +756,8 @@ async function snplocusPostprocess(q, sampledata, Rinput, result) {
 			throw 'unknown regression type'
 		}
 	}
+	etime = new Date().getTime()
+	benchmark['NodeJS']['snplocusPostprocess'] = (etime - stime) / 1000 + ' sec'
 }
 
 async function lowAFsnps_wilcoxon(tw, sampledata, Rinput, result) {
