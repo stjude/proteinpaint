@@ -1,5 +1,6 @@
 const fs = require('fs')
 const exec = require('child_process').execSync
+const path = require('path')
 const { parseDictionary } = require('../../client/src/databrowser/dictionary.parse')
 const initBinConfig = require('../../shared/termdb.initbinconfig')
 
@@ -126,36 +127,50 @@ try {
 	buildDb(annotationData, survivalData, scriptArg)
 	// dbfile is created
 } catch (e) {
-	console.log(`Error: ${e.message || e}`)
+	console.log(`
+		!!! Error: !!! 
+		${e.message || e}
+	`)
 	if (e.stack) console.log(e.stack)
-	console.log(usageNote)
 	process.exit()
 }
 
 //////////////////////////////////// helpers
 
 function getScriptArg() {
+	const allowedArgs = new Set(['phenotree', 'terms', 'annotations', 'annotation3Col', 'survival'])
 	const arg = new Map()
-	for (let i = 2; i < process.argv.length; i++) {
-		const str = process.argv[i]
-		const [k, v] = str.split('=')
-		arg.set(k, v)
-	}
-
-	if (arg.size == 0) throw 'no arguments'
-	if (!arg.has('phenotree') && !arg.has('terms')) throw '"phenotree=" and "terms=" both missing'
-	/*
-	allow annotation files to be missing, and process only dictionary without sample info
-
-	if (!arg.has('annotation') && !arg.has('annotation3Col') && !arg.has('survival'))
-		throw '"annotation=" and "annotation3Col=" and "survival=" all missing'
-	*/
-	if (!arg.has('dbfile')) arg.set('dbfile', 'db.' + runId)
-	if (!arg.has('sqlite3')) arg.set('sqlite3', 'sqlite3')
 	try {
-		exec(arg.get('sqlite3')) // test if sqlite3 exists
+		for (let i = 2; i < process.argv.length; i++) {
+			const str = process.argv[i]
+			const [k, v] = str.split('=')
+			if (!allowedArgs.has(k)) throw `unsupported argument '${k}' in '${str}'`
+			arg.set(k, v)
+		}
+
+		if (arg.size == 0) throw 'no arguments'
+		if (!arg.has('phenotree') && !arg.has('terms')) throw '"phenotree=" and "terms=" both missing'
+		/*
+		allow annotation files to be missing, and process only dictionary without sample info
+
+		if (!arg.has('annotation') && !arg.has('annotation3Col') && !arg.has('survival'))
+			throw '"annotation=" and "annotation3Col=" and "survival=" all missing'
+		*/
+		if (!arg.has('dbfile')) arg.set('dbfile', 'db.' + runId)
+		if (!arg.has('sqlite3')) arg.set('sqlite3', 'sqlite3')
+		try {
+			exec(arg.get('sqlite3')) // test if sqlite3 exists
+		} catch (e) {
+			throw 'sqlite3 command not found'
+		}
 	} catch (e) {
-		throw 'sqlite3 command not found'
+		console.log(`
+			!!! Error: !!! 
+			${e.message || e}
+		`)
+		if (e.stack) console.log(e.stack)
+		console.log(usageNote)
+		process.exit()
 	}
 
 	return arg
@@ -267,7 +282,7 @@ function loadAnnotationFile(scriptArg, terms, sampleCollect) {
 			}
 
 			const term = terms.find(i => i.id == termid)
-			if (!term) throw 'annotation3Col invalid term id: ' + termid
+			if (!term) throw `annotation3Col invalid term id: '${termid}'`
 			loadValue(sampleId, term, value)
 		}
 	}
@@ -283,7 +298,7 @@ function loadAnnotationFile(scriptArg, terms, sampleCollect) {
 			const tid = headerfields[i]
 			if (!tid) throw `blank field at column ${i + 1} in file header`
 			const t = terms.find(j => j.id == tid)
-			if (!t) throw `header field is not a term id: ${tid}`
+			if (!t) throw `header field is not a term id: '${tid}'`
 			hterms.push(t)
 		}
 		for (let i = 1; i < lines.length; i++) {
@@ -349,8 +364,8 @@ function loadSurvival(scriptArg, terms, sampleCollect) {
 		}
 
 		const term = terms.find(i => i.id == termid)
-		if (!term) throw 'survival invalid term id: ' + termid
-		if (term.type != 'survival') throw 'term id ' + termid + ' type!=survival'
+		if (!term) throw `survival invalid term id: '${termid}'`
+		if (term.type != 'survival') throw `term id '${termid}' type!=survival`
 
 		const tte = Number(v1),
 			ec = Number(v2)
@@ -424,7 +439,7 @@ function buildDb(annotationData, survivalData, scriptArg) {
 	const cmd = scriptArg.get('sqlite3') + ' ' + scriptArg.get('dbfile')
 
 	// create db with blank tables
-	exec(cmd + ' < ./create.sql')
+	exec(`${cmd} < ${path.join(__dirname, './create.sql')}`)
 
 	// ".import" commands
 	const importLines = ['.mode tab', `.import ${termdbFile} terms`]
@@ -441,18 +456,18 @@ function buildDb(annotationData, survivalData, scriptArg) {
 
 	// populate ancestry table
 	// TODO need to be able to generate full lineage
-	exec(cmd + ' < ./setancestry.sql')
+	exec(`${cmd} < ${path.join(__dirname, 'setancestry.sql')}`)
 
 	// populate cohort,term_id,count fields from subcohort_terms table
 	// only works for dataset without subcohort, fill blank string to cohort
-	exec(cmd + ' < ./set-default-subcohort.sql')
+	exec(`${cmd} < ${path.join(__dirname, 'set-default-subcohort.sql')}`)
 
 	// populate included_types and child_types fields from subcohort_terms table
-	exec(cmd + ' < ./set-included-types.sql')
+	exec(`${cmd} < ${path.join(__dirname, 'set-included-types.sql')}`)
 
 	// create 3 separate tables anno-categorical/integer/float
-	exec(cmd + ' < ./anno-by-type.sql')
+	exec(`${cmd} < ${path.join(__dirname, 'anno-by-type.sql')}`)
 
 	// index all tables
-	exec(cmd + ' < ./indexing.sql')
+	exec(`${cmd} < ${path.join(__dirname, 'indexing.sql')}`)
 }
