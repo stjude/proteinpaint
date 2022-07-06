@@ -126,6 +126,7 @@ try {
 
 	buildDb(annotationData, survivalData, scriptArg)
 	// dbfile is created
+	console.log('Done!')
 } catch (e) {
 	console.log(`
 		!!! Error: !!! 
@@ -138,7 +139,8 @@ try {
 //////////////////////////////////// helpers
 
 function getScriptArg() {
-	const allowedArgs = new Set(['phenotree', 'terms', 'annotations', 'annotation3Col', 'survival'])
+	console.log('validating arguments ...')
+	const allowedArgs = new Set(['phenotree', 'terms', 'annotations', 'annotation3Col', 'survival', 'sqlite3'])
 	const arg = new Map()
 	try {
 		for (let i = 2; i < process.argv.length; i++) {
@@ -177,6 +179,7 @@ function getScriptArg() {
 }
 
 function loadDictionary(scriptArg) {
+	console.log('loading dictionary ...')
 	let terms // array of term objects
 	if (scriptArg.has('phenotree')) {
 		const out = parseDictionary(fs.readFileSync(scriptArg.get('phenotree'), { encoding: 'utf8' }))
@@ -204,6 +207,7 @@ function loadDictionary(scriptArg) {
 }
 
 function loadTermsFile(scriptArg) {
+	console.log('loading terms ...')
 	/* use "terms" file
 	 */
 	const terms = []
@@ -234,7 +238,6 @@ function loadTermsFile(scriptArg) {
 
 function loadAnnotationFile(scriptArg, terms, sampleCollect) {
 	if (!scriptArg.has('annotation') && !scriptArg.has('annotation3Col')) return
-
 	const annotations = new Map()
 	// k: sample integer id
 	// v: map{}, k: term id, v: value
@@ -266,6 +269,7 @@ function loadAnnotationFile(scriptArg, terms, sampleCollect) {
 	*/
 
 	function load3Col() {
+		console.log('loading annotation3Col ...')
 		for (const line of fs
 			.readFileSync(scriptArg.get('annotation3Col'), { encoding: 'utf8' })
 			.trim()
@@ -288,6 +292,7 @@ function loadAnnotationFile(scriptArg, terms, sampleCollect) {
 	}
 
 	function loadMatrix() {
+		console.log('loading annotation ...')
 		const lines = fs
 			.readFileSync(scriptArg.get('annotation'), { encoding: 'utf8' })
 			.trim()
@@ -347,6 +352,7 @@ function loadAnnotationFile(scriptArg, terms, sampleCollect) {
 
 function loadSurvival(scriptArg, terms, sampleCollect) {
 	if (!scriptArg.has('survival')) return
+	console.log('loading survival ...')
 	const survivalData = new Map() // k: sample id, v: map( termid=>[v1,v2])
 	for (const line of fs
 		.readFileSync(scriptArg.get('survival'), { encoding: 'utf8' })
@@ -388,6 +394,7 @@ function loadSurvival(scriptArg, terms, sampleCollect) {
 }
 
 function finalizeTerms(terms) {
+	console.log('finalizing terms ...')
 	for (const term of terms) {
 		if (!term.type) continue
 		if (term.type == 'categorical') {
@@ -413,6 +420,7 @@ function finalizeTerms(terms) {
 }
 
 function writeFiles(terms) {
+	console.log('writing the input files ...')
 	{
 		const lines = []
 		for (const t of terms) {
@@ -436,13 +444,14 @@ function writeFiles(terms) {
 }
 
 function buildDb(annotationData, survivalData, scriptArg) {
+	console.log('writing the db file ...')
 	const cmd = scriptArg.get('sqlite3') + ' ' + scriptArg.get('dbfile')
 
 	// create db with blank tables
 	exec(`${cmd} < ${path.join(__dirname, './create.sql')}`)
 
 	// ".import" commands
-	const importLines = ['.mode tab', `.import ${termdbFile} terms`]
+	const importLines = ['.mode tabs', `.import ${termdbFile} terms`]
 	if (annotationData) importLines.push(`.import ${annotationFile} annotations`)
 	if (survivalData) importLines.push(`.import ${survivalFile} survival`)
 	if (sampleCollect.name2id.size) importLines.push(`.import ${sampleidFile} sampleidmap`)

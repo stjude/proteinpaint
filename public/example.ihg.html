@@ -14,7 +14,7 @@
 
 <script>
 document.body.onload = () => runproteinpaint({
-	//host: 'https://ppr.stjude.org',
+	host: 'https://ppr.stjude.org',
 	holder:document.getElementById('aaa'),
 	parseurl:true,
 	nobox:1,
@@ -118,7 +118,7 @@ document.body.onload = () => runproteinpaint({
 									id: 'Risk (At diagnosis)'
 								},
 								{
-									id: 'Integrated Risk'
+									id: 'Integrated Diagnosis'
 								},
 								{
 									id: 'GTR/STR/NTR/Biopsy'
@@ -135,7 +135,7 @@ document.body.onload = () => runproteinpaint({
                                                                 { id : 'Enrolling Institution'},
                                                                 { id : 'Ever Used RT During Rx (Yes /No)'},
                                                                 { id : 'First Relapse Or PD  (Y/N)'},
-                                                                { id : 'General Treatment'},
+                                                                //{ id : 'General Treatment'},
                                                                 { id : 'Integrated Diagnosis'},
                                                                 { id : 'Mutation Status'},
                                                                 { id : 'Radiaton Focal/CSI/None'},
@@ -238,7 +238,31 @@ document.body.onload = () => runproteinpaint({
 						id: 'Event-free survival'
 					},
 					term2: {
-					  id: 'Age Group'
+            label: 'Age Group',
+            id: 'Age',
+            q: {
+              mode: 'discrete',
+              type: 'custom-bin',
+              lst: [{
+                label: '<3',
+                startunbounded: true,
+                startinclusive: true,
+                stopinclusive: false,
+                stop: 3
+              },{
+                label: '3 to <7',
+                startinclusive: true,
+                stopinclusive: false,
+                start: 3,
+                stop: 7
+              },{
+                label: '7 to 18',
+                startinclusive: true,
+                stopinclusive: false,
+                start: 7,
+                stopunbounded: true,
+              }]
+            }
 					},
 					settings: {
 						survival: {
