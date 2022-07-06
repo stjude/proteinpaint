@@ -10,7 +10,7 @@ const termdbsql = require('./termdb.sql')
 ********************** EXPORTED
 handle_request_closure
 getOrderedLabels
-get_barchart_data
+get_barchart_data_sqlitedb
 **********************
 */
 
@@ -48,7 +48,7 @@ export function handle_request_closure(genomes) {
 
 /*
 inputs:
-q={}
+q{}
 	objectified URL query string
 	.term1_id=str
 	.term1_q={}
@@ -60,9 +60,9 @@ q={}
 	.term0_q={}
 		termsetting obj for term0
 	.filter=stringified filter json obj
-ds={}
+ds{}
 	server-side dataset obj
-tdb={}
+tdb{}
 	ds.cohort.termdb
 
 output an object:
@@ -79,25 +79,38 @@ async function barchart_data(q, ds, tdb) {
 
 	/*
 	!!quick fix!!
-	convoluted logic
+	tricky logic
 
-	when a barchart is launched from a mds3 track (later also sunburst)
-	ds should be flagged as isMds3=true
-	and q{} should carry additional parameters (ssm_id_lst, isoform, etc)
-	in order to trigger variant2samples.get()
+	(1) when a barchart is launched from mass, it needs to retrieve total number of samples annotated to a term
 
-	mds3 can also hosts server-side termdb, which calls get_barchart_data()
-	moving forward, all termdb datasets should be restructured as mds3
-	thus no need of if() check
+	(2) when a barchart is launched from a mds3 track, it needs to retrieve number of *mutated* samples based on a term, in addition to total
+
+	in (1), it launches from a mds2 dataset with termdb
+	in (2), it launches from a mds3 dataset which supports termdb among others (gdc api, bcf/tabix)
+
+	TODO in future:
+	mds3 should serve both (1) and (2), and deprecate mds2
+	add new attribute in q{} to tell if query is (1) or (2)
+	TODO mds3 getter for (1), since it can be served by sqlite db or gdc api
 	*/
+
 	if (ds.isMds3 && ds?.variant2samples?.get) {
+		/* for now this condition checking is a quick fix to detect (2)
+		later should state this explicitly with new attribute in q{}
+		*/
 		return await ds.variant2samples.get(q, ds)
 	}
 
-	return await get_barchart_data(q, ds, tdb)
+	// this query is for (1)
+	if (ds?.termdb?.termid2totalsize2?.get) {
+		// mds3 implementation which wraps sqlitedb support
+		throw 'barsql parameter not fitting termid2totalsize2.get() yet'
+		return await ds.termdb.termid2totalsize2.get(q)
+	}
+	return await get_barchart_data_sqlitedb(q, ds, tdb)
 }
 
-export async function get_barchart_data(q, ds, tdb) {
+export async function get_barchart_data_sqlitedb(q, ds, tdb) {
 	/* existing code to work with mds2 which only supports backend-termdb
 	as later mds2 will be deprecated and migrated to mds3,
 	there should be no need to check for isMds3 flag
@@ -121,7 +134,7 @@ export async function get_barchart_data(q, ds, tdb) {
 			pj: pj.times
 		}
 	}
-	console.log(JSON.stringify(pj.tree.results))
+	//console.log(JSON.stringify(pj.tree.results))
 	return pj.tree.results
 }
 

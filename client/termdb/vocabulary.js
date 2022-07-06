@@ -83,7 +83,21 @@ class TermdbVocab {
 		return data
 	}
 
-	// from termdb/plot
+	/* from termdb/plot
+	Input:
+	opts{}
+		.term={}
+			.id=str
+			.term={}
+			.q={}
+		.term2={}
+			id/term/q
+		.term0={}
+			id/term/q
+		.filter={}
+	Output:
+		a structure from the termdb-barsql route
+	*/
 	async getNestedChartSeriesData(opts) {
 		const url = this.getTdbDataUrl(opts)
 		const data = await dofetch3(url, {}, this.opts.fetchOpts)
@@ -154,6 +168,13 @@ class TermdbVocab {
 		if ('grade' in opts) params.push(`grade=${opts.grade}`)
 		if ('minSampleSize' in opts) params.push(`minSampleSize=${opts.minSampleSize}`)
 		if ('minYearsToEvent' in opts) params.push(`minYearsToEvent=${opts.minYearsToEvent}`)
+
+		// start of mds3 parameters for variant2sample query
+		if (opts.isoform) params.push('isoform=' + opts.isoform)
+		if (opts.ssm_id_lst) params.push('ssm_id_lst=' + opts.ssm_id_lst.join(','))
+		if (opts.rglst) params.push('rglst=' + JSON.stringify(opts.rglst))
+		if (opts.get) params.push('get=' + opts.get)
+		// end of mds3 parameters
 
 		const route = opts.chartType ? 'termdb' : 'termdb-barsql'
 		return `/${route}?${params.join('&')}&genome=${this.vocab.genome}&dslabel=${this.vocab.dslabel}`

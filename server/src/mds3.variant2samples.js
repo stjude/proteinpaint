@@ -62,7 +62,7 @@ q{}
 	for now term1_q and term2_q are ignored
 */
 export async function variant2samples_getresult(q, ds) {
-	ifUsingBarchartQuery(q)
+	ifUsingBarchartQuery(q, ds)
 
 	// each sample obj has keys from .terms[].id
 	const mutatedSamples = await queryMutatedSamples(q, ds)
@@ -90,7 +90,7 @@ export async function variant2samples_getresult(q, ds) {
 	throw 'unknown get type'
 }
 
-function ifUsingBarchartQuery(q) {
+function ifUsingBarchartQuery(q, ds) {
 	if (!q.term1_id) {
 		// not using barchart query
 		return
@@ -147,6 +147,16 @@ async function queryMutatedSamples(q, ds) {
 	}
 
 	if (q.rglst) {
+		if (typeof q.rglst == 'string') {
+			const a = JSON.parse(decodeURIComponent(q.rglst))
+			if (typeof a == 'string') {
+				// possible from barchart query
+				const b = JSON.parse(decodeURIComponent(a))
+				q.rglst = b
+			} else {
+				q.rglst = a
+			}
+		}
 		return await queryServerFileByRglst(q, tempTermidlst, ds)
 	}
 
@@ -575,8 +585,29 @@ async function addCrosstabCount_tonodes(nodes, combinations, ds) {
 	}
 }
 
-// TODO
-function summary2barchart(summary, q) {
+/*
+input:
+summary=[ {} ]
+each element:
+{
+  "termid": "Lineage",
+  "termname": "Lineage",
+  "numbycategory": [
+    [
+      "BALL", // category name
+      52, // #mutated samples
+      1829 // #total
+    ],
+  ]
+}
+
+output:
+barchart data as returned by "termdb-barsql" route
+*/
+function summary2barchart(input, q) {
+	// only convert first, as barchart query should only result in input[] array length=1
+	const summary = input[0]
+	if (!summary.numbycategory) throw 'numbycategory missing on input[0]'
 	const data = {
 		charts: [
 			{
@@ -584,6 +615,13 @@ function summary2barchart(summary, q) {
 				serieses: []
 			}
 		]
+	}
+	for (const [category, mutCount, total] of summary.numbycategory) {
+		data.charts[0].serieses.push({
+			seriesId: category,
+			total,
+			data: [{ dataId: 'Mutated', total: mutCount }, { dataId: 'Others', total: total - mutCount }]
+		})
 	}
 	return data
 }

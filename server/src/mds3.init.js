@@ -8,7 +8,7 @@ const compute_mclass = require('./vcf.mclass').compute_mclass
 const serverconfig = require('./serverconfig')
 const { dtfusionrna, dtsv, mclassfusionrna, mclasssv } = require('#shared/common')
 const { get_samples, server_init_db_queries } = require('./termdb.sql')
-const { get_barchart_data } = require('./termdb.barsql')
+const { get_barchart_data_sqlitedb } = require('./termdb.barsql')
 
 /*
 ********************** EXPORTED
@@ -132,12 +132,12 @@ async function validate_termdb(ds) {
 			if (tdb.termid2totalsize2.gdcapi) {
 				return await gdc.get_termlst2size(termidlst, q, combination, ds)
 			}
-			return await getBarchartData(termidlst, q, combination, ds)
+			return await getBarchartDataFromSqlitedb(termidlst, q, combination, ds)
 		}
 	}
 }
 
-async function getBarchartData(termidlst, q, combination, ds) {
+async function getBarchartDataFromSqlitedb(termidlst, q, combination, ds) {
 	const termid2values = new Map()
 	for (const tid of termidlst) {
 		const term = ds.cohort.termdb.q.termjsonByOneid(tid)
@@ -149,7 +149,7 @@ async function getBarchartData(termidlst, q, combination, ds) {
 			if (q.tid2value) {
 				_q.filter = tid2value2filter(q.tid2value, ds)
 			}
-			const out = await get_barchart_data(_q, ds, ds.cohort.termdb)
+			const out = await get_barchart_data_sqlitedb(_q, ds, ds.cohort.termdb)
 
 			if (!out.charts[0]) {
 				// no data

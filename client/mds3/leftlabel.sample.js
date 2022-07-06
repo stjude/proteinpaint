@@ -4,6 +4,7 @@ import { tab2box } from '../src/client'
 import { displaySampleTable } from './sampletable'
 import { fillbar } from '#dom/fillbar'
 import { make_densityplot } from '#dom/densityplot'
+import { rangequery_rglst } from './tk'
 
 export function makeSampleLabel(data, tk, block, laby) {
 	// skewer subtrack is visible, create leftlabel based on #variants that is displayed/total
@@ -13,16 +14,16 @@ export function makeSampleLabel(data, tk, block, laby) {
 
 	tk.leftlabels.doms.samples
 		.text(`${data.sampleTotalNumber} case${data.sampleTotalNumber > 1 ? 's' : ''}`)
-		.on('click', () => {
+		.on('click', async () => {
 			tk.menutip.clear().showunder(d3event.target)
 
-			mayShowSummary(tk, block)
+			await mayShowSummary(tk, block)
 
 			menu_samples(data, tk, block)
 		})
 }
 
-function mayShowSummary(tk, block) {
+async function mayShowSummary(tk, block) {
 	if (!tk.mds.variant2samples.termidlst) {
 		// no terms to summarize for
 		return
@@ -33,7 +34,29 @@ function mayShowSummary(tk, block) {
 		.text('Loading...')
 		.style('margin', '10px')
 
-	// TODO initiate barchart plot using vocabApi, in which barchart queries data using existing api method
+	/* TODO initiate barchart plot using vocabApi, in which barchart queries data using existing api method
+	 */
+	if (tk.mds?.termdb?.vocabApi) {
+		// just a test!!
+		// to demo the vocab barchart api works with mds3 backend
+		const termid = tk.mds.variant2samples.termidlst[0]
+		const arg = {
+			isoform: block.usegm.isoform,
+			get: 'summary',
+			term: {
+				id: termid,
+				term: await tk.mds.termdb.vocabApi.getterm(termid),
+				q: {}
+			}
+		}
+
+		rangequery_rglst(tk, block, arg)
+
+		tk.mds.termdb.vocabApi.getNestedChartSeriesData(arg).then(data => {
+			console.log('test barchart', data)
+		})
+	}
+
 	tk.mds
 		.getSamples({ isSummary: true })
 		.then(async data => {

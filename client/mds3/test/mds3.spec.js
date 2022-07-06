@@ -124,7 +124,7 @@ tape('Render gene track from search box', async test => {
 	test.end()
 })
 
-tape.only('Launch ASH dataset', async test => {
+tape('Launch ASH dataset', async test => {
 	test.timeoutAfter(3000)
 	const holder = getHolder()
 
