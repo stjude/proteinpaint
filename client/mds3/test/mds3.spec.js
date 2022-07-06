@@ -124,6 +124,33 @@ tape('Render gene track from search box', async test => {
 	test.end()
 })
 
+tape.only('Launch ASH dataset', async test => {
+	test.timeoutAfter(3000)
+	const holder = getHolder()
+
+	await runproteinpaint({
+		holder,
+		parseurl: true,
+		nobox: true,
+		noheader: true,
+		genome: 'hg38',
+		gene: 'BCR',
+		tracks: [
+			{
+				type: 'mds3',
+				dslabel: 'ASH'
+			}
+		]
+	})
+	await sleep(2300)
+	const customVariantFound = [...holder.querySelectorAll('span.sja_clbtext')].some(
+		elem => elem.innerText == 'BCR NM_004327'
+	)
+	test.true(customVariantFound, `Should render default BCR track in ASH dataset`)
+
+	test.end()
+})
+
 tape('Custom dataset with custom variants, NO samples', async test => {
 	test.timeoutAfter(10000)
 	const holder = getHolder()
