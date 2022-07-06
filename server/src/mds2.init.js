@@ -1,6 +1,6 @@
 const app = require('./app')
 const path = require('path')
-const fs = require('fs')
+const fs = require('fs').promises
 const spawn = require('child_process').spawn
 const utils = require('./utils')
 const server_init_db_queries = require('./termdb.sql').server_init_db_queries
@@ -483,6 +483,12 @@ function setDbRefreshRoute(ds, app, basepath) {
 	/*
 		req.body{}
 		- has one or more key-values, where
+		
+		.dbfile=path/to/dbfile to copy to ppr:/opt/data/pp/tp_native_dir/files/... (the dataset's data directory)
+			e.g., file/hg19/pnet/clinical/db relative to serverconfig.tpmasterdir
+		 
+		 OR
+		
 		- key: short string alias of the data file to update
 		- value: tab-delimited string data to write to the data file
 	*/
@@ -490,11 +496,23 @@ function setDbRefreshRoute(ds, app, basepath) {
 		try {
 			// save file to text
 			const q = req.body
-			for (const name in q) {
-				console.log(`Updating ${r.files[name]}`)
-				fs.writeFileSync(r.files[name], q[name], { encoding: 'utf8' })
+			if (q.dbfile) {
+				const source = path.join(serverconfig.tpmasterdir, q.dbfile)
+				const stat = await fs.stat(source)
+				if (!stat) throw `dbfile not found: '${source}'`
+				const target = ds.cohort.db.file_fullpath || ds.cohort.db.file
+				if (source === target) throw `db file source and target are the same`
+				console.log(`copying ${source} to ${target}`)
+				await fs.copyFile(source, target)
+			} else {
+				for (const name in q) {
+					if (name in r.files) {
+						console.log(`Updating ${r.files[name]}`)
+						await fs.writeFile(r.files[name], q[name], { encoding: 'utf8' })
+					}
+				}
 			}
-			if (r.cmd) {
+			if (!q.dbfile && r.cmd) {
 				const ps = spawn(...r.cmd)
 				const stderr = []
 				ps.stdout.on('data', data => {
