@@ -14,7 +14,6 @@
 
 <script>
 document.body.onload = () => runproteinpaint({
-	host: 'https://ppr.stjude.org',
 	holder:document.getElementById('aaa'),
 	parseurl:true,
 	nobox:1,
@@ -266,6 +265,7 @@ document.body.onload = () => runproteinpaint({
 					},
 					settings: {
 						survival: {
+              timeFactor: 1/365,
 							xTickValues: [0,2,4,6,8,10,12,14,16,18,20,22,24,26,28,30]
 						}
 					}
@@ -281,6 +281,7 @@ document.body.onload = () => runproteinpaint({
 					// },
 					settings: {
 						survival: {
+              timeFactor: 1/365,
 							xTickValues: [0,2,4,6,8,10,12,14,16,18,20,22,24,26,28,30]
 						}
 					}

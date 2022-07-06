@@ -118,7 +118,6 @@ try {
 
 	// load annotations first, in order to populate .values{} for categorical terms
 	// and convert all samples to integer ids
-
 	finalizeTerms(terms)
 
 	// then write termdbFile, sampleidmap
@@ -179,9 +178,9 @@ function getScriptArg() {
 }
 
 function loadDictionary(scriptArg) {
-	console.log('loading dictionary ...')
 	let terms // array of term objects
 	if (scriptArg.has('phenotree')) {
+		console.log('parsing dictionary ...')
 		const out = parseDictionary(fs.readFileSync(scriptArg.get('phenotree'), { encoding: 'utf8' }))
 
 		terms = out.terms
@@ -189,6 +188,7 @@ function loadDictionary(scriptArg) {
 		terms = loadTermsFile(scriptArg)
 	}
 
+	console.log('filling in missing term attributes ...')
 	// fill missing attributes and placeholders in term objects
 	for (const term of terms) {
 		if (!term.type) continue // not graphable
@@ -444,7 +444,7 @@ function writeFiles(terms) {
 }
 
 function buildDb(annotationData, survivalData, scriptArg) {
-	console.log('writing the db file ...')
+	console.log('importing data into the db file ...')
 	const cmd = scriptArg.get('sqlite3') + ' ' + scriptArg.get('dbfile')
 
 	// create db with blank tables
