@@ -33,6 +33,7 @@ function mayShowSummary(tk, block) {
 		.text('Loading...')
 		.style('margin', '10px')
 
+	// TODO initiate barchart plot using vocabApi, in which barchart queries data using existing api method
 	tk.mds
 		.getSamples({ isSummary: true })
 		.then(async data => {

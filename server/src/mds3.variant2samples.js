@@ -6,9 +6,9 @@ const utils = require('./utils')
 const { dtfusionrna, dtsv } = require('#shared/common')
 
 /*
-***************** exported
 variant2samples_getresult()
-	querySamples
+	ifUsingBarchartQuery
+	queryMutatedSamples
 		querySamples_gdcapi
 		queryServerFileBySsmid
 		queryServerFileByRglst
@@ -16,6 +16,7 @@ variant2samples_getresult()
 		get_crosstabCombinations()
 		addCrosstabCount_tonodes
 	make_summary
+	summary2barchart
 
 
 from one or more variants, get list of samples harboring any of the variants
@@ -27,40 +28,111 @@ only requires ds.variant2samples{}
 client instructs if to return sample list or sunburst summary; server may deny that request based on certain config
 
 q{}
-.get=str, samples/sunburst/summary
-.ssm_id_lst=str, comma-joined
-// later can add ssm_dt_lst="1,2" etc to indicate datatype for each of ssm_id_lst
+.get = "samples", or "sunburst", or "summary"
+	Required. Value determines what's returned
+
+.ssm_id_lst=str
+	Optional, comma-joined list of ssm_id (snvindel or fusion)
+.isoform=str
+	Optional, used for query gdc api to get all samples with mutation on an isoform
+.rglst=[ {chr,start,stop}, .. ]
+	Optional, used for querying bcf/tabix file with range
+
+	either "ssm_id_lst", "isoform", or "rglst" must be supplied, and must be consistent with dataset setup
+
 .termidlst=str
+	Optional.
+	comma-joined term ids, to retrieve value for each sample,
+	resulting sample obj will be like {sample_id:str, term1id:value1, term2id:value2, ...}
 	client always provides this, to reflect any user changes
 	if get=sunburst, termidlst is an ordered array of terms, for which to build layered sunburst
 	otherwise element order is not essential
+
+	should be replaced with barchart parameters with term1_id, term1_q etc
+	to enable termsetting (getting bin label for a sample based on bin config)
+
+.term1_id=str
+.term2_id=str
+	quick fix
+	value is dictionary term id
+	indicating the set of termdb-barsql parmeters are used, instead of .termidlst
+	for now concatenate term1_id and term2_id into termidlst for existing query to work
+	as termidlst does not support termsetting, should replace termidl
+
+	for now term1_q and term2_q are ignored
 */
 export async function variant2samples_getresult(q, ds) {
-	// query sample details for list of terms in request parameter
+	ifUsingBarchartQuery(q)
 
 	// each sample obj has keys from .terms[].id
-	const samples = await querySamples(q, ds)
+	const mutatedSamples = await queryMutatedSamples(q, ds)
 
 	if (q.get == ds.variant2samples.type_samples) {
 		// return list of samples
 		if (ds?.cohort?.termdb?.q?.id2sampleName) {
-			samples.forEach(i => (i.sample_id = ds.cohort.termdb.q.id2sampleName(i.sample_id)))
+			mutatedSamples.forEach(i => (i.sample_id = ds.cohort.termdb.q.id2sampleName(i.sample_id)))
 		}
-		return samples
+		return mutatedSamples
 	}
-	if (q.get == ds.variant2samples.type_sunburst) return await make_sunburst(samples, ds, q)
-	if (q.get == ds.variant2samples.type_summary) return await make_summary(samples, ds, q)
+
+	if (q.get == ds.variant2samples.type_sunburst) {
+		return await make_sunburst(mutatedSamples, ds, q)
+	}
+
+	if (q.get == ds.variant2samples.type_summary) {
+		const summary = await make_summary(mutatedSamples, ds, q)
+		if (q.term1_id) {
+			// using barchart query, convert data to barchart format
+			return summary2barchart(summary, q)
+		}
+		return summary
+	}
 	throw 'unknown get type'
 }
 
-async function querySamples(q, ds) {
-	const termidlst = q.termidlst ? q.termidlst.split(',') : []
+function ifUsingBarchartQuery(q) {
+	if (!q.term1_id) {
+		// not using barchart query
+		return
+	}
+	// using barchart query
+
+	if (q.get == ds.variant2samples.type_samples) {
+		throw 'using barchart query and q.get=samples (should only be "summary" for now)'
+	}
+
+	// temporary: concatenate so existing v2s code can still function
+	// term?_q{} are not used for now
+	const lst = [q.term1_id]
+	if (q.term2_id) lst.push(q.term2_id)
+	if (q.term0_id) lst.push(q.term0_id)
+	q.termidlst = lst.join(',')
+}
+
+/*
+input:
+	same as main function
+output:
+	list of mutated samples as basis for further processing
+	these samples all harbor mutation of certain specification (see q{})
+	depending on q.get=?, the samples may be summarized (to barchart), or returned without summary
+*/
+async function queryMutatedSamples(q, ds) {
+	/*
+	!!!tricky!!!
+
+	make temporary term id list that's only used in this function
+	and keep q.termidlst=str unchanged
+	as when using gdc api, observation.read_depth stuff are not in termidlst but are only added here to pull out that data
+	*/
+	const tempTermidlst = q.termidlst ? q.termidlst.split(',') : []
 	if (q.get == ds.variant2samples.type_samples && ds.variant2samples.extra_termids_samples) {
 		// extra term ids to add for get=samples query
-		termidlst.push(...ds.variant2samples.extra_termids_samples)
+		tempTermidlst.push(...ds.variant2samples.extra_termids_samples)
 	}
+
 	if (ds.variant2samples.gdcapi) {
-		return await querySamples_gdcapi(q, termidlst, ds)
+		return await querySamples_gdcapi(q, tempTermidlst, ds)
 	}
 
 	/* from server-side files
@@ -71,11 +143,11 @@ async function querySamples(q, ds) {
 	*/
 
 	if (q.ssm_id_lst) {
-		return await queryServerFileBySsmid(q, termidlst, ds)
+		return await queryServerFileBySsmid(q, tempTermidlst, ds)
 	}
 
 	if (q.rglst) {
-		return await queryServerFileByRglst(q, termidlst, ds)
+		return await queryServerFileByRglst(q, tempTermidlst, ds)
 	}
 
 	throw 'unknown q{} option when querying server side files'
@@ -205,12 +277,12 @@ async function queryServerFileByRglst(q, termidlst, ds) {
 	return [...samples.values()]
 }
 
-async function make_sunburst(samples, ds, q) {
+async function make_sunburst(mutatedSamples, ds, q) {
 	const termidlst = q.termidlst.split(',')
 
 	// to use stratinput, convert each attr to {k} where k is term id
 	const nodes = stratinput(
-		samples,
+		mutatedSamples,
 		termidlst.map(i => {
 			return { k: i }
 		})
@@ -258,10 +330,11 @@ async function make_sunburst(samples, ds, q) {
 		await addCrosstabCount_tonodes(nodes, combinations, ds)
 		// .cohortsize=int is added to applicable elements of nodes[]
 	}
+
 	return nodes
 }
 
-async function make_summary(samples, ds, q) {
+async function make_summary(mutatedSamples, ds, q) {
 	const entries = []
 	/* one element for a term
 	{
@@ -278,7 +351,7 @@ async function make_summary(samples, ds, q) {
 		// may skip a term
 		if (term.type == 'categorical') {
 			const cat2count = new Map()
-			for (const s of samples) {
+			for (const s of mutatedSamples) {
 				const c = s[term.id]
 				if (!c) continue
 				cat2count.set(c, 1 + (cat2count.get(c) || 0))
@@ -289,8 +362,8 @@ async function make_summary(samples, ds, q) {
 				numbycategory: [...cat2count].sort((i, j) => j[1] - i[1])
 			})
 		} else if (term.type == 'integer' || term.type == 'float') {
-			// later replace density with bin breakdown
-			const density_data = await get_densityplot(term, samples)
+			// TODO do binning instead
+			const density_data = await get_densityplot(term, mutatedSamples)
 			entries.push({
 				termid: term.id,
 				termname: term.name,
@@ -500,4 +573,17 @@ async function addCrosstabCount_tonodes(nodes, combinations, ds) {
 			if (n) node.cohortsize = n.count
 		}
 	}
+}
+
+// TODO
+function summary2barchart(summary, q) {
+	const data = {
+		charts: [
+			{
+				chartId: '',
+				serieses: []
+			}
+		]
+	}
+	return data
 }

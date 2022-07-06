@@ -10,7 +10,7 @@ const termdbsql = require('./termdb.sql')
 ********************** EXPORTED
 handle_request_closure
 getOrderedLabels
-barchart_data
+get_barchart_data
 **********************
 */
 
@@ -74,8 +74,35 @@ output an object:
 			.dataId=str // key of term2 category, '' if no term2
 			.total=int // size of this term1-term2 combination
 */
-export async function barchart_data(q, ds, tdb) {
+async function barchart_data(q, ds, tdb) {
 	if (!ds.cohort) throw 'cohort missing from ds'
+
+	/*
+	!!quick fix!!
+	convoluted logic
+
+	when a barchart is launched from a mds3 track (later also sunburst)
+	ds should be flagged as isMds3=true
+	and q{} should carry additional parameters (ssm_id_lst, isoform, etc)
+	in order to trigger variant2samples.get()
+
+	mds3 can also hosts server-side termdb, which calls get_barchart_data()
+	moving forward, all termdb datasets should be restructured as mds3
+	thus no need of if() check
+	*/
+	if (ds.isMds3 && ds?.variant2samples?.get) {
+		return await ds.variant2samples.get(q, ds)
+	}
+
+	return await get_barchart_data(q, ds, tdb)
+}
+
+export async function get_barchart_data(q, ds, tdb) {
+	/* existing code to work with mds2 which only supports backend-termdb
+	as later mds2 will be deprecated and migrated to mds3,
+	there should be no need to check for isMds3 flag
+	*/
+
 	q.ds = ds
 
 	if (q.ssid) {
@@ -94,7 +121,7 @@ export async function barchart_data(q, ds, tdb) {
 			pj: pj.times
 		}
 	}
-	//console.log(JSON.stringify(pj.tree.results,null,2))
+	console.log(JSON.stringify(pj.tree.results))
 	return pj.tree.results
 }
 

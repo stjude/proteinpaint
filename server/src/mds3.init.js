@@ -8,7 +8,7 @@ const compute_mclass = require('./vcf.mclass').compute_mclass
 const serverconfig = require('./serverconfig')
 const { dtfusionrna, dtsv, mclassfusionrna, mclasssv } = require('#shared/common')
 const { get_samples, server_init_db_queries } = require('./termdb.sql')
-const { barchart_data } = require('./termdb.barsql')
+const { get_barchart_data } = require('./termdb.barsql')
 
 /*
 ********************** EXPORTED
@@ -149,7 +149,7 @@ async function getBarchartData(termidlst, q, combination, ds) {
 			if (q.tid2value) {
 				_q.filter = tid2value2filter(q.tid2value, ds)
 			}
-			const out = await barchart_data(_q, ds, ds.cohort.termdb)
+			const out = await get_barchart_data(_q, ds, ds.cohort.termdb)
 
 			if (!out.charts[0]) {
 				// no data
