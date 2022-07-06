@@ -34,18 +34,18 @@ tape('Run GDC dataset via gene symbol, ensembl ID and RefSeq ID', async test => 
 	test.timeoutAfter(10000)
 	const holder = getHolder()
 
-	await callGDCByGene(test)
-	await callGDCByGene2(test)
-	await callGDCByEnsembl(test)
-	await callGDCByRefSeq(test)
-
-	async function callGDCByGene(test) {
+	const genes = [
+		{ gene: 'KRAS', isoform: '' },
+		{ gene: 'AKT1', isoform: 'ENST00000407796' },
+		{ gene: 'AKT1', isoform: 'NM_005163' }
+	]
+	for (const g of genes) {
 		await runproteinpaint({
 			holder,
 			noheader: true,
 			nobox: true,
 			genome: 'hg38',
-			gene: 'AKT1',
+			gene: g.isoform || g.gene,
 			tracks: [
 				{
 					type: 'mds3',
@@ -53,85 +53,14 @@ tape('Run GDC dataset via gene symbol, ensembl ID and RefSeq ID', async test => 
 				}
 			]
 		})
-		await sleep(2300)
-		const geneFound = [...holder.querySelectorAll('span')].some(elem => elem.innerText == 'AKT1')
-		if (!geneFound) test.fail('Should render default AKT1 track')
-		else {
-			test.equal(geneFound, true, 'Rendered AKT1 default track')
-		}
-	}
 
-	async function callGDCByGene2(test) {
-		runproteinpaint({
-			holder,
-			noheader: true,
-			nobox: true,
-			genome: 'hg38',
-			gene: 'ccnd1',
-			tracks: [
-				{
-					type: 'mds3',
-					dslabel: 'GDC'
-				}
-			],
-			onloadalltk_always: checker
-		})
-		function checker() {
-			const geneFound = [...holder.querySelectorAll('span')].some(elem => elem.innerText == 'CCND1')
-			if (!geneFound) test.fail('Should render default CCND1 track')
-			else {
-				test.equal(geneFound, true, 'Rendered CCND1 default track')
-			}
-		}
-	}
-
-	async function callGDCByEnsembl(test) {
-		await runproteinpaint({
-			holder,
-			noheader: true,
-			nobox: true,
-			genome: 'hg38',
-			gene: 'ENST00000407796',
-			tracks: [
-				{
-					type: 'mds3',
-					dslabel: 'GDC'
-				}
-			]
-		})
 		await sleep(2300)
-		const ensemblFound = [...holder.querySelectorAll('span.sja_clbtext')].some(
-			elem => elem.innerText == 'AKT1 ENST00000407796'
+		const geneFound = [...holder.querySelectorAll('span')].some(elem =>
+			elem.innerText == g.isoform ? `${g.gene} ${g.isoform}` : `${g.gene}`
 		)
-		if (!ensemblFound) test.fail('Should render default AKT1 ENST0000040779 isoform track')
-		else {
-			test.equal(ensemblFound, true, 'Rendered AKT1 ENST0000040779 isoform track')
-		}
+		test.true(geneFound, `Should render ${g.isoform || g.gene} track`)
 	}
 
-	async function callGDCByRefSeq(test) {
-		await runproteinpaint({
-			holder,
-			noheader: true,
-			nobox: true,
-			genome: 'hg38',
-			gene: 'NM_005163',
-			tracks: [
-				{
-					type: 'mds3',
-					dslabel: 'GDC'
-				}
-			]
-		})
-		await sleep(2300)
-		const refseqFound = [...holder.querySelectorAll('span.sja_clbtext')].some(
-			elem => elem.innerText == 'AKT1 NM_005163'
-		)
-		if (!refseqFound) test.fail('Should render AKT1 NM_005163 isoform track')
-		else {
-			test.equal(refseqFound, true, 'Rendered AKT1 NM_005163 isoform track')
-		}
-	}
 	test.end()
 })
 
@@ -157,16 +86,13 @@ tape('Launch GDC dataset by SSM ID', async test => {
 	})
 	await sleep(2300)
 	const ssmFound = [...holder.querySelectorAll('.sja_aa_disclabel')].some(elem => elem.innerHTML == 'G12V')
-	if (!ssmFound) test.fail('Should render KRAS track with focused G12V mutation')
-	else {
-		test.equal(ssmFound, true, 'Rendered GDC KRAS ssm track')
-	}
+	test.true(ssmFound, `Should render KRAS track with focused G12V mutation`)
 
 	test.end()
 })
 
 tape('Render gene track from search box', async test => {
-	test.timeoutAfter(3000)
+	test.timeoutAfter(10000)
 	const holder = getHolder()
 
 	await runproteinpaint({
@@ -176,10 +102,24 @@ tape('Render gene track from search box', async test => {
 	})
 
 	await sleep(2300)
-	const searchBox = d3s.select('input')
-	// searchBox.node().value('KRAS')
 
-	console.log(searchBox)
+	//Enter KRAS into search box
+	const searchBox = d3s.select('input')._groups[0][0]
+	searchBox.value = 'KRAS'
+	searchBox.dispatchEvent(new Event('keyup'))
+
+	//Click on first menu option -> 'KRAS'
+	await sleep(2300)
+	// const geneFoundInMenu = d3.select('div.sja_menuoption')._groups[0][0]
+	const geneFoundInMenu = [...document.querySelectorAll('div.sja_menuoption')].find(elem => elem.innerText == 'KRAS')
+	geneFoundInMenu.dispatchEvent(new Event('click'))
+
+	//Verify track renders
+	await sleep(2300)
+	const geneTrackFound = [...holder.querySelectorAll('span.sja_clbtext')].some(
+		elem => elem.innerText == 'KRAS ENST00000256078'
+	)
+	test.true(geneTrackFound, `Should render default KRAS ENST00000256078 track`)
 
 	test.end()
 })
@@ -212,10 +152,7 @@ tape('Custom dataset with custom variants, NO samples', async test => {
 	const customVariantFound = [...holder.querySelectorAll('.sja_aa_disclabel')].some(
 		elem => elem.innerHTML == 'WTPinsP75'
 	)
-	if (!customVariantFound) test.fail('Should render custom dataset')
-	else {
-		test.equal(customVariantFound, true, 'Rendered custom dataset with ad hoc WTPinsP75 variant')
-	}
+	test.true(customVariantFound, `Should render custom dataset with ad hoc WTPinsP75 variant`)
 
 	test.end()
 })
@@ -247,10 +184,7 @@ tape('Custom dataset with custom variants, WITH samples', async test => {
 	await sleep(2300)
 	//TODO, maybe?: Check for all mnames
 	const customVariantFound = [...holder.querySelectorAll('.sja_aa_discnum')].some(elem => elem.innerHTML == '2')
-	if (!customVariantFound) test.fail('Should render custom dataset with 2 samples for WTPinsP75 variant')
-	else {
-		test.equal(customVariantFound, true, 'Rendered custom dataset with 2 samples for WTPinsP75 variant')
-	}
+	test.true(customVariantFound, `Should render custom dataset with 2 samples for WTPinsP75 variant`)
 
 	test.end()
 })
@@ -292,10 +226,7 @@ tape('Numeric mode custom dataset', async test => {
 	})
 	await sleep(2300)
 	const customVariantFound = [...holder.querySelectorAll('text')].some(elem => elem.innerHTML == '-log10(p-value)')
-	if (!customVariantFound) test.fail('Should render custom dataset in numeric mode with -log10(p-value) scale')
-	else {
-		test.equal(customVariantFound, true, 'Rendered custom dataset, -log10(p-value) scale')
-	}
+	test.true(customVariantFound, `Should render custom dataset in numeric mode with -log10(p-value) scale`)
 
 	test.end()
 })
