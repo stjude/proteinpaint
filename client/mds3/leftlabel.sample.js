@@ -28,29 +28,33 @@ async function mayShowSummary(tk, block) {
 		// no terms to summarize for
 		return
 	}
-	// function is not async to display "wait" and not to block showing other menu options
+
 	const wait = tk.menutip.d
 		.append('div')
 		.text('Loading...')
 		.style('margin', '10px')
 
-	/* TODO initiate barchart plot using vocabApi, in which barchart queries data using existing api method
-	 */
 	if (tk.mds?.termdb?.vocabApi) {
-		// just a test!!
-		// to demo the vocab barchart api works with mds3 backend
+		// just a test!! to demo the vocab barchart api works with mds3 backend
+		// when barchart can be integrated, show barchart instead of using getSamples()
+
+		// make up term2 as geneVariant
+		const geneTerm = {
+			type: 'geneVariant',
+			isoform: block.usegm.isoform
+		}
+		rangequery_rglst(tk, block, geneTerm) // creates geneTerm.rglst=[{}]
+
 		const termid = tk.mds.variant2samples.termidlst[0]
 		const arg = {
-			isoform: block.usegm.isoform,
 			get: 'summary',
 			term: {
 				id: termid,
 				term: await tk.mds.termdb.vocabApi.getterm(termid),
 				q: {}
-			}
+			},
+			term2: { term: geneTerm, q: {} }
 		}
-
-		rangequery_rglst(tk, block, arg)
 
 		tk.mds.termdb.vocabApi.getNestedChartSeriesData(arg).then(data => {
 			console.log('test barchart', data)

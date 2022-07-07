@@ -51,15 +51,16 @@ q{}
 	should be replaced with barchart parameters with term1_id, term1_q etc
 	to enable termsetting (getting bin label for a sample based on bin config)
 
+*** optional parameters, if called from termdb-barsql ***
+
 .term1_id=str
-.term2_id=str
 	quick fix
 	value is dictionary term id
 	indicating the set of termdb-barsql parmeters are used, instead of .termidlst
-	for now concatenate term1_id and term2_id into termidlst for existing query to work
-	as termidlst does not support termsetting, should replace termidl
-
 	for now term1_q and term2_q are ignored
+
+.term2=(stringified json)
+	hardcoded to be a geneVariant term, carries isoform/rglst/etc for querying variant
 */
 export async function variant2samples_getresult(q, ds) {
 	ifUsingBarchartQuery(q, ds)
@@ -90,23 +91,48 @@ export async function variant2samples_getresult(q, ds) {
 	throw 'unknown get type'
 }
 
+/*
+when coming from "termdb-barsql" route, q{} looks like:
+
+q={
+  term1_id: 'Lineage',
+  term1_q: {},
+  term2: '{"type":"geneVariant","isoform":"NM_004327","rglst":"[{\\"chr\\":\\"chr22\\",\\"reverse\\":false,\\"width\\":979,\\"start\\":23180960,\\"stop\\":23315522,\\"xoff\\":0}]"}',
+  term2_q: {},
+  get: 'summary',
+  genome: 'hg38',
+  dslabel: 'ASH'
+}
+
+the function converts it to:
+
+q={
+	termidlst:'Lineage', // copy of term1_id
+	isoform:'NM_004327', // copied from term2{}
+	rglst:[{chr,start,stop}],
+	...
+	term1_id:'Lineage' // keep it
+}
+*/
 function ifUsingBarchartQuery(q, ds) {
 	if (!q.term1_id) {
 		// not using barchart query
 		return
 	}
-	// using barchart query
+	// using barchart query; q{} carries parameters from termdb-barsql
 
 	if (q.get == ds.variant2samples.type_samples) {
 		throw 'using barchart query and q.get=samples (should only be "summary" for now)'
 	}
 
-	// temporary: concatenate so existing v2s code can still function
-	// term?_q{} are not used for now
-	const lst = [q.term1_id]
-	if (q.term2_id) lst.push(q.term2_id)
-	if (q.term0_id) lst.push(q.term0_id)
-	q.termidlst = lst.join(',')
+	q.termidlst = q.term1_id
+
+	if (!q.term2) throw 'q.term2=string missing'
+	const t = JSON.parse(q.term2)
+	if (!t.isoform) throw 'q.term2.isoform missing'
+	q.isoform = t.isoform
+	if (!t.rglst) throw 'q.term2.rglst missing'
+	q.rglst = JSON.parse(t.rglst)
 }
 
 /*
@@ -147,16 +173,6 @@ async function queryMutatedSamples(q, ds) {
 	}
 
 	if (q.rglst) {
-		if (typeof q.rglst == 'string') {
-			const a = JSON.parse(decodeURIComponent(q.rglst))
-			if (typeof a == 'string') {
-				// possible from barchart query
-				const b = JSON.parse(decodeURIComponent(a))
-				q.rglst = b
-			} else {
-				q.rglst = a
-			}
-		}
 		return await queryServerFileByRglst(q, tempTermidlst, ds)
 	}
 
