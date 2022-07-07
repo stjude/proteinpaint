@@ -30,6 +30,39 @@ tape('\n', function(test) {
 	test.end()
 })
 
+/*
+run test with a runpp callback, which eliminates need of sleep()
+for that to work, the tape() callback function must not be "async"
+*/
+
+tape.only('Run GDC dataset, KRAS', t => {
+	const holder = getHolder()
+	runproteinpaint({
+		holder,
+		noheader: true,
+		nobox: true,
+		genome: 'hg38',
+		gene: 'kras',
+		tracks: [{ type: 'mds3', dslabel: 'GDC' }],
+		onloadalltk_always: test
+	})
+	function test(bb) {
+		// bb is the block instance
+
+		t.equal(bb.tklst.length, 2, 'should have two tracks')
+
+		const mtk = bb.tklst.find(i => i.type == 'mds3')
+		t.ok(mtk, 'type=mds3 track should be found')
+
+		// test number of dots
+
+		// ... more tests
+
+		t.end()
+		holder.remove()
+	}
+})
+
 tape('Run GDC dataset via gene symbol, ensembl ID and RefSeq ID', async test => {
 	test.timeoutAfter(10000)
 	const holder = getHolder()
@@ -63,26 +96,6 @@ tape('Run GDC dataset via gene symbol, ensembl ID and RefSeq ID', async test => 
 
 	test.end()
 })
-
-/* why is this not working?
-tape.only('Run GDC dataset, with callback', async test => {
-	test.timeoutAfter(10000)
-	const holder = getHolder()
-	runproteinpaint({
-		holder,
-		noheader: true,
-		nobox: true,
-		genome: 'hg38',
-		gene: 'kras',
-		tracks: [ { type: 'mds3', dslabel: 'GDC' } ],
-		onloadalltk_always: ()=>{
-			test.true(false,'dummy')
-			test.end()
-			console.log('callback called')
-		}
-	})
-})
-*/
 
 tape('Launch GDC dataset by SSM ID', async test => {
 	test.timeoutAfter(10000)
