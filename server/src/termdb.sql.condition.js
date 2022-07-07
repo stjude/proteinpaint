@@ -71,7 +71,7 @@ export const cuminc = {
 			- An event is defined by the grade breakpoint given in q.breaks
 				- E.g. if q.breaks[0] == 3, then an event is an occurrence of any grade between grades 3-5
 		- value: years from cancer diagnosis until last assessment (exit code = 0) or first occurrence of event (exit code = 1)
-			- if years < ds.cohort.minYearsSinceDx, then years is set to ds.cohort.minYearsSinceDx
+			- the first time point in the cuminc plot needs to be ds.cohort.minYearsSinceDx, so if years < ds.cohort.minYearsSinceDx, then set years to ds.cohort.minYearsSinceDx
 	*/
 	getCTE(tablename, term, ds, q, values, filter) {
 		if (!q.breaks || q.breaks.length != 1) throw 'one break is required'
