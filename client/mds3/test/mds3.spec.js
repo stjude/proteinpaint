@@ -26,7 +26,7 @@ function sleep(ms) {
 ***************/
 
 tape('\n', function(test) {
-	test.pass('-***- mds3/gdc -***-')
+	test.pass('-***- mds3 -***-')
 	test.end()
 })
 
@@ -63,6 +63,26 @@ tape('Run GDC dataset via gene symbol, ensembl ID and RefSeq ID', async test => 
 
 	test.end()
 })
+
+/* why is this not working?
+tape.only('Run GDC dataset, with callback', async test => {
+	test.timeoutAfter(10000)
+	const holder = getHolder()
+	runproteinpaint({
+		holder,
+		noheader: true,
+		nobox: true,
+		genome: 'hg38',
+		gene: 'kras',
+		tracks: [ { type: 'mds3', dslabel: 'GDC' } ],
+		onloadalltk_always: ()=>{
+			test.true(false,'dummy')
+			test.end()
+			console.log('callback called')
+		}
+	})
+})
+*/
 
 tape('Launch GDC dataset by SSM ID', async test => {
 	test.timeoutAfter(10000)
