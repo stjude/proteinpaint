@@ -153,7 +153,6 @@ class TermdbVocab {
 
 		if ('grade' in opts) params.push(`grade=${opts.grade}`)
 		if ('minSampleSize' in opts) params.push(`minSampleSize=${opts.minSampleSize}`)
-		if ('minYearsToEvent' in opts) params.push(`minYearsToEvent=${opts.minYearsToEvent}`)
 
 		const route = opts.chartType ? 'termdb' : 'termdb-barsql'
 		return `/${route}?${params.join('&')}&genome=${this.vocab.genome}&dslabel=${this.vocab.dslabel}`

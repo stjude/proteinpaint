@@ -676,6 +676,8 @@ module.exports = {
 			file: 'files/hg38/sjlife/clinical/db'
 		},
 
+		minYearsSinceDx: 5, // enrollment in sjlife requires 5 years since cancer diagnosis
+
 		termdb: {
 			// quick fix: list non-dictionary term types
 			// expose to client via termdbConfig
