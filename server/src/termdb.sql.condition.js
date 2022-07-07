@@ -71,11 +71,11 @@ export const cuminc = {
 			- An event is defined by the grade breakpoint given in q.breaks
 				- E.g. if q.breaks[0] == 3, then an event is an occurrence of any grade between grades 3-5
 		- value: years from cancer diagnosis until last assessment (exit code = 0) or first occurrence of event (exit code = 1)
-			- the first time point in the cuminc plot needs to be ds.cohort.minYearsSinceDx, so if years < ds.cohort.minYearsSinceDx, then set years to ds.cohort.minYearsSinceDx
+			- the first time point in the cuminc plot needs to be ds.cohort.minTimeSinceDx, so if years < ds.cohort.minTimeSinceDx, then set years to ds.cohort.minTimeSinceDx
 	*/
 	getCTE(tablename, term, ds, q, values, filter) {
 		if (!q.breaks || q.breaks.length != 1) throw 'one break is required'
-		if (!ds.cohort.minYearsSinceDx) throw 'min years since dx is missing'
+		if (!ds.cohort.minTimeSinceDx) throw 'min years since dx is missing'
 
 		// CTE for gathering event term(s)
 		// conditioned on whether or not the term is a leaf term
@@ -120,7 +120,7 @@ export const cuminc = {
 			${filter ? 'AND sample IN ' + filter.CTEname : ''}
 			GROUP BY sample
 		)`
-		values.push(ds.cohort.minYearsSinceDx, ds.cohort.minYearsSinceDx, q.breaks[0])
+		values.push(ds.cohort.minTimeSinceDx, ds.cohort.minTimeSinceDx, q.breaks[0])
 
 		// CTE for extracting event 0 entries
 		const event0 = `event0 AS (
@@ -134,7 +134,7 @@ export const cuminc = {
 			${filter ? 'AND sample IN ' + filter.CTEname : ''}
 			GROUP BY sample
 		)`
-		values.push(ds.cohort.minYearsSinceDx, ds.cohort.minYearsSinceDx)
+		values.push(ds.cohort.minTimeSinceDx, ds.cohort.minTimeSinceDx)
 
 		return {
 			sql: `${eventTerms},
@@ -165,20 +165,20 @@ export const cox = {
 			- An event is defined by the grade breakpoint given in q.breaks
 				- E.g. if q.breaks[0] == 3, then an event is an occurrence of any grade between grades 3-5
 		- value:
-			- for timeScale='time': years from ds.cohort.minYearsSinceDx until last assessment (exit code = 0) or first occurrence of event (exit code = 1)
+			- for timeScale='time': years from ds.cohort.minTimeSinceDx until last assessment (exit code = 0) or first occurrence of event (exit code = 1)
 			- for timeScale='age': {age_start, age_end, time}
-				age_start: agedx + ds.cohort.minYearsSinceDx
+				age_start: agedx + ds.cohort.minTimeSinceDx
 				age_end: age at last assessment (exit code = 0) or first occurrence of event (exit code = 1)
 					- 1 day (i.e. 1/365 or 0.00274) is added to age_end to prevent age_end = age_start (which would cause regression analysis to fail in R)
-				time: years from ds.cohort.minYearsSinceDx until last assessment (exit code = 0) or first occurrence of event (exit code = 1)
+				time: years from ds.cohort.minTimeSinceDx until last assessment (exit code = 0) or first occurrence of event (exit code = 1)
 					- time is included in this output so that cuminc analysis can run for rare variants when age scale is selected for cox regression
 	
-	Entries with years < ds.cohort.minYearsSinceDx are discarded
+	Entries with years < ds.cohort.minTimeSinceDx are discarded
 	*/
 	getCTE(tablename, term, ds, q, values, filter) {
 		if (!q.breaks || q.breaks.length != 1) throw 'one break is required'
 		if (!q.timeScale) throw 'time scale is missing'
-		if (!ds.cohort.minYearsSinceDx) throw 'min years since dx is missing'
+		if (!ds.cohort.minTimeSinceDx) throw 'min years since dx is missing'
 
 		// CTE for gathering event term(s)
 		// conditioned on whether or not the term is a leaf term
@@ -203,13 +203,13 @@ export const cox = {
 		}
 		values.push(term.id)
 
-		// CTE for discarding entries with years_to_event values below ds.cohort.minYearsSinceDx
+		// CTE for discarding entries with years_to_event values below ds.cohort.minTimeSinceDx
 		const filteredYears = `filteredYears AS (
 			SELECT *
 			FROM chronicevents
 			WHERE years_to_event >= ?
 		)`
-		values.push(ds.cohort.minYearsSinceDx)
+		values.push(ds.cohort.minTimeSinceDx)
 
 		let event1, event0
 		if (q.timeScale == 'time') {
@@ -225,7 +225,7 @@ export const cox = {
 				${filter ? 'AND sample IN ' + filter.CTEname : ''}
 				GROUP BY sample
 			)`
-			values.push(ds.cohort.minYearsSinceDx, q.breaks[0])
+			values.push(ds.cohort.minTimeSinceDx, q.breaks[0])
 
 			// CTE for extracting event 0 entries
 			event0 = `event0 AS (
@@ -236,13 +236,14 @@ export const cox = {
 				${filter ? 'AND sample IN ' + filter.CTEname : ''}
 				GROUP BY sample
 			)`
-			values.push(ds.cohort.minYearsSinceDx)
+			values.push(ds.cohort.minTimeSinceDx)
 		} else if (q.timeScale == 'age') {
 			// time scale is 'age'
+			if (!ds.cohort.ageEndOffset) throw 'age end offset is missing'
 
 			// CTE for extracting event 1 entries
 			event1 = `event1 AS (
-				SELECT f.sample, 1 as key, json_object('age_start', a.value + ?, 'age_end', (MIN(f.age_graded) + 0.00274), 'time', MIN(f.years_to_event) - ?) as value
+				SELECT f.sample, 1 as key, json_object('age_start', a.value + ?, 'age_end', (MIN(f.age_graded) + ?), 'time', MIN(f.years_to_event) - ?) as value
 				FROM filteredYears f
 				INNER JOIN anno_float a ON f.sample = a.sample
 				WHERE a.term_id = 'agedx'
@@ -252,11 +253,11 @@ export const cox = {
 				${filter ? 'AND f.sample IN ' + filter.CTEname : ''}
 				GROUP BY f.sample
 			)`
-			values.push(ds.cohort.minYearsSinceDx, ds.cohort.minYearsSinceDx, q.breaks[0])
+			values.push(ds.cohort.minTimeSinceDx, ds.cohort.ageEndOffset, ds.cohort.minTimeSinceDx, q.breaks[0])
 
 			// CTE for extracting event 0 entries
 			event0 = `event0 AS (
-				SELECT f.sample, 0 as key, json_object('age_start', a.value + ?, 'age_end', (MAX(f.age_graded) + 0.00274), 'time', MAX(f.years_to_event) - ?) as value
+				SELECT f.sample, 0 as key, json_object('age_start', a.value + ?, 'age_end', (MAX(f.age_graded) + ?), 'time', MAX(f.years_to_event) - ?) as value
 				FROM filteredYears f
 				INNER JOIN anno_float a ON f.sample = a.sample
 				WHERE a.term_id = 'agedx'
@@ -265,7 +266,7 @@ export const cox = {
 				${filter ? 'AND f.sample IN ' + filter.CTEname : ''}
 				GROUP BY f.sample
 			)`
-			values.push(ds.cohort.minYearsSinceDx, ds.cohort.minYearsSinceDx)
+			values.push(ds.cohort.minTimeSinceDx, ds.cohort.ageEndOffset, ds.cohort.minTimeSinceDx)
 		}
 
 		return {
