@@ -361,7 +361,7 @@ async function doRegression(p, cacheid, snp2effAle) {
 			q: {
 				timeScale: 'age',
 				//"hiddenValues": { "-1": 1 },
-				mode: 'time2event',
+				mode: 'cox',
 				value_by_max_grade: true,
 				bar_by_grade: true,
 				breaks: [1],

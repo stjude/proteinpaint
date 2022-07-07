@@ -739,9 +739,9 @@ async function parseRoutput(Rinput, Routput, id2originalId, q, result) {
 }
 
 async function snplocusPostprocess(q, sampledata, Rinput, result) {
-	stime = new Date().getTime()
 	const tw = q.independent.find(i => i.type == 'snplocus')
 	if (!tw) return
+	stime = new Date().getTime()
 	addResult4monomorphic(tw, result)
 	if (tw.lowAFsnps.size) {
 		// low-af variants are not used for model-fitting
@@ -751,7 +751,7 @@ async function snplocusPostprocess(q, sampledata, Rinput, result) {
 		} else if (q.regressionType == 'logistic') {
 			await lowAFsnps_fisher(tw, sampledata, Rinput, result)
 		} else if (q.regressionType == 'cox') {
-			await lowAFsnps_cuminc(tw, sampledata, Rinput, result, q.outcome.q.minYearsToEvent)
+			await lowAFsnps_cuminc(tw, sampledata, Rinput, result)
 		} else {
 			throw 'unknown regression type'
 		}
@@ -920,7 +920,7 @@ async function lowAFsnps_fisher(tw, sampledata, Rinput, result) {
 	}
 }
 
-async function lowAFsnps_cuminc(tw, sampledata, Rinput, result, minYearsToEvent) {
+async function lowAFsnps_cuminc(tw, sampledata, Rinput, result) {
 	// for cox, perform cuminc analysis between samples having and missing effect allele
 	const lines = [] // one line per snp
 	const fdata = {} // input for cuminc analysis {snpid: [{time, event, series}]}
@@ -962,7 +962,7 @@ async function lowAFsnps_cuminc(tw, sampledata, Rinput, result, minYearsToEvent)
 	}
 
 	// run cumulative incidence analysis in R
-	await runCumincR(fdata, final_data, minYearsToEvent)
+	await runCumincR(fdata, final_data)
 
 	// parse cumulative incidence results
 	for (const [snpid, snpO] of tw.lowAFsnps) {

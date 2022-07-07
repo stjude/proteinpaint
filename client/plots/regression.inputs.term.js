@@ -194,7 +194,7 @@ export class InputTerm {
 			for continuous term, assume it is numeric and that we'd want counts by bins,
 			so remove the 'mode: continuous' value as it will prevent bin construction in the backend
 		*/
-		if (q.mode == 'continuous' || q.mode == 'spline' || q.mode == 'time2event') delete q.mode
+		if (q.mode == 'continuous' || q.mode == 'spline' || q.mode == 'cox') delete q.mode
 
 		// the 3rd argument to getCategories() is different for snplst and dictionary term types
 		const qlst =

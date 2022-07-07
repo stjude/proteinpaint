@@ -21,7 +21,7 @@ export const discrete = {
 		- uncomputable values are not included in the CTE results, EXCEPT IF such values are in a group
 
 	*/
-	getCTE(tablename, term, q, values) {
+	getCTE(tablename, term, ds, q, values) {
 		if (q.breaks && q.breaks.length > 0) {
 			// breaks present, split grades into groups
 			return getCTE_discreteWithBreaks(tablename, term, q, values)
@@ -54,45 +54,40 @@ export const discrete = {
 export const binary = {
 	// Get CTE for binary term
 	// must have a single breakpoint
-	getCTE(tablename, term, q, values) {
+	getCTE(tablename, term, ds, q, values) {
 		if (!q.breaks) throw 'binary mode requires breaks'
 		if (q.breaks.length != 1) throw 'binary mode requires one break'
 		return getCTE_discreteWithBreaks(tablename, term, q, values)
 	}
 }
 
-export const time2event = {
-	// Get CTE for time2event term
-	// must have a time scale for time component
-	// must have a single breakpoint for event component
-	getCTE(tablename, term, q, values, filter) {
-		const minYearsToEvent = 'minYearsToEvent' in q ? q.minYearsToEvent : 5
-		if (!q.breaks) throw 'breaks is missing'
-		if (q.breaks.length != 1) throw 'time2event term requires one break'
-		if (!q.timeScale) throw 'time scale missing'
-		if (q.timeScale == 'time') {
-			/*
-			time scale is time from diagnosis
-			sql output -> 'key': event status (0/1); 'value': follow-up time
-			when 'key' is 0, 'value' is time until last assessment
-			when 'key' is 1, 'value' is time until first occurrence of event
-			FIXME: should "time" be (1) time from diagnosis or (2) time from study enrollment?
-			*/
-			let event1CTE
-			if (term.isleaf) {
-				event1CTE = `event1 AS (
-					SELECT sample, 1 as key, MIN(years_to_event) as value
-					FROM chronicevents
-					WHERE term_id = ?
-						AND grade >= ?
-					AND grade <= 5
-					AND years_to_event >= ?
-					${filter ? 'AND sample IN ' + filter.CTEname : ''}
-					GROUP BY sample
-				)`
-				values.push(term.id, q.breaks[0], minYearsToEvent)
-			} else {
-				event1CTE = `parentTerms AS (
+export const cuminc = {
+	/*
+	Get CTE for cuminc term
+
+	SQL output: sample|key|value
+		- sample: sample id
+		- key: exit code (0 = censored; 1 = event)
+			- An event is defined by the grade breakpoint given in q.breaks
+				- E.g. if q.breaks[0] == 3, then an event is an occurrence of any grade between grades 3-5
+		- value: years from cancer diagnosis until last assessment (exit code = 0) or first occurrence of event (exit code = 1)
+			- the first time point in the cuminc plot needs to be ds.cohort.minTimeSinceDx, so if years < ds.cohort.minTimeSinceDx, then set years to ds.cohort.minTimeSinceDx
+	*/
+	getCTE(tablename, term, ds, q, values, filter) {
+		if (!q.breaks || q.breaks.length != 1) throw 'one break is required'
+		if (!ds.cohort.minTimeSinceDx) throw 'min years since dx is missing'
+
+		// CTE for gathering event term(s)
+		// conditioned on whether or not the term is a leaf term
+		let eventTerms
+		if (term.isleaf) {
+			eventTerms = `eventTerms AS (
+				SELECT term_id
+				FROM chronicevents
+				WHERE term_id = ?
+			)`
+		} else {
+			eventTerms = `parentTerms AS (
 					SELECT distinct(ancestor_id) 
 					FROM ancestry
 				),
@@ -101,127 +96,194 @@ export const time2event = {
 					FROM ancestry a
 					JOIN terms t ON t.id = a.term_id AND t.id NOT IN parentTerms 
 					WHERE a.ancestor_id = ?
-				),
-				event1 AS (
-					SELECT sample, 1 as key, MIN(years_to_event) as value
-					FROM chronicevents
-					WHERE term_id in eventTerms
-						AND grade >= ?
-					AND grade <= 5
-					AND years_to_event >= ?
-					${filter ? 'AND sample IN ' + filter.CTEname : ''}
-					GROUP BY sample
 				)`
-				values.push(term.id, q.breaks[0], minYearsToEvent)
-			}
+		}
+		values.push(term.id)
 
-			const event0CTE = `event0 AS (
-				SELECT sample, 0 as key, MAX(years_to_event) as value
+		// CTE for discarding entries with negative years_to_event values
+		const positiveYears = `positiveYears AS (
+			SELECT *
+			FROM chronicevents
+			WHERE years_to_event > 0
+		)`
+
+		// CTE for extracting event 1 entries
+		const event1 = `event1 AS (
+			SELECT sample, 1 as key, CASE
+				WHEN MIN(years_to_event) < ? THEN ?
+				ELSE MIN(years_to_event)
+				END value
+			FROM positiveYears
+			WHERE term_id in eventTerms
+			AND grade >= ?
+			AND grade <= 5
+			${filter ? 'AND sample IN ' + filter.CTEname : ''}
+			GROUP BY sample
+		)`
+		values.push(ds.cohort.minTimeSinceDx, ds.cohort.minTimeSinceDx, q.breaks[0])
+
+		// CTE for extracting event 0 entries
+		const event0 = `event0 AS (
+			SELECT sample, 0 as key, CASE
+				WHEN MAX(years_to_event) < ? THEN ?
+				ELSE MAX(years_to_event)
+				END value
+			FROM positiveYears
+			WHERE grade <= 5 
+			AND sample NOT IN event1samples
+			${filter ? 'AND sample IN ' + filter.CTEname : ''}
+			GROUP BY sample
+		)`
+		values.push(ds.cohort.minTimeSinceDx, ds.cohort.minTimeSinceDx)
+
+		return {
+			sql: `${eventTerms},
+			${positiveYears},
+			${event1},
+			event1samples AS (
+				SELECT sample
+				FROM event1
+			),
+			${event0},
+			${tablename} AS (
+				SELECT * FROM event1
+				UNION ALL
+				SELECT * FROM event0
+			)`,
+			tablename
+		}
+	}
+}
+
+export const cox = {
+	/*
+	Get CTE for cox term
+
+	SQL output: sample|key|value
+		- sample: sample id
+		- key: exit code (0 = censored; 1 = event)
+			- An event is defined by the grade breakpoint given in q.breaks
+				- E.g. if q.breaks[0] == 3, then an event is an occurrence of any grade between grades 3-5
+		- value:
+			- for timeScale='time': years from ds.cohort.minTimeSinceDx until last assessment (exit code = 0) or first occurrence of event (exit code = 1)
+			- for timeScale='age': {age_start, age_end, time}
+				age_start: agedx + ds.cohort.minTimeSinceDx
+				age_end: age at last assessment (exit code = 0) or first occurrence of event (exit code = 1)
+					- 1 day (i.e. 1/365 or 0.00274) is added to age_end to prevent age_end = age_start (which would cause regression analysis to fail in R)
+				time: years from ds.cohort.minTimeSinceDx until last assessment (exit code = 0) or first occurrence of event (exit code = 1)
+					- time is included in this output so that cuminc analysis can run for rare variants when age scale is selected for cox regression
+	
+	Entries with years < ds.cohort.minTimeSinceDx are discarded
+	*/
+	getCTE(tablename, term, ds, q, values, filter) {
+		if (!q.breaks || q.breaks.length != 1) throw 'one break is required'
+		if (!q.timeScale) throw 'time scale is missing'
+		if (!ds.cohort.minTimeSinceDx) throw 'min years since dx is missing'
+
+		// CTE for gathering event term(s)
+		// conditioned on whether or not the term is a leaf term
+		let eventTerms
+		if (term.isleaf) {
+			eventTerms = `eventTerms AS (
+				SELECT term_id
 				FROM chronicevents
-				WHERE grade <= 5 
-					AND sample NOT IN event1samples
-					AND years_to_event >= ?
+				WHERE term_id = ?
+			)`
+		} else {
+			eventTerms = `parentTerms AS (
+					SELECT distinct(ancestor_id) 
+					FROM ancestry
+				),
+				eventTerms AS (
+					SELECT a.term_id 
+					FROM ancestry a
+					JOIN terms t ON t.id = a.term_id AND t.id NOT IN parentTerms 
+					WHERE a.ancestor_id = ?
+				)`
+		}
+		values.push(term.id)
+
+		// CTE for discarding entries with years_to_event values below ds.cohort.minTimeSinceDx
+		const filteredYears = `filteredYears AS (
+			SELECT *
+			FROM chronicevents
+			WHERE years_to_event >= ?
+		)`
+		values.push(ds.cohort.minTimeSinceDx)
+
+		let event1, event0
+		if (q.timeScale == 'time') {
+			// time scale is 'time'
+
+			// CTE for extracting event 1 entries
+			event1 = `event1 AS (
+				SELECT sample, 1 as key, (MIN(years_to_event) - ?) as value
+				FROM filteredYears
+				WHERE term_id in eventTerms
+				AND grade >= ?
+				AND grade <= 5
 				${filter ? 'AND sample IN ' + filter.CTEname : ''}
 				GROUP BY sample
 			)`
-			values.push(minYearsToEvent)
+			values.push(ds.cohort.minTimeSinceDx, q.breaks[0])
 
-			return {
-				sql: `${event1CTE},
-				event1samples AS (
-					SELECT sample
-					FROM event1
-				),
-				${event0CTE},
-				${tablename} AS (
-					SELECT * FROM event1
-					UNION ALL
-					SELECT * FROM event0
-				)`,
-				tablename
-			}
-		} else if (q.timeScale == 'age') {
-			/*
-			time scale is age
-			sql output -> 'key': event status (0/1); 'value': {age_start, age_end, time}
-			when 'key' is 0, 'value' is {age_start: age at cancer diagnosis, age_end: age at last assessment, time: time from diagnosis until last assessment}
-			when 'key' is 1, 'value' is {age_start: age at cancer diagnosis, age_end: age at first occurrence of event, time: time from diagnosis until first occurrence of event}
-			NOTE: time is included in this output so that cuminc analysis can run for rare variants when age scale is selected for cox regression
-			NOTE: one day (i.e. 1/365 or 0.00274) is added to age_end so that age_end does not equal age_start (otherwise model fit will fail in R)
-			FIXME: determine whether "age_start" should be (1) agedx, (2) (agedx + 5), or (3) ageconsent (from annotations table)
-			FIXME: see above FIXME for what kind of time should "time" refer to
-			TODO: do not hardcode '0.00274' or 'agedx'. Should retrieve from dataset.
-			*/
-			let event1CTE
-			if (term.isleaf) {
-				event1CTE = `event1 AS (
-					SELECT c.sample, 1 as key, json_object('age_start', a.value, 'age_end', (MIN(c.age_graded) + 0.00274), 'time', MIN(c.years_to_event)) as value
-					FROM chronicevents c
-					INNER JOIN anno_float a ON c.sample = a.sample
-					WHERE a.term_id = 'agedx'
-					AND c.term_id = ?
-					AND c.grade >= ?
-					AND c.grade <= 5
-					AND c.years_to_event >= ?
-					${filter ? 'AND c.sample IN ' + filter.CTEname : ''}
-					GROUP BY c.sample
-				)`
-				values.push(term.id, q.breaks[0], minYearsToEvent)
-			} else {
-				event1CTE = `parentTerms AS (
-					SELECT distinct(ancestor_id) 
-					FROM ancestry
-				),
-				eventTerms AS (
-					SELECT a.term_id 
-					FROM ancestry a
-					JOIN terms t ON t.id = a.term_id AND t.id NOT IN parentTerms 
-					WHERE a.ancestor_id = ?
-				),
-				event1 AS (
-					SELECT c.sample, 1 as key, json_object('age_start', a.value, 'age_end', (MIN(c.age_graded) + 0.00274), 'time', MIN(c.years_to_event)) as value
-					FROM chronicevents c
-					INNER JOIN anno_float a ON c.sample = a.sample
-					WHERE a.term_id = 'agedx'
-					AND c.term_id in eventTerms
-					AND c.grade >= ?
-					AND c.grade <= 5
-					AND c.years_to_event >= ?
-					${filter ? 'AND c.sample IN ' + filter.CTEname : ''}
-					GROUP BY c.sample
-				)`
-				values.push(term.id, q.breaks[0], minYearsToEvent)
-			}
-
-			const event0CTE = `event0 AS (
-				SELECT c.sample, 0 as key, json_object('age_start', a.value, 'age_end', (MAX(c.age_graded) + 0.00274), 'time', MAX(c.years_to_event)) as value
-				FROM chronicevents c
-				INNER JOIN anno_float a ON c.sample = a.sample
-				WHERE a.term_id = 'agedx'
-				AND c.grade <= 5 
-				AND c.sample NOT IN event1samples
-				AND c.years_to_event >= ?
-				${filter ? 'AND c.sample IN ' + filter.CTEname : ''}
-				GROUP BY c.sample
+			// CTE for extracting event 0 entries
+			event0 = `event0 AS (
+				SELECT sample, 0 as key, (MAX(years_to_event) - ?) as value
+				FROM filteredYears
+				WHERE grade <= 5 
+				AND sample NOT IN event1samples
+				${filter ? 'AND sample IN ' + filter.CTEname : ''}
+				GROUP BY sample
 			)`
-			values.push(minYearsToEvent)
+			values.push(ds.cohort.minTimeSinceDx)
+		} else if (q.timeScale == 'age') {
+			// time scale is 'age'
+			if (!ds.cohort.ageEndOffset) throw 'age end offset is missing'
 
-			return {
-				sql: `${event1CTE},
-				event1samples AS (
-					SELECT sample
-					FROM event1
-				),
-				${event0CTE},
-				${tablename} AS (
-					SELECT * FROM event1
-					UNION ALL
-					SELECT * FROM event0
-				)`,
-				tablename
-			}
-		} else {
-			throw 'unknown time scale'
+			// CTE for extracting event 1 entries
+			event1 = `event1 AS (
+				SELECT f.sample, 1 as key, json_object('age_start', a.value + ?, 'age_end', (MIN(f.age_graded) + ?), 'time', MIN(f.years_to_event) - ?) as value
+				FROM filteredYears f
+				INNER JOIN anno_float a ON f.sample = a.sample
+				WHERE a.term_id = 'agedx'
+				AND f.term_id in eventTerms
+				AND f.grade >= ?
+				AND f.grade <= 5
+				${filter ? 'AND f.sample IN ' + filter.CTEname : ''}
+				GROUP BY f.sample
+			)`
+			values.push(ds.cohort.minTimeSinceDx, ds.cohort.ageEndOffset, ds.cohort.minTimeSinceDx, q.breaks[0])
+
+			// CTE for extracting event 0 entries
+			event0 = `event0 AS (
+				SELECT f.sample, 0 as key, json_object('age_start', a.value + ?, 'age_end', (MAX(f.age_graded) + ?), 'time', MAX(f.years_to_event) - ?) as value
+				FROM filteredYears f
+				INNER JOIN anno_float a ON f.sample = a.sample
+				WHERE a.term_id = 'agedx'
+				AND f.grade <= 5
+				AND f.sample NOT IN event1samples
+				${filter ? 'AND f.sample IN ' + filter.CTEname : ''}
+				GROUP BY f.sample
+			)`
+			values.push(ds.cohort.minTimeSinceDx, ds.cohort.ageEndOffset, ds.cohort.minTimeSinceDx)
+		}
+
+		return {
+			sql: `${eventTerms},
+			${filteredYears},
+			${event1},
+			event1samples AS (
+				SELECT sample
+				FROM event1
+			),
+			${event0},
+			${tablename} AS (
+				SELECT * FROM event1
+				UNION ALL
+				SELECT * FROM event0
+			)`,
+			tablename
 		}
 	}
 }

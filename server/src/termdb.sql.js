@@ -386,7 +386,7 @@ export function get_term_cte(q, values, index, filter, termWrapper = null) {
 	} else if (term.type == 'condition') {
 		const mode = termq.mode || 'discrete'
 		// TODO: can add back 'filter' arg if performance degrades
-		CTE = conditionSql[mode].getCTE(tablename, term, termq, values /*, filter*/)
+		CTE = conditionSql[mode].getCTE(tablename, term, q.ds, termq, values /*, filter*/)
 	} else if (term.type == 'survival') {
 		CTE = makesql_survival(tablename, term, q, values, filter)
 	} else {

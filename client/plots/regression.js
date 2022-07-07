@@ -148,8 +148,7 @@ export function get_defaultQ4fillTW(regressionType, isOutcome) {
 	if (regressionType == 'cox') {
 		// should not preset timeScale to 'time' here,
 		// that can cause copyMerge to overwrite saved setting. fillTW will auto fill missing value
-		q.mode = 'time2event'
-		q.showTimeScale = true
+		q.mode = 'cox'
 	}
 	return { condition: q }
 }

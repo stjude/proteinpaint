@@ -167,7 +167,6 @@ class TermdbVocab {
 
 		if ('grade' in opts) params.push(`grade=${opts.grade}`)
 		if ('minSampleSize' in opts) params.push(`minSampleSize=${opts.minSampleSize}`)
-		if ('minYearsToEvent' in opts) params.push(`minYearsToEvent=${opts.minYearsToEvent}`)
 
 		// start of mds3 parameters for variant2sample query
 		if (opts.isoform) params.push('isoform=' + opts.isoform)
