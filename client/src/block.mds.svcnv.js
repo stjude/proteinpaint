@@ -3,7 +3,7 @@ import { select as d3select, event as d3event } from 'd3-selection'
 import { rgb as d3rgb } from 'd3-color'
 import { axisTop, axisLeft, axisRight } from 'd3-axis'
 import { scaleLinear } from 'd3-scale'
-import * as common from '../shared/common'
+import * as common from '#shared/common'
 import * as expressionstat from './block.mds.expressionstat'
 import {
 	tooltip_singleitem,
@@ -22,7 +22,7 @@ import { makeTk_legend, update_legend } from './block.mds.svcnv.legend'
 import { render_singlesample } from './block.mds.svcnv.single'
 import { createbutton_addfeature, may_show_samplematrix_button } from './block.mds.svcnv.samplematrix'
 import { render_multi_genebar, genebarconfig_fixed } from './block.mds.svcnv.addcolumn'
-import { vcfparsemeta } from '../shared/vcf'
+import { vcfparsemeta } from '#shared/vcf'
 import { rnabamtk_initparam, configPanel_rnabam } from './block.mds.svcnv.share'
 
 /*

@@ -428,10 +428,12 @@ function mayaddGetter_variant2samples(tk, block) {
 
 		// supply list of terms based on querytype
 		if (arg.querytype == tk.mds.variant2samples.type_sunburst) {
+			// TODO may change to vocabApi.getNestedChartSeriesData
 			if (tk.mds.variant2samples.sunburst_ids) par.push('termidlst=' + tk.mds.variant2samples.sunburst_ids)
 		} else if (arg.querytype == tk.mds.variant2samples.type_samples) {
 			if (tk.mds.variant2samples.termidlst) par.push('termidlst=' + tk.mds.variant2samples.termidlst)
 		} else if (arg.querytype == tk.mds.variant2samples.type_summary) {
+			// TODO querytype=summary should be replaced by client barchar issuing its own query
 			if (tk.mds.variant2samples.termidlst) par.push('termidlst=' + tk.mds.variant2samples.termidlst)
 		} else {
 			throw 'unknown querytype'

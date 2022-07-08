@@ -23,10 +23,6 @@ function getPortalConfig(env = {}) {
 			// e.g., window.runproteinpaint
 			libraryTarget: 'window'
 		},
-		externals: {
-			react: 'React',
-			'react-dom': 'ReactDOM'
-		},
 		resolve: {
 			/* TODO: select polyfills instead of using node-polyfill-webpack-plugin
 			fallback: {
@@ -43,7 +39,7 @@ function getPortalConfig(env = {}) {
 				{
 					test: /\.css$/,
 					use: ['style-loader', 'css-loader']
-				},
+				}
 			]
 		},
 		devtool: env.devtool ? env.devtool : env.NODE_ENV == 'development' ? 'source-map' : false

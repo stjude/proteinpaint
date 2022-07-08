@@ -1,17 +1,22 @@
-const { stratinput } = require('../shared/tree')
-const gdc = require('./mds3.gdc')
+const { stratinput } = require('#shared/tree')
+const { querySamples_gdcapi } = require('./mds3.gdc')
 const { get_densityplot } = require('./mds3.densityPlot')
 const { ssmIdFieldsSeparator } = require('./mds3.init')
 const utils = require('./utils')
-const { dtfusionrna, dtsv } = require('../shared/common')
+const { dtfusionrna, dtsv } = require('#shared/common')
 
 /*
-***************** exported
 variant2samples_getresult()
-	get_samples
+	ifUsingBarchartQuery
+	queryMutatedSamples
+		querySamples_gdcapi
 		queryServerFileBySsmid
 		queryServerFileByRglst
-get_crosstabCombinations()
+	make_sunburst
+		get_crosstabCombinations()
+		addCrosstabCount_tonodes
+	make_summary
+	summary2barchart
 
 
 from one or more variants, get list of samples harboring any of the variants
@@ -23,34 +28,137 @@ only requires ds.variant2samples{}
 client instructs if to return sample list or sunburst summary; server may deny that request based on certain config
 
 q{}
-.get=str, samples/sunburst/summary
-.ssm_id_lst=str, comma-joined
-// later can add ssm_dt_lst="1,2" etc to indicate datatype for each of ssm_id_lst
+.get = "samples", or "sunburst", or "summary"
+	Required. Value determines what's returned
+
+.ssm_id_lst=str
+	Optional, comma-joined list of ssm_id (snvindel or fusion)
+.isoform=str
+	Optional, used for query gdc api to get all samples with mutation on an isoform
+.rglst=[ {chr,start,stop}, .. ]
+	Optional, used for querying bcf/tabix file with range
+
+	either "ssm_id_lst", "isoform", or "rglst" must be supplied, and must be consistent with dataset setup
+
 .termidlst=str
+	Optional.
+	comma-joined term ids, to retrieve value for each sample,
+	resulting sample obj will be like {sample_id:str, term1id:value1, term2id:value2, ...}
 	client always provides this, to reflect any user changes
 	if get=sunburst, termidlst is an ordered array of terms, for which to build layered sunburst
 	otherwise element order is not essential
+
+	should be replaced with barchart parameters with term1_id, term1_q etc
+	to enable termsetting (getting bin label for a sample based on bin config)
+
+*** optional parameters, if called from termdb-barsql ***
+
+.term1_id=str
+	quick fix
+	value is dictionary term id
+	indicating the set of termdb-barsql parmeters are used, instead of .termidlst
+	for now term1_q and term2_q are ignored
+
+.term2=(stringified json)
+	hardcoded to be a geneVariant term, carries isoform/rglst/etc for querying variant
 */
 export async function variant2samples_getresult(q, ds) {
-	// query sample details for list of terms in request parameter
+	ifUsingBarchartQuery(q, ds)
 
 	// each sample obj has keys from .terms[].id
-	const samples = await get_samples(q, ds)
+	const mutatedSamples = await queryMutatedSamples(q, ds)
 
-	if (q.get == ds.variant2samples.type_samples) return samples
-	if (q.get == ds.variant2samples.type_sunburst) return await make_sunburst(samples, ds, q)
-	if (q.get == ds.variant2samples.type_summary) return await make_summary(samples, ds, q)
+	if (q.get == ds.variant2samples.type_samples) {
+		// return list of samples
+		if (ds?.cohort?.termdb?.q?.id2sampleName) {
+			mutatedSamples.forEach(i => (i.sample_id = ds.cohort.termdb.q.id2sampleName(i.sample_id)))
+		}
+		return mutatedSamples
+	}
+
+	if (q.get == ds.variant2samples.type_sunburst) {
+		return await make_sunburst(mutatedSamples, ds, q)
+	}
+
+	if (q.get == ds.variant2samples.type_summary) {
+		const summary = await make_summary(mutatedSamples, ds, q)
+		if (q.term1_id) {
+			// using barchart query, convert data to barchart format
+			return summary2barchart(summary, q)
+		}
+		return summary
+	}
 	throw 'unknown get type'
 }
 
-async function get_samples(q, ds) {
-	const termidlst = q.termidlst ? q.termidlst.split(',') : []
+/*
+when coming from "termdb-barsql" route, q{} looks like:
+
+q={
+  term1_id: 'Lineage',
+  term1_q: {},
+  term2: '{"type":"geneVariant","isoform":"NM_004327","rglst":"[{\\"chr\\":\\"chr22\\",\\"reverse\\":false,\\"width\\":979,\\"start\\":23180960,\\"stop\\":23315522,\\"xoff\\":0}]"}',
+  term2_q: {},
+  get: 'summary',
+  genome: 'hg38',
+  dslabel: 'ASH'
+}
+
+the function converts it to:
+
+q={
+	termidlst:'Lineage', // copy of term1_id
+	isoform:'NM_004327', // copied from term2{}
+	rglst:[{chr,start,stop}],
+	...
+	term1_id:'Lineage' // keep it
+}
+*/
+function ifUsingBarchartQuery(q, ds) {
+	if (!q.term1_id) {
+		// not using barchart query
+		return
+	}
+	// using barchart query; q{} carries parameters from termdb-barsql
+
+	if (q.get == ds.variant2samples.type_samples) {
+		throw 'using barchart query and q.get=samples (should only be "summary" for now)'
+	}
+
+	q.termidlst = q.term1_id
+
+	if (!q.term2) throw 'q.term2=string missing'
+	const t = JSON.parse(q.term2)
+	if (!t.isoform) throw 'q.term2.isoform missing'
+	q.isoform = t.isoform
+	if (!t.rglst) throw 'q.term2.rglst missing'
+	q.rglst = JSON.parse(t.rglst)
+}
+
+/*
+input:
+	same as main function
+output:
+	list of mutated samples as basis for further processing
+	these samples all harbor mutation of certain specification (see q{})
+	depending on q.get=?, the samples may be summarized (to barchart), or returned without summary
+*/
+async function queryMutatedSamples(q, ds) {
+	/*
+	!!!tricky!!!
+
+	make temporary term id list that's only used in this function
+	and keep q.termidlst=str unchanged
+	as when using gdc api, observation.read_depth stuff are not in termidlst but are only added here to pull out that data
+	*/
+	const tempTermidlst = q.termidlst ? q.termidlst.split(',') : []
 	if (q.get == ds.variant2samples.type_samples && ds.variant2samples.extra_termids_samples) {
 		// extra term ids to add for get=samples query
-		termidlst.push(...ds.variant2samples.extra_termids_samples)
+		tempTermidlst.push(...ds.variant2samples.extra_termids_samples)
 	}
+
 	if (ds.variant2samples.gdcapi) {
-		return await gdc.getSamples_gdcapi(q, termidlst, ds)
+		return await querySamples_gdcapi(q, tempTermidlst, ds)
 	}
 
 	/* from server-side files
@@ -61,11 +169,11 @@ async function get_samples(q, ds) {
 	*/
 
 	if (q.ssm_id_lst) {
-		return await queryServerFileBySsmid(q, termidlst, ds)
+		return await queryServerFileBySsmid(q, tempTermidlst, ds)
 	}
 
 	if (q.rglst) {
-		return await queryServerFileByRglst(q, termidlst, ds)
+		return await queryServerFileByRglst(q, tempTermidlst, ds)
 	}
 
 	throw 'unknown q{} option when querying server side files'
@@ -78,9 +186,12 @@ that contains chromsome position for querying snvindel or svfusion file
 thus can extract coordinate from  to query
 
 snvindel id has 4 fields, svfusion id has 6 fields, thus be able to differentiate
+
+TODO no need to collect ssm_id_lst for each sample e.g. doing sunburst
 */
 async function queryServerFileBySsmid(q, termidlst, ds) {
-	let samples = [] // array can be modified by q.tid2value
+	const samples = new Map() // must use sample id in map to dedup samples from multiple variants
+	// k: sample_id, v: {ssm_id_lst:[], ...}
 
 	for (const ssmid of q.ssm_id_lst.split(',')) {
 		const l = ssmid.split(ssmIdFieldsSeparator)
@@ -99,8 +210,8 @@ async function queryServerFileBySsmid(q, termidlst, ds) {
 			for (const m of mlst) {
 				if (m.pos != pos || m.ref != ref || m.alt != alt) continue
 				for (const s of m.samples) {
-					s.ssm_id = ssmid
-					samples.push(s)
+					if (!samples.has(s.sample_id)) samples.set(s.sample_id, { sample_id: s.sample_id, ssm_id_lst: [] })
+					samples.get(s.sample_id).ssm_id_lst.push(ssmid)
 				}
 			}
 			continue
@@ -122,23 +233,13 @@ async function queryServerFileBySsmid(q, termidlst, ds) {
 			const mlst = await ds.queries.svfusion.byrange.get(param)
 
 			for (const m of mlst) {
-				if (m.dt != dt || m.pos != pos || m.strand != strand || m.pairlstIdx != pairlstIdx || m.mname != mname) continue
+				if (m.dt != dt || m.pos != pos || m.strand != strand || m.pairlstIdx != pairlstIdx || m.mname != mname) {
+					// not this fusion event
+					continue
+				}
 				for (const s of m.samples) {
-					// if this sample is already found from snvindel
-					const s2 = samples.find(i => i.sample_id == s.sample_id)
-					if (s2) {
-						// this sample is already found; record ssmid on this s2
-						if (s2.ssm_id_lst) {
-							s2.ssm_id_lst.push(ssmid)
-						} else {
-							s2.ssm_id_lst = [s2.ssm_id, ssmid]
-							delete s2.ssm_id
-						}
-					} else {
-						// this sample is not found yet
-						s.ssm_id = ssmid
-						samples.push(s)
-					}
+					if (!samples.has(s.sample_id)) samples.set(s.sample_id, { sample_id: s.sample_id, ssm_id_lst: [] })
+					samples.get(s.sample_id).ssm_id_lst.push(ssmid)
 				}
 			}
 			continue
@@ -146,49 +247,33 @@ async function queryServerFileBySsmid(q, termidlst, ds) {
 		throw 'unknown format of ssm id'
 	}
 
-	if (q.tid2value) {
-		// this should not be needed once using `bcf query -s sample1,sample2,...` based on tid2value{}
-		// filter sample to only keep those matching given tid=value pairs
-		const lst = [] // samples meeting filter
-		for (const s of samples) {
-			let skip = false
-			for (const tid in q.tid2value) {
-				const v = ds.cohort.termdb.q.getSample2value(tid, s.sample_id)
-				if (v != q.tid2value[tid]) {
-					skip = true
-					break
-				}
-			}
-			if (skip) continue
-			lst.push(s)
-		}
-		samples = lst
-	}
-
 	if (termidlst && termidlst.length) {
 		// append term values to each sample
-		for (const s of samples) {
+		for (const s of samples.values()) {
 			for (const tid of termidlst) {
-				s[tid] = ds.cohort.termdb.q.getSample2value(tid, s.sample_id)
+				const v = ds.cohort.termdb.q.getSample2value(tid, s.sample_id)
+				if (v[0]) {
+					s[tid] = v[0].value
+				}
 			}
 		}
 	}
 
-	return samples
+	return [...samples.values()]
 }
 
 /*
 get list of samples that harbor any variant in rglst[]
 */
 async function queryServerFileByRglst(q, termidlst, ds) {
-	const samples = []
+	const samples = new Map() // same as in previous function
 
 	if (ds.queries.snvindel) {
 		const mlst = await ds.queries.snvindel.byrange.get(q)
 		for (const m of mlst) {
 			for (const s of m.samples) {
-				s.ssm_id = m.ssm_id
-				samples.push(s)
+				if (!samples.has(s.sample_id)) samples.set(s.sample_id, { sample_id: s.sample_id, ssm_id_lst: [] })
+				samples.get(s.sample_id).ssm_id_lst.push(m.ssm_id)
 			}
 		}
 	}
@@ -197,43 +282,33 @@ async function queryServerFileByRglst(q, termidlst, ds) {
 
 		for (const m of mlst) {
 			for (const s of m.samples) {
-				// if this sample is already found from snvindel
-				const s2 = samples.find(i => i.sample_id == s.sample_id)
-				if (s2) {
-					// this sample is already found; record ssmid on this s2
-					if (s2.ssm_id_lst) {
-						s2.ssm_id_lst.push(m.ssm_id)
-					} else {
-						s2.ssm_id_lst = [s2.ssm_id, m.ssm_id]
-						delete s2.ssm_id
-					}
-				} else {
-					// this sample is not found yet
-					s.ssm_id = m.ssm_id
-					samples.push(s)
-				}
+				if (!samples.has(s.sample_id)) samples.set(s.sample_id, { sample_id: s.sample_id, ssm_id_lst: [] })
+				samples.get(s.sample_id).ssm_id_lst.push(m.ssm_id)
 			}
 		}
 	}
 
 	if (termidlst && termidlst.length) {
 		// append term values to each sample
-		for (const s of samples) {
+		for (const s of samples.values()) {
 			for (const tid of termidlst) {
-				s[tid] = ds.cohort.termdb.q.getSample2value(tid, s.sample_id)
+				const v = ds.cohort.termdb.q.getSample2value(tid, s.sample_id)
+				if (v[0]) {
+					s[tid] = v[0].value
+				}
 			}
 		}
 	}
 
-	return samples
+	return [...samples.values()]
 }
 
-async function make_sunburst(samples, ds, q) {
+async function make_sunburst(mutatedSamples, ds, q) {
 	const termidlst = q.termidlst.split(',')
 
 	// to use stratinput, convert each attr to {k} where k is term id
 	const nodes = stratinput(
-		samples,
+		mutatedSamples,
 		termidlst.map(i => {
 			return { k: i }
 		})
@@ -278,13 +353,14 @@ async function make_sunburst(samples, ds, q) {
 
 	if (ds.termdb && ds.termdb.termid2totalsize2) {
 		const combinations = await get_crosstabCombinations(termidlst, ds, q, nodes)
-		await gdc.addCrosstabCount_tonodes(nodes, combinations)
+		await addCrosstabCount_tonodes(nodes, combinations, ds)
 		// .cohortsize=int is added to applicable elements of nodes[]
 	}
+
 	return nodes
 }
 
-async function make_summary(samples, ds, q) {
+async function make_summary(mutatedSamples, ds, q) {
 	const entries = []
 	/* one element for a term
 	{
@@ -301,7 +377,7 @@ async function make_summary(samples, ds, q) {
 		// may skip a term
 		if (term.type == 'categorical') {
 			const cat2count = new Map()
-			for (const s of samples) {
+			for (const s of mutatedSamples) {
 				const c = s[term.id]
 				if (!c) continue
 				cat2count.set(c, 1 + (cat2count.get(c) || 0))
@@ -312,8 +388,8 @@ async function make_summary(samples, ds, q) {
 				numbycategory: [...cat2count].sort((i, j) => j[1] - i[1])
 			})
 		} else if (term.type == 'integer' || term.type == 'float') {
-			// later replace density with bin breakdown
-			const density_data = await get_densityplot(term, samples)
+			// TODO do binning instead
+			const density_data = await get_densityplot(term, mutatedSamples)
 			entries.push({
 				termid: term.id,
 				termname: term.name,
@@ -382,9 +458,7 @@ export async function get_crosstabCombinations(termidlst, ds, q, nodes) {
 	// v: set of category labels
 	// if term id is not found, it will use all categories retrieved from api queries
 	const id2categories = new Map()
-	id2categories.set(termidlst[0], new Set())
-	if (termidlst[1]) id2categories.set(termidlst[1], new Set())
-	if (termidlst[2]) id2categories.set(termidlst[2], new Set())
+	for (const i of termidlst) id2categories.set(i, new Set())
 
 	const useall = nodes ? false : true // to use all categories returned from api query
 
@@ -398,20 +472,20 @@ export async function get_crosstabCombinations(termidlst, ds, q, nodes) {
 				if (!n.v0) {
 					continue
 				}
-				id2categories.get(n.id0).add(n.v0.toLowerCase())
+				id2categories.get(n.id0).add(ds.termdb.useLower ? n.v0.toLowerCase() : n.v0)
 			}
 			if (n.id1 && termidlst[1]) {
 				if (!n.v1) {
 					// see above comments
 					continue
 				}
-				id2categories.get(n.id1).add(n.v1.toLowerCase())
+				id2categories.get(n.id1).add(ds.termdb.useLower ? n.v1.toLowerCase() : n.v1)
 			}
 			if (n.id2 && termidlst[2]) {
 				if (!n.v2) {
 					continue
 				}
-				id2categories.get(n.id2).add(n.v2.toLowerCase())
+				id2categories.get(n.id2).add(ds.termdb.useLower ? n.v2.toLowerCase() : n.v2)
 			}
 		}
 	}
@@ -421,7 +495,7 @@ export async function get_crosstabCombinations(termidlst, ds, q, nodes) {
 	{
 		const tv2counts = await ds.termdb.termid2totalsize2.get([id0])
 		for (const [v, count] of tv2counts.get(id0)) {
-			const v0 = v.toLowerCase()
+			const v0 = ds.termdb.useLower ? v.toLowerCase() : v
 			if (useall) {
 				id2categories.get(id0).add(v0)
 				combinations.push({ count, id0, v0 })
@@ -442,15 +516,15 @@ export async function get_crosstabCombinations(termidlst, ds, q, nodes) {
 			promises.push(ds.termdb.termid2totalsize2.get([id1], { tid2value: { [id0]: v0 } }, v0))
 		}
 		const lst = await Promise.all(promises)
-		for (const [tv2counts, combination] of lst) {
+		for (const [tv2counts, v0] of lst) {
 			for (const [s, count] of tv2counts.get(id1)) {
-				const v1 = s.toLowerCase()
+				const v1 = ds.termdb.useLower ? s.toLowerCase() : s
 				if (useall) {
 					id2categories.get(id1).add(v1)
-					combinations.push({ count, id0, v0: combination, id1, v1 })
+					combinations.push({ count, id0, v0, id1, v1 })
 				} else {
 					if (id2categories.get(id1).has(v1)) {
-						combinations.push({ count, id0, v0: combination, id1, v1 })
+						combinations.push({ count, id0, v0, id1, v1 })
 					}
 				}
 			}
@@ -471,7 +545,7 @@ export async function get_crosstabCombinations(termidlst, ds, q, nodes) {
 		const lst = await Promise.all(promises)
 		for (const [tv2counts, combination] of lst) {
 			for (const [s, count] of v2counts.get(id2)) {
-				const v2 = s.toLowerCase()
+				const v2 = ds.termdb.useLower ? s.toLowerCase() : s
 				if (useall) {
 					id2categories.get(id2).add(v2)
 					combinations.push({ count, id0, v0: combination.v0, id1, v1: combination.v1, id2, v2 })
@@ -484,4 +558,86 @@ export async function get_crosstabCombinations(termidlst, ds, q, nodes) {
 		}
 	}
 	return combinations
+}
+
+/* for an ele of nodes[], find matching ele from combinations[]
+and assign total as node.cohortsize
+*/
+async function addCrosstabCount_tonodes(nodes, combinations, ds) {
+	for (const node of nodes) {
+		if (!node.id0) continue // root
+
+		if (!node.v0) {
+			continue
+		}
+		const v0 = ds.termdb.useLower ? node.v0.toLowerCase() : node.v0
+		if (!node.id1) {
+			const n = combinations.find(i => i.id1 == undefined && i.v0 == v0)
+			if (n) node.cohortsize = n.count
+			continue
+		}
+
+		if (!node.v1) {
+			// e.g. {"id":"root...HCMI-CMDC...","parentId":"root...HCMI-CMDC","value":1,"name":"","id0":"project","v0":"HCMI-CMDC","id1":"disease"}
+			continue
+		}
+		const v1 = ds.termdb.useLower ? node.v1.toLowerCase() : node.v1
+		if (!node.id2) {
+			// second level, use crosstabL1
+			const n = combinations.find(i => i.id2 == undefined && i.v0 == v0 && i.v1 == v1)
+			if (n) node.cohortsize = n.count
+			continue
+		}
+
+		if (!node.v2) {
+			continue
+		}
+		const v2 = ds.termdb.useLower ? node.v2.toLowerCase() : node.v2
+		if (!node.id3) {
+			// third level, use crosstabL2
+			const n = crosstabL2.find(i => i.v0 == v0 && i.v1 == v1 && i.v2 == v2)
+			if (n) node.cohortsize = n.count
+		}
+	}
+}
+
+/*
+input:
+summary=[ {} ]
+each element:
+{
+  "termid": "Lineage",
+  "termname": "Lineage",
+  "numbycategory": [
+    [
+      "BALL", // category name
+      52, // #mutated samples
+      1829 // #total
+    ],
+  ]
+}
+
+output:
+barchart data as returned by "termdb-barsql" route
+*/
+function summary2barchart(input, q) {
+	// only convert first, as barchart query should only result in input[] array length=1
+	const summary = input[0]
+	if (!summary.numbycategory) throw 'numbycategory missing on input[0]'
+	const data = {
+		charts: [
+			{
+				chartId: '',
+				serieses: []
+			}
+		]
+	}
+	for (const [category, mutCount, total] of summary.numbycategory) {
+		data.charts[0].serieses.push({
+			seriesId: category,
+			total,
+			data: [{ dataId: 'Mutated', total: mutCount }, { dataId: 'Others', total: total - mutCount }]
+		})
+	}
+	return data
 }

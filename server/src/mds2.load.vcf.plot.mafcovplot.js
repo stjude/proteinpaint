@@ -1,5 +1,5 @@
 const utils = require('./utils')
-const vcf = require('../shared/vcf')
+const vcf = require('#shared/vcf')
 const d3scale = require('d3-scale')
 const termdbsql = require('./termdb.sql')
 
@@ -146,7 +146,7 @@ function mafcov_getdata4clientrendering(m, tk, ds) {
 		}
 		if (tk.plot_mafcov.show_samplename) {
 			o.sampleobj = {
-				name: ds.sampleidmap ? ds.sampleidmap.get(sample.sampleobj.name) : sample.sampleobj.name
+				name: ds.cohort.termdb.q.id2sampleName(sample.sampleobj.name)
 			}
 		}
 

@@ -24,86 +24,31 @@ if (!params.route) {
 	showForm()
 }
 
+let getRequestBody
+
 async function showForm() {
 	const app = {
 		dom: {
 			holder: d3.select('#aaa').style('margin', '20px').style('padding', '10px')
 		}
 	}
+
 	try {
 		const data = await fetch(params.route).then(r=>r.json())
 		const div = app.dom.holder
 		div.append('h1').text(`${data.label} database update`)
 
+		if (params.dbfile) showDbFileInput(div, app)
+		
 		showExtractOption(div, app)
 		
 		div.append('div')
 			.style('margin', '20px 0')
-			.html('(May skip the extraction above and directly paste tab-delimited data below:)')
+			.html(params.dbfile ? '(may copy the extracted data to your input files)' : '(May skip the extraction above and directly paste tab-delimited data below:)')
 
-		div.append('div').html(`NOTE: Do not include a header row!`)
+		if (!params.dbfile) div.append('div').html(`NOTE: Do not include a header row!`)
 
-		const subdivs = div.selectAll('.refresh-subdiv')
-			.data(data.files)
-			.enter()
-			.append('div')
-			.attr('class', 'refresh-subdiv')
-			.style('text-align', 'left')
-			.style('padding', '15px')
-
-		subdivs.append('div')
-			.style('display', 'inline-block')
-			.style('width', '120px')
-			.style('margin', '10px')
-			.style('vertical-align', 'top')
-			.text(name=>name)
-
-		app.dom.textareas = subdivs.append('textarea')
-			.attr('placeholder', 
-				d => d == 'annotations' 
-					? `sample\tterm_id\tvalue` 
-					: d == 'survival' 
-					? `sample\tterm_id\ttte\texit_code`
-					: `id\tname\tparent_id\tjsondata\tchild_order\ttype\tisleaf` 
-			)
-			.style('width', '650px')
-			.style('height', '300px')
-			.style('margin', '10px')
-			.style('white-space', 'nowrap')
-
-		div.append('button')
-			.style('margin', '10px')
-			.text('Submit')
-			.on('click', ()=>{
-				const tsv = {}
-				subdivs.each(function(name) {
-					const content = d3.select(this).select('textarea').property('value')
-					if (content) tsv[name] = content
-				})
-				try {
-					if (!Object.keys(tsv).length) {
-						throw 'No data to submit.'
-					}
-
-					const opts = {
-						method: 'POST',
-						headers: {
-							'content-type': 'application/json'
-						},
-						body: JSON.stringify(tsv)
-					}
-					fetch(params.route, opts)
-						.then(r=>r.json())
-						.then(r => {
-							if (r.error) throw r.error
-							if (r.status != 'ok') throw 'server response not ok'
-						})
-						.catch(e => {throw e})
-				} catch(e) {
-					alert(e)
-				}
-			})
-
+		showTsvInputs(div, app, data)
 	} catch(e) {
 		alert(e.error || e)
 	}
@@ -118,6 +63,103 @@ function getParams() {
   })
   return params
 }
+
+function showDbFileInput(_div, app) {
+	const div = _div
+			.append('div')
+			.style('margin', '10px 10px 50px 10px')
+
+	const label = div.append('label')
+	label.append('span').html('DB file path: ')
+	input = label.append('input')
+		.attr('type', 'text')
+		.attr('value', params.dbfile)
+		.style('width', '500px')
+
+	div.append('button')
+		.text('Submit')
+		.on('click', postRequest)
+
+	getRequestBody = ()=>{
+		return {
+			dbfile: input.property('value')
+		}
+	}
+}
+
+function showTsvInputs(div, app, data) {
+	const subdivs = div.selectAll('.refresh-subdiv')
+		.data(data.files)
+		.enter()
+		.append('div')
+		.attr('class', 'refresh-subdiv')
+		.style('text-align', 'left')
+		.style('padding', '15px')
+	app.dom.subdivs = subdivs
+
+	subdivs.append('div')
+		.style('display', 'inline-block')
+		.style('width', '120px')
+		.style('margin', '10px')
+		.style('vertical-align', 'top')
+		.text(name=>name)
+
+	app.dom.textareas = subdivs.append('textarea')
+		.attr('placeholder', 
+			d => d == 'annotations' 
+				? `sample\tterm_id\tvalue` 
+				: d == 'survival' 
+				? `sample\tterm_id\ttte\texit_code`
+				: `id\tname\tparent_id\tjsondata\tchild_order\ttype\tisleaf` 
+		)
+		.style('width', '650px')
+		.style('height', '300px')
+		.style('margin', '10px')
+		.style('white-space', 'nowrap')
+
+	if (params.dbfile) return
+
+	const tsv = {}
+	getRequestBody = () => {
+		if (!Object.keys(tsv).length) throw 'No data to submit.'
+		subdivs.each(function(name) {
+			const content = d3.select(this).select('textarea').property('value')
+			if (content) tsv[name] = content
+		})
+		return tsv
+	}
+
+	div.append('button')
+		.style('margin', '10px')
+		.text('Submit')
+		.on('click', postRequest)
+}
+
+function postRequest() {
+	try {
+		const opts = {
+			method: 'POST',
+			headers: {
+				'content-type': 'application/json'
+			},
+			body: JSON.stringify(getRequestBody())
+		}
+		fetch(params.route, opts)
+			.then(r=>r.json())
+			.then(r => {
+				if (r.error) throw r.error
+				if (r.status != 'ok') throw 'server response not ok'
+				alert('Success!')
+			})
+			.catch(e => {
+				alert(JSON.stringify(e))
+				console.error(e)
+			})
+	} catch(e) {
+		alert(e)
+	}
+}
+
 
 function showExtractOption(div, app) {
 	const filediv = div

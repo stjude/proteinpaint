@@ -14,7 +14,6 @@
 
 <script>
 document.body.onload = () => runproteinpaint({
-	host: 'https://ppr.stjude.org',
 	holder:document.getElementById('aaa'),
 	parseurl:true,
 	nobox:1,
@@ -24,7 +23,7 @@ document.body.onload = () => runproteinpaint({
 		state: {
 			dslabel: 'IHG',
 			genome: 'hg19',
-      termfilter: {
+   /*   termfilter: {
         filter: {
           type: 'tvslst',
           lst: [{
@@ -35,7 +34,7 @@ document.body.onload = () => runproteinpaint({
             }
           }]
         }
-      },
+      },*/
 			plots: [
 				{
 					chartType: 'matrix',
@@ -114,65 +113,46 @@ document.body.onload = () => runproteinpaint({
 									id: 'Gender',
 									//q: { mode: 'values' } // or 'groupsetting'
 								},
-								/*{
-									id: 'Metastasis'
+								{
+									id: 'Risk (At diagnosis)'
 								},
 								{
-									id: 'Death'
+									id: 'Integrated Diagnosis'
 								},
 								{
-									id: 'Progressive Disease'
+									id: 'GTR/STR/NTR/Biopsy'
 								},
-								{
-									id: 'M stage'
-								},
-								{
-									id: 'Primary Treatment category'
-								},
-								{
-									id: 'Primary Treatment category 2'
-								},
-								{
-									id: 'Extent of Resection'
-								},
-								{
-									id: 'Group'
-								},
-								{
-									id: 'Histologic group at diagnosis'
-								},
-								{
-									id: 'TSNE Category'
-								},
-								{
-									id: 'TSNE closest cluster'
-								},
-								{
-									id: 'DKFZ 12.5 Prediction Simplified'
-								},
-                {
-                  id: 'Sample Type'
-                },
-                {
-                  
-                  id: 'study'
-                },
 								{
 									id: 'Mutational Burden'
-								},
-								{	
-                  id: 'Germline'
 								},
 								{
 									id: 'WES',
 								},
-								{
-									id: 'RNAseq',
-                  //$id: 'RNAseq'
-								},
+                                                                { id : 'Age at Last Follow Up (Y))'},
+                                                                { id : 'Alive / Dead'},
+                                                                { id : 'DKFZ Classifier'},
+                                                                { id : 'Enrolling Institution'},
+                                                                { id : 'Ever Used RT During Rx (Yes /No)'},
+                                                                { id : 'First Relapse Or PD  (Y/N)'},
+                                                                //{ id : 'General Treatment'},
+                                                                { id : 'Integrated Diagnosis'},
+                                                                { id : 'Mutation Status'},
+                                                                { id : 'Radiaton Focal/CSI/None'},
+                                                                { id : 'RNA_Seq'},
+                                                                { id : 'Score'},
+                                                                { id : 'Second Relapse Or PD  (Y/N)'},
+                                                                { id : 'SJ class score'},
+                                                                { id : 'Surgery Y/N'},
+                                                                { id : 'Surgery Y/N.1'},
+                                                                { id : 'Therapy'},
+                                                                { id : 'Third Relapse or PD'},
+                                                                { id : 'Treatment'},
+                                                                { id : 'Treatment.1'},
+                                                                { id : 't-SNE'},
+                                                                { id : 'TSNE closest cluster (Sandeep)'},
                 {
                   id: 'Methylation'
-                }*/
+                }
 							]
 						},
             /*{
@@ -256,14 +236,42 @@ document.body.onload = () => runproteinpaint({
 					term: {
 						id: 'Event-free survival'
 					},
+					term2: {
+            label: 'Age Group',
+            id: 'Age',
+            q: {
+              mode: 'discrete',
+              type: 'custom-bin',
+              lst: [{
+                label: '<3',
+                startunbounded: true,
+                startinclusive: true,
+                stopinclusive: false,
+                stop: 3
+              },{
+                label: '3 to <7',
+                startinclusive: true,
+                stopinclusive: false,
+                start: 3,
+                stop: 7
+              },{
+                label: '7 to 18',
+                startinclusive: true,
+                stopinclusive: false,
+                start: 7,
+                stopunbounded: true,
+              }]
+            }
+					},
 					settings: {
 						survival: {
+              timeFactor: 1/365,
 							xTickValues: [0,2,4,6,8,10,12,14,16,18,20,22,24,26,28,30]
 						}
 					}
 				},
 
-				/*{
+				{
 					chartType: 'survival',
 					term: {
 						id: 'Overall Survival'
@@ -273,10 +281,11 @@ document.body.onload = () => runproteinpaint({
 					// },
 					settings: {
 						survival: {
+              timeFactor: 1/365,
 							xTickValues: [0,2,4,6,8,10,12,14,16,18,20,22,24,26,28,30]
 						}
 					}
-				}*/
+				}
 			]
 		}
 	}

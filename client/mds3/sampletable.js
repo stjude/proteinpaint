@@ -437,7 +437,7 @@ function samples2rows(samples, tk) {
 					}
 				} else if (m.dt == dtsv || m.dt == dtfusionrna) {
 					const p = m.pairlst[0]
-					ssm.html = `${p.a.name || ''} ${p.a.chr}:${p.a.pos} ${p.a.strand == '+' ? 'forward' : 'reverse'} > ${p.a
+					ssm.html = `${p.a.name || ''} ${p.a.chr}:${p.a.pos} ${p.a.strand == '+' ? 'forward' : 'reverse'} > ${p.b
 						.name || ''} ${p.b.chr}:${p.b.pos} ${p.b.strand == '+' ? 'forward' : 'reverse'}`
 				} else {
 					throw 'unknown dt'
@@ -462,13 +462,22 @@ function renderTable({ columns, rows, div }) {
 		.style('border-collapse', 'separate')
 		.style('max-height', '40vw')
 	const tr = table.append('tr')
+
+	tr.append('td') // numerator
+
 	for (const c of columns) {
 		tr.append('td')
 			.text(c.label)
 			.style('opacity', 0.5)
 	}
-	for (const row of rows) {
+
+	for (const [i, row] of rows.entries()) {
 		const tr = table.append('tr').attr('class', 'sja_clb')
+		tr.append('td')
+			.text(i + 1)
+			.style('font-size', '.7em')
+			.style('opacity', 0.5)
+
 		for (const [colIdx, cell] of row.entries()) {
 			const column = columns[colIdx]
 

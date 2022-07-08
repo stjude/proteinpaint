@@ -1,6 +1,6 @@
 import { scaleOrdinal } from 'd3-scale'
 import * as client from './client'
-import { nt2aa, codon_stop, bplen } from '../shared/common'
+import { nt2aa, codon_stop, bplen } from '#shared/common'
 import { string2snp } from './coord'
 import { select } from 'd3-selection'
 import { dofetch3 } from '../common/dofetch'
@@ -42,6 +42,7 @@ export default function(arg) {
 	paint.tklst = arg.tklst || []
 	paint.datasetqueries = arg.datasetqueries
 	paint.mclassOverride = arg.mclassOverride
+	paint.onloadalltk_always = arg.onloadalltk_always
 	paint.error = m => client.sayerror(paint.holder, m)
 
 	if (!arg.genome) {
@@ -327,7 +328,8 @@ function step3(paint) {
 				samplecart: paint.samplecart,
 				debugmode: paint.debugmode,
 				tklst: paint.tklst,
-				mclassOverride: paint.mclassOverride
+				mclassOverride: paint.mclassOverride,
+				onloadalltk_always: paint.onloadalltk_always
 			})
 	)
 }

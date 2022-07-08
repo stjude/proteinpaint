@@ -51,22 +51,22 @@ const express = require('express'),
 	child_process = require('child_process'),
 	spawn = child_process.spawn,
 	createCanvas = require('canvas').createCanvas,
-	stratinput = require('../shared/tree').stratinput,
+	stratinput = require('#shared/tree').stratinput,
 	bodyParser = require('body-parser'),
 	imagesize = require('image-size'),
 	readline = require('readline'),
 	jsonwebtoken = require('jsonwebtoken'),
 	utils = require('./utils'),
-	common = require('../shared/common'),
-	vcf = require('../shared/vcf'),
-	bulk = require('../shared/bulk'),
-	bulksnv = require('../shared/bulk.snv'),
-	bulkcnv = require('../shared/bulk.cnv'),
-	bulkdel = require('../shared/bulk.del'),
-	bulkitd = require('../shared/bulk.itd'),
-	bulksv = require('../shared/bulk.sv'),
-	bulksvjson = require('../shared/bulk.svjson'),
-	bulktrunc = require('../shared/bulk.trunc'),
+	common = require('#shared/common'),
+	vcf = require('#shared/vcf'),
+	bulk = require('#shared/bulk'),
+	bulksnv = require('#shared/bulk.snv'),
+	bulkcnv = require('#shared/bulk.cnv'),
+	bulkdel = require('#shared/bulk.del'),
+	bulkitd = require('#shared/bulk.itd'),
+	bulksv = require('#shared/bulk.sv'),
+	bulksvjson = require('#shared/bulk.svjson'),
+	bulktrunc = require('#shared/bulk.trunc'),
 	d3color = require('d3-color'),
 	d3stratify = require('d3-hierarchy').stratify,
 	d3scale = require('d3-scale'),
@@ -162,7 +162,10 @@ app.use((req, res, next) => {
 	log(req)
 
 	res.header('Access-Control-Allow-Origin', '*')
-	res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization')
+	res.header(
+		'Access-Control-Allow-Headers',
+		'Origin, X-Requested-With, Content-Type, Accept, Authorization, X-Auth-Token, x-auth-token'
+	)
 	if (req.method == 'GET' && !req.path.includes('.')) {
 		// immutable response before expiration, client must revalidate after max-age;
 		// by convention, any path that has a dot will be treated as
@@ -652,6 +655,7 @@ function clientcopy_genome(genomename) {
 		if (ds.isMds3) {
 			g2.datasets[ds.label] = {
 				isMds3: true,
+				noHandleOnClient: ds.noHandleOnClient,
 				label: ds.label
 			}
 			continue

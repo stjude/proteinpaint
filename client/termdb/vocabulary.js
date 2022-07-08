@@ -4,9 +4,9 @@ import { nonDictionaryTermTypes } from '../termsetting/termsetting'
 import { getNormalRoot } from '../filter/filter'
 import { scaleLinear } from 'd3-scale'
 import { sample_match_termvaluesetting } from '../common/termutils'
-import initBinConfig from '../shared/termdb.initbinconfig'
+import initBinConfig from '#shared/termdb.initbinconfig'
 import { deepEqual } from '../rx'
-import { isUsableTerm, graphableTypes } from '../shared/termdb.usecase'
+import { isUsableTerm, graphableTypes } from '#shared/termdb.usecase'
 
 export function vocabInit(opts) {
 	/*** start legacy support for state.genome, .dslabel ***/
@@ -83,7 +83,21 @@ class TermdbVocab {
 		return data
 	}
 
-	// from termdb/plot
+	/* from termdb/plot
+	Input:
+	opts{}
+		.term={}
+			.id=str
+			.term={}
+			.q={}
+		.term2={}
+			id/term/q
+		.term0={}
+			id/term/q
+		.filter={}
+	Output:
+		a structure from the termdb-barsql route
+	*/
 	async getNestedChartSeriesData(opts) {
 		const url = this.getTdbDataUrl(opts)
 		const data = await dofetch3(url, {}, this.opts.fetchOpts)
@@ -153,7 +167,13 @@ class TermdbVocab {
 
 		if ('grade' in opts) params.push(`grade=${opts.grade}`)
 		if ('minSampleSize' in opts) params.push(`minSampleSize=${opts.minSampleSize}`)
-		if ('minYearsToEvent' in opts) params.push(`minYearsToEvent=${opts.minYearsToEvent}`)
+
+		// start of mds3 parameters for variant2sample query
+		if (opts.isoform) params.push('isoform=' + opts.isoform)
+		if (opts.ssm_id_lst) params.push('ssm_id_lst=' + opts.ssm_id_lst.join(','))
+		if (opts.rglst) params.push('rglst=' + JSON.stringify(opts.rglst))
+		if (opts.get) params.push('get=' + opts.get)
+		// end of mds3 parameters
 
 		const route = opts.chartType ? 'termdb' : 'termdb-barsql'
 		return `/${route}?${params.join('&')}&genome=${this.vocab.genome}&dslabel=${this.vocab.dslabel}`
@@ -541,7 +561,7 @@ class TermdbVocab {
 		const filter = getNormalRoot(opts.filter)
 		const isNewFilter = !deepEqual(this.currAnnoData.lastFilter, filter)
 		if (isNewFilter) {
-			this.currAnnoData = { samples: {}, refs: { byTermId: {} }, lastTerms: [], lastFilter: {} }
+			this.currAnnoData = { samples: {}, refs: { byTermId: {}, bySampleId: {} }, lastTerms: [], lastFilter: {} }
 		}
 		const termsToUpdate = opts.terms.filter(tw => {
 			const lastTw = this.currAnnoData.lastTerms.find(lt => lt.$id === tw.$id)
@@ -583,6 +603,10 @@ class TermdbVocab {
 								row[tw.$id] = sample[tw.idn]
 							}
 						}
+					}
+
+					for (const sampleId in data.refs.bySampleId) {
+						this.currAnnoData.refs.bySampleId[sampleId] = data.refs.bySampleId[sampleId]
 					}
 
 					for (const tw of copies) {

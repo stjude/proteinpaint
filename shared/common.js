@@ -220,7 +220,7 @@ mclass[mclassfusionrna] = {
 	color: '#545454',
 	dt: dtfusionrna,
 	desc:
-		'Marks the break points leading to fusion transcripts, predicted by "Cicero" from RNA-seq data.<br>' +
+		'Marks the break points leading to fusion transcripts.<br>' +
 		'<span style="font-size:150%">&#9680;</span> - 3\' end of the break point is fused to the 5\' end of another break point in a different gene.<br>' +
 		'<span style="font-size:150%">&#9681;</span> - 5\' end of the break point is fused to the 3\' end of another break point in a different gene.',
 	key: mclassfusionrna

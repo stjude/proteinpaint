@@ -271,8 +271,6 @@ class MassCumInc {
 	// creates an opts object for the vocabApi.getNestedChartsData()
 	getDataRequestOpts() {
 		const c = this.state.config
-		if (!Number.isFinite(c.term.q.minYearsToEvent)) throw 'minimum years to event must be a numeric value'
-		if (c.term.q.minYearsToEvent < 5) throw 'minimum years to event must be at least 5 years'
 		const opts = {
 			chartType: 'cuminc',
 			term: c.term,
@@ -947,7 +945,7 @@ export async function getPlotConfig(opts, app) {
 	if (!opts.term) throw 'cuminc: opts.term{} missing'
 	try {
 		await fillTermWrapper(opts.term, app.vocabApi, {
-			condition: { mode: 'time2event', breaks: [2], showTimeScale: false }
+			condition: { mode: 'cuminc', breaks: [2] }
 		})
 		if (opts.term2) await fillTermWrapper(opts.term2, app.vocabApi)
 		if (opts.term0) await fillTermWrapper(opts.term0, app.vocabApi)

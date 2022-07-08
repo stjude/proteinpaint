@@ -1,7 +1,7 @@
-import * as common from '../shared/common'
+import * as common from '#shared/common'
 import * as client from './client'
 import { select as d3select, event as d3event } from 'd3-selection'
-import { duplicate as svduplicate } from '../shared/bulk.sv'
+import { duplicate as svduplicate } from '#shared/bulk.sv'
 import blocklazyload from './block.lazyload'
 
 export default function(cohort, ds2clst, butt, folder, hostURL) {

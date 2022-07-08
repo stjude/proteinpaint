@@ -1,10 +1,10 @@
 const app = require('./app')
 const path = require('path')
-const fs = require('fs')
+const fs = require('fs').promises
 const spawn = require('child_process').spawn
 const utils = require('./utils')
 const server_init_db_queries = require('./termdb.sql').server_init_db_queries
-const validate_single_numericrange = require('../shared/mds.termdb.termvaluesetting').validate_single_numericrange
+const validate_single_numericrange = require('#shared/mds.termdb.termvaluesetting').validate_single_numericrange
 const serverconfig = require('./serverconfig')
 
 /*
@@ -33,6 +33,16 @@ export async function init_db(ds, app = null, basepath = null) {
 	if (!ds.cohort.termdb) throw 'cohort.termdb missing when cohort.db is used'
 	await validate_termdbconfig(ds.cohort.termdb)
 	server_init_db_queries(ds)
+	setSampleIdMap(ds)
+
+	// !!! TODO !!!
+	// handle different sources/formats for gene variant data
+	// instead of assumed mutation text files
+	const { mayGetGeneVariantData, getTermTypes, mayGetMatchingGeneNames } = require('./bulk.mset')
+	ds.mayGetGeneVariantData = mayGetGeneVariantData
+	ds.getTermTypes = getTermTypes
+	ds.mayGetMatchingGeneNames = mayGetMatchingGeneNames
+
 	// the "refresh" attribute on ds.cohort.db should be set in serverconfig.json
 	// for a genome dataset, using "updateAttr: [[...]]
 	if (ds.cohort.db.refresh && app) setDbRefreshRoute(ds, app, basepath)
@@ -381,6 +391,25 @@ function may_sum_samples(tk) {
 	}
 }
 
+function setSampleIdMap(ds) {
+	ds.sampleName2Id = new Map()
+	ds.sampleId2Name = new Map()
+	const sql = 'SELECT * FROM sampleidmap'
+	const rows = ds.cohort.db.connection.prepare(sql).all()
+	for (const r of rows) {
+		ds.sampleId2Name.set(r.id, r.name)
+		ds.sampleName2Id.set(r.name, r.id)
+	}
+
+	ds.getSampleIdMap = samples => {
+		const bySampleId = {}
+		for (const sampleId in samples) {
+			bySampleId[sampleId] = ds.sampleId2Name.get(+sampleId)
+		}
+		return bySampleId
+	}
+}
+
 /* TODO: may move this function elsewhere so that it
 	can be used for mds3 or other datasets besides mds2 */
 export function server_updateAttr(ds, sds) {
@@ -454,6 +483,12 @@ function setDbRefreshRoute(ds, app, basepath) {
 	/*
 		req.body{}
 		- has one or more key-values, where
+		
+		.dbfile=path/to/dbfile to copy to ppr:/opt/data/pp/tp_native_dir/files/... (the dataset's data directory)
+			e.g., file/hg19/pnet/clinical/db relative to serverconfig.tpmasterdir
+		 
+		 OR
+		
 		- key: short string alias of the data file to update
 		- value: tab-delimited string data to write to the data file
 	*/
@@ -461,11 +496,23 @@ function setDbRefreshRoute(ds, app, basepath) {
 		try {
 			// save file to text
 			const q = req.body
-			for (const name in q) {
-				console.log(`Updating ${r.files[name]}`)
-				fs.writeFileSync(r.files[name], q[name], { encoding: 'utf8' })
+			if (q.dbfile) {
+				const source = path.join(serverconfig.tpmasterdir, q.dbfile)
+				const stat = await fs.stat(source)
+				if (!stat) throw `dbfile not found: '${source}'`
+				const target = ds.cohort.db.file_fullpath || ds.cohort.db.file
+				if (source === target) throw `db file source and target are the same`
+				console.log(`copying ${source} to ${target}`)
+				await fs.copyFile(source, target)
+			} else {
+				for (const name in q) {
+					if (name in r.files) {
+						console.log(`Updating ${r.files[name]}`)
+						await fs.writeFile(r.files[name], q[name], { encoding: 'utf8' })
+					}
+				}
 			}
-			if (r.cmd) {
+			if (!q.dbfile && r.cmd) {
 				const ps = spawn(...r.cmd)
 				const stderr = []
 				ps.stdout.on('data', data => {

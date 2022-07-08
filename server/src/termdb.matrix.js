@@ -7,7 +7,6 @@ const imagesize = require('image-size')
 const serverconfig = require('./serverconfig')
 const utils = require('./utils')
 const termdbsql = require('./termdb.sql')
-const get_flagset = require('./bulk.mset').get_flagset
 
 /*
 q {}
@@ -97,15 +96,28 @@ Returns
 async function getSampleData(q, terms) {
 	// dictionary and non-dictionary terms require different methods for data query
 	const [dictTerms, nonDictTerms] = divideTerms(terms)
-
 	const { samples, refs } = getSampleData_dictionaryTerms(q, dictTerms)
+	refs.bySampleId = q.ds.getSampleIdMap(samples)
 
-	// sample data from all terms are loaded into "samples"
+	// return early if all samples are filtered out by not having matching dictionary term values
+	if (dictTerms.length && !Object.keys(samples).length) return { samples, refs }
+
+	// sample data from all terms are added into samples data
 	for (const tw of nonDictTerms) {
 		// for each non dictionary term type
 		// query sample data with its own method and append results to "samples"
 		if (tw.term.type == 'geneVariant') {
-			await add_geneMutation2SampleData(tw, samples, q, dictTerms.length)
+			const bySampleId = await q.ds.mayGetGeneVariantData(tw, q)
+			for (const [sampleId, value] of bySampleId.entries()) {
+				if (!(tw.term.name in value)) continue
+				if (!dictTerms.length) {
+					// only create a sample entry/row when it is not already filtered out by not having any dictionary term values
+					if (!(sampleId in samples)) samples[sampleId] = { sample: sampleId }
+				}
+				if (samples[sampleId]) {
+					samples[sampleId][tw.term.name] = value[tw.term.name]
+				}
+			}
 		} else {
 			throw 'unknown type of independent non-dictionary term'
 		}
@@ -177,26 +189,4 @@ function getSampleData_dictionaryTerms(q, termWrappers) {
 	}
 
 	return { samples, refs }
-}
-
-async function add_geneMutation2SampleData(tw, samples, q, dictTermsLength = 0) {
-	// return early if all samples are filtered out by not having matching dictionary term values
-	if (dictTermsLength && !Object.keys(samples).length) return
-	const tname = tw.term.name
-	const flagset = await get_flagset(q.ds.cohort, q.genome)
-	const sampleData = {}
-	for (const flagname in flagset) {
-		const flag = flagset[flagname]
-		if (!(tname in flag.data)) continue
-		for (const d of flag.data[tname]) {
-			// TODO: fix the sample names in the PNET mutation text files
-			const sname = d.sample.split(';')[0].trim()
-			// only create a sample entry/row when it is not already filtered out by not having any dictionary term values
-			if (!dictTermsLength && !(sname in samples)) samples[sname] = { sample: sname }
-			const row = samples[sname]
-			if (!row) continue
-			if (!row[tname]) row[tname] = { key: tname, values: [], label: tname }
-			row[tname].values.push(d)
-		}
-	}
 }

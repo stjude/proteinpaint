@@ -540,6 +540,11 @@ module.exports = {
 	// termdb as a generic interface
 	// getters will be added to abstract the detailed implementations
 	termdb: {
+		// quick fix to convert category values from a term to lower cases for comparison
+		// as different api returns case-mismatching strings for the same category Breast/breast
+		// need example
+		useLower: true,
+
 		// for each term from an input list, get total sizes for each category
 		// used for sunburst and summary
 		termid2totalsize2: {

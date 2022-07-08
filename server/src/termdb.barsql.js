@@ -10,6 +10,7 @@ const termdbsql = require('./termdb.sql')
 ********************** EXPORTED
 handle_request_closure
 getOrderedLabels
+get_barchart_data_sqlitedb
 **********************
 */
 
@@ -36,8 +37,8 @@ export function handle_request_closure(genomes) {
 			const tdb = ds.cohort.termdb
 			if (!tdb) throw 'no termdb for this dataset'
 
-			// process triggers
-			await barchart_data(q, ds, res, tdb)
+			const data = await barchart_data(q, ds, tdb)
+			res.send(data)
 		} catch (e) {
 			res.send({ error: e.message || e })
 			if (e.stack) console.log(e.stack)
@@ -45,14 +46,76 @@ export function handle_request_closure(genomes) {
 	}
 }
 
-async function barchart_data(q, ds, res, tdb) {
-	/*
-  q: objectified URL query string
-  ds: dataset
-  res: express route callback's response argument
-  tdb: cohort termdb tree 
+/*
+inputs:
+q{}
+	objectified URL query string
+	.term1_id=str
+	.term1_q={}
+		termsetting obj for term1
+	.term2_id=str
+	.term2_q={}
+		termsetting obj for term2
+	.term0_id=str
+	.term0_q={}
+		termsetting obj for term0
+	.filter=stringified filter json obj
+ds{}
+	server-side dataset obj
+tdb{}
+	ds.cohort.termdb
+
+output an object:
+.charts=[]
+	.serieses=[]
+		.seriesId=str // key of term1 category
+		.total=int // total of this category
+		.data=[]
+			.dataId=str // key of term2 category, '' if no term2
+			.total=int // size of this term1-term2 combination
 */
+async function barchart_data(q, ds, tdb) {
 	if (!ds.cohort) throw 'cohort missing from ds'
+
+	/*
+	!!quick fix!!
+	tricky logic
+
+	(1) when a barchart is launched from mass, it needs to retrieve total number of samples annotated to a term
+
+	(2) when a barchart is launched from a mds3 track, it needs to retrieve number of *mutated* samples based on a term, in addition to total
+
+	in (1), it launches from a mds2 dataset with termdb
+	in (2), it launches from a mds3 dataset which supports termdb among others (gdc api, bcf/tabix)
+
+	TODO in future:
+	mds3 should serve both (1) and (2), and deprecate mds2
+	add new attribute in q{} to tell if query is (1) or (2)
+	TODO mds3 getter for (1), since it can be served by sqlite db or gdc api
+	*/
+
+	if (ds.isMds3 && ds?.variant2samples?.get) {
+		/* for now this condition checking is a quick fix to detect (2)
+		later should state this explicitly with new attribute in q{}
+		*/
+		return await ds.variant2samples.get(q, ds)
+	}
+
+	// this query is for (1)
+	if (ds?.termdb?.termid2totalsize2?.get) {
+		// mds3 implementation which wraps sqlitedb support
+		throw 'barsql parameter not fitting termid2totalsize2.get() yet'
+		return await ds.termdb.termid2totalsize2.get(q)
+	}
+	return await get_barchart_data_sqlitedb(q, ds, tdb)
+}
+
+export async function get_barchart_data_sqlitedb(q, ds, tdb) {
+	/* existing code to work with mds2 which only supports backend-termdb
+	as later mds2 will be deprecated and migrated to mds3,
+	there should be no need to check for isMds3 flag
+	*/
+
 	q.ds = ds
 
 	if (q.ssid) {
@@ -71,7 +134,8 @@ async function barchart_data(q, ds, res, tdb) {
 			pj: pj.times
 		}
 	}
-	res.send(pj.tree.results)
+	//console.log(JSON.stringify(pj.tree.results))
+	return pj.tree.results
 }
 
 // template for partjson, already stringified so that it does not

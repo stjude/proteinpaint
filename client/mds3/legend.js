@@ -243,7 +243,7 @@ function update_mclass(mclass2variantcount, tk) {
 					.style('padding', '10px')
 					.style('font-size', '.8em')
 					.style('width', '150px')
-					.text(desc)
+					.html(desc)
 
 				tk.legend.tip.showunder(cell.node())
 			})

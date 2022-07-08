@@ -26,7 +26,6 @@
     "server/utils/*.R",
     "server/utils/rust/*.*",
     "server/utils/rust/src",
-    "server/shared",
     "server/cards",
     "utils/install.pp.js"
   ],
