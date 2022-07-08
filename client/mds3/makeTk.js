@@ -96,10 +96,7 @@ export async function makeTk(tk, block) {
 
 	mayInitSkewer(tk) // tk.skewer{} may be added
 
-	tk.leftLabelMaxwidth = tk.tklabel
-		.text(tk.mds.label || tk.name)
-		.node()
-		.getBBox().width
+	tk.tklabel.text(tk.mds.label || tk.name)
 
 	tk.clear = () => {
 		// called in loadTk, when uninitialized is true
@@ -169,6 +166,8 @@ function loadTk_finish_closure(tk, block) {
 		if (data) {
 			updateLegend(data, tk, block)
 		}
+
+		tk.leftLabelMaxwidth = Math.max(tk.leftlabels.maxwidth + tk.leftlabels.xoff, tk.skewer ? tk.skewer.maxwidth : 0)
 
 		block.tkcloakoff(tk, { error: data ? data.error : null })
 		block.block_setheight()

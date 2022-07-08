@@ -2,7 +2,6 @@ import { dtsnvindel, dtsv, dtfusionrna, dtitd, dtdel, dtnloss, dtcloss } from '#
 import { skewer_make, settle_glyph, fold_glyph, unfold_glyph, mayHighlightDiskBySsmid } from './skewer.render'
 import { make_datagroup } from './datagroup'
 import { renderNumericMode } from './numericmode'
-import { positionLeftlabelg } from './leftlabel'
 
 /*
 at some point, data.skewer will return aggregated data,
@@ -15,7 +14,6 @@ availability of ssm_id decides if variant2samples query is allowed
 
 ********************** EXPORTED
 may_render_skewer
-mayAddSkewerModeOption
 
 *********** function cascade
 make_skewer_data
@@ -82,6 +80,10 @@ export function may_render_skewer(data, tk, block) {
 		tk.subtk2height.skewer = 0
 		return
 	}
+
+	// numericmode axis label and any other skewer things rendered into gleft
+	// record the max width
+	tk.skewer.maxwidth = 0
 
 	updateViewModes(tk, data.skewer)
 	// tk.skewer.viewModes[] updated
@@ -476,43 +478,4 @@ function detectNumericMode(tk, mlst) {
 	// TODO more sources e.g. bcf numeric info fields
 }
 
-function getViewmodeName(n) {
-	if (!n) return 'MISSING!!'
-	if (n.type == 'skewer') return 'As lollipops'
-	if (n.type == 'numeric') return n.label + ' as Y axis'
-	return 'unknown mode'
-}
-
 function makeSkewerModeUI(tk) {}
-
-export function mayAddSkewerModeOption(tk, block) {
-	if (!tk.skewer) return
-	if (tk.skewer.viewModes.length <= 1) {
-		// only one possible mode, cannot toggle mode, do not add option
-		return
-	}
-	// there are more than 1 mode, print name of current mode
-	tk.menutip.d
-		.append('div')
-		.style('margin', '10px 10px 3px 10px')
-		.style('font-size', '.7em')
-		.style('opacity', 0.5)
-		.text(getViewmodeName(tk.skewer.viewModes.find(n => n.inuse)))
-	// show available modes
-	for (const n of tk.skewer.viewModes) {
-		if (n.inuse) continue
-		// a mode not in use; make option to switch to it
-		tk.menutip.d
-			.append('div')
-			.text(getViewmodeName(n))
-			.attr('class', 'sja_menuoption')
-			.on('click', () => {
-				for (const i of tk.skewer.viewModes) i.inuse = false
-				n.inuse = true
-				tk.menutip.hide()
-				may_render_skewer({ skewer: tk.skewer.rawmlst }, tk, block)
-				positionLeftlabelg(tk, block)
-				tk._finish()
-			})
-	}
-}
