@@ -56,9 +56,8 @@ async function mayShowSummary(tk, block) {
 			term2: { term: geneTerm, q: {} }
 		}
 
-		tk.mds.termdb.vocabApi.getNestedChartSeriesData(arg).then(data => {
-			console.log('test barchart', data)
-		})
+		const data = await tk.mds.termdb.vocabApi.getNestedChartSeriesData(arg)
+		console.log('test barchart', data)
 	}
 
 	tk.mds
@@ -85,12 +84,48 @@ async function showSummary4terms(data, div, tk, block) {
 				(numbycategory
 					? '<span style="color:#999;font-size:.8em;float:right;margin-left: 5px;">n=' +
 					  numbycategory.length +
-					  '</span>'
+					  'xxxxx</span>'
 					: ''),
-			callback: div => {
-				if (numbycategory) return showSummary4oneTerm(termid, div, numbycategory, tk, block)
-				if (density_data) return showDensity4oneTerm(termid, div, density_data, tk, block)
-				throw 'unknown summary data'
+			callback: async function(div) {
+				//if (numbycategory) return showSummary4oneTerm(termid, div, numbycategory, tk, block)
+				//if (density_data) return showDensity4oneTerm(termid, div, density_data, tk, block)
+				// throw 'unknown summary data'
+
+				if (!this.barchart) {
+					const holder = div
+						.append('div')
+						.style('display', 'inline-grid')
+						.style('grid-template-columns', 'auto auto auto')
+						.style('grid-row-gap', '3px')
+						.style('align-items', 'center')
+						.style('justify-items', 'left')
+
+					this.barchart = await (await import('#plots/barchart')).getBarchartApp({
+						holder,
+						vocabApi: tk.mds.termdb.vocabApi,
+						config: {
+							term: {
+								id: termid
+							},
+							settings: {
+								barchart: {
+									unit: 'pct'
+								}
+							}
+						}
+					})
+				}
+				const geneTerm = {
+					type: 'geneVariant',
+					isoform: block.usegm.isoform
+				}
+				rangequery_rglst(tk, block, geneTerm)
+				this.barchart.update({
+					term2: {
+						term: geneTerm,
+						q: { mode: 'summary' }
+					}
+				})
 			}
 		})
 	}

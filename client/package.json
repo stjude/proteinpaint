@@ -10,6 +10,7 @@
     "#dom/*": "./dom/*.js",
     "#filter": "./filter/filter.js",
     "#filter/*": "./filter/*.js",
+    "#plots/*": "./plots/*.js",
     "#rx": "./rx/index.js",
     "#shared/*": "./shared/*.js",
     "#termdb/*": "./termdb/*.js",
