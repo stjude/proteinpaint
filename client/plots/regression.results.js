@@ -1104,7 +1104,7 @@ async function createGenomebrowser(self, input, resultLst) {
 			triangle:
 				'rare variants analyzed by ' +
 				(self.config.regressionType == 'linear'
-					? 'Wilcoxon rank sum test' // with permutation
+					? 'Wilcoxon rank sum test'
 					: self.config.regressionType == 'logistic'
 					? "Fisher's exact test"
 					: 'Cumulative incidence test'),

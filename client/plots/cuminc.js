@@ -638,7 +638,7 @@ function setRenderers(self) {
 			.data(d => [
 				chart.serieses.find(series => series.seriesId == d.series1).seriesLabel,
 				chart.serieses.find(series => series.seriesId == d.series2).seriesLabel,
-				d.permutation == 'TRUE' ? d.pvalue + '*' : d.pvalue
+				d.permutation ? d.pvalue + '*' : d.pvalue
 			])
 			.enter()
 			.append('td')
@@ -647,12 +647,12 @@ function setRenderers(self) {
 			.text(d => d)
 
 		// footnote div
-		if (tests.find(test => test.permutation == 'TRUE')) {
+		if (tests.find(test => test.permutation)) {
 			pvaldiv
 				.append('div')
 				.style('margin-top', '10px')
 				.style('font-size', fontSize - 2 + 'px')
-				.text("*computed by permutation of Gray's test statistic (1000 permutations)")
+				.text("*computed by permutation of Gray's test statistic")
 		}
 	}
 
