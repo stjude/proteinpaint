@@ -70,13 +70,18 @@ run_cuminc <- function(chart) {
     out <- list("estimates" = estimates)
   } else {
     # multiple series
-    # will compute cumulative incidence for each pairwise combinations of series
+    # compute cumulative incidence for each pairwise combination of series
     pairs <- combn(levels(chart$series), 2)
-    # table for storing results of Gray's tests
-    tests <- data.frame("series1" = character(length = ncol(pairs)), "series2" = character(length = ncol(pairs)), "pvalue" = double(length = ncol(pairs)), "permutation" = logical(length = ncol(pairs)), stringsAsFactors = F)
+    # vectors for storing results of Gray's tests
+    series1s <- character(length = ncol(pairs))
+    series2s <- character(length = ncol(pairs))
+    pvalues <- double(length = ncol(pairs))
+    usedPermutation <- logical(length = ncol(pairs))
     # compute cumulative incidence for each pair
     for (i in 1:ncol(pairs)) {
       pair <- pairs[,i]
+      series1s[i] <- pair[1]
+      series2s[i] <- pair[2]
       pairDat <- chart[chart$series %in% pair,]
       pairDat$series <- droplevels(pairDat$series)
       res <- cuminc(ftime = pairDat$time, fstatus = pairDat$event, group = pairDat$series, cencode = 0)
@@ -89,8 +94,9 @@ run_cuminc <- function(chart) {
         estimates[[series]] <- seriesRes
       }
       
-      # get results of Gray's test
-      # first check if permutation test is needed
+      # Gray's test
+      # the cuminc() function performed Gray's test between the pair of curves
+      # before using the results of the test, first check if permutation test is needed
       # build an event-series contingency table
       # if expected count of any cell in table is <5, then permutation test is needed
       tbl <- table(pairDat$event, pairDat$series)
@@ -101,34 +107,69 @@ run_cuminc <- function(chart) {
       if (any(E < 5)) {
         # expected count of at least one cell in table is <5
         # perform permutation test
-        permutation <- TRUE
-        # determine the test statistic of original data
-        tsO <- res$Tests[1,"stat"]
-        # perform permutations
-        # for each permutation:
-        #   - shuffle series assignments of samples
-        #   - perform cumulative incidence analysis
-        #   - return the test statistic of Gray's test
-        M <- 1000 # number of permutations
-        tsPs <- replicate(M, cuminc(ftime = pairDat$time, fstatus = pairDat$event, group = sample(pairDat$series), cencode = 0)$Tests[1,"stat"], simplify = T)
-        # perform two-tailed test
-        B_left <- sum(tsPs <= -abs(tsO))
-        B_right <- sum(tsPs >= abs(tsO))
-        B <- B_left + B_right
-        pvalue <- signif((B+1)/(M+1), 2)
+        usedPermutation[i] <- TRUE
+        tsO <- res$Tests[1,"stat"] # test statistic of original data
+        pvalue <- permutationTest(pairDat, tsO)
       } else {
         # expected counts of all cells in table are >=5
         # permutation test is not needed
         # use computed p-value from Gray's test
-        permutation <- FALSE
+        usedPermutation[i] <- FALSE
         pvalue <- signif(res$Tests[1,"pv"], 2)
       }
       if (pvalue == 0) pvalue <- "<1e-16" # see https://stacks.cdc.gov/view/cdc/22757/cdc_22757_DS11.pdf
-      tests[i,] <- c(pair, pvalue, permutation)
+      pvalues[i] <- pvalue
     }
+    tests <- data.frame("series1" = series1s, "series2" = series2s, "pvalue" = pvalues, "permutation" = usedPermutation, stringsAsFactors = F)
     out <- list("estimates" = estimates, "tests" = tests)
   }
   return(out)
+}
+
+# function to perform permutation test
+permutationTest <- function(dat, tsO) {
+  tsPs <- runPermutations(100, dat) # start with 100 permutations
+  pvalue <- getPermutePvalue(tsPs, tsO)
+  if (pvalue <= 0.2) {
+    # p-value is <=0.2, so additional permutations are
+    # needed to get more accurate p-value to determine
+    # if p-value is significant
+    tsPs <- c(tsPs, runPermutations(100, dat))
+    pvalue <- getPermutePvalue(tsPs, tsO)
+    if (pvalue <= 0.1) {
+      # additional permutations are needed
+      tsPs <- c(tsPs, runPermutations(300, dat))
+      pvalue <- getPermutePvalue(tsPs, tsO)
+      if (pvalue <= 0.05) {
+        # additional permutations are needed
+        tsPs <- c(tsPs, runPermutations(500, dat))
+        pvalue <- getPermutePvalue(tsPs, tsO)
+        # no need to run more than a total of 1000 permutations
+      }
+    }
+  }
+  return(pvalue)
+}
+
+# function to perform permutations
+# for each permutation:
+#   - shuffle series assignments of samples
+#   - perform cumulative incidence analysis
+#   - compute the test statistic of Gray's test
+# return all permuted test statistics
+runPermutations <- function(M, dat) {
+  tsPs <- replicate(M, cuminc(ftime = dat$time, fstatus = dat$event, group = sample(dat$series), cencode = 0)$Tests[1,"stat"], simplify = T)
+  return(tsPs)
+}
+
+# function to compute p-value for permutation test
+# perform two-tailed test
+getPermutePvalue <- function(tsPs, tsO) {
+  B_left <- sum(tsPs <= -abs(tsO))
+  B_right <- sum(tsPs >= abs(tsO))
+  B <- B_left + B_right
+  pvalue <- signif((B+1)/(length(tsPs)+1), 2)
+  return(pvalue)
 }
 
 # function to compute 95% confidence intervals
