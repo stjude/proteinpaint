@@ -127,11 +127,11 @@ export function parseDictionary(input) {
 	function parsePhenotree(lines, header) {
 		/* 
         Parses phenotree:
-            - Parses tab delim data arranged in cols: levels(n), ID (i.e. Variable), type, and categories (i.e. previous configuration).
-            - Only the ID, type, and categories cols are required
+            - Parses tab delim data arranged in cols: levels(n), variable (i.e. term_id), type, and categories (i.e. previous configuration).
+            - Only the vairable and type cols are required
             - Blank and '-' values for levels converted to null -- how to distinguish between no id vs no hierarchy??
             - Assumptions:
-                1. Headers required. 'Type', 'Categories' may appear anywhere. 'Level_[XX]' for optional hierarchy/level columns. 
+                1. Headers required. `Variable', 'Type', and 'Categories' may appear anywhere. 'Level_[XX]' for optional hierarchy/level columns. 
                 2. Levels are defined left to right, highest to lowest, and in order, no gaps.
                 3. No blanks or '-' between levels as well as no duplicate values in the same line.
                 4. No identical term ids
@@ -147,9 +147,6 @@ export function parseDictionary(input) {
 		}
 
 		const categoriesIndex = header.findIndex(l => l.toLowerCase().includes('categories'))
-		if (categoriesIndex == -1) {
-			throw `Missing required 'Categories' header`
-		}
 
 		const levelColIndexes = header.map((c, i) => (c.toLowerCase().includes('level_') ? i : -1)).filter(i => i != -1)
 		//If no level cols provided, use key/Variable col as single level. Will print the id as name
@@ -158,6 +155,7 @@ export function parseDictionary(input) {
 		// caching and/or tracking variables
 		const termNameToId = {}
 		const parentTermNames = new Set()
+		const parent2ChildOrder = new Map()
 
 		for (const [i, line] of lines.entries()) {
 			if (i === 0) continue
@@ -190,14 +188,12 @@ export function parseDictionary(input) {
 					type: term.type,
 					values: term.values,
 					groupsetting: term.groupsetting,
-					//isleaf: to be assigned later
 
 					// *** temporary attributes to be deleted later ***
 					ancestry: levelNames.slice(), // to be deleted later, used to fill in missing terms
 					parent_name: levelNames.pop() || null, // will change this later to parent_id
 					lineNum // to be deleted later
 				}
-
 				termNameToId[name] = id
 				parentTermNames.add(terms[id].parent_name)
 			} catch (e) {
@@ -209,6 +205,15 @@ export function parseDictionary(input) {
 
 		for (const id in terms) {
 			const term = terms[id]
+
+			// Add child_order for child terms
+			if (term.parent_name != null) {
+				if (!parent2ChildOrder.has(term.parent_name)) parent2ChildOrder.set(term.parent_name, [])
+				parent2ChildOrder.get(term.parent_name).push(term.name)
+				// 1 based child order - is this correct?
+				term.child_order = parent2ChildOrder.get(term.parent_name).indexOf(term.name) + 1
+			}
+
 			term.isleaf = !parentTermNames.has(term.name)
 			term.parent_id = termNameToId[term.parent_name] || null
 			delete term.parent_name
