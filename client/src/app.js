@@ -984,6 +984,7 @@ async function launchgeneview(arg, app) {
 		tklst: arg.tracks,
 		gmmode: arg.gmmode,
 		mclassOverride: arg.mclassOverride,
+		hide_dsHandles: arg.hide_dsHandles,
 		onloadalltk_always: arg.onloadalltk_always
 	}
 	let ds = null
