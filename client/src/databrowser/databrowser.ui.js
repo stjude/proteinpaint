@@ -92,6 +92,7 @@ function makeSectionHeader(div, text) {
 		.style('font-size', '1.5em')
 		.style('color', '#003366')
 		.style('margin', '20px 10px 40px 10px')
+		.classed('sjpp-databrowser-section-header', true)
 	const hr = div.append('hr')
 	hr.style('color', 'ligthgrey')
 		.style('margin', '-30px 0px 15px 0px')

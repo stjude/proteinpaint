@@ -121,7 +121,7 @@ export function parseDictionary(input) {
 			}
 		}
 		for (const t in terms) terms[t].isleaf = !parentIds.has(terms[t].id)
-		console.log('dictionary parsing')
+		// console.log('dictionary parsing')
 	}
 
 	function parsePhenotree(lines, header) {
@@ -232,7 +232,7 @@ export function parseDictionary(input) {
 			//term.ancestry = term.ancestry.map(name => termNameToId[name]).filter(d=>!!d)
 			delete term.ancestry
 		}
-		console.log('phenotree parsing')
+		// console.log('phenotree parsing')
 	}
 	return { terms: Object.values(terms) }
 }
