@@ -1,7 +1,7 @@
 const tape = require('tape')
 const parseDictionary = require('../dictionary.parse').parseDictionary
 const d3s = require('d3-selection')
-const init_dictionaryUI = require('../databrowser.ui').init_dictionaryUI
+const init_dictionaryUI = require('../databrowser.ui').init_databrowserUI
 const helpers = require('../../../test/front.helpers.js')
 
 /***********************************
@@ -17,9 +17,13 @@ function getHolder() {
 		.style('margin', '5px')
 }
 
-/**************
- test sections
-***************/
+function sleep(ms) {
+	return new Promise(resolve => setTimeout(resolve, ms))
+}
+
+/****************
+ Dictionary Tests
+*****************/
 
 tape('\n', function(test) {
 	test.pass('-***- dictionary.ui, phenotree parsing -***-')
@@ -560,7 +564,7 @@ tape('missing values header', function(test) {
 
 	const message = 'Should throw on missing values header'
 	try {
-		const results = parseDictionary(tsv)
+		parseDictionary(tsv)
 		test.fail(message)
 	} catch (e) {
 		test.pass(message + ': ' + e)
@@ -608,13 +612,17 @@ tape('missing k=v in values (dictionary format)', function(test) {
 	test.end()
 })
 
+/**************
+ 	UI tests
+***************/
+
 tape('\n', function(test) {
 	test.pass('-***- databrowser UI -***-')
 	test.end()
 })
 
-tape.only('Render Databrowser UI', async test => {
-	test.timeoutAfter(10000)
+tape('Render Databrowser UI from runpp()', async test => {
+	test.timeoutAfter(300)
 	const holder = getHolder().node()
 
 	await runproteinpaint({
@@ -623,12 +631,81 @@ tape.only('Render Databrowser UI', async test => {
 		parseurl: true,
 		nobox: true,
 		tkui: 'databrowser'
+		// ********** Does not work
+		// onloadalltk_always: checkUI
 	})
 
+	// function checkUI() {
+	// const uiFound = [...holder.querySelectorAll('.sjpp-databrowser-section-header')].some(
+	// 	elem => elem.innerText == 'Data Dictionary'
+	// )
+	// test.true(uiFound, `Should databrowser UI`)
+	// }
+
+	await sleep(100)
 	const uiFound = [...holder.querySelectorAll('.sjpp-databrowser-section-header')].some(
 		elem => elem.innerText == 'Data Dictionary'
 	)
-	test.true(uiFound, `Should render  track`)
+	test.true(uiFound, `Should databrowser UI`)
+	if (test._ok) holder.remove()
+
+	test.end()
+})
+
+tape.only('Click submit with no data', async test => {
+	test.timeoutAfter(3000)
+	const holder = getHolder()
+	const message = `Should throw an error for no data submitted`
+
+	try {
+		init_dictionaryUI(holder)
+		window.alert = () => {} //Disable alert
+		const submitBtn = [...holder.node().querySelectorAll('.sjpp-ui-submitBtn')].find(
+			elem => elem.innerText == 'Create Data Browser'
+		)
+		submitBtn.dispatchEvent(new Event('click'))
+		//Does not catch error but throws?
+		test.fail(message)
+	} catch (e) {
+		test.pass(message + ': ' + e)
+	}
+	// if (test._ok) holder.remove()
+
+	test.end()
+})
+
+tape('Render Databrowser from copy/paste data', async test => {
+	test.timeoutAfter(3000)
+	const holder = getHolder()
+
+	const tsv = [
+		`variable\ttype\tcategories`,
+		`A1a\tcategorical\t{ "0": { "label": "No" }, "1": { "label": "Yes" } }`,
+		`A1b\tcategorical\t{ "0": { "label": "No" }, "1": { "label": "Yes" } }`,
+		`A2a\tcategorical\t{ "0": {"label": "Not treated" }, "1": { "label": "Treated" } }`,
+		`B1a\tcategorical\t{ "0": {"label": "Not treated" }, "1": { "label": "Treated" } }`
+	]
+		.join('\n')
+		.trim()
+
+	init_dictionaryUI(holder)
+
+	await sleep(100)
+	const pasteBtn = [...holder.node().querySelectorAll('.sj-toggle-button')].find(elem => elem.innerText == 'Paste Data')
+	pasteBtn.dispatchEvent(new Event('click'))
+
+	const textArea = d3s.select('textarea')._groups[0][0]
+	textArea.value = tsv
+	textArea.dispatchEvent(new Event('keyup'))
+
+	const submitBtn = [...holder.node().querySelectorAll('.sjpp-ui-submitBtn')].find(
+		elem => elem.innerText == 'Create Data Browser'
+	)
+	submitBtn.dispatchEvent(new Event('click'))
+
+	await sleep(100)
+	test.equal([...holder.node().querySelectorAll('.ts_pill')].length, 4, 'Should render four pills')
+	// if (test._ok) holder.remove()
 
 	test.end()
 })

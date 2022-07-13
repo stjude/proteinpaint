@@ -32,7 +32,7 @@ Long term plans:
 Will include sample annotation matrix, longitudinal data, sample ID hierarcy and molecular data (see old sketch: https://docs.google.com/drawings/d/1x3BgBbUF2ChkOGCXkA-fW8r46EbT_ZEqNZgwyTXLTXE/edit)
 */
 
-export function init_dictionaryUI(holder, debugmode) {
+export function init_databrowserUI(holder, debugmode) {
 	const wrapper = holder
 		.append('div')
 		.style('margin', '20px 20px 20px 40px')
@@ -42,6 +42,7 @@ export function init_dictionaryUI(holder, debugmode) {
 		)
 		.style('place-items', 'center left')
 		.style('overflow', 'hidden')
+		.classed('sjpp-app-ui', true)
 
 	const obj = {}
 
