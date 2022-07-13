@@ -533,3 +533,12 @@ exports.run_rust = function(binfile, input_data) {
 function tabixnoterror(s) {
 	return s.startsWith('[E::idx_test_and_fetch]') // got this with htslib 1.15.1
 }
+
+// get random integer between two values
+// both min and max are inclusive
+// used for creating test data for test scripts
+exports.getRandomInt = function(min, max) {
+	min = Math.ceil(min)
+	max = Math.floor(max)
+	return Math.floor(Math.random() * (max - min + 1) + min)
+}
