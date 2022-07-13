@@ -121,7 +121,7 @@ export function parseDictionary(input) {
 			}
 		}
 		for (const t in terms) terms[t].isleaf = !parentIds.has(terms[t].id)
-		// console.log('dictionary parsing')
+		console.log('dictionary parsing')
 	}
 
 	function parsePhenotree(lines, header) {
@@ -156,6 +156,7 @@ export function parseDictionary(input) {
 		const termNameToId = {}
 		const parentTermNames = new Set()
 		const parent2ChildOrder = new Map()
+		parent2ChildOrder.set(null, [])
 
 		for (const [i, line] of lines.entries()) {
 			if (i === 0) continue
@@ -167,7 +168,25 @@ export function parseDictionary(input) {
 				if (levelNames.length != new Set(levelNames).size) {
 					throw `Non-unique levels in line ${lineNum}: ${JSON.stringify(levelNames)}`
 				}
+
+				// Create map of immediate parents to children, in order of appearance
+				for (const [i, lvlName] of levelNames.entries()) {
+					// Messy?? Is there an more elegant way?
+					if (i == 0) {
+						if (parent2ChildOrder.get(null).indexOf(lvlName) == -1) parent2ChildOrder.get(null).push(lvlName)
+					}
+					if (i != levelNames.length - 1) {
+						if (!parent2ChildOrder.has(lvlName)) parent2ChildOrder.set(lvlName, [])
+					}
+					for (const n of levelNames) {
+						if (i == levelNames.indexOf(n) - 1) {
+							if (parent2ChildOrder.get(lvlName).indexOf(n) == -1) parent2ChildOrder.get(lvlName).push(n)
+						}
+					}
+				}
+
 				const name = levelNames.pop()
+
 				const firstDashIndex = cols.indexOf('-')
 				if (firstDashIndex != -1 && firstDashIndex < cols.indexOf(name)) {
 					throw `Blank or '-' value detected between levels in line ${lineNum}`
@@ -201,19 +220,11 @@ export function parseDictionary(input) {
 			}
 		}
 		// some parent term levels may not have entries
-		trackMissingTerms(termNameToId, terms, parentTermNames)
+		trackMissingTerms(termNameToId, terms, parentTermNames, parent2ChildOrder)
 
 		for (const id in terms) {
 			const term = terms[id]
-
-			// Add child_order for child terms
-			if (term.parent_name != null) {
-				if (!parent2ChildOrder.has(term.parent_name)) parent2ChildOrder.set(term.parent_name, [])
-				parent2ChildOrder.get(term.parent_name).push(term.name)
-				// 1 based child order - is this correct?
-				term.child_order = parent2ChildOrder.get(term.parent_name).indexOf(term.name) + 1
-			}
-
+			term.child_order = parent2ChildOrder.get(term.parent_name).indexOf(term.name) + 1
 			term.isleaf = !parentTermNames.has(term.name)
 			term.parent_id = termNameToId[term.parent_name] || null
 			delete term.parent_name
@@ -221,7 +232,7 @@ export function parseDictionary(input) {
 			//term.ancestry = term.ancestry.map(name => termNameToId[name]).filter(d=>!!d)
 			delete term.ancestry
 		}
-		// console.log('phenotree parsing')
+		console.log('phenotree parsing')
 	}
 	return { terms: Object.values(terms) }
 }
@@ -250,7 +261,7 @@ function parseCategories(type, catJSON, lineNum, varName) {
 	return term
 }
 
-function trackMissingTerms(termNameToId, terms, parentTermNames) {
+function trackMissingTerms(termNameToId, terms, parentTermNames, parent2ChildOrder) {
 	for (const id in terms) {
 		const term = terms[id]
 		for (const [i, name] of term.ancestry.entries()) {
