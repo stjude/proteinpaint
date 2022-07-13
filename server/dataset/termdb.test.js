@@ -39,7 +39,7 @@ const ds = {
 }
 
 const datadir = path.join(serverconfig.tpmasterdir, 'files/hg38/TermdbTest')
-if (!fs.existsSync(datadir)) fs.mkdirSync(datadir) // create missing path
+if (!fs.existsSync(datadir)) fs.mkdirSync(datadir, { recursive: true }) // create missing path
 
 const srcdb = path.join(serverconfig.binpath, 'test/testdata/db2')
 const destdb = path.join(serverconfig.tpmasterdir, ds.cohort.db.file)
