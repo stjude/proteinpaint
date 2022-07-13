@@ -44,7 +44,9 @@ export function init_databrowserUI(holder, debugmode) {
 		.style('overflow', 'hidden')
 		.classed('sjpp-app-ui', true)
 
-	const obj = {}
+	const obj = {
+		sayerror: e => alert(e)
+	}
 
 	//Information section for user with documentation and example
 	infoSection(wrapper)
@@ -59,6 +61,7 @@ export function init_databrowserUI(holder, debugmode) {
 
 	//Remove after testing
 	if (debugmode) window.doms = obj
+	return obj
 }
 
 //TODO later
@@ -215,7 +218,7 @@ function submitButton(div, obj, holder) {
 		.classed('sjpp-ui-submitBtn', true)
 		.on('click', () => {
 			if (!obj.data || obj.data == undefined) {
-				alert('Please provide data')
+				obj.sayerror('Please provide data')
 				throw 'No data provided'
 			}
 			div.remove()

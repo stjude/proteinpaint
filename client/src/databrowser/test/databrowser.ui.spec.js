@@ -658,14 +658,17 @@ tape.only('Click submit with no data', async test => {
 	const message = `Should throw an error for no data submitted`
 
 	try {
-		init_dictionaryUI(holder)
-		window.alert = () => {} //Disable alert
+		const obj = init_dictionaryUI(holder)
+		let err
+		obj.sayerror = e => {
+			err = e
+		}
 		const submitBtn = [...holder.node().querySelectorAll('.sjpp-ui-submitBtn')].find(
 			elem => elem.innerText == 'Create Data Browser'
 		)
-		submitBtn.dispatchEvent(new Event('click'))
+		await submitBtn.dispatchEvent(new Event('click'))
 		//Does not catch error but throws?
-		test.fail(message)
+		test.equal(err, 'Please provide data', message)
 	} catch (e) {
 		test.pass(message + ': ' + e)
 	}
