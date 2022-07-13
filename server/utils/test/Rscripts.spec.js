@@ -1,13 +1,8 @@
 /************************
-Test script for all R scripts at server/utils/
+Test script for R scripts in 'server/utils/'
 
-Run test script as follows (from server/):
+Run test script as follows (from pp root):
 
-    npx tape -r '@babel/register' utils/test/Rscripts.spec.js
-
-An error occurs when trying to import 'server/src/utils.js' into this script. Here is a temporary workaround (from pp root):
-
-	cp server/.babelrc babel.config.json // do this once
 	npx tape -r '@babel/register' server/utils/test/Rscripts.spec.js
 
 *************************/
