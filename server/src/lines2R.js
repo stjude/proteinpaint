@@ -28,32 +28,37 @@ module.exports = async function lines2R(Rscript, lines, args = []) {
 		if (lines && lines.length > 0) {
 			// if data lines are present, then data will be streamed into R
 			// otherwise, data will be read into R using an argument
-			const table = lines.join('\n') + '\n'
-			Readable.from(table)
-				.pipe(sp.stdin)
-				.on('error', () => {
-					console.log('\nR stderr: ' + stderr.join(''))
-					reject('input data could not be streamed into R')
-				})
+			try {
+				const table = lines.join('\n') + '\n'
+				Readable.from(table).pipe(sp.stdin)
+			} catch (error) {
+				sp.kill()
+				let errmsg = error
+				if (stderr.length > 0) errmsg += `\nR stderr: ${stderr.join('').trim()}`
+				reject(errmsg)
+			}
 		}
 		sp.stdout.on('data', data => stdout.push(data))
 		sp.stderr.on('data', data => stderr.push(data))
 		sp.on('error', err => reject(err))
 		sp.on('close', code => {
 			if (code !== 0) {
-				console.log('\nR stdout: ' + stdout.join(''))
-				console.log('\nR stderr: ' + stderr.join(''))
-				reject(`R process exited with non-zero status code=${code}`)
+				// handle non-zero exit status
+				let errmsg = `R process exited with non-zero status code=${code}`
+				if (stdout.length > 0) errmsg += `\nR stdout: ${stdout.join('').trim()}`
+				if (stderr.length > 0) errmsg += `\nR stderr: ${stderr.join('').trim()}`
+				reject(errmsg)
+			}
+			if (stderr.length > 0) {
+				// handle R stderr
+				const err = stderr.join('').trim()
+				const errmsg = `R process emitted standard error\nR stderr: ${err}`
+				reject(errmsg)
 			}
 			const out = stdout
 				.join('')
 				.trim()
 				.split('\n')
-			if (stderr.length > 0) {
-				const e = stderr.join('').trim()
-				console.log('\nR stderr: ' + e)
-				reject('R process emitted standard error')
-			}
 			resolve(out)
 		})
 	})
