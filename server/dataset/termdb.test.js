@@ -22,6 +22,9 @@ const ds = {
 - allow continuous integration test
 - ensure TermdbTest/db2 to be fully static and recoverable, to ensure tests work as expected
 */
+const datadir = path.join(serverconfig.tpmasterdir, 'files/hg38/TermdbTest')
+if (!fs.existsSync(datadir)) fs.mkdirSync(datadir) // create missing path
+
 const srcdb = path.join(serverconfig.binpath, 'test/testdata/db2')
 const destdb = path.join(serverconfig.tpmasterdir, ds.cohort.db.file)
 fs.copyFileSync(srcdb, destdb)
