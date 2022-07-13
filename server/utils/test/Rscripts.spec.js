@@ -5,6 +5,11 @@ Run test script as follows (from server/):
 
     npx tape -r '@babel/register' utils/test/Rscripts.spec.js
 
+An error occurs when trying to import 'server/src/utils.js' into this script. Here is a temporary workaround (from pp root):
+
+	cp server/.babelrc babel.config.json // do this once
+	npx tape -r '@babel/register' server/utils/test/Rscripts.spec.js
+
 *************************/
 
 const tape = require('tape')
@@ -12,13 +17,17 @@ const fs = require('fs')
 const lines2R = require('../../src/lines2R')
 const serverconfig = require('../../src/serverconfig')
 const path = require('path')
+const read_file = require('../../src/utils').read_file
 
 tape('\n', function(test) {
 	test.pass('-***- R scripts specs -***-')
 	test.end()
 })
 
+// hwe.R tests
 tape('hwe.R', async function(test) {
+	test.timeoutAfter(5000)
+	test.plan(2)
 	const invalidInput = '68\t28\t4,5\t40\t3,56\t4\t43,83\t45\t13'
 	try {
 		const output = await lines2R(path.join(__dirname, '../hwe.R'), invalidInput)
@@ -36,7 +45,10 @@ tape('hwe.R', async function(test) {
 	test.end()
 })
 
+// fisher.R tests
 tape('fisher.R', async function(test) {
+	test.timeoutAfter(5000)
+	test.plan(2)
 	const invalidInput = 'gene1\t2\t10\t15\t3,gene2\t4\t74\t67\t9,gene3\t12\t17\t1000\t1012,gene4\t13\t25\t37\t19'
 	try {
 		const output = await lines2R(path.join(__dirname, '../fisher.R'), invalidInput)
@@ -66,7 +78,10 @@ tape('fisher.R', async function(test) {
 	test.end()
 })
 
+// fisher.2x3.R tests
 tape('fisher.2x3.R', async function(test) {
+	test.timeoutAfter(5000)
+	test.plan(2)
 	const invalidInput =
 		'0\t506\t1451\t68\t206\t3\t11,1\t246\t1711\t24\t250\t1\t13,2\t102\t1855\t16\t258\t0\t14,3\t167\t1790\t22\t252\t2\t12,4\t174\t1783\t30\t244\t4\t10'
 	try {
@@ -97,7 +112,10 @@ tape('fisher.2x3.R', async function(test) {
 	test.end()
 })
 
+// km.R tests
 tape('km.R', async function(test) {
+	test.timeoutAfter(5000)
+	test.plan(2)
 	const invalidInput = 'futime\tfustat\trx,410\t1\t0,443\t0\t0,2819\t0\t0,496\t1\t0,2803\t0\t0,2983\t0\t0'
 	try {
 		const output = await lines2R(path.join(__dirname, '../km.R'), invalidInput)
@@ -193,258 +211,57 @@ tape('km.R', async function(test) {
 	test.end()
 })
 
+// survival.R tests
 tape('survival.R', async function(test) {
-	const validInput1 = [
-		`cohort\ttime\tstatus`,
-		`2\t185\t1`,
-		`2\t191\t1`,
-		`2\t368\t1`,
-		`2\t586\t1`,
-		`2\t1559\t1`,
-		`2\t1630\t1`,
-		`2\t3208\t1`,
-		`2\t6156\t0`,
-
-		`1\t23\t1`,
-		`1\t30\t1`,
-		`1\t69\t1`,
-		`1\t101\t1`,
-		`1\t128\t1`,
-		`1\t136\t1`,
-		`1\t182\t1`,
-		`1\t189\t1`,
-		`1\t221\t1`,
-		`1\t228\t1`,
-		`1\t262\t1`,
-		`1\t265\t1`,
-		`1\t274\t1`,
-		`1\t316\t1`,
-		`1\t325\t1`,
-		`1\t329\t1`,
-		`1\t378\t1`,
-		`1\t403\t1`,
-		`1\t418\t1`,
-		`1\t425\t1`,
-		`1\t458\t1`,
-		`1\t549\t1`,
-		`1\t553\t1`,
-		`1\t587\t1`,
-		`1\t624\t1`,
-		`1\t624\t1`,
-		`1\t842\t1`,
-		`1\t1070\t1`,
-		`1\t1692\t0`,
-		`1\t1914\t0`,
-		`1\t3033\t1`,
-		`1\t3827\t1`,
-		`1\t4149\t0`,
-		`1\t4203\t0`,
-		`1\t4203\t0`,
-		`1\t4309\t0`,
-		`1\t4392\t0`,
-		`1\t4434\t1`,
-		`1\t4453\t0`,
-		`1\t4474\t1`,
-		`1\t4664\t0`,
-		`1\t5072\t1`
-	]
-
-	try {
-		const output1 = await lines2R(path.join(__dirname, '../survival.R'), validInput1)
-		const expected1 = [
-			'cohort\ttime\tsurv\tlower\tupper\tnevent\tncensor\tnrisk',
-			'1\t23\t0.976190476190476\t0.931155465908631\t1\t1\t0\t42',
-			'1\t30\t0.952380952380952\t0.890105444476807\t1\t1\t0\t41',
-			'1\t69\t0.928571428571428\t0.853861149033387\t1\t1\t0\t40',
-			'1\t101\t0.904761904761905\t0.820202198408237\t0.998039393087499\t1\t0\t39',
-			'1\t128\t0.880952380952381\t0.788260373656289\t0.984544096649045\t1\t0\t38',
-			'1\t136\t0.857142857142857\t0.757587069035504\t0.969781438437659\t1\t0\t37',
-			'1\t182\t0.833333333333333\t0.727914326476415\t0.954019476173814\t1\t0\t36',
-			'1\t189\t0.80952380952381\t0.699066985451853\t0.937433481803406\t1\t0\t35',
-			'1\t221\t0.785714285714286\t0.670923299994012\t0.920145326270558\t1\t0\t34',
-			'1\t228\t0.761904761904762\t0.643394848499071\t0.902243571839836\t1\t0\t33',
-			'1\t262\t0.738095238095238\t0.616415300764895\t0.883794707598685\t1\t0\t32',
-			'1\t265\t0.714285714285714\t0.589933691214652\t0.864849879284163\t1\t0\t31',
-			'1\t274\t0.69047619047619\t0.563910171064325\t0.845449140799641\t1\t0\t30',
-			'1\t316\t0.666666666666667\t0.538313211381596\t0.825624255633193\t1\t0\t29',
-			'1\t325\t0.642857142857143\t0.513117699625512\t0.805400605794854\t1\t0\t28',
-			'1\t329\t0.619047619047619\t0.488303610677412\t0.784798527532684\t1\t0\t27',
-			'1\t378\t0.595238095238095\t0.463855061609755\t0.76383426493847\t1\t0\t26',
-			'1\t403\t0.571428571428571\t0.439759632003889\t0.74252066010918\t1\t0\t25',
-			'1\t418\t0.547619047619047\t0.416007874564318\t0.72086765576075\t1\t0\t24',
-			'1\t425\t0.523809523809524\t0.392592967259528\t0.698882659943779\t1\t0\t23',
-			'1\t458\t0.5\t0.369510475257087\t0.676570805810207\t1\t0\t22',
-			'1\t549\t0.476190476190476\t0.346758202424668\t0.653935128365923\t1\t0\t21',
-			'1\t553\t0.452380952380952\t0.324336120437094\t0.630976672599096\t1\t0\t20',
-			'1\t587\t0.428571428571428\t0.302246370007005\t0.607694541984071\t1\t0\t19',
-			'1\t624\t0.380952380952381\t0.25908379153838\t0.560145872852834\t2\t0\t18',
-			'1\t842\t0.357142857142857\t0.238027156193617\t0.535867513807585\t1\t0\t16',
-			'1\t1070\t0.333333333333333\t0.217335835160975\t0.511241558617398\t1\t0\t15',
-			'1\t1692\t0.333333333333333\t0.217335835160975\t0.511241558617398\t0\t1\t14',
-			'1\t1914\t0.333333333333333\t0.217335835160975\t0.511241558617398\t0\t1\t13',
-			'1\t3033\t0.305555555555555\t0.192802434779677\t0.484248021232485\t1\t0\t12',
-			'1\t3827\t0.277777777777778\t0.168996814110034\t0.456579576564804\t1\t0\t11',
-			'1\t4149\t0.277777777777778\t0.168996814110034\t0.456579576564804\t0\t1\t10',
-			'1\t4203\t0.277777777777778\t0.168996814110034\t0.456579576564804\t0\t2\t9',
-			'1\t4309\t0.277777777777778\t0.168996814110034\t0.456579576564804\t0\t1\t7',
-			'1\t4392\t0.277777777777778\t0.168996814110034\t0.456579576564804\t0\t1\t6',
-			'1\t4434\t0.222222222222222\t0.114558902375431\t0.431068341485553\t1\t0\t5',
-			'1\t4453\t0.222222222222222\t0.114558902375431\t0.431068341485553\t0\t1\t4',
-			'1\t4474\t0.148148148148148\t0.0524224541178201\t0.418673146251366\t1\t0\t3',
-			'1\t4664\t0.148148148148148\t0.0524224541178201\t0.418673146251366\t0\t1\t2',
-			'1\t5072\t0\tNA\tNA\t1\t0\t1',
-			'2\t185\t0.875\t0.673381936505955\t1\t1\t0\t8',
-			'2\t191\t0.75\t0.502701841294047\t1\t1\t0\t7',
-			'2\t368\t0.625\t0.365400278682409\t1\t1\t0\t6',
-			'2\t586\t0.5\t0.250048821862805\t0.999804750678524\t1\t0\t5',
-			'2\t1559\t0.375\t0.153289601742952\t0.917381207864386\t1\t0\t4',
-			'2\t1630\t0.25\t0.0752813929560883\t0.830218431750542\t1\t0\t3',
-			'2\t3208\t0.125\t0.0199840670220076\t0.781872878168034\t1\t0\t2',
-			'2\t6156\t0.125\t0.0199840670220076\t0.781872878168034\t0\t1\t1'
-		]
-
-		test.deepEqual(output1, expected1, 'should match the expected output')
-	} catch (e) {
-		test.fail(e)
-	}
-
+	test.timeoutAfter(5000)
+	test.plan(1)
+	const infile = path.join(serverconfig.binpath, 'test/testdata/R/survival_input.json')
+	const expfile = path.join(serverconfig.binpath, 'test/testdata/R/survival_output.json')
+	const Rout = await lines2R(path.join(__dirname, '../survival.R'), [], [infile])
+	const out = JSON.parse(Rout[0])
+	const exp = JSON.parse(await read_file(expfile))
+	test.deepEqual(out, exp, 'survival should match expected output')
 	test.end()
 })
 
-tape.skip('regression.R', async function(test) {
-	// view linear regression results
-	/*const temp_linear_input = fs
-		.readFileSync(path.join(serverconfig.tpmasterdir, 'gmatt/sjlife_regression/sf36.input.linear.pcs.txt'), {
-			encoding: 'utf8'
-		})
-		.trim()
-		.split('\n')
-	const temp_linear_output = await lines2R('../regression.R', temp_linear_input, ['linear'])
-	// console.log('\nResults of linear regression analysis:')
-	// console.log(temp_linear_output.join('\n'))
-	// view logistic regression results
-	const temp_logistic_input = fs
-		.readFileSync(path.join(serverconfig.tpmasterdir, 'gmatt/sjlife_regression/sf36.input.logistic.pcs.txt'), {
-			encoding: 'utf8'
-		})
-		.trim()
-		.split('\n')
-	const temp_logistic_output = await lines2R('../regression.R', temp_logistic_input, ['logistic'])*/
-	// console.log('\nResults of logistic regression analysis:')
-	// console.log(temp_logistic_output.join('\n'))
-	// console.log()
+// cuminc.R tests
+tape('cuminc.R', async function(test) {
+	test.timeoutAfter(5000)
+	test.plan(1)
+	const infile = path.join(serverconfig.binpath, 'test/testdata/R/cuminc_input.json')
+	const expfile = path.join(serverconfig.binpath, 'test/testdata/R/cuminc_output.json')
+	const Rout = await lines2R(path.join(__dirname, '../cuminc.R'), [], [infile])
+	const out = JSON.parse(Rout[0])
+	const exp = JSON.parse(await read_file(expfile))
+	test.deepEqual(out, exp, 'cuminc should match expected output')
+	test.end()
+})
 
-	// test linear regression
-	const linear_input = [
-		'outcome\tgender\trace\tage\ttreatment',
-		'10.56\tmale\tother\t10-20\t1',
-		'12.21\tmale\twhite\t10-20\t1',
-		'13.10\tfemale\twhite\t10-20\t1',
-		'3.42\tmale\tother\t10-20\t0',
-		'5.23\tfemale\twhite\t20-30\t0',
-		'11.02\tmale\twhite\t20-30\t1',
-		'15.84\tmale\tother\t20-30\t1',
-		'14.17\tfemale\twhite\t10-20\t1',
-		'1.32\tmale\twhite\t20-30\t0',
-		'2.61\tmale\twhite\t20-30\t0'
-	]
-	const linear_expected = [
-		'#matrix#Deviance Residuals',
-		'Minimum\t1st quartile\tMedian\t3rd quartile\tMaximum',
-		'-2.172\t-0.91\t0.18\t0.55\t1.622',
-		'#matrix#Coefficients',
-		'Variable\tCategory\tBeta\tStd. Error\tt value\tPr(>|t|)\t95% CI (low)\t95% CI (high)',
-		'(Intercept)\t\t5.889\t1.79\t3.29\t0.02171\t2.381\t9.397',
-		'gender\tmale\t-3.019\t1.312\t-2.3\t0.06977\t-5.591\t-0.446',
-		'race\twhite\t-2.125\t1.312\t-1.619\t0.1663\t-4.698\t0.447',
-		'age\t20-30\t1.486\t1.203\t1.235\t0.2717\t-0.872\t3.843',
-		'treatment\t1\t9.862\t1.137\t8.677\t0.0003362\t7.634\t12.09',
-		'#matrix#Type III statistics',
-		'Variable\tDf\tDeviance\tAIC\tscaled dev.\tPr(>Chi)',
-		'<none>\tNA\t12.918\t42.94\tNA\tNA',
-		'gender\t1\t26.587\t48.157\t7.218\t0.007219',
-		'race\t1\t19.694\t45.156\t4.217\t0.04003',
-		'age\t1\t16.86\t43.602\t2.663\t0.1027',
-		'treatment\t1\t207.437\t68.701\t27.762\t1.372e-07',
-		'#vector#Other summary statistics',
-		'Dispersion parameter\t2.6',
-		'Null deviance\t252.3',
-		'Null deviance df\t9',
-		'Residual deviance\t12.9',
-		'Residual deviance df\t5',
-		'AIC\t42.9'
-	]
-	const linear_output = await lines2R(path.join(__dirname, '../regression.R'), linear_input, [
-		'linear',
-		'numeric,factor,factor,factor,factor',
-		',female,other,10-20,0'
-	])
-	test.deepEqual(linear_output, linear_expected, 'linear regression should match expected output')
-	// test logistic regression
-	const logistic_input = [
-		'outcome\tgender\trace\tage\ttreatment',
-		'1\tmale\tother\t10-20\t1',
-		'1\tmale\twhite\t10-20\t1',
-		'1\tfemale\twhite\t10-20\t1',
-		'0\tmale\tother\t10-20\t0',
-		'1\tfemale\twhite\t20-30\t1',
-		'0\tfemale\tother\t20-30\t1',
-		'0\tmale\tother\t20-30\t1',
-		'1\tfemale\twhite\t10-20\t1',
-		'1\tmale\twhite\t20-30\t0',
-		'0\tmale\twhite\t20-30\t0',
-		'1\tfemale\tother\t10-20\t1',
-		'1\tmale\twhite\t10-20\t1',
-		'1\tfemale\twhite\t10-20\t1',
-		'1\tmale\tother\t10-20\t0',
-		'1\tfemale\tother\t20-30\t1',
-		'0\tmale\twhite\t20-30\t1',
-		'0\tmale\tother\t20-30\t1',
-		'1\tfemale\twhite\t10-20\t1',
-		'1\tmale\tother\t20-30\t1',
-		'0\tmale\twhite\t20-30\t0',
-		'1\tmale\tother\t10-20\t1',
-		'1\tfemale\twhite\t20-30\t1',
-		'1\tfemale\twhite\t10-20\t1',
-		'0\tmale\tother\t10-20\t0',
-		'1\tfemale\twhite\t20-30\t1',
-		'1\tmale\tother\t20-30\t1',
-		'0\tmale\tother\t20-30\t1',
-		'0\tfemale\tother\t20-30\t1',
-		'1\tmale\twhite\t20-30\t0',
-		'0\tmale\twhite\t20-30\t0'
-	]
-	const logistic_expected = [
-		'#matrix#Deviance Residuals',
-		'Minimum\t1st quartile\tMedian\t3rd quartile\tMaximum',
-		'-1.768\t-0.882\t0.124\t0.522\t1.553',
-		'#matrix#Coefficients',
-		'Variable\tCategory\tLog Odds\tStd. Error\tz value\tPr(>|z|)\tOdds ratio\t95% CI (low)\t95% CI (high)',
-		'(Intercept)\t\t0.613\t1.713\t0.358\t0.7206\t1.846\t0.058\t59.34',
-		'gender\tmale\t-0.761\t1.26\t-0.604\t0.546\t0.467\t0.033\t5.915',
-		'race\twhite\t2.179\t1.298\t1.679\t0.09316\t8.838\t0.984\t227.069',
-		'age\t20-30\t-2.775\t1.388\t-1.999\t0.04556\t0.062\t0.002\t0.602',
-		'treatment\t1\t2.072\t1.377\t1.505\t0.1324\t7.944\t0.702\t224.334',
-		'#matrix#Type III statistics',
-		'Variable\tDf\tDeviance\tAIC\tLRT\tPr(>Chi)',
-		'<none>\tNA\t26.572\t36.572\tNA\tNA',
-		'gender\t1\t26.938\t34.938\t0.366\t0.5452',
-		'race\t1\t30.349\t38.349\t3.777\t0.05197',
-		'age\t1\t32.715\t40.715\t6.143\t0.01319',
-		'treatment\t1\t29.316\t37.316\t2.743\t0.09765',
-		'#vector#Other summary statistics',
-		'Dispersion parameter\t1',
-		'Null deviance\t39.4',
-		'Null deviance df\t29',
-		'Residual deviance\t26.6',
-		'Residual deviance df\t25',
-		'AIC\t36.6'
-	]
-	const logistic_output = await lines2R(path.join(__dirname, '../regression.R'), logistic_input, [
-		'logistic',
-		'factor,factor,factor,factor,factor',
-		'0,female,other,10-20,0'
-	])
-	test.deepEqual(logistic_output, logistic_expected, 'logistic regression should match expected output')
+// regression.R tests
+tape('regression.R', async function(test) {
+	test.timeoutAfter(10000)
+	test.plan(3)
+	for (const type of ['linear', 'logistic', 'cox']) {
+		const infile = path.join(serverconfig.binpath, 'test/testdata/R', `${type}_regression_input.json`)
+		const expfile = path.join(serverconfig.binpath, 'test/testdata/R', `${type}_regression_output.json`)
+		const Rout = await lines2R(path.join(__dirname, '../regression.R'), [], [infile])
+		const out = JSON.parse(Rout[0])
+		delete out.benchmark
+		const exp = JSON.parse(await read_file(expfile))
+		test.deepEqual(out, exp, `${type} regression should match expected output`)
+	}
+	test.end()
+})
+
+// wilcoxon.R tests
+tape('wilcoxon.R', async function(test) {
+	test.timeoutAfter(5000)
+	test.plan(1)
+	const infile = path.join(serverconfig.binpath, 'test/testdata/R/wilcoxon_input.json')
+	const expfile = path.join(serverconfig.binpath, 'test/testdata/R/wilcoxon_output.json')
+	const Rout = await lines2R(path.join(__dirname, '../wilcoxon.R'), [], [infile])
+	const out = JSON.parse(Rout[0])
+	const exp = JSON.parse(await read_file(expfile))
+	test.deepEqual(out, exp, 'wilcoxon should match expected output')
 	test.end()
 })
