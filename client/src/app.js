@@ -54,6 +54,9 @@ launchmdssamplescatterplot
 launchmdssurvivalplot
 launch_fimo
 launch_singlecell
+
+********** quick fix parameters
+geneSearch4GDCmds3
 */
 
 const headtip = new client.Menu({ padding: '0px', offsetX: 0, offsetY: 0 })
@@ -713,6 +716,9 @@ async function parseEmbedThenUrl(arg, app) {
 	}
 
 	if (arg.geneSearch4GDCmds3) {
+		/* can generalize by changing to geneSearch4tk:{tkobj}
+		so it's no longer hardcoded for one dataset of one track type
+		*/
 		await launchGeneSearch4GDCmds3(arg, app)
 		return
 	}
