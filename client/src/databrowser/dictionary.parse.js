@@ -23,10 +23,10 @@ export function parseDictionary(input) {
 	const header = lines[0].split('\t')
 
 	const term_idIndex = header.findIndex(l => l.toLowerCase().includes('term_id'))
-	const varNameIndex = header.findIndex(l => l.toLowerCase().includes('variable name'))
+	const variableIndex = header.findIndex(l => l.toLowerCase().includes('variable')) // term_id col in phenotree
 	if (term_idIndex != -1) parseDataDictionary(lines, header)
-	if (varNameIndex != -1) parsePhenotree(lines, header)
-	if (varNameIndex == -1 && term_idIndex == -1) {
+	if (variableIndex != -1) parsePhenotree(lines, header)
+	if (variableIndex == -1 && term_idIndex == -1) {
 		throw `Unrecognized file format. Please check the header names.`
 	}
 	// if (varNameIndex != -1 && term_idIndex != -1) throw 'Unrecognized file format'
@@ -121,43 +121,42 @@ export function parseDictionary(input) {
 			}
 		}
 		for (const t in terms) terms[t].isleaf = !parentIds.has(terms[t].id)
-		console.log('dictionary parsing')
+		// console.log('dictionary parsing')
 	}
 
 	function parsePhenotree(lines, header) {
 		/* 
         Parses phenotree:
-            - Parses tab delim data arranged in cols: levels(n), ID (i.e. Variable name), Configuration (i.e. Variable note).
-            - Only the ID and configuration cols are required
-            - Not using uncomputable values in this iteration
+            - Parses tab delim data arranged in cols: levels(n), variable (i.e. term_id), type, and categories (i.e. previous configuration).
+            - Only the vairable and type cols are required
             - Blank and '-' values for levels converted to null -- how to distinguish between no id vs no hierarchy??
             - Assumptions:
-                1. Headers required. 'Variable name', 'Variable note' may appear anywhere. 'Level_[XX]' for optional hierarchy/level columns. 
+                1. Headers required. `Variable', 'Type', and 'Categories' may appear anywhere. 'Level_[XX]' for optional hierarchy/level columns. 
                 2. Levels are defined left to right, highest to lowest, and in order, no gaps.
                 3. No blanks or '-' between levels as well as no duplicate values in the same line.
                 4. No identical term ids
                 5. All non-leaf names/ids must be unique. 
         */
-		if (varNameIndex == -1) {
-			throw `Missing required 'Variable Name' header`
+		if (variableIndex == -1) {
+			throw `Missing required 'Variable' header`
 		}
 
-		const configIndex = header.findIndex(l => l.toLowerCase().includes('variable note'))
-		if (configIndex == -1) {
-			throw `Missing required 'Variable Note' header`
+		const typeIndex = header.findIndex(l => l.toLowerCase().includes('type'))
+		if (typeIndex == -1) {
+			throw `Missing required 'Type' header`
 		}
 
-		if (configIndex == -1 || varNameIndex == -1) {
-			throw `invalid header` // informative error message is already displayed using sayerror
-		}
+		const categoriesIndex = header.findIndex(l => l.toLowerCase().includes('categories'))
 
 		const levelColIndexes = header.map((c, i) => (c.toLowerCase().includes('level_') ? i : -1)).filter(i => i != -1)
-		//If no level cols provided, use key/Variable name col as single level. Will print the id as name
-		if (!levelColIndexes.length) levelColIndexes.push(varNameIndex)
+		//If no level cols provided, use key/Variable col as single level. Will print the id as name
+		if (!levelColIndexes.length) levelColIndexes.push(variableIndex)
 
 		// caching and/or tracking variables
 		const termNameToId = {}
 		const parentTermNames = new Set()
+		const parent2ChildOrder = new Map()
+		parent2ChildOrder.set(null, [])
 
 		for (const [i, line] of lines.entries()) {
 			if (i === 0) continue
@@ -169,21 +168,33 @@ export function parseDictionary(input) {
 				if (levelNames.length != new Set(levelNames).size) {
 					throw `Non-unique levels in line ${lineNum}: ${JSON.stringify(levelNames)}`
 				}
+
+				// Create map of immediate parents to children, in order of appearance
+				for (const [i, lvlName] of levelNames.entries()) {
+					// Messy?? Is there an more elegant way?
+					if (i == 0) {
+						if (parent2ChildOrder.get(null).indexOf(lvlName) == -1) parent2ChildOrder.get(null).push(lvlName)
+					}
+					if (i != levelNames.length - 1) {
+						if (!parent2ChildOrder.has(lvlName)) parent2ChildOrder.set(lvlName, [])
+					}
+					for (const n of levelNames) {
+						if (i == levelNames.indexOf(n) - 1) {
+							if (parent2ChildOrder.get(lvlName).indexOf(n) == -1) parent2ChildOrder.get(lvlName).push(n)
+						}
+					}
+				}
+
 				const name = levelNames.pop()
+
 				const firstDashIndex = cols.indexOf('-')
 				if (firstDashIndex != -1 && firstDashIndex < cols.indexOf(name)) {
 					throw `Blank or '-' value detected between levels in line ${lineNum}`
 				}
 
-				const term = parseConfig(lineNum, cols[configIndex], name)
-				if (!term) continue
-				// error handled in parseConfig()
-				else if (!Object.keys(term).length) {
-					// is it possible to have an empty term?
-					throw `Error: empty config column for term.id='${name}'.`
-				}
+				const term = parseCategories(cols[typeIndex], cols[categoriesIndex], lineNum, name)
 
-				const id = cols[varNameIndex] || name
+				const id = cols[variableIndex] || name
 				if (id in terms) {
 					const orig = terms[id]
 					throw `Error: Multiple config rows for term.id='${id}': lines# ${orig.lineNum} and ${lineNum}`
@@ -196,14 +207,12 @@ export function parseDictionary(input) {
 					type: term.type,
 					values: term.values,
 					groupsetting: term.groupsetting,
-					//isleaf: to be assigned later
 
 					// *** temporary attributes to be deleted later ***
 					ancestry: levelNames.slice(), // to be deleted later, used to fill in missing terms
 					parent_name: levelNames.pop() || null, // will change this later to parent_id
 					lineNum // to be deleted later
 				}
-
 				termNameToId[name] = id
 				parentTermNames.add(terms[id].parent_name)
 			} catch (e) {
@@ -211,10 +220,11 @@ export function parseDictionary(input) {
 			}
 		}
 		// some parent term levels may not have entries
-		trackMissingTerms(termNameToId, terms, parentTermNames)
+		trackMissingTerms(termNameToId, terms, parentTermNames, parent2ChildOrder)
 
 		for (const id in terms) {
 			const term = terms[id]
+			term.child_order = parent2ChildOrder.get(term.parent_name).indexOf(term.name) + 1
 			term.isleaf = !parentTermNames.has(term.name)
 			term.parent_id = termNameToId[term.parent_name] || null
 			delete term.parent_name
@@ -222,7 +232,7 @@ export function parseDictionary(input) {
 			//term.ancestry = term.ancestry.map(name => termNameToId[name]).filter(d=>!!d)
 			delete term.ancestry
 		}
-		console.log('phenotree parsing')
+		// console.log('phenotree parsing')
 	}
 	return { terms: Object.values(terms) }
 }
@@ -231,80 +241,27 @@ export function parseDictionary(input) {
  **** Parsing Functions for Phenotree ****
  */
 
-function parseConfig(lineNum, str, varName) {
-	//NOT using uncomputable values in this iteration
-	// const uncomputable_categories = new Set(['-994', '-995', '-996', '-997', '-998', '-999'])
-	const configStr = str.replace('"', '').trim()
-	if (!configStr) {
-		throw `Missing Variable Note string, line=${lineNum}, term='${varName}'`
+function parseCategories(type, catJSON, lineNum, varName) {
+	if (!type) throw `No type provided for variable: ${varName} on line ${lineNum}`
+
+	const term = {
+		type,
+		values: catJSON == '' || catJSON == undefined ? {} : JSON.parse(catJSON)
 	}
 
-	const term = {}
-
-	if (configStr == 'string') {
-		// Not relevant yet: is categorical term without predefined categories, need to collect from matrix, no further validation
-		term.type = 'categorical'
-		term.values = {}
-		// Not relevant yet: list of categories not provided in configstr so need to sum it up from matrix
-		term._set = new Set() // temp
-	} else {
-		const line = configStr.replace('"', '').split(';')
-		const config = line[0].trim() //1st field defines term.type
-		if (config == 'integer') {
-			term.type = 'integer'
-		} else if (config == 'float') {
-			term.type = 'float'
-		} else {
-			// must be categorical, config is either key=value or 'string'
-			term.type = 'categorical'
-			term.values = {}
-			// term._values_newinmatrix = new Set() //Not needed yet
-			if (config == 'string') {
-				//ignore
-			} else {
-				// const [key, value] = config.split(/(?<!\>|\<)=/)
-				const segments = config.split('=') //Fix for Safari not supporting regex look behinds
-				const key = segments.shift()
-				const label = segments.join('=')
-				if (!label)
-					throw `Variable note is not an integer/float/string and not k=v. line=${lineNum} variable note='${config}'`
-				term.values[key] = { label: label }
-			}
-		}
-
-		for (let i = 0; i < line.length; i++) {
-			if (i > 0) {
-				//Skip type, defined above
-				const field = line[i].trim()
-				if (field == '') continue
-				// const [key, value] = field.split(/(?<!\>|\<)=/)
-				const segments = field.split('=') //Fix for Safari not supporting regex look behinds
-				const key = segments.shift()
-				const label = segments.join('=')
-				if (!label) throw 'field ' + (i + 1) + ' is not k=v: ' + field
-				if (!term.values) term.values = {}
-				term.values[key] = { label: label }
-			}
-		}
-
-		if (term.type == 'integer' || term.type == 'float') {
-			// for numeric term, all keys in values are not computable
-			for (const k in term.values) term.values[k].uncomputable = true
-		} //else if (term.type == 'categorical') {
-		// 	// select categories are uncomputable
-		// 	for (const k in term.values) {
-		// 		if (uncomputable_categories.has(k)) term.values[k].uncomputable = true
-		// 	}
-		// }
+	if (term.type == 'integer' || term.type == 'float') {
+		// for numeric term, all keys in values are not computable
+		for (const k in term.values) term.values[k].uncomputable = true
 	}
 
 	if (term.type == 'categorical') {
 		term.groupsetting = { inuse: false }
 	}
+
 	return term
 }
 
-function trackMissingTerms(termNameToId, terms, parentTermNames) {
+function trackMissingTerms(termNameToId, terms, parentTermNames, parent2ChildOrder) {
 	for (const id in terms) {
 		const term = terms[id]
 		for (const [i, name] of term.ancestry.entries()) {

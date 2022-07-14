@@ -1363,7 +1363,7 @@ async function launch_tkUIs(arg, app) {
 	}
 	if (arg.tkui == 'databrowser') {
 		const p = await import('./databrowser/databrowser.ui')
-		p.init_dictionaryUI(app.holder, app.debugmode)
+		p.init_databrowserUI(app.holder, app.debugmode)
 	}
 }
 

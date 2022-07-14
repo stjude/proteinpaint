@@ -1,7 +1,7 @@
 const tape = require('tape')
 const parseDictionary = require('../dictionary.parse').parseDictionary
 const d3s = require('d3-selection')
-const init_dictionaryUI = require('../databrowser.ui').init_dictionaryUI
+const init_dictionaryUI = require('../databrowser.ui').init_databrowserUI
 const helpers = require('../../../test/front.helpers.js')
 
 /***********************************
@@ -17,23 +17,27 @@ function getHolder() {
 		.style('margin', '5px')
 }
 
-/**************
- test sections
-***************/
+function sleep(ms) {
+	return new Promise(resolve => setTimeout(resolve, ms))
+}
+
+/****************
+ Dictionary Tests
+*****************/
 
 tape('\n', function(test) {
 	test.pass('-***- dictionary.ui, phenotree parsing -***-')
 	test.end()
 })
 
-tape('levels before name+note, no gaps', function(test) {
+tape('levels before variable, type, and categories - no gaps', function(test) {
 	test.timeoutAfter(100)
 	const tsv = [
-		`level_1\tlevel_2\tlevel_3\tvariable name\tvariable note`,
-		`A\tA.1\tA.1.a\tA1a\t1=Yes; 0=No`,
-		`A\tA.1\tA.1.b\tA1b\t1=Yes; 0=No`,
-		`A\tA.2\tA.2.a\tA2a\t1=Treated; 0=Not treated`,
-		`B\tB.1\tB.1.a\tB1a\t1=Treated; 0=Not treated`
+		`level_1\tlevel_2\tlevel_3\tvariable\ttype\tcategories`,
+		`A\tA.1\tA.1.a\tA1a\tcategorical\t{ "0": { "label": "No" }, "1": { "label": "Yes" } }`,
+		`A\tA.1\tA.1.b\tA1b\tcategorical\t{ "0": { "label": "No" }, "1": { "label": "Yes" } }`,
+		`A\tA.2\tA.2.a\tA2a\tcategorical\t{ "0": {"label": "Not treated" }, "1": { "label": "Treated" } }`,
+		`B\tB.1\tB.1.a\tB1a\tcategorical\t{ "0": {"label": "Not treated" }, "1": { "label": "Treated" } }`
 	].join('\n')
 
 	const holder = getHolder()
@@ -45,6 +49,7 @@ tape('levels before name+note, no gaps', function(test) {
 			type: 'categorical',
 			values: { '0': { label: 'No' }, '1': { label: 'Yes' } },
 			groupsetting: { inuse: false },
+			child_order: 1,
 			isleaf: true,
 			parent_id: 'A.1'
 		},
@@ -54,6 +59,7 @@ tape('levels before name+note, no gaps', function(test) {
 			type: 'categorical',
 			values: { '0': { label: 'No' }, '1': { label: 'Yes' } },
 			groupsetting: { inuse: false },
+			child_order: 2,
 			isleaf: true,
 			parent_id: 'A.1'
 		},
@@ -63,6 +69,7 @@ tape('levels before name+note, no gaps', function(test) {
 			type: 'categorical',
 			values: { '0': { label: 'Not treated' }, '1': { label: 'Treated' } },
 			groupsetting: { inuse: false },
+			child_order: 1,
 			isleaf: true,
 			parent_id: 'A.2'
 		},
@@ -72,34 +79,35 @@ tape('levels before name+note, no gaps', function(test) {
 			type: 'categorical',
 			values: { '0': { label: 'Not treated' }, '1': { label: 'Treated' } },
 			groupsetting: { inuse: false },
+			child_order: 1,
 			isleaf: true,
 			parent_id: 'B.1'
 		},
-		{ id: 'A', name: 'A', isleaf: false, parent_id: null },
-		{ id: 'A.1', name: 'A.1', isleaf: false, parent_id: 'A' },
-		{ id: 'A.2', name: 'A.2', isleaf: false, parent_id: 'A' },
-		{ id: 'B', name: 'B', isleaf: false, parent_id: null },
-		{ id: 'B.1', name: 'B.1', isleaf: false, parent_id: 'B' }
+		{ id: 'A', name: 'A', isleaf: false, child_order: 1, parent_id: null },
+		{ id: 'A.1', name: 'A.1', isleaf: false, child_order: 1, parent_id: 'A' },
+		{ id: 'A.2', name: 'A.2', isleaf: false, child_order: 2, parent_id: 'A' },
+		{ id: 'B', name: 'B', isleaf: false, child_order: 2, parent_id: null },
+		{ id: 'B.1', name: 'B.1', isleaf: false, child_order: 1, parent_id: 'B' }
 	]
 	test.deepEqual(results.terms, expected, 'should output the expected terms array')
 	test.equal(holder.selectAll('.sja_errorbar').size(), 0, 'should not display any errors')
 	test.end()
 })
 
-tape('levels after name+note, with gap', function(test) {
+tape('levels after variable, type, categories - with gap', function(test) {
 	test.timeoutAfter(100)
 	const tsv = [
-		`variable name\tvariable note\tlevel_1\tlevel_2\tlevel_3\tlevel_4`,
-		`A1ai\t1=Yes; 0=No\tA\tA.1\tA.1.a\tA.1.a.i`,
-		`A1b\t1=Yes; 0=No\tA\tA.1\tA.1.b\t-`,
-		`A2a\t1=Treated; 0=Not treated\tA\tA.2\tA.2.a\t-`,
-		`B1a\t1=Treated; 0=Not treated\tB\tB.1\tB.1.a\t-`
+		`variable\ttype\tcategories\tlevel_1\tlevel_2\tlevel_3\tlevel_4`,
+		`A1ai\tcategorical\t{ "0": {"label": "No" }, "1": { "label": "Yes" } }\tA\tA.1\tA.1.a\tA.1.a.i`,
+		`A1b\tcategorical\t{ "0": {"label": "No" }, "1": { "label": "Yes" } }\tA\tA.1\tA.1.b\t-`,
+		`A2a\tcategorical\t{ "0": {"label": "Not treated" }, "1": { "label": "Treated" } }\tA\tA.2\tA.2.a\t-`,
+		`B1a\tcategorical\t{ "0": {"label": "Not treated" }, "1": { "label": "Treated" } }\tB\tB.1\tB.1.a\t-`
 	].join('\n')
 
 	const message = 'should output the expected terms array'
 	try {
 		const holder = getHolder()
-		const results = parseDictionary(tsv) //; console.log(JSON.stringify(results.terms))
+		const results = parseDictionary(tsv)
 		const expected = [
 			{
 				id: 'A1ai',
@@ -107,6 +115,7 @@ tape('levels after name+note, with gap', function(test) {
 				type: 'categorical',
 				values: { '0': { label: 'No' }, '1': { label: 'Yes' } },
 				groupsetting: { inuse: false },
+				child_order: 1,
 				isleaf: true,
 				parent_id: 'A.1.a'
 			},
@@ -116,6 +125,7 @@ tape('levels after name+note, with gap', function(test) {
 				type: 'categorical',
 				values: { '0': { label: 'No' }, '1': { label: 'Yes' } },
 				groupsetting: { inuse: false },
+				child_order: 2,
 				isleaf: true,
 				parent_id: 'A.1'
 			},
@@ -125,6 +135,7 @@ tape('levels after name+note, with gap', function(test) {
 				type: 'categorical',
 				values: { '0': { label: 'Not treated' }, '1': { label: 'Treated' } },
 				groupsetting: { inuse: false },
+				child_order: 1,
 				isleaf: true,
 				parent_id: 'A.2'
 			},
@@ -134,15 +145,16 @@ tape('levels after name+note, with gap', function(test) {
 				type: 'categorical',
 				values: { '0': { label: 'Not treated' }, '1': { label: 'Treated' } },
 				groupsetting: { inuse: false },
+				child_order: 1,
 				isleaf: true,
 				parent_id: 'B.1'
 			},
-			{ id: 'A', name: 'A', isleaf: false, parent_id: null },
-			{ id: 'A.1', name: 'A.1', isleaf: false, parent_id: 'A' },
-			{ id: 'A.1.a', name: 'A.1.a', isleaf: false, parent_id: 'A.1' },
-			{ id: 'A.2', name: 'A.2', isleaf: false, parent_id: 'A' },
-			{ id: 'B', name: 'B', isleaf: false, parent_id: null },
-			{ id: 'B.1', name: 'B.1', isleaf: false, parent_id: 'B' }
+			{ id: 'A', name: 'A', isleaf: false, child_order: 1, parent_id: null },
+			{ id: 'A.1', name: 'A.1', isleaf: false, child_order: 1, parent_id: 'A' },
+			{ id: 'A.1.a', name: 'A.1.a', isleaf: false, child_order: 1, parent_id: 'A.1' },
+			{ id: 'A.2', name: 'A.2', isleaf: false, child_order: 2, parent_id: 'A' },
+			{ id: 'B', name: 'B', isleaf: false, child_order: 2, parent_id: null },
+			{ id: 'B.1', name: 'B.1', isleaf: false, child_order: 1, parent_id: 'B' }
 		]
 		test.deepEqual(results.terms, expected, message)
 		test.equal(holder.selectAll('.sja_errorbar').size(), 0, 'should not display any errors')
@@ -152,25 +164,26 @@ tape('levels after name+note, with gap', function(test) {
 	test.end()
 })
 
-tape('empty variable name', function(test) {
+tape('empty variable', function(test) {
 	test.timeoutAfter(100)
 	const tsv = [
-		`level_1\tlevel_2\tlevel_3\tvariable name\tvariable note`,
-		`A\tA.1\tA.1.a\t\t1=Yes; 0=No`,
-		`A\tA.1\tA.1.b\tA1b\t1=Yes; 0=No`,
-		`A\tA.2\tA.2.a\tA2a\t1=Treated; 0=Not treated`,
-		`B\tB.1\tB.1.a\tB1a\t1=Treated; 0=Not treated`
+		`level_1\tlevel_2\tlevel_3\tvariable\ttype\tcategories`,
+		`A\tA.1\tA.1.a\tA1a\tcategorical\t{ "0": { "label": "No" }, "1": { "label": "Yes" } }`,
+		`A\tA.1\tA.1.b\tA1b\tcategorical\t{ "0": { "label": "No" }, "1": { "label": "Yes" } }`,
+		`A\tA.2\tA.2.a\tA2a\tcategorical\t{ "0": {"label": "Not treated" }, "1": { "label": "Treated" } }`,
+		`B\tB.1\tB.1.a\tB1a\tcategorical\t{ "0": {"label": "Not treated" }, "1": { "label": "Treated" } }`
 	].join('\n')
 
 	const holder = getHolder()
-	const results = parseDictionary(tsv) //; console.log(JSON.stringify(results.terms))
+	const results = parseDictionary(tsv)
 	const expected = [
 		{
-			id: 'A.1.a',
+			id: 'A1a',
 			name: 'A.1.a',
 			type: 'categorical',
 			values: { '0': { label: 'No' }, '1': { label: 'Yes' } },
 			groupsetting: { inuse: false },
+			child_order: 1,
 			isleaf: true,
 			parent_id: 'A.1'
 		},
@@ -180,6 +193,7 @@ tape('empty variable name', function(test) {
 			type: 'categorical',
 			values: { '0': { label: 'No' }, '1': { label: 'Yes' } },
 			groupsetting: { inuse: false },
+			child_order: 2,
 			isleaf: true,
 			parent_id: 'A.1'
 		},
@@ -189,6 +203,7 @@ tape('empty variable name', function(test) {
 			type: 'categorical',
 			values: { '0': { label: 'Not treated' }, '1': { label: 'Treated' } },
 			groupsetting: { inuse: false },
+			child_order: 1,
 			isleaf: true,
 			parent_id: 'A.2'
 		},
@@ -198,14 +213,15 @@ tape('empty variable name', function(test) {
 			type: 'categorical',
 			values: { '0': { label: 'Not treated' }, '1': { label: 'Treated' } },
 			groupsetting: { inuse: false },
+			child_order: 1,
 			isleaf: true,
 			parent_id: 'B.1'
 		},
-		{ id: 'A', name: 'A', isleaf: false, parent_id: null },
-		{ id: 'A.1', name: 'A.1', isleaf: false, parent_id: 'A' },
-		{ id: 'A.2', name: 'A.2', isleaf: false, parent_id: 'A' },
-		{ id: 'B', name: 'B', isleaf: false, parent_id: null },
-		{ id: 'B.1', name: 'B.1', isleaf: false, parent_id: 'B' }
+		{ id: 'A', name: 'A', isleaf: false, child_order: 1, parent_id: null },
+		{ id: 'A.1', name: 'A.1', isleaf: false, child_order: 1, parent_id: 'A' },
+		{ id: 'A.2', name: 'A.2', isleaf: false, child_order: 2, parent_id: 'A' },
+		{ id: 'B', name: 'B', isleaf: false, child_order: 2, parent_id: null },
+		{ id: 'B.1', name: 'B.1', isleaf: false, child_order: 1, parent_id: 'B' }
 	]
 	test.deepEqual(results.terms, expected, 'should use the variable name as term.id')
 	test.equal(holder.selectAll('.sja_errorbar').size(), 0, 'should not display any errors')
@@ -215,11 +231,11 @@ tape('empty variable name', function(test) {
 tape('extra, non essential column', function(test) {
 	test.timeoutAfter(100)
 	const tsv = [
-		`level_1\tlevel_2\tlevel_3\tabsolute nonsense\tvariable name\tvariable note`,
-		`A\tA.1\tA.1.a\tfoo bar\tA1a\t1=Yes; 0=No`,
-		`A\tA.1\tA.1.b\tfoo bar\tA1b\t1=Yes; 0=No`,
-		`A\tA.2\tA.2.a\tfoo bar\tA2a\t1=Treated; 0=Not treated`,
-		`B\tB.1\tB.1.a\tfoo bar\tB1a\t1=Treated; 0=Not treated`
+		`level_1\tlevel_2\tlevel_3\tabsolute nonsense\tvariable\ttype\tcategories`,
+		`A\tA.1\tA.1.a\tfoo bar\tA1a\tcategorical\t{ "0": { "label": "No" }, "1": { "label": "Yes" } }`,
+		`A\tA.1\tA.1.b\tfoo bar\tA1b\tcategorical\t{ "0": { "label": "No" }, "1": { "label": "Yes" } }`,
+		`A\tA.2\tA.2.a\tfoo bar\tA2a\tcategorical\t{ "0": {"label": "Not treated" }, "1": { "label": "Treated" } }`,
+		`B\tB.1\tB.1.a\tfoo bar\tB1a\tcategorical\t{ "0": {"label": "Not treated" }, "1": { "label": "Treated" } }`
 	].join('\n')
 
 	const message = `should display data properly, no errors`
@@ -233,6 +249,7 @@ tape('extra, non essential column', function(test) {
 				type: 'categorical',
 				values: { '0': { label: 'No' }, '1': { label: 'Yes' } },
 				groupsetting: { inuse: false },
+				child_order: 1,
 				isleaf: true,
 				parent_id: 'A.1'
 			},
@@ -242,6 +259,7 @@ tape('extra, non essential column', function(test) {
 				type: 'categorical',
 				values: { '0': { label: 'No' }, '1': { label: 'Yes' } },
 				groupsetting: { inuse: false },
+				child_order: 2,
 				isleaf: true,
 				parent_id: 'A.1'
 			},
@@ -251,6 +269,7 @@ tape('extra, non essential column', function(test) {
 				type: 'categorical',
 				values: { '0': { label: 'Not treated' }, '1': { label: 'Treated' } },
 				groupsetting: { inuse: false },
+				child_order: 1,
 				isleaf: true,
 				parent_id: 'A.2'
 			},
@@ -260,14 +279,15 @@ tape('extra, non essential column', function(test) {
 				type: 'categorical',
 				values: { '0': { label: 'Not treated' }, '1': { label: 'Treated' } },
 				groupsetting: { inuse: false },
+				child_order: 1,
 				isleaf: true,
 				parent_id: 'B.1'
 			},
-			{ id: 'A', name: 'A', isleaf: false, parent_id: null },
-			{ id: 'A.1', name: 'A.1', isleaf: false, parent_id: 'A' },
-			{ id: 'A.2', name: 'A.2', isleaf: false, parent_id: 'A' },
-			{ id: 'B', name: 'B', isleaf: false, parent_id: null },
-			{ id: 'B.1', name: 'B.1', isleaf: false, parent_id: 'B' }
+			{ id: 'A', name: 'A', isleaf: false, child_order: 1, parent_id: null },
+			{ id: 'A.1', name: 'A.1', isleaf: false, child_order: 1, parent_id: 'A' },
+			{ id: 'A.2', name: 'A.2', isleaf: false, child_order: 2, parent_id: 'A' },
+			{ id: 'B', name: 'B', isleaf: false, child_order: 2, parent_id: null },
+			{ id: 'B.1', name: 'B.1', isleaf: false, child_order: 1, parent_id: 'B' }
 		]
 		test.deepEqual(results.terms, expected, message)
 		test.equal(holder.selectAll('.sja_errorbar').size(), 0, 'should not display any errors')
@@ -280,11 +300,11 @@ tape('extra, non essential column', function(test) {
 tape('no level columns', function(test) {
 	test.timeoutAfter(100)
 	const tsv = [
-		`variable name\tvariable note`,
-		`A1a\t1=Yes; 0=No`,
-		`A1b\t1=Yes; 0=No`,
-		`A2a\t1=Treated; 0=Not treated`,
-		`B1a\t1=Treated; 0=Not treated`
+		`variable\ttype\tcategories`,
+		`A1a\tcategorical\t{ "0": { "label": "No" }, "1": { "label": "Yes" } }`,
+		`A1b\tcategorical\t{ "0": { "label": "No" }, "1": { "label": "Yes" } }`,
+		`A2a\tcategorical\t{ "0": {"label": "Not treated" }, "1": { "label": "Treated" } }`,
+		`B1a\tcategorical\t{ "0": {"label": "Not treated" }, "1": { "label": "Treated" } }`
 	].join('\n')
 
 	const message = `should display dictionary with variable name (i.e. id) as name`
@@ -298,6 +318,7 @@ tape('no level columns', function(test) {
 				type: 'categorical',
 				values: { '0': { label: 'No' }, '1': { label: 'Yes' } },
 				groupsetting: { inuse: false },
+				child_order: 1,
 				isleaf: true,
 				parent_id: null
 			},
@@ -307,6 +328,7 @@ tape('no level columns', function(test) {
 				type: 'categorical',
 				values: { '0': { label: 'No' }, '1': { label: 'Yes' } },
 				groupsetting: { inuse: false },
+				child_order: 2,
 				isleaf: true,
 				parent_id: null
 			},
@@ -316,6 +338,7 @@ tape('no level columns', function(test) {
 				type: 'categorical',
 				values: { '0': { label: 'Not treated' }, '1': { label: 'Treated' } },
 				groupsetting: { inuse: false },
+				child_order: 3,
 				isleaf: true,
 				parent_id: null
 			},
@@ -325,6 +348,7 @@ tape('no level columns', function(test) {
 				type: 'categorical',
 				values: { '0': { label: 'Not treated' }, '1': { label: 'Treated' } },
 				groupsetting: { inuse: false },
+				child_order: 4,
 				isleaf: true,
 				parent_id: null
 			}
@@ -340,11 +364,11 @@ tape('no level columns', function(test) {
 tape('repeated level names, same line', function(test) {
 	test.timeoutAfter(100)
 	const tsv = [
-		`level_1\tlevel_2\tlevel_3\tvariable name\tvariable note`,
-		`A\tA.1\tA.1.a\tA1a\t1=Yes; 0=No`,
-		`A\tA.1\tA.1.b\tA1b\t1=Yes; 0=No`,
-		`A\tA.2\tA.2.a\tA2a\t1=Treated; 0=Not treated`,
-		`B\tB.1\tB.1.a\tB1a\t1=Treated; 0=Not treated`
+		`level_1\tlevel_2\tlevel_3\tvariable\ttype\tcategories`,
+		`A\tA.1\tA.1.a\tA1a\tcategorical\t{ "0": { "label": "No" }, "1": { "label": "Yes" } }`,
+		`A\tA.1\tA.1.b\tA1b\tcategorical\t{ "0": { "label": "No" }, "1": { "label": "Yes" } }`,
+		`A\tA.2\tA.2.a\tA2a\tcategorical\t{ "0": {"label": "Not treated" }, "1": { "label": "Treated" } }`,
+		`B\tB.1\tB.1.a\tB1a\tcategorical\t{ "0": {"label": "Not treated" }, "1": { "label": "Treated" } }`
 	].join('\n')
 
 	const holder = getHolder()
@@ -361,11 +385,11 @@ tape('repeated level names, same line', function(test) {
 tape('dash between levels', function(test) {
 	test.timeoutAfter(100)
 	const tsv = [
-		`level_1\tlevel_2\tlevel_3\tvariable name\tvariable note`,
-		`A\tA.1\tA.1.a\tA1a\t1=Yes; 0=No`,
-		`A\tA.1\tA.1.b\tA1b\t1=Yes; 0=No`,
-		`A\t-\tA.2.a\tA2a\t1=Treated; 0=Not treated`,
-		`B\tB.1\tB.1.a\tB1a\t1=Treated; 0=Not treated`
+		`level_1\tlevel_2\tlevel_3\tvariable\ttype\tcategories`,
+		`A\tA.1\tA.1.a\tA1a\tcategorical\t{ "0": { "label": "No" }, "1": { "label": "Yes" } }`,
+		`A\tA.1\tA.1.b\tA1b\tcategorical\t{ "0": { "label": "No" }, "1": { "label": "Yes" } }`,
+		`A\t-\tA.2.a\tA2a\tcategorical\t{ "0": {"label": "Not treated" }, "1": { "label": "Treated" } }`,
+		`B\tB.1\tB.1.a\tB1a\tcategorical\t{ "0": {"label": "Not treated" }, "1": { "label": "Treated" } }`
 	].join('\n')
 
 	const message = `should throw an error for a '-' between level names in line 4`
@@ -378,14 +402,14 @@ tape('dash between levels', function(test) {
 	test.end()
 })
 
-tape('empty configuration', function(test) {
+tape('missing type', function(test) {
 	test.timeoutAfter(100)
 	const tsv = [
-		`level_1\tlevel_2\tlevel_3\tvariable name\tvariable note`,
-		`A\tA.1\tA.1.a\tA1a\t1=Yes; 0=No`,
-		`A\tA.1\tA.1.b\tA1b\t1=Yes; 0=No`,
-		`A\tA2\tA.2.a\tA2a\t`,
-		`B\tB.1\tB.1.a\tB1a\t1=Treated; 0=Not treated`
+		`level_1\tlevel_2\tlevel_3\tvariable\ttype\tcategories`,
+		`A\tA.1\tA.1.a\tA1a\tcategorical\t{ "0": { "label": "No" }, "1": { "label": "Yes" } }`,
+		`A\tA.1\tA.1.b\tA1b\t\t{ "0": { "label": "No" }, "1": { "label": "Yes" } }`,
+		`A\tA2\tA.2.a\tA2a\tcategorical\t{ "0": {"label": "Not treated" }, "1": { "label": "Treated" } }`,
+		`B\tB.1\tB.1.a\tB1a\tcategorical\t{ "0": {"label": "Not treated" }, "1": { "label": "Treated" } }`
 	].join('\n')
 
 	const message = `should throw an error for missing configuration in line 4`
@@ -398,34 +422,14 @@ tape('empty configuration', function(test) {
 	test.end()
 })
 
-tape('missing k=v in config (phenotree format)', function(test) {
-	test.timeoutAfter(100)
-	const tsv = [
-		`level_1\tlevel_2\tlevel_3\tvariable name\tvariable note`,
-		`A\tA.1\tA.1.a\tA1a\t1=Yes; 0=No`,
-		`A\tA.1\tA.1.b\tA1b\t1=Yes; 0=No`,
-		`A\tA2\tA.2.a\tA2a\t1`,
-		`B\tB.1\tB.1.a\tB1a\t1=Treated; 0=Not treated`
-	].join('\n')
-
-	const message = `should throw an error for configuration key in line 4`
-	try {
-		parseDictionary(tsv)
-		test.fail(message)
-	} catch (e) {
-		test.pass(message + ': ' + e)
-	}
-	test.end()
-})
-
 tape('repeated intermediate terms for diff branches, whole dataset', function(test) {
 	test.timeoutAfter(100)
 	const tsv = [
-		`level_1\tlevel_2\tlevel_3\tvariable name\tvariable note`,
-		`A\tA.1\tA.1a\tA1a\t1=Yes; 0=No`,
-		`A\tsameterm\tA.1.b\tA1b\t1=Yes; 0=No`,
-		`A2\tsameterm\tA.2.a\tA2a\t1=Treated; 0=Not treated`,
-		`B\tB.1\tB.1.a\tB1a\t1=Treated; 0=Not treated`
+		`level_1\tlevel_2\tlevel_3\tvariable\ttype\tcategories`,
+		`A\tA.1\tA.1a\tA1a\tcategorical\t{ "0": { "label": "No" }, "1": { "label": "Yes" } }`,
+		`A\tsameterm\tA.1.b\tA1b\tcategorical\t{ "0": { "label": "No" }, "1": { "label": "Yes" } }`,
+		`A2\tsameterm\tA.2.a\tA2a\tcategorical\t{ "0": {"label": "Not treated" }, "1": { "label": "Treated" } }`,
+		`B\tB.1\tB.1.a\tB1a\tcategorical\t{ "0": {"label": "Not treated" }, "1": { "label": "Treated" } }`
 	].join('\n')
 
 	const message = `should throw an error for identical intermediate level name in lines 3 & 4`
@@ -438,14 +442,14 @@ tape('repeated intermediate terms for diff branches, whole dataset', function(te
 	test.end()
 })
 
-tape('missing variable name header', function(test) {
+tape('missing Variable header', function(test) {
 	test.timeoutAfter(100)
 	const tsv = [
-		`level_1\tlevel_2\tlevel_3\tvariable\tvariable note`,
-		`A\tA.1\tA.1a\tA1a\t1=Yes; 0=No`,
-		`A\tA.1\tA.1.b\tA1b\t1=Yes; 0=No`,
-		`A2\tA.2\tA.2.a\tA2a\t1=Treated; 0=Not treated`,
-		`B\tB.1\tB.1.a\tB1a\t1=Treated; 0=Not treated`
+		`level_1\tlevel_2\tlevel_3\tvar\ttype\tcategories`,
+		`A\tA.1\tA.1a\tA1a\tcategorical\t{ "0": { "label": "No" }, "1": { "label": "Yes" } }`,
+		`A\tA.1\tA.1.b\tA1b\tcategorical\t{ "0": { "label": "No" }, "1": { "label": "Yes" } }`,
+		`A2\tA.2\tA.2.a\tA2a\tcategorical\t{ "0": {"label": "Not treated" }, "1": { "label": "Treated" } }`,
+		`B\tB.1\tB.1.a\tB1a\tcategorical\t{ "0": {"label": "Not treated" }, "1": { "label": "Treated" } }`
 	].join('\n')
 
 	const message = 'Should throw on unrecognized file format'
@@ -459,14 +463,14 @@ tape('missing variable name header', function(test) {
 	test.end()
 })
 
-tape('missing variable note header', function(test) {
+tape('missing Type header', function(test) {
 	test.timeoutAfter(100)
 	const tsv = [
-		`level_1\tlevel_2\tlevel_3\tvariable name\tvariable`,
-		`A\tA.1\tA.1a\tA1a\t1=Yes; 0=No`,
-		`A\tA.1\tA.1.b\tA1b\t1=Yes; 0=No`,
-		`A2\tA.2\tA.2.a\tA2a\t1=Treated; 0=Not treated`,
-		`B\tB.1\tB.1.a\tB1a\t1=Treated; 0=Not treated`
+		`level_1\tlevel_2\tlevel_3\tvariable\tt\tcategories`,
+		`A\tA.1\tA.1a\tA1a\tcategorical\t{ "0": { "label": "No" }, "1": { "label": "Yes" } }`,
+		`A\tA.1\tA.1.b\tA1b\tcategorical\t{ "0": { "label": "No" }, "1": { "label": "Yes" } }`,
+		`A2\tA.2\tA.2.a\tA2a\tcategorical\t{ "0": {"label": "Not treated" }, "1": { "label": "Treated" } }`,
+		`B\tB.1\tB.1.a\tB1a\tcategorical\t{ "0": {"label": "Not treated" }, "1": { "label": "Treated" } }`
 	].join('\n')
 
 	const message = 'Should throw on missing variable note header'
@@ -560,7 +564,7 @@ tape('missing values header', function(test) {
 
 	const message = 'Should throw on missing values header'
 	try {
-		const results = parseDictionary(tsv)
+		parseDictionary(tsv)
 		test.fail(message)
 	} catch (e) {
 		test.pass(message + ': ' + e)
@@ -608,31 +612,103 @@ tape('missing k=v in values (dictionary format)', function(test) {
 	test.end()
 })
 
-//TODO
-// tape('\n', function(test) {
-// 	test.pass('-***- databrowser UI -***-')
-// 	test.end()
-// })
+/**************
+ 	UI tests
+***************/
 
-// tape('Render UI', test => {
-// 	test.timeoutAfter(1000)
-// 	renderUI()
+tape('\n', function(test) {
+	test.pass('-***- databrowser UI -***-')
+	test.end()
+})
 
-// 	function renderUI() {
-// 		const holder = getHolder()
-// 		const args ={
-// 			holder,
-// 			host: window.location.origin,
-// 			noheader: true,
-// 			parseurl: true,
-// 			nobox: true,
-// 			tkui: "databrowser"
-// 		}
-// 		runproteinpaint(Object.assign(args))
-// 	}
+tape('Render Databrowser UI from runpp()', async test => {
+	test.timeoutAfter(300)
+	const holder = getHolder().node()
 
-// 	// testClick = (test) => {
+	await runproteinpaint({
+		holder,
+		noheader: true,
+		parseurl: true,
+		nobox: true,
+		tkui: 'databrowser'
+		// ********** Does not work
+		// onloadalltk_always: checkUI
+	})
 
-// 	// }
-// 	test.end()
-// })
+	// function checkUI() {
+	// const uiFound = [...holder.querySelectorAll('.sjpp-databrowser-section-header')].some(
+	// 	elem => elem.innerText == 'Data Dictionary'
+	// )
+	// test.true(uiFound, `Should databrowser UI`)
+	// }
+
+	await sleep(100)
+	const uiFound = [...holder.querySelectorAll('.sjpp-databrowser-section-header')].some(
+		elem => elem.innerText == 'Data Dictionary'
+	)
+	test.true(uiFound, `Should databrowser UI`)
+	if (test._ok) holder.remove()
+
+	test.end()
+})
+
+tape.only('Click submit with no data', async test => {
+	test.timeoutAfter(3000)
+	const holder = getHolder()
+	const message = `Should throw an error for no data submitted`
+
+	try {
+		const obj = init_dictionaryUI(holder)
+		let err
+		obj.sayerror = e => {
+			err = e
+		}
+		const submitBtn = [...holder.node().querySelectorAll('.sjpp-ui-submitBtn')].find(
+			elem => elem.innerText == 'Create Data Browser'
+		)
+		await submitBtn.dispatchEvent(new Event('click'))
+		//Does not catch error but throws?
+		test.equal(err, 'Please provide data', message)
+	} catch (e) {
+		test.pass(message + ': ' + e)
+	}
+	// if (test._ok) holder.remove()
+
+	test.end()
+})
+
+tape('Render Databrowser from copy/paste data', async test => {
+	test.timeoutAfter(3000)
+	const holder = getHolder()
+
+	const tsv = [
+		`variable\ttype\tcategories`,
+		`A1a\tcategorical\t{ "0": { "label": "No" }, "1": { "label": "Yes" } }`,
+		`A1b\tcategorical\t{ "0": { "label": "No" }, "1": { "label": "Yes" } }`,
+		`A2a\tcategorical\t{ "0": {"label": "Not treated" }, "1": { "label": "Treated" } }`,
+		`B1a\tcategorical\t{ "0": {"label": "Not treated" }, "1": { "label": "Treated" } }`
+	]
+		.join('\n')
+		.trim()
+
+	init_dictionaryUI(holder)
+
+	await sleep(100)
+	const pasteBtn = [...holder.node().querySelectorAll('.sj-toggle-button')].find(elem => elem.innerText == 'Paste Data')
+	pasteBtn.dispatchEvent(new Event('click'))
+
+	const textArea = d3s.select('textarea')._groups[0][0]
+	textArea.value = tsv
+	textArea.dispatchEvent(new Event('keyup'))
+
+	const submitBtn = [...holder.node().querySelectorAll('.sjpp-ui-submitBtn')].find(
+		elem => elem.innerText == 'Create Data Browser'
+	)
+	submitBtn.dispatchEvent(new Event('click'))
+
+	await sleep(100)
+	test.equal([...holder.node().querySelectorAll('.ts_pill')].length, 4, 'Should render four pills')
+	// if (test._ok) holder.remove()
+
+	test.end()
+})

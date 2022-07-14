@@ -32,7 +32,7 @@ Long term plans:
 Will include sample annotation matrix, longitudinal data, sample ID hierarcy and molecular data (see old sketch: https://docs.google.com/drawings/d/1x3BgBbUF2ChkOGCXkA-fW8r46EbT_ZEqNZgwyTXLTXE/edit)
 */
 
-export function init_dictionaryUI(holder, debugmode) {
+export function init_databrowserUI(holder, debugmode) {
 	const wrapper = holder
 		.append('div')
 		.style('margin', '20px 20px 20px 40px')
@@ -42,8 +42,11 @@ export function init_dictionaryUI(holder, debugmode) {
 		)
 		.style('place-items', 'center left')
 		.style('overflow', 'hidden')
+		.classed('sjpp-app-ui', true)
 
-	const obj = {}
+	const obj = {
+		sayerror: e => alert(e)
+	}
 
 	//Information section for user with documentation and example
 	infoSection(wrapper)
@@ -58,6 +61,7 @@ export function init_dictionaryUI(holder, debugmode) {
 
 	//Remove after testing
 	if (debugmode) window.doms = obj
+	return obj
 }
 
 //TODO later
@@ -92,6 +96,7 @@ function makeSectionHeader(div, text) {
 		.style('font-size', '1.5em')
 		.style('color', '#003366')
 		.style('margin', '20px 10px 40px 10px')
+		.classed('sjpp-databrowser-section-header', true)
 	const hr = div.append('hr')
 	hr.style('color', 'ligthgrey')
 		.style('margin', '-30px 0px 15px 0px')
@@ -213,7 +218,7 @@ function submitButton(div, obj, holder) {
 		.classed('sjpp-ui-submitBtn', true)
 		.on('click', () => {
 			if (!obj.data || obj.data == undefined) {
-				alert('Please provide data')
+				obj.sayerror('Please provide data')
 				throw 'No data provided'
 			}
 			div.remove()
