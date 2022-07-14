@@ -1,5 +1,4 @@
 const tape = require('tape')
-const helpers = require('../../test/front.helpers.js')
 const d3s = require('d3-selection')
 const host = window.location.origin
 
@@ -35,7 +34,7 @@ run test with a runpp callback, which eliminates need of sleep()
 for that to work, the tape() callback function must not be "async"
 */
 
-tape.only('Run GDC dataset, KRAS', t => {
+tape('Run GDC dataset, KRAS', t => {
 	const holder = getHolder()
 	runproteinpaint({
 		holder,
@@ -64,7 +63,7 @@ tape.only('Run GDC dataset, KRAS', t => {
 })
 
 tape('Run GDC dataset via gene symbol, ensembl ID and RefSeq ID', async test => {
-	test.timeoutAfter(10000)
+	test.timeoutAfter(8000)
 	const holder = getHolder()
 
 	const genes = [
@@ -85,23 +84,30 @@ tape('Run GDC dataset via gene symbol, ensembl ID and RefSeq ID', async test => 
 					dslabel: 'GDC'
 				}
 			]
+			// onloadalltk_always: checkGeneTrack ****This does not work
 		})
+
+		// function checkGeneTrack() {
+		// 	No tests pass because test.end() is called outside the for..of loop
+		// }
 
 		await sleep(2300)
 		const geneFound = [...holder.querySelectorAll('span')].some(elem =>
 			elem.innerText == g.isoform ? `${g.gene} ${g.isoform}` : `${g.gene}`
 		)
 		test.true(geneFound, `Should render ${g.isoform || g.gene} track`)
+
+		if (test._ok) holder.remove()
 	}
 
 	test.end()
 })
 
-tape('Launch GDC dataset by SSM ID', async test => {
+tape('Launch GDC dataset by SSM ID, KRAS', test => {
 	test.timeoutAfter(10000)
 	const holder = getHolder()
 
-	await runproteinpaint({
+	runproteinpaint({
 		holder,
 		noheader: true,
 		nobox: true,
@@ -115,16 +121,25 @@ tape('Launch GDC dataset by SSM ID', async test => {
 				type: 'mds3',
 				dslabel: 'GDC'
 			}
-		]
+		],
+		onloadalltk_always: checkTrack
 	})
-	await sleep(2300)
-	const ssmFound = [...holder.querySelectorAll('.sja_aa_disclabel')].some(elem => elem.innerHTML == 'G12V')
-	test.true(ssmFound, `Should render KRAS track with focused G12V mutation`)
 
-	test.end()
+	function checkTrack(bb) {
+		test.equal(bb.tklst.length, 2, 'should have two tracks')
+
+		const GDCtrack = bb.tklst.find(i => i.dslabel == 'GDC')
+		test.ok(GDCtrack, 'Should render KRAS track from GDC dataset')
+
+		const mds3Track = bb.tklst.find(i => i.type == 'mds3')
+		test.ok(mds3Track, 'Should render mds3 KRAS track with focused G12V mutation')
+
+		if (test._ok) holder.remove()
+		test.end()
+	}
 })
 
-tape('Render gene track from search box', async test => {
+tape('Render gene track from search box, KRAS', async test => {
 	test.timeoutAfter(10000)
 	const holder = getHolder()
 
@@ -132,9 +147,14 @@ tape('Render gene track from search box', async test => {
 		holder,
 		noheader: 1,
 		geneSearch4GDCmds3: true
+		// onloadalltk_always: checkSearchBox ****This does not work
 	})
 
-	await sleep(2300)
+	// function checkSearchBox() {
+	// 	console.log('This callback works without tracks')
+	// }
+
+	await sleep(1000)
 
 	//Enter KRAS into search box
 	const searchBox = d3s.select('input')._groups[0][0]
@@ -142,53 +162,63 @@ tape('Render gene track from search box', async test => {
 	searchBox.dispatchEvent(new Event('keyup'))
 
 	//Click on first menu option -> 'KRAS'
-	await sleep(2300)
-	// const geneFoundInMenu = d3.select('div.sja_menuoption')._groups[0][0]
-	const geneFoundInMenu = [...document.querySelectorAll('div.sja_menuoption')].find(elem => elem.innerText == 'KRAS')
+	await sleep(1000)
+	const geneFoundInMenu = d3.select('div.sja_menuoption')._groups[0][0]
 	geneFoundInMenu.dispatchEvent(new Event('click'))
 
 	//Verify track renders
-	await sleep(2300)
+	await sleep(3000)
 	const geneTrackFound = [...holder.querySelectorAll('span.sja_clbtext')].some(
 		elem => elem.innerText == 'KRAS ENST00000256078'
 	)
 	test.true(geneTrackFound, `Should render default KRAS ENST00000256078 track`)
 
+	if (test._ok) holder.remove()
 	test.end()
 })
 
-tape('Launch ASH dataset', async test => {
+tape('Launch ASH dataset, BCR', test => {
 	test.timeoutAfter(3000)
 	const holder = getHolder()
 
-	await runproteinpaint({
+	runproteinpaint({
 		holder,
 		parseurl: true,
 		nobox: true,
 		noheader: true,
 		genome: 'hg38',
 		gene: 'BCR',
-		tracks: [
-			{
-				type: 'mds3',
-				dslabel: 'ASH'
-			}
-		]
+		tracks: [{ type: 'mds3', dslabel: 'ASH' }],
+		onloadalltk_always: checkTrack
 	})
-	await sleep(2300)
-	const customVariantFound = [...holder.querySelectorAll('span.sja_clbtext')].some(
-		elem => elem.innerText == 'BCR NM_004327'
-	)
-	test.true(customVariantFound, `Should render default BCR track in ASH dataset`)
 
-	test.end()
+	function checkTrack(bb) {
+		test.equal(bb.tklst.length, 2, 'should have two tracks')
+
+		test.ok(bb.usegm.name == 'BCR', 'Should render BCR track')
+
+		const GDCtrack = bb.tklst.find(i => i.dslabel == 'ASH')
+		test.ok(GDCtrack, 'Should render BCR track from ASH dataset')
+
+		const mds3Track = bb.tklst.find(i => i.type == 'mds3')
+		test.ok(mds3Track, 'Should render mds3 BCR track with focused G12V mutation')
+
+		if (test._ok) holder.remove()
+		test.end()
+	}
 })
 
-tape('Custom dataset with custom variants, NO samples', async test => {
-	test.timeoutAfter(10000)
+tape('Custom dataset with custom variants, NO samples', test => {
+	test.timeoutAfter(3000)
 	const holder = getHolder()
 
-	await runproteinpaint({
+	const custom_variants = [
+		{ chr: 'chr8', pos: 128750685, mname: 'P75', class: 'M', dt: 1 },
+		{ chr: 'chr8', pos: 128750680, mname: 'T73', class: 'M', dt: 1 },
+		{ chr: 'chr8', pos: 128750685, mname: 'WTPinsP75', class: 'I', dt: 1 }
+	]
+
+	runproteinpaint({
 		holder,
 		parseurl: true,
 		nobox: true,
@@ -199,29 +229,47 @@ tape('Custom dataset with custom variants, NO samples', async test => {
 			{
 				type: 'mds3',
 				name: 'Test, without occurrence',
-				custom_variants: [
-					{ chr: 'chr8', pos: 128750685, mname: 'P75', class: 'M', dt: 1 },
-					{ chr: 'chr8', pos: 128750680, mname: 'T73', class: 'M', dt: 1 },
-					{ chr: 'chr8', pos: 128750685, mname: 'WTPinsP75', class: 'I', dt: 1 }
-				]
+				custom_variants
 			}
-		]
+		],
+		onloadalltk_always: checkTrack
 	})
-	await sleep(2300)
-	//TODO, maybe?: Check for all mnames
-	const customVariantFound = [...holder.querySelectorAll('.sja_aa_disclabel')].some(
-		elem => elem.innerHTML == 'WTPinsP75'
-	)
-	test.true(customVariantFound, `Should render custom dataset with ad hoc WTPinsP75 variant`)
 
-	test.end()
+	function checkTrack(bb) {
+		//Confirm mds3 track
+		const mds3Track = bb.tklst.find(i => i.type == 'mds3')
+		test.ok(mds3Track, 'Should render custom dataset mds3 track')
+
+		//Confirm number of custom variants matches in block instance
+		test.equal(
+			bb.tklst[0].custom_variants.length,
+			custom_variants.length,
+			`Should render ${custom_variants.length} custom variants`
+		)
+
+		for (const variant of custom_variants) {
+			//Test all custom variant entries successfully passed to block instance
+			const variantFound = bb.tklst[0].custom_variants.find(i => i.mname == variant.mname)
+			test.ok(variantFound, `Should render data point for ${variant.mname}`)
+		}
+
+		if (test._ok) holder.remove()
+		test.end()
+	}
 })
 
-tape('Custom dataset with custom variants, WITH samples', async test => {
-	test.timeoutAfter(10000)
+tape('Custom dataset with custom variants, WITH samples', test => {
+	test.timeoutAfter(3000)
 	const holder = getHolder()
 
-	await runproteinpaint({
+	const custom_variants = [
+		{ chr: 'chr8', pos: 128750685, mname: 'P75', class: 'M', dt: 1, sample: 'sample 1' },
+		{ chr: 'chr8', pos: 128750680, mname: 'T73', class: 'M', dt: 1, sample: 'sample 2' },
+		{ chr: 'chr8', pos: 128750685, mname: 'WTPinsP75', class: 'I', dt: 1, sample: 'sample 3' },
+		{ chr: 'chr8', pos: 128750685, mname: 'WTPinsP75', class: 'I', dt: 1, sample: 'sample 4' }
+	]
+
+	runproteinpaint({
 		holder,
 		parseurl: true,
 		nobox: true,
@@ -232,28 +280,60 @@ tape('Custom dataset with custom variants, WITH samples', async test => {
 			{
 				type: 'mds3',
 				name: 'Test, with sample name',
-				custom_variants: [
-					{ chr: 'chr8', pos: 128750685, mname: 'P75', class: 'M', dt: 1, sample: 'sample 1' },
-					{ chr: 'chr8', pos: 128750680, mname: 'T73', class: 'M', dt: 1, sample: 'sample 2' },
-					{ chr: 'chr8', pos: 128750685, mname: 'WTPinsP75', class: 'I', dt: 1, sample: 'sample 3' },
-					{ chr: 'chr8', pos: 128750685, mname: 'WTPinsP75', class: 'I', dt: 1, sample: 'sample 4' }
-				]
+				custom_variants
 			}
-		]
+		],
+		onloadalltk_always: checkTrack
 	})
-	await sleep(2300)
-	//TODO, maybe?: Check for all mnames
-	const customVariantFound = [...holder.querySelectorAll('.sja_aa_discnum')].some(elem => elem.innerHTML == '2')
-	test.true(customVariantFound, `Should render custom dataset with 2 samples for WTPinsP75 variant`)
 
-	test.end()
+	function checkTrack(bb) {
+		//Confirm mds3 track
+		const mds3Track = bb.tklst.find(i => i.type == 'mds3')
+		test.ok(mds3Track, 'Should render custom dataset')
+
+		const variantNum = new Set()
+		for (const variant of custom_variants) {
+			//Test all custom variant entries successfully passed to block instance
+			const variantFound = bb.tklst[0].custom_variants.find(i => i.mname == variant.mname)
+			test.ok(variantFound, `Should render data point for ${variant.mname}`)
+
+			variantNum.add(variant.mname)
+
+			//Test number of samples passed to block
+			if (variant.samples) {
+				test.equal(
+					variantFound.samples.length,
+					variant.samples.length,
+					`Should render ${variant.samples.length} sample(s) for ${variant.mname}`
+				)
+			}
+		}
+
+		//Confirm number of custom variants matches in block instance
+		test.equal(bb.tklst[0].custom_variants.length, variantNum.size, `Should render ${variantNum.size} custom variants`)
+
+		if (test._ok) holder.remove()
+		test.end()
+	}
 })
 
-tape('Numeric mode custom dataset', async test => {
-	test.timeoutAfter(10000)
+tape('Numeric mode custom dataset', test => {
+	test.timeoutAfter(3000)
 	const holder = getHolder()
 
-	await runproteinpaint({
+	const skewerModes = [
+		{ type: 'numeric', byAttribute: 'lpv', label: '-log10(p-value)', inuse: true, axisheight: 100 },
+		{ type: 'numeric', byAttribute: 'value2', label: 'other numbers', axisheight: 200 }
+	]
+
+	const custom_variants = [
+		{ chr: 'chr8', pos: 128750685, mname: 'P75', class: 'M', dt: 1, lpv: 1, value2: 4 },
+		{ chr: 'chr8', pos: 128750680, mname: 'T73', class: 'M', dt: 1, lpv: 2, value2: 5 },
+		{ chr: 'chr8', pos: 128750685, mname: 'WTPinsP75', class: 'I', dt: 1, lpv: 3, value2: 6 },
+		{ chr: 'chr8', pos: 128750754, mname: 'data point', class: 'I', dt: 1 }
+	]
+
+	runproteinpaint({
 		holder,
 		parseurl: true,
 		nobox: true,
@@ -263,17 +343,9 @@ tape('Numeric mode custom dataset', async test => {
 		tracks: [
 			{
 				type: 'mds3',
-				skewerModes: [
-					{ type: 'numeric', byAttribute: 'lpv', label: '-log10(p-value)', inuse: true, axisheight: 100 },
-					{ type: 'numeric', byAttribute: 'value2', label: 'other numbers', axisheight: 200 }
-				],
+				skewerModes,
 				name: 'AA sites with numbers',
-				custom_variants: [
-					{ chr: 'chr8', pos: 128750685, mname: 'P75', class: 'M', dt: 1, lpv: 1, value2: 4 },
-					{ chr: 'chr8', pos: 128750680, mname: 'T73', class: 'M', dt: 1, lpv: 2, value2: 5 },
-					{ chr: 'chr8', pos: 128750685, mname: 'WTPinsP75', class: 'I', dt: 1, lpv: 3, value2: 6 },
-					{ chr: 'chr8', pos: 128750754, mname: 'data point', class: 'I', dt: 1 }
-				]
+				custom_variants
 			}
 		],
 		mclassOverride: {
@@ -282,11 +354,34 @@ tape('Numeric mode custom dataset', async test => {
 				M: { label: 'AA', desc: 'AA desc' },
 				I: { label: 'BB', desc: 'BB desc' }
 			}
-		}
+		},
+		onloadalltk_always: checkTrack
 	})
-	await sleep(2300)
-	const customVariantFound = [...holder.querySelectorAll('text')].some(elem => elem.innerHTML == '-log10(p-value)')
-	test.true(customVariantFound, `Should render custom dataset in numeric mode with -log10(p-value) scale`)
 
-	test.end()
+	function checkTrack(bb) {
+		const mds3Track = bb.tklst.find(i => i.type == 'mds3')
+		test.ok(mds3Track, 'Should render custom dataset')
+
+		//Confirm number of custom variants matches in block instance
+		test.equal(
+			bb.tklst[0].custom_variants.length,
+			custom_variants.length,
+			`Should render ${custom_variants.length} custom variants`
+		)
+
+		for (const variant of custom_variants) {
+			//Test all custom variant entries successfully passed to block instance
+			const variantFound = bb.tklst[0].custom_variants.find(i => i.mname == variant.mname)
+			test.ok(variantFound, `Should render data point for ${variant.mname}`)
+		}
+
+		for (const skewer of skewerModes) {
+			//Test numeric skewers successfully passed to block instance
+			if (skewer.type == 'numeric') {
+				const skewerFound = bb.tklst[0].skewer.viewModes.find(i => i.byAttribute == skewer.byAttribute)
+				test.ok(skewerFound, `Should provide numeric option for ${skewer.label}`)
+			}
+		}
+		test.end()
+	}
 })
