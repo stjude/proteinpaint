@@ -10,6 +10,7 @@
 
 use bigtools::bigwigread::BigWigRead;
 use bigtools::remote_file::RemoteFile;
+use math::round;
 use std::env;
 use std::io;
 
@@ -33,8 +34,12 @@ fn main() {
     let chrom: String = args[1].parse::<String>().unwrap(); // Chromosome name
     let start_pos: u32 = args[2].parse::<u32>().unwrap(); // Start position
     let stop_pos: u32 = args[3].parse::<u32>().unwrap(); // Stop position
-
+    let difference = stop_pos - start_pos;
     let datapoints: u32 = args[4].replace("\n", "").parse::<u32>().unwrap(); // Number of intervals
+    let exact_offset: f64 = difference as f64 / datapoints as f64;
+    let exact_offset_whole: i64 = round::ceil(exact_offset, 0) as i64;
+    println!("exact_offset:{}", exact_offset);
+    println!("exact_offset_whole:{}", exact_offset_whole);
 
     if bigwig_file_url.starts_with("http") == true {
         // Its a web URL
@@ -61,6 +66,7 @@ fn main() {
             Ok(_) => {
                 let mut reader = BigWigRead::from_file_and_attach(&bigwig_file_url).unwrap();
                 let bigwig_output = reader.get_interval(&chrom, start_pos, stop_pos).unwrap();
+                //calculate_datapoints(bigwig_output, chrom, start_pos, stop_pos, data_points);
                 for interval in bigwig_output {
                     println!("{:?}", interval);
                 }
@@ -70,4 +76,13 @@ fn main() {
             }
         }
     }
+}
+
+fn calculate_datapoints(
+    bigwig_output: String,
+    chrom: String,
+    start_pos: u32,
+    stop_pos: u32,
+    data_points: u32,
+) {
 }
