@@ -5,7 +5,8 @@
   "main": "server.js",
   "bin": "bin.js",
   "imports": {
-    "#shared/*": "../shared/*.js"
+    "#shared/*": "./shared/*.js",
+    "#src/*": "./src/*.js"
   },
   "scripts": {
     "dev": "webpack --config=./webpack.config.js --env NODE_ENV=development --watch --progress --color",

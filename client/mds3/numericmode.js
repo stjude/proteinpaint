@@ -822,7 +822,6 @@ function render_axis(tk, nm, block) {
 		nm.axisWidth = Math.max(nm.axisWidth, this.getBBox().width)
 	})
 	nm.axisWidth += 15
-	tk.leftLabelMaxwidth = Math.max(tk.leftLabelMaxwidth, nm.axisWidth)
 
 	// axis label
 
@@ -844,10 +843,10 @@ function render_axis(tk, nm, block) {
 				maxlabelw = Math.max(maxlabelw, this.getBBox().width + 15 + nm.axisWidth)
 			})
 	})
-	tk.leftLabelMaxwidth = Math.max(tk.leftLabelMaxwidth, maxlabelw)
 	*/
 
 	// render one single text label so can apply click
+	let w
 	nm.axisg
 		.append('text')
 		.attr('fill', 'black')
@@ -858,7 +857,7 @@ function render_axis(tk, nm, block) {
 		.attr('x', -nm.axisWidth)
 		.text(nm.label || defaultLabel) // if too long can use ellipsis, hover to show full
 		.each(function() {
-			tk.leftLabelMaxwidth = Math.max(tk.leftLabelMaxwidth, this.getBBox().width + 15 + nm.axisWidth)
+			w = this.getBBox().width
 		})
 		.on('click', () => {
 			tk.menutip
@@ -876,6 +875,8 @@ function render_axis(tk, nm, block) {
 					tk._finish()
 				})
 		})
+
+	tk.skewer.maxwidth = nm.axisWidth + w
 }
 
 function trianglePath(p) {

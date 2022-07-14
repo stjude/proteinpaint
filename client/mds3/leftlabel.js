@@ -17,13 +17,13 @@ make left labels on main track render
 labels are based on server data
 labels are kept persistent by keys in tk.leftlabels.doms{}
 must call after rendering skewer track
-must reset leftLabelMaxwidth
+must reset tk.leftlabels.maxwidth
 
 TODO may not update every label when only updating certain sub track
 */
 
 export async function make_leftlabels(data, tk, block) {
-	tk.leftLabelMaxwidth = tk.tklabel.node().getBBox().width
+	tk.leftlabels.maxwidth = tk.tklabel.node().getBBox().width
 
 	let laby = 0
 
@@ -42,7 +42,7 @@ export async function make_leftlabels(data, tk, block) {
 	positionLeftlabelg(tk, block)
 
 	for (const k in tk.leftlabels.doms) {
-		tk.leftLabelMaxwidth = Math.max(tk.leftLabelMaxwidth, tk.leftlabels.doms[k].node().getBBox().width)
+		tk.leftlabels.maxwidth = Math.max(tk.leftlabels.maxwidth, tk.leftlabels.doms[k].node().getBBox().width)
 	}
 	tk.subtk2height.leftlabels = laby + 20 // account for tk.tklabel
 }
@@ -52,7 +52,7 @@ export function positionLeftlabelg(tk, block) {
 		// no labels
 		return
 	}
-	let x = 0
+	tk.leftlabels.xoff = 0
 	if (tk.skewer) {
 		const nm = tk.skewer.viewModes.find(i => i.inuse)
 		if (nm.type == 'numeric') {
@@ -61,11 +61,11 @@ export function positionLeftlabelg(tk, block) {
 			// use y position of last label
 			const lly = tk.leftlabels.laby + labyspace + block.labelfontsize
 			if (lly > nm.toplabelheight - 10) {
-				x = nm.axisWidth
+				tk.leftlabels.xoff = nm.axisWidth
 			}
 		}
 	}
-	tk.leftlabels.g.attr('transform', `translate(${-x},${labyspace + block.labelfontsize})`)
+	tk.leftlabels.g.attr('transform', `translate(-${tk.leftlabels.xoff},${labyspace + block.labelfontsize})`)
 }
 
 export function makelabel(tk, block, y) {

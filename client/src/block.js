@@ -392,35 +392,38 @@ export class Block {
 				.style('margin-right', '5px')
 				.style('border-radius', '4px')
 
-			// official dataset, only use in gm mode, won't show in plain browser
+			// official dataset (legacy ds), only use in gm mode, won't show in plain browser
 			this.ctrl.dshandleholder = butrow.append('span')
-			if (this.genome.datasets) {
-				for (const n in this.genome.datasets) {
-					if (this.genome.datasets[n].isMds) {
-						// old ds, do not show mds here
-						continue
+			if (!arg.hide_dsHandles) {
+				// can show ds handles
+				if (this.genome.datasets) {
+					for (const n in this.genome.datasets) {
+						if (this.genome.datasets[n].isMds) {
+							// old ds, do not show mds here
+							continue
+						}
+						if (this.genome.datasets[n].noHandleOnClient) continue
+						this.old_dshandle_new(n)
 					}
-					if (this.genome.datasets[n].noHandleOnClient) continue
-					this.old_dshandle_new(n)
 				}
+				// custom data, legacy ds
+				butrow
+					.append('div')
+					.style('display', 'inline-block')
+					.style('margin', '1px')
+					.style('border', 'solid 1px #545454')
+					.style('font-size', '.9em')
+					.style('font-family', client.font)
+					.style('cursor', 'default')
+					.style('padding', '2px 5px')
+					.attr('class', 'sja_opaque8')
+					.text('+')
+					.on('click', () => {
+						const p = d3event.target.getBoundingClientRect()
+						this.tip.clear().show(p.left - 150, p.top + p.height - 15)
+						import('./block.ds.gmcustomdata').then(q => q.default(this))
+					})
 			}
-			// custom data
-			butrow
-				.append('div')
-				.style('display', 'inline-block')
-				.style('margin', '1px')
-				.style('border', 'solid 1px #545454')
-				.style('font-size', '.9em')
-				.style('font-family', client.font)
-				.style('cursor', 'default')
-				.style('padding', '2px 5px')
-				.attr('class', 'sja_opaque8')
-				.text('+')
-				.on('click', () => {
-					const p = d3event.target.getBoundingClientRect()
-					this.tip.clear().show(p.left - 150, p.top + p.height - 15)
-					import('./block.ds.gmcustomdata').then(q => q.default(this))
-				})
 			butrow.append('span').html('&nbsp;&nbsp;&nbsp;')
 		}
 
@@ -454,7 +457,7 @@ export class Block {
 	after coord input
 	may configure not to show
 	*/
-		if (this.genome.datasets) {
+		if (!arg.hide_dsHandles && this.genome.datasets) {
 			const lst = []
 			for (const n in this.genome.datasets) {
 				if (this.genome.datasets[n].isMds && !this.genome.datasets[n].noHandleOnClient) {
@@ -462,10 +465,7 @@ export class Block {
 				}
 			}
 			if (lst.length) {
-				this.ctrl.mdsHandleHolder = butrow
-					.append('div')
-					.style('display', arg.hide_mdsHandleHolder ? 'none' : 'inline-block')
-					.style('margin-right', '10px')
+				this.ctrl.mdsHandleHolder = butrow.append('span').style('margin-right', '10px')
 				lst.forEach(i => this.mds_handle_make(i))
 			}
 		}

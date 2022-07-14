@@ -7,6 +7,8 @@ import { dofetch3 } from '../common/dofetch'
 import { first_genetrack_tolist } from '../common/1stGenetk'
 
 /*
+TODO rewrite with one async function
+
 for processing requests from entry point (app.js ui, embedding)
 mainly for launching gene view
 also for browser view if search term is position/snp
@@ -43,6 +45,7 @@ export default function(arg) {
 	paint.datasetqueries = arg.datasetqueries
 	paint.mclassOverride = arg.mclassOverride
 	paint.onloadalltk_always = arg.onloadalltk_always
+	paint.hide_dsHandles = arg.hide_dsHandles
 	paint.error = m => client.sayerror(paint.holder, m)
 
 	if (!arg.genome) {
@@ -329,6 +332,7 @@ function step3(paint) {
 				debugmode: paint.debugmode,
 				tklst: paint.tklst,
 				mclassOverride: paint.mclassOverride,
+				hide_dsHandles: paint.hide_dsHandles,
 				onloadalltk_always: paint.onloadalltk_always
 			})
 	)

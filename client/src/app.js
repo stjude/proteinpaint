@@ -984,6 +984,7 @@ async function launchgeneview(arg, app) {
 		tklst: arg.tracks,
 		gmmode: arg.gmmode,
 		mclassOverride: arg.mclassOverride,
+		hide_dsHandles: arg.hide_dsHandles,
 		onloadalltk_always: arg.onloadalltk_always
 	}
 	let ds = null
@@ -1362,7 +1363,7 @@ async function launch_tkUIs(arg, app) {
 	}
 	if (arg.tkui == 'databrowser') {
 		const p = await import('./databrowser/databrowser.ui')
-		p.init_dictionaryUI(app.holder, app.debugmode)
+		p.init_databrowserUI(app.holder, app.debugmode)
 	}
 }
 

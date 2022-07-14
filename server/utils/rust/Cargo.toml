@@ -32,5 +32,5 @@ name="indel"
 path="src/indel.rs"
 
 [[bin]]
-name="stats"
-path="src/stats.rs"
+name="fisher"
+path="src/fisher.rs"
