@@ -52,9 +52,14 @@ fn main() {
     let mut datapoints_num = vec![0 as u32; datapoints as usize]; // Number of all values within a region
 
     let mut current_pos = start_pos; // Initializing current_pos to start position
-    for _i in 0..datapoints {
+    let mut prev_pos;
+    for _i in 0..datapoints - 1 {
         datapoints_list.push(current_pos);
+        prev_pos = current_pos;
         current_pos += exact_offset_whole;
+        if current_pos >= stop_pos {
+            current_pos = round::ceil(((prev_pos as f64 + stop_pos as f64) / 2.0) as f64, 0) as u32;
+        }
     }
     datapoints_list.push(stop_pos);
     println!("datapoints_list length:{:?}", datapoints_list);
@@ -130,9 +135,11 @@ fn main() {
                                     }
                                     if end_region <= v.end {
                                         // Entry spans into next region, need to increment iterator
-                                        i += 1;
-                                        start_region = datapoints_list[i];
-                                        end_region = datapoints_list[i + 1];
+                                        if i + 2 < datapoints_list.len() {
+                                            i += 1;
+                                            start_region = datapoints_list[i];
+                                            end_region = datapoints_list[i + 1];
+                                        }
                                     }
                                     //if v.start < start_region {
                                     //    // Should not happen
@@ -234,9 +241,11 @@ fn main() {
                                     }
                                     if end_region <= v.end {
                                         // Entry spans into next region, need to increment iterator
-                                        i += 1;
-                                        start_region = datapoints_list[i];
-                                        end_region = datapoints_list[i + 1];
+                                        if i + 2 < datapoints_list.len() {
+                                            i += 1;
+                                            start_region = datapoints_list[i];
+                                            end_region = datapoints_list[i + 1];
+                                        }
                                     }
                                     //if v.start < start_region {
                                     //    // Should not happen
