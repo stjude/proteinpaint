@@ -92,7 +92,10 @@ export async function bamsliceui({ genomes, holder, disableSSM = false, hideToke
 		.html('&lt;&lt; back')
 		.on('click', () => {
 			backBtnDiv.style('display', 'none')
-			blockHolder.style('display', 'none')
+			blockHolder
+				.style('display', 'none')
+				.selectAll('*')
+				.remove()
 			formdiv.style('display', '')
 		})
 
