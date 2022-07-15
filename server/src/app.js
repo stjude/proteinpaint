@@ -1207,56 +1207,21 @@ if file/url ends with .gz, it is bedgraph
 			const tasks = [] // one task per region
 
 			for (const r of req.query.rglst) {
+				const input_data =
+					file + ',' + r.chr + ',' + r.start + ',' + r.stop + ',' + Math.ceil(r.width * (req.query.dotplotfactor || 1))
+				console.log(input_data)
+
 				tasks.push(
-					new Promise((resolve, reject) => {
-						const input_data =
-							file +
-							',' +
-							r.chr +
-							',' +
-							r.start +
-							',' +
-							r.stop +
-							',' +
-							Math.ceil(r.width * (req.query.dotplotfactor || 1))
-						const time1 = new Date()
-						const ps = utils.run_rust('bigwig', input_data)
-						const time2 = new Date()
-						console.log('Time taken to run rust bigwig pipeline:', time2 - time1, 'ms')
-						//const ps = spawn(bigwigsummary, [
-						//	'-udcDir=' + serverconfig.cachedir,
-						//	file,
-						//	r.chr,
-						//	r.start,
-						//	r.stop,
-						//	Math.ceil(r.width * (req.query.dotplotfactor || 1)),
-						//])
-						const out = []
-						const out2 = []
-						ps.stdout.on('data', i => out.push(i))
-						ps.stderr.on('data', i => out2.push(i))
-						ps.on('close', code => {
-							const err = out2.join('')
-							if (err.length) {
-								if (err.startsWith('no data')) {
-									r.nodata = true
-								} else {
-									// in case of invalid file the message is "Couldn't open /path/to/tp/..."
-									// must not give away the tp path!!
-									reject('Cannot read bigWig file')
-								}
-							} else {
-								r.values = out
-									.join('')
-									.trim()
-									.split('\t')
-									.map(Number.parseFloat)
-								if (req.query.dividefactor) {
-									r.values = r.values.map(i => i / req.query.dividefactor)
-								}
-							}
-							resolve()
-						})
+					utils.run_rust('bigwig', input_data).then(out => {
+						// TODO detect error string in out
+
+						r.values = out
+							.trim()
+							.split('\t')
+							.map(Number.parseFloat)
+						if (req.query.dividefactor) {
+							r.values = r.values.map(i => i / req.query.dividefactor)
+						}
 					})
 				)
 			}
