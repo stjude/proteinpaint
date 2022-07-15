@@ -49,7 +49,6 @@ fn main() {
     //println!("exact_offset_whole:{}", exact_offset_whole);
     let mut datapoints_list = Vec::<u32>::new(); // Vector for storing datapoints
     let mut datapoints_sum = vec![0.0 as f32; datapoints as usize]; // Sum of all values within a region
-    let mut datapoints_mean = vec![0.0 as f32; datapoints as usize]; // Mean of all values within a region
     let mut datapoints_num = vec![0 as u32; datapoints as usize]; // Number of all values within a region
 
     let mut current_pos = start_pos; // Initializing current_pos to start position
@@ -317,21 +316,17 @@ fn main() {
     }
     //println!("datapoints_sum:{:?}", datapoints_sum);
     //println!("datapoints_num:{:?}", datapoints_num);
+    let mut output_vec: String = "".to_string();
     for i in 0..datapoints_num.len() {
+        let mean;
         if datapoints_num[i] == 0 {
-            datapoints_mean[i] = 0.0;
+            mean = 0.0;
         } else {
-            datapoints_mean[i] = datapoints_sum[i] / datapoints_num[i] as f32;
+            mean = datapoints_sum[i] / datapoints_num[i] as f32;
         }
+        output_vec.push_str(&mean.to_string());
+        output_vec.push_str(&"\t".to_string());
     }
-    println!("datapoints_mean:{:?}", datapoints_mean);
+    output_vec.pop();
+    println!("{}", output_vec);
 }
-
-//fn calculate_datapoints(
-//    bigwig_output: String,
-//    chrom: String,
-//    start_pos: u32,
-//    stop_pos: u32,
-//    data_points: u32,
-//) {
-//}
