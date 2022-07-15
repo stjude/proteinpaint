@@ -218,7 +218,12 @@ function submitButton(div, obj, holder) {
 		.classed('sjpp-ui-submitBtn', true)
 		.on('click', () => {
 			if (!obj.data || obj.data == undefined) {
-				obj.sayerror('Please provide data')
+				const sayerrorDiv = div
+					.append('div')
+					.style('display', 'inline-block')
+					.style('max-width', '20vw')
+				sayerror(sayerrorDiv, 'Please provide data')
+				setTimeout(() => sayerrorDiv.remove(), 3000)
 				throw 'No data provided'
 			}
 			div.remove()
