@@ -1,7 +1,6 @@
 // cache
 const ch_genemcount = {} // genome name - gene name - ds name - mutation class - count
 const ch_dbtable = new Map() // k: db path, v: db stuff
-
 const serverconfig = require('./serverconfig')
 
 exports.features = Object.freeze(serverconfig.features || {})
@@ -1210,14 +1209,28 @@ if file/url ends with .gz, it is bedgraph
 			for (const r of req.query.rglst) {
 				tasks.push(
 					new Promise((resolve, reject) => {
-						const ps = spawn(bigwigsummary, [
-							'-udcDir=' + serverconfig.cachedir,
-							file,
-							r.chr,
-							r.start,
-							r.stop,
+						const input_data =
+							file +
+							',' +
+							r.chr +
+							',' +
+							r.start +
+							',' +
+							r.stop +
+							',' +
 							Math.ceil(r.width * (req.query.dotplotfactor || 1))
-						])
+						const time1 = new Date()
+						const ps = utils.run_rust('bigwig', input_data)
+						const time2 = new Date()
+						console.log('Time taken to run rust bigwig pipeline:', time2 - time1, 'ms')
+						//const ps = spawn(bigwigsummary, [
+						//	'-udcDir=' + serverconfig.cachedir,
+						//	file,
+						//	r.chr,
+						//	r.start,
+						//	r.stop,
+						//	Math.ceil(r.width * (req.query.dotplotfactor || 1)),
+						//])
 						const out = []
 						const out2 = []
 						ps.stdout.on('data', i => out.push(i))
