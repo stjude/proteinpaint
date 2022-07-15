@@ -122,7 +122,7 @@ function menu_variants(tk, block) {
 			// has expanded skewer
 			tk.menutip.d
 				.append('div')
-				.text('Fold')
+				.text('Collapse')
 				.attr('class', 'sja_menuoption')
 				.on('click', () => {
 					fold_glyph(tk.skewer.data, tk)
