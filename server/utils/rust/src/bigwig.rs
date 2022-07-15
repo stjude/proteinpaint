@@ -152,7 +152,6 @@ fn main() {
                                         || iter > 1
                                     {
                                         // Calculate sum and number for this region
-                                        println!("Hello");
                                         let start_entry_within_region =
                                             cmp::max(v.start, start_region);
                                         let stop_entry_within_region = cmp::min(v.end, end_region);
@@ -239,7 +238,6 @@ fn main() {
                                         || iter > 1
                                     {
                                         // Calculate sum and number for this region
-                                        //println!("Hello");
                                         let start_entry_within_region =
                                             cmp::max(v.start, start_region);
                                         let stop_entry_within_region = cmp::min(v.end, end_region);
