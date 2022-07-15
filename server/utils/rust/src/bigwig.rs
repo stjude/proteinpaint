@@ -1,13 +1,23 @@
-// Syntax: ~/proteinpaint/server/utils/bigWigSummary ~/proteinpaint/proteinpaint_demo/hg19/bigwig/file.bw chr17 7577333 7577780 10
+/*
+ Syntax:
+ bigWigSummary syntax:~/proteinpaint/server/utils/bigWigSummary ~/proteinpaint/proteinpaint_demo/hg19/bigwig/file.bw chr17 7577333 7577780 10
 
-// Syntax local: cd .. && cargo build --release && time echo ~/proteinpaint/proteinpaint_demo/hg19/bigwig/file.bw,chr17,7577333,7577780,10 | target/release/bigwig
+ local: cd .. && cargo build --release && time echo ~/proteinpaint/proteinpaint_demo/hg19/bigwig/file.bw,chr17,7577333,7577780,10 | target/release/bigwig
 
-// Syntax local: cd .. && cargo build --release && time echo /Users/rpaul1/proteinpaint/hg19/TARGET/DNA/cov-wes/SJALL015634_D1.bw,chr1,47682689,47700849,10 | target/release/bigwig
+ local: cd .. && cargo build --release && time echo /Users/rpaul1/proteinpaint/hg19/TARGET/DNA/cov-wes/SJALL015634_D1.bw,chr1,47682689,47700849,10 | target/release/bigwig
 
-// Syntax url: cd .. && cargo build --release && time echo http://hgdownload.soe.ucsc.edu/goldenPath/hg19/encodeDCC/wgEncodeMapability/wgEncodeCrgMapabilityAlign100mer.bigWig,chr17,7584491,7585468,100 | target/release/bigwig
-// Syntax: time ~/proteinpaint/server/utils/bigWigSummary http://hgdownload.soe.ucsc.edu/goldenPath/hg19/encodeDCC/wgEncodeMapability/wgEncodeCrgMapabilityAlign100mer.bigWig chr17 7584491 7585468 100
+ url: cd .. && cargo build --release && time echo http://hgdownload.soe.ucsc.edu/goldenPath/hg19/encodeDCC/wgEncodeMapability/wgEncodeCrgMapabilityAlign100mer.bigWig,chr17,7584491,7585468,100 | target/release/bigwig
+ time ~/proteinpaint/server/utils/bigWigSummary http://hgdownload.soe.ucsc.edu/goldenPath/hg19/encodeDCC/wgEncodeMapability/wgEncodeCrgMapabilityAlign100mer.bigWig chr17 7584491 7585468 100
 
-// Syntax url: cd .. && cargo build --release && time echo https://proteinpaint.stjude.org/ppdemo/hg19/bigwig/file.bw,chr17,7568451,7591984,100 | target/release/bigwig
+ url: cd .. && cargo build --release && time echo https://proteinpaint.stjude.org/ppdemo/hg19/bigwig/file.bw,chr17,7568451,7591984,100 | target/release/bigwig
+*/
+
+/*
+Notes:
+   The script accepts piped input in this format: {Bigwig_file_path/URL},{chr},{start_region},{stop_region}. See syntax above.
+
+   In case path to file is not correct, the script gives a message "File not found". If the file is found, the aggregated data points are separated by tab character.
+*/
 
 use bigtools::bigwigread::BigWigRead;
 use bigtools::remote_file::RemoteFile;
@@ -45,6 +55,7 @@ fn main() {
         datapoints = difference;
     }
 
+    let mut file_found = false; // Flag to check if the bigwig file was found. If not found, only "File not found" message is displayed.  false: not found, true: found
     let exact_offset_whole: u32 = round::ceil(difference as f64 / datapoints as f64, 0) as u32;
     //println!("exact_offset_whole:{}", exact_offset_whole);
     let mut datapoints_list = Vec::<u32>::new(); // Vector for storing datapoints
@@ -76,6 +87,7 @@ fn main() {
         match reader {
             Ok(_) => {
                 //println!("File found");
+                file_found = true;
                 let mut reader = BigWigRead::from(remote_file2).unwrap();
                 let bigwig_output = reader.get_interval(&chrom, start_pos, stop_pos).unwrap();
                 let mut i = 0;
@@ -190,6 +202,7 @@ fn main() {
         let reader = BigWigRead::from_file_and_attach(&bigwig_file_url);
         match reader {
             Ok(_) => {
+                file_found = true;
                 let mut reader = BigWigRead::from_file_and_attach(&bigwig_file_url).unwrap();
                 let bigwig_output = reader.get_interval(&chrom, start_pos, stop_pos).unwrap();
                 //calculate_datapoints(bigwig_output, chrom, start_pos, stop_pos, data_points);
@@ -312,19 +325,21 @@ fn main() {
             }
         }
     }
-    //println!("datapoints_sum:{:?}", datapoints_sum);
-    //println!("datapoints_num:{:?}", datapoints_num);
-    let mut output_vec: String = "".to_string();
-    for i in 0..datapoints_num.len() {
-        let mean;
-        if datapoints_num[i] == 0 {
-            mean = 0.0;
-        } else {
-            mean = datapoints_sum[i] / datapoints_num[i] as f32;
+    if file_found == true {
+        //println!("datapoints_sum:{:?}", datapoints_sum);
+        //println!("datapoints_num:{:?}", datapoints_num);
+        let mut output_vec: String = "".to_string();
+        for i in 0..datapoints_num.len() {
+            let mean;
+            if datapoints_num[i] == 0 {
+                mean = 0.0;
+            } else {
+                mean = datapoints_sum[i] / datapoints_num[i] as f32;
+            }
+            output_vec.push_str(&mean.to_string());
+            output_vec.push_str(&"\t".to_string());
         }
-        output_vec.push_str(&mean.to_string());
-        output_vec.push_str(&"\t".to_string());
+        output_vec.pop();
+        println!("{}", output_vec);
     }
-    output_vec.pop();
-    println!("{}", output_vec);
 }
