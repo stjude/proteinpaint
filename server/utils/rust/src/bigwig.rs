@@ -38,14 +38,15 @@ fn main() {
     let stop_pos: u32 = args[3].parse::<u32>().unwrap(); // Stop position
     let difference = stop_pos - start_pos;
     let mut datapoints: u32 = args[4].replace("\n", "").parse::<u32>().unwrap(); // Number of intervals
-    println!("datapoints:{}", datapoints);
+
+    //println!("datapoints:{}", datapoints);
     if datapoints > difference {
         // This helps to set the maximum resolution possible to 1bp.
         datapoints = difference;
     }
 
     let exact_offset_whole: u32 = round::ceil(difference as f64 / datapoints as f64, 0) as u32;
-    println!("exact_offset_whole:{}", exact_offset_whole);
+    //println!("exact_offset_whole:{}", exact_offset_whole);
     let mut datapoints_list = Vec::<u32>::new(); // Vector for storing datapoints
     let mut datapoints_sum = vec![0.0 as f32; datapoints as usize]; // Sum of all values within a region
     let mut datapoints_mean = vec![0.0 as f32; datapoints as usize]; // Mean of all values within a region
@@ -53,7 +54,7 @@ fn main() {
 
     let mut current_pos = start_pos; // Initializing current_pos to start position
     let mut prev_pos;
-    for _i in 0..datapoints - 1 {
+    for _i in 0..datapoints {
         datapoints_list.push(current_pos);
         prev_pos = current_pos;
         current_pos += exact_offset_whole;
@@ -62,7 +63,8 @@ fn main() {
         }
     }
     datapoints_list.push(stop_pos);
-    println!("datapoints_list length:{:?}", datapoints_list);
+    //println!("datapoints_list:{:?}", datapoints_list);
+    //println!("datapoints_list_length:{}", datapoints_list.len());
 
     if bigwig_file_url.starts_with("http://") == true
         || bigwig_file_url.starts_with("https://") == true
@@ -74,7 +76,7 @@ fn main() {
         let reader = BigWigRead::from(remote_file);
         match reader {
             Ok(_) => {
-                println!("File found");
+                //println!("File found");
                 let mut reader = BigWigRead::from(remote_file2).unwrap();
                 let bigwig_output = reader.get_interval(&chrom, start_pos, stop_pos).unwrap();
                 let mut i = 0;
@@ -84,7 +86,7 @@ fn main() {
                     //println!("{:?}", entry);
                     match entry {
                         Ok(v) => {
-                            println!("start,end,value:{},{},{}", v.start, v.end, v.value);
+                            //println!("start,end,value:{},{},{}", v.start, v.end, v.value);
                             if v.start == v.end {
                                 continue;
                             } else {
@@ -102,12 +104,6 @@ fn main() {
                                         as f32
                                         * v.value;
                                 }
-                                //else {
-                                //    println!("Unexpected case where v.start < start_region");
-                                //    println!("i:{}", i);
-                                //    println!("start_region:{}", start_region);
-                                //    println!("end_region:{}", end_region);
-                                //}
                                 let mut iter = 1;
                                 while end_region < v.end {
                                     //println!("iter:{}", iter);
@@ -122,7 +118,6 @@ fn main() {
                                         || iter > 1
                                     {
                                         // Calculate sum and number for this region
-                                        //println!("Hello");
                                         let start_entry_within_region =
                                             cmp::max(v.start, start_region);
                                         let stop_entry_within_region = cmp::min(v.end, end_region);
@@ -132,6 +127,8 @@ fn main() {
                                             - start_entry_within_region)
                                             as f32
                                             * v.value;
+                                        //println!("datapoints_num[i]:{}", datapoints_num[i]);
+                                        //println!("datapoints_sum[i]:{}", datapoints_sum[i]);
                                     }
                                     if end_region <= v.end {
                                         // Entry spans into next region, need to increment iterator
@@ -141,28 +138,43 @@ fn main() {
                                             end_region = datapoints_list[i + 1];
                                         }
                                     }
-                                    //if v.start < start_region {
-                                    //    // Should not happen
-                                    //    println!("Unexpected case where v.start < start_region inside while loop");
-                                    //    println!("i:{}", i);
-                                    //    println!("start_region:{}", start_region);
-                                    //    println!("end_region:{}", end_region);
-                                    //}
                                     iter += 1;
                                 }
-                                // Check number of regions that entry spans
-                                //let mut selected_regions_vec = Vec::<u32>::new();
-                                //for i in 0..datapoints_list {
-                                //    if i + 1 < datapoints_list.len() {
-                                //        if v.start >= datapoints_list[i]
-                                //            || datapoints_list[i + 1] < v.end
-                                //        {
-                                //            selected_regions_vec.push(datapoints_list[i]);
-                                //        }
-                                //    } else if datapoints_list[i + 1] >= v.end {
-                                //        break;
-                                //    }
-                                //}
+                                if end_region == v.end && v.start < start_region {
+                                    //println!("iter:{}", iter);
+                                    //println!("i:{}", i);
+                                    //println!("v.start:{}", v.start);
+                                    //println!("v.end:{}", v.end);
+                                    //println!("start_region:{}", start_region);
+                                    //println!("end_region:{}", end_region);
+                                    if (v.start >= start_region && end_region < v.end)
+                                        || (v.start >= start_region && v.start < end_region)
+                                        || (v.end >= start_region && v.end < end_region)
+                                        || iter > 1
+                                    {
+                                        // Calculate sum and number for this region
+                                        println!("Hello");
+                                        let start_entry_within_region =
+                                            cmp::max(v.start, start_region);
+                                        let stop_entry_within_region = cmp::min(v.end, end_region);
+                                        datapoints_num[i] +=
+                                            stop_entry_within_region - start_entry_within_region;
+                                        datapoints_sum[i] += (stop_entry_within_region
+                                            - start_entry_within_region)
+                                            as f32
+                                            * v.value;
+                                        //println!("datapoints_num[i]:{}", datapoints_num[i]);
+                                        //println!("datapoints_sum[i]:{}", datapoints_sum[i]);
+                                    }
+                                    if end_region <= v.end {
+                                        // Entry spans into next region, need to increment iterator
+                                        if i + 2 < datapoints_list.len() {
+                                            i += 1;
+                                            start_region = datapoints_list[i];
+                                            end_region = datapoints_list[i + 1];
+                                        }
+                                    }
+                                }
                             }
                         }
                         Err(_) => {
@@ -190,7 +202,7 @@ fn main() {
                 for entry in bigwig_output {
                     match entry {
                         Ok(v) => {
-                            println!("start,end,value:{},{},{}", v.start, v.end, v.value);
+                            //println!("start,end,value:{},{},{}", v.start, v.end, v.value);
                             if v.start == v.end {
                                 continue;
                             } else {
@@ -256,19 +268,40 @@ fn main() {
                                     //}
                                     iter += 1;
                                 }
-                                // Check number of regions that entry spans
-                                //let mut selected_regions_vec = Vec::<u32>::new();
-                                //for i in 0..datapoints_list {
-                                //    if i + 1 < datapoints_list.len() {
-                                //        if v.start >= datapoints_list[i]
-                                //            || datapoints_list[i + 1] < v.end
-                                //        {
-                                //            selected_regions_vec.push(datapoints_list[i]);
-                                //        }
-                                //    } else if datapoints_list[i + 1] >= v.end {
-                                //        break;
-                                //    }
-                                //}
+                                if end_region == v.end && v.start < start_region {
+                                    //println!("iter:{}", iter);
+                                    //println!("i:{}", i);
+                                    //println!("v.start:{}", v.start);
+                                    //println!("v.end:{}", v.end);
+                                    //println!("start_region:{}", start_region);
+                                    //println!("end_region:{}", end_region);
+                                    if (v.start >= start_region && end_region < v.end)
+                                        || (v.start >= start_region && v.start < end_region)
+                                        || (v.end >= start_region && v.end < end_region)
+                                        || iter > 1
+                                    {
+                                        // Calculate sum and number for this region
+                                        let start_entry_within_region =
+                                            cmp::max(v.start, start_region);
+                                        let stop_entry_within_region = cmp::min(v.end, end_region);
+                                        datapoints_num[i] +=
+                                            stop_entry_within_region - start_entry_within_region;
+                                        datapoints_sum[i] += (stop_entry_within_region
+                                            - start_entry_within_region)
+                                            as f32
+                                            * v.value;
+                                        //println!("datapoints_num[i]:{}", datapoints_num[i]);
+                                        //println!("datapoints_sum[i]:{}", datapoints_sum[i]);
+                                    }
+                                    if end_region <= v.end {
+                                        // Entry spans into next region, need to increment iterator
+                                        if i + 2 < datapoints_list.len() {
+                                            i += 1;
+                                            start_region = datapoints_list[i];
+                                            end_region = datapoints_list[i + 1];
+                                        }
+                                    }
+                                }
                             }
                         }
                         Err(_) => {
@@ -282,8 +315,8 @@ fn main() {
             }
         }
     }
-    println!("datapoints_sum:{:?}", datapoints_sum);
-    println!("datapoints_num:{:?}", datapoints_num);
+    //println!("datapoints_sum:{:?}", datapoints_sum);
+    //println!("datapoints_num:{:?}", datapoints_num);
     for i in 0..datapoints_num.len() {
         if datapoints_num[i] == 0 {
             datapoints_mean[i] = 0.0;
