@@ -34,7 +34,7 @@ run test with a runpp callback, which eliminates need of sleep()
 for that to work, the tape() callback function must not be "async"
 */
 
-tape('Run GDC dataset, KRAS', t => {
+tape('Run GDC dataset, gene symbol: KRAS', test => {
 	const holder = getHolder()
 	runproteinpaint({
 		holder,
@@ -43,69 +43,103 @@ tape('Run GDC dataset, KRAS', t => {
 		genome: 'hg38',
 		gene: 'kras',
 		tracks: [{ type: 'mds3', dslabel: 'GDC' }],
-		onloadalltk_always: test
+		onloadalltk_always: checkTrack
 	})
-	function test(bb) {
+	function checkTrack(bb) {
 		// bb is the block instance
 
-		t.equal(bb.tklst.length, 2, 'should have two tracks')
+		test.equal(bb.tklst.length, 2, 'should have two tracks')
 
+		//Confirm track type
 		const mtk = bb.tklst.find(i => i.type == 'mds3')
-		t.ok(mtk, 'type=mds3 track should be found')
+		test.ok(mtk, 'type=mds3 track should be found')
 
-		// test number of dots
+		//Confirm correct dataset
+		test.ok(mtk.dslabel == 'GDC', 'Should render GDC dataset')
 
-		// ... more tests
+		//Confirm gene symbol used to call track
+		test.ok(bb.usegm.name == 'KRAS', 'Should render KRAS track in GDC dataset')
 
-		t.end()
+		test.end()
 		holder.remove()
 	}
 })
 
-tape('Run GDC dataset via gene symbol, ensembl ID and RefSeq ID', async test => {
+tape('Run GDC dataset, ensembl ID: ENST00000407796', test => {
 	test.timeoutAfter(8000)
 	const holder = getHolder()
 
-	const genes = [
-		{ gene: 'KRAS', isoform: '' },
-		{ gene: 'AKT1', isoform: 'ENST00000407796' },
-		{ gene: 'AKT1', isoform: 'NM_005163' }
-	]
-	for (const g of genes) {
-		await runproteinpaint({
-			holder,
-			noheader: true,
-			nobox: true,
-			genome: 'hg38',
-			gene: g.isoform || g.gene,
-			tracks: [
-				{
-					type: 'mds3',
-					dslabel: 'GDC'
-				}
-			]
-			// onloadalltk_always: checkGeneTrack ****This does not work
-		})
+	runproteinpaint({
+		holder,
+		noheader: true,
+		nobox: true,
+		genome: 'hg38',
+		gene: 'ENST00000407796',
+		tracks: [
+			{
+				type: 'mds3',
+				dslabel: 'GDC'
+			}
+		],
+		onloadalltk_always: checkTrack
+	})
 
-		// function checkGeneTrack() {
-		// 	No tests pass because test.end() is called outside the for..of loop
-		// }
+	function checkTrack() {
+		//Confirm track type
+		const mds3Track = bb.tklst.find(i => i.type == 'mds3')
+		test.ok(mds3Track, 'type=mds3 track should be found')
 
-		await sleep(2300)
-		const geneFound = [...holder.querySelectorAll('span')].some(elem =>
-			elem.innerText == g.isoform ? `${g.gene} ${g.isoform}` : `${g.gene}`
-		)
-		test.true(geneFound, `Should render ${g.isoform || g.gene} track`)
+		//Confirm correct dataset
+		test.ok(mds3Track.dslabel == 'GDC', 'Should render GDC dataset')
+
+		//Confirm gene symbol used to call track
+		test.ok(bb.usegm.isoform == 'ENST00000407796', 'Should render ENST00000407796 track in GDC dataset')
 
 		if (test._ok) holder.remove()
+		test.end()
 	}
+})
 
-	test.end()
+tape('Run GDC dataset, RefSeq ID: NM_005163', test => {
+	test.timeoutAfter(8000)
+	const holder = getHolder()
+
+	runproteinpaint({
+		holder,
+		noheader: true,
+		nobox: true,
+		genome: 'hg38',
+		gene: 'NM_005163',
+		tracks: [
+			{
+				type: 'mds3',
+				dslabel: 'GDC'
+			}
+		],
+		onloadalltk_always: checkGeneTrack
+	})
+
+	function checkGeneTrack() {
+		//Confirm track type
+		const mds3Track = bb.tklst.find(i => i.type == 'mds3')
+		test.ok(mds3Track, 'type=mds3 track should be found')
+
+		//Confirm correct dataset
+		test.ok(mds3Track.dslabel == 'GDC', 'Should render GDC dataset')
+
+		//Confirm gene symbol used to call track
+		test.ok(bb.usegm.isoform == 'NM_005163', 'Should render NM_005163 track in GDC dataset')
+
+		if (test._ok) holder.remove()
+		test.end()
+	}
 })
 
 tape('Launch GDC dataset by SSM ID, KRAS', test => {
 	test.timeoutAfter(10000)
 	const holder = getHolder()
+
+	const ssm_id = '4fb37566-16d1-5697-9732-27c359828bc7' // kras G12V
 
 	runproteinpaint({
 		holder,
@@ -114,7 +148,7 @@ tape('Launch GDC dataset by SSM ID, KRAS', test => {
 		genome: 'hg38',
 		mds3_ssm2canonicalisoform: {
 			dslabel: 'GDC',
-			ssm_id: '4fb37566-16d1-5697-9732-27c359828bc7' // kras G12V
+			ssm_id
 		},
 		tracks: [
 			{
@@ -126,13 +160,12 @@ tape('Launch GDC dataset by SSM ID, KRAS', test => {
 	})
 
 	function checkTrack(bb) {
-		test.equal(bb.tklst.length, 2, 'should have two tracks')
-
-		const GDCtrack = bb.tklst.find(i => i.dslabel == 'GDC')
-		test.ok(GDCtrack, 'Should render KRAS track from GDC dataset')
-
+		//Confirm ssm_id passed to block
 		const mds3Track = bb.tklst.find(i => i.type == 'mds3')
-		test.ok(mds3Track, 'Should render mds3 KRAS track with focused G12V mutation')
+		test.ok(mds3Track.skewer.hlssmid.has(ssm_id), `Should render mds3 KRAS track from ssm_id: ${ssm_id}`)
+
+		//TODO check G12V mutation is focused
+		// test.ok(mds3Track, 'Should render mds3 KRAS track with focused G12V mutation')
 
 		if (test._ok) holder.remove()
 		test.end()
@@ -193,15 +226,13 @@ tape('Launch ASH dataset, BCR', test => {
 	})
 
 	function checkTrack(bb) {
-		test.equal(bb.tklst.length, 2, 'should have two tracks')
+		//Test if BCR track renders from mds3 track, in ASH dataset
+		const mds3Track = bb.tklst.find(i => i.type == 'mds3')
+		test.ok(mds3Track.dslabel == 'ASH', 'Should render ASH dataset')
 
 		test.ok(bb.usegm.name == 'BCR', 'Should render BCR track')
 
-		const GDCtrack = bb.tklst.find(i => i.dslabel == 'ASH')
-		test.ok(GDCtrack, 'Should render BCR track from ASH dataset')
-
-		const mds3Track = bb.tklst.find(i => i.type == 'mds3')
-		test.ok(mds3Track, 'Should render mds3 BCR track with focused G12V mutation')
+		//TODO test G12V mutation focus
 
 		if (test._ok) holder.remove()
 		test.end()
@@ -236,20 +267,17 @@ tape('Custom dataset with custom variants, NO samples', test => {
 	})
 
 	function checkTrack(bb) {
-		//Confirm mds3 track
-		const mds3Track = bb.tklst.find(i => i.type == 'mds3')
-		test.ok(mds3Track, 'Should render custom dataset mds3 track')
-
 		//Confirm number of custom variants matches in block instance
+		const mds3Track = bb.tklst.find(i => i.type == 'mds3')
 		test.equal(
-			bb.tklst[0].custom_variants.length,
+			mds3Track.custom_variants.length,
 			custom_variants.length,
-			`Should render ${custom_variants.length} custom variants`
+			`Should render total # of custom variants = ${custom_variants.length}`
 		)
 
 		for (const variant of custom_variants) {
 			//Test all custom variant entries successfully passed to block instance
-			const variantFound = bb.tklst[0].custom_variants.find(i => i.mname == variant.mname)
+			const variantFound = mds3Track.custom_variants.find(i => i.mname == variant.mname)
 			test.ok(variantFound, `Should render data point for ${variant.mname}`)
 		}
 
@@ -287,15 +315,13 @@ tape('Custom dataset with custom variants, WITH samples', test => {
 	})
 
 	function checkTrack(bb) {
-		//Confirm mds3 track
 		const mds3Track = bb.tklst.find(i => i.type == 'mds3')
-		test.ok(mds3Track, 'Should render custom dataset')
 
 		const variantNum = new Set()
 		for (const variant of custom_variants) {
 			//Test all custom variant entries successfully passed to block instance
-			const variantFound = bb.tklst[0].custom_variants.find(i => i.mname == variant.mname)
-			test.ok(variantFound, `Should render data point for ${variant.mname}`)
+			const variantFound = mds3Track.custom_variants.find(i => i.mname == variant.mname)
+			test.ok(variantFound, `Should render data point at ${variant.chr}-${variant.pos} for ${variant.mname}`)
 
 			variantNum.add(variant.mname)
 
@@ -304,13 +330,16 @@ tape('Custom dataset with custom variants, WITH samples', test => {
 				test.equal(
 					variantFound.samples.length,
 					variant.samples.length,
-					`Should render ${variant.samples.length} sample(s) for ${variant.mname}`
+					`Should render # of sample(s) = ${variant.samples.length} for variant = ${variant.mname}`
 				)
 			}
 		}
-
 		//Confirm number of custom variants matches in block instance
-		test.equal(bb.tklst[0].custom_variants.length, variantNum.size, `Should render ${variantNum.size} custom variants`)
+		test.equal(
+			mds3Track.custom_variants.length,
+			variantNum.size,
+			`Should render total # of custom variants = ${variantNum.size}`
+		)
 
 		if (test._ok) holder.remove()
 		test.end()
@@ -360,28 +389,19 @@ tape('Numeric mode custom dataset', test => {
 
 	function checkTrack(bb) {
 		const mds3Track = bb.tklst.find(i => i.type == 'mds3')
-		test.ok(mds3Track, 'Should render custom dataset')
-
-		//Confirm number of custom variants matches in block instance
-		test.equal(
-			bb.tklst[0].custom_variants.length,
-			custom_variants.length,
-			`Should render ${custom_variants.length} custom variants`
-		)
-
-		for (const variant of custom_variants) {
-			//Test all custom variant entries successfully passed to block instance
-			const variantFound = bb.tklst[0].custom_variants.find(i => i.mname == variant.mname)
-			test.ok(variantFound, `Should render data point for ${variant.mname}`)
-		}
 
 		for (const skewer of skewerModes) {
 			//Test numeric skewers successfully passed to block instance
 			if (skewer.type == 'numeric') {
-				const skewerFound = bb.tklst[0].skewer.viewModes.find(i => i.byAttribute == skewer.byAttribute)
+				const skewerFound = mds3Track.skewer.viewModes.find(i => i.byAttribute == skewer.byAttribute)
 				test.ok(skewerFound, `Should provide numeric option for ${skewer.label}`)
 			}
 		}
+
+		// for (const variant of custom_variants) {
+		//TODO test skewer value passed for each variant
+		// }
+
 		test.end()
 	}
 })
