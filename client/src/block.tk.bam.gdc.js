@@ -7,7 +7,7 @@ import { contigNameNoChr2 } from '#shared/common'
 import urlmap from '../common/urlmap'
 import { addGeneSearchbox, string2variant } from '../dom/genesearch'
 import { Menu } from '../dom/menu'
-import { init_tabs } from '../dom/toggleButtons'
+import { init_tabs_1 } from '../dom/toggleButtons'
 
 /*
 *********** gdc_args{}
@@ -86,6 +86,16 @@ export async function bamsliceui({ genomes, holder, disableSSM = false, hideToke
 	// formdiv collects multiple rows
 	// each row is for a ui input
 	// formdiv will be cleared upon submission
+	const backBtnDiv = holder.append('div').style('display', 'none')
+	backBtnDiv
+		.append('button')
+		.html('&lt;&lt; back')
+		.on('click', () => {
+			backBtnDiv.style('display', 'none')
+			blockHolder.style('display', 'none')
+			formdiv.style('display', '')
+		})
+
 	const formdiv = holder
 		.append('div')
 		.style('margin', '40px 20px 20px 20px')
@@ -97,7 +107,10 @@ export async function bamsliceui({ genomes, holder, disableSSM = false, hideToke
 		.style('justify-items', 'left')
 
 	// show block & bam tk
-	const blockHolder = holder.append('div').style('margin', '20px')
+	const blockHolder = holder
+		.append('div')
+		.style('display', 'none')
+		.style('margin', '20px')
 
 	/////////////////////////////////////////////////////
 	// create UI components in formdiv
@@ -122,7 +135,7 @@ export async function bamsliceui({ genomes, holder, disableSSM = false, hideToke
 			.style('display', 'none'),
 		tabs: [
 			{
-				width: 130,
+				width: 140,
 				label: 'Select SSM',
 				callback: () => {
 					gdc_args.useSsmOrGene = 'ssm'
@@ -130,7 +143,7 @@ export async function bamsliceui({ genomes, holder, disableSSM = false, hideToke
 				// .tab and .holder are automatically added
 			},
 			{
-				width: 130,
+				width: 140,
 				label: 'Gene or position',
 				callback: () => {
 					gdc_args.useSsmOrGene = 'gene'
@@ -425,7 +438,7 @@ export async function bamsliceui({ genomes, holder, disableSSM = false, hideToke
 	}
 
 	async function makeSsmGeneSearch() {
-		await init_tabs(ssmGeneArg)
+		await init_tabs_1(ssmGeneArg)
 
 		// argument for making search box
 		// gene searchbox is created in 2nd tab holder
@@ -633,7 +646,9 @@ export async function bamsliceui({ genomes, holder, disableSSM = false, hideToke
 					return
 				}
 				// success
-				formdiv.remove()
+				formdiv.style('display', 'none')
+				backBtnDiv.style('display', '')
+				blockHolder.style('display', '')
 				renderBamSlice(gdc_args, genome, blockHolder)
 			})
 	}
