@@ -96,7 +96,7 @@ export async function bamsliceui({ genomes, holder, disableSSM = false, hideToke
 				.style('display', 'none')
 				.selectAll('*')
 				.remove()
-			formdiv.style('display', '')
+			formdiv.style('display', 'grid')
 		})
 
 	const formdiv = holder
