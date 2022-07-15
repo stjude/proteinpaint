@@ -509,20 +509,27 @@ async function sample_id_getter(samples, headers) {
 	the getter is a dataset-specific, generic feature, so it should be defined here
 	passing in headers is a gdc-specific logic for controlled data
 	*/
-	const id2sample = new Map() // k: tumor_sample_barcode, v: sample obj
+	const id2sample = new Map()
+	// k: tumor_sample_barcode
+	// v: list of sample objects that are using the same tumor_sample_barcode
 	for (const sample of samples) {
 		const s = sample.tempcase
 		if (s.observation && s.observation[0].sample) {
 			const n = s.observation[0].sample.tumor_sample_barcode
 			if (n) {
-				id2sample.set(n, sample)
+				if (!id2sample.has(n)) id2sample.set(n, [])
+				id2sample.get(n).push(sample)
+			} else {
+				// TODO indicate on client that tumor_sample_barcode is missing for this case, to make things traceable
 			}
 		}
 		delete sample.tempcase
 	}
 	const idmap = await aliquot2sample.get([...id2sample.keys()], headers)
-	for (const [id, sample] of id2sample) {
-		sample.sample_id = idmap.get(id) || id
+	for (const [id, sampleLst] of id2sample) {
+		for (const s of sampleLst) {
+			s.sample_id = idmap.get(id) || id
+		}
 	}
 }
 
