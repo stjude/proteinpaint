@@ -1,10 +1,11 @@
-// Syntax: ~/proteinpaint/server/utils/bigWigSummary ~/proteinpaint/proteinpaint_demo/hg19/bigwig/file.bw chr17 7577333 7577780 1000
+// Syntax: ~/proteinpaint/server/utils/bigWigSummary ~/proteinpaint/proteinpaint_demo/hg19/bigwig/file.bw chr17 7577333 7577780 10
 
 // Syntax local: cd .. && cargo build --release && time echo ~/proteinpaint/proteinpaint_demo/hg19/bigwig/file.bw,chr17,7577333,7577780,10 | target/release/bigwig
 
 // Syntax local: cd .. && cargo build --release && time echo /Users/rpaul1/proteinpaint/hg19/TARGET/DNA/cov-wes/SJALL015634_D1.bw,chr1,47682689,47700849,10 | target/release/bigwig
 
 // Syntax url: cd .. && cargo build --release && time echo http://hgdownload.soe.ucsc.edu/goldenPath/hg19/encodeDCC/wgEncodeMapability/wgEncodeCrgMapabilityAlign100mer.bigWig,chr17,7584491,7585468,100 | target/release/bigwig
+// Syntax: time ~/proteinpaint/server/utils/bigWigSummary http://hgdownload.soe.ucsc.edu/goldenPath/hg19/encodeDCC/wgEncodeMapability/wgEncodeCrgMapabilityAlign100mer.bigWig chr17 7584491 7585468 100
 
 // Syntax url: cd .. && cargo build --release && time echo https://proteinpaint.stjude.org/ppdemo/hg19/bigwig/file.bw,chr17,7568451,7591984,100 | target/release/bigwig
 
@@ -47,6 +48,7 @@ fn main() {
     println!("exact_offset_whole:{}", exact_offset_whole);
     let mut datapoints_list = Vec::<u32>::new(); // Vector for storing datapoints
     let mut datapoints_sum = vec![0.0 as f32; datapoints as usize]; // Sum of all values within a region
+    let mut datapoints_mean = vec![0.0 as f32; datapoints as usize]; // Mean of all values within a region
     let mut datapoints_num = vec![0 as u32; datapoints as usize]; // Number of all values within a region
 
     let mut current_pos = start_pos; // Initializing current_pos to start position
@@ -81,39 +83,64 @@ fn main() {
                             if v.start == v.end {
                                 continue;
                             } else {
-                                if v.start >= start_region {
+                                if (v.start >= start_region && end_region < v.end)
+                                    || (v.start >= start_region && v.start < end_region)
+                                    || (v.end >= start_region && v.end < end_region)
+                                {
                                     // Calculate sum and number for this region
+                                    let start_entry_within_region = cmp::max(v.start, start_region);
                                     let stop_entry_within_region = cmp::min(v.end, end_region);
-                                    datapoints_num[i] += stop_entry_within_region;
-                                    datapoints_sum[i] += stop_entry_within_region as f32 * v.value;
-                                } else {
-                                    println!("Unexpected case where v.start < start_region");
-                                    println!("i:{}", i);
-                                    println!("start_region:{}", start_region);
-                                    println!("end_region:{}", end_region);
+                                    datapoints_num[i] +=
+                                        stop_entry_within_region - start_entry_within_region;
+                                    datapoints_sum[i] += (stop_entry_within_region
+                                        - start_entry_within_region)
+                                        as f32
+                                        * v.value;
                                 }
+                                //else {
+                                //    println!("Unexpected case where v.start < start_region");
+                                //    println!("i:{}", i);
+                                //    println!("start_region:{}", start_region);
+                                //    println!("end_region:{}", end_region);
+                                //}
                                 let mut iter = 1;
                                 while end_region < v.end {
-                                    if v.start >= start_region && iter > 1 {
+                                    //println!("iter:{}", iter);
+                                    //println!("i:{}", i);
+                                    //println!("v.start:{}", v.start);
+                                    //println!("v.end:{}", v.end);
+                                    //println!("start_region:{}", start_region);
+                                    //println!("end_region:{}", end_region);
+                                    if (v.start >= start_region && end_region < v.end)
+                                        || (v.start >= start_region && v.start < end_region)
+                                        || (v.end >= start_region && v.end < end_region)
+                                        || iter > 1
+                                    {
                                         // Calculate sum and number for this region
+                                        //println!("Hello");
+                                        let start_entry_within_region =
+                                            cmp::max(v.start, start_region);
                                         let stop_entry_within_region = cmp::min(v.end, end_region);
-                                        datapoints_num[i] += stop_entry_within_region;
-                                        datapoints_sum[i] +=
-                                            stop_entry_within_region as f32 * v.value;
+                                        datapoints_num[i] +=
+                                            stop_entry_within_region - start_entry_within_region;
+                                        datapoints_sum[i] += (stop_entry_within_region
+                                            - start_entry_within_region)
+                                            as f32
+                                            * v.value;
                                     }
-                                    if end_region < v.end {
+                                    if end_region <= v.end {
                                         // Entry spans into next region, need to increment iterator
                                         i += 1;
                                         start_region = datapoints_list[i];
                                         end_region = datapoints_list[i + 1];
                                     }
-                                    if v.start < start_region {
-                                        // Should not happen
-                                        println!("Unexpected case where v.start < start_region inside while loop");
-                                        println!("i:{}", i);
-                                        println!("start_region:{}", start_region);
-                                        println!("end_region:{}", end_region);
-                                    }
+                                    //if v.start < start_region {
+                                    //    // Should not happen
+                                    //    println!("Unexpected case where v.start < start_region inside while loop");
+                                    //    println!("i:{}", i);
+                                    //    println!("start_region:{}", start_region);
+                                    //    println!("end_region:{}", end_region);
+                                    //}
                                     iter += 1;
                                 }
                                 // Check number of regions that entry spans
@@ -160,39 +187,64 @@ fn main() {
                             if v.start == v.end {
                                 continue;
                             } else {
-                                if v.start >= start_region {
+                                if (v.start >= start_region && end_region < v.end)
+                                    || (v.start >= start_region && v.start < end_region)
+                                    || (v.end >= start_region && v.end < end_region)
+                                {
                                     // Calculate sum and number for this region
+                                    let start_entry_within_region = cmp::max(v.start, start_region);
                                     let stop_entry_within_region = cmp::min(v.end, end_region);
-                                    datapoints_num[i] += stop_entry_within_region;
-                                    datapoints_sum[i] += stop_entry_within_region as f32 * v.value;
-                                } else {
-                                    println!("Unexpected case where v.start < start_region");
-                                    println!("i:{}", i);
-                                    println!("start_region:{}", start_region);
-                                    println!("end_region:{}", end_region);
+                                    datapoints_num[i] +=
+                                        stop_entry_within_region - start_entry_within_region;
+                                    datapoints_sum[i] += (stop_entry_within_region
+                                        - start_entry_within_region)
+                                        as f32
+                                        * v.value;
                                 }
+                                //else {
+                                //    println!("Unexpected case where v.start < start_region");
+                                //    println!("i:{}", i);
+                                //    println!("start_region:{}", start_region);
+                                //    println!("end_region:{}", end_region);
+                                //}
                                 let mut iter = 1;
                                 while end_region < v.end {
-                                    if v.start >= start_region && iter > 1 {
+                                    //println!("iter:{}", iter);
+                                    //println!("i:{}", i);
+                                    //println!("v.start:{}", v.start);
+                                    //println!("v.end:{}", v.end);
+                                    //println!("start_region:{}", start_region);
+                                    //println!("end_region:{}", end_region);
+                                    if (v.start >= start_region && end_region < v.end)
+                                        || (v.start >= start_region && v.start < end_region)
+                                        || (v.end >= start_region && v.end < end_region)
+                                        || iter > 1
+                                    {
                                         // Calculate sum and number for this region
+                                        //println!("Hello");
+                                        let start_entry_within_region =
+                                            cmp::max(v.start, start_region);
                                         let stop_entry_within_region = cmp::min(v.end, end_region);
-                                        datapoints_num[i] += stop_entry_within_region;
-                                        datapoints_sum[i] +=
-                                            stop_entry_within_region as f32 * v.value;
+                                        datapoints_num[i] +=
+                                            stop_entry_within_region - start_entry_within_region;
+                                        datapoints_sum[i] += (stop_entry_within_region
+                                            - start_entry_within_region)
+                                            as f32
+                                            * v.value;
                                     }
-                                    if end_region < v.end {
+                                    if end_region <= v.end {
                                         // Entry spans into next region, need to increment iterator
                                         i += 1;
                                         start_region = datapoints_list[i];
                                         end_region = datapoints_list[i + 1];
                                     }
-                                    if v.start < start_region {
-                                        // Should not happen
-                                        println!("Unexpected case where v.start < start_region inside while loop");
-                                        println!("i:{}", i);
-                                        println!("start_region:{}", start_region);
-                                        println!("end_region:{}", end_region);
-                                    }
+                                    //if v.start < start_region {
+                                    //    // Should not happen
+                                    //    println!("Unexpected case where v.start < start_region inside while loop");
+                                    //    println!("i:{}", i);
+                                    //    println!("start_region:{}", start_region);
+                                    //    println!("end_region:{}", end_region);
+                                    //}
                                     iter += 1;
                                 }
                                 // Check number of regions that entry spans
@@ -223,6 +275,14 @@ fn main() {
     }
     println!("datapoints_sum:{:?}", datapoints_sum);
     println!("datapoints_num:{:?}", datapoints_num);
+    for i in 0..datapoints_num.len() {
+        if datapoints_num[i] == 0 {
+            datapoints_mean[i] = 0.0;
+        } else {
+            datapoints_mean[i] = datapoints_sum[i] / datapoints_num[i] as f32;
+        }
+    }
+    println!("datapoints_mean:{:?}", datapoints_mean);
 }
 
 //fn calculate_datapoints(
