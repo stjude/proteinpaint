@@ -17,6 +17,8 @@ Notes:
    The script accepts piped input in this format: {Bigwig_file_path/URL},{chr},{start_region},{stop_region}. See syntax above.
 
    In case path to file is not correct, the script gives a message "File not found". If the file is found, the aggregated data points are separated by tab character.
+
+   When number of datapoints > view range (stop - start position). number of datapoints is set equal to (stop - start). This helps in case of nucleotide resolution.
 */
 
 use bigtools::bigwigread::BigWigRead;
