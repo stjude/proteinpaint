@@ -215,7 +215,7 @@ export async function handle_tkbigwig(req, res) {
 	}
 }
 
-async function getGedgraph(req, res, minv, maxv, file, bedgraphdir) {
+async function getBedgraph(req, res, minv, maxv, file, bedgraphdir) {
 	/*
 	 */
 	if (minv == undefined || maxv == undefined) throw 'Y axis scale must be defined for bedgraph track'
