@@ -1,8 +1,8 @@
 /*
  Syntax:
- bigWigSummary syntax:~/proteinpaint/server/utils/bigWigSummary ~/proteinpaint/proteinpaint_demo/hg19/bigwig/file.bw chr17 7577333 7577780 10
+ bigWigSummary syntax:~/proteinpaint/server/utils/bigWigSummary ~/proteinpaint/proteinpaint_demo/hg19/bigwig/file.bw chr17 7568451 7591984 940
 
- local: cd .. && cargo build --release && time echo ~/proteinpaint/proteinpaint_demo/hg19/bigwig/file.bw,chr17,7577333,7577780,10 | target/release/bigwig
+ local: cd .. && cargo build --release && time echo ~/proteinpaint/server/utils/bigWigSummary ~/proteinpaint/proteinpaint_demo/hg19/bigwig/file.bw,chr17,7568451,7591984,940 | target/release/bigwig
 
  local: cd .. && cargo build --release && time echo /Users/rpaul1/proteinpaint/hg19/TARGET/DNA/cov-wes/SJALL015634_D1.bw,chr1,47682689,47700849,10 | target/release/bigwig
 
