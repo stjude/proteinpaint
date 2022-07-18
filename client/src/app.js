@@ -580,7 +580,7 @@ async function findgene2paint(app, str, genomename, jwt) {
 		}
 	}
 
-	blockinit(par)
+	await blockinit(par)
 }
 
 async function parseEmbedThenUrl(arg, app) {
@@ -1028,7 +1028,7 @@ async function launchgeneview(arg, app) {
 		pa.hlvariants = arg.hlvariants
 	}
 
-	blockinit(pa)
+	await blockinit(pa)
 }
 
 async function launchblock(arg, app) {

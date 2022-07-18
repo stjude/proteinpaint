@@ -56,6 +56,6 @@ export async function init(arg, holder, genomes) {
 			hide_dsHandles: arg.hide_dsHandles,
 			tklst: [{ type: 'mds3', dslabel: 'GDC' }]
 		}
-		blockinit(pa)
+		await blockinit(pa)
 	}
 }

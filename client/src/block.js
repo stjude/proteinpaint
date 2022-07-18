@@ -13,6 +13,7 @@ import vcf2dstk from './vcf.tkconvert'
 import blockinit from './block.init'
 import * as Legend from './block.legend'
 import { newSandboxDiv } from '../dom/sandbox'
+import { string2snp } from '#common/snp'
 
 // track types
 import { bamfromtemplate, bammaketk, bamload } from './block.tk.bam.adaptor'
@@ -1867,8 +1868,7 @@ reverseorient() {
 	}
 
 	block_jump_snp(s) {
-		coord
-			.string2snp(this.genome, s, this.hostURL, this.jwt)
+		string2snp(this.genome, s)
 			.then(r => {
 				const span = Math.ceil(this.width / ntpxwidth)
 				this.rglst = [
