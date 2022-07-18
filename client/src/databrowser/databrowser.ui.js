@@ -45,7 +45,6 @@ export function init_databrowserUI(holder, debugmode) {
 		.classed('sjpp-app-ui', true)
 
 	const obj = {}
-	makeResetBtn(wrapper, obj)
 
 	//Information section for user with documentation and example
 	infoSection(wrapper)
@@ -55,31 +54,19 @@ export function init_databrowserUI(holder, debugmode) {
 	const tabs_div = wrapper.append('div').style('margin-left', '2vw')
 	makeDataDictionaryTabs(tabs_div, obj)
 
-	//Submit button
-	submitButton(wrapper, obj, holder)
+	//Submit and reset button at the bottom.
+	const controlBtns_div = wrapper
+		.append('div')
+		.style('display', 'flex')
+		.style('align-items', 'center')
+		.style('margin', '40px 0px 40px 130px')
+
+	submitButton(controlBtns_div, obj, holder)
+	makeResetBtn(controlBtns_div, obj)
 
 	//Remove after testing
 	if (debugmode) window.doms = obj
 	return obj
-}
-
-function makeResetBtn(div, obj) {
-	const reset = uiutils.makeBtn({
-		div,
-		text: '&#8634',
-		backgroundColor: 'white',
-		color: 'grey',
-		padding: '2px 6px'
-	})
-	reset
-		.style('font-size', '1.25em')
-		.style('grid-column', 'span 2')
-		.style('float', 'right')
-		.style('margin-right', '40vw')
-		.attr('type', 'reset')
-		.on('click', async () => {
-			d3selectAll('.databrowser_input').property('value', '')
-		})
 }
 
 function infoSection(div) {
@@ -221,14 +208,15 @@ function submitButton(div, obj, holder) {
 		backgroundColor: '#001aff',
 		border: '2px solid #001aff'
 	})
+	const errorMessage_div = div.append('div')
 	submit
-		.style('margin', '40px 20px 40px 130px')
+		.style('margin-right', '10px')
 		.style('font-size', '16px')
 		.classed('sjpp-ui-submitBtn', true)
 		.attr('type', 'submit')
 		.on('click', () => {
 			if (!obj.data || obj.data == undefined) {
-				const sayerrorDiv = div
+				const sayerrorDiv = errorMessage_div
 					.append('div')
 					.style('display', 'inline-block')
 					.style('max-width', '20vw')
@@ -246,5 +234,24 @@ function submitButton(div, obj, holder) {
 					}
 				})
 			}
+		})
+}
+
+function makeResetBtn(div, obj) {
+	const reset = uiutils.makeBtn({
+		div,
+		text: '&#8634;',
+		backgroundColor: 'white',
+		color: 'grey',
+		padding: '0px 6px 1px 6px'
+	})
+	reset
+		.style('font-size', '1.5em')
+		.style('display', 'inline-block')
+		.style('margin', '0px 10px')
+		.attr('type', 'reset')
+		.on('click', async () => {
+			d3selectAll('.databrowser_input').property('value', '')
+			if (obj.data) obj.data = ''
 		})
 }
