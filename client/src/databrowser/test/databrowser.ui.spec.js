@@ -643,10 +643,9 @@ tape('Render Databrowser UI from runpp()', async test => {
 	test.end()
 })
 
-tape('Click submit with no data', async test => {
+tape('Click submit with no data', test => {
 	test.timeoutAfter(3000)
 	const holder = getHolder()
-	const message = `Should throw an error for no data submitted`
 
 	init_dictionaryUI(holder)
 
@@ -655,8 +654,8 @@ tape('Click submit with no data', async test => {
 	)
 	submitBtn.dispatchEvent(new Event('click'))
 	test.equal(holder.selectAll('.sja_errorbar').size(), 1, "should display 'no data' error")
-	if (test._ok) holder.remove()
 
+	if (test._ok) holder.remove()
 	test.end()
 })
 
