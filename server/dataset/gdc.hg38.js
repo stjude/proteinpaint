@@ -456,7 +456,7 @@ const aliquot2sample = {
 		}
 	},
 	get: async (aliquotidLst, headers) => {
-		const _t = new Date()
+		//const _t = new Date()
 
 		const response = await got.post(GDC_HOST + '/v0/graphql', {
 			headers,
@@ -466,7 +466,7 @@ const aliquot2sample = {
 			})
 		})
 
-		console.log('aliquot2sample', new Date() - _t, aliquotidLst.length)
+		//console.log('aliquot2sample', new Date() - _t, aliquotidLst.length)
 		/*
 		Time consuming!!! the query takes 28.9 seconds for 604 cases
 		Observed on 7/18/2022
