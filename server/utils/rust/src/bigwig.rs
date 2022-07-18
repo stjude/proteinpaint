@@ -5,6 +5,8 @@
  local: cd .. && cargo build --release && time echo ~/proteinpaint/proteinpaint_demo/hg19/bigwig/file.bw,chr17,7568451,7591984,940 | target/release/bigwig
 
  bigWigSummary syntax:~/proteinpaint/server/utils/bigWigSummary ~/proteinpaint/proteinpaint_demo/hg19/bigwig/file.bw chr17 7575510 7578450 2000
+
+~/proteinpaint/server/utils/bigWigInfo -zooms ~/proteinpaint/proteinpaint_demo/hg19/bigwig/file.bw
  local: cd .. && cargo build --release && time echo ~/proteinpaint/proteinpaint_demo/hg19/bigwig/file.bw,chr17,7575510,7578450,2000 | target/release/bigwig
 
  local: cd .. && cargo build --release && time echo /Users/rpaul1/proteinpaint/hg19/TARGET/DNA/cov-wes/SJALL015634_D1.bw,chr1,47682689,47700849,10 | target/release/bigwig
@@ -22,6 +24,7 @@ Notes:
    In case path to file is not correct, the script gives a message "File not found". If the file is found, the aggregated data points are separated by tab character.
 */
 
+use bigtools::bigwig::BBIFileInfo;
 use bigtools::bigwigread::BigWigRead;
 use bigtools::remote_file::RemoteFile;
 use std::io;
@@ -82,6 +85,18 @@ fn main() {
                 //println!("File found");
                 file_found = true;
                 let mut reader = BigWigRead::from(remote_file2).unwrap();
+                //println!("Bigwig file info:{}", BBIFileInfo(reader));
+                let a = &reader.info;
+                println!("a:{:?}", a);
+                //let a = BBIHeader(&reader.info.header);
+                //match a {
+                //    (v) => {
+                //        println!("v:{}", v);
+                //    }
+                //    Err(_) => {
+                //        println!("Possible error:{:?}", entry);
+                //    }
+                //}
                 let bigwig_output = reader
                     .get_interval(&chrom, start_pos as u32, stop_pos as u32)
                     .unwrap();
@@ -103,7 +118,7 @@ fn main() {
                                     || (start_region >= v.start as f64
                                         && (v.end as f64) < end_region)
                                 {
-                                    // Calculate sum and number for this region
+                                    //Calculate sum and number for this region
                                     //println!("i:{}", i);
                                     //println!("v.start:{}", v.start);
                                     //println!("v.end:{}", v.end);
@@ -122,7 +137,7 @@ fn main() {
                                         * v.value as f64;
                                 }
                                 let mut iter = 1;
-                                while end_region < v.end as f64 {
+                                while end_region < v.end as f64 && end_region != stop_pos {
                                     //println!("iter:{}", iter);
                                     //println!("i:{}", i);
                                     //println!("v.start:{}", v.start);
@@ -154,9 +169,11 @@ fn main() {
                                     }
                                     if end_region <= v.end as f64 {
                                         // Entry spans into next region, need to increment iterator and start and end region
-                                        i += 1;
-                                        start_region = datapoints_list[i];
-                                        end_region = datapoints_list[i + 1];
+                                        if i + 2 < datapoints_list.len() {
+                                            i += 1;
+                                            start_region = datapoints_list[i];
+                                            end_region = datapoints_list[i + 1];
+                                        }
                                     }
                                     iter += 1;
                                 }
@@ -179,8 +196,12 @@ fn main() {
             Ok(_) => {
                 file_found = true;
                 let mut reader = BigWigRead::from_file_and_attach(&bigwig_file_url).unwrap();
+                //let a = &reader.info.header;
+                let a = BBIFileInfo::from(reader.info.clone());
+                //let a = BBIFileInfo(&reader);
+                println!("a:{:?}", a);
                 let bigwig_output = reader
-                    .get_interval(&chrom, start_pos as u32, stop_pos as u32)
+                    .get_zoom_interval(&chrom, start_pos as u32, stop_pos as u32, 40)
                     .unwrap();
                 //calculate_datapoints(bigwig_output, chrom, start_pos, stop_pos, data_points);
 
@@ -190,7 +211,10 @@ fn main() {
                 for entry in bigwig_output {
                     match entry {
                         Ok(v) => {
-                            //println!("start,end,value:{},{},{}", v.start, v.end, v.value);
+                            println!(
+                                "start,end,value,sum,bases_covered:{},{},{},{}",
+                                v.start, v.end, v.summary.sum, v.summary.bases_covered
+                            );
                             if v.start == v.end {
                                 continue;
                             } else {
@@ -217,7 +241,9 @@ fn main() {
                                     datapoints_sum[i] += (stop_entry_within_region
                                         - start_entry_within_region)
                                         as f64
-                                        * v.value as f64;
+                                        * ((v.summary.sum as f64)
+                                            / (v.summary.bases_covered as f64))
+                                            as f64;
                                     //println!(
                                     //    "start_entry_within_region:{}",
                                     //    start_entry_within_region
@@ -230,7 +256,7 @@ fn main() {
                                     //println!("datapoints_sum[i]:{}", datapoints_sum[i]);
                                 }
                                 let mut iter = 1;
-                                while end_region < v.end as f64 {
+                                while end_region < v.end as f64 && end_region != stop_pos {
                                     //println!("iter:{}", iter);
                                     //println!("i:{}", i);
                                     //println!("v.start:{}", v.start);
@@ -259,7 +285,9 @@ fn main() {
                                         datapoints_sum[i] += (stop_entry_within_region
                                             - start_entry_within_region)
                                             as f64
-                                            * v.value as f64;
+                                            * ((v.summary.sum as f64)
+                                                / (v.summary.bases_covered as f64))
+                                                as f64;
                                         //println!(
                                         //    "start_entry_within_region inside:{}",
                                         //    start_entry_within_region
@@ -273,9 +301,11 @@ fn main() {
                                     }
                                     if end_region <= v.end as f64 {
                                         // Entry spans into next region, need to increment iterator
-                                        i += 1;
-                                        start_region = datapoints_list[i];
-                                        end_region = datapoints_list[i + 1];
+                                        if i + 2 < datapoints_list.len() {
+                                            i += 1;
+                                            start_region = datapoints_list[i];
+                                            end_region = datapoints_list[i + 1];
+                                        }
                                     }
                                     iter += 1;
                                 }
