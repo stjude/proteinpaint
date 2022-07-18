@@ -456,13 +456,24 @@ const aliquot2sample = {
 		}
 	},
 	get: async (aliquotidLst, headers) => {
+		const _t = new Date()
+
 		const response = await got.post(GDC_HOST + '/v0/graphql', {
 			headers,
 			body: JSON.stringify({
 				query: aliquot2sample.query,
-				variables: aliquot2sample.variables(aliquotidLst)
+				variables: aliquot2sample.variables(aliquotidLst.slice(0, 100))
 			})
 		})
+
+		console.log('aliquot2sample', new Date() - _t, aliquotidLst.length)
+		/*
+		Time consuming!!! the query takes 28.9 seconds for 604 cases
+		Observed on 7/18/2022
+		added quick fix to only run on first 100 ids of the list (if longer than 100)
+		which takes 3-4 seconds
+		*/
+
 		const json = JSON.parse(response.body)
 		if (
 			!json.data ||
@@ -525,7 +536,15 @@ async function sample_id_getter(samples, headers) {
 		}
 		delete sample.tempcase
 	}
+
+	if (id2sample.size == 0) {
+		// no applicable sample id to map
+		// possible when query didn't ask for sample name
+		return
+	}
+
 	const idmap = await aliquot2sample.get([...id2sample.keys()], headers)
+
 	for (const [id, sampleLst] of id2sample) {
 		for (const s of sampleLst) {
 			s.sample_id = idmap.get(id) || id
