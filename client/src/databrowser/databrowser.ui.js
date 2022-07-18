@@ -74,6 +74,8 @@ function makeResetBtn(div, obj) {
 	reset
 		.style('font-size', '1.25em')
 		.style('grid-column', 'span 2')
+		.style('float', 'right')
+		.style('margin-right', '40vw')
 		.attr('type', 'reset')
 		.on('click', async () => {
 			d3selectAll('.databrowser_input').property('value', '')
