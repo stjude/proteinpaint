@@ -110,11 +110,11 @@ export function makeFileUpload(div) {
 export function makeBtn(args) {
 	const btn = args.div
 		.append('button')
-		.text(args.text)
+		.html(args.text)
 		.style('color', args.color ? args.color : 'black')
 		.style('background-color', args.backgroundColor ? args.backgroundColor : '#F2F2F2')
 		.style('border', args.border ? args.border : '2px solid #999')
-		.style('padding', '5px 10px')
+		.style('padding', args.padding ? args.padding : '5px 10px')
 		.style('cursor', 'pointer')
 
 	return btn
