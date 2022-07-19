@@ -109,13 +109,12 @@ function mclassorigin(block, height) {
 		return [0, null]
 	}
 	let totalitem = 0
-	if (block.legend.mclasses && block.legend.mclasses.size > 0) {
-		for (const [cls, obj] of block.legend.mclasses) {
-			if (!obj.hidden) {
-				totalitem++
-			}
-		}
-	}
+
+	const mclass2show = getMclasses(block)
+	// [ [classkey=str, count=int], ... ]
+
+	totalitem += mclass2show.length
+
 	if (block.legend.morigins && block.legend.morigins.size > 0) {
 		for (const [cls, obj] of block.legend.morigins) {
 			if (!obj.hidden) {
@@ -123,36 +122,32 @@ function mclassorigin(block, height) {
 			}
 		}
 	}
-	if (totalitem == 0) {
-		return [0, null]
-	}
+
+	if (totalitem == 0) return [0, null]
+
 	let h = 0
 	const g = block.svg
 		.append('g')
 		.attr('transform', 'translate(' + (xpad + block.leftheadw + block.lpad + block.width - 200) + ',' + height + ')')
-	if (block.legend.mclasses && block.legend.mclasses.size > 0) {
-		for (const [cls, o] of block.legend.mclasses) {
-			if (o.hidden) {
-				continue
-			}
-			const row = g.append('g').attr('transform', 'translate(0,' + h + ')')
-			row
-				.append('circle')
-				.attr('cx', rowh / 2)
-				.attr('cy', rowh / 2)
-				.attr('r', rowh / 2)
-				.attr('fill', common.mclass[cls].color)
-			row
-				.append('text')
-				.text(common.mclass[cls].label + ', n=' + o.count)
-				.attr('x', rowh + 10)
-				.attr('y', rowh / 2)
-				.attr('dominant-baseline', 'central')
-				.attr('font-size', fontsize)
-				.attr('font-family', client.font)
-				.attr('fill', common.mclass[cls].color)
-			h += rowh + rowpad
-		}
+
+	for (const [cls, count] of mclass2show) {
+		const row = g.append('g').attr('transform', 'translate(0,' + h + ')')
+		row
+			.append('circle')
+			.attr('cx', rowh / 2)
+			.attr('cy', rowh / 2)
+			.attr('r', rowh / 2)
+			.attr('fill', common.mclass[cls].color)
+		row
+			.append('text')
+			.text(common.mclass[cls].label + ', n=' + count)
+			.attr('x', rowh + 10)
+			.attr('y', rowh / 2)
+			.attr('dominant-baseline', 'central')
+			.attr('font-size', fontsize)
+			.attr('font-family', client.font)
+			.attr('fill', common.mclass[cls].color)
+		h += rowh + rowpad
 	}
 	if (block.legend.morigins && block.legend.morigins.size > 0) {
 		for (const [org, o] of block.legend.morigins) {
@@ -175,4 +170,30 @@ function mclassorigin(block, height) {
 		}
 	}
 	return [h, g]
+}
+
+function getMclasses(block) {
+	/* two sources of mclass
+	 */
+
+	const mclass2show = [] // element: [class, count]
+
+	// 1: legacy ds track
+	if (block.legend.mclasses && block.legend.mclasses.size > 0) {
+		for (const [cls, o] of block.legend.mclasses) {
+			if (!o.hidden) mclass2show.push([cls, o.count])
+		}
+	}
+
+	// 2: mds3 tk
+	const tk = block.tklst.find(i => i.type == 'mds3')
+	if (tk && tk.legend?.mclass?.currentData) {
+		for (const m of tk.legend.mclass.currentData) {
+			// m = [class, count]
+			if (!tk.legend.mclass.hiddenvalues.has(m[0])) {
+				mclass2show.push(m)
+			}
+		}
+	}
+	return mclass2show
 }
