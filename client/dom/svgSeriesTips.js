@@ -1,6 +1,8 @@
 import { mouse, event } from 'd3-selection'
+import { Menu } from '#dom/menu'
 
-export function getSeriesTip(g, rect, tip) {
+export function getSeriesTip(g, rect, _tip = null) {
+	const tip = _tip || new Menu({ padding: '5px' })
 	let lineHovered = false
 	const line = g
 		.insert('line', 'rect')
@@ -26,27 +28,29 @@ export function getSeriesTip(g, rect, tip) {
 				if (d.scaledX < m[0]) matched = d
 			}
 			if (matched) hasMatched = true
-			s.d = {
-				x: matched.x,
-				y: matched.y,
-				lower: 'low' in matched ? matched.low : matched.lower,
-				upper: 'high' in matched ? matched.high : matched.upper
-			}
+			s.d = !matched
+				? null
+				: {
+						x: matched.x.toFixed(2),
+						y: matched.y.toFixed(2),
+						lower: ('low' in matched ? matched.low : matched.lower).toFixed(2),
+						upper: ('high' in matched ? matched.high : matched.upper).toFixed(2)
+				  }
 		})
 		if (hasMatched) {
 			const x = serieses[0].xScale.invert(m[0]).toFixed(2)
-			const label = serieses[0].seriesLabel ? serieses[0].seriesLabel + ':' : ''
-			tip
-				.show(event.clientX, event.clientY)
-				.d.html(
-					`Time: ${x}<br><br>` +
-						serieses
-							.map(
-								d =>
-									`<span style='color: ${d.color}'>${label} ${d.d.y}% at previous TTE=${d.d.x}, <br/>(${d.d.lower}, ${d.d.upper})</span>`
-							)
-							.join('<br><br/>')
-				)
+			tip.show(event.clientX, event.clientY).d.html(
+				`Time: ${x}<br><br>` +
+					serieses
+						.filter(d => d.d)
+						.map(
+							d =>
+								`<span style='color: ${d.color}'>${d.seriesLabel ? d.seriesLabel + ':' : ''} ${
+									d.d.y
+								}% at previous TTE=${d.d.x}, <br/>(${d.d.lower} to ${d.d.upper})</span>`
+						)
+						.join('<br><br/>')
+			)
 		} else {
 			tip.hide()
 		}

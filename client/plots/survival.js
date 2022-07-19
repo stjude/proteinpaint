@@ -6,11 +6,11 @@ import { axisLeft, axisBottom } from 'd3-axis'
 import { timeYear } from 'd3-time'
 import { line, area, curveStepAfter } from 'd3-shape'
 import { rgb } from 'd3-color'
-import htmlLegend from '../dom/html.legend'
+import htmlLegend from '#dom/html.legend'
 import Partjson from 'partjson'
-import { to_svg, rgb2hex } from '../src/client'
-import { fillTermWrapper } from '../termsetting/termsetting'
-import { Menu } from '../dom/menu'
+import { to_svg, rgb2hex } from '#src/client'
+import { fillTermWrapper } from '#termsetting'
+import { Menu } from '#dom/menu'
 import { getSeriesTip } from '#dom/svgSeriesTips'
 
 class TdbSurvival {
@@ -719,7 +719,7 @@ function setRenderers(self) {
 				.append('rect')
 				.attr('class', 'sjpcb-plot-rect')
 				.style('fill', 'transparent')
-			self.seriesTip = getSeriesTip(mainG, plotRect, self.app.tip)
+			self.seriesTip = getSeriesTip(mainG, plotRect, self.app?.tip)
 		} else {
 			mainG = svg.select('.sjpp-survival-mainG')
 			seriesesG = mainG.select('.sjpcb-survival-seriesesG')

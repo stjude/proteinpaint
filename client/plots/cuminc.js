@@ -718,7 +718,7 @@ function setRenderers(self) {
 				.append('rect')
 				.attr('class', 'sjpcb-plot-rect')
 				.style('fill', 'transparent')
-			self.seriesTip = getSeriesTip(mainG, plotRect, self.app.tip, self.term2toColor)
+			self.seriesTip = getSeriesTip(mainG, plotRect, self.app?.tip)
 		} else {
 			mainG = svg.select('.sjpcb-cuminc-mainG')
 			seriesesG = mainG.select('.sjpcb-cuminc-seriesesG')
