@@ -221,12 +221,26 @@ function checkTwAncestryRestriction(tw, q, ds) {
 	if (a.PCfileBySubcohort) {
 		// by subcohort, which is coded as a tvs in q.filter
 		if (!q.filter) throw 'q.filter missing while trying to access subcohort for PCfileBySubcohort'
-		const item = q.filter.lst.find(i => i.tag == 'cohortFilter')
-		if (!item)
-			throw 'item by tag=cohortFilter missing from q.filter.lst[] while trying to access subcohort for PCfileBySubcohort'
-		// item.tvs.values[] contain elements e.g. {key:'SJLIFE'}
+		let cohortFilterTvs
+		for (const i of q.filter.lst) {
+			if (i.tag && i.tag == 'cohortFilter') {
+				cohortFilterTvs = i
+				break
+			}
+			if (i.lst) {
+				for (const j of i.lst) {
+					if (j.tag && j.tag == 'cohortFilter') {
+						cohortFilterTvs = j
+						break
+					}
+				}
+			}
+		}
+		if (!cohortFilterTvs)
+			throw 'tvs by tag=cohortFilter missing from q.filter.lst[] while trying to access subcohort for PCfileBySubcohort'
+		// cohortFilterTvs.tvs.values[] contain elements e.g. {key:'SJLIFE'}
 		// in which keys are joined in alphabetical order for lookup in a.PCfileBySubcohort{}
-		const sortedKeys = item.tvs.values
+		const sortedKeys = cohortFilterTvs.tvs.values
 			.map(i => i.key)
 			.sort()
 			.join(',')
