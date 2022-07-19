@@ -99,7 +99,7 @@ for (const line of fs
 	// trim the trailing comma
 	const tmp1 = l[11 - 1].split(',')
 	tmp1.pop()
-	const blocksizes = tmp1.map(Number)
+	const blocksizes = tmp1.map(Number) // bp length of all exons; array length is #exons
 
 	const tmp2 = l[12 - 1].split(',')
 	tmp2.pop()
@@ -121,7 +121,8 @@ for (const line of fs
 			exon.unshift([a, b])
 		}
 
-		if (i > 0 && i < blocksizes.length - 1) {
+		// to generate the intron behind this exon; must skip the first exon
+		if (i > 0) {
 			if (forward) {
 				intron.push([paststop, a])
 			} else {
