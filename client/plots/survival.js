@@ -11,6 +11,7 @@ import Partjson from 'partjson'
 import { to_svg, rgb2hex } from '../src/client'
 import { fillTermWrapper } from '../termsetting/termsetting'
 import { Menu } from '../dom/menu'
+import { getSeriesTip } from '#dom/svgSeriesTips'
 
 class TdbSurvival {
 	constructor(opts) {
@@ -506,12 +507,12 @@ function setRenderers(self) {
 			.style('padding-left', '20px')
 
 		/* eslint-disable */
-		const [mainG, axisG, xAxis, yAxis, xTitle, yTitle, atRiskG] = getSvgSubElems(svg)
+		const [mainG, seriesesG, axisG, xAxis, yAxis, xTitle, yTitle, atRiskG, plotRect] = getSvgSubElems(svg)
 		/* eslint-enable */
 		const xOffset = chart.atRiskLabelWidth + s.svgPadding.left
 		mainG.attr('transform', 'translate(' + xOffset + ',' + s.svgPadding.top + ')')
 
-		const serieses = mainG
+		const serieses = seriesesG
 			.selectAll('.sjpp-survival-series')
 			.data(chart.visibleSerieses, d => (d && d[0] ? d[0].seriesId : ''))
 
@@ -529,6 +530,24 @@ function setRenderers(self) {
 
 		renderAxes(xAxis, xTitle, yAxis, yTitle, s, chart)
 		renderAtRiskG(atRiskG, s, chart)
+
+		plotRect
+			.attr('x', 0) //s.svgPadding.left) //s.svgh - s.svgPadding.top - s.svgPadding.bottom + 5)
+			.attr('width', s.svgw - s.svgPadding.left - s.svgPadding.right)
+			.attr('y', 0) //s.svgPadding.top) // - s.svgPadding.bottom + 5)
+			.attr('height', s.svgh - s.svgPadding.top - s.svgPadding.bottom + s.xAxisOffset)
+
+		self.seriesTip.update(
+			chart.visibleSerieses.map(s => {
+				return {
+					seriesLabel: s.seriesLabel,
+					seriesId: s.seriesId,
+					color: self.term2toColor[s.seriesId]?.adjusted || '#000',
+					xScale: chart.xScale,
+					data: s.data
+				}
+			})
+		)
 	}
 
 	function renderPvalues(pvaldiv, chart, tests, s) {
@@ -682,9 +701,10 @@ function setRenderers(self) {
 	}
 
 	function getSvgSubElems(svg) {
-		let mainG, axisG, xAxis, yAxis, xTitle, yTitle, atRiskG
+		let mainG, seriesesG, axisG, xAxis, yAxis, xTitle, yTitle, atRiskG, plotRect
 		if (!svg.select('.sjpp-survival-mainG').size()) {
 			mainG = svg.append('g').attr('class', 'sjpp-survival-mainG')
+			seriesesG = mainG.append('g').attr('class', 'sjpcb-survival-seriesesG')
 			axisG = mainG.append('g').attr('class', 'sjpp-survival-axis')
 			xAxis = axisG.append('g').attr('class', 'sjpp-survival-x-axis')
 			yAxis = axisG.append('g').attr('class', 'sjpp-survival-y-axis')
@@ -694,16 +714,24 @@ function setRenderers(self) {
 				.append('g')
 				.attr('class', 'sjpp-survival-atrisk')
 				.on('click', self.legendClick)
+
+			plotRect = mainG
+				.append('rect')
+				.attr('class', 'sjpcb-plot-rect')
+				.style('fill', 'transparent')
+			self.seriesTip = getSeriesTip(mainG, plotRect, self.app.tip)
 		} else {
 			mainG = svg.select('.sjpp-survival-mainG')
+			seriesesG = mainG.select('.sjpcb-survival-seriesesG')
 			axisG = mainG.select('.sjpp-survival-axis')
 			xAxis = axisG.select('.sjpp-survival-x-axis')
 			yAxis = axisG.select('.sjpp-survival-y-axis')
 			xTitle = axisG.select('.sjpp-survival-x-title')
 			yTitle = axisG.select('.sjpp-survival-y-title')
 			atRiskG = mainG.select('.sjpp-survival-atrisk').on('click', self.legendClick)
+			plotRect = mainG.select('.sjpcb-plot-rect')
 		}
-		return [mainG, axisG, xAxis, yAxis, xTitle, yTitle, atRiskG]
+		return [mainG, seriesesG, axisG, xAxis, yAxis, xTitle, yTitle, atRiskG, plotRect]
 	}
 
 	function renderSeries(g, chart, series, i, s, duration) {
@@ -788,7 +816,7 @@ function setRenderers(self) {
 		const lineData = data.filter((d, i) => i === 0 || d.nevent || i === data.length - 1)
 		const censoredData = data.filter(d => d.ncensor)
 		const subg = g.append('g')
-		const circles = subg.selectAll('circle').data(lineData, b => b.x)
+		/*const circles = subg.selectAll('circle').data(lineData, b => b.x)
 		circles.exit().remove()
 
 		// for mouseover only
@@ -801,7 +829,7 @@ function setRenderers(self) {
 			.style('opacity', 0)
 			.style('fill', s.fill)
 			.style('fill-opacity', s.fillOpacity)
-			.style('stroke', s.stroke)
+			.style('stroke', s.stroke)*/
 
 		const seriesName = data[0].seriesName
 		const color = self.term2toColor[data[0].seriesId].adjusted
@@ -851,9 +879,11 @@ function setRenderers(self) {
 				})
 		}
 
-		xAxis.attr('transform', 'translate(0,' + (s.svgh - s.svgPadding.top - s.svgPadding.bottom + 5) + ')').call(xTicks)
+		xAxis
+			.attr('transform', 'translate(0,' + (s.svgh - s.svgPadding.top - s.svgPadding.bottom + s.xAxisOffset) + ')')
+			.call(xTicks)
 
-		yAxis.attr('transform', 'translate(-5,0)').call(
+		yAxis.attr('transform', `translate(${s.yAxisOffset},0)`).call(
 			axisLeft(
 				scaleLinear()
 					.domain(chart.yScale.domain())
@@ -1039,7 +1069,7 @@ function setInteractivity(self) {
 
 	self.mouseover = function() {
 		const d = event.target.__data__
-		if (event.target.tagName == 'circle') {
+		/*if (event.target.tagName == 'circle') {
 			const label = labels[d.seriesName]
 			const x = d.x.toFixed(1)
 			const y = d.y.toPrecision(2)
@@ -1062,7 +1092,7 @@ function setInteractivity(self) {
 			self.app.tip.show(event.clientX, event.clientY).d.html(d.seriesLabel ? d.seriesLabel : d.seriesId)
 		} else if (!self.activeMenu) {
 			self.app.tip.hide()
-		}
+		}*/
 	}
 
 	self.mouseout = function() {
@@ -1340,6 +1370,8 @@ export async function getPlotConfig(opts, app) {
 					bottom: 50
 				},
 				axisTitleFontSize: 16,
+				xAxisOffset: 5,
+				yAxisOffset: -5,
 				hidden: [],
 				hiddenPvalues: []
 			}

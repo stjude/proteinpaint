@@ -1,16 +1,17 @@
 import { getCompInit, copyMerge } from '../rx'
 import { controlsInit } from './controls'
-import { fillTermWrapper } from '../termsetting/termsetting'
+import { fillTermWrapper } from '#termsetting'
 import { select, event } from 'd3-selection'
 import { scaleLinear as d3Linear } from 'd3-scale'
 import { axisLeft, axisBottom } from 'd3-axis'
 import { line, area, curveStepAfter } from 'd3-shape'
 import { scaleOrdinal, schemeCategory10, schemeCategory20 } from 'd3-scale'
 import { rgb } from 'd3-color'
-import htmlLegend from '../dom/html.legend'
+import htmlLegend from '#dom/html.legend'
 import Partjson from 'partjson'
-import { dofetch3, to_svg } from '../src/client'
-import { sayerror } from '../dom/error'
+import { dofetch3, to_svg } from '#src/client'
+import { sayerror } from '#dom/error'
+import { getSeriesTip } from '#dom/svgSeriesTips'
 
 export class Cuminc {
 	constructor(opts) {
@@ -558,15 +559,15 @@ function setRenderers(self) {
 			.style('padding-left', '20px')
 
 		/* eslint-disable */
-		const [mainG, axisG, xAxis, yAxis, xTitle, yTitle] = getSvgSubElems(svg)
+		const [mainG, seriesesG, axisG, xAxis, yAxis, xTitle, yTitle, plotRect] = getSvgSubElems(svg)
 		/* eslint-enable */
 		//if (d.xVals) computeScales(d, s);
 
 		mainG.attr('transform', 'translate(' + s.svgPadding.left + ',' + s.svgPadding.top + ')')
-		const visibleSerieses = chart.serieses.filter(s => !self.hiddenOverlays.includes(s.seriesId))
-		const serieses = mainG
+		chart.visibleSerieses = chart.serieses.filter(s => !self.hiddenOverlays.includes(s.seriesId))
+		const serieses = seriesesG
 			.selectAll('.sjpcb-cuminc-series')
-			.data(visibleSerieses, d => (d && d[0] ? d[0].seriesId : ''))
+			.data(chart.visibleSerieses, d => (d && d[0] ? d[0].seriesId : ''))
 
 		serieses.exit().remove()
 		serieses.each(function(series, i) {
@@ -581,6 +582,24 @@ function setRenderers(self) {
 			})
 
 		renderAxes(xAxis, xTitle, yAxis, yTitle, s, chart)
+
+		plotRect
+			.attr('x', 0) //s.svgPadding.left) //s.svgh - s.svgPadding.top - s.svgPadding.bottom + 5)
+			.attr('width', s.svgw - s.svgPadding.left - s.svgPadding.right)
+			.attr('y', 0) //s.svgPadding.top) // - s.svgPadding.bottom + 5)
+			.attr('height', s.svgh - s.svgPadding.top - s.svgPadding.bottom + s.xAxisOffset)
+
+		self.seriesTip.update(
+			chart.visibleSerieses.map(s => {
+				return {
+					seriesLabel: s.seriesLabel,
+					seriesId: s.seriesId,
+					color: self.term2toColor[s.seriesId],
+					xScale: chart.xScale,
+					data: s.data
+				}
+			})
+		)
 	}
 
 	function renderPvalues(pvaldiv, chart, tests, s) {
@@ -685,23 +704,32 @@ function setRenderers(self) {
 	}
 
 	function getSvgSubElems(svg) {
-		let mainG, axisG, xAxis, yAxis, xTitle, yTitle
+		let mainG, seriesesG, axisG, xAxis, yAxis, xTitle, yTitle, plotRect
 		if (!svg.select('.sjpcb-cuminc-mainG').size()) {
 			mainG = svg.append('g').attr('class', 'sjpcb-cuminc-mainG')
+			seriesesG = mainG.append('g').attr('class', 'sjpcb-cuminc-seriesesG')
 			axisG = mainG.append('g').attr('class', 'sjpcb-cuminc-axis')
 			xAxis = axisG.append('g').attr('class', 'sjpcb-cuminc-x-axis')
 			yAxis = axisG.append('g').attr('class', 'sjpcb-cuminc-y-axis')
 			xTitle = axisG.append('g').attr('class', 'sjpcb-cuminc-x-title')
 			yTitle = axisG.append('g').attr('class', 'sjpcb-cuminc-y-title')
+
+			plotRect = mainG
+				.append('rect')
+				.attr('class', 'sjpcb-plot-rect')
+				.style('fill', 'transparent')
+			self.seriesTip = getSeriesTip(mainG, plotRect, self.app.tip, self.term2toColor)
 		} else {
 			mainG = svg.select('.sjpcb-cuminc-mainG')
+			seriesesG = mainG.select('.sjpcb-cuminc-seriesesG')
 			axisG = mainG.select('.sjpcb-cuminc-axis')
 			xAxis = axisG.select('.sjpcb-cuminc-x-axis')
 			yAxis = axisG.select('.sjpcb-cuminc-y-axis')
 			xTitle = axisG.select('.sjpcb-cuminc-x-title')
 			yTitle = axisG.select('.sjpcb-cuminc-y-title')
+			plotRect = mainG.select('.sjpcb-plot-rect')
 		}
-		return [mainG, axisG, xAxis, yAxis, xTitle, yTitle]
+		return [mainG, seriesesG, axisG, xAxis, yAxis, xTitle, yTitle, plotRect]
 	}
 
 	function renderSeries(g, chart, series, i, s, duration) {
@@ -772,7 +800,7 @@ function setRenderers(self) {
 	function renderSubseries(s, g, data) {
 		g.selectAll('g').remove()
 		const subg = g.append('g')
-		const circles = subg.selectAll('circle').data(data, b => b.x)
+		/*const circles = subg.selectAll('circle').data(data, b => b.x)
 		circles.exit().remove()
 
 		circles
@@ -792,7 +820,7 @@ function setRenderers(self) {
 			.style('opacity', 0)
 			.style('fill', s.fill)
 			.style('fill-opacity', s.fillOpacity)
-			.style('stroke', s.stroke)
+			.style('stroke', s.stroke)*/
 
 		const seriesName = data[0].seriesName
 		const color = self.term2toColor[data[0].seriesId]
@@ -809,10 +837,10 @@ function setRenderers(self) {
 
 	function renderAxes(xAxis, xTitle, yAxis, yTitle, s, d) {
 		xAxis
-			.attr('transform', 'translate(0,' + (s.svgh - s.svgPadding.top - s.svgPadding.bottom + 5) + ')')
+			.attr('transform', 'translate(0,' + (s.svgh - s.svgPadding.top - s.svgPadding.bottom + s.xAxisOffset) + ')')
 			.call(axisBottom(d.xScale).ticks(5))
 
-		yAxis.attr('transform', 'translate(-5,0)').call(
+		yAxis.attr('transform', `translate(${s.yAxisOffset},0)`).call(
 			axisLeft(
 				d3Linear()
 					.domain(d.yScale.domain())
@@ -863,7 +891,7 @@ function setInteractivity(self) {
 
 	self.mouseover = function() {
 		const d = event.target.__data__
-		if (event.target.tagName == 'circle') {
+		/*if (event.target.tagName == 'circle') {
 			const label = labels[d.seriesName]
 			const x = d.x.toFixed(1)
 			const y = d.y.toPrecision(2)
@@ -882,7 +910,7 @@ function setInteractivity(self) {
 			self.app.tip.show(event.clientX, event.clientY).d.html(d.seriesLabel ? d.seriesLabel : d.seriesId)
 		} else {
 			self.app.tip.hide()
-		}
+		}*/
 	}
 
 	self.mouseout = function() {
@@ -937,7 +965,9 @@ const defaultSettings = JSON.stringify({
 			right: 20,
 			bottom: 50
 		},
-		axisTitleFontSize: 16
+		axisTitleFontSize: 16,
+		xAxisOffset: 5,
+		yAxisOffset: -5
 	}
 })
 
