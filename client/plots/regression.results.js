@@ -545,7 +545,7 @@ function setRenderers(self) {
 			// col 1: variable
 			{
 				const td = tr.append('td').style('padding', '8px')
-				fillTdName(td.append('div'), term1 ? term1.term.name : row.term1)
+				fillTdName(td.append('div'), term1 ? term1.term.name + ' : ' : row.term1 + ' : ')
 				fillTdName(td.append('div'), term2 ? term2.term.name : row.term2)
 			}
 			// col 2: category
@@ -602,12 +602,7 @@ function setRenderers(self) {
 		let rowcount = 0
 		for (const tid in result.type3.terms) {
 			// get term data
-			// if term is part of interaction, then
-			// set data to 'NA' because the effect of
-			// main term on the model cannot be estimated
-			const termdata = result.type3.interactions.find(int => int.term1 == tid || int.term2 == tid)
-				? result.type3.terms[tid].map(d => 'NA')
-				: result.type3.terms[tid]
+			const termdata = result.type3.terms[tid]
 			const tw = self.getIndependentInput(tid).term
 			let tr = table.append('tr').style('background', rowcount++ % 2 ? '#eee' : 'none')
 			// col 1: variable
@@ -627,8 +622,32 @@ function setRenderers(self) {
 			const t2 = self.getIndependentInput(row.term2).term
 			// col 1: variable
 			const td = tr.append('td').style('padding', '8px')
-			fillTdName(td.append('div'), t1.term.name)
+			fillTdName(td.append('div'), t1.term.name + ' : ')
 			fillTdName(td.append('div'), t2.term.name)
+			// rest of columns
+			for (const v of row.lst) {
+				tr.append('td')
+					.text(v)
+					.style('padding', '8px')
+			}
+		}
+		// combinations
+		for (const row of result.type3.combinations) {
+			const tr = table.append('tr').style('background', rowcount++ % 2 ? '#eee' : 'none')
+			const mainEff = self.getIndependentInput(row.mainEff).term
+			const interactions = row.interactions.map(interaction => {
+				return {
+					t1: self.getIndependentInput(interaction.term1).term,
+					t2: self.getIndependentInput(interaction.term2).term
+				}
+			})
+			// col 1: variable
+			const td = tr.append('td').style('padding', '8px')
+			fillTdName(td.append('div'), mainEff.term.name + ' + ')
+			interactions.map(interaction => {
+				fillTdName(td.append('div'), interaction.t1.term.name + ' : ')
+				fillTdName(td.append('div'), interaction.t2.term.name)
+			})
 			// rest of columns
 			for (const v of row.lst) {
 				tr.append('td')
@@ -886,10 +905,10 @@ function setRenderers(self) {
 }
 
 function fillTdName(td, name) {
-	if (name.length < 30) {
+	if (name.length < 40) {
 		td.text(name)
 	} else {
-		td.text(name.substring(0, 25) + ' ...').attr('title', name)
+		td.text(name.substring(0, 35) + ' ...').attr('title', name)
 	}
 }
 function fillCoefficientTermname(tw, td) {
@@ -1276,14 +1295,18 @@ function getSnpPvalueFromType3orCoefficient(d, snpid) {
 	if (!d.type3.terms) throw '.data{type3:{terms}} missing'
 	if (!d.type3.terms[snpid]) throw snpid + ' missing in type3.terms{}'
 	if (!Array.isArray(d.type3.terms[snpid])) throw `type3.terms[${snp.snpid}] not array`
-	const str = d.type3.terms[snpid][d.type3.terms[snpid].length - 1]
-	// last value of the array should be p-value string (can be 'NA')
-	/*
-	TODO pvalue is always NA for main effects of interacting terms
-	when interacting, a new row is to be created in type3 table that can provide pvalue for the snp
-	see issue 1033 and 1034
-	*/
-	const v = Number(str)
+	let str
+	const snpCombination = d.type3.combinations.find(combination => combination.mainEff == snpid)
+	if (snpCombination) {
+		// type3 stats of snp was computed by combining multiple terms
+		// display this p-value
+		str = snpCombination.lst[snpCombination.lst.length - 1]
+	} else {
+		// type3 stats of snp was computed only for the snp
+		// display this p-value
+		str = d.type3.terms[snpid][d.type3.terms[snpid].length - 1]
+	}
+	const v = Number(str) // p-value string can be 'NA'
 	if (Number.isFinite(v)) {
 		return v
 	}

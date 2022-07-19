@@ -366,6 +366,7 @@ function makeRinput(q, sampledata) {
 			const v = id2value.get(t.id)
 			if (!v) {
 				// sample has no value for this variable
+				// this variable is either a snplocus snp or an ancestry PC
 				// set value to 'null' because R will
 				// convert 'null' to 'NA' during json import
 				entry[t.id] = null
@@ -683,10 +684,31 @@ async function parseRoutput(Rinput, Routput, id2originalId, q, result) {
 			header: data.type3.header,
 			intercept: data.type3.rows.shift(),
 			terms: {}, // individual independent terms, not interaction
-			interactions: [] // interactions
+			interactions: [], // interactions
+			combinations: [] // combinations of terms
 		}
 		for (const row of data.type3.rows) {
-			if (row[0].indexOf(':') != -1) {
+			if (row[0].indexOf('+') != -1) {
+				// combined stats of main effect + interaction(s)
+				const combination = {}
+				const coefs = row.shift().split('+')
+				const mainEffInd = coefs.findIndex(coef => !coef.includes(':'))
+				const mainEff = coefs.splice(mainEffInd, 1)[0]
+				combination.mainEff = id2originalId[mainEff]
+				// coefs is now only interactions
+				const interactions = []
+				for (const coef of coefs) {
+					const interaction = {}
+					const [id1, id2] = coef.split(':')
+					interaction.term1 = id2originalId[id1]
+					interaction.term2 = id2originalId[id2]
+					interactions.push(interaction)
+				}
+				combination.interactions = interactions
+				// row is now only data fields
+				combination.lst = row
+				analysisResult.data.type3.combinations.push(combination)
+			} else if (row[0].indexOf(':') != -1) {
 				// is an interaction
 				const interaction = {}
 				const [id1, id2] = row.shift().split(':')

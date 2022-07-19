@@ -188,7 +188,38 @@ linearRegression <- function(formula, dat) {
   
   # type III statistics table
   type3_table <- as.matrix(drop1(res, scope = ~., test = "F"))
-  type3_table[,c("Sum of Sq","RSS","AIC")] <- round(type3_table[,c("Sum of Sq","RSS","AIC")], 1)
+  type3_table <- type3_table[,c("Df", "Sum of Sq", "RSS", "F value", "Pr(>F)")]
+  # if there are interactions, then set the results
+  # of the main effects to "NA" because these type III
+  # stats cannot be accurately estimated
+  ints <- grep(":", row.names(type3_table), value = T, fixed = T)
+  intsIds <- unique(unlist(strsplit(ints, ":")))
+  type3_table[intsIds,] <- NA
+  # if this is a snplocus analysis and the snp has
+  # interactions, then the type III stats of the snp
+  # need to be computed by determining the combined
+  # effect the snp and all of its interactions have
+  # on the model
+  if (formula$id != "" && length(ints) > 0 && any(grepl(formula$id, ints, fixed = T))) {
+    # snplocus snp has interaction(s)
+    # compute type III stats of the snp as described above
+    snplocus_vars <- grep(formula$id, row.names(type3_table), value = T, fixed = T)
+    snplocus_coefs <- grep(formula$id, row.names(coefficients_table), value = T, fixed = T)
+    if (any(res_summ$aliased)) {
+      # alised coefficients present in model, which
+      # means some coefficients are perfectly correlated
+      # need to remove these coefficients from the
+      # hypothesis matrix
+      aliased <- names(which(res_summ$aliased))
+      snplocus_coefs <- snplocus_coefs[!snplocus_coefs %in% aliased]
+    }
+    lh <- as.matrix(linearHypothesis(res, paste0(snplocus_coefs, "=0"), test = "F", singular.ok = T))
+    snplocus_type3 <- lh[2, c("Df", "Sum of Sq", "RSS", "F", "Pr(>F)"), drop = F]
+    row.names(snplocus_type3) <- paste(snplocus_vars, collapse = "+")
+    type3_table <- rbind(type3_table, snplocus_type3)
+  }
+  # round values
+  type3_table[,c("Sum of Sq","RSS")] <- round(type3_table[,c("Sum of Sq","RSS")], 1)
   type3_table[,"F value"] <- round(type3_table[,"F value"], 3)
   type3_table[,"Pr(>F)"] <- signif(type3_table[,"Pr(>F)"], 4)
   
@@ -242,9 +273,33 @@ logisticRegression <- function(formula, dat) {
   
   # type III statistics table
   type3_table <- as.matrix(drop1(res, scope = ~., test = "LRT"))
-  type3_table[,c("Deviance","AIC")] <- round(type3_table[,c("Deviance","AIC")], 1)
-  type3_table[,"LRT"] <- round(type3_table[,"LRT"], 3)
-  type3_table[,"Pr(>Chi)"] <- signif(type3_table[,"Pr(>Chi)"], 4)
+  type3_table <- type3_table[,c("Df", "LRT", "Pr(>Chi)")]
+  colnames(type3_table) <- c("Df", "LR Chisq", "Pr(>Chisq)")
+  # if there are interactions, then set the results
+  # of the main effects to "NA" because these type III
+  # stats cannot be accurately estimated
+  ints <- grep(":", row.names(type3_table), value = T, fixed = T)
+  intsIds <- unique(unlist(strsplit(ints, ":")))
+  type3_table[intsIds,] <- NA
+  # if this is a snplocus analysis and the snp has
+  # interactions, then the type III stats of the snp
+  # need to be computed by determining the combined
+  # effect the snp and all of its interactions have
+  # on the model
+  if (formula$id != "" && length(ints) > 0 && any(grepl(formula$id, ints, fixed = T))) {
+    # snplocus snp has interaction(s)
+    # compute type III stats of the snp as described above
+    snplocus_vars <- grep(formula$id, row.names(type3_table), value = T, fixed = T)
+    formula_reduce <- update(formula$formula, paste0("~.",paste0("-", snplocus_vars, collapse = "")))
+    res_reduce <- glm(formula_reduce, family = binomial(link='logit'), data = dat)
+    lrt <- as.matrix(lrtest(res, res_reduce))
+    lrt[,"Df"] <- lrt[,"Df"] * -1
+    snplocus_type3 <- lrt[2, c("Df", "Chisq", "Pr(>Chisq)"), drop = F]
+    row.names(snplocus_type3) <- paste(snplocus_vars, collapse = "+")
+    type3_table <- rbind(type3_table, snplocus_type3)
+  }
+  type3_table[,"LR Chisq"] <- round(type3_table[,"LR Chisq"], 3)
+  type3_table[,"Pr(>Chisq)"] <- signif(type3_table[,"Pr(>Chisq)"], 4)
   
   # other summary stats table
   other_table <- list(
@@ -282,10 +337,34 @@ coxRegression <- function(formula, dat) {
   coefficients_table <- coefficients_table[, c(2,6,7,1,3,4,5), drop = F]
   
   # type III statistics table
-  type3_table <- as.matrix(anova(res, test = "Chisq"))
-  type3_table[,"loglik"] <- round(type3_table[,"loglik"], 1)
-  type3_table[,"Chisq"] <- round(type3_table[,"Chisq"], 3)
-  type3_table[,"Pr(>|Chi|)"] <- signif(type3_table[,"Pr(>|Chi|)"], 4)
+  type3_table <- as.matrix(drop1(res, scope = ~., test = "Chisq"))
+  type3_table <- type3_table[,c("Df", "LRT", "Pr(>Chi)")]
+  colnames(type3_table) <- c("Df", "LR Chisq", "Pr(>Chisq)")
+  # if there are interactions, then set the results
+  # of the main effects to "NA" because these type III
+  # stats cannot be accurately estimated
+  ints <- grep(":", row.names(type3_table), value = T, fixed = T)
+  intsIds <- unique(unlist(strsplit(ints, ":")))
+  type3_table[intsIds,] <- NA
+  # if this is a snplocus analysis and the snp has
+  # interactions, then the type III stats of the snp
+  # need to be computed by determining the combined
+  # effect the snp and all of its interactions have
+  # on the model
+  if (formula$id != "" && length(ints) > 0 && any(grepl(formula$id, ints, fixed = T))) {
+    # snplocus snp has interaction(s)
+    # compute type III stats of the snp as described above
+    snplocus_vars <- grep(formula$id, row.names(type3_table), value = T, fixed = T)
+    formula_reduce <- update(formula$formula, paste0("~.",paste0("-", snplocus_vars, collapse = "")))
+    res_reduce <- coxph(formula_reduce, data = dat, model = T)
+    lrt <- as.matrix(lrtest(res, res_reduce))
+    lrt[,"Df"] <- lrt[,"Df"] * -1
+    snplocus_type3 <- lrt[2, c("Df", "Chisq", "Pr(>Chisq)"), drop = F]
+    row.names(snplocus_type3) <- paste(snplocus_vars, collapse = "+")
+    type3_table <- rbind(type3_table, snplocus_type3)
+  }
+  type3_table[,"LR Chisq"] <- round(type3_table[,"LR Chisq"], 3)
+  type3_table[,"Pr(>Chisq)"] <- signif(type3_table[,"Pr(>Chisq)"], 4)
   
   # statistical tests table
   tests_table <- rbind(res_summ$logtest, res_summ$waldtest, res_summ$sctest)
@@ -310,6 +389,12 @@ coxRegression <- function(formula, dat) {
 # run regression analysis
 runRegression <- function(formula, regtype, dat, outcome) {
   id <- formula$id
+  # remove samples with NA values in any variable in the formula
+  # note: even though regression functions (e.g. lm, glm, etc.)
+  # perform this step by default, type III stats will error
+  # out when comparing models with and without certain variables
+  # that are NA for some samples
+  fdat <- dat[complete.cases(dat[,all.vars(formula$formula)]),]
   warns <- vector(mode = "character")
   handleWarns <- function(w) {
     # handler for warning messages
@@ -317,11 +402,11 @@ runRegression <- function(formula, regtype, dat, outcome) {
     invokeRestart("muffleWarning")
   }
   if (regtype == "linear") {
-    results <- withCallingHandlers(linearRegression(formula, dat), warning = handleWarns)
+    results <- withCallingHandlers(linearRegression(formula, fdat), warning = handleWarns)
   } else if (regtype == "logistic") {
-    results <- withCallingHandlers(logisticRegression(formula, dat), warning = handleWarns)
+    results <- withCallingHandlers(logisticRegression(formula, fdat), warning = handleWarns)
   } else if (regtype == "cox") {
-    results <- withCallingHandlers(coxRegression(formula, dat), warning = handleWarns)
+    results <- withCallingHandlers(coxRegression(formula, fdat), warning = handleWarns)
   } else {
     stop("unknown regression type")
   }
@@ -334,7 +419,7 @@ runRegression <- function(formula, regtype, dat, outcome) {
     for (r in 1:nrow(splineVariables)) {
       splineVariable <- splineVariables[r,]
       if ("plotfile" %in% names(splineVariable$spline)) {
-        plot_spline(splineVariable, dat, outcome, results$res, regtype)
+        plot_spline(splineVariable, fdat, outcome, results$res, regtype)
       }
     }
   }

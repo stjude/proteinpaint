@@ -70,9 +70,13 @@
 # CODE
 ###########
 
-library(jsonlite)
-library(survival)
-library(parallel)
+suppressPackageStartupMessages({
+  library(jsonlite)
+  library(survival)
+  library(parallel)
+  library(lmtest)
+  library(car)
+})
 
 args <- commandArgs(trailingOnly = T)
 if (length(args) != 1) stop("Usage: Rscript regression.R in.json > results")
