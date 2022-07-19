@@ -221,21 +221,7 @@ function checkTwAncestryRestriction(tw, q, ds) {
 	if (a.PCfileBySubcohort) {
 		// by subcohort, which is coded as a tvs in q.filter
 		if (!q.filter) throw 'q.filter missing while trying to access subcohort for PCfileBySubcohort'
-		let cohortFilterTvs
-		for (const i of q.filter.lst) {
-			if (i.tag && i.tag == 'cohortFilter') {
-				cohortFilterTvs = i
-				break
-			}
-			if (i.lst) {
-				for (const j of i.lst) {
-					if (j.tag && j.tag == 'cohortFilter') {
-						cohortFilterTvs = j
-						break
-					}
-				}
-			}
-		}
+		const cohortFilterTvs = getFilterItemByTag(q.filter, 'cohortFilter')
 		if (!cohortFilterTvs)
 			throw 'tvs by tag=cohortFilter missing from q.filter.lst[] while trying to access subcohort for PCfileBySubcohort'
 		// cohortFilterTvs.tvs.values[] contain elements e.g. {key:'SJLIFE'}
@@ -1472,4 +1458,16 @@ function replaceTermId(Rinput) {
 	}
 
 	return [id2originalId, originalId2id]
+}
+
+/* temporary duplicated
+may move to server/shared/filter.js to share between client/back
+*/
+function getFilterItemByTag(item, tag) {
+	if (item.tag === tag) return item
+	if (item.type !== 'tvslst') return
+	for (const subitem of item.lst) {
+		const matchingItem = getFilterItemByTag(subitem, tag)
+		if (matchingItem) return matchingItem
+	}
 }
