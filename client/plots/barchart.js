@@ -507,50 +507,6 @@ export const barInit = getCompInit(Barchart)
 // this alias will allow abstracted dynamic imports
 export const componentInit = barInit
 
-export async function getBarchartApp(opts) {
-	try {
-		if (!opts.config) throw `missing opts.config`
-		const id = 'bar_' + +new Date() + '_' + Math.random()
-		opts.config.id = id
-
-		const app = {
-			opts,
-			vocabApi: opts.vocabApi,
-			getState: () => app.state,
-			dispatch: action => {
-				if (action.type != 'plot_edit') throw `unsupported action.type='${action.type}'`
-				barApi.update(action.config)
-			}
-		}
-		opts.app = app
-		app.state = {
-			vocab: {
-				genome: opts.vocabApi.genome,
-				dslabel: opts.vocabApi.dslabel
-			},
-			nav: {},
-			termfilter: {},
-			plots: [await getPlotConfig(opts.config, app)]
-		}
-
-		const bar = new Barchart(opts)
-		bar.app = app
-		bar.opts = opts
-		bar.id = id
-		await bar.init()
-		const barApi = {
-			async update(config = {}) {
-				copyMerge(app.state.plots[0], config)
-				bar.state = await bar.getState(app.state)
-				await bar.main()
-			}
-		}
-		return barApi
-	} catch (e) {
-		throw e
-	}
-}
-
 function setRenderers(self) {
 	self.render = function() {
 		const charts = self.dom.barDiv.selectAll('.pp-sbar-div').data(self.visibleCharts, chart => chart.chartId)
