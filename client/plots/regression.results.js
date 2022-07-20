@@ -23,6 +23,7 @@ result.data: {}
 	residuals: { header[], rows[], label:str }
 	coefficients: { header[], intercept[], terms{}, interactions[], label }
 	type3: {header[], intercept[], terms{}, interactions[], label }
+	totalSnpEffect: {header[], intercept[], snp, interactions[], lst, label }
 	other: {header[], rows[], label}
 
 
@@ -41,6 +42,7 @@ main
 			mayshow_splinePlots
 			mayshow_residuals
 			mayshow_coefficients
+			mayshow_totalSnpEffect
 			mayshow_type3
 			mayshow_other
 			mayshow_fisher
@@ -260,6 +262,7 @@ function setRenderers(self) {
 		self.mayshow_splinePlots(result)
 		self.mayshow_residuals(result)
 		self.mayshow_coefficients(result)
+		self.mayshow_totalSnpEffect(result)
 		self.mayshow_type3(result)
 		self.mayshow_tests(result)
 		self.mayshow_other(result)
@@ -572,6 +575,56 @@ function setRenderers(self) {
 		for (const v of result.coefficients.header) tr.append('td')
 	}
 
+	self.mayshow_totalSnpEffect = result => {
+		if (!result.totalSnpEffect) return
+		const div = self.newDiv(result.totalSnpEffect.label)
+		const table = div.append('table').style('border-spacing', '0px')
+
+		// header row
+		{
+			const tr = table.append('tr').style('opacity', 0.4)
+			for (const v of result.totalSnpEffect.header) {
+				tr.append('td')
+					.text(v)
+					.style('padding', '8px')
+			}
+		}
+
+		// intercept row
+		{
+			const tr = table.append('tr').style('background', '#eee')
+			for (const v of result.totalSnpEffect.intercept) {
+				tr.append('td')
+					.text(v)
+					.style('padding', '8px')
+			}
+		}
+
+		// total snp effect row
+		let rowcount = 0
+		const tr = table.append('tr').style('background', rowcount++ % 2 ? '#eee' : 'none')
+		const snp = self.getIndependentInput(result.totalSnpEffect.snp).term
+		const interactions = result.totalSnpEffect.interactions.map(interaction => {
+			return {
+				t1: self.getIndependentInput(interaction.term1).term,
+				t2: self.getIndependentInput(interaction.term2).term
+			}
+		})
+		// col 1: variable
+		const td = tr.append('td').style('padding', '8px')
+		fillTdName(td.append('div'), snp.term.name + ' + ')
+		interactions.map(interaction => {
+			fillTdName(td.append('div'), interaction.t1.term.name + ' : ')
+			fillTdName(td.append('div'), interaction.t2.term.name)
+		})
+		// rest of columns
+		for (const v of result.totalSnpEffect.lst) {
+			tr.append('td')
+				.text(v)
+				.style('padding', '8px')
+		}
+	}
+
 	self.mayshow_type3 = result => {
 		if (!result.type3) return
 		const div = self.newDiv(result.type3.label)
@@ -624,30 +677,6 @@ function setRenderers(self) {
 			const td = tr.append('td').style('padding', '8px')
 			fillTdName(td.append('div'), t1.term.name + ' : ')
 			fillTdName(td.append('div'), t2.term.name)
-			// rest of columns
-			for (const v of row.lst) {
-				tr.append('td')
-					.text(v)
-					.style('padding', '8px')
-			}
-		}
-		// combinations
-		for (const row of result.type3.combinations) {
-			const tr = table.append('tr').style('background', rowcount++ % 2 ? '#eee' : 'none')
-			const mainEff = self.getIndependentInput(row.mainEff).term
-			const interactions = row.interactions.map(interaction => {
-				return {
-					t1: self.getIndependentInput(interaction.term1).term,
-					t2: self.getIndependentInput(interaction.term2).term
-				}
-			})
-			// col 1: variable
-			const td = tr.append('td').style('padding', '8px')
-			fillTdName(td.append('div'), mainEff.term.name + ' + ')
-			interactions.map(interaction => {
-				fillTdName(td.append('div'), interaction.t1.term.name + ' : ')
-				fillTdName(td.append('div'), interaction.t2.term.name)
-			})
 			// rest of columns
 			for (const v of row.lst) {
 				tr.append('td')
@@ -997,13 +1026,13 @@ function make_mds3_variants(tw, resultLst) {
 		if (d.type3) {
 			/* result has type3 section, this variant has AF>cutoff and used for model-fitting
 			show this variant as a dot, do not set .shapeTriangle=true
-			find p-value (last column of type3 table)
+			find p-value in regression results
 			*/
-			const v = getSnpPvalueFromType3orCoefficient(d, snp.snpid)
+			const v = getSnpPvalueFromRegressionResults(d, snp.snpid)
 			if (v == undefined) {
-				// no valid pvalue from either place
+				// no valid pvalue from regression results
 			} else {
-				// has valid pvalue from either coefficients table, or type3 table
+				// has valid pvalue from regression results
 				m.regressionPvalue = v
 				m.mlpv = -Math.log10(v)
 			}
@@ -1290,20 +1319,18 @@ function getMtooltipValues(m, regressionType) {
 	return lst
 }
 
-function getSnpPvalueFromType3orCoefficient(d, snpid) {
-	// if type3 table has valid pvalue for snp, return; otherwise look to coefficients table
-	if (!d.type3.terms) throw '.data{type3:{terms}} missing'
-	if (!d.type3.terms[snpid]) throw snpid + ' missing in type3.terms{}'
-	if (!Array.isArray(d.type3.terms[snpid])) throw `type3.terms[${snp.snpid}] not array`
+function getSnpPvalueFromRegressionResults(d, snpid) {
 	let str
-	const snpCombination = d.type3.combinations.find(combination => combination.mainEff == snpid)
-	if (snpCombination) {
-		// type3 stats of snp was computed by combining multiple terms
-		// display this p-value
-		str = snpCombination.lst[snpCombination.lst.length - 1]
+	if (d.totalSnpEffect) {
+		// snp has interactions
+		// use p-value from total snp effect table
+		str = d.totalSnpEffect.lst[d.totalSnpEffect.lst.length - 1]
 	} else {
-		// type3 stats of snp was computed only for the snp
-		// display this p-value
+		// snp has no interactions
+		// use p-value from type3 stats table
+		if (!d.type3.terms) throw '.data{type3:{terms}} missing'
+		if (!d.type3.terms[snpid]) throw snpid + ' missing in type3.terms{}'
+		if (!Array.isArray(d.type3.terms[snpid])) throw `type3.terms[${snp.snpid}] not array`
 		str = d.type3.terms[snpid][d.type3.terms[snpid].length - 1]
 	}
 	const v = Number(str) // p-value string can be 'NA'

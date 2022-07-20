@@ -57,6 +57,7 @@
 #       "residuals": { "header": [], "rows": [] },
 #       "coefficients": { "header": [], "rows": [] },
 #       "type3": { "header": [], "rows": [] },
+#       "totalSnpEffect": { "header": [], "rows": [] } (only for snplocus interactions),
 #       "tests": { "header": [], "rows": [] } (only for cox regression),
 #       "other": { "header": [], "rows": [] },
 #       "warnings": [] warning messages
@@ -117,6 +118,9 @@ etime <- Sys.time()
 dtime <- etime - stime
 benchmark[["buildFormulas"]] <- unbox(paste(round(as.numeric(dtime), 4), attr(dtime, "units")))
 
+
+#save.image("~/test.RData")
+#stop("stop here")
 
 ##################
 # RUN REGRESSION #

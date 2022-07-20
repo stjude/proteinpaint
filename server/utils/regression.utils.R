@@ -188,40 +188,43 @@ linearRegression <- function(formula, dat) {
   
   # type III statistics table
   type3_table <- as.matrix(drop1(res, scope = ~., test = "F"))
-  type3_table <- type3_table[,c("Df", "Sum of Sq", "RSS", "F value", "Pr(>F)")]
   # if there are interactions, then set the results
   # of the main effects to "NA" because these type III
   # stats cannot be accurately estimated
   ints <- grep(":", row.names(type3_table), value = T, fixed = T)
   intsIds <- unique(unlist(strsplit(ints, ":")))
   type3_table[intsIds,] <- NA
-  # if this is a snplocus analysis and the snp has
-  # interactions, then the type III stats of the snp
-  # need to be computed by determining the combined
-  # effect the snp and all of its interactions have
-  # on the model
+  # round values
+  type3_table[,c("Sum of Sq","RSS","AIC")] <- round(type3_table[,c("Sum of Sq","RSS","AIC")], 1)
+  type3_table[,"F value"] <- round(type3_table[,"F value"], 3)
+  type3_table[,"Pr(>F)"] <- signif(type3_table[,"Pr(>F)"], 4)
+  
+  
+  # total SNP effect table
+  # if a snplocus snp has an interaction, then compute
+  # the total effect of the snp on the model
+  # by determining the combined effect of removing the
+  # snp and all of its interactions from the model
+  totalSnpEffect_table <- NULL
   if (formula$id != "" && length(ints) > 0 && any(grepl(formula$id, ints, fixed = T))) {
-    # snplocus snp has interaction(s)
-    # compute type III stats of the snp as described above
-    snplocus_vars <- grep(formula$id, row.names(type3_table), value = T, fixed = T)
-    snplocus_coefs <- grep(formula$id, row.names(coefficients_table), value = T, fixed = T)
+    snp_vars <- grep(formula$id, row.names(type3_table), value = T, fixed = T)
+    snp_coefs <- grep(formula$id, row.names(coefficients_table), value = T, fixed = T)
     if (any(res_summ$aliased)) {
-      # alised coefficients present in model, which
-      # means some coefficients are perfectly correlated
+      # aliased (i.e. perfectly correlated) coefficients
+      # are present in the model
       # need to remove these coefficients from the
       # hypothesis matrix
       aliased <- names(which(res_summ$aliased))
-      snplocus_coefs <- snplocus_coefs[!snplocus_coefs %in% aliased]
+      snp_coefs <- snp_coefs[!snp_coefs %in% aliased]
     }
-    lh <- as.matrix(linearHypothesis(res, paste0(snplocus_coefs, "=0"), test = "F", singular.ok = T))
-    snplocus_type3 <- lh[2, c("Df", "Sum of Sq", "RSS", "F", "Pr(>F)"), drop = F]
-    row.names(snplocus_type3) <- paste(snplocus_vars, collapse = "+")
-    type3_table <- rbind(type3_table, snplocus_type3)
+    totalSnpEffect_table <- as.matrix(linearHypothesis(res, paste0(snp_coefs, "=0"), test = "F", singular.ok = T))
+    row.names(totalSnpEffect_table) <- c("<none>", paste(snp_vars, collapse = "+"))
+    totalSnpEffect_table[,c("RSS","Sum of Sq")] <- round(totalSnpEffect_table[,c("RSS","Sum of Sq")], 1)
+    totalSnpEffect_table[,"F"] <- round(totalSnpEffect_table[,"F"], 3)
+    totalSnpEffect_table[,"Pr(>F)"] <- signif(totalSnpEffect_table[,"Pr(>F)"], 4)
+    totalSnpEffect_table <- cbind("Variable" = row.names(totalSnpEffect_table), totalSnpEffect_table)
+    totalSnpEffect_table <- list("header" = colnames(totalSnpEffect_table), "rows" = totalSnpEffect_table)
   }
-  # round values
-  type3_table[,c("Sum of Sq","RSS")] <- round(type3_table[,c("Sum of Sq","RSS")], 1)
-  type3_table[,"F value"] <- round(type3_table[,"F value"], 3)
-  type3_table[,"Pr(>F)"] <- signif(type3_table[,"Pr(>F)"], 4)
   
   # other summary stats table
   other_table <- list(
@@ -238,6 +241,7 @@ linearRegression <- function(formula, dat) {
   
   # export the results tables
   out <- list("res" = res, "sampleSize" = unbox(sampleSize), "residuals" = residuals_table, "coefficients" = coefficients_table, "type3" = type3_table, "other" = other_table)
+  if (!is.null(totalSnpEffect_table)) out[["totalSnpEffect"]] <- totalSnpEffect_table
   return(out)
 }
 
@@ -273,33 +277,36 @@ logisticRegression <- function(formula, dat) {
   
   # type III statistics table
   type3_table <- as.matrix(drop1(res, scope = ~., test = "LRT"))
-  type3_table <- type3_table[,c("Df", "LRT", "Pr(>Chi)")]
-  colnames(type3_table) <- c("Df", "LR Chisq", "Pr(>Chisq)")
   # if there are interactions, then set the results
   # of the main effects to "NA" because these type III
   # stats cannot be accurately estimated
   ints <- grep(":", row.names(type3_table), value = T, fixed = T)
   intsIds <- unique(unlist(strsplit(ints, ":")))
   type3_table[intsIds,] <- NA
-  # if this is a snplocus analysis and the snp has
-  # interactions, then the type III stats of the snp
-  # need to be computed by determining the combined
-  # effect the snp and all of its interactions have
-  # on the model
+  # round values
+  type3_table[,c("Deviance","AIC")] <- round(type3_table[,c("Deviance","AIC")], 1)
+  type3_table[,"LRT"] <- round(type3_table[,"LRT"], 3)
+  type3_table[,"Pr(>Chi)"] <- signif(type3_table[,"Pr(>Chi)"], 4)
+  
+  # total SNP effect table
+  # if a snplocus snp has an interaction, then compute
+  # the total effect of the snp on the model
+  # by determining the combined effect of removing the
+  # snp and all of its interactions from the model
+  totalSnpEffect_table <- NULL
   if (formula$id != "" && length(ints) > 0 && any(grepl(formula$id, ints, fixed = T))) {
-    # snplocus snp has interaction(s)
-    # compute type III stats of the snp as described above
-    snplocus_vars <- grep(formula$id, row.names(type3_table), value = T, fixed = T)
-    formula_reduce <- update(formula$formula, paste0("~.",paste0("-", snplocus_vars, collapse = "")))
+    snp_vars <- grep(formula$id, row.names(type3_table), value = T, fixed = T)
+    formula_reduce <- update(formula$formula, paste0("~.",paste0("-", snp_vars, collapse = "")))
     res_reduce <- glm(formula_reduce, family = binomial(link='logit'), data = dat)
-    lrt <- as.matrix(lrtest(res, res_reduce))
-    lrt[,"Df"] <- lrt[,"Df"] * -1
-    snplocus_type3 <- lrt[2, c("Df", "Chisq", "Pr(>Chisq)"), drop = F]
-    row.names(snplocus_type3) <- paste(snplocus_vars, collapse = "+")
-    type3_table <- rbind(type3_table, snplocus_type3)
+    totalSnpEffect_table <- as.matrix(lrtest(res, res_reduce))
+    colnames(totalSnpEffect_table)[3] <- "Df diff"
+    row.names(totalSnpEffect_table) <- c("<none>", paste(snp_vars, collapse = "+"))
+    totalSnpEffect_table[,"LogLik"] <- round(totalSnpEffect_table[,"LogLik"], 1)
+    totalSnpEffect_table[,"Chisq"] <- round(totalSnpEffect_table[,"Chisq"], 3)
+    totalSnpEffect_table[,"Pr(>Chisq)"] <- signif(totalSnpEffect_table[,"Pr(>Chisq)"], 4)
+    totalSnpEffect_table <- cbind("Variable" = row.names(totalSnpEffect_table), totalSnpEffect_table)
+    totalSnpEffect_table <- list("header" = colnames(totalSnpEffect_table), "rows" = totalSnpEffect_table)
   }
-  type3_table[,"LR Chisq"] <- round(type3_table[,"LR Chisq"], 3)
-  type3_table[,"Pr(>Chisq)"] <- signif(type3_table[,"Pr(>Chisq)"], 4)
   
   # other summary stats table
   other_table <- list(
@@ -309,6 +316,7 @@ logisticRegression <- function(formula, dat) {
   
   # export the results tables
   out <- list("res" = res, "sampleSize" = unbox(sampleSize), "residuals" = residuals_table, "coefficients" = coefficients_table, "type3" = type3_table, "other" = other_table)
+  if (!is.null(totalSnpEffect_table)) out[["totalSnpEffect"]] <- totalSnpEffect_table
   return(out)
 }
 
@@ -338,33 +346,36 @@ coxRegression <- function(formula, dat) {
   
   # type III statistics table
   type3_table <- as.matrix(drop1(res, scope = ~., test = "Chisq"))
-  type3_table <- type3_table[,c("Df", "LRT", "Pr(>Chi)")]
-  colnames(type3_table) <- c("Df", "LR Chisq", "Pr(>Chisq)")
   # if there are interactions, then set the results
   # of the main effects to "NA" because these type III
   # stats cannot be accurately estimated
   ints <- grep(":", row.names(type3_table), value = T, fixed = T)
   intsIds <- unique(unlist(strsplit(ints, ":")))
   type3_table[intsIds,] <- NA
-  # if this is a snplocus analysis and the snp has
-  # interactions, then the type III stats of the snp
-  # need to be computed by determining the combined
-  # effect the snp and all of its interactions have
-  # on the model
+  # round values
+  type3_table[,"AIC"] <- round(type3_table[,"AIC"], 1)
+  type3_table[,"LRT"] <- round(type3_table[,"LRT"], 3)
+  type3_table[,"Pr(>Chi)"] <- signif(type3_table[,"Pr(>Chi)"], 4)
+  
+  # total SNP effect table
+  # if a snplocus snp has an interaction, then compute
+  # the total effect of the snp on the model
+  # by determining the combined effect of removing the
+  # snp and all of its interactions from the model
+  totalSnpEffect_table <- NULL
   if (formula$id != "" && length(ints) > 0 && any(grepl(formula$id, ints, fixed = T))) {
-    # snplocus snp has interaction(s)
-    # compute type III stats of the snp as described above
-    snplocus_vars <- grep(formula$id, row.names(type3_table), value = T, fixed = T)
-    formula_reduce <- update(formula$formula, paste0("~.",paste0("-", snplocus_vars, collapse = "")))
+    snp_vars <- grep(formula$id, row.names(type3_table), value = T, fixed = T)
+    formula_reduce <- update(formula$formula, paste0("~.",paste0("-", snp_vars, collapse = "")))
     res_reduce <- coxph(formula_reduce, data = dat, model = T)
-    lrt <- as.matrix(lrtest(res, res_reduce))
-    lrt[,"Df"] <- lrt[,"Df"] * -1
-    snplocus_type3 <- lrt[2, c("Df", "Chisq", "Pr(>Chisq)"), drop = F]
-    row.names(snplocus_type3) <- paste(snplocus_vars, collapse = "+")
-    type3_table <- rbind(type3_table, snplocus_type3)
+    totalSnpEffect_table <- as.matrix(lrtest(res, res_reduce))
+    colnames(totalSnpEffect_table)[3] <- "Df diff"
+    row.names(totalSnpEffect_table) <- c("<none>", paste(snp_vars, collapse = "+"))
+    totalSnpEffect_table[,"LogLik"] <- round(totalSnpEffect_table[,"LogLik"], 1)
+    totalSnpEffect_table[,"Chisq"] <- round(totalSnpEffect_table[,"Chisq"], 3)
+    totalSnpEffect_table[,"Pr(>Chisq)"] <- signif(totalSnpEffect_table[,"Pr(>Chisq)"], 4)
+    totalSnpEffect_table <- cbind("Variable" = row.names(totalSnpEffect_table), totalSnpEffect_table)
+    totalSnpEffect_table <- list("header" = colnames(totalSnpEffect_table), "rows" = totalSnpEffect_table)
   }
-  type3_table[,"LR Chisq"] <- round(type3_table[,"LR Chisq"], 3)
-  type3_table[,"Pr(>Chisq)"] <- signif(type3_table[,"Pr(>Chisq)"], 4)
   
   # statistical tests table
   tests_table <- rbind(res_summ$logtest, res_summ$waldtest, res_summ$sctest)
@@ -383,6 +394,7 @@ coxRegression <- function(formula, dat) {
   
   # export the results tables
   out <- list("res" = res, "sampleSize" = unbox(sampleSize), "eventCnt" = unbox(eventCnt),"coefficients" = coefficients_table, "type3" = type3_table, "tests" = tests_table, "other" = other_table)
+  if (!is.null(totalSnpEffect_table)) out[["totalSnpEffect"]] <- totalSnpEffect_table
   return(out)
 }
 
