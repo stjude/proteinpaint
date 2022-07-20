@@ -2,7 +2,7 @@ import tape from 'tape'
 import { getSeriesTip } from '../svgSeriesTips'
 import { select } from 'd3-selection'
 import { scaleLinear } from 'd3-scale'
-import { Menu } from '#src/client'
+import { Menu } from '#dom/menu'
 
 tape('default behavior', test => {
 	const width = 400
@@ -55,7 +55,6 @@ tape('default behavior', test => {
 	)
 	test.notEqual(line.style('display'), 'none', 'should display the vertical line on mouseover')
 	const html1 = tip.d.html()
-	console.log(html1)
 	test.ok(html1.includes('a1') && !html1.includes('z'), 'must only include a series info in the tip')
 
 	rectNode.dispatchEvent(
@@ -68,13 +67,13 @@ tape('default behavior', test => {
 		})
 	)
 	const html2 = tip.d.html()
-	console.log(html2)
 	test.ok(html2.includes('a3') && html2.includes('z2.5'), 'must only both series a & z info in the tip')
 
 	if (test._ok) {
 		seriesTip.destroy()
 		svg.remove()
 		tip.hide()
+		tip.d.remove()
 	}
 	test.end()
 })
