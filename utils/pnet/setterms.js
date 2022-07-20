@@ -1,5 +1,5 @@
 const bettersqlite = require('better-sqlite3')
-const initBinConfig = require('../../shared/termdb.initbinconfig')
+const initBinConfig = require('../../server/shared/termdb.initbinconfig')
 
 const cn = new bettersqlite('db', {
 	readonly: false,
