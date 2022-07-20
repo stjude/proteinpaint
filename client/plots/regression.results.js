@@ -330,11 +330,12 @@ function setRenderers(self) {
 			holder,
 			config: {
 				term: self.config.outcome,
+				xlabel: self.state.config.regressionType == 'cox' && self.state.coxCumincXlab,
 				term2: {
 					term: {
 						name: 'Variant',
 						values: {
-							1: { key: 1, label: 'Carry minor allele' },
+							1: { key: 1, label: 'Has minor allele' },
 							2: { key: 2, label: 'No minor allele' }
 						}
 					}

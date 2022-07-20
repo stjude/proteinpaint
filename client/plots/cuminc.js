@@ -841,7 +841,7 @@ function setRenderers(self) {
 		)
 
 		xTitle.select('text, title').remove()
-		const xTitleLabel = 'Years since diagnosis'
+		const xTitleLabel = self.state.config.xlabel || 'Years since diagnosis'
 		const xText = xTitle
 			.attr(
 				'transform',
@@ -951,6 +951,7 @@ const defaultSettings = JSON.stringify({
 		chartMargin: 10,
 		svgw: 400,
 		svgh: 300,
+		coxXlabel: 'Years since diagnosis',
 		svgPadding: {
 			top: 20,
 			left: 55,
