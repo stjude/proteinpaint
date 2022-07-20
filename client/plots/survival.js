@@ -537,17 +537,24 @@ function setRenderers(self) {
 			.attr('y', 0) //s.svgPadding.top) // - s.svgPadding.bottom + 5)
 			.attr('height', s.svgh - s.svgPadding.top - s.svgPadding.bottom + s.xAxisOffset)
 
-		self.seriesTip.update(
-			chart.visibleSerieses.map(s => {
+		svg.seriesTip.update({
+			xScale: chart.xScale,
+			serieses: chart.visibleSerieses.map(s => {
+				const seriesLabel = `${s.seriesLabel || 'Probability'}:`
+				const color = self.term2toColor[s.seriesId].adjusted || '#000'
 				return {
-					seriesLabel: s.seriesLabel,
-					seriesId: s.seriesId,
-					color: self.term2toColor[s.seriesId]?.adjusted || '#000',
-					xScale: chart.xScale,
-					data: s.data
+					data: s.data.map(d => {
+						return {
+							x: d.x,
+							html:
+								`<span style='color: ${color}'>` +
+								`${seriesLabel} ${d.y.toFixed(2)} (${d.lower.toFixed(2)} -${d.upper.toFixed(2)})` +
+								`</span>`
+						}
+					})
 				}
 			})
-		)
+		})
 	}
 
 	function renderPvalues(pvaldiv, chart, tests, s) {
@@ -715,11 +722,15 @@ function setRenderers(self) {
 				.attr('class', 'sjpp-survival-atrisk')
 				.on('click', self.legendClick)
 
+			const line = mainG
+				.append('line')
+				.attr('stroke', '#000')
+				.attr('stroke-width', '1px')
 			plotRect = mainG
 				.append('rect')
 				.attr('class', 'sjpcb-plot-rect')
 				.style('fill', 'transparent')
-			self.seriesTip = getSeriesTip(mainG, plotRect, self.app?.tip)
+			svg.seriesTip = getSeriesTip(line, plotRect, self.app?.tip)
 		} else {
 			mainG = svg.select('.sjpp-survival-mainG')
 			seriesesG = mainG.select('.sjpcb-survival-seriesesG')
