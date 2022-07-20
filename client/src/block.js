@@ -15,6 +15,7 @@ import * as Legend from './block.legend'
 import { newSandboxDiv } from '#dom/sandbox'
 import { string2snp } from '#common/snp'
 import { sayerror } from '#dom/error'
+import { appear, disappear } from '#dom/animation'
 
 // track types
 import { bamfromtemplate, bammaketk, bamload } from './block.tk.bam.adaptor'
@@ -237,6 +238,7 @@ export class Block {
 		this.stopidx = this.rglst.length - 1
 
 		// TODO allow svgholder for embedding into an existing svg
+
 		this.holder = arg.holder
 			.append('div')
 			.style('margin', arg.style.margin)
@@ -247,6 +249,12 @@ export class Block {
 		if (arg.bgcolor) {
 			this.holder.style('background-color', arg.bgcolor)
 		}
+
+		if (this.genome.hasIdeogram) {
+			this.initIdeogram(arg)
+			// creates this.ideogram{}
+		}
+
 		let butrow
 		if (!arg.butrowbottom) {
 			butrow = this.holder.append('div')
@@ -317,10 +325,10 @@ export class Block {
 				.on('click', () => {
 					if (shown) {
 						shown = false
-						client.disappear(div2)
+						disappear(div2)
 					} else {
 						shown = true
-						client.appear(div2)
+						appear(div2)
 					}
 				})
 
@@ -356,8 +364,16 @@ export class Block {
 
 		if (arg.usegm) {
 			// do this after legend is set
+			// fills this.rglst[], this.startidx, this.stopidx
 			this.setgmmode(arg.gmmode || client.gmmode.genomic)
 		}
+
+		// rglst is set, can process ideogram
+		if (this.ideogram) {
+			if (this.ideogram.visible) this.updateIdeogram()
+			else this.ideogram.div.style('display', 'none')
+		}
+
 		if (arg.nobox) {
 			// no dogtag
 		} else {
@@ -2316,7 +2332,7 @@ seekrange(chr,start,stop) {
 			}
 		}
 		if (oldt.tr_legend) {
-			client.disappear(oldt.tr_legend, true)
+			disappear(oldt.tr_legend, true)
 		}
 	}
 
@@ -2949,7 +2965,7 @@ seekrange(chr,start,stop) {
 			}
 		}
 		if (tk.tr_legend) {
-			client.disappear(tk.tr_legend)
+			disappear(tk.tr_legend)
 		}
 	}
 
@@ -3012,7 +3028,7 @@ seekrange(chr,start,stop) {
 			this.gbase.node().appendChild(tk.g.node())
 		}
 		if (tk.tr_legend && tk.tr_legend.style('display') == 'none') {
-			client.appear(tk.tr_legend, 'table-row')
+			appear(tk.tr_legend, 'table-row')
 		}
 		tk.busy = true
 		switch (tk.type) {
@@ -4581,6 +4597,17 @@ seekrange(chr,start,stop) {
 					maygetdna(this, tip)
 				})
 
+			// ideogram
+			if (this.genome.hasIdeogram) {
+				row
+					.append('button')
+					.text((this.ideogram.visible ? 'Hide' : 'Show') + ' ideogram')
+					.on('click', () => {
+						this.toggleIdeogram()
+						tip.hide()
+					})
+			}
+
 			if (this.allowpopuponce) {
 				row
 					.append('button')
@@ -4710,6 +4737,65 @@ seekrange(chr,start,stop) {
 				tip.clear()
 				client.mclasscolorchangeui(tip)
 			})
+	}
+
+	initIdeogram(arg) {
+		const vpad = 5
+		this.ideogram = {
+			width: 800,
+			height: 20,
+			visible: arg.showIdeogram, // boolean, if ideogram is showing or not
+			chr: null // current chr, to be set when rglst is available
+		}
+		this.ideogram.div = this.holder
+			.append('div') // place to show ideogram
+			.style('position', 'relative')
+			.style('width', this.ideogram.width + 'px')
+			.style('margin', '5px')
+
+		this.ideogram.canvas = this.ideogram.div
+			.append('canvas')
+			.attr('width', this.ideogram.width)
+			.attr('height', this.ideogram.height)
+			.style('margin-top', vpad + 'px')
+
+		this.ideogram.ctx = this.ideogram.canvas.node().getContext('2d')
+		this.ideogram.blueBox = this.ideogram.div
+			.append('div')
+			.style('border', 'solid 1px blue')
+			.style('position', 'absolute')
+			.style('height', this.ideogram.height + vpad * 2 + 'px')
+			.style('top', '0px')
+	}
+	toggleIdeogram() {
+		if (!this.ideogram) return
+		this.ideogram.visible = !this.ideogram.visible
+		if (!this.ideogram.visible) {
+			disappear(this.ideogram.div)
+			return
+		}
+		appear(this.ideogram.div)
+		this.updateIdeogram()
+	}
+	async updateIdeogram() {
+		if (!this.ideogram) return
+		const currentChr = this.rglst[0].chr
+		if (currentChr != this.ideogram.chr) await this.plotIdeogram(currentChr)
+		// TODO move blueBox
+	}
+	async plotIdeogram(chr) {
+		if (!this.ideogram) return
+		try {
+			if (!chr) throw 'unknonw chr to show ideogram'
+			this.ideogram.chr = chr
+			const data = await dofetch3('ideogram?genome=' + this.genome.name + '&chr=' + chr)
+			if (data.error) throw data.error
+			if (!Array.isArray(data)) throw 'data is not array'
+			console.log(data)
+			// TODO plot on canvas
+		} catch (e) {
+			this.error(e.message || e)
+		}
 	}
 
 	mds_handle_make(key) {

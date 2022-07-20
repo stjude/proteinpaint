@@ -283,6 +283,8 @@ app.get(basepath + '/isoformbycoord', handle_isoformbycoord)
 app.post(basepath + '/ase', handle_ase)
 app.post(basepath + '/bamnochr', handle_bamnochr)
 app.get(basepath + '/gene2canonicalisoform', handle_gene2canonicalisoform)
+app.get(basepath + '/ideogram', handle_ideogram)
+
 /****
 	- validate and start the server
 	This enables the correct monitoring by the forever module. 
@@ -636,7 +638,7 @@ function clientcopy_genome(genomename) {
 		species: g.species,
 		name: genomename,
 		hasSNP: g.snp ? true : false,
-		hasIdeogram: g.hasIdeogram,
+		hasIdeogram: g.genedb.hasIdeogram,
 		hasClinvarVCF: g.clinvarVCF ? true : false,
 		fimo_motif: g.fimo_motif ? true : false,
 		blat: g.blat ? true : false,
@@ -7558,7 +7560,15 @@ async function pp_init() {
 				g.genedb.getCoordByGene = g.genedb.db.prepare('select * from gene2coord where name=?')
 			}
 
-			g.hasIdeogram = checkTable.get('ideogram')
+			{
+				const s = checkTable.get('ideogram')
+				if (s && s.name == 'ideogram') {
+					g.genedb.hasIdeogram = true
+					g.genedb.getIdeogramByChr = g.genedb.db.prepare('select * from ideogram where chromosome=?')
+				} else {
+					g.genedb.hasIdeogram = false
+				}
+			}
 		}
 		if (g.genedb.gene2canonicalisoform) {
 			g.genedb.get_gene2canonicalisoform = g.genedb.db.prepare(
@@ -9009,3 +9019,17 @@ async function mds_init_mdsvcf(query, ds, genome) {
 }
 
 ////////////// end of __MDS
+
+function handle_ideogram(req, res) {
+	try {
+		const g = genomes[req.query.genome]
+		if (!g) throw 'invalid genome'
+		if (!g.genedb.hasIdeogram) throw 'ideogram not supported on this genome'
+		if (!req.query.chr) throw '.chr missing'
+		const lst = g.genedb.getIdeogramByChr.all(req.query.chr)
+		if (!lst.length) throw 'no ideogram data for this chr'
+		res.send(lst)
+	} catch (e) {
+		res.send({ error: e.message || e })
+	}
+}
