@@ -2030,7 +2030,7 @@ reverseorient() {
 				this.resized = false
 				let tk = this.tklst.find(t => {
 					if (ds.isMds3) {
-						if (t.type == client.tkt.mds3 && t.mds.label == ds.label) return t
+						if (t.type == client.tkt.mds3 && t.mds && t.mds.label == ds.label) return t
 					} else if (t.type == client.tkt.ds && t.ds && t.ds.label == ds.label) {
 						return t
 					}
