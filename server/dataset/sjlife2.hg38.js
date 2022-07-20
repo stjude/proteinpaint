@@ -690,6 +690,8 @@ module.exports = {
 				// to add 'snplocus' 'prs' later
 			],
 
+			coxCumincXlab: 'Years since study enrollment',
+
 			restrictAncestries,
 
 			//// this attribute is optional
