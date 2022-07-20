@@ -507,7 +507,7 @@ function setRenderers(self) {
 			.style('padding-left', '20px')
 
 		/* eslint-disable */
-		const [mainG, seriesesG, axisG, xAxis, yAxis, xTitle, yTitle, atRiskG, plotRect] = getSvgSubElems(svg)
+		const [mainG, seriesesG, axisG, xAxis, yAxis, xTitle, yTitle, atRiskG, plotRect] = getSvgSubElems(svg, chart)
 		/* eslint-enable */
 		const xOffset = chart.atRiskLabelWidth + s.svgPadding.left
 		mainG.attr('transform', 'translate(' + xOffset + ',' + s.svgPadding.top + ')')
@@ -707,8 +707,8 @@ function setRenderers(self) {
 		}
 	}
 
-	function getSvgSubElems(svg) {
-		let mainG, seriesesG, axisG, xAxis, yAxis, xTitle, yTitle, atRiskG, plotRect
+	function getSvgSubElems(svg, chart) {
+		let mainG, seriesesG, axisG, xAxis, yAxis, xTitle, yTitle, atRiskG, plotRect, line
 		if (!svg.select('.sjpp-survival-mainG').size()) {
 			mainG = svg.append('g').attr('class', 'sjpp-survival-mainG')
 			seriesesG = mainG.append('g').attr('class', 'sjpcb-survival-seriesesG')
@@ -722,15 +722,15 @@ function setRenderers(self) {
 				.attr('class', 'sjpp-survival-atrisk')
 				.on('click', self.legendClick)
 
-			const line = mainG
+			line = mainG
 				.append('line')
+				.attr('class', 'sjpcb-plot-tip-line')
 				.attr('stroke', '#000')
 				.attr('stroke-width', '1px')
 			plotRect = mainG
 				.append('rect')
-				.attr('class', 'sjpcb-plot-rect')
+				.attr('class', 'sjpcb-plot-tip-rect')
 				.style('fill', 'transparent')
-			svg.seriesTip = getSeriesTip(line, plotRect, self.app?.tip)
 		} else {
 			mainG = svg.select('.sjpp-survival-mainG')
 			seriesesG = mainG.select('.sjpcb-survival-seriesesG')
@@ -740,8 +740,14 @@ function setRenderers(self) {
 			xTitle = axisG.select('.sjpp-survival-x-title')
 			yTitle = axisG.select('.sjpp-survival-y-title')
 			atRiskG = mainG.select('.sjpp-survival-atrisk').on('click', self.legendClick)
-			plotRect = mainG.select('.sjpcb-plot-rect')
+			plotRect = mainG.select('.sjpcb-plot-tip-rect')
+			line = mainG.select('.sjpcb-plot-tip-line')
 		}
+
+		if (!svg.seriesTip) {
+			svg.seriesTip = getSeriesTip(line, plotRect, self.app?.tip)
+		}
+
 		return [mainG, seriesesG, axisG, xAxis, yAxis, xTitle, yTitle, atRiskG, plotRect]
 	}
 

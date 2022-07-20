@@ -555,7 +555,7 @@ function setRenderers(self) {
 			.style('padding-left', '20px')
 
 		/* eslint-disable */
-		const [mainG, seriesesG, axisG, xAxis, yAxis, xTitle, yTitle, plotRect] = getSvgSubElems(svg)
+		const [mainG, seriesesG, axisG, xAxis, yAxis, xTitle, yTitle, plotRect] = getSvgSubElems(svg, chart)
 		/* eslint-enable */
 		//if (d.xVals) computeScales(d, s);
 
@@ -706,8 +706,8 @@ function setRenderers(self) {
 			.text(d => d)
 	}
 
-	function getSvgSubElems(svg) {
-		let mainG, seriesesG, axisG, xAxis, yAxis, xTitle, yTitle, plotRect
+	function getSvgSubElems(svg, chart) {
+		let mainG, seriesesG, axisG, xAxis, yAxis, xTitle, yTitle, plotRect, line
 		if (!svg.select('.sjpcb-cuminc-mainG').size()) {
 			mainG = svg.append('g').attr('class', 'sjpcb-cuminc-mainG')
 			seriesesG = mainG.append('g').attr('class', 'sjpcb-cuminc-seriesesG')
@@ -717,15 +717,15 @@ function setRenderers(self) {
 			xTitle = axisG.append('g').attr('class', 'sjpcb-cuminc-x-title')
 			yTitle = axisG.append('g').attr('class', 'sjpcb-cuminc-y-title')
 
-			const line = mainG
+			line = mainG
 				.append('line')
+				.attr('class', 'sjpcb-plot-tip-line')
 				.attr('stroke', '#000')
 				.attr('stroke-width', '1px')
 			plotRect = mainG
 				.append('rect')
-				.attr('class', 'sjpcb-plot-rect')
+				.attr('class', 'sjpcb-plot-tip-rect')
 				.style('fill', 'transparent')
-			svg.seriesTip = getSeriesTip(line, plotRect, self.app?.tip)
 		} else {
 			mainG = svg.select('.sjpcb-cuminc-mainG')
 			seriesesG = mainG.select('.sjpcb-cuminc-seriesesG')
@@ -734,8 +734,14 @@ function setRenderers(self) {
 			yAxis = axisG.select('.sjpcb-cuminc-y-axis')
 			xTitle = axisG.select('.sjpcb-cuminc-x-title')
 			yTitle = axisG.select('.sjpcb-cuminc-y-title')
-			plotRect = mainG.select('.sjpcb-plot-rect')
+			plotRect = mainG.select('.sjpcb-plot-tip-rect')
+			line = mainG.select('.sjpcb-plot-tip-line')
 		}
+
+		if (!svg.seriesTip) {
+			svg.seriesTip = getSeriesTip(line, plotRect, self.app?.tip)
+		}
+
 		return [mainG, seriesesG, axisG, xAxis, yAxis, xTitle, yTitle, plotRect]
 	}
 
