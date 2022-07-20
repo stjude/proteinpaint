@@ -636,6 +636,7 @@ function clientcopy_genome(genomename) {
 		species: g.species,
 		name: genomename,
 		hasSNP: g.snp ? true : false,
+		hasIdeogram: g.hasIdeogram,
 		hasClinvarVCF: g.clinvarVCF ? true : false,
 		fimo_motif: g.fimo_motif ? true : false,
 		blat: g.blat ? true : false,
@@ -7544,13 +7545,20 @@ async function pp_init() {
 			g.genedb.getjsonbyname = g.genedb.db.prepare('select isdefault,genemodel from genes where name=?')
 			g.genedb.getjsonbyisoform = g.genedb.db.prepare('select isdefault,genemodel from genes where isoform=?')
 			g.genedb.getnameslike = g.genedb.db.prepare('select distinct name from genes where name like ? limit 20')
+
+			const checkTable = g.genedb.db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name=?")
+
 			if (g.genedb.hasalias) {
+				// TODO enable if checkTable.get('genealias') is true
 				g.genedb.getnamebyalias = g.genedb.db.prepare('select name from genealias where alias=?')
 			}
 			if (g.genedb.gene2coord) {
 				// this table will become available to all genomes
+				// TODO checkTable
 				g.genedb.getCoordByGene = g.genedb.db.prepare('select * from gene2coord where name=?')
 			}
+
+			g.hasIdeogram = checkTable.get('ideogram')
 		}
 		if (g.genedb.gene2canonicalisoform) {
 			g.genedb.get_gene2canonicalisoform = g.genedb.db.prepare(
