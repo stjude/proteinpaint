@@ -366,6 +366,7 @@ function makeRinput(q, sampledata) {
 			const v = id2value.get(t.id)
 			if (!v) {
 				// sample has no value for this variable
+				// this variable is either a snplocus snp or an ancestry PC
 				// set value to 'null' because R will
 				// convert 'null' to 'NA' during json import
 				entry[t.id] = null
@@ -704,6 +705,32 @@ async function parseRoutput(Rinput, Routput, id2originalId, q, result) {
 			}
 		}
 		analysisResult.data.type3.label = 'Type III statistics'
+
+		// total snp effect
+		if (data.totalSnpEffect) {
+			if (data.totalSnpEffect.rows.length < 2) throw 'fewer than 2 rows in total SNP effect table'
+			analysisResult.data.totalSnpEffect = {
+				header: data.totalSnpEffect.header,
+				intercept: data.totalSnpEffect.rows.shift()
+			}
+			const row = data.totalSnpEffect.rows[0] // total snp effect row
+			if (!row[0].includes('+') || !row[0].includes(':')) throw 'unexpected format of total snp effect variable'
+			const variables = row.shift().split('+')
+			// extract the snp main effect variable
+			const snpInd = variables.findIndex(variable => !variable.includes(':'))
+			const snp = variables.splice(snpInd, 1)[0]
+			analysisResult.data.totalSnpEffect.snp = id2originalId[snp]
+			// extract the snp interactions
+			const interactions = []
+			for (const variable of variables) {
+				const [id1, id2] = variable.split(':')
+				interactions.push({ term1: id2originalId[id1], term2: id2originalId[id2] })
+			}
+			analysisResult.data.totalSnpEffect.interactions = interactions
+			// row is now only data fields
+			analysisResult.data.totalSnpEffect.lst = row
+			analysisResult.data.totalSnpEffect.label = 'Total SNP effect'
+		}
 
 		// statistical tests
 		if (data.tests) {
