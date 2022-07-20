@@ -110,10 +110,19 @@ function may_create_variantShapeName(tk) {
 	}
 }
 
-export function updateLegend(data, tk, block) {
-	/*
+/*
 data is returned by xhr
+update legend dom
+makes no return
 */
+export function updateLegend(data, tk, block) {
+	if (!tk.legend) {
+		/* if using invalid dslabel, upon initiating initLegend() will not be called
+		and tk.legend may not be created
+		*/
+		return
+	}
+
 	// should clear here
 	//tk.legend.mclass.holder.selectAll('*').remove()
 
@@ -121,6 +130,7 @@ data is returned by xhr
 	also keep data so it can be accessible by block.svg.js
 	for rendering mclass legend in exported svg
 	*/
+
 	tk.legend.mclass.currentData = data.mclass2variantcount
 	update_mclass(tk)
 
