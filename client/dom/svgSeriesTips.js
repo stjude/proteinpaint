@@ -45,9 +45,9 @@ export function getSeriesTip(g, rect, _tip = null) {
 						.filter(d => d.d)
 						.map(
 							d =>
-								`<span style='color: ${d.color}'>${d.seriesLabel ? d.seriesLabel + ':' : ''} ${
-									d.d.y
-								}% at previous TTE=${d.d.x}, <br/>(${d.d.lower} to ${d.d.upper})</span>`
+								`<span style='color: ${d.color}'>${d.seriesLabel ? d.seriesLabel + ':' : ''} ${d.d.y} (${
+									d.d.lower
+								} to ${d.d.upper})</span>`
 						)
 						.join('<br><br/>')
 			)
