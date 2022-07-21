@@ -48,7 +48,10 @@ const defaultState = {
 	},
 	cache: {
 		customTermQ: {
-			byId: {}
+			byId: {},
+			// non-dictionary terms do not have a term.id,
+			// save by term.type + name?
+			byName: {}
 		}
 	},
 	autoSave: true
@@ -279,11 +282,22 @@ TdbStore.prototype.actions = {
 	},
 
 	cache_termq({ termId, q }) {
+		// TODO: support caching by term.name
 		if (!termId) throw `missing termId for caching custom term.q`
 		if (!q?.name) throw `missing tw.q.name as cache identifier for term='${termId}'`
 		const cache = this.state.cache.customTermQ.byId
 		if (!cache[termId]) cache[termId] = {}
 		cache[termId][q.name] = q
+	},
+
+	uncache_termq({ term, q }) {
+		// TODO: support uncaching by term.name
+		if (!term.id) throw `missing term.id for uncaching custom term.q`
+		if (!q.name) throw `missing qname as uncache identifier for term.id='${term.id}'`
+		const cache = this.state.cache.customTermQ.byId[term.id]
+		if (!cache) throw `missing term.q cache for term.id='${term.id}`
+		if (!(q.name in cache)) console.warn(`q.name='${q.name}' not cached for term.id='${term.id}'`)
+		else delete cache[q.name]
 	}
 }
 

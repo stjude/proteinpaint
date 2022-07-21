@@ -221,18 +221,6 @@ export function setGroupsettingMethods(self) {
 
 		self.dom.tip.clear().showunder(self.dom.holder.node())
 
-		const qNameDiv = self.dom.tip.d
-			.append('div')
-			.style('margin', '5px')
-			.style('padding', '5px')
-			.style('text-align', 'center')
-		const qNameInput = qNameDiv
-			.append('input')
-			.attr('type', 'text')
-			.attr('placeholder', 'optional name to save this grouping')
-			.attr('value', self.q.name || null)
-			.style('width', '300px')
-
 		const regroup_div = self.dom.tip.d.append('div').style('margin', '10px')
 
 		const header_buttons_div = regroup_div
@@ -325,8 +313,6 @@ export function setGroupsettingMethods(self) {
 			.style('cursor', 'pointer')
 			.text('Apply')
 			.on('click', () => {
-				const qName = qNameInput.property('value')
-				if (qName) self.q.name = qName
 				const name_inputs = groups_holder.node().querySelectorAll('input')
 				//update customset and add to self.q
 				for (const [key, val] of Object.entries(cat_grps)) {

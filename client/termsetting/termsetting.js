@@ -96,14 +96,13 @@ class TermSetting {
 		}
 	}
 
-	runCallback(overrideTw) {
+	runCallback(overrideTw = null) {
 		/* optional termwrapper (tw) to override attributes of this.term{} and this.q{}
 		the override tw serves the "atypical" termsetting usage
 		as used in snplocus block pan/zoom update in regression.results.js
 		*/
 		const arg = this.term ? { id: this.term.id, term: this.term, q: this.q } : {}
 		if ('$id' in this) arg.$id = this.$id
-		this.vocabApi.mayCacheTermQ(this.term, this.q)
 		this.opts.callback(overrideTw ? copyMerge(JSON.stringify(arg), overrideTw) : arg)
 	}
 
@@ -210,6 +209,49 @@ class TermSetting {
 			}
 		}
 		this.handler = this.handlerByType[typeSubtype]
+	}
+
+	renderQNameInput(div, prefix = `Configuration`) {
+		div
+			.append('div')
+			.style('grid-column', '1')
+			//.style('width', '80%')
+			.style('margin', '5px')
+			.style('padding', '5px')
+			.style('text-align', 'center')
+			.style('background-color', '#eee')
+			.style('border-radius', '5px')
+			.style('font-size', '.9em')
+			.style('cursor', 'pointer')
+			.html('Save this term configuration')
+			.on('click', () => {
+				div.selectAll('*').remove()
+				div
+					.style('display', 'block')
+					.style('padding', '10px')
+					.append('span')
+					.html('Save as ')
+
+				const id = btoa((+new Date()).toString()).slice(10, -3)
+				const defaultQname = `${prefix} #${id}`
+				const qNameInput = div
+					.append('input')
+					.attr('type', 'text')
+					.attr('placeholder', defaultQname)
+					.attr('value', this.q.name || null)
+				//.style('width', '300px')
+
+				div
+					.append('button')
+					.style('margin-left', '5px')
+					.html('Save')
+					.on('click', () => {
+						this.q.name = qNameInput.property('value') || defaultQname
+						this.vocabApi.mayCacheTermQ(this.term, this.q)
+						this.runCallback()
+						this.dom.tip.hide()
+					})
+			})
 	}
 }
 

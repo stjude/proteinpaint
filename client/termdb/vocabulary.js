@@ -708,15 +708,33 @@ class TermdbVocab {
 	}
 
 	mayCacheTermQ(term, q) {
+		// only save q with a user or automatically assigned name
 		if (!q.name) return
-		const gs = q.groupsetting
-		if (gs.inuse && gs?.customset && term.id) {
+		if (term.type == 'categorical') {
+			const gs = q.groupsetting
+			if (gs.inuse && gs?.customset && term.id) {
+				this.app.dispatch({
+					type: 'cache_termq',
+					termId: term.id,
+					q
+				})
+			}
+		}
+		if (term.type == 'integer' || term.type == 'float') {
 			this.app.dispatch({
 				type: 'cache_termq',
 				termId: term.id,
 				q
 			})
 		}
+	}
+
+	async uncacheTermQ(term, q) {
+		await this.app.dispatch({
+			type: 'uncache_termq',
+			term,
+			q
+		})
 	}
 
 	getCustomTermQLst(term) {
