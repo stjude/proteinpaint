@@ -26,8 +26,6 @@ const defaultOpts = {
 	menuLayout: 'vertical'
 }
 
-const qCacheByTermId = new Map()
-
 class TermSetting {
 	constructor(opts) {
 		this.opts = this.validateOpts(opts)
@@ -96,8 +94,6 @@ class TermSetting {
 				}
 			}
 		}
-
-		this.qCacheByTermId = qCacheByTermId
 	}
 
 	runCallback(overrideTw) {
@@ -107,16 +103,7 @@ class TermSetting {
 		*/
 		const arg = this.term ? { id: this.term.id, term: this.term, q: this.q } : {}
 		if ('$id' in this) arg.$id = this.$id
-		const gs = this.q.groupsetting
-		if (gs.inuse && gs?.customset && this.term.id) {
-			if (!qCacheByTermId.has(this.term.id)) qCacheByTermId.set(this.term.id, [])
-			const qCache = qCacheByTermId.get(this.term.id)
-			delete this.q.name
-			const qId = JSON.stringify(this.q)
-			if (!qCache.includes(qId)) {
-				qCache.push(qId)
-			}
-		}
+		this.vocabApi.mayCacheTermQ(this.term, this.q)
 		this.opts.callback(overrideTw ? copyMerge(JSON.stringify(arg), overrideTw) : arg)
 	}
 

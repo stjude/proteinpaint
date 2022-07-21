@@ -46,6 +46,11 @@ const defaultState = {
 			lst: []
 		}
 	},
+	cache: {
+		customTermQ: {
+			byId: {}
+		}
+	},
 	autoSave: true
 }
 
@@ -271,6 +276,14 @@ TdbStore.prototype.actions = {
 				parent.lst[i] = replacementFilter
 			}
 		}
+	},
+
+	cache_termq({ termId, q }) {
+		if (!termId) throw `missing termId for caching custom term.q`
+		if (!q?.name) throw `missing tw.q.name as cache identifier for term='${termId}'`
+		const cache = this.state.cache.customTermQ.byId
+		if (!cache[termId]) cache[termId] = {}
+		cache[termId][q.name] = q
 	}
 }
 

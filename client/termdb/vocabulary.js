@@ -8,6 +8,8 @@ import initBinConfig from '#shared/termdb.initbinconfig'
 import { deepEqual } from '../rx'
 import { isUsableTerm, graphableTypes } from '#shared/termdb.usecase'
 
+const qCacheByTermId = {}
+
 export function vocabInit(opts) {
 	/*** start legacy support for state.genome, .dslabel ***/
 	if (opts.vocab && !opts.state) {
@@ -703,6 +705,25 @@ class TermdbVocab {
 			'm=' + JSON.stringify({ chr: m.chr, pos: m.pos, ref: m.ref, alt: m.alt })
 		]
 		return await dofetch3('termdb?' + args.join('&'))
+	}
+
+	mayCacheTermQ(term, q) {
+		if (!q.name) return
+		const gs = q.groupsetting
+		if (gs.inuse && gs?.customset && term.id) {
+			this.app.dispatch({
+				type: 'cache_termq',
+				termId: term.id,
+				q
+			})
+		}
+	}
+
+	getCustomTermQLst(term) {
+		if (term.id) {
+			const cache = this.state.cache.customTermQ.byId[term.id] || {}
+			return Object.values(cache).map(q => JSON.parse(JSON.stringify(q)))
+		} else return []
 	}
 }
 

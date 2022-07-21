@@ -247,26 +247,19 @@ export function setCategoryConditionMethods(self) {
 			.on('click', () => {
 				self.q.groupsetting.inuse = false
 				delete self.q.groupsetting.predefined_groupset_idx
+				delete self.q.name
 				// self.q.type = 'values' ????
 				self.dom.tip.hide()
 				self.runCallback()
 			})
 
 		//show button/s for default groups
-		const qCache = self.qCacheByTermId.get(self.term.id)
 		const gsLst = self.term.groupsetting?.lst || []
-		const qLst = qCache || []
+		const qLst = self.vocabApi.getCustomTermQLst(self.term)
 		const lst = [...gsLst, ...qLst]
-		const qId = JSON.stringify(self.q)
 
-		for (const [i, _group] of lst.entries()) {
-			const group = typeof _group != 'string' ? _group : JSON.parse(_group)
-			if (!group.name && group.groupsetting.customset) {
-				if (qId != _group) {
-					group.name = `Custom groups #${qCache.indexOf(_group) + 1}`
-				}
-			}
-			if (self.q.groupsetting?.predefined_groupset_idx != i && group.name)
+		for (const [i, group] of lst.entries()) {
+			if (self.q.groupsetting?.predefined_groupset_idx != i && self.q.name != group.name)
 				div
 					.append('div')
 					.attr('class', 'group_btn sja_menuoption')
