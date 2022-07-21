@@ -23,6 +23,20 @@ Notes:
    The script accepts piped input in this format: {Bigwig_file_path/URL},{chr},{start_region},{stop_region}. See syntax above.
 
    In case path to file is not correct, the script gives a message "File not found". If the file is found, the aggregated data points are separated by tab character.
+
+   Function cascade:
+
+   main() - Checks if the web url/local file path is correct. If not, it will display "File not found" message and exit. if true, it will collect zoom headers.
+     calculate_datapoints() - Calculates range for each region for the number of points required by the user.
+         calculate_appropriate_zoom_level() - Calculates approporiate zoom level (or query raw data) depending upon the range being viewed.
+
+         if web_url {
+            Some(zoom_level) => use get_zoom_interval()
+            None => use get_interval()
+         } else local file {
+            Some(zoom_level) => use get_zoom_interval()
+            None => use get_interval()
+         }
 */
 
 use bigtools::bigwig::ZoomHeader;
