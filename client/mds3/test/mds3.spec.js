@@ -60,8 +60,8 @@ tape('Run GDC dataset, gene symbol: KRAS', test => {
 		//Confirm gene symbol used to call track
 		test.ok(bb.usegm.name == 'KRAS', 'Should render KRAS track in GDC dataset')
 
+		if (test._ok) holder.remove()
 		test.end()
-		holder.remove()
 	}
 })
 
@@ -239,6 +239,36 @@ tape('Launch ASH dataset, BCR', test => {
 	}
 })
 
+tape('Incorrect dataset name: ash instead of ASH', async test => {
+	test.timeoutAfter(3000)
+	const holder = getHolder()
+
+	runproteinpaint({
+		holder,
+		parseurl: true,
+		nobox: true,
+		noheader: true,
+		genome: 'hg38',
+		gene: 'BCR',
+		tracks: [{ type: 'mds3', dslabel: 'ash' }]
+		// onloadalltk_always: checkTrack *** doesn't work: error appears a few ms after load
+	})
+	await sleep(500)
+	//Confirm track is uninitialized from block
+	const mds3Track = bb.tklst.find(i => i.type == 'mds3')
+	test.ok(mds3Track.uninitialized == true, 'Should not render mds3 track and not throw')
+
+	//Confirm error message displays in track
+	const errorDivFound = d3s
+		.selectAll('text')
+		.nodes()
+		.find(i => i.textContent == 'Error: invalid dsname')
+	test.ok(errorDivFound, 'Should display invalid dsname error')
+
+	if (test._ok) holder.remove()
+	test.end()
+})
+
 tape('Custom dataset with custom variants, NO samples', test => {
 	test.timeoutAfter(3000)
 	const holder = getHolder()
@@ -346,6 +376,225 @@ tape('Custom dataset with custom variants, WITH samples', test => {
 	}
 })
 
+tape('Launch variant table from track variant label', async test => {
+	//If dispatchEvent error in browser, run again before debugging
+	test.timeoutAfter(10000)
+	const holder = getHolder()
+
+	runproteinpaint({
+		holder,
+		noheader: true,
+		nobox: true,
+		genome: 'hg38',
+		gene: 'kras',
+		tracks: [{ type: 'mds3', dslabel: 'GDC' }]
+	})
+
+	await sleep(1000)
+	//Click on track variant link to open menu
+	const variantsControl = d3s
+		.selectAll('text.sja_clbtext2')
+		.nodes()
+		.find(e => e.innerHTML == '100 of 111 variants')
+	variantsControl.dispatchEvent(new Event('click'))
+
+	await sleep(1000)
+	//Click 'List' menu option
+	const listMenuOptionFound = d3s
+		.selectAll('div.sja_menuoption')
+		.nodes()
+		.find(e => e.innerHTML == 'List')
+	test.ok(listMenuOptionFound, 'Should open menu from clicking on variant link beneath track label')
+	listMenuOptionFound.dispatchEvent(new Event('click'))
+
+	await sleep(1500)
+	//Click on the first variant bar in the list
+	const E3KvariantFound = d3s
+		.selectAll('div.sja_menuoption')
+		.nodes()
+		.find(e => e.innerText == 'E3KMISSENSEchr12:25245378, C>T')
+	test.ok(E3KvariantFound, 'Should display variant list')
+	E3KvariantFound.dispatchEvent(new Event('click'))
+
+	await sleep(1000)
+	//Confirm variant annotation table appears
+	const variantTableFound = d3s
+		.selectAll('div.sja_menuoption > span')
+		.nodes()
+		.find(e => e.innerText == 'E3K')
+	test.ok(variantTableFound, 'Should display variant annotation table')
+
+	//Close orphaned popup window
+	const findMenu = d3s
+		.selectAll('div.sja_menu_div')
+		.nodes()
+		.find(e => e.style.display == 'block')
+	//Simulate mousedown event?
+	findMenu.remove()
+
+	if (test._ok) holder.remove()
+	test.end()
+})
+
+tape('Launch cases from track cases label', async test => {
+	//If dispatchEvent error in browser, run again before debugging
+	test.timeoutAfter(5000)
+	const holder = getHolder()
+
+	runproteinpaint({
+		holder,
+		noheader: true,
+		nobox: true,
+		genome: 'hg38',
+		gene: 'kras',
+		tracks: [{ type: 'mds3', dslabel: 'GDC' }]
+	})
+
+	await sleep(1000)
+	//Click on track cases link to open table
+	const casesControl = d3s
+		.selectAll('text.sja_clbtext2')
+		.nodes()
+		.find(e => e.innerHTML == '1273 cases')
+	casesControl.dispatchEvent(new Event('click'))
+
+	await sleep(1500)
+	// Confirm table openned
+	const diseaseTypeFound = d3s
+		.selectAll('div')
+		.nodes()
+		.find(e => e.innerText == 'Disease type\nn=21')
+	test.ok(diseaseTypeFound, "Should display cases table with 'Disease type' as the first tab")
+
+	//Close orphaned popup window
+	const findMenu = d3s
+		.selectAll('div.sja_menu_div')
+		.nodes()
+		.find(e => e.style.display == 'block')
+	findMenu.remove()
+
+	if (test._ok) holder.remove()
+	test.end()
+})
+
+tape('Collapse and expand mutations from variant link', async test => {
+	//If dispatchEvent error in browser, run again before debugging
+	test.timeoutAfter(8000)
+	const holder = getHolder()
+
+	runproteinpaint({
+		holder,
+		noheader: true,
+		nobox: true,
+		genome: 'hg38',
+		gene: 'kras',
+		tracks: [{ type: 'mds3', dslabel: 'GDC' }]
+	})
+
+	await sleep(1000)
+	//Click on track variant link to open menu
+	const variantsControl = d3s
+		.selectAll('text.sja_clbtext2')
+		.nodes()
+		.find(e => e.innerHTML == '100 of 111 variants')
+	variantsControl.dispatchEvent(new Event('click'))
+
+	await sleep(1000)
+	//Click 'Collapse' menu option
+	const collaspseOptionFound = d3s
+		.selectAll('div.sja_menuoption')
+		.nodes()
+		.find(e => e.innerHTML == 'Collapse')
+	collaspseOptionFound.dispatchEvent(new Event('click'))
+
+	await sleep(1000)
+	//Ensure only collapsed data points appear
+	const onlyCollapsedCircles = d3s
+		.selectAll('text.sja_aa_disclabel')
+		.nodes()
+		.some(e => e.attributes.transform.value == 'scale(1)')
+	test.ok(!onlyCollapsedCircles, 'Should collaspe data points')
+
+	await sleep(1000)
+	//Go back and click on 'Expand' to test the circle expanding
+	variantsControl.dispatchEvent(new Event('click'))
+	const expandOptionFound = d3s
+		.selectAll('div.sja_menuoption')
+		.nodes()
+		.find(e => e.innerHTML == 'Expand')
+	expandOptionFound.dispatchEvent(new Event('click'))
+
+	await sleep(2000)
+	//Confirm expanded mutations
+	const expandedCircleFound = d3s
+		.selectAll('text.sja_aa_disclabel')
+		.nodes()
+		.some(e => e.attributes.transform.value == 'scale(1,1)')
+	test.ok(expandedCircleFound, 'Should expand mutation points')
+
+	if (test._ok) holder.remove()
+	test.end()
+})
+
+tape('Launch sample table from disco plot', async test => {
+	//If dispatchEvent error in browser, run again before debugging
+	test.timeoutAfter(8000)
+	const holder = getHolder()
+
+	runproteinpaint({
+		holder,
+		noheader: true,
+		nobox: true,
+		genome: 'hg38',
+		gene: 'kras',
+		tracks: [{ type: 'mds3', dslabel: 'GDC' }]
+	})
+
+	await sleep(1000)
+	//Click on track variant link to open menu
+	const discFound = d3s
+		.selectAll('circle.sja_aa_disckick')
+		.nodes()
+		.find(e => e.__data__.occurrence == '13')
+	discFound.dispatchEvent(new Event('click'))
+
+	await sleep(2000)
+	//Click 'Info' in the center
+	const clickInfo = d3s.selectAll('rect.sja_info_click').node()
+	test.ok(clickInfo, 'Should display sunburst for K117N')
+	clickInfo.dispatchEvent(new Event('click'))
+
+	await sleep(1000)
+	//Confirm inital sample table launched
+	const clickFirstVariantOption = d3
+		.selectAll('div.sja_menuoption')
+		.nodes()
+		.find(e => e.innerText == 'K117NMISSENSEchr12:25225713, T>A')
+	test.ok(clickFirstVariantOption, 'Should display 2 variants in menu options')
+	clickFirstVariantOption.dispatchEvent(new Event('click'))
+
+	await sleep(1000)
+	//Confirm sample table launched
+	const multiSampleTableFound = d3s.selectAll('div.sjpp-sample-table-div').nodes()
+	test.ok(multiSampleTableFound, 'Should display sample table')
+	const multiSampleTable = d3s
+		.selectAll('div.sja_menu_div')
+		.nodes()
+		.find(e => e.style.display == 'block')
+
+	if (test._ok) multiSampleTable.remove()
+	if (test._ok) holder.remove()
+	test.end()
+})
+
+/*
+********* LEAVE THIS TEST LAST *********
+mclassOverride persists between tests! All missense mutations will appear as 'AA'. 
+Proteinin likewise will appear as 'BB'. 
+
+TODO: Find out why mclassOverride persists between runproteinpaint calls.
+****************************************
+*/
 tape('Numeric mode custom dataset', test => {
 	test.timeoutAfter(3000)
 	const holder = getHolder()
@@ -402,6 +651,7 @@ tape('Numeric mode custom dataset', test => {
 		//TODO test skewer value passed for each variant
 		// }
 
+		if (test._ok) holder.remove()
 		test.end()
 	}
 })
