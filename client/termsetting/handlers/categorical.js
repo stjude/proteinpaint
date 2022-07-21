@@ -230,7 +230,7 @@ export function setCategoryConditionMethods(self) {
 			' default categories ' +
 			(values ? '(n=' + Object.keys(values).length + ')' : '')
 
-		// default overlay btn - devide to n groups (n=total)
+		// default overlay btn - divide to n groups (n=total)
 		div
 			.append('div')
 			.attr('class', 'group_btn sja_menuoption')
@@ -253,38 +253,52 @@ export function setCategoryConditionMethods(self) {
 			})
 
 		//show button/s for default groups
-		if (self.term.groupsetting && self.term.groupsetting.lst) {
-			for (const [i, group] of self.term.groupsetting.lst.entries()) {
-				if (self.q.groupsetting && self.q.groupsetting.predefined_groupset_idx != i)
-					div
-						.append('div')
-						.attr('class', 'group_btn sja_menuoption')
-						.style(
-							'display',
-							(group.is_grade && !self.q.bar_by_grade) || (group.is_subcondition && !self.q.bar_by_children)
-								? 'none'
-								: 'block'
-						)
-						// .style('padding', '7px 6px')
-						.style('margin', '5px')
-						.style('text-align', 'center')
-						.style('font-size', '.8em')
-						.style('border-radius', '13px')
-						.html('Use <b>' + group.name + '</b>')
-						.on('click', () => {
-							self.q.groupsetting.inuse = true
+		const qCache = self.qCacheByTermId.get(self.term.id)
+		const gsLst = self.term.groupsetting?.lst || []
+		const qLst = qCache || []
+		const lst = [...gsLst, ...qLst]
+		const qId = JSON.stringify(self.q)
+
+		for (const [i, _group] of lst.entries()) {
+			const group = typeof _group != 'string' ? _group : JSON.parse(_group)
+			if (!group.name && group.groupsetting.customset) {
+				if (qId != _group) {
+					group.name = `Custom groups #${qCache.indexOf(_group) + 1}`
+				}
+			}
+			if (self.q.groupsetting?.predefined_groupset_idx != i && group.name)
+				div
+					.append('div')
+					.attr('class', 'group_btn sja_menuoption')
+					.style(
+						'display',
+						(group.is_grade && !self.q.bar_by_grade) || (group.is_subcondition && !self.q.bar_by_children)
+							? 'none'
+							: 'block'
+					)
+					// .style('padding', '7px 6px')
+					.style('margin', '5px')
+					.style('text-align', 'center')
+					.style('font-size', '.8em')
+					.style('border-radius', '13px')
+					.html('Use <b>' + group.name + '</b>')
+					.on('click', () => {
+						self.q.groupsetting.inuse = true
+						if (group.groupsetting.customset) {
+							self.q = group
+						} else {
 							self.q.groupsetting.predefined_groupset_idx = i
 							// used for groupsetting if one of the group is filter rahter than values,
 							// Not in use rightnow, if used in future, uncomment following line
 							// self.q.groupsetting.activeCohort = self.activeCohort
 							self.q.type = 'predefined-groupset'
-							self.dom.tip.hide()
-							self.runCallback()
-						})
-			}
+						}
+						self.dom.tip.hide()
+						self.runCallback()
+					})
 		}
 
-		// devide to grpups btn
+		// divide to groups btn
 		div
 			.append('div')
 			.attr('class', 'group_btn sja_menuoption')
