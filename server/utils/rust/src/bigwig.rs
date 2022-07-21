@@ -15,6 +15,7 @@
  time ~/proteinpaint/server/utils/bigWigSummary http://hgdownload.soe.ucsc.edu/goldenPath/hg19/encodeDCC/wgEncodeMapability/wgEncodeCrgMapabilityAlign100mer.bigWig chr17 7584491 7585468 100
 
  url: cd .. && cargo build --release && time echo https://proteinpaint.stjude.org/ppdemo/hg19/bigwig/file.bw,chr17,7568451,7591984,100 | target/release/bigwig
+cd .. && cargo build --release && time echo /Users/rpaul1/proteinpaint/proteinpaint_demo/hg19/bigwig/file.bw,chr17,7579863,7579920,1140 | target/release/bigwig
 */
 
 /*
@@ -24,9 +25,10 @@ Notes:
    In case path to file is not correct, the script gives a message "File not found". If the file is found, the aggregated data points are separated by tab character.
 */
 
-use bigtools::bigwig::BBIFileInfo;
+use bigtools::bigwig::ZoomHeader;
 use bigtools::bigwigread::BigWigRead;
-use bigtools::remote_file::RemoteFile;
+use bigtools::utils::file::remote_file::RemoteFile;
+use math::round;
 use std::io;
 
 fn main() {
@@ -58,20 +60,11 @@ fn main() {
     //println!("datapoints:{}", datapoints);
 
     let mut file_found = false; // Flag to check if the bigwig file was found. If not found, only "File not found" message is displayed.  false: not found, true: found
-    let exact_offset_whole: f64 = difference as f64 / datapoints as f64;
-    //println!("exact_offset_whole:{}", exact_offset_whole);
-    let mut datapoints_list = Vec::<f64>::new(); // Vector for storing datapoints
-    let mut datapoints_sum = vec![0.0 as f64; datapoints as usize]; // Sum of all values within a region
-    let mut datapoints_num = vec![0 as f64; datapoints as usize]; // Number of all values within a region
 
-    let mut current_pos: f64 = start_pos as f64; // Initializing current_pos to start position
-    for _i in 0..datapoints {
-        datapoints_list.push(current_pos);
-        current_pos = current_pos as f64 + exact_offset_whole as f64;
-    }
-    datapoints_list.push(stop_pos as f64);
     //println!("datapoints_list length:{:?}", datapoints_list);
 
+    let mut is_weburl: bool = false;
+    let mut zoom_headers = Vec::<ZoomHeader>::new();
     if bigwig_file_url.starts_with("http://") == true
         || bigwig_file_url.starts_with("https://") == true
         || bigwig_file_url.starts_with("www.") == true
@@ -82,108 +75,10 @@ fn main() {
         let reader = BigWigRead::from(remote_file);
         match reader {
             Ok(_) => {
-                //println!("File found");
                 file_found = true;
-                let mut reader = BigWigRead::from(remote_file2).unwrap();
-                //println!("Bigwig file info:{}", BBIFileInfo(reader));
-                let a = &reader.info;
-                println!("a:{:?}", a);
-                //let a = BBIHeader(&reader.info.header);
-                //match a {
-                //    (v) => {
-                //        println!("v:{}", v);
-                //    }
-                //    Err(_) => {
-                //        println!("Possible error:{:?}", entry);
-                //    }
-                //}
-                let bigwig_output = reader
-                    .get_interval(&chrom, start_pos as u32, stop_pos as u32)
-                    .unwrap();
-                let mut i = 0;
-                let mut start_region = datapoints_list[i];
-                let mut end_region = datapoints_list[i + 1];
-                for entry in bigwig_output {
-                    //println!("{:?}", entry);
-                    match entry {
-                        Ok(v) => {
-                            //println!("start,end,value:{},{},{}", v.start, v.end, v.value);
-                            if v.start == v.end {
-                                continue;
-                            } else {
-                                if (v.start as f64 <= start_region && end_region < v.end as f64)
-                                    || (v.start as f64 >= start_region
-                                        && (v.start as f64) < end_region)
-                                    || (v.end as f64 >= start_region && (v.end as f64) < end_region)
-                                    || (start_region >= v.start as f64
-                                        && (v.end as f64) < end_region)
-                                {
-                                    //Calculate sum and number for this region
-                                    //println!("i:{}", i);
-                                    //println!("v.start:{}", v.start);
-                                    //println!("v.end:{}", v.end);
-                                    //println!("start_region:{}", start_region);
-                                    //println!("end_region:{}", end_region);
-                                    let start_entry_within_region =
-                                        determine_max(v.start as f64, start_region);
-                                    let stop_entry_within_region =
-                                        determine_min(v.end as f64, end_region);
-                                    datapoints_num[i] += (stop_entry_within_region
-                                        - start_entry_within_region)
-                                        as f64;
-                                    datapoints_sum[i] += (stop_entry_within_region
-                                        - start_entry_within_region)
-                                        as f64
-                                        * v.value as f64;
-                                }
-                                let mut iter = 1;
-                                while end_region < v.end as f64 && end_region != stop_pos {
-                                    //println!("iter:{}", iter);
-                                    //println!("i:{}", i);
-                                    //println!("v.start:{}", v.start);
-                                    //println!("v.end:{}", v.end);
-                                    //println!("start_region:{}", start_region);
-                                    //println!("end_region:{}", end_region);
-                                    if ((v.start as f64 <= start_region
-                                        && end_region < v.end as f64)
-                                        || (v.start as f64 >= start_region
-                                            && (v.start as f64) < end_region)
-                                        || (v.end as f64 >= start_region
-                                            && (v.end as f64) < end_region)
-                                        || (start_region >= v.start as f64
-                                            && (v.end as f64) < end_region))
-                                        && iter > 1
-                                    {
-                                        // Calculate sum and number for this region
-                                        let start_entry_within_region =
-                                            determine_max(v.start as f64, start_region);
-                                        let stop_entry_within_region =
-                                            determine_min(v.end as f64, end_region);
-                                        datapoints_num[i] += (stop_entry_within_region
-                                            - start_entry_within_region)
-                                            as f64;
-                                        datapoints_sum[i] += (stop_entry_within_region
-                                            - start_entry_within_region)
-                                            as f64
-                                            * v.value as f64;
-                                    }
-                                    if end_region <= v.end as f64 {
-                                        // Entry spans into next region, need to increment iterator and start and end region
-                                        if i + 2 < datapoints_list.len() {
-                                            i += 1;
-                                            start_region = datapoints_list[i];
-                                            end_region = datapoints_list[i + 1];
-                                        }
-                                    }
-                                    iter += 1;
-                                }
-                            }
-                        }
-                        Err(_) => {
-                            println!("Possible error:{:?}", entry);
-                        }
-                    }
-                }
+                is_weburl = true;
+                let reader = BigWigRead::from(remote_file2).unwrap();
+                zoom_headers = reader.info.zoom_headers;
             }
             Err(_) => {
                 println!("File not found");
@@ -192,29 +87,137 @@ fn main() {
     } else {
         // Its a local file
         let reader = BigWigRead::from_file_and_attach(&bigwig_file_url);
+        //let a = &reader.info.zoom_headers;
         match reader {
             Ok(_) => {
                 file_found = true;
-                let mut reader = BigWigRead::from_file_and_attach(&bigwig_file_url).unwrap();
-                //let a = &reader.info.header;
-                let a = BBIFileInfo::from(reader.info.clone());
-                //let a = BBIFileInfo(&reader);
-                println!("a:{:?}", a);
-                let bigwig_output = reader
-                    .get_zoom_interval(&chrom, start_pos as u32, stop_pos as u32, 40)
-                    .unwrap();
-                //calculate_datapoints(bigwig_output, chrom, start_pos, stop_pos, data_points);
+                let reader = BigWigRead::from_file_and_attach(&bigwig_file_url).unwrap();
+                zoom_headers = reader.info.zoom_headers;
+            }
+            Err(_) => {
+                println!("File not found");
+            }
+        }
+    }
+    //println!("zoom_headers:{:?}", zoom_headers);
 
+    if file_found == true {
+        //println!("datapoints_sum:{:?}", datapoints_sum);
+        //println!("datapoints_num:{:?}", datapoints_num);
+
+        calculate_datapoints(
+            zoom_headers,
+            &bigwig_file_url,
+            is_weburl,
+            datapoints,
+            difference,
+            chrom,
+            start_pos as f64,
+            stop_pos as f64,
+        );
+    }
+}
+
+fn determine_max(n1: f64, n2: f64) -> f64 {
+    if n1 >= n2 {
+        n1
+    } else {
+        n2
+    }
+}
+
+fn determine_min(n1: f64, n2: f64) -> f64 {
+    if n1 < n2 {
+        n1
+    } else {
+        n2
+    }
+}
+
+fn calculate_appropriate_zoom_level(
+    zoom_headers: Vec<ZoomHeader>,
+    exact_offset: f64,
+) -> Option<u32> {
+    let mut reduction_levels = Vec::<u32>::new();
+    let mut closest_level = Option::<u32>::None; // Zoom level will be none at base-pair resolution
+    let desired_reduction: u32 = round::ceil((exact_offset as f64) / 2.0, 0) as u32;
+    let mut unity_added = false;
+    if desired_reduction > 1 {
+        // Parsing out various zoom levels from bigwig file
+        for reduction_level in zoom_headers
+            .into_iter()
+            .map(|entry| (entry.reduction_level))
+            .rev()
+        {
+            reduction_levels.push(reduction_level as u32);
+        }
+        if reduction_levels.contains(&1) == false {
+            reduction_levels.push(1); // 1 represents single base-pair level
+            unity_added = true;
+        }
+        //println!("reduction_levels:{:?}", reduction_levels);
+        let mut closest_diff: u32 = 4294967295; // Highest number allowed by u32 type
+        for level in reduction_levels {
+            let diff: u32 = (desired_reduction as i32 - level as i32).abs() as u32;
+            if diff > 0 && diff < closest_diff {
+                closest_diff = diff;
+                closest_level = Some(level);
+            }
+        }
+    }
+    if closest_level == Some(1) && unity_added == true {
+        closest_level = None;
+    }
+    //println!("closest_level:{:?}", closest_level);
+    closest_level
+}
+
+fn calculate_datapoints(
+    zoom_headers: Vec<ZoomHeader>,
+    bigwig_file_url: &String,
+    is_weburl: bool,
+    datapoints: u32,
+    difference: f64,
+    chrom: String,
+    start_pos: f64,
+    stop_pos: f64,
+) {
+    let exact_offset: f64 = difference as f64 / datapoints as f64;
+    //println!("exact_offset:{}", exact_offset);
+    let mut datapoints_list = Vec::<f64>::new(); // Vector for storing datapoints
+    let mut datapoints_sum = vec![0.0 as f64; datapoints as usize]; // Sum of all values within a region
+    let mut datapoints_num = vec![0 as f64; datapoints as usize]; // Number of all values within a region
+    let zoom_level = calculate_appropriate_zoom_level(zoom_headers, exact_offset);
+
+    let mut current_pos: f64 = start_pos as f64; // Initializing current_pos to start position
+    for _i in 0..datapoints {
+        datapoints_list.push(current_pos);
+        current_pos = current_pos as f64 + exact_offset as f64;
+    }
+    datapoints_list.push(stop_pos as f64);
+    //println!("datapoints_list:{:?}", datapoints_list);
+
+    if is_weburl == true {
+        // Read from a web URL
+        let remote_file = RemoteFile::new(&bigwig_file_url);
+        let mut reader = BigWigRead::from(remote_file).unwrap();
+        match zoom_level {
+            Some(level) => {
+                // Using some zoom level
+                let bigwig_output = reader
+                    .get_zoom_interval(&chrom, start_pos as u32, stop_pos as u32, level)
+                    .unwrap();
                 let mut i = 0;
                 let mut start_region = datapoints_list[i];
                 let mut end_region = datapoints_list[i + 1];
                 for entry in bigwig_output {
                     match entry {
                         Ok(v) => {
-                            println!(
-                                "start,end,value,sum,bases_covered:{},{},{},{}",
-                                v.start, v.end, v.summary.sum, v.summary.bases_covered
-                            );
+                            //println!(
+                            //    "start,end,sum,bases_covered:{},{},{},{}",
+                            //    v.start, v.end, v.summary.sum, v.summary.bases_covered
+                            //);
+
                             if v.start == v.end {
                                 continue;
                             } else {
@@ -241,9 +244,7 @@ fn main() {
                                     datapoints_sum[i] += (stop_entry_within_region
                                         - start_entry_within_region)
                                         as f64
-                                        * ((v.summary.sum as f64)
-                                            / (v.summary.bases_covered as f64))
-                                            as f64;
+                                        * ((v.summary.sum as f64) / v.summary.bases_covered as f64);
                                     //println!(
                                     //    "start_entry_within_region:{}",
                                     //    start_entry_within_region
@@ -286,8 +287,7 @@ fn main() {
                                             - start_entry_within_region)
                                             as f64
                                             * ((v.summary.sum as f64)
-                                                / (v.summary.bases_covered as f64))
-                                                as f64;
+                                                / v.summary.bases_covered as f64);
                                         //println!(
                                         //    "start_entry_within_region inside:{}",
                                         //    start_entry_within_region
@@ -317,43 +317,368 @@ fn main() {
                     }
                 }
             }
-            Err(_) => {
-                println!("File not found");
+            None => {
+                // To be used in nucleotide resolution
+                let bigwig_output = reader
+                    .get_interval(&chrom, start_pos as u32, stop_pos as u32)
+                    .unwrap();
+                let mut i = 0;
+                let mut start_region = datapoints_list[i];
+                let mut end_region = datapoints_list[i + 1];
+                for entry in bigwig_output {
+                    match entry {
+                        Ok(v) => {
+                            //println!("start,end,value:{},{},{}", v.start, v.end, v.value);
+                            if v.start == v.end {
+                                continue;
+                            } else {
+                                if (v.start as f64 <= start_region && end_region < v.end as f64)
+                                    || (v.start as f64 >= start_region
+                                        && (v.start as f64) < end_region)
+                                    || (v.end as f64 >= start_region && (v.end as f64) < end_region)
+                                    || (start_region >= v.start as f64
+                                        && (v.end as f64) < end_region)
+                                {
+                                    // Calculate sum and number for this region
+                                    //println!("i:{}", i);
+                                    //println!("v.start:{}", v.start);
+                                    //println!("v.end:{}", v.end);
+                                    //println!("start_region:{}", start_region);
+                                    //println!("end_region:{}", end_region);
+                                    let start_entry_within_region =
+                                        determine_max(v.start as f64, start_region);
+                                    let stop_entry_within_region =
+                                        determine_min(v.end as f64, end_region);
+                                    datapoints_num[i] += (stop_entry_within_region
+                                        - start_entry_within_region)
+                                        as f64;
+                                    datapoints_sum[i] += (stop_entry_within_region
+                                        - start_entry_within_region)
+                                        as f64
+                                        * v.value as f64;
+                                    //println!(
+                                    //    "start_entry_within_region:{}",
+                                    //    start_entry_within_region
+                                    //);
+                                    //println!(
+                                    //    "stop_entry_within_region:{}",
+                                    //    stop_entry_within_region
+                                    //);
+                                    //println!("datapoints_num[i]:{}", datapoints_num[i]);
+                                    //println!("datapoints_sum[i]:{}", datapoints_sum[i]);
+                                }
+                                let mut iter = 1;
+                                while end_region < v.end as f64 && end_region != stop_pos {
+                                    //println!("iter:{}", iter);
+                                    //println!("i:{}", i);
+                                    //println!("v.start:{}", v.start);
+                                    //println!("v.end:{}", v.end);
+                                    //println!("start_region:{}", start_region);
+                                    //println!("end_region:{}", end_region);
+                                    if ((v.start as f64 <= start_region
+                                        && end_region < v.end as f64)
+                                        || (v.start as f64 >= start_region
+                                            && (v.start as f64) < end_region)
+                                        || (v.end as f64 >= start_region
+                                            && (v.end as f64) < end_region)
+                                        || (start_region >= v.start as f64
+                                            && (v.end as f64) < end_region))
+                                        && iter > 1
+                                    {
+                                        // Calculate sum and number for this region
+                                        //println!("Hello");
+                                        let start_entry_within_region =
+                                            determine_max(v.start as f64, start_region);
+                                        let stop_entry_within_region =
+                                            determine_min(v.end as f64, end_region);
+                                        datapoints_num[i] += (stop_entry_within_region
+                                            - start_entry_within_region)
+                                            as f64;
+                                        datapoints_sum[i] += (stop_entry_within_region
+                                            - start_entry_within_region)
+                                            as f64
+                                            * v.value as f64;
+                                        //println!(
+                                        //    "start_entry_within_region inside:{}",
+                                        //    start_entry_within_region
+                                        //);
+                                        //println!(
+                                        //    "stop_entry_within_region inside:{}",
+                                        //    stop_entry_within_region
+                                        //);
+                                        //println!("datapoints_num inside[i]:{}", datapoints_num[i]);
+                                        //println!("datapoints_sum inside[i]:{}", datapoints_sum[i]);
+                                    }
+                                    if end_region <= v.end as f64 {
+                                        // Entry spans into next region, need to increment iterator
+                                        if i + 2 < datapoints_list.len() {
+                                            i += 1;
+                                            start_region = datapoints_list[i];
+                                            end_region = datapoints_list[i + 1];
+                                        } else {
+                                            break;
+                                        }
+                                    }
+                                    iter += 1;
+                                }
+                            }
+                        }
+                        Err(_) => {
+                            println!("Possible error:{:?}", entry);
+                        }
+                    }
+                }
+            }
+        }
+    } else {
+        // Read from a file
+        let mut reader = BigWigRead::from_file_and_attach(&bigwig_file_url).unwrap();
+        match zoom_level {
+            Some(level) => {
+                // Using some zoom level
+                let bigwig_output = reader
+                    .get_zoom_interval(&chrom, start_pos as u32, stop_pos as u32, level)
+                    .unwrap();
+                let mut i = 0;
+                let mut start_region = datapoints_list[i];
+                let mut end_region = datapoints_list[i + 1];
+                for entry in bigwig_output {
+                    match entry {
+                        Ok(v) => {
+                            //println!(
+                            //    "start,end,sum,bases_covered:{},{},{},{}",
+                            //    v.start, v.end, v.summary.sum, v.summary.bases_covered
+                            //);
+
+                            if v.start == v.end {
+                                continue;
+                            } else {
+                                if (v.start as f64 <= start_region && end_region < v.end as f64)
+                                    || (v.start as f64 >= start_region
+                                        && (v.start as f64) < end_region)
+                                    || (v.end as f64 >= start_region && (v.end as f64) < end_region)
+                                    || (start_region >= v.start as f64
+                                        && (v.end as f64) < end_region)
+                                {
+                                    // Calculate sum and number for this region
+                                    //println!("i:{}", i);
+                                    //println!("v.start:{}", v.start);
+                                    //println!("v.end:{}", v.end);
+                                    //println!("start_region:{}", start_region);
+                                    //println!("end_region:{}", end_region);
+                                    let start_entry_within_region =
+                                        determine_max(v.start as f64, start_region);
+                                    let stop_entry_within_region =
+                                        determine_min(v.end as f64, end_region);
+                                    datapoints_num[i] += (stop_entry_within_region
+                                        - start_entry_within_region)
+                                        as f64;
+                                    datapoints_sum[i] += (stop_entry_within_region
+                                        - start_entry_within_region)
+                                        as f64
+                                        * ((v.summary.sum as f64) / v.summary.bases_covered as f64);
+                                    //println!(
+                                    //    "start_entry_within_region:{}",
+                                    //    start_entry_within_region
+                                    //);
+                                    //println!(
+                                    //    "stop_entry_within_region:{}",
+                                    //    stop_entry_within_region
+                                    //);
+                                    //println!("datapoints_num[i]:{}", datapoints_num[i]);
+                                    //println!("datapoints_sum[i]:{}", datapoints_sum[i]);
+                                }
+                                let mut iter = 1;
+                                while end_region < v.end as f64 && end_region != stop_pos {
+                                    //println!("iter:{}", iter);
+                                    //println!("i:{}", i);
+                                    //println!("v.start:{}", v.start);
+                                    //println!("v.end:{}", v.end);
+                                    //println!("start_region:{}", start_region);
+                                    //println!("end_region:{}", end_region);
+                                    if ((v.start as f64 <= start_region
+                                        && end_region < v.end as f64)
+                                        || (v.start as f64 >= start_region
+                                            && (v.start as f64) < end_region)
+                                        || (v.end as f64 >= start_region
+                                            && (v.end as f64) < end_region)
+                                        || (start_region >= v.start as f64
+                                            && (v.end as f64) < end_region))
+                                        && iter > 1
+                                    {
+                                        // Calculate sum and number for this region
+                                        //println!("Hello");
+                                        let start_entry_within_region =
+                                            determine_max(v.start as f64, start_region);
+                                        let stop_entry_within_region =
+                                            determine_min(v.end as f64, end_region);
+                                        datapoints_num[i] += (stop_entry_within_region
+                                            - start_entry_within_region)
+                                            as f64;
+                                        datapoints_sum[i] += (stop_entry_within_region
+                                            - start_entry_within_region)
+                                            as f64
+                                            * ((v.summary.sum as f64)
+                                                / v.summary.bases_covered as f64);
+                                        //println!(
+                                        //    "start_entry_within_region inside:{}",
+                                        //    start_entry_within_region
+                                        //);
+                                        //println!(
+                                        //    "stop_entry_within_region inside:{}",
+                                        //    stop_entry_within_region
+                                        //);
+                                        //println!("datapoints_num inside[i]:{}", datapoints_num[i]);
+                                        //println!("datapoints_sum inside[i]:{}", datapoints_sum[i]);
+                                    }
+                                    if end_region <= v.end as f64 {
+                                        // Entry spans into next region, need to increment iterator
+                                        if i + 2 < datapoints_list.len() {
+                                            i += 1;
+                                            start_region = datapoints_list[i];
+                                            end_region = datapoints_list[i + 1];
+                                        } else {
+                                            break;
+                                        }
+                                    }
+                                    iter += 1;
+                                }
+                            }
+                        }
+                        Err(_) => {
+                            println!("Possible error:{:?}", entry);
+                        }
+                    }
+                }
+            }
+            None => {
+                // To be used in nucleotide resolution
+                let bigwig_output = reader
+                    .get_interval(&chrom, start_pos as u32, stop_pos as u32)
+                    .unwrap();
+                let mut i = 0;
+                let mut start_region = datapoints_list[i];
+                let mut end_region = datapoints_list[i + 1];
+                for entry in bigwig_output {
+                    match entry {
+                        Ok(v) => {
+                            //println!("start,end,value:{},{},{}", v.start, v.end, v.value);
+                            if v.start == v.end {
+                                continue;
+                            } else {
+                                if (v.start as f64 <= start_region && end_region < v.end as f64)
+                                    || (v.start as f64 >= start_region
+                                        && (v.start as f64) < end_region)
+                                    || (v.end as f64 >= start_region && (v.end as f64) < end_region)
+                                    || (start_region >= v.start as f64
+                                        && (v.end as f64) < end_region)
+                                {
+                                    // Calculate sum and number for this region
+                                    //println!("i:{}", i);
+                                    //println!("v.start:{}", v.start);
+                                    //println!("v.end:{}", v.end);
+                                    //println!("start_region:{}", start_region);
+                                    //println!("end_region:{}", end_region);
+                                    let start_entry_within_region =
+                                        determine_max(v.start as f64, start_region);
+                                    let stop_entry_within_region =
+                                        determine_min(v.end as f64, end_region);
+                                    datapoints_num[i] += (stop_entry_within_region
+                                        - start_entry_within_region)
+                                        as f64;
+                                    datapoints_sum[i] += (stop_entry_within_region
+                                        - start_entry_within_region)
+                                        as f64
+                                        * v.value as f64;
+                                    //println!(
+                                    //    "start_entry_within_region:{}",
+                                    //    start_entry_within_region
+                                    //);
+                                    //println!(
+                                    //    "stop_entry_within_region:{}",
+                                    //    stop_entry_within_region
+                                    //);
+                                    //println!("datapoints_num[i]:{}", datapoints_num[i]);
+                                    //println!("datapoints_sum[i]:{}", datapoints_sum[i]);
+                                }
+                                let mut iter = 1;
+                                while end_region < v.end as f64 && end_region != stop_pos {
+                                    //println!("iter:{}", iter);
+                                    //println!("i:{}", i);
+                                    //println!("v.start:{}", v.start);
+                                    //println!("v.end:{}", v.end);
+                                    //println!("start_region:{}", start_region);
+                                    //println!("end_region:{}", end_region);
+                                    if ((v.start as f64 <= start_region
+                                        && end_region < v.end as f64)
+                                        || (v.start as f64 >= start_region
+                                            && (v.start as f64) < end_region)
+                                        || (v.end as f64 >= start_region
+                                            && (v.end as f64) < end_region)
+                                        || (start_region >= v.start as f64
+                                            && (v.end as f64) < end_region))
+                                        && iter > 1
+                                    {
+                                        // Calculate sum and number for this region
+                                        //println!("Hello");
+                                        let start_entry_within_region =
+                                            determine_max(v.start as f64, start_region);
+                                        let stop_entry_within_region =
+                                            determine_min(v.end as f64, end_region);
+                                        datapoints_num[i] += (stop_entry_within_region
+                                            - start_entry_within_region)
+                                            as f64;
+                                        datapoints_sum[i] += (stop_entry_within_region
+                                            - start_entry_within_region)
+                                            as f64
+                                            * v.value as f64;
+                                        //println!(
+                                        //    "start_entry_within_region inside:{}",
+                                        //    start_entry_within_region
+                                        //);
+                                        //println!(
+                                        //    "stop_entry_within_region inside:{}",
+                                        //    stop_entry_within_region
+                                        //);
+                                        //println!("datapoints_num inside[i]:{}", datapoints_num[i]);
+                                        //println!("datapoints_sum inside[i]:{}", datapoints_sum[i]);
+                                    }
+                                    if end_region <= v.end as f64 {
+                                        // Entry spans into next region, need to increment iterator
+                                        if i + 2 < datapoints_list.len() {
+                                            i += 1;
+                                            start_region = datapoints_list[i];
+                                            end_region = datapoints_list[i + 1];
+                                        } else {
+                                            break;
+                                        }
+                                    }
+                                    iter += 1;
+                                }
+                            }
+                        }
+                        Err(_) => {
+                            println!("Possible error:{:?}", entry);
+                        }
+                    }
+                }
             }
         }
     }
 
-    if file_found == true {
-        //println!("datapoints_sum:{:?}", datapoints_sum);
-        //println!("datapoints_num:{:?}", datapoints_num);
-        let mut output_vec: String = "".to_string();
-        for i in 0..datapoints_num.len() {
-            let mean;
-            if datapoints_num[i] == 0.0 {
-                mean = 0.0;
-            } else {
-                mean = datapoints_sum[i] / datapoints_num[i] as f64;
-            }
-            output_vec.push_str(&mean.to_string());
-            output_vec.push_str(&"\t".to_string());
+    //calculate_datapoints(bigwig_output, chrom, start_pos, stop_pos, data_points);
+
+    let mut output_vec: String = "".to_string();
+    for i in 0..datapoints_num.len() {
+        let mean;
+        if datapoints_num[i] == 0.0 {
+            mean = 0.0;
+        } else {
+            mean = datapoints_sum[i] / datapoints_num[i] as f64;
         }
-        output_vec.pop();
-        println!("{}", output_vec);
+        output_vec.push_str(&mean.to_string());
+        output_vec.push_str(&"\t".to_string());
     }
-}
-
-fn determine_max(n1: f64, n2: f64) -> f64 {
-    if n1 >= n2 {
-        n1
-    } else {
-        n2
-    }
-}
-
-fn determine_min(n1: f64, n2: f64) -> f64 {
-    if n1 < n2 {
-        n1
-    } else {
-        n2
-    }
+    output_vec.pop();
+    println!("{}", output_vec);
 }
