@@ -1,16 +1,16 @@
 import { getCompInit, copyMerge } from '../rx'
 import { controlsInit } from './controls'
-import { fillTermWrapper } from '../termsetting/termsetting'
+import { fillTermWrapper } from '#termsetting'
 import { select, event } from 'd3-selection'
-import { scaleLinear as d3Linear } from 'd3-scale'
+import { scaleLinear, scaleOrdinal, schemeCategory10, schemeCategory20 } from 'd3-scale'
 import { axisLeft, axisBottom } from 'd3-axis'
 import { line, area, curveStepAfter } from 'd3-shape'
-import { scaleOrdinal, schemeCategory10, schemeCategory20 } from 'd3-scale'
 import { rgb } from 'd3-color'
-import htmlLegend from '../dom/html.legend'
+import htmlLegend from '#dom/html.legend'
 import Partjson from 'partjson'
-import { dofetch3, to_svg } from '../src/client'
-import { sayerror } from '../dom/error'
+import { dofetch3, to_svg } from '#src/client'
+import { sayerror } from '#dom/error'
+import { getSeriesTip } from '#dom/svgSeriesTips'
 
 export class Cuminc {
 	constructor(opts) {
@@ -309,23 +309,20 @@ class MassCumInc {
 		this.refs = data.refs
 		const labelOrder = this.refs.bins && this.refs.bins.length > 0 ? this.refs.bins.map(b => b.label) : null
 
+		this.tests = {}
 		// process statistical tests
 		if (data.tests) {
-			this.tests = {}
-			for (const chart in data.tests) {
+			for (const chartId in data.tests) {
 				// hide tests of hidden series
-				this.tests[chart] = data.tests[chart].filter(
+				const visibleTests = data.tests[chartId].filter(
 					test => !this.hiddenOverlays.includes(test.series1) && !this.hiddenOverlays.includes(test.series2)
 				)
-				if (this.tests[chart].length == 0) {
-					delete this.tests[chart]
-					continue
-				}
-
+				if (!visibleTests.length) continue
+				this.tests[chartId] = visibleTests
 				// sort tests
 				if (labelOrder) {
 					// series 1 should have smaller bin value
-					for (const test of this.tests[chart]) {
+					for (const test of this.tests[chartId]) {
 						const orderedSeries = [test.series1, test.series2].sort(
 							(a, b) => labelOrder.indexOf(a) - labelOrder.indexOf(b)
 						)
@@ -333,7 +330,7 @@ class MassCumInc {
 						test.series2 = orderedSeries[1]
 					}
 					// sort first by series1 then by series2
-					this.tests[chart].sort(
+					this.tests[chartId].sort(
 						(a, b) =>
 							labelOrder.indexOf(a.series1) - labelOrder.indexOf(b.series1) ||
 							labelOrder.indexOf(a.series2) - labelOrder.indexOf(b.series2)
@@ -558,15 +555,15 @@ function setRenderers(self) {
 			.style('padding-left', '20px')
 
 		/* eslint-disable */
-		const [mainG, axisG, xAxis, yAxis, xTitle, yTitle] = getSvgSubElems(svg)
+		const [mainG, seriesesG, axisG, xAxis, yAxis, xTitle, yTitle, plotRect] = getSvgSubElems(svg, chart)
 		/* eslint-enable */
 		//if (d.xVals) computeScales(d, s);
 
 		mainG.attr('transform', 'translate(' + s.svgPadding.left + ',' + s.svgPadding.top + ')')
-		const visibleSerieses = chart.serieses.filter(s => !self.hiddenOverlays.includes(s.seriesId))
-		const serieses = mainG
+		chart.visibleSerieses = chart.serieses.filter(s => !self.hiddenOverlays.includes(s.seriesId))
+		const serieses = seriesesG
 			.selectAll('.sjpcb-cuminc-series')
-			.data(visibleSerieses, d => (d && d[0] ? d[0].seriesId : ''))
+			.data(chart.visibleSerieses, d => (d && d[0] ? d[0].seriesId : ''))
 
 		serieses.exit().remove()
 		serieses.each(function(series, i) {
@@ -581,6 +578,31 @@ function setRenderers(self) {
 			})
 
 		renderAxes(xAxis, xTitle, yAxis, yTitle, s, chart)
+
+		plotRect
+			.attr('x', 0) //s.svgPadding.left) //s.svgh - s.svgPadding.top - s.svgPadding.bottom + 5)
+			.attr('width', s.svgw - s.svgPadding.left - s.svgPadding.right)
+			.attr('y', 0) //s.svgPadding.top) // - s.svgPadding.bottom + 5)
+			.attr('height', s.svgh - s.svgPadding.top - s.svgPadding.bottom + s.xAxisOffset)
+
+		svg.seriesTip.update({
+			xScale: chart.xScale,
+			serieses: chart.visibleSerieses.map(s => {
+				const seriesLabel = s.seriesLabel ? `${s.seriesLabel}:` : 'Cumulative Incidence:'
+				const color = self.term2toColor[s.seriesId]
+				return {
+					data: s.data.map(d => {
+						return {
+							x: d.x,
+							html:
+								`<span style='color: ${color}'>` +
+								`${seriesLabel} ${d.y.toFixed(2)} (${d.low.toFixed(2)} -${d.high.toFixed(2)})` +
+								`</span>`
+						}
+					})
+				}
+			})
+		})
 	}
 
 	function renderPvalues(pvaldiv, chart, tests, s) {
@@ -684,24 +706,43 @@ function setRenderers(self) {
 			.text(d => d)
 	}
 
-	function getSvgSubElems(svg) {
-		let mainG, axisG, xAxis, yAxis, xTitle, yTitle
+	function getSvgSubElems(svg, chart) {
+		let mainG, seriesesG, axisG, xAxis, yAxis, xTitle, yTitle, plotRect, line
 		if (!svg.select('.sjpcb-cuminc-mainG').size()) {
 			mainG = svg.append('g').attr('class', 'sjpcb-cuminc-mainG')
+			seriesesG = mainG.append('g').attr('class', 'sjpcb-cuminc-seriesesG')
 			axisG = mainG.append('g').attr('class', 'sjpcb-cuminc-axis')
 			xAxis = axisG.append('g').attr('class', 'sjpcb-cuminc-x-axis')
 			yAxis = axisG.append('g').attr('class', 'sjpcb-cuminc-y-axis')
 			xTitle = axisG.append('g').attr('class', 'sjpcb-cuminc-x-title')
 			yTitle = axisG.append('g').attr('class', 'sjpcb-cuminc-y-title')
+
+			line = mainG
+				.append('line')
+				.attr('class', 'sjpcb-plot-tip-line')
+				.attr('stroke', '#000')
+				.attr('stroke-width', '1px')
+			plotRect = mainG
+				.append('rect')
+				.attr('class', 'sjpcb-plot-tip-rect')
+				.style('fill', 'transparent')
 		} else {
 			mainG = svg.select('.sjpcb-cuminc-mainG')
+			seriesesG = mainG.select('.sjpcb-cuminc-seriesesG')
 			axisG = mainG.select('.sjpcb-cuminc-axis')
 			xAxis = axisG.select('.sjpcb-cuminc-x-axis')
 			yAxis = axisG.select('.sjpcb-cuminc-y-axis')
 			xTitle = axisG.select('.sjpcb-cuminc-x-title')
 			yTitle = axisG.select('.sjpcb-cuminc-y-title')
+			plotRect = mainG.select('.sjpcb-plot-tip-rect')
+			line = mainG.select('.sjpcb-plot-tip-line')
 		}
-		return [mainG, axisG, xAxis, yAxis, xTitle, yTitle]
+
+		if (!svg.seriesTip) {
+			svg.seriesTip = getSeriesTip(line, plotRect, self.app?.tip)
+		}
+
+		return [mainG, seriesesG, axisG, xAxis, yAxis, xTitle, yTitle, plotRect]
 	}
 
 	function renderSeries(g, chart, series, i, s, duration) {
@@ -772,27 +813,6 @@ function setRenderers(self) {
 	function renderSubseries(s, g, data) {
 		g.selectAll('g').remove()
 		const subg = g.append('g')
-		const circles = subg.selectAll('circle').data(data, b => b.x)
-		circles.exit().remove()
-
-		circles
-			.attr('r', s.radius)
-			.attr('cx', c => c.scaledX)
-			.attr('cy', c => c.scaledY)
-			.style('fill', s.fill)
-			.style('fill-opacity', s.fillOpacity)
-			.style('stroke', s.stroke)
-
-		circles
-			.enter()
-			.append('circle')
-			.attr('r', s.radius)
-			.attr('cx', c => c.scaledX)
-			.attr('cy', c => c.scaledY)
-			.style('opacity', 0)
-			.style('fill', s.fill)
-			.style('fill-opacity', s.fillOpacity)
-			.style('stroke', s.stroke)
 
 		const seriesName = data[0].seriesName
 		const color = self.term2toColor[data[0].seriesId]
@@ -809,19 +829,19 @@ function setRenderers(self) {
 
 	function renderAxes(xAxis, xTitle, yAxis, yTitle, s, d) {
 		xAxis
-			.attr('transform', 'translate(0,' + (s.svgh - s.svgPadding.top - s.svgPadding.bottom + 5) + ')')
+			.attr('transform', 'translate(0,' + (s.svgh - s.svgPadding.top - s.svgPadding.bottom + s.xAxisOffset) + ')')
 			.call(axisBottom(d.xScale).ticks(5))
 
-		yAxis.attr('transform', 'translate(-5,0)').call(
+		yAxis.attr('transform', `translate(${s.yAxisOffset},0)`).call(
 			axisLeft(
-				d3Linear()
+				scaleLinear()
 					.domain(d.yScale.domain())
 					.range([0, s.svgh - s.svgPadding.top - s.svgPadding.bottom])
 			).ticks(5)
 		)
 
 		xTitle.select('text, title').remove()
-		const xTitleLabel = 'Years since diagnosis'
+		const xTitleLabel = self.state.config.xlabel || 'Years since diagnosis'
 		const xText = xTitle
 			.attr(
 				'transform',
@@ -863,7 +883,7 @@ function setInteractivity(self) {
 
 	self.mouseover = function() {
 		const d = event.target.__data__
-		if (event.target.tagName == 'circle') {
+		/*if (event.target.tagName == 'circle') {
 			const label = labels[d.seriesName]
 			const x = d.x.toFixed(1)
 			const y = d.y.toPrecision(2)
@@ -882,7 +902,7 @@ function setInteractivity(self) {
 			self.app.tip.show(event.clientX, event.clientY).d.html(d.seriesLabel ? d.seriesLabel : d.seriesId)
 		} else {
 			self.app.tip.hide()
-		}
+		}*/
 	}
 
 	self.mouseout = function() {
@@ -931,13 +951,16 @@ const defaultSettings = JSON.stringify({
 		chartMargin: 10,
 		svgw: 400,
 		svgh: 300,
+		coxXlabel: 'Years since diagnosis',
 		svgPadding: {
 			top: 20,
 			left: 55,
 			right: 20,
 			bottom: 50
 		},
-		axisTitleFontSize: 16
+		axisTitleFontSize: 16,
+		xAxisOffset: 5,
+		yAxisOffset: -5
 	}
 })
 
@@ -1039,7 +1062,7 @@ function getPj(self) {
 			xScale(row, context) {
 				const s = self.settings
 				return (
-					d3Linear()
+					scaleLinear()
 						// force min x=0, instead of using min time in server data
 						// add 2 years to x max value to ensure a horizontally flat ending
 						// and avoid the potential for a vertical line ending
@@ -1059,7 +1082,7 @@ function getPj(self) {
 				const s = self.settings
 				const yMax = s.scale == 'byChart' ? context.self.yMax : context.root.yMax
 				const domain = [Math.min(100, 1.1 * yMax), 0]
-				return d3Linear()
+				return scaleLinear()
 					.domain(domain)
 					.range([0, s.svgh - s.svgPadding.top - s.svgPadding.bottom])
 			},

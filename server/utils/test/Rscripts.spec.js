@@ -1,11 +1,11 @@
-/************************
+/********************************************
 Test script for R scripts in 'server/utils/'
 
-Run test script as follows (from pp root):
+Run test script as follows (from 'server/'):
 
-	npx tape -r '@babel/register' server/utils/test/Rscripts.spec.js
+	npx tape -r '@babel/register' utils/test/Rscripts.spec.js
 
-*************************/
+*********************************************/
 
 const tape = require('tape')
 const fs = require('fs')

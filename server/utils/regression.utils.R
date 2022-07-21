@@ -188,9 +188,43 @@ linearRegression <- function(formula, dat) {
   
   # type III statistics table
   type3_table <- as.matrix(drop1(res, scope = ~., test = "F"))
+  # if there are interactions, then set the results
+  # of the main effects to "NA" because these type III
+  # stats cannot be accurately estimated
+  ints <- grep(":", row.names(type3_table), value = T, fixed = T)
+  intsIds <- unique(unlist(strsplit(ints, ":")))
+  type3_table[intsIds,] <- NA
+  # round values
   type3_table[,c("Sum of Sq","RSS","AIC")] <- round(type3_table[,c("Sum of Sq","RSS","AIC")], 1)
   type3_table[,"F value"] <- round(type3_table[,"F value"], 3)
   type3_table[,"Pr(>F)"] <- signif(type3_table[,"Pr(>F)"], 4)
+  
+  
+  # total SNP effect table
+  # if a snplocus snp has an interaction, then compute
+  # the total effect of the snp on the model
+  # by determining the combined effect of removing the
+  # snp and all of its interactions from the model
+  totalSnpEffect_table <- NULL
+  if (formula$id != "" && length(ints) > 0 && any(grepl(formula$id, ints, fixed = T))) {
+    snp_vars <- grep(formula$id, row.names(type3_table), value = T, fixed = T)
+    snp_coefs <- grep(formula$id, row.names(coefficients_table), value = T, fixed = T)
+    if (any(res_summ$aliased)) {
+      # aliased (i.e. perfectly correlated) coefficients
+      # are present in the model
+      # need to remove these coefficients from the
+      # hypothesis matrix
+      aliased <- names(which(res_summ$aliased))
+      snp_coefs <- snp_coefs[!snp_coefs %in% aliased]
+    }
+    totalSnpEffect_table <- as.matrix(linearHypothesis(res, paste0(snp_coefs, "=0"), test = "F", singular.ok = T))
+    row.names(totalSnpEffect_table) <- c("<none>", paste(snp_vars, collapse = "+"))
+    totalSnpEffect_table[,c("RSS","Sum of Sq")] <- round(totalSnpEffect_table[,c("RSS","Sum of Sq")], 1)
+    totalSnpEffect_table[,"F"] <- round(totalSnpEffect_table[,"F"], 3)
+    totalSnpEffect_table[,"Pr(>F)"] <- signif(totalSnpEffect_table[,"Pr(>F)"], 4)
+    totalSnpEffect_table <- cbind("Variable" = row.names(totalSnpEffect_table), totalSnpEffect_table)
+    totalSnpEffect_table <- list("header" = colnames(totalSnpEffect_table), "rows" = totalSnpEffect_table)
+  }
   
   # other summary stats table
   other_table <- list(
@@ -207,6 +241,7 @@ linearRegression <- function(formula, dat) {
   
   # export the results tables
   out <- list("res" = res, "sampleSize" = unbox(sampleSize), "residuals" = residuals_table, "coefficients" = coefficients_table, "type3" = type3_table, "other" = other_table)
+  if (!is.null(totalSnpEffect_table)) out[["totalSnpEffect"]] <- totalSnpEffect_table
   return(out)
 }
 
@@ -242,9 +277,36 @@ logisticRegression <- function(formula, dat) {
   
   # type III statistics table
   type3_table <- as.matrix(drop1(res, scope = ~., test = "LRT"))
+  # if there are interactions, then set the results
+  # of the main effects to "NA" because these type III
+  # stats cannot be accurately estimated
+  ints <- grep(":", row.names(type3_table), value = T, fixed = T)
+  intsIds <- unique(unlist(strsplit(ints, ":")))
+  type3_table[intsIds,] <- NA
+  # round values
   type3_table[,c("Deviance","AIC")] <- round(type3_table[,c("Deviance","AIC")], 1)
   type3_table[,"LRT"] <- round(type3_table[,"LRT"], 3)
   type3_table[,"Pr(>Chi)"] <- signif(type3_table[,"Pr(>Chi)"], 4)
+  
+  # total SNP effect table
+  # if a snplocus snp has an interaction, then compute
+  # the total effect of the snp on the model
+  # by determining the combined effect of removing the
+  # snp and all of its interactions from the model
+  totalSnpEffect_table <- NULL
+  if (formula$id != "" && length(ints) > 0 && any(grepl(formula$id, ints, fixed = T))) {
+    snp_vars <- grep(formula$id, row.names(type3_table), value = T, fixed = T)
+    formula_reduce <- update(formula$formula, paste0("~.",paste0("-", snp_vars, collapse = "")))
+    res_reduce <- glm(formula_reduce, family = binomial(link='logit'), data = dat)
+    totalSnpEffect_table <- as.matrix(lrtest(res, res_reduce))
+    colnames(totalSnpEffect_table)[3] <- "Df diff"
+    row.names(totalSnpEffect_table) <- c("<none>", paste(snp_vars, collapse = "+"))
+    totalSnpEffect_table[,"LogLik"] <- round(totalSnpEffect_table[,"LogLik"], 1)
+    totalSnpEffect_table[,"Chisq"] <- round(totalSnpEffect_table[,"Chisq"], 3)
+    totalSnpEffect_table[,"Pr(>Chisq)"] <- signif(totalSnpEffect_table[,"Pr(>Chisq)"], 4)
+    totalSnpEffect_table <- cbind("Variable" = row.names(totalSnpEffect_table), totalSnpEffect_table)
+    totalSnpEffect_table <- list("header" = colnames(totalSnpEffect_table), "rows" = totalSnpEffect_table)
+  }
   
   # other summary stats table
   other_table <- list(
@@ -254,6 +316,7 @@ logisticRegression <- function(formula, dat) {
   
   # export the results tables
   out <- list("res" = res, "sampleSize" = unbox(sampleSize), "residuals" = residuals_table, "coefficients" = coefficients_table, "type3" = type3_table, "other" = other_table)
+  if (!is.null(totalSnpEffect_table)) out[["totalSnpEffect"]] <- totalSnpEffect_table
   return(out)
 }
 
@@ -282,10 +345,37 @@ coxRegression <- function(formula, dat) {
   coefficients_table <- coefficients_table[, c(2,6,7,1,3,4,5), drop = F]
   
   # type III statistics table
-  type3_table <- as.matrix(anova(res, test = "Chisq"))
-  type3_table[,"loglik"] <- round(type3_table[,"loglik"], 1)
-  type3_table[,"Chisq"] <- round(type3_table[,"Chisq"], 3)
-  type3_table[,"Pr(>|Chi|)"] <- signif(type3_table[,"Pr(>|Chi|)"], 4)
+  type3_table <- as.matrix(drop1(res, scope = ~., test = "Chisq"))
+  # if there are interactions, then set the results
+  # of the main effects to "NA" because these type III
+  # stats cannot be accurately estimated
+  ints <- grep(":", row.names(type3_table), value = T, fixed = T)
+  intsIds <- unique(unlist(strsplit(ints, ":")))
+  type3_table[intsIds,] <- NA
+  # round values
+  type3_table[,"AIC"] <- round(type3_table[,"AIC"], 1)
+  type3_table[,"LRT"] <- round(type3_table[,"LRT"], 3)
+  type3_table[,"Pr(>Chi)"] <- signif(type3_table[,"Pr(>Chi)"], 4)
+  
+  # total SNP effect table
+  # if a snplocus snp has an interaction, then compute
+  # the total effect of the snp on the model
+  # by determining the combined effect of removing the
+  # snp and all of its interactions from the model
+  totalSnpEffect_table <- NULL
+  if (formula$id != "" && length(ints) > 0 && any(grepl(formula$id, ints, fixed = T))) {
+    snp_vars <- grep(formula$id, row.names(type3_table), value = T, fixed = T)
+    formula_reduce <- update(formula$formula, paste0("~.",paste0("-", snp_vars, collapse = "")))
+    res_reduce <- coxph(formula_reduce, data = dat, model = T)
+    totalSnpEffect_table <- as.matrix(lrtest(res, res_reduce))
+    colnames(totalSnpEffect_table)[3] <- "Df diff"
+    row.names(totalSnpEffect_table) <- c("<none>", paste(snp_vars, collapse = "+"))
+    totalSnpEffect_table[,"LogLik"] <- round(totalSnpEffect_table[,"LogLik"], 1)
+    totalSnpEffect_table[,"Chisq"] <- round(totalSnpEffect_table[,"Chisq"], 3)
+    totalSnpEffect_table[,"Pr(>Chisq)"] <- signif(totalSnpEffect_table[,"Pr(>Chisq)"], 4)
+    totalSnpEffect_table <- cbind("Variable" = row.names(totalSnpEffect_table), totalSnpEffect_table)
+    totalSnpEffect_table <- list("header" = colnames(totalSnpEffect_table), "rows" = totalSnpEffect_table)
+  }
   
   # statistical tests table
   tests_table <- rbind(res_summ$logtest, res_summ$waldtest, res_summ$sctest)
@@ -304,12 +394,19 @@ coxRegression <- function(formula, dat) {
   
   # export the results tables
   out <- list("res" = res, "sampleSize" = unbox(sampleSize), "eventCnt" = unbox(eventCnt),"coefficients" = coefficients_table, "type3" = type3_table, "tests" = tests_table, "other" = other_table)
+  if (!is.null(totalSnpEffect_table)) out[["totalSnpEffect"]] <- totalSnpEffect_table
   return(out)
 }
 
 # run regression analysis
 runRegression <- function(formula, regtype, dat, outcome) {
   id <- formula$id
+  # remove samples with NA values in any variable in the formula
+  # note: even though regression functions (e.g. lm, glm, etc.)
+  # perform this step by default, type III stats will error
+  # out when comparing models with and without certain variables
+  # that are NA for some samples
+  fdat <- dat[complete.cases(dat[,all.vars(formula$formula)]),]
   warns <- vector(mode = "character")
   handleWarns <- function(w) {
     # handler for warning messages
@@ -317,11 +414,11 @@ runRegression <- function(formula, regtype, dat, outcome) {
     invokeRestart("muffleWarning")
   }
   if (regtype == "linear") {
-    results <- withCallingHandlers(linearRegression(formula, dat), warning = handleWarns)
+    results <- withCallingHandlers(linearRegression(formula, fdat), warning = handleWarns)
   } else if (regtype == "logistic") {
-    results <- withCallingHandlers(logisticRegression(formula, dat), warning = handleWarns)
+    results <- withCallingHandlers(logisticRegression(formula, fdat), warning = handleWarns)
   } else if (regtype == "cox") {
-    results <- withCallingHandlers(coxRegression(formula, dat), warning = handleWarns)
+    results <- withCallingHandlers(coxRegression(formula, fdat), warning = handleWarns)
   } else {
     stop("unknown regression type")
   }
@@ -334,7 +431,7 @@ runRegression <- function(formula, regtype, dat, outcome) {
     for (r in 1:nrow(splineVariables)) {
       splineVariable <- splineVariables[r,]
       if ("plotfile" %in% names(splineVariable$spline)) {
-        plot_spline(splineVariable, dat, outcome, results$res, regtype)
+        plot_spline(splineVariable, fdat, outcome, results$res, regtype)
       }
     }
   }

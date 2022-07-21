@@ -61,7 +61,8 @@ class Regression {
 			activeCohort: appState.activeCohort,
 			termfilter: appState.termfilter,
 			config,
-			allowedTermTypes: appState.termdbConfig.allowedTermTypes
+			allowedTermTypes: appState.termdbConfig.allowedTermTypes,
+			coxCumincXlab: appState.termdbConfig.coxCumincXlab
 		}
 	}
 

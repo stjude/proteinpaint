@@ -5,7 +5,7 @@
 </head>
 <body>
 
-<script src="/bin/proteinpaint.js" charset="utf-8"></script>
+<script src="https://ppr.stjude.org/bin/proteinpaint.js" charset="utf-8"></script>
 
 <noscript>This page requires JavaScript. Please enable it in your browser settings.</noscript>
 
@@ -14,6 +14,7 @@
 
 <script>
 document.body.onload = () => runproteinpaint({
+	host: 'https://ppr.stjude.org',
 	holder:document.getElementById('aaa'),
 	parseurl:true,
 	nobox:1,
@@ -113,60 +114,61 @@ document.body.onload = () => runproteinpaint({
 									id: 'Gender',
 									//q: { mode: 'values' } // or 'groupsetting'
 								},
-								{
-									id: 'Risk (At diagnosis)'
-								},
-								{
-									id: 'Integrated Diagnosis'
-								},
-								{
-									id: 'GTR/STR/NTR/Biopsy'
-								},
-								{
-									id: 'Mutational Burden'
-								},
-								{
-									id: 'WES',
-								},
-                                                                { id : 'Age at Last Follow Up (Y))'},
-                                                                { id : 'Alive / Dead'},
-                                                                { id : 'DKFZ Classifier'},
-                                                                { id : 'Enrolling Institution'},
-                                                                { id : 'Ever Used RT During Rx (Yes /No)'},
-                                                                { id : 'First Relapse Or PD  (Y/N)'},
-                                                                //{ id : 'General Treatment'},
-                                                                { id : 'Integrated Diagnosis'},
-                                                                { id : 'Mutation Status'},
-                                                                { id : 'Radiaton Focal/CSI/None'},
-                                                                { id : 'RNA_Seq'},
-                                                                { id : 'Score'},
-                                                                { id : 'Second Relapse Or PD  (Y/N)'},
-                                                                { id : 'SJ class score'},
-                                                                { id : 'Surgery Y/N'},
-                                                                { id : 'Surgery Y/N.1'},
-                                                                { id : 'Therapy'},
-                                                                { id : 'Third Relapse or PD'},
-                                                                { id : 'Treatment'},
-                                                                { id : 'Treatment.1'},
-                                                                { id : 't-SNE'},
-                                                                { id : 'TSNE closest cluster (Sandeep)'},
-                {
-                  id: 'Methylation'
-                }
+                { id : 'Age at Last Follow Up (Y))'},
+                { id : 'Age-Cohort'},
+                { id : 'Alive / Dead'},
+                { id : 'Anatomical Location of Tumor Tier 1'},
+                { id : 'Anatomical Location of Tumor Tier 2'},
+                { id : 'Anatomical Location of Tumor Tier 3'},
+                { id : 'Anatomical Location of Tumor -Tier 4'},
+                { id : 'DKFZ Classifier'},
+                { id : 'Enrolling Institution'},
+                { id : 'Ever Used RT During Rx (Yes /No)'},
+                { id : 'Final EOR'},
+                { id : 'First Relapse Or PD  (Yes/No)'},
+                { id : 'Focal/CSI'},
+                { id : 'Fusion Types'},
+                { id : 'GTR/STR/NTR'},
+                { id : 'GTR/STR/NTR.1'},
+                { id : 'GTR/STR/NTR/Biopsy'},
+                { id : 'Genetic Fusion (Yes/No)'},
+                { id : 'Histology Re-Review'},
+                { id : 'Histology as Documented at Diagnosis'},
+                { id : 'Integrated Tier 1 Diagnosis'},
+                { id : 'Integrated Tier 2 Diagnosis'},
+                { id : 'Integrated Tier 3 Diagnosis'},
+                { id : 'Integrated  Tier 4 Diagnosis'},
+                { id : 'M Stage'},
+                { id : 'Methylation'},
+                { id : 'Post Surgery -Treatment Details'},
+                { id : 'Primary treatment tier 1'},
+                { id : 'Primary treatment tier 2'},
+                { id : 'Protocol'},
+                { id : 'RNA-Seq'},
+                { id : 'Radiaton Focal/CSI/None'},
+                { id : 'Risk (At diagnosis)'},
+                { id : 'Score'},
+                { id : 'Second Relapse  (Yes/No)'},
+                { id : 'Surgery (Yes/No)'},
+                { id : 'TSNE closest cluster (Sandeep)'},
+                { id : 'Treatment'},
+                { id : 'Treatment.1'},
+                { id : 'WES'},
+                { id : 't-SNE'},
 							]
 						},
-            /*{
+           /* {
               name: 'Cytogenetics',
               lst: getCytogeneticsData()
-            },
-						...getGeneTermGroups(),*/
+            },*/
+						...getGeneTermGroups(),
 					],
           // each override may be used by any termwrapper 
           // that has a tw.overrides[$key] array of any twOverride[$key] below
-         /* overrides: {
+          overrides: {
             SVfill: {
               value: {
-                key: 'RNAseq', 
+                key: 'RNA-Seq', 
                 //value: 'RNAseq', 
                 values: [
                   {key: 'Not tested', label: 'Not tested', color: '#fff'}
@@ -175,12 +177,12 @@ document.body.onload = () => runproteinpaint({
               sampleFilter: {
                 type: 'tvs',
                 tvs: {
-                  term: {id: 'RNAseq'},
+                  term: {id: 'RNA-Seq'},
                   values: [{key: 'No'}]
                 }
               }
             },
-            Germfill: {
+            /*Germfill: {
               value: {
                 key: 'Germline', 
                 //value: 'Germline', 
@@ -195,7 +197,7 @@ document.body.onload = () => runproteinpaint({
                   values: [{key: 'No'}]
                 }
               }
-            },
+            },*/
             WESfill: {
               value: {
                 key: 'WES', 
@@ -228,7 +230,7 @@ document.body.onload = () => runproteinpaint({
                 }
               }
             }
-          }*/
+          }
 				},
 
 				{
@@ -236,36 +238,8 @@ document.body.onload = () => runproteinpaint({
 					term: {
 						id: 'Event-free survival'
 					},
-					term2: {
-            label: 'Age Group',
-            id: 'Age',
-            q: {
-              mode: 'discrete',
-              type: 'custom-bin',
-              lst: [{
-                label: '<3',
-                startunbounded: true,
-                startinclusive: true,
-                stopinclusive: false,
-                stop: 3
-              },{
-                label: '3 to <7',
-                startinclusive: true,
-                stopinclusive: false,
-                start: 3,
-                stop: 7
-              },{
-                label: '7 to 18',
-                startinclusive: true,
-                stopinclusive: false,
-                start: 7,
-                stopunbounded: true,
-              }]
-            }
-					},
 					settings: {
 						survival: {
-              timeFactor: 1/365,
 							xTickValues: [0,2,4,6,8,10,12,14,16,18,20,22,24,26,28,30]
 						}
 					}
@@ -281,7 +255,6 @@ document.body.onload = () => runproteinpaint({
 					// },
 					settings: {
 						survival: {
-              timeFactor: 1/365,
 							xTickValues: [0,2,4,6,8,10,12,14,16,18,20,22,24,26,28,30]
 						}
 					}
@@ -367,7 +340,7 @@ const genegroups = [
     overrides: ['CNVfill'],
     lst: cnvGenes.map(name=>{return {name}})
   },
-  {
+  /*{
       "name": "Germline",
       overrides: ['Germfill'],
       "lst": [
@@ -378,7 +351,7 @@ const genegroups = [
               "name": "ATM_G"
           }
       ]
-  },
+  },*/
   {
       "name": "Somatic",
       "settings": {

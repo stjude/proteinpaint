@@ -7,8 +7,14 @@ import blockinit from './block.init'
 test with http://localhost:3000/example.gdc.html
 runpp({ geneSearch4GDCmds3:true })
 
-designed to work with client/src/wrappers/PpReact.js 
+designed to work for ssm lollipop app in GDC Analysis Tools Framework
 
+parameters:
+
+arg = {}
+	runpp() argument object
+holder
+genomes = { hg38 : {} }
 */
 
 const gdcGenome = 'hg38'
@@ -20,22 +26,19 @@ export async function init(arg, holder, genomes) {
 
 	// first row, gene search
 	const geneInputDiv = holder.append('div')
-	geneInputDiv
-		.append('div')
-		.style('opacity', 0.5)
-		.text('To view GDC mutations on a gene, enter gene symbol or alias below.')
+	geneInputDiv.append('div').text('To view GDC mutations on a gene, enter gene symbol or alias below.')
 
 	// second row, display graph
 	const graphDiv = holder.append('div')
 
-	const opt = {
+	const searchOpt = {
 		genome,
 		tip,
 		row: geneInputDiv,
 		geneOnly: true,
 		callback: launchView
 	}
-	const coordInput = addGeneSearchbox(opt)
+	const coordInput = addGeneSearchbox(searchOpt)
 
 	async function launchView() {
 		if (!coordInput.geneSymbol) throw 'geneSymbol missing'
@@ -50,8 +53,9 @@ export async function init(arg, holder, genomes) {
 			genome,
 			holder: graphDiv,
 			gmmode: data.coding ? 'protein' : 'exon only',
+			hide_dsHandles: arg.hide_dsHandles,
 			tklst: [{ type: 'mds3', dslabel: 'GDC' }]
 		}
-		blockinit(pa)
+		await blockinit(pa)
 	}
 }

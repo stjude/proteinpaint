@@ -38,6 +38,7 @@ const gdc_apis = {
 }
 
 const skip_workflow_type = 'STAR 2-Pass Transcriptome'
+// will also drop out those with workflow containing "chimeric"
 
 const sequencing_read_filter = { op: '=', content: { field: 'data_category', value: 'Sequencing Reads' } }
 
@@ -69,6 +70,8 @@ async function get_gdc_data(gdc_id) {
 	// scenario 3: 1 or multiple hits/files are available for submitted gdc id
 	for (const s of re.data.hits) {
 		if (s.analysis.workflow_type == skip_workflow_type) continue // skip
+		if (s.analysis.workflow_type.toLowerCase().includes('chimeric')) continue
+
 		const file = {}
 		file.file_uuid = s.id
 		file.file_size = (parseFloat(s.file_size) / 10e8).toFixed(2) + ' GB'

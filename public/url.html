@@ -10,9 +10,11 @@
 by running makeURL(), rows of URLs are added to this <div>
 url host is window.location.origin, allowing to work as ppr.stjude.org/url.html and test things there
 -->
+
 <div id='div' style='margin:10px;display:grid;grid-template-columns:150px 80vw;gap:5px;word-break:break-word'></div>
 
 
+<!-- search "main" to jump to URL sections -->
 
 
 <script>
@@ -220,7 +222,7 @@ makeURL([
 
 
 
-{name:'GDC lollipop',
+{name:'GDC lollipop (mds3)',
 	links:[
 		['AKT1','?genome=hg38&gene=ENST00000407796&mds3=GDC'],
 		['NM_005163','?genome=hg38&gene=NM_005163&mds3=GDC'],
@@ -232,6 +234,15 @@ makeURL([
 		['AKT1 lncRNA','?genome=hg38&gene=ENST00000557552&mds3=GDC'], // no ssm but has cases??
 	]
 },
+
+{name:'mds3 tk',
+	links:[
+		['ASH', '?genome=hg38&gene=bcr&mds3=ASH'],
+		['invalid ds', '?genome=hg38&gene=bcr&mds3=ash'],
+		// todo vcf file
+	]
+},
+
 {name:'RNA splicing',
 	links:[
 		['single','?block=on&genome=hg19&junctionfile=RNA%20splice%20junction,proteinpaint_demo/hg19/junction/file.gz'],
@@ -248,6 +259,15 @@ makeURL([
 		['bed arc','?genome=hg19&block=1&position=chr11:7839893-9165172&arcfile=Arc%20Track,proteinpaint_demo/hg19/arc/mango.gz'],
 	]
 },
+
+{name:'bigwig',
+	links:[
+		['local','?block=on&genome=hg19&bigwigfile=local,proteinpaint_demo/hg19/bigwig/file.bw'],
+		['prp1','?block=on&genome=hg19&bigwigurl=prp1,https://proteinpaint.stjude.org/ppdemo/hg19/bigwig/file.bw'],
+		['ucsc','?block=on&genome=hg19&bigwigurl=ucsc,http://hgdownload.soe.ucsc.edu/goldenPath/hg19/encodeDCC/wgEncodeMapability/wgEncodeCrgMapabilityAlign100mer.bigWig'],
+	]
+},
+
 {name:'bedj',
 	links:[
 		['bedj','?block=on&genome=hg19&bedjfile=JSON-BED,proteinpaint_demo/hg19/bedj/gencode.gz'],
@@ -261,6 +281,7 @@ makeURL([
 		['wrong index','?genome=hg19&block=1&bedjfile=wrong%20index,proteinpaint_demo/hg19/bedj/wrongIndex.gz'],
 	]
 },
+
 {name:'bampile',
 	links:[
 		['example','?block=on&genome=hg19&position=chr12:25362480-25363264&bampilefile=Test,proteinpaint_demo/hg19/bampile/tk.gz'],

@@ -210,7 +210,7 @@ else
 	mv server/utils $APP/
 	mv server/cards $APP/
 	mv server/src/serverconfig.js $APP/src
-	mv shared $APP/
+	mv server/shared $APP/
 	# !!! TODO: old version of cohort.db.refresh will not be supported moving forward
 	if [[ "$SUBDOMAIN" == "ppr" ]]; then
 		# may need to support cohort.db.refresh,
