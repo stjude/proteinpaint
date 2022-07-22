@@ -19,6 +19,7 @@
  cd .. && cargo build --release && time echo /Users/rpaul1/proteinpaint/hg19/PCGP/DNA/cov-wgs/SJOS016_D.bw,chr17,0,81195210,1140 | target/release/bigwig
  ~/proteinpaint/server/utils/bigWigSummary /Users/rpaul1/proteinpaint/hg19/PCGP/DNA/cov-wgs/SJOS016_D.bw chr17 0 81195210 1140
 
+ cd .. && cargo build --release && time echo http://hgdownload.soe.ucsc.edu/goldenPath/hg19/encodeDCC/wgEncodeMapability/wgEncodeCrgMapabilityAlign100mer.bigWig,chr17,0,36996442,800 | target/release/bigwig (not working)
 */
 
 /*
@@ -46,10 +47,12 @@ use bigtools::bigwig::ZoomHeader;
 use bigtools::bigwigread::BigWigRead;
 use bigtools::utils::file::remote_file::RemoteFile;
 use math::round;
+use std::env;
 use std::io;
 
 fn main() {
     let mut input = String::new();
+    env::set_var("RUST_BACKTRACE", "full");
     match io::stdin().read_line(&mut input) {
         // Accepting the piped input from nodejs (or command line from testing)
         #[allow(unused_variables)]
