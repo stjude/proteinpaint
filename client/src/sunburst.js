@@ -241,6 +241,7 @@ export default function(opts) {
 							.attr('font-size', Math.min(18, fontsize))
 						sun.listbutt
 							.append('rect')
+							.classed('sja_info_click', true) //For tape test
 							.attr('x', -eyeheight / 2)
 							.attr('width', eyeheight)
 							.attr('height', emptyspace - fontsize1 / 2)
