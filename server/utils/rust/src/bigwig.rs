@@ -155,8 +155,8 @@ fn calculate_appropriate_zoom_level(zoom_headers: Vec<ZoomHeader>, difference: f
     let mut reduction_levels = Vec::<u32>::new();
     let mut closest_level = Option::<u32>::None; // Zoom level will be none at base-pair resolution
     let mut unity_added = false;
-    let max_entries_parsed_limit = 1000000; // Maximum number of entries that should be parsed from bigwig file. A very high number will lead to better accuracy as this will lead to selection of a lower zoom level. In contrast, a lower value will decrease run time at the cost of accuracy.
-                                            // Parsing out various zoom levels from bigwig file
+    let max_entries_parsed_limit = 100000; // Maximum number of entries that should be parsed from bigwig file. A very high number will lead to better accuracy as this will lead to selection of a lower zoom level. In contrast, a lower value will decrease run time at the cost of accuracy.
+                                           // Parsing out various zoom levels from bigwig file
     for reduction_level in zoom_headers
         .into_iter()
         .map(|entry| (entry.reduction_level))
@@ -205,6 +205,7 @@ fn calculate_appropriate_zoom_level_ucsc(
             reduction_levels.push(1); // 1 represents single base-pair level
             unity_added = true;
         }
+        reduction_levels.reverse();
         //println!("reduction_levels:{:?}", reduction_levels);
         let mut closest_diff: u64 = 18446744073709551615; // Highest number allowed by u64 type
         for level in reduction_levels {
