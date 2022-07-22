@@ -16,6 +16,9 @@
 
  url: cd .. && cargo build --release && time echo https://proteinpaint.stjude.org/ppdemo/hg19/bigwig/file.bw,chr17,7568451,7591984,100 | target/release/bigwig
 cd .. && cargo build --release && time echo /Users/rpaul1/proteinpaint/proteinpaint_demo/hg19/bigwig/file.bw,chr17,7579863,7579920,1140 | target/release/bigwig
+cd .. && cargo build --release && time echo /Users/rpaul1/proteinpaint/hg19/PCGP/DNA/cov-wgs/SJOS016_D.bw,chr17,0,81195210,1140 | target/release/bigwig
+~/proteinpaint/server/utils/bigWigSummary /Users/rpaul1/proteinpaint/hg19/PCGP/DNA/cov-wgs/SJOS016_D.bw chr17 0 81195210 1140
+
 */
 
 /*
@@ -150,11 +153,53 @@ fn determine_min(n1: f64, n2: f64) -> f64 {
 
 fn calculate_appropriate_zoom_level(
     zoom_headers: Vec<ZoomHeader>,
+    difference: f64,
     exact_offset: f64,
 ) -> Option<u32> {
     let mut reduction_levels = Vec::<u32>::new();
     let mut closest_level = Option::<u32>::None; // Zoom level will be none at base-pair resolution
-    let desired_reduction: u32 = round::ceil((exact_offset as f64) / 2.0, 0) as u32;
+    let desired_reduction: u32 = round::floor((exact_offset as f64) / 2.0, 0) as u32;
+    let mut unity_added = false;
+    let max_entries_parsed = 100000; // Maximum number of entries that should be parsed from bigwig file. A very high number will lead to better accuracy as this will lead to selection of a lower zoom level. In contrast, a lower value will decrease run time at the cost of accuracy.
+    if desired_reduction > 1 {
+        // Parsing out various zoom levels from bigwig file
+        for reduction_level in zoom_headers
+            .into_iter()
+            .map(|entry| (entry.reduction_level))
+            .rev()
+        {
+            reduction_levels.push(reduction_level as u32);
+        }
+        if reduction_levels.contains(&1) == false {
+            reduction_levels.push(1); // 1 represents single base-pair level
+            unity_added = true;
+        }
+        reduction_levels.reverse();
+        //println!("reduction_levels:{:?}", reduction_levels);
+        for level in reduction_levels {
+            if round::floor(difference as f64 / level as f64, 0) < max_entries_parsed as f64 {
+                break;
+            } else {
+                closest_level = Some(level);
+            }
+        }
+    }
+    if closest_level == Some(1) && unity_added == true {
+        closest_level = None;
+    }
+    //println!("closest_level:{:?}", closest_level);
+    closest_level
+}
+
+#[allow(dead_code)]
+fn calculate_appropriate_zoom_level_ucsc(
+    zoom_headers: Vec<ZoomHeader>,
+    _difference: f64,
+    exact_offset: f64,
+) -> Option<u32> {
+    let mut reduction_levels = Vec::<u32>::new();
+    let mut closest_level = Option::<u32>::None; // Zoom level will be none at base-pair resolution
+    let desired_reduction: u32 = round::floor((exact_offset as f64) / 2.0, 0) as u32;
     let mut unity_added = false;
     if desired_reduction > 1 {
         // Parsing out various zoom levels from bigwig file
@@ -169,20 +214,24 @@ fn calculate_appropriate_zoom_level(
             reduction_levels.push(1); // 1 represents single base-pair level
             unity_added = true;
         }
-        //println!("reduction_levels:{:?}", reduction_levels);
-        let mut closest_diff: u32 = 4294967295; // Highest number allowed by u32 type
+        println!("reduction_levels:{:?}", reduction_levels);
+        let mut closest_diff: u64 = 18446744073709551615; // Highest number allowed by u64 type
         for level in reduction_levels {
-            let diff: u32 = (desired_reduction as i32 - level as i32).abs() as u32;
+            let diff: u64 = (desired_reduction as i64 - level as i64).abs() as u64;
+            println!("level:{}", level);
+            println!("diff:{}", diff);
             if diff > 0 && diff < closest_diff {
                 closest_diff = diff;
                 closest_level = Some(level);
+                println!("closest_diff:{}", closest_diff);
             }
         }
     }
     if closest_level == Some(1) && unity_added == true {
         closest_level = None;
     }
-    //println!("closest_level:{:?}", closest_level);
+    //closest_level = Some(8704);
+    println!("closest_level:{:?}", closest_level);
     closest_level
 }
 
@@ -201,7 +250,7 @@ fn calculate_datapoints(
     let mut datapoints_list = Vec::<f64>::new(); // Vector for storing datapoints
     let mut datapoints_sum = vec![0.0 as f64; datapoints as usize]; // Sum of all values within a region
     let mut datapoints_num = vec![0 as f64; datapoints as usize]; // Number of all values within a region
-    let zoom_level = calculate_appropriate_zoom_level(zoom_headers, exact_offset);
+    let zoom_level = calculate_appropriate_zoom_level(zoom_headers, difference, exact_offset);
 
     let mut current_pos: f64 = start_pos as f64; // Initializing current_pos to start position
     for _i in 0..datapoints {
