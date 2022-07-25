@@ -257,6 +257,30 @@ async function step3(arg) {
 			mode = gmmode.exononly
 		}
 	}
+
+	if (arg.dataset) {
+		/*
+		for legacy ds
+		when migrated to mds3, can delete this step
+		since mds3 ds is loaded from mds3/makeTk, when initiating a track
+		*/
+		if (!Array.isArray(arg.dataset)) throw 'dataset is not array'
+		// load dataset client-side object, register in genome
+		for (const dsname of arg.dataset) {
+			const d = await dofetch3(`getDataset?genome=${arg.genome.name}&dsname=${dsname}`)
+			if (d.error) throw 'invalid name from dataset[]'
+			if (!d.ds) throw '.ds missing'
+
+			// dataset is already registered under genome by ds.label
+			const ds = arg.genome.datasets[d.ds.label]
+			Object.assign(ds, d.ds)
+			const _ = await import('./legacyDataset')
+			_.validate_oldds(ds)
+
+			delete ds.legacyDsIsUninitiated
+		}
+	}
+
 	const b = await import('./block')
 
 	new b.Block({

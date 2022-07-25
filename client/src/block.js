@@ -47,7 +47,9 @@ import { mds2_fromtemplate, mds2_maketk, mds2_load } from './block.mds2.adaptor'
 import { mds3_fromtemplate, mds3_maketk, mds3_load } from '../mds3/adaptor'
 import { bedgraphdot_fromtemplate, bedgraphdot_maketk, bedgraphdot_load } from './block.tk.bedgraphdot.adaptor'
 
-// ds tk special case
+/* non-standard handler for legacy dataset
+can delete when migrated to mds3
+*/
 import * as blockds from './block.ds'
 import dsmaketk from './block.ds.maketk'
 
@@ -484,7 +486,7 @@ export class Block {
 			}
 			if (lst.length) {
 				this.ctrl.mdsHandleHolder = butrow.append('span').style('margin-right', '10px')
-				lst.forEach(i => this.mds_handle_make(i))
+				for (const i of lst) this.mds_handle_make(i)
 			}
 		}
 
@@ -2041,7 +2043,7 @@ reverseorient() {
 			.style('color', 'black')
 			.style('padding', '2px 4px')
 			.text(ds.label)
-			.on('click', () => {
+			.on('click', async () => {
 				this.pannedpx = undefined // important!
 				this.resized = false
 				let tk = this.tklst.find(t => {
@@ -2068,10 +2070,27 @@ reverseorient() {
 				if (ds.isMds3) {
 					tk = this.block_addtk_template({ type: client.tkt.mds3, dslabel: ds.label })
 					this.tk_load(tk)
-				} else {
-					tk = this.block_addtk_template({ ds, type: client.tkt.ds })
-					blockds.dstkload(tk, this)
+					return
 				}
+
+				// is legacy ds
+				if (ds.legacyDsIsUninitiated) {
+					/* only for legacy ds
+					can delete this step when migrated to mds3
+					*/
+					const d = await dofetch3(`getDataset?genome=${this.genome.name}&dsname=${ds.label}`)
+					if (d.error) throw 'invalid name'
+					if (!d.ds) throw '.ds missing'
+
+					Object.assign(ds, d.ds)
+					const _ = await import('./legacyDataset')
+					_.validate_oldds(ds)
+
+					delete ds.legacyDsIsUninitiated
+				}
+
+				tk = this.block_addtk_template({ ds, type: client.tkt.ds })
+				blockds.dstkload(tk, this)
 			})
 			.on('mouseover', () => {
 				if (ds.iscustom) {
@@ -4814,8 +4833,9 @@ seekrange(chr,start,stop) {
 			.append('div')
 			.text(ds.label)
 			.attr('class', 'sja_handle_green')
-			.on('click', () => {
+			.on('click', async () => {
 				this.blocktip.clear().showunder(d3event.target)
+
 				if (ds.queries) {
 					const table = this.blocktip.d.append('table')
 					// one tk per tr

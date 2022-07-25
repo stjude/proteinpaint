@@ -100,10 +100,9 @@ const express = require('express'),
 	cookieParser = require('cookie-parser'),
 	{ maySetAuthRoutes, getDsAuth } = require('./auth.js')
 
-/*
-valuable globals
-*/
-const genomes = {}
+//////////////////////////////
+// Global variable (storing things in memory)
+const genomes = {} // { hg19: {...}, ... }
 const tabix = serverconfig.tabix
 const samtools = serverconfig.samtools
 const bcftools = serverconfig.bcftools
@@ -381,6 +380,7 @@ function log(req) {
 exports.log = log
 
 async function startServer() {
+	// uses the global express "app"
 	try {
 		if (serverconfig.preListenScript) {
 			const { cmd, args } = serverconfig.preListenScript
@@ -406,6 +406,7 @@ async function startServer() {
 		} else {
 			const server = await http.createServer(app)
 			server.listen(port, () => {
+				console.log(22222)
 				console.log(message)
 			})
 			return server
@@ -656,6 +657,8 @@ function clientcopy_genome(genomename) {
 		const ds = g.datasets[dsname]
 
 		if (ds.isMds3) {
+			// only send most basic info about the dataset, enough for e.g. a button to launch this dataset
+			// client will request detailed info when using this dataset
 			g2.datasets[ds.label] = {
 				isMds3: true,
 				noHandleOnClient: ds.noHandleOnClient,
@@ -665,6 +668,7 @@ function clientcopy_genome(genomename) {
 		}
 
 		if (ds.isMds) {
+			// TODO send basic info
 			const _ds = mds_clientcopy(ds)
 			if (_ds) {
 				g2.datasets[ds.label] = _ds
@@ -672,56 +676,13 @@ function clientcopy_genome(genomename) {
 			continue
 		}
 
-		// old official ds
-		const ds2 = {
+		// old official ds; to be replaced by mds3
+		g2.datasets[ds.label] = {
 			isofficial: true,
+			legacyDsIsUninitiated: true, // so client only gets copy_legacyDataset once
 			noHandleOnClient: ds.noHandleOnClient,
-			sampleselectable: ds.sampleselectable,
-			label: ds.label,
-			dsinfo: ds.dsinfo,
-			stratify: ds.stratify,
-			cohort: ds.cohort,
-			vcfinfofilter: ds.vcfinfofilter,
-			info2table: ds.info2table,
-			info2singletable: ds.info2singletable,
-			url4variant: ds.url4variant,
-			itemlabelname: ds.itemlabelname
+			label: ds.label
 		}
-
-		if (ds.snvindel_attributes) {
-			ds2.snvindel_attributes = []
-			for (const at of ds.snvindel_attributes) {
-				const rep = {}
-				for (const k in at) {
-					if (k == 'lst') {
-						rep.lst = []
-						for (const e of at.lst) {
-							const rep2 = {}
-							for (const k2 in e) rep2[k2] = e[k2]
-							rep.lst.push(rep2)
-						}
-					} else {
-						rep[k] = at[k]
-					}
-				}
-				ds2.snvindel_attributes.push(rep)
-			}
-		}
-		if (ds.snvindel_legend) {
-			ds2.snvindel_legend = ds.snvindel_legend
-		}
-		const vcfinfo = {}
-		let hasvcf = false
-		for (const q of ds.queries) {
-			if (q.vcf) {
-				hasvcf = true
-				vcfinfo[q.vcf.vcfid] = q.vcf
-			}
-		}
-		if (hasvcf) {
-			ds2.id2vcf = vcfinfo
-		}
-		g2.datasets[dsname] = ds2
 	}
 
 	if (g.hicdomain) {
@@ -744,19 +705,83 @@ function clientcopy_genome(genomename) {
 	return g2
 }
 
+function copy_legacyDataset(ds) {
+	const ds2 = {
+		noHandleOnClient: ds.noHandleOnClient,
+		sampleselectable: ds.sampleselectable,
+		label: ds.label,
+		dsinfo: ds.dsinfo,
+		stratify: ds.stratify,
+		cohort: ds.cohort,
+		vcfinfofilter: ds.vcfinfofilter,
+		info2table: ds.info2table,
+		info2singletable: ds.info2singletable,
+		url4variant: ds.url4variant,
+		itemlabelname: ds.itemlabelname
+	}
+
+	if (ds.snvindel_attributes) {
+		ds2.snvindel_attributes = []
+		for (const at of ds.snvindel_attributes) {
+			const rep = {}
+			for (const k in at) {
+				if (k == 'lst') {
+					rep.lst = []
+					for (const e of at.lst) {
+						const rep2 = {}
+						for (const k2 in e) rep2[k2] = e[k2]
+						rep.lst.push(rep2)
+					}
+				} else {
+					rep[k] = at[k]
+				}
+			}
+			ds2.snvindel_attributes.push(rep)
+		}
+	}
+	if (ds.snvindel_legend) {
+		ds2.snvindel_legend = ds.snvindel_legend
+	}
+	const vcfinfo = {}
+	let hasvcf = false
+	for (const q of ds.queries) {
+		if (q.vcf) {
+			hasvcf = true
+			vcfinfo[q.vcf.vcfid] = q.vcf
+		}
+	}
+	if (hasvcf) {
+		ds2.id2vcf = vcfinfo
+	}
+	return ds2
+}
+
 function handle_getDataset(req, res) {
-	log(req)
-	// { genome:str, dsname: str}
+	/*
+	q.genome=str, case-sensitive match with genome name
+	q.dsname=str, case-insensitive match with ds key (e.g. pediatric for Pediatric) 
+
+	allow case-insensitive match with dsname
+	*/
 	try {
 		const genome = genomes[req.query.genome]
 		if (!genome) throw 'unknown genome'
 		if (!genome.datasets) throw 'genomeobj.datasets{} missing'
-		const ds = genome.datasets[req.query.dsname]
+		let ds
+		for (const k in genome.datasets) {
+			if (k.toLowerCase() == req.query.dsname.toLowerCase()) {
+				ds = genome.datasets[k]
+				break
+			}
+		}
 		if (!ds) throw 'invalid dsname'
 		if (ds.isMds3) {
 			return res.send({ ds: mds3_init.client_copy(ds) })
 		}
-		throw 'unknown way to make client copy of ds'
+		if (ds.isMds) {
+			throw 'iMds: to be done'
+		}
+		return res.send({ ds: copy_legacyDataset(ds) })
 	} catch (e) {
 		res.send({ error: e.message || e })
 	}
@@ -7362,6 +7387,12 @@ function parse_textfilewithheader(text) {
 
 /***************************   end of __util   **/
 
+/* when starting pp server process with "npm start" or "node server.js"
+pp_init() runs first to load all genomes supported on this server,
+and load all datasets supported in each genome
+as encoded in file "serverconfig.json"
+at the end it will 
+*/
 async function pp_init() {
 	try {
 		await fs.promises.stat(serverconfig.tpmasterdir)
@@ -7731,104 +7762,105 @@ async function pp_init() {
 				continue
 			}
 
-			/* old official dataset */
-
-			if (ds.dbfile) {
-				/* this dataset has a db */
-				try {
-					ds.newconn = utils.connect_db(ds.dbfile)
-				} catch (e) {
-					throw 'Error with ' + ds.dbfile + ': ' + e
-				}
-			}
-
-			if (ds.snvindel_attributes) {
-				for (const at of ds.snvindel_attributes) {
-					if (at.lst) {
-						for (const a2 of at.lst) {
-							a2.get = a2.get.toString()
-						}
-					} else {
-						at.get = at.get.toString()
-					}
-				}
-			}
-
-			if (ds.cohort) {
-				// a dataset with cohort
-
-				if (ds.cohort.levels) {
-					if (!Array.isArray(ds.cohort.levels)) throw 'cohort.levels must be array for ' + genomename + '.' + ds.label
-					if (ds.cohort.levels.length == 0) throw 'levels is blank array for cohort of ' + genomename + '.' + ds.label
-					for (const i of ds.cohort.levels) {
-						if (!i.k) throw '.k key missing in one of the levels, .cohort, in ' + genomename + '.' + ds.label
-					}
-				}
-
-				if (ds.cohort.fromdb) {
-					/*
-				cohort content to be loaded lazily from db
-				*/
-					if (!ds.cohort.fromdb.sql) throw '.sql missing from ds.cohort.fromdb in ' + genomename + '.' + ds.label
-					const rows = ds.newconn.prepare(ds.cohort.fromdb.sql).all()
-					delete ds.cohort.fromdb
-					ds.cohort.raw = rows ///// backward compatible
-					console.log(rows.length + ' rows retrieved for ' + ds.label + ' sample annotation')
-				}
-
-				if (ds.cohort.files) {
-					// sample annotation load directly from text files, in sync
-					let rows = []
-					for (const file of ds.cohort.files) {
-						if (!file.file) throw '.file missing from one of cohort.files[] for ' + genomename + '.' + ds.label
-						const txt = fs.readFileSync(path.join(serverconfig.tpmasterdir, file.file), 'utf8').trim()
-						if (!txt) throw file.file + ' is empty for ' + genomename + '.' + ds.label
-						rows = [...rows, ...d3dsv.tsvParse(txt)]
-					}
-					delete ds.cohort.files
-					if (ds.cohort.raw) {
-						ds.cohort.raw = [...ds.cohort.raw, ...rows]
-					} else {
-						ds.cohort.raw = rows
-					}
-					console.log(rows.length + ' rows retrieved for ' + ds.label + ' sample annotation')
-				}
-				if (ds.cohort.tosampleannotation) {
-					// a directive to tell client to convert cohort.raw[] to cohort.annotation{}, key-value hash
-					if (!ds.cohort.tosampleannotation.samplekey)
-						throw '.samplekey missing from .cohort.tosampleannotation for ' + genomename + '.' + ds.label
-					if (!ds.cohort.key4annotation)
-						throw '.cohort.key4annotation missing when .cohort.tosampleannotation is on for ' +
-							genomename +
-							'.' +
-							ds.label
-					// in fact, it still requires ds.cohort.raw, but since db querying is async, not checked
-				}
-			}
-
-			if (!ds.queries) throw '.queries missing from dataset ' + ds.label + ', ' + genomename
-			if (!Array.isArray(ds.queries)) throw ds.label + '.queries is not array'
-			for (const q of ds.queries) {
-				const err = legacyds_init_one_query(q, ds, g)
-				if (err) throw 'Error parsing a query in "' + ds.label + '": ' + err
-			}
-
-			if (ds.vcfinfofilter) {
-				const err = common.validate_vcfinfofilter(ds.vcfinfofilter)
-				if (err) throw ds.label + ': vcfinfofilter error: ' + err
-			}
-
-			if (ds.url4variant) {
-				for (const u of ds.url4variant) {
-					if (!u.makelabel) throw 'makelabel() missing for one item of url4variant from ' + ds.label
-					if (!u.makeurl) throw 'makeurl() missing for one item of url4variant from ' + ds.label
-					u.makelabel = u.makelabel.toString()
-					u.makeurl = u.makeurl.toString()
-				}
-			}
+			initLegacyDataset(ds, g)
 		}
 
 		delete g.rawdslst
+	}
+}
+
+function initLegacyDataset(ds, genome) {
+	/* old official dataset */
+
+	if (ds.dbfile) {
+		/* this dataset has a db */
+		try {
+			ds.newconn = utils.connect_db(ds.dbfile)
+		} catch (e) {
+			throw 'Error with ' + ds.dbfile + ': ' + e
+		}
+	}
+
+	if (ds.snvindel_attributes) {
+		for (const at of ds.snvindel_attributes) {
+			if (at.lst) {
+				for (const a2 of at.lst) {
+					a2.get = a2.get.toString()
+				}
+			} else {
+				at.get = at.get.toString()
+			}
+		}
+	}
+
+	if (ds.cohort) {
+		// a dataset with cohort
+
+		if (ds.cohort.levels) {
+			if (!Array.isArray(ds.cohort.levels)) throw 'cohort.levels must be array for ' + genomename + '.' + ds.label
+			if (ds.cohort.levels.length == 0) throw 'levels is blank array for cohort of ' + genomename + '.' + ds.label
+			for (const i of ds.cohort.levels) {
+				if (!i.k) throw '.k key missing in one of the levels, .cohort, in ' + genomename + '.' + ds.label
+			}
+		}
+
+		if (ds.cohort.fromdb) {
+			/*
+		cohort content to be loaded lazily from db
+		*/
+			if (!ds.cohort.fromdb.sql) throw '.sql missing from ds.cohort.fromdb in ' + genomename + '.' + ds.label
+			const rows = ds.newconn.prepare(ds.cohort.fromdb.sql).all()
+			delete ds.cohort.fromdb
+			ds.cohort.raw = rows ///// backward compatible
+			console.log(rows.length + ' rows retrieved for ' + ds.label + ' sample annotation')
+		}
+
+		if (ds.cohort.files) {
+			// sample annotation load directly from text files, in sync
+			let rows = []
+			for (const file of ds.cohort.files) {
+				if (!file.file) throw '.file missing from one of cohort.files[] for ' + genomename + '.' + ds.label
+				const txt = fs.readFileSync(path.join(serverconfig.tpmasterdir, file.file), 'utf8').trim()
+				if (!txt) throw file.file + ' is empty for ' + genomename + '.' + ds.label
+				rows = [...rows, ...d3dsv.tsvParse(txt)]
+			}
+			delete ds.cohort.files
+			if (ds.cohort.raw) {
+				ds.cohort.raw = [...ds.cohort.raw, ...rows]
+			} else {
+				ds.cohort.raw = rows
+			}
+			console.log(rows.length + ' rows retrieved for ' + ds.label + ' sample annotation')
+		}
+		if (ds.cohort.tosampleannotation) {
+			// a directive to tell client to convert cohort.raw[] to cohort.annotation{}, key-value hash
+			if (!ds.cohort.tosampleannotation.samplekey)
+				throw '.samplekey missing from .cohort.tosampleannotation for ' + genomename + '.' + ds.label
+			if (!ds.cohort.key4annotation)
+				throw '.cohort.key4annotation missing when .cohort.tosampleannotation is on for ' + genomename + '.' + ds.label
+			// in fact, it still requires ds.cohort.raw, but since db querying is async, not checked
+		}
+	}
+
+	if (!ds.queries) throw '.queries missing from dataset ' + ds.label + ', ' + genomename
+	if (!Array.isArray(ds.queries)) throw ds.label + '.queries is not array'
+	for (const q of ds.queries) {
+		const err = legacyds_init_one_query(q, ds, genome)
+		if (err) throw 'Error parsing a query in "' + ds.label + '": ' + err
+	}
+
+	if (ds.vcfinfofilter) {
+		const err = common.validate_vcfinfofilter(ds.vcfinfofilter)
+		if (err) throw ds.label + ': vcfinfofilter error: ' + err
+	}
+
+	if (ds.url4variant) {
+		for (const u of ds.url4variant) {
+			if (!u.makelabel) throw 'makelabel() missing for one item of url4variant from ' + ds.label
+			if (!u.makeurl) throw 'makeurl() missing for one item of url4variant from ' + ds.label
+			u.makelabel = u.makelabel.toString()
+			u.makeurl = u.makeurl.toString()
+		}
 	}
 }
 
