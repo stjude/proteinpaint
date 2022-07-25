@@ -16,6 +16,7 @@ validate_query_snvindel_byisoform_2
 validate_query_genecnv
 querySamples_gdcapi
 	flattenCaseByFields
+	may_add_readdepth
 get_termlst2size
 validate_m2csq
 validate_ssm2canonicalisoform
@@ -26,7 +27,6 @@ handle_gdc_ssms
 
 **************** internal
 mayMapRefseq2ensembl
-may_add_readdepth
 */
 
 const apihost = process.env.PP_GDC_HOST || 'https://api.gdc.cancer.gov'
@@ -661,9 +661,12 @@ export async function querySamples_gdcapi(q, termidlst, ds) {
 			flattenCaseByFields(sample, s.case, term)
 		}
 
-		/////////////////// hardcoded logic to use .observation
+		/////////////////// hardcoded logic to add read depth using .observation
 		// FIXME apply a generalized mechanism to record read depth (or just use sampledata.read_depth{})
 		may_add_readdepth(s.case, sample)
+
+		/////////////////// hardcoded logic to indicate a case is open/controlled using
+		may_add_projectAccess(sample, ds)
 
 		///////////////////
 		samples.push(sample)
@@ -690,6 +693,14 @@ function may_add_readdepth(acase, sample) {
 		totalTumor: dat.read_depth.t_depth,
 		totalNormal: dat.read_depth.n_depth
 	}
+}
+
+/* hardcoded gdc logic! does not rely on any dataset config
+ */
+function may_add_projectAccess(sample, ds) {
+	const projectId = sample['case.project.project_id']
+	if (!projectId) return
+	sample.caseIsOpenAccess = ds.gdcOpenProjects.has(projectId)
 }
 
 /*

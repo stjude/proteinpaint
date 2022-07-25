@@ -103,6 +103,14 @@ async function make_singleSampleTable(sampledata, arg) {
 		printSampleName(sampledata, arg.tk, cell2)
 	}
 
+	/////////////
+	// hardcoded logic to represent if this case is open or controlled-access
+	if ('caseIsOpenAccess' in sampledata) {
+		const [cell1, cell2] = get_list_cells(grid_div)
+		cell1.text('Access')
+		cell2.text(sampledata.caseIsOpenAccess ? 'Open' : 'Controlled')
+	}
+
 	if (arg.tk.mds.variant2samples.termidlst) {
 		for (const termid of arg.tk.mds.variant2samples.termidlst) {
 			const term = await arg.tk.mds.termdb.vocabApi.getterm(termid)
@@ -219,7 +227,8 @@ async function make_multiSampleTable(data, arg) {
 	// flags for optional columns
 	const has_sample_id = data.some(i => i.sample_id),
 		has_ssm_read_depth = data.some(i => i.ssm_read_depth),
-		has_totalNormal = data.some(i => i.totalNormal)
+		has_totalNormal = data.some(i => i.totalNormal),
+		has_caseAccess = data.some(i => 'caseIsOpenAccess' in i)
 
 	// count total number of columns
 	let numColumns = 0
@@ -276,6 +285,19 @@ async function make_multiSampleTable(data, arg) {
 			}
 			if (gray) c.style('opacity', 0.3)
 		}
+
+		if (has_caseAccess) {
+			const c = div
+				.append('div')
+				.text('Access')
+				.style('grid-row-start', 1)
+			if (startDataCol) {
+				startCol = ++startCol
+				c.style('grid-column-start', startCol)
+			}
+			if (gray) c.style('opacity', 0.3)
+		}
+
 		if (arg.tk.mds.variant2samples.termidlst) {
 			for (const termid of arg.tk.mds.variant2samples.termidlst) {
 				const t = await arg.tk.mds.termdb.vocabApi.getterm(termid)
@@ -290,6 +312,7 @@ async function make_multiSampleTable(data, arg) {
 				if (gray) c.style('opacity', 0.3)
 			}
 		}
+
 		if (has_ssm_read_depth) {
 			const c = div
 				.append('div')
@@ -326,6 +349,15 @@ async function make_multiSampleTable(data, arg) {
 			}
 			printSampleName(sample, arg.tk, cell)
 		}
+
+		if (has_caseAccess) {
+			row
+				.append('div')
+				.classed('sjpp-sample-table-div', true)
+				.style('padding', '1px')
+				.text(sample.caseIsOpenAccess ? 'Open' : 'Controlled')
+		}
+
 		if (arg.tk.mds.variant2samples.termidlst) {
 			for (const termid of arg.tk.mds.variant2samples.termidlst) {
 				const cell = row
@@ -338,6 +370,7 @@ async function make_multiSampleTable(data, arg) {
 				}
 			}
 		}
+
 		if (has_ssm_read_depth) {
 			const cell = row
 				.append('div')
@@ -394,6 +427,11 @@ samples2columns() and samples2rows() should continue to work with the future ren
 */
 async function samples2columns(samples, tk) {
 	const columns = [{ label: 'Sample' }]
+
+	if (samples.some(i => 'caseIsOpenAccess' in i)) {
+		columns.push({ label: 'Access' })
+	}
+
 	if (tk.mds.variant2samples.termidlst) {
 		for (const id of tk.mds.variant2samples.termidlst) {
 			const t = await tk.mds.termdb.vocabApi.getterm(id)
@@ -404,16 +442,24 @@ async function samples2columns(samples, tk) {
 			}
 		}
 	}
+
 	columns.push({ label: 'Mutations', isSsm: true })
 	return columns
 }
 function samples2rows(samples, tk) {
 	const rows = []
+
+	const has_caseAccess = samples.some(i => 'caseIsOpenAccess' in i)
+
 	for (const sample of samples) {
 		const row = [{ value: sample.sample_id }]
 
 		if (tk.mds.variant2samples.url) {
 			row[0].url = tk.mds.variant2samples.url.base + sample[tk.mds.variant2samples.url.namekey]
+		}
+
+		if (has_caseAccess) {
+			row.push({ value: sample.caseIsOpenAccess ? 'Open' : 'Controlled' })
 		}
 
 		if (tk.mds.variant2samples.termidlst) {
