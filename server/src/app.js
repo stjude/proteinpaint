@@ -7,6 +7,8 @@ const serverconfig = require('./serverconfig')
 exports.features = Object.freeze(serverconfig.features || {})
 
 /*
+********** TODO constructor options **********
+
 ********** test accessibility of serverconfig.tpmasterdir at two places **********
 if inaccessible, do not crash service. maintain server process to be able to return helpful message to all request
 1. pp_init()
@@ -406,7 +408,6 @@ async function startServer() {
 		} else {
 			const server = await http.createServer(app)
 			server.listen(port, () => {
-				console.log(22222)
 				console.log(message)
 			})
 			return server
@@ -668,12 +669,20 @@ function clientcopy_genome(genomename) {
 		}
 
 		if (ds.isMds) {
-			// TODO send basic info
+			g2.datasets[ds.label] = {
+				isMds: true,
+				mdsIsUninitiated: true,
+				noHandleOnClient: ds.noHandleOnClient,
+				label: ds.label
+			}
+			continue
+			/*
 			const _ds = mds_clientcopy(ds)
 			if (_ds) {
 				g2.datasets[ds.label] = _ds
 			}
 			continue
+			*/
 		}
 
 		// old official ds; to be replaced by mds3
@@ -779,9 +788,9 @@ function handle_getDataset(req, res) {
 			return res.send({ ds: mds3_init.client_copy(ds) })
 		}
 		if (ds.isMds) {
-			throw 'iMds: to be done'
+			return res.send({ ds: mds_clientcopy(ds) })
 		}
-		return res.send({ ds: copy_legacyDataset(ds) })
+		return res.send({ ds: copy_legacyDataset(ds) }) // to be replaced by mds3
 	} catch (e) {
 		res.send({ error: e.message || e })
 	}

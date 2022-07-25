@@ -895,8 +895,6 @@ export class Block {
 					const ds = this.genome.datasets[q.dataset]
 					if (!ds) return this.error('invalid dataset name: ' + q.dataset)
 					if (!ds.isMds) return this.error('query not supported in dataset: ' + q.dataset)
-					if (!ds.queries) return this.error('.queries missing from dataset: ' + q.dataset)
-					if (!ds.queries[q.querykey]) return this.error('invalid querykey: ' + q.querykey)
 					this.mds_load_query_bykey(ds, q)
 				})
 			}
@@ -4836,6 +4834,14 @@ seekrange(chr,start,stop) {
 			.on('click', async () => {
 				this.blocktip.clear().showunder(d3event.target)
 
+				if (ds.mdsIsUninitiated) {
+					const d = await dofetch3(`getDataset?genome=${this.genome.name}&dsname=${ds.label}`)
+					if (d.error) throw d.error
+					if (!d.ds) throw 'ds missing'
+					Object.assign(ds, d.ds)
+					delete ds.mdsIsUninitiated
+				}
+
 				if (ds.queries) {
 					const table = this.blocktip.d.append('table')
 					// one tk per tr
@@ -4888,9 +4894,18 @@ seekrange(chr,start,stop) {
 
 	async mds_load_query_bykey(ds, q) {
 		/*
-	official ds
-	q comes from datasetqueries of embedding, with customizations
-	*/
+		official ds
+		q comes from datasetqueries of embedding, with customizations
+		*/
+
+		if (ds.mdsIsUninitiated) {
+			const d = await dofetch3(`getDataset?genome=${this.genome.name}&dsname=${ds.label}`)
+			if (d.error) throw d.error
+			if (!d.ds) throw 'ds missing'
+			Object.assign(ds, d.ds)
+			delete ds.mdsIsUninitiated
+		}
+
 		if (!ds.queries) return console.log('ds.queries{} missing')
 		const tk0 = ds.queries[q.querykey]
 		if (!tk0) return console.log('querykey not found in ds.queries: ' + q.querykey)
