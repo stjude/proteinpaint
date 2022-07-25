@@ -162,16 +162,16 @@ export const cox = {
 	SQL output: sample|key|value
 		- sample: sample id
 		- key: exit code (0 = censored; 1 = event)
-			- An event is defined by the grade breakpoint given in q.breaks
-				- E.g. if q.breaks[0] == 3, then an event is an occurrence of any grade between grades 3-5
+			- event is defined by grade breakpoint given in q.breaks (e.g. if q.breaks[0] == 3, then an event is first occurrence of grade between grades 3-5)
 		- value:
-			- for timeScale='time': years from ds.cohort.minTimeSinceDx until last assessment (exit code = 0) or first occurrence of event (exit code = 1)
-			- for timeScale='age': {age_start, age_end, time}
-				age_start: agedx + ds.cohort.minTimeSinceDx
-				age_end: age at last assessment (exit code = 0) or first occurrence of event (exit code = 1)
-					- 1 day (i.e. 1/365 or 0.00274) is added to age_end to prevent age_end = age_start (which would cause regression analysis to fail in R)
-				time: years from ds.cohort.minTimeSinceDx until last assessment (exit code = 0) or first occurrence of event (exit code = 1)
-					- time is included in this output so that cuminc analysis can run for rare variants when age scale is selected for cox regression
+			- when timeScale='time'
+				- value is years from ds.cohort.minTimeSinceDx until last assessment (exit code = 0) or first occurrence of event (exit code = 1)
+			- when timeScale='age'
+				- value has following format: {age_start, age_end, time}
+					- age_start: agedx + ds.cohort.minTimeSinceDx
+					- age_end: age at last assessment (exit code = 0) or first occurrence of event (exit code = 1)
+					- time: years from ds.cohort.minTimeSinceDx until last assessment (exit code = 0) or first occurrence of event (exit code = 1)
+						- time is included in this output so that cuminc analysis can run for rare variants when age scale is selected for cox regression
 	
 	Entries with years < ds.cohort.minTimeSinceDx are discarded
 	*/
@@ -239,34 +239,47 @@ export const cox = {
 			values.push(ds.cohort.minTimeSinceDx)
 		} else if (q.timeScale == 'age') {
 			// time scale is 'age'
-			if (!ds.cohort.ageEndOffset) throw 'age end offset is missing'
+			if (!ds.cohort.ageStartTermId) throw 'age start term id missing'
+			if (!ds.cohort.ageEndOffset) throw 'age end offset missing'
+
+			// determine the term id of the starting age and its
+			// associated annotation table from the dataset
+			const ageStartTerm = ds.cohort.termdb.q.termjsonByOneid(ds.cohort.ageStartTermId)
+			if (!ageStartTerm) throw 'age start term missing'
+			const annoTable = 'anno_' + ageStartTerm.type
 
 			// CTE for extracting event 1 entries
 			event1 = `event1 AS (
 				SELECT f.sample, 1 as key, json_object('age_start', a.value + ?, 'age_end', (MIN(f.age_graded) + ?), 'time', MIN(f.years_to_event) - ?) as value
 				FROM filteredYears f
-				INNER JOIN anno_float a ON f.sample = a.sample
-				WHERE a.term_id = 'agedx'
+				INNER JOIN ${annoTable} a ON f.sample = a.sample
+				WHERE a.term_id = ?
 				AND f.term_id in eventTerms
 				AND f.grade >= ?
 				AND f.grade <= 5
 				${filter ? 'AND f.sample IN ' + filter.CTEname : ''}
 				GROUP BY f.sample
 			)`
-			values.push(ds.cohort.minTimeSinceDx, ds.cohort.ageEndOffset, ds.cohort.minTimeSinceDx, q.breaks[0])
+			values.push(
+				ds.cohort.minTimeSinceDx,
+				ds.cohort.ageEndOffset,
+				ds.cohort.minTimeSinceDx,
+				ds.cohort.ageStartTermId,
+				q.breaks[0]
+			)
 
 			// CTE for extracting event 0 entries
 			event0 = `event0 AS (
 				SELECT f.sample, 0 as key, json_object('age_start', a.value + ?, 'age_end', (MAX(f.age_graded) + ?), 'time', MAX(f.years_to_event) - ?) as value
 				FROM filteredYears f
-				INNER JOIN anno_float a ON f.sample = a.sample
-				WHERE a.term_id = 'agedx'
+				INNER JOIN ${annoTable} a ON f.sample = a.sample
+				WHERE a.term_id = ?
 				AND f.grade <= 5
 				AND f.sample NOT IN event1samples
 				${filter ? 'AND f.sample IN ' + filter.CTEname : ''}
 				GROUP BY f.sample
 			)`
-			values.push(ds.cohort.minTimeSinceDx, ds.cohort.ageEndOffset, ds.cohort.minTimeSinceDx)
+			values.push(ds.cohort.minTimeSinceDx, ds.cohort.ageEndOffset, ds.cohort.minTimeSinceDx, ds.cohort.ageStartTermId)
 		}
 
 		return {
