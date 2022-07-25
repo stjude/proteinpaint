@@ -119,6 +119,14 @@ export async function loadTk(tk, block, noViewRangeChange) {
 		makeTk(tk, block)
 	}
 
+	if (tk.mds.mdsIsUninitiated) {
+		const d = await client.dofetch3(`getDataset?genome=${block.genome.name}&dsname=${tk.mds.label}`)
+		if (d.error) throw d.error
+		if (!d.ds) throw 'ds missing'
+		Object.assign(tk.mds, d.ds)
+		delete tk.mds.mdsIsUninitiated
+	}
+
 	const par = {
 		genome: block.genome.name,
 		rglst: block.tkarg_maygm(tk),
