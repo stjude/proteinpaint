@@ -318,7 +318,7 @@ async function makeTk(tk, block) {
 		if (!tk.mds) throw 'dataset not found: invalid value for dslabel'
 
 		if (tk.mds.mdsIsUninitiated) {
-			const d = await dofetch3(`getDataset?genome=${block.genome.name}&dsname=${tk.dslabel}`)
+			const d = await client.dofetch3(`getDataset?genome=${block.genome.name}&dsname=${tk.dslabel}`)
 			if (d.error) throw d.error
 			if (!d.ds) throw 'ds missing'
 			Object.assign(tk.mds, d.ds)
