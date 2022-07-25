@@ -19,7 +19,7 @@ Yu's ase & outlier analysis result is built-in but optional
 
 const labyspace = 5
 
-export function loadTk(tk, block) {
+export async function loadTk(tk, block) {
 	block.tkcloakon(tk)
 	block.block_setheight()
 
@@ -296,7 +296,7 @@ function set_height(tk, block) {
 	block.block_setheight()
 }
 
-function makeTk(tk, block) {
+async function makeTk(tk, block) {
 	if (!tk.sample) throw 'sample name missing'
 
 	if (tk.dslabel) {
@@ -316,7 +316,17 @@ function makeTk(tk, block) {
 		if (!tk.querykey) throw 'querykey missing for native track'
 		tk.mds = block.genome.datasets[tk.dslabel]
 		if (!tk.mds) throw 'dataset not found: invalid value for dslabel'
+
+		if (tk.mds.mdsIsUninitiated) {
+			const d = await dofetch3(`getDataset?genome=${block.genome.name}&dsname=${tk.dslabel}`)
+			if (d.error) throw d.error
+			if (!d.ds) throw 'ds missing'
+			Object.assign(tk.mds, d.ds)
+			delete tk.mds.mdsIsUninitiated
+		}
+
 		delete tk.dslabel
+
 		tk.gecfg = tk.mds.queries[tk.querykey]
 		if (!tk.gecfg) throw 'expression query not found: invalid value for querykey'
 	}
