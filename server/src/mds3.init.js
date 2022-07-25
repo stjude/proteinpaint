@@ -99,6 +99,9 @@ async function validate_termdb(ds) {
 	if (!tdb.dictionary) throw 'termdb.dictionary{} missing'
 	if (tdb.dictionary.gdcapi) {
 		await initGDCdictionary(ds)
+		/* creates ds.cohort.termdb.q={}
+		and ds.gdcOpenProjects=set
+		*/
 	} else if (tdb.dictionary.dbFile) {
 		initTermdb(ds)
 	} else {
