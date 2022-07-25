@@ -15,7 +15,6 @@
 
 
 
-/*
 runproteinpaint({
 	holder:document.getElementById('aaa'),
 	genome:'hg38',
@@ -33,17 +32,22 @@ runproteinpaint({
 			// gdc customizations
 			//set_id: 'set_id:DDw3QnUB_tcD1Zw3Af72'
 			//filter0:{"op":"and","content":[{"op":"in","content":{"field":"cases.project.project_id","value":["TCGA-PAAD"]}}]}
+			callbackOnRender: (tk,bb) => {
+				const E17K = tk.skewer.selection.filter(i=>i.mlst[0].mname=='E17K')
+				console.log(E17K)
+			}
 		}
 	],
 })
-*/
 
+/*
 runproteinpaint({
 	holder:document.getElementById('aaa'),
 	noheader:1,
 	geneSearch4GDCmds3:true,
 	hide_dsHandles:true
 })
+*/
 
 </script>
 

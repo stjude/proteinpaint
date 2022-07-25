@@ -174,6 +174,10 @@ function loadTk_finish_closure(tk, block) {
 		block.tkcloakoff(tk, { error: data ? data.error : null })
 		block.block_setheight()
 		block.setllabel()
+
+		if (typeof tk.callbackOnRender == 'function') {
+			tk.callbackOnRender(tk, block)
+		}
 	}
 }
 
