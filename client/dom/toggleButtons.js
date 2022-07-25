@@ -1,3 +1,5 @@
+import { select } from 'd3-selection'
+
 /*
 ********************** EXPORTED
 init_tabs(opts)
@@ -50,7 +52,7 @@ export async function init_tabs(opts) {
 		tab.tab = opts.tabHolder
 			.append('div')
 			.attr('class', 'sj-toggle-button' + toggle_btn_class)
-			.classed('active', tab.active ? true : false)
+			.classed('sjpp-active', tab.active ? true : false)
 			.style('padding', '5px')
 			.style('display', 'inline-block')
 			.html(tab.label)
@@ -70,7 +72,7 @@ export async function init_tabs(opts) {
 		tab.tab.on('click', async () => {
 			for (const tab_ of tabs) {
 				tab_.active = tab_ === tab
-				tab_.tab.classed('active', tab_.active ? true : false)
+				tab_.tab.classed('sjpp-active', tab_.active ? true : false)
 				tab_.holder.style('display', tab_.active ? 'block' : 'none')
 			}
 			if (tab.callback) await tab.callback(tab.holder)
@@ -93,7 +95,75 @@ export function update_tabs(tabs) {
 	if (!has_active_tab) tabs[0].active = true
 
 	for (const tab of tabs) {
-		tab.tab.classed('active', tab.active ? true : false)
+		tab.tab.classed('sjpp-active', tab.active ? true : false)
 		tab.holder.style('display', tab.active ? 'block' : 'none')
+	}
+}
+
+/*
+	alternative tabbed component,
+	where the tab data is bound to the rendered tab elements/content holder
+	and vice-versa, for easier debugging in the console using 
+	inspect element > styles > properties > __data__
+
+	opts{}
+	- same argument as for init_tabs
+*/
+export async function init_tabs_1(opts) {
+	if (!opts.holder) throw `missing opts.holder for toggleButtons()`
+	if (!Array.isArray(opts.tabs)) throw `invalid opts.tabs for toggleButtons()`
+
+	let tabs = opts.tabs
+	opts.tabHolder = opts.holder.append('div')
+	if (!opts.contentHolder) {
+		opts.contentHolder = opts.holder.append('div')
+	}
+
+	const has_active_tab = tabs.find(tab => tab.active)
+	tabs.forEach((tab, i) => {
+		tab.btnPosition = i == 0 ? 'left' : i < tabs.length - 1 ? 'center' : 'right'
+		if (!has_active_tab && i === 0) tab.active = true
+	})
+
+	await opts.tabHolder
+		.selectAll(':scope>div')
+		// will bind each tab data to the correpsonding rendered element
+		.data(tabs)
+		.enter()
+		.append('div')
+		.attr('class', (tab, i) => `sj-toggle-button sj-${tab.btnPosition}-toggle`)
+		.style('width', tab => (tab.width ? `${tab.width}px` : 'fit-content'))
+		.style('min-width', tab => (tab.width ? null : Math.max(defaultTabWidth)))
+		.style('padding', '5px')
+		.style('display', 'inline-block')
+		.html(tab => tab.label)
+		.on('click', async tab => {
+			for (const t of tabs) {
+				t.active = t === tab
+			}
+			updateTabs()
+			if (tab.callback) await tab.callback(tab.holder)
+		})
+		.each(async function(tab) {
+			tab.tab = select(this)
+			tab.holder = opts.contentHolder
+				.append('div')
+				.style('padding-top', '10px')
+				.style('margin-top', '10px')
+				.style('display', tab.active ? 'block' : 'none')
+
+			if (tab.active && tab.callback) await tab.callback(tab.holder)
+		})
+
+	updateTabs()
+
+	function updateTabs() {
+		opts.tabHolder
+			.selectAll(':scope>div')
+			.data(tabs)
+			.classed('sjpp-active', tab => tab.active)
+			.each(tab => {
+				tab.holder.style('display', tab.active ? 'block' : 'none')
+			})
 	}
 }

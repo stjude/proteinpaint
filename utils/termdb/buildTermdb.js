@@ -2,7 +2,7 @@ const fs = require('fs')
 const exec = require('child_process').execSync
 const path = require('path')
 const { parseDictionary } = require('../../client/src/databrowser/dictionary.parse')
-const initBinConfig = require('../../shared/termdb.initbinconfig')
+const initBinConfig = require('../../server/shared/termdb.initbinconfig')
 
 /*
 TODO
@@ -139,7 +139,7 @@ try {
 
 function getScriptArg() {
 	console.log('validating arguments ...')
-	const allowedArgs = new Set(['phenotree', 'terms', 'annotations', 'annotation3Col', 'survival', 'sqlite3'])
+	const allowedArgs = new Set(['phenotree', 'terms', 'annotation', 'annotation3Col', 'survival', 'sqlite3'])
 	const arg = new Map()
 	try {
 		for (let i = 2; i < process.argv.length; i++) {

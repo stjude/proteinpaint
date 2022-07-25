@@ -6,13 +6,16 @@ import { axisTop, axisLeft } from 'd3-axis'
 import { debounce } from 'debounce'
 import * as client from './client'
 import { Menu } from '../dom/menu'
-import { dofetch2, dofetch3 } from '../common/dofetch'
+import { dofetch3 } from '../common/dofetch'
 import * as common from '#shared/common'
 import * as coord from './coord'
 import vcf2dstk from './vcf.tkconvert'
 import blockinit from './block.init'
 import * as Legend from './block.legend'
-import { newSandboxDiv } from '../dom/sandbox'
+import { newSandboxDiv } from '#dom/sandbox'
+import { string2snp } from '#common/snp'
+import { sayerror } from '#dom/error'
+import { appear, disappear } from '#dom/animation'
 
 // track types
 import { bamfromtemplate, bammaketk, bamload } from './block.tk.bam.adaptor'
@@ -83,7 +86,7 @@ export class Block {
 
 		this.mclassOverride = arg.mclassOverride // allow tracks to access it to render legend
 
-		// temp fix, to use in dofetch2( {serverData} )
+		// temp fix, to use in dofetch( {serverData} )
 		this.cache = {}
 
 		if (arg.debugmode) {
@@ -91,7 +94,7 @@ export class Block {
 			this.debugmode = true
 		}
 
-		this.hostURL = sessionStorage.getItem('hostURL') // NO NEED for these after replacing fetch() with dofetch2()
+		this.hostURL = sessionStorage.getItem('hostURL') // NO NEED for these after replacing fetch() with dofetch
 		this.jwt = sessionStorage.getItem('jwt')
 
 		if (!arg.style) {
@@ -235,6 +238,7 @@ export class Block {
 		this.stopidx = this.rglst.length - 1
 
 		// TODO allow svgholder for embedding into an existing svg
+
 		this.holder = arg.holder
 			.append('div')
 			.style('margin', arg.style.margin)
@@ -245,6 +249,12 @@ export class Block {
 		if (arg.bgcolor) {
 			this.holder.style('background-color', arg.bgcolor)
 		}
+
+		if (this.genome.hasIdeogram) {
+			this.initIdeogram(arg)
+			// creates this.ideogram{}
+		}
+
 		let butrow
 		if (!arg.butrowbottom) {
 			butrow = this.holder.append('div')
@@ -315,10 +325,10 @@ export class Block {
 				.on('click', () => {
 					if (shown) {
 						shown = false
-						client.disappear(div2)
+						disappear(div2)
 					} else {
 						shown = true
-						client.appear(div2)
+						appear(div2)
 					}
 				})
 
@@ -354,8 +364,16 @@ export class Block {
 
 		if (arg.usegm) {
 			// do this after legend is set
+			// fills this.rglst[], this.startidx, this.stopidx
 			this.setgmmode(arg.gmmode || client.gmmode.genomic)
 		}
+
+		// rglst is set, can process ideogram
+		if (this.ideogram) {
+			if (this.ideogram.visible) this.updateIdeogram()
+			else this.ideogram.div.style('display', 'none')
+		}
+
 		if (arg.nobox) {
 			// no dogtag
 		} else {
@@ -564,7 +582,7 @@ export class Block {
 					'gdcFileUUID=' + tk.gdcFile.uuid,
 					'gdcFilePosition=' + tk.gdcFile.position
 				]
-				const data = await dofetch2('tkbam?' + lst.join('&'), { headers })
+				const data = await dofetch3('tkbam?' + lst.join('&'), { headers })
 
 				this.gdcBamSliceDownloadBtn.property('disabled', false)
 
@@ -899,7 +917,7 @@ export class Block {
 		.file: tp path to an image file
 		.height: optional icon height
 		*/
-		const data = await client.dofetch2('img?file=' + arg.file)
+		const data = await dofetch3('img?file=' + arg.file)
 		if (data.error) {
 			div.text(data.error)
 			return
@@ -1182,70 +1200,61 @@ export class Block {
 		this.coord.height = this.coordyp1 + this.rulerheight + this.coordyp2 + (atbplevel ? baseheight + 2 : 0)
 	}
 
-	getntsequence4ruler(r, g) {
+	async getntsequence4ruler(r, g) {
 		r.busy = true // assessed by ifbusy()
 
-		fetch(
-			new Request(this.hostURL + '/ntseq', {
+		try {
+			const data = await dofetch3('ntseq', {
 				method: 'POST',
 				body: JSON.stringify({
 					genome: this.genome.name,
-					coord: r.chr + ':' + (r.start + 1) + '-' + r.stop,
-					jwt: this.jwt
+					coord: r.chr + ':' + (r.start + 1) + '-' + r.stop
 				})
 			})
-		)
-			.then(data => {
-				return data.json()
-			})
-			.then(data => {
-				g.selectAll('*').remove()
-				if (data.error) throw { message: data.error }
+			g.selectAll('*').remove()
+			if (data.error) throw data.error
 
-				const basewidth = r.width / data.seq.length
-				// tentative nt font size
-				let _fs = Math.min(this.rulerheight, basewidth / client.textlensf)
+			const basewidth = r.width / data.seq.length
+			// tentative nt font size
+			let _fs = Math.min(this.rulerheight, basewidth / client.textlensf)
 
-				if (_fs > 6) {
-					// show nt
-					for (let i = 0; i < data.seq.length; i++) {
-						let nt = data.seq[r.reverse ? data.seq.length - 1 - i : i]
-						if (r.reverse) {
-							nt = common.basecompliment(nt)
-						}
-						g.append('text')
-							.text(nt)
-							.attr('font-family', 'Courier')
-							.attr('font-size', _fs)
-							.attr('dominant-baseline', 'hanging')
-							.attr('x', basewidth * i + basewidth / 2) //+this.exonsf/2
-							.attr('text-anchor', 'middle')
-					}
-				} else {
-					// no show nt
-					_fs = 0
-				}
-				for (var i = 0; i < data.seq.length; i++) {
+			if (_fs > 6) {
+				// show nt
+				for (let i = 0; i < data.seq.length; i++) {
 					let nt = data.seq[r.reverse ? data.seq.length - 1 - i : i]
 					if (r.reverse) {
 						nt = common.basecompliment(nt)
 					}
-					g.append('rect')
-						.attr('x', i * basewidth)
-						.attr('y', Math.min(baseheight - 2, _fs))
-						.attr('width', basewidth)
-						.attr('height', Math.max(2, baseheight - _fs))
-						.attr('fill', common.basecolor[nt.toUpperCase()] || basecolorunknown)
+					g.append('text')
+						.text(nt)
+						.attr('font-family', 'Courier')
+						.attr('font-size', _fs)
+						.attr('dominant-baseline', 'hanging')
+						.attr('x', basewidth * i + basewidth / 2) //+this.exonsf/2
+						.attr('text-anchor', 'middle')
 				}
-			})
-			.catch(err => {
-				g.append('text').text(err.message)
-				if (err.stack) console.log(err.stack)
-			})
-			.then(() => {
-				r.busy = false
-				this.ifbusy()
-			})
+			} else {
+				// no show nt
+				_fs = 0
+			}
+			for (let i = 0; i < data.seq.length; i++) {
+				let nt = data.seq[r.reverse ? data.seq.length - 1 - i : i]
+				if (r.reverse) {
+					nt = common.basecompliment(nt)
+				}
+				g.append('rect')
+					.attr('x', i * basewidth)
+					.attr('y', Math.min(baseheight - 2, _fs))
+					.attr('width', basewidth)
+					.attr('height', Math.max(2, baseheight - _fs))
+					.attr('fill', common.basecolor[nt.toUpperCase()] || basecolorunknown)
+			}
+		} catch (e) {
+			g.append('text').text(e.message || e)
+			if (e.stack) console.log(e.stack)
+		}
+		r.busy = false
+		this.ifbusy()
 	}
 
 	nozoomout() {
@@ -1867,8 +1876,7 @@ reverseorient() {
 	}
 
 	block_jump_snp(s) {
-		coord
-			.string2snp(this.genome, s, this.hostURL, this.jwt)
+		string2snp(this.genome, s)
 			.then(r => {
 				const span = Math.ceil(this.width / ntpxwidth)
 				this.rglst = [
@@ -2038,7 +2046,7 @@ reverseorient() {
 				this.resized = false
 				let tk = this.tklst.find(t => {
 					if (ds.isMds3) {
-						if (t.type == client.tkt.mds3 && t.mds.label == ds.label) return t
+						if (t.type == client.tkt.mds3 && t.mds && t.mds.label == ds.label) return t
 					} else if (t.type == client.tkt.ds && t.ds && t.ds.label == ds.label) {
 						return t
 					}
@@ -2324,7 +2332,7 @@ seekrange(chr,start,stop) {
 			}
 		}
 		if (oldt.tr_legend) {
-			client.disappear(oldt.tr_legend, true)
+			disappear(oldt.tr_legend, true)
 		}
 	}
 
@@ -2957,7 +2965,7 @@ seekrange(chr,start,stop) {
 			}
 		}
 		if (tk.tr_legend) {
-			client.disappear(tk.tr_legend)
+			disappear(tk.tr_legend)
 		}
 	}
 
@@ -3020,7 +3028,7 @@ seekrange(chr,start,stop) {
 			this.gbase.node().appendChild(tk.g.node())
 		}
 		if (tk.tr_legend && tk.tr_legend.style('display') == 'none') {
-			client.appear(tk.tr_legend, 'table-row')
+			appear(tk.tr_legend, 'table-row')
 		}
 		tk.busy = true
 		switch (tk.type) {
@@ -3909,9 +3917,9 @@ seekrange(chr,start,stop) {
 
 	showisoform4switch(holder, hideuponselect) {
 		/*
-	showing gene in gmmode
-	list all isoforms to allow switching isoform
-	*/
+		showing gene in gmmode
+		list all isoforms to allow switching isoform
+		*/
 		if (!this.allgm) {
 			this.error('this.allgm[] missing')
 			return
@@ -3952,7 +3960,7 @@ seekrange(chr,start,stop) {
 			const tr = table
 				.append('tr')
 				.attr('class', 'sja_clb')
-				.on('click', () => {
+				.on('click', async () => {
 					if (hideuponselect) {
 						// hardcoded, hide the block menu
 						this.usegmtip.fadeout()
@@ -3968,67 +3976,51 @@ seekrange(chr,start,stop) {
 					this.holder0.selectAll('*').remove()
 
 					/*
-			this selected isoform may not have genomic sequence loaded
-			which is initially only loaded in block.init for bb.usegm
-			now may need to load it
-			*/
-					new Promise((resolve, reject) => {
-						if (gm1.genomicseq) {
-							// sequence already loaded
-							resolve()
+					this selected isoform may not have genomic sequence loaded
+					which is initially only loaded in block.init for bb.usegm
+					now may need to load it
+					*/
+					if (!gm1.genomicseq) {
+						const data = await dofetch3('ntseq', {
+							method: 'POST',
+							body: JSON.stringify({
+								genome: this.genome.name,
+								coord: gm1.chr + ':' + (gm1.start + 1) + '-' + gm1.stop
+							})
+						})
+						if (data.error) {
+							this.error(data.error)
+							return
 						}
-						fetch(
-							new Request(this.hostURL + '/ntseq', {
-								method: 'POST',
-								body: JSON.stringify({
-									genome: this.genome.name,
-									coord: gm1.chr + ':' + (gm1.start + 1) + '-' + gm1.stop,
-									jwt: this.jwt
-								})
-							})
-						)
-							.then(data => {
-								return data.json()
-							})
-							.then(data => {
-								if (data.error) throw { message: data.error }
-								return data.seq
-							})
-							.then(seq => {
-								gm1.genomicseq = seq
-								gm1.aaseq = common.nt2aa(gm1)
-								resolve()
-							})
+						gm1.genomicseq = data.seq
+						gm1.aaseq = common.nt2aa(gm1)
+					}
+
+					// quick fix based on changes to mds3/maketk
+					const tklst = []
+					for (const t of this.tklst) {
+						if (t.type == client.tkt.usegm) continue
+						if (t.type == client.tkt.mds3) delete t.mds
+						tklst.push(t)
+					}
+					new Block({
+						holder: this.holder0,
+						genome: this.genome,
+						hostURL: this.hostURL,
+						nobox: true,
+						gmstackheight: 37,
+						usegm: gm1,
+						allgm: this.allgm,
+						tklst,
+						gmmode: gm1.cdslen ? client.gmmode.protein : client.gmmode.exononly,
+						allowpopup: this.allowpopup,
+						hidedatasetexpression: this.hidedatasetexpression,
+						hidegenecontrol: this.hidegenecontrol,
+						hidegenelegend: this.hidegenelegend,
+						variantPageCall_snv: this.variantPageCall_snv,
+						samplecart: this.samplecart,
+						debugmode: this.debugmode
 					})
-						.catch(err => {
-							client.sayerror(this.holder0, err.message)
-						})
-						.then(() => {
-							const tklst = [] // quick fix based on changes to mds3/maketk
-							for (const t of this.tklst) {
-								if (t.type == client.tkt.usegm) continue
-								if (t.type == client.tkt.mds3) delete t.mds
-								tklst.push(t)
-							}
-							new Block({
-								holder: this.holder0,
-								genome: this.genome,
-								hostURL: this.hostURL,
-								nobox: true,
-								gmstackheight: 37,
-								usegm: gm1,
-								allgm: this.allgm,
-								tklst,
-								gmmode: gm1.cdslen ? client.gmmode.protein : client.gmmode.exononly,
-								allowpopup: this.allowpopup,
-								hidedatasetexpression: this.hidedatasetexpression,
-								hidegenecontrol: this.hidegenecontrol,
-								hidegenelegend: this.hidegenelegend,
-								variantPageCall_snv: this.variantPageCall_snv,
-								samplecart: this.samplecart,
-								debugmode: this.debugmode
-							})
-						})
 				})
 
 			tr.append('td')
@@ -4578,7 +4570,7 @@ seekrange(chr,start,stop) {
 	/** __subpanel ends **/
 
 	error(m) {
-		client.sayerror(this.errdiv, m)
+		sayerror(this.errdiv, m)
 	}
 
 	moremenu(tip) {
@@ -4604,6 +4596,17 @@ seekrange(chr,start,stop) {
 				.on('click', () => {
 					maygetdna(this, tip)
 				})
+
+			// ideogram
+			if (this.genome.hasIdeogram) {
+				row
+					.append('button')
+					.text((this.ideogram.visible ? 'Hide' : 'Show') + ' ideogram')
+					.on('click', () => {
+						this.toggleIdeogram()
+						tip.hide()
+					})
+			}
 
 			if (this.allowpopuponce) {
 				row
@@ -4736,6 +4739,65 @@ seekrange(chr,start,stop) {
 			})
 	}
 
+	initIdeogram(arg) {
+		const vpad = 5
+		this.ideogram = {
+			width: 800,
+			height: 20,
+			visible: arg.showIdeogram, // boolean, if ideogram is showing or not
+			chr: null // current chr, to be set when rglst is available
+		}
+		this.ideogram.div = this.holder
+			.append('div') // place to show ideogram
+			.style('position', 'relative')
+			.style('width', this.ideogram.width + 'px')
+			.style('margin', '5px')
+
+		this.ideogram.canvas = this.ideogram.div
+			.append('canvas')
+			.attr('width', this.ideogram.width)
+			.attr('height', this.ideogram.height)
+			.style('margin-top', vpad + 'px')
+
+		this.ideogram.ctx = this.ideogram.canvas.node().getContext('2d')
+		this.ideogram.blueBox = this.ideogram.div
+			.append('div')
+			.style('border', 'solid 1px blue')
+			.style('position', 'absolute')
+			.style('height', this.ideogram.height + vpad * 2 + 'px')
+			.style('top', '0px')
+	}
+	toggleIdeogram() {
+		if (!this.ideogram) return
+		this.ideogram.visible = !this.ideogram.visible
+		if (!this.ideogram.visible) {
+			disappear(this.ideogram.div)
+			return
+		}
+		appear(this.ideogram.div)
+		this.updateIdeogram()
+	}
+	async updateIdeogram() {
+		if (!this.ideogram) return
+		const currentChr = this.rglst[0].chr
+		if (currentChr != this.ideogram.chr) await this.plotIdeogram(currentChr)
+		// TODO move blueBox
+	}
+	async plotIdeogram(chr) {
+		if (!this.ideogram) return
+		try {
+			if (!chr) throw 'unknonw chr to show ideogram'
+			this.ideogram.chr = chr
+			const data = await dofetch3('ideogram?genome=' + this.genome.name + '&chr=' + chr)
+			if (data.error) throw data.error
+			if (!Array.isArray(data)) throw 'data is not array'
+			console.log(data)
+			// TODO plot on canvas
+		} catch (e) {
+			this.error(e.message || e)
+		}
+	}
+
 	mds_handle_make(key) {
 		// make handle for a mds dataset, also the click menu for that handle
 		const ds = this.genome.datasets[key]
@@ -4825,7 +4887,7 @@ seekrange(chr,start,stop) {
 		}
 
 		if (q.singlesample && q.getsampletrackquickfix) {
-			const data = await client.dofetch2('mdssvcnv', {
+			const data = await dofetch3('mdssvcnv', {
 				method: 'POST',
 				body: JSON.stringify({
 					genome: this.genome.name,
@@ -5145,7 +5207,7 @@ function allgm2sum(gmlst) {
 
 const dnalenlimit = 100000
 
-function maygetdna(block, tip) {
+async function maygetdna(block, tip) {
 	tip.clear()
 	const regions = []
 	for (let i = block.startidx; i <= block.stopidx; i++) {
@@ -5162,35 +5224,17 @@ function maygetdna(block, tip) {
 		return
 	}
 	const wait = tip.d.append('div').text('Loading DNA sequence ...')
-	const tasks = []
+	const lst = []
 	for (const r of regions) {
 		const coord = r.chr + ':' + (r.start + 1) + '-' + r.stop
-		const req = new Request(block.hostURL + '/ntseq', {
+		const data = await dofetch3('ntseq', {
 			method: 'POST',
-			body: JSON.stringify({ genome: block.genome.name, coord: coord, jwt: block.jwt })
+			body: JSON.stringify({ genome: block.genome.name, coord })
 		})
-		const task = fetch(req)
-			.then(data => {
-				return data.json()
-			})
-			.then(data => {
-				if (data.error) throw { message: data.error }
-				return { coord: coord, seq: data.seq }
-			})
-		tasks.push(task)
+		lst.push('>' + coord + '\n' + data.seq)
 	}
-	Promise.all(tasks)
-		.then(data => {
-			tip.hide()
-			const lst = []
-			for (const d of data) {
-				lst.push('>' + d.coord + '\n' + d.seq)
-			}
-			client.export_data('DNA from ' + block.genome.name, [{ text: lst.join('\n') }])
-		})
-		.catch(err => {
-			wait.text('Error: ' + err.message)
-		})
+	client.export_data('DNA from ' + block.genome.name, [{ text: lst.join('\n') }])
+	tip.hide()
 }
 
 function init_cursorhlbar(block) {

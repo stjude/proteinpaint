@@ -74,7 +74,9 @@ export async function makeTk(tk, block) {
 		doms: {},
 		// keys: label name, value: label dom
 		// to avoid having to delete all labels upon tk rendering
-		laby: 0 // cumulative height, 0 for no labels
+		laby: 0, // cumulative height, 0 for no labels
+		xoff: 0,
+		maxwidth: 0 // set default 0 in case track runs into err, can still render tk
 	}
 
 	tk._finish = loadTk_finish_closure(tk, block)

@@ -347,7 +347,7 @@ upon error, throw err message as a string
 		mayAddBedjfilterbyname(urlp, par.tklst)
 
 		par.datasetqueries = may_get_officialmds(urlp)
-		blockinit(par)
+		await blockinit(par)
 		return
 	}
 

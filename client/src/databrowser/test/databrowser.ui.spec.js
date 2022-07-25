@@ -631,16 +631,7 @@ tape('Render Databrowser UI from runpp()', async test => {
 		parseurl: true,
 		nobox: true,
 		tkui: 'databrowser'
-		// ********** Does not work
-		// onloadalltk_always: checkUI
 	})
-
-	// function checkUI() {
-	// const uiFound = [...holder.querySelectorAll('.sjpp-databrowser-section-header')].some(
-	// 	elem => elem.innerText == 'Data Dictionary'
-	// )
-	// test.true(uiFound, `Should databrowser UI`)
-	// }
 
 	await sleep(100)
 	const uiFound = [...holder.querySelectorAll('.sjpp-databrowser-section-header')].some(
@@ -652,28 +643,19 @@ tape('Render Databrowser UI from runpp()', async test => {
 	test.end()
 })
 
-tape.only('Click submit with no data', async test => {
+tape('Click submit with no data', test => {
 	test.timeoutAfter(3000)
 	const holder = getHolder()
-	const message = `Should throw an error for no data submitted`
 
-	try {
-		const obj = init_dictionaryUI(holder)
-		let err
-		obj.sayerror = e => {
-			err = e
-		}
-		const submitBtn = [...holder.node().querySelectorAll('.sjpp-ui-submitBtn')].find(
-			elem => elem.innerText == 'Create Data Browser'
-		)
-		await submitBtn.dispatchEvent(new Event('click'))
-		//Does not catch error but throws?
-		test.equal(err, 'Please provide data', message)
-	} catch (e) {
-		test.pass(message + ': ' + e)
-	}
-	// if (test._ok) holder.remove()
+	init_dictionaryUI(holder)
 
+	const submitBtn = [...holder.node().querySelectorAll('.sjpp-ui-submitBtn')].find(
+		elem => elem.innerText == 'Create Data Browser'
+	)
+	submitBtn.dispatchEvent(new Event('click'))
+	test.equal(holder.selectAll('.sja_errorbar').size(), 1, "should display 'no data' error")
+
+	if (test._ok) holder.remove()
 	test.end()
 })
 
