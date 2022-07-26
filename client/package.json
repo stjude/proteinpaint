@@ -1,6 +1,6 @@
 {
   "name": "@stjude/proteinpaint-client",
-  "version": "2.0.0",
+  "version": "2.1.1",
   "description": "a genomics visualization tool for exploring a cohort's genotype and phenotype data",
   "main": "dist/app.js",
   "scripts": {
@@ -11,6 +11,7 @@
     "browser": "node ./test/import-specs.js",
     "examples": "node ./test/import-specs.js name=_x_.examples",
     "gdc": "node ./test/import-specs.js name=_x_.gdc.views && npm run test",
+    "gdc-unwatched": "node ./test/import-specs.js name=_x_.gdc.views && webpack --env.NODE_ENV=development && npm run test -- --no-sandbox",
     "rollw": "rm -rf dist && rollup -c ./rollup.config.js -w"
   },
   "author": "",
@@ -22,6 +23,7 @@
     "@babel/preset-env": "^7.9.6",
     "@babel/preset-react": "^7.14.5",
     "@rollup/plugin-commonjs": "^17.0.0",
+    "@rollup/plugin-json": "^4.1.0",
     "@rollup/plugin-node-resolve": "^11.0.1",
     "babel-loader": "^8.2.2",
     "css-loader": "^0.23.1",

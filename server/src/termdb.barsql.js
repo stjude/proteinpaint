@@ -9,10 +9,11 @@ const termdbsql = require('./termdb.sql')
 /*
 ********************** EXPORTED
 handle_request_closure
+getOrderedLabels
 **********************
 */
 
-exports.handle_request_closure = genomes => {
+export function handle_request_closure(genomes) {
 	return async (req, res) => {
 		const q = req.query
 		for (const i of [0, 1, 2]) {
@@ -154,6 +155,7 @@ function getPj(q, data, tdb, ds) {
 		const d = getTermDetails(q, tdb, i)
 		d.q.index = i
 		const bins = q.results['CTE' + i].bins ? q.results['CTE' + i].bins : []
+
 		return Object.assign(d, {
 			key: 'key' + i,
 			val: 'val' + i,
@@ -161,12 +163,7 @@ function getPj(q, data, tdb, ds) {
 			isGenotype: q['term' + i + '_is_genotype'],
 			bins,
 			q: d.q,
-			orderedLabels:
-				d.term.type == 'condition' && d.term.grades
-					? d.term.grades.map(grade => d.term.values[grade].label)
-					: d.term.type == 'condition'
-					? [0, 1, 2, 3, 4, 5, 9].map(grade => d.term.values[grade].label) // hardcoded default order
-					: bins.map(bin => (bin.name ? bin.name : bin.label))
+			orderedLabels: getOrderedLabels(d.term, bins)
 		})
 	})
 
@@ -290,6 +287,16 @@ function getPj(q, data, tdb, ds) {
 			}
 		}
 	})
+}
+
+export function getOrderedLabels(term, bins) {
+	if (term.type == 'condition' && term.values) {
+		return Object.keys(term.values)
+			.map(Number)
+			.sort((a, b) => a - b)
+			.map(i => term.values[i].label)
+	}
+	return bins.map(bin => (bin.name ? bin.name : bin.label))
 }
 
 function getTermDetails(q, tdb, index) {

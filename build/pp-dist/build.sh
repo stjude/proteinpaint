@@ -25,53 +25,19 @@ while getopts "r:h:" opt; do
 	esac
 done
 
-#########################
-# EXTRACT REQUIRED FILES
-#########################
+################################
+# BUILD THE FULL TESTABLE IMAGE
+################################
 
-./build/extract.sh -r $REV -t pp-dist
+./build/full/build.sh -r $REV
 REV=$(cat tmppack/rev.txt)
+tar -C tmppack/ -xvf archive.tar build/pp-dist
 
-#######
-# PACK
-#######
-
-cd tmppack
-npm run reset
-
-cd server
-echo -e "\nCreating the server bundle\n"
-npx webpack --config=webpack.config.js
-
-cd ../client
-echo -e "\nBundling the client browser bin ...\n"
-rm -rf ../public/bin
-npx webpack --config=webpack.config.js --env.url="__PP_URL__"
-echo -e "\nPacking the client module main ...\n"
-rm -rf dist
-npx rollup -c ./rollup.config.js
-
-cd ..
-
-##########
-# PACK
-##########
-
-mv package.json package.json.bak
-./build/pp-dist/editpkgjson.js > package.json
-npm pack 
-rm package.json
-mv package.json.bak package.json
-
-#####################
-# Build Docker Image
-#####################
+#########################
+# Pack with Docker build
+#########################
 
 # get the current tag
 TAG="$(node -p "require('./package.json').version")"
-echo "building ppbase:$REV image, package version=$TAG"
-docker build --file ./build/Dockerfile --target ppbase --tag ppbase:$REV .
-echo "building pprust:$REV image, package version=$TAG"
-docker build --file ./build/Dockerfile --target pprust --tag pprust:$REV .
 echo "building ppdist:$REV image, package version=$TAG"
-docker build --file ./build/pp-dist/Dockerfile --tag ppdist:$REV --build-arg IMGVER=$REV --build-arg PKGVER=$TAG .
+docker build --file ./tmppack/build/pp-dist/Dockerfile --tag ppdist:$REV --build-arg IMGVER=$REV --build-arg PKGVER=$TAG .

@@ -182,10 +182,11 @@ async function add_geneMutation2SampleData(tw, samples, q, dictTermsLength = 0) 
 			const sname = d.sample
 				.split(';')
 				.pop()
+				.split('_')[0]
 				.trim()
 			// only create a sample entry/row when it is not already filtered out by not having any dictionary term values
-			if (!dictTermsLength && !(d.sample in samples)) samples[d.sample] = { sample: d.sample }
-			const row = samples[d.sample]
+			if (!dictTermsLength && !(sname in samples)) samples[sname] = { sample: sname }
+			const row = samples[sname]
 			if (!row) continue
 			if (!row[tname]) row[tname] = { key: tname, values: [], label: tname }
 			row[tname].values.push(d)

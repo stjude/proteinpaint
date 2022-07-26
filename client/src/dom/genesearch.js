@@ -4,13 +4,16 @@ import { dofetch3 } from '../common/dofetch'
 import { invalidcoord, string2pos } from '../coord'
 
 /*
-some code duplication with block.js
 
 TODO
-* allow only searching by gene name to replace gene_searchbox()
+1. allow only searching by gene name, disable coorinput
+   this allows to replace gene_searchbox() in client/src/gene.js
+   use only shallow (not "deep") query to find gene symbol
+   do not map gene to coord
+2. dedup code with block.js
 
 ***********************************
-* function argument object {}
+function argument object {}
 
 .tip
 	required. menu instance to show list of matching genes
@@ -33,15 +36,29 @@ TODO
 	optional
 	if true, allow to enter chr.pos.ref.alt
 	otherwise, only allow chr:start-stop
+	support hgvs notations for substitution/insertion/deletion
+		chr14:g.104780214C>T
+		chr5:g.171410539_171410540insTCTG
+		chr17:g.7673802delCGCACCTCAAAGCTGTTC
 
 .callback()
 	optional
 	triggered when a valid hit is found, and has been written to returned result{} object
 
 ***********************************
-* result object returned by the function
+result object returned by the function
 
-{ chr, start, stop, pos, ref, alt, geneSymbol }
+.chr
+	"chr" is always included
+.start
+.stop
+	"start/stop" are included when entered a coordinate or the coord is mapped from a gene/snp
+.geneSymbol
+
+.pos
+.ref
+.alt
+	"pos/ref/alt" are included when entered a variant
 */
 export function addGeneSearchbox(arg) {
 	const tip = arg.tip,

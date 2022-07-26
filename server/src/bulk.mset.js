@@ -45,7 +45,7 @@ async function process_mset(index, mset, genome) {
 	flag.tpsetname = mset.name ? mset.name : 'set' + index
 	for (const key in mset) {
 		if (!(key in handlers)) throw `unknown mutationset: ${key}`
-		const file = path.join(serverconfig.tpmasterdir, mset[key])
+		const file = mset[key].startsWith('/') ? mset[key] : path.join(serverconfig.tpmasterdir, mset[key])
 		try {
 			const text = await fs.promises.readFile(file, 'utf8')
 			const lines = text.trim().split(/\r?\n/)

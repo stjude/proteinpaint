@@ -1,5 +1,5 @@
 const tape = require('tape')
-const parseTabDelimitedData = require('../dictionary.ui.js').parseTabDelimitedData
+const parseDictionary = require('../dictionary.parse').parseDictionary
 const d3s = require('d3-selection')
 
 /***********************************
@@ -21,7 +21,7 @@ function getHolder() {
 ***************/
 
 tape('\n', function(test) {
-	test.pass('-***- dictionary.ui -***-')
+	test.pass('-***- dictionary.ui, phenotree parsing -***-')
 	test.end()
 })
 
@@ -36,7 +36,7 @@ tape('levels before name+note, no gaps', function(test) {
 	].join('\n')
 
 	const holder = getHolder()
-	const results = parseTabDelimitedData(holder, tsv) //console.log(JSON.stringify(results.terms))
+	const results = parseDictionary(holder, tsv) //console.log(JSON.stringify(results.terms))
 	const expected = [
 		{
 			id: 'A1a',
@@ -98,7 +98,7 @@ tape('levels after name+note, with gap', function(test) {
 	const message = 'should output the expected terms array'
 	try {
 		const holder = getHolder()
-		const results = parseTabDelimitedData(holder, tsv) //; console.log(JSON.stringify(results.terms))
+		const results = parseDictionary(holder, tsv) //; console.log(JSON.stringify(results.terms))
 		const expected = [
 			{
 				id: 'A1ai',
@@ -162,7 +162,7 @@ tape('empty variable name', function(test) {
 	].join('\n')
 
 	const holder = getHolder()
-	const results = parseTabDelimitedData(holder, tsv) //; console.log(JSON.stringify(results.terms))
+	const results = parseDictionary(holder, tsv) //; console.log(JSON.stringify(results.terms))
 	const expected = [
 		{
 			id: 'A.1.a',
@@ -224,7 +224,7 @@ tape('extra, non essential column', function(test) {
 	const message = `should display data properly, no errors`
 	try {
 		const holder = getHolder()
-		const results = parseTabDelimitedData(holder, tsv)
+		const results = parseDictionary(holder, tsv)
 		const expected = [
 			{
 				id: 'A1a',
@@ -289,7 +289,7 @@ tape('no level columns', function(test) {
 	const message = `should display dictionary with variable name (i.e. id) as name`
 	try {
 		const holder = getHolder()
-		const results = parseTabDelimitedData(holder, tsv)
+		const results = parseDictionary(holder, tsv)
 		const expected = [
 			{
 				id: 'A1a',
@@ -349,7 +349,7 @@ tape('repeated level names, same line', function(test) {
 	const holder = getHolder()
 	const message = 'should display an error for repeated level names in the same line'
 	try {
-		const results = parseTabDelimitedData(holder, tsv)
+		const results = parseDictionary(holder, tsv)
 		const errorbar = holder.selectAll('.sja_errorbar')
 		test.equal(errorbar.size(), 1, `should display error for identicial level names and not throw`)
 		const expectedStr = 'non-unique'
@@ -379,7 +379,7 @@ tape('dash between levels', function(test) {
 	const holder = getHolder()
 	const message = `should display an error for a '-' between level names`
 	try {
-		const results = parseTabDelimitedData(holder, tsv)
+		const results = parseDictionary(holder, tsv)
 		const errorbar = holder.selectAll('.sja_errorbar')
 		test.equal(errorbar.size(), 1, `should display error for blank of '-' between level names and not throw`)
 		const expectedStr = `blank or '-'`
@@ -408,7 +408,7 @@ tape('empty configuration', function(test) {
 
 	const holder = getHolder()
 	try {
-		const results = parseTabDelimitedData(holder, tsv)
+		const results = parseDictionary(holder, tsv)
 		// check for error display here if no errors are thrown, otherwise check within the catch block
 		const errorbar = holder.selectAll('.sja_errorbar')
 		test.equal(errorbar.size(), 1, `should display error for missing configuration and not throw`)
@@ -428,7 +428,7 @@ tape('empty configuration', function(test) {
 	test.end()
 })
 
-tape('missing k=v in config', function(test) {
+tape('missing k=v in config (phenotree format)', function(test) {
 	test.timeoutAfter(100)
 	const tsv = [
 		`level_1\tlevel_2\tlevel_3\tvariable name\tvariable note`,
@@ -440,7 +440,7 @@ tape('missing k=v in config', function(test) {
 
 	const holder = getHolder()
 	try {
-		const results = parseTabDelimitedData(holder, tsv)
+		const results = parseDictionary(holder, tsv)
 		// check for error display here if no errors are thrown, otherwise check within the catch block
 		const errorbar = holder.selectAll('.sja_errorbar')
 		test.equal(errorbar.size(), 1, `should display an error for missing value for config key and not throw`)
@@ -472,7 +472,7 @@ tape('repeated intermediate terms for diff branches, whole dataset', function(te
 
 	const holder = getHolder()
 	try {
-		const results = parseTabDelimitedData(holder, tsv)
+		const results = parseDictionary(holder, tsv)
 		// check for error display here if no errors are thrown, otherwise check within the catch block
 		const errorbar = holder.selectAll('.sja_errorbar')
 		test.equal(errorbar.size(), 1, 'should display an error for identical intermediate level names, but not throw')
@@ -503,20 +503,21 @@ tape('missing variable name header', function(test) {
 	].join('\n')
 
 	const holder = getHolder()
-	const message = 'Should throw on missing variable name header'
+	const message = 'Should throw on unrecognized file format'
 	try {
-		const results = parseTabDelimitedData(holder, tsv)
-		// test fails because the function did not throw
+		const results = parseDictionary(holder, tsv)
 		test.fail(message)
 	} catch (e) {
-		// test passes because the function is expected to throw
 		test.pass(message)
 	}
 
-	// an error message should also be displayed for the user
 	const errorbar = holder.selectAll('.sja_errorbar')
-	test.equal(errorbar.size(), 1, 'should display an error for missing variable name header')
-	const expectedStr = 'variable name'
+	test.equal(
+		errorbar.size(),
+		1,
+		'should display an error for unrecognized format since "variable name" is missing and not a dictionary format'
+	)
+	const expectedStr = 'unrecognized'
 	test.true(
 		errorbar
 			.text()
@@ -541,7 +542,7 @@ tape('missing variable note header', function(test) {
 	const holder = getHolder()
 	const message = 'Should throw on missing variable note header'
 	try {
-		const results = parseTabDelimitedData(holder, tsv)
+		const results = parseDictionary(holder, tsv)
 		test.fail(message)
 	} catch (e) {
 		test.pass(message)
@@ -558,5 +559,195 @@ tape('missing variable note header', function(test) {
 		`should have '${expectedStr}' in the error message`
 	)
 
+	test.end()
+})
+
+tape('\n', function(test) {
+	test.pass('-***- dictionary.ui, data dictionary parsing-***-')
+	test.end()
+})
+
+tape('missing parent_id header', function(test) {
+	test.timeoutAfter(100)
+	const tsv = [
+		`term_id\tname\ttype\tvalues`,
+		`A\tA+B\tcategorical\t1=Yes; 0=No`,
+		`B\tB+C\tcategorical\t1=Yes; 0=No`,
+		`A\tA+D\tcategorical\t1=Pending`,
+		`B\tB+E\tcategorical\t1=Treated; 0=Not treated`
+	].join('\n')
+
+	const holder = getHolder()
+	const message = 'Should throw on missing parent_id header'
+	try {
+		const results = parseDictionary(holder, tsv)
+		test.fail(message)
+	} catch (e) {
+		test.pass(message)
+	}
+	const errorbar = holder.selectAll('.sja_errorbar')
+	test.equal(errorbar.size(), 1, `should display an error for missing parent_id and throw`)
+	const expectedStr = "required 'parent_id'"
+	test.true(
+		errorbar
+			.text()
+			.toLowerCase()
+			.includes(expectedStr),
+		`should have '${expectedStr}' in the error message`
+	)
+	test.end()
+})
+
+tape('missing name header', function(test) {
+	test.timeoutAfter(100)
+
+	const tsv = [
+		`term_id\tparent_id\tn\ttype\tvalues`,
+		`A\tB\tA+B\tcategorical\t1=Yes; 0=No`,
+		`B\tC\tB+C\tcategorical\t1=Yes; 0=No`,
+		`A\tD\tA+D\tcategorical\t1=Pending`,
+		`B\tE\tB+E\tcategorical\t1=Treated; 0=Not treated`
+	].join('\n')
+
+	const holder = getHolder()
+	const message = 'Should throw on missing name header'
+	try {
+		const results = parseDictionary(holder, tsv)
+		test.fail(message)
+	} catch (e) {
+		test.pass(message)
+	}
+	const errorbar = holder.selectAll('.sja_errorbar')
+	test.equal(errorbar.size(), 1, `should display an error for missing name and throw`)
+	const expectedStr = "required 'name'"
+	test.true(
+		errorbar
+			.text()
+			.toLowerCase()
+			.includes(expectedStr),
+		`should have '${expectedStr}' in the error message`
+	)
+	test.end()
+})
+
+tape('missing type header', function(test) {
+	test.timeoutAfter(100)
+	const tsv = [
+		`term_id\tparent_id\tname\tt\tvalues`,
+		`A\tB\tA+B\tcategorical\t1=Yes; 0=No`,
+		`B\tC\tB+C\tcategorical\t1=Yes; 0=No`,
+		`A\tD\tA+D\tcategorical\t1=Pending`,
+		`B\tE\tB+E\tcategorical\t1=Treated; 0=Not treated`
+	].join('\n')
+
+	const holder = getHolder()
+	const message = 'Should throw on missing type header'
+	try {
+		const results = parseDictionary(holder, tsv)
+		test.fail(message)
+	} catch (e) {
+		test.pass(message)
+	}
+	const errorbar = holder.selectAll('.sja_errorbar')
+	test.equal(errorbar.size(), 1, `should display an error for missing type and throw`)
+	const expectedStr = "required 'type'"
+	test.true(
+		errorbar
+			.text()
+			.toLowerCase()
+			.includes(expectedStr),
+		`should have '${expectedStr}' in the error message`
+	)
+	test.end()
+})
+
+tape('missing values header', function(test) {
+	test.timeoutAfter(100)
+	const tsv = [
+		`term_id\tparent_id\tname\ttype\tvalue`,
+		`A\tB\tA+B\tcategorical\t1=Yes; 0=No`,
+		`B\tC\tB+C\tcategorical\t1=Yes; 0=No`,
+		`A\tD\tA+D\tcategorical\t1=Pending`,
+		`B\tE\tB+E\tcategorical\t1=Treated; 0=Not treated`
+	].join('\n')
+
+	const holder = getHolder()
+	const message = 'Should throw on missing values header'
+	try {
+		const results = parseDictionary(holder, tsv)
+		test.fail(message)
+	} catch (e) {
+		test.pass(message)
+	}
+	const errorbar = holder.selectAll('.sja_errorbar')
+	test.equal(errorbar.size(), 1, `should display an error for missing values and throw`)
+	const expectedStr = "required 'values'"
+	test.true(
+		errorbar
+			.text()
+			.toLowerCase()
+			.includes(expectedStr),
+		`should have '${expectedStr}' in the error message`
+	)
+	test.end()
+})
+
+tape('blank or dash in required data column', function(test) {
+	test.timeoutAfter(100)
+	const tsv = [
+		`term_id\tparent_id\tname\ttype\tvalues`,
+		`A\tB\t\tcategorical\t1=Yes; 0=No`,
+		`B\tC\tB+C\tcategorical\t1=Yes; 0=No`,
+		`A\tD\tA+D\tcategorical\t1=Pending`,
+		`B\tE\tB+E\tcategorical\t1=Treated; 0=Not treated`
+	].join('\n')
+
+	const holder = getHolder()
+	const message = `should display an error for a '-' in required data columns`
+	try {
+		const results = parseDictionary(holder, tsv)
+		test.fail(message)
+	} catch (e) {
+		test.pass(message)
+	}
+	const errorbar = holder.selectAll('.sja_errorbar')
+	test.equal(errorbar.size(), 1, `should display error for blank of '-' in required data columns and throw`)
+	const expectedStr = `blank or '-'`
+	test.true(
+		errorbar
+			.text()
+			.toLowerCase()
+			.includes(expectedStr),
+		`should have '${expectedStr}' in the error message`
+	)
+	test.end()
+})
+
+tape('missing k=v in values (dictionary format)', function(test) {
+	test.timeoutAfter(100)
+	const tsv = [
+		`term_id\tparent_id\tname\ttype\tvalues`,
+		`A\tB\tA+B\tcategorical\t1=Yes; 0=No`,
+		`B\tC\tB+C\tcategorical\t1=Yes; 0=No`,
+		`A\tD\tA+D\tcategorical\t1`,
+		`B\tE\tB+E\tcategorical\t1=Treated; 0=Not treated`
+	].join('\n')
+
+	const holder = getHolder()
+	try {
+		const results = parseDictionary(holder, tsv)
+		const errorbar = holder.selectAll('.sja_errorbar')
+		test.equal(errorbar.size(), 1, `should display an error for non k:v format and not throw`)
+		const expectedStr = 'key = value'
+		test.true(
+			errorbar
+				.text()
+				.toLowerCase()
+				.includes(expectedStr),
+			`should have '${expectedStr}' in the error message`
+		)
+	} catch (e) {
+		test.fail('An error should only be displayed and NOT thrown for this validation step: ' + e)
+	}
 	test.end()
 })

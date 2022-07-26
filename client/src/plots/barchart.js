@@ -196,7 +196,15 @@ class TdbBarchart {
 			rowspace: config.settings.common.barspace
 		}
 
-		this.mayResetHidden(this.config.term, this.config.term2, this.config.term0)
+		/* mayResetHidden() was added before to prevent showing empty chart due to automatic hiding uncomputable categories
+		this has following problems:
+		1. when term1=diaggrp and term2=hrtavg, uncomputable categories from term2 can show up by default.
+		2. inconsistent behavior: when term1=agedx, term2=hrtavg the uncomputable categories are hidden by default
+
+		side effect of disabling this function can cause empty chart, but seems to be minor given above
+		*/
+		//this.mayResetHidden(this.config.term, this.config.term2, this.config.term0)
+
 		this.setExclude(this.config.term, this.config.term2)
 		Object.assign(this.settings, settings, this.currServerData.refs ? this.currServerData.refs : {}, {
 			exclude: this.settings.exclude

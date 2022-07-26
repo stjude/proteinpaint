@@ -19,6 +19,7 @@ usage() {
 
 REV=latest
 TPDIR=''
+DOCKER_TAG=ppgdc:$REV
 while getopts "t:r:h:d:" opt; do
 	case "${opt}" in
 	t) 
@@ -42,58 +43,26 @@ done
 #	usage
 #	exit 1
 #fi
+################################
+# BUILD THE FULL TESTABLE IMAGE
+################################
 
-#########################
-# EXTRACT REQUIRED FILES
-#########################
 
-./build/extract.sh -r $REV -t gdc
-REV=$(cat tmppack/rev.txt)
+./build/full/build.sh -r $REV \
+	-b "--build-arg http_proxy=http://cloud-proxy:3128 --build-arg https_proxy=http://cloud-proxy:3128 --build-arg ELECTRON_GET_USE_PROXY=true --build-arg GLOBAL_AGENT_HTTPS_PROXY=http://cloud-proxy:3128"
+
+tar -C tmppack/ -xvf archive.tar build/gdc
 
 #####################
 # Build the image
 #####################
 
-cd tmppack
 # get the current tag
 # GIT_TAG is set when the script is kicked off by GDC Jenkins
 TAG="$(grep version package.json | sed 's/.*"version": "\(.*\)".*/\1/')"
-echo "building ppbase:$REV image, package version=$TAG"
-docker build --file ./build/Dockerfile --tag ppbase:$REV --build-arg http_proxy=http://cloud-proxy:3128 --build-arg https_proxy=http://cloud-proxy:3128 .
 
-# build an image for GDC-related tests
-# 
-# TODO: 
-# will do this test as QC for building the server image once 
-# minimal test-only data files are available
-#
-docker build \
-	--file ./build/gdc/Dockerfile \
-	--target ppgdctest \
-	--tag ppgdctest:$REV \
-	--build-arg IMGVER=$REV \
-	--build-arg PKGVER=$TAG \
-        --build-arg http_proxy=http://cloud-proxy:3128 \
-        --build-arg https_proxy=http://cloud-proxy:3128 \
-	--build-arg electron_get_use_proxy=true \
-	--build-arg global_agent_https_proxy=http://cloud-proxy:3128 \
-	.
-
-# delete this test step once the gdc wrapper tests are 
-# triggered as part of the image building process
-#./build/gdc/dockrun.sh $TPMASTERDIR 3456 ppgdctest:$REV
-#if [[ "$?" != "0" ]]; then
-#	echo "Error when running the GDC test image (exit code=$?)"
-#	exit 1
-#fi
-
-# this image may publish the @stjude-proteinpaint client package
-docker build \
-	--file ./build/gdc/Dockerfile \
-	--target ppserver \
-	--tag $DOCKER_TAG \
-	--build-arg IMGVER=$REV \
-	--build-arg PKGVER=$TAG \
-        --build-arg http_proxy=http://cloud-proxy:3128 \
-        --build-arg https_proxy=http://cloud-proxy:3128 \
-	.
+# get the current tag
+#TAG="$(node -p "require('./package.json').version")"
+REV=$(cat tmppack/rev.txt)
+echo "building $DOCKER_TAG image, package version=$TAG, REV=$REV"
+docker build --file ./tmppack/build/gdc/Dockerfile --tag $DOCKER_TAG --build-arg IMGVER=$REV --build-arg PKGVER=$TAG .

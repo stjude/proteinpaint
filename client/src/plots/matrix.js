@@ -1,11 +1,15 @@
 import { getCompInit, copyMerge } from '../common/rx.core'
 import { select } from 'd3-selection'
 import { scaleOrdinal, schemeCategory10, schemeCategory20 } from 'd3-scale'
-import { fillTermWrapper, termsettingInit } from '../common/termsetting'
+import { fillTermWrapper } from '../common/termsetting'
 import { MatrixCluster } from './matrix.cluster'
 import { MatrixControls } from './matrix.controls'
 import htmlLegend from '../html.legend'
 import { mclass } from '../../shared/common'
+import { Menu } from '../dom/menu'
+import { setInteractivity } from './matrix.interactivity'
+import { setRenderers } from './matrix.renderers'
+import { getSampleSorter, getTermSorter } from './matrix.sort'
 
 class Matrix {
 	constructor(opts) {
@@ -27,13 +31,18 @@ class Matrix {
 			.append('g')
 			.on('mouseover', this.showCellInfo)
 			.on('mouseout', this.mouseout)
+
+		const tip = new Menu({ padding: '5px' })
 		this.dom = {
 			header: opts.header,
 			controls,
 			holder,
 			svg,
 			mainG,
-			sampleGrpLabelG: mainG.append('g').attr('class', 'sjpp-matrix-series-group-label-g'),
+			sampleGrpLabelG: mainG
+				.append('g')
+				.attr('class', 'sjpp-matrix-series-group-label-g')
+				.on('click', this.showSampleGroupMenu),
 			termGrpLabelG: mainG.append('g').attr('class', 'sjpp-matrix-term-group-label-g'),
 			cluster: mainG.append('g').attr('class', 'sjpp-matrix-cluster-g'),
 			seriesesG: mainG.append('g').attr('class', 'sjpp-matrix-serieses-g'),
@@ -41,9 +50,18 @@ class Matrix {
 			termLabelG: mainG
 				.append('g')
 				.attr('class', 'sjpp-matrix-term-label-g')
-				.on('click', this.showTermEditMenu),
-			legendDiv: holder.append('div').style('margin', '5px 5px 15px 50px')
+				.on('click', this.showTermMenu),
+			legendDiv: holder.append('div').style('margin', '5px 5px 15px 50px'),
+			tip,
+			menutop: tip.d.append('div'),
+			menubody: tip.d.append('div')
 		}
+
+		this.dom.tip.onHide = () => {
+			this.lastActiveTerm = this.activeTerm
+			delete this.activeTerm
+		}
+
 		this.config = appState.plots.find(p => p.id === this.id)
 		this.settings = Object.assign({}, this.config.settings.matrix)
 		if (this.dom.header) this.dom.header.html('Sample Matrix')
@@ -61,63 +79,23 @@ class Matrix {
 				}
 			}
 		})
-		// will use the same pill to show term edit menu
-		this.pill = termsettingInit({
-			showFullMenu: true,
-			vocabApi: this.app.vocabApi,
-			vocab: appState.vocab,
-			activeCohort: appState.activeCohort,
-			//holder: {}, //self.dom.inputTd.append('div'),
-			//debug: opts.debug,
-			renderAs: 'none',
-			callback: tw => {
-				// data is object with only one needed attribute: q, never is null
-				if (tw && !tw.q) throw 'data.q{} missing from pill callback'
-				const t = this.termBeingEdited
-				//const termgroups = JSON.parse(this.config.termgroups
-				if (tw) {
-					this.pill.main(tw)
-					this.app.dispatch({
-						type: 'plot_nestedEdits',
-						id: opts.id,
-						edits: [
-							{
-								nestedKeys: ['termgroups', t.grpIndex, 'lst', t.index],
-								value: tw
-							}
-						]
-					})
-				} else {
-					// reset the pill data
-					this.pill.main({ term: null, q: null })
 
-					const termgroups = JSON.parse(JSON.stringify(this.config.termgroups))
-					const grp = termgroups[t.grpIndex]
-					// remove this element
-					grp.lst.splice(t.index, 1)
-					if (grp.lst.length) {
-						this.app.dispatch({
-							type: 'plot_nestedEdits',
-							id: opts.id,
-							edits: [
-								{
-									nestedKeys: ['termgroups', t.grpIndex, 'lst'],
-									value: grp.lst
-								}
-							]
-						})
-					} else {
-						// remove this now-empty group
-						termgroups.splice(t.grpIndex, 1)
-						this.app.dispatch({
-							type: 'plot_edit',
-							id: opts.id,
-							config: { termgroups }
-						})
-					}
-				}
+		// enable embedding of termsetting and tree menu inside self.dom.menu
+		this.customTipApi = this.dom.tip.getCustomApi({
+			d: this.dom.menubody,
+			clear: () => {
+				this.dom.menubody.selectAll('*').remove()
+				return this.customTipApi
+			},
+			show: () => {
+				this.dom.menubody.style('display', 'block')
+			},
+			hide: () => {
+				//this.dom.menubody.style('display', 'none')
 			}
 		})
+
+		this.setPill(appState)
 	}
 
 	setControls(appState) {
@@ -163,8 +141,8 @@ class Matrix {
 			await this.app.vocabApi.setAnnotatedSampleData(reqOpts, this.currData)
 
 			// process the data
-			this.setSampleGroupsOrder(this.currData)
 			this.setTermOrder(this.currData)
+			this.setSampleGroupsOrder(this.currData)
 			this.setLayout()
 			this.serieses = this.getSerieses(this.currData)
 			// render the data
@@ -198,6 +176,7 @@ class Matrix {
 	setSampleGroupsOrder(data) {
 		const s = this.settings.matrix
 		const defaultSampleGrp = { id: undefined, lst: [] }
+		this.sampleSorter = getSampleSorter(this, s, data.lst)
 
 		const sampleGroups = new Map()
 		if (!this.config.divideBy) {
@@ -207,13 +186,14 @@ class Matrix {
 			defaultSampleGrp.name = 'Not annotated'
 			const term = this.config.divideBy.term
 			const $id = this.config.divideBy.$id
+			const exclude = this.config.divideBy.exclude || []
 			const values = term.values || {}
 			const ref = data.refs.byTermId[$id] || {}
 
 			for (const row of data.lst) {
-				const anno = row[$id]
 				if ($id in row) {
-					const key = anno.key
+					if (exclude.includes(row[$id].key)) continue
+					const key = row[$id].key
 					if (!sampleGroups.has(key)) {
 						sampleGroups.set(key, {
 							id: key,
@@ -238,17 +218,10 @@ class Matrix {
 		this.sampleGroups = [...sampleGroups.values()].sort((a, b) => a.order - b.order)
 		//this.sampleGroupKeys = [...sampleGroups.keys()] -- not needed?
 		this.sampleOrder = []
-		const sampleSorter = (a, b) => {
-			const k = a[s.sortSamplesBy] // TODO: support many types of sorting
-			const l = b[s.sortSamplesBy]
-			if (k < l) return -1
-			if (k > l) return 1
-			return 0
-		}
 
 		let total = 0
 		for (const [grpIndex, grp] of this.sampleGroups.entries()) {
-			grp.lst.sort(sampleSorter)
+			grp.lst.sort(this.sampleSorter)
 			for (const [index, row] of grp.lst.entries()) {
 				this.sampleOrder.push({ grp, grpIndex, row, index, prevGrpTotalIndex: total, totalIndex: total + index })
 			}
@@ -257,14 +230,43 @@ class Matrix {
 	}
 
 	setTermOrder(data) {
-		this.termGrp = this.config.termgroups
+		const s = this.settings.matrix
+		this.termSorter = getTermSorter(this, s, data.lst)
+		this.termGroups = JSON.parse(JSON.stringify(this.config.termgroups))
 		this.termOrder = []
 		let total = 0
-		for (const [grpIndex, grp] of this.config.termgroups.entries()) {
+		for (const [grpIndex, grp] of this.termGroups.entries()) {
+			const lst = [] // will derive a mutable copy of grp.lst
 			for (const [index, tw] of grp.lst.entries()) {
-				const ref = data.refs.byTermId[tw.$id] || {}
-				this.termOrder.push({ grp, grpIndex, tw, index, prevGrpTotalIndex: total, totalIndex: total + index, ref })
+				const counts = { samples: 0, hits: 0 }
+				for (const sn in data.samples) {
+					const row = data.samples[sn]
+					if (tw.$id in row) {
+						counts.samples += 1
+						counts.hits += Array.isArray(row[tw.$id].values) ? row[tw.$id].values.length : 1
+					}
+				}
+				lst.push({ tw, counts, index })
 			}
+
+			grp.lst = lst.sort(this.termSorter).map(t => t.tw)
+			for (const [index, t] of lst.entries()) {
+				const { tw, counts } = t
+				const ref = data.refs.byTermId[t.tw.$id] || {}
+				this.termOrder.push({
+					grp,
+					grpIndex,
+					tw,
+					index, // rendered index
+					prevGrpTotalIndex: total,
+					totalIndex: total + index,
+					ref,
+					counts,
+					label:
+						t.tw.term.name + (s.samplecount4gene && t.tw.term.type.startsWith('gene') ? ` (${counts.samples})` : '')
+				})
+			}
+
 			total += grp.lst.length
 		}
 	}
@@ -423,6 +425,7 @@ class Matrix {
 
 				// TODO: improve logic for excluding data from legend
 				if (t.tw.q.mode != 'continuous' && t.tw.term.type != 'geneVariant') {
+					if (!t.tw.$id) console.log(427, t.tw.$id, t.tw.term?.id)
 					if (!keysByTermId[t.tw.$id]) keysByTermId[t.tw.$id] = { ref: t.ref, values: {} }
 					if (!keysByTermId[t.tw.$id].values[key]) keysByTermId[t.tw.$id].values[key] = { key, label }
 				}
@@ -456,7 +459,7 @@ class Matrix {
 	}
 
 	termLabel(t) {
-		return t.tw.term.name
+		return t.label
 	}
 
 	termGrpKey(t) {
@@ -503,213 +506,6 @@ export const matrixInit = getCompInit(Matrix)
 // this alias will allow abstracted dynamic imports
 export const componentInit = matrixInit
 
-function setRenderers(self) {
-	self.render = function() {
-		const s = self.settings.matrix
-		const l = self.layout
-		const d = self.dimensions
-		const duration = self.dom.svg.attr('width') ? s.duration : 0
-		self.renderSerieses(s, l, d, duration)
-		self.renderLabels(s, l, d, duration)
-	}
-
-	self.renderSerieses = function(s, l, d, duration) {
-		self.dom.seriesesG
-			.transition()
-			.duration(duration)
-			.attr('transform', `translate(${d.xOffset},${d.yOffset})`)
-
-		const sg = self.dom.seriesesG.selectAll('.sjpp-mass-series-g').data(this.serieses, series => series.row.sample)
-
-		sg.exit().remove()
-		sg.each(self.renderSeries)
-		sg.enter()
-			.append('g')
-			.attr('class', 'sjpp-mass-series-g')
-			.style('opacity', 0.001)
-			.each(self.renderSeries)
-	}
-
-	self.renderSeries = function(series) {
-		const s = self.settings.matrix
-		const g = select(this)
-		const duration = g.attr('transform') ? s.duration : 0
-
-		g.transition()
-			.duration(duration)
-			.attr('transform', `translate(${series.x},${series.y})`)
-			.style('opacity', 1)
-
-		const rects = g.selectAll('rect').data(series.cells, (cell, i) => cell.sample + ';;' + cell.tw.$id)
-		rects.exit().remove()
-		rects.each(self.renderCell)
-		rects
-			.enter()
-			.append('rect')
-			.each(self.renderCell)
-	}
-
-	self.renderCell = function(cell) {
-		if (!cell.fill)
-			cell.fill = cell.$id in self.colorScaleByTermId ? self.colorScaleByTermId[cell.$id](cell.key) : getRectFill(cell)
-		const s = self.settings.matrix
-		const rect = select(this)
-			.transition()
-			.duration('x' in this ? s.duration : 0)
-			.attr('x', cell.x)
-			.attr('y', cell.y)
-			.attr('width', cell.width ? cell.width : s.colw)
-			.attr('height', cell.height ? cell.height : s.rowh)
-			//.attr('stroke', '#eee')
-			//.attr('stroke-width', 1)
-			.attr('fill', cell.fill)
-	}
-
-	self.renderLabels = function(s, l, d, duration) {
-		for (const direction of ['top', 'btm', 'left', 'right']) {
-			const side = l[direction]
-			side.box
-				.transition()
-				.duration(duration)
-				.attr('transform', side.attr.boxTransform)
-
-			const labels = side.box.selectAll('g').data(side.data, side.key)
-			labels.exit().remove()
-			labels.each(renderLabel)
-			labels
-				.enter()
-				.append('g')
-				.each(renderLabel)
-
-			function renderLabel(lab) {
-				const g = select(this)
-				g.transition()
-					.duration(duration)
-					.attr('transform', side.attr.labelGTransform)
-
-				if (!g.select('text').size()) g.append('text')
-				g.select('text')
-					.attr('fill', '#000')
-					.transition()
-					.duration(duration)
-					.attr('opacity', side.attr.fontSize < 6 ? 0 : 1)
-					.attr('font-size', side.attr.fontSize)
-					.attr('text-anchor', side.attr.labelAnchor)
-					.attr('transform', side.attr.labelTransform)
-					.text(side.label)
-			}
-		}
-	}
-
-	self.colLabelGTransform = (lab, grpIndex) => {
-		const s = self.settings.matrix
-		const d = self.dimensions
-		const x = lab.grpIndex * s.colgspace + lab.totalIndex * d.dx + 0.8 * s.colw
-		return `translate(${x},0)`
-	}
-
-	self.colGrpLabelGTransform = (lab, grpIndex) => {
-		const s = self.settings.matrix
-		const d = self.dimensions
-		const x = lab.grpIndex * s.colgspace + lab.prevGrpTotalIndex * d.dx + (lab.grp.lst.length * d.dx) / 2 + 3
-		return `translate(${x},0)`
-	}
-
-	self.rowLabelGTransform = (lab, grpIndex) => {
-		const s = self.settings.matrix
-		const d = self.dimensions
-		const y = lab.grpIndex * s.rowgspace + lab.totalIndex * d.dy + 0.7 * s.rowh
-		return `translate(0,${y})`
-	}
-
-	self.rowGrpLabelGTransform = (lab, grpIndex) => {
-		const s = self.settings.matrix
-		const d = self.dimensions
-		const y = lab.grpIndex * s.rowgspace + lab.prevGrpTotalIndex * d.dy + (lab.grp.lst.length * d.dy) / 2 + 3
-		return `translate(0,${y})`
-	}
-
-	self.adjustSvgDimensions = async function(prevTranspose) {
-		const s = self.settings.matrix
-		const d = self.dimensions
-		const duration = self.dom.svg.attr('width') ? s.duration : 10
-
-		// wait for labels to render; when transposing, must wait for
-		// the label rotation to end before measuring the label height and width
-		await sleep(prevTranspose == s.transpose ? duration : s.duration)
-
-		const topBox = self.layout.top.box.node().getBBox()
-		const btmBox = self.layout.btm.box.node().getBBox()
-		const leftBox = self.layout.left.box.node().getBBox()
-		const rtBox = self.layout.right.box.node().getBBox()
-
-		d.extraWidth = leftBox.width + rtBox.width + s.margin.left + s.margin.right + s.rowlabelgap * 2
-		d.extraHeight = topBox.height + btmBox.height + s.margin.top + s.margin.bottom + s.collabelgap * 2
-		d.svgw = d.mainw + d.extraWidth
-		d.svgh = d.mainh + d.extraHeight
-		self.dom.svg
-			.transition()
-			.duration(duration)
-			.attr('width', d.svgw)
-			.attr('height', d.svgh)
-
-		const x = leftBox.width - self.layout.left.offset
-		const y = topBox.height - self.layout.top.offset
-		self.dom.mainG
-			.transition()
-			.duration(duration)
-			.attr('transform', `translate(${x},${y})`)
-	}
-}
-
-function setInteractivity(self) {
-	self.showCellInfo = function() {
-		const d = event.target.__data__
-		if (!d || !d.term || !d.sample) return
-		if (event.target.tagName == 'rect') {
-			const rows = [
-				`<tr><td style='text-align: center'>Sample: ${d.sample}</td></tr>`,
-				`<tr><td style='text-align: center'>${d.term.name}</td></tr>`,
-				`<tr><td style='text-align: center; color: ${d.fill}'>${d.label}</td></tr>`
-			]
-
-			if (d.term.type == 'geneVariant') {
-				rows.push()
-				if (d.value.alt)
-					rows.push(`<tr><td style='text-align: center'>ref=${d.value.ref}, alt=${d.value.alt}</td></tr>`)
-				if (d.value.isoform) rows.push(`<tr><td style='text-align: center'>Isoform: ${d.value.isoform}</td></tr>`)
-				if (d.value.mname) rows.push(`<tr><td style='text-align: center'>${d.value.mname}</td></tr>`)
-				if (d.value.chr) rows.push(`<tr><td style='text-align: center'>${d.value.chr}:${d.value.pos}</td></tr>`)
-			}
-
-			self.app.tip
-				.show(event.clientX, event.clientY)
-				.d.html(`<table class='sja_simpletable'>${rows.join('\n')}</table>`)
-		}
-	}
-
-	self.mouseout = function() {
-		self.app.tip.hide()
-	}
-
-	self.showTermEditMenu = function() {
-		const d = event.target.__data__
-		if (!d || !d.tw) return
-		self.termBeingEdited = d
-		self.pill.main(d.tw)
-		self.pill.showMenu(event.target)
-	}
-
-	self.legendClick = function() {}
-}
-
-function getRectFill(d) {
-	if (d.fill) return d.fill
-	/*** TODO: class should be for every values entry, as applicable ***/
-	const cls = d.class || (Array.isArray(d.values) && d.values[0].class)
-	return cls ? mclass[cls].color : '#555'
-}
-
 export async function getPlotConfig(opts, app) {
 	const config = {
 		// data configuration
@@ -729,7 +525,10 @@ export async function getPlotConfig(opts, app) {
 					bottom: 20,
 					left: 50
 				},
-				sortSamplesBy: 'sample',
+				sortSamplesBy: 'selectedTerms',
+				sortSamplesTieBreakers: [{ $id: 'sample', sortSamples: {} /*split: {char: '', index: 0}*/ }],
+				sortTermsBy: 'asListed', // or sampleCount
+				samplecount4gene: true,
 				colw: 14,
 				colspace: 1,
 				colgspace: 8,
@@ -764,8 +563,4 @@ export async function getPlotConfig(opts, app) {
 	if (config.divideBy) promises.push(fillTermWrapper(config.divideBy, app.vocabApi))
 	await Promise.all(promises)
 	return config
-}
-
-function sleep(ms) {
-	return new Promise(resolve => setTimeout(resolve, ms))
 }

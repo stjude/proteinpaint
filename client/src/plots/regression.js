@@ -111,7 +111,15 @@ export async function getPlotConfig(opts, app) {
 	if (!opts.outcome) {
 		opts.outcome = {}
 	}
-	await fillTermWrapper(opts.outcome, app.vocabApi)
+
+	{
+		/* for condition term as outcome, it will have q.mode='binary', rather than default "discrete"
+		as required by logistic/cox regression
+		*/
+		const plot = app.opts.state.plots.find(i => i.chartType == 'regression')
+		if (!plot) throw 'regression plot missing in state'
+		await fillTermWrapper(opts.outcome, app.vocabApi, get_defaultQ4fillTW(plot.regressionType, true))
+	}
 
 	const id = 'id' in opts ? opts.id : `_REGRESSION_${_ID_++}`
 	const config = { id }
@@ -120,6 +128,8 @@ export async function getPlotConfig(opts, app) {
 	if (opts.independent) {
 		if (!Array.isArray(opts.independent)) throw '.independent[] is not array'
 		for (const t of opts.independent) {
+			// condition term cannot be used as independent terms
+			// thus no need to specify context
 			await fillTermWrapper(t, app.vocabApi)
 		}
 		config.independent = opts.independent
@@ -129,4 +139,16 @@ export async function getPlotConfig(opts, app) {
 	}
 	// may apply term-specific changes to the default object
 	return copyMerge(config, opts)
+}
+
+export function get_defaultQ4fillTW(regressionType, isOutcome) {
+	if (!isOutcome) return
+	// need default q{} for condition term
+	const q = { mode: 'binary' }
+	if (regressionType == 'cox') {
+		// should not preset timeScale to 'year' here,
+		// that can cause copyMerge to overwrite saved setting. fillTW will auto fill missing value
+		q.type = 'time2event'
+	}
+	return { condition: q }
 }

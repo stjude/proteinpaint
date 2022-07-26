@@ -27,6 +27,8 @@ init_termdb_queries
 add description here or in termdb doc
 */
 
+const apihost = process.env.PP_GDC_HOST || 'https://api.gdc.cancer.gov'
+
 export async function validate_ssm2canonicalisoform(api) {
 	if (!api.endpoint) throw '.endpoint missing from ssm2canonicalisoform'
 	if (!api.fields) throw '.fields[] missing from ssm2canonicalisoform'
@@ -872,6 +874,9 @@ function sort_mclass(set) {
 }
 
 export async function init_dictionary(ds) {
+	/* store gdc dictionary in memory
+	 */
+
 	ds.cohort.termdb = {}
 	const id2term = (ds.cohort.termdb.id2term = new Map())
 	const dictionary = ds.termdb.dictionary
@@ -884,17 +889,67 @@ export async function init_dictionary(ds) {
 	try {
 		re = JSON.parse(response.body)
 	} catch (e) {
-		throw 'invalid JSON from GDC for variant2samples'
+		throw 'invalid JSON from GDC dictionary'
 	}
 	if (!re._mapping) throw 'returned data does not have ._mapping'
 	if (!re.fields) throw 'returned data does not have .fields'
 	if (!Array.isArray(re.fields)) throw '.fields not array'
 	if (!re.expand) throw 'returned data does not have .expand'
 	if (!Array.isArray(re.expand)) throw '.expand not array'
-	// store gdc dictionary in memory
+	/*
+	re._mapping: {}
+		'ssm_occurrence_centrics.case.available_variation_data': {
+			description: '',
+			doc_type: 'ssm_occurrence_centrics',
+			field: 'case.available_variation_data',
+			full: 'ssm_occurrence_centrics.case.available_variation_data',
+			type: 'keyword'
+		},
+		'ssm_occurrence_centrics.case.case_id': {
+			description: '',
+			doc_type: 'ssm_occurrence_centrics',
+			field: 'case.case_id',
+			full: 'ssm_occurrence_centrics.case.case_id',
+			type: 'keyword'
+		},
+
+	re.fields: []
+		'case.available_variation_data',
+		'case.case_id',
+		'case.consent_type',
+		'case.days_to_consent',
+		'case.days_to_index',
+		'case.demographic.age_at_index',
+		'case.demographic.age_is_obfuscated',
+		'case.demographic.cause_of_death',
+		'case.demographic.days_to_birth',
+		'case.demographic.days_to_death',
+		'case.demographic.demographic_id',
+		...
+
+	re.expand: []
+		'case',
+		'case.demographic',
+		'case.diagnoses',
+		'case.diagnoses.pathology_details',
+		'case.diagnoses.treatments',
+		'case.exposures',
+		'case.family_histories',
+		'case.observation',
+		'case.observation.input_bam_file',
+		'case.observation.normal_genotype',
+		'case.observation.read_depth',
+		'case.observation.sample',
+	*/
+
 	// step 1: add leaf terms
-	for (const i in re.fields) {
-		const term_path_str = re.fields[i]
+	let skipLineCount = 0
+	for (const term_path_str of re.fields) {
+		if (maySkipLine(term_path_str)) {
+			skipLineCount++
+			continue
+		}
+
 		// skip term if it's present in duplicate_term_skip []
 		if (dictionary.gdcapi.duplicate_term_skip.includes(term_path_str)) continue
 		const term_paths = term_path_str.split('.')
@@ -915,9 +970,12 @@ export async function init_dictionary(ds) {
 		else if (t_map == undefined) term_obj.type = 'unknown'
 		id2term.set(term_id, term_obj)
 	}
+
 	// step 3: add parent  and root terms
-	for (const i in re.expand) {
-		const term_str = re.expand[i]
+	for (const term_str of re.expand) {
+		if (maySkipLine(term_str)) {
+			continue
+		}
 		const term_levels = term_str.split('.')
 		const term_id = term_levels.length == 1 ? term_str : term_levels[term_levels.length - 1]
 		const term_obj = {
@@ -928,37 +986,40 @@ export async function init_dictionary(ds) {
 			// included_types: [] // TODO update term.included_types usage to this method
 			// child_types: [] // TODO: may set in the future to support hiding childless parent terms in the tree menu
 		}
-		if (term_levels.length > 1) term_obj['parent_id'] = term_levels[term_levels.length - 2]
+		if (term_levels.length > 1) term_obj.parent_id = term_levels[term_levels.length - 2]
 		id2term.set(term_id, term_obj)
 	}
 
-	//step 4: prune the tree
-	// Quick fix: added 'program' to prune_terms
-	// because gdc query is giving error while querying child terms for this term
-	const prune_terms = [
-		'ssm_occurrence_autocomplete',
-		'ssm_occurrence_id',
-		'ssm',
-		'observation',
-		'available_variation_data'
-	]
-	for (const term_id of prune_terms) {
-		if (id2term.has(term_id)) {
-			const children = [...id2term.values()].filter(t => t.path.includes(term_id))
-			if (children.length) {
-				for (const child_t of children) {
-					id2term.delete(child_t.id)
-				}
-			}
-			id2term.delete(term_id)
+	function maySkipLine(line) {
+		if (
+			line.startsWith('ssm') ||
+			line.startsWith('case.observation') ||
+			line.startsWith('case.available_variation_data')
+		)
+			return true
+		return false
+	}
+
+	//step 5: remove 'case' term, remove "case" as the first level
+	id2term.delete('case')
+	for (const term of id2term.values()) {
+		if (term.parent_id == 'case') {
+			// this term is a direct child of "case"
+			delete term.parent_id
+
+			// hope later able to move it to "Misc" branch
+			//term.parent_id = 'Miscellaneous'
 		}
 	}
 
-	//setp 5: remove 'case' term and modify children
-	id2term.delete('case')
-	const children = [...id2term.values()].filter(t => t.parent_id == 'case')
-	if (children.length) children.forEach(t => (t.parent_id = undefined))
-	console.log(ds.cohort.termdb.id2term.size, 'variables parsed from GDC dictionary')
+	/* adding Misc branch does not work, as term.path is required
+	id2term.set('Miscellaneous', {
+		id: 'Miscellaneous',
+		name:'Miscellaneous',
+	})
+	*/
+
+	console.log(ds.cohort.termdb.id2term.size, 'variables parsed from GDC dictionary,', skipLineCount, 'lines skipped')
 
 	// freeze gdc dictionary as it's readonly and must not be changed by treeFilter or other features
 	Object.freeze(ds.cohort.termdb.id2term)
@@ -971,23 +1032,21 @@ function init_termdb_queries(termdb, ds) {
 	q.getRootTerms = async (vocab, treeFilter = null) => {
 		// find terms without term.parent_id
 		const terms = []
-		termdb.id2term.forEach((v, k) => {
-			if (v.parent_id == undefined) terms.push(v)
-		})
-		const re = JSON.parse(JSON.stringify(terms))
-		if (treeFilter) await add_terms_samplecount(re, treeFilter)
-		return re
+		for (const term of termdb.id2term.values()) {
+			if (term.parent_id == undefined) terms.push(JSON.parse(JSON.stringify(term)))
+		}
+		await mayAddSamplecount4treeFilter(terms, treeFilter)
+		return terms
 	}
 
 	q.getTermChildren = async (id, vocab, treeFilter = null) => {
 		// find terms which have term.parent_id as clicked term
 		const terms = []
-		termdb.id2term.forEach((v, k) => {
-			if (v.parent_id == id) terms.push(v)
-		})
-		const re = JSON.parse(JSON.stringify(terms))
-		if (treeFilter) await add_terms_samplecount(re, treeFilter)
-		return re
+		for (const term of termdb.id2term.values()) {
+			if (term.parent_id == id) terms.push(JSON.parse(JSON.stringify(term)))
+		}
+		await mayAddSamplecount4treeFilter(terms, treeFilter)
+		return terms
 	}
 
 	q.findTermByName = async (searchStr, limit = null, vocab, exclude_types = [], treeFilter = null) => {
@@ -996,13 +1055,11 @@ function init_termdb_queries(termdb, ds) {
 		if (searchStr.includes(' ')) searchStr = searchStr.replace(/\s/g, '_')
 		// find terms that have term.id containing search string
 		const terms = []
-		termdb.id2term.forEach((v, k) => {
-			if (v.id.includes(searchStr)) terms.push(v)
-		})
-		const re = JSON.parse(JSON.stringify(terms))
-		// find terms that have term.id containing search string
-		if (treeFilter) await add_terms_samplecount(re, treeFilter)
-		return re
+		for (const term of termdb.id2term.values()) {
+			if (term.id.includes(searchStr)) terms.push(JSON.parse(JSON.stringify(term)))
+		}
+		await mayAddSamplecount4treeFilter(terms, treeFilter)
+		return terms
 	}
 
 	q.getAncestorIDs = id => {
@@ -1048,15 +1105,20 @@ function init_termdb_queries(termdb, ds) {
 		return supportedChartTypes
 	}
 
-	async function add_terms_samplecount(terms, treeFilter) {
+	async function mayAddSamplecount4treeFilter(terms, treeFilter) {
+		// if tree filter is given, add sample count for each term
+		if (terms.length == 0 || !treeFilter) return
 		let termlst = []
 		for (const term of terms) {
-			if (term)
+			if (term.path)
 				termlst.push({
 					path: term.path.replace('case.', '').replace(/\./g, '__'),
 					type: term.type
 				})
 		}
+
+		if (termlst.length == 0) return
+
 		const tv2counts = await get_termlst2size({
 			api: ds.termdb.termid2totalsize2.gdcapi,
 			ds,
@@ -1126,12 +1188,10 @@ export function handle_gdc_ssms(genomes) {
 				})
 			}
 
-			// allow alternative api host (as gdc docker)
-			const apihost = (process.env.PP_GDC_HOST || 'https://api.gdc.cancer.gov') + '/ssms'
-
 			const headers = { 'Content-Type': 'application/json', Accept: 'application/json' }
 			const response = await got(
 				apihost +
+					'/ssms' +
 					'?size=1000&fields=' +
 					ssms_fields.join(',') +
 					'&filters=' +

@@ -5,6 +5,7 @@ import { InputValuesTable } from './regression.inputs.values.table'
 import { Menu } from '../dom/menu'
 import { select } from 'd3-selection'
 import { mayRunSnplstTask } from '../common/termsetting.snplst.sampleSum'
+import { get_defaultQ4fillTW } from './regression'
 
 /*
 class instance is an input
@@ -44,7 +45,8 @@ export class InputTerm {
 		try {
 			const { app, config, state, disable_terms } = this.parent
 
-			this.pill = termsettingInit({
+			// termsetting constructor option
+			const arg = {
 				placeholder: this.section.selectPrompt,
 				placeholderIcon: this.section.placeholderIcon,
 				holder: this.dom.pillDiv,
@@ -53,19 +55,21 @@ export class InputTerm {
 				activeCohort: state.activeCohort,
 				debug: app.opts.debug,
 				buttons: this.section.configKey == 'outcome' ? ['replace'] : ['delete'],
-				numericEditMenuVersion: this.getMenuVersion(config),
 				usecase: { target: 'regression', detail: this.section.configKey, regressionType: config.regressionType },
 				disable_terms,
 				abbrCutoff: 50,
 				genomeObj: this.parent.parent.genomeObj, // required for snplocus
+				defaultQ4fillTW: get_defaultQ4fillTW(config.regressionType, this.section.configKey == 'outcome'),
 				callback: term => {
 					this.parent.editConfig(this, term)
 				}
-			})
+			}
+			this.furbishTsConstructorArg(arg)
+			this.pill = termsettingInit(arg)
 
 			if (this.section.configKey == 'outcome') {
 				// special treatment for terms selected for outcome
-				this.setQ = getQSetter(config.regressionType)
+				this.setQ = getQSetter4outcome(config.regressionType)
 			}
 
 			this.valuesTable = new InputValuesTable({
@@ -80,17 +84,30 @@ export class InputTerm {
 		}
 	}
 
-	getMenuVersion(config) {
-		// for the numericEditMenuVersion of termsetting constructor option
+	furbishTsConstructorArg(arg) {
+		// furbish termsetting constructor argument, based on regression type and if term is outcome/input
+		const type = this.parent.config.regressionType
 		if (this.section.configKey == 'outcome') {
-			// outcome
-			if (config.regressionType == 'logistic') return ['binary']
-			if (config.regressionType == 'linear') return ['continuous']
+			// this term is outcome
+			if (type == 'logistic') {
+				arg.numericEditMenuVersion = ['binary']
+				return
+			}
+			if (type == 'linear') {
+				arg.numericEditMenuVersion = ['continuous']
+				return
+			}
+			if (type == 'cox') {
+				//arg.showTimeScale = true
+				return
+			}
 			throw 'unknown regressionType'
 		}
 		if (this.section.configKey == 'independent') {
-			// independent
-			return ['continuous', 'discrete', 'spline']
+			// this temr is independent
+			// do not allow condition term
+			arg.numericEditMenuVersion = ['continuous', 'discrete', 'spline']
+			return
 		}
 		throw 'unknown section.configKey: ' + this.section.configKey
 	}
@@ -158,9 +175,7 @@ export class InputTerm {
 		create following attributes:
 
 		input.orderedLabels
-		input.totalCount
-		input.sampleCounts
-		input.excludeCounts
+		input.termStatus{ sampleCounts, excludeCounts }
 		input.term.refGrp
 		*/
 		const tw = this.term
@@ -199,12 +214,13 @@ export class InputTerm {
 		if (!data) throw `no data for term.id='${tw.id}'`
 		if (data.error) throw data.error
 		mayRunSnplstTask(tw, data)
+
 		this.termStatus = {
 			topInfoStatus: [],
 			bottomSummaryStatus: undefined,
 			sampleCounts: undefined,
 			excludeCounts: undefined,
-			allowToSelectRefGrp: undefined
+			allowToSelectRefGrp: false
 		}
 
 		// update status based on special attr from snplst and snplocus terms
@@ -238,70 +254,102 @@ export class InputTerm {
 			)
 		}
 
+		this.orderedLabels = data.orderedLabels
+
 		if (data.lst) {
-			this.orderedLabels = data.orderedLabels
+			// got sample counts for dictionary terms
 
-			// sepeate include and exclude categories based on term.values.uncomputable
-			const excluded_values = tw.term.values
-				? Object.entries(tw.term.values)
-						.filter(v => v[1].uncomputable)
-						.map(v => v[1].label)
-				: []
-			const sampleCounts = (this.termStatus.sampleCounts = data.lst.filter(v => !excluded_values.includes(v.label)))
-			const excludeCounts = (this.termStatus.excludeCounts = data.lst.filter(v => excluded_values.includes(v.label)))
-			this.termStatus.allowToSelectRefGrp = tw.q.mode !== 'continuous' && tw.q.mode !== 'spline' ? true : false
-
-			// get include, excluded and total sample count
-			const totalCount = (this.totalCount = { included: 0, excluded: 0, total: 0 })
-			sampleCounts.forEach(v => (totalCount.included += v.samplecount))
-			excludeCounts.forEach(v => (totalCount.excluded += v.samplecount))
-			totalCount.total = totalCount.included + totalCount.excluded
-			// for condition term, subtract included count from totalCount.total to get excluded
-			if (tw.term.type == 'condition' && totalCount.total) {
-				totalCount.excluded = totalCount.total - totalCount.included
-			}
+			this.summarizeSample(tw, data.lst)
 
 			if (tw.term.type == 'float' || tw.term.type == 'integer') {
+				if (tw.q.mode != 'continuous' && tw.q.mode != 'spline') {
+					this.termStatus.allowToSelectRefGrp = true
+				}
+
 				this.termStatus.topInfoStatus.push(
 					`Use as ${tw.q.mode || 'continuous'} ` +
 						(tw.q.mode !== 'spline' ? 'variable.' : '') +
 						(tw.q.mode == 'continuous' && tw.q.scale && tw.q.scale != 1 ? ` Scale: Per ${tw.q.scale}` : '') +
 						(tw.q.mode == 'spline'
 							? ` with ${tw.q.knots.length} knots: ${tw.q.knots.map(v => v.value).join(', ')}`
-							: '') +
-						(this.termStatus.allowToSelectRefGrp
-							? ` <span style="font-size:.8em;">CLICK TO SET A ROW AS REFERENCE.</span>`
 							: '')
 				)
-			} else if (tw.term.type == 'categorical' || tw.term.type == 'condition') {
+			} else if (tw.term.type == 'categorical') {
+				this.termStatus.allowToSelectRefGrp = true
+
 				const gs = tw.q.groupsetting || {}
 				// self.values is already set by parent.setActiveValues() above
 				this.termStatus.topInfoStatus.push(
-					'Use as ' +
-						sampleCounts.length +
-						(gs.inuse ? ' groups.' : ' categories.') +
-						` <span style="font-size:.8em;">CLICK TO SET A ROW AS REFERENCE.</span>`
+					'Use as ' + this.termStatus.sampleCounts.length + (gs.inuse ? ' groups.' : ' categories.')
 				)
-			}
-			// update bottomSummaryStatus
-			this.termStatus.bottomSummaryStatus =
-				`${totalCount.included} sample included.` +
-				(totalCount.excluded ? ` ${totalCount.excluded} samples excluded:` : '')
-			if (tw && tw.q.mode !== 'continuous' && sampleCounts.length < 2)
-				throw `there should be two or more discrete values with samples for variable='${tw.term.name}'`
+			} else if (tw.term.type == 'condition') {
+				if (this.section.configKey == 'outcome' && this.parent.opts.regressionType == 'logistic') {
+					// allow selecting refgrp
+					this.termStatus.allowToSelectRefGrp = true
+				}
 
-			if (!tw.q.mode) throw 'q.mode missing'
-
-			// set term.refGrp
-			if (tw.q.mode == 'continuous') {
-				tw.refGrp = 'NA' // hardcoded in R
-			} else if (!('refGrp' in tw) || !sampleCounts.find(i => i.key == tw.refGrp)) {
-				// refGrp not defined or no longer exists according to sampleCounts[]
-				const o = this.orderedLabels
-				if (o.length) sampleCounts.sort((a, b) => o.indexOf(a.key) - o.indexOf(b.key))
-				else sampleCounts.sort((a, b) => (a.samplecount < b.samplecount ? 1 : -1))
-				tw.refGrp = sampleCounts[0].key
+				this.termStatus.topInfoStatus.push('Minimum grade to have event: ' + tw.term.values[tw.q.breaks[0]].label)
+				if (tw.q.timeScale) {
+					this.termStatus.topInfoStatus.push(
+						'Time axis: ' +
+							(tw.q.timeScale == 'age'
+								? 'Age'
+								: tw.q.timeScale == 'year'
+								? 'From study enrollment' // can be from termdbConfig
+								: 'ERR unknown value')
+					)
+				}
 			}
+
+			this.maySet_refGrp(tw)
+		}
+	}
+
+	summarizeSample(tw, datalst) {
+		// sepeate include and exclude categories based on term.values.uncomputable
+		const excluded_values = new Set()
+		if (tw.term.values) {
+			for (const i in tw.term.values) {
+				if (tw.term.values[i].uncomputable) excluded_values.add(tw.term.values[i].label)
+			}
+		}
+		const sampleCounts = (this.termStatus.sampleCounts = datalst.filter(v => !excluded_values.has(v.label)))
+		const excludeCounts = (this.termStatus.excludeCounts = datalst.filter(v => excluded_values.has(v.label)))
+
+		// get include, excluded and total sample count
+		const totalCount = { included: 0, excluded: 0, total: 0 }
+		sampleCounts.forEach(v => (totalCount.included += v.samplecount))
+		excludeCounts.forEach(v => (totalCount.excluded += v.samplecount))
+		totalCount.total = totalCount.included + totalCount.excluded
+		// for condition term, subtract included count from totalCount.total to get excluded
+		if (tw.term.type == 'condition' && totalCount.total) {
+			totalCount.excluded = totalCount.total - totalCount.included
+		}
+		// update bottomSummaryStatus
+		this.termStatus.bottomSummaryStatus =
+			`${totalCount.included} sample included.` +
+			(totalCount.excluded ? ` ${totalCount.excluded} samples excluded:` : '')
+		if (tw && tw.q.mode !== 'continuous' && sampleCounts.length < 2)
+			throw `there should be two or more discrete values with samples for variable='${tw.term.name}'`
+	}
+
+	maySet_refGrp(tw) {
+		if (this.section.configKey == 'outcome' && this.parent.config.regressionType == 'cox') {
+			// no need to set refgrp
+			return
+		}
+		if (tw.q.mode == 'continuous') {
+			// numeric term in continuous mode, refgrp NA is hardcoded in R
+			tw.refGrp = 'NA'
+			return
+		}
+		const sc = this.termStatus.sampleCounts
+		if (!('refGrp' in tw) || !sc.find(i => i.key == tw.refGrp)) {
+			// refGrp not defined or no longer exists according to sampleCounts[]
+			const o = this.orderedLabels
+			if (o && o.length) sc.sort((a, b) => o.indexOf(a.key) - o.indexOf(b.key))
+			else sc.sort((a, b) => (a.samplecount < b.samplecount ? 1 : -1))
+			tw.refGrp = sc[0].key
 		}
 	}
 
@@ -420,12 +468,13 @@ export class InputTerm {
 	}
 }
 
-function getQSetter(regressionType) {
+function getQSetter4outcome(regressionType) {
+	// only for outcome term
 	return {
 		integer: regressionType == 'logistic' ? maySetTwoBins : setContMode,
 		float: regressionType == 'logistic' ? maySetTwoBins : setContMode,
 		categorical: maySetTwoGroups,
-		condition: maySetTwoGroups
+		condition: setQ4conditionOutcome
 	}
 }
 
@@ -466,9 +515,48 @@ async function maySetTwoBins(tw, vocabApi, filter, state) {
 	tw.refGrp = tw.q.lst[0].label
 }
 
+function setQ4conditionOutcome(tw, vocabApi, filter, state) {
+	/* tw is a condition term as outcome for logistic/cox (but not other regression types, for now)
+	will always break grades into two groups
+	this requires q.breaks[] to have a single grade value
+	for logistic: set tw.refGrp
+	for cox: set q.timeScale
+	*/
+	const { term, q } = tw
+	if (!q.breaks) q.breaks = []
+	if (q.breaks.length != 1) {
+		q.breaks = [2] // hardcode for now
+	}
+	if (![1, 2, 3, 4, 5].includes(q.breaks[0])) {
+		q.breaks[0] = 2
+	}
+	const grade = q.breaks[0]
+	if (!q.groupNames) q.groupNames = []
+	if (!q.groupNames[0]) q.groupNames[0] = 'Grade <' + grade
+	if (!q.groupNames[1]) q.groupNames[1] = 'Grade >=' + grade
+	if (state.config.regressionType == 'logistic') {
+		if (tw.refGrp) {
+			if (!q.groupNames.includes(tw.refGrp)) {
+				// not found!
+				tw.refGrp = q.groupNames[0]
+			}
+		} else {
+			// missing, set to be first group, guaranteed to be "No event"
+			tw.refGrp = q.groupNames[0]
+		}
+	} else {
+		// cox
+		if (!['age', 'year'].includes(q.timeScale)) q.timeScale = 'year' // change year to time2event
+	}
+}
+
 async function maySetTwoGroups(tw, vocabApi, filter, state) {
 	// if the bins are already binary, do not reset
 	const { term, q } = tw
+
+	// TODO clean up logic?
+
+	// not condition, currently can only be categorical
 	if (q.mode == 'binary') {
 		if (q.type == 'values' && Object.keys(term.values).length == 2) return
 		if (q.type == 'predefined-groupset') {
@@ -480,11 +568,7 @@ async function maySetTwoGroups(tw, vocabApi, filter, state) {
 			const gs = q.groupsetting.customset
 			if (gs.groups.length == 2) return
 		}
-	} else {
-		q.mode = 'binary'
 	}
-
-	// category and condition terms share some logic
 
 	// step 1: check if term has only two computable categories/grades with >0 samples
 	// if so, use the two categories as outcome and do not apply groupsetting

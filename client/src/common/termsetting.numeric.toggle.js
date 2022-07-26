@@ -1,5 +1,5 @@
 import { init_tabs } from '../dom/toggleButtons'
-import { getPillNameDefault } from './termsetting'
+import { getPillNameDefault, set_hiddenvalues } from './termsetting'
 import { copyMerge } from '../common/rx.core'
 
 /*
@@ -87,13 +87,7 @@ export async function getHandler(self) {
 		},
 
 		async showEditMenu(div) {
-			div.style('padding', '5px 10px')
-
-			const topBar = div.append('div').style('margin-left', '20px')
-			topBar
-				.append('div')
-				.style('display', 'inline-block')
-				.html('Use as')
+			div.style('padding', '10px')
 
 			for (const t of tabs) {
 				// reset the tracked state of each tab data on each call of showEditMenu();
@@ -103,8 +97,14 @@ export async function getHandler(self) {
 				t.active = self.q.mode == t.subType || (t.subType == 'continuous' && !self.q.mode)
 			}
 
-			const tabDiv = topBar.append('div').style('display', 'inline-block')
-			init_tabs({ holder: tabDiv, contentHolder: div.append('div'), tabs })
+			const topBar = div.append('div')
+			topBar.append('span').html('Use as&nbsp;')
+
+			init_tabs({
+				holder: topBar.append('div').style('display', 'inline-block'),
+				contentHolder: div.append('div'),
+				tabs
+			})
 		}
 	}
 }
@@ -126,17 +126,6 @@ export function fillTW(tw, vocabApi) {
 	set_hiddenvalues(tw.q, tw.term)
 	// binconfig.termtype may be used to improve bin labels
 	//if (!tw.q.termtype) tw.q.termtype = term.type
-}
-
-function set_hiddenvalues(q, term) {
-	if (!q.hiddenValues) {
-		q.hiddenValues = {}
-	}
-	if (term.values) {
-		for (const k in term.values) {
-			if (term.values[k].uncomputable) q.hiddenValues[k] = 1
-		}
-	}
 }
 
 function valid_binscheme(q) {

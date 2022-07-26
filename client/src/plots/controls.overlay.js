@@ -38,7 +38,7 @@ class Overlay {
 			holder: this.dom.pilldiv,
 			use_bins_less: true,
 			debug: this.opts.debug,
-			showFullMenu: true, // to show edit/replace/remove menu upon clicking pill
+			menuOptions: 'all', // to show edit/replace/remove menu upon clicking pill
 			callback: term2 => {
 				// term2 is {term,q} and can be null
 				if (term2) {

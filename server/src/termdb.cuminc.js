@@ -1,5 +1,7 @@
 const path = require('path')
 const get_rows = require('./termdb.sql').get_rows
+const write_file = require('./utils').write_file
+const fs = require('fs')
 const lines2R = require('./lines2R')
 const serverconfig = require('./serverconfig')
 
@@ -29,14 +31,29 @@ export async function get_incidence(q, ds) {
 		for (const chartId in byChartSeries) {
 			const data = byChartSeries[chartId]
 			if (!data.length) continue
+			const datafile = path.join(serverconfig.cachedir, Math.random().toString() + '.json')
+			await write_file(datafile, JSON.stringify(data))
 			promises.push(
-				lines2R(path.join(serverconfig.binpath, 'utils/cuminc.R'), [JSON.stringify(data)]).then(Routput => {
+				lines2R(path.join(serverconfig.binpath, 'utils/cuminc.R'), [], [datafile]).then(Routput => {
 					const ci_data = JSON.parse(Routput[0])
-					// for single series, R will convert an empty string key to '1', so convert back to empty string
-					if (Object.keys(ci_data.estimates).length == 1) {
+
+					if (!ci_data.estimates) {
+						// this chart has no cuminc estimates
+						// because no events occurred in any
+						// of the data serieses.
+						// this chart will be skipped
+						if (!final_data.skippedCharts) final_data.skippedCharts = []
+						final_data.skippedCharts.push(chartId)
+						return
+					}
+
+					// for chart with a single series, R will convert the series ID from '' to '1', so convert back to empty string
+					const serieses = new Set(data.map(x => x.series))
+					if (serieses.size == 1 && serieses.has('')) {
 						ci_data.estimates[''] = ci_data.estimates['1']
 						delete ci_data.estimates['1']
 					}
+
 					// Cohort enrollment requires a minimum of 5 year survival after diagnosis,
 					// the sql uses `AND years_to_event >= 5`, so reset the first data timepoint
 					// to the actual queried minimum time. This first data point (case_est=0) is added
@@ -50,10 +67,21 @@ export async function get_incidence(q, ds) {
 							final_data.case.push([chartId, seriesId, series[i].time, series[i].est, series[i].low, series[i].up])
 						}
 					}
+
+					// store results of statistical tests
 					if (ci_data.tests) {
 						if (!final_data.tests) final_data.tests = {}
 						final_data.tests[chartId] = ci_data.tests
 					}
+
+					// store any skipped series
+					if (ci_data.skippedSeries) {
+						if (!final_data.skippedSeries) final_data.skippedSeries = {}
+						final_data.skippedSeries[chartId] = ci_data.skippedSeries
+					}
+
+					// delete the input data file
+					fs.unlink(datafile, () => {})
 				})
 			)
 		}

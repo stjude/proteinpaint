@@ -4,6 +4,13 @@
             "label": "JSON BED",
             "download": "https://pecan.stjude.cloud/static/proteinpaint_demo/hg19/bedj/bedjDemoData.tar.gz",
             "urlparam": "?block=on&genome=hg19&bedjfile=JSON-BED,proteinpaint_demo/hg19/bedj/gencode.gz",
+            "datapreview": [
+                {
+                    "file": "proteinpaint_demo/hg19/bedj/gencode.gz",
+                    "message": "",
+                    "tabixQueryCoord": "chr17:7568451-7591984"
+                }
+            ],
             "runargs": {
                 "parseurl": true,
                 "block": true,
@@ -29,6 +36,12 @@
             "message": "The bare minimum for the JSON BED track is a three column tab-delimited file with the chromosome, start position, and stop position. Below is example of the barebone rendering of the data.",
             "download": "https://pecan.stjude.cloud/static/proteinpaint_demo/hg19/bedj/bedj3DemoData.tar.gz",
             "urlparam": "?genome=hg19&block=1&bedjfile=BED3_Example,proteinpaint_demo/hg19/bedj/bed3.gz",
+            "datapreview": [
+                {
+                    "file": "proteinpaint_demo/hg19/bedj/bed3.gz",
+                    "tabixQueryCoord": "chr17:7449122-7706842"
+                }
+            ],
             "runargs": {
                 "parseurl": true,
                 "block": true,
@@ -51,6 +64,12 @@
         {
             "label": "Numeric Filter",
             "download": "https://pecan.stjude.cloud/static/proteinpaint_demo/hg19/bedj/numericDenomData.tar.gz",
+            "datapreview": [
+                {
+                    "file": "proteinpaint_demo/hg19/bedj/value.gz",
+                    "tabixQueryCoord": "chr17:7449122-7706842"
+                }
+            ],
             "runargs": {
                 "parseurl": true,
                 "block": true,
@@ -78,6 +97,12 @@
             "label": "URL Linkout",
             "message": "Click on a SNP item to see details on the dbSNP website.",
             "download": "https://pecan.stjude.cloud/static/proteinpaint_demo/hg19/bedj/bedjLinkoutDemoData.tar.gz",
+            "datapreview": [
+                {
+                    "file": "proteinpaint_demo/hg19/bedj/snp.gz",
+                    "tabixQueryCoord": "chr17:7579546-7579629"
+                }
+            ],
             "runargs": {
                 "parseurl": true,
                 "block": true,
@@ -110,6 +135,12 @@
             "label": "Hide item names",
             "download": "https://pecan.stjude.cloud/static/proteinpaint_demo/hg19/bedj/bedjDemoData.tar.gz",
             "message": "In this example, the gene name is removed. To add the gene name, navigate to the right-hand side of the track, and click on <a style='color:gray; text-decoration: none;'>CONFIG</a>. Uncheck 'Hide item names' and the gene symbol will reappear.", 
+            "datapreview": [
+                {
+                    "file": "proteinpaint_demo/hg19/bedj/gencode.gz",
+                    "tabixQueryCoord": "chr17:7449122-7706842"
+                }
+            ],
             "runargs": {
                 "parseurl": true,
                 "block": true,
@@ -141,6 +172,12 @@
             "label": "Show item by name",
             "message": "To single out genes of interest, click <a style='color:gray; text-decoration: none;'>CONFIG</a> on the right-hand side of the track. Enter the isoform name(s) under 'Show items by names' and click <button>Submit</button>.<br><br>In this example, only MYC and PVT1 are shown. Delete one of the names and uncheck 'Show items by names' to see the differences in the track display.",
             "download": "https://pecan.stjude.cloud/static/proteinpaint_demo/hg19/bedj/bedjDemoData.tar.gz",
+            "datapreview": [
+                {
+                    "file": "proteinpaint_demo/hg19/bedj/gencode.gz",
+                    "tabixQueryCoord": "chr8:128538507-129301994"
+                }
+            ],
             "runargs": {
                 "parseurl": true,
                 "block": true,
@@ -165,6 +202,26 @@
                     "link": "https://docs.google.com/document/d/1GP81rer7YEb0RpIej2XXfx-k7SCAL1Od9At_oczf06A/edit#heading=h.eqwpaqaeo973"
                 }
             ],
+            "arrowButtons": [
+                {
+                    "name": "Run track from URL",
+                    "message": "<p style='line-height:1.5em'>Genes of interest may be filtered in either the JSON BED, RefGene, or both. Use ensembl IDs separated by a space to filter a JSON BED track. For RefGene, use NCBI ids. See the examples below of how to use the <span style='font-family: courier; display: inline-block; color:gray;font-size:16px;'>bedjfilterbyname</span> URL parameter in each case.</p>",
+                    "links": [
+                        {
+                            "name": "JSON BED only",
+                            "link": "https://proteinpaint.stjude.org/?genome=hg19&block=1&position=chr8:128538507-129301994&bedjfilterbyname=ENST00000377970%20ENST00000667305&bedjfile=demo,proteinpaint_demo/hg19/bedj/gencode.gz"
+                        },
+                        {
+                            "name": "RefGene only",
+                            "link": "https://proteinpaint.stjude.org/?genome=hg19&block=1&position=chr8:128538507-129301994&bedjfilterbyname=NM_001354870%20NR_003367"
+                        },
+                        {
+                            "name": "JSON BED & RefGene",
+                            "link": "https://proteinpaint.stjude.org/?genome=hg19&block=1&position=chr8:128538507-129301994&bedjfilterbyname=ENST00000377970%20ENST00000667305%20NM_001354870%20NR_003367&bedjfile=demo,proteinpaint_demo/hg19/bedj/gencode.gz"
+                        }
+                    ]
+                }
+            ],
             "testSpec": {
                 "expected": {"image": 1 }
             }
@@ -174,6 +231,12 @@
             "message": "<p style='margin:5px'>In the bedj file JSON object, create an \"exon2color\" array with {\"color\": \"XX\", \"start\": ##, \"stop\": ##} objects. For instance, this array defines the exon colors for this example.</p><pre style='color:#656566'><code>\"exon2color\": [{\"color\": \"red\", \"start\": 129146958, \"stop\": 129147048},...]</code></pre></p>",
             "download": "https://pecan.stjude.cloud/static/proteinpaint_demo/hg38/bedj/bedjExonColorDemoData.tar.gz",
             "urlparam": "?genome=hg38&block=1&position=chr6:128566421-129833285&bedjfile=Exon2Color_Example,proteinpaint_demo/hg38/bedj/bedjExonColorDemo.gz",
+            "datapreview": [
+                {
+                    "file": "proteinpaint_demo/hg38/bedj/bedjExonColorDemo.gz",
+                    "tabixQueryCoord": "chr6:128843664-129561504"
+                }
+            ],
             "runargs": {
                 "block": true,
                 "nobox": 1,

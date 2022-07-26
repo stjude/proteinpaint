@@ -459,6 +459,25 @@ async function handle_cards(req, res) {
 			if (req.query.file.match(/[^\w]/)) throw 'Invalid file'
 			const txt = await utils.read_file(path.join(serverconfig.cardsjsondir, req.query.file + '.txt'))
 			res.send({ file: txt })
+		} else if (req.query.datafile && req.query.tabixCoord) {
+			return new Promise((resolve, reject) => {
+				const sp = spawn(tabix, [path.join(serverconfig.tpmasterdir, req.query.datafile), req.query.tabixCoord])
+				const output = [],
+					errOut = []
+				sp.stdout.on('data', i => output.push(i))
+				sp.stderr.on('data', i => errOut.push(i))
+				sp.on('close', code => {
+					const e = errOut.join('').trim()
+					if (e != '') reject('error querying bedj file')
+					const tmp = output.join('').trim()
+					resolve(res.send({ file: tmp.split('\n') }))
+				})
+			}).catch(err => {
+				if (err.stack) {
+					// debug
+					console.error(err.stack)
+				}
+			})
 		} else {
 			const cardsjson = await utils.read_file(serverconfig.cardsjson)
 			const json = JSON.parse(cardsjson)
@@ -890,19 +909,39 @@ function handle_genelookup(req, res) {
 
 	if (req.query.deep) {
 		///////////// deep
-
 		// isoform query must be converted to symbol first, so as to retrieve all gene models related to this gene
-
-		// see if query string match directly with gene symbol
+		const result = {} // object to collect results of gene query and send back
 		let symbol
 		{
+			// see if query string match directly with gene symbol
 			const tmp = g.genedb.getnamebynameorisoform.get(req.query.input, req.query.input)
 			if (tmp) symbol = tmp.name
 		}
 		if (!symbol) {
+			// input does not directly match with symbol
 			if (g.genedb.hasalias) {
+				// see if input is alias; if so convert alias to official symbol
 				const tmp = g.genedb.getnamebyalias.get(req.query.input)
 				if (tmp) symbol = tmp.name
+			}
+		}
+		if (!symbol) {
+			if (g.genedb.get_gene2canonicalisoform && req.query.input.toLowerCase().startsWith('ensg')) {
+				/* db has this table and input looks like ENSG accession
+				convert it to ENST canonical isoform 
+				currently db does not have a direct mapping from ENSG to symbol
+				also it is more fitting to convert ENSG to ENST, rather than to symbol
+				which can cause a refseq isoform to be shown instead
+				*/
+				const data = g.genedb.get_gene2canonicalisoform.get(req.query.input)
+				if (data) {
+					// mapped into an ENST isoform
+					result.found_isoform = data.isoform
+					// convert isoform back to symbol as in the beginning
+					const tmp = g.genedb.getnamebynameorisoform.get(data.isoform, data.isoform)
+					if (!tmp) throw 'cannot map enst isoform to symbol'
+					symbol = tmp.name
+				}
 			}
 		}
 		if (!symbol) {
@@ -910,13 +949,12 @@ function handle_genelookup(req, res) {
 			symbol = req.query.input
 		}
 		const tmp = g.genedb.getjsonbyname.all(symbol)
-		res.send({
-			gmlst: tmp.map(i => {
-				const j = JSON.parse(i.genemodel)
-				if (i.isdefault) j.isdefault = true
-				return j
-			})
+		result.gmlst = tmp.map(i => {
+			const j = JSON.parse(i.genemodel)
+			if (i.isdefault) j.isdefault = true
+			return j
 		})
+		res.send(result)
 		return
 	}
 	////////////// shallow

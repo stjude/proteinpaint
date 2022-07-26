@@ -163,6 +163,15 @@ function getChartTypeList(self) {
 						regressionType: 'logistic',
 						independent: []
 					}
+				},
+				{
+					label: 'Cox',
+					clickTo: self.prepPlot,
+					config: {
+						chartType: 'regression',
+						regressionType: 'cox',
+						independent: []
+					}
 				}
 			]
 		},

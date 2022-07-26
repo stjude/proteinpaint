@@ -28,7 +28,9 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/ \ 
     && rm -rf /tmp/downloaded_packages/ /tmp/*.rds
 
-ARG htsversion=1.11
+RUN sed -i '/<blank>/,/<\/blank>/d' /etc/fonts/fonts.conf
+
+ARG htsversion=1.14
 
 RUN curl -L https://github.com/samtools/htslib/releases/download/${htsversion}/htslib-${htsversion}.tar.bz2 | tar xj && \
     (cd htslib-${htsversion} && ./configure --enable-plugins --with-plugin-path='$(libexecdir)/htslib:/usr/libexec/htslib' && make install) && \
@@ -49,7 +51,8 @@ RUN apt-get update && apt-get install -y r-base \
 RUN mkdir -p /home/root/pp && cd /home/root/pp && mkdir app && mkdir tp && mkdir cache && mkdir tools
 
 RUN wget https://pecan.stjude.cloud/static/pp-support/linux/straw -P /home/root/pp/tools/ && \
-    wget http://www.clustal.org/omega/clustalo-1.2.4-Ubuntu-x86_64 -P /usr/local/bin && \
+    wget -O /usr/local/bin/clustalo http://www.clustal.org/omega/clustalo-1.2.4-Ubuntu-x86_64 && \
+    chmod 755 /usr/local/bin/clustalo && \
     wget http://hgdownload.soe.ucsc.edu/admin/exe/linux.x86_64/bigWigSummary -P /home/root/pp/tools/ && \
     wget http://hgdownload.soe.ucsc.edu/admin/exe/linux.x86_64/bigBedToBed -P /home/root/pp/tools/ && \
     wget http://hgdownload.soe.ucsc.edu/admin/exe/linux.x86_64/bigBedNamedItems -P /home/root/pp/tools/
@@ -58,7 +61,6 @@ RUN wget https://pecan.stjude.cloud/static/pp-support/linux/straw -P /home/root/
 # need npm v7 to support workspaces
 RUN npm install --global npm@7
 
-
 # Separate rust build so that the compiled code may be copied later
 # in isolation, without including all the rust toolchain in the image
 FROM ppbase AS pprust
@@ -66,7 +68,7 @@ FROM ppbase AS pprust
 RUN set -eux; \
     wget "https://static.rust-lang.org/rustup/dist/x86_64-unknown-linux-gnu/rustup-init"; \
     chmod +x rustup-init; \
-    ./rustup-init -y --no-modify-path --default-toolchain nightly; \
+    ./rustup-init -y --no-modify-path --default-toolchain stable; \
     rm rustup-init; \
     chmod -R a+w $RUSTUP_HOME $CARGO_HOME; \
     rustup --version; \
@@ -75,4 +77,15 @@ RUN set -eux; \
     cargo install sccache \
     ## clean up
     && apt-get clean \ 
-    && rm -rf /var/lib/apt/lists/ \ 
+    && rm -rf /var/lib/apt/lists/
+
+
+FROM ppbase AS ppminpkg
+WORKDIR /home/root/pp
+ADD . ./tmppack
+WORKDIR /home/root/pp/tmppack
+
+RUN mkdir -p minpkgjsons/server && mkdir minpkgjsons/client && \
+    ./build/minpkgjson.js package.json > minpkgjsons/package.json && \
+    ./build/minpkgjson.js server/package.json > minpkgjsons/server/package.json && \
+    ./build/minpkgjson.js client/package.json > minpkgjsons/client/package.json

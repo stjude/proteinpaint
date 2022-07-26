@@ -2,6 +2,7 @@ import { getCompInit, multiInit } from '../common/rx.core'
 import { searchInit } from './search'
 import { filterRxCompInit } from '../common/filter'
 import { chartsInit } from './charts'
+import { recoverInit } from '../../rx/src/recover'
 import { select } from 'd3-selection'
 import { dofetch3 } from '../common/dofetch'
 import { Menu } from '../dom/menu'
@@ -52,6 +53,11 @@ class TdbNav {
 					app: this.app,
 					holder: this.dom.subheader.charts,
 					vocab: this.opts.vocab
+				}),
+				recover: recoverInit({
+					app: this.app,
+					holder: this.dom.recoverDiv,
+					maxHistoryLen: 5
 				})
 			})
 		} catch (e) {
@@ -127,6 +133,10 @@ function setRenderers(self) {
 				.style('margin', '10px')
 				.style('vertical-align', 'top'),
 			sessionDiv: header
+				.append('div')
+				.style('display', 'inline-block')
+				.style('vertical-align', 'top'),
+			recoverDiv: header
 				.append('div')
 				.style('display', 'inline-block')
 				.style('vertical-align', 'top'),
@@ -388,7 +398,8 @@ function setInteractivity(self) {
 			method: 'POST',
 			body: JSON.stringify(self.app.getState())
 		})
-		const url = `${window.location.protocol}//${window.location.host}/?mass-session-id=${res.id}&noheader=1`
+		const host = sessionStorage.getItem('hostURL') || `${window.location.protocol}//${window.location.host}`
+		const url = `${host}/?mass-session-id=${res.id}&noheader=1`
 		self.dom.tip.clear().showunder(self.dom.saveBtn.node())
 		self.dom.tip.d
 			.append('div')

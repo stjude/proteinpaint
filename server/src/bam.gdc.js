@@ -1,5 +1,7 @@
 const got = require('got')
 
+const apihost = process.env.PP_GDC_HOST || 'https://api.gdc.cancer.gov'
+
 // type of gdc_ids
 const filter_types = [
 	{ is_file_uuid: 1, field: 'file_id' },
@@ -16,7 +18,7 @@ const filter_types = [
 // https://docs.google.com/document/d/1WzrrCUrY2A4u7PGDQeDZN8U3oLJAd-4wxuXPaQTIr_s/edit?usp=sharing
 const gdc_apis = {
 	gdc_files: {
-		end_point: 'https://api.gdc.cancer.gov/files/',
+		end_point: apihost + '/files/',
 		fields: [
 			'id',
 			'file_size',
@@ -30,7 +32,7 @@ const gdc_apis = {
 		size: 100
 	},
 	gdc_cases: {
-		end_point: 'https://api.gdc.cancer.gov/cases/',
+		end_point: apihost + '/cases/',
 		fields: ['case_id']
 	}
 }

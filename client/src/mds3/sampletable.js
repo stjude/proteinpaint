@@ -367,9 +367,14 @@ async function make_multiSampleSummaryList(args) {
 		}
 	}
 
-	await init_tabs({ holder, tabs: main_tabs })
-	init_dictionary_ui(main_tabs.holder, arg, main_tabs)
-	init_download(main_tabs.holder, arg, main_tabs)
+	const tabArg = {
+		holder: holder.append('div').style('margin-top', '20px'),
+		tabs: main_tabs
+	}
+	await init_tabs(tabArg)
+
+	init_dictionary_ui(tabArg.tabHolder, arg, main_tabs)
+	init_download(tabArg.tabHolder, arg, main_tabs)
 	// TODO: enable and move later in CONFIG
 	// init_remove_terms_menu(main_tabs.holder, arg, main_tabs)
 	arg.temp_div.style('display', 'none')

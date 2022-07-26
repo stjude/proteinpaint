@@ -8,12 +8,23 @@ nonDictionaryTermTypes
 termsettingInit()
 getPillNameDefault()
 fillTermWrapper()
+set_hiddenvalues()
 ********************* Instance methods
 clickNoPillDiv
 showTree
 */
 
 export const nonDictionaryTermTypes = new Set(['snplst', 'prs', 'snplocus', 'geneVariant'])
+
+// append the common ID substring,
+// so that the first characters of $id is more indexable
+const idSuffix = `_ts_${(+new Date()).toString().slice(-8)}`
+let $id = 0
+
+const defaultOpts = {
+	menuOptions: 'edit',
+	menuLayout: 'vertical'
+}
 
 class TermSetting {
 	constructor(opts) {
@@ -38,10 +49,12 @@ class TermSetting {
 		// NOTE: the parent_menu value may be empty (undefined)
 		this.dom = {
 			holder: opts.holder,
-			tip: new Menu({
-				padding: '0px',
-				parent_menu: this.opts.holder && this.opts.holder.node() && this.opts.holder.node().closest('.sja_menu_div')
-			})
+			tip:
+				opts.tip ||
+				new Menu({
+					padding: '0px',
+					parent_menu: this.opts.holder && this.opts.holder.node() && this.opts.holder.node().closest('.sja_menu_div')
+				})
 		}
 		// tip2 is for showing inside tip, e.g. in snplocus UI
 		this.dom.tip2 = new Menu({
@@ -92,7 +105,8 @@ class TermSetting {
 		this.opts.callback(overrideTw ? copyMerge({}, arg, overrideTw) : arg)
 	}
 
-	validateOpts(o) {
+	validateOpts(_opts) {
+		const o = Object.assign({}, defaultOpts, _opts)
 		if (!o.holder && o.renderAs != 'none') throw '.holder missing'
 		if (typeof o.callback != 'function') throw '.callback() is not a function'
 		if (!o.vocabApi) throw '.vocabApi missing'
@@ -265,6 +279,7 @@ function setRenderers(self) {
 				.on('click', d => {
 					if (d == 'delete') self.removeTerm()
 					else if (d == 'replace') self.showTree(event.target)
+					else throw 'unknown button'
 				})
 
 			// render info button only if term has html details
@@ -454,24 +469,29 @@ function setInteractivity(self) {
 						_term = JSON.parse(JSON.stringify(term))
 						_term.bins.default = _term.bins.less
 					}
-					await call_fillTW(data, self.vocabApi)
+					await call_fillTW(data, self.vocabApi, self.opts.defaultQ4fillTW)
 					self.opts.callback(data)
 				}
 			}
 		})
 	}
 
-	self.showMenu = _elem => {
-		self.dom.tip.clear()
-		if (self.opts.renderAs == 'none' && _elem) self.dom.holder = select(_elem)
-		const elem = self.dom.holder.node()
-		if (elem) self.dom.tip.showunder(elem)
-		else self.dom.tip.show(event.clientX, event.clientY)
+	self.showMenu = (clickedElem = null) => {
+		const tip = self.dom.tip
+		tip.clear()
+		if (self.opts.renderAs == 'none' && clickedElem) self.dom.holder = select(clickedElem)
+		if (self.dom.holder) {
+			const elem = self.dom.holder.node()
+			if (elem) tip.showunder(elem)
+			else tip.show(event.clientX, event.clientY)
+		}
 
-		if (self.opts.showFullMenu) {
-			self.showEditReplaceRemoveMenu(self.dom.tip.d)
+		if (self.opts.menuOptions == 'all') {
+			self.showEditReplaceRemoveMenu(tip.d)
+		} else if (self.opts.menuOptions == 'edit') {
+			self.handler.showEditMenu(tip.d)
 		} else {
-			self.handler.showEditMenu(self.dom.tip.d)
+			throw `Unsupported termsettingInit.opts.menuOptions='${self.opts.menuOptions}'`
 		}
 	}
 
@@ -479,7 +499,7 @@ function setInteractivity(self) {
 		div
 			.append('div')
 			.attr('class', 'sja_menuoption')
-			.style('display', 'block')
+			.style('display', self.opts.menuLayout == 'horizontal' ? 'inline-block' : 'block')
 			.text('Edit')
 			.on('click', () => {
 				self.dom.tip.clear()
@@ -488,7 +508,7 @@ function setInteractivity(self) {
 		div
 			.append('div')
 			.attr('class', 'sja_menuoption')
-			.style('display', 'block')
+			.style('display', self.opts.menuLayout == 'horizontal' ? 'inline-block' : 'block')
 			.text('Replace')
 			.on('click', () => {
 				self.showTree(self.dom.tip.d.node())
@@ -496,7 +516,7 @@ function setInteractivity(self) {
 		div
 			.append('div')
 			.attr('class', 'sja_menuoption')
-			.style('display', 'block')
+			.style('display', self.opts.menuLayout == 'horizontal' ? 'inline-block' : 'block')
 			.text('Remove')
 			.on('click', () => {
 				self.dom.tip.hide()
@@ -522,18 +542,19 @@ export function getPillNameDefault(self, d) {
 		: '<label title="' + d.name + '">' + d.name.substring(0, self.opts.abbrCutoff) + '...' + '</label>'
 }
 
-// append the common ID substring,
-// so that the first characters of $id is more indexable
-const idSuffix = `_ts_${(+new Date()).toString().slice(-8)}`
-let $id = 0
+/* For some plots that can have multiple terms of the same ID,
+but with different q{}, we can assign and use $id to
+disambiguate which tw data to update and associate with
+a rendered element such as a pill or a matrix row
 
-// tw: termWrapper = {id, term{}, q{}}
-// vocabApi
-export async function fillTermWrapper(tw, vocabApi) {
-	// For some plots that can have multiple terms of the same ID,
-	// but with different q{}, we can assign and use $id to
-	// disambiguate which tw data to update and associate with
-	// a rendered element such as a pill or a matrix row
+tw: termWrapper = {id, term{}, q{}}
+vocabApi
+defaultQ{}
+	supply the optional default q{}
+	value is { condition: {mode:'binary'}, ... }
+	with term types as keys
+*/
+export async function fillTermWrapper(tw, vocabApi, defaultQ) {
 	if (!tw.$id) tw.$id = `${$id++}${idSuffix}`
 
 	if (!tw.term) {
@@ -553,12 +574,24 @@ export async function fillTermWrapper(tw, vocabApi) {
 	}
 	if (!tw.q) tw.q = {}
 	// call term-type specific logic to fill tw
-	await call_fillTW(tw, vocabApi)
+	await call_fillTW(tw, vocabApi, defaultQ)
 }
 
-async function call_fillTW(tw, vocabApi) {
+async function call_fillTW(tw, vocabApi, defaultQ) {
 	const t = tw.term.type
 	const type = t == 'float' || t == 'integer' ? 'numeric.toggle' : t
 	const _ = await import(`./termsetting.${type}.js`)
-	await _.fillTW(tw, vocabApi)
+	await _.fillTW(tw, vocabApi, defaultQ ? defaultQ[type] : null)
+}
+
+export function set_hiddenvalues(q, term) {
+	if (!q.hiddenValues) {
+		q.hiddenValues = {}
+		// by default, fill-in with uncomputable values
+		if (term.values) {
+			for (const k in term.values) {
+				if (term.values[k].uncomputable) q.hiddenValues[k] = 1
+			}
+		}
+	}
 }

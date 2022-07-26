@@ -7,6 +7,10 @@
     "type": "git",
     "url": "https://github.com/stjude/pp-dist"
   },
+  "scripts": {
+    "postinstall": "./build/compile-rust.sh",
+    "postupdate": "./build/compile-rust.sh"
+  },
   "//": "dependencies will be copied from proteinpaint/[server, client]/package.json",
   "files": [
     "client/dist",
@@ -14,7 +18,7 @@
     "public/bin",
     "server/bin.js",
     "server/dataset/clinvar*.js",
-    "server/genome",
+    "server/genome/",
     "server/src/serverconfig.js",
     "server/server.js*",
     "server/utils",

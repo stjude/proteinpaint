@@ -12,7 +12,6 @@ dist/*
 
 archive/*
 package/*
-package-lock.json
 
 public/bin/*
 */*/public/bin/*

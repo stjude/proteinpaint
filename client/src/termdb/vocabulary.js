@@ -269,7 +269,7 @@ class TermdbVocab {
 	}
 
 	// from termdb/search
-	async findTerm(str, cohortStr, exclude_types = []) {
+	async findTerm(str, cohortStr, exclude_types = [], usecase = null) {
 		const lst = [
 			'genome=' + this.vocab.genome,
 			'dslabel=' + this.vocab.dslabel,
@@ -278,6 +278,9 @@ class TermdbVocab {
 		]
 		if (exclude_types.length) {
 			lst.push('exclude_types=' + encodeURIComponent(JSON.stringify(exclude_types)))
+		}
+		if (usecase) {
+			lst.push('usecase=' + encodeURIComponent(JSON.stringify(usecase)))
 		}
 		if (this.state.treeFilter) {
 			lst.push('treeFilter=' + encodeURIComponent(JSON.stringify(this.state.treeFilter)))
@@ -535,12 +538,11 @@ class TermdbVocab {
 					const lastTw = currData.lastTerms.find(lt => lt.$id === tw.$id)
 					return !lastTw || !deepEqual(lastTw, tw)
 			  })
-
 		if (!termsToUpdate.length) return
 
+		const currSampleIds = Object.keys(currData.samples)
 		const promises = []
-		const filteredSampleIds = []
-		let i = 0
+		const serverSampleIds = []
 		while (termsToUpdate.length) {
 			const copies = this.getCopiesToUpdate(termsToUpdate)
 			const init = {
@@ -557,7 +559,7 @@ class TermdbVocab {
 				dofetch3('termdb', init, this.opts.fetchOpts).then(data => {
 					if (data.error) throw data.error
 					for (const sampleId in data.samples) {
-						filteredSampleIds.push(sampleId)
+						serverSampleIds.push(sampleId)
 						const sample = data.samples[sampleId]
 						if (!(sampleId in currData.samples)) {
 							currData.samples[sampleId] = { sample: sampleId }
@@ -577,12 +579,26 @@ class TermdbVocab {
 					}
 				})
 			)
-			// prevent infinite loop
-			if (i++ > 10) break
 		}
 
 		await Promise.all(promises)
-		currData.lst = Object.values(currData.samples).filter(s => filteredSampleIds.includes(s.sample))
+
+		const dictTerm$ids = opts.terms.filter(tw => !nonDictionaryTermTypes.has(tw.term.type)).map(tw => tw.$id)
+		if (!dictTerm$ids.length) {
+			console.log(585)
+			currData.lst = Object.values(currData.samples)
+		} else {
+			currData.lst = []
+			for (const sampleId in currData.samples) {
+				const row = currData.samples[sampleId]
+				for (const $id in row) {
+					if (dictTerm$ids.includes($id)) {
+						currData.lst.push(row)
+						break
+					}
+				}
+			}
+		}
 		currData.lastFilter = filter
 		currData.lastTerms = opts.terms
 	}

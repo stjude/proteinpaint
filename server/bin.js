@@ -24,8 +24,10 @@ const serverconfig = require('./src/serverconfig.js')
 const pkgpublic = path.join(serverconfig.binpath, '../public')
 
 if (serverconfig.backend_only) {
-	execSync(`rm -rf ${pkgpublic}`)
-	execSync(`rm -rf ${path.join(serverconfig.binpath, '../client/dist')}`)
+	if (process.env.USER == 'root') {
+		execSync(`rm -rf ${pkgpublic}`)
+		execSync(`rm -rf ${path.join(serverconfig.binpath, '../client/dist')}`)
+	}
 } else if (!fs.existsSync('./webpack.config.js')) {
 	// do not do the following in a dev environment
 

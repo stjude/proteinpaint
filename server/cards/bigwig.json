@@ -46,7 +46,7 @@
                 "nobox": 1,
                 "noheader": 1,
                 "genome": "hg19",
-                "position": "chr8:128597079-130293343",
+                "position": "chr12:6643235-6647792",
                 "nativetracks": "RefGene",
                 "tracks": [{
                     "name": "Stranded RNA-seq Demo",

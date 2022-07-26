@@ -609,6 +609,7 @@ function termid2size_query(termlst) {
 	let query_str = ''
 	for (const term of termlst) {
 		const key = term.path
+		if (!key) continue
 		if (term.type)
 			query_str = query_str.length
 				? `${query_str} ${key} ${term.type == 'categorical' ? '{buckets { doc_count, key }}' : '{stats { count }}'}`

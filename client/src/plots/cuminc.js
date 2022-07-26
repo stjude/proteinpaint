@@ -10,6 +10,7 @@ import { rgb } from 'd3-color'
 import htmlLegend from '../html.legend'
 import Partjson from 'partjson'
 import { dofetch3, to_svg } from '../client'
+import { sayerror } from '../dom/error'
 
 class TdbCumInc {
 	constructor(opts) {
@@ -24,8 +25,13 @@ class TdbCumInc {
 			header: opts.header,
 			controls,
 			holder,
+			errDiv: holder
+				.append('div')
+				.style('display', 'none')
+				.style('margin', '10px'),
 			chartsDiv: holder.append('div').style('margin', '10px'),
-			legendDiv: holder.append('div').style('margin', '5px 5px 15px 5px')
+			legendDiv: holder.append('div').style('margin', '5px'),
+			skippedChartsDiv: holder.append('div').style('margin', '25px 5px 15px 5px')
 		}
 		if (this.dom.header) this.dom.header.html('Cumulative Incidence Plot')
 		// hardcode for now, but may be set as option later
@@ -77,18 +83,7 @@ class TdbCumInc {
 					app: this.app,
 					id: this.id,
 					holder: this.dom.controls.attr('class', 'pp-termdb-plot-controls').style('display', 'inline-block'),
-					inputs: [
-						'term1',
-						'overlay',
-						{
-							label: 'Cutoff Grade',
-							type: 'dropdown',
-							chartType: 'cuminc',
-							settingsKey: 'gradeCutoff',
-							options
-						},
-						'divideBy'
-					]
+					inputs: ['term1', 'overlay', 'divideBy']
 				})
 			}
 
@@ -101,6 +96,7 @@ class TdbCumInc {
 		if (!config) {
 			throw `No plot with id='${this.id}' found. Did you set this.id before this.api = getComponentApi(this)?`
 		}
+
 		return {
 			genome: this.app.vocabApi.vocab.genome,
 			dslabel: this.app.vocabApi.vocab.dslabel,
@@ -126,16 +122,25 @@ class TdbCumInc {
 
 			const reqOpts = this.getDataRequestOpts()
 			const data = await this.app.vocabApi.getNestedChartSeriesData(reqOpts)
+			if (data.case.length === 0) {
+				// the case data is empty here if every data series in
+				// every chart was skipped due to absence of events
+				throw 'no events found in the dataset'
+			}
 			this.app.vocabApi.syncTermData(this.state.config, data)
-			this.currData = this.processData(data)
-			this.refs = data.refs
-			this.tests = data.tests
+			this.hiddenOverlays = this.getHiddenOverlays()
+			this.processData(data)
 			this.pj.refresh({ data: this.currData })
 			this.setTerm2Color(this.pj.tree.charts)
 			this.render()
 			this.legendRenderer(this.legendData)
+			this.renderSkippedCharts(this.dom.skippedChartsDiv, this.skippedCharts)
 		} catch (e) {
-			throw e
+			this.dom.chartsDiv.style('display', 'none')
+			this.dom.legendDiv.style('display', 'none')
+			this.dom.errDiv.style('display', 'inline-block')
+			sayerror(this.dom.errDiv, 'Error: ' + e)
+			console.error(e)
 		}
 	}
 
@@ -144,7 +149,7 @@ class TdbCumInc {
 		const c = this.state.config
 		const opts = {
 			chartType: 'cuminc',
-			grade: this.settings.gradeCutoff,
+			grade: c.term.q.breaks[0],
 			term: c.term,
 			filter: this.state.termfilter.filter
 			//minYearsToEvent: 5 // may have user input for this later
@@ -155,19 +160,52 @@ class TdbCumInc {
 		return opts
 	}
 
+	getHiddenOverlays() {
+		const tw = this.state.config.term2
+		if (!tw) return []
+		const h = tw.q.hiddenValues
+		return Object.keys(h)
+			.filter(k => h[k])
+			.map(k => tw.term.values[k].label)
+	}
+
 	processData(data) {
 		this.uniqueSeriesIds = new Set()
-		const rows = []
+		this.currData = []
 		const estKeys = ['cuminc', 'low', 'high']
 		for (const d of data.case) {
 			const obj = {}
 			data.keys.forEach((k, i) => {
 				obj[k] = estKeys.includes(k) ? 100 * d[i] : d[i]
 			})
-			rows.push(obj)
+			this.currData.push(obj)
 			this.uniqueSeriesIds.add(obj.seriesId)
 		}
-		return rows
+
+		this.refs = data.refs
+		this.skippedCharts = data.skippedCharts
+
+		// hide tests of hidden series
+		this.tests = data.tests
+		if (this.tests) {
+			for (const chart in this.tests) {
+				// remove hidden series from this.tests
+				this.tests[chart] = this.tests[chart].filter(
+					test => !this.hiddenOverlays.includes(test.series1) && !this.hiddenOverlays.includes(test.series2)
+				)
+				if (this.tests[chart].length == 0) delete this.tests[chart]
+			}
+		}
+
+		// hide skipped series of hidden series
+		this.skippedSeries = data.skippedSeries
+		if (this.skippedSeries) {
+			for (const chart in this.skippedSeries) {
+				// remove hidden series from this.skippedTests
+				this.skippedSeries[chart] = this.skippedSeries[chart].filter(series => !this.hiddenOverlays.includes(series))
+				if (this.skippedSeries[chart].length == 0) delete this.skippedSeries[chart]
+			}
+		}
 	}
 
 	setTerm2Color(charts) {
@@ -183,7 +221,7 @@ class TdbCumInc {
 						seriesId: series.seriesId,
 						text: series.seriesLabel,
 						color: this.term2toColor[series.seriesId],
-						isHidden: this.settings.hidden.includes(series.seriesId)
+						isHidden: this.hiddenOverlays.includes(series.seriesId)
 					})
 				}
 			}
@@ -255,18 +293,32 @@ function setRenderers(self) {
 				.duration(s.duration)
 				.style('opacity', 1)
 
-			// p-value div
-			// will only display when self.tests is true
+			// div for chart-specific legends
 			div
 				.append('div')
-				.attr('class', 'pp-cuminc-pval')
-				.style('display', 'none')
+				.attr('class', 'pp-cuminc-chartLegends')
 				.style('vertical-align', 'top')
 				.style('margin', '10px')
+				.style('display', 'none')
 
-			if (self.tests) {
-				const pvaldiv = div.select('.pp-cuminc-pval').style('display', 'inline-block')
-				renderPvalues(pvaldiv, chart, self.tests, s)
+			// p-values legend
+			if (self.tests && chart.chartId in self.tests) {
+				const pvaldiv = div
+					.select('.pp-cuminc-chartLegends')
+					.style('display', 'inline-block')
+					.append('div')
+					.style('margin', '10px')
+				renderPvalues(pvaldiv, chart, self.tests[chart.chartId], s)
+			}
+
+			// skipped series legend
+			if (self.skippedSeries && chart.chartId in self.skippedSeries) {
+				const skipdiv = div
+					.select('.pp-cuminc-chartLegends')
+					.style('display', 'inline-block')
+					.append('div')
+					.style('margin', '30px 10px')
+				renderSkippedSeries(skipdiv, self.skippedSeries[chart.chartId], s)
 			}
 		}
 	}
@@ -295,10 +347,58 @@ function setRenderers(self) {
 
 		renderSVG(div.select('svg'), chart, s, s.duration)
 
-		if (self.tests) {
-			const pvaldiv = div.select('.pp-cuminc-pval').style('display', 'inline-block')
-			renderPvalues(pvaldiv, chart, self.tests, s)
+		// div for chart-specific legends
+		div
+			.select('.pp-cuminc-chartLegends')
+			.selectAll('*')
+			.remove()
+
+		// p-values legend
+		if (self.tests && chart.chartId in self.tests) {
+			const pvaldiv = div
+				.select('.pp-cuminc-chartLegends')
+				.style('display', 'inline-block')
+				.append('div')
+				.style('margin', '10px')
+			renderPvalues(pvaldiv, chart, self.tests[chart.chartId], s)
 		}
+
+		// skipped series legend
+		if (self.skippedSeries && chart.chartId in self.skippedSeries) {
+			const skipdiv = div
+				.select('.pp-cuminc-chartLegends')
+				.style('display', 'inline-block')
+				.append('div')
+				.style('margin', '30px 10px')
+			renderSkippedSeries(skipdiv, self.skippedSeries[chart.chartId], s)
+		}
+	}
+
+	self.renderSkippedCharts = function(div, skippedCharts) {
+		if (!skippedCharts || skippedCharts.length === 0) {
+			div.style('display', 'none')
+			return
+		}
+
+		div.selectAll('*').remove()
+
+		// title div
+		div
+			.append('div')
+			.style('font-weight', 'bold')
+			.style('margin-left', '15px')
+			.style('padding-bottom', '2px')
+			.text('Skipped charts (no events)')
+
+		// charts div
+		const chartsDiv = div.append('div').style('margin-left', '15px')
+
+		chartsDiv
+			.selectAll('div')
+			.data(skippedCharts)
+			.enter()
+			.append('div')
+			.text(d => d)
 	}
 
 	function renderSVG(svg, chart, s, duration) {
@@ -316,7 +416,7 @@ function setRenderers(self) {
 		//if (d.xVals) computeScales(d, s);
 
 		mainG.attr('transform', 'translate(' + s.svgPadding.left + ',' + s.svgPadding.top + ')')
-		const visibleSerieses = chart.serieses.filter(s => !self.settings.hidden.includes(s.seriesId))
+		const visibleSerieses = chart.serieses.filter(s => !self.hiddenOverlays.includes(s.seriesId))
 		const serieses = mainG
 			.selectAll('.sjpcb-cuminc-series')
 			.data(visibleSerieses, d => (d && d[0] ? d[0].seriesId : ''))
@@ -337,7 +437,6 @@ function setRenderers(self) {
 	}
 
 	function renderPvalues(pvaldiv, chart, tests, s) {
-		const chartTests = tests[chart.chartId]
 		const fontSize = s.axisTitleFontSize - 2
 		const maxPvalsToShow = 10
 
@@ -349,14 +448,13 @@ function setRenderers(self) {
 			.style('padding-bottom', '5px')
 			.style('font-size', fontSize + 'px')
 			.style('font-weight', 'bold')
-			.style('text-align', 'center')
 			.text("Series comparisons (Gray's test)")
 
 		// table div
 		// need separate divs for title and table
 		// to support table scrolling
 		const tablediv = pvaldiv.append('div').style('border', '1px solid #ccc')
-		if (chartTests.length > maxPvalsToShow) {
+		if (tests.length > maxPvalsToShow) {
 			tablediv.style('overflow', 'auto').style('height', '220px')
 		}
 
@@ -383,9 +481,10 @@ function setRenderers(self) {
 		const tbody = table.append('tbody')
 		const tr = tbody
 			.selectAll('tr')
-			.data(chartTests.sort((a, b) => a.pvalue - b.pvalue))
+			.data(tests.sort((a, b) => a.pvalue - b.pvalue))
 			.enter()
 			.append('tr')
+			.attr('class', 'pp-cuminc-chartLegends-pvalue')
 
 		// table cells
 		tr.selectAll('td')
@@ -398,6 +497,34 @@ function setRenderers(self) {
 			.append('td')
 			.style('padding', '1px 8px 1px 2px')
 			.style('font-size', fontSize + 'px')
+			.text(d => d)
+	}
+
+	function renderSkippedSeries(skipdiv, skippedSeries, s) {
+		const fontSize = s.axisTitleFontSize - 2
+
+		skipdiv.selectAll('*').remove()
+
+		// title div
+		skipdiv
+			.append('div')
+			.style('padding-bottom', '5px')
+			.style('font-size', fontSize + 'px')
+			.style('font-weight', 'bold')
+			.text('Skipped series (no events)')
+
+		// serieses div
+		const seriesesDiv = skipdiv
+			.append('div')
+			.style('padding-bottom', '5px')
+			.style('font-size', fontSize + 'px')
+
+		seriesesDiv
+			.selectAll('div')
+			.data(skippedSeries)
+			.enter()
+			.append('div')
+			.attr('class', 'pp-cuminc-chartLegends-skipped')
 			.text(d => d)
 	}
 
@@ -610,20 +737,25 @@ function setInteractivity(self) {
 		event.stopPropagation()
 		const d = event.target.__data__
 		if (d === undefined) return
-		const hidden = self.settings.hidden.slice()
+		const hidden = self.hiddenOverlays.slice()
 		const i = hidden.indexOf(d.seriesId)
 		if (i == -1) hidden.push(d.seriesId)
 		else hidden.splice(i, 1)
+
+		const hiddenValues = {}
+		const term2 = JSON.parse(JSON.stringify(self.state.config.term2))
+		for (const v of hidden) {
+			for (const k in term2.term.values) {
+				const value = term2.term.values[k]
+				if (hidden.includes(value.label)) hiddenValues[k] = 1
+			}
+		}
+		term2.q.hiddenValues = hiddenValues
+
 		self.app.dispatch({
 			type: 'plot_edit',
 			id: self.id,
-			config: {
-				settings: {
-					cuminc: {
-						hidden
-					}
-				}
-			}
+			config: { term2 }
 		})
 	}
 }
@@ -631,13 +763,13 @@ function setInteractivity(self) {
 export async function getPlotConfig(opts, app) {
 	if (!opts.term) throw 'cuminc: opts.term{} missing'
 	try {
-		await fillTermWrapper(opts.term, app.vocabApi)
+		await fillTermWrapper(opts.term, app.vocabApi, { condition: { mode: 'binary', breaks: [3], type: 'time2event' } })
 		if (opts.term2) await fillTermWrapper(opts.term2, app.vocabApi)
 		if (opts.term0) await fillTermWrapper(opts.term0, app.vocabApi)
 	} catch (e) {
 		throw `${e} [cuminc getPlotConfig()]`
 	}
-
+	const h = opts.term2?.q.hiddenValues || {}
 	const config = {
 		id: opts.term.term.id,
 		settings: {
@@ -654,7 +786,6 @@ export async function getPlotConfig(opts, app) {
 				barspace: 2 // space between two bars
 			},
 			cuminc: {
-				gradeCutoff: 3,
 				radius: 5,
 				fill: '#fff',
 				stroke: '#000',
@@ -668,8 +799,7 @@ export async function getPlotConfig(opts, app) {
 					right: 20,
 					bottom: 50
 				},
-				axisTitleFontSize: 16,
-				hidden: []
+				axisTitleFontSize: 16
 			}
 		}
 	}
@@ -721,8 +851,9 @@ function getPj(self) {
 		'=': {
 			chartTitle(row) {
 				const s = self.settings
+				const cutoff = self.state.config.term.q.breaks[0]
 				if (!row.chartId || row.chartId == '-') {
-					return s.gradeCutoff == 5 ? 'CTCAE grade 5' : `CTCAE grade ${s.gradeCutoff}-5`
+					return cutoff == 5 ? 'CTCAE grade 5' : `CTCAE grade ${cutoff}-5`
 				}
 				const t0 = self.state.config.term0
 				if (!t0 || !t0.term.values) return row.chartId

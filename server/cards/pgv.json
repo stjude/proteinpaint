@@ -2,6 +2,18 @@
     "ppcalls": [
         {
             "download": "https://pecan.stjude.cloud/static/proteinpaint_demo/hg19/pgv/pgvDemoData.tar.gz",
+            "datapreview": [
+                {
+                    "file": "proteinpaint_demo/hg19/pgv/sample1.gz",
+                    "message": "",
+                    "tabixQueryCoord": "chr14:24549316-24584223"
+                },
+                {
+                    "file": "proteinpaint_demo/hg19/pgv/pgvdemo.fpkm.gz",
+                    "message": "",
+                    "tabixQueryCoord": "chr14:24549316-24584223"
+                }
+            ],
             "runargs": {
                 "parseurl": true,
                 "block": true,

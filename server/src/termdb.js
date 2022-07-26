@@ -9,6 +9,7 @@ const survival = require('./termdb.survival')
 const regression = require('./termdb.regression')
 const termdbsnp = require('./termdb.snp')
 const LDoverlay = require('./mds2.load.ld').overlay
+const getOrderedLabels = require('./termdb.barsql').getOrderedLabels
 
 /*
 ********************** EXPORTED
@@ -23,6 +24,7 @@ const encodedParams = [
 	'tvslst',
 	'term1_q',
 	'exclude_types',
+	'usecase',
 	'variant_filter',
 	'info_fields',
 	'outcome',
@@ -112,8 +114,6 @@ function trigger_gettermdbconfig(res, tdb) {
 	// add attributes to this object for revealing to client
 	const c = {
 		selectCohort: tdb.selectCohort, // optional
-		cumincplot4condition: tdb.cumincplot4condition, // optional
-		survivalplot: tdb.survivalplot, // optional
 		supportedChartTypes: tdb.q.getSupportedChartTypes(),
 		allowedTermTypes: tdb.allowedTermTypes || []
 	}
@@ -178,7 +178,7 @@ async function trigger_findterm(q, res, termdb) {
 		const exclude_types = q.exclude_types
 		q.exclude_types = exclude_types.map(t => t.toLowerCase())
 	}
-	const terms_ = await termdb.q.findTermByName(q.findterm, 10, q.cohortStr, q.exclude_types, q.treeFilter)
+	const terms_ = await termdb.q.findTermByName(q.findterm, 10, q.cohortStr, q.exclude_types, q.treeFilter, q.usecase)
 	const terms = terms_.map(copy_term)
 	const id2ancestors = {}
 	terms.forEach(term => {
@@ -194,7 +194,7 @@ async function trigger_findterm(q, res, termdb) {
 
 function trigger_getcategories(q, res, tdb, ds) {
 	// thin wrapper of get_summary
-	// works for all types of terms, not just categorical
+	// works for all types of terms
 	if (!q.tid) throw '.tid missing'
 	const term = tdb.q.termjsonByOneid(q.tid)
 	const arg = {
@@ -210,14 +210,17 @@ function trigger_getcategories(q, res, tdb, ds) {
 			if (q.term1_q == undefined) arg.term1_q = term.bins.default
 			break
 		case 'condition':
-			if (q.term1_q == undefined)
+			if (q.term1_q == undefined) {
 				arg.term1_q = {
+					mode: q.mode,
+					breaks: q.breaks,
 					bar_by_grade: q.bar_by_grade,
 					bar_by_children: q.bar_by_children,
 					value_by_max_grade: q.value_by_max_grade,
 					value_by_most_recent: q.value_by_most_recent,
 					value_by_computable_grade: q.value_by_computable_grade
 				}
+			}
 			break
 		default:
 			throw 'unknown term type'
@@ -226,14 +229,11 @@ function trigger_getcategories(q, res, tdb, ds) {
 
 	const result = termdbsql.get_summary(arg)
 	const bins = result.CTE1.bins ? result.CTE1.bins : []
-	const orderedLabels =
-		term.type == 'condition' && term.grades
-			? term.grades.map(grade => term.values[grade].label)
-			: term.type == 'condition'
-			? [0, 1, 2, 3, 4, 5, 9].map(grade => term.values[grade].label) // hardcoded default order
-			: bins.map(bin => (bin.name ? bin.name : bin.label))
 
-	res.send({ lst: result.lst, orderedLabels })
+	res.send({
+		lst: result.lst,
+		orderedLabels: getOrderedLabels(term, bins)
+	})
 }
 function trigger_getnumericcategories(q, res, tdb, ds) {
 	if (!q.tid) throw '.tid missing'

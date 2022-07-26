@@ -28,6 +28,7 @@ tk.dom.variantg // if defined.
 ******* attributes ********
 
 tk.downloadgdc:true // Downloads bam file from gdc, single-use flag
+tk.gdcFileUUID: str // uuid of a bam file in gdc
 tk.gdcToken // gdc token string
 tk.variants[ {} ]
 	.chr/pos/ref/alt
@@ -216,12 +217,15 @@ async function getData(tk, block, additional = []) {
 		headers = { 'Content-Type': 'application/json', Accept: 'application/json' }
 		headers['X-Auth-Token'] = tk.gdcToken
 	}
-	if (tk.gdc_file) {
-		lst.push('gdc_file=' + tk.gdc_file)
+
+	if (tk.gdcFile) {
+		lst.push('gdcFileUUID=' + tk.gdcFile.uuid)
+		lst.push('gdcFilePosition=' + tk.gdcFile.position)
 	}
 
 	if (tk.downloadgdc) {
-		// here will download gdc slice; downloadgdc is a single-use flag
+		if (!tk.gdcFile) throw '.gdcFile{} missing'
+		// ask backend to call gdc slicing api to slice the uuid on this tk
 		delete tk.downloadgdc
 		tk.cloaktext.text('Downloading BAM slice ...')
 		const gdc_bam_files = await dofetch3('tkbam?downloadgdc=1&' + lst.join('&'), { headers })
@@ -229,9 +233,8 @@ async function getData(tk, block, additional = []) {
 		if (gdc_bam_files.error) throw gdc_bam_files.error
 		if (!Array.isArray(gdc_bam_files) || gdc_bam_files.length == 0) throw 'invalid returned data'
 		// This will need to be changed to a loop when viewing multiple regions in the same sample
-		const { filename, filesize } = gdc_bam_files[0]
+		const { filesize } = gdc_bam_files[0]
 		tk.cloaktext.text('BAM slice downloaded. File size: ' + filesize)
-		tk.file = filename
 		block.gdcBamSliceDownloadBtn.style('display', 'inline-block')
 		if (tk.aboutThisFile) {
 			tk.aboutThisFile.push({ k: 'Slice file size', v: filesize })
@@ -274,7 +277,12 @@ async function getData(tk, block, additional = []) {
 	if (tk.drop_pcrduplicates) lst.push('drop_pcrduplicates=1')
 
 	if (window.devicePixelRatio > 1) lst.push('devicePixelRatio=' + window.devicePixelRatio)
+
 	const data = await dofetch3('tkbam?' + lst.join('&'), { headers })
+
+	// reset text
+	tk.cloaktext.text('Loading ...')
+
 	if (tk.variants && !tk.alleleAlreadyUpdated) {
 		tk.variants[0].refseq = data.refseq
 		tk.variants[0].altseq = data.altseq
@@ -704,12 +712,26 @@ function may_render_variant(data, tk, block) {
 
 	if (Number.isFinite(data.max_diff_score)) {
 		// Should always be true if variant field was given by user, but may change in the future
-		tk.dom.variantg
+		const diff_score_string = tk.dom.variantg
 			.append('text')
 			.attr('x', data.pileup_data.width + 5)
 			.attr('y', -20 + tk.dom.variantrowheight)
 			.attr('font-size', tk.dom.variantrowheight)
+			.attr('class', 'sja_clbtext2')
 			.text('Diff Score')
+
+		//Show information about diff score in tooltip on click
+		diff_score_string.on('click', () => {
+			tk.tktip.clear().showunder(d3event.target)
+			tk.tktip.d
+				.append('div')
+				.style('width', '300px')
+				.style('font-size', '12px')
+				.html(
+					'Diff score is the difference between jaccard similarities of the alternate and reference alleles for each read. For reference and alternate groups, higher magnitude indicates greater confidence of the classification.' +
+						"<br><a href='https://proteinpaint.stjude.org/bam' target='_blank'>Click here to view details of this method</a>."
+				)
+		})
 	}
 }
 
@@ -878,7 +900,7 @@ function update_box_stay(group, tk, block) {
 }
 
 function makeTk(tk, block) {
-	may_add_urlparameter(tk)
+	may_add_urlparameter(tk, block)
 
 	// if to hide PCR or optical duplicates
 	if (tk.drop_pcrduplicates == undefined) {
@@ -979,7 +1001,7 @@ function makeTk(tk, block) {
 }
 
 // may add additional parameters from url that specifically apply to the bam track
-function may_add_urlparameter(tk) {
+function may_add_urlparameter(tk, block) {
 	const u2p = urlmap()
 
 	if (u2p.has('variant')) {
@@ -1032,8 +1054,12 @@ function may_add_urlparameter(tk) {
 		const [file, token] = str.split(',')
 		if (file && token) {
 			tk.gdcToken = token
-			tk.gdc_file = file
-			tk.downloadgdc = true
+			const r = block.rglst[0]
+			tk.gdcFile = {
+				uuid: file,
+				position: r.chr + '.' + r.start + '.' + r.stop
+			}
+			tk.downloadgdc = true // single use
 		}
 	}
 }
@@ -1453,6 +1479,12 @@ async function align_reads_to_allele(tk, group, block) {
 	alig_lst.push('genome=' + block.genome.name)
 	alig_lst.push('regions=' + JSON.stringify(tk.regions))
 	if (tk.file) alig_lst.push('file=' + tk.file)
+	if (tk.url) alig_lst.push('url=' + tk.url)
+	if (tk.indexURL) alig_lst.push('indexURL=' + tk.indexURL)
+	if (tk.gdcFile) {
+		alig_lst.push('gdcFileUUID=' + tk.gdcFile.uuid)
+		alig_lst.push('gdcFilePosition=' + tk.gdcFile.position)
+	}
 	alig_lst.push(
 		'variant=' + tk.variants.map(m => m.chr + '.' + m.pos + '.' + m.ref + '.' + m.alt + '.' + m.strictness).join('.')
 	)
@@ -1481,6 +1513,7 @@ async function align_reads_to_allele(tk, group, block) {
 		alig_lst.push('grouptype=' + group.data.type)
 	}
 	const headers = { 'Content-Type': 'application/json', Accept: 'application/json' }
+	if (tk.gdcToken) headers['X-Auth-Token'] = tk.gdcToken
 	return await dofetch3('tkbam?' + alig_lst.join('&'), { headers })
 }
 
@@ -2444,6 +2477,7 @@ async function getReadInfo(tk, block, box, ridx) {
 		// reusable helper
 		const r = block.rglst[ridx]
 		const headers = { 'Content-Type': 'application/json', Accept: 'application/json' }
+		if (tk.gdcToken) headers['X-Auth-Token'] = tk.gdcToken
 		const lst = [
 			'getread=1',
 			'qname=' + encodeURIComponent(box.qname), // convert + to %2B, so it can be kept the same but not a space instead
@@ -2452,13 +2486,14 @@ async function getReadInfo(tk, block, box, ridx) {
 			'start=' + r.start,
 			'stop=' + r.stop
 		]
+		if (tk.gdcFile) {
+			lst.push('gdcFileUUID=' + tk.gdcFile.uuid)
+			lst.push('gdcFilePosition=' + tk.gdcFile.position)
+		}
 		if (tk.nochr) lst.push('nochr=1')
 		if (tk.file) lst.push('file=' + tk.file)
 		if (tk.url) lst.push('url=' + tk.url)
 		if (tk.indexURL) lst.push('indexURL=' + tk.indexURL)
-		if (tk.gdcToken) {
-			headers['X-Auth-Token'] = tk.gdcToken
-		}
 		if (tk.asPaired) {
 			lst.push('getpair=1')
 		} else {
@@ -2503,10 +2538,19 @@ async function get_gene_models_refalt(block, tk, segstart, segstop, local_alignm
 		__isgene: true,
 		noNameHover: true
 	}
-	//console.log('args:', JSON.stringify(args))
+
+	{
+		// if the same gene tk is currently showing, apply its gene model filtering
+		const tk = block.tklst.find(i => i.name == args.name && i.type == 'bedj')
+		if (tk && tk.filterByName) {
+			args.filterByName = tk.filterByName
+		}
+	}
+
 	return await dofetch3('tkbedj', { method: 'POST', body: JSON.stringify(args) })
 }
 
+// FIXME may combine with get_gene_models_refalt?
 async function get_gene_models_reads(block, ridx, segstart, segstop, local_alignment_width) {
 	const genetk = block.genome.tracks.find(i => i.__isgene)
 	const args = {
@@ -2531,7 +2575,13 @@ async function get_gene_models_reads(block, ridx, segstart, segstop, local_align
 		__isgene: true,
 		noNameHover: true
 	}
-	//console.log('args:', JSON.stringify(args))
+	{
+		// if the same gene tk is currently showing, apply its gene model filtering
+		const tk = block.tklst.find(i => i.name == args.name && i.type == 'bedj')
+		if (tk && tk.filterByName) {
+			args.filterByName = tk.filterByName
+		}
+	}
 	return await dofetch3('tkbedj', { method: 'POST', body: JSON.stringify(args) })
 }
 

@@ -312,7 +312,7 @@ function setRenderers(self) {
 	}
 
 	self.addTerm = async function(term) {
-		const termIsDisabled = self.opts.disable_terms && self.opts.disable_terms.includes(term.id)
+		const termIsDisabled = self.opts.disable_terms?.includes(term.id)
 
 		const div = select(this)
 			.attr('class', cls_termdiv)
@@ -346,7 +346,7 @@ function setRenderers(self) {
 		if (term.hashtmldetail) {
 			infoIcon_div = div.append('div').style('display', 'inline-block')
 		}
-		if (graphable(term)) {
+		if (graphable(term) && (!self.state.usecase || isUsableTerm(term, self.state.usecase))) {
 			if (termIsDisabled) {
 				labeldiv
 					.attr('class', 'sja_tree_click_term_disabled ' + cls_termlabel)

@@ -92,9 +92,18 @@ for (const line of fs
 		thick = [],
 		intron = [],
 		exon = [], // exons are sorted from 5' to 3'
-		blocksizes = l[11 - 1].split(',').map(Number),
-		startlst = l[12 - 1].split(',').map(Number)
-	;(exonframes = l[16 - 1]), (symbol = l[18 - 1]), (category = l[21 - 1])
+		exonframes = l[16 - 1],
+		symbol = l[18 - 1],
+		category = l[21 - 1]
+
+	// trim the trailing comma
+	const tmp1 = l[11 - 1].split(',')
+	tmp1.pop()
+	const blocksizes = tmp1.map(Number)
+
+	const tmp2 = l[12 - 1].split(',')
+	tmp2.pop()
+	const startlst = tmp2.map(Number)
 
 	let paststop = null, // genomic stop of previous exon, for getting intron
 		rnalen = 0,

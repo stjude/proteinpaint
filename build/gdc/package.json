@@ -6,7 +6,11 @@
   "browser": "public/bin/proteinpaint.js",
   "repository": {
     "type": "git",
-    "url": "https://github.com/stjude/pp-dist"
+    "url": "https://github.com/NCI-GDC/proteinpaint"
+  },
+  "scripts": {
+    "postinstall": "./build/compile-rust.sh",
+    "postupdate": "./build/compile-rust.sh"
   },
   "//": "dependencies will be copied from proteinpaint/[server, client]/package.json",
   "files": [
