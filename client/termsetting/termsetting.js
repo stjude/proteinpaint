@@ -1,4 +1,4 @@
-import { getInitFxn, copyMerge } from '#rx'
+import { getInitFxn, copyMerge, deepEqual } from '#rx'
 import { Menu } from '#dom/menu'
 import { select } from 'd3-selection'
 
@@ -520,7 +520,7 @@ function setInteractivity(self) {
 			options.push({ label: 'Edit', callback: self.handler.showEditMenu })
 		}
 
-		options.push({ label: 'Save', callback: self.saveTermQ })
+		options.push({ label: 'Reuse', callback: self.showReuseMenu })
 
 		if (self.opts.menuOptions == 'all') {
 			options.push({ label: 'Replace', callback: self.showTree }, { label: 'Remove', callback: self.removeTerm })
@@ -542,33 +542,103 @@ function setInteractivity(self) {
 		//self.showFullMenu(tip.d, self.opts.menuOptions)
 	}
 
-	self.saveTermQ = function(_div) {
-		const div = _div.append('div')
-		div
+	self.showReuseMenu = async function(_div) {
+		const saveDiv = _div.append('div')
+		saveDiv
 			.style('display', 'block')
 			.style('padding', '10px')
 			.append('span')
-			.html('Save as ')
+			.style('color', '#aaa')
+			.html('Save current setting as ')
 
-		const id = btoa((+new Date()).toString()).slice(10, -3)
-		const defaultQname = `Setting #${id}`
-		const qNameInput = div
+		const qlst = self.vocabApi.getCustomTermQLst(self.term)
+		const qNameInput = saveDiv
 			.append('input')
 			.attr('type', 'text')
-			.attr('placeholder', defaultQname)
-			.attr('value', self.q.name || null)
+			.attr('placeholder', qlst.nextReuseId)
+			.attr('value', self.q.reuseId || null)
 		//.style('width', '300px')
 
-		div
+		saveDiv
 			.append('button')
 			.style('margin-left', '5px')
 			.html('Save')
 			.on('click', () => {
-				self.q.name = qNameInput.property('value') || defaultQname
+				self.q.reuseId = qNameInput.property('value') || qlst.nextReuseId
+				self.q.name = self.q.reuseId
 				self.vocabApi.mayCacheTermQ(self.term, self.q)
 				self.runCallback()
 				self.dom.tip.hide()
 			})
+
+		const tableWrapper = _div.append('div').style('margin', '10px')
+		const defaultTw = { term: self.term }
+		await fillTermWrapper(defaultTw, self.vocabApi)
+		defaultTw.q.reuseId = 'Default'
+		qlst.push(defaultTw.q)
+		if (qlst.length > 1) {
+			tableWrapper
+				.append('div')
+				.style('color', '#aaa')
+				.html('Previously saved settings')
+		}
+
+		tableWrapper
+			.append('table')
+			.selectAll('tr')
+			.data(qlst)
+			.enter()
+			.append('tr')
+			.style('margin', '2px 5px')
+			.each(function(q) {
+				const tr = select(this)
+				const inuse = deepEqual(self.q, q) || qlst.length === 1
+
+				tr.append('td')
+					.style('min-width', '180px')
+					//.style('padding', '5px')
+					//.style('font-weight', 600)
+					.html(q.name || q.reuseId)
+
+				const useTd = tr.append('td').style('text-align', 'center')
+				if (inuse) {
+					useTd.html(`In use <span style='color:#5a5;font-weight:600'>&check;</span>`)
+				} else {
+					useTd
+						.append('button')
+						.style('min-width', '80px')
+						.html('Use')
+						.on('click', () => {
+							self.q = q
+							self.dom.tip.hide()
+							self.runCallback()
+						})
+				}
+
+				const deleteTd = tr.append('td').style('text-align', 'center')
+				if (!inuse) {
+					deleteTd
+						.append('button')
+						.style('min-width', '80px')
+						.html('Delete')
+						.on('click', async () => {
+							await self.vocabApi.uncacheTermQ(self.term, q)
+							self.dom.tip.hide()
+							self.runCallback()
+						})
+				}
+			})
+
+		_div
+			.append('div')
+			.style('margin', '20px 5px 5px 5px')
+			.style('padding', '5px')
+			.style('font-size', '0.8em')
+			.style('color', '#aaa')
+			.html(
+				`Saving the setting will allow it to be reused at another chart.<br/>` +
+					`The setting will be reusable in your current or saved session.`
+			)
 	}
 
 	self.showGeneSearch = clickedElem => {

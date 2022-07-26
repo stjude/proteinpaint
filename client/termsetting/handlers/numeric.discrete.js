@@ -46,6 +46,8 @@ export function getHandler(self) {
 		},
 
 		getPillStatus() {
+			const text = self.q.name || self.q.reuseId
+			if (text) return { text }
 			if (self.q.type == 'regular-bin') return { text: 'bin size=' + self.q.bin_size }
 			return { text: self.q.lst.length + ' bins' }
 		},

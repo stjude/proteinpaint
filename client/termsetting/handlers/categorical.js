@@ -85,8 +85,8 @@ export function getHandler(self) {
 				}
 				return
 			}
-
-			throw `unknown q.type='${data.q.type}' for categorical q.mode='${data.q.mode}'`
+			console.log(88, data)
+			throw `unknown xxxx q.type='${data.q.type}' for categorical q.mode='${data.q.mode}'`
 		},
 
 		async postMain() {
@@ -118,6 +118,7 @@ export function getHandler(self) {
 export function setCategoryConditionMethods(self) {
 	self.validateGroupsetting = function() {
 		if (!self.q.groupsetting || !self.q.groupsetting.inuse) return
+		if (self.q.name || self.q.reuseId) return { text: self.q.name || self.q.reuseId }
 		if (Number.isInteger(self.q.groupsetting.predefined_groupset_idx)) {
 			if (!self.term.groupsetting) return { text: 'term.groupsetting missing', bgcolor: 'red' }
 			if (!self.term.groupsetting.lst) return { text: 'term.groupsetting.lst[] missing', bgcolor: 'red' }
@@ -151,12 +152,24 @@ export function setCategoryConditionMethods(self) {
 		}
 	}
 
-	self.getSettingNames = () => {
+	self.getQlst = () => {
 		const values = self.q.bar_by_children ? self.term.subconditions : self.term.values
 		const defaultGrpName = `default categories ${values ? '(n=' + Object.keys(values).length + ')' : ''}`
 		const activeName = self.q.name || qgs?.name || activeGroup?.name || defaultGrpName
-		const div = _div.append('div').style('display', 'grid')
 
+		//show button/s for default groups
+		const gsLst = tgs?.lst || []
+		const qlst = self.vocabApi.getCustomTermQLst(self.term)
+		const lst = [...gsLst, ...qlst].sort((a, b) => (a.name === self.q.name ? -1 : 0))
+		return lst.map(q => {
+			return {
+				name: q.name || defaultGrpName,
+				isActive: activeName === defaultGrpName,
+				callback
+			}
+		})
+		/*
+		const div = _div.append('div').style('display', 'grid')
 		div
 			.append('div')
 			.style('font-size', '.9em')
@@ -267,6 +280,7 @@ export function setCategoryConditionMethods(self) {
 			})
 
 		self.renderQNameInput(div, `Grouping`)
+		*/
 	}
 
 	function mayShowGroupDetails(tgs, qgs, groupset, div) {

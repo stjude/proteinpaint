@@ -709,7 +709,7 @@ class TermdbVocab {
 
 	mayCacheTermQ(term, q) {
 		// only save q with a user or automatically assigned name
-		if (!q.name) return
+		if (!q.reuseId) return
 		if (term.type == 'categorical') {
 			const gs = q.groupsetting
 			if (gs.inuse && gs?.customset && term.id) {
@@ -739,8 +739,21 @@ class TermdbVocab {
 
 	getCustomTermQLst(term) {
 		if (term.id) {
-			const cache = this.state.cache.customTermQ.byId[term.id] || {}
-			return Object.values(cache).map(q => JSON.parse(JSON.stringify(q)))
+			const cache = this.state.reuse.customTermQ.byId[term.id] || {}
+			const qlst = Object.values(cache).map(q => JSON.parse(JSON.stringify(q)))
+			// find a non-conflicting reuseId for saving a new term.q
+			for (let i = qlst.length + 1; i < 1000; i++) {
+				const nextReuseId = `Setting #${i}`
+				if (!qlst.find(q => q.reuseId === nextReuseId)) {
+					qlst.nextReuseId = nextReuseId
+					break
+				}
+			}
+			// last resort to use a random reuseId that is harder to read
+			if (!qlst.nextReuseId) {
+				qlst.nextReuseId = btoa((+new Date()).toString()).slice(10, -3)
+			}
+			return qlst
 		} else return []
 	}
 }
