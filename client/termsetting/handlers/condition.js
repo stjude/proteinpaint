@@ -42,6 +42,8 @@ export function getHandler(self) {
 }
 
 function getPillStatus(self) {
+	const text = self.q?.name || self.q?.reuseId
+	if (text) return { text }
 	if (self.q.mode == 'discrete') {
 		if (self.q.breaks.length == 0) {
 			if (self.q.bar_by_grade) {

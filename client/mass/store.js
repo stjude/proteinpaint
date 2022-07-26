@@ -325,8 +325,11 @@ TdbStore.prototype.actions = {
 
 // each chartType should have a getter function
 // to return all the term wrappers in the plot config
+const getNestedChartSeriesDataTws = plot => [plot.term0, plot.term, plot.term2].filter(d => !!d)
 const getTwsByChartType = {
-	barchart: plot => [plot.term0, plot.term, plot.term2].filter(d => !!d),
+	barchart: getNestedChartSeriesDataTws,
+	survival: getNestedChartSeriesDataTws,
+	cuminc: getNestedChartSeriesDataTws,
 	regression: plot => [plot.outcome, ...plot.independent].filter(d => !!d),
 	matrix: plot => plot.termgroups.reduce((arr, grp) => arr.push(...grp.lst), [])
 }

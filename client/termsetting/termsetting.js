@@ -566,7 +566,7 @@ function setInteractivity(self) {
 			.on('click', () => {
 				self.q.reuseId = qNameInput.property('value') || qlst.nextReuseId
 				self.q.name = self.q.reuseId
-				self.vocabApi.mayCacheTermQ(self.term, self.q)
+				self.vocabApi.cacheTermQ(self.term, self.q)
 				self.runCallback()
 				self.dom.tip.hide()
 			})
@@ -616,7 +616,7 @@ function setInteractivity(self) {
 				}
 
 				const deleteTd = tr.append('td').style('text-align', 'center')
-				if (!inuse) {
+				if (!inuse && q.reuseId != 'Default') {
 					deleteTd
 						.append('button')
 						.style('min-width', '80px')

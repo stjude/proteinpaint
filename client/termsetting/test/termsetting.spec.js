@@ -32,7 +32,7 @@ async function getOpts(_opts = {}, genome = 'hg38', dslabel = 'TermdbTest') {
 	const state = {
 		vocab,
 		termfilter: {},
-		cache: {
+		reuse: {
 			customTermQ: {
 				byId: {},
 				// non-dictionary terms do not have a term.id,
@@ -41,17 +41,18 @@ async function getOpts(_opts = {}, genome = 'hg38', dslabel = 'TermdbTest') {
 			}
 		}
 	}
-	const app = {
+	const app = Object.assign(_opts.app || {}, {
 		getState() {
 			return state
 		},
 		opts: { state }
-	}
+	})
 
+	opts.app = app
 	opts.pill = termsettingInit({
 		holder,
 		vocab,
-		vocabApi: vocabInit({ state }),
+		vocabApi: vocabInit({ app, state }),
 		use_bins_less: opts.use_bins_less,
 		menuOptions: opts.menuOptions,
 		disable_ReplaceRemove: opts.disable_ReplaceRemove,
@@ -138,6 +139,63 @@ tape('menuOptions', async test => {
 	pilldiv.click()
 	test.equal(tipd.selectAll('.sja_menuoption').size(), 2, `should show two menu options when menuOptions='edit'`)
 
+	opts.pill.Inner.dom.tip.hide()
+	test.end()
+})
+
+tape('Reuse option', async test => {
+	test.timeoutAfter(2000)
+	test.plan(7)
+
+	const app = {}
+	const opts = await getOpts({
+		app,
+		menuOptions: 'all',
+		tsData: {
+			term: termjson['diaggrp'],
+			q: { type: 'values' }
+		}
+	})
+
+	await opts.pill.main(opts.tsData)
+	await opts.pillMenuClick('Reuse')
+	const tipd = opts.pill.Inner.dom.tip.d
+	const tipn = tipd.node()
+	test.equal([...tipn.querySelectorAll('input')].length, 1, 'should have a name input')
+	const saveBtns = [...tipn.querySelectorAll('button')].filter(td => td.innerHTML === 'Save')
+	test.equal(saveBtns.length, 1, 'should have a save button')
+	test.equal(
+		[...tipn.querySelectorAll('td')].filter(td => td.innerHTML === 'Default').length,
+		1,
+		'should have a default setting entry'
+	)
+
+	const settingName = 'my setting'
+	tipd.select('input').property('value', settingName)
+	opts.app.dispatch = action => {
+		test.equal(action.type, 'cache_termq', `should dispatch the correct action when saving a setting`)
+	}
+	saveBtns[0].click()
+
+	opts.app.opts.state.reuse.customTermQ.byId['diaggrp'] = { 'Setting #1': opts.tsData.q }
+	await opts.pill.main(opts.tsData)
+	await opts.pillMenuClick('Reuse')
+	test.equal(
+		tipn.querySelectorAll('tr').length,
+		2,
+		'should have 2 previously saved settings after clicking the save button'
+	)
+	test.equal(
+		[...tipn.querySelectorAll('td')].filter(td => td.innerHTML === settingName).length,
+		1,
+		'should list the newly saved setting'
+	)
+	const defaultRow = [...tipn.querySelectorAll('tr')].filter(tr => tr.firstChild.innerHTML === 'Default')[0]
+	test.equal(
+		[...defaultRow.querySelectorAll('button')].filter(btn => btn.innerHTML === 'Delete').length,
+		0,
+		'should not have a delete button for the default setting'
+	)
 	opts.pill.Inner.dom.tip.hide()
 	test.end()
 })

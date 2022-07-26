@@ -118,7 +118,8 @@ export function getHandler(self) {
 export function setCategoryConditionMethods(self) {
 	self.validateGroupsetting = function() {
 		if (!self.q.groupsetting || !self.q.groupsetting.inuse) return
-		if (self.q.name || self.q.reuseId) return { text: self.q.name || self.q.reuseId }
+		const text = self.q?.name || self.q?.reuseId
+		if (text) return { text }
 		if (Number.isInteger(self.q.groupsetting.predefined_groupset_idx)) {
 			if (!self.term.groupsetting) return { text: 'term.groupsetting missing', bgcolor: 'red' }
 			if (!self.term.groupsetting.lst) return { text: 'term.groupsetting.lst[] missing', bgcolor: 'red' }

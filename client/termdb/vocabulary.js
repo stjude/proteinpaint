@@ -707,26 +707,14 @@ class TermdbVocab {
 		return await dofetch3('termdb?' + args.join('&'))
 	}
 
-	mayCacheTermQ(term, q) {
+	cacheTermQ(term, q) {
 		// only save q with a user or automatically assigned name
-		if (!q.reuseId) return
-		if (term.type == 'categorical') {
-			const gs = q.groupsetting
-			if (gs.inuse && gs?.customset && term.id) {
-				this.app.dispatch({
-					type: 'cache_termq',
-					termId: term.id,
-					q
-				})
-			}
-		}
-		if (term.type == 'integer' || term.type == 'float') {
-			this.app.dispatch({
-				type: 'cache_termq',
-				termId: term.id,
-				q
-			})
-		}
+		if (!q.reuseId) throw `missing term q.reuseId for term.id='${term.id}'`
+		this.app.dispatch({
+			type: 'cache_termq',
+			termId: term.id,
+			q
+		})
 	}
 
 	async uncacheTermQ(term, q) {
