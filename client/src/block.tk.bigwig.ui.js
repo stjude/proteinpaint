@@ -149,7 +149,10 @@ function multiTrackInput(div, doms) {
 }
 
 function submitButton(div, doms, holder, genomes) {
-	const submit = uiutils.makeBtn(div, 'Submit')
+	const submit = uiutils.makeBtn({
+		div,
+		text: 'Submit'
+	})
 	submit
 		.style('margin', '20px 20px 20px 130px')
 		.style('font-size', '16px')
