@@ -29,7 +29,18 @@ async function getOpts(_opts = {}, genome = 'hg38', dslabel = 'TermdbTest') {
 
 	const opts = Object.assign({ holder, menuOptions: 'edit' }, _opts)
 	const vocab = opts.vocab ? opts.vocab : { route: 'termdb', genome, dslabel }
-	const state = { vocab, termfilter: {} }
+	const state = {
+		vocab,
+		termfilter: {},
+		cache: {
+			customTermQ: {
+				byId: {},
+				// non-dictionary terms do not have a term.id,
+				// save by term.type + name?
+				byName: {}
+			}
+		}
+	}
 	const app = {
 		getState() {
 			return state
@@ -52,6 +63,18 @@ async function getOpts(_opts = {}, genome = 'hg38', dslabel = 'TermdbTest') {
 		}
 	})
 
+	opts.pillMenuClick = async optionLabel => {
+		const pilldiv = opts.holder.node().querySelectorAll('.ts_pill')[0]
+		pilldiv.click()
+		await sleep(300)
+		const tip = opts.pill.Inner.dom.tip.d.node()
+		{
+			const editOption = [...tip.querySelectorAll('.sja_menuoption')].filter(o => o.__data__.label === optionLabel)[0]
+			editOption.click()
+			await sleep(300)
+		}
+	}
+
 	return opts
 }
 
@@ -68,7 +91,26 @@ tape('\n', test => {
 	test.end()
 })
 
-tape('editMenu', async test => {
+tape('menuOptions', async test => {
+	test.timeoutAfter(500)
+	test.plan(5)
+
+	{
+		const message = `should throw on invalid menuOptions`
+		try {
+			const opts = await getOpts({
+				menuOptions: 'xyz',
+				tsData: {
+					term: termjson['diaggrp'],
+					q: { type: 'values' }
+				}
+			})
+			test.fail(message)
+		} catch (e) {
+			test.pass(message)
+		}
+	}
+
 	const opts = await getOpts({
 		menuOptions: 'all',
 		tsData: {
@@ -84,13 +126,17 @@ tape('editMenu', async test => {
 	pilldiv.click()
 	const tipd = opts.pill.Inner.dom.tip.d
 	test.equal(tipd.style('display'), 'block', 'tip is shown upon clicking pill')
-	test.equal(tipd.selectAll('.sja_menuoption').size(), 3, 'the menu should show 3 buttons for edit/replace/remove')
+	test.equal(
+		tipd.selectAll('.sja_menuoption').size(),
+		4,
+		`the menu should show 3 buttons for edit/replace/remove when menuOptions='all'`
+	)
 
 	// delete the flag and click pill again to see if hiding menu for replace/remove buttons in tip
 	// if pill.opts is frozen in future, just create a new pill
 	opts.pill.Inner.opts.menuOptions = 'edit'
 	pilldiv.click()
-	test.equal(tipd.selectAll('.sja_menuoption').size(), 2, 'should hide edit menu')
+	test.equal(tipd.selectAll('.sja_menuoption').size(), 2, `should show two menu options when menuOptions='edit'`)
 
 	opts.pill.Inner.dom.tip.hide()
 	test.end()
@@ -108,20 +154,18 @@ tape('use_bins_less', async test => {
 	await opts.pill.main(opts.tsData)
 
 	const pilldiv = opts.holder.node().querySelectorAll('.ts_pill')[0]
-	pilldiv.click()
-	await sleep(300)
+	await opts.pillMenuClick('Edit')
 
 	const tip = opts.pill.Inner.dom.tip.d.node()
 	const bin_size_input = tip.querySelectorAll('tr')[0].querySelectorAll('input')[0]
-
 	test.equal(bin_size_input.value, '3', 'has term.bins.less.bin_size as value')
 
 	delete opts.pill.Inner.opts.use_bins_less
 	delete opts.pill.Inner.numqByTermIdModeType[opts.pill.Inner.term.id]
 	delete opts.pill.Inner.q
 	//TODO: need to tweak timeout, UI reflects true value
-	pilldiv.click()
-	await sleep(300)
+	await opts.pillMenuClick('Edit')
+
 	const bin_size_input2 = tip.querySelectorAll('tr')[0].querySelectorAll('input')[0]
 	test.equal(bin_size_input2.value, '3', 'has term.bins.default.bin_size as value')
 	opts.pill.Inner.dom.tip.hide()
@@ -226,30 +270,19 @@ tape('Numerical term: range boundaries', async test => {
 	})
 
 	const pilldiv = opts.holder.node().querySelectorAll('.ts_pill')[0]
-	pilldiv.click()
+	await opts.pillMenuClick('Edit')
 
-	await sleep(300)
-	const tip = opts.pill.Inner.dom.tip
-	test.equal(tip.d.node().querySelectorAll('select').length, 1, 'Should have a select dropdown')
+	const tip = opts.pill.Inner.dom.tip.d.node()
+	test.equal(tip.querySelectorAll('select').length, 1, 'Should have a select dropdown')
 	test.equal(
-		tip.d
-			.node()
-			.querySelector('select')
-			.previousSibling.innerHTML.toLowerCase(),
+		tip.querySelector('select').previousSibling.innerHTML.toLowerCase(),
 		'boundary inclusion',
 		'Should label the select dropdown as Boundary Inclusion'
 	)
-	test.equal(
-		tip.d
-			.node()
-			.querySelector('select')
-			.querySelectorAll('option').length,
-		2,
-		'Should have 2 select options'
-	)
+	test.equal(tip.querySelector('select').querySelectorAll('option').length, 2, 'Should have 2 select options')
 
 	await sleep(50)
-	const select1 = tip.d.node().querySelector('select')
+	const select1 = tip.querySelector('select')
 	const option1 = select1.querySelectorAll('option')[1]
 	select1.value = option1.value
 	select1.dispatchEvent(new Event('change'))
@@ -257,19 +290,19 @@ tape('Numerical term: range boundaries', async test => {
 	const q1 = opts.pill.Inner.numqByTermIdModeType.agedx.discrete['regular-bin']
 	test.equal(!q1.stopinclusive && q1.startinclusive, true, 'should set the range boundary to start inclusive')
 
-	const select0 = tip.d.node().querySelector('select')
+	const select0 = tip.querySelector('select')
 	const option0 = select0.querySelectorAll('option')[0]
 	select0.value = option0.value
 	select0.dispatchEvent(new Event('change'))
 	await sleep(50)
 	const q0 = opts.pill.Inner.numqByTermIdModeType.agedx.discrete['regular-bin']
 	test.equal(q0.stopinclusive && !q0.startinclusive, true, 'should set the range boundary to stop inclusive')
-	tip.hide()
+	opts.pill.Inner.dom.tip.hide()
 })
 
 tape('Numerical term: fixed bins', async test => {
 	test.timeoutAfter(3000)
-	test.plan(10)
+	test.plan(9)
 
 	const opts = await getOpts({
 		tsData: {
@@ -287,11 +320,9 @@ tape('Numerical term: fixed bins', async test => {
 		keyCode: 13
 	})
 
-	const pilldiv = opts.holder.node().querySelectorAll('.ts_pill')[0]
-	pilldiv.click()
-
-	await sleep(300)
+	await opts.pillMenuClick('Edit')
 	const tip = opts.pill.Inner.dom.tip
+
 	const lines = tip.d
 		.select('.binsize_g')
 		.node()
@@ -376,8 +407,7 @@ tape('Numerical term: fixed bins', async test => {
 	// test 'apply' button
 	const apply_btn = tip.d.selectAll('button')._groups[0][0]
 	apply_btn.click()
-	pilldiv.click()
-	await sleep(500)
+	await opts.pillMenuClick('Edit')
 
 	test.equal(
 		tip.d
@@ -394,9 +424,7 @@ tape('Numerical term: fixed bins', async test => {
 	await sleep(100)
 	apply_btn.click()
 	await sleep(100)
-	pilldiv.click()
-	await sleep(500)
-
+	await opts.pillMenuClick('Edit')
 	test.equal(
 		tip.d
 			.node()
@@ -416,7 +444,7 @@ tape('Numerical term: fixed bins', async test => {
 		event listener, since the event handler may be buried in layers
 		of nested function calls. Must use unit testing instead.
 	***/
-	const firstBinStopInput = d3s
+	/*const firstBinStopInput = d3s
 		.select(tip.d.selectAll('tr')._groups[0][1])
 		.selectAll('td')
 		._groups[0][1].querySelector('input')
@@ -432,7 +460,7 @@ tape('Numerical term: fixed bins', async test => {
 	firstBinStopInput.dispatchEvent(new Event('change'))
 	await sleep(500)
 	window.removeEventListener('error.firstBinStopTest', detectFirstBinStopError)
-	test.pass(firstBinStopMessage)
+	test.pass(firstBinStopMessage)*/
 	tip.hide()
 })
 
@@ -481,10 +509,7 @@ tape('Numerical term: float custom bins', async test => {
 		keyCode: 13
 	})
 
-	const pilldiv = opts.holder.node().querySelectorAll('.ts_pill')[0]
-	pilldiv.click()
-
-	await sleep(300)
+	await opts.pillMenuClick('Edit')
 	const tip = opts.pill.Inner.dom.tip
 	const lines = tip.d
 		.select('.binsize_g')
@@ -507,10 +532,7 @@ tape('Numerical term: toggle menu - 4 options', async test => {
 	opts.tsData.q = termjson['agedx'].bins.less
 
 	await opts.pill.main(opts.tsData)
-
-	const pilldiv = opts.holder.node().querySelectorAll('.ts_pill')[0]
-	pilldiv.click()
-	await sleep(300)
+	await opts.pillMenuClick('Edit')
 
 	const tip = opts.pill.Inner.dom.tip
 	const toggleButtons = tip.d.node().querySelectorAll('.sj-toggle-button')
@@ -581,13 +603,8 @@ tape('Numerical term: toggle menu - 2 options', async test => {
 	})
 
 	await opts.pill.main(opts.tsData)
-
-	const pilldiv = opts.holder.node().querySelectorAll('.ts_pill')[0]
-	pilldiv.click()
-	await sleep(300)
-
+	await opts.pillMenuClick('Edit')
 	const tip = opts.pill.Inner.dom.tip
-
 	test.equal(
 		tip.d.node().querySelectorAll('.sj-toggle-button').length,
 		2,
@@ -608,13 +625,8 @@ tape('Numerical term: toggle menu - 1 option', async test => {
 	})
 
 	await opts.pill.main(opts.tsData)
-
-	const pilldiv = opts.holder.node().querySelectorAll('.ts_pill')[0]
-	pilldiv.click()
-	await sleep(300)
-
+	await opts.pillMenuClick('Edit')
 	const tip = opts.pill.Inner.dom.tip
-
 	test.equal(
 		tip.d.node().querySelectorAll('.sj-toggle-button').length,
 		0,
@@ -666,16 +678,7 @@ tape('Numerical term: integer custom bins', async test => {
 	})
 
 	await opts.pill.main(opts.tsData)
-
-	// create enter event to use for inputs of bin edit menu
-	const enter_event = new KeyboardEvent('keyup', {
-		code: 'Enter',
-		key: 'Enter',
-		keyCode: 13
-	})
-
-	const pilldiv = opts.holder.node().querySelectorAll('.ts_pill')[0]
-	pilldiv.click()
+	await opts.pillMenuClick('Edit')
 
 	await sleep(300)
 	const tip = opts.pill.Inner.dom.tip
@@ -709,7 +712,7 @@ tape('Numerical term: integer custom bins', async test => {
 	tip.hide()
 })
 
-tape('Conditional term', async test => {
+tape.skip('Conditional term', async test => {
 	const opts = await getOpts({
 		tsData: {
 			term: {
@@ -760,6 +763,8 @@ tape('Conditional term', async test => {
 				}
 			},
 			q: {
+				mode: 'discrete',
+				breaks: [],
 				value_by_max_grade: true,
 				groupsetting: { inuse: false }
 			}
@@ -767,9 +772,7 @@ tape('Conditional term', async test => {
 	})
 
 	await opts.pill.main(opts.tsData)
-
-	const pilldiv = opts.holder.node().querySelectorAll('.ts_pill')[0]
-	pilldiv.click()
+	await opts.pillMenuClick('Edit')
 	const tip = opts.pill.Inner.dom.tip
 
 	//check menu buttons on first menu
@@ -781,7 +784,6 @@ tape('Conditional term', async test => {
 		tip.d.selectAll('.group_btn')._groups[0][0].innerText.includes('Using'),
 		'Should have an active "default" group button'
 	)
-
 	//change grade type
 	tip.d.select('select')._groups[0][0].selectedIndex = 1
 	tip.d.select('select')._groups[0][0].dispatchEvent(new Event('change'))
@@ -793,7 +795,7 @@ tape('Conditional term', async test => {
 	)
 
 	// select 'Any condition vs normal'
-	pilldiv.click()
+	await opts.pillMenuClick('Edit')
 	tip.d.selectAll('.group_btn')._groups[0][1].click()
 	await sleep(50)
 	// check tvspill and group menu
@@ -912,7 +914,7 @@ tape('Custom vocabulary', async test => {
 	pilldiv.click()
 	const tipd = opts.pill.Inner.dom.tip.d
 	test.equal(tipd.style('display'), 'block', 'tip is shown upon clicking pill')
-	test.equal(tipd.selectAll('.sja_menuoption').size(), 3, 'the menu should show 3 buttons for edit/replace/remove')
+	test.equal(tipd.selectAll('.sja_menuoption').size(), 4, 'the menu should show 4 buttons for edit/replace/remove')
 
 	const replaceBtn = tipd
 		.selectAll('.sja_menuoption')

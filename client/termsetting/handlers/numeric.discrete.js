@@ -50,7 +50,10 @@ export function getHandler(self) {
 			return { text: self.q.lst.length + ' bins' }
 		},
 
-		async showEditMenu(_div) {
+		async showEditMenu(div) {
+			showBinsMenu(self, div)
+
+			/*
 			const qlst = self.vocabApi.getCustomTermQLst(self.term).sort((a, b) => (a.name === self.q.name ? -1 : 0))
 
 			const templateQ = JSON.parse(JSON.stringify(self.q))
@@ -102,6 +105,7 @@ export function getHandler(self) {
 			}
 
 			self.renderQNameInput(div, `Binning`)
+			*/
 		}
 	}
 }

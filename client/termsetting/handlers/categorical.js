@@ -143,6 +143,15 @@ export function setCategoryConditionMethods(self) {
 		const tgs = self.term.groupsetting
 		const qgs = self.q?.groupsetting
 		const activeGroup = tgs?.lst?.[qgs?.predefined_groupset_idx] || (qgs?.inuse && qgs.customset)
+
+		if (!activeGroup) self.regroupMenu()
+		else {
+			const valGrp = self.grpSet2valGrp(activeGroup)
+			self.regroupMenu(activeGroup.groups.length, valGrp)
+		}
+	}
+
+	self.getSettingNames = () => {
 		const values = self.q.bar_by_children ? self.term.subconditions : self.term.values
 		const defaultGrpName = `default categories ${values ? '(n=' + Object.keys(values).length + ')' : ''}`
 		const activeName = self.q.name || qgs?.name || activeGroup?.name || defaultGrpName

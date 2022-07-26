@@ -22,7 +22,7 @@ const idSuffix = `_ts_${(+new Date()).toString().slice(-8)}`
 let $id = 0
 
 const defaultOpts = {
-	menuOptions: 'edit',
+	menuOptions: 'edit', // ['edit', 'replace', 'save', 'remove'],
 	menuLayout: 'vertical'
 }
 
@@ -117,6 +117,7 @@ class TermSetting {
 		if (!('placeholder' in o)) o.placeholder = 'Select term&nbsp;'
 		if (!('placeholderIcon' in o)) o.placeholderIcon = '+'
 		if (!Number.isInteger(o.abbrCutoff)) o.abbrCutoff = 18 //set the default to 18
+		this.validateMenuOptions(o)
 		if (!o.numericEditMenuVersion) o.numericEditMenuVersion = ['discrete']
 		this.mayValidate_noTermPromptOptions(o)
 		return o
@@ -169,6 +170,11 @@ class TermSetting {
 		this.mayValidate_noTermPromptOptions(d)
 	}
 
+	validateMenuOptions(o) {
+		const allowedOptions = ['all', 'edit']
+		if (!allowedOptions.includes(o.menuOptions)) throw `unsupported ts.opts.menuOptions='${o.menuOptions}'`
+	}
+
 	mayValidate_noTermPromptOptions(o) {
 		if (!o.noTermPromptOptions) return
 		if (!Array.isArray(o.noTermPromptOptions)) throw 'noTermPromptOptions[] is not array'
@@ -214,44 +220,18 @@ class TermSetting {
 	renderQNameInput(div, prefix = `Configuration`) {
 		div
 			.append('div')
+			.attr('class', 'sja_menuoption')
 			.style('grid-column', '1')
 			//.style('width', '80%')
-			.style('margin', '5px')
+			/*.style('margin', '5px')
 			.style('padding', '5px')
 			.style('text-align', 'center')
 			.style('background-color', '#eee')
 			.style('border-radius', '5px')
 			.style('font-size', '.9em')
-			.style('cursor', 'pointer')
+			.style('cursor', 'pointer')*/
 			.html('Save this term configuration')
-			.on('click', () => {
-				div.selectAll('*').remove()
-				div
-					.style('display', 'block')
-					.style('padding', '10px')
-					.append('span')
-					.html('Save as ')
-
-				const id = btoa((+new Date()).toString()).slice(10, -3)
-				const defaultQname = `${prefix} #${id}`
-				const qNameInput = div
-					.append('input')
-					.attr('type', 'text')
-					.attr('placeholder', defaultQname)
-					.attr('value', this.q.name || null)
-				//.style('width', '300px')
-
-				div
-					.append('button')
-					.style('margin-left', '5px')
-					.html('Save')
-					.on('click', () => {
-						this.q.name = qNameInput.property('value') || defaultQname
-						this.vocabApi.mayCacheTermQ(this.term, this.q)
-						this.runCallback()
-						this.dom.tip.hide()
-					})
-			})
+			.on('click', () => console.log(`!!! rewrite save code !!!`))
 	}
 }
 
@@ -535,41 +515,59 @@ function setInteractivity(self) {
 			else tip.show(event.clientX, event.clientY)
 		}
 
-		if (self.opts.menuOptions == 'all') {
-			self.showEditReplaceRemoveMenu(tip.d)
-		} else if (self.opts.menuOptions == 'edit') {
-			self.handler.showEditMenu(tip.d)
-		} else {
-			throw `Unsupported termsettingInit.opts.menuOptions='${self.opts.menuOptions}'`
+		const options = []
+		if (!self.q || !self.q.groupsetting?.disabled) {
+			options.push({ label: 'Edit', callback: self.handler.showEditMenu })
 		}
+
+		options.push({ label: 'Save', callback: self.saveTermQ })
+
+		if (self.opts.menuOptions == 'all') {
+			options.push({ label: 'Replace', callback: self.showTree }, { label: 'Remove', callback: self.removeTerm })
+		}
+
+		tip.d
+			.selectAll('div')
+			.data(options)
+			.enter()
+			.append('div')
+			.attr('class', 'sja_menuoption')
+			.style('display', self.opts.menuLayout == 'horizontal' ? 'inline-block' : 'block')
+			.text(d => d.label)
+			.on('click', d => {
+				self.dom.tip.clear()
+				d.callback(self.dom.tip.d)
+			})
+
+		//self.showFullMenu(tip.d, self.opts.menuOptions)
 	}
 
-	self.showEditReplaceRemoveMenu = async function(div) {
+	self.saveTermQ = function(_div) {
+		const div = _div.append('div')
 		div
-			.append('div')
-			.attr('class', 'sja_menuoption')
-			.style('display', self.opts.menuLayout == 'horizontal' ? 'inline-block' : 'block')
-			.text('Edit')
-			.on('click', () => {
-				self.dom.tip.clear()
-				self.handler.showEditMenu(self.dom.tip.d)
-			})
+			.style('display', 'block')
+			.style('padding', '10px')
+			.append('span')
+			.html('Save as ')
+
+		const id = btoa((+new Date()).toString()).slice(10, -3)
+		const defaultQname = `Setting #${id}`
+		const qNameInput = div
+			.append('input')
+			.attr('type', 'text')
+			.attr('placeholder', defaultQname)
+			.attr('value', self.q.name || null)
+		//.style('width', '300px')
+
 		div
-			.append('div')
-			.attr('class', 'sja_menuoption')
-			.style('display', self.opts.menuLayout == 'horizontal' ? 'inline-block' : 'block')
-			.text('Replace')
+			.append('button')
+			.style('margin-left', '5px')
+			.html('Save')
 			.on('click', () => {
-				self.showTree(self.dom.tip.d.node())
-			})
-		div
-			.append('div')
-			.attr('class', 'sja_menuoption')
-			.style('display', self.opts.menuLayout == 'horizontal' ? 'inline-block' : 'block')
-			.text('Remove')
-			.on('click', () => {
+				self.q.name = qNameInput.property('value') || defaultQname
+				self.vocabApi.mayCacheTermQ(self.term, self.q)
+				self.runCallback()
 				self.dom.tip.hide()
-				self.removeTerm()
 			})
 	}
 
