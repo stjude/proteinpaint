@@ -844,7 +844,7 @@ async function launchmdssamplescatterplot(arg, app) {
 		delete arg.dataset
 
 		if (arg.mds.mdsIsUninitiated) {
-			const d = await dofetch3(`getDataset?genome=${arg.genome}&dsname=${arg.dslabel}`)
+			const d = await dofetch3(`getDataset?genome=${arg.genome.name}&dsname=${arg.dslabel}`)
 			if (d.error) throw d.error
 			if (!d.ds) throw 'ds missing'
 			Object.assign(arg.mds, d.ds)
