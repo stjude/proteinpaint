@@ -18,7 +18,7 @@ makeTextInput()
     - placeholder (optional): STR
 	- size (optional): INT
 
-makeTextAreaInput()
+makeTextAreaInput({})
 	Creates a text area, mainly for copying and pasting data
     - div
     - placeholder (optional): STR
@@ -29,7 +29,7 @@ makeFileUpload()
 	Creates upload input for files
     - div
 
-makeBtn()
+makeBtn({})
 	Simplifed button and styling for UIs
     - div
 	- text: STR
@@ -85,13 +85,13 @@ export function makeTextInput(div, placeholder, size) {
 	return text
 }
 
-export function makeTextAreaInput(div, placeholder, rows, cols) {
-	const textarea = div
+export function makeTextAreaInput(args) {
+	const textarea = args.div
 		.append('textarea')
-		.attr('rows', rows ? rows : '5')
-		.attr('cols', cols ? cols : '70')
+		.attr('rows', args.rows ? args.rows : '5')
+		.attr('cols', args.cols ? args.cols : '70')
 		.style('border-radius', '5px')
-		.attr('placeholder', placeholder ? placeholder : '')
+		.attr('placeholder', args.placeholder ? args.placeholder : '')
 
 	return textarea
 }

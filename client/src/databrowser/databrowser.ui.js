@@ -187,7 +187,7 @@ function makeCopyPasteInput(div, obj) {
 	// Renders the copy/paste div and callback.
 	const paste_div = div.append('div').style('display', 'block')
 	const paste = uiutils
-		.makeTextAreaInput(paste_div, '', 10, 70)
+		.makeTextAreaInput({ div: paste_div, rows: 10 })
 		.style('border', '1px solid rgb(138, 177, 212)')
 		.style('margin', '0px 0px 0px 20px')
 		.classed('databrowser_input', true)
