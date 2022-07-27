@@ -41,7 +41,7 @@ findgene2paint
 
 launchblock()
 may_launchGeneView
-launchgeneview()
+	launchgeneview()
 launchfusioneditor()
 launchmavb()
 launch2dmaf()
@@ -50,6 +50,7 @@ launchsamplematrix()
 launchmdssamplescatterplot
 launchmdssurvivalplot
 launch_fimo
+launch_genefusion
 launch_singlecell
 
 ********** quick fix parameters
@@ -684,6 +685,11 @@ async function parseEmbedThenUrl(arg, app) {
 
 	if (arg.fusioneditor) {
 		launchfusioneditor(arg, app)
+		return app
+	}
+
+	if (arg.genefusion) {
+		launch_genefusion(arg, app)
 		return app
 	}
 
@@ -1383,6 +1389,47 @@ async function launchtermdb(opts, app) {
 	import('../termdb/app').then(_ => {
 		_.appInit(opts)
 	})
+}
+
+async function launch_genefusion(arg, app) {
+	try {
+		const genome = app.genomes[arg.genome]
+		if (!genome) throw 'Invalid genome: ' + arg.genome
+
+		const m = await (await import('./fusion.parse')).parseFusion({
+			line: arg.genefusion.text,
+			genome,
+			positionType: arg.genefusion.positionType
+		})
+
+		await getGm(m.pairlst[0].a, genome)
+		await getGm(m.pairlst[0].b, genome)
+
+		const _ = await import('./svgraph')
+		_.default({
+			pairlst: m.pairlst,
+			genome,
+			holder: app.holder
+		})
+	} catch (e) {
+		app.error0(e.message || e)
+		if (e.stack) console.log(e.stack)
+	}
+}
+
+async function getGm(p, genome) {
+	// p={isoform}
+	const d = await dofetch3('genelookup', {
+		method: 'POST',
+		body: JSON.stringify({ genome: genome.name, input: p.isoform, deep: 1 })
+	})
+	if (d.error) throw d.error
+	if (!Array.isArray(d.gmlst)) throw 'gmlst not array'
+	const u = d.gmlst.find(i => i.isoform == p.isoform)
+	if (!u) throw 'no match to isoform'
+	p.chr = u.chr
+	p.name = u.name
+	p.gm = { isoform: u.isoform }
 }
 
 async function launchmass(opts, app) {
