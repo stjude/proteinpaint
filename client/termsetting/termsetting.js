@@ -703,8 +703,13 @@ function equivalentQs(q0, q1) {
 		// TODO: may need to delete non-relevant q attributes
 		// when setting defaults in regression.inputs.term.js
 		if (q.mode === 'continuous') delete q.mode
+		if (q.mode === 'discrete' && q.type == 'custom-bin' && q.lst) {
+			for (const bin of q.lst) {
+				delete bin.range
+			}
+		}
 	}
-	return deepEqual(qlst[0], qlst[1])
+	return deepEqual(...qlst)
 }
 
 function getDefaultHandler(self) {

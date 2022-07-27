@@ -145,7 +145,7 @@ tape('menuOptions', async test => {
 
 tape('Reuse option', async test => {
 	test.timeoutAfter(5000)
-	test.plan(9)
+	test.plan(11)
 
 	const app = {}
 	const opts = await getOpts({
@@ -206,11 +206,13 @@ tape('Reuse option', async test => {
 			mode: 'discrete',
 			lst: [
 				{
+					label: '<5',
 					startunbounded: true,
 					stop: 5,
 					startinclusive: true
 				},
 				{
+					label: '≥5',
 					start: 5,
 					startinclusive: true,
 					stopunbounded: true
@@ -244,6 +246,25 @@ tape('Reuse option', async test => {
 		`Varying bin sizes`,
 		`should open the numeric edit menu to the correct tab of the reused q.mode`
 	)
+
+	await opts.pillMenuClick('Reuse')
+	const inUseTd = [...tipn.querySelectorAll('td')].filter(td => td.innerHTML.startsWith('In use'))[0]
+	test.equal(
+		inUseTd?.parentNode.__data__.reuseId,
+		opts.tsData.q.reuseId,
+		`should show an 'In use' status for a non-default, active q.reuseId`
+	)
+	{
+		const useBtn = [...tipn.querySelectorAll('button')].filter(td => td.innerHTML === 'Use')
+		useBtn[0].click()
+		await opts.pillMenuClick('Reuse')
+		const inUseTd = [...tipn.querySelectorAll('td')].filter(td => td.innerHTML.startsWith('In use'))[0]
+		test.equal(
+			inUseTd?.parentNode.__data__.reuseId,
+			'Default',
+			`should show an 'In use' status for a non-default, active q.reuseId`
+		)
+	}
 
 	opts.pill.Inner.dom.tip.hide()
 	test.end()
