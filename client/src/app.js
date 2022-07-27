@@ -842,6 +842,14 @@ async function launchmdssamplescatterplot(arg, app) {
 		}
 		arg.dslabel = arg.dataset
 		delete arg.dataset
+
+		if (arg.mds.mdsIsUninitiated) {
+			const d = await dofetch3(`getDataset?genome=${arg.genome}&dsname=${arg.dslabel}`)
+			if (d.error) throw d.error
+			if (!d.ds) throw 'ds missing'
+			Object.assign(arg.mds, d.ds)
+			delete arg.mds.mdsIsUninitiated
+		}
 	} else if (arg.analysisdata) {
 		// validate later
 	} else if (arg.analysisdata_file) {
