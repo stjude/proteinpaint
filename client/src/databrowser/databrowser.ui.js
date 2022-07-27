@@ -61,7 +61,7 @@ export function init_databrowserUI(holder, debugmode) {
 		.style('align-items', 'center')
 		.style('margin', '40px 0px 40px 130px')
 
-	submitButton(controlBtns_div, obj, holder)
+	submitButton(controlBtns_div, obj, wrapper, holder)
 	makeResetBtn(controlBtns_div, obj)
 
 	//Remove after testing
@@ -200,7 +200,7 @@ function makeCopyPasteInput(div, obj) {
  **** Submission Functions ****
  */
 
-function submitButton(div, obj, holder) {
+function submitButton(div, obj, wrapper, holder) {
 	const submit = uiutils.makeBtn({
 		div,
 		text: 'Create Data Browser',
@@ -223,7 +223,7 @@ function submitButton(div, obj, holder) {
 				sayerror(sayerrorDiv, 'Please provide data')
 				setTimeout(() => sayerrorDiv.remove(), 3000)
 			} else {
-				div.remove()
+				wrapper.remove()
 				console.log(449, obj.data.terms)
 				appInit({
 					holder: holder,
