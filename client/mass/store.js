@@ -46,6 +46,14 @@ const defaultState = {
 			lst: []
 		}
 	},
+	reuse: {
+		customTermQ: {
+			byId: {},
+			// non-dictionary terms do not have a term.id,
+			// save by term.type + name?
+			byName: {}
+		}
+	},
 	autoSave: true
 }
 
@@ -271,7 +279,59 @@ TdbStore.prototype.actions = {
 				parent.lst[i] = replacementFilter
 			}
 		}
+	},
+
+	cache_termq({ termId, q }) {
+		// TODO: support caching by term.name
+		if (!termId) throw `missing termId for caching custom term.q`
+		if (!q?.reuseId) throw `missing or empty tw.q.reuseId as cache identifier for term='${termId}'`
+		const cache = this.state.reuse.customTermQ.byId
+		if (!cache[termId]) cache[termId] = {}
+		cache[termId][q.reuseId] = q
+
+		// apply this change to all plots that use the same term.q cache
+		for (const plot of this.state.plots) {
+			if (!(plot.chartType in getTwsByChartType)) continue
+			const twlst = getTwsByChartType[plot.chartType](plot)
+			for (const tw of twlst) {
+				if (tw?.q?.reuseId === q.reuseId) tw.q = q
+			}
+		}
+	},
+
+	uncache_termq({ term, q }) {
+		// TODO: support uncaching by term.name
+		if (!term.id) throw `missing term.id for uncaching custom term.q`
+		if (!q.reuseId) throw `missing qname as uncache identifier for term.id='${term.id}'`
+		const cache = this.state.reuse.customTermQ.byId[term.id]
+		if (!cache) throw `missing term.q cache for term.id='${term.id}`
+		if (!(q.reuseId in cache)) console.warn(`q.reuseId='${q.cacheid}' not cached for term.id='${term.id}'`)
+		else {
+			delete cache[q.reuseId]
+			// apply this change to all plots that use the same term.q cache
+			for (const plot of this.state.plots) {
+				if (!(plot.chartType in getTwsByChartType)) continue
+				const twlst = getTwsByChartType[plot.chartType](plot)
+				for (const tw of twlst) {
+					if (tw.q.reuseId === q.reuseId) {
+						delete tw.q.reuseId
+						delete tw.q.name
+					}
+				}
+			}
+		}
 	}
+}
+
+// each chartType should have a getter function
+// to return all the term wrappers in the plot config
+const getNestedChartSeriesDataTws = plot => [plot.term0, plot.term, plot.term2].filter(d => !!d)
+const getTwsByChartType = {
+	barchart: getNestedChartSeriesDataTws,
+	survival: getNestedChartSeriesDataTws,
+	cuminc: getNestedChartSeriesDataTws,
+	regression: plot => [plot.outcome, ...plot.independent].filter(d => !!d),
+	matrix: plot => plot.termgroups.reduce((arr, grp) => arr.push(...grp.lst), [])
 }
 
 // must use the await keyword when using this storeInit()

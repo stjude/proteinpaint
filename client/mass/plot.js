@@ -9,6 +9,7 @@ class MassPlot {
 	}
 
 	reactsTo(action) {
+		if (action.type.includes('cache_termq')) return true
 		if (action.type.startsWith('plot_')) {
 			return action.id === this.id
 		}

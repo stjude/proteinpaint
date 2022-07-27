@@ -310,6 +310,7 @@ export function setGroupsettingMethods(self) {
 			.style('font-size', '.8em')
 			.style('float', 'right')
 			.style('text-transform', 'uppercase')
+			.style('cursor', 'pointer')
 			.text('Apply')
 			.on('click', () => {
 				const name_inputs = groups_holder.node().querySelectorAll('input')
