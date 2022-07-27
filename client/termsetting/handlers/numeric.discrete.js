@@ -54,60 +54,6 @@ export function getHandler(self) {
 
 		async showEditMenu(div) {
 			showBinsMenu(self, div)
-
-			/*
-			const qlst = self.vocabApi.getCustomTermQLst(self.term).sort((a, b) => (a.name === self.q.name ? -1 : 0))
-
-			const templateQ = JSON.parse(JSON.stringify(self.q))
-			delete templateQ.name
-			qlst.push(templateQ)
-
-			const div = _div.append('div').style('display', 'grid') //.style('grid-auto-columns', '1fr')
-			for (const q of qlst) {
-				const qIsActive = q.name && self.q.name === q.name
-				div
-					.append('div')
-					.datum(q)
-					.style('margin', '5px')
-					.style('text-align', 'center')
-					//.style('display', 'inline-block')
-					//.style('width', '80%')
-					.style('padding', '5px')
-					.style('background-color', qIsActive ? '#fff' : '#eee')
-					//.style('border', qIsActive ? '1px solid #' : 'none')
-					.style('border-radius', '5px')
-					.style('font-size', '.9em')
-					.style('cursor', qIsActive ? '' : 'pointer')
-					.html(!q.name ? 'Redivide bins' : qIsActive ? `Using ${q.name}` : `Use ${q.name}`)
-					.on('click', qIsActive ? null : editQ)
-
-				if (q.name) {
-					div
-						.append('div')
-						.style('grid-column', '2/3')
-						.style('margin', '5px')
-						.style('padding', '5px')
-						.style('cursor', 'pointer')
-						.style('color', '#999')
-						.style('font-size', '.8em')
-						.text('DELETE')
-						.on('click', async () => {
-							await self.vocabApi.uncacheTermQ(self.term, self.q)
-							if (q.name === self.q.name) delete self.q.name
-							self.dom.tip.hide()
-						})
-				}
-			}
-
-			function editQ(q) {
-				if (!q.name) {
-					div.selectAll('*').remove()
-					showBinsMenu(self, div)
-				} else self.runCallback({ q })
-			}
-
-			self.renderQNameInput(div, `Binning`)
-			*/
 		}
 	}
 }
@@ -342,7 +288,7 @@ function renderTypeInputs(self) {
 	const div = self.dom.bins_div.append('div').style('margin', '10px')
 	const tabs = [
 		{
-			active: self.q.type == 'regular-bin' && !self.q.name,
+			active: self.q.type == 'regular-bin',
 			label: 'Same bin size',
 			callback: async div => {
 				self.q.type = 'regular-bin'
@@ -356,7 +302,7 @@ function renderTypeInputs(self) {
 			}
 		},
 		{
-			active: self.q.type == 'custom-bin' && !self.q.name,
+			active: self.q.type == 'custom-bin',
 			label: 'Varying bin sizes',
 			callback: async div => {
 				self.q.type = 'custom-bin'

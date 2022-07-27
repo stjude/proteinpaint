@@ -601,7 +601,7 @@ function setInteractivity(self) {
 			.style('margin', '2px 5px')
 			.each(function(q) {
 				const tr = select(this)
-				const inuse = deepEqual(self.q, q) || qlst.length === 1
+				const inuse = deepEqual(self.q, q)
 
 				tr.append('td')
 					.style('min-width', '180px')
@@ -618,6 +618,10 @@ function setInteractivity(self) {
 						.style('min-width', '80px')
 						.html('Use')
 						.on('click', () => {
+							if (q.reuseId === 'Default') {
+								delete q.reuseId
+								delete q.name
+							}
 							self.q = q
 							self.dom.tip.hide()
 							self.runCallback()
