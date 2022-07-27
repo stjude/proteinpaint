@@ -144,8 +144,8 @@ tape('menuOptions', async test => {
 })
 
 tape('Reuse option', async test => {
-	test.timeoutAfter(2000)
-	test.plan(7)
+	test.timeoutAfter(5000)
+	test.plan(9)
 
 	const app = {}
 	const opts = await getOpts({
@@ -196,6 +196,55 @@ tape('Reuse option', async test => {
 		0,
 		'should not have a delete button for the default setting'
 	)
+
+	await sleep(100)
+	opts.tsData = {
+		term: termjson['agedx'],
+		q: {
+			reuseId: `Setting #1`,
+			type: 'custom-bin',
+			mode: 'discrete',
+			lst: [
+				{
+					startunbounded: true,
+					stop: 5,
+					startinclusive: true
+				},
+				{
+					start: 5,
+					startinclusive: true,
+					stopunbounded: true
+				}
+			]
+		}
+	}
+
+	await opts.pill.main(opts.tsData)
+	await opts.pillMenuClick('Reuse')
+	opts.app.dispatch = action => {
+		if (action.type != 'cache_termq') test.fail(`should dispatch action.type='cache_termq'`)
+		opts.app.opts.state.reuse.customTermQ.byId['agedx'] = {
+			[action.q.reuseId]: action.q
+		}
+	}
+
+	{
+		const saveBtns = [...tipn.querySelectorAll('button')].filter(td => td.innerHTML === 'Save')
+		saveBtns[0].click()
+	}
+	await sleep(100)
+	test.equal(
+		opts.holder.node().querySelector('.ts_summary_btn')?.innerHTML,
+		opts.tsData.q.reuseId,
+		`should display an active reuseId as pill status`
+	)
+	await opts.pillMenuClick('Edit')
+	test.equal(
+		tipn.querySelector('.sjpp-active').innerHTML,
+		`Varying bin sizes`,
+		`should open the numeric edit menu to the correct tab of the reused q.mode`
+	)
+
 	opts.pill.Inner.dom.tip.hide()
 	test.end()
 })

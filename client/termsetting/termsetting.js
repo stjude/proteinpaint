@@ -224,23 +224,6 @@ class TermSetting {
 		}
 		this.handler = this.handlerByType[typeSubtype]
 	}
-
-	renderQNameInput(div, prefix = `Configuration`) {
-		div
-			.append('div')
-			.attr('class', 'sja_menuoption')
-			.style('grid-column', '1')
-			//.style('width', '80%')
-			/*.style('margin', '5px')
-			.style('padding', '5px')
-			.style('text-align', 'center')
-			.style('background-color', '#eee')
-			.style('border-radius', '5px')
-			.style('font-size', '.9em')
-			.style('cursor', 'pointer')*/
-			.html('Save this term configuration')
-			.on('click', () => console.log(`!!! rewrite save code !!!`))
-	}
 }
 
 export const termsettingInit = getInitFxn(TermSetting)
@@ -574,7 +557,7 @@ function setInteractivity(self) {
 			.on('click', () => {
 				const reuseId = qNameInput.property('value').trim() || qlst.nextReuseId
 				self.q.reuseId = reuseId
-				self.q.name = self.q.reuseId
+				//self.q.name = self.q.reuseId
 				self.vocabApi.cacheTermQ(self.term, self.q)
 				self.runCallback()
 				self.dom.tip.hide()
@@ -601,8 +584,7 @@ function setInteractivity(self) {
 			.style('margin', '2px 5px')
 			.each(function(q) {
 				const tr = select(this)
-				const inuse = deepEqual(self.q, q)
-
+				const inuse = equivalentQs(self.q, q)
 				tr.append('td')
 					.style('min-width', '180px')
 					//.style('border-bottom', '1px solid #eee')
@@ -709,6 +691,20 @@ function setInteractivity(self) {
 			.style('padding-left', '5px')
 			.style('border-left', '2px solid #ccc')
 	}
+}
+
+// do not consider irrelevant q attributes when
+// computing the deep equality of two term.q's
+function equivalentQs(q0, q1) {
+	const qlst = [q0, q1].map(q => JSON.parse(JSON.stringify(q)))
+	for (const q of qlst) {
+		delete q.binLabelFormatter
+		if (q.reuseId === 'Default') delete q.reuseId
+		// TODO: may need to delete non-relevant q attributes
+		// when setting defaults in regression.inputs.term.js
+		if (q.mode === 'continuous') delete q.mode
+	}
+	return deepEqual(qlst[0], qlst[1])
 }
 
 function getDefaultHandler(self) {
