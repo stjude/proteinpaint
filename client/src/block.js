@@ -885,6 +885,8 @@ export class Block {
 
 		/*** new mds datasets ***/
 
+		let hasMdsDatasets = false
+
 		if (arg.datasetqueries) {
 			if (!Array.isArray(arg.datasetqueries)) {
 				this.error('datasetqueries should be array')
@@ -896,13 +898,22 @@ export class Block {
 					if (!ds) return this.error('invalid dataset name: ' + q.dataset)
 					if (!ds.isMds) return this.error('query not supported in dataset: ' + q.dataset)
 					this.mds_load_query_bykey(ds, q)
+
+					hasMdsDatasets = true
 				})
 			}
 		}
 
 		// help set block.busy off when there is no track to load
 		this.ifbusy()
-		if (this.tklst.length == 0) {
+
+		if (this.tklst.length == 0 && !hasMdsDatasets) {
+			/* show this error when there's no tracks to be loaded
+			since the client-side dataset are async loaded, things from datasetqueries
+			is not awaited (cannot do in Construtor)
+			thus the mds track obj will not be added to this.tklst
+			causing the empty tklst array
+			*/
 			this.error(
 				'No tracks specified. If you don\'t expect to see this, delete the "block:true" from runproteinpaint() argument.'
 			)
