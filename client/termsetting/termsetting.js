@@ -103,6 +103,12 @@ class TermSetting {
 		*/
 		const arg = this.term ? { id: this.term.id, term: this.term, q: this.q } : {}
 		if ('$id' in this) arg.$id = this.$id
+		if (arg.q?.reuseId && arg.q.reuseId === this.data.q?.reuseId) {
+			if (!deepEqual(arg.q, this.data.q)) {
+				delete arg.q.reuseId
+				delete arg.q.name
+			}
+		}
 		this.opts.callback(overrideTw ? copyMerge(JSON.stringify(arg), overrideTw) : arg)
 	}
 
@@ -134,6 +140,8 @@ class TermSetting {
 			this.hasError = false
 			delete this.error
 			this.validateMainData(data)
+			// may need original values for comparing edited settings
+			this.data = data
 			// term is read-only if it comes from state, let it remain read-only
 			this.term = data.term
 			this.q = JSON.parse(JSON.stringify(data.q)) // q{} will be altered here and must not be read-only
