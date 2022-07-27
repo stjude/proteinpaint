@@ -1,0 +1,13 @@
+{
+    "ppcalls": [
+        {
+            "is_ui": true, 
+            "runargs": {
+                "noheader": true,
+                "nobox": 1, 
+                "parseurl": false, 
+                "tkui": "genefusion"
+            }
+        }
+    ]
+}

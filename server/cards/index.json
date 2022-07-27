@@ -102,6 +102,15 @@
             "searchterms": ["Allele-specific gene expression"]
         },
         {
+            "name": "Gene Fusion",
+            "app": "Genome Browser",
+            "hidden": true,
+            "blurb": "",
+            "image": "",
+            "sandboxjson": "genefusion",
+            "searchterms": [""]
+        },
+        {
             "name": "BAM",
             "app": "Genome Browser",
             "isbeta": 1,
