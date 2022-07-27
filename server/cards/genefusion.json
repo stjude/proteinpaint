@@ -8,6 +8,18 @@
                 "parseurl": false, 
                 "tkui": "genefusion"
             }
+        },
+        {
+            "runargs": {
+                "noheader": true,
+                "nobox": 1, 
+                "parseurl": false, 
+                "genome": "hg19",
+                "genefusion":{
+                    "text": "PAX5,NM_016734,201,JAK2,NM_004972,812",
+		            "positionType": "codon"
+                }
+            }
         }
     ]
 }

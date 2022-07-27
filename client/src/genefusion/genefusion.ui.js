@@ -28,6 +28,8 @@ export function init_geneFusionUI(holder, genomes, debugmode) {
 
 	// makeSectionHeader(wrapper, 'Gene Fusion')
 
+	uiutils.makeTextAreaInput({ div: wrapper, cols: 50, placeholder:'Example: PAX5,NM_016734,201,JAK2,NM_004972,812' })
+
 	const dropdown_div = wrapper
 		.append('div')
 		.style('display', 'flex')
@@ -36,13 +38,11 @@ export function init_geneFusionUI(holder, genomes, debugmode) {
 	uiutils.makeGenomeDropDown(dropdown_div, genomes)
 	makePositionDropDown(dropdown_div)
 
-	uiutils.makeTextAreaInput({ div: wrapper, cols: 50 })
-
 	const controlBtns_div = wrapper
 		.append('div')
 		.style('display', 'flex')
 		.style('align-items', 'center')
-		.style('margin', '20px 0px 40px 130px')
+		.style('margin', '40px 0px 40px 130px')
 	makeSubmit(controlBtns_div)
 	makeResetBtn(controlBtns_div)
 

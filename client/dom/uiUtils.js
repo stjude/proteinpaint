@@ -18,7 +18,7 @@ makeTextInput()
     - placeholder (optional): STR
 	- size (optional): INT
 
-makeTextAreaInput()
+makeTextAreaInput({})
 	Creates a text area, mainly for copying and pasting data
     - div
     - placeholder (optional): STR
@@ -29,7 +29,7 @@ makeFileUpload()
 	Creates upload input for files
     - div
 
-makeBtn()
+makeBtn({})
 	Simplifed button and styling for UIs
     - div
 	- text: STR

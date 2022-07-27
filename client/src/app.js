@@ -1383,7 +1383,7 @@ async function launch_tkUIs(arg, app) {
 		p.init_databrowserUI(app.holder, app.debugmode)
 	}
 	if (arg.tkui == 'genefusion') {
-		const p = await import('./genefusion.ui')
+		const p = await import('./genefusion/genefusion.ui')
 		p.init_geneFusionUI(app.holder, app.genomes, app.debugmode)
 	}
 }
