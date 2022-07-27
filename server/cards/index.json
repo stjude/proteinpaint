@@ -107,6 +107,7 @@
             "hidden": true,
             "blurb": "",
             "image": "",
+            "new_expire": "2022-09-01",
             "sandboxjson": "genefusion",
             "searchterms": [""]
         },

@@ -28,7 +28,7 @@ export function init_geneFusionUI(holder, genomes, debugmode) {
 
 	// makeSectionHeader(wrapper, 'Gene Fusion')
 
-	uiutils.makeTextAreaInput({ div: wrapper, cols: 50, placeholder:'Example: PAX5,NM_016734,201,JAK2,NM_004972,812' })
+	makeFusionInput(wrapper, obj)
 
 	const dropdown_div = wrapper
 		.append('div')
@@ -43,8 +43,8 @@ export function init_geneFusionUI(holder, genomes, debugmode) {
 		.style('display', 'flex')
 		.style('align-items', 'center')
 		.style('margin', '40px 0px 40px 130px')
-	makeSubmit(controlBtns_div)
-	makeResetBtn(controlBtns_div)
+	makeSubmit(controlBtns_div, obj)
+	makeResetBtn(controlBtns_div, obj)
 
 	makeInfoSection(wrapper)
 
@@ -67,6 +67,21 @@ function makeSectionHeader(div, text) {
 		.style('opacity', '0.4')
 }
 
+function makeFusionInput(div, obj) {
+	const fusionInput = uiutils
+		.makeTextAreaInput({
+			div,
+			cols: 50,
+			placeholder: 'Example: PAX5,NM_016734,201,JAK2,NM_004972,812'
+		})
+		.style('border', '1px solid rgb(138, 177, 212)')
+		.style('margin', '0px 0px 0px 20px')
+		.classed('genefusion_input', true)
+		.on('keyup', async () => {
+			obj.data = fusionInput.property('value').trim()
+		})
+}
+
 function makePositionDropDown(div) {
 	const dropdown_div = div.append('div')
 
@@ -80,13 +95,13 @@ function makePositionDropDown(div) {
 	select.append('option').text('Genomic position')
 }
 
-function makeSubmit(div) {
+function makeSubmit(div, obj) {
 	const submit = uiutils.makeBtn({
 		div,
 		text: 'Submit'
 	})
 	submit.style('display', 'block').on('click', () => {
-		//do stuff
+		console.log(obj.data)
 	})
 }
 
@@ -105,7 +120,8 @@ function makeResetBtn(div, obj) {
 		.style('margin', '0px 10px')
 		.attr('type', 'reset')
 		.on('click', async () => {
-			//TODO
+			d3selectAll('.genefusion_input').property('value', '')
+			if (obj.data) obj.data = ''
 		})
 }
 
