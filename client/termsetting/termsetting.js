@@ -564,7 +564,7 @@ function setInteractivity(self) {
 			.append('input')
 			.attr('type', 'text')
 			.attr('placeholder', qlst.nextReuseId)
-			.attr('value', self.q.reuseId || null)
+			.attr('value', self.q.reuseId || qlst.nextReuseId)
 		//.style('width', '300px')
 
 		saveDiv
@@ -572,7 +572,8 @@ function setInteractivity(self) {
 			.style('margin-left', '5px')
 			.html('Save')
 			.on('click', () => {
-				self.q.reuseId = qNameInput.property('value') || qlst.nextReuseId
+				const reuseId = qNameInput.property('value').trim() || qlst.nextReuseId
+				self.q.reuseId = reuseId
 				self.q.name = self.q.reuseId
 				self.vocabApi.cacheTermQ(self.term, self.q)
 				self.runCallback()
@@ -604,8 +605,8 @@ function setInteractivity(self) {
 
 				tr.append('td')
 					.style('min-width', '180px')
-					//.style('padding', '5px')
-					//.style('font-weight', 600)
+					//.style('border-bottom', '1px solid #eee')
+					.style('text-align', 'center')
 					.html(q.name || q.reuseId)
 
 				const useTd = tr.append('td').style('text-align', 'center')
