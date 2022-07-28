@@ -1,41 +1,53 @@
 const got = require('got')
+const path = require('path')
+
+/*
+hardcoded logic to work with gdc apis
+exports one function
+
+input: <inputId>
+	a gdc id of unspecified type entered by user on the ui
+
+does:
+	determine the type of id by trying to query multiple gdc apis
+	/cases/<inputId>
+		valid return indicates the id is about a case
+		will fetch all bam files eligible for slicing
+		and return to client
+	/files/<inputId>
+		valid return indicates the id is about a file
+		must also ensure it's a bam file? test with a maf file
+		will fetch info about the case of this file
+*/
 
 const apihost = process.env.PP_GDC_HOST || 'https://api.gdc.cancer.gov'
 
-// type of gdc_ids
+const filesApi = {
+	end_point: path.join(apihost, 'files/'),
+	fields: [
+		'id',
+		'file_size',
+		'experimental_strategy',
+		'associated_entities.entity_submitter_id', // semi human readable
+		'associated_entities.entity_type',
+		'associated_entities.case_id', // case uuid
+		'cases.samples.sample_type',
+		'analysis.workflow_type' // to drop out those as skip_workflow_type
+	],
+	size: 100
+}
+const casesApi = {
+	end_point: path.join(apihost, 'cases/'),
+	fields: ['case_id']
+}
+
+// types of GDC ids
 const filter_types = [
 	{ is_file_uuid: 1, field: 'file_id' },
 	{ is_file_id: 1, field: 'file_name' },
 	{ is_case_uuid: 1, field: 'cases.case_id' },
 	{ is_case_id: 1, field: 'cases.submitter_id' }
 ]
-
-// type of gdc_apis
-// NOTE: it's need to use '/cases/' and '/files/' endpoints,
-// because if case_id/case_uuid supplied, it must be checked with '/cases/' endpoint
-// throw error if it's invalid and if it's valid, check if files are available for that
-// refer to example rest queries at this document:
-// https://docs.google.com/document/d/1WzrrCUrY2A4u7PGDQeDZN8U3oLJAd-4wxuXPaQTIr_s/edit?usp=sharing
-const gdc_apis = {
-	gdc_files: {
-		end_point: apihost + '/files/',
-		fields: [
-			'id',
-			'file_size',
-			'experimental_strategy',
-			'associated_entities.entity_submitter_id', // semi human readable
-			'associated_entities.entity_type',
-			'associated_entities.case_id', // case uuid
-			'cases.samples.sample_type',
-			'analysis.workflow_type' // to drop out those as skip_workflow_type
-		],
-		size: 100
-	},
-	gdc_cases: {
-		end_point: apihost + '/cases/',
-		fields: ['case_id']
-	}
-}
 
 const skip_workflow_type = 'STAR 2-Pass Transcriptome'
 // will also drop out those with workflow containing "chimeric"
@@ -44,11 +56,9 @@ const sequencing_read_filter = { op: '=', content: { field: 'data_category', val
 
 export async function gdc_bam_request(req, res) {
 	try {
-		if (req.query.gdc_id) {
-			const gdc_data = await get_gdc_data(req.query.gdc_id)
-			res.send(gdc_data)
-			return
-		}
+		if (!req.query.gdc_id) throw 'query.gdc_id missing'
+		const bamdata = await get_gdc_data(req.query.gdc_id)
+		res.send(bamdata)
 	} catch (e) {
 		res.send({ error: e.message || e })
 		if (e.stack) console.log(e.stack)
@@ -56,7 +66,7 @@ export async function gdc_bam_request(req, res) {
 }
 
 async function get_gdc_data(gdc_id) {
-	// data to returned
+	// data to be returned
 	const bamdata = {
 		file_metadata: []
 	}
@@ -99,36 +109,57 @@ async function try_query(gdc_id, bamdata) {
 			}
 		]
 	}
+
 	let re,
 		valid_case_id = true,
 		valid_case_uuid = true
-	// iterate through filter_types (4 possibilities: file_id, file_uuid, case_id or case_uuid)
-	// it's better to iterate using for loop, because all 4 flags must be updated for each possibility
-	// for example, valid_case_uuid and valid_case_id, both can be false for invalid gdc id
+
+	/*
+	jaimin's code. maybe clever. VERY tricky and confusing. impossible to maintain
+	if input is file id or file uuid:
+		runs /files/ query, get valid input, and break loop (will not run /cases/)
+	if input is case id or case uuid:
+		runs /files/ query, gets no return
+		next, runs /cases/ query, works.
+		!Then! continue to run /files/ with the sequencing_read_filter
+
+
+	iterate through filter_types (4 possibilities: file_id, file_uuid, case_id or case_uuid)
+	it's better to iterate using for loop, because all 4 flags must be updated for each possibility
+	for example, valid_case_uuid and valid_case_id, both can be false for invalid gdc id
+	*/
+
 	for (const f of filter_types) {
 		filter.content[0].content.field = f.field
 		// scenario 1: entered id is case_uuid or case_id
-		// process: query gdc_cases endpoint and see if any hits/case returned
+		// process: query cases endpoint and see if any hits/case returned
 		// outcome 1: valid case_uuid or case_id, add seq_read_filter
 		// outcome 2: invalid case_uuid or case_uuid (no hits/case)
 		if (f.is_case_uuid || f.is_case_id) {
 			// check if submitted id is valid case id or not
-			const case_check = await query_gdc_api(filter, gdc_apis.gdc_cases)
+			const case_check = await query_gdc_api(filter, casesApi)
 			if (!case_check.data.hits.length) {
 				if (f.is_case_uuid) valid_case_uuid = false
 				else if (f.is_case_id) valid_case_id = false
+				console.log(111, f.is_case_uuid ? 'case uuid' : 'case id')
 				continue
 			}
+
+			console.log(999, f.is_case_uuid ? 'case uuid' : 'case id')
+
 			filter.content.push(sequencing_read_filter)
 		}
 		// scenario 2: entered id is file_id or file_uuid
 		// process: query gdc_files endpoint and see if any hits/files returned
 		// outcome: add is_file_id or is_file_uuid = true in bamdata
-		re = await query_gdc_api(filter, gdc_apis.gdc_files)
+		re = await query_gdc_api(filter, filesApi)
 		if (re.data.hits.length) {
 			bamdata[Object.keys(f)[0]] = true
+
+			console.log(999, f.is_file_uuid ? 'file uuid' : 'file id')
 			break
 		}
+		console.log(111, f.is_file_uuid ? 'file uuid' : 'file id')
 	}
 	return [re, valid_case_uuid, valid_case_id]
 }
