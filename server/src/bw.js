@@ -1,7 +1,9 @@
 const app = require('./app'),
 	createCanvas = require('canvas').createCanvas,
 	utils = require('./utils')
-
+const serverconfig = require('./serverconfig')
+const spawn = require('child_process').spawn
+const bigwigsummary = serverconfig.bigwigsummary
 /*
 
 NOTE:
@@ -55,11 +57,18 @@ export async function handle_tkbigwig(req, res) {
 		}
 
 		for (const r of req.query.rglst) {
-			const input_data =
-				file + ',' + r.chr + ',' + r.start + ',' + r.stop + ',' + Math.ceil(r.width * (req.query.dotplotfactor || 1))
+			let out
+			console.log('serverconfig.features.bigwig_rust:', serverconfig.features.bigwig_rust)
+			if (serverconfig.features.bigwig_rust) {
+				// When bigwig_rust is defined in serverconfig.json, bigwig rust binary will be used to query the bigwig file (currently experimental!!)
+				const input_data =
+					file + ',' + r.chr + ',' + r.start + ',' + r.stop + ',' + Math.ceil(r.width * (req.query.dotplotfactor || 1))
 
-			const out = await utils.run_rust('bigwig', input_data)
-
+				out = await utils.run_rust('bigwig', input_data)
+			} else {
+				// When this flag is not defined, the ucsc bigwigsummary will be used to query the bigwig file
+				out = await run_bigwigsummary(req, r, file)
+			}
 			// TODO detect error string in out
 
 			r.values = out
@@ -308,4 +317,35 @@ function makeyscale() {
 		return yscale
 	}
 	return yscale
+}
+
+function run_bigwigsummary(req, r, file) {
+	return new Promise((resolve, reject) => {
+		const ps = spawn(bigwigsummary, [
+			'-udcDir=' + serverconfig.cachedir,
+			file,
+			r.chr,
+			r.start,
+			r.stop,
+			Math.ceil(r.width * (req.query.dotplotfactor || 1))
+		])
+		const out = []
+		const out2 = []
+		ps.stdout.on('data', i => out.push(i))
+		ps.stderr.on('data', i => out2.push(i))
+		ps.on('close', code => {
+			const err = out2.join('')
+			if (err.length) {
+				if (err.startsWith('no data')) {
+					r.nodata = true
+				} else {
+					// in case of invalid file the message is "Couldn't open /path/to/tp/..."
+					// must not give away the tp path!!
+					reject('Cannot read bigWig file')
+				}
+			} else {
+				resolve(out.toString())
+			}
+		})
+	})
 }
