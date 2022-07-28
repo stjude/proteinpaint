@@ -41,7 +41,9 @@ const casesApi = {
 	fields: ['case_id']
 }
 
-// types of GDC ids
+/* types of GDC ids
+tricky: element order matters. should redo to use simpler logic
+*/
 const filter_types = [
 	{ is_file_uuid: 1, field: 'file_id' },
 	{ is_file_id: 1, field: 'file_name' },
@@ -79,8 +81,10 @@ async function get_gdc_data(gdc_id) {
 	else if (!re.data.hits.length) throw 'Invalid GDC ID'
 	// scenario 3: 1 or multiple hits/files are available for submitted gdc id
 	for (const s of re.data.hits) {
+		/*
 		if (s.analysis.workflow_type == skip_workflow_type) continue // skip
 		if (s.analysis.workflow_type.toLowerCase().includes('chimeric')) continue
+		*/
 
 		const file = {}
 		file.file_uuid = s.id
@@ -131,10 +135,12 @@ async function try_query(gdc_id, bamdata) {
 
 	for (const f of filter_types) {
 		filter.content[0].content.field = f.field
+
 		// scenario 1: entered id is case_uuid or case_id
 		// process: query cases endpoint and see if any hits/case returned
 		// outcome 1: valid case_uuid or case_id, add seq_read_filter
 		// outcome 2: invalid case_uuid or case_uuid (no hits/case)
+
 		if (f.is_case_uuid || f.is_case_id) {
 			// check if submitted id is valid case id or not
 			const case_check = await query_gdc_api(filter, casesApi)
@@ -145,14 +151,44 @@ async function try_query(gdc_id, bamdata) {
 				continue
 			}
 
+			// gdc_id is a case or uuid
+			// do not break or continue, run the /files/ query to get its files
+
 			console.log(999, f.is_case_uuid ? 'case uuid' : 'case id')
 
 			filter.content.push(sequencing_read_filter)
 		}
+
 		// scenario 2: entered id is file_id or file_uuid
 		// process: query gdc_files endpoint and see if any hits/files returned
 		// outcome: add is_file_id or is_file_uuid = true in bamdata
-		re = await query_gdc_api(filter, filesApi)
+
+		/* wendy's method to check for bam files that are indexed
+		 */
+		const tmpfilter = JSON.parse(JSON.stringify(filter))
+		tmpfilter.content.push({
+			op: '=',
+			content: {
+				field: 'index_files.data_format',
+				value: 'bai'
+			}
+		})
+		tmpfilter.content.push({
+			op: '=',
+			content: {
+				field: 'data_type',
+				value: 'Aligned Reads'
+			}
+		})
+		tmpfilter.content.push({
+			op: '=',
+			content: {
+				field: 'data_format',
+				value: 'bam'
+			}
+		})
+
+		re = await query_gdc_api(tmpfilter, filesApi)
 		if (re.data.hits.length) {
 			bamdata[Object.keys(f)[0]] = true
 
@@ -166,16 +202,15 @@ async function try_query(gdc_id, bamdata) {
 
 async function query_gdc_api(query_filter, gdc_api) {
 	const headers = { 'Content-Type': 'application/json', Accept: 'application/json' }
-	const response = await got(
-		gdc_api.end_point +
-			'?filters=' +
-			encodeURIComponent(JSON.stringify(query_filter)) +
-			'&size=' +
-			(gdc_api.size || '10') +
-			'&fields=' +
-			gdc_api.fields.join(','),
-		{ method: 'GET', headers }
-	)
+
+	const data = {
+		filters: query_filter,
+		size: gdc_api.size || 10,
+		fields: gdc_api.fields.join(',')
+	}
+
+	const response = await got(gdc_api.end_point, { method: 'POST', headers, body: JSON.stringify(data) })
+
 	let re
 	try {
 		re = JSON.parse(response.body)
