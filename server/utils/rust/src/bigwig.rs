@@ -14,12 +14,13 @@
  url: cd .. && cargo build --release && time echo http://hgdownload.soe.ucsc.edu/goldenPath/hg19/encodeDCC/wgEncodeMapability/wgEncodeCrgMapabilityAlign100mer.bigWig,chr17,7584491,7585468,100 | target/release/bigwig
  time ~/proteinpaint/server/utils/bigWigSummary http://hgdownload.soe.ucsc.edu/goldenPath/hg19/encodeDCC/wgEncodeMapability/wgEncodeCrgMapabilityAlign100mer.bigWig chr17 7584491 7585468 100
 
- url: cd .. && cargo build --release && time echo https://proteinpaint.stjude.org/ppdemo/hg19/bigwig/file.bw,chr17,7568451,7591984,100 | target/release/bigwig
+ url: cd .. && cargo build --release && time echo https://proteinpaint.stjude.org/ppdemo/hg19/bigwig/file.bw,chr17,0,81195210,1140 | target/release/bigwig
  cd .. && cargo build --release && time echo /Users/rpaul1/proteinpaint/proteinpaint_demo/hg19/bigwig/file.bw,chr17,7579863,7579920,1140 | target/release/bigwig
  cd .. && cargo build --release && time echo /Users/rpaul1/proteinpaint/hg19/PCGP/DNA/cov-wgs/SJOS016_D.bw,chr17,0,81195210,1140 | target/release/bigwig
+ cd .. && cargo build --release && time echo https://proteinpaint.stjude.org/ppdemo/hg19/bigwig/temp.bw,chr17,0,81195210,1140 | target/release/bigwig
  ~/proteinpaint/server/utils/bigWigSummary /Users/rpaul1/proteinpaint/hg19/PCGP/DNA/cov-wgs/SJOS016_D.bw chr17 0 81195210 1140
 
- cd .. && cargo build --release && time echo http://hgdownload.soe.ucsc.edu/goldenPath/hg19/encodeDCC/wgEncodeMapability/wgEncodeCrgMapabilityAlign100mer.bigWig,chr17,6074169,9086266,1140 | target/release/bigwig (not working)
+ cd .. && cargo build --release && time echo http://hgdownload.soe.ucsc.edu/goldenPath/hg19/encodeDCC/wgEncodeMapability/wgEncodeCrgMapabilityAlign100mer.bigWig,chr17,0,81195210,1140 | target/release/bigwig (not working)
  ~/proteinpaint/server/utils/bigWigSummary http://hgdownload.soe.ucsc.edu/goldenPath/hg19/encodeDCC/wgEncodeMapability/wgEncodeCrgMapabilityAlign100mer.bigWig chr17 6074169 9086266 1140
 
 */
@@ -492,7 +493,7 @@ fn calculate_datapoints(
             }
         }
     } else {
-        // Read from a file
+        // Read from a local file
         let mut reader = BigWigRead::from_file_and_attach(&bigwig_file_url).unwrap();
         match zoom_level {
             Some(level) => {
