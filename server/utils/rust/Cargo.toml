@@ -12,6 +12,8 @@ autobins = false
 statrs = "^0.15"
 fishers_exact="^1.0"
 bio = "^0.39"
+bigtools = "^0.1.8"
+libmath = "^0.2.1"
 
 [profile.release]
 lto = "fat"
@@ -34,3 +36,7 @@ path="src/indel.rs"
 [[bin]]
 name="fisher"
 path="src/fisher.rs"
+
+[[bin]]
+name="bigwig"
+path="src/bigwig.rs"
