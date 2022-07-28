@@ -58,7 +58,7 @@ export async function handle_tkbigwig(req, res) {
 
 		for (const r of req.query.rglst) {
 			let out
-			console.log('serverconfig.features.bigwig_rust:', serverconfig.features.bigwig_rust)
+			//console.log('serverconfig.features.bigwig_rust:', serverconfig.features.bigwig_rust)
 			if (serverconfig.features.bigwig_rust) {
 				// When bigwig_rust is defined in serverconfig.json, bigwig rust binary will be used to query the bigwig file (currently experimental!!)
 				const input_data =
