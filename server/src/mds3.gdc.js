@@ -17,6 +17,7 @@ validate_query_genecnv
 querySamples_gdcapi
 	flattenCaseByFields
 	may_add_readdepth
+	may_add_projectAccess
 get_termlst2size
 validate_m2csq
 validate_ssm2canonicalisoform
