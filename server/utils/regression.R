@@ -75,7 +75,7 @@ suppressPackageStartupMessages({
   library(jsonlite)
   library(survival)
   library(parallel)
-#  library(lmtest) # disabled until package is available on servers
+  library(lmtest)
 #  library(car) # disabled until package is available on servers
 })
 
