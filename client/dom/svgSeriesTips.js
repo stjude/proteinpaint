@@ -36,18 +36,21 @@ export function getSeriesTip(line, rect, _tip = null) {
 
 	function mouseOver() {
 		const m = mouse(rectNode)
-		const x = opts.xScale.invert(m[0]).toFixed(2)
+		const xVal = +opts.xScale.invert(m[0]).toFixed(1)
+		// adding 0.5 makes the vertical line match the
+		// x-axis tick position exactly
+		const x = opts.xScale(xVal) + 0.5
 
 		line
 			.style('display', '')
-			.attr('x1', m[0])
-			.attr('x2', m[0])
+			.attr('x1', x)
+			.attr('x2', x)
 
 		const seriesHtmls = opts.serieses
 			.map(s => {
 				let matched
 				for (const d of s.data) {
-					if (d.x > x) break
+					if (d.x > xVal) break
 					matched = d
 				}
 				return !matched ? null : matched.html
@@ -55,7 +58,7 @@ export function getSeriesTip(line, rect, _tip = null) {
 			.filter(d => d)
 
 		if (seriesHtmls.length) {
-			tip.show(event.clientX, event.clientY).d.html(`Time: ${x}<br>` + seriesHtmls.map(d => d).join(opts.separator))
+			tip.show(event.clientX, event.clientY).d.html(`Time: ${xVal}<br>` + seriesHtmls.map(d => d).join(opts.separator))
 		} else {
 			tip.hide()
 		}
