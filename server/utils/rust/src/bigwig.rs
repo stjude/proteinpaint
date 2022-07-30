@@ -20,7 +20,7 @@
  cd .. && cargo build --release && time echo https://proteinpaint.stjude.org/ppdemo/hg19/bigwig/temp.bw,chr17,0,81195210,1140 | target/release/bigwig
  ~/proteinpaint/server/utils/bigWigSummary /Users/rpaul1/proteinpaint/hg19/PCGP/DNA/cov-wgs/SJOS016_D.bw chr17 0 81195210 1140
 
- cd .. && cargo build --release && time echo http://hgdownload.soe.ucsc.edu/goldenPath/hg19/encodeDCC/wgEncodeMapability/wgEncodeCrgMapabilityAlign100mer.bigWig,chr17,0,81195210,1140 | target/release/bigwig (not working)
+ cd .. && cargo build --release && time echo http://hgdownload.soe.ucsc.edu/goldenPath/hg19/encodeDCC/wgEncodeMapability/wgEncodeCrgMapabilityAlign100mer.bigWig,chr17,39963265,41231940,800 | target/release/bigwig (not working)
  ~/proteinpaint/server/utils/bigWigSummary http://hgdownload.soe.ucsc.edu/goldenPath/hg19/encodeDCC/wgEncodeMapability/wgEncodeCrgMapabilityAlign100mer.bigWig chr17 6074169 9086266 1140
 
 */
@@ -157,13 +157,12 @@ fn determine_min(n1: f64, n2: f64) -> f64 {
     }
 }
 
-#[allow(dead_code)]
 fn calculate_appropriate_zoom_level(zoom_headers: Vec<ZoomHeader>, difference: f64) -> Option<u32> {
     let mut reduction_levels = Vec::<u32>::new();
     let mut closest_level = Option::<u32>::None; // Zoom level will be none at base-pair resolution
     let mut unity_added = false;
-    let max_entries_parsed_limit = 100000; // Maximum number of entries that should be parsed from bigwig file. A very high number will lead to better accuracy as this will lead to selection of a lower zoom level. In contrast, a lower value will decrease run time at the cost of accuracy.
-                                           // Parsing out various zoom levels from bigwig file
+    let max_entries_parsed_limit = 10000; // Maximum number of entries that should be parsed from bigwig file. A very high number will lead to better accuracy as this will lead to selection of a lower zoom level. In contrast, a lower value will decrease run time at the cost of accuracy.
+                                          // Parsing out various zoom levels from bigwig file
     for reduction_level in zoom_headers
         .into_iter()
         .map(|entry| (entry.reduction_level))
@@ -190,6 +189,7 @@ fn calculate_appropriate_zoom_level(zoom_headers: Vec<ZoomHeader>, difference: f
     closest_level
 }
 
+#[allow(dead_code)]
 fn calculate_appropriate_zoom_level_ucsc(
     zoom_headers: Vec<ZoomHeader>,
     exact_offset: f64,
@@ -212,7 +212,7 @@ fn calculate_appropriate_zoom_level_ucsc(
             unity_added = true;
         }
         reduction_levels.reverse();
-        println!("reduction_levels:{:?}", reduction_levels);
+        //println!("reduction_levels:{:?}", reduction_levels);
         let mut closest_diff: u64 = 18446744073709551615; // Highest number allowed by u64 type
         for level in reduction_levels {
             let diff: u64 = (desired_reduction as i64 - level as i64).abs() as u64;
@@ -228,7 +228,7 @@ fn calculate_appropriate_zoom_level_ucsc(
     if closest_level == Some(1) && unity_added == true {
         closest_level = None;
     }
-    println!("closest_level:{:?}", closest_level);
+    //println!("closest_level:{:?}", closest_level);
     closest_level
 }
 
@@ -248,8 +248,8 @@ fn calculate_datapoints(
     let mut datapoints_sum = vec![0.0 as f64; datapoints as usize]; // Sum of all values within a region
     let mut datapoints_num = vec![0 as f64; datapoints as usize]; // Number of all values within a region
 
-    //let zoom_level = calculate_appropriate_zoom_level(zoom_headers, difference);
-    let zoom_level = calculate_appropriate_zoom_level_ucsc(zoom_headers, exact_offset);
+    let zoom_level = calculate_appropriate_zoom_level(zoom_headers, difference);
+    //let zoom_level = calculate_appropriate_zoom_level_ucsc(zoom_headers, exact_offset);
 
     let mut current_pos: f64 = start_pos as f64; // Initializing current_pos to start position
     for _i in 0..datapoints {
