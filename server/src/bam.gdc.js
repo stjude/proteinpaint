@@ -31,8 +31,8 @@ const filesApi = {
 		'associated_entities.entity_submitter_id', // semi human readable
 		'associated_entities.entity_type',
 		'associated_entities.case_id', // case uuid
-		'cases.samples.sample_type'
-		//'analysis.workflow_type' // to drop out those as skip_workflow_type
+		'cases.samples.sample_type',
+		'analysis.workflow_type' // to drop out those as skip_workflow_type
 	],
 	size: 100
 }
@@ -41,7 +41,7 @@ const casesApi = {
 	fields: ['case_id']
 }
 
-//const skip_workflow_type = 'STAR 2-Pass Transcriptome'
+const skip_workflow_type = 'STAR 2-Pass Transcriptome'
 
 export async function gdc_bam_request(req, res) {
 	try {
@@ -75,8 +75,9 @@ async function get_gdc_data(gdc_id) {
 	// 1 or multiple hits/files are available for submitted gdc id
 
 	for (const s of re.data.hits) {
-		/*
 		if (s.analysis.workflow_type == skip_workflow_type) continue // skip
+
+		/*
 		if (s.analysis.workflow_type.toLowerCase().includes('chimeric')) continue
 		*/
 
