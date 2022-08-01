@@ -359,12 +359,6 @@ export function get_term_cte(q, values, index, filter, termWrapper = null) {
 	if (typeof termq == 'string') {
 		termq = JSON.parse(decodeURIComponent(termq))
 	}
-	if (index == 1) {
-		if (q.getcuminc) {
-			termq.getcuminc = q.getcuminc
-			termq.grade = q.grade
-		}
-	}
 
 	const tablename = 'samplekey_' + index
 	/*
@@ -380,6 +374,8 @@ export function get_term_cte(q, values, index, filter, termWrapper = null) {
 		possible if only the bin labels are returned. Similar use cases may be supported
 		later.  
 	*/
+	// index position is dependent on server route
+	// TODO: investigate the utility of 'filter' argument (since get_rows() already performs filtering)
 	let CTE
 	if (term.type == 'categorical') {
 		const groupset = get_active_groupset(term, termq)
@@ -388,25 +384,15 @@ export function get_term_cte(q, values, index, filter, termWrapper = null) {
 		const mode = termq.mode == 'spline' ? 'cubicSpline' : termq.mode || 'discrete'
 		CTE = numericSql[mode].getCTE(tablename, term, q.ds, termq, values, index, filter)
 	} else if (term.type == 'condition') {
-		// index position is dependent on server route
-		// TODO: termq.mode == 'time-to-event' so that we don't need
-		// to check index or other flags
-		if (index == 1 && q.getcuminc) {
-			// CTE for cumulative incidence term
-			return conditionSql.cuminc.getCTE(tablename, term, q, values, filter)
-		} else if (q.getregression && q.regressionType == 'cox' && index === 0) {
-			// CTE for cox regression outcome term
-			return conditionSql.cox.getCTE(tablename, term, termq, values, filter)
-		} else {
-			// CTE for all other conditional terms
-			CTE = conditionSql.other.getCTE(tablename, term, q.ds, termq, values, index)
-		}
+		const mode = termq.mode || 'discrete'
+		// TODO: can add back 'filter' arg if performance degrades
+		CTE = conditionSql[mode].getCTE(tablename, term, termq, values /*, filter*/)
 	} else if (term.type == 'survival') {
 		CTE = makesql_survival(tablename, term, q, values, filter)
 	} else {
 		throw 'unknown term type'
 	}
-	if (index != 1) CTE.join_on_clause = `ON t${index}.sample = t1.sample`
+	if (index != 1) CTE.join_on_clause = `ON t${index}.sample = t1.sample` // will be ignored if no join clause is created by sql constructor
 	return CTE
 }
 
@@ -953,20 +939,16 @@ thus less things to worry about...
 			WHERE name LIKE ?`
 		)
 		const trueFilter = () => true
-		q.findTermByName = (n, limit, cohortStr = '', exclude_types = [], treeFilter = null, usecase = null) => {
+		q.findTermByName = (n, limit, cohortStr = '', treeFilter = null, usecase = null) => {
 			const vals = []
 			const tmp = sql.all([cohortStr, '%' + n + '%'])
 			if (tmp) {
 				const lst = []
-				const typeFilter = exclude_types.length ? a => !exclude_types.includes(a) : trueFilter
 				for (const i of tmp) {
 					const j = JSON.parse(i.jsondata)
 					j.id = i.id
 					j.included_types = i.included_types ? i.included_types.split(',') : []
-					if (usecase && isUsableTerm(j, usecase) != 'plot') continue
-					if (!exclude_types.includes(j.type) && j.included_types.filter(typeFilter).length) {
-						lst.push(j)
-					}
+					if (!usecase || isUsableTerm(j, usecase).has('plot')) lst.push(j)
 					if (lst.length == 10) break
 				}
 				return lst
@@ -1062,13 +1044,14 @@ thus less things to worry about...
 			if (!r.type) continue
 			// !!! r.cohort is undefined for dataset without subcohort
 			if (!(r.cohort in supportedChartTypes)) {
-				supportedChartTypes[r.cohort] = ['barchart', 'table', 'regression']
+				supportedChartTypes[r.cohort] = ['barchart', 'regression']
 				numericTypeCount[r.cohort] = 0
-				// why is app.features missing?
-				if (app.features && app.features.draftChartTypes) {
-					// TODO: move draft charts out of flag once stable
-					supportedChartTypes[r.cohort].push(...app.features.draftChartTypes)
-				}
+				if (ds.cohort.allowedChartTypes?.includes('matrix')) supportedChartTypes[r.cohort].push('matrix')
+			}
+			// why would app.features be missing?
+			if (app.features?.draftChartTypes) {
+				// TODO: move draft charts out of flag once stable
+				supportedChartTypes[r.cohort].push(...app.features.draftChartTypes)
 			}
 			if (r.type == 'survival' && !supportedChartTypes[r.cohort].includes('survival'))
 				supportedChartTypes[r.cohort].push('survival')
@@ -1081,6 +1064,12 @@ thus less things to worry about...
 			if (numericTypeCount[cohort] > 1) supportedChartTypes[cohort].push('scatterplot')
 		}
 
+		// may restrict the visible chart options
+		if (ds.cohort.allowedChartTypes) {
+			for (const cohort in supportedChartTypes) {
+				supportedChartTypes[cohort] = supportedChartTypes[cohort].filter(c => ds.cohort.allowedChartTypes.includes(c))
+			}
+		}
 		return supportedChartTypes
 	}
 }
@@ -1103,7 +1092,7 @@ function test_tables(cn) {
 
 // helper function to display or log the filled-in, constructed sql statement
 // use for debugging only, do not feed directly into better-sqlite3
-function interpolateSqlValues(sql, values) {
+export function interpolateSqlValues(sql, values) {
 	const vals = values.slice() // use a copy
 	let prevChar
 	return sql

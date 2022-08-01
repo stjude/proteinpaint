@@ -12,13 +12,11 @@ select term_id, term_id, 'Survival outcome', '{}', 1, 'survival', 1
 from survival
 group by term_id;
 
+-- import available terms data 
+.import terms.txt terms
+
 insert into terms
-select term_id, term_id, null, '{}', 1, '', 1
-from annotations
+select a.term_id, a.term_id, null, '{}', 1, '', 1
+from annotations a
+where a.term_id not in (select distinct(id) from terms)
 group by term_id;
-
-insert into ancestry (term_id, ancestor_id)
-values 
-('Event-free survival', 'Survival outcome'), 
-('Overall survival', 'Survival outcome');
-

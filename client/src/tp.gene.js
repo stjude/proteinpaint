@@ -4,7 +4,7 @@ import * as client from './client'
 import * as common from '../shared/common'
 import blockinit from './block.init'
 import tp_getgeneexpression from './tp.gene.geneexpression'
-import { Menu } from './dom/menu'
+import { Menu } from '../dom/menu'
 
 const tip = new Menu()
 
@@ -165,10 +165,6 @@ export default function(cohort, ds2clst, butt, folder, defaulthide, host) {
 		.append('div')
 		.style('padding', '10px')
 		.style('border-bottom', 'dashed 1px #ccc')
-	const importdiv = optiondiv
-		.append('div')
-		.style('padding', '10px')
-		.style('border-bottom', 'dashed 1px #ccc')
 	// option row1
 	const gcsays = oprow1
 		.append('span')
@@ -272,82 +268,7 @@ export default function(cohort, ds2clst, butt, folder, defaulthide, host) {
 		.style('font-size', '.8em')
 		.style('color', '#858585')
 		.text('Including: silent, splice_region, exon, UTR, and intron.')
-	// option row4
-	importdiv.append('span').text('Import mutation profile')
-	for (const _ds in cohort.genome.datasets) {
-		const ds = cohort.genome.datasets[_ds]
-		if (!ds.isofficial) continue
-		if (ds.id2vcf) {
-			// no vcf
-			continue
-		}
-		importdiv
-			.append('button')
-			.style('margin-left', '5px')
-			.text(ds.label)
-			.on('click', () => {
-				const qlst = []
-				let querycount = 0
-				for (let i = 0; i < genelimit; i++) {
-					const gene = genelst[i]
-					let willquery = false
-					if (gene in gene2import) {
-						if (!(ds.label in gene2import[gene])) {
-							qlst.push(gene)
-							gene2import[gene][ds.label] = { pending: 1 }
-							willquery = true
-						}
-					} else {
-						qlst.push(gene)
-						gene2import[gene] = {}
-						gene2import[gene][ds.label] = { pending: 1 }
-						willquery = true
-					}
-					if (willquery) {
-						querycount++
-						if (querycount >= 10) break
-					}
-				}
-				if (!qlst.length) return
-				if (!(ds.label in ds2import)) {
-					ds2import[ds.label] = { name: ds.label }
-				}
-				const button = d3event.target
-				button.innerHTML = 'loading...'
-				button.disabled = true
-				dotable()
 
-				const arg = {
-					genome: cohort.genome.name,
-					jwt: cohort.jwt,
-					dsname: ds.label,
-					lst: qlst
-				}
-				if (importsilent) {
-					arg.silent = 1
-				}
-				d3json(hostURL + '/dsgenestat').post(JSON.stringify(arg), data => {
-					button.innerHTML = ds.label
-					button.disabled = false
-					if (!data) return sayerror('Server error...')
-					if (data.error) return sayerror(data.error)
-					ds2import[ds.label].totalsample = data.totalsample
-					for (const gene in data.result) {
-						if (!gene2import[gene]) {
-							gene2import[gene] = {}
-						}
-						gene2import[gene][ds.label] = data.result[gene]
-						delete gene2import[gene][ds.label].pending
-					}
-					dotable()
-				})
-			})
-	}
-	importdiv
-		.append('p')
-		.style('color', '#858585')
-		.style('font-size', '.8em')
-		.text('Load 10 genes each click.')
 	const hassamplelst = []
 	for (const k in cohort.dsset) {
 		const d = cohort.dsset[k]

@@ -265,14 +265,15 @@ module.exports = genomes => {
 			}
 
 			if (req.query.downloadgdc) {
+				// call gdc bam slicing api to slice the bam, save to cachedir
 				res.send(await download_gdc_bam(req))
 				return
 			}
 
 			if (req.query.clientdownloadgdcslice) {
-				// TODO prevent unathorized download
-				if (app.illegalpath(req.query.clientdownloadgdcslice)) throw 'illegal file path'
-				const file = path.join(serverconfig.cachedir_bam, req.query.clientdownloadgdcslice)
+				// read the cached bam slice for client to download
+				if (!req.query.file || !req.query.isFileSlice) throw 'invalid query'
+				const file = path.join(serverconfig.cachedir_bam, req.query.file)
 				const data = await fs.promises.readFile(file)
 				res.writeHead(200, {
 					'Content-Type': 'application/octet-stream',
@@ -1140,7 +1141,7 @@ function run_clustalo(
 
 async function query_reads(q) {
 	if (q.variant) {
-		/* doing kmer typing on a variant
+		/* doing read alignment genotyping on a variant
 		will only query reads from the variant region
 		query region is centered on the variant position to be able to include softclip reads resulting from the mutation
 		*/
@@ -2197,7 +2198,7 @@ function plot_template(ctx, template, group, q) {
 
 	// for testing, print a stat (numeric or string) per template on the right of each row
 	// should not use this in production
-	if (template.__tempscore != undefined && serverconfig.features.indel_kmer_scores) {
+	if (template.__tempscore != undefined && serverconfig.features.indel_read_alignment_scores) {
 		ctx.fillStyle = 'blue'
 		ctx.font = group.stackheight + 'pt Arial'
 		ctx.fillText(template.__tempscore, q.regions[0].width - 100, template.y + group.stackheight / 2)
@@ -2647,6 +2648,10 @@ async function route_getread(genome, req) {
 		lst[0].q_align_alt = seglst.q_align_alt
 		lst[0].align_wrt_alt = seglst.align_wrt_alt
 		lst[0].r_align_alt = seglst.r_align_alt
+		lst[0].red_region_start_alt = Number.parseInt(seglst.red_region_start_alt)
+		lst[0].red_region_start_ref = Number.parseInt(seglst.red_region_start_ref)
+		lst[0].red_region_stop_alt = Number.parseInt(seglst.red_region_stop_alt)
+		lst[0].red_region_stop_ref = Number.parseInt(seglst.red_region_stop_ref)
 	}
 	return { lst }
 }
@@ -2730,10 +2735,53 @@ async function query_oneread(req, r) {
 
 	if (lst) {
 		// Aligning sequence against alternate sequence when altseq is present (when q.variant is true)
+		const cigar_chars = lst[0].boxes.map(i => i.opr)
+		const cigar_pos = lst[0].boxes.map(i => i.len)
+		let cigar_seq = ''
+		for (i = 0; i < cigar_chars.length; i++) {
+			cigar_seq += cigar_pos[i] + cigar_chars[i]
+		}
 		if (req.query.altseq) {
+			// Uncomment this line to test the single-read alignment in command line
+
+			//console.log(
+			//	'single:' +
+			//		lst[0].seq +
+			//		':' +
+			//		req.query.refseq +
+			//		':' +
+			//		req.query.altseq +
+			//		':' +
+			//		cigar_seq +
+			//		':' +
+			//		lst[0].boxes[0].start +
+			//		':' +
+			//		req.query.pos +
+			//		':' +
+			//		req.query.ref +
+			//		':' +
+			//		req.query.alt
+			//)
+			//console.log('lst[0].segstart:', lst[0].segstart)
+			//console.log('lst[0]:', lst[0])
 			const alignment_output = await utils.run_rust(
 				'align',
-				'single:' + lst[0].seq + ':' + req.query.refseq + ':' + req.query.altseq
+				'single:' +
+					lst[0].seq +
+					':' +
+					req.query.refseq +
+					':' +
+					req.query.altseq +
+					':' +
+					cigar_seq +
+					':' +
+					lst[0].segstart +
+					':' +
+					req.query.pos +
+					':' +
+					req.query.ref +
+					':' +
+					req.query.alt
 			)
 			const alignment_output_list = alignment_output.split('\n')
 			for (let item of alignment_output_list) {
@@ -2767,6 +2815,28 @@ async function query_oneread(req, r) {
 						.replace(/"/g, '')
 						.replace(/,/g, '')
 						.replace('r_seq_alt:', '')
+				} else if (item.includes('red_region_start_alt')) {
+					lst.red_region_start_alt = item
+						.replace(/"/g, '')
+						.replace(/,/g, '')
+						.replace('red_region_start_alt:', '')
+				} else if (item.includes('red_region_start_ref')) {
+					lst.red_region_start_ref = item
+						.replace(/"/g, '')
+						.replace(/,/g, '')
+						.replace('red_region_start_ref:', '')
+				} else if (item.includes('red_region_stop_alt')) {
+					lst.red_region_stop_alt = item
+						.replace(/"/g, '')
+						.replace(/,/g, '')
+						.replace('red_region_stop_alt:', '')
+				} else if (item.includes('red_region_stop_ref')) {
+					lst.red_region_stop_ref = item
+						.replace(/"/g, '')
+						.replace(/,/g, '')
+						.replace('red_region_stop_ref:', '')
+				} else {
+					console.log(item)
 				}
 			}
 		}
@@ -2820,6 +2890,7 @@ async function convertunmappedread2html(seg, genome, query) {
 		info: `<div style='margin-top:10px'>
 			<span style="opacity:.5;font-size:.7em">TEMPLATE</span>: ${Math.abs(seg.seq.length)} bp,
 			<span style="opacity:.5;font-size:.7em">CIGAR</span>: ${seg.cigarstr}
+			<span style="opacity:.5;font-size:.7em">FLAG</span>: ${seg.flag}
 			<span style="opacity:.5;font-size:.7em">NAME: ${seg.qname}</span>
 		  </div>
 		  <ul style='padding-left:15px'>${lst.join('')}</ul>`
@@ -2998,6 +3069,7 @@ async function convertread2html(seg, genome, query) {
 			<span style="opacity:.5;font-size:.7em">THIS READ</span>: ${refstop - refstart} bp,
 			<span style="opacity:.5;font-size:.7em">TEMPLATE</span>: ${Math.abs(seg.tlen)} bp,
 			<span style="opacity:.5;font-size:.7em">CIGAR</span>: ${seg.cigarstr}
+			<span style="opacity:.5;font-size:.7em">FLAG</span>: ${seg.flag}
 			<span style="opacity:.5;font-size:.7em">NAME: ${seg.qname}</span>
 		  </div>
 		  <ul style='padding-left:15px'>${lst.join('')}</ul>`,

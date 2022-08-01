@@ -23,7 +23,6 @@ const encodedParams = [
 	'filter',
 	'tvslst',
 	'term1_q',
-	'exclude_types',
 	'usecase',
 	'variant_filter',
 	'info_fields',
@@ -174,22 +173,14 @@ do not directly hand over the term object to client; many attr to be kept on ser
 async function trigger_findterm(q, res, termdb) {
 	// TODO also search categories
 	if (typeof q.cohortStr !== 'string') q.cohortStr = ''
-	if (q.exclude_types) {
-		const exclude_types = q.exclude_types
-		q.exclude_types = exclude_types.map(t => t.toLowerCase())
-	}
-	const terms_ = await termdb.q.findTermByName(q.findterm, 10, q.cohortStr, q.exclude_types, q.treeFilter, q.usecase)
+	const terms_ = await termdb.q.findTermByName(q.findterm, 10, q.cohortStr, q.treeFilter, q.usecase)
 	const terms = terms_.map(copy_term)
 	const id2ancestors = {}
 	terms.forEach(term => {
 		term.__ancestors = termdb.q.getAncestorIDs(term.id)
 		term.__ancestorNames = termdb.q.getAncestorNames(term.id)
 	})
-	if (q.exclude_types) {
-		res.send({ lst: terms.filter(t => true) })
-	} else {
-		res.send({ lst: terms })
-	}
+	res.send({ lst: terms })
 }
 
 function trigger_getcategories(q, res, tdb, ds) {
@@ -276,8 +267,10 @@ rightnow only few conditional terms have grade info
 }
 
 async function trigger_getincidence(q, res, ds) {
-	if (!q.grade) throw 'missing grade'
-	q.grade = Number(q.grade)
+	if (!q.minSampleSize) throw 'missing minSampleSize'
+	if (!q.minEventCnt) throw 'missing minEventCnt'
+	q.minSampleSize = Number(q.minSampleSize)
+	q.minEventCnt = Number(q.minEventCnt)
 	const data = await cuminc.get_incidence(q, ds)
 	res.send(data)
 }

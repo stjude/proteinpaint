@@ -309,7 +309,9 @@ exports.get_lines_bigfile = function({ args, dir, callback, isbcf, isbam }) {
 		ps.stderr.on('data', d => em.push(d))
 		ps.on('close', () => {
 			const e = em.join('').trim()
-			if (e) reject(e)
+			if (e && !tabixnoterror(e)) {
+				reject(e)
+			}
 			resolve()
 		})
 	})
@@ -379,7 +381,7 @@ exports.loadfile_ssid = async function(id, samplefilterset) {
 samplefilterset:
 	optional Set of samples to restrict to
 */
-	const text = await read_file(path.join(serverconfig.cachedir, 'ssid', id))
+	const text = await read_file(path.join(serverconfig.cachedir_ssid, id))
 	const sample2gt = new Map()
 	// k: sample, v: genotype str
 	const genotype2sample = new Map()
@@ -521,4 +523,8 @@ exports.run_rust = function(binfile, input_data) {
 			resolve(stdout.join('').toString())
 		})
 	})
+}
+
+function tabixnoterror(s) {
+	return s.startsWith('[E::idx_test_and_fetch]') // got this with htslib 1.15.1
 }

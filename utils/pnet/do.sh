@@ -17,7 +17,16 @@ echo "loading data into tables ..."
 sqlite3 db < $DIR/load.sql
 
 echo "updating the terms table"
-node $DIR/setterms.bundle.js
+if [[ -f $DIR/setterms.js ]]; then
+	if [[ ! -f $DIR/setterms.bundle.js || $DIR/setterms.js -nt $DIR/setterms.bundle.js ]]; then
+		node $DIR/setterms.js
+	else
+		node $DIR/setterms.bundle.js
+	fi
+else 
+	# production
+	node $DIR/setterms.bundle.js 
+fi
 
 echo "updating the ancestry table"
 sqlite3 db < $DIR/setancestry.sql

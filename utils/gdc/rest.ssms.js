@@ -51,10 +51,6 @@ const fields = [
 		)
 
 		const re = JSON.parse(response.body)
-		const aa2case = new Map()
-		const caseidset = new Set()
-		const projectset = new Set()
-		const siteset = new Set()
 		for (const hit of re.data.hits) {
 			if (p.isoform) {
 				const consequence = hit.consequence.find(i => i.transcript.transcript_id == p.isoform)
@@ -81,6 +77,7 @@ const fields = [
 				}
 			}
 		}
+		console.log(re.data.hits.length, 'ssms total')
 	} catch (error) {
 		console.log(error)
 	}

@@ -5,21 +5,27 @@ const fs = require('fs')
 const lines2R = require('./lines2R')
 const serverconfig = require('./serverconfig')
 
+/*********** EXPORT
+get_incidence()
+runCumincR
+*/
+
 export async function get_incidence(q, ds) {
 	try {
 		if (!ds.cohort) throw 'cohort missing from ds'
 		q.ds = ds
 		const results = get_rows(q)
 		const byChartSeries = {}
-		let minTime
 		for (const d of results.lst) {
+			// if no applicable term0 or term2, the d.key0/d.key2 is just a placeholder empty string (see comments in get_rows())
+			const chartId = d.key0
+			const time = d.val1
+			const event = d.key1
+			const series = d.key2
 			// do not include data when years_to_event < 0
-			if (d.val1 < 0) continue
-			// if no applicable term0 or term2, the d.key0/d.key2 is just a placeholder empty string,
-			// see the comments in the get_rows() function for more details
-			if (!(d.key0 in byChartSeries)) byChartSeries[d.key0] = []
-			byChartSeries[d.key0].push({ time: d.val1, event: d.key1, series: d.key2 })
-			if (minTime === undefined || d.val1 < minTime) minTime = d.val1
+			if (time < 0) continue
+			if (!(chartId in byChartSeries)) byChartSeries[chartId] = []
+			byChartSeries[chartId].push({ time, event, series })
 		}
 		const bins = q.term2_id && results.CTE2.bins ? results.CTE2.bins : []
 		const final_data = {
@@ -27,68 +33,125 @@ export async function get_incidence(q, ds) {
 			case: [],
 			refs: { bins }
 		}
-		const promises = []
+
+		// filter data prior to cumulative incidence analysis
+		const fdata = {} // input for cuminc analysis {chartId: [{time, event, series}]}
 		for (const chartId in byChartSeries) {
-			const data = byChartSeries[chartId]
-			if (!data.length) continue
-			const datafile = path.join(serverconfig.cachedir, Math.random().toString() + '.json')
-			await write_file(datafile, JSON.stringify(data))
-			promises.push(
-				lines2R(path.join(serverconfig.binpath, 'utils/cuminc.R'), [], [datafile]).then(Routput => {
-					const ci_data = JSON.parse(Routput[0])
+			if (!byChartSeries[chartId].length) continue
 
-					if (!ci_data.estimates) {
-						// this chart has no cuminc estimates
-						// because no events occurred in any
-						// of the data serieses.
-						// this chart will be skipped
-						if (!final_data.skippedCharts) final_data.skippedCharts = []
-						final_data.skippedCharts.push(chartId)
-						return
-					}
+			// skip series that do not meet sample size and event count thresholds
+			// compute sample sizes and event counts
+			const series2size = new Map()
+			for (const sample of byChartSeries[chartId]) {
+				const size = series2size.get(sample.series)
+				if (size) {
+					size.samplesize++
+					if (sample.event) size.eventcnt++
+					series2size.set(sample.series, size)
+				} else {
+					series2size.set(sample.series, { samplesize: 1, eventcnt: sample.event ? 1 : 0 })
+				}
+			}
 
-					// for chart with a single series, R will convert the series ID from '' to '1', so convert back to empty string
-					const serieses = new Set(data.map(x => x.series))
-					if (serieses.size == 1 && serieses.has('')) {
-						ci_data.estimates[''] = ci_data.estimates['1']
-						delete ci_data.estimates['1']
-					}
+			// flag series that do not meet thresholds
+			const toSkip = new Set()
+			for (const [series, size] of series2size) {
+				if (size.samplesize < q.minSampleSize || size.eventcnt < q.minEventCnt) {
+					toSkip.add(series)
+				}
+			}
 
-					// Cohort enrollment requires a minimum of 5 year survival after diagnosis,
-					// the sql uses `AND years_to_event >= 5`, so reset the first data timepoint
-					// to the actual queried minimum time. This first data point (case_est=0) is added
-					// automatically by cuminc to its computed series data. 5 is the target x-axis min,
-					// but check anyway to make sure that the constructed SQL result for min time
-					// is used if lower than the expected 5 years_to_event.
-					for (const seriesId in ci_data.estimates) {
-						const series = ci_data.estimates[seriesId]
-						series[0].time = Math.min(5, Math.floor(minTime))
-						for (let i = 0; i < series.length; i++) {
-							final_data.case.push([chartId, seriesId, series[i].time, series[i].est, series[i].low, series[i].up])
-						}
-					}
-
-					// store results of statistical tests
-					if (ci_data.tests) {
-						if (!final_data.tests) final_data.tests = {}
-						final_data.tests[chartId] = ci_data.tests
-					}
-
-					// store any skipped series
-					if (ci_data.skippedSeries) {
-						if (!final_data.skippedSeries) final_data.skippedSeries = {}
-						final_data.skippedSeries[chartId] = ci_data.skippedSeries
-					}
-
-					// delete the input data file
-					fs.unlink(datafile, () => {})
-				})
-			)
+			// skip any flagged series
+			if (toSkip.size > 0) {
+				// series need to be skipped
+				// remove the series from the byChartSeries[chartId]
+				fdata[chartId] = byChartSeries[chartId].filter(sample => !toSkip.has(sample.series))
+				// store the skipped series
+				if (!final_data.skippedSeries) final_data.skippedSeries = {}
+				final_data.skippedSeries[chartId] = [...toSkip]
+				if (fdata[chartId].length === 0) {
+					// all series in this chart have been skipped
+					// therefore this chart will be skipped
+					delete fdata[chartId]
+					if (!final_data.skippedCharts) final_data.skippedCharts = []
+					final_data.skippedCharts.push(chartId)
+					continue
+				}
+			} else {
+				// no series need to be skipped
+				fdata[chartId] = byChartSeries[chartId]
+			}
 		}
-		await Promise.all(promises)
+
+		await runCumincR(fdata, final_data, q.term1_q.minYearsToEvent)
 		return final_data
 	} catch (e) {
 		if (e.stack) console.log(e.stack)
 		return { error: e.message || e }
 	}
+}
+
+/* run cumulative incidence analysis in R
+function has no returns; R analysis result are collected into "final_data{}"
+
+chartId: a string, can be empty
+fdata{}: see above
+final_data{}
+	.case[]
+	.tests{}
+minYearsToEvent: a number, for setting first time point of plot. The first time point generated by cuminc() in R is always time 0, so this should be replaced with the minimum years to event cutoff.
+*/
+export async function runCumincR(fdata, final_data, minYearsToEvent) {
+	// replace empty string chartIds and seriesIds with '*' for R (will reconvert later)
+	for (let chartId in fdata) {
+		if (chartId === '') {
+			chartId = '*'
+			fdata[chartId] = fdata['']
+			delete fdata['']
+		}
+		fdata[chartId] = fdata[chartId].map(sample => {
+			const container = {
+				time: sample.time,
+				event: sample.event,
+				series: sample.series === '' ? '*' : sample.series
+			}
+			return container
+		})
+	}
+
+	// run cumulative incidence analysis
+	const datafile = path.join(serverconfig.cachedir, Math.random().toString() + '.json')
+	await write_file(datafile, JSON.stringify(fdata))
+	const Routput = await lines2R(path.join(serverconfig.binpath, 'utils/cuminc.R'), [], [datafile])
+	const ci_data = JSON.parse(Routput[0])
+
+	// parse cumulative incidence results
+	// for chartIds and seriesIds, reconvert the '*' placeholder back to empty string
+	for (const chartId in ci_data) {
+		// retrieve cumulative incidence estimates
+		for (const seriesId in ci_data[chartId].estimates) {
+			const series = ci_data[chartId].estimates[seriesId]
+			// replace first time point with min years to event (see above)
+			series[0].time = minYearsToEvent
+			// fill in final_data.case[]
+			for (let i = 0; i < series.length; i++) {
+				final_data.case.push([
+					chartId === '*' ? '' : chartId,
+					seriesId === '*' ? '' : seriesId,
+					series[i].time,
+					series[i].est,
+					series[i].low,
+					series[i].up
+				])
+			}
+		}
+		// retrieve results of Gray's tests
+		if (ci_data[chartId].tests) {
+			if (!final_data.tests) final_data.tests = {}
+			final_data.tests[chartId === '*' ? '' : chartId] = ci_data[chartId].tests
+		}
+	}
+
+	// delete the input data file
+	fs.unlink(datafile, () => {})
 }

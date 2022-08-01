@@ -5,14 +5,14 @@ import { format as d3format } from 'd3-format'
 import { axisTop, axisLeft } from 'd3-axis'
 import { debounce } from 'debounce'
 import * as client from './client'
-import { Menu } from './dom/menu'
-import { dofetch3 } from './common/dofetch'
+import { Menu } from '../dom/menu'
+import { dofetch2, dofetch3 } from '../common/dofetch'
 import * as common from '../shared/common'
 import * as coord from './coord'
 import vcf2dstk from './vcf.tkconvert'
 import blockinit from './block.init'
 import * as Legend from './block.legend'
-import { newSandboxDiv } from './dom/sandbox'
+import { newSandboxDiv } from '../dom/sandbox'
 
 // track types
 import { bamfromtemplate, bammaketk, bamload } from './block.tk.bam.adaptor'
@@ -376,6 +376,7 @@ export class Block {
 				.attr('class', 'sja_clbtext')
 				.html('<span style="font-size:1.5em;font-weight:bold">' + this.usegm.name + '</span> ' + this.usegm.isoform)
 				.on('click', () => {
+					d3event.stopPropagation()
 					this.genemenu()
 				})
 			butrow.append('span').html('&nbsp;&nbsp;&nbsp;')
@@ -540,12 +541,40 @@ export class Block {
 			.style('display', 'none')
 			.text('Download GDC BAM slice')
 			.on('click', async () => {
+				// TODO show menu options for multiple files
 				const tk = this.tklst.find(i => i.type == 'bam' && i.gdcFile)
 				if (!tk) return
-				// TODO show menu options for multiple files
-				// FIXME how to pass token as http header?
-				const requestUrl = `tkbam?genome=${this.genome.name}&clientdownloadgdcslice=${tk.file}`
-				window.open(requestUrl, '_self', 'download')
+
+				this.gdcBamSliceDownloadBtn.property('disabled', true)
+
+				// old method of window.open() won't allow passing token via request header
+				//const requestUrl = `tkbam?genome=${this.genome.name}&clientdownloadgdcslice=`
+				//window.open(requestUrl, '_self', 'download')
+
+				// FIXME the entire bam slice is cached in browser memory before downloading, which can be slow
+				// will be nice to directly "stream" to a download file without caching
+
+				const headers = {
+					'Content-Type': 'application/json',
+					Accept: 'application/json',
+					'X-Auth-Token': tk.gdcToken
+				}
+				const lst = [
+					'clientdownloadgdcslice=1',
+					'gdcFileUUID=' + tk.gdcFile.uuid,
+					'gdcFilePosition=' + tk.gdcFile.position
+				]
+				const data = await dofetch2('tkbam?' + lst.join('&'), { headers })
+
+				this.gdcBamSliceDownloadBtn.property('disabled', false)
+
+				const a = document.createElement('a')
+				a.href = URL.createObjectURL(data)
+				a.download = tk.aboutThisFile ? tk.aboutThisFile[0].v + '.bam' : 'gdc.bam'
+				a.style.display = 'none'
+				document.body.appendChild(a)
+				a.click()
+				document.body.removeChild(a)
 			})
 
 		this.gbase = this.svg.append('g').attr('transform', 'translate(0,0)')
@@ -1895,10 +1924,32 @@ reverseorient() {
 			.style('padding', '20px')
 			.style('background-color', '#E6EEF5')
 			.style('margin-bottom', '20px')
-		sec1
-			.append('div')
-			.style('width', '580px')
-			.html(gm.name + ': ' + (gm.description ? '<strong>' + gm.description + '</strong>' : 'no description'))
+
+		const description_div = sec1.append('div').style('width', '580px')
+		if (!gm.description) {
+			description_div.html(`${gm.name}: No description`)
+		} else if (gm.description.length >= 120) {
+			// Detect when the description is very long
+			const truncDescrip = gm.description.substring(0, 100)
+			let activeDesc = false
+			description_div.html(`${gm.name}: <strong>${truncDescrip}</strong> ...`)
+			const a = sec1.append('a')
+			a.text('Show More')
+				// Add simple a tag. Should show and hide text on click
+				.style('display', 'inline-block')
+				.on('click', () => {
+					activeDesc = !activeDesc
+					description_div.html(
+						activeDesc == true
+							? `${gm.name}: <strong>${gm.description}</strong>`
+							: `${gm.name}: <strong>${truncDescrip}</strong> ...`
+					)
+					a.text(activeDesc == true ? 'Hide' : 'Show More')
+				})
+		} else {
+			description_div.html(`${gm.name}: <strong>${gm.description}</strong>`)
+		}
+
 		const p2 = sec1.append('div').style('margin-top', '10px')
 
 		p2.append('span')
@@ -1957,7 +2008,7 @@ reverseorient() {
 	}
 
 	old_dshandle_new(dsname) {
-		// for old official dataset
+		// for old official dataset, and mds3
 		// won't add handle for either children or custom datasets
 		let ds = this.genome.datasets[dsname]
 		if (!ds) {

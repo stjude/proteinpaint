@@ -6,6 +6,7 @@ const serverconfig = require('./serverconfig')
 /*
 GDC graphql API
 
+****************** EXPORTED
 validate_variant2sample
 validate_query_snvindel_byrange
 validate_query_snvindel_byisoform
@@ -13,18 +14,18 @@ validate_query_snvindel_byisoform_2
 validate_query_genecnv
 getSamples_gdcapi
 get_cohortTotal
+get_termlst2size
 addCrosstabCount_tonodes
 validate_m2csq
 validate_ssm2canonicalisoform
 getheaders
 validate_sampleSummaries2_number
 validate_sampleSummaries2_mclassdetail
-init_dictionary
-init_termdb_queries
+handle_gdc_ssms
 
-
-************** gdc adhoc termdb structure
-add description here or in termdb doc
+**************** internal
+mayMapRefseq2ensembl
+may_add_readdepth
 */
 
 const apihost = process.env.PP_GDC_HOST || 'https://api.gdc.cancer.gov'
@@ -175,15 +176,8 @@ export function validate_query_snvindel_byisoform_2(ds) {
 		3. set refseq to "refseq" holder variable
 		4. in resulting ssm, set isoform to refseq so skewer can show
 		*/
-		let refseq
-		if (opts.isoform[0] == 'N' && ds.refseq2ensembl_query) {
-			const x = ds.refseq2ensembl_query.get(opts.isoform)
-			if (x) {
-				// converted given refseq to an ensembl
-				refseq = opts.isoform
-				opts.isoform = x.ensembl
-			}
-		}
+
+		const refseq = mayMapRefseq2ensembl(opts, ds)
 
 		const headers = getheaders(opts)
 		const response = await got.post(api.apihost, {
@@ -228,6 +222,26 @@ export function validate_query_snvindel_byisoform_2(ds) {
 	}
 }
 
+function mayMapRefseq2ensembl(q, ds) {
+	/*
+	q: { isoform: str }
+	if this isoform starts with N, consider it as refseq and try to map to ensembl
+	if mapped, assign ensembl to q.isoform, and return the original refseq
+	on any failure, return undefined
+	*/
+	if (!q.isoform) return
+	let refseq
+	if (q.isoform[0] == 'N' && ds.refseq2ensembl_query) {
+		const x = ds.refseq2ensembl_query.get(q.isoform)
+		if (x) {
+			// converted given refseq to an ensembl
+			refseq = q.isoform
+			q.isoform = x.ensembl
+		}
+	}
+	return refseq
+}
+
 function makeSampleObj(c, ds) {
 	// c: {project:{project_id}} as returned by api call
 	const sample = {}
@@ -236,8 +250,9 @@ function makeSampleObj(c, ds) {
 		// as defined here, for producing sub-labels
 		for (const i of ds.sampleSummaries.lst) {
 			{
-				const t = ds.termdb.getTermById(i.label1)
+				const t = ds.cohort.termdb.q.termjsonByOneid(i.label1)
 				if (t) {
+					console.log(t)
 					sample[i.label1] = c[t.fields[0]]
 					for (let j = 1; j < t.fields.length; j++) {
 						if (sample[i.label1]) sample[i.label1] = sample[i.label1][t.fields[j]]
@@ -245,7 +260,7 @@ function makeSampleObj(c, ds) {
 				}
 			}
 			if (i.label2) {
-				const t = ds.termdb.getTermById(i.label2)
+				const t = ds.cohort.termdb.q.termjsonByOneid(i.label2)
 				if (t) {
 					sample[i.label2] = c[t.fields[0]]
 					for (let j = 1; j < t.fields.length; j++) {
@@ -424,22 +439,27 @@ export function validate_query_genecnv(ds) {
 	}
 }
 
-// for variant2samples query
+/* for variant2samples query
+clarify why needs two parameters termidlst[] and fields[]
+*/
 export async function getSamples_gdcapi(q, termidlst, fields, ds) {
-	if (!q.ssm_id_lst) throw 'ssm_id_lst not provided'
 	const api = ds.variant2samples.gdcapi
 	if (!fields) throw 'invalid get type of q.get'
 	if (q.tid2value && Object.keys(q.tid2value).length) {
 		q.termlst = []
 		for (const t of Object.keys(q.tid2value)) {
-			let term = ds.termdb.terms.find(i => i.id == t)
-			if (!term) term = ds.cohort.termdb.q.getTermById(t)
+			const term = ds.cohort.termdb.q.termjsonByOneid(t)
 			if (term) q.termlst.push(term)
 		}
 	}
 
-	const query =
-		api.endpoint + '?size=' + (q.size || api.size) + '&from=' + (q.from || 0) + '&fields=' + fields.join(',')
+	const query = apihost + api.endpoint + '?size=10000&fields=' + fields.join(',')
+	// no longer paginates
+	//'&size=' + (q.size || api.size) + '&from=' + (q.from || 0)
+
+	// it may query with isoform
+	mayMapRefseq2ensembl(q, ds)
+
 	const filter = JSON.stringify(api.filters(q))
 	const headers = getheaders(q) // will be reused below
 
@@ -452,21 +472,39 @@ export async function getSamples_gdcapi(q, termidlst, fields, ds) {
 	}
 	if (!re.data || !re.data.hits) throw 'data structure not data.hits[] for query :' + query + ' and filter: ' + filter
 	if (!Array.isArray(re.data.hits)) throw 're.data.hits is not array for query :' + query + ' and filter: ' + filter
-	// total to display on sample list page
-	// for numerical terms, total is not possible before making GDC query
-	const total = re.data.pagination.total
+
 	const samples = []
+
 	for (const s of re.data.hits) {
 		if (!s.case) throw '.case{} missing from a hit for query :' + query + ' and filter: ' + filter
 		const sample = {}
+		if (s.ssm) {
+			/* ssm{ ssm_id } is available on this case
+			this happens when getting the list of samples for a set of variants
+			attach ssm id allows client to associate sample to variant
+			*/
+			sample.ssm_id = s.ssm.ssm_id
+		}
 
-		// get printable sample id
-		if (ds.variant2samples.sample_id_key) {
-			sample.sample_id = s.case[ds.variant2samples.sample_id_key] // "sample_id" field in sample is hardcoded
-		} else if (ds.variant2samples.sample_id_getter) {
-			// must pass request header to getter in case requesting a controlled sample via a user token
-			// this is gdc-specific logic and should not impact generic mds3
-			sample.sample_id = await ds.variant2samples.sample_id_getter(s.case, headers)
+		if (fields.length == 1 && fields[0] == 'case.case_id') {
+			/*
+			quick fix!
+
+			when getting the total list of samples from byisoform request
+			(see use of ds.queries.snvindel.getSamples in mds3.load.js load_driver())
+			only need to get uuid of each case, no need to convert to submitter id
+			thus detecting such case when fields array has single element
+			*/
+			sample.sample_id = s.case.case_id
+		} else {
+			// get printable sample id
+			if (ds.variant2samples.sample_id_key) {
+				sample.sample_id = s.case[ds.variant2samples.sample_id_key] // "sample_id" field in sample is hardcoded
+			} else if (ds.variant2samples.sample_id_getter) {
+				// must pass request header to getter in case requesting a controlled sample via a user token
+				// this is gdc-specific logic and should not impact generic mds3
+				sample.sample_id = await ds.variant2samples.sample_id_getter(s.case, headers)
+			}
 		}
 
 		/* gdc-specific logic
@@ -477,31 +515,30 @@ export async function getSamples_gdcapi(q, termidlst, fields, ds) {
 		sample.case_uuid = s.case.case_id
 
 		for (const id of termidlst) {
-			let t = ds.termdb.getTermById(id)
-			// if term is not in serverside termdb, query gdc_dictionary for new term
-			if (!t) t = ds.cohort.termdb.q.getTermById(id)
-			if (t) {
-				sample[id] = s.case[t.fields[0]]
-				for (let j = 1; j < t.fields.length; j++) {
-					if (sample[id] && Array.isArray(sample[id])) {
-						if (t.unit_conversion && (t.type == 'integer' || t.type == 'float'))
-							sample[id] = (sample[id][0][t.fields[j]] * t.unit_conversion).toFixed(2)
-						else sample[id] = sample[id][0][t.fields[j]]
-					} else if (sample[id]) {
-						if (t.unit_conversion && (t.type == 'integer' || t.type == 'float'))
-							sample[id] = (sample[id][t.fields[j]] * t.unit_conversion).toFixed(2)
-						else sample[id] = sample[id][t.fields[j]]
-					}
+			const t = ds.cohort.termdb.q.termjsonByOneid(id)
+			if (!t) continue
+			sample[id] = s.case[t.fields[0]]
+			for (let j = 1; j < t.fields.length; j++) {
+				if (sample[id] && Array.isArray(sample[id])) {
+					if (t.unit_conversion && (t.type == 'integer' || t.type == 'float'))
+						sample[id] = (sample[id][0][t.fields[j]] * t.unit_conversion).toFixed(2)
+					else sample[id] = sample[id][0][t.fields[j]]
+				} else if (sample[id]) {
+					if (t.unit_conversion && (t.type == 'integer' || t.type == 'float'))
+						sample[id] = (sample[id][t.fields[j]] * t.unit_conversion).toFixed(2)
+					else sample[id] = sample[id][t.fields[j]]
 				}
 			}
 		}
+
 		/////////////////// hardcoded logic to use .observation
 		// FIXME apply a generalized mechanism to record read depth (or just use sampledata.read_depth{})
 		may_add_readdepth(s.case, sample)
+
 		///////////////////
 		samples.push(sample)
 	}
-	return [samples, total]
+	return samples
 }
 
 function may_add_readdepth(acase, sample) {
@@ -532,7 +569,7 @@ export async function get_cohortTotal(api, ds, q) {
 	if (typeof api.filters != 'function') throw '.filters() not function in termid2totalsize'
 	const response = await got.post(ds.apihost, {
 		headers: getheaders(q),
-		body: JSON.stringify({ query: api.query, variables: api.filters(q) })
+		body: JSON.stringify({ query: api.query, variables: api.filters(q, ds) })
 	})
 	let re
 	try {
@@ -558,7 +595,7 @@ export async function get_cohortTotal(api, ds, q) {
 export async function get_termlst2size(args) {
 	const { api, ds, termlst, q, treeFilter } = args
 	const query = api.query(termlst)
-	const filter = api.filters(treeFilter)
+	const filter = api.filters(treeFilter, ds)
 	const response = await got.post(ds.apihost, {
 		headers: getheaders(q),
 		body: JSON.stringify({ query, variables: filter })
@@ -702,8 +739,12 @@ export function validate_sampleSummaries2_number(api) {
 		return [{ label1: 'project_id', count: project_set.size }, { label1: 'primary_site', count: site_set.size }]
 	}
 }
+
 export function validate_sampleSummaries2_mclassdetail(api, ds) {
 	api.get = async q => {
+		// q.isoform is refseq when queried from that; must convert to ensembl, no need to keep refseq
+		mayMapRefseq2ensembl(q, ds)
+
 		const headers = getheaders(q)
 		const p1 = got(
 			api.gdcapi[0].endpoint +
@@ -734,19 +775,21 @@ export function validate_sampleSummaries2_mclassdetail(api, ds) {
 		if (!re_ssms.data || !re_ssms.data.hits) throw 'returned data from ssms query not .data.hits'
 		if (!re_cases.data || !re_cases.data.hits) throw 'returned data from cases query not .data.hits[]'
 		if (!Array.isArray(re_ssms.data.hits) || !Array.isArray(re_cases.data.hits)) throw 're.data.hits[] is not array'
+
 		const id2ssm = new Map()
 		// key: ssm_id, value: ssm {}
+
 		for (const h of re_ssms.data.hits) {
 			if (!h.ssm_id) throw 'ssm_id missing from a ssms hit'
 			if (!h.consequence) throw '.consequence[] missing from a ssm'
-			const consequence = h.consequence.find(i => i.transcript.transcript_id == q.isoform)
+			const consequence = h.consequence.find(i => i.transcript.transcript_id == q.isoform) // xxx
 			snvindel_addclass(h, consequence)
 			h.samples = []
 			id2ssm.set(h.ssm_id, h)
 		}
 		const { label1, label2 } = JSON.parse(decodeURIComponent(q.samplesummary2_mclassdetail))
-		const term1 = ds.termdb.getTermById(label1)
-		const term2 = label2 ? ds.termdb.getTermById(label2) : null
+		const term1 = ds.cohort.termdb.q.termjsonByOneid(label1)
+		const term2 = label2 ? ds.cohort.termdb.q.termjsonByOneid(label2) : null
 		for (const h of re_cases.data.hits) {
 			if (!h.ssm) throw '.ssm{} missing from a case'
 			if (!h.ssm.ssm_id) throw '.ssm.ssm_id missing from a case'
@@ -864,6 +907,7 @@ export function validate_sampleSummaries2_mclassdetail(api, ds) {
 		return strat
 	}
 }
+
 function sort_mclass(set) {
 	const lst = []
 	for (const [c, s] of set) {
@@ -871,276 +915,6 @@ function sort_mclass(set) {
 	}
 	lst.sort((i, j) => j[1] - i[1])
 	return lst
-}
-
-export async function init_dictionary(ds) {
-	/* store gdc dictionary in memory
-	 */
-
-	ds.cohort.termdb = {}
-	const id2term = (ds.cohort.termdb.id2term = new Map())
-	const dictionary = ds.termdb.dictionary
-	if (!dictionary.gdcapi.endpoint) throw '.endpoint missing for termdb.dictionary_api'
-	const response = await got(dictionary.gdcapi.endpoint, {
-		method: 'GET',
-		headers: { 'Content-Type': 'application/json', Accept: 'application/json' }
-	})
-	let re
-	try {
-		re = JSON.parse(response.body)
-	} catch (e) {
-		throw 'invalid JSON from GDC dictionary'
-	}
-	if (!re._mapping) throw 'returned data does not have ._mapping'
-	if (!re.fields) throw 'returned data does not have .fields'
-	if (!Array.isArray(re.fields)) throw '.fields not array'
-	if (!re.expand) throw 'returned data does not have .expand'
-	if (!Array.isArray(re.expand)) throw '.expand not array'
-	/*
-	re._mapping: {}
-		'ssm_occurrence_centrics.case.available_variation_data': {
-			description: '',
-			doc_type: 'ssm_occurrence_centrics',
-			field: 'case.available_variation_data',
-			full: 'ssm_occurrence_centrics.case.available_variation_data',
-			type: 'keyword'
-		},
-		'ssm_occurrence_centrics.case.case_id': {
-			description: '',
-			doc_type: 'ssm_occurrence_centrics',
-			field: 'case.case_id',
-			full: 'ssm_occurrence_centrics.case.case_id',
-			type: 'keyword'
-		},
-
-	re.fields: []
-		'case.available_variation_data',
-		'case.case_id',
-		'case.consent_type',
-		'case.days_to_consent',
-		'case.days_to_index',
-		'case.demographic.age_at_index',
-		'case.demographic.age_is_obfuscated',
-		'case.demographic.cause_of_death',
-		'case.demographic.days_to_birth',
-		'case.demographic.days_to_death',
-		'case.demographic.demographic_id',
-		...
-
-	re.expand: []
-		'case',
-		'case.demographic',
-		'case.diagnoses',
-		'case.diagnoses.pathology_details',
-		'case.diagnoses.treatments',
-		'case.exposures',
-		'case.family_histories',
-		'case.observation',
-		'case.observation.input_bam_file',
-		'case.observation.normal_genotype',
-		'case.observation.read_depth',
-		'case.observation.sample',
-	*/
-
-	// step 1: add leaf terms
-	let skipLineCount = 0
-	for (const term_path_str of re.fields) {
-		if (maySkipLine(term_path_str)) {
-			skipLineCount++
-			continue
-		}
-
-		// skip term if it's present in duplicate_term_skip []
-		if (dictionary.gdcapi.duplicate_term_skip.includes(term_path_str)) continue
-		const term_paths = term_path_str.split('.')
-		const term_id = term_paths[term_paths.length - 1]
-		const term_obj = {
-			id: term_id,
-			name: term_id[0].toUpperCase() + term_id.slice(1).replace(/_/g, ' '),
-			path: term_path_str,
-			isleaf: true,
-			parent_id: term_paths[term_paths.length - 2],
-			fields: term_path_str.split('.').slice(1)
-			//child_types: [] // TODO: may set in the future to support hiding childless parent terms in the tree menu
-		}
-		// step 2: add type of leaf terms from _mapping:{}
-		const t_map = re._mapping[dictionary.gdcapi.mapping_prefix + '.' + term_path_str]
-		if (t_map)
-			term_obj.type = t_map.type == 'keyword' ? 'categorical' : 'long' ? 'integer' : 'double' ? 'float' : 'unknown'
-		else if (t_map == undefined) term_obj.type = 'unknown'
-		id2term.set(term_id, term_obj)
-	}
-
-	// step 3: add parent  and root terms
-	for (const term_str of re.expand) {
-		if (maySkipLine(term_str)) {
-			continue
-		}
-		const term_levels = term_str.split('.')
-		const term_id = term_levels.length == 1 ? term_str : term_levels[term_levels.length - 1]
-		const term_obj = {
-			id: term_id,
-			name: term_id[0].toUpperCase() + term_id.slice(1).replace(/_/g, ' '),
-			path: term_str,
-			fields: term_str.split('.').slice(1)
-			// included_types: [] // TODO update term.included_types usage to this method
-			// child_types: [] // TODO: may set in the future to support hiding childless parent terms in the tree menu
-		}
-		if (term_levels.length > 1) term_obj.parent_id = term_levels[term_levels.length - 2]
-		id2term.set(term_id, term_obj)
-	}
-
-	function maySkipLine(line) {
-		if (
-			line.startsWith('ssm') ||
-			line.startsWith('case.observation') ||
-			line.startsWith('case.available_variation_data')
-		)
-			return true
-		return false
-	}
-
-	//step 5: remove 'case' term, remove "case" as the first level
-	id2term.delete('case')
-	for (const term of id2term.values()) {
-		if (term.parent_id == 'case') {
-			// this term is a direct child of "case"
-			delete term.parent_id
-
-			// hope later able to move it to "Misc" branch
-			//term.parent_id = 'Miscellaneous'
-		}
-	}
-
-	/* adding Misc branch does not work, as term.path is required
-	id2term.set('Miscellaneous', {
-		id: 'Miscellaneous',
-		name:'Miscellaneous',
-	})
-	*/
-
-	console.log(ds.cohort.termdb.id2term.size, 'variables parsed from GDC dictionary,', skipLineCount, 'lines skipped')
-
-	// freeze gdc dictionary as it's readonly and must not be changed by treeFilter or other features
-	Object.freeze(ds.cohort.termdb.id2term)
-	init_termdb_queries(ds.cohort.termdb, ds)
-}
-
-function init_termdb_queries(termdb, ds) {
-	const q = (termdb.q = {})
-
-	q.getRootTerms = async (vocab, treeFilter = null) => {
-		// find terms without term.parent_id
-		const terms = []
-		for (const term of termdb.id2term.values()) {
-			if (term.parent_id == undefined) terms.push(JSON.parse(JSON.stringify(term)))
-		}
-		await mayAddSamplecount4treeFilter(terms, treeFilter)
-		return terms
-	}
-
-	q.getTermChildren = async (id, vocab, treeFilter = null) => {
-		// find terms which have term.parent_id as clicked term
-		const terms = []
-		for (const term of termdb.id2term.values()) {
-			if (term.parent_id == id) terms.push(JSON.parse(JSON.stringify(term)))
-		}
-		await mayAddSamplecount4treeFilter(terms, treeFilter)
-		return terms
-	}
-
-	q.findTermByName = async (searchStr, limit = null, vocab, exclude_types = [], treeFilter = null) => {
-		searchStr = searchStr.toLowerCase() // convert to lowercase
-		// replace space with _ to match with id of terms
-		if (searchStr.includes(' ')) searchStr = searchStr.replace(/\s/g, '_')
-		// find terms that have term.id containing search string
-		const terms = []
-		for (const term of termdb.id2term.values()) {
-			if (term.id.includes(searchStr)) terms.push(JSON.parse(JSON.stringify(term)))
-		}
-		await mayAddSamplecount4treeFilter(terms, treeFilter)
-		return terms
-	}
-
-	q.getAncestorIDs = id => {
-		const search_term = termdb.id2term.get(id)
-		if (!search_term) return
-		// ancestor terms are already defined in term.path seperated by '.'
-		const re = search_term.path ? search_term.path.split('.') : ['']
-		if (re.length > 1) re.pop() // remove the last element of array which is the query term itself
-		return re
-	}
-	q.getAncestorNames = q.getAncestorIDs
-
-	q.getTermById = id => {
-		const terms = [...termdb.id2term.values()]
-		return terms.find(i => i.id == id)
-	}
-
-	q.getSupportedChartTypes = () => {
-		// this function is required for server-provided termdbConfig
-		const supportedChartTypes = {}
-		const numericTypeCount = {}
-		// key: subcohort combinations, comma-joined, as in the subcohort_terms table
-		// value: array of chart types allowed by term types
-
-		for (const r of termdb.id2term.values()) {
-			if (!r.type) continue
-			// !!! r.cohort is undefined here as gdc data dictionary has no subcohort
-			if (!(r.cohort in supportedChartTypes)) {
-				supportedChartTypes[r.cohort] = ['barchart', 'table', 'regression']
-				numericTypeCount[r.cohort] = 0
-			}
-			if (r.type == 'survival' && !supportedChartTypes[r.cohort].includes('survival'))
-				supportedChartTypes[r.cohort].push('survival')
-			if (r.type == 'condition' && !supportedChartTypes[r.cohort].includes('cuminc'))
-				supportedChartTypes[r.cohort].push('cuminc')
-			if (r.type == 'float' || r.type == 'integer') numericTypeCount[r.cohort] += r.samplecount
-		}
-		for (const cohort in numericTypeCount) {
-			if (numericTypeCount[cohort] > 0) supportedChartTypes[cohort].push('boxplot')
-			if (numericTypeCount[cohort] > 1) supportedChartTypes[cohort].push('scatterplot')
-		}
-
-		return supportedChartTypes
-	}
-
-	async function mayAddSamplecount4treeFilter(terms, treeFilter) {
-		// if tree filter is given, add sample count for each term
-		if (terms.length == 0 || !treeFilter) return
-		let termlst = []
-		for (const term of terms) {
-			if (term.path)
-				termlst.push({
-					path: term.path.replace('case.', '').replace(/\./g, '__'),
-					type: term.type
-				})
-		}
-
-		if (termlst.length == 0) return
-
-		const tv2counts = await get_termlst2size({
-			api: ds.termdb.termid2totalsize2.gdcapi,
-			ds,
-			termlst,
-			treeFilter: JSON.parse(treeFilter)
-		})
-		// add term.disabled if samplesize if zero
-		for (const term of terms) {
-			if (term) {
-				const tv2count = tv2counts.get(term.id)
-				if (term.type == 'categorical' && tv2count) {
-					if (!tv2count.length) {
-						term.disabled = true
-						term.samplecount = 0
-					} else term.samplecount = tv2count.map(c => c[1]).reduce((a, b) => a + b)
-				} else if (term.type == 'integer' || term.type == 'float') {
-					term.samplecount = tv2count['total']
-					if (tv2count['total'] == 0) term.disabled = true
-				}
-			}
-		}
-	}
 }
 
 /************************************************

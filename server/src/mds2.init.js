@@ -23,13 +23,15 @@ may_init_svcnv
 may_sum_samples
 */
 
+const pc_termid_prefix = 'Ancestry_PC_' // may define in ds, must avoid conflicting with dictionary term ids
+
 export async function init_db(ds, app = null, basepath = null) {
 	/* db should be required
 	must initiate db first, then process other things
 	as db may be needed (e.g. getting json of a term)
 	*/
 	if (!ds.cohort.termdb) throw 'cohort.termdb missing when cohort.db is used'
-	validate_termdbconfig(ds.cohort.termdb)
+	await validate_termdbconfig(ds.cohort.termdb)
 	server_init_db_queries(ds)
 	// the "refresh" attribute on ds.cohort.db should be set in serverconfig.json
 	// for a genome dataset, using "updateAttr: [[...]]
@@ -93,7 +95,7 @@ the client copy stays at .mds.track{}
 	return tk
 }
 
-function validate_termdbconfig(tdb) {
+async function validate_termdbconfig(tdb) {
 	if (tdb.phewas) {
 		// phewas supported
 		if (tdb.phewas.samplefilter4termtype) {
@@ -128,30 +130,49 @@ function validate_termdbconfig(tdb) {
 		}
 	}
 	if (tdb.restrictAncestries) {
+		// is an array
 		if (!Array.isArray(tdb.restrictAncestries) || tdb.restrictAncestries.length == 0)
 			throw 'termdb.restrictAncestries[] is not non-empty array'
 		for (const a of tdb.restrictAncestries) {
 			if (!a.name) throw 'name missing from one of restrictAncestries'
 			if (typeof a.tvs != 'object') throw '.tvs{} missing from one of restrictAncestries'
-			/*
-			if(!a.file) throw '.file missing from one of restrictAncestries'
 			// file path is from tp/; parse file, store pc values to pcs
-			a.pcs = new Map() // k: pc ID, v: Map(sampleId:value)
-			for(const line of await utils.read_file(path.join(serverconfig.tpmasterdir, a.file)).trim().split('\n')) {
-				// each line: sample \t pcid \t value
-				const l = line.split('\t')
-				if(l.length!=3) throw 'restrictAncestry pc file has an invalid line'
-				const sampleid = Number(l[0])
-				if(!Number.isInteger(sampleid)) throw 'non-integer sample id from a line of restrictAncestries pc file'
-				const pcid = l[1]
-				const value = Number(l[2])
-				if(Number.isNaN(value)) throw 'non-numeric PC value from restrictAncestries file'
-				if(!a.pcs.has(pcid)) a.pcs.set(pcid, new Map())
-				a.pcs.get(pcid).set( sampleid, value )
+			if (!Number.isInteger(a.PCcount)) throw 'PCcount is not integer'
+			if (a.PCfile) {
+				// a single file for this ancestry, not by cohort
+				a.pcs = await read_PC_file(a.PCfile, a.PCcount)
+			} else if (a.PCfileBySubcohort) {
+				// pc file by subcohort
+				for (const subcohort in a.PCfileBySubcohort) {
+					const b = a.PCfileBySubcohort[subcohort]
+					if (!b.file) throw '.file missing for a subcohort in PCfileBySubcohort'
+					b.pcs = await read_PC_file(b.file, a.PCcount)
+				}
 			}
-			*/
 		}
 	}
+}
+
+async function read_PC_file(file, PCcount) {
+	const pcs = new Map() // k: pc ID, v: Map(sampleId:value)
+	for (let i = 1; i <= PCcount; i++) pcs.set(pc_termid_prefix + i, new Map())
+
+	let samplecount = 0
+	for (const line of (await utils.read_file(path.join(serverconfig.tpmasterdir, file))).trim().split('\n')) {
+		samplecount++
+		// each line: sampleid \t pc1 \t pc2 \t ...
+		const l = line.split('\t')
+		const sampleid = Number(l[0])
+		if (!Number.isInteger(sampleid)) throw 'non-integer sample id from a line of restrictAncestries pc file'
+		for (let i = 1; i <= PCcount; i++) {
+			const pcid = pc_termid_prefix + i
+			const value = Number(l[i])
+			if (Number.isNaN(value)) throw 'non-numeric PC value from restrictAncestries file'
+			pcs.get(pcid).set(sampleid, value)
+		}
+	}
+	console.log(samplecount, 'samples loaded from ' + file)
+	return Object.freeze(pcs)
 }
 
 function may_validate_info_fields(tk) {

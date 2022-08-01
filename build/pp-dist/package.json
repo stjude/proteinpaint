@@ -1,4 +1,5 @@
 {
+  "private": false,
   "name": "@stjude/proteinpaint",
   "bin": "server/bin.js",
   "main": "client/dist/app.js",
@@ -13,15 +14,18 @@
   },
   "//": "dependencies will be copied from proteinpaint/[server, client]/package.json",
   "files": [
+    "build/compile-rust.sh",
     "client/dist",
     "public/index.html",
     "public/bin",
     "server/bin.js",
-    "server/dataset/clinvar*.js",
-    "server/genome/",
+    "server/dataset/clinvar.*.js",
+    "server/genome",
     "server/src/serverconfig.js",
     "server/server.js*",
-    "server/utils",
+    "server/utils/*.R",
+    "server/utils/rust/*.*",
+    "server/utils/rust/src",
     "server/shared",
     "server/cards"
   ],

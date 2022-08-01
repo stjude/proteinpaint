@@ -1,6 +1,6 @@
 import { select as d3select, selectAll as d3selectAll, event as d3event } from 'd3-selection'
 import * as client from './client'
-import { dofetch3 } from './common/dofetch'
+import { dofetch3, setAuth } from '../common/dofetch'
 import { stratinput } from '../shared/tree'
 import { stratify } from 'd3-hierarchy'
 import { findgenemodel_bysymbol } from './gene'
@@ -15,11 +15,11 @@ import blockinit from './block.init'
 import { debounce } from 'debounce'
 import * as parseurl from './app.parseurl'
 import { init_mdsjson } from './app.mdsjson'
-import { drawer_init } from './app.drawer'
-import urlmap from './common/urlmap'
-import { renderSandboxFormDiv, newSandboxDiv } from './dom/sandbox'
+import { drawer_init } from '../appdrawer/app.drawer'
+import urlmap from '../common/urlmap'
+import { renderSandboxFormDiv, newSandboxDiv } from '../dom/sandbox'
 import * as wrappers from './wrappers/PpReact'
-import { first_genetrack_tolist } from './common/1stGenetk'
+import { first_genetrack_tolist } from '../common/1stGenetk'
 
 /*
 
@@ -44,6 +44,7 @@ findgene2paint
 ********** loaders from parseEmbedThenUrl()
 
 launchblock()
+may_launchGeneView
 launchgeneview()
 launchfusioneditor()
 launchmavb()
@@ -153,6 +154,7 @@ export function runproteinpaint(arg) {
 			if (data.debugmode) {
 				app.debugmode = true
 			}
+			setAuth({ dsAuth: data.dsAuth, holder: app.holder })
 
 			// genome data init
 			for (const genomename in app.genomes) {
@@ -162,7 +164,11 @@ export function runproteinpaint(arg) {
 				}
 			}
 
-			if (!arg.noheader && !window.location.search.includes('noheader')) {
+			if (
+				!arg.noheader &&
+				!window.location.search.includes('noheader') &&
+				!window.location.search.includes('mass-session-id')
+			) {
 				makeheader(app, data, arg.jwt)
 			}
 
@@ -577,65 +583,6 @@ async function findgene2paint(app, str, genomename, jwt) {
 	blockinit(par)
 }
 
-function studyui(app, x, y) {
-	const pane = client.newpane({ x: x, y: y })
-	pane.header.text('View a study')
-	pane.body.style('padding', '20px')
-	pane.body
-		.append('div')
-		.style('color', '#858585')
-		.html(
-			"A study can organize various data for a cohort, and is hosted on this server.<br>To view, enter the path to the study's JSON config file.<br><a href=https://drive.google.com/open?id=121SsSYiCb3NCU8jz0bF7UujFSN-1Y20b674dqa30iXE target=_blank>Learn how to organize data in a study</a>."
-		)
-	const row = pane.body.append('div').style('margin-top', '20px')
-	const input = row
-		.append('input')
-		.style('margin-right', '5px')
-		.attr('size', 15)
-		.attr('placeholder', 'Study name')
-	input
-		.on('keyup', () => {
-			if (d3event.code != 'Enter') return
-			submit()
-		})
-		.node()
-		.focus()
-	row
-		.append('button')
-		.text('Submit')
-		.on('click', submit)
-	row
-		.append('button')
-		.text('Clear')
-		.on('click', () => {
-			input
-				.property('value', '')
-				.node()
-				.focus()
-		})
-	pane.body
-		.append('p')
-		.html('<a href=https://www.dropbox.com/s/psfzwkbg7v022ef/example_study.json?dl=0 target=_blank>Example study</a>')
-	function submit() {
-		const v = input.property('value')
-		if (v == '') return
-		input.property('value', '')
-		input.node().blur()
-		const p2 = client.newpane({ x: 100, y: 100 })
-		p2.header.html('<span style="font-size:.7em">STUDY</span> ' + v)
-		p2.body.style('padding', '0px 20px 20px 20px')
-		loadstudycohort(
-			app.genomes,
-			v,
-			p2.body,
-			app.hostURL,
-			null, // jwt
-			false, // no show
-			app
-		)
-	}
-}
-
 async function parseEmbedThenUrl(arg, app) {
 	/*
 	first, try to parse any embedding parameters
@@ -765,6 +712,11 @@ async function parseEmbedThenUrl(arg, app) {
 
 	if (arg.selectGenomeWithTklst) {
 		await launchSelectGenomeWithTklst(arg, app)
+		return
+	}
+
+	if (arg.geneSearch4GDCmds3) {
+		await launchGeneSearch4GDCmds3(arg, app)
 		return
 	}
 
@@ -1070,7 +1022,6 @@ async function launchgeneview(arg, app) {
 		pa.hlvariants = arg.hlvariants
 	}
 
-	// TODO support tracks in block.init.js
 	blockinit(pa)
 }
 
@@ -1235,6 +1186,15 @@ async function launchblock(arg, app) {
 		blockinitarg.datasetqueries = arg.datasetqueries
 	}
 
+	if (arg.hlregions) {
+		const lst = []
+		for (const region of arg.hlregions) {
+			const pos = string2pos(region, genomeobj, true)
+			if (pos) lst.push(pos)
+		}
+		if (lst.length) blockinitarg.hlregions = lst
+	}
+
 	// apply url parameter
 	const h = urlmap()
 	if (h) {
@@ -1272,7 +1232,6 @@ async function launchblock(arg, app) {
 			}
 		}
 	}
-
 	// return a promise resolving to block
 	return import('./block').then(b => {
 		app.block = new b.Block(blockinitarg)
@@ -1308,6 +1267,11 @@ async function launchmdsjsonform(arg, app) {
 
 async function launchSelectGenomeWithTklst(arg, app) {
 	const _ = await import('./selectGenomeWithTklst')
+	await _.init(arg, app.holder0, app.genomes)
+}
+
+async function launchGeneSearch4GDCmds3(arg, app) {
+	const _ = await import('./geneSearch4GDCmds3')
 	await _.init(arg, app.holder0, app.genomes)
 }
 
@@ -1405,7 +1369,7 @@ async function launch_tkUIs(arg, app) {
 
 async function launchtermdb(opts, app) {
 	if (!opts.holder) opts.holder = app.holder0
-	import('./termdb/app').then(_ => {
+	import('../termdb/app').then(_ => {
 		_.appInit(opts)
 	})
 }
@@ -1415,7 +1379,7 @@ async function launchmass(opts, app) {
 	if (opts.state && opts.state.genome) {
 		opts.genome = app.genomes[opts.state.genome]
 	}
-	import('./mass/app').then(_ => {
+	import('../mass/app').then(_ => {
 		_.appInit(opts)
 	})
 }
@@ -1475,12 +1439,14 @@ function initgenome(g) {
 		*/
 		t.tkid = Math.random().toString()
 	}
+
 	// validate ds info
 	for (const dsname in g.datasets) {
 		const ds = g.datasets[dsname]
 
 		if (ds.isMds) {
-			// nothing to validate for the moment
+		} else if (ds.isMds3) {
+			if (!ds.label) return 'ds.label missing'
 		} else {
 			const e = validate_oldds(ds)
 			if (e) {

@@ -1,5 +1,5 @@
 import * as client from './client'
-import { renderSandboxFormDiv } from './dom/sandbox'
+import { renderSandboxFormDiv } from '../dom/sandbox'
 
 /*
 copy-paste a junction-by-sample matrix and show data

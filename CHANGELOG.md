@@ -2,6 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
+## 2.1.2
+
+- fix the Docker build and npm packing for pp-dist
+
 ## 2.1.1
 
 - bug-fix for trailing comma in gencode bigbed

@@ -1,110 +1,149 @@
+const graphableTypes = new Set(['categorical', 'integer', 'float', 'condition', 'survival', 'snplst', 'snplocus'])
+
 /*
-	Will migrate exclude_types:[] to usecase:{}, 
-	in order to:
+	isUsableTerm() will
 	- centralize the "allowed term" logic
 	which can be intricate or dataset-specific 
 	for certain terms or contexts
-	- also makes it easy to handle new term types,
-	rather than scattered across the code base
+	- make it easy to handle new term types
 
 	Arguments:
 	term {}
 		.type: 'categorical', etc.
-		.included_types: []
+		.child_types: []
 	
-	use {}
-		.target: 'barchart', etc. // may change to chartType 
-		.detail: 'term1', 'term2', etc. // optional 
-		// may have to add other key-values for more intricate logic
-		// for example, regression UI can have its own key-values
-		// that other apps or plots do not use and vice-versa
+	_usecase {}
+		.target (REQUIRED): 'barchart', 'regression', etc
+			- used as a switch-case "router" for additional use-specific logic
+			- other parameters, if applicable, are described in the route "handler" 
 	
-	ds
+	ds 
+	- a bootstrapped dataset object that can supply overrides to the use case logic,
+	for example, to apply role-based allowed term uses or performance-related restrictions
+	to ancestor terms when a use case aggregates too many data points for a given chart type
 
 	Returns
-	'plot' if the term can be used in a plot chartType
-	'tree' if the term can be used only as an expandable tree branch, but not in a plot
-	false if the term cannot be used either for plotting or as a tree branch
+	a Set{} with zero or more of the following strings:
+	- 'plot' if the term can be used in a plot chartType
+	- 'branch' if the term can be used only as an expandable tree branch, but not in a plot
+	- an empty Set means that the term has no valid uses, i.e, it cannot be used either for plotting or as a tree branch
 */
-export function isUsableTerm(term, use, ds) {
+export function isUsableTerm(term, _usecase, ds) {
+	const usecase = _usecase || {}
+
 	// may apply dataset specific override filter for a use case
 	if (ds && ds.usecase && use.target in ds.usecase) {
 		return ds.usecase[use.target](term, use)
 	}
 	// if (term.isprivate && !user.roleCanUse(term)) return false
 
+	const uses = new Set()
+	// note: expects term.child_types to be null if term.isleaf == true
+	const child_types = term.child_types || []
+
 	// default handling
-	switch (use.target) {
+	switch (usecase.target) {
 		case 'barchart':
-			if (term.type && term.type !== 'survival') return 'plot'
-			return (term.included_types.length > 1 || term.included_types[0] != 'survival') && 'tree'
+			if (term.type && term.type !== 'survival') uses.add('plot')
+			if (hasNonSurvivalTermChild(child_types)) uses.add('branch')
+			return uses
 
 		case 'table':
-			if (use.detail == 'term') return 'plot'
-			return term.included_types.length > 1 && 'tree'
+			if (usecase.detail == 'term') uses.add('plot')
+			if (child_types.length > 1) uses.add('branch')
+			return uses
 
 		case 'scatterplot':
-			if (user.notlogged.i) if (term.type == 'float' || term.type == 'integer') return 'plot'
-			if (term.included_types.includes('float') || term.included_types.includes('integer')) return 'tree'
-			return false
+			if (term.type == 'float' || term.type == 'integer') uses.add('plot')
+			if (hasNumericChild(child_types)) uses.add('branch')
+			return uses
 
 		case 'boxplot':
-			if (term.type == 'float' || term.type == 'integer') return 'plot'
-			if (use.detail === 'term2')
-				return (term.included_types.includes('float') || term.included_types.includes('integer')) && 'plot'
-			else return false
+			if (term.type == 'float' || term.type == 'integer') uses.add('plot')
+			if (usecase.detail === 'term2' && hasNumericChild(child_types)) uses.add('branch')
+			return uses
 
 		case 'cuminc':
-			if (use.detail == 'term') {
-				if (term.type == 'condition') return 'plot'
-				if (term.included_types.includes('condition')) return 'tree'
-				return false
+			if (usecase.detail == 'term') {
+				if (term.type == 'condition') uses.add('plot')
+				if (child_types.includes('condition')) uses.add('branch')
+				return uses
 			}
-			if (use.detail === 'term2') {
-				if (term.type == 'survival') return false
+			if (usecase.detail === 'term2') {
+				if (term.type && term.type != 'survival') uses.add('plot')
 				// -- leave it up to user, don't restrict overlay term by ancestry
 				// if (usecase.term.ancestors.includes(term.id)) return false
-
-				if (term.isleaf) return 'plot'
-				if (term.included_types?.length > 1 || term.included_types?.[0] != 'survival') return 'tree'
-				return false
+				if (hasNonSurvivalTermChild(child_types)) uses.add('branch')
+				return uses
 			}
-			if (use.detail == 'term0') return 'plot' // any term type can be used to divide charts
-			return false
+			if (usecase.detail == 'term0') {
+				uses.add('plot') // any term type can be used to divide charts
+				return uses
+			}
 
 		case 'survival':
-			if (use.detail == 'term') {
-				if (term.type == 'survival') return 'plot'
-				if (term.included_types.includes('survival')) return 'tree'
-				return false
+			if (usecase.detail == 'term') {
+				if (term.type == 'survival') uses.add('plot')
+				if (child_types.includes('survival')) uses.add('branch')
+				return uses
 			}
-			if (use.detail === 'term2') {
-				if (term.type == 'survival') return false // For now, do not allow overlaying one survival term over another
-				if (term.isleaf) return 'plot'
-				if (term.included_types?.length > 1 || term.included_types?.[0] != 'survival') return 'tree'
-				return false
+			if (usecase.detail === 'term2') {
+				if (term.type != 'survival') {
+					// do not allow overlaying one survival term over another
+					if (term.isleaf) uses.add('plot')
+					if (hasNonSurvivalTermChild(child_types)) uses.add('branch')
+				}
+				return uses
 			}
-			if (use.detail == 'term0') return 'plot' // divide by
-			return false
+			if (usecase.detail == 'term0') {
+				// divide by
+				if (term.isleaf) uses.add('plot')
+				if (hasNonSurvivalTermChild(child_types)) uses.add('branch')
+				return uses
+			}
 
 		case 'regression':
-			if (use.detail == 'term') {
-				// outcome term
-				if (use.regressionType == 'linear') {
-					return (term.included_types.includes('float') || term.included_types.includes('integer')) && 'plot'
-				} else return 'plot'
+			if (usecase.detail == 'outcome') {
+				if (usecase.regressionType == 'linear') {
+					if (term.type == 'float' || term.type == 'integer') uses.add('plot')
+					if (hasNumericChild(child_types)) uses.add('branch')
+					return uses
+				}
+				if (usecase.regressionType == 'logistic') {
+					if (term.type && term.type != 'survival') uses.add('plot')
+					if (hasNonSurvivalTermChild(child_types)) uses.add('branch')
+					return uses
+				} else if (usecase.regressionType == 'cox') {
+					if (term.type == 'condition') uses.add('plot')
+					if (child_types.includes('condition')) uses.add('branch')
+					return uses
+				}
 			}
-			if (use.detail == 'independent') {
-				return (
-					(term.included_types.includes('float') ||
-						term.included_types.includes('integer') ||
-						term.included_types.includes('categorical')) &&
-					'plot'
-				)
+
+			if (usecase.detail == 'independent') {
+				if (term.type == 'float' || term.type == 'integer' || term.type == 'categorical') uses.add('plot')
+				if (hasChildTypes(child_types, ['categorical', 'float', 'integer'])) uses.add('branch')
+				return uses
 			}
-			return 'plot'
 
 		default:
-			return 'plot'
+			if (graphableTypes.has(term.type)) uses.add('plot')
+			if (!term.isleaf) uses.add('branch')
+			return uses
+	}
+}
+
+function hasNonSurvivalTermChild(child_types) {
+	if (!child_types.length) return false
+	return child_types.length > 1 || child_types[0] != 'survival'
+}
+
+function hasNumericChild(child_types) {
+	return child_types.includes('float') || child_types.includes('integer')
+}
+
+function hasChildTypes(child_types, expected_types) {
+	for (const a of expected_types) {
+		if (child_types.includes(a)) return true
 	}
 }

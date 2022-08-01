@@ -47,7 +47,7 @@ exports.writeImportCode = async function writeImportCode(opts, targetFile) {
 
 	const specs = findMatchingSpecs(opts)
 	// the import code to write to the target file
-	const importCode = specs.matched.map(file => `import '${file}'`).join('\n')
+	const importCode = specs.matched.map(file => `import '../${file}'`).join('\n')
 	// the current import code as found in the target file
 	const currImportCode = getImportedSpecs(targetFile)
 	if (currImportCode != importCode || !currImportCode.includes(importCode)) {
@@ -65,14 +65,12 @@ function findMatchingSpecs(opts) {
 	const SPECDIR = opts.dir || '**'
 	const SPECNAME = opts.name || '*'
 	const exclude = 'exclude' in opts ? opts.exclude : SPECNAME.includes('_x_.') ? '' : '_x_.'
-	const pattern = path.join(__dirname, `../src/${SPECDIR}/test/${SPECNAME}.spec.js`)
-	const specs = glob
-		.sync(pattern, { cwd: path.join(__dirname, `../src`) })
-		.filter(f => !exclude || !f.includes(exclude))
+	const pattern = path.join(__dirname, `../**/${SPECDIR}/test/${SPECNAME}.spec.js`)
+	const specs = glob.sync(pattern, { cwd: path.join(__dirname, `../**`) }).filter(f => !exclude || !f.includes(exclude))
 
-	const srcDir = __dirname.replace('client/test', 'client/src')
+	const clientDir = __dirname.replace('client/test', 'client')
 	// sorting preference for running the tests
-	const specOrder = [`${srcDir}/common/test/rx.core.spec.js`]
+	const specOrder = [] //; console.log(75, clientDir, specs)
 	specs.sort((a, b) => {
 		const i = specOrder.indexOf(a)
 		const j = specOrder.indexOf(b)
@@ -83,7 +81,7 @@ function findMatchingSpecs(opts) {
 	})
 
 	return {
-		matched: specs.map(file => file.replace(srcDir, '../src')),
+		matched: specs.map(file => file.replace(clientDir + '/', '')),
 		n: specs.length,
 		pattern,
 		exclude

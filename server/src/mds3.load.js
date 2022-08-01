@@ -1,7 +1,6 @@
 const app = require('./app')
 const path = require('path')
 const utils = require('./utils')
-const samplefilter = require('./mds3.samplefilter')
 
 /*
 method good for somatic variants, in skewer and gp queries:
@@ -45,10 +44,7 @@ module.exports = genomes => {
 
 			may_validate_filter0(q, ds)
 
-			const result = init_result(q, ds)
-
-			await load_driver(q, ds, result)
-			// data loaded into result{}
+			const result = await load_driver(q, ds)
 
 			res.send(result)
 		} catch (e) {
@@ -68,45 +64,17 @@ function summarize_mclass(mlst) {
 	return [...cc].sort((i, j) => j[1] - i[1])
 }
 
-async function may_sampleSummary(q, ds, result) {
-	if (!q.samplesummary) return
-	if (!ds.sampleSummaries) throw 'sampleSummaries missing from ds'
-	const datalst = [result.skewer]
-	if (result.genecnvAtsample) datalst.push(result.genecnvAtsample)
-	const labels = ds.sampleSummaries.makeholder(q)
-	ds.sampleSummaries.summarize(labels, q, datalst)
-	result.sampleSummaries = await ds.sampleSummaries.finalize(labels, q)
-}
-
 function init_q(query, genome) {
 	// cannot validate filter0 here as ds will be required and is not made yet
 	if (query.hiddenmclasslst) {
 		query.hiddenmclass = new Set(query.hiddenmclasslst.split(','))
 		delete query.hiddenmclasslst
 	}
-	{
-		const filter = samplefilter.parsearg(query)
-		if (filter) {
-			query.samplefiltertemp = filter
-		} else {
-			delete query.samplefiltertemp
-		}
-	}
 	if (query.rglst) query.rglst = JSON.parse(query.rglst)
 	if (query.tid2value) query.tid2value = JSON.parse(query.tid2value)
 	return query
 }
 
-/*
-in order to do sample/variant summary, data from multiple queries needs to be summarized
-before querying, create the summary holder
-then cumulate counts from each type of data
-last, finalize results by converting Set of sample id to sample count
-*/
-function init_result(q, ds) {
-	const result = {}
-	return result
-}
 function finalize_result(q, ds, result) {
 	if (result.skewer) {
 		for (const m of result.skewer) {
@@ -115,6 +83,10 @@ function finalize_result(q, ds, result) {
 				delete m.samples
 			}
 		}
+	}
+	if (result._sampleSet) {
+		result.sampleTotalNumber = result._sampleSet.size
+		delete result._sampleSet
 	}
 }
 
@@ -132,89 +104,80 @@ async function get_ds(q, genome) {
 	return ds
 }
 
-async function load_driver(q, ds, result) {
+async function load_driver(q, ds) {
 	// various bits of data to be appended as keys to result{}
 	// what other loaders can be if not in ds.queries?
 
 	if (q.ssm2canonicalisoform) {
 		// gdc-specific logic
 		if (!ds.ssm2canonicalisoform) throw 'ssm2canonicalisoform not supported on this dataset'
-		result.isoform = await ds.ssm2canonicalisoform.get(q)
-		return
+		return { isoform: await ds.ssm2canonicalisoform.get(q) }
 	}
 
 	if (q.variant2samples) {
 		if (!ds.variant2samples) throw 'not supported by server'
-		result.variant2samples = await ds.variant2samples.get(q)
-		return
+		return { variant2samples: await ds.variant2samples.get(q) }
 	}
 
 	if (q.m2csq) {
 		if (ds.queries && ds.queries.snvindel && ds.queries.snvindel.m2csq) {
-			result.csq = await ds.queries.snvindel.m2csq.get(q)
-			return
+			return { csq: await ds.queries.snvindel.m2csq.get(q) }
 		}
 		throw 'm2csq not supported on this dataset'
 	}
 
-	if (q.samplesummary2_mclassdetail) {
-		if (ds.sampleSummaries2) {
-			result.strat = await ds.sampleSummaries2.get_mclassdetail.get(q)
-			return
-		}
-		throw 'sampleSummaries2 not supported on this dataset'
-	}
-
 	if (q.forTrack) {
 		// to load things for block track
+		const result = {}
 
 		if (q.skewer) {
 			// get skewer data
 			result.skewer = [] // for skewer track
 
-			// run queries in parallel
-			const promises = []
-
 			if (ds.queries.snvindel) {
 				// the query will resolve to list of mutations, to be flattened and pushed to .skewer[]
-				const p = query_snvindel(q, ds).then(d => {
-					//console.log('snv')
-					result.skewer.push(...d)
-				})
-				promises.push(p)
+				const d = await query_snvindel(q, ds)
+				result.skewer.push(...d)
+
+				// quick fix
+				// TODO if snvindel d contains samples, then collect samples from there
+				if (ds.queries.snvindel.getSamples) {
+					// running variant2sample query to retrieve total list of samples
+					// since ssm returned by snvindel query does not contain samples
+					// may rename to getSample_v2s to signify this
+					const p = JSON.parse(JSON.stringify(q))
+					p.get = ds.variant2samples.type_samplesIdOnly
+					const samples = await ds.variant2samples.get(p)
+					// samples is array of {sample_id}
+					// later may join sample sets from snvindel and fusion together using Set
+
+					// missing holder, init
+					if (!result._sampleSet) result._sampleSet = new Set()
+					// collect sample ids into the set
+					for (const s of samples) result._sampleSet.add(s.sample_id)
+				}
 			}
+
 			if (ds.queries.svfusion) {
 				// todo
-				promises.push(query_svfusion(q, ds).then(d => result.skewer.push(...d)))
+				const d = await query_svfusion(q, ds)
+				result.skewer.push(...d)
+				if (ds.queries.svfusion.getSamples) {
+					// may duplicate same steps as snvindel.getSamples?
+					if (!result._sampleSet) result._sampleSet = new Set()
+					// add fusion samples to _sampleSet
+				}
 			}
-			if (ds.queries.genecnv) {
-				promises.push(query_genecnv(q, ds).then(d => result.genecnvNosample))
-				// for gene cnv with sample details, need api details
-				//result.genecnvAtsample = ....
-				// should return genecnv at sample-level, then will be combined with snvindel for summary
-			}
-
-			if (q.samplesummary2) {
-				// FIXME change to issue one query per ds.sampleSummaries2.lst[]
-				const p = ds.sampleSummaries2.get_number.get(q).then(d => {
-					//console.log('s2')
-					result.sampleSummaries2 = d
-				})
-				promises.push(p)
-			}
-
-			await Promise.all(promises)
 
 			filter_data(q, result)
 
 			result.mclass2variantcount = summarize_mclass(result.skewer)
-
-			await may_sampleSummary(q, ds, result)
-
-			finalize_result(q, ds, result)
 		}
-		// other types of data e.g. cnvpileup
-		return
+
+		// add queries for new data types
+
+		finalize_result(q, ds, result)
+		return result
 	}
 	// other query type
 
@@ -270,13 +233,6 @@ function filter_data(q, result) {
 
 			// filter by other variant attributes
 
-			// filter by sample attributes
-			if (q.samplefiltertemp) {
-				if (!m.samples) continue
-				const samples = samplefilter.run(m.samples, q.samplefiltertemp)
-				if (samples.length == 0) continue
-				m.samples = samples
-			}
 			newskewer.push(m)
 		}
 		result.skewer = newskewer

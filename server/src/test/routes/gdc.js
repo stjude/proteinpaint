@@ -2,7 +2,6 @@
 
 const fs = require('fs')
 const path = require('path')
-const cookieParser = require('cookie-parser')
 const serverconfig = require('../../serverconfig')
 
 // simulate GDC sessionid to token mapping
@@ -10,7 +9,6 @@ const serverconfig = require('../../serverconfig')
 const sessions = [0]
 
 module.exports = function setRoutes(app, basepath) {
-	app.use(cookieParser())
 	app.use(basepath + '/mds3', (req, res, next) => {
 		if (req.cookies.gdcsessionid) {
 			req.headers['X-Auth-Token'] = sessions[+req.cookies.gdcsessionid]

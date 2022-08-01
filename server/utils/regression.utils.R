@@ -79,7 +79,7 @@ buildFormulas <- function(outcome, independent) {
     # cox outcome variable
     # time-to-event data
     outcomeEventId <- outcome$timeToEvent$eventId
-    if (outcome$timeToEvent$timeScale == "year") {
+    if (outcome$timeToEvent$timeScale == "time") {
       outcomeTimeId <- outcome$timeToEvent$timeId
       formula_outcome <- paste0("Surv(",outcomeTimeId,", ",outcomeEventId,")")
       outcomeIds <- c(outcomeIds, outcomeTimeId, outcomeEventId)
@@ -139,13 +139,13 @@ buildFormulas <- function(outcome, independent) {
   if (nrow(snpLocusSnps) > 0) {
     # snplocus snps present
     # build separate formula for each snplocus snp
-    tempIndependentIds <- vector(mode = "character")
-    temp_formula_independent <- vector(mode = "character")
-    temp_formula_interaction <- vector(mode = "character")
     for (r in 1:nrow(snpLocusSnps)) {
+      tempIndependentIds <- independentIds
+      temp_formula_independent <- formula_independent
+      temp_formula_interaction <- formula_interaction
       snp <- snpLocusSnps[r,]
-      tempIndependentIds <- c(independentIds, snp$id)
-      temp_formula_independent <- c(formula_independent, snp$id)
+      tempIndependentIds <- c(tempIndependentIds, snp$id)
+      temp_formula_independent <- c(temp_formula_independent, snp$id)
       if ("interactions" %in% names(snp) & length(snp$interactions[[1]]) > 0) {
         # interactions
         interactionIds <- snp$interactions[[1]]
@@ -153,8 +153,8 @@ buildFormulas <- function(outcome, independent) {
           # get unique set of interactions
           int1 <- paste(snp$id, intId, sep = ":")
           int2 <- paste(intId, snp$id, sep = ":")
-          if (!(int1 %in% formula_interaction) & !(int2 %in% formula_interaction)) {
-            temp_formula_interaction <- c(formula_interaction, int1)
+          if (!(int1 %in% temp_formula_interaction) & !(int2 %in% temp_formula_interaction)) {
+            temp_formula_interaction <- c(temp_formula_interaction, int1)
           }
         }
       }
@@ -258,7 +258,7 @@ logisticRegression <- function(formula, fdat) {
 
 # cox regression
 coxRegression <- function(formula, fdat) {  
-  res <- coxph(formula$formula, data = fdat)
+  res <- coxph(formula$formula, data = fdat, model = T)
   
   # extract summary object
   res_summ <- summary(res)
@@ -332,7 +332,7 @@ runRegression <- function(regtype, formula, fdat, outcome) {
     for (r in 1:nrow(splineVariables)) {
       splineVariable <- splineVariables[r,]
       if ("plotfile" %in% names(splineVariable$spline)) {
-        plot_spline(splineVariable, fdat, outcome, results$res, regtype)
+        plot_spline(splineVariable, fdat, outcome, formula$independentIds, results$res, regtype)
       }
     }
   }
@@ -341,13 +341,13 @@ runRegression <- function(regtype, formula, fdat, outcome) {
 }
 
 # generate cubic spline plot spline
-plot_spline <- function(splineVariable, fdat, outcome, res, regtype) {
+plot_spline <- function(splineVariable, fdat, outcome, independentIds, res, regtype) {
   ## prepare test data
   sampleSize <- 1000
   # newdat: test data table for predicting model outcome values
   # columns are all independent variables
-  # for spline variables, use regularly spaced data; for continuous variables, use data median; for categorical variables, use reference category
-  newdat <- fdat[1:sampleSize, -1, drop = F]
+  # for the spline variable, use regularly spaced data; for continuous variables, use data median; for categorical variables, use reference category
+  newdat <- fdat[1:sampleSize, independentIds, drop = F]
   # newdat2: test data table for adjusting model outcome values
   # columns are the proportions and effect sizes of non-reference categorical coefficients 
   newdat2 <- matrix(data = NA, nrow = 0, ncol = 2, dimnames = list(c(),c("prop", "effectSize")))
@@ -376,36 +376,64 @@ plot_spline <- function(splineVariable, fdat, outcome, res, regtype) {
   preddat_ci <- cbind("fit" = preddat$fit, "lwr" = ci_lwr, "upr" = ci_upr)
   # adjust the predicted values 
   # adjusted predicted values = predicted values + ((prop category A * coef category A) + (prop category B * coef category B) + etc.)
-  preddat_ci_adj <- preddat_ci + sum(apply(newdat2, 1, prod))
+  preddat_ci_adj <- preddat_ci + sum(apply(newdat2, 1, prod), na.rm = T)
   
   ## plot data
-  if (regtype == "linear") {
-    pointtype <- 16
-    pointsize <- 0.3
-    ylab <- outcome$name
-  } else {
-    # for logistic regression, plot predicted probabilities
-    preddat_ci_adj <- 1/(1+exp(-preddat_ci_adj))
-    pointtype <- 124
-    pointsize <- 0.7
-    ylab <- paste0("Pr(", outcome$name, " ", outcome$categories$nonref, ")")
-  }
   plotfile <- splineVariable$spline$plotfile
   png(filename = plotfile, width = 950, height = 550, res = 200)
   par(mar = c(3, 2.5, 1, 5), mgp = c(1, 0.5, 0), xpd = T)
-  # plot coordinate space
-  plot(fdat[,splineVariable$id],
-       fdat[,outcome$id],
-       cex.axis = 0.5,
-       ann = F,
-       type = "n"
-  )
+  if (regtype == "linear" | regtype == "logistic") {
+    if (regtype == "linear") {
+      # for linear, plot predicted values
+      pointtype <- 16
+      pointsize <- 0.3
+      ylab <- outcome$name
+    } else {
+      # for logistic, plot predicted probabilities
+      preddat_ci_adj <- 1/(1+exp(-preddat_ci_adj))
+      pointtype <- 124
+      pointsize <- 0.7
+      ylab <- paste0("Pr(", outcome$name, " ", outcome$categories$nonref, ")")
+    }
+    # first plot actual (not predicted) data
+    # predicted data will be overlayed later
+    plot(fdat[,splineVariable$id],
+         fdat[,outcome$id],
+         cex.axis = 0.5,
+         ann = F,
+         type = "n"
+    )
+    points(fdat[,splineVariable$id],
+           fdat[,outcome$id],
+           pch = pointtype,
+           cex = pointsize
+    )
+  } else if (regtype == "cox") {
+    # for cox, plot hazard ratios
+    preddat_ci_adj <- exp(preddat_ci_adj)
+    pointtype <- 16
+    pointsize <- 0.3
+    ylab <- "Hazard Ratio"
+    # plot only predicted data
+    # do not also plot actual data (like for linear/logistic) because cox outcome data is time-to-event and will not be comparable to the predicted hazard ratios
+    plot(newdat[,splineVariable$id],
+         preddat_ci_adj[,"fit"],
+         ylim = c(min(preddat_ci_adj[,"lwr"]), max(preddat_ci_adj[,"upr"])),
+         cex.axis = 0.5,
+         ann = F,
+         type = "n"
+    )
+  } else {
+    stop("unrecognized regression type")
+  }
+  
   # axis titles
   title(xlab = splineVariable$name,
         ylab = ylab,
         line = 1.5,
         cex.lab = 0.5
   )
+  
   # knots
   abline(v = splineVariable$spline$knots[[1]],
          col = "grey60",
@@ -413,24 +441,21 @@ plot_spline <- function(splineVariable, fdat, outcome, res, regtype) {
          lwd = 0.8,
          xpd = F
   )
-  # spline term vs. outcome term actual data
-  points(fdat[,splineVariable$id],
-         fdat[,outcome$id],
-         pch = pointtype,
-         cex = pointsize
-  )
+  
   # confidence intervals of regression line
   polygon(x = c(newdat[,splineVariable$id], rev(newdat[,splineVariable$id])),
           y = c(preddat_ci_adj[,"lwr"], rev(preddat_ci_adj[,"upr"])),
           col = adjustcolor("grey", alpha.f = 0.8),
           border = NA
   )
+  
   # regression line
   lines(newdat[,splineVariable$id],
         preddat_ci_adj[,"fit"],
         col = "red",
         lwd = 2
   )
+  
   # legend for lines
   legend("topright",
          cex = 0.5,
@@ -440,6 +465,7 @@ plot_spline <- function(splineVariable, fdat, outcome, res, regtype) {
          lty = c(2, 1, NA),
          col = c("grey60", "red", NA)
   )
+  
   # legend for ci
   legend("topright",
          cex = 0.5,

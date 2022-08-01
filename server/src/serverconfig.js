@@ -61,6 +61,7 @@ if (!serverconfig.Rscript) serverconfig.Rscript = 'Rscript'
 	APPLY OVERRIDES 
 ******************/
 
+// allow env overrides unless specifically configured
 if (!('allow_env_overrides' in serverconfig) && serverconfig.debugmode) {
 	serverconfig.allow_env_overrides = true
 }
@@ -136,22 +137,6 @@ if (serverconfig.allow_env_overrides) {
 		serverconfig.basepath = process.env.PP_BASEPATH
 	}
 
-	if (process.env.PP_MODE && process.env.PP_MODE.startsWith('container')) {
-		// within the container, the Dockerfile uses a pre-determined port and filepaths
-		Object.assign(serverconfig, {
-			port: 3000,
-			tpmasterdir: '/home/root/pp/tp',
-			cachedir: '/home/root/pp/cache',
-			hicstraw: '/home/root/pp/tools/straw',
-			bigwigsummary: '/home/root/pp/tools/bigWigSummary',
-			bigBedToBed: '/home/root/pp/tools/bigBedToBed',
-			bigBedNamedItems: '/home/root/pp/tools/bigBedNamedItems'
-			// note that tabix, samtools, and similar binaries are
-			// saved in the usual */bin/ paths so locating them
-			// is not needed when calling via Node child_process.spawn() or exec()
-		})
-	}
-
 	if (fs.existsSync('./.ssl') && !serverconfig.ssl) {
 		serverconfig.ssl = {}
 		const files = fs.readdirSync('./.ssl')
@@ -164,6 +149,23 @@ if (serverconfig.allow_env_overrides) {
 	if ('PP_BACKEND_ONLY' in process.env) {
 		serverconfig.backend_only = +process.env.PP_BACKEND_ONLY === 1 || process.env.PP_BACKEND_ONLY === 'true'
 	}
+}
+
+// always change selected configuration paths in a container
+if (process.env.PP_MODE && process.env.PP_MODE.startsWith('container')) {
+	// within the container, the Dockerfile uses a pre-determined port and filepaths
+	Object.assign(serverconfig, {
+		port: 3000,
+		tpmasterdir: '/home/root/pp/tp',
+		cachedir: '/home/root/pp/cache',
+		hicstraw: '/home/root/pp/tools/straw',
+		bigwigsummary: '/home/root/pp/tools/bigWigSummary',
+		bigBedToBed: '/home/root/pp/tools/bigBedToBed',
+		bigBedNamedItems: '/home/root/pp/tools/bigBedNamedItems'
+		// note that tabix, samtools, and similar binaries are
+		// saved in the usual */bin/ paths so locating them
+		// is not needed when calling via Node child_process.spawn() or exec()
+	})
 }
 
 if (!serverconfig.features) {

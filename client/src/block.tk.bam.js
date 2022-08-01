@@ -1,16 +1,16 @@
 import { select as d3select, event as d3event, mouse as d3mouse } from 'd3-selection'
 import { axisRight, axisTop } from 'd3-axis'
 import { scaleLinear } from 'd3-scale'
-import { axisstyle } from './dom/axisstyle'
+import { axisstyle } from '../dom/axisstyle'
 import { newpane } from './client'
-import { Menu } from './dom/menu'
-import { sayerror } from './dom/sayerror'
-import { appear } from './dom/animation'
-import { dofetch3 } from './common/dofetch'
-import { make_radios } from './dom/radiobutton'
-import { make_table_2col } from './dom/table2col'
-import { make_one_checkbox } from './dom/checkbox'
-import urlmap from './common/urlmap'
+import { Menu } from '../dom/menu'
+import { sayerror } from '../dom/sayerror'
+import { appear } from '../dom/animation'
+import { dofetch3 } from '../common/dofetch'
+import { make_radios } from '../dom/radiobutton'
+import { make_table_2col } from '../dom/table2col'
+import { make_one_checkbox } from '../dom/checkbox'
+import urlmap from '../common/urlmap'
 
 /*
 important: tk.uninitialized will be deleted by getData at the first launch
@@ -427,7 +427,7 @@ or update existing groups, in which groupidx will be provided
 	} else {
 		tk.leftLabelMaxwidth = tk.OriginalleftLabelMaxwidth
 	}
-	tk.kmer_diff_scores_asc = data.kmer_diff_scores_asc
+	tk.read_alignment_diff_scores_asc = data.read_alignment_diff_scores_asc
 }
 
 function update_left_margin(tk, block) {
@@ -584,7 +584,7 @@ function may_render_variant(data, tk, block) {
 			.append('div')
 			.style('width', '300px')
 			.html(
-				"<span>Fisher strand (FS) analysis score containing p-values in phred scale (-10*log(p-value)). If FS > <a href='https://gatk.broadinstitute.org/hc/en-us/articles/360035890471' target='_blank'>60</a>, the variant maybe a sequencing artifact and highlighted in red.</br></br>To compute the p-value, Fisher's exact test is used for variants with a sequencing depth <= 300. If depth > 300, chi-squared test is used.</span>"
+				"<span>Fisher strand (FS) analysis score containing p-values in phred scale (-10*log(p-value)). If FS > <a href='https://gatk.broadinstitute.org/hc/en-us/articles/360035890471' target='_blank'>60</a>, the variant maybe a sequencing artifact and highlighted in red.</br></br>To compute the p-value, Fisher's exact test is used for variants with a sequencing depth <= 300. If depth > 300 and each individual category > 150, chi-squared test is used.</span>"
 			)
 			.style('font-size', '12px')
 
@@ -1581,8 +1581,7 @@ function configPanel(tk, block) {
 			holder: row,
 			options: [
 				{ label: '0', value: 0, checked: tk.variants[0].strictness == 0 },
-				{ label: '1', value: 1, checked: tk.variants[0].strictness == 1 },
-				{ label: '2', value: 2, checked: tk.variants[0].strictness == 2 }
+				{ label: '1', value: 1, checked: tk.variants[0].strictness == 1 }
 			],
 			styles: { display: 'inline-block', margin: '10px 5px' },
 			callback: v => {
@@ -1599,6 +1598,7 @@ function configPanel(tk, block) {
 		.style('font-size', '.8em')
 		.style('width', '300px').html(`
 	<ul style="padding-left:15px">
+          <li><b>Strictness</b></li> <ul style="list-style-type:none;"> <li> 0: No post-processing after genotyping of reads (Lenient) </li> <li> 1: Reads with non-reference and non-alternate nucleotides within variant region are classifed into none category (Strict) </li></ul>
 	  <li><b>Matches</b> are rendered as gray boxes aligned to the reference.</li>
 	  <li><b>Mismatches</b> will be checked when 1 bp is wider than 1 pixel, and are rendered as red boxes aligned to the reference.</li>
 	  <li><b>Softclips</b> are rendered as blue boxes not aligned to the reference.</li>
@@ -1615,6 +1615,11 @@ function configPanel(tk, block) {
 		.style('margin-top', '10px')
 		.append('img')
 		.attr('src', tk.colorscale)
+	d
+		.append('div')
+		.style('font-size', '.8em')
+		.style('width', '300px').html(`
+`)
 }
 
 /*
@@ -1703,6 +1708,10 @@ async function create_read_alignment_table(tk, multi_read_alig_data, group) {
 			)
 			.style('text-align', 'center')
 	}
+	tk.alignpane.body
+		.style('max-width', '90vw')
+		.style('max-height', '65vh')
+		.style('overflow', 'scroll')
 
 	const div = tk.alignpane.body.append('div').style('margin', '20px')
 	tk.readAlignmentTable = div
@@ -2124,6 +2133,10 @@ async function getReadInfo(tk, block, box, ridx) {
 	if (tk.variants) {
 		req_data.lst.push('refseq=' + tk.variants[0].refseq)
 		req_data.lst.push('altseq=' + tk.variants[0].altseq)
+		req_data.lst.push('chrom=' + tk.variants[0].chr)
+		req_data.lst.push('pos=' + tk.variants[0].pos)
+		req_data.lst.push('ref=' + tk.variants[0].ref)
+		req_data.lst.push('alt=' + tk.variants[0].alt)
 	}
 	const data = await dofetch3('tkbam?' + req_data.lst.join('&'), { headers: req_data.headers })
 	if (data.error) {
@@ -2201,12 +2214,10 @@ async function getReadInfo(tk, block, box, ridx) {
 				.style('white-space', 'nowrap')
 			for (const nclt of r_align) {
 				nclt_count += 1
-				if (nclt_count <= Math.abs(tk.variants[0].pos - read_start_pos)) {
-					refAlt_tr.append('td').text(nclt)
-				} else if (
+				if (
 					type == 'Ref' &&
-					nclt_count > Math.abs(tk.variants[0].pos - read_start_pos) &&
-					nclt_count <= Math.abs(tk.variants[0].pos - read_start_pos) + tk.variants[0].ref.length
+					nclt_count > data.lst[0].red_region_start_ref &&
+					nclt_count <= data.lst[0].red_region_stop_ref
 				) {
 					refAlt_tr
 						.append('td')
@@ -2214,8 +2225,8 @@ async function getReadInfo(tk, block, box, ridx) {
 						.style('color', 'red')
 				} else if (
 					type == 'Alt' &&
-					nclt_count > Math.abs(tk.variants[0].pos - read_start_pos) &&
-					nclt_count <= Math.abs(tk.variants[0].pos - read_start_pos) + tk.variants[0].alt.length
+					nclt_count > data.lst[0].red_region_start_alt &&
+					nclt_count <= data.lst[0].red_region_stop_alt
 				) {
 					refAlt_tr
 						.append('td')
@@ -2230,12 +2241,10 @@ async function getReadInfo(tk, block, box, ridx) {
 			nclt_count = 0
 			for (const align_str of align_wrt) {
 				nclt_count += 1
-				if (nclt_count <= Math.abs(tk.variants[0].pos - read_start_pos)) {
-					alignment_tr.append('td').text(align_str)
-				} else if (
+				if (
 					type == 'Ref' &&
-					nclt_count > Math.abs(tk.variants[0].pos - read_start_pos) &&
-					nclt_count <= Math.abs(tk.variants[0].pos - read_start_pos) + tk.variants[0].ref.length
+					nclt_count > data.lst[0].red_region_start_ref &&
+					nclt_count <= data.lst[0].red_region_stop_ref
 				) {
 					alignment_tr
 						.append('td')
@@ -2243,8 +2252,8 @@ async function getReadInfo(tk, block, box, ridx) {
 						.style('color', 'red')
 				} else if (
 					type == 'Alt' &&
-					nclt_count > Math.abs(tk.variants[0].pos - read_start_pos) &&
-					nclt_count <= Math.abs(tk.variants[0].pos - read_start_pos) + tk.variants[0].alt.length
+					nclt_count > data.lst[0].red_region_start_alt &&
+					nclt_count <= data.lst[0].red_region_stop_alt
 				) {
 					alignment_tr
 						.append('td')
@@ -2264,12 +2273,10 @@ async function getReadInfo(tk, block, box, ridx) {
 			nclt_count = 0
 			for (const nclt of q_align) {
 				nclt_count += 1
-				if (nclt_count <= Math.abs(tk.variants[0].pos - read_start_pos)) {
-					query_tr.append('td').text(nclt)
-				} else if (
+				if (
 					type == 'Ref' &&
-					nclt_count > Math.abs(tk.variants[0].pos - read_start_pos) &&
-					nclt_count <= Math.abs(tk.variants[0].pos - read_start_pos) + tk.variants[0].ref.length
+					nclt_count > data.lst[0].red_region_start_ref &&
+					nclt_count <= data.lst[0].red_region_stop_ref
 				) {
 					query_tr
 						.append('td')
@@ -2277,8 +2284,8 @@ async function getReadInfo(tk, block, box, ridx) {
 						.style('color', 'red')
 				} else if (
 					type == 'Alt' &&
-					nclt_count > Math.abs(tk.variants[0].pos - read_start_pos) &&
-					nclt_count <= Math.abs(tk.variants[0].pos - read_start_pos) + tk.variants[0].alt.length
+					nclt_count > data.lst[0].red_region_start_alt &&
+					nclt_count <= data.lst[0].red_region_stop_alt
 				) {
 					query_tr
 						.append('td')

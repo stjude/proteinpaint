@@ -19,6 +19,9 @@ const snplstTerm = {
 	term:{
 		type:'snplst',
 		snps:[
+			{rsid:"rs1333261826",effectAllele:"T"}, // AF=0, not present in sjlife/ccss
+			//{rsid:'rs201382018',effectAllele:'T'}, // one het case, African sjlife, id:5506
+			{rsid:'rs1010330999',effectAllele:'G'}, // two het cases, European, sjlife and ccss
 			{rsid:'rs1641548',effectAllele:'T'},
 			{rsid:'rs858528',effectAllele:'T'},
 			{rsid:'rs1642793',effectAllele:'C'},
@@ -30,10 +33,21 @@ const snplstTerm = {
 		],
 	},
 	q:{
+		AFcutoff:5,
 		alleleType:0,
 		geneticModel:0,
 		missingGenotype:0,
 		restrictAncestry:{
+			name:'European ancestry',
+			tvs: {
+				term: {
+					id: 'genetic_race',
+					type: 'categorical',
+					name: 'Genetically defined race'
+				},
+				values: [{ key: 'European Ancestry', label: 'European Ancestry' }]
+			}
+		/*
 			name:'African ancestry',
 			tvs: {
 				term: {
@@ -43,12 +57,14 @@ const snplstTerm = {
 				},
 				values: [{ key: 'African Ancestry', label: 'African Ancestry' }]
 			}
+			*/
 		},
 	}
 }
 
 const snplocusQ = {
 	chr:'chr17', start:7674304, stop:7676849,
+	AFcutoff:5,
 	alleleType:0,
 	geneticModel:0,
 	restrictAncestry:{
@@ -73,8 +89,8 @@ const snplocusQ = {
 			{"type":"tvs","tvs":{"ranges":[{"start":0.95,"startinclusive":true,"stopunbounded":true}],"term":{"id":"CR","name":"Call rate, SJLIFE+CCSS","parent_id":null,"isleaf":true,"type":"float"}}},
 			{"type":"tvs","tvs":{"ranges":[{"start":0.95,"startinclusive":true,"stopunbounded":true}],"term":{"id":"CR_sjlife","name":"SJLIFE call rate","parent_id":null,"isleaf":true,"type":"float"}}},
 			{"type":"tvs","tvs":{"ranges":[{"start":0.95,"startinclusive":true,"stopunbounded":true}],"term":{"id":"CR_ccss","name":"CCSS call rate","parent_id":null,"isleaf":true,"type":"float"}}},
-			{"type":"tvs","tvs":{"ranges":[{"start":0.95,"startinclusive":true,"stopunbounded":true}],"term":{"id":"gnomAD_CR","name":"gnmoAD call rate","parent_id":null,"isleaf":true,"type":"float"}}},
-			{"type":"tvs","tvs":{"ranges":[{"start":0.1,"startinclusive":true,"stopunbounded":true}],"term":{"id":"gnomAD_AF","name":"gnomAD allele frequency","parent_id":null,"isleaf":true,"type":"float","min":0,"max":1,"values":{}}}},
+			//{"type":"tvs","tvs":{"ranges":[{"start":0.95,"startinclusive":true,"stopunbounded":true}],"term":{"id":"gnomAD_CR","name":"gnmoAD call rate","parent_id":null,"isleaf":true,"type":"float"}}},
+			//{"type":"tvs","tvs":{"ranges":[{"start":0.1,"startinclusive":true,"stopunbounded":true}],"term":{"id":"gnomAD_AF","name":"gnomAD allele frequency","parent_id":null,"isleaf":true,"type":"float","min":0,"max":1,"values":{}}}},
 			{"type":"tvs","tvs":{"isnot":true,"values":[{"label":"yes","key":"1"}],"term":{"id":"BadBLAT","name":"Paralog","parent_id":null,"isleaf":true,"type":"categorical"}}},
 			{"type":"tvs","tvs":{"isnot":true,"values":[{"label":"yes","key":"1"}],"term":{"id":"Polymer_region","name":"Polymer region","parent_id":null,"isleaf":true,"type":"categorical"}}}
 		]
@@ -162,15 +178,22 @@ makeURL([
 	links:[
 		['GBM EGFR by case id','?gdcbamslice=1&gdc_id=TCGA-06-0211&gdc_pos=chr7:55153818-55156225'],
 		['KRAS G12V by case uuid','?gdcbamslice=1&gdc_id=9a2a226e-9605-4214-9320-469305e664e6&gdc_var=chr12.25245350.C.A'],
-		['IDH1 R132H by file id','?gdcbamslice=1&gdc_id=00493087-9d9d-40ca-86d5-936f1b951c93_wxs_gdc_realn.bam&gdc_var=chr2.208248388.C.T'],
+		['IDH1 R132H by file id','?gdcbamslice=1&gdc_id=00493087-9d9d-40ca-86d5-936f1b951c93_wxs_gdc_realn.bam&gdc_var=chr2:g.208248388C>T'], // chr2.208248388.C.T
 
 		['AKT1 E17K file uuid','?gdcbamslice=1&gdc_id=35918f42-c424-48ef-8c95-2d87b48fdf41&gdc_var=chr14:g.104780214C>T'], // chr14.104780214.C.T
 
 		['bam link','?genome=hg38&block=1&position=chr14:104780136-104780318&variant=chr14.104780214.C.T&bamfile=xx,yy&gdc=35918f42-c424-48ef-8c95-2d87b48fdf41,<yourTokenHere>'],
 		['KRAS G12D','?gdcbamslice=1&gdc_id=17284ec9-c3cb-4c80-96a7-312e35e7c1d9&gdc_var=chr12.25245350.C.T'],
-		['NPM1 exon12 insertion','?gdcbamslice=1&gdc_id=411153fd-414c-46a7-ae2b-c6f579ad63e6&gdc_var=chr5.171410539.C.CTCTG'],
-		['MYC 3bp del','?gdcbamslice=1&gdc_id=d15a8749-e497-495d-a0a5-d21e79f4e172&gdc_var=chr8.127740426.ATGT.A'],
-		['ACVR2A K329fs','?gdcbamslice=1&gdc_id=ad5639d2-f715-4da9-9b02-700f0d1b3fca&gdc_var=chr2.147926116.TA.T'],
+		['NPM1 exon12 insertion','?gdcbamslice=1&gdc_id=09c3ee18-6f93-448f-85b6-344be06f8851&gdc_var=chr5:g.171410539_171410540insTCTG'], // chr5.171410539.C.CTCTG
+
+		['MYC 3bp del','?gdcbamslice=1&gdc_id=c3c5b27c-106b-457b-9bdf-faea907301d1_wxs_gdc_realn.bam&gdc_var=chr8:g.127740427delTGT'], // chr8.127740426.ATGT.A
+
+		['GATA3 X351 splice del', '?gdcbamslice=1&gdc_id=df82226e-2242-418b-9f5f-0a5e531826a4_wxs_gdc_realn.bam&gdc_var=chr10:g.8073734delTTTAGA'],
+
+		['ACVR2A K437fs','?gdcbamslice=1&gdc_id=fe42ed1d-e913-4214-a3a4-7baf5288dbb7_wxs_gdc_realn.bam&gdc_var=chr2:g.147926117delA'], // chr2.147926116.TA.T
+
+		['PTPN4 X605 mnv','?gdcbamslice=1&gdc_id=8577ef8a-f071-49cc-8158-05dfc52f3c70&gdc_var=chr2:g.119955155_119955159delinsTTTTT'],
+
 		['Skipped by workflow','?gdcbamslice=1&gdc_id=e2d8ca95-6a3d-48e3-abfc-ce5ee294e954'],
 		['No ssm','?gdcbamslice=1&gdc_id=DLBCL10969'],
 		['disableSSM','?gdcbamslice=1&disableSSM=1']
@@ -184,6 +207,8 @@ makeURL([
 		['KRAS','?genome=hg38&gene=ENST00000256078&mds3=GDC'],
 		['IDH1','?genome=hg38&gene=ENST00000345146&mds3=GDC'],
 		['KRAS G12V','example.gdc.byssm.html'],
+		['SRP9 small gene','?genome=hg38&gene=ENST00000650651&mds3=GDC'],
+		['AKT1 lncRNA','?genome=hg38&gene=ENST00000557552&mds3=GDC'], // no ssm but has cases??
 	]
 },
 {name:'RNA splicing',
@@ -206,6 +231,7 @@ makeURL([
 	links:[
 		['bedj','?block=on&genome=hg19&bedjfile=JSON-BED,proteinpaint_demo/hg19/bedj/gencode.gz'],
 		['bed3','?genome=hg19&block=1&bedjfile=BED3_Example,proteinpaint_demo/hg19/bedj/bed3.gz'],
+		['pecan','?genome=hg19&block=1&bedjurl=bed,https://pecan.stjude.cloud/static/hg19/refGene.hg19.gz'],
 		'ERR:',
 		['missing','?block=on&genome=hg19&bedjfile=JSON-BED,path/to/missing.gz'],
 		['text file','?genome=hg19&block=1&bedjfile=flag,proteinpaint_demo/hg19/junction/rnapeg'],
@@ -328,8 +354,8 @@ makeURL([
 			genome:'hg38',
 			plots: [ {
 				chartType:'survival',
-				term: { id: 'diaggrp' },
-				term2: { id: 'efs' }
+				term2: { id: 'diaggrp' },
+				term: { id: 'efs' }
 			} ],
 		})],
 
@@ -556,7 +582,7 @@ makeURL([
 			} ]
 		})],
 
-		['EF ~ snplocus*sex', '?noheader=1&mass='+JSON.stringify({
+		['EF ~ snplocus*sex*agedx', '?noheader=1&mass='+JSON.stringify({
 			genome: 'hg38',
 			dslabel: 'SJLife',
 			plots: [ {
@@ -566,10 +592,11 @@ makeURL([
 				independent: [
 					{
 						term:{ type:'snplocus', id:'temp112233' },
-						interactions:['sex'],
+						interactions:['sex','agedx'],
 						q:snplocusQ
 					},
-					{ id: 'sex', refGrp:'2', interactions:['temp112233']}
+					{ id: 'sex', refGrp:'2', interactions:['temp112233']},
+					{ id: 'agedx', interactions:['temp112233']}
 				]
 			} ]
 		})],
@@ -591,7 +618,7 @@ makeURL([
 			} ]
 		})],
 
-		['Yadav Cardiomyopathy 2021','?noheader=1&mass='+JSON.stringify({
+		['Yadav EF 2021','?noheader=1&mass='+JSON.stringify({
 			genome:'hg38',
 			dslabel:'SJLife',
 			plots:[{
@@ -611,9 +638,9 @@ makeURL([
 					}},
 					{id:'hrtavg',q:{
 						mode:'discrete',type:'custom-bin',lst:[
-							{startunbounded:true, stopinclusive:true,stop:0,label:'Not exposed'},
-							{stopinclusive:true,start:0,stop:250,label:'>0 to 250'},
-							{startinclusive:false,stopunbounded:true,start:250,label:'>250'}
+							{startunbounded:true, stopinclusive:true,stop:200,label:'Lower than 200'},
+							{stopinclusive:true,start:200,stop:2000,label:'>200 to 2000'},
+							{startinclusive:false,stopunbounded:true,start:2000,label:'>2000'}
 						]
 					}},
 					{
@@ -1021,9 +1048,9 @@ makeURL([
 					}},
 					{id:'hrtavg',q:{
 						mode:'discrete',type:'custom-bin',lst:[
-							{startunbounded:true, stopinclusive:true,stop:0,label:'Not exposed'},
-							{stopinclusive:true,start:0,stop:250,label:'>0 to 250'},
-							{startinclusive:false,stopunbounded:true,start:250,label:'>250'}
+							{startunbounded:true, stopinclusive:true,stop:200,label:'Lower than 200'},
+							{stopinclusive:true,start:200,stop:2000,label:'>200 to 2000'},
+							{startinclusive:false,stopunbounded:true,start:2000,label:'>2000'}
 						]
 					}},
 					// chr1:113558796-113559396 for rs6689879

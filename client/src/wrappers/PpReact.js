@@ -1,6 +1,6 @@
 import React from 'react'
 import { runproteinpaint } from '../app'
-import { getLolliplotTrack } from './gdc.views'
+import { getLolliplotTrack, getTrackByType } from './gdc.views'
 
 export function getPpReact(getTrack) {
 	if (!React) return
@@ -92,3 +92,4 @@ function deepEqual(x, y) {
 
 export { getLolliplotTrack }
 export const PpLolliplot = getPpReact(getLolliplotTrack)
+export const PpTrack = getPpReact(getTrackByType)

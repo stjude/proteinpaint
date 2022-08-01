@@ -68,6 +68,9 @@ function parse_q(q, ds) {
 	if (!ds.cohort) throw 'cohort missing from ds'
 	q.ds = ds
 	if (!q.terms) throw `missing 'terms' parameter`
+	q.terms.map(tw => {
+		if (!tw.term.name) tw.term = q.ds.cohort.termdb.q.termjsonByOneid(tw.term.id)
+	})
 }
 
 /*
@@ -144,6 +147,14 @@ function getSampleData_dictionaryTerms(q, termWrappers) {
 		if (CTE.bins) {
 			refs.byTermId[tw.term.id] = { bins: CTE.bins }
 		}
+		if (tw.term.values) {
+			const values = Object.values(tw.term.values)
+			if (values.find(v => 'order' in v)) {
+				refs.byTermId[tw.term.id] = {
+					keyOrder: values.sort((a, b) => a.order - b.order).map(v => v.key)
+				}
+			}
+		}
 		return CTE
 	})
 	values.push(...termWrappers.map(tw => tw.term.id))
@@ -179,11 +190,7 @@ async function add_geneMutation2SampleData(tw, samples, q, dictTermsLength = 0) 
 		if (!(tname in flag.data)) continue
 		for (const d of flag.data[tname]) {
 			// TODO: fix the sample names in the PNET mutation text files
-			const sname = d.sample
-				.split(';')
-				.pop()
-				.split('_')[0]
-				.trim()
+			const sname = d.sample.split(';')[0].trim()
 			// only create a sample entry/row when it is not already filtered out by not having any dictionary term values
 			if (!dictTermsLength && !(sname in samples)) samples[sname] = { sample: sname }
 			const row = samples[sname]

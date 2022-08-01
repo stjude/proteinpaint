@@ -5,7 +5,7 @@ import { bplen as bplength } from '../shared/common'
 import * as unload from './svmr.unload'
 import { scaleLinear } from 'd3-scale'
 import { axisTop } from 'd3-axis'
-import { Menu } from './dom/menu'
+import { Menu } from '../dom/menu'
 
 const genomelimit = 10000 // bp distance
 const knownprod_c = '#A702C4'

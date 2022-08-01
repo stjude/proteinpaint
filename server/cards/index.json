@@ -64,7 +64,7 @@
             "app": "Genome Browser",
             "blurb": "Coding mutations and gene fusions",
             "image": "https://pecan.stjude.cloud/static/examples/images/lollipop-square.png",
-            "update_expire": "2022-05-11",
+            "update_expire": "2022-06-05",
             "sandboxjson": "lollipop",
             "searchterms": []
         },
@@ -134,7 +134,7 @@
             "name": "Additional Track Features",
             "app": "Genome Browser",
             "blurb": "ProteinPaint arguments applicable to any track",
-            "new_expire": "2022-04-07",
+            "update_expire": "2022-06-17",
             "image": "https://pecan.stjude.cloud/static/examples/images/code-square.png",
             "sandboxjson": "tkFeatures",
             "searchterms": []
@@ -213,6 +213,28 @@
             "title": "Generate GenomePaint SV View",
             "describe": "Create a SV view with BigWig tracks using Python script",
             "file": "svview"
+        }
+    ],
+    "datasets": [
+        {
+            "name": "Pediatric Cancer Mutation",
+            "id": 1000
+        },
+        {
+            "name": "Pediatric2 GenomePaint",
+            "id": 1001
+        },
+        {
+            "name": "NCI GDC",
+            "id": 1002
+        },
+        {
+            "name": "CIViC",
+            "id": 1003
+        },
+        {
+            "name": "Survivorship Study",
+            "id": 1004
         }
     ]
 }
