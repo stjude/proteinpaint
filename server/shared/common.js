@@ -314,8 +314,21 @@ overwriteMclass({
 	,
 	M:{
 		color: 'rgb(40, 95, 143)'
+	},
+	N:{
+		color: 'rgb(179, 89, 10)'
+	},
+	L:{
+		color: 'rgb(71, 36, 179)'
+	},
+	P:{
+		color: 'rgb(104, 72, 132)'
+	},
+	Utr3:{
+		color: 'rgb(107, 90, 107)'
 	}
-}) 
+})   
+
 
 
 export const vepinfo = function(s) {
