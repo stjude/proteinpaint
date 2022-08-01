@@ -293,6 +293,31 @@ mclass[mclassdeletion] = {
 }
 // TODO complex indel
 
+// option to override mutation class attribute values
+// such as color
+export function overwriteMclass(overrides={}) {
+	for(const mc in mclass) {
+		if (!overrides[mc]) continue
+		for(const key in overrides[mc]) {
+			mclass[mc][key] = overrides[mc][key]
+		}
+	}
+}
+
+overwriteMclass({
+	I: {
+		color: 'rgb(98, 60, 53)'
+	},
+	S:{
+		color: 'rgb(31, 112, 31)'
+	}
+	,
+	M:{
+		color: 'rgb(40, 95, 143)'
+	}
+}) 
+
+
 export const vepinfo = function(s) {
 	const l = s.toLowerCase().split(',')
 	let rank = 1
