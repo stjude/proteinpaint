@@ -262,6 +262,7 @@ export async function bamsliceui({ genomes, holder, disableSSM = false, hideToke
 			.style('display', 'none')
 			.style('border-left', '1px solid #ccc')
 			.style('margin', '20px 20px 20px 40px')
+			.style('overflow', 'hidden')
 		// either baminfo_table or bamselection_table is displayed
 		// baminfo_table is a static table showing details about one bam file
 		// bamselection_table lists multiple bam files available from a sample, allowing user to select some forslicing
@@ -278,6 +279,8 @@ export async function bamsliceui({ genomes, holder, disableSSM = false, hideToke
 			.style('grid-template-columns', 'repeat(6, auto)')
 			.style('align-items', 'center')
 			.style('justify-items', 'left')
+			.style('overflow', 'scroll') //Fix for grid rows appearring defined area
+			.style('max-height', '20vh')
 
 		async function gdc_search() {
 			try {
@@ -386,10 +389,7 @@ export async function bamsliceui({ genomes, holder, disableSSM = false, hideToke
 				.style('grid-template-rows', 'repeat(' + files.length + ', auto)')
 				.append('div')
 				.style('padding', '3px 10px')
-				// .text('Select')
 				.style('opacity', 0.5)
-				.style('max-height', '20vh')
-				.style('overflow', 'scroll')
 
 			for (const row of baminfo_rows) {
 				bamselection_table
@@ -402,8 +402,9 @@ export async function bamsliceui({ genomes, holder, disableSSM = false, hideToke
 			}
 
 			for (const onebam of files) {
-				const wrapper = bamselection_table.append('label').style('display', 'contents')
-				// const file_checkbox = bamselection_table
+				const wrapper = bamselection_table
+					.append('label') //Creates a row wrapper where all text is clickable
+					.style('display', 'contents')
 				const file_checkbox = wrapper
 					// .append('div')
 					.append('input')
@@ -425,14 +426,13 @@ export async function bamsliceui({ genomes, holder, disableSSM = false, hideToke
 						}
 					})
 				for (const row of baminfo_rows) {
-					// const wrapper = bamselection_table
-					// 	.append('label')
-					// 	.style('display', 'contents')
 					const d = wrapper
 						// const d = bamselection_table
 						.append('div')
+						.style('background-color', 'transparent')
 						.style('padding', '3px 10px')
 						.style('white-space', 'nowrap') //Fix for values overlapping on window resize
+						.style('overflow', 'hidden')
 					if (row.url) {
 						d.html(`<a href=${row.url}${onebam.file_uuid} target=_blank>${onebam[row.key]}</a>`)
 					} else {
