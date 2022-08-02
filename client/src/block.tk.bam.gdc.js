@@ -385,11 +385,7 @@ export async function bamsliceui({ genomes, holder, disableSSM = false, hideToke
 				.remove()
 			baminfo_table.style('display', 'none')
 
-			bamselection_table
-				.style('grid-template-rows', 'repeat(' + files.length + ', auto)')
-				.append('div')
-				.style('padding', '3px 10px')
-				.style('opacity', 0.5)
+			bamselection_table.style('grid-template-rows', 'repeat(' + files.length + ', 20px)').append('div') //Placeholder div over checkboxes
 
 			for (const row of baminfo_rows) {
 				bamselection_table
@@ -399,12 +395,25 @@ export async function bamsliceui({ genomes, holder, disableSSM = false, hideToke
 					.style('opacity', 0.5)
 					.style('white-space', 'nowrap') //Fix for values overlapping on window resize
 					.style('text-overflow', 'ellipsis')
+					.style('overflow', 'hidden')
+					.style('max-width', '10vw')
 			}
 
 			for (const onebam of files) {
 				const wrapper = bamselection_table
 					.append('label') //Creates a row wrapper where all text is clickable
 					.style('display', 'contents')
+					.style('white-space', 'nowrap')
+					.style('overflow', 'hidden')
+					.style('text-overflow', 'ellipsis')
+					.style('max-width', '10vw')
+					.style('background-clip', 'padding-box')
+					.on('mouseenter', () => {
+						wrapper.style('background-color', '#fcfcca')
+					})
+					.on('mouseleave', () => {
+						wrapper.style('background-color', '')
+					})
 				const file_checkbox = wrapper
 					// .append('div')
 					.append('input')
@@ -429,10 +438,8 @@ export async function bamsliceui({ genomes, holder, disableSSM = false, hideToke
 					const d = wrapper
 						// const d = bamselection_table
 						.append('div')
-						.style('background-color', 'transparent')
 						.style('padding', '3px 10px')
-						.style('white-space', 'nowrap') //Fix for values overlapping on window resize
-						.style('overflow', 'hidden')
+						.style('background', 'inherit')
 					if (row.url) {
 						d.html(`<a href=${row.url}${onebam.file_uuid} target=_blank>${onebam[row.key]}</a>`)
 					} else {
@@ -618,7 +625,7 @@ export async function bamsliceui({ genomes, holder, disableSSM = false, hideToke
 				first = false
 
 				m.row.on('mouseover', () => {
-					if (!m.isClicked) m.row.style('background-color', '#fffce3')
+					if (!m.isClicked) m.row.style('background-color', '#fcfcca')
 				})
 				m.row.on('mouseout', () => {
 					if (!m.isClicked) m.row.style('background-color', '')
