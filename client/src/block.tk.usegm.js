@@ -6,6 +6,8 @@ import { select as d3select, event as d3event, mouse as d3mouse } from 'd3-selec
 import * as coord from './coord'
 import { legend_newrow } from './block.legend'
 import { basecompliment } from '#shared/common'
+import {rgb} from 'd3-color'
+import { default_text_color } from '../shared/common'
 
 /*
 the "gene model" track, showing in one of four modes:
@@ -1027,12 +1029,12 @@ function domainlegend(tk, block) {
 		row
 			.append('span')
 			.text(domaintype.name)
-			.style('color', '#aaa')
+			.style('color', default_text_color)
 			.style('padding-right', '10px')
 		row
 			.append('span')
 			.text(domaintype.description)
-			.style('color', '#aaa')
+			.style('color', default_text_color)
 			.style('font-size', '.7em')
 			.style('padding-right', '10px')
 

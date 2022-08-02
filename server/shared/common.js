@@ -8,8 +8,12 @@ exported functions
 
 
 */
+import {rgb} from 'd3-color'
 
-export const defaultcolor = '#8AB1D4'
+
+export const defaultcolor = rgb('#8AB1D4').darker()
+export const default_text_color = rgb('#aaa').darker().darker()
+
 
 export const exoncolor = '#4F8053'
 
@@ -99,7 +103,7 @@ export const mclass = {
 		desc: 'A variant near an exon edge that may affect splicing functionality.',
 		key: 'L'
 	},
-	Intron: { label: 'INTRON', color: '#bbbbbb', dt: dtsnvindel, desc: 'An intronic variant.', key: 'Intron' },
+	Intron: { label: 'INTRON', color: '#656565', dt: dtsnvindel, desc: 'An intronic variant.', key: 'Intron' },
 
 	// quick fix!! for showing genes that are not tested in samples (e.g. gene panels) in the heatmap
 	Blank: { label: 'Not tested', color: '#fff', dt: dtsnvindel, desc: 'This gene is not tested.', key: 'Blank' }
