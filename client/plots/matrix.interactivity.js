@@ -813,6 +813,7 @@ function setTermActions(self) {
 	}
 
 	self.launchBrowser = () => {
+		event.stopPropagation()
 		const tw = self.activeLabel.tw
 		const custom_variants = []
 		for (const row of self.data.lst) {
@@ -822,21 +823,10 @@ function setTermActions(self) {
 		self.app.dispatch({
 			type: 'plot_create',
 			config: {
+				term: tw,
 				chartType: 'variantBrowser',
 				insertBefore: self.id,
-				noheader: 1,
-				parseurl: true,
-				nobox: 1,
-				genome: self.app.vocabApi.vocab.genome,
-				gene: custom_variants[0].isoform,
-				geneName: tw.term.name,
-				tracks: [
-					{
-						type: 'mds3',
-						name: custom_variants[0].isoform,
-						custom_variants
-					}
-				]
+				custom_variants
 			}
 		})
 	}

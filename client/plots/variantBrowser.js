@@ -26,13 +26,29 @@ class MassVariantBrowser {
 
 		if (!this.rendered) {
 			this.dom.holder.selectAll('*').remove()
+			const gene = this.config.term.term.name
+			const arg = {
+				noheader: 1,
+				nobox: 1,
+				genome: this.app.vocabApi.vocab.genome,
+				gene,
+				geneName: gene,
+				tracks: [
+					{
+						type: 'mds3',
+						name: gene,
+						custom_variants: this.config.custom_variants
+					}
+				]
+			}
 
+			// TODO: use blockInit()
 			runproteinpaint(
 				Object.assign(
 					{
 						holder: this.dom.holder.node()
 					},
-					this.config
+					arg
 				)
 			)
 
