@@ -21,13 +21,16 @@ class MassVariantBrowser {
 	main() {
 		this.config = JSON.parse(JSON.stringify(this.state.config))
 		if (this.dom.header) {
-			this.dom.header.html(`${this.config.geneName}: variants in matrix samples`)
+			this.dom.header.html(`${this.config.term.term.name}: variants in matrix samples`)
 		}
 
 		if (!this.rendered) {
 			this.dom.holder.selectAll('*').remove()
 			const gene = this.config.term.term.name
+
+			// TODO: may construct argument differently based on track type?
 			const arg = {
+				holder: this.dom.holder.node(),
 				noheader: 1,
 				nobox: 1,
 				genome: this.app.vocabApi.vocab.genome,
@@ -43,15 +46,7 @@ class MassVariantBrowser {
 			}
 
 			// TODO: use blockInit()
-			runproteinpaint(
-				Object.assign(
-					{
-						holder: this.dom.holder.node()
-					},
-					arg
-				)
-			)
-
+			runproteinpaint(arg)
 			this.rendered = true
 		}
 	}
