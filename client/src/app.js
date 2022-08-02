@@ -16,7 +16,6 @@ import { drawer_init } from '../appdrawer/app.drawer'
 import urlmap from '../common/urlmap'
 import { renderSandboxFormDiv, newSandboxDiv } from '../dom/sandbox'
 import { first_genetrack_tolist } from '../common/1stGenetk'
-import {rgb} from 'd3-color'
 
 
 
@@ -267,7 +266,7 @@ function makeheader(app, obj, jwt) {
 		.style('padding', padw_sm)
 		.style('padding-left', '25px')
 		.style('font-size', '.8em')
-		.style('color', rgb(common.defaultcolor).darker())
+		.style('color', d3rgb(common.defaultcolor).darker())
 
 	{
 		// a row for server stats

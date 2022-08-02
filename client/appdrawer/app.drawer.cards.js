@@ -288,7 +288,7 @@ function makeRibbon(e, text, color) {
 		.append('span')
 		.text(text)
 		.style('color', 'white')
-		.style('background-color', color)
+		.style('background-color', rgb(color).darker())
 		.style('height', 'auto')
 		.style('width', '100%')
 		.style('top', '15%')
