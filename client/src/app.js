@@ -156,11 +156,12 @@ export function runproteinpaint(arg) {
 			}
 			setAuth({ dsAuth: data.dsAuth, holder: app.holder })
 
-			if (data.commonOverrides) {
-				// NOTE: required or imported code files are only loaded once by Nodejs
-				// and variables are static so that changes to common key-values will affect all
+			if (data.commonOverrides || arg.commonOverrides) {
+				// NOTE: required or imported code files are only loaded once
+				// and module variables are static so that changes to common key-values will affect all
 				// client-side code that import common.js
-				common.applyOverrides(data.commonOverrides)
+				// TODO??: server-side rendered viz should see client-side arg.commonOverrides ???
+				common.applyOverrides(Object.assign(data.commonOverrides || {}, arg.commonOverrides || {}))
 			}
 
 			// genome data init
