@@ -17,8 +17,6 @@ import urlmap from '../common/urlmap'
 import { renderSandboxFormDiv, newSandboxDiv } from '../dom/sandbox'
 import { first_genetrack_tolist } from '../common/1stGenetk'
 
-
-
 /*
 
 exports a global function runproteinpaint()
@@ -157,6 +155,13 @@ export function runproteinpaint(arg) {
 				app.debugmode = true
 			}
 			setAuth({ dsAuth: data.dsAuth, holder: app.holder })
+
+			if (data.commonOverrides) {
+				// NOTE: required or imported code files are only loaded once by Nodejs
+				// and variables are static so that changes to common key-values will affect all
+				// client-side code that import common.js
+				common.applyOverrides(data.commonOverrides)
+			}
 
 			// genome data init
 			for (const genomename in app.genomes) {

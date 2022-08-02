@@ -8,12 +8,12 @@ exported functions
 
 
 */
-import {rgb} from 'd3-color'
-
+import { rgb } from 'd3-color'
 
 export const defaultcolor = rgb('#8AB1D4').darker()
-export const default_text_color = rgb('#aaa').darker().darker()
-
+export const default_text_color = rgb('#aaa')
+	.darker()
+	.darker()
 
 export const exoncolor = '#4F8053'
 
@@ -297,17 +297,31 @@ mclass[mclassdeletion] = {
 }
 // TODO complex indel
 
-// option to override mutation class attribute values
 // such as color
-export function overwriteMclass(overrides={}) {
-	for(const mc in mclass) {
+/*for(const mc in mclass) {
 		if (!overrides[mc]) continue
 		for(const key in overrides[mc]) {
 			mclass[mc][key] = overrides[mc][key]
 		}
+	}*/
+//}
+
+// option to override mutation class attribute values
+export function applyOverrides(overrides = {}) {
+	if (overrides.mclass) {
+		for (const key in overrides.mclass) {
+			// allow to fill-in mutation class that are missing from mclass;
+			// may be useful for things like 'Not tested', etc, that may not be in mclass by default
+			// but are used by a customer with its own PP server instance
+			if (!mclass[key]) mclass[key] = {}
+			for (const subkey in overrides.mclass[key]) {
+				mclass[key][subkey] = overrides.mclass[key][subkey]
+			}
+		}
 	}
 }
 
+/*
 overwriteMclass({
 	I: {
 		color: 'rgb(98, 60, 53)'
@@ -332,8 +346,7 @@ overwriteMclass({
 		color: 'rgb(107, 90, 107)'
 	}
 })   
-
-
+*/
 
 export const vepinfo = function(s) {
 	const l = s.toLowerCase().split(',')
