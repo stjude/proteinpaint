@@ -339,7 +339,7 @@ export class Block {
 			const div2 = this.holder
 				.append('div')
 				.style('border-top', 'solid 1px ' + this.legend.legendcolor)
-				.style('background-color', '#FCFBF7')
+				//.style('background-color', '#FCFBF7')
 			if (arg.foldlegend) {
 				div2.style('display', 'none')
 			}

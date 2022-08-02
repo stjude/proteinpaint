@@ -317,7 +317,7 @@ overwriteMclass({
 	}
 	,
 	M:{
-		color: 'rgb(40, 95, 143)'
+		color: '#2379bc'
 	},
 	N:{
 		color: 'rgb(179, 89, 10)'
