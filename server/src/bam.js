@@ -2387,7 +2387,17 @@ function plot_segment(ctx, segment, y, group, q) {
 				} else if (r.to_printnt) {
 					ctx.fillStyle = 'white'
 				} else {
-					ctx.fillStyle = match_hq
+					if (segment.rnext) {
+						ctx.fillStyle = ctxpair_hq
+					} else if (segment.discord_orientation) {
+						ctx.fillStyle = discord_orientation_hq
+					} else if (segment.discord_wrong_insertsize) {
+						ctx.fillStyle = discord_wrong_insertsize_hq
+					} else if (segment.discord_unmapped2) {
+						ctx.fillStyle = discord_unmapped_hq
+					} else {
+						ctx.fillStyle = match_hq
+					}
 				}
 				if (x + b.len * r.ntwidth + ntboxwidthincrement < r.width && x < r.width && r.x < x + ntboxwidthincrement) {
 					ctx.fillRect(x, y, b.len * r.ntwidth + ntboxwidthincrement, group.stackheight)
@@ -2425,7 +2435,7 @@ function plot_segment(ctx, segment, y, group, q) {
 			// no quality and just a solid box, may print mate chr name
 			if (segment.x2 - segment.x1 >= 20 && group.stackheight >= 7) {
 				ctx.font = Math.min(insertion_maxfontsize, Math.max(insertion_minfontsize, group.stackheight - 4)) + 'pt Arial'
-				ctx.fillStyle = 'black'
+				ctx.fillStyle = 'white'
 				ctx.fillText(
 					(q.nochr ? 'chr' : '') + segment.rnext,
 					(segment.x1 + segment.x2) / 2,
