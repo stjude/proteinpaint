@@ -452,7 +452,9 @@ export async function bamsliceui({ genomes, holder, disableSSM = false, hideToke
 				.style('height', '0')
 				.transition()
 				.duration(500)
-				.style('height', files.length * 24 + 'px')
+				.style('height', 'auto')
+				.style('max-height', '20vh')
+			// .style('height', files.length * 24 + 'px') //Creates a gap between the 2nd to last and last row
 		}
 	}
 
