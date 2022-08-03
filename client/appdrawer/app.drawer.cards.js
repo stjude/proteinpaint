@@ -236,7 +236,7 @@ function displayTracks(tracks, holder, page_args) {
 			.html(
 				`<div class="sjpp-track-h"><span style="font-size:14.5px;font-weight:500;">${track.name}</span></div>
 				${track.blurb ? `<span class="sjpp-track-blurb" style="cursor:default">${track.blurb}</span></div>` : ''}
-				<span class="sjpp-track-image"><img src="${track.image}"></img></span>
+				<span class="sjpp-track-image"><img src="${track.image}" alt="${track.blurb}"></img></span>
 				</div>`
 			)
 			.on('click', async () => {

@@ -267,8 +267,9 @@ async function step3(arg) {
 		if (!Array.isArray(arg.dataset)) throw 'dataset is not array'
 		// load dataset client-side object, register in genome
 		for (const dsname of arg.dataset) {
+			if (arg.genome.datasets[dsname]) continue
 			const d = await dofetch3(`getDataset?genome=${arg.genome.name}&dsname=${dsname}`)
-			if (d.error) throw 'invalid name from dataset[]'
+			if (d.error) throw `invalid name from dataset[]: ${d.error}`
 			if (!d.ds) throw '.ds missing'
 
 			// dataset is already registered under genome by ds.label
