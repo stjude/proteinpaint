@@ -628,7 +628,8 @@ async function handle_genomes(req, res) {
 		launchdate,
 		hasblat,
 		features: exports.features,
-		dsAuth: getDsAuth(req)
+		dsAuth: getDsAuth(req),
+		commonOverrides: serverconfig.commonOverrides
 	})
 }
 
@@ -7096,6 +7097,13 @@ async function pp_init() {
 	serverconfig.cachedir_bam = await mayCreateSubdirInCache('bam')
 	serverconfig.cachedir_genome = await mayCreateSubdirInCache('genome')
 	serverconfig.cachedir_ssid = await mayCreateSubdirInCache('ssid')
+
+	// NOTE: required or imported code files are only loaded once by Nodejs
+	// and variables are static so that changes to common key-values will affect all
+	// server-side code that import common.js
+	if (serverconfig.commonOverrides) {
+		common.applyOverrides(serverconfig.commonOverrides)
+	}
 
 	if (!serverconfig.genomes) throw '.genomes[] missing'
 	if (!Array.isArray(serverconfig.genomes)) throw '.genomes[] not array'

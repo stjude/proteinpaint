@@ -156,6 +156,14 @@ export function runproteinpaint(arg) {
 			}
 			setAuth({ dsAuth: data.dsAuth, holder: app.holder })
 
+			if (data.commonOverrides || arg.commonOverrides) {
+				// NOTE: required or imported code files are only loaded once
+				// and module variables are static so that changes to common key-values will affect all
+				// client-side code that import common.js
+				// TODO??: server-side rendered viz should see client-side arg.commonOverrides ???
+				common.applyOverrides(Object.assign(data.commonOverrides || {}, arg.commonOverrides || {}))
+			}
+
 			// genome data init
 			for (const genomename in app.genomes) {
 				const err = initgenome(app.genomes[genomename])
@@ -264,7 +272,7 @@ function makeheader(app, obj, jwt) {
 		.style('padding', padw_sm)
 		.style('padding-left', '25px')
 		.style('font-size', '.8em')
-		.style('color', common.defaultcolor)
+		.style('color', d3rgb(common.defaultcolor).darker())
 
 	{
 		// a row for server stats

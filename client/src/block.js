@@ -46,6 +46,8 @@ import {
 import { mds2_fromtemplate, mds2_maketk, mds2_load } from './block.mds2.adaptor'
 import { mds3_fromtemplate, mds3_maketk, mds3_load } from '../mds3/adaptor'
 import { bedgraphdot_fromtemplate, bedgraphdot_maketk, bedgraphdot_load } from './block.tk.bedgraphdot.adaptor'
+import {rgb} from 'd3-color'
+
 
 /* non-standard handler for legacy dataset
 can delete when migrated to mds3
@@ -337,7 +339,7 @@ export class Block {
 			const div2 = this.holder
 				.append('div')
 				.style('border-top', 'solid 1px ' + this.legend.legendcolor)
-				.style('background-color', '#FCFBF7')
+				//.style('background-color', '#FCFBF7')
 			if (arg.foldlegend) {
 				div2.style('display', 'none')
 			}
@@ -464,7 +466,7 @@ export class Block {
 				.append('div') // duplicated
 				.style('display', 'inline-block')
 				.text(this.genome.name)
-				.style('background', '#7B95AB')
+				.style('background', rgb('#7B95AB').darker())
 				.style('font-size', '.8em')
 				.style('color', 'white')
 				.style('padding', '1px 5px')

@@ -8,8 +8,12 @@ exported functions
 
 
 */
+import { rgb } from 'd3-color'
 
-export const defaultcolor = '#8AB1D4'
+export const defaultcolor = rgb('#8AB1D4').darker()
+export const default_text_color = rgb('#aaa')
+	.darker()
+	.darker()
 
 export const exoncolor = '#4F8053'
 
@@ -99,7 +103,7 @@ export const mclass = {
 		desc: 'A variant near an exon edge that may affect splicing functionality.',
 		key: 'L'
 	},
-	Intron: { label: 'INTRON', color: '#bbbbbb', dt: dtsnvindel, desc: 'An intronic variant.', key: 'Intron' },
+	Intron: { label: 'INTRON', color: '#656565', dt: dtsnvindel, desc: 'An intronic variant.', key: 'Intron' },
 
 	// quick fix!! for showing genes that are not tested in samples (e.g. gene panels) in the heatmap
 	Blank: { label: 'Not tested', color: '#fff', dt: dtsnvindel, desc: 'This gene is not tested.', key: 'Blank' }
@@ -292,6 +296,57 @@ mclass[mclassdeletion] = {
 	key: mclassdeletion
 }
 // TODO complex indel
+
+// such as color
+/*for(const mc in mclass) {
+		if (!overrides[mc]) continue
+		for(const key in overrides[mc]) {
+			mclass[mc][key] = overrides[mc][key]
+		}
+	}*/
+//}
+
+// option to override mutation class attribute values
+export function applyOverrides(overrides = {}) {
+	if (overrides.mclass) {
+		for (const key in overrides.mclass) {
+			// allow to fill-in mutation class that are missing from mclass;
+			// may be useful for things like 'Not tested', etc, that may not be in mclass by default
+			// but are used by a customer with its own PP server instance
+			if (!mclass[key]) mclass[key] = {}
+			for (const subkey in overrides.mclass[key]) {
+				mclass[key][subkey] = overrides.mclass[key][subkey]
+			}
+		}
+	}
+}
+
+/*
+overwriteMclass({
+	I: {
+		color: 'rgb(98, 60, 53)'
+	},
+	S:{
+		color: 'rgb(31, 112, 31)'
+	}
+	,
+	M:{
+		color: '#2379bc'
+	},
+	N:{
+		color: 'rgb(179, 89, 10)'
+	},
+	L:{
+		color: 'rgb(71, 36, 179)'
+	},
+	P:{
+		color: 'rgb(104, 72, 132)'
+	},
+	Utr3:{
+		color: 'rgb(107, 90, 107)'
+	}
+})   
+*/
 
 export const vepinfo = function(s) {
 	const l = s.toLowerCase().split(',')
