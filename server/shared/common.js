@@ -877,34 +877,62 @@ export const gmmode = {
 	gmsum: 'aggregated exons'
 }
 
+/*
+input:
+
+m={}
+	m.csq=[]
+		element: {
+			Allele: str,
+			Consequence: str,
+			CANONICAL: str, // true if _isoform is canonical
+			...
+			_isoform: str,
+			_class: str,
+			_csqrank: int
+		}
+	m.ann=[]
+		annovar output. may be derelict
+block={}
+	block.usegm={ isoform }
+	can be a mock object when running this function in node!
+
+does:
+	find an annotation from m.csq[] that's fitting the circumstance
+	- current gm isoform displayed in block gene mode
+	- any canonical isoform from m.csq[] (can be missing if vep is not instructed to do it)
+	- one with highest _csqrank
+	then, copy its class/mname to m{}
+	has many fall-back and always try to assign class/mname
+
+no return
+*/
 export function vcfcopymclass(m, block) {
 	if (m.csq) {
-		// there could be many annotations, the first one not always desirable
-		// choose *colorful* annotation based on _csqrank
-		let useone = null
+		let useone // point to the element of m.csq[], from this class/mname is copied to m{}
+
 		if (block.usegm) {
-			for (const q of m.csq) {
-				if (q._isoform != block.usegm.isoform) continue
-				if (useone) {
+			// block is in gm mode, find a csq matching with the genemodel isoform
+			useone = m.csq.find(i => i._isoform == block.usegm.isoform)
+		}
+
+		if (!useone) {
+			// no match to usegm isoform; can be due to in genomic mode and zoomed out, where this variant is from a neighboring gene near block.usegm
+			// find one using canonical isoform
+			useone = m.csq.find(i => i.CANONICAL)
+
+			if (!useone) {
+				// none of the elements in m.csq[] is using a canonical isoform, as that's a vep optional output
+				// last method: choose *colorful* annotation based on if is canonical, _csqrank
+				useone = m.csq[0]
+				for (const q of m.csq) {
 					if (q._csqrank < useone._csqrank) {
 						useone = q
 					}
-				} else {
-					useone = q
-				}
-			}
-			if (!useone && block.gmmode == gmmode.genomic) {
-				// no match to this gene, but in genomic mode, maybe from other genes?
-				useone = m.csq[0]
-			}
-		} else {
-			useone = m.csq[0]
-			for (const q of m.csq) {
-				if (q._csqrank < useone._csqrank) {
-					useone = q
 				}
 			}
 		}
+
 		if (useone) {
 			m.gene = useone._gene
 			m.isoform = useone._isoform
