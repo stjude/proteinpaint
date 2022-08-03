@@ -14,13 +14,16 @@ usage() {
 
 	-t tpmasterdir: your local serverconfig.json's tpmasterdir
 	-r REV: git revision to checkout, if empty will use the current code state
+	-b build arguments, like proxy-servers for downloading whitelisted packages, dependencies
+	   default \"--build-arg http_proxy=http://cloud-proxy:3128 --build-arg https_proxy=http://cloud-proxy:3128 --build-arg ELECTRON_GET_USE_PROXY=true --build-arg GLOBAL_AGENT_HTTPS_PROXY=http://cloud-proxy:3128\" 
 	"
 }
 
 REV=latest
 TPDIR=''
 DOCKER_TAG=ppgdc:$REV
-while getopts "t:r:h:d:" opt; do
+BUILDARGS="--build-arg http_proxy=http://cloud-proxy:3128 --build-arg https_proxy=http://cloud-proxy:3128 --build-arg ELECTRON_GET_USE_PROXY=true --build-arg GLOBAL_AGENT_HTTPS_PROXY=http://cloud-proxy:3128"
+while getopts "t:r:b:h:d:" opt; do
 	case "${opt}" in
 	t) 
 		TPMASTERDIR=$OPTARG
@@ -30,6 +33,9 @@ while getopts "t:r:h:d:" opt; do
 		;;
 	d)
 		DOCKER_TAG=$OPTARG
+		;;
+	b)
+		BUILDARGS=$OPTARG
 		;;
 	h)
 		usage
@@ -48,9 +54,7 @@ done
 ################################
 
 
-./build/full/build.sh -r $REV \
-	-b "--build-arg http_proxy=http://cloud-proxy:3128 --build-arg https_proxy=http://cloud-proxy:3128 --build-arg ELECTRON_GET_USE_PROXY=true --build-arg GLOBAL_AGENT_HTTPS_PROXY=http://cloud-proxy:3128"
-
+./build/full/build.sh -r $REV -b $BUILDARGS
 tar -C tmppack/ -xvf archive.tar build/gdc
 
 #####################
