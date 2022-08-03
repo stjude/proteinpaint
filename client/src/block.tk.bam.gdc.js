@@ -262,6 +262,7 @@ export async function bamsliceui({ genomes, holder, disableSSM = false, hideToke
 			.style('display', 'none')
 			.style('border-left', '1px solid #ccc')
 			.style('margin', '20px 20px 20px 40px')
+			.style('overflow', 'hidden')
 		// either baminfo_table or bamselection_table is displayed
 		// baminfo_table is a static table showing details about one bam file
 		// bamselection_table lists multiple bam files available from a sample, allowing user to select some forslicing
@@ -278,6 +279,8 @@ export async function bamsliceui({ genomes, holder, disableSSM = false, hideToke
 			.style('grid-template-columns', 'repeat(6, auto)')
 			.style('align-items', 'center')
 			.style('justify-items', 'left')
+			.style('overflow', 'scroll') //Fix for grid rows appearring defined area
+			.style('max-height', '20vh')
 
 		async function gdc_search() {
 			try {
@@ -382,12 +385,7 @@ export async function bamsliceui({ genomes, holder, disableSSM = false, hideToke
 				.remove()
 			baminfo_table.style('display', 'none')
 
-			bamselection_table
-				.style('grid-template-rows', 'repeat(' + files.length + ', 20px)')
-				.append('div')
-				.style('padding', '3px 10px')
-				.text('Select')
-				.style('opacity', 0.5)
+			bamselection_table.style('grid-template-rows', 'repeat(' + files.length + ', 20px)').append('div') //Placeholder div over checkboxes
 
 			for (const row of baminfo_rows) {
 				bamselection_table
@@ -396,11 +394,28 @@ export async function bamsliceui({ genomes, holder, disableSSM = false, hideToke
 					.text(row.title)
 					.style('opacity', 0.5)
 					.style('white-space', 'nowrap') //Fix for values overlapping on window resize
+					.style('text-overflow', 'ellipsis')
+					.style('overflow', 'hidden')
+					.style('max-width', '10vw')
 			}
 
 			for (const onebam of files) {
-				const file_checkbox = bamselection_table
-					.append('div')
+				const wrapper = bamselection_table
+					.append('label') //Creates a row wrapper where all text is clickable
+					.style('display', 'contents')
+					.style('white-space', 'nowrap')
+					.style('overflow', 'hidden')
+					.style('text-overflow', 'ellipsis')
+					.style('max-width', '10vw')
+					.style('background-clip', 'padding-box')
+					.on('mouseenter', () => {
+						wrapper.style('background-color', '#fcfcca')
+					})
+					.on('mouseleave', () => {
+						wrapper.style('background-color', '')
+					})
+				const file_checkbox = wrapper
+					// .append('div')
 					.append('input')
 					.style('padding', '3px 10px')
 					.style('margin-left', '25px')
@@ -420,10 +435,11 @@ export async function bamsliceui({ genomes, holder, disableSSM = false, hideToke
 						}
 					})
 				for (const row of baminfo_rows) {
-					const d = bamselection_table
+					const d = wrapper
+						// const d = bamselection_table
 						.append('div')
 						.style('padding', '3px 10px')
-						.style('white-space', 'nowrap') //Fix for values overlapping on window resize
+						.style('background', 'inherit')
 					if (row.url) {
 						d.html(`<a href=${row.url}${onebam.file_uuid} target=_blank>${onebam[row.key]}</a>`)
 					} else {
@@ -436,7 +452,9 @@ export async function bamsliceui({ genomes, holder, disableSSM = false, hideToke
 				.style('height', '0')
 				.transition()
 				.duration(500)
-				.style('height', files.length * 24 + 'px')
+				.style('height', 'auto')
+				.style('max-height', '20vh')
+			// .style('height', files.length * 24 + 'px') //Creates a gap between the 2nd to last and last row
 		}
 	}
 
@@ -609,7 +627,7 @@ export async function bamsliceui({ genomes, holder, disableSSM = false, hideToke
 				first = false
 
 				m.row.on('mouseover', () => {
-					if (!m.isClicked) m.row.style('background-color', '#fffce3')
+					if (!m.isClicked) m.row.style('background-color', '#fcfcca')
 				})
 				m.row.on('mouseout', () => {
 					if (!m.isClicked) m.row.style('background-color', '')
