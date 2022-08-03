@@ -7454,9 +7454,11 @@ function checkDependenciesAndVersions() {
 		if (ps.stderr.trim()) throw ps.stderr
 	}
 
+	// samtools and bcftools usually have similar installed versions
+	const htslibMinorVer = 9
 	{
 		const lines = child_process
-			.execSync(serverconfig.samtools + ' version', { encoding: 'utf8' })
+			.execSync(serverconfig.samtools + ' --version', { encoding: 'utf8' })
 			.trim()
 			.split('\n')
 		// first line should be "samtools 1.14"
@@ -7465,7 +7467,7 @@ function checkDependenciesAndVersions() {
 		const [major, minor] = v.split('.')
 		if (major != '1') throw 'samtools not 1.*'
 		const i = Number(minor)
-		if (i < 10) throw 'samtools not >= 1.10'
+		if (i < htslibMinorVer) throw `samtools not >= 1.${htslibMinorVer}`
 	}
 	{
 		const lines = child_process
@@ -7478,7 +7480,7 @@ function checkDependenciesAndVersions() {
 		const [major, minor] = v.split('.')
 		if (major != '1') throw 'bcftools not 1.*'
 		const i = Number(minor)
-		if (i < 10) throw 'bcftools not >= 1.10'
+		if (i < htslibMinorVer) throw `bcftools not >= 1.${htslibMinorVer}`
 	}
 }
 
