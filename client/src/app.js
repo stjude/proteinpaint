@@ -790,10 +790,11 @@ async function parseEmbedThenUrl(arg, app) {
 		const opts = {
 			holder: arg.holder,
 			state: res.state,
-			genome: arg.genomes[res.state.vocab.genome]
+			genome: app.genomes[res.state.vocab.genome]
 		}
 		const _ = await import('../mass/app')
 		_.appInit(opts)
+		return
 	}
 }
 
