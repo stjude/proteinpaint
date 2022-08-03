@@ -2417,7 +2417,6 @@ function plot_segment(ctx, segment, y, group, q) {
 		}
 		throw 'unknown opr at rendering: ' + b.opr
 	}
-
 	mayClipArrowhead(ctx, segment, group, r, y)
 
 	if (segment.rnext) {
@@ -2426,12 +2425,7 @@ function plot_segment(ctx, segment, y, group, q) {
 			// no quality and just a solid box, may print mate chr name
 			if (segment.x2 - segment.x1 >= 20 && group.stackheight >= 7) {
 				ctx.font = Math.min(insertion_maxfontsize, Math.max(insertion_minfontsize, group.stackheight - 4)) + 'pt Arial'
-				if (!b.qual) {
-					// When quality scores are not defined print nucleotides in black
-					ctx.fillStyle = 'black'
-				} else {
-					ctx.fillStyle = 'white'
-				}
+				ctx.fillStyle = 'black'
 				ctx.fillText(
 					(q.nochr ? 'chr' : '') + segment.rnext,
 					(segment.x1 + segment.x2) / 2,
