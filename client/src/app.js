@@ -783,6 +783,19 @@ async function parseEmbedThenUrl(arg, app) {
 	if (arg.tkui) {
 		launch_tkUIs(arg, app)
 	}
+
+	if (arg.massSessionId) {
+		const res = await client.dofetch3(`/massSession?id=${arg.massSessionId}`)
+		if (res.error) throw res.error
+		const opts = {
+			holder: app.holder0,
+			state: res.state,
+			genome: app.genomes[res.state.vocab.genome]
+		}
+		const _ = await import('../mass/app')
+		_.appInit(opts)
+		return
+	}
 }
 
 async function may_launchGeneView(arg, app) {
