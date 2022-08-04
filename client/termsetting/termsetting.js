@@ -507,7 +507,7 @@ function setInteractivity(self) {
 		}
 
 		const options = []
-		if (!self.q || !self.q.groupsetting?.disabled) {
+		if (self.q && !self.q.groupsetting?.disabled) {
 			options.push({ label: 'Edit', callback: self.handler.showEditMenu })
 		}
 

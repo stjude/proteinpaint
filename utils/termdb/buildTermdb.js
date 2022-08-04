@@ -399,6 +399,9 @@ function finalizeTerms(terms) {
 		if (!term.type) continue
 		if (term.type == 'categorical') {
 			// to do: add checking
+			if (term.values?.length > 2 && term.groupsetting) {
+				delete term.groupsetting.disabled
+			}
 		} else if (term.type == 'integer' || term.type == 'float') {
 			const computableValues = []
 			for (const v of term.__all_values) {

@@ -164,7 +164,7 @@ function setTermActions(self) {
 
 	self.showShortcuts = (t, div) => {
 		div.style('text-align', 'center')
-		div.append('span').html('Shortcuts: ')
+		//div.append('span').html('Shortcuts: ')
 
 		// sorting icons
 		div
