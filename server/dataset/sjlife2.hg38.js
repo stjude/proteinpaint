@@ -676,19 +676,6 @@ module.exports = {
 			file: 'files/hg38/sjlife/clinical/db'
 		},
 
-		minTimeSinceDx: 5, // years
-		// enrollment in sjlife requires 5 years since cancer diagnosis
-
-		ageStartTermId: 'agedx', // term id for starting age of patients
-		// for cox outcome with timeScale='age'
-		// starting age of patients is age at cancer diagnosis
-
-		ageEndOffset: 0.00274, // years
-		// for cox outcome with timeScale='age'
-		// 1 day (i.e. 1/365 or 0.00274) needs to be added
-		// to age_end to prevent age_end = age_start (which
-		// would cause regression analysis to fail in R)
-
 		termdb: {
 			// quick fix: list non-dictionary term types
 			// expose to client via termdbConfig
@@ -696,6 +683,20 @@ module.exports = {
 				'snplst' // as independent variable in mass regression
 				// to add 'snplocus' 'prs' later
 			],
+
+			timeScale: 'years',
+
+			minTimeSinceDx: 5, // enrollment in sjlife requires 5 years since cancer diagnosis
+
+			ageStartTermId: 'agedx', // term id for starting age of patients
+			// for cox outcome with timeScale='age'
+			// starting age of patients is age at cancer diagnosis
+
+			ageEndOffset: 0.00274, // number of years to offset ending age of patients
+			// for cox outcome with timeScale='age'
+			// 1 day (i.e. 1/365 or 0.00274) needs to be added
+			// to age_end to prevent age_end = age_start (which
+			// would cause regression analysis to fail in R)
 
 			coxCumincXlab: 'Years since study enrollment',
 

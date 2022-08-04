@@ -490,6 +490,12 @@ function get_label4key(key, term, q, ds) {
 			if (!(key in term.values)) throw `unknown grade='${key}'`
 			return term.values[key].label
 		}
+		if (q.mode == 'cox') {
+			// cox outcome
+			// key is event status from cox sql query: 0 (no event) or 1 (event)
+			// use key to retrieve group name from q.groupNames
+			return q.groupNames[key]
+		}
 		// breaks[] has values, chart is by group and key should be group name
 		return key
 	}
