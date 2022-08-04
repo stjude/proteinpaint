@@ -788,7 +788,7 @@ async function parseEmbedThenUrl(arg, app) {
 		const res = await client.dofetch3(`/massSession?id=${arg.massSessionId}`)
 		if (res.error) throw res.error
 		const opts = {
-			holder: arg.holder,
+			holder: app.holder0,
 			state: res.state,
 			genome: app.genomes[res.state.vocab.genome]
 		}
