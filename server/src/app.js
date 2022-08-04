@@ -7443,19 +7443,18 @@ async function pp_init() {
 
 function checkDependenciesAndVersions() {
 	// test if R has all required libraries
-	const rlibraries = [
-		'library("jsonlite")',
-		'suppressPackageStartupMessages( library("cmprsk"))',
-		'library("hwde")',
-		'suppressPackageStartupMessages(library("lmtest"))'
-	]
+	const rlibraries = ['jsonlite', 'cmprsk', 'hwde', 'lmtest']
 	for (const lib of rlibraries) {
-		const ps = child_process.spawnSync(serverconfig.Rscript, ['-e', lib], { encoding: 'utf8' })
+		const ps = child_process.spawnSync(
+			serverconfig.Rscript,
+			['-e', `suppressPackageStartupMessages(library("${lib}"))`],
+			{ encoding: 'utf8' }
+		)
 		if (ps.stderr.trim()) throw ps.stderr
 	}
 
 	// samtools and bcftools usually have similar installed versions
-	const htslibMinorVer = 9
+	const htslibMinorVer = 10
 	{
 		const lines = child_process
 			.execSync(serverconfig.samtools + ' --version', { encoding: 'utf8' })
