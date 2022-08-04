@@ -524,8 +524,13 @@ exports.run_rust = function(binfile, input_data) {
 		})
 		ps.on('close', code => {
 			if (code !== 0) reject(`spawned '${binfile}' exited with a non-zero status and this stderr:\n${stderr.join('')}`)
-			//console.log("stdout:",stdout)
-			resolve(stdout.join('').toString())
+			else if (stdout.toString().includes('Cannot read bigWig file') == true) {
+				// When bigfile is not found, the promise should be rejected with message given below
+				reject(stdout.toString())
+			} else {
+				//console.log("stdout:",stdout)
+				resolve(stdout.join('').toString())
+			}
 		})
 	})
 }
