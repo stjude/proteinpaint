@@ -108,7 +108,7 @@ fn main() {
                 );
             }
             Err(_) => {
-                println!("File not found");
+                println!("Cannot read bigWig file");
             }
         }
     } else {
@@ -132,7 +132,7 @@ fn main() {
                 );
             }
             Err(_) => {
-                println!("File not found");
+                println!("Cannot read bigWig file");
             }
         }
     }
@@ -228,7 +228,7 @@ fn calculate_appropriate_zoom_level_ucsc(
             unity_added = true;
         }
         reduction_levels.reverse();
-        println!("reduction_levels:{:?}", reduction_levels);
+        //println!("reduction_levels:{:?}", reduction_levels);
         let mut closest_diff: u64 = 18446744073709551615; // Highest number allowed by u64 type
         for level in reduction_levels {
             let diff: u64 = (desired_reduction as i64 - level as i64).abs() as u64;
@@ -244,7 +244,7 @@ fn calculate_appropriate_zoom_level_ucsc(
     if closest_level == Some(1) && unity_added == true {
         closest_level = None;
     }
-    println!("closest_level:{:?}", closest_level);
+    //println!("closest_level:{:?}", closest_level);
     closest_level
 }
 
@@ -284,11 +284,11 @@ fn calculate_datapoints<
         match zoom_level {
             Some(level) => {
                 // Using some zoom level
-                let pre = std::time::Instant::now();
+                //let pre = std::time::Instant::now();
                 let bigwig_output = reader
                     .get_zoom_interval(&chrom, start_pos as u32, stop_pos as u32, level)
                     .unwrap();
-                dbg!(pre.elapsed());
+                //dbg!(pre.elapsed());
                 let mut i = 0;
                 let mut start_region = datapoints_list[i];
                 let mut end_region = datapoints_list[i + 1];
@@ -527,10 +527,10 @@ fn calculate_datapoints<
                 for entry in bigwig_output {
                     match entry {
                         Ok(v) => {
-                            println!(
-                                "start,end,sum,bases_covered:{},{},{},{}",
-                                v.start, v.end, v.summary.sum, v.summary.bases_covered
-                            );
+                            //println!(
+                            //    "start,end,sum,bases_covered:{},{},{},{}",
+                            //    v.start, v.end, v.summary.sum, v.summary.bases_covered
+                            //);
 
                             if v.start == v.end {
                                 continue;
@@ -589,7 +589,6 @@ fn calculate_datapoints<
                                         && iter > 1
                                     {
                                         // Calculate sum and number for this region
-                                        //println!("Hello");
                                         let start_entry_within_region =
                                             determine_max(v.start as f64, start_region);
                                         let stop_entry_within_region =
