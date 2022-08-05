@@ -2026,18 +2026,11 @@ reverseorient() {
 		}
 		const box = this.ctrl.dshandleholder
 			.append('div')
-			.style('display', 'inline-block')
-			.style('margin', '1px')
-			.style('border', 'solid 1px #545454')
-			.style('font-size', '.9em')
+			.attr('class', 'sjpp-dshandleholder')
 			.style('font-family', client.font)
-			.style('cursor', 'default')
 		const says = box
 			.append('div')
-			.attr('class', 'sja_opaque8')
-			.style('display', 'inline-block')
-			.style('color', 'black')
-			.style('padding', '2px 4px')
+			.attr('class', 'sja_opaque8 sjpp-dslabel')
 			.text(ds.label)
 			.on('click', async () => {
 				this.pannedpx = undefined // important!

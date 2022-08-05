@@ -1001,4 +1001,20 @@ table {
     padding: 2px 5px;
 }
 
+.sjpp-dshandleholder
+{
+    display: inline-block;
+    margin: 1px;
+    border: solid 1px #545454;
+    font-size: .9em;
+    cursor: default;
+}
+
+.sjpp-dslabel
+{
+    display: inline-block;
+    color: black;
+    padding: 2px 4px;
+
+}
 /* client/src/block.js end */
