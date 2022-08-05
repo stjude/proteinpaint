@@ -244,7 +244,8 @@ function getGDCconfig() {
 					color: 'rgb(107, 90, 107)'
 				}
 			}
-		}
+		},
+		targetPortal: 'gdc'
 		/**** 
 			ASSUMES THAT THE GDC-PP WILL RUN INSIDE A DOCKER CONTAINER,
 			see above where the serverconfig.port, tpmasterdir, etc 

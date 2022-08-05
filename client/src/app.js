@@ -163,7 +163,7 @@ export function runproteinpaint(arg) {
 				// TODO??: server-side rendered viz should see client-side arg.commonOverrides ???
 				common.applyOverrides(Object.assign(data.commonOverrides || {}, arg.commonOverrides || {}))
 			}
-
+			if (data.targetPortal && data.targetPortal == 'gdc') await import('./style.gdc.css') // actual string value will let webpack find and bundle this optional stylesheet
 			// genome data init
 			for (const genomename in app.genomes) {
 				const err = initgenome(app.genomes[genomename])
