@@ -1,4 +1,4 @@
-const common = require('../shared/common')
+const common = require('#shared/common')
 const got = require('got')
 const { get_crosstabCombinations } = require('./mds3.variant2samples')
 const serverconfig = require('./serverconfig')
@@ -11,14 +11,14 @@ validate_variant2sample
 validate_query_snvindel_byrange
 	makeSampleObj
 validate_query_snvindel_byisoform
-	getSamples_gdcapi
 	snvindel_byisoform
 validate_query_snvindel_byisoform_2
 validate_query_genecnv
-getSamples_gdcapi
+querySamples_gdcapi
 	flattenCaseByFields
+	may_add_readdepth
+	may_add_projectAccess
 get_termlst2size
-addCrosstabCount_tonodes
 validate_m2csq
 validate_ssm2canonicalisoform
 getheaders
@@ -28,7 +28,6 @@ handle_gdc_ssms
 
 **************** internal
 mayMapRefseq2ensembl
-may_add_readdepth
 */
 
 const apihost = process.env.PP_GDC_HOST || 'https://api.gdc.cancer.gov'
@@ -600,7 +599,7 @@ termidlst[]
 	and to parse out as sample attributes
 ds{}
 */
-export async function getSamples_gdcapi(q, termidlst, ds) {
+export async function querySamples_gdcapi(q, termidlst, ds) {
 	const api = ds.variant2samples.gdcapi
 
 	const termObjs = []
@@ -663,9 +662,12 @@ export async function getSamples_gdcapi(q, termidlst, ds) {
 			flattenCaseByFields(sample, s.case, term)
 		}
 
-		/////////////////// hardcoded logic to use .observation
+		/////////////////// hardcoded logic to add read depth using .observation
 		// FIXME apply a generalized mechanism to record read depth (or just use sampledata.read_depth{})
 		may_add_readdepth(s.case, sample)
+
+		/////////////////// hardcoded logic to indicate a case is open/controlled using
+		may_add_projectAccess(sample, ds)
 
 		///////////////////
 		samples.push(sample)
@@ -692,6 +694,14 @@ function may_add_readdepth(acase, sample) {
 		totalTumor: dat.read_depth.t_depth,
 		totalNormal: dat.read_depth.n_depth
 	}
+}
+
+/* hardcoded gdc logic! does not rely on any dataset config
+ */
+function may_add_projectAccess(sample, ds) {
+	const projectId = sample['case.project.project_id']
+	if (!projectId) return
+	sample.caseIsOpenAccess = ds.gdcOpenProjects.has(projectId)
 }
 
 /*
@@ -780,48 +790,6 @@ export async function get_termlst2size(termidlst, q, combination, ds) {
 
 	if (combination) return [tv2counts, combination]
 	return tv2counts
-}
-
-/* for an ele of nodes[], find matching ele from combinations[], and assign total as node.cohortsize
-why this function is gdc-specific?
-if not move to mds3.init.js
-*/
-export async function addCrosstabCount_tonodes(nodes, combinations) {
-	for (const node of nodes) {
-		if (!node.id0) continue // root
-
-		if (!node.v0) {
-			continue
-		}
-		const v0 = node.v0.toLowerCase()
-		if (!node.id1) {
-			const n = combinations.find(i => i.id1 == undefined && i.v0 == v0)
-			if (n) node.cohortsize = n.count
-			continue
-		}
-
-		if (!node.v1) {
-			// e.g. {"id":"root...HCMI-CMDC...","parentId":"root...HCMI-CMDC","value":1,"name":"","id0":"project","v0":"HCMI-CMDC","id1":"disease"}
-			continue
-		}
-		const v1 = node.v1.toLowerCase()
-		if (!node.id2) {
-			// second level, use crosstabL1
-			const n = combinations.find(i => i.id2 == undefined && i.v0 == v0 && i.v1 == v1)
-			if (n) node.cohortsize = n.count
-			continue
-		}
-
-		if (!node.v2) {
-			continue
-		}
-		const v2 = node.v2.toLowerCase()
-		if (!node.id3) {
-			// third level, use crosstabL2
-			const n = crosstabL2.find(i => i.v0 == v0 && i.v1 == v1 && i.v2 == v2)
-			if (n) node.cohortsize = n.count
-		}
-	}
 }
 
 export function validate_m2csq(ds) {

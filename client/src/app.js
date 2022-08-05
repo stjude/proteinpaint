@@ -1,16 +1,13 @@
 import { select as d3select, selectAll as d3selectAll, event as d3event } from 'd3-selection'
 import * as client from './client'
 import { dofetch3, setAuth } from '../common/dofetch'
-import { stratinput } from '../shared/tree'
-import { stratify } from 'd3-hierarchy'
 import { findgenemodel_bysymbol } from './gene'
 import './style.css'
-import * as common from '../shared/common'
+import * as common from '#shared/common'
 import { bulkui, bulkembed } from './bulk.ui'
 import { string2pos, invalidcoord } from './coord'
 import { loadstudycohort } from './tp.init'
 import { rgb as d3rgb } from 'd3-color'
-import { scaleOrdinal, schemeCategory20 } from 'd3-scale'
 import blockinit from './block.init'
 import { debounce } from 'debounce'
 import * as parseurl from './app.parseurl'
@@ -44,7 +41,7 @@ findgene2paint
 
 launchblock()
 may_launchGeneView
-launchgeneview()
+	launchgeneview()
 launchfusioneditor()
 launchmavb()
 launch2dmaf()
@@ -53,7 +50,11 @@ launchsamplematrix()
 launchmdssamplescatterplot
 launchmdssurvivalplot
 launch_fimo
+launch_genefusion
 launch_singlecell
+
+********** quick fix parameters
+geneSearch4GDCmds3
 */
 
 const headtip = new client.Menu({ padding: '0px', offsetX: 0, offsetY: 0 })
@@ -154,6 +155,14 @@ export function runproteinpaint(arg) {
 				app.debugmode = true
 			}
 			setAuth({ dsAuth: data.dsAuth, holder: app.holder })
+
+			if (data.commonOverrides || arg.commonOverrides) {
+				// NOTE: required or imported code files are only loaded once
+				// and module variables are static so that changes to common key-values will affect all
+				// client-side code that import common.js
+				// TODO??: server-side rendered viz should see client-side arg.commonOverrides ???
+				common.applyOverrides(Object.assign(data.commonOverrides || {}, arg.commonOverrides || {}))
+			}
 
 			// genome data init
 			for (const genomename in app.genomes) {
@@ -263,7 +272,7 @@ function makeheader(app, obj, jwt) {
 		.style('padding', padw_sm)
 		.style('padding-left', '25px')
 		.style('font-size', '.8em')
-		.style('color', common.defaultcolor)
+		.style('color', d3rgb(common.defaultcolor).darker())
 
 	{
 		// a row for server stats
@@ -577,7 +586,7 @@ async function findgene2paint(app, str, genomename, jwt) {
 		}
 	}
 
-	blockinit(par)
+	await blockinit(par)
 }
 
 async function parseEmbedThenUrl(arg, app) {
@@ -687,6 +696,11 @@ async function parseEmbedThenUrl(arg, app) {
 		return app
 	}
 
+	if (arg.genefusion) {
+		launch_genefusion(arg, app)
+		return app
+	}
+
 	if (arg.mavolcanoplot) {
 		launchmavb(arg, app)
 		return app
@@ -713,6 +727,9 @@ async function parseEmbedThenUrl(arg, app) {
 	}
 
 	if (arg.geneSearch4GDCmds3) {
+		/* can generalize by changing to geneSearch4tk:{tkobj}
+		so it's no longer hardcoded for one dataset of one track type
+		*/
 		await launchGeneSearch4GDCmds3(arg, app)
 		return
 	}
@@ -760,11 +777,24 @@ async function parseEmbedThenUrl(arg, app) {
 		await launchmass(arg.mass, app)
 	}
 	if (arg.testInternals && app.debugmode) {
-		// !!! TODO: RE-ACTIVATE this import once rollup can ignore this safely !!!
-		// await import('../test/internals.js')
+		// !!! TODO: configure rollup to ignore this import
+		await import('../test/internals.js')
 	}
 	if (arg.tkui) {
 		launch_tkUIs(arg, app)
+	}
+
+	if (arg.massSessionId) {
+		const res = await client.dofetch3(`/massSession?id=${arg.massSessionId}`)
+		if (res.error) throw res.error
+		const opts = {
+			holder: app.holder0,
+			state: res.state,
+			genome: app.genomes[res.state.vocab.genome]
+		}
+		const _ = await import('../mass/app')
+		_.appInit(opts)
+		return
 	}
 }
 
@@ -839,6 +869,14 @@ async function launchmdssamplescatterplot(arg, app) {
 		}
 		arg.dslabel = arg.dataset
 		delete arg.dataset
+
+		if (arg.mds.mdsIsUninitiated) {
+			const d = await dofetch3(`getDataset?genome=${arg.genome.name}&dsname=${arg.dslabel}`)
+			if (d.error) throw d.error
+			if (!d.ds) throw 'ds missing'
+			Object.assign(arg.mds, d.ds)
+			delete arg.mds.mdsIsUninitiated
+		}
 	} else if (arg.analysisdata) {
 		// validate later
 	} else if (arg.analysisdata_file) {
@@ -983,7 +1021,9 @@ async function launchgeneview(arg, app) {
 		mset: arg.mset,
 		tklst: arg.tracks,
 		gmmode: arg.gmmode,
-		mclassOverride: arg.mclassOverride
+		mclassOverride: arg.mclassOverride,
+		hide_dsHandles: arg.hide_dsHandles,
+		onloadalltk_always: arg.onloadalltk_always
 	}
 	let ds = null
 	if (arg.dataset) {
@@ -1020,7 +1060,7 @@ async function launchgeneview(arg, app) {
 		pa.hlvariants = arg.hlvariants
 	}
 
-	blockinit(pa)
+	await blockinit(pa)
 }
 
 async function launchblock(arg, app) {
@@ -1361,7 +1401,11 @@ async function launch_tkUIs(arg, app) {
 	}
 	if (arg.tkui == 'databrowser') {
 		const p = await import('./databrowser/databrowser.ui')
-		p.init_dictionaryUI(app.holder, app.debugmode)
+		p.init_databrowserUI(app.holder, app.debugmode)
+	}
+	if (arg.tkui == 'genefusion') {
+		const p = await import('./genefusion/genefusion.ui')
+		p.init_geneFusionUI(app.holder, app.genomes, app.debugmode)
 	}
 }
 
@@ -1370,6 +1414,47 @@ async function launchtermdb(opts, app) {
 	import('../termdb/app').then(_ => {
 		_.appInit(opts)
 	})
+}
+
+async function launch_genefusion(arg, app) {
+	try {
+		const genome = app.genomes[arg.genome]
+		if (!genome) throw 'Invalid genome: ' + arg.genome
+
+		const m = await (await import('./fusion.parse')).parseFusion({
+			line: arg.genefusion.text,
+			genome,
+			positionType: arg.genefusion.positionType
+		})
+
+		await getGm(m.pairlst[0].a, genome)
+		await getGm(m.pairlst[0].b, genome)
+
+		const _ = await import('./svgraph')
+		_.default({
+			pairlst: m.pairlst,
+			genome,
+			holder: app.holder
+		})
+	} catch (e) {
+		app.error0(e.message || e)
+		if (e.stack) console.log(e.stack)
+	}
+}
+
+async function getGm(p, genome) {
+	// p={isoform}
+	const d = await dofetch3('genelookup', {
+		method: 'POST',
+		body: JSON.stringify({ genome: genome.name, input: p.isoform, deep: 1 })
+	})
+	if (d.error) throw d.error
+	if (!Array.isArray(d.gmlst)) throw 'gmlst not array'
+	const u = d.gmlst.find(i => i.isoform == p.isoform)
+	if (!u) throw 'no match to isoform'
+	p.chr = u.chr
+	p.name = u.name
+	p.gm = { isoform: u.isoform }
 }
 
 async function launchmass(opts, app) {
@@ -1445,123 +1530,7 @@ function initgenome(g) {
 		if (ds.isMds) {
 		} else if (ds.isMds3) {
 			if (!ds.label) return 'ds.label missing'
-		} else {
-			const e = validate_oldds(ds)
-			if (e) {
-				return '(old) official dataset error: ' + e
-			}
 		}
 	}
 	return null
-}
-
-function validate_oldds(ds) {
-	// old official ds
-	if (ds.geneexpression) {
-		if (ds.geneexpression.maf) {
-			try {
-				ds.geneexpression.maf.get = eval('(' + ds.geneexpression.maf.get + ')')
-			} catch (e) {
-				return 'invalid Javascript for get() of expression.maf of ' + ds.label
-			}
-		}
-	}
-	if (ds.cohort) {
-		if (ds.cohort.raw && ds.cohort.tosampleannotation) {
-			/*
-			tosampleannotation triggers converting ds.cohort.raw to ds.cohort.annotation
-			*/
-			if (!ds.cohort.key4annotation) {
-				return 'cohort.tosampleannotation in use by .key4annotation missing of ' + ds.label
-			}
-			if (!ds.cohort.annotation) {
-				ds.cohort.annotation = {}
-			}
-			let nosample = 0
-			for (const a of ds.cohort.raw) {
-				const sample = a[ds.cohort.tosampleannotation.samplekey]
-				if (sample) {
-					const b = {}
-					for (const k in a) {
-						b[k] = a[k]
-					}
-					ds.cohort.annotation[sample] = b
-				} else {
-					nosample++
-				}
-			}
-			if (nosample) return nosample + ' rows has no sample name from sample annotation of ' + ds.label
-			delete ds.cohort.tosampleannotation
-		}
-		if (ds.cohort.levels) {
-			if (ds.cohort.raw) {
-				// to stratify
-				// cosmic has only level but no cohort info, buried in snvindel
-				const nodes = stratinput(ds.cohort.raw, ds.cohort.levels)
-				ds.cohort.root = stratify()(nodes)
-				ds.cohort.root.sum(i => i.value)
-			}
-		}
-		if (ds.cohort.raw) {
-			delete ds.cohort.raw
-		}
-		ds.cohort.suncolor = scaleOrdinal(schemeCategory20)
-	}
-	if (ds.snvindel_attributes) {
-		for (const at of ds.snvindel_attributes) {
-			if (at.get) {
-				try {
-					at.get = eval('(' + at.get + ')')
-				} catch (e) {
-					return 'invalid Javascript for getter of ' + JSON.stringify(at)
-				}
-			} else if (at.lst) {
-				for (const at2 of at.lst) {
-					if (at2.get) {
-						try {
-							at2.get = eval('(' + at2.get + ')')
-						} catch (e) {
-							return 'invalid Javascript for getter of ' + JSON.stringify(at2)
-						}
-					}
-				}
-			}
-		}
-	}
-	if (ds.stratify) {
-		if (!Array.isArray(ds.stratify)) {
-			return 'stratify is not an array in ' + ds.label
-		}
-		for (const strat of ds.stratify) {
-			if (!strat.label) {
-				return 'stratify method lacks label in ' + ds.label
-			}
-			if (strat.bycohort) {
-				if (!ds.cohort) {
-					return 'stratify method ' + strat.label + ' using cohort but no cohort in ' + ds.label
-				}
-			} else {
-				if (!strat.attr1) {
-					return 'stratify method ' + strat.label + ' not using cohort but no attr1 in ' + ds.label
-				}
-				if (!strat.attr1.label) {
-					return '.attr1.label missing in ' + strat.label + ' in ' + ds.label
-				}
-				if (!strat.attr1.k) {
-					return '.attr1.k missing in ' + strat.label + ' in ' + ds.label
-				}
-			}
-		}
-	}
-
-	if (ds.url4variant) {
-		// quick fix for clinvar
-		for (const u of ds.url4variant) {
-			u.makelabel = eval('(' + u.makelabel + ')')
-			u.makeurl = eval('(' + u.makeurl + ')')
-		}
-	}
-
-	// no checking vcfinfofilter
-	// no population freq filter
 }

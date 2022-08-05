@@ -90,17 +90,25 @@ const regressionTypes = ['linear', 'logistic', 'cox']
 // minimum number of samples to run analysis
 const minimumSample = 1
 
+let stime, etime
+const benchmark = { NodeJS: {}, 'regression.R': {} }
 export async function get_regression(q, ds) {
 	try {
 		parse_q(q, ds)
 
+		stime = new Date().getTime()
 		const sampledata = await getSampleData(q, [q.outcome, ...q.independent], ds)
 		/* each element is one sample with a key-val map for all its annotations:
 		{sample, id2value:Map( tid => {key,value}) }
 		*/
+		etime = new Date().getTime()
+		benchmark['NodeJS']['getSampleData'] = (etime - stime) / 1000 + ' sec'
 
+		stime = new Date().getTime()
 		// build the input for R script
 		const Rinput = makeRinput(q, sampledata)
+		etime = new Date().getTime()
+		benchmark['NodeJS']['makeRinput'] = (etime - stime) / 1000 + ' sec'
 
 		validateRinput(Rinput)
 		const [id2originalId, originalId2id] = replaceTermId(Rinput)
@@ -120,6 +128,8 @@ export async function get_regression(q, ds) {
 			runRegression(Rinput, id2originalId, q, result),
 			snplocusPostprocess(q, sampledata, Rinput, result)
 		])
+
+		console.log('benchmark:', benchmark)
 
 		return result
 	} catch (e) {
@@ -211,12 +221,12 @@ function checkTwAncestryRestriction(tw, q, ds) {
 	if (a.PCfileBySubcohort) {
 		// by subcohort, which is coded as a tvs in q.filter
 		if (!q.filter) throw 'q.filter missing while trying to access subcohort for PCfileBySubcohort'
-		const item = q.filter.lst.find(i => i.tag == 'cohortFilter')
-		if (!item)
-			throw 'item by tag=cohortFilter missing from q.filter.lst[] while trying to access subcohort for PCfileBySubcohort'
-		// item.tvs.values[] contain elements e.g. {key:'SJLIFE'}
+		const cohortFilterTvs = getFilterItemByTag(q.filter, 'cohortFilter')
+		if (!cohortFilterTvs)
+			throw 'tvs by tag=cohortFilter missing from q.filter.lst[] while trying to access subcohort for PCfileBySubcohort'
+		// cohortFilterTvs.tvs.values[] contain elements e.g. {key:'SJLIFE'}
 		// in which keys are joined in alphabetical order for lookup in a.PCfileBySubcohort{}
-		const sortedKeys = item.tvs.values
+		const sortedKeys = cohortFilterTvs.tvs.values
 			.map(i => i.key)
 			.sort()
 			.join(',')
@@ -356,6 +366,7 @@ function makeRinput(q, sampledata) {
 			const v = id2value.get(t.id)
 			if (!v) {
 				// sample has no value for this variable
+				// this variable is either a snplocus snp or an ancestry PC
 				// set value to 'null' because R will
 				// convert 'null' to 'NA' during json import
 				entry[t.id] = null
@@ -570,36 +581,23 @@ function validateRinput(Rinput) {
 
 async function runRegression(Rinput, id2originalId, q, result) {
 	// run regression analysis in R
+	stime = new Date().getTime()
 	const Rinputfile = path.join(serverconfig.cachedir, Math.random().toString() + '.json')
 	await utils.write_file(Rinputfile, JSON.stringify(Rinput))
 	const Routput = await lines2R(path.join(serverconfig.binpath, 'utils', 'regression.R'), [], [Rinputfile])
 	fs.unlink(Rinputfile, () => {})
 	await parseRoutput(Rinput, Routput, id2originalId, q, result)
+	etime = new Date().getTime()
+	benchmark['NodeJS']['runRegression'] = (etime - stime) / 1000 + ' sec'
 }
 
 async function parseRoutput(Rinput, Routput, id2originalId, q, result) {
 	if (Routput.length != 1) throw 'expected 1 json line in R output'
 	const out = JSON.parse(Routput[0])
+	const outdata = out.data
+	benchmark['regression.R'] = out.benchmark
 
-	/*
-	out (linear/logistic) 
-	[
-	  {
-		id: snpid from a snplocus term (empty if no snplocus terms)
-		data: { sampleSize, residuals: {}, coefficients: {}, type3: {}, other: {}, warnings: [] }
-	  }
-	]
-
-	out (cox) 
-	[
-	  {
-		id: snpid from a snplocus term (empty if no snplocus terms)
-		data: { sampleSize, eventCnt, coefficients: {}, type3: {}, tests: {}, other: {}, warnings: [] }
-	  }
-	]
-	*/
-
-	for (const analysis of out) {
+	for (const analysis of outdata) {
 		// convert "analysis" to "analysisResult", then push latter to resultLst
 		const analysisResult = {
 			data: {
@@ -708,6 +706,32 @@ async function parseRoutput(Rinput, Routput, id2originalId, q, result) {
 		}
 		analysisResult.data.type3.label = 'Type III statistics'
 
+		// total snp effect
+		if (data.totalSnpEffect) {
+			if (data.totalSnpEffect.rows.length < 2) throw 'fewer than 2 rows in total SNP effect table'
+			analysisResult.data.totalSnpEffect = {
+				header: data.totalSnpEffect.header,
+				intercept: data.totalSnpEffect.rows.shift()
+			}
+			const row = data.totalSnpEffect.rows[0] // total snp effect row
+			if (!row[0].includes('+') || !row[0].includes(':')) throw 'unexpected format of total snp effect variable'
+			const variables = row.shift().split('+')
+			// extract the snp main effect variable
+			const snpInd = variables.findIndex(variable => !variable.includes(':'))
+			const snp = variables.splice(snpInd, 1)[0]
+			analysisResult.data.totalSnpEffect.snp = id2originalId[snp]
+			// extract the snp interactions
+			const interactions = []
+			for (const variable of variables) {
+				const [id1, id2] = variable.split(':')
+				interactions.push({ term1: id2originalId[id1], term2: id2originalId[id2] })
+			}
+			analysisResult.data.totalSnpEffect.interactions = interactions
+			// row is now only data fields
+			analysisResult.data.totalSnpEffect.lst = row
+			analysisResult.data.totalSnpEffect.label = 'Total SNP effect'
+		}
+
 		// statistical tests
 		if (data.tests) {
 			analysisResult.data.tests = data.tests
@@ -744,6 +768,7 @@ async function parseRoutput(Rinput, Routput, id2originalId, q, result) {
 async function snplocusPostprocess(q, sampledata, Rinput, result) {
 	const tw = q.independent.find(i => i.type == 'snplocus')
 	if (!tw) return
+	stime = new Date().getTime()
 	addResult4monomorphic(tw, result)
 	if (tw.lowAFsnps.size) {
 		// low-af variants are not used for model-fitting
@@ -753,11 +778,13 @@ async function snplocusPostprocess(q, sampledata, Rinput, result) {
 		} else if (q.regressionType == 'logistic') {
 			await lowAFsnps_fisher(tw, sampledata, Rinput, result)
 		} else if (q.regressionType == 'cox') {
-			await lowAFsnps_cuminc(tw, sampledata, Rinput, result, q.outcome.q.minYearsToEvent)
+			await lowAFsnps_cuminc(tw, sampledata, Rinput, result)
 		} else {
 			throw 'unknown regression type'
 		}
 	}
+	etime = new Date().getTime()
+	benchmark['NodeJS']['snplocusPostprocess'] = (etime - stime) / 1000 + ' sec'
 }
 
 async function lowAFsnps_wilcoxon(tw, sampledata, Rinput, result) {
@@ -920,7 +947,7 @@ async function lowAFsnps_fisher(tw, sampledata, Rinput, result) {
 	}
 }
 
-async function lowAFsnps_cuminc(tw, sampledata, Rinput, result, minYearsToEvent) {
+async function lowAFsnps_cuminc(tw, sampledata, Rinput, result) {
 	// for cox, perform cuminc analysis between samples having and missing effect allele
 	const lines = [] // one line per snp
 	const fdata = {} // input for cuminc analysis {snpid: [{time, event, series}]}
@@ -962,7 +989,7 @@ async function lowAFsnps_cuminc(tw, sampledata, Rinput, result, minYearsToEvent)
 	}
 
 	// run cumulative incidence analysis in R
-	await runCumincR(fdata, final_data, minYearsToEvent)
+	await runCumincR(fdata, final_data)
 
 	// parse cumulative incidence results
 	for (const [snpid, snpO] of tw.lowAFsnps) {
@@ -1458,4 +1485,16 @@ function replaceTermId(Rinput) {
 	}
 
 	return [id2originalId, originalId2id]
+}
+
+/* temporary duplicated
+may move to server/shared/filter.js to share between client/back
+*/
+function getFilterItemByTag(item, tag) {
+	if (item.tag === tag) return item
+	if (item.type !== 'tvslst') return
+	for (const subitem of item.lst) {
+		const matchingItem = getFilterItemByTag(subitem, tag)
+		if (matchingItem) return matchingItem
+	}
 }

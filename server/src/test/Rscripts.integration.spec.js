@@ -7,7 +7,7 @@ const fs = require('fs')
 // Note: these integration tests are dependant on clinical datasets that are subject to change.
 
 const ssid = 'fisher2x3-test.txt'
-const src = path.join(__dirname, '../../test/testdata', ssid)
+const src = path.join(__dirname, '../../test/testdata/R', ssid)
 const dest = path.join(serverconfig.cachedir, 'ssid', ssid)
 try {
 	fs.copyFileSync(src, dest)

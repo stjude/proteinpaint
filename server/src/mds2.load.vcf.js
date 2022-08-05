@@ -2,8 +2,8 @@ const fs = require('fs')
 const path = require('path')
 const spawn = require('child_process').spawn
 const utils = require('./utils')
-const vcf = require('../shared/vcf')
-const common = require('../shared/common')
+const vcf = require('#shared/vcf')
+const common = require('#shared/common')
 const termdbsql = require('./termdb.sql')
 const lines2R = require('./lines2R')
 
@@ -376,7 +376,7 @@ for specific type of query mode, send additional info
 	if (q.exportgenotype) {
 		result.exportgenotype =
 			'variant\tSNP\t' +
-			tk.samples.map(i => (ds.sampleidmap ? ds.sampleidmap.get(i.name) : i.name)).join('\t') +
+			tk.samples.map(i => ds.cohort.termdb.id2sampleName(i.name)).join('\t') +
 			'\n' +
 			result.mlst.join('\n')
 		delete result.mlst

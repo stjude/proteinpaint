@@ -1,10 +1,11 @@
 import { scaleOrdinal } from 'd3-scale'
-import * as client from './client'
-import { nt2aa, codon_stop, bplen } from '../shared/common'
-import { string2snp } from './coord'
+import { gmmode, domaincolorlst } from './client'
+import { nt2aa, codon_stop, bplen } from '#shared/common'
 import { select } from 'd3-selection'
-import { dofetch3 } from '../common/dofetch'
-import { first_genetrack_tolist } from '../common/1stGenetk'
+import { dofetch3 } from '#common/dofetch'
+import { first_genetrack_tolist } from '#common/1stGenetk'
+import { sayerror } from '#dom/error'
+import { string2snp } from '#common/snp'
 
 /*
 for processing requests from entry point (app.js ui, embedding)
@@ -12,227 +13,188 @@ mainly for launching gene view
 also for browser view if search term is position/snp
 */
 
-let hostURL = ''
+export default async function(arg) {
+	if (!arg.holder) throw 'No holder for block.init'
+	if (!arg.genome) throw 'no genome'
+	if (arg.holder instanceof Element) arg.holder = select(arg.holder)
+	if (!arg.tklst) arg.tklst = []
 
-export default function(arg) {
-	if (!arg.holder) {
-		alert('No holder for block.init')
-		return
-	}
-	if (arg.hostURL) {
-		hostURL = arg.hostURL
-	}
-	const paint = {
-		jwt: arg.jwt
-	}
-	paint.holder = arg.holder instanceof Element ? select(arg.holder) : arg.holder
-	paint.dataset = arg.dataset
-	paint.mset = arg.mset
-	paint.gmmode = arg.gmmode
-	paint.hidedatasetexpression = arg.hidedatasetexpression
-	paint.hidegenecontrol = arg.hidegenecontrol
-	paint.hidegenelegend = arg.hidegenelegend
-	paint.hlaachange = arg.hlaachange
-	paint.hlvariants = arg.hlvariants
-	paint.hlregions = arg.hlregions
-	paint.nopopup = arg.nopopup
-	paint.variantPageCall_snv = arg.variantPageCall_snv
-	paint.samplecart = arg.samplecart
-	paint.debugmode = arg.debugmode
-	paint.tklst = arg.tklst || []
-	paint.datasetqueries = arg.datasetqueries
-	paint.mclassOverride = arg.mclassOverride
-	paint.error = m => client.sayerror(paint.holder, m)
-
-	if (!arg.genome) {
-		paint.error('no genome')
-		return
-	}
-	paint.genome = arg.genome
 	if (arg.query) {
-		step1_findgm(paint, arg.query)
-	} else if (arg.model && arg.allmodels) {
-		paint.model = arg.model
-		paint.allmodels = arg.allmodels
-		step2_getseq(paint)
+		/*
+		query=str, run step1() to match it with gene or snp
+		if match with gene, adds arg.model{} and arg.allmodels[], and run step2()
+		if match with snp, load block and exit
+		*/
+		await step1_findgm(arg)
+		return
 	}
+
+	if (arg.model && arg.allmodels) {
+		await step2_getseq(arg)
+		return
+	}
+
+	// TODO if to throw
+	//throw '.query and (.model, .allmodels) are both missing'
 }
 
-function step1_findgm(paint, querystr) {
-	const says = paint.holder
+async function step1_findgm(arg) {
+	/* arg.query=str is given
+	search it against gene or snp name
+	*/
+	const wait = arg.holder
 		.append('p')
 		.style('font-size', '2em')
 		.style('color', '#858585')
-		.text('Searching for ' + querystr + ' ...')
+		.text('Searching for ' + arg.query + ' ...')
 
-	dofetch3('genelookup', {
+	const data = await dofetch3('genelookup', {
 		method: 'POST',
-		body: JSON.stringify({ deep: 1, input: querystr, genome: paint.genome.name })
-	}).then(data => {
-		if (!data) {
-			paint.error('querying genes: server error')
-			return
-		}
-		if (data.error) {
-			paint.error('querying genes: ' + data.error)
-			return
-		}
-		if (!data.gmlst || data.gmlst.length == 0) {
-			// not a gene
-			if (paint.genome.hasSNP) {
-				string2snp(paint.genome, querystr, hostURL, paint.jwt)
-					.then(r => {
-						says.remove()
-						// TODO automatically add SNP track
-						const par = {
-							jwt: paint.jwt,
-							hostURL: hostURL,
-							genome: paint.genome,
-							holder: paint.holder,
-							dogtag: paint.genome.name,
-							chr: r.chr,
-							start: Math.max(0, r.start - 300),
-							stop: r.start + 300,
-							nobox: true,
-							allowpopup: paint.nopopup ? false : true,
-							tklst: paint.tklst,
-							debugmode: paint.debugmode
-						}
-						first_genetrack_tolist(paint.genome, par.tklst)
-						return import('./block').then(b => {
-							const block = new b.Block(par)
-							block.addhlregion(r.chr, r.start, r.stop - 1)
-						})
-					})
-					.catch(err => {
-						says.text(err.message)
-						if (err.stack) console.log(err.stack)
-					})
-			} else {
-				says.text('No hits found for ' + querystr)
-			}
-			return
-		}
-		says.remove()
-		paint.allmodels = data.gmlst
-
-		// if query string matches with an isoform
-		for (const m of paint.allmodels) {
-			if (m.isoform.toUpperCase() == (data.found_isoform ? data.found_isoform.toUpperCase() : querystr.toUpperCase())) {
-				// query string is an isoform
-				paint.model = m
-				step2_getseq(paint)
-				return
-			}
-		}
-
-		// query string is not an isoform
-		// from the list of returned isoforms, find a canonical one and use as paint.model
-
-		const defaultisoforms = []
-
-		for (const m of paint.allmodels) {
-			if (!m.isoform) {
-				paint.error('isoform missing from one gene model: ' + JSON.stringify(m))
-				return
-			}
-			// cache
-			const n = m.isoform.toUpperCase()
-			if (paint.genome.isoformcache.has(n)) {
-				let nothas = true
-				for (const m2 of paint.genome.isoformcache.get(n)) {
-					if (m2.chr == m.chr && m2.start == m.start && m2.stop == m.stop && m2.strand == m.strand) {
-						nothas = false
-						break
-					}
-				}
-				if (nothas) {
-					paint.genome.isoformcache.get(n).push(m)
-				}
-			} else {
-				paint.genome.isoformcache.set(n, [m])
-			}
-			if (m.isoform.toUpperCase() == querystr.toUpperCase()) {
-				defaultisoforms.push(m)
-				break
-			}
-			if (m.isdefault) {
-				defaultisoforms.push(m)
-			}
-		}
-
-		if (defaultisoforms.length == 1) {
-			paint.model = defaultisoforms[0]
-		} else if (defaultisoforms.length > 1) {
-			for (const m of defaultisoforms) {
-				if (m.chr == 'chrY') {
-					// hardcoded to avoid for CRLF2
-					continue
-				}
-				const chr = paint.genome.chrlookup[m.chr.toUpperCase()]
-				if (!chr) {
-					// unknown chr
-					continue
-				}
-				if (!chr.major) {
-					continue
-				}
-				paint.model = m
-				/* in human, canonical isoforms are marked out in both refseq and gencode
-					as in the "genes" table, refseq is loaded before gencode
-					this loop will encounter refseq canonical isoform first
-					break here so that it won't override it with gencode
-					and maintain the old behavior of showing refseq by searching a gene symbol
-					*/
-				break
-			}
-			if (!paint.model) {
-				paint.model = defaultisoforms[0]
-			}
-		}
-		if (!paint.model) {
-			paint.model = paint.allmodels[0]
-		}
-		step2_getseq(paint)
+		body: JSON.stringify({ deep: 1, input: arg.query, genome: arg.genome.name })
 	})
-}
+	if (!data) throw 'querying genes: server error'
+	if (data.error) throw 'error querying genes: ' + data.error
 
-function step2_getseq(paint) {
-	if (paint.model.genomicseq) {
-		checker()
-		step2_getpdomain(paint)
+	if (!data.gmlst || data.gmlst.length == 0) {
+		// not a gene
+		if (arg.genome.hasSNP) {
+			try {
+				// throws exception if not matching a snp
+				const r = await string2snp(arg.genome, arg.query)
+				wait.remove()
+				// TODO automatically add SNP track
+				const par = {
+					genome: arg.genome,
+					holder: arg.holder,
+					chr: r.chr,
+					start: Math.max(0, r.start - 300),
+					stop: r.start + 300,
+					nobox: true,
+					allowpopup: arg.nopopup ? false : true,
+					tklst: arg.tklst,
+					debugmode: arg.debugmode
+				}
+				first_genetrack_tolist(arg.genome, par.tklst)
+				const b = await import('./block')
+				const block = new b.Block(par)
+				block.addhlregion(r.chr, r.start, r.stop - 1)
+			} catch (e) {
+				wait.text('Not a gene or SNP: ' + arg.query)
+			}
+		} else {
+			wait.text('No match to gene: ' + arg.query)
+		}
 		return
 	}
-	const arg = {
-		genome: paint.genome.name,
-		coord: paint.model.chr + ':' + (paint.model.start + 1) + '-' + paint.model.stop
+
+	// match to a gene
+
+	wait.remove()
+	arg.allmodels = data.gmlst
+
+	// if query string matches with an isoform
+	for (const m of arg.allmodels) {
+		if (m.isoform.toUpperCase() == (data.found_isoform ? data.found_isoform.toUpperCase() : arg.query.toUpperCase())) {
+			// query string is an isoform
+			arg.model = m
+			await step2_getseq(arg)
+			return
+		}
 	}
-	dofetch3('ntseq', { method: 'POST', body: JSON.stringify(arg) }).then(data => {
-		if (!data) {
-			paint.error('getting sequence: server error')
-			return
+
+	// query string is not an isoform
+	// from the list of returned isoforms, find a canonical one and use as paint.model
+
+	const defaultisoforms = []
+
+	for (const m of arg.allmodels) {
+		if (!m.isoform) throw 'isoform missing from one gene model: ' + JSON.stringify(m)
+		// cache
+		const n = m.isoform.toUpperCase()
+		if (arg.genome.isoformcache.has(n)) {
+			let nothas = true
+			for (const m2 of arg.genome.isoformcache.get(n)) {
+				if (m2.chr == m.chr && m2.start == m.start && m2.stop == m.stop && m2.strand == m.strand) {
+					nothas = false
+					break
+				}
+			}
+			if (nothas) {
+				arg.genome.isoformcache.get(n).push(m)
+			}
+		} else {
+			arg.genome.isoformcache.set(n, [m])
 		}
-		if (data.error) {
-			paint.error('getting sequence: ' + data.error)
-			return
+		if (m.isoform.toUpperCase() == arg.query.toUpperCase()) {
+			defaultisoforms.push(m)
+			break
 		}
-		if (!data.seq) {
-			paint.error('no nt seq???')
-			return
+		if (m.isdefault) {
+			defaultisoforms.push(m)
 		}
-		paint.model.genomicseq = data.seq.toUpperCase()
-		paint.model.aaseq = nt2aa(paint.model)
+	}
+
+	if (defaultisoforms.length == 1) {
+		arg.model = defaultisoforms[0]
+	} else if (defaultisoforms.length > 1) {
+		for (const m of defaultisoforms) {
+			if (m.chr == 'chrY') {
+				// hardcoded to avoid for CRLF2
+				continue
+			}
+			const chr = arg.genome.chrlookup[m.chr.toUpperCase()]
+			if (!chr) {
+				// unknown chr
+				continue
+			}
+			if (!chr.major) {
+				continue
+			}
+			arg.model = m
+			/* in human, canonical isoforms are marked out in both refseq and gencode
+			as in the "genes" table, refseq is loaded before gencode
+			this loop will encounter refseq canonical isoform first
+			break here so that it won't override it with gencode
+			and maintain the old behavior of showing refseq by searching a gene symbol
+			*/
+			break
+		}
+		if (!arg.model) {
+			arg.model = defaultisoforms[0]
+		}
+	}
+	if (!arg.model) {
+		arg.model = arg.allmodels[0]
+	}
+	await step2_getseq(arg)
+}
+
+async function step2_getseq(arg) {
+	if (arg.model.genomicseq) {
 		checker()
-		step2_getpdomain(paint)
-	})
+		step2_getpdomain(arg)
+		return
+	}
+	const par = {
+		genome: arg.genome.name,
+		coord: arg.model.chr + ':' + (arg.model.start + 1) + '-' + arg.model.stop
+	}
+	const data = await dofetch3('ntseq', { method: 'POST', body: JSON.stringify(par) })
+	if (!data) throw 'getting sequence: server error'
+	if (data.error) throw 'getting sequence: ' + data.error
+	if (!data.seq) throw 'no nt seq???'
+	arg.model.genomicseq = data.seq.toUpperCase()
+	arg.model.aaseq = nt2aa(arg.model)
+	checker()
+	await step2_getpdomain(arg)
+
 	function checker() {
-		//if (paint.model.cdseq && paint.model.cdseq.length % 3 != 0)  paint.error('Dubious CDS of ' + paint.model.isoform + ': AA count ' + paint.model.aacount)
-		if (paint.model.aaseq) {
+		if (arg.model.aaseq) {
 			// stop codon check
-			const stop = paint.model.aaseq.indexOf(codon_stop)
-			const cdslen = paint.model.cdslen - (paint.model.startCodonFrame ? 3 - paint.model.startCodonFrame : 0) // subtrack non-translating nt from cds
+			const stop = arg.model.aaseq.indexOf(codon_stop)
+			const cdslen = arg.model.cdslen - (arg.model.startCodonFrame ? 3 - arg.model.startCodonFrame : 0) // subtrack non-translating nt from cds
 			if (stop != -1 && stop < cdslen / 3 - 1) {
-				paint.error('Translating ' + paint.model.isoform + ' ends at ' + stop + ' AA, expecting ' + cdslen / 3)
+				sayerror(arg.holder, 'Translating ' + arg.model.isoform + ' ends at ' + stop + ' AA, expecting ' + cdslen / 3)
 			}
 			/*
 			if (paint.model.aaseq[0] != 'M') {
@@ -243,7 +205,7 @@ function step2_getseq(paint) {
 	}
 }
 
-function step2_getpdomain(paint) {
+async function step2_getpdomain(arg) {
 	/*
 	block.init special treatment:
 	will get pdomain for all isoforms, not just the isoform that's used
@@ -251,7 +213,7 @@ function step2_getpdomain(paint) {
 	const isoform2gm = new Map()
 	// k: isoform name, v: [{}]
 
-	for (const m of paint.allmodels) {
+	for (const m of arg.allmodels) {
 		if (!m.pdomains) {
 			m.pdomains = [] // empty for no domain
 			m.domain_hidden = {}
@@ -260,74 +222,92 @@ function step2_getpdomain(paint) {
 		}
 	}
 	if (isoform2gm.size == 0) {
-		step3(paint)
+		await step3(arg)
 		return
 	}
 
-	dofetch3('pdomain', {
+	const data = await dofetch3('pdomain', {
 		method: 'POST',
-		body: JSON.stringify({ genome: paint.genome.name, isoforms: [...isoform2gm.keys()] })
+		body: JSON.stringify({ genome: arg.genome.name, isoforms: [...isoform2gm.keys()] })
 	})
-		.then(data => {
-			if (data.error) throw { message: 'error getting protein domain: ' + data.error }
-			if (data.lst) {
-				const colorscale = scaleOrdinal().range(client.domaincolorlst)
-
-				for (const a of data.lst) {
-					for (const m of isoform2gm.get(a.name)) {
-						m.pdomains = a.pdomains
-					}
-					for (const d of a.pdomains) {
-						if (!d.color) {
-							d.color = colorscale(d.name + d.description)
-						}
-					}
+	if (data.error) throw 'error getting protein domain: ' + data.error
+	if (data.lst) {
+		const colorscale = scaleOrdinal().range(domaincolorlst)
+		for (const a of data.lst) {
+			for (const m of isoform2gm.get(a.name)) {
+				m.pdomains = a.pdomains
+			}
+			for (const d of a.pdomains) {
+				if (!d.color) {
+					d.color = colorscale(d.name + d.description)
 				}
 			}
-			step3(paint)
-		})
-		.catch(err => {
-			paint.error(err.message)
-		})
-}
-
-function step3(paint) {
-	// mode
-	let mode = paint.gmmode
-	if (!mode) {
-		if (paint.model.cdslen) {
-			mode = client.gmmode.protein
-		} else {
-			mode = client.gmmode.exononly
 		}
 	}
-	import('./block').then(
-		b =>
-			new b.Block({
-				jwt: paint.jwt,
-				hostURL: hostURL,
-				genome: paint.genome,
-				holder: paint.holder,
-				nobox: true,
-				usegm: paint.model,
-				gmstackheight: 37,
-				allgm: paint.allmodels,
-				datasetlst: paint.dataset,
-				mset: paint.mset,
-				hlaachange: paint.hlaachange,
-				hlvariants: paint.hlvariants,
-				hlregions: paint.hlregions,
-				gmmode: mode,
-				allowpopup: paint.nopopup ? false : true,
-				hidedatasetexpression: paint.hidedatasetexpression,
-				hidegenecontrol: paint.hidegenecontrol,
-				hidegenelegend: paint.hidegenelegend,
-				variantPageCall_snv: paint.variantPageCall_snv,
-				datasetqueries: paint.datasetqueries,
-				samplecart: paint.samplecart,
-				debugmode: paint.debugmode,
-				tklst: paint.tklst,
-				mclassOverride: paint.mclassOverride
-			})
-	)
+	await step3(arg)
+}
+
+async function step3(arg) {
+	// mode
+	let mode = arg.gmmode
+	if (!mode) {
+		if (arg.model.cdslen) {
+			mode = gmmode.protein
+		} else {
+			mode = gmmode.exononly
+		}
+	}
+
+	if (arg.dataset) {
+		/*
+		for legacy ds
+		when migrated to mds3, can delete this step
+		since mds3 ds is loaded from mds3/makeTk, when initiating a track
+		*/
+		if (!Array.isArray(arg.dataset)) throw 'dataset is not array'
+		// load dataset client-side object, register in genome
+		for (const dsname of arg.dataset) {
+			if (arg.genome.datasets[dsname]) continue
+			const d = await dofetch3(`getDataset?genome=${arg.genome.name}&dsname=${dsname}`)
+			if (d.error) throw `invalid name from dataset[]: ${d.error}`
+			if (!d.ds) throw '.ds missing'
+
+			// dataset is already registered under genome by ds.label
+			const ds = arg.genome.datasets[d.ds.label]
+			Object.assign(ds, d.ds)
+			const _ = await import('./legacyDataset')
+			_.validate_oldds(ds)
+
+			delete ds.legacyDsIsUninitiated
+		}
+	}
+
+	const b = await import('./block')
+
+	new b.Block({
+		genome: arg.genome,
+		holder: arg.holder,
+		nobox: true,
+		usegm: arg.model,
+		gmstackheight: 37,
+		allgm: arg.allmodels,
+		datasetlst: arg.dataset,
+		mset: arg.mset,
+		hlaachange: arg.hlaachange,
+		hlvariants: arg.hlvariants,
+		hlregions: arg.hlregions,
+		gmmode: mode,
+		allowpopup: arg.nopopup ? false : true,
+		hidedatasetexpression: arg.hidedatasetexpression,
+		hidegenecontrol: arg.hidegenecontrol,
+		hidegenelegend: arg.hidegenelegend,
+		variantPageCall_snv: arg.variantPageCall_snv,
+		datasetqueries: arg.datasetqueries,
+		samplecart: arg.samplecart,
+		debugmode: arg.debugmode,
+		tklst: arg.tklst,
+		mclassOverride: arg.mclassOverride,
+		hide_dsHandles: arg.hide_dsHandles,
+		onloadalltk_always: arg.onloadalltk_always
+	})
 }

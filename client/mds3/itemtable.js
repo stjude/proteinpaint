@@ -1,9 +1,9 @@
-import { mclass, dtsnvindel, dtfusionrna, dtsv } from '../../shared/common'
+import { mclass, dtsnvindel, dtfusionrna, dtsv } from '#shared/common'
 import { init_sampletable } from './sampletable'
-import { get_list_cells } from '../../dom/gridutils'
+import { get_list_cells } from '#dom/gridutils'
 import { event as d3event } from 'd3-selection'
-import { appear } from '../../dom/animation'
-import { dofetch3 } from '../../common/dofetch'
+import { appear } from '#dom/animation'
+import { dofetch3 } from '#common/dofetch'
 
 /*
 ********************** EXPORTED
@@ -409,7 +409,7 @@ async function makeSvgraph(m, div, block) {
 
 		wait.remove()
 
-		const _ = await import('../svgraph')
+		const _ = await import('../src/svgraph')
 		_.default({
 			pairlst: [svpair],
 			genome: block.genome,

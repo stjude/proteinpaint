@@ -18,7 +18,7 @@ makeTextInput()
     - placeholder (optional): STR
 	- size (optional): INT
 
-makeTextAreaInput()
+makeTextAreaInput({})
 	Creates a text area, mainly for copying and pasting data
     - div
     - placeholder (optional): STR
@@ -29,7 +29,7 @@ makeFileUpload()
 	Creates upload input for files
     - div
 
-makeBtn()
+makeBtn({})
 	Simplifed button and styling for UIs
     - div
 	- text: STR
@@ -85,13 +85,13 @@ export function makeTextInput(div, placeholder, size) {
 	return text
 }
 
-export function makeTextAreaInput(div, placeholder, rows, cols) {
-	const textarea = div
+export function makeTextAreaInput(args) {
+	const textarea = args.div
 		.append('textarea')
-		.attr('rows', rows ? rows : '5')
-		.attr('cols', cols ? cols : '70')
+		.attr('rows', args.rows ? args.rows : '5')
+		.attr('cols', args.cols ? args.cols : '70')
 		.style('border-radius', '5px')
-		.attr('placeholder', placeholder ? placeholder : '')
+		.attr('placeholder', args.placeholder ? args.placeholder : '')
 
 	return textarea
 }
@@ -107,14 +107,14 @@ export function makeFileUpload(div) {
 	return upload
 }
 
-export function makeBtn(div, text, color, backgroundColor, border) {
-	const btn = div
+export function makeBtn(args) {
+	const btn = args.div
 		.append('button')
-		.text(text)
-		.style('color', color ? color : 'black')
-		.style('background-color', backgroundColor ? backgroundColor : '#F2F2F2')
-		.style('border', border ? border : '2px solid #999')
-		.style('padding', '5px 10px')
+		.html(args.text)
+		.style('color', args.color ? args.color : 'black')
+		.style('background-color', args.backgroundColor ? args.backgroundColor : '#F2F2F2')
+		.style('border', args.border ? args.border : '2px solid #999')
+		.style('padding', args.padding ? args.padding : '5px 10px')
 		.style('cursor', 'pointer')
 
 	return btn

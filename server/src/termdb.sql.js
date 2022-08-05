@@ -1,11 +1,11 @@
 const app = require('./app')
-const binsmodule = require('../shared/termdb.bins')
+const binsmodule = require('#shared/termdb.bins')
 const getFilterCTEs = require('./termdb.filter').getFilterCTEs
 const numericSql = require('./termdb.sql.numeric')
 const categoricalSql = require('./termdb.sql.categorical')
 const conditionSql = require('./termdb.sql.condition')
 const connect_db = require('./utils').connect_db
-const isUsableTerm = require('../shared/termdb.usecase').isUsableTerm
+const isUsableTerm = require('#shared/termdb.usecase').isUsableTerm
 /*
 
 ********************** EXPORTED
@@ -386,7 +386,7 @@ export function get_term_cte(q, values, index, filter, termWrapper = null) {
 	} else if (term.type == 'condition') {
 		const mode = termq.mode || 'discrete'
 		// TODO: can add back 'filter' arg if performance degrades
-		CTE = conditionSql[mode].getCTE(tablename, term, termq, values /*, filter*/)
+		CTE = conditionSql[mode].getCTE(tablename, term, q.ds, termq, values /*, filter*/)
 	} else if (term.type == 'survival') {
 		CTE = makesql_survival(tablename, term, q, values, filter)
 	} else {
@@ -723,16 +723,10 @@ thus less things to worry about...
 	if (!ds.cohort.db) throw 'ds.cohort.db missing'
 	if (!ds.cohort.termdb) throw 'ds.cohort.termdb missing'
 
-	let cn
-	if (ds.cohort.db.file) {
-		cn = connect_db(ds.cohort.db.file)
-	} else if (ds.cohort.db.file_fullpath) {
-		// only on ppr
-		cn = connect_db(ds.cohort.db.file_fullpath, true)
-	} else {
-		throw 'neither .file or .file_fullpath is set on ds.cohort.db'
-	}
-	console.log(`DB connected for ${ds.label}: ${ds.cohort.db.file || ds.cohort.db.file_fullpath}`)
+	const dbfile = ds.cohort.db.file || ds.cohort.db.file_fullpath
+	if (!dbfile) throw 'both file and file_fullpath missing'
+	const cn = connect_db(dbfile)
+	console.log(`DB connected for ${ds.label}: ${dbfile}`)
 
 	ds.cohort.db.connection = cn
 
@@ -747,21 +741,17 @@ thus less things to worry about...
 	const q = ds.cohort.termdb.q
 
 	if (tables.sampleidmap) {
-		const s = cn.prepare('SELECT * FROM sampleidmap')
-		let id2name
-		// new method added to ds{}, under same name of table
-		// the method could be defined indepenent of db
-		ds.sampleidmap = {
-			get: id => {
-				if (!id2name) {
-					id2name = new Map()
-					// k: sample id, v: sample name
-					for (const { id, name } of s.all()) {
-						id2name.set(id, name)
-					}
+		let cache
+		q.id2sampleName = id => {
+			if (!cache) {
+				const s = cn.prepare('SELECT * FROM sampleidmap')
+				cache = new Map()
+				// k: sample id, v: sample name
+				for (const { id, name } of s.all()) {
+					cache.set(id, name)
 				}
-				return id2name.get(id) || id
 			}
+			return cache.get(id) || id
 		}
 	}
 
@@ -800,7 +790,7 @@ thus less things to worry about...
 		}
 	}
 	{
-		const s = cn.prepare('SELECT jsondata FROM terms WHERE id=?')
+		const s = cn.prepare('SELECT name, jsondata FROM terms WHERE id=?')
 		const cache = new Map()
 		/* should only cache result for valid term id, not for invalid ids
 		as invalid id is arbitrary and indefinite
@@ -812,6 +802,7 @@ thus less things to worry about...
 			if (t) {
 				const j = JSON.parse(t.jsondata)
 				j.id = id
+				j.name = t.name || j.name
 				cache.set(id, j)
 				return j
 			}
@@ -834,7 +825,7 @@ thus less things to worry about...
 
 	{
 		const sql = cn.prepare(
-			`SELECT id, jsondata, s.included_types, s.child_types
+			`SELECT id, name, jsondata, s.included_types, s.child_types
 			FROM terms t
 			JOIN subcohort_terms s ON s.term_id = t.id AND s.cohort=?
 			WHERE parent_id is null
@@ -849,6 +840,7 @@ thus less things to worry about...
 			const re = tmp.map(i => {
 				const t = JSON.parse(i.jsondata)
 				t.id = i.id
+				t.name = i.name || t.name
 				t.included_types = i.included_types ? i.included_types.split(',') : ['TO-DO-PLACEHOLDER']
 				t.child_types = i.child_types ? i.child_types.split(',') : []
 				return t
@@ -902,7 +894,7 @@ thus less things to worry about...
 	*/
 	{
 		const sql = cn.prepare(
-			`SELECT id, type, jsondata, s.included_types, s.child_types 
+			`SELECT id, name, type, jsondata, s.included_types, s.child_types 
 			FROM terms t
 			JOIN subcohort_terms s ON s.term_id = t.id AND s.cohort=? 
 			WHERE id IN (SELECT id FROM terms WHERE parent_id=?)
@@ -920,6 +912,7 @@ thus less things to worry about...
 				re = tmp.map(i => {
 					const j = JSON.parse(i.jsondata)
 					j.id = i.id
+					j.name = i.name || j.name
 					j.included_types = i.included_types ? i.included_types.split(',') : []
 					j.child_types = i.child_types ? i.child_types.split(',') : []
 					return j
@@ -948,6 +941,7 @@ thus less things to worry about...
 					const name = i.name.toLowerCase()
 					const j = JSON.parse(i.jsondata)
 					j.id = i.id
+					j.name = i.name || j.name
 					j.included_types = i.included_types ? i.included_types.split(',') : []
 					if (!usecase || isUsableTerm(j, usecase).has('plot')) {
 						if (n === 'se') console.log(name, n)
@@ -1003,9 +997,15 @@ thus less things to worry about...
 		else, return single value by sample and term
 		*/
 		const s = cn.prepare('SELECT sample,value FROM annotations WHERE term_id=?')
-		const s2 = cn.prepare('SELECT value FROM annotations WHERE term_id=? AND sample=?')
-		q.getSample2value = (id, sample=null) => {
-			if(sample) return s2.all(id, sample)
+		const s_sampleInt = cn.prepare('SELECT value FROM annotations WHERE term_id=? AND sample=?')
+		const s_sampleStr = cn.prepare(
+			'SELECT a.value FROM annotations AS a, sampleidmap AS s WHERE a.term_id=? AND a.sample=s.id AND s.name=?'
+		)
+		q.getSample2value = (id, sample = null) => {
+			if (sample) {
+				if (typeof sample == 'string') return s_sampleStr.all(id, sample)
+				return s_sampleInt.all(id, sample)
+			}
 			return s.all(id)
 		}
 	}

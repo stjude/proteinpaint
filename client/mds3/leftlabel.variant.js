@@ -1,10 +1,10 @@
 import { event as d3event } from 'd3-selection'
 import { fold_glyph, settle_glyph } from './skewer.render'
+import { may_render_skewer } from './skewer'
 import { itemtable } from './itemtable'
-import { mayAddSkewerModeOption } from './skewer'
-import { makelabel } from './leftlabel'
-import {tab2box} from '../client'
-import {dt2label} from '../../shared/common'
+import { makelabel, positionLeftlabelg } from './leftlabel'
+import { tab2box } from '../src/client'
+import { dt2label } from '#shared/common'
 
 /*
 the "#variants" label should always be made as it is about any content displayed in mds3 track
@@ -122,7 +122,7 @@ function menu_variants(tk, block) {
 			// has expanded skewer
 			tk.menutip.d
 				.append('div')
-				.text('Fold')
+				.text('Collapse')
 				.attr('class', 'sja_menuoption')
 				.on('click', () => {
 					fold_glyph(tk.skewer.data, tk)
@@ -174,34 +174,73 @@ async function listSkewerData(tk, block) {
 		}
 	}
 
-	if(dt2mlst.size==1) {
+	if (dt2mlst.size == 1) {
 		// only one dt
 		const div = tk.menutip.d.append('div').style('margin', '10px')
 		await itemtable({
 			div,
-			mlst: dt2mlst.get( [...dt2mlst.keys()][0]),
+			mlst: dt2mlst.get([...dt2mlst.keys()][0]),
 			tk,
 			block,
-			doNotListSample4multim:true,
+			doNotListSample4multim: true
 		})
 		return
 	}
 
 	// multiple dt
 	const tabs = []
-	for(const [dt, mlst] of dt2mlst) {
+	for (const [dt, mlst] of dt2mlst) {
 		tabs.push({
-			label: mlst.length+' '+dt2label[dt],
-			callback: div=>{
+			label: mlst.length + ' ' + dt2label[dt],
+			callback: div => {
 				itemtable({
 					div,
 					mlst,
 					tk,
 					block,
-					doNotListSample4multim:true
+					doNotListSample4multim: true
 				})
 			}
 		})
 	}
-	tab2box(tk.menutip.d.append('div').style('margin','10px'), tabs)
+	tab2box(tk.menutip.d.append('div').style('margin', '10px'), tabs)
+}
+
+function mayAddSkewerModeOption(tk, block) {
+	if (!tk.skewer) return
+	if (tk.skewer.viewModes.length <= 1) {
+		// only one possible mode, cannot toggle mode, do not add option
+		return
+	}
+	// there are more than 1 mode, print name of current mode
+	tk.menutip.d
+		.append('div')
+		.style('margin', '10px 10px 3px 10px')
+		.style('font-size', '.7em')
+		.style('opacity', 0.5)
+		.text(getViewmodeName(tk.skewer.viewModes.find(n => n.inuse)))
+	// show available modes
+	for (const n of tk.skewer.viewModes) {
+		if (n.inuse) continue
+		// a mode not in use; make option to switch to it
+		tk.menutip.d
+			.append('div')
+			.text(getViewmodeName(n))
+			.attr('class', 'sja_menuoption')
+			.on('click', () => {
+				for (const i of tk.skewer.viewModes) i.inuse = false
+				n.inuse = true
+				tk.menutip.hide()
+				may_render_skewer({ skewer: tk.skewer.rawmlst }, tk, block)
+				positionLeftlabelg(tk, block)
+				tk._finish()
+			})
+	}
+}
+
+function getViewmodeName(n) {
+	if (!n) return 'MISSING!!'
+	if (n.type == 'skewer') return 'As lollipops'
+	if (n.type == 'numeric') return n.label + ' as Y axis'
+	return 'unknown mode'
 }

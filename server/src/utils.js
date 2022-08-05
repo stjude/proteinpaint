@@ -2,8 +2,8 @@ const fs = require('fs'),
 	path = require('path'),
 	spawn = require('child_process').spawn,
 	readline = require('readline'),
-	common = require('../shared/common'),
-	vcf = require('../shared/vcf'),
+	common = require('#shared/common'),
+	vcf = require('#shared/vcf'),
 	fetch = require('node-fetch').default, // adding .default allows webpack bundle to work
 	bettersqlite = require('better-sqlite3'),
 	serverconfig = require('./serverconfig'),
@@ -356,15 +356,20 @@ exports.get_fasta = async (gn, pos) => {
 	return lines.join('\n')
 }
 
-exports.connect_db = function(file, isfullpath) {
-	/*
-file: half or full path
-isfullpath: true/false
+/*
+inputs:
+file=str
+	half or full path; if not starting with '/', join with tp dir
+override={}
+	supplies overrides to default setting
+returns:
+	db connector
 */
-	return new bettersqlite(isfullpath ? file : path.join(serverconfig.tpmasterdir, file), {
-		readonly: true,
-		fileMustExist: true
-	})
+exports.connect_db = function(file, override = {}) {
+	return new bettersqlite(
+		file[0] == '/' ? file : path.join(serverconfig.tpmasterdir, file),
+		Object.assign({ readonly: true, fileMustExist: true }, override)
+	)
 }
 
 const genotype_type_set = new Set(['Homozygous reference', 'Homozygous alternative', 'Heterozygous'])
@@ -519,12 +524,26 @@ exports.run_rust = function(binfile, input_data) {
 		})
 		ps.on('close', code => {
 			if (code !== 0) reject(`spawned '${binfile}' exited with a non-zero status and this stderr:\n${stderr.join('')}`)
-			//console.log("stdout:",stdout)
-			resolve(stdout.join('').toString())
+			else if (stdout.toString().includes('Cannot read bigWig file') == true) {
+				// When bigfile is not found, the promise should be rejected with message given below
+				reject(stdout.toString())
+			} else {
+				//console.log("stdout:",stdout)
+				resolve(stdout.join('').toString())
+			}
 		})
 	})
 }
 
 function tabixnoterror(s) {
 	return s.startsWith('[E::idx_test_and_fetch]') // got this with htslib 1.15.1
+}
+
+// get random integer between two values
+// both min and max are inclusive
+// used for creating test data for test scripts
+exports.getRandomInt = function(min, max) {
+	min = Math.ceil(min)
+	max = Math.floor(max)
+	return Math.floor(Math.random() * (max - min + 1) + min)
 }

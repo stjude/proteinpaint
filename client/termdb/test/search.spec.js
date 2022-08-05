@@ -1,7 +1,6 @@
 const tape = require('tape')
 const d3s = require('d3-selection')
 const helpers = require('../../test/front.helpers.js')
-const graphable = require('../../src/common/termutils').graphable
 
 /*
 Note:
@@ -26,16 +25,13 @@ tape('\n', function(test) {
 	test.end()
 })
 
-tape('term search, default behavior', function(test) {
+tape('term search, default behavior with barchart usecase', function(test) {
 	test.timeoutAfter(5000)
 	runpp({
 		state: {
 			tree: {
-				
+				usecase: { target: 'barchart', detail: 'term' }
 			}
-		},
-		app: {
-			usecase: {target: 'survival', detail: 'term'}
 		},
 		search: {
 			callbacks: {
@@ -45,6 +41,7 @@ tape('term search, default behavior', function(test) {
 	})
 
 	function runTests(search) {
+		search.on('postRender.test', null)
 		const tree = search.Inner.app.getComponents('tree')
 
 		helpers
@@ -97,19 +94,13 @@ tape('term search, default behavior', function(test) {
 		)
 	}
 
-	// second search, on the same branch as the first search
-	/*function triggerSecondSearch_samebranchas1st(search) {
-		// somehow this function doesn't run when triggered with rideInit.use()?
-		search.Inner.doSearch('asthma')
-	}*/
-
 	function triggerSearchExcludedType(search) {
 		search.Inner.doSearch('survival')
 	}
 
 	function testExcludedTypeResult(search) {
 		const div = search.Inner.dom.resultDiv.select('div').node()
-		test.equal(div && div.innerHTML, 'No match', 'should not show excluded types in results')
+		test.equal(div?.innerHTML, 'No match', 'should not show excluded types in results')
 	}
 })
 
@@ -128,7 +119,9 @@ tape('click_term', test => {
 		}
 	})
 
+	let app
 	function runTests(search) {
+		app = search.Inner.app
 		const tree = search.Inner.app.getComponents('tree')
 		helpers
 			.rideInit({ arg: search, bus: search, eventType: 'postSearch' })
@@ -148,7 +141,7 @@ tape('click_term', test => {
 		buttons[0].click()
 	}
 	function modifier_callback(term) {
-		test.ok(graphable(term), 'click_term() called with a graphable term')
+		test.ok(app.vocabApi.graphable(term), 'click_term() called with a graphable term')
 	}
 	function testClearedResults(search) {
 		const buttons = search.Inner.dom.resultDiv.node().getElementsByClassName('sja_filter_tag_btn sja_tree_click_term')

@@ -42,7 +42,7 @@ RUN curl -L https://github.com/samtools/htslib/releases/download/${htsversion}/h
 
 RUN apt-get update && apt-get install -y r-base \
 	## install R packages
- 	&& R -e "install.packages(c('cmprsk', 'hwde', 'jsonlite', 'survival'), dependencies=TRUE, repos='http://cran.rstudio.com/')" \
+ 	&& R -e "install.packages(c('cmprsk', 'hwde', 'jsonlite', 'survival', 'lmtest'), dependencies=TRUE, repos='http://cran.rstudio.com/')" \
 	## clean up
     && apt-get clean \ 
     && rm -rf /var/lib/apt/lists/ \ 

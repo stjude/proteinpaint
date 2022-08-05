@@ -5,7 +5,7 @@
 </head>
 <body>
 
-<script src="/bin/proteinpaint.js" charset="utf-8"></script>
+<script src="https://ppr.stjude.org/bin/proteinpaint.js" charset="utf-8"></script>
 
 <noscript>This page requires JavaScript. Please enable it in your browser settings.</noscript>
 
@@ -24,7 +24,7 @@ document.body.onload = () => runproteinpaint({
 		state: {
 			dslabel: 'IHG',
 			genome: 'hg19',
-      termfilter: {
+   /*   termfilter: {
         filter: {
           type: 'tvslst',
           lst: [{
@@ -35,7 +35,7 @@ document.body.onload = () => runproteinpaint({
             }
           }]
         }
-      },
+      },*/
 			plots: [
 				{
 					chartType: 'matrix',
@@ -114,79 +114,61 @@ document.body.onload = () => runproteinpaint({
 									id: 'Gender',
 									//q: { mode: 'values' } // or 'groupsetting'
 								},
-								/*{
-									id: 'Metastasis'
-								},
-								{
-									id: 'Death'
-								},
-								{
-									id: 'Progressive Disease'
-								},
-								{
-									id: 'M stage'
-								},
-								{
-									id: 'Primary Treatment category'
-								},
-								{
-									id: 'Primary Treatment category 2'
-								},
-								{
-									id: 'Extent of Resection'
-								},
-								{
-									id: 'Group'
-								},
-								{
-									id: 'Histologic group at diagnosis'
-								},
-								{
-									id: 'TSNE Category'
-								},
-								{
-									id: 'TSNE closest cluster'
-								},
-								{
-									id: 'DKFZ 12.5 Prediction Simplified'
-								},
-                {
-                  id: 'Sample Type'
-                },
-                {
-                  
-                  id: 'study'
-                },
-								{
-									id: 'Mutational Burden'
-								},
-								{	
-                  id: 'Germline'
-								},
-								{
-									id: 'WES',
-								},
-								{
-									id: 'RNAseq',
-                  //$id: 'RNAseq'
-								},
-                {
-                  id: 'Methylation'
-                }*/
+                { id : 'Age at Last Follow Up (Y))'},
+                { id : 'Age-Cohort'},
+                { id : 'Alive / Dead'},
+                { id : 'Anatomical Location of Tumor Tier 1'},
+                { id : 'Anatomical Location of Tumor Tier 2'},
+                { id : 'Anatomical Location of Tumor Tier 3'},
+                { id : 'Anatomical Location of Tumor -Tier 4'},
+                { id : 'DKFZ Classifier'},
+                { id : 'Enrolling Institution'},
+                { id : 'Ever Used RT During Rx (Yes /No)'},
+                { id : 'Final EOR'},
+                { id : 'First Relapse Or PD  (Yes/No)'},
+                { id : 'Focal/CSI'},
+                { id : 'Fusion Types'},
+                { id : 'GTR/STR/NTR'},
+                { id : 'GTR/STR/NTR.1'},
+                { id : 'GTR/STR/NTR/Biopsy'},
+                { id : 'Genetic Fusion (Yes/No)'},
+                { id : 'Histology Re-Review'},
+                { id : 'Histology as Documented at Diagnosis'},
+                { id : 'Integrated Tier 1 Diagnosis'},
+                { id : 'Integrated Tier 2 Diagnosis'},
+                { id : 'Integrated Tier 3 Diagnosis'},
+                { id : 'Integrated  Tier 4 Diagnosis'},
+                { id : 'M Stage'},
+                { id : 'Methylation'},
+                { id : 'Post Surgery -Treatment Details'},
+                { id : 'Primary treatment tier 1'},
+                { id : 'Primary treatment tier 2'},
+                { id : 'Protocol'},
+                { id : 'RNA-Seq'},
+                { id : 'Radiaton Focal/CSI/None'},
+                { id : 'Risk (At diagnosis)'},
+                { id : 'Score'},
+                { id : 'Second Relapse  (Yes/No)'},
+                { id : 'Surgery (Yes/No)'},
+                { id : 'TSNE closest cluster (Sandeep)'},
+                { id : 'Treatment'},
+                { id : 'Treatment.1'},
+                { id : 'WES'},
+                { id : 't-SNE'},
 							]
 						},
-            /*{
+           /* {
               name: 'Cytogenetics',
               lst: getCytogeneticsData()
-            },
-						...getGeneTermGroups(),*/
+            },*/
+						...getGeneTermGroups(),
 					],
           // each override may be used by any termwrapper 
           // that has a tw.overrides[$key] array of any twOverride[$key] below
-         /* overrides: {
+          overrides: {
             SVfill: {
               value: {
-                key: 'RNAseq', 
+                key: 'RNA-Seq', 
                 //value: 'RNAseq', 
                 values: [
                   {key: 'Not tested', label: 'Not tested', color: '#fff'}
@@ -195,12 +177,12 @@ document.body.onload = () => runproteinpaint({
               sampleFilter: {
                 type: 'tvs',
                 tvs: {
-                  term: {id: 'RNAseq'},
+                  term: {id: 'RNA-Seq'},
                   values: [{key: 'No'}]
                 }
               }
             },
-            Germfill: {
+            /*Germfill: {
               value: {
                 key: 'Germline', 
                 //value: 'Germline', 
@@ -215,7 +197,7 @@ document.body.onload = () => runproteinpaint({
                   values: [{key: 'No'}]
                 }
               }
-            },
+            },*/
             WESfill: {
               value: {
                 key: 'WES', 
@@ -248,7 +230,7 @@ document.body.onload = () => runproteinpaint({
                 }
               }
             }
-          }*/
+          }
 				},
 
 				{
@@ -263,7 +245,7 @@ document.body.onload = () => runproteinpaint({
 					}
 				},
 
-				/*{
+				{
 					chartType: 'survival',
 					term: {
 						id: 'Overall Survival'
@@ -276,7 +258,7 @@ document.body.onload = () => runproteinpaint({
 							xTickValues: [0,2,4,6,8,10,12,14,16,18,20,22,24,26,28,30]
 						}
 					}
-				}*/
+				}
 			]
 		}
 	}
@@ -358,7 +340,7 @@ const genegroups = [
     overrides: ['CNVfill'],
     lst: cnvGenes.map(name=>{return {name}})
   },
-  {
+  /*{
       "name": "Germline",
       overrides: ['Germfill'],
       "lst": [
@@ -369,7 +351,7 @@ const genegroups = [
               "name": "ATM_G"
           }
       ]
-  },
+  },*/
   {
       "name": "Somatic",
       "settings": {

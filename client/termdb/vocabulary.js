@@ -4,9 +4,11 @@ import { nonDictionaryTermTypes } from '../termsetting/termsetting'
 import { getNormalRoot } from '../filter/filter'
 import { scaleLinear } from 'd3-scale'
 import { sample_match_termvaluesetting } from '../common/termutils'
-import initBinConfig from '../shared/termdb.initbinconfig'
+import initBinConfig from '#shared/termdb.initbinconfig'
 import { deepEqual } from '../rx'
-import { isUsableTerm, graphableTypes } from '../shared/termdb.usecase'
+import { isUsableTerm, graphableTypes } from '#shared/termdb.usecase'
+
+const qCacheByTermId = {}
 
 export function vocabInit(opts) {
 	/*** start legacy support for state.genome, .dslabel ***/
@@ -83,7 +85,21 @@ class TermdbVocab {
 		return data
 	}
 
-	// from termdb/plot
+	/* from termdb/plot
+	Input:
+	opts{}
+		.term={}
+			.id=str
+			.term={}
+			.q={}
+		.term2={}
+			id/term/q
+		.term0={}
+			id/term/q
+		.filter={}
+	Output:
+		a structure from the termdb-barsql route
+	*/
 	async getNestedChartSeriesData(opts) {
 		const url = this.getTdbDataUrl(opts)
 		const data = await dofetch3(url, {}, this.opts.fetchOpts)
@@ -153,8 +169,13 @@ class TermdbVocab {
 
 		if ('grade' in opts) params.push(`grade=${opts.grade}`)
 		if ('minSampleSize' in opts) params.push(`minSampleSize=${opts.minSampleSize}`)
-		if ('minEventCnt' in opts) params.push(`minEventCnt=${opts.minEventCnt}`)
-		if ('minYearsToEvent' in opts) params.push(`minYearsToEvent=${opts.minYearsToEvent}`)
+
+		// start of mds3 parameters for variant2sample query
+		if (opts.isoform) params.push('isoform=' + opts.isoform)
+		if (opts.ssm_id_lst) params.push('ssm_id_lst=' + opts.ssm_id_lst.join(','))
+		if (opts.rglst) params.push('rglst=' + JSON.stringify(opts.rglst))
+		if (opts.get) params.push('get=' + opts.get)
+		// end of mds3 parameters
 
 		const route = opts.chartType ? 'termdb' : 'termdb-barsql'
 		return `/${route}?${params.join('&')}&genome=${this.vocab.genome}&dslabel=${this.vocab.dslabel}`
@@ -542,7 +563,7 @@ class TermdbVocab {
 		const filter = getNormalRoot(opts.filter)
 		const isNewFilter = !deepEqual(this.currAnnoData.lastFilter, filter)
 		if (isNewFilter) {
-			this.currAnnoData = { samples: {}, refs: { byTermId: {} }, lastTerms: [], lastFilter: {} }
+			this.currAnnoData = { samples: {}, refs: { byTermId: {}, bySampleId: {} }, lastTerms: [], lastFilter: {} }
 		}
 		const termsToUpdate = opts.terms.filter(tw => {
 			const lastTw = this.currAnnoData.lastTerms.find(lt => lt.$id === tw.$id)
@@ -584,6 +605,10 @@ class TermdbVocab {
 								row[tw.$id] = sample[tw.idn]
 							}
 						}
+					}
+
+					for (const sampleId in data.refs.bySampleId) {
+						this.currAnnoData.refs.bySampleId[sampleId] = data.refs.bySampleId[sampleId]
 					}
 
 					for (const tw of copies) {
@@ -680,6 +705,44 @@ class TermdbVocab {
 			'm=' + JSON.stringify({ chr: m.chr, pos: m.pos, ref: m.ref, alt: m.alt })
 		]
 		return await dofetch3('termdb?' + args.join('&'))
+	}
+
+	cacheTermQ(term, q) {
+		// only save q with a user or automatically assigned name
+		if (!q.reuseId) throw `missing term q.reuseId for term.id='${term.id}'`
+		this.app.dispatch({
+			type: 'cache_termq',
+			termId: term.id,
+			q
+		})
+	}
+
+	async uncacheTermQ(term, q) {
+		await this.app.dispatch({
+			type: 'uncache_termq',
+			term,
+			q
+		})
+	}
+
+	getCustomTermQLst(term) {
+		if (term.id) {
+			const cache = this.state.reuse.customTermQ.byId[term.id] || {}
+			const qlst = Object.values(cache).map(q => JSON.parse(JSON.stringify(q)))
+			// find a non-conflicting reuseId for saving a new term.q
+			for (let i = qlst.length + 1; i < 1000; i++) {
+				const nextReuseId = `Setting #${i}`
+				if (!qlst.find(q => q.reuseId === nextReuseId)) {
+					qlst.nextReuseId = nextReuseId
+					break
+				}
+			}
+			// last resort to use a random reuseId that is harder to read
+			if (!qlst.nextReuseId) {
+				qlst.nextReuseId = btoa((+new Date()).toString()).slice(10, -3)
+			}
+			return qlst
+		} else return []
 	}
 }
 

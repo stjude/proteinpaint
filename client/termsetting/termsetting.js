@@ -1,4 +1,4 @@
-import { getInitFxn, copyMerge } from '#rx'
+import { getInitFxn, copyMerge, deepEqual } from '#rx'
 import { Menu } from '#dom/menu'
 import { select } from 'd3-selection'
 
@@ -22,7 +22,7 @@ const idSuffix = `_ts_${(+new Date()).toString().slice(-8)}`
 let $id = 0
 
 const defaultOpts = {
-	menuOptions: 'edit',
+	menuOptions: 'edit', // ['edit', 'replace', 'save', 'remove'],
 	menuLayout: 'vertical'
 }
 
@@ -96,13 +96,19 @@ class TermSetting {
 		}
 	}
 
-	runCallback(overrideTw) {
+	runCallback(overrideTw = null) {
 		/* optional termwrapper (tw) to override attributes of this.term{} and this.q{}
 		the override tw serves the "atypical" termsetting usage
 		as used in snplocus block pan/zoom update in regression.results.js
 		*/
 		const arg = this.term ? { id: this.term.id, term: this.term, q: this.q } : {}
 		if ('$id' in this) arg.$id = this.$id
+		if (arg.q?.reuseId && arg.q.reuseId === this.data.q?.reuseId) {
+			if (!deepEqual(arg.q, this.data.q)) {
+				delete arg.q.reuseId
+				delete arg.q.name
+			}
+		}
 		this.opts.callback(overrideTw ? copyMerge(JSON.stringify(arg), overrideTw) : arg)
 	}
 
@@ -117,6 +123,7 @@ class TermSetting {
 		if (!('placeholder' in o)) o.placeholder = 'Select term&nbsp;'
 		if (!('placeholderIcon' in o)) o.placeholderIcon = '+'
 		if (!Number.isInteger(o.abbrCutoff)) o.abbrCutoff = 18 //set the default to 18
+		this.validateMenuOptions(o)
 		if (!o.numericEditMenuVersion) o.numericEditMenuVersion = ['discrete']
 		this.mayValidate_noTermPromptOptions(o)
 		return o
@@ -133,6 +140,8 @@ class TermSetting {
 			this.hasError = false
 			delete this.error
 			this.validateMainData(data)
+			// may need original values for comparing edited settings
+			this.data = data
 			// term is read-only if it comes from state, let it remain read-only
 			this.term = data.term
 			this.q = JSON.parse(JSON.stringify(data.q)) // q{} will be altered here and must not be read-only
@@ -169,6 +178,11 @@ class TermSetting {
 		this.mayValidate_noTermPromptOptions(d)
 	}
 
+	validateMenuOptions(o) {
+		const allowedOptions = ['all', 'edit']
+		if (!allowedOptions.includes(o.menuOptions)) throw `unsupported ts.opts.menuOptions='${o.menuOptions}'`
+	}
+
 	mayValidate_noTermPromptOptions(o) {
 		if (!o.noTermPromptOptions) return
 		if (!Array.isArray(o.noTermPromptOptions)) throw 'noTermPromptOptions[] is not array'
@@ -196,7 +210,7 @@ class TermSetting {
 		const typeSubtype = `${type}${subtype}`
 		if (!this.handlerByType[typeSubtype]) {
 			try {
-				let _ 
+				let _
 				// @rollup/plugin-dynamic-import-vars cannot use a import variable name in the same dir
 				if (typeSubtype == 'numeric.toggle') {
 					_ = await import(`./numeric.toggle.js`)
@@ -492,42 +506,134 @@ function setInteractivity(self) {
 			else tip.show(event.clientX, event.clientY)
 		}
 
-		if (self.opts.menuOptions == 'all') {
-			self.showEditReplaceRemoveMenu(tip.d)
-		} else if (self.opts.menuOptions == 'edit') {
-			self.handler.showEditMenu(tip.d)
-		} else {
-			throw `Unsupported termsettingInit.opts.menuOptions='${self.opts.menuOptions}'`
+		const options = []
+		if (!self.q || !self.q.groupsetting?.disabled) {
+			options.push({ label: 'Edit', callback: self.handler.showEditMenu })
 		}
+
+		options.push({ label: 'Reuse', callback: self.showReuseMenu })
+
+		if (self.opts.menuOptions == 'all') {
+			options.push({ label: 'Replace', callback: self.showTree }, { label: 'Remove', callback: self.removeTerm })
+		}
+
+		tip.d
+			.selectAll('div')
+			.data(options)
+			.enter()
+			.append('div')
+			.attr('class', 'sja_menuoption')
+			.style('display', self.opts.menuLayout == 'horizontal' ? 'inline-block' : 'block')
+			.text(d => d.label)
+			.on('click', d => {
+				self.dom.tip.clear()
+				d.callback(self.dom.tip.d)
+			})
+
+		//self.showFullMenu(tip.d, self.opts.menuOptions)
 	}
 
-	self.showEditReplaceRemoveMenu = async function(div) {
-		div
-			.append('div')
-			.attr('class', 'sja_menuoption')
-			.style('display', self.opts.menuLayout == 'horizontal' ? 'inline-block' : 'block')
-			.text('Edit')
+	self.showReuseMenu = async function(_div) {
+		const saveDiv = _div.append('div')
+		saveDiv
+			.style('display', 'block')
+			.style('padding', '10px')
+			.append('span')
+			.style('color', '#aaa')
+			.html('Save current setting as ')
+
+		const qlst = self.vocabApi.getCustomTermQLst(self.term)
+		const qNameInput = saveDiv
+			.append('input')
+			.attr('type', 'text')
+			.attr('placeholder', qlst.nextReuseId)
+			.attr('value', self.q.reuseId || qlst.nextReuseId)
+		//.style('width', '300px')
+
+		saveDiv
+			.append('button')
+			.style('margin-left', '5px')
+			.html('Save')
 			.on('click', () => {
-				self.dom.tip.clear()
-				self.handler.showEditMenu(self.dom.tip.d)
-			})
-		div
-			.append('div')
-			.attr('class', 'sja_menuoption')
-			.style('display', self.opts.menuLayout == 'horizontal' ? 'inline-block' : 'block')
-			.text('Replace')
-			.on('click', () => {
-				self.showTree(self.dom.tip.d.node())
-			})
-		div
-			.append('div')
-			.attr('class', 'sja_menuoption')
-			.style('display', self.opts.menuLayout == 'horizontal' ? 'inline-block' : 'block')
-			.text('Remove')
-			.on('click', () => {
+				const reuseId = qNameInput.property('value').trim() || qlst.nextReuseId
+				self.q.reuseId = reuseId
+				//self.q.name = self.q.reuseId
+				self.vocabApi.cacheTermQ(self.term, self.q)
+				self.runCallback()
 				self.dom.tip.hide()
-				self.removeTerm()
 			})
+
+		const tableWrapper = _div.append('div').style('margin', '10px')
+		const defaultTw = { term: self.term }
+		await fillTermWrapper(defaultTw, self.vocabApi)
+		defaultTw.q.reuseId = 'Default'
+		qlst.push(defaultTw.q)
+		if (qlst.length > 1) {
+			tableWrapper
+				.append('div')
+				.style('color', '#aaa')
+				.html('Previously saved settings')
+		}
+
+		tableWrapper
+			.append('table')
+			.selectAll('tr')
+			.data(qlst)
+			.enter()
+			.append('tr')
+			.style('margin', '2px 5px')
+			.each(function(q) {
+				const tr = select(this)
+				const inuse = equivalentQs(self.q, q)
+				tr.append('td')
+					.style('min-width', '180px')
+					//.style('border-bottom', '1px solid #eee')
+					.style('text-align', 'center')
+					.html(q.name || q.reuseId)
+
+				const useTd = tr.append('td').style('text-align', 'center')
+				if (inuse) {
+					useTd.html(`In use <span style='color:#5a5;font-weight:600'>&check;</span>`)
+				} else {
+					useTd
+						.append('button')
+						.style('min-width', '80px')
+						.html('Use')
+						.on('click', () => {
+							if (q.reuseId === 'Default') {
+								delete q.reuseId
+								delete q.name
+							}
+							self.q = q
+							self.dom.tip.hide()
+							self.runCallback()
+						})
+				}
+
+				const deleteTd = tr.append('td').style('text-align', 'center')
+				if (!inuse && q.reuseId != 'Default') {
+					deleteTd
+						.append('button')
+						.style('min-width', '80px')
+						.html('Delete')
+						.on('click', async () => {
+							await self.vocabApi.uncacheTermQ(self.term, q)
+							self.dom.tip.hide()
+							self.runCallback()
+						})
+				}
+			})
+
+		_div
+			.append('div')
+			.style('margin', '20px 5px 5px 5px')
+			.style('padding', '5px')
+			.style('font-size', '0.8em')
+			.style('color', '#aaa')
+			.html(
+				`Saving the setting will allow it to be reused at another chart.<br/>` +
+					`The setting will be reusable in your current or saved session.`
+			)
 	}
 
 	self.showGeneSearch = clickedElem => {
@@ -585,6 +691,25 @@ function setInteractivity(self) {
 			.style('padding-left', '5px')
 			.style('border-left', '2px solid #ccc')
 	}
+}
+
+// do not consider irrelevant q attributes when
+// computing the deep equality of two term.q's
+function equivalentQs(q0, q1) {
+	const qlst = [q0, q1].map(q => JSON.parse(JSON.stringify(q)))
+	for (const q of qlst) {
+		delete q.binLabelFormatter
+		if (q.reuseId === 'Default') delete q.reuseId
+		// TODO: may need to delete non-relevant q attributes
+		// when setting defaults in regression.inputs.term.js
+		if (q.mode === 'continuous') delete q.mode
+		if (q.mode === 'discrete' && q.type == 'custom-bin' && q.lst) {
+			for (const bin of q.lst) {
+				delete bin.range
+			}
+		}
+	}
+	return deepEqual(...qlst)
 }
 
 function getDefaultHandler(self) {

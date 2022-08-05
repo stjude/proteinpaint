@@ -46,35 +46,41 @@ export function getHandler(self) {
 		},
 
 		getPillStatus() {
+			const text = self.q?.name || self.q?.reuseId
+			if (text) return { text }
 			if (self.q.type == 'regular-bin') return { text: 'bin size=' + self.q.bin_size }
 			return { text: self.q.lst.length + ' bins' }
 		},
 
 		async showEditMenu(div) {
-			self.num_obj = {}
-
-			self.num_obj.plot_size = {
-				width: 500,
-				height: 100,
-				xpad: 10,
-				ypad: 20
-			}
-			try {
-				self.num_obj.density_data = await self.vocabApi.getDensityPlotData(self.term.id, self.num_obj, self.filter)
-			} catch (err) {
-				console.log(err)
-			}
-
-			div.selectAll('*').remove()
-			self.dom.num_holder = div
-			self.dom.bins_div = div.append('div').style('padding', '5px')
-			setqDefaults(self)
-			setDensityPlot(self)
-			renderBoundaryInclusionInput(self)
-			renderTypeInputs(self)
-			renderButtons(self)
+			showBinsMenu(self, div)
 		}
 	}
+}
+
+async function showBinsMenu(self, div) {
+	self.num_obj = {}
+
+	self.num_obj.plot_size = {
+		width: 500,
+		height: 100,
+		xpad: 10,
+		ypad: 20
+	}
+	try {
+		self.num_obj.density_data = await self.vocabApi.getDensityPlotData(self.term.id, self.num_obj, self.filter)
+	} catch (err) {
+		console.log(err)
+	}
+
+	div.selectAll('*').remove()
+	self.dom.num_holder = div
+	self.dom.bins_div = div.append('div').style('padding', '5px')
+	setqDefaults(self)
+	setDensityPlot(self)
+	renderBoundaryInclusionInput(self)
+	renderTypeInputs(self)
+	renderButtons(self)
 }
 
 function applyEdits(self) {
@@ -282,7 +288,7 @@ function renderTypeInputs(self) {
 	const div = self.dom.bins_div.append('div').style('margin', '10px')
 	const tabs = [
 		{
-			active: self.q.type == 'regular-bin' ? true : false,
+			active: self.q.type == 'regular-bin',
 			label: 'Same bin size',
 			callback: async div => {
 				self.q.type = 'regular-bin'
@@ -296,7 +302,7 @@ function renderTypeInputs(self) {
 			}
 		},
 		{
-			active: self.q.type == 'custom-bin' ? true : false,
+			active: self.q.type == 'custom-bin',
 			label: 'Varying bin sizes',
 			callback: async div => {
 				self.q.type = 'custom-bin'
@@ -310,6 +316,7 @@ function renderTypeInputs(self) {
 			}
 		}
 	]
+
 	init_tabs({ holder: div, tabs })
 }
 

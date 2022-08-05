@@ -27,9 +27,13 @@ export function getHandler(self) {
 				// logistic outcome
 				return showMenu_binary(self, div)
 			}
-			if (self.q.mode == 'time2event') {
-				// cuminc term1, cox outcome
-				return showMenu_time2event(self, div)
+			if (self.q.mode == 'cuminc') {
+				// cuminc term1
+				return showMenu_cuminc(self, div)
+			}
+			if (self.q.mode == 'cox') {
+				// cox outcome
+				return showMenu_cox(self, div)
 			}
 			console.error('invalid q.mode:', self.q.mode)
 			throw 'invalid q.mode'
@@ -38,6 +42,8 @@ export function getHandler(self) {
 }
 
 function getPillStatus(self) {
+	const text = self.q?.name || self.q?.reuseId
+	if (text) return { text }
 	if (self.q.mode == 'discrete') {
 		if (self.q.breaks.length == 0) {
 			if (self.q.bar_by_grade) {
@@ -51,7 +57,8 @@ function getPillStatus(self) {
 			return { text: self.q.breaks.length + 1 + ' groups' }
 		}
 	}
-	if (self.q.mode == 'binary' || self.q.mode == 'time2event') return { text: 'Grades ' + self.q.breaks[0] + '-5' }
+	if (self.q.mode == 'binary' || self.q.mode == 'cuminc' || self.q.mode == 'cox')
+		return { text: 'Grades ' + self.q.breaks[0] + '-5' }
 	return { text: 'Error: unknown q.mode', bgcolor: 'red' }
 }
 
@@ -277,7 +284,7 @@ function showMenu_binary(self, div) {
 		})
 }
 
-function showMenu_time2event(self, div) {
+function showMenu_cuminc(self, div) {
 	const holder = div
 		.append('div')
 		.style('margin', '10px')
@@ -299,22 +306,6 @@ function showMenu_time2event(self, div) {
 	gradeSelect.property('selectedIndex', self.q.breaks[0] - 1)
 
 	// row 2
-	let minYearsToEventValue = self.q.minYearsToEvent
-	holder
-		.append('div')
-		.text('Minimum years to have event')
-		.style('opacity', 0.4)
-	const nd = holder.append('div')
-	const minYearsToEventInput = nd
-		.append('input')
-		.attr('type', 'number')
-		.style('width', '143px')
-		.property('value', minYearsToEventValue)
-		.on('change', () => {
-			minYearsToEventValue = Number(minYearsToEventInput.property('value'))
-		})
-
-	// row 3
 	holder
 		.append('div')
 		.text('No event')
@@ -346,40 +337,104 @@ function showMenu_time2event(self, div) {
 		}
 	}
 
-	let timeScaleChoice = self.q.timeScale
-	if (self.q.showTimeScale) {
-		// row 4: time scale toggle
-		holder
-			.append('div')
-			.text('Time scale')
-			.style('opacity', 0.4)
-		const options = [
-			{
-				label: 'Time from diagnosis', // may define from ds
-				value: 'time'
-			},
-			{ label: 'Age', value: 'age' }
-		]
-		if (self.q.timeScale == 'age') {
-			options[1].checked = true
-		} else {
-			options[0].checked = true
-		}
-		make_radios({
-			holder: holder.append('div'),
-			options,
-			styles: { margin: '' },
-			callback: v => (timeScaleChoice = v)
-		})
-	}
-
+	// apply button
 	div
 		.append('button')
 		.text('Apply')
 		.style('margin', '10px')
 		.on('click', () => {
 			self.q.breaks[0] = gradeSelect.property('selectedIndex') + 1
-			self.q.minYearsToEvent = minYearsToEventValue
+			event.target.disabled = true // is 'event' initialized?
+			event.target.innerHTML = 'Loading...' // is 'event' initialized?
+			self.runCallback()
+		})
+}
+
+function showMenu_cox(self, div) {
+	const holder = div
+		.append('div')
+		.style('margin', '10px')
+		.style('display', 'grid')
+		.style('grid-template-columns', '120px auto')
+		.style('gap', '10px')
+
+	// row 1
+	holder
+		.append('div')
+		.text('Minimum grade to have event')
+		.style('opacity', 0.4)
+	const sd = holder.append('div')
+	const gradeSelect = sd.append('select').on('change', changeGradeSelect)
+	for (const i of cutoffGrades) {
+		gradeSelect.append('option').text(self.term.values[i].label)
+	}
+	// breaks[0] must have already been set
+	gradeSelect.property('selectedIndex', self.q.breaks[0] - 1)
+
+	// row 2
+	holder
+		.append('div')
+		.text('No event')
+		.style('opacity', 0.4)
+	const g1n = holder.append('div').style('opacity', 0.4)
+
+	// row 3
+	holder
+		.append('div')
+		.text('Has event')
+		.style('opacity', 0.4)
+	const g2n = holder.append('div').style('opacity', 0.4)
+
+	changeGradeSelect()
+
+	function changeGradeSelect() {
+		const grade = gradeSelect.property('selectedIndex') + 1
+		g1n.selectAll('*').remove()
+		g2n.selectAll('*').remove()
+		const grades = Object.keys(self.term.values)
+			.map(Number)
+			.sort((a, b) => a - b)
+		for (const i of grades) {
+			if (i < grade) {
+				g1n.append('div').text(self.term.values[i].label)
+			} else {
+				g2n.append('div').text(self.term.values[i].label)
+			}
+		}
+	}
+
+	// row 4: time scale toggle
+	let timeScaleChoice = self.q.timeScale
+	holder
+		.append('div')
+		.text('Time scale')
+		.style('opacity', 0.4)
+	const options = [
+		{
+			label: 'Time from diagnosis', // may define from ds
+			value: 'time'
+		},
+		{ label: 'Age', value: 'age' }
+	]
+	if (self.q.timeScale == 'age') {
+		options[1].checked = true
+	} else {
+		options[0].checked = true
+	}
+	make_radios({
+		holder: holder.append('div'),
+		options,
+		styles: { margin: '' },
+		callback: v => (timeScaleChoice = v)
+	})
+
+	// apply button
+	div
+		.append('button')
+		.text('Apply')
+		.style('margin', '10px')
+		.on('click', () => {
+			self.q.breaks[0] = gradeSelect.property('selectedIndex') + 1
 			self.q.timeScale = timeScaleChoice
 			event.target.disabled = true // is 'event' initialized?
 			event.target.innerHTML = 'Loading...' // is 'event' initialized?
@@ -423,9 +478,8 @@ export function fillTW(tw, vocabApi, defaultQ) {
 
 	if (tw.q.breaks.length >= cutoffGrades.length) throw 'too many values from tw.q.breaks[]'
 
-	if (tw.q.mode == 'time2event') {
+	if (tw.q.mode == 'cox') {
 		if (!tw.q.timeScale) tw.q.timeScale = 'time'
 		if (!['age', 'time'].includes(tw.q.timeScale)) throw 'invalid q.timeScale'
-		if (!tw.q.minYearsToEvent) tw.q.minYearsToEvent = 5
 	}
 }

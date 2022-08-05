@@ -21,18 +21,20 @@ class TdbApp {
 	constructor(opts) {
 		this.type = 'app'
 		if (!opts.holder) select('body').append('div')
+
 		// do this in the constructor to have an dom.errdiv
 		// available at any point during initialization
 		const submitDiv = opts.holder
-				.append('div')
-				.style('display', opts.tree.submit_lst ? '' : 'none')
-				.style('text-align', 'center')
-				.style('margin', '10px 5px')
-				
-		const submitBtn =	submitDiv.append('button')
-				.property('disabled', true)
-				.text(this.noSelectionPrompt)
-				.on('click', () => this.opts.tree.submit_lst(this.state.selectedTerms))
+			.append('div')
+			.style('display', opts.tree?.submit_lst ? '' : 'none')
+			.style('text-align', 'center')
+			.style('margin', '10px 5px')
+
+		const submitBtn = submitDiv
+			.append('button')
+			.property('disabled', true)
+			.text(this.noSelectionPrompt)
+			.on('click', () => this.opts.tree?.submit_lst(this.state.selectedTerms))
 
 		const topbar = opts.holder.append('div')
 		this.dom = {
@@ -52,6 +54,15 @@ class TdbApp {
 			// verify it is an object returned by vocabInit()
 		} else if (o.state && o.state.vocab) {
 			if (typeof o.state.vocab != 'object') throw 'opts.state.vocab{} is not an object'
+		} else if (o.state && o.state.genome) {
+			const s = o.state
+			if (!s.vocab) s.vocab = {}
+			s.vocab.genome = s.genome
+			delete s.genome
+			if (s.dslabel) {
+				s.vocab.dslabel = s.dslabel
+				delete s.dslabel
+			}
 		} else {
 			throw 'neither state.vocab{} or opts.vocabApi provided'
 		}

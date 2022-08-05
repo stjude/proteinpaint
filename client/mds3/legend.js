@@ -1,7 +1,7 @@
 import { event as d3event } from 'd3-selection'
-import { legend_newrow } from '../block.legend'
-import { Menu } from '../../dom/menu'
-import { mclass, dt2label, dtcnv, dtloh, dtitd, dtsv, dtfusionrna, mclassitd } from '../../shared/common'
+import { legend_newrow } from '../src/block.legend'
+import { Menu } from '#dom/menu'
+import { mclass, dt2label, dtcnv, dtloh, dtitd, dtsv, dtfusionrna, mclassitd } from '#shared/common'
 
 /*
 ********************** EXPORTED
@@ -110,13 +110,30 @@ function may_create_variantShapeName(tk) {
 	}
 }
 
-export function updateLegend(data, tk, block) {
-	/*
+/*
 data is returned by xhr
+update legend dom
+makes no return
 */
-	if (data.mclass2variantcount) {
-		update_mclass(data.mclass2variantcount, tk)
+export function updateLegend(data, tk, block) {
+	if (!tk.legend) {
+		/* if using invalid dslabel, upon initiating initLegend() will not be called
+		and tk.legend may not be created
+		*/
+		return
 	}
+
+	// should clear here
+	//tk.legend.mclass.holder.selectAll('*').remove()
+
+	/* data.mclass2variantcount is optional; if present, will render in mclass section of track legend
+	also keep data so it can be accessible by block.svg.js
+	for rendering mclass legend in exported svg
+	*/
+
+	tk.legend.mclass.currentData = data.mclass2variantcount
+	update_mclass(tk)
+
 	if (data.info_fields) {
 		update_info_fields(data.info_fields, tk)
 	}
@@ -142,12 +159,17 @@ function may_update_variantShapeName(data, tk) {
 	vl.circleCount.text(circle)
 }
 
-function update_mclass(mclass2variantcount, tk) {
+function update_mclass(tk) {
+	if (!tk.legend.mclass.currentData || tk.legend.mclass.currentData.length == 0) return
+
+	/* only clear here
+	todo: upon zooming into protein, should generate updated mclass2variantcount using client cached data, visible in view range
+	*/
 	tk.legend.mclass.holder.selectAll('*').remove()
 
 	const showlst = [],
 		hiddenlst = []
-	for (const [k, count] of mclass2variantcount) {
+	for (const [k, count] of tk.legend.mclass.currentData) {
 		const v = { k, count }
 		if (tk.legend.mclass.hiddenvalues.has(k)) {
 			hiddenlst.push(v)
@@ -159,7 +181,7 @@ function update_mclass(mclass2variantcount, tk) {
 	hiddenlst.sort((i, j) => j.count - i.count)
 
 	// items in hiddenvalues{} can still be absent in hiddenlst,
-	// e.g. if class filter is done at backend, and mclass2variantcount is calculated just from visible data items
+	// e.g. if class filter is done at backend, and currentData is calculated just from visible data items
 	for (const k of tk.legend.mclass.hiddenvalues) {
 		if (!hiddenlst.find(i => i.k == k)) {
 			hiddenlst.push({ k })
@@ -243,7 +265,7 @@ function update_mclass(mclass2variantcount, tk) {
 					.style('padding', '10px')
 					.style('font-size', '.8em')
 					.style('width', '150px')
-					.text(desc)
+					.html(desc)
 
 				tk.legend.tip.showunder(cell.node())
 			})

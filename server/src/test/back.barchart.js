@@ -3,7 +3,7 @@ const fs = require('fs')
 const path = require('path')
 const Partjson = require('partjson')
 const sjlife = require('./load.sjlife').init('termdb.test.js')
-const filterUtils = require('../../shared/filter')
+const filterUtils = require('#shared/filter')
 
 function barchart_data(q, data0) {
 	/*

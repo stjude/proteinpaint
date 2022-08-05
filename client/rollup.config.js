@@ -21,8 +21,10 @@ export default [
 		output: { dir: path.join(__dirname, 'dist'), format: 'es' },
 		external: [...Object.keys(pkg.peerDependencies ? pkg.peerDependencies : {})],
 		plugins: [
+			ignoreTestInternals(),
 			resolve({
 				main: true
+				//preferBuiltins: false,
 			}),
 			json(),
 			commonjs({
@@ -39,3 +41,15 @@ export default [
 		onwarn
 	}
 ]
+
+function ignoreTestInternals() {
+	return {
+		name: 'ignoreTestInternals',
+		resolveId(id) {
+			return id.includes('/test/internals') ? id : null
+		},
+		load(id) {
+			return id.includes('/test/internals') ? '' : null
+		}
+	}
+}

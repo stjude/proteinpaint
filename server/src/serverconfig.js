@@ -74,9 +74,13 @@ if (!serverconfig.binpath) {
 		const specfile = process.argv.find(n => n.includes('.spec.js'))
 		if (specfile) {
 			serverconfig.binpath = path.dirname(__dirname)
-		} else { 
+		} else {
 			const jsfile = process.argv.find(
-				n => n.endsWith('/bin.js') || n.endsWith('/server.js') || n.endsWith('/proteinpaint') || n.endsWith('/proteinpaint-server')
+				n =>
+					n.endsWith('/bin.js') ||
+					n.endsWith('/server.js') ||
+					n.endsWith('/proteinpaint') ||
+					n.endsWith('/proteinpaint-server')
 			)
 			if (jsfile) {
 				try {
@@ -215,7 +219,32 @@ function getGDCconfig() {
 			}
 		],
 		backend_only: true,
-		ignoreTermdbTest: true
+		ignoreTermdbTest: true,
+		commonOverrides: {
+			mclass: {
+				I: {
+					color: 'rgb(98, 60, 53)'
+				},
+				S: {
+					color: 'rgb(31, 112, 31)'
+				},
+				M: {
+					color: 'rgb(40, 95, 143)'
+				},
+				N: {
+					color: 'rgb(179, 89, 10)'
+				},
+				L: {
+					color: 'rgb(71, 36, 179)'
+				},
+				P: {
+					color: 'rgb(104, 72, 132)'
+				},
+				Utr3: {
+					color: 'rgb(107, 90, 107)'
+				}
+			}
+		}
 		/**** 
 			ASSUMES THAT THE GDC-PP WILL RUN INSIDE A DOCKER CONTAINER,
 			see above where the serverconfig.port, tpmasterdir, etc 

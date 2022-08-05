@@ -4,12 +4,16 @@ import { addGeneSearchbox } from '#dom/genesearch'
 import { Menu } from '#dom/menu'
 import { debounce } from 'debounce'
 import { event, select, selectAll } from 'd3-selection'
+import {rgb} from 'd3-color'
+
+
 // js-only syntax highlighting for smallest bundle, see https://highlightjs.org/usage/
 // also works in rollup and not just webpack, without having to use named imports
 import hljs from 'highlight.js/lib/core'
 import javascript from 'highlight.js/lib/languages/javascript'
 hljs.registerLanguage('javascript', javascript)
 import json from 'highlight.js/lib/languages/json'
+import { defaultcolor } from '../shared/common'
 hljs.registerLanguage('json', json)
 
 /*
@@ -159,7 +163,7 @@ function make_subheader_contents(div, sub_name) {
 		.append('div')
 		.append('h5')
 		.attr('class', 'sjpp-track-cols')
-		.style('color', 'rgb(100, 122, 152)')
+		.style('color', rgb(defaultcolor).darker())
 		.html(sub_name)
 	const list = div.append('ul')
 	list
@@ -232,7 +236,7 @@ function displayTracks(tracks, holder, page_args) {
 			.html(
 				`<div class="sjpp-track-h"><span style="font-size:14.5px;font-weight:500;">${track.name}</span></div>
 				${track.blurb ? `<span class="sjpp-track-blurb" style="cursor:default">${track.blurb}</span></div>` : ''}
-				<span class="sjpp-track-image"><img src="${track.image}"></img></span>
+				<span class="sjpp-track-image"><img src="${track.image}" alt="${track.blurb}"></img></span>
 				</div>`
 			)
 			.on('click', async () => {
@@ -284,7 +288,7 @@ function makeRibbon(e, text, color) {
 		.append('span')
 		.text(text)
 		.style('color', 'white')
-		.style('background-color', color)
+		.style('background-color', rgb(color).darker())
 		.style('height', 'auto')
 		.style('width', '100%')
 		.style('top', '15%')
@@ -1045,7 +1049,7 @@ function makeDatasetButtons(div, datasets, page_args) {
 		.append('div')
 		.append('h5')
 		.attr('class', 'sjpp-track-cols')
-		.style('color', 'rgb(100, 122, 152)')
+		.style('color', defaultcolor.darker())
 		.html('Featured Datasets')
 
 	const datasetBtns_div = div.append('div').style('padding', '10px')

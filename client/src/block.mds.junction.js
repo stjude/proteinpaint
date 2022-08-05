@@ -1,5 +1,5 @@
 import * as client from './client'
-import * as common from '../shared/common'
+import * as common from '#shared/common'
 import { scaleLinear, scaleLog, scaleOrdinal, schemeCategory10 } from 'd3-scale'
 import { select as d3select, event as d3event } from 'd3-selection'
 import { axisRight } from 'd3-axis'
@@ -117,6 +117,14 @@ export async function loadTk(tk, block, noViewRangeChange) {
 
 	if (tk.uninitialized) {
 		makeTk(tk, block)
+	}
+
+	if (tk.mds.mdsIsUninitiated) {
+		const d = await client.dofetch3(`getDataset?genome=${block.genome.name}&dsname=${tk.mds.label}`)
+		if (d.error) throw d.error
+		if (!d.ds) throw 'ds missing'
+		Object.assign(tk.mds, d.ds)
+		delete tk.mds.mdsIsUninitiated
 	}
 
 	const par = {

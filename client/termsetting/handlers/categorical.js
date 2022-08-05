@@ -29,18 +29,13 @@ export function getHandler(self) {
 	setCategoryConditionMethods(self)
 
 	return {
-		showEditMenu(div) {
-			self.showGrpOpts(div)
-		},
+		showEditMenu: self.showGrpOpts,
 
 		getPillName(d) {
 			return getPillNameDefault(self, d)
 		},
 
-		getPillStatus() {
-			// get message text for the right half pill; may return null
-			return self.validateGroupsetting()
-		},
+		getPillStatus: self.validateGroupsetting,
 
 		validateQ(data) {
 			const t = data.term
@@ -90,8 +85,8 @@ export function getHandler(self) {
 				}
 				return
 			}
-
-			throw `unknown q.type='${data.q.type}' for categorical q.mode='${data.q.mode}'`
+			console.log(88, data)
+			throw `unknown xxxx q.type='${data.q.type}' for categorical q.mode='${data.q.mode}'`
 		},
 
 		async postMain() {
@@ -123,6 +118,8 @@ export function getHandler(self) {
 export function setCategoryConditionMethods(self) {
 	self.validateGroupsetting = function() {
 		if (!self.q.groupsetting || !self.q.groupsetting.inuse) return
+		const text = self.q?.name || self.q?.reuseId
+		if (text) return { text }
 		if (Number.isInteger(self.q.groupsetting.predefined_groupset_idx)) {
 			if (!self.term.groupsetting) return { text: 'term.groupsetting missing', bgcolor: 'red' }
 			if (!self.term.groupsetting.lst) return { text: 'term.groupsetting.lst[] missing', bgcolor: 'red' }
@@ -144,167 +141,190 @@ export function setCategoryConditionMethods(self) {
 	}
 
 	/******************* Functions for Categorical terms *******************/
-	self.showGrpOpts = async function(div) {
-		const grpsetting_flag = self.q && self.q.groupsetting && self.q.groupsetting.inuse
-		const predefined_group_name =
-			self.term.groupsetting &&
-			self.term.groupsetting.lst &&
-			self.q.groupsetting &&
-			self.q.groupsetting.predefined_groupset_idx != undefined
-				? self.term.groupsetting.lst[self.q.groupsetting.predefined_groupset_idx].name
-				: ''
+	self.showGrpOpts = async function(_div) {
+		const tgs = self.term.groupsetting
+		const qgs = self.q?.groupsetting
+		const activeGroup = tgs?.lst?.[qgs?.predefined_groupset_idx] || (qgs?.inuse && qgs.customset)
+
+		if (!activeGroup) self.regroupMenu()
+		else {
+			const valGrp = self.grpSet2valGrp(activeGroup)
+			self.regroupMenu(activeGroup.groups.length, valGrp)
+		}
+	}
+
+	self.getQlst = () => {
 		const values = self.q.bar_by_children ? self.term.subconditions : self.term.values
-		const active_group_info_div = div.append('div').style('margin', '10px')
+		const defaultGrpName = `default categories ${values ? '(n=' + Object.keys(values).length + ')' : ''}`
+		const activeName = self.q.name || qgs?.name || activeGroup?.name || defaultGrpName
 
-		// if using predfined groupset, display name
-		active_group_info_div
-			.append('div')
-			.style('display', grpsetting_flag && predefined_group_name ? 'block' : 'none')
-			.style('font-size', '.9em')
-			.style('font-weight', 'bold')
-			.style('text-align', 'center')
-			.style('padding-bottom', '5px')
-			.html('Using ' + predefined_group_name)
-
-		//display groups and categories assigned to that group
-		if (grpsetting_flag) {
-			const groupset =
-				self.q.groupsetting.predefined_groupset_idx != undefined
-					? self.term.groupsetting.lst[self.q.groupsetting.predefined_groupset_idx]
-					: self.q.groupsetting.customset || undefined
-
-			const group_table = active_group_info_div.append('table').style('font-size', '.8em')
-
-			for (const [i, g] of groupset.groups.entries()) {
-				const group_tr = group_table.append('tr')
-
-				//group name
-				group_tr
-					.append('td')
-					.style('font-weight', 'bold')
-					.style('vertical-align', 'top')
-					.html(g.name != undefined ? g.name + ':' : 'Group ' + (i + 1) + ':')
-
-				const values_td = group_tr.append('td')
-				if (!g.type || g.type == 'values') {
-					for (const v of g.values) {
-						values_td.append('div').html(values[v.key].label)
-					}
-				} else if (g.type == 'filter') {
-					if (!g.filter && self.term.groupsetting.lst[0].groups[i].filter4activeCohort) {
-						const filter_ = self.term.groupsetting.lst[0].groups[i].filter4activeCohort[self.activeCohort]
-						const filter = JSON.parse(JSON.stringify(filter_))
-
-						// show filter for predefined tvslst for activeCohort
-						filterInit({
-							btn: values_td.append('div'),
-							btnLabel: 'Filter',
-							emptyLabel: '+New Filter',
-							holder: values_td.append('div').style('width', '300px'),
-							vocabApi: self.vocabApi,
-							callback: () => {}
-						}).main(filter)
-					}
-				}
+		//show button/s for default groups
+		const gsLst = tgs?.lst || []
+		const qlst = self.vocabApi.getCustomTermQLst(self.term)
+		const lst = [...gsLst, ...qlst].sort((a, b) => (a.name === self.q.name ? -1 : 0))
+		return lst.map(q => {
+			return {
+				name: q.name || defaultGrpName,
+				isActive: activeName === defaultGrpName,
+				callback
 			}
+		})
+		/*
+		const div = _div.append('div').style('display', 'grid')
+		div
+			.append('div')
+			.style('font-size', '.9em')
+			.style('padding', '10px')
+			.style('text-align', 'center')
+			.html(`Using ${activeName}`)
 
-			//redevide groups btn
+		mayShowGroupDetails(tgs, qgs, activeGroup, div)
+
+		// default overlay btn - divide to n groups (n=total)
+		if (activeName != defaultGrpName) {
 			div
 				.append('div')
 				.attr('class', 'group_btn sja_menuoption')
-				.style('display', 'block')
 				// .style('padding', '7px 6px')
 				.style('margin', '5px')
 				.style('text-align', 'center')
 				.style('font-size', '.8em')
-				.style('border-radius', '12px')
-				.html('Redivide groups')
+				.style('border-radius', '13px')
+				.style('background-color', !qgs?.inuse ? '#fff' : '#eee')
+				.style('color', !qgs?.inuse ? '#888' : '#000')
+				.style('pointer-events', !qgs?.inuse ? 'none' : 'auto')
+				.text('Use ' + defaultGrpName)
 				.on('click', () => {
-					const valGrp = self.grpSet2valGrp(groupset)
-					self.regroupMenu(groupset.groups.length, valGrp)
+					qgs.inuse = false
+					delete qgs.predefined_groupset_idx
+					delete self.q.name
+					// self.q.type = 'values' ????
+					self.dom.tip.hide()
+					self.runCallback()
 				})
 		}
 
-		const default_btn_txt =
-			(!grpsetting_flag ? 'Using' : 'Use') +
-			' default categories ' +
-			(values ? '(n=' + Object.keys(values).length + ')' : '')
-
-		// default overlay btn - devide to n groups (n=total)
-		div
-			.append('div')
-			.attr('class', 'group_btn sja_menuoption')
-			.style('display', self.q.mode == 'binary' ? 'none' : 'block')
-			// .style('padding', '7px 6px')
-			.style('margin', '5px')
-			.style('text-align', 'center')
-			.style('font-size', '.8em')
-			.style('border-radius', '13px')
-			.style('background-color', !grpsetting_flag ? '#fff' : '#eee')
-			.style('color', !grpsetting_flag ? '#888' : '#000')
-			.style('pointer-events', !grpsetting_flag ? 'none' : 'auto')
-			.text(default_btn_txt)
-			.on('click', () => {
-				self.q.groupsetting.inuse = false
-				delete self.q.groupsetting.predefined_groupset_idx
-				// self.q.type = 'values' ????
-				self.dom.tip.hide()
-				self.runCallback()
-			})
-
 		//show button/s for default groups
-		if (self.term.groupsetting && self.term.groupsetting.lst) {
-			for (const [i, group] of self.term.groupsetting.lst.entries()) {
-				if (self.q.groupsetting && self.q.groupsetting.predefined_groupset_idx != i)
-					div
-						.append('div')
-						.attr('class', 'group_btn sja_menuoption')
-						.style(
-							'display',
-							(group.is_grade && !self.q.bar_by_grade) || (group.is_subcondition && !self.q.bar_by_children)
-								? 'none'
-								: 'block'
-						)
-						// .style('padding', '7px 6px')
-						.style('margin', '5px')
-						.style('text-align', 'center')
-						.style('font-size', '.8em')
-						.style('border-radius', '13px')
-						.html('Use <b>' + group.name + '</b>')
-						.on('click', () => {
-							self.q.groupsetting.inuse = true
-							self.q.groupsetting.predefined_groupset_idx = i
-							// used for groupsetting if one of the group is filter rahter than values,
-							// Not in use rightnow, if used in future, uncomment following line
-							// self.q.groupsetting.activeCohort = self.activeCohort
-							self.q.type = 'predefined-groupset'
-							self.dom.tip.hide()
-							self.runCallback()
-						})
+		const gsLst = tgs?.lst || []
+		const qlst = self.vocabApi.getCustomTermQLst(self.term)
+		const lst = [...gsLst, ...qlst].sort((a, b) => (a.name === self.q.name ? -1 : 0))
+
+		for (const [i, group] of lst.entries()) {
+			if (group.name === activeName) continue
+
+			div
+				.append('div')
+				.attr('class', 'group_btn sja_menuoption')
+				.style(
+					'display',
+					(group.is_grade && !self.q.bar_by_grade) || (group.is_subcondition && !self.q.bar_by_children)
+						? 'none'
+						: 'block'
+				)
+				// .style('padding', '7px 6px')
+				.style('grid-column', '1')
+				.style('margin', '5px')
+				.style('text-align', 'center')
+				.style('font-size', '.8em')
+				.style('border-radius', '13px')
+				.html(`Use <b>${group.name}</b>`)
+				.on('click', () => {
+					qgs.inuse = true
+					if (group.groupsetting.customset) {
+						self.q = group
+					} else {
+						qgs.predefined_groupset_idx = i
+						// used for groupsetting if one of the group is filter rahter than values,
+						// Not in use rightnow, if used in future, uncomment following line
+						// self.q.groupsetting.activeCohort = self.activeCohort
+						self.q.type = 'predefined-groupset'
+					}
+					self.dom.tip.hide()
+					self.runCallback()
+				})
+
+			if (group.name) {
+				div
+					.append('div')
+					.style('grid-column', '2/3')
+					.style('margin', '5px')
+					.style('padding', '5px')
+					.style('cursor', 'pointer')
+					.style('color', '#999')
+					.style('font-size', '.8em')
+					.text('DELETE')
+					.on('click', async () => {
+						await self.vocabApi.uncacheTermQ(self.term, group)
+						if (group.name === self.q.name) delete self.q.name
+						self.dom.tip.hide()
+					})
 			}
 		}
 
-		// devide to grpups btn
+		//redevide groups btn
 		div
 			.append('div')
 			.attr('class', 'group_btn sja_menuoption')
-			.style(
-				'display',
-				(self.term.groupsetting && self.term.groupsetting.disabled) || grpsetting_flag ? 'none' : 'block'
-			)
+			.style('display', 'block')
 			// .style('padding', '7px 6px')
 			.style('margin', '5px')
 			.style('text-align', 'center')
 			.style('font-size', '.8em')
-			.style('border-radius', '13px')
-			.html(
-				'Divide <b>' +
-					(self.term.name.length > 25 ? self.term.name.substring(0, 24) + '...' : self.term.name) +
-					'</b> to groups'
-			)
+			.style('border-radius', '12px')
+			.html('Redivide groups')
 			.on('click', () => {
-				self.regroupMenu()
+				if (!activeGroup) self.regroupMenu()
+				else {
+					const valGrp = self.grpSet2valGrp(activeGroup)
+					self.regroupMenu(activeGroup.groups.length, valGrp)
+				}
 			})
+
+		self.renderQNameInput(div, `Grouping`)
+		*/
+	}
+
+	function mayShowGroupDetails(tgs, qgs, groupset, div) {
+		return
+		const active_group_info_div = div.append('div').style('margin', '10px')
+
+		//display groups and categories assigned to that group
+		if (!qgs?.inuse) return
+		console.log(161, groupset)
+		const group_table = active_group_info_div.append('table').style('font-size', '.8em')
+
+		for (const [i, g] of groupset.groups.entries()) {
+			const group_tr = group_table.append('tr')
+
+			//group name
+			group_tr
+				.append('td')
+				.style('font-weight', 'bold')
+				.style('vertical-align', 'top')
+				.html(g.name != undefined ? g.name + ':' : 'Group ' + (i + 1) + ':')
+
+			const values_td = group_tr.append('td')
+			if (!g.type || g.type == 'values') {
+				for (const v of g.values) {
+					values_td.append('div').html(values[v.key].label)
+				}
+			} else if (g.type == 'filter') {
+				const cohortFilter = tgs.lst[0].groups[i].filter4activeCohort
+				if (!g.filter && cohortFilter) {
+					const filter = JSON.parse(JSON.stringify(cohortFilter[self.activeCohort]))
+
+					// show filter for predefined tvslst for activeCohort
+					filterInit({
+						btn: values_td.append('div'),
+						btnLabel: 'Filter',
+						emptyLabel: '+New Filter',
+						holder: values_td.append('div').style('width', '300px'),
+						vocabApi: self.vocabApi,
+						callback: () => {}
+					}).main(filter)
+				}
+			}
+		}
 	}
 
 	self.grpSet2valGrp = function(groupset) {

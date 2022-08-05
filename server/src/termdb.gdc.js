@@ -1,19 +1,34 @@
 const got = require('got')
-const isUsableTerm = require('../shared/termdb.usecase').isUsableTerm
+const path = require('path')
+const isUsableTerm = require('#shared/termdb.usecase').isUsableTerm
 
 /*
-HARDCODED LOGIC, does not need any dataset configuration
 
-parse gdc dictionary, and store as in-memory termdb
+- parsing gdc variables and constructing in-memory termdb:
+  HARDCODED LOGIC, does not need any configuration in server/dataset/mds3.gdc.js
+
+- querying list of open-access projects
+  also hardcoded logic, not relying on dataset config
+
 
 standard termdb "interface" functions are added to ds.cohort.termdb.q{}
 
 exports one function: initGDCdictionary
+
+adds following things:
+
+1. ds.cohort.termdb.q={ ... "standard" termdb callbacks ... }
+2. ds.gdcOpenProjects = set of project ids that are open-access
+
 */
 
-const apiurl = (process.env.PP_GDC_HOST || 'https://api.gdc.cancer.gov') + '/ssm_occurrences/_mapping'
+const gdcHost = process.env.PP_GDC_HOST || 'https://api.gdc.cancer.gov'
+
+// TODO!!!! switch to https://api.gdc.cancer.gov/cases/_mapping
+const dictUrl = path.join(gdcHost, 'ssm_occurrences/_mapping')
 
 /* 
+
 sections from api return that are used to build in-memory termdb
 
 ******************* Part 1
@@ -116,7 +131,7 @@ export async function initGDCdictionary(ds) {
 	// k: term id, string with full path
 	// v: term obj
 
-	const response = await got(apiurl, {
+	const response = await got(dictUrl, {
 		method: 'GET',
 		headers: { 'Content-Type': 'application/json', Accept: 'application/json' }
 	})
@@ -235,6 +250,8 @@ export async function initGDCdictionary(ds) {
 	Object.freeze(id2term)
 
 	makeTermdbQueries(ds, id2term)
+
+	await getOpenProjects(ds)
 }
 
 function mayAddTermAttribute(t) {
@@ -372,5 +389,51 @@ function makeTermdbQueries(ds, id2term) {
 				}
 			}
 		}
+	}
+}
+
+async function getOpenProjects(ds) {
+	const headers = {
+		'Content-Type': 'application/json',
+		Accept: 'application/json'
+	}
+
+	const data = {
+		filters: {
+			op: 'and',
+			content: [
+				{
+					op: '=',
+					content: {
+						field: 'access',
+						value: 'open'
+					}
+				},
+				{
+					op: '=',
+					content: {
+						field: 'data_type',
+						value: 'Masked Somatic Mutation'
+					}
+				}
+			]
+		},
+		facets: 'cases.project.project_id',
+		size: 0
+	}
+
+	const tmp = await got(path.join(gdcHost, 'files'), { method: 'POST', headers, body: JSON.stringify(data) })
+
+	const re = JSON.parse(tmp.body)
+
+	ds.gdcOpenProjects = new Set()
+
+	if (re?.data?.aggregations?.['cases.project.project_id']?.buckets) {
+		for (const b of re.data.aggregations['cases.project.project_id'].buckets) {
+			// key is project_id value
+			if (b.key) ds.gdcOpenProjects.add(b.key)
+		}
+	} else {
+		console.log("getting open project_id but return is not re.data.aggregations['cases.project.project_id'].buckets")
 	}
 }

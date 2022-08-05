@@ -1,12 +1,13 @@
 // cache
 const ch_genemcount = {} // genome name - gene name - ds name - mutation class - count
 const ch_dbtable = new Map() // k: db path, v: db stuff
-
 const serverconfig = require('./serverconfig')
 
 exports.features = Object.freeze(serverconfig.features || {})
 
 /*
+********** TODO constructor options **********
+
 ********** test accessibility of serverconfig.tpmasterdir at two places **********
 if inaccessible, do not crash service. maintain server process to be able to return helpful message to all request
 1. pp_init()
@@ -51,28 +52,29 @@ const express = require('express'),
 	child_process = require('child_process'),
 	spawn = child_process.spawn,
 	createCanvas = require('canvas').createCanvas,
-	stratinput = require('../shared/tree').stratinput,
+	stratinput = require('#shared/tree').stratinput,
 	bodyParser = require('body-parser'),
 	imagesize = require('image-size'),
 	readline = require('readline'),
 	jsonwebtoken = require('jsonwebtoken'),
 	utils = require('./utils'),
-	common = require('../shared/common'),
-	vcf = require('../shared/vcf'),
-	bulk = require('../shared/bulk'),
-	bulksnv = require('../shared/bulk.snv'),
-	bulkcnv = require('../shared/bulk.cnv'),
-	bulkdel = require('../shared/bulk.del'),
-	bulkitd = require('../shared/bulk.itd'),
-	bulksv = require('../shared/bulk.sv'),
-	bulksvjson = require('../shared/bulk.svjson'),
-	bulktrunc = require('../shared/bulk.trunc'),
+	common = require('#shared/common'),
+	vcf = require('#shared/vcf'),
+	bulk = require('#shared/bulk'),
+	bulksnv = require('#shared/bulk.snv'),
+	bulkcnv = require('#shared/bulk.cnv'),
+	bulkdel = require('#shared/bulk.del'),
+	bulkitd = require('#shared/bulk.itd'),
+	bulksv = require('#shared/bulk.sv'),
+	bulksvjson = require('#shared/bulk.svjson'),
+	bulktrunc = require('#shared/bulk.trunc'),
 	d3color = require('d3-color'),
 	d3stratify = require('d3-hierarchy').stratify,
 	d3scale = require('d3-scale'),
 	d3dsv = require('d3-dsv'),
 	basicAuth = require('express-basic-auth'),
 	termdb = require('./termdb'),
+	handle_tkbigwig = require('./bw').handle_tkbigwig,
 	termdbbarsql = require('./termdb.barsql'),
 	bedgraphdot_request_closure = require('./bedgraphdot'),
 	bam_request_closure = require('./bam'),
@@ -100,10 +102,9 @@ const express = require('express'),
 	cookieParser = require('cookie-parser'),
 	{ maySetAuthRoutes, getDsAuth } = require('./auth.js')
 
-/*
-valuable globals
-*/
-const genomes = {}
+//////////////////////////////
+// Global variable (storing things in memory)
+const genomes = {} // { hg19: {...}, ... }
 const tabix = serverconfig.tabix
 const samtools = serverconfig.samtools
 const bcftools = serverconfig.bcftools
@@ -162,7 +163,10 @@ app.use((req, res, next) => {
 	log(req)
 
 	res.header('Access-Control-Allow-Origin', '*')
-	res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization')
+	res.header(
+		'Access-Control-Allow-Headers',
+		'Origin, X-Requested-With, Content-Type, Accept, Authorization, X-Auth-Token, x-auth-token'
+	)
 	if (req.method == 'GET' && !req.path.includes('.')) {
 		// immutable response before expiration, client must revalidate after max-age;
 		// by convention, any path that has a dot will be treated as
@@ -236,9 +240,7 @@ app.get(basepath + '/blat', blat_request_closure(genomes))
 app.all(basepath + '/mds3', mds3_request_closure(genomes))
 app.get(basepath + '/tkbampile', bampile_request)
 app.post(basepath + '/dsdata', handle_dsdata) // old official ds, replace by mds
-
 app.post(basepath + '/tkbigwig', handle_tkbigwig)
-
 app.get(basepath + '/tabixheader', handle_tabixheader)
 app.post(basepath + '/snp', handle_snp)
 app.get(basepath + '/clinvarVCF', handle_clinvarVCF)
@@ -280,6 +282,8 @@ app.get(basepath + '/isoformbycoord', handle_isoformbycoord)
 app.post(basepath + '/ase', handle_ase)
 app.post(basepath + '/bamnochr', handle_bamnochr)
 app.get(basepath + '/gene2canonicalisoform', handle_gene2canonicalisoform)
+app.get(basepath + '/ideogram', handle_ideogram)
+
 /****
 	- validate and start the server
 	This enables the correct monitoring by the forever module. 
@@ -376,6 +380,7 @@ function log(req) {
 exports.log = log
 
 async function startServer() {
+	// uses the global express "app"
 	try {
 		if (serverconfig.preListenScript) {
 			const { cmd, args } = serverconfig.preListenScript
@@ -460,7 +465,8 @@ function handle_gene2canonicalisoform(req, res) {
 		if (!genome) throw 'unknown genome'
 		if (!genome.genedb.get_gene2canonicalisoform) throw 'gene2canonicalisoform not supported on this genome'
 		const data = genome.genedb.get_gene2canonicalisoform.get(req.query.gene)
-		res.send(data)
+		const j = JSON.parse(data.genemodel)
+		res.send(j)
 	} catch (e) {
 		res.send({ error: e.message || e })
 		if (e.stack) console.log(e.stack)
@@ -622,7 +628,8 @@ async function handle_genomes(req, res) {
 		launchdate,
 		hasblat,
 		features: exports.features,
-		dsAuth: getDsAuth(req)
+		dsAuth: getDsAuth(req),
+		commonOverrides: serverconfig.commonOverrides
 	})
 }
 
@@ -632,6 +639,7 @@ function clientcopy_genome(genomename) {
 		species: g.species,
 		name: genomename,
 		hasSNP: g.snp ? true : false,
+		hasIdeogram: g.genedb.hasIdeogram,
 		hasClinvarVCF: g.clinvarVCF ? true : false,
 		fimo_motif: g.fimo_motif ? true : false,
 		blat: g.blat ? true : false,
@@ -649,71 +657,40 @@ function clientcopy_genome(genomename) {
 		const ds = g.datasets[dsname]
 
 		if (ds.isMds3) {
+			// only send most basic info about the dataset, enough for e.g. a button to launch this dataset
+			// client will request detailed info when using this dataset
 			g2.datasets[ds.label] = {
 				isMds3: true,
+				noHandleOnClient: ds.noHandleOnClient,
 				label: ds.label
 			}
 			continue
 		}
 
 		if (ds.isMds) {
+			g2.datasets[ds.label] = {
+				isMds: true,
+				mdsIsUninitiated: true,
+				noHandleOnClient: ds.noHandleOnClient,
+				label: ds.label
+			}
+			continue
+			/*
 			const _ds = mds_clientcopy(ds)
 			if (_ds) {
 				g2.datasets[ds.label] = _ds
 			}
 			continue
+			*/
 		}
 
-		// old official ds
-		const ds2 = {
+		// old official ds; to be replaced by mds3
+		g2.datasets[ds.label] = {
 			isofficial: true,
+			legacyDsIsUninitiated: true, // so client only gets copy_legacyDataset once
 			noHandleOnClient: ds.noHandleOnClient,
-			sampleselectable: ds.sampleselectable,
-			label: ds.label,
-			dsinfo: ds.dsinfo,
-			stratify: ds.stratify,
-			cohort: ds.cohort,
-			vcfinfofilter: ds.vcfinfofilter,
-			info2table: ds.info2table,
-			info2singletable: ds.info2singletable,
-			url4variant: ds.url4variant,
-			itemlabelname: ds.itemlabelname
+			label: ds.label
 		}
-
-		if (ds.snvindel_attributes) {
-			ds2.snvindel_attributes = []
-			for (const at of ds.snvindel_attributes) {
-				const rep = {}
-				for (const k in at) {
-					if (k == 'lst') {
-						rep.lst = []
-						for (const e of at.lst) {
-							const rep2 = {}
-							for (const k2 in e) rep2[k2] = e[k2]
-							rep.lst.push(rep2)
-						}
-					} else {
-						rep[k] = at[k]
-					}
-				}
-				ds2.snvindel_attributes.push(rep)
-			}
-		}
-		if (ds.snvindel_legend) {
-			ds2.snvindel_legend = ds.snvindel_legend
-		}
-		const vcfinfo = {}
-		let hasvcf = false
-		for (const q of ds.queries) {
-			if (q.vcf) {
-				hasvcf = true
-				vcfinfo[q.vcf.vcfid] = q.vcf
-			}
-		}
-		if (hasvcf) {
-			ds2.id2vcf = vcfinfo
-		}
-		g2.datasets[dsname] = ds2
 	}
 
 	if (g.hicdomain) {
@@ -736,19 +713,83 @@ function clientcopy_genome(genomename) {
 	return g2
 }
 
+function copy_legacyDataset(ds) {
+	const ds2 = {
+		noHandleOnClient: ds.noHandleOnClient,
+		sampleselectable: ds.sampleselectable,
+		label: ds.label,
+		dsinfo: ds.dsinfo,
+		stratify: ds.stratify,
+		cohort: ds.cohort,
+		vcfinfofilter: ds.vcfinfofilter,
+		info2table: ds.info2table,
+		info2singletable: ds.info2singletable,
+		url4variant: ds.url4variant,
+		itemlabelname: ds.itemlabelname
+	}
+
+	if (ds.snvindel_attributes) {
+		ds2.snvindel_attributes = []
+		for (const at of ds.snvindel_attributes) {
+			const rep = {}
+			for (const k in at) {
+				if (k == 'lst') {
+					rep.lst = []
+					for (const e of at.lst) {
+						const rep2 = {}
+						for (const k2 in e) rep2[k2] = e[k2]
+						rep.lst.push(rep2)
+					}
+				} else {
+					rep[k] = at[k]
+				}
+			}
+			ds2.snvindel_attributes.push(rep)
+		}
+	}
+	if (ds.snvindel_legend) {
+		ds2.snvindel_legend = ds.snvindel_legend
+	}
+	const vcfinfo = {}
+	let hasvcf = false
+	for (const q of ds.queries) {
+		if (q.vcf) {
+			hasvcf = true
+			vcfinfo[q.vcf.vcfid] = q.vcf
+		}
+	}
+	if (hasvcf) {
+		ds2.id2vcf = vcfinfo
+	}
+	return ds2
+}
+
 function handle_getDataset(req, res) {
-	log(req)
-	// { genome:str, dsname: str}
+	/*
+	q.genome=str, case-sensitive match with genome name
+	q.dsname=str, case-insensitive match with ds key (e.g. pediatric for Pediatric) 
+
+	allow case-insensitive match with dsname
+	*/
 	try {
 		const genome = genomes[req.query.genome]
 		if (!genome) throw 'unknown genome'
 		if (!genome.datasets) throw 'genomeobj.datasets{} missing'
-		const ds = genome.datasets[req.query.dsname]
+		let ds
+		for (const k in genome.datasets) {
+			if (k.toLowerCase() == req.query.dsname.toLowerCase()) {
+				ds = genome.datasets[k]
+				break
+			}
+		}
 		if (!ds) throw 'invalid dsname'
 		if (ds.isMds3) {
 			return res.send({ ds: mds3_init.client_copy(ds) })
 		}
-		throw 'unknown way to make client copy of ds'
+		if (ds.isMds) {
+			return res.send({ ds: mds_clientcopy(ds) })
+		}
+		return res.send({ ds: copy_legacyDataset(ds) }) // to be replaced by mds3
 	} catch (e) {
 		res.send({ error: e.message || e })
 	}
@@ -981,10 +1022,11 @@ function handle_genelookup(req, res) {
 				*/
 				const data = g.genedb.get_gene2canonicalisoform.get(req.query.input)
 				if (data) {
+					const j = JSON.parse(data.genemodel)
 					// mapped into an ENST isoform
-					result.found_isoform = data.isoform
+					result.found_isoform = j.isoform
 					// convert isoform back to symbol as in the beginning
-					const tmp = g.genedb.getnamebynameorisoform.get(data.isoform, data.isoform)
+					const tmp = g.genedb.getnamebynameorisoform.get(j.isoform, j.isoform)
 					if (!tmp) throw 'cannot map enst isoform to symbol'
 					symbol = tmp.name
 				}
@@ -1088,310 +1130,6 @@ function handle_pdomain(req, res) {
 		res.send({ error: e.message || e })
 		if (e.stack) console.log(e.stack)
 	}
-}
-
-function handle_tkbigwig_bedgraph_region(req, r, xoff, minv, maxv, file, bedgraphdir, ctx) {
-	const hscale = makeyscale()
-		.height(req.query.barheight)
-		.min(minv)
-		.max(maxv)
-	const sf = r.width / (r.stop - r.start)
-
-	return new Promise((resolve, reject) => {
-		const ps = spawn(tabix, [file, r.chr + ':' + r.start + '-' + r.stop], { cwd: bedgraphdir })
-		const rl = readline.createInterface({ input: ps.stdout })
-		rl.on('line', line => {
-			const l = line.split('\t')
-			const start = Number.parseInt(l[1])
-			if (Number.isNaN(start)) return
-			const stop = Number.parseInt(l[2])
-			if (Number.isNaN(stop)) return
-			const v = Number.parseFloat(l[3])
-			if (Number.isNaN(v)) return
-			ctx.fillStyle = v > 0 ? req.query.pcolor : req.query.ncolor
-			const tmp = hscale(v)
-			const x1 = xoff + (Math.max(start, r.start) - r.start) * sf
-			const x2 = xoff + (Math.min(stop, r.stop) - r.start) * sf
-			const w = Math.max(1, x2 - x1)
-
-			ctx.fillRect(x1, tmp.y, w, tmp.h)
-
-			if (v > maxv) {
-				ctx.fillStyle = req.query.pcolor2
-				ctx.fillRect(x1, 0, w, 2)
-			} else if (v < minv) {
-				ctx.fillStyle = req.query.ncolor2
-				ctx.fillRect(x1, req.query.barheight - 2, w, 2)
-			}
-		})
-
-		ps.on('close', () => {
-			resolve()
-		})
-	})
-}
-
-async function handle_tkbigwig_bedgraph(req, res, minv, maxv, file, bedgraphdir) {
-	/*
-	 */
-	if (minv == undefined || maxv == undefined) throw 'Y axis scale must be defined for bedgraph track'
-	const canvas = createCanvas(req.query.width, req.query.barheight)
-	const ctx = canvas.getContext('2d')
-	let xoff = 0
-	for (let r of req.query.rglst) {
-		await handle_tkbigwig_bedgraph_region(req, r, xoff, minv, maxv, file, bedgraphdir, ctx)
-		xoff += r.width + req.query.regionspace
-	}
-	res.send({ src: canvas.toDataURL() })
-}
-
-async function handle_tkbigwig(req, res) {
-	/*
-if file/url ends with .gz, it is bedgraph
-	- all bedgraph data from view range will be kept in mem, risk of running out of mem
-	- not to be used in production!!!
-	- bedgraph should render bars while reading data, with predefined y axis; no storing data
-*/
-	let fixminv,
-		fixmaxv,
-		percentile,
-		autoscale = false,
-		isbedgraph = false,
-		bedgraphdir
-
-	const [e, file, isurl] = fileurl(req)
-	if (e) return res.send({ error: e })
-
-	if (file.endsWith('.gz')) {
-		// is bedgraph, will cache index if is url
-		isbedgraph = true
-		if (isurl) {
-			try {
-				bedgraphdir = await utils.cache_index(file, req.query.indexURL)
-			} catch (e) {
-				return res.send({ error: 'index caching error' })
-			}
-		}
-	}
-
-	Promise.resolve()
-		.then(() => {
-			if (req.query.autoscale) {
-				autoscale = true
-			} else if (req.query.percentile) {
-				percentile = req.query.percentile
-				if (!Number.isFinite(percentile)) throw 'invalid percentile'
-			} else {
-				fixminv = req.query.minv
-				fixmaxv = req.query.maxv
-				if (!Number.isFinite(fixminv)) throw 'invalid minv'
-				if (!Number.isFinite(fixmaxv)) throw 'invalid maxv'
-			}
-			if (!Number.isFinite(req.query.barheight)) throw 'invalid barheight'
-			if (!Number.isFinite(req.query.regionspace)) throw 'invalid regionspace'
-			if (!Number.isFinite(req.query.width)) throw 'invalid width'
-			if (!req.query.rglst) throw 'region list missing'
-			if (req.query.dotplotfactor) {
-				if (!Number.isInteger(req.query.dotplotfactor)) throw 'dotplotfactor value should be positive integer'
-			}
-
-			if (isbedgraph) {
-				return handle_tkbigwig_bedgraph(req, res, fixminv, fixmaxv, file, bedgraphdir)
-			}
-
-			const tasks = [] // one task per region
-
-			for (const r of req.query.rglst) {
-				tasks.push(
-					new Promise((resolve, reject) => {
-						const ps = spawn(bigwigsummary, [
-							'-udcDir=' + serverconfig.cachedir,
-							file,
-							r.chr,
-							r.start,
-							r.stop,
-							Math.ceil(r.width * (req.query.dotplotfactor || 1))
-						])
-						const out = []
-						const out2 = []
-						ps.stdout.on('data', i => out.push(i))
-						ps.stderr.on('data', i => out2.push(i))
-						ps.on('close', code => {
-							const err = out2.join('')
-							if (err.length) {
-								if (err.startsWith('no data')) {
-									r.nodata = true
-								} else {
-									// in case of invalid file the message is "Couldn't open /path/to/tp/..."
-									// must not give away the tp path!!
-									reject('Cannot read bigWig file')
-								}
-							} else {
-								r.values = out
-									.join('')
-									.trim()
-									.split('\t')
-									.map(Number.parseFloat)
-								if (req.query.dividefactor) {
-									r.values = r.values.map(i => i / req.query.dividefactor)
-								}
-							}
-							resolve()
-						})
-					})
-				)
-			}
-
-			return Promise.all(tasks)
-		})
-		.then(() => {
-			if (isbedgraph) return
-
-			let nodata = true
-			for (const r of req.query.rglst) {
-				if (r.values) nodata = false
-			}
-			const canvas = createCanvas(
-				req.query.width * req.query.devicePixelRatio,
-				req.query.barheight * req.query.devicePixelRatio
-			)
-			const ctx = canvas.getContext('2d')
-			if (req.query.devicePixelRatio > 1) {
-				ctx.scale(req.query.devicePixelRatio, req.query.devicePixelRatio)
-			}
-			if (nodata) {
-				// bigwig hard-coded stuff
-				ctx.font = '14px Arial'
-				ctx.fillStyle = '#858585'
-				ctx.textAlign = 'center'
-				ctx.textBaseline = 'middle'
-				ctx.fillText(req.query.name + ': no data in view range', req.query.width / 2, req.query.barheight / 2)
-				res.send({ src: canvas.toDataURL(), nodata: true })
-				return
-			}
-
-			const pointwidth = 1 // line/dot plot width
-			const pointshift = req.query.dotplotfactor ? 1 / req.query.dotplotfactor : 1 // shift distance
-
-			let maxv = 0,
-				minv = 0
-
-			const values = []
-			const result = {}
-
-			if (autoscale || percentile) {
-				const positive = []
-				const negative = []
-				for (const r of req.query.rglst) {
-					if (r.values) {
-						for (const v of r.values) {
-							if (Number.isNaN(v)) continue
-							if (v >= 0) positive.push(v)
-							if (v <= 0) negative.push(v)
-						}
-					}
-				}
-				if (positive.length) {
-					positive.sort((a, b) => a - b)
-					if (autoscale) {
-						maxv = positive[positive.length - 1]
-					} else {
-						maxv = positive[Math.floor((positive.length * percentile) / 100)]
-					}
-				}
-				if (negative.length) {
-					negative.sort((a, b) => b - a)
-					if (autoscale) {
-						minv = negative[negative.length - 1]
-					} else {
-						minv = negative[Math.floor((negative.length * percentile) / 100)]
-					}
-				}
-				result.minv = minv
-				result.maxv = maxv
-			} else {
-				minv = fixminv
-				maxv = fixmaxv
-			}
-			if (req.query.barheight < 10) {
-				/*
-			heatmap
-			*/
-				let r = d3color.rgb(req.query.pcolor)
-				const rgbp = r.r + ',' + r.g + ',' + r.b
-				r = d3color.rgb(req.query.ncolor)
-				const rgbn = r.r + ',' + r.g + ',' + r.b
-				let x = 0
-				for (const r of req.query.rglst) {
-					if (r.values) {
-						for (let i = 0; i < r.values.length; i++) {
-							const v = r.values[i]
-							if (Number.isNaN(v)) continue
-							ctx.fillStyle =
-								v >= maxv
-									? req.query.pcolor2
-									: v >= 0
-									? 'rgba(' + rgbp + ',' + v / maxv + ')'
-									: v <= minv
-									? req.query.ncolor2
-									: 'rgba(' + rgbn + ',' + v / minv + ')'
-							const x2 = Math.ceil(x + (r.reverse ? r.width - pointshift * i : pointshift * i))
-							ctx.fillRect(x2, 0, pointwidth, req.query.barheight)
-						}
-					}
-					x += r.width + req.query.regionspace
-				}
-			} else {
-				/*
-			barplot
-			*/
-				const hscale = makeyscale()
-					.height(req.query.barheight)
-					.min(minv)
-					.max(maxv)
-				let x = 0
-				for (const r of req.query.rglst) {
-					if (r.values) {
-						for (let i = 0; i < r.values.length; i++) {
-							const v = r.values[i]
-							if (Number.isNaN(v)) continue
-							ctx.fillStyle = v > 0 ? req.query.pcolor : req.query.ncolor
-							const x2 = Math.ceil(x + (r.reverse ? r.width - pointshift * i : pointshift * i))
-							const tmp = hscale(v)
-
-							if (v > 0) {
-								ctx.fillRect(x2, tmp.y, pointwidth, req.query.dotplotfactor ? Math.min(2, tmp.h) : tmp.h)
-							} else {
-								// negative value
-								if (req.query.dotplotfactor) {
-									const _h = Math.min(2, tmp.h)
-									ctx.fillRect(x2, tmp.y + tmp.h - _h, pointwidth, _h)
-								} else {
-									ctx.fillRect(x2, tmp.y, pointwidth, tmp.h)
-								}
-							}
-
-							if (v > maxv) {
-								ctx.fillStyle = req.query.pcolor2
-								ctx.fillRect(x2, 0, pointwidth, 2)
-							} else if (v < minv) {
-								ctx.fillStyle = req.query.ncolor2
-								ctx.fillRect(x2, req.query.barheight - 2, pointwidth, 2)
-							}
-						}
-					}
-					x += r.width + req.query.regionspace
-				}
-			}
-			result.src = canvas.toDataURL()
-			res.send(result)
-		})
-		.catch(err => {
-			if (err.stack) {
-				console.log(err.stack)
-			}
-			res.send({ error: typeof err == 'string' ? err : err.message })
-		})
 }
 
 async function handle_snp(req, res) {
@@ -6286,12 +6024,12 @@ async function handle_isoformbycoord(req, res) {
 		const isoforms = []
 		await utils.get_lines_bigfile({
 			args: [path.join(serverconfig.tpmasterdir, genetk.file), req.query.chr + ':' + pos + '-' + pos],
-			callback: line=>{
+			callback: line => {
 				const str = line.split('\t')[3]
 				if (!str) return
 				const j = JSON.parse(str)
 				if (!j.isoform) return
-				const j2 = {isoform: j.isoform}
+				const j2 = { isoform: j.isoform }
 				const tmp = genome.genedb.getjsonbyisoform.get(j.isoform)
 				if (tmp) {
 					j2.name = JSON.parse(tmp.genemodel).name
@@ -7228,51 +6966,6 @@ function local_end_flag(flag) {
 	delete flag.patient2ori2sample
 }
 
-function makeyscale() {
-	var barheight = 50,
-		minv = 0,
-		maxv = 100
-
-	function yscale(v) {
-		var usebaseline = false
-		var baseliney = 0
-		if (minv == 0 && maxv == 0) {
-			// nothing
-		} else if (minv <= 0 && maxv >= 0) {
-			usebaseline = true
-			baseliney = (barheight * maxv) / (maxv - minv)
-		}
-		if (usebaseline) {
-			if (v >= maxv) return { y: 0, h: baseliney }
-			if (v >= 0) {
-				var h = (baseliney * v) / maxv
-				return { y: baseliney - h, h: h }
-			}
-			if (v <= minv) return { y: baseliney, h: barheight - baseliney }
-			var h = ((barheight - baseliney) * v) / minv
-			return { y: baseliney, h: h }
-			return
-		}
-		if (v <= minv) return { y: barheight, h: 0 }
-		var h = (barheight * (v - minv)) / (maxv - minv)
-		return { y: barheight - h, h: h }
-	}
-	yscale.height = function(h) {
-		barheight = h
-		return yscale
-	}
-	yscale.min = function(v) {
-		minv = v
-		return yscale
-	}
-	yscale.max = function(v) {
-		maxv = v
-		return yscale
-	}
-	return yscale
-}
-exports.makeyscale = makeyscale
-
 function illegalpath(s) {
 	if (s[0] == '/') return true // must not be relative to mount root
 	if (s.includes('"') || s.includes("'")) return true // must not include quotes, apostrophe
@@ -7353,7 +7046,15 @@ function parse_textfilewithheader(text) {
 
 /***************************   end of __util   **/
 
+/* when starting pp server process with "npm start" or "node server.js"
+pp_init() runs first to load all genomes supported on this server,
+and load all datasets supported in each genome
+as encoded in file "serverconfig.json"
+at the end it will 
+*/
 async function pp_init() {
+	// verify if tp directory is readable
+	// ppr has this situation where its tp/ is from a nfs mount and can go down...
 	try {
 		await fs.promises.stat(serverconfig.tpmasterdir)
 	} catch (e) {
@@ -7363,11 +7064,15 @@ async function pp_init() {
 			throw message
 		} else {
 			// allow the server process to boot
+			// we want the node server to keep running so it can inform user with some meaningful msg rather than http error
 			console.log('\n!!! ' + message + '\n')
 			return
 		}
 	}
 
+	checkDependenciesAndVersions()
+
+	// date updated
 	codedate = get_codedate()
 	launchdate = Date(Date.now())
 		.toString()
@@ -7398,6 +7103,13 @@ async function pp_init() {
 	serverconfig.cachedir_bam = await mayCreateSubdirInCache('bam')
 	serverconfig.cachedir_genome = await mayCreateSubdirInCache('genome')
 	serverconfig.cachedir_ssid = await mayCreateSubdirInCache('ssid')
+
+	// NOTE: required or imported code files are only loaded once by Nodejs
+	// and variables are static so that changes to common key-values will affect all
+	// server-side code that import common.js
+	if (serverconfig.commonOverrides) {
+		common.applyOverrides(serverconfig.commonOverrides)
+	}
 
 	if (!serverconfig.genomes) throw '.genomes[] missing'
 	if (!Array.isArray(serverconfig.genomes)) throw '.genomes[] not array'
@@ -7538,16 +7250,33 @@ async function pp_init() {
 			g.genedb.getjsonbyname = g.genedb.db.prepare('select isdefault,genemodel from genes where name=?')
 			g.genedb.getjsonbyisoform = g.genedb.db.prepare('select isdefault,genemodel from genes where isoform=?')
 			g.genedb.getnameslike = g.genedb.db.prepare('select distinct name from genes where name like ? limit 20')
+
+			const checkTable = g.genedb.db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name=?")
+
 			if (g.genedb.hasalias) {
+				// TODO enable if checkTable.get('genealias') is true
 				g.genedb.getnamebyalias = g.genedb.db.prepare('select name from genealias where alias=?')
 			}
 			if (g.genedb.gene2coord) {
 				// this table will become available to all genomes
+				// TODO checkTable
 				g.genedb.getCoordByGene = g.genedb.db.prepare('select * from gene2coord where name=?')
+			}
+
+			{
+				const s = checkTable.get('ideogram')
+				if (s && s.name == 'ideogram') {
+					g.genedb.hasIdeogram = true
+					g.genedb.getIdeogramByChr = g.genedb.db.prepare('select * from ideogram where chromosome=?')
+				} else {
+					g.genedb.hasIdeogram = false
+				}
 			}
 		}
 		if (g.genedb.gene2canonicalisoform) {
-			g.genedb.get_gene2canonicalisoform = g.genedb.db.prepare('select isoform from gene2canonicalisoform where gene=?')
+			g.genedb.get_gene2canonicalisoform = g.genedb.db.prepare(
+				'select genemodel from gene2canonicalisoform as c, genes as g where c.gene=? AND c.isoform=g.isoform'
+			)
 		}
 
 		for (const tk of g.tracks) {
@@ -7705,104 +7434,147 @@ async function pp_init() {
 				continue
 			}
 
-			/* old official dataset */
-
-			if (ds.dbfile) {
-				/* this dataset has a db */
-				try {
-					ds.newconn = utils.connect_db(ds.dbfile)
-				} catch (e) {
-					throw 'Error with ' + ds.dbfile + ': ' + e
-				}
-			}
-
-			if (ds.snvindel_attributes) {
-				for (const at of ds.snvindel_attributes) {
-					if (at.lst) {
-						for (const a2 of at.lst) {
-							a2.get = a2.get.toString()
-						}
-					} else {
-						at.get = at.get.toString()
-					}
-				}
-			}
-
-			if (ds.cohort) {
-				// a dataset with cohort
-
-				if (ds.cohort.levels) {
-					if (!Array.isArray(ds.cohort.levels)) throw 'cohort.levels must be array for ' + genomename + '.' + ds.label
-					if (ds.cohort.levels.length == 0) throw 'levels is blank array for cohort of ' + genomename + '.' + ds.label
-					for (const i of ds.cohort.levels) {
-						if (!i.k) throw '.k key missing in one of the levels, .cohort, in ' + genomename + '.' + ds.label
-					}
-				}
-
-				if (ds.cohort.fromdb) {
-					/*
-				cohort content to be loaded lazily from db
-				*/
-					if (!ds.cohort.fromdb.sql) throw '.sql missing from ds.cohort.fromdb in ' + genomename + '.' + ds.label
-					const rows = ds.newconn.prepare(ds.cohort.fromdb.sql).all()
-					delete ds.cohort.fromdb
-					ds.cohort.raw = rows ///// backward compatible
-					console.log(rows.length + ' rows retrieved for ' + ds.label + ' sample annotation')
-				}
-
-				if (ds.cohort.files) {
-					// sample annotation load directly from text files, in sync
-					let rows = []
-					for (const file of ds.cohort.files) {
-						if (!file.file) throw '.file missing from one of cohort.files[] for ' + genomename + '.' + ds.label
-						const txt = fs.readFileSync(path.join(serverconfig.tpmasterdir, file.file), 'utf8').trim()
-						if (!txt) throw file.file + ' is empty for ' + genomename + '.' + ds.label
-						rows = [...rows, ...d3dsv.tsvParse(txt)]
-					}
-					delete ds.cohort.files
-					if (ds.cohort.raw) {
-						ds.cohort.raw = [...ds.cohort.raw, ...rows]
-					} else {
-						ds.cohort.raw = rows
-					}
-					console.log(rows.length + ' rows retrieved for ' + ds.label + ' sample annotation')
-				}
-				if (ds.cohort.tosampleannotation) {
-					// a directive to tell client to convert cohort.raw[] to cohort.annotation{}, key-value hash
-					if (!ds.cohort.tosampleannotation.samplekey)
-						throw '.samplekey missing from .cohort.tosampleannotation for ' + genomename + '.' + ds.label
-					if (!ds.cohort.key4annotation)
-						throw '.cohort.key4annotation missing when .cohort.tosampleannotation is on for ' +
-							genomename +
-							'.' +
-							ds.label
-					// in fact, it still requires ds.cohort.raw, but since db querying is async, not checked
-				}
-			}
-
-			if (!ds.queries) throw '.queries missing from dataset ' + ds.label + ', ' + genomename
-			if (!Array.isArray(ds.queries)) throw ds.label + '.queries is not array'
-			for (const q of ds.queries) {
-				const err = legacyds_init_one_query(q, ds, g)
-				if (err) throw 'Error parsing a query in "' + ds.label + '": ' + err
-			}
-
-			if (ds.vcfinfofilter) {
-				const err = common.validate_vcfinfofilter(ds.vcfinfofilter)
-				if (err) throw ds.label + ': vcfinfofilter error: ' + err
-			}
-
-			if (ds.url4variant) {
-				for (const u of ds.url4variant) {
-					if (!u.makelabel) throw 'makelabel() missing for one item of url4variant from ' + ds.label
-					if (!u.makeurl) throw 'makeurl() missing for one item of url4variant from ' + ds.label
-					u.makelabel = u.makelabel.toString()
-					u.makeurl = u.makeurl.toString()
-				}
-			}
+			initLegacyDataset(ds, g)
 		}
 
 		delete g.rawdslst
+	}
+}
+
+function checkDependenciesAndVersions() {
+	// test if R has all required libraries
+	const rlibraries = ['jsonlite', 'cmprsk', 'hwde', 'lmtest']
+	for (const lib of rlibraries) {
+		const ps = child_process.spawnSync(
+			serverconfig.Rscript,
+			['-e', `suppressPackageStartupMessages(library("${lib}"))`],
+			{ encoding: 'utf8' }
+		)
+		if (ps.stderr.trim()) throw ps.stderr
+	}
+
+	// samtools and bcftools usually have similar installed versions
+	const htslibMinorVer = 10
+	{
+		const lines = child_process
+			.execSync(serverconfig.samtools + ' --version', { encoding: 'utf8' })
+			.trim()
+			.split('\n')
+		// first line should be "samtools 1.14"
+		const [name, v] = lines[0].split(' ')
+		if (name != 'samtools' || !v) throw 'cannot run "samtools version"'
+		const [major, minor] = v.split('.')
+		if (major != '1') throw 'samtools not 1.*'
+		const i = Number(minor)
+		if (i < htslibMinorVer) throw `samtools not >= 1.${htslibMinorVer}`
+	}
+	{
+		const lines = child_process
+			.execSync(serverconfig.bcftools + ' -v', { encoding: 'utf8' })
+			.trim()
+			.split('\n')
+		// first line should be "bcftools 1.14"
+		const [name, v] = lines[0].split(' ')
+		if (name != 'bcftools' || !v) throw 'cannot run "bcftools version"'
+		const [major, minor] = v.split('.')
+		if (major != '1') throw 'bcftools not 1.*'
+		const i = Number(minor)
+		if (i < htslibMinorVer) throw `bcftools not >= 1.${htslibMinorVer}`
+	}
+}
+
+function initLegacyDataset(ds, genome) {
+	/* old official dataset */
+
+	if (ds.dbfile) {
+		/* this dataset has a db */
+		try {
+			ds.newconn = utils.connect_db(ds.dbfile)
+		} catch (e) {
+			throw 'Error with ' + ds.dbfile + ': ' + e
+		}
+	}
+
+	if (ds.snvindel_attributes) {
+		for (const at of ds.snvindel_attributes) {
+			if (at.lst) {
+				for (const a2 of at.lst) {
+					a2.get = a2.get.toString()
+				}
+			} else {
+				at.get = at.get.toString()
+			}
+		}
+	}
+
+	if (ds.cohort) {
+		// a dataset with cohort
+
+		if (ds.cohort.levels) {
+			if (!Array.isArray(ds.cohort.levels)) throw 'cohort.levels must be array for ' + genomename + '.' + ds.label
+			if (ds.cohort.levels.length == 0) throw 'levels is blank array for cohort of ' + genomename + '.' + ds.label
+			for (const i of ds.cohort.levels) {
+				if (!i.k) throw '.k key missing in one of the levels, .cohort, in ' + genomename + '.' + ds.label
+			}
+		}
+
+		if (ds.cohort.fromdb) {
+			/*
+		cohort content to be loaded lazily from db
+		*/
+			if (!ds.cohort.fromdb.sql) throw '.sql missing from ds.cohort.fromdb in ' + genomename + '.' + ds.label
+			const rows = ds.newconn.prepare(ds.cohort.fromdb.sql).all()
+			delete ds.cohort.fromdb
+			ds.cohort.raw = rows ///// backward compatible
+			console.log(rows.length + ' rows retrieved for ' + ds.label + ' sample annotation')
+		}
+
+		if (ds.cohort.files) {
+			// sample annotation load directly from text files, in sync
+			let rows = []
+			for (const file of ds.cohort.files) {
+				if (!file.file) throw '.file missing from one of cohort.files[] for ' + genomename + '.' + ds.label
+				const txt = fs.readFileSync(path.join(serverconfig.tpmasterdir, file.file), 'utf8').trim()
+				if (!txt) throw file.file + ' is empty for ' + genomename + '.' + ds.label
+				rows = [...rows, ...d3dsv.tsvParse(txt)]
+			}
+			delete ds.cohort.files
+			if (ds.cohort.raw) {
+				ds.cohort.raw = [...ds.cohort.raw, ...rows]
+			} else {
+				ds.cohort.raw = rows
+			}
+			console.log(rows.length + ' rows retrieved for ' + ds.label + ' sample annotation')
+		}
+		if (ds.cohort.tosampleannotation) {
+			// a directive to tell client to convert cohort.raw[] to cohort.annotation{}, key-value hash
+			if (!ds.cohort.tosampleannotation.samplekey)
+				throw '.samplekey missing from .cohort.tosampleannotation for ' + genomename + '.' + ds.label
+			if (!ds.cohort.key4annotation)
+				throw '.cohort.key4annotation missing when .cohort.tosampleannotation is on for ' + genomename + '.' + ds.label
+			// in fact, it still requires ds.cohort.raw, but since db querying is async, not checked
+		}
+	}
+
+	if (!ds.queries) throw '.queries missing from dataset ' + ds.label + ', ' + genomename
+	if (!Array.isArray(ds.queries)) throw ds.label + '.queries is not array'
+	for (const q of ds.queries) {
+		const err = legacyds_init_one_query(q, ds, genome)
+		if (err) throw 'Error parsing a query in "' + ds.label + '": ' + err
+	}
+
+	if (ds.vcfinfofilter) {
+		const err = common.validate_vcfinfofilter(ds.vcfinfofilter)
+		if (err) throw ds.label + ': vcfinfofilter error: ' + err
+	}
+
+	if (ds.url4variant) {
+		for (const u of ds.url4variant) {
+			if (!u.makelabel) throw 'makelabel() missing for one item of url4variant from ' + ds.label
+			if (!u.makeurl) throw 'makeurl() missing for one item of url4variant from ' + ds.label
+			u.makelabel = u.makelabel.toString()
+			u.makeurl = u.makeurl.toString()
+		}
 	}
 }
 
@@ -8993,3 +8765,17 @@ async function mds_init_mdsvcf(query, ds, genome) {
 }
 
 ////////////// end of __MDS
+
+function handle_ideogram(req, res) {
+	try {
+		const g = genomes[req.query.genome]
+		if (!g) throw 'invalid genome'
+		if (!g.genedb.hasIdeogram) throw 'ideogram not supported on this genome'
+		if (!req.query.chr) throw '.chr missing'
+		const lst = g.genedb.getIdeogramByChr.all(req.query.chr)
+		if (!lst.length) throw 'no ideogram data for this chr'
+		res.send(lst)
+	} catch (e) {
+		res.send({ error: e.message || e })
+	}
+}

@@ -1,11 +1,11 @@
 import * as client from './client'
 import { string2pos, invalidcoord } from './coord'
 import { event as d3event } from 'd3-selection'
-import * as common from '../shared/common'
+import * as common from '#shared/common'
 import { scaleLinear, scaleOrdinal, schemeCategory10 } from 'd3-scale'
 import { showMenu_isgenevalue, showMenu_iscnv, showMenu_isloh, showMenu_ismutation } from './samplematrix.featuremenu'
 import { may_add_kmplotbutton } from './samplematrix.kmplot'
-import { vcfparsemeta } from '../shared/vcf'
+import { vcfparsemeta } from '#shared/vcf'
 
 /*
 build a sample by feature matrix
@@ -114,104 +114,98 @@ export class Samplematrix {
 		client.sayerror(this.errdiv, m)
 	}
 
-	validate_config() {
+	async validate_config() {
 		/*
 		only run once, upon init
 		*/
+		if (this.iscustom) {
+			if (!this.querykey2tracks) throw 'querykey2tracks missing for custom dataset'
+			let novalidtk = true
+			for (const key in this.querykey2tracks) {
+				// key is arbitrary
+				const tk = this.querykey2tracks[key]
+				if (!tk.file && !tk.url) throw 'no file or url for a custom track by key ' + key
+				if (!tk.type) throw 'missing type for member track by key ' + key
+				if (!common.validtkt(tk.type)) throw 'invalid type for a member track: ' + tk.type
+				novalidtk = false
+			}
+			if (novalidtk) throw 'no custom tracks from querykey2tracks'
 
-		return Promise.resolve()
-			.then(() => {
-				if (!this.iscustom) {
-					// official dataset
-					return
-				}
-
-				// load from custom dataset: may cache vcf header
-
-				if (!this.querykey2tracks) throw 'querykey2tracks missing for custom dataset'
-
-				let novalidtk = true
-				for (const key in this.querykey2tracks) {
-					// key is arbitrary
-					const tk = this.querykey2tracks[key]
-					if (!tk.file && !tk.url) throw 'no file or url for a custom track by key ' + key
-					if (!tk.type) throw 'missing type for member track by key ' + key
-					if (!common.validtkt(tk.type)) throw 'invalid type for a member track: ' + tk.type
-					novalidtk = false
-				}
-				if (novalidtk) throw 'no custom tracks from querykey2tracks'
-
-				/*
+			/*
 			for custom dataset, allows one vcf file
 			FIXME may allow more than one
 			if it comes from mdssvcnv/mdsgeneral, the vcf header has already been parsed
 			otherwise, fetch header
 			*/
-				let vcftk
-				for (const key in this.querykey2tracks) {
-					const tk = this.querykey2tracks[key]
-					if (tk.type == common.tkt.mdsvcf) {
-						vcftk = tk
-					}
+			let vcftk
+			for (const key in this.querykey2tracks) {
+				const tk = this.querykey2tracks[key]
+				if (tk.type == common.tkt.mdsvcf) {
+					vcftk = tk
 				}
+			}
 
-				if (!vcftk) {
-					// no vcf track
-					return
-				}
+			if (vcftk) {
+				await this.may_init_customvcf(vcftk)
+			}
+		} else {
+			// official dataset
+			// load from custom dataset: may cache vcf header
 
-				return this.may_init_customvcf(vcftk)
-			})
-			.then(() => {
-				if (this.limitsamplebyeitherannotation) {
-					if (!Array.isArray(this.limitsamplebyeitherannotation)) throw 'limitsamplebyeitherannotation must be an array'
-					const tr = this.legendtable.append('tr')
-					for (const anno of this.limitsamplebyeitherannotation) {
-						if (!anno.key) throw '.key missing from an element of limitsamplebyeitherannotation'
-						if (!anno.value) throw '.value missing from an element of limitsamplebyeitherannotation'
-					}
-					this.showlegend_limitsample()
-				}
+			if (this.mds.mdsIsUninitiated) {
+				const d = await client.dofetch3(`getDataset?genome=${this.genome.name}&dsname=${this.mds.label}`)
+				if (d.error) throw d.error
+				if (!d.ds) throw 'ds missing'
+				Object.assign(this.mds, d.ds)
+				delete this.mds.mdsIsUninitiated
+			}
+		}
+		if (this.limitsamplebyeitherannotation) {
+			if (!Array.isArray(this.limitsamplebyeitherannotation)) throw 'limitsamplebyeitherannotation must be an array'
+			const tr = this.legendtable.append('tr')
+			for (const anno of this.limitsamplebyeitherannotation) {
+				if (!anno.key) throw '.key missing from an element of limitsamplebyeitherannotation'
+				if (!anno.value) throw '.value missing from an element of limitsamplebyeitherannotation'
+			}
+			this.showlegend_limitsample()
+		}
 
-				const cnv_tr = this.legendtable.append('tr')
-				cnv_tr
-					.append('td')
-					.style('opacity', 0.5)
-					.style('text-align', 'right')
-					.text('CNV cutoff')
-				this.legendtable.cnv_td = cnv_tr.append('td')
+		const cnv_tr = this.legendtable.append('tr')
+		cnv_tr
+			.append('td')
+			.style('opacity', 0.5)
+			.style('text-align', 'right')
+			.text('CNV cutoff')
+		this.legendtable.cnv_td = cnv_tr.append('td')
 
-				const loh_tr = this.legendtable.append('tr')
-				loh_tr
-					.append('td')
-					.style('opacity', 0.5)
-					.style('text-align', 'right')
-					.text('LOH cutoff')
-				this.legendtable.loh_td = loh_tr.append('td')
+		const loh_tr = this.legendtable.append('tr')
+		loh_tr
+			.append('td')
+			.style('opacity', 0.5)
+			.style('text-align', 'right')
+			.text('LOH cutoff')
+		this.legendtable.loh_td = loh_tr.append('td')
 
-				if (this.limitbysamplesetgroup) {
-					if (!Array.isArray(this.limitbysamplesetgroup.samples)) throw '.limitbysamplesetgroup.samples is not array'
-				}
+		if (this.limitbysamplesetgroup) {
+			if (!Array.isArray(this.limitbysamplesetgroup.samples)) throw '.limitbysamplesetgroup.samples is not array'
+		}
 
-				if (!this.rowspace) this.rowspace = 1
-				if (!this.colspace) this.colspace = 1
-				if (!this.rowlabspace) this.rowlabspace = 5
-				if (!this.collabspace) this.collabspace = 5
-				if (!this.rowlabticksize) this.rowlabticksize = 5
-				if (!this.collabticksize) this.collabticksize = 5
+		if (!this.rowspace) this.rowspace = 1
+		if (!this.colspace) this.colspace = 1
+		if (!this.rowlabspace) this.rowlabspace = 5
+		if (!this.collabspace) this.collabspace = 5
+		if (!this.rowlabticksize) this.rowlabticksize = 5
+		if (!this.collabticksize) this.collabticksize = 5
 
-				// features
-				if (!this.features) throw 'missing features[]'
-				if (!Array.isArray(this.features)) throw 'features must be an array'
+		// features
+		if (!this.features) throw 'missing features[]'
+		if (!Array.isArray(this.features)) throw 'features must be an array'
 
-				const featuretasks = []
-				if (this.features[0].height) this.ori_feature_height = this.features[0].height
-				if (this.features[0].width) this.ori_feature_width = this.features[0].width
-				for (const f of this.features) {
-					featuretasks.push(this.validate_feature(f))
-				}
-				return Promise.all(featuretasks)
-			})
+		if (this.features[0].height) this.ori_feature_height = this.features[0].height
+		if (this.features[0].width) this.ori_feature_width = this.features[0].width
+		for (const f of this.features) {
+			await this.validate_feature(f)
+		}
 	}
 
 	showlegend_limitsample() {

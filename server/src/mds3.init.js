@@ -4,9 +4,11 @@ const path = require('path')
 const { initGDCdictionary } = require('./termdb.gdc')
 const { variant2samples_getresult } = require('./mds3.variant2samples')
 const utils = require('./utils')
-const compute_mclass = require('./termdb.snp').compute_mclass
+const compute_mclass = require('./vcf.mclass').compute_mclass
 const serverconfig = require('./serverconfig')
-const { dtfusionrna, dtsv, mclassfusionrna, mclasssv } = require('../shared/common')
+const { dtfusionrna, dtsv, mclassfusionrna, mclasssv } = require('#shared/common')
+const { get_samples, server_init_db_queries } = require('./termdb.sql')
+const { get_barchart_data_sqlitedb } = require('./termdb.barsql')
 
 /*
 ********************** EXPORTED
@@ -15,12 +17,11 @@ client_copy
 	copy_queries
 ********************** INTERNAL
 validate_termdb
-	initTermdb_termsAndFile
-		loadAnnotationFile
-		makeTermdbApi_inMemoryData
+	initTermdb
 validate_query_snvindel
 	snvindelByRangeGetter_bcf
 		mayLimitSamples
+			tid2value2filter
 		addSamplesFromBcfLine
 			vcfFormat2sample
 validate_query_svfusion
@@ -95,18 +96,16 @@ async function validate_termdb(ds) {
 	ds.cohort = {}
 	ds.cohort.termdb = {}
 
-	if (tdb.dictionary) {
-		if (tdb.dictionary.gdcapi) {
-			await initGDCdictionary(ds)
-		} else {
-			throw 'unknown method to initiate dictionary'
-		}
-	} else if (tdb.terms) {
-		// array of terms, directly coded up in js file
-		// also need tdb.annotationFile
-		await initTermdb_termsAndFile(ds)
+	if (!tdb.dictionary) throw 'termdb.dictionary{} missing'
+	if (tdb.dictionary.gdcapi) {
+		await initGDCdictionary(ds)
+		/* creates ds.cohort.termdb.q={}
+		and ds.gdcOpenProjects=set
+		*/
+	} else if (tdb.dictionary.dbFile) {
+		initTermdb(ds)
 	} else {
-		throw 'unknown source of termdb vocabulary'
+		throw 'unknown method to initiate dictionary'
 	}
 
 	if (tdb.termid2totalsize2) {
@@ -117,7 +116,8 @@ async function validate_termdb(ds) {
 			if (!gdcapi.keys && !gdcapi.keys.length) throw 'termid2totalsize2 missing keys[]'
 			if (typeof gdcapi.filters != 'function') throw '.filters is not in termid2totalsize2'
 		} else {
-			throw 'unknown method for termid2totalsize2'
+			// query through termdb methods
+			// since termdb.dictionary is a required attribute
 		}
 
 		/* add getter
@@ -127,7 +127,7 @@ async function validate_termdb(ds) {
 				.tid2value={id1:v1, ...}
 				.ssm_id_lst=str
 			combination={}
-				optional,
+				optional, not used for computing
 		output:
 			a map, key is termid, value is array, each element: [category, total]
 		*/
@@ -135,165 +135,44 @@ async function validate_termdb(ds) {
 			if (tdb.termid2totalsize2.gdcapi) {
 				return await gdc.get_termlst2size(termidlst, q, combination, ds)
 			}
-			throw 'unknown method for termid2totalsize2'
+			return await getBarchartDataFromSqlitedb(termidlst, q, combination, ds)
 		}
 	}
 }
 
-async function initTermdb_termsAndFile(ds) {
-	/* requires ds.termdb.terms[],
-	and ds.termdb.annotationFile = 'path to server-side tabular text file of sample annotation for these terms'
-	generate termdb api methods at ds.cohort.termdb.q{}
-
-	file:
-	sample \t term1 \t term2 \t ...
-	aaa    \t v1    \t v2    \t ...
-	bbb    \t v3    \t v4    \t ...
-
-	1. first line must be header, each field is term id
-	2. first column must be sample id
-	*/
-	const terms = ds.termdb.terms
-	for (const t of terms) {
-		if (!t.id) throw 'id missing from a term'
-		if (!t.name) t.name = t.id
-		if (t.type == 'categorical') {
-			if (!t.values) {
-				// while reading file, missing categories are filled into values{}
-				t.values = {}
+async function getBarchartDataFromSqlitedb(termidlst, q, combination, ds) {
+	const termid2values = new Map()
+	for (const tid of termidlst) {
+		const term = ds.cohort.termdb.q.termjsonByOneid(tid)
+		if (term.type == 'categorical') {
+			const _q = {
+				term1_id: tid,
+				term1_q: { type: 'values' }
 			}
-		} else if (t.type == 'integer' || t.type == 'float') {
-		} else {
-			throw 'invalid term type of ' + t.id
-		}
-	}
-	if (!ds.termdb.annotationFile) throw 'termdb.annotationFile missing when .terms[] used'
+			if (q.tid2value) {
+				_q.filter = tid2value2filter(q.tid2value, ds)
+			}
+			const out = await get_barchart_data_sqlitedb(_q, ds, ds.cohort.termdb)
 
-	const annotations = await loadAnnotationFile(ds)
-	// k: sample id
-	// v: map{}, k: term id, v: value
-
-	ds.cohort.termdb.q = makeTermdbApi_inMemoryData(terms, annotations)
-}
-
-async function loadAnnotationFile(ds) {
-	const lines = (await fs.promises.readFile(path.join(serverconfig.tpmasterdir, ds.termdb.annotationFile), {
-		encoding: 'utf8'
-	}))
-		.trim()
-		.split('\n')
-	const hterms = [] // array of term objs by order of file columns
-	const headerfields = lines[0].split('\t')
-	for (let i = 1; i < headerfields.length; i++) {
-		const tid = headerfields[i]
-		if (!tid) throw `blank field at column ${i + 1} in file header`
-		const t = ds.termdb.terms.find(j => j.id == tid)
-		if (!t) throw `header field is not a term id: ${tid}`
-		hterms.push(t)
-	}
-
-	const annotations = new Map()
-	// k: sample id
-	// v: map{}, k: term id, v: value
-
-	for (let i = 1; i < lines.length; i++) {
-		const l = lines[i].split('\t')
-		const sample_id = l[0]
-		if (!sample_id) throw `blank sample id at line ${i + 1}`
-		if (annotations.has(sample_id)) throw `duplicate sample id: ${sample_id}`
-		annotations.set(sample_id, new Map())
-		for (const [j, term] of hterms.entries()) {
-			const v = l[j + 1]
-			if (!v) {
-				// blank, no value for this term
+			if (!out.charts[0]) {
+				// no data
 				continue
 			}
-			if (term.type == 'categorical') {
-				annotations.get(sample_id).set(term.id, v)
-				if (!(v in term.values)) {
-					// auto add
-					term.values[v] = { label: v }
-				}
-			} else if (term.type == 'float') {
-				const n = Number(v)
-				if (Number.isNaN(n)) throw `value=${v} not number for type=float, term=${term.id}, line=${i + 1}`
-				annotations.get(sample_id).set(term.id, n)
-			} else if (term.type == 'integer') {
-				const n = Number(v)
-				if (Number.isInteger(n)) throw `value=${v} not integer for type=integer, term=${term.id}, line=${i + 1}`
-				annotations.get(sample_id).set(term.id, n)
-			} else {
-				throw 'unknown term type'
+
+			const lst = []
+			for (const s of out.charts[0].serieses) {
+				lst.push([s.seriesId, s.total])
 			}
+			termid2values.set(tid, lst)
 		}
 	}
-	return annotations
+	if (combination) return [termid2values, combination]
+	return termid2values
 }
 
-/*
-terms[] list of term objects
-annotations{}
-	k=sample id
-	v=map
-		k=term id
-		v=value
-*/
-function makeTermdbApi_inMemoryData(terms, annotations) {
-	const q = {}
-	q.getSample2value = (termid, sample_id = undefined) => {
-		if (sample_id != undefined) {
-			if (!annotations.has(sample_id)) return
-			return annotations.get(sample_id).get(termid)
-		}
-		const lst = []
-		for (const [s, o] of annotations) {
-			if (o.has(termid)) lst.push({ sample: s, value: o.get(termid) })
-		}
-		return lst
-	}
-	q.getRootTerms = async (vocab, treeFilter = null) => {
-		const roots = []
-		for (const t of terms) {
-			if (t.parent_id == undefined) roots.push(JSON.parse(JSON.stringify(t)))
-		}
-		return roots
-	}
-
-	q.getTermChildren = async (id, cohortValues = null, treeFilter = null) => {
-		// find terms which have term.parent_id as input id
-		const lst = []
-		for (const t of terms) {
-			if (t.parent_id == id) lst.push(JSON.parse(JSON.stringify(t)))
-		}
-		return lst
-	}
-
-	q.findTermByName = async (searchStr, limit = null, vocab, treeFilter = null, usecase = null) => {
-		searchStr = searchStr.toLowerCase() // convert to lowercase
-		// find terms that have term.id containing search string
-		const lst = []
-		for (const t of terms) {
-			//if (usecase && !isUsableTerm(term, usecase)) continue
-			if (t.id.toLowerCase().includes(searchStr)) lst.push(JSON.parse(JSON.stringify(t)))
-		}
-		return lst
-	}
-
-	q.getAncestorIDs = id => {
-		return []
-	}
-	q.getAncestorNames = q.getAncestorIDs
-
-	q.termjsonByOneid = id => {
-		const t = terms.find(i => i.id.toLowerCase() == id.toLowerCase())
-		if (t) return JSON.parse(JSON.stringify(t))
-		return null
-	}
-
-	q.getSupportedChartTypes = () => {
-		return ['barchart']
-	}
-	return q
+function initTermdb(ds) {
+	ds.cohort.db = { file: ds.termdb.dictionary.dbFile } // termdb is hardcoded to look for db here
+	server_init_db_queries(ds)
 }
 
 function validate_variant2samples(ds) {
@@ -329,17 +208,12 @@ function validate_variant2samples(ds) {
 		// look for server-side vcf/bcf/tabix file
 		// file header should already been parsed and samples obtain if any
 		let hasSamples = false
-		if (ds.queries.snvindel) {
-			// has snvindel
-			if (ds.queries.snvindel.byrange) {
-				if (ds.queries.snvindel.byrange._tk) {
-					if (ds.queries.snvindel.byrange._tk.samples) {
-						// this file has samples
-						hasSamples = true
-					}
-				}
-			}
-			// expand later
+		if (ds.queries?.snvindel?.byrange?._tk?.samples) {
+			// this file has samples
+			hasSamples = true
+		}
+		if (ds.queries?.svfusion?.byrange?.samples) {
+			hasSamples = true
 		}
 		if (!hasSamples) throw 'cannot find a sample source from ds.queries{}'
 	}
@@ -403,7 +277,11 @@ async function validate_query_snvindel(ds, genome) {
 			q.byrange.bcffile = path.join(serverconfig.tpmasterdir, q.byrange.bcffile)
 			q.byrange._tk = { file: q.byrange.bcffile }
 			q.byrange.get = await snvindelByRangeGetter_bcf(ds, genome)
-			console.log(q.byrange._tk.samples.length, 'samples from snvindel.byrange.bcffile of ' + ds.label)
+			if (!q.byrange._tk.samples.length) {
+				// vcf header parsing returns blank array when file has no sample
+				delete q.byrange._tk.samples
+			}
+			mayValidateSampleHeader(ds, q.byrange._tk.samples, 'snvindel.byrange.bcffile')
 		} else {
 			throw 'unknown query method for queries.snvindel.byrange'
 		}
@@ -428,6 +306,23 @@ async function validate_query_snvindel(ds, genome) {
 			throw 'unknown query method for queries.snvindel.m2csq'
 		}
 	}
+}
+
+function mayValidateSampleHeader(ds, samples, where) {
+	if (!samples) return
+	// samples[] elements: {name:str}
+	let useint
+	if (ds.termdb && ds.termdb.dictionary && ds.termdb.dictionary.dbFile) {
+		// using sqlite3 db
+		// as samples are kept as integer ids in termdb, cast name into integers
+		for (const s of samples) {
+			const id = Number(s.name)
+			if (!Number.isInteger(id)) throw 'non-integer sample id from ' + where
+			s.name = id
+		}
+		useint = ', all integer IDs'
+	}
+	console.log(samples.length, 'samples from ' + where + ' of ' + ds.label + useint)
 }
 
 function validate_ssm2canonicalisoform(ds) {
@@ -508,7 +403,10 @@ export async function snvindelByRangeGetter_bcf(ds, genome) {
 			'query',
 			q._tk.file || q._tk.url,
 			'-r',
-			param.rglst.map(r => (q._tk.nochr ? r.chr.replace('chr', '') : r.chr) + ':' + r.start + '-' + r.stop).join(','),
+			// plus 1 to stop, as rglst pos is 0-based, and bcf is 1-based
+			param.rglst
+				.map(r => (q._tk.nochr ? r.chr.replace('chr', '') : r.chr) + ':' + r.start + '-' + (r.stop + 1))
+				.join(','),
 			'-f',
 			'%ID\t%CHROM\t%POS\t%REF\t%ALT\t%INFO\t%FORMAT\n'
 		]
@@ -535,12 +433,12 @@ export async function snvindelByRangeGetter_bcf(ds, genome) {
 				// [6] is format fields, [7 and on] for samples
 
 				const m0 = {} // temp obj, modified by compute_mclass()
-				compute_mclass(q._tk, refallele, altalleles, m0, infoStr, id)
+				compute_mclass(q._tk, refallele, altalleles, m0, infoStr, id, param.isoform)
 				// make a m{} for every alt allele
 				for (const alt in m0.alt2csq) {
 					const m = m0.alt2csq[alt]
 					m.chr = (q._tk.nochr ? 'chr' : '') + chr
-					m.pos = pos
+					m.pos = pos - 1 // bcf pos is 1-based, return 0-based
 					m.ssm_id = [m.chr, m.pos, m.ref, m.alt].join(ssmIdFieldsSeparator)
 
 					if (q._tk.samples && q._tk.samples.length) {
@@ -570,31 +468,57 @@ input:
 param={}
 	.tid2value = { term1id: v1, term2id:v2, ... }
 	if present, return list of samples matching the given k/v pairs, assuming AND
-	later to replace with filter
-allSamples = [ {name}, ... ] array of parsed samples from a bcf file header
+	TODO replace with filter
+allSamples=[]
+	whole list of samples, each ele: {name: int}
+	presumably the set of samples from a bcf file or tabix file
 ds={}
 
 output:
 array of {name}, same elements from allSamples, null if not filtering
 */
 function mayLimitSamples(param, allSamples, ds) {
-	if (!allSamples || allSamples.length == 0) return null // no samples from this bcf file
+	if (!allSamples) return null // no samples from this big file
+
+	// later should be param.filter, no need for conversion
 	if (!param.tid2value) return null // no limit, use all samples
 	if (typeof param.tid2value != 'object') throw 'q.tid2value{} not object'
-	const limitSamples = []
-	for (const s of allSamples) {
-		let skip = false
-		for (const tid in param.tid2value) {
-			const v = ds.cohort.termdb.q.getSample2value(tid, s.name)
-			if (v != param.tid2value[tid]) {
-				skip = true
-				break
-			}
-		}
-		if (skip) continue
-		limitSamples.push(s)
+	const filter = tid2value2filter(param.tid2value, ds)
+
+	const filterSamples = get_samples(filter, ds)
+	// filterSamples is the list of samples retrieved from termdb that are matching filter
+	// as allSamples (from bcf etc) may be a subset of what's in termdb
+	// must only use those from allSamples
+	const set = new Set(allSamples.map(i => i.name))
+	return filterSamples
+		.filter(i => set.has(i))
+		.map(i => {
+			return { name: i }
+		})
+}
+
+// temporary function to convert tid2value={} to filter, can delete later when it's replaced by filter
+function tid2value2filter(t, ds) {
+	const f = {
+		type: 'tvslst',
+		in: true,
+		join: 'and',
+		lst: []
 	}
-	return limitSamples
+	for (const k in t) {
+		const term = ds.cohort.termdb.q.termjsonByOneid(k)
+		if (!term) continue
+		const v = t[k]
+		f.lst.push({
+			type: 'tvs',
+			tvs: {
+				term,
+				// assuming only categorical
+				values: [{ key: v }]
+			}
+		})
+	}
+	return f
 }
 
 /* 
@@ -711,6 +635,7 @@ async function validate_query_svfusion(ds, genome) {
 		if (q.byrange.file) {
 			q.byrange.file = path.join(serverconfig.tpmasterdir, q.byrange.file)
 			q.byrange.get = await svfusionByRangeGetter_file(ds, genome)
+			mayValidateSampleHeader(ds, q.byrange.samples, 'svfusion.byrange')
 		} else {
 			throw 'unknown query method for svfusion.byrange'
 		}
@@ -738,9 +663,26 @@ export async function svfusionByRangeGetter_file(ds, genome) {
 		throw 'file and url both missing on svfusion.byrange{}'
 	}
 	q.nochr = await utils.tabix_is_nochr(q.file || q.url, null, genome)
+
+	{
+		const lines = await utils.get_header_tabix(q.file)
+		if (!lines[0]) throw 'header line missing from ' + q.file
+		const l = lines[0].split(' ')
+		if (l[0] != '#sample') throw 'header line not starting with #sample: ' + q.file
+		q.samples = l.slice(1).map(i => {
+			return { name: i }
+		})
+	}
+
 	return async param => {
 		if (!Array.isArray(param.rglst)) throw 'q.rglst[] is not array'
 		if (param.rglst.length == 0) throw 'q.rglst[] blank array'
+
+		let limitSamples
+		{
+			const lst = mayLimitSamples(param, q.samples, ds)
+			if (lst) limitSamples = new Set(lst.map(i => i.name))
+		}
 
 		const key2variants = new Map()
 		/*
@@ -775,15 +717,9 @@ export async function svfusionByRangeGetter_file(ds, genome) {
 						return
 					}
 
-					if (j.sample && param.tid2value) {
+					if (j.sample && limitSamples) {
 						// to filter sample
-						for (const tid in param.tid2value) {
-							const v = ds.cohort.termdb.q.getSample2value(tid, j.sample)
-							if (v != param.tid2value[tid]) {
-								// this sample is no match, skip this event
-								return
-							}
-						}
+						if (!limitSamples.has(j.sample)) return
 					}
 
 					// collect key fields

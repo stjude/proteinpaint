@@ -1,7 +1,7 @@
-import { fillbar } from '../../dom/fillbar'
-import { get_list_cells } from '../../dom/gridutils'
+import { fillbar } from '#dom/fillbar'
+import { get_list_cells } from '#dom/gridutils'
 import { select as d3select } from 'd3-selection'
-import { mclass } from '../../shared/common'
+import { mclass, dtsnvindel, dtsv, dtfusionrna } from '#shared/common'
 
 /*
 ********************** EXPORTED
@@ -74,6 +74,7 @@ export async function displaySampleTable(samples, arg) {
 		return await make_singleSampleTable(samples[0], arg)
 	}
 	if (arg.useRenderTable) {
+		// flag is temporary, delete if() when renderTable is permanent
 		renderTable({
 			rows: samples2rows(samples, arg.tk),
 			columns: await samples2columns(samples, arg.tk),
@@ -100,6 +101,14 @@ async function make_singleSampleTable(sampledata, arg) {
 		const [cell1, cell2] = get_list_cells(grid_div)
 		cell1.text('Sample')
 		printSampleName(sampledata, arg.tk, cell2)
+	}
+
+	/////////////
+	// hardcoded logic to represent if this case is open or controlled-access
+	if ('caseIsOpenAccess' in sampledata) {
+		const [cell1, cell2] = get_list_cells(grid_div)
+		cell1.text('Access')
+		cell2.text(sampledata.caseIsOpenAccess ? 'Open' : 'Controlled')
 	}
 
 	if (arg.tk.mds.variant2samples.termidlst) {
@@ -218,7 +227,8 @@ async function make_multiSampleTable(data, arg) {
 	// flags for optional columns
 	const has_sample_id = data.some(i => i.sample_id),
 		has_ssm_read_depth = data.some(i => i.ssm_read_depth),
-		has_totalNormal = data.some(i => i.totalNormal)
+		has_totalNormal = data.some(i => i.totalNormal),
+		has_caseAccess = data.some(i => 'caseIsOpenAccess' in i)
 
 	// count total number of columns
 	let numColumns = 0
@@ -275,6 +285,19 @@ async function make_multiSampleTable(data, arg) {
 			}
 			if (gray) c.style('opacity', 0.3)
 		}
+
+		if (has_caseAccess) {
+			const c = div
+				.append('div')
+				.text('Access')
+				.style('grid-row-start', 1)
+			if (startDataCol) {
+				startCol = ++startCol
+				c.style('grid-column-start', startCol)
+			}
+			if (gray) c.style('opacity', 0.3)
+		}
+
 		if (arg.tk.mds.variant2samples.termidlst) {
 			for (const termid of arg.tk.mds.variant2samples.termidlst) {
 				const t = await arg.tk.mds.termdb.vocabApi.getterm(termid)
@@ -289,6 +312,7 @@ async function make_multiSampleTable(data, arg) {
 				if (gray) c.style('opacity', 0.3)
 			}
 		}
+
 		if (has_ssm_read_depth) {
 			const c = div
 				.append('div')
@@ -325,6 +349,15 @@ async function make_multiSampleTable(data, arg) {
 			}
 			printSampleName(sample, arg.tk, cell)
 		}
+
+		if (has_caseAccess) {
+			row
+				.append('div')
+				.classed('sjpp-sample-table-div', true)
+				.style('padding', '1px')
+				.text(sample.caseIsOpenAccess ? 'Open' : 'Controlled')
+		}
+
 		if (arg.tk.mds.variant2samples.termidlst) {
 			for (const termid of arg.tk.mds.variant2samples.termidlst) {
 				const cell = row
@@ -337,6 +370,7 @@ async function make_multiSampleTable(data, arg) {
 				}
 			}
 		}
+
 		if (has_ssm_read_depth) {
 			const cell = row
 				.append('div')
@@ -393,6 +427,11 @@ samples2columns() and samples2rows() should continue to work with the future ren
 */
 async function samples2columns(samples, tk) {
 	const columns = [{ label: 'Sample' }]
+
+	if (samples.some(i => 'caseIsOpenAccess' in i)) {
+		columns.push({ label: 'Access' })
+	}
+
 	if (tk.mds.variant2samples.termidlst) {
 		for (const id of tk.mds.variant2samples.termidlst) {
 			const t = await tk.mds.termdb.vocabApi.getterm(id)
@@ -403,16 +442,24 @@ async function samples2columns(samples, tk) {
 			}
 		}
 	}
+
 	columns.push({ label: 'Mutations', isSsm: true })
 	return columns
 }
 function samples2rows(samples, tk) {
 	const rows = []
+
+	const has_caseAccess = samples.some(i => 'caseIsOpenAccess' in i)
+
 	for (const sample of samples) {
 		const row = [{ value: sample.sample_id }]
 
 		if (tk.mds.variant2samples.url) {
 			row[0].url = tk.mds.variant2samples.url.base + sample[tk.mds.variant2samples.url.namekey]
+		}
+
+		if (has_caseAccess) {
+			row.push({ value: sample.caseIsOpenAccess ? 'Open' : 'Controlled' })
 		}
 
 		if (tk.mds.variant2samples.termidlst) {
@@ -427,11 +474,19 @@ function samples2rows(samples, tk) {
 			const ssm = {}
 			if (m) {
 				// found m data point
-				ssm.value = m.mname
-				if (tk.mds.queries && tk.mds.queries.snvindel && tk.mds.queries.snvindel.url) {
-					ssm.html = `<a href=${tk.mds.queries.snvindel.url.base + m.ssm_id} target=_blank>${m.mname}</a>`
+				if (m.dt == dtsnvindel) {
+					ssm.value = m.mname
+					if (tk.mds.queries && tk.mds.queries.snvindel && tk.mds.queries.snvindel.url) {
+						ssm.html = `<a href=${tk.mds.queries.snvindel.url.base + m.ssm_id} target=_blank>${m.mname}</a>`
+					} else {
+						ssm.html = m.mname
+					}
+				} else if (m.dt == dtsv || m.dt == dtfusionrna) {
+					const p = m.pairlst[0]
+					ssm.html = `${p.a.name || ''} ${p.a.chr}:${p.a.pos} ${p.a.strand == '+' ? 'forward' : 'reverse'} > ${p.b
+						.name || ''} ${p.b.chr}:${p.b.pos} ${p.b.strand == '+' ? 'forward' : 'reverse'}`
 				} else {
-					ssm.html = m.mname
+					throw 'unknown dt'
 				}
 				ssm.html += ` <span style="color:${mclass[m.class].color};font-size:.7em">${mclass[m.class].label}</span>`
 			} else {
@@ -451,14 +506,24 @@ function renderTable({ columns, rows, div }) {
 		.append('table')
 		.style('border-spacing', '5px')
 		.style('border-collapse', 'separate')
+		.style('max-height', '40vw')
 	const tr = table.append('tr')
+
+	tr.append('td') // numerator
+
 	for (const c of columns) {
 		tr.append('td')
 			.text(c.label)
 			.style('opacity', 0.5)
 	}
-	for (const row of rows) {
+
+	for (const [i, row] of rows.entries()) {
 		const tr = table.append('tr').attr('class', 'sja_clb')
+		tr.append('td')
+			.text(i + 1)
+			.style('font-size', '.7em')
+			.style('opacity', 0.5)
+
 		for (const [colIdx, cell] of row.entries()) {
 			const column = columns[colIdx]
 

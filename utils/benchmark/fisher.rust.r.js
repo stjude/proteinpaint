@@ -54,7 +54,7 @@ async function comparePvalues() {
 	}
 
 	for (const line of (await run_rust(
-		'stats',
+		'fisher',
 		'fisher_limits\t' + fisher_limit + '\t' + individual_fisher_limit + '-' + data.join('-')
 	)).split('\n')) {
 		rust_pv.push(-Math.log10(Number(line.split('\t')[5])))
@@ -78,7 +78,7 @@ async function testR(data) {
 
 async function testRust(data) {
 	const t = new Date()
-	await run_rust('stats', 'fisher_limits\t' + fisher_limit + '\t' + individual_fisher_limit + '-' + data.join('-'))
+	await run_rust('fisher', 'fisher_limits\t' + fisher_limit + '\t' + individual_fisher_limit + '-' + data.join('-'))
 	return new Date() - t
 }
 

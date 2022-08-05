@@ -1,8 +1,8 @@
 import { termsettingInit, nonDictionaryTermTypes } from '#termsetting'
 import { getNormalRoot } from '#filter'
-import { get_bin_label } from '../shared/termdb.bins'
+import { get_bin_label } from '#shared/termdb.bins'
 import { InputValuesTable } from './regression.inputs.values.table'
-import { Menu } from '../dom/menu'
+import { Menu } from '#dom/menu'
 import { select } from 'd3-selection'
 import { mayRunSnplstTask } from '#termsetting/handlers/snplst.sampleSum'
 import { get_defaultQ4fillTW } from './regression'
@@ -194,7 +194,7 @@ export class InputTerm {
 			for continuous term, assume it is numeric and that we'd want counts by bins,
 			so remove the 'mode: continuous' value as it will prevent bin construction in the backend
 		*/
-		if (q.mode == 'continuous' || q.mode == 'spline' || q.mode == 'time2event') delete q.mode
+		if (q.mode == 'continuous' || q.mode == 'spline' || q.mode == 'cox') delete q.mode
 
 		// the 3rd argument to getCategories() is different for snplst and dictionary term types
 		const qlst =

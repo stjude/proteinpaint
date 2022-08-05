@@ -142,9 +142,9 @@ async function load_driver(q, ds) {
 		if (!ds.variant2samples) throw 'not supported by server'
 		const out = await ds.variant2samples.get(q)
 
-		if (q.get == ds.variant2samples.type_samples && q.listSsm) {
+		if (q.get == ds.variant2samples.type_samples && q.groupSsmBySample) {
 			/*
-			listSsm=true as a modifier of get=samples
+			groupSsmBySample=true as a modifier of get=samples
 			work for "List" option in case menu
 			for listing all samples that have mutation in the view range
 			client-side variant data are stripped of sample info
@@ -155,10 +155,13 @@ async function load_driver(q, ds) {
 			const id2samples = new Map() // k: sample_id, v: { key:val, ssm_id_lst:[] }
 			for (const s of out) {
 				if (id2samples.has(s.sample_id)) {
-					id2samples.get(s.sample_id).ssm_id_lst.push(s.ssm_id)
+					if (s.ssm_id_lst) id2samples.get(s.sample_id).ssm_id_lst.push(...s.ssm_id_lst)
+					else id2samples.get(s.sample_id).ssm_id_lst.push(s.ssm_id)
 				} else {
-					s.ssm_id_lst = [s.ssm_id]
-					delete s.ssm_id
+					if (!s.ssm_id_lst) {
+						s.ssm_id_lst = [s.ssm_id]
+						delete s.ssm_id
+					}
 					id2samples.set(s.sample_id, s)
 				}
 			}

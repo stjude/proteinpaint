@@ -8,8 +8,12 @@ exported functions
 
 
 */
+import { rgb } from 'd3-color'
 
-export const defaultcolor = '#8AB1D4'
+export const defaultcolor = rgb('#8AB1D4').darker()
+export const default_text_color = rgb('#aaa')
+	.darker()
+	.darker()
 
 export const exoncolor = '#4F8053'
 
@@ -99,7 +103,7 @@ export const mclass = {
 		desc: 'A variant near an exon edge that may affect splicing functionality.',
 		key: 'L'
 	},
-	Intron: { label: 'INTRON', color: '#bbbbbb', dt: dtsnvindel, desc: 'An intronic variant.', key: 'Intron' },
+	Intron: { label: 'INTRON', color: '#656565', dt: dtsnvindel, desc: 'An intronic variant.', key: 'Intron' },
 
 	// quick fix!! for showing genes that are not tested in samples (e.g. gene panels) in the heatmap
 	Blank: { label: 'Not tested', color: '#fff', dt: dtsnvindel, desc: 'This gene is not tested.', key: 'Blank' }
@@ -220,7 +224,7 @@ mclass[mclassfusionrna] = {
 	color: '#545454',
 	dt: dtfusionrna,
 	desc:
-		'Marks the break points leading to fusion transcripts, predicted by "Cicero" from RNA-seq data.<br>' +
+		'Marks the break points leading to fusion transcripts.<br>' +
 		'<span style="font-size:150%">&#9680;</span> - 3\' end of the break point is fused to the 5\' end of another break point in a different gene.<br>' +
 		'<span style="font-size:150%">&#9681;</span> - 5\' end of the break point is fused to the 3\' end of another break point in a different gene.',
 	key: mclassfusionrna
@@ -292,6 +296,23 @@ mclass[mclassdeletion] = {
 	key: mclassdeletion
 }
 // TODO complex indel
+
+
+// option to override mutation class attribute values
+export function applyOverrides(overrides = {}) {
+	if (overrides.mclass) {
+		for (const key in overrides.mclass) {
+			// allow to fill-in mutation class that are missing from mclass;
+			// may be useful for things like 'Not tested', etc, that may not be in mclass by default
+			// but are used by a customer with its own PP server instance
+			if (!mclass[key]) mclass[key] = {}
+			for (const subkey in overrides.mclass[key]) {
+				mclass[key][subkey] = overrides.mclass[key][subkey]
+			}
+		}
+	}
+}
+
 
 export const vepinfo = function(s) {
 	const l = s.toLowerCase().split(',')
@@ -856,34 +877,62 @@ export const gmmode = {
 	gmsum: 'aggregated exons'
 }
 
+/*
+input:
+
+m={}
+	m.csq=[]
+		element: {
+			Allele: str,
+			Consequence: str,
+			CANONICAL: str, // true if _isoform is canonical
+			...
+			_isoform: str,
+			_class: str,
+			_csqrank: int
+		}
+	m.ann=[]
+		annovar output. may be derelict
+block={}
+	block.usegm={ isoform }
+	can be a mock object when running this function in node!
+
+does:
+	find an annotation from m.csq[] that's fitting the circumstance
+	- current gm isoform displayed in block gene mode
+	- any canonical isoform from m.csq[] (can be missing if vep is not instructed to do it)
+	- one with highest _csqrank
+	then, copy its class/mname to m{}
+	has many fall-back and always try to assign class/mname
+
+no return
+*/
 export function vcfcopymclass(m, block) {
 	if (m.csq) {
-		// there could be many annotations, the first one not always desirable
-		// choose *colorful* annotation based on _csqrank
-		let useone = null
+		let useone // point to the element of m.csq[], from this class/mname is copied to m{}
+
 		if (block.usegm) {
-			for (const q of m.csq) {
-				if (q._isoform != block.usegm.isoform) continue
-				if (useone) {
+			// block is in gm mode, find a csq matching with the genemodel isoform
+			useone = m.csq.find(i => i._isoform == block.usegm.isoform)
+		}
+
+		if (!useone) {
+			// no match to usegm isoform; can be due to in genomic mode and zoomed out, where this variant is from a neighboring gene near block.usegm
+			// find one using canonical isoform
+			useone = m.csq.find(i => i.CANONICAL)
+
+			if (!useone) {
+				// none of the elements in m.csq[] is using a canonical isoform, as that's a vep optional output
+				// last method: choose *colorful* annotation based on if is canonical, _csqrank
+				useone = m.csq[0]
+				for (const q of m.csq) {
 					if (q._csqrank < useone._csqrank) {
 						useone = q
 					}
-				} else {
-					useone = q
-				}
-			}
-			if (!useone && block.gmmode == gmmode.genomic) {
-				// no match to this gene, but in genomic mode, maybe from other genes?
-				useone = m.csq[0]
-			}
-		} else {
-			useone = m.csq[0]
-			for (const q of m.csq) {
-				if (q._csqrank < useone._csqrank) {
-					useone = q
 				}
 			}
 		}
+
 		if (useone) {
 			m.gene = useone._gene
 			m.isoform = useone._isoform

@@ -120,7 +120,8 @@ export function fillTW(tw, vocabApi) {
 		// rounding and label_offset may have to defined separately within bins.default or bins.less,
 		// for now assume that the same values will apply to both bins.default and .less
 		if (tw.term.bins.rounding) tw.term.bins.default.rounding = tw.term.bins.rounding
-		if (tw.term.bins.label_offset) tw.term.bins.default.label_offset = tw.term.bins.label_offset
+		if (tw.term.bins.label_offset && !tw.term.bins.default.label_offset)
+			tw.term.bins.default.label_offset = tw.term.bins.label_offset
 		copyMerge(tw.q, tw.term.bins.default)
 	}
 	set_hiddenvalues(tw.q, tw.term)
@@ -155,4 +156,60 @@ function valid_binscheme(q) {
 		}
 	}
 	return false
+}
+
+function getQlst() {
+	/*
+	const qlst = self.vocabApi.getCustomTermQLst(self.term).sort((a, b) => (a.name === self.q.name ? -1 : 0))
+
+	const templateQ = JSON.parse(JSON.stringify(self.q))
+	delete templateQ.name
+	qlst.push(templateQ)
+
+	const div = _div.append('div').style('display', 'grid') //.style('grid-auto-columns', '1fr')
+	for (const q of qlst) {
+		const qIsActive = q.name && self.q.name === q.name
+		div
+			.append('div')
+			.datum(q)
+			.style('margin', '5px')
+			.style('text-align', 'center')
+			//.style('display', 'inline-block')
+			//.style('width', '80%')
+			.style('padding', '5px')
+			.style('background-color', qIsActive ? '#fff' : '#eee')
+			//.style('border', qIsActive ? '1px solid #' : 'none')
+			.style('border-radius', '5px')
+			.style('font-size', '.9em')
+			.style('cursor', qIsActive ? '' : 'pointer')
+			.html(!q.name ? 'Redivide bins' : qIsActive ? `Using ${q.name}` : `Use ${q.name}`)
+			.on('click', qIsActive ? null : editQ)
+
+		if (q.name) {
+			div
+				.append('div')
+				.style('grid-column', '2/3')
+				.style('margin', '5px')
+				.style('padding', '5px')
+				.style('cursor', 'pointer')
+				.style('color', '#999')
+				.style('font-size', '.8em')
+				.text('DELETE')
+				.on('click', async () => {
+					await self.vocabApi.uncacheTermQ(self.term, self.q)
+					if (q.name === self.q.name) delete self.q.name
+					self.dom.tip.hide()
+				})
+		}
+	}
+
+	function editQ(q) {
+		if (!q.name) {
+			div.selectAll('*').remove()
+			showBinsMenu(self, div)
+		} else self.runCallback({ q })
+	}
+
+	self.renderQNameInput(div, `Binning`)
+	*/
 }

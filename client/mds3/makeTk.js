@@ -1,11 +1,11 @@
 import { select as d3select, event as d3event } from 'd3-selection'
-import { Menu } from '../../dom/menu'
-import { dofetch3 } from '../../common/dofetch'
+import { Menu } from '#dom/menu'
+import { dofetch3 } from '#common/dofetch'
 import { initLegend, updateLegend } from './legend'
 import { loadTk, rangequery_rglst } from './tk'
-import urlmap from '../../common/urlmap'
-import { mclass } from '../../shared/common'
-import { vcfparsemeta } from '../../shared/vcf'
+import urlmap from '#common/urlmap'
+import { mclass } from '#shared/common'
+import { vcfparsemeta } from '#shared/vcf'
 
 /*
 ********************** EXPORTED
@@ -74,7 +74,9 @@ export async function makeTk(tk, block) {
 		doms: {},
 		// keys: label name, value: label dom
 		// to avoid having to delete all labels upon tk rendering
-		laby: 0 // cumulative height, 0 for no labels
+		laby: 0, // cumulative height, 0 for no labels
+		xoff: 0,
+		maxwidth: 0 // set default 0 in case track runs into err, can still render tk
 	}
 
 	tk._finish = loadTk_finish_closure(tk, block)
@@ -96,10 +98,7 @@ export async function makeTk(tk, block) {
 
 	mayInitSkewer(tk) // tk.skewer{} may be added
 
-	tk.leftLabelMaxwidth = tk.tklabel
-		.text(tk.mds.label || tk.name)
-		.node()
-		.getBBox().width
+	tk.tklabel.text(tk.mds.label || tk.name)
 
 	tk.clear = () => {
 		// called in loadTk, when uninitialized is true
@@ -170,9 +169,15 @@ function loadTk_finish_closure(tk, block) {
 			updateLegend(data, tk, block)
 		}
 
+		tk.leftLabelMaxwidth = Math.max(tk.leftlabels.maxwidth + tk.leftlabels.xoff, tk.skewer ? tk.skewer.maxwidth : 0)
+
 		block.tkcloakoff(tk, { error: data ? data.error : null })
 		block.block_setheight()
 		block.setllabel()
+
+		if (typeof tk.callbackOnRender == 'function') {
+			tk.callbackOnRender(tk, block)
+		}
 	}
 }
 
@@ -259,10 +264,10 @@ async function get_ds(tk, block) {
 	tk.mds = {}
 	// fill in details to tk.mds
 	///////////// custom data sources
-	if (tk.vcf) {
-		if (!tk.vcf.file && !tk.vcf.url) throw 'file or url missing for tk.vcf{}'
+	if (tk.bcf) {
+		if (!tk.bcf.file && !tk.bcf.url) throw 'file or url missing for tk.bcf{}'
 		tk.mds.has_skewer = true // enable skewer tk
-		await getvcfheader_customtk(tk, block.genome)
+		await getbcfheader_customtk(tk, block.genome)
 	} else if (tk.custom_variants) {
 		tk.mds.has_skewer = true // enable skewer tk
 		validateCustomVariants(tk)
@@ -291,7 +296,7 @@ async function init_termdb(tk, block) {
 		} else {
 			throw 'do not know how to init vocab'
 		}
-		const _ = await import('../../termdb/vocabulary')
+		const _ = await import('#termdb/vocabulary')
 		tdb.vocabApi = _.vocabInit(arg)
 	}
 
@@ -394,9 +399,9 @@ function mayaddGetter_variant2samples(tk, block) {
 	*/
 	tk.mds.variant2samples.get = async arg => {
 		const par = ['genome=' + block.genome.name, 'dslabel=' + tk.mds.label, 'variant2samples=1', 'get=' + arg.querytype]
-		if (arg.listSsm) {
+		if (arg.groupSsmBySample) {
 			// from getSamples(), is a modifier of querytype=samples, to return .ssm_id_lst[] with each sample
-			par.push('listSsm=1')
+			par.push('groupSsmBySample=1')
 		}
 
 		// pagination, not used
@@ -428,10 +433,12 @@ function mayaddGetter_variant2samples(tk, block) {
 
 		// supply list of terms based on querytype
 		if (arg.querytype == tk.mds.variant2samples.type_sunburst) {
+			// TODO may change to vocabApi.getNestedChartSeriesData
 			if (tk.mds.variant2samples.sunburst_ids) par.push('termidlst=' + tk.mds.variant2samples.sunburst_ids)
 		} else if (arg.querytype == tk.mds.variant2samples.type_samples) {
 			if (tk.mds.variant2samples.termidlst) par.push('termidlst=' + tk.mds.variant2samples.termidlst)
 		} else if (arg.querytype == tk.mds.variant2samples.type_summary) {
+			// TODO querytype=summary should be replaced by client barchar issuing its own query
 			if (tk.mds.variant2samples.termidlst) par.push('termidlst=' + tk.mds.variant2samples.termidlst)
 		} else {
 			throw 'unknown querytype'
@@ -459,7 +466,7 @@ function mayaddGetter_variant2samples(tk, block) {
 			// must be calling from "List" option of #case menu
 			arg.querytype = tk.mds.variant2samples.type_samples
 			// supply this flag so server will group ssm by case
-			arg.listSsm = 1
+			arg.groupSsmBySample = 1
 		}
 		rangequery_rglst(tk, block, arg)
 		return await tk.mds.variant2samples.get(arg)
@@ -601,20 +608,21 @@ function mayDeriveSkewerOccurrence4samples(tk) {
 	v.type_sunburst = 'sunburst'
 }
 
-async function getvcfheader_customtk(tk, genome) {
+async function getbcfheader_customtk(tk, genome) {
 	const arg = ['genome=' + genome.name]
-	if (tk.vcf.file) {
-		arg.push('file=' + tk.vcf.file)
+	if (tk.bcf.file) {
+		arg.push('file=' + tk.bcf.file)
 	} else {
-		arg.push('url=' + tk.vcf.url)
-		if (tk.vcf.indexURL) arg.push('indexURL=' + tk.vcf.indexURL)
+		arg.push('url=' + tk.bcf.url)
+		if (tk.bcf.indexURL) arg.push('indexURL=' + tk.bcf.indexURL)
 	}
+	// FIXME if vcf and bcf files can both be used?
 	const data = await dofetch3('vcfheader?' + arg.join('&'))
 	if (data.error) throw data.error
 	const [info, format, samples, errs] = vcfparsemeta(data.metastr.split('\n'))
 	if (errs) throw 'Error parsing VCF meta lines: ' + errs.join('; ')
-	tk.vcf.info = info
-	tk.vcf.format = format
-	tk.vcf.samples = samples
-	tk.vcf.nochr = data.nochr
+	tk.bcf.info = info
+	tk.bcf.format = format
+	tk.bcf.samples = samples
+	tk.bcf.nochr = data.nochr
 }

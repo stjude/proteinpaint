@@ -13,10 +13,9 @@
 
 # Input JSON specifications:
 # {
-#   id: { # "id" is required for each entry
-#     group1values: [] vector of numeric values for the 1st group
-#     group2values: [] vector of numeric values for the 2nd group
-#   }
+#   id: {} id of data entry
+#     group1values: [] group 1 values
+#     group2values: [] group 2 values
 # }
 #
 # Output JSON specifications:
@@ -35,8 +34,22 @@ if (length(args) != 1) stop("one argument required")
 infile <- args[1]
 dat <- fromJSON(infile)
 
-# compute wilcox p-value for each snp
-pvalues <- lapply(dat, function(item) unbox(wilcox.test(item$group1values, item$group2values)$p.value))
+# function to compute wilcox p-value between two groups of values
+getPvalue <- function(x) {
+  # break any ties between values
+  # this will allow exact p-values to be computed
+  if(anyDuplicated(x$group1values)) x$group1values <- jitter(x$group1values)
+  if(anyDuplicated(x$group2values)) x$group2values <- jitter(x$group2values)
+  # perform wilcox test between groups
+  # by default, exact p-values will be computed if groups contain < 50 values and there are no ties
+  # do not set exact=TRUE because this will use large amounts of memory when groups have large numbers of values
+  wt <- wilcox.test(x$group1values, x$group2values)
+  # return p-value
+  return(unbox(wt$p.value))
+}
+
+# compute wilcox p-value for each data entry
+pvalues <- lapply(dat, getPvalue)
 
 # output p-values
 toJSON(pvalues)

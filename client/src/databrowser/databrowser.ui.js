@@ -1,9 +1,10 @@
 import * as uiutils from '../../dom/uiUtils'
 import { appear } from '../../dom/animation'
 import { init_tabs } from '../../dom/toggleButtons'
-import { event as d3event } from 'd3-selection'
+import { event as d3event, selectAll as d3selectAll } from 'd3-selection'
 import { appInit } from '../../mass/app'
 import { parseDictionary } from './dictionary.parse'
+import { sayerror } from '../client'
 
 /* 
 Launches MASS UI by uploading a custom data dictionary
@@ -31,7 +32,7 @@ Long term plans:
 Will include sample annotation matrix, longitudinal data, sample ID hierarcy and molecular data (see old sketch: https://docs.google.com/drawings/d/1x3BgBbUF2ChkOGCXkA-fW8r46EbT_ZEqNZgwyTXLTXE/edit)
 */
 
-export function init_dictionaryUI(holder, debugmode) {
+export function init_databrowserUI(holder, debugmode) {
 	const wrapper = holder
 		.append('div')
 		.style('margin', '20px 20px 20px 40px')
@@ -41,6 +42,7 @@ export function init_dictionaryUI(holder, debugmode) {
 		)
 		.style('place-items', 'center left')
 		.style('overflow', 'hidden')
+		.classed('sjpp-app-ui', true)
 
 	const obj = {}
 
@@ -50,25 +52,22 @@ export function init_dictionaryUI(holder, debugmode) {
 	//Data dictionary section
 	makeSectionHeader(wrapper, 'Data Dictionary')
 	const tabs_div = wrapper.append('div').style('margin-left', '2vw')
-	makeDataDictionaryTabs(holder, tabs_div, obj)
+	makeDataDictionaryTabs(tabs_div, obj)
 
-	//Submit button
-	submitButton(wrapper, obj, holder)
+	//Submit and reset button at the bottom.
+	const controlBtns_div = wrapper
+		.append('div')
+		.style('display', 'flex')
+		.style('align-items', 'center')
+		.style('margin', '40px 0px 40px 130px')
+
+	submitButton(controlBtns_div, obj, wrapper, holder)
+	makeResetBtn(controlBtns_div, obj)
 
 	//Remove after testing
 	if (debugmode) window.doms = obj
+	return obj
 }
-
-//TODO later
-// function makeResetBtn(div, obj) {
-// 	const reset = uiutils.makeBtn(div, '↺')
-// 	reset
-// 		.style('grid-column', 'span 2')
-// 		.style('align-self', 'right')
-// 		.on('click', () => {
-// 			Object.keys(obj).forEach(key => delete obj[key])
-// 	})
-// }
 
 function infoSection(div) {
 	div
@@ -91,6 +90,7 @@ function makeSectionHeader(div, text) {
 		.style('font-size', '1.5em')
 		.style('color', '#003366')
 		.style('margin', '20px 10px 40px 10px')
+		.classed('sjpp-databrowser-section-header', true)
 	const hr = div.append('hr')
 	hr.style('color', 'ligthgrey')
 		.style('margin', '-30px 0px 15px 0px')
@@ -98,7 +98,7 @@ function makeSectionHeader(div, text) {
 		.style('opacity', '0.4')
 }
 
-function makeDataDictionaryTabs(holder, tabs_div, obj) {
+function makeDataDictionaryTabs(tabs_div, obj) {
 	// Creates the horizontal top tabs and callbacks for the data dictionary section
 	// Rendering code and callback to the same parseDictionary().
 	// All data parsed in client and returned to obj.data
@@ -110,7 +110,7 @@ function makeDataDictionaryTabs(holder, tabs_div, obj) {
 					div.style('border', 'none').style('display', 'block')
 					appear(div)
 					div.append('div').html(`<p style="margin-left: 10px; opacity: 0.65;">Select a file from your computer.</p>`)
-					makeFileUpload(holder, div, obj)
+					makeFileUpload(div, obj)
 					tabs[1].rendered = true
 				}
 			}
@@ -126,7 +126,7 @@ function makeDataDictionaryTabs(holder, tabs_div, obj) {
 						.html(
 							`<p style="margin-left: 10px; opacity: 0.65;">Paste data dictionary or phenotree in a tab delimited format.</p>`
 						)
-					makeCopyPasteInput(holder, div, obj)
+					makeCopyPasteInput(div, obj)
 					tabs[2].rendered = true
 				}
 			}
@@ -139,7 +139,7 @@ function makeDataDictionaryTabs(holder, tabs_div, obj) {
 					appear(div)
 					div.append('div').html(`<p style="margin-left: 10px; opacity: 0.65;">Provide a URL file path.</p>`)
 					uiutils.makePrompt(div, 'URL')
-					makeTextEntryFilePathInput(holder, div, obj)
+					makeTextEntryFilePathInput(div, obj)
 					tabs[0].rendered = true
 				}
 			}
@@ -148,19 +148,20 @@ function makeDataDictionaryTabs(holder, tabs_div, obj) {
 	init_tabs({ holder: tabs_div, tabs })
 }
 
-function makeTextEntryFilePathInput(holder, div, obj) {
+function makeTextEntryFilePathInput(div, obj) {
 	// Renders the file path input div and callback.
 	const filepath_div = div.append('div').style('display', 'inline-block')
 	const filepath = uiutils
 		.makeTextInput(filepath_div)
 		.style('border', '1px solid rgb(138, 177, 212)')
+		.classed('databrowser_input', true)
 		.on('keyup', async () => {
 			const data = filepath.property('value').trim()
 			if (uiutils.isURL(data)) {
-				fetch(data)
+				const txt = await fetch(data)
 					.then(req => req.text())
 					.then(txt => {
-						obj.data = parseDictionary(holder, txt)
+						obj.data = parseDictionary(txt)
 					})
 			} else {
 				//TODO: implement serverside filepaths(?)
@@ -168,29 +169,30 @@ function makeTextEntryFilePathInput(holder, div, obj) {
 		})
 }
 
-function makeFileUpload(holder, div, obj) {
+function makeFileUpload(div, obj) {
 	// Renders the select file div and callback.
 	const upload_div = div.append('div').style('display', 'inline-block')
-	const upload = uiutils.makeFileUpload(upload_div)
+	const upload = uiutils.makeFileUpload(upload_div).classed('databrowser_input', true)
 	upload.on('change', () => {
 		const file = d3event.target.files[0]
 		const reader = new FileReader()
 		reader.onload = event => {
-			obj.data = parseDictionary(holder, event.target.result)
+			obj.data = parseDictionary(event.target.result)
 		}
 		reader.readAsText(file, 'utf8')
 	})
 }
 
-function makeCopyPasteInput(holder, div, obj) {
+function makeCopyPasteInput(div, obj) {
 	// Renders the copy/paste div and callback.
 	const paste_div = div.append('div').style('display', 'block')
 	const paste = uiutils
-		.makeTextAreaInput(paste_div, '', 10, 70)
+		.makeTextAreaInput({ div: paste_div, rows: 10 })
 		.style('border', '1px solid rgb(138, 177, 212)')
 		.style('margin', '0px 0px 0px 20px')
+		.classed('databrowser_input', true)
 		.on('keyup', async () => {
-			obj.data = parseDictionary(holder, paste.property('value').trim())
+			obj.data = parseDictionary(paste.property('value').trim())
 		})
 }
 
@@ -198,27 +200,58 @@ function makeCopyPasteInput(holder, div, obj) {
  **** Submission Functions ****
  */
 
-function submitButton(div, obj, holder) {
-	const submit = uiutils.makeBtn(div, 'Create Data Browser', 'white', '#001aff', '2px solid #001aff')
+function submitButton(div, obj, wrapper, holder) {
+	const submit = uiutils.makeBtn({
+		div,
+		text: 'Create Data Browser',
+		color: 'white',
+		backgroundColor: '#001aff',
+		border: '2px solid #001aff'
+	})
+	const errorMessage_div = div.append('div')
 	submit
-		.style('margin', '40px 20px 40px 130px')
+		.style('margin-right', '10px')
 		.style('font-size', '16px')
+		.classed('sjpp-ui-submitBtn', true)
+		.attr('type', 'submit')
 		.on('click', () => {
-			// if (!obj.data) {
-			// 	alert('Please provide data')
-			// }
-			// if (!obj.data.length || obj.data == undefined) {
-			// 	throw 'No data provided' // Show user error with alert above and prevent form from disappearing
-			// }
-			div.remove()
-			console.log(449, obj.data.terms)
-			appInit({
-				holder: holder,
-				state: {
-					vocab: {
-						terms: obj.data.terms
+			if (!obj.data || obj.data == undefined) {
+				const sayerrorDiv = errorMessage_div
+					.append('div')
+					.style('display', 'inline-block')
+					.style('max-width', '20vw')
+				sayerror(sayerrorDiv, 'Please provide data')
+				setTimeout(() => sayerrorDiv.remove(), 3000)
+			} else {
+				wrapper.remove()
+				console.log(449, obj.data.terms)
+				appInit({
+					holder: holder,
+					state: {
+						vocab: {
+							terms: obj.data.terms
+						}
 					}
-				}
-			})
+				})
+			}
+		})
+}
+
+function makeResetBtn(div, obj) {
+	const reset = uiutils.makeBtn({
+		div,
+		text: '&#8634;',
+		backgroundColor: 'white',
+		color: 'grey',
+		padding: '0px 6px 1px 6px'
+	})
+	reset
+		.style('font-size', '1.5em')
+		.style('display', 'inline-block')
+		.style('margin', '0px 10px')
+		.attr('type', 'reset')
+		.on('click', async () => {
+			d3selectAll('.databrowser_input').property('value', '')
+			if (obj.data) obj.data = ''
 		})
 }

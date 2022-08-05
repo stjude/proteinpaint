@@ -28,6 +28,8 @@ The following script will:
 
 ```bash
 # create a full image with test spec files and devDependencies
+# by default, this will use GDC cloud proxy for downloading whitelisted packages and deps
+# you can supply -b "" to not use the default cloud proxy
 ./build/full/build.sh
 
 # extract a subset of build artifacts from the full image

@@ -1,5 +1,5 @@
 import * as client from './client'
-import { bplen } from '../shared/common'
+import { bplen } from '#shared/common'
 import { event as d3event } from 'd3-selection'
 import { legend_newrow } from './block.legend'
 import { make_one_checkbox } from '../dom/checkbox'

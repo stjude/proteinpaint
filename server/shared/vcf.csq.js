@@ -28,6 +28,7 @@ header: [ // something like this
   { name: 'FLAGS' },
   { name: 'SYMBOL_SOURCE' },
   { name: 'HGNC_ID' },
+  { name: 'CANONICAL' },
   { name: 'REFSEQ_MATCH' },
   { name: 'GIVEN_REF' },
   { name: 'USED_REF' },

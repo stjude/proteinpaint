@@ -48,8 +48,8 @@
 #
 #
 # Output JSON specifications:
-# [
-#   {
+# [{
+#   data: {
 #     "id": id of snplocus term (empty when no snplocus terms are present)
 #     "data": {
 #       "sampleSize": sample size of analysis,
@@ -57,24 +57,33 @@
 #       "residuals": { "header": [], "rows": [] },
 #       "coefficients": { "header": [], "rows": [] },
 #       "type3": { "header": [], "rows": [] },
+#       "totalSnpEffect": { "header": [], "rows": [] } (only for snplocus interactions),
 #       "tests": { "header": [], "rows": [] } (only for cox regression),
 #       "other": { "header": [], "rows": [] },
 #       "warnings": [] warning messages
 #     },
 #   }
-# ]
+#   benchmark: {} benchmarking results
+# }]
 
 
 ###########
 # CODE
 ###########
 
-library(jsonlite)
-library(survival)
+suppressPackageStartupMessages({
+  library(jsonlite)
+  library(survival)
+  library(parallel)
+  library(lmtest)
+#  library(car) # disabled until package is available on servers
+})
 
 args <- commandArgs(trailingOnly = T)
 if (length(args) != 1) stop("Usage: Rscript regression.R in.json > results")
 infile <- args[1]
+
+benchmark <- list()
 
 
 ################
@@ -82,44 +91,52 @@ infile <- args[1]
 ################
 
 # read in json input
+stime <- Sys.time()
 input <- fromJSON(infile)
+etime <- Sys.time()
+dtime <- etime - stime
+benchmark[["read_json_input"]] <- unbox(paste(round(as.numeric(dtime), 4), attr(dtime, "units")))
 
 # import regression utilities
 source(paste0(input$binpath, "/utils/regression.utils.R"))
 
 # prepare data table
+stime <- Sys.time()
 dat <- prepareDataTable(input$data, input$independent)
+etime <- Sys.time()
+dtime <- etime - stime
+benchmark[["prepareDataTable"]] <- unbox(paste(round(as.numeric(dtime), 4), attr(dtime, "units")))
 
 
 ##################
 # BUILD FORMULAS #
 ##################
 
+stime <- Sys.time()
 formulas <- buildFormulas(input$outcome, input$independent)
+etime <- Sys.time()
+dtime <- etime - stime
+benchmark[["buildFormulas"]] <- unbox(paste(round(as.numeric(dtime), 4), attr(dtime, "units")))
 
+
+#save.image("~/test.RData")
+#stop("stop here")
 
 ##################
 # RUN REGRESSION #
 ##################
 
-# Run a separate regression analysis for each formula
-out <- list()
-for (i in 1:length(formulas)) {
-  formula <- formulas[[i]]
-  id <- formula$id
-  # extract columns from data table that will be used in the analysis
-  subdat <- dat[,c(formula$outcomeIds, formula$independentIds)]
-  # discard samples that have missing values for any variable
-  # NOTE: while regression functions (i.e. lm, glm, coxph) perform
-  # this step by default, computation of cox type III statistics will
-  # break if this step is not done prior to regression analysis.
-  fdat <- subdat[complete.cases(subdat),]
-  # run regression
-  results <- runRegression(input$regressionType, formula, fdat, input$outcome)
-  results$coefficients <- formatCoefficients(results$coefficients, results$res, input$regressionType)
-  results$type3 <- formatType3(results$type3)
-  out[[length(out)+1]] <- list("id" = unbox(id), "data" = results[names(results) != "res"])
-}
+# run a separate regression analysis for each formula
+# run the analyses in parallel using multiple cores
+stime <- Sys.time()
+cores <- detectCores()
+if (is.na(cores)) stop("unable to detect number of cores")
+reg_results <- mclapply(X = formulas, FUN = runRegression, regtype = input$regressionType, dat = dat, outcome = input$outcome, mc.cores = cores)
+etime <- Sys.time()
+dtime <- etime - stime
+benchmark[["runRegression"]] <- unbox(paste(round(as.numeric(dtime), 4), attr(dtime, "units")))
+
+out <- list(data = reg_results, benchmark = benchmark)
 
 
 ##################
@@ -127,4 +144,4 @@ for (i in 1:length(formulas)) {
 ##################
 
 # Export results as json to stdout
-cat(toJSON(out, digits = NA, na = "string"), file = "", sep = "")
+toJSON(out, digits = NA, na = "string")

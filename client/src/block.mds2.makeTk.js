@@ -1,5 +1,5 @@
 import { select as d3select, event as d3event } from 'd3-selection'
-import * as common from '../shared/common'
+import * as common from '#shared/common'
 import * as client from './client'
 import { init as init_legend } from './block.mds2.legend'
 import { may_setup_numerical_axis } from './block.mds2.vcf.numericaxis'
@@ -37,8 +37,18 @@ export async function makeTk(tk, block) {
 	if (tk.dslabel) {
 		// official dataset
 
-		tk.mds = block.genome.datasets[tk.dslabel]
-		if (!tk.mds) throw 'dataset not found for ' + tk.dslabel
+		const ds = block.genome.datasets[tk.dslabel]
+		if (!ds) throw 'dataset not found for ' + tk.dslabel
+
+		if (ds.mdsIsUninitiated) {
+			const d = await client.dofetch3(`getDataset?genome=${block.genome.name}&dsname=${ds.label}`)
+			if (d.error) throw d.error
+			if (!d.ds) throw 'ds missing'
+			Object.assign(ds, d.ds)
+			delete ds.mdsIsUninitiated
+		}
+
+		tk.mds = ds
 		if (!tk.mds.track) throw 'mds.track{} missing: dataset not configured for mds2 track'
 
 		copy_official_configs(tk)
