@@ -8,7 +8,7 @@
 	a lolliplot track
 */
 
-const basepath = '/auth/api/custom/proteinpaint'
+const basepath = '/'
 
 export function getLolliplotTrack() {
 	// host in gdc is just a relative url path,

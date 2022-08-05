@@ -1,7 +1,4 @@
-import React from 'react'
-import { findDOMNode } from 'react-dom'
-import { runproteinpaint } from '../app'
-import { getLolliplotTrack, getTrackByType } from './gdc.views'
+import { getLolliplotTrack, getTrackByType } from './gdc.views.js'
 
 export function getPpReact(getTrack) {
 	if (!React) throw `missing React module`
@@ -28,7 +25,7 @@ export function getPpReact(getTrack) {
 			// is the same as the last render
 			if (deepEqual(data, this.currentData)) return
 			this.currentData = data
-			const rootElem = findDOMNode(this)
+			const rootElem = ReactDOM.findDOMNode(this)
 			const pp_holder = rootElem.querySelector('.sja_root_holder')
 			if (pp_holder) pp_holder.remove()
 
@@ -95,4 +92,5 @@ export { getLolliplotTrack }
 export function getPpLolliplot() {
 	return getPpReact(getLolliplotTrack)
 }
+
 //export const PpTrack = getPpReact(getTrackByType)

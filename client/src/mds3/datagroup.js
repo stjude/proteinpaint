@@ -1,10 +1,29 @@
 import { gmmode, dtsnvindel, dtsv, dtfusionrna } from '../../shared/common'
 import * as coord from '../coord'
 
-/*
-method shared by skewer and numeric mode
+/* method shared by skewer and numeric mode
 
-each data group is:
+******** input ************
+list of mixed snvindel or sv/fusion
+
+snvindel is:
+{
+	dt = dtsnvindel
+	chr = str
+	pos = int
+}
+sv/fusion is:
+{
+	dt = dtsv/dtfusionrna
+	chr = str
+	pos = int
+	pairlstIdx = int
+	strand = +/-
+	mname = str
+}
+
+******** output ***********
+
 {
 	chr
 	pos
@@ -13,13 +32,17 @@ each data group is:
 }
 */
 
+// minimum #pixels per basepair, for which to group data points by bp position
+// if lower than this, means too zoomed out and will group by on-screen pixel position
 const minbpwidth = 4
 
 export function make_datagroup(tk, rawmlst, block) {
 	mlst_pretreat(rawmlst, tk, block)
-	// m.__x added
+	// m.__x is added to viewable data points
 
 	const x2mlst = new Map()
+	// k: m.__x, v: mlst
+
 	for (const m of rawmlst) {
 		if (m.__x == undefined) continue // dropped
 		if (!x2mlst.has(m.__x)) {
@@ -30,8 +53,7 @@ export function make_datagroup(tk, rawmlst, block) {
 	const datagroup = []
 	// by resolution
 	if (block.exonsf >= minbpwidth) {
-		// # pixel per nt is big enough
-		// group by each nt
+		// # pixel per nt is big enough, group by each nt
 		for (const [x, mlst] of x2mlst) {
 			datagroup.push({
 				chr: mlst[0].chr,
@@ -133,7 +155,10 @@ legacy function kept to add in new filters
 guard against bad data
 filter data by a systematic filter
 
-- calculate m.__x by mapping coord to view range
+for viewable data points, add following:
+.__x = view range x position
+.rnapos = rna position of block.usegm
+.aapos = aa position of block.usegm
 */
 function mlst_pretreat(rawmlst, tk, block) {
 	let nogenomicpos = 0,
@@ -198,172 +223,18 @@ function mlst_pretreat(rawmlst, tk, block) {
 function dsqueryresult_snvindelfusionitd(lst, tk, block) {
 	// legacy function, kept the same
 	for (const m of lst) {
-		if (m.dt == dtsnvindel) {
-			if (block.usegm) {
-				const t = coord.genomic2gm(m.pos, block.usegm)
-				m.rnapos = t.rnapos
-				m.aapos = t.aapos
-			}
-			continue
+		if (block.usegm) {
+			// m.pos must always be set
+			const t = coord.genomic2gm(m.pos, block.usegm)
+			m.rnapos = t.rnapos
+			m.aapos = t.aapos
 		}
+		if(m.dt==dtsnvindel) continue
 		if (m.dt == dtsv || m.dt == dtfusionrna) {
-			if (!m.pairlst) {
-				throw 'pairlst missing from sv/fusion'
-			}
-			// TODO following legacy code needs correction
-			if (block.usegm && m.dt == dtsv) {
-				/*
-				SV data correction to suit gene strand
-				do not look at strands
-				*/
-				if (m.pairlst.length == 1) {
-					// only works for single pair
-					const a = m.pairlst[0].a
-					const b = m.pairlst[0].b
-					if (a.chr != null && b.chr != null && a.chr == b.chr && a.position != null && b.position != null) {
-						// good to check
-						if (a.position < b.position) {
-							if (block.usegm.strand == '+') {
-								// no change
-								a.strand = '+'
-								b.strand = '+'
-							} else {
-								a.strand = '-'
-								b.strand = '-'
-								m.pairlst[0].a = b
-								m.pairlst[0].b = a
-							}
-						}
-					}
-				}
-			}
-			// XXX current data format doesnt work for genomic range query!!!
-			if (block.usegm && block.gmmode != gmmode.genomic) {
-				m.isoform = block.usegm.isoform
-				// gmmode, single datum over current gene
-				let nohit = true
-				for (let i = 0; i < m.pairlst.length; i++) {
-					const pair = m.pairlst[i]
-					// try to match with both isoform and name, for IGH, without isoform, but the querying "gene" can be IGH
-					if (block.usegm.isoform == (pair.a.isoform || pair.a.name)) {
-						m.useNterm = i == 0
-						m.chr = block.usegm.chr
-						m.strand = pair.a.strand
-						if (pair.a.position == undefined) {
-							if (pair.a.rnaposition == undefined) {
-								if (pair.a.codon == undefined) {
-									console.error('no position/rnaposition/codon available for ' + block.usegm.isoform)
-									break
-								} else {
-									m.pos = coord.aa2gmcoord(pair.a.codon, block.usegm)
-									pair.a.position = m.pos
-								}
-							} else {
-								m.pos = coord.rna2gmcoord(pair.a.rnaposition - 1, block.usegm)
-								if (m.pos == null) {
-									console.error('failed to convert rnaposition to genomic position: ' + pair.a.rnaposition)
-									break
-								}
-								pair.a.position = m.pos
-							}
-						} else {
-							m.pos = pair.a.position
-						}
-						const t = coord.genomic2gm(m.pos, block.usegm)
-						m.rnapos = t.rnapos
-						m.aapos = t.aapos
-						if (pair.a.codon) {
-							m.aapos = pair.a.codon
-						}
-						m.mname = pair.b.name
-						nohit = false
-						break
-					}
-					if (block.usegm.isoform == (pair.b.isoform || pair.b.name)) {
-						m.useNterm = false // always
-						m.chr = block.usegm.chr
-						m.strand = pair.b.strand
-						if (pair.b.position == undefined) {
-							if (pair.b.rnaposition == undefined) {
-								if (pair.b.codon == undefined) {
-									console.error('no position/rnaposition/codon available for ' + block.usegm.isoform)
-									break
-								} else {
-									m.pos = coord.aa2gmcoord(pair.b.codon, block.usegm)
-									pair.b.position = m.pos
-								}
-							} else {
-								m.pos = coord.rna2gmcoord(pair.b.rnaposition - 1, block.usegm)
-								if (m.pos == null) {
-									console.error('failed to convert rnaposition to genomic')
-									break
-								}
-								pair.b.position = m.pos
-							}
-						} else {
-							m.pos = pair.b.position
-						}
-						const t = coord.genomic2gm(m.pos, block.usegm)
-						m.rnapos = t.rnapos
-						m.aapos = t.aapos
-						if (pair.b.codon) {
-							m.aapos = pair.b.codon
-						}
-						m.mname = pair.a.name
-						nohit = false
-						break
-					}
-				}
-				if (nohit) {
-					console.error('sv/fusion isoform no match to gm isoform: ' + block.usegm.isoform)
-				}
+			if(m.pairlstIdx==0) {
+				m.useNterm=true
 			} else {
-				// genomic mode, one m for each breakend
-				for (const pair of m.pairlst) {
-					let ain = false,
-						bin = false
-					for (let i = block.startidx; i <= block.stopidx; i++) {
-						const r = block.rglst[i]
-						if (pair.a.chr == r.chr && pair.a.position >= r.start && pair.a.position <= r.stop) {
-							ain = true
-						}
-						if (pair.b.chr == r.chr && pair.b.position >= r.start && pair.b.position <= r.stop) {
-							bin = true
-						}
-					}
-					if (ain) {
-						const m2 = svduplicate(m)
-						const ma = pair.a
-						m2.chr = ma.chr
-						m2.strand = ma.strand
-						m2.useNterm = ma.strand == '+'
-						m2.pos = ma.pos || ma.position
-						m2.mname = pair.b.name || pair.b.chr
-						if (!Number.isFinite(m2.pos)) {
-							console.error('no genomic pos for breakend a')
-						} else if (!m2.chr) {
-							console.error('no chromosome for breakend a')
-						} else {
-							//tk.mlst.push(m2)
-						}
-					}
-					if (bin) {
-						const m2 = svduplicate(m)
-						const mb = pair.b
-						m2.chr = mb.chr
-						m2.strand = mb.strand
-						m2.useNterm = mb.strand == '+'
-						m2.pos = mb.pos || mb.position
-						m2.mname = pair.a.name || pair.a.chr
-						if (!Number.isFinite(m2.pos)) {
-							console.error('no genomic pos for breakend b')
-						} else if (!m2.chr) {
-							console.error('no chromosome for breakend b')
-						} else {
-							//tk.mlst.push(m2)
-						}
-					}
-				}
+				m.useNterm=false
 			}
 			continue
 		}

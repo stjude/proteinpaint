@@ -1,7 +1,7 @@
-import { dofetch, dofetch2, dofetch3, sayerror, tab_wait, appear } from '../src/client'
-import { newSandboxDiv } from '../dom/sandbox'
-import { addGeneSearchbox } from '../dom/genesearch'
-import { Menu } from '../dom/menu'
+import { dofetch, dofetch2, dofetch3, sayerror, tab_wait, appear } from '#src/client'
+import { newSandboxDiv } from '#dom/sandbox'
+import { addGeneSearchbox } from '#dom/genesearch'
+import { Menu } from '#dom/menu'
 import { debounce } from 'debounce'
 import { event, select, selectAll } from 'd3-selection'
 // js-only syntax highlighting for smallest bundle, see https://highlightjs.org/usage/
@@ -1135,7 +1135,7 @@ async function openDatasetSandbox(page_args, ds) {
 		callback: async div => {
 			//Creates search results as tracks, last to first
 			const result_div = allResults_div
-				// .insert('div', ':first-child')
+				.insert('div', ':first-child')
 				.style('max-width', '90vw')
 				.style('margin', '1vw')
 			result_div

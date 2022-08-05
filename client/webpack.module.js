@@ -22,19 +22,19 @@ module.exports = function(env = {}) {
 		mode: env.NODE_ENV ? env.NODE_ENV : 'production',
 		target: 'web',
 		entry: path.join(__dirname, './src/app.js'),
+		experiments: {
+			outputModule: true
+		},
 		output: {
-			path: path.join(__dirname, '../public/bin'),
-			publicPath: (env.url || '') + '/bin/',
-			filename: 'proteinpaint.js',
-			chunkLoadingGlobal: 'ppJsonp',
+			//path: path.join(__dirname, '../public/bin'),
+			//publicPath: (env.url || '') + '/bin/',
+			filename: 'app.js',
+			//chunkLoadingGlobal: 'ppJsonp',
 			// the library name exposed by this bundle
-			library: 'runproteinpaint',
-			// the exported value from the entry point file
-			// here the runproteinpaint() function will be used as exported by ./src/app.js
-			libraryExport: 'runproteinpaint',
-			// the target context to which the library is 'attached' or assigned
-			// e.g., window.runproteinpaint
-			libraryTarget: 'window'
+			library: {
+				//name: 'runproteinpaint',
+				type: 'module'
+			}
 		},
 		resolve: {
 			/* TODO: select polyfills instead of using node-polyfill-webpack-plugin

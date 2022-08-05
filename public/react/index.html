@@ -12,18 +12,20 @@
 		<script crossorigin src="https://unpkg.com/react@17/umd/react.production.min.js"></script>
 		<script crossorigin src="https://unpkg.com/react-dom@17/umd/react-dom.production.min.js"></script>
 		<script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>
-		<script src="/portal/bin/proteinpaint.js" charset="utf-8"></script>
+		<script src="/bin/proteinpaint.js" charset="utf-8"></script>
+		<script src="./gdc.views.js" type='module' charset="utf-8"></script>
+		<script src="./PpReact.js" type='module' charset="utf-8"></script>
 
 		<div id="aaa" style="margin: 10px"></div>
 		<div id="bbb" style="margin: 10px"></div>
-
-		<script></script>
-		<script type="text/babel">
-			const PpLolliplot = runproteinpaint.wrappers.getPpLolliplot()
-			ReactDOM.render(
-				<PpLolliplot basepath="http://localhost:3000" geneId="ENSG00000142208" />,
-				document.querySelector('#aaa')
-			)
-		</script>
-	</body>
+</script>
+<script type='module'>
+import { getPpLolliplot } from './PpReact.js'
+const PpLolliplot = getPpLolliplot()
+ReactDOM.render(
+	React.createElement(PpLolliplot, {}, null),
+	document.getElementById('aaa')
+)
+</script>
+</body>
 </html>

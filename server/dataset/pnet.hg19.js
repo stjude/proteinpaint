@@ -15,7 +15,9 @@ module.exports = function() {
 			db: {
 				file: 'files/hg19/pnet/clinical/db'
 			},
-			termdb: {}
+			termdb: {
+				allowedTermTypes: ['geneVariant']
+			}
 		}
 	}
 }

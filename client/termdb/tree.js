@@ -12,7 +12,8 @@ const cls_termdiv = 'termdiv',
 	cls_termchilddiv = 'termchilddiv',
 	cls_termbtn = 'termbtn',
 	cls_termlabel = 'termlabel',
-	cls_termloading = 'termloading'
+	cls_termloading = 'termloading',
+	cls_termcheck = 'termcheck'
 
 /*
 ******************** EXPORTED
@@ -65,21 +66,8 @@ class TdbTree {
 	}
 
 	init() {
-		this.dom = {}
-		if (!this.opts.submit_lst) {
-			this.dom.holder = this.opts.holder.append('div')
-		} else {
-			this.noSelectionPrompt = 'Select 1 or more terms'
-			this.dom.submitBtn = this.opts.holder
-				.append('div')
-				.style('text-align', 'center')
-				.style('margin', '10px 5px')
-				.append('button')
-				.property('disabled', true)
-				.text(this.noSelectionPrompt)
-				.on('click', () => this.opts.submit_lst([...this.selectedTerms]))
-			this.dom.holder = this.opts.holder.append('div')
-			this.selectedTerms = new Set()
+		this.dom = {
+			holder: this.opts.holder.append('div')
 		}
 	}
 
@@ -98,6 +86,7 @@ class TdbTree {
 			isVisible: !appState.submenu.term,
 			activeCohort: appState.activeCohort,
 			expandedTermIds: appState.tree.expandedTermIds,
+			selectedTerms: appState.selectedTerms,
 			termfilter: { filter },
 			usecase: appState.tree.usecase
 		}
@@ -289,11 +278,19 @@ function setRenderers(self) {
 			div.style('display', 'none')
 			return
 		}
+
+		const termIsDisabled = self.opts.disable_terms?.includes(term.id)
+		const uses = isUsableTerm(term, self.state.usecase)
+
 		div.style('display', '')
 		const isExpanded = self.state.expandedTermIds.includes(term.id)
 		div.select('.' + cls_termbtn).text(isExpanded ? '-' : '+')
 		// update other parts if needed, e.g. label
 		div.select('.' + cls_termchilddiv).style('display', isExpanded ? 'block' : 'none')
+
+		const isSelected = self.state.selectedTerms.find(t => t.name === term.name && t.type === term.type)
+		div.select('.' + cls_termlabel).style('background-color', !uses.has('plot') || termIsDisabled ? '' : isSelected ? 'rgba(255, 194, 10,0.5)' : '#cfe2f3')
+		div.select('.' + cls_termcheck).style('display', uses.has('plot') && isSelected && !termIsDisabled ? 'inline-block' : 'none')
 	}
 
 	self.addTerm = async function(term) {
@@ -317,6 +314,7 @@ function setRenderers(self) {
 				.on('click', self.toggleTerm)
 		}
 
+		const isSelected = self.state.selectedTerms.find(t => t.name === term.name && t.type === term.type)
 		const labeldiv = div
 			.append('div')
 			.attr('class', cls_termlabel)
@@ -329,6 +327,7 @@ function setRenderers(self) {
 		if (term.hashtmldetail) {
 			infoIcon_div = div.append('div').style('display', 'inline-block')
 		}
+
 		if (uses.size > 0) {
 			if (termIsDisabled) {
 				labeldiv
@@ -343,7 +342,7 @@ function setRenderers(self) {
 					.style('color', 'black')
 					.style('padding', '5px 8px')
 					.style('border-radius', '6px')
-					.style('background-color', '#cfe2f3')
+					.style('background-color', isSelected ? 'rgba(255, 194, 10,0.5)' : '#cfe2f3')
 					.style('margin', '1px 0px')
 					.style('cursor', 'default')
 					.on('click', () => {
@@ -352,19 +351,22 @@ function setRenderers(self) {
 						} else if (self.opts.click_term) {
 							self.opts.click_term(term)
 						} else if (self.opts.submit_lst) {
-							if (self.selectedTerms.has(term)) {
-								self.selectedTerms.delete(term)
-								labeldiv.style('background-color', '#cfe2f3')
-								selected_checkbox.style('display', 'none')
+							const i = self.state.selectedTerms.findIndex(t => t.name === term.name)
+							if (i == -1) {
+								self.app.dispatch({
+									type: 'app_refresh',
+									state: {
+										selectedTerms: [...self.state.selectedTerms, term]
+									}
+								})
 							} else {
-								self.selectedTerms.add(term)
-								labeldiv.style('background-color', 'rgba(255, 194, 10,0.5)')
-								selected_checkbox.style('display', 'inline-block')
+								const selectedTerms = self.state.selectedTerms.slice(0)
+								selectedTerms.splice(i, 1)
+								self.app.dispatch({
+									type: 'app_refresh',
+									state: { selectedTerms }
+								})
 							}
-							const n = self.selectedTerms.size
-							self.dom.submitBtn
-								.property('disabled', !n)
-								.text(!n ? self.noSelectionPrompt : `Submit ${n} term${n > 1 ? 's' : ''}`)
 						} else {
 							throw 'missing term click callback'
 						}
@@ -397,8 +399,9 @@ function setRenderers(self) {
 		if (self.opts.submit_lst) {
 			selected_checkbox = div
 				.append('div')
-				.style('display', 'none')
+				.attr('class', cls_termcheck)
 				.style('color', '#008000')
+				.style('display', isSelected ? 'inline-block' : 'none')
 				.html('&check;')
 		}
 

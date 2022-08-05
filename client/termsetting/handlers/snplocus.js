@@ -1,7 +1,7 @@
 import { event } from 'd3-selection'
 import { makeSnpSelect, mayRestrictAncestry } from './snplst'
-import { filterInit, getNormalRoot } from '../filter/filter'
-import { addGeneSearchbox } from '../dom/genesearch'
+import { filterInit, getNormalRoot } from '#filter'
+import { addGeneSearchbox } from '#dom/genesearch'
 
 /* 
 ***************** EXPORT

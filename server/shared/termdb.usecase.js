@@ -1,5 +1,13 @@
-const graphableTypes = new Set(['categorical', 'integer', 'float', 'condition', 'survival', 'snplst', 'snplocus'])
-
+export const graphableTypes = new Set([
+	'categorical',
+	'integer',
+	'float',
+	'condition',
+	'survival',
+	'snplst',
+	'snplocus',
+	'geneVariant'
+])
 /*
 	isUsableTerm() will
 	- centralize the "allowed term" logic
@@ -44,6 +52,7 @@ export function isUsableTerm(term, _usecase, ds) {
 	// default handling
 	switch (usecase.target) {
 		case 'barchart':
+			if (term.type == 'geneVariant') return uses
 			if (term.type && term.type !== 'survival') uses.add('plot')
 			if (hasNonSurvivalTermChild(child_types)) uses.add('branch')
 			return uses
@@ -90,7 +99,7 @@ export function isUsableTerm(term, _usecase, ds) {
 			if (usecase.detail === 'term2') {
 				if (term.type != 'survival') {
 					// do not allow overlaying one survival term over another
-					if (term.isleaf) uses.add('plot')
+					if (term.isleaf || term.type == 'geneVariant') uses.add('plot')
 					if (hasNonSurvivalTermChild(child_types)) uses.add('branch')
 				}
 				return uses
@@ -101,6 +110,10 @@ export function isUsableTerm(term, _usecase, ds) {
 				if (hasNonSurvivalTermChild(child_types)) uses.add('branch')
 				return uses
 			}
+
+			if (term.isleaf) uses.add('plot')
+			else uses.add('branch')
+			return uses
 
 		case 'regression':
 			if (usecase.detail == 'outcome') {

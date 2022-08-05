@@ -1,13 +1,16 @@
 const { stratinput } = require('../shared/tree')
 const gdc = require('./mds3.gdc')
 const { get_densityplot } = require('./mds3.densityPlot')
-const {ssmIdFieldsSeparator, mayAddSamplesFromVcfLine} =require('./mds3.init')
+const { ssmIdFieldsSeparator } = require('./mds3.init')
 const utils = require('./utils')
-
+const { dtfusionrna, dtsv } = require('../shared/common')
 
 /*
 ***************** exported
 variant2samples_getresult()
+	get_samples
+		queryServerFileBySsmid
+		queryServerFileByRglst
 get_crosstabCombinations()
 
 
@@ -50,25 +53,179 @@ async function get_samples(q, ds) {
 		return await gdc.getSamples_gdcapi(q, termidlst, ds)
 	}
 
-	/* tentative
-	from server-side files, q.ssm_id_lst can be multiple data types
+	/* from server-side files
+	action depends on details:
+	- file type (gz or db perhaps)
+	- data type (snv or sv)
+	- query by what (ssm id, region, or isoform)
 	*/
-	if(ds.queries.snvindel
-		&& ds.queries.snvindel.byrange
-		&& ds.queries.snvindel.byrange._tk) {
-		return await get_samples_vcf_byssmid(q, termidlst, ds.queries.snvindel.byrange._tk)
+
+	if (q.ssm_id_lst) {
+		return await queryServerFileBySsmid(q, termidlst, ds)
 	}
 
-	throw 'unknown query method for variant2samples'
+	if (q.rglst) {
+		return await queryServerFileByRglst(q, termidlst, ds)
+	}
+
+	throw 'unknown q{} option when querying server side files'
 }
 
-function get_termid2fields(termidlst, ds) {
-	const fields = []
-	for (const termid of termidlst) {
-		const term = ds.cohort.termdb.q.termjsonByOneid(termid)
-		fields.push(term.path)
+/*
+q.ssm_id_lst can be multiple data types
+the id string must be in format like chr.pos.etc.etc
+that contains chromsome position for querying snvindel or svfusion file
+thus can extract coordinate from  to query
+
+snvindel id has 4 fields, svfusion id has 6 fields, thus be able to differentiate
+*/
+async function queryServerFileBySsmid(q, termidlst, ds) {
+	let samples = [] // array can be modified by q.tid2value
+
+	for (const ssmid of q.ssm_id_lst.split(',')) {
+		const l = ssmid.split(ssmIdFieldsSeparator)
+
+		if (l.length == 4) {
+			if (!ds.queries.snvindel || !ds.queries.snvindel.byrange)
+				throw 'queries.snvindel.byrange missing when id has 4 fields'
+			const [chr, tmp, ref, alt] = l
+			const pos = Number(tmp)
+			if (Number.isNaN(pos)) throw 'no integer position for snvindel from ssm id'
+
+			// new param with rglst as the variant position, also inherit q.tid2value if provided
+			const param = Object.assign({}, q, { rglst: [{ chr, start: pos, stop: pos }] })
+
+			const mlst = await ds.queries.snvindel.byrange.get(param)
+			for (const m of mlst) {
+				if (m.pos != pos || m.ref != ref || m.alt != alt) continue
+				for (const s of m.samples) {
+					s.ssm_id = ssmid
+					samples.push(s)
+				}
+			}
+			continue
+		}
+
+		if (l.length == 6) {
+			if (!ds.queries.svfusion || !ds.queries.svfusion.byrange)
+				throw 'queries.svfusion.byrange missing when id has 6 fields'
+			const [_dt, chr, _pos, strand, _pi, mname] = l
+			const dt = Number(_dt)
+			if (dt != dtsv && dt != dtfusionrna) throw 'dt not sv/fusion'
+			const pos = Number(_pos)
+			if (Number.isNaN(pos)) throw 'position not integer'
+			const pairlstIdx = Number(_pi)
+			if (Number.isNaN(pairlstIdx)) throw 'pairlstIdx not integer'
+
+			// why has to stop=pos+1
+			const param = Object.assign({}, q, { rglst: [{ chr, start: pos, stop: pos + 1 }] })
+			const mlst = await ds.queries.svfusion.byrange.get(param)
+
+			for (const m of mlst) {
+				if (m.dt != dt || m.pos != pos || m.strand != strand || m.pairlstIdx != pairlstIdx || m.mname != mname) continue
+				for (const s of m.samples) {
+					// if this sample is already found from snvindel
+					const s2 = samples.find(i => i.sample_id == s.sample_id)
+					if (s2) {
+						// this sample is already found; record ssmid on this s2
+						if (s2.ssm_id_lst) {
+							s2.ssm_id_lst.push(ssmid)
+						} else {
+							s2.ssm_id_lst = [s2.ssm_id, ssmid]
+							delete s2.ssm_id
+						}
+					} else {
+						// this sample is not found yet
+						s.ssm_id = ssmid
+						samples.push(s)
+					}
+				}
+			}
+			continue
+		}
+		throw 'unknown format of ssm id'
 	}
-	return fields
+
+	if (q.tid2value) {
+		// this should not be needed once using `bcf query -s sample1,sample2,...` based on tid2value{}
+		// filter sample to only keep those matching given tid=value pairs
+		const lst = [] // samples meeting filter
+		for (const s of samples) {
+			let skip = false
+			for (const tid in q.tid2value) {
+				const v = ds.cohort.termdb.q.getSample2value(tid, s.sample_id)
+				if (v != q.tid2value[tid]) {
+					skip = true
+					break
+				}
+			}
+			if (skip) continue
+			lst.push(s)
+		}
+		samples = lst
+	}
+
+	if (termidlst && termidlst.length) {
+		// append term values to each sample
+		for (const s of samples) {
+			for (const tid of termidlst) {
+				s[tid] = ds.cohort.termdb.q.getSample2value(tid, s.sample_id)
+			}
+		}
+	}
+
+	return samples
+}
+
+/*
+get list of samples that harbor any variant in rglst[]
+*/
+async function queryServerFileByRglst(q, termidlst, ds) {
+	const samples = []
+
+	if (ds.queries.snvindel) {
+		const mlst = await ds.queries.snvindel.byrange.get(q)
+		for (const m of mlst) {
+			for (const s of m.samples) {
+				s.ssm_id = m.ssm_id
+				samples.push(s)
+			}
+		}
+	}
+	if (ds.queries.svfusion) {
+		const mlst = await ds.queries.svfusion.byrange.get(q)
+
+		for (const m of mlst) {
+			for (const s of m.samples) {
+				// if this sample is already found from snvindel
+				const s2 = samples.find(i => i.sample_id == s.sample_id)
+				if (s2) {
+					// this sample is already found; record ssmid on this s2
+					if (s2.ssm_id_lst) {
+						s2.ssm_id_lst.push(m.ssm_id)
+					} else {
+						s2.ssm_id_lst = [s2.ssm_id, m.ssm_id]
+						delete s2.ssm_id
+					}
+				} else {
+					// this sample is not found yet
+					s.ssm_id = m.ssm_id
+					samples.push(s)
+				}
+			}
+		}
+	}
+
+	if (termidlst && termidlst.length) {
+		// append term values to each sample
+		for (const s of samples) {
+			for (const tid of termidlst) {
+				s[tid] = ds.cohort.termdb.q.getSample2value(tid, s.sample_id)
+			}
+		}
+	}
+
+	return samples
 }
 
 async function make_sunburst(samples, ds, q) {
@@ -159,6 +316,7 @@ async function make_summary(samples, ds, q) {
 			const density_data = await get_densityplot(term, samples)
 			entries.push({
 				termid: term.id,
+				termname: term.name,
 				density_data
 			})
 		} else {
@@ -326,36 +484,4 @@ export async function get_crosstabCombinations(termidlst, ds, q, nodes) {
 		}
 	}
 	return combinations
-}
-
-async function get_samples_vcf_byssmid(q, termidlst, _tk) {
-	const samples = []
-	for(const ssmId of q.ssm_id_lst.split(',')) {
-		// chr.pos.ref.alt
-		const ssmFields = ssmId.split(ssmIdFieldsSeparator)
-		if(ssmFields.length!=4) throw 'ssmid not 4 fields'
-		const pos = Number(ssmFields[1])
-		if(Number.isNaN(pos)) throw 'ssmid position not integer'
-		await utils.get_lines_bigfile({
-			args: [
-				_tk.file || _tk.url,
-				(_tk.nochr ? ssmFields[0].replace('chr', '') : ssmFields[0]) + ':' + pos + '-' + (pos+1)
-			],
-			dir: _tk.dir,
-			callback: line => {
-				const l = line.split('\t')
-				if(l[1]!=ssmFields[1] || l[3]!=ssmFields[2] || l[4]!=ssmFields[3]) {
-					// not matching with this ssm
-					return
-				}
-				const m = {}
-				mayAddSamplesFromVcfLine( {_tk}, m, l, q.get=='samples' )
-				if(!m.samples) return
-				for(const sample of m.samples) {
-					samples.push(sample)
-				}
-			}
-		})
-	}
-	return samples
 }

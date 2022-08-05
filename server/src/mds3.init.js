@@ -1,18 +1,31 @@
 const gdc = require('./mds3.gdc')
+const fs = require('fs')
+const path = require('path')
 const { initGDCdictionary } = require('./termdb.gdc')
 const { variant2samples_getresult } = require('./mds3.variant2samples')
 const utils = require('./utils')
 const compute_mclass = require('./termdb.snp').compute_mclass
-const path = require('path')
 const serverconfig = require('./serverconfig')
+const { dtfusionrna, dtsv, mclassfusionrna, mclasssv } = require('../shared/common')
 
 /*
 ********************** EXPORTED
 init
 client_copy
-snvindelVcfByRangeGetter
-mayAddSamplesFromVcfLine
+	copy_queries
 ********************** INTERNAL
+validate_termdb
+	initTermdb_termsAndFile
+		loadAnnotationFile
+		makeTermdbApi_inMemoryData
+validate_query_snvindel
+	snvindelByRangeGetter_bcf
+		mayLimitSamples
+		addSamplesFromBcfLine
+			vcfFormat2sample
+validate_query_svfusion
+	svfusionByRangeGetter_file
+validate_variant2samples
 */
 
 // in case chr name may contain '.', can change to __
@@ -22,9 +35,12 @@ export async function init(ds, genome, _servconfig) {
 	if (!ds.queries) throw 'ds.queries{} missing'
 	// must validate termdb first
 	await validate_termdb(ds)
+
 	// must validate snvindel query before variant2sample
-	// as vcf header must be parsed to supply samples for v2s
+	// as vcf header must be parsed to supply samples for variant2samples
 	await validate_query_snvindel(ds, genome)
+	await validate_query_svfusion(ds, genome)
+
 	validate_variant2samples(ds)
 	validate_ssm2canonicalisoform(ds)
 
@@ -86,12 +102,9 @@ async function validate_termdb(ds) {
 			throw 'unknown method to initiate dictionary'
 		}
 	} else if (tdb.terms) {
-		// flat list of terms
-		for (const t of tdb.terms) {
-			if (!t.id) throw 'id missing from a term'
-			if (!t.fields) throw '.fields[] missing from a term'
-			if (!Array.isArray(t.fields)) throw '.fields[] not an array'
-		}
+		// array of terms, directly coded up in js file
+		// also need tdb.annotationFile
+		await initTermdb_termsAndFile(ds)
 	} else {
 		throw 'unknown source of termdb vocabulary'
 	}
@@ -127,6 +140,162 @@ async function validate_termdb(ds) {
 	}
 }
 
+async function initTermdb_termsAndFile(ds) {
+	/* requires ds.termdb.terms[],
+	and ds.termdb.annotationFile = 'path to server-side tabular text file of sample annotation for these terms'
+	generate termdb api methods at ds.cohort.termdb.q{}
+
+	file:
+	sample \t term1 \t term2 \t ...
+	aaa    \t v1    \t v2    \t ...
+	bbb    \t v3    \t v4    \t ...
+
+	1. first line must be header, each field is term id
+	2. first column must be sample id
+	*/
+	const terms = ds.termdb.terms
+	for (const t of terms) {
+		if (!t.id) throw 'id missing from a term'
+		if (!t.name) t.name = t.id
+		if (t.type == 'categorical') {
+			if (!t.values) {
+				// while reading file, missing categories are filled into values{}
+				t.values = {}
+			}
+		} else if (t.type == 'integer' || t.type == 'float') {
+		} else {
+			throw 'invalid term type of ' + t.id
+		}
+	}
+	if (!ds.termdb.annotationFile) throw 'termdb.annotationFile missing when .terms[] used'
+
+	const annotations = await loadAnnotationFile(ds)
+	// k: sample id
+	// v: map{}, k: term id, v: value
+
+	ds.cohort.termdb.q = makeTermdbApi_inMemoryData(terms, annotations)
+}
+
+async function loadAnnotationFile(ds) {
+	const lines = (await fs.promises.readFile(path.join(serverconfig.tpmasterdir, ds.termdb.annotationFile), {
+		encoding: 'utf8'
+	}))
+		.trim()
+		.split('\n')
+	const hterms = [] // array of term objs by order of file columns
+	const headerfields = lines[0].split('\t')
+	for (let i = 1; i < headerfields.length; i++) {
+		const tid = headerfields[i]
+		if (!tid) throw `blank field at column ${i + 1} in file header`
+		const t = ds.termdb.terms.find(j => j.id == tid)
+		if (!t) throw `header field is not a term id: ${tid}`
+		hterms.push(t)
+	}
+
+	const annotations = new Map()
+	// k: sample id
+	// v: map{}, k: term id, v: value
+
+	for (let i = 1; i < lines.length; i++) {
+		const l = lines[i].split('\t')
+		const sample_id = l[0]
+		if (!sample_id) throw `blank sample id at line ${i + 1}`
+		if (annotations.has(sample_id)) throw `duplicate sample id: ${sample_id}`
+		annotations.set(sample_id, new Map())
+		for (const [j, term] of hterms.entries()) {
+			const v = l[j + 1]
+			if (!v) {
+				// blank, no value for this term
+				continue
+			}
+			if (term.type == 'categorical') {
+				annotations.get(sample_id).set(term.id, v)
+				if (!(v in term.values)) {
+					// auto add
+					term.values[v] = { label: v }
+				}
+			} else if (term.type == 'float') {
+				const n = Number(v)
+				if (Number.isNaN(n)) throw `value=${v} not number for type=float, term=${term.id}, line=${i + 1}`
+				annotations.get(sample_id).set(term.id, n)
+			} else if (term.type == 'integer') {
+				const n = Number(v)
+				if (Number.isInteger(n)) throw `value=${v} not integer for type=integer, term=${term.id}, line=${i + 1}`
+				annotations.get(sample_id).set(term.id, n)
+			} else {
+				throw 'unknown term type'
+			}
+		}
+	}
+	return annotations
+}
+
+/*
+terms[] list of term objects
+annotations{}
+	k=sample id
+	v=map
+		k=term id
+		v=value
+*/
+function makeTermdbApi_inMemoryData(terms, annotations) {
+	const q = {}
+	q.getSample2value = (termid, sample_id = undefined) => {
+		if (sample_id != undefined) {
+			if (!annotations.has(sample_id)) return
+			return annotations.get(sample_id).get(termid)
+		}
+		const lst = []
+		for (const [s, o] of annotations) {
+			if (o.has(termid)) lst.push({ sample: s, value: o.get(termid) })
+		}
+		return lst
+	}
+	q.getRootTerms = async (vocab, treeFilter = null) => {
+		const roots = []
+		for (const t of terms) {
+			if (t.parent_id == undefined) roots.push(JSON.parse(JSON.stringify(t)))
+		}
+		return roots
+	}
+
+	q.getTermChildren = async (id, cohortValues = null, treeFilter = null) => {
+		// find terms which have term.parent_id as input id
+		const lst = []
+		for (const t of terms) {
+			if (t.parent_id == id) lst.push(JSON.parse(JSON.stringify(t)))
+		}
+		return lst
+	}
+
+	q.findTermByName = async (searchStr, limit = null, vocab, treeFilter = null, usecase = null) => {
+		searchStr = searchStr.toLowerCase() // convert to lowercase
+		// find terms that have term.id containing search string
+		const lst = []
+		for (const t of terms) {
+			//if (usecase && !isUsableTerm(term, usecase)) continue
+			if (t.id.toLowerCase().includes(searchStr)) lst.push(JSON.parse(JSON.stringify(t)))
+		}
+		return lst
+	}
+
+	q.getAncestorIDs = id => {
+		return []
+	}
+	q.getAncestorNames = q.getAncestorIDs
+
+	q.termjsonByOneid = id => {
+		const t = terms.find(i => i.id.toLowerCase() == id.toLowerCase())
+		if (t) return JSON.parse(JSON.stringify(t))
+		return null
+	}
+
+	q.getSupportedChartTypes = () => {
+		return ['barchart']
+	}
+	return q
+}
+
 function validate_variant2samples(ds) {
 	const vs = ds.variant2samples
 	if (!vs) return
@@ -149,7 +318,8 @@ function validate_variant2samples(ds) {
 		if (vs.sunburst_ids.length == 0) throw '.sunburst_ids[] empty array from variant2samples'
 		if (!ds.termdb) throw 'ds.termdb missing when variant2samples.sunburst_ids is in use'
 		for (const id of vs.sunburst_ids) {
-			if (!ds.cohort.termdb.q.termjsonByOneid(id)) throw 'term not found for an id of variant2samples.sunburst_ids: ' + id
+			if (!ds.cohort.termdb.q.termjsonByOneid(id))
+				throw 'term not found for an id of variant2samples.sunburst_ids: ' + id
 		}
 	}
 
@@ -159,19 +329,19 @@ function validate_variant2samples(ds) {
 		// look for server-side vcf/bcf/tabix file
 		// file header should already been parsed and samples obtain if any
 		let hasSamples = false
-		if(ds.queries.snvindel) {
+		if (ds.queries.snvindel) {
 			// has snvindel
-			if(ds.queries.snvindel.byrange) {
-				if(ds.queries.snvindel.byrange._tk) {
-					if(ds.queries.snvindel.byrange._tk.samples) {
+			if (ds.queries.snvindel.byrange) {
+				if (ds.queries.snvindel.byrange._tk) {
+					if (ds.queries.snvindel.byrange._tk.samples) {
 						// this file has samples
-						hasSamples=true
+						hasSamples = true
 					}
 				}
 			}
 			// expand later
 		}
-		if(!hasSamples) throw 'cannot find a sample source from ds.queries{}'
+		if (!hasSamples) throw 'cannot find a sample source from ds.queries{}'
 	}
 
 	vs.get = async q => {
@@ -223,13 +393,17 @@ async function validate_query_snvindel(ds, genome) {
 		if (!q.url.base) throw '.snvindel.url.base missing'
 		if (!q.url.key) throw '.snvindel.url.key missing'
 	}
+
+	if (!q.byisoform && !q.byrange) throw 'byisoform and byrange are both missing on queries.snvindel'
 	if (q.byrange) {
 		if (q.byrange.gdcapi) {
 			gdc.validate_query_snvindel_byrange(ds)
-		} else if (q.byrange.vcffile) {
-			q.byrange.vcffile = path.join(serverconfig.tpmasterdir, q.byrange.vcffile)
-			q.byrange._tk = { file: q.byrange.vcffile }
-			q.byrange.get = await snvindelVcfByRangeGetter(ds, genome)
+			// q.byrange.get() added
+		} else if (q.byrange.bcffile) {
+			q.byrange.bcffile = path.join(serverconfig.tpmasterdir, q.byrange.bcffile)
+			q.byrange._tk = { file: q.byrange.bcffile }
+			q.byrange.get = await snvindelByRangeGetter_bcf(ds, genome)
+			console.log(q.byrange._tk.samples.length, 'samples from snvindel.byrange.bcffile of ' + ds.label)
 		} else {
 			throw 'unknown query method for queries.snvindel.byrange'
 		}
@@ -237,8 +411,8 @@ async function validate_query_snvindel(ds, genome) {
 
 	if (q.byisoform) {
 		if (q.byisoform.gdcapi) {
-			//gdc.validate_query_snvindel_byisoform(ds) // tandem rest apis
 			gdc.validate_query_snvindel_byisoform(ds)
+			// q.byisoform.get() added
 		} else {
 			throw 'unknown query method for queries.snvindel.byisoform'
 		}
@@ -274,90 +448,156 @@ function may_add_refseq2ensembl(ds, genome) {
 
 /* generate getter as ds.queries.snvindel.byrange.get()
 
-usage scenario:
-1. to initiate official dataset
-2. to make temp ds{} on the fly when querying a custom track
+called at two places:
+1. to initiate official dataset, in this script
+2. to make temp ds{} on the fly when querying a custom track, in mds3.load.js
 
-get(param{}):
-.rglst=[ {chr, start, stop} ]
+getter input:
+.rglst=[ {chr, start, stop} ] (required)
+.tid2value = { termid1:v1, termid2:v2, ...} (optional, to restrict samples)
 
-returns array of variants
+getter returns:
+array of variants
+if samples are available, attaches array of sample ids to each variant
+as .samples=[ {sample_id} ]
+TODO change to bcf
 */
-export async function snvindelVcfByRangeGetter(ds, genome) {
+export async function snvindelByRangeGetter_bcf(ds, genome) {
 	const q = ds.queries.snvindel.byrange
 	/* q{}
 	._tk={}
-		.file=str
+		.file= absolute path to bcf file
 		.url, .indexURL
 		.dir=str
 		.nochr=true
 		.indexURL
 		.info={}
-		.format={
-			ID: {
+			<ID>: {}
+				ID: 'CSQ',
+				Number: '.',
+				Type: 'String',
+				Description: 'Cons
+		.format={} // null if no format
+			<ID>: {}
 				ID: 'dna_assay',
 				Number: '1',
 				Type: 'String',
 				Description: '...'
-	  		}
-		}
 		.samples=[ {name:str}, ... ] // blank array if vcf has no samples
 	.
 	*/
-	await utils.init_one_vcf(q._tk, genome)
-	// tk{ dir, info, format, samples, nochr }
-	if (q._tk.samples.length && !q._tk.format) {
-		throw 'vcf file has samples but no FORMAT'
-	}
-	if(q._tk.format) {
-		for(const id in q._tk.format) {
-			if(id=='GT') {
+
+	await utils.init_one_vcf(q._tk, genome, true) // "true" to indicate file is bcf but not vcf
+
+	if (q._tk.samples.length > 0 && !q._tk.format) throw 'bcf file has samples but no FORMAT'
+	if (q._tk.format && q._tk.samples.length == 0) throw 'bcf file has FORMAT but no samples'
+	if (q._tk.format) {
+		for (const id in q._tk.format) {
+			if (id == 'GT') {
+				// may not need with bcftools
 				q._tk.format.isGT = true
 			}
 		}
 	}
 
 	return async param => {
-		const variants = [] // to be returned
-		for (const r of param.rglst) {
-			await utils.get_lines_bigfile({
-				args: [
-					q._tk.file || q._tk.url,
-					(q._tk.nochr ? r.chr.replace('chr', '') : r.chr) + ':' + r.start + '-' + r.stop
-				],
-				dir: q._tk.dir,
-				callback: line => {
-					const l = line.split('\t')
-					// [9] for samples
-					const refallele = l[3]
-					const altalleles = l[4].split(',')
-					const m0 = {} // temp obj
-					compute_mclass(
-						q._tk,
-						refallele,
-						altalleles,
-						m0,
-						l[7], // info str
-						l[2] // vcf line ID
-					)
-					// make a m{} for every alt allele
-					for (const alt in m0.alt2csq) {
-						const m = m0.alt2csq[alt]
-						m.chr = r.chr
-						m.pos = Number(l[1])
-						m.ssm_id = [m.chr, m.pos, m.ref, m.alt].join(ssmIdFieldsSeparator)
-						variants.push(m)
-						mayAddSamplesFromVcfLine(q, m, l)
-					}
-				}
-			})
+		if (!Array.isArray(param.rglst)) throw 'q.rglst[] is not array'
+		if (param.rglst.length == 0) throw 'q.rglst[] blank array'
+
+		const bcfArgs = [
+			'query',
+			q._tk.file || q._tk.url,
+			'-r',
+			param.rglst.map(r => (q._tk.nochr ? r.chr.replace('chr', '') : r.chr) + ':' + r.start + '-' + r.stop).join(','),
+			'-f',
+			'%ID\t%CHROM\t%POS\t%REF\t%ALT\t%INFO\t%FORMAT\n'
+		]
+
+		const limitSamples = mayLimitSamples(param, q._tk.samples, ds)
+		if (limitSamples) {
+			bcfArgs.push('-s', limitSamples.map(i => i.name).join(','))
 		}
+
+		const variants = []
+
+		await utils.get_lines_bigfile({
+			isbcf: true,
+			args: bcfArgs,
+			dir: q._tk.dir,
+			callback: line => {
+				const l = line.split('\t')
+				const id = l[0],
+					chr = l[1],
+					pos = Number(l[2]),
+					refallele = l[3],
+					altalleles = l[4].split(','),
+					infoStr = l[5]
+				// [6] is format fields, [7 and on] for samples
+
+				const m0 = {} // temp obj, modified by compute_mclass()
+				compute_mclass(q._tk, refallele, altalleles, m0, infoStr, id)
+				// make a m{} for every alt allele
+				for (const alt in m0.alt2csq) {
+					const m = m0.alt2csq[alt]
+					m.chr = (q._tk.nochr ? 'chr' : '') + chr
+					m.pos = pos
+					m.ssm_id = [m.chr, m.pos, m.ref, m.alt].join(ssmIdFieldsSeparator)
+
+					if (q._tk.samples && q._tk.samples.length) {
+						/* vcf file has sample, must find out samples harboring this variant
+						TODO determine when to set addFormatValues=true
+						so to attach format fields to each sample
+						*/
+						addSamplesFromBcfLine(q, m, l, false, ds, limitSamples)
+						if (!m.samples) {
+							// no sample found for this variant, when vcf has samples
+							// can be due to sample filtering, thus must skip this variant
+							continue
+						}
+					}
+
+					// acceptable variant
+					variants.push(m)
+				}
+			}
+		})
 		return variants
 	}
 }
 
-/* tentative, subject to change
+/*
+input:
+param={}
+	.tid2value = { term1id: v1, term2id:v2, ... }
+	if present, return list of samples matching the given k/v pairs, assuming AND
+	later to replace with filter
+allSamples = [ {name}, ... ] array of parsed samples from a bcf file header
+ds={}
 
+output:
+array of {name}, same elements from allSamples, null if not filtering
+*/
+function mayLimitSamples(param, allSamples, ds) {
+	if (!allSamples || allSamples.length == 0) return null // no samples from this bcf file
+	if (!param.tid2value) return null // no limit, use all samples
+	if (typeof param.tid2value != 'object') throw 'q.tid2value{} not object'
+	const limitSamples = []
+	for (const s of allSamples) {
+		let skip = false
+		for (const tid in param.tid2value) {
+			const v = ds.cohort.termdb.q.getSample2value(tid, s.name)
+			if (v != param.tid2value[tid]) {
+				skip = true
+				break
+			}
+		}
+		if (skip) continue
+		limitSamples.push(s)
+	}
+	return limitSamples
+}
+
+/* 
 usage:
 call at snvindel.byrange.get() to assign .samples[] to each m for counting total number of unique samples
 call at variant2samples.get() to get list of samples
@@ -374,19 +614,23 @@ l=[]
 addFormatValues=true
 	if true, k:v for format fields are added to each sample of m.samples[]
 	set to false for counting samples, or doing sample summary
+ds={}
+	the server-side dataset obj
+limitSamples=[ {name} ]
+	if bcf query is limiting on this sample set. if so the output is only based on these samples
+	otherwise output will have all samples from the bcf file
 */
-export function mayAddSamplesFromVcfLine(q, m, l, addFormatValues) {
-	if (!q._tk.samples || q._tk.samples.length == 0) {
-		// vcf file has no samples
+function addSamplesFromBcfLine(q, m, l, addFormatValues, ds, limitSamples) {
+	// l[6] is FORMAT, l[7] is first sample
+	const format_idx = 6
+	const firstSample_idx = 7
+
+	if (!l[format_idx] || l[format_idx] == '.') {
+		// this variant has 0 format fields??
 		return
 	}
-	// l[8] is FORMAT, l[9] is first sample
-	if (!l[8] || l[8] == '.') {
-		// no format field
-		return
-	}
-	const formatlst = [] // list of format object from q._tk.format{}, by the order of l[8]
-	for (const s of l[8].split(':')) {
+	const formatlst = [] // list of format object from q._tk.format{}, by the order of l[7]
+	for (const s of l[format_idx].split(':')) {
 		const f = q._tk.format[s]
 		if (f) {
 			// a valid format field
@@ -396,15 +640,15 @@ export function mayAddSamplesFromVcfLine(q, m, l, addFormatValues) {
 		}
 	}
 	const samples = []
-	for (const [i, sampleHeaderObj] of q._tk.samples.entries()) {
-		const v = l[i + 9]
+	for (const [i, sampleHeaderObj] of (limitSamples || q._tk.samples).entries()) {
+		const v = l[i + firstSample_idx]
 		if (!v || v == '.') {
 			// no value for this sample
 			continue
 		}
 		const vlst = v.split(':')
 		const sampleObj = vcfFormat2sample(vlst, formatlst, sampleHeaderObj, addFormatValues)
-		if(sampleObj) {
+		if (sampleObj) {
 			// this sample is annotated with this variant
 			samples.push(sampleObj)
 		}
@@ -412,6 +656,11 @@ export function mayAddSamplesFromVcfLine(q, m, l, addFormatValues) {
 	if (samples.length) m.samples = samples
 }
 
+/*
+parse format value for a sample and decide if the sample harbor the variant
+if so, return sample obj
+otherwise, return null
+*/
 function vcfFormat2sample(vlst, formatlst, sampleHeaderObj, addFormatValues) {
 	const sampleObj = {
 		sample_id: sampleHeaderObj.name
@@ -428,7 +677,7 @@ function vcfFormat2sample(vlst, formatlst, sampleHeaderObj, addFormatValues) {
 				continue
 			}
 			// has gt value
-			if(addFormatValues) {
+			if (addFormatValues) {
 				sampleObj.GT = fv
 			} else {
 				// no need to add any format fields, only need to return sample id for counting
@@ -437,10 +686,10 @@ function vcfFormat2sample(vlst, formatlst, sampleHeaderObj, addFormatValues) {
 		} else {
 			/* has value for a non-GT field
 			indicating the variant is annotated to this sample
-			irrespective of what this format field is
+			irrespective of what this field is
 			later may check by meanings of each format field
 			*/
-			if(addFormatValues) {
+			if (addFormatValues) {
 				sampleObj[format.ID] = fv
 			} else {
 				// no need to add field, just return
@@ -448,8 +697,167 @@ function vcfFormat2sample(vlst, formatlst, sampleHeaderObj, addFormatValues) {
 			}
 		}
 	}
-	if(Object.keys(sampleObj).length==1) {
+	if (Object.keys(sampleObj).length == 1) {
 		return null
 	}
 	return sampleObj
+}
+
+async function validate_query_svfusion(ds, genome) {
+	const q = ds.queries.svfusion
+	if (!q) return
+	if (!q.byrange) throw 'byrange missing from queries.svfusion'
+	if (q.byrange) {
+		if (q.byrange.file) {
+			q.byrange.file = path.join(serverconfig.tpmasterdir, q.byrange.file)
+			q.byrange.get = await svfusionByRangeGetter_file(ds, genome)
+		} else {
+			throw 'unknown query method for svfusion.byrange'
+		}
+	}
+}
+
+/*
+getter input:
+.rglst=[ { chr, start, stop} ]
+.tid2value, same as in bcf
+
+getter returns:
+list of svfusion events,
+events are partially grouped
+represented as { dt, chr, pos, strand, pairlstIdx, mname, samples:[] }
+object attributes (except samples) are differentiators, enough to identify events on a gene
+*/
+export async function svfusionByRangeGetter_file(ds, genome) {
+	const q = ds.queries.svfusion.byrange
+	if (q.file) {
+		await utils.validate_tabixfile(q.file)
+	} else if (q.url) {
+		q.dir = await utils.cache_index(q.url, q.indexURL)
+	} else {
+		throw 'file and url both missing on svfusion.byrange{}'
+	}
+	q.nochr = await utils.tabix_is_nochr(q.file || q.url, null, genome)
+	return async param => {
+		if (!Array.isArray(param.rglst)) throw 'q.rglst[] is not array'
+		if (param.rglst.length == 0) throw 'q.rglst[] blank array'
+
+		const key2variants = new Map()
+		/*
+		key: key fields joined into a string
+		value: list of events described by the key
+		key fields include:
+		- dt sv/fusion
+		- chr of current breakpoint
+		- pos of current breakpoint
+		- strand of current breakpoint
+		- array index in pairlst[]
+		- partner gene name(s)
+		*/
+
+		for (const r of param.rglst) {
+			await utils.get_lines_bigfile({
+				args: [q.file || q.url, (q.nochr ? r.chr.replace('chr', '') : r.chr) + ':' + r.start + '-' + r.stop],
+				dir: q.dir,
+				callback: line => {
+					const l = line.split('\t')
+					const pos = Number(l[1])
+					let j
+					try {
+						j = JSON.parse(l[3])
+					} catch (e) {
+						//console.log('svfusion json err')
+						return
+					}
+					if (j.dt != dtfusionrna && j.dt != dtsv) {
+						// not fusion or sv
+						//console.log('svfusion invalid dt')
+						return
+					}
+
+					if (j.sample && param.tid2value) {
+						// to filter sample
+						for (const tid in param.tid2value) {
+							const v = ds.cohort.termdb.q.getSample2value(tid, j.sample)
+							if (v != param.tid2value[tid]) {
+								// this sample is no match, skip this event
+								return
+							}
+						}
+					}
+
+					// collect key fields
+					let pairlstIdx, mname, strand
+					// later may add pairlstLength to support fusion events with more than 2 genes
+
+					// collect initial pairlst to add to key2variants{}, for showing svgraph
+					let pairlst
+
+					/* two types of possible file formats
+					1. {chrA, posA, chrB, posB, strandA, strandB}
+						legacy format used for mds, hardcoded for 2-gene events
+					2. {pairlst:[ {a,b}, {a,b}, ... ]}
+						new format that can support events with more than 2 genes
+						pairlst.length=1 for 2-gene event
+						pairlst.length=2 for 3-gene event, where lst[0].b and lst[1].a are on the same gene
+					*/
+					if (j.chrA) {
+						// chrA given, current chr:pos is on 3'
+						pairlstIdx = 1 // as using C-term of this gene
+						mname = j.geneA || j.chrA
+						strand = j.strandA
+						//
+						pairlst = [
+							{
+								a: { chr: j.chrA, pos: j.posA, strand: j.strandA, name: j.geneA },
+								b: { chr: r.chr, pos, strand: j.strandB, name: j.geneB }
+							}
+						]
+					} else if (j.chrB) {
+						// chrB given, current chr:pos is on 5'
+						pairlstIdx = 0 // as using N-term of this gene
+						mname = j.geneB || j.chrB
+						strand = j.strandB
+						//
+						pairlst = [
+							{
+								a: { chr: r.chr, pos, strand: j.strandA, name: j.geneA },
+								b: { chr: j.chrB, pos: j.posB, strand: j.strandB, name: j.geneB }
+							}
+						]
+					} else if (j.pairlst) {
+						// todo: support pairlst=[{chr,pos}, {chr,pos}, ...]
+						pairlst = j.pairlst
+						const idx = j.pairlst.findIndex(i => i.chr == chr && i.pos == pos)
+						if (idx == -1) throw 'current point missing from pairlst'
+						pairlstIdx = idx
+						// todo mname as joining names of rest of pairlst points
+					} else {
+						throw 'missing chrA and chrB'
+					}
+
+					const ssm_id = [j.dt, r.chr, pos, strand, pairlstIdx, mname].join(ssmIdFieldsSeparator)
+
+					if (!key2variants.has(ssm_id)) {
+						key2variants.set(ssm_id, {
+							ssm_id,
+							dt: j.dt,
+							class: j.dt == dtsv ? mclasssv : mclassfusionrna,
+							chr: r.chr,
+							pos,
+							strand,
+							pairlstIdx,
+							mname,
+							pairlst, // if this key corresponds multiple events, add initial pairlst to allow showing svgraph without additional query to get other breakpoints
+							samples: []
+						})
+					}
+					if (j.sample) {
+						key2variants.get(ssm_id).samples.push({ sample_id: j.sample })
+					}
+				}
+			})
+		}
+		return [...key2variants.values()]
+	}
 }

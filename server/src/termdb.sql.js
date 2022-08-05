@@ -333,9 +333,9 @@ RETURNS
 { sql, tablename }
 */
 export function get_term_cte(q, values, index, filter, termWrapper = null) {
-	const twterm = termWrapper && termWrapper.term
+	const twterm = (termWrapper && termWrapper.term) || q[`term${index}`]
 	const termid = twterm ? twterm.id : q['term' + index + '_id']
-	const term_is_genotype = twterm ? termWrapper.term.is_genotype : q['term' + index + '_is_genotype']
+	const term_is_genotype = termWrapper && twterm ? termWrapper.term.is_genotype : q['term' + index + '_is_genotype']
 	// legacy code support: index=1 is assumed to be barchart term
 	// when there is no termWrapper argument
 	if (!termWrapper && index == 1 && !term_is_genotype) {
@@ -938,11 +938,11 @@ thus less things to worry about...
 			JOIN subcohort_terms s ON s.term_id = t.id AND s.cohort=?
 			WHERE name LIKE ?`
 		)
-		q.findTermByName = (n, limit, cohortStr = '', treeFilter = null, usecase = null) => {
+		q.findTermByName = (n, limit = 10, cohortStr = '', treeFilter = null, usecase = null, matches = null) => {
 			const vals = []
 			const tmp = sql.all([cohortStr, '%' + n + '%'])
 			if (tmp) {
-				const r = { equals: [], startsWith: [], startsWord: [], includes: [] }
+				const r = matches || { equals: [], startsWith: [], startsWord: [], includes: [] }
 				const lst = []
 				for (const i of tmp) {
 					const name = i.name.toLowerCase()
@@ -957,7 +957,7 @@ thus less things to worry about...
 						else r.includes.push(j)
 					}
 				}
-				return [...r.equals, ...r.startsWith, ...r.startsWord, ...r.includes].slice(0, 10)
+				return [...r.equals, ...r.startsWith, ...r.startsWord, ...r.includes].slice(0, limit)
 			}
 			return undefined
 		}
@@ -997,10 +997,15 @@ thus less things to worry about...
 		}
 	}
 	{
-		// select sample and category, only for categorical term
-		// right now only for category-overlay on maf-cov plot
+		/* term id is required, sample id is optional
+		if sample is missing, select all sample and category by term id
+			return [ {sample=str, value=?}, ... ]
+		else, return single value by sample and term
+		*/
 		const s = cn.prepare('SELECT sample,value FROM annotations WHERE term_id=?')
-		q.getSample2value = id => {
+		const s2 = cn.prepare('SELECT value FROM annotations WHERE term_id=? AND sample=?')
+		q.getSample2value = (id, sample=null) => {
+			if(sample) return s2.all(id, sample)
 			return s.all(id)
 		}
 	}

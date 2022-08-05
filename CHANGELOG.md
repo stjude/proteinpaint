@@ -2,6 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
+## 2.1.5
+
+- move all React wrapper code to the GDC frontend framework repo
+
 ## 2.1.4
 
 - make the React wrapper work in the GDC frontend framework

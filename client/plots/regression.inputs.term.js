@@ -1,10 +1,10 @@
-import { termsettingInit, nonDictionaryTermTypes } from '../termsetting/termsetting'
-import { getNormalRoot } from '../filter/filter'
+import { termsettingInit, nonDictionaryTermTypes } from '#termsetting'
+import { getNormalRoot } from '#filter'
 import { get_bin_label } from '../shared/termdb.bins'
 import { InputValuesTable } from './regression.inputs.values.table'
 import { Menu } from '../dom/menu'
 import { select } from 'd3-selection'
-import { mayRunSnplstTask } from '../termsetting/snplst.sampleSum'
+import { mayRunSnplstTask } from '#termsetting/handlers/snplst.sampleSum'
 import { get_defaultQ4fillTW } from './regression'
 
 /*

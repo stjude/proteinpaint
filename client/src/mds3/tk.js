@@ -96,14 +96,14 @@ function getParameter(tk, block) {
 		par.push('dslabel=' + tk.mds.label)
 	} else {
 		// should be custom track with data files on backend
-		if (tk.vcf) {
-			if (tk.vcf.file) {
-				par.push('vcffile=' + tk.vcf.file)
-			} else if (tk.vcf.url) {
-				par.push('vcfurl=' + tk.vcf.url)
-				if (tk.vcf.indexURL) par.push('vcfindexURL=' + tk.vcf.indexURL)
+		if (tk.bcf) {
+			if (tk.bcf.file) {
+				par.push('bcffile=' + tk.bcf.file)
+			} else if (tk.bcf.url) {
+				par.push('bcfurl=' + tk.bcf.url)
+				if (tk.bcf.indexURL) par.push('bcfindexURL=' + tk.bcf.indexURL)
 			} else {
-				throw '.file and .url missing for tk.vcf{}'
+				throw '.file and .url missing for tk.bcf{}'
 			}
 		}
 		// add new file types

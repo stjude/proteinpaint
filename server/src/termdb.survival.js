@@ -4,6 +4,7 @@ const write_file = require('./utils').write_file
 const fs = require('fs')
 const serverconfig = require('./serverconfig')
 const lines2R = require('./lines2R')
+const get_flagset = require('./bulk.mset').get_flagset
 
 export async function get_survival(q, ds) {
 	try {
@@ -15,7 +16,10 @@ export async function get_survival(q, ds) {
 			if (typeof q[termnum_id] == 'string') {
 				q[termnum_id] = decodeURIComponent(q[termnum_id])
 				q[termnum] = q.ds.cohort.termdb.q.termjsonByOneid(q[termnum_id])
+			} else if (typeof q[termnum] == 'string') {
+				q[termnum] = JSON.parse(decodeURIComponent(q[termnum]))
 			}
+
 			const termnum_q = termnum + '_q'
 			if (typeof q[termnum_q] == 'string') {
 				q[termnum_q] = JSON.parse(decodeURIComponent(q[termnum_q]))
@@ -45,9 +49,12 @@ export async function get_survival(q, ds) {
 		const survq = tNum == 't1' ? q.term1_q : q.term2_q
 
 		const results = get_rows(q, { withCTEs: true })
-		results.lst.sort((a, b) => (a[vNum] < b[vNum] ? -1 : 1)) //if (q.term1.id.startsWith('Event-free')) console.log(results.lst.map(r=>`${r.sample}\t${r.key1}\t${r.val1}\t${r.key2}`).join('\n'))
+		results.lst.sort((a, b) => (a[vNum] < b[vNum] ? -1 : 1))
 
-		// prepare input data for survival analysis
+		if (q.term2?.type == 'geneVariant') {
+			await addGeneData(q, results.lst)
+		}
+
 		const byChartSeries = {}
 		const keys = { chart: new Set(), series: new Set() }
 		for (const d of results.lst) {
@@ -151,4 +158,33 @@ function getOrderedLabels(term, bins = []) {
 		}
 	}
 	return bins.map(bin => (bin.name ? bin.name : bin.label))
+}
+
+async function addGeneData(q, rows) {
+	const termq = q.term2_q
+	if (!termq.exclude) termq.exclude = []
+	const classes = new Set()
+	const flagset = await get_flagset(q.ds.cohort, q.genome)
+	for (const row of rows) {
+		let matched = 0
+		for (const flagname in flagset) {
+			const flag = flagset[flagname]
+			const gene = q.term2.name
+			if (gene in flag.data) {
+				for (const d of flag.data[gene]) {
+					// TODO: fix the sample names in the PNET mutation text files
+					const sname = d.sample.split(';')[0].trim()
+					// only create a sample entry/row when it is not already filtered out by not having any dictionary term values
+					if (sname == row.sample) {
+						// TODO: may finetune matching based on dt# or mutation class
+						if (!termq.exclude.includes(d.class)) matched++
+						classes.add(d.class)
+						break
+					}
+				}
+			}
+		}
+		row.val2 = matched ? 'Altered' : 'Wildtype'
+		row.key2 = row.val2
+	}
 }

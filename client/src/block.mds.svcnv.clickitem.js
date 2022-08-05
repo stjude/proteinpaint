@@ -2468,8 +2468,8 @@ export async function make_svgraph(p, holder) {
 		wait.remove()
 
 		const svarg = {
-			jwt: p.block.jwt,
-			hostURL: p.block.hostURL,
+			//jwt: p.block.jwt,
+			//hostURL: p.block.hostURL,
 			pairlst: [svpair],
 			genome: p.block.genome,
 			holder: holder
@@ -2484,10 +2484,11 @@ export async function make_svgraph(p, holder) {
 }
 
 function getisoform(p, chr, pos) {
-	return client.dofetch('isoformbycoord', { genome: p.block.genome.name, chr: chr, pos: pos }).then(data => {
-		if (data.error) throw data.error
-		return data.lst
-	})
+	return client.dofetch3(`isoformbycoord?genome=${p.block.genome.name}&chr=${chr}&pos=${pos}`)
+		.then(data => {
+			if (data.error) throw data.error
+			return data.lst
+		})
 }
 
 async function may_findmatchingsnp_printintable(m, block, table) {

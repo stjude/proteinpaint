@@ -3,6 +3,8 @@ import { fold_glyph, settle_glyph } from './skewer.render'
 import { itemtable } from './itemtable'
 import { mayAddSkewerModeOption } from './skewer'
 import { makelabel } from './leftlabel'
+import {tab2box} from '../client'
+import {dt2label} from '../../shared/common'
 
 /*
 the "#variants" label should always be made as it is about any content displayed in mds3 track
@@ -162,7 +164,6 @@ async function listSkewerData(tk, block) {
 
 	tk.menutip.clear()
 
-	// should simply list variants in a table
 	// group variants by dt; for each group, render with itemtable()
 
 	const dt2mlst = new Map()
@@ -173,15 +174,34 @@ async function listSkewerData(tk, block) {
 		}
 	}
 
-	for (const mlst of dt2mlst.values()) {
+	if(dt2mlst.size==1) {
+		// only one dt
 		const div = tk.menutip.d.append('div').style('margin', '10px')
 		await itemtable({
 			div,
-			mlst,
+			mlst: dt2mlst.get( [...dt2mlst.keys()][0]),
 			tk,
 			block,
-			// quick fix to prevent gdc track to run variant2samples on too many ssm
-			disable_variant2samples: true
+			doNotListSample4multim:true,
+		})
+		return
+	}
+
+	// multiple dt
+	const tabs = []
+	for(const [dt, mlst] of dt2mlst) {
+		tabs.push({
+			label: mlst.length+' '+dt2label[dt],
+			callback: div=>{
+				itemtable({
+					div,
+					mlst,
+					tk,
+					block,
+					doNotListSample4multim:true
+				})
+			}
 		})
 	}
+	tab2box(tk.menutip.d.append('div').style('margin','10px'), tabs)
 }

@@ -48,7 +48,8 @@ class Overlay {
 				this.app.dispatch({
 					type: 'plot_edit',
 					id: this.opts.id,
-					config: { term2 }
+					config: { term2 },
+					usecase: this.opts.usecase
 				})
 			}
 		})
@@ -59,6 +60,7 @@ class Overlay {
 			throw `No plot with id='${this.id}' found.`
 		}
 		const state = {
+			allowedTermTypes: appState.termdbConfig.allowedTermTypes,
 			vocab: appState.vocab,
 			activeCohort: appState.activeCohort,
 			config,
@@ -173,118 +175,6 @@ function setRenderers(self) {
 		self.updatePill()
 	}
 	self.showMenu = function() {
-		self.dom.tip.clear().showunder(self.dom.menuBtn.node())
-		const term2 = self.state.config.term2
-
-		// option (1) none
-		if (term2) {
-			// term2 is not null, allow to change to none
-			self.dom.tip.d
-				.append('div')
-				.attr('class', 'sja_menuoption')
-				.text('None')
-				.on('click', () => {
-					self.dom.tip.hide()
-					self.app.dispatch({
-						type: 'plot_edit',
-						id: self.opts.id,
-						config: {
-							term2: null
-						}
-					})
-				})
-		}
-
-		{
-			const t1 = self.state.config.term
-			if (t1.term.iscondition && !t1.term.isleaf) {
-				/* term1 is non-leaf CHC
-				meet the need for allowing grade-subcondition overlay
-				no longer uses bar_choices
-				*/
-				if (t1.q.bar_by_grade || (term2 && term2.term.id == t1.id && term2.q.bar_by_grade)) {
-					// not to show (3)
-				} else {
-					// show (3)
-					self.dom.tip.d
-						.append('div')
-						.attr('class', 'sja_menuoption')
-						.html(
-							'Max grade <span style="font-size:.7em;text-transform:uppercase;opacity:.6">' + t1.term.name + '</span>'
-						)
-						.on('click', () => {
-							self.dom.tip.hide()
-							self.app.dispatch({
-								type: 'plot_edit',
-								id: self.opts.id,
-								config: {
-									term2: {
-										id: t1.id,
-										term: t1.term,
-										q: { bar_by_grade: true, value_by_max_grade: true }
-									}
-								}
-							})
-						})
-				}
-				if (t1.q.bar_by_children || (term2 && term2.term.id == t1.id && term2.q.bar_by_children)) {
-					// not to show (4)
-				} else {
-					// show (4)
-					self.dom.tip.d
-						.append('div')
-						.attr('class', 'sja_menuoption')
-						.html(
-							'Sub-condition <span style="font-size:.7em;text-transform:uppercase;opacity:.6">' +
-								t1.term.name +
-								'</span>'
-						)
-						.on('click', () => {
-							self.dom.tip.hide()
-							self.app.dispatch({
-								type: 'plot_edit',
-								id: self.opts.id,
-								config: {
-									term2: {
-										id: t1.id,
-										term: t1.term,
-										q: { bar_by_children: true, value_by_max_grade: true }
-									}
-								}
-							})
-						})
-				}
-			}
-		}
-
-		for (const t of self.usedTerms) {
-			self.dom.tip.d
-				.append('div')
-				.attr('class', 'sja_menuoption')
-				.text('Term: ' + t.term.name)
-				.on('click', () => {
-					self.dom.tip.hide()
-					self.app.dispatch({
-						type: 'plot_edit',
-						id: self.opts.id,
-						config: {
-							term2: {
-								id: t.term.id,
-								term: t.term,
-								q: t.q
-							}
-						}
-					})
-				})
-		}
-		// option (4)
-		self.dom.tip.d
-			.append('div')
-			.attr('class', 'sja_menuoption')
-			.text('Select a new term')
-			.on('click', () => {
-				self.dom.tip.hide()
-				self.pill.showTree(self.dom.menuBtn.node())
-			})
+		self.pill.showTree(self.dom.menuBtn.node())
 	}
 }

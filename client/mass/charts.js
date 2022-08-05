@@ -182,7 +182,7 @@ function getChartTypeList(self) {
 			withBackBtn: true,
 			menuOptions: [
 				{
-					label: 'Dictionary term',
+					label: 'Term tree & search',
 					clickTo: self.showTree_selectlst,
 					chartType: 'matrix',
 					usecase: { target: 'matrix', detail: 'termgroups' },

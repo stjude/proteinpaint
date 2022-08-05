@@ -436,26 +436,9 @@ function setTermActions(self) {
 
 		self.makeInsertPosRadios(self.dom.editbtns)
 
-		const termSrcDiv = self.dom.editbtns.append('div')
-		termSrcDiv.append('span').html('Source&nbsp;')
-
-		self.dom.dictTermBtn = termSrcDiv
-			.append('div')
-			.attr('class', 'sja_menuoption')
-			.style('display', 'inline-block')
-			//.style('font-size', '0.8em')
-			.html('Dictionary term')
-			.on('click', self.showDictTermSelection)
-
-		self.dom.textTermBtn = termSrcDiv
-			.append('div')
-			.attr('class', 'sja_menuoption')
-			.style('display', 'inline-block')
-			//.style('font-size', '0.8em')
-			.html('Text input')
-			.on('click', self.showTermTextInput)
-
-		self.dom.dictTermBtn.on('click')()
+		//const termSrcDiv = self.dom.editbtns.append('div')
+		//termSrcDiv.append('span').html('Source&nbsp;')
+		self.showDictTermSelection()
 	}
 
 	self.makeInsertPosRadios = function(div) {
@@ -490,8 +473,8 @@ function setTermActions(self) {
 	}
 
 	self.showDictTermSelection = async () => {
-		self.dom.dictTermBtn.style('text-decoration', 'underline')
-		self.dom.textTermBtn.style('text-decoration', '')
+		//self.dom.dictTermBtn.style('text-decoration', 'underline')
+		//self.dom.textTermBtn.style('text-decoration', '')
 
 		const termdb = await import('../termdb/app')
 		self.dom.editbody.selectAll('*').remove()
@@ -509,108 +492,53 @@ function setTermActions(self) {
 				}
 			},
 			tree: {
-				submit_lst: async termlst => {
-					const newterms = await Promise.all(
-						termlst.map(async term => {
-							const tw = { id: term.id, term }
-							await fillTermWrapper(tw)
-							return tw
-						})
-					)
-					const pos = select(`input[name='${self.insertRadioId}']:checked`).property('value')
-					const t = self.activeLabel
-					const termgroups = self.termGroups
-					if (self.dom.grpNameSelect.property('value') == 'current') {
-						const grp = termgroups[t.grpIndex]
-						const i = pos == 'above' ? t.lstIndex : t.lstIndex + 1
-						// remove this element
-						grp.lst.splice(i, 0, ...newterms)
-						self.app.dispatch({
-							type: 'plot_nestedEdits',
-							id: self.opts.id,
-							edits: [
-								{
-									nestedKeys: ['termgroups', t.grpIndex, 'lst'],
-									value: grp.lst
-								}
-							]
-						})
-					} else {
-						const i = pos == 'above' ? t.grpIndex : t.grpIndex + 1
-						termgroups.splice(i, 0, {
-							name: self.dom.grpNameTextInput.property('value'),
-							lst: newterms
-						})
-						self.app.dispatch({
-							type: 'plot_edit',
-							id: self.opts.id,
-							config: { termgroups }
-						})
-					}
-					self.dom.tip.hide()
-				}
+				submit_lst
+			},
+			search: {
+				handleGeneVariant: term => submit_lst([term])
 			}
 		})
 	}
 
-	self.showTermTextInput = opt => {
-		self.dom.dictTermBtn.style('text-decoration', '')
-		self.dom.textTermBtn.style('text-decoration', 'underline')
-		self.dom.editbody.selectAll('*').remove()
-		self.dom.editbody
-			.append('button')
-			.style('margin', '0 5px')
-			.html('Submit')
-			.on('click', async () => {
-				event.stopPropagation()
-				const text = ta.property('value')
-				const lines = text.split('\n').map(line => line.trim())
-				const ids = lines.filter(id => !!id)
-				const terms = await self.app.vocabApi.getTermTypes(ids)
-				const termgroups = self.termGroups
-				const name = self.dom.grpNameTextInput.property('value')
-				let grp = termgroups.find(g => g.name === name)
-				if (!grp) {
-					grp = { name, lst: [] }
-					termgroups.push(grp)
-				}
-				const tws = []
-				for (const id of lines) {
-					if (!(id in terms)) continue
-					const tw = { term: terms[id], minNumSamples: 0 }
-					await fillTermWrapper(tw)
-					tws.push(tw)
-				}
-				grp.lst.splice(self.activeLabel.lstIndex, 0, ...tws)
-
-				self.app.dispatch({
-					type: 'plot_edit',
-					id: self.opts.id,
-					config: { termgroups }
-				})
-				self.dom.tip.hide()
+	async function submit_lst(termlst) {
+		const newterms = await Promise.all(
+			termlst.map(async term => {
+				const tw = 'id' in term ? { id: term.id, term } : { term }
+				await fillTermWrapper(tw)
+				return tw
 			})
-
-		const ta = self.dom.editbody
-			.append('div')
-			.style('text-align', 'left')
-			.append('textarea')
-			.attr('placeholder', 'term')
-			.style('width', '300px')
-			.style('height', '300px')
-			.style('margin', '5px')
-			.style('padding', '5px')
-			.on('keydown', () => {
-				const keyCode = event.keyCode || event.which
-				// handle tab key press, otherwise it will cause the focus to move to another input
-				if (keyCode == 9) {
-					event.preventDefault()
-					const t = event.target
-					const s = t.selectionStart
-					t.value = t.value.substring(0, t.selectionStart) + '\t' + t.value.substring(t.selectionEnd)
-					t.selectionEnd = s + 1
-				}
+		)
+		const pos = select(`input[name='${self.insertRadioId}']:checked`).property('value')
+		const t = self.activeLabel
+		const termgroups = self.termGroups
+		if (self.dom.grpNameSelect.property('value') == 'current') {
+			const grp = termgroups[t.grpIndex]
+			const i = pos == 'above' ? t.lstIndex : t.lstIndex + 1
+			// remove this element
+			grp.lst.splice(i, 0, ...newterms)
+			self.app.dispatch({
+				type: 'plot_nestedEdits',
+				id: self.opts.id,
+				edits: [
+					{
+						nestedKeys: ['termgroups', t.grpIndex, 'lst'],
+						value: grp.lst
+					}
+				]
 			})
+		} else {
+			const i = pos == 'above' ? t.grpIndex : t.grpIndex + 1
+			termgroups.splice(i, 0, {
+				name: self.dom.grpNameTextInput.property('value'),
+				lst: newterms
+			})
+			self.app.dispatch({
+				type: 'plot_edit',
+				id: self.opts.id,
+				config: { termgroups }
+			})
+		}
+		self.dom.tip.hide()
 	}
 
 	self.showSortMenu = () => {

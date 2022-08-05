@@ -16,8 +16,8 @@ const bcftools = serverconfig.bcftools
 const bigBedToBed = serverconfig.bigBedToBed
 const bigBedNamedItems = serverconfig.bigBedNamedItems
 
-/* p4 ready
-********************** EXPORTED
+/*********************** EXPORTED
+cache_index
 file_is_readable
 init_one_vcf
 validate_tabixfile

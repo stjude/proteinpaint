@@ -130,14 +130,14 @@ export function validate_query_snvindel_byisoform(ds) {
 	if (typeof api.query1.filters != 'function') throw 'query1.filters() is not a function'
 	if (!api.query2) throw 'api.query2 is missing'
 	if (!api.query2.endpoint) throw 'query2.endpoint missing'
-	if (!api.query2.fields4counting) throw 'query2.fields4counting missing'
-	if (!api.query2.fields4details) throw 'query2.fields4details missing'
+	if (!Array.isArray(api.query2.fields)) throw 'query2.fields[] not array'
 	if (!api.query2.filters) throw 'query2.filters missing'
 	if (typeof api.query2.filters != 'function') throw 'query2.filters() is not a function'
 
 	ds.queries.snvindel.byisoform.get = async opts => {
 		/* opts{}
 		.isoform= str
+		TODO .tid2value can be used to filter samples
 		*/
 
 		/*
@@ -359,7 +359,7 @@ async function snvindel_byisoform(api, opts) {
 			'?size=' +
 			api.query2.size +
 			'&fields=' +
-			api.query2.fields4counting.join(',') +
+			api.query2.fields.join(',') +
 			'&filters=' +
 			encodeURIComponent(JSON.stringify(api.query2.filters(opts))),
 		{ method: 'GET', headers }

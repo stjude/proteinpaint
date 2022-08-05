@@ -42,6 +42,7 @@ export async function click_variant(d, tk, block, tippos, eventTarget) {
 			return
 		}
 		if ('occurrence' in d && d.occurrence >= minoccur4sunburst && tk.mds.variant2samples && tk.mds.variant2samples.sunburst_ids) {
+			// show sunburst when meeting conditions: mutation have occurrence, have v2s.sunburst_ids[]
 			await click2sunburst(d, tk, block, tippos)
 			return
 		}
@@ -129,11 +130,9 @@ async function click2sunburst(d, tk, block, tippos) {
 }
 
 /*
-if items of mlst are of same type, show table view of the variant itself, plus the sample summary table
-if of multiple data types, do not show variant table view; only show the sample summary table
-should work with skewer and non-skewer data types
 arg{}
 .mlst[]
+	can be mixture of different dt
 .tk
 .block
 .tippos
@@ -142,19 +141,5 @@ arg{}
 async function variant_details(arg) {
 	arg.tk.itemtip.clear().show(arg.tippos.left - 10, arg.tippos.top - 10)
 	arg.div = arg.tk.itemtip.d
-	// count how many dt
-	const dtset = new Set()
-	for (const m of arg.mlst) dtset.add(m.dt)
-	if (dtset.size > 1) {
-		// more than 1 data types, won't print detail table for each variant
-		if (arg.tk.mds.variant2samples) {
-			// show sample summary
-			await init_sampletable(arg)
-		} else {
-			throw 'no variant2samples, do not know what to show'
-		}
-		return
-	}
-	// mlst are of one data type
 	await itemtable(arg)
 }
