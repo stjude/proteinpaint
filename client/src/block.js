@@ -46,8 +46,7 @@ import {
 import { mds2_fromtemplate, mds2_maketk, mds2_load } from './block.mds2.adaptor'
 import { mds3_fromtemplate, mds3_maketk, mds3_load } from '../mds3/adaptor'
 import { bedgraphdot_fromtemplate, bedgraphdot_maketk, bedgraphdot_load } from './block.tk.bedgraphdot.adaptor'
-import {rgb} from 'd3-color'
-
+import { rgb } from 'd3-color'
 
 /* non-standard handler for legacy dataset
 can delete when migrated to mds3
@@ -336,10 +335,8 @@ export class Block {
 					}
 				})
 
-			const div2 = this.holder
-				.append('div')
-				.style('border-top', 'solid 1px ' + this.legend.legendcolor)
-				//.style('background-color', '#FCFBF7')
+			const div2 = this.holder.append('div').style('border-top', 'solid 1px ' + this.legend.legendcolor)
+			//.style('background-color', '#FCFBF7')
 			if (arg.foldlegend) {
 				div2.style('display', 'none')
 			}
@@ -405,14 +402,8 @@ export class Block {
 
 			butrow
 				.append('div') // duplicated
-				.style('display', 'inline-block')
 				.text(this.genome.name)
-				.style('background', '#1C5E86')
-				.style('font-size', '.8em')
-				.style('color', 'white')
-				.style('padding', '1px 5px')
-				.style('margin-right', '5px')
-				.style('border-radius', '4px')
+				.attr('class', '.sjpp-active-tiny-button')
 
 			// official dataset (legacy ds), only use in gm mode, won't show in plain browser
 			this.ctrl.dshandleholder = butrow.append('span')
