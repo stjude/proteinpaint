@@ -290,14 +290,14 @@ export class InputTerm {
 				if (this.section.configKey == 'outcome' && this.parent.opts.regressionType == 'cox') {
 					if (!['age', 'time'].includes(tw.q.timeScale)) throw 'invalid q.timeScale'
 					this.termStatus.topInfoStatus.push(
-						`Time axis: ${tw.q.timeScale == 'time' ? 'follow-up time' : 'age'} (starts at ${
+						`Time axis: ${tw.q.timeScale == 'time' ? 'follow-up time' : 'age'} (begins at ${
 							this.parent.state.minTimeSinceDx
 						} ${this.parent.state.timeScale} post cancer diagnosis)`
 					)
 					this.termStatus.topInfoStatus.push(`Event: first occurrence of grade ${tw.q.breaks[0]} or higher`)
 					this.termStatus.topInfoStatus.push('')
 					this.termStatus.topInfoStatus.push(
-						`Events prior to study enrollment (i.e. within ${this.parent.state.minTimeSinceDx} ${this.parent.state.timeScale} of diagnosis) are discarded`
+						`Samples with events before study enrollment (i.e. within ${this.parent.state.minTimeSinceDx} ${this.parent.state.timeScale} of diagnosis) are excluded`
 					)
 				}
 			}
@@ -313,6 +313,7 @@ export class InputTerm {
 				if (tw.term.values[i].uncomputable) excluded_values.add(tw.term.values[i].label)
 			}
 		}
+		if (tw.q.mode == 'cox') excluded_values.add('Event before study enrollment')
 		const sampleCounts = (this.termStatus.sampleCounts = datalst.filter(v => !excluded_values.has(v.label)))
 		const excludeCounts = (this.termStatus.excludeCounts = datalst.filter(v => excluded_values.has(v.label)))
 

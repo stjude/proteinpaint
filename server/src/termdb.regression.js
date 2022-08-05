@@ -1155,7 +1155,17 @@ function getSampleData_dictionaryTerms(q, terms) {
 
 	const rows = q.ds.cohort.db.connection.prepare(sql).all(values)
 
-	for (const { sample, term_id, key, value } of rows) {
+	// filter rows
+	let frows = rows
+	if (q.regressionType == 'cox') {
+		// cox regression
+		// need to remove rows with key=-1 for cox outcome
+		// because these samples had event before study enrollment
+		frows = rows.filter(row => !(row.term_id == q.outcome.id && row.key === -1))
+	}
+
+	// parse filtered rows
+	for (const { sample, term_id, key, value } of frows) {
 		if (!samples.has(sample)) {
 			samples.set(sample, { sample, id2value: new Map() })
 		}
@@ -1169,6 +1179,7 @@ function getSampleData_dictionaryTerms(q, terms) {
 
 	/* drop samples that are missing value for any term
 	as those are ineligible for analysis
+	TODO: is this a duplication of a step in makeRinput()
 	*/
 	const deletesamples = new Set()
 	for (const o of samples.values()) {
