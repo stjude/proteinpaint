@@ -46,7 +46,8 @@ function setTermActions(self) {
 		// will reuse a pill instance to show term edit menu
 		self.pill = termsettingInit({
 			tip: self.customTipApi,
-			menuOptions: 'edit',
+			menuOptions: 'all',
+			menuLayout: 'horizontal',
 			vocabApi: self.app.vocabApi,
 			vocab: appState.vocab,
 			activeCohort: appState.activeCohort,
@@ -72,7 +73,7 @@ function setTermActions(self) {
 						]
 					})
 				} else {
-					throw 'no tw'
+					self.removeTerm()
 				}
 				self.dom.tip.hide()
 			}
@@ -83,52 +84,76 @@ function setTermActions(self) {
 		const t = event.target.__data__
 		if (!t || !t.tw) return
 		self.activeLabel = t
-		self.activeLabel = t
-		self.dom.menutop.selectAll('*').remove()
+		self.dom.menutop
+			.style('display', '')
+			.selectAll('*')
+			.remove()
 		self.dom.menubody
 			.style('padding', 0)
 			.selectAll('*')
 			.remove()
 
-		const labelEditDiv = self.dom.menutop.append('div')
+		self.dom.shortcutDiv = self.dom.menutop.append('div')
+		self.showShortcuts(t, self.dom.shortcutDiv)
 
+		self.dom.twMenuDiv = self.dom.menutop.append('div')
+		const labelEditDiv = self.dom.twMenuDiv.append('div').style('text-align', 'center')
+		labelEditDiv.append('span').text('Term ')
+
+		const twlabel = t.tw.label || t.tw.term.name
 		self.dom.twLabelInput = labelEditDiv
 			.append('input')
 			.attr('type', 'text')
-			.attr('size', t.tw.term.name.length + 5)
+			.attr('size', twlabel.length + 3)
+			.attr('title', 'Type to edit the term label')
 			.style('padding', '1px 5px')
 			.style('text-align', 'center')
-			.property('value', t.tw.term.name)
+			.property('value', twlabel)
 			.on('input', () => {
 				const value = self.dom.twLabelInput.property('value')
-				self.dom.twLabelInput.attr('size', value.length + 5)
-				self.dom.twLabelEditBtn.property('disabled', value === t.tw.label)
+				self.dom.twLabelInput.attr('size', value.length + 3)
+				self.dom.twLabelEditBtn.style('display', value.trim() === twlabel ? 'none' : 'inline')
 			})
-			.on('change', self.updateTermLabel)
 
 		self.dom.twLabelEditBtn = labelEditDiv
 			.append('button')
-			.property('disabled', true)
+			.style('display', 'none')
 			.style('margin-left', '5px')
-			.html('edit')
-			.on('click', self.updateTermLabel)
+			.html('submit')
+			.on('click', () => {
+				if (twlabel != self.dom.twLabelInput.property('value').trim()) self.updateTermLabel()
+				self.dom.tip.hide()
+			})
 
-		self.showShortcuts(t, self.dom.menutop)
+		self.dom.twMenuBar = self.dom.twMenuDiv.append('div').style('text-align', 'center')
+		//menuBtnsDiv.on('click', () => menuBtnsDiv.style('display', 'none'))
+		// must remember event target since it's cleared after async-await
+		const clickedElem = event.target
+		await self.pill.main(t.tw ? t.tw : { term: null, q: null })
+		self.pill.showMenu(clickedElem, self.dom.twMenuBar)
 
+		self.dom.grpMenuDiv = self.dom.menutop.append('div').style('margin-top', '10px')
+		self.showTermGroupInputs(self.dom.grpMenuDiv)
+
+		self.dom.tip.showunder(clickedElem)
+		/*
+		const grpMenuBar = menuBtnsDiv.append('div')
+		grpMenuBar.append('span').html('Group ')
 		const options = []
 		if (t.tw.term?.type == 'geneVariant') options.push({ label: 'Browser', callback: self.launchBrowser })
 		options.push(
 			...[
-				{ label: 'Edit', callback: self.showTermEditMenu },
+				//{ label: 'Edit', callback: self.showTermEditMenu },
 				//{ label: 'Move', callback: self.showMoveMenu },
-				{ label: 'Insert', callback: self.showTermInsertMenu },
+				{ label: 'Add Terms', callback: self.showTermInsertMenu },
 				{ label: 'Sort', callback: self.showSortMenu },
-				{ label: 'Delete', callback: self.showRemoveMenu }
+				{ label: 'Delete', callback: self.removeTermGroup }
 			]
 		)
 
-		self.dom.menutop
+		grpMenuBar
 			.append('div')
+			.style('display', 'inline-block')
 			.selectAll(':scope>.sja_menuoption')
 			.data(options)
 			.enter()
@@ -137,15 +162,15 @@ function setTermActions(self) {
 			.style('display', 'inline-block')
 			.html(d => d.label)
 			.on('click', d => {
-				event.stopPropagation()
 				d.callback(d)
 			})
 
-		self.dom.tip.showunder(event.target)
+		self.dom.tip.showunder(clickedElem)
+		*/
 	}
 
 	self.updateTermLabel = () => {
-		const value = self.dom.twLabelInput.property('value')
+		const value = self.dom.twLabelInput.property('value').trim()
 		const t = self.activeLabel
 		if (t.tw.label === value) return
 		t.tw.label = value
@@ -199,12 +224,6 @@ function setTermActions(self) {
 						title: `Move this term down`,
 						disabled: t.index === t.grp.lst.length - 1,
 						handler: self.moveTermDown
-					},
-
-					{
-						icon: 'x',
-						title: 'Delete gene row',
-						handler: self.removeTerm
 					}
 				],
 				d => d.icon
@@ -751,26 +770,6 @@ function setTermActions(self) {
 		return [tcopy, sorterTerms]
 	}
 
-	self.showRemoveMenu = () => {
-		const t = self.activeLabel
-		self.dom.menubody.selectAll('*').remove()
-		const subdiv = self.dom.menubody.append('div').style('margin-top', '10px')
-		subdiv
-			.append('div')
-			.style('text-align', 'center')
-			.html('Click to remove')
-		subdiv
-			.append('div')
-			.attr('class', 'sja_menuoption')
-			.html('Term: ' + t.tw.term.name)
-			.on('click', self.removeTerm)
-		subdiv
-			.append('div')
-			.attr('class', 'sja_menuoption')
-			.html('Group: ' + t.grp.name)
-			.on('click', self.removeTermGroup)
-	}
-
 	self.removeTerm = () => {
 		const t = self.activeLabel
 		const termgroups = self.termGroups
@@ -955,9 +954,18 @@ function setTermGroupActions(self) {
 		const d = event.target.__data__
 		if (!d) return
 		self.activeLabel = d
-		self.dom.menutop.selectAll('*').remove()
+		self.dom.menutop
+			.style('display', '')
+			.selectAll('*')
+			.remove()
+		self.showTermGroupInputs(self.dom.menutop.append('div'))
+		self.dom.tip.showunder(event.target)
+	}
 
-		const labelEditDiv = self.dom.menutop.append('div').style('text-align', 'center')
+	self.showTermGroupInputs = function(div) {
+		const holder = div
+		const labelEditDiv = holder.append('div').style('text-align', 'center')
+		labelEditDiv.append('span').text('Group ')
 
 		self.dom.grpNameInput = labelEditDiv
 			.append('input')
@@ -988,10 +996,11 @@ function setTermGroupActions(self) {
 		const menuOptions = [
 			{ label: 'Edit', callback: self.showTermGroupEditMenu },
 			{ label: 'Add Terms', callback: self.showTermInsertMenu },
+			{ label: 'Sort', callback: self.showSortMenu },
 			{ label: 'Delete', callback: self.removeTermGroup }
 		]
 
-		self.dom.menutop
+		holder
 			.append('div')
 			.style('text-align', 'center')
 			.selectAll(':scope>.sja_menuoption')
@@ -1003,10 +1012,9 @@ function setTermGroupActions(self) {
 			.html(d => d.label)
 			.on('click', d => {
 				event.stopPropagation()
+				self.dom.menutop.style('display', 'none')
 				d.callback(d)
 			})
-
-		self.dom.tip.showunder(event.target)
 	}
 
 	self.updateTermGrpName = () => {

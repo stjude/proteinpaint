@@ -194,7 +194,8 @@ function loadDictionary(scriptArg) {
 		if (!term.type) continue // not graphable
 		if (term.type == 'categorical') {
 			if (!term.values) term.values = {}
-			if (!term.groupsetting) term.groupsetting = { disabled: true }
+			const numValues = term.values ? Object.keys(term.values).length : 0
+			if (!term.groupsetting) term.groupsetting = { disabled: numValues < 3 }
 		} else if (term.type == 'integer' || term.type == 'float') {
 			if (!term.values) term.values = {}
 			term.__all_values = [] // placeholder to collect all sample values and make binconfig

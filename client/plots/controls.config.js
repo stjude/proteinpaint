@@ -397,10 +397,7 @@ function setCheckboxInput(opts) {
 			})
 		})
 
-	label
-		.append('span')
-		.html('&nbsp;' + opts.boxLabel)
-		.attr('type', 'checkbox')
+	label.append('span').html('&nbsp;' + opts.boxLabel)
 
 	const api = {
 		main(plot) {
