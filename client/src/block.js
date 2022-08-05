@@ -5121,6 +5121,7 @@ function makecoordinput(bb, butrow) {
 		.attr('size', 20)
 		.style('margin-left', '10px')
 		.style('padding-right', '20px')
+		.attr('aria-label', "Gene coordinates")
 
 	bb.coord.inputtipshow = () => {
 		bb.coord.inputtip.clear()
