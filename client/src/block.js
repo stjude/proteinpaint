@@ -403,7 +403,7 @@ export class Block {
 			butrow
 				.append('div') // duplicated
 				.text(this.genome.name)
-				.attr('class', '.sjpp-active-tiny-button')
+				.attr('class', 'sjpp-active-tiny-button')
 
 			// official dataset (legacy ds), only use in gm mode, won't show in plain browser
 			this.ctrl.dshandleholder = butrow.append('span')
@@ -422,14 +422,8 @@ export class Block {
 				// custom data, legacy ds
 				butrow
 					.append('div')
-					.style('display', 'inline-block')
-					.style('margin', '1px')
-					.style('border', 'solid 1px #545454')
-					.style('font-size', '.9em')
 					.style('font-family', client.font)
-					.style('cursor', 'default')
-					.style('padding', '2px 5px')
-					.attr('class', 'sja_opaque8')
+					.attr('class', 'sja_opaque8 sjpp-plus-button')
 					.text('+')
 					.on('click', () => {
 						const p = d3event.target.getBoundingClientRect()
