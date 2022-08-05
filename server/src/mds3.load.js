@@ -1,6 +1,7 @@
 const app = require('./app')
 const path = require('path')
 const utils = require('./utils')
+const snvindelVcfByRangeGetter = require('./mds3.init').snvindelVcfByRangeGetter
 
 /*
 method good for somatic variants, in skewer and gp queries:
@@ -27,7 +28,7 @@ method good for somatic variants, in skewer and gp queries:
 .genecnvNosample[]
  */
 
-module.exports = genomes => {
+export function mds3_request_closure(genomes) {
 	return async (req, res) => {
 		try {
 			if (!req.query.genome) throw '.genome missing'
@@ -76,31 +77,52 @@ function init_q(query, genome) {
 }
 
 function finalize_result(q, ds, result) {
+	const sampleSet = new Set() // collects sample ids if present in data points
+
 	if (result.skewer) {
 		for (const m of result.skewer) {
 			if (m.samples) {
 				m.occurrence = m.samples.length
+				for (const s of m.samples) {
+					sampleSet.add(s.sample_id)
+				}
 				delete m.samples
 			}
 		}
 	}
-	if (result._sampleSet) {
-		result.sampleTotalNumber = result._sampleSet.size
-		delete result._sampleSet
+
+	if (sampleSet.size) {
+		// has samples, report total number of unique samples across all data types
+		result.sampleTotalNumber = sampleSet.size
 	}
 }
 
 async function get_ds(q, genome) {
 	if (q.dslabel) {
+		// is official dataset
 		if (!genome.datasets) throw '.datasets{} missing from genome'
 		const ds = genome.datasets[q.dslabel]
 		if (!ds) throw 'invalid dslabel'
 		return ds
 	}
-	// make a custom ds
-	throw 'custom ds todo'
-	const ds = {}
+	// for a custom dataset, a temporary ds{} obj is made for every query, based on q{}
 	// may cache index files from url, thus the await
+	const ds = { queries: {} }
+	if (q.vcffile || q.vcfurl) {
+		const [e, file, isurl] = app.fileurl({ query: { file: q.vcffile, url: q.vcfurl } })
+		if (e) throw e
+		const _tk = {}
+		if (isurl) {
+			_tk.url = file
+			_tk.indexURL = q.vcfindexURL
+		} else {
+			_tk.file = file
+		}
+		ds.queries.snvindel = { byrange: { _tk } }
+		ds.queries.snvindel.byrange.get = await snvindelVcfByRangeGetter(ds, genome)
+	}
+	// add new file types
+
 	return ds
 }
 
@@ -116,7 +138,32 @@ async function load_driver(q, ds) {
 
 	if (q.variant2samples) {
 		if (!ds.variant2samples) throw 'not supported by server'
-		return { variant2samples: await ds.variant2samples.get(q) }
+		const out = await ds.variant2samples.get(q)
+
+		if (q.get == ds.variant2samples.type_samples && q.listSsm) {
+			/*
+			listSsm=true as a modifier of get=samples
+			work for "List" option in case menu
+			for listing all samples that have mutation in the view range
+			client-side variant data are stripped of sample info
+			to list samples, must re-query and collect samples
+
+			out[] must be list of sample obj, each with .ssm_id
+			*/
+			const id2samples = new Map() // k: sample_id, v: { key:val, ssm_id_lst:[] }
+			for (const s of out) {
+				if (id2samples.has(s.sample_id)) {
+					id2samples.get(s.sample_id).ssm_id_lst.push(s.ssm_id)
+				} else {
+					s.ssm_id_lst = [s.ssm_id]
+					delete s.ssm_id
+					id2samples.set(s.sample_id, s)
+				}
+			}
+			return { variant2samples: [...id2samples.values()] }
+		}
+
+		return { variant2samples: out }
 	}
 
 	if (q.m2csq) {
@@ -136,37 +183,21 @@ async function load_driver(q, ds) {
 
 			if (ds.queries.snvindel) {
 				// the query will resolve to list of mutations, to be flattened and pushed to .skewer[]
-				const d = await query_snvindel(q, ds)
-				result.skewer.push(...d)
-
-				// quick fix
-				// TODO if snvindel d contains samples, then collect samples from there
-				if (ds.queries.snvindel.getSamples) {
-					// running variant2sample query to retrieve total list of samples
-					// since ssm returned by snvindel query does not contain samples
-					// may rename to getSample_v2s to signify this
-					const p = JSON.parse(JSON.stringify(q))
-					p.get = ds.variant2samples.type_samplesIdOnly
-					const samples = await ds.variant2samples.get(p)
-					// samples is array of {sample_id}
-					// later may join sample sets from snvindel and fusion together using Set
-
-					// missing holder, init
-					if (!result._sampleSet) result._sampleSet = new Set()
-					// collect sample ids into the set
-					for (const s of samples) result._sampleSet.add(s.sample_id)
+				const mlst = await query_snvindel(q, ds)
+				/* mlst=[], each element:
+				{
+					ssm_id:str
+					mclass
+					samples:[ {sample_id}, ... ]
 				}
+				*/
+				result.skewer.push(...mlst)
 			}
 
 			if (ds.queries.svfusion) {
 				// todo
 				const d = await query_svfusion(q, ds)
 				result.skewer.push(...d)
-				if (ds.queries.svfusion.getSamples) {
-					// may duplicate same steps as snvindel.getSamples?
-					if (!result._sampleSet) result._sampleSet = new Set()
-					// add fusion samples to _sampleSet
-				}
 			}
 
 			filter_data(q, result)
@@ -179,6 +210,7 @@ async function load_driver(q, ds) {
 		finalize_result(q, ds, result)
 		return result
 	}
+
 	// other query type
 
 	throw 'do not know what client wants'
@@ -186,18 +218,26 @@ async function load_driver(q, ds) {
 
 async function query_snvindel(q, ds) {
 	if (q.isoform) {
+		// client supplies isoform, see if isoform query is supported
 		if (q.atgenomic) {
 			// in genomic mode
 			if (!ds.queries.snvindel.byrange) throw '.atgenomic but missing byrange query method'
 			return await ds.queries.snvindel.byrange.get(q)
 		}
-		if (!ds.queries.snvindel.byisoform) throw 'q.isoform is given but missing byisoform query method'
-		return await ds.queries.snvindel.byisoform.get(q)
+		if (ds.queries.snvindel.byisoform) {
+			// querying by isoform is supported
+			return await ds.queries.snvindel.byisoform.get(q)
+		} else {
+			// querying by isoform is not supported, continue to check if can query by range
+		}
 	}
-	// if isoform not provided, must be by range. could be by other things?
-	if (ds.queries.snvindel.byrange) {
+	// not querying by isoform;
+	if (q.rglst) {
+		// provided range parameter
+		if (!ds.queries.snvindel.byrange) throw 'q.rglst[] provided but .byrange{} is missing'
 		return await ds.queries.snvindel.byrange.get(q)
 	}
+	// may allow other query method (e.g. by gene name from a db table)
 	throw 'unknown query method for snvindel'
 }
 

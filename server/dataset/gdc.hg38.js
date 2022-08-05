@@ -1,5 +1,20 @@
 const got = require('got')
 
+/*
+validate_filter0
+isoform2ssm_getvariant
+isoform2ssm_getcase
+query_range2variants
+variables_range2variants
+variant2samplesGdcapi
+termTotalSizeGdcapi
+	termid2size_query
+	termid2size_filters
+ssm2canonicalisoform
+aliquot2sample
+sample_id_getter
+*/
+
 const GDC_HOST = process.env.PP_GDC_HOST || 'https://api.gdc.cancer.gov'
 
 /* if filter0 is missing necessary attr, adding it to api query will cause error
@@ -25,59 +40,16 @@ function validate_filter0(f) {
 query list of variants by isoform
 */
 
-// TODO FIXME investigate if this api supports both isoform and coordinate query
-// if so then no need for snvindel.byrange and .byisoform
-const protein_mutations = {
-	apihost: GDC_HOST + '/v0/graphql',
-	query: `query Lolliplot_relayQuery(
-		  $filter: FiltersArgument
-		  $score: String
-		) {
-		  analysis {
-			protein_mutations {
-			  data(first: 10000, score: $score,  filters: $filter, fields: [
-				"ssm_id"
-				"chromosome"
-				"start_position"
-				"reference_allele"
-				"tumor_allele"
-				"consequence.transcript.aa_change"
-				"consequence.transcript.consequence_type"
-				"consequence.transcript.transcript_id"
-				])
-			}
-		  }
-		}`,
-	filters: p => {
-		if (!p.isoform) throw '.isoform missing'
-		const f = {
-			filter: {
-				op: 'and',
-				content: [{ op: '=', content: { field: 'ssms.consequence.transcript.transcript_id', value: [p.isoform] } }]
-			},
-			score: 'occurrence.case.project.project_id'
-		}
-		if (p.set_id) {
-			if (typeof p.set_id != 'string') throw '.set_id value not string'
-			f.filter.content.push({
-				op: 'in',
-				content: {
-					field: 'cases.case_id',
-					value: [p.set_id]
-				}
-			})
-		}
-		if (p.filter0) {
-			f.filter.content.push(p.filter0)
-		}
-		return f
-	}
-}
+/*
+REST: get list of ssm with consequence, no case info and occurrence
+isoform2ssm_getvariant and isoform2ssm_getcase are the "tandem REST api"
+yields list of ssm, each with .samples[{sample_id}]
+can use .samples[] to derive .occurrence for each ssm, and overal number of unique samples
 
-// REST: get list of ssm with consequence, no case info and occurrence
-// isoform2ssm_getvariant and isoform2ssm_getcase are the "tandem REST api" for lollipop+summary label, which is not in use now
+in comparison to "protein_mutations" graphql query
+*/
 const isoform2ssm_getvariant = {
-	endpoint: GDC_HOST + '/ssms',
+	endpoint: '/ssms',
 	size: 100000,
 	fields: [
 		'ssm_id',
@@ -102,6 +74,46 @@ const isoform2ssm_getvariant = {
 					op: '=',
 					content: {
 						field: 'consequence.transcript.transcript_id',
+						value: [p.isoform]
+					}
+				}
+			]
+		}
+		if (p.set_id) {
+			if (typeof p.set_id != 'string') throw '.set_id value not string'
+			f.content.push({
+				op: 'in',
+				content: {
+					field: 'cases.case_id',
+					value: [p.set_id]
+				}
+			})
+		}
+		if (p.filter0) {
+			f.content.push(p.filter0)
+		}
+		return f
+	}
+}
+// REST: get case details for each ssm, no variant-level info
+const isoform2ssm_getcase = {
+	endpoint: '/ssm_occurrences',
+	size: 100000,
+	fields4counting: ['ssm.ssm_id', 'case.case_id'],
+	fields4details: ['ssm.ssm_id', 'case.case_id', 'case.observation.sample.tumor_sample_barcode'],
+	filters: p => {
+		// p:{}
+		// .isoform
+		// .set_id
+		if (!p.isoform) throw '.isoform missing'
+		if (typeof p.isoform != 'string') throw '.isoform value not string'
+		const f = {
+			op: 'and',
+			content: [
+				{
+					op: '=',
+					content: {
+						field: 'ssms.consequence.transcript.transcript_id',
 						value: [p.isoform]
 					}
 				}
@@ -253,21 +265,8 @@ don't know a js method to alter the list of attributes in `case { }` part
 */
 const variant2samplesGdcapi = {
 	endpoint: '/ssm_occurrences',
-	// Note: case.case_id seems extra field just for sunburst,
-	// but it's fail-safe in case both 'disease_type' and 'primary_site' are missing from that case
-	fields_sunburst: ['disease_type', 'primary_site', 'case_id'],
-	// Note: observation node and children terms are removed from gdc dictionary,
-	// so have to use entire path
-	fields_samples: [
-		'ssm.ssm_id',
-		'case.case_id',
-		'case.observation.read_depth.t_alt_count',
-		'case.observation.read_depth.t_depth',
-		'case.observation.read_depth.n_depth',
-		'case.observation.sample.tumor_sample_barcode'
-	],
-	fields_samplesIdOnly: ['case.case_id'],
-	filters: p => {
+
+	filters: (p, ds) => {
 		const f = { op: 'and', content: [] }
 		if (p.ssm_id_lst) {
 			f.content.push({
@@ -278,6 +277,7 @@ const variant2samplesGdcapi = {
 				}
 			})
 		} else if (p.isoform) {
+			// note purpose!!
 			f.content.push({
 				op: '=',
 				content: {
@@ -302,18 +302,20 @@ const variant2samplesGdcapi = {
 		if (p.filter0) {
 			f.content.push(p.filter0)
 		}
-		if (p.termlst) {
-			for (const t of p.termlst) {
-				if (t && t.type == 'categorical') {
+		if (p.tid2value) {
+			for (const termid in p.tid2value) {
+				const t = ds.cohort.termdb.q.termjsonByOneid(termid)
+				if (!t) continue
+				if (t.type == 'categorical') {
 					f.content.push({
 						op: 'in',
-						content: { field: 'cases.' + t.fields.join('.'), value: [p.tid2value[t.id]] }
+						content: { field: termid, value: [p.tid2value[termid]] }
 					})
-				} else if (t && t.type == 'integer') {
-					for (const val of p.tid2value[t.id]) {
+				} else if (t.type == 'integer') {
+					for (const val of p.tid2value[termid]) {
 						f.content.push({
 							op: val.op,
-							content: { field: 'cases.' + t.fields.join('.'), value: val.range }
+							content: { field: termid, value: val.range }
 						})
 					}
 				}
@@ -324,111 +326,21 @@ const variant2samplesGdcapi = {
 }
 
 /*
-getting total cohort sizes
-*/
-function totalsize_filters(p, ds) {
-	// same filter maker function is shared for all terms that need to get total size
-	const f = {
-		filters: {
-			op: 'and',
-			content: [{ op: 'in', content: { field: 'cases.available_variation_data', value: ['ssm'] } }]
-		}
-	}
-	if (p.set_id) {
-		f.filters.content.push({
-			op: 'in',
-			content: {
-				field: 'cases.case_id',
-				value: [p.set_id]
-			}
-		})
-	}
-	if (p.filter0) {
-		f.filters.content.push(p.filter0)
-	}
-	if (p.tid2value) {
-		for (const tid in p.tid2value) {
-			const t = ds.cohort.termdb.q.termjsonByOneid(tid)
-			if (t) {
-				f.filters.content.push({
-					op: 'in',
-					content: { field: 'cases.' + t.fields.join('.'), value: [p.tid2value[tid]] }
-				})
-			}
-		}
-	}
-	return f
-}
-const project_size = {
-	query: ` query projectSize( $filters: FiltersArgument) {
-	viewer {
-		explore {
-			cases {
-				total: aggregations(filters: $filters) {
-					project__project_id {
-						buckets {
-							doc_count
-							key
-						}
-					}
-				}
-			}
-		}
-	}
-}`,
-	keys: ['data', 'viewer', 'explore', 'cases', 'total', 'project__project_id', 'buckets'],
-	filters: totalsize_filters
-}
-const disease_size = {
-	query: ` query diseaseSize( $filters: FiltersArgument) {
-	viewer {
-		explore {
-			cases {
-				total: aggregations(filters: $filters) {
-					disease_type {
-						buckets {
-							doc_count
-							key
-						}
-					}
-				}
-			}
-		}
-	}
-}`,
-	keys: ['data', 'viewer', 'explore', 'cases', 'total', 'disease_type', 'buckets'],
-	filters: totalsize_filters
-}
-const site_size = {
-	query: ` query siteSize( $filters: FiltersArgument) {
-	viewer {
-		explore {
-			cases {
-				total: aggregations(filters: $filters) {
-					primary_site {
-						buckets {
-							doc_count
-							key
-						}
-					}
-				}
-			}
-		}
-	}
-}`,
-	keys: ['data', 'viewer', 'explore', 'cases', 'total', 'primary_site', 'buckets'],
-	filters: totalsize_filters
-}
+argument is array, each element: {type, id}
 
+for term id of 'case.project.project_id', convert to "project__project_id", for graphql
+*/
 function termid2size_query(termlst) {
-	let query_str = ''
+	const lst = []
 	for (const term of termlst) {
-		const key = term.path
-		if (!key) continue
-		if (term.type)
-			query_str = query_str.length
-				? `${query_str} ${key} ${term.type == 'categorical' ? '{buckets { doc_count, key }}' : '{stats { count }}'}`
-				: `${key} ${term.type == 'categorical' ? '{buckets { doc_count, key }}' : '{stats { count }}'}`
+		if (!term.id) continue
+		if ((term.type = 'categorical')) {
+			lst.push(term.path + ' {buckets { doc_count, key }}')
+		} else if (term.type == 'integer' || term.type == 'float') {
+			lst.push(term.path + ' {stats { count }}')
+		} else {
+			throw 'unknown term type'
+		}
 	}
 
 	// for all terms from termidlst will be added to single query
@@ -436,7 +348,7 @@ function termid2size_query(termlst) {
 		explore {
 			cases {
 				aggregations (filters: $filters, aggregations_filter_themselves: true) {
-					${query_str}
+					${lst.join('\n')}
 				}
 			}
 		}
@@ -453,12 +365,21 @@ function termid2size_filters(p, ds) {
 	}
 
 	if (p && p.tid2value) {
-		for (const tid in p.tid2value) {
-			const t = ds.cohort.termdb.q.termjsonByOneid(tid)
+		for (const termid in p.tid2value) {
+			const t = ds.cohort.termdb.q.termjsonByOneid(termid)
 			if (t) {
 				f.filters.content.push({
 					op: 'in',
-					content: { field: 'cases.' + t.fields.join('.'), value: [p.tid2value[tid]] }
+					content: {
+						/*********************
+						extremely tricky, no explanation
+						**********************
+						term id all starts with "case.**"
+						but in this graphql query, fields must start with "cases.**"
+						*/
+						field: termid.replace(/^case\./, 'cases.'),
+						value: [p.tid2value[termid]]
+					}
 				})
 			}
 		}
@@ -470,10 +391,11 @@ function termid2size_filters(p, ds) {
 			content: { field: 'cases.gene.ssm.ssm_id', value: p.ssm_id_lst.split(',') }
 		})
 	}
+	//console.log(JSON.stringify(f,null,2))
 	return f
 }
 
-const termidlst2size = {
+const termTotalSizeGdcapi = {
 	query: termid2size_query,
 	keys: ['data', 'explore', 'cases', 'aggregations'],
 	filters: termid2size_filters
@@ -487,72 +409,127 @@ const ssm2canonicalisoform = {
 	fields: ['consequence.transcript.is_canonical', 'consequence.transcript.transcript_id']
 }
 
-// gdc-specific logic, for converting aliquot id to sample id
-// per greg: Confusingly, the tumor_sample_barcode is actually the submitter ID of the tumor aliquot for which a variant was called. If you want to display the submitter ID of the sample, you’ll have to query the GDC case API for the sample for that aliquot.
+/* gdc-specific logic, for converting aliquot id to sample id
+
+per greg: Confusingly, the tumor_sample_barcode is actually the submitter ID of the tumor aliquot for which a variant was called. If you want to display the submitter ID of the sample, you’ll have to query the GDC case API for the sample for that aliquot.
+
+per phil's suggestion, setting first "first=1000" works
+
+questions:
+- 433c2eb6-560f-4387-93af-6c2e1a_D6_1 is converted to 433c2eb6-560f-4387-93af-6c2e1a but not but not case id (15BR003, CPTAC-2)
+- why setting (first: 100, filters: $filters) at two places
+*/
 const aliquot2sample = {
 	query: `query barcode($filters: FiltersArgument) {
-	  repository {
-		cases {
-		  hits(first: 10, filters: $filters) {
-			edges {
-			  node {
-				samples {
-				  hits (first: 10, filters: $filters) {
-					edges {
-					  node {
-						submitter_id
-					  }
+  repository {
+    cases {
+      hits(first: 1000, filters: $filters) { edges { node {
+        samples {
+          hits (first: 100, filters: $filters) { edges { node {
+            submitter_id
+            portions {
+              hits { edges { node {
+			    analytes {
+				  hits { edges { node { 
+				    aliquots {
+					  hits { edges { node { submitter_id }}}
 					}
-				  }
+				  }}}
 				}
-			  }
-			}
-		  }
-		}
-	  }
-	}`,
-	variables: aliquotid => {
+              } } }
+            }
+          } } }
+        }
+      } } }
+    }
+  }
+}`,
+	variables: aliquotidLst => {
 		return {
 			filters: {
 				op: '=',
 				content: {
 					// one aliquot id will match with one sample id
 					field: 'samples.portions.analytes.aliquots.submitter_id',
-					value: aliquotid
+					value: aliquotidLst
 				}
 			}
 		}
 	},
-	get: async (aliquotid, headers) => {
+	get: async (aliquotidLst, headers) => {
 		const response = await got.post(GDC_HOST + '/v0/graphql', {
 			headers,
-			body: JSON.stringify({ query: aliquot2sample.query, variables: aliquot2sample.variables(aliquotid) })
+			body: JSON.stringify({
+				query: aliquot2sample.query,
+				variables: aliquot2sample.variables(aliquotidLst)
+			})
 		})
-		const d = JSON.parse(response.body)
+		const json = JSON.parse(response.body)
 		if (
-			!d.data ||
-			!d.data.repository ||
-			!d.data.repository.cases ||
-			!d.data.repository.cases.hits ||
-			!d.data.repository.cases.hits.edges
+			!json.data ||
+			!json.data.repository ||
+			!json.data.repository.cases ||
+			!json.data.repository.cases.hits ||
+			!json.data.repository.cases.hits.edges
 		)
 			throw 'structure not data.repository.cases.hits.edges'
-		const acase = d.data.repository.cases.hits.edges[0]
-		if (!acase) throw 'data.repository.cases.hits.edges[0] missing'
-		if (!acase.node || !acase.node.samples || !acase.node.samples.hits || !acase.node.samples.hits.edges)
-			throw 'case not .node.samples.hits.edges'
-		const sample = acase.node.samples.hits.edges[0]
-		if (!sample) throw 'acase.node.samples.hits.edges[0] missing'
-		if (!sample.node || !sample.node.submitter_id) throw 'a sample is not node.submitter_id'
-		return sample.node.submitter_id
+
+		const aset = new Set(aliquotidLst)
+		const idmap = new Map() // k: input id, v: output id
+
+		for (const c of json.data.repository.cases.hits.edges) {
+			for (const s of c.node.samples.hits.edges) {
+				const submitter_id = s.node.submitter_id
+				for (const p of s.node.portions.hits.edges) {
+					for (const a of p.node.analytes.hits.edges) {
+						for (const al of a.node.aliquots.hits.edges) {
+							const al_id = al.node.submitter_id
+							if (aset.has(al_id)) {
+								// a match!
+								idmap.set(al_id, submitter_id)
+							}
+						}
+					}
+				}
+			}
+		}
+		return idmap
+	}
+}
+
+async function sample_id_getter(samples, headers) {
+	/*
+	samples[], each element:
+		{
+			tempcase:{observation[0].sample.tumor_sample_barcode}
+		}
+	convert tumor_sample_barcode to sample submitter id, assign to sample.sample_id
+	and delete sample.tempcase
+
+	fire one graphql query to convert id of all samples
+	the getter is a dataset-specific, generic feature, so it should be defined here
+	passing in headers is a gdc-specific logic for controlled data
+	*/
+	const id2sample = new Map() // k: tumor_sample_barcode, v: sample obj
+	for (const sample of samples) {
+		const s = sample.tempcase
+		if (s.observation && s.observation[0].sample) {
+			const n = s.observation[0].sample.tumor_sample_barcode
+			if (n) {
+				id2sample.set(n, sample)
+			}
+		}
+		delete sample.tempcase
+	}
+	const idmap = await aliquot2sample.get([...id2sample.keys()], headers)
+	for (const [id, sample] of id2sample) {
+		sample.sample_id = idmap.get(id) || id
 	}
 }
 
 ///////////////////////////////// end of query strings ///////////////
 
-// XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-// XXX hardcoded to use .sample_id to dedup samples
-// XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+// mds3 hardcodes to use .sample_id to dedup samples
 
 module.exports = {
 	isMds3: true,
@@ -564,16 +541,23 @@ module.exports = {
 	// termdb as a generic interface
 	// getters will be added to abstract the detailed implementations
 	termdb: {
-		termid2totalsize: {
-			// keys are term ids
-			project_id: { gdcapi: project_size },
-			disease_type: { gdcapi: disease_size },
-			primary_site: { gdcapi: site_size }
-		},
+		// for each term from an input list, get total sizes for each category
+		// used for sunburst and summary
 		termid2totalsize2: {
-			gdcapi: termidlst2size
+			gdcapi: termTotalSizeGdcapi
 		},
-		dictionary: { gdcapi: true }
+
+		dictionary: {
+			// runs termdb.gdc.js to init gdc dictionary
+			// create standard helpers at ds.cohort.termdb.q{}
+			gdcapi: true
+		},
+
+		// pending
+		allowCaseDetails: {
+			sample_id_key: 'case_uuid',
+			terms: ['case.diagnoses']
+		}
 	},
 
 	ssm2canonicalisoform,
@@ -584,11 +568,37 @@ module.exports = {
 	variant2samples: {
 		variantkey: 'ssm_id', // required, tells client to return ssm_id for identifying variants
 
-		// default list of terms to show as sample attributes in details page
-		termidlst: ['disease_type', 'primary_site', 'project_id', 'gender', 'age_at_diagnosis', 'race', 'ethnicity'],
+		//////////////////////////////
+		// termidlst and sunburst_ids are sent to client as default lists for different purposes
+		// subject to user-customization there, and sent back via request arg for computing
+		// not to be used on server-side!
 
-		// default list of terms for making sunburst/crosstab summary for cases harboring a term
-		sunburst_ids: ['disease_type', 'primary_site'],
+		// list of term ids as sample details
+		termidlst: [
+			'case.disease_type',
+			'case.primary_site',
+			'case.project.project_id',
+			'case.demographic.gender',
+			//'case.diagnoses.age_at_diagnosis',
+			//'case.diagnoses.treatments.therapeutic_agents',
+			'case.demographic.race',
+			'case.demographic.ethnicity'
+		],
+
+		// small list of terms for sunburst rings
+		sunburst_ids: ['case.disease_type', 'case.primary_site'],
+
+		//////////////////////////////
+		// optional extra terms to append to client-provided term ids when get='samples'
+		// not to send to client but secretly used in backend computing
+		extra_termids_samples: [
+			'ssm.ssm_id',
+			'case.case_id',
+			'case.observation.read_depth.t_alt_count',
+			'case.observation.read_depth.t_depth',
+			'case.observation.read_depth.n_depth',
+			'case.observation.sample.tumor_sample_barcode'
+		],
 
 		// quick fix: flag to indicate availability of these fields, so as to create new columns in sample table
 		sampleHasSsmReadDepth: true, // corresponds to .ssm_read_depth{} of a sample
@@ -596,14 +606,7 @@ module.exports = {
 
 		// either of sample_id_key or sample_id_getter will be required for making url link for a sample
 		//sample_id_key: 'case_id',
-		sample_id_getter: async (d, headers) => {
-			// the getter is a dataset-specific, generic feature, so it should be defined here
-			// passing in headers is a gdc-specific logic for controlled data
-			if (d.observation && d.observation[0].sample && d.observation[0].sample.tumor_sample_barcode) {
-				return await aliquot2sample.get(d.observation[0].sample.tumor_sample_barcode, headers)
-			}
-			return ''
-		},
+		sample_id_getter,
 
 		url: {
 			base: 'https://portal.gdc.cancer.gov/cases/',
@@ -629,11 +632,15 @@ module.exports = {
 				}
 			},
 			byisoform: {
+				gdcapi: {
+					query1: isoform2ssm_getvariant,
+					query2: isoform2ssm_getcase
+				}
+				/* using tandem api but not graphql query, as former returns list of samples
+				and easier to summarize
 				gdcapi: protein_mutations
+				*/
 			},
-			// run a separate query to get total number of samples with snvindel
-			// since snvindel byisoform query only return ssm, but not cases
-			getSamples: {},
 			m2csq: {
 				// may also support querying a vcf by chr.pos.ref.alt
 				by: 'ssm_id',

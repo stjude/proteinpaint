@@ -27,7 +27,8 @@
     "server/utils/*.R",
     "server/utils/rust/*.*",
     "server/utils/rust/src",
-    "server/shared"
+    "server/shared",
+    "utils/install.pp.js"
   ],
   "bugs": {
     "url": "https://github.com/stjude/pp-dist"

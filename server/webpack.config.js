@@ -13,7 +13,7 @@ try {
 
 module.exports = function(env = {}) {
 	// the env object is passed to webpack cli call by
-	// adding --env.NODE_ENV='...', --env.devtool='...', etc
+	// adding --env NODE_ENV='...', --env devtool='...', etc
 	return {
 		// see https://v4.webpack.js.org/configuration/mode/
 		//
@@ -26,9 +26,13 @@ module.exports = function(env = {}) {
 		target: 'node',
 		externals: [
 			nodeExternals({
-				allowlist: [/\/src\//]
+				allowlist: [/\/src\//],
+				additionalModuleDirs: [path.resolve(__dirname, '../node_modules')],
 			})
 		],
+		externalsPresets: {
+			node: true
+		},
 		entry: path.join(__dirname, './src/app.js'),
 		output: {
 			path: path.join(__dirname, './'),
@@ -56,6 +60,6 @@ module.exports = function(env = {}) {
 		// devtool: 'source-map' is slowest to build/rebuild, but
 		// line numbers in stack traces are accurate
 		//
-		devtool: env.devtool ? env.devtool : env.NODE_ENV == 'development' ? 'eval' : ''
+		devtool: env.devtool ? env.devtool : env.NODE_ENV == 'development' ? 'source-map' : false
 	}
 }

@@ -1,11 +1,12 @@
 {
   "name": "@stjude/proteinpaint-client",
-  "version": "2.1.2",
+  "version": "2.1.4",
   "description": "a genomics visualization tool for exploring a cohort's genotype and phenotype data",
   "main": "dist/app.js",
+  "module": "dist/app.js",
   "scripts": {
     "predev": "node ./test/import-specs.js name=? && rm -f ../public/bin/*proteinpaint.js",
-    "dev": "webpack --env.NODE_ENV=development --watch --progress --colors",
+    "dev": "webpack --env NODE_ENV=development --watch --progress --color",
     "pretest": "./test/pretest.js",
     "test": "node ./test/import-specs.js && npm run tape",
     "tape": "cat ../public/bin/proteinpaint.js ./test/init.js | tape-run --static ../public",
@@ -27,19 +28,21 @@
     "@rollup/plugin-node-resolve": "^11.0.1",
     "babel-loader": "^8.2.2",
     "css-loader": "^0.23.1",
+    "node-polyfill-webpack-plugin": "^1.1.4",
+    "postcss-import": "^14.1.0",
     "prettier": "1.18.2",
     "react": "^17.0.1",
     "react-dom": "^17.0.1",
     "rollup": "^2.35.1",
-    "rollup-plugin-postcss": "^3.1.8",
+    "rollup-plugin-postcss": "^4.0.2",
     "rollup-plugin-terser": "^7.0.2",
     "style-loader": "^0.13.1",
     "tape": "^5.2.2",
     "tape-run": "^9.0.0",
-    "webpack": "^4.44.2",
-    "webpack-cli": "^3.3.12",
-    "webpack-node-externals": "^1.7.2",
-    "webpack-notifier": "^1.7.0"
+    "webpack": "^5.7.3",
+    "webpack-cli": "^4.9.2",
+    "webpack-node-externals": "^3.0.0",
+    "webpack-notifier": "^1.15.0"
   },
   "dependencies": {
     "d3": "^4.12.2",
@@ -47,7 +50,8 @@
     "debounce": "^1.2.0",
     "highlight.js": "~11.2.0",
     "normalize.css": "^8.0.1",
-    "partjson": "^0.58.1"
+    "partjson": "^0.58.1",
+    "process": "^0.11.10"
   },
   "peerDependencies": {
     "react": "^17.0.1",

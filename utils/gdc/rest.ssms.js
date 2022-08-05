@@ -1,5 +1,6 @@
 const got = require('got')
 // gene=AKT1 isoform=ENST00000407796 case_id=0772cdbe-8b0d-452b-8df1-bd70d1306363
+// corresponds to isoform2ssm_getvariant{}
 
 /* following code should be shared with rest.ssm_occurrences.js or more
 const [p, filters] = arg2filter(process.argv)
@@ -10,12 +11,11 @@ for (let i = 2; i < process.argv.length; i++) {
 	const [k, v] = process.argv[i].split('=')
 	p[k] = v
 }
-/*
 if (!p.gene && !p.isoform) {
 	// if missing gene/isoform, use AKT1
 	p.isoform = 'ENST00000407796'
 }
-*/
+
 const filters = {
 	op: 'and',
 	content: []

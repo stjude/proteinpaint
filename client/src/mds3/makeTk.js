@@ -2,9 +2,10 @@ import { select as d3select, event as d3event } from 'd3-selection'
 import { Menu } from '../../dom/menu'
 import { dofetch3 } from '../../common/dofetch'
 import { initLegend, updateLegend } from './legend'
-import { loadTk } from './tk'
+import { loadTk, rangequery_rglst } from './tk'
 import urlmap from '../../common/urlmap'
 import { mclass } from '../../shared/common'
+import { vcfparsemeta } from '../../shared/vcf'
 
 /*
 ********************** EXPORTED
@@ -259,9 +260,9 @@ async function get_ds(tk, block) {
 	// fill in details to tk.mds
 	///////////// custom data sources
 	if (tk.vcf) {
+		if (!tk.vcf.file && !tk.vcf.url) throw 'file or url missing for tk.vcf{}'
 		tk.mds.has_skewer = true // enable skewer tk
-		console.log('to enable custom vcf')
-		//await getvcfheader_customtk(tk.vcf, block.genome)
+		await getvcfheader_customtk(tk, block.genome)
 	} else if (tk.custom_variants) {
 		tk.mds.has_skewer = true // enable skewer tk
 		validateCustomVariants(tk)
@@ -293,6 +294,10 @@ async function init_termdb(tk, block) {
 		const _ = await import('../../termdb/vocabulary')
 		tdb.vocabApi = _.vocabInit(arg)
 	}
+
+	if (tk.mds.termdb.allowCaseDetails) {
+		tk.mds.termdb.allowCaseDetails.get = async acase => {}
+	}
 }
 
 function mayaddGetter_m2csq(tk, block) {
@@ -310,11 +315,23 @@ function mayaddGetter_m2csq(tk, block) {
 	}
 }
 
+/* to add tk.mds.variant2samples.get()
+with different implementation for client/server-based data sources
+
+note inconsistency in getSamples() for client/server
+where server function queries v2s.get()
+but client function does not do v2s.get() but should do the same to support sunburst and summary
+*/
 function mayaddGetter_variant2samples(tk, block) {
 	if (!tk.mds.variant2samples) return
 
-	// getter are implemented differently based on data sources
 	if (tk.custom_variants) {
+		// TODO auto generate variant2samples.termidlst[] based on sample data
+
+		/* getter implemented for custom data
+		currently only provides list of samples
+		TODO support summary and sunburst
+		*/
 		tk.mds.variant2samples.get = arg => {
 			/*
 			arg{}
@@ -330,7 +347,7 @@ function mayaddGetter_variant2samples(tk, block) {
 						samples.push(s2)
 					}
 				}
-				return [samples, samples.length]
+				return samples
 			}
 			if (arg.querytype == tk.mds.variant2samples.type_summary) {
 				throw 'todo: summary'
@@ -340,38 +357,112 @@ function mayaddGetter_variant2samples(tk, block) {
 			}
 			throw 'unknown querytype'
 		}
+
+		tk.mds.getSamples = () => {
+			const id2sample = new Map()
+			for (const m of tk.custom_variants) {
+				if (!m.samples) continue
+				for (const s of m.samples) {
+					if (id2sample.has(s.sample_id)) {
+						id2sample.get(s.sample_id).ssm_id_lst.push(m.ssm_id)
+					} else {
+						const s2 = JSON.parse(JSON.stringify(s))
+						s2.ssm_id_lst = [m.ssm_id]
+						id2sample.set(s.sample_id, s2)
+					}
+				}
+			}
+			return [...id2sample.values()]
+		}
 		return
 	}
 
-	// server-hosted official dataset
+	// same getters implemented for server-hosted official dataset
+
+	/*
+	call v2s.get() with querytype=?
+	based on querytype, get() finds terms from appropriate places to retrieve attributes
+	thus no need to directly supply list of terms to get()
+
+	arg{}
+	.querytype=sunburst/samples/summary
+	.listSamples=1
+	.mlst
+	.isoform 
+	.rglst[] // requires one of (mlst, isoform, rglst)
+	.tid2value{}
+	*/
 	tk.mds.variant2samples.get = async arg => {
-		/* arg{}
-		.querytype
-		.mlst
-		.tid2value{}
-		*/
 		const par = ['genome=' + block.genome.name, 'dslabel=' + tk.mds.label, 'variant2samples=1', 'get=' + arg.querytype]
+		if (arg.listSsm) {
+			// from getSamples(), is a modifier of querytype=samples, to return .ssm_id_lst[] with each sample
+			par.push('listSsm=1')
+		}
+
+		// pagination, not used
 		//if (arg.size) par.push('size=' + arg.size)
 		//if (arg.from != undefined) par.push('from=' + arg.from)
-		if (tk.mds.variant2samples.variantkey == 'ssm_id') {
-			// TODO detect too long string length that will result url-too-long error
-			// in such case, need alternative query method
-			par.push('ssm_id_lst=' + arg.mlst.map(i => i.ssm_id).join(','))
-		} else {
-			throw 'unknown variantkey for variant2samples'
+
+		if (arg.mlst) {
+			if (tk.mds.variant2samples.variantkey == 'ssm_id') {
+				// TODO detect too long string length that will result url-too-long error
+				// in such case, need alternative query method
+				par.push('ssm_id_lst=' + arg.mlst.map(i => i.ssm_id).join(','))
+			} else {
+				throw 'unknown variantkey for variant2samples'
+			}
+		} else if (arg.isoform) {
+			par.push('isoform=' + arg.isoform)
+		} else if (arg.rglst) {
+			par.push('rglst=' + arg.rglst)
 		}
+
 		const headers = { 'Content-Type': 'application/json', Accept: 'application/json' }
 		if (tk.set_id) par.push('set_id=' + tk.set_id)
 		if (tk.token) headers['X-Auth-Token'] = tk.token
 		if (tk.filter0) par.push('filter0=' + encodeURIComponent(JSON.stringify(tk.filter0)))
 		if (arg.tid2value) par.push('tid2value=' + encodeURIComponent(JSON.stringify(arg.tid2value)))
-		// pass all termidlst including new termid
-		if (arg.querytype != tk.mds.variant2samples.type_sunburst && tk.mds.variant2samples.termidlst)
-			par.push('termidlst=' + tk.mds.variant2samples.termidlst)
+
+		// supply list of terms based on querytype
+		if (arg.querytype == tk.mds.variant2samples.type_sunburst) {
+			if(tk.mds.variant2samples.sunburst_ids) 
+				par.push('termidlst=' + tk.mds.variant2samples.sunburst_ids)
+		} else if (arg.querytype == tk.mds.variant2samples.type_samples) {
+			if(tk.mds.variant2samples.termidlst)
+				par.push('termidlst=' + tk.mds.variant2samples.termidlst)
+		} else if (arg.querytype == tk.mds.variant2samples.type_summary) {
+			if(tk.mds.variant2samples.termidlst)
+				par.push('termidlst=' + tk.mds.variant2samples.termidlst)
+		} else {
+			throw 'unknown querytype'
+		}
+
 		const data = await dofetch3('mds3?' + par.join('&'), { headers }, { serverData: tk.cache })
 		if (data.error) throw data.error
 		if (!data.variant2samples) throw 'result error'
 		return data.variant2samples
+	}
+
+	/*
+	this function is called for 2 uses in #cases menu
+	arg{}
+	.isSummary=true
+		true: return summaries for v2s.termidlst
+		false: return list of samples
+	.tid2value={}
+		optional, to filter samples
+	*/
+	tk.mds.getSamples = async (arg = {}) => {
+		if (arg.isSummary) {
+			arg.querytype = tk.mds.variant2samples.type_summary
+		} else {
+			// must be calling from "List" option of #case menu
+			arg.querytype = tk.mds.variant2samples.type_samples
+			// supply this flag so server will group ssm by case
+			arg.listSsm = 1
+		}
+		rangequery_rglst(tk, block, arg)
+		return await tk.mds.variant2samples.get(arg)
 	}
 }
 
@@ -508,4 +599,22 @@ function mayDeriveSkewerOccurrence4samples(tk) {
 	v.type_samples = 'samples'
 	v.type_summary = 'summary'
 	v.type_sunburst = 'sunburst'
+}
+
+async function getvcfheader_customtk(tk, genome) {
+	const arg = ['genome=' + genome.name]
+	if (tk.vcf.file) {
+		arg.push('file=' + tk.vcf.file)
+	} else {
+		arg.push('url=' + tk.vcf.url)
+		if (tk.vcf.indexURL) arg.push('indexURL=' + tk.vcf.indexURL)
+	}
+	const data = await dofetch3('vcfheader?' + arg.join('&'))
+	if (data.error) throw data.error
+	const [info, format, samples, errs] = vcfparsemeta(data.metastr.split('\n'))
+	if (errs) throw 'Error parsing VCF meta lines: ' + errs.join('; ')
+	tk.vcf.info = info
+	tk.vcf.format = format
+	tk.vcf.samples = samples
+	tk.vcf.nochr = data.nochr
 }

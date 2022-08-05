@@ -42,7 +42,7 @@ export async function loadTk(tk, block) {
 		// left labels and skewer at same row, whichever taller
 		may_render_skewer(data, tk, block)
 		// must render skewer first, then left labels
-		make_leftlabels(data, tk, block)
+		await make_leftlabels(data, tk, block)
 
 		////////// add new subtrack type
 
@@ -95,7 +95,18 @@ function getParameter(tk, block) {
 		// official
 		par.push('dslabel=' + tk.mds.label)
 	} else {
-		throw 'how to deal with custom track'
+		// should be custom track with data files on backend
+		if (tk.vcf) {
+			if (tk.vcf.file) {
+				par.push('vcffile=' + tk.vcf.file)
+			} else if (tk.vcf.url) {
+				par.push('vcfurl=' + tk.vcf.url)
+				if (tk.vcf.indexURL) par.push('vcfindexURL=' + tk.vcf.indexURL)
+			} else {
+				throw '.file and .url missing for tk.vcf{}'
+			}
+		}
+		// add new file types
 	}
 
 	//rangequery_add_variantfilters(par, tk)
@@ -133,6 +144,8 @@ async function getData(tk, block) {
 }
 
 export function rangequery_rglst(tk, block, par) {
+	// if par is array, push "k=v" string to it; otherwise add to obj: par[k] = v
+	// makes no return
 	let rglst = []
 	if (block.usegm) {
 		/* to merge par.rglst[] into one region
@@ -149,13 +162,13 @@ export function rangequery_rglst(tk, block, par) {
 			const j = block.rglst[i]
 			r.width += j.width + block.regionspace
 			r.start = r.start == null ? j.start : Math.min(r.start, j.start)
-			r.stop = r.stop == null ? j.stop : Math.min(r.stop, j.stop)
+			r.stop = r.stop == null ? j.stop : Math.max(r.stop, j.stop)
 		}
 		rglst.push(r)
-		par.push('isoform=' + block.usegm.isoform)
+		add('isoform', block.usegm.isoform)
 		if (block.gmmode == 'genomic') {
 			// TODO if can delete the isoform parameter to simply make the query by genomic pos
-			par.push('atgenomic=1')
+			add.push('atgenomic', 1)
 		}
 	} else {
 		rglst = block.tkarg_rglst(tk)
@@ -184,7 +197,14 @@ export function rangequery_rglst(tk, block, par) {
 			xoff += r.width + r.leftpad
 		}
 	}
-	par.push('rglst=' + JSON.stringify(rglst))
+	add('rglst', JSON.stringify(rglst))
+	function add(k, v) {
+		if (Array.isArray(par)) {
+			par.push(k + '=' + v)
+		} else {
+			par[k] = v
+		}
+	}
 }
 
 function rangequery_add_variantfilters(par, tk) {

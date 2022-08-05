@@ -1,20 +1,31 @@
 const gdc = require('./mds3.gdc')
-const gdcTermdb = require('./termdb.gdc')
+const { initGDCdictionary } = require('./termdb.gdc')
 const { variant2samples_getresult } = require('./mds3.variant2samples')
+const utils = require('./utils')
+const compute_mclass = require('./termdb.snp').compute_mclass
+const path = require('path')
+const serverconfig = require('./serverconfig')
 
 /*
 ********************** EXPORTED
 init
 client_copy
-get_crosstabCombinations
+snvindelVcfByRangeGetter
+mayAddSamplesFromVcfLine
 ********************** INTERNAL
 */
 
+// in case chr name may contain '.', can change to __
+export const ssmIdFieldsSeparator = '.'
+
 export async function init(ds, genome, _servconfig) {
 	if (!ds.queries) throw 'ds.queries{} missing'
+	// must validate termdb first
 	await validate_termdb(ds)
+	// must validate snvindel query before variant2sample
+	// as vcf header must be parsed to supply samples for v2s
+	await validate_query_snvindel(ds, genome)
 	validate_variant2samples(ds)
-	validate_query_snvindel(ds)
 	validate_ssm2canonicalisoform(ds)
 
 	may_add_refseq2ensembl(ds, genome)
@@ -35,16 +46,25 @@ export function client_copy(ds) {
 		// if using flat list of terms, do not send terms[] to client
 		// as this is official ds, and client will create vocabApi
 		// to query /termdb server route with standard methods
+		if (ds.termdb.allowCaseDetails) {
+			ds2.termdb.allowCaseDetails = {
+				sample_id_key: ds.termdb.allowCaseDetails.sample_id_key // optional key
+			}
+		}
 	}
 	if (ds.queries.snvindel) {
 		ds2.has_skewer = true
 	}
 	if (ds.variant2samples) {
-		const skip = ['sample_id_key', 'sample_id_getter', 'gdcapi']
-		ds2.variant2samples = {}
-		for (const k in ds.variant2samples) {
-			if (skip.includes(k)) continue
-			ds2.variant2samples[k] = ds.variant2samples[k]
+		const v = ds.variant2samples
+		ds2.variant2samples = {
+			sunburst_ids: v.sunburst_ids,
+			termidlst: v.termidlst,
+			type_samples: v.type_samples,
+			type_summary: v.type_summary,
+			type_sunburst: v.type_sunburst,
+			url: v.url,
+			variantkey: v.variantkey
 		}
 	}
 	return ds2
@@ -61,7 +81,7 @@ async function validate_termdb(ds) {
 
 	if (tdb.dictionary) {
 		if (tdb.dictionary.gdcapi) {
-			await gdcTermdb.initDictionary(ds)
+			await initGDCdictionary(ds)
 		} else {
 			throw 'unknown method to initiate dictionary'
 		}
@@ -76,26 +96,6 @@ async function validate_termdb(ds) {
 		throw 'unknown source of termdb vocabulary'
 	}
 
-	if (tdb.termid2totalsize) {
-		for (const tid in tdb.termid2totalsize) {
-			if (!ds.cohort.termdb.q.termjsonByOneid(tid)) throw 'unknown term id from termid2totalsize: ' + tid
-			const t = tdb.termid2totalsize[tid]
-			if (t.gdcapi) {
-				// validate
-			} else {
-				throw 'unknown method for term totalsize: ' + tid
-			}
-			// add getter
-			t.get = async p => {
-				// p is client query parameter (set_id, parent project_id etc)
-				if (t.gdcapi) {
-					return gdc.get_cohortTotal(t.gdcapi, ds, p)
-				}
-				throw 'unknown method for term totalsize: ' + tid
-			}
-		}
-	}
-
 	if (tdb.termid2totalsize2) {
 		if (tdb.termid2totalsize2.gdcapi) {
 			// validate gdcapi
@@ -106,35 +106,23 @@ async function validate_termdb(ds) {
 		} else {
 			throw 'unknown method for termid2totalsize2'
 		}
-		// add getter
-		tdb.termid2totalsize2.get = async (termidlst, entries, q) => {
-			// termidlst is from clientside
-			let termlst = []
-			for (const termid of termidlst) {
-				const term = ds.cohort.termdb.q.termjsonByOneid(termid)
-				if (term)
-					termlst.push({
-						path: term.path.replace('case.', '').replace(/\./g, '__'),
-						type: term.type
-					})
-			}
+
+		/* add getter
+		input:
+			termidlst=[ id1, ...]
+			q={}
+				.tid2value={id1:v1, ...}
+				.ssm_id_lst=str
+			combination={}
+				optional,
+		output:
+			a map, key is termid, value is array, each element: [category, total]
+		*/
+		tdb.termid2totalsize2.get = async (termidlst, q = {}, combination = null) => {
 			if (tdb.termid2totalsize2.gdcapi) {
-				const tv2counts = await gdc.get_termlst2size({ api: tdb.termid2totalsize2.gdcapi, ds, termlst, q })
-				for (const termid of termidlst) {
-					const term = ds.cohort.termdb.q.termjsonByOneid(termid)
-					const entry = entries.find(e => e.name == term.name)
-					if (term && term.type == 'categorical' && entry !== undefined) {
-						const tv2count = tv2counts.get(term.id)
-						for (const cat of entry.numbycategory) {
-							const vtotal = tv2count.find(v => v[0].toLowerCase() == cat[0].toLowerCase())
-							if (vtotal) cat.push(vtotal[1])
-						}
-					}
-				}
-			} else {
-				throw 'unknown method for termid2totalsize2'
+				return await gdc.get_termlst2size(termidlst, q, combination, ds)
 			}
-			return entries
+			throw 'unknown method for termid2totalsize2'
 		}
 	}
 }
@@ -143,43 +131,51 @@ function validate_variant2samples(ds) {
 	const vs = ds.variant2samples
 	if (!vs) return
 	vs.type_samples = 'samples'
-	vs.type_samplesIdOnly = 'samplesIdOnly'
 	vs.type_sunburst = 'sunburst'
 	vs.type_summary = 'summary'
 	if (!vs.variantkey) throw '.variantkey missing from variant2samples'
 	if (['ssm_id'].indexOf(vs.variantkey) == -1) throw 'invalid value of variantkey'
-	if (!vs.termidlst) throw '.termidlst[] missing from variant2samples'
-	if (!Array.isArray(vs.termidlst)) throw 'variant2samples.termidlst[] is not array'
-	if (vs.termidlst.length == 0) throw '.termidlst[] empty array from variant2samples'
-	if (!ds.termdb) throw 'ds.termdb missing when variant2samples.termidlst is in use'
-	for (const id of vs.termidlst) {
-		if (!ds.cohort.termdb.q.termjsonByOneid(id)) throw 'term not found for an id of variant2samples.termidlst: ' + id
+	if (vs.termidlst) {
+		if (!Array.isArray(vs.termidlst)) throw 'variant2samples.termidlst[] is not array'
+		if (vs.termidlst.length == 0) throw '.termidlst[] empty array from variant2samples'
+		if (!ds.termdb) throw 'ds.termdb missing when variant2samples.termidlst is in use'
+		for (const id of vs.termidlst) {
+			if (!ds.cohort.termdb.q.termjsonByOneid(id)) throw 'term not found for an id of variant2samples.termidlst: ' + id
+		}
 	}
-	// FIXME should be optional. when provided will show sunburst chart
-	if (!vs.sunburst_ids) throw '.sunburst_ids[] missing from variant2samples'
-	if (!Array.isArray(vs.sunburst_ids)) throw '.sunburst_ids[] not array from variant2samples'
-	if (vs.sunburst_ids.length == 0) throw '.sunburst_ids[] empty array from variant2samples'
-	for (const id of vs.sunburst_ids) {
-		if (!ds.cohort.termdb.q.termjsonByOneid(id)) throw 'term not found for an id of variant2samples.sunburst_ids: ' + id
+
+	if (vs.sunburst_ids) {
+		if (!Array.isArray(vs.sunburst_ids)) throw '.sunburst_ids[] not array from variant2samples'
+		if (vs.sunburst_ids.length == 0) throw '.sunburst_ids[] empty array from variant2samples'
+		if (!ds.termdb) throw 'ds.termdb missing when variant2samples.sunburst_ids is in use'
+		for (const id of vs.sunburst_ids) {
+			if (!ds.cohort.termdb.q.termjsonByOneid(id)) throw 'term not found for an id of variant2samples.sunburst_ids: ' + id
+		}
 	}
+
 	if (vs.gdcapi) {
 		gdc.validate_variant2sample(vs.gdcapi)
 	} else {
-		throw 'unknown query method of variant2samples'
+		// look for server-side vcf/bcf/tabix file
+		// file header should already been parsed and samples obtain if any
+		let hasSamples = false
+		if(ds.queries.snvindel) {
+			// has snvindel
+			if(ds.queries.snvindel.byrange) {
+				if(ds.queries.snvindel.byrange._tk) {
+					if(ds.queries.snvindel.byrange._tk.samples) {
+						// this file has samples
+						hasSamples=true
+					}
+				}
+			}
+			// expand later
+		}
+		if(!hasSamples) throw 'cannot find a sample source from ds.queries{}'
 	}
+
 	vs.get = async q => {
 		return await variant2samples_getresult(q, ds)
-	}
-	if (ds.termdb.termid2totalsize) {
-		// has ways of querying total size, add the crosstab getter
-		vs.addCrosstabCount = async (nodes, q) => {
-			const combinations = await get_crosstabCombinations(vs.sunburst_ids, ds, q, nodes)
-			if (vs.gdcapi) {
-				await gdc.addCrosstabCount_tonodes(nodes, combinations)
-			} else {
-				throw 'unknown way of doing crosstab'
-			}
-		}
 	}
 
 	if (vs.url) {
@@ -220,26 +216,32 @@ function sort_mclass(set) {
 	return lst
 }
 
-function validate_query_snvindel(ds) {
+async function validate_query_snvindel(ds, genome) {
 	const q = ds.queries.snvindel
 	if (!q) return
 	if (q.url) {
 		if (!q.url.base) throw '.snvindel.url.base missing'
 		if (!q.url.key) throw '.snvindel.url.key missing'
 	}
-	if (!q.byrange) throw '.byrange missing for queries.snvindel'
-	if (q.byrange.gdcapi) {
-		gdc.validate_query_snvindel_byrange(ds)
-	} else {
-		throw 'unknown query method for queries.snvindel.byrange'
+	if (q.byrange) {
+		if (q.byrange.gdcapi) {
+			gdc.validate_query_snvindel_byrange(ds)
+		} else if (q.byrange.vcffile) {
+			q.byrange.vcffile = path.join(serverconfig.tpmasterdir, q.byrange.vcffile)
+			q.byrange._tk = { file: q.byrange.vcffile }
+			q.byrange.get = await snvindelVcfByRangeGetter(ds, genome)
+		} else {
+			throw 'unknown query method for queries.snvindel.byrange'
+		}
 	}
 
-	if (!q.byisoform) throw '.byisoform missing for queries.snvindel'
-	if (q.byisoform.gdcapi) {
-		//gdc.validate_query_snvindel_byisoform(ds) // tandem rest apis
-		gdc.validate_query_snvindel_byisoform_2(ds)
-	} else {
-		throw 'unknown query method for queries.snvindel.byisoform'
+	if (q.byisoform) {
+		if (q.byisoform.gdcapi) {
+			//gdc.validate_query_snvindel_byisoform(ds) // tandem rest apis
+			gdc.validate_query_snvindel_byisoform(ds)
+		} else {
+			throw 'unknown query method for queries.snvindel.byisoform'
+		}
 	}
 
 	if (q.m2csq) {
@@ -252,153 +254,6 @@ function validate_query_snvindel(ds) {
 			throw 'unknown query method for queries.snvindel.m2csq'
 		}
 	}
-}
-
-/*
-sunburst requires an array of multiple levels [project, disease, ...], with one term at each level
-to get disease total sizes per project, issue separate graphql queries on disease total with filter of project=xx for each
-essentially cross-tab two terms, for sunburst
-may generalize for 3 terms (3 layer sunburst)
-the procedural logic of cross-tabing Project+Disease may be specific to gdc, so the code here
-steps:
-1. given levels of sunburst [project, disease, ..], get size of each project without filtering
-2. for disease at level2, get disease size by filtering on each project
-3. for level 3 term, get category size by filtering on each project-disease combination
-4. apply the combination sizes to each node of sunburst
-*/
-export async function get_crosstabCombinations(termidlst, ds, q, nodes) {
-	/*
-	parameters:
-	termidlst[]
-	- ordered array of term ids
-	- must always get category list from first term, as the list cannot be predetermined due to api and token permissions
-	- currently has up to three levels
-	ds{}
-	q{}
-	nodes[], optional
-	*/
-
-	if (termidlst.length == 0) throw 'zero terms for crosstab'
-	if (termidlst.length > 3) throw 'crosstab will not work with more than 3 levels'
-
-	// stores all combinations
-	// level 1: {count, id0, v0}
-	// level 2: {count, id0, v0, id1, v1}
-	// level 3: {count, id0, v0, id1, v1, id2, v2}
-	const combinations = []
-
-	// temporarily record categories for each term
-	// do not register list of categories in ds, as the list could be token-specific
-	// k: term id
-	// v: set of category labels
-	// if term id is not found, it will use all categories retrieved from api queries
-	const id2categories = new Map()
-	id2categories.set(termidlst[0], new Set())
-	if (termidlst[1]) id2categories.set(termidlst[1], new Set())
-	if (termidlst[2]) id2categories.set(termidlst[2], new Set())
-
-	let useall = true // to use all categories returned from api query
-	if (nodes) {
-		// only use a subset of categories existing in nodes[]
-		// at kras g12d, may get a node such as:
-		// {"id":"root...HCMI-CMDC...","parentId":"root...HCMI-CMDC","value":1,"name":"","id0":"project","v0":"HCMI-CMDC","id1":"disease"}
-		// with v1 missing, unknown reason
-		useall = false
-		for (const n of nodes) {
-			if (n.id0) {
-				if (!n.v0) {
-					continue
-				}
-				id2categories.get(n.id0).add(n.v0.toLowerCase())
-			}
-			if (n.id1 && termidlst[1]) {
-				if (!n.v1) {
-					// see above comments
-					continue
-				}
-				id2categories.get(n.id1).add(n.v1.toLowerCase())
-			}
-			if (n.id2 && termidlst[2]) {
-				if (!n.v2) {
-					continue
-				}
-				id2categories.get(n.id2).add(n.v2.toLowerCase())
-			}
-		}
-	}
-
-	// get term[0] category total, not dependent on other terms
-	const id0 = termidlst[0]
-	{
-		const v2c = (await ds.termdb.termid2totalsize[id0].get(q)).v2count
-		for (const [v, count] of v2c) {
-			const v0 = v.toLowerCase()
-			if (useall) {
-				id2categories.get(id0).add(v0)
-				combinations.push({ count, id0, v0 })
-			} else {
-				if (id2categories.get(id0).has(v0)) {
-					combinations.push({ count, id0, v0 })
-				}
-			}
-		}
-	}
-
-	// get term[1] category total, conditional on term1
-	const id1 = termidlst[1]
-	if (id1) {
-		const promises = []
-		for (const v0 of id2categories.get(id0)) {
-			const q2 = Object.assign({ tid2value: {} }, q)
-			q2.tid2value[id0] = v0
-			q2._combination = v0
-			promises.push(ds.termdb.termid2totalsize[id1].get(q2))
-		}
-		const lst = await Promise.all(promises)
-		for (const { v2count, combination } of lst) {
-			for (const [s, count] of v2count) {
-				const v1 = s.toLowerCase()
-				if (useall) {
-					id2categories.get(id1).add(v1)
-					combinations.push({ count, id0, v0: combination, id1, v1 })
-				} else {
-					if (id2categories.get(id1).has(v1)) {
-						combinations.push({ count, id0, v0: combination, id1, v1 })
-					}
-				}
-			}
-		}
-	}
-
-	// get term[2] category total, conditional on term1+term2 combinations
-	const id2 = termidlst[2]
-	if (id2) {
-		const promises = []
-		for (const v0 of id2categories.get(id0)) {
-			for (const v1 of id2categories.get(id1)) {
-				const q2 = Object.assign({ tid2value: {} }, q)
-				q2.tid2value[id0] = v0
-				q2.tid2value[id1] = v1
-				q2._combination = { v0, v1 }
-				promises.push(ds.termdb.termid2totalsize[id2].get(q2))
-			}
-		}
-		const lst = await Promise.all(promises)
-		for (const { v2count, combination } of lst) {
-			for (const [s, count] of v2count) {
-				const v2 = s.toLowerCase()
-				if (useall) {
-					id2categories.get(id2).add(v2)
-					combinations.push({ count, id0, v0: combination.v0, id1, v1: combination.v1, id2, v2 })
-				} else {
-					if (id2categories.get(id2).has(v2)) {
-						combinations.push({ count, id0, v0: combination.v0, id1, v1: combination.v1, id2, v2 })
-					}
-				}
-			}
-		}
-	}
-	return combinations
 }
 
 function validate_ssm2canonicalisoform(ds) {
@@ -415,4 +270,186 @@ so that gencode-annotated stuff can show under a refseq name
 function may_add_refseq2ensembl(ds, genome) {
 	if (!genome.genedb.refseq2ensembl) return
 	ds.refseq2ensembl_query = genome.genedb.db.prepare('select ensembl from refseq2ensembl where refseq=?')
+}
+
+/* generate getter as ds.queries.snvindel.byrange.get()
+
+usage scenario:
+1. to initiate official dataset
+2. to make temp ds{} on the fly when querying a custom track
+
+get(param{}):
+.rglst=[ {chr, start, stop} ]
+
+returns array of variants
+*/
+export async function snvindelVcfByRangeGetter(ds, genome) {
+	const q = ds.queries.snvindel.byrange
+	/* q{}
+	._tk={}
+		.file=str
+		.url, .indexURL
+		.dir=str
+		.nochr=true
+		.indexURL
+		.info={}
+		.format={
+			ID: {
+				ID: 'dna_assay',
+				Number: '1',
+				Type: 'String',
+				Description: '...'
+	  		}
+		}
+		.samples=[ {name:str}, ... ] // blank array if vcf has no samples
+	.
+	*/
+	await utils.init_one_vcf(q._tk, genome)
+	// tk{ dir, info, format, samples, nochr }
+	if (q._tk.samples.length && !q._tk.format) {
+		throw 'vcf file has samples but no FORMAT'
+	}
+	if(q._tk.format) {
+		for(const id in q._tk.format) {
+			if(id=='GT') {
+				q._tk.format.isGT = true
+			}
+		}
+	}
+
+	return async param => {
+		const variants = [] // to be returned
+		for (const r of param.rglst) {
+			await utils.get_lines_bigfile({
+				args: [
+					q._tk.file || q._tk.url,
+					(q._tk.nochr ? r.chr.replace('chr', '') : r.chr) + ':' + r.start + '-' + r.stop
+				],
+				dir: q._tk.dir,
+				callback: line => {
+					const l = line.split('\t')
+					// [9] for samples
+					const refallele = l[3]
+					const altalleles = l[4].split(',')
+					const m0 = {} // temp obj
+					compute_mclass(
+						q._tk,
+						refallele,
+						altalleles,
+						m0,
+						l[7], // info str
+						l[2] // vcf line ID
+					)
+					// make a m{} for every alt allele
+					for (const alt in m0.alt2csq) {
+						const m = m0.alt2csq[alt]
+						m.chr = r.chr
+						m.pos = Number(l[1])
+						m.ssm_id = [m.chr, m.pos, m.ref, m.alt].join(ssmIdFieldsSeparator)
+						variants.push(m)
+						mayAddSamplesFromVcfLine(q, m, l)
+					}
+				}
+			})
+		}
+		return variants
+	}
+}
+
+/* tentative, subject to change
+
+usage:
+call at snvindel.byrange.get() to assign .samples[] to each m for counting total number of unique samples
+call at variant2samples.get() to get list of samples
+
+parameters:
+q={}
+	q._tk{}
+		.samples=[ {name=str}, ... ] // list of samples corresponding to vcf header
+		.format={}
+m={}
+	m.samples=[] will be created if any are found
+l=[]
+	list of fields from a vcf line, corresponding to m{}
+addFormatValues=true
+	if true, k:v for format fields are added to each sample of m.samples[]
+	set to false for counting samples, or doing sample summary
+*/
+export function mayAddSamplesFromVcfLine(q, m, l, addFormatValues) {
+	if (!q._tk.samples || q._tk.samples.length == 0) {
+		// vcf file has no samples
+		return
+	}
+	// l[8] is FORMAT, l[9] is first sample
+	if (!l[8] || l[8] == '.') {
+		// no format field
+		return
+	}
+	const formatlst = [] // list of format object from q._tk.format{}, by the order of l[8]
+	for (const s of l[8].split(':')) {
+		const f = q._tk.format[s]
+		if (f) {
+			// a valid format field
+			formatlst.push(f)
+		} else {
+			throw 'invalid format field: ' + f
+		}
+	}
+	const samples = []
+	for (const [i, sampleHeaderObj] of q._tk.samples.entries()) {
+		const v = l[i + 9]
+		if (!v || v == '.') {
+			// no value for this sample
+			continue
+		}
+		const vlst = v.split(':')
+		const sampleObj = vcfFormat2sample(vlst, formatlst, sampleHeaderObj, addFormatValues)
+		if(sampleObj) {
+			// this sample is annotated with this variant
+			samples.push(sampleObj)
+		}
+	}
+	if (samples.length) m.samples = samples
+}
+
+function vcfFormat2sample(vlst, formatlst, sampleHeaderObj, addFormatValues) {
+	const sampleObj = {
+		sample_id: sampleHeaderObj.name
+	}
+	for (const [j, format] of formatlst.entries()) {
+		const fv = vlst[j] // value for this format field
+		if (!fv || fv == '.') {
+			// no value for this format field
+			continue
+		}
+		if (format.isGT) {
+			if (fv == './.' || fv == '.|.') {
+				// no gt
+				continue
+			}
+			// has gt value
+			if(addFormatValues) {
+				sampleObj.GT = fv
+			} else {
+				// no need to add any format fields, only need to return sample id for counting
+				return sampleObj
+			}
+		} else {
+			/* has value for a non-GT field
+			indicating the variant is annotated to this sample
+			irrespective of what this format field is
+			later may check by meanings of each format field
+			*/
+			if(addFormatValues) {
+				sampleObj[format.ID] = fv
+			} else {
+				// no need to add field, just return
+				return sampleObj
+			}
+		}
+	}
+	if(Object.keys(sampleObj).length==1) {
+		return null
+	}
+	return sampleObj
 }

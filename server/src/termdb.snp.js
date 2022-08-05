@@ -28,6 +28,7 @@ info fields:
 
 *************** EXPORT
 validate()
+compute_mclass
 *************** function cascade
 summarizeSamplesFromCache()
 validateInputCreateCache_by_snptext
@@ -452,7 +453,7 @@ once effect allele is decided for each variant,
 refer to .alt2csq{} to find the class/mname based on effect allele choice
 (if eff ale is reference allele?)
 */
-function compute_mclass(tk, refAllele, altAlleles, variant, info_str, ID) {
+export function compute_mclass(tk, refAllele, altAlleles, variant, info_str, ID) {
 	const info = dissect_INFO(info_str)
 	if (!info.CSQ) {
 		// missing csq

@@ -84,7 +84,7 @@ const express = require('express'),
 	junction_request = require('./junction'),
 	bedj_request_closure = require('./bedj'),
 	blat_request_closure = require('./blat').request_closure,
-	mds3_request_closure = require('./mds3.load'),
+	mds3_request_closure = require('./mds3.load').mds3_request_closure,
 	mds2_init = require('./mds2.init'),
 	mds3_init = require('./mds3.init'),
 	mds2_load = require('./mds2.load'),
@@ -7125,7 +7125,6 @@ function samplematrix_task_isvcf(feature, ds, dsquery, usesampleset) {
 
 async function handle_vcfheader(req, res) {
 	// get header for a single custom vcf track
-	log(req)
 	try {
 		if (!req.query.genome) throw 'genome missing'
 		const g = genomes[req.query.genome]

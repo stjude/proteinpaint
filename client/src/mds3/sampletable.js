@@ -1,27 +1,37 @@
 import { fillbar } from '../../dom/fillbar'
 import { get_list_cells } from '../../dom/gridutils'
 import { select as d3select } from 'd3-selection'
+import { mclass } from '../../shared/common'
 
 /*
 ********************** EXPORTED
-init_sampletable
+init_sampletable()
+	using mds.variant2samples.get() to map mlst[] to samples
+	always return list of samples, does not return summaries
+	mlst can be mixture of data types, doesn't matter
+displaySampleTable()
+	call this function to render one or multiple samples
+
 ********************** INTERNAL
 make_singleSampleTable
 make_multiSampleTable
+samples2rows
+samples2columns
+renderTable
 
-using mds.variant2samples.get() to map mlst[] to samples
-always return list of samples, does not return summaries
-mlst can be mixture of data types, doesn't matter
 
 ********************** arg{}
 .mlst[]
-	.occurrence
+	used for v2s.get() query
 .tk
 	.mds.variant2samples.termidlst
 .block
 .div
-.tid2value
+.tid2value={}
  	sample filters by e.g. clicking on a sunburst ring, for tk.mds.variant2samples.get
+.useRenderTable=true
+	temp flag for using renderTable() for multi-sample display
+	delete this flag when renderTable() replaces make_multiSampleTable()
 .singleSampleDiv
 	optional, if just one single sample, can show into this table rather than creating a new one
 .multiSampleTable{}
@@ -32,6 +42,7 @@ mlst can be mixture of data types, doesn't matter
 const cutoff_tableview = 10
 
 export async function init_sampletable(arg) {
+	// run variant2samples.get() to map variants to samples
 	const wait = arg.div
 		.append('div')
 		.text('Loading...')
@@ -39,7 +50,6 @@ export async function init_sampletable(arg) {
 		.style('color', '#8AB1D4')
 		.style('font-size', '1.25em')
 		.style('font-weight', 'bold')
-	const numofcases = arg.mlst.reduce((i, j) => i + j.occurrence, 0) // sum of occurrence of mlst[]
 
 	// may not be used!
 	//terms from sunburst ring
@@ -49,13 +59,9 @@ export async function init_sampletable(arg) {
 	if (arg.tid2value) Object.keys(arg.tid2value).forEach(arg.tid2value_orig.add, arg.tid2value_orig)
 
 	try {
-		if (numofcases == 1) {
-			// one sample
-			await make_singleSampleTable(arg)
-		} else {
-			// multiple samples
-			await make_multiSampleTable(arg)
-		}
+		arg.querytype = arg.tk.mds.variant2samples.type_samples
+		const samples = await arg.tk.mds.variant2samples.get(arg) // returns list of samples
+		await displaySampleTable(samples, arg)
 		wait.remove()
 	} catch (e) {
 		wait.text('Error: ' + (e.message || e))
@@ -63,11 +69,22 @@ export async function init_sampletable(arg) {
 	}
 }
 
-async function make_singleSampleTable(arg) {
-	arg.querytype = arg.tk.mds.variant2samples.type_samples
-	const data = await arg.tk.mds.variant2samples.get(arg) // data is [samples, total]
-	const sampledata = data[0] // must have just one sample
+export async function displaySampleTable(samples, arg) {
+	if (samples.length == 1) {
+		return await make_singleSampleTable(samples[0], arg)
+	}
+	if (arg.useRenderTable) {
+		renderTable({
+			rows: samples2rows(samples, arg.tk),
+			columns: await samples2columns(samples, arg.tk),
+			div: arg.div
+		})
+	} else {
+		await make_multiSampleTable(samples, arg)
+	}
+}
 
+async function make_singleSampleTable(sampledata, arg) {
 	const grid_div =
 		arg.singleSampleDiv ||
 		arg.div
@@ -91,14 +108,55 @@ async function make_singleSampleTable(arg) {
 			if (!term) throw 'unknown term id: ' + termid
 			const [cell1, cell2] = get_list_cells(grid_div)
 			cell1.text(term.name).style('text-overflow', 'ellipsis')
-			cell2.text(sampledata[termid] || 'N/A').style('text-overflow', 'ellipsis')
+			cell2.style('text-overflow', 'ellipsis')
+			if (termid in sampledata) {
+				if (Array.isArray(sampledata[termid])) {
+					cell2.html(sampledata[termid].join('<br>'))
+				} else {
+					cell2.text(sampledata[termid])
+				}
+			}
 		}
 	}
 
 	/////////////
 	// hardcoded logic to represent read depth using gdc data
 	// allelic read depth only applies to ssm, not to other types of mutations
-	if (sampledata.ssm_read_depth) {
+
+	if (sampledata.ssm_id_lst) {
+		/* ssm_id_lst is array of ssm ids
+		it's attached to this sample when samples are queried from the #cases leftlabel
+		create a new row in the table and list all ssm items
+		in such case there can still be sampledata.ssm_read_depth,
+		but since there can be multiple items from ssm_id_lst[] so do not display read depth
+		*/
+		const [cell1, cell2] = get_list_cells(grid_div)
+		cell1.text('Mutations')
+		for (const ssm_id of sampledata.ssm_id_lst) {
+			const d = cell2.append('div')
+			const m = (arg.tk.skewer.rawmlst || arg.tk.custom_variants).find(i => i.ssm_id == ssm_id)
+			if (m) {
+				// found
+				if (arg.tk.mds.queries && arg.tk.mds.queries.snvindel && arg.tk.mds.queries.snvindel.url) {
+					d.append('a')
+						.text(m.mname)
+						.attr('target', '_blank')
+						.attr('href', arg.tk.mds.queries.snvindel.url.base + ssm_id)
+				} else {
+					d.append('span').text(m.mname)
+				}
+				// class
+				d.append('span')
+					.style('margin-left', '10px')
+					.style('color', mclass[m.class].color)
+					.style('font-size', '.7em')
+					.text(mclass[m.class].label)
+			} else {
+				// not found by ssm id
+				d.text(ssm_id)
+			}
+		}
+	} else if (sampledata.ssm_read_depth) {
 		// to support other configurations of ssm read depth
 		const sm = sampledata.ssm_read_depth
 		const [cell1, cell2] = get_list_cells(grid_div)
@@ -128,6 +186,13 @@ async function make_singleSampleTable(arg) {
 			.style('opacity', 0.5)
 			.style('text-overflow', 'ellipsis')
 	}
+
+	/* quick fix for accessing details of a single case
+	if (arg.tk.mds.termdb && arg.tk.mds.termdb.allowCaseDetails) {
+		// has one single case
+		arg.div.append('div').text('Case details')
+	}
+	*/
 }
 
 function printSampleName(sample, tk, div) {
@@ -147,11 +212,8 @@ function printSampleName(sample, tk, div) {
 	}
 }
 
-async function make_multiSampleTable(arg) {
+async function make_multiSampleTable(data, arg) {
 	// create horizontal table to show multiple samples, one sample per row
-	arg.querytype = arg.tk.mds.variant2samples.type_samples
-	const data = await arg.tk.mds.variant2samples.get(arg)
-	// each element of data[] is a sample{}
 
 	// flags for optional columns
 	const has_sample_id = data.some(i => i.sample_id),
@@ -320,6 +382,109 @@ async function make_multiSampleTable(arg) {
 			e.on('mouseout', () => {
 				e.style('background-color', background == true ? '#ededed' : '')
 			})
+		}
+	}
+}
+
+/***********************************************
+renderTable() is the temporary implementation of table renderer
+can replace with colleen's new function
+samples2columns() and samples2rows() should continue to work with the future renderTable()
+*/
+async function samples2columns(samples, tk) {
+	const columns = [{ label: 'Sample' }]
+	if (tk.mds.variant2samples.termidlst) {
+		for (const id of tk.mds.variant2samples.termidlst) {
+			const t = await tk.mds.termdb.vocabApi.getterm(id)
+			if (t) {
+				columns.push({ label: t.name })
+			} else {
+				columns.push({ isinvalid: true })
+			}
+		}
+	}
+	columns.push({ label: 'Mutations', isSsm: true })
+	return columns
+}
+function samples2rows(samples, tk) {
+	const rows = []
+	for (const sample of samples) {
+		const row = [{ value: sample.sample_id }]
+
+		if (tk.mds.variant2samples.url) {
+			row[0].url = tk.mds.variant2samples.url.base + sample[tk.mds.variant2samples.url.namekey]
+		}
+
+		if (tk.mds.variant2samples.termidlst) {
+			for (const id of tk.mds.variant2samples.termidlst) {
+				row.push({ value: sample[id] })
+			}
+		}
+
+		const ssmCell = { values: [] }
+		for (const ssm_id of sample.ssm_id_lst) {
+			const m = (tk.skewer.rawmlst || tk.custom_variants).find(i => i.ssm_id == ssm_id)
+			const ssm = {}
+			if (m) {
+				// found m data point
+				ssm.value = m.mname
+				if (tk.mds.queries && tk.mds.queries.snvindel && tk.mds.queries.snvindel.url) {
+					ssm.html = `<a href=${tk.mds.queries.snvindel.url.base + m.ssm_id} target=_blank>${m.mname}</a>`
+				} else {
+					ssm.html = m.mname
+				}
+				ssm.html += ` <span style="color:${mclass[m.class].color};font-size:.7em">${mclass[m.class].label}</span>`
+			} else {
+				// m datapoint not found on client
+				ssm.value = ssm_id
+			}
+			ssmCell.values.push(ssm)
+		}
+
+		row.push(ssmCell)
+		rows.push(row)
+	}
+	return rows
+}
+function renderTable({ columns, rows, div }) {
+	const table = div
+		.append('table')
+		.style('border-spacing', '5px')
+		.style('border-collapse', 'separate')
+	const tr = table.append('tr')
+	for (const c of columns) {
+		tr.append('td')
+			.text(c.label)
+			.style('opacity', 0.5)
+	}
+	for (const row of rows) {
+		const tr = table.append('tr').attr('class', 'sja_clb')
+		for (const [colIdx, cell] of row.entries()) {
+			const column = columns[colIdx]
+
+			const td = tr.append('td')
+			if (cell.values) {
+				for (const v of cell.values) {
+					const d = td.append('div')
+					if (v.url) {
+						d.append('a')
+							.text(v.value)
+							.attr('href', v.url)
+							.attr('target', '_blank')
+					} else if (v.html) {
+						d.html(v.html)
+					} else {
+						d.text(v.value)
+					}
+				}
+			} else if (cell.url) {
+				td.append('a')
+					.text(cell.value)
+					.attr('href', cell.url)
+					.attr('target', '_blank')
+			} else {
+				td.text(cell.value)
+			}
 		}
 	}
 }

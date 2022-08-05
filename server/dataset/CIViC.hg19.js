@@ -10,7 +10,7 @@ module.exports = {
 	queries: [
 		{
 			name: 'CIViC',
-			vcffile: 'hg19/CIViC.hg19.vcf.gz',
+			vcffile: 'hg19/civic/CIViC.hg19.vcf.gz',
 			hlinfo: {}
 		}
 	],

@@ -74,9 +74,9 @@ if (!serverconfig.binpath) {
 		const specfile = process.argv.find(n => n.includes('.spec.js'))
 		if (specfile) {
 			serverconfig.binpath = path.dirname(__dirname)
-		} else {
+		} else { 
 			const jsfile = process.argv.find(
-				n => n.endsWith('/bin.js') || n.endsWith('/server.js') || n.endsWith('/proteinpaint')
+				n => n.endsWith('/bin.js') || n.endsWith('/server.js') || n.endsWith('/proteinpaint') || n.endsWith('/proteinpaint-server')
 			)
 			if (jsfile) {
 				try {

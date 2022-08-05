@@ -95,9 +95,11 @@ export async function match_complexvariant_rust(q, templates_info, region_widths
 		altseq = q.altseq
 	}
 
-	//console.log(q.variant.chr + '.' + final_pos + '.' + final_ref + '.' + final_alt)
+	console.log(q.variant.chr + '.' + final_pos + '.' + final_ref + '.' + final_alt)
 	//console.log('refSeq', refseq)
 	//console.log('mutSeq', leftflankseq + final_alt + rightflankseq)
+	//console.log('leftflankseq:', leftflankseq)
+	//console.log('rightflankseq:', rightflankseq)
 
 	// console.log(refallele,altallele,refseq,altseq)
 
@@ -164,6 +166,7 @@ export async function match_complexvariant_rust(q, templates_info, region_widths
 	})
 	*/
 
+	//console.log('input_data:', input_data)
 	//fs.writeFile('test.txt', input_data, function(err) {
 	//	// For catching input to rust pipeline, in case of an error
 	//	if (err) return console.log(err)
@@ -316,8 +319,16 @@ export async function match_complexvariant_rust(q, templates_info, region_widths
 	// console.log('Final array for plotting:', read_alignment_diff_scores_input)
 	// Please use this array for plotting the scatter plot .values contain the numeric value, .groupID contains ref/alt/none status. You can use red for alt, green for ref and blue for none.
 	const diff_list = read_alignment_diff_scores_input.map(i => i.value)
-	const max_diff_score = Math.max(...diff_list)
-	const min_diff_score = Math.min(...diff_list)
+	let max_diff_score = Math.max(...diff_list)
+	let min_diff_score = Math.min(...diff_list)
+	if (min_diff_score > 0) {
+		// This scenario arises when only alt group is displayed, in that case the min_diff_score will be the lowest number within the alt group. In that case, set min_diff_score = 0
+		min_diff_score = 0
+	}
+	if (max_diff_score < 0) {
+		// This scenario arises when only ref group is displayed, in that case the max_diff_score will be the highest number within the ref group, but that number will always be less than zero. In that case, set max_diff_score = 0
+		max_diff_score = 0
+	}
 	const groups = []
 	for (const k in type2group) {
 		const g = type2group[k]

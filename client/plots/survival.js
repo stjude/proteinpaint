@@ -8,7 +8,7 @@ import { line, area, curveStepAfter } from 'd3-shape'
 import { rgb } from 'd3-color'
 import htmlLegend from '../dom/html.legend'
 import Partjson from 'partjson'
-import { to_svg } from '../src/client'
+import { to_svg, rgb2hex } from '../src/client'
 import { fillTermWrapper } from '../termsetting/termsetting'
 import { Menu } from '../dom/menu'
 
@@ -24,6 +24,7 @@ class TdbSurvival {
 		this.dom = {
 			loadingDiv: holder
 				.append('div')
+				.style('position', 'absolute')
 				.style('display', 'none')
 				.style('padding', '20px')
 				.html('Loading ...'),
@@ -32,6 +33,7 @@ class TdbSurvival {
 			holder,
 			chartsDiv: holder.append('div').style('margin', '10px'),
 			legendDiv: holder.append('div').style('margin', '5px 5px 15px 5px'),
+			hiddenDiv: holder.append('div').style('margin', '5px 5px 15px 5px'),
 			tip: new Menu({ padding: '5px' })
 		}
 		this.dom.tip.onHide = () => {
@@ -48,6 +50,16 @@ class TdbSurvival {
 		setInteractivity(this)
 		setRenderers(this)
 		this.legendRenderer = htmlLegend(this.dom.legendDiv, {
+			settings: {
+				legendOrientation: 'vertical'
+			},
+			handlers: {
+				legend: {
+					click: this.legendClick
+				}
+			}
+		})
+		this.hiddenRenderer = htmlLegend(this.dom.hiddenDiv, {
 			settings: {
 				legendOrientation: 'vertical'
 			},
@@ -85,6 +97,20 @@ class TdbSurvival {
 							usecase: { target: 'survival', detail: 'term0' }
 						},
 						{
+							label: 'Chart width',
+							type: 'number',
+							chartType: 'survival',
+							settingsKey: 'svgw',
+							title: 'The internal width of the chart plot'
+						},
+						{
+							label: 'Chart height',
+							type: 'number',
+							chartType: 'survival',
+							settingsKey: 'svgh',
+							title: 'The internal height of the chart plot'
+						},
+						{
 							label: '95% CI',
 							boxLabel: 'Visible',
 							type: 'checkbox',
@@ -111,6 +137,14 @@ class TdbSurvival {
 							chartType: 'survival',
 							settingsKey: 'timeUnit',
 							title: `The unit to display in the x-axis title, like 'years'`
+						},
+						{
+							label: 'X-axis ticks',
+							type: 'text',
+							chartType: 'survival',
+							settingsKey: 'xTickValues',
+							title: `Option to customize the x-axis tick values, enter as comma-separated values. Will be ignored if empty`,
+							processInput: value => value.split(',').map(Number)
 						},
 						{
 							label: 'At-risk counts',
@@ -158,12 +192,12 @@ class TdbSurvival {
 			}
 
 			if (this.dom.header) this.dom.header.html(this.state.config.term.term.name + ` plot`)
-			this.dom.loadingDiv.style('display', '')
+			this.toggleLoadingDiv()
 
 			Object.assign(this.settings, this.state.config.settings)
 			const reqOpts = this.getDataRequestOpts()
 			const data = await this.app.vocabApi.getNestedChartSeriesData(reqOpts)
-			this.dom.loadingDiv.style('display', 'none')
+			this.toggleLoadingDiv('none')
 			this.serverData = data
 			this.app.vocabApi.syncTermData(this.state.config, data)
 			this.currData = this.processData(data)
@@ -172,7 +206,6 @@ class TdbSurvival {
 			this.setTerm2Color(this.pj.tree.charts)
 			this.symbol = this.getSymbol(7) // hardcode the symbol size for now
 			this.render()
-			this.legendRenderer(this.settings.atRiskVisible ? [] : this.legendData)
 		} catch (e) {
 			throw e
 		}
@@ -224,19 +257,28 @@ class TdbSurvival {
 	setTerm2Color(charts) {
 		if (!charts) return
 		const config = this.state.config
-		const values = this.refs.bins[2] || Object.values(config.term2?.term?.values || {})
+		const t2values = copyMerge({}, config.term2?.term?.values || {}, config.term2?.values || {})
+		const values = (this.refs.bins[2] && [this.refs.bins[2]]) || Object.values(t2values)
 		this.term2toColor = {}
 		this.colorScale = this.uniqueSeriesIds.size < 11 ? scaleOrdinal(schemeCategory10) : scaleOrdinal(schemeCategory20)
 		const legendItems = []
 		for (const chart of charts) {
 			for (const series of chart.serieses) {
 				const v = values.find(v => v.key === series.seriesId || v.name === series.seriesId)
-				this.term2toColor[series.seriesId] = rgb(v?.color || this.colorScale(series.seriesId))
+				const c = {
+					orig: v?.color || this.colorScale(series.seriesId)
+				}
+				c.rgb = rgb(c.orig)
+				c.adjusted = c.rgb.toString()
+				c.hex = rgb2hex(c.adjusted)
+				this.term2toColor[series.seriesId] = c
+
 				if (!legendItems.find(d => d.seriesId == series.seriesId)) {
 					legendItems.push({
+						key: series.seriesId,
 						seriesId: series.seriesId,
 						text: series.seriesLabel,
-						color: this.term2toColor[series.seriesId],
+						color: this.term2toColor[series.seriesId].adjusted,
 						isHidden: this.settings.hidden.includes(series.seriesId)
 					})
 				}
@@ -246,18 +288,70 @@ class TdbSurvival {
 			const s = this.refs.orderedKeys.series
 			legendItems.sort((a, b) => s.indexOf(a.seriesId) - s.indexOf(b.seriesId))
 		}
+		this.legendValues = {}
+		legendItems.forEach((item, i) => {
+			this.legendValues[item.seriesId] = {
+				seriesId: item.seriesId,
+				order: 'order' in item ? item.order : i,
+				color: this.term2toColor[item.seriesId].orig
+			}
+		})
+		const v = this.state.config.term2?.values
+		if (v) {
+			legendItems.sort((a, b) => {
+				const av = v[a.seriesId]
+				const bv = v[b.seriesId]
+				if (av && bv) {
+					if ('order' in av && 'order' in bv) return av.order - bv.order
+					if (av.order) return av.order
+					if (bv.order) return bv.order
+					return 0
+				}
+				if (av) return av.order || 0
+				if (bv) return bv.order || 0
+				// default order
+				return a.order - b.order
+			})
+
+			legendItems.forEach((item, i) => {
+				this.legendValues[item.seriesId].order = i
+			})
+		}
 
 		if ((!config.term.term.type == 'survival' || config.term2) && legendItems.length) {
 			const termNum = config.term.term.type == 'survival' ? 'term2' : 'term'
 			this.legendData = [
 				{
 					name: config[termNum].term.name,
-					items: legendItems
+					items: legendItems.filter(s => !s.isHidden)
+				}
+			]
+
+			this.hiddenData = [
+				{
+					name: `<span style='color:#aaa; font-weight:400'><span>Hidden categories</span><span style='font-size:0.8rem'> CLICK TO SHOW</span></span>`,
+					items: legendItems.filter(s => s.isHidden).map(item => Object.assign({}, item, { isHidden: false }))
 				}
 			]
 		} else {
 			this.legendData = []
 		}
+	}
+
+	// helper so that 'Loading...' does not flash when not needed
+	toggleLoadingDiv(display = '') {
+		if (display != 'none') {
+			this.dom.loadingDiv
+				.style('opacity', 0)
+				.style('display', display)
+				.transition()
+				.duration('loadingWait' in this ? this.loadingWait : 0)
+				.style('opacity', 1)
+		} else {
+			this.dom.loadingDiv.style('display', display)
+		}
+		// do not transition on initial chart load
+		this.loadingWait = 1000
 	}
 }
 
@@ -275,6 +369,13 @@ function setRenderers(self) {
 
 		self.dom.holder.style('display', 'inline-block')
 		self.dom.chartsDiv.on('mouseover', self.mouseover).on('mouseout', self.mouseout)
+
+		self.legendRenderer(self.settings.atRiskVisible ? [] : self.legendData)
+		if (!self.hiddenData?.[0]?.items.length) self.dom.hiddenDiv.style('display', 'none')
+		else {
+			self.dom.hiddenDiv.style('display', '')
+			self.hiddenRenderer(self.hiddenData)
+		}
 	}
 
 	self.addCharts = function(chart) {
@@ -394,7 +495,7 @@ function setRenderers(self) {
 	}
 
 	function renderSVG(svg, chart, s, duration) {
-		const extraHeight = s.atRiskVisible ? chart.visibleSerieses.length * 20 : 0
+		const extraHeight = s.atRiskVisible ? 20 + chart.visibleSerieses.length * 20 : 0
 
 		svg
 			.transition()
@@ -442,7 +543,7 @@ function setRenderers(self) {
 			.style('padding-bottom', '5px')
 			.style('font-size', fontSize + 'px')
 			.style('font-weight', 'bold')
-			.text('Series comparisons (log-rank test)')
+			.text('Group comparisons (log-rank test)')
 
 		// table div
 		// need separate divs for title and table
@@ -452,46 +553,132 @@ function setRenderers(self) {
 			tablediv.style('overflow', 'auto').style('height', '220px')
 		}
 
-		// table
-		const table = tablediv.append('table').style('width', '100%')
+		const visibleTests = tests.filter(
+			t => !s.hiddenPvalues.find(p => p.series1 === t.series1 && p.series2 === t.series2)
+		)
 
-		// table header
-		table
-			.append('thead')
-			.append('tr')
-			.selectAll('td')
-			.data(['Series 1', 'Series 2', 'P-value'])
-			.enter()
-			.append('td')
-			.style('padding', '1px 8px 1px 2px')
-			.style('color', '#858585')
-			.style('position', 'sticky')
-			.style('top', '0px')
-			.style('background', 'white')
-			.style('font-size', fontSize + 'px')
-			.text(column => column)
+		if (visibleTests.length) {
+			visibleTests.sort((a, b) => a.pvalue - b.pvalue)
 
-		// table rows
-		const tbody = table.append('tbody')
-		const tr = tbody
-			.selectAll('tr')
-			.data(tests.sort((a, b) => a.pvalue - b.pvalue))
-			.enter()
-			.append('tr')
-			.attr('class', 'pp-survival-chartLegends-pvalue')
+			// table
+			const table = tablediv.append('table').style('width', '100%')
 
-		// table cells
-		tr.selectAll('td')
-			.data(d => [
-				chart.serieses.find(series => series.seriesId == d.series1).seriesLabel,
-				chart.serieses.find(series => series.seriesId == d.series2).seriesLabel,
-				d.pvalue
-			])
-			.enter()
-			.append('td')
-			.style('padding', '1px 8px 1px 2px')
-			.style('font-size', fontSize + 'px')
-			.text(d => d)
+			// table header
+			table
+				.append('thead')
+				.append('tr')
+				.selectAll('td')
+				.data(['Group 1', 'Group 2', 'P-value'])
+				.enter()
+				.append('td')
+				.style('padding', '1px 8px 1px 2px')
+				.style('color', '#858585')
+				.style('position', 'sticky')
+				.style('top', '0px')
+				.style('background', 'white')
+				.style('font-size', fontSize + 'px')
+				.text(column => column)
+
+			// table rows
+			const tbody = table.append('tbody')
+			const tr = tbody
+				.selectAll('tr')
+				.data(visibleTests)
+				.enter()
+				.append('tr')
+				.attr('class', 'pp-survival-chartLegends-pvalue')
+				.on('click', t => {
+					const hiddenPvalues = s.hiddenPvalues.slice()
+					hiddenPvalues.push(t)
+					self.app.dispatch({
+						type: 'plot_edit',
+						id: self.id,
+						config: {
+							settings: {
+								survival: {
+									hiddenPvalues
+								}
+							}
+						}
+					})
+				})
+
+			// table cells
+			tr.selectAll('td')
+				.data(d => [
+					{
+						d,
+						text: chart.serieses.find(series => series.seriesId == d.series1).seriesLabel,
+						color: self.term2toColor[d.series1].adjusted
+					},
+					{
+						d,
+						text: chart.serieses.find(series => series.seriesId == d.series2).seriesLabel,
+						color: self.term2toColor[d.series2].adjusted
+					},
+					{ d, text: d.pvalue, color: '#000' }
+				])
+				.enter()
+				.append('td')
+				.attr('title', 'Click to hide a p-value')
+				.style('color', d => d.color)
+				.style('padding', '1px 8px 1px 2px')
+				.style('font-size', fontSize + 'px')
+				.style('cursor', 'pointer')
+				.text(d => d.text)
+		}
+
+		const hiddenTests = tests.filter(t => s.hiddenPvalues.find(p => p.series1 === t.series1 && p.series2 === t.series2))
+		if (hiddenTests.length) {
+			pvaldiv
+				.append('div')
+				.style('color', '#aaa')
+				.html(`<span style='color:#aaa; font-weight:400'><span>Hidden tests (${hiddenTests.length})</span>`)
+				.on('click', () => {
+					self.app.tip.clear()
+					const divs = self.app.tip.d
+						.append('div')
+						.selectAll('div')
+						.data(hiddenTests)
+						.enter()
+						.append('div')
+						.each(function(d) {
+							self.activeMenu = true
+							const div = select(this)
+							div
+								.append('input')
+								.attr('type', 'checkbox')
+								.style('margin-right', '5px')
+							div.append('span').html(`${d.series1} vs ${d.series2}`)
+						})
+
+					self.app.tip.d
+						.append('button')
+						.html('Show checked test(s)')
+						.on('click', () => {
+							const hiddenPvalues = []
+							divs
+								.filter(function() {
+									return !select(this.firstChild).property('checked')
+								})
+								.each(d => hiddenPvalues.push(d))
+							self.app.dispatch({
+								type: 'plot_edit',
+								id: self.id,
+								config: {
+									settings: {
+										survival: {
+											hiddenPvalues
+										}
+									}
+								}
+							})
+							self.app.tip.hide()
+						})
+
+					self.app.tip.show(event.clientX, event.clientY)
+				})
+		}
 	}
 
 	function getSvgSubElems(svg) {
@@ -503,7 +690,10 @@ function setRenderers(self) {
 			yAxis = axisG.append('g').attr('class', 'sjpp-survival-y-axis')
 			xTitle = axisG.append('g').attr('class', 'sjpp-survival-x-title')
 			yTitle = axisG.append('g').attr('class', 'sjpp-survival-y-title')
-			atRiskG = mainG.append('g').attr('class', 'sjpp-survival-atrisk')
+			atRiskG = mainG
+				.append('g')
+				.attr('class', 'sjpp-survival-atrisk')
+				.on('click', self.legendClick)
 		} else {
 			mainG = svg.select('.sjpp-survival-mainG')
 			axisG = mainG.select('.sjpp-survival-axis')
@@ -511,7 +701,7 @@ function setRenderers(self) {
 			yAxis = axisG.select('.sjpp-survival-y-axis')
 			xTitle = axisG.select('.sjpp-survival-x-title')
 			yTitle = axisG.select('.sjpp-survival-y-title')
-			atRiskG = mainG.select('.sjpp-survival-atrisk')
+			atRiskG = mainG.select('.sjpp-survival-atrisk').on('click', self.legendClick)
 		}
 		return [mainG, axisG, xAxis, yAxis, xTitle, yTitle, atRiskG]
 	}
@@ -529,7 +719,7 @@ function setRenderers(self) {
 					.y1(c => c.scaledY[2])(series.data)
 			)
 			.style('display', s.ciVisible ? '' : 'none')
-			.style('fill', self.term2toColor[series.seriesId].toString())
+			.style('fill', self.term2toColor[series.seriesId].adjusted)
 			.style('opacity', '0.15')
 			.style('stroke', 'none')
 
@@ -614,12 +804,12 @@ function setRenderers(self) {
 			.style('stroke', s.stroke)
 
 		const seriesName = data[0].seriesName
-		const color = self.term2toColor[data[0].seriesId]
+		const color = self.term2toColor[data[0].seriesId].adjusted
 		if (seriesName == 'survival') {
 			g.append('path')
 				.attr('d', self.lineFxn(lineData))
 				.style('fill', 'none')
-				.style('stroke', color.darker())
+				.style('stroke', color)
 				.style('opacity', 1)
 				.style('stroke-opacity', 1)
 		}
@@ -631,7 +821,7 @@ function setRenderers(self) {
 
 		censored
 			.attr('transform', c => `translate(${c.scaledX},${c.scaledY})`)
-			.style('stroke', color.darker())
+			.style('stroke', color)
 			.style('display', '')
 
 		censored
@@ -642,13 +832,13 @@ function setRenderers(self) {
 			.attr('d', self.symbol)
 			.style('fill', 'transparent')
 			.style('fill-opacity', s.fillOpacity)
-			.style('stroke', color.darker())
+			.style('stroke', color)
 			.style('display', '')
 	}
 
 	function renderAxes(xAxis, xTitle, yAxis, yTitle, s, chart) {
 		let xTicks
-		if (s.xTickValues) {
+		if (s.xTickValues?.length) {
 			chart.xTickValues = s.xTickValues.filter(v => v === 0 || (v >= chart.xMin && v <= chart.xMax))
 			xTicks = axisBottom(chart.xScale).tickValues(chart.xTickValues)
 		} else {
@@ -737,9 +927,26 @@ function setRenderers(self) {
 
 		const y = s.svgh - s.svgPadding.top - s.svgPadding.bottom + 60 // make y-offset option???
 		// fully rerender, later may reuse previously rendered elements
-		g.selectAll('*').remove()
+		// g.selectAll('*').remove()
 
 		const seriesOrder = chart.serieses.map(s => s.seriesId)
+		const v = self.state.config.term2?.values
+		if (v) {
+			seriesOrder.sort((aId, bId) => {
+				const av = v[aId]
+				const bv = v[bId]
+				if (av && bv) {
+					if ('order' in av && 'order' in bv) return av.order - bv.order
+					if (av.order) return av.order
+					if (bv.order) return bv.order
+					return 0
+				}
+				if (av) return av.order || 0
+				if (bv) return bv.order || 0
+				return 0
+			})
+		}
+
 		const data = !s.atRiskVisible
 			? []
 			: Object.keys(bySeries).sort((a, b) => seriesOrder.indexOf(a) - seriesOrder.indexOf(b))
@@ -749,43 +956,61 @@ function setRenderers(self) {
 			.selectAll(':scope > g')
 			.data(data, seriesId => seriesId)
 
+		sg.exit().remove()
+
+		sg.each(function(seriesId, i) {
+			const g = select(this)
+				.attr('transform', `translate(0,${(i + 1) * 20})`)
+				.attr('fill', s.hidden.includes(seriesId) ? '#aaa' : self.term2toColor[seriesId].adjusted)
+
+			renderAtRiskTick(g.select(':scope>g'), chart, s, seriesId, bySeries[seriesId])
+		})
+
 		sg.enter()
 			.append('g')
 			.each(function(seriesId, i) {
-				const series = bySeries[seriesId]
-				const reversed = series.slice().reverse()
 				const y = (i + 1) * 20
 				const g = select(this)
 					.attr('transform', `translate(0,${y})`)
-					.attr('fill', self.term2toColor[seriesId])
+					.attr('fill', s.hidden.includes(seriesId) ? '#aaa' : self.term2toColor[seriesId].adjusted)
 
-				const fontsize = `${s.axisTitleFontSize - 4}px`
 				const sObj = chart.serieses.find(s => s.seriesId === seriesId)
-
 				g.append('text')
 					.attr('transform', `translate(${s.atRiskLabelOffset}, 0)`)
 					.attr('text-anchor', 'end')
-					.attr('font-size', fontsize)
+					.attr('font-size', `${s.axisTitleFontSize - 4}px`)
+					.attr('cursor', 'pointer')
+					.datum({ seriesId })
 					.text(seriesId && seriesId != '*' ? sObj.seriesLabel || seriesId : 'At-risk')
 
-				const data = chart.xTickValues.map(tickVal => {
-					if (tickVal === 0) return { tickVal, atRisk: series[0][1], nCensored: series[0][2] }
-					const d = reversed.find(d => d[0] <= tickVal)
-					return { tickVal, atRisk: d[1], nCensored: d[2] }
-				})
-				const text = g
-					.append('g')
-					.selectAll('text')
-					.data(data)
-				text.exit().remove()
-				text
-					.enter()
-					.append('text')
-					.attr('transform', d => `translate(${chart.xScale(d.tickVal)},0)`)
-					.attr('text-anchor', 'middle')
-					.attr('font-size', fontsize)
-					.text(d => `${d.atRisk}(${d.nCensored})`)
+				renderAtRiskTick(g.append('g'), chart, s, seriesId, bySeries[seriesId])
 			})
+	}
+
+	function renderAtRiskTick(g, chart, s, seriesId, series) {
+		const reversed = series.slice().reverse()
+		const data = chart.xTickValues.map(tickVal => {
+			if (tickVal === 0) return { seriesId, tickVal, atRisk: series[0][1], nCensored: series[0][2] }
+			const d = reversed.find(d => d[0] <= tickVal)
+			return { seriesId, tickVal, atRisk: d[1], nCensored: d[2] }
+		})
+
+		const text = g.selectAll('text').data(data)
+		text.exit().remove()
+		text.each(function(d) {
+			select(this)
+				.attr('transform', d => `translate(${chart.xScale(d.tickVal)},0)`)
+				.attr('font-size', `${s.axisTitleFontSize - 4}px`)
+				.text(d => `${d.atRisk}(${d.nCensored})`)
+		})
+		text
+			.enter()
+			.append('text')
+			.attr('transform', d => `translate(${chart.xScale(d.tickVal)},0)`)
+			.attr('text-anchor', 'middle')
+			.attr('font-size', `${s.axisTitleFontSize - 4}px`)
+			.attr('cursor', 'pointer')
+			.text(d => `${d.atRisk}(${d.nCensored})`)
 	}
 
 	self.getSymbol = function(size) {
@@ -825,7 +1050,8 @@ function setInteractivity(self) {
 					d.seriesLabel ? d.seriesLabel : self.state.config.term.term.name
 				}</td></tr>`,
 				`<tr><td style='padding:3px; color:#aaa'>Time to event:</td><td style='padding:3px; text-align:center'>${x} ${xUnit}</td></tr>`,
-				`<tr><td style='padding:3px; color:#aaa'>${label}:</td><td style='padding:3px; text-align:center'>${y}%</td></tr>`,
+				`<tr><td style='padding:3px; color:#aaa'>${label}:</td><td style='padding:3px; text-align:center'>${100 *
+					y}%</td></tr>`,
 				`<tr><td style='padding:3px; color:#aaa'>At-risk:</td><td style='padding:3px; text-align:center'>${d.nrisk}</td></tr>`
 			]
 			// may also indicate the confidence interval (lower%-upper%) in a new row
@@ -850,19 +1076,215 @@ function setInteractivity(self) {
 		if (d === undefined) return
 		const hidden = self.settings.hidden.slice()
 		const i = hidden.indexOf(d.seriesId)
-		if (i == -1) hidden.push(d.seriesId)
-		else hidden.splice(i, 1)
+		if (i == -1) {
+			self.showLegendItemMenu(d)
+		} else {
+			hidden.splice(i, 1)
+			self.app.dispatch({
+				type: 'plot_edit',
+				id: self.id,
+				config: {
+					settings: {
+						survival: {
+							hidden
+						}
+					}
+				}
+			})
+		}
+	}
+
+	self.showLegendItemMenu = function(d) {
+		const term1 = self.state.config.term.term
+		const term2 = self.state.config.term2?.term || null
+		const uncomp_term1 = term1.values ? Object.values(term1.values).map(v => v.label) : []
+		const uncomp_term2 = term2 && term2.values ? Object.values(term2.values).map(v => v.label) : []
+		const term1unit = term1.unit && !uncomp_term1.includes(d.seriesId || d.id) ? ' ' + term1.unit : ''
+		const term2unit = term2 && term2.unit && !uncomp_term2.includes(d.dataId || d.id) ? ' ' + term2.unit : ''
+		const seriesLabel =
+			(term1.values && d.seriesId in term1.values ? term1.values[d.seriesId].label : d.seriesId ? d.seriesId : d.id) +
+			term1unit
+		const dataLabel =
+			(term2 && term2.values && d.dataId in term2.values ? term2.values[d.dataId].label : d.dataId ? d.dataId : d.id) +
+			term2unit
+		const icon = !term2
+			? ''
+			: "<div style='display:inline-block; width:14px; height:14px; margin: 2px 3px; vertical-align:top; background:" +
+			  d.color +
+			  "'>&nbsp;</div>"
+		const header =
+			`<div style='padding:2px'><b>${term1.name}</b>: ${seriesLabel}</div>` +
+			(d.seriesId && term2 ? `<div style='padding:2px'><b>${term2.name}</b>: ${dataLabel} ${icon}</div>` : '')
+
+		const data = d.seriesId || d.seriesId === 0 ? d : { seriesId: d.id, dataId: d.dataId }
+
+		const options = []
+		options.push({
+			label: 'Hide "' + seriesLabel,
+			callback: () => {
+				const hidden = self.settings.hidden.slice()
+				hidden.push(d.seriesId)
+				self.app.dispatch({
+					type: 'plot_edit',
+					id: self.id,
+					config: {
+						settings: {
+							survival: {
+								hidden
+							}
+						}
+					}
+				})
+			}
+		})
+
+		if (self.legendData[0]?.items.length > 1) {
+			options.push({
+				label: 'Move',
+				setInput: holder => {
+					const legendIndex = self.legendValues[d.seriesId].order
+					if (legendIndex != 0)
+						holder
+							.append('button')
+							.html('up')
+							.on('click', () => self.adjustValueOrder(d, -1))
+					if (legendIndex < self.legendData[0]?.items.length - 1)
+						holder
+							.append('button')
+							.html('down')
+							.on('click', () => self.adjustValueOrder(d, 1))
+				}
+			})
+		}
+
+		options.push({
+			//label: 'Color',
+			//callback: d => {}
+			setInput: holder => {
+				const label = holder.append('label')
+				label
+					.append('span')
+					.style('vertical-align', 'middle')
+					.style('line-height', '25px')
+					.html('Edit color ')
+				const input = label
+					.append('input')
+					.attr('type', 'color')
+					.attr('value', self.term2toColor[d.seriesId].hex)
+					.style('vertical-align', 'top')
+					.on('change', () => self.adjustColor(input.property('value'), d))
+
+				holder
+					.append('span')
+					.style('vertical-align', 'middle')
+					.style('line-height', '25px')
+					.html(' OR ')
+
+				holder
+					.append('button')
+					.style('margin-left', '5px')
+					.style('background-color', self.term2toColor[d.seriesId].rgb.darker())
+					.style('vertical-align', 'top')
+					.html('darken')
+					.on('click', () => self.adjustColor(input.property('value'), d, 'darker'))
+
+				holder
+					.append('button')
+					.style('margin-left', '5px')
+					.style('background-color', self.term2toColor[d.seriesId].rgb.brighter())
+					.style('vertical-align', 'top')
+					.html('brighten')
+					.on('click', () => self.adjustColor(input.property('value'), d, 'brighter'))
+			}
+		})
+
+		if (!options.length) return
+		self.activeMenu = true
+		self.app.tip.clear()
+		self.app.tip.d.append('div').html(header)
+		self.app.tip.d
+			.append('div')
+			.selectAll('div')
+			.data(options)
+			.enter()
+			.append('div')
+			.attr('class', 'sja_menuoption')
+			.on('click', c => {
+				if (c.setInput) return
+				self.app.tip.hide()
+				c.callback(d)
+			})
+			.each(function(d) {
+				const div = select(this)
+				if (d.label)
+					div
+						.append('div')
+						.style('display', 'inline-block')
+						.html(d.label)
+				if (d.setInput)
+					d.setInput(
+						div
+							.append('div')
+							.style('display', 'inline-block')
+							.style('margin-left', '10px')
+					)
+			})
+
+		self.app.tip.show(event.clientX, event.clientY)
+	}
+
+	self.adjustValueOrder = (d, increment) => {
+		const values = JSON.parse(JSON.stringify(self.state.config.term2?.values || self.legendValues))
+		if (!values[d.seriesId]) {
+			values[d.seriesId] = Object.assign({}, self.state.config.term2?.term?.values || {})
+		}
+
+		for (const id in values) {
+			if (!('order' in values[id])) values[id].order = self.legendValues[id].order
+		}
+
+		const v = values[d.seriesId]
+		v.order += increment
+		for (const id in values) {
+			if (id == d.seriesId) continue
+			if ('order' in values[id] && values[id].order === v.order) {
+				values[id].order += -1 * increment
+				break
+			}
+		}
+
+		const term2 = JSON.parse(JSON.stringify(self.state.config.term2))
+		term2.values = values
+
 		self.app.dispatch({
 			type: 'plot_edit',
 			id: self.id,
 			config: {
-				settings: {
-					survival: {
-						hidden
-					}
-				}
+				term2
 			}
 		})
+
+		self.app.tip.hide()
+	}
+
+	self.adjustColor = (value, d, adjust = '') => {
+		if (adjust && adjust != 'darker' && adjust != 'brighter') throw 'invalid color adjustment option'
+		const t2 = self.state.config.term2
+		const values = JSON.parse(JSON.stringify(t2?.values || self.legendValues))
+		const term2 = JSON.parse(JSON.stringify(self.state.config.term2))
+		term2.values = values
+		const color = rgb(value)
+		const adjustedColor = !adjust ? color : adjust == 'darker' ? color.darker() : color.brighter()
+		values[d.seriesId].color = adjustedColor.toString()
+		self.app.dispatch({
+			type: 'plot_edit',
+			id: self.id,
+			config: {
+				term2
+			}
+		})
+
+		self.app.tip.hide()
 	}
 
 	self.showMenuForSelectedChart = function(d) {
@@ -908,9 +1330,9 @@ export async function getPlotConfig(opts, app) {
 				svgh: 300,
 				timeFactor: 1,
 				timeUnit: '',
-				//xTickInterval: 0, // if zero, automatically determined by d3-axis
 				atRiskVisible: true,
 				atRiskLabelOffset: -20,
+				xTickValues: [], // if undefined or empty, will be ignored
 				svgPadding: {
 					top: 20,
 					left: 55,
@@ -918,7 +1340,8 @@ export async function getPlotConfig(opts, app) {
 					bottom: 50
 				},
 				axisTitleFontSize: 16,
-				hidden: []
+				hidden: [],
+				hiddenPvalues: []
 			}
 		}
 	}

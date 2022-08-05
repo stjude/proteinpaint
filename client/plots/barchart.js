@@ -404,6 +404,11 @@ class TdbBarchart {
 	}
 
 	setTerm2Color(result) {
+		const t2 = this.config.term2
+		const t2firstVal = Object.values(t2?.term?.values || {})
+		if (t2 && t2.term.values && t2.term.values[result.dataId]?.color) {
+			this.term2toColor[result.dataId] = t2.term.values[result.dataId]?.color
+		}
 		if (this.settings.groups && result.dataId in this.settings.groups) {
 			this.term2toColor[result.dataId] = this.settings.groups[result.dataId].color
 		}
@@ -415,7 +420,7 @@ class TdbBarchart {
 					: scaleOrdinal(schemeCategory20)
 		}
 		const group = this.state.ssid && this.state.ssid.groups && this.state.ssid.groups[result.dataId]
-		this.term2toColor[result.dataId] = !this.config.term2
+		this.term2toColor[result.dataId] = !t2
 			? 'rgb(144, 23, 57)'
 			: group && 'color' in group
 			? group.color
