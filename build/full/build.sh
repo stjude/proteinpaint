@@ -7,7 +7,7 @@ set -e
 ###############
 
 USAGE="Usage:
-	./build/full/build.sh [-r]
+./build/full/build.sh [-r] [-b] [-c]
 
 	-r REV: git revision to checkout, if empty will use the current code state
 	-b BUILDARGS: build variables to pass to the Dockerfile that are not persisted to the built image

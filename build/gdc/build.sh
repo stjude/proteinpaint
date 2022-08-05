@@ -10,7 +10,7 @@ set -e
 usage() {
 	echo "Usage:
 
-	./build/gdc/build.sh [-t] [-r]
+	./build/gdc/build.sh [-t] [-r] [-b]
 
 	-t tpmasterdir: your local serverconfig.json's tpmasterdir
 	-r REV: git revision to checkout, if empty will use the current code state
@@ -54,7 +54,7 @@ done
 ################################
 
 
-./build/full/build.sh -r $REV -b $BUILDARGS
+./build/full/build.sh -r $REV -b "$BUILDARGS"
 tar -C tmppack/ -xvf archive.tar build/gdc
 
 #####################
