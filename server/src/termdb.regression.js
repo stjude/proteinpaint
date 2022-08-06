@@ -918,8 +918,7 @@ async function lowAFsnps_fisher(tw, sampledata, Rinput, result) {
 		lines.push(line.join('\t'))
 	}
 
-	//const plines = await lines2R(path.join(serverconfig.binpath, 'utils/fisher.R'), lines)
-	const plines = (await utils.run_rust('stats', 'fisher_limits\t300\t150-' + lines.join('-'))).trim().split('\n')
+	const plines = (await utils.run_rust('fisher', 'fisher_limits\t300\t150-' + lines.join('-'))).trim().split('\n')
 
 	for (const line of plines) {
 		const l = line.split('\t')
