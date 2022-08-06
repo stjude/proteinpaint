@@ -13,6 +13,8 @@ runCumincR
 export async function get_incidence(q, ds) {
 	try {
 		if (!ds.cohort) throw 'cohort missing from ds'
+		const minTimeSinceDx = ds.cohort.termdb.minTimeSinceDx
+		if (minTimeSinceDx === undefined) throw 'missing min time since dx'
 		q.ds = ds
 		const results = get_rows(q)
 		const byChartSeries = {}
@@ -80,7 +82,7 @@ export async function get_incidence(q, ds) {
 			}
 		}
 
-		await runCumincR(fdata, final_data, ds.cohort.minTimeSinceDx)
+		await runCumincR(fdata, final_data, minTimeSinceDx)
 		return final_data
 	} catch (e) {
 		if (e.stack) console.log(e.stack)

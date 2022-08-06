@@ -116,7 +116,9 @@ function trigger_gettermdbconfig(res, tdb) {
 		selectCohort: tdb.selectCohort, // optional
 		supportedChartTypes: tdb.q.getSupportedChartTypes(),
 		allowedTermTypes: tdb.allowedTermTypes || [],
-		coxCumincXlab: tdb.coxCumincXlab
+		coxCumincXlab: tdb.coxCumincXlab,
+		timeScale: tdb.timeScale,
+		minTimeSinceDx: tdb.minTimeSinceDx
 	}
 	if (tdb.restrictAncestries) {
 		c.restrictAncestries = []
