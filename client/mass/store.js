@@ -331,7 +331,11 @@ const getTwsByChartType = {
 	survival: getNestedChartSeriesDataTws,
 	cuminc: getNestedChartSeriesDataTws,
 	regression: plot => [plot.outcome, ...plot.independent].filter(d => !!d),
-	matrix: plot => plot.termgroups.reduce((arr, grp) => arr.push(...grp.lst), [])
+	matrix: plot =>
+		plot.termgroups.reduce((arr, grp) => {
+			arr.push(...grp.lst)
+			return arr
+		}, [])
 }
 
 // must use the await keyword when using this storeInit()

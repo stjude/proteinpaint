@@ -496,9 +496,11 @@ function setInteractivity(self) {
 		})
 	}
 
-	self.showMenu = (clickedElem = null) => {
+	self.showMenu = (clickedElem = null, menuHolder = null) => {
 		const tip = self.dom.tip
 		tip.clear()
+		// self.dom.holder really is set to clickedElem because
+		// handler showEditMenu() use if for tip.showunder(self.dom.holder)
 		if (self.opts.renderAs == 'none' && clickedElem) self.dom.holder = select(clickedElem)
 		if (self.dom.holder) {
 			const elem = self.dom.holder.node()
@@ -507,7 +509,7 @@ function setInteractivity(self) {
 		}
 
 		const options = []
-		if (!self.q || !self.q.groupsetting?.disabled) {
+		if (self.q && !self.q.groupsetting?.disabled) {
 			options.push({ label: 'Edit', callback: self.handler.showEditMenu })
 		}
 
@@ -517,7 +519,7 @@ function setInteractivity(self) {
 			options.push({ label: 'Replace', callback: self.showTree }, { label: 'Remove', callback: self.removeTerm })
 		}
 
-		tip.d
+		;(menuHolder || tip.d)
 			.selectAll('div')
 			.data(options)
 			.enter()

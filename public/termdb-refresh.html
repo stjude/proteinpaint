@@ -121,11 +121,11 @@ function showTsvInputs(div, app, data) {
 
 	const tsv = {}
 	getRequestBody = () => {
-		if (!Object.keys(tsv).length) throw 'No data to submit.'
 		subdivs.each(function(name) {
 			const content = d3.select(this).select('textarea').property('value')
 			if (content) tsv[name] = content
 		})
+		if (!Object.keys(tsv).length) throw 'No data to submit.'
 		return tsv
 	}
 
