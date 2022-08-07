@@ -64,7 +64,7 @@ export function newSandboxDiv(sandbox_holder, opts = {}) {
 		.style('box-shadow', '2px 0px 2px #f2f2f2')
 		.style('border-radius', '5px 5px 0 0')
 		.style('background-color', '#f2f2f2')
-		.style('width', '95vw')
+		.style('width', opts.style?.width || '95vw')
 		.style('z-index', '99')
 
 	// close_btn
@@ -105,7 +105,7 @@ export function newSandboxDiv(sandbox_holder, opts = {}) {
 		.style('border', 'solid 1px #f2f2f2')
 		.style('border-top', 'solid 1px white')
 		.style('border-radius', '0  0 5px 5px')
-		.style('width', '95vw')
+		.style('width', opts.style?.width || '95vw')
 
 	return { header_row, header, body, app_div, id: sandboxId }
 }
