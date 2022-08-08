@@ -36,6 +36,11 @@ dat <- fromJSON(infile)
 
 # function to compute wilcox p-value between two groups of values
 getPvalue <- function(x) {
+  if (length(x$group1values) == 0 || length(x$group2values) == 0) {
+    # all samples fall in one group
+    # return NA p-value
+    return(unbox("NA"))
+  }
   # break any ties between values
   # this will allow exact p-values to be computed
   if(anyDuplicated(x$group1values)) x$group1values <- jitter(x$group1values)
