@@ -88,15 +88,13 @@ const snplocusQ = {
 		"join":"and",
 		"in":true,
 		"lst":[
-			{"type":"tvs","tvs":{"isnot":true,"values":[{"label":"Bad","key":"Bad"}],"term":{"id":"QC_sjlife","name":"SJLIFE classification","parent_id":null,"isleaf":true,"type":"categorical","values":{"SuperGood":{"label":"SuperGood","key":"SuperGood"},"Good":{"label":"Good","key":"Good"},"Ambiguous":{"label":"Ambiguous","key":"Ambiguous"},"Bad":{"label":"Bad","key":"Bad"}}}}},
-			{"type":"tvs","tvs":{"isnot":true,"values":[{"label":"Bad","key":"Bad"}],"term":{"id":"QC_ccss","name":"CCSS classification","parent_id":null,"isleaf":true,"type":"categorical","values":{"SuperGood":{"label":"SuperGood","key":"SuperGood"},"Good":{"label":"Good","key":"Good"},"Ambiguous":{"label":"Ambiguous","key":"Ambiguous"},"Bad":{"label":"Bad","key":"Bad"}}}}},
+			{"type":"tvs","tvs":{"isnot":true,"values":[{"label":"Bad","key":"Bad"}],"term":{"id":"QC","name":"Classification","parent_id":null,"isleaf":true,"type":"categorical","values":{"Good":{"label":"Good","key":"Good"},"Bad":{"label":"Bad","key":"Bad"}}}}},
 			{"type":"tvs","tvs":{"ranges":[{"start":0.95,"startinclusive":true,"stopunbounded":true}],"term":{"id":"SJcontrol_CR","name":"SJLIFE control call rate","parent_id":null,"isleaf":true,"type":"float"}}},
 			{"type":"tvs","tvs":{"ranges":[{"start":0.95,"startinclusive":true,"stopunbounded":true}],"term":{"id":"CR","name":"Call rate, SJLIFE+CCSS","parent_id":null,"isleaf":true,"type":"float"}}},
 			{"type":"tvs","tvs":{"ranges":[{"start":0.95,"startinclusive":true,"stopunbounded":true}],"term":{"id":"CR_sjlife","name":"SJLIFE call rate","parent_id":null,"isleaf":true,"type":"float"}}},
 			{"type":"tvs","tvs":{"ranges":[{"start":0.95,"startinclusive":true,"stopunbounded":true}],"term":{"id":"CR_ccss","name":"CCSS call rate","parent_id":null,"isleaf":true,"type":"float"}}},
 			//{"type":"tvs","tvs":{"ranges":[{"start":0.95,"startinclusive":true,"stopunbounded":true}],"term":{"id":"gnomAD_CR","name":"gnmoAD call rate","parent_id":null,"isleaf":true,"type":"float"}}},
 			//{"type":"tvs","tvs":{"ranges":[{"start":0.1,"startinclusive":true,"stopunbounded":true}],"term":{"id":"gnomAD_AF","name":"gnomAD allele frequency","parent_id":null,"isleaf":true,"type":"float","min":0,"max":1,"values":{}}}},
-			{"type":"tvs","tvs":{"isnot":true,"values":[{"label":"yes","key":"1"}],"term":{"id":"BadBLAT","name":"Paralog","parent_id":null,"isleaf":true,"type":"categorical"}}},
 			{"type":"tvs","tvs":{"isnot":true,"values":[{"label":"yes","key":"1"}],"term":{"id":"Polymer_region","name":"Polymer region","parent_id":null,"isleaf":true,"type":"categorical"}}}
 		]
 	}
