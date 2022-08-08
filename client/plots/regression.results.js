@@ -642,7 +642,7 @@ function setRenderers(self) {
 		}
 
 		// intercept row
-		{
+		if (self.config.regressionType != 'cox') {
 			const tr = table.append('tr').style('background', '#eee')
 			for (const v of result.type3.intercept) {
 				tr.append('td')

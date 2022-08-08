@@ -345,7 +345,23 @@ coxRegression <- function(formula, dat) {
   coefficients_table <- coefficients_table[, c(2,6,7,1,3,4,5), drop = F]
   
   # type III statistics table
-  type3_table <- as.matrix(drop1(res, scope = ~., test = "Chisq"))
+  # do not use drop1() to compute type III stats for cox regression
+  # because it will use the drop1.default() method and this will
+  # error out if samples are filtered from the data table
+  # TODO: may replace with car::Anova() when car package becomes available on servers
+  vlst <- attr(res$terms, "term.labels", exact = T)
+  type3_table <- matrix(data = NA, nrow = length(vlst), ncol = 5)
+  row.names(type3_table) <- vlst
+  for (i in 1:length(vlst)) {
+    v <- vlst[i]
+    formula_reduce <- update(formula$formula, paste0("~.-", v))
+    res_reduce <- coxph(formula_reduce, data = dat, model = T)
+    lt <- as.matrix(lrtest(res, res_reduce))
+    type3_table[i,] <- lt[2,]
+  }
+  colnames(type3_table) <- colnames(lt)
+  type3_table <- type3_table[,3:5]
+  type3_table[,"Df"] <- type3_table[,"Df"] * -1 #convert Df diff to Df
   # if there are interactions, then set the results
   # of the main effects to "NA" because these type III
   # stats cannot be accurately estimated
@@ -353,9 +369,8 @@ coxRegression <- function(formula, dat) {
   intsIds <- unique(unlist(strsplit(ints, ":")))
   type3_table[intsIds,] <- NA
   # round values
-  type3_table[,"AIC"] <- round(type3_table[,"AIC"], 1)
-  type3_table[,"LRT"] <- round(type3_table[,"LRT"], 3)
-  type3_table[,"Pr(>Chi)"] <- signif(type3_table[,"Pr(>Chi)"], 4)
+  type3_table[,"Chisq"] <- round(type3_table[,"Chisq"], 3)
+  type3_table[,"Pr(>Chisq)"] <- signif(type3_table[,"Pr(>Chisq)"], 4)
   
   # total SNP effect table
   # if a snplocus snp has an interaction, then compute
@@ -402,10 +417,13 @@ coxRegression <- function(formula, dat) {
 runRegression <- function(formula, regtype, dat, outcome) {
   id <- formula$id
   # remove samples with NA values in any variable in the formula
-  # note: even though regression functions (e.g. lm, glm, etc.)
-  # perform this step by default, type III stats will error
-  # out when comparing models with and without certain variables
-  # that are NA for some samples
+  # NOTE: even though regression functions (e.g. lm, glm, etc.)
+  # perform this filtration by default, this filtration
+  # should be done before any regression analysis because
+  # multiple regression models might need to be compared to one
+  # another (e.g. computation of total snp effect) and there might
+  # be samples that are NA for variables in one model but
+  # not in another model.
   fdat <- dat[complete.cases(dat[,all.vars(formula$formula)]),]
   warns <- vector(mode = "character")
   handleWarns <- function(w) {
