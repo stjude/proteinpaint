@@ -229,7 +229,7 @@ function getGDCconfig() {
 					color: 'rgb(31, 112, 31)'
 				},
 				M: {
-					color: 'rgb(40, 95, 143)'
+					color: '#2379BC'//Best update for the default blue, that is compliant with section508
 				},
 				N: {
 					color: 'rgb(179, 89, 10)'
