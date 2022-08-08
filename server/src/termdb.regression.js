@@ -682,10 +682,10 @@ async function parseRoutput(Rinput, Routput, id2originalId, q, result) {
 		// type III statistics
 		analysisResult.data.type3 = {
 			header: data.type3.header,
-			intercept: data.type3.rows.shift(),
 			terms: {}, // individual independent terms, not interaction
 			interactions: [] // interactions
 		}
+		if (Rinput.regressionType != 'cox') analysisResult.data.type3.intercept = data.type3.rows.shift()
 		for (const row of data.type3.rows) {
 			if (row[0].indexOf(':') != -1) {
 				// is an interaction
