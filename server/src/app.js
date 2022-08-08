@@ -629,7 +629,8 @@ async function handle_genomes(req, res) {
 		hasblat,
 		features: exports.features,
 		dsAuth: getDsAuth(req),
-		commonOverrides: serverconfig.commonOverrides
+		commonOverrides: serverconfig.commonOverrides,
+		targetPortal: serverconfig.targetPortal //sending target portal to the client
 	})
 }
 

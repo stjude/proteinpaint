@@ -978,3 +978,43 @@ table {
  .sjpp-content-div{
     grid-area: content;
 }
+
+/* client/src/block.js start */
+
+.sjpp-active-tiny-button {
+	display: inline-block;
+	background-color: #1C5E86;
+	font-size: .8em;
+	color: white;
+	padding: 1px 5px;
+	margin-right: 5px;
+	border-radius: 4px;
+}
+
+.sjpp-plus-button
+{
+    display: inline-block;
+    margin: 1px;
+    border: solid 1px #545454;
+    font-size: .9em;
+    cursor: default;
+    padding: 2px 5px;
+}
+
+.sjpp-dshandleholder
+{
+    display: inline-block;
+    margin: 1px;
+    border: solid 1px #545454;
+    font-size: .9em;
+    cursor: default;
+}
+
+.sjpp-dslabel
+{
+    display: inline-block;
+    color: black;
+    padding: 2px 4px;
+
+}
+/* client/src/block.js end */
