@@ -67,20 +67,23 @@ const snplstTerm = {
 	}
 }
 
+// 7665606.C.G,T is multi-allelic 
+// in european, G is 0%, T and C are common alleles
 const snplocusQ = {
-	chr:'chr17', start:7674304, stop:7676849,
+	chr:'chr17', start:7664218, stop:7671018,
 	AFcutoff:5,
 	alleleType:0,
 	geneticModel:0,
 	restrictAncestry:{
-		name:'African ancestry',
+		name:'European ancestry',
 		tvs: {
 			term: {
 				id: 'genetic_race',
 				type: 'categorical',
 				name: 'Genetically defined race'
 			},
-			values: [{ key: 'African Ancestry', label: 'African Ancestry' }]
+			//values: [{ key: 'African Ancestry', label: 'African Ancestry' }]
+			values: [{ key: 'European Ancestry', label: 'European Ancestry' }]
 		}
 	},
 	variant_filter: {
