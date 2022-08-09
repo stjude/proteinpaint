@@ -519,7 +519,11 @@ async function findgene2paint(app, str, genomename, jwt) {
 	}
 
 	sandbox_div.header.html(
-		'<div style="display:inline-block;">' + str + '</div><div class="output-sandbox-title">' + genomename + '</div>'
+		'<div style="display:inline-block;">' +
+			str +
+			'</div><div class="sjpp-output-sandbox-title">' +
+			genomename +
+			'</div>'
 	)
 	// may yield tklst from url parameters
 	const urlp = urlmap()

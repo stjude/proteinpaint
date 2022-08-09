@@ -57,13 +57,13 @@ export function newSandboxDiv(sandbox_holder, opts = {}) {
 
 	const header_row = app_div
 		.append('div')
-		.attr('class', 'output-sandbox-header')
+		.attr('class', 'sjpp-output-sandbox-header')
 		.style('width', opts.style?.width || '95vw')
 
 	// close_btn
 	header_row
 		.append('div')
-		.classed('output-sandbox-close-bt', true)
+		.classed('sjpp-output-sandbox-close-bt', true)
 		.classed('sja_menuoption', true)
 		.html('&times;')
 		.on('mousedown', () => {
@@ -84,7 +84,7 @@ export function newSandboxDiv(sandbox_holder, opts = {}) {
 
 	const body = app_div
 		.append('div')
-		.attr('class', 'output-sandbox-content')
+		.attr('class', 'sjpp-output-sandbox-content')
 		.style('width', opts.style?.width || '95vw')
 
 	return { header_row, header, body, app_div, id: sandboxId }

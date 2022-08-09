@@ -1047,7 +1047,7 @@ table {
     margin: 1px 20px 1px 10px;
 }
 
-.output-sandbox-title
+.sjpp-output-sandbox-title
 {
     border-radius:4px; 
     color:white; 
@@ -1060,7 +1060,7 @@ table {
 /* client/src/app.js end */
 
 /* client/dom/sandbox.js start */
-.output-sandbox-header
+.sjpp-output-sandbox-header
 {
     display: inline-block;
     margin: 5px 10px;
@@ -1072,7 +1072,7 @@ table {
     z-index: 99;
 }
 
-.output-sandbox-content
+.sjpp-output-sandbox-content
 {
     margin: 5px 10px;
     margin-top: 0px;
@@ -1084,7 +1084,7 @@ table {
     border-radius: 0  0 5px 5px;
 }
 
-.output-sandbox-close-bt
+.sjpp-output-sandbox-close-bt
 {
     display: inline-block;
     padding: 4px 10px;
