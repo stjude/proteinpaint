@@ -708,14 +708,10 @@ async function parseRoutput(Rinput, Routput, id2originalId, q, result) {
 
 		// total snp effect
 		if (data.totalSnpEffect) {
-			if (data.totalSnpEffect.rows.length < 2) throw 'fewer than 2 rows in total SNP effect table'
-			analysisResult.data.totalSnpEffect = {
-				header: data.totalSnpEffect.header,
-				intercept: data.totalSnpEffect.rows.shift()
-			}
-			const row = data.totalSnpEffect.rows[0] // total snp effect row
-			if (!row[0].includes('+') || !row[0].includes(':')) throw 'unexpected format of total snp effect variable'
-			const variables = row.shift().split('+')
+			if (data.totalSnpEffect.rows.length != 1) throw 'total SNP effect table should have 1 row'
+			analysisResult.data.totalSnpEffect = { header: data.totalSnpEffect.header.slice(0, 4) }
+			const rowdata = data.totalSnpEffect.rows[0].slice(0, 4)
+			const variables = data.totalSnpEffect.rows[0][4].split(';')
 			// extract the snp main effect variable
 			const snpInd = variables.findIndex(variable => !variable.includes(':'))
 			const snp = variables.splice(snpInd, 1)[0]
@@ -723,12 +719,12 @@ async function parseRoutput(Rinput, Routput, id2originalId, q, result) {
 			// extract the snp interactions
 			const interactions = []
 			for (const variable of variables) {
+				if (!variable.includes(':')) throw 'expected interaction'
 				const [id1, id2] = variable.split(':')
 				interactions.push({ term1: id2originalId[id1], term2: id2originalId[id2] })
 			}
 			analysisResult.data.totalSnpEffect.interactions = interactions
-			// row is now only data fields
-			analysisResult.data.totalSnpEffect.lst = row
+			analysisResult.data.totalSnpEffect.lst = rowdata
 			analysisResult.data.totalSnpEffect.label = 'Total SNP effect'
 		}
 
