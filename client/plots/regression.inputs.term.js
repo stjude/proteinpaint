@@ -194,7 +194,7 @@ export class InputTerm {
 			for continuous term, assume it is numeric and that we'd want counts by bins,
 			so remove the 'mode: continuous' value as it will prevent bin construction in the backend
 		*/
-		if (q.mode == 'continuous' || q.mode == 'spline' || q.mode == 'cox') delete q.mode
+		if (q.mode == 'continuous' || q.mode == 'spline') delete q.mode
 
 		// the 3rd argument to getCategories() is different for snplst and dictionary term types
 		const qlst =
@@ -287,20 +287,20 @@ export class InputTerm {
 					// allow selecting refgrp
 					this.termStatus.allowToSelectRefGrp = true
 				}
-
-				this.termStatus.topInfoStatus.push('Minimum grade to have event: ' + tw.term.values[tw.q.breaks[0]].label)
-				if (tw.q.timeScale) {
+				if (this.section.configKey == 'outcome' && this.parent.opts.regressionType == 'cox') {
+					if (!['age', 'time'].includes(tw.q.timeScale)) throw 'invalid q.timeScale'
 					this.termStatus.topInfoStatus.push(
-						'Time axis: ' +
-							(tw.q.timeScale == 'age'
-								? 'Age'
-								: tw.q.timeScale == 'time'
-								? 'From study enrollment' // can be from termdbConfig
-								: 'ERR unknown value')
+						`Time axis: ${tw.q.timeScale == 'time' ? 'follow-up time' : 'age'} (begins at ${
+							this.parent.state.minTimeSinceDx
+						} ${this.parent.state.timeScale} post cancer diagnosis)`
+					)
+					this.termStatus.topInfoStatus.push(`Event: first occurrence of grade ${tw.q.breaks[0]} or higher`)
+					this.termStatus.topInfoStatus.push('')
+					this.termStatus.topInfoStatus.push(
+						`Samples with events before study enrollment (i.e. within ${this.parent.state.minTimeSinceDx} ${this.parent.state.timeScale} of diagnosis) are excluded`
 					)
 				}
 			}
-
 			this.maySet_refGrp(tw)
 		}
 	}
@@ -313,6 +313,7 @@ export class InputTerm {
 				if (tw.term.values[i].uncomputable) excluded_values.add(tw.term.values[i].label)
 			}
 		}
+		if (tw.q.mode == 'cox') excluded_values.add('Event before study enrollment')
 		const sampleCounts = (this.termStatus.sampleCounts = datalst.filter(v => !excluded_values.has(v.label)))
 		const excludeCounts = (this.termStatus.excludeCounts = datalst.filter(v => excluded_values.has(v.label)))
 
@@ -519,20 +520,8 @@ function setQ4conditionOutcome(tw, vocabApi, filter, state) {
 	will always break grades into two groups
 	this requires q.breaks[] to have a single grade value
 	for logistic: set tw.refGrp
-	for cox: set q.timeScale
 	*/
 	const { term, q } = tw
-	if (!q.breaks) q.breaks = []
-	if (q.breaks.length != 1) {
-		q.breaks = [2] // hardcode for now
-	}
-	if (![1, 2, 3, 4, 5].includes(q.breaks[0])) {
-		q.breaks[0] = 2
-	}
-	const grade = q.breaks[0]
-	if (!q.groupNames) q.groupNames = []
-	if (!q.groupNames[0]) q.groupNames[0] = 'Grade <' + grade
-	if (!q.groupNames[1]) q.groupNames[1] = 'Grade >=' + grade
 	if (state.config.regressionType == 'logistic') {
 		if (tw.refGrp) {
 			if (!q.groupNames.includes(tw.refGrp)) {
@@ -543,9 +532,6 @@ function setQ4conditionOutcome(tw, vocabApi, filter, state) {
 			// missing, set to be first group, guaranteed to be "No event"
 			tw.refGrp = q.groupNames[0]
 		}
-	} else {
-		// cox
-		if (!['age', 'time'].includes(q.timeScale)) q.timeScale = 'time'
 	}
 }
 

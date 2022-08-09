@@ -682,10 +682,10 @@ async function parseRoutput(Rinput, Routput, id2originalId, q, result) {
 		// type III statistics
 		analysisResult.data.type3 = {
 			header: data.type3.header,
-			intercept: data.type3.rows.shift(),
 			terms: {}, // individual independent terms, not interaction
 			interactions: [] // interactions
 		}
+		if (Rinput.regressionType != 'cox') analysisResult.data.type3.intercept = data.type3.rows.shift()
 		for (const row of data.type3.rows) {
 			if (row[0].indexOf(':') != -1) {
 				// is an interaction
@@ -708,14 +708,10 @@ async function parseRoutput(Rinput, Routput, id2originalId, q, result) {
 
 		// total snp effect
 		if (data.totalSnpEffect) {
-			if (data.totalSnpEffect.rows.length < 2) throw 'fewer than 2 rows in total SNP effect table'
-			analysisResult.data.totalSnpEffect = {
-				header: data.totalSnpEffect.header,
-				intercept: data.totalSnpEffect.rows.shift()
-			}
-			const row = data.totalSnpEffect.rows[0] // total snp effect row
-			if (!row[0].includes('+') || !row[0].includes(':')) throw 'unexpected format of total snp effect variable'
-			const variables = row.shift().split('+')
+			if (data.totalSnpEffect.rows.length != 1) throw 'total SNP effect table should have 1 row'
+			analysisResult.data.totalSnpEffect = { header: data.totalSnpEffect.header.slice(0, 4) }
+			const rowdata = data.totalSnpEffect.rows[0].slice(0, 4)
+			const variables = data.totalSnpEffect.rows[0][4].split(';')
 			// extract the snp main effect variable
 			const snpInd = variables.findIndex(variable => !variable.includes(':'))
 			const snp = variables.splice(snpInd, 1)[0]
@@ -723,12 +719,12 @@ async function parseRoutput(Rinput, Routput, id2originalId, q, result) {
 			// extract the snp interactions
 			const interactions = []
 			for (const variable of variables) {
+				if (!variable.includes(':')) throw 'expected interaction'
 				const [id1, id2] = variable.split(':')
 				interactions.push({ term1: id2originalId[id1], term2: id2originalId[id2] })
 			}
 			analysisResult.data.totalSnpEffect.interactions = interactions
-			// row is now only data fields
-			analysisResult.data.totalSnpEffect.lst = row
+			analysisResult.data.totalSnpEffect.lst = rowdata
 			analysisResult.data.totalSnpEffect.label = 'Total SNP effect'
 		}
 
@@ -918,8 +914,7 @@ async function lowAFsnps_fisher(tw, sampledata, Rinput, result) {
 		lines.push(line.join('\t'))
 	}
 
-	//const plines = await lines2R(path.join(serverconfig.binpath, 'utils/fisher.R'), lines)
-	const plines = (await utils.run_rust('stats', 'fisher_limits\t300\t150-' + lines.join('-'))).trim().split('\n')
+	const plines = (await utils.run_rust('fisher', 'fisher_limits\t300\t150-' + lines.join('-'))).trim().split('\n')
 
 	for (const line of plines) {
 		const l = line.split('\t')
@@ -1155,7 +1150,17 @@ function getSampleData_dictionaryTerms(q, terms) {
 
 	const rows = q.ds.cohort.db.connection.prepare(sql).all(values)
 
-	for (const { sample, term_id, key, value } of rows) {
+	// filter rows
+	let frows = rows
+	if (q.regressionType == 'cox') {
+		// cox regression
+		// need to remove rows with key=-1 for cox outcome
+		// because these samples had event before study enrollment
+		frows = rows.filter(row => !(row.term_id == q.outcome.id && row.key === -1))
+	}
+
+	// parse filtered rows
+	for (const { sample, term_id, key, value } of frows) {
 		if (!samples.has(sample)) {
 			samples.set(sample, { sample, id2value: new Map() })
 		}
@@ -1169,6 +1174,7 @@ function getSampleData_dictionaryTerms(q, terms) {
 
 	/* drop samples that are missing value for any term
 	as those are ineligible for analysis
+	TODO: is this a duplication of a step in makeRinput()
 	*/
 	const deletesamples = new Set()
 	for (const o of samples.values()) {

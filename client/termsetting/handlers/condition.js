@@ -23,17 +23,10 @@ export function getHandler(self) {
 				// barchart, cuminc term0/2
 				return showMenu_discrete(self, div)
 			}
-			if (self.q.mode == 'binary') {
-				// logistic outcome
-				return showMenu_binary(self, div)
-			}
-			if (self.q.mode == 'cuminc') {
-				// cuminc term1
-				return showMenu_cuminc(self, div)
-			}
-			if (self.q.mode == 'cox') {
-				// cox outcome
-				return showMenu_cox(self, div)
+			if (self.q.mode == 'binary' || self.q.mode == 'cuminc' || self.q.mode == 'cox') {
+				// logistic outcome, cuminc term1, or cox outcome
+				// all use a single grade cutoff
+				return showMenu_cutoff(self, div)
 			}
 			console.error('invalid q.mode:', self.q.mode)
 			throw 'invalid q.mode'
@@ -216,86 +209,18 @@ function addBreaksSelector(self, div) {
 		})
 }
 
-function showMenu_binary(self, div) {
+function showMenu_cutoff(self, div) {
 	const holder = div
 		.append('div')
 		.style('margin', '10px')
 		.style('display', 'grid')
 		.style('grid-template-columns', 'auto auto')
-		.style('gap', '10px')
+		.style('gap', '20px')
 
 	// row 1
 	holder
 		.append('div')
-		.text('Cutoff grade')
-		.style('opacity', 0.4)
-	const sd = holder.append('div')
-	const gradeSelect = sd.append('select').on('change', changeGradeSelect)
-	for (const i of cutoffGrades) {
-		gradeSelect.append('option').text(self.term.values[i].label)
-	}
-	// breaks[0] must have already been set
-	gradeSelect.property('selectedIndex', self.q.breaks[0] - 1)
-	sd.append('div')
-		.text('Using maximum grade for each patient.')
-		.style('opacity', 0.4)
-		.style('font-size', '.7em')
-
-	// row 2
-	holder
-		.append('div')
-		.text('Group 1 name')
-		.style('opacity', 0.4)
-	const g1n = holder
-		.append('div')
-		.append('input')
-		.style('width', '130px')
-
-	// row 3
-	holder
-		.append('div')
-		.text('Group 2 name')
-		.style('opacity', 0.4)
-	const g2n = holder
-		.append('div')
-		.append('input')
-		.style('width', '130px')
-
-	changeGradeSelect()
-
-	function changeGradeSelect() {
-		const grade = gradeSelect.property('selectedIndex') + 1
-		if (!self.q.groupNames) self.q.groupNames = []
-		g1n.property('value', self.q.groupNames[0] || 'Grade <' + grade)
-		g2n.property('value', self.q.groupNames[1] || 'Grade >=' + grade)
-	}
-
-	div
-		.append('button')
-		.text('Apply')
-		.style('margin', '10px')
-		.on('click', () => {
-			self.q.breaks[0] = gradeSelect.property('selectedIndex') + 1
-			self.q.groupNames[0] = g1n.property('value')
-			self.q.groupNames[1] = g2n.property('value')
-			event.target.disabled = true
-			event.target.innerHTML = 'Loading...'
-			self.runCallback()
-		})
-}
-
-function showMenu_cuminc(self, div) {
-	const holder = div
-		.append('div')
-		.style('margin', '10px')
-		.style('display', 'grid')
-		.style('grid-template-columns', '120px auto')
-		.style('gap', '10px')
-
-	// row 1
-	holder
-		.append('div')
-		.text('Minimum grade to have event')
+		.text('Grade cutoff')
 		.style('opacity', 0.4)
 	const sd = holder.append('div')
 	const gradeSelect = sd.append('select').on('change', changeGradeSelect)
@@ -308,14 +233,14 @@ function showMenu_cuminc(self, div) {
 	// row 2
 	holder
 		.append('div')
-		.text('No event')
+		.text(self.q.mode == 'binary' ? 'Group 1' : 'No event / censored')
 		.style('opacity', 0.4)
 	const g1n = holder.append('div').style('opacity', 0.4)
 
 	// row 3
 	holder
 		.append('div')
-		.text('Has event')
+		.text(self.q.mode == 'binary' ? 'Group 2' : 'Has event')
 		.style('opacity', 0.4)
 	const g2n = holder.append('div').style('opacity', 0.4)
 
@@ -337,96 +262,33 @@ function showMenu_cuminc(self, div) {
 		}
 	}
 
-	// apply button
-	div
-		.append('button')
-		.text('Apply')
-		.style('margin', '10px')
-		.on('click', () => {
-			self.q.breaks[0] = gradeSelect.property('selectedIndex') + 1
-			event.target.disabled = true // is 'event' initialized?
-			event.target.innerHTML = 'Loading...' // is 'event' initialized?
-			self.runCallback()
-		})
-}
-
-function showMenu_cox(self, div) {
-	const holder = div
-		.append('div')
-		.style('margin', '10px')
-		.style('display', 'grid')
-		.style('grid-template-columns', '120px auto')
-		.style('gap', '10px')
-
-	// row 1
-	holder
-		.append('div')
-		.text('Minimum grade to have event')
-		.style('opacity', 0.4)
-	const sd = holder.append('div')
-	const gradeSelect = sd.append('select').on('change', changeGradeSelect)
-	for (const i of cutoffGrades) {
-		gradeSelect.append('option').text(self.term.values[i].label)
-	}
-	// breaks[0] must have already been set
-	gradeSelect.property('selectedIndex', self.q.breaks[0] - 1)
-
-	// row 2
-	holder
-		.append('div')
-		.text('No event')
-		.style('opacity', 0.4)
-	const g1n = holder.append('div').style('opacity', 0.4)
-
-	// row 3
-	holder
-		.append('div')
-		.text('Has event')
-		.style('opacity', 0.4)
-	const g2n = holder.append('div').style('opacity', 0.4)
-
-	changeGradeSelect()
-
-	function changeGradeSelect() {
-		const grade = gradeSelect.property('selectedIndex') + 1
-		g1n.selectAll('*').remove()
-		g2n.selectAll('*').remove()
-		const grades = Object.keys(self.term.values)
-			.map(Number)
-			.sort((a, b) => a - b)
-		for (const i of grades) {
-			if (i < grade) {
-				g1n.append('div').text(self.term.values[i].label)
-			} else {
-				g2n.append('div').text(self.term.values[i].label)
-			}
+	// row 4: time scale toggle (for cox outcome)
+	let timeScaleChoice
+	if (self.q.mode == 'cox') {
+		timeScaleChoice = self.q.timeScale
+		holder
+			.append('div')
+			.text('Time scale')
+			.style('opacity', 0.4)
+		const options = [
+			{
+				label: 'Time from diagnosis', // may define from ds
+				value: 'time'
+			},
+			{ label: 'Age', value: 'age' }
+		]
+		if (self.q.timeScale == 'age') {
+			options[1].checked = true
+		} else {
+			options[0].checked = true
 		}
+		make_radios({
+			holder: holder.append('div'),
+			options,
+			styles: { margin: '' },
+			callback: v => (timeScaleChoice = v)
+		})
 	}
-
-	// row 4: time scale toggle
-	let timeScaleChoice = self.q.timeScale
-	holder
-		.append('div')
-		.text('Time scale')
-		.style('opacity', 0.4)
-	const options = [
-		{
-			label: 'Time from diagnosis', // may define from ds
-			value: 'time'
-		},
-		{ label: 'Age', value: 'age' }
-	]
-	if (self.q.timeScale == 'age') {
-		options[1].checked = true
-	} else {
-		options[0].checked = true
-	}
-	make_radios({
-		holder: holder.append('div'),
-		options,
-		styles: { margin: '' },
-		callback: v => (timeScaleChoice = v)
-	})
 
 	// apply button
 	div
@@ -434,8 +296,17 @@ function showMenu_cox(self, div) {
 		.text('Apply')
 		.style('margin', '10px')
 		.on('click', () => {
-			self.q.breaks[0] = gradeSelect.property('selectedIndex') + 1
-			self.q.timeScale = timeScaleChoice
+			const grade = gradeSelect.property('selectedIndex') + 1
+			self.q.breaks[0] = grade
+			if (self.q.mode == 'binary') {
+				self.q.groupNames[0] = 'Grade < ' + grade
+				self.q.groupNames[1] = 'Grade >= ' + grade
+			}
+			if (self.q.mode == 'cox') {
+				self.q.groupNames[0] = 'No event / censored'
+				self.q.groupNames[1] = `Event (grade >= ${grade})`
+				self.q.timeScale = timeScaleChoice
+			}
 			event.target.disabled = true // is 'event' initialized?
 			event.target.innerHTML = 'Loading...' // is 'event' initialized?
 			self.runCallback()
@@ -465,19 +336,29 @@ export function fillTW(tw, vocabApi, defaultQ) {
 		tw.q.bar_by_grade = true
 	}
 
+	// assign breaks and group names
 	if (!tw.q.breaks) tw.q.breaks = []
 	if (!tw.q.groupNames) tw.q.groupNames = []
-	if (tw.q.mode == 'binary') {
-		if (tw.q.breaks.length != 1) {
-			tw.q.breaks = [1] // HARDCODED
+	if (tw.q.mode == 'binary' || tw.q.mode == 'cox') {
+		// mode is binary or cox, must have a single break
+		const defaultBreak = tw.q.mode == 'binary' ? 1 : 2 // hardcode for now
+		if (!tw.q.breaks || tw.q.breaks.length == 0) tw.q.breaks = [defaultBreak]
+		if (tw.q.breaks.length != 1 || ![1, 2, 3, 4, 5].includes(tw.q.breaks[0])) throw 'invalid tw.q.breaks'
+		if (!tw.q.groupNames || tw.q.groupNames.length == 0) {
+			if (tw.q.mode == 'binary') {
+				tw.q.groupNames[0] = 'Grade < ' + tw.q.breaks[0]
+				tw.q.groupNames[1] = 'Grade >= ' + tw.q.breaks[0]
+			}
+			if (tw.q.mode == 'cox') {
+				tw.q.groupNames[0] = 'No event / censored'
+				tw.q.groupNames[1] = `Event (grade >= ${tw.q.breaks[0]})`
+			}
 		}
-		if (tw.q.groupNames.length != 2) {
-			tw.q.groupNames = ['No event' + (tw.term.values[not_tested_grade] ? ' / not tested' : ''), 'Has event']
-		}
+		if (tw.q.groupNames.length != 2) throw 'invalid tw.q.groupNames'
 	}
-
 	if (tw.q.breaks.length >= cutoffGrades.length) throw 'too many values from tw.q.breaks[]'
 
+	// cox time scale
 	if (tw.q.mode == 'cox') {
 		if (!tw.q.timeScale) tw.q.timeScale = 'time'
 		if (!['age', 'time'].includes(tw.q.timeScale)) throw 'invalid q.timeScale'

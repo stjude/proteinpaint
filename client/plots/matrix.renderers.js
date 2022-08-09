@@ -88,19 +88,26 @@ export function setRenderers(self) {
 					.attr('transform', side.attr.labelGTransform)
 
 				if (!g.select(':scope>text').size()) g.append('text')
-				g.select(':scope>text')
-					.attr('fill', '#000')
+				const showContAxis = !side.isGroup && lab.tw?.q?.mode == 'continuous'
+				const labelText = side.label(lab)
+				const text = g.select(':scope>text').attr('fill', '#000')
+
+				text
 					.transition()
 					.duration(textduration)
-					.attr('opacity', side.attr.fontSize < 6 ? 0 : 1)
+					.attr('opacity', side.attr.fontSize < 6 || labelText === 'configure' ? 0 : 1)
 					.attr('font-size', side.attr.fontSize)
 					.attr('text-anchor', side.attr.labelAnchor)
 					.attr('transform', side.attr.labelTransform)
 					.attr('cursor', 'pointer')
-					.attr(side.attr.textpos.coord, side.attr.textpos.factor * (lab.tw?.q?.mode == 'continuous' ? 30 : 0))
+					.attr(side.attr.textpos.coord, side.attr.textpos.factor * (showContAxis ? 30 : 0))
 					.text(side.label)
 
-				if (lab.tw?.q?.mode == 'continuous' && side.label(lab)) {
+				text
+					.on('mouseover', labelText === 'configure' ? () => text.attr('opacity', 0.5) : null)
+					.on('mouseout', labelText === 'configure' ? () => text.attr('opacity', 0) : null)
+
+				if (showContAxis && labelText) {
 					if (!g.select('.sjpp-matrix-cell-axis').size()) {
 						g.append('g')
 							.attr('class', 'sjpp-matrix-cell-axis')

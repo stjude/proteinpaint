@@ -1,5 +1,5 @@
 import { getCompInit, copyMerge } from '../rx'
-import { select } from 'd3-selection'
+import { select, event } from 'd3-selection'
 import { scaleLinear, scaleOrdinal, schemeCategory10, schemeCategory20 } from 'd3-scale'
 import { axisLeft, axisTop, axisRight, axisBottom } from 'd3-axis'
 import { fillTermWrapper } from '../termsetting/termsetting'
@@ -87,6 +87,7 @@ class Matrix {
 		this.customTipApi = this.dom.tip.getCustomApi({
 			d: this.dom.menubody,
 			clear: () => {
+				if (event?.target) this.dom.menutop.style('display', 'none')
 				this.dom.menubody.selectAll('*').remove()
 				return this.customTipApi
 			},
@@ -412,7 +413,8 @@ class Matrix {
 				box: this.dom[`${d}LabelG`],
 				key: this[`${d}Key`],
 				label: this[`${d}Label`],
-				render: this[`render${Direction}Label`]
+				render: this[`render${Direction}Label`],
+				isGroup: sides[direction].includes('Grp')
 			}
 		}
 
@@ -633,7 +635,7 @@ class Matrix {
 	}
 
 	termGrpLabel(t) {
-		return t.grp.name
+		return t.grp.name || `configure`
 	}
 
 	setLegendData(legendGroups, refs) {

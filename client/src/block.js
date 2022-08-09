@@ -46,8 +46,7 @@ import {
 import { mds2_fromtemplate, mds2_maketk, mds2_load } from './block.mds2.adaptor'
 import { mds3_fromtemplate, mds3_maketk, mds3_load } from '../mds3/adaptor'
 import { bedgraphdot_fromtemplate, bedgraphdot_maketk, bedgraphdot_load } from './block.tk.bedgraphdot.adaptor'
-import {rgb} from 'd3-color'
-
+import { rgb } from 'd3-color'
 
 /* non-standard handler for legacy dataset
 can delete when migrated to mds3
@@ -336,10 +335,8 @@ export class Block {
 					}
 				})
 
-			const div2 = this.holder
-				.append('div')
-				.style('border-top', 'solid 1px ' + this.legend.legendcolor)
-				//.style('background-color', '#FCFBF7')
+			const div2 = this.holder.append('div').style('border-top', 'solid 1px ' + this.legend.legendcolor)
+			//.style('background-color', '#FCFBF7')
 			if (arg.foldlegend) {
 				div2.style('display', 'none')
 			}
@@ -405,14 +402,8 @@ export class Block {
 
 			butrow
 				.append('div') // duplicated
-				.style('display', 'inline-block')
 				.text(this.genome.name)
-				.style('background', '#1C5E86')
-				.style('font-size', '.8em')
-				.style('color', 'white')
-				.style('padding', '1px 5px')
-				.style('margin-right', '5px')
-				.style('border-radius', '4px')
+				.attr('class', 'sjpp-active-tiny-button')
 
 			// official dataset (legacy ds), only use in gm mode, won't show in plain browser
 			this.ctrl.dshandleholder = butrow.append('span')
@@ -431,14 +422,8 @@ export class Block {
 				// custom data, legacy ds
 				butrow
 					.append('div')
-					.style('display', 'inline-block')
-					.style('margin', '1px')
-					.style('border', 'solid 1px #545454')
-					.style('font-size', '.9em')
 					.style('font-family', client.font)
-					.style('cursor', 'default')
-					.style('padding', '2px 5px')
-					.attr('class', 'sja_opaque8')
+					.attr('class', 'sja_opaque8 sjpp-plus-button')
 					.text('+')
 					.on('click', () => {
 						const p = d3event.target.getBoundingClientRect()
@@ -2041,18 +2026,11 @@ reverseorient() {
 		}
 		const box = this.ctrl.dshandleholder
 			.append('div')
-			.style('display', 'inline-block')
-			.style('margin', '1px')
-			.style('border', 'solid 1px #545454')
-			.style('font-size', '.9em')
+			.attr('class', 'sjpp-dshandleholder')
 			.style('font-family', client.font)
-			.style('cursor', 'default')
 		const says = box
 			.append('div')
-			.attr('class', 'sja_opaque8')
-			.style('display', 'inline-block')
-			.style('color', 'black')
-			.style('padding', '2px 4px')
+			.attr('class', 'sja_opaque8 sjpp-dslabel')
 			.text(ds.label)
 			.on('click', async () => {
 				this.pannedpx = undefined // important!
@@ -5121,6 +5099,7 @@ function makecoordinput(bb, butrow) {
 		.attr('size', 20)
 		.style('margin-left', '10px')
 		.style('padding-right', '20px')
+		.attr('aria-label', "Gene coordinates")
 
 	bb.coord.inputtipshow = () => {
 		bb.coord.inputtip.clear()
