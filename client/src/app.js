@@ -148,6 +148,9 @@ export function runproteinpaint(arg) {
 			if (data.base_zindex) {
 				client.newpane({ setzindex: data.base_zindex })
 			}
+			if (data.features) {
+				sessionStorage.setItem('optionalFeatures', JSON.stringify(data.features))
+			}
 
 			app.genomes = data.genomes
 

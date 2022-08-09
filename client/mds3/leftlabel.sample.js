@@ -57,7 +57,7 @@ async function mayShowSummary(tk, block) {
 			term2: { term: geneTerm, q: {} }
 		}
 
-		const chartSeriesData = await tk.mds.termdb.vocabApi.getNestedChartSeriesData(arg)
+		//const chartSeriesData = await tk.mds.termdb.vocabApi.getNestedChartSeriesData(arg)
 		//console.log('test barchart', chartSeriesData)
 	}
 
@@ -88,10 +88,14 @@ async function showSummary4terms(data, div, tk, block) {
 					  'xxxxx</span>'
 					: ''),
 			callback: async function(div) {
-				//if (numbycategory) return showSummary4oneTerm(termid, div, numbycategory, tk, block)
-				//if (density_data) return showDensity4oneTerm(termid, div, density_data, tk, block)
-				// throw 'unknown summary data'
+				const features = JSON.parse(sessionStorage.getItem('optionalFeatures') || `{}`)
+				if (!features.mds3barapp) {
+					if (numbycategory) return showSummary4oneTerm(termid, div, numbycategory, tk, block)
+					if (density_data) return showDensity4oneTerm(termid, div, density_data, tk, block)
+					throw 'unknown summary data'
+				}
 
+				// will use the "barapp" when serverconfig.features.mds3barapp evaluates to true
 				const holder = div.append('div')
 				/*.style('display', 'inline-grid')
 						.style('grid-template-columns', 'auto auto auto')
@@ -143,12 +147,13 @@ async function showSummary4terms(data, div, tk, block) {
 click a category to list cases
 */
 function showSummary4oneTerm(termid, div, numbycategory, tk, block) {
-	const grid_div = div.append('div')
-	/*.style('display', 'inline-grid')
+	const grid_div = div
+		.append('div')
+		.style('display', 'inline-grid')
 		.style('grid-template-columns', 'auto auto auto')
 		.style('grid-row-gap', '3px')
 		.style('align-items', 'center')
-		.style('justify-items', 'left')*/
+		.style('justify-items', 'left')
 
 	for (const [category_name, count, total] of numbycategory) {
 		const cat_div = grid_div
