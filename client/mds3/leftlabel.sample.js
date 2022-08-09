@@ -85,7 +85,7 @@ async function showSummary4terms(data, div, tk, block) {
 				(numbycategory
 					? '<span style="color:#999;font-size:.8em;float:right;margin-left: 5px;">n=' +
 					  numbycategory.length +
-					  'xxxxx</span>'
+					  '</span>'
 					: ''),
 			callback: async function(div) {
 				const features = JSON.parse(sessionStorage.getItem('optionalFeatures') || `{}`)
