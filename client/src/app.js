@@ -344,10 +344,10 @@ function makeheader(app, obj, jwt) {
 	const debouncer = debounce(genesearch, 300)
 	const input = headbox
 		.append('div')
-		.attr("class", "sjpp-input-div-gene-pos")
+		.attr('class', 'sjpp-input-div-gene-pos')
 		.style('padding', padw_sm)
 		.append('input')
-		.attr("class", "sjpp-input-gene-pos")
+		.attr('class', 'sjpp-input-gene-pos')
 		.style('border', 'solid 1px ' + common.defaultcolor)
 		.attr('size', 20)
 		.attr('placeholder', 'Gene, position, or SNP')
@@ -519,11 +519,7 @@ async function findgene2paint(app, str, genomename, jwt) {
 	}
 
 	sandbox_div.header.html(
-		'<div style="display:inline-block;">' +
-			str +
-			'</div><div style="border-radius:4px; color:white; background-color: #969696; padding: 1px 5px; display:inline-block; font-size:0.8em; margin-left:4px;">' +
-			genomename +
-			'</div>'
+		'<div style="display:inline-block;">' + str + '</div><div class="output-sandbox-title">' + genomename + '</div>'
 	)
 	// may yield tklst from url parameters
 	const urlp = urlmap()
