@@ -8,6 +8,10 @@ echo -e "\nPacking the client module main ...\n"
 rm -rf dist
 npx rollup -c ./client/rollup.config.js
 
+cd rust
+npm pack
+cd ..
+
 mv package.json package.json.bak
 ./build/full/editpkgjson.js > package.json
 npm pack 

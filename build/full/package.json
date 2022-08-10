@@ -18,8 +18,6 @@
     "client/dist",
     "public/index.html",
     "public/bin",
-    "rust/*.*",
-    "rust/src",
     "server/bin.js",
     "server/dataset",
     "server/genome",
@@ -27,6 +25,7 @@
     "server/server.js*",
     "server/utils/*.R",
     "server/cards",
+    "rust/stjude-proteinpaint-rust-*.tgz",
     "utils/install.pp.js"
   ],
   "bugs": {

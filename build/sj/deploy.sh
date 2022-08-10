@@ -197,15 +197,25 @@ else
 		npx webpack --config=utils/pnet/webpack.config.js
 	fi
 
+	cd rust
+	npm pack
+	cd ..
+
 	# create dirs to put extracted files
 	rm -rf $APP
 	mkdir $APP
 	mkdir $APP/public
 	mkdir $APP/src
+	mkdir $APP/rust
 
-	mv rust $APP
+	mv rust/*.tgz $APP/rust
 	mv server/server.js* $APP/
 	mv server/package.json $APP/
+	# need to modify the tarball name so that the rust build will be triggered via postinstall npm script
+	# TODO: use lerna to automate and cache builds
+	RUSTPKGVER="$(grep version rust/package.json | sed 's/.*"version": "\(.*\)".*/\1/')"
+	sed -i '.bak' "s%\"@stjude/proteinpaint-rust\": \"^1.0.0\"%\"@stjude/proteinpaint-rust\": \"./rust/stjude-proteinpaint-rust-$RUSTPKGVER.tgz\"%" $APP/package.json
+
 	mv server/genome $APP/
 	mv server/dataset $APP/
 	mv server/utils $APP/
@@ -234,6 +244,8 @@ fi
 ##########
 # DEPLOY
 ##########
+PPRUSTMODDIR=node_modules/@stjude/proteinpaint-rust
+PPRUSTACTIVEDIR=$REMOTEDIR/active/$PPRUSTMODDIR/target
 
 echo "Transferring build to $USERatREMOTE"
 scp $APP-$REV.tgz $USERatREMOTE:~
@@ -250,11 +262,10 @@ ssh -t $USERatREMOTE "
 
 	chmod -R 755 available/$APP-$REV
 	
-	cd available/$APP-$REV/rust
+	cd available/$APP-$REV
 	# copy previous builds to allow reuse if validated by sccache and cargo
-	[[ -d $REMOTEDIR/active/rust/target ]] && cp -rf $REMOTEDIR/active/rust/target ./
-	cargo build --release
-	#rm -rf src
+	[[ -d $PPRUSTACTIVEDIR ]] && mkdir -p $PPRUSTMODDIR && cp -rf $PPRUSTACTIVEDIR ./$PPRUSTMODDIR/
+	npm install @stjude/proteinpaint-rust
 
 	cd $REMOTEDIR
 	ln -sfn /opt/app/pecan/portal/www/sjcharts/public available/$APP-$REV/public/sjcharts
