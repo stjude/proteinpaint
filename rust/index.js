@@ -2,7 +2,7 @@ const path = require('path'),
 	spawn = require('child_process').spawn,
 	Readable = require('stream').Readable
 
-exports.default = function(binfile, input_data) {
+exports.run_rust = function(binfile, input_data) {
 	return new Promise((resolve, reject) => {
 		const binpath = path.join(__dirname, '/target/release/', binfile)
 		const ps = spawn(binpath)
