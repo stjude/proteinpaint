@@ -8,6 +8,7 @@ const path = require('path')
 const fs = require('fs')
 const Readable = require('stream').Readable
 const utils = require('./utils')
+const run_rust = require('@stjude/proteinpaint-rust')
 const createCanvas = require('canvas').createCanvas
 const spawn = require('child_process').spawn
 const readline = require('readline')
@@ -2803,7 +2804,7 @@ async function query_oneread(req, r) {
 			//)
 			//console.log('lst[0].segstart:', lst[0].segstart)
 			//console.log('lst[0]:', lst[0])
-			const alignment_output = await utils.run_rust(
+			const alignment_output = await run_rust(
 				'align',
 				'single:' +
 					lst[0].seq +

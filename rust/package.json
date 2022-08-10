@@ -1,0 +1,28 @@
+{
+  "version": "1.0.0",
+  "name": "@stjude/proteinpaint-rust",
+  "description": "Rust-based utilities for proteinpaint",
+  "main": "target",
+  "bin": {
+    "proteinpaint-rust": "index.js"
+  },
+  "private": true,
+  "scripts": {
+    "dev": "cargo build --release",
+    "build": "cargo build --release",
+    "test": "tape **/test/*.spec.js"
+  },
+  "author": "Robin Paul",
+  "license": "UNLICENSED",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/stjude/proteinpaint.git"
+  },
+  "bugs": {
+    "url": "https://github.com/stjude/proteinpaint"
+  },
+  "homepage": "https://github.com/stjude/proteinpaint#readme",
+  "devDependencies": {
+    "tape": "^5.2.2"
+  }
+}

@@ -1,6 +1,7 @@
 const app = require('./app'),
 	createCanvas = require('canvas').createCanvas,
 	utils = require('./utils')
+const run_rust = require('@stjude/proteinpaint-rust')
 const serverconfig = require('./serverconfig')
 const spawn = require('child_process').spawn
 const bigwigsummary = serverconfig.bigwigsummary
@@ -64,7 +65,7 @@ export async function handle_tkbigwig(req, res) {
 				const input_data =
 					file + ',' + r.chr + ',' + r.start + ',' + r.stop + ',' + Math.ceil(r.width * (req.query.dotplotfactor || 1))
 
-				out = await utils.run_rust('bigwig', input_data)
+				out = await run_rust('bigwig', input_data)
 			} else {
 				// When this flag is not defined, the ucsc bigwigsummary will be used to query the bigwig file
 				out = await run_bigwigsummary(req, r, file)

@@ -42,8 +42,8 @@ public/rev.txt
 /utils/countbamallele.phased/bin*
 /utils/*/*.bundle.js*
 
-server/utils/rust/*.lock
-server/utils/rust/target/*
+**/rust/*.lock
+**/rust/target/*
 
 /dnanexus/app/vcf2matrix/resources/usr/bin/*
 

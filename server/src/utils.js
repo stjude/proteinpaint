@@ -509,32 +509,6 @@ exports.query_bigbed_by_name = function(bigbed, name) {
 	})
 }
 
-exports.run_rust = function(binfile, input_data) {
-	return new Promise((resolve, reject) => {
-		const binpath = path.join(serverconfig.binpath, '/utils/rust/target/release/', binfile)
-		const ps = spawn(binpath)
-		const stdout = []
-		const stderr = []
-		Readable.from(input_data).pipe(ps.stdin)
-		ps.stdout.on('data', data => stdout.push(data))
-		ps.stderr.on('data', data => stderr.push(data))
-		ps.on('error', err => {
-			console.log('stderr:', stderr)
-			reject(err)
-		})
-		ps.on('close', code => {
-			if (code !== 0) reject(`spawned '${binfile}' exited with a non-zero status and this stderr:\n${stderr.join('')}`)
-			else if (stdout.toString().includes('Cannot read bigWig file') == true) {
-				// When bigfile is not found, the promise should be rejected with message given below
-				reject(stdout.toString())
-			} else {
-				//console.log("stdout:",stdout)
-				resolve(stdout.join('').toString())
-			}
-		})
-	})
-}
-
 function tabixnoterror(s) {
 	return s.startsWith('[E::idx_test_and_fetch]') // got this with htslib 1.15.1
 }
