@@ -105,10 +105,17 @@ export function getHandler(self) {
 						: null
 				)
 			}
+
 			const data = await self.vocabApi.getCategories(self.term, self.filter, lst)
 			self.category2samplecount = []
 			for (const i of data.lst) {
 				self.category2samplecount.push({ key: i.key, count: i.samplecount })
+				//
+			}
+			if (self.term.type == 'categorical') {
+				if (!self.term.values) {
+					self.term.q = {}
+				} // ...
 			}
 		}
 	}

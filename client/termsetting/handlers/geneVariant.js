@@ -41,6 +41,7 @@ let id = 0
 
 export function fillTW(tw, vocabApi) {
 	if (!('id' in tw)) tw.id = idPrefix + id++
+	if (!tw.term.name && tw.term.isoform) tw.term.name = tw.term.isoform
 }
 
 function makeEditMenu(self, _div) {
