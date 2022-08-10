@@ -10,6 +10,10 @@ npx rollup -c ./client/rollup.config.js
 
 cd rust
 npm pack
+RUSTPKGVER="$(grep version package.json | sed 's/.*"version": "\(.*\)".*/\1/')"
+cd ../server
+echo -e "\nInstalling @stjude/proteinpaint-rust ...\n"
+npm install rust/stjude-proteinpaint-rust-$RUSTPKGVER.tgz
 cd ..
 
 mv package.json package.json.bak
