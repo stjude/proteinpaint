@@ -1605,7 +1605,7 @@ function configPanel(tk, block) {
 	  <li><b>Base qualities</b> are rendered when 1 bp is wider than 2 pixels. See color scale below. When base quality is not used or is unavailable, full colors are used.</li>
 	  <li><b>Sequences</b> from mismatch and softclip will be printed when 1 bp is wider than 7 pixels.</li>
 	  <li>An <b>insertion</b> with on-screen size wider than 1 pixel will be rendered as cyan text between aligned bases, in either a letter or the number of inserted bp. Text color scales by average base quality when that is in use.</li>
-	  <li><b>Deletions</b> are gaps joined by red horizontal lines.</li>
+	  <li><b>Deletions</b> are gaps joined by black horizontal lines.</li>
 	  <li><b>Split reads</b> and splice junctions are indicated by solid gray lines.</li>
 	  <li><b>Read pairs</b> are joined by dashed gray lines.</li>
           <li><b>Discordant reads</b> Discordant reads are colored based on their respective features as described below:<ul style="list-style-type:none;"> <li> <svg width="10" height="10" style = "display:inline-block;"> <rect width="10" height="10" style="fill:#3B7A57;" /> </svg> Read pair has wrong insert size </li> <li> <svg width="10" height="10" style = "display:inline-block;"> <rect width="10" height="10" style="fill:#6B4423;" /> </svg> Mate is unmapped </li> <li> <svg width="10" height="10" style = "display:inline-block;"> <rect width="10" height="10" style="fill:#fc6df3;" /> </svg> Wrong orientation </li> <li> <svg width="10" height="10" style = "display:inline-block;"> <rect width="10" height="10" style="fill:#d48b37;" /> </svg> Mate mapped to different chromosome </li> </ul>

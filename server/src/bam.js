@@ -203,7 +203,7 @@ const qual2insertion = interpolateRgb(insertion_lq, insertion_hq)
 const insertion_maxfontsize = 12
 const insertion_minfontsize = 7
 
-const deletion_linecolor = 'red'
+const deletion_linecolor = 'black'
 const split_linecolorfaint = '#ededed' // if thin stack (hardcoded cutoff 2), otherwise use match_hq
 const overlapreadhlcolor = 'blue'
 const insertion_vlinecolor = 'black'
