@@ -1,6 +1,6 @@
 #!/bin/bash
 
-cd server/utils/rust
+cd rust
 cargo build --release
 rm -rf src Cargo.*
 # keep these for dynamically linked deps?

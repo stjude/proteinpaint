@@ -203,6 +203,7 @@ else
 	mkdir $APP/public
 	mkdir $APP/src
 
+	mv rust $APP
 	mv server/server.js* $APP/
 	mv server/package.json $APP/
 	mv server/genome $APP/
@@ -249,9 +250,9 @@ ssh -t $USERatREMOTE "
 
 	chmod -R 755 available/$APP-$REV
 	
-	cd available/$APP-$REV/utils/rust
+	cd available/$APP-$REV/rust
 	# copy previous builds to allow reuse if validated by sccache and cargo
-	[[ -d $REMOTEDIR/active/utils/rust/target ]] && cp -rf $REMOTEDIR/active/utils/rust/target ./
+	[[ -d $REMOTEDIR/active/rust/target ]] && cp -rf $REMOTEDIR/active/rust/target ./
 	cargo build --release
 	#rm -rf src
 
