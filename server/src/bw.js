@@ -1,7 +1,7 @@
 const app = require('./app'),
 	createCanvas = require('canvas').createCanvas,
 	utils = require('./utils')
-const run_rust = require('@stjude/proteinpaint-rust')
+const run_rust = require('@stjude/proteinpaint-rust').run_rust
 const serverconfig = require('./serverconfig')
 const spawn = require('child_process').spawn
 const bigwigsummary = serverconfig.bigwigsummary
@@ -14,7 +14,7 @@ if file/url ends with .gz, it is bedgraph
 - not to be used in production!!!
 - bedgraph should render bars while reading data, with predefined y axis; no storing data
 */
-export async function handle_tkbigwig(req, res) {
+exports.handle_tkbigwig = async function(req, res) {
 	try {
 		let fixminv,
 			fixmaxv,

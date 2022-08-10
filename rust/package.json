@@ -2,7 +2,7 @@
   "version": "1.0.0",
   "name": "@stjude/proteinpaint-rust",
   "description": "Rust-based utilities for proteinpaint",
-  "main": "target",
+  "main": "index.js",
   "bin": {
     "proteinpaint-rust": "index.js"
   },
@@ -10,14 +10,20 @@
   "scripts": {
     "dev": "cargo build --release",
     "build": "cargo build --release",
+    "postinstall": "cargo build --release",
     "test": "tape **/test/*.spec.js"
   },
   "author": "Robin Paul",
   "license": "UNLICENSED",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/stjude/proteinpaint.git"
+    "url": "https://github.com/stjude/proteinpaint.git"
   },
+  "files": [
+    "index.js",
+    "Cargo.toml",
+    "src"
+  ],
   "bugs": {
     "url": "https://github.com/stjude/proteinpaint"
   },

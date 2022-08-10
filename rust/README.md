@@ -27,7 +27,7 @@ which goes against rust cargo's assumptions of having source code under `src/bin
 ## Build
 
 ```bash
-cargo build --release
+npm build # cargo build --release
 ```
 
 The compiled dependencies and target binaries will be generated under `./target/release`.
@@ -36,7 +36,7 @@ The compiled dependencies and target binaries will be generated under `./target/
 
 ```js
 // assuming a js file from server/src 
-const run_rust = require('@stjude/proteinpaint-rust').default
+const run_rust = require('@stjude/proteinpaint-rust').run_rust
 // or 
 // import * as utils from './utils'
 
