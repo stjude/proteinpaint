@@ -69,6 +69,7 @@ printf "Copying selected directories and files ..."
 tar -C tmppack/ -xf $FILE package.json
 tar -C tmppack/ -xf $FILE server
 tar -C tmppack/ -xf $FILE client
+tar -C tmppack/ -xf $FILE rust
 tar -C tmppack/ -xvf $FILE $TARGETDIR
 tar -C tmppack/ -xvf $FILE build/Dockerfile
 tar -C tmppack/ -xvf $FILE build/compile-rust.sh

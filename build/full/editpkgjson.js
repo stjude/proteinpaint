@@ -3,6 +3,7 @@
 const pkg = require('./package.json')
 const serverpkg = require('../../server/package.json')
 const clientpkg = require('../../client/package.json')
+const rustpkg = require('../../rust/package.json')
 
 pkg.version = serverpkg.version
 
@@ -12,6 +13,7 @@ for (const name in clientpkg.dependencies) {
 		pkg.dependencies[name] = clientpkg.dependencies[name]
 	}
 }
+pkg.dependencies['@stjude/proteinpaint-rust'] = `./rust/stjude-proteinpaint-rust-${rustpkg.version}.tgz`
 
 console.log(JSON.stringify(pkg, null, '    '))
 

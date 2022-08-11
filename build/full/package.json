@@ -24,9 +24,8 @@
     "server/src/serverconfig.js",
     "server/server.js*",
     "server/utils/*.R",
-    "server/utils/rust/*.*",
-    "server/utils/rust/src",
     "server/cards",
+    "rust/stjude-proteinpaint-rust-*.tgz",
     "utils/install.pp.js"
   ],
   "bugs": {

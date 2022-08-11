@@ -27,7 +27,7 @@ which goes against rust cargo's assumptions of having source code under `src/bin
 ## Build
 
 ```bash
-cargo build --release
+npm build # cargo build --release
 ```
 
 The compiled dependencies and target binaries will be generated under `./target/release`.
@@ -36,17 +36,17 @@ The compiled dependencies and target binaries will be generated under `./target/
 
 ```js
 // assuming a js file from server/src 
-const utils = require('./utils')
+const run_rust = require('@stjude/proteinpaint-rust').run_rust
 // or 
 // import * as utils from './utils'
 
 // 'indel' may be replaced by any binary name as specified in Cargo.toml
-const out = await utils.run_rust('indel', input_data)
+const out = await run_rust('indel', input_data)
 ```
 
 ## Test
 
 From the `proteinpaint/server` directory,
 ```bash
-npx tape -r '@babel/register' utils/test/rust.spec.js
+npx test
 ```

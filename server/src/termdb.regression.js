@@ -5,7 +5,8 @@ const lines2R = require('./lines2R')
 const fs = require('fs')
 const imagesize = require('image-size')
 const serverconfig = require('./serverconfig')
-const utils = require('./utils')
+const utils = require('./utils').default
+const run_rust = require('@stjude/proteinpaint-rust').run_rust
 const termdbsql = require('./termdb.sql')
 const runCumincR = require('./termdb.cuminc').runCumincR
 const app = require('./app')
@@ -871,6 +872,7 @@ async function lowAFsnps_wilcoxon(tw, sampledata, Rinput, result) {
 }
 
 async function lowAFsnps_fisher(tw, sampledata, Rinput, result) {
+	console.log(874, 'fisher')
 	// for logistic, perform fisher's exact test for low-AF snps
 	const lines = [] // one line per snp
 	for (const [snpid, snpO] of tw.lowAFsnps) {
@@ -914,8 +916,8 @@ async function lowAFsnps_fisher(tw, sampledata, Rinput, result) {
 		lines.push(line.join('\t'))
 	}
 
-	const plines = (await utils.run_rust('fisher', 'fisher_limits\t300\t150-' + lines.join('-'))).trim().split('\n')
-
+	//const plines = await lines2R(path.join(serverconfig.binpath, 'utils/fisher.R'), lines)
+	const plines = (await run_rust('stats', 'fisher_limits\t300\t150-' + lines.join('-'))).trim().split('\n')
 	for (const line of plines) {
 		const l = line.split('\t')
 		const snpid = l[0]
