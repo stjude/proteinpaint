@@ -117,14 +117,16 @@ class TermdbVocab {
 
 		// TODO: instead of this workaround to fill in missing categorical term.values,
 		// should query all available values in getterm()
-		for (const chart of data.charts) {
-			this.mayFillInMissingCatValues(opts.term0, chart.chartId, chart.total)
+		if (data.charts) {
+			for (const chart of data.charts) {
+				this.mayFillInMissingCatValues(opts.term0, chart.chartId, chart.total)
 
-			for (const series of chart.serieses) {
-				this.mayFillInMissingCatValues(opts.term, series.seriesId, series.total)
+				for (const series of chart.serieses) {
+					this.mayFillInMissingCatValues(opts.term, series.seriesId, series.total)
 
-				for (const data of series.data) {
-					this.mayFillInMissingCatValues(opts.term2, data.dataId, data.total)
+					for (const data of series.data) {
+						this.mayFillInMissingCatValues(opts.term2, data.dataId, data.total)
+					}
 				}
 			}
 		}
