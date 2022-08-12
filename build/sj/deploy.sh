@@ -174,7 +174,6 @@ else
 	rm -Rf tmpbuild
 	# remote repo not used, use local repo for now
 	mkdir tmpbuild  # temporary empty workspace for checkedout commit
-	node -v
 	cd ../..
 	git archive HEAD | tar -x -C build/sj/tmpbuild/
 
@@ -241,8 +240,7 @@ else
 
 	tar -czf $APP-$REV.tgz $APP
 fi
-echo "-- end test --"
-exit 1
+
 ##########
 # DEPLOY
 ##########
