@@ -646,7 +646,7 @@ function setRenderers(self) {
 
 		// term rows
 		// independent terms (no interaction)
-		let rowcount = 0
+		let rowcount = self.config.regressionType == 'cox' ? 1 : 0
 		for (const tid in result.type3.terms) {
 			// get term data
 			const termdata = result.type3.terms[tid]

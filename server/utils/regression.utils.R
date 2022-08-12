@@ -360,7 +360,7 @@ coxRegression <- function(formula, dat) {
     type3_table[i,] <- lt[2,]
   }
   colnames(type3_table) <- colnames(lt)
-  type3_table <- type3_table[,3:5]
+  type3_table <- type3_table[,3:5,drop = F]
   type3_table[,"Df"] <- type3_table[,"Df"] * -1 #convert Df diff to Df
   # if there are interactions, then set the results
   # of the main effects to "NA" because these type III
