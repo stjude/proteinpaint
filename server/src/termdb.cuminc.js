@@ -31,7 +31,7 @@ export async function get_incidence(q, ds) {
 		}
 		const bins = q.term2_id && results.CTE2.bins ? results.CTE2.bins : []
 		const final_data = {
-			keys: ['chartId', 'seriesId', 'time', 'cuminc', 'low', 'high'],
+			keys: ['chartId', 'seriesId', 'time', 'cuminc', 'low', 'high', 'nrisk'],
 			case: [],
 			refs: { bins }
 		}
@@ -141,7 +141,8 @@ export async function runCumincR(fdata, final_data, startTime = undefined) {
 					series[i].time,
 					series[i].est,
 					series[i].low,
-					series[i].up
+					series[i].up,
+					series[i].nrisk
 				])
 			}
 		}

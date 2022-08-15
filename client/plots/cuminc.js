@@ -251,6 +251,7 @@ class MassCumInc {
 				// every chart was skipped due to absence of events
 				throw 'no events found in the dataset'
 			}
+			//console.log('data:', data)
 			this.app.vocabApi.syncTermData(this.state.config, data)
 			this.hiddenOverlays = this.getHiddenOverlays()
 			this.processData(data)

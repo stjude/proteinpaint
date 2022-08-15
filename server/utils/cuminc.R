@@ -33,6 +33,7 @@
 #           var: variance of cumulative incidence value
 #           low: 95% confidence interval - lower bound
 #           up: 95% confidence intervals - upper bound
+#           nrisk: # at-risk samples at timepoint
 #         }
 #       ]
 #     },
@@ -65,7 +66,13 @@ run_cuminc <- function(chart) {
     # single series
     res <- cuminc(ftime = chart$time, fstatus = chart$event, cencode = 0)
     seriesRes <- as.data.frame(res[[1]])
+    # compute confidence intervals
     seriesRes <- compute_ci(seriesRes)
+    # compute at-risk counts
+    # at-risk count is the number of samples
+    # that have not experienced an event or
+    # have not been censored by this time
+    seriesRes$nrisk <- apply(seriesRes, 1, function(row) length(which(chart$time >= row["time"])))
     estimates[[levels(chart$series)]] <- seriesRes
     out <- list("estimates" = estimates)
   } else {
@@ -90,7 +97,13 @@ run_cuminc <- function(chart) {
       for (series in pair) {
         if (series %in% names(estimates)) next
         seriesRes <- as.data.frame(res[[paste(series,1)]])
+        # compute confidence intervals
         seriesRes <- compute_ci(seriesRes)
+        # compute at-risk counts
+        # at-risk count is the number of samples
+        # that have not experienced an event or
+        # have not been censored by this time
+        seriesRes$nrisk <- apply(seriesRes, 1, function(row) length(which(chart$series == series & chart$time >= row["time"])))
         estimates[[series]] <- seriesRes
       }
       
