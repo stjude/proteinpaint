@@ -25,6 +25,14 @@ opts{}
 
 class MassApp {
 	constructor(opts) {
+		// just a test
+		if (opts.datasetAccessToken) {
+			console.log('using token:', opts.datasetAccessToken)
+			// datasetAccessToken should be kept in state?
+			// this token should be used in headers of certain queries from mass to ppserver
+			// the data downloader app should query server with this token to inquire if access will be granted
+		}
+
 		this.type = 'app'
 		// this will create divs in the correct order
 		this.dom = {
