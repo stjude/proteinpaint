@@ -548,7 +548,9 @@ function setRenderers(self) {
 							x: d.x,
 							html:
 								`<span style='color: ${color}'>` +
-								`${seriesLabel} ${d.y.toFixed(2)} (${d.lower.toFixed(2)} -${d.upper.toFixed(2)})` +
+								`${seriesLabel} ${(100 * d.y).toFixed(2)}% (${(100 * d.lower).toFixed(2)} - ${(100 * d.upper).toFixed(
+									2
+								)})` +
 								`</span>`
 						}
 					})
