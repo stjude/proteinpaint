@@ -11,6 +11,8 @@ const termdbsnp = require('./termdb.snp')
 const LDoverlay = require('./mds2.load.ld').overlay
 const getOrderedLabels = require('./termdb.barsql').getOrderedLabels
 const isUsableTerm = require('#shared/termdb.usecase').isUsableTerm
+const jsonwebtoken = require('jsonwebtoken')
+const serverconfig = require('./serverconfig.js')
 
 /*
 ********************** EXPORTED
@@ -88,6 +90,19 @@ export function handle_request_closure(genomes) {
 				res.send(await ds.getTermTypes(q))
 				return
 			} else if (q.for == 'matrix') {
+				const data = await require(`./termdb.matrix.js`).getData(q, ds)
+				res.send(data)
+				return
+			} else if (q.for == 'download') {
+				console.log(96, q)
+				const secret = serverconfig.dsCredentials?.[q.dslabel]?.secret
+				if (secret) {
+					console.log(99, jsonwebtoken.sign({ accessibleDatasets: ['TermdbTest'] }, secret))
+					if (!q.datasetAccessToken) throw `missing q.datasetAccessToken`
+					const payload = jsonwebtoken.verify(q.datasetAccessToken, secret)
+					console.log(101, payload)
+					if (!payload.accessibleDatasets.includes(q.dslabel)) throw `not authorized for dslabel='${q.dslabel}'`
+				}
 				const data = await require(`./termdb.matrix.js`).getData(q, ds)
 				res.send(data)
 				return

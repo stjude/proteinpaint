@@ -90,6 +90,13 @@ class TermdbVocab {
 		}
 		const data = await dofetch3('/termdb?' + lst.join('&'), {}, this.opts.fetchOpts)
 		if (data.error) throw data.error
+		for (const term of data.lst) {
+			if (term.type == 'integer' || term.type == 'float') {
+				if (term.bins.rounding) term.bins.default.rounding = term.bins.rounding
+				if (term.bins.label_offset && !term.bins.default.label_offset)
+					term.bins.default.label_offset = term.bins.label_offset
+			}
+		}
 		return data
 	}
 
