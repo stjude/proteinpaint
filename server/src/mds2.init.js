@@ -55,9 +55,12 @@ export async function init_track(ds, genome) {
 	const tk = ds.track
 	if (!tk.name) tk.name = ds.label
 
-	may_validate_info_fields(tk)
 	may_validate_population(tk)
+
 	await may_init_vcf(tk.vcf, genome, ds)
+
+	may_validate_info_fields(tk)
+
 	await may_init_ld(tk.ld, genome, ds)
 	await may_init_svcnv(tk.svcnv, genome, ds)
 	may_sum_samples(tk)
@@ -190,6 +193,17 @@ function may_validate_info_fields(tk) {
 	if (!Array.isArray(tk.info_fields)) throw 'tk.info_fields is not array'
 	for (const i of tk.info_fields) {
 		if (!i.key) throw '.key missing from one of tk.info_fields[]'
+
+		if(tk.vcf && tk.vcf.info) {
+			/* require this info field to be present in the vcf header
+			trouble: this can only ensure the field to be found in header
+			but not in actual data lines.
+			if the field is missing from data then it can still cause data issue
+			*/
+			if(!tk.vcf.info[i.key]) throw `info field ${i.key} missing from tk.vcf.info{}`
+			// can do further check on type etc
+		}
+
 		if (!i.label) i.label = i.key
 		if (i.iscategorical) {
 			if (!Array.isArray(i.values)) throw '.values[] not an array of categorical INFO field: ' + i.key

@@ -128,6 +128,7 @@ export function addGeneSearchbox(arg) {
 		.append('input')
 		.attr('type', 'text')
 		.attr('placeholder', placeholder)
+		.attr('aria-label', 'Gene symbol, position, or alias')
 		.style('width', width + 'px')
 		.on('focus', () => {
 			event.target.select()

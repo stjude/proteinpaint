@@ -43,6 +43,7 @@
     "node-polyfill-webpack-plugin": "^1.1.4",
     "postcss-import": "^14.1.0",
     "prettier": "1.18.2",
+    "read-cache": "^1.0.0",
     "rollup": "^2.35.1",
     "rollup-plugin-postcss": "^4.0.2",
     "rollup-plugin-terser": "^7.0.2",

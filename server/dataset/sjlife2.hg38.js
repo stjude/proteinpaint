@@ -107,28 +107,13 @@ const restrictAncestries = [
 // the vcf file
 const info_fields = [
 	{
-		key: 'QC_sjlife',
-		label: 'SJLIFE classification',
+		key: 'QC',
+		label: 'classification',
 		isfilter: true,
 		isactivefilter: true,
 		iscategorical: true,
 		values: [
-			{ key: 'SuperGood', label: 'SuperGood' },
 			{ key: 'Good', label: 'Good' },
-			{ key: 'Ambiguous', label: 'Ambiguous' },
-			{ key: 'Bad', label: 'Bad', ishidden: true }
-		]
-	},
-	{
-		key: 'QC_ccss',
-		label: 'CCSS classification',
-		isfilter: true,
-		isactivefilter: true,
-		iscategorical: true,
-		values: [
-			{ key: 'SuperGood', label: 'SuperGood' },
-			{ key: 'Good', label: 'Good' },
-			{ key: 'Ambiguous', label: 'Ambiguous' },
 			{ key: 'Bad', label: 'Bad', ishidden: true }
 		]
 	},
@@ -318,14 +303,6 @@ const info_fields = [
 		values: [{ key: 'P', label: 'Pathogenic' }, { key: 'LP', label: 'Likely pathogenic' }]
 	},
 	{
-		key: 'BadBLAT',
-		label: 'Paralog',
-		isfilter: true,
-		isactivefilter: true,
-		isflag: true,
-		remove_yes: true
-	},
-	{
 		key: 'Polymer_region',
 		label: 'Polymer region',
 		isflag: true,
@@ -337,32 +314,13 @@ const info_fields = [
 
 const terms = [
 	{
-		id: 'QC_sjlife',
-		name: 'SJLIFE classification',
+		id: 'QC',
+		name: 'classification',
 		parent_id: null,
 		isleaf: true,
 		type: 'categorical',
 		values: {
-			SuperGood: { label: 'SuperGood' },
 			Good: { label: 'Good' },
-			Ambiguous: { label: 'Ambiguous' },
-			Bad: { label: 'Bad' }
-		},
-		tvs: {
-			isnot: true,
-			values: ['Bad']
-		}
-	},
-	{
-		id: 'QC_ccss',
-		name: 'CCSS classification',
-		parent_id: null,
-		isleaf: true,
-		type: 'categorical',
-		values: {
-			SuperGood: { label: 'SuperGood' },
-			Good: { label: 'Good' },
-			Ambiguous: { label: 'Ambiguous' },
 			Bad: { label: 'Bad' }
 		},
 		tvs: {
@@ -580,20 +538,6 @@ const terms = [
 		values: {
 			P: { label: 'Pathogenic' },
 			LP: { label: 'Likely pathogenic' }
-		}
-	},
-	{
-		id: 'BadBLAT',
-		name: 'Paralog',
-		parent_id: null,
-		isleaf: true,
-		type: 'categorical',
-		values: {
-			1: { label: 'yes' }
-		},
-		tvs: {
-			isnot: true,
-			values: [1]
 		}
 	},
 	{
