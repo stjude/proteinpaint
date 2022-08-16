@@ -345,7 +345,15 @@ function setRenderers(self) {
 				}
 			}
 		})
-		plotter.main(result.cuminc.final_data)
+
+		if (result.cuminc.final_data) {
+			plotter.main(result.cuminc.final_data)
+		} else {
+			holder
+				.append('div')
+				.style('margin', '20px')
+				.text(result.cuminc.msg)
+		}
 	}
 
 	self.mayshow_wilcoxon = result => {

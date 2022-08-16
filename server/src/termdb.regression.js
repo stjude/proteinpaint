@@ -948,10 +948,11 @@ async function lowAFsnps_fisher(tw, sampledata, Rinput, result) {
 
 async function lowAFsnps_cuminc(tw, sampledata, Rinput, result) {
 	// for cox, perform cuminc analysis between samples having and missing effect allele
-	const lines = [] // one line per snp
 	const fdata = {} // input for cuminc analysis {snpid: [{time, event, series}]}
+	const snpsToSkip = new Set() // skip these snps
+	// because at least one allele is not found in any sample
 	for (const [snpid, snpO] of tw.lowAFsnps) {
-		fdata[snpid] = []
+		const snpData = []
 		// Rinput.data[] is a subset of sampledata[], though they're in same order
 		// see makeRinput()
 		let RinputDataidx = 0
@@ -961,7 +962,7 @@ async function lowAFsnps_cuminc(tw, sampledata, Rinput, result) {
 			if (d.outcome_event != 0 && d.outcome_event != 1) throw 'd.outcome_event is not 0/1'
 			if (!Number.isFinite(d.outcome_time)) throw 'd.outcome_time is not numeric'
 
-			// data point of this sample, to add to fdata[snpid][]
+			// data point of this sample, to add to snpData[]
 			const sampleData = {
 				time: d.outcome_time,
 				event: d.outcome_event
@@ -978,8 +979,16 @@ async function lowAFsnps_cuminc(tw, sampledata, Rinput, result) {
 			// if this person carries the allele, assign to series "1", otherwise "2"
 			sampleData.series = snpO.effAle == a || snpO.effAle == b ? '1' : '2'
 
-			fdata[snpid].push(sampleData)
+			snpData.push(sampleData)
 		}
+		const serieses = new Set(snpData.map(sample => sample.series))
+		if (serieses.size < 2) {
+			// at least one allele of snp is not found in any sample
+			// cannot perform cuminc test on snp
+			snpsToSkip.add(snpid)
+			continue
+		}
+		fdata[snpid] = snpData
 	}
 
 	const final_data = {
@@ -991,17 +1000,31 @@ async function lowAFsnps_cuminc(tw, sampledata, Rinput, result) {
 	await runCumincR(fdata, final_data)
 
 	// parse cumulative incidence results
+	let cuminc
 	for (const [snpid, snpO] of tw.lowAFsnps) {
-		if (!final_data.tests[snpid] || final_data.tests[snpid].length == 0) throw 'final_data.tests missing for snp'
-		const pvalue = Number(final_data.tests[snpid][0].pvalue)
-		if (!Number.isFinite(pvalue)) throw 'invalid pvalue'
-
-		// clear chartId at [0] so it won't show as chart title
-		const caselst = []
-		for (const i of final_data.case) {
-			if (i[0] == snpid) {
-				i[0] = ''
-				caselst.push(i)
+		if (snpsToSkip.has(snpid)) {
+			cuminc = {
+				pvalue: 'NA',
+				msg: 'Cannot perform cumulative incidence test on this snp - at least one allele is not found in any sample'
+			}
+		} else {
+			if (!final_data.tests[snpid] || final_data.tests[snpid].length == 0) throw 'final_data.tests missing for snp'
+			const pvalue = Number(final_data.tests[snpid][0].pvalue)
+			if (!Number.isFinite(pvalue)) throw 'invalid pvalue'
+			// clear chartId at [0] so it won't show as chart title
+			const caselst = []
+			for (const i of final_data.case) {
+				if (i[0] == snpid) {
+					i[0] = ''
+					caselst.push(i)
+				}
+			}
+			cuminc = {
+				pvalue: Number(pvalue.toFixed(4)),
+				final_data: {
+					case: caselst,
+					tests: final_data.tests[snpid]
+				}
 			}
 		}
 
@@ -1011,13 +1034,7 @@ async function lowAFsnps_cuminc(tw, sampledata, Rinput, result) {
 			AFstr: tw.snpid2AFstr.get(snpid),
 			data: {
 				headerRow: getLine4OneSnp(snpid, tw),
-				cuminc: {
-					pvalue: Number(pvalue.toFixed(4)),
-					final_data: {
-						case: caselst,
-						tests: final_data.tests[snpid]
-					}
-				}
+				cuminc
 			}
 		}
 
