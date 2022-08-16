@@ -14,7 +14,7 @@
 
 <script>
 document.body.onload = () => runproteinpaint({
-	//host: 'https://ppr.stjude.org',
+	host: 'https://ppr.stjude.org',
 	holder:document.getElementById('aaa'),
 	parseurl:true,
 	nobox:1,
@@ -168,8 +168,7 @@ document.body.onload = () => runproteinpaint({
           overrides: {
             SVfill: {
               value: {
-                key: 'RNA-Seq', 
-                //value: 'RNAseq', 
+                key: 'RNA-Seq',
                 values: [
                   {key: 'Not tested', label: 'Not tested', color: '#fff'}
                 ]
@@ -200,8 +199,7 @@ document.body.onload = () => runproteinpaint({
             },*/
             WESfill: {
               value: {
-                key: 'WES', 
-                //value: 'WES', 
+                key: 'WES',
                 values: [
                   {key: 'Not tested', label: 'Not tested', color: '#fff', order: 10000}
                 ]
@@ -217,7 +215,6 @@ document.body.onload = () => runproteinpaint({
             CNVfill: {
               value: {
                 key: 'Methylation', 
-                value: 'Methylation', 
                 values: [
                   {key: 'Not tested', label: 'Not tested', color: '#fff', order: 10000}
                 ]
@@ -264,7 +261,7 @@ document.body.onload = () => runproteinpaint({
 	}
 })
 
-const cnvGenes = `C19MC, MYCN, PDGFR,CDK4, MET, MDM4, MYC`.split(',').map(g=>g.trim())
+const cnvGenes = `C19MC, MYCN, MYB, MYBL, PDGFR,CDK4, MET, MDM4, MYC`.split(',').map(g=>g.trim())
 
 function getGeneTermGroups() {
 	const termgroups = []
@@ -316,16 +313,31 @@ const genegroups = [
               "name": "CIC_SV"
           },
           {
-              "name": "TTYH1_SV"
+              "name": "MN1_SV"
           },
           {
-              "name": "ATXN1_SV"
+              "name": "NTRK1_SV"
           },
           {
-              "name": "C19MC_SV"
+              "name": "NTRK2_SV"
           },
           {
-              "name": "KDM2B_SV"
+              "name": "NTRK3_SV"
+          },
+          {
+              "name": "ROS1_SV"
+          },
+          {
+              "name": "ALK_SV"
+          },
+          {
+              "name": "MET_SV"
+          },
+          {
+              "name": "ZFTA_SV"
+          },
+          {
+              "name": "PATZ1_SV"
           }
       ]
   },
