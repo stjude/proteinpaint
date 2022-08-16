@@ -226,6 +226,14 @@ function getChartTypeList(self) {
 			config: {
 				chartType: 'dictionary'
 			}
+		},
+		{
+			label: 'Data Download',
+			clickTo: self.prepPlot,
+			chartType: 'dataDownload',
+			config: {
+				chartType: 'dataDownload'
+			}
 		}
 	]
 }

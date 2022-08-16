@@ -1062,24 +1062,29 @@ thus less things to worry about...
 			if (!r.type) continue
 			// !!! r.cohort is undefined for dataset without subcohort
 			if (!(r.cohort in supportedChartTypes)) {
-				supportedChartTypes[r.cohort] = ['barchart', 'regression']
+				supportedChartTypes[r.cohort] = new Set(['barchart', 'regression', 'dataDownload'])
 				numericTypeCount[r.cohort] = 0
-				if (ds.cohort.allowedChartTypes?.includes('matrix')) supportedChartTypes[r.cohort].push('matrix')
+				if (ds.cohort.allowedChartTypes?.includes('matrix')) supportedChartTypes[r.cohort].add('matrix')
 			}
 			// why would app.features be missing?
 			if (app.features?.draftChartTypes) {
 				// TODO: move draft charts out of flag once stable
-				supportedChartTypes[r.cohort].push(...app.features.draftChartTypes)
+				supportedChartTypes[r.cohort].add(...app.features.draftChartTypes)
 			}
-			if (r.type == 'survival' && !supportedChartTypes[r.cohort].includes('survival'))
-				supportedChartTypes[r.cohort].push('survival')
-			if (r.type == 'condition' && !supportedChartTypes[r.cohort].includes('cuminc'))
-				supportedChartTypes[r.cohort].push('cuminc')
+			if (r.type == 'survival' && !supportedChartTypes[r.cohort].has('survival'))
+				supportedChartTypes[r.cohort].add('survival')
+			if (r.type == 'condition' && !supportedChartTypes[r.cohort].has('cuminc'))
+				supportedChartTypes[r.cohort].add('cuminc')
 			if (r.type == 'float' || r.type == 'integer') numericTypeCount[r.cohort] += r.samplecount
 		}
 		for (const cohort in numericTypeCount) {
-			if (numericTypeCount[cohort] > 0) supportedChartTypes[cohort].push('boxplot')
-			if (numericTypeCount[cohort] > 1) supportedChartTypes[cohort].push('scatterplot')
+			if (numericTypeCount[cohort] > 0) supportedChartTypes[cohort].add('boxplot')
+			if (numericTypeCount[cohort] > 1) supportedChartTypes[cohort].add('scatterplot')
+		}
+
+		// convert to array
+		for (const cohort in supportedChartTypes) {
+			supportedChartTypes[cohort] = [...supportedChartTypes[cohort]]
 		}
 
 		// may restrict the visible chart options
@@ -1088,6 +1093,7 @@ thus less things to worry about...
 				supportedChartTypes[cohort] = supportedChartTypes[cohort].filter(c => ds.cohort.allowedChartTypes.includes(c))
 			}
 		}
+
 		return supportedChartTypes
 	}
 }
