@@ -10,7 +10,7 @@ import { controlsInit } from './controls'
 import { to_svg } from '../src/client'
 import { fillTermWrapper } from '../termsetting/termsetting'
 
-class TdbBarchart {
+class Barchart {
 	constructor(opts) {
 		// rx.getComponentInit() will set this.app, this.id, this.opts
 		this.type = 'barchart'
@@ -503,7 +503,7 @@ class TdbBarchart {
 	}
 }
 
-export const barInit = getCompInit(TdbBarchart)
+export const barInit = getCompInit(Barchart)
 // this alias will allow abstracted dynamic imports
 export const componentInit = barInit
 

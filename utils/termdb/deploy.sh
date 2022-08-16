@@ -1,4 +1,4 @@
 #!/bin/bash
 
 npx webpack
-scp buildTermdb.bundle.js *.sql hpc:~/tp/termdb/
+scp buildTermdb.bundle.js extractFromStudyJson.js *.sql hpc:~/tp/termdb/

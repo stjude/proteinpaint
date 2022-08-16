@@ -599,19 +599,13 @@ function setRenderers(self) {
 			}
 		}
 
-		// intercept row
-		{
-			const tr = table.append('tr').style('background', '#eee')
-			for (const v of result.totalSnpEffect.intercept) {
-				tr.append('td')
-					.text(v)
-					.style('padding', '8px')
-			}
-		}
-
 		// total snp effect row
-		let rowcount = 0
-		const tr = table.append('tr').style('background', rowcount++ % 2 ? '#eee' : 'none')
+		const tr = table.append('tr').style('background', '#eee')
+		for (const v of result.totalSnpEffect.lst) {
+			tr.append('td')
+				.text(v)
+				.style('padding', '8px')
+		}
 		const snp = self.getIndependentInput(result.totalSnpEffect.snp).term
 		const interactions = result.totalSnpEffect.interactions.map(interaction => {
 			return {
@@ -619,19 +613,18 @@ function setRenderers(self) {
 				t2: self.getIndependentInput(interaction.term2).term
 			}
 		})
-		// col 1: variable
-		const td = tr.append('td').style('padding', '8px')
-		fillTdName(td.append('div'), snp.term.name + ' + ')
-		interactions.map(interaction => {
-			fillTdName(td.append('div'), interaction.t1.term.name + ' : ')
-			fillTdName(td.append('div'), interaction.t2.term.name)
-		})
-		// rest of columns
-		for (const v of result.totalSnpEffect.lst) {
-			tr.append('td')
-				.text(v)
-				.style('padding', '8px')
-		}
+		const bottomInfo = `Total: total effect of removing the snp (${
+			snp.term.name
+		}) and its interactions (${interactions
+			.map(interaction => interaction.t1.term.name + ' : ' + interaction.t2.term.name)
+			.join(' ; ')}) from the model`
+		div
+			.append('div')
+			.style('margin', '20px 0px 20px 10px')
+			.style('font-size', '.8em')
+			.style('text-align', 'left')
+			.style('color', '#999')
+			.text(bottomInfo)
 	}
 
 	self.mayshow_type3 = result => {
@@ -650,7 +643,7 @@ function setRenderers(self) {
 		}
 
 		// intercept row
-		{
+		if (self.config.regressionType != 'cox') {
 			const tr = table.append('tr').style('background', '#eee')
 			for (const v of result.type3.intercept) {
 				tr.append('td')
@@ -661,7 +654,7 @@ function setRenderers(self) {
 
 		// term rows
 		// independent terms (no interaction)
-		let rowcount = 0
+		let rowcount = self.config.regressionType == 'cox' ? 1 : 0
 		for (const tid in result.type3.terms) {
 			// get term data
 			const termdata = result.type3.terms[tid]

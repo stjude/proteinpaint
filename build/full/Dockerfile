@@ -29,7 +29,7 @@ ENV PKGTGZ=stjude-proteinpaint.tgz
 RUN npm install ../tmppack/$PKGTGZ
 
 COPY ./build/full/setup.sh .
-# run this image tocopy artifacts from the Docker process for troubleshooting 
+# run this image to copy artifacts from the Docker process for troubleshooting 
 CMD ["sleep", "3600"]
 
 #################

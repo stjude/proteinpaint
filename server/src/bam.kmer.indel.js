@@ -2,6 +2,7 @@ const jStat = require('jstat').jStat
 const path = require('path')
 const features = require('./app').features
 const utils = require('./utils')
+const run_rust = require('@stjude/proteinpaint-rust').run_rust
 const spawn = require('child_process').spawn
 const Readable = require('stream').Readable
 const readline = require('readline')
@@ -172,7 +173,7 @@ export async function match_complexvariant_rust(q, templates_info, region_widths
 	//	if (err) return console.log(err)
 	//})
 	const time1 = new Date()
-	const rust_output = await utils.run_rust('indel', input_data)
+	const rust_output = await run_rust('indel', input_data)
 	const time2 = new Date()
 	console.log('Time taken to run rust indel pipeline:', time2 - time1, 'ms')
 	const rust_output_list = rust_output.split('\n')

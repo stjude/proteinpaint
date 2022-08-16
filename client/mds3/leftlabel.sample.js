@@ -41,7 +41,8 @@ async function mayShowSummary(tk, block) {
 		// make up term2 as geneVariant
 		const geneTerm = {
 			type: 'geneVariant',
-			isoform: block.usegm.isoform
+			isoform: block.usegm.isoform,
+			name: block.usegm.isoform
 		}
 		rangequery_rglst(tk, block, geneTerm) // creates geneTerm.rglst=[{}]
 
@@ -56,9 +57,8 @@ async function mayShowSummary(tk, block) {
 			term2: { term: geneTerm, q: {} }
 		}
 
-		tk.mds.termdb.vocabApi.getNestedChartSeriesData(arg).then(data => {
-			console.log('test barchart', data)
-		})
+		//const chartSeriesData = await tk.mds.termdb.vocabApi.getNestedChartSeriesData(arg)
+		//console.log('test barchart', chartSeriesData)
 	}
 
 	tk.mds
@@ -87,10 +87,56 @@ async function showSummary4terms(data, div, tk, block) {
 					  numbycategory.length +
 					  '</span>'
 					: ''),
-			callback: div => {
-				if (numbycategory) return showSummary4oneTerm(termid, div, numbycategory, tk, block)
-				if (density_data) return showDensity4oneTerm(termid, div, density_data, tk, block)
-				throw 'unknown summary data'
+			callback: async function(div) {
+				const features = JSON.parse(sessionStorage.getItem('optionalFeatures') || `{}`)
+				if (!features.mds3barapp) {
+					if (numbycategory) return showSummary4oneTerm(termid, div, numbycategory, tk, block)
+					if (density_data) return showDensity4oneTerm(termid, div, density_data, tk, block)
+					throw 'unknown summary data'
+				}
+
+				// will use the "barapp" when serverconfig.features.mds3barapp evaluates to true
+				const holder = div.append('div')
+				/*.style('display', 'inline-grid')
+						.style('grid-template-columns', 'auto auto auto')
+						.style('grid-row-gap', '3px')
+						.style('align-items', 'center')
+						.style('justify-items', 'left')*/
+
+				const geneTerm = {
+					type: 'geneVariant',
+					isoform: block.usegm.isoform
+				}
+				rangequery_rglst(tk, block, geneTerm)
+
+				try {
+					const plot = await import('#plots/plot.app')
+					await plot.appInit({
+						holder,
+						vocabApi: tk.mds.termdb.vocabApi,
+						state: {
+							plots: [
+								{
+									chartType: 'barchart',
+									term: {
+										id: termid
+									},
+									term2: {
+										term: geneTerm,
+										q: { mode: 'summary' }
+									},
+									settings: {
+										barchart: {
+											unit: 'pct'
+										}
+									}
+								}
+							]
+						}
+					})
+				} catch (e) {
+					throw e
+				}
 			}
 		})
 	}

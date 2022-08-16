@@ -51,7 +51,7 @@ exports.mayGetGeneVariantData = async function(tw, q) {
 			const sid = d._SAMPLEID_
 			if (!bySampleId.has(sid)) bySampleId.set(sid, { sample: sid })
 			const sampleData = bySampleId.get(sid)
-			sampleData[tname] = { key: tname, values: [], label: tname }
+			if (!(tname in sampleData)) sampleData[tname] = { key: tname, values: [], label: tname }
 			sampleData[tname].values.push(d)
 		}
 	}

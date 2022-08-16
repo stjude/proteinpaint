@@ -229,7 +229,7 @@ function getGDCconfig() {
 					color: 'rgb(31, 112, 31)'
 				},
 				M: {
-					color: 'rgb(40, 95, 143)'
+					color: '#2379BC'//Best update for the default blue, that is compliant with section508
 				},
 				N: {
 					color: 'rgb(179, 89, 10)'
@@ -244,7 +244,8 @@ function getGDCconfig() {
 					color: 'rgb(107, 90, 107)'
 				}
 			}
-		}
+		},
+		targetPortal: 'gdc'
 		/**** 
 			ASSUMES THAT THE GDC-PP WILL RUN INSIDE A DOCKER CONTAINER,
 			see above where the serverconfig.port, tpmasterdir, etc 

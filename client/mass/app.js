@@ -108,7 +108,10 @@ class MassApp {
 						})
 					},
 					plotId: plot.id,
-					beforePlotId: plot.insertBefore || null
+					beforePlotId: plot.insertBefore || null,
+					style: {
+						width: '98.5%'
+					}
 				})
 				newPlots[plot.id] = plotInit(Object.assign({}, { app: this.api, holder: sandbox }, plot))
 			}

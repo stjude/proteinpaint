@@ -30,13 +30,13 @@
     "nodemon": "^1.19.1",
     "prettier": "1.18.2",
     "tape": "^5.2.2",
-    "webpack": "^5.7.3",
+    "webpack": "^5.73.0",
     "webpack-cli": "^4.9.2",
     "webpack-node-externals": "^3.0.0",
     "webpack-notifier": "^1.15.0"
   },
   "dependencies": {
-    "@babel/register": "^7.14.5",
+    "@stjude/proteinpaint-rust": "^1.0.0",
     "better-sqlite3": "^7.5.3",
     "body-parser": "^1.15.2",
     "canvas": "2.6.0",
@@ -53,8 +53,7 @@
     "lazy": "^1.0.11",
     "node-fetch": "^2.6.1",
     "partjson": "^0.58.1",
-    "tiny-async-pool": "^1.2.0",
-    "webpack": "^5.73.0"
+    "tiny-async-pool": "^1.2.0"
   },
   "repository": {
     "type": "git",

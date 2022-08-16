@@ -413,7 +413,8 @@ class Matrix {
 				box: this.dom[`${d}LabelG`],
 				key: this[`${d}Key`],
 				label: this[`${d}Label`],
-				render: this[`render${Direction}Label`]
+				render: this[`render${Direction}Label`],
+				isGroup: sides[direction].includes('Grp')
 			}
 		}
 
@@ -634,7 +635,7 @@ class Matrix {
 	}
 
 	termGrpLabel(t) {
-		return t.grp.name
+		return t.grp.name || `configure`
 	}
 
 	setLegendData(legendGroups, refs) {

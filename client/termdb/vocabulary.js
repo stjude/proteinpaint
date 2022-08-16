@@ -44,6 +44,14 @@ class TermdbVocab {
 		this.state = opts.state
 		this.vocab = opts.state.vocab
 		this.currAnnoData = { samples: {}, refs: { byTermId: {} }, lastTerms: [], lastFilter: {} }
+		/*
+			some categorical terms may not have an initial term.values object,
+			but is expected to be filled from data requests such as nestedChartSeriesData()
+			TODO: 
+			- add values-filling logic to other data requests besides nestedChartSeriesData()
+			- instead of this workaround, should query all available values in getterm()
+		*/
+		this.missingCatValsByTermId = {}
 	}
 
 	main(stateOverride = null) {
@@ -104,7 +112,40 @@ class TermdbVocab {
 		const url = this.getTdbDataUrl(opts)
 		const data = await dofetch3(url, {}, this.opts.fetchOpts)
 		if (data.error) throw data.error
+
+		const valuesByTermId = {}
+
+		// TODO: instead of this workaround to fill in missing categorical term.values,
+		// should query all available values in getterm()
+		if (data.charts) {
+			for (const chart of data.charts) {
+				this.mayFillInMissingCatValues(opts.term0, chart.chartId, chart.total)
+
+				for (const series of chart.serieses) {
+					this.mayFillInMissingCatValues(opts.term, series.seriesId, series.total)
+
+					for (const data of series.data) {
+						this.mayFillInMissingCatValues(opts.term2, data.dataId, data.total)
+					}
+				}
+			}
+		}
+
 		return data
+	}
+
+	mayFillInMissingCatValues(term, key, total) {
+		if (!key) return
+		if (!(term.id in this.missingCatValsByTermId)) return
+		const t = this.missingCatValsByTermId[term.id]
+		if (!(key in t.values)) {
+			// TODO: assign color here so that the same color is used for a value even as the chart gets updated or reused
+			t.values[key] = { key, label: key /*color: */ }
+			t.samplecount[key] = { samplecount: 0, key, label: key }
+		}
+		// !!! NOTE: assumes a sample may only have at most one value by term
+		// and so can add samplecount totals for an overlay term across charts and serieses
+		t.samplecount[key].samplecount += total
 	}
 
 	/*
@@ -135,7 +176,7 @@ class TermdbVocab {
 		if (opts.chartType == 'cuminc') params.push('getcuminc=1')
 		if (opts.chartType == 'survival') params.push('getsurvival=1')
 
-		for (const _key of ['term', 'term2', 'term0']) {
+		for (const _key of ['term0', 'term', 'term2']) {
 			// "term" on client is "term1" at backend
 			const term = opts[_key]
 			if (!term) continue
@@ -171,9 +212,6 @@ class TermdbVocab {
 		if ('minSampleSize' in opts) params.push(`minSampleSize=${opts.minSampleSize}`)
 
 		// start of mds3 parameters for variant2sample query
-		if (opts.isoform) params.push('isoform=' + opts.isoform)
-		if (opts.ssm_id_lst) params.push('ssm_id_lst=' + opts.ssm_id_lst.join(','))
-		if (opts.rglst) params.push('rglst=' + JSON.stringify(opts.rglst))
 		if (opts.get) params.push('get=' + opts.get)
 		// end of mds3 parameters
 
@@ -418,6 +456,13 @@ class TermdbVocab {
 		const data = await dofetch3(`termdb?dslabel=${dslabel}&genome=${genome}&gettermbyid=${termid}`)
 		if (data.error) throw 'getterm: ' + data.error
 		if (!data.term) throw 'no term found for ' + termid
+		if (data.term.type == 'categorical' && !data.term.values && !data.term.groupsetting?.inuse) {
+			// TODO: instead of this workaround to create an empty term.values to be filled in by other data requests,
+			// the data response should already have the filled in term.values
+			data.term.values = {}
+			data.term.samplecount = {}
+			this.missingCatValsByTermId[data.term.id] = data.term
+		}
 		return data.term
 	}
 
@@ -427,6 +472,8 @@ class TermdbVocab {
 	}
 
 	async getCategories(term, filter, lst = []) {
+		if (term.samplecount) return { lst: Object.values(term.samplecount) }
+
 		// works for both dictionary and non-dict term types
 		// for non-dict terms, will handle each type individually
 		// for dictionary terms, use same method to query backend termdb
@@ -447,6 +494,10 @@ class TermdbVocab {
 			}
 			return await dofetch3('/termdb?' + args.join('&'))
 		}
+		if (term.category2samplecount) {
+			// grab directly from term and not the server
+		}
+
 		// use same query method for all dictionary terms
 		const args = [
 			'getcategories=1',

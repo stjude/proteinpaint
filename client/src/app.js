@@ -148,6 +148,9 @@ export function runproteinpaint(arg) {
 			if (data.base_zindex) {
 				client.newpane({ setzindex: data.base_zindex })
 			}
+			if (data.features) {
+				sessionStorage.setItem('optionalFeatures', JSON.stringify(data.features))
+			}
 
 			app.genomes = data.genomes
 
@@ -163,7 +166,7 @@ export function runproteinpaint(arg) {
 				// TODO??: server-side rendered viz should see client-side arg.commonOverrides ???
 				common.applyOverrides(Object.assign(data.commonOverrides || {}, arg.commonOverrides || {}))
 			}
-
+			if (data.targetPortal && data.targetPortal == 'gdc') await import('./style.gdc.css') // actual string value will let webpack find and bundle this optional stylesheet
 			// genome data init
 			for (const genomename in app.genomes) {
 				const err = initgenome(app.genomes[genomename])
@@ -344,14 +347,11 @@ function makeheader(app, obj, jwt) {
 	const debouncer = debounce(genesearch, 300)
 	const input = headbox
 		.append('div')
-		.style('display', 'inline-block')
+		.attr('class', 'sjpp-input-div-gene-pos')
 		.style('padding', padw_sm)
-		.style('padding-right', '5px')
 		.append('input')
+		.attr('class', 'sjpp-input-gene-pos')
 		.style('border', 'solid 1px ' + common.defaultcolor)
-		// .style('padding', '3px')
-		.style('padding', '6px 10px')
-		.style('border-radius', '5px')
 		.attr('size', 20)
 		.attr('placeholder', 'Gene, position, or SNP')
 		.attr('title', 'Search by gene, SNP, or position')
@@ -363,17 +363,15 @@ function makeheader(app, obj, jwt) {
 
 	const genome_select_div = headbox
 		.append('div')
-		.style('display', 'inline-block')
+		.attr('class', 'sjpp-genome-select-div')
 		.style('padding', padw_sm)
-		.style('padding-left', '5px')
 
 	app.selectgenome = genome_select_div
 		.append('select')
 		.attr('title', 'Select a genome')
+		.attr('class', 'sjpp-genome-select')
 		.style('padding', padw_input)
 		.style('border', 'solid 1px ' + common.defaultcolor)
-		.style('border-radius', '5px')
-		.style('margin', '1px 20px 1px 10px')
 		.on('change', () => {
 			update_genome_browser_btn(app)
 		})
@@ -393,7 +391,6 @@ function makeheader(app, obj, jwt) {
 		.append('span')
 		.classed('sja_menuoption', true)
 		.style('padding', padw_sm)
-		.style('border-radius', '5px')
 		.text('Help')
 		.on('click', () => {
 			const p = d3event.target.getBoundingClientRect()
@@ -435,7 +432,6 @@ function make_genome_browser_btn(app, headbox, jwt) {
 		.attr('class', 'sja_menuoption')
 		.attr('id', 'genome_btn')
 		.style('padding', padw)
-		.style('border-radius', '5px')
 		.datum(genomename)
 		.text(genomename + ' genome browser')
 		.on('click', genomename => {
@@ -528,7 +524,7 @@ async function findgene2paint(app, str, genomename, jwt) {
 	sandbox_div.header.html(
 		'<div style="display:inline-block;">' +
 			str +
-			'</div><div style="border-radius:4px; color:white; background-color: #969696; padding: 1px 5px; display:inline-block; font-size:0.8em; margin-left:4px;">' +
+			'</div><div class="sjpp-output-sandbox-title">' +
 			genomename +
 			'</div>'
 	)

@@ -133,40 +133,8 @@ function setTermActions(self) {
 		self.pill.showMenu(clickedElem, self.dom.twMenuBar)
 
 		self.dom.grpMenuDiv = self.dom.menutop.append('div').style('margin-top', '10px')
-		self.showTermGroupInputs(self.dom.grpMenuDiv)
-
+		//self.showTermGroupInputs(self.dom.grpMenuDiv)
 		self.dom.tip.showunder(clickedElem)
-		/*
-		const grpMenuBar = menuBtnsDiv.append('div')
-		grpMenuBar.append('span').html('Group ')
-		const options = []
-		if (t.tw.term?.type == 'geneVariant') options.push({ label: 'Browser', callback: self.launchBrowser })
-		options.push(
-			...[
-				//{ label: 'Edit', callback: self.showTermEditMenu },
-				//{ label: 'Move', callback: self.showMoveMenu },
-				{ label: 'Add Terms', callback: self.showTermInsertMenu },
-				{ label: 'Sort', callback: self.showSortMenu },
-				{ label: 'Delete', callback: self.removeTermGroup }
-			]
-		)
-
-		grpMenuBar
-			.append('div')
-			.style('display', 'inline-block')
-			.selectAll(':scope>.sja_menuoption')
-			.data(options)
-			.enter()
-			.append('div')
-			.attr('class', 'sja_menuoption')
-			.style('display', 'inline-block')
-			.html(d => d.label)
-			.on('click', d => {
-				d.callback(d)
-			})
-
-		self.dom.tip.showunder(clickedElem)
-		*/
 	}
 
 	self.updateTermLabel = () => {
@@ -977,15 +945,15 @@ function setTermGroupActions(self) {
 			.on('input', () => {
 				const value = self.dom.grpNameInput.property('value')
 				self.dom.grpNameInput.attr('size', value.length + 5)
-				self.dom.grpEditBtn.property('disabled', value === self.activeLabel.grp.name)
+				self.dom.grpEditBtn.style('display', value === self.activeLabel.grp.name ? 'none' : '')
 			})
-			.on('change', self.updateTermGrpName)
+		//.on('change', self.updateTermGrpName)
 
 		self.dom.grpEditBtn = labelEditDiv
 			.append('button')
-			.property('disabled', true)
+			.style('display', 'none')
 			.style('margin-left', '5px')
-			.html('edit')
+			.html('submit')
 			.on('click', self.updateTermGrpName)
 
 		self.dom.menubody

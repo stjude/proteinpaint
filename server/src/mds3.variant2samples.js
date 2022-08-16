@@ -79,12 +79,40 @@ export async function variant2samples_getresult(q, ds) {
 	if (q.get == ds.variant2samples.type_sunburst) {
 		return await make_sunburst(mutatedSamples, ds, q)
 	}
-
-	if (q.get == ds.variant2samples.type_summary) {
+	const get = q.get || q.term2_q.mode
+	if (get == ds.variant2samples.type_summary) {
 		const summary = await make_summary(mutatedSamples, ds, q)
 		if (q.term1_id) {
 			// using barchart query, convert data to barchart format
-			return summary2barchart(summary, q)
+			const results = summary2barchart(summary, q)
+
+			// start creating reference metadata
+			const row2name = {}
+			const col2name = {}
+			for (const chart of results.charts) {
+				for (const s of chart.serieses) {
+					if (!col2name[s.seriesId]) col2name[s.seriesId] = { name: s.seriesId, grp: '-' }
+					for (const d of s.data) {
+						if (!row2name[d.dataId]) row2name[d.dataId] = { name: d.dataId, grp: '-' }
+					}
+				}
+			}
+
+			// these are "reference" metadata for plots, to help with sorting, etc.
+			// the reference data is computed by the server because groupsetting and bins may not
+			// be fully computable within the client, for example start and stop bins when
+			// the sample values for a term are not known client-side
+			results.refs = {
+				cols: Object.keys(col2name),
+				colgrps: ['-'],
+				rows: Object.keys(row2name),
+				rowgrps: ['-'],
+				bins: [[], [], []],
+				col2name,
+				row2name,
+				q: [{}, {}, {}]
+			}
+			return results
 		}
 		return summary
 	}

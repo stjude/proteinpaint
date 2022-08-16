@@ -1,11 +1,11 @@
+const run_rust = require('../index').default
 const tape = require('tape')
 const path = require('path')
 const spawn = require('child_process').spawn
-const serverconfig = require('../../src/serverconfig')
 const Readable = require('stream').Readable
 const additionalExamples = require('./indel.examples')
 //const utils = require('../../src/utils')
-
+console.log(9, 'test')
 /*
 to compile rust, see server/utils/rust/README.md
 Syntax for compiling the rust code: cd ~/proteinpaint/server/utils/rust && cargo build --release
@@ -1933,25 +1933,3 @@ const examples = [
 		]
 	}
 ]
-
-// same as utils/benchmark/fisher.rust.r.js
-function run_rust(binfile, input_data) {
-	//console.log('input_data:', input_data)
-	return new Promise((resolve, reject) => {
-		const binpath = path.join(serverconfig.binpath, '/utils/rust/target/release/', binfile)
-		const ps = spawn(binpath)
-		const stdout = []
-		const stderr = []
-		Readable.from(input_data).pipe(ps.stdin)
-		ps.stdout.on('data', data => stdout.push(data))
-		ps.stderr.on('data', data => stderr.push(data))
-		ps.on('error', err => {
-			reject(err)
-		})
-		ps.on('close', code => {
-			if (code !== 0) reject(`spawned '${binfile}' exited with a non-zero status and this stderr:\n${stderr.join('')}`)
-			//console.log('stdout:', stdout.join('').toString())
-			resolve(stdout.join('').toString())
-		})
-	})
-}
