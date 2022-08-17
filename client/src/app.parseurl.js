@@ -29,7 +29,7 @@ upon error, throw err message as a string
 	const urlp = urlmap()
 
 	if (urlp.has('appcard')) {
-		const ad = await import('../appdrawer/app.drawer.cards')
+		const ad = await import('../appdrawer/app.drawer.render')
 		const cardJsonFile = urlp.get('appcard')
 		const re = await client.dofetch2('/cardsjson')
 		const track = re.examples.findIndex(t => t.sandboxjson == cardJsonFile)

@@ -805,7 +805,7 @@ table {
 
 /* App Drawer style */
 
-.sjpp-track-cols {
+.sjpp-appdrawer-cols {
     font-family: Verdana, Geneva, Tahoma, sans-serif;
     font-weight: 500;
     font-size: 17px;
@@ -875,14 +875,14 @@ table {
     border-radius: 5px 0px 0px 5px;
 }
 
-.sjpp-track-ribbon{
+.sjpp-app-drawer-card-ribbon{
     grid-area: image;
     overflow: hidden;
     width: 100%;
     height: 100%;
 }
-.sjpp-track-ribbon::before,
-.sjpp-track-ribbon::after {
+.sjpp-app-drawer-card-ribbon::before,
+.sjpp-app-drawer-card-ribbon::after {
   position: relative;
   z-index: -1;
   content: '';
@@ -890,7 +890,7 @@ table {
   border-top-color: transparent;
   border-left-color: transparent;
 }
-.sjpp-track-ribbon span {
+.sjpp-app-drawer-card-ribbon span {
   position: relative;
   display: block;
   width: 100%;
@@ -902,11 +902,11 @@ table {
   transform: rotate(-45deg);
 }
 
-.sjpp-track-ribbon::before {
+.sjpp-app-drawer-card-ribbon::before {
     top: 0;
     right: 0;
 }
-.sjpp-track-ribbon::after {
+.sjpp-app-drawer-card-ribbon::after {
     bottom: 0;
     left: 0;
 }
