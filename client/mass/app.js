@@ -1,12 +1,13 @@
 import { getAppInit } from '../rx'
 import { select } from 'd3-selection'
 import { storeInit } from './store'
-import { vocabInit } from '../termdb/vocabulary'
+import { vocabInit } from '#termdb/vocabulary'
 import { navInit } from './nav'
 import { plotInit } from './plot'
-import { sayerror } from '../dom/error'
-import { Menu } from '../dom/menu'
-import { newSandboxDiv } from '../dom/sandbox'
+import { sayerror } from '#dom/error'
+import { Menu } from '#dom/menu'
+import { newSandboxDiv } from '#dom/sandbox'
+import { dofetch3 } from '#common/dofetch'
 
 /*
 opts{}
@@ -26,11 +27,13 @@ opts{}
 class MassApp {
 	constructor(opts) {
 		// just a test
-		if (opts.datasetAccessToken) {
-			console.log('using token:', opts.datasetAccessToken)
-			// datasetAccessToken should be kept in state?
-			// this token should be used in headers of certain queries from mass to ppserver
-			// the data downloader app should query server with this token to inquire if access will be granted
+		if (opts.getDatasetAccessToken) {
+			// should return a jwt token, to be used in headers of certain queries from mass to ppserver
+			if (typeof opts.getDatasetAccessToken !== 'function') throw `opts.getDatasetAccessToken must be a function`
+			console.log('has getDatasetAccessToken() function')
+		}
+		if (opts.addLoginCallback) {
+			opts.addLoginCallback(() => this.api.dispatch({ type: 'app_refresh' }))
 		}
 
 		this.type = 'app'
@@ -56,6 +59,7 @@ class MassApp {
 		try {
 			api.tip = new Menu({ padding: '5px' })
 			api.printError = e => this.printError(e)
+			api.getVerifiedToken = () => this.verifiedToken
 
 			const vocab = this.opts.state.vocab
 
@@ -103,6 +107,7 @@ class MassApp {
 
 	async main() {
 		this.api.vocabApi.main()
+		await this.maySetVerifiedToken()
 
 		const newPlots = {}
 		let sandbox
@@ -146,6 +151,37 @@ class MassApp {
 				this.components.plots[plotId].destroy()
 				delete this.components.plots[plotId]
 			}
+		}
+	}
+
+	async maySetVerifiedToken() {
+		if (this.verifiedToken) return
+		try {
+			const dslabel = this.state.dslabel
+			const auth = this.state.termdbConfig.requiredAuth
+			if (!auth) return
+			if (auth.type === 'jwt') {
+				const token = this.opts.getDatasetAccessToken()
+				if (!token) {
+					delete this.verifiedToken
+					return
+				}
+				const data = await dofetch3('/jwt-status', {
+					method: 'POST',
+					headers: {
+						[auth.headerKey]: token
+					},
+					body: {
+						dslabel
+					}
+				})
+				// TODO: later may check against expiration time in response if included
+				this.verifiedToken = data.status === 'ok' && token
+			} else {
+				throw `unsupported requiredAuth='${auth.type}'`
+			}
+		} catch (e) {
+			throw e
 		}
 	}
 

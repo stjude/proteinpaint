@@ -86,7 +86,6 @@ export function runproteinpaint(arg) {
 	}
 
 	setHostUrl(arg, app)
-
 	// subnest an sjcharts object to track its app instances by rendererType,
 	// to avoid namespace conflicts with PP renderer instances
 	if (!app.instanceTracker.sjcharts) {
@@ -789,7 +788,8 @@ async function parseEmbedThenUrl(arg, app) {
 			holder: app.holder0,
 			state: res.state,
 			genome: app.genomes[res.state.vocab.genome],
-			datasetAccessToken: arg.datasetAccessToken
+			getDatasetAccessToken: arg.getDatasetAccessToken,
+			addLoginCallback: arg.addLoginCallback
 		}
 		const _ = await import('../mass/app')
 		_.appInit(opts)
@@ -1463,7 +1463,8 @@ async function launchmass(arg, app) {
 	if (opts.state && opts.state.genome) {
 		opts.genome = app.genomes[opts.state.genome]
 	}
-	opts.datasetAccessToken = arg.datasetAccessToken
+	opts.getDatasetAccessToken = arg.getDatasetAccessToken
+	opts.addLoginCallback = arg.addLoginCallback
 	import('../mass/app').then(_ => {
 		_.appInit(opts)
 	})

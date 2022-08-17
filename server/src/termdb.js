@@ -11,8 +11,8 @@ const termdbsnp = require('./termdb.snp')
 const LDoverlay = require('./mds2.load.ld').overlay
 const getOrderedLabels = require('./termdb.barsql').getOrderedLabels
 const isUsableTerm = require('#shared/termdb.usecase').isUsableTerm
-const jsonwebtoken = require('jsonwebtoken')
 const serverconfig = require('./serverconfig.js')
+const checkDsSecret = require('./auth').checkDsSecret
 
 /*
 ********************** EXPORTED
@@ -74,7 +74,7 @@ export function handle_request_closure(genomes) {
 				return await phewas.trigger(q, res, ds)
 			}
 			if (q.density) return await density_plot(q, res, ds)
-			if (q.gettermdbconfig) return trigger_gettermdbconfig(res, tdb)
+			if (q.gettermdbconfig) return trigger_gettermdbconfig(q, res, tdb)
 			if (q.getcohortsamplecount) return trigger_getcohortsamplecount(q, res, ds)
 			if (q.getsamplecount) return trigger_getsamplecount(q, res, ds)
 			if (q.getsamples) return trigger_getsamples(q, res, ds)
@@ -90,22 +90,12 @@ export function handle_request_closure(genomes) {
 				res.send(await ds.getTermTypes(q))
 				return
 			} else if (q.for == 'matrix') {
+				console.log(q, req.headers)
+				checkDsSecret(q, req.headers)
 				const data = await require(`./termdb.matrix.js`).getData(q, ds)
 				res.send(data)
 				return
-			} else if (q.for == 'download') {
-				console.log(96, q)
-				const secret = serverconfig.dsCredentials?.[q.dslabel]?.secret
-				if (secret) {
-					console.log(99, jsonwebtoken.sign({ accessibleDatasets: ['TermdbTest'] }, secret))
-					if (!q.datasetAccessToken) throw `missing q.datasetAccessToken`
-					const payload = jsonwebtoken.verify(q.datasetAccessToken, secret)
-					console.log(101, payload)
-					if (!payload.accessibleDatasets.includes(q.dslabel)) throw `not authorized for dslabel='${q.dslabel}'`
-				}
-				const data = await require(`./termdb.matrix.js`).getData(q, ds)
-				res.send(data)
-				return
+			} else if (q.for == 'validateToken') {
 			}
 
 			throw "termdb: don't know what to do"
@@ -125,7 +115,7 @@ function trigger_getsamples(q, res, ds) {
 	res.send({ samples })
 }
 
-function trigger_gettermdbconfig(res, tdb) {
+function trigger_gettermdbconfig(q, res, tdb) {
 	// add attributes to this object for revealing to client
 	const c = {
 		selectCohort: tdb.selectCohort, // optional
@@ -139,6 +129,16 @@ function trigger_gettermdbconfig(res, tdb) {
 		c.restrictAncestries = []
 		for (const i of tdb.restrictAncestries) {
 			c.restrictAncestries.push({ name: i.name, tvs: i.tvs })
+		}
+	}
+	const cred = serverconfig.dsCredentials[q.dslabel]
+	console.log(135, cred)
+	if (cred) {
+		// TODO: may restrict required auth by chart type???
+		// currently, the client code assumes that it will only apply to the dataDownload MASS app
+		c.requiredAuth = {
+			type: cred.type || 'login',
+			headerKey: cred.headerKey
 		}
 	}
 	res.send({ termdbConfig: c })

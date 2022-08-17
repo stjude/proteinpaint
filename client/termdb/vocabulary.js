@@ -66,7 +66,8 @@ class TermdbVocab {
 			'termdb?genome=' + this.vocab.genome + '&dslabel=' + this.vocab.dslabel + '&gettermdbconfig=1'
 		)
 		// note: in case of error such as missing dataset, supply empty object
-		return data.termdbConfig || {}
+		this.termdbConfig = data.termdbConfig || {}
+		return this.termdbConfig
 	}
 
 	// migrated from termdb/tree
@@ -610,13 +611,9 @@ class TermdbVocab {
 													for specifying value order, colors, etc.
 	*/
 	async getAnnotatedSampleData(opts) {
-		const init = {
-			body: {
-				for: 'matrix',
-				genome: this.vocab.genome,
-				dslabel: this.vocab.dslabel
-			}
-		}
+		// may check against required auth credentials for the server route
+		const auth = this.termdbConfig.requiredAuth
+		const headers = auth ? { [auth.headerKey]: this.app.getVerifiedToken() } : {}
 
 		const filter = getNormalRoot(opts.filter)
 		const isNewFilter = !deepEqual(this.currAnnoData.lastFilter, filter)
@@ -639,6 +636,7 @@ class TermdbVocab {
 		while (termsToUpdate.length) {
 			const copies = this.getCopiesToUpdate(termsToUpdate)
 			const init = {
+				headers,
 				body: {
 					for: 'matrix',
 					genome: this.vocab.genome,

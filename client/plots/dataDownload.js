@@ -21,13 +21,12 @@ class DataDownload {
 			titleDiv: this.opts.holder
 				.append('div')
 				.style('margin', '10px')
-				.style('font-weight', 600)
-				.html('Selected terms '),
+				.style('font-weight', 600),
 			terms: this.opts.holder.append('div'),
 			submitDiv: this.opts.holder.append('div').style('margin', '10px')
 		}
 
-		setInteractivity(this)
+		setInteractivity(this) // in cases of static viz, you don't use interactivity code
 		setRenderers(this)
 
 		this.dom.submitBtn = this.dom.submitDiv
@@ -49,12 +48,13 @@ class DataDownload {
 		if (!config) {
 			throw `No plot with id='${this.id}' found. Did you set this.id before this.api = getComponentApi(this)?`
 		}
+
 		return {
 			vocab: appState.vocab,
 			activeCohort: appState.activeCohort,
 			termfilter: appState.termfilter,
 			config,
-			allowedTermTypes: appState.termdbConfig.allowedTermTypes
+			hasVerifiedToken: !!this.app.getVerifiedToken()
 		}
 	}
 
@@ -62,19 +62,20 @@ class DataDownload {
 	so it reacts to all actions matching with the plot id (controlled by store method)
 	including filter/cohort change
 	*/
-
 	async main() {
 		try {
 			this.config = JSON.parse(JSON.stringify(this.state.config))
 			this.mayUpdateSandboxHeader()
+			if (this.mayRequireToken()) return
 			const reqOpts = await this.getDataRequestOpts()
-			this.render()
 			this.data = await this.app.vocabApi.getAnnotatedSampleData(reqOpts)
-			console.log(61, this.data)
+			//console.log(61, this.data)
 			this.processData()
 			const n = this.activeSamples.length
+
 			this.dom.submitBtn.property('disabled', n < 1)
 			this.dom.submitNote.html(n ? `${n} samples` : 'no sample data')
+			this.render()
 		} catch (e) {
 			sayerror(this.dom.errordiv, 'Error: ' + (e.error || e))
 			if (e.stack) console.log(e.stack)
@@ -87,10 +88,24 @@ class DataDownload {
 		this.dom.header.html('<span>Data download</span>')
 	}
 
+	mayRequireToken() {
+		if (this.state.hasVerifiedToken) {
+			this.dom.titleDiv.html('Selected terms')
+			this.dom.terms.style('display', '')
+			this.dom.submitDiv.style('display', '')
+			return false
+		} else {
+			this.dom.titleDiv.html('Please login')
+			this.dom.terms.style('display', 'none')
+			this.dom.submitDiv.style('display', 'none')
+			return true
+		}
+	}
+
 	// creates an opts object for the vocabApi.getNestedChartsData()
 	async getDataRequestOpts() {
 		const terms = this.config.terms
-		return { terms, filter: this.state.filter }
+		return { terms, filter: this.state.termfilter.filter }
 	}
 
 	processData() {
@@ -165,7 +180,7 @@ function setRenderers(self) {
 			return { tw, pill: self.pillBy$id[tw.$id] }
 		})
 		if (!data.find(d => !d.tw.term)) {
-			console.log(126, 'adding empty term')
+			// console.log(126, 'adding empty term')
 			data.push({ tw: { $id: getTw$id() } })
 		}
 		const terms = self.dom.terms.selectAll(':scope>div').data(data, d => d.tw.$id)
@@ -178,7 +193,7 @@ function setRenderers(self) {
 	}
 
 	self.addTerm = async function(d) {
-		console.log(136, 'addTerm()', d)
+		// console.log(136, 'addTerm()', d)
 		const div = select(this)
 			.style('display', 'inline-block')
 			.style('width', 'fit-content')
