@@ -266,7 +266,7 @@ export function addGeneSearchbox(arg) {
 				tip.d
 					.append('div')
 					.text(s)
-					.attr('class', 'sja_menuoption')
+					.attr('class', 'sja_menuoption sja_sharp_border')
 					.attr('isgene', 1)
 					.on('click', () => {
 						if (arg.geneOnly) {

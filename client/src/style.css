@@ -163,6 +163,9 @@ table {
     border-radius: 5px;
 }
 
+.sja_sharp_border {
+    border-radius: 0px !important;
+}
 .sja_menuoption:hover {
     background-color: #e6e6e6
 }
