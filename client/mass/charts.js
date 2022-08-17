@@ -279,7 +279,7 @@ function setRenderers(self) {
 		for (const opt of chart.menuOptions) {
 			menuDiv
 				.append('div')
-				.attr('class', 'sja_menuoption_sharp')
+				.attr('class', 'sja_menuoption sja_sharp_border')
 				.text(opt.label)
 				.on('click', () => {
 					if (backBtn) {
