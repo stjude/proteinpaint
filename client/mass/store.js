@@ -352,6 +352,8 @@ function validatePlot(p, vocabApi) {
 			validateRegressionPlot(p, vocabApi)
 		} else if (p.chartType == 'matrix') {
 			// todo: validateMatrixPlot(p, vocabApi)
+		} else if (p.chartType == 'dataDownload') {
+			// todo: validateMatrixPlot(p, vocabApi)
 		} else {
 			validateGenericPlot(p, vocabApi)
 		}

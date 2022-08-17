@@ -232,7 +232,8 @@ function getChartTypeList(self) {
 			clickTo: self.prepPlot,
 			chartType: 'dataDownload',
 			config: {
-				chartType: 'dataDownload'
+				chartType: 'dataDownload',
+				terms: []
 			}
 		}
 	]
