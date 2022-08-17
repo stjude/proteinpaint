@@ -823,7 +823,7 @@ function setSampleGroupActions(self) {
 			.data(menuOptions)
 			.enter()
 			.append('div')
-			.attr('class', 'sja_menuoption')
+			.attr('class', 'sja_menuoption sja_sharp_border')
 			.style('display', 'inline-block')
 			.html(d => d.label)
 			.on('click', d => {
@@ -976,7 +976,7 @@ function setTermGroupActions(self) {
 			.data(menuOptions)
 			.enter()
 			.append('div')
-			.attr('class', 'sja_menuoption')
+			.attr('class', 'sja_menuoption sja_sharp_border')
 			.style('display', 'inline-block')
 			.html(d => d.label)
 			.on('click', d => {
