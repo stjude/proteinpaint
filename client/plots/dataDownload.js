@@ -18,12 +18,30 @@ class DataDownload {
 		this.dom = {
 			header: this.opts.header, // header is optional
 			errordiv: this.opts.holder.append('div'),
-			terms: this.opts.holder.append('div')
+			titleDiv: this.opts.holder
+				.append('div')
+				.style('margin', '10px')
+				.style('font-weight', 600)
+				.html('Selected terms '),
+			terms: this.opts.holder.append('div'),
+			submitDiv: this.opts.holder.append('div').style('margin', '10px')
 		}
+
+		setInteractivity(this)
+		setRenderers(this)
+
+		this.dom.submitBtn = this.dom.submitDiv
+			.append('button')
+			.html('Download')
+			.on('click', this.download)
+
+		this.dom.submitNote = this.dom.submitDiv
+			.append('span')
+			.style('margin-left', '5px')
+			.style('font-style', 'italic')
 
 		// this.id is from opts.id and assigned by rx
 		const config = appState.plots.find(p => p.id === this.id)
-		setRenderers(this)
 	}
 
 	getState(appState, sub) {
@@ -50,8 +68,13 @@ class DataDownload {
 			this.config = JSON.parse(JSON.stringify(this.state.config))
 			this.mayUpdateSandboxHeader()
 			const reqOpts = await this.getDataRequestOpts()
-			//this.data = await this.app.vocabApi.getAnnotatedSampleData(reqOpts)
 			this.render()
+			this.data = await this.app.vocabApi.getAnnotatedSampleData(reqOpts)
+			console.log(61, this.data)
+			this.processData()
+			const n = this.activeSamples.length
+			this.dom.submitBtn.property('disabled', n < 1)
+			this.dom.submitNote.html(n ? `${n} samples` : 'no sample data')
 		} catch (e) {
 			sayerror(this.dom.errordiv, 'Error: ' + (e.error || e))
 			if (e.stack) console.log(e.stack)
@@ -68,6 +91,19 @@ class DataDownload {
 	async getDataRequestOpts() {
 		const terms = this.config.terms
 		return { terms, filter: this.state.filter }
+	}
+
+	processData() {
+		const { lst, bySampleId } = this.data
+		this.activeSamples = []
+		for (const d of lst) {
+			for (const tw of this.config.terms) {
+				if (tw.term && tw.$id in d) {
+					this.activeSamples.push(d)
+					break
+				}
+			}
+		}
 	}
 
 	async getNewPill(holder, d) {
@@ -167,6 +203,36 @@ function setRenderers(self) {
 			filter: self.state.filter,
 			activeCohort: self.state.activeCohort
 		})
+	}
+}
+
+function setInteractivity(self) {
+	self.download = () => {
+		const rows = [['sample', ...self.config.terms.map(tw => tw.term.name)]]
+
+		for (const s of self.activeSamples) {
+			const samplename = self.data.refs.bySampleId[s.sample]
+			const row = [samplename]
+			for (const tw of self.config.terms) {
+				row.push(tw.$id in s ? s[tw.$id].key : '')
+			}
+			rows.push(row)
+		}
+
+		const matrix = rows.map(row => row.join('\t')).join('\n')
+
+		const a = document.createElement('a')
+		document.body.appendChild(a)
+		a.addEventListener(
+			'click',
+			function() {
+				a.download = 'cohortData.txt'
+				a.href = URL.createObjectURL(new Blob([matrix], { type: 'text/tab-separated-values' }))
+				document.body.removeChild(a)
+			},
+			false
+		)
+		a.click()
 	}
 }
 
