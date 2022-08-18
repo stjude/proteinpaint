@@ -1,4 +1,5 @@
 import { getInitFxn } from '../rx'
+import * as utils from './utils'
 
 class AppDrawerButton {
 	constructor(opts) {
@@ -6,6 +7,7 @@ class AppDrawerButton {
 		this.holder = opts.holder
 		setInteractivity(this)
 		setRenderers(this)
+		this.initBtn()
 	}
 
 	validateOpts(opts) {
@@ -19,23 +21,10 @@ class AppDrawerButton {
 
 export const buttonInit = getInitFxn(AppDrawerButton)
 
-function setInteractivity(self) {}
-
 function setRenderers(self) {
-	self.makeButton = function(div, text) {
-		const button = div
-			.append('button')
-			.attr('type', 'submit')
-			.style('background-color', '#cfe2f3')
-			.style('margin', '20px 20px 0px 20px')
-			.style('padding', '8px')
-			.style('border', 'none')
-			.style('border-radius', '3px')
-			.style('display', 'inline-block')
-			.text(text)
-
-		return button
+	self.initBtn = function () {
+		utils.makeButton(self.holder, self.opts.element.name)
 	}
-
-	self.makeButton(self.holder, self.opts.element.name)
 }
+
+function setInteractivity(self) {}

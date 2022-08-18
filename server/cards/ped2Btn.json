@@ -1,0 +1,17 @@
+{
+    "button": {
+        "name": "Pediatric2 GenomePaint",
+        "id": 1001,
+        "intro": "The Pediatric2 dataset expanded the original Pediatric dataset with non-coding variants and expression data in GenomePaint. The additional data includes Genome for Kids <a href='https://pubmed.ncbi.nlm.nih.gov/34301788/' target='blank'>(PMID: 34301788)</a>, Shanghai Children's Medical Center relapsed ALL cohort <a href='https://pubmed.ncbi.nlm.nih.gov/32632335/' target='_blank'>(PMID: 32632335)</a>, St Jude's Clinical cancer genomic profiling by three-platform sequencing study<a href='https://pubmed.ncbi.nlm.nih.gov/30262806/' target='_blank'> (PMID: 30262806)</a>, and St Jude's Pan-neuroblastoma analysis data study<a href='https://pubmed.ncbi.nlm.nih.gov/33056981/' target='_blank'> (PMID: 33056981)</a>.<br><br><div style='margin-left: 3em;'>Read more about ProteinPaint <a href='https://genomepaint.stjude.cloud/#data-release' target='PP data release' >data releases</a>.</div>",
+        "searchbar": "all",
+        "availableGenomes": ["hg19", "hg38"],
+        "dsURLparam": "block=1&mds=Pediatric2,svcnv",
+        "runargs": {
+            "nobox": true,
+            "parselurl": true,
+            "noheader": true,
+            "block": true,
+            "datasetqueries":[ {"dataset": "Pediatric2", "querykey": "svcnv"} ]
+        }
+    }
+}

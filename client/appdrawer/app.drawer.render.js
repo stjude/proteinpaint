@@ -1,6 +1,6 @@
 import { dofetch, dofetch2, dofetch3, sayerror, tab_wait, appear } from '#src/client'
 import { cardInit } from './ad.card'
-import { buttonInit } from './ad.button'
+import { buttonInit } from './ad.dsButton'
 import { event, select, selectAll } from 'd3-selection'
 // import {rgb} from 'd3-color'
 
@@ -23,7 +23,7 @@ export async function init_appDrawer(par) {
 		elements: re.elements.filter(e => !e.hidden)
 	}
 
-	const page_args = {
+	const pageArgs = {
 		apps_sandbox_div,
 		apps_off,
 		// allow_mdsform: re.allow_mdsform, TODO: Decommission code altogether? no longer relevant
@@ -31,7 +31,7 @@ export async function init_appDrawer(par) {
 	}
 
 	makeParentGrid(wrapper, render_args)
-	loadElements(render_args.elements)
+	loadElements(render_args.elements, pageArgs)
 }
 
 /********** Main Layout Functions  ********* 
@@ -80,13 +80,14 @@ function addSection(section, parentGrid) {
 	return newSection
 }
 
-function loadElements(elements) {
+function loadElements(elements, pageArgs) {
 	elements.forEach(element => {
 		const holder = select(`#${element.section} > .sjpp-element-list`)
 		if (element.type == 'card' || element.type == 'nestedCard') {
 			cardInit({
 				holder,
-				element
+				element,
+				pageArgs
 			})
 		} else if (element.type == 'button') {
 			buttonInit({

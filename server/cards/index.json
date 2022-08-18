@@ -51,28 +51,54 @@
         },
         {
             "type": "card",
+            "name": "GenomePaint",
+            "section": "tracks",
+            "description": "Explore coding and non-coding variants in cancer",
+            "image": "https://pecan.stjude.cloud/static/examples/images/gpaint-square.png",
+            "sandboxJson": "genomepaint",
+            "searchterms": ["GenomePaint"]
+        },
+        {
+            "type": "card",
             "name": "BigWig",
             "section": "tracks",
-            "updateFlagExpireDate": "2022-10-01",
             "description": "Quantitative data at genomic positions",
             "image": "https://pecan.stjude.cloud/static/examples/images/bigwig-square.png",
+            "flag": {"text":"updated", "expireDate":"2022-10-01"},
             "sandboxJson": "bigwig"
         },
         {
             "type": "card",
             "name": "Allelic imbalance",
             "section": "tracks",
-            "newFlagExpireDate": "2022-10-01",
             "description": "From tumor and germline DNA",
             "image": "https://pecan.stjude.cloud/static/examples/images/aicheck-square.png",
+            "flag": {"text":"new", "expireDate":"2022-10-01"},
             "sandboxJson": "ai",
             "searchterms": ["aicheck", "tumor", "normal", "DNA"]
+        },
+        {
+            "type": "card",
+            "name": "GDC BAM slicing",
+            "section": "tracks",
+            "flag": {"text": "beta"},
+            "disableTopTabs": true,
+            "description": "Visualize sequencing reads in NCI GDC",
+            "image": "https://pecan.stjude.cloud/static/examples/images/bam-square.png",
+            "sandboxJson": "gdcbam",
+            "searchterms": []
         },
         {
             "type": "button",
             "name": "Pediatric Cancer Mutation",
             "section": "datasetButtons",
             "sandboxJson": "pcmBtn"
+        },
+        {
+            "type": "button",
+            "name": "Pediatric2 GenomePaint",
+            "section": "datasetButtons",
+            "sandboxJson": "ped2Btn"
         },
         {
             "type": "card",
@@ -96,9 +122,9 @@
             "type": "card",
             "name": "Data Browser",
             "section": "apps",
-            "isBeta": true,
             "description": "Browse data from a custom cohort",
             "image": "https://pecan.stjude.cloud/static/examples/images/databrowser-square.png",
+            "flag": {"text":"beta"},
             "sandboxJson": "databrowser",
             "searchterms": ["clinical", "dictionary"]
         }
