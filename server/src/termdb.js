@@ -130,7 +130,7 @@ function trigger_gettermdbconfig(q, res, tdb) {
 			c.restrictAncestries.push({ name: i.name, tvs: i.tvs })
 		}
 	}
-	const cred = serverconfig.dsCredentials[q.dslabel]
+	const cred = serverconfig.dsCredentials?.[q.dslabel]
 	if (cred) {
 		// TODO: may restrict required auth by chart type???
 		// currently, the client code assumes that it will only apply to the dataDownload MASS app

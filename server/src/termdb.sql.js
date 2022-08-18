@@ -1040,7 +1040,7 @@ thus less things to worry about...
 	returned object will have "undefined" as key. make sure an object like {undefined:"xx"} can work in client side
 	*/
 	q.getSupportedChartTypes = embedder => {
-		const cred = serverconfig.dsCredentials?.[ds.label]
+		const cred = serverconfig.dsCredentials?.[ds.label] || {}
 
 		const rows = cn
 			.prepare(
