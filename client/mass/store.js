@@ -350,10 +350,12 @@ function validatePlot(p, vocabApi) {
 	try {
 		if (p.chartType == 'regression') {
 			validateRegressionPlot(p, vocabApi)
-		} else if (p.chartType == 'matrix') {
-			// todo: validateMatrixPlot(p, vocabApi)
-		} else if (p.chartType == 'dataDownload') {
-			// todo: validateMatrixPlot(p, vocabApi)
+		} else if (p.chartType == 'matrix' || p.chartType == 'dataDownload') {
+			if (!p.terms) throw `plot error: missing the config.terms for '${p.chartType}'`
+			if (!Array.isArray(p.terms)) `plot error: config.terms must be an array '${p.chartType}'`
+			for (const tw of p.terms) {
+				validatePlotTerm(tw, vocabApi)
+			}
 		} else {
 			validateGenericPlot(p, vocabApi)
 		}
