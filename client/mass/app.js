@@ -172,7 +172,8 @@ class MassApp {
 						[auth.headerKey]: token
 					},
 					body: {
-						dslabel
+						dslabel,
+						embedder: location.hostname
 					}
 				})
 				// TODO: later may check against expiration time in response if included

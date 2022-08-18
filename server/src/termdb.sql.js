@@ -6,6 +6,7 @@ const categoricalSql = require('./termdb.sql.categorical')
 const conditionSql = require('./termdb.sql.condition')
 const connect_db = require('./utils').connect_db
 const isUsableTerm = require('#shared/termdb.usecase').isUsableTerm
+const serverconfig = require('./serverconfig')
 /*
 
 ********************** EXPORTED
@@ -1038,7 +1039,9 @@ thus less things to worry about...
 	FIXME for a termdb without subcohort, r.cohort will be undefined
 	returned object will have "undefined" as key. make sure an object like {undefined:"xx"} can work in client side
 	*/
-	q.getSupportedChartTypes = () => {
+	q.getSupportedChartTypes = embedder => {
+		const cred = serverconfig.dsCredentials?.[ds.label]
+
 		const rows = cn
 			.prepare(
 				`WITH c AS (
@@ -1062,9 +1065,12 @@ thus less things to worry about...
 			if (!r.type) continue
 			// !!! r.cohort is undefined for dataset without subcohort
 			if (!(r.cohort in supportedChartTypes)) {
-				supportedChartTypes[r.cohort] = new Set(['barchart', 'regression', 'dataDownload'])
+				supportedChartTypes[r.cohort] = new Set(['barchart', 'regression'])
 				numericTypeCount[r.cohort] = 0
 				if (ds.cohort.allowedChartTypes?.includes('matrix')) supportedChartTypes[r.cohort].add('matrix')
+				if (!cred.secret || embedder in cred.secret) {
+					supportedChartTypes[r.cohort].add('dataDownload')
+				}
 			}
 			// why would app.features be missing?
 			if (app.features?.draftChartTypes) {

@@ -63,7 +63,12 @@ class TermdbVocab {
 	// migrated from termdb/store
 	async getTermdbConfig() {
 		const data = await dofetch3(
-			'termdb?genome=' + this.vocab.genome + '&dslabel=' + this.vocab.dslabel + '&gettermdbconfig=1'
+			'termdb?genome=' +
+				this.vocab.genome +
+				'&dslabel=' +
+				this.vocab.dslabel +
+				'&gettermdbconfig=1' +
+				`&embedder=${window.location.hostname}`
 		)
 		// note: in case of error such as missing dataset, supply empty object
 		this.termdbConfig = data.termdbConfig || {}
@@ -645,6 +650,8 @@ class TermdbVocab {
 					filter
 				}
 			}
+
+			if (auth) init.body.embedder = window.location.hostname
 
 			promises.push(
 				dofetch3('termdb', init, this.opts.fetchOpts).then(data => {

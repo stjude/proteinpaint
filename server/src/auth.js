@@ -161,11 +161,13 @@ function getDsAuth(req) {
 function checkDsSecret(q, headers) {
 	const cred = serverconfig.dsCredentials?.[q.dslabel]
 	if (!cred) return
+	if (!q.embedder) throw `missing q.embedder`
+	if (!cred.secret[q.embedder]) throw `unknown q.embedder='${q.embedder}'`
 	// console.log(165, jsonwebtoken.sign({ accessibleDatasets: ['TermdbTest'] }, cred.secret))
 	const token = headers[cred.headerKey]
 	if (!token) throw `missing q['${cred.headerKey}']`
-	const payload = jsonwebtoken.verify(token, cred.secret)
-	console.log(169, payload)
+	const payload = jsonwebtoken.verify(token, cred.secret[q.embedder])
+	//console.log(169, payload)
 	if (!payload.accessibleDatasets.includes(q.dslabel)) throw `not authorized for dslabel='${q.dslabel}'`
 }
 

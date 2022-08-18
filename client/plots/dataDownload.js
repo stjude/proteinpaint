@@ -95,7 +95,7 @@ class DataDownload {
 			this.dom.submitDiv.style('display', '')
 			return false
 		} else {
-			this.dom.titleDiv.html('Please login')
+			this.dom.titleDiv.html('Requires login')
 			this.dom.terms.style('display', 'none')
 			this.dom.submitDiv.style('display', 'none')
 			return true

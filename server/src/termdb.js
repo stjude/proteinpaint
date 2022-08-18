@@ -90,7 +90,6 @@ export function handle_request_closure(genomes) {
 				res.send(await ds.getTermTypes(q))
 				return
 			} else if (q.for == 'matrix') {
-				console.log(q, req.headers)
 				checkDsSecret(q, req.headers)
 				const data = await require(`./termdb.matrix.js`).getData(q, ds)
 				res.send(data)
@@ -119,7 +118,7 @@ function trigger_gettermdbconfig(q, res, tdb) {
 	// add attributes to this object for revealing to client
 	const c = {
 		selectCohort: tdb.selectCohort, // optional
-		supportedChartTypes: tdb.q.getSupportedChartTypes(),
+		supportedChartTypes: tdb.q.getSupportedChartTypes(q.embedder),
 		allowedTermTypes: tdb.allowedTermTypes || [],
 		coxCumincXlab: tdb.coxCumincXlab,
 		timeScale: tdb.timeScale,
@@ -132,7 +131,6 @@ function trigger_gettermdbconfig(q, res, tdb) {
 		}
 	}
 	const cred = serverconfig.dsCredentials[q.dslabel]
-	console.log(135, cred)
 	if (cred) {
 		// TODO: may restrict required auth by chart type???
 		// currently, the client code assumes that it will only apply to the dataDownload MASS app
