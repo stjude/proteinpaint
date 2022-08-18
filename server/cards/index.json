@@ -64,8 +64,16 @@
             "section": "tracks",
             "description": "Quantitative data at genomic positions",
             "image": "https://pecan.stjude.cloud/static/examples/images/bigwig-square.png",
-            "flag": {"text":"updated", "expireDate":"2022-10-01"},
             "sandboxJson": "bigwig"
+        },
+        {
+            "type": "card",
+            "name": "JSON BED",
+            "section": "tracks",
+            "description": "Genomic feature annotation",
+            "image": "https://pecan.stjude.cloud/static/examples/images/bedj-square.png",
+            "sandboxJson": "bedj",
+            "searchterms": []
         },
         {
             "type": "card",
@@ -73,9 +81,112 @@
             "section": "tracks",
             "description": "From tumor and germline DNA",
             "image": "https://pecan.stjude.cloud/static/examples/images/aicheck-square.png",
-            "flag": {"text":"new", "expireDate":"2022-10-01"},
             "sandboxJson": "ai",
             "searchterms": ["aicheck", "tumor", "normal", "DNA"]
+        },
+        {
+            "type": "card",
+            "name": "Profile gene value",
+            "section": "tracks",
+            "description": "Profiling results & gene-level values",
+            "image": "https://pecan.stjude.cloud/static/examples/images/pgv-square.png",
+            "sandboxJson": "pgv",
+            "searchterms": ["pgv", "chromHMM", "profiling results", "gene level", "gene expression"]
+        },
+        {
+            "type": "card",
+            "name": "Expression rank",
+            "section": "tracks",
+            "description": "Against all samples from a cohort",
+            "image": "https://pecan.stjude.cloud/static/examples/images/exprank-square.png",
+            "sandboxJson": "exprank",
+            "searchterms": []
+        },
+        {
+            "type": "card",
+            "name": "Hi-C",
+            "section": "tracks",
+            "description": "Chromatin interaction at a locus",
+            "image": "https://pecan.stjude.cloud/static/examples/images/hic-square.png",
+            "sandboxJson": "hic",
+            "searchterms": ["hic", "hicstraw", "chromatin interaction", "conformation"]
+        },
+        {
+            "type": "card",
+            "name": "Lollipop",
+            "section": "tracks",
+            "description": "Coding mutations and gene fusions",
+            "image": "https://pecan.stjude.cloud/static/examples/images/lollipop-square.png",
+            "sandboxJson": "lollipop",
+            "searchterms": []
+        },
+        {
+            "type": "card",
+            "name": "Splice Junction",
+            "section": "tracks",
+            "description": "Single sample and cohort",
+            "image": "https://pecan.stjude.cloud/static/examples/images/junction-cohort-square.png",
+            "sandboxJson": "junction",
+            "searchterms": []
+        },
+        {
+            "type": "card",
+            "name": "Track list & facet table",
+            "section": "tracks",
+            "description": " ",
+            "image": "https://pecan.stjude.cloud/static/examples/images/tklist-square.png",
+            "sandboxJson": "tklist",
+            "searchterms": []
+        },
+        {
+            "type": "card",
+            "name": "Arc Track",
+            "section": "tracks",
+            "description": "Pairwise chromatin interactions",
+            "image": "https://pecan.stjude.cloud/static/examples/images/arc-square.png",
+            "sandboxJson":"arc",
+            "searchterms": []
+        },
+        {
+            "type": "card",
+            "name": "ASE",
+            "section": "tracks",
+            "flag": {"text": "beta"},
+            "description": "Allele-specific expression analysis",
+            "image": "https://pecan.stjude.cloud/static/examples/images/ase-square.png",
+            "sandboxJson": "ase",
+            "searchterms": ["Allele-specific gene expression"]
+        },
+        {
+            "type": "card",
+            "name": "Gene Fusion",
+            "section": "tracks",
+            "hidden": true,
+            "description": "",
+            "image": "",
+            "sandboxJson": "genefusion",
+            "searchterms": [""]
+        },
+        {
+            "type": "card",
+            "name": "BAM",
+            "section": "tracks",
+            "flag": {"text": "beta"},
+            "description": "Sequence reads alignment",
+            "image": "https://pecan.stjude.cloud/static/examples/images/bam-square.png",
+            "sandboxJson": "bam",
+            "searchterms": ["BLAT"]
+        },
+        {
+            "type": "card",
+            "name": "Bampile",
+            "hidden": true,
+            "section": "tracks",
+            "flag": {"text": "beta"},
+            "description": "Deep sequencing",
+            "image": "https://pecan.stjude.cloud/static/examples/images/bampile-square.png",
+            "sandboxJson": "bampile",
+            "searchterms": []
         },
         {
             "type": "card",
@@ -89,6 +200,61 @@
             "searchterms": []
         },
         {
+            "type": "card",
+            "name": "Additional Track Features",
+            "section": "tracks",
+            "description": "ProteinPaint arguments applicable to any track",
+            "image": "https://pecan.stjude.cloud/static/examples/images/code-square.png",
+            "sandboxJson": "tkFeatures",
+            "searchterms": []
+        },
+        {
+            "type": "card",
+            "name": "FusionEditor",
+            "section": "apps",
+            "description": "Review CICERO output",
+            "image": "https://pecan.stjude.cloud/static/examples/images/fusion-editor-square.png",
+            "sandboxJson": "fusioneditor",
+            "searchterms": []
+        },
+        {
+            "type": "card",
+            "name": "2DMAF",
+            "section": "apps",
+            "description": "Somatic mutations from diagnosis & relapse",
+            "image": "https://pecan.stjude.cloud/static/examples/images/2dmaf-square.png",
+            "sandboxJson": "2dmaf",
+            "searchterms": ["2dmaf", "clonal evolution", "point mutations"]
+        },
+        {
+            "type": "card",
+            "name": "Load mutations from text files",
+            "section": "apps",
+            "description": "Mutation heatmap",
+            "image": "https://pecan.stjude.cloud/static/examples/images/heatmap-square.png",
+            "sandboxJson": "study",
+            "searchterms": ["heat map"]
+        },
+        {
+            "type": "card",
+            "name": "MA+Volcano plots",
+            "section": "apps",
+            "description": "Differential gene expression",
+            "image": "https://pecan.stjude.cloud/static/examples/images/mavb-square.png",
+            "sandboxJson": "mavb",
+            "searchterms": ["differential gene expression", "RNAseq coverage"]
+        },
+        {
+            "type": "card",
+            "name": "MAF-timeline",
+            "section": "apps",
+            "hidden": true, 
+            "description": "Mutant allele fraction timeline chart by date",
+            "image": "https://pecan.stjude.cloud/static/examples/images/maf-timeline-square.png",
+            "sandboxJson": "maf.timeline",
+            "searchterms": ["mutant allele fraction", "snv", "snv4"]
+        },
+        {
             "type": "button",
             "name": "Pediatric Cancer Mutation",
             "section": "datasetButtons",
@@ -99,6 +265,24 @@
             "name": "Pediatric2 GenomePaint",
             "section": "datasetButtons",
             "sandboxJson": "ped2Btn"
+        },
+        {
+            "type": "button",
+            "name": "NCI GDC",
+            "section": "datasetButtons",
+            "sandboxJson": "xx"
+        },
+        {
+            "type": "button",
+            "name": "CIViC",
+            "section": "datasetButtons",
+            "sandboxJson": "xx"
+        },
+        {
+            "type": "button",
+            "name": "Survivorship Study",
+            "section": "datasetButtons",
+            "sandboxJson": "xx"
         },
         {
             "type": "card",

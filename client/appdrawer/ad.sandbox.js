@@ -4,32 +4,96 @@ import * as utils from './utils'
 import { event, select, selectAll } from 'd3-selection'
 // import { addGeneSearchbox } from '#dom/genesearch'
 // import { Menu } from '#dom/menu'
-// import { debounce } from 'debounce'
 
 // js-only syntax highlighting for smallest bundle, see https://highlightjs.org/usage/
 // also works in rollup and not just webpack, without having to use named imports
-// import hljs from 'highlight.js/lib/core'
-// import javascript from 'highlight.js/lib/languages/javascript'
-// hljs.registerLanguage('javascript', javascript)
-// import json from 'highlight.js/lib/languages/json'
+import hljs from 'highlight.js/lib/core'
+import javascript from 'highlight.js/lib/languages/javascript'
+hljs.registerLanguage('javascript', javascript)
+import json from 'highlight.js/lib/languages/json'
 // import { defaultcolor } from '../shared/common'
-// hljs.registerLanguage('json', json)
+hljs.registerLanguage('json', json)
 
 export async function openSandbox(element, holder) {
-	const res = element.sandboxJson
-		? await dofetch3(`/cardsjson?jsonfile=${element.sandboxJson}`)
-		: await dofetch3(`/cardsjson?file=${element.sandboxHtml}`)
-	if (res.error) {
-		sayerror(holder.append('div'), res.error)
-		return
-	}
-
 	const sandboxDiv = newSandboxDiv(holder)
 	sandboxDiv.header_row
 	sandboxDiv.header.text(element.name)
 	sandboxDiv.body.style('overflow', 'hidden')
 
-	if (element.type == 'card' && element.sandboxJson) openCardSandbox(element, res, sandboxDiv)
+	if (element.type == 'nestedCard') openNestedCardSandbox(element, sandboxDiv)
+	if (element.type == 'card' && element.sandboxJson) {
+		const res = element.sandboxJson
+			? await dofetch3(`/cardsjson?jsonfile=${element.sandboxJson}`)
+			: await dofetch3(`/cardsjson?file=${element.sandboxHtml}`)
+		if (res.error) {
+			sayerror(holder.append('div'), res.error)
+			return
+		}
+		openCardSandbox(element, res, sandboxDiv)
+	}
+}
+
+function openNestedCardSandbox(nestedCard, sandboxDiv) {
+	// Colors all sandboxes
+	// sandboxDiv.body.style('justify-content', 'center').style('background-color', '#f2ebdc')
+
+	const ucList = sandboxDiv.body
+		.append('ul')
+		.style('list-style', 'none')
+		.style('display', 'grid')
+		.style('grid-template-columns', '40vw 40vw')
+		.style('grid-template-rows', 'repeat(1, auto)')
+		.style('gap', '5px')
+
+	const ucContent = sandboxDiv.body.append('div').style('padding', '0vw 0vw 2vw 0vw')
+
+	function displayUseCases(nestedCard, listDiv, contentDiv) {
+		//joins together all the use cases objects from index.json and displays them as cards in a newly created sandbox.
+		nestedCard.children.forEach(child => {
+			const uc = listDiv.append('li')
+			uc.attr('class', 'sjpp-app-drawer-card')
+				.style('padding', '10px')
+				.style('margin', '5px')
+				.html(
+					`<p style="margin-left: 12px; font-size:14.5px;font-weight:500; display: block;">${child.name}</p>
+				<p style="display: block; font-size: 13px; font-weight: 300; margin-left: 20px; justify-content: center; font-style:oblique; color: #403f3f;">${child.description}</p>`
+				)
+				.on('click', () => {
+					event.stopPropagation()
+					listDiv.selectAll('*').remove()
+					showUseCaseContent(child, contentDiv)
+				})
+			return JSON.stringify(uc)
+		})
+	}
+
+	displayUseCases(nestedCard, ucList, ucContent)
+
+	async function showUseCaseContent(child, div) {
+		//Fetches html from use case .txt file, applies a 'back' button at the top, and renders to client
+		const res = await dofetch3(`/cardsjson?file=${child.sandboxHtml}`) //only HTML files enabled at the moment
+		if (res.error) {
+			sayerror(holder.append('div'), res.error)
+			return
+		}
+
+		const content_div = div
+			.append('div')
+			.style('background-color', 'white')
+			.style('margin', '0vw 10vw')
+			.style('padding', '10px')
+
+		const backBtn = utils.makeButton(content_div, '<').style('background-color', '#d0e3ff')
+		backBtn.style('font-size', '20px').on('click', () => {
+			div.selectAll('*').remove()
+			displayUseCases(nestedCard, ucList, ucContent)
+		})
+
+		content_div
+			.append('div')
+			.style('margin', '0vw 5vw')
+			.html(res.file)
+	}
 }
 
 function openCardSandbox(card, res, sandboxDiv) {
@@ -51,7 +115,7 @@ function openCardSandbox(card, res, sandboxDiv) {
 	const mainButtonsContentDiv = sandboxDiv.body.append('div')
 
 	addButtons(sandboxArgs.buttons, mainButtonsDiv)
-	//addArrowButtons() TODO, remove type argument
+	addArrowBtns(sandboxArgs, 'main', mainButtonsDiv, mainButtonsContentDiv)
 	if (card.disableTopTabs) renderContent(sandboxArgs.ppcalls[0], sandboxDiv.body, card)
 	else {
 		const topTabsDiv = sandboxDiv.body
@@ -78,6 +142,27 @@ function renderContent(ppcalls, div, card) {
 	//Proteinpaint app drawer specific rendering
 	makeDataDownload(ppcalls.download, buttonsDiv, card.section)
 	showURLLaunch(ppcalls.urlparam, buttonsDiv, card.section)
+	addArrowBtns(ppcalls, 'call', buttonsDiv, buttonsContentDiv)
+
+	if (!card.disableTopTabs) {
+		div
+			.append('hr')
+			.style('border', '0')
+			.style('border-top', '1px dashed #e3e3e6')
+			.style('width', '100%')
+	}
+
+	const runpp_arg = {
+		holder: div
+			.append('div')
+			.style('margin', '20px')
+			.node(),
+		host: window.location.origin
+	}
+
+	const callpp = JSON.parse(JSON.stringify(ppcalls.runargs))
+
+	runproteinpaint(Object.assign(runpp_arg, callpp))
 }
 
 //********* Tab Menu Functions *********
@@ -130,8 +215,8 @@ function makeTopTabs(ppcalls, card) {
 			active: false,
 			callback: async div => {
 				try {
-					const examplesOnly = ppcalls.filter(p => p.is_ui != true) //Fix to rm UIs from Examples tab
-					// makeLeftsideTabMenu(ppcalls, div, examplesOnly)
+					const examplesOnly = ppcalls.filter(p => p.isUi != true) //Fix to rm UIs from Examples tab
+					makeLeftsideTabMenu(card, div, examplesOnly)
 				} catch (e) {
 					alert('Error: ' + (e.message || e))
 				}
@@ -183,6 +268,71 @@ function makeParentTabsMenu(ppcalls, card, tabsDiv, contentDiv) {
 	}
 }
 
+async function makeLeftsideTabMenu(card, div, examplesOnly) {
+	const tabs = examplesOnly.map((p, index) => getTabData(p, index, card.section))
+
+	const menuWrapper = div.append('div').classed('sjpp-vertical-tab-menu', true)
+	const tabsDiv = menuWrapper
+		.append('div')
+		.classed('sjpp-tabs-div', true)
+		.style('min-width', '150px') //Fixes the unsightly problem of tabs dramatically changing size on click.
+	const tabsContentDiv = menuWrapper.append('div').classed('sjpp-content-div', true)
+
+	for (const tab of tabs) {
+		tab.tab = tabsDiv
+			.append('button')
+			.attr('type', 'submit')
+			.text(tab.label)
+			.style('font', 'Arial')
+			.style('font-size', '16px')
+			.style('padding', '6px')
+			.style('color', tab.active ? '#1575ad' : '#757373') //#1575ad: blue color, same as the top tab. #757373: default darker gray color
+			.style('background-color', 'transparent')
+			.style('border', 'none')
+			.style('border-right', tab.active ? '8px solid #1575ad' : 'none')
+			.style('border-radius', 'unset')
+			.style('width', '100%')
+			.style('text-align', 'right')
+			.style('margin', '10px 0px 10px 0px')
+
+		tab.content = tabsContentDiv.append('div').style('display', tab.active ? 'block' : 'none')
+
+		if (tab.active) {
+			tab.callback(tab.content)
+			delete tab.callback
+		}
+
+		tab.tab.on('click', () => {
+			for (const t of tabs) {
+				t.active = t === tab
+				t.tab.style('border-right', t.active ? '8px solid #1575ad' : 'none')
+				t.tab.style('color', t.active ? '#1575ad' : '#757373')
+				t.content.style('display', t.active ? 'block' : 'none')
+			}
+			if (tab.callback) {
+				tab.callback(tab.content)
+				delete tab.callback
+			}
+		})
+	}
+}
+
+function getTabData(ppcalls, i, app) {
+	return {
+		label: ppcalls.label,
+		active: i === 0,
+		callback: async div => {
+			const wait = tab_wait(div)
+			try {
+				renderContent(ppcalls, div, app)
+				wait.remove()
+			} catch (e) {
+				wait.text('Error: ' + (e.message || e))
+			}
+		}
+	}
+}
+
 // ******* Helper Functions *********
 
 function addHtmlText(text, div, flag) {
@@ -222,6 +372,109 @@ function addButtons(buttons, div) {
 	}
 }
 
+function makeArrowButtons(arrows, btns) {
+	if (arrows) {
+		arrows.forEach(arrow => {
+			const contents = `<div style="margin:10px;" class="sjpp-arrow-content">
+				${arrow.message ? `<div style="margin: 1vw;">${arrow.message}</div>` : ''}
+				${
+					arrow.links
+						? arrow.links
+								.map(hyperlink => {
+									if (!hyperlink) return ''
+									if (hyperlink.download) {
+										return `<a style="cursor:pointer; margin-left:20px;" onclick="event.stopPropagation();" href="${hyperlink.download}", target="_self" download>${hyperlink.name}</a>`
+									}
+									if (hyperlink.link) {
+										return `<a style="cursor:pointer; margin-left:20px;" onclick="event.stopPropagation();" href="${hyperlink.link}", target="_blank">${hyperlink.name}</a>`
+									}
+								})
+								.join('')
+						: ''
+				}</div>`
+
+			btns.push({
+				name: arrow.name,
+				callback: async rdiv => {
+					try {
+						rdiv.append('div').html(contents)
+					} catch (e) {
+						alert('Error: ' + e)
+					}
+				}
+			})
+		})
+	}
+}
+
+async function addArrowBtns(args, type, bdiv, rdiv) {
+	//Creates arrow buttons from every .arrowButtons object as well as `Code`, `View Data`, and `Citation`.
+	let btns = []
+	console.log(bdiv)
+	if ((type = 'main')) showCode(args, btns) //Only show Code for examples, not in top div
+	if (args.datapreview) showViewData(btns, args.datapreview)
+	if ((type = 'call' && args.citation)) {
+		//Only show citation in top div
+		const res = await dofetch3('/cardsjson?jsonfile=citations')
+		if (res.error) {
+			console.log(`Error: ${res.error}`)
+			return
+		}
+		const pubs = res.jsonfile.publications
+		for (const pub of pubs) {
+			if (args.citation == pub.id) showCitation(btns, pub)
+		}
+	}
+	makeArrowButtons(args.arrowButtons, btns)
+
+	const active_btn = btns.findIndex(b => b.active) == -1 ? false : true
+
+	for (let i = 0; i < btns.length; i++) {
+		const btn = btns[i]
+
+		btn.btn = utils.makeButton(bdiv, btn.name + ' ▼')
+
+		btn.c = rdiv
+			.append('div')
+			.style('margin', '20px 0px 10px 20px')
+			.style('display', (active_btn && i == 0) || btn.active ? 'block' : 'none')
+
+		if ((active_btn && i == 0 && btn.callback) || btn.active) {
+			btn.callback(btn.c)
+			delete btn.callback
+		}
+
+		btn.btn.on('click', () => {
+			if (btn.c.style('display') != 'none') {
+				btn.btn
+					.text(btn.name + ' ▼')
+					.style('color', 'black')
+					.style('background-color', '#cfe2f3')
+				btn.c.style('display', 'none')
+			} else {
+				btn.btn
+					.text(btn.name + ' ▲')
+					.style('color', 'whitesmoke')
+					.style('background-color', '#487ba8')
+				appear(btn.c)
+				for (let j = 0; j < btns.length; j++) {
+					if (i != j) {
+						btns[j].btn
+							.text(btns[j].name + ' ▼')
+							.style('color', 'black')
+							.style('background-color', '#cfe2f3')
+						btns[j].c.style('display', 'none')
+					}
+				}
+			}
+			if (btn.callback) {
+				btn.callback(btn.c)
+				delete btn.callback
+			}
+		})
+	}
+}
+
 // ******* App Drawer Specific Helper Functions *********
 
 function showURLLaunch(urlparam, div, section) {
@@ -242,4 +495,167 @@ function makeDataDownload(download, div, section) {
 			window.open(`${download}`, '_self', 'download')
 		})
 	}
+}
+
+async function showCode(ppcalls, btns) {
+	//Push 'Code' and div callback to `btns`. Create button in addArrowButtons
+	if (ppcalls.isUi == true) return
+
+	//Leave the weird spacing below. Otherwise the lines won't display the same identation in the sandbox
+	const runppCode = hljs.highlight(
+		`runproteinpaint({
+    host: "${window.location.origin}",
+    holder: document.getElementById('a'),
+    ` + // Fix for first argument not properly appearing underneath holder
+			JSON.stringify(ppcalls.runargs, '', 4)
+				.replaceAll(/"(.+)"\s*:/g, '$1:')
+				.replaceAll(/\\t/g, '	')
+				.replaceAll(/\\n/g, '\r\t')
+				.slice(1, -1)
+				.trim() +
+			`\r})`,
+		{ language: 'javascript' }
+	).value
+
+	const runppContents = `<pre style="border: 1px solid #d7d7d9; align-items: center; justify-content: center; margin: 0px 10px 5px 30px; overflow:auto; max-height:400px; ${
+		ppcalls.jsonpath ? `min-height:400px;` : `min-height: auto;`
+	}">
+	<code style="font-size:14px; display:block;">${runppCode}</code></pre>`
+
+	btns.push({
+		name: 'Code',
+		callback: async rdiv => {
+			try {
+				if (ppcalls.jsonpath) {
+					const includeJson = await showJsonCode(ppcalls)
+					const runppHeader = "<p style='margin:20px 5px 20px 25px;'>ProteinPaint JS code</p>"
+					const grid = rdiv
+						.append('div')
+						.style('display', 'grid')
+						.style('grid-template-columns', 'repeat(auto-fit, minmax(100px, 1fr))')
+						.style('gap', '5px')
+					grid
+						.append('div')
+						.style('display', 'block')
+						.html(runppHeader + runppContents)
+					grid
+						.append('div')
+						.style('display', 'block')
+						.html(includeJson)
+				} else {
+					rdiv.append('div').html(runppContents)
+				}
+			} catch (e) {
+				alert('Error: ' + e)
+			}
+		}
+	})
+}
+
+async function showJsonCode(ppcalls) {
+	const jsondata = await dofetch('textfile', { file: ppcalls.jsonpath })
+	const json_code = JSON.parse(jsondata.text)
+
+	const splitpath = ppcalls.jsonpath.split('/')
+	const filename = splitpath[splitpath.length - 1]
+
+	let lines = JSON.stringify(json_code, '', 4).split('\n')
+	let slicedjson
+	if (lines.length > 120) {
+		lines = lines.slice(0, 100)
+		slicedjson = true
+	}
+	const code = hljs.highlight(lines.join('\n'), { language: 'json' }).value
+
+	const json_contents = `<div>
+			<p style="margin: 20px 5px 20px 25px; display: inline-block;">JSON code </p>
+			<p style="display: inline-block; color: #696969; font-style:oblique;"> (contents of ${filename})</p>
+		</div> 
+		<pre style="border: 1px solid #d7d7d9; align-items: center; justify-content: center; margin: 0px 10px 5px 10px; max-height:400px; min-height:400px; overflow:auto;">
+			<code class="sjpp-json-code" style="font-size:14px; display:block;">${
+				slicedjson == true
+					? `${code} ...<br><p style='margin:20px 25px; justify-content:center;'>Showing first 100 lines. To see the entire JSON, download ${filename} from the button above.</p>`
+					: `${code}`
+			}
+			</code>
+		</pre>`
+
+	return json_contents
+}
+
+function showCitation(btns, pub) {
+	//Push 'Citation' and div callback to `btns`. Create button in addArrowButtons
+	btns.push({
+		name: 'Citation',
+		callback: async rdiv => {
+			try {
+				rdiv
+					.append('div')
+					.style('margin-left', '5w')
+					.html(
+						`<p style="display: inline-block;">${pub.title}. <em>${pub.journal}</em>, ${pub.year}. </p>
+						${
+							pub.pmid
+								? `<p style="display: inline-block;">PMID: <a href="${pub.pmidURL}" target="_blank">${pub.pmid}</a></p>`
+								: `<p>doi: <a href="${pub.doi}" target="_blank style="display: inline-block;">${pub.doi}</a></p>`
+						}`
+					)
+			} catch (e) {
+				alert('Error: ' + e)
+			}
+		}
+	})
+}
+
+function makeDataPreviewDiv(content, contLength, div, filename, message) {
+	//Create collapsible div displaying, if available, HTML message, file name, and 10 lines of data
+	div.append('div').html(`
+		${message ? `<p style="display:block;">${message}<p>` : ''}
+		<p style="display: inline-block;">Data preview <span style="color: #696969; font-style:oblique;"> 
+		${contLength > 10 ? `(first ${content.length} rows of ${filename})</span></p>` : `(content of ${filename})</span></p>`} 
+	`)
+	const bedjContent_div = div
+		.append('div')
+		.style('display', 'grid')
+		.style('grid-template-columns', '1fr')
+		.style('max-width', '80%')
+		.style('margin-left', '10px')
+		.style('border', '1px solid rgb(227, 227, 230)')
+		.style('white-space', 'pre')
+		.style('overflow-x', 'scroll')
+		.style('opacity', '0.65')
+		.style('padding', '1vw')
+	content.forEach(c => {
+		bedjContent_div.append('code').html(c)
+	})
+}
+
+async function showViewData(btns, data) {
+	//Push 'View Data' and div callback to `btns`. Create button in addArrowButtons
+	btns.push({
+		name: 'View Data',
+		callback: async rdiv => {
+			try {
+				for (const file of data) {
+					const res = await dofetch3(`/cardsjson?datafile=${file.file}&tabixCoord=${file.tabixQueryCoord}`)
+					if (res.error) {
+						console.log(`Error: ${res.error}`)
+						return
+					}
+					const returnedContent = res.file
+					const contLength = returnedContent.length
+					//Limit to only the first 10 rows
+					const content = returnedContent.slice(0, 10)
+
+					//Parse file path for file name to show above content
+					const splitpath = file.file.split('/')
+					const filename = splitpath[splitpath.length - 1]
+
+					makeDataPreviewDiv(content, contLength, rdiv, filename, file.message)
+				}
+			} catch (e) {
+				alert('Error: ' + e)
+			}
+		}
+	})
 }

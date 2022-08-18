@@ -1,7 +1,7 @@
 {
     "ppcalls": [
         {
-            "is_ui": true,
+            "isUi": true,
             "runargs": {
                 "genome": "hg19",
                 "nobox": 1,
