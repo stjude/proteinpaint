@@ -1,6 +1,6 @@
 {
   "name": "@stjude/proteinpaint-client",
-  "version": "2.1.5",
+  "version": "2.2.0",
   "description": "a genomics visualization tool for exploring a cohort's genotype and phenotype data",
   "main": "dist/app.js",
   "module": "dist/app.js",
@@ -25,7 +25,8 @@
     "test": "node ./test/import-specs.js && npm run tape",
     "tape": "cat ../public/bin/proteinpaint.js ./test/init.js | tape-run --static ../public",
     "examples": "node ./test/import-specs.js name=_x_.examples && npm run tape",
-    "rollw": "rm -rf dist && rollup -c ./rollup.config.js -w"
+    "rollw": "rm -rf dist && rollup -c ./rollup.config.js -w",
+    "build": "rm -rf dist && rollup -c ./rollup.config.js && npm pack"
   },
   "author": "",
   "license": "UNLICENSED",
@@ -72,7 +73,7 @@
     "registry": "https://npm.pkg.github.com/"
   },
   "files": [
-    "dist"
+    "dist/*"
   ],
   "bugs": {
     "url": "https://github.com/stjude/pp-dist"
