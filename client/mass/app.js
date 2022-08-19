@@ -160,7 +160,7 @@ class MassApp {
 				return
 			}
 			if (auth.type === 'jwt') {
-				const token = this.opts.getDatasetAccessToken()
+				const token = this.opts.getDatasetAccessToken?.()
 				if (!token) {
 					delete this.verifiedToken
 					return
