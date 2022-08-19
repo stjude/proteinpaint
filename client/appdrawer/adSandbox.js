@@ -10,8 +10,6 @@ hljs.registerLanguage('javascript', javascript)
 import json from 'highlight.js/lib/languages/json'
 hljs.registerLanguage('json', json)
 
-
-
 export async function openSandbox(element, pageArgs) {
 	const sandboxDiv = newSandboxDiv(pageArgs.apps_sandbox_div)
 	sandboxDiv.header_row
@@ -21,13 +19,13 @@ export async function openSandbox(element, pageArgs) {
 	if (element.type == 'nestedCard') return openNestedCardSandbox(element, sandboxDiv)
 
 	const res = element.sandboxJson
-			? await dofetch3(`/cardsjson?jsonfile=${element.sandboxJson}`)
-			: await dofetch3(`/cardsjson?file=${element.sandboxHtml}`)
-		if (res.error) {
-			sayerror(holder.append('div'), res.error)
-			return
-		}
-	
+		? await dofetch3(`/cardsjson?jsonfile=${element.sandboxJson}`)
+		: await dofetch3(`/cardsjson?file=${element.sandboxHtml}`)
+	if (res.error) {
+		sayerror(holder.append('div'), res.error)
+		return
+	}
+
 	if (element.type == 'card') return openCardSandbox(element, res, sandboxDiv) //only for .sandboxJson
 	if (element.type == 'dsButton') return openDatasetSandbox(pageArgs, element, res, sandboxDiv) //only for .sandboxJson
 }
@@ -83,7 +81,7 @@ function openNestedCardSandbox(nestedCard, sandboxDiv) {
 			.style('margin', '0vw 10vw')
 			.style('padding', '10px')
 
-		const backBtn = utils.makeButton({ div: content_div, text: '<'}).style('background-color', '#d0e3ff')
+		const backBtn = utils.makeButton({ div: content_div, text: '<' }).style('background-color', '#d0e3ff')
 		backBtn.style('font-size', '20px').on('click', () => {
 			div.selectAll('*').remove()
 			displayUseCases(nestedCard, ucList, ucContent)
@@ -104,14 +102,14 @@ function openCardSandbox(card, res, sandboxDiv) {
 		ppcalls: res.jsonfile.ppcalls,
 		buttons: res.jsonfile.buttons,
 		arrowButtons: res.jsonfile.arrowButtons,
-		update_message: res.jsonfile.update_message, //TODO change key to flagMessage
+		ribbonMessage: res.jsonfile.ribbonMessage,
 		citation: res.jsonfile.citation_id
 	}
 
 	// Main intro text above tabs - use for permanent text
 	addHtmlText(sandboxArgs.intro, sandboxDiv.body)
 	// Temporary text expiring with flags
-	addHtmlText(sandboxArgs.update_message, sandboxDiv.body, card.flag)
+	if (card.flag) addHtmlText(sandboxArgs.ribbonMessage, sandboxDiv.body, card.flag)
 
 	const mainButtonsDiv = sandboxDiv.body.append('div')
 	const mainButtonsContentDiv = sandboxDiv.body.append('div')
@@ -412,10 +410,9 @@ function makeArrowButtons(arrows, btns) {
 async function addArrowBtns(args, type, bdiv, rdiv) {
 	//Creates arrow buttons from every .arrowButtons object as well as `Code`, `View Data`, and `Citation`.
 	let btns = []
-	console.log(bdiv)
-	if ((type = 'main')) showCode(args, btns) //Only show Code for examples, not in top div
+	if (type == 'call') showCode(args, btns) //Only show Code for examples, not in top div
 	if (args.datapreview) showViewData(btns, args.datapreview)
-	if ((type = 'call' && args.citation)) {
+	if (type == 'main' && args.citation) {
 		//Only show citation in top div
 		const res = await dofetch3('/cardsjson?jsonfile=citations')
 		if (res.error) {
@@ -491,7 +488,10 @@ function showURLLaunch(urlparam, div, section) {
 
 function makeDataDownload(download, div, section) {
 	if (download) {
-		const dataBtn = utils.makeButton({ div, text: section == 'apps' ? 'Download App File(s)' : 'Download Track File(s)' })
+		const dataBtn = utils.makeButton({
+			div,
+			text: section == 'apps' ? 'Download App File(s)' : 'Download Track File(s)'
+		})
 		dataBtn.on('click', () => {
 			event.stopPropagation()
 			window.open(`${download}`, '_self', 'download')
@@ -665,7 +665,6 @@ async function showViewData(btns, data) {
 /********** Dataset Button Functions  **********/
 
 async function openDatasetSandbox(pageArgs, element, res, sandboxDiv) {
-
 	const par = {
 		// First genome in .availableGenomes is the default
 		availableGenomes: res.jsonfile.button.availableGenomes,
@@ -796,7 +795,7 @@ function addDatasetGenomeBtns(div, par, genomes) {
 			btns.push({
 				name: genome,
 				active: false,
-				btn: utils.makeButton({ div, text:genome }),
+				btn: utils.makeButton({ div, text: genome }),
 				callback: par => {
 					par.genome = genomes[genome]
 				}
@@ -832,12 +831,10 @@ function addDatasetGenomeBtns(div, par, genomes) {
 }
 
 function makeURLbutton(div, coords, par) {
-	const URLbtn = utils.makeButton({div, text:'Run Result from URL'})
+	const URLbtn = utils.makeButton({ div, text: 'Run Result from URL' })
 	// Use position for genome browser and gene for protein view
 	const blockOn =
-		par.runargs.block == true
-			? `position=${coords.chr}:${coords.start}-${coords.stop}`
-			: `gene=${coords.geneSymbol}`
+		par.runargs.block == true ? `position=${coords.chr}:${coords.start}-${coords.stop}` : `gene=${coords.geneSymbol}`
 	URLbtn.on('click', () => {
 		event.stopPropagation()
 		window.open(`?genome=${par.genome.name}&${blockOn}&${par.dsURLparam}`, '_blank')

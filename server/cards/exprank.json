@@ -51,7 +51,6 @@
             }
         }
     ],
-    "update_message": "Please see the additional track in the example for how to display the expression rank, FPKM, or TPM scale by default.",
     "buttons": [
         {
             "name": "Documentation",

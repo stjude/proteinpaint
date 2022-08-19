@@ -9,7 +9,7 @@
                 },
                 {
                     "id": "tracks",
-                    "name": "Genome Browser Tracks"
+                    "name": "Tracks"
                 }
             ]
         },
@@ -38,13 +38,13 @@
                 {
                     "name": "Generate GenomePaint SV View",
                     "type": "card",
-                    "description": "",
+                    "description": "Create a SV view with BigWig tracks using Python script",
                     "sandboxHtml": "svview"
                 },
                 {
                     "name": "DNAnexus File Viewer",
                     "type": "card",
-                    "description": "",
+                    "description": "Instructions on launching ProteinPaint from DNAnexus",
                     "sandboxHtml": "dnanexus"
                 }
             ]

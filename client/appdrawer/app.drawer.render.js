@@ -50,7 +50,7 @@ function makeParentGrid(wrapper, renderArgs) {
 		//*************TODO change responsive style to accomodate multiple columns
 		.style('grid-template-columns', 'repeat(auto-fit, minmax(425px, 1fr))')
 		.style('gap', '10px')
-		.style('padding', '10px 20px')
+		.style('padding', '10px')
 		.style('text-align', 'left')
 
 	//Allow user to create multiple parent columns in columnsLayout
@@ -91,7 +91,8 @@ function loadElements(elements, pageArgs) {
 					.style('display', 'grid')
 					.style('grid-template-columns', 'repeat(auto-fit, minmax(320px, 1fr))')
 					.style('gap', '10px')
-					.style('list-style', 'none'),
+					.style('list-style', 'none')
+					.style('margin', '15px 0px'),
 				element,
 				pageArgs
 			})

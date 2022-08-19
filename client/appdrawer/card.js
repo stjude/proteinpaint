@@ -83,7 +83,8 @@ function setRenderers(self) {
 			)
 		}
 
-		self.makeRibbon = function(flag) { //only relevant for 'card', not 'nestedCard'
+		self.makeRibbon = function(flag) {
+			//only relevant for 'card', not 'nestedCard'
 			const ribbon = card
 				.append('div')
 				.classed('sjpp-app-drawer-card-ribbon', true)
@@ -120,9 +121,10 @@ function setRenderers(self) {
 
 		if (self.opts.element.flag) {
 			const today = new Date()
-			const expireDate = new Date(self.opts.element.flag.expireDate)
+			self.opts.element.flagExpireDate = new Date(self.opts.element.flag.expireDate)
 			//Allows flags to expire or appear indefinitely
-			if (expireDate > today || self.opts.element.flag.expireDate == undefined) self.makeRibbon(self.opts.element.flag)
+			if (self.opts.element.flagExpireDate > today || self.opts.element.flag.expireDate == undefined)
+				self.makeRibbon(self.opts.element.flag)
 		}
 
 		card.on('click', async () => {

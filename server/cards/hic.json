@@ -27,7 +27,6 @@
             }
         }
     ],
-    "update_message": "New <span style='font-family: Courier; opacity: 0.65;'>normalizationmethod</span> to show normalization by VC, VC_SQRT, or KR by default.",
     "buttons": [
         {
             "name": "Documentation",
