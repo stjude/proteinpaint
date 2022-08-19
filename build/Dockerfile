@@ -3,7 +3,9 @@
 ARG registry=docker.io/library
 
 FROM ${registry}/node:12-stretch AS ppbase
+ARG platform="x86_64"
 
+RUN echo "PLATFORM IS ${platform}"
 ENV RUSTUP_HOME=/usr/local/rustup \
     CARGO_HOME=/usr/local/cargo \
     PATH=/usr/local/cargo/bin:$PATH
@@ -51,11 +53,11 @@ RUN apt-get update && apt-get install -y r-base \
 RUN mkdir -p /home/root/pp && cd /home/root/pp && mkdir app && mkdir tp && mkdir cache && mkdir tools
 
 RUN wget https://pecan.stjude.cloud/static/pp-support/linux/straw -P /home/root/pp/tools/ && \
-    wget -O /usr/local/bin/clustalo http://www.clustal.org/omega/clustalo-1.2.4-Ubuntu-x86_64 && \
-    chmod 755 /usr/local/bin/clustalo && \
-    wget http://hgdownload.soe.ucsc.edu/admin/exe/linux.x86_64/bigWigSummary -P /home/root/pp/tools/ && \
-    wget http://hgdownload.soe.ucsc.edu/admin/exe/linux.x86_64/bigBedToBed -P /home/root/pp/tools/ && \
-    wget http://hgdownload.soe.ucsc.edu/admin/exe/linux.x86_64/bigBedNamedItems -P /home/root/pp/tools/
+    wget -O /usr/local/bin/clustalo "http://www.clustal.org/omega/clustalo-1.2.4-Ubuntu-${platform}"
+RUN chmod 755 /usr/local/bin/clustalo && \
+    wget http://hgdownload.soe.ucsc.edu/admin/exe/linux.$platform/bigWigSummary -P /home/root/pp/tools/ && \
+    wget http://hgdownload.soe.ucsc.edu/admin/exe/linux.$platform/bigBedToBed -P /home/root/pp/tools/ && \
+    wget http://hgdownload.soe.ucsc.edu/admin/exe/linux.$platform/bigBedNamedItems -P /home/root/pp/tools/
 
 
 # need npm v7 to support workspaces
@@ -66,7 +68,7 @@ RUN npm install --global npm@7
 FROM ppbase AS pprust
 
 RUN set -eux; \
-    wget "https://static.rust-lang.org/rustup/dist/x86_64-unknown-linux-gnu/rustup-init"; \
+    wget https://static.rust-lang.org/rustup/dist/${platform}-unknown-linux-gnu/rustup-init; \
     chmod +x rustup-init; \
     ./rustup-init -y --no-modify-path --default-toolchain stable; \
     rm rustup-init; \
@@ -86,6 +88,7 @@ ADD . ./tmppack
 WORKDIR /home/root/pp/tmppack
 
 RUN mkdir -p minpkgjsons/server && mkdir minpkgjsons/client && \
-    ./build/minpkgjson.js package.json > minpkgjsons/package.json && \
-    ./build/minpkgjson.js server/package.json > minpkgjsons/server/package.json && \
-    ./build/minpkgjson.js client/package.json > minpkgjsons/client/package.json
+     ./build/minpkgjson.js package.json > minpkgjsons/package.json && \
+     ./build/minpkgjson.js server/package.json > minpkgjsons/server/package.json && \
+     ./build/minpkgjson.js client/package.json > minpkgjsons/client/package.json
+#CMD ["sleep", "3600"] 

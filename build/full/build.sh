@@ -7,17 +7,18 @@ set -e
 ###############
 
 USAGE="Usage:
-./build/full/build.sh [-r] [-b] [-c]
+./build/full/build.sh [-r] [-b] [-c] [-p]
 
 	-r REV: git revision to checkout, if empty will use the current code state
 	-b BUILDARGS: build variables to pass to the Dockerfile that are not persisted to the built image
 	-c CROSSENV: cross-env options that used prior to npm install
+	-p: platform that should be used to compile native packages
 "
-
 REV=latest
 BUILDARGS=""
 CROSSENV=""
-while getopts "r:b:c:h:" opt; do
+PLATFORM="x86_64"
+while getopts "r:b:c:h:p:" opt; do
 	case "${opt}" in
 	r)
 		REV=${OPTARG}
@@ -28,13 +29,17 @@ while getopts "r:b:c:h:" opt; do
 	c)
 		CROSSENV=${OPTARG}	
 		;;
+	p)
+		PLATFORM=${OPTARG}	
+		;;
 	h)
 		echo $USAGE
 		exit 1
 		;;
+	
 	esac
 done
-
+echo "PLATFORM IS $PLATFORM"
 #########################
 # EXTRACT REQUIRED FILES
 #########################
@@ -52,14 +57,14 @@ cd tmppack
 #TAG="$(node -p "require('./package.json').version")"
 TAG="$(grep version package.json | sed 's/.*"version": "\(.*\)".*/\1/')"
 echo "building ppbase:$REV image, package version=$TAG"
-docker build --file ./build/Dockerfile $BUILDARGS --target ppbase --tag ppbase:$REV .
+docker build  --file ./build/Dockerfile $BUILDARGS --target ppbase --tag ppbase:$REV --build-arg platform="$PLATFORM" .
 echo "building pprust:$REV image, package version=$TAG"
-docker build --file ./build/Dockerfile $BUILDARGS --target pprust --tag pprust:$REV .
+docker build  --file ./build/Dockerfile $BUILDARGS --target pprust --tag pprust:$REV --build-arg platform="$PLATFORM" .
 echo "generating a build with minimal package jsons"
-docker build --file ./build/Dockerfile $BUILDARGS --target ppminpkg --tag ppminpkg:$REV .
+docker build  --file ./build/Dockerfile $BUILDARGS --target ppminpkg --tag ppminpkg:$REV --build-arg platform="$PLATFORM" .
 
 echo "building pppkg:$REV image, package version=$TAG, can copy /home/root/pp/tmppack/stjude-proteinpaint.tgz as a publishable package"
-docker build --file ./build/full/Dockerfile $BUILDARGS --target pppkg --tag pppkg:$REV --build-arg IMGVER=$REV --build-arg PKGVER=$TAG --build-arg CROSSENV="$CROSSENV" .
+docker build  --file ./build/full/Dockerfile $BUILDARGS --target pppkg --tag pppkg:$REV --build-arg IMGVER=$REV --build-arg PKGVER=$TAG --build-arg CROSSENV="$CROSSENV" .
 
 echo "building ppfull:$REV image, package version=$TAG"
-docker build --file ./build/full/Dockerfile $BUILDARGS --target ppapp --tag ppfull:$REV --build-arg IMGVER=$REV --build-arg PKGVER=$TAG --build-arg CROSSENV="$CROSSENV" .
+docker build  --file ./build/full/Dockerfile $BUILDARGS --target ppapp --tag ppfull:$REV --build-arg IMGVER=$REV --build-arg PKGVER=$TAG --build-arg CROSSENV="$CROSSENV" .
