@@ -1,6 +1,7 @@
 const fs = require('fs').promises
 const path = require('path')
 const serverconfig = require('./serverconfig')
+const jsonwebtoken = require('jsonwebtoken')
 
 const cacheFile = path.join(serverconfig.cachedir, 'dsSessions')
 const creds = serverconfig.dsCredentials
@@ -45,7 +46,13 @@ async function maySetAuthRoutes(app, basepath) {
 	// for a ds label
 	app.use((req, res, next) => {
 		const q = req.query
-		if (req.path == '/genomes' || req.path == '/dslogin' || !q.dslabel || !(q.dslabel in creds)) {
+		if (
+			req.path == '/genomes' ||
+			req.path == '/dslogin' ||
+			req.path == '/jwt-status' ||
+			!q.dslabel ||
+			!(q.dslabel in creds)
+		) {
 			next()
 			return
 		}
@@ -93,6 +100,20 @@ async function maySetAuthRoutes(app, basepath) {
 			res.send({ error: e })
 		}
 	})
+
+	// will not set a session
+	app.post(basepath + '/jwt-status', async (req, res) => {
+		let code = 401
+		console.log(99)
+		try {
+			await checkDsSecret(req.query, req.headers)
+			res.send({ status: 'ok' })
+		} catch (e) {
+			console.log(e, code)
+			res.status(code)
+			res.send({ error: e })
+		}
+	})
 }
 /*
 	will return a sessions object that is used
@@ -129,8 +150,25 @@ function getDsAuth(req) {
 	return Object.keys(serverconfig.dsCredentials || {}).map(dslabel => {
 		const id = req.cookies[`${dslabel}SessionId`]
 		const sessionStart = sessions[dslabel]?.[id]?.time || 0
-		return { dslabel, insession: +new Date() - sessionStart < maxSessionAge }
+		return {
+			dslabel,
+			insession: +new Date() - sessionStart < maxSessionAge,
+			type: serverconfig.dsCredentials[dslabel].type || 'login'
+		}
 	})
 }
 
-module.exports = { maySetAuthRoutes, getDsAuth }
+function checkDsSecret(q, headers) {
+	const cred = serverconfig.dsCredentials?.[q.dslabel]
+	if (!cred) return
+	if (!q.embedder) throw `missing q.embedder`
+	if (!cred.secret[q.embedder]) throw `unknown q.embedder='${q.embedder}'`
+	// console.log(165, jsonwebtoken.sign({ accessibleDatasets: ['TermdbTest'] }, cred.secret))
+	const token = headers[cred.headerKey]
+	if (!token) throw `missing q['${cred.headerKey}']`
+	const payload = jsonwebtoken.verify(token, cred.secret[q.embedder])
+	//console.log(169, payload)
+	if (!payload.accessibleDatasets.includes(q.dslabel)) throw `not authorized for dslabel='${q.dslabel}'`
+}
+
+module.exports = { maySetAuthRoutes, getDsAuth, checkDsSecret }

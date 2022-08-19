@@ -1,12 +1,13 @@
 import { getAppInit } from '../rx'
 import { select } from 'd3-selection'
 import { storeInit } from './store'
-import { vocabInit } from '../termdb/vocabulary'
+import { vocabInit } from '#termdb/vocabulary'
 import { navInit } from './nav'
 import { plotInit } from './plot'
-import { sayerror } from '../dom/error'
-import { Menu } from '../dom/menu'
-import { newSandboxDiv } from '../dom/sandbox'
+import { sayerror } from '#dom/error'
+import { Menu } from '#dom/menu'
+import { newSandboxDiv } from '#dom/sandbox'
+import { dofetch3 } from '#common/dofetch'
 
 /*
 opts{}
@@ -25,6 +26,10 @@ opts{}
 
 class MassApp {
 	constructor(opts) {
+		if (opts.addLoginCallback) {
+			opts.addLoginCallback(() => this.api.dispatch({ type: 'app_refresh' }))
+		}
+
 		this.type = 'app'
 		// this will create divs in the correct order
 		this.dom = {
@@ -48,6 +53,9 @@ class MassApp {
 		try {
 			api.tip = new Menu({ padding: '5px' })
 			api.printError = e => this.printError(e)
+			// shold return an actual token if the dataset is secured, or true if not secured
+			api.getVerifiedToken = () => this.verifiedToken
+			//await this.maySetVerifiedToken()
 
 			const vocab = this.opts.state.vocab
 
@@ -95,6 +103,7 @@ class MassApp {
 
 	async main() {
 		this.api.vocabApi.main()
+		await this.maySetVerifiedToken()
 
 		const newPlots = {}
 		let sandbox
@@ -138,6 +147,41 @@ class MassApp {
 				this.components.plots[plotId].destroy()
 				delete this.components.plots[plotId]
 			}
+		}
+	}
+
+	async maySetVerifiedToken() {
+		if (this.verifiedToken) return this.verifiedToken
+		try {
+			const dslabel = this.state.dslabel
+			const auth = this.state.termdbConfig.requiredAuth
+			if (!auth) {
+				this.verifiedToken = true
+				return
+			}
+			if (auth.type === 'jwt') {
+				const token = this.opts.getDatasetAccessToken?.()
+				if (!token) {
+					delete this.verifiedToken
+					return
+				}
+				const data = await dofetch3('/jwt-status', {
+					method: 'POST',
+					headers: {
+						[auth.headerKey]: token
+					},
+					body: {
+						dslabel,
+						embedder: location.hostname
+					}
+				})
+				// TODO: later may check against expiration time in response if included
+				this.verifiedToken = data.status === 'ok' && token
+			} else {
+				throw `unsupported requiredAuth='${auth.type}'`
+			}
+		} catch (e) {
+			throw e
 		}
 	}
 

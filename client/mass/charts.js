@@ -31,8 +31,7 @@ class MassCharts {
 			appState.termdbConfig.selectCohort &&
 			appState.termdbConfig.selectCohort.values[appState.activeCohort]
 		const cohortStr = (activeCohort && [...activeCohort.keys].sort().join(',')) || ''
-		const chartTypes =
-			(appState.termdbConfig && JSON.parse(JSON.stringify(appState.termdbConfig.supportedChartTypes))) || {}
+		const chartTypes = JSON.parse(JSON.stringify(appState.termdbConfig?.supportedChartTypes || {}))
 
 		const state = {
 			vocab: appState.vocab,
@@ -225,6 +224,15 @@ function getChartTypeList(self) {
 			chartType: 'dictionary',
 			config: {
 				chartType: 'dictionary'
+			}
+		},
+		{
+			label: 'Data Download',
+			clickTo: self.prepPlot,
+			chartType: 'dataDownload',
+			config: {
+				chartType: 'dataDownload',
+				terms: []
 			}
 		}
 	]

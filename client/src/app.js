@@ -86,7 +86,6 @@ export function runproteinpaint(arg) {
 	}
 
 	setHostUrl(arg, app)
-
 	// subnest an sjcharts object to track its app instances by rendererType,
 	// to avoid namespace conflicts with PP renderer instances
 	if (!app.instanceTracker.sjcharts) {
@@ -769,9 +768,11 @@ async function parseEmbedThenUrl(arg, app) {
 	if (arg.gdcbamslice) {
 		launchgdcbamslice(arg, app)
 	}
+
 	if (arg.mass) {
-		await launchmass(arg.mass, app)
+		await launchmass(arg, app)
 	}
+
 	if (arg.testInternals && app.debugmode) {
 		// !!! TODO: configure rollup to ignore this import
 		await import('../test/internals.js')
@@ -786,7 +787,9 @@ async function parseEmbedThenUrl(arg, app) {
 		const opts = {
 			holder: app.holder0,
 			state: res.state,
-			genome: app.genomes[res.state.vocab.genome]
+			genome: app.genomes[res.state.vocab.genome],
+			getDatasetAccessToken: arg.getDatasetAccessToken,
+			addLoginCallback: arg.addLoginCallback
 		}
 		const _ = await import('../mass/app')
 		_.appInit(opts)
@@ -1453,11 +1456,15 @@ async function getGm(p, genome) {
 	p.gm = { isoform: u.isoform }
 }
 
-async function launchmass(opts, app) {
+async function launchmass(arg, app) {
+	// arg is from runpp(arg)
+	const opts = arg.mass
 	if (!opts.holder) opts.holder = app.holder0
 	if (opts.state && opts.state.genome) {
 		opts.genome = app.genomes[opts.state.genome]
 	}
+	opts.getDatasetAccessToken = arg.getDatasetAccessToken
+	opts.addLoginCallback = arg.addLoginCallback
 	import('../mass/app').then(_ => {
 		_.appInit(opts)
 	})
