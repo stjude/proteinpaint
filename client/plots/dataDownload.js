@@ -54,7 +54,7 @@ class DataDownload {
 			activeCohort: appState.activeCohort,
 			termfilter: appState.termfilter,
 			config,
-			hasVerifiedToken: !!this.app.getVerifiedToken()
+			hasVerifiedToken: this.app.getVerifiedToken()
 		}
 	}
 

@@ -26,12 +26,6 @@ opts{}
 
 class MassApp {
 	constructor(opts) {
-		// just a test
-		if (opts.getDatasetAccessToken) {
-			// should return a jwt token, to be used in headers of certain queries from mass to ppserver
-			if (typeof opts.getDatasetAccessToken !== 'function') throw `opts.getDatasetAccessToken must be a function`
-			console.log('has getDatasetAccessToken() function')
-		}
 		if (opts.addLoginCallback) {
 			opts.addLoginCallback(() => this.api.dispatch({ type: 'app_refresh' }))
 		}
@@ -59,7 +53,9 @@ class MassApp {
 		try {
 			api.tip = new Menu({ padding: '5px' })
 			api.printError = e => this.printError(e)
+			// shold return an actual token if the dataset is secured, or true if not secured
 			api.getVerifiedToken = () => this.verifiedToken
+			//await this.maySetVerifiedToken()
 
 			const vocab = this.opts.state.vocab
 
@@ -155,11 +151,14 @@ class MassApp {
 	}
 
 	async maySetVerifiedToken() {
-		if (this.verifiedToken) return
+		if (this.verifiedToken) return this.verifiedToken
 		try {
 			const dslabel = this.state.dslabel
 			const auth = this.state.termdbConfig.requiredAuth
-			if (!auth) return
+			if (!auth) {
+				this.verifiedToken = true
+				return
+			}
 			if (auth.type === 'jwt') {
 				const token = this.opts.getDatasetAccessToken()
 				if (!token) {
