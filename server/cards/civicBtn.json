@@ -1,7 +1,6 @@
 {
     "button":{
         "name": "CIViC",
-        "id": 1003,
         "intro": "The <a href='https://civicdb.org' target='_blank'>Clinical Interpretation of Variants in Cancer</a> is \"an open-source platform for crowdsourced and expert-moderated cancer variant curation.\" Supported by the NIH, NHGRI, and NCI, CIViC is a richly curated oncology dataset <a href='https://pubmed.ncbi.nlm.nih.gov/28138153/' target='_blank'>(PMID: 28138153)</a>.", 
         "searchbar": "gene",
         "availableGenomes": ["hg19"],
