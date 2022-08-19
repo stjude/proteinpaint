@@ -1,41 +1,41 @@
-import { dofetch, dofetch2, dofetch3, sayerror, tab_wait, appear } from '#src/client'
+import { dofetch, dofetch3, sayerror, tab_wait, appear } from '#src/client'
 import { newSandboxDiv } from '#dom/sandbox'
 import * as utils from './utils'
-import { event, select, selectAll } from 'd3-selection'
-// import { addGeneSearchbox } from '#dom/genesearch'
-// import { Menu } from '#dom/menu'
-
-// js-only syntax highlighting for smallest bundle, see https://highlightjs.org/usage/
-// also works in rollup and not just webpack, without having to use named imports
+import { event } from 'd3-selection'
+import { addGeneSearchbox } from '#dom/genesearch'
+import { Menu } from '#dom/menu'
 import hljs from 'highlight.js/lib/core'
 import javascript from 'highlight.js/lib/languages/javascript'
 hljs.registerLanguage('javascript', javascript)
 import json from 'highlight.js/lib/languages/json'
-// import { defaultcolor } from '../shared/common'
 hljs.registerLanguage('json', json)
 
-export async function openSandbox(element, holder) {
-	const sandboxDiv = newSandboxDiv(holder)
+
+
+export async function openSandbox(element, pageArgs) {
+	const sandboxDiv = newSandboxDiv(pageArgs.apps_sandbox_div)
 	sandboxDiv.header_row
 	sandboxDiv.header.text(element.name)
-	sandboxDiv.body.style('overflow', 'hidden')
+	sandboxDiv.body.style('overflow', 'hidden').style('background-color', 'white')
 
-	if (element.type == 'nestedCard') openNestedCardSandbox(element, sandboxDiv)
-	if (element.type == 'card' && element.sandboxJson) {
-		const res = element.sandboxJson
+	if (element.type == 'nestedCard') return openNestedCardSandbox(element, sandboxDiv)
+
+	const res = element.sandboxJson
 			? await dofetch3(`/cardsjson?jsonfile=${element.sandboxJson}`)
 			: await dofetch3(`/cardsjson?file=${element.sandboxHtml}`)
 		if (res.error) {
 			sayerror(holder.append('div'), res.error)
 			return
 		}
-		openCardSandbox(element, res, sandboxDiv)
-	}
+	
+	if (element.type == 'card') return openCardSandbox(element, res, sandboxDiv) //only for .sandboxJson
+	if (element.type == 'dsButton') return openDatasetSandbox(pageArgs, element, res, sandboxDiv) //only for .sandboxJson
 }
 
+/********** Nested Card Functions  **********/
+
 function openNestedCardSandbox(nestedCard, sandboxDiv) {
-	// Colors all sandboxes
-	// sandboxDiv.body.style('justify-content', 'center').style('background-color', '#f2ebdc')
+	sandboxDiv.body.style('justify-content', 'center').style('background-color', '#f2ebdc')
 
 	const ucList = sandboxDiv.body
 		.append('ul')
@@ -83,7 +83,7 @@ function openNestedCardSandbox(nestedCard, sandboxDiv) {
 			.style('margin', '0vw 10vw')
 			.style('padding', '10px')
 
-		const backBtn = utils.makeButton(content_div, '<').style('background-color', '#d0e3ff')
+		const backBtn = utils.makeButton({ div: content_div, text: '<'}).style('background-color', '#d0e3ff')
 		backBtn.style('font-size', '20px').on('click', () => {
 			div.selectAll('*').remove()
 			displayUseCases(nestedCard, ucList, ucContent)
@@ -95,6 +95,8 @@ function openNestedCardSandbox(nestedCard, sandboxDiv) {
 			.html(res.file)
 	}
 }
+
+/********** Card Functions  **********/
 
 function openCardSandbox(card, res, sandboxDiv) {
 	const sandboxArgs = {
@@ -362,7 +364,7 @@ function addHtmlText(text, div, flag) {
 function addButtons(buttons, div) {
 	if (buttons) {
 		buttons.forEach(button => {
-			const sandboxButton = utils.makeButton(div, button.name)
+			const sandboxButton = utils.makeButton({ div, text: button.name })
 			sandboxButton.on('click', () => {
 				event.stopPropagation()
 				if (button.download) window.open(`${button.download}`, '_self', 'download')
@@ -432,7 +434,7 @@ async function addArrowBtns(args, type, bdiv, rdiv) {
 	for (let i = 0; i < btns.length; i++) {
 		const btn = btns[i]
 
-		btn.btn = utils.makeButton(bdiv, btn.name + ' ▼')
+		btn.btn = utils.makeButton({ div: bdiv, text: btn.name + ' ▼' })
 
 		btn.c = rdiv
 			.append('div')
@@ -479,7 +481,7 @@ async function addArrowBtns(args, type, bdiv, rdiv) {
 
 function showURLLaunch(urlparam, div, section) {
 	if (urlparam) {
-		const URLbtn = utils.makeButton(div, section == 'apps' ? 'Run app from URL' : 'Run track from URL')
+		const URLbtn = utils.makeButton({ div, text: section == 'apps' ? 'Run app from URL' : 'Run track from URL' })
 		URLbtn.on('click', () => {
 			event.stopPropagation()
 			window.open(`${urlparam}`, '_blank')
@@ -489,7 +491,7 @@ function showURLLaunch(urlparam, div, section) {
 
 function makeDataDownload(download, div, section) {
 	if (download) {
-		const dataBtn = utils.makeButton(div, section == 'apps' ? 'Download App File(s)' : 'Download Track File(s)')
+		const dataBtn = utils.makeButton({ div, text: section == 'apps' ? 'Download App File(s)' : 'Download Track File(s)' })
 		dataBtn.on('click', () => {
 			event.stopPropagation()
 			window.open(`${download}`, '_self', 'download')
@@ -657,5 +659,187 @@ async function showViewData(btns, data) {
 				alert('Error: ' + e)
 			}
 		}
+	})
+}
+
+/********** Dataset Button Functions  **********/
+
+async function openDatasetSandbox(pageArgs, element, res, sandboxDiv) {
+
+	const par = {
+		// First genome in .availableGenomes is the default
+		availableGenomes: res.jsonfile.button.availableGenomes,
+		genome: pageArgs.genomes[res.jsonfile.button.availableGenomes[0]],
+		intro: res.jsonfile.button.intro,
+		name: res.jsonfile.button.name,
+		runargs: res.jsonfile.button.runargs,
+		searchBar: res.jsonfile.button.searchBar,
+		dsURLparam: res.jsonfile.button.dsURLparam
+	}
+
+	const mainDiv = sandboxDiv.body
+		// Intro, gene toggle, and gene search box
+		.append('div')
+		.style('padding', '1em')
+		.style('border-bottom', '1px solid #d0e3ff')
+
+	// Introduction div
+	if (par.intro) {
+		mainDiv
+			.append('div')
+			.style('line-height', '1.5em')
+			.style('padding', '0.5em 0.5em 1em 0.5em')
+			.html(par.intro)
+	}
+
+	if (par.searchBar == 'none') {
+		// Call mass UI without search bar
+		const runppArg = {
+			holder: sandboxDiv.body
+				.append('div')
+				.style('margin', '20px')
+				.style('overflow-x', 'auto')
+				.node(),
+			host: window.location.origin
+		}
+
+		const callpp = JSON.parse(JSON.stringify(par.runargs))
+
+		runproteinpaint(Object.assign(runppArg, callpp))
+		return
+	}
+
+	addDatasetGenomeBtns(mainDiv, par, pageArgs.genomes)
+	// Create the gene search bar last (text flyout on keyup prevents placing elements to the right)
+	const searchBarDiv = mainDiv
+		.append('div')
+		.style('display', 'inline-block')
+		.style('padding', '0.5em')
+
+	const allResultsDiv = sandboxDiv.body.append('div').style('max-width', '90vw')
+
+	const coords = addGeneSearchbox({
+		genome: par.genome,
+		tip: new Menu({ padding: '' }),
+		row: searchBarDiv.append('div'),
+		row: mainDiv
+			.append('div')
+			.style('display', 'inline-block')
+			.style('padding', '0.5em'),
+		geneOnly: par.searchBar == 'gene' ? true : false,
+		focusOff: true,
+		callback: async div => {
+			//Creates search results as tracks, last to first
+			const resultDiv = allResultsDiv
+				.insert('div', ':first-child')
+				.style('max-width', '90vw')
+				.style('margin', '1vw')
+			resultDiv
+				// Destroy track on `x` button click
+				.append('div')
+				.style('display', 'inline-block')
+				.style('cursor', 'default')
+				.style('margin', '0px')
+				.style('font-size', '1.5em')
+				.html('&times;')
+				.on('click', () => {
+					// clear event handlers
+					resultDiv.selectAll('*').remove()
+					if (typeof close === 'function') close()
+				})
+			// Create 'Run Dataset from URL' btn specific to each applied search
+			makeURLbutton(resultDiv, coords, par)
+			// Render the search parameters as a track
+			const runppArg = {
+				holder: resultDiv
+					.append('div')
+					.style('margin', '20px')
+					.node(),
+				host: window.location.origin,
+				genome: par.genome.name
+			}
+			// Return only position or gene; avoid returning undefined values to runpp()
+			par.runargs.block == true
+				? (runppArg.position = `${coords.chr}:${coords.start}-${coords.stop}`) && (runppArg.nativetracks = 'Refgene')
+				: (runppArg.gene = coords.geneSymbol)
+
+			const callpp = JSON.parse(JSON.stringify(par.runargs))
+
+			runproteinpaint(Object.assign(runppArg, callpp))
+		}
+	})
+}
+
+function addDatasetGenomeBtns(div, par, genomes) {
+	// Dynamically creates genome marker or buttons
+	div
+		.append('div')
+		.style('display', 'inline-block')
+		.style('padding', '10px 0px 10px 10px')
+
+	if (par.availableGenomes.length == 1) {
+		// Show default genome as a non-functional button left of the search bar
+		div
+			.append('div')
+			.style('padding', '8px')
+			.style('color', '#a6a6a6')
+			.style('border', '1px solid #a6a6a6')
+			.style('display', 'inline-block')
+			.style('width', 'auto')
+			.style('height', 'auto')
+			.style('cursor', 'not-allowed')
+			.text(par.availableGenomes[0])
+	} else {
+		const btns = []
+
+		par.availableGenomes.forEach(genome => {
+			btns.push({
+				name: genome,
+				active: false,
+				btn: utils.makeButton({ div, text:genome }),
+				callback: par => {
+					par.genome = genomes[genome]
+				}
+			})
+		})
+
+		for (const btn of btns) {
+			btns[0].active = true
+
+			btn.btn
+				.style('margin', '0px')
+				.style('color', btn.active ? 'white' : 'black')
+				.style('background-color', btn.active ? '#0b5394ff' : '#bfbfbf')
+				.style('border-radius', '0px')
+				.style('cursor', 'pointer')
+
+			if (btn.active) {
+				btn.callback(par)
+			}
+
+			btn.btn.on('click', () => {
+				for (const b of btns) {
+					b.active = b === btn
+					b.btn.style('color', b.active ? 'white' : 'black')
+					b.btn.style('background-color', b.active ? '#0b5394ff' : '#bfbfbf')
+				}
+				if (btn.active) {
+					btn.callback(par)
+				}
+			})
+		}
+	}
+}
+
+function makeURLbutton(div, coords, par) {
+	const URLbtn = utils.makeButton({div, text:'Run Result from URL'})
+	// Use position for genome browser and gene for protein view
+	const blockOn =
+		par.runargs.block == true
+			? `position=${coords.chr}:${coords.start}-${coords.stop}`
+			: `gene=${coords.geneSymbol}`
+	URLbtn.on('click', () => {
+		event.stopPropagation()
+		window.open(`?genome=${par.genome.name}&${blockOn}&${par.dsURLparam}`, '_blank')
 	})
 }

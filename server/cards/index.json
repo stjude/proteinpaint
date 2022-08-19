@@ -9,7 +9,7 @@
                 },
                 {
                     "id": "tracks",
-                    "name": "Tracks"
+                    "name": "Genome Browser Tracks"
                 }
             ]
         },
@@ -23,7 +23,7 @@
                 },
                 {
                     "id": "apps",
-                    "name": "Apps"
+                    "name": "Launch Apps"
                 }
             ]
         }
@@ -255,34 +255,34 @@
             "searchterms": ["mutant allele fraction", "snv", "snv4"]
         },
         {
-            "type": "button",
+            "type": "dsButton",
             "name": "Pediatric Cancer Mutation",
             "section": "datasetButtons",
             "sandboxJson": "pcmBtn"
         },
         {
-            "type": "button",
+            "type": "dsButton",
             "name": "Pediatric2 GenomePaint",
             "section": "datasetButtons",
             "sandboxJson": "ped2Btn"
         },
         {
-            "type": "button",
+            "type": "dsButton",
             "name": "NCI GDC",
             "section": "datasetButtons",
-            "sandboxJson": "xx"
+            "sandboxJson": "nciGdcBtn"
         },
         {
-            "type": "button",
+            "type": "dsButton",
             "name": "CIViC",
             "section": "datasetButtons",
-            "sandboxJson": "xx"
+            "sandboxJson": "civicBtn"
         },
         {
-            "type": "button",
+            "type": "dsButton",
             "name": "Survivorship Study",
             "section": "datasetButtons",
-            "sandboxJson": "xx"
+            "sandboxJson": "survivorBtn"
         },
         {
             "type": "card",

@@ -1,9 +1,10 @@
 import { getInitFxn } from '../rx'
 import { rgb } from 'd3-color'
-import { openSandbox } from './ad.sandbox'
+import { openSandbox } from './adSandbox'
 import { event } from 'd3-selection'
 
 class AppDrawerCard {
+	// handles types 'card' and 'nestedCard'
 	constructor(opts) {
 		this.opts = this.validateOpts(opts)
 		this.holder = opts.holder
@@ -82,7 +83,7 @@ function setRenderers(self) {
 			)
 		}
 
-		self.makeRibbon = function(flag) {
+		self.makeRibbon = function(flag) { //only relevant for 'card', not 'nestedCard'
 			const ribbon = card
 				.append('div')
 				.classed('sjpp-app-drawer-card-ribbon', true)
@@ -127,7 +128,7 @@ function setRenderers(self) {
 		card.on('click', async () => {
 			event.stopPropagation()
 			self.opts.pageArgs.apps_off()
-			await openSandbox(self.opts.element, self.opts.pageArgs.apps_sandbox_div)
+			await openSandbox(self.opts.element, self.opts.pageArgs)
 		})
 	}
 }

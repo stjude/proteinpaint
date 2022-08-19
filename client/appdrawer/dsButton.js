@@ -1,10 +1,14 @@
-import { getInitFxn } from '../rx'
+import { getInitFxn } from '#rx'
 import * as utils from './utils'
+import { event } from 'd3-selection'
+import { openSandbox } from './adSandbox'
 
 class AppDrawerButton {
+	//For .type = 'dsButton' only!
 	constructor(opts) {
 		this.opts = this.validateOpts(opts)
 		this.holder = opts.holder
+		this.pageArgs = opts.pageArgs
 		setInteractivity(this)
 		setRenderers(this)
 		this.initBtn()
@@ -23,7 +27,12 @@ export const buttonInit = getInitFxn(AppDrawerButton)
 
 function setRenderers(self) {
 	self.initBtn = function () {
-		utils.makeButton(self.holder, self.opts.element.name)
+		const btn = utils.makeButton({ div:self.holder, text:self.opts.element.name, margin: '20px 20px 0px' })
+		btn.attr('class', 'sjpp-appdrawer-dataset-btn').on('click', async () => {
+			event.stopPropagation()
+			self.opts.pageArgs.apps_off()
+			await openSandbox(self.opts.element, self.opts.pageArgs)
+		})
 	}
 }
 

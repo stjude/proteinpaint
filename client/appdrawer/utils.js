@@ -1,14 +1,14 @@
-export function makeButton(div, text) {
-	const button = div
+export function makeButton(arg) {
+	const button = arg.div
 		.append('button')
 		.attr('type', 'submit')
 		.style('background-color', '#cfe2f3')
-		.style('margin', '20px 20px 0px 20px')
+		.style('margin', arg.margin ? arg.margin : '20px 20px 0px 20px')
 		.style('padding', '8px')
 		.style('border', 'none')
 		.style('border-radius', '3px')
 		.style('display', 'inline-block')
-		.text(text)
+		.text(arg.text)
 
 	return button
 }

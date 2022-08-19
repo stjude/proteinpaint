@@ -2,7 +2,6 @@
     "button": 
         {
             "name": "Pediatric Cancer Mutation",
-            "id": 1000,
             "intro": "The Pediatric dataset consists of somatic variants and tumor RNA-seq data shown in the protein view. The dataset is comprised of the GRCh37/hg19 genome as well as data from the Pediatric Cancer Genome Project <a href='https://permalinks.stjude.cloud/permalinks/pcgp' target='_blank'>(PCGP)</a>, NCI Target cohort, the Pan-TARGET study <a href='https://pubmed.ncbi.nlm.nih.gov/29489755/' target='_blank'>(PMID: 29489755)</a>, and the Shanghai Children's Medical Center T-ALL cohort <a href='https://pubmed.ncbi.nlm.nih.gov/32632335/' target='_blank'>(PMID: 32632335)</a>. A liftover of genomic variants and gene internals created the GRCh/hg38 dataset.<br><br><div style='margin-left: 3em;'>Read more about ProteinPaint <a href='https://genomepaint.stjude.cloud/#data-release' target='_blank' >data releases</a>.</div>",
             "searchbar": "gene",
             "availableGenomes": ["hg19", "hg38"],

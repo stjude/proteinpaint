@@ -811,7 +811,7 @@ table {
     font-size: 17px;
     text-align: left;
     color: #324870;
-    margin: 10px 10px 0px 10px;
+    margin: 10px;
 }
 
 .sjpp-track, .sjpp-track li {
@@ -824,6 +824,8 @@ table {
 .sjpp-app-drawer-card,
 .sjpp-track {
     background-color: white;
+    max-width: 25vw;
+    min-width: 320px;
     border-radius: 5px;
     padding: 0px;
     align-items: center;
