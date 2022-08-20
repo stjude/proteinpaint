@@ -4,13 +4,7 @@ module.exports = {
 	species: 'human',
 	genomefile: 'genomes/hg38.gz',
 	genedb: {
-		dbfile: 'anno/genes.hg38.db',
-		hasalias: true,
-		gene2canonicalisoform: true,
-		// enable mapping for refseq and ensembl
-		refseq2ensembl: true,
-		// TO BE DELETED once gene2coord table is added to all genomes
-		gene2coord: true
+		dbfile: 'anno/genes.hg38.db'
 	},
 	proteindomain: {
 		dbfile: 'anno/db/proteindomain.db',

@@ -1,10 +1,3 @@
-// cache
-const ch_genemcount = {} // genome name - gene name - ds name - mutation class - count
-const ch_dbtable = new Map() // k: db path, v: db stuff
-const serverconfig = require('./serverconfig')
-
-exports.features = Object.freeze(serverconfig.features || {})
-
 /*
 ********** TODO constructor options **********
 
@@ -38,6 +31,13 @@ const tabixnoterror = s => {
 	return s.startsWith('[E::idx_test_and_fetch]') // got this with htslib 1.15.1
 }
 exports.tabixnoterror = tabixnoterror
+
+// cache
+const ch_genemcount = {} // genome name - gene name - ds name - mutation class - count
+const ch_dbtable = new Map() // k: db path, v: db stuff
+
+const serverconfig = require('./serverconfig')
+exports.features = Object.freeze(serverconfig.features || {})
 
 const express = require('express'),
 	util = require('util'),
@@ -110,8 +110,10 @@ const samtools = serverconfig.samtools
 const bcftools = serverconfig.bcftools
 const bigwigsummary = serverconfig.bigwigsummary
 const hicstraw = serverconfig.hicstraw
+
 let codedate, // date for code files last updated
 	launchdate // server launch date
+
 /*
     this hardcoded term is kept same with notAnnotatedLabel in block.tk.mdsjunction.render
     */
@@ -1007,9 +1009,9 @@ function handle_genelookup(req, res) {
 		}
 		if (!symbol) {
 			// input does not directly match with symbol
-			if (g.genedb.hasalias) {
+			if (g.genedb.getNameByAlias) {
 				// see if input is alias; if so convert alias to official symbol
-				const tmp = g.genedb.getnamebyalias.get(req.query.input)
+				const tmp = g.genedb.getNameByAlias.get(req.query.input)
 				if (tmp) symbol = tmp.name
 			}
 		}
@@ -1057,8 +1059,8 @@ function handle_genelookup(req, res) {
 		return
 	}
 	// no direct name match, try alias
-	if (g.genedb.hasalias) {
-		const tmp = g.genedb.getnamebyalias.all(input)
+	if (g.genedb.getNameByAlias) {
+		const tmp = g.genedb.getNameByAlias.all(input)
 		if (tmp.length) {
 			res.send({ hits: tmp.map(i => i.name) })
 			return
@@ -7115,6 +7117,12 @@ async function pp_init() {
 	if (!serverconfig.genomes) throw '.genomes[] missing'
 	if (!Array.isArray(serverconfig.genomes)) throw '.genomes[] not array'
 
+	/*
+	for genomes declared in serverconfig for this pp instance,
+	load its built in genome javascript file to an in-mem object
+	and apply overrides from serverconfig to modify this object
+	keep the object in genomes{}
+	*/
 	for (const g of serverconfig.genomes) {
 		if (!g.name) throw '.name missing from a genome: ' + JSON.stringify(g)
 		if (!g.file) throw '.file missing from genome ' + g.name
@@ -7189,8 +7197,8 @@ async function pp_init() {
 
 	for (const genomename in genomes) {
 		/*
-	validate each genome
-	*/
+		validate each genome
+		*/
 
 		const g = genomes[genomename]
 		if (!g.majorchr) throw genomename + ': majorchr missing'
@@ -7237,14 +7245,14 @@ async function pp_init() {
 			}
 		}
 
-		if (!g.genedb) throw genomename + ': .genedb{} missing'
-		if (!g.genedb.dbfile) throw genomename + ': .genedb.dbfile missing'
-		{
-			// keep reference of .db so as to add dataset-specific query statements later
+		// genedb is optional
+		if (g.genedb) {
+			if (!g.genedb.dbfile) throw genomename + ': .genedb.dbfile missing'
+			// keep reference of the connection (.db) so as to add dataset-specific query statements later
 			try {
 				g.genedb.db = utils.connect_db(g.genedb.dbfile)
 			} catch (e) {
-				throw 'Error with ' + g.genedb.dbfile + ': ' + e
+				throw `Cannot connect genedb: ${g.genedb.dbfile}: ${e}`
 			}
 			g.genedb.getnamebynameorisoform = g.genedb.db.prepare('select name from genes where name=? or isoform=?')
 			g.genedb.getnamebyisoform = g.genedb.db.prepare('select distinct name from genes where isoform=?')
@@ -7252,18 +7260,29 @@ async function pp_init() {
 			g.genedb.getjsonbyisoform = g.genedb.db.prepare('select isdefault,genemodel from genes where isoform=?')
 			g.genedb.getnameslike = g.genedb.db.prepare('select distinct name from genes where name like ? limit 20')
 
+			/*
+			optional tables in gene db:
+
+			- genealias
+			- gene2coord
+			- ideogram
+			- gene2canonicalisoform
+
+			if present, create getter to this table and attach to g.genedb{}
+			*/
 			const checkTable = g.genedb.db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name=?")
-
-			if (g.genedb.hasalias) {
-				// TODO enable if checkTable.get('genealias') is true
-				g.genedb.getnamebyalias = g.genedb.db.prepare('select name from genealias where alias=?')
+			{
+				const s = checkTable.get('genealias')
+				if (s && s.name == 'genealias') {
+					g.genedb.getNameByAlias = g.genedb.db.prepare('select name from genealias where alias=?')
+				}
 			}
-			if (g.genedb.gene2coord) {
-				// this table will become available to all genomes
-				// TODO checkTable
-				g.genedb.getCoordByGene = g.genedb.db.prepare('select * from gene2coord where name=?')
+			{
+				const s = checkTable.get('gene2coord')
+				if (s && s.name == 'gene2coord') {
+					g.genedb.getCoordByGene = g.genedb.db.prepare('select * from gene2coord where name=?')
+				}
 			}
-
 			{
 				const s = checkTable.get('ideogram')
 				if (s && s.name == 'ideogram') {
@@ -7273,11 +7292,14 @@ async function pp_init() {
 					g.genedb.hasIdeogram = false
 				}
 			}
-		}
-		if (g.genedb.gene2canonicalisoform) {
-			g.genedb.get_gene2canonicalisoform = g.genedb.db.prepare(
-				'select genemodel from gene2canonicalisoform as c, genes as g where c.gene=? AND c.isoform=g.isoform'
-			)
+			{
+				const s = checkTable.get('gene2canonicalisoform')
+				if (s && s.name == 'gene2canonicalisoform') {
+					g.genedb.get_gene2canonicalisoform = g.genedb.db.prepare(
+						'select genemodel from gene2canonicalisoform as c, genes as g where c.gene=? AND c.isoform=g.isoform'
+					)
+				}
+			}
 		}
 
 		for (const tk of g.tracks) {
