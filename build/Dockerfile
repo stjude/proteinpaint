@@ -42,7 +42,7 @@ RUN curl -L https://github.com/samtools/htslib/releases/download/${htsversion}/h
     curl -L https://github.com/samtools/bcftools/releases/download/${htsversion}/bcftools-${htsversion}.tar.bz2 | tar xj && \
     (cd bcftools-${htsversion} && ./configure --enable-libgsl --with-htslib=system && make install)
 
-RUN apt-get update && apt-get install -y r-base \
+RUN apt-get update && apt-get install -y r-base -y libargtable2-dev \
 	## install R packages
  	&& R -e "install.packages(c('cmprsk', 'hwde', 'jsonlite', 'survival', 'lmtest'), dependencies=TRUE, repos='http://cran.rstudio.com/')" \
 	## clean up
@@ -52,12 +52,14 @@ RUN apt-get update && apt-get install -y r-base \
 
 RUN mkdir -p /home/root/pp && cd /home/root/pp && mkdir app && mkdir tp && mkdir cache && mkdir tools
 
-RUN wget https://pecan.stjude.cloud/static/pp-support/linux/straw -P /home/root/pp/tools/ && \
-    wget -O /usr/local/bin/clustalo "http://www.clustal.org/omega/clustalo-1.2.4-Ubuntu-${platform}"
-RUN chmod 755 /usr/local/bin/clustalo && \
-    wget http://hgdownload.soe.ucsc.edu/admin/exe/linux.$platform/bigWigSummary -P /home/root/pp/tools/ && \
-    wget http://hgdownload.soe.ucsc.edu/admin/exe/linux.$platform/bigBedToBed -P /home/root/pp/tools/ && \
-    wget http://hgdownload.soe.ucsc.edu/admin/exe/linux.$platform/bigBedNamedItems -P /home/root/pp/tools/
+RUN wget https://pecan.stjude.cloud/static/pp-support/linux/straw -P /home/root/pp/tools/ 
+RUN curl http://www.clustal.org/omega/clustal-omega-1.2.4.tar.gz -O && tar -xvf clustal-omega-1.2.4.tar.gz
+RUN cd clustal-omega-1.2.4 && ./configure --prefix="/usr/local" --build=${platform}-unknown-linux-gnu && make && make install
+RUN  chmod 755 /usr/local/bin/clustalo
+
+#RUN wget http://hgdownload.soe.ucsc.edu/admin/exe/linux.$platform/bigWigSummary -P /home/root/pp/tools/ && \
+#    wget http://hgdownload.soe.ucsc.edu/admin/exe/linux.$platform/bigBedToBed -P /home/root/pp/tools/ && \
+#    wget http://hgdownload.soe.ucsc.edu/admin/exe/linux.$platform/bigBedNamedItems -P /home/root/pp/tools/
 
 
 # need npm v7 to support workspaces
@@ -91,4 +93,3 @@ RUN mkdir -p minpkgjsons/server && mkdir minpkgjsons/client && \
      ./build/minpkgjson.js package.json > minpkgjsons/package.json && \
      ./build/minpkgjson.js server/package.json > minpkgjsons/server/package.json && \
      ./build/minpkgjson.js client/package.json > minpkgjsons/client/package.json
-#CMD ["sleep", "3600"] 
