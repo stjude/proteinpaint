@@ -88,6 +88,5 @@
                 "expected": {"image": 2}
             }
         }
-    ],
-    "update_message": "Please see the new example on how to highlight regions in the genome brower."
+    ]
 }

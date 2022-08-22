@@ -358,7 +358,7 @@ function makeheader(app, obj, jwt) {
 			if (client.keyupEnter()) entersearch()
 			else debouncer()
 		})
-	input.node().focus()
+	// input.node().focus() Causes app drawer to unsmoothly open and close
 
 	const genome_select_div = headbox
 		.append('div')
