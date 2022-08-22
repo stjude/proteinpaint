@@ -3,7 +3,7 @@
 ARG registry=docker.io/library
 
 FROM ${registry}/node:12-stretch AS ppbase
-ARG platform="x86_64"
+ARG ARCH="x86_64"
 
 ENV RUSTUP_HOME=/usr/local/rustup \
     CARGO_HOME=/usr/local/cargo \
@@ -59,13 +59,13 @@ RUN mkdir -p /home/root/pp && cd /home/root/pp && mkdir app && mkdir tp && mkdir
 
 RUN wget https://pecan.stjude.cloud/static/pp-support/linux/straw -P /home/root/pp/tools/ 
 RUN curl http://www.clustal.org/omega/clustal-omega-1.2.4.tar.gz -O && tar -xvf clustal-omega-1.2.4.tar.gz
-RUN cd clustal-omega-1.2.4 && ./configure --prefix="/usr/local" --build=${platform}-unknown-linux-gnu && make && make install
+RUN cd clustal-omega-1.2.4 && ./configure --prefix="/usr/local" --build=${ARCH}}-unknown-linux-gnu && make && make install
 RUN  chmod 755 /usr/local/bin/clustalo
 
 
-#RUN wget http://hgdownload.soe.ucsc.edu/admin/exe/linux.$platform/bigWigSummary -P /home/root/pp/tools/ && \
-#    wget http://hgdownload.soe.ucsc.edu/admin/exe/linux.$platform/bigBedToBed -P /home/root/pp/tools/ && \
-#    wget http://hgdownload.soe.ucsc.edu/admin/exe/linux.$platform/bigBedNamedItems -P /home/root/pp/tools/
+#RUN wget http://hgdownload.soe.ucsc.edu/admin/exe/linux.$ARCH/bigWigSummary -P /home/root/pp/tools/ && \
+#    wget http://hgdownload.soe.ucsc.edu/admin/exe/linux.$ARCH/bigBedToBed -P /home/root/pp/tools/ && \
+#    wget http://hgdownload.soe.ucsc.edu/admin/exe/linux.$ARCH/bigBedNamedItems -P /home/root/pp/tools/
 
 
 # need npm v7 to support workspaces
@@ -78,7 +78,7 @@ RUN apt-get update && apt-get install -y libsdl-pango-dev && npm install canvas 
 FROM ppbase AS pprust
 
 RUN set -eux; \
-    wget https://static.rust-lang.org/rustup/dist/${platform}-unknown-linux-gnu/rustup-init; \
+    wget https://static.rust-lang.org/rustup/dist/${ARCH}-unknown-linux-gnu/rustup-init; \
     chmod +x rustup-init; \
     ./rustup-init -y --no-modify-path --default-toolchain stable; \
     rm rustup-init; \
