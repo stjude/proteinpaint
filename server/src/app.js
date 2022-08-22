@@ -7267,6 +7267,7 @@ async function pp_init() {
 			- gene2coord
 			- ideogram
 			- gene2canonicalisoform
+			- refseq2ensembl
 
 			if present, create getter to this table and attach to g.genedb{}
 			*/
@@ -7299,6 +7300,11 @@ async function pp_init() {
 						'select genemodel from gene2canonicalisoform as c, genes as g where c.gene=? AND c.isoform=g.isoform'
 					)
 				}
+			}
+			{
+				// this table is only used for gdc dataset
+				const s = checkTable.get('refseq2ensembl')
+				g.genedb.hasTable_refseq2ensembl = s && s.name == 'refseq2ensembl'
 			}
 		}
 

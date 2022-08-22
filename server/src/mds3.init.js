@@ -337,7 +337,7 @@ this is required for gdc dataset
 so that gencode-annotated stuff can show under a refseq name
 */
 function may_add_refseq2ensembl(ds, genome) {
-	if (!genome.genedb.refseq2ensembl) return
+	if (!genome.genedb.hasTable_refseq2ensembl) return
 	ds.refseq2ensembl_query = genome.genedb.db.prepare('select ensembl from refseq2ensembl where refseq=?')
 }
 
