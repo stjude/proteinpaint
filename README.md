@@ -35,15 +35,14 @@ npm run sethooks
 
 ### Scripts
 
-This requires npm v7.7.6+ and tested with Node v12.21.0, which is currently
-compatible with the required node-canvas version of 2.6.0 (Node v14 is not).
-Bundles were also tested to run in Node v10.15.3 in a SJ host machine. 
+This requires npm v7.7.6+ and tested with Node v16+.
+Bundles were also tested to run in Node v12.21+ in a SJ host machine. 
 
 #### Project root
 
 ```bash
 # one-time setup
-nvm use 12 # use Node v12+
+nvm use 16 # use Node v16+
 npm install -g npm@7 # if you have not upgraded yet
 npm run reset # alias for `npm install --workspaces`
 
