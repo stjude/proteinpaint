@@ -5,12 +5,13 @@ ARG registry=docker.io/library
 FROM ${registry}/node:12-stretch AS ppbase
 ARG platform="x86_64"
 
-RUN echo "PLATFORM IS ${platform}"
 ENV RUSTUP_HOME=/usr/local/rustup \
     CARGO_HOME=/usr/local/cargo \
     PATH=/usr/local/cargo/bin:$PATH
 
 RUN apt-get update && apt-get install -y \
+    build-essential \
+    librsvg2-dev \
 	libbz2-dev \
 	libcurl4-openssl-dev \
 	libgsl0-dev \
@@ -20,15 +21,19 @@ RUN apt-get update && apt-get install -y \
 	libssl-dev \
 	zlib1g-dev && rm -rf /var/lib/apt/lists/* \
 	libcairo2-dev \
+    libcairo-dev \
 	libjpeg-dev \
 	libpango1.0-dev \
+    libsdl-pango-dev \
 	libgif-dev \
 	sqlite3 libsqlite3-dev \
 	g++ \
+    pkg-config \
 	## clean up
     && apt-get clean \ 
     && rm -rf /var/lib/apt/lists/ \ 
     && rm -rf /tmp/downloaded_packages/ /tmp/*.rds
+
 
 RUN sed -i '/<blank>/,/<\/blank>/d' /etc/fonts/fonts.conf
 
@@ -57,6 +62,7 @@ RUN curl http://www.clustal.org/omega/clustal-omega-1.2.4.tar.gz -O && tar -xvf 
 RUN cd clustal-omega-1.2.4 && ./configure --prefix="/usr/local" --build=${platform}-unknown-linux-gnu && make && make install
 RUN  chmod 755 /usr/local/bin/clustalo
 
+
 #RUN wget http://hgdownload.soe.ucsc.edu/admin/exe/linux.$platform/bigWigSummary -P /home/root/pp/tools/ && \
 #    wget http://hgdownload.soe.ucsc.edu/admin/exe/linux.$platform/bigBedToBed -P /home/root/pp/tools/ && \
 #    wget http://hgdownload.soe.ucsc.edu/admin/exe/linux.$platform/bigBedNamedItems -P /home/root/pp/tools/
@@ -64,6 +70,8 @@ RUN  chmod 755 /usr/local/bin/clustalo
 
 # need npm v7 to support workspaces
 RUN npm install --global npm@7
+WORKDIR /home/root/pp
+RUN apt-get update && apt-get install -y libsdl-pango-dev && npm install canvas --build-from-source
 
 # Separate rust build so that the compiled code may be copied later
 # in isolation, without including all the rust toolchain in the image
@@ -88,6 +96,7 @@ FROM ppbase AS ppminpkg
 WORKDIR /home/root/pp
 ADD . ./tmppack
 WORKDIR /home/root/pp/tmppack
+
 
 RUN mkdir -p minpkgjsons/server && mkdir minpkgjsons/client && \
      ./build/minpkgjson.js package.json > minpkgjsons/package.json && \
