@@ -24,7 +24,7 @@ RUN export RUSTC_WRAPPER=$(which sccache)
 ARG PKGVER=0.0.0
 
 # # todo: may rename package with version number to publish
-RUN cp -r ../tmppack/node_modules . 
+#RUN cp -r ../tmppack/node_modules . 
 ENV PKGTGZ=stjude-proteinpaint.tgz
 RUN npm install ../tmppack/$PKGTGZ
 
