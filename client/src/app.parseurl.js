@@ -29,11 +29,23 @@ upon error, throw err message as a string
 	const urlp = urlmap()
 
 	if (urlp.has('appcard')) {
-		const ad = await import('../appdrawer/app.drawer.render')
+		const ad = await import('../appdrawer/adSandbox')
 		const cardJsonFile = urlp.get('appcard')
 		const re = await client.dofetch2('/cardsjson')
-		const track = re.examples.findIndex(t => t.sandboxjson == cardJsonFile)
-		ad.openSandbox(re.examples[track], arg.app.drawer.apps_sandbox_div)
+		const track = re.elements.findIndex(t => {
+			if (t.sandboxJson == cardJsonFile) return t
+			else if (t.sandboxHtml == cardJsonFile) return t
+			else if (t.type == 'nestedCard') {
+				//TODO: only opens nestedCard track list
+				//Fix when simiplfying openSandbox code
+				for (const child of t.children) {
+					if (child.sandboxHtml == cardJsonFile) return child
+					else if (child.sandboxHtml == cardJsonFile) return child
+				}
+			}
+		})
+		arg.app.drawer.genomes = arg.genomes
+		ad.openSandbox(re.elements[track], arg.app.drawer)
 		return
 	}
 
