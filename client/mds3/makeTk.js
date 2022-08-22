@@ -63,7 +63,7 @@ and will use cached data at rawmlst instead
 */
 
 export async function makeTk(tk, block) {
-	// run just once to initiate a track
+	// run just once to initiate a track by adding in essential attributes to tk object
 
 	tk.subtk2height = {}
 	// keys: "skewer", "leftlabels"
@@ -249,9 +249,23 @@ function init_mclass(tk) {
 	}
 }
 
+/*
+to get the dataset object for this track, to be kept in client side
+
+input:
+	tk{}
+	block{}
+no output
+
+effect: creates tk.mds{}
+
+
+for official dataset, query ?getDataset to obtain a fresh copy
+for custom dataset, generate an object from scratch
+*/
 async function get_ds(tk, block) {
 	if (tk.dslabel) {
-		// official dataset
+		// this tk loads from an official dataset
 		const data = await dofetch3(`getDataset?genome=${block.genome.name}&dsname=${tk.dslabel}`)
 		if (data.error) throw 'Error: ' + data.error
 		if (!data.ds) throw 'data.ds{} missing'
@@ -259,10 +273,13 @@ async function get_ds(tk, block) {
 		tk.name = data.ds.label
 		return
 	}
-	// custom
+
+	// this tk loads as a custom track
 	if (!tk.name) tk.name = 'Custom data'
+	// create the dataset object
 	tk.mds = {}
 	// fill in details to tk.mds
+
 	///////////// custom data sources
 	if (tk.bcf) {
 		if (!tk.bcf.file && !tk.bcf.url) throw 'file or url missing for tk.bcf{}'
@@ -608,6 +625,12 @@ function mayDeriveSkewerOccurrence4samples(tk) {
 	v.type_sunburst = 'sunburst'
 }
 
+/*
+input:
+	tk{}
+	genome{}
+		client-side genome object
+*/
 async function getbcfheader_customtk(tk, genome) {
 	const arg = ['genome=' + genome.name]
 	if (tk.bcf.file) {
@@ -621,8 +644,9 @@ async function getbcfheader_customtk(tk, genome) {
 	if (data.error) throw data.error
 	const [info, format, samples, errs] = vcfparsemeta(data.metastr.split('\n'))
 	if (errs) throw 'Error parsing VCF meta lines: ' + errs.join('; ')
-	tk.bcf.info = info
-	tk.bcf.format = format
-	tk.bcf.samples = samples
-	tk.bcf.nochr = data.nochr
+	tk.mds.bcf = {
+		info,
+		format,
+		samples
+	}
 }

@@ -54,9 +54,10 @@ export function client_copy(ds) {
 */
 	const ds2 = {
 		isMds3: true,
-		label: ds.label,
-		queries: copy_queries(ds)
+		label: ds.label
 	}
+
+	ds2.queries = copy_queries(ds, ds2)
 
 	if (ds.termdb) {
 		ds2.termdb = {}
@@ -236,15 +237,27 @@ function validate_variant2samples(ds) {
 	}
 }
 
-function copy_queries(ds) {
+function copy_queries(ds, dscopy) {
 	const copy = {}
 	if (ds.queries.snvindel) {
 		copy.snvindel = {
 			forTrack: ds.queries.snvindel.forTrack,
 			url: ds.queries.snvindel.url
 		}
+
 		if (ds.queries.snvindel.m2csq) {
 			copy.snvindel.m2csq = { by: ds.queries.snvindel.m2csq.by }
+		}
+
+		if (ds.queries.snvindel?.byrange?.bcffile) {
+			// the query is using a bcf file
+			// create the bcf{} object on dscopy
+			dscopy.bcf = {}
+			if (ds.queries.snvindel.byrange?._tk?.info) {
+				// this bcf file has info fields, attach to copy.bcf{}
+				// dataset may specify if to withhold
+				dscopy.bcf.info = ds.queries.snvindel.byrange._tk.info
+			}
 		}
 	}
 	// new query
