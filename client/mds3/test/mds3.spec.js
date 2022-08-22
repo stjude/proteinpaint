@@ -175,23 +175,19 @@ tape('Launch GDC dataset by SSM ID, KRAS', test => {
 tape('Render gene track from search box, KRAS', async test => {
 	test.timeoutAfter(10000)
 	const holder = getHolder()
+	const gene = 'KRAS'
 
 	await runproteinpaint({
 		holder,
 		noheader: 1,
 		geneSearch4GDCmds3: true
-		// onloadalltk_always: checkSearchBox ****This does not work
 	})
-
-	// function checkSearchBox() {
-	// 	console.log('This callback works without tracks')
-	// }
 
 	await sleep(1000)
 
 	//Enter KRAS into search box
 	const searchBox = d3s.select('input')._groups[0][0]
-	searchBox.value = 'KRAS'
+	searchBox.value = gene
 	searchBox.dispatchEvent(new Event('keyup'))
 
 	//Click on first menu option -> 'KRAS'
@@ -201,10 +197,11 @@ tape('Render gene track from search box, KRAS', async test => {
 
 	//Verify track renders
 	await sleep(3000)
-	const geneTrackFound = [...holder.querySelectorAll('span.sja_clbtext')].some(
-		elem => elem.innerText == 'KRAS ENST00000256078'
-	)
-	test.true(geneTrackFound, `Should render default KRAS ENST00000256078 track`)
+	const geneTrackFound = d3
+		.selectAll('span.sja_clbtext')
+		.nodes()
+		.some(elem => elem.innerText.includes(gene))
+	test.true(geneTrackFound, `Should render default ${gene} track`)
 
 	if (test._ok) holder.remove()
 	test.end()
