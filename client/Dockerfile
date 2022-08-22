@@ -1,4 +1,4 @@
-FROM node:18.7.0-slim as build
+FROM node:16.16.0-slim as build
 
 USER node
 RUN mkdir /home/node/app
@@ -10,6 +10,11 @@ COPY --chown=node:node /client/package.json ./
 ENV PATH=/home/node/node_modules/.bin:$PATH
 
 WORKDIR /home/node/app
-RUN npm install
+
+FROM pprust:$IMGVER AS pppkg
+
+COPY --from=pppkg /home/root/pp/tmppack/node_modules .
+
+
 
 CMD ["npm", "run", "start"]
