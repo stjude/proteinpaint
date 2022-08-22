@@ -6,9 +6,9 @@ module.exports = function() {
 			allowedChartTypes: ['barchart', 'survival', 'matrix'],
 			mutationset: [
 				{
-					snvindel: 'sdhanda/mb_portal/BT_database/SNVindel_pnet.tsv',
-					cnv: 'sdhanda/mb_portal/BT_database/CNV_data_pnet.tsv',
-					fusion: 'sdhanda/mb_portal/BT_database/fusion_pnet.tsv'
+					snvindel: 'sdhanda/mb_portal/BT_database/SNVindel_IHG.tsv',
+					cnv: 'sdhanda/mb_portal/BT_database/CNV_data_IHG.tsv',
+					fusion: 'sdhanda/mb_portal/BT_database/fusion_IHG.tsv'
 				}
 			],
 			db: {
