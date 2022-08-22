@@ -1,0 +1,44 @@
+---
+version: "3"
+
+services:
+
+
+  pp-server:
+    container_name: pp-server
+    environment:
+      - NODE_OPTIONS="--max-old-space-size=2048"
+    build:
+      context: ./
+      dockerfile: ./build/full/Dockerfile
+      args: 
+        platform: "aarch64"
+
+
+    volumes:
+      - ./:/home/node/app/
+      - /Users/azaldiva/data/tp:/home/root/pp/tp/
+      - /Users/azaldiva/proteinpaint/bare:/home/root/pp/active/
+      - exclude:/home/node/app/node_modules
+
+  pp-client:
+    container_name: pp-client
+    environment:
+      - NODE_OPTIONS="--max-old-space-size=2048"
+
+    build:
+      context: ./
+      dockerfile: ./client/Dockerfile
+    command: bash -c "rm -rf /home/node/app/node_modules/* && npm run start"
+    volumes:
+      - ./client:/home/node/app/
+      - exclude:/home/node/app/node_modules
+
+  nginx:
+    image: nginx:latest
+    volumes:
+      - ./build/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+
+
+volumes:
+  exclude: null
