@@ -397,11 +397,12 @@ tape('Launch variant table from track variant label', test => {
 				type: 'mds3',
 				dslabel: 'GDC',
 				callbackOnRender: (tk, bb) => {
+					const mtk = bb.tklst.find(i => i.type == 'mds3')
 					//Click on track variant link to open menu
 					const variantsControl = d3s
 						.selectAll('text.sja_clbtext2')
 						.nodes()
-						.find(e => e.innerHTML == '100 of 111 variants')
+						.find(e => e.innerHTML == mtk.leftlabels.doms.variants.nodes()[0].innerHTML)
 					variantsControl.dispatchEvent(new Event('click'))
 
 					//Click 'List' menu option
@@ -458,11 +459,12 @@ tape('Launch cases from track cases label', test => {
 				type: 'mds3',
 				dslabel: 'GDC',
 				callbackOnRender: async (tk, bb) => {
+					const mtk = bb.tklst.find(i => i.type == 'mds3')
 					//Click on track cases link to open table
 					const casesControl = d3s
 						.selectAll('text.sja_clbtext2')
 						.nodes()
-						.find(e => e.innerHTML == '1273 cases')
+						.find(e => e.innerHTML == mtk.leftlabels.doms.samples.nodes()[0].innerHTML)
 					casesControl.dispatchEvent(new Event('click'))
 
 					await sleep(1000) //Still required. Callback executes to quickly for dom
@@ -472,7 +474,7 @@ tape('Launch cases from track cases label', test => {
 					const diseaseTypeFound = d3s
 						.selectAll('div')
 						.nodes()
-						.find(e => e.innerText == 'Disease type\nn=21')
+						.find(e => e.innerText.includes('Disease type'))
 					test.ok(diseaseTypeFound, "Should display cases table with 'Disease type' as the first tab")
 
 					//Close orphaned popup window
@@ -506,11 +508,12 @@ tape('Collapse and expand mutations from variant link', test => {
 				type: 'mds3',
 				dslabel: 'GDC',
 				callbackOnRender: async (tk, bb) => {
+					const mtk = bb.tklst.find(i => i.type == 'mds3')
 					//Click on track variant link to open menu
 					const variantsControl = d3s
 						.selectAll('text.sja_clbtext2')
 						.nodes()
-						.find(e => e.innerHTML == '100 of 111 variants')
+						.find(e => e.innerHTML == mtk.leftlabels.doms.variants.nodes()[0].innerHTML)
 					variantsControl.dispatchEvent(new Event('click'))
 
 					//Click 'Collapse' menu option
