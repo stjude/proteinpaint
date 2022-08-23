@@ -59,7 +59,7 @@ RUN mkdir -p /home/root/pp && cd /home/root/pp && mkdir app && mkdir tp && mkdir
 
 RUN wget https://pecan.stjude.cloud/static/pp-support/linux/straw -P /home/root/pp/tools/ 
 RUN curl http://www.clustal.org/omega/clustal-omega-1.2.4.tar.gz -O && tar -xvf clustal-omega-1.2.4.tar.gz
-RUN cd clustal-omega-1.2.4 && ./configure --prefix="/usr/local" --build=${ARCH}}-unknown-linux-gnu && make && make install
+RUN cd clustal-omega-1.2.4 && ./configure --prefix="/usr/local" --build=${ARCH}-unknown-linux-gnu && make && make install
 RUN  chmod 755 /usr/local/bin/clustalo
 
 
