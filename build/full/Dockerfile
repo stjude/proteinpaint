@@ -16,7 +16,10 @@ WORKDIR /home/root/pp/tmppack
 ARG ELECTRON_GET_USE_PROXY=false
 ARG GLOBAL_AGENT_HTTPS_PROXY=""
 
-RUN npm -D install --workspaces
+RUN if [ "$ARCH" = "aarch64" ]; then \ 
+         apt-get update && apt-get install -y libsdl-pango-dev && npm install canvas --build-from-source; \
+    fi
+RUN npm -D install
 ADD . .
 RUN ./build/full/pack.sh
 WORKDIR /home/root/pp/app
@@ -26,7 +29,7 @@ ARG PKGVER=0.0.0
 # # todo: may rename package with version number to publish
 RUN cp -r ../tmppack/node_modules . 
 ENV PKGTGZ=stjude-proteinpaint.tgz
-RUN npm install ../tmppack/$PKGTGZ
+#RUN npm install ../tmppack/$PKGTGZ
 
 COPY ./build/full/setup.sh .
 # run this image to copy artifacts from the Docker process for troubleshooting 

@@ -7,6 +7,9 @@ let babelrc
 try {
 	babelrc = fs.readFileSync(path.join(__dirname, '.babelrc'))
 	babelrc = JSON.parse(babelrc)
+	if (process.env.PP_MODE?.startsWith('container')) {
+		babelrc.presets[0][1].targets.node = 16
+	}
 } catch (e) {
 	throw e
 }

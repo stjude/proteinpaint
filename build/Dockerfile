@@ -2,9 +2,10 @@
 # different registry by setting the registry arg at build time.
 ARG registry=docker.io/library
 
-FROM ${registry}/node:12-stretch AS ppbase
+FROM ${registry}/node:16-bullseye AS ppbase
 ARG ARCH="x86_64"
 
+ENV ARCH=$ARCH
 ENV RUSTUP_HOME=/usr/local/rustup \
     CARGO_HOME=/usr/local/cargo \
     PATH=/usr/local/cargo/bin:$PATH
@@ -20,11 +21,8 @@ RUN apt-get update && apt-get install -y \
 	libperl-dev \
 	libssl-dev \
 	zlib1g-dev && rm -rf /var/lib/apt/lists/* \
-	libcairo2-dev \
     libcairo-dev \
 	libjpeg-dev \
-	libpango1.0-dev \
-    libsdl-pango-dev \
 	libgif-dev \
 	sqlite3 libsqlite3-dev \
 	g++ \
@@ -63,15 +61,11 @@ RUN cd clustal-omega-1.2.4 && ./configure --prefix="/usr/local" --build=${ARCH}-
 RUN  chmod 755 /usr/local/bin/clustalo
 
 
-#RUN wget http://hgdownload.soe.ucsc.edu/admin/exe/linux.$ARCH/bigWigSummary -P /home/root/pp/tools/ && \
-#    wget http://hgdownload.soe.ucsc.edu/admin/exe/linux.$ARCH/bigBedToBed -P /home/root/pp/tools/ && \
-#    wget http://hgdownload.soe.ucsc.edu/admin/exe/linux.$ARCH/bigBedNamedItems -P /home/root/pp/tools/
-
-
-# need npm v7 to support workspaces
-RUN npm install --global npm@7
-WORKDIR /home/root/pp
-RUN apt-get update && apt-get install -y libsdl-pango-dev && npm install canvas --build-from-source
+RUN if ["$ARCH" = "x86_64" ]; then \ 
+        wget http://hgdownload.soe.ucsc.edu/admin/exe/linux.$ARCH/bigWigSummary -P /home/root/pp/tools/ && \
+        wget http://hgdownload.soe.ucsc.edu/admin/exe/linux.$ARCH/bigBedToBed -P /home/root/pp/tools/ && \
+        wget http://hgdownload.soe.ucsc.edu/admin/exe/linux.$ARCH/bigBedNamedItems -P /home/root/pp/tools/; \
+    fi
 
 # Separate rust build so that the compiled code may be copied later
 # in isolation, without including all the rust toolchain in the image
@@ -93,6 +87,7 @@ RUN set -eux; \
 
 
 FROM ppbase AS ppminpkg
+
 WORKDIR /home/root/pp
 ADD . ./tmppack
 WORKDIR /home/root/pp/tmppack
