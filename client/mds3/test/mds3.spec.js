@@ -65,7 +65,7 @@ tape('Run GDC dataset, gene symbol: KRAS', test => {
 	}
 })
 
-tape('Run GDC dataset, ensembl ID: ENST00000407796', test => {
+tape('Run GDC dataset, ensembl transcript: ENST00000407796', test => {
 	test.timeoutAfter(8000)
 	const holder = getHolder()
 
@@ -94,6 +94,42 @@ tape('Run GDC dataset, ensembl ID: ENST00000407796', test => {
 
 		//Confirm gene symbol used to call track
 		test.ok(bb.usegm.isoform == 'ENST00000407796', 'Should render ENST00000407796 track in GDC dataset')
+
+		if (test._ok) holder.remove()
+		test.end()
+	}
+})
+
+tape('Run GDC dataset, ensembl gene: ENSG00000133703', test => {
+	// kras, should map to canonical isoform ENST00000256078
+	test.timeoutAfter(8000)
+	const holder = getHolder()
+
+	runproteinpaint({
+		holder,
+		noheader: true,
+		nobox: true,
+		genome: 'hg38',
+		gene: 'ENSG00000133703',
+		tracks: [
+			{
+				type: 'mds3',
+				dslabel: 'GDC'
+			}
+		],
+		onloadalltk_always: checkTrack
+	})
+
+	function checkTrack() {
+		//Confirm track type
+		const mds3Track = bb.tklst.find(i => i.type == 'mds3')
+		test.ok(mds3Track, 'type=mds3 track should be found')
+
+		//Confirm correct dataset
+		test.ok(mds3Track.dslabel == 'GDC', 'Should render GDC dataset')
+
+		//Confirm gene symbol used to call track
+		test.ok(bb.usegm.isoform == 'ENST00000256078', 'Should render ENST00000256078 track in GDC dataset')
 
 		if (test._ok) holder.remove()
 		test.end()

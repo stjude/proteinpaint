@@ -3,8 +3,7 @@ module.exports = {
 	species: 'human',
 	genomefile: 'genomes/hg19.gz',
 	genedb: {
-		dbfile: 'anno/genes.hg19.db',
-		hasalias: true
+		dbfile: 'anno/genes.hg19.db'
 	},
 	proteindomain: {
 		dbfile: 'anno/db/proteindomain.db',
