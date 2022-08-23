@@ -1,7 +1,6 @@
 #!/bin/bash
 
-set -e
-set -x
+set -euxo pipefail
 
 ###############
 # ARGUMENTS
@@ -27,9 +26,13 @@ while getopts "t:r:h:" opt; do
 		REV=$OPTARG
 		;;
 	h)
-		echo $USAGE
+		echo "$USAGE"
 		exit 1
 		;;
+  *)
+  	echo "Unrecognized parameter. Use -h to display usage."
+  	exit 1
+  	;;
 	esac
 done
 
@@ -38,18 +41,18 @@ done
 #######################################
 
 FILE=archive.tar
-if [[ "$REV" != 'latest' ]]; then
+if [[ $REV != 'latest' ]]; then
 	if [[ $REV == "HEAD" ]]; then
 		REV=$(git rev-parse --short HEAD)
 	fi
 
-	if [[ "$REV" == "HEAD" || "$REV" == "" ]]; then
+	if [[ $REV == "HEAD" || $REV == "" ]]; then
 		echo "Unable to convert the HEAD revision into a Git commit hash."
 		exit 1
 	fi
 
 	echo "Extracting from commit='$REV' ... "
-	git archive --output=$FILE $REV
+	git archive --output=$FILE "$REV"
 elif [[ "$(git status --porcelain)" == "" ]]; then
 	# clean git workspace
 	echo "Extracting from latest commit ... "
@@ -58,7 +61,7 @@ else
 	# dirty git workspace
 	HASH=$(git stash create)
 	echo "Extracting from git-tracked files (stash=$HASH) ..."
-	git archive --output=$FILE $HASH
+	git archive --output=$FILE "$HASH"
 	#git ls-files | tar Tzcf - archive.tgz
 fi
 
@@ -69,7 +72,7 @@ printf "Copying selected directories and files ..."
 tar -C tmppack/ -xf $FILE package.json
 tar -C tmppack/ -xf $FILE server
 tar -C tmppack/ -xf $FILE client
-tar -C tmppack/ -xvf $FILE $TARGETDIR
+tar -C tmppack/ -xvf $FILE "$TARGETDIR"
 tar -C tmppack/ -xvf $FILE build/Dockerfile
 tar -C tmppack/ -xvf $FILE build/compile-rust.sh
 tar -C tmppack/ -xvf $FILE build/minpkgjson.js
@@ -77,4 +80,4 @@ tar -C tmppack/ -xvf $FILE public/index.html
 tar -C tmppack/ -xvf $FILE utils/install.pp.js
 tar -C tmppack/ -xvf $FILE .dockerignore
 tar -C tmppack/ -xvf $FILE LICENSE
-echo $REV > tmppack/rev.txt
+echo "$REV" > tmppack/rev.txt

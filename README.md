@@ -66,7 +66,7 @@ npm run gdc # runs the gdc tests
 ```bash
 npm run dev # generates the server.js bundle
 npm start # starts the server
-npm test # tests the server conde
+npm test # tests the server code
 ```
 
 #### in project/root

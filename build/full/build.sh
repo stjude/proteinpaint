@@ -1,13 +1,13 @@
 #!/bin/bash
 
-set -e
+set -euxo pipefail
 
 ###############
 # ARGUMENTS
 ###############
 
 USAGE="Usage:
-./build/full/build.sh [-r] [-b] [-c]
+	./build/full/build.sh [-r] [-b] [-c]
 
 	-r REV: git revision to checkout, if empty will use the current code state
 	-b BUILDARGS: build variables to pass to the Dockerfile that are not persisted to the built image
@@ -17,7 +17,7 @@ USAGE="Usage:
 REV=latest
 BUILDARGS=""
 CROSSENV=""
-while getopts "r:b:c:h:" opt; do
+while getopts "r:b:c:h:x:" opt; do
 	case "${opt}" in
 	r)
 		REV=${OPTARG}
@@ -26,12 +26,16 @@ while getopts "r:b:c:h:" opt; do
 		BUILDARGS=${OPTARG}
 		;;
 	c)
-		CROSSENV=${OPTARG}	
+		CROSSENV=${OPTARG}
 		;;
 	h)
-		echo $USAGE
+		echo "$USAGE"
 		exit 1
 		;;
+  *)
+  	echo "Unrecognized parameter. Use -h to display usage."
+  	exit 1
+  	;;
 	esac
 done
 
@@ -39,7 +43,7 @@ done
 # EXTRACT REQUIRED FILES
 #########################
 
-./build/extract.sh -r $REV -t full
+./build/extract.sh -r "$REV" -t full
 REV=$(cat tmppack/rev.txt)
 
 #########################
@@ -52,14 +56,14 @@ cd tmppack
 #TAG="$(node -p "require('./package.json').version")"
 TAG="$(grep version package.json | sed 's/.*"version": "\(.*\)".*/\1/')"
 echo "building ppbase:$REV image, package version=$TAG"
-docker build --file ./build/Dockerfile $BUILDARGS --target ppbase --tag ppbase:$REV .
+docker build . --file ./build/Dockerfile --target ppbase --tag ppbase:$REV $BUILDARGS
 echo "building pprust:$REV image, package version=$TAG"
-docker build --file ./build/Dockerfile $BUILDARGS --target pprust --tag pprust:$REV .
+docker build . --file ./build/Dockerfile --target pprust --tag pprust:$REV $BUILDARGS
 echo "generating a build with minimal package jsons"
-docker build --file ./build/Dockerfile $BUILDARGS --target ppminpkg --tag ppminpkg:$REV .
+docker build . --file ./build/Dockerfile --target ppminpkg --tag ppminpkg:$REV $BUILDARGS
 
 echo "building pppkg:$REV image, package version=$TAG, can copy /home/root/pp/tmppack/stjude-proteinpaint.tgz as a publishable package"
-docker build --file ./build/full/Dockerfile $BUILDARGS --target pppkg --tag pppkg:$REV --build-arg IMGVER=$REV --build-arg PKGVER=$TAG --build-arg CROSSENV="$CROSSENV" .
+docker build . --file ./build/full/Dockerfile --target pppkg --tag pppkg:$REV --build-arg IMGVER=$REV --build-arg PKGVER=$TAG --build-arg CROSSENV=$CROSSENV $BUILDARGS
 
 echo "building ppfull:$REV image, package version=$TAG"
-docker build --file ./build/full/Dockerfile $BUILDARGS --target ppapp --tag ppfull:$REV --build-arg IMGVER=$REV --build-arg PKGVER=$TAG --build-arg CROSSENV="$CROSSENV" .
+docker build . --file ./build/full/Dockerfile --target ppapp --tag ppfull:$REV --build-arg IMGVER=$REV --build-arg PKGVER=$TAG --build-arg CROSSENV=$CROSSENV $BUILDARGS
