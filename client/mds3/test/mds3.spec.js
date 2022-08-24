@@ -526,8 +526,8 @@ tape('Launch cases from track cases label', test => {
 })
 
 tape('Collapse and expand mutations from variant link', test => {
-	//If dispatchEvent error in browser, run again before debugging
-	test.timeoutAfter(8000)
+	test.timeoutAfter(10000) //Fix for succeeding tape tests running before this one finishes
+	//Will throw a not ok error if another test fires
 	const holder = getHolder()
 
 	runproteinpaint({
