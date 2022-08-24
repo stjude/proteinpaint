@@ -36,7 +36,10 @@ while getopts "r:b:c:h:a:" opt; do
 		echo $USAGE
 		exit 1
 		;;
-	
+	\?)
+		echo $USAGE
+		exit 1
+		;;
 	esac
 done
 echo "ARCH IS $ARCH"

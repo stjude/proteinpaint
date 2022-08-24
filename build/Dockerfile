@@ -2,7 +2,7 @@
 # different registry by setting the registry arg at build time.
 ARG registry=docker.io/library
 
-FROM ${registry}/node:16-bullseye AS ppbase
+FROM ${registry}/node:16-buster-slim AS ppbase
 ARG ARCH="x86_64"
 
 ENV ARCH=$ARCH
@@ -11,6 +11,8 @@ ENV RUSTUP_HOME=/usr/local/rustup \
     PATH=/usr/local/cargo/bin:$PATH
 
 RUN apt-get update && apt-get install -y \
+    curl \
+    wget \
     build-essential \
     librsvg2-dev \
 	libbz2-dev \
@@ -39,10 +41,10 @@ ARG htsversion=1.14
 
 RUN curl -L https://github.com/samtools/htslib/releases/download/${htsversion}/htslib-${htsversion}.tar.bz2 | tar xj && \
     (cd htslib-${htsversion} && ./configure --enable-plugins --with-plugin-path='$(libexecdir)/htslib:/usr/libexec/htslib' && make install) && \
-    ldconfig && \
-    curl -L https://github.com/samtools/samtools/releases/download/${htsversion}/samtools-${htsversion}.tar.bz2 | tar xj && \
-    (cd samtools-${htsversion} && ./configure --with-htslib=system && make install) && \
-    curl -L https://github.com/samtools/bcftools/releases/download/${htsversion}/bcftools-${htsversion}.tar.bz2 | tar xj && \
+    ldconfig 
+RUN curl -L https://github.com/samtools/samtools/releases/download/${htsversion}/samtools-${htsversion}.tar.bz2 | tar xj && \
+    (cd samtools-${htsversion} && ./configure --with-htslib=system && make install) 
+RUN curl -L https://github.com/samtools/bcftools/releases/download/${htsversion}/bcftools-${htsversion}.tar.bz2 | tar xj && \
     (cd bcftools-${htsversion} && ./configure --enable-libgsl --with-htslib=system && make install)
 
 RUN apt-get update && apt-get install -y r-base -y libargtable2-dev \
@@ -55,16 +57,16 @@ RUN apt-get update && apt-get install -y r-base -y libargtable2-dev \
 
 RUN mkdir -p /home/root/pp && cd /home/root/pp && mkdir app && mkdir tp && mkdir cache && mkdir tools
 
-RUN wget https://pecan.stjude.cloud/static/pp-support/linux/straw -P /home/root/pp/tools/ 
-RUN curl http://www.clustal.org/omega/clustal-omega-1.2.4.tar.gz -O && tar -xvf clustal-omega-1.2.4.tar.gz
-RUN cd clustal-omega-1.2.4 && ./configure --prefix="/usr/local" --build=${ARCH}-unknown-linux-gnu && make && make install
-RUN  chmod 755 /usr/local/bin/clustalo
-
-
-RUN if ["$ARCH" = "x86_64" ]; then \ 
+RUN if [[ "$ARCH" == "x86_64" ]]; then \ 
+        wget https://pecan.stjude.cloud/static/pp-support/linux/straw -P /home/root/pp/tools/ && \
+        wget -O /usr/local/bin/clustalo http://www.clustal.org/omega/clustalo-1.2.4-Ubuntu-x86_64 && chmod 755 /usr/local/bin/clustalo && \
         wget http://hgdownload.soe.ucsc.edu/admin/exe/linux.$ARCH/bigWigSummary -P /home/root/pp/tools/ && \
         wget http://hgdownload.soe.ucsc.edu/admin/exe/linux.$ARCH/bigBedToBed -P /home/root/pp/tools/ && \
         wget http://hgdownload.soe.ucsc.edu/admin/exe/linux.$ARCH/bigBedNamedItems -P /home/root/pp/tools/; \
+    elif [[ "$ARCH" == "aarch64" ]]; then \
+        curl http://www.clustal.org/omega/clustal-omega-1.2.4.tar.gz -O && tar -xvf clustal-omega-1.2.4.tar.gz && \
+        cd clustal-omega-1.2.4 && ./configure --prefix="/usr/local" --build=${ARCH}-unknown-linux-gnu && make && make install && \
+        chmod 755 /usr/local/bin/clustalo; \
     fi
 
 # Separate rust build so that the compiled code may be copied later
