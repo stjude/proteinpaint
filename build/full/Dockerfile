@@ -15,18 +15,25 @@ COPY --from=ppminpkg /home/root/pp/tmppack /home/root/pp/tmppack
 WORKDIR /home/root/pp/tmppack
 ARG ELECTRON_GET_USE_PROXY=false
 ARG GLOBAL_AGENT_HTTPS_PROXY=""
-RUN npm -D install --workspaces
 
+RUN apt-get update && apt-get install -y libsdl-pango-dev \
+	## clean up
+  && apt-get clean \ 
+  && rm -rf /var/lib/apt/lists/ \ 
+  && rm -rf /tmp/downloaded_packages/ /tmp/*.rds
+
+RUN if [ "$ARCH" = "aarch64" ]; then npm install canvas --build-from-source; fi
+RUN npm -D install
 ADD . .
 RUN ./build/full/pack.sh
 WORKDIR /home/root/pp/app
 RUN export RUSTC_WRAPPER=$(which sccache)
 ARG PKGVER=0.0.0
 
-# todo: may rename package with version number to publish
+# # todo: may rename package with version number to publish
 RUN cp -r ../tmppack/node_modules . 
-ENV PKGTGZ=stjude-proteinpaint.tgz
-RUN npm install ../tmppack/$PKGTGZ
+RUN npm install node-pre-gyp
+RUN npm install ../tmppack/stjude-proteinpaint.tgz
 
 COPY ./build/full/setup.sh .
 # run this image to copy artifacts from the Docker process for troubleshooting 

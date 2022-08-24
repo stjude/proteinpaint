@@ -57,6 +57,9 @@ elif [[ "$(git status --porcelain)" == "" ]]; then
 else
 	# dirty git workspace
 	HASH=$(git stash create)
+	if [[ "$HASH" == "" ]]; then
+		HASH="HEAD"
+	fi
 	echo "Extracting from git-tracked files (stash=$HASH) ..."
 	git archive --output=$FILE $HASH
 	#git ls-files | tar Tzcf - archive.tgz
