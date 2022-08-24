@@ -15,7 +15,13 @@ COPY --from=ppminpkg /home/root/pp/tmppack /home/root/pp/tmppack
 WORKDIR /home/root/pp/tmppack
 ARG ELECTRON_GET_USE_PROXY=false
 ARG GLOBAL_AGENT_HTTPS_PROXY=""
-RUN apt-get update && apt-get install -y libsdl-pango-dev
+
+RUN apt-get update && apt-get install -y libsdl-pango-dev \
+	## clean up
+  && apt-get clean \ 
+  && rm -rf /var/lib/apt/lists/ \ 
+  && rm -rf /tmp/downloaded_packages/ /tmp/*.rds
+
 RUN if [ "$ARCH" = "aarch64" ]; then npm install canvas --build-from-source; fi
 RUN npm -D install
 ADD . .
