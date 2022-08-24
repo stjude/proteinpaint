@@ -115,46 +115,56 @@ document.body.onload = () => runproteinpaint({
 									//q: { mode: 'values' } // or 'groupsetting'
 								},
                 { id : 'Age at Last Follow Up (Y))'},
-                { id : 'Age-Cohort'},
-                { id : 'Alive / Dead'},
+                { id : 'Alive / Dead at the time of analysis'},
+                { id : 'Histology as Documented at Diagnosis'},
                 { id : 'Anatomical Location of Tumor Tier 1'},
                 { id : 'Anatomical Location of Tumor Tier 2'},
                 { id : 'Anatomical Location of Tumor Tier 3'},
-                { id : 'Anatomical Location of Tumor -Tier 4'},
-                { id : 'DKFZ Classifier'},
-                { id : 'Enrolling Institution'},
-                { id : 'Ever Used RT During Rx (Yes /No)'},
-                //{ id : 'Final EOR'},
-                { id : 'First Relapse Or PD  (Yes/No)'},
+                { id : 'Anatomical Location of Tumor Tier 4'},
+                { id : 'M0/M+'},
+                { id : 'M Stage'},
+                { id : 'Extent of Resection-1'},
+                { id : 'Extent of Resection-2'},
+                { id : 'Extent of Resection-3'},
+                { id : 'Primary treatment tier 1'},
+                { id : 'Primary treatment tier 2'},
+                { id : 'Post Surgery -Treatment Details'},
+                { id : 'Radiaton Used for Primary Treatment (Yes/No)'},
                 { id : 'Focal/CSI'},
-                { id : 'Fusion Types'},
+                { id : 'First Relapse Or Progresssive Disease  (Yes/No)'},
+                { id : 'Surgery (Yes/No)'},
                 { id : 'GTR/STR/NTR'},
+                { id : 'Treatment'},
+                { id : 'Radiation if used Focal/CSI'},
+                { id : 'Second Relapse  (Yes/No)'},
+                { id : 'Surgery (Yes/No).1'},
                 { id : 'GTR/STR/NTR.1'},
-                //{ id : 'GTR/STR/NTR/Biopsy'},
-                { id : 'Genetic Fusion (Yes/No)'},
+                { id : 'Treatment.1'},
+                { id : 'Radiation (Yes/No)'},
+                { id : 'Radiation if Used Focal/CSI'},
+                { id : 'Third Relapse  (Yes/No)'},
+                { id : 'Treatment.2'},
+                { id : 'Focal/CSI.1'},
+                { id : 'Ever Used RT During Treatment Course  (Yes /No)'},
                 { id : 'Histology Re-Review'},
-                { id : 'Histology as Documented at Diagnosis'},
+                { id : 'Genetic Fusion (Yes/No)'},
+                { id : 'Fusion Types'},
+                { id : 't-SNE Molecular Class'},
+                { id : 't-SNE Molecular Class -Abb'},
+                { id : 'MNP Brain Classifier Version 12.5 (Molecular Class)'},
+                { id : 'MNP Brain Classifier Version 12.5 (Molecular Class)  - Abb'},
                 { id : 'Integrated Tier 1 Diagnosis'},
                 { id : 'Integrated Tier 2 Diagnosis'},
                 { id : 'Integrated Tier 3 Diagnosis'},
-                { id : 'Integrated  Tier 4 Diagnosis'},
-                { id : 'M Stage'},
-                { id : 'Methylation'},
-                { id : 'Post Surgery -Treatment Details'},
-                { id : 'Primary treatment tier 1'},
-                { id : 'Primary treatment tier 2'},
-                //{ id : 'Protocol'},
+                { id : 'Integrated  Tier 4 Diagnosis ( Nomenclature based on WHO 2023)'},
+                { id : 'Integrated  Tier 4 Diagnosis ( Nomenclature based on WHO 2023)-Abb'},
+                { id : 'Structural Variants'},
+                //{ id : 'CNV'},
+                { id : 'Somatic Mutations'},
+                //{ id : 'Driver Gene'},
+                { id : 'Methylation '},
                 { id : 'RNA-Seq'},
-                { id : 'Radiaton Focal/CSI/None'},
-                { id : 'Risk (At diagnosis)'},
-                { id : 'Score'},
-                { id : 'Second Relapse  (Yes/No)'},
-                { id : 'Surgery (Yes/No)'},
-                { id : 'TSNE closest cluster (Sandeep)'},
-                { id : 'Treatment'},
-                { id : 'Treatment.1'},
                 { id : 'WES'},
-                { id : 't-SNE'},
 							]
 						},
            /* {
@@ -168,7 +178,8 @@ document.body.onload = () => runproteinpaint({
           overrides: {
             SVfill: {
               value: {
-                key: 'RNA-Seq',
+                key: 'RNA-Seq', 
+                //value: 'RNA-seq', 
                 values: [
                   {key: 'Not tested', label: 'Not tested', color: '#fff'}
                 ]
@@ -199,7 +210,8 @@ document.body.onload = () => runproteinpaint({
             },*/
             WESfill: {
               value: {
-                key: 'WES',
+                key: 'WES', 
+                //value: 'WES', 
                 values: [
                   {key: 'Not tested', label: 'Not tested', color: '#fff', order: 10000}
                 ]
@@ -214,7 +226,8 @@ document.body.onload = () => runproteinpaint({
             },
             CNVfill: {
               value: {
-                key: 'Methylation', 
+                key: 'Methylation ', 
+                value: 'Methylation ', 
                 values: [
                   {key: 'Not tested', label: 'Not tested', color: '#fff', order: 10000}
                 ]
@@ -222,7 +235,7 @@ document.body.onload = () => runproteinpaint({
               sampleFilter: {
                 type: 'tvs', // "wrapper-value-setting"
                 tvs: {
-                  term: {id: 'Methylation'},
+                  term: {id: 'Methylation '},
                   values: [{key: 'No'}]
                 }
               }
