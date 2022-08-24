@@ -1,3 +1,6 @@
+# This file will work with a .vcf extension. to run use the following command:
+# $ python3 clinvar_short.py -v vcf -o output 
+
 import sys
 import argparse
 import re
