@@ -62,6 +62,7 @@ function loadElements(self) {
 		const holder = select(`#${element.section} > .sjpp-element-list`)
 		if (element.type == 'card' || element.type == 'nestedCard') {
 			cardInit({
+				app: self.api,
 				holder: holder
 					.style('display', 'grid')
 					.style('grid-template-columns', 'repeat(auto-fit, minmax(320px, 1fr))')
@@ -73,6 +74,7 @@ function loadElements(self) {
 			})
 		} else if (element.type == 'dsButton') {
 			buttonInit({
+				app: self.api,
 				holder,
 				element,
 				pageArgs: self.opts

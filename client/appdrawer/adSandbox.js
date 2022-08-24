@@ -99,7 +99,7 @@ function openNestedCardSandbox(nestedCard, sandboxDiv) {
 function openCardSandbox(card, res, sandboxDiv) {
 	const sandboxArgs = {
 		intro: res.jsonfile.intro, //TODO change key to mainIntroduction
-		ppcalls: res.jsonfile.ppcalls,
+		ppcalls: res.jsonfile.ppcalls.filter(e => !e.hidden),
 		buttons: res.jsonfile.buttons,
 		arrowButtons: res.jsonfile.arrowButtons,
 		ribbonMessage: res.jsonfile.ribbonMessage,
