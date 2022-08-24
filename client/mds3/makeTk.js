@@ -8,6 +8,13 @@ import { mclass } from '#shared/common'
 import { vcfparsemeta } from '#shared/vcf'
 
 /*
+this script exports one function "makeTk()" that will be called just once
+when the mds3 track object is initiating
+makeTk will not be called for subsequent user interactions with mds3 track
+it will initiate dataset object "tk.mds{}" for both official and custom data
+and creates getter callbacks to abstract dataset details
+
+
 ********************** EXPORTED
 makeTk
 ********************** INTERNAL
@@ -287,7 +294,7 @@ async function get_ds(tk, block) {
 		await getbcfheader_customtk(tk, block.genome)
 	} else if (tk.custom_variants) {
 		tk.mds.has_skewer = true // enable skewer tk
-		validateCustomVariants(tk)
+		validateCustomVariants(tk, block)
 		mayDeriveSkewerOccurrence4samples(tk)
 	} else {
 		throw 'unknown data source for custom track'
@@ -554,10 +561,100 @@ function getter_mcset_key(mcset, m) {
 	return ['no trigger']
 }
 
-function validateCustomVariants(tk) {
+/*
+to validate custom variants (snvindel and svfusion) already present in tk.custom_variants[]
+create "ssm_id" for each variant inside array
+create "pairlst[]" for sv/fusion
+makes no return
+*/
+function validateCustomVariants(tk, block) {
 	for (const m of tk.custom_variants) {
-		if (!m.ssm_id) {
-			m.ssm_id = m.chr + '.' + m.pos + '.' + (m.ref && m.alt ? m.ref + '.' + m.alt : m.mname)
+		if(m.dt==1) {
+			// snvindel
+			if(!m.chr) throw '.chr missing for custom snvindel'
+			if(!Number.isInteger(m.pos)) throw '.pos not integer for custom snvindel'
+			if(!m.ssm_id) {
+				// TODO ssmIdFieldsSeparator
+				m.ssm_id = m.chr + '.' + m.pos + '.' + (m.ref && m.alt ? m.ref + '.' + m.alt : m.mname)
+			}
+		} else if(m.dt==2 || m.dt==5) {
+			// sv or fusion
+			if(m.pairlst) {
+				// todo validate pairlst[]
+			} else {
+				// make pairlst[], requires chr1/pos1/chr2/pos2 etc
+				if(!m.chr1) throw '.chr1 missing for custom sv/fusion'
+				if(!Number.isInteger(m.pos1)) throw '.pos1 not integer for custom svfusion'
+				if(m.strand1!='+' && m.strand1!='-') throw '.strand1 not +/- for custom svfusion'
+				if(!m.chr2) throw '.chr1 missing for custom sv/fusion'
+				if(!Number.isInteger(m.pos2)) throw '.pos1 not integer for custom svfusion'
+				if(m.strand2!='+' && m.strand2!='-') throw '.strand1 not +/- for custom svfusion'
+				m.pairlst = [ {
+					a: {
+						chr: m.chr1,
+						pos: m.pos1,
+						strand: m.strand1,
+						name: m.gene1 || ''
+					},
+					b: {
+						chr: m.chr2,
+						pos: m.pos2,
+						strand: m.strand2,
+						name: m.gene2 || ''
+					}
+				}]
+				delete m.chr1
+				delete m.pos1
+				delete m.strand1
+				delete m.gene1
+				delete m.chr2
+				delete m.pos2
+				delete m.strand2
+				delete m.gene2
+			}
+
+			// m.pairlst[] is ready
+
+			// create ssm_id
+			const fields = [ m.dt ] // fields to make ssm_id for svfusion
+			// FIXME need pairlst[] index and a/b side
+			// "2.chr22.23253797.+.1.ABL1" should be "2.chr22.23253797.+.0b.ABL1" instead
+			// seek [0].a{}
+			const hits = block.seekcoord( m.pairlst[0].a.chr, m.pairlst[0].a.pos )
+			if(hits.length) {
+				// [0].a is within range
+				fields.push(...[
+					m.pairlst[0].a.chr,
+					m.pairlst[0].a.pos,
+					m.pairlst[0].a.strand,
+					0,
+					m.pairlst[0].a.name
+				])
+				m.mname = m.pairlst[0].a.name
+				m.chr = m.pairlst[0].a.chr
+				m.pos = m.pairlst[0].a.pos
+			} else {
+				// [0].a is not within range, seek [0].b{}
+				const hits = block.seekcoord( m.pairlst[0].b.chr, m.pairlst[0].b.pos )
+				if(hits.length) {
+					// [0].b is in range
+					fields.push(...[
+						m.pairlst[0].b.chr,
+						m.pairlst[0].b.pos,
+						m.pairlst[0].b.strand,
+						1,
+						m.pairlst[0].b.name
+					])
+					m.mname = m.pairlst[0].b.name
+					m.chr = m.pairlst[0].b.chr
+					m.pos = m.pairlst[0].b.pos
+				} else {
+					// [0] a/b both are not in range. do not reject?
+				}
+			}
+			m.ssm_id = fields.join('.')
+		} else {
+			throw 'unknown dt for a custom variant'
 		}
 	}
 }

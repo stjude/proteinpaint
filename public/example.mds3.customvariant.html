@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+<head>
+	 <meta charset="utf-8">
+</head>
+<body>
+
+<script src="bin/proteinpaint.js" charset="utf-8"></script>
+
+<noscript>This page requires JavaScript. Please enable it in your browser settings.</noscript>
+
+<div id=aaa style="margin:10px"></div>
+<div id=bb style="margin:10px"></div>
+<div id=cc style="margin:10px"></div>
+<div id=dd style="margin:10px"></div>
+
+<script>
+
+
+runproteinpaint({
+noheader:1,
+	holder:document.getElementById('bb'),
+	parseurl:true,
+	nobox:1,
+	genome:'hg19',
+	gene:'NM_016734', // pax5
+	tracks:[{
+		type:'mds3',
+		name:'custom snvindel and fusion',
+		custom_variants:[
+			{"chr":"chr9","pos":37015165,"mname":"P80R","class":"M","dt":1,ref:'G',alt:'C'},
+
+			{
+				gene1:'PAX5',chr1:'chr9',pos1:37002646, strand1:'-',
+				gene2:'JAK2',chr2:'chr9',pos2:5081726, strand2:'+',
+				dt:2,class:'Fuserna',
+			},
+		],
+	}],
+})
+</script>
+
+</body>
+</html>
