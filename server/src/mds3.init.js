@@ -447,12 +447,21 @@ export async function snvindelByRangeGetter_bcf(ds, genome) {
 
 				const m0 = {} // temp obj, modified by compute_mclass()
 				compute_mclass(q._tk, refallele, altalleles, m0, infoStr, id, param.isoform)
+				// m0.info{} is set
+
 				// make a m{} for every alt allele
 				for (const alt in m0.alt2csq) {
 					const m = m0.alt2csq[alt]
 					m.chr = (q._tk.nochr ? 'chr' : '') + chr
 					m.pos = pos - 1 // bcf pos is 1-based, return 0-based
 					m.ssm_id = [m.chr, m.pos, m.ref, m.alt].join(ssmIdFieldsSeparator)
+
+					/* QUICK FIX
+					simply attach all info fields to m{}
+					TODO as m{} is about one single ALT allele, may need to distinguish info fields that are about this allele
+					TODO official ds may decide only to reveal subset of info fields
+					*/
+					m.info = m0.info
 
 					if (q._tk.samples && q._tk.samples.length) {
 						/* vcf file has sample, must find out samples harboring this variant

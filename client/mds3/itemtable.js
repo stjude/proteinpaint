@@ -255,6 +255,19 @@ function table_snvindel({ mlst, tk, block }, grid) {
 		td1.text(currentMode.label)
 		td2.text(m.__value_missing ? 'NA' : m.__value_use)
 	}
+
+	if(m.info) {
+		/* info fields are available for this variant
+		later to add more features for info field display
+		by referencing tk.mds.bcf.info{} for instructions to display each info field
+		*/
+		for(const key in m.info) {
+			if(key=='CSQ') continue
+			const [td1, td2] = get_list_cells(grid)
+			td1.text(key)
+			td2.text(m.info[key])
+		}
+	}
 }
 
 function print_mname(div, m) {
