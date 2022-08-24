@@ -32,7 +32,7 @@ upon error, throw err message as a string
 		const ad = await import('../appdrawer/adSandbox')
 		const cardJsonFile = urlp.get('appcard')
 		const re = await client.dofetch2('/cardsjson')
-		const track = re.elements.findIndex(t => {
+		const element = re.json.elements.findIndex(t => {
 			if (t.sandboxJson == cardJsonFile) return t
 			else if (t.sandboxHtml == cardJsonFile) return t
 			else if (t.type == 'nestedCard') {
@@ -45,7 +45,7 @@ upon error, throw err message as a string
 			}
 		})
 		arg.app.drawer.genomes = arg.genomes
-		ad.openSandbox(re.elements[track], arg.app.drawer)
+		ad.openSandbox(re.json.elements[element], arg.app.drawer)
 		return
 	}
 
