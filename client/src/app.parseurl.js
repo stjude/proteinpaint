@@ -40,7 +40,8 @@ upon error, throw err message as a string
 			nestedCards.findIndex(t => {
 				for (const [i, child] of t.children.entries()) {
 					if (child.sandboxJson == cardJsonFile || child.sandboxHtml == cardJsonFile) {
-						;(element = t), (c = i)
+						element = t
+						c = i
 					}
 				}
 			})
