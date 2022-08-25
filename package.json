@@ -13,7 +13,7 @@
   ],
   "scripts": {
     "reset": "npm install --workspaces",
-    "predev": "node ./client/test/import-specs.js name=? && rm -f ../public/bin/*proteinpaint.js",
+    "predev": "if [[ -d ./client ]]; then node ./client/test/import-specs.js name=? && rm -f ../public/bin/*proteinpaint.js; fi",
     "dev": "webpack --config=./webpack.config.js --env NODE_ENV=development --watch --progress --color",
     "start": "nodemon server/bin.js --watch serverconfig.json --watch ./server/server*.js* --watch server/genome --watch server/dataset",
     "server": "npm start",
