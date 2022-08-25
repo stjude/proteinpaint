@@ -2,7 +2,7 @@ export function makeButton(arg) {
 	const button = arg.div
 		.append('button')
 		.attr('type', 'submit')
-		.style('background-color', '#cfe2f3')
+		.style('background-color', arg.backgroundColor ? arg.backgroundColor : '#cfe2f3')
 		.style('margin', arg.margin ? arg.margin : '20px 20px 0px 20px')
 		.style('padding', '8px')
 		.style('border', 'none')

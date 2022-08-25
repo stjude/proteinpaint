@@ -42,10 +42,17 @@
                     "sandboxHtml": "svview"
                 },
                 {
+                    "hidden": true,
+                    "name": "DNAnexus Tips",
+                    "type": "card",
+                    "description": "",
+                    "sandboxHtml": "dnanexusTips"
+                },
+                {
                     "name": "DNAnexus File Viewer",
                     "type": "card",
                     "description": "Instructions on launching ProteinPaint from DNAnexus",
-                    "sandboxHtml": "dnanexus"
+                    "sandboxHtml": "dnanexusFileviewer"
                 }
             ]
         },
@@ -151,7 +158,7 @@
             "type": "card",
             "name": "ASE",
             "section": "tracks",
-            "flag": {"text": "beta"},
+            "ribbon": {"text": "beta"},
             "description": "Allele-specific expression analysis",
             "image": "https://pecan.stjude.cloud/static/examples/images/ase-square.png",
             "sandboxJson": "ase",
@@ -161,9 +168,9 @@
             "type": "card",
             "name": "Gene Fusion",
             "section": "tracks",
-            "hidden": true,
-            "description": "",
-            "image": "",
+            "ribbon": {"text": "new", "expireDate": "2022-09-25"},
+            "description": " ",
+            "image": "https://pecan.stjude.cloud/static/examples/images/genefusion-square.png",
             "sandboxJson": "genefusion",
             "searchterms": [""]
         },
@@ -171,7 +178,7 @@
             "type": "card",
             "name": "BAM",
             "section": "tracks",
-            "flag": {"text": "beta"},
+            "ribbon": {"text": "beta"},
             "description": "Sequence reads alignment",
             "image": "https://pecan.stjude.cloud/static/examples/images/bam-square.png",
             "sandboxJson": "bam",
@@ -182,7 +189,7 @@
             "name": "Bampile",
             "hidden": true,
             "section": "tracks",
-            "flag": {"text": "beta"},
+            "ribbon": {"text": "beta"},
             "description": "Deep sequencing",
             "image": "https://pecan.stjude.cloud/static/examples/images/bampile-square.png",
             "sandboxJson": "bampile",
@@ -192,7 +199,7 @@
             "type": "card",
             "name": "GDC BAM slicing",
             "section": "tracks",
-            "flag": {"text": "beta"},
+            "ribbon": {"text": "beta"},
             "disableTopTabs": true,
             "description": "Visualize sequencing reads in NCI GDC",
             "image": "https://pecan.stjude.cloud/static/examples/images/bam-square.png",
@@ -308,7 +315,7 @@
             "section": "apps",
             "description": "Browse data from a custom cohort",
             "image": "https://pecan.stjude.cloud/static/examples/images/databrowser-square.png",
-            "flag": {"text":"beta"},
+            "ribbon": {"text":"beta"},
             "sandboxJson": "databrowser",
             "searchterms": ["clinical", "dictionary"]
         }
