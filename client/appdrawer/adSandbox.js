@@ -22,9 +22,10 @@ openDatasetButtonSandbox()
 
 
 TODOs: 
-- add breadcrumb trail in sandbox headers -> Removed the nested card back button for now
+- add breadcrumb trail in sandbox headers -> ***Removed the nested card back button for now
 - add icon link to copy appcard= link for each sandbox and views (i.e. examples, UIs, etc.) in sandbox headers
 - combine vertical and horizontal tab functions into one
+- fix nestcard background not in margins when sandbox called from ?appcard=
 
 Questions: 
 

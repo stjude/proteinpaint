@@ -32,20 +32,22 @@ upon error, throw err message as a string
 		const ad = await import('../appdrawer/adSandbox')
 		const cardJsonFile = urlp.get('appcard')
 		const re = await client.dofetch2('/cardsjson')
-		const element = re.json.elements.findIndex(t => {
-			if (t.sandboxJson == cardJsonFile) return t
-			else if (t.sandboxHtml == cardJsonFile) return t
-			else if (t.type == 'nestedCard') {
-				//TODO: only opens nestedCard track list
-				//Fix when simiplfying openSandbox code
-				for (const child of t.children) {
-					if (child.sandboxHtml == cardJsonFile) return child
-					else if (child.sandboxHtml == cardJsonFile) return child
-				}
-			}
-		})
 		arg.app.drawer.genomes = arg.genomes
-		ad.openSandbox(re.json.elements[element], arg.app.drawer)
+		const element = re.json.elements.findIndex(t => t.sandboxJson == cardJsonFile || t.sandboxHtml == cardJsonFile)
+		if (element <= 0) {
+			const nestedCards = [...re.json.elements.filter(e => e.type == 'nestedCard')]
+			let element, c
+			nestedCards.findIndex(t => {
+				for (const [i, child] of t.children.entries()) {
+					if (child.sandboxJson == cardJsonFile || child.sandboxHtml == cardJsonFile) {
+						;(element = t), (c = i)
+					}
+				}
+			})
+			ad.openSandbox(element.children[c], arg.app.drawer)
+		} else {
+			ad.openSandbox(re.json.elements[element], arg.app.drawer)
+		}
 		return
 	}
 
