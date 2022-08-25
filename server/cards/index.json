@@ -168,7 +168,7 @@
             "type": "card",
             "name": "Gene Fusion",
             "section": "tracks",
-            "description": "",
+            "description": " ",
             "image": "https://pecan.stjude.cloud/static/examples/images/genefusion-square.png",
             "sandboxJson": "genefusion",
             "searchterms": [""]
