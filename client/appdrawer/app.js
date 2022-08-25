@@ -15,6 +15,7 @@ import { select } from 'd3-selection'
     .indexJson{}
 
 TODOs: 
+- Accommodate layout = none
 - Update and add documentation link
 
 Questions: 
@@ -24,11 +25,11 @@ class AppDrawerApp {
 	constructor(opts) {
 		this.type = 'app'
 		this.opts = this.validateOpts(opts)
-		;(this.dom = {
+		this.dom = {
 			holder: this.opts.holder,
 			wrapper: this.opts.holder.append('div')
-		}),
-			(this.elements = this.opts.indexJson.elements.filter(e => !e.hidden))
+		}
+		this.elements = this.opts.indexJson.elements.filter(e => !e.hidden) //TODO move to store.js
 	}
 
 	validateOpts(opts) {
@@ -41,6 +42,7 @@ class AppDrawerApp {
 			this.store = await storeInit({ app: this.api, state: this.opts.state })
 			// this.state = await this.store.copyState()
 			this.components = {
+				// Only accounts for columnsLayout format
 				layout: await compLayoutInit({ app: this.api, dom: this.dom, index: this.opts.indexJson })
 			}
 			await this.api.dispatch()

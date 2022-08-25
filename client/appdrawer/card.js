@@ -1,4 +1,3 @@
-// import { getInitFxn } from '../rx'
 import { getCompInit } from '#rx'
 import { rgb } from 'd3-color'
 import { openSandbox } from './adSandbox'
@@ -26,20 +25,20 @@ class AppDrawerCard {
 			if (!opts.element.children || opts.element.children.length == 0)
 				throw `Missing .children for nested card = ${opts.element.name}`
 		}
-		if (opts.element.flag) {
-			if (!opts.element.flag.text) throw `Missing flag .text for ${opts.element.type} = ${opts.element.name}`
+		if (opts.element.ribbon) {
+			if (!opts.element.ribbon.text) throw `Missing ribbon .text for ${opts.element.type} = ${opts.element.name}`
 
 			//ProteinPaint app drawer specific validation
 			if (
-				(opts.element.flag.text.toUpperCase() == 'NEW' || opts.element.flag.text.toUpperCase() == 'UPDATED') &&
-				!opts.element.flag.expireDate
+				(opts.element.ribbon.text.toUpperCase() == 'NEW' || opts.element.ribbon.text.toUpperCase() == 'UPDATED') &&
+				!opts.element.ribbon.expireDate
 			)
 				throw `${opts.element.type} = ${
 					opts.element.name
-				} flag is ${opts.element.flag.text.toUpperCase()} but .expireDate is missing. Please provide`
+				} ribbon is ${opts.element.ribbon.text.toUpperCase()} but .expireDate is missing. Please provide`
 
-			if (opts.element.flag.expireDate) {
-				if (opts.element.flag.expireDate >= 0) {
+			if (opts.element.ribbon.expireDate) {
+				if (opts.element.ribbon.expireDate >= 0) {
 					throw `Flag for ${opts.element.type} = ${opts.element.name} is not a valid date`
 				} //TODO add validation for format?
 			}
@@ -85,17 +84,17 @@ function setRenderers(self) {
 		)
 	}
 
-	self.makeRibbon = function(flag) {
+	self.makeRibbon = function(ribbon) {
 		//only relevant for 'card', not 'nestedCard'
-		const ribbon = card
+		const ribbonDiv = card
 			.append('div')
 			.classed('sjpp-app-drawer-card-ribbon', true)
 			.style('align-items', 'center')
 			.style('justify-content', 'center')
 
 		//*********TODO: move from diagonal to straight on right side */
-		const text = flag.text.toUpperCase()
-		//Enfore color palette for proteinpaint homepage flags
+		const text = ribbon.text.toUpperCase()
+		//Enfore color palette for proteinpaint homepage ribbons
 		const color =
 			text == 'BETA'
 				? '#418cb5'
@@ -103,11 +102,11 @@ function setRenderers(self) {
 				? '#1ba176'
 				: text == 'UPDATED'
 				? 'orange'
-				: flag.color
-				? flag.color
+				: ribbon.color
+				? ribbon.color
 				: 'red'
 
-		ribbon
+		ribbonDiv
 			.append('span')
 			.text(text) // Need fn in utils to decide black or white text in utils.js
 			.style('color', 'white')
@@ -121,12 +120,12 @@ function setRenderers(self) {
 			.style('text-align', 'center')
 	}
 
-	if (self.opts.element.flag) {
+	if (self.opts.element.ribbon) {
 		const today = new Date()
-		self.opts.element.flagExpireDate = new Date(self.opts.element.flag.expireDate)
-		//Allows flags to expire or appear indefinitely
-		if (self.opts.element.flagExpireDate > today || self.opts.element.flag.expireDate == undefined)
-			self.makeRibbon(self.opts.element.flag)
+		self.opts.element.ribbonExpireDate = new Date(self.opts.element.ribbon.expireDate)
+		//Allows ribbons to expire or appear indefinitely
+		if (self.opts.element.ribbonExpireDate > today || self.opts.element.ribbon.expireDate == undefined)
+			self.makeRibbon(self.opts.element.ribbon)
 	}
 
 	card.on('click', async () => {

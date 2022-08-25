@@ -1,3 +1,4 @@
+import { getCompInit } from '#rx'
 import { dofetch, dofetch3, sayerror, tab_wait, appear } from '#src/client'
 import { newSandboxDiv } from '#dom/sandbox'
 import * as utils from './utils'
@@ -10,13 +11,32 @@ hljs.registerLanguage('javascript', javascript)
 import json from 'highlight.js/lib/languages/json'
 hljs.registerLanguage('json', json)
 
+/*
+---------Exported---------
+openSandbox()
+
+---------Internal---------
+openNestedCardSandbox()
+openCardSandbox()
+openDatasetButtonSandbox()
+
+
+TODOs: 
+- add breadcrumb trail in sandbox headers -> Removed the nested card back button for now
+- add icon link to copy appcard= link for each sandbox and views (i.e. examples, UIs, etc.) in sandbox headers
+- combine vertical and horizontal tab functions into one
+
+Questions: 
+
+*/
+
 export async function openSandbox(element, pageArgs) {
 	const sandboxDiv = newSandboxDiv(pageArgs.apps_sandbox_div)
 	sandboxDiv.header_row
 	sandboxDiv.header.text(element.name)
 	sandboxDiv.body.style('overflow', 'hidden').style('background-color', 'white')
 
-	if (element.type == 'nestedCard') return openNestedCardSandbox(element, sandboxDiv)
+	if (element.type == 'nestedCard') return openNestedCardSandbox(element, sandboxDiv, pageArgs)
 
 	const res = element.sandboxJson
 		? await dofetch3(`/cardsjson?jsonfile=${element.sandboxJson}`)
@@ -26,13 +46,13 @@ export async function openSandbox(element, pageArgs) {
 		return
 	}
 
-	if (element.type == 'card') return openCardSandbox(element, res, sandboxDiv) //only for .sandboxJson
-	if (element.type == 'dsButton') return openDatasetSandbox(pageArgs, element, res, sandboxDiv) //only for .sandboxJson
+	if (element.type == 'card') return openCardSandbox(element, res, sandboxDiv)
+	if (element.type == 'dsButton') return openDatasetButtonSandbox(pageArgs, element, res, sandboxDiv) //only for .sandboxJson
 }
 
 /********** Nested Card Functions  **********/
 
-function openNestedCardSandbox(nestedCard, sandboxDiv) {
+async function openNestedCardSandbox(nestedCard, sandboxDiv, pageArgs) {
 	sandboxDiv.body.style('justify-content', 'center').style('background-color', '#f2ebdc')
 
 	const ucList = sandboxDiv.body
@@ -43,60 +63,56 @@ function openNestedCardSandbox(nestedCard, sandboxDiv) {
 		.style('grid-template-rows', 'repeat(1, auto)')
 		.style('gap', '5px')
 
-	const ucContent = sandboxDiv.body.append('div').style('padding', '0vw 0vw 2vw 0vw')
-
-	function displayUseCases(nestedCard, listDiv, contentDiv) {
-		//joins together all the use cases objects from index.json and displays them as cards in a newly created sandbox.
-		nestedCard.children.forEach(child => {
-			const uc = listDiv.append('li')
-			uc.attr('class', 'sjpp-app-drawer-card')
-				.style('padding', '10px')
-				.style('margin', '5px')
-				.html(
-					`<p style="margin-left: 12px; font-size:14.5px;font-weight:500; display: block;">${child.name}</p>
-				<p style="display: block; font-size: 13px; font-weight: 300; margin-left: 20px; justify-content: center; font-style:oblique; color: #403f3f;">${child.description}</p>`
-				)
-				.on('click', () => {
-					event.stopPropagation()
-					listDiv.selectAll('*').remove()
-					showUseCaseContent(child, contentDiv)
-				})
-			return JSON.stringify(uc)
-		})
-	}
-
-	displayUseCases(nestedCard, ucList, ucContent)
-
-	async function showUseCaseContent(child, div) {
-		//Fetches html from use case .txt file, applies a 'back' button at the top, and renders to client
-		const res = await dofetch3(`/cardsjson?file=${child.sandboxHtml}`) //only HTML files enabled at the moment
-		if (res.error) {
-			sayerror(holder.append('div'), res.error)
-			return
-		}
-
-		const content_div = div
-			.append('div')
-			.style('background-color', 'white')
-			.style('margin', '0vw 10vw')
+	const filteredChildren = nestedCard.children.filter(e => !e.hidden)
+	//joins together all the use cases objects from index.json and displays them as cards in a newly created sandbox.
+	filteredChildren.forEach(child => {
+		const uc = ucList.append('li')
+		uc.attr('class', 'sjpp-app-drawer-card')
 			.style('padding', '10px')
+			.style('margin', '5px')
+			.html(
+				`<p style="margin-left: 12px; font-size:14.5px;font-weight:500; display: block;">${child.name}</p>
+			<p style="display: block; font-size: 13px; font-weight: 300; margin-left: 20px; justify-content: center; font-style:oblique; color: #403f3f;">${child.description}</p>`
+			)
+			.on('click', async () => {
+				event.stopPropagation()
+				ucList.selectAll('*').remove()
 
-		const backBtn = utils.makeButton({ div: content_div, text: '<' }).style('background-color', '#d0e3ff')
-		backBtn.style('font-size', '20px').on('click', () => {
-			div.selectAll('*').remove()
-			displayUseCases(nestedCard, ucList, ucContent)
-		})
+				const res = child.sandboxJson
+					? await dofetch3(`/cardsjson?jsonfile=${child.sandboxJson}`)
+					: await dofetch3(`/cardsjson?file=${child.sandboxHtml}`)
+				if (res.error) {
+					sayerror(holder.append('div'), res.error)
+					return
+				}
 
-		content_div
-			.append('div')
-			.style('margin', '0vw 5vw')
-			.html(res.file)
-	}
+				if (child.type == 'card') return openCardSandbox(child, res, sandboxDiv)
+				if (child.type == 'dsButton') return openDatasetButtonSandbox(pageArgs, child, res, sandboxDiv) //only for .sandboxJson
+			})
+		return JSON.stringify(uc)
+	})
 }
 
 /********** Card Functions  **********/
 
 function openCardSandbox(card, res, sandboxDiv) {
+	//Handles html content from .txt file
+	if (card.sandboxHtml) {
+		return sandboxDiv.body
+			.append('div')
+			.style('padding', '0vw 0vw 2vw 0vw')
+			.append('div')
+			.style('background-color', 'white')
+			.style('margin', '0vw 10vw')
+			.style('padding', '10px')
+			.append('div')
+			.style('margin', '0vw 5vw')
+			.html(res.file)
+	}
+
+	//Configures the sandbox per .sandboxJson
+	sandboxDiv.body.style('background-color', 'white') //Quick fix for nested card tan background persisting
+
 	const sandboxArgs = {
 		intro: res.jsonfile.intro, //TODO change key to mainIntroduction
 		ppcalls: res.jsonfile.ppcalls.filter(e => !e.hidden),
@@ -664,7 +680,7 @@ async function showViewData(btns, data) {
 
 /********** Dataset Button Functions  **********/
 
-async function openDatasetSandbox(pageArgs, element, res, sandboxDiv) {
+async function openDatasetButtonSandbox(pageArgs, element, res, sandboxDiv) {
 	const par = {
 		// First genome in .availableGenomes is the default
 		availableGenomes: res.jsonfile.button.availableGenomes,
