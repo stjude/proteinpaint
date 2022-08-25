@@ -125,8 +125,8 @@ function openCardSandbox(card, res, sandboxDiv) {
 
 	// Main intro text above tabs - use for permanent text
 	addHtmlText(sandboxArgs.intro, sandboxDiv.body)
-	// Temporary text expiring with flags
-	if (card.flag) addHtmlText(sandboxArgs.ribbonMessage, sandboxDiv.body, card.flag)
+	// Temporary text expiring with ribbons
+	if (card.ribbon) addHtmlText(sandboxArgs.ribbonMessage, sandboxDiv.body, card.ribbon)
 
 	const mainButtonsDiv = sandboxDiv.body.append('div')
 	const mainButtonsContentDiv = sandboxDiv.body.append('div')
@@ -352,14 +352,14 @@ function getTabData(ppcalls, i, app) {
 
 // ******* Helper Functions *********
 
-function addHtmlText(text, div, flag) {
-	//Tie together flags and sandbox messages
-	if (flag && flag.expireDate) {
+function addHtmlText(text, div, ribbon) {
+	//Tie together ribbons and sandbox messages
+	if (ribbon && ribbon.expireDate) {
 		const today = new Date()
-		const expire = new Date(flag.expireDate)
+		const expire = new Date(ribbon.expireDate)
 		if (expire > today && (text != undefined && text)) {
 			function boldedText() {
-				const str = flag.text.toLowerCase()
+				const str = ribbon.text.toLowerCase()
 				return str[0].toUpperCase() + str.slice(1)
 			}
 			div

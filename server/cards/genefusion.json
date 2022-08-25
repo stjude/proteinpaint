@@ -47,5 +47,6 @@
                 }]
             }
         }
-    ]
+    ],
+    "ribbonMessage": "Visualize gene fusions from your custom dataset! See the examples below for how to call the gene fusion track."
 }
