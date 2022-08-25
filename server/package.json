@@ -39,7 +39,7 @@
     "@stjude/proteinpaint-rust": "^1.0.0",
     "better-sqlite3": "^7.5.3",
     "body-parser": "^1.15.2",
-    "canvas": "2.6.0",
+    "canvas": "^2.9.3",
     "compression": "^1.6.2",
     "cookie-parser": "^1.4.5",
     "d3": "^4.12.2",
