@@ -2,7 +2,6 @@ import * as uiutils from '#dom/uiUtils'
 import { init_tabs } from '#dom/toggleButtons'
 import { appear } from '#dom/animation'
 import { first_genetrack_tolist } from './client'
-import { selectAll as d3selectAll } from 'd3-selection'
 
 /*
 
@@ -61,7 +60,7 @@ export async function bigwigUI(genomes, holder) {
 
 	//Submit and information for user
 	submitButton(wrapper, obj, holder, genomes)
-	makeResetBtn(wrapper, obj)
+	uiutils.makeResetBtn(wrapper, obj, '.bigwigUI_input')
 	infoSection(wrapper, obj)
 }
 
@@ -173,25 +172,6 @@ function submitButton(div, obj, holder, genomes) {
 			if (!bigwig_arg) return
 			div.remove()
 			runproteinpaint(Object.assign(runpp_arg, bigwig_arg))
-		})
-}
-
-function makeResetBtn(div, obj) {
-	const reset = uiutils.makeBtn({
-		div,
-		text: '&#8634;',
-		backgroundColor: 'white',
-		color: 'grey',
-		padding: '0px 6px 1px 6px'
-	})
-	reset
-		.style('font-size', '1.5em')
-		.style('display', 'inline-block')
-		.style('margin', '0px 10px')
-		.attr('type', 'reset')
-		.on('click', async () => {
-			d3selectAll('.bigwigUI_input').property('value', '')
-			if (obj.data) obj.data = ''
 		})
 }
 
