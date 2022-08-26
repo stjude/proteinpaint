@@ -641,7 +641,7 @@ function validateCustomSvfusion(m, block) {
 
 	// seek [0].a{}
 	const hits = block.seekcoord(m.pairlst[0].a.chr, m.pairlst[0].a.pos)
-	if (hits.length) {
+	if (hits.length && hits[0].x > 0 && hits[0].x < block.width) {
 		// [0].a is within range
 		fields.push(...[m.pairlst[0].a.chr, m.pairlst[0].a.pos, m.pairlst[0].a.strand, 0, m.pairlst[0].a.name])
 
@@ -653,7 +653,7 @@ function validateCustomSvfusion(m, block) {
 	} else {
 		// [0].a is not within range, seek [0].b{}
 		const hits = block.seekcoord(m.pairlst[0].b.chr, m.pairlst[0].b.pos)
-		if (hits.length) {
+		if (hits.length && hits[0].x > 0 && hits[0].x < block.width) {
 			// [0].b is in range
 			fields.push(...[m.pairlst[0].b.chr, m.pairlst[0].b.pos, m.pairlst[0].b.strand, 1, m.pairlst[0].b.name])
 
