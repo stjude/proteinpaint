@@ -3,9 +3,9 @@
 ARG registry=docker.io/library
 
 FROM ${registry}/node:16-buster-slim AS ppbase
-ARG ARCH="x86_64"
+ENV ARCH="$( node -p process.arch )"
+RUN if [[ ${ARCH} == "arm64" ]]; then ARCH="aarch64"; else ARCH="x86_64"; fi
 
-ENV ARCH=$ARCH
 ENV RUSTUP_HOME=/usr/local/rustup \
     CARGO_HOME=/usr/local/cargo \
     PATH=/usr/local/cargo/bin:$PATH
@@ -74,6 +74,7 @@ RUN if [[ "$ARCH" == "x86_64" ]]; then \
 FROM ppbase AS pprust
 
 RUN set -eux; \
+
     wget https://static.rust-lang.org/rustup/dist/${ARCH}-unknown-linux-gnu/rustup-init; \
     chmod +x rustup-init; \
     ./rustup-init -y --no-modify-path --default-toolchain stable; \
