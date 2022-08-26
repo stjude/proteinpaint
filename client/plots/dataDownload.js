@@ -245,7 +245,9 @@ function setInteractivity(self) {
 					self.app.tip.hide()
 					const tws = await Promise.all(
 						termlst.map(async term => {
-							const tw = { id: term.id, term }
+							const q = {}
+							if (term.type == 'condition') q.mode = 'cox'
+							const tw = { id: term.id, term, q }
 							await fillTermWrapper(tw)
 							return tw
 						})
@@ -263,19 +265,26 @@ function setInteractivity(self) {
 	}
 
 	self.download = () => {
-		const rows = [['sample', ...self.config.terms.map(tw => tw.term.name)]]
-
+		const header = ['sample']
+		for (const tw of self.config.terms) {
+			header.push(tw.term.name)
+			if (tw.term.type == 'condition') header.push(tw.term.name + ': Age at event')
+		}
+		const rows = [header]
 		for (const s of self.activeSamples) {
 			const samplename = self.data.refs.bySampleId[s.sample]
 			const row = [samplename]
 			for (const tw of self.config.terms) {
-				row.push(tw.$id in s ? s[tw.$id].key : '')
+				if (!s[tw.$id]) row.push('')
+				else {
+					row.push(s[tw.$id].key)
+					if (tw.term.type == 'condition') row.push(s[tw.$id].value)
+				}
 			}
 			rows.push(row)
 		}
 
 		const matrix = rows.map(row => row.join('\t')).join('\n')
-
 		const a = document.createElement('a')
 		document.body.appendChild(a)
 		a.addEventListener(
