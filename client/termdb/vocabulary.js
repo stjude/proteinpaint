@@ -37,7 +37,7 @@ export function vocabInit(opts) {
 	}
 }
 
-class TermdbVocab {
+class Vocab {
 	constructor(opts) {
 		this.app = opts.app
 		this.opts = opts
@@ -54,12 +54,98 @@ class TermdbVocab {
 		this.missingCatValsByTermId = {}
 	}
 
-	main(stateOverride = null) {
+	async main(stateOverride = null) {
 		if (stateOverride) Object.assign(this.state, stateOverride)
-		else this.state = this.app ? this.app.getState() : this.opts.state
-		this.vocab = this.state.vocab
+		else this.state = this.app?.getState() || this.opts.state
+
+		// frontend vocab may replace the vocab object reference
+		if (this.state.vocab) this.vocab = this.state.vocab
+
+		// secured plots need to confirm that a verified token exists
+		await this.maySetVerifiedToken()
 	}
 
+	async maySetVerifiedToken() {
+		// strict true boolean value means no auth required
+		if (this.verifiedToken === true) return this.verifiedToken
+		const token = this.opts.getDatasetAccessToken?.()
+		if (token === this.verifiedToken) return this.verifiedToken
+		try {
+			const dslabel = this.state.dslabel
+			const auth = this.state.termdbConfig?.requiredAuth
+			if (!auth) {
+				this.verifiedToken = true
+				return
+			}
+			if (auth.type === 'jwt') {
+				if (!token) {
+					delete this.verifiedToken
+					return
+				}
+				const data = await dofetch3('/jwt-status', {
+					method: 'POST',
+					headers: {
+						[auth.headerKey]: token
+					},
+					body: {
+						dslabel,
+						embedder: location.hostname
+					}
+				})
+				// TODO: later may check against expiration time in response if included
+				this.verifiedToken = data.status === 'ok' && token
+			} else {
+				throw `unsupported requiredAuth='${auth.type}'`
+			}
+		} catch (e) {
+			throw e
+		}
+	}
+
+	hasVerifiedToken() {
+		return !!this.verifiedToken
+	}
+
+	cacheTermQ(term, q) {
+		// only save q with a user or automatically assigned name
+		if (!q.reuseId) throw `missing term q.reuseId for term.id='${term.id}'`
+		this.app.dispatch({
+			type: 'cache_termq',
+			termId: term.id,
+			q
+		})
+	}
+
+	async uncacheTermQ(term, q) {
+		await this.app.dispatch({
+			type: 'uncache_termq',
+			term,
+			q
+		})
+	}
+
+	getCustomTermQLst(term) {
+		if (term.id) {
+			const cache = this.state.reuse.customTermQ.byId[term.id] || {}
+			const qlst = Object.values(cache).map(q => JSON.parse(JSON.stringify(q)))
+			// find a non-conflicting reuseId for saving a new term.q
+			for (let i = qlst.length + 1; i < 1000; i++) {
+				const nextReuseId = `Setting #${i}`
+				if (!qlst.find(q => q.reuseId === nextReuseId)) {
+					qlst.nextReuseId = nextReuseId
+					break
+				}
+			}
+			// last resort to use a random reuseId that is harder to read
+			if (!qlst.nextReuseId) {
+				qlst.nextReuseId = btoa((+new Date()).toString()).slice(10, -3)
+			}
+			return qlst
+		} else return []
+	}
+}
+
+class TermdbVocab extends Vocab {
 	// migrated from termdb/store
 	async getTermdbConfig() {
 		const data = await dofetch3(
@@ -618,7 +704,7 @@ class TermdbVocab {
 	async getAnnotatedSampleData(opts) {
 		// may check against required auth credentials for the server route
 		const auth = this.termdbConfig.requiredAuth
-		const headers = auth ? { [auth.headerKey]: this.app.getVerifiedToken() } : {}
+		const headers = auth ? { [auth.headerKey]: this.verifiedToken } : {}
 
 		const filter = getNormalRoot(opts.filter)
 		const isNewFilter = !deepEqual(this.currAnnoData.lastFilter, filter)
@@ -769,44 +855,6 @@ class TermdbVocab {
 		]
 		return await dofetch3('termdb?' + args.join('&'))
 	}
-
-	cacheTermQ(term, q) {
-		// only save q with a user or automatically assigned name
-		if (!q.reuseId) throw `missing term q.reuseId for term.id='${term.id}'`
-		this.app.dispatch({
-			type: 'cache_termq',
-			termId: term.id,
-			q
-		})
-	}
-
-	async uncacheTermQ(term, q) {
-		await this.app.dispatch({
-			type: 'uncache_termq',
-			term,
-			q
-		})
-	}
-
-	getCustomTermQLst(term) {
-		if (term.id) {
-			const cache = this.state.reuse.customTermQ.byId[term.id] || {}
-			const qlst = Object.values(cache).map(q => JSON.parse(JSON.stringify(q)))
-			// find a non-conflicting reuseId for saving a new term.q
-			for (let i = qlst.length + 1; i < 1000; i++) {
-				const nextReuseId = `Setting #${i}`
-				if (!qlst.find(q => q.reuseId === nextReuseId)) {
-					qlst.nextReuseId = nextReuseId
-					break
-				}
-			}
-			// last resort to use a random reuseId that is harder to read
-			if (!qlst.nextReuseId) {
-				qlst.nextReuseId = btoa((+new Date()).toString()).slice(10, -3)
-			}
-			return qlst
-		} else return []
-	}
 }
 
 function q_to_param(q) {
@@ -819,22 +867,14 @@ function q_to_param(q) {
 // to-do
 // class Mds3Vocab {}
 
-class FrontendVocab {
+class FrontendVocab extends Vocab {
 	constructor(opts) {
-		this.app = opts.app
-		this.opts = opts
-		this.state = opts.state
-		this.vocab = opts.state.vocab
+		super(opts)
 		this.datarows = []
 		if (opts.state.vocab.sampleannotation) {
 			const anno = opts.state.vocab.sampleannotation
 			Object.keys(anno).forEach(sample => this.datarows.push({ sample, data: anno[sample] }))
 		}
-	}
-
-	main(vocab) {
-		if (vocab) Object.assign(this.vocab, vocab)
-		this.state = this.app ? this.app.getState() : {}
 	}
 
 	getTermdbConfig() {

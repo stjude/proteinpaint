@@ -44,7 +44,7 @@ function login(btn) {
 	// a valid token value is logged by the server for testing, see server/src/auth.js checkDsSecret()
 	// you will need to paste the logged value here, which is generated using your own 
 	// serverconfig.dsCredentials['TermdbTest'].secret
-	token = `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhY2Nlc3NpYmxlRGF0YXNldHMiOlsiVGVybWRiVGVzdCJdLCJpYXQiOjE2NjA3NzEyMDB9.-TiPdQEWKJKF2eWXOk_iFaU7pwgCjz_TU4xiiTZUbQ8`
+	token = window.location.hash.slice(1)
 	btn.innerHTML = 'You are logged in'
 	// console.log(44, loginCallbacks)
 	for(const cb of loginCallbacks) cb()

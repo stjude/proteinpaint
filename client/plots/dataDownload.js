@@ -54,7 +54,7 @@ class DataDownload {
 			activeCohort: appState.activeCohort,
 			termfilter: appState.termfilter,
 			config,
-			hasVerifiedToken: this.app.getVerifiedToken()
+			hasVerifiedToken: this.app.vocabApi.hasVerifiedToken()
 		}
 	}
 
@@ -69,7 +69,6 @@ class DataDownload {
 			if (this.mayRequireToken()) return
 			const reqOpts = await this.getDataRequestOpts()
 			this.data = await this.app.vocabApi.getAnnotatedSampleData(reqOpts)
-			//console.log(61, this.data)
 			this.processData()
 			const n = this.activeSamples.length
 
@@ -135,14 +134,11 @@ class DataDownload {
 				const termsCopy = this.config.terms.slice(0)
 				const i = this.config.terms.findIndex(tw => tw.$id === d.tw.$id)
 				if (!tw?.term) {
-					console.log(86, 'termsCopy.splice(i, 1)')
 					termsCopy.splice(i, 1)
 				} else if (i === -1) {
-					console.log(88, 'termsCopy.push(tw)')
 					tw.$id = d.tw.$id
 					termsCopy.push(tw)
 				} else {
-					console.log(90, 'termsCopy[i] = tw')
 					tw.$id = d.tw.$id
 					termsCopy[i] = tw
 				}
@@ -180,7 +176,6 @@ function setRenderers(self) {
 			return { tw, pill: self.pillBy$id[tw.$id] }
 		})
 		if (!data.find(d => !d.tw.term)) {
-			// console.log(126, 'adding empty term')
 			data.push({ tw: { $id: getTw$id() } })
 		}
 		const terms = self.dom.terms.selectAll(':scope>div').data(data, d => d.tw.$id)

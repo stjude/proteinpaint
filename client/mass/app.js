@@ -53,10 +53,6 @@ class MassApp {
 		try {
 			api.tip = new Menu({ padding: '5px' })
 			api.printError = e => this.printError(e)
-			// shold return an actual token if the dataset is secured, or true if not secured
-			api.getVerifiedToken = () => this.verifiedToken
-			//await this.maySetVerifiedToken()
-
 			const vocab = this.opts.state.vocab
 
 			// TODO: only pass state.genome, dslabel to vocabInit
@@ -70,7 +66,8 @@ class MassApp {
 						terms: vocab?.terms
 					}
 				},
-				fetchOpts: this.opts.fetchOpts
+				fetchOpts: this.opts.fetchOpts,
+				getDatasetAccessToken: this.opts.getDatasetAccessToken
 			})
 
 			// the vocabApi's vocab may be reprocessed from the original input
@@ -102,8 +99,7 @@ class MassApp {
 	}
 
 	async main() {
-		this.api.vocabApi.main()
-		await this.maySetVerifiedToken()
+		await this.api.vocabApi.main()
 
 		const newPlots = {}
 		let sandbox
@@ -147,41 +143,6 @@ class MassApp {
 				this.components.plots[plotId].destroy()
 				delete this.components.plots[plotId]
 			}
-		}
-	}
-
-	async maySetVerifiedToken() {
-		if (this.verifiedToken) return this.verifiedToken
-		try {
-			const dslabel = this.state.dslabel
-			const auth = this.state.termdbConfig.requiredAuth
-			if (!auth) {
-				this.verifiedToken = true
-				return
-			}
-			if (auth.type === 'jwt') {
-				const token = this.opts.getDatasetAccessToken?.()
-				if (!token) {
-					delete this.verifiedToken
-					return
-				}
-				const data = await dofetch3('/jwt-status', {
-					method: 'POST',
-					headers: {
-						[auth.headerKey]: token
-					},
-					body: {
-						dslabel,
-						embedder: location.hostname
-					}
-				})
-				// TODO: later may check against expiration time in response if included
-				this.verifiedToken = data.status === 'ok' && token
-			} else {
-				throw `unsupported requiredAuth='${auth.type}'`
-			}
-		} catch (e) {
-			throw e
 		}
 	}
 
