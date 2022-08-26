@@ -1,6 +1,6 @@
-import * as uiutils from '../dom/uiUtils'
-import { init_tabs } from '../dom/toggleButtons'
-import { appear } from '../dom/animation'
+import * as uiutils from '#dom/uiUtils'
+import { init_tabs } from '#dom/toggleButtons'
+import { appear } from '#dom/animation'
 import { first_genetrack_tolist } from './client'
 
 /*
@@ -140,7 +140,7 @@ function trackFilePathInput(div, doms) {
 function multiTrackInput(div, doms) {
 	const pasteTrack_div = div.append('div').style('display', 'block')
 	const multi = uiutils
-		.makeTextAreaInput(pasteTrack_div)
+		.makeTextAreaInput({ div: pasteTrack_div })
 		.style('border', '1px solid rgb(138, 177, 212)')
 		.style('margin', '0px 0px 0px 20px')
 		.on('keyup', async () => {
