@@ -3,8 +3,8 @@
 ARG registry=docker.io/library
 
 FROM ${registry}/node:16-buster-slim AS ppbase
-ENV ARCH="$( node -p process.arch )"
-RUN if [[ ${ARCH} == "arm64" ]]; then ARCH="aarch64"; else ARCH="x86_64"; fi
+ARG ARCH='x86_64'
+ENV ARCH=$ARCH
 
 ENV RUSTUP_HOME=/usr/local/rustup \
     CARGO_HOME=/usr/local/cargo \

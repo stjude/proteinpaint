@@ -43,7 +43,8 @@ done
 
 ./build/extract.sh -r $REV -t full
 REV=$(cat tmppack/rev.txt)
-
+ARCH=$( uname -m )
+if [[ ${ARCH} == "arm64" ]]; then ARCH="aarch64"; fi
 #########################
 # Pack with Docker build
 #########################
@@ -54,11 +55,11 @@ cd tmppack
 #TAG="$(node -p "require('./package.json').version")"
 TAG="$(grep version package.json | sed 's/.*"version": "\(.*\)".*/\1/')"
 echo "building ppbase:$REV image, package version=$TAG"
-docker build  --file ./build/Dockerfile $BUILDARGS --target ppbase --tag ppbase:$REV .
+docker build  --file ./build/Dockerfile $BUILDARGS --target ppbase --tag ppbase:$REV --build-arg ARCH="$ARCH" .
 echo "building pprust:$REV image, package version=$TAG"
-docker build  --file ./build/Dockerfile $BUILDARGS --target pprust --tag pprust:$REV .
+docker build  --file ./build/Dockerfile $BUILDARGS --target pprust --tag pprust:$REV --build-arg ARCH="$ARCH" .
 echo "generating a build with minimal package jsons"
-docker build  --file ./build/Dockerfile $BUILDARGS --target ppminpkg --tag ppminpkg:$REV .
+docker build  --file ./build/Dockerfile $BUILDARGS --target ppminpkg --tag ppminpkg:$REV --build-arg ARCH="$ARCH" .
 
 echo "building pppkg:$REV image, package version=$TAG, can copy /home/root/pp/tmppack/stjude-proteinpaint.tgz as a publishable package"
 docker build  --file ./build/full/Dockerfile $BUILDARGS --target pppkg --tag pppkg:$REV --build-arg IMGVER=$REV --build-arg PKGVER=$TAG --build-arg CROSSENV="$CROSSENV" .
