@@ -23,8 +23,7 @@ To start the developer container:
 
 To inspect troubleshoot logs:
 - the client bundling logs are displayed in the terminal window where you triggered `./build/dev/run.sh`
-- the server bundling logs are displayed via `docker logs ppdev`
-- the PP server process logs are displayed via `docker cp ppd:/home/root/pp/app/log.txt . && tail log.txt`
+- the running logs for server bundling and process can be displayed in a terminal via `docker logs ppdev --follow` 
 
 ## TODO 
 - minimize the need for a full `npm install`, even for just the server workspace

@@ -9,13 +9,13 @@
     "#src/*": "./src/*.js"
   },
   "scripts": {
-    "dev": "webpack --config=./webpack.config.js --env NODE_ENV=development --watch --color",
+    "dev": "webpack --config=./webpack.config.js --env NODE_ENV=development --watch --progress --color",
     "start": "nodemon server.js --watch ./server*.js* --watch genome --watch dataset",
     "pretest": "./test/pretest.js",
     "test": "tape -r '@babel/register' */test/*.spec.js",
     "build": "webpack --config=./webpack.config.js",
     "response": "nodemon modules/test/test.server.js --watch src",
-    "getconf": "node -p 'JSON.stringify(require(\"./src/serverconfig.js\"),null,\"  \")'"
+    "getconssssssf": "node -p 'JSON.stringify(require(\"./src/serverconfig.js\"),null,\"  \")'"
   },
   "author": "",
   "license": "UNLICENSED",
