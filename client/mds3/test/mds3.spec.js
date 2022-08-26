@@ -101,7 +101,7 @@ tape('Run GDC dataset, ensembl transcript: ENST00000407796', test => {
 })
 
 tape('Run GDC dataset, ensembl gene: ENSG00000133703', test => {
-	// kras, should map to canonical isoform ENST00000256078
+	// kras, should map to canonical isoform ENST00000311936
 	test.timeoutAfter(8000)
 	const holder = getHolder()
 
@@ -129,7 +129,8 @@ tape('Run GDC dataset, ensembl gene: ENSG00000133703', test => {
 		test.ok(mds3Track.dslabel == 'GDC', 'Should render GDC dataset')
 
 		//Confirm gene symbol used to call track
-		test.ok(bb.usegm.isoform == 'ENST00000256078', 'Should render ENST00000256078 track in GDC dataset')
+		console.log(bb.usegm.isoform)
+		test.ok(bb.usegm.isoform == 'ENST00000311936', 'Should render ENST00000311936 track in GDC dataset')
 
 		if (test._ok) holder.remove()
 		test.end()
@@ -571,14 +572,14 @@ tape('Collapse and expand mutations from variant link', test => {
 						.find(e => e.innerHTML == 'Expand')
 					expandOptionFound.dispatchEvent(new Event('click'))
 
-					await sleep(2000) //Still required. The animation takes too long to
+					await sleep(1000) //Still required. The animation takes too long to
 					// find dom elements
 
 					//Confirm expanded mutations
-					const expandedCircleFound = d3s
-						.selectAll('text.sja_aa_disclabel')
+					const expandedCircleFound = mtk.skewer.g
+						.selectAll('.sja_aa_disclabel')
 						.nodes()
-						.some(e => e.attributes.transform.value == 'scale(1,1)')
+						.some(e => e.attributes['fill-opacity'].value == '1')
 					test.ok(expandedCircleFound, 'Should expand mutation points')
 
 					if (test._ok) holder.remove()
