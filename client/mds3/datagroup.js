@@ -4,7 +4,9 @@ import * as coord from '../src/coord'
 /* method shared by skewer and numeric mode
 
 ******** input ************
+
 list of mixed snvindel or sv/fusion
+each element is one data point
 
 snvindel is:
 {
@@ -24,10 +26,16 @@ sv/fusion is:
 
 ******** output ***********
 
+input data points that are clustering together are grouped for skewer data
+
 {
 	chr
 	pos
-	mlst[]
+	mlst[ {} ]
+		.aapos = number
+		.rnapos = number
+		.__x = number
+		.useNterm = boolean
 	x
 }
 */
@@ -216,12 +224,9 @@ function mlst_pretreat(rawmlst, tk, block) {
 	}
 
 	dsqueryresult_snvindelfusionitd(usemlst, tk, block)
-
-	return usemlst
 }
 
 function dsqueryresult_snvindelfusionitd(lst, tk, block) {
-	// legacy function, kept the same
 	for (const m of lst) {
 		if (block.usegm) {
 			// m.pos must always be set
@@ -229,15 +234,23 @@ function dsqueryresult_snvindelfusionitd(lst, tk, block) {
 			m.rnapos = t.rnapos
 			m.aapos = t.aapos
 		}
-		if(m.dt==dtsnvindel) continue
+
+		if (m.dt == dtsnvindel) {
+			// no further processing needed for snvindel
+			continue
+		}
+
 		if (m.dt == dtsv || m.dt == dtfusionrna) {
-			if(m.pairlstIdx==0) {
-				m.useNterm=true
+			if (m.pairlstIdx == 0) {
+				m.useNterm = true
 			} else {
-				m.useNterm=false
+				m.useNterm = false
 			}
 			continue
 		}
+
+		// support additional data types
+
 		throw 'unknown dt: ' + m.dt
 	}
 }
