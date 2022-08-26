@@ -21,6 +21,8 @@ makeTk
 init_mclass
 get_ds
 	validateCustomVariants
+		validateCustomSnvindel
+		validateCustomSvfusion
 	mayDeriveSkewerOccurrence4samples
 init_termdb
 mayInitSkewer
@@ -647,6 +649,7 @@ function validateCustomSvfusion(m, block) {
 		m.mname = m.pairlst[0].b.name || ''
 		m.chr = m.pairlst[0].a.chr
 		m.pos = m.pairlst[0].a.pos
+		m.pairlstIdx = 0
 	} else {
 		// [0].a is not within range, seek [0].b{}
 		const hits = block.seekcoord(m.pairlst[0].b.chr, m.pairlst[0].b.pos)
@@ -658,6 +661,7 @@ function validateCustomSvfusion(m, block) {
 			m.mname = m.pairlst[0].a.name || ''
 			m.chr = m.pairlst[0].b.chr
 			m.pos = m.pairlst[0].b.pos
+			m.pairlstIdx = 1
 		} else {
 			// [0] a/b both are not in range. do not reject?
 		}
