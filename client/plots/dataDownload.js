@@ -2,6 +2,7 @@ import { getCompInit, copyMerge } from '../rx'
 import { select } from 'd3-selection'
 import { sayerror } from '../dom/error'
 import { termsettingInit, fillTermWrapper, nonDictionaryTermTypes } from '#termsetting'
+import { appInit } from '#termdb/app'
 
 /*
 
@@ -9,12 +10,15 @@ import { termsettingInit, fillTermWrapper, nonDictionaryTermTypes } from '#terms
 
 class DataDownload {
 	constructor(opts) {
-		this.type = 'regression'
+		this.type = 'dataDownload'
 		this.genomeObj = opts.app.opts.genome
 		this.pillBy$id = {}
 	}
 
 	async init(appState) {
+		setInteractivity(this) // in cases of static viz, you don't use interactivity code
+		setRenderers(this)
+
 		this.dom = {
 			header: this.opts.header, // header is optional
 			errordiv: this.opts.holder.append('div'),
@@ -23,11 +27,14 @@ class DataDownload {
 				.style('margin', '10px')
 				.style('font-weight', 600),
 			terms: this.opts.holder.append('div'),
+			addBtn: this.opts.holder
+				.append('div')
+				.style('margin', '10px 10px 20px 10px')
+				.style('cursor', 'pointer')
+				.html('+Add Term(s)')
+				.on('click', this.showTreeMenu),
 			submitDiv: this.opts.holder.append('div').style('margin', '10px')
 		}
-
-		setInteractivity(this) // in cases of static viz, you don't use interactivity code
-		setRenderers(this)
 
 		this.dom.submitBtn = this.dom.submitDiv
 			.append('button')
@@ -91,11 +98,13 @@ class DataDownload {
 		if (this.state.hasVerifiedToken) {
 			this.dom.titleDiv.html('Selected terms')
 			this.dom.terms.style('display', '')
+			this.dom.addBtn.style('display', '')
 			this.dom.submitDiv.style('display', '')
 			return false
 		} else {
 			this.dom.titleDiv.html('Requires login')
 			this.dom.terms.style('display', 'none')
+			this.dom.addBtn.style('display', 'none')
 			this.dom.submitDiv.style('display', 'none')
 			return true
 		}
@@ -129,6 +138,7 @@ class DataDownload {
 			activeCohort: this.state.activeCohort,
 			debug: this.app.opts.debug,
 			usecase: { target: 'dataDownload' },
+			numericEditMenuVersion: ['continuous', 'discrete'],
 			abbrCutoff: 50,
 			callback: tw => {
 				const termsCopy = this.config.terms.slice(0)
@@ -175,9 +185,9 @@ function setRenderers(self) {
 		const data = self.config.terms.map(tw => {
 			return { tw, pill: self.pillBy$id[tw.$id] }
 		})
-		if (!data.find(d => !d.tw.term)) {
-			data.push({ tw: { $id: getTw$id() } })
-		}
+		//if (!data.find(d => !d.tw.term)) {
+		//data.push({ tw: { $id: getTw$id() } })
+		//}
 		const terms = self.dom.terms.selectAll(':scope>div').data(data, d => d.tw.$id)
 		terms.exit().remove()
 		terms.each(self.renderTerm)
@@ -217,6 +227,41 @@ function setRenderers(self) {
 }
 
 function setInteractivity(self) {
+	self.showTreeMenu = () => {
+		self.app.tip.clear().showunder(self.dom.addBtn.node())
+		appInit({
+			holder: self.app.tip.d,
+			vocabApi: self.app.vocabApi,
+			state: {
+				//vocab: self.state.vocab,
+				activeCohort: self.state.activeCohort,
+				nav: {
+					header_mode: 'search_only'
+				},
+				tree: { usecase: self.type }
+			},
+			tree: {
+				submit_lst: async termlst => {
+					self.app.tip.hide()
+					const tws = await Promise.all(
+						termlst.map(async term => {
+							const tw = { id: term.id, term }
+							await fillTermWrapper(tw)
+							return tw
+						})
+					)
+					self.app.dispatch({
+						type: 'plot_edit',
+						id: self.id,
+						config: {
+							terms: [...self.config.terms, ...tws]
+						}
+					})
+				}
+			}
+		})
+	}
+
 	self.download = () => {
 		const rows = [['sample', ...self.config.terms.map(tw => tw.term.name)]]
 

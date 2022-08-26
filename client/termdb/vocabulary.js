@@ -69,7 +69,7 @@ class Vocab {
 		// strict true boolean value means no auth required
 		if (this.verifiedToken === true) return this.verifiedToken
 		const token = this.opts.getDatasetAccessToken?.()
-		if (token === this.verifiedToken) return this.verifiedToken
+		if (this.verifedToken && token === this.verifiedToken) return this.verifiedToken
 		try {
 			const dslabel = this.state.dslabel
 			const auth = this.state.termdbConfig?.requiredAuth
@@ -704,6 +704,7 @@ class TermdbVocab extends Vocab {
 	async getAnnotatedSampleData(opts) {
 		// may check against required auth credentials for the server route
 		const auth = this.termdbConfig.requiredAuth
+		if (auth && !this.verifiedToken) throw `requires login for this data`
 		const headers = auth ? { [auth.headerKey]: this.verifiedToken } : {}
 
 		const filter = getNormalRoot(opts.filter)

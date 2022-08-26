@@ -91,8 +91,9 @@ class TdbStore {
 			await this.setTermfilter()
 			// vocab.state.termfilter may be used in getPlotConfig() when rehydrating terms,
 			// so manually set it here
-			this.app.vocabApi.main({
-				termfilter: JSON.parse(JSON.stringify(this.state.termfilter))
+			await this.app.vocabApi.main({
+				termfilter: JSON.parse(JSON.stringify(this.state.termfilter)),
+				termdbConfig: this.state.termdbConfig
 			})
 
 			for (const [i, savedPlot] of this.state.plots.entries()) {
