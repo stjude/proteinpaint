@@ -1,5 +1,6 @@
 import * as uiutils from '#dom/uiUtils'
 import { select as d3select, selectAll as d3selectAll, event as d3event } from 'd3-selection'
+import { sayerror } from '../client'
 
 /*
 ------ EXPORTED ------ 
@@ -35,16 +36,16 @@ export function init_geneFusionUI(holder, genomes, debugmode) {
 		.style('display', 'flex')
 		.style('align-items', 'center')
 		.style('margin', '10px')
-	uiutils.makeGenomeDropDown(dropdown_div, genomes)
-	makePositionDropDown(dropdown_div)
+	genomeSelection(dropdown_div, genomes, obj)
+	makePositionDropDown(dropdown_div, obj)
 
 	const controlBtns_div = wrapper
 		.append('div')
 		.style('display', 'flex')
 		.style('align-items', 'center')
 		.style('margin', '40px 0px 40px 130px')
-	makeSubmit(controlBtns_div, obj)
-	makeResetBtn(controlBtns_div, obj)
+	makeSubmit(controlBtns_div, obj, holder, genomes)
+	uiutils.makeResetBtn(controlBtns_div, obj, '.genefusion_input').style('margin', '0px 10px')
 
 	makeInfoSection(wrapper)
 
@@ -82,47 +83,70 @@ function makeFusionInput(div, obj) {
 		})
 }
 
-function makePositionDropDown(div) {
+async function genomeSelection(div, genomes, obj) {
+	const genome_div = div.append('div').style('margin-left', '40px')
+	const g = uiutils.makeGenomeDropDown(genome_div, genomes).style('border', '1px solid rgb(138, 177, 212)')
+	obj.genome = g.node()
+}
+
+async function makePositionDropDown(div, obj) {
 	const dropdown_div = div.append('div')
 
-	const select = dropdown_div
+	const positionSelect = dropdown_div
 		.append('select')
 		.style('border-radius', '5px')
 		.style('padding', '5px 10px')
 		.style('margin', '1px 10px 1px 10px')
-	select.append('option').text('Codon position')
-	select.append('option').text('RNA position')
-	select.append('option').text('Genomic position')
+	positionSelect
+		.append('option')
+		.text('Codon position')
+		.property('value', 'codon')
+	positionSelect
+		.append('option')
+		.text('RNA position')
+		.property('value', 'rna')
+	positionSelect
+		.append('option')
+		.text('Genomic position')
+		.property('value', 'genomic')
+	obj.position = positionSelect.node()
 }
 
-function makeSubmit(div, obj) {
+function makeSubmit(div, obj, holder) {
 	const submit = uiutils.makeBtn({
 		div,
 		text: 'Submit'
 	})
+	const errorMessage_div = div.append('div')
 	submit.style('display', 'block').on('click', () => {
-		console.log(obj.data)
+		if (!obj.data || obj.data == undefined) {
+			const sayerrorDiv = errorMessage_div
+				.append('div')
+				.style('display', 'inline-block')
+				.style('max-width', '20vw')
+			sayerror(sayerrorDiv, 'Please provide data')
+			setTimeout(() => sayerrorDiv.remove(), 3000)
+		} else {
+			const runpp_arg = {
+				holder: holder
+					.append('div')
+					.style('margin', '20px')
+					.node(),
+				host: window.location.origin,
+				nobox: true,
+				noheader: true,
+				parseurl: false,
+				genome: obj.genome.options[obj.genome.selectedIndex].text,
+				genefusion: {
+					text: obj.data,
+					positionType: obj.position.options[obj.position.selectedIndex].value
+				}
+			}
+			console.log(runpp_arg)
+			d3select('.sjpp-app-ui').remove()
+			runproteinpaint(Object.assign(runpp_arg))
+		}
 	})
-}
-
-function makeResetBtn(div, obj) {
-	//maybe more this to uiutils?
-	const reset = uiutils.makeBtn({
-		div,
-		text: '&#8634;',
-		backgroundColor: 'white',
-		color: 'grey',
-		padding: '0px 6px 1px 6px'
-	})
-	reset
-		.style('font-size', '1.5em')
-		.style('display', 'inline-block')
-		.style('margin', '0px 10px')
-		.attr('type', 'reset')
-		.on('click', async () => {
-			d3selectAll('.genefusion_input').property('value', '')
-			if (obj.data) obj.data = ''
-		})
 }
 
 function makeInfoSection(div) {

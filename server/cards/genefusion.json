@@ -1,7 +1,6 @@
 {
     "ppcalls": [
         {
-            "hidden": true,
             "isUi": true, 
             "runargs": {
                 "noheader": true,
