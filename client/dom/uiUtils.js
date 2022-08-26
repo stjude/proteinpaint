@@ -144,12 +144,13 @@ export function makeResetBtn(div, obj, selector) {
 	reset
 		.style('font-size', '1.5em')
 		.style('display', 'inline-block')
-		.style('margin', '0px 10px')
 		.attr('type', 'reset')
 		.on('click', async () => {
 			d3selectAll(selector).property('value', '')
 			if (obj.data) obj.data = ''
 		})
+
+	return reset
 }
 
 export function detectDelimiter(fileName) {
