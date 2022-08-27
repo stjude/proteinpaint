@@ -246,7 +246,10 @@ function setInteractivity(self) {
 					const tws = await Promise.all(
 						termlst.map(async term => {
 							const q = {}
-							if (term.type == 'condition') q.mode = 'cox'
+							if (term.type == 'condition') {
+								q.mode = 'cox'
+								q.timeScale = 'age'
+							}
 							const tw = { id: term.id, term, q }
 							await fillTermWrapper(tw)
 							return tw
