@@ -7,18 +7,16 @@ set -e
 ###############
 
 USAGE="Usage:
-./build/full/build.sh [-r] [-b] [-c] [-a]
+./build/full/build.sh [-r] [-b] [-c]
 
 	-r REV: git revision to checkout, if empty will use the current code state
 	-b BUILDARGS: build variables to pass to the Dockerfile that are not persisted to the built image
 	-c CROSSENV: cross-env options that used prior to npm install
-	-a: architecture that should be used to compile native packages
 "
 REV=latest
 BUILDARGS=""
 CROSSENV=""
-ARCH="x86_64"
-while getopts "r:b:c:h:a:" opt; do
+while getopts "r:b:c:h:" opt; do
 	case "${opt}" in
 	r)
 		REV=${OPTARG}
@@ -28,9 +26,6 @@ while getopts "r:b:c:h:a:" opt; do
 		;;
 	c)
 		CROSSENV=${OPTARG}	
-		;;
-	a)
-		ARCH=${OPTARG}	
 		;;
 	h)
 		echo $USAGE
@@ -42,14 +37,14 @@ while getopts "r:b:c:h:a:" opt; do
 		;;
 	esac
 done
-echo "ARCH IS $ARCH"
 #########################
 # EXTRACT REQUIRED FILES
 #########################
 
 ./build/extract.sh -r $REV -t full
 REV=$(cat tmppack/rev.txt)
-
+ARCH=$( uname -m )
+if [[ ${ARCH} == "arm64" ]]; then ARCH="aarch64"; fi
 #########################
 # Pack with Docker build
 #########################
