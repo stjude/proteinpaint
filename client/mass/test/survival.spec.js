@@ -46,6 +46,7 @@ tape('survival term as term1', function(test) {
 	async function runTests(survival) {
 		survivalDiv = survival.Inner.dom.chartsDiv
 		test.equal(survivalDiv && survivalDiv.selectAll('.sjpp-survival-series').size(), 1, 'should render 1 surv series g')
+		// please advice if to remove below tests using "circle" which is no longered rendered
 		test.equal(
 			survivalDiv && survivalDiv.selectAll('.sjpp-survival-series circle').size(),
 			153,
