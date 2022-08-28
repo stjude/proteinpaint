@@ -274,29 +274,18 @@ tape('use_bins_less', async test => {
 	const opts = await getOpts({
 		use_bins_less: true,
 		tsData: {
-			term: termjson['agedx'],
-			q: termjson['agedx'].bins.default
+			term: termjson.agedx,
+			q: termjson.agedx.bins.less
 		}
 	})
 
 	await opts.pill.main(opts.tsData)
 
-	const pilldiv = opts.holder.node().querySelectorAll('.ts_pill')[0]
 	await opts.pillMenuClick('Edit')
 
 	const tip = opts.pill.Inner.dom.tip.d.node()
 	const bin_size_input = tip.querySelectorAll('tr')[0].querySelectorAll('input')[0]
-	test.equal(bin_size_input.value, '3', 'has term.bins.less.bin_size as value')
-
-	delete opts.pill.Inner.opts.use_bins_less
-	delete opts.pill.Inner.numqByTermIdModeType[opts.pill.Inner.term.id]
-	delete opts.pill.Inner.q
-	//TODO: need to tweak timeout, UI reflects true value
-	await opts.pillMenuClick('Edit')
-
-	const bin_size_input2 = tip.querySelectorAll('tr')[0].querySelectorAll('input')[0]
-	test.equal(bin_size_input2.value, '3', 'has term.bins.default.bin_size as value')
-	opts.pill.Inner.dom.tip.hide()
+	test.equal(bin_size_input.value, '5', 'has term.bins.less.bin_size as value (is 5 not 3)')
 	test.end()
 })
 
