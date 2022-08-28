@@ -53,11 +53,6 @@ tape('basic cuminc', function(test) {
 			2,
 			'should render 2 cuminc series paths for estimate line and 95% CI area'
 		)
-		test.equal(
-			cumincDiv && cumincDiv.selectAll('.sjpcb-cuminc-series circle').size(),
-			21,
-			'should render 21 cuminc series circles'
-		)
 		test.end()
 	}
 })
