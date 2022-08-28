@@ -75,13 +75,6 @@ function handleNoDensity(self) {
 	self.num_obj.brushes = []
 	const brushes = self.num_obj.brushes
 
-	if (!self.num_obj.custom_bins_q) {
-		/* when custom_bins_q is undefined, do not run below as a quick fix not to break
-		FIXME where is this created and purpose?
-		*/
-		return
-	}
-
 	for (const [i, r] of self.num_obj.ranges.entries()) {
 		const _b = brushes.find(b => b.orig === r)
 		let brush
