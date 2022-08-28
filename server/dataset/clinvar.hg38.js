@@ -11,7 +11,7 @@ module.exports = {
 	queries: [
 		{
 			name: 'clinvar',
-			vcffile: 'hg38/clinvar.hg38.vcf.gz',
+			vcffile: 'hg38/clinvar_hg38.hgvs_short.sorted.vep.bcf.gz',
 			hlinfo: {}
 		}
 	],
