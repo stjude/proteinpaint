@@ -137,11 +137,17 @@ function makeInfoSection(div) {
 		</ol>
 		Separate the two genes by a double colon (::). Example: PAX5,chr9,37002646,-::JAK2,chr9,5081726,+ <br>`)
 }
-// Example data:
-// PAX5,chr9,37002646,-::JAK2,chr9,5081726,+
-// ZCCHC7,chr9,37257786,-::PAX5,chr9,37024824,-
-// BCR,chr22,23524427,+::ABL1,chr9,133729449,+
+
 function makeSubmitResult(obj, div, runpp_arg) {
+	if (obj.data.split(/[\r\n]/).length == 1) {
+		//Only one line entered, no dropdown
+		const line = obj.data.trim().split('::')
+		const gene1 = line[0].split(',')
+		const gene2 = line[1].split(',')
+		return makeFusionTabs(div, runpp_arg, gene1, gene2)
+	}
+	//Make dropdown to select fusions
+	//On select, toggle tabs for each gene appears underneath with the track for each gene
 	const fusionSelect = div
 		.append('div')
 		.append('select')
@@ -178,7 +184,7 @@ function makeSubmitResult(obj, div, runpp_arg) {
 function makeFusionTabs(div, runpp_arg, gene1, gene2) {
 	const tabs = [
 		// {
-		// ************ Keep for later, will introduce gene fusion view once data format settled
+		// ************ Keep for later, will introduce gene fusion view once data format settled *************
 		// 	label: 'Fusion',
 		// 	callback: async div => {
 		// 		if (!tabs[0].rendered) {
