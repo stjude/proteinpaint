@@ -1,5 +1,6 @@
 const clinvar = require('./clinvar')
 module.exports = {
+	isMds3: true,
 	color: '#545454',
 	dsinfo: [
 		{ k: 'Source', v: '<a href=http://www.ncbi.nlm.nih.gov/clinvar/ target=_blank>NCBI ClinVar</a>' },
@@ -8,13 +9,14 @@ module.exports = {
 		{ k: 'Download date', v: 'July 2022' }
 	],
 	genome: 'hg19',
-	queries: [
-		{
+	queries: {
+		snvindel: {
 			name: 'clinvar',
-			vcffile: 'hg19/clinvar.hg19.hgvs_short.vep.bcf.gz',
-			hlinfo: {}
+			hlinfo: {},
+			byrange: { bcffile: 'hg19/clinvar.hg19.hgvs_short.vep.bcf.gz' },
+			forTrack: true
 		}
-	],
+	},
 	vcfinfofilter: {
 		setidx4mclass: 0,
 		setidx4numeric: 1,
