@@ -1,19 +1,20 @@
 import * as uiutils from '#dom/uiUtils'
 import { select as d3select, selectAll as d3selectAll, event as d3event } from 'd3-selection'
 import { sayerror } from '../client'
+import { init_tabs } from '#dom/toggleButtons'
+import { appear } from '#dom/animation'
 
 /*
 ------ EXPORTED ------ 
 init_geneFusionUI()
 	holder 
 	genomes
-	debugmode: Remove after testing (?)
 
 ------ Internal ------ 
 
 */
 
-export function init_geneFusionUI(holder, genomes, debugmode) {
+export function init_geneFusionUI(holder, genomes) {
 	const wrapper = holder
 		.append('div')
 		.style('margin', '20px 20px 20px 40px')
@@ -26,8 +27,6 @@ export function init_geneFusionUI(holder, genomes, debugmode) {
 		.classed('sjpp-app-ui', true)
 
 	const obj = {}
-
-	// makeSectionHeader(wrapper, 'Gene Fusion')
 
 	makeFusionInput(wrapper, obj)
 
@@ -49,23 +48,7 @@ export function init_geneFusionUI(holder, genomes, debugmode) {
 
 	makeInfoSection(wrapper)
 
-	//Remove after testing
-	if (debugmode) window.doms = obj
 	return obj
-}
-
-function makeSectionHeader(div, text) {
-	//maybe more this to uiutils?
-	const header = uiutils.makePrompt(div, text)
-	header
-		.style('font-size', '1.5em')
-		.style('color', '#003366')
-		.style('margin', '20px 10px 40px 10px')
-	const hr = div.append('hr')
-	hr.style('color', 'ligthgrey')
-		.style('margin', '-30px 0px 15px 0px')
-		.style('width', '50vw')
-		.style('opacity', '0.4')
 }
 
 function makeFusionInput(div, obj) {
@@ -73,7 +56,7 @@ function makeFusionInput(div, obj) {
 		.makeTextAreaInput({
 			div,
 			cols: 50,
-			placeholder: 'Example: PAX5,NM_016734,201,JAK2,NM_004972,812'
+			placeholder: 'Example: PAX5,chr9,37002646,-::JAK2,chr9,5081726,+'
 		})
 		.style('border', '1px solid rgb(138, 177, 212)')
 		.style('margin', '0px 0px 0px 20px')
@@ -109,7 +92,7 @@ async function makePositionDropDown(div, obj) {
 		.append('option')
 		.text('Genomic position')
 		.property('value', 'genomic')
-	obj.position = positionSelect.node()
+	obj.posType = positionSelect.node()
 }
 
 function makeSubmit(div, obj, holder) {
@@ -127,24 +110,15 @@ function makeSubmit(div, obj, holder) {
 			sayerror(sayerrorDiv, 'Please provide data')
 			setTimeout(() => sayerrorDiv.remove(), 3000)
 		} else {
+			d3select('.sjpp-app-ui').remove()
 			const runpp_arg = {
-				holder: holder
-					.append('div')
-					.style('margin', '20px')
-					.node(),
 				host: window.location.origin,
 				nobox: true,
 				noheader: true,
 				parseurl: false,
-				genome: obj.genome.options[obj.genome.selectedIndex].text,
-				genefusion: {
-					text: obj.data,
-					positionType: obj.position.options[obj.position.selectedIndex].value
-				}
+				genome: obj.genome.options[obj.genome.selectedIndex].text
 			}
-			console.log(runpp_arg)
-			d3select('.sjpp-app-ui').remove()
-			runproteinpaint(Object.assign(runpp_arg))
+			makeSubmitResult(obj, holder, runpp_arg)
 		}
 	})
 }
@@ -155,17 +129,161 @@ function makeInfoSection(div) {
 		.style('margin', '10px')
 		.style('opacity', '0.65').html(`Limited to two-gene fusion products.<br>
 		One product per line.<br>
-		Each line has six fields joined by comma:
-		<ol><li>N-term gene symbol</li>
-		<li>N-term gene isoform</li>
-		<li>N-term gene break-end position</li>
-		<li>C-term gene symbol</li>
-		<li>C-term gene isoform</li>
-		<li>C-term gene break-end position</li>
-		<li>(optional) interstitial sequence AA length</li>
+		Each line has eight fields. four fields for each gene. For each gene join the following fields separated by a comma:
+		<ol><li>Gene symbol</li>
+		<li>Chromosome</li>
+		<li>Position</li>
+		<li>Strand</li>
 		</ol>
-		Break-end position types:
-		<ul><li>Codon position: integer, 1-based</li>
-		<li>RNA position: integer, 1-based, beginning from transcription start site</li>
-		<li>Genomic position: chromosome name and 1-based coordinate joined by colon, e.g. chr1:2345</li></ul>`)
+		Separate the two genes by a double colon (::). Example: PAX5,chr9,37002646,-::JAK2,chr9,5081726,+ <br>`)
+}
+// Example data:
+// PAX5,chr9,37002646,-::JAK2,chr9,5081726,+
+// ZCCHC7,chr9,37257786,-::PAX5,chr9,37024824,-
+// BCR,chr22,23524427,+::ABL1,chr9,133729449,+
+function makeSubmitResult(obj, div, runpp_arg) {
+	const fusionSelect = div
+		.append('div')
+		.append('select')
+		.style('border-radius', '5px')
+		.style('padding', '5px 10px')
+		.style('margin', '1px 10px 1px 10px')
+
+	fusionSelect.append('option').text('Select Fusion')
+
+	const tabsDiv = div.append('div').style('margin', '20px')
+
+	const fusionsMap = new Map()
+
+	for (const data of obj.data.split(/[\r\n]/)) {
+		const line = data.trim().split('::')
+		const gene1 = line[0].split(',')
+		const gene2 = line[1].split(',')
+		fusionsMap.set(`${gene1[0]}-${gene2[0]}`, [gene1, gene2])
+	}
+
+	for (const fusion of fusionsMap) {
+		fusionSelect
+			.append('option')
+			.property('value', fusion[0])
+			.text(fusion[0])
+	}
+	fusionSelect.on('change', () => {
+		tabsDiv.selectAll('*').remove()
+		const geneArrays = fusionsMap.get(fusionSelect.property('value'))
+		makeFusionTabs(tabsDiv, runpp_arg, geneArrays[0], geneArrays[1])
+	})
+}
+
+function makeFusionTabs(div, runpp_arg, gene1, gene2) {
+	const tabs = [
+		// {
+		// ************ Keep for later, will introduce gene fusion view once data format settled
+		// 	label: 'Fusion',
+		// 	callback: async div => {
+		// 		if (!tabs[0].rendered) {
+		// 			appear(div)
+		// 			const text = `${gene1[0]}, ${gene1[1]},${gene1[2]},${gene2[0]},${gene2[1]},${gene2[2]}`
+		// 			const runpp_arg = {
+		// 				holder: div
+		// 					.append('div')
+		// 					.style('margin', '20px')
+		// 					.node(),
+		// 				host: window.location.origin,
+		// 				nobox: true,
+		// 				noheader: true,
+		// 				parseurl: false,
+		// 				genome,
+		// 				genefusion: {
+		// 					text,
+		// 					positionType: posType
+		// 					}
+		// 				}
+		// 			console.log(runpp_arg)
+		// 			runproteinpaint(Object.assign(runpp_arg))
+		// 			tabs[0].rendered = true
+		// 		}
+		// 	}
+		// },
+		{
+			label: gene1[0],
+			callback: async div => {
+				// if(!tabs[1].rendered) {
+				if (!tabs[0].rendered) {
+					appear(div)
+					const fusion_arg = {
+						holder: div
+							.append('div')
+							.style('margin', '20px')
+							.node(),
+						gene: gene1[0],
+						tracks: [
+							{
+								type: 'mds3',
+								name: gene1[0],
+								custom_variants: [
+									{
+										gene1: gene1[0],
+										chr1: gene1[1],
+										pos1: parseInt(gene1[2]),
+										strand1: gene1[3],
+										gene2: gene2[0],
+										chr2: gene2[1],
+										pos2: parseInt(gene2[2]),
+										strand2: gene2[3],
+										dt: 2,
+										class: 'Fuserna'
+									}
+								]
+							}
+						]
+					}
+					runproteinpaint(Object.assign(runpp_arg, fusion_arg))
+					// tabs[1].rendered = true
+					tabs[0].rendered = true
+				}
+			}
+		},
+		{
+			label: gene2[0],
+			callback: async div => {
+				appear(div)
+				// if(!tabs[2].rendered ) {
+				if (!tabs[1].rendered) {
+					const fusion_arg = {
+						holder: div
+							.append('div')
+							.style('margin', '20px')
+							.node(),
+						gene: gene2[0],
+						tracks: [
+							{
+								type: 'mds3',
+								name: gene2[0],
+								custom_variants: [
+									{
+										gene1: gene2[0],
+										chr1: gene2[1],
+										pos1: parseInt(gene2[2]),
+										strand1: gene2[3],
+										gene2: gene1[0],
+										chr2: gene1[1],
+										pos2: parseInt(gene1[2]),
+										strand2: gene1[3],
+										dt: 2,
+										class: 'Fuserna'
+									}
+								]
+							}
+						]
+					}
+					runproteinpaint(Object.assign(runpp_arg, fusion_arg))
+					// tabs[2].rendered = true
+					tabs[1].rendered = true
+				}
+			}
+		}
+	]
+
+	init_tabs({ holder: div, tabs })
 }

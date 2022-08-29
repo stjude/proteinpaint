@@ -47,5 +47,5 @@
             }
         }
     ],
-    "ribbonMessage": "Visualize gene fusions from your custom dataset! See the examples below for how to call the gene fusion track."
+    "ribbonMessage": "<p style='display: inline-block;'>Explore gene fusions! Use the new form on the <span style='color:#1575ad; font-weight:600;'>Add Your Data</span> tab to see the gene fusion view. Please see the <span style='color:#1575ad; font-weight:600;'>Examples</span> tab for an example and how to display custom data.</p>"
 }
