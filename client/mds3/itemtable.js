@@ -256,16 +256,46 @@ function table_snvindel({ mlst, tk, block }, grid) {
 		td2.text(m.__value_missing ? 'NA' : m.__value_use)
 	}
 
-	if(m.info) {
+	if (m.info) {
 		/* info fields are available for this variant
 		later to add more features for info field display
 		by referencing tk.mds.bcf.info{} for instructions to display each info field
 		*/
-		for(const key in m.info) {
-			if(key=='CSQ') continue
+		for (const key in m.info) {
+			if (key == 'CSQ') {
+				// TODO for custom tk, backend will send csq to client for display
+				// for native tk, dataset may be configured not to send?
+				continue
+			}
+
 			const [td1, td2] = get_list_cells(grid)
+			// column 1: info field key
 			td1.text(key)
-			td2.text(m.info[key])
+			// column 2: info field value of this variant m{}
+			// keep reference to valueSpan as it may be modified later
+			const valueSpan = td2.append('span').text(m.info[key])
+
+			const infoField = tk.mds.bcf.info[key] // client-side obj about this info field
+			if (infoField) {
+				if (infoField.categories) {
+					const category = infoField.categories[m.info[key]]
+					if (category) {
+						// {color,label,textcolor}
+						valueSpan.style('padding', '1px 4px').style('background', category.color)
+						if (category.textcolor) {
+							valueSpan.style('color', category.textcolor)
+						}
+					}
+				}
+				if (infoField.Description) {
+					td2
+						.append('span')
+						.style('margin-left', '10px')
+						.style('font-size', '.8em')
+						.style('opacity', 0.6)
+						.text(infoField.Description)
+				}
+			}
 		}
 	}
 }

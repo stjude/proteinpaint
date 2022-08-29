@@ -12,11 +12,24 @@ module.exports = {
 	queries: {
 		snvindel: {
 			forTrack: true,
-			name: 'clinvar',
-			hlinfo: {},
-			byrange: { bcffile: 'hg38/clinvar.hg38.hgvs_short.vep.bcf.gz' }
+			byrange: {
+				bcffile: 'hg38/clinvar.hg38.hgvs_short.vep.bcf.gz',
+				// list of info fields with special configurations
+				infoFields: [
+					{
+						name: 'Clinical significance',
+						key: 'CLNSIG',
+						categories: clinvar.clinsig
+					}
+				]
+			},
+			url: {
+				base: 'https://www.ncbi.nlm.nih.gov/clinvar/variation/',
+				key: 'id'
+			}
 		}
-	},
+	}
+	/*
 	vcfinfofilter: {
 		setidx4mclass: 0,
 		setidx4numeric: 1,
@@ -32,14 +45,6 @@ module.exports = {
 			clinvar.AF.AF_ESP,
 			clinvar.AF.AF_TGP
 		]
-	},
-
-	url4variant: [
-		{
-			makelabel: m => 'ClinVar Variation ' + m.vcf_ID,
-			makeurl: m => {
-				return 'https://www.ncbi.nlm.nih.gov/clinvar/variation/' + m.vcf_ID
-			}
-		}
-	]
+	}
+	*/
 }
