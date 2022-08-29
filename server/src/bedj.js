@@ -93,6 +93,9 @@ TODO filter by category
 	.start // pixel position in canvas
 	.stop
 	.stranded
+		if true, item.strand=+/-
+	.namein
+		if true, print name inside item box
 	.namewidth // rendering width of a name
 	.namestart // x position to print a name
 	.namehover // if true, "hover" name on top of item, with a white bordered box as backdrop
@@ -103,8 +106,9 @@ TODO filter by category
 
 const namespace = 1 // one pixel between the gene label name and the item structure
 const namepad = 10 // box no struct: [pad---name---pad]
-const packfull_cutoff = 200 //the number of items in the view range; below the cutoff will render in 'packfull' mode
-const onerow_minitemcount = 400 // number of items exceeding this amount will all be rendered in one row
+const packfull_cutoff = 400 //the number of items in the view range; below the cutoff will render in 'packfull' mode
+const onerow_minitemcount = 600 // number of items exceeding this amount will all be rendered in one row
+const returngmdata_maxCount = 50 // max number of items to return data to client
 
 // color for translated codons
 const altcolor = 'rgba(122,103,44,.7)',
@@ -321,7 +325,7 @@ async function do_query(req, genomes) {
 	}
 
 	let returngmdata = null
-	if (__isgene && items.length < 50) {
+	if (__isgene && items.length < returngmdata_maxCount) {
 		// gene data requested and not too many, so return data
 		returngmdata = []
 		for (const i of items) {
@@ -375,10 +379,8 @@ async function do_query(req, genomes) {
 			return a.start - b.start
 		}
 	})
-	let hasstruct = false
-	for (const i of items) {
-		if (i.exon) hasstruct = true
-	}
+
+	const hasstruct = items.some(i => i.exon)
 
 	// stack
 	const stack = [0]
