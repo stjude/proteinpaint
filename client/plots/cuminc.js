@@ -77,22 +77,33 @@ export class Cuminc {
 		}
 
 		this.refs = {} //data.refs
-		this.skippedCharts = data.skippedCharts
 
 		// assume only one chart for now
 		this.tests = {
 			[this.currData[0].chartId]: data.tests //[0]
 		}
 
-		// hide skipped series of hidden series
-		this.skippedSeries = data.skippedSeries
-		if (this.skippedSeries) {
-			for (const chart in this.skippedSeries) {
-				// remove hidden series from this.skippedTests
-				this.skippedSeries[chart] = this.skippedSeries[chart].filter(series => !this.hiddenOverlays.includes(series))
-				if (this.skippedSeries[chart].length == 0) delete this.skippedSeries[chart]
+		// process skipped series
+		if (data.lowSampleSize) {
+			this.lowSampleSize = {}
+			// hide skipped series of hidden series
+			for (const chart in data.lowSampleSize) {
+				const serieses = data.lowSampleSize[chart].filter(series => !this.hiddenOverlays.includes(series))
+				if (serieses) this.lowSampleSize[chart] = serieses
 			}
 		}
+
+		if (data.lowEventCnt) {
+			this.lowEventCnt = {}
+			// hide skipped series of hidden series
+			for (const chart in data.lowEventCnt) {
+				const serieses = data.lowEventCnt[chart].filter(series => !this.hiddenOverlays.includes(series))
+				if (serieses) this.lowEventCnt[chart] = serieses
+			}
+		}
+
+		// process skipped charts
+		this.skippedCharts = data.skippedCharts
 	}
 
 	setTerm2Color(charts) {
@@ -340,13 +351,21 @@ class MassCumInc {
 		}
 
 		// process skipped series
-		this.skippedSeries = data.skippedSeries
-		if (this.skippedSeries) {
+		if (data.lowSampleSize) {
+			this.lowSampleSize = {}
 			// hide skipped series of hidden series
-			for (const chart in this.skippedSeries) {
-				// remove hidden series from this.skippedTests
-				this.skippedSeries[chart] = this.skippedSeries[chart].filter(series => !this.hiddenOverlays.includes(series))
-				if (this.skippedSeries[chart].length == 0) delete this.skippedSeries[chart]
+			for (const chart in data.lowSampleSize) {
+				const serieses = data.lowSampleSize[chart].filter(series => !this.hiddenOverlays.includes(series))
+				if (serieses) this.lowSampleSize[chart] = serieses
+			}
+		}
+
+		if (data.lowEventCnt) {
+			this.lowEventCnt = {}
+			// hide skipped series of hidden series
+			for (const chart in data.lowEventCnt) {
+				const serieses = data.lowEventCnt[chart].filter(series => !this.hiddenOverlays.includes(series))
+				if (serieses) this.lowEventCnt[chart] = serieses
 			}
 		}
 
@@ -456,14 +475,26 @@ function setRenderers(self) {
 				renderPvalues(pvaldiv, chart, self.tests[chart.chartId], s)
 			}
 
-			// skipped series legend
-			if (self.skippedSeries && chart.chartId in self.skippedSeries) {
+			// skipped series legends
+			// series with no events
+			if (self.lowEventCnt && chart.chartId in self.lowEventCnt) {
 				const skipdiv = div
 					.select('.pp-cuminc-chartLegends')
 					.style('display', 'inline-block')
 					.append('div')
 					.style('margin', '30px 0px')
-				renderSkippedSeries(skipdiv, self.skippedSeries[chart.chartId], s)
+				const title = 'Skipped series (no events)'
+				renderSkippedSeries(skipdiv, title, self.lowEventCnt[chart.chartId], s)
+			}
+			// series with low sample size
+			if (self.lowSampleSize && chart.chartId in self.lowSampleSize) {
+				const skipdiv = div
+					.select('.pp-cuminc-chartLegends')
+					.style('display', 'inline-block')
+					.append('div')
+					.style('margin', '30px 0px')
+				const title = 'Skipped series (too few samples)'
+				renderSkippedSeries(skipdiv, title, self.lowSampleSize[chart.chartId], s)
 			}
 		}
 	}
@@ -507,14 +538,26 @@ function setRenderers(self) {
 			renderPvalues(pvaldiv, chart, self.tests[chart.chartId], s)
 		}
 
-		// skipped series legend
-		if (self.skippedSeries && chart.chartId in self.skippedSeries) {
+		// skipped series legends
+		// series with no events
+		if (self.lowEventCnt && chart.chartId in self.lowEventCnt) {
 			const skipdiv = div
 				.select('.pp-cuminc-chartLegends')
 				.style('display', 'inline-block')
 				.append('div')
 				.style('margin', '30px 0px')
-			renderSkippedSeries(skipdiv, self.skippedSeries[chart.chartId], s)
+			const title = 'Skipped series (no events)'
+			renderSkippedSeries(skipdiv, title, self.lowEventCnt[chart.chartId], s)
+		}
+		// series with low sample size
+		if (self.lowSampleSize && chart.chartId in self.lowSampleSize) {
+			const skipdiv = div
+				.select('.pp-cuminc-chartLegends')
+				.style('display', 'inline-block')
+				.append('div')
+				.style('margin', '30px 0px')
+			const title = 'Skipped series (too few samples)'
+			renderSkippedSeries(skipdiv, title, self.lowSampleSize[chart.chartId], s)
 		}
 	}
 
@@ -678,28 +721,28 @@ function setRenderers(self) {
 		}
 	}
 
-	function renderSkippedSeries(skipdiv, skippedSeries, s) {
+	function renderSkippedSeries(div, title, serieses, s) {
 		const fontSize = s.axisTitleFontSize - 2
 
-		skipdiv.selectAll('*').remove()
+		div.selectAll('*').remove()
 
 		// title div
-		skipdiv
+		div
 			.append('div')
 			.style('padding-bottom', '5px')
 			.style('font-size', fontSize + 'px')
 			.style('font-weight', 'bold')
-			.text('Skipped series (too few samples/events)')
+			.text(title)
 
 		// serieses div
-		const seriesesDiv = skipdiv
+		const seriesesDiv = div
 			.append('div')
 			.style('padding-bottom', '5px')
 			.style('font-size', fontSize + 'px')
 
 		seriesesDiv
 			.selectAll('div')
-			.data(skippedSeries)
+			.data(serieses)
 			.enter()
 			.append('div')
 			.attr('class', 'pp-cuminc-chartLegends-skipped')
