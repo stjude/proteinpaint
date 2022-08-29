@@ -44,6 +44,11 @@ makePrompt()
     - div
 	- text: STR 
 
+makeResetBtn()
+	Button to clear a form/UI
+	- div
+	- obj{}
+	- selector: STR, class selector to clear
 
 detectDelimiter()
 	Returns the delimiter based on the file name
