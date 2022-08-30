@@ -42,17 +42,10 @@
                     "sandboxHtml": "svview"
                 },
                 {
-                    "hidden": true,
                     "name": "DNAnexus Tips",
                     "type": "card",
-                    "description": "",
+                    "description": "Guide to use DNAnexus for ProteinPaint",
                     "sandboxHtml": "dnanexusTips"
-                },
-                {
-                    "name": "DNAnexus File Viewer",
-                    "type": "card",
-                    "description": "Instructions on launching ProteinPaint from DNAnexus",
-                    "sandboxHtml": "dnanexusFileviewer"
                 }
             ]
         },
