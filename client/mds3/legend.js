@@ -14,6 +14,7 @@ update_info_fields
 may_create_variantShapeName
 may_update_variantShapeName
 may_create_infoFields
+may_update_infoFields
 
 ********************** tk.legend{} structure
 .tip
@@ -225,7 +226,13 @@ function may_update_infoFields(data, tk) {
 				if (!m.info) continue
 				if (!(infoKey in m.info)) continue
 				const category = m.info[infoKey]
-				category2variantCount.set(category, 1 + (category2variantCount.get(category) || 0))
+				if (Array.isArray(category)) {
+					for (const c of category) {
+						category2variantCount.set(c, 1 + (category2variantCount.get(c) || 0))
+					}
+				} else {
+					category2variantCount.set(category, 1 + (category2variantCount.get(category) || 0))
+				}
 			}
 
 			// sort tally in descending order, each element is a two-ele array [category, variantCount]
