@@ -252,9 +252,9 @@ function getGDCconfig() {
 				Utr5: {
 					color: '#566c58'
 				},
-				// E: {
-				// 	color: 'rgb(132, 132, 24)'
-				// },
+				E: {
+					color: '#595b00'
+				},
 				ITD: {
 					color: 'rgb(179, 78, 179)'
 				},
@@ -264,15 +264,15 @@ function getGDCconfig() {
 				SV: {
 					color: 'rgb(93, 93, 93)'
 				},
-				// CNV_amp: {
-				// 	color: 'rgb(163, 114, 141)'
-				// },
-				// CNV_loss: {
-				// 	color: 'rgb(113, 151, 74)'
-				// },
-				// CNV_loh: {
-				// 	color: 'rgb(13, 166, 176)'
-				// },
+				CNV_amp: {
+				 	color: '#7a425f'
+				},
+				CNV_loss: {
+					color: '#42741a'
+				},
+				CNV_loh: {
+					color: 'rgb(13, 166, 176)'
+				},
 				snv: {
 					color: 'rgb(102, 113, 148)'
 				},
