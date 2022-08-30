@@ -1,96 +1,126 @@
-import { getLolliplotTrack, getTrackByType } from './gdc.views.js'
+const { useEffect, useRef, FC, createElement, useState } = window.React
+const { render } = window.ReactDOM
+const runproteinpaint = window.runproteinpaint
 
-export function getPpReact(getTrack) {
-	if (!React) throw `missing React module`
-	class PpReact extends React.Component {
-		constructor(props) {
-			super(props)
-			this.state = {}
-		}
-		componentDidMount() {
-			this.window = this.props.window ? this.props.window : window
-			this.runpp()
-		}
-		componentDidUpdate() {
-			this.runpp()
-		}
-		render() {
-			// avoid jsx syntax to simplify bundling requirements
-			// since this is only a very minimal wrapper
-			return React.createElement('div', null, '')
-		}
-		runpp() {
-			const data = this.getTrack()
-			// do not cause unnecessary re-render if the track argument
-			// is the same as the last render
-			if (deepEqual(data, this.currentData)) return
-			this.currentData = data
-			const rootElem = ReactDOM.findDOMNode(this)
+// !!! TODO: may determine basepath prop value at runtime !!!
+const basepath = 'http://localhost:3000' // '/auth/api/custom/proteinpaint'
+
+/*interface PpProps {
+  track: string;
+  basepath?: string;
+  geneId?: string;
+  gene2canonicalisoform?: string;
+  ssm_id?: string;
+  mds3_ssm2canonicalisoform?: mds3_isoform;
+  geneSearch4GDCmds3?: boolean;
+}*/
+
+export const ProteinPaintWrapper = props => {
+	//: FC<PpProps> = (props: PpProps) => {
+	const [, updateState] = useState({})
+	window.updateState = updateState
+	const filter0 = () => window.filter0
+
+	// to track reusable instance for mds3 skewer track
+	/*** TODO: bam track should return reusable renderer???? ***/
+	const ppRef = useRef()
+
+	useEffect(async () => {
+		const data =
+			props.track == 'lolliplot'
+				? getLolliplotTrack(props, filter0)
+				: props.track == 'bam'
+				? getBamTrack(props, filter0)
+				: null
+
+		if (!data) return
+		const rootElem = divRef.current /*as HTMLElement*/
+
+		rootElem.parentNode.parentNode.parentNode.style.backgroundColor = '#fff'
+		const arg = Object.assign(
+			{ holder: rootElem, noheader: true, nobox: true, hide_dsHandles: true },
+			JSON.parse(JSON.stringify(data))
+		)
+		if (ppRef.current) {
+			ppRef.current.update(arg)
+		} else {
 			const pp_holder = rootElem.querySelector('.sja_root_holder')
 			if (pp_holder) pp_holder.remove()
+			ppRef.current = await runproteinpaint(arg)
+		}
+	}, [props.gene2canonicalisoform, props.mds3_ssm2canonicalisoform, props.geneSearch4GDCmds3, filter0])
 
-			const arg = Object.assign({ holder: rootElem, noheader: true, nobox: true }, JSON.parse(JSON.stringify(data)))
-			runproteinpaint(arg)
-		}
-		/* 
-			TODO: delete getUrlParams() once all 
-		  required input are passed via props 
-		  by the gdc portal app
-		*/
-		getUrlParams() {
-			const loc = this.window.location
-			const params = {}
-			loc.search
-				.substr(1)
-				.split('&')
-				.forEach(kv => {
-					const [key, value] = kv.split('=')
-					params[key] = value
-				})
-			if (params.filters) {
-				params['filters'] = JSON.parse(decodeURIComponent(params.filters))
+	const divRef = useRef()
+	return createElement('div', { ref: divRef }, '')
+}
+
+/*interface Mds3Arg {
+  host: string;
+  genome: string;
+  gene2canonicalisoform?: string;
+  mds3_ssm2canonicalisoform?: mds3_isoform;
+  geneSearch4GDCmds3?: boolean;
+  tracks: Track[];
+}
+
+interface Track {
+  type: string;
+  dslabel: string;
+}
+
+interface mds3_isoform {
+  ssm_id: string;
+  dslabel: string;
+}*/
+
+function getLolliplotTrack(props /*: PpProps*/, filter0 /*: any*/) {
+	// host in gdc is just a relative url path,
+	// using the same domain as the GDC portal where PP is embedded
+	const arg /*: Mds3Arg*/ = {
+		host: props.basepath || basepath /*as string*/,
+		genome: 'hg38', // hardcoded for gdc
+		//gene: data.gene,
+		tracks: [
+			{
+				type: 'mds3',
+				dslabel: 'GDC',
+				filter0
 			}
-			if (loc.pathname) {
-				const url_split = loc.pathname.split('/')
-				// do not hardcode the position of /genes/ in the pathname
-				const i = url_split.findIndex(d => d === 'genes')
-				if (i !== -1) params.gene = url_split[i + 1]
-			}
-			return params
-		}
+		]
 	}
 
-	if (typeof getTrack == 'function') {
-		PpReact.prototype.getTrack = getTrack
+	if (props.geneId) {
+		arg.gene2canonicalisoform = this.props.geneId
+	} else if (props.ssm_id) {
+		arg.mds3_ssm2canonicalisoform = {
+			dslabel: 'GDC',
+			ssm_id: props.ssm_id
+		}
 	} else {
-		throw 'The second argument to getPpReact must be a function that returns runproteinpaint() arguments'
+		arg.geneSearch4GDCmds3 = true
+
+		/* arg.geneSearch4tk = {
+      tracks:[ {type:'mds3', dslabel:'GDC'} ],
+      foundGeneCallback:()=>{}
+    }*/
 	}
-	PpReact.React = React
-	return PpReact
+
+	return arg
 }
 
-function deepEqual(x, y) {
-	if (x === y) {
-		return true
-	} else if (typeof x == 'object' && x != null && typeof y == 'object' && y != null) {
-		if (Object.keys(x).length != Object.keys(y).length) {
-			return false
-		}
+/*interface BamArg {
+  host: string;
+  gdcbamslice: boolean;
+}*/
 
-		for (var prop in x) {
-			if (y.hasOwnProperty(prop)) {
-				if (!deepEqual(x[prop], y[prop])) return false
-			} else {
-				return false
-			}
-		}
-		return true
-	} else return false
+function getBamTrack(props /*: PpProps*/, filter0 /*: any*/) {
+	// host in gdc is just a relative url path,
+	// using the same domain as the GDC portal where PP is embedded
+	const arg /*: BamArg*/ = {
+		host: props.basepath || basepath /*as string*/,
+		gdcbamslice: true,
+		filter0
+	}
+
+	return arg
 }
-
-export { getLolliplotTrack }
-export function getPpLolliplot() {
-	return getPpReact(getLolliplotTrack)
-}
-
-//export const PpTrack = getPpReact(getTrackByType)

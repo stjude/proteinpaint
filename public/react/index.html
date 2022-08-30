@@ -3,27 +3,53 @@
 	<head>
 		<meta charset="utf-8" />
 		<title>ProteinPaint</title>
-	</head>
-	<body>
-		<!--
-<script crossorigin src="https://unpkg.com/react@17/umd/react.development.js"></script>
-<script crossorigin src="https://unpkg.com/react-dom@17/umd/react-dom.development.js"></script>
--->
 		<script crossorigin src="https://unpkg.com/react@17/umd/react.production.min.js"></script>
 		<script crossorigin src="https://unpkg.com/react-dom@17/umd/react-dom.production.min.js"></script>
 		<script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>
 		<script src="/bin/proteinpaint.js" charset="utf-8"></script>
-		<script src="./gdc.views.js" type='module' charset="utf-8"></script>
 		<script src="./PpReact.js" type='module' charset="utf-8"></script>
+		<script>
+			const operands = []
+			const filter0 = {
+			 mode: 'and',
+			 root: {
+			    'cases.primary_site': {
+			      operator: 'includes',
+			      field: 'cases.primary_site',
+			      operands
+			    }
+			  }
+			}
+
+			function setPrimarySite() {
+				const operands = []
+				filter0.root['cases.primary_site'].operands = operands
+				const checkboxes = document.querySelector('#primarySiteOptions').querySelectorAll('input')
+				for(const c of checkboxes) {
+					if (c.checked) operands.push(c.value)
+				}
+				window.updateState({})
+			}
+
+		</script>
+	</head>
+	<body>
+		<div style='margin: 10px; padding:10px'>
+			<h2>Primary Site</h2>
+			<div id='primarySiteOptions' onclick='setPrimarySite()'>
+				<label><input type='checkbox' value='brain' /><span> Brain</span></label>
+				<label><input type='checkbox' value='lung' /><span> Lung</span></label>
+				<label><input type='checkbox' value='pancreas' /><span> Pancreas</span></label>
+			</div>
+		</div>
 
 		<div id="aaa" style="margin: 10px"></div>
 		<div id="bbb" style="margin: 10px"></div>
-</script>
 <script type='module'>
-import { getPpLolliplot } from './PpReact.js'
-const PpLolliplot = getPpLolliplot()
+import { ProteinPaintWrapper } from './PpReact.js'
+
 ReactDOM.render(
-	React.createElement(PpLolliplot, {}, null),
+	React.createElement(ProteinPaintWrapper, {track: 'lolliplot', }, null),
 	document.getElementById('aaa')
 )
 </script>
