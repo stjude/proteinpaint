@@ -242,6 +242,15 @@ function getGDCconfig() {
 				},
 				Utr3: {
 					color: 'rgb(107, 90, 107)'
+				},
+				F: {
+					color: '#a71c25'
+				},
+				D: {
+					color: '#595959'
+				},
+				Utr5: {
+					color: '#566c58'
 				}
 			}
 		},
