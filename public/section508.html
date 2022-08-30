@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en" style="margin:0px;width:100%;height:100%">
+
+<head>
+    <meta charset="utf-8">
+    <title>ProteinPaint</title>
+</head>
+
+<body style="margin:0px;width:100%;height:100%">
+    <script src="bin/proteinpaint.js" charset="utf-8"></script>
+
+    <noscript>This page requires JavaScript. Please enable it in your browser settings.</noscript>
+
+    <table style="border-spacing: 5px; border-collapse: separate;">
+        <tr>
+            <td style="text-align: right; opacity: 0.3;">Mutation</td>
+            <td>
+
+                <div class="sja_clb" id="darker_item" style="display: inline-block;">
+                    <div class="sja_mcdot" style="display: inline-block; background: #3987CC ;">&nbsp;</div>
+                    <div style="display: inline-block; color: #3987CC ;">&nbsp;MISSENSE</div>
+                </div>
+                <div class="sja_clb" id="darker_item" style="display: inline-block;">
+                    <div class="sja_mcdot" style="display: inline-block; background: #bcbd22 ;">&nbsp;</div>
+                    <div style="display: inline-block; color: #bcbd22 ;">&nbsp;EXON</div>
+                </div>
+                <div class="sja_clb" id="darker_item" style="display: inline-block;">
+                    <div class="sja_mcdot" style="display: inline-block; background: #db3d3d ;">&nbsp;</div>
+                    <div style="display: inline-block; color: #db3d3d ;">&nbsp;FRAMESHIFT</div>
+                </div>
+                <div class="sja_clb" id="darker_item" style="display: inline-block;">
+                    <div class="sja_mcdot" style="display: inline-block; background: #ff7f0e ;">&nbsp;</div>
+                    <div style="display: inline-block; color: #ff7f0e ;">&nbsp;NONSENSE</div>
+                </div>
+                <div class="sja_clb" id="darker_item" style="display: inline-block;">
+                    <div class="sja_mcdot" style="display: inline-block; background: #2ca02c ;">&nbsp;</div>
+                    <div style="display: inline-block; color: #2ca02c ;">&nbsp;SILENT</div>
+                </div>
+                <div class="sja_clb" id="darker_item" style="display: inline-block;">
+                    <div class="sja_mcdot" style="display: inline-block; background: #7f7f7f ;">&nbsp;</div>
+                    <div style="display: inline-block; color: #7f7f7f ;">&nbsp;PROTEINDEL</div>
+                </div>
+                <div class="sja_clb" id="darker_item" style="display: inline-block;">
+                    <div class="sja_mcdot" style="display: inline-block; background: #8c564b ;">&nbsp;</div>
+                    <div style="display: inline-block; color: #8c564b ;">&nbsp;PROTEININS</div>
+                </div>
+                <div class="sja_clb" id="darker_item" style="display: inline-block;">
+                    <div class="sja_mcdot" style="display: inline-block; background: #9467bd ;">&nbsp;</div>
+                    <div style="display: inline-block; color: #9467bd ;">&nbsp;SPLICE_REGION</div>
+                </div>
+                <div class="sja_clb" id="darker_item" style="display: inline-block;">
+                    <div class="sja_mcdot" style="display: inline-block; background: #6633FF ;">&nbsp;</div>
+                    <div style="display: inline-block; color: #6633FF ;">&nbsp;SPLICE</div>
+                </div>
+                <div class="sja_clb" id="darker_item" style="display: inline-block;">
+                    <div class="sja_mcdot" style="display: inline-block; background: #656565 ;">&nbsp;</div>
+                    <div style="display: inline-block; color: #656565 ;">&nbsp;INTRON</div>
+                </div>
+                <div class="sja_clb" id="darker_item" style="display: inline-block;">
+                    <div class="sja_mcdot" style="display: inline-block; background: #fff ;">&nbsp;</div>
+                    <div style="display: inline-block; color: #fff ;">&nbsp;Not tested</div>
+                </div>
+                <div class="sja_clb" id="darker_item" style="display: inline-block;">
+                    <div class="sja_mcdot" style="display: inline-block; background: #ff70ff ;">&nbsp;</div>
+                    <div style="display: inline-block; color: #ff70ff ;">&nbsp;ITD</div>
+                </div>
+                <div class="sja_clb" id="darker_item" style="display: inline-block;">
+                    <div class="sja_mcdot" style="display: inline-block; background: #858585 ;">&nbsp;</div>
+                    <div style="display: inline-block; color: #858585 ;">&nbsp;DELETION, intragenic</div>
+                </div>
+                <div class="sja_clb" id="darker_item" style="display: inline-block;">
+                    <div class="sja_mcdot" style="display: inline-block; background: #545454 ;">&nbsp;</div>
+                    <div style="display: inline-block; color: #545454 ;">&nbsp;N-terminus loss</div>
+                </div>
+                <div class="sja_clb" id="darker_item" style="display: inline-block;">
+                    <div class="sja_mcdot" style="display: inline-block; background: #545454 ;">&nbsp;</div>
+                    <div style="display: inline-block; color: #545454 ;">&nbsp;C-terminus loss</div>
+                </div>
+                <div class="sja_clb" id="darker_item" style="display: inline-block;">
+                    <div class="sja_mcdot" style="display: inline-block; background: #998199 ;">&nbsp;</div>
+                    <div style="display: inline-block; color: #998199 ;">&nbsp;UTR_3</div>
+                </div>
+                <div class="sja_clb" id="darker_item" style="display: inline-block;">
+                    <div class="sja_mcdot" style="display: inline-block; background: #819981 ;">&nbsp;</div>
+                    <div style="display: inline-block; color: #819981 ;">&nbsp;UTR_5</div>
+                </div>
+                <div class="sja_clb" id="darker_item" style="display: inline-block;">
+                    <div class="sja_mcdot" style="display: inline-block; background: black ;">&nbsp;</div>
+                    <div style="display: inline-block; color: black ;">&nbsp;NONSTANDARD</div>
+                </div>
+                <div class="sja_clb" id="darker_item" style="display: inline-block;">
+                    <div class="sja_mcdot" style="display: inline-block; background: black ;">&nbsp;</div>
+                    <div style="display: inline-block; color: black ;">&nbsp;NONCODING</div>
+                </div>
+                <div class="sja_clb" id="darker_item" style="display: inline-block;">
+                    <div class="sja_mcdot" style="display: inline-block; background: #545454 ;">&nbsp;</div>
+                    <div style="display: inline-block; color: #545454 ;">&nbsp;Fusion transcript</div>
+                </div>
+                <div class="sja_clb" id="darker_item" style="display: inline-block;">
+                    <div class="sja_mcdot" style="display: inline-block; background: #858585 ;">&nbsp;</div>
+                    <div style="display: inline-block; color: #858585 ;">&nbsp;Structural variation</div>
+                </div>
+                <div class="sja_clb" id="darker_item" style="display: inline-block;">
+                    <div class="sja_mcdot" style="display: inline-block; background: #e9a3c9 ;">&nbsp;</div>
+                    <div style="display: inline-block; color: #e9a3c9 ;">&nbsp;Copy number gain</div>
+                </div>
+                <div class="sja_clb" id="darker_item" style="display: inline-block;">
+                    <div class="sja_mcdot" style="display: inline-block; background: #a1d76a ;">&nbsp;</div>
+                    <div style="display: inline-block; color: #a1d76a ;">&nbsp;Copy number loss</div>
+                </div>
+                <div class="sja_clb" id="darker_item" style="display: inline-block;">
+                    <div class="sja_mcdot" style="display: inline-block; background: #12EDFC ;">&nbsp;</div>
+                    <div style="display: inline-block; color: #12EDFC ;">&nbsp;LOH</div>
+                </div>
+                <div class="sja_clb" id="darker_item" style="display: inline-block;">
+                    <div class="sja_mcdot" style="display: inline-block; background: #92a2d4 ;">&nbsp;</div>
+                    <div style="display: inline-block; color: #92a2d4 ;">&nbsp;SNV</div>
+                </div>
+                <div class="sja_clb" id="darker_item" style="display: inline-block;">
+                    <div class="sja_mcdot" style="display: inline-block; background: #92a2d4 ;">&nbsp;</div>
+                    <div style="display: inline-block; color: #92a2d4 ;">&nbsp;MNV</div>
+                </div>
+                <div class="sja_clb" id="darker_item" style="display: inline-block;">
+                    <div class="sja_mcdot" style="display: inline-block; background: #bd8e91 ;">&nbsp;</div>
+                    <div style="display: inline-block; color: #bd8e91 ;">&nbsp;Sequence insertion</div>
+                </div>
+                <div class="sja_clb" id="darker_item" style="display: inline-block;">
+                    <div class="sja_mcdot" style="display: inline-block; background: #b5a174 ;">&nbsp;</div>
+                    <div style="display: inline-block; color: #b5a174 ;">&nbsp;Sequence deletion</div>
+                </div>
+            </td>
+        </tr>
+    </table>
+    <table style="border-spacing: 5px; border-collapse: separate;">
+        <tr>
+            <td style="text-align: right; opacity: 0.3;">Mutation</td>
+            <td>
+                <div class="sja_clb" id="darker_item" style="display: inline-block;">
+                    <div class="sja_mcdot" style="display: inline-block; background: rgb(40, 95, 143) ;">&nbsp;</div>
+                    <div style="display: inline-block; color: rgb(40, 95, 143) ;">&nbsp;MISSENSE</div>
+                </div>
+                <div class="sja_clb" id="darker_item" style="display: inline-block;">
+                    <div class="sja_mcdot" style="display: inline-block; background: rgb(132, 132, 24) ;">&nbsp;</div>
+                    <div style="display: inline-block; color: rgb(132, 132, 24) ;">&nbsp;EXON</div>
+                </div>
+                <div class="sja_clb" id="darker_item" style="display: inline-block;">
+                    <div class="sja_mcdot" style="display: inline-block; background: rgb(153, 43, 43) ;">&nbsp;</div>
+                    <div style="display: inline-block; color: rgb(153, 43, 43) ;">&nbsp;FRAMESHIFT</div>
+                </div>
+                <div class="sja_clb" id="darker_item" style="display: inline-block;">
+                    <div class="sja_mcdot" style="display: inline-block; background: rgb(179, 89, 10) ;">&nbsp;</div>
+                    <div style="display: inline-block; color: rgb(179, 89, 10) ;">&nbsp;NONSENSE</div>
+                </div>
+                <div class="sja_clb" id="darker_item" style="display: inline-block;">
+                    <div class="sja_mcdot" style="display: inline-block; background: rgb(31, 112, 31) ;">&nbsp;</div>
+                    <div style="display: inline-block; color: rgb(31, 112, 31) ;">&nbsp;SILENT</div>
+                </div>
+                <div class="sja_clb" id="darker_item" style="display: inline-block;">
+                    <div class="sja_mcdot" style="display: inline-block; background: rgb(89, 89, 89) ;">&nbsp;</div>
+                    <div style="display: inline-block; color: rgb(89, 89, 89) ;">&nbsp;PROTEINDEL</div>
+                </div>
+                <div class="sja_clb" id="darker_item" style="display: inline-block;">
+                    <div class="sja_mcdot" style="display: inline-block; background: rgb(98, 60, 53) ;">&nbsp;</div>
+                    <div style="display: inline-block; color: rgb(98, 60, 53) ;">&nbsp;PROTEININS</div>
+                </div>
+                <div class="sja_clb" id="darker_item" style="display: inline-block;">
+                    <div class="sja_mcdot" style="display: inline-block; background: rgb(104, 72, 132) ;">&nbsp;</div>
+                    <div style="display: inline-block; color: rgb(104, 72, 132) ;">&nbsp;SPLICE_REGION</div>
+                </div>
+                <div class="sja_clb" id="darker_item" style="display: inline-block;">
+                    <div class="sja_mcdot" style="display: inline-block; background: rgb(71, 36, 179) ;">&nbsp;</div>
+                    <div style="display: inline-block; color: rgb(71, 36, 179) ;">&nbsp;SPLICE</div>
+                </div>
+                <div class="sja_clb" id="darker_item" style="display: inline-block;">
+                    <div class="sja_mcdot" style="display: inline-block; background: rgb(71, 71, 71) ;">&nbsp;</div>
+                    <div style="display: inline-block; color: rgb(71, 71, 71) ;">&nbsp;INTRON</div>
+                </div>
+                <div class="sja_clb" id="darker_item" style="display: inline-block;">
+                    <div class="sja_mcdot" style="display: inline-block; background: rgb(179, 179, 179) ;">&nbsp;</div>
+                    <div style="display: inline-block; color: rgb(179, 179, 179) ;">&nbsp;Not tested</div>
+                </div>
+                <div class="sja_clb" id="darker_item" style="display: inline-block;">
+                    <div class="sja_mcdot" style="display: inline-block; background: rgb(179, 78, 179) ;">&nbsp;</div>
+                    <div style="display: inline-block; color: rgb(179, 78, 179) ;">&nbsp;ITD</div>
+                </div>
+                <div class="sja_clb" id="darker_item" style="display: inline-block;">
+                    <div class="sja_mcdot" style="display: inline-block; background: rgb(93, 93, 93) ;">&nbsp;</div>
+                    <div style="display: inline-block; color: rgb(93, 93, 93) ;">&nbsp;DELETION, intragenic</div>
+                </div>
+                <div class="sja_clb" id="darker_item" style="display: inline-block;">
+                    <div class="sja_mcdot" style="display: inline-block; background: rgb(59, 59, 59) ;">&nbsp;</div>
+                    <div style="display: inline-block; color: rgb(59, 59, 59) ;">&nbsp;N-terminus loss</div>
+                </div>
+                <div class="sja_clb" id="darker_item" style="display: inline-block;">
+                    <div class="sja_mcdot" style="display: inline-block; background: rgb(59, 59, 59) ;">&nbsp;</div>
+                    <div style="display: inline-block; color: rgb(59, 59, 59) ;">&nbsp;C-terminus loss</div>
+                </div>
+                <div class="sja_clb" id="darker_item" style="display: inline-block;">
+                    <div class="sja_mcdot" style="display: inline-block; background: rgb(107, 90, 107) ;">&nbsp;</div>
+                    <div style="display: inline-block; color: rgb(107, 90, 107) ;">&nbsp;UTR_3</div>
+                </div>
+                <div class="sja_clb" id="darker_item" style="display: inline-block;">
+                    <div class="sja_mcdot" style="display: inline-block; background: rgb(90, 107, 90) ;">&nbsp;</div>
+                    <div style="display: inline-block; color: rgb(90, 107, 90) ;">&nbsp;UTR_5</div>
+                </div>
+                <div class="sja_clb" id="darker_item" style="display: inline-block;">
+                    <div class="sja_mcdot" style="display: inline-block; background: rgb(0, 0, 0) ;">&nbsp;</div>
+                    <div style="display: inline-block; color: rgb(0, 0, 0) ;">&nbsp;NONSTANDARD</div>
+                </div>
+                <div class="sja_clb" id="darker_item" style="display: inline-block;">
+                    <div class="sja_mcdot" style="display: inline-block; background: rgb(0, 0, 0) ;">&nbsp;</div>
+                    <div style="display: inline-block; color: rgb(0, 0, 0) ;">&nbsp;NONCODING</div>
+                </div>
+                <div class="sja_clb" id="darker_item" style="display: inline-block;">
+                    <div class="sja_mcdot" style="display: inline-block; background: rgb(59, 59, 59) ;">&nbsp;</div>
+                    <div style="display: inline-block; color: rgb(59, 59, 59) ;">&nbsp;Fusion transcript</div>
+                </div>
+                <div class="sja_clb" id="darker_item" style="display: inline-block;">
+                    <div class="sja_mcdot" style="display: inline-block; background: rgb(93, 93, 93) ;">&nbsp;</div>
+                    <div style="display: inline-block; color: rgb(93, 93, 93) ;">&nbsp;Structural variation</div>
+                </div>
+                <div class="sja_clb" id="darker_item" style="display: inline-block;">
+                    <div class="sja_mcdot" style="display: inline-block; background: rgb(163, 114, 141) ;">&nbsp;</div>
+                    <div style="display: inline-block; color: rgb(163, 114, 141) ;">&nbsp;Copy number gain</div>
+                </div>
+                <div class="sja_clb" id="darker_item" style="display: inline-block;">
+                    <div class="sja_mcdot" style="display: inline-block; background: rgb(113, 151, 74) ;">&nbsp;</div>
+                    <div style="display: inline-block; color: rgb(113, 151, 74) ;">&nbsp;Copy number loss</div>
+                </div>
+                <div class="sja_clb" id="darker_item" style="display: inline-block;">
+                    <div class="sja_mcdot" style="display: inline-block; background: rgb(13, 166, 176) ;">&nbsp;</div>
+                    <div style="display: inline-block; color: rgb(13, 166, 176) ;">&nbsp;LOH</div>
+                </div>
+                <div class="sja_clb" id="darker_item" style="display: inline-block;">
+                    <div class="sja_mcdot" style="display: inline-block; background: rgb(102, 113, 148) ;">&nbsp;</div>
+                    <div style="display: inline-block; color: rgb(102, 113, 148) ;">&nbsp;SNV</div>
+                </div>
+                <div class="sja_clb" id="darker_item" style="display: inline-block;">
+                    <div class="sja_mcdot" style="display: inline-block; background: rgb(102, 113, 148) ;">&nbsp;</div>
+                    <div style="display: inline-block; color: rgb(102, 113, 148) ;">&nbsp;MNV</div>
+                </div>
+                <div class="sja_clb" id="darker_item" style="display: inline-block;">
+                    <div class="sja_mcdot" style="display: inline-block; background: rgb(132, 99, 102) ;">&nbsp;</div>
+                    <div style="display: inline-block; color: rgb(132, 99, 102) ;">&nbsp;Sequence insertion</div>
+                </div>
+                <div class="sja_clb" id="darker_item" style="display: inline-block;">
+                    <div class="sja_mcdot" style="display: inline-block; background: rgb(127, 113, 81) ;">&nbsp;</div>
+                    <div style="display: inline-block; color: rgb(127, 113, 81) ;">&nbsp;Sequence deletion</div>
+                </div>
+            </td>
+        </tr>
+    </table>
+</body>
+
+</html>
