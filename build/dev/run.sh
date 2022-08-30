@@ -19,19 +19,26 @@ echo "serverconfig.tpmasterdir='$TPDIR'"
 PPDIR=$(pwd)
 CONTAPP=/home/root/pp/app/
 
+# ensure this file exists, for a new PP repo clone 
+touch client/test/internals.js
+if [[ ! -d ./public/bin ]]; then
+	mkdir public/bin
+fi
 
-
-docker run -d \
+docker run \
 	--name ppdev \
 	`# mounting specific subdirs and files avoids mounting the node_modules at the root or any workspace` \
 	--mount type=bind,source=$TPDIR,target=/home/root/pp/tp,readonly \
-	--mount type=bind,source=$PPDIR/public,target=$CONTAPP/public,readonly \
+	--mount type=bind,source=$PPDIR/public,target=$CONTAPP/public \
 	`# the client dir is mounted for purposes of generating /spec route results, not related to bundling` \
 	--mount type=bind,source=$PPDIR/client,target=$CONTAPP/client,readonly \
 	--mount type=bind,source=$PPDIR/client/test/internals.js,target=$CONTAPP/client/test/internals.js \
 	`# rust code is compiled as part of server deps installation` \
 	--mount type=bind,source=$PPDIR/rust/src,target=$CONTAPP/rust/src,readonly \
 	--mount type=bind,source=$PPDIR/rust/test,target=$CONTAPP/rust/test,readonly \
+	--mount type=bind,source=$PPDIR/rust/Cargo.toml,target=$CONTAPP/rust/Cargo.toml,readonly \
+	--mount type=bind,source=$PPDIR/rust/index.js,target=$CONTAPP/rust/index.js,readonly \
+	--mount type=bind,source=$PPDIR/rust/package.json,target=$CONTAPP/rust/package.json,readonly \
 	`# copy source and build code` \
 	--mount type=bind,source=$PPDIR/server/src,target=$CONTAPP/server/src,readonly \
 	--mount type=bind,source=$PPDIR/server/dataset,target=$CONTAPP/server/dataset,readonly \
@@ -52,8 +59,3 @@ docker run -d \
 	-e PP_MODE=container-prod \
 	ppdev:latest
 
-cd client
-# the client-side webpack bundling is outputted to public/bin/,
-# and public is mounted to be served by the PP server
-npm run dev
-cd ..

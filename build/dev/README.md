@@ -19,11 +19,16 @@ To start the developer container:
 ```
 # this will reuse the full build artifacts to lessen the total build time
 ./build/dev/run.sh
+# use CTRL+Z to stop the loogin and `docker stop ppdev` to stop the container
+
+# in another terminal tab or window
+cd proteinpaint/client
+npm run dev
 ```
 
 To inspect troubleshoot logs:
-- the client bundling logs are displayed in the terminal window where you triggered `./build/dev/run.sh`
-- the running logs for server bundling and process can be displayed in a terminal via `docker logs ppdev --follow` 
+- the running logs for server bundling and process are displayed in the terminal window where you triggered `./build/dev/run.sh`
+- the client bundling logs will be displayed where you triggered `npm run dev` from the client dir 
 
 ## TODO 
 - minimize the need for a full `npm install`, even for just the server workspace
