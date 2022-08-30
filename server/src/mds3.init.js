@@ -424,6 +424,7 @@ export async function snvindelByRangeGetter_bcf(ds, genome) {
 
 			// transfer configurations from field{} to _field{}
 			_field.categories = field.categories
+			_field.name = field.name
 		}
 		delete q.infoFields
 	}

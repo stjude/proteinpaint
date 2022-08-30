@@ -13,6 +13,7 @@ update_mclass
 update_info_fields
 may_create_variantShapeName
 may_update_variantShapeName
+may_create_infoFields
 
 ********************** tk.legend{} structure
 .tip
@@ -46,6 +47,7 @@ run only once, called by makeTk
 
 	create_mclass(tk, block)
 	may_create_variantShapeName(tk)
+	may_create_infoFields(tk)
 }
 
 function create_mclass(tk, block) {
@@ -110,6 +112,46 @@ function may_create_variantShapeName(tk) {
 	}
 }
 
+function may_create_infoFields(tk) {
+	if (!tk.mds.bcf || !tk.mds.bcf.info) {
+		// not using bcf with info fields
+		return
+	}
+	const infoFields4legend = [] // collect info field keys eligible for displaying in legend
+	// find eligible info field keys to show in legend
+	for (const key in tk.mds.bcf.info) {
+		const field = tk.mds.bcf.info[key]
+		if (field.categories) {
+			infoFields4legend.push(key)
+		}
+	}
+	if (!infoFields4legend.length) {
+		return
+	}
+
+	// has info fields to show in legend
+
+	if (!tk.legend.bcfInfo) tk.legend.bcfInfo = {} // key: info key
+	for (const key of infoFields4legend) {
+		const row = tk.legend.table.append('tr') // html <tr> created for this info field in the legend table
+		// this row will have two columns, just like mclass
+
+		// column 1 <td>: info field name
+		row
+			.append('td')
+			.style('text-align', 'right')
+			.style('opacity', 0.3)
+			.text(tk.mds.bcf.info[key].name || key)
+
+		tk.legend.bcfInfo[key] = {
+			hiddenvalues: new Set(),
+			row,
+			// column 2 <td>: content holder
+			holder: row.append('td')
+		}
+	}
+}
+
 /*
 data is returned by xhr
 update legend dom
@@ -134,10 +176,14 @@ export function updateLegend(data, tk, block) {
 	tk.legend.mclass.currentData = data.mclass2variantcount
 	update_mclass(tk)
 
+	/*
 	if (data.info_fields) {
 		update_info_fields(data.info_fields, tk)
 	}
+	*/
+
 	may_update_variantShapeName(data, tk)
+	may_update_infoFields(data, tk)
 }
 
 function may_update_variantShapeName(data, tk) {
@@ -157,6 +203,76 @@ function may_update_variantShapeName(data, tk) {
 	vl.dotCount.text(dot)
 	vl.triangleCount.text(triangle)
 	vl.circleCount.text(circle)
+}
+
+function may_update_infoFields(data, tk) {
+	// TODO allow filtering
+	if (!tk.legend.bcfInfo) return
+	if (!data.skewer) {
+		console.log('data.skewer[] is not present and cannot show INFO legend')
+		return
+	}
+
+	for (const infoKey in tk.legend.bcfInfo) {
+		// clear holder
+		tk.legend.bcfInfo[infoKey].holder.selectAll('*').remove()
+		if (tk.mds.bcf.info[infoKey].Type == 'String') {
+			// categorical field, show unique list of categories and variant count
+			// TODO later use "termType=categorical/integer/float"
+
+			const category2variantCount = new Map() // key: category of this INFO field, v: number of variants
+			for (const m of data.skewer) {
+				if (!m.info) continue
+				if (!(infoKey in m.info)) continue
+				const category = m.info[infoKey]
+				category2variantCount.set(category, 1 + (category2variantCount.get(category) || 0))
+			}
+
+			// sort tally in descending order, each element is a two-ele array [category, variantCount]
+			const showlst = [...category2variantCount].sort((i, j) => j[1] - i[1])
+
+			for (const [category, count] of showlst) {
+				const cell = tk.legend.bcfInfo[infoKey].holder
+					.append('div')
+					.attr('class', 'sja_clb')
+					.style('display', 'inline-block')
+				// .on('click', () => { })
+
+				cell
+					.append('div')
+					.style('display', 'inline-block')
+					.attr('class', 'sja_mcdot')
+					.style('background', tk.mds.bcf.info[infoKey].categories[category].color)
+					.html(count > 1 ? count : '&nbsp;')
+				cell
+					.append('div')
+					.style('display', 'inline-block')
+					.style('color', tk.mds.bcf.info[infoKey].categories[category].color)
+					.html('&nbsp;' + tk.mds.bcf.info[infoKey].categories[category].label)
+			}
+
+			// hidden ones
+			for (const c of tk.legend.bcfInfo[infoKey].hiddenvalues) {
+				tk.legend.bcfInfo[infoKey].holder
+					.append('div')
+					.style('display', 'inline-block')
+					.attr('class', 'sja_clb')
+					.style('text-decoration', 'line-through')
+					.style('opacity', 0.3)
+				/*
+					.text((c.count ? '(' + c.count + ') ' : '') + (Number.isInteger(c.k) ? dt2label[c.k] : mclass[c.k].label))
+					.on('click', async () => {
+						if (loading) return
+						loading = true
+						tk.legend.mclass.hiddenvalues.delete(c.k)
+						d3event.target.innerHTML = 'Updating...'
+						tk.uninitialized = true
+						await tk.load()
+					})
+					*/
+			}
+		}
+	}
 }
 
 function update_mclass(tk) {
@@ -307,6 +423,7 @@ function update_mclass(tk) {
 
 function update_info_fields(data, tk) {
 	/*
+	not in use
 data is data.info_fields{}
 */
 	for (const key in data) {
