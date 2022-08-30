@@ -18,7 +18,7 @@ module.exports = {
 		annotationfile: 'utils/meme/motif_databases/HUMAN/HOCOMOCOv11_full_annotation_HUMAN_mono.tsv'
 	},
 	clinvarVCF: {
-		file: 'hg38/clinvar.hg38.vcf.gz',
+		file: 'hg38/clinvar.hg38.hgvs_short.vep.bcf.gz',
 		infokey: 'CLNSIG',
 		categories: clinvar.clinsig
 	},

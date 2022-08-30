@@ -253,6 +253,7 @@ function copy_queries(ds, dscopy) {
 			// the query is using a bcf file
 			// create the bcf{} object on dscopy
 			dscopy.bcf = {}
+
 			if (ds.queries.snvindel.byrange?._tk?.info) {
 				// this bcf file has info fields, attach to copy.bcf{}
 				// dataset may specify if to withhold
@@ -396,6 +397,7 @@ export async function snvindelByRangeGetter_bcf(ds, genome) {
 	*/
 
 	await utils.init_one_vcf(q._tk, genome, true) // "true" to indicate file is bcf but not vcf
+	// q._tk{} is initiated
 
 	if (q._tk.samples.length > 0 && !q._tk.format) throw 'bcf file has samples but no FORMAT'
 	if (q._tk.format && q._tk.samples.length == 0) throw 'bcf file has FORMAT but no samples'
@@ -406,6 +408,26 @@ export async function snvindelByRangeGetter_bcf(ds, genome) {
 				q._tk.format.isGT = true
 			}
 		}
+	}
+
+	if (q._tk.info && q.infoFields) {
+		/* q._tk.info{} is the raw INFO fields parsed from vcf file
+		q.infoFields[] is the list of fields with special configuration
+		pass these configurations to q._tk.info{}
+		*/
+		for (const field of q.infoFields) {
+			// field = {name,key,categories}
+			if (!field.key) throw '.key missing from one of snvindel.byrange.infoFields[]'
+			if (!field.name) field.name = field.key
+			const _field = q._tk.info[field.key]
+			if (!_field) throw 'invalid key from one of snvindel.byrange.infoFields[]'
+
+			// transfer configurations from field{} to _field{}
+			_field.categories = field.categories
+			_field.name = field.name
+			_field.separator = field.separator
+		}
+		delete q.infoFields
 	}
 
 	return async param => {

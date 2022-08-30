@@ -45,6 +45,18 @@ export function compute_mclass(tk, refAllele, altAlleles, variant, info_str, ID,
 	*/
 	variant.info = info
 
+	/*
+	if any info field uses a special separator, e.g. "|" for CLNSIG
+	*/
+	for (const key in tk.info) {
+		if (!tk.info[key].separator) continue
+		if (!(key in info)) continue
+		const lst = info[key].split(tk.info[key].separator)
+		if (lst.length > 1) {
+			info[key] = lst
+		}
+	}
+
 	if (!info.CSQ) {
 		// missing csq
 		return
