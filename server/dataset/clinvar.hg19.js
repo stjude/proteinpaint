@@ -16,7 +16,7 @@ module.exports = {
 		infoFields:[
 			{
 				name: 'Clinical Significance',
-				key: 'CLINSIG',
+				key: 'CLNSIG',
 				categories: clinvar.clinsig
 			}
 		] },
