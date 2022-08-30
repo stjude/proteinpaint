@@ -46,8 +46,6 @@ export function mds3_request_closure(genomes) {
 			may_validate_filter0(q, ds)
 
 			const result = await load_driver(q, ds)
-			console.log(48, result.sampleTotalNumber, result.mclass2variantcount)
-
 			res.send(result)
 		} catch (e) {
 			res.send({ error: e.message || e })
@@ -231,7 +229,6 @@ async function query_snvindel(q, ds) {
 			return await ds.queries.snvindel.byrange.get(q)
 		}
 		if (ds.queries.snvindel.byisoform) {
-			console.log(232, ds.queries.snvindel.byisoform)
 			// querying by isoform is supported
 			return await ds.queries.snvindel.byisoform.get(q)
 		} else {
@@ -278,7 +275,6 @@ async function query_genecnv(q, ds) {
 }
 
 function filter_data(q, result) {
-	console.log(278, q.filter0)
 	// will not be needed when filters are combined into graphql query language
 	if (result.skewer) {
 		const newskewer = []
@@ -304,7 +300,6 @@ this ensures filter0 and its validation is generic and not specific to gdc
 */
 function may_validate_filter0(q, ds) {
 	if (q.filter0) {
-		console.log(303, q.filter0)
 		const f = JSON.parse(
 			typeof q.filter0 == 'string' && q.filter0.startsWith('%') ? decodeURIComponent(q.filter0) : q.filter0
 		)

@@ -9,28 +9,32 @@
 		<script src="/bin/proteinpaint.js" charset="utf-8"></script>
 		<script src="./PpReact.js" type='module' charset="utf-8"></script>
 		<script>
-			const operands = []
+			const value = []
 			window.filter0 = {
-			 mode: 'and',
-			 root: {
-			    'cases.primary_site': {
-			      operator: 'includes',
-			      field: 'cases.primary_site',
-			      operands
-			    }
-			  }
+			  op: "and",
+        content: [
+            {
+                op: "in",
+                content: {
+                    field: "cases.primary_site",
+                    value: [
+                        "breast",
+                        "bronchus and lung"
+                    ]
+                }
+            }
+        ]
 			}
 
 			function setPrimarySite() {
-				const operands = []
-				filter0.root['cases.primary_site'].operands = operands
+				const value = []
+				filter0.content[0].content.value = value
 				const checkboxes = document.querySelector('#primarySiteOptions').querySelectorAll('input')
 				for(const c of checkboxes) {
-					if (c.checked) operands.push(c.value)
+					if (c.checked) value.push(c.value)
 				} //console.log(30, window.filter0)
 				window.updateState({})
 			}
-
 		</script>
 	</head>
 	<body>

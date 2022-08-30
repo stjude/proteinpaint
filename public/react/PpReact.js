@@ -90,7 +90,7 @@ function getLolliplotTrack(props /*: PpProps*/, filter0 /*: any*/) {
 	}
 
 	if (props.geneId) {
-		arg.gene2canonicalisoform = this.props.geneId
+		arg.gene2canonicalisoform = props.geneId
 	} else if (props.ssm_id) {
 		arg.mds3_ssm2canonicalisoform = {
 			dslabel: 'GDC',
