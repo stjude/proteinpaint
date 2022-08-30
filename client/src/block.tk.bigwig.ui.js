@@ -2,6 +2,7 @@ import * as uiutils from '#dom/uiUtils'
 import { init_tabs } from '#dom/toggleButtons'
 import { appear } from '#dom/animation'
 import { first_genetrack_tolist } from './client'
+import { select as d3select, selectAll as d3selectAll, event as d3event } from 'd3-selection'
 
 /*
 
@@ -185,7 +186,7 @@ function submitButton(div, obj, holder, genomes) {
 			}
 			const bigwig_arg = validateInput(obj, genomes)
 			if (!bigwig_arg) return
-			div.remove()
+			d3select('.sjpp-bw-ui').remove()
 			runproteinpaint(Object.assign(runpp_arg, bigwig_arg))
 		})
 }
