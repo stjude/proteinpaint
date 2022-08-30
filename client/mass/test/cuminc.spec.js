@@ -23,7 +23,7 @@ tape('\n', function(test) {
 })
 
 tape('basic cuminc', function(test) {
-	test.timeoutAfter(2000)
+	test.timeoutAfter(10000)
 	runpp({
 		state: {
 			plots: [
@@ -103,7 +103,7 @@ tape('hidden uncomputable', function(test) {
 })
 
 tape('skipped series', function(test) {
-	test.timeoutAfter(2000)
+	test.timeoutAfter(10000)
 	runpp({
 		state: {
 			plots: [
