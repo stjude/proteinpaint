@@ -11,12 +11,22 @@ module.exports = {
 	genome: 'hg19',
 	queries: {
 		snvindel: {
-			name: 'clinvar',
-			hlinfo: {},
-			byrange: { bcffile: 'hg19/clinvar.hg19.hgvs_short.vep.bcf.gz' },
-			forTrack: true
+			forTrack: true,
+			byrange: { bcffile: 'hg19/clinvar.hg19.hgvs_short.vep.bcf.gz',
+		infoFields:[
+			{
+				name: 'Clinical Significance',
+				key: 'CLINSIG',
+				categories: clinvar.clinsig
+			}
+		] },
+		url:{
+			base:'https://www.ncbi.nlm.nih.gov/clinvar/variation/',
+			key:'id'
 		}
-	},
+		}
+	}
+	/*
 	vcfinfofilter: {
 		setidx4mclass: 0,
 		setidx4numeric: 1,
@@ -42,4 +52,5 @@ module.exports = {
 			}
 		}
 	]
+*/
 }
