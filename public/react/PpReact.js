@@ -19,7 +19,7 @@ export const ProteinPaintWrapper = props => {
 	//: FC<PpProps> = (props: PpProps) => {
 	const [, updateState] = useState({})
 	window.updateState = updateState
-	const filter0 = () => window.filter0
+	const filter0 = JSON.parse(JSON.stringify(window.filter0 || {}))
 
 	// to track reusable instance for mds3 skewer track
 	/*** TODO: bam track should return reusable renderer???? ***/

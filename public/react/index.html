@@ -10,7 +10,7 @@
 		<script src="./PpReact.js" type='module' charset="utf-8"></script>
 		<script>
 			const operands = []
-			const filter0 = {
+			window.filter0 = {
 			 mode: 'and',
 			 root: {
 			    'cases.primary_site': {
@@ -27,7 +27,7 @@
 				const checkboxes = document.querySelector('#primarySiteOptions').querySelectorAll('input')
 				for(const c of checkboxes) {
 					if (c.checked) operands.push(c.value)
-				}
+				} //console.log(30, window.filter0)
 				window.updateState({})
 			}
 
