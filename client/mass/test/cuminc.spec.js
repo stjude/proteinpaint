@@ -23,7 +23,7 @@ tape('\n', function(test) {
 })
 
 tape('basic cuminc', function(test) {
-	test.timeoutAfter(2000)
+	test.timeoutAfter(10000)
 	runpp({
 		state: {
 			plots: [
@@ -53,17 +53,12 @@ tape('basic cuminc', function(test) {
 			2,
 			'should render 2 cuminc series paths for estimate line and 95% CI area'
 		)
-		test.equal(
-			cumincDiv && cumincDiv.selectAll('.sjpcb-cuminc-series circle').size(),
-			21,
-			'should render 21 cuminc series circles'
-		)
 		test.end()
 	}
 })
 
 tape('hidden uncomputable', function(test) {
-	test.timeoutAfter(2000)
+	test.timeoutAfter(10000)
 	runpp({
 		state: {
 			plots: [
@@ -101,14 +96,14 @@ tape('hidden uncomputable', function(test) {
 					})
 					.size(),
 			2,
-			'should hide 1 series'
+			'should hide 2 series'
 		)
 		test.end()
 	}
 })
 
 tape('skipped series', function(test) {
-	test.timeoutAfter(2000)
+	test.timeoutAfter(10000)
 	runpp({
 		state: {
 			plots: [
@@ -126,7 +121,7 @@ tape('skipped series', function(test) {
 					},
 					settings: {
 						cuminc: {
-							minSampleSize: 1
+							minSampleSize: 5
 						}
 					}
 				}
@@ -143,7 +138,7 @@ tape('skipped series', function(test) {
 		const skippedDivs = cuminc.Inner.dom.chartsDiv
 			.select('.pp-cuminc-chartLegends')
 			.selectAll('.pp-cuminc-chartLegends-skipped')
-		test.equal(skippedDivs && skippedDivs.size(), 1, 'should render 1 skipped series')
+		test.equal(skippedDivs && skippedDivs.size(), 2, 'should render 2 skipped series')
 		test.end()
 	}
 })
