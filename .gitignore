@@ -80,6 +80,7 @@ p4/config.json
 p4/public/dev.html
 .vscode/launch.json
 .vscode/settings.json
+.idea/
 
 *.key
 *.pem

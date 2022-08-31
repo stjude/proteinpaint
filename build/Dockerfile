@@ -30,9 +30,9 @@ RUN apt-get update && apt-get install -y \
 	g++ \
     pkg-config \
 	## clean up
-    && apt-get clean \ 
-    && rm -rf /var/lib/apt/lists/ \ 
-    && rm -rf /tmp/downloaded_packages/ /tmp/*.rds
+  && apt-get clean \
+  && rm -rf /var/lib/apt/lists/ \
+  && rm -rf /tmp/downloaded_packages/ /tmp/*.rds
 
 
 RUN sed -i '/<blank>/,/<\/blank>/d' /etc/fonts/fonts.conf
@@ -51,8 +51,8 @@ RUN apt-get update && apt-get install -y r-base -y libargtable2-dev \
 	## install R packages
  	&& R -e "install.packages(c('cmprsk', 'hwde', 'jsonlite', 'survival', 'lmtest'), dependencies=TRUE, repos='http://cran.rstudio.com/')" \
 	## clean up
-    && apt-get clean \ 
-    && rm -rf /var/lib/apt/lists/ \ 
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/ \
     && rm -rf /tmp/downloaded_packages/ /tmp/*.rds
 
 RUN mkdir -p /home/root/pp && cd /home/root/pp && mkdir app && mkdir tp && mkdir cache && mkdir tools
@@ -85,7 +85,7 @@ RUN set -eux; \
     rustc --version; \
     cargo install sccache \
     ## clean up
-    && apt-get clean \ 
+    && apt-get clean \
     && rm -rf /var/lib/apt/lists/
 
 
