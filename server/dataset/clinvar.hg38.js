@@ -24,9 +24,13 @@ module.exports = {
 					}
 				]
 			},
-			url: {
+			variantUrl: {
 				base: 'https://www.ncbi.nlm.nih.gov/clinvar/variation/',
 				key: 'id'
+			},
+			infoUrl: {
+				base: 'https://www.ncbi.nlm.nih.gov/snp/',
+				key: 'RS'
 			}
 		}
 	}

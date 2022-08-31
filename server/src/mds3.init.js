@@ -1,3 +1,5 @@
+import { clinsig } from '../dataset/clinvar'
+
 const gdc = require('./mds3.gdc')
 const fs = require('fs')
 const path = require('path')
@@ -52,30 +54,30 @@ export function client_copy(ds) {
 	/* make client copy of the ds
 	to be stored at genome.datasets
 */
-	const ds2 = {
+	const ds2_client = {
 		isMds3: true,
 		label: ds.label
 	}
 
-	ds2.queries = copy_queries(ds, ds2)
+	ds2_client.queries = copy_queries(ds, ds2_client)
 
 	if (ds.termdb) {
-		ds2.termdb = {}
+		ds2_client.termdb = {}
 		// if using flat list of terms, do not send terms[] to client
 		// as this is official ds, and client will create vocabApi
 		// to query /termdb server route with standard methods
 		if (ds.termdb.allowCaseDetails) {
-			ds2.termdb.allowCaseDetails = {
+			ds2_client.termdb.allowCaseDetails = {
 				sample_id_key: ds.termdb.allowCaseDetails.sample_id_key // optional key
 			}
 		}
 	}
 	if (ds.queries.snvindel) {
-		ds2.has_skewer = true
+		ds2_client.has_skewer = true
 	}
 	if (ds.variant2samples) {
 		const v = ds.variant2samples
-		ds2.variant2samples = {
+		ds2_client.variant2samples = {
 			sunburst_ids: v.sunburst_ids,
 			termidlst: v.termidlst,
 			type_samples: v.type_samples,
@@ -85,7 +87,7 @@ export function client_copy(ds) {
 			variantkey: v.variantkey
 		}
 	}
-	return ds2
+	return ds2_client
 }
 
 async function validate_termdb(ds) {
@@ -242,7 +244,8 @@ function copy_queries(ds, dscopy) {
 	if (ds.queries.snvindel) {
 		copy.snvindel = {
 			forTrack: ds.queries.snvindel.forTrack,
-			url: ds.queries.snvindel.url
+			variantUrl: ds.queries.snvindel.variantUrl,
+			infoUrl: ds.queries.snvindel.infoUrl
 		}
 
 		if (ds.queries.snvindel.m2csq) {

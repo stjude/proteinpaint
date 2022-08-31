@@ -12,18 +12,24 @@ module.exports = {
 	queries: {
 		snvindel: {
 			forTrack: true,
-			byrange: { bcffile: 'hg19/clinvar.hg19.hgvs_short.vep.bcf.gz',
-		infoFields:[
-			{
-				name: 'Clinical Significance',
-				key: 'CLNSIG',
-				categories: clinvar.clinsig
+			byrange: {
+				bcffile: 'hg19/clinvar.hg19.hgvs_short.vep.bcf.gz',
+				infoFields: [
+					{
+						name: 'Clinical Significance',
+						key: 'CLNSIG',
+						categories: clinvar.clinsig
+					}
+				]
+			},
+			variantUrl: {
+				base: 'https://www.ncbi.nlm.nih.gov/clinvar/variation/',
+				key: 'id'
+			},
+			infoUrl: {
+				base: 'https://www.ncbi.nlm.nih.gov/snp/',
+				key: 'RS'
 			}
-		] },
-		url:{
-			base:'https://www.ncbi.nlm.nih.gov/clinvar/variation/',
-			key:'id'
-		}
 		}
 	}
 	/*
