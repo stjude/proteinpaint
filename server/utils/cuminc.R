@@ -68,11 +68,9 @@ run_cuminc <- function(chart) {
     seriesRes <- as.data.frame(res[[1]])
     # compute confidence intervals
     seriesRes <- compute_ci(seriesRes)
-    # compute at-risk counts
-    # at-risk count is the number of samples
-    # that have not experienced an event or
-    # have not been censored by this time
-    seriesRes$nrisk <- apply(seriesRes, 1, function(row) length(which(chart$time >= row["time"])))
+    # compute counts of at-risk samples, events, and
+    # censored exits at each time point
+    seriesRes <- compute_counts(seriesRes, chart)
     estimates[[levels(chart$series)]] <- seriesRes
     out <- list("estimates" = estimates)
   } else {
@@ -99,11 +97,9 @@ run_cuminc <- function(chart) {
         seriesRes <- as.data.frame(res[[paste(series,1)]])
         # compute confidence intervals
         seriesRes <- compute_ci(seriesRes)
-        # compute at-risk counts
-        # at-risk count is the number of samples
-        # that have not experienced an event or
-        # have not been censored by this time
-        seriesRes$nrisk <- apply(seriesRes, 1, function(row) length(which(chart$series == series & chart$time >= row["time"])))
+        # compute counts of at-risk samples, events, and
+        # censored exits at each time point
+        seriesRes <- compute_counts(seriesRes, chart[chart$series == series,])
         estimates[[series]] <- seriesRes
       }
       
@@ -192,6 +188,29 @@ compute_ci <- function(res) {
   up <- res$est + (1.96 * sqrt(res$var))
   res["low"] <- low
   res["up"] <- up
+  return(res)
+}
+
+# function to compute counts of at-risk samples, events, and censored exits at each time point
+# res: series-specific res
+# chart: series-specific chart
+compute_counts <- function(res, chart) {
+  # compute at-risk counts
+  # these counts are the number of samples
+  # that have not experienced an event or
+  # have not been censored prior to each time point
+  res$nrisk <- apply(res, 1, function(timepoint) length(which(chart$time >= timepoint["time"])))
+  # compute number of events and censored exits during each time point
+  times <- unique(res$time)
+  chart <- cbind(chart, "bin" = findInterval(chart$time, times))
+  res <- cbind(res, "bin" = findInterval(res$time, times))
+  m <- table(chart$bin, chart$event)
+  colnames(m) <- c("ncensor", "nevent")
+  m <- cbind(m, "bin" = as.numeric(row.names(m)))
+  res <- merge(res, m, by = "bin", all.x = T)
+  res$nevent[is.na(res$nevent)] <- 0
+  res$ncensor[is.na(res$ncensor)] <- 0
+  res <- res[,c(2:7,9,8)]
   return(res)
 }
 

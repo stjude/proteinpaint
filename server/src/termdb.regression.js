@@ -872,7 +872,6 @@ async function lowAFsnps_wilcoxon(tw, sampledata, Rinput, result) {
 }
 
 async function lowAFsnps_fisher(tw, sampledata, Rinput, result) {
-	console.log(874, 'fisher')
 	// for logistic, perform fisher's exact test for low-AF snps
 	const lines = [] // one line per snp
 	for (const [snpid, snpO] of tw.lowAFsnps) {
@@ -991,7 +990,8 @@ async function lowAFsnps_cuminc(tw, sampledata, Rinput, result) {
 
 	const final_data = {
 		case: [],
-		tests: {}
+		tests: {},
+		startTimes: {}
 	}
 
 	// run cumulative incidence analysis in R
@@ -1001,27 +1001,31 @@ async function lowAFsnps_cuminc(tw, sampledata, Rinput, result) {
 	let cuminc
 	for (const [snpid, snpO] of tw.lowAFsnps) {
 		if (snpsToSkip.has(snpid)) {
-			cuminc = {
-				pvalue: 'NA',
-				msg: 'Cannot perform cumulative incidence test on this snp - at least one allele is not found in any sample'
-			}
+			// cuminc test was not performed on this snp
+			const msg =
+				'Cannot perform cumulative incidence test on this snp - at least one allele is not found in any sample'
+			cuminc = { pvalue: 'NA', msg }
 		} else {
-			if (!final_data.tests[snpid] || final_data.tests[snpid].length == 0) throw 'final_data.tests missing for snp'
-			const pvalue = Number(final_data.tests[snpid][0].pvalue)
-			if (!Number.isFinite(pvalue)) throw 'invalid pvalue'
-			// clear chartId at [0] so it won't show as chart title
+			// parse case data
 			const caselst = []
 			for (const i of final_data.case) {
-				if (i[0] == snpid) {
-					i[0] = ''
-					caselst.push(i)
-				}
+				if (i[0] == snpid) caselst.push(i)
 			}
+			// parse statistical tests
+			if (!final_data.tests[snpid] || !final_data.tests[snpid].length) throw 'no tests for snp'
+			const pvalue = Number(final_data.tests[snpid][0].pvalue)
+			if (!Number.isFinite(pvalue)) throw 'invalid pvalue'
+			const tests = {}
+			tests[snpid] = final_data.tests[snpid]
+			// parse start times
+			const startTimes = {}
+			startTimes[snpid] = final_data.startTimes[snpid]
 			cuminc = {
 				pvalue: Number(pvalue.toFixed(4)),
 				final_data: {
 					case: caselst,
-					tests: final_data.tests[snpid]
+					tests,
+					startTimes
 				}
 			}
 		}
