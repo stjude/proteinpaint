@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 const serverconfig = require('../server/src/serverconfig.js')
 
 const propName = process.argv[2]

@@ -21,7 +21,7 @@ To start the developer container:
 ./build/dev/run.sh
 # !!! NOTE: There may be an initial server process error 
 # if the bundling has not completed before the server start;
-# use CTRL+Z to stop the loogin and `docker stop ppdev` to stop the container
+# use CTRL+Z to stop the logging and `docker stop ppdev` to stop the container
 ```
 
 To inspect troubleshoot logs:
