@@ -242,6 +242,48 @@ function getGDCconfig() {
 				},
 				Utr3: {
 					color: 'rgb(107, 90, 107)'
+				},
+				F: {
+					color: '#a71c25'
+				},
+				D: {
+					color: '#595959'
+				},
+				Utr5: {
+					color: '#566c58'
+				},
+				E: {
+					color: '#595b00'
+				},
+				ITD: {
+					color: 'rgb(179, 78, 179)'
+				},
+				DEL: {
+					color: 'rgb(93, 93, 93)'
+				},
+				SV: {
+					color: 'rgb(93, 93, 93)'
+				},
+				CNV_amp: {
+				 	color: '#7a425f'
+				},
+				CNV_loss: {
+					color: '#42741a'
+				},
+				CNV_loh: {
+					color: 'rgb(13, 166, 176)'
+				},
+				snv: {
+					color: 'rgb(102, 113, 148)'
+				},
+				mnv: {
+					color: 'rgb(102, 113, 148)'
+				},
+				insertion: {
+					color: 'rgb(132, 99, 102)'
+				},
+				deletion: {
+					color: 'rgb(127, 113, 81)'
 				}
 			}
 		},
