@@ -650,7 +650,7 @@ module.exports = {
 	queries: {
 		snvindel: {
 			forTrack: true,
-			url: {
+			variantUrl: {
 				// for adding url link in variant panel
 				base: 'https://portal.gdc.cancer.gov/ssms/',
 				key: 'ssm_id'

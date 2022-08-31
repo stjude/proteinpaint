@@ -1,3 +1,5 @@
+import { clinsig } from '../dataset/clinvar'
+
 const gdc = require('./mds3.gdc')
 const fs = require('fs')
 const path = require('path')
@@ -52,30 +54,30 @@ export function client_copy(ds) {
 	/* make client copy of the ds
 	to be stored at genome.datasets
 */
-	const ds2 = {
+	const ds2_client = {
 		isMds3: true,
 		label: ds.label
 	}
 
-	ds2.queries = copy_queries(ds, ds2)
+	ds2_client.queries = copy_queries(ds, ds2_client)
 
 	if (ds.termdb) {
-		ds2.termdb = {}
+		ds2_client.termdb = {}
 		// if using flat list of terms, do not send terms[] to client
 		// as this is official ds, and client will create vocabApi
 		// to query /termdb server route with standard methods
 		if (ds.termdb.allowCaseDetails) {
-			ds2.termdb.allowCaseDetails = {
+			ds2_client.termdb.allowCaseDetails = {
 				sample_id_key: ds.termdb.allowCaseDetails.sample_id_key // optional key
 			}
 		}
 	}
 	if (ds.queries.snvindel) {
-		ds2.has_skewer = true
+		ds2_client.has_skewer = true
 	}
 	if (ds.variant2samples) {
 		const v = ds.variant2samples
-		ds2.variant2samples = {
+		ds2_client.variant2samples = {
 			sunburst_ids: v.sunburst_ids,
 			termidlst: v.termidlst,
 			type_samples: v.type_samples,
@@ -85,7 +87,7 @@ export function client_copy(ds) {
 			variantkey: v.variantkey
 		}
 	}
-	return ds2
+	return ds2_client
 }
 
 async function validate_termdb(ds) {
@@ -242,7 +244,7 @@ function copy_queries(ds, dscopy) {
 	if (ds.queries.snvindel) {
 		copy.snvindel = {
 			forTrack: ds.queries.snvindel.forTrack,
-			url: ds.queries.snvindel.url
+			variantUrl: ds.queries.snvindel.variantUrl
 		}
 
 		if (ds.queries.snvindel.m2csq) {
@@ -410,24 +412,34 @@ export async function snvindelByRangeGetter_bcf(ds, genome) {
 		}
 	}
 
-	if (q._tk.info && q.infoFields) {
-		/* q._tk.info{} is the raw INFO fields parsed from vcf file
-		q.infoFields[] is the list of fields with special configuration
-		pass these configurations to q._tk.info{}
-		*/
-		for (const field of q.infoFields) {
-			// field = {name,key,categories}
-			if (!field.key) throw '.key missing from one of snvindel.byrange.infoFields[]'
-			if (!field.name) field.name = field.key
-			const _field = q._tk.info[field.key]
-			if (!_field) throw 'invalid key from one of snvindel.byrange.infoFields[]'
+	if (q._tk.info) {
+		if (q.infoFields) {
+			/* q._tk.info{} is the raw INFO fields parsed from vcf file
+			q.infoFields[] is the list of fields with special configuration
+			pass these configurations to q._tk.info{}
+			*/
+			for (const field of q.infoFields) {
+				// field = {name,key,categories}
+				if (!field.key) throw '.key missing from one of snvindel.byrange.infoFields[]'
+				if (!field.name) field.name = field.key
+				const _field = q._tk.info[field.key]
+				if (!_field) throw 'invalid key from one of snvindel.byrange.infoFields[]'
 
-			// transfer configurations from field{} to _field{}
-			_field.categories = field.categories
-			_field.name = field.name
-			_field.separator = field.separator
+				// transfer configurations from field{} to _field{}
+				_field.categories = field.categories
+				_field.name = field.name
+				_field.separator = field.separator
+			}
+			delete q.infoFields
 		}
-		delete q.infoFields
+		if (ds.queries.snvindel.infoUrl) {
+			for (const i of ds.queries.snvindel.infoUrl) {
+				const _field = q._tk.info[i.key]
+				if (!_field) throw 'invalid key from one of snvindel.infoUrl[]'
+				_field.urlBase = i.base
+			}
+			delete ds.queries.snvindel.infoUrl
+		}
 	}
 
 	return async param => {
