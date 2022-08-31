@@ -355,9 +355,9 @@ function print_mname(div, m) {
 
 function print_snv(holder, m, tk) {
 	let printto = holder
-	if (tk.mds.queries && tk.mds.queries.snvindel.url && tk.mds.queries.snvindel.url.key in m) {
+	if (tk.mds.queries && tk.mds.queries.snvindel.variantUrl && tk.mds.queries.snvindel.variantUrl.key in m) {
 		const a = holder.append('a')
-		a.attr('href', tk.mds.queries.snvindel.url.base + m[tk.mds.queries.snvindel.url.key])
+		a.attr('href', tk.mds.queries.snvindel.variantUrl.base + m[tk.mds.queries.snvindel.variantUrl.key])
 		a.attr('target', '_blank')
 		printto = a
 	}
