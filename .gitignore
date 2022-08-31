@@ -89,3 +89,4 @@ p4/public/dev.html
 *.crt
 .ssl
 .RData
+log.txt

@@ -163,7 +163,7 @@ function checkDsSecret(q, headers) {
 	if (!cred) return
 	if (!q.embedder) throw `missing q.embedder`
 	if (!cred.secret[q.embedder]) throw `unknown q.embedder='${q.embedder}'`
-	//console.log(165, cred.secret[q.embedder], jsonwebtoken.sign({ accessibleDatasets: ['TermdbTest', "SJLife"] }, cred.secret[q.embedder]))
+	//console.log(165, cred.secret[q.embedder], jsonwebtoken.sign({ accessibleDatasets: ['TermdbTest', "SJLife"] }, cred.secret[q.embedder
 	const token = headers[cred.headerKey]
 	if (!token) throw `missing q['${cred.headerKey}']`
 	const payload = jsonwebtoken.verify(token, cred.secret[q.embedder])

@@ -15,7 +15,7 @@
     "test": "tape -r '@babel/register' */test/*.spec.js",
     "build": "webpack --config=./webpack.config.js",
     "response": "nodemon modules/test/test.server.js --watch src",
-    "getconf": "node -p 'JSON.stringify(require(\"./src/serverconfig.js\"),null,\"  \")'"
+    "getconf": "../build/getConfigProp.js"
   },
   "author": "",
   "license": "UNLICENSED",
