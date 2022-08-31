@@ -6,12 +6,7 @@
 */
 
 const wpServer = require('./server/webpack.config.js')
-const configs = [wpServer]
+const wpClient = require('./client/webpack.config.js')
 
-if (!process.env.PP_MODE?.startsWith('container-')) {
-	const wpClient = require('./client/webpack.config.js')
-	configs.push(wpClient)
-}
-
-module.exports = configs
+module.exports = [wpServer, wpClient]
 process.traceDeprecation = true

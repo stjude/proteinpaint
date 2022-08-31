@@ -31,8 +31,7 @@ docker run \
 	--mount type=bind,source=$TPDIR,target=/home/root/pp/tp,readonly \
 	--mount type=bind,source=$PPDIR/public,target=$CONTAPP/public \
 	`# the client dir is mounted for purposes of generating /spec route results, not related to bundling` \
-	--mount type=bind,source=$PPDIR/client,target=$CONTAPP/client,readonly \
-	--mount type=bind,source=$PPDIR/client/test/internals.js,target=$CONTAPP/client/test/internals.js \
+	--mount type=bind,source=$PPDIR/client,target=$CONTAPP/client \
 	`# rust code is compiled as part of server deps installation` \
 	--mount type=bind,source=$PPDIR/rust/src,target=$CONTAPP/rust/src,readonly \
 	--mount type=bind,source=$PPDIR/rust/test,target=$CONTAPP/rust/test,readonly \

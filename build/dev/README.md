@@ -16,14 +16,12 @@ Run once to set up the base node-debian image:
 ```
 
 To start the developer container:
-```
+```bash
 # this will reuse the full build artifacts to lessen the total build time
 ./build/dev/run.sh
+# !!! NOTE: There may be an initial server process error 
+# if the bundling has not completed before the server start;
 # use CTRL+Z to stop the loogin and `docker stop ppdev` to stop the container
-
-# in another terminal tab or window
-cd proteinpaint/client
-npm run dev
 ```
 
 To inspect troubleshoot logs:
