@@ -392,7 +392,7 @@ tape('series visibility - condition', function(test) {
 		const bar = barchart.Inner
 		const excluded = bar.settings.exclude.cols
 		// exclude "Unknown status" and "1: Mild"
-		test.equal(excluded.length, 2, 'should have the correct number of hidden condition bars by q.hiddenValues')
+		test.equal(excluded.length, 1, 'should have the correct number of hidden condition bars by q.hiddenValues')
 		if (test._ok) bar.app.destroy()
 		test.end()
 	}
@@ -1187,7 +1187,7 @@ tape('max number of bins: exceeded', test => {
 
 	function testBarCount(barchart) {
 		const numBars = barDiv.selectAll('.bars-cell-grp').size()
-		test.equal(numBars, 23, 'should have 23 age bars')
+		test.equal(numBars, 22, 'should have 22 age bars')
 	}
 
 	function triggerExceedMaxBin(barchart) {
@@ -1214,7 +1214,7 @@ tape('max number of bins: exceeded', test => {
 
 	function testExceedMaxBin(barchart) {
 		const numBars = barDiv.selectAll('.bars-cell-grp').size()
-		test.equal(numBars, 23, 'should still have 23 age bars and not re-render on error')
+		test.equal(numBars, 22, 'should still have 22 age bars and not re-render on error')
 		const errorbar = barchart.Inner.app.Inner.dom.holder.node().querySelector('.sja_errorbar')
 		test.true(errorbar && errorbar.innerText.includes('max_num_bins_reached'), 'should show a max number of bins error')
 	}

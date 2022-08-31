@@ -139,7 +139,7 @@ exports.termjson = {
 			}
 		},
 		values: {
-			'0': { label: 'Not exposed', uncomputable: true },
+			'-1': { label: 'not exposed', uncomputable: true },
 			'-8888': { label: 'Exposed but dose unknown', uncomputable: true },
 			'-9999': { label: 'Unknown treatment record', uncomputable: true }
 		},
