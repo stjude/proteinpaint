@@ -942,8 +942,7 @@ tape('numeric exclude range', function(test) {
 	function testBarCount(barchart) {
 		const barDiv = barchart.Inner.dom.barDiv
 		const numBars = barDiv.selectAll('.bars-cell-grp').size()
-		// FIXME issue with aaclassic_5: "-1=not exposed" category becomes visible by default
-		test.equal(numBars, 9, 'should have 8 bars')
+		test.equal(numBars, 8, 'should have 8 bars')
 		if (test._ok) barchart.Inner.app.destroy()
 		test.end()
 	}
@@ -1188,7 +1187,7 @@ tape('max number of bins: exceeded', test => {
 
 	function testBarCount(barchart) {
 		const numBars = barDiv.selectAll('.bars-cell-grp').size()
-		test.equal(numBars, 23, 'should have 23 age bars')
+		test.equal(numBars, 22, 'should have 22 age bars')
 	}
 
 	function triggerExceedMaxBin(barchart) {
@@ -1215,7 +1214,7 @@ tape('max number of bins: exceeded', test => {
 
 	function testExceedMaxBin(barchart) {
 		const numBars = barDiv.selectAll('.bars-cell-grp').size()
-		test.equal(numBars, 23, 'should still have 23 age bars and not re-render on error')
+		test.equal(numBars, 22, 'should still have 22 age bars and not re-render on error')
 		const errorbar = barchart.Inner.app.Inner.dom.holder.node().querySelector('.sja_errorbar')
 		test.true(errorbar && errorbar.innerText.includes('max_num_bins_reached'), 'should show a max number of bins error')
 	}
