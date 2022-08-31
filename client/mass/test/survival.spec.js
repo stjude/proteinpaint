@@ -46,15 +46,11 @@ tape('survival term as term1', function(test) {
 	async function runTests(survival) {
 		survivalDiv = survival.Inner.dom.chartsDiv
 		test.equal(survivalDiv && survivalDiv.selectAll('.sjpp-survival-series').size(), 1, 'should render 1 surv series g')
-		test.equal(
-			survivalDiv && survivalDiv.selectAll('.sjpp-survival-series circle').size(),
-			153,
-			'should render 153 survival series circles (hidden for hover)'
-		)
+		// please advice if to remove below tests using "circle" which is no longered rendered
 		test.equal(
 			survivalDiv && survivalDiv.selectAll('.sjpp-survival-censored-x').size(),
 			10,
-			'should render 10 survival censored circles'
+			'should render 10 survival censored symbols'
 		)
 		test.end()
 	}
@@ -88,14 +84,9 @@ tape('survival term as term1, with overlay', function(test) {
 		survivalDiv = survival.Inner.dom.chartsDiv
 		test.equal(survivalDiv && survivalDiv.selectAll('.sjpp-survival-series').size(), 7, 'should render 7 surv series g')
 		test.equal(
-			survivalDiv && survivalDiv.selectAll('.sjpp-survival-series circle').size(),
-			171,
-			'should render 171 survival series circles (hidden for hover)'
-		)
-		test.equal(
 			survivalDiv && survivalDiv.selectAll('.sjpp-survival-censored-x').size(),
 			10,
-			'should render 9 survival censored circles'
+			'should render 9 survival censored symbols'
 		)
 		test.end()
 	}
@@ -129,14 +120,9 @@ tape('survival term as overlay', function(test) {
 		survivalDiv = survival.Inner.dom.chartsDiv
 		test.equal(survivalDiv && survivalDiv.selectAll('.sjpp-survival-series').size(), 7, 'should render 7 surv series g')
 		test.equal(
-			survivalDiv && survivalDiv.selectAll('.sjpp-survival-series circle').size(),
-			171,
-			'should render 171 survival series circles (hidden for hover)'
-		)
-		test.equal(
 			survivalDiv && survivalDiv.selectAll('.sjpp-survival-censored-x').size(),
 			10,
-			'should render 10 survival censored circles'
+			'should render 10 survival censored symbols'
 		)
 		test.end()
 	}
