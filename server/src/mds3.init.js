@@ -244,8 +244,7 @@ function copy_queries(ds, dscopy) {
 	if (ds.queries.snvindel) {
 		copy.snvindel = {
 			forTrack: ds.queries.snvindel.forTrack,
-			variantUrl: ds.queries.snvindel.variantUrl,
-			infoUrl: ds.queries.snvindel.infoUrl
+			variantUrl: ds.queries.snvindel.variantUrl
 		}
 
 		if (ds.queries.snvindel.m2csq) {
@@ -413,24 +412,34 @@ export async function snvindelByRangeGetter_bcf(ds, genome) {
 		}
 	}
 
-	if (q._tk.info && q.infoFields) {
-		/* q._tk.info{} is the raw INFO fields parsed from vcf file
-		q.infoFields[] is the list of fields with special configuration
-		pass these configurations to q._tk.info{}
-		*/
-		for (const field of q.infoFields) {
-			// field = {name,key,categories}
-			if (!field.key) throw '.key missing from one of snvindel.byrange.infoFields[]'
-			if (!field.name) field.name = field.key
-			const _field = q._tk.info[field.key]
-			if (!_field) throw 'invalid key from one of snvindel.byrange.infoFields[]'
+	if (q._tk.info) {
+		if (q.infoFields) {
+			/* q._tk.info{} is the raw INFO fields parsed from vcf file
+			q.infoFields[] is the list of fields with special configuration
+			pass these configurations to q._tk.info{}
+			*/
+			for (const field of q.infoFields) {
+				// field = {name,key,categories}
+				if (!field.key) throw '.key missing from one of snvindel.byrange.infoFields[]'
+				if (!field.name) field.name = field.key
+				const _field = q._tk.info[field.key]
+				if (!_field) throw 'invalid key from one of snvindel.byrange.infoFields[]'
 
-			// transfer configurations from field{} to _field{}
-			_field.categories = field.categories
-			_field.name = field.name
-			_field.separator = field.separator
+				// transfer configurations from field{} to _field{}
+				_field.categories = field.categories
+				_field.name = field.name
+				_field.separator = field.separator
+			}
+			delete q.infoFields
 		}
-		delete q.infoFields
+		if (ds.queries.snvindel.infoUrl) {
+			for (const i of ds.queries.snvindel.infoUrl) {
+				const _field = q._tk.info[i.key]
+				if (!_field) throw 'invalid key from one of snvindel.infoUrl[]'
+				_field.urlBase = i.base
+			}
+			delete ds.queries.snvindel.infoUrl
+		}
 	}
 
 	return async param => {
