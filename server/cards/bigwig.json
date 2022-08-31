@@ -1,7 +1,7 @@
 {
     "ppcalls":[
         {
-            "is_ui": true, 
+            "isUi": true, 
             "runargs": {
                 "noheader": true,
                 "nobox": 1, 
@@ -66,5 +66,5 @@
             }
         }
     ],
-    "update_message": "<p style='display: inline-block;'>Create your own bigwig track! Use the new form on the <span style='color:#1575ad; font-weight:600;'>Add Your Data</span> tab to create your own bigwig track. Additional configuration options coming soon.</p>"
+    "ribbonMessage": "<p style='display: inline-block;'>Create your own bigwig track! Use the new form on the <span style='color:#1575ad; font-weight:600;'>Add Your Data</span> tab to create your own bigwig track. Additional configuration options coming soon.</p>"
 }

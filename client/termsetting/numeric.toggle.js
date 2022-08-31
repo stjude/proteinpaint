@@ -116,12 +116,6 @@ export function fillTW(tw, vocabApi) {
 		to be tested if can work with partially declared state
 		always copies from .bins.default
 		*/
-
-		// rounding and label_offset may have to defined separately within bins.default or bins.less,
-		// for now assume that the same values will apply to both bins.default and .less
-		if (tw.term.bins.rounding) tw.term.bins.default.rounding = tw.term.bins.rounding
-		if (tw.term.bins.label_offset && !tw.term.bins.default.label_offset)
-			tw.term.bins.default.label_offset = tw.term.bins.label_offset
 		copyMerge(tw.q, tw.term.bins.default)
 	}
 	set_hiddenvalues(tw.q, tw.term)

@@ -273,7 +273,11 @@ async function mayShowAuthUi(init, path) {
 	for (const a of dsAuth) {
 		if (init.body?.includes(`"dslabel":${a.dslabel}`) || path.includes(`dslabel=${a.dslabel}`)) {
 			if (dsAuthOk.has(a.dslabel)) return ok
-			return await authUi(a.dslabel)
+			else if (a.type == 'login') return await authUi(a.dslabel)
+			else if (a.type == 'jwt') {
+				// assume the embedder/portal provides the login UI
+				// so do not need to do anything here
+			} else throw `unsupported dsAuth type='${a.type}'`
 		}
 	}
 	return ok

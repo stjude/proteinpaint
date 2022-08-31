@@ -38,6 +38,25 @@ isoform=str
 */
 export function compute_mclass(tk, refAllele, altAlleles, variant, info_str, ID, isoform) {
 	const info = dissect_INFO(info_str)
+
+	/* QUICK FIX
+	simply attach parsed info fields to variant{}
+	for it to be accessible by outside code e.g. mds3
+	*/
+	variant.info = info
+
+	/*
+	if any info field uses a special separator, e.g. "|" for CLNSIG
+	*/
+	for (const key in tk.info) {
+		if (!tk.info[key].separator) continue
+		if (!(key in info)) continue
+		const lst = info[key].split(tk.info[key].separator)
+		if (lst.length > 1) {
+			info[key] = lst
+		}
+	}
+
 	if (!info.CSQ) {
 		// missing csq
 		return

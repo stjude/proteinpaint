@@ -345,7 +345,15 @@ function setRenderers(self) {
 				}
 			}
 		})
-		plotter.main(result.cuminc.final_data)
+
+		if (result.cuminc.final_data) {
+			plotter.main(result.cuminc.final_data)
+		} else {
+			holder
+				.append('div')
+				.style('margin', '20px')
+				.text(result.cuminc.msg)
+		}
 	}
 
 	self.mayshow_wilcoxon = result => {
@@ -646,7 +654,7 @@ function setRenderers(self) {
 
 		// term rows
 		// independent terms (no interaction)
-		let rowcount = 0
+		let rowcount = self.config.regressionType == 'cox' ? 1 : 0
 		for (const tid in result.type3.terms) {
 			// get term data
 			const termdata = result.type3.terms[tid]

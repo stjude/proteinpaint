@@ -1,5 +1,5 @@
 {
-  "version": "2.1.5",
+  "version": "2.2.0",
   "name": "@stjude/proteinpaint",
   "description": "a genomics visualization tool for exploring a cohort's genotype and phenotype data",
   "main": "server/main.js",
@@ -8,7 +8,8 @@
   "workspaces": [
     "client",
     "server",
-    "portal"
+    "portal",
+    "rust"
   ],
   "scripts": {
     "reset": "npm install --workspaces",

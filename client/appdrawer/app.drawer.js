@@ -1,4 +1,5 @@
 import { event as d3event } from 'd3-selection'
+import { dofetch3, sayerror } from '#src/client'
 
 const defaults = {
 	duration: 500, // for apps drawer animation
@@ -40,12 +41,22 @@ export function drawer_init(app, features, overrides = {}) {
 		// prevent reloading
 		if (examples_rendered) return
 		examples_rendered = true
-		const _ = await import('./app.drawer.cards')
-		await _.init_appDrawer({
+
+		// Import logic here? Will need to pass both server and
+		// user data to appDrawerInit
+		const re = await dofetch3('/cardsjson')
+		if (re.error) {
+			sayerror(holder.append('div'), re.error)
+			return
+		}
+
+		const _ = await import('./app')
+		await _.appDrawerInit({
 			holder: dom.drawer_div,
 			apps_sandbox_div: dom.sandbox_div,
 			apps_off,
-			genomes: app.genomes
+			genomes: app.genomes,
+			indexJson: re.json
 		})
 		drawer_full_height = dom.drawer_div.node().getBoundingClientRect().height + 5
 		slide_drawer()

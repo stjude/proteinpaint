@@ -60,6 +60,9 @@ elif [[ "$(git status --porcelain)" == "" ]]; then
 else
 	# dirty git workspace
 	HASH=$(git stash create)
+	if [[ "$HASH" == "" ]]; then
+		HASH="HEAD"
+	fi
 	echo "Extracting from git-tracked files (stash=$HASH) ..."
 	git archive --output=$FILE "$HASH"
 	#git ls-files | tar Tzcf - archive.tgz
@@ -72,7 +75,8 @@ printf "Copying selected directories and files ..."
 tar -C tmppack/ -xf $FILE package.json
 tar -C tmppack/ -xf $FILE server
 tar -C tmppack/ -xf $FILE client
-tar -C tmppack/ -xvf $FILE "$TARGETDIR"
+tar -C tmppack/ -xf $FILE rust
+tar -C tmppack/ -xvf $FILE $TARGETDIR
 tar -C tmppack/ -xvf $FILE build/Dockerfile
 tar -C tmppack/ -xvf $FILE build/compile-rust.sh
 tar -C tmppack/ -xvf $FILE build/minpkgjson.js

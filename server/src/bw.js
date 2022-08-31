@@ -1,6 +1,7 @@
 const app = require('./app'),
 	createCanvas = require('canvas').createCanvas,
 	utils = require('./utils')
+const run_rust = require('@stjude/proteinpaint-rust').run_rust
 const serverconfig = require('./serverconfig')
 const spawn = require('child_process').spawn
 const bigwigsummary = serverconfig.bigwigsummary
@@ -58,25 +59,26 @@ export async function handle_tkbigwig(req, res) {
 
 		for (const r of req.query.rglst) {
 			let out
-			//console.log('serverconfig.features.bigwig_rust:', serverconfig.features.bigwig_rust)
+
 			if (serverconfig.features.bigwig_rust) {
 				// When bigwig_rust is defined in serverconfig.json, bigwig rust binary will be used to query the bigwig file (currently experimental!!)
 				const input_data =
 					file + ',' + r.chr + ',' + r.start + ',' + r.stop + ',' + Math.ceil(r.width * (req.query.dotplotfactor || 1))
 
-				out = await utils.run_rust('bigwig', input_data)
+				out = await run_rust('bigwig', input_data)
 			} else {
 				// When this flag is not defined, the ucsc bigwigsummary will be used to query the bigwig file
 				out = await run_bigwigsummary(req, r, file)
 			}
-			// TODO detect error string in out
 
-			r.values = out
-				.trim()
-				.split('\t')
-				.map(Number.parseFloat)
-			if (req.query.dividefactor) {
-				r.values = r.values.map(i => i / req.query.dividefactor)
+			if (out) {
+				r.values = out
+					.trim()
+					.split('\t')
+					.map(Number.parseFloat)
+				if (req.query.dividefactor) {
+					r.values = r.values.map(i => i / req.query.dividefactor)
+				}
 			}
 		}
 
@@ -337,14 +339,14 @@ function run_bigwigsummary(req, r, file) {
 			const err = out2.join('')
 			if (err.length) {
 				if (err.startsWith('no data')) {
-					r.nodata = true
+					resolve()
 				} else {
 					// in case of invalid file the message is "Couldn't open /path/to/tp/..."
 					// must not give away the tp path!!
 					reject('Cannot read bigWig file')
 				}
 			} else {
-				resolve(out.toString())
+				resolve(out.join(''))
 			}
 		})
 	})

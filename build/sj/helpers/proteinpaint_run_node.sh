@@ -16,7 +16,7 @@ mkdir $logdir
 # server.js uses the serverconfig.preListenScript=/opt/app/pp/ppstop.sj 
 # option to stop all processes except the most recently started,
 # before app.listen()
-./node_modules/.bin/forever -m 10000 -a --minUptime 5000 --spinSleepTime 1000 --uid "pp" -l $logdir/log -o $logdir/out -e $logdir/err start server.js --max-old-space-size=8192
+npx forever -m 10000 -a --minUptime 5000 --spinSleepTime 1000 --uid "pp" -l $logdir/log -o $logdir/out -e $logdir/err start server.js --max-old-space-size=8192
 
 logtail=""
 vstatus=""

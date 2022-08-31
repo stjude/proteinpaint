@@ -8,12 +8,21 @@ import { mclass } from '#shared/common'
 import { vcfparsemeta } from '#shared/vcf'
 
 /*
+this script exports one function "makeTk()" that will be called just once
+when the mds3 track object is initiating
+makeTk will not be called for subsequent user interactions with mds3 track
+it will initiate dataset object "tk.mds{}" for both official and custom data
+and creates getter callbacks to abstract dataset details
+
+
 ********************** EXPORTED
 makeTk
 ********************** INTERNAL
 init_mclass
 get_ds
 	validateCustomVariants
+		validateCustomSnvindel
+		validateCustomSvfusion
 	mayDeriveSkewerOccurrence4samples
 init_termdb
 mayInitSkewer
@@ -63,7 +72,7 @@ and will use cached data at rawmlst instead
 */
 
 export async function makeTk(tk, block) {
-	// run just once to initiate a track
+	// run just once to initiate a track by adding in essential attributes to tk object
 
 	tk.subtk2height = {}
 	// keys: "skewer", "leftlabels"
@@ -249,9 +258,23 @@ function init_mclass(tk) {
 	}
 }
 
+/*
+to get the dataset object for this track, to be kept in client side
+
+input:
+	tk{}
+	block{}
+no output
+
+effect: creates tk.mds{}
+
+
+for official dataset, query ?getDataset to obtain a fresh copy
+for custom dataset, generate an object from scratch
+*/
 async function get_ds(tk, block) {
 	if (tk.dslabel) {
-		// official dataset
+		// this tk loads from an official dataset
 		const data = await dofetch3(`getDataset?genome=${block.genome.name}&dsname=${tk.dslabel}`)
 		if (data.error) throw 'Error: ' + data.error
 		if (!data.ds) throw 'data.ds{} missing'
@@ -259,10 +282,13 @@ async function get_ds(tk, block) {
 		tk.name = data.ds.label
 		return
 	}
-	// custom
+
+	// this tk loads as a custom track
 	if (!tk.name) tk.name = 'Custom data'
+	// create the dataset object
 	tk.mds = {}
 	// fill in details to tk.mds
+
 	///////////// custom data sources
 	if (tk.bcf) {
 		if (!tk.bcf.file && !tk.bcf.url) throw 'file or url missing for tk.bcf{}'
@@ -270,7 +296,7 @@ async function get_ds(tk, block) {
 		await getbcfheader_customtk(tk, block.genome)
 	} else if (tk.custom_variants) {
 		tk.mds.has_skewer = true // enable skewer tk
-		validateCustomVariants(tk)
+		validateCustomVariants(tk, block)
 		mayDeriveSkewerOccurrence4samples(tk)
 	} else {
 		throw 'unknown data source for custom track'
@@ -537,12 +563,110 @@ function getter_mcset_key(mcset, m) {
 	return ['no trigger']
 }
 
-function validateCustomVariants(tk) {
+/*
+to validate custom variants (snvindel and svfusion) already present in tk.custom_variants[]
+create "ssm_id" for each variant inside array
+create "pairlst[]" for sv/fusion
+makes no return
+*/
+function validateCustomVariants(tk, block) {
 	for (const m of tk.custom_variants) {
-		if (!m.ssm_id) {
-			m.ssm_id = m.chr + '.' + m.pos + '.' + (m.ref && m.alt ? m.ref + '.' + m.alt : m.mname)
+		if (m.dt == 1) {
+			validateCustomSnvindel(m)
+			continue
+		}
+		if (m.dt == 2 || m.dt == 5) {
+			validateCustomSvfusion(m, block)
+			continue
+		}
+		throw 'unknown dt for a custom variant'
+	}
+}
+
+function validateCustomSnvindel(m) {
+	// snvindel
+	if (!m.chr) throw '.chr missing for custom snvindel'
+	if (!Number.isInteger(m.pos)) throw '.pos not integer for custom snvindel'
+	if (!m.ssm_id) {
+		// TODO ssmIdFieldsSeparator
+		m.ssm_id = m.chr + '.' + m.pos + '.' + (m.ref && m.alt ? m.ref + '.' + m.alt : m.mname)
+	}
+}
+function validateCustomSvfusion(m, block) {
+	// sv or fusion
+	if (m.pairlst) {
+		// todo validate pairlst[]
+	} else {
+		// make pairlst[], requires chr1/pos1/chr2/pos2 etc
+		if (!m.chr1) throw '.chr1 missing for custom sv/fusion'
+		if (!Number.isInteger(m.pos1)) throw '.pos1 not integer for custom svfusion'
+		if (m.strand1 != '+' && m.strand1 != '-') throw '.strand1 not +/- for custom svfusion'
+		if (!m.chr2) throw '.chr1 missing for custom sv/fusion'
+		if (!Number.isInteger(m.pos2)) throw '.pos1 not integer for custom svfusion'
+		if (m.strand2 != '+' && m.strand2 != '-') throw '.strand1 not +/- for custom svfusion'
+		m.pairlst = [
+			{
+				a: {
+					chr: m.chr1,
+					pos: m.pos1,
+					strand: m.strand1,
+					name: m.gene1 || ''
+				},
+				b: {
+					chr: m.chr2,
+					pos: m.pos2,
+					strand: m.strand2,
+					name: m.gene2 || ''
+				}
+			}
+		]
+		delete m.chr1
+		delete m.pos1
+		delete m.strand1
+		delete m.gene1
+		delete m.chr2
+		delete m.pos2
+		delete m.strand2
+		delete m.gene2
+	}
+
+	// m.pairlst[] is ready
+
+	// create ssm_id
+	const fields = [m.dt] // fields to make ssm_id for svfusion
+
+	// FIXME need pairlst[] index and a/b side
+	// "2.chr22.23253797.+.1.ABL1" should be "2.chr22.23253797.+.0b.ABL1" instead
+	// TODO loop through m.pairlst[]
+
+	// seek [0].a{}
+	const hits = block.seekcoord(m.pairlst[0].a.chr, m.pairlst[0].a.pos)
+	if (hits.length && hits[0].x > 0 && hits[0].x < block.width) {
+		// [0].a is within range
+		fields.push(...[m.pairlst[0].a.chr, m.pairlst[0].a.pos, m.pairlst[0].a.strand, 0, m.pairlst[0].a.name])
+
+		// since .a{} is in range, use .b.name as mname
+		m.mname = m.pairlst[0].b.name || ''
+		m.chr = m.pairlst[0].a.chr
+		m.pos = m.pairlst[0].a.pos
+		m.pairlstIdx = 0
+	} else {
+		// [0].a is not within range, seek [0].b{}
+		const hits = block.seekcoord(m.pairlst[0].b.chr, m.pairlst[0].b.pos)
+		if (hits.length && hits[0].x > 0 && hits[0].x < block.width) {
+			// [0].b is in range
+			fields.push(...[m.pairlst[0].b.chr, m.pairlst[0].b.pos, m.pairlst[0].b.strand, 1, m.pairlst[0].b.name])
+
+			// since .b{} is in range, use .a.name as mname
+			m.mname = m.pairlst[0].a.name || ''
+			m.chr = m.pairlst[0].b.chr
+			m.pos = m.pairlst[0].b.pos
+			m.pairlstIdx = 1
+		} else {
+			// [0] a/b both are not in range. do not reject?
 		}
 	}
+	m.ssm_id = fields.join('.')
 }
 
 /*
@@ -608,6 +732,12 @@ function mayDeriveSkewerOccurrence4samples(tk) {
 	v.type_sunburst = 'sunburst'
 }
 
+/*
+input:
+	tk{}
+	genome{}
+		client-side genome object
+*/
 async function getbcfheader_customtk(tk, genome) {
 	const arg = ['genome=' + genome.name]
 	if (tk.bcf.file) {
@@ -621,8 +751,9 @@ async function getbcfheader_customtk(tk, genome) {
 	if (data.error) throw data.error
 	const [info, format, samples, errs] = vcfparsemeta(data.metastr.split('\n'))
 	if (errs) throw 'Error parsing VCF meta lines: ' + errs.join('; ')
-	tk.bcf.info = info
-	tk.bcf.format = format
-	tk.bcf.samples = samples
-	tk.bcf.nochr = data.nochr
+	tk.mds.bcf = {
+		info,
+		format,
+		samples
+	}
 }

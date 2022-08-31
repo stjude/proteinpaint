@@ -1,8 +1,8 @@
-import * as uiutils from '../../dom/uiUtils'
-import { appear } from '../../dom/animation'
-import { init_tabs } from '../../dom/toggleButtons'
+import * as uiutils from '#dom/uiUtils'
+import { appear } from '#dom/animation'
+import { init_tabs } from '#dom/toggleButtons'
 import { event as d3event, selectAll as d3selectAll } from 'd3-selection'
-import { appInit } from '../../mass/app'
+import { appInit } from '#mass/app'
 import { parseDictionary } from './dictionary.parse'
 import { sayerror } from '../client'
 
@@ -62,7 +62,7 @@ export function init_databrowserUI(holder, debugmode) {
 		.style('margin', '40px 0px 40px 130px')
 
 	submitButton(controlBtns_div, obj, wrapper, holder)
-	makeResetBtn(controlBtns_div, obj)
+	uiutils.makeResetBtn(controlBtns_div, obj, '.databrowser_input')
 
 	//Remove after testing
 	if (debugmode) window.doms = obj
@@ -234,24 +234,5 @@ function submitButton(div, obj, wrapper, holder) {
 					}
 				})
 			}
-		})
-}
-
-function makeResetBtn(div, obj) {
-	const reset = uiutils.makeBtn({
-		div,
-		text: '&#8634;',
-		backgroundColor: 'white',
-		color: 'grey',
-		padding: '0px 6px 1px 6px'
-	})
-	reset
-		.style('font-size', '1.5em')
-		.style('display', 'inline-block')
-		.style('margin', '0px 10px')
-		.attr('type', 'reset')
-		.on('click', async () => {
-			d3selectAll('.databrowser_input').property('value', '')
-			if (obj.data) obj.data = ''
 		})
 }

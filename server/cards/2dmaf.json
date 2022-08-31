@@ -1,7 +1,7 @@
 {
     "ppcalls": [
         {
-            "is_ui": true,
+            "isUi": true,
             "runargs": {
                 "genome": "hg19",
                 "nobox": 1,
@@ -33,6 +33,5 @@
             "name": "Documentation",
             "link": "https://docs.google.com/document/d/1anyEDMcW1lTSf8399Li2G9r57V-Fqp2591WvoODY7n4/edit#heading=h.mne2ecmp9m13"
         }
-    ],
-    "update_message": "Please use the new example to explore the 2DMAF plot!"
+    ]
 }

@@ -1,3 +1,5 @@
+import { selectAll as d3selectAll } from 'd3-selection'
+
 /*
 
 Functions commonly used in UIs.
@@ -42,6 +44,11 @@ makePrompt()
     - div
 	- text: STR 
 
+makeResetBtn()
+	Button to clear a form/UI
+	- div
+	- obj{}
+	- selector: STR, class selector to clear
 
 detectDelimiter()
 	Returns the delimiter based on the file name
@@ -129,6 +136,26 @@ export function makePrompt(div, text) {
 		.html(text)
 
 	return prompt
+}
+
+export function makeResetBtn(div, obj, selector) {
+	const reset = makeBtn({
+		div,
+		text: '&#8634;',
+		backgroundColor: 'white',
+		color: 'grey',
+		padding: '0px 6px 1px 6px'
+	})
+	reset
+		.style('font-size', '1.5em')
+		.style('display', 'inline-block')
+		.attr('type', 'reset')
+		.on('click', async () => {
+			d3selectAll(selector).property('value', '')
+			if (obj.data) obj.data = ''
+		})
+
+	return reset
 }
 
 export function detectDelimiter(fileName) {

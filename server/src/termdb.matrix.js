@@ -145,6 +145,7 @@ function divideTerms(lst) {
 
 function getSampleData_dictionaryTerms(q, termWrappers) {
 	const samples = {}
+	const twByTermId = {}
 	const refs = { byTermId: {} }
 	if (!termWrappers.length) return { samples, refs }
 
@@ -167,6 +168,7 @@ function getSampleData_dictionaryTerms(q, termWrappers) {
 				}
 			}
 		}
+		if ('id' in tw.term) twByTermId[tw.term.id] = tw
 		return CTE
 	})
 	values.push(...termWrappers.map(tw => tw.term.id))
@@ -185,7 +187,13 @@ function getSampleData_dictionaryTerms(q, termWrappers) {
 	const rows = q.ds.cohort.db.connection.prepare(sql).all(values)
 	for (const { sample, term_id, key, value } of rows) {
 		if (!samples[sample]) samples[sample] = { sample }
-		samples[sample][term_id] = { key, value }
+		const tw = twByTermId[term_id]
+		if (tw && tw.term.type == 'condition' && tw.q.mode == 'cox' && tw.q.timeScale == 'age') {
+			const v = JSON.parse(value)
+			samples[sample][term_id] = { key, value: v.age_end - q.ds.cohort.termdb.ageEndOffset }
+		} else {
+			samples[sample][term_id] = { key, value }
+		}
 	}
 
 	return { samples, refs }

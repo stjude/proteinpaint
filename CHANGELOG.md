@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## 2.2.0
+
+- option to easily override colors for mutation class and other styles
+- Improvements to MASS UI plots, including a data downloader app
+- Updates to the BAM sequence rad app
+
 ## 2.1.5
 
 - move all React wrapper code to the GDC frontend framework repo

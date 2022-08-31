@@ -1,7 +1,7 @@
 {
     "ppcalls": [
         {
-            "is_ui": true, 
+            "isUi": true, 
             "runargs": {
                 "noheader": true,
                 "nobox": 1, 
@@ -10,16 +10,42 @@
             }
         },
         {
+            "label": "Gene fusion",
+            "message": "<p>Call the gene fusion view by defining the following, separated by commas, in the <span style='font-family: courier; display: inline-block; color:gray;font-size:16px;'>text</span> key. <ol><li>N-term gene symbol</li><li>N-term gene isoform</li><li>N-term gene break-end position</li><li>C-term gene symbol</li><li>C-term gene isoform</li><li>C-term gene break-end position</li><li>(optional) interstitial sequence AA length</li></ol></p>",
             "runargs": {
                 "noheader": true,
                 "nobox": 1, 
                 "parseurl": false, 
                 "genome": "hg19",
-                "genefusion":{
+                "genefusion": {
                     "text": "PAX5,NM_016734,201,JAK2,NM_004972,812",
 		            "positionType": "codon"
                 }
             }
+        },
+        {
+            "label": "Protein view with gene fusion",
+            "runargs": {
+                "noheader": true,
+                "nobox": 1, 
+                "parseurl": false, 
+                "genome": "hg19",
+                "gene": "NM_016734",
+                "tracks":[{
+                    "type":"mds3",
+                    "name":"custom snvindel and fusion",
+                    "custom_variants":[
+                        {
+                            "chr":"chr9","pos":37015165,"mname":"P80R","class":"M","dt":1,"ref":"G","alt":"C"
+                        },
+                        {
+                            "gene1":"PAX5","chr1":"chr9","pos1":37002646, "strand1":"-",
+                            "gene2":"JAK2","chr2":"chr9","pos2":5081726, "strand2":"+","dt":2,"class":"Fuserna"
+                        }
+                    ]
+                }]
+            }
         }
-    ]
+    ],
+    "ribbonMessage": "<p style='display: inline-block;'>Explore gene fusions! Use the new form on the <span style='color:#1575ad; font-weight:600;'>Add Your Data</span> tab to see the gene fusion view. Please see the <span style='color:#1575ad; font-weight:600;'>Examples</span> tab for an example and how to display custom data.</p>"
 }

@@ -99,7 +99,7 @@ function int() {
 // and can delete the run_rust() copy
 function run_rust(binfile, input_data) {
 	return new Promise((resolve, reject) => {
-		const binpath = path.join('../../server/utils/rust/target/release/', binfile)
+		const binpath = path.join('../../rust/target/release/', binfile)
 		const ps = spawn(binpath)
 		const stdout = []
 		const stderr = []

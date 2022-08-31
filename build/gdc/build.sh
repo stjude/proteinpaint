@@ -36,7 +36,9 @@ while getopts 'r:b:h:d:p:x:' opt; do
 		DOCKER_TAG=${OPTARG}
 		;;
 	b )
-		BUILDARGS="${BUILDARGS} ${OPTARG}"
+		if [[ ${OPTARG} == "" ]]; then
+			BUILDARGS="${BUILDARGS} ${OPTARG}"
+		fi
 		;;
 	p )
 		BUILDARGS="${BUILDARGS} --build-arg http_proxy=http://cloud-proxy:3128 --build-arg https_proxy=http://cloud-proxy:3128 --build-arg ELECTRON_GET_USE_PROXY=true --build-arg GLOBAL_AGENT_HTTPS_PROXY=http://cloud-proxy:3128"

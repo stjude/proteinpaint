@@ -65,7 +65,7 @@ tape('Run GDC dataset, gene symbol: KRAS', test => {
 	}
 })
 
-tape('Run GDC dataset, ensembl ID: ENST00000407796', test => {
+tape('Run GDC dataset, ensembl transcript: ENST00000407796', test => {
 	test.timeoutAfter(8000)
 	const holder = getHolder()
 
@@ -94,6 +94,43 @@ tape('Run GDC dataset, ensembl ID: ENST00000407796', test => {
 
 		//Confirm gene symbol used to call track
 		test.ok(bb.usegm.isoform == 'ENST00000407796', 'Should render ENST00000407796 track in GDC dataset')
+
+		if (test._ok) holder.remove()
+		test.end()
+	}
+})
+
+tape('Run GDC dataset, ensembl gene: ENSG00000133703', test => {
+	// kras, should map to canonical isoform ENST00000311936
+	test.timeoutAfter(8000)
+	const holder = getHolder()
+
+	runproteinpaint({
+		holder,
+		noheader: true,
+		nobox: true,
+		genome: 'hg38',
+		gene: 'ENSG00000133703',
+		tracks: [
+			{
+				type: 'mds3',
+				dslabel: 'GDC'
+			}
+		],
+		onloadalltk_always: checkTrack
+	})
+
+	function checkTrack() {
+		//Confirm track type
+		const mds3Track = bb.tklst.find(i => i.type == 'mds3')
+		test.ok(mds3Track, 'type=mds3 track should be found')
+
+		//Confirm correct dataset
+		test.ok(mds3Track.dslabel == 'GDC', 'Should render GDC dataset')
+
+		//Confirm gene symbol used to call track
+		console.log(bb.usegm.isoform)
+		test.ok(bb.usegm.isoform == 'ENST00000311936', 'Should render ENST00000311936 track in GDC dataset')
 
 		if (test._ok) holder.remove()
 		test.end()
@@ -175,23 +212,19 @@ tape('Launch GDC dataset by SSM ID, KRAS', test => {
 tape('Render gene track from search box, KRAS', async test => {
 	test.timeoutAfter(10000)
 	const holder = getHolder()
+	const gene = 'KRAS'
 
 	await runproteinpaint({
 		holder,
 		noheader: 1,
 		geneSearch4GDCmds3: true
-		// onloadalltk_always: checkSearchBox ****This does not work
 	})
-
-	// function checkSearchBox() {
-	// 	console.log('This callback works without tracks')
-	// }
 
 	await sleep(1000)
 
 	//Enter KRAS into search box
 	const searchBox = d3s.select('input')._groups[0][0]
-	searchBox.value = 'KRAS'
+	searchBox.value = gene
 	searchBox.dispatchEvent(new Event('keyup'))
 
 	//Click on first menu option -> 'KRAS'
@@ -201,10 +234,11 @@ tape('Render gene track from search box, KRAS', async test => {
 
 	//Verify track renders
 	await sleep(3000)
-	const geneTrackFound = [...holder.querySelectorAll('span.sja_clbtext')].some(
-		elem => elem.innerText == 'KRAS ENST00000256078'
-	)
-	test.true(geneTrackFound, `Should render default KRAS ENST00000256078 track`)
+	const geneTrackFound = d3
+		.selectAll('span.sja_clbtext')
+		.nodes()
+		.some(elem => elem.innerText.includes(gene))
+	test.true(geneTrackFound, `Should render default ${gene} track`)
 
 	if (test._ok) holder.remove()
 	test.end()
@@ -397,11 +431,12 @@ tape('Launch variant table from track variant label', test => {
 				type: 'mds3',
 				dslabel: 'GDC',
 				callbackOnRender: (tk, bb) => {
+					const mtk = bb.tklst.find(i => i.type == 'mds3')
 					//Click on track variant link to open menu
 					const variantsControl = d3s
 						.selectAll('text.sja_clbtext2')
 						.nodes()
-						.find(e => e.innerHTML == '100 of 111 variants')
+						.find(e => e.innerHTML == mtk.leftlabels.doms.variants.nodes()[0].innerHTML)
 					variantsControl.dispatchEvent(new Event('click'))
 
 					//Click 'List' menu option
@@ -458,11 +493,12 @@ tape('Launch cases from track cases label', test => {
 				type: 'mds3',
 				dslabel: 'GDC',
 				callbackOnRender: async (tk, bb) => {
+					const mtk = bb.tklst.find(i => i.type == 'mds3')
 					//Click on track cases link to open table
 					const casesControl = d3s
 						.selectAll('text.sja_clbtext2')
 						.nodes()
-						.find(e => e.innerHTML == '1273 cases')
+						.find(e => e.innerHTML == mtk.leftlabels.doms.samples.nodes()[0].innerHTML)
 					casesControl.dispatchEvent(new Event('click'))
 
 					await sleep(1000) //Still required. Callback executes to quickly for dom
@@ -472,7 +508,7 @@ tape('Launch cases from track cases label', test => {
 					const diseaseTypeFound = d3s
 						.selectAll('div')
 						.nodes()
-						.find(e => e.innerText == 'Disease type\nn=21')
+						.find(e => e.innerText.includes('Disease type'))
 					test.ok(diseaseTypeFound, "Should display cases table with 'Disease type' as the first tab")
 
 					//Close orphaned popup window
@@ -491,8 +527,8 @@ tape('Launch cases from track cases label', test => {
 })
 
 tape('Collapse and expand mutations from variant link', test => {
-	//If dispatchEvent error in browser, run again before debugging
-	test.timeoutAfter(8000)
+	test.timeoutAfter(10000) //Fix for succeeding tape tests running before this one finishes
+	//Will throw a not ok error if another test fires
 	const holder = getHolder()
 
 	runproteinpaint({
@@ -506,11 +542,12 @@ tape('Collapse and expand mutations from variant link', test => {
 				type: 'mds3',
 				dslabel: 'GDC',
 				callbackOnRender: async (tk, bb) => {
+					const mtk = bb.tklst.find(i => i.type == 'mds3')
 					//Click on track variant link to open menu
 					const variantsControl = d3s
 						.selectAll('text.sja_clbtext2')
 						.nodes()
-						.find(e => e.innerHTML == '100 of 111 variants')
+						.find(e => e.innerHTML == mtk.leftlabels.doms.variants.nodes()[0].innerHTML)
 					variantsControl.dispatchEvent(new Event('click'))
 
 					//Click 'Collapse' menu option
@@ -535,14 +572,14 @@ tape('Collapse and expand mutations from variant link', test => {
 						.find(e => e.innerHTML == 'Expand')
 					expandOptionFound.dispatchEvent(new Event('click'))
 
-					await sleep(2000) //Still required. The animation takes too long to
+					await sleep(1000) //Still required. The animation takes too long to
 					// find dom elements
 
 					//Confirm expanded mutations
-					const expandedCircleFound = d3s
-						.selectAll('text.sja_aa_disclabel')
+					const expandedCircleFound = mtk.skewer.g
+						.selectAll('.sja_aa_disclabel')
 						.nodes()
-						.some(e => e.attributes.transform.value == 'scale(1,1)')
+						.some(e => e.attributes['fill-opacity'].value == '1')
 					test.ok(expandedCircleFound, 'Should expand mutation points')
 
 					if (test._ok) holder.remove()

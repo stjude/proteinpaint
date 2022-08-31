@@ -8,13 +8,12 @@ let babelrc
 try {
 	babelrc = fs.readFileSync(path.join(__dirname, '.babelrc'))
 	babelrc = JSON.parse(babelrc)
+	const internalsFile = path.join(__dirname, './test/internals.js')
+	if (!fs.existsSync(internalsFile)) {
+		fs.writeFileSync(internalsFile, '')
+	}
 } catch (e) {
 	throw e
-}
-
-const internalsFile = path.join(__dirname, './test/internals.js')
-if (!fs.existsSync(internalsFile)) {
-	fs.writeFileSync(internalsFile)
 }
 
 module.exports = function(env = {}) {
