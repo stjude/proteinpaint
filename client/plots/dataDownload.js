@@ -249,6 +249,9 @@ function setInteractivity(self) {
 							if (term.type == 'condition') {
 								q.mode = 'cox'
 								q.timeScale = 'age'
+							} else if (term.type == 'float' || term.type == 'integer') {
+								/*** ADD THIS ***/
+								q.mode = 'continuous'
 							}
 							const tw = { id: term.id, term, q }
 							await fillTermWrapper(tw)
@@ -269,9 +272,14 @@ function setInteractivity(self) {
 
 	self.download = () => {
 		const header = ['sample']
+		console.log(self.config.terms)
 		for (const tw of self.config.terms) {
-			header.push(tw.term.name)
-			if (tw.term.type == 'condition') header.push(tw.term.name + ': Age at event')
+			if (tw.term.type == 'condition') {
+				header.push(tw.term.name + `(Event=Grades ${tw.q.breaks[0]}-5)`)
+				header.push(tw.term.name + ':Age at event')
+			} else {
+				header.push(tw.term.name)
+			}
 		}
 		const rows = [header]
 		for (const s of self.activeSamples) {
@@ -280,8 +288,12 @@ function setInteractivity(self) {
 			for (const tw of self.config.terms) {
 				if (!s[tw.$id]) row.push('')
 				else {
-					row.push(s[tw.$id].key)
-					if (tw.term.type == 'condition') row.push(s[tw.$id].value)
+					if (tw.term.type == 'condition') {
+						row.push(s[tw.$id].key == 0 ? 'No' : 'Yes')
+						row.push(s[tw.$id].value)
+					} else {
+						row.push(s[tw.$id].key) // NOTE: this value may need to be renamed, see barchart legend series names
+					}
 				}
 			}
 			rows.push(row)
