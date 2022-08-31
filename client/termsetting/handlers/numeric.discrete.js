@@ -169,12 +169,26 @@ function processCustomBinInputs(self) {
 
 function setqDefaults(self) {
 	const dd = self.num_obj.density_data
+
 	const cache = self.numqByTermIdModeType
 	const t = self.term
 	if (!cache[t.id]) cache[t.id] = {}
+
 	if (!cache[t.id].discrete) {
+		// when cache{}.discrete{} is missing, initiate it
+
 		const defaultCustomBoundary =
-			dd.maxvalue != dd.minvalue ? dd.minvalue + (dd.maxvalue - dd.minvalue) / 2 : dd.maxvalue
+			/* when no sample is annotated by this term,
+			minvalue and maxvalue are both null
+			setting defaultCustomBoundary to arbitrary "0" will allow existing UI to work
+			but remains to be evaluated if is really okay to use 0
+			*/
+			!Number.isFinite(dd.minvalue) || !Number.isFinite(dd.maxvalue)
+				? 0
+				: // minvalue and maxvalue is valid number
+				dd.maxvalue != dd.minvalue
+				? dd.minvalue + (dd.maxvalue - dd.minvalue) / 2
+				: dd.maxvalue
 
 		cache[t.id].discrete = {
 			'regular-bin':
