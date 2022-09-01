@@ -168,7 +168,7 @@ export function rangequery_rglst(tk, block, par) {
 		add('isoform', block.usegm.isoform)
 		if (block.gmmode == 'genomic') {
 			// TODO if can delete the isoform parameter to simply make the query by genomic pos
-			add.push('atgenomic', 1)
+			add('atgenomic', 1)
 		}
 	} else {
 		rglst = block.tkarg_rglst(tk)
