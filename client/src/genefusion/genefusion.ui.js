@@ -88,6 +88,7 @@ async function makePositionDropDown(div, obj) {
 		.append('option')
 		.text('RNA position')
 		.property('value', 'rna')
+		.attr('selected', true)
 	positionSelect
 		.append('option')
 		.text('Genomic position')
@@ -160,7 +161,7 @@ function makeSubmitResult(obj, div, runpp_arg) {
 		.style('padding', '5px 10px')
 		.style('margin', '1px 10px 1px 10px')
 
-	fusionSelect.append('option').text('Select Fusion')
+	fusionSelect.append('option').text(`Select Fusion (${obj.data.split(/[\r\n]/).length})`)
 
 	const tabsDiv = div.append('div').style('margin', '20px')
 
