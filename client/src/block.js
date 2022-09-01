@@ -192,12 +192,23 @@ export class Block {
 			if (!arg.tklst) {
 				arg.tklst = []
 			}
-			arg.tklst.push({
-				type: client.tkt.usegm,
-				name: arg.usegm.name,
-				//model:arg.usegm,
-				stackheight: arg.gmstackheight
-			})
+
+			const gmtk = arg.tklst.find(i => i.type == client.tkt.usegm)
+			if (gmtk) {
+				/*
+				a track obj by type="usegm" already exists
+				override gene name of this tk, and do not add a new "gmtk" obj to arg.tklst[]
+				*/
+				gmtk.name = arg.usegm.name
+			} else {
+				// no "usegm" track exists in arg.tklst[], create new object
+				arg.tklst.push({
+					type: client.tkt.usegm,
+					name: arg.usegm.name,
+					//model:arg.usegm,
+					stackheight: arg.gmstackheight
+				})
+			}
 		} else if (arg.rglst) {
 			for (const r of arg.rglst) {
 				this.rglst.push({
@@ -5099,7 +5110,7 @@ function makecoordinput(bb, butrow) {
 		.attr('size', 20)
 		.style('margin-left', '10px')
 		.style('padding-right', '20px')
-		.attr('aria-label', "Gene coordinates")
+		.attr('aria-label', 'Gene coordinates')
 
 	bb.coord.inputtipshow = () => {
 		bb.coord.inputtip.clear()
