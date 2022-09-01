@@ -88,11 +88,11 @@ async function makePositionDropDown(div, obj) {
 		.append('option')
 		.text('RNA position')
 		.property('value', 'rna')
-		.attr('selected', true)
 	positionSelect
 		.append('option')
 		.text('Genomic position')
 		.property('value', 'genomic')
+		.attr('selected', true)
 	obj.posType = positionSelect.node()
 }
 
