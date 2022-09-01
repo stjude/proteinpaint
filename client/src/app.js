@@ -725,8 +725,8 @@ async function parseEmbedThenUrl(arg, app) {
 		/* can generalize by changing to geneSearch4tk:{tkobj}
 		so it's no longer hardcoded for one dataset of one track type
 		*/
-		await launchGeneSearch4GDCmds3(arg, app)
-		return
+		return await launchGeneSearch4GDCmds3(arg, app)
+		//return
 	}
 
 	if (arg.parseurl && location.search.length) {
@@ -1309,7 +1309,7 @@ async function launchSelectGenomeWithTklst(arg, app) {
 
 async function launchGeneSearch4GDCmds3(arg, app) {
 	const _ = await import('./geneSearch4GDCmds3')
-	await _.init(arg, app.holder0, app.genomes)
+	return await _.init(arg, app.holder0, app.genomes)
 }
 
 function launchmavb(arg, app) {

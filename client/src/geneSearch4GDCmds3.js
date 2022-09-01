@@ -26,7 +26,7 @@ export async function init(arg, holder, genomes) {
 
 	// first row, gene search
 	const geneInputDiv = holder.append('div')
-	geneInputDiv.append('div').text('To view GDC mutations on a gene, enter gene symbol or alias below.')
+	geneInputDiv.append('div').text('To view GDC mutations on a gene, essssnter gene symbol or alias below.')
 
 	// second row, display graph
 	const graphDiv = holder.append('div')
@@ -40,6 +40,7 @@ export async function init(arg, holder, genomes) {
 	}
 	const coordInput = addGeneSearchbox(searchOpt)
 
+	let selectedIsoform
 	async function launchView() {
 		if (!coordInput.geneSymbol) throw 'geneSymbol missing'
 
@@ -48,14 +49,24 @@ export async function init(arg, holder, genomes) {
 		const data = await dofetch3('gene2canonicalisoform?genome=' + gdcGenome + '&gene=' + coordInput.geneSymbol)
 		if (data.error) throw data.error
 		if (!data.isoform) throw 'no canonical isoform for given gene accession'
+		selectedIsoform = data.isoform
 		const pa = {
 			query: data.isoform,
 			genome,
 			holder: graphDiv,
 			gmmode: data.coding ? 'protein' : 'exon only',
 			hide_dsHandles: arg.hide_dsHandles,
-			tklst: [{ type: 'mds3', dslabel: 'GDC' }]
+			tklst: arg.tracks ? arg.tracks : [{ type: 'mds3', dslabel: 'GDC' }]
 		}
-		await blockinit(pa)
+		return await blockinit(pa)
 	}
+
+	const api = {
+		update: _arg => {
+			Object.assign(arg, _arg)
+			arg.isoform = selectedIsoform
+			launchView()
+		}
+	}
+	return api
 }

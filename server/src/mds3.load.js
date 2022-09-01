@@ -46,7 +46,6 @@ export function mds3_request_closure(genomes) {
 			may_validate_filter0(q, ds)
 
 			const result = await load_driver(q, ds)
-
 			res.send(result)
 		} catch (e) {
 			res.send({ error: e.message || e })
@@ -301,7 +300,9 @@ this ensures filter0 and its validation is generic and not specific to gdc
 */
 function may_validate_filter0(q, ds) {
 	if (q.filter0) {
-		const f = JSON.parse(q.filter0)
+		const f = JSON.parse(
+			typeof q.filter0 == 'string' && q.filter0.startsWith('%') ? decodeURIComponent(q.filter0) : q.filter0
+		)
 		q.filter0 = ds.validate_filter0(f)
 	}
 }
