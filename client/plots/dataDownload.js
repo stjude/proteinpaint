@@ -292,7 +292,7 @@ function setInteractivity(self) {
 						row.push(s[tw.$id].key == 0 ? 'No' : 'Yes')
 						row.push(s[tw.$id].value)
 					} else {
-						const v = tw.term.values[s[tw.$id].key]
+						const v = tw.term.values?.[s[tw.$id].key] || s[tw.$id]
 						row.push(v.label || v.key)
 					}
 				}
