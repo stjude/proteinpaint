@@ -54,6 +54,7 @@ docker run \
 	--mount type=bind,source=$PPDIR/package.json,target=$CONTAPP/package.json,readonly \
 	--mount type=bind,source=$PPDIR/server/package.json,target=$CONTAPP/server/package.json,readonly \
 	--mount type=bind,source=$PPDIR/client/package.json,target=$CONTAPP/client/package.json,readonly \
+	--mount type=bind,source=$PPDIR/build/dev,target=$CONTAPP/build/dev,readonly \
 	--publish 3000:3000 \
 	-e PP_MODE=container-prod \
 	ppdev:latest
