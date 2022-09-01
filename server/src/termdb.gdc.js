@@ -24,8 +24,37 @@ adds following things:
 
 const gdcHost = process.env.PP_GDC_HOST || 'https://api.gdc.cancer.gov'
 
-// TODO!!!! switch to https://api.gdc.cancer.gov/cases/_mapping
+// TODO switch to https://api.gdc.cancer.gov/cases/_mapping
 const dictUrl = path.join(gdcHost, 'ssm_occurrences/_mapping')
+
+/*
+adding a dummy default term.bins as it's required
+named dummy as it will likely break when actually used
+need a way to know a reasonable range for gdc terms, but cannot afford to query api for each term
+it's best if a typical min/max range can be available in _mapping
+*/
+const dummyBins = {
+	default: {
+		mode: 'discrete',
+		type: 'regular-bin',
+		bin_size: 1,
+		startinclusive: false,
+		stopinclusive: true,
+		first_bin: {
+			startunbounded: true,
+			stop: 0
+		},
+		last_bin: {
+			start: 1,
+			stopunbounded: true
+		}
+	}
+}
+
+// stopgap: can declare preconfigured bin configs for specific terms
+const termId2bins = {
+	// 'case.days_to_index' : { bin_size:10, ... }
+}
 
 /* 
 
@@ -194,9 +223,11 @@ export async function initGDCdictionary(ds) {
 						categoricalCount++
 					} else if (t.type == 'long') {
 						termObj.type = 'integer'
+						termObj.bins = termId2bins[termObj.id] || JSON.parse(JSON.stringify(dummyBins))
 						integerCount++
 					} else if (t.type == 'double') {
 						termObj.type = 'float'
+						termObj.bins = termId2bins[termObj.id] || JSON.parse(JSON.stringify(dummyBins))
 						floatCount++
 					}
 				}
