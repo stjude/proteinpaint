@@ -9,31 +9,32 @@
 		<script src="/bin/proteinpaint.js" charset="utf-8"></script>
 		<script src="./PpReact.js" type='module' charset="utf-8"></script>
 		<script>
-			const value = []
-			window.filter0 = {
-			  op: "and",
-        content: [
-            {
-                op: "in",
-                content: {
-                    field: "cases.primary_site",
-                    value: [
-                        "breast",
-                        "bronchus and lung"
-                    ]
-                }
-            }
-        ]
-			}
-
 			function setPrimarySite() {
-				const value = []
-				filter0.content[0].content.value = value
+				const values = []
 				const checkboxes = document.querySelector('#primarySiteOptions').querySelectorAll('input')
 				for(const c of checkboxes) {
-					if (c.checked) value.push(c.value)
+					if (c.checked) values.push(c.value)
 				} //console.log(30, window.filter0)
-				window.updateState({})
+
+				if (values.length) {
+					if (window.filter0) window.filter0.content[0].content.value = values
+					else window.filter0 = {
+				  	op: "and",
+			        content: [
+			            {
+			                op: "in",
+			                content: {
+			                    field: "cases.primary_site",
+			                    value: values
+			                }
+			            }
+			        ]
+			    }
+				} else {
+					window.filter0 = null
+				}
+
+				if (window.updateState) window.updateState({})
 			}
 		</script>
 	</head>
@@ -41,9 +42,9 @@
 		<div style='margin: 10px; padding:10px'>
 			<h2>Primary Site</h2>
 			<div id='primarySiteOptions'>
-				<label><input type='checkbox' value='brain'  onchange='setPrimarySite()'/><span> Brain</span></label>
-				<label><input type='checkbox' value='bronchus and lung' onchange='setPrimarySite()'/><span> Lung</span></label>
-				<label><input type='checkbox' value='pancreas' onchange='setPrimarySite()' /><span> Pancreas</span></label>
+				<label><input type='checkbox' value='brain'  onchange='setPrimarySite()' checked /><span> Brain</span></label>
+				<label><input type='checkbox' value='bronchus and lung' onchange='setPrimarySite()' checked /><span> Lung</span></label>
+				<label><input type='checkbox' value='pancreas' onchange='setPrimarySite()' checked /><span> Pancreas</span></label>
 			</div>
 		</div>
 
@@ -51,7 +52,7 @@
 		<div id="bbb" style="margin: 10px"></div>
 <script type='module'>
 import { ProteinPaintWrapper } from './PpReact.js'
-
+setPrimarySite()
 ReactDOM.render(
 	React.createElement(ProteinPaintWrapper, {track: 'lolliplot', }, null),
 	document.getElementById('aaa')
