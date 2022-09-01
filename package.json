@@ -12,11 +12,14 @@
     "rust"
   ],
   "scripts": {
-    "reset": "npm install --workspaces",
+    "reset": "npm install",
     "predev": "if [[ -d ./client ]]; then node ./client/test/import-specs.js name=? && rm -f ../public/bin/*proteinpaint.js; fi",
-    "dev": "webpack --config=./webpack.config.js --env NODE_ENV=development --watch --color",
+    "dev": "webpack --config=./webpack.config.js --env NODE_ENV=development --watch --progress --color",
     "start": "./build/dev/resetBundles.sh && nodemon server/bin.js --watch serverconfig.json --watch ./server/server*.js* --watch server/genome --watch server/dataset",
-    "server": "npm start",
+    "dev1": "trap 'kill %1' INT; webpack --config=./webpack.config.js --env NODE_ENV=development --watch --color & npm start",
+    "server": "trap 'kill %1' INT; npm run dev -w @stjude/proteinpaint-server & npm start",
+    "client": "npm run dev -w @stjude/proteinpaint-client",
+    "docker": "./build/dev/run.sh",
     "ppr": "./build/deploy.sh ppr",
     "prp1": "./build/deploy.sh prp1",
     "testws": "npm test --workspaces",

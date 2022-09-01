@@ -18,6 +18,10 @@ TPDIR=$(node ./build/getConfigProp.js tpmasterdir)
 echo "serverconfig.tpmasterdir='$TPDIR'"
 PPDIR=$(pwd)
 CONTAPP=/home/root/pp/app/
+SCRIPT=$2
+if [[ "$SCRIPT" == "" ]]; then
+	SCRIPT=dev1
+fi
 
 # ensure this file exists, for a new PP repo clone 
 touch client/test/internals.js
@@ -56,6 +60,7 @@ docker run \
 	--mount type=bind,source=$PPDIR/client/package.json,target=$CONTAPP/client/package.json,readonly \
 	--mount type=bind,source=$PPDIR/build/dev,target=$CONTAPP/build/dev,readonly \
 	--publish 3000:3000 \
+	-e script=$SCRIPT \
 	-e PP_MODE=container-prod \
 	ppdev:latest
 
