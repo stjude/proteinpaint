@@ -135,7 +135,12 @@ function makeInfoSection(div) {
 		<li>Position</li>
 		<li>Strand</li>
 		</ol>
-		Separate the two genes by a double colon (::). Example: PAX5,chr9,37002646,-::JAK2,chr9,5081726,+ <br>`)
+		Separate the two genes by a double colon (::). <br><br>
+		Example: <br>
+		<p style="margin-left: 10px">
+		PAX5,chr9,37002646,-::JAK2,chr9,5081726,+<br>
+		ZCCHC7,chr9,37257786,-::PAX5,chr9,37024824,-<br>
+		BCR,chr22,23524427,+::ABL1,chr9,133729449,+<p>`)
 }
 
 function makeSubmitResult(obj, div, runpp_arg) {
@@ -268,14 +273,14 @@ function makeFusionTabs(div, runpp_arg, gene1, gene2) {
 								name: gene2[0],
 								custom_variants: [
 									{
-										gene1: gene2[0],
-										chr1: gene2[1],
-										pos1: parseInt(gene2[2]),
-										strand1: gene2[3],
-										gene2: gene1[0],
-										chr2: gene1[1],
-										pos2: parseInt(gene1[2]),
-										strand2: gene1[3],
+										gene1: gene1[0],
+										chr1: gene1[1],
+										pos1: parseInt(gene1[2]),
+										strand1: gene1[3],
+										gene2: gene2[0],
+										chr2: gene2[1],
+										pos2: parseInt(gene2[2]),
+										strand2: gene2[3],
 										dt: 2,
 										class: 'Fuserna'
 									}
