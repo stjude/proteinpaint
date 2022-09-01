@@ -276,7 +276,7 @@ function setInteractivity(self) {
 		for (const tw of self.config.terms) {
 			if (tw.term.type == 'condition') {
 				header.push(tw.term.name + `(Event=Grades ${tw.q.breaks[0]}-5)`)
-				header.push(tw.term.name + ':Age at event')
+				header.push(tw.term.name + '(Age at event)')
 			} else {
 				header.push(tw.term.name)
 			}
@@ -292,7 +292,8 @@ function setInteractivity(self) {
 						row.push(s[tw.$id].key == 0 ? 'No' : 'Yes')
 						row.push(s[tw.$id].value)
 					} else {
-						row.push(s[tw.$id].key) // NOTE: this value may need to be renamed, see barchart legend series names
+						const v = tw.term.values[s[tw.$id].key]
+						row.push(v.label || v.key)
 					}
 				}
 			}
