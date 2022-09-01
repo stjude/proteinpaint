@@ -91,8 +91,9 @@ class TdbStore {
 			await this.setTermfilter()
 			// vocab.state.termfilter may be used in getPlotConfig() when rehydrating terms,
 			// so manually set it here
-			this.app.vocabApi.main({
-				termfilter: JSON.parse(JSON.stringify(this.state.termfilter))
+			await this.app.vocabApi.main({
+				termfilter: JSON.parse(JSON.stringify(this.state.termfilter)),
+				termdbConfig: this.state.termdbConfig
 			})
 
 			for (const [i, savedPlot] of this.state.plots.entries()) {
@@ -351,7 +352,16 @@ function validatePlot(p, vocabApi) {
 		if (p.chartType == 'regression') {
 			validateRegressionPlot(p, vocabApi)
 		} else if (p.chartType == 'matrix') {
-			// todo: validateMatrixPlot(p, vocabApi)
+			if (!p.termgroups) throw `plot error: missing the config.termgroups for '${p.chartType}'`
+			if (!Array.isArray(p.termgroups)) `plot error: config.termgroups must be an array '${p.chartType}'`
+			if (!p.samplegroups) throw `plot error: missing the config.samplegroups for '${p.chartType}'`
+			if (!Array.isArray(p.samplegroups)) `plot error: config.samplegroups must be an array '${p.chartType}'`
+		} else if (p.chartType == 'dataDownload') {
+			if (!p.terms) throw `plot error: missing the config.terms for '${p.chartType}'`
+			if (!Array.isArray(p.terms)) `plot error: config.terms must be an array '${p.chartType}'`
+			for (const tw of p.terms) {
+				validatePlotTerm(tw, vocabApi)
+			}
 		} else {
 			validateGenericPlot(p, vocabApi)
 		}

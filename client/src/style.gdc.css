@@ -5,15 +5,3 @@
     border-radius: 4px;
 }
 
-.sjpp-output-sandbox-header, .sjpp-output-sandbox-close-bt
-{
-    background-color: #0071a9 !important;
-    color:white;
-    font-weight: bold;
-
-}
-
-.sjpp-output-sandbox-content
-{
-    background-color: #c9e3ee !important;
-}

@@ -112,10 +112,7 @@ const info_fields = [
 		isfilter: true,
 		isactivefilter: true,
 		iscategorical: true,
-		values: [
-			{ key: 'Good', label: 'Good' },
-			{ key: 'Bad', label: 'Bad', ishidden: true }
-		]
+		values: [{ key: 'Good', label: 'Good' }, { key: 'Bad', label: 'Bad', ishidden: true }]
 	},
 	{
 		key: 'AF',
@@ -616,6 +613,8 @@ module.exports = {
 	},*/
 
 	cohort: {
+		allowedChartTypes: ['barchart', 'cuminc', 'survival', 'regression'],
+
 		db: {
 			file: 'files/hg38/sjlife/clinical/db'
 		},

@@ -1,12 +1,13 @@
 import { getAppInit } from '../rx'
 import { select } from 'd3-selection'
 import { storeInit } from './store'
-import { vocabInit } from '../termdb/vocabulary'
+import { vocabInit } from '#termdb/vocabulary'
 import { navInit } from './nav'
 import { plotInit } from './plot'
-import { sayerror } from '../dom/error'
-import { Menu } from '../dom/menu'
-import { newSandboxDiv } from '../dom/sandbox'
+import { sayerror } from '#dom/error'
+import { Menu } from '#dom/menu'
+import { newSandboxDiv } from '#dom/sandbox'
+import { dofetch3 } from '#common/dofetch'
 
 /*
 opts{}
@@ -25,6 +26,10 @@ opts{}
 
 class MassApp {
 	constructor(opts) {
+		if (opts.addLoginCallback) {
+			opts.addLoginCallback(() => this.api.dispatch({ type: 'app_refresh' }))
+		}
+
 		this.type = 'app'
 		// this will create divs in the correct order
 		this.dom = {
@@ -48,7 +53,6 @@ class MassApp {
 		try {
 			api.tip = new Menu({ padding: '5px' })
 			api.printError = e => this.printError(e)
-
 			const vocab = this.opts.state.vocab
 
 			// TODO: only pass state.genome, dslabel to vocabInit
@@ -62,7 +66,8 @@ class MassApp {
 						terms: vocab?.terms
 					}
 				},
-				fetchOpts: this.opts.fetchOpts
+				fetchOpts: this.opts.fetchOpts,
+				getDatasetAccessToken: this.opts.getDatasetAccessToken
 			})
 
 			// the vocabApi's vocab may be reprocessed from the original input
@@ -94,7 +99,7 @@ class MassApp {
 	}
 
 	async main() {
-		this.api.vocabApi.main()
+		await this.api.vocabApi.main()
 
 		const newPlots = {}
 		let sandbox

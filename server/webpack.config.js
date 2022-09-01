@@ -7,6 +7,9 @@ let babelrc
 try {
 	babelrc = fs.readFileSync(path.join(__dirname, '.babelrc'))
 	babelrc = JSON.parse(babelrc)
+	if (process.env.PP_MODE?.startsWith('container')) {
+		babelrc.presets[0][1].targets.node = 16
+	}
 } catch (e) {
 	throw e
 }
@@ -27,7 +30,7 @@ module.exports = function(env = {}) {
 		externals: [
 			nodeExternals({
 				allowlist: [/\/src\//],
-				additionalModuleDirs: [path.resolve(__dirname, '../node_modules')],
+				additionalModuleDirs: [path.resolve(__dirname, '../node_modules')]
 			})
 		],
 		externalsPresets: {
@@ -60,6 +63,10 @@ module.exports = function(env = {}) {
 		// devtool: 'source-map' is slowest to build/rebuild, but
 		// line numbers in stack traces are accurate
 		//
-		devtool: env.devtool ? env.devtool : env.NODE_ENV == 'development' ? 'source-map' : false
+		devtool: env.devtool ? env.devtool : env.NODE_ENV == 'development' ? 'source-map' : false,
+		infrastructureLogging: {
+			appendOnly: false,
+			level: 'info'
+		}
 	}
 }

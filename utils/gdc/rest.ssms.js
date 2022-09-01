@@ -1,30 +1,28 @@
-const got = require('got')
-// gene=AKT1 isoform=ENST00000407796 case_id=0772cdbe-8b0d-452b-8df1-bd70d1306363
-// corresponds to isoform2ssm_getvariant{}
+/*
+this script is hosted at https://proteinpaint.stjude.org/GDC/rest.ssms.js
 
-/* following code should be shared with rest.ssm_occurrences.js or more
-const [p, filters] = arg2filter(process.argv)
+examples:
+
+node rest.ssms.js # uses AKT1 by default
+
+node rest.ssms.js token=<yourGdcToken>
+
+node rest.ssms.js gene=AKT1
+
+node rest.ssms.js isoform=ENST00000407796
+
+node rest.ssms.js case_id=0772cdbe-8b0d-452b-8df1-bd70d1306363
+
+node rest.ssms.js filter='{ "op": "and", "content": [ { "op": "in", "content": { "field": "cases.primary_site", "value": [ "breast", "bronchus and lung" ] } } ] }'
+
+corresponds to isoform2ssm_getvariant{} in gdc.hg38.js
 */
 
-const p = {}
-for (let i = 2; i < process.argv.length; i++) {
-	const [k, v] = process.argv[i].split('=')
-	p[k] = v
-}
-if (!p.gene && !p.isoform) {
-	// if missing gene/isoform, use AKT1
-	p.isoform = 'ENST00000407796'
-}
+const got = require('got')
 
-const filters = {
-	op: 'and',
-	content: []
-}
-if (p.isoform)
-	filters.content.push({ op: '=', content: { field: 'consequence.transcript.transcript_id', value: [p.isoform] } })
-if (p.gene) filters.content.push({ op: '=', content: { field: 'consequence.transcript.gene.symbol', value: [p.gene] } })
-if (p.set_id) filters.content.push({ op: 'in', content: { field: 'cases.case_id', value: [p.set_id] } })
-if (p.case_id) filters.content.push({ op: 'in', content: { field: 'cases.case_id', value: [p.case_id] } })
+const p = get_parameter()
+
+const filters = get_filters(p)
 
 const fields = [
 	'ssm_id',
@@ -82,3 +80,45 @@ const fields = [
 		console.log(error)
 	}
 })()
+
+/////////////////// helpers
+
+function get_parameter() {
+	const p = {}
+	for (let i = 2; i < process.argv.length; i++) {
+		const [k, v] = process.argv[i].split('=')
+		p[k] = v
+	}
+	if (!p.gene && !p.isoform) {
+		// if missing gene/isoform, use AKT1
+		p.isoform = 'ENST00000407796'
+	}
+	return p
+}
+
+function get_filters(p) {
+	const filters = {
+		op: 'and',
+		content: []
+	}
+
+	if (p.isoform) {
+		filters.content.push({ op: '=', content: { field: 'consequence.transcript.transcript_id', value: [p.isoform] } })
+	}
+
+	if (p.gene) {
+		filters.content.push({ op: '=', content: { field: 'consequence.transcript.gene.symbol', value: [p.gene] } })
+	}
+
+	if (p.case_id) {
+		filters.content.push({ op: 'in', content: { field: 'cases.case_id', value: [p.case_id] } })
+	}
+
+	if (p.filter) {
+		const f = JSON.parse(p.filter)
+		filters.content.push(f)
+	}
+
+	//if (p.set_id) filters.content.push({ op: 'in', content: { field: 'cases.case_id', value: [p.set_id] } })
+	return filters
+}

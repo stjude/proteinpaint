@@ -441,7 +441,7 @@ function setInteractivity(self) {
 			// {isDictionary, termtype, text, html}
 			const item = self.dom.tip.d
 				.append('div')
-				.attr('class', 'sja_menuoption')
+				.attr('class', 'sja_menuoption sja_sharp_border')
 				.on('click', async () => {
 					self.dom.tip.clear()
 					if (option.isDictionary) {
@@ -524,7 +524,7 @@ function setInteractivity(self) {
 			.data(options)
 			.enter()
 			.append('div')
-			.attr('class', 'sja_menuoption')
+			.attr('class', 'sja_menuoption sja_sharp_border')
 			.style('display', self.opts.menuLayout == 'horizontal' ? 'inline-block' : 'block')
 			.text(d => d.label)
 			.on('click', d => {

@@ -85,7 +85,7 @@ async function runTests(data, test) {
 			for (const call of ppcalls) {
 				if (typeof call.runargs !== 'object') {
 					test.fail('runargs is not object for ' + call.label)
-				} else if (!call.is_ui) {
+				} else if (!call.isUi) {
 					const tracks = call.runargs.tracks || []
 					// for tracks, use callback tests only if there is one track
 					// otherwise, use timed tests

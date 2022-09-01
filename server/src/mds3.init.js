@@ -1,3 +1,5 @@
+import { clinsig } from '../dataset/clinvar'
+
 const gdc = require('./mds3.gdc')
 const fs = require('fs')
 const path = require('path')
@@ -52,29 +54,30 @@ export function client_copy(ds) {
 	/* make client copy of the ds
 	to be stored at genome.datasets
 */
-	const ds2 = {
+	const ds2_client = {
 		isMds3: true,
-		label: ds.label,
-		queries: copy_queries(ds)
+		label: ds.label
 	}
 
+	ds2_client.queries = copy_queries(ds, ds2_client)
+
 	if (ds.termdb) {
-		ds2.termdb = {}
+		ds2_client.termdb = {}
 		// if using flat list of terms, do not send terms[] to client
 		// as this is official ds, and client will create vocabApi
 		// to query /termdb server route with standard methods
 		if (ds.termdb.allowCaseDetails) {
-			ds2.termdb.allowCaseDetails = {
+			ds2_client.termdb.allowCaseDetails = {
 				sample_id_key: ds.termdb.allowCaseDetails.sample_id_key // optional key
 			}
 		}
 	}
 	if (ds.queries.snvindel) {
-		ds2.has_skewer = true
+		ds2_client.has_skewer = true
 	}
 	if (ds.variant2samples) {
 		const v = ds.variant2samples
-		ds2.variant2samples = {
+		ds2_client.variant2samples = {
 			sunburst_ids: v.sunburst_ids,
 			termidlst: v.termidlst,
 			type_samples: v.type_samples,
@@ -84,7 +87,7 @@ export function client_copy(ds) {
 			variantkey: v.variantkey
 		}
 	}
-	return ds2
+	return ds2_client
 }
 
 async function validate_termdb(ds) {
@@ -236,15 +239,28 @@ function validate_variant2samples(ds) {
 	}
 }
 
-function copy_queries(ds) {
+function copy_queries(ds, dscopy) {
 	const copy = {}
 	if (ds.queries.snvindel) {
 		copy.snvindel = {
 			forTrack: ds.queries.snvindel.forTrack,
-			url: ds.queries.snvindel.url
+			variantUrl: ds.queries.snvindel.variantUrl
 		}
+
 		if (ds.queries.snvindel.m2csq) {
 			copy.snvindel.m2csq = { by: ds.queries.snvindel.m2csq.by }
+		}
+
+		if (ds.queries.snvindel?.byrange?.bcffile) {
+			// the query is using a bcf file
+			// create the bcf{} object on dscopy
+			dscopy.bcf = {}
+
+			if (ds.queries.snvindel.byrange?._tk?.info) {
+				// this bcf file has info fields, attach to copy.bcf{}
+				// dataset may specify if to withhold
+				dscopy.bcf.info = ds.queries.snvindel.byrange._tk.info
+			}
 		}
 	}
 	// new query
@@ -337,7 +353,7 @@ this is required for gdc dataset
 so that gencode-annotated stuff can show under a refseq name
 */
 function may_add_refseq2ensembl(ds, genome) {
-	if (!genome.genedb.refseq2ensembl) return
+	if (!genome.genedb.hasTable_refseq2ensembl) return
 	ds.refseq2ensembl_query = genome.genedb.db.prepare('select ensembl from refseq2ensembl where refseq=?')
 }
 
@@ -383,6 +399,7 @@ export async function snvindelByRangeGetter_bcf(ds, genome) {
 	*/
 
 	await utils.init_one_vcf(q._tk, genome, true) // "true" to indicate file is bcf but not vcf
+	// q._tk{} is initiated
 
 	if (q._tk.samples.length > 0 && !q._tk.format) throw 'bcf file has samples but no FORMAT'
 	if (q._tk.format && q._tk.samples.length == 0) throw 'bcf file has FORMAT but no samples'
@@ -392,6 +409,36 @@ export async function snvindelByRangeGetter_bcf(ds, genome) {
 				// may not need with bcftools
 				q._tk.format.isGT = true
 			}
+		}
+	}
+
+	if (q._tk.info) {
+		if (q.infoFields) {
+			/* q._tk.info{} is the raw INFO fields parsed from vcf file
+			q.infoFields[] is the list of fields with special configuration
+			pass these configurations to q._tk.info{}
+			*/
+			for (const field of q.infoFields) {
+				// field = {name,key,categories}
+				if (!field.key) throw '.key missing from one of snvindel.byrange.infoFields[]'
+				if (!field.name) field.name = field.key
+				const _field = q._tk.info[field.key]
+				if (!_field) throw 'invalid key from one of snvindel.byrange.infoFields[]'
+
+				// transfer configurations from field{} to _field{}
+				_field.categories = field.categories
+				_field.name = field.name
+				_field.separator = field.separator
+			}
+			delete q.infoFields
+		}
+		if (ds.queries.snvindel.infoUrl) {
+			for (const i of ds.queries.snvindel.infoUrl) {
+				const _field = q._tk.info[i.key]
+				if (!_field) throw 'invalid key from one of snvindel.infoUrl[]'
+				_field.urlBase = i.base
+			}
+			delete ds.queries.snvindel.infoUrl
 		}
 	}
 
@@ -434,12 +481,21 @@ export async function snvindelByRangeGetter_bcf(ds, genome) {
 
 				const m0 = {} // temp obj, modified by compute_mclass()
 				compute_mclass(q._tk, refallele, altalleles, m0, infoStr, id, param.isoform)
+				// m0.info{} is set
+
 				// make a m{} for every alt allele
 				for (const alt in m0.alt2csq) {
 					const m = m0.alt2csq[alt]
 					m.chr = (q._tk.nochr ? 'chr' : '') + chr
 					m.pos = pos - 1 // bcf pos is 1-based, return 0-based
 					m.ssm_id = [m.chr, m.pos, m.ref, m.alt].join(ssmIdFieldsSeparator)
+
+					/* QUICK FIX
+					simply attach all info fields to m{}
+					TODO as m{} is about one single ALT allele, may need to distinguish info fields that are about this allele
+					TODO official ds may decide only to reveal subset of info fields
+					*/
+					m.info = m0.info
 
 					if (q._tk.samples && q._tk.samples.length) {
 						/* vcf file has sample, must find out samples harboring this variant

@@ -25,7 +25,7 @@ export async function get_incidence(q, ds) {
 			const event = d.key1
 			const series = d.key2
 			// do not include data when years_to_event < 0
-			if (time < 0) continue
+			if (time < 0) continue //TODO: this should be handled in sql
 			if (!(chartId in byChartSeries)) byChartSeries[chartId] = []
 			byChartSeries[chartId].push({ time, event, series })
 		}
@@ -37,49 +37,66 @@ export async function get_incidence(q, ds) {
 			startTimes: {}
 		}
 
-		// filter data prior to cumulative incidence analysis
+		/*
+		filter data prior to cumulative incidence analysis
+
+		skip series that do not meet sample size or event count thresholds
+			- sample size threshold is specified by user
+			- event count threshold is 0 (R will throw error when no series has an event)
+		*/
 		const fdata = {} // input for cuminc analysis {chartId: [{time, event, series}]}
 		for (const chartId in byChartSeries) {
 			if (!byChartSeries[chartId].length) continue
-
-			// skip series that do not meet sample size threshold
-			// compute sample sizes
-			const samplesizes = new Map() // series => samplesize
+			// compute sample sizes and even counts for each series
+			const series2counts = new Map() // series => {samplesize, eventcnt}
 			for (const sample of byChartSeries[chartId]) {
-				let samplesize = samplesizes.get(sample.series)
-				if (samplesize) {
-					samplesize++
-					samplesizes.set(sample.series, samplesize)
+				let counts = series2counts.get(sample.series)
+				if (counts) {
+					counts.samplesize++
+					if (sample.event == 1) counts.eventcnt++
+					series2counts.set(sample.series, counts)
 				} else {
-					samplesizes.set(sample.series, 1)
+					counts = {
+						samplesize: 1,
+						eventcnt: sample.event == 1 ? 1 : 0
+					}
+					series2counts.set(sample.series, counts)
 				}
 			}
 
-			// flag series that do not meet the sample size threshold
-			const toSkip = new Set()
-			for (const [series, samplesize] of samplesizes) {
-				if (samplesize < q.minSampleSize) {
-					toSkip.add(series)
+			// flag series that do not meet the sample size or event count thresholds
+			const lowSampleSize = new Set()
+			const lowEventCnt = new Set()
+			for (const [series, counts] of series2counts) {
+				if (counts.samplesize < q.minSampleSize) {
+					lowSampleSize.add(series)
+				}
+				if (counts.eventcnt === 0) {
+					lowEventCnt.add(series)
 				}
 			}
 
 			// skip any flagged series
-			if (toSkip.size > 0) {
-				fdata[chartId] = byChartSeries[chartId].filter(sample => !toSkip.has(sample.series))
-				// store the skipped series
-				if (!final_data.skippedSeries) final_data.skippedSeries = {}
-				final_data.skippedSeries[chartId] = [...toSkip]
-				if (fdata[chartId].length === 0) {
-					// all series in this chart have been skipped
-					// therefore this chart will be skipped
-					delete fdata[chartId]
-					if (!final_data.skippedCharts) final_data.skippedCharts = []
-					final_data.skippedCharts.push(chartId)
-					continue
-				}
-			} else {
-				// no series need to be skipped
-				fdata[chartId] = byChartSeries[chartId]
+			fdata[chartId] = byChartSeries[chartId].filter(
+				sample => !lowSampleSize.has(sample.series) && !lowEventCnt.has(sample.series)
+			)
+
+			// store the skipped series
+			if (lowSampleSize.size) {
+				if (!final_data.lowSampleSize) final_data.lowSampleSize = {}
+				final_data.lowSampleSize[chartId] = [...lowSampleSize]
+			}
+			if (lowEventCnt.size) {
+				if (!final_data.lowEventCnt) final_data.lowEventCnt = {}
+				final_data.lowEventCnt[chartId] = [...lowEventCnt]
+			}
+
+			// skip the chart if all series have been skipped
+			if (fdata[chartId].length === 0) {
+				delete fdata[chartId]
+				if (!final_data.skippedCharts) final_data.skippedCharts = []
+				final_data.skippedCharts.push(chartId)
+				continue
 			}
 		}
 

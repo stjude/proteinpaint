@@ -1,0 +1,137 @@
+include:
+  - project: nci-gdc/gitlab-templates
+    ref: master
+    file:
+      - templates/global/full.yaml
+
+stages:
+  - test
+  - build
+
+image: docker.osdc.io/node:12
+variables:
+  npm_config_registry: https://nexus.osdc.io/repository/npm-all/
+  DOCKER_BUILDKIT: 1
+  PP_CUSTOMER: gdc
+  NPM_RELEASE_REGISTRY: https://nexus.osdc.io/repository/npm-local/
+
+client-test:
+  allow_failure: true
+  stage: test
+  before_script:
+    - npm install -g npm@7
+    - npm run reset
+  script:
+    - cd client/
+    - npm install
+    - npm run pretest
+    - pwd
+    - ls -lsha ../public
+    - npm run test
+
+server:
+  allow_failure: true
+  stage: test
+  variables:
+    NODE_ENV: development
+  before_script:
+    - cd server
+    - npm install
+  script:
+    - npm run dev < /dev/null &> dev.log & # generates the server.js bundle
+    - npm start < /dev/null &> start.log & # starts the server
+    - npm test # tests the server code
+  artifacts:
+    expire_in: 1 week
+    when: always
+    paths:
+      - /root/.npm/_logs/
+      - dev.log
+      - start.log
+
+client:
+  allow_failure: true
+  stage: test
+  variables:
+    NODE_ENV: development
+  before_script:
+    - cd client
+    - npm install
+  script:
+    - npm run dev < /dev/null &> dev.log & # generates bundles to public/bin
+    - npm test # tests the client code
+    - npm run browser < /dev/null &> browser.log & # bundles the front-end spec files for use at localhost:[port]/testrun.html
+    - npm run gdc # runs the gdc tests
+  artifacts:
+    expire_in: 1 week
+    when: always
+    paths:
+      - /root/.npm/_logs/
+      - dev.log
+      - browser.log
+
+npm-build:
+  allow_failure: true
+  stage: test
+  variables:
+    npm_config__auth: ${NEXUS_NPM_AUTHTOKEN}
+  before_script:
+    - npm install -g npm@7
+    - npm run reset
+  script:
+    - cd client/
+    - npx cross-env npm -D install
+    - npx rollup -c ./rollup.config.js
+    - echo "registry = ${NPM_RELEASE_REGISTRY}_auth=${NEXUS_NPM_AUTHTOKEN}" > .npmrc
+    - npm publish || ls -lsha
+  artifacts:
+    expire_in: 1 week
+    when: always
+    paths:
+      - /root/.npm/_logs/
+      - "@stjude/proteinpaint-client-*.tgz"
+
+Backend Build - latest:
+  only:
+    - master
+  stage: build
+  services:
+    - docker:${DOCKER_VERSION}-dind
+  tags:
+    - dind
+  image: docker:${DOCKER_VERSION}-dind
+  before_script:
+    - apk add git bash
+  script:
+    - - bash ./build/gdc/build.sh -r HEAD -d "${DOCKER_RELEASE_REGISTRY}/ncigdc/${CI_PROJECT_NAME}:latest" -p --
+      - docker push "${DOCKER_RELEASE_REGISTRY}/ncigdc/${CI_PROJECT_NAME}:latest"
+
+Backend Build - hash:
+  stage: build
+  services:
+    - docker:${DOCKER_VERSION}-dind
+  tags:
+    - dind
+  image: docker:${DOCKER_VERSION}-dind
+  before_script:
+    - apk add git bash
+  script:
+    - export CLEAN_BRANCH_NAME=${CI_COMMIT_BRANCH/\//_}
+    - export LOWERCASE_BRANCH_NAME="$(bash -c 'tr "[:upper:]" "[:lower:]" <<< "$CLEAN_BRANCH_NAME"')"
+    - - bash ./build/gdc/build.sh -r HEAD -d "${DOCKER_RELEASE_REGISTRY}/ncigdc/${CI_PROJECT_NAME}:${LOWERCASE_BRANCH_NAME}-${CI_COMMIT_SHORT_SHA}" -x -p --
+      - docker push "${DOCKER_RELEASE_REGISTRY}/ncigdc/${CI_PROJECT_NAME}:${LOWERCASE_BRANCH_NAME}-${CI_COMMIT_SHORT_SHA}"
+
+Backend Build - tag:
+  stage: build
+  only:
+    - tags
+  services:
+    - docker:${DOCKER_VERSION}-dind
+  tags:
+    - dind
+  image: docker:${DOCKER_VERSION}-dind
+  before_script:
+    - apk add git bash
+  script:
+    - - bash ./build/gdc/build.sh -r HEAD -d "${DOCKER_RELEASE_REGISTRY}/ncigdc/${CI_PROJECT_NAME}:${CI_COMMIT_TAG}" -p --
+      - docker push "${DOCKER_RELEASE_REGISTRY}/ncigdc/${CI_PROJECT_NAME}:${CI_COMMIT_TAG}"

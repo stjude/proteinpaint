@@ -80,6 +80,7 @@ p4/config.json
 p4/public/dev.html
 .vscode/launch.json
 .vscode/settings.json
+.idea/
 
 *.key
 *.pem
@@ -88,3 +89,4 @@ p4/public/dev.html
 *.crt
 .ssl
 .RData
+log.txt

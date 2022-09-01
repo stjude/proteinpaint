@@ -37,7 +37,7 @@ export function vocabInit(opts) {
 	}
 }
 
-class TermdbVocab {
+class Vocab {
 	constructor(opts) {
 		this.app = opts.app
 		this.opts = opts
@@ -54,19 +54,111 @@ class TermdbVocab {
 		this.missingCatValsByTermId = {}
 	}
 
-	main(stateOverride = null) {
+	async main(stateOverride = null) {
 		if (stateOverride) Object.assign(this.state, stateOverride)
-		else this.state = this.app ? this.app.getState() : this.opts.state
-		this.vocab = this.state.vocab
+		else this.state = this.app?.getState() || this.opts.state
+
+		// frontend vocab may replace the vocab object reference
+		if (this.state.vocab) this.vocab = this.state.vocab
+
+		// secured plots need to confirm that a verified token exists
+		await this.maySetVerifiedToken()
 	}
 
+	async maySetVerifiedToken() {
+		// strict true boolean value means no auth required
+		if (this.verifiedToken === true) return this.verifiedToken
+		const token = this.opts.getDatasetAccessToken?.()
+		if (this.verifedToken && token === this.verifiedToken) return this.verifiedToken
+		try {
+			const dslabel = this.state.dslabel
+			const auth = this.state.termdbConfig?.requiredAuth
+			if (!auth) {
+				this.verifiedToken = true
+				return
+			}
+			if (auth.type === 'jwt') {
+				if (!token) {
+					delete this.verifiedToken
+					return
+				}
+				const data = await dofetch3('/jwt-status', {
+					method: 'POST',
+					headers: {
+						[auth.headerKey]: token
+					},
+					body: {
+						dslabel,
+						embedder: location.hostname
+					}
+				})
+				// TODO: later may check against expiration time in response if included
+				this.verifiedToken = data.status === 'ok' && token
+			} else {
+				throw `unsupported requiredAuth='${auth.type}'`
+			}
+		} catch (e) {
+			throw e
+		}
+	}
+
+	hasVerifiedToken() {
+		return !!this.verifiedToken
+	}
+
+	cacheTermQ(term, q) {
+		// only save q with a user or automatically assigned name
+		if (!q.reuseId) throw `missing term q.reuseId for term.id='${term.id}'`
+		this.app.dispatch({
+			type: 'cache_termq',
+			termId: term.id,
+			q
+		})
+	}
+
+	async uncacheTermQ(term, q) {
+		await this.app.dispatch({
+			type: 'uncache_termq',
+			term,
+			q
+		})
+	}
+
+	getCustomTermQLst(term) {
+		if (term.id) {
+			const cache = this.state.reuse.customTermQ.byId[term.id] || {}
+			const qlst = Object.values(cache).map(q => JSON.parse(JSON.stringify(q)))
+			// find a non-conflicting reuseId for saving a new term.q
+			for (let i = qlst.length + 1; i < 1000; i++) {
+				const nextReuseId = `Setting #${i}`
+				if (!qlst.find(q => q.reuseId === nextReuseId)) {
+					qlst.nextReuseId = nextReuseId
+					break
+				}
+			}
+			// last resort to use a random reuseId that is harder to read
+			if (!qlst.nextReuseId) {
+				qlst.nextReuseId = btoa((+new Date()).toString()).slice(10, -3)
+			}
+			return qlst
+		} else return []
+	}
+}
+
+class TermdbVocab extends Vocab {
 	// migrated from termdb/store
 	async getTermdbConfig() {
 		const data = await dofetch3(
-			'termdb?genome=' + this.vocab.genome + '&dslabel=' + this.vocab.dslabel + '&gettermdbconfig=1'
+			'termdb?genome=' +
+				this.vocab.genome +
+				'&dslabel=' +
+				this.vocab.dslabel +
+				'&gettermdbconfig=1' +
+				`&embedder=${window.location.hostname}`
 		)
 		// note: in case of error such as missing dataset, supply empty object
-		return data.termdbConfig || {}
+		this.termdbConfig = data.termdbConfig || {}
+		return this.termdbConfig
 	}
 
 	// migrated from termdb/tree
@@ -90,6 +182,13 @@ class TermdbVocab {
 		}
 		const data = await dofetch3('/termdb?' + lst.join('&'), {}, this.opts.fetchOpts)
 		if (data.error) throw data.error
+		for (const term of data.lst) {
+			if (term.type == 'integer' || term.type == 'float') {
+				if (term.bins.rounding) term.bins.default.rounding = term.bins.rounding
+				if (term.bins.label_offset && !term.bins.default.label_offset)
+					term.bins.default.label_offset = term.bins.label_offset
+			}
+		}
 		return data
 	}
 
@@ -453,7 +552,7 @@ class TermdbVocab {
 		}
 		if (!dslabel) throw 'getterm: dslabel missing'
 		if (!genome) throw 'getterm: genome missing'
-		const data = await dofetch3(`termdb?dslabel=${dslabel}&genome=${genome}&gettermbyid=${termid}`)
+		const data = await dofetch3(`termdb?dslabel=${dslabel}&genome=${genome}&gettermbyid=${encodeURIComponent(termid)}`)
 		if (data.error) throw 'getterm: ' + data.error
 		if (!data.term) throw 'no term found for ' + termid
 		if (data.term.type == 'categorical' && !data.term.values && !data.term.groupsetting?.inuse) {
@@ -603,13 +702,10 @@ class TermdbVocab {
 													for specifying value order, colors, etc.
 	*/
 	async getAnnotatedSampleData(opts) {
-		const init = {
-			body: {
-				for: 'matrix',
-				genome: this.vocab.genome,
-				dslabel: this.vocab.dslabel
-			}
-		}
+		// may check against required auth credentials for the server route
+		const auth = this.termdbConfig.requiredAuth
+		if (auth && !this.verifiedToken) throw `requires login for this data`
+		const headers = auth ? { [auth.headerKey]: this.verifiedToken } : {}
 
 		const filter = getNormalRoot(opts.filter)
 		const isNewFilter = !deepEqual(this.currAnnoData.lastFilter, filter)
@@ -632,6 +728,7 @@ class TermdbVocab {
 		while (termsToUpdate.length) {
 			const copies = this.getCopiesToUpdate(termsToUpdate)
 			const init = {
+				headers,
 				body: {
 					for: 'matrix',
 					genome: this.vocab.genome,
@@ -640,6 +737,8 @@ class TermdbVocab {
 					filter
 				}
 			}
+
+			if (auth) init.body.embedder = window.location.hostname
 
 			promises.push(
 				dofetch3('termdb', init, this.opts.fetchOpts).then(data => {
@@ -757,44 +856,6 @@ class TermdbVocab {
 		]
 		return await dofetch3('termdb?' + args.join('&'))
 	}
-
-	cacheTermQ(term, q) {
-		// only save q with a user or automatically assigned name
-		if (!q.reuseId) throw `missing term q.reuseId for term.id='${term.id}'`
-		this.app.dispatch({
-			type: 'cache_termq',
-			termId: term.id,
-			q
-		})
-	}
-
-	async uncacheTermQ(term, q) {
-		await this.app.dispatch({
-			type: 'uncache_termq',
-			term,
-			q
-		})
-	}
-
-	getCustomTermQLst(term) {
-		if (term.id) {
-			const cache = this.state.reuse.customTermQ.byId[term.id] || {}
-			const qlst = Object.values(cache).map(q => JSON.parse(JSON.stringify(q)))
-			// find a non-conflicting reuseId for saving a new term.q
-			for (let i = qlst.length + 1; i < 1000; i++) {
-				const nextReuseId = `Setting #${i}`
-				if (!qlst.find(q => q.reuseId === nextReuseId)) {
-					qlst.nextReuseId = nextReuseId
-					break
-				}
-			}
-			// last resort to use a random reuseId that is harder to read
-			if (!qlst.nextReuseId) {
-				qlst.nextReuseId = btoa((+new Date()).toString()).slice(10, -3)
-			}
-			return qlst
-		} else return []
-	}
 }
 
 function q_to_param(q) {
@@ -807,22 +868,14 @@ function q_to_param(q) {
 // to-do
 // class Mds3Vocab {}
 
-class FrontendVocab {
+class FrontendVocab extends Vocab {
 	constructor(opts) {
-		this.app = opts.app
-		this.opts = opts
-		this.state = opts.state
-		this.vocab = opts.state.vocab
+		super(opts)
 		this.datarows = []
 		if (opts.state.vocab.sampleannotation) {
 			const anno = opts.state.vocab.sampleannotation
 			Object.keys(anno).forEach(sample => this.datarows.push({ sample, data: anno[sample] }))
 		}
-	}
-
-	main(vocab) {
-		if (vocab) Object.assign(this.vocab, vocab)
-		this.state = this.app ? this.app.getState() : {}
 	}
 
 	getTermdbConfig() {

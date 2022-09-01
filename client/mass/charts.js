@@ -31,8 +31,7 @@ class MassCharts {
 			appState.termdbConfig.selectCohort &&
 			appState.termdbConfig.selectCohort.values[appState.activeCohort]
 		const cohortStr = (activeCohort && [...activeCohort.keys].sort().join(',')) || ''
-		const chartTypes =
-			(appState.termdbConfig && JSON.parse(JSON.stringify(appState.termdbConfig.supportedChartTypes))) || {}
+		const chartTypes = JSON.parse(JSON.stringify(appState.termdbConfig?.supportedChartTypes || {}))
 
 		const state = {
 			vocab: appState.vocab,
@@ -226,6 +225,15 @@ function getChartTypeList(self) {
 			config: {
 				chartType: 'dictionary'
 			}
+		},
+		{
+			label: 'Data Download',
+			clickTo: self.prepPlot,
+			chartType: 'dataDownload',
+			config: {
+				chartType: 'dataDownload',
+				terms: []
+			}
 		}
 	]
 }
@@ -279,7 +287,7 @@ function setRenderers(self) {
 		for (const opt of chart.menuOptions) {
 			menuDiv
 				.append('div')
-				.attr('class', 'sja_menuoption')
+				.attr('class', 'sja_menuoption sja_sharp_border')
 				.text(opt.label)
 				.on('click', () => {
 					if (backBtn) {

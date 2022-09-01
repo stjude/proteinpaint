@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+<head>
+	 <meta charset="utf-8">
+</head>
+<body>
+
+<script src="bin/proteinpaint.js" charset="utf-8"></script>
+
+<noscript>This page requires JavaScript. Please enable it in your browser settings.</noscript>
+
+<div id=aaa style="margin:10px"></div>
+<div style='width: 100%; text-align: center'>
+	<button onclick='login(this)' style='font-size: 36px;'>Please Login</button>
+</div>
+
+<script>
+runproteinpaint({
+	holder: document.getElementById('aaa'),
+	parseurl:true,
+	nobox:1,
+	noheader:1,
+	getDatasetAccessToken: () => token,
+	addLoginCallback: callback => {
+		if (typeof callback !== 'function') throw `addLoginListener(callback) argument should be a function`
+		loginCallbacks.add(callback)
+	},
+	mass:{
+		state:{
+			genome:'hg38',
+			dslabel:'TermdbTest',
+			optionalApps: [],
+
+		}
+	}
+})
+
+
+const loginCallbacks = new Set()
+let token
+
+function login(btn) {
+	// token = 'dataset.Access.Token12345'
+	
+	// a valid token value is logged by the server for testing, see server/src/auth.js checkDsSecret()
+	// you will need to paste the logged value here, which is generated using your own 
+	// serverconfig.dsCredentials['TermdbTest'].secret
+	token = window.location.hash.slice(1)
+	btn.innerHTML = 'You are logged in'
+	// console.log(44, loginCallbacks)
+	for(const cb of loginCallbacks) cb()
+}
+</script>
+
+</body>
+</html>

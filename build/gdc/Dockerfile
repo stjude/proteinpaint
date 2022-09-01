@@ -9,6 +9,11 @@ FROM ppfull:$IMGVER AS ppimg
 # use the ppbase image which does NOT have 
 # the Xvfb-related libs and NPM devDependencies installed 
 FROM ppbase:$IMGVER as ppserver
+
+LABEL org.opencontainers.image.title="ncigdc/proteinpaint" \
+      org.opencontainers.image.description="GDCs copy of a genomics visualization tool for exploring a cohort's genotype and phenotype data" \
+      org.opencontainers.image.source="https://github.com/NCI-GDC/proteinpaint"
+
 COPY --from=ppimg /home/root/pp/app /home/root/pp/app
 
 WORKDIR /home/root/pp/app

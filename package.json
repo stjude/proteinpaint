@@ -1,5 +1,5 @@
 {
-  "version": "2.1.5",
+  "version": "2.2.0",
   "name": "@stjude/proteinpaint",
   "description": "a genomics visualization tool for exploring a cohort's genotype and phenotype data",
   "main": "server/main.js",
@@ -13,9 +13,9 @@
   ],
   "scripts": {
     "reset": "npm install --workspaces",
-    "predev": "node ./client/test/import-specs.js name=? && rm -f ../public/bin/*proteinpaint.js",
-    "dev": "webpack --config=./webpack.config.js --env NODE_ENV=development --watch --progress --color",
-    "start": "nodemon server/bin.js --watch serverconfig.json --watch ./server/server*.js* --watch server/genome --watch server/dataset",
+    "predev": "if [[ -d ./client ]]; then node ./client/test/import-specs.js name=? && rm -f ../public/bin/*proteinpaint.js; fi",
+    "dev": "webpack --config=./webpack.config.js --env NODE_ENV=development --watch --color",
+    "start": "./build/dev/resetBundles.sh && nodemon server/bin.js --watch serverconfig.json --watch ./server/server*.js* --watch server/genome --watch server/dataset",
     "server": "npm start",
     "ppr": "./build/deploy.sh ppr",
     "prp1": "./build/deploy.sh prp1",

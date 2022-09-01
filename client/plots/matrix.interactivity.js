@@ -13,16 +13,17 @@ export function setInteractivity(self) {
 			const rows = [
 				`<tr><td style='text-align: center'>Sample: ${d.sample}</td></tr>`,
 				`<tr><td style='text-align: center'>${d.term.name}</td></tr>`,
-				`<tr><td style='text-align: center; color: ${d.fill}'>${d.label}</td></tr>`
+				`<tr><td style='text-align: center; color: ${d.fill == '#fff' ? '' : d.fill}'>${d.label}</td></tr>`
 			]
 
-			if (d.term.type == 'geneVariant') {
-				if (d.value.label) rows.push(`<tr><td style='text-align: center'>${d.value.label}</td></tr>`)
-				if (d.value.alt)
-					rows.push(`<tr><td style='text-align: center'>ref=${d.value.ref}, alt=${d.value.alt}</td></tr>`)
-				if (d.value.isoform) rows.push(`<tr><td style='text-align: center'>Isoform: ${d.value.isoform}</td></tr>`)
-				if (d.value.mname) rows.push(`<tr><td style='text-align: center'>${d.value.mname}</td></tr>`)
-				if (d.value.chr) rows.push(`<tr><td style='text-align: center'>${d.value.chr}:${d.value.pos}</td></tr>`)
+			if (d.term.type == 'geneVariant' && d.value) {
+				const value = d.value
+				if (value.label && value.label !== d.label)
+					rows.push(`<tr><td style='text-align: center'>${value.label}</td></tr>`)
+				if (value.alt) rows.push(`<tr><td style='text-align: center'>ref=${value.ref}, alt=${value.alt}</td></tr>`)
+				if (value.isoform) rows.push(`<tr><td style='text-align: center'>Isoform: ${value.isoform}</td></tr>`)
+				if (value.mname) rows.push(`<tr><td style='text-align: center'>${value.mname}</td></tr>`)
+				if (value.chr) rows.push(`<tr><td style='text-align: center'>${value.chr}:${value.pos}</td></tr>`)
 			}
 
 			self.dom.menutop.selectAll('*').remove()
@@ -822,7 +823,7 @@ function setSampleGroupActions(self) {
 			.data(menuOptions)
 			.enter()
 			.append('div')
-			.attr('class', 'sja_menuoption')
+			.attr('class', 'sja_menuoption sja_sharp_border')
 			.style('display', 'inline-block')
 			.html(d => d.label)
 			.on('click', d => {
@@ -975,7 +976,7 @@ function setTermGroupActions(self) {
 			.data(menuOptions)
 			.enter()
 			.append('div')
-			.attr('class', 'sja_menuoption')
+			.attr('class', 'sja_menuoption sja_sharp_border')
 			.style('display', 'inline-block')
 			.html(d => d.label)
 			.on('click', d => {
