@@ -237,95 +237,93 @@ function may_update_infoFields(data, tk) {
 
 			// sort tally in descending order, each element is a two-ele array [category, variantCount]
 			const all_lst = [...category2variantCount].sort((i, j) => j[1] - i[1])
-			
+
 			const show_lst = [],
-			hidden_lst = []
+				hidden_lst = []
 
 			for (const [category, count] of all_lst) {
-				const clnsig_dict = {category, count}
-				if(tk.legend.bcfInfo[infoKey].hiddenvalues.has(category)){
+				const clnsig_dict = { category, count }
+				if (tk.legend.bcfInfo[infoKey].hiddenvalues.has(category)) {
 					hidden_lst.push(clnsig_dict)
 				} else {
 					show_lst.push(clnsig_dict)
 				}
 			}
 
-			show_lst.sort((i,j) => j.count - i.count)
-			hidden_lst.sort((i,j) => j.count - i.count)
+			show_lst.sort((i, j) => j.count - i.count)
+			hidden_lst.sort((i, j) => j.count - i.count)
 
-			for (const k of tk.legend.bcfInfo[infoKey].hiddenvalues){
-				if (!hidden_lst.find(i => i.k == k)){
-					hidden_lst.push({k})
+			for (const k of tk.legend.bcfInfo[infoKey].hiddenvalues) {
+				if (!hidden_lst.find(i => i.k == k)) {
+					hidden_lst.push({ k })
 				}
 			}
-			
-			for (const c of show_lst){
-				
+
+			for (const c of show_lst) {
 				const cell = tk.legend.bcfInfo[infoKey].holder
-				.append('div')
-				.attr('class', 'sja_clb')
-				.style('display', 'inline-block')
-				.on('click', () => { 
-					tk.legend.tip
-					.clear()
-					.d
 					.append('div')
-					.attr('class', 'sja_menuoption')
-					.text('Hide')
-					.on('click', () =>{
-						tk.legend.bcfInfo[infoKey].hiddenvalues.add(c.category)
-						tk.legend.tip.hide()
-						tk.uninitialized = true
-						tk.load()
-					})
-					
-					tk.legend.tip.d
-					.append('div')
-					.attr('class', 'sja_menuoption')
-					.text('Show only')
+					.attr('class', 'sja_clb')
+					.style('display', 'inline-block')
 					.on('click', () => {
-						for(const c2 of show_lst){
-							tk.legend.bcfInfo[infoKey].hiddenvalues.add(c2.category)
-						}
-					tk.legend.bcfInfo[infoKey].hiddenvalues.delete(c.category)
-					tk.legend.tip.hide()
-					tk.uninitialized = true
-					tk.load()
-					})
-					
-					if(hidden_lst.length){
-						tk.legend.tip.d
-							.append('div')
+						tk.legend.tip
+							.clear()
+							.d.append('div')
 							.attr('class', 'sja_menuoption')
-							.text('Show all')
+							.text('Hide')
 							.on('click', () => {
-								tk.legend.bcfInfo[infoKey].hiddenvalues.clear()
+								tk.legend.bcfInfo[infoKey].hiddenvalues.add(c.category)
 								tk.legend.tip.hide()
 								tk.uninitialized = true
 								tk.load()
 							})
-					}
-					
-					tk.legend.tip.d
+
+						tk.legend.tip.d
+							.append('div')
+							.attr('class', 'sja_menuoption')
+							.text('Show only')
+							.on('click', () => {
+								for (const c2 of show_lst) {
+									tk.legend.bcfInfo[infoKey].hiddenvalues.add(c2.category)
+								}
+								tk.legend.bcfInfo[infoKey].hiddenvalues.delete(c.category)
+								tk.legend.tip.hide()
+								tk.uninitialized = true
+								tk.load()
+							})
+
+						if (hidden_lst.length) {
+							tk.legend.tip.d
+								.append('div')
+								.attr('class', 'sja_menuoption')
+								.text('Show all')
+								.on('click', () => {
+									tk.legend.bcfInfo[infoKey].hiddenvalues.clear()
+									tk.legend.tip.hide()
+									tk.uninitialized = true
+									tk.load()
+								})
+						}
+
+						tk.legend.tip.d
+							.append('div')
+							.style('padding', '10px')
+							.style('font-size', '.8em')
+							.style('width', '150px')
+
+						tk.legend.tip.showunder(cell.node())
+					})
+
+				cell
 					.append('div')
-					.style('padding', '10px')
-					.style('font-size', '.8em')
-					.style('width', '150px')
-					
-					tk.legend.tip.showunder(cell.node())
-				})
-				
+					.style('display', 'inline-block')
+					.attr('class', 'sja_mcdot')
+					.style('background', tk.mds.bcf.info[infoKey].categories[c.category].color)
+					.html(c.count > 1 ? c.count : '&nbsp;')
 				cell
-				.append('div')
-				.style('display', 'inline-block')
-				.attr('class', 'sja_mcdot')
-				.style('background', tk.mds.bcf.info[infoKey].categories[c.category].color)
-				.html(c.count > 1 ? c.count : '&nbsp;')
-				cell
-				.append('div')
-				.style('display', 'inline-block')
-				.style('color', tk.mds.bcf.info[infoKey].categories[c.category].color)
-				.html('&nbsp;' + tk.mds.bcf.info[infoKey].categories[c.category].label)
+					.append('div')
+					.style('display', 'inline-block')
+					.style('color', tk.mds.bcf.info[infoKey].categories[c.category].color)
+					.html('&nbsp;' + tk.mds.bcf.info[infoKey].categories[c.category].label)
 			}
 
 			// hidden ones
@@ -337,11 +335,12 @@ function may_update_infoFields(data, tk) {
 					.attr('class', 'sja_clb')
 					.style('text-decoration', 'line-through')
 					.style('opacity', 0.3)
-					.text((c.count ? '(' + c.count + ')' : '') + (Number.isInteger(c.category) ? c.category: tk.mds.bcf.info[infoKey].categories[c.category].label))
+					.text(c.k)
+					//.text((c.count ? '(' + c.count + ')' : '') + (Number.isInteger(c.category) ? c.category: tk.mds.bcf.info[infoKey].categories[c.category].label))
 					.on('click', async () => {
 						if (loading) return
 						loading = true
-						tk.legend.bcfInfo[infoKey].hiddenvalues.delete(c.category)
+						tk.legend.bcfInfo[infoKey].hiddenvalues.delete(c.k)
 						d3event.target.innerHTML = 'Updating...'
 						tk.uninitialized = true
 						await tk.load()
