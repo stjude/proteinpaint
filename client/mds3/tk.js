@@ -116,6 +116,18 @@ function getParameter(tk, block) {
 	if (tk.legend.mclass.hiddenvalues.size) {
 		par.push('hiddenmclasslst=' + [...tk.legend.mclass.hiddenvalues].join(','))
 	}
+
+	if(tk.legend.bcfInfo){
+		const infoFilter = {}
+		for (const k in tk.legend.bcfInfo){
+			if(tk.legend.bcfInfo[k].hiddenvalues.size){
+				infoFilter[k] = [...tk.legend.bcfInfo[k].hiddenvalues]
+			}
+		}
+		if(Object.keys(infoFilter).length){
+			par.push('infoFilter=' +JSON.stringify(infoFilter))
+		}
+	}
 	return [par.join('&'), headers]
 }
 
