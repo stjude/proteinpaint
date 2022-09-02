@@ -182,7 +182,6 @@ function loadDictionary(scriptArg) {
 	if (scriptArg.has('phenotree')) {
 		console.log('parsing dictionary ...')
 		const out = parseDictionary(fs.readFileSync(scriptArg.get('phenotree'), { encoding: 'utf8' }))
-
 		terms = out.terms
 	} else {
 		terms = loadTermsFile(scriptArg)
@@ -428,6 +427,14 @@ function writeFiles(terms) {
 	{
 		const lines = []
 		for (const t of terms) {
+			if (t.parent_id == null) {
+				/* null for parent_id will fill the string "null" into the terms table
+				must delete
+				should fix parseDictionary so it won't assign null to root terms
+				*/
+				delete t.parent_id
+			}
+
 			const parent_id = t.parent_id || ''
 			delete t.parent_id
 			// FIXME terms parsed from phenotree currently does not include child_order
