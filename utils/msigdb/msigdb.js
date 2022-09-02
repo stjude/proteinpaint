@@ -1,10 +1,38 @@
 /*
-parse MSigDB XML file
-(at download page https://www.gsea-msigdb.org/gsea/downloads.jsp, find this file
-https://www.gsea-msigdb.org/gsea/msigdb/download_file.jsp?filePath=/msigdb/release/7.5.1/msigdb_v7.5.1.xml)
+manual steps of building a sqlite db to store MSigDB info:
+
+*** STEP 1 ***
+
+download MSigDB XML file, go to https://www.gsea-msigdb.org/gsea/downloads.jsp, find this file
+https://www.gsea-msigdb.org/gsea/msigdb/download_file.jsp?filePath=/msigdb/release/7.5.1/msigdb_v7.5.1.xml
+
+run script:
+$ cd ~/dev/proteinpaint/utils/msigdb/
+$ node msigdb.js path/to/msigdb_v7.5.1.xml
+
+following 2 files are made at current directory:
+1. "phenotree", as input to buildTermdb.bundle.js
+2. "term2genes"
 
 
-************* three examples
+*** STEP 2 ***
+
+$ cd ../termdb/
+$ node buildTermdb.bundle.js phenotree=../msigdb/phenotree
+
+the termdb sqlite file is made in the current dir
+
+
+*** STEP 3 ***
+
+$ cd ../msigdb/
+$ sqlite3 ../termdb/db < term2genes.sql 
+$ mv ../termdb/db ~/data/tp/msigdb/
+
+restart pp server and test at http://localhost:3000/example.termdb.gdc.html?msigdb
+
+
+************************* three examples
 
 H > HALLMARK_ADIPOGENESIS
 
@@ -26,16 +54,19 @@ fields of each line:
 - STANDARD_NAME
 	term id
 - DESCRIPTION_BRIEF
+	not used
+- ORGANISM
+	only limit to "Homo sapiens"
 - CATEGORY_CODE
 	level 1
 - SUB_CATEGORY_CODE
 	level 2, or
 	level 2:3
 - MEMBERS
-	list of gene symbols
+	list of genes, sometimes symbols, sometimes ENSG
+- MEMBERS_SYMBOLIZED
+	list of symbols
 
-
-create new table "termid2genes"
 */
 
 if (process.argv.length != 3) {
@@ -98,25 +129,97 @@ const id2term = new Map()
 key: term id
 value: { type:str, L1:str, L2:str, L3:str, genes }
 */
+let nonHumanCount=0
+let missingGeneCount=0
 
 const rl = readline.createInterface({ input: fs.createReadStream(xmlFile) })
-rl.on('line', line => {
+rl.on('line', parseLine)
+rl.on('close', outputFiles )
+
+
+////////////////////////////// helpers
+
+/*
+input:
+a line of an xml tag describing a gene set
+
+find eligible gene sets and record in the global "id2term" map
+*/
+function parseLine(line) {
+
 	if (!line.startsWith('<GENESET ')) {
 		console.log('skipped line:', line)
 		return
 	}
-	parseLine(line)
-})
-rl.on('close', () => {
-	outputPhenotree()
-})
+
+	const k2v = xmlLine2kv(line)
+
+	if(k2v.get('ORGANISM') != 'Homo sapiens') {
+		nonHumanCount++
+		return
+	}
+
+	// an object {L1, L2, L3, genes}
+	const term = {
+		L1: null, // required
+		L2: '-', // optional
+		L3: '-', // optional
+		// add genes
+	}
+
+	try {
+		const termId = k2v.get('STANDARD_NAME').trim()
+		if (!termId) throw 'STANDARD_NAME missing or blank'
+
+		if(id2term.has(termId)) throw 'duplicating term ID: '+termId
+
+		const L1 = k2v.get('CATEGORY_CODE').trim()
+		if (!L1) throw 'CATEGORY_CODE missing or blank'
+		if (L1skip.has(L1)) return
+
+		term.L1 = L1name[L1]
+		if (!term.L1) throw 'unknown L1: ' + L1
+
+		const tmp = k2v.get('SUB_CATEGORY_CODE').trim()
+		if (tmp) {
+			// if both L2+L3, they are joined by :
+			const [L2, L3] = tmp.split(':')
+			if (!L2) throw 'SUB_CATEGORY_CODE begins with ":"'
+			term.L2 = L2name[L2]
+			if (!term.L2) throw 'unknown L2: ' + L2
+			if (L3) {
+				term.L3 = L3name[L3]
+				if (!term.L3) throw 'unknown L3: ' + L3
+			}
+		}
+
+		if(k2v.has('MEMBERS_SYMBOLIZED')) {
+			const s = k2v.get('MEMBERS_SYMBOLIZED').trim()
+			if(!s) throw 'MEMBERS_SYMBOLIZED is blank'
+			term.genes = s
+		} else if(k2v.has('MEMBERS')) {
+			const s = k2v.get('MEMBERS').trim()
+			if(!s) throw 'MEMBERS is blank'
+			term.genes = s
+		} else {
+			missingGeneCount++
+		}
+
+		id2term.set(termId, term)
+
+	} catch (e) {
+		throw 'Error: ' + e + '\nLINE ' + line
+	}
+}
 
 /*
-find two patterns
-keyOnly(space)
-key="word1(space)word2"
+parses the space-separated attributes on the xml tag, into key-value pairs
+(potentially reusable)
+find two patterns:
+1. keyOnly(space)
+2. key="word1(space)word2"(space)
 */
-function parseLine(line) {
+function xmlLine2kv(line) {
 	const k2v = new Map()
 
 	let previousIndex = 0,
@@ -155,43 +258,23 @@ function parseLine(line) {
 			thisKey = line.substring(previousIndex, i)
 		}
 	}
+	return k2v
+}
 
-	// an object {L1, L2, L3, genes}
-	const term = {
-		L1: null, // required
-		L2: '-', // optional
-		L3: '-', // optional
-		genes: []
+function outputFiles() {
+	outputPhenotree()
+	outputGenes()
+	console.log('Skipped non-human sets:', nonHumanCount)
+	console.log('Missing genes:',missingGeneCount)
+}
+
+function outputGenes() {
+	const lines = []
+	for(const [id,term] of id2term) {
+		if(!term.genes) continue
+		lines.push(id+'\t'+term.genes)
 	}
-
-	try {
-		const id = k2v.get('STANDARD_NAME')
-		if (!id) throw 'STANDARD_NAME missing or blank'
-
-		const L1 = k2v.get('CATEGORY_CODE')
-		if (!L1) throw 'CATEGORY_CODE missing or blank'
-		if (L1skip.has(L1)) return
-
-		term.L1 = L1name[L1]
-		if (!term.L1) throw 'unknown L1: ' + L1
-
-		const tmp = k2v.get('SUB_CATEGORY_CODE')
-		if (tmp) {
-			// if both L2+L3, that will be joined by :
-			const [L2, L3] = tmp.split(':')
-			if (!L2) throw 'SUB_CATEGORY_CODE begins with ":"'
-			term.L2 = L2name[L2]
-			if (!term.L2) throw 'unknown L2: ' + L2
-			if (L3) {
-				term.L3 = L3name[L3]
-				if (!term.L3) throw 'unknown L3: ' + L3
-			}
-		}
-
-		id2term.set(id, term)
-	} catch (e) {
-		throw 'Error: ' + e + '\nLINE ' + line
-	}
+	fs.writeFileSync('term2genes', lines.join('\n'))
 }
 
 function outputPhenotree() {
@@ -212,6 +295,5 @@ function outputPhenotree() {
 		lines.push(`${L1}\t${L2}\t${L3}\t${id}\t${id}\tcategorical`)
 	}
 	fs.writeFileSync('phenotree', lines.join('\n'))
-
-	console.log('max ID length: ' + maxIdLen)
+	console.log('max ID length:', maxIdLen)
 }
