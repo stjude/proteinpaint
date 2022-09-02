@@ -44,13 +44,9 @@ export function handle_request_closure(genomes) {
 		try {
 			const genome = genomes[q.genome]
 			if (!genome) throw 'invalid genome'
-			const ds = genome.datasets[q.dslabel]
-			if (!ds) throw 'invalid dslabel'
-			if (!ds.cohort) throw 'ds.cohort missing'
-			const tdb = ds.cohort.termdb
-			if (!tdb) throw 'no termdb for this dataset'
 
-			//
+			const [ds, tdb] = get_ds_tdb(genome, q)
+
 			for (const param of encodedParams) {
 				if (typeof q[param] == 'string') {
 					const strvalue = q[param].startsWith('%') ? decodeURIComponent(q[param]) : q[param]
@@ -103,6 +99,38 @@ export function handle_request_closure(genomes) {
 			if (e.stack) console.log(e.stack)
 		}
 	}
+}
+
+/*
+supports both dataset-based and genome-based sources
+1. genome.datasets[ q.dslabel ]
+2. genome.termdbs[ q.dslabel ]
+
+given q.dslabel, try to find a match in both places
+it's curator's responsibility to ensure not to use the same dslabel in these two places
+*/
+function get_ds_tdb(genome, q) {
+	{
+		const ds = genome.datasets[q.dslabel]
+		if (ds) {
+			// matches with dataset
+			if (ds?.cohort?.termdb) return [ds, ds.cohort.termdb]
+			throw '.cohort.termdb not found on this dataset'
+		}
+	}
+	// not matching with dataset
+	if (!genome.termdbs) {
+		throw 'genome-level termdb not available'
+	}
+	const ds = genome.termdbs[q.dslabel]
+	if (!ds) {
+		// no match found in either places for this dslabel
+		throw 'invalid dslabel'
+	}
+	// still maintains ds.cohort.termdb to be fully compatible with dataset-level design
+	if (!ds.cohort) throw 'ds.cohort missing for genome-level termdb'
+	if (!ds.cohort.termdb) throw 'ds.cohort.termdb{} missing for a genome-level termdb'
+	return [ds, ds.cohort.termdb]
 }
 
 function trigger_getsamples(q, res, ds) {

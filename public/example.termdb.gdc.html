@@ -19,7 +19,7 @@ runproteinpaint({
 	termdb:{
 		dev:true,
 		state:{
-			dslabel: 'GDC',
+			dslabel: location.search.substring(1) || 'GDC',
 			genome:'hg38',
 			nav: {
 				header_mode: 'search_only'
