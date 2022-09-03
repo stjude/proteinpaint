@@ -219,10 +219,13 @@ async function trigger_findterm(q, res, termdb, ds) {
 	// TODO also search categories
 	const matches = { equals: [], startsWith: [], startsWord: [], includes: [] }
 	const str = q.findterm.toUpperCase()
-	// harcoded gene name length limit to exclude fusion/comma-separated gene names
-	/* TODO: improve the logic for excluding concatenated gene names */
-	if (isUsableTerm({ type: 'geneVariant' }, q.usecase).has('plot')) {
-		await ds.mayGetMatchingGeneNames(matches, str, q)
+
+	if (ds.mayGetMatchingGeneNames) {
+		// harcoded gene name length limit to exclude fusion/comma-separated gene names
+		/* TODO: improve the logic for excluding concatenated gene names */
+		if (isUsableTerm({ type: 'geneVariant' }, q.usecase).has('plot')) {
+			await ds.mayGetMatchingGeneNames(matches, str, q)
+		}
 	}
 
 	if (typeof q.cohortStr !== 'string') q.cohortStr = ''
