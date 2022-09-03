@@ -47,6 +47,8 @@ npm run dev1
 npm run docker
 ```
 
+When running your dev server, you can see [marked up README's in the browser](http://localhost:3000/readme.html).
+
 ## Test
 ```bash
 npm test # tests both frontend and backend code

@@ -1,4 +1,4 @@
-# Proteinpaint Server
+# Proteinpaint Client
 
 The frontend code for the ProteinPaint application
 

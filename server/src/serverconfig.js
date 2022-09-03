@@ -104,7 +104,7 @@ if (serverconfig.debugmode) {
 	const routeSetters = []
 	const defaultDir = path.join(serverconfig.binpath, 'src/test/routes')
 	// will add testing routes as needed and if found, such as in dev environment
-	const testRouteSetters = ['gdc.js', 'specs.js']
+	const testRouteSetters = ['gdc.js', 'specs.js', 'readme.js']
 
 	if (serverconfig.routeSetters) {
 		for (const f of serverconfig.routeSetters) {
@@ -122,6 +122,7 @@ if (serverconfig.debugmode) {
 
 	for (const f of testRouteSetters) {
 		const absf = `${defaultDir}/${f}`
+		console.log(124, absf, fs.existsSync(absf), !routeSetters.includes(absf))
 		// avoid duplicate entries; these test route setters should only exist in dev environment and not deployed to prod
 		if (!routeSetters.includes(absf) && fs.existsSync(absf)) routeSetters.push(absf)
 	}
@@ -229,7 +230,7 @@ function getGDCconfig() {
 					color: 'rgb(31, 112, 31)'
 				},
 				M: {
-					color: '#2379BC'//Best update for the default blue, that is compliant with section508
+					color: '#2379BC' //Best update for the default blue, that is compliant with section508
 				},
 				N: {
 					color: 'rgb(179, 89, 10)'
@@ -265,7 +266,7 @@ function getGDCconfig() {
 					color: 'rgb(93, 93, 93)'
 				},
 				CNV_amp: {
-				 	color: '#7a425f'
+					color: '#7a425f'
 				},
 				CNV_loss: {
 					color: '#42741a'
