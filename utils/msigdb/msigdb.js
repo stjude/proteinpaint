@@ -129,13 +129,12 @@ const id2term = new Map()
 key: term id
 value: { type:str, L1:str, L2:str, L3:str, genes }
 */
-let nonHumanCount=0
-let missingGeneCount=0
+let nonHumanCount = 0
+let missingGeneCount = 0
 
 const rl = readline.createInterface({ input: fs.createReadStream(xmlFile) })
 rl.on('line', parseLine)
-rl.on('close', outputFiles )
-
+rl.on('close', outputFiles)
 
 ////////////////////////////// helpers
 
@@ -146,7 +145,6 @@ a line of an xml tag describing a gene set
 find eligible gene sets and record in the global "id2term" map
 */
 function parseLine(line) {
-
 	if (!line.startsWith('<GENESET ')) {
 		console.log('skipped line:', line)
 		return
@@ -154,7 +152,7 @@ function parseLine(line) {
 
 	const k2v = xmlLine2kv(line)
 
-	if(k2v.get('ORGANISM') != 'Homo sapiens') {
+	if (k2v.get('ORGANISM') != 'Homo sapiens') {
 		nonHumanCount++
 		return
 	}
@@ -163,7 +161,7 @@ function parseLine(line) {
 	const term = {
 		L1: null, // required
 		L2: '-', // optional
-		L3: '-', // optional
+		L3: '-' // optional
 		// add genes
 	}
 
@@ -171,7 +169,7 @@ function parseLine(line) {
 		const termId = k2v.get('STANDARD_NAME').trim()
 		if (!termId) throw 'STANDARD_NAME missing or blank'
 
-		if(id2term.has(termId)) throw 'duplicating term ID: '+termId
+		if (id2term.has(termId)) throw 'duplicating term ID: ' + termId
 
 		const L1 = k2v.get('CATEGORY_CODE').trim()
 		if (!L1) throw 'CATEGORY_CODE missing or blank'
@@ -193,20 +191,19 @@ function parseLine(line) {
 			}
 		}
 
-		if(k2v.has('MEMBERS_SYMBOLIZED')) {
+		if (k2v.has('MEMBERS_SYMBOLIZED')) {
 			const s = k2v.get('MEMBERS_SYMBOLIZED').trim()
-			if(!s) throw 'MEMBERS_SYMBOLIZED is blank'
+			if (!s) throw 'MEMBERS_SYMBOLIZED is blank'
 			term.genes = s
-		} else if(k2v.has('MEMBERS')) {
+		} else if (k2v.has('MEMBERS')) {
 			const s = k2v.get('MEMBERS').trim()
-			if(!s) throw 'MEMBERS is blank'
+			if (!s) throw 'MEMBERS is blank'
 			term.genes = s
 		} else {
 			missingGeneCount++
 		}
 
 		id2term.set(termId, term)
-
 	} catch (e) {
 		throw 'Error: ' + e + '\nLINE ' + line
 	}
@@ -265,14 +262,14 @@ function outputFiles() {
 	outputPhenotree()
 	outputGenes()
 	console.log('Skipped non-human sets:', nonHumanCount)
-	console.log('Missing genes:',missingGeneCount)
+	console.log('Missing genes:', missingGeneCount)
 }
 
 function outputGenes() {
 	const lines = []
-	for(const [id,term] of id2term) {
-		if(!term.genes) continue
-		lines.push(id+'\t'+term.genes)
+	for (const [id, term] of id2term) {
+		if (!term.genes) continue
+		lines.push(id + '\t' + term.genes)
 	}
 	fs.writeFileSync('term2genes', lines.join('\n'))
 }
@@ -283,7 +280,7 @@ function outputPhenotree() {
 	let maxIdLen = 0
 	for (const [id, term] of id2term) {
 		const { L1, L2, L3 } = term
-		maxIdLen = Math.max(id.length, L1.length, L2.length, L3.length)
+		maxIdLen = Math.max(maxIdLen, id.length, L1.length, L2.length, L3.length)
 		if (L2 == '-') {
 			lines.push(`${L1}\t${id}\t-\t-\t${id}\tcategorical`)
 			continue
