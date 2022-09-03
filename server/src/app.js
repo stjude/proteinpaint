@@ -100,7 +100,8 @@ const express = require('express'),
 	handle_mdssurvivalplot = require('./km').handle_mdssurvivalplot,
 	validator = require('./validator'),
 	cookieParser = require('cookie-parser'),
-	{ maySetAuthRoutes, getDsAuth } = require('./auth.js')
+	{ maySetAuthRoutes, getDsAuth } = require('./auth.js'),
+	{ server_init_db_queries } = require('./termdb.sql')
 
 //////////////////////////////
 // Global variable (storing things in memory)
@@ -7300,6 +7301,14 @@ async function pp_init() {
 				// this table is only used for gdc dataset
 				const s = checkTable.get('refseq2ensembl')
 				g.genedb.hasTable_refseq2ensembl = s && s.name == 'refseq2ensembl'
+			}
+		}
+
+		// termdbs{} is optional
+		if (g.termdbs) {
+			for (const key in g.termdbs) {
+				server_init_db_queries(g.termdbs[key])
+				console.log(`${key} initiated as ${genomename}-level termdb`)
 			}
 		}
 

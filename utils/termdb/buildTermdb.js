@@ -139,7 +139,7 @@ try {
 
 function getScriptArg() {
 	console.log('validating arguments ...')
-	const allowedArgs = new Set(['phenotree', 'terms', 'annotation', 'annotation3Col', 'survival', 'sqlite3'])
+	const allowedArgs = new Set(['phenotree', 'terms', 'annotation', 'annotation3Col', 'survival', 'sqlite3', 'dbfile'])
 	const arg = new Map()
 	try {
 		for (let i = 2; i < process.argv.length; i++) {
@@ -476,18 +476,28 @@ function buildDb(annotationData, survivalData, scriptArg) {
 
 	// populate ancestry table
 	// TODO need to be able to generate full lineage
+	console.log('setting ancestry data ...')
 	exec(`${cmd} < ${path.join(__dirname, 'setancestry.sql')}`)
+
+	// index all tables
+	console.log('reindexing tables ...')
+	exec(`${cmd} < ${path.join(__dirname, 'indexing.sql')}`)
 
 	// populate cohort,term_id,count fields from subcohort_terms table
 	// only works for dataset without subcohort, fill blank string to cohort
-	exec(`${cmd} < ${path.join(__dirname, 'set-default-subcohort.sql')}`)
+	if (annotationData || survivalData) {
+		console.log('setting default subcohort ...')
+		exec(`${cmd} < ${path.join(__dirname, 'set-default-subcohort.sql')}`)
+	} else {
+		console.log('setting default subcohort with no sample ...')
+		exec(`${cmd} < ${path.join(__dirname, 'set-default-subcohort-no-sample.sql')}`)
+	}
 
 	// populate included_types and child_types fields from subcohort_terms table
+	console.log('setting included types ...')
 	exec(`${cmd} < ${path.join(__dirname, 'set-included-types.sql')}`)
 
 	// create 3 separate tables anno-categorical/integer/float
+	console.log('creating anno-by-type ...')
 	exec(`${cmd} < ${path.join(__dirname, 'anno-by-type.sql')}`)
-
-	// index all tables
-	exec(`${cmd} < ${path.join(__dirname, 'indexing.sql')}`)
 }
