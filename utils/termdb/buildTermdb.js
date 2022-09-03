@@ -481,8 +481,13 @@ function buildDb(annotationData, survivalData, scriptArg) {
 
 	// populate cohort,term_id,count fields from subcohort_terms table
 	// only works for dataset without subcohort, fill blank string to cohort
-	console.log('setting default subcohort ...')
-	exec(`${cmd} < ${path.join(__dirname, 'set-default-subcohort.sql')}`)
+	if (annotationData || survivalData) {
+		console.log('setting default subcohort ...')
+		exec(`${cmd} < ${path.join(__dirname, 'set-default-subcohort.sql')}`)
+	} else {
+		console.log('setting default subcohort with no sample ...')
+		exec(`${cmd} < ${path.join(__dirname, 'set-default-subcohort-no-sample.sql')}`)
+	}
 
 	// populate included_types and child_types fields from subcohort_terms table
 	console.log('setting included types ...')
