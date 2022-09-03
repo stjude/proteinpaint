@@ -479,6 +479,10 @@ function buildDb(annotationData, survivalData, scriptArg) {
 	console.log('setting ancestry data ...')
 	exec(`${cmd} < ${path.join(__dirname, 'setancestry.sql')}`)
 
+	// index all tables
+	console.log('reindexing tables ...')
+	exec(`${cmd} < ${path.join(__dirname, 'indexing.sql')}`)
+
 	// populate cohort,term_id,count fields from subcohort_terms table
 	// only works for dataset without subcohort, fill blank string to cohort
 	if (annotationData || survivalData) {
@@ -496,8 +500,4 @@ function buildDb(annotationData, survivalData, scriptArg) {
 	// create 3 separate tables anno-categorical/integer/float
 	console.log('creating anno-by-type ...')
 	exec(`${cmd} < ${path.join(__dirname, 'anno-by-type.sql')}`)
-
-	// index all tables
-	console.log('reindexing tables ...')
-	exec(`${cmd} < ${path.join(__dirname, 'indexing.sql')}`)
 }
