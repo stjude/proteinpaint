@@ -68,6 +68,13 @@ survival=path/to/file
 	Column 3: time to event
 	Column 4: exit code, 0=death, 1=censored (TODO verify)
 
+termHtmlDef=path/to/file
+	Optional. Provide path to a file with html definition for terms.
+	File has 2 columns. Does not contain a header line.
+
+	Column 1: term id
+	Column 2: stringified json object
+
 dbfile=path/to/file
 	Optional. Provide path to output db file
 	If missing, creates "./db.runID"
@@ -109,6 +116,10 @@ try {
 	// map{}: key=str, value=str
 
 	const terms = loadDictionary(scriptArg)
+	const id2term = new Map()
+	for (const t of terms) id2term.set(t.id, t)
+
+	mayLoadHtmlDef(scriptArg, id2term)
 
 	const annotationData = loadAnnotationFile(scriptArg, terms, sampleCollect)
 	// annotationFile written, if data is available
@@ -139,7 +150,16 @@ try {
 
 function getScriptArg() {
 	console.log('validating arguments ...')
-	const allowedArgs = new Set(['phenotree', 'terms', 'annotation', 'annotation3Col', 'survival', 'sqlite3', 'dbfile'])
+	const allowedArgs = new Set([
+		'phenotree',
+		'terms',
+		'annotation',
+		'annotation3Col',
+		'survival',
+		'sqlite3',
+		'dbfile',
+		'termHtmlDef'
+	])
 	const arg = new Map()
 	try {
 		for (let i = 2; i < process.argv.length; i++) {
@@ -234,6 +254,20 @@ function loadTermsFile(scriptArg) {
 		terms.push(term)
 	}
 	return terms
+}
+
+function mayLoadHtmlDef(scriptArg, id2term) {
+	if (!scriptArg.has('termHtmlDef')) return
+	for (const line of fs
+		.readFileSync(scriptArg.get('termHtmlDef'), { encoding: 'utf8' })
+		.trim()
+		.split('\n')) {
+		const [id, s] = line.split('\t')
+		if (!id) throw 'id field blank in termHtmlDef file'
+		const term = id2term.get(id)
+		if (!term) throw 'unknown term id from termHtmlDef: ' + id
+		term.hashtmldetail = true
+	}
 }
 
 function loadAnnotationFile(scriptArg, terms, sampleCollect) {
@@ -466,6 +500,7 @@ function buildDb(annotationData, survivalData, scriptArg) {
 	if (annotationData) importLines.push(`.import ${annotationFile} annotations`)
 	if (survivalData) importLines.push(`.import ${survivalFile} survival`)
 	if (sampleCollect.name2id.size) importLines.push(`.import ${sampleidFile} sampleidmap`)
+	if (scriptArg.has('termHtmlDef')) importLines.push(`.import ${scriptArg.get('termHtmlDef')} termhtmldef`)
 
 	// temp script to load tables
 	fs.writeFileSync(loadScript, importLines.join('\n'))

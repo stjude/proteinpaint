@@ -1,74 +1,3 @@
-/*
-manual steps of building a sqlite db to store MSigDB info:
-
-*** STEP 1 ***
-
-download MSigDB XML file, go to https://www.gsea-msigdb.org/gsea/downloads.jsp, find this file
-https://www.gsea-msigdb.org/gsea/msigdb/download_file.jsp?filePath=/msigdb/release/7.5.1/msigdb_v7.5.1.xml
-
-run script:
-$ cd ~/dev/proteinpaint/utils/msigdb/
-$ node msigdb.js path/to/msigdb_v7.5.1.xml
-
-following 2 files are made at current directory:
-1. "phenotree", as input to buildTermdb.bundle.js
-2. "term2genes"
-
-
-*** STEP 2 ***
-
-$ cd ../termdb/
-$ node buildTermdb.bundle.js phenotree=../msigdb/phenotree
-
-the termdb sqlite file is made in the current dir
-
-
-*** STEP 3 ***
-
-$ cd ../msigdb/
-$ sqlite3 ../termdb/db < term2genes.sql 
-$ mv ../termdb/db ~/data/tp/msigdb/
-
-restart pp server and test at http://localhost:3000/example.termdb.gdc.html?msigdb
-
-
-************************* three examples
-
-H > HALLMARK_ADIPOGENESIS
-
-<GENESET STANDARD_NAME="HALLMARK_ADIPOGENESIS" SYSTEMATIC_NAME="M5905" HISTORICAL_NAME="" ORGANISM="Homo sapiens" PMID="26771021" AUTHORS="Liberzon A,Birger C,Thorvaldsdóttir H,Ghandi M,Mesirov JP,Tamayo P." GEOID="" EXACT_SOURCE="" GENESET_LISTING_URL="" EXTERNAL_DETAILS_URL="" CHIP="HUMAN_GENE_SYMBOL" CATEGORY_CODE="H" SUB_CATEGORY_CODE="" CONTRIBUTOR="Arthur Liberzon" CONTRIBUTOR_ORG="MSigDB Team" DESCRIPTION_BRIEF="Genes up-regulated during adipocyte differentiation (adipogenesis)." DESCRIPTION_FULL="" TAGS="" MEMBERS="FABP4,ADIPOQ,PPARG,LIPE,DGAT1,LPL,CPT2,CD36,GPAM,ADIPOR2,ACAA2,ETFB,ACOX1,ACADM,HADH,IDH1
-
-C2 > CGP > ABBUD_LIF_SIGNALING_1_DN
-
-<GENESET STANDARD_NAME="ABBUD_LIF_SIGNALING_1_DN" SYSTEMATIC_NAME="M1423" HISTORICAL_NAME="" ORGANISM="Mus musculus" PMID="14576184" AUTHORS="Abbud RA,Kelleher R,Melmed S" GEOID="" EXACT_SOURCE="Table 2" GENESET_LISTING_URL="" EXTERNAL_DETAILS_URL="" CHIP="MOUSE_SEQ_ACCESSION" CATEGORY_CODE="C2" SUB_CATEGORY_CODE="CGP"
-
-
-C2 > CP > CP:BIOCARTA > BIOCARTA_41BB_PATHWAY
-
-<GENESET STANDARD_NAME="BIOCARTA_41BB_PATHWAY" SYSTEMATIC_NAME="M2064" HISTORICAL_NAME="" ORGANISM="Homo sapiens" PMID="" AUTHORS="" GEOID="" EXACT_SOURCE="" GENESET_LISTING_URL="" EXTERNAL_DETAILS_URL="https://data.broadinstitute.org/gsea-msigdb/msigdb/biocarta/human/h_41BBPathway.gif" CHIP="Human_RefSeq" CATEGORY_CODE="C2" SUB_CATEGORY_CODE="CP:BIOCARTA" 
-
-
-*************** parsing logic
-only parse lines starting with "<GENESET"
-fields of each line:
-- STANDARD_NAME
-	term id
-- DESCRIPTION_BRIEF
-	not used
-- ORGANISM
-	only limit to "Homo sapiens"
-- CATEGORY_CODE
-	level 1
-- SUB_CATEGORY_CODE
-	level 2, or
-	level 2:3
-- MEMBERS
-	list of genes, sometimes symbols, sometimes ENSG
-- MEMBERS_SYMBOLIZED
-	list of symbols
-
-*/
-
 if (process.argv.length != 3) {
 	console.log('<XML file> creates "msigdb.db" in the current folder')
 	process.exit()
@@ -157,20 +86,22 @@ function parseLine(line) {
 		return
 	}
 
-	// an object {L1, L2, L3, genes}
+	// an object representing this geneset, with attributes parsed from the xml line {L1, L2, L3, genes, ...}
+	// to be kept in id2term
 	const term = {
 		L1: null, // required
 		L2: '-', // optional
-		L3: '-' // optional
-		// add genes
+		L3: '-', // optional
+		def: []
 	}
 
 	try {
+		// STANDARD_NAME as id
 		const termId = k2v.get('STANDARD_NAME').trim()
 		if (!termId) throw 'STANDARD_NAME missing or blank'
-
 		if (id2term.has(termId)) throw 'duplicating term ID: ' + termId
 
+		// CATEGORY* as hierarchy
 		const L1 = k2v.get('CATEGORY_CODE').trim()
 		if (!L1) throw 'CATEGORY_CODE missing or blank'
 		if (L1skip.has(L1)) return
@@ -191,6 +122,7 @@ function parseLine(line) {
 			}
 		}
 
+		// MEMBERS as genes
 		if (k2v.has('MEMBERS_SYMBOLIZED')) {
 			const s = k2v.get('MEMBERS_SYMBOLIZED').trim()
 			if (!s) throw 'MEMBERS_SYMBOLIZED is blank'
@@ -201,7 +133,23 @@ function parseLine(line) {
 			term.genes = s
 		} else {
 			missingGeneCount++
+			return
 		}
+
+		term.def.push({ label: 'Gene count', value: term.genes.split(',').length })
+
+		// DESCRIPTION_BRIEF
+		if (k2v.has('DESCRIPTION_BRIEF')) {
+			const tmp = k2v.get('DESCRIPTION_BRIEF').trim()
+			if (tmp) {
+				term.def.push({ label: 'Description', value: tmp })
+			}
+		}
+
+		term.def.push({
+			label: 'Source',
+			value: `<a href=https://www.gsea-msigdb.org/gsea/msigdb/cards/${termId}.html target=_blank>MSigDB</a>`
+		})
 
 		id2term.set(termId, term)
 	} catch (e) {
@@ -261,6 +209,7 @@ function xmlLine2kv(line) {
 function outputFiles() {
 	outputPhenotree()
 	outputGenes()
+	outputTermHtmlDef()
 	console.log('Skipped non-human sets:', nonHumanCount)
 	console.log('Missing genes:', missingGeneCount)
 }
@@ -268,7 +217,6 @@ function outputFiles() {
 function outputGenes() {
 	const lines = []
 	for (const [id, term] of id2term) {
-		if (!term.genes) continue
 		lines.push(id + '\t' + term.genes)
 	}
 	fs.writeFileSync('term2genes', lines.join('\n'))
@@ -293,4 +241,12 @@ function outputPhenotree() {
 	}
 	fs.writeFileSync('phenotree', lines.join('\n'))
 	console.log('max ID length:', maxIdLen)
+}
+
+function outputTermHtmlDef() {
+	const lines = []
+	for (const [id, term] of id2term) {
+		lines.push(`${id}\t${JSON.stringify({ description: term.def })}`)
+	}
+	fs.writeFileSync('termhtmldef', lines.join('\n'))
 }
