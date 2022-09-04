@@ -122,7 +122,6 @@ if (serverconfig.debugmode) {
 
 	for (const f of testRouteSetters) {
 		const absf = `${defaultDir}/${f}`
-		console.log(124, absf, fs.existsSync(absf), !routeSetters.includes(absf))
 		// avoid duplicate entries; these test route setters should only exist in dev environment and not deployed to prod
 		if (!routeSetters.includes(absf) && fs.existsSync(absf)) routeSetters.push(absf)
 	}

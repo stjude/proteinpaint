@@ -10,7 +10,6 @@ module.exports = function setRoutes(app, basepath) {
 	app.get(basepath + '/readme', async (req, res) => {
 		const q = req.query
 		try {
-			console.log(7, req.params, req.body, q)
 			if (Object.keys(q).length) {
 				const file = path.join(cwd, q.file)
 				if (!(await fs.stat(file))) throw `file='${file}' not found`

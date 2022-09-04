@@ -187,25 +187,54 @@
 		  color: #111;
   	}
 	</style>
+	<style>
+		body {
+			padding-top: 0;
+		}
+		#leftnav {
+			margin: 30px
+		}
+		#right-wrapper {
+			max-width: 1280px;
+		}
+		#topnav {	
+			padding: 10px;
+			margin:  10px;
+		}
+		#readme {
+			display: inline-block;
+			max-height: 900px;
+			max-width: 960px; 
+			margin: 0px 20px;
+			overflow: scroll;
+		}
+	</style>
 	<script src='https://cdn.jsdelivr.net/npm/marked/marked.min.js'></script>
 	<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/4.13.0/d3.min.js" integrity="sha512-RJJ1NNC88QhN7dwpCY8rm/6OxI+YdQP48DrLGe/eSAd+n+s1PXwQkkpzzAgoJe4cZFW2GALQoxox61gSY2yQfg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 </head>
 <body>
 	<div style='display: grid; grid-template-columns: auto auto'>
-		<div id='leftnav' style='margin: 30px'></div>
-		<div style='max-width: 1080px;'>
+		<div id='leftnav'></div>
+		<div id='right-wrapper'>
 			<div id='topnav'></div>
-			<div id='readme' style='display:inline-block; max-width: 960px; margin: 0px 20px'></div>
+			<div id='readme'></div>
 		</div>
 	</div>
 	<script>
-		const readme = document.getElementById('readme');
+		const settings = {
+			activeColor: 'rgba(100,210,100,0.8)',
+			hintChar: ' &#x25B6;'
+		}
+		const dom = {
+			readme: d3.select('#readme')
+		}
+		const serverCache = {}
 
-		async function setNav() {
-			const data =  await fetch(`/readme`).then(r=>r.json()).catch(alert); console.log(data)
+		async function init() {
+			const data =  await fetch(`/readme`).then(r=>r.json()).catch(alert)//; console.log(data)
 			data.readmes.sort()
 
-			d3.select('#topnav')
+			dom.topTabs = d3.select('#topnav')
 				.selectAll('div')
 				.data(data.readmes)
 				.enter()
@@ -223,8 +252,10 @@
 
 
 			const root = {path:'', files:[], subdirs: {}, filepaths: data.readmes}
-			setHierarchy(root); console.log(204, 'root', root)
+			setHierarchy(root)//; console.log(204, 'root', root)
 			d3.select('#leftnav').selectAll(':scope>div').data([root]).enter().append('div').each(renderNavBtns)
+			dom.activeHints = d3.select('#leftnav').selectAll('.activehint')
+    	render()
 		}
 
 		let i=0
@@ -258,48 +289,82 @@
 			const div = d3.select(this).style('margin-left', '10px')
 
 			div
-				.selectAll('div')
+				.selectAll(':scope>div')
 				.data(dir.files)
 				.enter()
 				.append('div')
-				.style('cursor', 'pointer')
+				.each(function(d) {
+					const div = d3.select(this)
+					const name = d.split('/').pop()
+					div.append('a')
+						.attr('href', `#${d}`)
+						.html(name)
+
+					div.append('span')
+						.datum(d)
+						.attr('class', 'activehint')
+						.style('display', 'none')
+						.style('color', settings.activeColor)
+						.html(settings.hintChar)
+				})
+				//.append('a')
 				//.style('display', 'inline-block')
 				/*.style('margin', '3px 5px')
 				.style('padding', '5px')
 				.style('background-color', '#ccc')
 				.style('font-size', '16px')
 				.style('font-family', 'Consolas, Arial, sans-serif')*/
-				.html(d => !d.includes('/') ? d : d.split('/').pop()) //d.replace('/README.md', '').replace('/README.txt', '').replace('/README', ''))
-				.on('click', setHash)
+				//.html(d => !d.includes('/') ? d : d.split('/').pop()) //d.replace('/README.md', '').replace('/README.txt', '').replace('/README', ''))
+				//.on('click', setHash)
 
 			div.append('div')
 				.selectAll(':scope>div')
 				.data(Object.values(dir.subdirs))
 				.enter()
 				.append('div')
-				.each(function(d) { if (d.files[0] === 'client/README.md') console.log(281, d)
+				.each(function(d) {
 					const subdiv = d3.select(this)
 					const hasOwnReadme = d.files[0]?.startsWith(`${d.path}/README`)
 					const name = d.path.replace(dir.path+'/', '')
-					subdiv.append('div').html(hasOwnReadme ? `<a href='#${d.files[0]}'>${name}</a>` : name)
+					const ownLink = subdiv.append('div')
+					if (hasOwnReadme) {
+						ownLink.append('a')
+							.attr('href', `#${d.files[0]}`)
+							.html(name)
+
+						ownLink.append('span')
+							.datum(d.files[0])
+							.attr('class', 'activehint')
+							.style('display', 'none')
+							.style('color', settings.activeColor)
+							.html(settings.hintChar)
+					} else {
+						ownLink.html(name)
+					}
+
 					renderNavBtns.bind(this)(d)
 				})
 		}
 
-		function setHash(d) { console.log(d)
+		function setHash(d) {
 			if (!d.includes('README')) return
 			window.location.hash = '#' + (d.path || d) 
 		}
 
     async function render() {
-    	const file = location.hash ? `file=${location.hash.slice(1)}` : 'file=README.md'; //console.log(222, file)
-    	const content = await fetch(`/readme?${file}`).then(r=>r.text()).catch(alert)
-    	readme.innerHTML =  marked.parse(content);
+    	const file = location.hash?.slice(1) || 'README.md'//; console.log(300, file)
+    	const param = `file=${file}` //console.log(222, file)
+    	if (!serverCache[file]) {
+    		serverCache[file] = await fetch(`/readme?${param}`).then(r=>r.text()).catch(alert)
+    	}
+    	const content = serverCache[file]
+    	dom.readme.html(marked.parse(content))
+    	dom.topTabs.style('background-color', d => d === file ? settings.activeColor : '')
+    	dom.activeHints.style('display', d => d === file ? '' : 'none')
     }
 
     window.onhashchange = render
-    setNav() 
-    render()
+    init()
 	</script>
 </body>
 </html>
