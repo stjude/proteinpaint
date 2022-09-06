@@ -2,7 +2,6 @@ const glob = require('glob')
 const path = require('path')
 const serverconfig = require('../../serverconfig')
 const fs = require('fs/promises')
-const marked = require('marked')
 
 module.exports = function setRoutes(app, basepath) {
 	const cwd = path.join(serverconfig.binpath, '..')

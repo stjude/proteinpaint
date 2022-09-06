@@ -204,7 +204,7 @@
 		#readme {
 			display: inline-block;
 			max-height: 900px;
-			max-width: 960px; 
+			max-width: 1012px;
 			margin: 0px 20px;
 			overflow: scroll;
 		}
@@ -293,6 +293,7 @@
 				.data(dir.files)
 				.enter()
 				.append('div')
+				.style('white-space', 'nowrap')
 				.each(function(d) {
 					const div = d3.select(this)
 					const name = d.split('/').pop()
@@ -322,6 +323,7 @@
 				.data(Object.values(dir.subdirs))
 				.enter()
 				.append('div')
+				.style('white-space', 'nowrap')
 				.each(function(d) {
 					const subdiv = d3.select(this)
 					const hasOwnReadme = d.files[0]?.startsWith(`${d.path}/README`)
