@@ -58,6 +58,7 @@ canvas/*
 pixman-*/*
 serverconfig.json
 server.js*
+!client/rx/server.js
 setup/*gz*
 setup/*
 tmpbuild/*
