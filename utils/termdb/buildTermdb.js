@@ -249,7 +249,7 @@ function loadTermsFile(scriptArg) {
 		}
 
 		term.parent_id = parent_id
-		term._child_order = child_order // temporary flag
+		term.child_order = child_order // not an official json attribute
 		term.isleaf = isleaf ? true : false
 		terms.push(term)
 	}
@@ -471,11 +471,9 @@ function writeFiles(terms) {
 
 			const parent_id = t.parent_id || ''
 			delete t.parent_id
-			// FIXME terms parsed from phenotree currently does not include child_order
-			// when t.child_order=int is present, can replace ._child_order with .child_order
-			const child_order = t._child_order || 1
-			delete t._child_order
 			const isleaf = t.isleaf ? 1 : 0
+			const child_order = t.child_order
+			delete t.child_order
 			lines.push(`${t.id}\t${t.name}\t${parent_id}\t${JSON.stringify(t)}\t${child_order}\t${t.type || ''}\t${isleaf}`)
 		}
 		fs.writeFileSync(termdbFile, lines.join('\n') + '\n')

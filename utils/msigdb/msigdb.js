@@ -58,7 +58,7 @@ const id2term = new Map()
 key: term id
 value: { type:str, L1:str, L2:str, L3:str, genes }
 */
-let nonHumanCount = 0
+const nonHumanCount = new Map() // k: organism, v: count
 let missingGeneCount = 0
 
 const rl = readline.createInterface({ input: fs.createReadStream(xmlFile) })
@@ -81,9 +81,13 @@ function parseLine(line) {
 
 	const k2v = xmlLine2kv(line)
 
-	if (k2v.get('ORGANISM') != 'Homo sapiens') {
-		nonHumanCount++
-		return
+	{
+		let tmp = k2v.get('ORGANISM').trim()
+		if (!tmp) tmp = 'none'
+		if (tmp != 'Homo sapiens') {
+			nonHumanCount.set(tmp, 1 + (nonHumanCount.get(tmp) || 0))
+			return
+		}
 	}
 
 	// an object representing this geneset, with attributes parsed from the xml line {L1, L2, L3, genes, ...}
@@ -136,19 +140,35 @@ function parseLine(line) {
 			return
 		}
 
+		// term details
+
 		term.def.push({ label: 'Gene count', value: term.genes.split(',').length })
 
-		// DESCRIPTION_BRIEF
 		if (k2v.has('DESCRIPTION_BRIEF')) {
 			const tmp = k2v.get('DESCRIPTION_BRIEF').trim()
 			if (tmp) {
-				term.def.push({ label: 'Description', value: tmp })
+				term.def.push({ label: 'Brief description', value: tmp })
+			}
+		}
+		if (k2v.has('PMID')) {
+			const tmp = k2v.get('PMID').trim()
+			if (tmp) {
+				term.def.push({
+					label: 'PMID',
+					value: `<a href=https://pubmed.ncbi.nlm.nih.gov/${tmp} target=_blank>${tmp}</a>`
+				})
+			}
+		}
+		if (k2v.has('DESCRIPTION_FULL')) {
+			const tmp = k2v.get('DESCRIPTION_FULL').trim()
+			if (tmp) {
+				term.def.push({ label: 'Full description', value: tmp })
 			}
 		}
 
 		term.def.push({
-			label: 'Source',
-			value: `<a href=https://www.gsea-msigdb.org/gsea/msigdb/cards/${termId}.html target=_blank>MSigDB</a>`
+			label: 'MSigDB',
+			value: `<a href=https://www.gsea-msigdb.org/gsea/msigdb/cards/${termId}.html target=_blank>Link</a>`
 		})
 
 		id2term.set(termId, term)
@@ -210,7 +230,10 @@ function outputFiles() {
 	outputPhenotree()
 	outputGenes()
 	outputTermHtmlDef()
-	console.log('Skipped non-human sets:', nonHumanCount)
+	console.log('Skipped non-human sets')
+	for (const [k, v] of nonHumanCount) {
+		console.log(`\t${k}\t${v}`)
+	}
 	console.log('Missing genes:', missingGeneCount)
 }
 
