@@ -27,7 +27,6 @@ may_update_infoFields
 .variantShapeName{}
 	.row
 */
-
 export function initLegend(tk, block) {
 	/*
 run only once, called by makeTk
@@ -114,15 +113,20 @@ function may_create_variantShapeName(tk) {
 }
 
 function may_create_infoFields(tk) {
+	
+	// console.log(field_category)
+	// console.log(tk)
+	
 	if (!tk.mds.bcf || !tk.mds.bcf.info) {
 		// not using bcf with info fields
 		return
 	}
-	const infoFields4legend = [] // collect info field keys eligible for displaying in legend
-	// find eligible info field keys to show in legend
-	for (const key in tk.mds.bcf.info) {
-		const field = tk.mds.bcf.info[key]
-		if (field.categories) {
+	// collect info field keys eligible for displaying in legend
+	const infoFields4legend = [] 
+	// find eligible info field keys to show in legend and create global object with infofield categories as field_category
+	for(let key in tk.mds.bcf.info){
+		let field = tk.mds.bcf.info[key]
+		if(field.categories){
 			infoFields4legend.push(key)
 		}
 	}
@@ -208,11 +212,20 @@ function may_update_variantShapeName(data, tk) {
 
 function may_update_infoFields(data, tk) {
 	// TODO allow filtering
+	
 	if (!tk.legend.bcfInfo) return
 	if (!data.skewer) {
 		console.log('data.skewer[] is not present and cannot show INFO legend')
 		return
 	}
+	let field_category = {}
+	for(let key in tk.mds.bcf.info){
+		let field = tk.mds.bcf.info[key]
+		if(field.categories){
+			field_category = field.categories
+		}
+	}
+	// console.log(field_category)
 
 	for (const infoKey in tk.legend.bcfInfo) {
 		// clear holder
@@ -258,22 +271,14 @@ function may_update_infoFields(data, tk) {
 					hidden_lst.push({ k })
 				}
 			}
-
+			
 			for (const c of show_lst) {
-				console.log(c)
-				let desc
-
-				c.category == "Uncertain_significance" ? desc = `a genetic change whose impact on the individual’s cancer risk is not yet known.`
-				: c.category == "Likely_benign" ? desc = `The variant is reported to be likely benign.`
-				: c.category == "Pathogenic" ? desc = `The variant is reported to be pathogenic.`
-				: c.category == "Likely_pathogenic" ? desc = `The variant is reported to be likely pathogenic.`
-				: c.category == "Benign" ? desc = `The variant is reported to be benign.`
-				: c.category == "Conflicting_interpretations_of_pathogenicity" ? desc = `The variant has conflicting clinical assertions from different submitters.`
-				: c.category == "Pathogenic/Likely_pathogenic" ? desc = `The variant is reported to be pathogenic/likely pathogenic by different submitters.`
-				: c.category == "Benign/Likely_benign" ? desc = `The variant is reported to be benign/likely benign by different submitters.`
-				: c.category == "not_provided" ? desc = `Clinical significance for the variant has not been provided by the submitter.`
-				: desc = ""
-
+			let desc
+				for(let [key,value] of Object.entries(field_category)){
+					if(c.category == key){	
+						desc = value.desc
+					}
+				}
 
 				const cell = tk.legend.bcfInfo[infoKey].holder
 					.append('div')
@@ -511,11 +516,10 @@ function update_mclass(tk) {
 	}
 }
 
+/*
 function update_info_fields(data, tk) {
-	/*
-	not in use
-data is data.info_fields{}
-*/
+// data is data.info_fields{}
+
 	for (const key in data) {
 		const i = tk.info_fields.find(i => i.key == key)
 		if (!i) {
@@ -547,3 +551,4 @@ data is data.info_fields{}
 		}
 	}
 }
+*/
