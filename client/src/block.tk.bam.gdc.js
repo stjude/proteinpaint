@@ -67,9 +67,11 @@ disableSSM=true
 	to reenable, simply delete all uses of this flag
 hideTokenInput=true/false
 	set to true in gdc react wrapper
-
+filter0=str
+	optional, stringified json obj as the cohort filter from gdc ATF
+	simply pass to backend to include in api queries
 */
-export async function bamsliceui({ genomes, holder, disableSSM = false, hideTokenInput = false }) {
+export async function bamsliceui({ genomes, holder, filter0, disableSSM = false, hideTokenInput = false }) {
 	const genome = genomes[gdc_genome]
 	if (!genome) throw 'missing genome for ' + gdc_genome
 
@@ -295,7 +297,7 @@ export async function bamsliceui({ genomes, holder, disableSSM = false, hideToke
 				// disable input field and show 'loading...' until response returned from gdc api
 				gdcid_input.attr('disabled', 1)
 				gdc_loading.style('display', 'inline-block')
-				const data = await dofetch3('gdcbam?gdc_id=' + gdc_id)
+				const data = await dofetch3(`gdcbam?gdc_id=${gdc_id}${filter0 ? '&filter0=' + filter0 : ''}`)
 				// enable input field and hide 'Loading...'
 				gdcid_input.attr('disabled', null)
 				gdc_loading.style('display', 'none')

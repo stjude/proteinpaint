@@ -42,7 +42,15 @@ gdc_bam_request
 export async function gdc_bam_request(req, res) {
 	try {
 		if (!req.query.gdc_id) throw 'query.gdc_id missing'
-		const bamdata = await get_gdc_data(req.query.gdc_id)
+
+		// optional gdc cohort filter
+		let filter0
+		if (req.query.filter0) {
+			filter0 = JSON.parse(req.query.filter0)
+		}
+
+		const bamdata = await get_gdc_data(req.query.gdc_id, filter0)
+
 		res.send(bamdata)
 	} catch (e) {
 		res.send({ error: e.message || e })
@@ -81,13 +89,13 @@ const casesApi = {
 
 const skip_workflow_type = 'STAR 2-Pass Transcriptome'
 
-async function get_gdc_data(gdc_id) {
+async function get_gdc_data(gdc_id, filter0) {
 	// data to be returned
 	const bamdata = {
 		file_metadata: []
 	}
 
-	const re = await try_query(gdc_id, bamdata)
+	const re = await try_query(gdc_id, bamdata, filter0)
 
 	if (!re.data.hits.length) {
 		// no bam file found
@@ -126,27 +134,27 @@ async function get_gdc_data(gdc_id) {
 given user input id, test if it's one of four valid ones
 if true, return the list of bam files associated with that id
 */
-async function try_query(id, bamdata) {
+async function try_query(id, bamdata, filter0) {
 	// first, test if is case uuid
-	if (await ifIdIsCase(id, 'cases.case_id')) {
+	if (await ifIdIsCase(id, 'cases.case_id', filter0)) {
 		// is case uuid
 		bamdata.is_case_uuid = true
 		// get bam files from this case uuid
-		return await getFileByCaseId(id, 'cases.case_id')
+		return await getFileByCaseId(id, 'cases.case_id', filter0)
 	}
 
 	// is not case uuid
 	// then, test if is case id
-	if (await ifIdIsCase(id, 'cases.submitter_id')) {
+	if (await ifIdIsCase(id, 'cases.submitter_id', filter0)) {
 		// is case id
 		bamdata.is_case_id = true
 		// get bam files
-		return await getFileByCaseId(id, 'cases.submitter_id')
+		return await getFileByCaseId(id, 'cases.submitter_id', filter0)
 	}
 
 	// is not case id or case uuid
 	// then, test if is file uuid
-	const re = await getFileByFileId(id, 'file_id')
+	const re = await getFileByFileId(id, 'file_id', filter0)
 	if (re.data.hits.length) {
 		// is file uuid, "re" contains the bam file from it (what if this is not indexed?)
 		bamdata.is_file_uuid = true
@@ -155,7 +163,7 @@ async function try_query(id, bamdata) {
 
 	// is not case id, case uuid, file uuid
 	// last, test if is file id
-	const re2 = await getFileByFileId(id, 'file_name')
+	const re2 = await getFileByFileId(id, 'file_name', filter0)
 	if (re2.data.hits.length) {
 		// is file id
 		bamdata.is_file_id = true
@@ -168,7 +176,7 @@ async function try_query(id, bamdata) {
 query /cases/ api with id; if valid return, is case id or case uuid, depends on value of field
 returns boolean
 */
-async function ifIdIsCase(id, field) {
+async function ifIdIsCase(id, field, filter0) {
 	const filter = {
 		op: 'and',
 		content: [
@@ -178,6 +186,11 @@ async function ifIdIsCase(id, field) {
 			}
 		]
 	}
+
+	if (filter0) {
+		filter.content.push(filter0)
+	}
+
 	const re = await queryApi(filter, casesApi)
 	return re.data.hits.length > 0
 }
@@ -186,7 +199,7 @@ async function ifIdIsCase(id, field) {
 id is case id or case uuid; corresponding field is caseField
 query /files/ to retrieve all indexed bam files using this id
 */
-async function getFileByCaseId(id, caseField) {
+async function getFileByCaseId(id, caseField, filter0) {
 	const filter = {
 		op: 'and',
 		content: [
@@ -213,6 +226,11 @@ async function getFileByCaseId(id, caseField) {
 			}
 		]
 	}
+
+	if (filter0) {
+		filter.content.push(filter0)
+	}
+
 	return await queryApi(filter, filesApi)
 }
 
@@ -221,7 +239,7 @@ id is not case id or case uuid.
 assuming this id can only be file id or file uuid
 query /files/ directly with this
 */
-async function getFileByFileId(id, field) {
+async function getFileByFileId(id, field, filter0) {
 	const filter = {
 		op: 'and',
 		content: [
@@ -231,6 +249,11 @@ async function getFileByFileId(id, field) {
 			}
 		]
 	}
+
+	if (filter0) {
+		filter.content.push(filter0)
+	}
+
 	return await queryApi(filter, filesApi)
 }
 
