@@ -3,7 +3,7 @@ module.exports = function() {
 		isMds: true,
 
 		cohort: {
-			allowedChartTypes: ['barchart', 'survival', 'matrix'],
+			allowedChartTypes: ['barchart', 'survival', 'matrix', 'sampleScatter'],
 			mutationset: [
 				{
 					snvindel: 'sdhanda/mb_portal/BT_database/SNVindel_pnet.tsv',

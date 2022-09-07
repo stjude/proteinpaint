@@ -234,6 +234,12 @@ function getChartTypeList(self) {
 				chartType: 'dataDownload',
 				terms: []
 			}
+		},
+		{
+			label: 'Sample Scatter',
+			chartType: 'sampleScatter',
+			clickTo: self.showTree_select1term,
+			usecase: { target: 'sampleScatter', detail: 'term' }
 		}
 	]
 }
@@ -335,6 +341,7 @@ function setRenderers(self) {
 			},
 			tree: {
 				click_term: term => {
+					console.log(343, term)
 					action.config[chart.usecase.detail] = term
 					self.dom.tip.hide()
 					self.app.dispatch(action)

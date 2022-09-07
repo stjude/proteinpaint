@@ -1,44 +1,28 @@
 import { getCompInit, copyMerge } from '../rx'
-import { controlsInit } from './controls'
+import { fillTermWrapper } from '../termsetting/termsetting'
 import { select, event } from 'd3-selection'
 import { scaleLinear as d3Linear } from 'd3-scale'
 import { axisLeft, axisBottom } from 'd3-axis'
 import Partjson from 'partjson'
-import { to_svg } from '../src/client'
 
-class TdbScatter {
-	constructor(opts) {
-		this.type = 'scatter'
+class Scatter {
+	constructor() {
+		this.type = 'sampleScatter'
 	}
 
-	async init() {
+	async init(opts) {
 		const div = this.opts.controls ? this.opts.holder : this.opts.holder.append('div')
 		this.dom = {
 			header: this.opts.header,
-			controls: this.opts.controls ? null : holder.append('div'),
+			//controls: this.opts.controls ? null : holder.append('div'),
 			div
 		}
 		this.settings = {}
 		if (this.dom.header) this.dom.header.html('Scatter Plot')
-		await this.setControls()
-		setInteractivity(this)
+		if (!this.pj) this.pj = getPj(this)
+		//await this.setControls()
+		//setInteractivity(this)
 		setRenderers(this)
-	}
-
-	async setControls() {
-		if (this.opts.controls) {
-			this.opts.controls.on('downloadClick.boxplot', this.download)
-		} else {
-			this.components = {
-				controls: await controlsInit({
-					app: this.app,
-					id: this.id,
-					holder: this.dom.controls.attr('class', 'pp-termdb-plot-controls'),
-					inputs: ['term1', 'overlay', 'divideBy']
-				})
-			}
-			this.components.controls.on('downloadClick.boxplot', this.download)
-		}
 	}
 
 	getState(appState) {
@@ -46,52 +30,56 @@ class TdbScatter {
 		if (!config) {
 			throw `No plot with id='${this.id}' found. Did you set this.id before this.api = getComponentApi(this)?`
 		}
+
 		return {
-			activeCohort: appState.activeCohort,
-			termfilter: appState.termfilter,
-			config: {
-				term: config.term,
-				term0: config.term0,
-				term2: config.term2,
-				settings: {
-					common: config.settings.common,
-					scatter: JSON.parse(JSON.stringify(config.settings.scatter))
-				}
-			}
+			config,
+			termfilter: appState.termfilter
 		}
 	}
 
+	// called in relevant dispatch when reactsTo==true
+	// or current.state != replcament.state
 	async main() {
-		try {
-			this.config = this.state.config
-			if (this.dom.header) this.dom.header.html(this.config.term.term.name + ' vs ' + this.config.term2.term.name)
-			copyMerge(this.settings, this.state.config.settings.scatter)
-			if (!this.pj) this.pj = getPj(this)
-
-			const reqOpts = this.getDataRequestOpts()
-			this.currData = await this.app.vocabApi.getNestedChartSeriesData(reqOpts)
-			this.app.vocabApi.syncTermData(this.state.config, this.currData)
-			this.pj.refresh({ data: this.currData.rows })
-			this.render()
-		} catch (e) {
-			throw e
-		}
+		this.config = this.state.config
+		copyMerge(this.settings, this.config.settings.sampleScatter)
+		console.log(this.settings, this.config)
+		const reqOpts = this.getDataRequestOpts()
+		//this.data = this.app.vocabApi.getScatterData(reqOpts)
+		const data = await fetch('pnet_apr13_tnse.csv')
+			.then(d => d.text())
+			.catch(console.error)
+		this.processData(data)
+		this.render()
 	}
 
-	// creates an opts object for the vocabApi.getNestedChartsData()
+	// creates an opts object for the vocabApi.someMethod(),
+	// may need to add a new method to client/termdb/vocabulary.js
+	// for now, just add methods to TermdbVocab,
+	// later on, add methods with same name to FrontendVocab
 	getDataRequestOpts() {
 		const c = this.config
-		const opts = { chartType: 'scatter', term: c.term, filter: this.state.termfilter.filter }
-		if (c.term2) opts.term2 = c.term2
-		if (c.term0) opts.term0 = c.term0
-		if (this.state.ssid) opts.ssid = this.state.ssid
-		return opts
+		const opts = { term: c.term, filter: this.state.termfilter.filter }
+	}
+
+	processData(data) {
+		const lines = data.split('\n')
+		const header = lines[0].split('\t')
+		const rows = []
+		for (let i = 1; i < lines.length; i++) {
+			const row = {}
+			for (const [j, v] of lines[i].split('\t').entries()) {
+				const key = header[j]
+				row[key] = key == 'x' || key == 'y' ? Number(v) : v
+			}
+			rows.push(row)
+		}
+		console.log(72, rows)
+		this.currData = { rows }
+		this.pj.refresh({ data: this.currData.rows })
 	}
 }
 
-export const scatterInit = getCompInit(TdbScatter)
-
-export function setRenderers(self) {
+function setRenderers(self) {
 	self.render = function() {
 		const chartDivs = self.dom.div.selectAll('.pp-scatter-chart').data(self.pj.tree.charts, d => d.chartId)
 
@@ -288,10 +276,7 @@ export function setRenderers(self) {
 
 		xText.append('title').text(self.config.term.term.name)
 
-		const yTitleLabel =
-			self.config.term2.term.name.length > 24
-				? self.config.term2.term.name.slice(0, 20) + '...'
-				: self.config.term2.term.name
+		const yTitleLabel = 'Y'
 		yTitle.select('text, title').remove()
 		const yText = yTitle
 			.attr(
@@ -305,128 +290,67 @@ export function setRenderers(self) {
 			.append('text')
 			.style('text-anchor', 'middle')
 			.style('font-size', s.axisTitleFontSize + 'px')
-			.text(yTitleLabel + (self.config.term2.term.unit ? ', ' + self.config.term2.term.unit : ''))
+		//.text(yTitleLabel + (self.config.term2.term.unit ? ', ' + self.config.term2.term.unit : ''))
 
-		yText.append('title').text(self.config.term2.term.name)
+		//yText.append('title').text(self.config.term2.term.name)
 	}
 }
 
-function setInteractivity(self) {
-	self.mouseover = function() {
-		if (event.target.tagName == 'circle') {
-			const d = event.target.__data__
-			const rows = [
-				`<tr><td style='padding:3px; color:#aaa'>X:</td><td style='padding:3px; text-align:center'>${d.x}</td></tr>`,
-				`<tr><td style='padding:3px; color:#aaa'>Y:</td><td style='padding:3px; text-align:center'>${d.y}</td></tr>`
-			]
-			self.app.tip
-				.show(event.clientX, event.clientY)
-				.d.html(`<table class='sja_simpletable'>${rows.join('\n')}</table>`)
-		} else {
-			self.app.tip.hide()
-		}
-	}
-
-	self.mouseout = function() {
-		self.app.tip.hide()
-	}
-
-	self.download = () => {
-		if (!self.state || !self.state.isVisible) return
-		// has to be able to handle multichart view
-		const mainGs = []
-		const translate = { x: undefined, y: undefined }
-		const titles = []
-		let maxw = 0,
-			maxh = 0,
-			tboxh = 0
-		let prevY = 0,
-			numChartsPerRow = 0
-
-		self.dom.div.selectAll('.sjpcb-scatter-mainG').each(function() {
-			mainGs.push(this)
-			const bbox = this.getBBox()
-			if (bbox.width > maxw) maxw = bbox.width
-			if (bbox.height > maxh) maxh = bbox.height
-			const divY = Math.round(this.parentNode.parentNode.getBoundingClientRect().y)
-			if (!numChartsPerRow) {
-				prevY = divY
-				numChartsPerRow++
-			} else if (Math.abs(divY - prevY) < 5) {
-				numChartsPerRow++
+export async function getPlotConfig(opts, app) {
+	if (!opts.term) throw 'sampleScatter getPlotConfig: opts.term{} missing'
+	try {
+		await fillTermWrapper(opts.term, app.vocabApi)
+		const config = {
+			id: opts.term.term.id,
+			settings: {
+				controls: {
+					isOpen: false // control panel is hidden by default
+				},
+				sampleScatter: {
+					radius: 5,
+					svgw: 400,
+					svgh: 300,
+					svgPadding: {
+						top: 20,
+						left: 55,
+						right: 20,
+						bottom: 50
+					},
+					axisTitleFontSize: 16,
+					xAxisOffset: 5,
+					yAxisOffset: -5
+				}
 			}
-			const xy = select(this)
-				.attr('transform')
-				.split('translate(')[1]
-				.split(')')[0]
-				.split(',')
-				.map(d => +d.trim())
-			if (translate.x === undefined || xy[0] > translate.x) translate.x = +xy[0]
-			if (translate.y === undefined || xy[1] > translate.y) translate.y = +xy[1]
-
-			const title = this.parentNode.parentNode.firstChild
-			const tbox = title.getBoundingClientRect()
-			if (tbox.width > maxw) maxw = tbox.width
-			if (tbox.height > tboxh) tboxh = tbox.height
-			titles.push({ text: title.innerText, styles: window.getComputedStyle(title) })
-		})
-
-		// add padding between charts
-		maxw += 30
-		maxh += 30
-
-		const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
-
-		select(svg)
-			.style('display', 'block')
-			.style('opacity', 1)
-			.attr('width', numChartsPerRow * maxw)
-			.attr('height', Math.floor(mainGs.length / numChartsPerRow) * maxh)
-
-		const svgStyles = window.getComputedStyle(document.querySelector('.pp-scatter-svg'))
-		const svgSel = select(svg)
-		for (const prop of svgStyles) {
-			if (prop.startsWith('font')) svgSel.style(prop, svgStyles.getPropertyValue(prop))
 		}
 
-		mainGs.forEach((g, i) => {
-			const mainG = g.cloneNode(true)
-			const colNum = i % numChartsPerRow
-			const rowNum = Math.floor(i / numChartsPerRow)
-			const corner = { x: colNum * maxw + translate.x, y: rowNum * maxh + translate.y }
-			const title = select(svg)
-				.append('text')
-				.attr('transform', 'translate(' + corner.x + ',' + corner.y + ')')
-				.text(titles[i].text)
-			for (const prop of titles[i].styles) {
-				if (prop.startsWith('font')) title.style(prop, titles[i].styles.getPropertyValue(prop))
-			}
-
-			select(mainG).attr('transform', 'translate(' + corner.x + ',' + (corner.y + tboxh) + ')')
-			svg.appendChild(mainG)
-		})
-
-		const svg_name = self.plot.term.term.name + ' scatter'
-		to_svg(svg, svg_name) //,{apply_dom_styles:true})
+		// may apply term-specific changes to the default object
+		return copyMerge(config, opts)
+	} catch (e) {
+		throw `${e} [bsampleScatter getPlotConfig()]`
 	}
 }
+
+export const scatterInit = getCompInit(Scatter)
+// this alias will allow abstracted dynamic imports
+export const componentInit = scatterInit
 
 function getPj(self) {
 	const s = self.settings
+	console.log(s)
 
 	const pj = new Partjson({
 		template: {
 			//"__:charts": "@.byChc.@values",
-			yMin: '>$val2',
-			yMax: '<$val2',
+			yMin: '>$y',
+			yMax: '<$y',
 			charts: [
 				{
 					chartId: '@key',
 					chc: '@key',
-					xMin: '>$val1',
-					xMax: '<$val1',
-					yMin: '>$val2',
-					yMax: '<$val2',
+					xMin: '>$x',
+					xMax: '<$x',
+					yMin: '>$y',
+					yMax: '<$y',
 					'__:xScale': '=xScale()',
 					'__:yScale': '=yScale()',
 					serieses: [
@@ -435,15 +359,14 @@ function getPj(self) {
 							seriesId: '@key',
 							data: [
 								{
-									'__:chc': '@parent.@parent.chc',
 									'__:seriesId': '@parent.@parent.seriesId',
 									//color: "$color",
-									x: '$val1',
-									y: '$val2',
+									x: '$x',
+									y: '$x',
 									'_1:scaledX': '=scaledX()',
 									'_1:scaledY': '=scaledY()'
 								},
-								'$val2'
+								'$y'
 							]
 						},
 						'-'
@@ -465,8 +388,9 @@ function getPj(self) {
 				return context.context.context.context.parent.yScale(context.self.y)
 			},
 			yScale(row, context) {
+				const yMin = context.self.yMin
 				const yMax = context.self.yMax
-				const domain = s.scale == 'byChart' ? [yMax, 0] : [context.root.yMax, 0]
+				const domain = s.scale == 'byChart' ? [yMax, yMin] : [context.root.yMax, yMin]
 				return d3Linear()
 					.domain(domain)
 					.range([0, s.svgh - s.svgPadding.top - s.svgPadding.bottom])
