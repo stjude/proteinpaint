@@ -20,5 +20,7 @@ RUN mkdir /home/root/pp/cache/dsSessions
 ADD webpack.config.js ./
 
 EXPOSE 3000
-CMD [ "sh", "-c", "npm run dev & npm start"]
+ENV script=dev1
+
+CMD [ "sh", "-c", "npm run ${script}"]
 # CMD ["sleep", "3600"]

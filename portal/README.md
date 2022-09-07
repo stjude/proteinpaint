@@ -14,3 +14,12 @@ npm run dev
 cd portal
 npm start
 ```
+
+## Build
+
+```bash
+npm version [major | minor | patch] # TODO: coordinate version changes across dependent workspaces
+npm pack
+npm publish
+# !!! TODO: When deploying, use `npm update` from within the target host machine. !!!
+```

@@ -1,4 +1,14 @@
-// get the list of open-access project_ids
+/*
+this script is hosted at https://proteinpaint.stjude.org/GDC/rest.openproject.js
+
+get the list of open-access project_ids
+
+run as:
+
+node rest.openproject.js
+
+corresponds to getOpenProjects() of termdb.gdc.js
+*/
 
 const got = require('got')
 

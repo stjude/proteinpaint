@@ -1,6 +1,6 @@
 {
   "name": "@stjude/proteinpaint-server",
-  "version": "2.2.0",
+  "version": "2.3.0",
   "description": "a genomics visualization tool for exploring a cohort's genotype and phenotype data",
   "main": "server.js",
   "bin": "bin.js",
@@ -9,7 +9,7 @@
     "#src/*": "./src/*.js"
   },
   "scripts": {
-    "dev": "webpack --config=./webpack.config.js --env NODE_ENV=development --watch --progress --color",
+    "dev": "webpack --config=./webpack.config.js --env NODE_ENV=development --watch --color",
     "start": "nodemon server.js --watch ./server*.js* --watch genome --watch dataset",
     "pretest": "./test/pretest.js",
     "test": "tape -r '@babel/register' */test/*.spec.js",

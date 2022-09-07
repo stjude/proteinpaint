@@ -446,6 +446,10 @@ export async function snvindelByRangeGetter_bcf(ds, genome) {
 		if (!Array.isArray(param.rglst)) throw 'q.rglst[] is not array'
 		if (param.rglst.length == 0) throw 'q.rglst[] blank array'
 
+		if (param.infoFilter) {
+			param.infoFilter = JSON.parse(param.infoFilter)
+		}
+
 		const bcfArgs = [
 			'query',
 			q._tk.file || q._tk.url,
@@ -482,6 +486,35 @@ export async function snvindelByRangeGetter_bcf(ds, genome) {
 				const m0 = {} // temp obj, modified by compute_mclass()
 				compute_mclass(q._tk, refallele, altalleles, m0, infoStr, id, param.isoform)
 				// m0.info{} is set
+
+				if (param.infoFilter) {
+					// example: {"CLNSIG":["Benign",...], ... }
+
+					let skipVariant = false
+
+					for (const infoKey in param.infoFilter) {
+						// each key corresponds to a value to skip
+						const variantValue = m0.info[infoKey]
+						if (!variantValue) {
+							// no value, don't skip
+							continue
+						}
+						if (Array.isArray(variantValue)) {
+							for (const v of param.infoFilter[infoKey]) {
+								if (variantValue.includes(v)) {
+									skipVariant = true
+									break
+								}
+							}
+						} else {
+							// variantValue is single value, not array
+							skipVariant = param.infoFilter[infoKey].includes(variantValue)
+						}
+						if (skipVariant) break
+					}
+
+					if (skipVariant) return
+				}
 
 				// make a m{} for every alt allele
 				for (const alt in m0.alt2csq) {

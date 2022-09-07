@@ -2,11 +2,27 @@
 
 All notable changes to this project will be documented in this file.
 
+## 2.3.0
+
+- data download app in the MASS UI
+- improvements to the cuminc plot
+- app drawer refactor
+
+GDC-related
+- more customized mutation colors for Section 508 compliance
+
+Dev-related
+- Upgrade to Node 16 for development, non-breaking as transpilation still targets Node 12 for deployed builds,
+until SJ servers are upgraded to have python3
+- node-canvas 2.9.3, fixes hardcoded requirement for Node 12 fonts
+- Support Apple Silicon for Docker builds
+- Support developer containers
+
 ## 2.2.0
 
 - option to easily override colors for mutation class and other styles
 - Improvements to MASS UI plots, including a data downloader app
-- Updates to the BAM sequence rad app
+- Updates to the BAM sequence read app
 
 ## 2.1.5
 

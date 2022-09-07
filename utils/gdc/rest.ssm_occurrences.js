@@ -1,13 +1,26 @@
+/*
+this script is hosted at https://proteinpaint.stjude.org/GDC/rest.ssm_occurrences.js
+
+examples:
+
+node rest.ssm_occurrences.js # uses AKT1 by default
+
+node rest.ssm_occurrences.js token=<yourGdcToken>
+
+node rest.ssm_occurrences.js isoform=ENST00000407796
+
+node rest.ssm_occurrences.js case_id=0772cdbe-8b0d-452b-8df1-bd70d1306363
+
+node rest.ssm_occurrences.js filter='{ "op": "and", "content": [ { "op": "in", "content": { "field": "cases.primary_site", "value": [ "breast", "bronchus and lung" ] } } ] }'
+
+corresponds to isoform2ssm_getcase{} in gdc.hg38.js
+*/
+
 const got = require('got')
 
-const p = {}
-for (let i = 2; i < process.argv.length; i++) {
-	const [k, v] = process.argv[i].split('=')
-	p[k] = v
-}
+const p = get_parameter()
 
-
-if (!p.isoform) p.isoform = 'ENST00000407796' // AKT1
+const filters = get_filters(p)
 
 const fields = [
 	'ssm.ssm_id',
@@ -20,12 +33,6 @@ const fields = [
 	'case.primary_site'
 ]
 
-const filters = {
-	op: 'and',
-	content: [{ op: '=', content: { field: 'ssms.consequence.transcript.transcript_id', value: [p.isoform] } }]
-}
-if (p.set_id) filters.content.push({ op: 'in', content: { field: 'cases.case_id', value: [p.set_id] } })
-if (p.case_id) filters.content.push({ op: 'in', content: { field: 'cases.case_id', value: [p.case_id] } })
 ;(async () => {
 	try {
 		const headers = { 'Content-Type': 'application/json', Accept: 'application/json' }
@@ -65,3 +72,44 @@ if (p.case_id) filters.content.push({ op: 'in', content: { field: 'cases.case_id
 		console.log(error)
 	}
 })()
+
+////////////// helpers
+
+function get_parameter() {
+	const p = {}
+	for (let i = 2; i < process.argv.length; i++) {
+		const [k, v] = process.argv[i].split('=')
+		p[k] = v
+	}
+	if (!p.gene && !p.isoform) {
+		// if missing gene/isoform, use AKT1
+		p.isoform = 'ENST00000407796'
+	}
+	return p
+}
+
+function get_filters(p) {
+	const filters = {
+		op: 'and',
+		content: []
+	}
+
+	if (p.isoform) {
+		filters.content.push({
+			op: '=',
+			content: { field: 'ssms.consequence.transcript.transcript_id', value: [p.isoform] }
+		})
+	}
+
+	if (p.case_id) {
+		filters.content.push({ op: 'in', content: { field: 'cases.case_id', value: [p.case_id] } })
+	}
+
+	if (p.filter) {
+		const f = JSON.parse(p.filter)
+		filters.content.push(f)
+	}
+
+	//if (p.set_id) filters.content.push({ op: 'in', content: { field: 'cases.case_id', value: [p.set_id] } })
+	return filters
+}

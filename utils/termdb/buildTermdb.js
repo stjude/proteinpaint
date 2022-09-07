@@ -68,6 +68,13 @@ survival=path/to/file
 	Column 3: time to event
 	Column 4: exit code, 0=death, 1=censored (TODO verify)
 
+termHtmlDef=path/to/file
+	Optional. Provide path to a file with html definition for terms.
+	File has 2 columns. Does not contain a header line.
+
+	Column 1: term id
+	Column 2: stringified json object
+
 dbfile=path/to/file
 	Optional. Provide path to output db file
 	If missing, creates "./db.runID"
@@ -109,6 +116,10 @@ try {
 	// map{}: key=str, value=str
 
 	const terms = loadDictionary(scriptArg)
+	const id2term = new Map()
+	for (const t of terms) id2term.set(t.id, t)
+
+	mayLoadHtmlDef(scriptArg, id2term)
 
 	const annotationData = loadAnnotationFile(scriptArg, terms, sampleCollect)
 	// annotationFile written, if data is available
@@ -139,7 +150,16 @@ try {
 
 function getScriptArg() {
 	console.log('validating arguments ...')
-	const allowedArgs = new Set(['phenotree', 'terms', 'annotation', 'annotation3Col', 'survival', 'sqlite3'])
+	const allowedArgs = new Set([
+		'phenotree',
+		'terms',
+		'annotation',
+		'annotation3Col',
+		'survival',
+		'sqlite3',
+		'dbfile',
+		'termHtmlDef'
+	])
 	const arg = new Map()
 	try {
 		for (let i = 2; i < process.argv.length; i++) {
@@ -182,7 +202,6 @@ function loadDictionary(scriptArg) {
 	if (scriptArg.has('phenotree')) {
 		console.log('parsing dictionary ...')
 		const out = parseDictionary(fs.readFileSync(scriptArg.get('phenotree'), { encoding: 'utf8' }))
-
 		terms = out.terms
 	} else {
 		terms = loadTermsFile(scriptArg)
@@ -230,11 +249,25 @@ function loadTermsFile(scriptArg) {
 		}
 
 		term.parent_id = parent_id
-		term._child_order = child_order // temporary flag
+		term.child_order = child_order // not an official json attribute
 		term.isleaf = isleaf ? true : false
 		terms.push(term)
 	}
 	return terms
+}
+
+function mayLoadHtmlDef(scriptArg, id2term) {
+	if (!scriptArg.has('termHtmlDef')) return
+	for (const line of fs
+		.readFileSync(scriptArg.get('termHtmlDef'), { encoding: 'utf8' })
+		.trim()
+		.split('\n')) {
+		const [id, s] = line.split('\t')
+		if (!id) throw 'id field blank in termHtmlDef file'
+		const term = id2term.get(id)
+		if (!term) throw 'unknown term id from termHtmlDef: ' + id
+		term.hashtmldetail = true
+	}
 }
 
 function loadAnnotationFile(scriptArg, terms, sampleCollect) {
@@ -428,13 +461,19 @@ function writeFiles(terms) {
 	{
 		const lines = []
 		for (const t of terms) {
+			if (t.parent_id == null) {
+				/* null for parent_id will fill the string "null" into the terms table
+				must delete
+				should fix parseDictionary so it won't assign null to root terms
+				*/
+				delete t.parent_id
+			}
+
 			const parent_id = t.parent_id || ''
 			delete t.parent_id
-			// FIXME terms parsed from phenotree currently does not include child_order
-			// when t.child_order=int is present, can replace ._child_order with .child_order
-			const child_order = t._child_order || 1
-			delete t._child_order
 			const isleaf = t.isleaf ? 1 : 0
+			const child_order = t.child_order
+			delete t.child_order
 			lines.push(`${t.id}\t${t.name}\t${parent_id}\t${JSON.stringify(t)}\t${child_order}\t${t.type || ''}\t${isleaf}`)
 		}
 		fs.writeFileSync(termdbFile, lines.join('\n') + '\n')
@@ -459,6 +498,7 @@ function buildDb(annotationData, survivalData, scriptArg) {
 	if (annotationData) importLines.push(`.import ${annotationFile} annotations`)
 	if (survivalData) importLines.push(`.import ${survivalFile} survival`)
 	if (sampleCollect.name2id.size) importLines.push(`.import ${sampleidFile} sampleidmap`)
+	if (scriptArg.has('termHtmlDef')) importLines.push(`.import ${scriptArg.get('termHtmlDef')} termhtmldef`)
 
 	// temp script to load tables
 	fs.writeFileSync(loadScript, importLines.join('\n'))
@@ -469,18 +509,28 @@ function buildDb(annotationData, survivalData, scriptArg) {
 
 	// populate ancestry table
 	// TODO need to be able to generate full lineage
+	console.log('setting ancestry data ...')
 	exec(`${cmd} < ${path.join(__dirname, 'setancestry.sql')}`)
+
+	// index all tables
+	console.log('reindexing tables ...')
+	exec(`${cmd} < ${path.join(__dirname, 'indexing.sql')}`)
 
 	// populate cohort,term_id,count fields from subcohort_terms table
 	// only works for dataset without subcohort, fill blank string to cohort
-	exec(`${cmd} < ${path.join(__dirname, 'set-default-subcohort.sql')}`)
+	if (annotationData || survivalData) {
+		console.log('setting default subcohort ...')
+		exec(`${cmd} < ${path.join(__dirname, 'set-default-subcohort.sql')}`)
+	} else {
+		console.log('setting default subcohort with no sample ...')
+		exec(`${cmd} < ${path.join(__dirname, 'set-default-subcohort-no-sample.sql')}`)
+	}
 
 	// populate included_types and child_types fields from subcohort_terms table
+	console.log('setting included types ...')
 	exec(`${cmd} < ${path.join(__dirname, 'set-included-types.sql')}`)
 
 	// create 3 separate tables anno-categorical/integer/float
+	console.log('creating anno-by-type ...')
 	exec(`${cmd} < ${path.join(__dirname, 'anno-by-type.sql')}`)
-
-	// index all tables
-	exec(`${cmd} < ${path.join(__dirname, 'indexing.sql')}`)
 }

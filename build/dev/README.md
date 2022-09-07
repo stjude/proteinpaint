@@ -18,9 +18,17 @@ Run once to set up the base node-debian image:
 To start the developer container:
 ```bash
 # this will reuse the full build artifacts to lessen the total build time
-./build/dev/run.sh
-# !!! NOTE: There may be an initial server process error 
-# if the bundling has not completed before the server start;
+# client bundling logs wil be displayed with server bundling + process logs,
+# all in one window
+npm run docker
+# use CTRL+Z to stop the logging and `docker stop ppdev` to stop the container
+
+# --- OR ---
+# to have more readable logs, run these in separate terminals
+# run the server ONLY (bundling + process) in the container
+./build/dev/run.sh server
+# run the client bundling natively outside of the container
+npm run client
 # use CTRL+Z to stop the logging and `docker stop ppdev` to stop the container
 ```
 

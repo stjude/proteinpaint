@@ -27,7 +27,6 @@ may_update_infoFields
 .variantShapeName{}
 	.row
 */
-
 export function initLegend(tk, block) {
 	/*
 run only once, called by makeTk
@@ -114,15 +113,20 @@ function may_create_variantShapeName(tk) {
 }
 
 function may_create_infoFields(tk) {
+	
+	// console.log(field_category)
+	// console.log(tk)
+	
 	if (!tk.mds.bcf || !tk.mds.bcf.info) {
 		// not using bcf with info fields
 		return
 	}
-	const infoFields4legend = [] // collect info field keys eligible for displaying in legend
-	// find eligible info field keys to show in legend
-	for (const key in tk.mds.bcf.info) {
-		const field = tk.mds.bcf.info[key]
-		if (field.categories) {
+	// collect info field keys eligible for displaying in legend
+	const infoFields4legend = [] 
+	// find eligible info field keys to show in legend and create global object with infofield categories as field_category
+	for(let key in tk.mds.bcf.info){
+		let field = tk.mds.bcf.info[key]
+		if(field.categories){
 			infoFields4legend.push(key)
 		}
 	}
@@ -208,11 +212,20 @@ function may_update_variantShapeName(data, tk) {
 
 function may_update_infoFields(data, tk) {
 	// TODO allow filtering
+	
 	if (!tk.legend.bcfInfo) return
 	if (!data.skewer) {
 		console.log('data.skewer[] is not present and cannot show INFO legend')
 		return
 	}
+	let field_category = {}
+	for(let key in tk.mds.bcf.info){
+		let field = tk.mds.bcf.info[key]
+		if(field.categories){
+			field_category = field.categories
+		}
+	}
+	// console.log(field_category)
 
 	for (const infoKey in tk.legend.bcfInfo) {
 		// clear holder
@@ -236,47 +249,121 @@ function may_update_infoFields(data, tk) {
 			}
 
 			// sort tally in descending order, each element is a two-ele array [category, variantCount]
-			const showlst = [...category2variantCount].sort((i, j) => j[1] - i[1])
+			const all_lst = [...category2variantCount].sort((i, j) => j[1] - i[1])
 
-			for (const [category, count] of showlst) {
+			const show_lst = [],
+				hidden_lst = []
+
+			for (const [category, count] of all_lst) {
+				const clnsig_dict = { category, count }
+				if (tk.legend.bcfInfo[infoKey].hiddenvalues.has(category)) {
+					hidden_lst.push(clnsig_dict)
+				} else {
+					show_lst.push(clnsig_dict)
+				}
+			}
+
+			show_lst.sort((i, j) => j.count - i.count)
+			hidden_lst.sort((i, j) => j.count - i.count)
+
+			for (const k of tk.legend.bcfInfo[infoKey].hiddenvalues) {
+				if (!hidden_lst.find(i => i.k == k)) {
+					hidden_lst.push({ k })
+				}
+			}
+			
+			for (const c of show_lst) {
+			let desc
+				for(let [key,value] of Object.entries(field_category)){
+					if(c.category == key){	
+						desc = value.desc
+					}
+				}
+
 				const cell = tk.legend.bcfInfo[infoKey].holder
 					.append('div')
 					.attr('class', 'sja_clb')
 					.style('display', 'inline-block')
-				// .on('click', () => { })
+					.on('click', () => {
+						tk.legend.tip
+							.clear()
+							.d.append('div')
+							.attr('class', 'sja_menuoption')
+							.text('Hide')
+							.on('click', () => {
+								tk.legend.bcfInfo[infoKey].hiddenvalues.add(c.category)
+								tk.legend.tip.hide()
+								tk.uninitialized = true
+								tk.load()
+							})
+
+						tk.legend.tip.d
+							.append('div')
+							.attr('class', 'sja_menuoption')
+							.text('Show only')
+							.on('click', () => {
+								for (const c2 of show_lst) {
+									tk.legend.bcfInfo[infoKey].hiddenvalues.add(c2.category)
+								}
+								tk.legend.bcfInfo[infoKey].hiddenvalues.delete(c.category)
+								tk.legend.tip.hide()
+								tk.uninitialized = true
+								tk.load()
+							})
+
+						if (hidden_lst.length) {
+							tk.legend.tip.d
+								.append('div')
+								.attr('class', 'sja_menuoption')
+								.text('Show all')
+								.on('click', () => {
+									tk.legend.bcfInfo[infoKey].hiddenvalues.clear()
+									tk.legend.tip.hide()
+									tk.uninitialized = true
+									tk.load()
+								})
+						}
+
+						tk.legend.tip.d
+							.append('div')
+							.style('padding', '10px')
+							.style('font-size', '.8em')
+							.style('width', '150px')
+							.html(desc)
+
+						tk.legend.tip.showunder(cell.node())
+					})
 
 				cell
 					.append('div')
 					.style('display', 'inline-block')
 					.attr('class', 'sja_mcdot')
-					.style('background', tk.mds.bcf.info[infoKey].categories[category].color)
-					.html(count > 1 ? count : '&nbsp;')
+					.style('background', tk.mds.bcf.info[infoKey].categories[c.category].color)
+					.html(c.count > 1 ? c.count : '&nbsp;')
 				cell
 					.append('div')
 					.style('display', 'inline-block')
-					.style('color', tk.mds.bcf.info[infoKey].categories[category].color)
-					.html('&nbsp;' + tk.mds.bcf.info[infoKey].categories[category].label)
+					.style('color', tk.mds.bcf.info[infoKey].categories[c.category].color)
+					.html('&nbsp;' + tk.mds.bcf.info[infoKey].categories[c.category].label)
 			}
 
 			// hidden ones
-			for (const c of tk.legend.bcfInfo[infoKey].hiddenvalues) {
+			for (const c of hidden_lst) {
+				let loading = false
 				tk.legend.bcfInfo[infoKey].holder
 					.append('div')
 					.style('display', 'inline-block')
 					.attr('class', 'sja_clb')
 					.style('text-decoration', 'line-through')
 					.style('opacity', 0.3)
-				/*
-					.text((c.count ? '(' + c.count + ') ' : '') + (Number.isInteger(c.k) ? dt2label[c.k] : mclass[c.k].label))
+					.text(c.k)
 					.on('click', async () => {
 						if (loading) return
 						loading = true
-						tk.legend.mclass.hiddenvalues.delete(c.k)
-						d3event.target.innerHTML = 'Updating...'
+						tk.legend.bcfInfo[infoKey].hiddenvalues.delete(c.k)
 						tk.uninitialized = true
 						await tk.load()
 					})
-					*/
 			}
 		}
 	}
@@ -284,6 +371,7 @@ function may_update_infoFields(data, tk) {
 
 function update_mclass(tk) {
 	if (!tk.legend.mclass.currentData || tk.legend.mclass.currentData.length == 0) return
+	// console.log(tk.legend.mclass.currentData)
 
 	/* only clear here
 	todo: upon zooming into protein, should generate updated mclass2variantcount using client cached data, visible in view range
@@ -428,11 +516,10 @@ function update_mclass(tk) {
 	}
 }
 
+/*
 function update_info_fields(data, tk) {
-	/*
-	not in use
-data is data.info_fields{}
-*/
+// data is data.info_fields{}
+
 	for (const key in data) {
 		const i = tk.info_fields.find(i => i.key == key)
 		if (!i) {
@@ -464,3 +551,4 @@ data is data.info_fields{}
 		}
 	}
 }
+*/

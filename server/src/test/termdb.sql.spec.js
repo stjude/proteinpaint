@@ -1,5 +1,5 @@
 /*
-  Requires a running pp server, `npm run server`
+  Requires a running pp server, `npm start`
 
   See the header comments in test/test.server.js 
   for help in troubleshooting a failing test if
