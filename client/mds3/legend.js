@@ -260,6 +260,21 @@ function may_update_infoFields(data, tk) {
 			}
 
 			for (const c of show_lst) {
+				console.log(c)
+				let desc
+
+				c.category == "Uncertain_significance" ? desc = `a genetic change whose impact on the individual’s cancer risk is not yet known.`
+				: c.category == "Likely_benign" ? desc = `The variant is reported to be likely benign.`
+				: c.category == "Pathogenic" ? desc = `The variant is reported to be pathogenic.`
+				: c.category == "Likely_pathogenic" ? desc = `The variant is reported to be likely pathogenic.`
+				: c.category == "Benign" ? desc = `The variant is reported to be benign.`
+				: c.category == "Conflicting_interpretations_of_pathogenicity" ? desc = `The variant has conflicting clinical assertions from different submitters.`
+				: c.category == "Pathogenic/Likely_pathogenic" ? desc = `The variant is reported to be pathogenic/likely pathogenic by different submitters.`
+				: c.category == "Benign/Likely_benign" ? desc = `The variant is reported to be benign/likely benign by different submitters.`
+				: c.category == "not_provided" ? desc = `Clinical significance for the variant has not been provided by the submitter.`
+				: desc = ""
+
+
 				const cell = tk.legend.bcfInfo[infoKey].holder
 					.append('div')
 					.attr('class', 'sja_clb')
@@ -309,6 +324,7 @@ function may_update_infoFields(data, tk) {
 							.style('padding', '10px')
 							.style('font-size', '.8em')
 							.style('width', '150px')
+							.html(desc)
 
 						tk.legend.tip.showunder(cell.node())
 					})
@@ -336,12 +352,10 @@ function may_update_infoFields(data, tk) {
 					.style('text-decoration', 'line-through')
 					.style('opacity', 0.3)
 					.text(c.k)
-					//.text((c.count ? '(' + c.count + ')' : '') + (Number.isInteger(c.category) ? c.category: tk.mds.bcf.info[infoKey].categories[c.category].label))
 					.on('click', async () => {
 						if (loading) return
 						loading = true
 						tk.legend.bcfInfo[infoKey].hiddenvalues.delete(c.k)
-						d3event.target.innerHTML = 'Updating...'
 						tk.uninitialized = true
 						await tk.load()
 					})
