@@ -1,7 +1,7 @@
 import { select } from 'd3-selection'
 
 /*
-render at-risk counts at specific x-axis tick values
+render at-risk counts at x-axis tick values
 
 used by survival plot and cuminc plot
 
@@ -18,6 +18,14 @@ input parameter:
 
 export function renderAtRiskG({ g, s, chart, hidden, term2values, term2toColor }) {
 	const bySeries = {}
+
+	// do not compute at-risk counts of tick values that are
+	// smaller than the first timepoint of the chart
+	// e.g. if all curves start at 5 years, we do not want
+	// to compute at-risk counts at tick value 0
+	const xTickValues = chart.xTickValues.filter(xTick => xTick >= chart.xMin)
+
+	// compute at-risk counts of filtered tick values
 	for (const series of chart.visibleSerieses) {
 		const counts = []
 		let i = 0,
@@ -25,24 +33,34 @@ export function renderAtRiskG({ g, s, chart, hidden, term2values, term2toColor }
 			prev = d, // prev = "previous" data point
 			nCensored = 0
 
-		// for each x-axis timepoint, find and use the data that applies
-		for (const time of chart.xTickValues) {
+		// for each x-axis tick value, find and use the data that applies
+		for (const time of xTickValues) {
 			while (d && d.x < time) {
 				nCensored += d.ncensor
 				prev = d
 				i++
 				d = series.data[i]
 			}
-			// NOTE:
+
 			// prev will become last timepoint before tick value
 			// for example, if tick value is 10 and timepoint A is at time 8.5, timepoint B is at time 9.2, timepoint C is at 9.8, and timepoint D is at time 10.2, then prev will be set to the timepoint C
 			// the at-risk count at tick value 10 will then be the nrisk at prev minus any events/censored exits that occurred at prev
-			counts.push([time, prev.nrisk - prev.nevent - prev.ncensor, nCensored])
+
+			if (d && d.x === time) {
+				// iterated timepoint is equal to tick value
+				// can use nrisk of timepoint as the nrisk of tick value
+				counts.push([time, d.nrisk, nCensored])
+			} else {
+				// iterated timepoint does not equal tick value
+				// use the nrisk of prev minus any events/censored exits
+				// at prev as the nrisk of tick value
+				counts.push([time, prev.nrisk - prev.nevent - prev.ncensor, nCensored])
+			}
 		}
 		bySeries[series.seriesId] = counts
 	}
 
-	const y = s.svgh - s.svgPadding.top - s.svgPadding.bottom + 50 // make y-offset option???
+	const y = s.svgh - s.svgPadding.top - s.svgPadding.bottom + 60 // make y-offset option???
 	// fully rerender, later may reuse previously rendered elements
 	// g.selectAll('*').remove()
 
@@ -63,10 +81,37 @@ export function renderAtRiskG({ g, s, chart, hidden, term2values, term2toColor }
 		})
 	}
 
-	const data = !s.atRiskVisible
-		? []
-		: Object.keys(bySeries).sort((a, b) => seriesOrder.indexOf(a) - seriesOrder.indexOf(b))
+	let data
+	if (s.atRiskVisible) {
+		// at-risk counts are visible
+		// sort the data
+		data = Object.keys(bySeries).sort((a, b) => seriesOrder.indexOf(a) - seriesOrder.indexOf(b))
+		// render the title
+		g.selectAll('.sjpp-cuminc-atrisk-title').remove()
+		const titleg = g
+			.append('text')
+			.attr('class', 'sjpp-cuminc-atrisk-title')
+			.attr(
+				'transform',
+				`translate(${s.atRiskLabelOffset}, ${chart.serieses.length == 1 ? 2 * s.axisTitleFontSize : 0})`
+			)
+			.attr('text-anchor', 'end')
+			.attr('font-size', `${s.axisTitleFontSize - 4}px`)
+			.attr('cursor', 'pointer')
+			.text('Number at risk')
+		titleg
+			.append('tspan')
+			.attr('x', 0)
+			.attr('y', s.axisTitleFontSize - 4)
+			.attr('cursor', 'pointer')
+			.text('(# censored)')
+	} else {
+		// at-risk counts are not visible
+		// empty the data
+		data = []
+	}
 
+	// render at-risk counts
 	const sg = g
 		.attr('transform', `translate(0,${y})`)
 		.selectAll(':scope > g')
@@ -75,21 +120,27 @@ export function renderAtRiskG({ g, s, chart, hidden, term2values, term2toColor }
 	sg.exit().remove()
 
 	sg.each(function(seriesId, i) {
-		const y = (i + 1) * (2 * (s.axisTitleFontSize + 4))
+		const y = (i + 1) * (2 * s.axisTitleFontSize)
 		const g = select(this)
 			.attr('transform', `translate(0,${y})`)
-			.attr('fill', hidden.includes(seriesId) ? '#aaa' : term2toColor[seriesId].adjusted) // TODO: attached series color to the data of 'sg'
+			.attr(
+				'fill',
+				chart.serieses.length == 1 ? '#000' : hidden.includes(seriesId) ? '#aaa' : term2toColor[seriesId].adjusted
+			) // TODO: attached series color to the data of 'sg'
 
-		renderAtRiskTick(g.select(':scope>g'), chart, s, seriesId, bySeries[seriesId])
+		renderAtRiskTick(g.select(':scope>g'), chart, xTickValues, s, seriesId, bySeries[seriesId])
 	})
 
 	sg.enter()
 		.append('g')
 		.each(function(seriesId, i) {
-			const y = (i + 1) * (2 * (s.axisTitleFontSize + 4))
+			const y = (i + 1) * (2 * s.axisTitleFontSize)
 			const g = select(this)
 				.attr('transform', `translate(0,${y})`)
-				.attr('fill', hidden.includes(seriesId) ? '#aaa' : term2toColor[seriesId].adjusted)
+				.attr(
+					'fill',
+					chart.serieses.length == 1 ? '#000' : hidden.includes(seriesId) ? '#aaa' : term2toColor[seriesId].adjusted
+				)
 
 			const sObj = chart.serieses.find(s => s.seriesId === seriesId)
 			g.append('text')
@@ -98,15 +149,15 @@ export function renderAtRiskG({ g, s, chart, hidden, term2values, term2toColor }
 				.attr('font-size', `${s.axisTitleFontSize - 4}px`)
 				.attr('cursor', 'pointer')
 				.datum({ seriesId })
-				.text(seriesId && seriesId != '*' ? sObj.seriesLabel || seriesId : 'At-risk')
+				.text(seriesId && seriesId != '*' ? sObj.seriesLabel || seriesId : '')
 
-			renderAtRiskTick(g.append('g'), chart, s, seriesId, bySeries[seriesId])
+			renderAtRiskTick(g.append('g'), chart, xTickValues, s, seriesId, bySeries[seriesId])
 		})
 }
 
-function renderAtRiskTick(g, chart, s, seriesId, series) {
+function renderAtRiskTick(g, chart, xTickValues, s, seriesId, series) {
 	const reversed = series.slice().reverse()
-	const data = chart.xTickValues.map(tickVal => {
+	const data = xTickValues.map(tickVal => {
 		if (tickVal === 0) return { seriesId, tickVal, atRisk: series[0][1], nCensored: series[0][2] }
 		const d = reversed.find(d => d[0] <= tickVal)
 		return { seriesId, tickVal, atRisk: d[1], nCensored: d[2] }
@@ -135,14 +186,14 @@ function renderAtRiskTick(g, chart, s, seriesId, series) {
 
 		tspans
 			.attr('x', 0)
-			.attr('y', (d, i) => i * s.axisTitleFontSize)
+			.attr('y', (d, i) => i * (s.axisTitleFontSize - 4))
 			.text((d, i) => (i === 0 ? d : `(${d})`))
 
 		tspans
 			.enter()
 			.append('tspan')
 			.attr('x', 0)
-			.attr('y', (d, i) => i * s.axisTitleFontSize)
+			.attr('y', (d, i) => i * (s.axisTitleFontSize - 4))
 			.text((d, i) => (i === 0 ? d : `(${d})`))
 	}
 }

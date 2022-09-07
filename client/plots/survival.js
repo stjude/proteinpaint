@@ -837,7 +837,7 @@ function setRenderers(self) {
 				'translate(' +
 					(s.svgw - s.svgPadding.left - s.svgPadding.right) / 2 +
 					',' +
-					(s.svgh - s.axisTitleFontSize) +
+					(s.svgh - s.axisTitleFontSize - 4) +
 					')'
 			)
 			.append('text')
@@ -1240,7 +1240,7 @@ function getPj(self) {
 						},
 						'$seriesId'
 					],
-					'@done()': '=padAndSortSerieses()'
+					'@done()': '=sortSerieses()'
 				},
 				'=chartTitle()'
 			],
@@ -1287,7 +1287,8 @@ function getPj(self) {
 				const xMin = s.method == 2 ? 0 : context.self.xMin
 				return (
 					scaleLinear()
-						// force x to start at 0, padAndSortSerieses() prepends this data point
+						// force x to start at 0 because first data point will always
+						// be at x=0 (see survival.R)
 						.domain([0, context.self.xMax])
 						.range([0, s.svgw - s.svgPadding.left - s.svgPadding.right])
 				)
@@ -1308,24 +1309,8 @@ function getPj(self) {
 					.domain(domain)
 					.range([0, s.svgh - s.svgPadding.top - s.svgPadding.bottom])
 			},
-			padAndSortSerieses(result) {
-				const s = self.settings
+			sortSerieses(result) {
 				for (const series of result.serieses) {
-					// prepend a starting prob=1 data point that survfit() does not include
-					const d0 = series.data[0]
-					series.data.unshift({
-						seriesId: d0.seriesId,
-						x: 0,
-						y: 1,
-						nevent: 0,
-						ncensor: 0,
-						nrisk: series.data[0].nrisk,
-						lower: 1,
-						upper: 1,
-						scaledX: 0, //result.xScale(0),
-						scaledY: [result.yScale(1), result.yScale(1), result.yScale(1)]
-					})
-
 					series.data.sort((a, b) => (a.x < b.x ? -1 : 1))
 				}
 				if (self.refs.orderedKeys) {

@@ -945,7 +945,7 @@ async function lowAFsnps_fisher(tw, sampledata, Rinput, result) {
 
 async function lowAFsnps_cuminc(tw, sampledata, Rinput, result) {
 	// for cox, perform cuminc analysis between samples having and missing effect allele
-	const fdata = {} // input for cuminc analysis {snpid: [{time, event, series}]}
+	const cumincRinput = { data: {} } // input for cuminc analysis
 	const snpsToSkip = new Set() // skip these snps
 	// because at least one allele is not found in any sample
 	for (const [snpid, snpO] of tw.lowAFsnps) {
@@ -985,17 +985,16 @@ async function lowAFsnps_cuminc(tw, sampledata, Rinput, result) {
 			snpsToSkip.add(snpid)
 			continue
 		}
-		fdata[snpid] = snpData
+		cumincRinput.data[snpid] = snpData
 	}
 
 	const final_data = {
 		case: [],
-		tests: {},
-		startTimes: {}
+		tests: {}
 	}
 
 	// run cumulative incidence analysis in R
-	await runCumincR(fdata, final_data)
+	await runCumincR(cumincRinput, final_data)
 
 	// parse cumulative incidence results
 	let cuminc
@@ -1017,15 +1016,11 @@ async function lowAFsnps_cuminc(tw, sampledata, Rinput, result) {
 			if (!Number.isFinite(pvalue)) throw 'invalid pvalue'
 			const tests = {}
 			tests[snpid] = final_data.tests[snpid]
-			// parse start times
-			const startTimes = {}
-			startTimes[snpid] = final_data.startTimes[snpid]
 			cuminc = {
 				pvalue: Number(pvalue.toFixed(4)),
 				final_data: {
 					case: caselst,
-					tests,
-					startTimes
+					tests
 				}
 			}
 		}

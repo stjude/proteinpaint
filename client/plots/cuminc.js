@@ -107,9 +107,6 @@ export class Cuminc {
 		}
 		if (!this.tests[chartId].length) delete this.tests[chartId]
 
-		// procress start times
-		this.startTimes = data.startTimes
-
 		// NOTE: no need to process skipped series or skipped charts, because no series or charts are skipped for cox cuminc test
 	}
 
@@ -236,10 +233,19 @@ class MassCumInc {
 						'overlay',
 						'divideBy',
 						{
-							label: 'Minimum number of samples in series',
+							label: 'Minimum sample size',
+							title: 'Minimum number of samples in series',
 							type: 'number',
 							chartType: 'cuminc',
 							settingsKey: 'minSampleSize'
+						},
+						{
+							label: 'X-axis ticks',
+							type: 'text',
+							chartType: 'cuminc',
+							settingsKey: 'xTickValues',
+							title: `Option to customize the x-axis tick values, enter as comma-separated values. Will be ignored if empty`,
+							processInput: value => value.split(',').map(Number)
 						},
 						{
 							label: 'At-risk counts',
@@ -248,6 +254,13 @@ class MassCumInc {
 							chartType: 'cuminc',
 							settingsKey: 'atRiskVisible',
 							title: 'Display the at-risk counts'
+						},
+						{
+							label: '95% CI',
+							boxLabel: 'Visible',
+							type: 'checkbox',
+							chartType: 'cuminc',
+							settingsKey: 'ciVisible'
 						}
 					]
 				})
@@ -380,9 +393,6 @@ class MassCumInc {
 
 		// process skipped charts
 		this.skippedCharts = data.skippedCharts
-
-		// procress start times
-		this.startTimes = data.startTimes
 	}
 
 	setTerm2Color(charts) {
@@ -572,8 +582,8 @@ function setRenderers(self) {
 
 		div
 			.select('.sjpcb-cuminc-title')
-			.style('width', s.svgw + 50)
-			.style('height', s.chartTitleDivHt + 'px')
+			//.style('width', s.svgw + 50)
+			//.style('height', s.chartTitleDivHt + 'px')
 			.datum(chart.chartId)
 			.html(chart.chartTitle)
 
@@ -663,7 +673,7 @@ function setRenderers(self) {
 
 	function renderSVG(svg, chart, s, duration) {
 		const extraHeight = s.atRiskVisible
-			? s.axisTitleFontSize + 4 + chart.visibleSerieses.length * 2 * (s.axisTitleFontSize + 4)
+			? s.axisTitleFontSize + 4 + chart.visibleSerieses.length * 2 * s.axisTitleFontSize
 			: 0
 
 		svg
@@ -806,8 +816,6 @@ function setRenderers(self) {
 	}
 
 	function renderSeries(g, chart, series, i, s, duration) {
-		const data = series.startTime.adj ? series.data.filter(d => d.x >= series.startTime.adj) : series.data
-
 		g.selectAll('path').remove()
 
 		g.append('path')
@@ -817,8 +825,9 @@ function setRenderers(self) {
 					.curve(curveStepAfter)
 					.x(c => c.scaledX)
 					.y0(c => c.scaledY[1])
-					.y1(c => c.scaledY[2])(data)
+					.y1(c => c.scaledY[2])(series.data)
 			)
+			.style('display', s.ciVisible ? '' : 'none')
 			.style('fill', self.term2toColor[series.seriesId].adjusted)
 			.style('opacity', '0.15')
 			.style('stroke', 'none')
@@ -826,7 +835,7 @@ function setRenderers(self) {
 		renderSubseries(
 			s,
 			g,
-			data.map(d => {
+			series.data.map(d => {
 				return {
 					seriesId: d.seriesId,
 					x: d.x,
@@ -842,7 +851,7 @@ function setRenderers(self) {
 		renderSubseries(
 			s,
 			g.append('g'),
-			data.map(d => {
+			series.data.map(d => {
 				return {
 					seriesId: d.seriesId,
 					x: d.x,
@@ -858,7 +867,7 @@ function setRenderers(self) {
 		renderSubseries(
 			s,
 			g.append('g'),
-			data.map(d => {
+			series.data.map(d => {
 				return {
 					seriesId: d.seriesId,
 					x: d.x,
@@ -884,20 +893,34 @@ function setRenderers(self) {
 				.attr('d', self.lineFxn(data))
 				.style('fill', 'none')
 				.style('stroke', color)
+				.style('stroke-width', 2)
 				.style('opacity', 1)
 				.style('stroke-opacity', 1)
 		}
 	}
 
-	function renderAxes(xAxis, xTitle, yAxis, yTitle, s, d) {
-		d.xTickValues = []
+	function renderAxes(xAxis, xTitle, yAxis, yTitle, s, chart) {
+		// x-axis ticks
+		if (s.xTickValues?.length) {
+			// custom x-tick values
+			chart.xTickValues = s.xTickValues.filter(v => v === 0 || (v >= chart.xMin && v <= chart.xMax))
+		} else {
+			// compute x-tick values
+			// compute width between ticks for a maximum of 5 ticks
+			const tickWidth = (chart.xMax - chart.xMin) / 5
+			// round tick width to the nearest 5
+			const log = Math.floor(Math.log10(tickWidth))
+			const tickWidth_rnd = Math.round(tickWidth / (5 * 10 ** log)) * (5 * 10 ** log) || 1 * 10 ** log
+			// compute tick values using tick width
+			chart.xTickValues = [0]
+			let tick = chart.xMin
+			while (tick < chart.xMax) {
+				chart.xTickValues.push(tick)
+				tick = tick + tickWidth_rnd
+			}
+		}
 
-		const xTicks = axisBottom(d.xScale)
-			.ticks(5)
-			.tickFormat(t => {
-				d.xTickValues.push(t)
-				return t
-			})
+		const xTicks = axisBottom(chart.xScale).tickValues(chart.xTickValues)
 
 		xAxis
 			.attr('transform', 'translate(0,' + (s.svgh - s.svgPadding.top - s.svgPadding.bottom + s.xAxisOffset) + ')')
@@ -906,7 +929,7 @@ function setRenderers(self) {
 		yAxis.attr('transform', `translate(${s.yAxisOffset},0)`).call(
 			axisLeft(
 				scaleLinear()
-					.domain(d.yScale.domain())
+					.domain(chart.yScale.domain())
 					.range([0, s.svgh - s.svgPadding.top - s.svgPadding.bottom])
 			).ticks(5)
 		)
@@ -919,7 +942,7 @@ function setRenderers(self) {
 				'translate(' +
 					(s.svgw - s.svgPadding.left - s.svgPadding.right) / 2 +
 					',' +
-					(s.svgh - s.axisTitleFontSize) +
+					(s.svgh - s.axisTitleFontSize - 4) +
 					')'
 			)
 			.append('text')
@@ -1016,7 +1039,9 @@ const defaultSettings = JSON.stringify({
 	cuminc: {
 		minSampleSize: 5,
 		atRiskVisible: true,
-		atRiskLabelOffset: -20,
+		atRiskLabelOffset: -10,
+		xTickValues: [], // if undefined or empty, will be ignored
+		ciVisible: false,
 		radius: 5,
 		fill: '#fff',
 		stroke: '#000',
@@ -1077,7 +1102,6 @@ function getPj(self) {
 							chartId: '@parent.@parent.@key',
 							seriesId: '@key',
 							'__:seriesLabel': '=seriesLabel()',
-							'__:startTime': '=startTime()',
 							data: [
 								{
 									'__:seriesId': '@parent.@parent.seriesId',
@@ -1126,20 +1150,15 @@ function getPj(self) {
 				if (t2 && t2.term.values && seriesId in t2.term.values) return t2.term.values[seriesId].label
 				return seriesId
 			},
-			startTime(row, context) {
-				const seriesId = context.self.seriesId
-				const chartId = context.self.chartId
-				return self.startTimes[chartId][seriesId]
-			},
 			y(row, context) {
 				const seriesId = context.context.parent.seriesId
 				return seriesId == 'CI' ? [row.low, row.high] : row[seriesId]
 			},
 			yMin(row) {
-				return row.low
+				return row.cuminc
 			},
 			yMax(row) {
-				return row.high
+				return row.cuminc
 			},
 			xScale(row, context) {
 				const s = self.settings

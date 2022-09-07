@@ -58,7 +58,7 @@ library(jsonlite)
 suppressPackageStartupMessages(library(cmprsk))
 
 # function to run cumulative incidence analysis on data for a chart
-run_cuminc <- function(chart) {
+run_cuminc <- function(chart, startTime) {
   chart$event <- as.factor(chart$event)
   chart$series <- as.factor(chart$series)
   estimates <- list()
@@ -66,6 +66,16 @@ run_cuminc <- function(chart) {
     # single series
     res <- cuminc(ftime = chart$time, fstatus = chart$event, cencode = 0)
     seriesRes <- as.data.frame(res[[1]])
+    # if a custom start time is given, then this start time
+    # should serve as the first time point of the curve
+    if (!is.na(startTime)) {
+      seriesRes$time[1] <- startTime
+      if (seriesRes$time[1] == seriesRes$time[2]) {
+        # event occurred at startTime
+        # so time point 2 can serve as time point 1
+        seriesRes <- seriesRes[-1,]
+      }
+    }
     # compute confidence intervals
     seriesRes <- compute_ci(seriesRes)
     # compute counts of at-risk samples, events, and
@@ -95,6 +105,16 @@ run_cuminc <- function(chart) {
       for (series in pair) {
         if (series %in% names(estimates)) next
         seriesRes <- as.data.frame(res[[paste(series,1)]])
+        # if a custom start time is given, then this start time
+        # should serve as the first time point of the curve
+        if (!is.na(startTime)) {
+          seriesRes$time[1] <- startTime
+          if (seriesRes$time[1] == seriesRes$time[2]) {
+            # event occurred at startTime
+            # so time point 2 can serve as time point 1
+            seriesRes <- seriesRes[-1,]
+          }
+        }
         # compute confidence intervals
         seriesRes <- compute_ci(seriesRes)
         # compute counts of at-risk samples, events, and
@@ -219,13 +239,16 @@ compute_counts <- function(res, chart) {
 args <- commandArgs(trailingOnly = T)
 if (length(args) != 1) stop("Usage: Rscript cuminc.R in.json > results")
 infile <- args[1]
-dat <- fromJSON(infile)
+input <- fromJSON(infile)
+
+dat <- input$data
+startTime <- ifelse("startTime" %in% names(input), input$startTime, NA)
 
 # perform cumulative incidence analysis
 # parallelize the analysis across charts/variants
 cores <- detectCores()
 if (is.na(cores)) stop("unable to detect number of cores")
-ci_results <- mclapply(dat, run_cuminc, mc.cores = cores)
+ci_results <- mclapply(X = dat, FUN = run_cuminc, startTime = startTime, mc.cores = cores)
 
 # output results in json format
 toJSON(ci_results, digits = NA, na = "string")
