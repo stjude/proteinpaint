@@ -12,7 +12,7 @@ import blockinit from './block.init'
 import { debounce } from 'debounce'
 import * as parseurl from './app.parseurl'
 import { init_mdsjson } from './app.mdsjson'
-import { drawer_init } from '../appdrawer/app.drawer'
+import { appDrawerInit } from '../appdrawer/app'
 import urlmap from '../common/urlmap'
 import { renderSandboxFormDiv, newSandboxDiv } from '../dom/sandbox'
 import { first_genetrack_tolist } from '../common/1stGenetk'
@@ -383,8 +383,15 @@ function makeheader(app, obj, jwt) {
 	}
 	app.genome_browser_btn = make_genome_browser_btn(app, headbox, jwt)
 
-	app.drawer = drawer_init(app, obj.features)
-	app.drawer.addBtn(headbox, 'Apps', padw_sm, jwt)
+	app.drawer = appDrawerInit({
+		genomes: app.genomes,
+		holder: app.holder,
+		sandbox_header: app.sandbox_header,
+		genome_browser_btn: app.genome_browser_btn,
+		debugmode: app.debugmode,
+		headbox: headbox,
+		padw_sm: padw_sm
+	})
 
 	headbox
 		.append('span')

@@ -4,13 +4,16 @@ import { defaultcolor } from '../shared/common'
 
 /*
 .opts{}
-    .index{}
+    .app{}
+	.dom{}
+	.index{}
 
 TODOs: 
 - Update and add documentation link
 
 Questions: 
-    For the column layout: 
+	- Organize in window based on section size to make best use of space?
+    - For the column layout: 
         1. Cap number of columns?
         2. Allow y overflow for >2 columns (like Trello)?
 */
@@ -29,6 +32,9 @@ class AppDrawerLayoutComp {
 	validateOpts(opts) {
 		if (opts.index.columnsLayout) {
 			if (opts.index.columnsLayout.length == 0) throw `Missing column objects`
+			const allGridAreaValues = opts.index.columnsLayout.map(s => s.gridarea)
+			if (allGridAreaValues.length != new Set(allGridAreaValues).size) throw `Duplicate values for .gridarea found`
+			const allSectionIdValues = []
 			for (const col of opts.index.columnsLayout) {
 				if (!col.name) throw `Missing column .name`
 				if (!col.gridarea) throw `Missing column .gridarea for column = ${col.name}`
@@ -36,21 +42,16 @@ class AppDrawerLayoutComp {
 				for (const section of col.sections) {
 					if (!section.id)
 						throw `Missing section .id in ${section.name ? `section = ${section.name}` : `column = ${col.name} array`}`
+					allSectionIdValues.push(section.id)
+				}
+				if (col.sections.length != new Set(col.sections).size) {
+					throw `Non-unique levels in line ${lineNum}: ${JSON.stringify(levelNames)}`
 				}
 			}
+			if (allSectionIdValues.length != new Set(allSectionIdValues).size) throw `Duplicate values for section.id found`
 		}
 		return opts
 	}
-
-	// init() {
-	//     try {
-	//         // this.dom = {
-	//         //     holder: this.opts.dom.holder
-	//         // }
-	//     } catch (e) {
-	//         throw e
-	//     }
-	// }
 
 	main() {}
 }
@@ -58,18 +59,24 @@ class AppDrawerLayoutComp {
 export const compLayoutInit = getCompInit(AppDrawerLayoutComp)
 
 function setRenderers(self) {
+	if (!self.opts.index.columnsLayout) noDefinedLayout(self)
 	if (self.opts.index.columnsLayout) columnsLayout(self)
-	if (!self.opts.index.columnsLayout) {
-		//TODO: display in order
-	}
+}
+
+function noDefinedLayout(self) {
+	const flexLayout = self.dom.wrapper
+		.append('div')
+		.style('display', 'flex')
+		.style('padding', '10px')
+		.classed('sjpp-element-list', true)
+	return flexLayout
 }
 
 function columnsLayout(self) {
-	// - Allow user to create multiple columns in parent grid
+	// Allow user to create multiple columns in parent grid
 	const parentGrid = self.dom.wrapper
 		.append('div')
 		.style('display', 'grid')
-		//*************TODO change responsive style to accomodate multiple columns
 		.style('grid-template-columns', 'repeat(auto-fit, minmax(425px, 1fr))')
 		.style('gap', '10px')
 		.style('padding', '10px')
