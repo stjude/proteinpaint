@@ -1,60 +1,29 @@
+/*
+this script is hosted at https://proteinpaint.stjude.org/GDC/fileCase2bam.js
+
+examples:
+
+node fileCase2bam.js # queries all files from TCGA-06-0211
+
+node fileCase2bam.js 9a2a226e-9605-4214-9320-469305e664e6 # by case uuid
+
+node fileCase2bam.js 00493087-9d9d-40ca-86d5-936f1b951c93_wxs_gdc_realn.bam # file id
+node fileCase2bam.js 35918f42-c424-48ef-8c95-2d87b48fdf41 # file uuid
+node fileCase2bam.js e2d8ca95-6a3d-48e3-abfc-ce5ee294e954 # this bam file is not viewable (skipped by workflow)
+node fileCase2bam.js invalid_name 
+
+
+corresponds to isoform2ssm_getvariant{} in gdc.hg38.js
+
+*/
+
 const got = require('got')
 const path = require('path')
 
-/*
-hardcoded logic to work with gdc apis
-exports one function
+const apihost = 'https://api.gdc.cancer.gov'
 
-input: <inputId>
-	a gdc id of unspecified type entered by user on the ui
-
-does:
-	determine the type of id by trying to query multiple gdc apis
-	/cases/<inputId>
-		valid return indicates the id is about a case
-		will fetch all bam files eligible for slicing
-		and return to client
-	/files/<inputId>
-		valid return indicates the id is about a file
-		must also ensure it's a bam file? test with a maf file
-		will fetch info about the case of this file
-
-
-function cascade:
-
-gdc_bam_request
-	get_gdc_data
-		try_query
-			ifIdIsCase('cases.case_id')
-				queryApi
-				-> getFileByCaseId('cases.case_id')
-					queryApi
-			ifIdIsCase('cases.submitter_id')
-				-> getFileByCaseId('cases.submitter_id')
-					queryApi
-			getFileByFileId('file_id')
-				queryApi
-			getFileByFileId('file_name')
-				queryApi
-	
-*/
-
-export async function gdc_bam_request(req, res) {
-	try {
-		if (!req.query.gdc_id) throw 'query.gdc_id missing'
-		const bamdata = await get_gdc_data(req.query.gdc_id)
-		res.send(bamdata)
-	} catch (e) {
-		res.send({ error: e.message || e })
-		if (e.stack) console.log(e.stack)
-	}
-}
-
-const apihost = process.env.PP_GDC_HOST || 'https://api.gdc.cancer.gov'
-
-/**********************************************************
-all the rest is copied to /utils/gdc/fileCase2bam.js
-for testing and posting to https://proteinpaint.stjude.org/GDC/
+/************************************************
+following part is copied from bam.gdc.js (lines 63 to the end)
 */
 
 // used in getFileByCaseId() and getFileByCaseId()
@@ -255,3 +224,18 @@ async function queryApi(filters, api) {
 	if (!re.data || !re.data.hits) throw 'data structure not data.hits[]'
 	return re
 }
+
+/************************************************
+above part is copied from bam.gdc.js
+*/
+
+const input = process.argv[2] || 'TCGA-06-0211'
+
+;(async () => {
+	try {
+		const re = await get_gdc_data(input)
+		console.log(re)
+	} catch (e) {
+		console.log('ERROR: ' + (e.message || e))
+	}
+})()
