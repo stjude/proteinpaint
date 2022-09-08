@@ -1,5 +1,4 @@
 import { getAppInit } from '#rx'
-import { storeInit } from './store'
 import { compLayoutInit } from './layout'
 import { cardInit } from './card'
 import { buttonInit } from './dsButton'
@@ -27,7 +26,7 @@ Questions:
 class AppDrawerApp {
 	constructor(opts) {
 		this.type = 'app'
-		this.opts = this.validateOpts(opts)
+		// this.opts = this.validateOpts(opts)
 		// this.drawerRendered = false
 
 		const drawerRow = opts.holder
@@ -72,17 +71,14 @@ class AppDrawerApp {
 		}
 	}
 
-	validateOpts(opts) {
-		// if (!opts.indexJson.elements || opts.indexJson.elements.length == 0) throw `Missing elements to render`
-		// const allSandboxValues = opts.indexJson.elements.map(e => e.sandboxJson || e.sandboxHtml)
-		// if (allSandboxValues.length != new Set(allSandboxValues).size)
-		// 	throw `Duplicate values for .sandboxJson or .sandboxHtml found`
+	validateOpts(opts = {}) {
+		if (!opts.holder) throw `missing opts.holder in the MassApp constructor argument`
 		return opts
 	}
 
 	async init() {
-		this.drawerRendered = false //move to state
-		this.appBtnActive = false //move to state
+		this.drawerRendered = false //move to store
+		this.appBtnActive = false //move to store
 		this.drawerFullHeight = '1000'
 		try {
 			if (this.drawerRendered == true) return
@@ -92,8 +88,7 @@ class AppDrawerApp {
 			this.indexJson = await getCardsJson(this.dom.holder)
 			this.elements = this.indexJson.elements.filter(e => !e.hidden)
 			this.layout = this.indexJson.columnsLayout ? this.indexJson.columnsLayout : null
-			this.drawerFullHeight = this.dom.drawerDiv.node().getBoundingClientRect().height + 5
-			addAppsBtn(this, 'Apps', this.padw_sm)
+			addAppsBtn(this, 'Apps', this.padw_sm) //Change to component?
 			this.components = {
 				layout: await compLayoutInit({ app: this.api, dom: this.dom, index: this.indexJson })
 			}
@@ -105,9 +100,12 @@ class AppDrawerApp {
 	}
 
 	async main() {
-		// if (this.state.drawerRendered == true) return
-		// this.drawerRendered = true
+		slideDrawer(this)
 		loadElements(this)
+		return {
+			appsOff,
+			apps_sandbox_div: this.dom.sandboxDiv
+		}
 	}
 }
 
@@ -124,6 +122,7 @@ async function getCardsJson(holder) {
 }
 
 function appsOff(self) {
+	//move to the store
 	self.appsBtnActive = false
 	if (self.dom.drawerDiv !== undefined) slideDrawer(self)
 }
@@ -135,11 +134,11 @@ function addAppsBtn(self, btnLabel, padw_sm) {
 		.on('click', async () => {
 			d3event.stopPropagation()
 			self.appBtnActive = !self.appBtnActive
-			// await appDrawerInit.main()
+			appDrawerInit
 			slideDrawer(self)
 			if (self.appBtnActive) {
 				setTimeout(() => {
-					self.drawerFullHeight = self.dom.drawerDiv.node().getBoundingClientRect().height + 5
+					// self.drawerFullHeight = self.dom.drawerDiv.node().getBoundingClientRect().height + 5
 				}, self.state.duration + 5)
 			}
 		})
@@ -193,9 +192,8 @@ function addAppsBtn(self, btnLabel, padw_sm) {
 	// if an app is loaded when the page opens, delay the loading
 	// of examples in order to not affect that loading,
 	// otherwise load trigger the loading of examples right away
-	// setTimeout(load_examples, self.appBtnActive ? 0 : 5000)
 
-	//Fix for examplesjson loading before Apps btn is clicked
+	//Fix for index.json loading before Apps btn is clicked
 	if (self.appBtnActive) {
 		appDrawerInit
 	}
@@ -254,14 +252,16 @@ function loadElements(self) {
 					.style('list-style', 'none')
 					.style('margin', '15px 0px'),
 				element,
-				pageArgs: self.opts
+				appsOff
+				// pageArgs: self.opts
 			})
 		} else if (element.type == 'dsButton') {
 			buttonInit({
 				app: self.api,
 				holder,
 				element,
-				pageArgs: self.opts
+				appsOff
+				// pageArgs: self.opts
 			})
 		}
 	})

@@ -389,9 +389,12 @@ function makeheader(app, obj, jwt) {
 		sandbox_header: app.sandbox_header,
 		genome_browser_btn: app.genome_browser_btn,
 		debugmode: app.debugmode,
-		headbox: headbox,
-		padw_sm: padw_sm
+		headbox,
+		padw_sm
 	})
+
+	// app.drawer = drawer_init(app, obj.features)
+	// app.drawer.addBtn(headbox, 'Apps', padw_sm, jwt)
 
 	headbox
 		.append('span')
