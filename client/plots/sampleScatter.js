@@ -49,6 +49,7 @@ class Scatter {
 			.then(d => d.text())
 			.catch(console.error)
 		this.processData(data)
+		console.log(data)
 		this.render()
 	}
 
@@ -63,6 +64,7 @@ class Scatter {
 
 	processData(data) {
 		const lines = data.split('\n')
+		console.log(lines)
 		const header = lines[0].split('\t')
 		const rows = []
 		for (let i = 1; i < lines.length; i++) {
@@ -73,7 +75,6 @@ class Scatter {
 			}
 			rows.push(row)
 		}
-		console.log(72, rows)
 		this.currData = { rows }
 		this.pj.refresh({ data: this.currData.rows })
 	}
@@ -227,7 +228,6 @@ function setRenderers(self) {
 			//.style("fill", color)
 			.style('fill-opacity', s.fillOpacity)
 		//.style("stroke", color);
-
 		circles
 			.enter()
 			.append('circle')
@@ -360,9 +360,9 @@ function getPj(self) {
 							data: [
 								{
 									'__:seriesId': '@parent.@parent.seriesId',
-									//color: "$color",
+									color: '$color',
 									x: '$x',
-									y: '$x',
+									y: '$y',
 									'_1:scaledX': '=scaledX()',
 									'_1:scaledY': '=scaledY()'
 								},
@@ -382,6 +382,7 @@ function getPj(self) {
 					.range([0, s.svgw - s.svgPadding.left - s.svgPadding.right])
 			},
 			scaledX(row, context) {
+				console.log(row)
 				return context.context.context.context.parent.xScale(context.self.x)
 			},
 			scaledY(row, context) {
@@ -397,6 +398,6 @@ function getPj(self) {
 			}
 		}
 	})
-
+	console.log(pj)
 	return pj
 }

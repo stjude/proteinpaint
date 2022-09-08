@@ -238,8 +238,7 @@ function getChartTypeList(self) {
 		{
 			label: 'Sample Scatter',
 			chartType: 'sampleScatter',
-			clickTo: self.showTree_select1term,
-			usecase: { target: 'sampleScatter', detail: 'term' }
+			clickTo: self.showFileLst
 		}
 	]
 }
@@ -341,7 +340,6 @@ function setRenderers(self) {
 			},
 			tree: {
 				click_term: term => {
-					console.log(343, term)
 					action.config[chart.usecase.detail] = term
 					self.dom.tip.hide()
 					self.app.dispatch(action)
@@ -443,5 +441,18 @@ function setRenderers(self) {
 	self.prepPlot = function(chart) {
 		const action = { type: 'plot_prep', config: chart.config, id: idPrefix + id++ }
 		self.app.dispatch(action)
+	}
+
+	self.showFileLst = function() {
+		const menuDiv = self.dom.tip.d.append('div')
+		for (const plot of self.state.termdbConfig.scatterplots.plot) {
+			menuDiv
+				.append('div')
+				.attr('class', 'sja_menuoption sja_sharp_border')
+				.text(plot.name)
+				.on('click', () => {
+					self.app.dispatch({ type: 'plot_create', chartType: 'sampleScatter', plot })
+				})
+		}
 	}
 }

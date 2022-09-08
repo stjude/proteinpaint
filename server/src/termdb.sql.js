@@ -1086,7 +1086,8 @@ thus less things to worry about...
 			if (!r.type) continue
 			// !!! r.cohort is undefined for dataset without subcohort
 			if (!(r.cohort in supportedChartTypes)) {
-				supportedChartTypes[r.cohort] = new Set(['barchart', 'regression', 'sampleScatter'])
+				supportedChartTypes[r.cohort] = new Set(['barchart', 'regression'])
+				if (ds.cohort.scatterplots) supportedChartTypes[r.cohort].add('sampleScatter')
 				numericTypeCount[r.cohort] = 0
 				if (ds.cohort.allowedChartTypes?.includes('matrix')) supportedChartTypes[r.cohort].add('matrix')
 				if (!cred.secret || embedder in cred.secret) {

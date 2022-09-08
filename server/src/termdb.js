@@ -72,7 +72,7 @@ export function handle_request_closure(genomes) {
 				return await phewas.trigger(q, res, ds)
 			}
 			if (q.density) return await density_plot(q, res, ds)
-			if (q.gettermdbconfig) return trigger_gettermdbconfig(q, res, tdb)
+			if (q.gettermdbconfig) return trigger_gettermdbconfig(q, res, tdb, ds.cohort)
 			if (q.getcohortsamplecount) return trigger_getcohortsamplecount(q, res, ds)
 			if (q.getsamplecount) return trigger_getsamplecount(q, res, ds)
 			if (q.getsamples) return trigger_getsamples(q, res, ds)
@@ -145,8 +145,9 @@ function trigger_getsamples(q, res, ds) {
 	res.send({ samples })
 }
 
-function trigger_gettermdbconfig(q, res, tdb) {
+function trigger_gettermdbconfig(q, res, tdb, cohort) {
 	// add attributes to this object for revealing to client
+	console.log(tdb)
 	const c = {
 		selectCohort: tdb.selectCohort, // optional
 		supportedChartTypes: tdb.q.getSupportedChartTypes(q.embedder),
@@ -154,7 +155,8 @@ function trigger_gettermdbconfig(q, res, tdb) {
 		coxCumincXlab: tdb.coxCumincXlab,
 		timeScale: tdb.timeScale,
 		minTimeSinceDx: tdb.minTimeSinceDx,
-		termMatch2geneSet: tdb.termMatch2geneSet
+		termMatch2geneSet: tdb.termMatch2geneSet,
+		scatterplots: cohort.scatterplots
 	}
 	if (tdb.restrictAncestries) {
 		c.restrictAncestries = []
