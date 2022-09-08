@@ -45,8 +45,8 @@ for (let i = 1; i < lines.length; i++) {
 	// names of each level, may be empty; if id is provided, levelX will be term name, otherwise will be term ID
 	const level1 = str2level(l[0]),
 		level2 = str2level(l[1]),
-		level3 = str2level(l[2]),
-		level4 = str2level(l[3]),
+		level3 = str2level(l[2] || '-'),
+		level4 = str2level(l[3] || '-'),
 		level5 = str2level(l[4] || '-') // level 5 is missing from certain terms e.g. ccss ctcae events
 
 	if (!thisid) {
