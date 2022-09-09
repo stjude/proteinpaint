@@ -90,6 +90,7 @@ class TdbTree {
 			termfilter: { filter },
 			usecase: appState.tree.usecase
 		}
+
 		// if cohort selection is enabled for the dataset, tree component needs to know which cohort is selected
 		if (appState.termdbConfig.selectCohort) {
 			state.toSelectCohort = true
@@ -99,6 +100,7 @@ class TdbTree {
 				state.cohortValuelst = choice.keys
 			}
 		}
+
 		return state
 	}
 
@@ -318,7 +320,7 @@ function setRenderers(self) {
 				.style('font-family', 'courier')
 				.text('+')
 				// always allow show/hide children even this term is already in use
-				.on('click', self.toggleTerm)
+				.on('click', self.toggleBranch)
 		}
 
 		const isSelected = self.state.selectedTerms.find(t => t.name === term.name && t.type === term.type)
@@ -352,32 +354,7 @@ function setRenderers(self) {
 					.style('background-color', isSelected ? 'rgba(255, 194, 10,0.5)' : '#cfe2f3')
 					.style('margin', '1px 0px')
 					.style('cursor', 'default')
-					.on('click', () => {
-						if (self.opts.click_term2select_tvs) {
-							self.app.dispatch({ type: 'submenu_set', submenu: { term, type: 'tvs' } })
-						} else if (self.opts.click_term) {
-							self.opts.click_term(term)
-						} else if (self.opts.submit_lst) {
-							const i = self.state.selectedTerms.findIndex(t => t.name === term.name)
-							if (i == -1) {
-								self.app.dispatch({
-									type: 'app_refresh',
-									state: {
-										selectedTerms: [...self.state.selectedTerms, term]
-									}
-								})
-							} else {
-								const selectedTerms = self.state.selectedTerms.slice(0)
-								selectedTerms.splice(i, 1)
-								self.app.dispatch({
-									type: 'app_refresh',
-									state: { selectedTerms }
-								})
-							}
-						} else {
-							throw 'missing term click callback'
-						}
-					})
+					.on('click', () => self.clickTerm(term))
 			}
 
 			//show sample count for a term
@@ -433,7 +410,7 @@ function setInteractivity(self) {
 	// !!! no free-floating variable declarations here !!!
 	// use self in TdbTree constructor to create properties
 
-	self.toggleTerm = function(term) {
+	self.toggleBranch = function(term) {
 		event.stopPropagation()
 		if (term.isleaf) return
 		const t0 = self.termsById[term.id]
@@ -459,5 +436,39 @@ function setInteractivity(self) {
 		const expanded = self.state.expandedTermIds.includes(term.id)
 		const type = expanded ? 'tree_collapse' : 'tree_expand'
 		self.app.dispatch({ type, termId: term.id })
+	}
+
+	self.clickTerm = async term => {
+		if (self.opts.click_term2select_tvs) {
+			self.app.dispatch({ type: 'submenu_set', submenu: { term, type: 'tvs' } })
+			return
+		}
+
+		if (self.opts.click_term_wrapper) {
+			self.opts.click_term_wrapper(term)
+			return
+		}
+
+		if (self.opts.submit_lst) {
+			const i = self.state.selectedTerms.findIndex(t => t.name === term.name)
+			if (i == -1) {
+				self.app.dispatch({
+					type: 'app_refresh',
+					state: {
+						selectedTerms: [...self.state.selectedTerms, term]
+					}
+				})
+			} else {
+				const selectedTerms = self.state.selectedTerms.slice(0)
+				selectedTerms.splice(i, 1)
+				self.app.dispatch({
+					type: 'app_refresh',
+					state: { selectedTerms }
+				})
+			}
+			return
+		}
+
+		throw 'missing term click callback'
 	}
 }

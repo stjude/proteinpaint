@@ -11,7 +11,9 @@ module.exports = {
 		msigdb: {
 			cohort: {
 				db: { file: 'msigdb/db' },
-				termdb: {}
+				termdb: {
+					//termMatch2geneSet:true
+				}
 			}
 		}
 	},
