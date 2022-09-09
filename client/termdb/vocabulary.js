@@ -1,4 +1,4 @@
-import { dofetch3 } from '../common/dofetch'
+import { dofetch3, isInSession } from '../common/dofetch'
 import { getBarchartData, getCategoryData } from '../plots/barchart.data'
 import { nonDictionaryTermTypes } from '../termsetting/termsetting'
 import { getNormalRoot } from '../filter/filter'
@@ -60,6 +60,8 @@ class Vocab {
 
 		// frontend vocab may replace the vocab object reference
 		if (this.state.vocab) this.vocab = this.state.vocab
+		// may or may not need a verified token for a dslabel, based on genome response.dsAuth
+		this.verifiedToken = isInSession(this.state.dslabel)
 
 		// secured plots need to confirm that a verified token exists
 		await this.maySetVerifiedToken()

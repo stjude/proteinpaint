@@ -2,6 +2,7 @@ const fs = require('fs').promises
 const path = require('path')
 const serverconfig = require('./serverconfig')
 const jsonwebtoken = require('jsonwebtoken')
+const crypto = require('crypto')
 
 const cacheFile = path.join(serverconfig.cachedir, 'dsSessions')
 const creds = serverconfig.dsCredentials
@@ -88,11 +89,7 @@ async function maySetAuthRoutes(app, basepath) {
 			const [type, pwd] = req.headers.authorization.split(' ')
 			if (type.toLowerCase() != 'basic') throw `unsupported authorization type='${type}', allowed: 'Basic'`
 			if (Buffer.from(pwd, 'base64').toString() != creds[q.dslabel].password) throw 'invalid password'
-			const id = Math.random().toString()
-			const time = +new Date()
-			sessions[q.dslabel][id] = { id, time }
-			await fs.appendFile(cacheFile, `${q.dslabel}\t${id}\t${time}\n`)
-			res.header('Set-cookie', `${q.dslabel}SessionId=${id}`)
+			await setSession(q, res)
 			res.send({ status: 'ok' })
 		} catch (e) {
 			console.log(e, code)
@@ -101,12 +98,11 @@ async function maySetAuthRoutes(app, basepath) {
 		}
 	})
 
-	// will not set a session
 	app.post(basepath + '/jwt-status', async (req, res) => {
 		let code = 401
-		console.log(99)
 		try {
 			await checkDsSecret(req.query, req.headers)
+			await setSession(req.query, res)
 			res.send({ status: 'ok' })
 		} catch (e) {
 			console.log(e, code)
@@ -115,6 +111,15 @@ async function maySetAuthRoutes(app, basepath) {
 		}
 	})
 }
+
+async function setSession(q, res) {
+	const id = Math.random().toString()
+	const time = +new Date()
+	sessions[q.dslabel][id] = { id, time }
+	await fs.appendFile(cacheFile, `${q.dslabel}\t${id}\t${time}\n`)
+	res.header('Set-cookie', `${q.dslabel}SessionId=${id}`)
+}
+
 /*
 	will return a sessions object that is used
 	for tracking sessions by [dslabel]{[id]: {id, time}}
@@ -158,17 +163,49 @@ function getDsAuth(req) {
 	})
 }
 
+const expIncrement = 300
+
 function checkDsSecret(q, headers) {
 	const cred = serverconfig.dsCredentials?.[q.dslabel]
 	if (!cred) return
 	if (!q.embedder) throw `missing q.embedder`
-	if (!cred.secret[q.embedder]) throw `unknown q.embedder='${q.embedder}'`
-	//console.log(165, cred.secret[q.embedder], jsonwebtoken.sign({ accessibleDatasets: ['TermdbTest', "SJLife"] }, cred.secret[q.embedder
+	const secret = cred.secret[q.embedder]
+	if (!secret) throw `unknown q.embedder='${q.embedder}'`
+
+	//const subsecret =
+	//console.log(165, secret, jsonwebtoken.sign({ accessibleDatasets: ['TermdbTest', "SJLife"] }, secret))
 	const token = headers[cred.headerKey]
-	if (!token) throw `missing q['${cred.headerKey}']`
-	const payload = jsonwebtoken.verify(token, cred.secret[q.embedder])
-	//console.log(169, payload)
-	if (!payload.accessibleDatasets.includes(q.dslabel)) throw `not authorized for dslabel='${q.dslabel}'`
+	if (!token) throw `missing header['${cred.headerKey}']`
+	const payload = jsonwebtoken.verify(token, secret)
+	//const exp = time + 300000
+	const time = +new Date() / 1000
+	const exp = Math.ceil(time / expIncrement) * expIncrement
+	if (payload.iat + expIncrement < exp) throw `expired token`
+
+	const subSecret = crypto
+		.createHash('sha256')
+		.update(exp.toString())
+		.digest('hex')
+		.toString()
+		.substring(0, 32)
+
+	const decryptedSub = AESDecrypt(payload.sub, subSecret)
+	const dsname = cred.dsname || q.dslabel
+	if (0 && !decryptedSub.accessibleDatasets?.includes(dsname))
+		throw `not authorized for dslabel='${q.dslabel}' (dsname='${dsname}')`
 }
 
 module.exports = { maySetAuthRoutes, getDsAuth, checkDsSecret }
+
+const AES_METHOD = 'aes-256-cbc'
+const IV_LENGTH = 16 // For AES, this is always 16 for compatibility with Viz' PHP implementation
+
+function AESDecrypt(text, password) {
+	const textParts = text.split(':')
+	const iv = Buffer.from(textParts.shift(), 'hex')
+	const encryptedText = Buffer.from(textParts.join(':'), 'hex')
+	const decipher = crypto.createDecipheriv('aes-256-cbc', Buffer.from(password), iv)
+	let decrypted = decipher.update(encryptedText)
+	decrypted = Buffer.concat([decrypted, decipher.final()])
+	return decrypted.toString()
+}

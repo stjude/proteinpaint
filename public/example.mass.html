@@ -28,9 +28,11 @@ runproteinpaint({
 	mass:{
 		state:{
 			genome:'hg38',
-			dslabel:'TermdbTest',
+			dslabel:'SJLife',
 			optionalApps: [],
-
+			plots: [{
+				chartType: 'dataDownload'
+			}]
 		}
 	}
 })
@@ -46,9 +48,20 @@ function login(btn) {
 	// you will need to paste the logged value here, which is generated using your own 
 	// serverconfig.dsCredentials['TermdbTest'].secret
 	token = window.location.hash.slice(1)
-	btn.innerHTML = 'You are logged in'
+	if (!token) {
+		alert('missing token')
+		return
+	}
+
+
 	// console.log(44, loginCallbacks)
-	for(const cb of loginCallbacks) cb()
+	try {
+		for(const cb of loginCallbacks) cb()
+	} catch(e) {
+		throw e
+	}
+
+	btn.innerHTML = 'Test of Log in'
 }
 </script>
 
