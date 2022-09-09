@@ -147,7 +147,6 @@ function trigger_getsamples(q, res, ds) {
 
 function trigger_gettermdbconfig(q, res, tdb, cohort) {
 	// add attributes to this object for revealing to client
-	console.log(tdb)
 	const c = {
 		selectCohort: tdb.selectCohort, // optional
 		supportedChartTypes: tdb.q.getSupportedChartTypes(q.embedder),
