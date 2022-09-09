@@ -99,9 +99,10 @@ export class Cuminc {
 		if (chartTests.length != 1) throw 'should have one test'
 		const test = chartTests[0]
 		this.tests[chartId].push({
-			pvalue: { id: 'pvalue', text: test.pvalue },
+			pvalue: { id: 'pvalue', text: test.permutation ? test.pvalue + '*' : test.pvalue },
 			series1: { id: test.series1 },
-			series2: { id: test.series2 }
+			series2: { id: test.series2 },
+			permutation: test.permutation
 		})
 	}
 
@@ -143,11 +144,14 @@ export class Cuminc {
 			if (key == 'pvalue') {
 				// p-value of test
 				test[key].color = '#000'
-			} else {
+			} else if (key.startsWith('series')) {
 				// series of test
 				const item = legendItems.find(item => item.seriesId == test[key].id)
 				test[key].color = item.color
 				test[key].text = item.text
+			} else {
+				// permutation flag
+				continue
 			}
 		}
 	}
@@ -253,7 +257,7 @@ class MassCumInc {
 							chartType: 'cuminc',
 							settingsKey: 'xTickValues',
 							title: `Option to customize the x-axis tick values, enter as comma-separated values. Will be ignored if empty`,
-							processInput: value => value.split(',').map(Number)
+							processInput: value => (value ? value.split(',').map(Number) : [])
 						},
 						{
 							label: 'At-risk counts',
@@ -360,9 +364,10 @@ class MassCumInc {
 				for (const test of chartTests) {
 					if (this.settings.hidden.includes(test.series1) || this.settings.hidden.includes(test.series2)) continue // hide tests that contain hidden series
 					this.tests[chartId].push({
-						pvalue: { id: 'pvalue', text: test.pvalue },
+						pvalue: { id: 'pvalue', text: test.permutation ? test.pvalue + '*' : test.pvalue },
 						series1: { id: test.series1 },
-						series2: { id: test.series2 }
+						series2: { id: test.series2 },
+						permutation: test.permutation
 					})
 				}
 				if (!this.tests[chartId].length) delete this.tests[chartId]
@@ -441,11 +446,14 @@ class MassCumInc {
 					if (key == 'pvalue') {
 						// p-value of test
 						test[key].color = '#000'
-					} else {
+					} else if (key.startsWith('series')) {
 						// series of test
 						const item = legendItems.find(item => item.seriesId == test[key].id)
 						test[key].color = item.color
 						test[key].text = item.text
+					} else {
+						// permutation flag
+						continue
 					}
 				}
 			}
@@ -575,9 +583,6 @@ function setRenderers(self) {
 			(maxlen, a) => (a.seriesLabel && a.seriesLabel.length > maxlen ? a.seriesLabel.length : maxlen),
 			0
 		)
-		chart.atRiskLabelWidth = s.atRiskVisible
-			? maxSeriesLabelLen * (s.axisTitleFontSize - 2) * 0.4 + s.atRiskLabelOffset
-			: 0
 	}
 
 	self.updateCharts = function(chart) {
@@ -691,7 +696,7 @@ function setRenderers(self) {
 		svg
 			.transition()
 			.duration(duration)
-			.attr('width', s.svgw + chart.atRiskLabelWidth)
+			.attr('width', s.svgw)
 			.attr('height', s.svgh + extraHeight)
 			.style('overflow', 'visible')
 			.style('padding-left', '20px')
@@ -700,7 +705,7 @@ function setRenderers(self) {
 		const [mainG, seriesesG, axisG, xAxis, yAxis, xTitle, yTitle, atRiskG, plotRect] = getSvgSubElems(svg, chart)
 		/* eslint-enable */
 		//if (d.xVals) computeScales(d, s);
-		const xOffset = chart.atRiskLabelWidth + s.svgPadding.left
+		const xOffset = s.svgPadding.left
 		mainG.attr('transform', 'translate(' + xOffset + ',' + s.svgPadding.top + ')')
 		const serieses = seriesesG
 			.selectAll('.sjpcb-cuminc-series')
@@ -1042,7 +1047,7 @@ const defaultSettings = JSON.stringify({
 	},
 	cuminc: {
 		minSampleSize: 5,
-		atRiskVisible: false,
+		atRiskVisible: true,
 		atRiskLabelOffset: -10,
 		xTickValues: [], // if undefined or empty, will be ignored
 		ciVisible: false,

@@ -147,7 +147,7 @@ class TdbSurvival {
 							chartType: 'survival',
 							settingsKey: 'xTickValues',
 							title: `Option to customize the x-axis tick values, enter as comma-separated values. Will be ignored if empty`,
-							processInput: value => value.split(',').map(Number)
+							processInput: value => (value ? value.split(',').map(Number) : [])
 						},
 						{
 							label: 'At-risk counts',

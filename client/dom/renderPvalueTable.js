@@ -131,6 +131,15 @@ export function renderPvalues({ holder, plot, tests, s, bins, tip, setActiveMenu
 			.style('font-size', fontSize + 'px')
 			.style('cursor', plot == 'survival' ? 'pointer' : 'auto')
 			.text(d => d.text)
+
+		// footnote div
+		if (visibleTests.find(test => test.permutation)) {
+			holder
+				.append('div')
+				.style('margin-top', '10px')
+				.style('font-size', fontSize - 2 + 'px')
+				.text("*computed by permutation of Gray's test statistic")
+		}
 	}
 
 	if (plot == 'survival') {

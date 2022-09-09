@@ -81,12 +81,12 @@ export function renderAtRiskG({ g, s, chart, term2values, term2toColor }) {
 	}
 
 	let data
+	g.selectAll('.sjpp-cuminc-atrisk-title').remove()
 	if (s.atRiskVisible) {
 		// at-risk counts are visible
 		// sort the data
 		data = Object.keys(bySeries).sort((a, b) => seriesOrder.indexOf(a) - seriesOrder.indexOf(b))
 		// render the title
-		g.selectAll('.sjpp-cuminc-atrisk-title').remove()
 		const titleg = g
 			.append('text')
 			.attr('class', 'sjpp-cuminc-atrisk-title')
@@ -96,13 +96,11 @@ export function renderAtRiskG({ g, s, chart, term2values, term2toColor }) {
 			)
 			.attr('text-anchor', 'end')
 			.attr('font-size', `${s.axisTitleFontSize - 4}px`)
-			.attr('cursor', 'pointer')
 			.text('Number at risk')
 		titleg
 			.append('tspan')
 			.attr('x', 0)
 			.attr('y', s.axisTitleFontSize - 4)
-			.attr('cursor', 'pointer')
 			.text('(# censored)')
 	} else {
 		// at-risk counts are not visible
@@ -158,7 +156,7 @@ function renderAtRiskTick(g, chart, xTickValues, s, seriesId, series) {
 
 	const text = g.selectAll('text').data(data)
 	text.exit().remove()
-	text.each(renderAtRiskTspans)
+	text.each(renderAtRiskLabel)
 	text
 		.enter()
 		.append('text')
@@ -166,27 +164,14 @@ function renderAtRiskTick(g, chart, xTickValues, s, seriesId, series) {
 		.attr('text-anchor', 'middle')
 		.attr('font-size', `${s.axisTitleFontSize - 4}px`)
 		.attr('cursor', 'pointer')
-		.each(renderAtRiskTspans)
+		.each(renderAtRiskLabel)
 
-	function renderAtRiskTspans(d) {
-		const atRiskTickLabel = select(this)
-			.attr('transform', d => `translate(${chart.xScale(d.tickVal)},0)`)
-			.attr('font-size', `${s.axisTitleFontSize - 4}px`)
-
-		const tspans = atRiskTickLabel.selectAll('tspan').data([d.atRisk, d.nCensored])
-
-		tspans.exit().remove()
-
-		tspans
-			.attr('x', 0)
-			.attr('y', (d, i) => i * (s.axisTitleFontSize - 4))
-			.text((d, i) => (i === 0 ? d : `(${d})`))
-
-		tspans
-			.enter()
+	function renderAtRiskLabel(d) {
+		const atRiskTickLabel = select(this).text(d => d.atRisk)
+		atRiskTickLabel
 			.append('tspan')
 			.attr('x', 0)
-			.attr('y', (d, i) => i * (s.axisTitleFontSize - 4))
-			.text((d, i) => (i === 0 ? d : `(${d})`))
+			.attr('y', s.axisTitleFontSize - 4)
+			.text(d => `(${d.nCensored})`)
 	}
 }
