@@ -16,6 +16,7 @@ variant2samples_getresult()
 		get_crosstabCombinations()
 		addCrosstabCount_tonodes
 	make_summary
+		make_summary_categorical
 	summary2barchart
 
 
@@ -79,7 +80,9 @@ export async function variant2samples_getresult(q, ds) {
 	if (q.get == ds.variant2samples.type_sunburst) {
 		return await make_sunburst(mutatedSamples, ds, q)
 	}
+
 	const get = q.get || q.term2_q.mode
+
 	if (get == ds.variant2samples.type_summary) {
 		const summary = await make_summary(mutatedSamples, ds, q)
 		if (q.term1_id) {
@@ -116,6 +119,7 @@ export async function variant2samples_getresult(q, ds) {
 		}
 		return summary
 	}
+
 	throw 'unknown get type'
 }
 
@@ -388,6 +392,9 @@ async function make_sunburst(mutatedSamples, ds, q) {
 	return nodes
 }
 
+/*
+given a list of cases, summarize over a set of terms
+*/
 async function make_summary(mutatedSamples, ds, q) {
 	const entries = []
 	/* one element for a term
@@ -402,14 +409,11 @@ async function make_summary(mutatedSamples, ds, q) {
 	for (const termid of termidlst) {
 		const term = ds.cohort.termdb.q.termjsonByOneid(termid)
 		if (!term) continue
-		// may skip a term
+
 		if (term.type == 'categorical') {
-			const cat2count = new Map()
-			for (const s of mutatedSamples) {
-				const c = s[term.id]
-				if (!c) continue
-				cat2count.set(c, 1 + (cat2count.get(c) || 0))
-			}
+			const cat2count = make_summary_categorical(mutatedSamples, termid)
+			// k: category string, v: sample count
+
 			entries.push({
 				termid: term.id,
 				termname: term.name,
@@ -441,6 +445,73 @@ async function make_summary(mutatedSamples, ds, q) {
 		}
 	}
 	return entries
+}
+
+/*
+input:
+	samples = []
+		an array of sample objects returned by queryMutatedSamples()
+		!! NOTE !! a sample carrying multiple mutations can be represented multiple times
+		to get correct sample count in category breakdown,
+		must count unique samples by sample id
+
+	termid = str
+		term id summarize against
+
+output:
+	map of unique sample counts per category
+*/
+function make_summary_categorical(samples, termid) {
+	const cat2count = new Map()
+
+	if ('sample_id' in samples[0]) {
+		/* 
+		sample.sample_id is set. this should be present for all non-gdc tracks
+		*/
+		for (const s of samples) {
+			const c = s[termid]
+			if (!c) continue
+			if (!cat2count.has(c)) {
+				cat2count.set(c, new Set())
+			}
+			cat2count.get(c).add(s.sample_id)
+		}
+		const map = new Map()
+		for (const [c, s] of cat2count) {
+			map.set(c, s.size)
+		}
+		return map
+	}
+
+	if ('case_uuid' in samples[0]) {
+		/*
+		for gdc track, instead of "sample_id" it uses "case_uuid" as hardcoded for gdc
+		*/
+		for (const s of samples) {
+			const c = s[termid]
+			if (!c) continue
+			if (!cat2count.has(c)) {
+				cat2count.set(c, new Set())
+			}
+			cat2count.get(c).add(s.case_uuid)
+		}
+		const map = new Map()
+		for (const [c, s] of cat2count) {
+			map.set(c, s.size)
+		}
+		return map
+	}
+
+	/*
+	neither sample_id or case.case_id is set
+	no way to gather unique list of samples
+	*/
+	for (const s of samples) {
+		const c = s[term.id]
+		if (!c) continue
+		cat2count.set(c, 1 + (cat2count.get(c) || 0))
+	}
+	return cat2count
 }
 
 /*
