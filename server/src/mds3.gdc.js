@@ -600,6 +600,15 @@ termidlst[]
 ds{}
 */
 export async function querySamples_gdcapi(q, termidlst, ds) {
+	if (q.get == 'summary' && !termidlst.includes('case.case_id')) {
+		/*
+		(from variant2sample) to summarize samples that can be retrieved here
+		which requires case_uuid to count unique list of samples per category
+		when 'case.case_id' is missing from term ids, must add it to the list so case_uuid will be available from resulting sample objects
+		*/
+		termidlst.push('case.case_id')
+	}
+
 	const api = ds.variant2samples.gdcapi
 
 	const termObjs = []
