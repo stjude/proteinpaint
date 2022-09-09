@@ -111,11 +111,14 @@ export function renderPvalues({ holder, plot, tests, s, bins, tip, setActiveMenu
 			.enter()
 			.append('tr')
 			.attr('class', `pp-${plot}-chartLegends-pvalue`)
-			.on('click', t => {
+
+		if (plot == 'survival') {
+			tr.on('click', t => {
 				const hiddenPvalues = s.hiddenPvalues.slice()
 				hiddenPvalues.push(t)
 				updateHiddenPvalues(hiddenPvalues)
 			})
+		}
 
 		// table cells
 		tr.selectAll('td')

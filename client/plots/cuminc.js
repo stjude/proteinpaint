@@ -14,8 +14,15 @@ import { getSeriesTip } from '#dom/svgSeriesTips'
 import { renderAtRiskG } from '#dom/renderAtRisk'
 import { renderPvalues } from '#dom/renderPvalueTable'
 
-// Cuminc class is for cumulative incidence test for cox regression
-// input data is cuminc data for a single chart for a low AF snp
+/*
+class Cuminc
+- for cox regression cumulative incidence test
+- simpler workflow relative to class MassCumInc:
+	- input data is for a single chart
+	- no hidden series
+	- no skipped series
+	- no skipped charts
+*/
 export class Cuminc {
 	constructor(opts) {
 		this.pj = getPj(this)
@@ -32,7 +39,8 @@ export class Cuminc {
 		this.dom = {
 			holder,
 			chartsDiv: holder.append('div').style('margin', '10px'),
-			legendDiv: holder.append('div').style('margin', '5px')
+			legendDiv: holder.append('div').style('margin', '5px'),
+			hiddenDiv: holder.append('div').style('margin', '5px 5px 15px 5px')
 		}
 
 		this.lineFxn = line()
@@ -48,23 +56,17 @@ export class Cuminc {
 			settings: {
 				legendOrientation: 'vertical'
 			},
-			handlers: {
-				legend: {
-					click: this.legendClick
-				}
-			}
+			handlers: {}
 		})
 	}
 
 	main(data) {
 		this.settings = this.state.config.settings.cuminc
 		this.settings.atRiskVisible = false
-		this.hiddenOverlays = []
 		this.processData(data)
 		this.pj.refresh({ data: this.currData })
 		this.setTerm2Color(this.pj.tree.charts)
 		this.render()
-		this.legendRenderer(this.legendData)
 	}
 
 	processData(data) {
@@ -96,18 +98,11 @@ export class Cuminc {
 		const chartTests = data.tests[chartId]
 		if (chartTests.length != 1) throw 'should have one test'
 		const test = chartTests[0]
-		if (!this.hiddenOverlays.includes(test.series1) && !this.hiddenOverlays.includes(test.series2)) {
-			// if test does not contain any hidden series
-			// then show test
-			this.tests[chartId].push({
-				pvalue: { id: 'pvalue', text: test.pvalue },
-				series1: { id: test.series1 },
-				series2: { id: test.series2 }
-			})
-		}
-		if (!this.tests[chartId].length) delete this.tests[chartId]
-
-		// NOTE: no need to process skipped series or skipped charts, because no series or charts are skipped for cox cuminc test
+		this.tests[chartId].push({
+			pvalue: { id: 'pvalue', text: test.pvalue },
+			series1: { id: test.series1 },
+			series2: { id: test.series2 }
+		})
 	}
 
 	setTerm2Color(charts) {
@@ -127,8 +122,7 @@ export class Cuminc {
 				legendItems.push({
 					seriesId: series.seriesId,
 					text: series.seriesLabel,
-					color: this.term2toColor[series.seriesId].adjusted,
-					isHidden: this.hiddenOverlays.includes(series.seriesId)
+					color: this.term2toColor[series.seriesId].adjusted
 				})
 			}
 		}
@@ -159,8 +153,11 @@ export class Cuminc {
 	}
 }
 
-// MassCumInc class is for general cumulative incidence analysis
-// input data is cuminc data for one or more charts
+/*
+class MassCumInc
+- for general cumulative incidence analysis
+- input data is for one or more charts
+*/
 class MassCumInc {
 	constructor(opts) {
 		this.type = 'cuminc'
@@ -176,6 +173,7 @@ class MassCumInc {
 			holder,
 			chartsDiv: holder.append('div').style('margin', '10px'),
 			legendDiv: holder.append('div').style('margin', '5px'),
+			hiddenDiv: holder.append('div').style('margin', '5px 5px 15px 5px'),
 			skippedChartsDiv: holder.append('div').style('margin', '25px 5px 15px 5px')
 		}
 		if (this.dom.header) this.dom.header.html('Cumulative Incidence Plot')
@@ -189,6 +187,16 @@ class MassCumInc {
 		setInteractivity(this)
 		setRenderers(this)
 		this.legendRenderer = htmlLegend(this.dom.legendDiv, {
+			settings: {
+				legendOrientation: 'vertical'
+			},
+			handlers: {
+				legend: {
+					click: this.legendClick
+				}
+			}
+		})
+		this.hiddenRenderer = htmlLegend(this.dom.hiddenDiv, {
 			settings: {
 				legendOrientation: 'vertical'
 			},
@@ -302,12 +310,10 @@ class MassCumInc {
 			const reqOpts = this.getDataRequestOpts()
 			const data = await this.app.vocabApi.getNestedChartSeriesData(reqOpts)
 			this.app.vocabApi.syncTermData(this.state.config, data)
-			this.hiddenOverlays = this.getHiddenOverlays()
 			this.processData(data)
 			this.pj.refresh({ data: this.currData })
 			this.setTerm2Color(this.pj.tree.charts)
 			this.render()
-			this.legendRenderer(this.settings.atRiskVisible ? [] : this.legendData)
 			this.renderSkippedCharts(this.dom.skippedChartsDiv, this.skippedCharts)
 		} catch (e) {
 			console.error(e)
@@ -327,15 +333,6 @@ class MassCumInc {
 		if (c.term0) opts.term0 = c.term0
 		if (this.state.ssid) opts.ssid = this.state.ssid
 		return opts
-	}
-
-	getHiddenOverlays() {
-		const tw = this.state.config.term2
-		if (!tw) return []
-		const h = tw.q.hiddenValues
-		return Object.keys(h)
-			.filter(k => h[k])
-			.map(k => tw.term.values[k].label)
 	}
 
 	processData(data) {
@@ -361,7 +358,7 @@ class MassCumInc {
 				const chartTests = data.tests[chartId]
 				this.tests[chartId] = []
 				for (const test of chartTests) {
-					if (this.hiddenOverlays.includes(test.series1) || this.hiddenOverlays.includes(test.series2)) continue // hide tests that contain hidden series
+					if (this.settings.hidden.includes(test.series1) || this.settings.hidden.includes(test.series2)) continue // hide tests that contain hidden series
 					this.tests[chartId].push({
 						pvalue: { id: 'pvalue', text: test.pvalue },
 						series1: { id: test.series1 },
@@ -377,7 +374,7 @@ class MassCumInc {
 		if (data.lowSampleSize) {
 			// hide skipped series of hidden series
 			for (const chart in data.lowSampleSize) {
-				const serieses = data.lowSampleSize[chart].filter(series => !this.hiddenOverlays.includes(series))
+				const serieses = data.lowSampleSize[chart].filter(series => !this.settings.hidden.includes(series))
 				if (serieses) this.lowSampleSize[chart] = serieses
 			}
 		}
@@ -386,7 +383,7 @@ class MassCumInc {
 		if (data.lowEventCnt) {
 			// hide skipped series of hidden series
 			for (const chart in data.lowEventCnt) {
-				const serieses = data.lowEventCnt[chart].filter(series => !this.hiddenOverlays.includes(series))
+				const serieses = data.lowEventCnt[chart].filter(series => !this.settings.hidden.includes(series))
 				if (serieses) this.lowEventCnt[chart] = serieses
 			}
 		}
@@ -415,7 +412,7 @@ class MassCumInc {
 						seriesId: series.seriesId,
 						text: series.seriesLabel,
 						color: this.term2toColor[series.seriesId].adjusted,
-						isHidden: this.hiddenOverlays.includes(series.seriesId)
+						isHidden: this.settings.hidden.includes(series.seriesId)
 					})
 				}
 			}
@@ -424,7 +421,14 @@ class MassCumInc {
 			this.legendData = [
 				{
 					name: this.state.config.term2.term.name,
-					items: legendItems
+					items: legendItems.filter(s => !s.isHidden)
+				}
+			]
+
+			this.hiddenData = [
+				{
+					name: `<span style='color:#aaa; font-weight:400'><span>Hidden categories</span><span style='font-size:0.8rem'> CLICK TO SHOW</span></span>`,
+					items: legendItems.filter(s => s.isHidden).map(item => Object.assign({}, item, { isHidden: false }))
 				}
 			]
 		} else {
@@ -463,6 +467,14 @@ function setRenderers(self) {
 
 		self.dom.holder.style('display', 'inline-block')
 		self.dom.chartsDiv.on('mouseover', self.mouseover).on('mouseout', self.mouseout)
+
+		self.legendRenderer(self.settings.atRiskVisible ? [] : self.legendData)
+
+		if (!self.hiddenData?.[0]?.items.length) self.dom.hiddenDiv.style('display', 'none')
+		else {
+			self.dom.hiddenDiv.style('display', '')
+			self.hiddenRenderer(self.hiddenData)
+		}
 	}
 
 	self.addCharts = function(chart) {
@@ -558,7 +570,7 @@ function setRenderers(self) {
 	}
 
 	function setVisibleSerieses(chart, s) {
-		chart.visibleSerieses = chart.serieses.filter(series => !self.hiddenOverlays.includes(series.seriesId))
+		chart.visibleSerieses = chart.serieses.filter(series => !s.hidden.includes(series.seriesId))
 		const maxSeriesLabelLen = chart.visibleSerieses.reduce(
 			(maxlen, a) => (a.seriesLabel && a.seriesLabel.length > maxlen ? a.seriesLabel.length : maxlen),
 			0
@@ -690,7 +702,6 @@ function setRenderers(self) {
 		//if (d.xVals) computeScales(d, s);
 		const xOffset = chart.atRiskLabelWidth + s.svgPadding.left
 		mainG.attr('transform', 'translate(' + xOffset + ',' + s.svgPadding.top + ')')
-		chart.visibleSerieses = chart.serieses.filter(s => !self.hiddenOverlays.includes(s.seriesId))
 		const serieses = seriesesG
 			.selectAll('.sjpcb-cuminc-series')
 			.data(chart.visibleSerieses, d => (d && d[0] ? d[0].seriesId : ''))
@@ -712,7 +723,6 @@ function setRenderers(self) {
 			g: atRiskG,
 			s,
 			chart,
-			hidden: self.hiddenOverlays,
 			term2values: self.state.config.term2?.values,
 			term2toColor: self.term2toColor
 		})
@@ -1007,25 +1017,19 @@ function setInteractivity(self) {
 		event.stopPropagation()
 		const d = event.target.__data__
 		if (d === undefined) return
-		const hidden = self.hiddenOverlays.slice()
+		const hidden = self.settings.hidden.slice()
 		const i = hidden.indexOf(d.seriesId)
-		if (i == -1) hidden.push(d.seriesId)
-		else hidden.splice(i, 1)
-
-		const hiddenValues = {}
-		const term2 = JSON.parse(JSON.stringify(self.state.config.term2))
-		for (const v of hidden) {
-			for (const k in term2.term.values) {
-				const value = term2.term.values[k]
-				if (hidden.includes(value.label)) hiddenValues[k] = 1
-			}
-		}
-		term2.q.hiddenValues = hiddenValues
-
+		i == -1 ? hidden.push(d.seriesId) : hidden.splice(i, 1)
 		self.app.dispatch({
 			type: 'plot_edit',
 			id: self.id,
-			config: { term2 }
+			config: {
+				settings: {
+					cuminc: {
+						hidden
+					}
+				}
+			}
 		})
 	}
 }
@@ -1038,7 +1042,7 @@ const defaultSettings = JSON.stringify({
 	},
 	cuminc: {
 		minSampleSize: 5,
-		atRiskVisible: true,
+		atRiskVisible: false,
 		atRiskLabelOffset: -10,
 		xTickValues: [], // if undefined or empty, will be ignored
 		ciVisible: false,
@@ -1058,7 +1062,8 @@ const defaultSettings = JSON.stringify({
 		},
 		axisTitleFontSize: 16,
 		xAxisOffset: 5,
-		yAxisOffset: -5
+		yAxisOffset: -5,
+		hidden: []
 	}
 })
 

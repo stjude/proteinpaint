@@ -593,7 +593,6 @@ function setRenderers(self) {
 			g: atRiskG,
 			s,
 			chart,
-			hidden: s.hidden,
 			term2values: self.state.config.term2?.values,
 			term2toColor: self.term2toColor
 		})

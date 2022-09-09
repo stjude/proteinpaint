@@ -10,13 +10,12 @@ input parameter:
     g: selection
     s: {} self.settings
     chart: {} chart object
-    hidden: [] hidden series
     term2values: TODO: is this ever defined?
     term2toColor: {} map term2 values to colors
 }
 */
 
-export function renderAtRiskG({ g, s, chart, hidden, term2values, term2toColor }) {
+export function renderAtRiskG({ g, s, chart, term2values, term2toColor }) {
 	const bySeries = {}
 
 	// do not compute at-risk counts of tick values that are
@@ -123,10 +122,7 @@ export function renderAtRiskG({ g, s, chart, hidden, term2values, term2toColor }
 		const y = (i + 1) * (2 * s.axisTitleFontSize)
 		const g = select(this)
 			.attr('transform', `translate(0,${y})`)
-			.attr(
-				'fill',
-				chart.serieses.length == 1 ? '#000' : hidden.includes(seriesId) ? '#aaa' : term2toColor[seriesId].adjusted
-			) // TODO: attached series color to the data of 'sg'
+			.attr('fill', chart.serieses.length == 1 ? '#000' : term2toColor[seriesId].adjusted) // TODO: attached series color to the data of 'sg'
 
 		renderAtRiskTick(g.select(':scope>g'), chart, xTickValues, s, seriesId, bySeries[seriesId])
 	})
@@ -137,10 +133,7 @@ export function renderAtRiskG({ g, s, chart, hidden, term2values, term2toColor }
 			const y = (i + 1) * (2 * s.axisTitleFontSize)
 			const g = select(this)
 				.attr('transform', `translate(0,${y})`)
-				.attr(
-					'fill',
-					chart.serieses.length == 1 ? '#000' : hidden.includes(seriesId) ? '#aaa' : term2toColor[seriesId].adjusted
-				)
+				.attr('fill', chart.serieses.length == 1 ? '#000' : term2toColor[seriesId].adjusted)
 
 			const sObj = chart.serieses.find(s => s.seriesId === seriesId)
 			g.append('text')

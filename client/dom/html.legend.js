@@ -158,10 +158,12 @@ export default function htmlLegend(legendDiv, viz = { settings: {}, handlers: {}
 			.style('vertical-align', d.svg ? 'top' : null)
 			.html(d.text)
 
-		div
-			.on('click', viz.handlers.legend.click)
-			.on('mouseover', viz.handlers.legend.mouseover)
-			.on('mouseout', viz.handlers.legend.mouseout)
+		if (Object.keys(viz.handlers).length) {
+			div
+				.on('click', viz.handlers.legend.click)
+				.on('mouseover', viz.handlers.legend.mouseover)
+				.on('mouseout', viz.handlers.legend.mouseout)
+		}
 	}
 
 	return render
