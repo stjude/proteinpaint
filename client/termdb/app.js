@@ -51,6 +51,8 @@ class TdbApp {
 	}
 
 	validateOpts(o) {
+		// FIXME XXX errors thrown here are silently ignored !!!!
+
 		if (o.vocabApi) {
 			// verify it is an object returned by vocabInit()
 		} else if (o.state && o.state.vocab) {
@@ -77,10 +79,12 @@ class TdbApp {
 				throw `opts.tree.disable_terms is used only when opts.tree.click_term, opts.tree.click_term2select_tvs, or opts.barchart.bar_click_override is set`
 			}
 
+			// opts.search{} is required, possibly in search.js
+			if (!o.search) o.search = {}
+
 			if (o.tree.click_term2select_tvs) {
 				// create the callback on o.search{} so search.js code does not break
 				// FIXME dispatch('submenu_set') is coded twice (also in tree.js)
-				if (!o.search) o.search = {}
 				o.search.click_term = term =>
 					this.api.dispatch({
 						type: 'submenu_set',
