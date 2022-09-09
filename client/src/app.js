@@ -766,7 +766,7 @@ async function parseEmbedThenUrl(arg, app) {
 	}
 
 	if (arg.gdcbamslice) {
-		launchgdcbamslice(arg, app)
+		return await launchgdcbamslice(arg, app)
 	}
 
 	if (arg.mass) {
@@ -1367,8 +1367,8 @@ function launchJunctionbyMatrix(arg, app) {
 }
 
 function launchgdcbamslice(arg, app) {
-	import('./block.tk.bam.gdc').then(p => {
-		p.bamsliceui({
+	return import('./block.tk.bam.gdc').then(p => {
+		return p.bamsliceui({
 			genomes: app.genomes,
 			holder: app.holder0,
 

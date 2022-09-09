@@ -49,6 +49,9 @@
 		</div>
 
 		<div id="aaa" style="margin: 10px"></div>
+		<hr/>
+		<hr/>
+		<p style='margin:10px; padding: 10px'>Example file or case ID: TCGA-06-0211</p>
 		<div id="bbb" style="margin: 10px"></div>
 <script type='module'>
 import { ProteinPaintWrapper } from './PpReact.js'
@@ -56,6 +59,11 @@ setPrimarySite()
 ReactDOM.render(
 	React.createElement(ProteinPaintWrapper, {track: 'lolliplot', }, null),
 	document.getElementById('aaa')
+)
+
+ReactDOM.render(
+	React.createElement(ProteinPaintWrapper, {track: 'bam', }, null),
+	document.getElementById('bbb')
 )
 </script>
 </body>
