@@ -37,7 +37,8 @@ class MassCharts {
 			vocab: appState.vocab,
 			activeCohort: appState.activeCohort,
 			termfilter: appState.termfilter,
-			supportedChartTypes: chartTypes[cohortStr] || ['barchart']
+			supportedChartTypes: chartTypes[cohortStr] || ['barchart'],
+			termdbConfig: appState.termdbConfig
 		}
 		if (appState.termfilter && appState.termfilter.filter) {
 			state.filter = getNormalRoot(appState.termfilter.filter)
@@ -451,7 +452,11 @@ function setRenderers(self) {
 				.attr('class', 'sja_menuoption sja_sharp_border')
 				.text(plot.name)
 				.on('click', () => {
-					self.app.dispatch({ type: 'plot_create', chartType: 'sampleScatter', plot })
+					self.app.dispatch({
+						type: 'plot_create',
+						config: { chartType: 'sampleScatter', term: { id: plot.term.id }, file: plot.file },
+						plot
+					})
 				})
 		}
 	}

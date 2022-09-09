@@ -31,7 +31,8 @@ module.exports = function() {
 					{
 						name: 'Methylome TSNE',
 						dimension: 2, // 2d requires x/y, 3d requires x/y/z
-						file: 'files/hg19/pnet/classification/methylome_tsne.txt'
+						file: 'files/hg19/pnet/classification/methylome_tsne.csv',
+						term: { id: 'TSNE Category' }
 						// allow additional config for this plot
 					}
 					// {

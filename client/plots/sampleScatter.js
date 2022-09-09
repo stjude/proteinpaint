@@ -4,6 +4,7 @@ import { select, event } from 'd3-selection'
 import { scaleLinear as d3Linear } from 'd3-scale'
 import { axisLeft, axisBottom } from 'd3-axis'
 import Partjson from 'partjson'
+import { dofetch } from '../common/dofetch'
 
 class Scatter {
 	constructor() {
@@ -42,15 +43,14 @@ class Scatter {
 	async main() {
 		this.config = this.state.config
 		copyMerge(this.settings, this.config.settings.sampleScatter)
-		console.log(this.settings, this.config)
 		const reqOpts = this.getDataRequestOpts()
 		//this.data = this.app.vocabApi.getScatterData(reqOpts)
-		const data = await fetch('pnet_apr13_tnse.csv')
-			.then(d => d.text())
-			.catch(console.error)
-		this.processData(data)
-		console.log(data)
-		this.render()
+		const data = await dofetch('textfile', { file: this.config.file })
+		if (data.error) throw tmp.error
+		else if (data.text) {
+			this.processData(data.text)
+			this.render()
+		}
 	}
 
 	// creates an opts object for the vocabApi.someMethod(),
@@ -64,7 +64,6 @@ class Scatter {
 
 	processData(data) {
 		const lines = data.split('\n')
-		console.log(lines)
 		const header = lines[0].split('\t')
 		const rows = []
 		for (let i = 1; i < lines.length; i++) {
@@ -301,7 +300,7 @@ export async function getPlotConfig(opts, app) {
 	try {
 		await fillTermWrapper(opts.term, app.vocabApi)
 		const config = {
-			id: opts.term.term.id,
+			id: opts.term.id,
 			settings: {
 				controls: {
 					isOpen: false // control panel is hidden by default
@@ -336,8 +335,6 @@ export const componentInit = scatterInit
 
 function getPj(self) {
 	const s = self.settings
-	console.log(s)
-
 	const pj = new Partjson({
 		template: {
 			//"__:charts": "@.byChc.@values",
@@ -382,7 +379,6 @@ function getPj(self) {
 					.range([0, s.svgw - s.svgPadding.left - s.svgPadding.right])
 			},
 			scaledX(row, context) {
-				console.log(row)
 				return context.context.context.context.parent.xScale(context.self.x)
 			},
 			scaledY(row, context) {
@@ -398,6 +394,5 @@ function getPj(self) {
 			}
 		}
 	})
-	console.log(pj)
 	return pj
 }
