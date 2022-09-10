@@ -29,6 +29,7 @@ tape('init errors', function(test) {
 	test.timeoutAfter(1300)
 	test.plan(3)
 	runpp({
+		vocabApi: {},
 		callbacks: {
 			'postInit.test': testMissingState
 		}
@@ -41,9 +42,11 @@ tape('init errors', function(test) {
 	}
 
 	runpp({
+		vocabApi: {},
 		state: {
 			vocab: {
-				route: 'termdb'
+				route: 'termdb',
+				dslabel: 'test'
 			}
 		},
 		callbacks: {
@@ -58,6 +61,7 @@ tape('init errors', function(test) {
 	}
 
 	runpp({
+		vocabApi: {},
 		state: {
 			vocab: {
 				route: 'termdb',
