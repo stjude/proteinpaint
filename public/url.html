@@ -19,6 +19,25 @@ url host is window.location.origin, allowing to work as ppr.stjude.org/url.html 
 
 <script>
 
+// list of section names, use these to quickly find url contents for a section
+const section_BAM = 'BAM',
+	section_GDCbam = 'GDC BAM UI',
+	section_GDCmds3 = 'GDC lollipop (mds3)',
+	section_mds3 = 'mds3 tk',
+	section_splicing = 'RNA splicing',
+	section_hic = 'HiC, interaction',
+	section_bw = 'bigwig',
+	section_bedj = 'bedj',
+	section_miscTk = 'Misc track types',
+	section_study = 'legacy study',
+	section_mds = 'mds',
+	section_scatterplot = 'scatterplot',
+	section_singleCell = 'single cell',
+	section_termdbTree = 'termdb tree',
+	section_mass = 'MASS UI',
+	section_regression = 'regression'
+
+
 ///////////// helpers ////////////////////
 const snplstTerm = {
 	term:{
@@ -136,17 +155,21 @@ function __cuminc({t1,t2,t0,grade,hidden}) {
 /*
 call the makeURL() to make URLs
 argument is an array; each element defines a set of example URLs showing in a row
-.name: string
-.links: []
-   each element is a text or array of length 2
-   text: create <span> to display text, no url
-   array: [0]: URL label
-          [1]: URL path name
+
+{
+	name: string
+	links: [ 'bam', [ 'bam1', '?bamfile=xx' ], ... ]
+	   each element is a text or array of length 2
+	   text: create <span> to display text, no url
+	   array: [0]: URL label
+			  [1]: URL path name
+}
+
 */
 makeURL([
 
 
-{ name: 'BAM',
+{ name: section_BAM,
 	links: [
 		[ 'TP53 18bp del', '?genome=hg19&block=1&position=chr17:7578191-7578591&bamfile=Test,proteinpaint_demo/hg19/bam/TP53_del.bam' ],
 		[ 'k-mer', '?genome=hg19&block=1&position=chr17:7578191-7578591&bamfile=Test,proteinpaint_demo/hg19/bam/TP53_del.bam&variant=chr17.7578383.AGCAGCGCTCATGGTGGGG.A' ],
@@ -192,7 +215,7 @@ makeURL([
 
 
 
-{ name:'GDC BAM UI',
+{ name:section_GDCbam,
 	links:[
 		['GBM EGFR by case id','?gdcbamslice=1&gdc_id=TCGA-06-0211&gdc_pos=chr7:55153818-55156225'],
 		['KRAS G12V by case uuid','?gdcbamslice=1&gdc_id=9a2a226e-9605-4214-9320-469305e664e6&gdc_var=chr12.25245350.C.A'],
@@ -223,7 +246,7 @@ makeURL([
 
 
 
-{name:'GDC lollipop (mds3)',
+{name:section_GDCmds3,
 	links:[
 		['AKT1','?genome=hg38&gene=ENST00000407796&mds3=GDC'],
 		['NM_005163','?genome=hg38&gene=NM_005163&mds3=GDC'],
@@ -236,7 +259,7 @@ makeURL([
 	]
 },
 
-{name:'mds3 tk',
+{name:section_mds3,
 	links:[
 		['ASH', '?genome=hg38&gene=bcr&mds3=ASH'],
 		['invalid ds', '?genome=hg38&gene=bcr&mds3=ash'],
@@ -245,7 +268,7 @@ makeURL([
 	]
 },
 
-{name:'RNA splicing',
+{name:section_splicing,
 	links:[
 		['single','?block=on&genome=hg19&junctionfile=RNA%20splice%20junction,proteinpaint_demo/hg19/junction/file.gz'],
 		['rnapeg','?genome=hg19&block=1&junctionrnapeg=RNApeg,proteinpaint_demo/hg19/junction/rnapeg'],
@@ -254,7 +277,7 @@ makeURL([
 		['custom matrix','?genome=hg19&block=1&junctionmatrix=test,proteinpaint_demo/hg19/junction/matrix.gz']
 	]
 },
-{name:'HiC, interaction',
+{name:section_hic,
 	links:[
 		['hic genome','?genome=hg19&hicfile=proteinpaint_demo/hg19/hic/hic_demo.hic&enzyme=MboI'],
 		['hic tk file','?block=1&genome=hg19&position=chr7:13749862-20841903&hictkfile=Test_HiC,MboI,proteinpaint_demo/hg19/hic/hic_demo.hic'],
@@ -263,7 +286,7 @@ makeURL([
 	]
 },
 
-{name:'bigwig',
+{name:section_bw,
 	links:[
 		['local','?block=on&genome=hg19&bigwigfile=local,proteinpaint_demo/hg19/bigwig/file.bw'],
 		['local blank region','?block=on&genome=hg19&bigwigfile=local,proteinpaint_demo/hg19/bigwig/file.bw&position=chr17:7625542-7640838'],
@@ -275,7 +298,7 @@ makeURL([
 	]
 },
 
-{name:'bedj',
+{name:section_bedj,
 	links:[
 		['bedj','?block=on&genome=hg19&bedjfile=JSON-BED,proteinpaint_demo/hg19/bedj/gencode.gz'],
 		['bed3','?genome=hg19&block=1&bedjfile=BED3_Example,proteinpaint_demo/hg19/bedj/bed3.gz'],
@@ -289,18 +312,19 @@ makeURL([
 	]
 },
 
-{name:'bampile',
+{name:section_miscTk,
 	links:[
-		['example','?block=on&genome=hg19&position=chr12:25362480-25363264&bampilefile=Test,proteinpaint_demo/hg19/bampile/tk.gz'],
+		['aicheck','?block=on&genome=hg19&position=chr9:36816442-37058548&aicheckfile=Allelic%20imbalance,proteinpaint_demo/hg19/aicheck/file.gz'],
+		['bampile','?block=on&genome=hg19&position=chr12:25362480-25363264&bampilefile=Test,proteinpaint_demo/hg19/bampile/tk.gz'],
 	]
 },
 
-{name:'study',
+{name:section_study,
 	links:[
 		['ERG','?study=proteinpaint_demo/hg19/heatmap/heatmapDemo.json'],
 	]
 },
-{name:'mds',
+{name:section_mds,
 	links:[
 		['pediatric','?genome=hg19&block=1&mds=Pediatric2,svcnv'],
 		['tcga-dlbc','?genome=hg38&block=1&position=chr22:22569655-23013766&svcnvfpkmfile=TCGA_DLBC,svcnv,proteinpaint_demo/hg38/GP/TCGA_DLBC.CNV.gz,vcf,proteinpaint_demo/hg38/GP/TCGA_DLBC.vcf.gz,fpkm,proteinpaint_demo/hg38/GP/TCGA_DLBC.fpkm.gz'],
@@ -308,17 +332,28 @@ makeURL([
 	]
 },
 
-{name:'scatterplot',
+{name:section_scatterplot,
 	links:[
 		['sjcloud', '?scatterplot=1&genome=hg38&tsnejson=proteinpaint_demo/hg38/mdstsne/file.json']
 	]
 },
-{name:'single cell',
+{name:section_singleCell,
 	links:[
 		['2D','?genome=hg19&singlecell=proteinpaint_demo/hg19/singlecell/singlecell.json']
 	]
 },
-{name:'MASS UI',
+
+{name:section_termdbTree,
+	links:[
+		['TermdbTest', '?termdb={"vocab":{"dslabel":"TermdbTest","genome":"hg38"}}'],
+		['SJLife', '?termdb={"vocab":{"dslabel":"SJLife","genome":"hg38"}}'],
+		['ASH', '?termdb={"vocab":{"dslabel":"ASH","genome":"hg38"}}'],
+		['GDC', '?termdb={"vocab":{"dslabel":"GDC","genome":"hg38"}}'],
+		['MSigDB', '?termdb={"vocab":{"dslabel":"msigdb","genome":"hg38"}}'],
+	]
+},
+
+{name:section_mass,
 	links:[
 		['TermdbTest', '?noheader=1&mass={"genome":"hg38","dslabel": "TermdbTest"}'],
 		['SJLife', '?noheader=1&mass={"genome":"hg38","dslabel": "SJLife"}'],
@@ -502,7 +537,7 @@ makeURL([
 		})],
 	]
 },
-{name:'Regression',
+{name:section_regression,
 	links:[
 
 		'LINEAR',
@@ -1113,8 +1148,7 @@ makeURL([
 		})],
 	]
 },
-]
-)
+])
 
 function makeURL(rows) {
 	const div = document.getElementById('div')

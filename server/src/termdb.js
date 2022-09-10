@@ -34,6 +34,8 @@ const encodedParams = [
 	'terms'
 ]
 
+const limitSearchTermTo = 10
+
 export function handle_request_closure(genomes) {
 	/*
 	 */
@@ -231,7 +233,14 @@ async function trigger_findterm(q, res, termdb, ds) {
 	}
 
 	if (typeof q.cohortStr !== 'string') q.cohortStr = ''
-	const terms_ = await termdb.q.findTermByName(q.findterm, 10, q.cohortStr, q.treeFilter, q.usecase, matches)
+	const terms_ = await termdb.q.findTermByName(
+		q.findterm,
+		limitSearchTermTo,
+		q.cohortStr,
+		q.treeFilter,
+		q.usecase,
+		matches
+	)
 	const terms = terms_.map(copy_term)
 	const id2ancestors = {}
 	terms.forEach(term => {
