@@ -268,7 +268,7 @@ tape('error handling', function(test) {
 
 	runpp({
 		state: {
-			genome: 'ahg38',
+			vocab: { genome: 'ahg38' },
 			termdbConfig: {}
 		},
 		callbacks: {
@@ -282,7 +282,7 @@ tape('error handling', function(test) {
 
 	runpp({
 		state: {
-			dslabel: 'xxx',
+			vocab: { dslabel: 'xxx' },
 			termdbConfig: {}
 		},
 		callbacks: {

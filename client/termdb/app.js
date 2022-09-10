@@ -51,8 +51,6 @@ class TdbApp {
 	}
 
 	validateOpts(o) {
-		// FIXME XXX errors thrown here are silently ignored !!!!
-
 		if (o.vocabApi) {
 			// verify it is an object returned by vocabInit()
 		} else if (o.state && o.state.vocab) {
