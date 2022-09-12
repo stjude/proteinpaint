@@ -198,6 +198,8 @@ class TdbSurvival {
 			this.toggleLoadingDiv()
 
 			Object.assign(this.settings, this.state.config.settings)
+			this.settings.hidden = this.getHidden()
+
 			const reqOpts = this.getDataRequestOpts()
 			const data = await this.app.vocabApi.getNestedChartSeriesData(reqOpts)
 			this.toggleLoadingDiv('none')
@@ -226,6 +228,22 @@ class TdbSurvival {
 		if (c.term0) opts.term0 = c.term0
 		if (this.state.ssid) opts.ssid = this.state.ssid
 		return opts
+	}
+
+	getHidden() {
+		const tw = this.state.config.term2
+		if (!tw) return []
+		const obj = tw.q.hiddenValues
+		const hiddenSeries = Object.keys(obj).map(k => {
+			if (Object.keys(tw.term.values).includes(k)) {
+				// hidden value is a term value
+				return tw.term.values[k].label
+			} else {
+				// hidden value is a bin label
+				return k
+			}
+		})
+		return hiddenSeries
 	}
 
 	processData(data) {
@@ -928,18 +946,29 @@ function setInteractivity(self) {
 			self.showLegendItemMenu(d)
 		} else {
 			hidden.splice(i, 1)
+			const term2 = self.updateTerm2HiddenValues(hidden)
 			self.app.dispatch({
 				type: 'plot_edit',
 				id: self.id,
-				config: {
-					settings: {
-						survival: {
-							hidden
-						}
-					}
-				}
+				config: { term2 }
 			})
 		}
+	}
+
+	self.updateTerm2HiddenValues = function(hidden) {
+		const hiddenValues = {}
+		const term2 = JSON.parse(JSON.stringify(self.state.config.term2))
+		for (const k in term2.term.values) {
+			const value = term2.term.values[k]
+			if (hidden.includes(value.label)) hiddenValues[k] = 1
+		}
+		if (this.refs.bins && this.refs.bins.length) {
+			for (const bin of this.refs.bins) {
+				if (hidden.includes(bin.label)) hiddenValues[bin.label] = 1
+			}
+		}
+		term2.q.hiddenValues = hiddenValues
+		return term2
 	}
 
 	self.showLegendItemMenu = function(d) {
@@ -972,16 +1001,11 @@ function setInteractivity(self) {
 			callback: () => {
 				const hidden = self.settings.hidden.slice()
 				hidden.push(d.seriesId)
+				const term2 = self.updateTerm2HiddenValues(hidden)
 				self.app.dispatch({
 					type: 'plot_edit',
 					id: self.id,
-					config: {
-						settings: {
-							survival: {
-								hidden
-							}
-						}
-					}
+					config: { term2 }
 				})
 			}
 		})
@@ -1190,7 +1214,6 @@ export async function getPlotConfig(opts, app) {
 				axisTitleFontSize: 16,
 				xAxisOffset: 5,
 				yAxisOffset: -5,
-				hidden: [],
 				hiddenPvalues: []
 			}
 		}

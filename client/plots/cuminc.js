@@ -309,8 +309,9 @@ class MassCumInc {
 					this.state.config.term.term.name +
 						' <span style="opacity:.6;font-size:.7em;margin-left:10px;">CUMULATIVE INCIDENCE</span>'
 				)
-			Object.assign(this.settings, this.state.config.settings)
 
+			Object.assign(this.settings, this.state.config.settings)
+			this.settings.hidden = this.getHidden()
 			const reqOpts = this.getDataRequestOpts()
 			const data = await this.app.vocabApi.getNestedChartSeriesData(reqOpts)
 			this.app.vocabApi.syncTermData(this.state.config, data)
@@ -337,6 +338,22 @@ class MassCumInc {
 		if (c.term0) opts.term0 = c.term0
 		if (this.state.ssid) opts.ssid = this.state.ssid
 		return opts
+	}
+
+	getHidden() {
+		const tw = this.state.config.term2
+		if (!tw) return []
+		const obj = tw.q.hiddenValues
+		const hiddenSeries = Object.keys(obj).map(k => {
+			if (Object.keys(tw.term.values).includes(k)) {
+				// hidden value is a term value
+				return tw.term.values[k].label
+			} else {
+				// hidden value is a bin label
+				return k
+			}
+		})
+		return hiddenSeries
 	}
 
 	processData(data) {
@@ -579,10 +596,6 @@ function setRenderers(self) {
 
 	function setVisibleSerieses(chart, s) {
 		chart.visibleSerieses = chart.serieses.filter(series => !s.hidden.includes(series.seriesId))
-		const maxSeriesLabelLen = chart.visibleSerieses.reduce(
-			(maxlen, a) => (a.seriesLabel && a.seriesLabel.length > maxlen ? a.seriesLabel.length : maxlen),
-			0
-		)
 	}
 
 	self.updateCharts = function(chart) {
@@ -1025,17 +1038,28 @@ function setInteractivity(self) {
 		const hidden = self.settings.hidden.slice()
 		const i = hidden.indexOf(d.seriesId)
 		i == -1 ? hidden.push(d.seriesId) : hidden.splice(i, 1)
+		const term2 = self.updateTerm2HiddenValues(hidden)
 		self.app.dispatch({
 			type: 'plot_edit',
 			id: self.id,
-			config: {
-				settings: {
-					cuminc: {
-						hidden
-					}
-				}
-			}
+			config: { term2 }
 		})
+	}
+
+	self.updateTerm2HiddenValues = function(hidden) {
+		const hiddenValues = {}
+		const term2 = JSON.parse(JSON.stringify(self.state.config.term2))
+		for (const k in term2.term.values) {
+			const value = term2.term.values[k]
+			if (hidden.includes(value.label)) hiddenValues[k] = 1
+		}
+		if (this.refs.bins && this.refs.bins.length) {
+			for (const bin of this.refs.bins) {
+				if (hidden.includes(bin.label)) hiddenValues[bin.label] = 1
+			}
+		}
+		term2.q.hiddenValues = hiddenValues
+		return term2
 	}
 }
 
@@ -1067,8 +1091,7 @@ const defaultSettings = JSON.stringify({
 		},
 		axisTitleFontSize: 16,
 		xAxisOffset: 5,
-		yAxisOffset: -5,
-		hidden: []
+		yAxisOffset: -5
 	}
 })
 
