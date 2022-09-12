@@ -156,7 +156,7 @@ const ds = {
 					name: 'Methylome TSNE',
 					dimension: 2, // 2d requires x/y, 3d requires x/y/z
 					file: 'files/hg19/pnet/classification/methylome_tsne.csv',
-					term: { id: 'TSNE Category' }
+					term: { id: 'diaggrp' }
 				}
 			]
 		}
