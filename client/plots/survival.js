@@ -233,7 +233,7 @@ class TdbSurvival {
 	getHidden() {
 		const tw = this.state.config.term2
 		if (!tw) return []
-		const obj = tw.q.hiddenValues
+		const obj = tw.q.hiddenValues || {}
 		const hiddenSeries = Object.keys(obj).map(k => {
 			if (Object.keys(tw.term.values).includes(k)) {
 				// hidden value is a term value
