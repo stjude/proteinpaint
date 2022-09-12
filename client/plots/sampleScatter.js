@@ -212,7 +212,7 @@ function setRenderers(self) {
 	function renderSeries(g, chart, series, i, s, duration) {
 		// remove all circles as there is no data id for privacy
 		g.selectAll('circle').remove()
-
+		console.log('data', series.data)
 		const circles = g.selectAll('circle').data(series.data, b => b.x)
 
 		circles.exit().remove()
@@ -233,7 +233,7 @@ function setRenderers(self) {
 			.attr('cx', c => c.scaledX)
 			.attr('cy', c => c.scaledY)
 			//.style("opacity", 0)
-			//.style("fill", color)
+			.style('fill', c => ('color' in c ? c.color : 'black'))
 			.style('fill-opacity', s.fillOpacity)
 			//.style("stroke", color)
 			.transition()
