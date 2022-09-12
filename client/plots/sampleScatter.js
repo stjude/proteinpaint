@@ -42,11 +42,12 @@ class Scatter {
 	// or current.state != replcament.state
 	async main() {
 		this.config = this.state.config
+		if (this.dom.header) this.dom.header.html(this.config.plot.name + ' Scatter Plot')
 		copyMerge(this.settings, this.config.settings.sampleScatter)
 		const reqOpts = this.getDataRequestOpts()
 		//this.data = this.app.vocabApi.getScatterData(reqOpts)
-		const data = await dofetch('textfile', { file: this.config.file })
-		if (data.error) throw tmp.error
+		const data = await dofetch('textfile', { file: this.config.plot.file })
+		if (data.error) throw data.error
 		else if (data.text) {
 			this.processData(data.text)
 			this.render()
@@ -86,9 +87,7 @@ function setRenderers(self) {
 		chartDivs.exit().remove()
 		chartDivs.each(self.updateCharts)
 		chartDivs.enter().each(self.addCharts)
-
 		self.dom.div.style('display', 'block')
-
 		self.dom.div.on('mouseover', self.mouseover).on('mouseout', self.mouseout)
 	}
 
