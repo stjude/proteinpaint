@@ -235,7 +235,7 @@ function setHostUrl(arg, app) {
 	sessionStorage.setItem('hostURL', app.hostURL)
 }
 
-function makeheader(app, obj, jwt) {
+async function makeheader(app, obj, jwt) {
 	/*
 	app
 	obj: server returned data
@@ -383,7 +383,7 @@ function makeheader(app, obj, jwt) {
 	}
 	app.genome_browser_btn = make_genome_browser_btn(app, headbox, jwt)
 
-	app.drawer = appDrawerInit({
+	app.drawer = await appDrawerInit({
 		genomes: app.genomes,
 		holder: app.holder,
 		sandbox_header: app.sandbox_header,
@@ -444,6 +444,7 @@ function make_genome_browser_btn(app, headbox, jwt) {
 		.datum(genomename)
 		.text(genomename + ' genome browser')
 		.on('click', genomename => {
+			// app.drawer.dispatch({ type: 'toggle_off' })
 			let sandbox_div = newSandboxDiv(app.drawer.apps_sandbox_div)
 
 			const g = app.genomes[genomename]

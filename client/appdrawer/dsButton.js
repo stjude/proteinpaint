@@ -9,7 +9,6 @@ class AppDrawerButton {
 		this.opts = this.validateOpts(opts)
 		this.holder = opts.holder
 		this.pageArgs = opts.pageArgs
-		setInteractivity(this)
 		setRenderers(this)
 	}
 
@@ -33,5 +32,3 @@ function setRenderers(self) {
 		await openSandbox(self.opts.element, self.opts.pageArgs)
 	})
 }
-
-function setInteractivity(self) {}

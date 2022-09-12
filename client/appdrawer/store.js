@@ -17,9 +17,8 @@ class AppDrawerStore {
 			},
 			hintWidth: { open: '0px', closed: '18px' },
 			arrowSize: { open: 42, closed: 20 },
-			arrowColor: { open: 'rgb(242,242,242)', closed: 'rgb(85,85,85)' }
-			// appBtnActive: false
-			// drawerRendered: false
+			arrowColor: { open: 'rgb(242,242,242)', closed: 'rgb(85,85,85)' },
+			appBtnActive: true
 		}
 	}
 
@@ -28,11 +27,8 @@ class AppDrawerStore {
 
 export const appDrawerStoreInit = getStoreInit(AppDrawerStore)
 
-// AppDrawerStore.prototype.actions = {
-// 	toggle_off() {
-// 		this.state.appBtnActive = false
-// 	}
-// 	// track_drawer_rendering(action) {
-// 	// 	this.state.drawerRendered = action.value
-// 	// }
-// }
+AppDrawerStore.prototype.actions = {
+	toggle_apps_off(action) {
+		this.state.appBtnActive = 'value' in action ? action.value : !this.state.appBtnActive
+	}
+}

@@ -8,9 +8,6 @@ import { defaultcolor } from '../shared/common'
 	.dom{}
 	.index{}
 
-TODOs: 
-- Update and add documentation link
-
 Questions: 
 	- Organize in window based on section size to make best use of space?
     - For the column layout: 
@@ -23,7 +20,7 @@ class AppDrawerLayoutComp {
 		this.type = 'layout'
 		this.opts = this.validateOpts(opts)
 		this.dom = {
-			holder: opts.dom.holder,
+			holder: opts.dom.drawerDiv,
 			wrapper: opts.dom.wrapper
 		}
 		setRenderers(this)
@@ -56,7 +53,7 @@ class AppDrawerLayoutComp {
 	main() {}
 }
 
-export const compLayoutInit = getCompInit(AppDrawerLayoutComp)
+export const layoutInit = getCompInit(AppDrawerLayoutComp)
 
 function setRenderers(self) {
 	if (!self.opts.index.columnsLayout) noDefinedLayout(self)
