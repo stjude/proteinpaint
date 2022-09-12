@@ -22,7 +22,7 @@ tape('\n', function(test) {
 	test.end()
 })
 
-tape('matrix', function(test) {
+tape.skip('matrix', function(test) {
 	test.timeoutAfter(3000)
 	runpp({
 		state: {
