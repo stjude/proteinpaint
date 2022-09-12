@@ -22,7 +22,7 @@ class Scatter {
 		if (this.dom.header) this.dom.header.html('Scatter Plot')
 		if (!this.pj) this.pj = getPj(this)
 		//await this.setControls()
-		//setInteractivity(this)
+		setInteractivity(this)
 		setRenderers(this)
 	}
 
@@ -326,6 +326,7 @@ export async function getPlotConfig(opts, app) {
 	} catch (e) {
 		throw `${e} [bsampleScatter getPlotConfig()]`
 	}
+	self.dom.div.on('mouseover', self.mouseover).on('mouseout', self.mouseout)
 }
 
 export const scatterInit = getCompInit(Scatter)
@@ -394,4 +395,25 @@ function getPj(self) {
 		}
 	})
 	return pj
+}
+
+function setInteractivity(self) {
+	self.mouseover = function() {
+		if (event.target.tagName == 'circle') {
+			const d = event.target.__data__
+			const rows = [
+				`<tr><td style='padding:3px; color:#aaa'>X:</td><td style='padding:3px; text-align:center'>${d.x}</td></tr>`,
+				`<tr><td style='padding:3px; color:#aaa'>Y:</td><td style='padding:3px; text-align:center'>${d.y}</td></tr>`
+			]
+			self.app.tip
+				.show(event.clientX, event.clientY)
+				.d.html(`<table class='sja_simpletable'>${rows.join('\n')}</table>`)
+		} else {
+			self.app.tip.hide()
+		}
+	}
+
+	self.mouseout = function() {
+		self.app.tip.hide()
+	}
 }
