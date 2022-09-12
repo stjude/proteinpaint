@@ -208,7 +208,7 @@ function showSummary4oneTerm(termid, div, numbycategory, tk, block) {
 	async function listSamples(category) {
 		// for a selected category, list the samples
 		tk.menutip.clear()
-		const div = tk.menutip.d.append('div').style('margin', '10px')
+		const div = tk.menutip.d.append('div').style('margin', '2px')
 		const wait = div.append('div').text('Loading...')
 		const samples = await tk.mds.getSamples({ tid2value: { [termid]: category } })
 		wait.remove()

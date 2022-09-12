@@ -9,6 +9,7 @@
 
 <noscript>This page requires JavaScript. Please enable it in your browser settings.</noscript>
 
+<div id=genes style="margin:30px"></div>
 <div id=a style="margin:30px"></div>
 
 <script>
@@ -26,8 +27,9 @@ runproteinpaint({
 			}
 		},
 		tree: {
-			click_term: (term) => { console.log(term.name) },
-			disable_terms:[]
+			click_term: term => {
+				document.getElementById('genes').innerHTML = term._geneset.join(', ')
+			}
 		}
 	}
 })

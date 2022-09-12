@@ -67,9 +67,11 @@ disableSSM=true
 	to reenable, simply delete all uses of this flag
 hideTokenInput=true/false
 	set to true in gdc react wrapper
-
+filter0=str
+	optional, stringified json obj as the cohort filter from gdc ATF
+	simply pass to backend to include in api queries
 */
-export async function bamsliceui({ genomes, holder, disableSSM = false, hideTokenInput = false }) {
+export async function bamsliceui({ genomes, holder, filter0, disableSSM = false, hideTokenInput = false }) {
 	const genome = genomes[gdc_genome]
 	if (!genome) throw 'missing genome for ' + gdc_genome
 
@@ -120,7 +122,7 @@ export async function bamsliceui({ genomes, holder, disableSSM = false, hideToke
 
 	// for showing err
 	const saydiv = formdiv.append('div').style('grid-column', 'span 2')
-
+	const api = {}
 	// upload toke file
 	makeTokenInput()
 
@@ -282,7 +284,14 @@ export async function bamsliceui({ genomes, holder, disableSSM = false, hideToke
 			.style('overflow', 'scroll') //Fix for grid rows appearring defined area
 			.style('max-height', '20vh')
 
-		async function gdc_search() {
+		api.update = _arg => {
+			console.log(_arg?.filter0)
+			//Object.assign(arg, _arg)
+			gdc_search(_arg?.filter0 || filter0)
+		}
+
+		async function gdc_search(filter) {
+			const _filter0 = Object.keys(filter || {}).length ? filter : filter0 || null
 			try {
 				const gdc_id = gdcid_input.property('value').trim()
 				if (!gdc_id.length) {
@@ -295,7 +304,9 @@ export async function bamsliceui({ genomes, holder, disableSSM = false, hideToke
 				// disable input field and show 'loading...' until response returned from gdc api
 				gdcid_input.attr('disabled', 1)
 				gdc_loading.style('display', 'inline-block')
-				const data = await dofetch3('gdcbam?gdc_id=' + gdc_id)
+				const data = await dofetch3(
+					`gdcbam?gdc_id=${gdc_id}${filter0 ? '&filter0=' + encodeURIComponent(JSON.stringify(_filter0)) : ''}`
+				)
 				// enable input field and hide 'Loading...'
 				gdcid_input.attr('disabled', null)
 				gdc_loading.style('display', 'none')
@@ -673,6 +684,8 @@ export async function bamsliceui({ genomes, holder, disableSSM = false, hideToke
 				renderBamSlice(gdc_args, genome, blockHolder)
 			})
 	}
+
+	return api
 }
 
 function geneSearchInstruction(d) {

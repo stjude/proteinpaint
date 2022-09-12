@@ -110,11 +110,15 @@ function setRenderers(self) {
 			.style('margin', '0px 0px 10px 10px')
 			.style('padding-left', '5px')
 
-		self.dom.nonDictDiv = self.dom.holder.append('div')
+		self.dom.nonDictDiv = self.dom.holder
+			.append('div')
 			.style('margin', '0px 0px 10px 10px')
 			.style('display', 'none')
 
-		self.dom.nonDictDiv.append('div').style('font-weight', 600).html('Selected genes')
+		self.dom.nonDictDiv
+			.append('div')
+			.style('font-weight', 600)
+			.html('Selected genes')
 		self.dom.selectedNonDictDiv = self.dom.nonDictDiv.append('div')
 	}
 	self.noResult = () => {
@@ -145,7 +149,12 @@ function setRenderers(self) {
 		const button = tr.append('td').text(term.name)
 		const uses = isUsableTerm(term, self.state.usecase)
 
-		if (self.opts.click_term && uses.has('plot')) {
+		/*
+		below, both callbacks are made in app.js validateOpts()
+		1. self.opts.click_term() is for selecting to tvs
+		2. self.app.opts.tree.click_term_wrapper() is a wrapper for opts.tree.click_term()
+		*/
+		if ((self.opts.click_term || self.app.opts?.tree?.click_term_wrapper) && uses.has('plot')) {
 			// to click a graphable term, show as blue button
 			if ('id' in term && self.opts.disable_terms?.includes(term.id)) {
 				// but it's disabled
@@ -167,7 +176,11 @@ function setRenderers(self) {
 					.style('margin', '1px 0px')
 					.style('cursor', 'default')
 					.on('click', () => {
-						self.opts.click_term(term)
+						if (self.opts.click_term) {
+							self.opts.click_term(term)
+						} else {
+							self.app.opts.tree.click_term_wrapper(term)
+						}
 						self.clear()
 						self.dom.input.property('value', '')
 					})
@@ -225,12 +238,11 @@ function setRenderers(self) {
 		const lst = self.state.selectedTerms.filter(t => nonDictionaryTermTypes.has(t.type))
 		self.dom.nonDictDiv.style('display', lst.length ? '' : 'none')
 
-		const genes = self.dom.selectedNonDictDiv
-			.selectAll('div')
-			.data(lst, d => d.name)
+		const genes = self.dom.selectedNonDictDiv.selectAll('div').data(lst, d => d.name)
 
 		genes.exit().remove()
-		genes.enter()
+		genes
+			.enter()
 			.append('div')
 			.style('display', 'inline-block')
 			.style('margin', '1px')
@@ -238,7 +250,7 @@ function setRenderers(self) {
 			.style('background-color', 'rgba(255, 194, 10,0.5)')
 			.style('border-radius', '6px')
 			.html(d => d.name)
-			/*.each(function(){
+		/*.each(function(){
 				const div = select(this)
 				div.append('')
 			})*/

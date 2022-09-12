@@ -34,6 +34,8 @@ const encodedParams = [
 	'terms'
 ]
 
+const limitSearchTermTo = 10
+
 export function handle_request_closure(genomes) {
 	/*
 	 */
@@ -80,6 +82,7 @@ export function handle_request_closure(genomes) {
 			if (q.validateSnps) return res.send(await termdbsnp.validate(q, tdb, ds, genome))
 			if (q.getvariantfilter) return trigger_getvariantfilter(res, ds)
 			if (q.getLDdata) return trigger_getLDdata(q, res, ds)
+			if (q.genesetByTermId) return trigger_genesetByTermId(q, res, tdb)
 
 			// TODO: use trigger flags like above?
 			if (q.for == 'termTypes') {
@@ -150,7 +153,8 @@ function trigger_gettermdbconfig(q, res, tdb) {
 		allowedTermTypes: tdb.allowedTermTypes || [],
 		coxCumincXlab: tdb.coxCumincXlab,
 		timeScale: tdb.timeScale,
-		minTimeSinceDx: tdb.minTimeSinceDx
+		minTimeSinceDx: tdb.minTimeSinceDx,
+		termMatch2geneSet: tdb.termMatch2geneSet
 	}
 	if (tdb.restrictAncestries) {
 		c.restrictAncestries = []
@@ -229,7 +233,14 @@ async function trigger_findterm(q, res, termdb, ds) {
 	}
 
 	if (typeof q.cohortStr !== 'string') q.cohortStr = ''
-	const terms_ = await termdb.q.findTermByName(q.findterm, 10, q.cohortStr, q.treeFilter, q.usecase, matches)
+	const terms_ = await termdb.q.findTermByName(
+		q.findterm,
+		limitSearchTermTo,
+		q.cohortStr,
+		q.treeFilter,
+		q.usecase,
+		matches
+	)
 	const terms = terms_.map(copy_term)
 	const id2ancestors = {}
 	terms.forEach(term => {
@@ -385,4 +396,11 @@ async function trigger_getLDdata(q, res, ds) {
 	q.m = JSON.parse(q.m)
 	if (ds.track && ds.track.ld && ds.track.ld.tracks.find(i => i.name == q.ldtkname)) return await LDoverlay(q, ds, res)
 	res.send({ nodata: 1 })
+}
+
+function trigger_genesetByTermId(q, res, tdb) {
+	if (!tdb.termMatch2geneSet) throw 'this feature is not enabled'
+	if (typeof q.genesetByTermId != 'string' || q.genesetByTermId.length == 0) throw 'invalid query term id'
+	const geneset = tdb.q.getGenesetByTermId(q.genesetByTermId)
+	res.send(geneset)
 }

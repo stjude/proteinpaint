@@ -97,8 +97,7 @@ create table annotations (
 );
 
 .import annotation.matrix annotations
-.import annotation.admix.sjlife annotations
-.import annotation.admix.ccss annotations
+.import annotation.admix annotations
 
 create index a_sample on annotations(sample);
 create index a_termid on annotations(term_id);

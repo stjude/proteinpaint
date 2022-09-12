@@ -181,14 +181,17 @@ function step1_parsephenotree() {
 }
 
 function get_name(L2, L3, L4, L5) {
+	/* tolerate blank fields
+
 	if (!L2) throw 'L2 missing'
 	if (!L3) throw 'L3 missing'
 	if (!L4) throw 'L4 missing'
 	if (!L5) throw 'L5 missing'
-	if (L5 != '-') return L5
-	if (L4 != '-') return L4
-	if (L3 != '-') return L3
-	if (L2 != '-') return L2
+	*/
+	if (L5 && L5 != '-') return L5
+	if (L4 && L4 != '-') return L4
+	if (L3 && L3 != '-') return L3
+	if (L2 && L2 != '-') return L2
 	throw 'name missing'
 }
 

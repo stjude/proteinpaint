@@ -748,6 +748,27 @@ thus less things to worry about...
 	ds.cohort.termdb.q = {}
 	const q = ds.cohort.termdb.q
 
+	if (tables.term2genes) {
+		/*
+		this db has optional table that maps term id to gene set, right now only used for msigdb
+		set termMatch2geneSet flag to true for client termdb tree to be aware of it via termdbConfig{}
+		add the getter function
+		*/
+		ds.cohort.termdb.termMatch2geneSet = true
+		const s = cn.prepare('SELECT genes FROM term2genes WHERE id=?')
+		const cache = new Map()
+		q.getGenesetByTermId = id => {
+			if (cache.has(id)) return cache.get(id)
+			const t = s.get(id)
+			if (t && t.genes) {
+				const lst = t.genes.split(',')
+				cache.set(id, lst)
+				return lst
+			}
+			return undefined
+		}
+	}
+
 	if (tables.sampleidmap) {
 		let cache
 		q.id2sampleName = id => {
@@ -1116,7 +1137,8 @@ function test_tables(cn) {
 		chronicevents: s.get('chronicevents'),
 		precomputed: s.get('precomputed'),
 		subcohort_terms: s.get('subcohort_terms'),
-		sampleidmap: s.get('sampleidmap')
+		sampleidmap: s.get('sampleidmap'),
+		term2genes: s.get('term2genes')
 	}
 }
 

@@ -766,7 +766,7 @@ async function parseEmbedThenUrl(arg, app) {
 	}
 
 	if (arg.gdcbamslice) {
-		launchgdcbamslice(arg, app)
+		return await launchgdcbamslice(arg, app)
 	}
 
 	if (arg.mass) {
@@ -1367,14 +1367,22 @@ function launchJunctionbyMatrix(arg, app) {
 }
 
 function launchgdcbamslice(arg, app) {
-	import('./block.tk.bam.gdc').then(p => {
-		p.bamsliceui({
+	return import('./block.tk.bam.gdc').then(p => {
+		return p.bamsliceui({
 			genomes: app.genomes,
 			holder: app.holder0,
+
 			// set to true for gdc phase9, delete afterwards
 			disableSSM: arg.gdcbamslice.disableSSM,
+
 			// set to true in gdc react wrapper
-			hideTokenInput: arg.gdcbamslice.hideTokenInput
+			hideTokenInput: arg.gdcbamslice.hideTokenInput,
+
+			// react wrapper can supply this optional filter as bam ui is required to only search cases within a cohort user created in Analysis Tools Framework(ATF)
+			filter0: arg.filter0
+
+			//(future) react wrapper may set to true when user is not logged in in ATF
+			//hideSubmitButton: arg.hideSubmitButton
 		})
 	})
 }

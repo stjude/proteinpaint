@@ -504,21 +504,41 @@ function samples2rows(samples, tk) {
 function renderTable({ columns, rows, div }) {
 	const table = div
 		.append('table')
-		.style('border-spacing', '5px')
+		.style('border-spacing', '20px')
 		.style('border-collapse', 'separate')
-		.style('max-height', '40vw')
-	const tr = table.append('tr')
+		.style('max-height', '100vw')
+		.style('display', 'inline-block')
+		.style('position', 'absolute')
+		.style('overflow-y', 'hidden')
+		.style('background-color', 'white')
+		.style('box-shadow', 'rgb(153,153,153) 0px 2px 4px 1px')
+					
+	const thead = table.append('thead')
+	const tr = thead.append('tr')
+					.style('display', 'block')
 
 	tr.append('td') // numerator
 
+// header values
 	for (const c of columns) {
-		tr.append('td')
+		tr.append('th')
 			.text(c.label)
 			.style('opacity', 0.5)
+			.style('padding', '5px 10px')
+			.style('width', '200px')
+			.style('cursor', 'default')
+			.style('font-family', 'Arial')
+			.style('font-size', '1em')
 	}
 
+	const tbody = table.append('tbody')
+						.style('display', 'block')
+						.style('width', '100%')
+						.style('overflow', 'auto')
+						.style('height', '500px')
+   
 	for (const [i, row] of rows.entries()) {
-		const tr = table.append('tr').attr('class', 'sja_clb')
+		const tr = tbody.append('tr').attr('class', 'sja_clb')
 		tr.append('td')
 			.text(i + 1)
 			.style('font-size', '.7em')
@@ -528,14 +548,16 @@ function renderTable({ columns, rows, div }) {
 			const column = columns[colIdx]
 
 			const td = tr.append('td')
+						.style('word-wrap', 'break-word')
 			if (cell.values) {
 				for (const v of cell.values) {
 					const d = td.append('div')
+					
 					if (v.url) {
 						d.append('a')
-							.text(v.value)
-							.attr('href', v.url)
-							.attr('target', '_blank')
+						.text(v.value)
+						.attr('href', v.url)
+						.attr('target', '_blank')
 					} else if (v.html) {
 						d.html(v.html)
 					} else {

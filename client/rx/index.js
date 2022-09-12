@@ -235,10 +235,16 @@ export function getStoreApi(self) {
 }
 
 export function prepApp(self, opts) {
-	if (self.validateOpts) self.validateOpts(opts)
-	if ('id' in opts) self.id = opts[self.type].id
-	self.opts = opts
-	self.api = getAppApi(self)
+	try {
+		if (self.validateOpts) self.validateOpts(opts)
+		if ('id' in opts) self.id = opts[self.type].id
+		self.opts = opts
+		self.api = getAppApi(self)
+	} catch (e) {
+		console.error(e)
+		if (self.printError) self.printError(e)
+		else alert(e)
+	}
 }
 
 export function getAppApi(self) {

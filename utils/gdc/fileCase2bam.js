@@ -12,6 +12,12 @@ node fileCase2bam.js 35918f42-c424-48ef-8c95-2d87b48fdf41 # file uuid
 node fileCase2bam.js e2d8ca95-6a3d-48e3-abfc-ce5ee294e954 # this bam file is not viewable (skipped by workflow)
 node fileCase2bam.js invalid_name 
 
+# case not found in given cohort
+node fileCase2bam.js TCGA-06-0211 '{ "op": "and", "content": [ { "op": "in", "content": { "field": "cases.primary_site", "value": [ "breast", "bronchus and lung" ] } } ] }'
+
+# case is found in the cohort
+node fileCase2bam.js TCGA-06-0211 '{ "op": "and", "content": [ { "op": "in", "content": { "field": "cases.primary_site", "value": [ "brain" ] } } ] }'
+
 
 corresponds to isoform2ssm_getvariant{} in gdc.hg38.js
 
@@ -25,7 +31,6 @@ const apihost = 'https://api.gdc.cancer.gov'
 /************************************************
 following part is copied from bam.gdc.js (lines 63 to the end)
 */
-
 // used in getFileByCaseId() and getFileByCaseId()
 const filesApi = {
 	end_point: path.join(apihost, 'files/'),
@@ -50,13 +55,13 @@ const casesApi = {
 
 const skip_workflow_type = 'STAR 2-Pass Transcriptome'
 
-async function get_gdc_data(gdc_id) {
+async function get_gdc_data(gdc_id, filter0) {
 	// data to be returned
 	const bamdata = {
 		file_metadata: []
 	}
 
-	const re = await try_query(gdc_id, bamdata)
+	const re = await try_query(gdc_id, bamdata, filter0)
 
 	if (!re.data.hits.length) {
 		// no bam file found
@@ -95,27 +100,27 @@ async function get_gdc_data(gdc_id) {
 given user input id, test if it's one of four valid ones
 if true, return the list of bam files associated with that id
 */
-async function try_query(id, bamdata) {
+async function try_query(id, bamdata, filter0) {
 	// first, test if is case uuid
-	if (await ifIdIsCase(id, 'cases.case_id')) {
+	if (await ifIdIsCase(id, 'cases.case_id', filter0)) {
 		// is case uuid
 		bamdata.is_case_uuid = true
 		// get bam files from this case uuid
-		return await getFileByCaseId(id, 'cases.case_id')
+		return await getFileByCaseId(id, 'cases.case_id', filter0)
 	}
 
 	// is not case uuid
 	// then, test if is case id
-	if (await ifIdIsCase(id, 'cases.submitter_id')) {
+	if (await ifIdIsCase(id, 'cases.submitter_id', filter0)) {
 		// is case id
 		bamdata.is_case_id = true
 		// get bam files
-		return await getFileByCaseId(id, 'cases.submitter_id')
+		return await getFileByCaseId(id, 'cases.submitter_id', filter0)
 	}
 
 	// is not case id or case uuid
 	// then, test if is file uuid
-	const re = await getFileByFileId(id, 'file_id')
+	const re = await getFileByFileId(id, 'file_id', filter0)
 	if (re.data.hits.length) {
 		// is file uuid, "re" contains the bam file from it (what if this is not indexed?)
 		bamdata.is_file_uuid = true
@@ -124,7 +129,7 @@ async function try_query(id, bamdata) {
 
 	// is not case id, case uuid, file uuid
 	// last, test if is file id
-	const re2 = await getFileByFileId(id, 'file_name')
+	const re2 = await getFileByFileId(id, 'file_name', filter0)
 	if (re2.data.hits.length) {
 		// is file id
 		bamdata.is_file_id = true
@@ -137,7 +142,7 @@ async function try_query(id, bamdata) {
 query /cases/ api with id; if valid return, is case id or case uuid, depends on value of field
 returns boolean
 */
-async function ifIdIsCase(id, field) {
+async function ifIdIsCase(id, field, filter0) {
 	const filter = {
 		op: 'and',
 		content: [
@@ -147,6 +152,11 @@ async function ifIdIsCase(id, field) {
 			}
 		]
 	}
+
+	if (filter0) {
+		filter.content.push(filter0)
+	}
+
 	const re = await queryApi(filter, casesApi)
 	return re.data.hits.length > 0
 }
@@ -155,7 +165,7 @@ async function ifIdIsCase(id, field) {
 id is case id or case uuid; corresponding field is caseField
 query /files/ to retrieve all indexed bam files using this id
 */
-async function getFileByCaseId(id, caseField) {
+async function getFileByCaseId(id, caseField, filter0) {
 	const filter = {
 		op: 'and',
 		content: [
@@ -182,6 +192,11 @@ async function getFileByCaseId(id, caseField) {
 			}
 		]
 	}
+
+	if (filter0) {
+		filter.content.push(filter0)
+	}
+
 	return await queryApi(filter, filesApi)
 }
 
@@ -190,7 +205,7 @@ id is not case id or case uuid.
 assuming this id can only be file id or file uuid
 query /files/ directly with this
 */
-async function getFileByFileId(id, field) {
+async function getFileByFileId(id, field, filter0) {
 	const filter = {
 		op: 'and',
 		content: [
@@ -200,6 +215,11 @@ async function getFileByFileId(id, field) {
 			}
 		]
 	}
+
+	if (filter0) {
+		filter.content.push(filter0)
+	}
+
 	return await queryApi(filter, filesApi)
 }
 
@@ -230,10 +250,16 @@ above part is copied from bam.gdc.js
 */
 
 const input = process.argv[2] || 'TCGA-06-0211'
+const filter0 = process.argv[3]
 
 ;(async () => {
 	try {
-		const re = await get_gdc_data(input)
+		let f
+		if (filter0) {
+			f = JSON.parse(filter0)
+		}
+
+		const re = await get_gdc_data(input, f)
 		console.log(re)
 	} catch (e) {
 		console.log('ERROR: ' + (e.message || e))
