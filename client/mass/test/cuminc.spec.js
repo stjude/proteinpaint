@@ -86,18 +86,8 @@ tape('hidden uncomputable', function(test) {
 	})
 
 	async function runTests(cuminc) {
-		const legendDiv = cuminc.Inner.dom.legendDiv
-		test.equal(
-			legendDiv &&
-				legendDiv
-					.selectAll('.legend-row')
-					.filter(function() {
-						return Number(this.style.opacity) < 1
-					})
-					.size(),
-			2,
-			'should hide 2 series'
-		)
+		const hiddenDiv = cuminc.Inner.dom.hiddenDiv
+		test.equal(hiddenDiv && hiddenDiv.selectAll('.legend-row').size(), 2, 'should hide 2 series')
 		test.end()
 	}
 })

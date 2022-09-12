@@ -872,7 +872,6 @@ async function lowAFsnps_wilcoxon(tw, sampledata, Rinput, result) {
 }
 
 async function lowAFsnps_fisher(tw, sampledata, Rinput, result) {
-	console.log(874, 'fisher')
 	// for logistic, perform fisher's exact test for low-AF snps
 	const lines = [] // one line per snp
 	for (const [snpid, snpO] of tw.lowAFsnps) {
@@ -946,7 +945,7 @@ async function lowAFsnps_fisher(tw, sampledata, Rinput, result) {
 
 async function lowAFsnps_cuminc(tw, sampledata, Rinput, result) {
 	// for cox, perform cuminc analysis between samples having and missing effect allele
-	const fdata = {} // input for cuminc analysis {snpid: [{time, event, series}]}
+	const cumincRinput = { data: {} } // input for cuminc analysis
 	const snpsToSkip = new Set() // skip these snps
 	// because at least one allele is not found in any sample
 	for (const [snpid, snpO] of tw.lowAFsnps) {
@@ -986,7 +985,7 @@ async function lowAFsnps_cuminc(tw, sampledata, Rinput, result) {
 			snpsToSkip.add(snpid)
 			continue
 		}
-		fdata[snpid] = snpData
+		cumincRinput.data[snpid] = snpData
 	}
 
 	const final_data = {
@@ -995,33 +994,33 @@ async function lowAFsnps_cuminc(tw, sampledata, Rinput, result) {
 	}
 
 	// run cumulative incidence analysis in R
-	await runCumincR(fdata, final_data)
+	await runCumincR(cumincRinput, final_data)
 
 	// parse cumulative incidence results
 	let cuminc
 	for (const [snpid, snpO] of tw.lowAFsnps) {
 		if (snpsToSkip.has(snpid)) {
-			cuminc = {
-				pvalue: 'NA',
-				msg: 'Cannot perform cumulative incidence test on this snp - at least one allele is not found in any sample'
-			}
+			// cuminc test was not performed on this snp
+			const msg =
+				'Cannot perform cumulative incidence test on this snp - at least one allele is not found in any sample'
+			cuminc = { pvalue: 'NA', msg }
 		} else {
-			if (!final_data.tests[snpid] || final_data.tests[snpid].length == 0) throw 'final_data.tests missing for snp'
-			const pvalue = Number(final_data.tests[snpid][0].pvalue)
-			if (!Number.isFinite(pvalue)) throw 'invalid pvalue'
-			// clear chartId at [0] so it won't show as chart title
+			// parse case data
 			const caselst = []
 			for (const i of final_data.case) {
-				if (i[0] == snpid) {
-					i[0] = ''
-					caselst.push(i)
-				}
+				if (i[0] == snpid) caselst.push(i)
 			}
+			// parse statistical tests
+			if (!final_data.tests[snpid] || !final_data.tests[snpid].length) throw 'no tests for snp'
+			const pvalue = Number(final_data.tests[snpid][0].pvalue)
+			if (!Number.isFinite(pvalue)) throw 'invalid pvalue'
+			const tests = {}
+			tests[snpid] = final_data.tests[snpid]
 			cuminc = {
 				pvalue: Number(pvalue.toFixed(4)),
 				final_data: {
 					case: caselst,
-					tests: final_data.tests[snpid]
+					tests
 				}
 			}
 		}

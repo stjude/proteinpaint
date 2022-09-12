@@ -158,7 +158,7 @@ if (!fs.existsSync(datadir)) fs.mkdirSync(datadir, { recursive: true }) // creat
 
 const srcdb = path.join(serverconfig.binpath, 'test/testdata/db2')
 const destdb = path.join(serverconfig.tpmasterdir, ds.cohort.db.file)
-if (!fs.existsSync(destdb) && !process.env.PP_MODE?.startsWith('container-')) {
+if (!process.env.PP_MODE?.startsWith('container-')) {
 	fs.copyFileSync(srcdb, destdb)
 }
 

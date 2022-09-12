@@ -33,6 +33,7 @@
 #           var: variance of cumulative incidence value
 #           low: 95% confidence interval - lower bound
 #           up: 95% confidence intervals - upper bound
+#           nrisk: # at-risk samples at timepoint
 #         }
 #       ]
 #     },
@@ -57,7 +58,7 @@ library(jsonlite)
 suppressPackageStartupMessages(library(cmprsk))
 
 # function to run cumulative incidence analysis on data for a chart
-run_cuminc <- function(chart) {
+run_cuminc <- function(chart, startTime) {
   chart$event <- as.factor(chart$event)
   chart$series <- as.factor(chart$series)
   estimates <- list()
@@ -65,7 +66,21 @@ run_cuminc <- function(chart) {
     # single series
     res <- cuminc(ftime = chart$time, fstatus = chart$event, cencode = 0)
     seriesRes <- as.data.frame(res[[1]])
+    # if a custom start time is given, then this start time
+    # should serve as the first time point of the curve
+    if (!is.na(startTime)) {
+      seriesRes$time[1] <- startTime
+      if (seriesRes$time[1] == seriesRes$time[2]) {
+        # event occurred at startTime
+        # so time point 2 can serve as time point 1
+        seriesRes <- seriesRes[-1,]
+      }
+    }
+    # compute confidence intervals
     seriesRes <- compute_ci(seriesRes)
+    # compute counts of at-risk samples, events, and
+    # censored exits at each time point
+    seriesRes <- compute_counts(seriesRes, chart)
     estimates[[levels(chart$series)]] <- seriesRes
     out <- list("estimates" = estimates)
   } else {
@@ -90,7 +105,21 @@ run_cuminc <- function(chart) {
       for (series in pair) {
         if (series %in% names(estimates)) next
         seriesRes <- as.data.frame(res[[paste(series,1)]])
+        # if a custom start time is given, then this start time
+        # should serve as the first time point of the curve
+        if (!is.na(startTime)) {
+          seriesRes$time[1] <- startTime
+          if (seriesRes$time[1] == seriesRes$time[2]) {
+            # event occurred at startTime
+            # so time point 2 can serve as time point 1
+            seriesRes <- seriesRes[-1,]
+          }
+        }
+        # compute confidence intervals
         seriesRes <- compute_ci(seriesRes)
+        # compute counts of at-risk samples, events, and
+        # censored exits at each time point
+        seriesRes <- compute_counts(seriesRes, chart[chart$series == series,])
         estimates[[series]] <- seriesRes
       }
       
@@ -182,18 +211,44 @@ compute_ci <- function(res) {
   return(res)
 }
 
+# function to compute counts of at-risk samples, events, and censored exits at each time point
+# res: series-specific res
+# chart: series-specific chart
+compute_counts <- function(res, chart) {
+  # compute at-risk counts
+  # these counts are the number of samples
+  # that have not experienced an event or
+  # have not been censored prior to each time point
+  res$nrisk <- apply(res, 1, function(timepoint) length(which(chart$time >= timepoint["time"])))
+  # compute number of events and censored exits during each time point
+  times <- unique(res$time)
+  chart <- cbind(chart, "bin" = findInterval(chart$time, times))
+  res <- cbind(res, "bin" = findInterval(res$time, times))
+  m <- table(chart$bin, chart$event)
+  colnames(m) <- c("ncensor", "nevent")
+  m <- cbind(m, "bin" = as.numeric(row.names(m)))
+  res <- merge(res, m, by = "bin", all.x = T)
+  res$nevent[is.na(res$nevent)] <- 0
+  res$ncensor[is.na(res$ncensor)] <- 0
+  res <- res[,c(2:7,9,8)]
+  return(res)
+}
+
 
 # read in data
 args <- commandArgs(trailingOnly = T)
 if (length(args) != 1) stop("Usage: Rscript cuminc.R in.json > results")
 infile <- args[1]
-dat <- fromJSON(infile)
+input <- fromJSON(infile)
+
+dat <- input$data
+startTime <- ifelse("startTime" %in% names(input), input$startTime, NA)
 
 # perform cumulative incidence analysis
 # parallelize the analysis across charts/variants
 cores <- detectCores()
 if (is.na(cores)) stop("unable to detect number of cores")
-ci_results <- mclapply(dat, run_cuminc, mc.cores = cores)
+ci_results <- mclapply(X = dat, FUN = run_cuminc, startTime = startTime, mc.cores = cores)
 
 # output results in json format
 toJSON(ci_results, digits = NA, na = "string")

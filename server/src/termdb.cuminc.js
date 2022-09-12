@@ -31,22 +31,36 @@ export async function get_incidence(q, ds) {
 		}
 		const bins = q.term2_id && results.CTE2.bins ? results.CTE2.bins : []
 		const final_data = {
-			keys: ['chartId', 'seriesId', 'time', 'cuminc', 'low', 'high'],
+			keys: ['chartId', 'seriesId', 'time', 'cuminc', 'low', 'high', 'nrisk', 'nevent', 'ncensor'],
 			case: [],
 			refs: { bins }
 		}
 
 		/*
-		filter data prior to cumulative incidence analysis
+		prepare R input
 
-		skip series that do not meet sample size or event count thresholds
-			- sample size threshold is specified by user
-			- event count threshold is 0 (R will throw error when no series has an event)
+		input format
+		{
+			data: { chartId: [{time, event, series}] },
+			startTime: number, custom start time of cuminc curve
+		}
 		*/
-		const fdata = {} // input for cuminc analysis {chartId: [{time, event, series}]}
+
+		const Rinput = {
+			data: {},
+			startTime: minTimeSinceDx // start time of curve will be the min time since cancer diagnosis for the dataset
+		}
+
 		for (const chartId in byChartSeries) {
-			if (!byChartSeries[chartId].length) continue
-			// compute sample sizes and even counts for each series
+			/*
+			filter series of chart
+			
+			skip series that do not meet sample size or event count thresholds
+			sample size threshold is specified by user
+			event count threshold is 0, because R will throw error when no series has an event
+			*/
+
+			// compute sample sizes and event counts for each series
 			const series2counts = new Map() // series => {samplesize, eventcnt}
 			for (const sample of byChartSeries[chartId]) {
 				let counts = series2counts.get(sample.series)
@@ -75,12 +89,7 @@ export async function get_incidence(q, ds) {
 				}
 			}
 
-			// skip any flagged series
-			fdata[chartId] = byChartSeries[chartId].filter(
-				sample => !lowSampleSize.has(sample.series) && !lowEventCnt.has(sample.series)
-			)
-
-			// store the skipped series
+			// keep track of any flagged series
 			if (lowSampleSize.size) {
 				if (!final_data.lowSampleSize) final_data.lowSampleSize = {}
 				final_data.lowSampleSize[chartId] = [...lowSampleSize]
@@ -90,16 +99,23 @@ export async function get_incidence(q, ds) {
 				final_data.lowEventCnt[chartId] = [...lowEventCnt]
 			}
 
-			// skip the chart if all series have been skipped
-			if (fdata[chartId].length === 0) {
-				delete fdata[chartId]
+			// skip any flagged series
+			const samples = byChartSeries[chartId].filter(
+				sample => !lowSampleSize.has(sample.series) && !lowEventCnt.has(sample.series)
+			)
+			if (samples) {
+				Rinput.data[chartId] = samples
+			} else {
+				// skip the chart if all series have been skipped
+				// keep track of any skipped charts
 				if (!final_data.skippedCharts) final_data.skippedCharts = []
 				final_data.skippedCharts.push(chartId)
-				continue
 			}
 		}
 
-		await runCumincR(fdata, final_data, minTimeSinceDx)
+		// run cumulative incidence analysis in R
+		await runCumincR(Rinput, final_data)
+
 		return final_data
 	} catch (e) {
 		if (e.stack) console.log(e.stack)
@@ -107,25 +123,28 @@ export async function get_incidence(q, ds) {
 	}
 }
 
-/* run cumulative incidence analysis in R
-function has no returns; R analysis result are collected into "final_data{}"
+/*
+run cumulative incidence analysis in R
 
-chartId: a string, can be empty
-fdata{}: see above
-final_data{}
+function has no returns
+
+R analysis results are collected into "final_data{}"
+
+Rinput: {} see above
+final_data: {
 	.case[]
 	.tests{}
-startTime: first timepoint of curve. Undefined by default. Defined if a minimum time cutoff is given (e.g. SJLIFE has a minimum time cutoff of 5 years since cancer diagnosis)
+}
 */
-export async function runCumincR(fdata, final_data, startTime = undefined) {
+export async function runCumincR(Rinput, final_data) {
 	// replace empty string chartIds and seriesIds with '*' for R (will reconvert later)
-	for (let chartId in fdata) {
+	for (let chartId in Rinput.data) {
 		if (chartId === '') {
 			chartId = '*'
-			fdata[chartId] = fdata['']
-			delete fdata['']
+			Rinput.data[chartId] = Rinput.data['']
+			delete Rinput.data['']
 		}
-		fdata[chartId] = fdata[chartId].map(sample => {
+		Rinput.data[chartId] = Rinput.data[chartId].map(sample => {
 			const container = {
 				time: sample.time,
 				event: sample.event,
@@ -137,35 +156,55 @@ export async function runCumincR(fdata, final_data, startTime = undefined) {
 
 	// run cumulative incidence analysis
 	const datafile = path.join(serverconfig.cachedir, Math.random().toString() + '.json')
-	await write_file(datafile, JSON.stringify(fdata))
+	await write_file(datafile, JSON.stringify(Rinput))
 	const Routput = await lines2R(path.join(serverconfig.binpath, 'utils/cuminc.R'), [], [datafile])
 	const ci_data = JSON.parse(Routput[0])
 
 	// parse cumulative incidence results
-	// for chartIds and seriesIds, reconvert the '*' placeholder back to empty string
+	// first revert placeholders
+	if (Object.keys(ci_data).length == 1) {
+		if (Object.keys(ci_data)[0] === '*') {
+			ci_data[''] = ci_data['*']
+			delete ci_data['*']
+		} else {
+			throw 'unexpected chartId'
+		}
+	}
+	for (const chartId in ci_data) {
+		if (Object.keys(ci_data[chartId].estimates).length == 1) {
+			if (Object.keys(ci_data[chartId].estimates)[0] === '*') {
+				ci_data[chartId].estimates[''] = ci_data[chartId].estimates['*']
+				delete ci_data[chartId].estimates['*']
+			} else {
+				throw 'unexpected seriesId'
+			}
+		}
+	}
+
+	// parse results
 	for (const chartId in ci_data) {
 		// retrieve cumulative incidence estimates
 		for (const seriesId in ci_data[chartId].estimates) {
 			const series = ci_data[chartId].estimates[seriesId]
-			// the first time point generated by cuminc() in R is always time 0
-			// if startTime is given, use it as first time point
-			series[0].time = startTime !== undefined ? startTime : series[0].time
 			// fill in final_data.case[]
 			for (let i = 0; i < series.length; i++) {
 				final_data.case.push([
-					chartId === '*' ? '' : chartId,
-					seriesId === '*' ? '' : seriesId,
+					chartId,
+					seriesId,
 					series[i].time,
 					series[i].est,
 					series[i].low,
-					series[i].up
+					series[i].up,
+					series[i].nrisk,
+					series[i].nevent,
+					series[i].ncensor
 				])
 			}
 		}
 		// retrieve results of Gray's tests
 		if (ci_data[chartId].tests) {
 			if (!final_data.tests) final_data.tests = {}
-			final_data.tests[chartId === '*' ? '' : chartId] = ci_data[chartId].tests
+			final_data.tests[chartId] = ci_data[chartId].tests
 		}
 	}
 
