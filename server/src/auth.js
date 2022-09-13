@@ -172,7 +172,6 @@ function checkDsSecret(q, headers) {
 	const secret = cred.secret[q.embedder]
 	if (!secret) throw `unknown q.embedder='${q.embedder}'`
 
-	//const subsecret =
 	//console.log(165, secret, jsonwebtoken.sign({ accessibleDatasets: ['TermdbTest', "SJLife"] }, secret))
 	const token = headers[cred.headerKey]
 	if (!token) throw `missing header['${cred.headerKey}']`
@@ -189,10 +188,9 @@ function checkDsSecret(q, headers) {
 		.toString()
 		.substring(0, 32)
 
-	const decryptedSub = AESDecrypt(payload.sub, subSecret)
+	const decryptedSub = AESDecrypt(payload.sub, subSecret) //; console.log('decryptedSub', decryptedSub)
 	const dsname = cred.dsname || q.dslabel
-	if (0 && !decryptedSub.accessibleDatasets?.includes(dsname))
-		throw `not authorized for dslabel='${q.dslabel}' (dsname='${dsname}')`
+	if (!decryptedSub.datasets?.includes(dsname)) throw `not authorized for dslabel='${q.dslabel}' (dsname='${dsname}')`
 }
 
 module.exports = { maySetAuthRoutes, getDsAuth, checkDsSecret }
