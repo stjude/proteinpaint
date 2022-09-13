@@ -39,7 +39,8 @@ tape('initial tests', function(test) {
 					term: {
 						id: 'diaggrp'
 					},
-					plot: { file: 'files/hg19/pnet/classification/methylome_tsne.csv', name: 'Methylome TSNE' }
+					file: 'files/hg19/pnet/classification/methylome_tsne.csv',
+					name: 'Methylome TSNE'
 				}
 			]
 		},

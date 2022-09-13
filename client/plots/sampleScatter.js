@@ -42,11 +42,14 @@ class Scatter {
 	// or current.state != replcament.state
 	async main() {
 		this.config = this.state.config
-		if (this.dom.header) this.dom.header.html(this.config.plot.name + ' Scatter Plot')
+		if (this.dom.header)
+			this.dom.header.html(
+				this.config.name + ` <span style="opacity:.6;font-size:.7em;margin-left:10px;">SCATTER PLOT</span>`
+			)
 		copyMerge(this.settings, this.config.settings.sampleScatter)
 		const reqOpts = this.getDataRequestOpts()
 		//this.data = this.app.vocabApi.getScatterData(reqOpts)
-		const data = await dofetch('textfile', { file: this.config.plot.file })
+		const data = await dofetch('textfile', { file: this.config.file })
 		if (data.error) throw data.error
 		else if (data.text) {
 			this.processData(data.text)
@@ -294,6 +297,27 @@ function setRenderers(self) {
 	}
 }
 
+function setInteractivity(self) {
+	self.mouseover = function() {
+		if (event.target.tagName == 'circle') {
+			const d = event.target.__data__
+			const rows = [
+				`<tr><td style='padding:3px; color:#aaa'>X:</td><td style='padding:3px; text-align:center'>${d.x}</td></tr>`,
+				`<tr><td style='padding:3px; color:#aaa'>Y:</td><td style='padding:3px; text-align:center'>${d.y}</td></tr>`
+			]
+			self.app.tip
+				.show(event.clientX, event.clientY)
+				.d.html(`<table class='sja_simpletable'>${rows.join('\n')}</table>`)
+		} else {
+			self.app.tip.hide()
+		}
+	}
+
+	self.mouseout = function() {
+		self.app.tip.hide()
+	}
+}
+
 export async function getPlotConfig(opts, app) {
 	if (!opts.term) throw 'sampleScatter getPlotConfig: opts.term{} missing'
 	try {
@@ -395,25 +419,4 @@ function getPj(self) {
 		}
 	})
 	return pj
-}
-
-function setInteractivity(self) {
-	self.mouseover = function() {
-		if (event.target.tagName == 'circle') {
-			const d = event.target.__data__
-			const rows = [
-				`<tr><td style='padding:3px; color:#aaa'>X:</td><td style='padding:3px; text-align:center'>${d.x}</td></tr>`,
-				`<tr><td style='padding:3px; color:#aaa'>Y:</td><td style='padding:3px; text-align:center'>${d.y}</td></tr>`
-			]
-			self.app.tip
-				.show(event.clientX, event.clientY)
-				.d.html(`<table class='sja_simpletable'>${rows.join('\n')}</table>`)
-		} else {
-			self.app.tip.hide()
-		}
-	}
-
-	self.mouseout = function() {
-		self.app.tip.hide()
-	}
 }

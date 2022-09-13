@@ -454,8 +454,7 @@ function setRenderers(self) {
 				.on('click', () => {
 					self.app.dispatch({
 						type: 'plot_create',
-						config: { chartType: 'sampleScatter', term: { id: plot.term.id }, plot: plot },
-						plot
+						config: { chartType: 'sampleScatter', term: { id: plot.term.id }, file: plot.file, name: plot.name }
 					})
 				})
 		}
