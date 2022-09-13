@@ -818,7 +818,7 @@ function setRenderers(self) {
 				.append('line')
 				.attr('class', 'sjpcb-plot-tip-line')
 				.attr('stroke', '#000')
-				.attr('stroke-width', '1px')
+				.attr('stroke-width', '2px')
 			plotRect = mainG
 				.append('rect')
 				.attr('class', 'sjpcb-plot-tip-rect')
@@ -950,11 +950,18 @@ function setRenderers(self) {
 
 		const xTicks = axisBottom(chart.xScale).tickValues(chart.xTickValues)
 
+		// use a -0.5 offset to compensate for the default 0.5 offset
+		// used by d3-axis
+		// TODO: once we upgrade d3, we can use axis.offset() to
+		// change this axis offset
 		xAxis
-			.attr('transform', 'translate(0,' + (s.svgh - s.svgPadding.top - s.svgPadding.bottom + s.xAxisOffset) + ')')
+			.attr(
+				'transform',
+				'translate(-0.5,' + (s.svgh - s.svgPadding.top - s.svgPadding.bottom + s.xAxisOffset - 0.5) + ')'
+			)
 			.call(xTicks)
 
-		yAxis.attr('transform', `translate(${s.yAxisOffset},0)`).call(
+		yAxis.attr('transform', `translate(${s.yAxisOffset - 0.5},-0.5)`).call(
 			axisLeft(
 				scaleLinear()
 					.domain(chart.yScale.domain())
