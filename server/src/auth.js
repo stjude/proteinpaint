@@ -188,9 +188,12 @@ function checkDsSecret(q, headers) {
 		.toString()
 		.substring(0, 32)
 
-	const decryptedSub = AESDecrypt(payload.sub, subSecret) //; console.log('decryptedSub', decryptedSub)
+	const decryptedSub = AESDecrypt(payload.sub, subSecret)
+	//console.log('decryptedSub', decryptedSub)
+	const sub = JSON.parse(decryptedSub)
+	//console.log('sub', sub)
 	const dsname = cred.dsname || q.dslabel
-	if (!decryptedSub.datasets?.includes(dsname)) throw `not authorized for dslabel='${q.dslabel}' (dsname='${dsname}')`
+	if (!sub.datasets?.includes(dsname)) throw `not authorized for dslabel='${q.dslabel}' (dsname='${dsname}')`
 }
 
 module.exports = { maySetAuthRoutes, getDsAuth, checkDsSecret }
