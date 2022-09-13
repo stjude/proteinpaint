@@ -37,7 +37,8 @@ class MassCharts {
 			vocab: appState.vocab,
 			activeCohort: appState.activeCohort,
 			termfilter: appState.termfilter,
-			supportedChartTypes: chartTypes[cohortStr] || ['barchart']
+			supportedChartTypes: chartTypes[cohortStr] || ['barchart'],
+			termdbConfig: appState.termdbConfig
 		}
 		if (appState.termfilter && appState.termfilter.filter) {
 			state.filter = getNormalRoot(appState.termfilter.filter)
@@ -234,6 +235,11 @@ function getChartTypeList(self) {
 				chartType: 'dataDownload',
 				terms: []
 			}
+		},
+		{
+			label: 'Sample Scatter',
+			chartType: 'sampleScatter',
+			clickTo: self.showFileLst
 		}
 	]
 }
@@ -436,5 +442,21 @@ function setRenderers(self) {
 	self.prepPlot = function(chart) {
 		const action = { type: 'plot_prep', config: chart.config, id: idPrefix + id++ }
 		self.app.dispatch(action)
+	}
+
+	self.showFileLst = function() {
+		const menuDiv = self.dom.tip.d.append('div')
+		for (const plot of self.state.termdbConfig.scatterplots.plot) {
+			menuDiv
+				.append('div')
+				.attr('class', 'sja_menuoption sja_sharp_border')
+				.text(plot.name)
+				.on('click', () => {
+					self.app.dispatch({
+						type: 'plot_create',
+						config: { chartType: 'sampleScatter', term: { id: plot.term.id }, file: plot.file, name: plot.name }
+					})
+				})
+		}
 	}
 }
