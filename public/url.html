@@ -355,14 +355,16 @@ makeURL([
 
 {name:section_mass,
 	links:[
-		['TermdbTest', '?noheader=1&mass={"genome":"hg38","dslabel": "TermdbTest"}'],
+		['TermdbTest', '?noheader=1&mass={"genome":"hg38","dslabel":"TermdbTest"}'],
 		['SJLife', '?noheader=1&mass={"genome":"hg38","dslabel": "SJLife"}'],
 		['CCSS','?noheader=1&mass='+JSON.stringify( {
 			dslabel:'SJLife',
 			genome:'hg38',
 			activeCohort:1
 		})],
-		
+		['PNET', '?noheader=1&mass={"genome":"hg19","dslabel": "PNET"}'],
+		['ASH', '?noheader=1&mass={"genome":"hg38","dslabel": "ASH"}'],
+
 		'barchart',
 
 		['diaggrp', __barchart({ id: 'diaggrp' })],

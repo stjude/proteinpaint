@@ -75,8 +75,6 @@ output an object:
 			.total=int // size of this term1-term2 combination
 */
 async function barchart_data(q, ds, tdb) {
-	if (!ds.cohort) throw 'cohort missing from ds'
-
 	/*
 	!!quick fix!!
 	tricky logic
@@ -94,8 +92,11 @@ async function barchart_data(q, ds, tdb) {
 	TODO mds3 getter for (1), since it can be served by sqlite db or gdc api
 	*/
 
-	if (ds.isMds3 && ds?.variant2samples?.get) {
-		/* for now this condition checking is a quick fix to detect (2)
+	if (typeof q.get == 'string' && ds.isMds3 && ds?.variant2samples?.get) {
+		/*
+		presence of q.get (value should be "summary") indicates this is for mds3 variant2sample.get()
+
+		for now this condition checking is a quick fix to detect (2)
 		later should state this explicitly with new attribute in q{}
 		*/
 		return await ds.variant2samples.get(q, ds)
@@ -107,7 +108,13 @@ async function barchart_data(q, ds, tdb) {
 		throw 'barsql parameter not fitting termid2totalsize2.get() yet'
 		return await ds.termdb.termid2totalsize2.get(q)
 	}
-	return await get_barchart_data_sqlitedb(q, ds, tdb)
+
+	if (ds.cohort?.db?.connection) {
+		// using sqlite db
+		return await get_barchart_data_sqlitedb(q, ds, tdb)
+	}
+
+	throw 'unknown method to get barchart data'
 }
 
 export async function get_barchart_data_sqlitedb(q, ds, tdb) {
