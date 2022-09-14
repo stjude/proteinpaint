@@ -1519,7 +1519,10 @@ async function align_reads_to_allele(tk, group, block) {
 
 function configPanel(tk, block) {
 	tk.tkconfigtip.clear().showunder(tk.config_handle.node())
-	const d = tk.tkconfigtip.d.append('div')
+	const d = tk.tkconfigtip.d
+		.append('div')
+		.style('min-width', '700px')
+		.style('max-width', '25vw')
 
 	{
 		const row = d.append('div')
@@ -1548,6 +1551,7 @@ function configPanel(tk, block) {
 			holder: d.append('div'),
 			labeltext: 'Drop PCR or optical duplicates',
 			checked: tk.drop_pcrduplicates,
+			divstyle: { display: 'block', margin: '10px 5px', height: '10px', 'margin-left': '6.5px' },
 			callback: () => {
 				tk.drop_pcrduplicates = !tk.drop_pcrduplicates
 				loadTk(tk, block)
@@ -1559,6 +1563,7 @@ function configPanel(tk, block) {
 			holder: d.append('div'),
 			labeltext: 'Show read names',
 			checked: tk.show_readnames,
+			divstyle: { display: 'block', margin: '10px 5px', height: '10px', 'margin-left': '6.5px' },
 			callback: () => {
 				tk.show_readnames = !tk.show_readnames
 				loadTk(tk, block)
@@ -1574,16 +1579,27 @@ function configPanel(tk, block) {
 		const row = d.append('div')
 		row
 			.append('span')
-			.html('Strictness:&nbsp;')
+			.html('Strictness: ')
+			.style('display', 'block')
+			.style('height', '10px')
 			.style('opacity', 0.5)
 			.style('margin', '10px 5px')
 		make_radios({
 			holder: row,
 			options: [
-				{ label: '0', value: 0, checked: tk.variants[0].strictness == 0 },
-				{ label: '1', value: 1, checked: tk.variants[0].strictness == 1 }
+				{
+					label: 'Lenient: No post-processing after genotyping of reads',
+					value: 0,
+					checked: tk.variants[0].strictness == 0
+				},
+				{
+					label:
+						'Strict: Reads with non-reference and non-alternate nucleotides within variant region are classifed into none category',
+					value: 1,
+					checked: tk.variants[0].strictness == 1
+				}
 			],
-			styles: { display: 'inline-block', margin: '10px 5px' },
+			styles: { display: 'block', margin: '10px 5px', height: '10px', 'margin-left': '30px' },
 			callback: v => {
 				tk.variants[0].strictness = v
 				loadTk(tk, block)
@@ -1595,10 +1611,11 @@ function configPanel(tk, block) {
 
 	d
 		.append('div')
-		.style('font-size', '.8em')
-		.style('width', '300px').html(`
+		.style('display', 'inline-block')
+		.style('height', '10px')
+		.style('margin-top', '10px')
+		.style('font-size', '.8em').html(`
 	<ul style="padding-left:15px">
-          <li><b>Strictness</b></li> <ul style="list-style-type:none;"> <li> 0: No post-processing after genotyping of reads (Lenient) </li> <li> 1: Reads with non-reference and non-alternate nucleotides within variant region are classifed into none category (Strict) </li></ul>
 	  <li><b>Matches</b> are rendered as gray boxes aligned to the reference.</li>
 	  <li><b>Mismatches</b> will be checked when 1 bp is wider than 1 pixel, and are rendered as red boxes aligned to the reference.</li>
 	  <li><b>Softclips</b> are rendered as blue boxes not aligned to the reference.</li>
@@ -1615,10 +1632,7 @@ function configPanel(tk, block) {
 		.style('margin-top', '10px')
 		.append('img')
 		.attr('src', tk.colorscale)
-	d
-		.append('div')
-		.style('font-size', '.8em')
-		.style('width', '300px').html(`
+	d.append('div').style('font-size', '.8em').html(`
 `)
 }
 
