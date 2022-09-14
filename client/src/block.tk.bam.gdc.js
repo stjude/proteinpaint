@@ -233,6 +233,7 @@ export async function bamsliceui({ genomes, holder, filter0, disableSSM = false,
 
 		const gdcid_input = gdcid_inputdiv
 			.append('input')
+			.attr('type', 'search')
 			.attr('size', 40)
 			.style('padding', '3px 10px')
 			.property('placeholder', 'File name / File UUID / Case ID / Case UUID')
@@ -285,7 +286,6 @@ export async function bamsliceui({ genomes, holder, filter0, disableSSM = false,
 			.style('max-height', '20vh')
 
 		api.update = _arg => {
-			console.log(_arg?.filter0)
 			//Object.assign(arg, _arg)
 			gdc_search(_arg?.filter0 || filter0)
 		}
@@ -305,7 +305,7 @@ export async function bamsliceui({ genomes, holder, filter0, disableSSM = false,
 				gdcid_input.attr('disabled', 1)
 				gdc_loading.style('display', 'inline-block')
 				const data = await dofetch3(
-					`gdcbam?gdc_id=${gdc_id}${filter0 ? '&filter0=' + encodeURIComponent(JSON.stringify(_filter0)) : ''}`
+					`gdcbam?gdc_id=${gdc_id}${_filter0 ? '&filter0=' + encodeURIComponent(JSON.stringify(_filter0)) : ''}`
 				)
 				// enable input field and hide 'Loading...'
 				gdcid_input.attr('disabled', null)

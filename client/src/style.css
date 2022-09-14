@@ -90,6 +90,16 @@ table {
     margin:  2px 5px;
 }
 
+.sja_root_holder input[type="text"],
+.sja_root_holder input[type="search"] {
+    border:  1px solid #ccc !important;
+}
+
+.sja_root_holder [type="text"],
+.sja_root_holder [type="search"] {
+    border:  1px solid #ccc !important;
+}
+
 .sja_root_holder input[type="search"].tree_search {
     -webkit-appearance: searchfield;
 }
