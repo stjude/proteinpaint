@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## 2.3.1
+
+GDC-related
+- fix the cohort filter handling for GDC case search and BAM slice
+- input border for text and search input within sja_root div
+
+Dev-related
+- readme.html to easily navigate and view readme's in one place
+
 ## 2.3.0
 
 - data download app in the MASS UI
