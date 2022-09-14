@@ -188,8 +188,6 @@ function setRenderers(self) {
 			.each(function(series, i) {
 				renderSeries(select(this), chart, series, i, s, duration)
 			})
-
-		renderAxes(xAxis, xTitle, yAxis, yTitle, s, chart)
 	}
 
 	function getSvgSubElems(svg) {
@@ -242,68 +240,15 @@ function setRenderers(self) {
 			.transition()
 			.duration(duration)
 	}
-
-	function renderAxes(xAxis, xTitle, yAxis, yTitle, s, d) {
-		xAxis
-			.attr('transform', 'translate(0,' + (s.svgh - s.svgPadding.top - s.svgPadding.bottom) + ')')
-			.call(axisBottom(d.xScale).ticks(5))
-
-		yAxis.call(
-			axisLeft(
-				d3Linear()
-					.domain(d.yScale.domain())
-					.range([0, s.svgh - s.svgPadding.top - s.svgPadding.bottom])
-			).ticks(5)
-		)
-
-		xTitle.select('text, title').remove()
-		const xTitleLabel =
-			self.config.term.term.name.length > 24
-				? self.config.term.term.name.slice(0, 20) + '...'
-				: self.config.term.term.name
-		const xText = xTitle
-			.attr(
-				'transform',
-				'translate(' +
-					(s.svgw - s.svgPadding.left - s.svgPadding.right) / 2 +
-					',' +
-					(s.svgh - s.axisTitleFontSize) +
-					')'
-			)
-			.append('text')
-			.style('text-anchor', 'middle')
-			.style('font-size', s.axisTitleFontSize + 'px')
-			.text(xTitleLabel + (self.config.term.term.unit ? ', ' + self.config.term.term.unit : ''))
-
-		xText.append('title').text(self.config.term.term.name)
-
-		const yTitleLabel = 'Y'
-		yTitle.select('text, title').remove()
-		const yText = yTitle
-			.attr(
-				'transform',
-				'translate(' +
-					(-s.svgPadding.left / 2 - s.axisTitleFontSize) +
-					',' +
-					(s.svgh - s.svgPadding.top - s.svgPadding.bottom) / 2 +
-					')rotate(-90)'
-			)
-			.append('text')
-			.style('text-anchor', 'middle')
-			.style('font-size', s.axisTitleFontSize + 'px')
-		//.text(yTitleLabel + (self.config.term2.term.unit ? ', ' + self.config.term2.term.unit : ''))
-
-		//yText.append('title').text(self.config.term2.term.name)
-	}
 }
 
 function setInteractivity(self) {
 	self.mouseover = function() {
 		if (event.target.tagName == 'circle') {
 			const d = event.target.__data__
+			console.log(d)
 			const rows = [
-				`<tr><td style='padding:3px; color:#aaa'>X:</td><td style='padding:3px; text-align:center'>${d.x}</td></tr>`,
-				`<tr><td style='padding:3px; color:#aaa'>Y:</td><td style='padding:3px; text-align:center'>${d.y}</td></tr>`
+				`<tr><td style='padding:3px; color:#aaa'>Sample:</td><td style='padding:3px; text-align:center'>${d.sample}</td></tr>`
 			]
 			self.app.tip
 				.show(event.clientX, event.clientY)
@@ -384,6 +329,7 @@ function getPj(self) {
 									color: '$color',
 									x: '$x',
 									y: '$y',
+									sample: '$sample',
 									'_1:scaledX': '=scaledX()',
 									'_1:scaledY': '=scaledY()'
 								},
