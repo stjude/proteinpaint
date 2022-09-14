@@ -12,14 +12,14 @@
             }
         },
         {
-            "download":"https://pecan.stjude.cloud/static/proteinpaint_demo/hg19/mavb/mavbDemoData.tar.gz",
+            "download":"https://proteinpaint.stjude.org/ppdemo/hg19/mavb/mavbDemoData.tar.gz",
             "runargs": {
                 "genome": "hg19",
                 "noheader": 1,
                 "mavolcanoplot": {
                     "genome": "hg19",
                     "noheader": 1,
-                    "url": "https://pecan.stjude.cloud/static/pp-support/example.files/DIPG_H33K27MvsWT_noACVR_adj.txt",
+                    "url": "https://proteinpaint.stjude.org/ppdemo/hg19/mavb/mavbDemoData.txt",
                     "tracks": [{
                         "name": "Demo RNA-seq coverage",
                         "strand1": { 

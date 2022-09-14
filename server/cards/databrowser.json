@@ -1,5 +1,5 @@
 {
-  "intro": "<b>We're excited to announce our newest app!</b> By uploading a dictionary in the Data Browser, one can explore the structure of their custom cohort. <br><br>Options to upload sample annotation and other data types are in development.", 
+  "intro": "<b>We're excited to announce our newest app!</b> By uploading a dictionary in the Data Browser, one can explore the structure of their custom data. <br><br>Options to upload sample annotation and other data types are in development.", 
   "ppcalls":[
     {
         "isUi": true,
@@ -11,7 +11,8 @@
         }
     },
     {
-      "download":"https://pecan.stjude.cloud/static/proteinpaint_demo/databrowser/dictionaryDemoData.tar.gz",
+      "label": "Custom Data",
+      "download":"https://proteinpaint.stjude.org/ppdemo/databrowser/dictionaryDemoData.tar.gz",
       "runargs": {
         "noheader": true,
         "nobox":true,
@@ -453,6 +454,56 @@
         "timeout": 7000,
         "expected": { "input": 2, "button": 1 }
     }
+    },
+    {
+      "label": "Survivorship Study",
+      "runargs":{
+        "noheader": true,
+        "nobox":true,
+        "termdb":{
+          "state": {
+            "vocab": {
+              "dslabel": "SJLife",
+              "genome": "hg38"
+            }
+          }
+        }
+      },
+      "buttons": [
+        {
+          "name": "Survivorship Study Homepage",
+          "link": "https://survivorship.stjude.cloud/"
+        }
+      ],
+      "testSpec": {
+        "timeout": 7000,
+        "expected": { "input": 2, "button": 1 }
+      }
+    },
+    {
+      "label": "MSigDB",
+      "runargs":{
+        "noheader": true,
+        "nobox":true,
+        "termdb":{
+          "state": {
+            "vocab": {
+              "dslabel": "msigdb",
+              "genome": "hg38"
+            }
+          }
+        }
+      },
+      "buttons": [
+        {
+          "name": "MSigDB Homepage",
+          "link": "http://www.gsea-msigdb.org/gsea/msigdb/index.jsp"
+        }
+      ],
+      "testSpec": {
+        "timeout": 7000,
+        "expected": { "input": 2, "button": 1 }
+      }
     }
   ]
 }
