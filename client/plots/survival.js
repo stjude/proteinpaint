@@ -623,6 +623,7 @@ function setRenderers(self) {
 
 		svg.seriesTip.update({
 			xScale: chart.xScale,
+			decimals: s.seriesTipDecimals,
 			serieses: chart.visibleSerieses.map(s => {
 				const seriesLabel = `${s.seriesLabel || 'Probability'}:`
 				const color = self.term2toColor[s.seriesId].adjusted || '#000'
@@ -832,18 +833,19 @@ function setRenderers(self) {
 				})
 		}
 
-		// use a -0.5 offset to compensate for the default 0.5 offset
-		// used by d3-axis
-		// TODO: once we upgrade d3, we can use axis.offset() to
-		// change this axis offset
+		// without this pixel offset, the axes and data are slightly misaligned
+		// this could be because the axes have a 0.5 offset in their path,
+		// for example: <path class="domain" stroke="#000" d="M0.5,6V0.5H325.5V6"></path>
+		const pixelOffset = -0.5
+
 		xAxis
 			.attr(
 				'transform',
-				'translate(-0.5,' + (s.svgh - s.svgPadding.top - s.svgPadding.bottom + s.xAxisOffset - 0.5) + ')'
+				`translate(${pixelOffset}, ${s.svgh - s.svgPadding.top - s.svgPadding.bottom + s.xAxisOffset + pixelOffset})`
 			)
 			.call(xTicks)
 
-		yAxis.attr('transform', `translate(${s.yAxisOffset - 0.5},-0.5)`).call(
+		yAxis.attr('transform', `translate(${s.yAxisOffset + pixelOffset}, ${pixelOffset})`).call(
 			axisLeft(
 				scaleLinear()
 					.domain(chart.yScale.domain())
@@ -1212,6 +1214,7 @@ export async function getPlotConfig(opts, app) {
 				atRiskVisible: true,
 				atRiskLabelOffset: -20,
 				xTickValues: [], // if undefined or empty, will be ignored
+				seriesTipDecimals: 1,
 				svgPadding: {
 					top: 20,
 					left: 55,

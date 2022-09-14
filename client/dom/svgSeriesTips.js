@@ -36,11 +36,9 @@ export function getSeriesTip(line, rect, _tip = null) {
 
 	function mouseOver() {
 		const m = mouse(rectNode)
-		// adding 1 makes the vertical line match the
-		// x-axis tick position exactly
-		const mx = m[0] + 1
-		const xVal = +opts.xScale.invert(mx).toFixed(1)
-		const x = opts.xScale(xVal)
+		const mx = m[0]
+		const xVal = +opts.xScale.invert(mx).toFixed(opts.decimals)
+		const x = opts.xScale(xVal) /* + 0.5*/ // do not add a small float value here; otherwise, the line will not match up with the data
 
 		line
 			.style('display', '')
@@ -75,7 +73,8 @@ export function getSeriesTip(line, rect, _tip = null) {
 		})
 
 	const opts = {
-		separator: '<br>'
+		separator: '<br>',
+		decimals: 1
 	}
 
 	/*
@@ -108,6 +107,9 @@ export function getSeriesTip(line, rect, _tip = null) {
 
 			.separator	optional, string
 									the html to be used to join the series html strings when displayed in the tooltip
+
+			.decimals	optional, number
+									number of decimal places of the datapoint's x-value; will control the precision of the vertical line
 		*/
 		update(_opts = {}) {
 			Object.assign(opts, _opts)

@@ -252,6 +252,20 @@ class MassCumInc {
 							settingsKey: 'minSampleSize'
 						},
 						{
+							label: 'Chart width',
+							type: 'number',
+							chartType: 'cuminc',
+							settingsKey: 'svgw',
+							title: 'The internal width of the chart plot'
+						},
+						{
+							label: 'Chart height',
+							type: 'number',
+							chartType: 'cuminc',
+							settingsKey: 'svgh',
+							title: 'The internal height of the chart plot'
+						},
+						{
 							label: 'X-axis ticks',
 							type: 'text',
 							chartType: 'cuminc',
@@ -595,7 +609,9 @@ function setRenderers(self) {
 	}
 
 	function setVisibleSerieses(chart, s) {
-		chart.visibleSerieses = chart.serieses.filter(series => !s.hidden.includes(series.seriesId))
+		chart.visibleSerieses = s.hidden
+			? chart.serieses.filter(series => !s.hidden.includes(series.seriesId))
+			: chart.serieses
 	}
 
 	self.updateCharts = function(chart) {
@@ -607,13 +623,13 @@ function setRenderers(self) {
 		div
 			.transition()
 			.duration(s.duration)
-			//.style('width', s.svgw + 50 + 'px')
+			.style('width', s.svgw + 50 + 'px')
 			.style('background', 1 || s.orderChartsBy == 'organ-system' ? chart.color : '')
 
 		div
 			.select('.sjpcb-cuminc-title')
-			//.style('width', s.svgw + 50)
-			//.style('height', s.chartTitleDivHt + 'px')
+			.style('width', s.svgw + 50)
+			.style('height', s.chartTitleDivHt + 'px')
 			.datum(chart.chartId)
 			.html(chart.chartTitle)
 
@@ -753,6 +769,7 @@ function setRenderers(self) {
 
 		svg.seriesTip.update({
 			xScale: chart.xScale,
+			decimals: s.seriesTipDecimals,
 			serieses: chart.visibleSerieses.map(s => {
 				const seriesLabel = s.seriesLabel ? `${s.seriesLabel}:` : 'Cumulative Incidence:'
 				const color = self.term2toColor[s.seriesId].adjusted
@@ -950,18 +967,19 @@ function setRenderers(self) {
 
 		const xTicks = axisBottom(chart.xScale).tickValues(chart.xTickValues)
 
-		// use a -0.5 offset to compensate for the default 0.5 offset
-		// used by d3-axis
-		// TODO: once we upgrade d3, we can use axis.offset() to
-		// change this axis offset
+		// without this pixel offset, the axes and data are slightly misaligned
+		// this could be because the axes have a 0.5 offset in their path,
+		// for example: <path class="domain" stroke="#000" d="M0.5,6V0.5H325.5V6"></path>
+		const pixelOffset = -0.5
+
 		xAxis
 			.attr(
 				'transform',
-				'translate(-0.5,' + (s.svgh - s.svgPadding.top - s.svgPadding.bottom + s.xAxisOffset - 0.5) + ')'
+				`translate(${pixelOffset}, ${s.svgh - s.svgPadding.top - s.svgPadding.bottom + s.xAxisOffset + pixelOffset})`
 			)
 			.call(xTicks)
 
-		yAxis.attr('transform', `translate(${s.yAxisOffset - 0.5},-0.5)`).call(
+		yAxis.attr('transform', `translate(${s.yAxisOffset + pixelOffset}, ${pixelOffset})`).call(
 			axisLeft(
 				scaleLinear()
 					.domain(chart.yScale.domain())
@@ -1081,6 +1099,7 @@ const defaultSettings = JSON.stringify({
 		atRiskVisible: true,
 		atRiskLabelOffset: -10,
 		xTickValues: [], // if undefined or empty, will be ignored
+		seriesTipDecimals: 0,
 		ciVisible: false,
 		radius: 5,
 		fill: '#fff',
