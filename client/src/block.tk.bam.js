@@ -1584,6 +1584,7 @@ function configPanel(tk, block) {
 			.style('height', '10px')
 			.style('opacity', 0.5)
 			.style('margin', '10px 5px')
+			.style('margin-top', '20px')
 		make_radios({
 			holder: row,
 			options: [
@@ -1613,7 +1614,7 @@ function configPanel(tk, block) {
 		.append('div')
 		.style('display', 'inline-block')
 		.style('height', '10px')
-		.style('margin-top', '10px')
+		.style('margin-top', '20px')
 		.style('font-size', '.8em').html(`
 	<ul style="padding-left:15px">
 	  <li><b>Matches</b> are rendered as gray boxes aligned to the reference.</li>
