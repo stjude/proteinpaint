@@ -733,7 +733,7 @@ output
 	if combination is given, returns [ map, combination ] instead
 */
 export async function get_termlst2size(termidlst, q, combination, ds) {
-	const api = ds.termdb.termid2totalsize2.gdcapi
+	const api = ds.cohort.termdb.termid2totalsize2.gdcapi
 
 	// convert each term id to {path}
 	// id=case.project.project_id, convert to path=project__project_id, for graphql
@@ -981,7 +981,7 @@ export function validate_sampleSummaries2_mclassdetail(api, ds) {
 			}
 		}
 		let combinations
-		if (ds.termdb.termid2totalsize) {
+		if (ds.cohort.termdb.termid2totalsize) {
 			const terms = [label1]
 			if (label2) terms.push(label2)
 			combinations = await get_crosstabCombinations(terms, ds, q)

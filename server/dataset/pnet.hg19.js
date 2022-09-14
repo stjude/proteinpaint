@@ -1,6 +1,6 @@
 module.exports = function() {
 	return {
-		isMds: true,
+		isMds3: true,
 
 		cohort: {
 			allowedChartTypes: ['barchart', 'survival', 'matrix', 'sampleScatter'],

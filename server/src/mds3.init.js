@@ -1,5 +1,3 @@
-import { clinsig } from '../dataset/clinvar'
-
 const gdc = require('./mds3.gdc')
 const fs = require('fs')
 const path = require('path')
@@ -19,7 +17,6 @@ client_copy
 	copy_queries
 ********************** INTERNAL
 validate_termdb
-	initTermdb
 validate_query_snvindel
 	snvindelByRangeGetter_bcf
 		mayLimitSamples
@@ -35,19 +32,20 @@ validate_variant2samples
 export const ssmIdFieldsSeparator = '.'
 
 export async function init(ds, genome, _servconfig) {
-	if (!ds.queries) throw 'ds.queries{} missing'
 	// must validate termdb first
 	await validate_termdb(ds)
 
-	// must validate snvindel query before variant2sample
-	// as vcf header must be parsed to supply samples for variant2samples
-	await validate_query_snvindel(ds, genome)
-	await validate_query_svfusion(ds, genome)
+	if (ds.queries) {
+		// must validate snvindel query before variant2sample
+		// as vcf header must be parsed to supply samples for variant2samples
+		await validate_query_snvindel(ds, genome)
+		await validate_query_svfusion(ds, genome)
 
-	validate_variant2samples(ds)
-	validate_ssm2canonicalisoform(ds)
+		validate_variant2samples(ds)
+		validate_ssm2canonicalisoform(ds)
 
-	may_add_refseq2ensembl(ds, genome)
+		may_add_refseq2ensembl(ds, genome)
+	}
 }
 
 export function client_copy(ds) {
@@ -61,14 +59,14 @@ export function client_copy(ds) {
 
 	ds2_client.queries = copy_queries(ds, ds2_client)
 
-	if (ds.termdb) {
+	if (ds?.cohort?.termdb) {
 		ds2_client.termdb = {}
 		// if using flat list of terms, do not send terms[] to client
 		// as this is official ds, and client will create vocabApi
 		// to query /termdb server route with standard methods
-		if (ds.termdb.allowCaseDetails) {
+		if (ds.cohort.termdb.allowCaseDetails) {
 			ds2_client.termdb.allowCaseDetails = {
-				sample_id_key: ds.termdb.allowCaseDetails.sample_id_key // optional key
+				sample_id_key: ds.cohort.termdb.allowCaseDetails.sample_id_key // optional key
 			}
 		}
 	}
@@ -90,23 +88,48 @@ export function client_copy(ds) {
 	return ds2_client
 }
 
+/*
+two formats
+
+ds.termdb = {
+	dictionary: {}
+}
+
+ds.cohort = {
+	db:{}
+	termdb: {}
+}
+*/
 async function validate_termdb(ds) {
-	const tdb = ds.termdb
-	if (!tdb) return
+	if (ds.cohort) {
+		if (!ds.cohort.termdb) throw 'ds.cohort is set but cohort.termdb{} missing'
+		if (!ds.cohort.db) throw 'ds.cohort is set but cohort.db{} missing'
+		if (!ds.cohort.db.file) throw 'ds.cohort.db.file missing'
+	} else if (ds.termdb) {
+		ds.cohort = {}
+		ds.cohort.termdb = ds.termdb
+		delete ds.termdb
+		// ds.cohort.termdb is required to be compatible with termdb.js
+	} else {
+		// this dataset is not equipped with termdb
+		return
+	}
 
-	////////////////////////////////////////
-	// ds.cohort.termdb{} is created to be compatible with termdb.js
-	ds.cohort = {}
-	ds.cohort.termdb = {}
+	const tdb = ds.cohort.termdb
+	/* points to ds.cohort.termdb{}
+	 */
 
-	if (!tdb.dictionary) throw 'termdb.dictionary{} missing'
-	if (tdb.dictionary.gdcapi) {
+	if (tdb?.dictionary?.gdcapi) {
 		await initGDCdictionary(ds)
 		/* creates ds.cohort.termdb.q={}
 		and ds.gdcOpenProjects=set
 		*/
-	} else if (tdb.dictionary.dbFile) {
-		initTermdb(ds)
+	} else if (tdb?.dictionary?.dbFile) {
+		ds.cohort.db = { file: tdb.dictionary.dbFile }
+		delete tdb.dictionary.dbFile
+		server_init_db_queries(ds)
+	} else if (ds.cohort.db) {
+		server_init_db_queries(ds)
 	} else {
 		throw 'unknown method to initiate dictionary'
 	}
@@ -141,6 +164,39 @@ async function validate_termdb(ds) {
 			return await getBarchartDataFromSqlitedb(termidlst, q, combination, ds)
 		}
 	}
+
+	// !!! XXX
+	// rest is quick fixes taken from mds2.init.js
+
+	if (ds.cohort?.db?.connection) {
+		// gdc does not use db connection
+		ds.sampleName2Id = new Map()
+		ds.sampleId2Name = new Map()
+		const sql = 'SELECT * FROM sampleidmap'
+		const rows = ds.cohort.db.connection.prepare(sql).all()
+		for (const r of rows) {
+			ds.sampleId2Name.set(r.id, r.name)
+			ds.sampleName2Id.set(r.name, r.id)
+		}
+
+		ds.getSampleIdMap = samples => {
+			const bySampleId = {}
+			for (const sampleId in samples) {
+				bySampleId[sampleId] = ds.sampleId2Name.get(+sampleId)
+			}
+			return bySampleId
+		}
+	}
+
+	if (ds.cohort.mutationset) {
+		// !!! TODO !!!
+		// handle different sources/formats for gene variant data
+		// instead of assumed mutation text files
+		const { mayGetGeneVariantData, getTermTypes, mayGetMatchingGeneNames } = require('./bulk.mset')
+		ds.mayGetGeneVariantData = mayGetGeneVariantData
+		ds.getTermTypes = getTermTypes
+		ds.mayGetMatchingGeneNames = mayGetMatchingGeneNames
+	}
 }
 
 async function getBarchartDataFromSqlitedb(termidlst, q, combination, ds) {
@@ -173,11 +229,6 @@ async function getBarchartDataFromSqlitedb(termidlst, q, combination, ds) {
 	return termid2values
 }
 
-function initTermdb(ds) {
-	ds.cohort.db = { file: ds.termdb.dictionary.dbFile } // termdb is hardcoded to look for db here
-	server_init_db_queries(ds)
-}
-
 function validate_variant2samples(ds) {
 	const vs = ds.variant2samples
 	if (!vs) return
@@ -189,7 +240,7 @@ function validate_variant2samples(ds) {
 	if (vs.termidlst) {
 		if (!Array.isArray(vs.termidlst)) throw 'variant2samples.termidlst[] is not array'
 		if (vs.termidlst.length == 0) throw '.termidlst[] empty array from variant2samples'
-		if (!ds.termdb) throw 'ds.termdb missing when variant2samples.termidlst is in use'
+		if (!ds.cohort || !ds.cohort.termdb) throw 'ds.cohort.termdb missing when variant2samples.termidlst is in use'
 		for (const id of vs.termidlst) {
 			if (!ds.cohort.termdb.q.termjsonByOneid(id)) throw 'term not found for an id of variant2samples.termidlst: ' + id
 		}
@@ -198,7 +249,7 @@ function validate_variant2samples(ds) {
 	if (vs.sunburst_ids) {
 		if (!Array.isArray(vs.sunburst_ids)) throw '.sunburst_ids[] not array from variant2samples'
 		if (vs.sunburst_ids.length == 0) throw '.sunburst_ids[] empty array from variant2samples'
-		if (!ds.termdb) throw 'ds.termdb missing when variant2samples.sunburst_ids is in use'
+		if (!ds.cohort || !ds.cohort.termdb) throw 'ds.cohort.termdb missing when variant2samples.sunburst_ids is in use'
 		for (const id of vs.sunburst_ids) {
 			if (!ds.cohort.termdb.q.termjsonByOneid(id))
 				throw 'term not found for an id of variant2samples.sunburst_ids: ' + id
@@ -328,7 +379,7 @@ function mayValidateSampleHeader(ds, samples, where) {
 	if (!samples) return
 	// samples[] elements: {name:str}
 	let useint
-	if (ds.termdb && ds.termdb.dictionary && ds.termdb.dictionary.dbFile) {
+	if (ds?.cohort?.termdb) {
 		// using sqlite3 db
 		// as samples are kept as integer ids in termdb, cast name into integers
 		for (const s of samples) {
