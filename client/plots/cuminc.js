@@ -326,6 +326,7 @@ class MassCumInc {
 
 			Object.assign(this.settings, this.state.config.settings)
 			this.settings.hidden = this.getHidden()
+			this.settings.xTitleLabel = 'Years since diagnosis' // TODO: do not harcode time unit (see survival.js)
 			const reqOpts = this.getDataRequestOpts()
 			const data = await this.app.vocabApi.getNestedChartSeriesData(reqOpts)
 			this.app.vocabApi.syncTermData(this.state.config, data)
@@ -769,6 +770,7 @@ function setRenderers(self) {
 
 		svg.seriesTip.update({
 			xScale: chart.xScale,
+			xTitleLabel: s.xTitleLabel,
 			decimals: s.seriesTipDecimals,
 			serieses: chart.visibleSerieses.map(s => {
 				const seriesLabel = s.seriesLabel ? `${s.seriesLabel}:` : 'Cumulative Incidence:'
@@ -988,7 +990,6 @@ function setRenderers(self) {
 		)
 
 		xTitle.select('text, title').remove()
-		const xTitleLabel = self.state.config.xlabel || 'Years since diagnosis'
 		const xText = xTitle
 			.attr(
 				'transform',
@@ -1001,7 +1002,7 @@ function setRenderers(self) {
 			.append('text')
 			.style('text-anchor', 'middle')
 			.style('font-size', s.axisTitleFontSize + 'px')
-			.text(xTitleLabel)
+			.text(s.xTitleLabel)
 
 		const yTitleLabel = 'Cumulative Incidence (%)'
 		yTitle.select('text, title').remove()
@@ -1108,7 +1109,6 @@ const defaultSettings = JSON.stringify({
 		chartMargin: 10,
 		svgw: 400,
 		svgh: 300,
-		coxXlabel: 'Years since diagnosis',
 		svgPadding: {
 			top: 20,
 			left: 55,

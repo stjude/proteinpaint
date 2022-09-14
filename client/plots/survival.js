@@ -199,6 +199,7 @@ class TdbSurvival {
 
 			Object.assign(this.settings, this.state.config.settings)
 			this.settings.hidden = this.getHidden()
+			this.settings.xTitleLabel = this.getXtitleLabel()
 
 			const reqOpts = this.getDataRequestOpts()
 			const data = await this.app.vocabApi.getNestedChartSeriesData(reqOpts)
@@ -244,6 +245,13 @@ class TdbSurvival {
 			}
 		})
 		return hiddenSeries
+	}
+
+	getXtitleLabel() {
+		const termNum = this.state.config.term.term.type == 'survival' ? 'term' : 'term2'
+		const xUnit = this.settings.timeUnit ? this.settings.timeUnit : this.state.config[termNum].term.unit
+		const xTitleLabel = `Time to Event (${xUnit})`
+		return xTitleLabel
 	}
 
 	processData(data) {
@@ -623,6 +631,7 @@ function setRenderers(self) {
 
 		svg.seriesTip.update({
 			xScale: chart.xScale,
+			xTitleLabel: s.xTitleLabel,
 			decimals: s.seriesTipDecimals,
 			serieses: chart.visibleSerieses.map(s => {
 				const seriesLabel = `${s.seriesLabel || 'Probability'}:`
@@ -854,9 +863,6 @@ function setRenderers(self) {
 		)
 
 		xTitle.select('text, title').remove()
-		const termNum = self.state.config.term.term.type == 'survival' ? 'term' : 'term2'
-		const xUnit = s.timeUnit ? s.timeUnit : self.state.config[termNum].term.unit
-		const xTitleLabel = `Time to Event (${xUnit})`
 		const xText = xTitle
 			.attr(
 				'transform',
@@ -869,7 +875,7 @@ function setRenderers(self) {
 			.append('text')
 			.style('text-anchor', 'middle')
 			.style('font-size', s.axisTitleFontSize + 'px')
-			.text(xTitleLabel)
+			.text(s.xTitleLabel)
 
 		const yTitleLabel = 'Probability of Survival'
 		yTitle.select('text, title').remove()
