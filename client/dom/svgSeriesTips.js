@@ -36,13 +36,16 @@ export function getSeriesTip(line, rect, _tip = null) {
 
 	function mouseOver() {
 		const m = mouse(rectNode)
-		const xVal = +opts.xScale.invert(m[0]).toFixed(1)
-		// adding 0.5 makes the vertical line match the
+		// adding 1 makes the vertical line match the
 		// x-axis tick position exactly
-		const x = opts.xScale(xVal) + 0.5
+		const mx = m[0] + 1
+		const xVal = +opts.xScale.invert(mx).toFixed(1)
+		const x = opts.xScale(xVal)
 
 		line
 			.style('display', '')
+			.attr('stroke', '#aaa')
+			.attr('stroke-dasharray', 4)
 			.attr('x1', x)
 			.attr('x2', x)
 
