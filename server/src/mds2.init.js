@@ -32,6 +32,8 @@ export async function init_db(ds, app = null, basepath = null) {
 	*/
 	if (!ds.cohort.termdb) throw 'cohort.termdb missing when cohort.db is used'
 	await validate_termdbconfig(ds.cohort.termdb)
+	await validate_cohort(ds.cohort)
+
 	server_init_db_queries(ds)
 	setSampleIdMap(ds)
 
@@ -166,6 +168,14 @@ async function validate_termdbconfig(tdb) {
 	}
 }
 
+async function validate_cohort(cohort) {
+	if ('scatterplots' in cohort)
+		for (const plot of cohort.scatterplots.plot) {
+			const filepath = path.join(serverconfig.tpmasterdir, plot.file)
+			await utils.file_is_readable(filepath)
+		}
+}
+
 async function read_PC_file(file, PCcount) {
 	const pcs = new Map() // k: pc ID, v: Map(sampleId:value)
 	for (let i = 1; i <= PCcount; i++) pcs.set(pc_termid_prefix + i, new Map())
@@ -194,13 +204,13 @@ function may_validate_info_fields(tk) {
 	for (const i of tk.info_fields) {
 		if (!i.key) throw '.key missing from one of tk.info_fields[]'
 
-		if(tk.vcf && tk.vcf.info) {
+		if (tk.vcf && tk.vcf.info) {
 			/* require this info field to be present in the vcf header
 			trouble: this can only ensure the field to be found in header
 			but not in actual data lines.
 			if the field is missing from data then it can still cause data issue
 			*/
-			if(!tk.vcf.info[i.key]) throw `info field ${i.key} missing from tk.vcf.info{}`
+			if (!tk.vcf.info[i.key]) throw `info field ${i.key} missing from tk.vcf.info{}`
 			// can do further check on type etc
 		}
 

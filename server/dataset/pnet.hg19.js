@@ -35,14 +35,14 @@ module.exports = function() {
 						file: 'files/hg19/pnet/classification/methylome_tsne.csv',
 						term: { id: 'TSNE Category' }
 						// allow additional config for this plot
-					},
-					{
-						name: 'RNAseq tSNE',
-						dimension: 2, // 2d requires x/y, 3d requires x/y/z
-						file: 'files/hg19/pnet/classification/transcriptomeTsne.csv',
-						// allow additional config for this plot
-						term: { id: 'TSNE Category' }
 					}
+					// {
+					// 	name: 'RNAseq tSNE',
+					// 	dimension: 2, // 2d requires x/y, 3d requires x/y/z
+					// 	file: 'files/hg19/pnet/classification/transcriptome_tsne.csv',
+					// 	// allow additional config for this plot
+					// 	term: { id: 'TSNE Category' }
+					// }
 				]
 			}
 		}
