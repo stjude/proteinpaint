@@ -12,7 +12,7 @@
     },
     {
       "label": "Custom Data",
-      "download":"https://pecan.stjude.cloud/static/proteinpaint_demo/databrowser/dictionaryDemoData.tar.gz",
+      "download":"https://proteinpaint.stjude.org/ppdemo/databrowser/dictionaryDemoData.tar.gz",
       "runargs": {
         "noheader": true,
         "nobox":true,

@@ -1,7 +1,7 @@
 {
     "ppcalls": [
         {
-            "download":"https://pecan.stjude.cloud/static/proteinpaint_demo/hg19/arc/arcDemoData.tar.gz",
+            "download":"https://proteinpaint.stjude.org/ppdemo/hg19/arc/arcDemoData.tar.gz",
             "urlparam": "?genome=hg19&block=1&position=chr11:7839893-9165172&arcfile=Arc Track,proteinpaint_demo/hg19/arc/mango.gz",
             "runargs": {
                 "parseurl": true,

@@ -1,7 +1,7 @@
 {
     "ppcalls": [
         {
-            "download":"https://pecan.stjude.cloud/static/proteinpaint_demo/hg38/ase/aseDemoData.tar.gz",
+            "download":"https://proteinpaint.stjude.org/ppdemo/hg38/ase/aseDemoData.tar.gz",
             "runargs": {
                 "parseurl": true,
                 "block": true,
