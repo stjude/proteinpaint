@@ -5,6 +5,7 @@ import { scaleLinear as d3Linear } from 'd3-scale'
 import { axisLeft, axisBottom } from 'd3-axis'
 import Partjson from 'partjson'
 import { dofetch } from '../common/dofetch'
+import { zoom as d3zoom } from 'd3'
 
 class Scatter {
 	constructor() {
@@ -107,8 +108,6 @@ function setRenderers(self) {
 			.style('top', 0) //layout.byChc[d.chc].top)
 			.style('left', 0) //layout.byChc[d.chc].left)
 			.style('text-align', 'left')
-			.style('border', '1px solid #eee')
-			.style('box-shadow', '0px 0px 1px 0px #ccc')
 			.style('background', 1 || s.orderChartsBy == 'organ-system' ? d.color : '')
 
 		div
@@ -188,6 +187,13 @@ function setRenderers(self) {
 			.each(function(series, i) {
 				renderSeries(select(this), chart, series, i, s, duration)
 			})
+		console.log('svg', svg)
+		const zoomer = d3zoom()
+			.scaleExtent([1, 5])
+			.on('zoom', () => {
+				svg.attr('transform', event.transform)
+			})
+		svg.call(zoomer)
 	}
 
 	function getSvgSubElems(svg) {
