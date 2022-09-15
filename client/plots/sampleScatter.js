@@ -5,7 +5,7 @@ import { scaleLinear as d3Linear } from 'd3-scale'
 import { axisLeft, axisBottom } from 'd3-axis'
 import Partjson from 'partjson'
 import { dofetch } from '../common/dofetch'
-import { zoom as d3zoom } from 'd3'
+import { zoom as d3zoom, zoomIdentity } from 'd3'
 import { Menu } from '#dom/menu'
 import { controlsInit } from './controls'
 
@@ -17,7 +17,7 @@ class Scatter {
 	async init(opts) {
 		const controls = this.opts.controls ? null : this.opts.holder.append('div')
 		const holder = this.opts.controls ? this.opts.holder : this.opts.holder.append('div')
-		const zoom_ctrl = this.opts.holder.append('div')
+		const zoomDiv = this.opts.holder.append('div')
 
 		this.dom = {
 			loadingDiv: holder
@@ -33,6 +33,7 @@ class Scatter {
 				.append('div')
 				.style('margin', '10px')
 				.style('display'),
+			zoomDiv,
 			tip: new Menu({ padding: '5px' })
 		}
 
@@ -40,6 +41,7 @@ class Scatter {
 		if (this.dom.header) this.dom.header.html('Scatter Plot')
 		if (!this.pj) this.pj = getPj(this)
 		await this.setControls()
+		setZoomer(zoomDiv)
 		setInteractivity(this)
 		setRenderers(this)
 	}
@@ -245,48 +247,6 @@ function setRenderers(self) {
 			.each(function(series, i) {
 				renderSeries(select(this), chart, series, i, s, duration)
 			})
-		console.log('svg', svg)
-		const zoomer = d3zoom()
-			.scaleExtent([1, 5])
-			.on('zoom', () => {
-				svg.attr('transform', event.transform)
-			})
-		svg.call(zoomer)
-		function zoomIn() {
-			d3.select('svg')
-				.transition()
-				.call(zoom.scaleBy, 2)
-		}
-
-		function zoomOut() {
-			d3.select('svg')
-				.transition()
-				.call(zoom.scaleBy, 0.5)
-		}
-
-		function resetZoom() {
-			d3.select('svg')
-				.transition()
-				.call(zoom.scaleTo, 1)
-		}
-
-		function center() {
-			d3.select('svg')
-				.transition()
-				.call(zoom.translateTo, 0.5 * width, 0.5 * height)
-		}
-
-		function panLeft() {
-			d3.select('svg')
-				.transition()
-				.call(zoom.translateBy, -50, 0)
-		}
-
-		function panRight() {
-			d3.select('svg')
-				.transition()
-				.call(zoom.translateBy, 50, 0)
-		}
 	}
 
 	function getSvgSubElems(svg) {
@@ -380,7 +340,7 @@ export async function getPlotConfig(opts, app) {
 					svgPadding: {
 						top: 100,
 						left: 200,
-						right: 20,
+						right: 200,
 						bottom: 100
 					},
 					axisTitleFontSize: 16,
@@ -398,29 +358,17 @@ export async function getPlotConfig(opts, app) {
 	self.dom.div.on('mouseover', self.mouseover).on('mouseout', self.mouseout)
 }
 
-/* function makeConfigPanel(obj) {
+function setZoomer(obj) {
+	obj.style('display', 'inline-block')
+	const div = select(this)
+	obj.scattersvg = div.select('svg')
+	obj.scattersvg_resizehandle = obj.append('div')
+	obj.scattersvg_buttons = obj.append('div').style('display', 'inline-block')
 	const svg = obj.scattersvg
-
 	// settings buttons
-	obj.scattersvg_buttons
-		.style('position', 'absolute')
-		.style('right', '0px')
-		.style('top', '0px')
+	obj.style('vertical-align', 'top').style('float', 'right')
 
 	// zoom button
-	obj.zoom_active = false
-	const zoom_btn = obj.scattersvg_buttons
-		.append('div')
-		.style('padding', '2px 5px')
-		.style('border', '1px solid #999')
-		.style('color', '#999')
-		.style('background-color', '#fff')
-		.style('cursor', 'pointer')
-		.style('font-weight', '300')
-		.style('border-radius', '5px')
-		.style('text-align', 'center')
-		.text('Pan / Zoom')
-		.on('click', zoomToggle)
 
 	const zoom_menu = obj.scattersvg_buttons
 		.append('div')
@@ -428,7 +376,6 @@ export async function getPlotConfig(opts, app) {
 		.style('padding', '2px 5px')
 		.style('border-radius', '5px')
 		.style('text-align', 'center')
-		.style('display', obj.zoom_active ? 'block' : 'none')
 		.style('background-color', '#ddd')
 
 	const zoom_inout_div = zoom_menu.append('div').style('margin', '5px 2px')
@@ -483,122 +430,51 @@ export async function getPlotConfig(opts, app) {
 		.style('padding', '2px 8px')
 		.text('Reset')
 
-	function zoomToggle() {
-		obj.zoom_active = obj.zoom_active ? false : true
+	zoom_menu.style('display', 'inline-block')
 
-		zoom_btn
-			.style('border', obj.zoom_active ? '2px solid #000' : '1px solid #999')
-			.style('color', obj.zoom_active ? '#000' : '#999')
-			.style('background-color', obj.zoom_active ? '#eee' : '#fff')
-			.style('font-weight', obj.zoom_active ? '400' : '300')
-
-		lasso_btn.style('pointer-events', obj.zoom_active ? 'none' : 'auto')
-
-		zoom_menu.style('display', obj.zoom_active ? 'block' : 'none')
-
-		const zoom = d3zoom()
-			.scaleExtent([1, 5])
-			.on('zoom', obj.zoom_active ? zoomed : null)
-
-		function zoomed() {
-			obj.new_xscale = d3event.transform.rescaleX(obj.xscale)
-			obj.new_yscale = d3event.transform.rescaleY(obj.yscale)
-			obj.zoomed_scale = d3event.transform.k
-			const dots = obj.dotg.selectAll('.sample_dot')
-			dots.attr('transform', d => 'translate(' + obj.new_xscale(d.x) + ',' + obj.new_yscale(d.y) + ')')
-			const userlabelg = obj.dotg.selectAll('.userlabelg')
-			userlabelg.attr(
-				'transform',
-				d => 'translate(' + obj.new_xscale(d.x_ || d.x) + ',' + obj.new_yscale(d.y_ || d.y) + ')'
-			)
-		}
-
-		if (obj.zoom_active) svg.call(zoom)
-		else svg.on('.zoom', null)
-
-		zoom_in_btn.on('click', () => {
-			zoom.scaleBy(svg.transition().duration(750), 1.5)
+	const zoom = d3zoom()
+		.scaleExtent([1, 5])
+		.on('zoom', () => {
+			select('svg g').attr('transform', event.transform)
 		})
 
-		zoom_out_btn.on('click', () => {
-			zoom.scaleBy(svg.transition().duration(750), 0.5)
-		})
-
-		reset_btn.on('click', () => {
-			svg
-				.transition()
-				.duration(750)
-				.call(zoom.transform, zoomIdentity)
-		})
+	function zoomIn() {
+		d3.select('svg')
+			.transition()
+			.call(zoom.scaleBy, 2)
 	}
 
-	const lasso_btn = obj.scattersvg_buttons
-		.append('div')
-		.style('display', 'block')
-		.style('padding', '2px 5px')
-		.style('margin-top', '5px')
-		.style('border', '1px solid #999')
-		.style('color', '#999')
-		.style('background-color', '#fff')
-		.style('cursor', 'pointer')
-		.style('font-weight', '300')
-		.style('border-radius', '5px')
-		.style('text-align', 'center')
-		.text('Lasso select')
-		.on('click', lassoToggle)
-
-	const lasso_menu = obj.scattersvg_buttons
-		.append('div')
-		.style('margin-top', '2px')
-		.style('padding', '2px 5px')
-		.style('border-radius', '5px')
-		.style('text-align', 'center')
-		.style('display', obj.lasso_active ? 'block' : 'none')
-		.style('background-color', '#ddd')
-
-	const lasso_div = lasso_menu.append('div').style('margin', '5px 2px')
-
-	lasso_div
-		.append('div')
-		.style('display', 'block')
-		.style('padding', '2px')
-		.style('font-size', '80%')
-		.text('Lasso usage')
-
-	lasso_div
-		.append('div')
-		.style('display', 'block')
-		.style('padding', '2px')
-		.style('font-size', '70%')
-		.html(
-			'<p style="margin:1px;">Mouse click </br>+ Mouse move <br>' +
-				'TIP: Release the mouse <br> when desired dots <br> are selected, without <br>closing the loop. </p>'
-		)
-
-	function lassoToggle() {
-		const dots = obj.dotg.selectAll('g')
-		obj.lasso_active = obj.lasso_active ? false : true
-		zoom_btn.style('pointer-events', obj.lasso_active ? 'none' : 'auto')
-		lasso_menu.style('display', obj.lasso_active ? 'block' : 'none')
-
-		lasso_btn
-			.style('border', obj.lasso_active ? '2px solid #000' : '1px solid #999')
-			.style('color', obj.lasso_active ? '#000' : '#999')
-			.style('background-color', obj.lasso_active ? '#eee' : '#fff')
-			.style('font-weight', obj.lasso_active ? '400' : '300')
-
-		lasso_select(obj, dots)
-
-		// reset dots to original state if lasso button deactivated
-		if (obj.lasso_active) return
-		dots
-			.selectAll('circle')
-			.classed('not_possible', false)
-			.classed('possible', false)
-			.attr('r', radius)
-			.style('fill-opacity', '1')
+	function zoomOut() {
+		d3.select('svg')
+			.transition()
+			.call(zoom.scaleBy, 0.5)
 	}
-} */
+
+	function resetZoom() {
+		d3.select('svg')
+			.transition()
+			.call(zoom.scaleTo, 1)
+	}
+
+	svg.call(zoom)
+
+	zoom_in_btn.on('click', () => {
+		console.log('zoom in', svg)
+		zoom.scaleBy(svg.transition().duration(750), 1.5)
+	})
+
+	zoom_out_btn.on('click', () => {
+		zoom.scaleBy(svg.transition().duration(750), 0.5)
+	})
+
+	reset_btn.on('click', () => {
+		svg
+			.transition()
+			.duration(750)
+			.call(zoom.transform, zoomIdentity)
+	})
+}
+
 export const scatterInit = getCompInit(Scatter)
 // this alias will allow abstracted dynamic imports
 export const componentInit = scatterInit
