@@ -36,7 +36,7 @@ export default [
 			dynamicImportVars(),
 			// for GDC webpack 3 use case: do not use terser by running
 			// `cd client && rm -rf dist && NODE_ENV=dev npx rollup -c ./rollup.config.js`
-			production && terser()
+			production && terser({ compress: false })
 		],
 		onwarn
 	}
