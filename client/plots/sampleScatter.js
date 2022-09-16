@@ -338,10 +338,10 @@ export async function getPlotConfig(opts, app) {
 					svgw: 600,
 					svgh: 600,
 					svgPadding: {
-						top: 100,
-						left: 200,
-						right: 200,
-						bottom: 100
+						top: 0,
+						left: 0,
+						right: 0,
+						bottom: 0
 					},
 					axisTitleFontSize: 16,
 					xAxisOffset: 5,
@@ -359,15 +359,11 @@ export async function getPlotConfig(opts, app) {
 }
 
 function setZoomer(obj) {
-	obj.style('display', 'inline-block')
-	obj.scattersvg = select('svg')
-	obj.scattersvg_resizehandle = obj.append('div')
-	obj.scattersvg_buttons = obj.append('div').style('display', 'inline-block')
-	const svg = obj.scattersvg
-	// settings buttons
-	obj.style('vertical-align', 'top').style('float', 'right')
 
-	// zoom button
+	obj.style('display', 'inline-block')
+	const svg = select('svg')
+	obj.scattersvg_buttons = obj.append('div').style('display', 'inline-block')
+	obj.style('vertical-align', 'top').style('float', 'right')
 
 	const zoom_menu = obj.scattersvg_buttons
 		.append('div')
@@ -382,16 +378,16 @@ function setZoomer(obj) {
 	zoom_inout_div
 		.append('div')
 		.style('display', 'block')
-		.style('padding', '2px 4px')
-		.style('font-size', '80%')
-		.text('Zoom')
-
+		.style('padding', '2px')
+		.style('font-size', '70%')
+		.html('<p style="margin:1px;">Use the mouse or  </br>these buttons to pan/zoom</p>')
+	
 	zoom_inout_div
 		.append('div')
 		.style('display', 'block')
-		.style('padding', '2px')
-		.style('font-size', '70%')
-		.html('<p style="margin:1px;">Mouse wheel </br>or use these buttons</p>')
+		.style('padding', '2px 4px')
+		.style('font-size', '80%')
+		.text('Zoom')
 
 	const zoom_in_btn = zoom_inout_div
 		.append('button')
@@ -414,12 +410,17 @@ function setZoomer(obj) {
 		.style('font-size', '80%')
 		.text('Pan')
 
-	pan_div
-		.append('div')
-		.style('display', 'block')
-		.style('padding', '2px')
-		.style('font-size', '70%')
-		.html('<p style="margin:1px;">Mouse click </br>+ Mouse move</p>')
+	const pan_left_btn = pan_div
+		.append('button')
+		.style('margin', '1px')
+		.style('padding', '2px 7px')
+		.text('+')
+
+	const pan_right_btn = pan_div
+		.append('button')
+		.style('margin', '1px')
+		.style('padding', '2px 8px')
+		.text('-')
 
 	const reset_div = zoom_menu.append('div').style('margin', '5px 2px')
 
@@ -437,28 +438,9 @@ function setZoomer(obj) {
 			select('svg g').attr('transform', event.transform)
 		})
 
-	function zoomIn() {
-		d3.select('svg')
-			.transition()
-			.call(zoom.scaleBy, 2)
-	}
-
-	function zoomOut() {
-		d3.select('svg')
-			.transition()
-			.call(zoom.scaleBy, 0.5)
-	}
-
-	function resetZoom() {
-		d3.select('svg')
-			.transition()
-			.call(zoom.scaleTo, 1)
-	}
-
 	svg.call(zoom)
 
 	zoom_in_btn.on('click', () => {
-		console.log('zoom in', svg)
 		zoom.scaleBy(svg.transition().duration(750), 1.5)
 	})
 
@@ -466,11 +448,20 @@ function setZoomer(obj) {
 		zoom.scaleBy(svg.transition().duration(750), 0.5)
 	})
 
+
 	reset_btn.on('click', () => {
 		svg
 			.transition()
 			.duration(750)
 			.call(zoom.transform, zoomIdentity)
+	})
+
+	pan_left_btn.on('click', () => {
+		zoom.translateBy(svg.transition().duration(750), -50, 0)
+	})
+
+	pan_right_btn.on('click', () => {
+		zoom.translateBy(svg.transition().duration(750), 50, 0)
 	})
 }
 
