@@ -64,7 +64,7 @@ class Vocab {
 		this.verifiedToken = isInSession(this.state.dslabel)
 
 		// secured plots need to confirm that a verified token exists
-		await this.maySetVerifiedToken()
+		if (this.state.dslabel) await this.maySetVerifiedToken()
 	}
 
 	async maySetVerifiedToken() {
@@ -96,11 +96,16 @@ class Vocab {
 				})
 				// TODO: later may check against expiration time in response if included
 				this.verifiedToken = data.status === 'ok' && token
+				if (data.error) throw data.error
+				else {
+					delete this.tokenVerificationMessage
+				}
 			} else {
 				throw `unsupported requiredAuth='${auth.type}'`
 			}
 		} catch (e) {
-			throw e
+			this.tokenVerificationMessage = e.message || e.reason || e
+			if (typeof e == 'object') console.log(e)
 		}
 	}
 
@@ -706,7 +711,10 @@ class TermdbVocab extends Vocab {
 	async getAnnotatedSampleData(opts) {
 		// may check against required auth credentials for the server route
 		const auth = this.termdbConfig.requiredAuth
-		if (auth && !this.verifiedToken) throw `requires login for this data`
+		if (auth && !this.verifiedToken) {
+			this.tokenVerificationMessage = `requires login for this data`
+			return
+		}
 		const headers = auth ? { [auth.headerKey]: this.verifiedToken } : {}
 
 		const filter = getNormalRoot(opts.filter)
@@ -772,7 +780,12 @@ class TermdbVocab extends Vocab {
 			)
 		}
 
-		await Promise.all(promises)
+		try {
+			await Promise.all(promises)
+		} catch (e) {
+			this.tokenVerificationMessage = e
+			throw e
+		}
 
 		const dictTerm$ids = opts.terms.filter(tw => !nonDictionaryTermTypes.has(tw.term.type)).map(tw => tw.$id)
 		if (!dictTerm$ids.length) {

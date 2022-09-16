@@ -15,6 +15,10 @@
 </div>
 
 <script>
+const loginCallbacks = new Set()
+let token = window.location.hash.slice(1)
+
+
 runproteinpaint({
 	holder: document.getElementById('aaa'),
 	parseurl:true,
@@ -37,10 +41,6 @@ runproteinpaint({
 	}
 })
 
-
-const loginCallbacks = new Set()
-let token
-
 function login(btn) {
 	// token = 'dataset.Access.Token12345'
 	
@@ -52,7 +52,6 @@ function login(btn) {
 		alert('missing token')
 		return
 	}
-
 
 	// console.log(44, loginCallbacks)
 	try {

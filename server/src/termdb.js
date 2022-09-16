@@ -12,7 +12,6 @@ const LDoverlay = require('./mds2.load.ld').overlay
 const getOrderedLabels = require('./termdb.barsql').getOrderedLabels
 const isUsableTerm = require('#shared/termdb.usecase').isUsableTerm
 const serverconfig = require('./serverconfig.js')
-const checkDsSecret = require('./auth').checkDsSecret
 
 /*
 ********************** EXPORTED
@@ -89,7 +88,6 @@ export function handle_request_closure(genomes) {
 				res.send(await ds.getTermTypes(q))
 				return
 			} else if (q.for == 'matrix') {
-				checkDsSecret(q, req.headers)
 				const data = await require(`./termdb.matrix.js`).getData(q, ds)
 				res.send(data)
 				return

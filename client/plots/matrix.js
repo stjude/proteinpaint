@@ -23,6 +23,10 @@ class Matrix {
 		const opts = this.opts
 		const holder = opts.controls ? opts.holder : opts.holder.append('div')
 		const controls = this.opts.controls ? null : holder.append('div')
+		const errdiv = holder
+			.append('div')
+			.attr('class', 'sja_errorbar')
+			.style('display', 'none')
 		const svg = holder
 			.append('svg')
 			.style('margin', '20px 10px')
@@ -35,8 +39,9 @@ class Matrix {
 		const tip = new Menu({ padding: '5px' })
 		this.dom = {
 			header: opts.header,
-			controls,
 			holder,
+			errdiv,
+			controls,
 			svg,
 			mainG,
 			sampleGrpLabelG: mainG
@@ -130,13 +135,17 @@ class Matrix {
 		return {
 			isVisible: true,
 			config,
-			filter: appState.termfilter.filter
+			filter: appState.termfilter.filter,
+			hasVerifiedToken: this.app.vocabApi.hasVerifiedToken(),
+			tokenVerificationMessage: this.app.vocabApi.tokenVerificationMessage
 		}
 	}
 
 	async main() {
 		try {
 			this.config = JSON.parse(JSON.stringify(this.state.config))
+			if (this.mayRequireToken()) return
+
 			const prevTranspose = this.settings.transpose
 			Object.assign(this.settings, this.config.settings)
 
@@ -173,7 +182,26 @@ class Matrix {
 
 			await this.adjustSvgDimensions(prevTranspose)
 		} catch (e) {
-			throw e
+			// a new token message error may have been triggered by the data request here,
+			// even if the initial state did not have a token message at the start of a dispatch
+			const message = this.app.vocabApi.tokenVerificationMessage
+			this.mayRequireToken(message)
+			if (!message) throw e
+		}
+	}
+
+	mayRequireToken(tokenMessage = '') {
+		const message = tokenMessage || this.state.tokenVerificationMessage
+		if (!message && this.state.hasVerifiedToken) {
+			this.dom.errdiv.style('display', 'none').html()
+			this.dom.controls.style('display', '')
+			this.dom.svg.style('display', '')
+			return false
+		} else {
+			this.dom.errdiv.style('display', '').html(message || 'Requires login')
+			this.dom.controls.style('display', 'none')
+			this.dom.svg.style('display', 'none')
+			return true
 		}
 	}
 

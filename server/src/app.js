@@ -100,7 +100,7 @@ const express = require('express'),
 	handle_mdssurvivalplot = require('./km').handle_mdssurvivalplot,
 	validator = require('./validator'),
 	cookieParser = require('cookie-parser'),
-	{ maySetAuthRoutes, getDsAuth } = require('./auth.js'),
+	authApi = require('./auth.js'),
 	{ server_init_db_queries } = require('./termdb.sql')
 
 //////////////////////////////
@@ -224,7 +224,7 @@ if (serverconfig.jwt) {
 // has to set optional routes before app.get() or app.post()
 // otherwise next() may not be called for a middleware in the optional routes
 setOptionalRoutes()
-maySetAuthRoutes(app, basepath)
+authApi.maySetAuthRoutes(app, basepath, serverconfig)
 app.get(basepath + '/healthcheck', handle_healthcheck)
 app.get(basepath + '/cardsjson', handle_cards)
 app.post(basepath + '/mdsjsonform', handle_mdsjsonform)
@@ -626,7 +626,7 @@ async function handle_genomes(req, res) {
 		launchdate,
 		hasblat,
 		features: exports.features,
-		dsAuth: getDsAuth(req),
+		dsAuth: authApi.getDsAuth(req),
 		commonOverrides: serverconfig.commonOverrides,
 		targetPortal: serverconfig.targetPortal //sending target portal to the client
 	})
