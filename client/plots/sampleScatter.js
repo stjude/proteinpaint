@@ -115,12 +115,13 @@ class Scatter {
 				id: this.id,
 				holder: this.dom.controls.attr('class', 'pp-termdb-plot-controls').style('display', 'inline-block'),
 				inputs: [
-					// {
-					// 	type: 'term',
-					// 	usecase: { target: 'scatterPlot', detail: 'term' },
-					// 	vocab: this.app.vocabApi,
-					// 	title: 'The term to use to color the samples'
-					// },
+					{
+						type: 'overlay',
+						chartType: 'sampleScatter',
+						usecase: { target: 'sampleScatter', detail: 'term' },
+						title: 'The term to use to color the samples',
+						label: 'Term'
+					},
 
 					{
 						label: 'Chart width',
@@ -272,7 +273,6 @@ function setRenderers(self) {
 	function renderSeries(g, chart, series, i, s, duration) {
 		// remove all circles as there is no data id for privacy
 		g.selectAll('circle').remove()
-		console.log('data', series.data)
 		const circles = g.selectAll('circle').data(series.data, b => b.x)
 
 		circles.exit().remove()
@@ -305,7 +305,6 @@ function setInteractivity(self) {
 	self.mouseover = function() {
 		if (event.target.tagName == 'circle') {
 			const d = event.target.__data__
-			console.log(d)
 			const rows = [
 				`<tr><td style='padding:3px; color:#aaa'>Sample:</td><td style='padding:3px; text-align:center'>${d.sample}</td></tr>`
 			]
@@ -323,7 +322,6 @@ function setInteractivity(self) {
 }
 
 export async function getPlotConfig(opts, app) {
-	console.log('opts', opts)
 	if (!opts.term) throw 'sampleScatter getPlotConfig: opts.term{} missing'
 	try {
 		await fillTermWrapper(opts.term, app.vocabApi)
@@ -359,7 +357,6 @@ export async function getPlotConfig(opts, app) {
 }
 
 function setZoomer(obj) {
-
 	obj.style('display', 'inline-block')
 	const svg = select('svg')
 	obj.scattersvg_buttons = obj.append('div').style('display', 'inline-block')
@@ -375,13 +372,6 @@ function setZoomer(obj) {
 
 	const zoom_inout_div = zoom_menu.append('div').style('margin', '5px 2px')
 
-	zoom_inout_div
-		.append('div')
-		.style('display', 'block')
-		.style('padding', '2px')
-		.style('font-size', '70%')
-		.html('<p style="margin:1px;">Use the mouse or  </br>these buttons to pan/zoom</p>')
-	
 	zoom_inout_div
 		.append('div')
 		.style('display', 'block')
@@ -447,7 +437,6 @@ function setZoomer(obj) {
 	zoom_out_btn.on('click', () => {
 		zoom.scaleBy(svg.transition().duration(750), 0.5)
 	})
-
 
 	reset_btn.on('click', () => {
 		svg
