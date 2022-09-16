@@ -14,6 +14,7 @@ const time = Math.floor(Date.now() / 1000)
 const validToken = jsonwebtoken.sign({ iat: time, exp: time + 300, datasets: ['ds0'] }, secret)
 
 function appInit() {
+	// mock the express router api
 	const app = {
 		routes: {},
 		middlewares: {},
@@ -55,13 +56,48 @@ tape('\n', function(test) {
 })
 
 tape(`initialization`, async test => {
-	const app = appInit()
-	await auth.maySetAuthRoutes(app)
-	const middlewares = Object.keys(app.middlewares)
-	test.deepEqual(['*'], middlewares, 'should set a global middleware')
-	const routes = Object.keys(app.routes)
-	routes.sort()
-	test.deepEqual(['/dslogin', '/jwt-status'], routes, 'should set the expected routes')
+	{
+		const app = appInit()
+		await auth.maySetAuthRoutes(app, '', { cachedir })
+		const middlewares = Object.keys(app.middlewares)
+		test.deepEqual(
+			[],
+			middlewares,
+			'should NOT set a global middleware when there are NO dsCredentials in serverconfig'
+		)
+		const routes = Object.keys(app.routes)
+		routes.sort()
+		test.deepEqual([], routes, 'should NOT set the expected routes when there are NO dsCredentials in serverconfig')
+	}
+
+	{
+		const app = appInit()
+		await auth.maySetAuthRoutes(app, '', { cachedir, dsCredentials: {} })
+		const middlewares = Object.keys(app.middlewares)
+		test.deepEqual([], middlewares, 'should NOT set a global middleware when dsCredentials is empty')
+		const routes = Object.keys(app.routes)
+		routes.sort()
+		test.deepEqual([], routes, 'should NOT set the expected routes when dsCredentials is empty')
+	}
+
+	{
+		const app = appInit()
+		await auth.maySetAuthRoutes(app, '', { cachedir, dsCredentials: { testds: {} } })
+		const middlewares = Object.keys(app.middlewares)
+		test.deepEqual(
+			['*'],
+			middlewares,
+			'should set a global middleware when there is a non-empty dsCredentials entry in serverconfig'
+		)
+		const routes = Object.keys(app.routes)
+		routes.sort()
+		test.deepEqual(
+			['/dslogin', '/jwt-status'],
+			routes,
+			'should set the expected routes when there is a non-empty dsCredentials entry in serverconfig'
+		)
+	}
+
 	test.end()
 })
 

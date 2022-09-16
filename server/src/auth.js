@@ -26,6 +26,17 @@ const processors = require('./custom-jwt-processors.js')
 	- will setup a middleware for most requests and the /dslogin route
 */
 async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
+	const serverconfig = _serverconfig || require('./serverconfig')
+	const cacheFile = path.join(serverconfig.cachedir, 'dsSessions')
+	const creds = serverconfig.dsCredentials
+
+	const maxSessionAge = serverconfig.maxSessionAge || 1000 * 3600 * 16
+	let sessions
+
+	// no need to setup additional middlewares and routes
+	// if there are no protected datasets
+	if (!creds || !Object.keys(creds).length) return
+
 	/* !!! app.use() must be called before route setters and await !!! */
 
 	// "gatekeeper" middleware that checks if a request requires
@@ -61,10 +72,16 @@ async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 				including between subsequent checks of jwts, in order to avoid potentially expensive decryption 
 			*/
 			if (time - session.time > maxSessionAge) {
-				const iat = checkDsSecret(q, req.headers, creds, session)
-				if (time - iat > maxSessionAge) {
+				iat = checkDsSecret(q, req.headers, creds, session)
+				const elapsedSinceIssue = time - iat
+				if (elapsedSinceIssue > maxSessionAge) {
 					delete sessions[q.dslabel][id]
 					throw 'Please login again to access this feature. (expired session)'
+				}
+				if (elapsedSinceIssue < 300000) {
+					// this request is accompanied by a new jwt
+					session.time = time
+					return
 				}
 			}
 
@@ -78,15 +95,8 @@ async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 		}
 	})
 
-	const serverconfig = _serverconfig || require('./serverconfig')
-	const cacheFile = path.join(serverconfig.cachedir, 'dsSessions')
-	const creds = serverconfig.dsCredentials
-	const maxSessionAge = serverconfig.maxSessionAge || 1000 * 3600 * 16
-	let sessions
+	/*** call app.use() before setting routes ***/
 
-	// no need to setup additional middlewares and routes
-	// if there are no protected datasets
-	if (!creds || !Object.keys(creds).length) return
 	try {
 		// 1. Get an empty or rehydrated sessions tracker object
 		sessions = await getSessions(creds, cacheFile, maxSessionAge)
@@ -174,7 +184,8 @@ async function getSessions(creds, cacheFile, maxSessionAge) {
 		}
 		return sessions
 	} catch (e) {
-		console.log(e)
+		// ok for the session backup to not exists, will be created later as needed
+		if (fs.fileExists(cacheFile)) console.log(e)
 		return sessions
 	}
 }
@@ -222,7 +233,7 @@ function checkDsSecret(q, headers, creds = {}, _time, session = null) {
 			processors[embedder.postjwt](embedder, payload, time)
 		} catch (e) {
 			if (e.reason == 'bad decrypt') throw `Please login again to access this feature. (${e.reason})`
-			else throw e
+			throw e
 		}
 	}
 
