@@ -16,17 +16,14 @@ class Scatter {
 
 	async init(opts) {
 		const controls = this.opts.controls || this.opts.holder.append('div')
-		const holder = this.opts.holder || this.opts.holder.append('div')
+		const holder = this.opts.controls ? opts.holder : this.opts.holder.append('div')
 		const zoomDiv = this.opts.holder.append('div')
 
 		this.dom = {
 			header: this.opts.header,
 			holder,
 			controls,
-			chartsDiv: holder
-				.append('div')
-				.style('margin', '10px')
-				.style('display', 'inline-block'),
+			chartsDiv: holder.style('margin', '10px').style('display', 'inline-block'),
 			zoomDiv,
 			tip: new Menu({ padding: '5px' })
 		}
@@ -83,13 +80,16 @@ class Scatter {
 		const lines = data.split('\n')
 		const header = lines[0].split('\t')
 		const rows = []
+		let skip
 		for (let i = 1; i < lines.length; i++) {
 			const row = {}
 			for (const [j, v] of lines[i].split('\t').entries()) {
 				const key = header[j]
+				skip = (key == 'x' || key == 'y') && v === ''
+				if (key == 'x' || key == 'y') console.log(key, v)
 				row[key] = key == 'x' || key == 'y' ? Number(v) : v
 			}
-			rows.push(row)
+			if (!skip) rows.push(row)
 		}
 		this.currData = { rows }
 		this.pj.refresh({ data: this.currData.rows })
@@ -165,18 +165,6 @@ function setRenderers(self) {
 			.style('text-align', 'left')
 			.style('background', 1 || s.orderChartsBy == 'organ-system' ? d.color : '')
 
-		div
-			.append('div')
-			.attr('class', 'sjpcb-scatter-title')
-			.style('text-align', 'center')
-			.style('width', s.svgw + 50 + 'px')
-			.style('height', s.chartTitleDivHt + 'px')
-			.style('font-weight', '600')
-			.style('margin', '5px')
-			.datum(d.chartId)
-			.html(d.chartId)
-		//.on("click", viz.chcClick);
-
 		const svg = div.append('svg').attr('class', 'pp-scatter-svg')
 		renderSVG(svg, d, s, 0)
 
@@ -184,7 +172,7 @@ function setRenderers(self) {
 			.transition()
 			.duration(s.duration)
 			.style('opacity', 1)
-		setZoomer(self.dom)
+		setZoomer(self.dom, svg)
 	}
 
 	self.updateCharts = function(d) {
@@ -195,18 +183,8 @@ function setRenderers(self) {
 			.transition()
 			.duration(s.duration)
 			.style('width', s.svgw + 50 + 'px')
-			//.style("top", layout.byChc[d.chc].top)
-			//.style("left", layout.byChc[d.chc].left)
-			.style('background', 1 || s.orderChartsBy == 'organ-system' ? d.color : '')
-
-		div
-			.select('.sjpcb-scatter-title')
-			.style('width', s.svgw + 50)
-			.style('height', s.chartTitleDivHt + 'px')
-			.datum(d.chartId)
-			.html(d.chartId)
-
-		div.selectAll('.sjpcb-lock-icon').style('display', s.scale == 'byChart' ? 'block' : 'none')
+		//.style("top", layout.byChc[d.chc].top)
+		//.style("left", layout.byChc[d.chc].left)
 
 		div.selectAll('.sjpcb-unlock-icon').style('display', s.scale == 'byChart' ? 'none' : 'block')
 
@@ -294,15 +272,13 @@ function setRenderers(self) {
 			.duration(duration)
 	}
 
-	function setZoomer(dom) {
-		console.log(dom)
-		const obj = dom.zoomDiv
-		obj.style('display', 'inline-block')
-		const svg = select('svg')
-		obj.scattersvg_buttons = obj.append('div').style('display', 'inline-block')
-		obj.style('vertical-align', 'top').style('float', 'right')
+	function setZoomer(dom, svg) {
+		const scattersvg_buttons = dom.zoomDiv
+			.style('display', 'inline-block')
+			.style('vertical-align', 'top')
+			.style('float', 'right')
 
-		const zoom_menu = obj.scattersvg_buttons
+		const zoom_menu = scattersvg_buttons
 			.append('div')
 			.style('margin-top', '2px')
 			.style('padding', '2px 5px')
@@ -311,6 +287,12 @@ function setRenderers(self) {
 			.style('background-color', '#ddd')
 
 		const zoom_inout_div = zoom_menu.append('div').style('margin', '5px 2px')
+		zoom_inout_div
+			.append('div')
+			.style('display', 'block')
+			.style('padding', '2px')
+			.style('font-size', '70%')
+			.html('<p style="margin:1px;">Use the mouse or use </br>these buttons to zoom/pan</p>')
 
 		zoom_inout_div
 			.append('div')
@@ -363,13 +345,12 @@ function setRenderers(self) {
 		zoom_menu.style('display', 'inline-block')
 
 		const zoom = d3zoom()
-			.scaleExtent([1, 5])
+			.scaleExtent([0.5, 5])
 			.on('zoom', () => {
-				select('svg g').attr('transform', event.transform)
+				svg.select('g').attr('transform', event.transform)
 			})
 
 		svg.call(zoom)
-
 		zoom_in_btn.on('click', () => {
 			zoom.scaleBy(svg.transition().duration(750), 1.5)
 		})
@@ -425,12 +406,13 @@ function setRenderers(self) {
 				.classed('not_possible', false)
 				.classed('possible', true)
 
-			// Style the not possible dot
-			// lasso.notPossibleItems()
-			// 	.attr('r',2)
-			// 	.style('fill-opacity','.5')
-			// 	.classed('not_possible',true)
-			// 	.classed('possible',false)
+			//Style the not possible dot
+			lasso
+				.notPossibleItems()
+				.attr('r', 2)
+				.style('fill-opacity', '.5')
+				.classed('not_possible', true)
+				.classed('possible', false)
 		}
 
 		function lasso_end() {
@@ -442,7 +424,6 @@ function setRenderers(self) {
 				.data()
 				.map(d => d.sample)
 			if (selected_samples.length) show_lasso_menu(selected_samples)
-			else obj.menu.hide()
 
 			// Reset classes of all items (.possible and .not_possible are useful
 			// only while drawing lasso. At end of drawing, only selectedItems()
@@ -567,7 +548,7 @@ function getPj(self) {
 			xScale(row, context) {
 				return d3Linear()
 					.domain([context.self.xMin, context.self.xMax])
-					.range([0, s.svgw - s.svgPadding.left - s.svgPadding.right])
+					.range([3 * s.radius, s.svgw - s.svgPadding.left - s.svgPadding.right - 3 * s.radius])
 			},
 			scaledX(row, context) {
 				return context.context.context.context.parent.xScale(context.self.x)
@@ -581,7 +562,7 @@ function getPj(self) {
 				const domain = s.scale == 'byChart' ? [yMax, yMin] : [context.root.yMax, yMin]
 				return d3Linear()
 					.domain(domain)
-					.range([0, s.svgh - s.svgPadding.top - s.svgPadding.bottom])
+					.range([3 * s.radius, s.svgh - s.svgPadding.top - s.svgPadding.bottom - 3 * s.radius])
 			}
 		}
 	})
