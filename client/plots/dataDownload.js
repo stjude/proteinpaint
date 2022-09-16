@@ -61,7 +61,8 @@ class DataDownload {
 			activeCohort: appState.activeCohort,
 			termfilter: appState.termfilter,
 			config,
-			hasVerifiedToken: this.app.vocabApi.hasVerifiedToken()
+			hasVerifiedToken: this.app.vocabApi.hasVerifiedToken(),
+			tokenVerificationMessage: this.app.vocabApi.tokenVerificationMessage
 		}
 	}
 
@@ -96,13 +97,13 @@ class DataDownload {
 
 	mayRequireToken() {
 		if (this.state.hasVerifiedToken) {
-			this.dom.titleDiv.html('Selected terms')
+			this.dom.titleDiv.style('color', '').html('Selected terms')
 			this.dom.terms.style('display', '')
 			this.dom.addBtn.style('display', '')
 			this.dom.submitDiv.style('display', '')
 			return false
 		} else {
-			this.dom.titleDiv.html('Requires login')
+			this.dom.titleDiv.style('color', '#e44').html(this.state.tokenVerificationMessage || 'Requires login')
 			this.dom.terms.style('display', 'none')
 			this.dom.addBtn.style('display', 'none')
 			this.dom.submitDiv.style('display', 'none')

@@ -1,14 +1,8 @@
 const fs = require('fs').promises
 const path = require('path')
-const serverconfig = require('./serverconfig')
 const jsonwebtoken = require('jsonwebtoken')
-const crypto = require('crypto')
-
-const cacheFile = path.join(serverconfig.cachedir, 'dsSessions')
-const creds = serverconfig.dsCredentials
-const maxSessionAge = 1000 * 3600 * 24
-
-let sessions
+const sleep = require('./utils').sleep
+const processors = require('./custom-jwt-processors.js')
 
 /*
 	One-time setup on server startup:
@@ -31,16 +25,8 @@ let sessions
 	- if there are no serverconfig.dsCredentials, will not do anything
 	- will setup a middleware for most requests and the /dslogin route
 */
-async function maySetAuthRoutes(app, basepath) {
-	// no need to setup additional middlewares and routes
-	// if there are no protected datasets
-	if (!creds || !Object.keys(creds).length) return
-	try {
-		// 1. Get an empty or rehydrated sessions tracker object
-		sessions = await getSessions()
-	} catch (e) {
-		throw e
-	}
+async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
+	/* !!! app.use() must be called before route setters and await !!! */
 
 	// "gatekeeper" middleware that checks if a request requires
 	// credentials and if yes, if there is already a valid session
@@ -52,7 +38,9 @@ async function maySetAuthRoutes(app, basepath) {
 			req.path == '/dslogin' ||
 			req.path == '/jwt-status' ||
 			!q.dslabel ||
-			!(q.dslabel in creds)
+			!(q.dslabel in creds) ||
+			// check if not a protected route
+			!(req.path == '/termdb' && q.for == 'matrix')
 		) {
 			next()
 			return
@@ -63,17 +51,49 @@ async function maySetAuthRoutes(app, basepath) {
 			if (!id) throw 'missing session cookie'
 			const session = sessions[q.dslabel][id]
 			if (!session) throw `unestablished or expired browser session`
-			const time = +new Date()
+
+			const time = Date.now()
+			/* !!! TODO: may rethink the following assumption !!!
+				assumes that the payload.datasets list will not change within the maxSessionAge duration
+				including between subsequent checks of jwts, in order to avoid potentially expensive decryption 
+			*/
 			if (time - session.time > maxSessionAge) {
-				delete sessions[q.dslabel][id]
-				throw 'expired browser session'
+				const iat = checkDsSecret(q, req.headers, creds, session)
+				if (time - iat > maxSessionAge) {
+					delete sessions[q.dslabel][id]
+					throw 'Please login again to access this feature. (expired session)'
+				}
 			}
-			session.time = time
+
+			// TODO: may not to adjust session expiration based on the last active period
+			// If any activity happens within the harcoded number of milliseconds below,
+			// then update the start time of the active session (account for prolonged user inactivity)
+			if (session.time - time < 900) session.time = time
 			next()
 		} catch (e) {
 			res.send({ error: e })
 		}
 	})
+
+	const serverconfig = _serverconfig || require('./serverconfig')
+	const cacheFile = path.join(serverconfig.cachedir, 'dsSessions')
+	const creds = serverconfig.dsCredentials
+	const maxSessionAge = serverconfig.maxSessionAge || 1000 * 3600 * 16
+	let sessions
+
+	// no need to setup additional middlewares and routes
+	// if there are no protected datasets
+	if (!creds || !Object.keys(creds).length) return
+	try {
+		// 1. Get an empty or rehydrated sessions tracker object
+		sessions = await getSessions(creds, cacheFile, maxSessionAge)
+	} catch (e) {
+		throw e
+	}
+
+	// app.use() from other route setters must be called before app.get|post|all
+	// so delay setting these optional routes (this is done in server/src/test/routes/gdc.js also)
+	await sleep(0)
 
 	// creates a session ID that is returned
 	app.post(basepath + '/dslogin', async (req, res) => {
@@ -89,10 +109,9 @@ async function maySetAuthRoutes(app, basepath) {
 			const [type, pwd] = req.headers.authorization.split(' ')
 			if (type.toLowerCase() != 'basic') throw `unsupported authorization type='${type}', allowed: 'Basic'`
 			if (Buffer.from(pwd, 'base64').toString() != creds[q.dslabel].password) throw 'invalid password'
-			await setSession(q, res)
+			await setSession(q, res, sessions, cacheFile)
 			res.send({ status: 'ok' })
 		} catch (e) {
-			console.log(e, code)
 			res.status(code)
 			res.send({ error: e })
 		}
@@ -101,30 +120,39 @@ async function maySetAuthRoutes(app, basepath) {
 	app.post(basepath + '/jwt-status', async (req, res) => {
 		let code = 401
 		try {
-			await checkDsSecret(req.query, req.headers)
-			await setSession(req.query, res)
+			await checkDsSecret(req.query, req.headers, creds)
+			await setSession(req.query, res, sessions, cacheFile)
 			res.send({ status: 'ok' })
 		} catch (e) {
-			console.log(e, code)
+			//console.log(e, code)
 			res.status(code)
 			res.send({ error: e })
 		}
 	})
-}
 
-async function setSession(q, res) {
-	const id = Math.random().toString()
-	const time = +new Date()
-	sessions[q.dslabel][id] = { id, time }
-	await fs.appendFile(cacheFile, `${q.dslabel}\t${id}\t${time}\n`)
-	res.header('Set-cookie', `${q.dslabel}SessionId=${id}`)
+	/*
+		will return a list of dslabels that require credentials
+	*/
+	authApi.getDsAuth = function(req) {
+		return Object.keys(creds || {}).map(dslabel => {
+			const cred = creds[dslabel]
+			const id = req.cookies[`${dslabel}SessionId`]
+			const sessionStart = sessions[dslabel]?.[id]?.time || 0
+			return {
+				dslabel,
+				// type='jwt' will require a token in the initial runpp call
+				insession: cred.type != 'jwt' && +new Date() - sessionStart < maxSessionAge,
+				type: cred.type || 'login'
+			}
+		})
+	}
 }
 
 /*
 	will return a sessions object that is used
 	for tracking sessions by [dslabel]{[id]: {id, time}}
 */
-async function getSessions() {
+async function getSessions(creds, cacheFile, maxSessionAge) {
 	const sessions = {}
 	for (const dslabel in creds) {
 		if (!sessions[dslabel]) sessions[dslabel] = {}
@@ -148,65 +176,63 @@ async function getSessions() {
 	}
 }
 
-/*
-	will return a list of dslabels that require credentials
-*/
-function getDsAuth(req) {
-	return Object.keys(serverconfig.dsCredentials || {}).map(dslabel => {
-		const id = req.cookies[`${dslabel}SessionId`]
-		const sessionStart = sessions[dslabel]?.[id]?.time || 0
-		return {
-			dslabel,
-			insession: +new Date() - sessionStart < maxSessionAge,
-			type: serverconfig.dsCredentials[dslabel].type || 'login'
-		}
-	})
+async function setSession(q, res, sessions, cacheFile) {
+	const time = +new Date()
+	const id = Math.random().toString() + '.' + time.toString().slice(4)
+	if (!sessions[q.dslabel]) sessions[q.dslabel] = {}
+	sessions[q.dslabel][id] = { id, time }
+	await fs.appendFile(cacheFile, `${q.dslabel}\t${id}\t${time}\n`)
+	res.header('Set-cookie', `${q.dslabel}SessionId=${id}`)
 }
 
-const expIncrement = 300
-
-function checkDsSecret(q, headers) {
-	const cred = serverconfig.dsCredentials?.[q.dslabel]
+/*
+	Arguments
+	creds: serverconfig.dsCredentials
+*/
+function checkDsSecret(q, headers, creds = {}, _time, session = null) {
+	const cred = creds[q.dslabel]
 	if (!cred) return
 	if (!q.embedder) throw `missing q.embedder`
-	const secret = cred.secret[q.embedder]
-	if (!secret) throw `unknown q.embedder='${q.embedder}'`
+	const embedder = cred.embedders[q.embedder]
+	if (!embedder) throw `unknown q.embedder='${q.embedder}'`
+	const secret = embedder.secret
+	if (!secret) throw `missing embedder setting`
 
-	//console.log(165, secret, jsonwebtoken.sign({ accessibleDatasets: ['TermdbTest', "SJLife"] }, secret))
-	const token = headers[cred.headerKey]
-	if (!token) throw `missing header['${cred.headerKey}']`
+	const time = Math.floor((_time || Date.now()) / 1000)
+	//console.log(206, secret, jsonwebtoken.sign({ iat: time, exp: time + 300,  datasets: ['TermdbTest', "SJLife", "PNET"] }, secret))
+
+	const rawToken = headers[cred.headerKey]
+	if (!rawToken) throw `missing header['${cred.headerKey}']`
+	const prepjwt = embedder.prepjwt ? processors[embedder.prejwt] : null
+	// the embedder may supply a pre-processor function, such as to decrypt a fully encrypted jwt
+	const token = prepjwt ? preprocessor(rawToken) : rawToken
+
+	// this verification will throw if the token is invalid in any way
 	const payload = jsonwebtoken.verify(token, secret)
-	//const exp = time + 300000
-	const time = +new Date() / 1000
-	const exp = Math.ceil(time / expIncrement) * expIncrement
-	if (payload.iat + expIncrement < exp) throw `expired token`
+	// if there is a session, handle the expiration outside of this function
+	if (session) return payload.iat
 
-	const subSecret = crypto
-		.createHash('sha256')
-		.update(exp.toString())
-		.digest('hex')
-		.toString()
-		.substring(0, 32)
+	// the embedder may refer to a post-processor function to
+	// optionally transform, translate, reformat the payload
+	if (embedder.postjwt) {
+		try {
+			processors[embedder.postjwt](embedder, payload, time)
+		} catch (e) {
+			if (e.reason == 'bad decrypt') throw `Please login again to access this feature. (${e.reason})`
+			else throw e
+		}
+	}
 
-	const decryptedSub = AESDecrypt(payload.sub, subSecret)
-	//console.log('decryptedSub', decryptedSub)
-	const sub = JSON.parse(decryptedSub)
-	//console.log('sub', sub)
-	const dsname = cred.dsname || q.dslabel
-	if (!sub.datasets?.includes(dsname)) throw `not authorized for dslabel='${q.dslabel}' (dsname='${dsname}')`
+	if (time > payload.exp) throw `Please login again to access this feature. (expired token)`
+
+	const dsnames = embedder.dsnames || [q.dslabel]
+	const missingAccess = dsnames.filter(dsname => !payload.datasets.includes(dsname))
+	if (missingAccess.length) {
+		throw `Please request access for these dataset(s): ${JSON.stringify(missingAccess)}. ` +
+			(embedder.missingAccessMessage || '')
+	}
 }
 
-module.exports = { maySetAuthRoutes, getDsAuth, checkDsSecret }
-
-const AES_METHOD = 'aes-256-cbc'
-const IV_LENGTH = 16 // For AES, this is always 16 for compatibility with Viz' PHP implementation
-
-function AESDecrypt(text, password) {
-	const textParts = text.split(':')
-	const iv = Buffer.from(textParts.shift(), 'hex')
-	const encryptedText = Buffer.from(textParts.join(':'), 'hex')
-	const decipher = crypto.createDecipheriv('aes-256-cbc', Buffer.from(password), iv)
-	let decrypted = decipher.update(encryptedText)
-	decrypted = Buffer.concat([decrypted, decipher.final()])
-	return decrypted.toString()
-}
+/* NOTE: maySetAuthRoutes could replace api.getDsAuth() and .hasActiveSession() */
+const authApi = { maySetAuthRoutes, checkDsSecret, getDsAuth: () => [], hasActiveSession: () => true }
+module.exports = authApi

@@ -264,7 +264,7 @@ export function setAuth(opts) {
 }
 
 export function isInSession(dslabel) {
-	return dsAuthOk.has(dslabel)
+	return dslabel && dsAuthOk.has(dslabel)
 }
 
 /* 
