@@ -360,8 +360,7 @@ export async function getPlotConfig(opts, app) {
 
 function setZoomer(obj) {
 	obj.style('display', 'inline-block')
-	const div = select(this)
-	obj.scattersvg = div.select('svg')
+	obj.scattersvg = select('svg')
 	obj.scattersvg_resizehandle = obj.append('div')
 	obj.scattersvg_buttons = obj.append('div').style('display', 'inline-block')
 	const svg = obj.scattersvg
