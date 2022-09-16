@@ -31,7 +31,7 @@ class TdbConfigUiInit {
 				if (typeof key == 'object') {
 					const obj = key // reassign to be less confusing
 					if (obj.type in initByInput) {
-						this.inputs[obj.settingsKey || obj.configKey] = initByInput[obj.type](
+						this.inputs[obj.settingsKey || obj.configKey] = await initByInput[obj.type](
 							Object.assign({}, obj, {
 								holder: this.dom.table.append('tr'),
 								dispatch,
@@ -42,7 +42,7 @@ class TdbConfigUiInit {
 							})
 						)
 					} else if (obj.type in initByComponent) {
-						componentPromises[obj.type] = initByComponent[obj.type]({
+						componentPromises[obj.type] = await initByComponent[obj.type]({
 							app: this.app,
 							holder: this.dom.table.append('tr'),
 							id: this.id,
@@ -51,7 +51,7 @@ class TdbConfigUiInit {
 						})
 					}
 				} else if (key in initByInput) {
-					this.inputs[key] = initByInput[key]({
+					this.inputs[key] = await initByInput[key]({
 						holder: this.dom.table.append('tr'),
 						dispatch,
 						id: this.id,
@@ -60,7 +60,7 @@ class TdbConfigUiInit {
 						parent: this
 					})
 				} else if (key in initByComponent) {
-					componentPromises[key] = initByComponent[key]({
+					componentPromises[key] = await initByComponent[key]({
 						app: this.app,
 						holder: this.dom.table.append('tr'),
 						id: this.id,
@@ -410,7 +410,7 @@ function setCheckboxInput(opts) {
 	return Object.freeze(api)
 }
 
-function setTermInput(opts) {
+async function setTermInput(opts) {
 	const self = {
 		dom: {
 			row: opts.holder.style('display', 'table-row'),
@@ -423,11 +423,11 @@ function setTermInput(opts) {
 		}
 	}
 
-	const pill = termsettingInit({
+	const pill = await termsettingInit({
 		menuOptions: 'all',
 		vocabApi: opts.vocabApi,
-		vocab: opts.state.vocab,
-		activeCohort: opts.state.activeCohort,
+		vocab: opts.state?.vocab,
+		activeCohort: opts.state?.activeCohort,
 		holder: self.dom.inputTd.append('div'),
 		debug: opts.debug,
 		callback: tw => {

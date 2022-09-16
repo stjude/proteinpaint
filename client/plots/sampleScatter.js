@@ -109,13 +109,14 @@ class Scatter {
 				holder: this.dom.controls.attr('class', 'pp-termdb-plot-controls').style('display', 'inline-block'),
 				inputs: [
 					{
-						type: 'overlay',
+						type: 'term',
+						configKey: 'term',
 						chartType: 'sampleScatter',
 						usecase: { target: 'sampleScatter', detail: 'term' },
 						title: 'The term to use to color the samples',
-						label: 'Term'
+						label: 'Term',
+						vocabApi: this.app.vocabApi
 					},
-
 					{
 						label: 'Chart width',
 						type: 'number',
