@@ -39,7 +39,10 @@ async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 			req.path == '/jwt-status' ||
 			!q.dslabel ||
 			!(q.dslabel in creds) ||
-			// check if not a protected route
+			// password protection applies to all routes for a dslabel,
+			// jwt to only a few routes
+			creds[q.dslabel].type == 'jwt' ||
+			// check if not a jwt-protected route
 			!(req.path == '/termdb' && q.for == 'matrix')
 		) {
 			next()

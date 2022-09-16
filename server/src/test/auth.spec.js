@@ -41,6 +41,10 @@ function appInit() {
 	return app
 }
 
+function sleep(ms) {
+	return new Promise(resolve => setTimeout(resolve, ms))
+}
+
 /**************
  test sections
 ***************/
@@ -108,8 +112,6 @@ tape(`invalid embedder`, async test => {
 	test.plan(2)
 
 	const app = appInit()
-	const headerKey = 'x-ds-token'
-	const secret = 'abc123'
 	const serverconfig = {
 		dsCredentials: {
 			ds0: {
@@ -160,8 +162,6 @@ tape(`invalid dataset access`, async test => {
 	test.plan(2)
 
 	const app = appInit()
-	const headerKey = 'x-ds-token'
-	const secret = 'abc123'
 	const serverconfig = {
 		dsCredentials: {
 			ds0: {
@@ -212,8 +212,6 @@ tape(`invalid jwt`, async test => {
 	test.plan(6)
 
 	const app = appInit()
-	const headerKey = 'x-ds-token'
-	const secret = 'abc123'
 	const serverconfig = {
 		dsCredentials: {
 			ds0: {
@@ -311,4 +309,114 @@ tape(`invalid jwt`, async test => {
 
 	const middlewares = Object.keys(app.middlewares)
 	test.end()
+})
+
+tape(`session-handling by the middleware`, async test => {
+	test.timeoutAfter(400)
+	test.plan(6)
+
+	const serverconfig = {
+		dsCredentials: {
+			ds0: {
+				embedders: {
+					localhost: {
+						secret
+					}
+				},
+				headerKey
+			}
+		},
+		cachedir
+	}
+
+	const app = appInit()
+	await auth.maySetAuthRoutes(app, '', serverconfig)
+	{
+		const req = {
+			query: { embedder: 'localhost', dslabel: 'ds0' },
+			headers: {
+				[headerKey]: validToken
+			},
+			path: '/non-protected'
+		}
+		const res = {}
+		function next() {
+			test.pass('should call the next function on a non-protected route')
+		}
+
+		await app.middlewares['*'](req, res, next)
+	}
+
+	{
+		const req = {
+			query: { embedder: 'localhost', dslabel: 'ds0', for: 'matrix' },
+			headers: {
+				[headerKey]: validToken
+			},
+			path: '/jwt-status'
+		}
+		let sessionId
+		const res = {
+			send(data) {
+				test.deepEqual({ status: 'ok' }, data, 'should respond ok on a valid jwt-status login')
+			},
+			header(key, val) {
+				test.equal(key, 'Set-cookie', 'should set a session cookie on a valid jwt-status login')
+				sessionId = val.split('=')[1]
+			},
+			headers: {}
+		}
+		async function next() {
+			test.pass('should call the next() function for jwt-login')
+			app.routes['/jwt-status'].post(req, res)
+		}
+
+		await app.middlewares['*'](req, res, next)
+		await sleep(100)
+		const req1 = {
+			query: { embedder: 'localhost', dslabel: 'ds0', for: 'matrix' },
+			headers: {
+				[headerKey]: validToken
+			},
+			path: '/termdb',
+			cookies: {
+				ds0SessionId: sessionId
+			}
+		}
+
+		const res1 = {}
+		function next1() {
+			test.pass('should call the next function on a valid session')
+		}
+		await app.middlewares['*'](req1, res1, next1)
+
+		const req2 = {
+			query: { embedder: 'localhost', dslabel: 'ds0', for: 'matrix' },
+			headers: {
+				[headerKey]: validToken
+			},
+			path: '/termdb',
+			cookies: {
+				ds0SessionId: 'Invalid-Session-Id'
+			}
+		}
+		const res2 = {
+			send(data) {
+				if (data.error) delete data.error.expiredAt
+				test.deepEqual(
+					data,
+					{ error: `unestablished or expired browser session` },
+					'should send an invalid session error'
+				)
+			},
+			header(key, val) {
+				test.fail('should NOT set a session cookie')
+			},
+			headers: {}
+		}
+		function next2() {
+			test.fail('should NOT call the next function on an invalid session')
+		}
+		await app.middlewares['*'](req2, res2, next2)
+	}
 })
