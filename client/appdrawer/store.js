@@ -18,7 +18,7 @@ class AppDrawerStore {
 			hintWidth: { open: '0px', closed: '18px' },
 			arrowSize: { open: 42, closed: 20 },
 			arrowColor: { open: 'rgb(242,242,242)', closed: 'rgb(85,85,85)' },
-			appBtnActive: true
+			appBtnActive: false
 		}
 	}
 

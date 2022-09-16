@@ -32,7 +32,6 @@ class AppDrawerApp {
 			.style('position', 'relative')
 			.style('overflow-x', 'visible')
 			.style('overflow-y', 'hidden')
-			// .style('height', '60vh')
 			.classed('sjpp-drawer-row', true)
 
 		const sandboxDiv = opts.holder
@@ -45,7 +44,6 @@ class AppDrawerApp {
 			.style('position', 'relative')
 			.style('margin', '0 20px')
 			.style('padding', `0 ${opts.padw_sm}`)
-			// .style('top', `-${window.screen.height}px`)
 			.style('display', 'inline-block')
 			.style('overflow', 'hidden')
 			.style('background-color', '#f5f5f5')
@@ -83,8 +81,13 @@ class AppDrawerApp {
 			this.elements = this.indexJson.elements.filter(e => !e.hidden)
 			this.layout = this.indexJson.columnsLayout ? this.indexJson.columnsLayout : null
 			this.components = {
-				mainBtn: await mainBtnInit({ app: this.api, dom: this.dom, state: this.state }),
-				layout: await layoutInit({ app: this.api, dom: this.dom, index: this.indexJson })
+				mainBtn: await mainBtnInit({
+					app: this.api,
+					dom: this.dom,
+					state: this.state,
+					drawerRendered: this.drawerRendered
+				}),
+				layout: await layoutInit({ app: this.api, dom: this.dom, state: this.state, index: this.indexJson })
 			}
 			await this.api.dispatch()
 		} catch (e) {
@@ -112,7 +115,8 @@ async function getCardsJson(holder) {
 }
 
 async function loadElements(self) {
-	// console.log(113, 'elements')
+	// if (self.state.appBtnActive == false) return
+	console.log('elements', self.state.appBtnActive)
 	self.elements.forEach(element => {
 		const holder = select(self.layout ? `#${element.section} > .sjpp-element-list` : `.sjpp-element-list`)
 		if (element.type == 'card' || element.type == 'nestedCard') {
@@ -124,17 +128,15 @@ async function loadElements(self) {
 					.style('gap', '10px')
 					.style('list-style', 'none')
 					.style('margin', '15px 0px'),
-				element
-				// appsOff
-				// pageArgs: self.opts
+				element,
+				sandboxDiv: self.dom.sandboxDiv
 			})
 		} else if (element.type == 'dsButton') {
 			buttonInit({
 				app: self.api,
 				holder,
-				element
-				// appsOff
-				// pageArgs: self.opts
+				element,
+				sandboxDiv: self.dom.sandboxDiv
 			})
 		}
 	})

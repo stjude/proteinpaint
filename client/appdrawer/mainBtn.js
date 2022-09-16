@@ -8,28 +8,51 @@ class MainHeadboxBtn {
 		this.opts = this.validateOpts(opts)
 		this.dom = opts.dom
 		this.state = opts.state
+		setRenderers(this)
 	}
 
 	validateOpts(opts) {
 		return opts.app.opts
 	}
 
-	async init() {
-		try {
-			this.drawerFullHeight = ''
-		} catch (e) {}
+	getState(appState) {
+		return {
+			appBtnActive: appState.appBtnActive
+		}
 	}
 
-	async main() {
-		if (this.state.appBtnActive == true)
-			this.drawerFullHeight = this.dom.drawerDiv.node().getBoundingClientRect().height + 5
-		makeAppsBtn(this)
+	async init(appState) {
+		// this.btnRendered = false
+		this.state = this.getState(appState)
+		this.appBtnActive = this.state.appBtnActive
+		if (this.appBtnActive == false) return
+		this.drawerFullHeight = ''
+		if (window.location.pathname == '/' && !window.location.search.length) {
+			await this.app.dispatch({ type: 'toggle_apps_off', value: true })
+			console.log('homepage')
+		} else {
+			await this.app.dispatch({ type: 'toggle_apps_off', value: false })
+		}
+	}
+
+	main() {
+		// if (this.btnRendered == true) return
+		// this.btnRendered = true
+		// detect whether to show examples right away, which is when the url is barebone without any route paths or search parameters
+		// if (window.location.pathname == '/' && !window.location.search.length) {
+		//     this.app.dispatch({ type: 'toggle_apps_off', value: true })
+		//     console.log()
+		// } else {
+		//     this.app.dispatch({ type: 'toggle_apps_off', value: false })
+		//     slideDrawer(this)
+		// }
 	}
 }
 
 export const mainBtnInit = getCompInit(MainHeadboxBtn)
 
-async function makeAppsBtn(self) {
+function setRenderers(self) {
+	console.log('button', self.state.appBtnActive)
 	self.dom.btnWrapper
 		.style('background-color', self.state.appBtnActive ? '#b2b2b2' : '#f2f2f2')
 		.style('color', self.state.appBtnActive ? '#fff' : '#000')
@@ -87,20 +110,10 @@ async function makeAppsBtn(self) {
 		.style('cursor', 'pointer')
 		.style('pointer-events', self.state.appBtnActive ? 'auto' : 'none')
 		.html('&#9660;')
-
-	// detect whether to show examples right away, which is when the url is barebone without any route paths or search parameters
-	// self.state.appBtnActive = window.location.pathname == '/' && !window.location.search.length
-	// if an app is loaded when the page opens, delay the loading
-	// of examples in order to not affect that loading,
-	// otherwise load trigger the loading of examples right away
-
-	//Fix for index.json loading before Apps btn is clicked
-	// if (self.state.appBtnActive) {
-	//    await appDrawerInit
-	// }
 }
 
 function slideDrawer(self) {
+	console.log('slide drawer', self.state.appBtnActive)
 	self.dom.btnWrapper
 		.transition()
 		.duration(self.state.duration)

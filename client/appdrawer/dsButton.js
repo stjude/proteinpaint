@@ -28,7 +28,10 @@ function setRenderers(self) {
 	const btn = utils.makeButton({ div: self.holder, text: self.opts.element.name, margin: '20px 20px 0px' })
 	btn.attr('class', 'sjpp-appdrawer-dataset-btn').on('click', async () => {
 		event.stopPropagation()
-		self.opts.pageArgs.apps_off()
-		await openSandbox(self.opts.element, self.opts.pageArgs)
+		self.app.dispatch({
+			type: 'toggle_apps_off',
+			value: false
+		})
+		await openSandbox(self.opts.element, self.opts)
 	})
 }

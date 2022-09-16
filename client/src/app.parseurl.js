@@ -53,7 +53,6 @@ upon error, throw err message as a string
 		} else {
 			ad.openSandbox(re.json.elements[element], arg.app.drawer.opts)
 		}
-		console.log(arg.app.drawer.opts)
 		return
 	}
 

@@ -30,9 +30,7 @@ class AppDrawerCard {
 	constructor(opts) {
 		this.type = 'card'
 		this.opts = this.validateOpts(opts)
-		this.holder = opts.holder
-		// this.pageArgs = opts.pageArgs
-		setInteractivity(this)
+		;(this.holder = opts.holder), (this.sandboxDiv = opts.sandboxDiv)
 		setRenderers(this)
 	}
 
@@ -66,6 +64,12 @@ class AppDrawerCard {
 			}
 		}
 		return opts
+	}
+
+	getState(appState) {
+		return {
+			appBtnActive: appState.appBtnActive
+		}
 	}
 
 	main() {}
@@ -140,13 +144,10 @@ function setRenderers(self) {
 
 	card.on('click', async () => {
 		event.stopPropagation()
-		// console.log(self)
-		self.opts.appsOff(self)
-		// self.app.dispatch({
-		// 	type: 'toggle_off'
-		// })
-		// await openSandbox(self.opts.element, self.opts.pageArgs)
+		self.app.dispatch({
+			type: 'toggle_apps_off',
+			value: false
+		})
+		await openSandbox(self.opts.element, self.opts)
 	})
 }
-
-function setInteractivity(self) {}

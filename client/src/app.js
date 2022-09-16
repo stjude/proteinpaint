@@ -386,7 +386,7 @@ async function makeheader(app, obj, jwt) {
 	app.drawer = await appDrawerInit({
 		genomes: app.genomes,
 		holder: app.holder,
-		sandbox_header: app.sandbox_header,
+		// sandbox_header: app.sandbox_header,
 		genome_browser_btn: app.genome_browser_btn,
 		debugmode: app.debugmode,
 		headbox,

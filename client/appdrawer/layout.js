@@ -23,7 +23,7 @@ class AppDrawerLayoutComp {
 			holder: opts.dom.drawerDiv,
 			wrapper: opts.dom.wrapper
 		}
-		setRenderers(this)
+		// this.state = opts.state
 	}
 
 	validateOpts(opts) {
@@ -50,12 +50,31 @@ class AppDrawerLayoutComp {
 		return opts
 	}
 
-	main() {}
+	getState(appState) {
+		return {
+			appBtnActive: appState.appBtnActive
+		}
+	}
+
+	init(appState) {
+		this.state = this.getState(appState)
+		// console.log(this.state.appBtnActive)
+		// this.layoutRendered = false
+		this.appBtnActive = this.state.appBtnActive
+		if (this.appBtnActive == false) return
+		setRenderers(this)
+	}
+
+	main() {
+		// if (this.layoutRendered == true) return
+		// this.layoutRendered = true
+	}
 }
 
 export const layoutInit = getCompInit(AppDrawerLayoutComp)
 
 function setRenderers(self) {
+	console.log('layout', self.appBtnActive)
 	if (!self.opts.index.columnsLayout) noDefinedLayout(self)
 	if (self.opts.index.columnsLayout) columnsLayout(self)
 }
