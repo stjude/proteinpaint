@@ -2,10 +2,10 @@ import { getCompInit, copyMerge } from '../rx'
 import { fillTermWrapper } from '../termsetting/termsetting'
 import { select, event } from 'd3-selection'
 import { scaleLinear as d3Linear } from 'd3-scale'
-import { axisLeft, axisBottom } from 'd3-axis'
 import Partjson from 'partjson'
 import { dofetch } from '../common/dofetch'
 import { zoom as d3zoom, zoomIdentity } from 'd3'
+import { d3lasso } from '../common/lasso'
 import { Menu } from '#dom/menu'
 import { controlsInit } from './controls'
 
@@ -15,24 +15,18 @@ class Scatter {
 	}
 
 	async init(opts) {
-		const controls = this.opts.controls ? null : this.opts.holder.append('div')
-		const holder = this.opts.controls ? this.opts.holder : this.opts.holder.append('div')
+		const controls = this.opts.controls || this.opts.holder.append('div')
+		const holder = this.opts.holder || this.opts.holder.append('div')
 		const zoomDiv = this.opts.holder.append('div')
 
 		this.dom = {
-			loadingDiv: holder
-				.append('div')
-				.style('position', 'absolute')
-				.style('display', 'none')
-				.style('padding', '20px')
-				.html('Loading ...'),
 			header: this.opts.header,
 			holder,
 			controls,
 			chartsDiv: holder
 				.append('div')
 				.style('margin', '10px')
-				.style('display'),
+				.style('display', 'inline-block'),
 			zoomDiv,
 			tip: new Menu({ padding: '5px' })
 		}
@@ -41,7 +35,6 @@ class Scatter {
 		if (this.dom.header) this.dom.header.html('Scatter Plot')
 		if (!this.pj) this.pj = getPj(this)
 		await this.setControls()
-		setZoomer(zoomDiv)
 		setInteractivity(this)
 		setRenderers(this)
 	}
@@ -190,6 +183,7 @@ function setRenderers(self) {
 			.transition()
 			.duration(s.duration)
 			.style('opacity', 1)
+		setZoomer(self.dom)
 	}
 
 	self.updateCharts = function(d) {
@@ -224,7 +218,6 @@ function setRenderers(self) {
 			.duration(duration)
 			.attr('width', s.svgw)
 			.attr('height', s.svgh)
-			.style('overflow', 'visible')
 			.style('padding-left', '20px')
 
 		/* eslint-disable */
@@ -276,14 +269,14 @@ function setRenderers(self) {
 		const circles = g.selectAll('circle').data(series.data, b => b.x)
 
 		circles.exit().remove()
-
+		const default_color = 'blue'
 		circles
 			.transition()
 			.duration(duration)
 			.attr('r', s.radius)
 			.attr('cx', c => c.scaledX)
 			.attr('cy', c => c.scaledY)
-			//.style("fill", color)
+			.style('fill', c => ('color' in c ? c.color : default_color))
 			.style('fill-opacity', s.fillOpacity)
 		//.style("stroke", color);
 		circles
@@ -293,11 +286,181 @@ function setRenderers(self) {
 			.attr('cx', c => c.scaledX)
 			.attr('cy', c => c.scaledY)
 			//.style("opacity", 0)
-			.style('fill', c => ('color' in c ? c.color : 'black'))
+			.style('fill', c => ('color' in c ? c.color : default_color))
 			.style('fill-opacity', s.fillOpacity)
 			//.style("stroke", color)
 			.transition()
 			.duration(duration)
+	}
+
+	function setZoomer(dom) {
+		console.log(dom)
+		const obj = dom.zoomDiv
+		obj.style('display', 'inline-block')
+		const svg = select('svg')
+		obj.scattersvg_buttons = obj.append('div').style('display', 'inline-block')
+		obj.style('vertical-align', 'top').style('float', 'right')
+
+		const zoom_menu = obj.scattersvg_buttons
+			.append('div')
+			.style('margin-top', '2px')
+			.style('padding', '2px 5px')
+			.style('border-radius', '5px')
+			.style('text-align', 'center')
+			.style('background-color', '#ddd')
+
+		const zoom_inout_div = zoom_menu.append('div').style('margin', '5px 2px')
+
+		zoom_inout_div
+			.append('div')
+			.style('display', 'block')
+			.style('padding', '2px 4px')
+			.style('font-size', '80%')
+			.text('Zoom')
+
+		const zoom_in_btn = zoom_inout_div
+			.append('button')
+			.style('margin', '1px')
+			.style('padding', '2px 7px')
+			.text('+')
+
+		const zoom_out_btn = zoom_inout_div
+			.append('button')
+			.style('margin', '1px')
+			.style('padding', '2px 8px')
+			.text('-')
+
+		const pan_div = zoom_menu.append('div').style('margin', '5px 2px')
+
+		pan_div
+			.append('div')
+			.style('display', 'block')
+			.style('padding', '2px')
+			.style('font-size', '80%')
+			.text('Pan')
+
+		const pan_left_btn = pan_div
+			.append('button')
+			.style('margin', '1px')
+			.style('padding', '2px 7px')
+			.text('+')
+
+		const pan_right_btn = pan_div
+			.append('button')
+			.style('margin', '1px')
+			.style('padding', '2px 8px')
+			.text('-')
+
+		const reset_div = zoom_menu.append('div').style('margin', '5px 2px')
+
+		const reset_btn = reset_div
+			.append('button')
+			.style('margin', '1px')
+			.style('padding', '2px 8px')
+			.text('Reset')
+
+		zoom_menu.style('display', 'inline-block')
+
+		const zoom = d3zoom()
+			.scaleExtent([1, 5])
+			.on('zoom', () => {
+				select('svg g').attr('transform', event.transform)
+			})
+
+		svg.call(zoom)
+
+		zoom_in_btn.on('click', () => {
+			zoom.scaleBy(svg.transition().duration(750), 1.5)
+		})
+
+		zoom_out_btn.on('click', () => {
+			zoom.scaleBy(svg.transition().duration(750), 0.5)
+		})
+
+		reset_btn.on('click', () => {
+			svg
+				.transition()
+				.duration(750)
+				.call(zoom.transform, zoomIdentity)
+		})
+
+		pan_left_btn.on('click', () => {
+			zoom.translateBy(svg.transition().duration(750), -50, 0)
+		})
+
+		pan_right_btn.on('click', () => {
+			zoom.translateBy(svg.transition().duration(750), 50, 0)
+		})
+
+		const circles = svg.selectAll('g').selectAll('circle')
+		console.log('circles', circles)
+		const lasso = d3lasso()
+			.items(circles)
+			.targetArea(svg)
+			.on('start', lasso_start)
+			.on('draw', lasso_draw)
+			.on('end', lasso_end)
+
+		svg.call(lasso)
+
+		function lasso_start() {
+			console.log('lasso start')
+			lasso
+				.items()
+				.attr('r', 2)
+				.style('fill-opacity', '.5')
+				.classed('not_possible', true)
+				.classed('selected', false)
+		}
+
+		function lasso_draw() {
+			console.log('lasso draw')
+
+			// Style the possible dots
+			lasso
+				.possibleItems()
+				.attr('r', radius)
+				.style('fill-opacity', '1')
+				.classed('not_possible', false)
+				.classed('possible', true)
+
+			// Style the not possible dot
+			// lasso.notPossibleItems()
+			// 	.attr('r',2)
+			// 	.style('fill-opacity','.5')
+			// 	.classed('not_possible',true)
+			// 	.classed('possible',false)
+		}
+
+		function lasso_end() {
+			console.log('lasso end')
+
+			// show menu if at least 1 sample selected
+			const selected_samples = svg
+				.selectAll('.possible')
+				.data()
+				.map(d => d.sample)
+			if (selected_samples.length) show_lasso_menu(selected_samples)
+			else obj.menu.hide()
+
+			// Reset classes of all items (.possible and .not_possible are useful
+			// only while drawing lasso. At end of drawing, only selectedItems()
+			// should be used)
+			lasso
+				.items()
+				.classed('not_possible', false)
+				.classed('possible', false)
+
+			// Style the selected dots
+			lasso.selectedItems().attr('r', radius)
+
+			// if none of the items are selected, reset radius of all dots or
+			// keep them as unselected with tiny radius
+			lasso
+				.notSelectedItems()
+				.attr('r', selected_samples.length == 0 ? radius : radius_tiny)
+				.style('fill-opacity', '1')
+		}
 	}
 }
 
@@ -353,105 +516,6 @@ export async function getPlotConfig(opts, app) {
 	} catch (e) {
 		throw `${e} [bsampleScatter getPlotConfig()]`
 	}
-	self.dom.div.on('mouseover', self.mouseover).on('mouseout', self.mouseout)
-}
-
-function setZoomer(obj) {
-	obj.style('display', 'inline-block')
-	const svg = select('svg')
-	obj.scattersvg_buttons = obj.append('div').style('display', 'inline-block')
-	obj.style('vertical-align', 'top').style('float', 'right')
-
-	const zoom_menu = obj.scattersvg_buttons
-		.append('div')
-		.style('margin-top', '2px')
-		.style('padding', '2px 5px')
-		.style('border-radius', '5px')
-		.style('text-align', 'center')
-		.style('background-color', '#ddd')
-
-	const zoom_inout_div = zoom_menu.append('div').style('margin', '5px 2px')
-
-	zoom_inout_div
-		.append('div')
-		.style('display', 'block')
-		.style('padding', '2px 4px')
-		.style('font-size', '80%')
-		.text('Zoom')
-
-	const zoom_in_btn = zoom_inout_div
-		.append('button')
-		.style('margin', '1px')
-		.style('padding', '2px 7px')
-		.text('+')
-
-	const zoom_out_btn = zoom_inout_div
-		.append('button')
-		.style('margin', '1px')
-		.style('padding', '2px 8px')
-		.text('-')
-
-	const pan_div = zoom_menu.append('div').style('margin', '5px 2px')
-
-	pan_div
-		.append('div')
-		.style('display', 'block')
-		.style('padding', '2px')
-		.style('font-size', '80%')
-		.text('Pan')
-
-	const pan_left_btn = pan_div
-		.append('button')
-		.style('margin', '1px')
-		.style('padding', '2px 7px')
-		.text('+')
-
-	const pan_right_btn = pan_div
-		.append('button')
-		.style('margin', '1px')
-		.style('padding', '2px 8px')
-		.text('-')
-
-	const reset_div = zoom_menu.append('div').style('margin', '5px 2px')
-
-	const reset_btn = reset_div
-		.append('button')
-		.style('margin', '1px')
-		.style('padding', '2px 8px')
-		.text('Reset')
-
-	zoom_menu.style('display', 'inline-block')
-
-	const zoom = d3zoom()
-		.scaleExtent([1, 5])
-		.on('zoom', () => {
-			select('svg g').attr('transform', event.transform)
-		})
-
-	svg.call(zoom)
-
-	zoom_in_btn.on('click', () => {
-		zoom.scaleBy(svg.transition().duration(750), 1.5)
-	})
-
-	zoom_out_btn.on('click', () => {
-		zoom.scaleBy(svg.transition().duration(750), 0.5)
-	})
-
-	reset_btn.on('click', () => {
-		svg
-			.transition()
-			.duration(750)
-			.call(zoom.transform, zoomIdentity)
-	})
-
-	pan_left_btn.on('click', () => {
-		zoom.translateBy(svg.transition().duration(750), -50, 0)
-	})
-
-	pan_right_btn.on('click', () => {
-		zoom.translateBy(svg.transition().duration(750), 50, 0)
-	})
 }
 
 export const scatterInit = getCompInit(Scatter)
