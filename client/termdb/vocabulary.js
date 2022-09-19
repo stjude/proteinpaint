@@ -61,7 +61,7 @@ class Vocab {
 		// frontend vocab may replace the vocab object reference
 		if (this.state.vocab) this.vocab = this.state.vocab
 		// may or may not need a verified token for a dslabel, based on genome response.dsAuth
-		this.verifiedToken = isInSession(this.state.dslabel)
+		this.verifiedToken = !this.state.termdbConfig?.requiredAuth || isInSession(this.state.dslabel)
 
 		// secured plots need to confirm that a verified token exists
 		if (this.state.dslabel) await this.maySetVerifiedToken()
