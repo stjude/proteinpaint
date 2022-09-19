@@ -80,16 +80,14 @@ class Scatter {
 		const lines = data.split('\n')
 		const header = lines[0].split('\t')
 		const rows = []
-		let skip
 		for (let i = 1; i < lines.length; i++) {
+			if (!lines[i]) continue
 			const row = {}
 			for (const [j, v] of lines[i].split('\t').entries()) {
 				const key = header[j]
-				skip = (key == 'x' || key == 'y') && v === ''
-				if (key == 'x' || key == 'y') console.log(key, v)
 				row[key] = key == 'x' || key == 'y' ? Number(v) : v
 			}
-			if (!skip) rows.push(row)
+			rows.push(row)
 		}
 		this.currData = { rows }
 		this.pj.refresh({ data: this.currData.rows })
@@ -246,6 +244,7 @@ function setRenderers(self) {
 		// remove all circles as there is no data id for privacy
 		g.selectAll('circle').remove()
 		const circles = g.selectAll('circle').data(series.data, b => b.x)
+		console.log('data', series.data)
 
 		circles.exit().remove()
 		const default_color = 'blue'
@@ -253,8 +252,14 @@ function setRenderers(self) {
 			.transition()
 			.duration(duration)
 			.attr('r', s.radius)
-			.attr('cx', c => c.scaledX)
-			.attr('cy', c => c.scaledY)
+			.attr('cx', c => {
+				console.log('cx', c.scaledX)
+				c.scaledX
+			})
+			.attr('cy', c => {
+				console.log('cy', c.scaledY)
+				c.scaledY
+			})
 			.style('fill', c => ('color' in c ? c.color : default_color))
 			.style('fill-opacity', s.fillOpacity)
 		//.style("stroke", color);
@@ -292,7 +297,7 @@ function setRenderers(self) {
 			.style('display', 'block')
 			.style('padding', '2px')
 			.style('font-size', '70%')
-			.html('<p style="margin:1px;">Use the mouse or use </br>these buttons to zoom/pan</p>')
+			.html('<p style="margin:1px;">Use the mouse and/or this </br>panel to interact with the plot</p>')
 
 		zoom_inout_div
 			.append('div')
@@ -341,6 +346,8 @@ function setRenderers(self) {
 			.style('margin', '1px')
 			.style('padding', '2px 8px')
 			.text('Reset')
+		const lasso_div = zoom_menu.append('div').style('margin', '5px 2px')
+		const lasso_chb = lasso_div.append('input').attr('type', 'checkbox')
 
 		zoom_menu.style('display', 'inline-block')
 
@@ -386,7 +393,6 @@ function setRenderers(self) {
 		svg.call(lasso)
 
 		function lasso_start() {
-			console.log('lasso start')
 			lasso
 				.items()
 				.attr('r', 2)
@@ -396,12 +402,10 @@ function setRenderers(self) {
 		}
 
 		function lasso_draw() {
-			console.log('lasso draw')
-
 			// Style the possible dots
 			lasso
 				.possibleItems()
-				.attr('r', radius)
+				.attr('r', self.settings.radius)
 				.style('fill-opacity', '1')
 				.classed('not_possible', false)
 				.classed('possible', true)
@@ -416,14 +420,11 @@ function setRenderers(self) {
 		}
 
 		function lasso_end() {
-			console.log('lasso end')
-
 			// show menu if at least 1 sample selected
 			const selected_samples = svg
 				.selectAll('.possible')
 				.data()
 				.map(d => d.sample)
-			if (selected_samples.length) show_lasso_menu(selected_samples)
 
 			// Reset classes of all items (.possible and .not_possible are useful
 			// only while drawing lasso. At end of drawing, only selectedItems()
@@ -546,9 +547,10 @@ function getPj(self) {
 		},
 		'=': {
 			xScale(row, context) {
-				return d3Linear()
+				const cx = d3Linear()
 					.domain([context.self.xMin, context.self.xMax])
 					.range([3 * s.radius, s.svgw - s.svgPadding.left - s.svgPadding.right - 3 * s.radius])
+				return cx
 			},
 			scaledX(row, context) {
 				return context.context.context.context.parent.xScale(context.self.x)
@@ -560,9 +562,10 @@ function getPj(self) {
 				const yMin = context.self.yMin
 				const yMax = context.self.yMax
 				const domain = s.scale == 'byChart' ? [yMax, yMin] : [context.root.yMax, yMin]
-				return d3Linear()
+				const cy = d3Linear()
 					.domain(domain)
 					.range([3 * s.radius, s.svgh - s.svgPadding.top - s.svgPadding.bottom - 3 * s.radius])
+				return cy
 			}
 		}
 	})
