@@ -138,7 +138,7 @@ class Scatter {
 }
 
 function setRenderers(self) {
-	self.render = function() {
+	self.render = function () {
 		const chartDivs = self.dom.holder.selectAll('.pp-scatter-chart').data(self.pj.tree.charts, d => d.chartId)
 
 		chartDivs.exit().remove()
@@ -148,7 +148,7 @@ function setRenderers(self) {
 		self.dom.holder.on('mouseover', self.mouseover).on('mouseout', self.mouseout)
 	}
 
-	self.addCharts = function(d) {
+	self.addCharts = function (d) {
 		const s = self.settings
 		const div = select(this)
 			.append('div')
@@ -173,7 +173,7 @@ function setRenderers(self) {
 		setZoomer(self.dom, svg)
 	}
 
-	self.updateCharts = function(d) {
+	self.updateCharts = function (d) {
 		const s = self.settings
 		const div = select(this)
 
@@ -208,14 +208,14 @@ function setRenderers(self) {
 			.data(chart.serieses, d => (d && d[0] ? d[0].seriesId : ''))
 
 		serieses.exit().remove()
-		serieses.each(function(series, i) {
+		serieses.each(function (series, i) {
 			renderSeries(select(this), chart, series, i, s, s.duration)
 		})
 		serieses
 			.enter()
 			.append('g')
 			.attr('class', 'sjpcb-scatter-series')
-			.each(function(series, i) {
+			.each(function (series, i) {
 				renderSeries(select(this), chart, series, i, s, duration)
 			})
 	}
@@ -346,8 +346,13 @@ function setRenderers(self) {
 			.style('margin', '1px')
 			.style('padding', '2px 8px')
 			.text('Reset')
-		const lasso_div = zoom_menu.append('div').style('margin', '5px 2px')
-		const lasso_chb = lasso_div.append('input').attr('type', 'checkbox')
+		const lasso_div = zoom_menu.append('div').style('margin', '5px 2px').style('font-size', '70%')
+		const lasso_chb = lasso_div.append('input')
+			.attr('type', 'checkbox')
+			.attr('id', 'lasso_chb')
+			.on('input', toggle_lasso)
+			.property('checked', false)
+		lasso_div.append('label').attr('for', 'lasso_chb').html('Use lasso')
 
 		zoom_menu.style('display', 'inline-block')
 
@@ -393,62 +398,77 @@ function setRenderers(self) {
 		svg.call(lasso)
 
 		function lasso_start() {
-			lasso
-				.items()
-				.attr('r', 2)
-				.style('fill-opacity', '.5')
-				.classed('not_possible', true)
-				.classed('selected', false)
+			if (lasso_chb.checked)
+				lasso
+					.items()
+					.attr('r', 2)
+					.style('fill-opacity', '.5')
+					.classed('not_possible', true)
+					.classed('selected', false)
 		}
 
 		function lasso_draw() {
-			// Style the possible dots
-			lasso
-				.possibleItems()
-				.attr('r', self.settings.radius)
-				.style('fill-opacity', '1')
-				.classed('not_possible', false)
-				.classed('possible', true)
+			if (lasso_chb.checked) {
+				// Style the possible dots
+				lasso
+					.possibleItems()
+					.attr('r', self.settings.radius)
+					.style('fill-opacity', '1')
+					.classed('not_possible', false)
+					.classed('possible', true)
 
-			//Style the not possible dot
-			lasso
-				.notPossibleItems()
-				.attr('r', 2)
-				.style('fill-opacity', '.5')
-				.classed('not_possible', true)
-				.classed('possible', false)
+				//Style the not possible dot
+				lasso
+					.notPossibleItems()
+					.attr('r', 2)
+					.style('fill-opacity', '.5')
+					.classed('not_possible', true)
+					.classed('possible', false)
+			}
 		}
 
 		function lasso_end() {
-			// show menu if at least 1 sample selected
-			const selected_samples = svg
-				.selectAll('.possible')
-				.data()
-				.map(d => d.sample)
+			if (lasso_chb.checked) {
 
-			// Reset classes of all items (.possible and .not_possible are useful
-			// only while drawing lasso. At end of drawing, only selectedItems()
-			// should be used)
-			lasso
-				.items()
-				.classed('not_possible', false)
-				.classed('possible', false)
+				// Reset classes of all items (.possible and .not_possible are useful
+				// only while drawing lasso. At end of drawing, only selectedItems()
+				// should be used)
+				lasso
+					.items()
+					.classed('not_possible', false)
+					.classed('possible', false)
 
-			// Style the selected dots
-			lasso.selectedItems().attr('r', radius)
+				// Style the selected dots
+				lasso.selectedItems().attr('r', self.settings.radius)
 
-			// if none of the items are selected, reset radius of all dots or
-			// keep them as unselected with tiny radius
-			lasso
-				.notSelectedItems()
-				.attr('r', selected_samples.length == 0 ? radius : radius_tiny)
-				.style('fill-opacity', '1')
+				// if none of the items are selected, reset radius of all dots or
+				// keep them as unselected with tiny radius
+				lasso
+					.items()
+					.style('fill-opacity', '1')
+			}
+		}
+
+		function toggle_lasso() {
+			lasso_chb.checked = lasso_chb.property('checked')
+			if (lasso_chb.checked)
+				svg.on('.zoom', null);
+			else
+			{
+				lasso.items().classed('not_possible', false)
+				lasso.items().classed('possible', false)
+				lasso
+					.items()
+					.attr('r',  self.settings.radius)
+					.style('fill-opacity', '1')
+				svg.call(zoom)
+			}
 		}
 	}
 }
 
 function setInteractivity(self) {
-	self.mouseover = function() {
+	self.mouseover = function () {
 		if (event.target.tagName == 'circle') {
 			const d = event.target.__data__
 			const rows = [
@@ -462,7 +482,7 @@ function setInteractivity(self) {
 		}
 	}
 
-	self.mouseout = function() {
+	self.mouseout = function () {
 		self.app.tip.hide()
 	}
 }
