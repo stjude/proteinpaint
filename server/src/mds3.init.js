@@ -9,6 +9,7 @@ const serverconfig = require('./serverconfig')
 const { dtfusionrna, dtsv, mclassfusionrna, mclasssv } = require('#shared/common')
 const { get_samples, server_init_db_queries } = require('./termdb.sql')
 const { get_barchart_data_sqlitedb } = require('./termdb.barsql')
+const { setDbRefreshRoute } = require('./dsUpdateAttr.js')
 
 /*
 ********************** EXPORTED
@@ -31,7 +32,7 @@ validate_variant2samples
 // in case chr name may contain '.', can change to __
 export const ssmIdFieldsSeparator = '.'
 
-export async function init(ds, genome, _servconfig) {
+export async function init(ds, genome, _servconfig, app = null, basepath = null) {
 	// must validate termdb first
 	await validate_termdb(ds)
 
@@ -46,6 +47,10 @@ export async function init(ds, genome, _servconfig) {
 
 		may_add_refseq2ensembl(ds, genome)
 	}
+
+	// the "refresh" attribute on ds.cohort.db should be set in serverconfig.json
+	// for a genome dataset, using "updateAttr: [[...]]
+	if (ds.cohort?.db?.refresh && app) setDbRefreshRoute(ds, app, basepath)
 }
 
 export function client_copy(ds) {
@@ -104,7 +109,7 @@ async function validate_termdb(ds) {
 	if (ds.cohort) {
 		if (!ds.cohort.termdb) throw 'ds.cohort is set but cohort.termdb{} missing'
 		if (!ds.cohort.db) throw 'ds.cohort is set but cohort.db{} missing'
-		if (!ds.cohort.db.file) throw 'ds.cohort.db.file missing'
+		if (!ds.cohort.db.file && !ds.cohort.db.file_fullpath) throw 'ds.cohort.db.file missing'
 	} else if (ds.termdb) {
 		ds.cohort = {}
 		ds.cohort.termdb = ds.termdb

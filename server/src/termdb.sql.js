@@ -731,7 +731,7 @@ thus less things to worry about...
 	if (!ds.cohort.db) throw 'ds.cohort.db missing'
 	if (!ds.cohort.termdb) throw 'ds.cohort.termdb missing'
 
-	const dbfile = ds.cohort.db.file || ds.cohort.db.file_fullpath
+	const dbfile = ds.cohort.db.file_fullpath || ds.cohort.db.file
 	if (!dbfile) throw 'both file and file_fullpath missing'
 	const cn = connect_db(dbfile)
 	console.log(`DB connected for ${ds.label}: ${dbfile}`)

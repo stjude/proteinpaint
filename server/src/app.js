@@ -87,6 +87,7 @@ const express = require('express'),
 	bedj_request_closure = require('./bedj'),
 	blat_request_closure = require('./blat').request_closure,
 	mds3_request_closure = require('./mds3.load').mds3_request_closure,
+	server_updateAttr = require('./dsUpdateAttr').server_updateAttr,
 	mds2_init = require('./mds2.init'),
 	mds3_init = require('./mds3.init'),
 	mds2_load = require('./mds2.load'),
@@ -783,7 +784,7 @@ function handle_getDataset(req, res) {
 		}
 		if (!ds) throw 'invalid dsname'
 		if (ds.isMds3) {
-			return res.send({ ds: mds3_init.client_copy(ds) })
+			return res.send({ ds: mds3_init.client_copy(ds, null, null, app, basepath) })
 		}
 		if (ds.isMds) {
 			return res.send({ ds: mds_clientcopy(ds) })
@@ -7445,13 +7446,15 @@ async function pp_init() {
 			const _ds = __non_webpack_require__(fs.existsSync(overrideFile) ? overrideFile : d.jsfile)
 			const ds = typeof _ds == 'function' ? _ds(common) : _ds
 
+			// !!! TODO: is this unnecessarily repeated at a later time? !!!
+			server_updateAttr(ds, d)
 			ds.noHandleOnClient = d.noHandleOnClient
 			ds.label = d.name
 			g.datasets[ds.label] = ds
 
 			if (ds.isMds3) {
 				try {
-					await mds3_init.init(ds, g, d)
+					await mds3_init.init(ds, g, d, app, basepath)
 				} catch (e) {
 					if (e.stack) console.log(e.stack)
 					throw 'Error with mds3 dataset ' + ds.label + ': ' + e
@@ -7720,8 +7723,10 @@ async function mds_init(ds, genome, _servconfig) {
     genome: obj {}
     _servconfig: the entry in "datasets" array from serverconfig.json
     */
-
-	mds2_init.server_updateAttr(ds, _servconfig)
+	if (ds.isMds2 || ds.isMds3 || ds.isMds) {
+		// !!! TODO: does this repeat an earlier server_updateAttr? !!!
+		server_updateAttr(ds, _servconfig)
+	} //else console.log('not mds', ds.label)
 
 	if (ds.assayAvailability) {
 		if (!ds.assayAvailability.file) throw '.assayAvailability.file missing'
