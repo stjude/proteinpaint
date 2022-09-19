@@ -12,7 +12,7 @@ module.exports = function(common) {
 				v: '<img style="margin-bottom:20px" src=http://cancer.sanger.ac.uk/cancergenome/gfx/logo_cosmic.png>'
 			},
 			{ k: 'Link', v: '<a href=http://cancer.sanger.ac.uk/cosmic target=_blank>http://cancer.sanger.ac.uk/cosmic</a>' },
-			{ k: 'Version', v: '87' },
+			{ k: 'Version', v: '92' },
 			{ k: 'Genome', v: 'GRCh38/hg38' },
 			{
 				k: 'Note',
