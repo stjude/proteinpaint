@@ -15,6 +15,7 @@ const samtools = serverconfig.samtools
 const bcftools = serverconfig.bcftools
 const bigBedToBed = serverconfig.bigBedToBed
 const bigBedNamedItems = serverconfig.bigBedNamedItems
+const bigBedInfo = serverconfig.bigBedInfo
 
 /*********************** EXPORTED
 cache_index
@@ -28,6 +29,8 @@ read_file
 file_not_exist
 file_not_readable
 get_lines_bigfile
+query_bigbed_by_coord
+query_bigbed_by_name
 get_header_tabix
 get_header_vcf
 get_header_bcf
@@ -35,6 +38,7 @@ get_fasta
 connect_db
 loadfile_ssid
 bam_ifnochr
+testIfFileIsBigbed
 ********************** INTERNAL
 */
 
@@ -524,4 +528,41 @@ exports.getRandomInt = function(min, max) {
 
 exports.sleep = function sleep(ms) {
 	return new Promise(resolve => setTimeout(resolve, ms))
+}
+
+/*
+input: full file path
+output:
+	boolean
+	TODO change to resolve({isbb:boolean, message:str, index:...})
+*/
+exports.testIfFileIsBigbed = async function(file) {
+	return new Promise((resolve, reject) => {
+		const ps = spawn(bigBedInfo, [file])
+		const out = []
+		const err = []
+		ps.stdout.on('data', i => out.push(i))
+		ps.stderr.on('data', i => err.push(i))
+		ps.on('close', code => {
+			const e = err.join('')
+			if (e) {
+				// two types of known error
+				// do not print file name in the error message to guard against attack string
+				if (e.includes('is not a big bed file')) {
+					//reject('File is not a bigBed file')
+					resolve(false)
+				} else if (e.includes("Couldn't open")) {
+					//reject('Invalid file')
+					resolve(false)
+				} else {
+					//reject('Error detecting if file is bigbed')
+					resolve(false)
+				}
+			}
+			// no error from stderr. if there are text in stdout, then file should be bb
+			const text = out.join('').trim()
+			if (text.startsWith('version')) resolve(true)
+			// TODO also test extraIndexCount. return object but not true/false
+		})
+	})
 }
