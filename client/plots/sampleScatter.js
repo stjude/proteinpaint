@@ -17,14 +17,14 @@ class Scatter {
 	async init(opts) {
 		const controls = this.opts.controls || this.opts.holder.append('div')
 		const holder = this.opts.controls ? opts.holder : this.opts.holder.append('div')
-		const zoomDiv = this.opts.holder.append('div')
+		const toolsDiv = this.opts.holder.append('div')
 
 		this.dom = {
 			header: this.opts.header,
 			holder,
 			controls,
 			chartsDiv: holder.style('margin', '10px').style('display', 'inline-block'),
-			zoomDiv,
+			toolsDiv,
 			tip: new Menu({ padding: '5px' })
 		}
 
@@ -170,7 +170,7 @@ function setRenderers(self) {
 			.transition()
 			.duration(s.duration)
 			.style('opacity', 1)
-		setZoomer(self.dom, svg)
+		setTools(self.dom, svg)
 	}
 
 	self.updateCharts = function (d) {
@@ -277,8 +277,8 @@ function setRenderers(self) {
 			.duration(duration)
 	}
 
-	function setZoomer(dom, svg) {
-		const scattersvg_buttons = dom.zoomDiv
+	function setTools(dom, svg) {
+		const scattersvg_buttons = dom.toolsDiv
 			.style('display', 'inline-block')
 			.style('vertical-align', 'top')
 			.style('float', 'right')
@@ -395,8 +395,6 @@ function setRenderers(self) {
 			.on('draw', lasso_draw)
 			.on('end', lasso_end)
 
-		svg.call(lasso)
-
 		function lasso_start() {
 			if (lasso_chb.checked)
 				lasso
@@ -452,9 +450,13 @@ function setRenderers(self) {
 		function toggle_lasso() {
 			lasso_chb.checked = lasso_chb.property('checked')
 			if (lasso_chb.checked)
+			{
 				svg.on('.zoom', null);
+				svg.call(lasso)
+			}
 			else
 			{
+				svg.on('mousedown.drag', null)
 				lasso.items().classed('not_possible', false)
 				lasso.items().classed('possible', false)
 				lasso
