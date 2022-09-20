@@ -1,8 +1,6 @@
 import { getAppInit } from '#rx'
 import { mainBtnInit } from './mainBtn'
 import { layoutInit } from './layout'
-import { cardInit } from './card'
-import { buttonInit } from './dsButton'
 import { select } from 'd3-selection'
 import { event as d3event } from 'd3-selection'
 import { dofetch3, sayerror } from '#src/client'
@@ -78,8 +76,6 @@ class AppDrawerApp {
 			this.store = await appDrawerStoreInit({ app: this.api, state: this.opts.state })
 			this.state = await this.store.copyState()
 			this.indexJson = await getCardsJson(this.dom.drawerDiv)
-			this.elements = this.indexJson.elements.filter(e => !e.hidden)
-			this.layout = this.indexJson.columnsLayout ? this.indexJson.columnsLayout : null
 			this.components = {
 				mainBtn: await mainBtnInit({
 					app: this.api,
@@ -98,7 +94,6 @@ class AppDrawerApp {
 	main() {
 		if (this.drawerRendered == true) return
 		this.drawerRendered = true
-		loadElements(this)
 	}
 }
 
@@ -112,32 +107,4 @@ async function getCardsJson(holder) {
 	}
 
 	return re.json
-}
-
-async function loadElements(self) {
-	// if (self.state.appBtnActive == false) return
-	console.log('elements', self.state.appBtnActive)
-	self.elements.forEach(element => {
-		const holder = select(self.layout ? `#${element.section} > .sjpp-element-list` : `.sjpp-element-list`)
-		if (element.type == 'card' || element.type == 'nestedCard') {
-			cardInit({
-				app: self.api,
-				holder: holder
-					.style('display', 'grid')
-					.style('grid-template-columns', 'repeat(auto-fit, minmax(320px, 1fr))')
-					.style('gap', '10px')
-					.style('list-style', 'none')
-					.style('margin', '15px 0px'),
-				element,
-				sandboxDiv: self.dom.sandboxDiv
-			})
-		} else if (element.type == 'dsButton') {
-			buttonInit({
-				app: self.api,
-				holder,
-				element,
-				sandboxDiv: self.dom.sandboxDiv
-			})
-		}
-	})
 }

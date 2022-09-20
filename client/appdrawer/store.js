@@ -28,7 +28,7 @@ class AppDrawerStore {
 export const appDrawerStoreInit = getStoreInit(AppDrawerStore)
 
 AppDrawerStore.prototype.actions = {
-	toggle_apps_off(action) {
+	is_apps_btn_active(action) {
 		this.state.appBtnActive = 'value' in action ? action.value : !this.state.appBtnActive
 	}
 }

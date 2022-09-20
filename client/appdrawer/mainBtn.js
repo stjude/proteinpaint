@@ -21,44 +21,43 @@ class MainHeadboxBtn {
 		}
 	}
 
-	async init(appState) {
-		// this.btnRendered = false
-		this.state = this.getState(appState)
-		this.appBtnActive = this.state.appBtnActive
-		if (this.appBtnActive == false) return
+	async init() {
+		this.btnRendered = false
 		this.drawerFullHeight = ''
-		if (window.location.pathname == '/' && !window.location.search.length) {
-			await this.app.dispatch({ type: 'toggle_apps_off', value: true })
-			console.log('homepage')
-		} else {
-			await this.app.dispatch({ type: 'toggle_apps_off', value: false })
+		try {
+			if (window.location.pathname == '/' && !window.location.search.length) {
+				await this.app.dispatch({ type: 'is_apps_btn_active', value: true })
+			} else {
+				await this.app.dispatch({ type: 'is_apps_btn_active', value: false })
+			}
+		} catch (e) {
+			throw e
 		}
 	}
 
-	main() {
-		// if (this.btnRendered == true) return
-		// this.btnRendered = true
-		// detect whether to show examples right away, which is when the url is barebone without any route paths or search parameters
-		// if (window.location.pathname == '/' && !window.location.search.length) {
-		//     this.app.dispatch({ type: 'toggle_apps_off', value: true })
-		//     console.log()
-		// } else {
-		//     this.app.dispatch({ type: 'toggle_apps_off', value: false })
-		//     slideDrawer(this)
-		// }
+	main(appState) {
+		this.app.getState(appState).appBtnActive == false
+			? (this.drawerFullHeight = '0px')
+			: (this.drawerFullHeight = this.dom.drawerDiv.node().getBoundingClientRect().height + 5)
+		console.log(this.drawerFullHeight)
+		slideDrawer(this)
+
+		//detect whether to show examples right away, which is when the url is barebone without any route paths or search parameters
 	}
 }
 
 export const mainBtnInit = getCompInit(MainHeadboxBtn)
 
 function setRenderers(self) {
-	console.log('button', self.state.appBtnActive)
+	if (self.btnRendered == true) return
+	self.btnRendered == true
 	self.dom.btnWrapper
 		.style('background-color', self.state.appBtnActive ? '#b2b2b2' : '#f2f2f2')
 		.style('color', self.state.appBtnActive ? '#fff' : '#000')
 		.on('click', async () => {
 			d3event.stopPropagation()
-			await self.app.dispatch({ type: 'toggle_apps_off' })
+			await self.app.dispatch({ type: 'is_apps_btn_active' })
+			console.log(self.state.appBtnActive, self.drawerFullHeight)
 			slideDrawer(self)
 			if (self.state.appBtnActive) {
 				setTimeout(() => {
@@ -80,7 +79,7 @@ function setRenderers(self) {
 	// an empty spacer div, needed since the arrows are absolutely positioned
 	self.dom.drawerHint
 		.style('position', 'relative')
-		.style('display', 'inline-block') //self.state.appBtnActive ? '' : 'inline-block')
+		.style('display', 'inline-block')
 		.style('height', self.state.arrowSize.closed + 'px')
 		.style('width', self.state.appBtnActive ? self.state.hintWidth.open : self.state.hintWidth.closed)
 		.style('background-color', 'transparent')
@@ -113,42 +112,42 @@ function setRenderers(self) {
 }
 
 function slideDrawer(self) {
-	console.log('slide drawer', self.state.appBtnActive)
+	// self.drawerFullHeight = self.dom.drawerDiv.node().getBoundingClientRect().height + 5
 	self.dom.btnWrapper
 		.transition()
-		.duration(self.state.duration)
+		.duration(self.opts.state.duration)
 		.style('background-color', self.state.appBtnActive ? '#b2b2b2' : '#f2f2f2')
 		.style('color', self.state.appBtnActive ? '#fff' : '#000')
 
 	self.dom.btn
 		.transition()
-		.duration(self.state.duration)
+		.duration(self.opts.state.duration)
 		.style('color', self.state.appBtnActive ? '#fff' : '#000')
 
 	self.dom.drawerDiv
 		.style('display', 'inline-block')
 		.transition()
-		.duration(self.state.duration)
+		.duration(self.opts.state.duration)
 		.style('top', self.state.appBtnActive ? '0px' : '-' + self.drawerFullHeight + 'px')
 
 	self.dom.drawerRow
 		.transition()
-		.duration(self.state.duration)
+		.duration(self.opts.state.duration)
 		.style('height', self.state.appBtnActive ? self.drawerFullHeight + 'px' : '0px')
 
 	self.dom.drawerHint
 		.transition()
-		.duration(self.state.duration)
-		.style('width', self.state.appBtnActive ? self.state.hintWidth.open : self.state.hintWidth.closed)
+		.duration(self.opts.state.duration)
+		.style('width', self.state.appBtnActive ? self.opts.state.hintWidth.open : self.opts.state.hintWidth.closed)
 
 	self.dom.drawerArrow
 		.transition()
-		.duration(self.state.duration)
+		.duration(self.opts.state.duration)
 		.style('opacity', self.state.appBtnActive ? 0 : 1)
 
 	self.dom.drawerArrowOpen
 		.style('pointer-events', self.state.appBtnActive ? 'auto' : 'none')
 		.transition()
-		.duration(self.state.duration)
+		.duration(self.opts.state.duration)
 		.style('opacity', self.state.appBtnActive ? 1 : 0)
 }

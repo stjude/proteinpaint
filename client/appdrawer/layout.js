@@ -1,6 +1,9 @@
 import { getCompInit } from '#rx'
 import { rgb } from 'd3-color'
 import { defaultcolor } from '../shared/common'
+import { cardInit } from './card'
+import { buttonInit } from './dsButton'
+import { select } from 'd3-selection'
 
 /*
 .opts{}
@@ -23,10 +26,13 @@ class AppDrawerLayoutComp {
 			holder: opts.dom.drawerDiv,
 			wrapper: opts.dom.wrapper
 		}
-		// this.state = opts.state
+		this.state = opts.state
+		setRenderers(this)
 	}
 
 	validateOpts(opts) {
+		if (!opts.index.elements) throw `Missing elements array`
+		if (!opts.index.elements.length) throw `No element objects provided`
 		if (opts.index.columnsLayout) {
 			if (opts.index.columnsLayout.length == 0) throw `Missing column objects`
 			const allGridAreaValues = opts.index.columnsLayout.map(s => s.gridarea)
@@ -57,24 +63,51 @@ class AppDrawerLayoutComp {
 	}
 
 	init(appState) {
-		this.state = this.getState(appState)
-		// console.log(this.state.appBtnActive)
-		// this.layoutRendered = false
-		this.appBtnActive = this.state.appBtnActive
-		if (this.appBtnActive == false) return
-		setRenderers(this)
+		this.elementsRendered = false
+		this.elements = this.opts.index.elements.filter(e => !e.hidden)
+		this.layout = this.opts.index.columnsLayout ? this.opts.index.columnsLayout : null
+		this.components = {
+			elements: []
+		}
 	}
 
-	main() {
-		// if (this.layoutRendered == true) return
-		// this.layoutRendered = true
+	async main() {
+		if (this.elementsRendered == true) return
+		this.elementsRendered = true
+		for (const element of this.elements) {
+			const holder = select(this.layout ? `#${element.section} > .sjpp-element-list` : `.sjpp-element-list`)
+			if (element.type == 'card' || element.type == 'nestedCard') {
+				this.components.elements.push(
+					await cardInit({
+						app: this.app,
+						holder: holder
+							.style('display', 'grid')
+							.style('grid-template-columns', 'repeat(auto-fit, minmax(320px, 1fr))')
+							.style('gap', '10px')
+							.style('list-style', 'none')
+							.style('margin', '15px 0px'),
+						element,
+						sandboxDiv: this.dom.sandboxDiv
+					})
+				)
+			} else if (element.type == 'dsButton') {
+				this.components.elements.push(
+					await buttonInit({
+						app: this.app,
+						holder,
+						element,
+						sandboxDiv: this.dom.sandboxDiv
+					})
+				)
+			}
+		}
 	}
 }
 
 export const layoutInit = getCompInit(AppDrawerLayoutComp)
 
 function setRenderers(self) {
-	console.log('layout', self.appBtnActive)
+	if (self.opts.appBtnActive == false) return
 	if (!self.opts.index.columnsLayout) noDefinedLayout(self)
 	if (self.opts.index.columnsLayout) columnsLayout(self)
 }

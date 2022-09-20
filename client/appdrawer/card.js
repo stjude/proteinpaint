@@ -145,7 +145,7 @@ function setRenderers(self) {
 	card.on('click', async () => {
 		event.stopPropagation()
 		self.app.dispatch({
-			type: 'toggle_apps_off',
+			type: 'is_apps_btn_active',
 			value: false
 		})
 		await openSandbox(self.opts.element, self.opts)
