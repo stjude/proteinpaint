@@ -2,15 +2,7 @@
 
 a genomics visualization tool for exploring a cohort's genotype and phenotype data
 
-
-## Usage
-
-Follow the [example project setup](https://github.com/stjude/pp-dist).
-
-
-## Develop
-
-### Source Code 
+## Source Code 
 
 ```bash
 # St. Jude developers
@@ -20,7 +12,7 @@ git clone git@github.com:stjude/proteinpaint.git
 git clone git@github.com:NCI-GDC/proteinpaint.git
 ```
 
-### Installation
+## Installation
 
 If working on the server code: Install the 
 [system depedencies](https://docs.google.com/document/d/1tkEHG_vYtT-OifPV-tlPeWQUMsEd3aWAKf5ExOT8G34/edit#heading=h.jy5sdrb1zkut)
@@ -29,54 +21,53 @@ as listed in the [installation instructions](https://docs.google.com/document/d/
 ```bash
 cd proteinpaint
 npm run sethooks
+nvm use 16
+npm install
 # follow the instructions at https://docs.google.com/document/d/1tkEHG_vYtT-OifPV-tlPeWQUMsEd3aWAKf5ExOT8G34/edit
 # to install system and application dependencies, then run of the scripts below
 ```
 
-### Scripts
+## Develop
 
-This requires npm v7.7.6+ and tested with Node v16+.
+These scripts require npm v7.7.6+ and are tested with Node v16+.
 Bundles were also tested to run in Node v12.21+ in a SJ host machine. 
 
-#### Project root
-
 ```bash
-# one-time setup
-nvm use 16 # use Node v16+
-npm install -g npm@7 # if you have not upgraded yet
-npm run reset # alias for `npm install --workspaces`
-
-# develop both server and client code
+# develop BOTH server and client code using 2 terminal windows/tabs
 npm run dev # rebundles backend and frontend code
-npm start # runs the proteinpaint server, requires a serverconfig.json at the project root
+npm start # in separate terminal runs the proteinpaint server, requires a serverconfig.json at the project root
+
+# --- OR --- 
+# to display both server/client bundling logs, 
+# plus server process logs in one terminal window/tab
+npm run dev1
+
+# --- OR ---
+# see build/dev/README.md to use a Docker container for development
+npm run docker
+```
+
+When running your dev server, you can see [marked up README's in the browser](http://localhost:3000/readme.html).
+
+## Test
+```bash
 npm test # tests both frontend and backend code
-
-# develop client code only
-```
-#### in client/
-```bash
-npm run dev # generates bundles to public/bin
-npm test # tests the client code
-npm run browser # bundles the front-end spec files for use at localhost:[port]/testrun.html
-npm run gdc # runs the gdc tests
 ```
 
-#### in server/
-```bash
-npm run dev # generates the server.js bundle
-npm start # starts the server
-npm test # tests the server code
-```
+## Build + Deploy
 
-#### in project/root
 ```bash
 ./build/deploy.sh [env] # builds and deploys the bundled code to internal SJ hosts
-
 # or to deploy to internal/external production servers
 npm run ppr
 npm run prp1
 ```
 
-## Build
+## Package Release
 
 Follow the [build instructions](https://docs.google.com/document/d/13gUdU9UrHFkdspcQgc6ToRZJsrdFM4LCwCg7g1SQc4Q/edit?usp=sharing).
+
+### Use Proteinpaint as a module
+
+Follow the [example project setup](https://github.com/stjude/pp-dist).
+

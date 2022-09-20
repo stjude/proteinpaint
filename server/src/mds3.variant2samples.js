@@ -16,6 +16,7 @@ variant2samples_getresult()
 		get_crosstabCombinations()
 		addCrosstabCount_tonodes
 	make_summary
+		make_summary_categorical
 	summary2barchart
 
 
@@ -79,7 +80,9 @@ export async function variant2samples_getresult(q, ds) {
 	if (q.get == ds.variant2samples.type_sunburst) {
 		return await make_sunburst(mutatedSamples, ds, q)
 	}
+
 	const get = q.get || q.term2_q.mode
+
 	if (get == ds.variant2samples.type_summary) {
 		const summary = await make_summary(mutatedSamples, ds, q)
 		if (q.term1_id) {
@@ -116,6 +119,7 @@ export async function variant2samples_getresult(q, ds) {
 		}
 		return summary
 	}
+
 	throw 'unknown get type'
 }
 
@@ -379,7 +383,7 @@ async function make_sunburst(mutatedSamples, ds, q) {
 	}
 	*/
 
-	if (ds.termdb && ds.termdb.termid2totalsize2) {
+	if (ds?.cohort?.termdb?.termid2totalsize2) {
 		const combinations = await get_crosstabCombinations(termidlst, ds, q, nodes)
 		await addCrosstabCount_tonodes(nodes, combinations, ds)
 		// .cohortsize=int is added to applicable elements of nodes[]
@@ -388,6 +392,9 @@ async function make_sunburst(mutatedSamples, ds, q) {
 	return nodes
 }
 
+/*
+given a list of cases, summarize over a set of terms
+*/
 async function make_summary(mutatedSamples, ds, q) {
 	const entries = []
 	/* one element for a term
@@ -402,14 +409,11 @@ async function make_summary(mutatedSamples, ds, q) {
 	for (const termid of termidlst) {
 		const term = ds.cohort.termdb.q.termjsonByOneid(termid)
 		if (!term) continue
-		// may skip a term
+
 		if (term.type == 'categorical') {
-			const cat2count = new Map()
-			for (const s of mutatedSamples) {
-				const c = s[term.id]
-				if (!c) continue
-				cat2count.set(c, 1 + (cat2count.get(c) || 0))
-			}
+			const cat2count = make_summary_categorical(mutatedSamples, termid)
+			// k: category string, v: sample count
+
 			entries.push({
 				termid: term.id,
 				termname: term.name,
@@ -427,8 +431,8 @@ async function make_summary(mutatedSamples, ds, q) {
 			throw 'unknown term type'
 		}
 	}
-	if (ds.termdb.termid2totalsize2) {
-		const tv2counts = await ds.termdb.termid2totalsize2.get(termidlst, q)
+	if (ds.cohort.termdb.termid2totalsize2) {
+		const tv2counts = await ds.cohort.termdb.termid2totalsize2.get(termidlst, q)
 		for (const { termid, numbycategory } of entries) {
 			const categories = tv2counts.get(termid)
 			// array ele: [category, total]
@@ -441,6 +445,73 @@ async function make_summary(mutatedSamples, ds, q) {
 		}
 	}
 	return entries
+}
+
+/*
+input:
+	samples = []
+		an array of sample objects returned by queryMutatedSamples()
+		!! NOTE !! a sample carrying multiple mutations can be represented multiple times
+		to get correct sample count in category breakdown,
+		must count unique samples by sample id
+
+	termid = str
+		term id summarize against
+
+output:
+	map of unique sample counts per category
+*/
+function make_summary_categorical(samples, termid) {
+	const cat2count = new Map()
+
+	if ('sample_id' in samples[0]) {
+		/* 
+		sample.sample_id is set. this should be present for all non-gdc tracks
+		*/
+		for (const s of samples) {
+			const c = s[termid]
+			if (!c) continue
+			if (!cat2count.has(c)) {
+				cat2count.set(c, new Set())
+			}
+			cat2count.get(c).add(s.sample_id)
+		}
+		const map = new Map()
+		for (const [c, s] of cat2count) {
+			map.set(c, s.size)
+		}
+		return map
+	}
+
+	if ('case_uuid' in samples[0]) {
+		/*
+		for gdc track, instead of "sample_id" it uses "case_uuid" as hardcoded for gdc
+		*/
+		for (const s of samples) {
+			const c = s[termid]
+			if (!c) continue
+			if (!cat2count.has(c)) {
+				cat2count.set(c, new Set())
+			}
+			cat2count.get(c).add(s.case_uuid)
+		}
+		const map = new Map()
+		for (const [c, s] of cat2count) {
+			map.set(c, s.size)
+		}
+		return map
+	}
+
+	/*
+	neither sample_id or case.case_id is set
+	no way to gather unique list of samples
+	*/
+	for (const s of samples) {
+		const c = s[term.id]
+		if (!c) continue
+		cat2count.set(c, 1 + (cat2count.get(c) || 0))
+	}
+	return cat2count
 }
 
 /*
@@ -500,20 +571,20 @@ export async function get_crosstabCombinations(termidlst, ds, q, nodes) {
 				if (!n.v0) {
 					continue
 				}
-				id2categories.get(n.id0).add(ds.termdb.useLower ? n.v0.toLowerCase() : n.v0)
+				id2categories.get(n.id0).add(ds.cohort.termdb.useLower ? n.v0.toLowerCase() : n.v0)
 			}
 			if (n.id1 && termidlst[1]) {
 				if (!n.v1) {
 					// see above comments
 					continue
 				}
-				id2categories.get(n.id1).add(ds.termdb.useLower ? n.v1.toLowerCase() : n.v1)
+				id2categories.get(n.id1).add(ds.cohort.termdb.useLower ? n.v1.toLowerCase() : n.v1)
 			}
 			if (n.id2 && termidlst[2]) {
 				if (!n.v2) {
 					continue
 				}
-				id2categories.get(n.id2).add(ds.termdb.useLower ? n.v2.toLowerCase() : n.v2)
+				id2categories.get(n.id2).add(ds.cohort.termdb.useLower ? n.v2.toLowerCase() : n.v2)
 			}
 		}
 	}
@@ -521,9 +592,9 @@ export async function get_crosstabCombinations(termidlst, ds, q, nodes) {
 	// get term[0] category total, not dependent on other terms
 	const id0 = termidlst[0]
 	{
-		const tv2counts = await ds.termdb.termid2totalsize2.get([id0])
+		const tv2counts = await ds.cohort.termdb.termid2totalsize2.get([id0])
 		for (const [v, count] of tv2counts.get(id0)) {
-			const v0 = ds.termdb.useLower ? v.toLowerCase() : v
+			const v0 = ds.cohort.termdb.useLower ? v.toLowerCase() : v
 			if (useall) {
 				id2categories.get(id0).add(v0)
 				combinations.push({ count, id0, v0 })
@@ -541,12 +612,12 @@ export async function get_crosstabCombinations(termidlst, ds, q, nodes) {
 		const promises = []
 		// for every id0 category, get id1 category/count conditional on it
 		for (const v0 of id2categories.get(id0)) {
-			promises.push(ds.termdb.termid2totalsize2.get([id1], { tid2value: { [id0]: v0 } }, v0))
+			promises.push(ds.cohort.termdb.termid2totalsize2.get([id1], { tid2value: { [id0]: v0 } }, v0))
 		}
 		const lst = await Promise.all(promises)
 		for (const [tv2counts, v0] of lst) {
 			for (const [s, count] of tv2counts.get(id1)) {
-				const v1 = ds.termdb.useLower ? s.toLowerCase() : s
+				const v1 = ds.cohort.termdb.useLower ? s.toLowerCase() : s
 				if (useall) {
 					id2categories.get(id1).add(v1)
 					combinations.push({ count, id0, v0, id1, v1 })
@@ -567,13 +638,15 @@ export async function get_crosstabCombinations(termidlst, ds, q, nodes) {
 		for (const v0 of id2categories.get(id0)) {
 			for (const v1 of id2categories.get(id1)) {
 				const q2 = JSON.parse(JSON.stringify(q))
-				promises.push(ds.termdb.termid2totalsize2.get([id2], { tid2value: { [id0]: v0, [id1]: v1 } }, { v0, v1 }))
+				promises.push(
+					ds.cohort.termdb.termid2totalsize2.get([id2], { tid2value: { [id0]: v0, [id1]: v1 } }, { v0, v1 })
+				)
 			}
 		}
 		const lst = await Promise.all(promises)
 		for (const [tv2counts, combination] of lst) {
 			for (const [s, count] of v2counts.get(id2)) {
-				const v2 = ds.termdb.useLower ? s.toLowerCase() : s
+				const v2 = ds.cohort.termdb.useLower ? s.toLowerCase() : s
 				if (useall) {
 					id2categories.get(id2).add(v2)
 					combinations.push({ count, id0, v0: combination.v0, id1, v1: combination.v1, id2, v2 })
@@ -598,7 +671,7 @@ async function addCrosstabCount_tonodes(nodes, combinations, ds) {
 		if (!node.v0) {
 			continue
 		}
-		const v0 = ds.termdb.useLower ? node.v0.toLowerCase() : node.v0
+		const v0 = ds.cohort.termdb.useLower ? node.v0.toLowerCase() : node.v0
 		if (!node.id1) {
 			const n = combinations.find(i => i.id1 == undefined && i.v0 == v0)
 			if (n) node.cohortsize = n.count
@@ -609,7 +682,7 @@ async function addCrosstabCount_tonodes(nodes, combinations, ds) {
 			// e.g. {"id":"root...HCMI-CMDC...","parentId":"root...HCMI-CMDC","value":1,"name":"","id0":"project","v0":"HCMI-CMDC","id1":"disease"}
 			continue
 		}
-		const v1 = ds.termdb.useLower ? node.v1.toLowerCase() : node.v1
+		const v1 = ds.cohort.termdb.useLower ? node.v1.toLowerCase() : node.v1
 		if (!node.id2) {
 			// second level, use crosstabL1
 			const n = combinations.find(i => i.id2 == undefined && i.v0 == v0 && i.v1 == v1)
@@ -620,7 +693,7 @@ async function addCrosstabCount_tonodes(nodes, combinations, ds) {
 		if (!node.v2) {
 			continue
 		}
-		const v2 = ds.termdb.useLower ? node.v2.toLowerCase() : node.v2
+		const v2 = ds.cohort.termdb.useLower ? node.v2.toLowerCase() : node.v2
 		if (!node.id3) {
 			// third level, use crosstabL2
 			const n = crosstabL2.find(i => i.v0 == v0 && i.v1 == v1 && i.v2 == v2)

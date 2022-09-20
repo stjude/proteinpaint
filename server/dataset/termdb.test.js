@@ -149,6 +149,16 @@ const ds = {
 				highlightCohortBy: 'cssSelector',
 				htmlinfo: cohorthtmltable
 			}
+		},
+		scatterplots: {
+			plot: [
+				{
+					name: 'Methylome TSNE',
+					dimension: 2, // 2d requires x/y, 3d requires x/y/z
+					file: 'files/hg19/pnet/classification/methylome_tsne.csv',
+					term: { id: 'diaggrp' }
+				}
+			]
 		}
 	}
 }
@@ -158,6 +168,8 @@ if (!fs.existsSync(datadir)) fs.mkdirSync(datadir, { recursive: true }) // creat
 
 const srcdb = path.join(serverconfig.binpath, 'test/testdata/db2')
 const destdb = path.join(serverconfig.tpmasterdir, ds.cohort.db.file)
-fs.copyFileSync(srcdb, destdb)
+if (!process.env.PP_MODE?.startsWith('container-')) {
+	fs.copyFileSync(srcdb, destdb)
+}
 
 module.exports = ds

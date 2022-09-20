@@ -87,6 +87,7 @@ const express = require('express'),
 	bedj_request_closure = require('./bedj'),
 	blat_request_closure = require('./blat').request_closure,
 	mds3_request_closure = require('./mds3.load').mds3_request_closure,
+	server_updateAttr = require('./dsUpdateAttr').server_updateAttr,
 	mds2_init = require('./mds2.init'),
 	mds3_init = require('./mds3.init'),
 	mds2_load = require('./mds2.load'),
@@ -100,7 +101,8 @@ const express = require('express'),
 	handle_mdssurvivalplot = require('./km').handle_mdssurvivalplot,
 	validator = require('./validator'),
 	cookieParser = require('cookie-parser'),
-	{ maySetAuthRoutes, getDsAuth } = require('./auth.js')
+	authApi = require('./auth.js'),
+	{ server_init_db_queries } = require('./termdb.sql')
 
 //////////////////////////////
 // Global variable (storing things in memory)
@@ -167,7 +169,7 @@ app.use((req, res, next) => {
 	res.header('Access-Control-Allow-Origin', '*')
 	res.header(
 		'Access-Control-Allow-Headers',
-		'Origin, X-Requested-With, Content-Type, Accept, Authorization, X-Auth-Token, x-auth-token'
+		'Origin, X-Requested-With, Content-Type, Accept, Authorization, X-Auth-Token, x-auth-token, x-ds-access-token'
 	)
 	if (req.method == 'GET' && !req.path.includes('.')) {
 		// immutable response before expiration, client must revalidate after max-age;
@@ -223,7 +225,7 @@ if (serverconfig.jwt) {
 // has to set optional routes before app.get() or app.post()
 // otherwise next() may not be called for a middleware in the optional routes
 setOptionalRoutes()
-maySetAuthRoutes(app, basepath)
+authApi.maySetAuthRoutes(app, basepath, serverconfig)
 app.get(basepath + '/healthcheck', handle_healthcheck)
 app.get(basepath + '/cardsjson', handle_cards)
 app.post(basepath + '/mdsjsonform', handle_mdsjsonform)
@@ -625,7 +627,7 @@ async function handle_genomes(req, res) {
 		launchdate,
 		hasblat,
 		features: exports.features,
-		dsAuth: getDsAuth(req),
+		dsAuth: authApi.getDsAuth(req),
 		commonOverrides: serverconfig.commonOverrides,
 		targetPortal: serverconfig.targetPortal //sending target portal to the client
 	})
@@ -782,7 +784,7 @@ function handle_getDataset(req, res) {
 		}
 		if (!ds) throw 'invalid dsname'
 		if (ds.isMds3) {
-			return res.send({ ds: mds3_init.client_copy(ds) })
+			return res.send({ ds: mds3_init.client_copy(ds, null, null, app, basepath) })
 		}
 		if (ds.isMds) {
 			return res.send({ ds: mds_clientcopy(ds) })
@@ -7303,6 +7305,14 @@ async function pp_init() {
 			}
 		}
 
+		// termdbs{} is optional
+		if (g.termdbs) {
+			for (const key in g.termdbs) {
+				server_init_db_queries(g.termdbs[key])
+				console.log(`${key} initiated as ${genomename}-level termdb`)
+			}
+		}
+
 		for (const tk of g.tracks) {
 			if (!tk.__isgene) continue
 			if (!tk.file) throw 'Tabix file missing for gene track: ' + JSON.stringify(tk)
@@ -7436,13 +7446,15 @@ async function pp_init() {
 			const _ds = __non_webpack_require__(fs.existsSync(overrideFile) ? overrideFile : d.jsfile)
 			const ds = typeof _ds == 'function' ? _ds(common) : _ds
 
+			// !!! TODO: is this unnecessarily repeated at a later time? !!!
+			server_updateAttr(ds, d)
 			ds.noHandleOnClient = d.noHandleOnClient
 			ds.label = d.name
 			g.datasets[ds.label] = ds
 
 			if (ds.isMds3) {
 				try {
-					await mds3_init.init(ds, g, d)
+					await mds3_init.init(ds, g, d, app, basepath)
 				} catch (e) {
 					if (e.stack) console.log(e.stack)
 					throw 'Error with mds3 dataset ' + ds.label + ': ' + e
@@ -7711,8 +7723,10 @@ async function mds_init(ds, genome, _servconfig) {
     genome: obj {}
     _servconfig: the entry in "datasets" array from serverconfig.json
     */
-
-	mds2_init.server_updateAttr(ds, _servconfig)
+	if (ds.isMds2 || ds.isMds3 || ds.isMds) {
+		// !!! TODO: does this repeat an earlier server_updateAttr? !!!
+		server_updateAttr(ds, _servconfig)
+	} //else console.log('not mds', ds.label)
 
 	if (ds.assayAvailability) {
 		if (!ds.assayAvailability.file) throw '.assayAvailability.file missing'

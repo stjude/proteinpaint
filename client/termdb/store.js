@@ -52,10 +52,13 @@ class TdbStore {
 		if (!opts.state) throw '.state{} missing'
 		const s = opts.state
 		if (s.vocab) {
+			/*** !!! May not need to duplicate the validation steps in vocabulary.js ??? ***/
 			// assume that any vocabulary with a route
 			// will require genome + dslabel
 			if (s.vocab.dslabel) {
 				if (!s.vocab.genome) throw '.state[.vocab].genome missing'
+			} else if (s.vocab.genome) {
+				if (!s.vocab.dslabel) throw '.state[.vocab].dslabel missing'
 			} else {
 				if (!Array.isArray(s.vocab.terms)) throw 'vocab.terms must be an array of objects'
 			}

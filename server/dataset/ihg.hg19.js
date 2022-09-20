@@ -12,7 +12,7 @@ module.exports = function() {
 				}
 			],
 			db: {
-				file: 'files/hg19/pnet/clinical/db'
+				file: 'files/hg19/ihg/clinical/db'
 			},
 			termdb: {
 				allowedTermTypes: ['geneVariant']

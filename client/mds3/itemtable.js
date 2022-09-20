@@ -282,6 +282,8 @@ function table_snvindel({ mlst, tk, block }, grid) {
 			// TODO improve code
 			if (Array.isArray(infoValue)) {
 				for (const v of infoValue) {
+					renderInfoTd(m, infoField, v, td2, tk)
+					/*
 					const valueSpan = td2.append('span').text(v)
 					if (infoField && infoField.categories) {
 						const category = infoField.categories[v]
@@ -293,19 +295,10 @@ function table_snvindel({ mlst, tk, block }, grid) {
 							}
 						}
 					}
+					*/
 				}
 			} else {
-				const valueSpan = td2.append('span').text(infoValue)
-				if (infoField && infoField.categories) {
-					const category = infoField.categories[infoValue]
-					if (category) {
-						// {color,label,textcolor}
-						valueSpan.style('padding', '1px 4px').style('background', category.color)
-						if (category.textcolor) {
-							valueSpan.style('color', category.textcolor)
-						}
-					}
-				}
+				renderInfoTd(m, infoField, infoValue, td2, tk)
 			}
 
 			if (infoField && infoField.Description) {
@@ -315,6 +308,36 @@ function table_snvindel({ mlst, tk, block }, grid) {
 					.style('font-size', '.8em')
 					.style('opacity', 0.6)
 					.text(infoField.Description)
+			}
+		}
+	}
+}
+
+function renderInfoTd(m, infoField, infoValue, td, tk) {
+	/* render the <td> cell for one INFO field for a variant
+m{}
+key:str
+infoValue:str
+td: <td>
+tk{}
+*/
+	if (infoField.urlBase) {
+		// value of this info field will be rendered as url
+		td.append('a')
+			.text(infoValue)
+			.attr('href', infoField.urlBase + infoValue)
+			.attr('target', '_blank')
+		return
+	}
+	// this key is not rendered as url, show it using following logic
+	const valueSpan = td.append('span').text(infoValue)
+	if (infoField && infoField.categories) {
+		const category = infoField.categories[infoValue]
+		if (category) {
+			// {color,label,textcolor}
+			valueSpan.style('padding', '1px 4px').style('background', category.color)
+			if (category.textcolor) {
+				valueSpan.style('color', category.textcolor)
 			}
 		}
 	}
@@ -332,9 +355,9 @@ function print_mname(div, m) {
 
 function print_snv(holder, m, tk) {
 	let printto = holder
-	if (tk.mds.queries && tk.mds.queries.snvindel.url && tk.mds.queries.snvindel.url.key in m) {
+	if (tk.mds.queries && tk.mds.queries.snvindel.variantUrl && tk.mds.queries.snvindel.variantUrl.key in m) {
 		const a = holder.append('a')
-		a.attr('href', tk.mds.queries.snvindel.url.base + m[tk.mds.queries.snvindel.url.key])
+		a.attr('href', tk.mds.queries.snvindel.variantUrl.base + m[tk.mds.queries.snvindel.variantUrl.key])
 		a.attr('target', '_blank')
 		printto = a
 	}

@@ -263,6 +263,10 @@ export function setAuth(opts) {
 	}
 }
 
+export function isInSession(dslabel) {
+	return dslabel && dsAuthOk.has(dslabel)
+}
+
 /* 
 	mayShowAuthUi() is the client-side "gatekeeper"
 	method to check if a dataset requires credentials

@@ -11,7 +11,18 @@ import Partjson from 'partjson'
 import { dofetch3, to_svg } from '#src/client'
 import { sayerror } from '#dom/error'
 import { getSeriesTip } from '#dom/svgSeriesTips'
+import { renderAtRiskG } from '#dom/renderAtRisk'
+import { renderPvalues } from '#dom/renderPvalueTable'
 
+/*
+class Cuminc
+- for cox regression cumulative incidence test
+- simpler workflow relative to class MassCumInc:
+	- input data is for a single chart
+	- no hidden series
+	- no skipped series
+	- no skipped charts
+*/
 export class Cuminc {
 	constructor(opts) {
 		this.pj = getPj(this)
@@ -29,7 +40,7 @@ export class Cuminc {
 			holder,
 			chartsDiv: holder.append('div').style('margin', '10px'),
 			legendDiv: holder.append('div').style('margin', '5px'),
-			skippedChartsDiv: holder.append('div').style('margin', '25px 5px 15px 5px')
+			hiddenDiv: holder.append('div').style('margin', '5px 5px 15px 5px')
 		}
 
 		this.lineFxn = line()
@@ -37,32 +48,32 @@ export class Cuminc {
 			.x(c => c.scaledX)
 			.y(c => c.scaledY)
 
+		this.hidePlotTitle = true
+
 		setRenderers(this)
 
 		this.legendRenderer = htmlLegend(this.dom.legendDiv, {
 			settings: {
 				legendOrientation: 'vertical'
 			},
-			handlers: {
-				legend: {
-					click: this.legendClick
-				}
-			}
+			handlers: {}
 		})
 	}
 
 	main(data) {
 		this.settings = this.state.config.settings.cuminc
-		this.hiddenOverlays = []
+		this.settings.atRiskVisible = false
 		this.processData(data)
 		this.pj.refresh({ data: this.currData })
 		this.setTerm2Color(this.pj.tree.charts)
 		this.render()
-		this.legendRenderer(this.legendData)
-		this.renderSkippedCharts(this.dom.skippedChartsDiv, this.skippedCharts)
 	}
 
 	processData(data) {
+		// data is for a single chart/snp
+		if (new Set(data.case.map(d => d[0])).size != 1) throw 'should have one chart'
+
+		// process case data
 		data.keys = ['chartId', 'seriesId', 'time', 'cuminc', 'low', 'high']
 		this.uniqueSeriesIds = new Set()
 		this.currData = []
@@ -78,50 +89,42 @@ export class Cuminc {
 
 		this.refs = {} //data.refs
 
-		// assume only one chart for now
-		this.tests = {
-			[this.currData[0].chartId]: data.tests //[0]
-		}
-
-		// process skipped series
-		this.lowSampleSize = {}
-		if (data.lowSampleSize) {
-			// hide skipped series of hidden series
-			for (const chart in data.lowSampleSize) {
-				const serieses = data.lowSampleSize[chart].filter(series => !this.hiddenOverlays.includes(series))
-				if (serieses) this.lowSampleSize[chart] = serieses
-			}
-		}
-
-		this.lowEventCnt = {}
-		if (data.lowEventCnt) {
-			// hide skipped series of hidden series
-			for (const chart in data.lowEventCnt) {
-				const serieses = data.lowEventCnt[chart].filter(series => !this.hiddenOverlays.includes(series))
-				if (serieses) this.lowEventCnt[chart] = serieses
-			}
-		}
-
-		// process skipped charts
-		this.skippedCharts = data.skippedCharts
+		// process statistical tests
+		this.tests = {}
+		const chartIds = Object.keys(data.tests)
+		if (chartIds.length != 1) throw 'should have one chart'
+		const chartId = chartIds[0]
+		this.tests[chartId] = []
+		const chartTests = data.tests[chartId]
+		if (chartTests.length != 1) throw 'should have one test'
+		const test = chartTests[0]
+		this.tests[chartId].push({
+			pvalue: { id: 'pvalue', text: test.permutation ? test.pvalue + '*' : test.pvalue },
+			series1: { id: test.series1 },
+			series2: { id: test.series2 },
+			permutation: test.permutation
+		})
 	}
 
 	setTerm2Color(charts) {
 		if (!charts) return
+		if (charts.length != 1) throw 'should be a single chart'
+		const chart = charts[0]
 		this.term2toColor = {}
 		this.colorScale = this.uniqueSeriesIds.size < 11 ? scaleOrdinal(schemeCategory10) : scaleOrdinal(schemeCategory20)
 		const legendItems = []
-		for (const chart of charts) {
-			for (const series of chart.serieses) {
-				this.term2toColor[series.seriesId] = rgb(this.colorScale(series.seriesId))
-				if (!legendItems.find(d => d.seriesId == series.seriesId)) {
-					legendItems.push({
-						seriesId: series.seriesId,
-						text: series.seriesLabel,
-						color: this.term2toColor[series.seriesId],
-						isHidden: false // this.hiddenOverlays.includes(series.seriesId)
-					})
-				}
+		for (const series of chart.serieses) {
+			const c = { orig: this.colorScale(series.seriesId) }
+			c.rgb = rgb(c.orig)
+			c.adjusted = c.rgb.toString()
+			this.term2toColor[series.seriesId] = c
+
+			if (!legendItems.find(d => d.seriesId == series.seriesId)) {
+				legendItems.push({
+					seriesId: series.seriesId,
+					text: series.seriesLabel,
+					color: this.term2toColor[series.seriesId].adjusted
+				})
 			}
 		}
 		if (this.state.config.term2 && legendItems.length) {
@@ -134,9 +137,31 @@ export class Cuminc {
 		} else {
 			this.legendData = []
 		}
+		const chartTests = this.tests[chart.chartId]
+		if (chartTests.length != 1) throw 'should have one test'
+		const test = chartTests[0]
+		for (const key in test) {
+			if (key == 'pvalue') {
+				// p-value of test
+				test[key].color = '#000'
+			} else if (key.startsWith('series')) {
+				// series of test
+				const item = legendItems.find(item => item.seriesId == test[key].id)
+				test[key].color = item.color
+				test[key].text = item.text
+			} else {
+				// permutation flag
+				continue
+			}
+		}
 	}
 }
 
+/*
+class MassCumInc
+- for general cumulative incidence analysis
+- input data is for one or more charts
+*/
 class MassCumInc {
 	constructor(opts) {
 		this.type = 'cuminc'
@@ -152,6 +177,7 @@ class MassCumInc {
 			holder,
 			chartsDiv: holder.append('div').style('margin', '10px'),
 			legendDiv: holder.append('div').style('margin', '5px'),
+			hiddenDiv: holder.append('div').style('margin', '5px 5px 15px 5px'),
 			skippedChartsDiv: holder.append('div').style('margin', '25px 5px 15px 5px')
 		}
 		if (this.dom.header) this.dom.header.html('Cumulative Incidence Plot')
@@ -165,6 +191,16 @@ class MassCumInc {
 		setInteractivity(this)
 		setRenderers(this)
 		this.legendRenderer = htmlLegend(this.dom.legendDiv, {
+			settings: {
+				legendOrientation: 'vertical'
+			},
+			handlers: {
+				legend: {
+					click: this.legendClick
+				}
+			}
+		})
+		this.hiddenRenderer = htmlLegend(this.dom.hiddenDiv, {
 			settings: {
 				legendOrientation: 'vertical'
 			},
@@ -209,10 +245,48 @@ class MassCumInc {
 						'overlay',
 						'divideBy',
 						{
-							label: 'Minimum number of samples in series',
+							label: 'Minimum sample size',
+							title: 'Minimum number of samples in series',
 							type: 'number',
 							chartType: 'cuminc',
 							settingsKey: 'minSampleSize'
+						},
+						{
+							label: 'Chart width',
+							type: 'number',
+							chartType: 'cuminc',
+							settingsKey: 'svgw',
+							title: 'The internal width of the chart plot'
+						},
+						{
+							label: 'Chart height',
+							type: 'number',
+							chartType: 'cuminc',
+							settingsKey: 'svgh',
+							title: 'The internal height of the chart plot'
+						},
+						{
+							label: 'X-axis ticks',
+							type: 'text',
+							chartType: 'cuminc',
+							settingsKey: 'xTickValues',
+							title: `Option to customize the x-axis tick values, enter as comma-separated values. Will be ignored if empty`,
+							processInput: value => (value ? value.split(',').map(Number) : [])
+						},
+						{
+							label: 'At-risk counts',
+							boxLabel: 'Visible',
+							type: 'checkbox',
+							chartType: 'cuminc',
+							settingsKey: 'atRiskVisible',
+							title: 'Display the at-risk counts'
+						},
+						{
+							label: '95% CI',
+							boxLabel: 'Visible',
+							type: 'checkbox',
+							chartType: 'cuminc',
+							settingsKey: 'ciVisible'
 						}
 					]
 				})
@@ -249,17 +323,17 @@ class MassCumInc {
 					this.state.config.term.term.name +
 						' <span style="opacity:.6;font-size:.7em;margin-left:10px;">CUMULATIVE INCIDENCE</span>'
 				)
-			Object.assign(this.settings, this.state.config.settings)
 
+			Object.assign(this.settings, this.state.config.settings)
+			this.settings.hidden = this.getHidden()
+			this.settings.xTitleLabel = 'Years since diagnosis' // TODO: do not harcode time unit (see survival.js)
 			const reqOpts = this.getDataRequestOpts()
 			const data = await this.app.vocabApi.getNestedChartSeriesData(reqOpts)
 			this.app.vocabApi.syncTermData(this.state.config, data)
-			this.hiddenOverlays = this.getHiddenOverlays()
 			this.processData(data)
 			this.pj.refresh({ data: this.currData })
 			this.setTerm2Color(this.pj.tree.charts)
 			this.render()
-			this.legendRenderer(this.legendData)
 			this.renderSkippedCharts(this.dom.skippedChartsDiv, this.skippedCharts)
 		} catch (e) {
 			console.error(e)
@@ -281,13 +355,20 @@ class MassCumInc {
 		return opts
 	}
 
-	getHiddenOverlays() {
+	getHidden() {
 		const tw = this.state.config.term2
 		if (!tw) return []
-		const h = tw.q.hiddenValues
-		return Object.keys(h)
-			.filter(k => h[k])
-			.map(k => tw.term.values[k].label)
+		const obj = tw.q.hiddenValues
+		const hiddenSeries = Object.keys(obj).map(k => {
+			if (Object.keys(tw.term.values).includes(k)) {
+				// hidden value is a term value
+				return tw.term.values[k].label
+			} else {
+				// hidden value is a bin label
+				return k
+			}
+		})
+		return hiddenSeries
 	}
 
 	processData(data) {
@@ -305,35 +386,23 @@ class MassCumInc {
 		}
 
 		this.refs = data.refs
-		const labelOrder = this.refs.bins && this.refs.bins.length > 0 ? this.refs.bins.map(b => b.label) : null
 
-		this.tests = {}
 		// process statistical tests
+		this.tests = {}
 		if (data.tests) {
 			for (const chartId in data.tests) {
-				// hide tests of hidden series
-				const visibleTests = data.tests[chartId].filter(
-					test => !this.hiddenOverlays.includes(test.series1) && !this.hiddenOverlays.includes(test.series2)
-				)
-				if (!visibleTests.length) continue
-				this.tests[chartId] = visibleTests
-				// sort tests
-				if (labelOrder) {
-					// series 1 should have smaller bin value
-					for (const test of this.tests[chartId]) {
-						const orderedSeries = [test.series1, test.series2].sort(
-							(a, b) => labelOrder.indexOf(a) - labelOrder.indexOf(b)
-						)
-						test.series1 = orderedSeries[0]
-						test.series2 = orderedSeries[1]
-					}
-					// sort first by series1 then by series2
-					this.tests[chartId].sort(
-						(a, b) =>
-							labelOrder.indexOf(a.series1) - labelOrder.indexOf(b.series1) ||
-							labelOrder.indexOf(a.series2) - labelOrder.indexOf(b.series2)
-					)
+				const chartTests = data.tests[chartId]
+				this.tests[chartId] = []
+				for (const test of chartTests) {
+					if (this.settings.hidden.includes(test.series1) || this.settings.hidden.includes(test.series2)) continue // hide tests that contain hidden series
+					this.tests[chartId].push({
+						pvalue: { id: 'pvalue', text: test.permutation ? test.pvalue + '*' : test.pvalue },
+						series1: { id: test.series1 },
+						series2: { id: test.series2 },
+						permutation: test.permutation
+					})
 				}
+				if (!this.tests[chartId].length) delete this.tests[chartId]
 			}
 		}
 
@@ -342,7 +411,7 @@ class MassCumInc {
 		if (data.lowSampleSize) {
 			// hide skipped series of hidden series
 			for (const chart in data.lowSampleSize) {
-				const serieses = data.lowSampleSize[chart].filter(series => !this.hiddenOverlays.includes(series))
+				const serieses = data.lowSampleSize[chart].filter(series => !this.settings.hidden.includes(series))
 				if (serieses) this.lowSampleSize[chart] = serieses
 			}
 		}
@@ -351,7 +420,7 @@ class MassCumInc {
 		if (data.lowEventCnt) {
 			// hide skipped series of hidden series
 			for (const chart in data.lowEventCnt) {
-				const serieses = data.lowEventCnt[chart].filter(series => !this.hiddenOverlays.includes(series))
+				const serieses = data.lowEventCnt[chart].filter(series => !this.settings.hidden.includes(series))
 				if (serieses) this.lowEventCnt[chart] = serieses
 			}
 		}
@@ -370,13 +439,17 @@ class MassCumInc {
 		const legendItems = []
 		for (const chart of charts) {
 			for (const series of chart.serieses) {
-				this.term2toColor[series.seriesId] = rgb(this.colorScale(series.seriesId))
+				const c = { orig: this.colorScale(series.seriesId) }
+				c.rgb = rgb(c.orig)
+				c.adjusted = c.rgb.toString()
+				this.term2toColor[series.seriesId] = c
+
 				if (!legendItems.find(d => d.seriesId == series.seriesId)) {
 					legendItems.push({
 						seriesId: series.seriesId,
 						text: series.seriesLabel,
-						color: this.term2toColor[series.seriesId],
-						isHidden: this.hiddenOverlays.includes(series.seriesId)
+						color: this.term2toColor[series.seriesId].adjusted,
+						isHidden: this.settings.hidden.includes(series.seriesId)
 					})
 				}
 			}
@@ -385,11 +458,37 @@ class MassCumInc {
 			this.legendData = [
 				{
 					name: this.state.config.term2.term.name,
-					items: legendItems
+					items: legendItems.filter(s => !s.isHidden)
+				}
+			]
+
+			this.hiddenData = [
+				{
+					name: `<span style='color:#aaa; font-weight:400'><span>Hidden categories</span><span style='font-size:0.8rem'> CLICK TO SHOW</span></span>`,
+					items: legendItems.filter(s => s.isHidden).map(item => Object.assign({}, item, { isHidden: false }))
 				}
 			]
 		} else {
 			this.legendData = []
+		}
+		for (const chartId in this.tests) {
+			const chartTests = this.tests[chartId]
+			for (const test of chartTests) {
+				for (const key in test) {
+					if (key == 'pvalue') {
+						// p-value of test
+						test[key].color = '#000'
+					} else if (key.startsWith('series')) {
+						// series of test
+						const item = legendItems.find(item => item.seriesId == test[key].id)
+						test[key].color = item.color
+						test[key].text = item.text
+					} else {
+						// permutation flag
+						continue
+					}
+				}
+			}
 		}
 	}
 }
@@ -408,10 +507,20 @@ function setRenderers(self) {
 
 		self.dom.holder.style('display', 'inline-block')
 		self.dom.chartsDiv.on('mouseover', self.mouseover).on('mouseout', self.mouseout)
+
+		self.legendRenderer(self.settings.atRiskVisible ? [] : self.legendData)
+
+		if (!self.hiddenData?.[0]?.items.length) self.dom.hiddenDiv.style('display', 'none')
+		else {
+			self.dom.hiddenDiv.style('display', '')
+			self.hiddenRenderer(self.hiddenData)
+		}
 	}
 
 	self.addCharts = function(chart) {
 		const s = self.settings
+		setVisibleSerieses(chart, s)
+
 		const div = select(this)
 			.append('div')
 			.attr('class', 'pp-cuminc-chart')
@@ -439,6 +548,8 @@ function setRenderers(self) {
 			.datum(chart.chartId)
 			.html(chart.chartTitle)
 
+		if (self.hidePlotTitle) div.select('.sjpcb-cuminc-title').style('display', 'none')
+
 		if (chart.serieses) {
 			const svg = div.append('svg').attr('class', 'pp-cuminc-svg')
 			renderSVG(svg, chart, s, 0)
@@ -458,11 +569,20 @@ function setRenderers(self) {
 
 			// p-values legend
 			if (self.tests && chart.chartId in self.tests) {
-				const pvaldiv = div
+				const holder = div
 					.select('.pp-cuminc-chartLegends')
 					.style('display', 'inline-block')
 					.append('div')
-				renderPvalues(pvaldiv, chart, self.tests[chart.chartId], s)
+				renderPvalues({
+					holder,
+					plot: 'cuminc',
+					tests: self.tests[chart.chartId],
+					s,
+					bins: self.refs.bins,
+					tip: null,
+					setActiveMenu: null,
+					showHiddenTests: null
+				})
 			}
 
 			// skipped series legends
@@ -489,14 +609,22 @@ function setRenderers(self) {
 		}
 	}
 
+	function setVisibleSerieses(chart, s) {
+		chart.visibleSerieses = s.hidden
+			? chart.serieses.filter(series => !s.hidden.includes(series.seriesId))
+			: chart.serieses
+	}
+
 	self.updateCharts = function(chart) {
 		const s = self.settings
+		setVisibleSerieses(chart, s)
+
 		const div = select(this)
 
 		div
 			.transition()
 			.duration(s.duration)
-			//.style('width', s.svgw + 50 + 'px')
+			.style('width', s.svgw + 50 + 'px')
 			.style('background', 1 || s.orderChartsBy == 'organ-system' ? chart.color : '')
 
 		div
@@ -505,6 +633,8 @@ function setRenderers(self) {
 			.style('height', s.chartTitleDivHt + 'px')
 			.datum(chart.chartId)
 			.html(chart.chartTitle)
+
+		if (self.hidePlotTitle) div.select('.sjpcb-cuminc-title').style('display', 'none')
 
 		div.selectAll('.sjpcb-lock-icon').style('display', s.scale == 'byChart' ? 'block' : 'none')
 
@@ -521,11 +651,20 @@ function setRenderers(self) {
 
 			// p-values legend
 			if (self.tests && chart.chartId in self.tests) {
-				const pvaldiv = div
+				const holder = div
 					.select('.pp-cuminc-chartLegends')
 					.style('display', 'inline-block')
 					.append('div')
-				renderPvalues(pvaldiv, chart, self.tests[chart.chartId], s)
+				renderPvalues({
+					holder,
+					plot: 'cuminc',
+					tests: self.tests[chart.chartId],
+					s,
+					bins: self.refs.bins,
+					tip: null,
+					setActiveMenu: null,
+					showHiddenTests: null
+				})
 			}
 
 			// skipped series legends
@@ -580,21 +719,24 @@ function setRenderers(self) {
 	}
 
 	function renderSVG(svg, chart, s, duration) {
+		const extraHeight = s.atRiskVisible
+			? s.axisTitleFontSize + 4 + chart.visibleSerieses.length * 2 * s.axisTitleFontSize
+			: 0
+
 		svg
 			.transition()
 			.duration(duration)
 			.attr('width', s.svgw)
-			.attr('height', s.svgh)
+			.attr('height', s.svgh + extraHeight)
 			.style('overflow', 'visible')
 			.style('padding-left', '20px')
 
 		/* eslint-disable */
-		const [mainG, seriesesG, axisG, xAxis, yAxis, xTitle, yTitle, plotRect] = getSvgSubElems(svg, chart)
+		const [mainG, seriesesG, axisG, xAxis, yAxis, xTitle, yTitle, atRiskG, plotRect] = getSvgSubElems(svg, chart)
 		/* eslint-enable */
 		//if (d.xVals) computeScales(d, s);
-
-		mainG.attr('transform', 'translate(' + s.svgPadding.left + ',' + s.svgPadding.top + ')')
-		chart.visibleSerieses = chart.serieses.filter(s => !self.hiddenOverlays.includes(s.seriesId))
+		const xOffset = s.svgPadding.left
+		mainG.attr('transform', 'translate(' + xOffset + ',' + s.svgPadding.top + ')')
 		const serieses = seriesesG
 			.selectAll('.sjpcb-cuminc-series')
 			.data(chart.visibleSerieses, d => (d && d[0] ? d[0].seriesId : ''))
@@ -612,6 +754,13 @@ function setRenderers(self) {
 			})
 
 		renderAxes(xAxis, xTitle, yAxis, yTitle, s, chart)
+		renderAtRiskG({
+			g: atRiskG,
+			s,
+			chart,
+			term2values: self.state.config.term2?.values,
+			term2toColor: self.term2toColor
+		})
 
 		plotRect
 			.attr('x', 0) //s.svgPadding.left) //s.svgh - s.svgPadding.top - s.svgPadding.bottom + 5)
@@ -621,95 +770,24 @@ function setRenderers(self) {
 
 		svg.seriesTip.update({
 			xScale: chart.xScale,
+			xTitleLabel: s.xTitleLabel,
+			decimals: s.seriesTipDecimals,
 			serieses: chart.visibleSerieses.map(s => {
 				const seriesLabel = s.seriesLabel ? `${s.seriesLabel}:` : 'Cumulative Incidence:'
-				const color = self.term2toColor[s.seriesId]
+				const color = self.term2toColor[s.seriesId].adjusted
 				return {
 					data: s.data.map(d => {
 						return {
 							x: d.x,
 							html:
 								`<span style='color: ${color}'>` +
-								`${seriesLabel} ${d.y.toFixed(2)} (${d.low.toFixed(2)} -${d.high.toFixed(2)})` +
+								`${seriesLabel} ${d.y.toFixed(2)} (${d.low.toFixed(2)} - ${d.high.toFixed(2)})` +
 								`</span>`
 						}
 					})
 				}
 			})
 		})
-	}
-
-	function renderPvalues(pvaldiv, chart, tests, s) {
-		const fontSize = s.axisTitleFontSize - 2
-		const maxPvalsToShow = 10
-
-		pvaldiv.selectAll('*').remove()
-
-		// title div
-		pvaldiv
-			.append('div')
-			.style('padding-bottom', '5px')
-			.style('font-size', fontSize + 'px')
-			.style('font-weight', 'bold')
-			.text("Group comparisons (Gray's test)")
-
-		// table div
-		// need separate divs for title and table
-		// to support table scrolling
-		const tablediv = pvaldiv.append('div').style('border', '1px solid #ccc')
-		if (tests.length > maxPvalsToShow) {
-			tablediv.style('overflow', 'auto').style('height', '220px')
-		}
-
-		// table
-		const table = tablediv.append('table').style('width', '100%')
-
-		// table header
-		table
-			.append('thead')
-			.append('tr')
-			.selectAll('td')
-			.data(['Group 1', 'Group 2', 'P-value'])
-			.enter()
-			.append('td')
-			.style('padding', '1px 20px 1px 3px')
-			.style('color', '#858585')
-			.style('position', 'sticky')
-			.style('top', '0px')
-			.style('background', 'white')
-			.style('font-size', fontSize + 'px')
-			.text(column => column)
-
-		// table rows
-		const tbody = table.append('tbody')
-		const tr = tbody
-			.selectAll('tr')
-			.data(tests)
-			.enter()
-			.append('tr')
-			.attr('class', 'pp-cuminc-chartLegends-pvalue')
-
-		// table cells
-		tr.selectAll('td')
-			.data(d => [
-				chart.serieses.find(series => series.seriesId == d.series1).seriesLabel,
-				chart.serieses.find(series => series.seriesId == d.series2).seriesLabel,
-				d.permutation ? d.pvalue + '*' : d.pvalue
-			])
-			.enter()
-			.append('td')
-			.style('padding', '1px 20px 1px 3px')
-			.style('font-size', fontSize + 'px')
-			.text(d => d)
-
-		// footnote div
-		if (tests.find(test => test.permutation)) {
-			pvaldiv
-				.append('div')
-				.style('margin-top', '10px')
-				.style('font-size', fontSize - 2 + 'px')
-				.text("*computed by permutation of Gray's test statistic")
-		}
 	}
 
 	function renderSkippedSeries(div, title, serieses, s) {
@@ -741,7 +819,7 @@ function setRenderers(self) {
 	}
 
 	function getSvgSubElems(svg, chart) {
-		let mainG, seriesesG, axisG, xAxis, yAxis, xTitle, yTitle, plotRect, line
+		let mainG, seriesesG, axisG, xAxis, yAxis, xTitle, yTitle, atRiskG, plotRect, line
 		if (!svg.select('.sjpcb-cuminc-mainG').size()) {
 			mainG = svg.append('g').attr('class', 'sjpcb-cuminc-mainG')
 			seriesesG = mainG.append('g').attr('class', 'sjpcb-cuminc-seriesesG')
@@ -750,12 +828,16 @@ function setRenderers(self) {
 			yAxis = axisG.append('g').attr('class', 'sjpcb-cuminc-y-axis')
 			xTitle = axisG.append('g').attr('class', 'sjpcb-cuminc-x-title')
 			yTitle = axisG.append('g').attr('class', 'sjpcb-cuminc-y-title')
+			atRiskG = mainG
+				.append('g')
+				.attr('class', 'sjpp-cuminc-atrisk')
+				.on('click', self.legendClick)
 
 			line = mainG
 				.append('line')
 				.attr('class', 'sjpcb-plot-tip-line')
 				.attr('stroke', '#000')
-				.attr('stroke-width', '1px')
+				.attr('stroke-width', '2px')
 			plotRect = mainG
 				.append('rect')
 				.attr('class', 'sjpcb-plot-tip-rect')
@@ -768,6 +850,7 @@ function setRenderers(self) {
 			yAxis = axisG.select('.sjpcb-cuminc-y-axis')
 			xTitle = axisG.select('.sjpcb-cuminc-x-title')
 			yTitle = axisG.select('.sjpcb-cuminc-y-title')
+			atRiskG = mainG.select('.sjpp-cuminc-atrisk').on('click', self.legendClick)
 			plotRect = mainG.select('.sjpcb-plot-tip-rect')
 			line = mainG.select('.sjpcb-plot-tip-line')
 		}
@@ -776,7 +859,7 @@ function setRenderers(self) {
 			svg.seriesTip = getSeriesTip(line, plotRect, self.app?.tip)
 		}
 
-		return [mainG, seriesesG, axisG, xAxis, yAxis, xTitle, yTitle, plotRect]
+		return [mainG, seriesesG, axisG, xAxis, yAxis, xTitle, yTitle, atRiskG, plotRect]
 	}
 
 	function renderSeries(g, chart, series, i, s, duration) {
@@ -791,7 +874,8 @@ function setRenderers(self) {
 					.y0(c => c.scaledY[1])
 					.y1(c => c.scaledY[2])(series.data)
 			)
-			.style('fill', self.term2toColor[series.seriesId].toString())
+			.style('display', s.ciVisible ? '' : 'none')
+			.style('fill', self.term2toColor[series.seriesId].adjusted)
 			.style('opacity', '0.15')
 			.style('stroke', 'none')
 
@@ -849,46 +933,76 @@ function setRenderers(self) {
 		const subg = g.append('g')
 
 		const seriesName = data[0].seriesName
-		const color = self.term2toColor[data[0].seriesId]
+		const color = self.term2toColor[data[0].seriesId].adjusted
 
 		if (seriesName == 'cuminc') {
 			g.append('path')
 				.attr('d', self.lineFxn(data))
 				.style('fill', 'none')
-				.style('stroke', color.darker())
+				.style('stroke', color)
+				.style('stroke-width', 2)
 				.style('opacity', 1)
 				.style('stroke-opacity', 1)
 		}
 	}
 
-	function renderAxes(xAxis, xTitle, yAxis, yTitle, s, d) {
-		xAxis
-			.attr('transform', 'translate(0,' + (s.svgh - s.svgPadding.top - s.svgPadding.bottom + s.xAxisOffset) + ')')
-			.call(axisBottom(d.xScale).ticks(5))
+	function renderAxes(xAxis, xTitle, yAxis, yTitle, s, chart) {
+		// x-axis ticks
+		if (s.xTickValues?.length) {
+			// custom x-tick values
+			chart.xTickValues = s.xTickValues.filter(v => v === 0 || (v >= chart.xMin && v <= chart.xMax))
+		} else {
+			// compute x-tick values
+			// compute width between ticks for a maximum of 5 ticks
+			const tickWidth = (chart.xMax - chart.xMin) / 5
+			// round tick width to the nearest 5
+			const log = Math.floor(Math.log10(tickWidth))
+			const tickWidth_rnd = Math.round(tickWidth / (5 * 10 ** log)) * (5 * 10 ** log) || 1 * 10 ** log
+			// compute tick values using tick width
+			chart.xTickValues = [0]
+			let tick = chart.xMin
+			while (tick < chart.xMax) {
+				chart.xTickValues.push(tick)
+				tick = tick + tickWidth_rnd
+			}
+		}
 
-		yAxis.attr('transform', `translate(${s.yAxisOffset},0)`).call(
+		const xTicks = axisBottom(chart.xScale).tickValues(chart.xTickValues)
+
+		// without this pixel offset, the axes and data are slightly misaligned
+		// this could be because the axes have a 0.5 offset in their path,
+		// for example: <path class="domain" stroke="#000" d="M0.5,6V0.5H325.5V6"></path>
+		const pixelOffset = -0.5
+
+		xAxis
+			.attr(
+				'transform',
+				`translate(${pixelOffset}, ${s.svgh - s.svgPadding.top - s.svgPadding.bottom + s.xAxisOffset + pixelOffset})`
+			)
+			.call(xTicks)
+
+		yAxis.attr('transform', `translate(${s.yAxisOffset + pixelOffset}, ${pixelOffset})`).call(
 			axisLeft(
 				scaleLinear()
-					.domain(d.yScale.domain())
+					.domain(chart.yScale.domain())
 					.range([0, s.svgh - s.svgPadding.top - s.svgPadding.bottom])
 			).ticks(5)
 		)
 
 		xTitle.select('text, title').remove()
-		const xTitleLabel = self.state.config.xlabel || 'Years since diagnosis'
 		const xText = xTitle
 			.attr(
 				'transform',
 				'translate(' +
 					(s.svgw - s.svgPadding.left - s.svgPadding.right) / 2 +
 					',' +
-					(s.svgh - s.axisTitleFontSize) +
+					(s.svgh - s.axisTitleFontSize - 4) +
 					')'
 			)
 			.append('text')
 			.style('text-anchor', 'middle')
 			.style('font-size', s.axisTitleFontSize + 'px')
-			.text(xTitleLabel)
+			.text(s.xTitleLabel)
 
 		const yTitleLabel = 'Cumulative Incidence (%)'
 		yTitle.select('text, title').remove()
@@ -947,26 +1061,31 @@ function setInteractivity(self) {
 		event.stopPropagation()
 		const d = event.target.__data__
 		if (d === undefined) return
-		const hidden = self.hiddenOverlays.slice()
+		const hidden = self.settings.hidden.slice()
 		const i = hidden.indexOf(d.seriesId)
-		if (i == -1) hidden.push(d.seriesId)
-		else hidden.splice(i, 1)
-
-		const hiddenValues = {}
-		const term2 = JSON.parse(JSON.stringify(self.state.config.term2))
-		for (const v of hidden) {
-			for (const k in term2.term.values) {
-				const value = term2.term.values[k]
-				if (hidden.includes(value.label)) hiddenValues[k] = 1
-			}
-		}
-		term2.q.hiddenValues = hiddenValues
-
+		i == -1 ? hidden.push(d.seriesId) : hidden.splice(i, 1)
+		const term2 = self.updateTerm2HiddenValues(hidden)
 		self.app.dispatch({
 			type: 'plot_edit',
 			id: self.id,
 			config: { term2 }
 		})
+	}
+
+	self.updateTerm2HiddenValues = function(hidden) {
+		const hiddenValues = {}
+		const term2 = JSON.parse(JSON.stringify(self.state.config.term2))
+		for (const k in term2.term.values) {
+			const value = term2.term.values[k]
+			if (hidden.includes(value.label)) hiddenValues[k] = 1
+		}
+		if (this.refs.bins && this.refs.bins.length) {
+			for (const bin of this.refs.bins) {
+				if (hidden.includes(bin.label)) hiddenValues[bin.label] = 1
+			}
+		}
+		term2.q.hiddenValues = hiddenValues
+		return term2
 	}
 }
 
@@ -978,6 +1097,11 @@ const defaultSettings = JSON.stringify({
 	},
 	cuminc: {
 		minSampleSize: 5,
+		atRiskVisible: true,
+		atRiskLabelOffset: -10,
+		xTickValues: [], // if undefined or empty, will be ignored
+		seriesTipDecimals: 0,
+		ciVisible: false,
 		radius: 5,
 		fill: '#fff',
 		stroke: '#000',
@@ -985,7 +1109,6 @@ const defaultSettings = JSON.stringify({
 		chartMargin: 10,
 		svgw: 400,
 		svgh: 300,
-		coxXlabel: 'Years since diagnosis',
 		svgPadding: {
 			top: 20,
 			left: 55,
@@ -1047,7 +1170,10 @@ function getPj(self) {
 									low: '$low',
 									high: '$high',
 									'_1:scaledX': '=scaledX()',
-									'_1:scaledY': '=scaledY()'
+									'_1:scaledY': '=scaledY()',
+									nrisk: '$nrisk',
+									nevent: '$nevent',
+									ncensor: '$ncensor'
 								},
 								'$time'
 							]
@@ -1088,10 +1214,10 @@ function getPj(self) {
 				return seriesId == 'CI' ? [row.low, row.high] : row[seriesId]
 			},
 			yMin(row) {
-				return row.low
+				return row.cuminc
 			},
 			yMax(row) {
-				return row.high
+				return row.cuminc
 			},
 			xScale(row, context) {
 				const s = self.settings

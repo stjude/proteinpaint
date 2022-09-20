@@ -58,6 +58,7 @@ canvas/*
 pixman-*/*
 serverconfig.json
 server.js*
+!client/rx/server.js
 setup/*gz*
 setup/*
 tmpbuild/*
@@ -89,3 +90,4 @@ p4/public/dev.html
 *.crt
 .ssl
 .RData
+log.txt

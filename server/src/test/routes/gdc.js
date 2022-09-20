@@ -8,13 +8,18 @@ const serverconfig = require('../../serverconfig')
 // sessionid will be the index of the entry in the array
 const sessions = [0]
 
-module.exports = function setRoutes(app, basepath) {
+module.exports = async function setRoutes(app, basepath) {
 	app.use(basepath + '/mds3', (req, res, next) => {
 		if (req.cookies.gdcsessionid) {
 			req.headers['X-Auth-Token'] = sessions[+req.cookies.gdcsessionid]
 		}
 		next()
 	})
+
+	// app.use() from other route setters must be called before app.get|post|all
+	// so delay setting these optional routes (this is done in server/src/auth.js also)
+	await sleep(0)
+
 	app.post('/gdc/ssid', async (req, res) => {
 		const q = req.body
 		const i = sessions.indexOf(q.token)
@@ -67,4 +72,8 @@ module.exports = function setRoutes(app, basepath) {
 		}
 		res.send(str)
 	})
+}
+
+function sleep(ms) {
+	return new Promise(resolve => setTimeout(resolve, ms))
 }

@@ -2,7 +2,7 @@ const tape = require('tape')
 const utils = require('../utils')
 
 tape('\n', function(test) {
-	test.pass('-***- modules/utils specs -***-')
+	test.pass('-***- server/utils specs -***-')
 	test.end()
 })
 

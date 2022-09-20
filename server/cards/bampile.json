@@ -1,7 +1,7 @@
 {
     "ppcalls": [
         {
-            "download": "https://pecan.stjude.cloud/static/proteinpaint_demo/hg19/bampile/bampileDemoData.tar.gz",
+            "download": "https://proteinpaint.stjude.org/ppdemo/hg19/bampile/bampileDemoData.tar.gz",
             "urlparam": "?block=on&genome=hg19&position=chr12:25362480-25363264&bampilefile=Test%20Bampile,proteinpaint_demo/hg19/bampile/tk.gz",
             "runargs": {
                 "parseurl": true,

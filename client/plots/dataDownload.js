@@ -61,7 +61,8 @@ class DataDownload {
 			activeCohort: appState.activeCohort,
 			termfilter: appState.termfilter,
 			config,
-			hasVerifiedToken: this.app.vocabApi.hasVerifiedToken()
+			hasVerifiedToken: this.app.vocabApi.hasVerifiedToken(),
+			tokenVerificationMessage: this.app.vocabApi.tokenVerificationMessage
 		}
 	}
 
@@ -96,13 +97,13 @@ class DataDownload {
 
 	mayRequireToken() {
 		if (this.state.hasVerifiedToken) {
-			this.dom.titleDiv.html('Selected terms')
+			this.dom.titleDiv.style('color', '').html('Selected terms')
 			this.dom.terms.style('display', '')
 			this.dom.addBtn.style('display', '')
 			this.dom.submitDiv.style('display', '')
 			return false
 		} else {
-			this.dom.titleDiv.html('Requires login')
+			this.dom.titleDiv.style('color', '#e44').html(this.state.tokenVerificationMessage || 'Requires login')
 			this.dom.terms.style('display', 'none')
 			this.dom.addBtn.style('display', 'none')
 			this.dom.submitDiv.style('display', 'none')
@@ -249,6 +250,9 @@ function setInteractivity(self) {
 							if (term.type == 'condition') {
 								q.mode = 'cox'
 								q.timeScale = 'age'
+							} else if (term.type == 'float' || term.type == 'integer') {
+								/*** ADD THIS ***/
+								q.mode = 'continuous'
 							}
 							const tw = { id: term.id, term, q }
 							await fillTermWrapper(tw)
@@ -269,9 +273,14 @@ function setInteractivity(self) {
 
 	self.download = () => {
 		const header = ['sample']
+		console.log(self.config.terms)
 		for (const tw of self.config.terms) {
-			header.push(tw.term.name)
-			if (tw.term.type == 'condition') header.push(tw.term.name + ': Age at event')
+			if (tw.term.type == 'condition') {
+				header.push(tw.term.name + `(Event=Grades ${tw.q.breaks[0]}-5)`)
+				header.push(tw.term.name + '(Age at event)')
+			} else {
+				header.push(tw.term.name)
+			}
 		}
 		const rows = [header]
 		for (const s of self.activeSamples) {
@@ -280,8 +289,13 @@ function setInteractivity(self) {
 			for (const tw of self.config.terms) {
 				if (!s[tw.$id]) row.push('')
 				else {
-					row.push(s[tw.$id].key)
-					if (tw.term.type == 'condition') row.push(s[tw.$id].value)
+					if (tw.term.type == 'condition') {
+						row.push(s[tw.$id].key == 0 ? 'No' : 'Yes')
+						row.push(s[tw.$id].value)
+					} else {
+						const v = tw.term.values?.[s[tw.$id].key] || s[tw.$id]
+						row.push(v.label || v.key)
+					}
 				}
 			}
 			rows.push(row)

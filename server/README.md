@@ -4,14 +4,28 @@ The data server backend for the ProteinPaint application
 
 ## Installation
 
-Install the [system depedencies](https://docs.google.com/document/d/1tkEHG_vYtT-OifPV-tlPeWQUMsEd3aWAKf5ExOT8G34/edit#heading=h.jy5sdrb1zkut) as listed in the [installation instructions](https://docs.google.com/document/d/1tkEHG_vYtT-OifPV-tlPeWQUMsEd3aWAKf5ExOT8G34/edit#heading=h.6nxua6c3ik9l).
+The client dependencies should be installed as a workspace, follow the README at the project root.
 
-## Scripts
+You can either:
+- use a docker container for development, see ../build/dev/README.md
+- or install the [system depedencies](https://docs.google.com/document/d/1tkEHG_vYtT-OifPV-tlPeWQUMsEd3aWAKf5ExOT8G34/edit#heading=h.jy5sdrb1zkut)
+as listed in the [installation instructions](https://docs.google.com/document/d/1tkEHG_vYtT-OifPV-tlPeWQUMsEd3aWAKf5ExOT8G34/edit#heading=h.6nxua6c3ik9l).
+
+
+## Develop
+
+From the proteinpaint/server/ directory:
 
 `npm run dev` rebundles backend code
 
 `npm start` runs the proteinpaint server
 
+
 ## Build
 
-Follow the [build instructions](https://docs.google.com/document/d/13gUdU9UrHFkdspcQgc6ToRZJsrdFM4LCwCg7g1SQc4Q/edit?usp=sharing).
+```bash
+npm version [major | minor | patch] # TODO: coordinate version changes across dependent workspaces
+npm pack
+npm publish
+# !!! TODO: When deploying, use `npm update` from within the target host machine. !!!
+```

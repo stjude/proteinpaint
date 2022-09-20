@@ -5,7 +5,7 @@ const path = require('path')
 const pkgfile = path.join(process.cwd(), process.argv[2])
 const pkg = require(pkgfile)
 const min = {}
-if (pkg.dependencies) min.dependencies = pkg.dependencies
-if (pkg.devDependencies) min.devDependencies = pkg.devDependencies
-if (pkg.workspaces) min.workspaces = pkg.workspaces
+for (const propName of ['dependencies', 'devDependencies', 'workspaces', 'imports']) {
+	if (pkg[propName]) min[propName] = pkg[propName]
+}
 console.log(JSON.stringify(min, null, '    '))

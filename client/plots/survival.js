@@ -12,6 +12,8 @@ import { to_svg, rgb2hex } from '#src/client'
 import { fillTermWrapper } from '#termsetting'
 import { Menu } from '#dom/menu'
 import { getSeriesTip } from '#dom/svgSeriesTips'
+import { renderAtRiskG } from '#dom/renderAtRisk'
+import { renderPvalues } from '#dom/renderPvalueTable'
 
 class TdbSurvival {
 	constructor(opts) {
@@ -145,7 +147,7 @@ class TdbSurvival {
 							chartType: 'survival',
 							settingsKey: 'xTickValues',
 							title: `Option to customize the x-axis tick values, enter as comma-separated values. Will be ignored if empty`,
-							processInput: value => value.split(',').map(Number)
+							processInput: value => (value ? value.split(',').map(Number) : [])
 						},
 						{
 							label: 'At-risk counts',
@@ -196,6 +198,9 @@ class TdbSurvival {
 			this.toggleLoadingDiv()
 
 			Object.assign(this.settings, this.state.config.settings)
+			this.settings.hidden = this.getHidden()
+			this.settings.xTitleLabel = this.getXtitleLabel()
+
 			const reqOpts = this.getDataRequestOpts()
 			const data = await this.app.vocabApi.getNestedChartSeriesData(reqOpts)
 			this.toggleLoadingDiv('none')
@@ -226,6 +231,29 @@ class TdbSurvival {
 		return opts
 	}
 
+	getHidden() {
+		const tw = this.state.config.term2
+		if (!tw) return []
+		const obj = tw.q.hiddenValues || {}
+		const hiddenSeries = Object.keys(obj).map(k => {
+			if (Object.keys(tw.term.values).includes(k)) {
+				// hidden value is a term value
+				return tw.term.values[k].label
+			} else {
+				// hidden value is a bin label
+				return k
+			}
+		})
+		return hiddenSeries
+	}
+
+	getXtitleLabel() {
+		const termNum = this.state.config.term.term.type == 'survival' ? 'term' : 'term2'
+		const xUnit = this.settings.timeUnit ? this.settings.timeUnit : this.state.config[termNum].term.unit
+		const xTitleLabel = `Time to Event (${xUnit})`
+		return xTitleLabel
+	}
+
 	processData(data) {
 		this.uniqueSeriesIds = new Set()
 		const rows = []
@@ -240,15 +268,21 @@ class TdbSurvival {
 			this.uniqueSeriesIds.add(obj.seriesId)
 		}
 
-		// hide tests of hidden series
-		this.tests = data.tests
-		if (this.tests) {
-			for (const chart in this.tests) {
-				// remove hidden series from this.tests
-				this.tests[chart] = this.tests[chart].filter(
-					test => !this.settings.hidden.includes(test.series1) && !this.settings.hidden.includes(test.series2)
-				)
-				if (this.tests[chart].length == 0) delete this.tests[chart]
+		// process statistical tests
+		this.tests = {}
+		if (data.tests) {
+			for (const chartId in data.tests) {
+				const chartTests = data.tests[chartId]
+				this.tests[chartId] = []
+				for (const test of chartTests) {
+					if (this.settings.hidden.includes(test.series1) || this.settings.hidden.includes(test.series2)) continue // hide tests that contain hidden series
+					this.tests[chartId].push({
+						pvalue: { id: 'pvalue', text: test.pvalue },
+						series1: { id: test.series1 },
+						series2: { id: test.series2 }
+					})
+				}
+				if (!this.tests[chartId].length) delete this.tests[chartId]
 			}
 		}
 
@@ -337,6 +371,22 @@ class TdbSurvival {
 		} else {
 			this.legendData = []
 		}
+		for (const chartId in this.tests) {
+			const chartTests = this.tests[chartId]
+			for (const test of chartTests) {
+				for (const key in test) {
+					if (key == 'pvalue') {
+						// p-value of test
+						test[key].color = '#000'
+					} else {
+						// series of test
+						const item = legendItems.find(item => item.seriesId == test[key].id)
+						test[key].color = item.color
+						test[key].text = item.text
+					}
+				}
+			}
+		}
 	}
 
 	// helper so that 'Loading...' does not flash when not needed
@@ -378,6 +428,22 @@ function setRenderers(self) {
 			self.hiddenRenderer(self.hiddenData)
 		}
 	}
+
+	const updateHiddenPvalues = hiddenPvalues => {
+		self.app.dispatch({
+			type: 'plot_edit',
+			id: self.id,
+			config: {
+				settings: {
+					survival: {
+						hiddenPvalues
+					}
+				}
+			}
+		})
+	}
+
+	const setActiveMenu = bool => (self.activeMenu = bool)
 
 	self.addCharts = function(chart) {
 		const s = self.settings
@@ -435,11 +501,20 @@ function setRenderers(self) {
 
 			// p-values legend
 			if (self.tests && chart.rawChartId in self.tests) {
-				const pvaldiv = div
+				const holder = div
 					.select('.pp-survival-chartLegends')
 					.style('display', 'inline-block')
 					.append('div')
-				renderPvalues(pvaldiv, chart, self.tests[chart.rawChartId], s)
+				renderPvalues({
+					holder,
+					plot: 'survival',
+					tests: self.tests[chart.rawChartId],
+					s,
+					bins: self.refs.bins,
+					tip: self.app.tip,
+					setActiveMenu,
+					updateHiddenPvalues
+				})
 			}
 		}
 	}
@@ -487,16 +562,27 @@ function setRenderers(self) {
 
 		// p-values legend
 		if (self.tests && chart.rawChartId in self.tests) {
-			const pvaldiv = div
+			const holder = div
 				.select('.pp-survival-chartLegends')
 				.style('display', 'inline-block')
 				.append('div')
-			renderPvalues(pvaldiv, chart, self.tests[chart.rawChartId], s)
+			renderPvalues({
+				holder,
+				plot: 'survival',
+				tests: self.tests[chart.rawChartId],
+				s,
+				bins: self.refs.bins,
+				tip: self.app.tip,
+				setActiveMenu,
+				updateHiddenPvalues
+			})
 		}
 	}
 
 	function renderSVG(svg, chart, s, duration) {
-		const extraHeight = s.atRiskVisible ? 20 + chart.visibleSerieses.length * 20 : 0
+		const extraHeight = s.atRiskVisible
+			? s.axisTitleFontSize + 4 + chart.visibleSerieses.length * 2 * (s.axisTitleFontSize + 4)
+			: 0
 
 		svg
 			.transition()
@@ -529,7 +615,13 @@ function setRenderers(self) {
 			})
 
 		renderAxes(xAxis, xTitle, yAxis, yTitle, s, chart)
-		renderAtRiskG(atRiskG, s, chart)
+		renderAtRiskG({
+			g: atRiskG,
+			s,
+			chart,
+			term2values: self.state.config.term2?.values,
+			term2toColor: self.term2toColor
+		})
 
 		plotRect
 			.attr('x', 0) //s.svgPadding.left) //s.svgh - s.svgPadding.top - s.svgPadding.bottom + 5)
@@ -539,6 +631,8 @@ function setRenderers(self) {
 
 		svg.seriesTip.update({
 			xScale: chart.xScale,
+			xTitleLabel: s.xTitleLabel,
+			decimals: s.seriesTipDecimals,
 			serieses: chart.visibleSerieses.map(s => {
 				const seriesLabel = `${s.seriesLabel || 'Probability'}:`
 				const color = self.term2toColor[s.seriesId].adjusted || '#000'
@@ -557,156 +651,6 @@ function setRenderers(self) {
 				}
 			})
 		})
-	}
-
-	function renderPvalues(pvaldiv, chart, tests, s) {
-		const fontSize = s.axisTitleFontSize - 2
-		const maxPvalsToShow = 10
-
-		pvaldiv.selectAll('*').remove()
-
-		// title div
-		pvaldiv
-			.append('div')
-			.style('padding-bottom', '5px')
-			.style('font-size', fontSize + 'px')
-			.style('font-weight', 'bold')
-			.text('Group comparisons (log-rank test)')
-
-		// table div
-		// need separate divs for title and table
-		// to support table scrolling
-		const tablediv = pvaldiv.append('div').style('border', '1px solid #ccc')
-		if (tests.length > maxPvalsToShow) {
-			tablediv.style('overflow', 'auto').style('height', '220px')
-		}
-
-		const visibleTests = tests.filter(
-			t => !s.hiddenPvalues.find(p => p.series1 === t.series1 && p.series2 === t.series2)
-		)
-
-		if (visibleTests.length) {
-			visibleTests.sort((a, b) => a.pvalue - b.pvalue)
-
-			// table
-			const table = tablediv.append('table').style('width', '100%')
-
-			// table header
-			table
-				.append('thead')
-				.append('tr')
-				.selectAll('td')
-				.data(['Group 1', 'Group 2', 'P-value'])
-				.enter()
-				.append('td')
-				.style('padding', '1px 8px 1px 2px')
-				.style('color', '#858585')
-				.style('position', 'sticky')
-				.style('top', '0px')
-				.style('background', 'white')
-				.style('font-size', fontSize + 'px')
-				.text(column => column)
-
-			// table rows
-			const tbody = table.append('tbody')
-			const tr = tbody
-				.selectAll('tr')
-				.data(visibleTests)
-				.enter()
-				.append('tr')
-				.attr('class', 'pp-survival-chartLegends-pvalue')
-				.on('click', t => {
-					const hiddenPvalues = s.hiddenPvalues.slice()
-					hiddenPvalues.push(t)
-					self.app.dispatch({
-						type: 'plot_edit',
-						id: self.id,
-						config: {
-							settings: {
-								survival: {
-									hiddenPvalues
-								}
-							}
-						}
-					})
-				})
-
-			// table cells
-			tr.selectAll('td')
-				.data(d => [
-					{
-						d,
-						text: chart.serieses.find(series => series.seriesId == d.series1).seriesLabel,
-						color: self.term2toColor[d.series1].adjusted
-					},
-					{
-						d,
-						text: chart.serieses.find(series => series.seriesId == d.series2).seriesLabel,
-						color: self.term2toColor[d.series2].adjusted
-					},
-					{ d, text: d.pvalue, color: '#000' }
-				])
-				.enter()
-				.append('td')
-				.attr('title', 'Click to hide a p-value')
-				.style('color', d => d.color)
-				.style('padding', '1px 8px 1px 2px')
-				.style('font-size', fontSize + 'px')
-				.style('cursor', 'pointer')
-				.text(d => d.text)
-		}
-
-		const hiddenTests = tests.filter(t => s.hiddenPvalues.find(p => p.series1 === t.series1 && p.series2 === t.series2))
-		if (hiddenTests.length) {
-			pvaldiv
-				.append('div')
-				.style('color', '#aaa')
-				.html(`<span style='color:#aaa; font-weight:400'><span>Hidden tests (${hiddenTests.length})</span>`)
-				.on('click', () => {
-					self.app.tip.clear()
-					const divs = self.app.tip.d
-						.append('div')
-						.selectAll('div')
-						.data(hiddenTests)
-						.enter()
-						.append('div')
-						.each(function(d) {
-							self.activeMenu = true
-							const div = select(this)
-							div
-								.append('input')
-								.attr('type', 'checkbox')
-								.style('margin-right', '5px')
-							div.append('span').html(`${d.series1} vs ${d.series2}`)
-						})
-
-					self.app.tip.d
-						.append('button')
-						.html('Show checked test(s)')
-						.on('click', () => {
-							const hiddenPvalues = []
-							divs
-								.filter(function() {
-									return !select(this.firstChild).property('checked')
-								})
-								.each(d => hiddenPvalues.push(d))
-							self.app.dispatch({
-								type: 'plot_edit',
-								id: self.id,
-								config: {
-									settings: {
-										survival: {
-											hiddenPvalues
-										}
-									}
-								}
-							})
-							self.app.tip.hide()
-						})
-
-					self.app.tip.show(event.clientX, event.clientY)
-				})
-		}
 	}
 
 	function getSvgSubElems(svg, chart) {
@@ -898,11 +842,19 @@ function setRenderers(self) {
 				})
 		}
 
+		// without this pixel offset, the axes and data are slightly misaligned
+		// this could be because the axes have a 0.5 offset in their path,
+		// for example: <path class="domain" stroke="#000" d="M0.5,6V0.5H325.5V6"></path>
+		const pixelOffset = -0.5
+
 		xAxis
-			.attr('transform', 'translate(0,' + (s.svgh - s.svgPadding.top - s.svgPadding.bottom + s.xAxisOffset) + ')')
+			.attr(
+				'transform',
+				`translate(${pixelOffset}, ${s.svgh - s.svgPadding.top - s.svgPadding.bottom + s.xAxisOffset + pixelOffset})`
+			)
 			.call(xTicks)
 
-		yAxis.attr('transform', `translate(${s.yAxisOffset},0)`).call(
+		yAxis.attr('transform', `translate(${s.yAxisOffset + pixelOffset}, ${pixelOffset})`).call(
 			axisLeft(
 				scaleLinear()
 					.domain(chart.yScale.domain())
@@ -911,22 +863,19 @@ function setRenderers(self) {
 		)
 
 		xTitle.select('text, title').remove()
-		const termNum = self.state.config.term.term.type == 'survival' ? 'term' : 'term2'
-		const xUnit = s.timeUnit ? s.timeUnit : self.state.config[termNum].term.unit
-		const xTitleLabel = `Time to Event (${xUnit})`
 		const xText = xTitle
 			.attr(
 				'transform',
 				'translate(' +
 					(s.svgw - s.svgPadding.left - s.svgPadding.right) / 2 +
 					',' +
-					(s.svgh - s.axisTitleFontSize) +
+					(s.svgh - s.axisTitleFontSize - 4) +
 					')'
 			)
 			.append('text')
 			.style('text-anchor', 'middle')
 			.style('font-size', s.axisTitleFontSize + 'px')
-			.text(xTitleLabel)
+			.text(s.xTitleLabel)
 
 		const yTitleLabel = 'Probability of Survival'
 		yTitle.select('text, title').remove()
@@ -943,123 +892,6 @@ function setRenderers(self) {
 			.style('text-anchor', 'middle')
 			.style('font-size', s.axisTitleFontSize + 'px')
 			.text(yTitleLabel)
-	}
-
-	function renderAtRiskG(g, s, chart) {
-		const bySeries = {}
-		for (const series of chart.visibleSerieses) {
-			const counts = []
-			let i = 0,
-				d = series.data[0],
-				prev = d, // prev = "previous" data point,
-				nCensored = 0
-
-			// for each x-axis timepoint, find and use the data that applies
-			for (const time of chart.xTickValues) {
-				while (d && d.x < time) {
-					nCensored += d.ncensor
-					prev = d
-					i++
-					d = series.data[i]
-				}
-				// NOTE:
-				// must use the previous data point to compute the starting nrisk at the next timepoint,
-				// since there may not be events/censored exits between or corresponding to all timepoints,
-				// and a final curve drop to zero that happens before the max x-axis timepoint will not be
-				// followed by another data with nrisk counts;
-				// however, must also adjust the prev.nrisk for use in the next timepoint,
-				// since it is a starting count and does not include the exits in that timepoint
-				counts.push([time, prev.nrisk - prev.nevent - prev.ncensor, nCensored])
-			}
-			bySeries[series.seriesId] = counts
-		}
-
-		const y = s.svgh - s.svgPadding.top - s.svgPadding.bottom + 60 // make y-offset option???
-		// fully rerender, later may reuse previously rendered elements
-		// g.selectAll('*').remove()
-
-		const seriesOrder = chart.serieses.map(s => s.seriesId)
-		const v = self.state.config.term2?.values
-		if (v) {
-			seriesOrder.sort((aId, bId) => {
-				const av = v[aId]
-				const bv = v[bId]
-				if (av && bv) {
-					if ('order' in av && 'order' in bv) return av.order - bv.order
-					if (av.order) return av.order
-					if (bv.order) return bv.order
-					return 0
-				}
-				if (av) return av.order || 0
-				if (bv) return bv.order || 0
-				return 0
-			})
-		}
-
-		const data = !s.atRiskVisible
-			? []
-			: Object.keys(bySeries).sort((a, b) => seriesOrder.indexOf(a) - seriesOrder.indexOf(b))
-
-		const sg = g
-			.attr('transform', `translate(0,${y})`)
-			.selectAll(':scope > g')
-			.data(data, seriesId => seriesId)
-
-		sg.exit().remove()
-
-		sg.each(function(seriesId, i) {
-			const g = select(this)
-				.attr('transform', `translate(0,${(i + 1) * 20})`)
-				.attr('fill', s.hidden.includes(seriesId) ? '#aaa' : self.term2toColor[seriesId].adjusted)
-
-			renderAtRiskTick(g.select(':scope>g'), chart, s, seriesId, bySeries[seriesId])
-		})
-
-		sg.enter()
-			.append('g')
-			.each(function(seriesId, i) {
-				const y = (i + 1) * 20
-				const g = select(this)
-					.attr('transform', `translate(0,${y})`)
-					.attr('fill', s.hidden.includes(seriesId) ? '#aaa' : self.term2toColor[seriesId].adjusted)
-
-				const sObj = chart.serieses.find(s => s.seriesId === seriesId)
-				g.append('text')
-					.attr('transform', `translate(${s.atRiskLabelOffset}, 0)`)
-					.attr('text-anchor', 'end')
-					.attr('font-size', `${s.axisTitleFontSize - 4}px`)
-					.attr('cursor', 'pointer')
-					.datum({ seriesId })
-					.text(seriesId && seriesId != '*' ? sObj.seriesLabel || seriesId : 'At-risk')
-
-				renderAtRiskTick(g.append('g'), chart, s, seriesId, bySeries[seriesId])
-			})
-	}
-
-	function renderAtRiskTick(g, chart, s, seriesId, series) {
-		const reversed = series.slice().reverse()
-		const data = chart.xTickValues.map(tickVal => {
-			if (tickVal === 0) return { seriesId, tickVal, atRisk: series[0][1], nCensored: series[0][2] }
-			const d = reversed.find(d => d[0] <= tickVal)
-			return { seriesId, tickVal, atRisk: d[1], nCensored: d[2] }
-		})
-
-		const text = g.selectAll('text').data(data)
-		text.exit().remove()
-		text.each(function(d) {
-			select(this)
-				.attr('transform', d => `translate(${chart.xScale(d.tickVal)},0)`)
-				.attr('font-size', `${s.axisTitleFontSize - 4}px`)
-				.text(d => `${d.atRisk}(${d.nCensored})`)
-		})
-		text
-			.enter()
-			.append('text')
-			.attr('transform', d => `translate(${chart.xScale(d.tickVal)},0)`)
-			.attr('text-anchor', 'middle')
-			.attr('font-size', `${s.axisTitleFontSize - 4}px`)
-			.attr('cursor', 'pointer')
-			.text(d => `${d.atRisk}(${d.nCensored})`)
 	}
 
 	self.getSymbol = function(size) {
@@ -1129,18 +961,29 @@ function setInteractivity(self) {
 			self.showLegendItemMenu(d)
 		} else {
 			hidden.splice(i, 1)
+			const term2 = self.updateTerm2HiddenValues(hidden)
 			self.app.dispatch({
 				type: 'plot_edit',
 				id: self.id,
-				config: {
-					settings: {
-						survival: {
-							hidden
-						}
-					}
-				}
+				config: { term2 }
 			})
 		}
+	}
+
+	self.updateTerm2HiddenValues = function(hidden) {
+		const hiddenValues = {}
+		const term2 = JSON.parse(JSON.stringify(self.state.config.term2))
+		for (const k in term2.term.values) {
+			const value = term2.term.values[k]
+			if (hidden.includes(value.label)) hiddenValues[k] = 1
+		}
+		if (this.refs.bins && this.refs.bins.length) {
+			for (const bin of this.refs.bins) {
+				if (hidden.includes(bin.label)) hiddenValues[bin.label] = 1
+			}
+		}
+		term2.q.hiddenValues = hiddenValues
+		return term2
 	}
 
 	self.showLegendItemMenu = function(d) {
@@ -1173,16 +1016,11 @@ function setInteractivity(self) {
 			callback: () => {
 				const hidden = self.settings.hidden.slice()
 				hidden.push(d.seriesId)
+				const term2 = self.updateTerm2HiddenValues(hidden)
 				self.app.dispatch({
 					type: 'plot_edit',
 					id: self.id,
-					config: {
-						settings: {
-							survival: {
-								hidden
-							}
-						}
-					}
+					config: { term2 }
 				})
 			}
 		})
@@ -1382,6 +1220,7 @@ export async function getPlotConfig(opts, app) {
 				atRiskVisible: true,
 				atRiskLabelOffset: -20,
 				xTickValues: [], // if undefined or empty, will be ignored
+				seriesTipDecimals: 1,
 				svgPadding: {
 					top: 20,
 					left: 55,
@@ -1391,7 +1230,6 @@ export async function getPlotConfig(opts, app) {
 				axisTitleFontSize: 16,
 				xAxisOffset: 5,
 				yAxisOffset: -5,
-				hidden: [],
 				hiddenPvalues: []
 			}
 		}
@@ -1440,7 +1278,7 @@ function getPj(self) {
 						},
 						'$seriesId'
 					],
-					'@done()': '=padAndSortSerieses()'
+					'@done()': '=sortSerieses()'
 				},
 				'=chartTitle()'
 			],
@@ -1487,7 +1325,8 @@ function getPj(self) {
 				const xMin = s.method == 2 ? 0 : context.self.xMin
 				return (
 					scaleLinear()
-						// force x to start at 0, padAndSortSerieses() prepends this data point
+						// force x to start at 0 because first data point will always
+						// be at x=0 (see survival.R)
 						.domain([0, context.self.xMax])
 						.range([0, s.svgw - s.svgPadding.left - s.svgPadding.right])
 				)
@@ -1508,24 +1347,8 @@ function getPj(self) {
 					.domain(domain)
 					.range([0, s.svgh - s.svgPadding.top - s.svgPadding.bottom])
 			},
-			padAndSortSerieses(result) {
-				const s = self.settings
+			sortSerieses(result) {
 				for (const series of result.serieses) {
-					// prepend a starting prob=1 data point that survfit() does not include
-					const d0 = series.data[0]
-					series.data.unshift({
-						seriesId: d0.seriesId,
-						x: 0,
-						y: 1,
-						nevent: 0,
-						ncensor: 0,
-						nrisk: series.data[0].nrisk,
-						lower: 1,
-						upper: 1,
-						scaledX: 0, //result.xScale(0),
-						scaledY: [result.yScale(1), result.yScale(1), result.yScale(1)]
-					})
-
 					series.data.sort((a, b) => (a.x < b.x ? -1 : 1))
 				}
 				if (self.refs.orderedKeys) {

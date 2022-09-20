@@ -91,7 +91,7 @@ class TdbScatter {
 
 export const scatterInit = getCompInit(TdbScatter)
 
-function setRenderers(self) {
+export function setRenderers(self) {
 	self.render = function() {
 		const chartDivs = self.dom.div.selectAll('.pp-scatter-chart').data(self.pj.tree.charts, d => d.chartId)
 

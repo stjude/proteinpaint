@@ -36,13 +36,14 @@ export function getSeriesTip(line, rect, _tip = null) {
 
 	function mouseOver() {
 		const m = mouse(rectNode)
-		const xVal = +opts.xScale.invert(m[0]).toFixed(1)
-		// adding 0.5 makes the vertical line match the
-		// x-axis tick position exactly
-		const x = opts.xScale(xVal) + 0.5
+		const mx = m[0]
+		const xVal = +opts.xScale.invert(mx).toFixed(opts.decimals)
+		const x = opts.xScale(xVal) /* + 0.5*/ // do not add a small float value here; otherwise, the line will not match up with the data
 
 		line
 			.style('display', '')
+			.attr('stroke', '#aaa')
+			.attr('stroke-dasharray', 4)
 			.attr('x1', x)
 			.attr('x2', x)
 
@@ -58,7 +59,9 @@ export function getSeriesTip(line, rect, _tip = null) {
 			.filter(d => d)
 
 		if (seriesHtmls.length) {
-			tip.show(event.clientX, event.clientY).d.html(`Time: ${xVal}<br>` + seriesHtmls.map(d => d).join(opts.separator))
+			tip
+				.show(event.clientX, event.clientY)
+				.d.html(`${opts.xTitleLabel}: ${xVal}<br>` + seriesHtmls.map(d => d).join(opts.separator))
 		} else {
 			tip.hide()
 		}
@@ -72,7 +75,8 @@ export function getSeriesTip(line, rect, _tip = null) {
 		})
 
 	const opts = {
-		separator: '<br>'
+		separator: '<br>',
+		decimals: 1
 	}
 
 	/*
@@ -88,23 +92,33 @@ export function getSeriesTip(line, rect, _tip = null) {
 			position could be computed with .xScale !!! 
 
 			_opts{}
-			.xScale	required
-							the d3-scale object that was used for the rect dimensions
+			.xScale					required
+										the d3-scale object that was used for the rect dimensions
+										
+			.xTitleLabel			required
+										title of x-axis
+										will be used as label of x-value in tooltip
 
-			.serieses[{data}] 		required, array of series objects, assumed to be visibly rendered
+			.serieses[{data}] 		required
+										array of series objects, assumed to be visibly rendered
 							
-				.data[{x, html}]		required, array of data objects
-														the series data that is currently rendered in the chart
+				.data[{x, html}]	required
+										array of data objects
+										the series data that is currently rendered in the chart
 					
-					.x 								required, float
-														the datapoint's actual, unscaled x value
+					.x 				required, float
+										the datapoint's actual, unscaled x value
 					
-					.html   					required, string
-														the HTML to display in the tooltip if this datapoint's 
-														x value matched the vertical line's position
+					.html   		required, string
+										the HTML to display in the tooltip if this datapoint's 
+										x value matched the vertical line's position
 
-			.separator	optional, string
-									the html to be used to join the series html strings when displayed in the tooltip
+			.separator				optional, string
+										the html to be used to join the series html strings when displayed in the tooltip
+
+			.decimals				optional, number
+										number of decimal places of the datapoint's x-value
+										will control the precision of the vertical line
 		*/
 		update(_opts = {}) {
 			Object.assign(opts, _opts)

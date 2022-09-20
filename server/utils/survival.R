@@ -46,7 +46,8 @@ if (length(levels(dat$series)) == 1) {
   # single series
   results <- survfit(Surv(time, status) ~ 1, data = dat)
   # get survival estimates
-  estimates <- data.frame("series" = levels(dat$series), "time" = results$time, "surv" = results$surv, "lower" = results$lower, "upper" = results$upper, "nevent" = results$n.event, "ncensor" = results$n.censor, "nrisk" = results$n.risk, stringsAsFactors = F)
+  # prepend a starting prob=1 data point that survfit() does not include
+  estimates <- data.frame("series" = levels(dat$series), "time" = c(0,results$time), "surv" = c(1,results$surv), "lower" = c(1,results$lower), "upper" = c(1,results$upper), "nevent" = c(0,results$n.event), "ncensor" = c(0,results$n.censor), "nrisk" = c(results$n.risk[1],results$n.risk), stringsAsFactors = F)
 } else {
   # multiple series
   # generate pairwise combinations of series
@@ -60,10 +61,11 @@ if (length(levels(dat$series)) == 1) {
     pair <- pairs[,i]
     results <- survfit(Surv(time, status) ~ series, data = dat, subset = dat$series %in% pair)
     # get survival estimates for each series within pair
+    # prepend a starting prob=1 data point that survfit() does not include
     for (series in pair) {
       if (series %in% estimates$series) next
       results_series <- results[paste0("series=",series)]
-      estimates_series <- data.frame("series" = series, "time" = results_series$time, "surv" = results_series$surv, "lower" = results_series$lower, "upper" = results_series$upper, "nevent" = results_series$n.event, "ncensor" = results_series$n.censor, "nrisk" = results_series$n.risk, stringsAsFactors = F)
+      estimates_series <- data.frame("series" = series, "time" = c(0,results_series$time), "surv" = c(1,results_series$surv), "lower" = c(1,results_series$lower), "upper" = c(1,results_series$upper), "nevent" = c(0,results_series$n.event), "ncensor" = c(0,results_series$n.censor), "nrisk" = c(results_series$n.risk[1],results_series$n.risk), stringsAsFactors = F)
       estimates <- rbind(estimates, estimates_series)
     }
     # test for difference between survival curves using log-rank test

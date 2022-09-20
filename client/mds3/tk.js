@@ -116,6 +116,18 @@ function getParameter(tk, block) {
 	if (tk.legend.mclass.hiddenvalues.size) {
 		par.push('hiddenmclasslst=' + [...tk.legend.mclass.hiddenvalues].join(','))
 	}
+
+	if(tk.legend.bcfInfo){
+		const infoFilter = {}
+		for (const k in tk.legend.bcfInfo){
+			if(tk.legend.bcfInfo[k].hiddenvalues.size){
+				infoFilter[k] = [...tk.legend.bcfInfo[k].hiddenvalues]
+			}
+		}
+		if(Object.keys(infoFilter).length){
+			par.push('infoFilter=' +JSON.stringify(infoFilter))
+		}
+	}
 	return [par.join('&'), headers]
 }
 
@@ -168,7 +180,7 @@ export function rangequery_rglst(tk, block, par) {
 		add('isoform', block.usegm.isoform)
 		if (block.gmmode == 'genomic') {
 			// TODO if can delete the isoform parameter to simply make the query by genomic pos
-			add.push('atgenomic', 1)
+			add('atgenomic', 1)
 		}
 	} else {
 		rglst = block.tkarg_rglst(tk)

@@ -6,6 +6,7 @@ import { submenuInit } from './submenu'
 import { searchInit } from './search'
 import { select } from 'd3-selection'
 import { sayerror, Menu } from '../src/client'
+import { dofetch3 } from '#common/dofetch'
 
 /*
 opts{}
@@ -75,14 +76,45 @@ class TdbApp {
 			) {
 				throw `opts.tree.disable_terms is used only when opts.tree.click_term, opts.tree.click_term2select_tvs, or opts.barchart.bar_click_override is set`
 			}
+
+			// opts.search{} is required, possibly in search.js
 			if (!o.search) o.search = {}
-			if (o.tree.click_term) o.search.click_term = o.tree.click_term
-			else if (o.tree.click_term2select_tvs) {
+
+			if (o.tree.click_term2select_tvs) {
+				// create the callback on o.search{} so search.js code does not break
+				// FIXME dispatch('submenu_set') is coded twice (also in tree.js)
 				o.search.click_term = term =>
 					this.api.dispatch({
 						type: 'submenu_set',
 						submenu: { term, type: 'tvs' }
 					})
+			}
+
+			if (o.tree.click_term) {
+				// no need to create extra on
+
+				o.tree.click_term_wrapper = async term => {
+					// this function wraps user-defined click_term, to encapsulate some logic
+
+					if (this.state.termdbConfig.termMatch2geneSet) {
+						/*
+						the dataset is special-purpose that will map terms to gene sets (e.g. msigdb)
+						do this hardcoded behavior that upon clicking a term, it fetches the list of genes for this term
+						and attaches to the term object as an ad-hoc attribute
+						the same behaviors are maintained in that the click_term() callback gets the term obj as well as the genes
+						*/
+						const lst = [
+							'genome=' + this.state.vocab.genome,
+							'dslabel=' + this.state.vocab.dslabel,
+							'genesetByTermId=' + term.id
+						]
+						const geneset = await dofetch3('termdb?' + lst.join('&'))
+						term._geneset = geneset
+					}
+
+					// call the click callback
+					o.tree.click_term(term)
+				}
 			}
 
 			if (o.tree.disable_terms) o.search.disable_terms = o.tree.disable_terms

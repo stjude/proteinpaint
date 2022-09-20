@@ -12,7 +12,6 @@ const LDoverlay = require('./mds2.load.ld').overlay
 const getOrderedLabels = require('./termdb.barsql').getOrderedLabels
 const isUsableTerm = require('#shared/termdb.usecase').isUsableTerm
 const serverconfig = require('./serverconfig.js')
-const checkDsSecret = require('./auth').checkDsSecret
 
 /*
 ********************** EXPORTED
@@ -34,6 +33,8 @@ const encodedParams = [
 	'terms'
 ]
 
+const limitSearchTermTo = 10
+
 export function handle_request_closure(genomes) {
 	/*
 	 */
@@ -44,13 +45,9 @@ export function handle_request_closure(genomes) {
 		try {
 			const genome = genomes[q.genome]
 			if (!genome) throw 'invalid genome'
-			const ds = genome.datasets[q.dslabel]
-			if (!ds) throw 'invalid dslabel'
-			if (!ds.cohort) throw 'ds.cohort missing'
-			const tdb = ds.cohort.termdb
-			if (!tdb) throw 'no termdb for this dataset'
 
-			//
+			const [ds, tdb] = get_ds_tdb(genome, q)
+
 			for (const param of encodedParams) {
 				if (typeof q[param] == 'string') {
 					const strvalue = q[param].startsWith('%') ? decodeURIComponent(q[param]) : q[param]
@@ -74,7 +71,7 @@ export function handle_request_closure(genomes) {
 				return await phewas.trigger(q, res, ds)
 			}
 			if (q.density) return await density_plot(q, res, ds)
-			if (q.gettermdbconfig) return trigger_gettermdbconfig(q, res, tdb)
+			if (q.gettermdbconfig) return trigger_gettermdbconfig(q, res, tdb, ds.cohort)
 			if (q.getcohortsamplecount) return trigger_getcohortsamplecount(q, res, ds)
 			if (q.getsamplecount) return trigger_getsamplecount(q, res, ds)
 			if (q.getsamples) return trigger_getsamples(q, res, ds)
@@ -84,13 +81,13 @@ export function handle_request_closure(genomes) {
 			if (q.validateSnps) return res.send(await termdbsnp.validate(q, tdb, ds, genome))
 			if (q.getvariantfilter) return trigger_getvariantfilter(res, ds)
 			if (q.getLDdata) return trigger_getLDdata(q, res, ds)
+			if (q.genesetByTermId) return trigger_genesetByTermId(q, res, tdb)
 
 			// TODO: use trigger flags like above?
 			if (q.for == 'termTypes') {
 				res.send(await ds.getTermTypes(q))
 				return
 			} else if (q.for == 'matrix') {
-				checkDsSecret(q, req.headers)
 				const data = await require(`./termdb.matrix.js`).getData(q, ds)
 				res.send(data)
 				return
@@ -105,6 +102,38 @@ export function handle_request_closure(genomes) {
 	}
 }
 
+/*
+supports both dataset-based and genome-based sources
+1. genome.datasets[ q.dslabel ]
+2. genome.termdbs[ q.dslabel ]
+
+given q.dslabel, try to find a match in both places
+it's curator's responsibility to ensure not to use the same dslabel in these two places
+*/
+function get_ds_tdb(genome, q) {
+	{
+		const ds = genome.datasets[q.dslabel]
+		if (ds) {
+			// matches with dataset
+			if (ds?.cohort?.termdb) return [ds, ds.cohort.termdb]
+			throw '.cohort.termdb not found on this dataset'
+		}
+	}
+	// not matching with dataset
+	if (!genome.termdbs) {
+		throw 'genome-level termdb not available'
+	}
+	const ds = genome.termdbs[q.dslabel]
+	if (!ds) {
+		// no match found in either places for this dslabel
+		throw 'invalid dslabel'
+	}
+	// still maintains ds.cohort.termdb to be fully compatible with dataset-level design
+	if (!ds.cohort) throw 'ds.cohort missing for genome-level termdb'
+	if (!ds.cohort.termdb) throw 'ds.cohort.termdb{} missing for a genome-level termdb'
+	return [ds, ds.cohort.termdb]
+}
+
 function trigger_getsamples(q, res, ds) {
 	// this may be potentially limited?
 	// ds may allow it as a whole
@@ -114,7 +143,7 @@ function trigger_getsamples(q, res, ds) {
 	res.send({ samples })
 }
 
-function trigger_gettermdbconfig(q, res, tdb) {
+function trigger_gettermdbconfig(q, res, tdb, cohort) {
 	// add attributes to this object for revealing to client
 	const c = {
 		selectCohort: tdb.selectCohort, // optional
@@ -122,7 +151,9 @@ function trigger_gettermdbconfig(q, res, tdb) {
 		allowedTermTypes: tdb.allowedTermTypes || [],
 		coxCumincXlab: tdb.coxCumincXlab,
 		timeScale: tdb.timeScale,
-		minTimeSinceDx: tdb.minTimeSinceDx
+		minTimeSinceDx: tdb.minTimeSinceDx,
+		termMatch2geneSet: tdb.termMatch2geneSet,
+		scatterplots: cohort.scatterplots
 	}
 	if (tdb.restrictAncestries) {
 		c.restrictAncestries = []
@@ -191,14 +222,24 @@ async function trigger_findterm(q, res, termdb, ds) {
 	// TODO also search categories
 	const matches = { equals: [], startsWith: [], startsWord: [], includes: [] }
 	const str = q.findterm.toUpperCase()
-	// harcoded gene name length limit to exclude fusion/comma-separated gene names
-	/* TODO: improve the logic for excluding concatenated gene names */
-	if (isUsableTerm({ type: 'geneVariant' }, q.usecase).has('plot')) {
-		await ds.mayGetMatchingGeneNames(matches, str, q)
+
+	if (ds.mayGetMatchingGeneNames) {
+		// harcoded gene name length limit to exclude fusion/comma-separated gene names
+		/* TODO: improve the logic for excluding concatenated gene names */
+		if (isUsableTerm({ type: 'geneVariant' }, q.usecase).has('plot')) {
+			await ds.mayGetMatchingGeneNames(matches, str, q)
+		}
 	}
 
 	if (typeof q.cohortStr !== 'string') q.cohortStr = ''
-	const terms_ = await termdb.q.findTermByName(q.findterm, 10, q.cohortStr, q.treeFilter, q.usecase, matches)
+	const terms_ = await termdb.q.findTermByName(
+		q.findterm,
+		limitSearchTermTo,
+		q.cohortStr,
+		q.treeFilter,
+		q.usecase,
+		matches
+	)
 	const terms = terms_.map(copy_term)
 	const id2ancestors = {}
 	terms.forEach(term => {
@@ -354,4 +395,11 @@ async function trigger_getLDdata(q, res, ds) {
 	q.m = JSON.parse(q.m)
 	if (ds.track && ds.track.ld && ds.track.ld.tracks.find(i => i.name == q.ldtkname)) return await LDoverlay(q, ds, res)
 	res.send({ nodata: 1 })
+}
+
+function trigger_genesetByTermId(q, res, tdb) {
+	if (!tdb.termMatch2geneSet) throw 'this feature is not enabled'
+	if (typeof q.genesetByTermId != 'string' || q.genesetByTermId.length == 0) throw 'invalid query term id'
+	const geneset = tdb.q.getGenesetByTermId(q.genesetByTermId)
+	res.send(geneset)
 }

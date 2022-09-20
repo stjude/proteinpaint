@@ -1,0 +1,372 @@
+<html>
+<head>
+	<style>
+		body {
+		  font: 400 16px/1.5 "Helvetica Neue", Helvetica, Arial, sans-serif;
+		  color: #111;
+		  background-color: #fdfdfd;
+		  -webkit-text-size-adjust: 100%;
+		  -webkit-font-feature-settings: "kern" 1;
+		  -moz-font-feature-settings: "kern" 1;
+		  -o-font-feature-settings: "kern" 1;
+		  font-feature-settings: "kern" 1;
+		  font-kerning: normal;
+		  padding: 30px;
+		}
+
+		@media only screen and (max-width: 600px) {
+		  body {
+		    padding: 5px;
+		  }
+
+		  body > #content {
+		    padding: 0px 20px 20px 20px !important;
+		  }
+		}
+
+		body > #content {
+		  margin: 0px;
+		  max-width: 900px;
+		  border: 1px solid #e1e4e8;
+		  padding: 10px 40px;
+		  padding-bottom: 20px;
+		  border-radius: 2px;
+		  margin-left: auto;
+		  margin-right: auto;
+		}
+
+		hr {
+		  color: #bbb;
+		  background-color: #bbb;
+		  height: 1px;
+		  flex: 0 1 auto;
+		  margin: 1em 0;
+		  padding: 0;
+		  border: none;
+		}
+
+		/**
+		 * Links
+		 */
+		a {
+		  color: #0366d6;
+		  text-decoration: none; }
+		  a:visited {
+		    color: #0366d6; }
+		  a:hover {
+		    color: #0366d6;
+		    text-decoration: underline; }
+
+		pre {
+		  background-color: #f6f8fa;
+		  border-radius: 3px;
+		  font-size: 85%;
+		  line-height: 1.45;
+		  overflow: auto;
+		  padding: 16px;
+		}
+
+		/**
+		  * Code blocks
+		  */
+
+		code {
+		  background-color: rgba(27,31,35,.05);
+		  border-radius: 3px;
+		  font-size: 85%;
+		  margin: 0;
+		  word-wrap: break-word;
+		  padding: .2em .4em;
+		  font-family: SFMono-Regular,Consolas,Liberation Mono,Menlo,Courier,monospace;
+		}
+
+		pre > code {
+		  background-color: transparent;
+		  border: 0;
+		  display: inline;
+		  line-height: inherit;
+		  margin: 0;
+		  overflow: visible;
+		  padding: 0;
+		  word-wrap: normal;
+		  font-size: 100%;
+		}
+
+
+		/**
+		 * Blockquotes
+		 */
+		blockquote {
+		  margin-left: 30px;
+		  margin-top: 0px;
+		  margin-bottom: 16px;
+		  border-left-width: 3px;
+		  padding: 0 1em;
+		  color: #828282;
+		  border-left: 4px solid #e8e8e8;
+		  padding-left: 15px;
+		  font-size: 18px;
+		  letter-spacing: -1px;
+		  font-style: italic;
+		}
+		blockquote * {
+		  font-style: normal !important;
+		  letter-spacing: 0;
+		  color: #6a737d !important;
+		}
+
+		/**
+		 * Tables
+		 */
+		table {
+		  border-spacing: 2px;
+		  display: block;
+		  font-size: 14px;
+		  overflow: auto;
+		  width: 100%;
+		  margin-bottom: 16px;
+		  border-spacing: 0;
+		  border-collapse: collapse;
+		}
+
+		td {
+		  padding: 6px 13px;
+		  border: 1px solid #dfe2e5;
+		}
+
+		th {
+		  font-weight: 600;
+		  padding: 6px 13px;
+		  border: 1px solid #dfe2e5;
+		}
+
+		tr {
+		  background-color: #fff;
+		  border-top: 1px solid #c6cbd1;
+		}
+
+		table tr:nth-child(2n) {
+		  background-color: #f6f8fa;
+		}
+
+		/**
+		 * Others
+		 */
+
+		img {
+		  max-width: 100%;
+		}
+
+		p {
+		  line-height: 24px;
+		  font-weight: 400;
+		  font-size: 16px;
+		  color: #24292e; }
+
+		ul {
+		  margin-top: 0; }
+
+		li {
+		  color: #24292e;
+		  font-size: 16px;
+		  font-weight: 400;
+		  line-height: 1.5; }
+
+		li + li {
+		  margin-top: 0.25em; }
+
+		* {
+		  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+		  color: #24292e; }
+
+		a:visited {
+		  color: #0366d6; }
+
+		h1, h2, h3 {
+		  border-bottom: 1px solid #eaecef;
+		  color: #111;
+  	}
+	</style>
+	<style>
+		body {
+			padding-top: 0;
+		}
+		#leftnav {
+			margin: 30px
+		}
+		#right-wrapper {
+			max-width: 1280px;
+		}
+		#topnav {	
+			padding: 10px;
+			margin:  10px;
+		}
+		#readme {
+			display: inline-block;
+			max-height: 900px;
+			max-width: 1012px;
+			margin: 0px 20px;
+			overflow: scroll;
+		}
+	</style>
+	<script src='https://cdn.jsdelivr.net/npm/marked/marked.min.js'></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/4.13.0/d3.min.js" integrity="sha512-RJJ1NNC88QhN7dwpCY8rm/6OxI+YdQP48DrLGe/eSAd+n+s1PXwQkkpzzAgoJe4cZFW2GALQoxox61gSY2yQfg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script><!-- # pragma: allowlist secret -->
+</head>
+<body>
+	<div style='display: grid; grid-template-columns: auto auto'>
+		<div id='leftnav'></div>
+		<div id='right-wrapper'>
+			<div id='topnav'></div>
+			<div id='readme'></div>
+		</div>
+	</div>
+	<script>
+		const settings = {
+			activeColor: 'rgba(100,210,100,0.8)',
+			hintChar: ' &#x25B6;'
+		}
+		const dom = {
+			readme: d3.select('#readme')
+		}
+		const serverCache = {}
+
+		async function init() {
+			const data =  await fetch(`/readme`).then(r=>r.json()).catch(alert)
+			data.readmes.sort()
+
+			dom.topTabs = d3.select('#topnav')
+				.selectAll('div')
+				.data(data.readmes)
+				.enter()
+				.append('button')
+				//.style('display', 'inline-block')
+				/*.style('margin', '3px 5px')
+				.style('padding', '5px')
+				.style('background-color', '#ccc')
+				.style('font-size', '16px')
+				.style('font-family', 'Consolas, Arial, sans-serif')*/
+				.html(d => d.replace('/README.md', '').replace('/README.txt', '').replace('/README', ''))
+				.on('click', d => {
+					window.location.hash = '#'+d
+				})
+
+
+			const root = {path:'', files:[], subdirs: {}, filepaths: data.readmes}
+			setHierarchy(root)//; console.log(204, 'root', root)
+			d3.select('#leftnav').selectAll(':scope>div').data([root]).enter().append('div').each(renderNavBtns)
+			dom.activeHints = d3.select('#leftnav').selectAll('.activehint')
+    	render()
+		}
+
+		let i=0
+		function setHierarchy(dir) { i++; if (i > 100) return;
+			const {path, files, subdirs, filepaths} = dir
+			for(const f of filepaths) {
+				if (!path) {
+					if (!f.includes('/')) {
+						files.push(f)
+						continue
+					}
+				}
+
+				if (f.replace(path, '').toUpperCase().startsWith('/README')) {
+					files.push(f)
+					continue
+				}
+				//console.log(237, [path, f.replace(path+'/', ''), f])
+				const subpath = path ? path + '/' + f.replace(path+'/','').split('/')[0] : f.split('/')[0]; //console.log(238, subpath)
+				if (!subdirs[subpath]) subdirs[subpath] = {path: subpath, files: [], subdirs: {}, filepaths: []}
+				subdirs[subpath].filepaths.push(f)
+			}
+
+			for(const d in subdirs) {
+				const subdir = subdirs[d]
+				if (subdir.filepaths.length) setHierarchy(subdir)
+			}
+		}
+
+		function renderNavBtns(dir) {
+			const div = d3.select(this).style('margin-left', '10px')
+
+			div
+				.selectAll(':scope>div')
+				.data(dir.files)
+				.enter()
+				.append('div')
+				.style('white-space', 'nowrap')
+				.each(function(d) {
+					const div = d3.select(this)
+					const name = d.split('/').pop()
+					div.append('a')
+						.attr('href', `#${d}`)
+						.html(name)
+
+					div.append('span')
+						.datum(d)
+						.attr('class', 'activehint')
+						.style('display', 'none')
+						.style('color', settings.activeColor)
+						.html(settings.hintChar)
+				})
+				//.append('a')
+				//.style('display', 'inline-block')
+				/*.style('margin', '3px 5px')
+				.style('padding', '5px')
+				.style('background-color', '#ccc')
+				.style('font-size', '16px')
+				.style('font-family', 'Consolas, Arial, sans-serif')*/
+				//.html(d => !d.includes('/') ? d : d.split('/').pop()) //d.replace('/README.md', '').replace('/README.txt', '').replace('/README', ''))
+				//.on('click', setHash)
+
+			div.append('div')
+				.selectAll(':scope>div')
+				.data(Object.values(dir.subdirs))
+				.enter()
+				.append('div')
+				.style('white-space', 'nowrap')
+				.each(function(d) {
+					const subdiv = d3.select(this)
+					const hasOwnReadme = d.files[0]?.startsWith(`${d.path}/README`)
+					const name = d.path.replace(dir.path+'/', '')
+					const ownLink = subdiv.append('div')
+					if (hasOwnReadme) {
+						ownLink.append('a')
+							.attr('href', `#${d.files[0]}`)
+							.html(name)
+
+						ownLink.append('span')
+							.datum(d.files[0])
+							.attr('class', 'activehint')
+							.style('display', 'none')
+							.style('color', settings.activeColor)
+							.html(settings.hintChar)
+					} else {
+						ownLink.html(name)
+					}
+
+					renderNavBtns.bind(this)(d)
+				})
+		}
+
+		function setHash(d) {
+			if (!d.includes('README')) return
+			window.location.hash = '#' + (d.path || d) 
+		}
+
+    async function render() {
+    	const file = location.hash?.slice(1) || 'README.md'//; console.log(300, file)
+    	const param = `file=${file}` //console.log(222, file)
+    	if (!serverCache[file]) {
+    		serverCache[file] = await fetch(`/readme?${param}`).then(r=>r.text()).catch(alert)
+    	}
+    	const content = serverCache[file]
+    	dom.readme.html(marked.parse(content))
+    	dom.topTabs.style('background-color', d => d === file ? settings.activeColor : '')
+    	dom.activeHints.style('display', d => d === file ? '' : 'none')
+    }
+
+    window.onhashchange = render
+    init()
+	</script>
+</body>
+</html>
