@@ -210,7 +210,7 @@
 		}
 	</style>
 	<script src='https://cdn.jsdelivr.net/npm/marked/marked.min.js'></script>
-	<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/4.13.0/d3.min.js" integrity="sha512-RJJ1NNC88QhN7dwpCY8rm/6OxI+YdQP48DrLGe/eSAd+n+s1PXwQkkpzzAgoJe4cZFW2GALQoxox61gSY2yQfg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/4.13.0/d3.min.js" integrity="sha512-RJJ1NNC88QhN7dwpCY8rm/6OxI+YdQP48DrLGe/eSAd+n+s1PXwQkkpzzAgoJe4cZFW2GALQoxox61gSY2yQfg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script><!-- # pragma: allowlist secret -->
 </head>
 <body>
 	<div style='display: grid; grid-template-columns: auto auto'>
@@ -231,7 +231,7 @@
 		const serverCache = {}
 
 		async function init() {
-			const data =  await fetch(`/readme`).then(r=>r.json()).catch(alert)//; console.log(data)
+			const data =  await fetch(`/readme`).then(r=>r.json()).catch(alert)
 			data.readmes.sort()
 
 			dom.topTabs = d3.select('#topnav')

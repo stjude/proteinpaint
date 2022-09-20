@@ -23,7 +23,7 @@
     "ppr": "./build/deploy.sh ppr",
     "prp1": "./build/deploy.sh prp1",
     "testws": "npm test --workspaces",
-    "sethooks": "rm -f .git/hooks/pre-commit && cd .git/hooks && ln -s ../../utils/hooks/pre-commit pre-commit && chmod -R 755 ../../utils/hooks",
+    "sethooks": "./utils/hooks/init.sh",
     "getconf": "node -p 'JSON.stringify(require(\"./server/src/serverconfig.js\"),null,\"  \")'"
   },
   "author": "",

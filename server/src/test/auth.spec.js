@@ -9,7 +9,7 @@ const serverconfig = require('../serverconfig')
 
 const cachedir = serverconfig.cachedir
 const headerKey = 'x-ds-token'
-const secret = 'abc123'
+const secret = 'abc123' // pragma: allowlist secret
 const time = Math.floor(Date.now() / 1000)
 const validToken = jsonwebtoken.sign({ iat: time, exp: time + 300, datasets: ['ds0'] }, secret)
 
