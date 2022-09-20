@@ -302,7 +302,11 @@ makeURL([
 	links:[
 		['bedj','?block=on&genome=hg19&bedjfile=JSON-BED,proteinpaint_demo/hg19/bedj/gencode.gz'],
 		['bed3','?genome=hg19&block=1&bedjfile=BED3_Example,proteinpaint_demo/hg19/bedj/bed3.gz'],
-		['pecan','?genome=hg19&block=1&bedjurl=bed,https://pecan.stjude.cloud/static/hg19/refGene.hg19.gz'],
+		['bigbed gencode','?genome=hg38&block=1&bedjfile=bigbed,proteinpaint_demo/hg38/bedj/gencodeV41.bb'],
+		['bigbed dbsnp','?block=on&genome=hg19&position=chr17:7579489-7579868&bedjfile=dbsnp,anno/dbsnp.hg19.bb'],
+		['pecan bedj','?genome=hg19&block=1&bedjurl=bed,https://pecan.stjude.cloud/static/hg19/refGene.hg19.gz'],
+		['prp1 bedj','?genome=hg19&block=1&bedjurl=bed,https://proteinpaint.stjude.org/ppdemo/hg19/bedj/gencode.gz'],
+		// TODO add examples using bb url
 		'ERR:',
 		['missing','?block=on&genome=hg19&bedjfile=JSON-BED,path/to/missing.gz'],
 		['text file','?genome=hg19&block=1&bedjfile=flag,proteinpaint_demo/hg19/junction/rnapeg'],
