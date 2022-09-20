@@ -86,8 +86,10 @@ sqlite3=path/to/sqlite3
 
 *** Output ***
 
-Following files are created at current directory, suffixed by a random number.
-    db, termdb, sampleidmap, annotation, survival
+Following two files are created at current directory, suffixed by a random number.
+Move both files to project directory under tp/ and must not commit to repo.
+    file "db.??"
+	file "sampleidmap.??"
 `
 
 const runId = Math.ceil(Math.random() * 100000)
@@ -505,7 +507,6 @@ function buildDb(annotationData, survivalData, scriptArg) {
 
 	// load db
 	exec(cmd + ' < ' + loadScript)
-	fs.unlink(loadScript, () => {})
 
 	// populate ancestry table
 	// TODO need to be able to generate full lineage
@@ -533,4 +534,9 @@ function buildDb(annotationData, survivalData, scriptArg) {
 	// create 3 separate tables anno-categorical/integer/float
 	console.log('creating anno-by-type ...')
 	exec(`${cmd} < ${path.join(__dirname, 'anno-by-type.sql')}`)
+
+	fs.unlink(loadScript, () => {})
+	fs.unlink(termdbFile, () => {})
+	fs.unlink(annotationFile, () => {})
+	fs.unlink(survivalFile, () => {})
 }
