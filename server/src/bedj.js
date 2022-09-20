@@ -4,6 +4,7 @@ const fs = require('fs')
 const utils = require('./utils')
 const createCanvas = require('canvas').createCanvas
 const nt2aa = require('#shared/common').nt2aa
+const parseBedLine = require('./bedj.parseBed').parseBedLine
 
 /*
 should guard against file content error e.g. two tabs separating columns
@@ -959,8 +960,28 @@ async function query_file(q, tkfile, dir, flag_gm, gmisoform) {
 
 		if (q.fileIsBigbed) {
 			const lines = await utils.query_bigbed_by_coord(tkfile, flag_gm.chr, flag_gm.start, flag_gm.stop)
-			console.log(lines)
-			// TODO parse lines into items[]
+			for (const line of lines) {
+				const l = line.split('\t')
+
+				// create one object for the line from the bigbed file
+				const j = parseBedLine(l)
+
+				// helper function does not add chr/start/stop/rglst
+				j.chr = l[0]
+				j.start = Number(l[1])
+				j.stop = Number(l[2])
+				j.rglst = []
+				for (let i = 0; i < q.rglst.length; i++) {
+					const r = q.rglst[i]
+					// simply decide by the whole gene span, not by exons, otherwise there will result in gaps
+					if (Math.max(j.start, r.start) < Math.min(j.stop, r.stop)) {
+						j.rglst.push({ idx: i })
+					}
+				}
+				if (j.rglst.length == 0) continue
+
+				items.push(j)
+			}
 		} else {
 			await utils.get_lines_bigfile({
 				args: [tkfile, flag_gm.chr + ':' + flag_gm.start + '-' + flag_gm.stop],
@@ -983,8 +1004,10 @@ async function query_file(q, tkfile, dir, flag_gm, gmisoform) {
 						return
 					}
 					j.chr = l[0]
-					j.start = Number.parseInt(l[1])
-					j.stop = Number.parseInt(l[2])
+					j.start = Number(l[1])
+					j.stop = Number(l[2])
+
+					// TODO clarify reason
 					j.rglst = []
 					for (let i = 0; i < q.rglst.length; i++) {
 						const r = q.rglst[i]
@@ -1000,6 +1023,7 @@ async function query_file(q, tkfile, dir, flag_gm, gmisoform) {
 		}
 		return [items]
 	}
+
 	// query over genomic regions
 	// each item belong to only one region
 	const regions = []
@@ -1009,15 +1033,30 @@ async function query_file(q, tkfile, dir, flag_gm, gmisoform) {
 
 		if (q.fileIsBigbed) {
 			const lines = await utils.query_bigbed_by_coord(tkfile, r.chr, r.start, r.stop)
-			console.log(lines)
-			// TODO parse lines into itemofthisregion
+			for (const line of lines) {
+				const l = line.split('\t')
+
+				// create one object for the line from the bigbed file
+				const j = parseBedLine(l)
+
+				// helper function does not add chr/start/stop/rglst
+				j.chr = l[0]
+				j.start = Number(l[1])
+				j.stop = Number(l[2])
+				j.rglst = [{ idx }] // can help with rendering later
+
+				itemofthisregion.push(j)
+			}
 		} else {
 			await utils.get_lines_bigfile({
 				args: [tkfile, r.chr + ':' + r.start + '-' + r.stop],
 				dir,
 				callback: line => {
 					const l = line.split('\t')
+
+					// create one object for the bed item
 					let j = {}
+
 					if (q.getBED) {
 						j.rest = l.slice(3)
 					} else if (l[3]) {
@@ -1029,9 +1068,9 @@ async function query_file(q, tkfile, dir, flag_gm, gmisoform) {
 						}
 					}
 					j.chr = l[0]
-					j.start = Number.parseInt(l[1])
-					j.stop = Number.parseInt(l[2])
-					j.rglst = [{ idx }]
+					j.start = Number(l[1])
+					j.stop = Number(l[2])
+					j.rglst = [{ idx }] // can help with rendering later
 					itemofthisregion.push(j)
 				}
 			})
