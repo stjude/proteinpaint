@@ -523,7 +523,6 @@ async function renderTable({ columns, rows, div }) {
 	const divH = ParentDiv.append('div')
 		.attr('class', 'grid-container')
 		.style('grid-template-columns', `2vw repeat(${numColumns}, 0.5fr) 1fr`)
-		.style('position', 'sticky')
 		.style('z-index', '2')
 	// .style('border', '2px outset black')
 
