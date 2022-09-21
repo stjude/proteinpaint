@@ -8,6 +8,8 @@ import { zoom as d3zoom, zoomIdentity } from 'd3'
 import { d3lasso } from '../common/lasso'
 import { Menu } from '#dom/menu'
 import { controlsInit } from './controls'
+import { axisLeft, axisBottom } from 'd3-axis'
+
 
 class Scatter {
 	constructor() {
@@ -23,7 +25,7 @@ class Scatter {
 			header: this.opts.header,
 			holder,
 			controls,
-			chartsDiv: holder.style('margin', '10px').style('display', 'inline-block'),
+			chartsDiv: holder.style('margin', '20px'),
 			toolsDiv,
 			tip: new Menu({ padding: '5px' })
 		}
@@ -128,7 +130,15 @@ class Scatter {
 						chartType: 'sampleScatter',
 						settingsKey: 'svgh',
 						title: 'The internal height of the chart plot'
-					}
+					},
+					{
+						boxLabel: 'Visible',
+						label: 'Show axes',
+						type: 'checkbox',
+						chartType: 'sampleScatter',
+						settingsKey: 'showAxes',
+						title: `Option to show/hide plot axes`
+					},
 				]
 			})
 		}
@@ -155,7 +165,8 @@ function setRenderers(self) {
 			.attr('class', 'pp-scatter-chart')
 			.style('opacity', 0)
 			//.style("position", "absolute")
-			.style('width', s.svgw + 50 + 'px')
+			.style('width', s.svgw + 100 + 'px')
+			.style('height', s.svgh + 50 + 'px')
 			.style('display', 'inline-block')
 			.style('margin', s.chartMargin + 'px')
 			.style('top', 0) //layout.byChc[d.chc].top)
@@ -193,16 +204,15 @@ function setRenderers(self) {
 		svg
 			.transition()
 			.duration(duration)
-			.attr('width', s.svgw)
-			.attr('height', s.svgh)
-			.style('padding-left', '20px')
+			.attr('width', s.svgw + 100)
+			.attr('height', s.svgh + 100)
+		
 
 		/* eslint-disable */
 		const [mainG, axisG, xAxis, yAxis, xTitle, yTitle] = getSvgSubElems(svg)
 		/* eslint-enable */
 		//if (d.xVals) computeScales(d, s);
 
-		mainG.attr('transform', 'translate(' + s.svgPadding.left + ',' + s.svgPadding.top + ')')
 		const serieses = mainG
 			.selectAll('.sjpcb-scatter-series')
 			.data(chart.serieses, d => (d && d[0] ? d[0].seriesId : ''))
@@ -218,11 +228,14 @@ function setRenderers(self) {
 			.each(function (series, i) {
 				renderSeries(select(this), chart, series, i, s, duration)
 			})
+		if(s.showAxes)
+			renderAxes(xAxis, xTitle, yAxis, yTitle, s, chart)
+
 	}
 
 	function getSvgSubElems(svg) {
 		let mainG, axisG, xAxis, yAxis, xTitle, yTitle
-		if (!svg.select('.sjpcb-scatter-mainG').size()) {
+		if (svg.select('.sjpcb-scatter-mainG').size() == 0) {
 			mainG = svg.append('g').attr('class', 'sjpcb-scatter-mainG')
 			axisG = mainG.append('g').attr('class', 'sjpcb-scatter-axis')
 			xAxis = axisG.append('g').attr('class', 'sjpcb-scatter-x-axis')
@@ -230,8 +243,14 @@ function setRenderers(self) {
 			xTitle = axisG.append('g').attr('class', 'sjpcb-scatter-x-title')
 			yTitle = axisG.append('g').attr('class', 'sjpcb-scatter-y-title')
 		} else {
+
 			mainG = svg.select('.sjpcb-scatter-mainG')
 			axisG = mainG.select('.sjpcb-scatter-axis')
+			if(self.settings.showAxes)
+				axisG.style('opacity', 1)
+			else
+				axisG.style('opacity', 0)
+
 			xAxis = axisG.select('.sjpcb-scatter-x-axis')
 			yAxis = axisG.select('.sjpcb-scatter-y-axis')
 			xTitle = axisG.select('.sjpcb-scatter-x-title')
@@ -244,7 +263,6 @@ function setRenderers(self) {
 		// remove all circles as there is no data id for privacy
 		g.selectAll('circle').remove()
 		const circles = g.selectAll('circle').data(series.data, b => b.x)
-		console.log('data', series.data)
 
 		circles.exit().remove()
 		const default_color = 'blue'
@@ -253,11 +271,9 @@ function setRenderers(self) {
 			.duration(duration)
 			.attr('r', s.radius)
 			.attr('cx', c => {
-				console.log('cx', c.scaledX)
-				c.scaledX
+				c.scaledX + 100
 			})
 			.attr('cy', c => {
-				console.log('cy', c.scaledY)
 				c.scaledY
 			})
 			.style('fill', c => ('color' in c ? c.color : default_color))
@@ -267,7 +283,7 @@ function setRenderers(self) {
 			.enter()
 			.append('circle')
 			.attr('r', s.radius)
-			.attr('cx', c => c.scaledX)
+			.attr('cx', c => c.scaledX + 100)
 			.attr('cy', c => c.scaledY)
 			//.style("opacity", 0)
 			.style('fill', c => ('color' in c ? c.color : default_color))
@@ -467,7 +483,62 @@ function setRenderers(self) {
 			}
 		}
 	}
+
+	function renderAxes(xAxis, xTitle, yAxis, yTitle, s, d) {
+		xAxis
+			.attr('transform', 'translate(100,' + (s.svgh) + ')')
+			.call(axisBottom(d.xScale).ticks(5))
+
+		yAxis.attr('transform', 'translate(100, 0)')
+		.call(
+			axisLeft(
+				d3Linear()
+					.domain(d.yScale.domain())
+					.range([0, s.svgh])
+			).ticks(5)
+		)
+
+		xTitle.select('text, title').remove()
+		const xTitleLabel =
+			self.config.term.term.name.length > 24
+				? self.config.term.term.name.slice(0, 20) + '...'
+				: self.config.term.term.name
+		const xText = xTitle
+			.attr(
+				'transform',
+				'translate(' +
+					(100 + s.svgw) / 2 +
+					',' +
+					(50 + s.svgh) +
+					')'
+			)
+			.append('text')
+			.style('text-anchor', 'middle')
+			.style('font-size', s.axisTitleFontSize + 'px')
+			.text(xTitleLabel + (self.config.term.term.unit ? ', ' + self.config.term.term.unit : ''))
+
+		xText.append('title').text(self.config.term.term.name)
+
+		const yTitleLabel = 'Y'
+		yTitle.select('text, title').remove()
+		const yText = yTitle
+			.attr(
+				'transform',
+				'translate(' +
+					( - s.axisTitleFontSize) +
+					',' +
+					(s.svgh) / 2 +
+					')rotate(-90)'
+			)
+			.append('text')
+			.style('text-anchor', 'middle')
+			.style('font-size', s.axisTitleFontSize + 'px')
+		
+	}
+
 }
+
+
 
 function setInteractivity(self) {
 	self.mouseover = function () {
@@ -503,15 +574,8 @@ export async function getPlotConfig(opts, app) {
 					radius: 5,
 					svgw: 600,
 					svgh: 600,
-					svgPadding: {
-						top: 0,
-						left: 0,
-						right: 0,
-						bottom: 0
-					},
 					axisTitleFontSize: 16,
-					xAxisOffset: 5,
-					yAxisOffset: -5
+					showAxes: false
 				}
 			}
 		}
@@ -571,7 +635,7 @@ function getPj(self) {
 			xScale(row, context) {
 				const cx = d3Linear()
 					.domain([context.self.xMin, context.self.xMax])
-					.range([3 * s.radius, s.svgw - s.svgPadding.left - s.svgPadding.right - 3 * s.radius])
+					.range([3 * s.radius, s.svgw - 3 * s.radius])
 				return cx
 			},
 			scaledX(row, context) {
@@ -586,7 +650,7 @@ function getPj(self) {
 				const domain = s.scale == 'byChart' ? [yMax, yMin] : [context.root.yMax, yMin]
 				const cy = d3Linear()
 					.domain(domain)
-					.range([3 * s.radius, s.svgh - s.svgPadding.top - s.svgPadding.bottom - 3 * s.radius])
+					.range([3 * s.radius, s.svgh - 3 * s.radius]) 
 				return cy
 			}
 		}
