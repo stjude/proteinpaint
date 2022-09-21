@@ -14,14 +14,38 @@ this allows to differentiate the intermediate terms belonging to different linea
 this is the same trick for "Graded Adverse Events" vs "Graded adverse events"
 */
 
+const infile = 'phenotree/matrix.tree'
+
 const fs = require('fs')
 
+const newlines = []
+
+// these lines must exist in phenotree file
+let hasLinesAboutFirst5 = false,
+	hasLinesAboutLifetime = false
+
 for (const line of fs
-	.readFileSync('phenotree/matrix.tree.original', { encoding: 'utf8' })
+	.readFileSync(infile, { encoding: 'utf8' })
 	.trim()
 	.split('\n')) {
 	const l = line.split('\t')
-	if (l[2] == 'Chemotherapy, First 5 Years of Therapy') l[3] += ' (First 5 Years of Therapy)'
-	else if (l[2] == 'Chemotherapy, Lifetime') l[3] += ' (Lifetime)'
-	console.log(l.join('\t'))
+
+	if (l[2] == 'Chemotherapy, First 5 Years of Therapy') {
+		hasLinesAboutFirst5 = true
+
+		if (!l[3].endsWith('(First 5 Years of Therapy)')) l[3] += ' (First 5 Years of Therapy)'
+		if (!l[4].endsWith('(First 5 Years of Therapy)')) l[4] += ' (First 5 Years of Therapy)'
+	} else if (l[2] == 'Chemotherapy, Lifetime') {
+		hasLinesAboutLifetime = true
+
+		if (!l[3].endsWith('(Lifetime)')) l[3] += ' (Lifetime)'
+		if (!l[4].endsWith('(Lifetime)')) l[4] += ' (Lifetime)'
+	}
+
+	newlines.push(l.join('\t'))
 }
+
+if (!hasLinesAboutFirst5) throw '"Chemotherapy, First 5 Years of Therapy" not in phenotree'
+if (!hasLinesAboutLifetime) throw '"Chemotherapy, Lifetime" not in phenotree'
+
+fs.writeFileSync(infile, newlines.join('\n') + '\n')
