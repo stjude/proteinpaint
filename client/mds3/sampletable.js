@@ -501,63 +501,90 @@ function samples2rows(samples, tk) {
 	}
 	return rows
 }
-function renderTable({ columns, rows, div }) {
-	const table = div
-		.append('table')
-		.style('border-spacing', '20px')
-		.style('border-collapse', 'separate')
-		.style('max-height', '100vw')
-		.style('display', 'inline-block')
-		.style('position', 'absolute')
-		.style('overflow-y', 'hidden')
+async function renderTable({ columns, rows, div }) {
+	// columns is an Array of a number of elements that contains attribute 'label' that contains objects such as Sample, Access, Disease type, Primary site, Project id...etc'
+	// columns will make the header row.
+	// rows comprises an array of elements and each element is a sample/case.
+
+	// columns length is 1 less than the original column.length to support the width for the last column because of difference in information in different datasets
+	const numColumns = columns.length - 1
+
+	// create a Parent Div element to which the header and sample grid will be appended as divH and divS.
+	const ParentDiv = div
+		.append('div')
+		.style('overflow', 'auto')
+		.style('scrollbar-width', 'none')
+		.style('max-height', '30vw')
+		.style('max-width', '70vw')
 		.style('background-color', 'white')
-		.style('box-shadow', 'rgb(153,153,153) 0px 2px 4px 1px')
-					
-	const thead = table.append('thead')
-	const tr = thead.append('tr')
-					.style('display', 'block')
+	// .style('border', '2px outset black')
 
-	tr.append('td') // numerator
+	// header div
+	const divH = ParentDiv.append('div')
+		.attr('class', 'grid-container')
+		.style('grid-template-columns', `2vw repeat(${numColumns}, 0.5fr) 1fr`)
+		.style('position', 'sticky')
+		.style('z-index', '2')
+	// .style('border', '2px outset black')
 
-// header values
+	// sample div
+	const divS = ParentDiv.append('div').style('position', 'relative')
+	// .style('z-index', '1')
+	// .style('border', '2px outset red')
+
+	// append empty div element to header to adjust columns
+	divH.append('div').attr('header-container')
+
+	// header values
 	for (const c of columns) {
-		tr.append('th')
+		divH
+			.append('div')
 			.text(c.label)
-			.style('opacity', 0.5)
-			.style('padding', '5px 10px')
-			.style('width', '200px')
-			.style('cursor', 'default')
 			.style('font-family', 'Arial')
 			.style('font-size', '1em')
+			.style('opacity', 0.5)
 	}
 
-	const tbody = table.append('tbody')
-						.style('display', 'block')
-						.style('width', '100%')
-						.style('overflow', 'auto')
-						.style('height', '500px')
-   
+	// sample values
+	// iterate over each row in rows and create a div for each row that has a grid layout similar to the header grid.
 	for (const [i, row] of rows.entries()) {
-		const tr = tbody.append('tr').attr('class', 'sja_clb')
-		tr.append('td')
+		const rowGrid = divS
+			.append('div')
+			.attr('class', 'grid-container')
+			.style('grid-template-columns', `2vw repeat(${numColumns}, 0.5fr) 1fr`)
 			.text(i + 1)
-			.style('font-size', '.7em')
-			.style('opacity', 0.5)
+			.style('font-size', '1em')
+			.style('align-items', 'center')
+			// .style('border', '2px outset green')
+			.style('transition', '0.4s')
+		// .style('z-index', '3')
 
+		// each row comprises of cell and each cell has values that will get appended to div elements of the rowGrid stored in td.
 		for (const [colIdx, cell] of row.entries()) {
-			const column = columns[colIdx]
+			const td = rowGrid
+				.append('div')
+				.style('display', 'flex')
+				.style('word-break', 'break-word')
+				.style('padding', '1px')
+			// .style('align-items', 'center')
 
-			const td = tr.append('td')
-						.style('word-wrap', 'break-word')
+			// if index of each row is even then the background of that row should be grey and also add hovering in yellow.
+			rowGrid
+				.style('background-color', i % 2 == 0 ? 'rgb(237, 237, 237)' : 'white')
+				.on('mouseover', () => rowGrid.style('background-color', '#fcfcca'))
+				.on('mouseout', () => rowGrid.style('background-color', i % 2 == 0 ? 'rgb(237, 237, 237)' : 'white'))
+
+			// if cell has values then append those values in new divs on td which is stored in d.
 			if (cell.values) {
 				for (const v of cell.values) {
 					const d = td.append('div')
-					
+
+					// if those values have url in them then tag it to the sample name/id otherwise just append the value of that cell onto the div
 					if (v.url) {
 						d.append('a')
-						.text(v.value)
-						.attr('href', v.url)
-						.attr('target', '_blank')
+							.text(v.value)
+							.attr('href', v.url)
+							.attr('target', '_blank')
 					} else if (v.html) {
 						d.html(v.html)
 					} else {
