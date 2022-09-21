@@ -27,7 +27,6 @@ class AppDrawerLayoutComp {
 			wrapper: opts.dom.wrapper
 		}
 		this.state = opts.state
-		setRenderers(this)
 	}
 
 	validateOpts(opts) {
@@ -56,14 +55,16 @@ class AppDrawerLayoutComp {
 		return opts
 	}
 
-	getState(appState) {
-		return {
-			appBtnActive: appState.appBtnActive
-		}
-	}
+	// getState(appState) {
+	// 	return {
+	// 		appBtnActive: appState.appBtnActive
+	// 	}
+	// }
 
-	init(appState) {
+	async init(appState) {
 		this.elementsRendered = false
+		// this.appBtnActive = this.app.getState(appState).appBtnActive
+		setRenderers(this)
 		this.elements = this.opts.index.elements.filter(e => !e.hidden)
 		this.layout = this.opts.index.columnsLayout ? this.opts.index.columnsLayout : null
 		this.components = {
@@ -106,8 +107,7 @@ class AppDrawerLayoutComp {
 
 export const layoutInit = getCompInit(AppDrawerLayoutComp)
 
-function setRenderers(self) {
-	if (self.opts.appBtnActive == false) return
+async function setRenderers(self) {
 	if (!self.opts.index.columnsLayout) noDefinedLayout(self)
 	if (self.opts.index.columnsLayout) columnsLayout(self)
 }

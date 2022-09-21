@@ -1,8 +1,5 @@
 import { getAppInit } from '#rx'
 import { mainBtnInit } from './mainBtn'
-import { layoutInit } from './layout'
-import { select } from 'd3-selection'
-import { event as d3event } from 'd3-selection'
 import { dofetch3, sayerror } from '#src/client'
 import { appDrawerStoreInit } from './store'
 
@@ -81,9 +78,10 @@ class AppDrawerApp {
 					app: this.api,
 					dom: this.dom,
 					state: this.state,
-					drawerRendered: this.drawerRendered
-				}),
-				layout: await layoutInit({ app: this.api, dom: this.dom, state: this.state, index: this.indexJson })
+					drawerRendered: this.drawerRendered,
+					indexJson: this.indexJson
+				})
+				// layout: await layoutInit({ app: this.api, dom: this.dom, state: this.state, index: this.indexJson })
 			}
 			await this.api.dispatch()
 		} catch (e) {

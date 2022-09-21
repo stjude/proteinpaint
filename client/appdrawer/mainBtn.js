@@ -1,6 +1,7 @@
 import { getCompInit } from '#rx'
 import { event as d3event } from 'd3-selection'
-import { appDrawerInit } from './app'
+import { layoutInit } from './layout'
+import { select } from 'd3-selection'
 
 class MainHeadboxBtn {
 	constructor(opts) {
@@ -25,39 +26,36 @@ class MainHeadboxBtn {
 		this.btnRendered = false
 		this.drawerFullHeight = ''
 		try {
-			if (window.location.pathname == '/' && !window.location.search.length) {
+			//detect whether to show examples right away, which is when the url is barebone without any route paths or search parameters
+			if (window.location.pathname == '/' && !window.location.search.length)
 				await this.app.dispatch({ type: 'is_apps_btn_active', value: true })
-			} else {
-				await this.app.dispatch({ type: 'is_apps_btn_active', value: false })
+			this.components = {
+				layout: await layoutInit({ app: this.app, dom: this.dom, state: this.state, index: this.opts.indexJson })
 			}
 		} catch (e) {
 			throw e
 		}
 	}
 
-	main(appState) {
-		this.app.getState(appState).appBtnActive == false
-			? (this.drawerFullHeight = '0px')
-			: (this.drawerFullHeight = this.dom.drawerDiv.node().getBoundingClientRect().height + 5)
-		console.log(this.drawerFullHeight)
+	async main(appState) {
+		if (this.app.getState(appState).appBtnActive == true && this.btnRendered == false) {
+			slideDrawer(this)
+		}
 		slideDrawer(this)
-
-		//detect whether to show examples right away, which is when the url is barebone without any route paths or search parameters
+		this.drawerFullHeight = this.dom.drawerDiv.node().getBoundingClientRect().height + 5
+		this.btnRendered = true
 	}
 }
 
 export const mainBtnInit = getCompInit(MainHeadboxBtn)
 
 function setRenderers(self) {
-	if (self.btnRendered == true) return
-	self.btnRendered == true
 	self.dom.btnWrapper
 		.style('background-color', self.state.appBtnActive ? '#b2b2b2' : '#f2f2f2')
 		.style('color', self.state.appBtnActive ? '#fff' : '#000')
 		.on('click', async () => {
 			d3event.stopPropagation()
 			await self.app.dispatch({ type: 'is_apps_btn_active' })
-			console.log(self.state.appBtnActive, self.drawerFullHeight)
 			slideDrawer(self)
 			if (self.state.appBtnActive) {
 				setTimeout(() => {
@@ -109,10 +107,12 @@ function setRenderers(self) {
 		.style('cursor', 'pointer')
 		.style('pointer-events', self.state.appBtnActive ? 'auto' : 'none')
 		.html('&#9660;')
+
+	self.drawerFullHeight = self.dom.drawerRow.node().getBoundingClientRect().height + 5
 }
 
 function slideDrawer(self) {
-	// self.drawerFullHeight = self.dom.drawerDiv.node().getBoundingClientRect().height + 5
+	console.log('slide drawer', self.drawerFullHeight)
 	self.dom.btnWrapper
 		.transition()
 		.duration(self.opts.state.duration)
