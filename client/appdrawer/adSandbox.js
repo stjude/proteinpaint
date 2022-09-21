@@ -682,7 +682,6 @@ async function showViewData(btns, data) {
 /********** Dataset Button Functions  **********/
 
 async function openDatasetButtonSandbox(pageArgs, element, res, sandboxDiv) {
-	console.log(pageArgs.app.opts.genomes[res.jsonfile.button.availableGenomes[0]])
 	const par = {
 		// First genome in .availableGenomes is the default
 		availableGenomes: res.jsonfile.button.availableGenomes,
@@ -815,7 +814,6 @@ function addDatasetGenomeBtns(div, par, genomes) {
 				active: false,
 				btn: utils.makeButton({ div, text: genome }),
 				callback: par => {
-					console.log(genomes)
 					par.genome = genomes[genome]
 				}
 			})

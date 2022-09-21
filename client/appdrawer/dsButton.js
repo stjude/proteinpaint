@@ -2,6 +2,7 @@ import { getInitFxn } from '#rx'
 import * as utils from './utils'
 import { event } from 'd3-selection'
 import { openSandbox } from './adSandbox'
+import { slideDrawer } from './mainBtn'
 
 /*
 .opts{
@@ -18,7 +19,8 @@ class AppDrawerButton {
 		this.type = 'button' // works for 'dsButton'. May expand to other button types
 		this.opts = this.validateOpts(opts)
 		this.holder = opts.holder
-		this.pageArgs = opts.pageArgs
+		this.dom = opts.dom
+		this.sandboxDiv = opts.sandboxDiv
 		setRenderers(this)
 	}
 
@@ -29,6 +31,7 @@ class AppDrawerButton {
 			throw `Either .sandboxJson or .sandboxHtml is missing for button=${opts.element.name}`
 		return opts
 	}
+
 	main() {}
 }
 
@@ -42,6 +45,11 @@ function setRenderers(self) {
 			type: 'is_apps_btn_active',
 			value: false
 		})
+		// Will not update appropriately without waiting for dispatch
+		// Better solution?
+		setTimeout(() => {
+			slideDrawer(self)
+		}, 1)
 		await openSandbox(self.opts.element, self.opts)
 	})
 }

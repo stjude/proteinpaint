@@ -2,6 +2,7 @@ import { getCompInit } from '#rx'
 import { rgb } from 'd3-color'
 import { openSandbox } from './adSandbox'
 import { event } from 'd3-selection'
+import { slideDrawer } from './mainBtn'
 
 /*
 .opts{
@@ -30,7 +31,9 @@ class AppDrawerCard {
 	constructor(opts) {
 		this.type = 'card'
 		this.opts = this.validateOpts(opts)
-		;(this.holder = opts.holder), (this.sandboxDiv = opts.sandboxDiv)
+		this.holder = opts.holder
+		this.dom = opts.dom
+		this.sandboxDiv = opts.sandboxDiv
 		setRenderers(this)
 	}
 
@@ -64,12 +67,6 @@ class AppDrawerCard {
 			}
 		}
 		return opts
-	}
-
-	getState(appState) {
-		return {
-			appBtnActive: appState.appBtnActive
-		}
 	}
 
 	main() {}
@@ -148,6 +145,11 @@ function setRenderers(self) {
 			type: 'is_apps_btn_active',
 			value: false
 		})
+		// Will not update appropriately without waiting for dispatch
+		// Better solution?
+		setTimeout(() => {
+			slideDrawer(self)
+		}, 1)
 		await openSandbox(self.opts.element, self.opts)
 	})
 }

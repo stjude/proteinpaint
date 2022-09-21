@@ -11,8 +11,9 @@ import { layoutInit } from './layout'
 
 
 TODOs: 
-Replace drawerFullHeight with a different approach
-- Causes the drawer to only partially appear when the window zooms in
+- Move cardsjson logic to layout
+- Replace drawerFullHeight with a different approach
+	- Causes the drawer to only partially appear when the window zooms in
 */
 
 class MainHeadboxBtn {
@@ -135,7 +136,7 @@ function setRenderers(self) {
 	self.drawerFullHeight = self.dom.drawerRow.node().getBoundingClientRect().height + 5
 }
 
-function slideDrawer(self) {
+export async function slideDrawer(self) {
 	self.dom.btnWrapper
 		.transition()
 		.duration(self.opts.state.duration)

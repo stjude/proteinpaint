@@ -25,7 +25,8 @@ class AppDrawerLayoutComp {
 		this.opts = this.validateOpts(opts)
 		this.dom = {
 			holder: opts.dom.drawerDiv,
-			wrapper: opts.dom.wrapper
+			wrapper: opts.dom.wrapper,
+			sandboxDiv: opts.dom.sandboxDiv
 		}
 		this.state = opts.state
 	}
@@ -57,7 +58,19 @@ class AppDrawerLayoutComp {
 		return opts
 	}
 
-	init() {
+	getState(appState) {
+		return {
+			appBtnActive: appState.appBtnActive,
+			duration: appState.duration,
+			hintPos: appState.hintPos,
+			hintWidth: appState.hintWidth,
+			arrowSize: appState.arrowSize,
+			arrowColor: appState.arrowColor
+		}
+	}
+
+	async init(appState) {
+		this.state = this.getState(appState)
 		this.elementsRendered = false
 		setRenderers(this)
 		this.elements = this.opts.index.elements.filter(e => !e.hidden)
@@ -84,6 +97,8 @@ class AppDrawerLayoutComp {
 							.style('list-style', 'none')
 							.style('margin', '15px 0px'),
 						element,
+						dom: this.opts.dom,
+						state: this.state,
 						sandboxDiv: this.dom.sandboxDiv
 					})
 				)
@@ -93,6 +108,8 @@ class AppDrawerLayoutComp {
 						app: this.app,
 						holder,
 						element,
+						dom: this.opts.dom,
+						state: this.state,
 						sandboxDiv: this.dom.sandboxDiv
 					})
 				)
