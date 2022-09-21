@@ -9,6 +9,21 @@ import { d3lasso } from '../common/lasso'
 import { Menu } from '#dom/menu'
 import { controlsInit } from './controls'
 import { axisLeft, axisBottom } from 'd3-axis'
+import { make_table_2col } from '#dom/table2col'
+
+/*
+sample object returned by server:
+{
+	sample=str
+	x=number
+	y=number
+	category=str
+}
+
+NOTE
+"sample" and "category" attributes here are hardcoded
+
+*/
 
 class Scatter {
 	constructor() {
@@ -502,13 +517,15 @@ function setRenderers(self) {
 function setInteractivity(self) {
 	self.mouseover = function() {
 		if (event.target.tagName == 'circle') {
+			self.app.tip.clear().show(event.clientX, event.clientY)
+
 			const d = event.target.__data__
-			const rows = [
-				`<tr><td style='padding:3px; color:#aaa'>Sample:</td><td style='padding:3px; text-align:center'>${d.sample}</td></tr>`
-			]
-			self.app.tip
-				.show(event.clientX, event.clientY)
-				.d.html(`<table class='sja_simpletable'>${rows.join('\n')}</table>`)
+
+			const rows = [{ k: 'Sample', v: d.sample }]
+			if ('category' in d) {
+				rows.push({ k: self.config.term.id, v: d.category })
+			}
+			make_table_2col(self.app.tip.d, rows)
 		} else {
 			self.app.tip.hide()
 		}
@@ -578,6 +595,7 @@ function getPj(self) {
 									x: '$x',
 									y: '$y',
 									sample: '$sample',
+									category: '$category',
 									'_1:scaledX': '=scaledX()',
 									'_1:scaledY': '=scaledY()'
 								},
