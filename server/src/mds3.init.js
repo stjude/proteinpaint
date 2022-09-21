@@ -202,6 +202,14 @@ async function validate_termdb(ds) {
 		ds.getTermTypes = getTermTypes
 		ds.mayGetMatchingGeneNames = mayGetMatchingGeneNames
 	}
+
+	if (ds.cohort.scatterplots) {
+		if (!Array.isArray(ds.cohort.scatterplots.plots)) throw 'cohort.scatterplots.plots is not array'
+		for (const p of ds.cohort.scatterplots.plots) {
+			if (!p.name) throw '.name missing from one of scatterplots.plots[]'
+			if (!p.file) throw '.file missing from one of scatterplots.plots[]'
+		}
+	}
 }
 
 async function getBarchartDataFromSqlitedb(termidlst, q, combination, ds) {

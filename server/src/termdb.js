@@ -82,6 +82,8 @@ export function handle_request_closure(genomes) {
 			if (q.getvariantfilter) return trigger_getvariantfilter(res, ds)
 			if (q.getLDdata) return trigger_getLDdata(q, res, ds)
 			if (q.genesetByTermId) return trigger_genesetByTermId(q, res, tdb)
+			console.log(1121)
+			if (q.getSampleScatter) return await trigger_getSampleScatter(q, res, ds)
 
 			// TODO: use trigger flags like above?
 			if (q.for == 'termTypes') {
@@ -170,6 +172,14 @@ function trigger_gettermdbconfig(q, res, tdb, cohort) {
 			headerKey: cred.headerKey
 		}
 	}
+
+	if (cohort.scatterplots) {
+		// this dataset has premade scatterplots. reveal to client
+		c.scatterplots = cohort.scatterplots.plots.map(p => {
+			return { name: p.name, dimensions: p.dimensions, term: p.term }
+		})
+	}
+
 	res.send({ termdbConfig: c })
 }
 
@@ -402,4 +412,40 @@ function trigger_genesetByTermId(q, res, tdb) {
 	if (typeof q.genesetByTermId != 'string' || q.genesetByTermId.length == 0) throw 'invalid query term id'
 	const geneset = tdb.q.getGenesetByTermId(q.genesetByTermId)
 	res.send(geneset)
+}
+
+async function trigger_getSampleScatter(q, res, ds) {
+	try {
+		if (!ds.cohort.scatterplots || !ds.cohort.scatterplots.plots) throw 'not supported'
+
+		const plot = ds.cohort.scatterplots.plots.find(p => p.name == q.plotName)
+		if (!plot) throw 'plot not found with plotName'
+
+		const samples = []
+
+		if (plot.file) {
+			// load plot data from tabular text file
+			const lines = (await utils.read_file(path.join(serverconfig.tpmasterdir, plot.file))).trim().split('\n')
+
+			for (let i = 1; i < lines.length; i++) {
+				const l = lines[i].split('\t')
+				const sample = {
+					sample: l[0],
+					x: Number(l[1]),
+					y: Number(l[2])
+				}
+				if (Number.isNaN(sample.x) || Number.isNaN(sample.y)) {
+					// this sample has invalid x/y, for now just ignore
+					continue
+				}
+				samples.push(sample)
+			}
+		} else {
+			throw 'do not know how to load data from this plot'
+		}
+
+		res.send({ samples })
+	} catch (e) {
+		res.send({ error: e.message || e })
+	}
 }
