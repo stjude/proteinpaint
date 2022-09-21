@@ -141,15 +141,11 @@ function setRenderers(self) {
 
 	card.on('click', async () => {
 		event.stopPropagation()
-		self.app.dispatch({
+		await self.app.dispatch({
 			type: 'is_apps_btn_active',
 			value: false
 		})
-		// Will not update appropriately without waiting for dispatch
-		// Better solution?
-		setTimeout(() => {
-			slideDrawer(self)
-		}, 1)
+		slideDrawer(self)
 		await openSandbox(self.opts.element, self.opts)
 	})
 }

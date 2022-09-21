@@ -41,15 +41,13 @@ function setRenderers(self) {
 	const btn = utils.makeButton({ div: self.holder, text: self.opts.element.name, margin: '20px 20px 0px' })
 	btn.attr('class', 'sjpp-appdrawer-dataset-btn').on('click', async () => {
 		event.stopPropagation()
-		self.app.dispatch({
+		await self.app.dispatch({
 			type: 'is_apps_btn_active',
 			value: false
 		})
 		// Will not update appropriately without waiting for dispatch
 		// Better solution?
-		setTimeout(() => {
-			slideDrawer(self)
-		}, 1)
+		slideDrawer(self)
 		await openSandbox(self.opts.element, self.opts)
 	})
 }
