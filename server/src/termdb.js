@@ -82,7 +82,6 @@ export function handle_request_closure(genomes) {
 			if (q.getvariantfilter) return trigger_getvariantfilter(res, ds)
 			if (q.getLDdata) return trigger_getLDdata(q, res, ds)
 			if (q.genesetByTermId) return trigger_genesetByTermId(q, res, tdb)
-			console.log(1121)
 			if (q.getSampleScatter) return await trigger_getSampleScatter(q, res, ds)
 
 			// TODO: use trigger flags like above?
@@ -421,31 +420,86 @@ async function trigger_getSampleScatter(q, res, ds) {
 		const plot = ds.cohort.scatterplots.plots.find(p => p.name == q.plotName)
 		if (!plot) throw 'plot not found with plotName'
 
-		const samples = []
+		const samples = await sampleScatter_getSampleLst(plot)
 
-		if (plot.file) {
-			// load plot data from tabular text file
-			const lines = (await utils.read_file(path.join(serverconfig.tpmasterdir, plot.file))).trim().split('\n')
-
-			for (let i = 1; i < lines.length; i++) {
-				const l = lines[i].split('\t')
-				const sample = {
-					sample: l[0],
-					x: Number(l[1]),
-					y: Number(l[2])
-				}
-				if (Number.isNaN(sample.x) || Number.isNaN(sample.y)) {
-					// this sample has invalid x/y, for now just ignore
-					continue
-				}
-				samples.push(sample)
-			}
-		} else {
-			throw 'do not know how to load data from this plot'
-		}
+		await sampleScatter_mayColorSamples(samples, q, ds)
 
 		res.send({ samples })
 	} catch (e) {
 		res.send({ error: e.message || e })
+	}
+}
+
+async function sampleScatter_getSampleLst(plot) {
+	/* returns an array, each sample:
+{ sample=str, x, y }
+*/
+	if (plot.file) {
+		// load plot data from tabular text file
+		const lines = (await utils.read_file(path.join(serverconfig.tpmasterdir, plot.file))).trim().split('\n')
+
+		const samples = []
+		for (let i = 1; i < lines.length; i++) {
+			const l = lines[i].split('\t')
+			const sample = {
+				sample: l[0],
+				x: Number(l[1]),
+				y: Number(l[2])
+			}
+			if (Number.isNaN(sample.x) || Number.isNaN(sample.y)) {
+				// this sample has invalid x/y, for now just ignore
+				continue
+			}
+			samples.push(sample)
+		}
+		return samples
+	}
+	throw 'do not know how to load data from this plot'
+}
+
+async function sampleScatter_mayColorSamples(samples, q, ds) {
+	// if applicable, assign .color=str to each sample
+	if (!q.term) {
+		// no term to do sample coloring
+		return
+	}
+
+	// q.term{} is a termsetting
+	if (!('id' in q.term)) throw 'q.term.id missing'
+	if (typeof q.term.q != 'object') throw 'q.term.q is not object'
+
+	const rowsQ = {
+		ds,
+		term1_id: q.term.id,
+		term1_q: q.term.q,
+		filter: q.filter
+	}
+
+	const result = termdbsql.get_rows(rowsQ)
+	/*
+	result = {
+	  lst: [
+		{
+		  key0: '',
+		  val0: '',
+		  key1: 'HGG',
+		  val1: 'HGG',
+		  key2: '',
+		  val2: '',
+		  sample: 1
+		},
+		...
+	  ]
+	}
+	*/
+
+	const sampleId2category = new Map()
+	for (const i of result.lst) {
+		sampleId2category.set(i.sample, i.key1)
+	}
+
+	for (const s of samples) {
+		const sampleId = ds.cohort.termdb.q.sampleName2id(s.sample)
+		s.category = sampleId2category.get(sampleId)
 	}
 }
