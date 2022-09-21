@@ -239,7 +239,7 @@ function getChartTypeList(self) {
 		{
 			label: 'Sample Scatter',
 			chartType: 'sampleScatter',
-			clickTo: self.showFileLst
+			clickTo: self.showScatterPlot
 		}
 	]
 }
@@ -444,7 +444,7 @@ function setRenderers(self) {
 		self.app.dispatch(action)
 	}
 
-	self.showFileLst = function() {
+	self.showScatterPlot = function() {
 		const menuDiv = self.dom.tip.d.append('div')
 		for (const plot of self.state.termdbConfig.scatterplots) {
 			/* plot: 
