@@ -455,7 +455,9 @@ function setRenderers(self) {
 					self.app.dispatch({
 						type: 'plot_create',
 						config: { chartType: 'sampleScatter', term: { id: plot.term.id }, file: plot.file, name: plot.name }
+						
 					})
+					self.dom.tip.hide()
 				})
 		}
 	}
