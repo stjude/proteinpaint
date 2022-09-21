@@ -25,7 +25,7 @@ class Scatter {
 			header: this.opts.header,
 			holder,
 			controls,
-			chartsDiv: holder.style('margin', '10px').style('display', 'inline-block'),
+			chartsDiv: holder.style('margin', '20px'),
 			toolsDiv,
 			tip: new Menu({ padding: '5px' })
 		}
@@ -165,9 +165,8 @@ function setRenderers(self) {
 			.attr('class', 'pp-scatter-chart')
 			.style('opacity', 0)
 			//.style("position", "absolute")
-			.style('width', s.svgw + 150 + 'px')
-			.style('height', s.svgh + 150 + 'px')
-
+			.style('width', s.svgw + 100 + 'px')
+			.style('height', s.svgh + 50 + 'px')
 			.style('display', 'inline-block')
 			.style('margin', s.chartMargin + 'px')
 			.style('top', 0) //layout.byChc[d.chc].top)
@@ -230,7 +229,7 @@ function setRenderers(self) {
 				renderSeries(select(this), chart, series, i, s, duration)
 			})
 		if(s.showAxes)
-				renderAxes(xAxis, xTitle, yAxis, yTitle, s, chart)
+			renderAxes(xAxis, xTitle, yAxis, yTitle, s, chart)
 
 	}
 
@@ -247,6 +246,11 @@ function setRenderers(self) {
 
 			mainG = svg.select('.sjpcb-scatter-mainG')
 			axisG = mainG.select('.sjpcb-scatter-axis')
+			if(self.settings.showAxes)
+				axisG.style('opacity', 1)
+			else
+				axisG.style('opacity', 0)
+
 			xAxis = axisG.select('.sjpcb-scatter-x-axis')
 			yAxis = axisG.select('.sjpcb-scatter-y-axis')
 			xTitle = axisG.select('.sjpcb-scatter-x-title')
@@ -571,9 +575,7 @@ export async function getPlotConfig(opts, app) {
 					svgw: 600,
 					svgh: 600,
 					axisTitleFontSize: 16,
-					xAxisOffset: 5,
-					yAxisOffset: -5,
-					showAxes: true
+					showAxes: false
 				}
 			}
 		}
