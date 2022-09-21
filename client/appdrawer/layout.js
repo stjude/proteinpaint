@@ -9,6 +9,7 @@ import { select } from 'd3-selection'
 .opts{}
     .app{}
 	.dom{}
+	.state{}
 	.index{}
 
 Questions: 
@@ -32,6 +33,7 @@ class AppDrawerLayoutComp {
 	validateOpts(opts) {
 		if (!opts.index.elements) throw `Missing elements array`
 		if (!opts.index.elements.length) throw `No element objects provided`
+		//TODO simplify element validation and move here
 		if (opts.index.columnsLayout) {
 			if (opts.index.columnsLayout.length == 0) throw `Missing column objects`
 			const allGridAreaValues = opts.index.columnsLayout.map(s => s.gridarea)
@@ -55,15 +57,8 @@ class AppDrawerLayoutComp {
 		return opts
 	}
 
-	// getState(appState) {
-	// 	return {
-	// 		appBtnActive: appState.appBtnActive
-	// 	}
-	// }
-
-	async init(appState) {
+	init() {
 		this.elementsRendered = false
-		// this.appBtnActive = this.app.getState(appState).appBtnActive
 		setRenderers(this)
 		this.elements = this.opts.index.elements.filter(e => !e.hidden)
 		this.layout = this.opts.index.columnsLayout ? this.opts.index.columnsLayout : null
@@ -73,6 +68,7 @@ class AppDrawerLayoutComp {
 	}
 
 	async main() {
+		//prevent elements from reloading each time
 		if (this.elementsRendered == true) return
 		this.elementsRendered = true
 		for (const element of this.elements) {
@@ -107,7 +103,7 @@ class AppDrawerLayoutComp {
 
 export const layoutInit = getCompInit(AppDrawerLayoutComp)
 
-async function setRenderers(self) {
+function setRenderers(self) {
 	if (!self.opts.index.columnsLayout) noDefinedLayout(self)
 	if (self.opts.index.columnsLayout) columnsLayout(self)
 }

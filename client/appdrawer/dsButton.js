@@ -3,6 +3,16 @@ import * as utils from './utils'
 import { event } from 'd3-selection'
 import { openSandbox } from './adSandbox'
 
+/*
+.opts{
+	.app{
+		.holder
+		.element{}
+		.sandboxDiv
+	}
+}
+*/
+
 class AppDrawerButton {
 	constructor(opts) {
 		this.type = 'button' // works for 'dsButton'. May expand to other button types

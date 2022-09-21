@@ -8,7 +8,7 @@ import { event } from 'd3-selection'
 	.app{
 		.holder
 		.element{}
-		.pageArgs{}
+		.sandboxDiv
 	}
 }
 

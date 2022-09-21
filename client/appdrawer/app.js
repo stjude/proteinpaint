@@ -41,7 +41,6 @@ class AppDrawerApp {
 			.style('padding', `0 ${opts.padw_sm}`)
 			.style('display', 'inline-block')
 			.style('overflow', 'hidden')
-			.style('background-color', '#f5f5f5')
 			.style('border-radius', '0px 0px 5px 5px')
 			.style('width', '93vw')
 			.classed('sjpp-drawer-div', true)
@@ -68,7 +67,6 @@ class AppDrawerApp {
 	}
 
 	async init() {
-		this.drawerRendered = false
 		try {
 			this.store = await appDrawerStoreInit({ app: this.api, state: this.opts.state })
 			this.state = await this.store.copyState()
@@ -78,10 +76,8 @@ class AppDrawerApp {
 					app: this.api,
 					dom: this.dom,
 					state: this.state,
-					drawerRendered: this.drawerRendered,
 					indexJson: this.indexJson
 				})
-				// layout: await layoutInit({ app: this.api, dom: this.dom, state: this.state, index: this.indexJson })
 			}
 			await this.api.dispatch()
 		} catch (e) {
@@ -89,10 +85,7 @@ class AppDrawerApp {
 		}
 	}
 
-	main() {
-		if (this.drawerRendered == true) return
-		this.drawerRendered = true
-	}
+	main() {}
 }
 
 export const appDrawerInit = getAppInit(AppDrawerApp)

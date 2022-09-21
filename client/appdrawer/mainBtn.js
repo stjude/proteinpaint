@@ -1,7 +1,19 @@
 import { getCompInit } from '#rx'
 import { event as d3event } from 'd3-selection'
 import { layoutInit } from './layout'
-import { select } from 'd3-selection'
+
+/*
+.opts{}
+    .app{}
+	.dom{}
+	.state{}
+	.indexJson{}
+
+
+TODOs: 
+Replace drawerFullHeight with a different approach
+- Causes the drawer to only partially appear when the window zooms in
+*/
 
 class MainHeadboxBtn {
 	constructor(opts) {
@@ -30,7 +42,7 @@ class MainHeadboxBtn {
 			if (window.location.pathname == '/' && !window.location.search.length)
 				await this.app.dispatch({ type: 'is_apps_btn_active', value: true })
 			this.components = {
-				layout: await layoutInit({ app: this.app, dom: this.dom, state: this.state, index: this.opts.indexJson })
+				layout: []
 			}
 		} catch (e) {
 			throw e
@@ -39,11 +51,23 @@ class MainHeadboxBtn {
 
 	async main(appState) {
 		if (this.app.getState(appState).appBtnActive == true && this.btnRendered == false) {
+			this.dom.drawerDiv.style('background-color', '#f5f5f5') //Quick fix for drawerDiv initially appearing before layout init
+			//Init layout only once when 'Apps' button is active for the first time
+			this.components.layout.push(
+				await layoutInit({
+					app: this.app,
+					dom: this.dom,
+					state: this.state,
+					index: this.opts.indexJson
+				})
+			)
+			//Give the drawerDiv time to render before calculating height
+			setTimeout(() => {
+				this.drawerFullHeight = this.dom.drawerDiv.node().getBoundingClientRect().height + 5
+			}, this.state.duration + 5)
 			slideDrawer(this)
+			this.btnRendered = true
 		}
-		slideDrawer(this)
-		this.drawerFullHeight = this.dom.drawerDiv.node().getBoundingClientRect().height + 5
-		this.btnRendered = true
 	}
 }
 
@@ -112,7 +136,6 @@ function setRenderers(self) {
 }
 
 function slideDrawer(self) {
-	console.log('slide drawer', self.drawerFullHeight)
 	self.dom.btnWrapper
 		.transition()
 		.duration(self.opts.state.duration)
