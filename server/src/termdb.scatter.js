@@ -129,6 +129,9 @@ async function mayColorAndFilterSamples(allSamples, q, ds) {
 	if (!q.term) return [allSamples] // no term to get sample category
 
 	// q.term{} is a termsetting
+	// TODO groupsetting
+	// TODO numeric bins
+	// TODO numeric continuous values
 	if (!('id' in q.term)) throw 'q.term.id missing'
 	if (typeof q.term.q != 'object') throw 'q.term.q is not object'
 
@@ -160,7 +163,8 @@ async function mayColorAndFilterSamples(allSamples, q, ds) {
 	}
 
 	const samples = [] // samples pass filter and to be returned to client and display
-	const categories = {} // k: category, v: {sampleCount, color}
+	const categories = new Map()
+	// key: category, value: {sampleCount=integer, color=str}
 
 	for (const s of allSamples) {
 		if ('sampleId' in s) {
@@ -176,13 +180,13 @@ async function mayColorAndFilterSamples(allSamples, q, ds) {
 			if (sampleId2category.has(s.sampleId)) {
 				// sample has category assignment
 				s.category = sampleId2category.get(s.sampleId)
-				if (!categories[s.category]) {
-					categories[s.category] = { sampleCount: 0 }
+				if (!categories.has(s.category)) {
+					categories.set(s.category, { sampleCount: 0 })
 				}
-				categories[s.category].sampleCount++
+				categories.get(s.category).sampleCount++
 			}
 
-			delete s.sampleId // no need to send this to client
+			delete s.sampleId // no need to send to client
 			samples.push(s)
 		} else {
 			// this sample does not has ID, and is un-filterable
@@ -191,22 +195,23 @@ async function mayColorAndFilterSamples(allSamples, q, ds) {
 		}
 	}
 
-	// logic to add color is subject to change...
-	if (q.term?.term?.values) {
-		for (const k in q.term.term.values) {
-			if (q.term.term.values[k].color && categories[k]) {
-				categories[k].color = q.term.term.values[k].color
-			}
+	// add color to categories
+	const k2c = d3scale.scaleOrdinal(d3scale.schemeCategory10)
+	for (const [category, o] of categories) {
+		if (q.term?.term?.values?.[category]?.color) {
+			o.color = q.term.term.values[category].color
+		} else {
+			o.color = k2c(category)
 		}
 	}
-	if (!categories[Object.keys(categories)[0]].color) {
-		// lack color for first category, reassign color for all
-		const s = d3scale.scaleOrdinal(d3scale.schemeCategory10)
-		for (const k in categories) {
-			categories[k].color = s(k)
-		}
-	}
-	console.log(categories)
 
-	return [samples, categories]
+	// now each category gets an color, apply to samples
+	for (const s of samples) {
+		s.color = categories.has(s.category) ? categories.get(s.category).color : '#ccc'
+	}
+
+	// sort in descending order
+	const legendItems = [...categories].sort((a, b) => b[1].sampleCount - a[1].sampleCount)
+
+	return [samples, legendItems]
 }
