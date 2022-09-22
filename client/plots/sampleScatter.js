@@ -10,6 +10,7 @@ import { Menu } from '#dom/menu'
 import { controlsInit } from './controls'
 import { axisLeft, axisBottom } from 'd3-axis'
 import { make_table_2col } from '#dom/table2col'
+import htmlLegend from '../dom/html.legend'
 
 /*
 sample object returned by server:
@@ -33,14 +34,17 @@ class Scatter {
 	async init(opts) {
 		const controls = this.opts.controls || this.opts.holder.append('div')
 		const holder = this.opts.controls ? opts.holder : this.opts.holder.append('div')
+		holder.style('margin', '20px').style('position', 'relative')
+		const legendDiv = holder.append('div').style('position', 'relative')
 		const toolsDiv = this.opts.holder.append('div')
 
 		this.dom = {
 			header: this.opts.header,
 			holder,
 			controls,
-			chartsDiv: holder.style('margin', '20px'),
+			chartsDiv: holder,
 			toolsDiv,
+			legendDiv,
 			tip: new Menu({ padding: '5px' })
 		}
 
