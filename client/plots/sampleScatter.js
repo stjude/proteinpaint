@@ -87,7 +87,7 @@ class Scatter {
 		this.pj.refresh({ data: data.samples })
 		this.render()
 		const renderLegend = htmlLegend(this.dom.legendDiv)
-		renderLegend(this.getLegend(data.samples))
+		renderLegend(this.getLegend(data.categories))
 	}
 
 	// creates an opts object for the vocabApi.someMethod(),
@@ -155,27 +155,24 @@ class Scatter {
 		this.components.controls.on('downloadClick.survival', () => alert('TODO: data download?'))
 	}
 
-	getLegend(rows) {
-		let groups = rows.reduce((groups, item) => {
-			if (typeof item.category == 'undefined') item.category = 'NONE'
-			const group = groups[item.category] || []
-			group.push(item)
-			groups[item.category] = group
-			return groups
-		}, [])
+	getLegend(categories) {
 		let items = []
 		let item
-		for (const [key, value] of Object.entries(groups)) {
-			item = { dataId: key, text: key + '/' + value.length, type: 'row', color: 'blue' }
+		for (const category of categories) {
+			item = {
+				dataId: category[0],
+				text: category[0] + '/' + category[1].sampleCount,
+				type: 'row',
+				color: category[1].color,
+				color: category[1].color
+			}
 			items.push(item)
 		}
-		console.log(items)
 		const legendGrps = []
 
 		legendGrps.push({
 			items: items
 		})
-		console.log(legendGrps)
 		return legendGrps
 	}
 }
