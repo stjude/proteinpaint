@@ -10,6 +10,7 @@ const { dtfusionrna, dtsv, mclassfusionrna, mclasssv } = require('#shared/common
 const { get_samples, server_init_db_queries } = require('./termdb.sql')
 const { get_barchart_data_sqlitedb } = require('./termdb.barsql')
 const { setDbRefreshRoute } = require('./dsUpdateAttr.js')
+const mayInitiateScatterplots = require('./termdb.scatter').mayInitiateScatterplots
 
 /*
 ********************** EXPORTED
@@ -170,8 +171,13 @@ async function validate_termdb(ds) {
 		}
 	}
 
-	// !!! XXX
-	// rest is quick fixes taken from mds2.init.js
+	await mayInitiateScatterplots(ds)
+
+	//////////////////////////////////////////////////////
+	//
+	// XXX rest is quick fixes taken from mds2.init.js
+	//
+	//////////////////////////////////////////////////////
 
 	if (ds.cohort?.db?.connection) {
 		// gdc does not use db connection
@@ -201,14 +207,6 @@ async function validate_termdb(ds) {
 		ds.mayGetGeneVariantData = mayGetGeneVariantData
 		ds.getTermTypes = getTermTypes
 		ds.mayGetMatchingGeneNames = mayGetMatchingGeneNames
-	}
-
-	if (ds.cohort.scatterplots) {
-		if (!Array.isArray(ds.cohort.scatterplots.plots)) throw 'cohort.scatterplots.plots is not array'
-		for (const p of ds.cohort.scatterplots.plots) {
-			if (!p.name) throw '.name missing from one of scatterplots.plots[]'
-			if (!p.file) throw '.file missing from one of scatterplots.plots[]'
-		}
 	}
 }
 
