@@ -58,19 +58,7 @@ class AppDrawerLayoutComp {
 		return opts
 	}
 
-	getState(appState) {
-		return {
-			appBtnActive: appState.appBtnActive,
-			duration: appState.duration,
-			hintPos: appState.hintPos,
-			hintWidth: appState.hintWidth,
-			arrowSize: appState.arrowSize,
-			arrowColor: appState.arrowColor
-		}
-	}
-
-	async init(appState) {
-		this.state = this.getState(appState)
+	async init() {
 		this.elementsRendered = false
 		setRenderers(this)
 		this.elements = this.opts.index.elements.filter(e => !e.hidden)

@@ -45,8 +45,6 @@ function setRenderers(self) {
 			type: 'is_apps_btn_active',
 			value: false
 		})
-		// Will not update appropriately without waiting for dispatch
-		// Better solution?
 		slideDrawer(self)
 		await openSandbox(self.opts.element, self.opts)
 	})
