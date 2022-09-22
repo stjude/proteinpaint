@@ -149,12 +149,13 @@ function trigger_gettermdbconfig(q, res, tdb, cohort) {
 		selectCohort: tdb.selectCohort, // optional
 		supportedChartTypes: tdb.q.getSupportedChartTypes(q.embedder),
 		allowedTermTypes: tdb.allowedTermTypes || [],
-		coxCumincXlab: tdb.coxCumincXlab,
-		timeScale: tdb.timeScale,
-		minTimeSinceDx: tdb.minTimeSinceDx,
 		termMatch2geneSet: tdb.termMatch2geneSet,
 		scatterplots: cohort.scatterplots
 	}
+	if (tdb.helpPages) c.helpPages = tdb.helpPages
+	if (tdb.coxCumincXlab) c.coxCumincXlab = tdb.coxCumincXlab
+	if (tdb.timeScale) c.timeScale = tdb.timeScale
+	if (tdb.minTimeSinceDx) c.minTimeSinceDx = tdb.minTimeSinceDx
 	if (tdb.restrictAncestries) {
 		c.restrictAncestries = []
 		for (const i of tdb.restrictAncestries) {

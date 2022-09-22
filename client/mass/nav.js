@@ -3,7 +3,7 @@ import { recoverInit } from '../rx/src/recover'
 import { searchInit } from './search'
 import { filterRxCompInit } from '../filter/filter'
 import { chartsInit } from './charts'
-import { select } from 'd3-selection'
+import { select, event } from 'd3-selection'
 import { dofetch3 } from '../common/dofetch'
 import { Menu } from '../dom/menu'
 import { getNormalRoot, getFilterItemByTag } from '../filter/filter'
@@ -13,13 +13,28 @@ import { getNormalRoot, getFilterItemByTag } from '../filter/filter'
 // otherwise termdp app popups
 let instanceNum = 0
 
+// to distinguish from IDs assigned by other code or users
+const idPrefix =
+	'_MASS_AUTOID_' +
+	Math.random()
+		.toString()
+		.slice(-6)
+let id = (+new Date()).toString().slice(-8)
+
+const headtip = new Menu({ padding: '0px', offsetX: 0, offsetY: 0 })
+headtip.d.style('z-index', 5555)
+// headtip must get a crazy high z-index so it can stay on top of all, no matter if server config has base_zindex or not
+
+function getId() {
+	return idPrefix + '_' + id++
+}
+
 class TdbNav {
 	constructor(opts) {
 		this.type = 'nav'
 		this.instanceNum = instanceNum++
-		// 0 = cohort tab, will switch to 1 = filter tab if there are no cohorts
-		this.activeTab = 0
-		this.activeCohort = -1
+		this.activeTab = 0 // 0 = cohort tab if present, otherwise charts tab
+		this.activeCohort = 0 // -1 = unselected, 0,1,2... = selected
 		this.searching = false
 		this.samplecounts = {}
 		setInteractivity(this)
@@ -141,11 +156,20 @@ function setRenderers(self) {
 				.append('div')
 				.style('display', 'inline-block')
 				.style('vertical-align', 'top'),
+			helpDiv: header
+				.append('div')
+				.style('display', 'none')
+				.style('vertical-align', 'top'),
 			subheaderDiv: self.opts.holder
 				.append('div')
 				.style('display', 'block')
 				.style('padding-top', '5px')
 				.style('border-bottom', '1px solid #000'),
+			messageDiv: self.opts.holder
+				.append('div')
+				.style('margin', '30px')
+				//.style('font-weight', 'bold')
+				.style('display', 'none'),
 			tip: new Menu({ padding: '5px' })
 		}
 
@@ -189,7 +213,7 @@ function setRenderers(self) {
 		const filterTab = { top: 'FILTER', mid: 'NONE', btm: '', subheader: 'filter' }
 		const cartTab = { top: 'CART', mid: 'NONE', btm: '', subheader: 'cart' }
 		self.tabs = appState.termdbConfig.selectCohort
-			? [chartTab, cohortTab, filterTab /*, cartTab*/]
+			? [cohortTab, chartTab, filterTab /*, cartTab*/]
 			: [chartTab, filterTab /*, cartTab*/]
 
 		// using a table layout for tabs, iterate through each tab
@@ -229,9 +253,39 @@ function setRenderers(self) {
 			.style('margin', '10px')
 			.text('Save')
 			.on('click', self.getSessionUrl)
+
+		const helpPages = appState.termdbConfig.helpPages
+		if (helpPages) {
+			// if help pages are defined, then show a help button
+			self.dom.helpBtn = self.dom.helpDiv
+				.style('display', 'inline-block')
+				.append('button')
+				.style('margin', '10px')
+				.html('Help &#9660;')
+				.on('click', () => {
+					const p = event.target.getBoundingClientRect()
+					const div = headtip
+						.clear()
+						.show(p.left - 0, p.top + p.height + 5)
+						.d.append('div')
+						.style('padding', '5px 20px')
+					for (const page of helpPages) {
+						div.append('p').html(`<a href=${page.url} target=_blank>${page.label}</a>`)
+					}
+				})
+		}
 	}
 
 	self.updateUI = () => {
+		if (self.activeTab && self.activeCohort == -1) {
+			// charts or filter tab, but no cohort is selected
+			self.dom.subheaderDiv.style('display', 'none')
+			self.dom.messageDiv.selectAll('text').remove()
+			self.dom.messageDiv.style('display', '').text('No cohort selected. Please select a cohort in the "COHORT" tab.')
+		} else {
+			self.dom.subheaderDiv.style('display', 'block')
+			self.dom.messageDiv.style('display', 'none')
+		}
 		const selectCohort = self.state.termdbConfig.selectCohort
 		self.dom.searchDiv.style('display', selectCohort && self.activeCohort == -1 ? 'none' : 'inline-block')
 		self.dom.holder.style('margin-bottom', self.state.nav.header_mode === 'with_tabs' ? '20px' : '')
@@ -286,7 +340,6 @@ function setRenderers(self) {
 			self.dom.cohortTable.selectAll(activeSelector).style('background-color', 'yellow')
 			self.dom.cohortInputs.property('checked', (d, i) => i === self.activeCohort)
 		}
-		if (self.dom.cohortPrompt) self.dom.cohortPrompt.style('display', self.activeCohort == -1 ? '' : 'none')
 
 		if (self.opts.header_mode === 'with_cohort_select') {
 			self.dom.cohortSelect.selectAll('option').property('value', appState.activeCohort)
@@ -295,10 +348,7 @@ function setRenderers(self) {
 
 	self.initCohort = appState => {
 		const selectCohort = appState.termdbConfig.selectCohort
-		if (!selectCohort) {
-			if (self.activeTab === 1) self.activeTab = 0
-			return
-		}
+		if (!selectCohort) return
 		self.dom.tds.filter(d => d.colNum === 0).style('display', '')
 		self.cohortNames = selectCohort.values.map(d =>
 			d.keys
@@ -307,14 +357,36 @@ function setRenderers(self) {
 				.join(',')
 		)
 
-		self.dom.cohortPrompt = self.dom.subheader.cohort
-			.append('div')
-			.html(`<h4 style="margin-left: 30px;">${selectCohort.showMessageWhenNotSelected}</h4>`)
+		if (selectCohort.title) {
+			self.dom.cohortTitle = self.dom.subheader.cohort
+				.append('div')
+				.html(`<h2 style="margin-left: 20px;">${selectCohort.title}</h2>`)
+		}
 
-		self.dom.cohortOpts = self.dom.subheader.cohort.append('div')
+		if (selectCohort.description) {
+			self.dom.cohortDescription = self.dom.subheader.cohort
+				.append('div')
+				.style('margin-left', '20px')
+				.text(selectCohort.description)
+		}
+
+		if (selectCohort.prompt) {
+			self.dom.cohortPrompt = self.dom.subheader.cohort
+				.append('div')
+				.style('margin-left', '20px')
+				.style('padding-top', '30px')
+				.style('padding-bottom', '10px')
+				.style('font-weight', 'bold')
+				.text(selectCohort.prompt)
+		}
+
+		self.dom.cohortOpts = self.dom.subheader.cohort
+			.append('div')
+			.style('margin-bottom', '30px')
+			.style('margin-left', '13px')
+
 		const trs = self.dom.cohortOpts
 			.append('table')
-			.style('margin', '20px')
 			.selectAll('tr')
 			.data(selectCohort.values)
 			.enter()
@@ -331,24 +403,20 @@ function setRenderers(self) {
 					.attr('id', radioId)
 					.attr('value', i)
 					.property('checked', i === self.activeCohort)
-					.style('margin-right', '3px')
+					.style('margin-right', '5px')
 					.on('click', () => self.app.dispatch({ type: 'cohort_set', activeCohort: i }))
 
 				td0
 					.append('label')
 					.attr('for', radioId)
+					.attr('colspan', 2)
 					.style('cursor', 'pointer')
 					.html(d => d.label)
 
-				if (!d.note) {
-					td0.attr('colspan', 2)
-				} else {
-					tr.append('td').html(d.note)
-				}
-
 				tr.selectAll('td')
 					.style('max-width', '600px')
-					.style('padding', '10px')
+					.style('padding-bottom', '10px')
+					.style('padding-right', '20px')
 					.style('vertical-align', 'top')
 			})
 
@@ -376,6 +444,16 @@ function setRenderers(self) {
 		self.dom.cohortTable.selectAll('td').style('border', 'solid 2px rgba(220, 180, 0, 1)')
 
 		self.highlightCohortBy = selectCohort.highlightCohortBy
+
+		if (selectCohort.asterisk) {
+			self.dom.cohortAsterisk = self.dom.subheader.cohort
+				.append('div')
+				.style('margin-left', '20px')
+				.style('padding-top', '20px')
+				.style('padding-bottom', '20px')
+				.style('font-size', 'small')
+				.text(selectCohort.asterisk)
+		}
 	}
 }
 
@@ -392,6 +470,15 @@ function setInteractivity(self) {
 		self.activeTab = d.colNum
 		self.searching = false
 		self.app.dispatch({ type: 'tab_set', activeTab: self.activeTab })
+		if (self.activeTab == 1 && self.activeCohort != -1 && !self.state.plots.length) {
+			// show dictionary in charts tab if no other
+			// plots have been created
+			self.app.dispatch({
+				type: 'plot_create',
+				id: getId(),
+				config: { chartType: 'dictionary' }
+			})
+		}
 	}
 
 	self.getSessionUrl = async () => {

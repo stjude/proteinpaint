@@ -110,6 +110,14 @@ function getChartTypeList(self) {
 	*/
 	return [
 		{
+			label: 'Dictionary',
+			clickTo: self.prepPlot,
+			chartType: 'dictionary',
+			config: {
+				chartType: 'dictionary'
+			}
+		},
+		{
 			label: 'Bar Chart',
 			chartType: 'barchart',
 			clickTo: self.showTree_select1term,
@@ -218,14 +226,6 @@ function getChartTypeList(self) {
 					}
 				}
 			]
-		},
-		{
-			label: 'Dictionary',
-			clickTo: self.prepPlot,
-			chartType: 'dictionary',
-			config: {
-				chartType: 'dictionary'
-			}
 		},
 		{
 			label: 'Data Download',
