@@ -161,9 +161,8 @@ class Scatter {
 		for (const category of categories) {
 			item = {
 				dataId: category[0],
-				text: category[0] + '/' + category[1].sampleCount,
+				text: category[0] + ' (' + category[1].sampleCount + ')',
 				type: 'row',
-				color: category[1].color,
 				color: category[1].color
 			}
 			items.push(item)
