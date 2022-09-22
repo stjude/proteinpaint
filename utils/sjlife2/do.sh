@@ -13,9 +13,8 @@ set -o pipefail
 
 ###############################################
 # this is a temporary step!
-# input is phenotree/matrix.tree.original
-# output to phenotree/matrix.tree
-node ~/dev/proteinpaint/utils/sjlife2/phenotree.tempfix.chemo.js > phenotree/matrix.tree
+# updates file "phenotree/matrix.tree" in place
+node ~/dev/proteinpaint/utils/sjlife2/phenotree.tempfix.chemo.js
 
 ###############################################
 # procedures to build database table files

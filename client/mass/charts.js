@@ -239,7 +239,7 @@ function getChartTypeList(self) {
 		{
 			label: 'Sample Scatter',
 			chartType: 'sampleScatter',
-			clickTo: self.showFileLst
+			clickTo: self.showScatterPlot
 		}
 	]
 }
@@ -444,9 +444,16 @@ function setRenderers(self) {
 		self.app.dispatch(action)
 	}
 
-	self.showFileLst = function() {
+	self.showScatterPlot = function() {
 		const menuDiv = self.dom.tip.d.append('div')
-		for (const plot of self.state.termdbConfig.scatterplots.plot) {
+		for (const plot of self.state.termdbConfig.scatterplots) {
+			/* plot: 
+			{
+				name=str,
+				dimensions=int,
+				term={ id, ... }
+			}
+			*/
 			menuDiv
 				.append('div')
 				.attr('class', 'sja_menuoption sja_sharp_border')
@@ -454,8 +461,9 @@ function setRenderers(self) {
 				.on('click', () => {
 					self.app.dispatch({
 						type: 'plot_create',
-						config: { chartType: 'sampleScatter', term: { id: plot.term.id }, file: plot.file, name: plot.name }
+						config: { chartType: 'sampleScatter', term: JSON.parse(JSON.stringify(plot.term)), name: plot.name }
 					})
+					self.dom.tip.hide()
 				})
 		}
 	}

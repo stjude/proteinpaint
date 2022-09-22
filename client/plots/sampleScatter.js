@@ -8,6 +8,22 @@ import { zoom as d3zoom, zoomIdentity } from 'd3'
 import { d3lasso } from '../common/lasso'
 import { Menu } from '#dom/menu'
 import { controlsInit } from './controls'
+import { axisLeft, axisBottom } from 'd3-axis'
+import { make_table_2col } from '#dom/table2col'
+
+/*
+sample object returned by server:
+{
+	sample=str
+	x=number
+	y=number
+	category=str
+}
+
+NOTE
+"sample" and "category" attributes here are hardcoded
+
+*/
 
 class Scatter {
 	constructor() {
@@ -23,7 +39,7 @@ class Scatter {
 			header: this.opts.header,
 			holder,
 			controls,
-			chartsDiv: holder.style('margin', '10px').style('display', 'inline-block'),
+			chartsDiv: holder.style('margin', '20px'),
 			toolsDiv,
 			tip: new Menu({ padding: '5px' })
 		}
@@ -58,13 +74,11 @@ class Scatter {
 			)
 		copyMerge(this.settings, this.config.settings.sampleScatter)
 		const reqOpts = this.getDataRequestOpts()
-		//this.data = this.app.vocabApi.getScatterData(reqOpts)
-		const data = await dofetch('textfile', { file: this.config.file })
+		const data = await this.app.vocabApi.getScatterData(reqOpts)
 		if (data.error) throw data.error
-		else if (data.text) {
-			this.processData(data.text)
-			this.render()
-		}
+		if (!Array.isArray(data.samples)) throw 'data.samples[] not array'
+		this.pj.refresh({ data: data.samples })
+		this.render()
 	}
 
 	// creates an opts object for the vocabApi.someMethod(),
@@ -73,24 +87,12 @@ class Scatter {
 	// later on, add methods with same name to FrontendVocab
 	getDataRequestOpts() {
 		const c = this.config
-		const opts = { term: c.term, filter: this.state.termfilter.filter }
-	}
-
-	processData(data) {
-		const lines = data.split('\n')
-		const header = lines[0].split('\t')
-		const rows = []
-		for (let i = 1; i < lines.length; i++) {
-			if (!lines[i]) continue
-			const row = {}
-			for (const [j, v] of lines[i].split('\t').entries()) {
-				const key = header[j]
-				row[key] = key == 'x' || key == 'y' ? Number(v) : v
-			}
-			rows.push(row)
+		const opts = {
+			name: c.name, // the actual identifier of the plot, for retrieving data from server
+			term: c.term,
+			filter: this.state.termfilter.filter
 		}
-		this.currData = { rows }
-		this.pj.refresh({ data: this.currData.rows })
+		return opts
 	}
 
 	async setControls() {
@@ -128,6 +130,14 @@ class Scatter {
 						chartType: 'sampleScatter',
 						settingsKey: 'svgh',
 						title: 'The internal height of the chart plot'
+					},
+					{
+						boxLabel: 'Visible',
+						label: 'Show axes',
+						type: 'checkbox',
+						chartType: 'sampleScatter',
+						settingsKey: 'showAxes',
+						title: `Option to show/hide plot axes`
 					}
 				]
 			})
@@ -138,7 +148,7 @@ class Scatter {
 }
 
 function setRenderers(self) {
-	self.render = function () {
+	self.render = function() {
 		const chartDivs = self.dom.holder.selectAll('.pp-scatter-chart').data(self.pj.tree.charts, d => d.chartId)
 
 		chartDivs.exit().remove()
@@ -148,14 +158,15 @@ function setRenderers(self) {
 		self.dom.holder.on('mouseover', self.mouseover).on('mouseout', self.mouseout)
 	}
 
-	self.addCharts = function (d) {
+	self.addCharts = function(d) {
 		const s = self.settings
 		const div = select(this)
 			.append('div')
 			.attr('class', 'pp-scatter-chart')
 			.style('opacity', 0)
 			//.style("position", "absolute")
-			.style('width', s.svgw + 50 + 'px')
+			.style('width', s.svgw + 100 + 'px')
+			.style('height', s.svgh + 50 + 'px')
 			.style('display', 'inline-block')
 			.style('margin', s.chartMargin + 'px')
 			.style('top', 0) //layout.byChc[d.chc].top)
@@ -173,7 +184,7 @@ function setRenderers(self) {
 		setTools(self.dom, svg)
 	}
 
-	self.updateCharts = function (d) {
+	self.updateCharts = function(d) {
 		const s = self.settings
 		const div = select(this)
 
@@ -193,36 +204,35 @@ function setRenderers(self) {
 		svg
 			.transition()
 			.duration(duration)
-			.attr('width', s.svgw)
-			.attr('height', s.svgh)
-			.style('padding-left', '20px')
+			.attr('width', s.svgw + 100)
+			.attr('height', s.svgh + 100)
 
 		/* eslint-disable */
 		const [mainG, axisG, xAxis, yAxis, xTitle, yTitle] = getSvgSubElems(svg)
 		/* eslint-enable */
 		//if (d.xVals) computeScales(d, s);
 
-		mainG.attr('transform', 'translate(' + s.svgPadding.left + ',' + s.svgPadding.top + ')')
 		const serieses = mainG
 			.selectAll('.sjpcb-scatter-series')
 			.data(chart.serieses, d => (d && d[0] ? d[0].seriesId : ''))
 
 		serieses.exit().remove()
-		serieses.each(function (series, i) {
+		serieses.each(function(series, i) {
 			renderSeries(select(this), chart, series, i, s, s.duration)
 		})
 		serieses
 			.enter()
 			.append('g')
 			.attr('class', 'sjpcb-scatter-series')
-			.each(function (series, i) {
+			.each(function(series, i) {
 				renderSeries(select(this), chart, series, i, s, duration)
 			})
+		if (s.showAxes) renderAxes(xAxis, xTitle, yAxis, yTitle, s, chart)
 	}
 
 	function getSvgSubElems(svg) {
 		let mainG, axisG, xAxis, yAxis, xTitle, yTitle
-		if (!svg.select('.sjpcb-scatter-mainG').size()) {
+		if (svg.select('.sjpcb-scatter-mainG').size() == 0) {
 			mainG = svg.append('g').attr('class', 'sjpcb-scatter-mainG')
 			axisG = mainG.append('g').attr('class', 'sjpcb-scatter-axis')
 			xAxis = axisG.append('g').attr('class', 'sjpcb-scatter-x-axis')
@@ -232,6 +242,9 @@ function setRenderers(self) {
 		} else {
 			mainG = svg.select('.sjpcb-scatter-mainG')
 			axisG = mainG.select('.sjpcb-scatter-axis')
+			if (self.settings.showAxes) axisG.style('opacity', 1)
+			else axisG.style('opacity', 0)
+
 			xAxis = axisG.select('.sjpcb-scatter-x-axis')
 			yAxis = axisG.select('.sjpcb-scatter-y-axis')
 			xTitle = axisG.select('.sjpcb-scatter-x-title')
@@ -244,7 +257,6 @@ function setRenderers(self) {
 		// remove all circles as there is no data id for privacy
 		g.selectAll('circle').remove()
 		const circles = g.selectAll('circle').data(series.data, b => b.x)
-		console.log('data', series.data)
 
 		circles.exit().remove()
 		const default_color = 'blue'
@@ -253,11 +265,9 @@ function setRenderers(self) {
 			.duration(duration)
 			.attr('r', s.radius)
 			.attr('cx', c => {
-				console.log('cx', c.scaledX)
-				c.scaledX
+				c.scaledX + 100
 			})
 			.attr('cy', c => {
-				console.log('cy', c.scaledY)
 				c.scaledY
 			})
 			.style('fill', c => ('color' in c ? c.color : default_color))
@@ -267,7 +277,7 @@ function setRenderers(self) {
 			.enter()
 			.append('circle')
 			.attr('r', s.radius)
-			.attr('cx', c => c.scaledX)
+			.attr('cx', c => c.scaledX + 100)
 			.attr('cy', c => c.scaledY)
 			//.style("opacity", 0)
 			.style('fill', c => ('color' in c ? c.color : default_color))
@@ -346,13 +356,20 @@ function setRenderers(self) {
 			.style('margin', '1px')
 			.style('padding', '2px 8px')
 			.text('Reset')
-		const lasso_div = zoom_menu.append('div').style('margin', '5px 2px').style('font-size', '70%')
-		const lasso_chb = lasso_div.append('input')
+		const lasso_div = zoom_menu
+			.append('div')
+			.style('margin', '5px 2px')
+			.style('font-size', '70%')
+		const lasso_chb = lasso_div
+			.append('input')
 			.attr('type', 'checkbox')
 			.attr('id', 'lasso_chb')
 			.on('input', toggle_lasso)
 			.property('checked', false)
-		lasso_div.append('label').attr('for', 'lasso_chb').html('Use lasso')
+		lasso_div
+			.append('label')
+			.attr('for', 'lasso_chb')
+			.html('Use lasso')
 
 		zoom_menu.style('display', 'inline-block')
 
@@ -427,7 +444,6 @@ function setRenderers(self) {
 
 		function lasso_end() {
 			if (lasso_chb.checked) {
-
 				// Reset classes of all items (.possible and .not_possible are useful
 				// only while drawing lasso. At end of drawing, only selectedItems()
 				// should be used)
@@ -441,50 +457,81 @@ function setRenderers(self) {
 
 				// if none of the items are selected, reset radius of all dots or
 				// keep them as unselected with tiny radius
-				lasso
-					.items()
-					.style('fill-opacity', '1')
+				lasso.items().style('fill-opacity', '1')
 			}
 		}
 
 		function toggle_lasso() {
 			lasso_chb.checked = lasso_chb.property('checked')
-			if (lasso_chb.checked)
-			{
-				svg.on('.zoom', null);
+			if (lasso_chb.checked) {
+				svg.on('.zoom', null)
 				svg.call(lasso)
-			}
-			else
-			{
+			} else {
 				svg.on('mousedown.drag', null)
 				lasso.items().classed('not_possible', false)
 				lasso.items().classed('possible', false)
 				lasso
 					.items()
-					.attr('r',  self.settings.radius)
+					.attr('r', self.settings.radius)
 					.style('fill-opacity', '1')
 				svg.call(zoom)
 			}
 		}
 	}
+
+	function renderAxes(xAxis, xTitle, yAxis, yTitle, s, d) {
+		xAxis.attr('transform', 'translate(100,' + s.svgh + ')').call(axisBottom(d.xScale).ticks(5))
+
+		yAxis.attr('transform', 'translate(100, 0)').call(
+			axisLeft(
+				d3Linear()
+					.domain(d.yScale.domain())
+					.range([0, s.svgh])
+			).ticks(5)
+		)
+
+		xTitle.select('text, title').remove()
+		const xTitleLabel =
+			self.config.term.term.name.length > 24
+				? self.config.term.term.name.slice(0, 20) + '...'
+				: self.config.term.term.name
+		const xText = xTitle
+			.attr('transform', 'translate(' + (100 + s.svgw) / 2 + ',' + (50 + s.svgh) + ')')
+			.append('text')
+			.style('text-anchor', 'middle')
+			.style('font-size', s.axisTitleFontSize + 'px')
+			.text(xTitleLabel + (self.config.term.term.unit ? ', ' + self.config.term.term.unit : ''))
+
+		xText.append('title').text(self.config.term.term.name)
+
+		const yTitleLabel = 'Y'
+		yTitle.select('text, title').remove()
+		const yText = yTitle
+			.attr('transform', 'translate(' + -s.axisTitleFontSize + ',' + s.svgh / 2 + ')rotate(-90)')
+			.append('text')
+			.style('text-anchor', 'middle')
+			.style('font-size', s.axisTitleFontSize + 'px')
+	}
 }
 
 function setInteractivity(self) {
-	self.mouseover = function () {
+	self.mouseover = function() {
 		if (event.target.tagName == 'circle') {
+			self.app.tip.clear().show(event.clientX, event.clientY)
+
 			const d = event.target.__data__
-			const rows = [
-				`<tr><td style='padding:3px; color:#aaa'>Sample:</td><td style='padding:3px; text-align:center'>${d.sample}</td></tr>`
-			]
-			self.app.tip
-				.show(event.clientX, event.clientY)
-				.d.html(`<table class='sja_simpletable'>${rows.join('\n')}</table>`)
+
+			const rows = [{ k: 'Sample', v: d.sample }]
+			if ('category' in d) {
+				rows.push({ k: self.config.term.id, v: d.category })
+			}
+			make_table_2col(self.app.tip.d, rows)
 		} else {
 			self.app.tip.hide()
 		}
 	}
 
-	self.mouseout = function () {
+	self.mouseout = function() {
 		self.app.tip.hide()
 	}
 }
@@ -503,15 +550,8 @@ export async function getPlotConfig(opts, app) {
 					radius: 5,
 					svgw: 600,
 					svgh: 600,
-					svgPadding: {
-						top: 0,
-						left: 0,
-						right: 0,
-						bottom: 0
-					},
 					axisTitleFontSize: 16,
-					xAxisOffset: 5,
-					yAxisOffset: -5
+					showAxes: false
 				}
 			}
 		}
@@ -555,6 +595,7 @@ function getPj(self) {
 									x: '$x',
 									y: '$y',
 									sample: '$sample',
+									category: '$category',
 									'_1:scaledX': '=scaledX()',
 									'_1:scaledY': '=scaledY()'
 								},
@@ -571,7 +612,7 @@ function getPj(self) {
 			xScale(row, context) {
 				const cx = d3Linear()
 					.domain([context.self.xMin, context.self.xMax])
-					.range([3 * s.radius, s.svgw - s.svgPadding.left - s.svgPadding.right - 3 * s.radius])
+					.range([3 * s.radius, s.svgw - 3 * s.radius])
 				return cx
 			},
 			scaledX(row, context) {
@@ -586,7 +627,7 @@ function getPj(self) {
 				const domain = s.scale == 'byChart' ? [yMax, yMin] : [context.root.yMax, yMin]
 				const cy = d3Linear()
 					.domain(domain)
-					.range([3 * s.radius, s.svgh - s.svgPadding.top - s.svgPadding.bottom - 3 * s.radius])
+					.range([3 * s.radius, s.svgh - 3 * s.radius])
 				return cy
 			}
 		}

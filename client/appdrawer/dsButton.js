@@ -2,14 +2,25 @@ import { getInitFxn } from '#rx'
 import * as utils from './utils'
 import { event } from 'd3-selection'
 import { openSandbox } from './adSandbox'
+import { slideDrawer } from './mainBtn'
+
+/*
+.opts{
+	.app{
+		.holder
+		.element{}
+		.sandboxDiv
+	}
+}
+*/
 
 class AppDrawerButton {
 	constructor(opts) {
 		this.type = 'button' // works for 'dsButton'. May expand to other button types
 		this.opts = this.validateOpts(opts)
 		this.holder = opts.holder
-		this.pageArgs = opts.pageArgs
-		setInteractivity(this)
+		this.dom = opts.dom
+		this.sandboxDiv = opts.sandboxDiv
 		setRenderers(this)
 	}
 
@@ -20,6 +31,7 @@ class AppDrawerButton {
 			throw `Either .sandboxJson or .sandboxHtml is missing for button=${opts.element.name}`
 		return opts
 	}
+
 	main() {}
 }
 
@@ -29,9 +41,11 @@ function setRenderers(self) {
 	const btn = utils.makeButton({ div: self.holder, text: self.opts.element.name, margin: '20px 20px 0px' })
 	btn.attr('class', 'sjpp-appdrawer-dataset-btn').on('click', async () => {
 		event.stopPropagation()
-		self.opts.pageArgs.apps_off()
-		await openSandbox(self.opts.element, self.opts.pageArgs)
+		await self.app.dispatch({
+			type: 'is_apps_btn_active',
+			value: false
+		})
+		slideDrawer(self)
+		await openSandbox(self.opts.element, self.opts)
 	})
 }
-
-function setInteractivity(self) {}

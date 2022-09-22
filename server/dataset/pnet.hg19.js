@@ -18,7 +18,7 @@ module.exports = function() {
 				allowedTermTypes: ['geneVariant']
 			},
 			scatterplots: {
-				plot: [
+				plots: [
 					{
 						name: 'Methylome UMAP',
 						dimensions: 2,

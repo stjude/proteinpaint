@@ -1,6 +1,7 @@
 const fs = require('fs')
 const path = require('path')
 const utils = require('./utils')
+const serverconfig = require('./serverconfig.js')
 const termdbsql = require('./termdb.sql')
 const phewas = require('./termdb.phewas')
 const density_plot = require('./termdb.densityPlot')
@@ -11,7 +12,7 @@ const termdbsnp = require('./termdb.snp')
 const LDoverlay = require('./mds2.load.ld').overlay
 const getOrderedLabels = require('./termdb.barsql').getOrderedLabels
 const isUsableTerm = require('#shared/termdb.usecase').isUsableTerm
-const serverconfig = require('./serverconfig.js')
+const trigger_getSampleScatter = require('./termdb.scatter').trigger_getSampleScatter
 
 /*
 ********************** EXPORTED
@@ -82,6 +83,7 @@ export function handle_request_closure(genomes) {
 			if (q.getvariantfilter) return trigger_getvariantfilter(res, ds)
 			if (q.getLDdata) return trigger_getLDdata(q, res, ds)
 			if (q.genesetByTermId) return trigger_genesetByTermId(q, res, tdb)
+			if (q.getSampleScatter) return await trigger_getSampleScatter(q, res, ds)
 
 			// TODO: use trigger flags like above?
 			if (q.for == 'termTypes') {
@@ -171,6 +173,14 @@ function trigger_gettermdbconfig(q, res, tdb, cohort) {
 			headerKey: cred.headerKey
 		}
 	}
+
+	if (cohort.scatterplots) {
+		// this dataset has premade scatterplots. reveal to client
+		c.scatterplots = cohort.scatterplots.plots.map(p => {
+			return { name: p.name, dimensions: p.dimensions, term: p.term }
+		})
+	}
+
 	res.send({ termdbConfig: c })
 }
 

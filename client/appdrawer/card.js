@@ -2,6 +2,29 @@ import { getCompInit } from '#rx'
 import { rgb } from 'd3-color'
 import { openSandbox } from './adSandbox'
 import { event } from 'd3-selection'
+import { slideDrawer } from './mainBtn'
+
+/*
+.opts{
+	.app{
+		.holder
+		.element{}
+		.sandboxDiv
+	}
+}
+
+TODOs: 
+
+- responsiveness of image on window resize 
+	- expand image size on resize
+	- non square, take better use of space
+- Need fn in utils to decide black or white text based on background color contrast
+- Unify card and nestedCard layout. Only call one layout function for both
+	- optional non image card layout
+	- Make ribbons appear on nested cards
+
+
+*/
 
 class AppDrawerCard {
 	// handles types 'card' and 'nestedCard'
@@ -9,8 +32,8 @@ class AppDrawerCard {
 		this.type = 'card'
 		this.opts = this.validateOpts(opts)
 		this.holder = opts.holder
-		this.pageArgs = opts.pageArgs
-		setInteractivity(this)
+		this.dom = opts.dom
+		this.sandboxDiv = opts.sandboxDiv
 		setRenderers(this)
 	}
 
@@ -54,29 +77,18 @@ export const cardInit = getCompInit(AppDrawerCard)
 function setRenderers(self) {
 	const card = self.holder.append('li')
 	if (self.opts.element.type == 'card') {
-		card
-			.classed('sjpp-track', true)
-			/*TODO: 
-			1. optional non image card layout
-			2. responsiveness of image on window resize 
-				- expand image size on resize
-				- non square, take better use of space
-				- solve problem of cards 'stretching' when only one is available
-			*/
-			.html(
-				`<div class="sjpp-track-h"><span style="font-size:14.5px;font-weight:500;">${
-					self.opts.element.name
-				}</span></div>
+		card.classed('sjpp-track', true).html(
+			`<div class="sjpp-track-h"><span style="font-size:14.5px;font-weight:500;">${self.opts.element.name}</span></div>
 				${
 					self.opts.element.description
 						? `<span class="sjpp-track-blurb" style="cursor:default">${self.opts.element.description}</span></div>`
-						: ''
+						: ' '
 				}
 				<span class="sjpp-track-image"><img src="${self.opts.element.image}" alt="${
-					self.opts.element.description
-				}"></img></span>
+				self.opts.element.description
+			}"></img></span>
 				</div>`
-			)
+		)
 	} else if (self.opts.element.type == 'nestedCard') {
 		card.classed('sjpp-app-drawer-card', true).html(
 			`<p style="margin-left: 12px; font-size:14.5px;font-weight:500; display: block;">${self.opts.element.name}</p>
@@ -94,7 +106,7 @@ function setRenderers(self) {
 
 		//*********TODO: move from diagonal to straight on right side */
 		const text = ribbon.text.toUpperCase()
-		//Enfore color palette for proteinpaint homepage ribbons
+		//Enforce color palette for proteinpaint homepage ribbons
 		const color =
 			text == 'BETA'
 				? '#418cb5'
@@ -108,9 +120,9 @@ function setRenderers(self) {
 
 		ribbonDiv
 			.append('span')
-			.text(text) // Need fn in utils to decide black or white text in utils.js
+			.text(text)
 			.style('color', 'white')
-			.style('background-color', rgb(color).darker()) // May remove with contrast fn (??)
+			.style('background-color', rgb(color).darker())
 			.style('height', 'auto')
 			.style('width', '100%')
 			.style('top', '15%')
@@ -122,17 +134,18 @@ function setRenderers(self) {
 
 	if (self.opts.element.ribbon) {
 		const today = new Date()
-		self.opts.element.ribbonExpireDate = new Date(self.opts.element.ribbon.expireDate)
+		const ribbonExpireDate = new Date(self.opts.element.ribbon.expireDate)
 		//Allows ribbons to expire or appear indefinitely
-		if (self.opts.element.ribbonExpireDate > today || self.opts.element.ribbon.expireDate == undefined)
-			self.makeRibbon(self.opts.element.ribbon)
+		if (ribbonExpireDate > today || ribbonExpireDate == 'Invalid Date') self.makeRibbon(self.opts.element.ribbon)
 	}
 
 	card.on('click', async () => {
 		event.stopPropagation()
-		self.opts.pageArgs.apps_off()
-		await openSandbox(self.opts.element, self.opts.pageArgs)
+		await self.app.dispatch({
+			type: 'is_apps_btn_active',
+			value: false
+		})
+		slideDrawer(self)
+		await openSandbox(self.opts.element, self.opts)
 	})
 }
-
-function setInteractivity(self) {}

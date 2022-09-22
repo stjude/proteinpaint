@@ -871,6 +871,19 @@ class TermdbVocab extends Vocab {
 		]
 		return await dofetch3('termdb?' + args.join('&'))
 	}
+
+	async getScatterData(opts) {
+		const args = [
+			'getSampleScatter=1',
+			'genome=' + this.state.vocab.genome,
+			'dslabel=' + this.state.vocab.dslabel,
+			'plotName=' + opts.name,
+			'term=' + encodeURIComponent(JSON.stringify(opts.term)),
+			'filter=' + encodeURIComponent(JSON.stringify(opts.filter))
+		]
+		console.log(args)
+		return await dofetch3('termdb?' + args.join('&'))
+	}
 }
 
 function q_to_param(q) {

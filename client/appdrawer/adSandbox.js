@@ -32,7 +32,7 @@ Questions:
 */
 
 export async function openSandbox(element, pageArgs) {
-	const sandboxDiv = newSandboxDiv(pageArgs.apps_sandbox_div)
+	const sandboxDiv = newSandboxDiv(pageArgs.sandboxDiv)
 	sandboxDiv.header_row
 	sandboxDiv.header.text(element.name)
 	sandboxDiv.body.style('overflow', 'hidden').style('background-color', 'white')
@@ -685,7 +685,7 @@ async function openDatasetButtonSandbox(pageArgs, element, res, sandboxDiv) {
 	const par = {
 		// First genome in .availableGenomes is the default
 		availableGenomes: res.jsonfile.button.availableGenomes,
-		genome: pageArgs.genomes[res.jsonfile.button.availableGenomes[0]],
+		genome: pageArgs.app.opts.genomes[res.jsonfile.button.availableGenomes[0]],
 		intro: res.jsonfile.button.intro,
 		name: res.jsonfile.button.name,
 		runargs: res.jsonfile.button.runargs,
@@ -725,7 +725,7 @@ async function openDatasetButtonSandbox(pageArgs, element, res, sandboxDiv) {
 		return
 	}
 
-	addDatasetGenomeBtns(mainDiv, par, pageArgs.genomes)
+	addDatasetGenomeBtns(mainDiv, par, pageArgs.app.opts.genomes)
 	// Create the gene search bar last (text flyout on keyup prevents placing elements to the right)
 	const searchBarDiv = mainDiv
 		.append('div')

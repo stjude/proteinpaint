@@ -1,4 +1,4 @@
-const run_rust = require('../index').default
+const run_rust = require('@stjude/proteinpaint-rust').run_rust
 const tape = require('tape')
 const path = require('path')
 const spawn = require('child_process').spawn
@@ -6,6 +6,7 @@ const Readable = require('stream').Readable
 const additionalExamples = require('./indel.examples')
 //const utils = require('../../src/utils')
 console.log(9, 'test')
+
 /*
 to compile rust, see server/utils/rust/README.md
 Syntax for compiling the rust code: cd ~/proteinpaint/server/utils/rust && cargo build --release

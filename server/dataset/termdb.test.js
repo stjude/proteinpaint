@@ -150,7 +150,7 @@ const ds = {
 			}
 		},
 		scatterplots: {
-			plot: [
+			plots: [
 				{
 					name: 'Methylome TSNE',
 					dimension: 2, // 2d requires x/y, 3d requires x/y/z
