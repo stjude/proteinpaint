@@ -12,7 +12,7 @@ import blockinit from './block.init'
 import { debounce } from 'debounce'
 import * as parseurl from './app.parseurl'
 import { init_mdsjson } from './app.mdsjson'
-import { drawer_init } from '../appdrawer/app.drawer'
+import { appDrawerInit } from '../appdrawer/app'
 import urlmap from '../common/urlmap'
 import { renderSandboxFormDiv, newSandboxDiv } from '../dom/sandbox'
 import { first_genetrack_tolist } from '../common/1stGenetk'
@@ -235,7 +235,7 @@ function setHostUrl(arg, app) {
 	sessionStorage.setItem('hostURL', app.hostURL)
 }
 
-function makeheader(app, obj, jwt) {
+async function makeheader(app, obj, jwt) {
 	/*
 	app
 	obj: server returned data
@@ -383,8 +383,18 @@ function makeheader(app, obj, jwt) {
 	}
 	app.genome_browser_btn = make_genome_browser_btn(app, headbox, jwt)
 
-	app.drawer = drawer_init(app, obj.features)
-	app.drawer.addBtn(headbox, 'Apps', padw_sm, jwt)
+	app.drawer = await appDrawerInit({
+		genomes: app.genomes,
+		holder: app.holder,
+		// sandbox_header: app.sandbox_header,
+		genome_browser_btn: app.genome_browser_btn,
+		debugmode: app.debugmode,
+		headbox,
+		padw_sm
+	})
+
+	// app.drawer = drawer_init(app, obj.features)
+	// app.drawer.addBtn(headbox, 'Apps', padw_sm, jwt)
 
 	headbox
 		.append('span')
@@ -434,6 +444,7 @@ function make_genome_browser_btn(app, headbox, jwt) {
 		.datum(genomename)
 		.text(genomename + ' genome browser')
 		.on('click', genomename => {
+			// app.drawer.dispatch({ type: 'toggle_off' })
 			let sandbox_div = newSandboxDiv(app.drawer.apps_sandbox_div)
 
 			const g = app.genomes[genomename]

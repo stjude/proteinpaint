@@ -32,7 +32,11 @@ upon error, throw err message as a string
 		const ad = await import('../appdrawer/adSandbox')
 		const cardJsonFile = urlp.get('appcard')
 		const re = await client.dofetch2('/cardsjson')
-		arg.app.drawer.genomes = arg.genomes
+		arg.app.drawer.opts.genomes = arg.genomes
+		arg.app.drawer.opts.sandboxDiv = arg.app.drawer.opts.holder
+			.append('div')
+			.style('margin-top', '15px')
+			.classed('sjpp-drawer-sandbox', true)
 		const element = re.json.elements.findIndex(t => t.sandboxJson == cardJsonFile || t.sandboxHtml == cardJsonFile)
 		if (element <= 0) {
 			const nestedCards = [...re.json.elements.filter(e => e.type == 'nestedCard')]
@@ -45,9 +49,9 @@ upon error, throw err message as a string
 					}
 				}
 			})
-			ad.openSandbox(element.children[c], arg.app.drawer)
+			ad.openSandbox(element.children[c], arg.app.drawer.opts)
 		} else {
-			ad.openSandbox(re.json.elements[element], arg.app.drawer)
+			ad.openSandbox(re.json.elements[element], arg.app.drawer.opts)
 		}
 		return
 	}
