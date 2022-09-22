@@ -5,15 +5,16 @@ const utils = require('./utils')
 const serverconfig = require('./serverconfig')
 
 /*
-works with pre-coded scatterplots in a dataset, e.g. data from a text file
+works with "canned" scatterplots in a dataset, e.g. data from a text file of tSNE coordinates from analysis of a cohort
 
-reason of not storing x/y data in termdb annotations table:
+reason of not storing x/y data of canned plots in termdb annotations table:
 1. a sample can have different x/y in multiple plots
    still, using term id e.g. x_tsne/y_tsne/x_umap/y_umap will solve it
 2. keeping all plot data in annotations table adds complexity to sql query
-   in that get_rows() may not work directly?
-3. keeping all plot data in annotations table requires "control" samples to be there too
-   but control samples are not to be skipped by filtering
+   in that get_rows() may not work directly (need to pull out two numbers per sample)?
+3. has need to support "reference" samples (e.g. DKFZ reference cohort in PNET tsne)
+   with annotations table, the reference samples need to be mixed with case samples
+   but this cause filtering to skip all reference samples (which shouldn't)
    thus can be tricky to manage
 
 to find out efficiency comparison of file vs sqlite db with 1 million dots
