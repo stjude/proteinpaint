@@ -125,7 +125,7 @@ const snplocusQ = {
 function __barchart(t1,t2) {
 	const chart = { chartType:'barchart', term:t1 }
 	if(t2) chart.term2 = t2
-	return '?noheader=1&mass='+JSON.stringify( { dslabel:'SJLife', genome:'hg38', plots: [ chart ] })
+	return '?noheader=1&mass='+JSON.stringify( { dslabel:'SJLife', genome:'hg38', plots: [ chart ], nav: { activeTab: 1 } })
 }
 function __cuminc({t1,t2,t0,grade,hidden}) {
 	const chart = {
@@ -141,7 +141,8 @@ function __cuminc({t1,t2,t0,grade,hidden}) {
 	return '?noheader=1&mass='+JSON.stringify( {
 		dslabel:'SJLife',
 		genome:'hg38',
-		plots: [ chart ]
+		plots: [ chart ],
+		nav: { activeTab: 1 }
 	})
 }
 
@@ -438,6 +439,7 @@ makeURL([
 
 		['survival','?noheader=1&mass='+JSON.stringify( {
 			dslabel:'TermdbTest',
+			nav: { activeTab: 1 },
 			genome:'hg38',
 			plots: [ {
 				chartType:'survival',
@@ -448,6 +450,7 @@ makeURL([
 
 		['matrix','?noheader=1&mass='+JSON.stringify({
 			dslabel:'SJLife',
+			nav: { activeTab: 1 },
 			genome:'hg38',
 			plots: [
 				{
@@ -548,6 +551,7 @@ makeURL([
 		['EF', '?noheader=1&mass='+JSON.stringify({
 			genome: 'hg38',
 			dslabel: 'SJLife',
+			nav: { activeTab: 1 },
 			plots: [
 				{
 					chartType: 'regression',
@@ -562,6 +566,7 @@ makeURL([
 		['EF ~ anthracycline', '?noheader=1&mass='+JSON.stringify({
 			genome: 'hg38',
 			dslabel: 'SJLife',
+			nav: { activeTab: 1 },
 			plots: [
 				{
 					chartType: 'regression',
@@ -593,6 +598,7 @@ makeURL([
 		['EF ~ agedx diaggrp', '?noheader=1&mass='+JSON.stringify({
 			genome: 'hg38',
 			dslabel: 'SJLife',
+			nav: { activeTab: 1 },
 			plots: [
 				{
 					chartType: 'regression',
@@ -611,6 +617,7 @@ makeURL([
 		['EF ~ agedxSpline diaggrp', '?noheader=1&mass='+JSON.stringify({
 			genome: 'hg38',
 			dslabel: 'SJLife',
+			nav: { activeTab: 1 },
 			plots: [
 				{
 					chartType: 'regression',
@@ -629,6 +636,7 @@ makeURL([
 		['EF ~ agedx*sex', '?noheader=1&mass='+JSON.stringify({
 			genome: 'hg38',
 			dslabel: 'SJLife',
+			nav: { activeTab: 1 },
 			plots: [
 				{
 					chartType: 'regression',
@@ -644,6 +652,7 @@ makeURL([
 		['EF ~ snplst sex', '?noheader=1&mass='+JSON.stringify({
 			genome: 'hg38',
 			dslabel: 'SJLife',
+			nav: { activeTab: 1 },
 			plots: [ {
 				chartType: 'regression',
 				regressionType: 'linear',
@@ -655,6 +664,7 @@ makeURL([
 		['EF ~ sex snplocus', '?noheader=1&mass='+JSON.stringify({
 			genome: 'hg38',
 			dslabel: 'SJLife',
+			nav: { activeTab: 1 },
 			plots: [ {
 				chartType: 'regression',
 				regressionType: 'linear',
@@ -672,6 +682,7 @@ makeURL([
 		['EF ~ snplocus*sex*agedx', '?noheader=1&mass='+JSON.stringify({
 			genome: 'hg38',
 			dslabel: 'SJLife',
+			nav: { activeTab: 1 },
 			plots: [ {
 				chartType: 'regression',
 				regressionType: 'linear',
@@ -691,6 +702,7 @@ makeURL([
 		['EF ~ snplocus agedxSpline', '?noheader=1&mass='+JSON.stringify({
 			genome: 'hg38',
 			dslabel: 'SJLife',
+			nav: { activeTab: 1 },
 			plots: [ {
 				chartType: 'regression',
 				regressionType: 'linear',
@@ -708,6 +720,7 @@ makeURL([
 		['Yadav EF 2021','?noheader=1&mass='+JSON.stringify({
 			genome:'hg38',
 			dslabel:'SJLife',
+			nav: { activeTab: 1 },
 			plots:[{
 				chartType: 'regression',
 				regressionType: 'linear',
@@ -743,6 +756,7 @@ makeURL([
 		['EF', '?noheader=1&mass='+JSON.stringify({
 			genome: 'hg38',
 			dslabel: 'SJLife',
+			nav: { activeTab: 1 },
 			plots: [{
 				chartType: 'regression',
 				regressionType: 'logistic',
@@ -755,6 +769,7 @@ makeURL([
 		['EF ~ agedx diaggrp', '?noheader=1&mass='+JSON.stringify({
 			genome: 'hg38',
 			dslabel: 'SJLife',
+			nav: { activeTab: 1 },
 			plots: [
 				{
 					chartType: 'regression',
@@ -771,6 +786,7 @@ makeURL([
 		['EF ~ agedxSpline diaggrp', '?noheader=1&mass='+JSON.stringify({
 			genome: 'hg38',
 			dslabel: 'SJLife',
+			nav: { activeTab: 1 },
 			plots: [
 				{
 					chartType: 'regression',
@@ -789,6 +805,7 @@ makeURL([
 		['EF ~ diaggrp hrtavg', '?noheader=1&mass='+JSON.stringify({
 			genome: 'hg38',
 			dslabel: 'SJLife',
+			nav: { activeTab: 1 },
 			plots: [{
 				chartType: 'regression',
 				regressionType: 'logistic',
@@ -823,6 +840,7 @@ makeURL([
 		['EF ~ snplst sex', '?noheader=1&mass='+JSON.stringify({
 			genome: 'hg38',
 			dslabel: 'SJLife',
+			nav: { activeTab: 1 },
 			plots: [ {
 				chartType: 'regression',
 				regressionType: 'logistic',
@@ -834,6 +852,7 @@ makeURL([
 		['EF ~ sex snplocus', '?noheader=1&mass='+JSON.stringify({
 			genome: 'hg38',
 			dslabel: 'SJLife',
+			nav: { activeTab: 1 },
 			plots: [ {
 				chartType: 'regression',
 				regressionType: 'logistic',
@@ -851,6 +870,7 @@ makeURL([
 		['EF ~ snplocus*sex', '?noheader=1&mass='+JSON.stringify({
 			genome: 'hg38',
 			dslabel: 'SJLife',
+			nav: { activeTab: 1 },
 			plots: [ {
 				chartType: 'regression',
 				regressionType: 'logistic',
@@ -869,6 +889,7 @@ makeURL([
 		['Arrhythmias', '?noheader=1&mass='+JSON.stringify({
 			genome: 'hg38',
 			dslabel: 'SJLife',
+			nav: { activeTab: 1 },
 			plots: [{
 				chartType: 'regression',
 				regressionType: 'logistic',
@@ -879,6 +900,7 @@ makeURL([
 		['Arrhythmias ~ chestrt', '?noheader=1&mass='+JSON.stringify({
 			genome: 'hg38',
 			dslabel: 'SJLife',
+			nav: { activeTab: 1 },
 			plots: [{
 				chartType: 'regression',
 				regressionType: 'logistic',
@@ -909,6 +931,7 @@ makeURL([
 		['BreastSN ~ PGS + age + chestRT', '?noheader=1&mass='+JSON.stringify({
 			genome: 'hg38',
 			dslabel: 'SJLife',
+			nav: { activeTab: 1 },
 			plots: [{
 				chartType: 'regression',
 				regressionType: 'logistic',
@@ -974,6 +997,7 @@ makeURL([
 		['Arrhythmias ~ snplst sex', '?noheader=1&mass='+JSON.stringify({
 			genome: 'hg38',
 			dslabel: 'SJLife',
+			nav: { activeTab: 1 },
 			plots: [{
 				chartType: 'regression',
 				regressionType: 'logistic',
@@ -985,6 +1009,7 @@ makeURL([
 		['Arrhythmias ~ sex snplocus', '?noheader=1&mass='+JSON.stringify({
 			genome: 'hg38',
 			dslabel: 'SJLife',
+			nav: { activeTab: 1 },
 			plots: [ {
 				chartType: 'regression',
 				regressionType: 'logistic',
@@ -1006,6 +1031,7 @@ makeURL([
 		['Arrhythmias ~ snplocus*sex', '?noheader=1&mass='+JSON.stringify({
 			genome: 'hg38',
 			dslabel: 'SJLife',
+			nav: { activeTab: 1 },
 			plots: [ {
 				chartType: 'regression',
 				regressionType: 'logistic',
@@ -1033,6 +1059,7 @@ makeURL([
 		['Neuro ~ sex', '?noheader=1&mass='+JSON.stringify({
 			genome: 'hg38',
 			dslabel: 'SJLife',
+			nav: { activeTab: 1 },
 			plots: [ {
 				chartType: 'regression',
 				regressionType: 'cox',
@@ -1046,6 +1073,7 @@ makeURL([
 		['Cardio ~ chestrt', '?noheader=1&mass='+JSON.stringify({
 			genome: 'hg38',
 			dslabel: 'SJLife',
+			nav: { activeTab: 1 },
 			plots: [ {
 				chartType: 'regression',
 				regressionType: 'cox',
@@ -1071,6 +1099,7 @@ makeURL([
 		['Cardio ~ sex*agedx', '?noheader=1&mass='+JSON.stringify({
 			genome: 'hg38',
 			dslabel: 'SJLife',
+			nav: { activeTab: 1 },
 			plots: [ {
 				chartType: 'regression',
 				regressionType: 'cox',
@@ -1085,6 +1114,7 @@ makeURL([
 		['Neuro ~ snplst sex', '?noheader=1&mass='+JSON.stringify({
 			genome: 'hg38',
 			dslabel: 'SJLife',
+			nav: { activeTab: 1 },
 			plots: [{
 				chartType: 'regression',
 				regressionType: 'cox',
@@ -1096,6 +1126,7 @@ makeURL([
 		['Neuro ~ sex snplocus', '?noheader=1&mass='+JSON.stringify({
 			genome: 'hg38',
 			dslabel: 'SJLife',
+			nav: { activeTab: 1 },
 			plots: [ {
 				chartType: 'regression',
 				regressionType: 'cox',
@@ -1115,6 +1146,7 @@ makeURL([
 		['Yadav Cardiomyopathy 2021','?noheader=1&mass='+JSON.stringify({
 			genome:'hg38',
 			dslabel:'SJLife',
+			nav: { activeTab: 1 },
 			plots:[{
 				chartType: 'regression',
 				regressionType: 'cox',
