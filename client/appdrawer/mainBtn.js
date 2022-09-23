@@ -152,12 +152,12 @@ export async function slideDrawer(self) {
 		.style('display', 'inline-block')
 		.transition()
 		.duration(self.opts.state.duration)
-		.style('top', self.state.appBtnActive ? '0px' : '-' + self.drawerFullHeight + 'px')
+		.style('top', self.state.appBtnActive ? '0px' : '-' + self.state.drawerFullHeight + 'px')
 
 	self.dom.drawerRow
 		.transition()
 		.duration(self.opts.state.duration)
-		.style('height', self.state.appBtnActive ? self.drawerFullHeight + 'px' : '0px')
+		.style('height', self.state.appBtnActive ? self.state.drawerFullHeight + 'px' : '0px')
 
 	self.dom.drawerHint
 		.transition()
