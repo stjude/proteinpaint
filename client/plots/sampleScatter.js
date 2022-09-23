@@ -34,13 +34,19 @@ class Scatter {
 	async init(opts) {
 		const controls = this.opts.controls || this.opts.holder.append('div')
 		let holder = this.opts.controls ? opts.holder : this.opts.holder.append('div').style('display', 'inline-block')
-		const mainDiv = holder.append('div').style('display', 'inline-block')
+		const mainDiv = holder
+			.append('div')
+			.style('display', 'inline-block')
+			.style('width', '70vw')
 		const toolsDiv = mainDiv
 			.append('div')
 			.style('display', 'inline-block')
 			.style('float', 'right')
 		const chartsDiv = mainDiv.append('div').style('display', 'inline-block')
-		const legendDiv = mainDiv.append('div').style('display', 'inline-block')
+		const legendDiv = mainDiv
+			.append('div')
+			.style('display', 'inline-block')
+			.style('width', '70vw')
 
 		this.dom = {
 			header: this.opts.header,
@@ -576,8 +582,8 @@ export async function getPlotConfig(opts, app) {
 				},
 				sampleScatter: {
 					radius: 5,
-					svgw: 600,
-					svgh: 600,
+					svgw: 550,
+					svgh: 550,
 					axisTitleFontSize: 16,
 					showAxes: false
 				}
