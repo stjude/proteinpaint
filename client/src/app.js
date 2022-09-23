@@ -384,6 +384,7 @@ async function makeheader(app, obj, jwt) {
 	app.genome_browser_btn = make_genome_browser_btn(app, headbox, jwt)
 
 	app.drawer = await appDrawerInit({
+		holder: app.holder,
 		genomes: app.genomes,
 		drawerRow: app.holder
 			.append('div')

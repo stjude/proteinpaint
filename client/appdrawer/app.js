@@ -6,8 +6,6 @@ import { appDrawerStoreInit } from './store'
 /*
 .opts{}
     .holder
-    .apps_sandbox_div
-    .apps_off()
     .genomes{}
         - client-side genome object
     .indexJson{}
