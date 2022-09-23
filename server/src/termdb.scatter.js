@@ -3,6 +3,7 @@ const fs = require('fs')
 const path = require('path')
 const utils = require('./utils')
 const serverconfig = require('./serverconfig')
+const d3scale = require('d3-scale')
 
 /*
 works with "canned" scatterplots in a dataset, e.g. data from a text file of tSNE coordinates from analysis of a cohort
@@ -36,21 +37,38 @@ export async function mayInitiateScatterplots(ds) {
 		if (p.file) {
 			p.fileData = []
 			const lines = (await utils.read_file(path.join(serverconfig.tpmasterdir, p.file))).trim().split('\n')
+
+			let invalidXY = 0,
+				sampleCount = 0
+
 			for (let i = 1; i < lines.length; i++) {
 				const l = lines[i].split('\t')
 				// sampleName \t x \t y ...
 				const x = Number(l[1]),
 					y = Number(l[2])
-				if (Number.isNaN(x) || Number.isNaN(y)) continue
-				const sampleId = ds.cohort.termdb.q.sampleName2id(l[0])
-				const sample = {
-					sample: l[0],
-					sampleId, // sample id can be undefined, e.g. for "control" samples that are display only
-					x,
-					y
+				if (Number.isNaN(x) || Number.isNaN(y)) {
+					invalidXY++
+					continue
 				}
+
+				const sample = { sample: l[0], x, y }
+
+				const id = ds.cohort.termdb.q.sampleName2id(l[0])
+				if (id != undefined) {
+					// sample id can be undefined, e.g. reference samples
+					sampleCount++
+					sample.sampleId = id
+				}
+
 				p.fileData.push(sample)
 			}
+
+			console.log(
+				p.fileData.length,
+				`scatterplot lines from ${p.name} of ${ds.label},`,
+				sampleCount < p.fileData.length ? p.fileData.length - sampleCount + ' reference cases' : '',
+				invalidXY ? invalidXY + ' lines with invalid X/Y values' : ''
+			)
 		} else {
 			throw 'unknown data source of one of scatterplots.plots[]'
 		}
@@ -79,20 +97,17 @@ export async function trigger_getSampleScatter(q, res, ds) {
 		// array of all samples
 		// [ { sample=str, sampleId=int, x, y } ]
 
-		const [samples, category2color] = await mayColorAndFilterSamples(allSamples, q, ds)
+		const [samples, categories] = await mayColorAndFilterSamples(allSamples, q, ds)
 		// array of plottable samples
 		// [ { sample=str, sampleId=int, x, y, category } ]
 
-		res.send({ samples, category2color })
+		res.send({ samples, categories })
 	} catch (e) {
 		res.send({ error: e.message || e })
 	}
 }
 
 async function getSampleLst(plot) {
-	/* returns an array, each sample:
-{ sample=str, x, y }
-*/
 	if (plot.fileData) return JSON.parse(JSON.stringify(plot.fileData)) // efficiency concern for .5M dots?
 	if (plot.gdcapi) throw 'gdcapi not implemented yet'
 	throw 'do not know how to load data from this plot'
@@ -108,12 +123,15 @@ and should only retain samples passed filter for scatterplot
 
 whether to drop a sample from allSamples[] is depends on if sampleId is set
 if sampleId is set on a sample, it's a filter-able sample
-otherwise, it's un-filterable, e.g. control sample
+otherwise, it's un-filterable, e.g. reference sample
 */
 async function mayColorAndFilterSamples(allSamples, q, ds) {
 	if (!q.term) return [allSamples] // no term to get sample category
 
 	// q.term{} is a termsetting
+	// TODO groupsetting
+	// TODO numeric bins
+	// TODO numeric continuous values
 	if (!('id' in q.term)) throw 'q.term.id missing'
 	if (typeof q.term.q != 'object') throw 'q.term.q is not object'
 
@@ -144,7 +162,9 @@ async function mayColorAndFilterSamples(allSamples, q, ds) {
 		sampleId2category.set(i.sample, i.key1)
 	}
 
-	const samples = [] // samples pass filter and to be shown in plot
+	const samples = [] // samples pass filter and to be returned to client and display
+	const categories = new Map()
+	// key: category, value: {sampleCount=integer, color=str}
 
 	for (const s of allSamples) {
 		if ('sampleId' in s) {
@@ -154,8 +174,19 @@ async function mayColorAndFilterSamples(allSamples, q, ds) {
 				// and will exclude it from the scatterplot
 				continue
 			}
-			// the sample is kept in filter and will show in scatterplot
-			s.category = sampleId2category.get(s.sampleId)
+
+			// the sample is kept by filter and will show in scatterplot
+
+			if (sampleId2category.has(s.sampleId)) {
+				// sample has category assignment
+				s.category = sampleId2category.get(s.sampleId)
+				if (!categories.has(s.category)) {
+					categories.set(s.category, { sampleCount: 0 })
+				}
+				categories.get(s.category).sampleCount++
+			}
+
+			delete s.sampleId // no need to send to client
 			samples.push(s)
 		} else {
 			// this sample does not has ID, and is un-filterable
@@ -164,7 +195,23 @@ async function mayColorAndFilterSamples(allSamples, q, ds) {
 		}
 	}
 
-	const category2color = {} // k: category, v: color TODO
+	// add color to categories
+	const k2c = d3scale.scaleOrdinal(d3scale.schemeCategory10)
+	for (const [category, o] of categories) {
+		if (q.term?.term?.values?.[category]?.color) {
+			o.color = q.term.term.values[category].color
+		} else {
+			o.color = k2c(category)
+		}
+	}
 
-	return [samples, category2color]
+	// now each category gets an color, apply to samples
+	for (const s of samples) {
+		s.color = categories.has(s.category) ? categories.get(s.category).color : '#ccc'
+	}
+
+	// sort in descending order
+	const legendItems = [...categories].sort((a, b) => b[1].sampleCount - a[1].sampleCount)
+
+	return [samples, legendItems]
 }

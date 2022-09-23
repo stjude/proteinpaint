@@ -881,7 +881,6 @@ class TermdbVocab extends Vocab {
 			'term=' + encodeURIComponent(JSON.stringify(opts.term)),
 			'filter=' + encodeURIComponent(JSON.stringify(opts.filter))
 		]
-		console.log(args)
 		return await dofetch3('termdb?' + args.join('&'))
 	}
 }

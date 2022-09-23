@@ -10,6 +10,7 @@ import { Menu } from '#dom/menu'
 import { controlsInit } from './controls'
 import { axisLeft, axisBottom } from 'd3-axis'
 import { make_table_2col } from '#dom/table2col'
+import htmlLegend from '../dom/html.legend'
 
 /*
 sample object returned by server:
@@ -32,15 +33,21 @@ class Scatter {
 
 	async init(opts) {
 		const controls = this.opts.controls || this.opts.holder.append('div')
-		const holder = this.opts.controls ? opts.holder : this.opts.holder.append('div')
-		const toolsDiv = this.opts.holder.append('div')
+		let holder = this.opts.controls ? opts.holder : this.opts.holder.append('div').style('display', 'inline-block')
+		const mainDiv = holder.append('div').style('display', 'inline-block')
+		const toolsDiv = mainDiv
+			.append('div')
+			.style('display', 'inline-block')
+			.style('float', 'right')
+		const chartsDiv = mainDiv.append('div').style('display', 'inline-block')
+		const legendDiv = mainDiv.append('div').style('display', 'inline-block')
 
 		this.dom = {
 			header: this.opts.header,
-			holder,
+			holder: chartsDiv,
 			controls,
-			chartsDiv: holder.style('margin', '20px'),
 			toolsDiv,
+			legendDiv,
 			tip: new Menu({ padding: '5px' })
 		}
 
@@ -79,6 +86,8 @@ class Scatter {
 		if (!Array.isArray(data.samples)) throw 'data.samples[] not array'
 		this.pj.refresh({ data: data.samples })
 		this.render()
+		const renderLegend = htmlLegend(this.dom.legendDiv)
+		renderLegend(this.getLegend(data.categories))
 	}
 
 	// creates an opts object for the vocabApi.someMethod(),
@@ -144,6 +153,26 @@ class Scatter {
 		}
 
 		this.components.controls.on('downloadClick.survival', () => alert('TODO: data download?'))
+	}
+
+	getLegend(categories) {
+		let items = []
+		let item
+		for (const category of categories) {
+			item = {
+				dataId: category[0],
+				text: category[0] + ' (' + category[1].sampleCount + ')',
+				type: 'row',
+				color: category[1].color
+			}
+			items.push(item)
+		}
+		const legendGrps = []
+
+		legendGrps.push({
+			items: items
+		})
+		return legendGrps
 	}
 }
 
@@ -404,7 +433,6 @@ function setRenderers(self) {
 		})
 
 		const circles = svg.selectAll('g').selectAll('circle')
-		console.log('circles', circles)
 		const lasso = d3lasso()
 			.items(circles)
 			.targetArea(svg)
