@@ -6,8 +6,6 @@ import { appDrawerStoreInit } from './store'
 /*
 .opts{}
     .holder
-    .apps_sandbox_div
-    .apps_off()
     .genomes{}
         - client-side genome object
     .indexJson{}
@@ -22,19 +20,7 @@ class AppDrawerApp {
 	constructor(opts) {
 		this.type = 'app'
 
-		const drawerRow = opts.holder
-			.append('div')
-			.style('position', 'relative')
-			.style('overflow-x', 'visible')
-			.style('overflow-y', 'hidden')
-			.classed('sjpp-drawer-row', true)
-
-		const sandboxDiv = opts.holder
-			.append('div')
-			.style('margin-top', '15px')
-			.classed('sjpp-drawer-sandbox', true)
-
-		const drawerDiv = drawerRow
+		const drawerDiv = opts.drawerRow
 			.append('div')
 			.style('position', 'relative')
 			.style('margin', '0 20px')
@@ -52,16 +38,17 @@ class AppDrawerApp {
 			.style('margin-left', '5px')
 			.style('margin-right', '5px')
 			.style('border-radius', '5px')
+			.classed('sjpp-apps-btn-wrapper', true)
 
 		this.dom = {
-			drawerRow,
-			sandboxDiv,
+			drawerRow: opts.drawerRow,
+			drawerDiv,
+			sandboxDiv: opts.sandboxDiv,
 			btnWrapper,
 			btn: btnWrapper.append('div'),
 			drawerHint: btnWrapper.append('div'),
 			drawerArrow: btnWrapper.append('div'),
 			drawerArrowOpen: btnWrapper.append('div'),
-			drawerDiv,
 			wrapper: drawerDiv.append('div')
 		}
 	}

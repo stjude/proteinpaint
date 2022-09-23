@@ -69,6 +69,7 @@ class MainHeadboxBtn {
 			slideDrawer(this)
 			this.btnRendered = true
 		}
+		if (this.state.appBtnActive == false && this.btnRendered == true) slideDrawer(this)
 	}
 }
 
