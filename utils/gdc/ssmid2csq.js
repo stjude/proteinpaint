@@ -1,3 +1,13 @@
+/*
+this script is hosted at https://proteinpaint.stjude.org/GDC/ssmid2csq.js
+
+examples:
+
+node ssmid2csq.js
+
+corresponds to ssm2canonicalisoform in gdc.hg38.js
+*/
+
 const got = require('got')
 
 const headers = { 'Content-Type': 'application/json', Accept: 'application/json' }

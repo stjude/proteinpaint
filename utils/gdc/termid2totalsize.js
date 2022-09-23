@@ -1,7 +1,16 @@
+/*
+this script is hosted at https://proteinpaint.stjude.org/GDC/termid2totalsize.js
+
+examples:
+
+node termid2totalsize.js
+
+corresponds to termid2size_query() in gdc.hg38.js
+TODO support cohort filter
+*/
+
 const got = require('got')
 const token = process.argv[2]
-
-// this query may work better than projectsize.js
 
 const query = `
 query termislst2total( $filters: FiltersArgument) {
