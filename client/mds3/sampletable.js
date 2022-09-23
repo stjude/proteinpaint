@@ -96,6 +96,7 @@ async function make_singleSampleTable(sampledata, arg) {
 			.style('gap-row-gap', '1px')
 			.style('align-items', 'center')
 			.style('justify-items', 'left')
+			.style('padding', '10px')
 
 	if (sampledata.sample_id) {
 		// sample_id is hardcoded
