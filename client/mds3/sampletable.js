@@ -74,6 +74,12 @@ export async function displaySampleTable(samples, arg) {
 	if (samples.length == 1) {
 		return await make_singleSampleTable(samples[0], arg)
 	}
+	renderTable({
+		rows: samples2rows(samples, arg.tk),
+		columns: await samples2columns(samples, arg.tk),
+		div: arg.div
+	})
+	return
 	if (arg.useRenderTable) {
 		// flag is temporary, delete if() when renderTable is permanent
 		renderTable({
@@ -445,13 +451,26 @@ async function samples2columns(samples, tk) {
 		}
 	}
 
-	columns.push({ label: 'Mutations', isSsm: true })
+	if (samples.some(i => i.ssm_read_depth)) {
+		columns.push({ label: 'Tumor DNA MAF' })
+	}
+	if (samples.some(i => i.totalNormal)) {
+		columns.push({ label: 'Normal depth' })
+	}
+
+	if (samples.some(i => i.ssm_id) || samples.some(i => i.ssm_id_lst)) {
+		columns.push({ label: 'Mutations', isSsm: true })
+	}
+
 	return columns
 }
 function samples2rows(samples, tk) {
 	const rows = []
 
-	const has_caseAccess = samples.some(i => 'caseIsOpenAccess' in i)
+	const has_caseAccess = samples.some(i => 'caseIsOpenAccess' in i),
+		has_ssm_read_depth = samples.some(i => i.ssm_read_depth),
+		has_totalNormal = samples.some(i => i.totalNormal),
+		has_ssm = samples.some(i => i.ssm_id) || samples.some(i => i.ssm_id_lst)
 
 	for (const sample of samples) {
 		const row = [{ value: sample.sample_id }]
@@ -470,35 +489,63 @@ function samples2rows(samples, tk) {
 			}
 		}
 
-		const ssmCell = { values: [] }
-		for (const ssm_id of sample.ssm_id_lst) {
-			const m = (tk.skewer.rawmlst || tk.custom_variants).find(i => i.ssm_id == ssm_id)
-			const ssm = {}
-			if (m) {
-				// found m data point
-				if (m.dt == dtsnvindel) {
-					ssm.value = m.mname
-					if (tk.mds.queries && tk.mds.queries.snvindel && tk.mds.queries.snvindel.url) {
-						ssm.html = `<a href=${tk.mds.queries.snvindel.url.base + m.ssm_id} target=_blank>${m.mname}</a>`
-					} else {
-						ssm.html = m.mname
-					}
-				} else if (m.dt == dtsv || m.dt == dtfusionrna) {
-					const p = m.pairlst[0]
-					ssm.html = `${p.a.name || ''} ${p.a.chr}:${p.a.pos} ${p.a.strand == '+' ? 'forward' : 'reverse'} > ${p.b
-						.name || ''} ${p.b.chr}:${p.b.pos} ${p.b.strand == '+' ? 'forward' : 'reverse'}`
-				} else {
-					throw 'unknown dt'
-				}
-				ssm.html += ` <span style="color:${mclass[m.class].color};font-size:.7em">${mclass[m.class].label}</span>`
-			} else {
-				// m datapoint not found on client
-				ssm.value = ssm_id
+		if (has_ssm_read_depth) {
+			const cell = {}
+			const sm = sample.ssm_read_depth
+			if (sm) {
+				cell.html =
+					fillbar(null, { f: sm.altTumor / sm.totalTumor }) +
+					'<span style="margin:0px 10px">' +
+					sm.altTumor +
+					' / ' +
+					sm.totalTumor +
+					'</span>'
 			}
-			ssmCell.values.push(ssm)
+			row.push(cell)
 		}
 
-		row.push(ssmCell)
+		if (has_totalNormal) {
+			row.push({ value: 'totalNormal' in sample ? sample.totalNormal : '' })
+		}
+
+		if (has_ssm) {
+			const ssmCell = { values: [] }
+
+			let ssm_id_lst = sample.ssm_id_lst
+			if (sample.ssm_id) ssm_id_lst = [sample.ssm_id]
+
+			if (ssm_id_lst) {
+				for (const ssm_id of ssm_id_lst) {
+					const m = (tk.skewer.rawmlst || tk.custom_variants).find(i => i.ssm_id == ssm_id)
+					const ssm = {}
+					if (m) {
+						// found m data point
+						if (m.dt == dtsnvindel) {
+							ssm.value = m.mname
+							if (tk.mds.queries && tk.mds.queries.snvindel && tk.mds.queries.snvindel.url) {
+								ssm.html = `<a href=${tk.mds.queries.snvindel.url.base + m.ssm_id} target=_blank>${m.mname}</a>`
+							} else {
+								ssm.html = m.mname
+							}
+						} else if (m.dt == dtsv || m.dt == dtfusionrna) {
+							const p = m.pairlst[0]
+							ssm.html = `${p.a.name || ''} ${p.a.chr}:${p.a.pos} ${p.a.strand == '+' ? 'forward' : 'reverse'} > ${p.b
+								.name || ''} ${p.b.chr}:${p.b.pos} ${p.b.strand == '+' ? 'forward' : 'reverse'}`
+						} else {
+							throw 'unknown dt'
+						}
+						ssm.html += ` <span style="color:${mclass[m.class].color};font-size:.7em">${mclass[m.class].label}</span>`
+					} else {
+						// m datapoint not found on client
+						ssm.value = ssm_id
+					}
+					ssmCell.values.push(ssm)
+				}
+			}
+
+			row.push(ssmCell)
+		}
+
 		rows.push(row)
 	}
 	return rows

@@ -93,7 +93,9 @@ export async function renderTable({ columns, rows, div }) {
 					.text(cell.value)
 					.attr('href', cell.url)
 					.attr('target', '_blank')
-			} else {
+			} else if (cell.html) {
+				td.html(cell.html)
+			} else if (cell.value) {
 				td.text(cell.value)
 			}
 		}
