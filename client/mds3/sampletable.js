@@ -2,7 +2,7 @@ import { fillbar } from '#dom/fillbar'
 import { get_list_cells } from '#dom/gridutils'
 import { select as d3select } from 'd3-selection'
 import { mclass, dtsnvindel, dtsv, dtfusionrna } from '#shared/common'
-import { renderTable } from '../dom/table'
+import { renderTable } from '#dom/table'
 
 /*
 ********************** EXPORTED
@@ -12,13 +12,11 @@ init_sampletable()
 	mlst can be mixture of data types, doesn't matter
 displaySampleTable()
 	call this function to render one or multiple samples
+	calls make_singleSampleTable() or renderTable()
 
 ********************** INTERNAL
 make_singleSampleTable
-make_multiSampleTable
-samples2rows
-samples2columns
-renderTable
+samples2columnsRows
 
 
 ********************** arg{}
@@ -30,14 +28,8 @@ renderTable
 .div
 .tid2value={}
  	sample filters by e.g. clicking on a sunburst ring, for tk.mds.variant2samples.get
-.useRenderTable=true
-	temp flag for using renderTable() for multi-sample display
-	delete this flag when renderTable() replaces make_multiSampleTable()
 .singleSampleDiv
 	optional, if just one single sample, can show into this table rather than creating a new one
-.multiSampleTable{}
-	optional, may show a list of samples in here
-	{ header:div, ssmid2div: map }
 */
 
 const cutoff_tableview = 10
@@ -74,22 +66,8 @@ export async function displaySampleTable(samples, arg) {
 	if (samples.length == 1) {
 		return await make_singleSampleTable(samples[0], arg)
 	}
-	renderTable({
-		rows: samples2rows(samples, arg.tk),
-		columns: await samples2columns(samples, arg.tk),
-		div: arg.div
-	})
-	return
-	if (arg.useRenderTable) {
-		// flag is temporary, delete if() when renderTable is permanent
-		renderTable({
-			rows: samples2rows(samples, arg.tk),
-			columns: await samples2columns(samples, arg.tk),
-			div: arg.div
-		})
-	} else {
-		await make_multiSampleTable(samples, arg)
-	}
+	const [columns, rows] = await samples2columnsRows(samples, arg.tk)
+	renderTable({ rows, columns, div: arg.div })
 }
 
 async function make_singleSampleTable(sampledata, arg) {
@@ -229,214 +207,20 @@ function printSampleName(sample, tk, div) {
 	}
 }
 
-async function make_multiSampleTable(data, arg) {
-	// create horizontal table to show multiple samples, one sample per row
-
-	// flags for optional columns
-	const has_sample_id = data.some(i => i.sample_id),
-		has_ssm_read_depth = data.some(i => i.ssm_read_depth),
-		has_totalNormal = data.some(i => i.totalNormal),
-		has_caseAccess = data.some(i => 'caseIsOpenAccess' in i)
-
-	// count total number of columns
-	let numColumns = 0
-	if (has_sample_id) numColumns++
-	if (arg.tk.mds.variant2samples.termidlst) numColumns += arg.tk.mds.variant2samples.termidlst.length
-	if (has_ssm_read_depth) numColumns++
-	if (has_totalNormal) numColumns++
-
-	if (arg.multiSampleTable) {
-		// for each sample, find placeholder by sample.ssm_id, create new row for this sample into placeholder
-
-		let startDataCol = arg.multiSampleTable.startCol + 1
-		await printHeader(arg.grid, true, startDataCol)
-		for (const sample of data) {
-			const row = arg.multiSampleTable.ssmid2div.get(sample.ssm_id)
-			if (!row) {
-				// no corresponding row was found by this ssm id
-				continue
-			}
-			// for a variant with multiple samples, css is set repeatedly on the row (placeholder)
-			// display: contents renders data within the parent grid, ensuring the grid and subgrid
-			// stay aligned as well as resize/flex synchronously
-			row.style('display', 'contents').style('grid-column-start', startDataCol)
-			printSampleRow(sample, row, startDataCol)
-		}
-	} else {
-		// create new table, one row per sample
-		const grid = arg.div
-			.append('div')
-			.style('display', 'grid')
-			.style('grid-template-columns', 'repeat(' + numColumns + ', auto)')
-			.style('gap', '5px')
-			.style('max-height', '30vw')
-			.style('overflow-y', 'scroll')
-		await printHeader(grid, true)
-		for (const sample of data) {
-			printSampleRow(sample, grid)
-		}
-	}
-	// Alternating background color for sample rows
-	colorRows()
-
-	//////////// helpers
-
-	async function printHeader(div, gray, startDataCol) {
-		let startCol = startDataCol
-		if (has_sample_id) {
-			const c = div
-				.append('div')
-				.text('Sample')
-				.style('grid-row-start', 1)
-			if (startDataCol) {
-				c.style('grid-column-start', startCol)
-			}
-			if (gray) c.style('opacity', 0.3)
-		}
-
-		if (has_caseAccess) {
-			const c = div
-				.append('div')
-				.text('Access')
-				.style('grid-row-start', 1)
-			if (startDataCol) {
-				startCol = ++startCol
-				c.style('grid-column-start', startCol)
-			}
-			if (gray) c.style('opacity', 0.3)
-		}
-
-		if (arg.tk.mds.variant2samples.termidlst) {
-			for (const termid of arg.tk.mds.variant2samples.termidlst) {
-				const t = await arg.tk.mds.termdb.vocabApi.getterm(termid)
-				const c = div
-					.append('div')
-					.text(t ? t.name : termid)
-					.style('grid-row-start', 1)
-				if (startDataCol) {
-					startCol = ++startCol
-					c.style('grid-column-start', startCol)
-				}
-				if (gray) c.style('opacity', 0.3)
-			}
-		}
-
-		if (has_ssm_read_depth) {
-			const c = div
-				.append('div')
-				.text('Tumor DNA MAF')
-				.style('grid-row-start', 1)
-			if (startDataCol) {
-				startCol = ++startCol
-				c.style('grid-column-start', startCol)
-			}
-			if (gray) c.style('opacity', 0.3)
-		}
-		if (has_totalNormal) {
-			const c = div.header
-				.append('div')
-				.text('Normal depth')
-				.style('grid-row-start', 1)
-			if (startDataCol) {
-				startCol = ++startCol
-				c.style('grid-column-start', startCol)
-			}
-			if (gray) c.style('opacity', 0.3)
-		}
-	}
-
-	function printSampleRow(sample, row, startDataCol) {
-		let startCol = startDataCol
-		if (has_sample_id) {
-			const cell = row
-				.append('div')
-				.classed('sjpp-sample-table-div', true)
-				.style('padding', '1px')
-			if (startDataCol) {
-				cell.style('grid-column-start', startCol)
-			}
-			printSampleName(sample, arg.tk, cell)
-		}
-
-		if (has_caseAccess) {
-			row
-				.append('div')
-				.classed('sjpp-sample-table-div', true)
-				.style('padding', '1px')
-				.text(sample.caseIsOpenAccess ? 'Open' : 'Controlled')
-		}
-
-		if (arg.tk.mds.variant2samples.termidlst) {
-			for (const termid of arg.tk.mds.variant2samples.termidlst) {
-				const cell = row
-					.append('div')
-					.text(termid in sample ? sample[termid] : '')
-					.style('padding', '1px')
-					.classed('sjpp-sample-table-div', true)
-				if (startDataCol && !has_sample_id && arg.tk.mds.variant2samples.termidlst[0]) {
-					cell.style('grid-column-start', startCol)
-				}
-			}
-		}
-
-		if (has_ssm_read_depth) {
-			const cell = row
-				.append('div')
-				.classed('sjpp-sample-table-div', true)
-				.style('padding', '1px')
-			const sm = sample.ssm_read_depth
-			if (sm) {
-				fillbar(cell, { f: sm.altTumor / sm.totalTumor })
-				cell
-					.append('span')
-					.text(sm.altTumor + ' / ' + sm.totalTumor)
-					.style('margin', '0px 10px')
-			}
-		}
-		if (has_totalNormal) {
-			const cell = row
-				.append('div')
-				.text('totalNormal' in sample ? sample.totalNormal : '')
-				.classed('sjpp-sample-table-div', true)
-				.style('padding', '1px')
-		}
-	}
-
-	function colorRows() {
-		// Colors every other row light gray
-		// Solves the problem of the multisample table rows' background color
-		// rendering out of order (Cause: the sample rows are processed and rendered in order of
-		// the data list and then shuffled into the respective sample subgrid)
-
-		const rowDivs = document.querySelectorAll('.sjpp-sample-table-div')
-		const rowArray = Array.from(rowDivs)
-		for (const [i, elm] of rowArray.entries()) {
-			const e = d3select(elm)
-			const rowPosition = Math.floor(i / numColumns)
-			let background = false
-			if (rowPosition % 2 != 0) {
-				background = true
-				e.style('background-color', '#ededed')
-			}
-			e.on('mouseover', () => {
-				e.style('background-color', '#fcfcca')
-			})
-			e.on('mouseout', () => {
-				e.style('background-color', background == true ? '#ededed' : '')
-			})
-		}
-	}
-}
-
 /***********************************************
-renderTable() is the temporary implementation of table renderer
-can replace with colleen's new function
-samples2columns() and samples2rows() should continue to work with the future renderTable()
+converts list of samples into inputs for renderTable()
 */
-async function samples2columns(samples, tk) {
-	const columns = [{ label: 'Sample' }]
+async function samples2columnsRows(samples, tk) {
+	// detect if these columns appear in the samples
+	const has_caseAccess = samples.some(i => 'caseIsOpenAccess' in i),
+		has_ssm_read_depth = samples.some(i => i.ssm_read_depth),
+		has_totalNormal = samples.some(i => i.totalNormal),
+		has_ssm = samples.some(i => i.ssm_id) || samples.some(i => i.ssm_id_lst)
 
-	if (samples.some(i => 'caseIsOpenAccess' in i)) {
+	const columns = [{ label: 'Sample' }],
+		rows = []
+
+	if (has_caseAccess) {
 		columns.push({ label: 'Access' })
 	}
 
@@ -451,26 +235,18 @@ async function samples2columns(samples, tk) {
 		}
 	}
 
-	if (samples.some(i => i.ssm_read_depth)) {
+	if (has_ssm_read_depth) {
 		columns.push({ label: 'Tumor DNA MAF' })
 	}
-	if (samples.some(i => i.totalNormal)) {
+	if (has_totalNormal) {
 		columns.push({ label: 'Normal depth' })
 	}
 
-	if (samples.some(i => i.ssm_id) || samples.some(i => i.ssm_id_lst)) {
+	if (has_ssm) {
 		columns.push({ label: 'Mutations', isSsm: true })
 	}
 
-	return columns
-}
-function samples2rows(samples, tk) {
-	const rows = []
-
-	const has_caseAccess = samples.some(i => 'caseIsOpenAccess' in i),
-		has_ssm_read_depth = samples.some(i => i.ssm_read_depth),
-		has_totalNormal = samples.some(i => i.totalNormal),
-		has_ssm = samples.some(i => i.ssm_id) || samples.some(i => i.ssm_id_lst)
+	// done making columns[]
 
 	for (const sample of samples) {
 		const row = [{ value: sample.sample_id }]
@@ -548,5 +324,5 @@ function samples2rows(samples, tk) {
 
 		rows.push(row)
 	}
-	return rows
+	return [columns, rows]
 }

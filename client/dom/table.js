@@ -1,9 +1,34 @@
-export async function renderTable({ columns, rows, div }) {
-	// columns is an Array of a number of elements that contains attribute 'label' that contains objects such as Sample, Access, Disease type, Primary site, Project id...etc'
-	// columns will make the header row.
-	// rows comprises an array of elements and each element is a sample/case.
+/*
+print an html table, using the specified columns and rows
 
-	// columns length is 1 less than the original column.length to support the width for the last column because of difference in information in different datasets
+input:
+
+div = d3-wrapped holder
+
+columns = [ {label} ]
+	each element is an object describing a column
+	.label = str
+		the text to show as header of a column
+
+rows = [ [] ]
+	each element is an array of cells for a row, with array length must matching columns.length
+	a cell can be single value, or multi value:
+
+	single value cell: 
+	{
+		url: string, to print in <a> element
+		html: string, to print with .html() d3 method, may be susceptible to attack
+		value, to print with .text() d3 method
+	}
+
+	multi-value cell:
+	{
+		values: [
+			{url/html/value}, {}, ...
+		]
+	}
+*/
+export async function renderTable({ columns, rows, div }) {
 	const numColumns = columns.length - 1
 
 	// create a Parent Div element to which the header and sample grid will be appended as divH and divS.
