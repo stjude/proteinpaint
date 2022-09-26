@@ -277,8 +277,8 @@ function setRenderers(self) {
 	}
 
 	self.updateUI = () => {
-		if (self.activeTab && self.activeCohort == -1) {
-			// charts or filter tab, but no cohort is selected
+		if (self.activeTab && self.state.termdbConfig.selectCohort && self.activeCohort == -1) {
+			// showing charts or filter tab; cohort selection is enabled but no cohort is selected
 			self.dom.subheaderDiv.style('display', 'none')
 			self.dom.messageDiv.selectAll('text').remove()
 			self.dom.messageDiv.style('display', '').text('No cohort selected. Please select a cohort in the "COHORT" tab.')
