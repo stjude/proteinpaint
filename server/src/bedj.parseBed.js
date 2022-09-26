@@ -71,7 +71,7 @@ to parse line as gene file, require following:
 
 const checkReadingFrame = require('./checkReadingFrame')
 
-export function parseBedLine(l, enst2desc) {
+exports.parseBedLine = function parseBedLine(l, enst2desc) {
 	const chr = l[0],
 		chromstart = Number(l[2 - 1]),
 		chromstop = l[3 - 1],
