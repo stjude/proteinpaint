@@ -3,7 +3,6 @@ import { fillTermWrapper } from '../termsetting/termsetting'
 import { select, event } from 'd3-selection'
 import { scaleLinear as d3Linear } from 'd3-scale'
 import Partjson from 'partjson'
-import { dofetch } from '../common/dofetch'
 import { zoom as d3zoom, zoomIdentity } from 'd3'
 import { d3lasso } from '../common/lasso'
 import { Menu } from '#dom/menu'
@@ -91,6 +90,21 @@ class Scatter {
 		if (data.error) throw data.error
 		if (!Array.isArray(data.samples)) throw 'data.samples[] not array'
 		this.pj.refresh({ data: data.samples })
+		const x = data.samples.map(item => item.x)
+		const y = data.samples.map(item => item.y)
+		const xMin = Math.min(x)
+		const xMax = Math.max(x)
+		const yMin = Math.min(y)
+		const yMax = Math.max(y)
+
+		this.xAxisScale = d3Linear()
+			.domain([xMin, xMax])
+			.range([100, this.settings.svgw])
+
+		this.yAxisScale = d3Linear()
+			.domain([yMax, yMin])
+			.range([this.settings.svgh, 0])
+
 		this.render()
 		const renderLegend = htmlLegend(this.dom.legendDiv)
 		renderLegend(this.getLegend(data.categories))
@@ -217,7 +231,7 @@ function setRenderers(self) {
 			.transition()
 			.duration(s.duration)
 			.style('opacity', 1)
-		setTools(self.dom, svg)
+		setTools(self.dom, svg, d)
 	}
 
 	self.updateCharts = function(d) {
@@ -323,7 +337,7 @@ function setRenderers(self) {
 			.duration(duration)
 	}
 
-	function setTools(dom, svg) {
+	function setTools(dom, svg, d) {
 		const scattersvg_buttons = dom.toolsDiv
 			.style('display', 'inline-block')
 			.style('vertical-align', 'top')
@@ -410,14 +424,39 @@ function setRenderers(self) {
 		zoom_menu.style('display', 'inline-block')
 
 		const zoom = d3zoom()
-			.scaleExtent([0.5, 5])
-			.on('zoom', () => {
+			.scaleExtent([0.5, 10])
+			.on('zoom', e => {
 				svg.select('g').attr('transform', event.transform)
+
+				const axisG = svg.select('.sjpcb-scatter-mainG').select('.sjpcb-scatter-axis')
+				const xAxis = axisG.select('.sjpcb-scatter-x-axis')
+				const yAxis = axisG.select('.sjpcb-scatter-y-axis')
+
+				// create new scale ojects based on event
+				const new_xScale = event.transform.rescaleX(xAxisScale)
+				const new_yScale = event.transform.rescaleY(yAxisScale)
+				console.log(
+					axisBottom(xAxisScale)
+						.ticks(5)
+						.scale(new_xScale)
+				)
+
+				xAxis.attr('transform', 'translate(100,' + self.settings.svgh + ')').call(
+					axisBottom(this.xAxisScale)
+						.ticks(5)
+						.scale(new_xScale)
+				)
+
+				yAxis.attr('transform', 'translate(100, 0)').call(
+					axisLeft(this.yAxisScale)
+						.ticks(5)
+						.scale(new_yScale)
+				)
 			})
 
 		svg.call(zoom)
 		zoom_in_btn.on('click', () => {
-			zoom.scaleBy(svg.transition().duration(750), 1.5)
+			zoom.scaleBy(svg.transition().duration(750), 0.5)
 		})
 
 		zoom_out_btn.on('click', () => {
@@ -515,15 +554,11 @@ function setRenderers(self) {
 	}
 
 	function renderAxes(xAxis, xTitle, yAxis, yTitle, s, d) {
-		xAxis.attr('transform', 'translate(100,' + s.svgh + ')').call(axisBottom(d.xScale).ticks(5))
+		// create new scale ojects based on event
 
-		yAxis.attr('transform', 'translate(100, 0)').call(
-			axisLeft(
-				d3Linear()
-					.domain(d.yScale.domain())
-					.range([0, s.svgh])
-			).ticks(5)
-		)
+		xAxis.attr('transform', 'translate(100,' + self.settings.svgh + ')').call(axisBottom(self.xAxisScale).ticks(5))
+
+		yAxis.attr('transform', 'translate(100, 0)').call(axisLeft(self.yAxisScale).ticks(5))
 
 		xTitle.select('text, title').remove()
 		const xTitleLabel =
@@ -586,7 +621,7 @@ export async function getPlotConfig(opts, app) {
 					svgw: 550,
 					svgh: 550,
 					axisTitleFontSize: 16,
-					showAxes: false
+					showAxes: true
 				}
 			}
 		}
