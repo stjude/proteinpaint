@@ -126,7 +126,7 @@ tape('test #3: parsing a line from lrg.bb file', async function(test) {
 		'2013-01-16'
 	]
 	const expected = {
-		name: 'WRAP53',
+		name: 'NG_028245.1',
 		isoform: 'LRG_375',
 		strand: '+',
 		exon: [[7681070, 7705502]],
