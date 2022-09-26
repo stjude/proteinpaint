@@ -4,6 +4,7 @@ import { select, event } from 'd3-selection'
 import { scaleLinear as d3Linear } from 'd3-scale'
 import Partjson from 'partjson'
 import { zoom as d3zoom, zoomIdentity } from 'd3'
+import { extent } from 'd3-array'
 import { d3lasso } from '../common/lasso'
 import { Menu } from '#dom/menu'
 import { controlsInit } from './controls'
@@ -92,19 +93,14 @@ class Scatter {
 		this.pj.refresh({ data: data.samples })
 		const x = data.samples.map(item => item.x)
 		const y = data.samples.map(item => item.y)
-		const xMin = Math.min(x)
-		const xMax = Math.max(x)
-		const yMin = Math.min(y)
-		const yMax = Math.max(y)
-
 		this.xAxisScale = d3Linear()
-			.domain([xMin, xMax])
+			.domain(extent(x))
 			.range([0, this.settings.svgw])
-
+		this.bottomAxis = axisBottom(this.xAxisScale)
 		this.yAxisScale = d3Linear()
-			.domain([yMax, yMin])
+			.domain(extent(y).reverse())
 			.range([this.settings.svgh, 0])
-
+		this.leftAxis = axisLeft(this.yAxisScale)
 		this.render()
 		const renderLegend = htmlLegend(this.dom.legendDiv)
 		renderLegend(this.getLegend(data.categories))
@@ -432,15 +428,10 @@ function setRenderers(self) {
 		const mainG = svg.select('.sjpcb-scatter-mainG')
 		const axisG = mainG.select('.sjpcb-scatter-axis')
 		const rect = mainG.select('.zoom').attr('fill', 'green')
-		console.log(mainG, axisG, rect)
 
 		const zoom = d3zoom()
 			.scaleExtent([0.5, 10])
 			.on('zoom', e => {
-				svg
-					.selectAll('g')
-					.selectAll('circle')
-					.attr('transform', event.transform)
 				const xAxis = axisG.select('.sjpcb-scatter-x-axis')
 				const yAxis = axisG.select('.sjpcb-scatter-y-axis')
 
@@ -448,20 +439,19 @@ function setRenderers(self) {
 				const new_xScale = event.transform.rescaleX(self.xAxisScale)
 				const new_yScale = event.transform.rescaleY(self.yAxisScale)
 
-				xAxis.attr('transform', 'translate(100,' + self.settings.svgh + ')').call(
-					axisBottom(self.xAxisScale)
-						.ticks(5)
-						.scale(new_xScale)
-				)
+				//console.log(new_xScale.domain(), new_xScale.range())
 
-				yAxis.attr('transform', 'translate(100, 0)').call(
-					axisLeft(self.yAxisScale)
-						.ticks(5)
-						.scale(new_yScale)
-				)
+				xAxis.attr('transform', 'translate(100,' + self.settings.svgh + ')').call(self.bottomAxis.scale(new_xScale))
+
+				yAxis.attr('transform', 'translate(100, 0)').call(self.leftAxis.scale(new_yScale))
+				svg
+					.selectAll('g')
+					.selectAll('circle')
+					.attr('transform', event.transform)
 			})
 
 		mainG.call(zoom)
+		//rect.call(zoom)
 		zoom_in_btn.on('click', () => {
 			zoom.scaleBy(svg.transition().duration(750), 0.5)
 		})
@@ -563,9 +553,8 @@ function setRenderers(self) {
 	function renderAxes(xAxis, xTitle, yAxis, yTitle, s, d) {
 		// create new scale ojects based on event
 
-		xAxis.attr('transform', 'translate(100,' + self.settings.svgh + ')').call(axisBottom(self.xAxisScale).ticks(5))
-
-		yAxis.attr('transform', 'translate(100, 0)').call(axisLeft(self.yAxisScale).ticks(5))
+		xAxis.attr('transform', 'translate(100,' + self.settings.svgh + ')').call(self.bottomAxis)
+		yAxis.attr('transform', 'translate(100, 0)').call(self.leftAxis)
 
 		xTitle.select('text, title').remove()
 		const xTitleLabel =
