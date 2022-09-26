@@ -58,7 +58,7 @@ export const byReqKey = {
 		return v
 	},
 	term(value) {
-		const termWrapper = JSON.parse(value)
+		const termWrapper = typeof value == 'string' ? JSON.parse(value) : value
 		if (!('id' in termWrapper)) throw 'missing termWrapper.id'
 		if (!('q' in termWrapper)) throw 'missing termWrapper.q'
 		return termWrapper
