@@ -3,7 +3,6 @@ import { fillTermWrapper } from '../termsetting/termsetting'
 import { select, event } from 'd3-selection'
 import { scaleLinear as d3Linear } from 'd3-scale'
 import Partjson from 'partjson'
-import { dofetch } from '../common/dofetch'
 import { zoom as d3zoom, zoomIdentity } from 'd3'
 import { d3lasso } from '../common/lasso'
 import { Menu } from '#dom/menu'
@@ -91,6 +90,17 @@ class Scatter {
 		if (data.error) throw data.error
 		if (!Array.isArray(data.samples)) throw 'data.samples[] not array'
 		this.pj.refresh({ data: data.samples })
+		// no option for dividing charts by term,
+		// so assume that the plot always corresponds to the first chart data
+		const chart0 = this.pj.tree.charts[0]
+		this.xAxisScale = d3Linear()
+			.domain([chart0.xMin, chart0.xMax])
+			.range([0, this.settings.svgw])
+		this.axisBottom = axisBottom(this.xAxisScale)
+		this.yAxisScale = d3Linear()
+			.domain([chart0.yMax, chart0.yMin])
+			.range([this.settings.svgh, 0])
+		this.axisLeft = axisLeft(this.yAxisScale)
 		this.render()
 		const renderLegend = htmlLegend(this.dom.legendDiv)
 		renderLegend(this.getLegend(data.categories))
@@ -210,14 +220,14 @@ function setRenderers(self) {
 			.style('text-align', 'left')
 			.style('background', 1 || s.orderChartsBy == 'organ-system' ? d.color : '')
 
-		const svg = div.append('svg').attr('class', 'pp-scatter-svg')
+		const svg = div.append('svg')
 		renderSVG(svg, d, s, 0)
 
 		div
 			.transition()
 			.duration(s.duration)
 			.style('opacity', 1)
-		setTools(self.dom, svg)
+		setTools(self.dom, svg, d)
 	}
 
 	self.updateCharts = function(d) {
@@ -244,7 +254,7 @@ function setRenderers(self) {
 			.attr('height', s.svgh + 100)
 
 		/* eslint-disable */
-		const [mainG, axisG, xAxis, yAxis, xTitle, yTitle] = getSvgSubElems(svg)
+		const [mainG, axisG, xAxis, yAxis, xTitle, yTitle] = getSvgSubElems(svg, chart)
 		/* eslint-enable */
 		//if (d.xVals) computeScales(d, s);
 
@@ -263,29 +273,43 @@ function setRenderers(self) {
 			.each(function(series, i) {
 				renderSeries(select(this), chart, series, i, s, duration)
 			})
-		if (s.showAxes) renderAxes(xAxis, xTitle, yAxis, yTitle, s, chart)
 	}
 
-	function getSvgSubElems(svg) {
+	function getSvgSubElems(svg, chart) {
 		let mainG, axisG, xAxis, yAxis, xTitle, yTitle
 		if (svg.select('.sjpcb-scatter-mainG').size() == 0) {
 			mainG = svg.append('g').attr('class', 'sjpcb-scatter-mainG')
 			axisG = mainG.append('g').attr('class', 'sjpcb-scatter-axis')
-			xAxis = axisG.append('g').attr('class', 'sjpcb-scatter-x-axis')
-			yAxis = axisG.append('g').attr('class', 'sjpcb-scatter-y-axis')
+			xAxis = axisG
+				.append('g')
+				.attr('class', 'sjpcb-scatter-x-axis')
+				.attr('transform', 'translate(100,' + self.settings.svgh + ')')
+			yAxis = axisG
+				.append('g')
+				.attr('class', 'sjpcb-scatter-y-axis')
+				.attr('transform', 'translate(100, 0)')
 			xTitle = axisG.append('g').attr('class', 'sjpcb-scatter-x-title')
 			yTitle = axisG.append('g').attr('class', 'sjpcb-scatter-y-title')
+			mainG
+				.append('rect')
+				.attr('class', 'zoom')
+				.attr('x', 101)
+				.attr('y', 0)
+				.attr('width', self.settings.svgw)
+				.attr('height', self.settings.svgh)
+				.attr('fill', 'white')
+			renderAxes(xAxis, xTitle, yAxis, yTitle, self.settings, chart)
 		} else {
 			mainG = svg.select('.sjpcb-scatter-mainG')
-			axisG = mainG.select('.sjpcb-scatter-axis')
-			if (self.settings.showAxes) axisG.style('opacity', 1)
-			else axisG.style('opacity', 0)
+			axisG = svg.select('.sjpcb-scatter-axis')
 
 			xAxis = axisG.select('.sjpcb-scatter-x-axis')
 			yAxis = axisG.select('.sjpcb-scatter-y-axis')
 			xTitle = axisG.select('.sjpcb-scatter-x-title')
 			yTitle = axisG.select('.sjpcb-scatter-y-title')
 		}
+		if (self.settings.showAxes) axisG.style('opacity', 1)
+		else axisG.style('opacity', 0)
 		return [mainG, axisG, xAxis, yAxis, xTitle, yTitle]
 	}
 
@@ -323,7 +347,7 @@ function setRenderers(self) {
 			.duration(duration)
 	}
 
-	function setTools(dom, svg) {
+	function setTools(dom, svg, d) {
 		const scattersvg_buttons = dom.toolsDiv
 			.style('display', 'inline-block')
 			.style('vertical-align', 'top')
@@ -408,35 +432,51 @@ function setRenderers(self) {
 			.html('Use lasso')
 
 		zoom_menu.style('display', 'inline-block')
-
+		const mainG = svg.select('.sjpcb-scatter-mainG')
+		const axisG = mainG.select('.sjpcb-scatter-axis')
+		const rect = mainG.select('.zoom')
+		const xAxisG = axisG.select('.sjpcb-scatter-x-axis')
+		const yAxisG = axisG.select('.sjpcb-scatter-y-axis')
 		const zoom = d3zoom()
 			.scaleExtent([0.5, 5])
-			.on('zoom', () => {
-				svg.select('g').attr('transform', event.transform)
-			})
+			.on('zoom', handleZoom)
 
-		svg.call(zoom)
+		mainG.call(zoom)
+		rect.call(zoom)
+
+		function handleZoom() {
+			// create new scale ojects based on event
+			const new_xScale = event.transform.rescaleX(self.xAxisScale)
+			const new_yScale = event.transform.rescaleY(self.yAxisScale)
+
+			xAxisG.call(self.axisBottom.scale(new_xScale))
+			yAxisG.call(self.axisLeft.scale(new_yScale))
+			svg
+				.selectAll('g')
+				.selectAll('circle')
+				.attr('transform', event.transform)
+		}
 		zoom_in_btn.on('click', () => {
-			zoom.scaleBy(svg.transition().duration(750), 1.5)
+			zoom.scaleBy(mainG.transition().duration(750), 1.5)
 		})
 
 		zoom_out_btn.on('click', () => {
-			zoom.scaleBy(svg.transition().duration(750), 0.5)
+			zoom.scaleBy(mainG.transition().duration(750), 0.5)
 		})
 
 		reset_btn.on('click', () => {
-			svg
+			mainG
 				.transition()
 				.duration(750)
 				.call(zoom.transform, zoomIdentity)
 		})
 
 		pan_left_btn.on('click', () => {
-			zoom.translateBy(svg.transition().duration(750), -50, 0)
+			zoom.translateBy(mainG.transition().duration(750), -50, 0)
 		})
 
 		pan_right_btn.on('click', () => {
-			zoom.translateBy(svg.transition().duration(750), 50, 0)
+			zoom.translateBy(mainG.transition().duration(750), 50, 0)
 		})
 
 		const circles = svg.selectAll('g').selectAll('circle')
@@ -514,16 +554,11 @@ function setRenderers(self) {
 		}
 	}
 
-	function renderAxes(xAxis, xTitle, yAxis, yTitle, s, d) {
-		xAxis.attr('transform', 'translate(100,' + s.svgh + ')').call(axisBottom(d.xScale).ticks(5))
+	function renderAxes(xAxis, xTitle, yAxis, yTitle, s) {
+		// create new scale ojects based on event
 
-		yAxis.attr('transform', 'translate(100, 0)').call(
-			axisLeft(
-				d3Linear()
-					.domain(d.yScale.domain())
-					.range([0, s.svgh])
-			).ticks(5)
-		)
+		xAxis.call(self.axisBottom)
+		yAxis.call(self.axisLeft)
 
 		xTitle.select('text, title').remove()
 		const xTitleLabel =
