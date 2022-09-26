@@ -280,7 +280,7 @@ function setRenderers(self) {
 		let mainG, axisG, xAxis, yAxis, xTitle, yTitle
 		if (svg.select('.sjpcb-scatter-mainG').size() == 0) {
 			mainG = svg.append('g').attr('class', 'sjpcb-scatter-mainG')
-			axisG = svg.append('g').attr('class', 'sjpcb-scatter-axis')
+			axisG = mainG.append('g').attr('class', 'sjpcb-scatter-axis')
 			xAxis = axisG.append('g').attr('class', 'sjpcb-scatter-x-axis')
 			yAxis = axisG.append('g').attr('class', 'sjpcb-scatter-y-axis')
 			xTitle = axisG.append('g').attr('class', 'sjpcb-scatter-x-title')
@@ -288,10 +288,11 @@ function setRenderers(self) {
 			mainG
 				.append('rect')
 				.attr('class', 'zoom')
-				.attr('x', 100)
+				.attr('x', 101)
 				.attr('y', 0)
 				.attr('width', self.settings.svgw)
 				.attr('height', self.settings.svgh)
+				.attr('fill', 'white')
 		} else {
 			mainG = svg.select('.sjpcb-scatter-mainG')
 			axisG = svg.select('.sjpcb-scatter-axis')
@@ -427,31 +428,28 @@ function setRenderers(self) {
 		zoom_menu.style('display', 'inline-block')
 		const mainG = svg.select('.sjpcb-scatter-mainG')
 		const axisG = mainG.select('.sjpcb-scatter-axis')
-		const rect = mainG.select('.zoom').attr('fill', 'green')
-
+		const rect = mainG.select('.zoom')
+		const xAxisG = axisG.select('.sjpcb-scatter-x-axis')
+		const yAxisG = axisG.select('.sjpcb-scatter-y-axis')
 		const zoom = d3zoom()
 			.scaleExtent([0.5, 10])
-			.on('zoom', e => {
-				const xAxis = axisG.select('.sjpcb-scatter-x-axis')
-				const yAxis = axisG.select('.sjpcb-scatter-y-axis')
+			.on('zoom', handleZoom)
 
-				// create new scale ojects based on event
-				const new_xScale = event.transform.rescaleX(self.xAxisScale)
-				const new_yScale = event.transform.rescaleY(self.yAxisScale)
+		//mainG.call(zoom)
+		rect.call(zoom)
 
-				//console.log(new_xScale.domain(), new_xScale.range())
+		function handleZoom() {
+			// create new scale ojects based on event
+			const new_xScale = event.transform.rescaleX(self.xAxisScale)
+			const new_yScale = event.transform.rescaleY(self.yAxisScale)
 
-				xAxis.attr('transform', 'translate(100,' + self.settings.svgh + ')').call(self.bottomAxis.scale(new_xScale))
-
-				yAxis.attr('transform', 'translate(100, 0)').call(self.leftAxis.scale(new_yScale))
-				svg
-					.selectAll('g')
-					.selectAll('circle')
-					.attr('transform', event.transform)
-			})
-
-		mainG.call(zoom)
-		//rect.call(zoom)
+			xAxisG.call(self.bottomAxis.scale(new_xScale))
+			yAxisG.call(self.leftAxis.scale(new_yScale))
+			svg
+				.selectAll('g')
+				.selectAll('circle')
+				.attr('transform', event.transform)
+		}
 		zoom_in_btn.on('click', () => {
 			zoom.scaleBy(svg.transition().duration(750), 0.5)
 		})
@@ -551,6 +549,7 @@ function setRenderers(self) {
 	}
 
 	function renderAxes(xAxis, xTitle, yAxis, yTitle, s, d) {
+		console.log('render axes')
 		// create new scale ojects based on event
 
 		xAxis.attr('transform', 'translate(100,' + self.settings.svgh + ')').call(self.bottomAxis)
