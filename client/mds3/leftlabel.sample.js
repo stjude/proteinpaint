@@ -212,7 +212,7 @@ function showSummary4oneTerm(termid, div, numbycategory, tk, block) {
 		const wait = div.append('div').text('Loading...')
 		const samples = await tk.mds.getSamples({ tid2value: { [termid]: category } })
 		wait.remove()
-		await displaySampleTable(samples, { div, tk, block, useRenderTable: true })
+		await displaySampleTable(samples, { div, tk, block })
 	}
 }
 
@@ -242,8 +242,7 @@ function menu_samples(data, tk, block) {
 				await displaySampleTable(samples, {
 					div: tk.menutip.d,
 					tk,
-					block,
-					useRenderTable: true
+					block
 				})
 				wait.remove()
 			} catch (e) {
