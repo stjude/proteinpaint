@@ -254,7 +254,7 @@ function setRenderers(self) {
 			.attr('height', s.svgh + 100)
 
 		/* eslint-disable */
-		const [mainG, axisG, xAxis, yAxis, xTitle, yTitle] = getSvgSubElems(svg)
+		const [mainG, axisG, xAxis, yAxis, xTitle, yTitle] = getSvgSubElems(svg, chart)
 		/* eslint-enable */
 		//if (d.xVals) computeScales(d, s);
 
@@ -273,16 +273,21 @@ function setRenderers(self) {
 			.each(function(series, i) {
 				renderSeries(select(this), chart, series, i, s, duration)
 			})
-		if (s.showAxes) renderAxes(xAxis, xTitle, yAxis, yTitle, s, chart)
 	}
 
-	function getSvgSubElems(svg) {
+	function getSvgSubElems(svg, chart) {
 		let mainG, axisG, xAxis, yAxis, xTitle, yTitle
 		if (svg.select('.sjpcb-scatter-mainG').size() == 0) {
 			mainG = svg.append('g').attr('class', 'sjpcb-scatter-mainG')
 			axisG = mainG.append('g').attr('class', 'sjpcb-scatter-axis')
-			xAxis = axisG.append('g').attr('class', 'sjpcb-scatter-x-axis')
-			yAxis = axisG.append('g').attr('class', 'sjpcb-scatter-y-axis')
+			xAxis = axisG
+				.append('g')
+				.attr('class', 'sjpcb-scatter-x-axis')
+				.attr('transform', 'translate(100,' + self.settings.svgh + ')')
+			yAxis = axisG
+				.append('g')
+				.attr('class', 'sjpcb-scatter-y-axis')
+				.attr('transform', 'translate(100, 0)')
 			xTitle = axisG.append('g').attr('class', 'sjpcb-scatter-x-title')
 			yTitle = axisG.append('g').attr('class', 'sjpcb-scatter-y-title')
 			mainG
@@ -293,17 +298,18 @@ function setRenderers(self) {
 				.attr('width', self.settings.svgw)
 				.attr('height', self.settings.svgh)
 				.attr('fill', 'white')
+			renderAxes(xAxis, xTitle, yAxis, yTitle, self.settings, chart)
 		} else {
 			mainG = svg.select('.sjpcb-scatter-mainG')
 			axisG = svg.select('.sjpcb-scatter-axis')
-			if (self.settings.showAxes) axisG.style('opacity', 1)
-			else axisG.style('opacity', 0)
 
 			xAxis = axisG.select('.sjpcb-scatter-x-axis')
 			yAxis = axisG.select('.sjpcb-scatter-y-axis')
 			xTitle = axisG.select('.sjpcb-scatter-x-title')
 			yTitle = axisG.select('.sjpcb-scatter-y-title')
 		}
+		if (self.settings.showAxes) axisG.style('opacity', 1)
+		else axisG.style('opacity', 0)
 		return [mainG, axisG, xAxis, yAxis, xTitle, yTitle]
 	}
 
@@ -432,7 +438,7 @@ function setRenderers(self) {
 		const xAxisG = axisG.select('.sjpcb-scatter-x-axis')
 		const yAxisG = axisG.select('.sjpcb-scatter-y-axis')
 		const zoom = d3zoom()
-			.scaleExtent([0.5, 10])
+			.scaleExtent([0.5, 5])
 			.on('zoom', handleZoom)
 
 		mainG.call(zoom)
@@ -548,12 +554,11 @@ function setRenderers(self) {
 		}
 	}
 
-	function renderAxes(xAxis, xTitle, yAxis, yTitle, s, d) {
-		console.log('render axes')
+	function renderAxes(xAxis, xTitle, yAxis, yTitle, s) {
 		// create new scale ojects based on event
 
-		xAxis.attr('transform', 'translate(100,' + self.settings.svgh + ')').call(self.bottomAxis)
-		yAxis.attr('transform', 'translate(100, 0)').call(self.leftAxis)
+		xAxis.call(self.bottomAxis)
+		yAxis.call(self.leftAxis)
 
 		xTitle.select('text, title').remove()
 		const xTitleLabel =
@@ -616,7 +621,7 @@ export async function getPlotConfig(opts, app) {
 					svgw: 550,
 					svgh: 550,
 					axisTitleFontSize: 16,
-					showAxes: true
+					showAxes: false
 				}
 			}
 		}
