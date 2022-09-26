@@ -176,6 +176,7 @@ class Scatter {
 		const legendGrps = []
 
 		legendGrps.push({
+			name: 'Color:',
 			items: items
 		})
 		return legendGrps
