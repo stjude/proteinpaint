@@ -99,7 +99,7 @@ class Scatter {
 
 		this.xAxisScale = d3Linear()
 			.domain([xMin, xMax])
-			.range([100, this.settings.svgw])
+			.range([0, this.settings.svgw])
 
 		this.yAxisScale = d3Linear()
 			.domain([yMax, yMin])
@@ -224,7 +224,7 @@ function setRenderers(self) {
 			.style('text-align', 'left')
 			.style('background', 1 || s.orderChartsBy == 'organ-system' ? d.color : '')
 
-		const svg = div.append('svg').attr('class', 'pp-scatter-svg')
+		const svg = div.append('svg')
 		renderSVG(svg, d, s, 0)
 
 		div
@@ -284,14 +284,21 @@ function setRenderers(self) {
 		let mainG, axisG, xAxis, yAxis, xTitle, yTitle
 		if (svg.select('.sjpcb-scatter-mainG').size() == 0) {
 			mainG = svg.append('g').attr('class', 'sjpcb-scatter-mainG')
-			axisG = mainG.append('g').attr('class', 'sjpcb-scatter-axis')
+			axisG = svg.append('g').attr('class', 'sjpcb-scatter-axis')
 			xAxis = axisG.append('g').attr('class', 'sjpcb-scatter-x-axis')
 			yAxis = axisG.append('g').attr('class', 'sjpcb-scatter-y-axis')
 			xTitle = axisG.append('g').attr('class', 'sjpcb-scatter-x-title')
 			yTitle = axisG.append('g').attr('class', 'sjpcb-scatter-y-title')
+			mainG
+				.append('rect')
+				.attr('class', 'zoom')
+				.attr('x', 100)
+				.attr('y', 0)
+				.attr('width', self.settings.svgw)
+				.attr('height', self.settings.svgh)
 		} else {
 			mainG = svg.select('.sjpcb-scatter-mainG')
-			axisG = mainG.select('.sjpcb-scatter-axis')
+			axisG = svg.select('.sjpcb-scatter-axis')
 			if (self.settings.showAxes) axisG.style('opacity', 1)
 			else axisG.style('opacity', 0)
 
@@ -422,39 +429,39 @@ function setRenderers(self) {
 			.html('Use lasso')
 
 		zoom_menu.style('display', 'inline-block')
+		const mainG = svg.select('.sjpcb-scatter-mainG')
+		const axisG = mainG.select('.sjpcb-scatter-axis')
+		const rect = mainG.select('.zoom').attr('fill', 'green')
+		console.log(mainG, axisG, rect)
 
 		const zoom = d3zoom()
 			.scaleExtent([0.5, 10])
 			.on('zoom', e => {
-				svg.select('g').attr('transform', event.transform)
-
-				const axisG = svg.select('.sjpcb-scatter-mainG').select('.sjpcb-scatter-axis')
+				svg
+					.selectAll('g')
+					.selectAll('circle')
+					.attr('transform', event.transform)
 				const xAxis = axisG.select('.sjpcb-scatter-x-axis')
 				const yAxis = axisG.select('.sjpcb-scatter-y-axis')
 
 				// create new scale ojects based on event
-				const new_xScale = event.transform.rescaleX(xAxisScale)
-				const new_yScale = event.transform.rescaleY(yAxisScale)
-				console.log(
-					axisBottom(xAxisScale)
-						.ticks(5)
-						.scale(new_xScale)
-				)
+				const new_xScale = event.transform.rescaleX(self.xAxisScale)
+				const new_yScale = event.transform.rescaleY(self.yAxisScale)
 
 				xAxis.attr('transform', 'translate(100,' + self.settings.svgh + ')').call(
-					axisBottom(this.xAxisScale)
+					axisBottom(self.xAxisScale)
 						.ticks(5)
 						.scale(new_xScale)
 				)
 
 				yAxis.attr('transform', 'translate(100, 0)').call(
-					axisLeft(this.yAxisScale)
+					axisLeft(self.yAxisScale)
 						.ticks(5)
 						.scale(new_yScale)
 				)
 			})
 
-		svg.call(zoom)
+		mainG.call(zoom)
 		zoom_in_btn.on('click', () => {
 			zoom.scaleBy(svg.transition().duration(750), 0.5)
 		})
