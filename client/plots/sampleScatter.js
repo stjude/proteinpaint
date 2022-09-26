@@ -4,7 +4,6 @@ import { select, event } from 'd3-selection'
 import { scaleLinear as d3Linear } from 'd3-scale'
 import Partjson from 'partjson'
 import { zoom as d3zoom, zoomIdentity } from 'd3'
-import { extent } from 'd3-array'
 import { d3lasso } from '../common/lasso'
 import { Menu } from '#dom/menu'
 import { controlsInit } from './controls'
@@ -91,16 +90,17 @@ class Scatter {
 		if (data.error) throw data.error
 		if (!Array.isArray(data.samples)) throw 'data.samples[] not array'
 		this.pj.refresh({ data: data.samples })
-		const x = data.samples.map(item => item.x)
-		const y = data.samples.map(item => item.y)
+		// no option for dividing charts by term,
+		// so assume that the plot always corresponds to the first chart data
+		const chart0 = this.pj.tree.charts[0]
 		this.xAxisScale = d3Linear()
-			.domain(extent(x))
+			.domain([chart0.xMin, chart0.xMax])
 			.range([0, this.settings.svgw])
-		this.bottomAxis = axisBottom(this.xAxisScale)
+		this.axisBottom = axisBottom(this.xAxisScale)
 		this.yAxisScale = d3Linear()
-			.domain(extent(y).reverse())
+			.domain([chart0.yMax, chart0.yMin])
 			.range([this.settings.svgh, 0])
-		this.leftAxis = axisLeft(this.yAxisScale)
+		this.axisLeft = axisLeft(this.yAxisScale)
 		this.render()
 		const renderLegend = htmlLegend(this.dom.legendDiv)
 		renderLegend(this.getLegend(data.categories))
@@ -449,8 +449,8 @@ function setRenderers(self) {
 			const new_xScale = event.transform.rescaleX(self.xAxisScale)
 			const new_yScale = event.transform.rescaleY(self.yAxisScale)
 
-			xAxisG.call(self.bottomAxis.scale(new_xScale))
-			yAxisG.call(self.leftAxis.scale(new_yScale))
+			xAxisG.call(self.axisBottom.scale(new_xScale))
+			yAxisG.call(self.axisLeft.scale(new_yScale))
 			svg
 				.selectAll('g')
 				.selectAll('circle')
@@ -557,8 +557,8 @@ function setRenderers(self) {
 	function renderAxes(xAxis, xTitle, yAxis, yTitle, s) {
 		// create new scale ojects based on event
 
-		xAxis.call(self.bottomAxis)
-		yAxis.call(self.leftAxis)
+		xAxis.call(self.axisBottom)
+		yAxis.call(self.axisLeft)
 
 		xTitle.select('text, title').remove()
 		const xTitleLabel =
