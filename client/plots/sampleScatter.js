@@ -435,7 +435,7 @@ function setRenderers(self) {
 			.scaleExtent([0.5, 10])
 			.on('zoom', handleZoom)
 
-		//mainG.call(zoom)
+		mainG.call(zoom)
 		rect.call(zoom)
 
 		function handleZoom() {
@@ -451,26 +451,26 @@ function setRenderers(self) {
 				.attr('transform', event.transform)
 		}
 		zoom_in_btn.on('click', () => {
-			zoom.scaleBy(svg.transition().duration(750), 0.5)
+			zoom.scaleBy(mainG.transition().duration(750), 1.5)
 		})
 
 		zoom_out_btn.on('click', () => {
-			zoom.scaleBy(svg.transition().duration(750), 0.5)
+			zoom.scaleBy(mainG.transition().duration(750), 0.5)
 		})
 
 		reset_btn.on('click', () => {
-			svg
+			mainG
 				.transition()
 				.duration(750)
 				.call(zoom.transform, zoomIdentity)
 		})
 
 		pan_left_btn.on('click', () => {
-			zoom.translateBy(svg.transition().duration(750), -50, 0)
+			zoom.translateBy(mainG.transition().duration(750), -50, 0)
 		})
 
 		pan_right_btn.on('click', () => {
-			zoom.translateBy(svg.transition().duration(750), 50, 0)
+			zoom.translateBy(mainG.transition().duration(750), 50, 0)
 		})
 
 		const circles = svg.selectAll('g').selectAll('circle')
