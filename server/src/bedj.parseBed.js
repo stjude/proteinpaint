@@ -252,13 +252,10 @@ exports.parseBedLine = function parseBedLine(l, enst2desc) {
 		if (thin3.length) obj.utr3 = thin3
 	}
 
-	// convert exonframes parsed into an array of numbers
-	const tmp3 = exonframes.split(',')
-	tmp3.pop()
-	const tmp4 = tmp3.map(Number)
-
 	// only call checkReadingFrame when exonframes parsed is a comma separated list that contains {-1,0,1,2}
-	if (exonframes.includes(',') && Math.min(tmp4) >= -1 && Math.max(tmp4) <= 2) {
+	const validFrames = new Set(['-1', '0', '1', '2'])
+	if (!exonframes.some(i => !validFrames.has(i))) {
+		/* all fields are valid frames, reject values that are not -1, 0, 1, or 2 */
 		checkReadingFrame.default(obj, exonframes)
 	}
 	return obj
