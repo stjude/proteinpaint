@@ -433,6 +433,8 @@ function setRenderers(self) {
 
 		zoom_menu.style('display', 'inline-block')
 		const mainG = svg.select('.sjpcb-scatter-mainG')
+		const seriesG = mainG.select('.sjpcb-scatter-series')
+		const circles = seriesG.selectAll('circle')
 		const axisG = mainG.select('.sjpcb-scatter-axis')
 		const rect = mainG.select('.zoom')
 		const xAxisG = axisG.select('.sjpcb-scatter-x-axis')
@@ -451,10 +453,8 @@ function setRenderers(self) {
 
 			xAxisG.call(self.axisBottom.scale(new_xScale))
 			yAxisG.call(self.axisLeft.scale(new_yScale))
-			svg
-				.selectAll('g')
-				.selectAll('circle')
-				.attr('transform', event.transform)
+			seriesG.attr('transform', event.transform)
+			circles.attr('r', 5 / event.transform.scale(1).k)
 		}
 		zoom_in_btn.on('click', () => {
 			zoom.scaleBy(mainG.transition().duration(750), 1.5)
@@ -479,7 +479,6 @@ function setRenderers(self) {
 			zoom.translateBy(mainG.transition().duration(750), 50, 0)
 		})
 
-		const circles = svg.selectAll('g').selectAll('circle')
 		const lasso = d3lasso()
 			.items(circles)
 			.targetArea(svg)
