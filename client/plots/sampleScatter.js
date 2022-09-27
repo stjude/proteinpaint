@@ -9,7 +9,6 @@ import { Menu } from '#dom/menu'
 import { controlsInit } from './controls'
 import { axisLeft, axisBottom } from 'd3-axis'
 import { make_table_2col } from '#dom/table2col'
-import htmlLegend from '../dom/html.legend'
 
 /*
 sample object returned by server:
@@ -33,19 +32,21 @@ class Scatter {
 	async init(opts) {
 		const controls = this.opts.controls || this.opts.holder.append('div')
 		let holder = this.opts.controls ? opts.holder : this.opts.holder.append('div').style('display', 'inline-block')
-		const mainDiv = holder
-			.append('div')
-			.style('display', 'inline-block')
-			.style('width', '70vw')
+		const mainDiv = holder.append('div').style('display', 'inline-block')
 		const toolsDiv = mainDiv
 			.append('div')
 			.style('display', 'inline-block')
 			.style('float', 'right')
-		const chartsDiv = mainDiv.append('div').style('display', 'inline-block')
-		const legendDiv = mainDiv
+			.style('width', '20vw')
+		const chartsDiv = mainDiv
 			.append('div')
 			.style('display', 'inline-block')
-			.style('width', '70vw')
+			.style('width', '60vw')
+		const legendDiv = toolsDiv
+		// mainDiv
+		// 	.append('div')
+		// 	.style('display', 'inline-block')
+		// 	.style('width', '50vw')
 
 		this.dom = {
 			header: this.opts.header,
@@ -102,8 +103,7 @@ class Scatter {
 			.range([this.settings.svgh, 0])
 		this.axisLeft = axisLeft(this.yAxisScale)
 		this.render()
-		const renderLegend = htmlLegend(this.dom.legendDiv)
-		renderLegend(this.getLegend(data.categories))
+		this.renderLegend(this.dom.legendDiv, data.categories)
 	}
 
 	// creates an opts object for the vocabApi.someMethod(),
@@ -171,25 +171,36 @@ class Scatter {
 		this.components.controls.on('downloadClick.survival', () => alert('TODO: data download?'))
 	}
 
-	getLegend(categories) {
+	renderLegend(holder, categories) {
+		holder.selectAll('*').remove()
+		const row = holder
+			.append('div')
+			.attr('class', 'sja_clb')
+			.style('display', 'block')
+			.style('font-weight', 'bold')
+			.html('&nbsp;&nbsp;' + this.config.term.term.name)
 		let items = []
 		let item
 		for (const category of categories) {
-			item = {
-				dataId: category[0],
-				text: category[0] + ' (' + category[1].sampleCount + ')',
-				type: 'row',
-				color: category[1].color
-			}
-			items.push(item)
+			const color = category[1].color
+			const sample_count = category[1].sampleCount
+			const name = category[0]
+			const row = holder
+				.append('div')
+				.attr('class', 'sja_clb')
+				.style('display', 'block')
+			row
+				.append('div')
+				.style('display', 'inline-block')
+				.attr('class', 'sja_mcdot')
+				.style('background', color)
+				.html(sample_count)
+			row
+				.append('div')
+				.style('display', 'inline-block')
+				.style('color', color)
+				.html('&nbsp;' + name)
 		}
-		const legendGrps = []
-
-		legendGrps.push({
-			name: 'Color:',
-			items: items
-		})
-		return legendGrps
 	}
 }
 
@@ -348,90 +359,6 @@ function setRenderers(self) {
 	}
 
 	function setTools(dom, svg, d) {
-		const scattersvg_buttons = dom.toolsDiv
-			.style('display', 'inline-block')
-			.style('vertical-align', 'top')
-			.style('float', 'right')
-
-		const zoom_menu = scattersvg_buttons
-			.append('div')
-			.style('margin-top', '2px')
-			.style('padding', '2px 5px')
-			.style('border-radius', '5px')
-			.style('text-align', 'center')
-			.style('background-color', '#ddd')
-
-		const zoom_inout_div = zoom_menu.append('div').style('margin', '5px 2px')
-		zoom_inout_div
-			.append('div')
-			.style('display', 'block')
-			.style('padding', '2px')
-			.style('font-size', '70%')
-			.html('<p style="margin:1px;">Use the mouse and/or this </br>panel to interact with the plot</p>')
-
-		zoom_inout_div
-			.append('div')
-			.style('display', 'block')
-			.style('padding', '2px 4px')
-			.style('font-size', '80%')
-			.text('Zoom')
-
-		const zoom_in_btn = zoom_inout_div
-			.append('button')
-			.style('margin', '1px')
-			.style('padding', '2px 7px')
-			.text('+')
-
-		const zoom_out_btn = zoom_inout_div
-			.append('button')
-			.style('margin', '1px')
-			.style('padding', '2px 8px')
-			.text('-')
-
-		const pan_div = zoom_menu.append('div').style('margin', '5px 2px')
-
-		pan_div
-			.append('div')
-			.style('display', 'block')
-			.style('padding', '2px')
-			.style('font-size', '80%')
-			.text('Pan')
-
-		const pan_left_btn = pan_div
-			.append('button')
-			.style('margin', '1px')
-			.style('padding', '2px 7px')
-			.text('+')
-
-		const pan_right_btn = pan_div
-			.append('button')
-			.style('margin', '1px')
-			.style('padding', '2px 8px')
-			.text('-')
-
-		const reset_div = zoom_menu.append('div').style('margin', '5px 2px')
-
-		const reset_btn = reset_div
-			.append('button')
-			.style('margin', '1px')
-			.style('padding', '2px 8px')
-			.text('Reset')
-		const lasso_div = zoom_menu
-			.append('div')
-			.style('margin', '5px 2px')
-			.style('font-size', '70%')
-		const lasso_chb = lasso_div
-			.append('input')
-			.attr('type', 'checkbox')
-			.attr('id', 'lasso_chb')
-			.on('input', toggle_lasso)
-			.property('checked', false)
-		lasso_div
-			.append('label')
-			.attr('for', 'lasso_chb')
-			.html('Use lasso')
-
-		zoom_menu.style('display', 'inline-block')
 		const mainG = svg.select('.sjpcb-scatter-mainG')
 		const seriesG = mainG.select('.sjpcb-scatter-series')
 		const circles = seriesG.selectAll('circle')
@@ -456,28 +383,20 @@ function setRenderers(self) {
 			seriesG.attr('transform', event.transform)
 			circles.attr('r', 5 / event.transform.scale(1).k)
 		}
-		zoom_in_btn.on('click', () => {
+		function zoomIn() {
 			zoom.scaleBy(mainG.transition().duration(750), 1.5)
-		})
+		}
 
-		zoom_out_btn.on('click', () => {
+		function zoomOut() {
 			zoom.scaleBy(mainG.transition().duration(750), 0.5)
-		})
+		}
 
-		reset_btn.on('click', () => {
+		function resetToIdentity() {
 			mainG
 				.transition()
 				.duration(750)
 				.call(zoom.transform, zoomIdentity)
-		})
-
-		pan_left_btn.on('click', () => {
-			zoom.translateBy(mainG.transition().duration(750), -50, 0)
-		})
-
-		pan_right_btn.on('click', () => {
-			zoom.translateBy(mainG.transition().duration(750), 50, 0)
-		})
+		}
 
 		const lasso = d3lasso()
 			.items(circles)
