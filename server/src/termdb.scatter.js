@@ -28,6 +28,9 @@ trigger_getSampleScatter()
 
 */
 
+// color of reference samples, they should be shown as a "cloud" of dots at backdrop
+const referenceSampleColor = '#ccc'
+
 // called in mds3.init
 export async function mayInitiateScatterplots(ds) {
 	if (!ds.cohort.scatterplots) return
@@ -216,7 +219,7 @@ async function mayColorAndFilterSamples(allSamples, q, ds) {
 		}
 	}
 
-	// add color to categories
+	// assign color to unique categories, but not reference
 	const k2c = d3scale.scaleOrdinal(d3scale.schemeCategory10)
 	for (const [category, o] of categories) {
 		if (q.term?.term?.values?.[category]?.color) {
@@ -227,12 +230,22 @@ async function mayColorAndFilterSamples(allSamples, q, ds) {
 	}
 
 	// now each category gets an color, apply to samples
+	let referenceSampleCount = 0
 	for (const s of samples) {
-		s.color = categories.has(s.category) ? categories.get(s.category).color : '#ccc'
+		if (categories.has(s.category)) {
+			s.color = categories.get(s.category).color
+		} else {
+			s.color = referenceSampleColor
+			referenceSampleCount++
+		}
 	}
 
 	// sort in descending order
 	const legendItems = [...categories].sort((a, b) => b[1].sampleCount - a[1].sampleCount)
+	// each element: [ 'categoryKey', { sampleCount=int, color=str } ]
+	if (referenceSampleCount) {
+		legendItems.push(['Reference samples', { sampleCount: referenceSampleCount, color: referenceSampleColor }])
+	}
 
 	return [samples, legendItems]
 }
