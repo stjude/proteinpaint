@@ -172,6 +172,13 @@ class Scatter {
 	}
 
 	renderLegend(holder, categories) {
+		holder.selectAll('*').remove()
+		const row = holder
+			.append('div')
+			.attr('class', 'sja_clb')
+			.style('display', 'block')
+			.style('font-weight', 'bold')
+			.html('&nbsp;&nbsp;' + this.config.term.term.name)
 		let items = []
 		let item
 		for (const category of categories) {
@@ -231,7 +238,7 @@ function setRenderers(self) {
 			.transition()
 			.duration(s.duration)
 			.style('opacity', 1)
-		//setTools(self.dom, svg, d)
+		setTools(self.dom, svg, d)
 	}
 
 	self.updateCharts = function(d) {
@@ -352,90 +359,6 @@ function setRenderers(self) {
 	}
 
 	function setTools(dom, svg, d) {
-		const scattersvg_buttons = dom.toolsDiv
-			.style('display', 'inline-block')
-			.style('vertical-align', 'top')
-			.style('float', 'right')
-
-		const zoom_menu = scattersvg_buttons
-			.append('div')
-			.style('margin-top', '2px')
-			.style('padding', '2px 5px')
-			.style('border-radius', '5px')
-			.style('text-align', 'center')
-			.style('background-color', '#ddd')
-
-		const zoom_inout_div = zoom_menu.append('div').style('margin', '5px 2px')
-		zoom_inout_div
-			.append('div')
-			.style('display', 'block')
-			.style('padding', '2px')
-			.style('font-size', '70%')
-			.html('<p style="margin:1px;">Use the mouse and/or this </br>panel to interact with the plot</p>')
-
-		zoom_inout_div
-			.append('div')
-			.style('display', 'block')
-			.style('padding', '2px 4px')
-			.style('font-size', '80%')
-			.text('Zoom')
-
-		const zoom_in_btn = zoom_inout_div
-			.append('button')
-			.style('margin', '1px')
-			.style('padding', '2px 7px')
-			.text('+')
-
-		const zoom_out_btn = zoom_inout_div
-			.append('button')
-			.style('margin', '1px')
-			.style('padding', '2px 8px')
-			.text('-')
-
-		const pan_div = zoom_menu.append('div').style('margin', '5px 2px')
-
-		pan_div
-			.append('div')
-			.style('display', 'block')
-			.style('padding', '2px')
-			.style('font-size', '80%')
-			.text('Pan')
-
-		const pan_left_btn = pan_div
-			.append('button')
-			.style('margin', '1px')
-			.style('padding', '2px 7px')
-			.text('+')
-
-		const pan_right_btn = pan_div
-			.append('button')
-			.style('margin', '1px')
-			.style('padding', '2px 8px')
-			.text('-')
-
-		const reset_div = zoom_menu.append('div').style('margin', '5px 2px')
-
-		const reset_btn = reset_div
-			.append('button')
-			.style('margin', '1px')
-			.style('padding', '2px 8px')
-			.text('Reset')
-		const lasso_div = zoom_menu
-			.append('div')
-			.style('margin', '5px 2px')
-			.style('font-size', '70%')
-		const lasso_chb = lasso_div
-			.append('input')
-			.attr('type', 'checkbox')
-			.attr('id', 'lasso_chb')
-			.on('input', toggle_lasso)
-			.property('checked', false)
-		lasso_div
-			.append('label')
-			.attr('for', 'lasso_chb')
-			.html('Use lasso')
-
-		zoom_menu.style('display', 'inline-block')
 		const mainG = svg.select('.sjpcb-scatter-mainG')
 		const seriesG = mainG.select('.sjpcb-scatter-series')
 		const circles = seriesG.selectAll('circle')
@@ -460,28 +383,20 @@ function setRenderers(self) {
 			seriesG.attr('transform', event.transform)
 			circles.attr('r', 5 / event.transform.scale(1).k)
 		}
-		zoom_in_btn.on('click', () => {
+		function zoomIn() {
 			zoom.scaleBy(mainG.transition().duration(750), 1.5)
-		})
+		}
 
-		zoom_out_btn.on('click', () => {
+		function zoomOut() {
 			zoom.scaleBy(mainG.transition().duration(750), 0.5)
-		})
+		}
 
-		reset_btn.on('click', () => {
+		function resetToIdentity() {
 			mainG
 				.transition()
 				.duration(750)
 				.call(zoom.transform, zoomIdentity)
-		})
-
-		pan_left_btn.on('click', () => {
-			zoom.translateBy(mainG.transition().duration(750), -50, 0)
-		})
-
-		pan_right_btn.on('click', () => {
-			zoom.translateBy(mainG.transition().duration(750), 50, 0)
-		})
+		}
 
 		const lasso = d3lasso()
 			.items(circles)
