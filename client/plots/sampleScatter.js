@@ -9,7 +9,6 @@ import { Menu } from '#dom/menu'
 import { controlsInit } from './controls'
 import { axisLeft, axisBottom } from 'd3-axis'
 import { make_table_2col } from '#dom/table2col'
-import htmlLegend from '../dom/html.legend'
 
 /*
 sample object returned by server:
@@ -33,19 +32,21 @@ class Scatter {
 	async init(opts) {
 		const controls = this.opts.controls || this.opts.holder.append('div')
 		let holder = this.opts.controls ? opts.holder : this.opts.holder.append('div').style('display', 'inline-block')
-		const mainDiv = holder
-			.append('div')
-			.style('display', 'inline-block')
-			.style('width', '70vw')
+		const mainDiv = holder.append('div').style('display', 'inline-block')
 		const toolsDiv = mainDiv
 			.append('div')
 			.style('display', 'inline-block')
 			.style('float', 'right')
-		const chartsDiv = mainDiv.append('div').style('display', 'inline-block')
-		const legendDiv = mainDiv
+			.style('width', '20vw')
+		const chartsDiv = mainDiv
 			.append('div')
 			.style('display', 'inline-block')
-			.style('width', '70vw')
+			.style('width', '60vw')
+		const legendDiv = toolsDiv
+		// mainDiv
+		// 	.append('div')
+		// 	.style('display', 'inline-block')
+		// 	.style('width', '50vw')
 
 		this.dom = {
 			header: this.opts.header,
@@ -102,8 +103,7 @@ class Scatter {
 			.range([this.settings.svgh, 0])
 		this.axisLeft = axisLeft(this.yAxisScale)
 		this.render()
-		const renderLegend = htmlLegend(this.dom.legendDiv)
-		renderLegend(this.getLegend(data.categories))
+		this.renderLegend(this.dom.legendDiv, data.categories)
 	}
 
 	// creates an opts object for the vocabApi.someMethod(),
@@ -171,25 +171,29 @@ class Scatter {
 		this.components.controls.on('downloadClick.survival', () => alert('TODO: data download?'))
 	}
 
-	getLegend(categories) {
+	renderLegend(holder, categories) {
 		let items = []
 		let item
 		for (const category of categories) {
-			item = {
-				dataId: category[0],
-				text: category[0] + ' (' + category[1].sampleCount + ')',
-				type: 'row',
-				color: category[1].color
-			}
-			items.push(item)
+			const color = category[1].color
+			const sample_count = category[1].sampleCount
+			const name = category[0]
+			const row = holder
+				.append('div')
+				.attr('class', 'sja_clb')
+				.style('display', 'block')
+			row
+				.append('div')
+				.style('display', 'inline-block')
+				.attr('class', 'sja_mcdot')
+				.style('background', color)
+				.html(sample_count)
+			row
+				.append('div')
+				.style('display', 'inline-block')
+				.style('color', color)
+				.html('&nbsp;' + name)
 		}
-		const legendGrps = []
-
-		legendGrps.push({
-			name: 'Color:',
-			items: items
-		})
-		return legendGrps
 	}
 }
 
@@ -227,7 +231,7 @@ function setRenderers(self) {
 			.transition()
 			.duration(s.duration)
 			.style('opacity', 1)
-		setTools(self.dom, svg, d)
+		//setTools(self.dom, svg, d)
 	}
 
 	self.updateCharts = function(d) {
