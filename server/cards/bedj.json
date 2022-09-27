@@ -45,7 +45,9 @@
                     {
                         "type":"bedj",
                         "name":"BigBed demo",
-                        "file":"proteinpaint_demo/hg19/bedj/knownGene.bb"
+                        "file":"proteinpaint_demo/hg19/bedj/knownGene.bb",
+                        "stackheight": 16,
+                        "stackspace": 1
                     }
                 ]
             },
