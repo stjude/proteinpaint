@@ -299,5 +299,6 @@
             "name": "Documentation",
             "link": "https://docs.google.com/document/d/1GP81rer7YEb0RpIej2XXfx-k7SCAL1Od9At_oczf06A"
         }
-    ]
+    ],
+    "ribbonMessage": "Now use bigBed files in ProteinPaint! Click on the bigBed example for more information."
 }
