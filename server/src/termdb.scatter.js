@@ -6,7 +6,7 @@ const serverconfig = require('./serverconfig')
 const d3scale = require('d3-scale')
 
 /*
-works with "canned" scatterplots in a dataset, e.g. data from a text file of tSNE coordinates from analysis of a cohort
+works with "canned" scatterplots in a dataset, e.g. data from a text file of tSNE coordinates from a pre-analyzed cohort (contrary to on-the-fly analysis)
 
 reason of not storing x/y data of canned plots in termdb annotations table:
 1. a sample can have different x/y in multiple plots
@@ -35,8 +35,12 @@ export async function mayInitiateScatterplots(ds) {
 	for (const p of ds.cohort.scatterplots.plots) {
 		if (!p.name) throw '.name missing from one of scatterplots.plots[]'
 		if (p.file) {
-			p.fileData = []
 			const lines = (await utils.read_file(path.join(serverconfig.tpmasterdir, p.file))).trim().split('\n')
+
+			const headerFields = lines[0].split('\t')
+
+			p.filterableSamples = [] // array to keep filterable samples
+			const referenceSamples = [] // optional array to keep reference samples
 
 			let invalidXY = 0,
 				sampleCount = 0
@@ -54,19 +58,27 @@ export async function mayInitiateScatterplots(ds) {
 				const sample = { sample: l[0], x, y }
 
 				const id = ds.cohort.termdb.q.sampleName2id(l[0])
-				if (id != undefined) {
+				if (id == undefined) {
+					// no integer sample id found, this is a reference sample
+					// for rest of columns starting from 4th, attach as key/value pairs to the sample object for showing on client
+					for (let j = 3; j < headerFields.length; j++) {
+						sample[headerFields[j]] = l[j]
+					}
+					referenceSamples.push(sample)
+				} else {
 					// sample id can be undefined, e.g. reference samples
 					sampleCount++
 					sample.sampleId = id
+					p.filterableSamples.push(sample)
 				}
-
-				p.fileData.push(sample)
 			}
 
+			if (referenceSamples.length) p.referenceSamples = referenceSamples
+
 			console.log(
-				p.fileData.length,
+				p.filterableSamples.length,
 				`scatterplot lines from ${p.name} of ${ds.label},`,
-				sampleCount < p.fileData.length ? p.fileData.length - sampleCount + ' reference cases' : '',
+				p.referenceSamples ? p.referenceSamples.length + ' reference cases' : '',
 				invalidXY ? invalidXY + ' lines with invalid X/Y values' : ''
 			)
 		} else {
@@ -108,7 +120,16 @@ export async function trigger_getSampleScatter(q, res, ds) {
 }
 
 async function getSampleLst(plot) {
-	if (plot.fileData) return JSON.parse(JSON.stringify(plot.fileData)) // efficiency concern for .5M dots?
+	if (plot.filterableSamples) {
+		// must make in-memory duplication of the objects as they will be modified by assigning .color/shape
+		const samples = []
+		if (plot.referenceSamples) {
+			// put reference samples in front of the returned array, so they are rendered as "background"
+			for (const i of JSON.parse(JSON.stringify(plot.referenceSamples))) samples.push(i)
+		}
+		for (const i of JSON.parse(JSON.stringify(plot.filterableSamples))) samples.push(i)
+		return samples
+	}
 	if (plot.gdcapi) throw 'gdcapi not implemented yet'
 	throw 'do not know how to load data from this plot'
 }
