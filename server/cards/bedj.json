@@ -32,6 +32,28 @@
             }
         },
         {
+            "label": "BigBed",
+            "download": "https://proteinpaint.stjude.org/ppdemo/hg19/bedj/knownGene.bb",
+            "urlparam": "?block=on&genome=hg19&bedjfile=BigBed demo,proteinpaint_demo/hg19/bedj/knownGene.bb",
+            "runargs": {
+                "block": true,
+                "nobox": 1,
+                "noheader": 1,
+                "genome": "hg19",
+                "nativetracks":"RefGene",
+                "tracks":[
+                    {
+                        "type":"bedj",
+                        "name":"BigBed demo",
+                        "file":"proteinpaint_demo/hg19/bedj/knownGene.bb"
+                    }
+                ]
+            },
+            "testSpec": {
+                "expected": {"image": 1 }
+            }
+        },
+        {
             "label": "BED3",
             "message": "The bare minimum for the JSON BED track is a three column tab-delimited file with the chromosome, start position, and stop position. Below is example of the barebone rendering of the data.",
             "download": "https://proteinpaint.stjude.org/ppdemo/hg19/bedj/bedj3DemoData.tar.gz",
@@ -259,27 +281,6 @@
                     "link": "https://docs.google.com/document/d/1GP81rer7YEb0RpIej2XXfx-k7SCAL1Od9At_oczf06A/edit#heading=h.j87g4brufqhu"
                 }
             ],
-            "testSpec": {
-                "expected": {"image": 1 }
-            }
-        },
-        {
-            "label": "BigBed",
-            "download": "https://proteinpaint.stjude.org/ppdemo/hg19/bedj/knownGene.bb",
-            "urlparam": "?block=on&genome=hg19&bedjfile=JSON-BED,proteinpaint_demo/hg19/bedj/knownGene.bb",
-            "runargs": {
-                "block": true,
-                "nobox": 1,
-                "noheader": 1,
-                "genome": "hg19",
-                "tracks":[
-                    {
-                        "type":"bedj",
-                        "name":"BigBed demo",
-                        "file":"proteinpaint_demo/hg19/bedj/knownGene.bb"
-                    }
-                ]
-            },
             "testSpec": {
                 "expected": {"image": 1 }
             }
