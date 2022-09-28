@@ -8,10 +8,14 @@ import { appDrawerStoreInit } from './store'
     .holder
     .genomes{}
         - client-side genome object
-    .indexJson{}
+	.drawerRow
+	.sandboxDiv
+	.genome_browser_btn
+	.debugmode
+	.headbox
+	.padw_sm
 
 TODOs: 
-- Update and add documentation link
 
 Questions: 
 */

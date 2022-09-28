@@ -5,12 +5,16 @@ import { slideDrawer } from './mainBtn'
 
 /*
 .opts{
-	.app{
-		.holder
-		.element{}
-		.sandboxDiv
-	}
+	.app
+	.holder
+	.element{}
+	.dom{}
+	.state{}
+	.sandboxDiv
 }
+
+TODOs
+- element.section only required if columnsLayout provided
 */
 
 class AppDrawerButton {
@@ -24,7 +28,9 @@ class AppDrawerButton {
 	}
 
 	validateOpts(opts) {
+		//Move these main validation to layout.js
 		if (!opts.element.name) throw `Button name is missing`
+		//TODO: only required if columnsLayout provided
 		if (!opts.element.section) throw `.section is missing for button=${opts.element.name}`
 		if (!opts.element.sandboxJson && !opts.element.sandboxHtml)
 			throw `Either .sandboxJson or .sandboxHtml is missing for button=${opts.element.name}`

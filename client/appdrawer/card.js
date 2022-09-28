@@ -21,7 +21,7 @@ TODOs:
 - Unify card and nestedCard layout. Only call one layout function for both
 	- optional non image card layout
 	- Make ribbons appear on nested cards
-
+- element.section only required if columnsLayout provided
 
 */
 
@@ -37,7 +37,9 @@ class AppDrawerCard {
 	}
 
 	validateOpts(opts) {
+		//Move these main validation to layout.js
 		if (!opts.element.name) throw `Card .name is missing`
+		//TODO: only required if columnsLayout provided
 		if (!opts.element.section) throw `.section is missing for card=${opts.element.name}`
 		if (opts.element.type == 'card') {
 			if (!opts.element.sandboxJson && !opts.element.sandboxHtml)

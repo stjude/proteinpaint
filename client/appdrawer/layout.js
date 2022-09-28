@@ -17,6 +17,9 @@ Questions:
     - For the column layout: 
         1. Cap number of columns?
         2. Allow y overflow for >2 columns (like Trello)?
+
+TODOs:
+- get rid of column.name -> not used
 */
 
 class AppDrawerLayoutComp {
@@ -41,6 +44,7 @@ class AppDrawerLayoutComp {
 			if (allGridAreaValues.length != new Set(allGridAreaValues).size) throw `Duplicate values for .gridarea found`
 			const allSectionIdValues = []
 			for (const col of opts.index.columnsLayout) {
+				//TODO: get rid of col.name - not used
 				if (!col.name) throw `Missing column .name`
 				if (!col.gridarea) throw `Missing column .gridarea for column = ${col.name}`
 				if (!col.sections || col.sections.length == 0) throw `Missing section objects for column = ${col.name}`
