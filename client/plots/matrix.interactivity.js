@@ -131,7 +131,7 @@ function setTermActions(self) {
 		// must remember event target since it's cleared after async-await
 		const clickedElem = event.target
 		await self.pill.main(t.tw ? t.tw : { term: null, q: null })
-		self.pill.showMenu(clickedElem, self.dom.twMenuBar)
+		self.pill.showMenu(event, clickedElem, self.dom.twMenuBar)
 
 		self.dom.grpMenuDiv = self.dom.menutop.append('div').style('margin-top', '10px')
 		//self.showTermGroupInputs(self.dom.grpMenuDiv)

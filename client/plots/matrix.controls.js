@@ -34,7 +34,7 @@ export class MatrixControls {
 			.append('button')
 			.style('margin', '2px 0')
 			.text(d => d.label)
-			.on('click', d => (d.callback ? d.callback() : this.callback(d)))
+			.on('click', (event, d) => (d.callback ? d.callback(event) : this.callback(event, d)))
 	}
 
 	setInputGroups() {
@@ -260,7 +260,7 @@ export class MatrixControls {
 		const table = app.tip.clear().d.append('table')
 
 		for (const inputConfig of this.inputGroups[d.value]) {
-			const input = initByInput[inputConfig.type](
+			const input = await initByInput[inputConfig.type](
 				Object.assign(
 					{},
 					{
