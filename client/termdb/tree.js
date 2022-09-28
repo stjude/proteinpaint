@@ -1,5 +1,5 @@
 import { getCompInit } from '../rx'
-import { select, selectAll, event } from 'd3-selection'
+import { select, selectAll } from 'd3-selection'
 import { getNormalRoot } from '../filter/filter'
 import { isUsableTerm } from '#shared/termdb.usecase'
 import { termInfoInit } from './termInfo'
@@ -410,7 +410,7 @@ function setInteractivity(self) {
 	// !!! no free-floating variable declarations here !!!
 	// use self in TdbTree constructor to create properties
 
-	self.toggleBranch = function(term) {
+	self.toggleBranch = function(event, term) {
 		event.stopPropagation()
 		if (term.isleaf) return
 		const t0 = self.termsById[term.id]

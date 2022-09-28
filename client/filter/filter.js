@@ -1,5 +1,5 @@
 import { getInitFxn, getCompInit } from '../rx'
-import { select, event } from 'd3-selection'
+import { select } from 'd3-selection'
 import { Menu } from '../src/client'
 import { TVSInit } from './tvs'
 import { vocabInit } from '../termdb/vocabulary'
@@ -426,7 +426,7 @@ function setRenderers(self) {
 
 		self.dom.treeHeadTitle = self.dom.treeHead.append('div')
 
-		select('body').on('mousedown.sja_filter_' + filterIndex++, () => {
+		select('body').on('mousedown.sja_filter_' + filterIndex++, event => {
 			if (
 				[
 					'sja_filter_join_label',
@@ -794,7 +794,7 @@ function setInteractivity(self) {
 		}
 	}
 
-	self.handleMenuOptionClick = function(d) {
+	self.handleMenuOptionClick = function(event, d) {
 		event.stopPropagation()
 		if (d == self.activeData.menuOpt) return
 		self.activeData.menuOpt = d
@@ -921,7 +921,7 @@ function setInteractivity(self) {
 	}
 
 	// menu to add a new term
-	self.displayTreeNew = async function(d) {
+	self.displayTreeNew = async function(event, d) {
 		if (self.opts.newBtn && this.className !== 'sja_filter_add_transformer' && self.filter.lst.length) return
 		self.dom.filterContainer.selectAll('.sja_filter_grp').style('background-color', 'transparent')
 		if (self.filter.lst.length > 0) {
@@ -1093,7 +1093,7 @@ function setInteractivity(self) {
 		return d.action == 'edit' ? MENU_OPTION_HIGHLIGHT_COLOR : ''
 	}
 
-	self.handleNotLabelClick = function(d) {
+	self.handleNotLabelClick = function(event, d) {
 		self.activeData = {
 			item: this.__data__
 		}
@@ -1174,8 +1174,7 @@ function setInteractivity(self) {
 		self.refresh(filterUiRoot)
 	}
 
-	self.removeTransform = function() {
-		const t = event.target.__data__
+	self.removeTransform = function(elem, t) {
 		const item = t.action || typeof t !== 'object' ? self.activeData.item : findItem(self.filter, t.$id)
 		const filter = findParent(self.filter, item.$id) //self.activeData.filter
 		if (item == filter) {
@@ -1218,7 +1217,7 @@ function setInteractivity(self) {
 		}
 	}
 
-	self.showLastJoinBlank = function(d) {
+	self.showLastJoinBlank = function(event, d) {
 		event.stopPropagation()
 		const elem = self.dom.last_join_div.node()
 		self.dom.last_join_label.style('display', 'none')

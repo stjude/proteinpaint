@@ -1,8 +1,9 @@
 import * as client from './client'
 import * as common from '#shared/common'
 import { axisLeft, axisBottom } from 'd3-axis'
-import { scaleLinear, scaleOrdinal, schemeCategory10 } from 'd3-scale'
-import { select as d3select, selectAll as d3selectAll, event as d3event } from 'd3-selection'
+import { scaleLinear, scaleOrdinal } from 'd3-scale'
+import { schemeCategory10 } from 'd3-scale-chromatic'
+import { select as d3select, selectAll as d3selectAll } from 'd3-selection'
 
 /*
 obj:
@@ -143,8 +144,8 @@ push button to re-render
 			.append('div')
 			.style('margin-bottom', '10px')
 			.append('select')
-			.on('change', () => {
-				p.type = d3event.target.options[d3event.target.selectedIndex].value
+			.on('change', event => {
+				p.type = event.target.options[event.target.selectedIndex].value
 			})
 		for (const [i, t] of obj.plottypes.entries()) {
 			s.append('option')
@@ -183,11 +184,11 @@ push button to re-render
 		const s = row
 			.append('select')
 			.style('margin-right', '5px')
-			.on('change', () => {
+			.on('change', event => {
 				for (const k in attr2select) {
 					attr2select[k].style('display', 'none')
 				}
-				const o = d3event.target.options[d3event.target.selectedIndex]
+				const o = event.target.options[event.target.selectedIndex]
 				custom_input_row.style('display', o.usesampleset ? 'block' : 'none')
 				if (o.useall) {
 					// user selects to use all samples
@@ -222,8 +223,8 @@ push button to re-render
 				s.node().selectedIndex = i
 			}
 
-			const s2 = row.append('select').on('change', () => {
-				p.samplerule.full.value = d3event.target.options[d3event.target.selectedIndex].value
+			const s2 = row.append('select').on('change', event => {
+				p.samplerule.full.value = event.target.options[event.target.selectedIndex].value
 			})
 
 			attr2select[attr.key] = s2
@@ -472,16 +473,16 @@ function doPlot(plot, obj) {
 	}
 	resize()
 
-	plot.resize_handle.on('mousedown', () => {
-		d3event.preventDefault()
+	plot.resize_handle.on('mousedown', event => {
+		event.preventDefault()
 		const b = d3select(document.body)
-		const x = d3event.clientX
-		const y = d3event.clientY
+		const x = event.clientX
+		const y = event.clientY
 		const w0 = plot.width
 		const h0 = plot.height
 		b.on('mousemove', () => {
-			plot.width = w0 + d3event.clientX - x
-			plot.height = h0 + d3event.clientY - y
+			plot.width = w0 + event.clientX - x
+			plot.height = h0 + event.clientY - y
 			resize()
 		})
 		b.on('mouseup', () => {
@@ -571,8 +572,8 @@ TODO allow config for each rule, e.g. mutation filters
 			.style('opacity', 0.5)
 			.html('Divide samples by ' + st.gene + ' expression with&nbsp;')
 
-		const s = row.append('select').on('change', () => {
-			const o = d3event.target.options[d3event.target.selectedIndex]
+		const s = row.append('select').on('change', event => {
+			const o = event.target.options[event.target.selectedIndex]
 			if (o.median) {
 				p.samplerule.set.bymedian = 1
 				delete p.samplerule.set.byquartile
@@ -598,10 +599,10 @@ TODO allow config for each rule, e.g. mutation filters
 			.html('Compare each quartile against&nbsp;')
 			.style('opacity', 0.5)
 		{
-			const s = span_quartilecompare.append('select').on('change', () => {
+			const s = span_quartilecompare.append('select').on('change', event => {
 				delete p.samplerule.set.against1st
 				delete p.samplerule.set.against4th
-				switch (d3event.target.selectedIndex) {
+				switch (event.target.selectedIndex) {
 					case 0:
 						break
 					case 1:

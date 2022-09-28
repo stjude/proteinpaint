@@ -1,5 +1,5 @@
 import { axisRight, axisBottom } from 'd3-axis'
-import { select as d3select, selectAll as d3selectAll, event as d3event, mouse as d3mouse } from 'd3-selection'
+import { select as d3select, selectAll as d3selectAll, pointer } from 'd3-selection'
 import { scaleLinear } from 'd3-scale'
 import * as client from './client'
 import { format as d3format } from 'd3-format'
@@ -191,8 +191,8 @@ export function hicparsefile(hic, debugmode) {
 		.append('td')
 		.style('margin-right', '10px')
 		.append('select')
-		.on('change', () => {
-			const v = d3event.target.options[d3event.target.selectedIndex].innerHTML
+		.on('change', event => {
+			const v = event.target.options[event.target.selectedIndex].innerHTML
 			setnmeth(hic, v)
 		})
 	hic.nmethselect.append('option').text('NONE')
@@ -211,9 +211,9 @@ export function hicparsefile(hic, debugmode) {
 		.style('width', '70px')
 		.attr('type', 'number')
 		.property('value', hic.wholegenome.bpmaxv)
-		.on('keyup', () => {
-			if (d3event.code != 'Enter') return
-			const v = d3event.target.value
+		.on('keyup', event => {
+			if (event.code != 'Enter') return
+			const v = event.target.value
 			if (v <= 0) return hic.error('invalid cutoff value')
 			setmaxv(hic, v)
 		})
@@ -699,8 +699,8 @@ function makewholegenome_sv(hic) {
 				.attr('cy', obj.x + p1)
 				.attr('cx', obj.y + p2)
 				.attr('r', radius)
-				.on('mouseover', () => {
-					tooltip_sv(hic, item)
+				.on('mouseover', event => {
+					tooltip_sv(event, hic, item)
 				})
 				.on('mouseout', () => {
 					hic.tip.hide()
@@ -712,10 +712,10 @@ function makewholegenome_sv(hic) {
 	}
 }
 
-function tooltip_sv(hic, item) {
+function tooltip_sv(event, hic, item) {
 	hic.tip
 		.clear()
-		.show(d3event.clientX, d3event.clientY)
+		.show(event.clientX, event.clientY)
 		.d.append('div')
 		.text(
 			item.chr1 == item.chr2
@@ -905,8 +905,8 @@ function init_chrpair(hic, chrx, chry) {
 	const canvas = hic.c.td
 		.append('canvas')
 		.style('margin', axispad + 'px')
-		.on('click', () => {
-			const [x, y] = d3mouse(d3event.target)
+		.on('click', event => {
+			const [x, y] = pointer(event, this)
 			init_detail(hic, chrx, chry, x, y)
 		})
 		.node()
@@ -1212,23 +1212,23 @@ function init_detail(hic, chrx, chry, x, y) {
 		.attr('height', blockwidth)
 		.attr('left', '10px')
 		.attr('top', '10px')
-		.on('mousedown', () => {
+		.on('mousedown', event => {
 			const body = d3select(document.body)
-			const x = d3event.clientX
-			const y = d3event.clientY
+			const x = event.clientX
+			const y = event.clientY
 			const oldx = Number.parseInt(canvas.style('left'))
 			const oldy = Number.parseInt(canvas.style('top'))
-			body.on('mousemove', () => {
-				const xoff = d3event.clientX - x
-				const yoff = d3event.clientY - y
+			body.on('mousemove', event => {
+				const xoff = event.clientX - x
+				const yoff = event.clientY - y
 				hic.detailview.xb.panning(xoff)
 				hic.detailview.yb.panning(yoff)
 				canvas.style('left', oldx + xoff + 'px').style('top', oldy + yoff + 'px')
 			})
-			body.on('mouseup', () => {
+			body.on('mouseup', event => {
 				body.on('mousemove', null).on('mouseup', null)
-				const xoff = d3event.clientX - x
-				const yoff = d3event.clientY - y
+				const xoff = event.clientX - x
+				const yoff = event.clientY - y
 				hic.detailview.xb.pannedby(xoff)
 				hic.detailview.yb.pannedby(yoff)
 			})

@@ -1,8 +1,8 @@
 import * as client from './client'
 import { string2pos, invalidcoord } from './coord'
-import { event as d3event } from 'd3-selection'
 import * as common from '#shared/common'
-import { scaleLinear, scaleOrdinal, schemeCategory10 } from 'd3-scale'
+import { scaleLinear, scaleOrdinal } from 'd3-scale'
+import { schemeCategory10 } from 'd3-scale-chromatic'
 import { showMenu_isgenevalue, showMenu_iscnv, showMenu_isloh, showMenu_ismutation } from './samplematrix.featuremenu'
 import { may_add_kmplotbutton } from './samplematrix.kmplot'
 import { vcfparsemeta } from '#shared/vcf'
@@ -1363,12 +1363,12 @@ sort samples by f.issampleattribute
 			.attr('stroke', '#ccc')
 			.attr('stroke-opacity', 0)
 			.attr('shape-rendering', 'crispEdges')
-			.on('mouseover', () => {
-				d3event.target.setAttribute('stroke-opacity', 1)
+			.on('mouseover', event => {
+				event.target.setAttribute('stroke-opacity', 1)
 				this.showTip_cell(sample, feature)
 			})
-			.on('mouseout', () => {
-				d3event.target.setAttribute('stroke-opacity', 0)
+			.on('mouseout', event => {
+				event.target.setAttribute('stroke-opacity', 0)
 				this.tip.hide()
 			})
 			.on('click', () => {
@@ -1408,12 +1408,12 @@ sort samples by f.issampleattribute
 			.attr('stroke', '#ccc')
 			.attr('stroke-opacity', 0)
 			.attr('shape-rendering', 'crispEdges')
-			.on('mouseover', () => {
-				d3event.target.setAttribute('stroke-opacity', 1)
+			.on('mouseover', event => {
+				event.target.setAttribute('stroke-opacity', 1)
 				this.showTip_cell(sample, feature)
 			})
-			.on('mouseout', () => {
-				d3event.target.setAttribute('stroke-opacity', 0)
+			.on('mouseout', event => {
+				event.target.setAttribute('stroke-opacity', 0)
 				this.tip.hide()
 			})
 			.on('click', () => {
@@ -1450,12 +1450,12 @@ sort samples by f.issampleattribute
 			.attr('stroke', '#ccc')
 			.attr('stroke-opacity', 0)
 			.attr('shape-rendering', 'crispEdges')
-			.on('mouseover', () => {
-				d3event.target.setAttribute('stroke-opacity', 1)
+			.on('mouseover', event => {
+				event.target.setAttribute('stroke-opacity', 1)
 				this.showTip_cell(sample, feature)
 			})
-			.on('mouseout', () => {
-				d3event.target.setAttribute('stroke-opacity', 0)
+			.on('mouseout', event => {
+				event.target.setAttribute('stroke-opacity', 0)
 				this.tip.hide()
 			})
 			.on('click', () => {
@@ -1500,12 +1500,12 @@ sort samples by f.issampleattribute
 			.attr('stroke', '#ccc')
 			.attr('stroke-opacity', 0)
 			.attr('shape-rendering', 'crispEdges')
-			.on('mouseover', () => {
-				d3event.target.setAttribute('stroke-opacity', 1)
+			.on('mouseover', event => {
+				event.target.setAttribute('stroke-opacity', 1)
 				this.showTip_cell(sample, feature)
 			})
-			.on('mouseout', () => {
-				d3event.target.setAttribute('stroke-opacity', 0)
+			.on('mouseout', event => {
+				event.target.setAttribute('stroke-opacity', 0)
 				this.tip.hide()
 			})
 			.on('click', () => {
@@ -1528,12 +1528,12 @@ sort samples by f.issampleattribute
 			.attr('stroke', '#ccc')
 			.attr('stroke-opacity', 0)
 			.attr('shape-rendering', 'crispEdges')
-			.on('mouseover', () => {
-				d3event.target.setAttribute('stroke-opacity', 1)
+			.on('mouseover', event => {
+				event.target.setAttribute('stroke-opacity', 1)
 				this.showTip_cell(sample, feature)
 			})
-			.on('mouseout', () => {
-				d3event.target.setAttribute('stroke-opacity', 0)
+			.on('mouseout', event => {
+				event.target.setAttribute('stroke-opacity', 0)
 				this.tip.hide()
 			})
 			.on('click', () => {
@@ -1556,12 +1556,12 @@ sort samples by f.issampleattribute
 			.attr('stroke', '#ccc')
 			.attr('stroke-opacity', 0)
 			.attr('shape-rendering', 'crispEdges')
-			.on('mouseover', () => {
-				d3event.target.setAttribute('stroke-opacity', 1)
+			.on('mouseover', event => {
+				event.target.setAttribute('stroke-opacity', 1)
 				this.showTip_cell(sample, feature)
 			})
-			.on('mouseout', () => {
-				d3event.target.setAttribute('stroke-opacity', 0)
+			.on('mouseout', event => {
+				event.target.setAttribute('stroke-opacity', 0)
 				this.tip.hide()
 			})
 			.on('click', () => {
@@ -1584,12 +1584,12 @@ sort samples by f.issampleattribute
 			.attr('stroke', '#ccc')
 			.attr('stroke-opacity', 0)
 			.attr('shape-rendering', 'crispEdges')
-			.on('mouseover', () => {
-				d3event.target.setAttribute('stroke-opacity', 1)
+			.on('mouseover', event => {
+				event.target.setAttribute('stroke-opacity', 1)
 				this.showTip_cell(sample, feature)
 			})
-			.on('mouseout', () => {
-				d3event.target.setAttribute('stroke-opacity', 0)
+			.on('mouseout', event => {
+				event.target.setAttribute('stroke-opacity', 0)
 				this.tip.hide()
 			})
 			.on('click', () => {
@@ -1749,12 +1749,12 @@ sort samples by f.issampleattribute
 			.attr('stroke', '#ccc')
 			.attr('stroke-opacity', 0)
 			.attr('shape-rendering', 'crispEdges')
-			.on('mouseover', () => {
-				d3event.target.setAttribute('stroke-opacity', 1)
+			.on('mouseover', event => {
+				event.target.setAttribute('stroke-opacity', 1)
 				this.showTip_cell(sample, feature)
 			})
-			.on('mouseout', () => {
-				d3event.target.setAttribute('stroke-opacity', 0)
+			.on('mouseout', event => {
+				event.target.setAttribute('stroke-opacity', 0)
 				this.tip.hide()
 			})
 			.on('click', () => {
@@ -1938,14 +1938,14 @@ sort samples by f.issampleattribute
 	showTip_feature(f) {
 		this.tip.clear()
 		this.tipContent_feature(f, this.tip.d)
-		this.tip.showunder(d3event.target)
+		this.tip.showunder(event.target)
 	}
 
 	showMenu_feature(f) {
 		/*
 		click feature label for menu options
 		*/
-		this.menu.showunder(d3event.target).clear()
+		this.menu.showunder(event.target).clear()
 		this.tipContent_feature(f, this.menu.d)
 
 		this.menu.d
@@ -2184,7 +2184,7 @@ sort samples by f.issampleattribute
 		client.make_table_2col(this.tip.d, lst)
 		// show tip after filling it with html so that
 		// computed bounding width, height are accurate
-		this.tip.show(d3event.clientX, d3event.clientY)
+		this.tip.show(event.clientX, event.clientY)
 	}
 
 	showTip_cell(sample, f) {
@@ -2454,7 +2454,7 @@ sort samples by f.issampleattribute
 		client.make_table_2col(this.tip.d, lst)
 		// show tip after filling it with html so that
 		// computed bounding width, height are accurate
-		this.tip.show(d3event.clientX, d3event.clientY)
+		this.tip.show(event.clientX, event.clientY)
 	}
 
 	/********** __menu ends **********/

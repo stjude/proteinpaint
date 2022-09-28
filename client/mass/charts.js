@@ -1,7 +1,7 @@
 import { getCompInit } from '../rx'
 import { Menu } from '../dom/menu'
 import { getNormalRoot } from '../filter/filter'
-import { select, event } from 'd3-selection'
+import { select } from 'd3-selection'
 
 // to assign chart ID to distinguish
 // between chart instances
@@ -258,7 +258,7 @@ function setRenderers(self) {
 			.style('border-radius', '20px')
 			.style('border-color', '#ededed')
 			.html(d => d.label)
-			.on('click', function(chart) {
+			.on('click', function(event, chart) {
 				self.dom.tip.clear().showunder(this)
 				chart.clickTo(chart)
 			})
@@ -422,7 +422,7 @@ function setRenderers(self) {
 			.style('height', '300px')
 			.style('margin', '5px')
 			.style('padding', '5px')
-			.on('keydown', () => {
+			.on('keydown', event => {
 				const keyCode = event.keyCode || event.which
 				// handle tab key press, otherwise it will cause the focus to move to another input
 				if (keyCode == 9) {

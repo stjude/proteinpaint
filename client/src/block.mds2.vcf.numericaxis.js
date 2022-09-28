@@ -1,4 +1,4 @@
-import { select as d3select, event as d3event } from 'd3-selection'
+import { select as d3select } from 'd3-selection'
 import { format as d3format } from 'd3-format'
 import { axisTop, axisLeft, axisRight } from 'd3-axis'
 import { scaleLinear } from 'd3-scale'
@@ -328,9 +328,9 @@ function numeric_make(nm, r, _g, data, tk, block) {
 		.attr('fill', 'white')
 		.attr('fill-opacity', 0)
 		.attr('stroke-opacity', 0)
-		.on('mousedown', () => {
-			d3event.preventDefault()
-			//d3event.stopPropagation()
+		.on('mousedown', event => {
+			event.preventDefault()
+			//event.stopPropagation()
 		})
 		.on('mouseover', m => {
 			m_mouseover(m, nm, tk)
@@ -340,7 +340,7 @@ function numeric_make(nm, r, _g, data, tk, block) {
 		})
 		.on('click', m => {
 			// FIXME prevent triggering click after panning
-			const p = d3event.target.getBoundingClientRect()
+			const p = m.target.getBoundingClientRect()
 			vcf_clickvariant(m, p, tk, block)
 		})
 
@@ -367,14 +367,14 @@ function numeric_make(nm, r, _g, data, tk, block) {
 		.attr('y', m => m._labfontsize * middlealignshift)
 		.attr('class', 'sja_aa_disclabel')
 		.attr('transform', m => 'rotate(' + (m.labattop ? '-' : '') + '90)')
-		.on('mousedown', () => {
-			d3event.preventDefault()
-			//d3event.stopPropagation()
+		.on('mousedown', event => {
+			event.preventDefault()
+			//event.stopPropagation()
 		})
 		.on('mouseover', m => m_mouseover(m, nm, tk))
 		.on('mouseout', m => m_mouseout(m, tk))
 		.on('click', m => {
-			vcf_clickvariant(m, { left: d3event.clientX, top: d3event.clientY }, tk, block)
+			vcf_clickvariant(m, { left: m.clientX, top: m.clientY }, tk, block)
 			if (block.debugmode) {
 				console.log(m)
 			}

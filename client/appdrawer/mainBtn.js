@@ -1,5 +1,4 @@
 import { getCompInit } from '#rx'
-import { event as d3event } from 'd3-selection'
 import { layoutInit } from './layout'
 
 /*
@@ -79,8 +78,8 @@ function setRenderers(self) {
 	self.dom.btnWrapper
 		.style('background-color', self.state.appBtnActive ? '#b2b2b2' : '#f2f2f2')
 		.style('color', self.state.appBtnActive ? '#fff' : '#000')
-		.on('click', async () => {
-			d3event.stopPropagation()
+		.on('click', async event => {
+			event.stopPropagation()
 			await self.app.dispatch({ type: 'is_apps_btn_active' })
 			slideDrawer(self)
 			if (self.state.appBtnActive) {

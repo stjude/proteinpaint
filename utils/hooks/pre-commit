@@ -15,6 +15,6 @@ echo "$FILES" | xargs ./node_modules/.bin/prettier --no-semi --use-tabs --write
 echo "$FILES" | xargs git add
 
 # doing per GDC requirements
-pre-commit run -a
+pre-commit run --files "$FILES"
 
 exit 0

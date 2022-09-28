@@ -1,4 +1,3 @@
-import { event as d3event } from 'd3-selection'
 import * as client from './client'
 import * as common from '#shared/common'
 
@@ -37,9 +36,9 @@ export function showMenu_iscnv(smat, f, obj) {
 			.property('value', obj.valuecutoff || 0)
 			.attr('type', 'number')
 			.style('width', '50px')
-			.on('keyup', () => {
-				if (d3event.code != 'Enter' && d3event.code != 'NumpadEnter') return
-				let v = Number.parseFloat(d3event.target.value)
+			.on('keyup', event => {
+				if (event.code != 'Enter' && event.code != 'NumpadEnter') return
+				let v = Number.parseFloat(event.target.value)
 				if (!v || v < 0) {
 					// invalid value, set to 0 to cancel
 					v = 0
@@ -86,9 +85,9 @@ export function showMenu_iscnv(smat, f, obj) {
 			.property('value', obj.focalsizelimit || 0)
 			.attr('type', 'number')
 			.style('width', '100px')
-			.on('keyup', () => {
-				if (d3event.code != 'Enter' && d3event.code != 'NumpadEnter') return
-				let v = Number.parseInt(d3event.target.value)
+			.on('keyup', event => {
+				if (event.code != 'Enter' && event.code != 'NumpadEnter') return
+				let v = Number.parseInt(event.target.value)
 				if (!v || v < 0) {
 					// invalid value, set to 0 to cancel
 					v = 0
@@ -138,9 +137,9 @@ export function showMenu_isloh(smat, f, obj) {
 			.property('value', obj.valuecutoff || 0)
 			.attr('type', 'number')
 			.style('width', '50px')
-			.on('keyup', () => {
-				if (d3event.code != 'Enter' && d3event.code != 'NumpadEnter') return
-				let v = Number.parseFloat(d3event.target.value)
+			.on('keyup', event => {
+				if (event.code != 'Enter' && event.code != 'NumpadEnter') return
+				let v = Number.parseFloat(event.target.value)
 				if (!v || v < 0) {
 					// invalid value, set to 0 to cancel
 					v = 0
@@ -187,9 +186,9 @@ export function showMenu_isloh(smat, f, obj) {
 			.property('value', obj.focalsizelimit || 0)
 			.attr('type', 'number')
 			.style('width', '100px')
-			.on('keyup', () => {
-				if (d3event.code != 'Enter' && d3event.code != 'NumpadEnter') return
-				let v = Number.parseInt(d3event.target.value)
+			.on('keyup', event => {
+				if (event.code != 'Enter' && event.code != 'NumpadEnter') return
+				let v = Number.parseInt(event.target.value)
 				if (!v || v < 0) {
 					// invalid value, set to 0 to cancel
 					v = 0

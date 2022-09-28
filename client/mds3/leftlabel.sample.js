@@ -1,4 +1,3 @@
-import { event as d3event } from 'd3-selection'
 import { makelabel } from './leftlabel'
 import { tab2box } from '../src/client'
 import { displaySampleTable } from './sampletable'
@@ -14,8 +13,8 @@ export function makeSampleLabel(data, tk, block, laby) {
 
 	tk.leftlabels.doms.samples
 		.text(`${data.sampleTotalNumber} case${data.sampleTotalNumber > 1 ? 's' : ''}`)
-		.on('click', async () => {
-			tk.menutip.clear().showunder(d3event.target)
+		.on('click', async event => {
+			tk.menutip.clear().showunder(event.target)
 
 			await mayShowSummary(tk, block)
 

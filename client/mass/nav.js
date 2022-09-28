@@ -3,7 +3,7 @@ import { recoverInit } from '../rx/src/recover'
 import { searchInit } from './search'
 import { filterRxCompInit } from '../filter/filter'
 import { chartsInit } from './charts'
-import { select, event } from 'd3-selection'
+import { select } from 'd3-selection'
 import { dofetch3 } from '../common/dofetch'
 import { Menu } from '../dom/menu'
 import { getNormalRoot, getFilterItemByTag } from '../filter/filter'
@@ -262,7 +262,7 @@ function setRenderers(self) {
 				.append('button')
 				.style('margin', '10px')
 				.html('Help &#9660;')
-				.on('click', () => {
+				.on('click', event => {
 					const p = event.target.getBoundingClientRect()
 					const div = headtip
 						.clear()
@@ -458,7 +458,7 @@ function setRenderers(self) {
 }
 
 function setInteractivity(self) {
-	self.setTab = d => {
+	self.setTab = (event, d) => {
 		if (d.colNum == self.activeTab && !self.searching) {
 			self.prevCohort = self.activeCohort
 			self.updateUI()

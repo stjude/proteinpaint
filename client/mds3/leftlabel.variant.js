@@ -1,4 +1,3 @@
-import { event as d3event } from 'd3-selection'
 import { fold_glyph, settle_glyph } from './skewer.render'
 import { may_render_skewer } from './skewer'
 import { itemtable } from './itemtable'
@@ -78,8 +77,8 @@ export function makeVariantLabel(data, tk, block, laby) {
 				? showcount + ' of ' + totalcount + ' variants'
 				: showcount + ' variant' + (showcount > 1 ? 's' : '')
 		)
-		.on('click', () => {
-			tk.menutip.clear().showunder(d3event.target)
+		.on('click', event => {
+			tk.menutip.clear().showunder(event.target)
 			menu_variants(tk, block)
 		})
 	return

@@ -1,5 +1,4 @@
 import * as client from './client'
-import { event as d3event } from 'd3-selection'
 import { axisTop } from 'd3-axis'
 import { scaleLinear, scaleLog } from 'd3-scale'
 import * as expressionstat from './block.mds.expressionstat'
@@ -101,9 +100,9 @@ export async function init(p) {
 	buttonrow
 		.append('button')
 		.text('Log10')
-		.on('click', () => {
+		.on('click', event => {
 			plot.uselog = !plot.uselog
-			d3event.target.innerHTML = plot.uselog ? 'Linear' : 'Log10'
+			event.target.innerHTML = plot.uselog ? 'Linear' : 'Log10'
 			plot.place()
 		})
 
@@ -145,8 +144,8 @@ export async function init(p) {
 				.attr('type', 'checkbox')
 				.property('checked', true)
 				.attr('id', id)
-				.on('change', () => {
-					plot.svcnv.usegain = d3event.target.checked
+				.on('change', event => {
+					plot.svcnv.usegain = event.target.checked
 					plot.cnvconfig.div.style('display', plot.svcnv.usegain || plot.svcnv.useloss ? 'block' : 'none')
 					loadplot(plot)
 				})
@@ -167,8 +166,8 @@ export async function init(p) {
 				.attr('type', 'checkbox')
 				.property('checked', true)
 				.attr('id', id)
-				.on('change', () => {
-					plot.svcnv.useloss = d3event.target.checked
+				.on('change', event => {
+					plot.svcnv.useloss = event.target.checked
 					plot.cnvconfig.div.style('display', plot.svcnv.usegain || plot.svcnv.useloss ? 'block' : 'none')
 					loadplot(plot)
 				})
@@ -200,9 +199,9 @@ export async function init(p) {
 					.property('value', plot.svcnv.valueCutoff || 0)
 					.attr('type', 'number')
 					.style('width', '50px')
-					.on('keyup', () => {
-						if (d3event.code != 'Enter' && d3event.code != 'NumpadEnter') return
-						let v = Number.parseFloat(d3event.target.value)
+					.on('keyup', event => {
+						if (event.code != 'Enter' && event.code != 'NumpadEnter') return
+						let v = Number.parseFloat(event.target.value)
 						if (!v || v < 0) {
 							// invalid value, set to 0 to cancel
 							v = 0
@@ -249,9 +248,9 @@ export async function init(p) {
 					.property('value', plot.svcnv.bplengthUpperLimit || 0)
 					.attr('type', 'number')
 					.style('width', '80px')
-					.on('keyup', () => {
-						if (d3event.code != 'Enter' && d3event.code != 'NumpadEnter') return
-						let v = Number.parseInt(d3event.target.value)
+					.on('keyup', event => {
+						if (event.code != 'Enter' && event.code != 'NumpadEnter') return
+						let v = Number.parseInt(event.target.value)
 						if (!v || v < 0) {
 							// invalid value, set to 0 to cancel
 							v = 0
@@ -302,8 +301,8 @@ export async function init(p) {
 				.attr('type', 'checkbox')
 				.property('checked', false)
 				.attr('id', id)
-				.on('change', () => {
-					plot.svcnv.usesv = d3event.target.checked
+				.on('change', event => {
+					plot.svcnv.usesv = event.target.checked
 					plot.svconfig.div.style('display', plot.svcnv.usesv ? 'block' : 'none')
 					loadplot(plot)
 				})
@@ -333,9 +332,9 @@ export async function init(p) {
 					.property('value', 0)
 					.attr('type', 'number')
 					.style('width', '80px')
-					.on('keyup', () => {
-						if (d3event.code != 'Enter' && d3event.code != 'NumpadEnter') return
-						let v = Number.parseInt(d3event.target.value)
+					.on('keyup', event => {
+						if (event.code != 'Enter' && event.code != 'NumpadEnter') return
+						let v = Number.parseInt(event.target.value)
 						if (!v || v < 0) {
 							// invalid value, set to 0 to cancel
 							v = 0
@@ -609,13 +608,13 @@ async function loadplot(plot) {
 				.attr('fill-opacity', 0)
 				.attr('stroke', color0)
 				.attr('stroke-opacity', 0.8)
-				.on('mouseover', () => {
+				.on('mouseover', event => {
 					plot.tip
 						.clear()
 						.d.append('div')
 						.style('margin', '10px')
 						.html(d.sample + '<br>' + d.value)
-					plot.tip.show(d3event.clientX, d3event.clientY)
+					plot.tip.show(event.clientX, event.clientY)
 				})
 				.on('mouseout', () => plot.tip.hide())
 
@@ -646,15 +645,15 @@ async function loadplot(plot) {
 				.attr('dominant-baseline', 'central')
 				.attr('class', 'sja_clbtext')
 				.text(g.name)
-				.on('click', () => {
+				.on('click', event => {
 					// click a group label to show rope plot for this group alone
-					init2(Math.max(100, d3event.clientX - 100), Math.max(100, d3event.clientY - 100), plot, g)
+					init2(Math.max(100, event.clientX - 100), Math.max(100, event.clientY - 100), plot, g)
 				})
 
 			if (g.attributes) {
 				g.label
-					.on('mouseover', () => {
-						plot.tip.clear().show(d3event.clientX, d3event.clientY)
+					.on('mouseover', event => {
+						plot.tip.clear().show(event.clientX, event.clientY)
 						const d = plot.tip.d.append('div').style('margin', '10px')
 						for (const a of g.attributes) {
 							d.append('div').html(
@@ -721,13 +720,13 @@ async function loadplot(plot) {
 						.attr('stroke', color)
 						.attr('fill', 'white')
 						.attr('fill-opacity', 0)
-						.on('mouseover', () => {
+						.on('mouseover', event => {
 							plot.tip
 								.clear()
 								.d.append('div')
 								.style('margin', '10px')
 								.html(d.sample + '<br>' + d.value)
-							plot.tip.show(d3event.clientX, d3event.clientY)
+							plot.tip.show(event.clientX, event.clientY)
 						})
 						.on('mouseout', () => {
 							plot.tip.hide()
@@ -940,9 +939,9 @@ function init2(x, y, plot, group) {
 	buttonrow
 		.append('button')
 		.text('Log10')
-		.on('click', () => {
+		.on('click', event => {
 			pp.uselog = !pp.uselog
-			d3event.target.innerHTML = pp.uselog ? 'Linear' : 'Log10'
+			event.target.innerHTML = pp.uselog ? 'Linear' : 'Log10'
 			pp.place()
 		})
 
@@ -1211,9 +1210,9 @@ function init2(x, y, plot, group) {
 				.attr('fill', 'white')
 				.attr('fill-opacity', 0)
 				.attr('stroke', '#858585')
-				.on('mouseover', () => {
+				.on('mouseover', event => {
 					tooltip_pp(d, _p.tip.clear().d, pp)
-					_p.tip.show(d3event.clientX, d3event.clientY)
+					_p.tip.show(event.clientX, event.clientY)
 				})
 				.on('mouseout', () => {
 					_p.tip.hide()
@@ -1364,8 +1363,8 @@ quick fix!!
 generate a <select> with options based on plot.boxplotgroupers
 */
 	if (!plot.boxplotgroupers) return
-	const select = plot.buttonrow.append('select').on('change', () => {
-		plot.index_boxplotgroupers = d3event.target.selectedIndex
+	const select = plot.buttonrow.append('select').on('change', event => {
+		plot.index_boxplotgroupers = event.target.selectedIndex
 		loadplot(plot)
 	})
 	for (const [idx, name] of plot.boxplotgroupers.entries()) {

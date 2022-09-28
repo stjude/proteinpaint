@@ -1,4 +1,4 @@
-import { select as d3select, event as d3event } from 'd3-selection'
+import { select as d3select } from 'd3-selection'
 import { axisTop, axisLeft, axisRight } from 'd3-axis'
 import { scaleLinear } from 'd3-scale'
 import * as common from '#shared/common'

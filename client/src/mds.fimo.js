@@ -1,8 +1,8 @@
 import * as client from './client'
 import * as common from '#shared/common'
 import { axisTop } from 'd3-axis'
-import { scaleLinear, scaleOrdinal, schemeCategory10 } from 'd3-scale'
-import { select as d3select, selectAll as d3selectAll, event as d3event } from 'd3-selection'
+import { scaleLinear } from 'd3-scale'
+import { select as d3select, selectAll as d3selectAll } from 'd3-selection'
 
 /*
 
@@ -131,9 +131,9 @@ function init_ui(obj) {
 			.style('margin', '0px 10px')
 			.style('width', '100px')
 			.property('value', obj.flankspan)
-			.on('keyup', () => {
-				if (!client.keyupEnter()) return
-				const v = Number.parseInt(d3event.target.value)
+			.on('keyup', event => {
+				if (!client.keyupEnter(event)) return
+				const v = Number.parseInt(event.target.value)
 				if (v < 10) {
 					window.alert('Enter integer above 10')
 					return
@@ -157,9 +157,9 @@ function init_ui(obj) {
 			.style('margin', '0px 10px')
 			.style('width', '100px')
 			.property('value', obj.fimo_thresh)
-			.on('keyup', () => {
-				if (!client.keyupEnter()) return
-				const v = Number.parseFloat(d3event.target.value)
+			.on('keyup', event => {
+				if (!client.keyupEnter(event)) return
+				const v = Number.parseFloat(event.target.value)
 				if (v <= 0) {
 					window.alert('Enter a p value between 0 to 1')
 					return
@@ -184,9 +184,9 @@ function init_ui(obj) {
 			.style('margin', '0px 10px')
 			.style('width', '100px')
 			.property('value', obj.minabslogp)
-			.on('keyup', () => {
-				if (!client.keyupEnter()) return
-				const v = Number.parseFloat(d3event.target.value)
+			.on('keyup', event => {
+				if (!client.keyupEnter(event)) return
+				const v = Number.parseFloat(event.target.value)
 				if (v <= 0) {
 					window.alert('Enter a number above 0')
 					return
@@ -475,9 +475,9 @@ function draw_motif_simplified(data, obj) {
 			.attr('height', obj.motifrowheight)
 			.attr('fill', 'white')
 			.attr('fill-opacity', 0)
-			.on('mouseover', () => {
+			.on('mouseover', event => {
 				motif.bgbox.attr('fill', '#f9fabd')
-				motif_tooltip(motif, obj)
+				motif_tooltip(motif, obj, event)
 			})
 			.on('mouseout', () => {
 				motif.bgbox.attr('fill', 'white')
@@ -492,7 +492,7 @@ function draw_motif_simplified(data, obj) {
 	obj.svg.attr('width', motifgraphwidth).attr('height', svgheight)
 }
 
-function motif_tooltip(motif, obj) {
+function motif_tooltip(motif, obj, event) {
 	obj.tip.clear()
 	if (motif.attr) {
 		obj.tip.d
@@ -519,7 +519,7 @@ function motif_tooltip(motif, obj) {
 		]
 		client.make_table_2col(obj.tip.d, lst)
 	}
-	obj.tip.show(d3event.clientX, d3event.clientY)
+	obj.tip.show(event.clientX, event.clientY)
 }
 
 function htmlpvalue(m, obj) {

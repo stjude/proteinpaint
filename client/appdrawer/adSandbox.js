@@ -2,7 +2,6 @@ import { getCompInit } from '#rx'
 import { dofetch, dofetch3, sayerror, tab_wait, appear } from '#src/client'
 import { newSandboxDiv } from '#dom/sandbox'
 import * as utils from './utils'
-import { event } from 'd3-selection'
 import { addGeneSearchbox } from '#dom/genesearch'
 import { Menu } from '#dom/menu'
 import hljs from 'highlight.js/lib/core'
@@ -75,7 +74,7 @@ async function openNestedCardSandbox(nestedCard, sandboxDiv, pageArgs) {
 				`<p style="margin-left: 12px; font-size:14.5px;font-weight:500; display: block;">${child.name}</p>
 			<p style="display: block; font-size: 13px; font-weight: 300; margin-left: 20px; justify-content: center; font-style:oblique; color: #403f3f;">${child.description}</p>`
 			)
-			.on('click', async () => {
+			.on('click', async event => {
 				event.stopPropagation()
 				ucList.selectAll('*').remove()
 
@@ -380,7 +379,7 @@ function addButtons(buttons, div) {
 	if (buttons) {
 		buttons.forEach(button => {
 			const sandboxButton = utils.makeButton({ div, text: button.name })
-			sandboxButton.on('click', () => {
+			sandboxButton.on('click', event => {
 				event.stopPropagation()
 				if (button.download) window.open(`${button.download}`, '_self', 'download')
 				else window.open(`${button.link}`, `${button.name}`)
@@ -496,7 +495,7 @@ async function addArrowBtns(args, type, bdiv, rdiv) {
 function showURLLaunch(urlparam, div, section) {
 	if (urlparam) {
 		const URLbtn = utils.makeButton({ div, text: section == 'apps' ? 'Run app from URL' : 'Run track from URL' })
-		URLbtn.on('click', () => {
+		URLbtn.on('click', event => {
 			event.stopPropagation()
 			window.open(`${urlparam}`, '_blank')
 		})
@@ -509,7 +508,7 @@ function makeDataDownload(download, div, section) {
 			div,
 			text: section == 'apps' ? 'Download App File(s)' : 'Download Track File(s)'
 		})
-		dataBtn.on('click', () => {
+		dataBtn.on('click', event => {
 			event.stopPropagation()
 			window.open(`${download}`, '_self', 'download')
 		})
@@ -852,7 +851,7 @@ function makeURLbutton(div, coords, par) {
 	// Use position for genome browser and gene for protein view
 	const blockOn =
 		par.runargs.block == true ? `position=${coords.chr}:${coords.start}-${coords.stop}` : `gene=${coords.geneSymbol}`
-	URLbtn.on('click', () => {
+	URLbtn.on('click', event => {
 		event.stopPropagation()
 		window.open(`?genome=${par.genome.name}&${blockOn}&${par.dsURLparam}`, '_blank')
 	})

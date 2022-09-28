@@ -29,7 +29,7 @@ module.exports = function(env = {}) {
 		target: 'node',
 		externals: [
 			nodeExternals({
-				allowlist: [/\/src\//],
+				allowlist: [/\/src\//, /d3-*/, 'internmap', 'delaunator', 'robust-predicates'],
 				additionalModuleDirs: [path.resolve(__dirname, '../node_modules')]
 			})
 		],

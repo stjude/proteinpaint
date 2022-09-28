@@ -4,6 +4,7 @@ const path = require('path')
 const utils = require('./utils')
 const serverconfig = require('./serverconfig')
 const d3scale = require('d3-scale')
+const schemeCategory10 = require('d3-scale-chromatic').schemeCategory10
 
 /*
 works with "canned" scatterplots in a dataset, e.g. data from a text file of tSNE coordinates from a pre-analyzed cohort (contrary to on-the-fly analysis)
@@ -220,7 +221,7 @@ async function mayColorAndFilterSamples(allSamples, q, ds) {
 	}
 
 	// assign color to unique categories, but not reference
-	const k2c = d3scale.scaleOrdinal(d3scale.schemeCategory10)
+	const k2c = d3scale.scaleOrdinal(schemeCategory10)
 	for (const [category, o] of categories) {
 		if (q.term?.term?.values?.[category]?.color) {
 			o.color = q.term.term.values[category].color

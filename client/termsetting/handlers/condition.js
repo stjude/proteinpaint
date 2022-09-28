@@ -122,8 +122,8 @@ function addBreaksSelector(self, div) {
 		.style('width', '80px')
 		.style('height', '80px')
 		.property('placeholder', 'Enter grade values')
-		.on('keyup', () => {
-			if (!keyupEnter()) return
+		.on('keyup', event => {
+			if (!keyupEnter(event)) return
 			textarea2gradeUI()
 		})
 

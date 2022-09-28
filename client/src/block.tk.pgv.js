@@ -1,8 +1,9 @@
-import { scaleLinear, scaleOrdinal, schemeCategory10 } from 'd3-scale'
+import { schemeCategory10 } from 'd3-scale-chromatic'
+import { scaleLinear, scaleOrdinal } from 'd3-scale'
 import { axisLeft, axisTop } from 'd3-axis'
 import * as client from './client'
 import { legend_newrow } from './block.legend'
-import { event as d3event, select as d3select } from 'd3-selection'
+import { select as d3select } from 'd3-selection'
 import { color as d3color } from 'd3-color'
 import { bigwigconfigpanel } from './block.tk.bigwig'
 import { format as d3format } from 'd3-format'
@@ -342,17 +343,17 @@ function makeTk(tk, block) {
 			.attr('x', block.tkleftlabel_xshift)
 			.attr('y', 0)
 			.text(t.name)
-			.on('mousedown', () => {
+			.on('mousedown', event => {
 				// drag label and reorder tracks
-				d3event.stopPropagation()
-				d3event.preventDefault()
-				movetrack(t, tk, d3event.clientY)
+				event.stopPropagation()
+				event.preventDefault()
+				movetrack(t, tk, event.clientY)
 			})
 
 		if (t.list_description) {
 			t.tklabel
-				.on('mouseover', () => {
-					t.tktip.clear().show(d3event.clientX, d3event.clientY)
+				.on('mouseover', event => {
+					t.tktip.clear().show(event.clientX, event.clientY)
 					make_table_2col(t.tktip.d, t.list_description).style('margin', '')
 				})
 				.on('mouseout', () => t.tktip.hide())
@@ -702,7 +703,7 @@ function showgeneplot(tk, block, gene) {
 						.attr('fill', d => gvtk.runtimekey2color_genespecific.get(d.name))
 						.attr('fill-opacity', 0.2)
 						.attr('stroke', d => gvtk.runtimekey2color_genespecific.get(d.name))
-						.on('mouseover', d => {
+						.on('mouseover', (event, d) => {
 							const valuekeyname = d.name
 							// highlight this value key in all member tracks
 							for (const t of tk.tracks) {
@@ -713,7 +714,7 @@ function showgeneplot(tk, block, gene) {
 									.select('circle')
 									.attr('fill-opacity', 1)
 							}
-							const p = d3event.target.getBoundingClientRect()
+							const p = event.target.getBoundingClientRect()
 							tk.tktip.clear().show(p.left, p.top)
 							const lst = [{ k: 'sample', v: t.name }, { k: gvtk.multivaluekey, v: d.name }, { k: 'value', v: d.value }]
 							setTimeout(make_table_2col(tk.tktip.d, lst), 500)
@@ -1005,8 +1006,8 @@ function movetrack(t, tk, y0) {
 	moving member tracks require matching tracks by .name
 	*/
 	const body = d3select(document.body)
-	body.on('mousemove', () => {
-		const dy = d3event.clientY - y0
+	body.on('mousemove', event => {
+		const dy = event.clientY - y0
 		t.g.attr('transform', 'translate(0,' + (t.y + dy) + ')')
 		let tkidx = 0
 		for (let i = 0; i < tk.tracks.length; i++) {
@@ -1034,7 +1035,7 @@ function movetrack(t, tk, y0) {
 				t.y = t2.y
 				t2.y += t.height
 				t2.g.transition().attr('transform', 'translate(0,' + t2.y + ')')
-				y0 = d3event.clientY
+				y0 = event.clientY
 			}
 		} else if (dy > 0 && tkidx < tk.tracks.length - 1) {
 			let t2idx = tkidx + 1,
@@ -1056,7 +1057,7 @@ function movetrack(t, tk, y0) {
 				t2.y = t.y
 				t.y += t2.height
 				t2.g.transition().attr('transform', 'translate(0,' + t2.y + ')')
-				y0 = d3event.clientY
+				y0 = event.clientY
 			}
 		}
 	})
@@ -1263,9 +1264,9 @@ function configPanel_uniformheight(d, tk, block) {
 		.property('value', maxheight)
 		.attr('min', 5)
 		.style('width', '80px')
-		.on('keyup', () => {
-			if (d3event.code != 'Enter') return
-			const v = Number.parseInt(d3event.target.value)
+		.on('keyup', event => {
+			if (event.code != 'Enter') return
+			const v = Number.parseInt(event.target.value)
 			for (const t of tk.tracks) {
 				switch (t.type) {
 					case client.tkt.bigwig:
@@ -1315,9 +1316,9 @@ function configPanel_tkheights(d, tk, block) {
 			.property('value', v)
 			.attr('min', 5)
 			.style('width', '80px')
-			.on('keyup', () => {
-				if (d3event.code != 'Enter') return
-				const v = Number.parseInt(d3event.target.value)
+			.on('keyup', event => {
+				if (event.code != 'Enter') return
+				const v = Number.parseInt(event.target.value)
 				switch (t.type) {
 					case client.tkt.bigwig:
 						t.barheight = v
@@ -1360,9 +1361,9 @@ function gvtklabelclick(gvtk, tk, block) {
 			.property('value', gvtk.barwidth)
 			.attr('min', 50)
 			.style('width', '50px')
-			.on('keyup', () => {
-				if (d3event.code != 'Enter' && d3event.code != 'NumpadEnter') return
-				const w = Number.parseInt(d3event.target.value)
+			.on('keyup', event => {
+				if (event.code != 'Enter' && event.code != 'NumpadEnter') return
+				const w = Number.parseInt(event.target.value)
 				if (Number.isNaN(w) || w < 50) return
 				gvtk.barwidth = w
 				setrightwidth(tk, block)
@@ -1377,8 +1378,8 @@ function gvtklabelclick(gvtk, tk, block) {
 			.append('input')
 			.attr('type', 'color')
 			.property('value', gvtk.barcolor)
-			.on('change', () => {
-				gvtk.barcolor = d3event.target.value
+			.on('change', event => {
+				gvtk.barcolor = event.target.value
 				if (gvtk.multivaluekey) {
 					// do not set?
 				} else {

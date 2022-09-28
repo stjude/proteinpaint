@@ -105,7 +105,6 @@ function table_snvindel_multivariant({ mlst, tk, block, div, disable_variant2sam
 	return { ssmid2div, startCol }
 }
 
-
 function partFromLeftLabel() {
 	if (data.sampleSummaries) {
 		for (const strat of data.sampleSummaries) {
@@ -115,8 +114,8 @@ function partFromLeftLabel() {
 			const showcount = strat.items.reduce((i, j) => i + (j.mclasses ? 1 : 0), 0)
 			tk.leftlabels.doms[strat.label]
 				.text(showcount + ' ' + strat.label + (showcount > 1 ? 's' : ''))
-				.on('click', () => {
-					tk.tktip.clear().showunder(d3event.target)
+				.on('click', event => {
+					tk.tktip.clear().showunder(event.target)
 					stratifymenu_samplesummary(strat, tk, block)
 				})
 			laby += labyspace + block.labelfontsize
@@ -126,23 +125,25 @@ function partFromLeftLabel() {
 	if (data.sampleSummaries2) {
 		for (const l of data.sampleSummaries2) {
 			if (!tk.leftlabels.doms[l.label1]) tk.leftlabels.doms[l.label1] = makelabel(tk, block, laby)
-			tk.leftlabels.doms[l.label1].text(l.count + ' ' + l.label1 + (l.count > 1 ? 's' : '')).on('click', async () => {
-				const wait = tk.tktip
-					.clear()
-					.showunder(d3event.target)
-					.d.append('div')
-					.text('Loading...')
-				try {
-					const config = tk.mds.sampleSummaries2.lst.find(i => i.label1 == l.label1)
-					if (!config) throw 'not found: ' + l.label1
-					const data = await tk.mds.sampleSummaries2.get(config)
-					if (data.error) throw data.error
-					wait.remove()
-					stratifymenu_samplesummary(data.strat, tk, block)
-				} catch (e) {
-					wait.text('Error: ' + (e.message || e))
-				}
-			})
+			tk.leftlabels.doms[l.label1]
+				.text(l.count + ' ' + l.label1 + (l.count > 1 ? 's' : ''))
+				.on('click', async event => {
+					const wait = tk.tktip
+						.clear()
+						.showunder(event.target)
+						.d.append('div')
+						.text('Loading...')
+					try {
+						const config = tk.mds.sampleSummaries2.lst.find(i => i.label1 == l.label1)
+						if (!config) throw 'not found: ' + l.label1
+						const data = await tk.mds.sampleSummaries2.get(config)
+						if (data.error) throw data.error
+						wait.remove()
+						stratifymenu_samplesummary(data.strat, tk, block)
+					} catch (e) {
+						wait.text('Error: ' + (e.message || e))
+					}
+				})
 			laby += labyspace + block.labelfontsize
 		}
 	}
@@ -690,7 +691,7 @@ function init_remove_terms_menu(holder, arg, main_tabs) {
 			const active_tab = main_tabs ? main_tabs.find(t => t.active) : undefined
 			const tip = new Menu({ padding: '5px', parent_menu: remove_btn })
 			tip.clear().showunder(remove_btn.node())
-			tip.d.on('click', () => event.stopPropagation())
+			tip.d.on('click', event => event.stopPropagation())
 
 			let terms_remove = []
 
@@ -723,7 +724,7 @@ function init_remove_terms_menu(holder, arg, main_tabs) {
 					.append('label')
 					.style('padding', '2px 5px')
 					.text(term.name)
-					.on('click', () => {
+					.on('click', event => {
 						event.stopPropagation()
 						check.attr('checked', check.node().checked ? null : true)
 						check.node().dispatchEvent(new Event('change'))
@@ -1093,7 +1094,7 @@ function make_column_showhide_menu(arg, columns, header_div, sample_table) {
 			let visibleterms = arg.tk.mds.variant2samples.visibleterms
 			const tip = new Menu({ padding: '5px', parent_menu: column_edit_btn })
 			tip.clear().showunder(column_edit_btn.node())
-			tip.d.on('click', () => event.stopPropagation())
+			tip.d.on('click', event => event.stopPropagation())
 
 			let hidden_terms = termidlst.filter(t => !visibleterms.includes(t))
 
@@ -1141,7 +1142,7 @@ function make_column_showhide_menu(arg, columns, header_div, sample_table) {
 					.append('label')
 					.style('padding', '2px 5px')
 					.text(term.name)
-					.on('click', () => {
+					.on('click', event => {
 						event.stopPropagation()
 						check.attr('checked', check.node().checked ? null : true)
 						check.node().dispatchEvent(new Event('change'))

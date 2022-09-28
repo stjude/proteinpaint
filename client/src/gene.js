@@ -1,5 +1,4 @@
 import * as client from './client'
-import { event as d3event } from 'd3-selection'
 import { debounce } from 'debounce'
 
 export function gene_searchbox(p) {
@@ -36,14 +35,14 @@ otherwise to show in client.tip
 		}
 	}
 
-	input.on('keyup', () => {
-		const str = d3event.target.value
+	input.on('keyup', event => {
+		const str = event.target.value
 		if (str.length <= 1) {
 			fold()
 			return
 		}
 
-		if (client.keyupEnter()) {
+		if (client.keyupEnter(event)) {
 			const hitgene = printdiv.select('.sja_menuoption')
 			if (hitgene.size() > 0) {
 				p.callback(hitgene.text())

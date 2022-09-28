@@ -1,4 +1,4 @@
-import { select, mouse } from 'd3-selection'
+import { select, pointer } from 'd3-selection'
 import { scaleLinear, drag as d3drag } from 'd3'
 import { get_bin_label, get_bin_range_equation } from '#shared/termdb.bins'
 import { makeDensityPlot } from '#filter/densityplot'
@@ -206,8 +206,8 @@ function renderBinLines(self, data) {
 
 	const middleLines = self.num_obj.binsize_g.selectAll('line').filter((d, i) => !d.isDraggable)
 
-	function dragged(b) {
-		const draggedX = mouse(this)[0]
+	function dragged(event, b) {
+		const draggedX = pointer(event, this)[0]
 		if (draggedX <= scaledMinX || draggedX >= scaledMaxX) return
 		const line =
 			self.q.type == 'regular-bin'
@@ -291,8 +291,8 @@ function renderBinLines(self, data) {
 		}
 	}
 
-	function dragend(b) {
-		const draggedX = mouse(this)[0]
+	function dragend(event, b) {
+		const draggedX = pointer(event, this)[0]
 		const line =
 			self.q.type == 'regular-bin'
 				? select(this)

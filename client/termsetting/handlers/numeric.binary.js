@@ -2,7 +2,6 @@ import { event as d3event } from 'd3-selection'
 import { setDensityPlot } from './density'
 import { renderBoundaryInclusionInput, renderBoundaryInputDivs } from './numeric.discrete'
 import { get_bin_label, get_bin_range_equation } from '#shared/termdb.bins'
-import { keyupEnter } from '#src/client'
 import { make_one_checkbox } from '#dom/checkbox'
 import { getPillNameDefault } from '#termsetting'
 

@@ -1,4 +1,3 @@
-import { select as d3select, event as d3event } from 'd3-selection'
 import { Menu } from '#dom/menu'
 import { dofetch3 } from '#common/dofetch'
 import { initLegend, updateLegend } from './legend'

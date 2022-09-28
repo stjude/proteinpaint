@@ -1,4 +1,4 @@
-import { select, event } from 'd3-selection'
+import { select } from 'd3-selection'
 
 /*
 render a table of p-values
@@ -153,7 +153,7 @@ export function renderPvalues({ holder, plot, tests, s, bins, tip, setActiveMenu
 				.style('color', '#aaa')
 				.style('cursor', 'pointer')
 				.html(`<span style='color:#aaa; font-weight:400'><span>Hidden tests (${hiddenTests.length})</span>`)
-				.on('click', () => {
+				.on('click', event => {
 					tip.clear()
 					const divs = tip.d
 						.append('div')

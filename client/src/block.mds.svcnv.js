@@ -1,5 +1,4 @@
 import * as client from './client'
-import { select as d3select, event as d3event } from 'd3-selection'
 import { rgb as d3rgb } from 'd3-color'
 import { axisTop, axisLeft, axisRight } from 'd3-axis'
 import { scaleLinear } from 'd3-scale'
@@ -199,7 +198,7 @@ function may_showgeneexp_nomutationdata(tk, block) {
 		and show the menu option
 		*/
 
-		text.text(genenames[0]).on('click', () => {
+		text.text(genenames[0]).on('click', event => {
 			const c = tk.gene2coord[genenames[0]]
 			genebarconfig_fixed(
 				{
@@ -211,7 +210,7 @@ function may_showgeneexp_nomutationdata(tk, block) {
 				tk,
 				block
 			)
-			tk.tkconfigtip.showunder(d3event.target)
+			tk.tkconfigtip.showunder(event.target)
 		})
 		return
 	}
@@ -1312,10 +1311,10 @@ function render_multi_cnvloh(tk, block) {
 				.on('mouseout', () => {
 					tk.tktip.hide()
 				})
-				.on('click', () => {
+				.on('click', event => {
 					tk.tip2.clear()
 					click_samplegroup_showmenu(samplegroup, tk, block)
-					tk.tip2.showunder(d3event.target)
+					tk.tip2.showunder(event.target)
 				})
 
 			// v span
@@ -2503,8 +2502,8 @@ export async function focus_singlesample(p) {
 				.attr('type', 'checkbox')
 				.style('margin-right', '3px')
 				.property('checked', !t.hidden)
-				.on('change', () => {
-					if (d3event.target.checked) {
+				.on('change', event => {
+					if (event.target.checked) {
 						bb.turnOnTrack(t)
 					} else {
 						bb.turnOffTrack(t)
@@ -3337,8 +3336,8 @@ the cutoff "1" may be configurable
 		.attr('type', 'checkbox')
 		.attr('id', id)
 		.property('checked', tk.waterfall.inuse)
-		.on('change', () => {
-			tk.waterfall.inuse = d3event.target.checked
+		.on('change', event => {
+			tk.waterfall.inuse = event.target.checked
 			render_singlesample(tk, block)
 			block.block_setheight()
 		})
@@ -3362,8 +3361,8 @@ function configPanel_cnvloh(tk, block) {
 			.attr('type','checkbox')
 			.attr('id', id)
 			.property( 'checked', tk.showonlycnvwithsv )
-			.on('change',()=>{
-				tk.showonlycnvwithsv = d3event.target.checked
+			.on('change',(event)=>{
+				tk.showonlycnvwithsv = event.target.checked
 				loadTk(tk, block)
 			})
 		row.append('label')
@@ -3384,9 +3383,9 @@ function configPanel_cnvloh(tk, block) {
 			.property('value', tk.valueCutoff || 0)
 			.attr('type', 'number')
 			.style('width', '50px')
-			.on('keyup', () => {
-				if (d3event.code != 'Enter' && d3event.code != 'NumpadEnter') return
-				let v = Number.parseFloat(d3event.target.value)
+			.on('keyup', event => {
+				if (event.code != 'Enter' && event.code != 'NumpadEnter') return
+				let v = Number.parseFloat(event.target.value)
 				if (!v || v < 0) {
 					// invalid value, set to 0 to cancel
 					v = 0
@@ -3435,9 +3434,9 @@ function configPanel_cnvloh(tk, block) {
 			.property('value', tk.bplengthUpperLimit || 0)
 			.attr('type', 'number')
 			.style('width', '80px')
-			.on('keyup', () => {
-				if (d3event.code != 'Enter' && d3event.code != 'NumpadEnter') return
-				let v = Number.parseInt(d3event.target.value)
+			.on('keyup', event => {
+				if (event.code != 'Enter' && event.code != 'NumpadEnter') return
+				let v = Number.parseInt(event.target.value)
 				if (!v || v < 0) {
 					// invalid value, set to 0 to cancel
 					v = 0
@@ -3484,8 +3483,8 @@ function configPanel_cnvloh(tk, block) {
 			.append('input')
 			.attr('type', 'color')
 			.property('value', tk.cnvcolor.gain.str)
-			.on('change', () => {
-				tk.cnvcolor.gain.str = d3event.target.value
+			.on('change', event => {
+				tk.cnvcolor.gain.str = event.target.value
 				const c = d3rgb(tk.cnvcolor.gain.str)
 				tk.cnvcolor.gain.r = c.r
 				tk.cnvcolor.gain.g = c.g
@@ -3502,8 +3501,8 @@ function configPanel_cnvloh(tk, block) {
 			.append('input')
 			.attr('type', 'color')
 			.property('value', tk.cnvcolor.loss.str)
-			.on('change', () => {
-				tk.cnvcolor.loss.str = d3event.target.value
+			.on('change', event => {
+				tk.cnvcolor.loss.str = event.target.value
 				const c = d3rgb(tk.cnvcolor.loss.str)
 				tk.cnvcolor.loss.r = c.r
 				tk.cnvcolor.loss.g = c.g
@@ -3529,9 +3528,9 @@ function configPanel_cnvloh(tk, block) {
 				.property('value', tk.segmeanValueCutoff || 0)
 				.attr('type', 'number')
 				.style('width', '50px')
-				.on('keyup', () => {
-					if (d3event.code != 'Enter' && d3event.code != 'NumpadEnter') return
-					let v = Number.parseFloat(d3event.target.value)
+				.on('keyup', event => {
+					if (event.code != 'Enter' && event.code != 'NumpadEnter') return
+					let v = Number.parseFloat(event.target.value)
 					if (!v || v < 0) {
 						// invalid value, set to 0 to cancel
 						v = 0
@@ -3578,9 +3577,9 @@ function configPanel_cnvloh(tk, block) {
 				.property('value', tk.lohLengthUpperLimit || 0)
 				.attr('type', 'number')
 				.style('width', '80px')
-				.on('keyup', () => {
-					if (d3event.code != 'Enter' && d3event.code != 'NumpadEnter') return
-					let v = Number.parseInt(d3event.target.value)
+				.on('keyup', event => {
+					if (event.code != 'Enter' && event.code != 'NumpadEnter') return
+					let v = Number.parseInt(event.target.value)
 					if (!v || v < 0) {
 						// invalid value, set to 0 to cancel
 						v = 0
@@ -3627,8 +3626,8 @@ function configPanel_cnvloh(tk, block) {
 				.append('input')
 				.attr('type', 'color')
 				.property('value', tk.cnvcolor.loh.str)
-				.on('change', () => {
-					tk.cnvcolor.loh.str = d3event.target.value
+				.on('change', event => {
+					tk.cnvcolor.loh.str = event.target.value
 					const c = d3rgb(tk.cnvcolor.loh.str)
 					tk.cnvcolor.loh.r = c.r
 					tk.cnvcolor.loh.g = c.g

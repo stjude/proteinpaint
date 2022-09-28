@@ -1,4 +1,4 @@
-import { select as d3select, event as d3event } from 'd3-selection'
+import { select as d3select } from 'd3-selection'
 import { arc as d3arc } from 'd3-shape'
 import { scaleLinear } from 'd3-scale'
 import { click_variant } from './clickVariant'
@@ -193,8 +193,8 @@ export function skewer_make(tk, block) {
 		.classed('sja_aa_disclabel', true)
 		.attr('fill-opacity', d => (d.aa.showmode == modefold ? 0 : 1))
 		.attr('transform', 'scale(1) rotate(0)')
-		.on('mousedown', () => {
-			d3event.stopPropagation()
+		.on('mousedown', event => {
+			event.stopPropagation()
 		})
 		.on('click', d => {
 			fold_glyph([d.aa], tk)
@@ -227,12 +227,12 @@ export function skewer_make(tk, block) {
 		.attr('fill', 'white')
 		.attr('fill-opacity', 0)
 		.attr('stroke-opacity', 0)
-		.on('mousedown', () => {
-			d3event.stopPropagation()
+		.on('mousedown', event => {
+			event.stopPropagation()
 		})
-		.on('mouseover', d => {
+		.on('mouseover', (event, d) => {
 			if (tk.disc_mouseover) {
-				tk.disc_mouseover(d, d3event.target)
+				tk.disc_mouseover(d, event.target)
 			}
 		})
 		.on('mouseout', d => {
@@ -240,8 +240,8 @@ export function skewer_make(tk, block) {
 				tk.disc_mouseout(d)
 			}
 		})
-		.on('click', async d => {
-			click_variant(d, tk, block, d3event.target.getBoundingClientRect(), d3event.target)
+		.on('click', async (event, d) => {
+			click_variant(d, tk, block, event.target.getBoundingClientRect(), event.target)
 		})
 
 	// disc rims
@@ -457,8 +457,8 @@ export function skewer_make(tk, block) {
 		.attr('height', ss.stem1)
 		.attr('x', d => -d.ssk_width / 2)
 		.attr('width', d => d.ssk_width)
-		.on('mouseover', d => {
-			const p = d3select(d3event.target.parentNode)
+		.on('mouseover', (event, d) => {
+			const p = d3select(event.target.parentNode)
 			p.selectAll('.sja_aa_disckick')
 				.transition()
 				.attr('stroke-opacity', 1)
@@ -470,8 +470,8 @@ export function skewer_make(tk, block) {
 				.transition()
 				.attr('fill-opacity', 1)
 		})
-		.on('mouseout', function(d) {
-			const p = d3select(d3event.target.parentNode)
+		.on('mouseout', function(event, d) {
+			const p = d3select(event.target.parentNode)
 			p.selectAll('.sja_aa_disckick')
 				.transition()
 				.attr('stroke-opacity', 0)
@@ -483,8 +483,8 @@ export function skewer_make(tk, block) {
 				.transition()
 				.attr('fill-opacity', 0)
 		})
-		.on('click', async d => {
-			click_variant(d, tk, block, d3event.target.getBoundingClientRect(), null, d3event.target)
+		.on('click', async (event, d) => {
+			click_variant(d, tk, block, event.target.getBoundingClientRect(), null, event.target)
 		})
 }
 

@@ -1,4 +1,3 @@
-import { event as d3event } from 'd3-selection'
 import * as client from './client'
 import { legend_newrow } from './block.legend'
 import * as common from '#shared/common'
@@ -113,10 +112,10 @@ allow interacting with it, to update settings of i, and update track
 		.style('margin-right', '1px')
 		.style('color', '#000')
 		.html('&#215;')
-		.on('click', async () => {
+		.on('click', async event => {
 			if (loading) return
 			loading = true
-			d3event.target.innerHTML = 'deleting...'
+			event.target.innerHTML = 'deleting...'
 			delete i.isactivefilter
 			if (i.iscategorical) {
 				delete i.unannotated_ishidden
@@ -324,8 +323,8 @@ function menu_show_numeric(i, td, tk, block) {
 		.attr('value', i.range.start)
 		.style('width', '60px')
 		.property('disabled', i.range.startunbounded ? true : false)
-		.on('keyup', async () => {
-			if (!client.keyupEnter()) return
+		.on('keyup', async event => {
+			if (!client.keyupEnter(event)) return
 			if (!i.isactivefilter) return
 			start_input.property('disabled', true)
 			await apply()
@@ -339,8 +338,8 @@ function menu_show_numeric(i, td, tk, block) {
 	const startselect = td
 		.append('select')
 		.style('margin-left', '10px')
-		.on('change', async () => {
-			const si = d3event.target.selectedIndex
+		.on('change', async event => {
+			const si = event.target.selectedIndex
 			if (si == 2) {
 				i.range.startunbounded = true
 				start_input.property('disabled', true)
@@ -372,8 +371,8 @@ function menu_show_numeric(i, td, tk, block) {
 	const stopselect = td
 		.append('select')
 		.style('margin-right', '10px')
-		.on('change', async () => {
-			const si = d3event.target.selectedIndex
+		.on('change', async event => {
+			const si = event.target.selectedIndex
 			if (si == 2) {
 				i.range.stopunbounded = true
 				stop_input.property('disabled', true)
@@ -402,8 +401,8 @@ function menu_show_numeric(i, td, tk, block) {
 		.style('width', '60px')
 		.attr('value', i.range.stop)
 		.property('disabled', i.range.stopunbounded ? true : false)
-		.on('keyup', async () => {
-			if (!client.keyupEnter()) return
+		.on('keyup', async event => {
+			if (!client.keyupEnter(event)) return
 			if (!i.isactivefilter) return
 			stop_input.property('disabled', true)
 			await apply()
@@ -635,8 +634,8 @@ function display_numeric_filter(tk, i, active_filter_div, row) {
 			.attr('type', 'number')
 			.attr('value', i.range.start)
 			.style('width', '60px')
-			.on('keyup', async () => {
-				if (!client.keyupEnter()) return
+			.on('keyup', async event => {
+				if (!client.keyupEnter(event)) return
 				start_input.property('disabled', true)
 				await apply()
 				start_input.property('disabled', false)
@@ -671,8 +670,8 @@ function display_numeric_filter(tk, i, active_filter_div, row) {
 			.attr('type', 'number')
 			.style('width', '60px')
 			.attr('value', i.range.stop)
-			.on('keyup', async () => {
-				if (!client.keyupEnter()) return
+			.on('keyup', async event => {
+				if (!client.keyupEnter(event)) return
 				stop_input.property('disabled', true)
 				await apply()
 				stop_input.property('disabled', false)

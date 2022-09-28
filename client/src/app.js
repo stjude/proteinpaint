@@ -1,4 +1,4 @@
-import { select as d3select, selectAll as d3selectAll, event as d3event } from 'd3-selection'
+import { select as d3select, selectAll as d3selectAll } from 'd3-selection'
 import * as client from './client'
 import { dofetch3, setAuth } from '../common/dofetch'
 import { findgenemodel_bysymbol } from './gene'
@@ -287,8 +287,8 @@ async function makeheader(app, obj, jwt) {
 				.append('a')
 				.style('margin-left', '10px')
 				.text('Running BLAT')
-				.on('click', async () => {
-					headtip.clear().showunder(d3event.target)
+				.on('click', async event => {
+					headtip.clear().showunder(event.target)
 					const div = headtip.d.append('div').style('margin', '10px')
 					const wait = div.append('div').text('Loading...')
 					try {
@@ -354,8 +354,8 @@ async function makeheader(app, obj, jwt) {
 		.attr('size', 20)
 		.attr('placeholder', 'Gene, position, or SNP')
 		.attr('title', 'Search by gene, SNP, or position')
-		.on('keyup', () => {
-			if (client.keyupEnter()) entersearch()
+		.on('keyup', event => {
+			if (client.keyupEnter(event)) entersearch()
 			else debouncer()
 		})
 	// input.node().focus() Causes app drawer to unsmoothly open and close
@@ -407,8 +407,8 @@ async function makeheader(app, obj, jwt) {
 		.classed('sja_menuoption', true)
 		.style('padding', padw_sm)
 		.text('Help')
-		.on('click', () => {
-			const p = d3event.target.getBoundingClientRect()
+		.on('click', event => {
+			const p = event.target.getBoundingClientRect()
 			const div = headtip
 				.clear()
 				.show(p.left - 0, p.top + p.height + 5)

@@ -388,7 +388,7 @@ export const icons = {
 			.style('background-color', '#fff')
 			.style('cursor', 'pointer')
 			.on('change', o.handler)
-			.on('click.tphm2', () => event.stopPropagation())
+			.on('click.tphm2', event => event.stopPropagation())
 
 		addWrapper
 			.append('button')

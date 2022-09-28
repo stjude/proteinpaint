@@ -1,8 +1,10 @@
-import { select as d3select, event as d3event } from 'd3-selection'
+import { select as d3select } from 'd3-selection'
 import { stratify, partition } from 'd3-hierarchy'
 import { arc as d3arc } from 'd3-shape'
 import { rgb as d3rgb } from 'd3-color'
-import { scaleOrdinal, schemeCategory10 } from 'd3-scale'
+import { scaleOrdinal } from 'd3-scale'
+import { schemeCategory10 } from 'd3-scale-chromatic'
+
 import { textlensf } from './client'
 
 /*
@@ -115,11 +117,11 @@ export default function(opts) {
 			d._color = c
 			return c
 		})
-		.on('mouseover', d => {
+		.on('mouseover', (event, d) => {
 			if (!d.parent) return
 			if (sun.busy) return
 
-			d3event.target.setAttribute(
+			event.target.setAttribute(
 				'fill',
 				d3rgb(d._color)
 					.darker(0.5)
@@ -127,13 +129,13 @@ export default function(opts) {
 			)
 			slicemouseover(d, sun)
 		})
-		.on('mouseout', d => {
+		.on('mouseout', (event, d) => {
 			pica.g.selectAll('*').remove()
 			if (!d.parent) return
-			d3event.target.setAttribute('fill', d._color)
+			event.target.setAttribute('fill', d._color)
 		})
 
-		.on('click', d => {
+		.on('click', (event, d) => {
 			if (!click_ring) return
 			// TODO
 			click_ring(d)
@@ -200,19 +202,19 @@ export default function(opts) {
 							if (sun.busy) return
 							remove(sun)
 						})
-						.on('mousedown', () => {
-							d3event.preventDefault()
-							d3event.stopPropagation()
-							const mx = d3event.clientX,
-								my = d3event.clientY,
+						.on('mousedown', event => {
+							event.preventDefault()
+							event.stopPropagation()
+							const mx = event.clientX,
+								my = event.clientY,
 								body = d3select(document.body)
 							let cx0 = sun.cx,
 								cy0 = sun.cy
 							body
 								.on('mousemove', () => {
 									sun.busy = true // must set here but not mousedown
-									sun.cx = cx0 + d3event.clientX - mx
-									sun.cy = cy0 + d3event.clientY - my
+									sun.cx = cx0 + event.clientX - mx
+									sun.cy = cy0 + event.clientY - my
 									g.attr('transform', 'translate(' + sun.cx + ',' + sun.cy + ')')
 								})
 								.on('mouseup', () => {
@@ -254,10 +256,10 @@ export default function(opts) {
 								listbutt_bg.attr('fill', '#d9d9d9')
 								listbutt_text.attr('fill', '#858585')
 							})
-							.on('click', () => {
+							.on('click', event => {
 								remove(sun)
-								const x = d3event.clientX - radius,
-									y = d3event.clientY - radius
+								const x = event.clientX - radius,
+									y = event.clientY - radius
 								setTimeout(() => click_listbutton(x, y), dur1)
 							})
 					}

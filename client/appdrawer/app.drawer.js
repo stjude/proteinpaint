@@ -1,4 +1,3 @@
-import { event as d3event } from 'd3-selection'
 import { dofetch3, sayerror } from '#src/client'
 
 const defaults = {
@@ -130,8 +129,8 @@ export function drawer_init(app, features, overrides = {}) {
 				.style('border-radius', '5px')
 				.style('background-color', app_btn_active ? '#b2b2b2' : '#f2f2f2')
 				.style('color', app_btn_active ? '#fff' : '#000')
-				.on('click', async () => {
-					d3event.stopPropagation()
+				.on('click', async event => {
+					event.stopPropagation()
 					// toggle button color and hide/show apps div
 					app_btn_active = !app_btn_active
 					await load_examples()

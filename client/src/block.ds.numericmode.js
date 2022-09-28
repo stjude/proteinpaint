@@ -3,7 +3,7 @@ import { axisLeft } from 'd3-axis'
 import { format as d3format } from 'd3-format'
 import { arc as d3arc } from 'd3-shape'
 import { rgb as d3rgb } from 'd3-color'
-import { select as d3select, event as d3event } from 'd3-selection'
+import { select as d3select } from 'd3-selection'
 import { itemtable, query_vcfcohorttrack } from './block.ds.itemtable'
 import * as client from './client'
 import * as coord from './coord'
@@ -810,23 +810,23 @@ set:
 						.attr('y2', y)
 						.attr('stroke', hasref ? (hasalt ? tk.genotype2color.ra : tk.genotype2color.rr) : tk.genotype2color.aa)
 						.attr('shape-rendering', 'crispEdges')
-						.on('mouseover', () => {
+						.on('mouseover', event => {
 							const lst = [{ k: tk.ds.cohort.key4annotation, v: sn }]
 							for (const k in a) {
 								lst.push({ k: k, v: a[k] })
 							}
 							lst.push({ k: 'genotype', v: s.genotype })
-							tk.tktip.clear().show(d3event.clientX, d3event.clientY)
+							tk.tktip.clear().show(event.clientX, event.clientY)
 							client.make_table_2col(tk.tktip.d, lst)
-							d3event.target.setAttribute('stroke-width', 3)
-							d3event.target.setAttribute('x1', -m.radius - 3)
-							d3event.target.setAttribute('x2', m.radius + 3)
+							event.target.setAttribute('stroke-width', 3)
+							event.target.setAttribute('x1', -m.radius - 3)
+							event.target.setAttribute('x2', m.radius + 3)
 						})
-						.on('mouseout', () => {
+						.on('mouseout', event => {
 							tk.tktip.hide()
-							d3event.target.setAttribute('stroke-width', 1)
-							d3event.target.setAttribute('x1', -m.radius)
-							d3event.target.setAttribute('x2', m.radius)
+							event.target.setAttribute('stroke-width', 1)
+							event.target.setAttribute('x1', -m.radius)
+							event.target.setAttribute('x2', m.radius)
 						})
 				}
 				for (const s of m.sampledata) {
@@ -847,23 +847,23 @@ set:
 						.attr('y2', y)
 						.attr('stroke', hasref ? (hasalt ? tk.genotype2color.ra : tk.genotype2color.rr) : tk.genotype2color.aa)
 						.attr('shape-rendering', 'crispEdges')
-						.on('mouseover', () => {
+						.on('mouseover', event => {
 							const lst = [{ k: tk.ds.cohort.key4annotation, v: sn }]
 							for (const k in a) {
 								lst.push({ k: k, v: a[k] })
 							}
 							lst.push({ k: 'genotype', v: s.genotype })
-							tk.tktip.clear().show(d3event.clientX, d3event.clientY)
+							tk.tktip.clear().show(event.clientX, event.clientY)
 							client.make_table_2col(tk.tktip.d, lst)
-							d3event.target.setAttribute('stroke-width', 3)
-							d3event.target.setAttribute('x1', -m.radius - 3)
-							d3event.target.setAttribute('x2', m.radius + 3)
+							event.target.setAttribute('stroke-width', 3)
+							event.target.setAttribute('x1', -m.radius - 3)
+							event.target.setAttribute('x2', m.radius + 3)
 						})
-						.on('mouseout', () => {
+						.on('mouseout', event => {
 							tk.tktip.hide()
-							d3event.target.setAttribute('stroke-width', 1)
-							d3event.target.setAttribute('x1', -m.radius)
-							d3event.target.setAttribute('x2', m.radius)
+							event.target.setAttribute('stroke-width', 1)
+							event.target.setAttribute('x1', -m.radius)
+							event.target.setAttribute('x2', m.radius)
 						})
 				}
 			}
@@ -913,8 +913,8 @@ set:
 							.attr('stroke', tk.ds.genotypebynumericvalue.refref.color)
 							.attr('fill', 'white')
 							.attr('fill-opacity', 0)
-							.on('mouseover', () => {
-								tk.tktip.show(d3event.clientX, d3event.clientY).clear()
+							.on('mouseover', event => {
+								tk.tktip.show(event.clientX, event.clientY).clear()
 								const lst = [
 									{ k: 'Variant', v: m.chr + ':' + (m.pos + 1) + ' ' + m.ref + '>' + m.alt },
 									{ k: 'Genotype', v: 'Ref/Ref' },
@@ -939,8 +939,8 @@ set:
 							.attr('stroke', tk.ds.genotypebynumericvalue.refalt.color)
 							.attr('fill', 'white')
 							.attr('fill-opacity', 0)
-							.on('mouseover', () => {
-								tk.tktip.show(d3event.clientX, d3event.clientY).clear()
+							.on('mouseover', event => {
+								tk.tktip.show(event.clientX, event.clientY).clear()
 								const lst = [
 									{ k: 'Variant', v: m.chr + ':' + (m.pos + 1) + ' ' + m.ref + '>' + m.alt },
 									{ k: 'Genotype', v: 'Ref/Alt' },
@@ -965,8 +965,8 @@ set:
 							.attr('stroke', tk.ds.genotypebynumericvalue.altalt.color)
 							.attr('fill', 'white')
 							.attr('fill-opacity', 0)
-							.on('mouseover', () => {
-								tk.tktip.show(d3event.clientX, d3event.clientY).clear()
+							.on('mouseover', event => {
+								tk.tktip.show(event.clientX, event.clientY).clear()
 								const lst = [
 									{ k: 'Variant', v: m.chr + ':' + (m.pos + 1) + ' ' + m.ref + '>' + m.alt },
 									{ k: 'Genotype', v: 'Alt/Alt' },
@@ -1029,14 +1029,14 @@ set:
 			.attr('fill-opacity', 0)
 			.attr('stroke-opacity', 0)
 
-			.on('mousedown', () => {
-				d3event.stopPropagation()
+			.on('mousedown', event => {
+				event.stopPropagation()
 			})
 
-			.on('mouseover', m => {
+			.on('mouseover', (event, m) => {
 				m_mouseover(m, tk)
 				if (tk.disc_mouseover) {
-					tk.disc_mouseover(m, d3event.target)
+					tk.disc_mouseover(m, event.target)
 				} else {
 					epaint_may_hl(tk, [m], true)
 				}
@@ -1051,8 +1051,8 @@ set:
 				}
 			})
 
-			.on('click', m => {
-				const p = d3event.target.getBoundingClientRect()
+			.on('click', (event, m) => {
+				const p = event.target.getBoundingClientRect()
 				m_click(m, p, tk, block)
 			})
 	}
@@ -1080,13 +1080,13 @@ set:
 		.attr('y', m => m._labfontsize * middlealignshift)
 		.attr('class', 'sja_aa_disclabel')
 		.attr('transform', m => 'rotate(' + (m.labattop ? '-' : '') + '90)')
-		.on('mousedown', () => {
-			d3event.stopPropagation()
+		.on('mousedown', event => {
+			event.stopPropagation()
 		})
 		.on('mouseover', m => m_mouseover(m, tk))
 		.on('mouseout', m => m_mouseout(m, tk))
-		.on('click', m => {
-			m_click(m, { left: d3event.clientX, top: d3event.clientY }, tk, block)
+		.on('click', (event, m) => {
+			m_click(m, { left: event.clientX, top: event.clientY }, tk, block)
 		})
 
 	if (tk.hlaachange) {

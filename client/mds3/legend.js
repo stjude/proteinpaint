@@ -1,4 +1,3 @@
-import { event as d3event } from 'd3-selection'
 import { legend_newrow } from '../src/block.legend'
 import { Menu } from '#dom/menu'
 import { mclass, dt2label, dtcnv, dtloh, dtitd, dtsv, dtfusionrna, mclassitd } from '#shared/common'
@@ -113,20 +112,19 @@ function may_create_variantShapeName(tk) {
 }
 
 function may_create_infoFields(tk) {
-	
 	// console.log(field_category)
 	// console.log(tk)
-	
+
 	if (!tk.mds.bcf || !tk.mds.bcf.info) {
 		// not using bcf with info fields
 		return
 	}
 	// collect info field keys eligible for displaying in legend
-	const infoFields4legend = [] 
+	const infoFields4legend = []
 	// find eligible info field keys to show in legend and create global object with infofield categories as field_category
-	for(let key in tk.mds.bcf.info){
+	for (let key in tk.mds.bcf.info) {
 		let field = tk.mds.bcf.info[key]
-		if(field.categories){
+		if (field.categories) {
 			infoFields4legend.push(key)
 		}
 	}
@@ -212,16 +210,16 @@ function may_update_variantShapeName(data, tk) {
 
 function may_update_infoFields(data, tk) {
 	// TODO allow filtering
-	
+
 	if (!tk.legend.bcfInfo) return
 	if (!data.skewer) {
 		console.log('data.skewer[] is not present and cannot show INFO legend')
 		return
 	}
 	let field_category = {}
-	for(let key in tk.mds.bcf.info){
+	for (let key in tk.mds.bcf.info) {
 		let field = tk.mds.bcf.info[key]
-		if(field.categories){
+		if (field.categories) {
 			field_category = field.categories
 		}
 	}
@@ -271,11 +269,11 @@ function may_update_infoFields(data, tk) {
 					hidden_lst.push({ k })
 				}
 			}
-			
+
 			for (const c of show_lst) {
-			let desc
-				for(let [key,value] of Object.entries(field_category)){
-					if(c.category == key){	
+				let desc
+				for (let [key, value] of Object.entries(field_category)) {
+					if (c.category == key) {
 						desc = value.desc
 					}
 				}
@@ -505,11 +503,11 @@ function update_mclass(tk) {
 			.style('text-decoration', 'line-through')
 			.style('opacity', 0.3)
 			.text((c.count ? '(' + c.count + ') ' : '') + (Number.isInteger(c.k) ? dt2label[c.k] : mclass[c.k].label))
-			.on('click', async () => {
+			.on('click', async event => {
 				if (loading) return
 				loading = true
 				tk.legend.mclass.hiddenvalues.delete(c.k)
-				d3event.target.innerHTML = 'Updating...'
+				event.target.innerHTML = 'Updating...'
 				tk.uninitialized = true
 				await tk.load()
 			})

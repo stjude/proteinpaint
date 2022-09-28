@@ -496,7 +496,7 @@ function setInteractivity(self) {
 		})
 	}
 
-	self.showMenu = (clickedElem = null, menuHolder = null) => {
+	self.showMenu = (event, clickedElem = null, menuHolder = null) => {
 		const tip = self.dom.tip
 		tip.clear()
 		// self.dom.holder really is set to clickedElem because
@@ -519,7 +519,8 @@ function setInteractivity(self) {
 			options.push({ label: 'Replace', callback: self.showTree }, { label: 'Remove', callback: self.removeTerm })
 		}
 
-		;(menuHolder || tip.d)
+		const d3elem = menuHolder || tip.d
+		d3elem
 			.selectAll('div')
 			.data(options)
 			.enter()
@@ -527,7 +528,7 @@ function setInteractivity(self) {
 			.attr('class', 'sja_menuoption sja_sharp_border')
 			.style('display', self.opts.menuLayout == 'horizontal' ? 'inline-block' : 'block')
 			.text(d => d.label)
-			.on('click', d => {
+			.on('click', (event, d) => {
 				self.dom.tip.clear()
 				d.callback(self.dom.tip.d)
 			})

@@ -1,4 +1,4 @@
-import { select, event } from 'd3-selection'
+import { select } from 'd3-selection'
 import { initByInput } from './controls.config'
 import { to_svg } from '../src/client'
 import { fillTermWrapper } from '../termsetting/termsetting'
@@ -253,7 +253,7 @@ export class MatrixControls {
 		//this.recover.track()
 	}
 
-	async callback(d) {
+	async callback(event, d) {
 		const { clientX, clientY } = event
 		const app = this.opts.app
 		const parent = this.opts.parent

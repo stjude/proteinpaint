@@ -1,6 +1,6 @@
 import { getCompInit, copyMerge } from '../rx'
 import { fillTermWrapper } from '../termsetting/termsetting'
-import { select, event } from 'd3-selection'
+import { select } from 'd3-selection'
 import { scaleLinear as d3Linear } from 'd3-scale'
 import Partjson from 'partjson'
 import { zoom as d3zoom, zoomIdentity } from 'd3'
@@ -373,7 +373,7 @@ function setRenderers(self) {
 		mainG.call(zoom)
 		rect.call(zoom)
 
-		function handleZoom() {
+		function handleZoom(event) {
 			// create new scale ojects based on event
 			const new_xScale = event.transform.rescaleX(self.xAxisScale)
 			const new_yScale = event.transform.rescaleY(self.yAxisScale)
@@ -503,7 +503,7 @@ function setRenderers(self) {
 }
 
 function setInteractivity(self) {
-	self.mouseover = function() {
+	self.mouseover = function(event) {
 		if (event.target.tagName == 'circle') {
 			self.app.tip.clear().show(event.clientX, event.clientY)
 

@@ -1,4 +1,4 @@
-import { select, event } from 'd3-selection'
+import { select } from 'd3-selection'
 import { brushX } from 'd3-brush'
 
 /*
@@ -73,7 +73,7 @@ function applyBrush(self, elem, brush) {
 
 	brush.d3brush = brushX()
 		.extent([[plot_size.xpad, 0], [plot_size.width - plot_size.xpad, plot_size.height]])
-		.on('brush', function(d) {
+		.on('brush', function(event, d) {
 			const s = event.selection
 			if (!s) return // not an event triggered by brush dragging
 			//update temp_ranges

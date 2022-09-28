@@ -1,10 +1,11 @@
 import * as client from './client'
 import * as d3 from 'd3'
+import { interpolatePlasma } from 'd3-scale-chromatic'
 import { axisTop, axisBottom } from 'd3-axis'
-import { scaleLinear, scaleOrdinal, schemeCategory20 } from 'd3-scale'
-import { event as d3event } from 'd3-selection'
+import { scaleLinear, scaleOrdinal } from 'd3-scale'
 import { gene_searchbox, findgenemodel_bysymbol } from './gene'
 import { legend_newrow } from './block.legend'
+import { schemeCategory20 } from '#common/legacy-d3-polyfill'
 
 /*
 ********************** EXPORTED
@@ -658,8 +659,8 @@ function make_zoom_panel(obj) {
 				obj.camera.fov = parseInt(obj.zoom_slider.node().value)
 				obj.camera.updateProjectionMatrix()
 			})
-			.on('mousedown', () => {
-				d3event.stopPropagation()
+			.on('mousedown', event => {
+				event.stopPropagation()
 			})
 	}
 }
@@ -1470,7 +1471,7 @@ function make_heatmap(data, obj, colidx) {
 	// Build color scale
 	var myColor = d3
 		.scaleSequential()
-		.interpolator(d3.interpolatePlasma)
+		.interpolator(interpolatePlasma)
 		.domain([0, max_mean])
 
 	const div = pane.pane
@@ -1498,7 +1499,7 @@ function make_heatmap(data, obj, colidx) {
 				.style('stroke', 'none')
 				.style('opacity', 0.8)
 				//tooltip
-				.on('mouseover', function(d) {
+				.on('mouseover', function(event) {
 					div
 						.transition()
 						.duration(200)
@@ -1506,10 +1507,10 @@ function make_heatmap(data, obj, colidx) {
 
 					div
 						.html('Mean Expression: ' + category.mean)
-						.style('left', d3.mouse(this)[0] + 70 + 'px')
-						.style('top', d3.mouse(this)[1] + 20 + 'px')
+						.style('left', d3.pointer(event, this)[0] + 70 + 'px')
+						.style('top', d3.pointer(event, this)[1] + 20 + 'px')
 				})
-				.on('mouseout', function(d) {
+				.on('mouseout', function() {
 					div
 						.transition()
 						.duration(500)

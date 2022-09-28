@@ -1,8 +1,9 @@
 import { getCompInit, copyMerge } from '../rx'
 import { controlsInit } from './controls'
 import * as client from '../src/client'
-import { event as d3event } from 'd3-selection'
-import { scaleLinear, scaleLog, scaleOrdinal, schemeCategory10, schemeCategory20 } from 'd3-scale'
+import { scaleLinear, scaleLog, scaleOrdinal } from 'd3-scale'
+import { schemeCategory10 } from 'd3-scale-chromatic'
+import { schemeCategory20 } from '#common/legacy-d3-polyfill'
 import { format as d3format } from 'd3-format'
 import { axisLeft } from 'd3-axis'
 
@@ -232,10 +233,10 @@ function setRenderers(self) {
 							self.y_scale(sc.use_logscale ? item.boxplot.p75 / item.boxplot.p25 : item.boxplot.p75 - item.boxplot.p25)
 					)
 					.attr('fill', '#901739')
-					.on('mouseover', () => {
+					.on('mouseover', event => {
 						self.app.tip
 							.clear()
-							.show(d3event.clientX, d3event.clientY)
+							.show(event.clientX, event.clientY)
 							.d.append('div')
 							.html(
 								`<table class='sja_simpletable'>
@@ -295,10 +296,10 @@ function setRenderers(self) {
 					.attr('cy', self.y_scale(outlier.value) - s.barheight)
 					.attr('r', 2)
 					.attr('fill', '#901739')
-					.on('mouseover', () => {
+					.on('mouseover', event => {
 						self.app.tip
 							.clear()
-							.show(d3event.clientX, d3event.clientY)
+							.show(event.clientX, event.clientY)
 							.d.append('div')
 							.html(self.config.term2.term.name + ' ' + outlier.value.toPrecision(4))
 					})
@@ -309,10 +310,10 @@ function setRenderers(self) {
 			// x-label tooltip
 			if (item.lst) {
 				xlabel
-					.on('mouseover', () => {
+					.on('mouseover', event => {
 						self.app.tip
 							.clear()
-							.show(d3event.clientX, d3event.clientY)
+							.show(event.clientX, event.clientY)
 							.d.append('div')
 							.html(
 								self.config.term.term.name +
@@ -330,10 +331,10 @@ function setRenderers(self) {
 					})
 			} else {
 				xlabel
-					.on('mouseover', () => {
+					.on('mouseover', event => {
 						self.app.tip
 							.clear()
-							.show(d3event.clientX, d3event.clientY)
+							.show(event.clientX, event.clientY)
 							.d.append('div')
 							.html(self.config.term.term.name + ': ' + item.label + '<br>' + '# patients: ' + item.value)
 					})

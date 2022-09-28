@@ -1,6 +1,5 @@
 import { getInitFxn } from '#rx'
 import * as utils from './utils'
-import { event } from 'd3-selection'
 import { openSandbox } from './adSandbox'
 import { slideDrawer } from './mainBtn'
 
@@ -39,7 +38,7 @@ export const buttonInit = getInitFxn(AppDrawerButton)
 
 function setRenderers(self) {
 	const btn = utils.makeButton({ div: self.holder, text: self.opts.element.name, margin: '20px 20px 0px' })
-	btn.attr('class', 'sjpp-appdrawer-dataset-btn').on('click', async () => {
+	btn.attr('class', 'sjpp-appdrawer-dataset-btn').on('click', async event => {
 		event.stopPropagation()
 		await self.app.dispatch({
 			type: 'is_apps_btn_active',

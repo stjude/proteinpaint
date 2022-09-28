@@ -1,4 +1,3 @@
-import { event } from 'd3-selection'
 import { Menu } from '../dom/menu'
 import { dofetch3 } from '../common/dofetch'
 import { newpane, export_data } from '../src/client'
@@ -9,7 +8,7 @@ export default function getHandlers(self) {
 	self.dom.tip = tip
 	const s = self.settings
 
-	function barLabelClickHandler() {
+	function barLabelClickHandler(event) {
 		// same handler for row label click in horziontal orientation
 		// or col label click in vertical orientation, since
 		// row/column labels only apply to bars
@@ -45,7 +44,7 @@ export default function getHandlers(self) {
 			}
 		},
 		series: {
-			mouseover(d) {
+			mouseover(event, d) {
 				event.stopPropagation()
 				const t1 = self.config.term.term
 				const t2 = self.config.term2 && self.config.term2.term
@@ -86,8 +85,8 @@ export default function getHandlers(self) {
 				return d.color
 			},
 			click: self.opts.bar_click_override
-				? d => self.opts.bar_click_override(getTermValues(d, self))
-				: d => handle_click(self, d)
+				? (event, d) => self.opts.bar_click_override(getTermValues(d, self))
+				: (event, d) => handle_click(event, self)
 		},
 		colLabel: {
 			text: d => {
@@ -98,7 +97,7 @@ export default function getHandlers(self) {
 					: d
 			},
 			click: barLabelClickHandler,
-			mouseover: () => {
+			mouseover: event => {
 				event.stopPropagation()
 				tip.show(event.clientX, event.clientY).d.html('Click to hide bar')
 			},
@@ -115,7 +114,7 @@ export default function getHandlers(self) {
 					: d
 			},
 			click: barLabelClickHandler,
-			mouseover: () => {
+			mouseover: event => {
 				event.stopPropagation()
 				tip.show(event.clientX, event.clientY).d.html('Click to hide bar')
 			},
@@ -124,7 +123,7 @@ export default function getHandlers(self) {
 			}
 		},
 		legend: {
-			click: () => {
+			click: event => {
 				event.stopPropagation()
 				const d = event.target.__data__
 				if (d === undefined) return
@@ -146,7 +145,7 @@ export default function getHandlers(self) {
 					}
 				})
 			},
-			mouseover: () => {
+			mouseover: event => {
 				event.stopPropagation()
 				const d = event.target.__data__
 				if (d === undefined) return
@@ -203,7 +202,7 @@ function getUpdatedQfromClick(d, term, isHidden = false) {
 	return q
 }
 
-function handle_click(self) {
+function handle_click(event, self) {
 	const d = event.target.__data__ || event.target.parentNode.__data__
 	// bar label data only has {id,label},
 	// while bar data has all required data including seriesId
@@ -322,7 +321,7 @@ function handle_click(self) {
 		.append('div')
 		.attr('class', 'sja_menuoption')
 		.html(d => d.label)
-		.on('click', d => {
+		.on('click', (event, d) => {
 			self.app.tip.hide()
 			d.callback(self, tvslst)
 		})

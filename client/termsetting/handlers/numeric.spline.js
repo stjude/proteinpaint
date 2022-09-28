@@ -1,4 +1,4 @@
-import { select, event } from 'd3-selection'
+import { select } from 'd3-selection'
 import { setDensityPlot } from './density'
 import { keyupEnter } from '#src/client'
 import { getPillNameDefault } from '#termsetting'
@@ -116,10 +116,10 @@ function renderCustomSplineInputs(self, div) {
 		.style('width', '100px')
 		.text(self.q.knots.map(d => d.value).join('\n'))
 		.on('change', handleChange)
-		.on('keyup', async () => {
+		.on('keyup', async event => {
 			// enter or backspace/delete
 			// i don't think backspace works
-			if (!keyupEnter() && event.key != 8) return
+			if (!keyupEnter(event) && event.key != 8) return
 			handleChange.call(this)
 		})
 

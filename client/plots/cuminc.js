@@ -1,8 +1,10 @@
 import { getCompInit, copyMerge } from '../rx'
 import { controlsInit } from './controls'
 import { fillTermWrapper } from '#termsetting'
-import { select, event } from 'd3-selection'
-import { scaleLinear, scaleOrdinal, schemeCategory10, schemeCategory20 } from 'd3-scale'
+import { select } from 'd3-selection'
+import { scaleLinear, scaleOrdinal } from 'd3-scale'
+import { schemeCategory10 } from 'd3-scale-chromatic'
+import { schemeCategory20 } from '#common/legacy-d3-polyfill'
 import { axisLeft, axisBottom } from 'd3-axis'
 import { line, area, curveStepAfter } from 'd3-shape'
 import { rgb } from 'd3-color'
@@ -1029,7 +1031,7 @@ function setInteractivity(self) {
 		high: 'Upper 95% CI'
 	}
 
-	self.mouseover = function() {
+	self.mouseover = function(event) {
 		const d = event.target.__data__
 		/*if (event.target.tagName == 'circle') {
 			const label = labels[d.seriesName]
@@ -1057,7 +1059,7 @@ function setInteractivity(self) {
 		self.app.tip.hide()
 	}
 
-	self.legendClick = function() {
+	self.legendClick = function(event) {
 		event.stopPropagation()
 		const d = event.target.__data__
 		if (d === undefined) return

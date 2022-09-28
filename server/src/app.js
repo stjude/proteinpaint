@@ -140,7 +140,7 @@ if (!serverconfig.backend_only) {
 app.use(compression())
 
 app.use((req, res, next) => {
-	if (req.method.toUpperCase() == 'POST' && !req.headers['content-type']) {
+	if (req.method.toUpperCase() == 'POST') {
 		// assume all post requests have json-encoded content
 		// TODO: change all client-side fetch(new Request(...)) to use dofetch*() to preset the content-type
 		req.headers['content-type'] = 'application/json'

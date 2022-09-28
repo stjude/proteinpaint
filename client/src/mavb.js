@@ -1,4 +1,4 @@
-import { select as d3select, event as d3event } from 'd3-selection'
+import { select as d3select } from 'd3-selection'
 import * as client from './client'
 import { renderSandboxFormDiv } from '../dom/sandbox'
 import { scaleLog, scaleLinear } from 'd3-scale'
@@ -145,8 +145,8 @@ export function mavbui(genomes, hostURL, jwt, holder, sandbox_header) {
 		const input = filediv
 			.append('input')
 			.attr('type', 'file')
-			.on('change', () => {
-				const file = d3event.target.files[0]
+			.on('change', event => {
+				const file = event.target.files[0]
 				if (!file) {
 					fileui()
 					return
@@ -416,7 +416,7 @@ function render(mavb) {
 		.append('button')
 		.style('display', 'block')
 		.text('Show gene labels')
-		.on('click', () => {
+		.on('click', event => {
 			const str = textarea.property('value').trim()
 			if (str == '') return
 			const genes = new Set()
@@ -434,7 +434,7 @@ function render(mavb) {
 		.append('button')
 		.style('display', 'block')
 		.text('Remove all labels')
-		.on('click', () => {
+		.on('click', event => {
 			for (const d of mavb.data) {
 				if (d.ma_label) {
 					hltoggle(d, mavb)
@@ -459,14 +459,14 @@ function render(mavb) {
 		.append('button')
 		.text('Get MA plot')
 		.style('display', 'block')
-		.on('click', () => {
+		.on('click', event => {
 			client.to_svg(ma_svg.node(), 'MAplot')
 		})
 	div32
 		.append('button')
 		.text('Get volcano plot')
 		.style('display', 'block')
-		.on('click', () => {
+		.on('click', event => {
 			client.to_svg(vo_svg.node(), 'Volcano')
 		})
 }
@@ -554,7 +554,7 @@ add:
 		.on('mouseover', circlemouseover)
 		.on('mouseout', circlemouseout)
 		.on('click', d => {
-			circleclick(d, mavb, d3event.clientX, d3event.clientY)
+			circleclick(d, mavb, event.clientX, event.clientY)
 		})
 
 	const logfc0line = mavb.ma_dotarea
@@ -758,7 +758,7 @@ add:
 		.on('mouseover', circlemouseover)
 		.on('mouseout', circlemouseout)
 		.on('click', d => {
-			circleclick(d, mavb, d3event.clientX, d3event.clientY)
+			circleclick(d, mavb, event.clientX, event.clientY)
 		})
 
 	const logfc0line = mavb.vo_dotarea
@@ -823,7 +823,7 @@ add:
 		const select = row
 			.append('select')
 			.style('margin-left', '5px')
-			.on('change', () => {
+			.on('change', event => {
 				minlogpv = 0
 				maxlogpv = 0
 				const useun = select.node().selectedIndex == 0
@@ -912,7 +912,7 @@ function add_lasso(selectable_items, svg, other_svg_item_key) {
 }
 
 function circlemouseover(d) {
-	tip.clear().show(d3event.clientX, d3event.clientY)
+	tip.clear().show(event.clientX, event.clientY)
 	const lst = [
 		{ k: 'gene', v: d.gene },
 		{ k: 'average value', v: d.averagevalue },
@@ -1000,7 +1000,7 @@ function hltoggle(d, mavb) {
 		.attr('fill', 'black')
 		.attr('font-family', client.font)
 		.on('mousedown', d => {
-			labelmousedown(d.ma_label, d.ma_labelbg, d3event)
+			labelmousedown(d.ma_label, d.ma_labelbg, event)
 		})
 
 	mavb.vo_dotarea.node().appendChild(d.vo_g)
@@ -1025,25 +1025,25 @@ function hltoggle(d, mavb) {
 		.attr('fill', 'black')
 		.attr('font-family', client.font)
 		.on('mousedown', d => {
-			labelmousedown(d.vo_label, d.vo_labelbg, d3event)
+			labelmousedown(d.vo_label, d.vo_labelbg, event)
 		})
 	d3select(d.ma_circle).attr('fill-opacity', 0.8)
 	d3select(d.vo_circle).attr('fill-opacity', 0.8)
 }
 
 function labelmousedown(label, labelbg, evt) {
-	d3event.preventDefault()
+	event.preventDefault()
 	const labx = Number.parseFloat(label.attr('x'))
 	const laby = Number.parseFloat(label.attr('y'))
 	const x0 = evt.clientX
 	const y0 = evt.clientY
 	const body = d3select(document.body)
 	body
-		.on('mousemove', () => {
-			label.attr('x', labx + d3event.clientX - x0).attr('y', laby + d3event.clientY - y0)
-			labelbg.attr('x', labx + d3event.clientX - x0).attr('y', laby + d3event.clientY - y0)
+		.on('mousemove', event => {
+			label.attr('x', labx + event.clientX - x0).attr('y', laby + event.clientY - y0)
+			labelbg.attr('x', labx + event.clientX - x0).attr('y', laby + event.clientY - y0)
 		})
-		.on('mouseup', () => {
+		.on('mouseup', event => {
 			body.on('mousemove', null).on('mouseup', null)
 		})
 }

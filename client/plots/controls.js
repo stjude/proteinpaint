@@ -1,5 +1,5 @@
 import { getCompInit, multiInit } from '../rx'
-import { select as d3select, event as d3event } from 'd3-selection'
+import { select as d3select } from 'd3-selection'
 import { topBarInit } from './controls.btns'
 import { configUiInit } from './controls.config'
 

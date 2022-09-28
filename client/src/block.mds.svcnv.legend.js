@@ -1,9 +1,9 @@
-import { scaleOrdinal, schemeCategory20 } from 'd3-scale'
+import { scaleOrdinal } from 'd3-scale'
+import { schemeCategory20 } from '#common/legacy-d3-polyfill'
 import * as client from './client'
 import { legend_newrow } from './block.legend'
 import * as common from '#shared/common'
 import { loadTk } from './block.mds.svcnv'
-import { event as d3event } from 'd3-selection'
 import { rgb as d3rgb } from 'd3-color'
 
 /*
@@ -579,9 +579,9 @@ function create_vcfAttribute(attrSet, tk, block) {
 				.attr('type', 'number')
 				.style('width', '50px')
 				.property('value', attr.cutoffvalue)
-				.on('keyup', () => {
-					if (d3event.key != 'Enter') return
-					attr.cutoffvalue = d3event.target.valueAsNumber
+				.on('keyup', event => {
+					if (event.key != 'Enter') return
+					attr.cutoffvalue = event.target.valueAsNumber
 					loadTk(tk, block)
 				})
 		} else {

@@ -1,7 +1,6 @@
 import { getCompInit } from '#rx'
 import { rgb } from 'd3-color'
 import { openSandbox } from './adSandbox'
-import { event } from 'd3-selection'
 import { slideDrawer } from './mainBtn'
 
 /*
@@ -139,7 +138,7 @@ function setRenderers(self) {
 		if (ribbonExpireDate > today || ribbonExpireDate == 'Invalid Date') self.makeRibbon(self.opts.element.ribbon)
 	}
 
-	card.on('click', async () => {
+	card.on('click', async event => {
 		event.stopPropagation()
 		await self.app.dispatch({
 			type: 'is_apps_btn_active',

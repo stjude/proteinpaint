@@ -1,6 +1,5 @@
 import * as client from './client'
 import { bplen } from '#shared/common'
-import { event as d3event } from 'd3-selection'
 import { legend_newrow } from './block.legend'
 import { make_one_checkbox } from '../dom/checkbox'
 
@@ -214,9 +213,9 @@ function configpanel(tk, block) {
 			.attr('type', 'number')
 			.property('value', tk.stackheight)
 			.style('width', '50px')
-			.on('keyup', () => {
-				if (d3event.code != 'Enter' && d3event.code != 'NumpadEnter') return
-				const s = d3event.target.value
+			.on('keyup', event => {
+				if (event.code != 'Enter' && event.code != 'NumpadEnter') return
+				const s = event.target.value
 				if (s == '') return
 				const v = Number.parseInt(s)
 				if (Number.isNaN(v) || v <= 0) {
@@ -235,8 +234,8 @@ function configpanel(tk, block) {
 			.append('input')
 			.property('value', tk.color)
 			.attr('type', 'color')
-			.on('change', () => {
-				tk.color = d3event.target.value
+			.on('change', event => {
+				tk.color = event.target.value
 				bedjload(tk, block)
 			})
 	}

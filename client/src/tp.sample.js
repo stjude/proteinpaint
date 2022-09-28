@@ -1,6 +1,6 @@
 import * as common from '#shared/common'
 import * as client from './client'
-import { select as d3select, event as d3event } from 'd3-selection'
+import { select as d3select } from 'd3-selection'
 import { duplicate as svduplicate } from '#shared/bulk.sv'
 import blocklazyload from './block.lazyload'
 
@@ -41,15 +41,15 @@ export default function(cohort, ds2clst, butt, folder, hostURL) {
 		.append('input')
 		.attr('size', 12)
 		.attr('placeholder', 'Find ' + patientlabel.toLowerCase())
-		.on('keyup', () => {
-			let pname = d3event.target.value
+		.on('keyup', event => {
+			let pname = event.target.value
 			if (pname.length == 0) {
 				for (const n in cohort.patientset) {
 					for (const i of cohort.patientset[n].trlst) {
 						i.style('display', 'table-row')
 					}
 				}
-				d3event.target.nextSibling.style.display = 'none'
+				event.target.nextSibling.style.display = 'none'
 				return
 			}
 			pname = pname.toUpperCase()
@@ -59,16 +59,16 @@ export default function(cohort, ds2clst, butt, folder, hostURL) {
 					i.style('display', s)
 				}
 			}
-			d3event.target.nextSibling.style.display = 'inline'
+			event.target.nextSibling.style.display = 'inline'
 		})
 	butrow
 		.append('button')
 		.text('Show all')
 		.style('display', 'none')
 		.style('font-size', '80%')
-		.on('click', () => {
-			d3event.target.style.display = 'none'
-			d3event.target.previousSibling.value = ''
+		.on('click', event => {
+			event.target.style.display = 'none'
+			event.target.previousSibling.value = ''
 			for (const n in cohort.patientset) {
 				for (const i of cohort.patientset[n].trlst) {
 					i.style('display', 'table-row')

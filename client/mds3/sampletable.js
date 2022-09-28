@@ -1,6 +1,5 @@
 import { fillbar } from '#dom/fillbar'
 import { get_list_cells } from '#dom/gridutils'
-import { select as d3select } from 'd3-selection'
 import { mclass, dtsnvindel, dtsv, dtfusionrna } from '#shared/common'
 import { renderTable } from '#dom/table'
 

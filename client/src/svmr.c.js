@@ -1,4 +1,4 @@
-import { select as d3select, event as d3event } from 'd3-selection'
+import { select as d3select } from 'd3-selection'
 import * as client from './client'
 import { genomic2gm } from './coord'
 import { bplen as bplength } from '#shared/common'
@@ -103,7 +103,7 @@ export default class {
 			.append('button')
 			.style('margin-right', '20px')
 			.text('Export data')
-			.on('click', () => {
+			.on('click', event => {
 				// in fact, using Major instead of HQ
 				let single_hq = 0,
 					multi_hq = 0,
@@ -143,7 +143,7 @@ export default class {
 				}
 				const d0 = tip
 					.clear()
-					.showunder(d3event.target)
+					.showunder(event.target)
 					.d.append('div')
 				const table = d0
 					.append('table')
@@ -231,8 +231,8 @@ export default class {
 		this.expression.input = this.expression.prediv
 			.append('input')
 			.attr('type', 'file')
-			.on('change', () => {
-				loadexpression(this, d3event.target.files[0])
+			.on('change', event => {
+				loadexpression(this, event.target.files[0])
 			})
 		this.expression.presays = this.expression.prediv.append('span').style('padding-left', '20px')
 		this.expression.afterdiv = this.expression.div.append('div').style('display', 'none')
@@ -280,8 +280,8 @@ export default class {
 			.append('input')
 			.attr('size', 3)
 			.property('value', this.cf_reads)
-			.on('change', () => {
-				const v = Number.parseInt(d3event.target.value)
+			.on('change', event => {
+				const v = Number.parseInt(event.target.value)
 				if (Number.isNaN(v)) {
 					return
 				}
@@ -293,8 +293,8 @@ export default class {
 			.append('input')
 			.attr('size', 3)
 			.property('value', this.cf_repeat)
-			.on('change', () => {
-				const v = Number.parseFloat(d3event.target.value)
+			.on('change', event => {
+				const v = Number.parseFloat(event.target.value)
 				if (Number.isNaN(v)) {
 					return
 				}
@@ -306,8 +306,8 @@ export default class {
 			.append('input')
 			.attr('size', 3)
 			.property('value', this.cf_match)
-			.on('change', () => {
-				const v = Number.parseInt(d3event.target.value)
+			.on('change', event => {
+				const v = Number.parseInt(event.target.value)
 				if (Number.isNaN(v)) {
 					return
 				}
@@ -319,8 +319,8 @@ export default class {
 			.append('input')
 			.attr('size', 3)
 			.property('value', this.cf_ratio)
-			.on('change', () => {
-				const v = Number.parseFloat(d3event.target.value)
+			.on('change', event => {
+				const v = Number.parseFloat(event.target.value)
 				if (Number.isNaN(v)) {
 					return
 				}
@@ -1232,8 +1232,8 @@ for(const i of atlst) {
 							.style('height', '100%')
 							.style('top', '0px')
 							.style('left', '0px')
-							.on('mouseover', () => {
-								const p = d3event.target.getBoundingClientRect()
+							.on('mouseover', event => {
+								const p = event.target.getBoundingClientRect()
 								tip.clear().show(p.left + p.width - 2, p.top - 30)
 								this.showsvpairs({
 									prodlst: [prod],
@@ -1244,8 +1244,8 @@ for(const i of atlst) {
 									showothersample: false
 								})
 							})
-							.on('click', () => {
-								const p = d3event.target.getBoundingClientRect()
+							.on('click', event => {
+								const p = event.target.getBoundingClientRect()
 								const pane = client.newpane({ x: p.left + p.width + 40, y: p.top - 60 })
 								pane.header.text(sample.name)
 								this.showsvpairs({
@@ -1633,7 +1633,7 @@ for(const i of atlst) {
 						.attr('height', rowh)
 						.attr('fill', 'white')
 						.attr('fill-opacity', 0)
-						.on('click', () => {
+						.on('click', event => {
 							const joinlst = []
 							const idlst = []
 							for (const evt of eg.lst) {
@@ -1702,7 +1702,7 @@ for(const i of atlst) {
 								}
 								joinlst.push(p)
 							}
-							const p = d3event.target.getBoundingClientRect()
+							const p = event.target.getBoundingClientRect()
 							const pane = client.newpane({ x: p.left + 10, y: p.top + p.height + 10 })
 							const div = pane.body.append('div').style('margin', '10px')
 							div
@@ -1747,12 +1747,12 @@ for(const i of atlst) {
 							div
 								.append('button')
 								.text('Edit')
-								.on('click', () => {
+								.on('click', event => {
 									const inputdom = document.createElement('input')
-									div.node().insertBefore(inputdom, d3event.target)
+									div.node().insertBefore(inputdom, event.target)
 									const buttdom = document.createElement('button')
-									div.node().insertBefore(buttdom, d3event.target)
-									div.node().removeChild(d3event.target)
+									div.node().insertBefore(buttdom, event.target)
+									div.node().removeChild(event.target)
 									inputdom.focus()
 									const input = d3select(inputdom)
 									const butt = d3select(buttdom)
@@ -2211,11 +2211,11 @@ for(const i of atlst) {
 						.attr('y', 3.5)
 						.attr('width', etw)
 						.attr('height', rowh - 4)
-						.on('mouseover', () => {
+						.on('mouseover', event => {
 							logobg2.attr('stroke-width', '2')
 							const table = tip
 								.clear()
-								.showunder(d3event.target)
+								.showunder(event.target)
 								.d.append('table')
 								.style('border-spacing', '10px')
 								.style('border-collapse', 'separate')
@@ -2261,8 +2261,8 @@ for(const i of atlst) {
 				if (evt.svg.hasrecurrence) {
 					text
 						.attr('class', 'sja_svgtext2')
-						.on('mouseover', () => {
-							const p = d3event.target.getBoundingClientRect()
+						.on('mouseover', event => {
+							const p = event.target.getBoundingClientRect()
 							tip.clear().show(p.left + p.width + 10, p.top - 15)
 							const slst = this.elab2sample[evt.label]
 							const dd = tip.d
@@ -2297,7 +2297,7 @@ for(const i of atlst) {
 					.attr('height', rowh)
 					.attr('fill', 'white')
 					.attr('fill-opacity', 0)
-					.on('mouseover', () => {
+					.on('mouseover', event => {
 						boxa.attr('stroke-width', 2)
 						boxb.attr('stroke-width', 2)
 						/* old behavior to remember the one under highlight and not to re-show tip on it
@@ -2310,7 +2310,7 @@ for(const i of atlst) {
 						evt.inview = true
 						d3select(document.body).on('mousedown', () => (evt.inview = false))
 						*/
-						const p = d3event.target.getBoundingClientRect()
+						const p = event.target.getBoundingClientRect()
 						tip.clear().show(p.left + p.width + s7 / 2, p.top - 30)
 						this.showsvpairs({
 							prodlst: evt.lst,
@@ -2326,13 +2326,13 @@ for(const i of atlst) {
 						boxa.attr('stroke-width', 1)
 						boxb.attr('stroke-width', 1)
 					})
-					.on('click', () => {
+					.on('click', event => {
 						if (evt.inclick) {
 							// shake
 							return
 						}
 						evt.inclick = true
-						const p = d3event.target.getBoundingClientRect()
+						const p = event.target.getBoundingClientRect()
 						const pane3 = client.newpane({
 							x: p.left + p.width + s7 + rowh + s1 + chrBw + s3 + eventlogow + s6 + recurw + 5,
 							y: p.top - 100,
@@ -2368,13 +2368,13 @@ for(const i of atlst) {
 						.attr('r', rowh / 2)
 						.attr('fill', 'white')
 						.attr('fill-opacity', 0)
-						.on('mouseover', () => this.extevt_mover(extevt.a, d3event.target, sample))
+						.on('mouseover', event => this.extevt_mover(extevt.a, event.target, sample))
 						.on('mouseout', () => {
 							this.extevt_mo(extevt.a)
 							tip.hide()
 						})
-						.on('click', () => {
-							this.extevt_c(extevt.a, d3event.target, sample)
+						.on('click', event => {
+							this.extevt_c(extevt.a, event.target, sample)
 						})
 				}
 				if (extevt.b) {
@@ -2385,12 +2385,12 @@ for(const i of atlst) {
 						.attr('r', rowh / 2)
 						.attr('fill', 'white')
 						.attr('fill-opacity', 0)
-						.on('mouseover', () => this.extevt_mover(extevt.b, d3event.target, sample))
+						.on('mouseover', event => this.extevt_mover(extevt.b, event.target, sample))
 						.on('mouseout', () => {
 							this.extevt_mo(extevt.b)
 							tip.hide()
 						})
-						.on('click', () => this.extevt_c(extevt.b, d3event.target, sample))
+						.on('click', event => this.extevt_c(extevt.b, event.target, sample))
 				}
 				y1 += rowh + rows
 				evtid++
@@ -2590,8 +2590,8 @@ for(const i of atlst) {
 				const ratingsl = div
 					.append('select')
 					.style('margin-right', '5px')
-					.on('change', () => {
-						const sl = d3event.target
+					.on('change', event => {
+						const sl = event.target
 						const newv = sl.options[sl.selectedIndex].innerHTML
 						prod.rating = newv
 						if (prod.hook.mainRating) {
@@ -2604,8 +2604,8 @@ for(const i of atlst) {
 				const framesl = div
 					.append('select')
 					.style('margin-right', '5px')
-					.on('change', () => {
-						const sl = d3event.target
+					.on('change', event => {
+						const sl = event.target
 						const inframe = sl.options[sl.selectedIndex].innerHTML == 'in-frame'
 						prod.usepair.inframe = inframe
 						if (prod.hook.mainFrame) {
@@ -2627,8 +2627,8 @@ for(const i of atlst) {
 				const typesl = div
 					.append('select')
 					.style('margin-right', '5px')
-					.on('change', () => {
-						const sl = d3event.target
+					.on('change', event => {
+						const sl = event.target
 						const i = sl.selectedIndex
 						const newv = sl.options[i].innerHTML
 						prod.type2 = newv
@@ -2645,18 +2645,18 @@ for(const i of atlst) {
 				const effectsl = div
 					.append('select')
 					.style('margin-right', '5px')
-					.on('change', () => {
-						const sl = d3event.target
+					.on('change', event => {
+						const sl = event.target
 						const newv = sl.options[sl.selectedIndex].innerHTML
 						prod.functioneffect = newv
 					})
 				div
 					.append('button')
 					.text('Create group')
-					.on('click', () => {
+					.on('click', event => {
 						let dnew = document.createElement('div')
-						div.node().insertBefore(dnew, d3event.target)
-						d3select(d3event.target).remove()
+						div.node().insertBefore(dnew, event.target)
+						d3select(event.target).remove()
 						dnew = d3select(dnew)
 						dnew.style('display', 'inline-block')
 						if (!arg.eglst) {
@@ -2672,8 +2672,8 @@ for(const i of atlst) {
 							.append('button')
 							.style('margin', '0px 10px')
 							.text('Apply')
-							.on('click', () => {
-								const lst0 = d3event.target.previousSibling.value.trim().split(',')
+							.on('click', event => {
+								const lst0 = event.target.previousSibling.value.trim().split(',')
 								const goodid = []
 								for (const i of lst0) {
 									const j = Number.parseInt(i)
@@ -2990,8 +2990,8 @@ for(const i of atlst) {
 				.style('display', 'block')
 				.style('margin', '20px')
 				.text('Show in ' + othersample.length + ' other sample' + (othersample.length > 1 ? 's' : ''))
-				.on('click', () => {
-					d3select(d3event.target).remove()
+				.on('click', event => {
+					d3select(event.target).remove()
 					for (const sample of othersample) {
 						const prodlst = sample.events[thislab]
 						if (!prodlst) {
@@ -3481,8 +3481,8 @@ function loadexpression(svmr, file) {
 				ep.input = ep.prediv
 					.append('input')
 					.attr('type', 'file')
-					.on('change', () => {
-						loadexpression(svmr, d3event.target.files[0])
+					.on('change', event => {
+						loadexpression(svmr, event.target.files[0])
 					})
 				ep.presays.text('')
 				client.disappear(ep.afterdiv)
@@ -3519,14 +3519,14 @@ function showgenevalues(arg) {
 		.attr('fill-opacity', 0)
 		.attr('stroke', d => (d.ishighlight ? hlcolor : 'black'))
 		.attr('stroke-opacity', d => (d.ishighlight ? 0.7 : 0.2))
-		.on('mouseover', d => {
-			d3event.target.setAttribute('transform', 'scale(1.5)')
+		.on('mouseover', (event, d) => {
+			event.target.setAttribute('transform', 'scale(1.5)')
 			drag
 				.text((d.sample ? d.sample : d.patient + ' ' + d.sampletype) + ' ' + d.value)
 				.attr('fill', d.ishighlight ? hlcolor : 'black')
 		})
-		.on('mouseout', d => {
-			d3event.target.setAttribute('transform', 'scale(1)')
+		.on('mouseout', (event, d) => {
+			event.target.setAttribute('transform', 'scale(1)')
 			drag.text('drag to resize').attr('fill', 'black')
 		})
 	const drag = svg
@@ -3536,16 +3536,16 @@ function showgenevalues(arg) {
 		.attr('class', 'sja_svgtext')
 		.attr('font-family', client.font)
 		.attr('text-anchor', 'end')
-		.on('mousedown', () => {
-			d3event.preventDefault()
-			const x0 = d3event.clientX,
-				y0 = d3event.clientY,
+		.on('mousedown', event => {
+			event.preventDefault()
+			const x0 = event.clientX,
+				y0 = event.clientY,
 				width0 = width,
 				height0 = height
 			const b = d3select(document.body)
 			b.on('mousemove', () => {
-				width = width0 + d3event.clientX - x0
-				height = height0 + d3event.clientY - y0
+				width = width0 + event.clientX - x0
+				height = height0 + event.clientY - y0
 				sizing()
 			}).on('mouseup', () => {
 				b.on('mousemove', null).on('mouseup', null)
