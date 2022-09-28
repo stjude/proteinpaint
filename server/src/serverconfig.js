@@ -166,7 +166,8 @@ if (process.env.PP_MODE && process.env.PP_MODE.startsWith('container')) {
 		hicstraw: '/home/root/pp/tools/straw',
 		bigwigsummary: '/home/root/pp/tools/bigWigSummary',
 		bigBedToBed: '/home/root/pp/tools/bigBedToBed',
-		bigBedNamedItems: '/home/root/pp/tools/bigBedNamedItems'
+		bigBedNamedItems: '/home/root/pp/tools/bigBedNamedItems',
+		bigBedInfo: '/home/root/pp/tools/bigBedInfo'
 		// note that tabix, samtools, and similar binaries are
 		// saved in the usual */bin/ paths so locating them
 		// is not needed when calling via Node child_process.spawn() or exec()
