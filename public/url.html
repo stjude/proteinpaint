@@ -6,7 +6,7 @@
 <body>
 
 
-<div id='contentDiv' style='margin:10px;display:grid;grid-template-columns:150px 80vw;gap:5px;word-break:break-word'>
+<div id='contentDiv' style='margin:10px;display:grid;grid-template-columns:150px 5vw 80vw;gap:5px;word-break:break-word'>
 
 -- How it works --
 
@@ -174,6 +174,7 @@ makeURL([
 
 
 { name: section_BAM,
+	card: 'bam',
 	links: [
 		[ 'TP53 18bp del', '?genome=hg19&block=1&position=chr17:7578191-7578591&bamfile=Test,proteinpaint_demo/hg19/bam/TP53_del.bam' ],
 		[ 'k-mer', '?genome=hg19&block=1&position=chr17:7578191-7578591&bamfile=Test,proteinpaint_demo/hg19/bam/TP53_del.bam&variant=chr17.7578383.AGCAGCGCTCATGGTGGGG.A' ],
@@ -220,6 +221,7 @@ makeURL([
 
 
 { name:section_GDCbam,
+	card: 'gdcbam',
 	links:[
 		['GBM EGFR by case id','?gdcbamslice=1&gdc_id=TCGA-06-0211&gdc_pos=chr7:55153818-55156225'],
 		['KRAS G12V by case uuid','?gdcbamslice=1&gdc_id=9a2a226e-9605-4214-9320-469305e664e6&gdc_var=chr12.25245350.C.A'],
@@ -274,6 +276,7 @@ makeURL([
 },
 
 {name:section_splicing,
+	card: 'junction',
 	links:[
 		['single','?block=on&genome=hg19&junctionfile=RNA%20splice%20junction,proteinpaint_demo/hg19/junction/file.gz'],
 		['rnapeg','?genome=hg19&block=1&junctionrnapeg=RNApeg,proteinpaint_demo/hg19/junction/rnapeg'],
@@ -283,6 +286,7 @@ makeURL([
 	]
 },
 {name:section_hic,
+	card: 'hic',
 	links:[
 		['hic genome','?genome=hg19&hicfile=proteinpaint_demo/hg19/hic/hic_demo.hic&enzyme=MboI'],
 		['hic tk file','?block=1&genome=hg19&position=chr7:13749862-20841903&hictkfile=Test_HiC,MboI,proteinpaint_demo/hg19/hic/hic_demo.hic'],
@@ -292,6 +296,7 @@ makeURL([
 },
 
 {name:section_bw,
+	card:'bigwig',
 	links:[
 		['local','?block=on&genome=hg19&bigwigfile=local,proteinpaint_demo/hg19/bigwig/file.bw'],
 		['local blank region','?block=on&genome=hg19&bigwigfile=local,proteinpaint_demo/hg19/bigwig/file.bw&position=chr17:7625542-7640838'],
@@ -304,6 +309,7 @@ makeURL([
 },
 
 {name:section_bedj,
+	card: 'bedj',
 	links:[
 		['bedj','?block=on&genome=hg19&bedjfile=JSON-BED,proteinpaint_demo/hg19/bedj/gencode.gz'],
 		['bed3','?genome=hg19&block=1&bedjfile=BED3_Example,proteinpaint_demo/hg19/bedj/bed3.gz'],
@@ -329,6 +335,7 @@ makeURL([
 },
 
 {name:section_study,
+	card: 'study',
 	links:[
 		['ERG','?study=proteinpaint_demo/hg19/heatmap/heatmapDemo.json'],
 	]
@@ -342,11 +349,13 @@ makeURL([
 },
 
 {name:section_scatterplot,
+	card: 'scatterplot',
 	links:[
 		['sjcloud', '?scatterplot=1&genome=hg38&tsnejson=proteinpaint_demo/hg38/mdstsne/file.json']
 	]
 },
 {name:section_singleCell,
+	card: 'singlecell',
 	links:[
 		['2D','?genome=hg19&singlecell=proteinpaint_demo/hg19/singlecell/singlecell.json']
 	]
@@ -1195,44 +1204,80 @@ function makeURL(rows) {
 	const div = document.getElementById('contentDiv')
 	div.innerHTML = '' // clear text
 
+	const headers = ['', 'App Card', 'Links']
+	for (const header of headers) {
+		const d = document.createElement('div')
+		d.innerHTML = header
+		d.style.fontWeight = '550'
+		div.appendChild(d)
+	}
+
 	for(const row of rows) {
-		// 1st column, header
-		const d1 = document.createElement('div')
-		d1.innerHTML = row.name || '.name missing'
-		div.appendChild(d1)
 
-		// 2nd column, links
-		const d2 = document.createElement('div')
-		div.appendChild(d2)
+		{
+			///////////////////////////////////////
+			// column 1: header
+			///////////////////////////////////////
 
-		if(!Array.isArray(row.links)) {
-			d2.innerHTML = '.links[] missing'
-			continue
+			const d = document.createElement('div')
+			d.innerHTML = row.name || '.name missing'
+			div.appendChild(d)
 		}
 
-		for(const [i,ele] of row.links.entries()) {
-			if(typeof ele == 'string') {
-				if(i!=0) {
-					// only create <br> if the string is not the first in array
-					d2.append(document.createElement('br'))
-				}
-				const s = document.createElement('span')
-				s.style.marginRight = '8px'
-				s.style.opacity = '.5'
-				s.innerHTML = ele
-				d2.appendChild(s)
+		{
+			///////////////////////////////////////
+			// column 2: card link
+			///////////////////////////////////////
+
+
+			const d = document.createElement('div')
+			div.appendChild(d)
+			if(row.card) {
+				const a = document.createElement('a')
+				a.innerHTML = row.card
+				a.setAttribute('href', `${window.location.origin}/?appcard=${row.card}`)
+				a.setAttribute('target', '_blank')
+				d.appendChild(a)
+			}
+
+		}
+
+		{
+			///////////////////////////////////////
+			// column 3: links
+			///////////////////////////////////////
+			const d = document.createElement('div')
+			div.appendChild(d)
+
+			if(!Array.isArray(row.links)) {
+				d.innerHTML = '.links[] missing'
 				continue
 			}
-			if(Array.isArray(ele)) {
-				// ele is [ name, link ]
-				const a = document.createElement('a')
-				a.innerHTML = ele[0]
-				a.setAttribute('href',window.location.origin+'/'+ele[1])
-				a.setAttribute('target','_blank')
-				a.style.paddingRight = '8px'
-				d2.appendChild(a)
-			} else {
-				window.alert('invalid element: '+ele)
+
+			for(const [i,ele] of row.links.entries()) {
+				if(typeof ele == 'string') {
+					if(i!=0) {
+						// only create <br> if the string is not the first in array
+						d.append(document.createElement('br'))
+					}
+					const s = document.createElement('span')
+					s.style.marginRight = '8px'
+					s.style.opacity = '.5'
+					s.innerHTML = ele
+					d.appendChild(s)
+					continue
+				}
+				if(Array.isArray(ele)) {
+					// ele is [ name, link ]
+					const a = document.createElement('a')
+					a.innerHTML = ele[0]
+					a.setAttribute('href',window.location.origin+'/'+ele[1])
+					a.setAttribute('target','_blank')
+					a.style.paddingRight = '8px'
+					d.appendChild(a)
+				} else {
+					window.alert('invalid element: '+ele)
+				}
 			}
 		}
 	}
