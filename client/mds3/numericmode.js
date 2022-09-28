@@ -343,10 +343,10 @@ function numeric_make(nm, tk, block) {
 		.on('mousedown', event => {
 			event.preventDefault()
 		})
-		.on('mouseover', m => {
+		.on('mouseover', (event, m) => {
 			m_mouseover(m, nm, tk)
 		})
-		.on('mouseout', m => {
+		.on('mouseout', (event, m) => {
 			m_mouseout(m, tk)
 		})
 		.on('click', (event, m) => {
@@ -365,10 +365,10 @@ function numeric_make(nm, tk, block) {
 		.on('mousedown', event => {
 			event.preventDefault()
 		})
-		.on('mouseover', m => {
+		.on('mouseover', (event, m) => {
 			m_mouseover(m, nm, tk)
 		})
-		.on('mouseout', m => {
+		.on('mouseout', (event, m) => {
 			m_mouseout(m, tk)
 		})
 		.on('click', (event, m) => {
@@ -401,8 +401,8 @@ function numeric_make(nm, tk, block) {
 		.on('mousedown', event => {
 			event.preventDefault()
 		})
-		.on('mouseover', m => m_mouseover(m, nm, tk))
-		.on('mouseout', m => m_mouseout(m, tk))
+		.on('mouseover', (event, m) => m_mouseover(m, nm, tk))
+		.on('mouseout', (event, m) => m_mouseout(m, tk))
 		.on('click', (event, m) => {
 			click_variant({ mlst: [m] }, tk, block, event.target.getBoundingClientRect(), event.target.previousSibling)
 		})
