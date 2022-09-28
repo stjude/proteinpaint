@@ -6,12 +6,15 @@
 <body>
 
 
-<!-- 
-by running makeURL(), rows of URLs are added to this <div>
-url host is window.location.origin, allowing to work as ppr.stjude.org/url.html and test things there
--->
+<div id='contentDiv' style='margin:10px;display:grid;grid-template-columns:150px 80vw;gap:5px;word-break:break-word'>
 
-<div id='div' style='margin:10px;display:grid;grid-template-columns:150px 80vw;gap:5px;word-break:break-word'></div>
+-- How it works --
+
+By running makeURL(), rows of URLs are added to this DIV.
+This message is also erased.
+URL host is window.location.origin, allowing ppr.stjude.org/url.html to work to test things there.
+
+</div>
 
 
 <!-- search "main" to jump to URL sections -->
@@ -436,6 +439,8 @@ makeURL([
 		})],
 
 		'others',
+		
+		['scatter plot', '?noheader=1&mass={"dslabel":"PNET","genome":"hg19","plots":[{"chartType":"sampleScatter","name":"Methylome TSNE","term":{"id":"TSNE Category"}}]}'],
 
 		['survival','?noheader=1&mass='+JSON.stringify( {
 			dslabel:'TermdbTest',
@@ -1186,7 +1191,9 @@ makeURL([
 ])
 
 function makeURL(rows) {
-	const div = document.getElementById('div')
+	const div = document.getElementById('contentDiv')
+	div.innerHTML = '' // clear text
+
 	for(const row of rows) {
 		// 1st column, header
 		const d1 = document.createElement('div')
