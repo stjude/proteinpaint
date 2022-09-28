@@ -16,11 +16,12 @@ Usage: $ node buildTermdb.js [arg=value] [more arguments] ...
 
 *** Dependencies ***
 
-1. node.js version 12 or above. No NPM packages needed.
+1. node.js version 16 or above. No NPM packages needed.
 2. sqlite3
 3. SQL scripts found at working directory:
    anno-by-type.sql  indexing.sql              set-included-types.sql
    create.sql        set-default-subcohort.sql setancestry.sql
+   term2genes.msigdb.sql
 
 *** List of arguments ***
 
@@ -75,6 +76,11 @@ termHtmlDef=path/to/file
 	Column 1: term id
 	Column 2: stringified json object
 
+term2genes=path/to/file
+	Optional. Provide path to a file with list of gene names for each term id.
+	File has 2 columns. Does not contain a header line.
+	Hardcoded for MSigDB.
+
 dbfile=path/to/file
 	Optional. Provide path to output db file
 	If missing, creates "./db.runID"
@@ -88,8 +94,8 @@ sqlite3=path/to/sqlite3
 
 Following two files are created at current directory, suffixed by a random number.
 Move both files to project directory under tp/ and must not commit to repo.
-    file "db.??"
-	file "sampleidmap.??"
+    file "db.runID"
+	file "sampleidmap.runID"
 `
 
 const runId = Math.ceil(Math.random() * 100000)
@@ -160,7 +166,8 @@ function getScriptArg() {
 		'survival',
 		'sqlite3',
 		'dbfile',
-		'termHtmlDef'
+		'termHtmlDef',
+		'term2genes'
 	])
 	const arg = new Map()
 	try {
@@ -494,6 +501,9 @@ function buildDb(annotationData, survivalData, scriptArg) {
 
 	// create db with blank tables
 	exec(`${cmd} < ${path.join(__dirname, './create.sql')}`)
+	if (scriptArg.has('term2genes')) {
+		exec(`${cmd} < ${path.join(__dirname, './term2genes.msigdb.sql')}`)
+	}
 
 	// ".import" commands
 	const importLines = ['.mode tabs', `.import ${termdbFile} terms`]
@@ -501,6 +511,7 @@ function buildDb(annotationData, survivalData, scriptArg) {
 	if (survivalData) importLines.push(`.import ${survivalFile} survival`)
 	if (sampleCollect.name2id.size) importLines.push(`.import ${sampleidFile} sampleidmap`)
 	if (scriptArg.has('termHtmlDef')) importLines.push(`.import ${scriptArg.get('termHtmlDef')} termhtmldef`)
+	if (scriptArg.has('term2genes')) importLines.push(`.import ${scriptArg.get('term2genes')} term2genes`)
 
 	// temp script to load tables
 	fs.writeFileSync(loadScript, importLines.join('\n'))
@@ -509,13 +520,15 @@ function buildDb(annotationData, survivalData, scriptArg) {
 	exec(cmd + ' < ' + loadScript)
 
 	// populate ancestry table
-	// TODO need to be able to generate full lineage
 	console.log('setting ancestry data ...')
 	exec(`${cmd} < ${path.join(__dirname, 'setancestry.sql')}`)
 
 	// index all tables
-	console.log('reindexing tables ...')
+	console.log('indexing tables ...')
 	exec(`${cmd} < ${path.join(__dirname, 'indexing.sql')}`)
+	if (scriptArg.has('term2genes')) {
+		exec(`${cmd} < ${path.join(__dirname, './term2genes.msigdb.indexing.sql')}`)
+	}
 
 	// populate cohort,term_id,count fields from subcohort_terms table
 	// only works for dataset without subcohort, fill blank string to cohort
