@@ -213,7 +213,7 @@ function checkDsSecret(q, headers, creds = {}, _time, session = null) {
 	if (!secret) throw `missing embedder setting`
 
 	const time = Math.floor((_time || Date.now()) / 1000)
-	//console.log(206, secret, jsonwebtoken.sign({ iat: time, exp: time + 300,  datasets: ['TermdbTest', "SJLife", "PNET"] }, secret))
+	//console.log(206, secret, jsonwebtoken.sign({ iat: time, exp: time + 300,  datasets: ['TermdbTest', "SJLife", "PNET", "sjlife", "ccss"] }, secret))
 
 	const rawToken = headers[cred.headerKey]
 	if (!rawToken) throw `missing header['${cred.headerKey}']`
@@ -240,9 +240,9 @@ function checkDsSecret(q, headers, creds = {}, _time, session = null) {
 	if (time > payload.exp) throw `Please login again to access this feature. (expired token)`
 
 	const dsnames = embedder.dsnames || [q.dslabel]
-	const missingAccess = dsnames.filter(dsname => !payload.datasets.includes(dsname))
+	const missingAccess = dsnames.filter(d => !payload.datasets.includes(d.id)).map(d => d.label || d.id)
 	if (missingAccess.length) {
-		throw `Please request access for these dataset(s): ${JSON.stringify(missingAccess)}. ` +
+		throw `Please request access for these dataset(s): ${missingAccess.join(', ')}. ` +
 			(embedder.missingAccessMessage || '')
 	}
 }

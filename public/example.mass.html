@@ -16,7 +16,8 @@
 
 <script>
 const loginCallbacks = new Set()
-let token = window.location.hash.slice(1)
+const params = getParams()
+const token = params.token
 
 
 runproteinpaint({
@@ -32,7 +33,7 @@ runproteinpaint({
 	mass:{
 		state:{
 			genome:'hg38',
-			dslabel:'SJLife',
+			dslabel:'TermdbTest',
 			optionalApps: [],
 			plots: [{
 				chartType: 'dataDownload'
@@ -47,7 +48,6 @@ function login(btn) {
 	// a valid token value is logged by the server for testing, see server/src/auth.js checkDsSecret()
 	// you will need to paste the logged value here, which is generated using your own 
 	// serverconfig.dsCredentials['TermdbTest'].secret
-	token = window.location.hash.slice(1)
 	if (!token) {
 		alert('missing token')
 		return
@@ -61,6 +61,16 @@ function login(btn) {
 	}
 
 	btn.innerHTML = 'Test of Log in'
+}
+
+function getParams() {
+  const params={}
+  if (!window.location.search.length) return params
+  window.location.search.substr(1).split("&").forEach(kv=>{
+    const [key,value] = kv.split("=")
+    params[key] = value
+  })
+  return params
 }
 </script>
 
