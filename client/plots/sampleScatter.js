@@ -9,6 +9,7 @@ import { Menu } from '#dom/menu'
 import { controlsInit } from './controls'
 import { axisLeft, axisBottom } from 'd3-axis'
 import { make_table_2col } from '#dom/table2col'
+import { icons as icon_functions } from '../dom/control.icons'
 
 /*
 sample object returned by server:
@@ -33,7 +34,7 @@ class Scatter {
 		const controls = this.opts.controls || this.opts.holder.append('div')
 		let holder = this.opts.controls ? opts.holder : this.opts.holder.append('div').style('display', 'inline-block')
 		const mainDiv = holder.append('div').style('display', 'inline-block')
-		const toolsDiv = mainDiv
+		const legendDiv = mainDiv
 			.append('div')
 			.style('display', 'inline-block')
 			.style('float', 'right')
@@ -42,17 +43,11 @@ class Scatter {
 			.append('div')
 			.style('display', 'inline-block')
 			.style('width', '60vw')
-		const legendDiv = toolsDiv
-		// mainDiv
-		// 	.append('div')
-		// 	.style('display', 'inline-block')
-		// 	.style('width', '50vw')
 
 		this.dom = {
 			header: this.opts.header,
 			holder: chartsDiv,
 			controls,
-			toolsDiv,
 			legendDiv,
 			tip: new Menu({ padding: '5px' })
 		}
@@ -359,6 +354,28 @@ function setRenderers(self) {
 	}
 
 	function setTools(dom, svg, d) {
+		const homeDiv = dom.controls
+			.insert('div')
+			.style('display', 'block')
+			.style('margin', '20px')
+		icon_functions['restart'](homeDiv, { handler: resetToIdentity })
+		const zoomInDiv = dom.controls
+			.insert('div')
+			.style('display', 'block')
+			.style('margin', '20px')
+		icon_functions['zoomIn'](zoomInDiv, { handler: zoomIn })
+		const zoomOutDiv = dom.controls
+			.insert('div')
+			.style('display', 'block')
+			.style('margin', '20px')
+		icon_functions['zoomOut'](zoomOutDiv, { handler: zoomOut })
+		const lassoDiv = dom.controls
+			.insert('div')
+			.style('display', 'block')
+			.style('margin', '20px')
+		let lassoOn = false
+		icon_functions['lasso'](lassoDiv, { handler: toggle_lasso, enabled: false })
+
 		const mainG = svg.select('.sjpcb-scatter-mainG')
 		const seriesG = mainG.select('.sjpcb-scatter-series')
 		const circles = seriesG.selectAll('circle')
@@ -400,23 +417,23 @@ function setRenderers(self) {
 
 		const lasso = d3lasso()
 			.items(circles)
-			.targetArea(svg)
+			.targetArea(mainG)
 			.on('start', lasso_start)
 			.on('draw', lasso_draw)
 			.on('end', lasso_end)
 
 		function lasso_start() {
-			if (lasso_chb.checked)
-				lasso
-					.items()
-					.attr('r', 2)
-					.style('fill-opacity', '.5')
-					.classed('not_possible', true)
-					.classed('selected', false)
+			if (lassoOn) console.log('lasso start')
+			lasso
+				.items()
+				.attr('r', 2)
+				.style('fill-opacity', '.5')
+				.classed('not_possible', true)
+				.classed('selected', false)
 		}
 
 		function lasso_draw() {
-			if (lasso_chb.checked) {
+			if (lassoOn) {
 				// Style the possible dots
 				lasso
 					.possibleItems()
@@ -436,7 +453,7 @@ function setRenderers(self) {
 		}
 
 		function lasso_end() {
-			if (lasso_chb.checked) {
+			if (lassoOn) {
 				// Reset classes of all items (.possible and .not_possible are useful
 				// only while drawing lasso. At end of drawing, only selectedItems()
 				// should be used)
@@ -455,20 +472,26 @@ function setRenderers(self) {
 		}
 
 		function toggle_lasso() {
-			lasso_chb.checked = lasso_chb.property('checked')
-			if (lasso_chb.checked) {
-				svg.on('.zoom', null)
-				svg.call(lasso)
+			lassoOn = !lassoOn
+			console.log(lassoOn)
+			if (lassoOn) {
+				console.log('zoom disabled')
+				mainG.on('.zoom', null)
+				rect.on('.zoom', null)
+				mainG.call(lasso)
 			} else {
-				svg.on('mousedown.drag', null)
+				mainG.on('mousedown.drag', null)
 				lasso.items().classed('not_possible', false)
 				lasso.items().classed('possible', false)
 				lasso
 					.items()
 					.attr('r', self.settings.radius)
 					.style('fill-opacity', '1')
-				svg.call(zoom)
+				mainG.call(zoom)
+				rect.call(zoom)
 			}
+			lassoDiv.select('*').remove()
+			icon_functions['lasso'](lassoDiv, { handler: toggle_lasso, enabled: lassoOn })
 		}
 	}
 
@@ -536,8 +559,8 @@ export async function getPlotConfig(opts, app) {
 				},
 				sampleScatter: {
 					radius: 5,
-					svgw: 550,
-					svgh: 550,
+					svgw: 500,
+					svgh: 500,
 					axisTitleFontSize: 16,
 					showAxes: false
 				}
