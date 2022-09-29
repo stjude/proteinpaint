@@ -1,5 +1,5 @@
-import { mouse, event } from 'd3-selection'
 import { Menu } from '#dom/menu'
+import { pointer } from 'd3-selection'
 
 /*
 	Will create a multi-series tooltip that follows
@@ -34,8 +34,8 @@ export function getSeriesTip(line, rect, _tip = null) {
 
 	const rectNode = rect.style('fill', 'transparent').node()
 
-	function mouseOver() {
-		const m = mouse(rectNode)
+	function mouseOver(event) {
+		const m = pointer(event, rectNode)
 		const mx = m[0]
 		const xVal = +opts.xScale.invert(mx).toFixed(opts.decimals)
 		const x = opts.xScale(xVal) /* + 0.5*/ // do not add a small float value here; otherwise, the line will not match up with the data

@@ -1,4 +1,3 @@
-import { event as d3event } from 'd3-selection'
 import { getPillNameDefault } from '#termsetting'
 
 /*
@@ -39,8 +38,8 @@ export function getHandler(self) {
 				.style('padding', '3px 10px')
 				.html('Scale values')
 
-			const select = div.append('select').on('change', () => {
-				if (d3event.target.value != '1') self.q.scale = Number(d3event.target.value)
+			const select = div.append('select').on('change', event => {
+				if (event.target.value != '1') self.q.scale = Number(event.target.value)
 				else delete self.q.scale
 			})
 

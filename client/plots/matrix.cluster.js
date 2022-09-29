@@ -1,4 +1,4 @@
-import { select, selectAll, mouse, event } from 'd3-selection'
+import { select, selectAll, mouse } from 'd3-selection'
 
 export class MatrixCluster {
 	constructor(opts) {

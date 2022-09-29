@@ -1,4 +1,4 @@
-import { select as d3select, event as d3event } from 'd3-selection'
+import { select as d3select } from 'd3-selection'
 import { format as d3format } from 'd3-format'
 import { axisLeft } from 'd3-axis'
 import { scaleLinear } from 'd3-scale'
@@ -340,17 +340,17 @@ function numeric_make(nm, tk, block) {
 		.attr('class', 'sja_aa_disckick')
 		.attr('fill-opacity', 0)
 		.attr('stroke-opacity', 0)
-		.on('mousedown', () => {
-			d3event.preventDefault()
+		.on('mousedown', event => {
+			event.preventDefault()
 		})
-		.on('mouseover', m => {
+		.on('mouseover', (event, m) => {
 			m_mouseover(m, nm, tk)
 		})
-		.on('mouseout', m => {
+		.on('mouseout', (event, m) => {
 			m_mouseout(m, tk)
 		})
-		.on('click', m => {
-			click_variant({ mlst: [m] }, tk, block, d3event.target.getBoundingClientRect(), d3event.target)
+		.on('click', (event, m) => {
+			click_variant({ mlst: [m] }, tk, block, event.target.getBoundingClientRect(), event.target)
 		})
 
 	discg
@@ -362,17 +362,17 @@ function numeric_make(nm, tk, block) {
 		.attr('fill', 'white')
 		.attr('fill-opacity', 0)
 		.attr('stroke-opacity', 0)
-		.on('mousedown', () => {
-			d3event.preventDefault()
+		.on('mousedown', event => {
+			event.preventDefault()
 		})
-		.on('mouseover', m => {
+		.on('mouseover', (event, m) => {
 			m_mouseover(m, nm, tk)
 		})
-		.on('mouseout', m => {
+		.on('mouseout', (event, m) => {
 			m_mouseout(m, tk)
 		})
-		.on('click', m => {
-			click_variant({ mlst: [m] }, tk, block, d3event.target.getBoundingClientRect(), d3event.target)
+		.on('click', (event, m) => {
+			click_variant({ mlst: [m] }, tk, block, event.target.getBoundingClientRect(), event.target)
 		})
 
 	// m label
@@ -398,13 +398,13 @@ function numeric_make(nm, tk, block) {
 		.attr('y', m => m._labfontsize * middlealignshift)
 		.attr('class', 'sja_aa_disclabel')
 		.attr('transform', m => 'rotate(' + (m.labattop ? '-' : '') + '90)')
-		.on('mousedown', () => {
-			d3event.preventDefault()
+		.on('mousedown', event => {
+			event.preventDefault()
 		})
-		.on('mouseover', m => m_mouseover(m, nm, tk))
-		.on('mouseout', m => m_mouseout(m, tk))
-		.on('click', m => {
-			click_variant({ mlst: [m] }, tk, block, d3event.target.getBoundingClientRect(), d3event.target.previousSibling)
+		.on('mouseover', (event, m) => m_mouseover(m, nm, tk))
+		.on('mouseout', (event, m) => m_mouseout(m, tk))
+		.on('click', (event, m) => {
+			click_variant({ mlst: [m] }, tk, block, event.target.getBoundingClientRect(), event.target.previousSibling)
 		})
 }
 
@@ -859,10 +859,10 @@ function render_axis(tk, nm, block) {
 		.each(function() {
 			w = this.getBBox().width
 		})
-		.on('click', () => {
+		.on('click', event => {
 			tk.menutip
 				.clear()
-				.showunder(d3event.target)
+				.showunder(event.target)
 				.d.append('div')
 				.text('Cancel')
 				.attr('class', 'sja_menuoption')

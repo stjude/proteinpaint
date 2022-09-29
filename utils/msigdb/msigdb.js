@@ -1,15 +1,18 @@
-if (process.argv.length != 3) {
-	console.log('<XML file> creates "msigdb.db" in the current folder')
+if (process.argv.length != 4) {
+	console.log('<path/to/XML file> <output dir> creates input files for buildTermdb.bundle.js ')
 	process.exit()
 }
 
-const xmlFile = process.argv[2]
+const xmlFile = process.argv[2],
+	outdir = process.argv[3]
 
 const fs = require('fs'),
+	path = require('path'),
 	readline = require('readline')
 
 // for now, skip these at L1
-const L1skip = new Set(['ARCHIVED'])
+const L1skip = new Map()
+L1skip.set('ARCHIVED', 0) // count number of skipped
 
 const L1name = {
 	C1: 'C1: positional gene sets',
@@ -108,7 +111,11 @@ function parseLine(line) {
 		// CATEGORY* as hierarchy
 		const L1 = k2v.get('CATEGORY_CODE').trim()
 		if (!L1) throw 'CATEGORY_CODE missing or blank'
-		if (L1skip.has(L1)) return
+
+		if (L1skip.has(L1)) {
+			L1skip.set(L1, L1skip.get(L1) + 1)
+			return
+		}
 
 		term.L1 = L1name[L1]
 		if (!term.L1) throw 'unknown L1: ' + L1
@@ -179,7 +186,9 @@ function parseLine(line) {
 
 /*
 parses the space-separated attributes on the xml tag, into key-value pairs
+
 (potentially reusable)
+
 find two patterns:
 1. keyOnly(space)
 2. key="word1(space)word2"(space)
@@ -230,11 +239,13 @@ function outputFiles() {
 	outputPhenotree()
 	outputGenes()
 	outputTermHtmlDef()
-	console.log('Skipped non-human sets')
 	for (const [k, v] of nonHumanCount) {
-		console.log(`\t${k}\t${v}`)
+		console.log('Non-human skipped: ' + k, v)
 	}
 	console.log('Missing genes:', missingGeneCount)
+	for (const [k, c] of L1skip) {
+		console.log('L1skip: ' + k, c)
+	}
 }
 
 function outputGenes() {
@@ -242,7 +253,7 @@ function outputGenes() {
 	for (const [id, term] of id2term) {
 		lines.push(id + '\t' + term.genes)
 	}
-	fs.writeFileSync('term2genes', lines.join('\n'))
+	fs.writeFileSync(path.join(outdir, 'term2genes'), lines.join('\n'))
 }
 
 function outputPhenotree() {
@@ -262,7 +273,7 @@ function outputPhenotree() {
 		}
 		lines.push(`${L1}\t${L2}\t${L3}\t${id}\t${id}\tcategorical`)
 	}
-	fs.writeFileSync('phenotree', lines.join('\n'))
+	fs.writeFileSync(path.join(outdir, 'phenotree'), lines.join('\n'))
 	console.log('max ID length:', maxIdLen)
 }
 
@@ -271,5 +282,5 @@ function outputTermHtmlDef() {
 	for (const [id, term] of id2term) {
 		lines.push(`${id}\t${JSON.stringify({ description: term.def })}`)
 	}
-	fs.writeFileSync('termhtmldef', lines.join('\n'))
+	fs.writeFileSync(path.join(outdir, 'termhtmldef'), lines.join('\n'))
 }

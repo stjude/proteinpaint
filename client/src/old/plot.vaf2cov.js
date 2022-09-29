@@ -1,6 +1,7 @@
-import { select as d3select, event as d3event } from 'd3-selection'
+import { select as d3select } from 'd3-selection'
 import * as client from '../client'
-import { scaleLinear, scaleOrdinal, schemeCategory10 } from 'd3-scale'
+import { scaleLinear, scaleOrdinal } from 'd3-scale'
+import { schemeCategory10 } from 'd3-scale-chromatic'
 import { axisBottom, axisLeft } from 'd3-axis'
 import { format as d3format } from 'd3-format'
 
@@ -202,7 +203,7 @@ export default function plot_vaf2cov(arg) {
 		.append('circle')
 		.attr('fill', 'white')
 		.attr('fill-opacity', 0)
-		.on('mouseover', d => {
+		.on('mouseover', (event, d) => {
 			d.crosshair1
 				.attr('stroke-width', 3)
 				.attr('x1', -marksize - 2)
@@ -216,7 +217,7 @@ export default function plot_vaf2cov(arg) {
 				.attr('x2', -marksize - 2)
 				.attr('y2', marksize + 2)
 			arg.tip.clear()
-			arg.tip.show(d3event.clientX, d3event.clientY)
+			arg.tip.show(event.clientX, event.clientY)
 			const lst = [{ k: 'mut', v: d.mut }, { k: 'total', v: d.total }]
 			if (d.genotype) {
 				lst.push({ k: 'genotype', v: d.genotype })
@@ -264,16 +265,16 @@ export default function plot_vaf2cov(arg) {
 		.attr('font-size', 13)
 		.attr('text-anchor', 'end')
 		.attr('fill', gray)
-		.on('mousedown', () => {
-			d3event.preventDefault()
+		.on('mousedown', event => {
+			event.preventDefault()
 			const b = d3select(document.body)
-			const x0 = d3event.clientX,
-				y0 = d3event.clientY,
+			const x0 = event.clientX,
+				y0 = event.clientY,
 				width0 = width,
 				height0 = height
-			b.on('mousemove', () => {
-				width = width0 + d3event.clientX - x0
-				height = height0 + d3event.clientY - y0
+			b.on('mousemove', event => {
+				width = width0 + event.clientX - x0
+				height = height0 + event.clientY - y0
 				resize()
 			})
 			b.on('mouseup', () => {

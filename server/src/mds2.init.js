@@ -171,7 +171,7 @@ async function validate_termdbconfig(tdb) {
 
 async function validate_cohort(cohort) {
 	if ('scatterplots' in cohort)
-		for (const plot of cohort.scatterplots.plot) {
+		for (const plot of cohort.scatterplots.plots) {
 			const filepath = path.join(serverconfig.tpmasterdir, plot.file)
 			await utils.file_is_readable(filepath)
 		}

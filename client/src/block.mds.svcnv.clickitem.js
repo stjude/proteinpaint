@@ -1,4 +1,4 @@
-import { select as d3select, event as d3event } from 'd3-selection'
+import { select as d3select } from 'd3-selection'
 import { axisTop } from 'd3-axis'
 import { scaleLinear } from 'd3-scale'
 import * as client from './client'
@@ -497,7 +497,7 @@ export function tooltip_samplegroup(g, tk) {
 		.style('color', '#858585')
 		.html(html.join('<br>'))
 
-	tk.tktip.show(d3event.clientX, d3event.clientY)
+	tk.tktip.show(event.clientX, event.clientY)
 }
 
 export function click_samplegroup_showtable(samplegroup, tk, block) {
@@ -506,7 +506,7 @@ export function click_samplegroup_showtable(samplegroup, tk, block) {
 	multi-sample
 	only for native track: no group for custom track for lack of annotation
 	*/
-	const pane = client.newpane({ x: d3event.clientX + 100, y: Math.max(100, d3event.clientY - 100) })
+	const pane = client.newpane({ x: event.clientX + 100, y: Math.max(100, event.clientY - 100) })
 	pane.header.html(samplegroup.name + ' <span style="font-size:.7em">' + tk.name + '</span>')
 
 	if (samplegroup.samples.length == 1) {
@@ -983,7 +983,7 @@ export function tooltip_multi_svdense(g, tk, block) {
 	if (fusionnum) lst.push({ k: '# of fusion', v: fusionnum })
 
 	client.make_table_2col(tk.tktip.d, lst)
-	tk.tktip.show(d3event.clientX, d3event.clientY)
+	tk.tktip.show(event.clientX, event.clientY)
 }
 
 export function click_multi_svdense(g, tk, block) {
@@ -1005,7 +1005,7 @@ export function click_multi_svdense(g, tk, block) {
 		return
 	}
 
-	const pane = client.newpane({ x: d3event.clientX, y: d3event.clientY })
+	const pane = client.newpane({ x: event.clientX, y: event.clientY })
 	pane.header.html(g.name + ' <span style="font-size:.8em">' + tk.name + '</span>')
 
 	const sample2lst = new Map()
@@ -1124,7 +1124,7 @@ export function click_multi_vcfdense(g, tk, block) {
 	g is a list of variants of the same class, shown as a dot
 	*/
 
-	const pane = client.newpane({ x: d3event.clientX, y: d3event.clientY })
+	const pane = client.newpane({ x: event.clientX, y: event.clientY })
 	pane.header.text(tk.name)
 
 	if (g.items.length == 1) {
@@ -1359,7 +1359,7 @@ export function tooltip_multi_vcfdense(g, tk, block) {
 			may_findmatchingsnp_printintable(m, block, table)
 			may_findmatchingclinvar_printintable(m, block, table)
 
-			tk.tktip.show(d3event.clientX, d3event.clientY)
+			tk.tktip.show(event.clientX, event.clientY)
 		} else {
 			throw 'unknown dt: ' + m.dt
 		}
@@ -1394,7 +1394,7 @@ export function tooltip_multi_vcfdense(g, tk, block) {
 		}
 	}
 
-	tk.tktip.show(d3event.clientX, d3event.clientY)
+	tk.tktip.show(event.clientX, event.clientY)
 }
 
 export async function click_multi_singleitem(p) {
@@ -1416,7 +1416,7 @@ export async function click_multi_singleitem(p) {
 		.m_sample
 	*/
 
-	const pane = client.newpane({ x: d3event.clientX, y: d3event.clientY })
+	const pane = client.newpane({ x: event.clientX, y: event.clientY })
 	pane.header.text(p.tk.name)
 
 	const tabs = []
@@ -1472,7 +1472,7 @@ export function tooltip_singleitem(p) {
 	detailtable_singlesample(p)
 
 	// show tip after content is made
-	p.tk.tktip.show(d3event.clientX, d3event.clientY)
+	p.tk.tktip.show(event.clientX, event.clientY)
 }
 
 export function detailtable_singlesample(p) {
@@ -3245,8 +3245,8 @@ function initui_partition(opts) {
 			.append('input')
 			.attr('type', 'checkbox')
 			.property('checked', true)
-			.on('change', async () => {
-				if (d3event.target.checked) {
+			.on('change', async event => {
+				if (event.target.checked) {
 					plot.hidetermid.delete(term.id)
 					if (plot.par.termidorder && !plot.par.termidorder.includes(term.id)) {
 						plot.par.termidorder.push(term.id)
@@ -3337,15 +3337,15 @@ function plot_partition(plot, data) {
 			.each(function() {
 				maxlabelw = Math.max(maxlabelw, this.getBBox().width)
 			})
-			.on('mousedown', () => {
-				d3event.preventDefault()
+			.on('mousedown', event => {
+				event.preventDefault()
 				thisrow.moving = true
 				const b = d3select(document.body)
-				let my0 = d3event.clientY
+				let my0 = event.clientY
 				let deltay
 				let nochange = true
-				b.on('mousemove', () => {
-					const my = d3event.clientY
+				b.on('mousemove', event => {
+					const my = event.clientY
 					deltay = my - my0
 					const rowidx = plot.rows.findIndex(i => i.id == thisrow.id)
 					if (deltay < 0) {
@@ -3414,11 +3414,11 @@ function plot_partition(plot, data) {
 						// not enough width to print width
 						text.remove()
 						box
-							.on('mouseover', () => {
+							.on('mouseover', event => {
 								box.attr('fill', 'black')
 								opts.boxtip
 									.clear()
-									.showunder(d3event.target)
+									.showunder(event.target)
 									.d.append('div')
 									.html(b.samplecount + ' <span style="font-size:.7em">' + term.name + '</span>')
 							})

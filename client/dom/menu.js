@@ -1,4 +1,4 @@
-import { select as d3select, event as d3event } from 'd3-selection'
+import { select as d3select } from 'd3-selection'
 import { transition } from 'd3-transition'
 import { base_zindex } from '../src/client'
 
@@ -17,7 +17,7 @@ export class Menu {
 			.style('position', 'absolute')
 			.style('background-color', 'white')
 			.style('font-family', 'Arial')
-			.on('mousedown.menu' + this.typename, () => {
+			.on('mousedown.menu' + this.typename, event => {
 				/* 
 					When clicking on non-interactive elements within a menu, 
 					it should trigger other menus to be hidden. For example,
@@ -25,7 +25,7 @@ export class Menu {
 					any submenu that are open, which is done by allowing the 
 					mousedown event to propagate to the body (default behavior).
 				*/
-				const t = d3select(d3event.target)
+				const t = d3select(event.target)
 				if (
 					/*** 
 						NOTE on interactive menu elements: 
@@ -38,9 +38,9 @@ export class Menu {
 					t.on('click') ||
 					// also assume that the following elements have event listeners by default,
 					// so same logic of not wanting to propagate the event to the body
-					['INPUT', 'SELECT', 'TEXTAREA'].includes(d3event.target.tagName.toUpperCase())
+					['INPUT', 'SELECT', 'TEXTAREA'].includes(event.target.tagName.toUpperCase())
 				) {
-					d3event.stopPropagation()
+					event.stopPropagation()
 				} /* else {
 					 // allow the bubbling of the mouse event to the document body
 				}*/
@@ -53,7 +53,7 @@ export class Menu {
 		// check if this.d isn't empty before assigning parent_menu
 		if (Object.values(this.d._groups[0]).length) this.dnode.parent_menu = arg.parent_menu
 
-		body.on('mousedown.menu' + this.typename, () => {
+		body.on('mousedown.menu' + this.typename, event => {
 			/*** 
 				Problem: A parent menu can close unexpectedly when clicking on a 
 				non-interactive submenu element, leaving its submenu still visible
@@ -62,12 +62,12 @@ export class Menu {
 				Solution: Do not hide a menu if it happens to be a parent of a clicked menu
 			***/
 			// when pressing the mouse cursor on the menu itself or any of its submenu, it should stay open
-			if (this.dnode.contains(d3event.target)) return
+			if (this.dnode.contains(event.target)) return
 			// this assumes that the mousedown occured on the menu holder itself (not any of its child elements)
-			if (d3event.target.parent_menu === this.dnode) return
+			if (event.target.parent_menu === this.dnode) return
 			// detect in case the mousedown occurred on a menu's child element,
 			// in which case the menu's parent should still be not hidden
-			const menu = d3event.target.closest('.sja_menu_div')
+			const menu = event.target.closest('.sja_menu_div')
 			if (menu && menu.parent_menu === this.dnode) return
 			// close a menu for all other mousedown events outside of its own div or submenu
 			this.hide()
@@ -185,13 +185,13 @@ export class Menu {
 	}
 
 	// this hide() method may be overriden with a custom method by getCustomApi(overrides)
-	hide() {
-		if (d3event) {
-			// d3event can be undefined
+	hide(event) {
+		if (event) {
+			// event can be undefined
 			// prevent flickering, decrease sensitivity of tooltip to movement on mouseout
 			if (
-				Math.abs(this.prevX - d3event.clientX) < this.hideXmute &&
-				Math.abs(this.prevY - d3event.clientY) < this.hideYmute
+				Math.abs(this.prevX - event.clientX) < this.hideXmute &&
+				Math.abs(this.prevY - event.clientY) < this.hideYmute
 			)
 				return
 		}

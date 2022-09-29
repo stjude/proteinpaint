@@ -1,4 +1,3 @@
-import { event } from 'd3-selection'
 import { makeSnpSelect, mayRestrictAncestry } from './snplst'
 import { filterInit, getNormalRoot } from '#filter'
 import { addGeneSearchbox } from '#dom/genesearch'
@@ -90,7 +89,7 @@ async function makeEditMenu(self, div) {
 		.append('button')
 		.style('margin', '0px 15px 15px 15px')
 		.text('Submit')
-		.on('click', async () => {
+		.on('click', async event => {
 			if (!coordResult.chr) return window.alert('Invalid coordinate')
 			event.target.disabled = true
 			event.target.innerHTML = 'Validating input...'

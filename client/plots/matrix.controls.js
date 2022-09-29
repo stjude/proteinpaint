@@ -1,4 +1,4 @@
-import { select, event } from 'd3-selection'
+import { select } from 'd3-selection'
 import { initByInput } from './controls.config'
 import { to_svg } from '../src/client'
 import { fillTermWrapper } from '../termsetting/termsetting'
@@ -34,7 +34,7 @@ export class MatrixControls {
 			.append('button')
 			.style('margin', '2px 0')
 			.text(d => d.label)
-			.on('click', d => (d.callback ? d.callback() : this.callback(d)))
+			.on('click', (event, d) => (d.callback ? d.callback(event) : this.callback(event, d)))
 	}
 
 	setInputGroups() {
@@ -253,14 +253,14 @@ export class MatrixControls {
 		//this.recover.track()
 	}
 
-	async callback(d) {
+	async callback(event, d) {
 		const { clientX, clientY } = event
 		const app = this.opts.app
 		const parent = this.opts.parent
 		const table = app.tip.clear().d.append('table')
 
 		for (const inputConfig of this.inputGroups[d.value]) {
-			const input = initByInput[inputConfig.type](
+			const input = await initByInput[inputConfig.type](
 				Object.assign(
 					{},
 					{

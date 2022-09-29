@@ -2,7 +2,7 @@
 # different registry by setting the registry arg at build time.
 ARG registry=docker.io/library
 
-FROM ${registry}/node:16-buster-slim AS ppbase
+FROM ${registry}/node:16.17.1-buster-slim AS ppbase
 ARG ARCH='x86_64'
 ENV ARCH=$ARCH
 
@@ -57,16 +57,21 @@ RUN apt-get update && apt-get install -y r-base -y libargtable2-dev \
 
 RUN mkdir -p /home/root/pp && cd /home/root/pp && mkdir app && mkdir tp && mkdir cache && mkdir tools
 
-RUN if [[ "$ARCH" == "x86_64" ]]; then \ 
+RUN if [ "$ARCH" = "x86_64" ]; then \ 
         wget https://pecan.stjude.cloud/static/pp-support/linux/straw -P /home/root/pp/tools/ && \
         wget -O /usr/local/bin/clustalo http://www.clustal.org/omega/clustalo-1.2.4-Ubuntu-x86_64 && chmod 755 /usr/local/bin/clustalo && \
         wget http://hgdownload.soe.ucsc.edu/admin/exe/linux.$ARCH/bigWigSummary -P /home/root/pp/tools/ && \
         wget http://hgdownload.soe.ucsc.edu/admin/exe/linux.$ARCH/bigBedToBed -P /home/root/pp/tools/ && \
-        wget http://hgdownload.soe.ucsc.edu/admin/exe/linux.$ARCH/bigBedNamedItems -P /home/root/pp/tools/; \
-    elif [[ "$ARCH" == "aarch64" ]]; then \
+        wget http://hgdownload.soe.ucsc.edu/admin/exe/linux.$ARCH/bigBedNamedItems -P /home/root/pp/tools/ && \
+        wget http://hgdownload.soe.ucsc.edu/admin/exe/linux.$ARCH/bigBedInfo -P /home/root/pp/tools/ && \
+        chmod -R 755 /home/root/pp/tools; \
+    elif [ "$ARCH" = "aarch64" ]; then \
         curl http://www.clustal.org/omega/clustal-omega-1.2.4.tar.gz -O && tar -xvf clustal-omega-1.2.4.tar.gz && \
         cd clustal-omega-1.2.4 && ./configure --prefix="/usr/local" --build=${ARCH}-unknown-linux-gnu && make && make install && \
         chmod 755 /usr/local/bin/clustalo; \
+    else \
+        echo "unknown ARCH='$ARCH'" && \
+        exit 1; \
     fi
 
 # Separate rust build so that the compiled code may be copied later
@@ -74,7 +79,6 @@ RUN if [[ "$ARCH" == "x86_64" ]]; then \
 FROM ppbase AS pprust
 
 RUN set -eux; \
-
     wget https://static.rust-lang.org/rustup/dist/${ARCH}-unknown-linux-gnu/rustup-init; \
     chmod +x rustup-init; \
     ./rustup-init -y --no-modify-path --default-toolchain stable; \
@@ -88,13 +92,13 @@ RUN set -eux; \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/
 
+WORKDIR /home/root/pp/app
 
 FROM ppbase AS ppminpkg
 
 WORKDIR /home/root/pp
 ADD . ./tmppack
 WORKDIR /home/root/pp/tmppack
-
 
 RUN mkdir -p minpkgjsons/server && mkdir minpkgjsons/client && \
      ./build/minpkgjson.js package.json > minpkgjsons/package.json && \

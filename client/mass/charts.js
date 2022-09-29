@@ -1,7 +1,7 @@
 import { getCompInit } from '../rx'
 import { Menu } from '../dom/menu'
 import { getNormalRoot } from '../filter/filter'
-import { select, event } from 'd3-selection'
+import { select } from 'd3-selection'
 
 // to assign chart ID to distinguish
 // between chart instances
@@ -109,6 +109,14 @@ function getChartTypeList(self) {
 		to be attached to action and used by store
 	*/
 	return [
+		{
+			label: 'Dictionary',
+			clickTo: self.prepPlot,
+			chartType: 'dictionary',
+			config: {
+				chartType: 'dictionary'
+			}
+		},
 		{
 			label: 'Bar Chart',
 			chartType: 'barchart',
@@ -220,14 +228,6 @@ function getChartTypeList(self) {
 			]
 		},
 		{
-			label: 'Dictionary',
-			clickTo: self.prepPlot,
-			chartType: 'dictionary',
-			config: {
-				chartType: 'dictionary'
-			}
-		},
-		{
 			label: 'Data Download',
 			clickTo: self.prepPlot,
 			chartType: 'dataDownload',
@@ -239,7 +239,7 @@ function getChartTypeList(self) {
 		{
 			label: 'Sample Scatter',
 			chartType: 'sampleScatter',
-			clickTo: self.showFileLst
+			clickTo: self.showScatterPlot
 		}
 	]
 }
@@ -258,7 +258,7 @@ function setRenderers(self) {
 			.style('border-radius', '20px')
 			.style('border-color', '#ededed')
 			.html(d => d.label)
-			.on('click', function(chart) {
+			.on('click', function(event, chart) {
 				self.dom.tip.clear().showunder(this)
 				chart.clickTo(chart)
 			})
@@ -422,7 +422,7 @@ function setRenderers(self) {
 			.style('height', '300px')
 			.style('margin', '5px')
 			.style('padding', '5px')
-			.on('keydown', () => {
+			.on('keydown', event => {
 				const keyCode = event.keyCode || event.which
 				// handle tab key press, otherwise it will cause the focus to move to another input
 				if (keyCode == 9) {
@@ -444,9 +444,16 @@ function setRenderers(self) {
 		self.app.dispatch(action)
 	}
 
-	self.showFileLst = function() {
+	self.showScatterPlot = function() {
 		const menuDiv = self.dom.tip.d.append('div')
-		for (const plot of self.state.termdbConfig.scatterplots.plot) {
+		for (const plot of self.state.termdbConfig.scatterplots) {
+			/* plot: 
+			{
+				name=str,
+				dimensions=int,
+				term={ id, ... }
+			}
+			*/
 			menuDiv
 				.append('div')
 				.attr('class', 'sja_menuoption sja_sharp_border')
@@ -454,8 +461,9 @@ function setRenderers(self) {
 				.on('click', () => {
 					self.app.dispatch({
 						type: 'plot_create',
-						config: { chartType: 'sampleScatter', term: { id: plot.term.id }, file: plot.file, name: plot.name }
+						config: { chartType: 'sampleScatter', term: JSON.parse(JSON.stringify(plot.term)), name: plot.name }
 					})
+					self.dom.tip.hide()
 				})
 		}
 	}

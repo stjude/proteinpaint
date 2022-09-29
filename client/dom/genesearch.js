@@ -130,10 +130,10 @@ export function addGeneSearchbox(arg) {
 		.attr('placeholder', placeholder)
 		.attr('aria-label', 'Gene symbol, position, or alias')
 		.style('width', width + 'px')
-		.on('focus', () => {
+		.on('focus', event => {
 			event.target.select()
 		})
-		.on('keyup', async () => {
+		.on('keyup', async event => {
 			const input = event.target
 			const v = input.value.trim()
 			if (v.length <= 1) return tip.hide()
@@ -142,7 +142,7 @@ export function addGeneSearchbox(arg) {
 			searchStat.mark.html('')
 			searchStat.word.text('Press ENTER to search, ESC to cancel')
 
-			if (keyupEnter()) {
+			if (keyupEnter(event)) {
 				// pressed enter
 				input.blur()
 				tip.hide()

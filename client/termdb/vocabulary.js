@@ -871,6 +871,20 @@ class TermdbVocab extends Vocab {
 		]
 		return await dofetch3('termdb?' + args.join('&'))
 	}
+
+	async getScatterData(opts) {
+		// dofetch* mayAdjustRequest() will automatically
+		// convert to GET query params or POST body, as needed
+		const body = {
+			getSampleScatter: 1,
+			genome: this.state.vocab.genome,
+			dslabel: this.state.vocab.dslabel,
+			plotName: opts.name,
+			term: opts.term,
+			filter: getNormalRoot(opts.filter)
+		}
+		return await dofetch3('termdb', { body })
+	}
 }
 
 function q_to_param(q) {

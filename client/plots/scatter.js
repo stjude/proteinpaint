@@ -1,6 +1,6 @@
 import { getCompInit, copyMerge } from '../rx'
 import { controlsInit } from './controls'
-import { select, event } from 'd3-selection'
+import { select } from 'd3-selection'
 import { scaleLinear as d3Linear } from 'd3-scale'
 import { axisLeft, axisBottom } from 'd3-axis'
 import Partjson from 'partjson'
@@ -312,7 +312,7 @@ export function setRenderers(self) {
 }
 
 function setInteractivity(self) {
-	self.mouseover = function() {
+	self.mouseover = function(event) {
 		if (event.target.tagName == 'circle') {
 			const d = event.target.__data__
 			const rows = [

@@ -26,18 +26,7 @@ const defaultState = {
 	// as 'cohortfilter' in state.termfilter.filter
 	activeCohort: 0,
 	search: { isVisible: true },
-	// default to showing a dictionary when there are no other plots to show;
-	// this default plots value will be overriden completely if a
-	// mass.state.plots[] is provided in the runpp argument
-	plots: [
-		{
-			id: getId(),
-			chartType: 'dictionary',
-			config: {
-				chartType: 'dictionary'
-			}
-		}
-	],
+	plots: [],
 	termfilter: {
 		filter: {
 			type: 'tvslst',

@@ -1,8 +1,9 @@
 import * as common from '#shared/common'
 import * as client from './client'
-import { scaleOrdinal, schemeCategory10, scaleLinear } from 'd3-scale'
+import { scaleOrdinal, scaleLinear } from 'd3-scale'
+import { schemeCategory10 } from 'd3-scale-chromatic'
+import { schemeCategory20 } from '#common/legacy-d3-polyfill'
 import { axisLeft } from 'd3-axis'
-import { event as d3event } from 'd3-selection'
 import { filterInit } from '../filter/filter'
 import { appInit } from '../termdb/app'
 
@@ -199,8 +200,8 @@ function make_phewas_ui(obj, div, tk) {
 			.attr('type', 'number')
 			.style('width', '150px')
 			.attr('placeholder', 'Set Y axis max')
-			.on('keyup', async () => {
-				if (!client.keyupEnter()) return
+			.on('keyup', async event => {
+				if (!client.keyupEnter(event)) return
 				const s = input.property('value')
 				if (!s) return
 				const v = Number(s)
@@ -338,7 +339,7 @@ function phewas_svg(data, obj) {
 				tr.append('td').text(d.table[5])
 			}
 			div.append('div').html('<span style="opacity:.5;font-size:.8em">P-value:</span> ' + d.pvalue)
-			obj.tip.show(d3event.clientX, d3event.clientY)
+			obj.tip.show(d.clientX, d.clientY)
 		})
 		.on('mouseout', () => {
 			obj.tip.hide()

@@ -1,6 +1,8 @@
 import { getCompInit, copyMerge } from '../rx'
-import { select, event } from 'd3-selection'
-import { scaleLinear, scaleOrdinal, schemeCategory10, schemeCategory20 } from 'd3-scale'
+import { select } from 'd3-selection'
+import { scaleLinear, scaleOrdinal } from 'd3-scale'
+import { schemeCategory10 } from 'd3-scale-chromatic'
+import { schemeCategory20 } from '#common/legacy-d3-polyfill'
 import { axisLeft, axisTop, axisRight, axisBottom } from 'd3-axis'
 import { fillTermWrapper } from '../termsetting/termsetting'
 import { MatrixCluster } from './matrix.cluster'
@@ -91,7 +93,7 @@ class Matrix {
 		// enable embedding of termsetting and tree menu inside self.dom.menu
 		this.customTipApi = this.dom.tip.getCustomApi({
 			d: this.dom.menubody,
-			clear: () => {
+			clear: event => {
 				if (event?.target) this.dom.menutop.style('display', 'none')
 				this.dom.menubody.selectAll('*').remove()
 				return this.customTipApi

@@ -1,5 +1,5 @@
-import { select as d3select, selectAll as d3selectAll, event as d3event } from 'd3-selection'
-import { json as d3json } from 'd3-request'
+import { select as d3select, selectAll as d3selectAll } from 'd3-selection'
+import { json as d3json } from 'd3-fetch'
 import * as client from './client'
 import * as common from '#shared/common'
 import blockinit from './block.init'
@@ -80,8 +80,8 @@ export default function(cohort, ds2clst, butt, folder, defaulthide, host) {
 		.attr('size', 10)
 		.attr('placeholder', 'Find gene')
 		.style('margin', '0px 20px 0px 5px')
-		.on('keyup', () => {
-			let n = d3event.target.value
+		.on('keyup', event => {
+			let n = event.target.value
 			if (n == '') {
 				tip.hide()
 				return
@@ -89,9 +89,9 @@ export default function(cohort, ds2clst, butt, folder, defaulthide, host) {
 			if (cohort.geneToUpper) {
 				n = n.toUpperCase()
 			}
-			if (d3event.code == 'Enter') {
+			if (event.code == 'Enter') {
 				tip.hide()
-				d3event.target.value = ''
+				event.target.value = ''
 				if (n in union) {
 					paintgene(n)
 				}
@@ -108,7 +108,7 @@ export default function(cohort, ds2clst, butt, folder, defaulthide, host) {
 				return
 			}
 			hit.sort((a, b) => b.count - a.count)
-			tip.clear().showunder(d3event.target)
+			tip.clear().showunder(event.target)
 			for (let i = 0; i < Math.min(30, hit.length); i++) {
 				const n = hit[i].name
 				const row = tip.d
@@ -287,7 +287,7 @@ export default function(cohort, ds2clst, butt, folder, defaulthide, host) {
 			oprow5
 				.append('button')
 				.text(hassamplelst.length == 1 ? 'show' : ds.label)
-				.on('click', () => {
+				.on('click', event => {
 					const bars = []
 					for (const gene of genelst) {
 						const hash = {}
@@ -306,7 +306,7 @@ export default function(cohort, ds2clst, butt, folder, defaulthide, host) {
 							size: samplecount
 						})
 					}
-					const pos = d3event.target.getBoundingClientRect()
+					const pos = event.target.getBoundingClientRect()
 					barplot(bars, '#76B38C', 'Number of samples' + (usenoncoding ? '' : ', excluding noncoding mutations'), pos)
 				})
 		}
@@ -320,7 +320,7 @@ export default function(cohort, ds2clst, butt, folder, defaulthide, host) {
 			oprow6
 				.append('button')
 				.text(hassamplelst.length == 1 ? 'show' : ds.label)
-				.on('click', () => {
+				.on('click', event => {
 					const samplehash = {}
 					for (const g in ds.bulkdata) {
 						for (const m of ds.bulkdata[g]) {
@@ -341,7 +341,7 @@ export default function(cohort, ds2clst, butt, folder, defaulthide, host) {
 							size: samplehash[n]
 						})
 					}
-					const pos = d3event.target.getBoundingClientRect()
+					const pos = event.target.getBoundingClientRect()
 					barplot(bars, '#76B38C', 'Mutation burden' + (usenoncoding ? '' : ', excluding noncoding mutations'), pos)
 				})
 		}

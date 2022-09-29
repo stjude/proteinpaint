@@ -292,7 +292,7 @@ function setRadioInput(opts) {
 		holder: self.dom.inputTd,
 		options: opts.options,
 		listeners: {
-			input(d) {
+			input(event, d) {
 				opts.dispatch({
 					type: 'plot_edit',
 					id: opts.id,

@@ -4,13 +4,16 @@
 
 ### STEP 1
 
-download MSigDB XML file, go to https://www.gsea-msigdb.org/gsea/downloads.jsp, find this file
-https://www.gsea-msigdb.org/gsea/msigdb/download_file.jsp?filePath=/msigdb/release/7.5.1/msigdb_v7.5.1.xml
+Download MSigDB XML file.
+Go to http://www.gsea-msigdb.org/gsea/downloads.jsp#msigdb, may need to log in with email.
+At section "MSigDB", find `ZIPped Human MSigDB file set` and download the zip file.
+Unzip the zip file to release a folder named like `msigdb_v2022.1.Hs_files_to_download_locally/`
+Find a big XML file inside named like `msigdb_v2022.1.Hs.xml`
 
 run script:
 ```bash
 cd ~/dev/proteinpaint/utils/msigdb/
-node msigdb.js path/to/msigdb_v7.5.1.xml
+node msigdb.js ~/data/tp/msigdb/msigdb_v2022.1.Hs_files_to_download_locally/msigdb_v2022.1.Hs.xml ~/data/tp/msigdb/
 ```
 The following files are made at current directory:
 1. "phenotree", as input to buildTermdb.bundle.js
@@ -21,17 +24,16 @@ The following files are made at current directory:
 ### STEP 2
 ```bash
 cd ../termdb/
-node buildTermdb.bundle.js phenotree=../msigdb/phenotree termHtmlDef=../msigdb/termhtmldef dbfile=~/data/tp/msigdb/db
+node buildTermdb.bundle.js \
+	phenotree=/Users/xzhou1/data/tp/msigdb/phenotree \
+	termHtmlDef=/Users/xzhou1/data/tp/msigdb/termhtmldef  \
+	term2genes=/Users/xzhou1/data/tp/msigdb/term2genes \
+	dbfile=/Users/xzhou1/data/tp/msigdb/db
 ```
-the termdb sqlite file is made in the current dir
 
 
 ### STEP 3
-```bash
-cd ../msigdb/
-sqlite3 ~/data/tp/msigdb/db < loadTables.sql 
-```
-restart pp server and test at http://localhost:3000/example.termdb.gdc.html?msigdb
+Restart pp server and test at http://localhost:3000/?termdb={%22vocab%22:{%22dslabel%22:%22msigdb%22,%22genome%22:%22hg38%22}}
 
 
 ## Examples

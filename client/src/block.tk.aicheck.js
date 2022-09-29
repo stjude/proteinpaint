@@ -1,7 +1,6 @@
 import { scaleLinear } from 'd3-scale'
 import { axisLeft, axisRight } from 'd3-axis'
 import * as client from './client'
-import { event as d3event } from 'd3-selection'
 import { make_radios } from '../dom/radiobutton'
 
 /*
@@ -83,7 +82,7 @@ function makeTk(tk, block) {
 		.attr('fill-opacity', 0.6)
 		.text('G coverage')
 
-	tk.config_handle = block.maketkconfighandle(tk).on('click', () => {
+	tk.config_handle = block.maketkconfighandle(tk).on('click', event => {
 		tk.tkconfigtip.clear().showunder(tk.config_handle.node())
 		configPanel(tk, block)
 	})
@@ -276,9 +275,9 @@ function configPanel(tk, block) {
 			.attr('type', 'number')
 			.style('width', '60px')
 			.property('value', tk.coveragemax)
-			.on('keyup', () => {
-				if (!client.keyupEnter()) return
-				const s = d3event.target.value
+			.on('keyup', event => {
+				if (!client.keyupEnter(event)) return
+				const s = event.target.value
 				if (s == '') return
 				const v = Number.parseInt(s)
 				if (Number.isNaN(v) || v <= 1) {
@@ -319,9 +318,9 @@ function configPanel(tk, block) {
 			.attr('type', 'number')
 			.style('width', '60px')
 			.property('value', tk.gtotalcutoff || 0)
-			.on('keyup', () => {
-				if (!client.keyupEnter()) return
-				const s = d3event.target.value
+			.on('keyup', event => {
+				if (!client.keyupEnter(event)) return
+				const s = event.target.value
 				if (s == '') return
 				const v = Number.parseInt(s)
 				if (Number.isNaN(v) || v < 0) {
@@ -347,9 +346,9 @@ function configPanel(tk, block) {
 			.attr('type', 'number')
 			.style('width', '60px')
 			.property('value', tk.gmafrestrict || 0)
-			.on('keyup', () => {
-				if (!client.keyupEnter()) return
-				const s = d3event.target.value
+			.on('keyup', event => {
+				if (!client.keyupEnter(event)) return
+				const s = event.target.value
 				if (s == '') return
 				const v = Number.parseFloat(s)
 				if (Number.isNaN(v) || v < 0 || v > 0.5) {

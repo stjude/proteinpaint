@@ -1,4 +1,3 @@
-import { event as d3event } from 'd3-selection'
 import * as client from './client'
 
 export function may_add_kmplotbutton(smat, buttonrow) {
@@ -10,8 +9,8 @@ export function may_add_kmplotbutton(smat, buttonrow) {
 		.style('font-size', '.8em')
 		.text('SURVIVAL PLOT')
 		.attr('class', 'sja_clbtext')
-		.on('click', () => {
-			smat.menu.clear().showunder(d3event.target)
+		.on('click', event => {
+			smat.menu.clear().showunder(event.target)
 			kmplot_menu(smat)
 		})
 }

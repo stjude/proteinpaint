@@ -1,12 +1,12 @@
-import { select as d3select, event as d3event, mouse as d3mouse } from 'd3-selection'
+import { select as d3select, pointer } from 'd3-selection'
 import { scaleLinear, scaleOrdinal } from 'd3-scale'
 import { rgb as d3rgb } from 'd3-color'
 import * as d3force from 'd3-force'
 import * as client from './client'
 import * as coord from './coord'
 import hm2legend from './hm2.legend'
-import {dofetch3} from '../common/dofetch'
-import {Menu} from '../dom/menu'
+import { dofetch3 } from '../common/dofetch'
+import { Menu } from '../dom/menu'
 
 /*
 argument:
@@ -21,7 +21,6 @@ argument:
 */
 
 export default function(arg) {
-
 	const outborder = '#ddd'
 	const pairlst = arg.pairlst
 	const genome = arg.genome
@@ -79,7 +78,7 @@ export default function(arg) {
 		loadlst.push(n)
 	}
 
-	dofetch3('isoformlst',{method:'POST',body:JSON.stringify({genome: genome.name, lst: loadlst })})
+	dofetch3('isoformlst', { method: 'POST', body: JSON.stringify({ genome: genome.name, lst: loadlst }) })
 		.then(data => {
 			if (data.error) throw { message: data.error }
 			for (const ilst of data.lst) {
@@ -1102,11 +1101,11 @@ chrbar.filter(function(d){return d.pxwidth>d.labelwidth+10})
 			.attr('clip-path', d => d.clipid)
 			.attr('fill', 'white')
 			.attr('fill-opacity', 0)
-			.on('mousemove', d => {
+			.on('mousemove', (event, d) => {
 				if (!d.gm) {
 					return
 				}
-				let aa = d.scale.invert(d3mouse(d3event.target)[0])
+				let aa = d.scale.invert(pointer(event, this)[0])
 				let pstr = null
 				const domainlst = []
 				if (d.upstream) {
@@ -1224,13 +1223,13 @@ chrbar.filter(function(d){return d.pxwidth>d.labelwidth+10})
 			.attr('fill', 'black')
 			.attr('font-size', 12)
 			.attr('text-anchor', 'end')
-			.on('mousedown', () => {
+			.on('mousedown', event => {
 				const b = d3select(document.body)
-				const x0 = d3event.clientX,
-					y0 = d3event.clientY
+				const x0 = event.clientX,
+					y0 = event.clientY
 				b.on('mousemove', () => {
-					d3event.preventDefault()
-					this.width = this.width0 + d3event.clientX - x0
+					event.preventDefault()
+					this.width = this.width0 + event.clientX - x0
 					setpxsize()
 					if (chimeric) {
 						tochimeric(false)
@@ -1713,12 +1712,12 @@ chrbar.filter(function(d){return d.pxwidth>d.labelwidth+10})
 										allpdomain
 											.filter(d => d.__scf.clipid == scf.clipid && d.name + d.description == e.key)
 											.transition()
-											.attr('height', () => {
+											.attr('height', event => {
 												if (e.key in scf.gm.domain_hidden) {
-													d3event.target.innerHTML = '&times;'
+													event.target.innerHTML = '&times;'
 													return 0
 												}
-												d3event.target.innerHTML = '&nbsp;'
+												event.target.innerHTML = '&nbsp;'
 												return proteinheight
 											})
 									})
@@ -1732,16 +1731,16 @@ chrbar.filter(function(d){return d.pxwidth>d.labelwidth+10})
 									.attr('class', 'sja_clbtext2')
 									.style('margin-right', '5px')
 									.property('title', 'Click to edit color of this domain')
-									.on('click', () => {
-										colormenu.clear().showunder(d3event.target)
+									.on('click', event => {
+										colormenu.clear().showunder(event.target)
 										const input = colormenu.d
 											.append('input')
 											.attr('type', 'text')
 											.property('value', e.fill)
 											.style('width', '100px')
-											.on('keyup', () => {
-												if (!client.keyupEnter()) return
-												const v = d3event.target.value.trim()
+											.on('keyup', event => {
+												if (!client.keyupEnter(event)) return
+												const v = event.target.value.trim()
 												if (!v) return
 												cbox.style('background', v)
 												allpdomain

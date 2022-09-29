@@ -1,10 +1,11 @@
-const app = require('./app'),
-	createCanvas = require('canvas').createCanvas,
-	utils = require('./utils')
+const app = require('./app')
+const createCanvas = require('canvas').createCanvas
+const utils = require('./utils')
 const run_rust = require('@stjude/proteinpaint-rust').run_rust
 const serverconfig = require('./serverconfig')
 const spawn = require('child_process').spawn
-const bigwigsummary = serverconfig.bigwigsummary
+const { rgb } = require('d3-color')
+
 /*
 
 NOTE:
@@ -14,6 +15,7 @@ if file/url ends with .gz, it is bedgraph
 - not to be used in production!!!
 - bedgraph should render bars while reading data, with predefined y axis; no storing data
 */
+
 export async function handle_tkbigwig(req, res) {
 	try {
 		let fixminv,
@@ -152,9 +154,9 @@ export async function handle_tkbigwig(req, res) {
 			/*
 			heatmap
 			*/
-			let r = d3color.rgb(req.query.pcolor)
+			let r = rgb(req.query.pcolor)
 			const rgbp = r.r + ',' + r.g + ',' + r.b
-			r = d3color.rgb(req.query.ncolor)
+			r = rgb(req.query.ncolor)
 			const rgbn = r.r + ',' + r.g + ',' + r.b
 			let x = 0
 			for (const r of req.query.rglst) {
@@ -323,7 +325,7 @@ function makeyscale() {
 
 function run_bigwigsummary(req, r, file) {
 	return new Promise((resolve, reject) => {
-		const ps = spawn(bigwigsummary, [
+		const ps = spawn(serverconfig.bigwigsummary, [
 			'-udcDir=' + serverconfig.cachedir,
 			file,
 			r.chr,

@@ -1,5 +1,4 @@
 import * as client from './client'
-import { event as d3event } from 'd3-selection'
 import { axisTop } from 'd3-axis'
 import { scaleLinear } from 'd3-scale'
 import * as common from '#shared/common'
@@ -419,12 +418,12 @@ function addcolumn_autogene(autogenename, genes_auto, tk, block) {
 						}
 
 						cover
-							.on('mouseover', () => {
+							.on('mouseover', event => {
 								tk.tktip.clear()
 
 								genebar_printtooltip(autogenename, v, s, tk.tktip.d, tk)
 
-								tk.tktip.show(d3event.clientX, d3event.clientY)
+								tk.tktip.show(event.clientX, event.clientY)
 
 								multi_sample_addhighlight(s)
 							})
@@ -511,9 +510,9 @@ function addcolumn_autogene(autogenename, genes_auto, tk, block) {
 			.attr('font-family', client.font)
 			.attr('font-size', 14)
 			.text('ADD GENE')
-			.on('click', () => {
+			.on('click', event => {
 				findgene4fix_searchui(tk.tkconfigtip.clear().d, tk, block)
-				tk.tkconfigtip.showunder(d3event.target)
+				tk.tkconfigtip.showunder(event.target)
 			})
 
 		if (tk.expressionrangelimit) {
@@ -645,7 +644,7 @@ function addcolumn_fixedgene(fixedgene, tk, block, column_xoff) {
 					}
 
 					cover
-						.on('mouseover', () => {
+						.on('mouseover', event => {
 							tk.tktip.clear()
 
 							const lst = [{ k: 'Sample', v: s.samplename }]
@@ -664,7 +663,7 @@ function addcolumn_fixedgene(fixedgene, tk, block, column_xoff) {
 
 							expressionstat.showsingleitem_table(v, tk.gecfg, table)
 
-							tk.tktip.show(d3event.clientX, d3event.clientY)
+							tk.tktip.show(event.clientX, event.clientY)
 
 							multi_sample_addhighlight(s)
 						})
@@ -719,9 +718,9 @@ function addcolumn_fixedgene(fixedgene, tk, block, column_xoff) {
 		.attr('fill', 'black')
 		.attr('class', 'sja_clbtext2')
 		.text(fixedgene.gene + ' rank')
-		.on('click', () => {
+		.on('click', event => {
 			genebarconfig_fixed(fixedgene, tk, block)
-			tk.tkconfigtip.showunder(d3event.target)
+			tk.tkconfigtip.showunder(event.target)
 		})
 
 	return expbarwidth + xspace
@@ -778,14 +777,14 @@ function addcolumn_attr(attr, tk, block, column_xoff) {
 					s.columnbars.push(cover)
 
 					cover
-						.on('mouseover', () => {
+						.on('mouseover', event => {
 							tk.tktip.clear()
 
 							const lst = [{ k: 'Sample', v: s.samplename }]
 							may_add_sampleannotation(s.samplename, tk, lst)
 							client.make_table_2col(tk.tktip.d, lst)
 
-							tk.tktip.show(d3event.clientX, d3event.clientY)
+							tk.tktip.show(event.clientX, event.clientY)
 
 							multi_sample_addhighlight(s)
 						})
@@ -916,7 +915,7 @@ function genebarconfig_auto(usegene, genes, tk, block) {
 
 	mayadd_aseohe(holder, tk, block)
 
-	tk.tkconfigtip.showunder(d3event.target)
+	tk.tkconfigtip.showunder(event.target)
 }
 
 export function genebarconfig_fixed(fixedgene, tk, block) {
@@ -1223,12 +1222,12 @@ function drawgenebar_rnabam(expbarwidth, maxvalue, row, gene, s, tk, block) {
 	}
 
 	cover
-		.on('mouseover', () => {
+		.on('mouseover', event => {
 			tk.tktip.clear()
 
 			genebar_printtooltip(gene.gene, gene, s, tk.tktip.d, tk)
 
-			tk.tktip.show(d3event.clientX, d3event.clientY)
+			tk.tktip.show(event.clientX, event.clientY)
 
 			multi_sample_addhighlight(s)
 		})

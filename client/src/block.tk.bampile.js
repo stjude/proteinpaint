@@ -1,7 +1,6 @@
 import { scaleLinear } from 'd3-scale'
 import { axisLeft, axisRight } from 'd3-axis'
 import * as client from './client'
-import { event as d3event } from 'd3-selection'
 import { basecolor } from '#shared/common'
 
 export function bampilefromtemplate(tk, template) {
@@ -20,11 +19,11 @@ export function bampilefromtemplate(tk, template) {
 }
 
 export function bampilemaketk(tk, block) {
-	tk.img = tk.glider.append('image').on('click', () => {
+	tk.img = tk.glider.append('image').on('click', event => {
 		if (!tk.link) return
 		// if tk.link is provided, will work
 		if (block.exonsf < 1) return
-		const x = d3event.clientX - block.svg.node().getBoundingClientRect().left - block.leftheadw - block.lpad
+		const x = event.clientX - block.svg.node().getBoundingClientRect().left - block.leftheadw - block.lpad
 		const [ridx, pos] = block.pxoff2region(x)
 		const chr = block.rglst[ridx].chr
 		const link = tk.link.replace('__CHR__', chr).replace('__POS__', pos + 1)
@@ -34,7 +33,7 @@ export function bampilemaketk(tk, block) {
 	tk.allaxis = tk.gleft.append('g')
 	tk.fineaxis = tk.gleft.append('g').attr('transform', 'translate(0,' + (tk.allheight + tk.midpad) + ')')
 
-	tk.config_handle = block.maketkconfighandle(tk).on('click', () => {
+	tk.config_handle = block.maketkconfighandle(tk).on('click', event => {
 		configpanel(tk, block)
 	})
 }
@@ -114,7 +113,7 @@ function configpanel(tk, block) {
 			tr.append('td')
 				.text(g)
 				.classed('sja_menuoption', true)
-				.on('click', () => {
+				.on('click', event => {
 					tk.usegrade = g
 					bampileload(tk, block)
 					tk.tkconfigtip.hide()
@@ -136,9 +135,9 @@ function configpanel(tk, block) {
 		const input = row
 			.append('input')
 			.attr('size', 5)
-			.on('keyup', () => {
-				if (d3event.code != 'Enter') return
-				const s = d3event.target.value
+			.on('keyup', event => {
+				if (event.code != 'Enter') return
+				const s = event.target.value
 				if (!s) return
 				const v = Number.parseInt(s)
 				if (Number.isNaN(v)) return
@@ -150,7 +149,7 @@ function configpanel(tk, block) {
 			.append('button')
 			.text('Set')
 			.style('margin-left', '3px')
-			.on('click', () => {
+			.on('click', event => {
 				const s = input.property('value')
 				if (!s) return
 				const v = Number.parseInt(s)

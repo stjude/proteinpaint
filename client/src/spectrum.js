@@ -1,4 +1,4 @@
-import { select as d3select, event as d3event } from 'd3-selection'
+import { select as d3select } from 'd3-selection'
 import * as client from './client'
 import { scaleLog, scaleLinear } from 'd3-scale'
 import { axisLeft } from 'd3-axis'
@@ -45,8 +45,8 @@ export default function spectrumui(genomes) {
 		const input = filediv
 			.append('input')
 			.attr('type', 'file')
-			.on('change', () => {
-				const file = d3event.target.files[0]
+			.on('change', event => {
+				const file = event.target.files[0]
 				if (!file) {
 					fileui()
 					return
@@ -327,8 +327,8 @@ function parseraw(lines, genome, filename) {
 	d.append('div')
 		.classed('sja_menuoption', true)
 		.text('Mutation frequency / burden')
-		.on('click', () => {
-			burden_render(data, d3event.target.getBoundingClientRect())
+		.on('click', event => {
+			burden_render(data, event.target.getBoundingClientRect())
 		})
 	d.append('div')
 		.classed('sja_menuoption', true)
@@ -677,9 +677,9 @@ function spectrum_init(p, holder) {
 		.attr('placeholder', 'mutation burden cutoff')
 		.attr('size', 20)
 		.property('value', p.mcountcutoff == null ? '' : p.mcountcutoff)
-		.on('keyup', () => {
-			if (d3event.code != 'Enter') return
-			const v = d3event.target.value
+		.on('keyup', event => {
+			if (event.code != 'Enter') return
+			const v = event.target.value
 			let cutoff
 			if (v == '') {
 				p.mcountcutoff = null
@@ -739,9 +739,9 @@ function spectrum_init(p, holder) {
 		.style('margin-left', '20px')
 		.attr('placeholder', 'bar width and height')
 		.attr('size', 20)
-		.on('keyup', () => {
-			if (d3event.code != 'Enter') return
-			const lst = d3event.target.value.split(' ')
+		.on('keyup', event => {
+			if (event.code != 'Enter') return
+			const lst = event.target.value.split(' ')
 			if (lst.length != 2) {
 				alert('width and height joined by space')
 				return
@@ -882,10 +882,10 @@ function spectrum_init(p, holder) {
 		.attr('dominant-baseline', 'central')
 		.attr('transform', 'rotate(-90)')
 		.classed('sja_svgtext2', true)
-		.on('mouseover', d => {
+		.on('mouseover', (event, d) => {
 			const div = tip
 				.clear()
-				.showunder(d3event.target)
+				.showunder(event.target)
 				.d.append('div')
 				.style('border', 'solid 1px black')
 				.style('padding', '10px')
@@ -1023,15 +1023,15 @@ function spectrum_init(p, holder) {
 		.style('bottom', '0px')
 		.text('drag to resize')
 		.classed('sja_clbtext', true)
-		.on('mousedown', () => {
-			d3event.preventDefault()
+		.on('mousedown', event => {
+			event.preventDefault()
 			const b = d3select(document.body)
-			const x = d3event.clientX
-			const y = d3event.clientY
+			const x = event.clientX
+			const y = event.clientY
 			const w = p.barwidth
 			const h = p.barheight
-			b.on('mousemove', () => {
-				resize(h + d3event.clientY - y, w + (d3event.clientX - x) / samplecount)
+			b.on('mousemove', event => {
+				resize(h + event.clientY - y, w + (event.clientX - x) / samplecount)
 			})
 			b.on('mouseup', () => {
 				b.on('mousemove', null).on('mouseup', null)

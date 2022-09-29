@@ -1,6 +1,6 @@
-import { scaleLinear, scaleOrdinal, schemeCategory20 } from 'd3-scale'
+import { scaleLinear, scaleOrdinal } from 'd3-scale'
 import { arc as d3arc } from 'd3-shape'
-import { select as d3select, event as d3event } from 'd3-selection'
+import { select as d3select } from 'd3-selection'
 import { itemtable } from './block.ds.itemtable'
 import * as client from './client'
 import * as coord from './coord'
@@ -9,53 +9,34 @@ import { duplicate as svduplicate } from '#shared/bulk.sv'
 import * as vcftk from './block.ds.vcf'
 import { rendernumerictk } from './block.ds.numericmode'
 import may_sunburst from './block.sunburst'
+import { schemeCategory20 } from '#common/legacy-d3-polyfill'
 
 /*
 a dstk can be vcf, server-hosted ds (sqlite and/or 1 or more vcf)
-
-
 here do following things for dstk:
 - load data by querying server
 - parse and add data to the track
 - render the skewer track
-
-
-
 ********************** EXPORTED 
-
 dstkload(tk,block)
 	- server query and load data from sqlite/vcf
-
 load2tk(datalst,block,tk)
 	- add data to dstk
-
 dstkrender(tk, block)
-
 getter_mcset_key
-
 epaint_may_hl
-
 mlst_pretreat
-
 done_tknodata
-
-
 ********************** INTERNAL
-
 renderskewertk
 skewer_make()
-
 showlegend_populationfrequencyfilter
 showlegend_vcfinfofilter
 showlegend_sampleattribute
-
 legendmenu_vcfinfo
 legendmenu_sampleattribute
-
 dsqueryresult_geneexpression()
 dsqueryresult_snvindelfusionitd()
-
-
 */
 
 // vcfinfofilter in which a variant is not annotated by a given key
@@ -474,7 +455,6 @@ tk.mlst[] is set
 function mlst_set_occurrence(tk) {
 	/*
 handle multiple ways of assigning occurrence
-
 .occurrence now applies to all legacy ds track, applications:
 - skewer graph to decide dot size
 - sunburst
@@ -501,11 +481,9 @@ handle multiple ways of assigning occurrence
 function renderskewertk(tk, block, originhidden) {
 	/*
 	makes:
-
 	tk.data
 	tk.skewer
 	tk.maxskewerheight
-
 	*/
 
 	tk.leftaxis.selectAll('*').remove() // in case turned from numericmode
@@ -675,7 +653,6 @@ function renderskewertk(tk, block, originhidden) {
 
 	/*
 	variants loaded for this track
-
 	*/
 
 	if (tk.hlaachange || tk.hlvariants) {
@@ -911,11 +888,8 @@ function mlst2disc(mlst, tk) {
 function skewer_make(tk, block) {
 	/*
 new things:
-
 itd/del stacked bars
-
 custom mclass from vcfinfofilter
-
 */
 
 	delete tk.skewer2
@@ -1184,10 +1158,10 @@ custom mclass from vcfinfofilter
 		.classed('sja_aa_disclabel', true)
 		.attr('fill-opacity', d => (d.aa.showmode == modefold ? 0 : 1))
 		.attr('transform', 'scale(1) rotate(0)')
-		.on('mousedown', () => {
-			d3event.stopPropagation()
+		.on('mousedown', event => {
+			event.stopPropagation()
 		})
-		.on('click', d => {
+		.on('click', (event, d) => {
 			fold_glyph([d.aa], tk)
 			unfold_update(tk, block)
 			if (block.debugmode) {
@@ -1230,25 +1204,25 @@ custom mclass from vcfinfofilter
 		.attr('fill', 'white')
 		.attr('fill-opacity', 0)
 		.attr('stroke-opacity', 0)
-		.on('mousedown', () => {
-			d3event.stopPropagation()
+		.on('mousedown', event => {
+			event.stopPropagation()
 		})
-		.on('mouseover', d => {
+		.on('mouseover', (event, d) => {
 			if (tk.disc_mouseover) {
-				tk.disc_mouseover(d, d3event.target)
+				tk.disc_mouseover(d, event.target)
 			} else {
 				epaint_may_hl(tk, d.mlst, true)
 			}
 		})
-		.on('mouseout', d => {
+		.on('mouseout', (event, d) => {
 			if (tk.disc_mouseout) {
 				tk.disc_mouseout(d)
 			} else {
 				epaint_may_hl(tk, d.mlst, false)
 			}
 		})
-		.on('click', async d => {
-			const p = d3event.target.getBoundingClientRect()
+		.on('click', async (event, d) => {
+			const p = event.target.getBoundingClientRect()
 			if (d.dt == common.dtfusionrna || d.dt == common.dtsv) {
 				// svgraph
 				itemtable({
@@ -1356,7 +1330,7 @@ custom mclass from vcfinfofilter
 		.attr('r', d => d.maxradius + 1)
 		.attr('cy', d => (tk.aboveprotein ? -1 : 1) * d.maxradius)
 		.attr('transform', d => 'scale(' + (d.showmode == modefold ? 1 : 0) + ')')
-		.on('mouseover', d => {
+		.on('mouseover', (event, d) => {
 			epaint_may_hl(tk, d.mlst, true)
 			const abp = tk.aboveprotein
 			let cumh = 0
@@ -1438,11 +1412,11 @@ custom mclass from vcfinfofilter
 				.attr('stroke', 'white')
 				.attr('shape-rendering', 'crispEdges')
 		})
-		.on('mouseout', d => {
+		.on('mouseout', (event, d) => {
 			tk.pica.g.selectAll('*').remove()
 			epaint_may_hl(tk, d.mlst, false)
 		})
-		.on('click', d => {
+		.on('click', (event, d) => {
 			tk.pica.g.selectAll('*').remove()
 			unfold_glyph([d], tk, block)
 		})
@@ -1491,9 +1465,9 @@ custom mclass from vcfinfofilter
 			.attr('stroke-width', 1)
 			.attr('height', d => d.height)
 			.attr('fill', d => color4disc(d.grp.mlst[0]))
-			.on('mouseover', d => {
+			.on('mouseover', (event, d) => {
 				const color = color4disc(d.grp.mlst[0])
-				d3select(d3event.target).attr('stroke', color)
+				d3select(event.target).attr('stroke', color)
 				const pica = tk.pica
 				let label1 = 'wrong label'
 				let label2 = 'wrong label, '
@@ -1576,16 +1550,16 @@ custom mclass from vcfinfofilter
 					.attr('font-family', client.font)
 					.attr('fill', '#858585')
 			})
-			.on('mouseout', d => {
-				d3select(d3event.target).attr('stroke', 'none')
+			.on('mouseout', (event, d) => {
+				d3select(event.target).attr('stroke', 'none')
 				tk.pica.g.selectAll('*').remove()
 			})
-			.on('click', d => {
+			.on('click', (event, d) => {
 				itemtable({
 					mlst: d.grp.mlst,
 					pane: true,
-					x: d3event.clientX,
-					y: d3event.clientY,
+					x: event.clientX,
+					y: event.clientY,
 					tk: tk,
 					block: block
 				})
@@ -1635,8 +1609,8 @@ custom mclass from vcfinfofilter
 		.attr('height', tk.stem1)
 		.attr('x', d => -d.ssk_width / 2)
 		.attr('width', d => d.ssk_width)
-		.on('mouseover', d => {
-			const p = d3select(d3event.target.parentNode)
+		.on('mouseover', (event, d) => {
+			const p = d3select(event.target.parentNode)
 			p.selectAll('.sja_aa_disckick')
 				.transition()
 				.attr('stroke-opacity', 1)
@@ -1649,8 +1623,8 @@ custom mclass from vcfinfofilter
 				.attr('fill-opacity', 1)
 			epaint_may_hl(tk, d.mlst, true)
 		})
-		.on('mouseout', function(d) {
-			const p = d3select(d3event.target.parentNode)
+		.on('mouseout', function(event, d) {
+			const p = d3select(event.target.parentNode)
 			p.selectAll('.sja_aa_disckick')
 				.transition()
 				.attr('stroke-opacity', 0)
@@ -1663,9 +1637,9 @@ custom mclass from vcfinfofilter
 				.attr('fill-opacity', 0)
 			epaint_may_hl(tk, d.mlst, false)
 		})
-		.on('click', async d => {
-			// must not check d3event after await as it will be voided
-			const p = d3event.target.getBoundingClientRect()
+		.on('click', async (event, d) => {
+			// must not check event after await as it will be voided
+			const p = event.target.getBoundingClientRect()
 			if (d.occurrence > 1) {
 				if (await may_sunburst(d.occurrence, d.mlst, d.x, d.y + ((tk.aboveprotein ? 1 : -1) * tk.stem1) / 2, tk, block))
 					return
@@ -2789,9 +2763,7 @@ function vcfinfofilter_mayupdateautocategory(tk, block) {
 export function getter_mcset_key(mcset, m) {
 	/*
 	get the key from an item (m) given a mcset
-
 	returns list!!!
-
 	*/
 	if (mcset.altalleleinfo) {
 		if (!m.altinfo) return ['no .altinfo']
@@ -2847,11 +2819,9 @@ function legendmenu_vcfinfo(mcset, key, tk, block) {
 	tk legend shows the values from certain vcf info fields
 	values are clickable to make filtering on variants of the track
 	show tooltip menu for the annotation items
-
 	key is:
 	- a key of mcset.categories
 	- vcfnotannotated_label
-
 	*/
 	const tip = tk.vcfinfofilter.tip
 	tip.clear()
@@ -3228,21 +3198,16 @@ function legendmenu_sampleattribute(thisvalue, thisattr, tip, tk, block) {
 export function mlst_pretreat(tk, block, originhidden) {
 	/*
 	used both in skewer & numeric
-
 	no change to tk.mlst, but return a subset where they:
-
 	- inside view range
 	- pass filter
 		- mclass, morigin
 		- vcf info
 		- population freq
 		- sample annotation
-
 	then:
-
 	- calculate m.__x by mapping coord to view range
 	- update tk labels
-
 	*/
 
 	let nogenomicpos = 0
@@ -3254,9 +3219,7 @@ export function mlst_pretreat(tk, block, originhidden) {
 		delete m.__x
 
 		/******************
-
 		__filter__
-
 		- by mclass/morigin
 			block.legend.mclasses(?).hidden
 		- by vcf INFO
@@ -3265,7 +3228,6 @@ export function mlst_pretreat(tk, block, originhidden) {
 				for numerical, use .numericCutoff
 		- by vcf populationfrequencyfilter
 			for multi-sample vcf
-
 		*******************/
 
 		if (block.legend && block.legend.mclasses.has(m.class) && block.legend.mclasses.get(m.class).hidden) {

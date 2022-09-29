@@ -1,4 +1,4 @@
-import { select, event } from 'd3-selection'
+import { select } from 'd3-selection'
 import { scaleLinear, scaleLog } from 'd3-scale'
 import { axisLeft, axisTop } from 'd3-axis'
 import { format } from 'd3-format'
@@ -813,7 +813,7 @@ export default function barsRenderer(barsapp, holder) {
 			.text(hm.handlers.xAxis.text())
 	}
 
-	function seriesMouseOver() {
+	function seriesMouseOver(event) {
 		const t = event.target.tagName == 'tspan' ? event.target.parentNode : event.target
 		const d = t.__data__
 
@@ -849,10 +849,10 @@ export default function barsRenderer(barsapp, holder) {
 				.style('fill', colTextColor)
 		}
 
-		hm.handlers.series.mouseover(d)
+		hm.handlers.series.mouseover(event, d)
 	}
 
-	function seriesMouseOut() {
+	function seriesMouseOut(event) {
 		event.stopPropagation()
 		//currRowTexts.attr('font-weight','').attr('font-size',computed.rowfontsize).style('fill','')
 		currColTexts
@@ -861,10 +861,10 @@ export default function barsRenderer(barsapp, holder) {
 			.style('fill', '')
 		//resizeCaller.show()
 		currCell = emptyObj
-		if (hm.handlers.series.mouseout) hm.handlers.series.mouseout()
+		if (hm.handlers.series.mouseout) hm.handlers.series.mouseout(event)
 	}
 
-	function colLabelMouseover() {
+	function colLabelMouseover(event) {
 		const d = event.target.__data__
 		if (!d) return
 		const r = hm.col2name['id' in d ? d.id : d]
@@ -873,19 +873,19 @@ export default function barsRenderer(barsapp, holder) {
 		cell[hm.colgrpkey] = r.grp
 		//seriesMouseOver(cell)
 
-		if (hm.handlers.colLabel.mouseover) hm.handlers.colLabel.mouseover()
+		if (hm.handlers.colLabel.mouseover) hm.handlers.colLabel.mouseover(event)
 	}
 
-	function colLabelMouseout() {
+	function colLabelMouseout(event) {
 		currCell = emptyObj
 		//resizeCaller.show()
 		if (clusterRenderer) clusterRenderer.rowcolline()
-		if (hm.handlers.colLabel.mouseout) hm.handlers.colLabel.mouseout()
+		if (hm.handlers.colLabel.mouseout) hm.handlers.colLabel.mouseout(event)
 	}
 
-	function seriesClick() {
+	function seriesClick(event) {
 		const d = event.target.__data__
-		barsapp.handlers.series.click(d)
+		barsapp.handlers.series.click(event, d)
 	}
 
 	main.hm = hm

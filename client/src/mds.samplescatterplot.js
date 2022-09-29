@@ -1,6 +1,7 @@
 import * as client from './client'
-import { scaleLinear, scaleOrdinal, schemeCategory20 } from 'd3-scale'
-import { select as d3select, event as d3event } from 'd3-selection'
+import { scaleLinear, scaleOrdinal } from 'd3-scale'
+import { schemeCategory20 } from '#common/legacy-d3-polyfill'
+import { select as d3select } from 'd3-selection'
 import blocklazyload from './block.lazyload'
 import { d3lasso } from '../common/lasso'
 import { zoom as d3zoom, zoomIdentity } from 'd3'
@@ -152,8 +153,8 @@ export async function init(obj, holder, debugmode) {
 			.attr('type', 'text')
 			.attr('placeholder', 'Search sample')
 			.style('width', '200px')
-			.on('keyup', () => {
-				const str0 = d3event.target.value
+			.on('keyup', event => {
+				const str0 = event.target.value
 				if (!str0) {
 					// reset
 					obj.dotselection.transition().attr('r', radius)
@@ -543,8 +544,8 @@ function init_plot(obj) {
 		.append('circle')
 		.attr('stroke', 'none')
 		.attr('r', radius)
-		.on('mouseover', d => {
-			d3event.target.setAttribute('stroke', 'white')
+		.on('mouseover', (event, d) => {
+			event.target.setAttribute('stroke', 'white')
 			const lst = [{ k: 'Sample', v: d.sample }]
 			if (obj.sample_attributes) {
 				for (const attrkey in obj.sample_attributes) {
@@ -558,14 +559,14 @@ function init_plot(obj) {
 			}
 
 			client.make_table_2col(obj.tip.clear().d, lst)
-			obj.tip.show(d3event.clientX, d3event.clientY)
+			obj.tip.show(event.clientX, event.clientY)
 		})
-		.on('mouseout', d => {
-			d3event.target.setAttribute('stroke', 'none')
+		.on('mouseout', (event, d) => {
+			event.target.setAttribute('stroke', 'none')
 			obj.tip.hide()
 		})
-		.on('click', d => {
-			click_dot(d, obj)
+		.on('click', (event, d) => {
+			click_dot(d, obj, event)
 		})
 
 	obj.dotselection = circles
@@ -584,7 +585,7 @@ function init_plot(obj) {
 			.attr('stroke', 'none')
 			.attr('fill', d => d.color)
 			.attr('r', radius)
-			.on('mouseover', d => {
+			.on('mouseover', (event, d) => {
 				const lst = [{ k: 'Sample', v: d.sample }]
 				if (obj.sample_attributes) {
 					for (const attrkey in obj.sample_attributes) {
@@ -597,7 +598,7 @@ function init_plot(obj) {
 					}
 				}
 				client.make_table_2col(obj.tip.clear().d, lst)
-				obj.tip.show(d3event.clientX, d3event.clientY)
+				obj.tip.show(event.clientX, event.clientY)
 				Object.values(userlabel_grp).forEach(labels =>
 					labels.filter(i => i.sample == d.sample).attr('font-weight', 'bold')
 				)
@@ -629,7 +630,7 @@ function init_plot(obj) {
 			.attr('fill', d => d.color)
 			.attr('font-size', fontsize)
 			.text(d => d.sample)
-			.on('mouseover', d => {
+			.on('mouseover', (event, d) => {
 				usercircles.filter(i => i.sample == d.sample).attr('r', radius * 2)
 				svg.style('cursor', 'move')
 				const lst = [{ k: 'Sample', v: d.sample }]
@@ -644,19 +645,19 @@ function init_plot(obj) {
 					}
 				}
 				client.make_table_2col(obj.tip.clear().d, lst)
-				obj.tip.show(d3event.clientX, d3event.clientY)
+				obj.tip.show(event.clientX, event.clientY)
 			})
 			.on('mouseout', d => {
 				usercircles.filter(i => i.sample == d.sample).attr('r', radius)
 				svg.style('cursor', 'auto')
 				obj.tip.hide()
 			})
-			.on('mousedown', d => {
-				d3event.preventDefault()
-				d3event.stopPropagation()
+			.on('mousedown', (event, d) => {
+				event.preventDefault()
+				event.stopPropagation()
 				const b = d3select(document.body)
-				const x = d3event.clientX
-				const y = d3event.clientY
+				const x = event.clientX
+				const y = event.clientY
 				xscale = obj.zoomed_scale && obj.zoomed_scale > 1 ? obj.new_xscale : obj.xscale
 				yscale = obj.zoomed_scale && obj.zoomed_scale > 1 ? obj.new_yscale : obj.yscale
 				// <g> is movable
@@ -666,25 +667,25 @@ function init_plot(obj) {
 					.match(/[\d\.]+/g)
 					.map(Number)
 				b.on('mousemove', () => {
-					g.attr('transform', 'translate(' + (x1 + d3event.clientX - x) + ',' + (y1 + d3event.clientY - y) + ')')
+					g.attr('transform', 'translate(' + (x1 + event.clientX - x) + ',' + (y1 + event.clientY - y) + ')')
 				})
 				b.on('mouseup', () => {
 					b.on('mousemove', null).on('mouseup', null)
-					d.x_ = xscale.invert(x1 + d3event.clientX - x)
-					d.y_ = yscale.invert(y1 + d3event.clientY - y)
+					d.x_ = xscale.invert(x1 + event.clientX - x)
+					d.y_ = yscale.invert(y1 + event.clientY - y)
 				})
 			})
-			.on('dblclick', d => {
-				obj.menu2.clear().show(d3event.clientX - 90, d3event.clientY)
+			.on('dblclick', (event, d) => {
+				obj.menu2.clear().show(event.clientX - 90, event.clientY)
 				obj.menu2.d
 					.append('input')
 					.attr('type', 'text')
 					.property('value', d.sample)
 					.style('display', 'block')
 					.style('margin-bottom', '5px')
-					.on('keyup', () => {
-						if (!client.keyupEnter()) return
-						const v = d3event.target.value
+					.on('keyup', event => {
+						if (!client.keyupEnter(event)) return
+						const v = event.target.value
 						Object.values(userlabel_grp).forEach(labels => labels.filter(i => i.sample == d.sample).text(v))
 						d.sample = v
 						obj.menu2.hide()
@@ -693,8 +694,8 @@ function init_plot(obj) {
 					.append('input')
 					.attr('type', 'color')
 					.property('value', d.color)
-					.on('change', () => {
-						const v = d3event.target.value
+					.on('change', event => {
+						const v = event.target.value
 						Object.values(userlabel_grp).forEach(labels => labels.filter(i => i.sample == d.sample).attr('fill', v))
 						usercircles.filter(i => i.sample == d.sample).attr('fill', v)
 						d.color = v
@@ -749,16 +750,16 @@ function init_plot(obj) {
 		.style('bottom', '0px')
 		.attr('class', 'sja_clbtext')
 		.text('drag to resize')
-		.on('mousedown', () => {
-			d3event.preventDefault()
+		.on('mousedown', event => {
+			event.preventDefault()
 			const b = d3select(document.body)
-			const x = d3event.clientX
-			const y = d3event.clientY
+			const x = event.clientX
+			const y = event.clientY
 			const w0 = width
 			const h0 = height
 			b.on('mousemove', () => {
-				width = w0 + d3event.clientX - x
-				height = h0 + d3event.clientY - y
+				width = w0 + event.clientX - x
+				height = h0 + event.clientY - y
 				resize()
 			})
 			b.on('mouseup', () => {
@@ -889,10 +890,10 @@ function makeConfigPanel(obj) {
 			.scaleExtent([1, 5])
 			.on('zoom', obj.zoom_active ? zoomed : null)
 
-		function zoomed() {
-			obj.new_xscale = d3event.transform.rescaleX(obj.xscale)
-			obj.new_yscale = d3event.transform.rescaleY(obj.yscale)
-			obj.zoomed_scale = d3event.transform.k
+		function zoomed(event) {
+			obj.new_xscale = event.transform.rescaleX(obj.xscale)
+			obj.new_yscale = event.transform.rescaleY(obj.yscale)
+			obj.zoomed_scale = event.transform.k
 			const dots = obj.dotg.selectAll('.sample_dot')
 			dots.attr('transform', d => 'translate(' + obj.new_xscale(d.x) + ',' + obj.new_yscale(d.y) + ')')
 			const userlabelg = obj.dotg.selectAll('.userlabelg')
@@ -1345,19 +1346,19 @@ function update_dotcolor_legend(obj) {
 /*
 clicking a dot can have different behaviors based on config
 */
-function click_dot(dot, obj) {
+function click_dot(dot, obj, event) {
 	if (obj.dslabel) {
 		// to launch browser view of tracks from this sample
-		click_dot_mdsview(dot, obj)
+		click_dot_mdsview(dot, obj, event)
 		return
 	}
 	if (obj.mds) {
-		click_dot_disco(dot, obj)
+		click_dot_disco(dot, obj, event)
 		return
 	}
 }
-async function click_dot_disco(dot, obj) {
-	const pane = client.newpane({ x: d3event.clientX, y: d3event.clientY })
+async function click_dot_disco(dot, obj, event) {
+	const pane = client.newpane({ x: event.clientX, y: event.clientY })
 	pane.header.text(dot.sample)
 	const wait = client.tab_wait(pane.body)
 	try {
@@ -1403,8 +1404,8 @@ async function click_dot_disco(dot, obj) {
 		if (e.stack) console.log(e.stack)
 	}
 }
-function click_dot_mdsview(dot, obj) {
-	const pane = client.newpane({ x: d3event.clientX, y: d3event.clientY })
+function click_dot_mdsview(dot, obj, event) {
+	const pane = client.newpane({ x: event.clientX, y: event.clientY })
 	pane.header.text(dot.sample)
 
 	const wait = pane.body
@@ -1480,7 +1481,7 @@ function lasso_select(obj, dots) {
 		// 	.classed('possible',false)
 	}
 
-	function scatterplot_lasso_end() {
+	function scatterplot_lasso_end(event) {
 		if (!obj.lasso_active) return
 
 		// show menu if at least 1 sample selected
@@ -1488,7 +1489,7 @@ function lasso_select(obj, dots) {
 			.selectAll('.possible')
 			.data()
 			.map(d => d.sample)
-		if (selected_samples.length) show_lasso_menu(selected_samples)
+		if (selected_samples.length) show_lasso_menu(event, selected_samples)
 		else obj.menu.hide()
 
 		// Reset classes of all items (.possible and .not_possible are useful
@@ -1510,8 +1511,8 @@ function lasso_select(obj, dots) {
 			.style('fill-opacity', '1')
 	}
 
-	function show_lasso_menu(samples) {
-		obj.menu.clear().show(d3event.sourceEvent.clientX - 90, d3event.sourceEvent.clientY)
+	function show_lasso_menu(event, samples) {
+		obj.menu.clear().show(event.sourceEvent.clientX - 90, event.sourceEvent.clientY)
 
 		if (obj.mds && obj.mds.gene2mutcount) {
 			obj.menu.d
@@ -1604,7 +1605,7 @@ function printData(obj) {
 }
 
 function click_mutated_genes(obj, samples) {
-	obj.pane = client.newpane({ x: d3event.clientX, y: d3event.clientY })
+	obj.pane = client.newpane({ x: event.clientX, y: event.clientY })
 	obj.pane.header.text('Recurrently Mutated Genes')
 	obj.pane.wait = client.tab_wait(obj.pane.body)
 	obj.pane.matrix_criteria_div = obj.pane.body.append('div')

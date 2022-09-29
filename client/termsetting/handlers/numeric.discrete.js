@@ -1,5 +1,5 @@
 import { keyupEnter } from '#src/client'
-import { select, event } from 'd3-selection'
+import { select } from 'd3-selection'
 import { format } from 'd3-format'
 import { setDensityPlot } from './density'
 import { get_bin_label, get_bin_range_equation } from '#shared/termdb.bins'
@@ -360,8 +360,8 @@ function renderBinSizeInput(self, tr) {
 		.style('width', '100px')
 		.style('color', d => (self.q.bin_size > Math.abs(dd.maxvalue - dd.minvalue) ? 'red' : ''))
 		.on('change', handleChange)
-		.on('keyup', function() {
-			if (!keyupEnter()) return
+		.on('keyup', function(event) {
+			if (!keyupEnter(event)) return
 			handleChange.call(this)
 		})
 
@@ -400,8 +400,8 @@ function renderFirstBinInput(self, tr) {
 		.style('margin-left', '15px')
 		.style('color', self.q.first_bin && self.q.first_bin.stop < self.num_obj.density_data.minvalue ? 'red' : '')
 		.on('change', handleChange)
-		.on('keyup', function() {
-			if (!keyupEnter()) return
+		.on('keyup', function(event) {
+			if (!keyupEnter(event)) return
 			handleChange.call(this)
 		})
 
@@ -490,8 +490,8 @@ function renderLastBinInputs(self, tr) {
 		.style('width', '100px')
 		.style('margin-left', '15px')
 		.on('change', handleChange)
-		.on('keyup', function() {
-			if (!keyupEnter()) return
+		.on('keyup', function(event) {
+			if (!keyupEnter(event)) return
 			handleChange.call(this)
 		})
 
@@ -564,10 +564,10 @@ function renderCustomBinInputs(self, tablediv) {
 				.join('\n')
 		)
 		.on('change', handleChange)
-		.on('keyup', async () => {
+		.on('keyup', async event => {
 			// enter or backspace/delete
 			// i don't think backspace works
-			if (!keyupEnter() && event.key != 8) return
+			if (!keyupEnter(event) && event.key != 8) return
 			if (!self.dom.customBinLabelDiv.selectAll('input').node().value) return
 			// Fix for if user hits enter with no values. Reverts to default cutoff.
 			handleChange.call(this)

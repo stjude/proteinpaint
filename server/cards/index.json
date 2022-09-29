@@ -73,6 +73,7 @@
             "description": "Genomic feature annotation",
             "image": "https://pecan.stjude.cloud/static/examples/images/bedj-square.png",
             "sandboxJson": "bedj",
+            "ribbon": {"text": "updated", "expireDate": "2022-10-27"},
             "searchterms": []
         },
         {

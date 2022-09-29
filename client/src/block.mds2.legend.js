@@ -1,4 +1,3 @@
-import { event as d3event } from 'd3-selection'
 import * as client from './client'
 import { legend_newrow } from './block.legend'
 import * as common from '#shared/common'
@@ -212,11 +211,11 @@ function update_mclass(mclass2count, tk) {
 			.style('text-decoration', 'line-through')
 			.style('opacity', 0.3)
 			.text('(' + c.count + ') ' + (Number.isInteger(c.k) ? common.dt2label[c.k] : common.mclass[c.k].label))
-			.on('click', async () => {
+			.on('click', async event => {
 				if (loading) return
 				loading = true
 				tk.legend.mclass.hiddenvalues.delete(c.k)
-				d3event.target.innerHTML = 'Updating...'
+				event.target.innerHTML = 'Updating...'
 				await tk.load()
 			})
 	}

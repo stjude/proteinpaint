@@ -30,8 +30,7 @@ function getOpts(_opts = {}) {
 		termdbConfig: {
 			selectCohort: {
 				term: { id: 'subcohort', type: 'categorical' },
-				showMessageWhenNotSelected:
-					'To get started with the Clinical Browser, select the survivor population you wish to browse.',
+				prompt: 'To get started with the Clinical Browser, select the survivor population you wish to browse.',
 				values: [
 					{
 						keys: ['SJLIFE'],

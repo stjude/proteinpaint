@@ -1,17 +1,10 @@
 import * as client from './client'
-import {event as d3event} from 'd3-selection'
-
 
 /*
 shared code for all mds tracks
 only for mdsjunction and mdscnv
 may be obsolete
 */
-
-
-
-
-
 
 export function makeLegend_cohort_hierarchy(arg) {
 	/*
@@ -26,25 +19,26 @@ export function makeLegend_cohort_hierarchy(arg) {
 	only works for parent track
 	*/
 
-	for(const hierarchyname in arg.hash) {
+	for (const hierarchyname in arg.hash) {
 		// hierarchyname is .name of a hierarchy from ds.cohort
-		const tr=arg.tk.cohortFilter.holderTable.append('tr')
+		const tr = arg.tk.cohortFilter.holderTable.append('tr')
 		tr.append('td')
-			.style('vertical-align','top')
+			.style('vertical-align', 'top')
 			.append('div')
 			.text(hierarchyname)
-			.style('color','#858585')
-			.style('margin-top','7px')
-		const treeholder=tr.append('td')
+			.style('color', '#858585')
+			.style('margin-top', '7px')
+		const treeholder = tr
+			.append('td')
 			.append('div')
-			.style('display','inline-block')  // so that row won't expand to full
+			.style('display', 'inline-block') // so that row won't expand to full
 
-		let folderstack=[]
+		let folderstack = []
 
 		const nodesofhierarchy = []
 		// v: {showhidebutton}
 
-		for(const node of arg.hash[hierarchyname]) {
+		for (const node of arg.hash[hierarchyname]) {
 			/*
 			.name
 			.label
@@ -55,107 +49,97 @@ export function makeLegend_cohort_hierarchy(arg) {
 			.count
 			.totalCount
 			*/
-			if(node.depth==0) {
+			if (node.depth == 0) {
 				// root
 				continue
 			}
 
-			if(node.depth==1) {
+			if (node.depth == 1) {
 				// depth 1, show by default
-				const [folder, showhidebutton] = make_one_node( arg, node, treeholder, hierarchyname )
-				if(folder) {
-					folderstack = [ folder ]
+				const [folder, showhidebutton] = make_one_node(arg, node, treeholder, hierarchyname)
+				if (folder) {
+					folderstack = [folder]
 				}
 				nodesofhierarchy.push({
 					nodeid: node.id,
-					showhidebutton:showhidebutton
+					showhidebutton: showhidebutton
 				})
 				continue
 			}
 
 			// children levels, find its own holder
-			const itsholder = folderstack[ node.depth-2 ]
-			const [folder, showhidebutton] = make_one_node( arg, node, itsholder, hierarchyname )
-			if(folder) {
-				folderstack[ node.depth-1 ] = folder
+			const itsholder = folderstack[node.depth - 2]
+			const [folder, showhidebutton] = make_one_node(arg, node, itsholder, hierarchyname)
+			if (folder) {
+				folderstack[node.depth - 1] = folder
 			}
 			nodesofhierarchy.push({
-				nodeid:node.id,
-				showhidebutton:showhidebutton
+				nodeid: node.id,
+				showhidebutton: showhidebutton
 			})
 		}
 
-		arg.tk.cohortFilter.hierarchies.keys[ hierarchyname ].allnodes = nodesofhierarchy
+		arg.tk.cohortFilter.hierarchies.keys[hierarchyname].allnodes = nodesofhierarchy
 	}
 }
 
-
-
-
-
-function make_one_node( arg, node, holder, hierarchyname ) {
-
+function make_one_node(arg, node, holder, hierarchyname) {
 	const row = holder.append('div')
 
-	const labeldiv = row.append('div')
-		.style('display','inline-block')
-		.style('margin-right','10px')
-	arg.makenodelabel( node, labeldiv )
+	const labeldiv = row
+		.append('div')
+		.style('display', 'inline-block')
+		.style('margin-right', '10px')
+	arg.makenodelabel(node, labeldiv)
 
 	/*
 	show/hide button
 	*/
-	const showhidebutton = row.append('div')
-		.style('display','inline-block')
-		.attr('class','sja_handle_green')
+	const showhidebutton = row
+		.append('div')
+		.style('display', 'inline-block')
+		.attr('class', 'sja_handle_green')
 		.text('SHOW')
-		.style('font-size','.8em')
-		.on('mousedown',()=>{
-			d3event.stopPropagation()
+		.style('font-size', '.8em')
+		.on('mousedown', event => {
+			event.stopPropagation()
 		})
-		.on('click',()=>{
-			d3event.stopPropagation()
-			arg.clicknode( node, hierarchyname )
+		.on('click', event => {
+			event.stopPropagation()
+			arg.clicknode(node, hierarchyname)
 		})
 	// search against tk.subTracks to detect if this node has been shown as a custom track
-	if(arg.tk.subTracks.find( i=> i.permanentHierarchy.nodeid == node.id)) {
+	if (arg.tk.subTracks.find(i => i.permanentHierarchy.nodeid == node.id)) {
 		// the node has already been shown as a subtrack of this track
-		showhidebutton.text('HIDE')
-			.attr('class','sja_handle_red')
+		showhidebutton.text('HIDE').attr('class', 'sja_handle_red')
 	}
 
 	// if not leaf, make a folder to show its leaf nodes
 	let folder
 
-	if(node.isleaf) {
-		row.style('padding','5px 10px') // must follow sja_clb padding
+	if (node.isleaf) {
+		row.style('padding', '5px 10px') // must follow sja_clb padding
 	} else {
-		row
-			.attr('class','sja_clb')
-			.on('click',()=>{
-				if(folder.style('display')=='none') {
-					arg.tk.cohortFilter.hierarchies.keys[ hierarchyname ].opennodeids.add( node.id )
-					client.appear(folder)
-					return
-				}
-				client.disappear(folder)
-				arg.tk.cohortFilter.hierarchies.keys[ hierarchyname ].opennodeids.delete( node.id )
-			})
+		row.attr('class', 'sja_clb').on('click', () => {
+			if (folder.style('display') == 'none') {
+				arg.tk.cohortFilter.hierarchies.keys[hierarchyname].opennodeids.add(node.id)
+				client.appear(folder)
+				return
+			}
+			client.disappear(folder)
+			arg.tk.cohortFilter.hierarchies.keys[hierarchyname].opennodeids.delete(node.id)
+		})
 
-		folder = holder.append('div')
-			.style('display', arg.tk.cohortFilter.hierarchies.keys[ hierarchyname ].opennodeids.has(node.id) ? 'block' : 'none')
+		folder = holder
+			.append('div')
+			.style('display', arg.tk.cohortFilter.hierarchies.keys[hierarchyname].opennodeids.has(node.id) ? 'block' : 'none')
 			.style('margin-left', '20px')
-			.style('border-left','solid 1px '+arg.block.legend.legendcolor)
-			.style('padding-left','5px')
-			.style('background','white')
+			.style('border-left', 'solid 1px ' + arg.block.legend.legendcolor)
+			.style('padding-left', '5px')
+			.style('background', 'white')
 	}
-	return [ folder, showhidebutton ]
+	return [folder, showhidebutton]
 }
-
-
-
-
-
 
 export function showHideSubtrack_byHierarchyLevel(parentTk, block, hierarchy) {
 	/*
@@ -174,17 +158,16 @@ export function showHideSubtrack_byHierarchyLevel(parentTk, block, hierarchy) {
 
 	*/
 
-	const arridx = parentTk.subTracks.findIndex( i=> i.permanentHierarchy.nodeid == hierarchy.nodeid )
-	if(arridx!=-1) {
+	const arridx = parentTk.subTracks.findIndex(i => i.permanentHierarchy.nodeid == hierarchy.nodeid)
+	if (arridx != -1) {
 		// the node is already shown as a subtrack, remove it
 		const subtkid = parentTk.subTracks[arridx].tkid
-		parentTk.subTracks.splice( arridx, 1 )
-		block.tk_remove( block.tklst.findIndex( i=>i.tkid == subtkid ) )
-		parentTk.cohortFilter.hierarchies.keys[ hierarchy.hierarchyname ].allnodes
-			.find( i=> i.nodeid == hierarchy.nodeid)
-			.showhidebutton
-			.text('SHOW')
-			.attr('class','sja_handle_green')
+		parentTk.subTracks.splice(arridx, 1)
+		block.tk_remove(block.tklst.findIndex(i => i.tkid == subtkid))
+		parentTk.cohortFilter.hierarchies.keys[hierarchy.hierarchyname].allnodes
+			.find(i => i.nodeid == hierarchy.nodeid)
+			.showhidebutton.text('SHOW')
+			.attr('class', 'sja_handle_green')
 		return
 	}
 
@@ -192,29 +175,29 @@ export function showHideSubtrack_byHierarchyLevel(parentTk, block, hierarchy) {
 	{
 		// template from parent.mds.queries
 		// tk0 should be read-only, also contain default customizable settings, which should be overriden by what's in parent track
-		const tk0 = parentTk.mds.queries[ parentTk.querykey ]
-		for(const k in tk0) {
+		const tk0 = parentTk.mds.queries[parentTk.querykey]
+		for (const k in tk0) {
 			tktemp[k] = tk0[k]
 		}
-		switch( tk0.type ) {
-		case client.tkt.mdscnv:
-			tktemp.valueCutoff = parentTk.valueCutoff
-			tktemp.bplengthUpperLimit = parentTk.bplengthUpperLimit
-			tktemp.gain = { 
-				color: parentTk.gain.color,
-				barheight: parentTk.gain.barheight
+		switch (tk0.type) {
+			case client.tkt.mdscnv:
+				tktemp.valueCutoff = parentTk.valueCutoff
+				tktemp.bplengthUpperLimit = parentTk.bplengthUpperLimit
+				tktemp.gain = {
+					color: parentTk.gain.color,
+					barheight: parentTk.gain.barheight
 				}
-			tktemp.loss = {
-				color: parentTk.loss.color,
-				barheight: parentTk.loss.barheight
+				tktemp.loss = {
+					color: parentTk.loss.color,
+					barheight: parentTk.loss.barheight
 				}
-			break
-		case client.tkt.mdsjunction:
-			tktemp.readcountCutoff = parentTk.readcountCutoff
-			tktemp.axisheight = parentTk.axisheight
-			tktemp.legheight  = parentTk.legheight
-			tktemp.yscaleUseLog = parentTk.yscaleUseLog
-			break
+				break
+			case client.tkt.mdsjunction:
+				tktemp.readcountCutoff = parentTk.readcountCutoff
+				tktemp.axisheight = parentTk.axisheight
+				tktemp.legheight = parentTk.legheight
+				tktemp.yscaleUseLog = parentTk.yscaleUseLog
+				break
 		}
 	}
 
@@ -224,7 +207,7 @@ export function showHideSubtrack_byHierarchyLevel(parentTk, block, hierarchy) {
 	subtk.permanentHierarchy = hierarchy
 
 	delete subtk.subTracks
-	parentTk.subTracks.push( subtk )
+	parentTk.subTracks.push(subtk)
 
 	subtk.querykey = parentTk.querykey
 	subtk.mds = parentTk.mds
@@ -237,31 +220,24 @@ export function showHideSubtrack_byHierarchyLevel(parentTk, block, hierarchy) {
 
 	block.tk_load(subtk)
 
-	parentTk.cohortFilter.hierarchies.keys[ hierarchy.hierarchyname ].allnodes
-		.find( i=> i.nodeid == hierarchy.nodeid)
-		.showhidebutton
-		.text('HIDE')
-		.attr('class','sja_handle_red')
+	parentTk.cohortFilter.hierarchies.keys[hierarchy.hierarchyname].allnodes
+		.find(i => i.nodeid == hierarchy.nodeid)
+		.showhidebutton.text('HIDE')
+		.attr('class', 'sja_handle_red')
 }
 
-
-
-
-
-
-export function subtrackclosehandle( tk, block, y ) {
-
+export function subtrackclosehandle(tk, block, y) {
 	// make a Close handle for a subtrack
 
-	return block.maketklefthandle(tk, y||0)
+	return block
+		.maketklefthandle(tk, y || 0)
 		.text('Close')
-		.on('click',()=>{
-			tk.parentTk.subTracks.splice( tk.parentTk.subTracks.findIndex(i=>i.tkid==tk.tkid), 1)
-			block.tk_remove( block.tklst.findIndex(i=>i.tkid==tk.tkid) )
-			tk.parentTk.cohortFilter.hierarchies.keys[ tk.permanentHierarchy.hierarchyname ].allnodes
-				.find( i=> i.nodeid == tk.permanentHierarchy.nodeid)
-				.showhidebutton
-				.text('SHOW')
-				.attr('class','sja_handle_green')
+		.on('click', () => {
+			tk.parentTk.subTracks.splice(tk.parentTk.subTracks.findIndex(i => i.tkid == tk.tkid), 1)
+			block.tk_remove(block.tklst.findIndex(i => i.tkid == tk.tkid))
+			tk.parentTk.cohortFilter.hierarchies.keys[tk.permanentHierarchy.hierarchyname].allnodes
+				.find(i => i.nodeid == tk.permanentHierarchy.nodeid)
+				.showhidebutton.text('SHOW')
+				.attr('class', 'sja_handle_green')
 		})
 }

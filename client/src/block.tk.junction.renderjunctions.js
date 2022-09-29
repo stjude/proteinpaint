@@ -1,5 +1,6 @@
-import { scaleLinear, scaleLog, scaleOrdinal, schemeCategory10 } from 'd3-scale'
-import { select as d3select, event as d3event } from 'd3-selection'
+import { scaleLinear, scaleLog, scaleOrdinal } from 'd3-scale'
+import { schemeCategory10 } from 'd3-scale-chromatic'
+import { select as d3select } from 'd3-selection'
 import { axisRight } from 'd3-axis'
 import * as client from './client'
 import * as common from '#shared/common'
@@ -446,7 +447,7 @@ jug2.filter(function(d){return d.rimwidth>0})
 		.attr('fill', 'white')
 		.attr('fill-opacity', 0)
 		.attr('stroke-opacity', 0)
-		.on('mouseover', d => {
+		.on('mouseover', (event, d) => {
 			jug.selectAll('.sja_jug_leg1').attr('stroke-opacity', 0.2)
 			jug.selectAll('.sja_jug_leg2').attr('stroke-opacity', 0.2)
 			jug.selectAll('.sja_jug_stem').attr('stroke-opacity', 0.2)
@@ -457,7 +458,7 @@ jug2.filter(function(d){return d.rimwidth>0})
 				foldedjunctioninfo(d, tk)
 				return
 			}
-			const circle = d3event.target.getBoundingClientRect()
+			const circle = event.target.getBoundingClientRect()
 			expandedjunctioninfo(d, tk, circle)
 		})
 		.on('mouseout', () => {
@@ -467,11 +468,11 @@ jug2.filter(function(d){return d.rimwidth>0})
 			jug.selectAll('.sja_jug_leg2').attr('stroke-opacity', d => set_lineopacity(d))
 			jug.selectAll('.sja_jug_stem').attr('stroke-opacity', d => set_lineopacity(d))
 		})
-		.on('mousedown', () => {
+		.on('mousedown', event => {
 			/*
 		allow shift jug manually
 		*/
-			d3event.stopPropagation()
+			event.stopPropagation()
 		})
 		.on('click', d => {
 			if (d.mode == modefold) {
@@ -1037,10 +1038,10 @@ function junctionsamplespread(j, tk, block) {
 		.attr('width', set_pillar(j))
 		.attr('shape-rendering','crispEdges')
 		.on('mousedown',()=>{
-			d3event.stopPropagation()
+			event.stopPropagation()
 		})
 		.on('click',()=>{
-			j.pillarrect=d3event.target // for modifying pillar rect when removing junction from matrix table
+			j.pillarrect=event.target // for modifying pillar rect when removing junction from matrix table
 			const added=matrixjunctionchange(j,tk,block)
 			j.pillarrect.style.stroke = added ? d.color : 'none'
 		})
@@ -1072,17 +1073,17 @@ function junctionsamplespread(j, tk, block) {
 			*/
 		})
 		.attr('fill-opacity', opacity)
-		.on('mousedown', () => d3event.stopPropagation())
-		.on('mousemove', () => d3event.stopPropagation())
-		.on('mouseover', bee => {
+		.on('mousedown', event => event.stopPropagation())
+		.on('mousemove', event => event.stopPropagation())
+		.on('mouseover', (event, bee) => {
 			// mouse over a single sample, tiny dot
-			d3select(d3event.target).attr('fill-opacity', 1)
-			const p = d3event.target.getBoundingClientRect()
+			d3select(event.target).attr('fill-opacity', 1)
+			const p = event.target.getBoundingClientRect()
 			tk.tktip.clear()
 			tk.tktip.show(p.left + 20, p.top - 40)
 			samplejunctiontooltip(j, bee.datum, tk, tk.tktip.d)
 		})
-		.on('mouseout', () => d3select(d3event.target).attr('fill-opacity', opacity))
+		.on('mouseout', event => d3select(event.target).attr('fill-opacity', opacity))
 		.on('click', bee => {
 			if (tk.tracks) {
 				// FIXME need cohort

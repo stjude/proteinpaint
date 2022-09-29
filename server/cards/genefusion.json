@@ -21,6 +21,9 @@
                     "text": "PAX5,NM_016734,201,JAK2,NM_004972,812",
 		            "positionType": "codon"
                 }
+            },
+            "testSpec": {
+                "expected": {"rect": 1, "svg": 1, "table": 1 }
             }
         },
         {
@@ -44,6 +47,9 @@
                         }
                     ]
                 }]
+            },
+            "testSpec": {
+                "expected": {"rect": 1, "svg": 1, "table": 1 }
             }
         }
     ],

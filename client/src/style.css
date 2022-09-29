@@ -1110,3 +1110,22 @@ table {
     cursor: default;
 }
 /* client/dom/sandbox.js end */
+
+.grid-container{
+    display:grid;
+    padding:1px 1;
+	/* gap: 3px; */
+	top:0px;
+	background-color:white;
+	padding:0.2em
+}
+
+.header-container{
+  display: grid;
+  background:color white;
+  font-size: 1em;
+  opacity:0.5;
+  padding:1px 1;
+  /* gap:3px; */
+  position:sticky
+}

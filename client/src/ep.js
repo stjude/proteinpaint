@@ -1,6 +1,7 @@
-import { scaleLinear, scaleLog, scaleOrdinal, schemeCategory20 } from 'd3-scale'
+import { scaleLinear, scaleLog, scaleOrdinal } from 'd3-scale'
+import { schemeCategory20 } from '#common/legacy-d3-polyfill'
 import { axisTop } from 'd3-axis'
-import { select as d3select, event as d3event, mouse as d3mouse } from 'd3-selection'
+import { select as d3select, pointer as d3pointer } from 'd3-selection'
 import { hierarchy, stratify } from 'd3-hierarchy'
 import * as client from './client'
 import { burst } from './ep.sun'
@@ -136,23 +137,6 @@ arg
 		if (this.data.length == 0) {
 			this.pane.header.text(this.p.name)
 			error('No expression data for ' + this.genename)
-			/*
-		don't show gene search
-			this.pane.body.append('input')
-			.attr('placeholder','Try another gene')
-			.attr('size',15)
-			.style('margin','0px 0px 20px 20px')
-			.on('keyup',()=>{
-				const str=d3event.target.value
-				if(d3event.code=='Enter') {
-					this.width=400
-					this.height=500
-					showgene(this,str)
-					d3event.target.value=''
-					return
-				}
-			})
-			*/
 			return
 		}
 
@@ -201,15 +185,15 @@ arg
 			.attr('font-size', '.8em')
 			.attr('font-family', client.font)
 			.attr('class', 'sja_clbtext')
-			.on('mousedown', () => {
-				d3event.preventDefault()
-				const x = d3event.clientX
-				const y = d3event.clientY
+			.on('mousedown', event => {
+				event.preventDefault()
+				const x = event.clientX
+				const y = event.clientY
 				const width = this.width
 				const height = this.height
 				const b = d3select(document.body)
 				b.on('mousemove', () => {
-					this.render(width + d3event.clientX - x, height + d3event.clientY - y)
+					this.render(width + event.clientX - x, height + event.clientY - y)
 				})
 				b.on('mouseup', () => {
 					b.on('mousemove', null).on('mouseup', null)
@@ -230,14 +214,14 @@ arg
 			.attr('y', 0)
 			.attr('fill', 'white')
 			.attr('fill-opacity', 0)
-			.on('mousedown', () => {
+			.on('mousedown', event => {
 				if (!this.p.cohort) {
 					console.log('no .p.cohort')
 					return
 				}
 
 				this.busy = true
-				const x = d3mouse(this.grabbar.node())[0]
+				const x = d3pointer(event, event.grabbar.node())[0]
 				const val1 = Number.parseFloat(this.x_scale.invert(x).toFixed(1))
 				this.grab.x = x
 				this.grab.width = 1
@@ -251,9 +235,9 @@ arg
 				this.grab.shadehandle2.attr('x', 2).attr('fill-opacity', 0.5)
 				burst(this, val1, Number.parseFloat(this.x_scale.invert(x + 1).toFixed(1)))
 				const b = d3select(document.body)
-				b.on('mousemove', () => {
-					d3event.preventDefault()
-					let x2 = d3mouse(this.grabbar.node())[0]
+				b.on('mousemove', event => {
+					event.preventDefault()
+					let x2 = d3pointer(event, this.grabbar.node())[0]
 					x2 = Math.max(-this.dotsize, x2)
 					x2 = Math.min(this.width + this.dotsize, x2)
 					this.grab.width = Math.max(1, Math.abs(x2 - x))
@@ -293,17 +277,17 @@ arg
 			.attr('stroke-width', 1)
 			.attr('fill', this.p.hlcolor)
 			.style('cursor', 'move')
-			.on('mousedown', () => {
+			.on('mousedown', event => {
 				if (!this.p.cohort) {
 					// no cohort, do not show sunburst
 					return
 				}
 				this.busy = true
-				let x = d3event.clientX
+				let x = event.clientX
 				const b = d3select(document.body)
-				b.on('mousemove', () => {
-					d3event.preventDefault()
-					const x2 = d3event.clientX
+				b.on('mousemove', event => {
+					event.preventDefault()
+					const x2 = event.clientX
 					this.grab.x += x2 - x
 					x = x2
 					this.grab.shade.attr('transform', 'translate(' + this.grab.x + ',' + this.grab.y + ')')
@@ -325,13 +309,13 @@ arg
 			.attr('fill', this.p.hlcolor)
 			.attr('fill-opacity', 0)
 			.style('cursor', 'ew-resize')
-			.on('mousedown', () => {
+			.on('mousedown', event => {
 				this.busy = true
-				let x = d3event.clientX
+				let x = event.clientX
 				const b = d3select(document.body)
-				b.on('mousemove', () => {
-					d3event.preventDefault()
-					const x2 = d3event.clientX
+				b.on('mousemove', event => {
+					event.preventDefault()
+					const x2 = event.clientX
 					this.grab.width += x - x2
 					if (this.grab.width <= 0) {
 						this.grab.width -= x - x2
@@ -360,12 +344,12 @@ arg
 			.attr('fill', this.p.hlcolor)
 			.attr('fill-opacity', 0)
 			.style('cursor', 'ew-resize')
-			.on('mousedown', () => {
-				let x = d3event.clientX
+			.on('mousedown', event => {
+				let x = event.clientX
 				const b = d3select(document.body)
-				b.on('mousemove', () => {
-					d3event.preventDefault()
-					const x2 = d3event.clientX
+				b.on('mousemove', event => {
+					event.preventDefault()
+					const x2 = event.clientX
 					this.grab.width += x2 - x
 					if (this.grab.width <= 0) {
 						this.grab.width -= x2 - x
@@ -400,7 +384,7 @@ arg
 			.each(function(d) {
 				d.circle = this
 			})
-			.on('mouseover', d => {
+			.on('mouseover', (event, d) => {
 				if (this.busy) return
 				d.circle.setAttribute('transform', 'scale(1.5)')
 				this.dottip.clear()
@@ -420,7 +404,7 @@ arg
 				}
 				const cangetmore = this.getsampleinfo(d, lst)
 				client.make_table_2col(this.dottip.d, lst).style('zoom', 0.7)
-				this.dottip.show(d3event.clientX, d3event.clientY)
+				this.dottip.show(event.clientX, event.clientY)
 
 				if (cangetmore) {
 					// more info available from cohort.annotation
@@ -429,33 +413,33 @@ arg
 						.text('Full details')
 						.attr('class', 'sja_menuoption')
 						.on('click', () => {
-							samplefulldetail(d, this.p.cohort, d3event.clientX - 100, d3event.clientY - 100)
+							samplefulldetail(d, this.p.cohort, event.clientX - 100, event.clientY - 100)
 						})
 				}
 			})
-			.on('mouseout', d => {
+			.on('mouseout', (event, d) => {
 				d.circle.setAttribute('transform', 'scale(1)')
 			})
-			.on('mousedown', d => {
-				d3event.preventDefault()
-				const y0 = d3event.clientY
+			.on('mousedown', (event, d) => {
+				event.preventDefault()
+				const y0 = event.clientY
 				const b = d3select(document.body)
 				const median = this.data[Math.floor(this.data.length / 2)].value
 				if (d.value < median) {
 					// shift
 					const inity = this.dotgraph_y
-					b.on('mousemove', () => {
+					b.on('mousemove', event => {
 						this.busy = true // must set it here so not busy for click
 						this.dotmoved = true
-						this.dotgraph_y = inity + d3event.clientY - y0
+						this.dotgraph_y = inity + event.clientY - y0
 						this.graph.attr('transform', 'translate(0,' + this.dotgraph_y + ')')
 					})
 				} else {
 					// lengthen
 					const inith = this.heightmove
-					b.on('mousemove', () => {
+					b.on('mousemove', event => {
 						this.dotmoved = true
-						this.heightmove = inith + y0 - d3event.clientY
+						this.heightmove = inith + y0 - event.clientY
 						const rowheight = this.heightmove / this.data.length
 						this.epdotg.attr('transform', (d, i) => {
 							d._y = this.height - this.heightmove + i * rowheight
@@ -851,7 +835,7 @@ arg
 			.attr('text-anchor', d => (d.mafrect.onleft ? 'end' : 'start'))
 			.attr('x', d => (d.mafrect.onleft ? -1 : 1) * this.dotsize)
 			.attr('y', d => d.mafrect.y1 - d._y + this.dotsize / 2)
-			.on('click', d => {
+			.on('click', (event, d) => {
 				// cancel highlight
 				d3select(d.circle)
 					.attr('stroke-width', 1)
@@ -859,7 +843,7 @@ arg
 					.attr('stroke', 'black')
 					.attr('r', this.dotsize / 2)
 				d.showtext = false
-				d3select(d3event.target).remove()
+				d3select(event.target).remove()
 			})
 			.attr('font-size', 1)
 			.transition()
@@ -1127,8 +1111,8 @@ function makeButtons(ep) {
 		.attr('placeholder', 'Sample')
 		.style('width', '60px')
 		.style('margin-left', '5px')
-		.on('keyup', () => {
-			const str = d3event.target.value
+		.on('keyup', event => {
+			const str = event.target.value
 			if (str == '') {
 				ep.epdot
 					.attr('r', ep.dotsize / 2)
@@ -1160,11 +1144,11 @@ function makeButtons(ep) {
 		.attr('placeholder', 'Gene')
 		.style('width', '60px')
 		.style('margin-left', '5px')
-		.on('keyup', () => {
-			const str = d3event.target.value
-			if (d3event.code == 'Enter') {
+		.on('keyup', event => {
+			const str = event.target.value
+			if (event.code == 'Enter') {
 				showgene(ep, str)
-				d3event.target.value = ''
+				event.target.value = ''
 				return
 			}
 		})

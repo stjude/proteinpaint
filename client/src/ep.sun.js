@@ -1,7 +1,7 @@
 import { arc as d3arc } from 'd3-shape'
 import { scaleLinear } from 'd3-scale'
 import { stratify, partition } from 'd3-hierarchy'
-import { select as d3select, event as d3event } from 'd3-selection'
+import { select as d3select } from 'd3-selection'
 import { rgb as d3rgb } from 'd3-color'
 import { stratinput } from '#shared/tree'
 import { font as fontfamily } from './client'
@@ -166,7 +166,7 @@ quick fix to avoid error!
 			d._color = ep.p.cohort.suncolor(name)
 			return d._color
 		})
-		.on('mouseover', d => {
+		.on('mouseover', (event, d) => {
 			if (!d.parent) return
 			//let thissize
 			setnamesays.text(d.data.name)
@@ -179,20 +179,20 @@ quick fix to avoid error!
 			//.attr('font-size',thissize)
 			numsays.text(d.value)
 			datatypesays.text(d.data.full || '')
-			d3event.target.setAttribute(
+			event.target.setAttribute(
 				'fill',
 				d3rgb(d._color)
 					.darker(0.5)
 					.toString()
 			)
 		})
-		.on('mouseout', d => {
+		.on('mouseout', (event, d) => {
 			setnamesays.text(grab.min + ' - ' + grab.max).attr('font-size', setnamefontsize)
 			setnamesaysbg.text(grab.min + ' - ' + grab.max).attr('font-size', setnamefontsize)
 			numsays.text(numsamplewithlevel1 == elst.length ? elst.length : numsamplewithlevel1 + '/' + elst.length)
 			datatypesays.text(ep.p.datatype)
 			//sampletypesays.text(ep.p.sampletype.toUpperCase())
-			d3event.target.setAttribute('fill', d._color)
+			event.target.setAttribute('fill', d._color)
 		})
 		.on('click', d => {
 			// clicking a slice
@@ -440,18 +440,18 @@ items must be sorted in proper order to work with following label y placement me
 			if (sun.busy) return
 			removesun(sun, grab, ep)
 		})
-		.on('mousedown', () => {
+		.on('mousedown', event => {
 			const x0 = sun.x,
 				y0 = sun.y,
-				mx = d3event.clientX,
-				my = d3event.clientY,
+				mx = event.clientX,
+				my = event.clientY,
 				body = d3select(document.body)
 			body
-				.on('mousemove', () => {
-					d3event.preventDefault()
+				.on('mousemove', event => {
+					event.preventDefault()
 					sun.busy = true
-					sun.x = x0 + d3event.clientX - mx
-					sun.y = y0 + d3event.clientY - my
+					sun.x = x0 + event.clientX - mx
+					sun.y = y0 + event.clientY - my
 					sun.g.attr('transform', 'translate(' + sun.x + ',' + sun.y + ')')
 				})
 				.on('mouseup', () => {

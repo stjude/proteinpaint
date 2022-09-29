@@ -1,7 +1,6 @@
 import * as uiutils from '#dom/uiUtils'
 import { appear } from '#dom/animation'
 import { init_tabs } from '#dom/toggleButtons'
-import { event as d3event, selectAll as d3selectAll } from 'd3-selection'
 import { appInit } from '#mass/app'
 import { parseDictionary } from './dictionary.parse'
 import { sayerror } from '../client'
@@ -173,8 +172,8 @@ function makeFileUpload(div, obj) {
 	// Renders the select file div and callback.
 	const upload_div = div.append('div').style('display', 'inline-block')
 	const upload = uiutils.makeFileUpload(upload_div).classed('databrowser_input', true)
-	upload.on('change', () => {
-		const file = d3event.target.files[0]
+	upload.on('change', event => {
+		const file = event.target.files[0]
 		const reader = new FileReader()
 		reader.onload = event => {
 			obj.data = parseDictionary(event.target.result)

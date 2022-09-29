@@ -1,4 +1,3 @@
-import { event as d3event } from 'd3-selection'
 import { axisLeft, axisRight } from 'd3-axis'
 import { scaleLinear } from 'd3-scale'
 import * as client from './client'
@@ -341,12 +340,12 @@ function renderTk_fpkm(tk, block) {
 				.attr('height', boxh + 2)
 				.attr('fill', 'white')
 				.attr('fill-opacity', 0)
-				.on('mouseover', () => {
+				.on('mouseover', event => {
 					line.attr('stroke-opacity', 0.5)
 					box.attr('fill-opacity', 0.3)
 					tooltip_genefpkm(gene, tk)
 				})
-				.on('mouseout', () => {
+				.on('mouseout', event => {
 					line.attr('stroke-opacity', 0.4)
 					box.attr('fill-opacity', 0.2)
 					tk.tktip.hide()
@@ -356,7 +355,7 @@ function renderTk_fpkm(tk, block) {
 }
 
 function tooltip_genefpkm(gene, tk) {
-	tk.tktip.clear().show(d3event.clientX, d3event.clientY)
+	tk.tktip.clear().show(event.clientX, event.clientY)
 	const lst = [
 		{
 			k: gene.gene + ' ' + tk.gecfg.datatype,
@@ -409,7 +408,7 @@ function makeTk(tk, block) {
 	tk.config_handle = block
 		.maketkconfighandle(tk)
 		.attr('y', 10 + block.labelfontsize)
-		.on('click', () => {
+		.on('click', event => {
 			configPanel(tk, block)
 		})
 
@@ -433,9 +432,9 @@ function configPanel(tk, block) {
 			.attr('type', 'numeric')
 			.property('value', tk.rna.coveragebarh)
 			.style('width', '80px')
-			.on('keyup', () => {
-				if (!client.keyupEnter()) return
-				const v = Number.parseInt(d3event.target.value)
+			.on('keyup', event => {
+				if (!client.keyupEnter(event)) return
+				const v = Number.parseInt(event.target.value)
 				if (v <= 20) return
 				if (v == tk.rna.coveragebarh) return
 				tk.rna.coveragebarh = v
@@ -450,8 +449,8 @@ function configPanel(tk, block) {
 			.attr('type', 'checkbox')
 			.attr('id', id)
 			.property('checked', tk.rna.coverageauto)
-			.on('change', () => {
-				tk.rna.coverageauto = d3event.target.checked
+			.on('change', event => {
+				tk.rna.coverageauto = event.target.checked
 				fixed.style('display', tk.rna.coverageauto ? 'none' : 'inline')
 				loadTk(tk, block)
 			})
@@ -469,9 +468,9 @@ function configPanel(tk, block) {
 			.attr('value', 'numeric')
 			.property('value', tk.rna.coveragemax)
 			.style('width', '50px')
-			.on('keyup', () => {
-				if (!client.keyupEnter()) return
-				const v = Number.parseInt(d3event.target.value)
+			.on('keyup', event => {
+				if (!client.keyupEnter(event)) return
+				const v = Number.parseInt(event.target.value)
 				if (v <= 0) return
 				if (v == tk.rna.coveragemax) return
 				tk.rna.coveragemax = v
@@ -493,9 +492,9 @@ function configPanel(tk, block) {
 			.attr('type', 'numeric')
 			.property('value', tk.dna.coveragebarh)
 			.style('width', '80px')
-			.on('keyup', () => {
-				if (!client.keyupEnter()) return
-				const v = Number.parseInt(d3event.target.value)
+			.on('keyup', event => {
+				if (!client.keyupEnter(event)) return
+				const v = Number.parseInt(event.target.value)
 				if (v <= 20) return
 				if (v == tk.dna.coveragebarh) return
 				tk.dna.coveragebarh = v
@@ -509,8 +508,8 @@ function configPanel(tk, block) {
 			.append('input')
 			.attr('type', 'color')
 			.property('value', tk.dna.refcolor)
-			.on('change', () => {
-				tk.dna.refcolor = d3event.target.value
+			.on('change', event => {
+				tk.dna.refcolor = event.target.value
 				loadTk(tk, block)
 			})
 		row.append('span').html('&nbsp;Alt:&nbsp;')
@@ -518,8 +517,8 @@ function configPanel(tk, block) {
 			.append('input')
 			.attr('type', 'color')
 			.property('value', tk.dna.altcolor)
-			.on('change', () => {
-				tk.dna.altcolor = d3event.target.value
+			.on('change', event => {
+				tk.dna.altcolor = event.target.value
 				loadTk(tk, block)
 			})
 	}

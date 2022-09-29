@@ -1,4 +1,4 @@
-import { select as d3select, event as d3event } from 'd3-selection'
+import { select as d3select } from 'd3-selection'
 import * as client from './client'
 import { genomic2gm } from './coord'
 import { bplen as bplength } from '#shared/common'
@@ -127,8 +127,8 @@ export function svmrui(dlst, genomes, hostURL, jwt) {
 		const input = filediv
 			.append('input')
 			.attr('type', 'file')
-			.on('change', () => {
-				const file = d3event.target.files[0]
+			.on('change', event => {
+				const file = event.target.files[0]
 				if (!file) {
 					fileui()
 					return

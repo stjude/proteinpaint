@@ -475,8 +475,8 @@ function enterRange(self, tr, brush, i) {
 		.style('width', '80px')
 		.style('margin-left', '15px')
 		.attr('value', range.start)
-		.on('keyup', async () => {
-			if (!client.keyupEnter()) return
+		.on('keyup', async event => {
+			if (!client.keyupEnter(event)) return
 			brush.start_input.property('disabled', true)
 			try {
 				if (brush.start_input.node().value < minvalue) throw 'entered value is lower than minimum value'
@@ -497,6 +497,7 @@ function enterRange(self, tr, brush, i) {
 			// make changes based on start select
 			const new_range = JSON.parse(JSON.stringify(brush.range))
 			const value = brush.start_select.property('value')
+			const brushStopVal = brush.stop_input.node().value
 
 			if (value == 'startunbounded') {
 				range.startunbounded = true
@@ -505,12 +506,12 @@ function enterRange(self, tr, brush, i) {
 			} else {
 				delete range.startunbounded
 				new_range.start = brush.start_input.node().value || minvalue.toFixed(1)
-				new_range.stop = brush.stop_input.node().value || maxvalue.toFixed(1)
+				new_range.stop = brushStopVal || maxvalue.toFixed(1)
 				brush.start_input.property('disabled', false)
 				range.startinclusive = value == 'startinclusive'
 			}
-			if (brush.stop_input.node().value != maxvalue.toFixed(1)) {
-				new_range.stop = brush.stop_input.node().value
+			if (brushStopVal !== '' && brushStopVal != maxvalue.toFixed(1)) {
+				new_range.stop = brushStopVal
 				delete range.stopunbounded
 			}
 			brush.elem.call(brush.d3brush).call(brush.d3brush.move, [new_range.start, new_range.stop].map(xscale))
@@ -630,8 +631,8 @@ function enterRange(self, tr, brush, i) {
 		.style('width', '80px')
 		.style('margin-left', '15px')
 		.attr('value', range.stop)
-		.on('keyup', async () => {
-			if (!client.keyupEnter()) return
+		.on('keyup', async event => {
+			if (!client.keyupEnter(event)) return
 			brush.stop_input.property('disabled', true)
 			try {
 				if (+brush.stop_input.node().value > maxvalue) throw 'entered value is higher than maximum value'
