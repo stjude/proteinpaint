@@ -194,7 +194,7 @@ quick fix to avoid error!
 			//sampletypesays.text(ep.p.sampletype.toUpperCase())
 			event.target.setAttribute('fill', d._color)
 		})
-		.on('click', d => {
+		.on('click', (event, d) => {
 			// clicking a slice
 			if (!ep.samplecart) {
 				// no callback, do not handle

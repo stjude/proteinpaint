@@ -474,7 +474,7 @@ jug2.filter(function(d){return d.rimwidth>0})
 		*/
 			event.stopPropagation()
 		})
-		.on('click', d => {
+		.on('click', (event, d) => {
 			if (d.mode == modefold) {
 				d.mode = moderaise
 			} else if (d.mode == moderaise) {

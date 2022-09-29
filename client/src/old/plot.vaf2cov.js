@@ -233,7 +233,7 @@ export default function plot_vaf2cov(arg) {
 			}
 		})
 
-		.on('mouseout', d => {
+		.on('mouseout', (event, d) => {
 			d.crosshair1
 				.attr('stroke-width', 1)
 				.attr('x1', -marksize)
@@ -253,7 +253,7 @@ export default function plot_vaf2cov(arg) {
 			}
 		})
 	if (arg.click) {
-		spgkick.on('click', d => {
+		spgkick.on('click', (event, d) => {
 			arg.click(d)
 		})
 	}

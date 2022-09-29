@@ -553,7 +553,7 @@ add:
 		})
 		.on('mouseover', circlemouseover)
 		.on('mouseout', circlemouseout)
-		.on('click', d => {
+		.on('click', (event, d) => {
 			circleclick(d, mavb, event.clientX, event.clientY)
 		})
 
@@ -757,7 +757,7 @@ add:
 		})
 		.on('mouseover', circlemouseover)
 		.on('mouseout', circlemouseout)
-		.on('click', d => {
+		.on('click', (event, d) => {
 			circleclick(d, mavb, event.clientX, event.clientY)
 		})
 
@@ -911,7 +911,7 @@ function add_lasso(selectable_items, svg, other_svg_item_key) {
 	svg.call(lasso)
 }
 
-function circlemouseover(d) {
+function circlemouseover(event, d) {
 	tip.clear().show(event.clientX, event.clientY)
 	const lst = [
 		{ k: 'gene', v: d.gene },
@@ -952,7 +952,7 @@ function circlemouseover(d) {
 	}
 }
 
-function circlemouseout(d) {
+function circlemouseout(event, d) {
 	tip.hide()
 	if (!d.ma_label) {
 		d3select(d.ma_circle).attr('fill-opacity', 0)
@@ -999,7 +999,7 @@ function hltoggle(d, mavb) {
 		.attr('font-size', 14)
 		.attr('fill', 'black')
 		.attr('font-family', client.font)
-		.on('mousedown', d => {
+		.on('mousedown', (event, d) => {
 			labelmousedown(d.ma_label, d.ma_labelbg, event)
 		})
 
@@ -1024,7 +1024,7 @@ function hltoggle(d, mavb) {
 		.attr('font-size', 14)
 		.attr('fill', 'black')
 		.attr('font-family', client.font)
-		.on('mousedown', d => {
+		.on('mousedown', (event, d) => {
 			labelmousedown(d.vo_label, d.vo_labelbg, event)
 		})
 	d3select(d.ma_circle).attr('fill-opacity', 0.8)

@@ -196,7 +196,7 @@ export function skewer_make(tk, block) {
 		.on('mousedown', event => {
 			event.stopPropagation()
 		})
-		.on('click', d => {
+		.on('click', (event, d) => {
 			fold_glyph([d.aa], tk)
 			unfold_update(tk, block)
 		})
@@ -235,7 +235,7 @@ export function skewer_make(tk, block) {
 				tk.disc_mouseover(d, event.target)
 			}
 		})
-		.on('mouseout', d => {
+		.on('mouseout', (event, d) => {
 			if (tk.disc_mouseout) {
 				tk.disc_mouseout(d)
 			}
@@ -310,7 +310,7 @@ export function skewer_make(tk, block) {
 		.attr('r', d => d.maxradius + 1)
 		.attr('cy', d => (tk.aboveprotein ? -1 : 1) * d.maxradius)
 		.attr('transform', d => 'scale(' + (d.showmode == modefold ? 1 : 0) + ')')
-		.on('mouseover', d => {
+		.on('mouseover', (event, d) => {
 			const abp = tk.aboveprotein
 			let cumh = 0
 			let boxw = 0
@@ -391,10 +391,10 @@ export function skewer_make(tk, block) {
 				.attr('stroke', 'white')
 				.attr('shape-rendering', 'crispEdges')
 		})
-		.on('mouseout', d => {
+		.on('mouseout', (event, d) => {
 			tk.pica.g.selectAll('*').remove()
 		})
-		.on('click', d => {
+		.on('click', (event, d) => {
 			tk.pica.g.selectAll('*').remove()
 			unfold_glyph([d], tk, block)
 		})

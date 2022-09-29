@@ -603,7 +603,7 @@ function init_plot(obj) {
 					labels.filter(i => i.sample == d.sample).attr('font-weight', 'bold')
 				)
 			})
-			.on('mouseout', d => {
+			.on('mouseout', () => {
 				obj.tip.hide()
 				Object.values(userlabel_grp).forEach(labels =>
 					labels.filter(i => i.sample == d.sample).attr('font-weight', 'normal')
@@ -647,7 +647,7 @@ function init_plot(obj) {
 				client.make_table_2col(obj.tip.clear().d, lst)
 				obj.tip.show(event.clientX, event.clientY)
 			})
-			.on('mouseout', d => {
+			.on('mouseout', (event, d) => {
 				usercircles.filter(i => i.sample == d.sample).attr('r', radius)
 				svg.style('cursor', 'auto')
 				obj.tip.hide()
