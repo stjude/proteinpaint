@@ -64,6 +64,7 @@ export class Cuminc {
 
 	main(data) {
 		this.settings = this.state.config.settings.cuminc
+		this.settings.xTitleLabel = 'Years since entry into the cohort' // TODO: do not harcode time unit (see survival.js)
 		this.settings.atRiskVisible = false
 		this.processData(data)
 		this.pj.refresh({ data: this.currData })
@@ -327,7 +328,8 @@ class MassCumInc {
 				)
 
 			Object.assign(this.settings, this.state.config.settings)
-			this.settings.hidden = this.getHidden()
+			this.settings.defaultHidden = this.getDefaultHidden()
+			this.settings.hidden = this.settings.customHidden || this.settings.defaultHidden
 			this.settings.xTitleLabel = 'Years since diagnosis' // TODO: do not harcode time unit (see survival.js)
 			const reqOpts = this.getDataRequestOpts()
 			const data = await this.app.vocabApi.getNestedChartSeriesData(reqOpts)
@@ -357,20 +359,18 @@ class MassCumInc {
 		return opts
 	}
 
-	getHidden() {
-		const tw = this.state.config.term2
-		if (!tw) return []
-		const obj = tw.q.hiddenValues
-		const hiddenSeries = Object.keys(obj).map(k => {
-			if (Object.keys(tw.term.values).includes(k)) {
-				// hidden value is a term value
-				return tw.term.values[k].label
-			} else {
-				// hidden value is a bin label
-				return k
+	getDefaultHidden() {
+		const hidden = []
+		const term2 = this.state.config.term2
+		if (!term2) return hidden
+		const hiddenValues = term2.q.hiddenValues
+		if (hiddenValues && Object.keys(hiddenValues).length) {
+			// term2 has default hidden values
+			for (const k in hiddenValues) {
+				hidden.push(term2.term.values[k].label)
 			}
-		})
-		return hiddenSeries
+		}
+		return hidden
 	}
 
 	processData(data) {
@@ -830,10 +830,8 @@ function setRenderers(self) {
 			yAxis = axisG.append('g').attr('class', 'sjpcb-cuminc-y-axis')
 			xTitle = axisG.append('g').attr('class', 'sjpcb-cuminc-x-title')
 			yTitle = axisG.append('g').attr('class', 'sjpcb-cuminc-y-title')
-			atRiskG = mainG
-				.append('g')
-				.attr('class', 'sjpp-cuminc-atrisk')
-				.on('click', self.legendClick)
+			atRiskG = mainG.append('g').attr('class', 'sjpp-cuminc-atrisk')
+			if (chart.visibleSerieses.length > 1) atRiskG.on('click', self.legendClick)
 
 			line = mainG
 				.append('line')
@@ -852,7 +850,8 @@ function setRenderers(self) {
 			yAxis = axisG.select('.sjpcb-cuminc-y-axis')
 			xTitle = axisG.select('.sjpcb-cuminc-x-title')
 			yTitle = axisG.select('.sjpcb-cuminc-y-title')
-			atRiskG = mainG.select('.sjpp-cuminc-atrisk').on('click', self.legendClick)
+			atRiskG = mainG.select('.sjpp-cuminc-atrisk')
+			if (chart.visibleSerieses.length > 1) atRiskG.on('click', self.legendClick)
 			plotRect = mainG.select('.sjpcb-plot-tip-rect')
 			line = mainG.select('.sjpcb-plot-tip-line')
 		}
@@ -1066,28 +1065,17 @@ function setInteractivity(self) {
 		const hidden = self.settings.hidden.slice()
 		const i = hidden.indexOf(d.seriesId)
 		i == -1 ? hidden.push(d.seriesId) : hidden.splice(i, 1)
-		const term2 = self.updateTerm2HiddenValues(hidden)
 		self.app.dispatch({
 			type: 'plot_edit',
 			id: self.id,
-			config: { term2 }
-		})
-	}
-
-	self.updateTerm2HiddenValues = function(hidden) {
-		const hiddenValues = {}
-		const term2 = JSON.parse(JSON.stringify(self.state.config.term2))
-		for (const k in term2.term.values) {
-			const value = term2.term.values[k]
-			if (hidden.includes(value.label)) hiddenValues[k] = 1
-		}
-		if (this.refs.bins && this.refs.bins.length) {
-			for (const bin of this.refs.bins) {
-				if (hidden.includes(bin.label)) hiddenValues[bin.label] = 1
+			config: {
+				settings: {
+					cuminc: {
+						customHidden: hidden
+					}
+				}
 			}
-		}
-		term2.q.hiddenValues = hiddenValues
-		return term2
+		})
 	}
 }
 
@@ -1134,7 +1122,6 @@ export async function getPlotConfig(opts, app) {
 	} catch (e) {
 		throw `${e} [cuminc getPlotConfig()]`
 	}
-	const h = opts.term2?.q.hiddenValues || {}
 	const config = {
 		id: opts.term.term.id,
 		settings: JSON.parse(defaultSettings)

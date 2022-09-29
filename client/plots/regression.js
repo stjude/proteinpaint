@@ -62,7 +62,6 @@ class Regression {
 			termfilter: appState.termfilter,
 			config,
 			allowedTermTypes: appState.termdbConfig.allowedTermTypes,
-			coxCumincXlab: appState.termdbConfig.coxCumincXlab,
 			timeScale: appState.termdbConfig.timeScale,
 			minTimeSinceDx: appState.termdbConfig.minTimeSinceDx
 		}

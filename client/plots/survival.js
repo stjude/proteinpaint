@@ -200,9 +200,9 @@ class TdbSurvival {
 			this.toggleLoadingDiv()
 
 			Object.assign(this.settings, this.state.config.settings)
-			this.settings.hidden = this.getHidden()
+			this.settings.defaultHidden = this.getDefaultHidden()
+			this.settings.hidden = this.settings.customHidden || this.settings.defaultHidden
 			this.settings.xTitleLabel = this.getXtitleLabel()
-
 			const reqOpts = this.getDataRequestOpts()
 			const data = await this.app.vocabApi.getNestedChartSeriesData(reqOpts)
 			this.toggleLoadingDiv('none')
@@ -233,20 +233,18 @@ class TdbSurvival {
 		return opts
 	}
 
-	getHidden() {
-		const tw = this.state.config.term2
-		if (!tw) return []
-		const obj = tw.q.hiddenValues || {}
-		const hiddenSeries = Object.keys(obj).map(k => {
-			if (Object.keys(tw.term.values).includes(k)) {
-				// hidden value is a term value
-				return tw.term.values[k].label
-			} else {
-				// hidden value is a bin label
-				return k
+	getDefaultHidden() {
+		const hidden = []
+		const term2 = this.state.config.term2
+		if (!term2) return hidden
+		const hiddenValues = term2.q.hiddenValues
+		if (hiddenValues && Object.keys(hiddenValues).length) {
+			// term2 has default hidden values
+			for (const k in hiddenValues) {
+				hidden.push(term2.term.values[k].label)
 			}
-		})
-		return hiddenSeries
+		}
+		return hidden
 	}
 
 	getXtitleLabel() {
@@ -665,11 +663,8 @@ function setRenderers(self) {
 			yAxis = axisG.append('g').attr('class', 'sjpp-survival-y-axis')
 			xTitle = axisG.append('g').attr('class', 'sjpp-survival-x-title')
 			yTitle = axisG.append('g').attr('class', 'sjpp-survival-y-title')
-			atRiskG = mainG
-				.append('g')
-				.attr('class', 'sjpp-survival-atrisk')
-				.on('click', self.legendClick)
-
+			atRiskG = mainG.append('g').attr('class', 'sjpp-survival-atrisk')
+			if (chart.visibleSerieses.length > 1) atRiskG.on('click', self.legendClick)
 			line = mainG
 				.append('line')
 				.attr('class', 'sjpcb-plot-tip-line')
@@ -687,7 +682,8 @@ function setRenderers(self) {
 			yAxis = axisG.select('.sjpp-survival-y-axis')
 			xTitle = axisG.select('.sjpp-survival-x-title')
 			yTitle = axisG.select('.sjpp-survival-y-title')
-			atRiskG = mainG.select('.sjpp-survival-atrisk').on('click', self.legendClick)
+			atRiskG = mainG.select('.sjpp-survival-atrisk')
+			if (chart.visibleSerieses.length > 1) atRiskG.on('click', self.legendClick)
 			plotRect = mainG.select('.sjpcb-plot-tip-rect')
 			line = mainG.select('.sjpcb-plot-tip-line')
 		}
@@ -960,35 +956,25 @@ function setInteractivity(self) {
 		const hidden = self.settings.hidden.slice()
 		const i = hidden.indexOf(d.seriesId)
 		if (i == -1) {
-			self.showLegendItemMenu(d)
+			hidden.push(d.seriesId)
+			self.showLegendItemMenu(d, hidden)
 		} else {
 			hidden.splice(i, 1)
-			const term2 = self.updateTerm2HiddenValues(hidden)
 			self.app.dispatch({
 				type: 'plot_edit',
 				id: self.id,
-				config: { term2 }
+				config: {
+					settings: {
+						survival: {
+							customHidden: hidden
+						}
+					}
+				}
 			})
 		}
 	}
 
-	self.updateTerm2HiddenValues = function(hidden) {
-		const hiddenValues = {}
-		const term2 = JSON.parse(JSON.stringify(self.state.config.term2))
-		for (const k in term2.term.values) {
-			const value = term2.term.values[k]
-			if (hidden.includes(value.label)) hiddenValues[k] = 1
-		}
-		if (this.refs.bins && this.refs.bins.length) {
-			for (const bin of this.refs.bins) {
-				if (hidden.includes(bin.label)) hiddenValues[bin.label] = 1
-			}
-		}
-		term2.q.hiddenValues = hiddenValues
-		return term2
-	}
-
-	self.showLegendItemMenu = function(d) {
+	self.showLegendItemMenu = function(d, hidden) {
 		const term1 = self.state.config.term.term
 		const term2 = self.state.config.term2?.term || null
 		const uncomp_term1 = term1.values ? Object.values(term1.values).map(v => v.label) : []
@@ -1016,13 +1002,16 @@ function setInteractivity(self) {
 		options.push({
 			label: 'Hide "' + seriesLabel,
 			callback: () => {
-				const hidden = self.settings.hidden.slice()
-				hidden.push(d.seriesId)
-				const term2 = self.updateTerm2HiddenValues(hidden)
 				self.app.dispatch({
 					type: 'plot_edit',
 					id: self.id,
-					config: { term2 }
+					config: {
+						settings: {
+							survival: {
+								customHidden: hidden
+							}
+						}
+					}
 				})
 			}
 		})
@@ -1098,7 +1087,7 @@ function setInteractivity(self) {
 			.enter()
 			.append('div')
 			.attr('class', 'sja_menuoption')
-			.on('click', c => {
+			.on('click', (event, c) => {
 				if (c.setInput) return
 				self.app.tip.hide()
 				c.callback(d)
@@ -1176,7 +1165,7 @@ function setInteractivity(self) {
 		self.app.tip.hide()
 	}
 
-	self.showMenuForSelectedChart = function(d) {
+	self.showMenuForSelectedChart = function() {
 		self.dom.tip.clear()
 		self.activeMenu = true
 		self.dom.tip

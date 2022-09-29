@@ -641,8 +641,6 @@ module.exports = {
 			// to age_end to prevent age_end = age_start (which
 			// would cause regression analysis to fail in R)
 
-			coxCumincXlab: 'Years since study enrollment',
-
 			restrictAncestries,
 
 			//// this attribute is optional

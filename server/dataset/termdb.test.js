@@ -107,9 +107,7 @@ const ds = {
 			// for cox outcome with timeScale='age'
 			// 1 day (i.e. 1/365 or 0.00274) needs to be added
 			// to age_end to prevent age_end = age_start (which
-
 			// would cause regression analysis to fail in R)
-			coxCumincXlab: 'Years since study enrollment',
 
 			selectCohort: {
 				// wrap term.id into a term json object so as to use it in tvs;

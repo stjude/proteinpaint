@@ -155,7 +155,6 @@ function trigger_gettermdbconfig(q, res, tdb, cohort) {
 		scatterplots: cohort.scatterplots
 	}
 	if (tdb.helpPages) c.helpPages = tdb.helpPages
-	if (tdb.coxCumincXlab) c.coxCumincXlab = tdb.coxCumincXlab
 	if (tdb.timeScale) c.timeScale = tdb.timeScale
 	if (tdb.minTimeSinceDx) c.minTimeSinceDx = tdb.minTimeSinceDx
 	if (tdb.restrictAncestries) {

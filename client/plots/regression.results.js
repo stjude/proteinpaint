@@ -333,7 +333,6 @@ function setRenderers(self) {
 			holder,
 			config: {
 				term: self.config.outcome,
-				xlabel: self.state.config.regressionType == 'cox' && self.state.coxCumincXlab,
 				term2: {
 					term: {
 						name: 'Variant',

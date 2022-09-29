@@ -197,7 +197,7 @@ function addBreaksSelector(self, div) {
 		.append('button')
 		.text('Apply')
 		.style('margin', '10px')
-		.on('click', () => {
+		.on('click', event => {
 			self.q.breaks = textarea2breaks()
 			self.q.groupNames = []
 			for (const i of nameDiv.selectAll('input').nodes()) {
@@ -268,11 +268,11 @@ function showMenu_cutoff(self, div) {
 		timeScaleChoice = self.q.timeScale
 		holder
 			.append('div')
-			.text('Time scale')
+			.text('Time axis')
 			.style('opacity', 0.4)
 		const options = [
 			{
-				label: 'Time from diagnosis', // may define from ds
+				label: 'Years since entry into the cohort', // may define from ds
 				value: 'time'
 			},
 			{ label: 'Age', value: 'age' }
@@ -295,7 +295,7 @@ function showMenu_cutoff(self, div) {
 		.append('button')
 		.text('Apply')
 		.style('margin', '10px')
-		.on('click', () => {
+		.on('click', event => {
 			const grade = gradeSelect.property('selectedIndex') + 1
 			self.q.breaks[0] = grade
 			if (self.q.mode == 'binary') {
@@ -307,8 +307,8 @@ function showMenu_cutoff(self, div) {
 				self.q.groupNames[1] = `Event (grade >= ${grade})`
 				self.q.timeScale = timeScaleChoice
 			}
-			event.target.disabled = true // is 'event' initialized?
-			event.target.innerHTML = 'Loading...' // is 'event' initialized?
+			event.target.disabled = true
+			event.target.innerHTML = 'Loading...'
 			self.runCallback()
 		})
 }

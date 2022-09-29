@@ -1173,7 +1173,7 @@ function getSampleData_dictionaryTerms(q, terms) {
 	if (q.regressionType == 'cox') {
 		// cox regression
 		// need to remove rows with key=-1 for cox outcome
-		// because these samples had event before study enrollment
+		// because these samples had Event before entry into the cohort
 		frows = rows.filter(row => !(row.term_id == q.outcome.id && row.key === -1))
 	}
 
