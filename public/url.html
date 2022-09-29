@@ -6,7 +6,7 @@
 <body>
 
 
-<div id='contentDiv' style='margin:10px;display:grid;grid-template-columns:150px 5vw 80vw;gap:5px;word-break:break-word'>
+<div id='contentDiv' style='margin:10px;display:grid;grid-template-columns:150px auto 80vw;gap:5px;word-break:break-word'>
 
 -- How it works --
 
@@ -1204,6 +1204,7 @@ function makeURL(rows) {
 	const div = document.getElementById('contentDiv')
 	div.innerHTML = '' // clear text
 
+/*
 	const headers = ['', 'App Card', 'Links']
 	for (const header of headers) {
 		const d = document.createElement('div')
@@ -1211,6 +1212,7 @@ function makeURL(rows) {
 		d.style.fontWeight = '550'
 		div.appendChild(d)
 	}
+	*/
 
 	for(const row of rows) {
 
@@ -1234,7 +1236,7 @@ function makeURL(rows) {
 			div.appendChild(d)
 			if(row.card) {
 				const a = document.createElement('a')
-				a.innerHTML = row.card
+				a.innerHTML = 'card'
 				a.setAttribute('href', `${window.location.origin}/?appcard=${row.card}`)
 				a.setAttribute('target', '_blank')
 				d.appendChild(a)
