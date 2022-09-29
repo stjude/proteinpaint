@@ -1042,7 +1042,7 @@ set:
 				}
 			})
 
-			.on('mouseout', m => {
+			.on('mouseout', (event, m) => {
 				m_mouseout(m, tk)
 				if (tk.disc_mouseout) {
 					tk.disc_mouseout(m)
