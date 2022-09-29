@@ -299,7 +299,9 @@ class TdbSurvival {
 		const legendItems = []
 		for (const chart of charts) {
 			for (const series of chart.serieses) {
-				const v = values.find(v => v.key === series.seriesId || v.name === series.seriesId)
+				const v = values.find(
+					v => v.key === series.seriesId || v.name === series.seriesId || v.label === series.seriesId
+				)
 				const c = {
 					orig: v?.color || this.colorScale(series.seriesId)
 				}
