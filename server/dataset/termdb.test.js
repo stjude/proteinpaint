@@ -153,8 +153,8 @@ const ds = {
 			plots: [
 				{
 					name: 'Methylome TSNE',
-					dimension: 2, // 2d requires x/y, 3d requires x/y/z
-					file: 'files/hg19/pnet/classification/methylome_tsne.csv',
+					dimension: 2,
+					file: 'files/hg19/pnet/classification/pnet_apr13_tnse.txt',
 					term: { id: 'diaggrp' }
 				}
 			]

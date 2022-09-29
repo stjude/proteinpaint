@@ -332,15 +332,15 @@ function numeric_make(nm, r, _g, data, tk, block) {
 			event.preventDefault()
 			//event.stopPropagation()
 		})
-		.on('mouseover', m => {
+		.on('mouseover', (event, m) => {
 			m_mouseover(m, nm, tk)
 		})
-		.on('mouseout', m => {
+		.on('mouseout', (event, m) => {
 			m_mouseout(m, tk)
 		})
-		.on('click', m => {
+		.on('click', (event, m) => {
 			// FIXME prevent triggering click after panning
-			const p = m.target.getBoundingClientRect()
+			const p = event.target.getBoundingClientRect()
 			vcf_clickvariant(m, p, tk, block)
 		})
 
@@ -371,9 +371,9 @@ function numeric_make(nm, r, _g, data, tk, block) {
 			event.preventDefault()
 			//event.stopPropagation()
 		})
-		.on('mouseover', m => m_mouseover(m, nm, tk))
-		.on('mouseout', m => m_mouseout(m, tk))
-		.on('click', m => {
+		.on('mouseover', (event, m) => m_mouseover(m, nm, tk))
+		.on('mouseout', (event, m) => m_mouseout(m, tk))
+		.on('click', (event, m) => {
 			vcf_clickvariant(m, { left: m.clientX, top: m.clientY }, tk, block)
 			if (block.debugmode) {
 				console.log(m)
