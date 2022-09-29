@@ -603,7 +603,7 @@ function init_plot(obj) {
 					labels.filter(i => i.sample == d.sample).attr('font-weight', 'bold')
 				)
 			})
-			.on('mouseout', () => {
+			.on('mouseout', (event, d) => {
 				obj.tip.hide()
 				Object.values(userlabel_grp).forEach(labels =>
 					labels.filter(i => i.sample == d.sample).attr('font-weight', 'normal')
@@ -666,10 +666,10 @@ function init_plot(obj) {
 					.attr('transform')
 					.match(/[\d\.]+/g)
 					.map(Number)
-				b.on('mousemove', () => {
+				b.on('mousemove', event => {
 					g.attr('transform', 'translate(' + (x1 + event.clientX - x) + ',' + (y1 + event.clientY - y) + ')')
 				})
-				b.on('mouseup', () => {
+				b.on('mouseup', event => {
 					b.on('mousemove', null).on('mouseup', null)
 					d.x_ = xscale.invert(x1 + event.clientX - x)
 					d.y_ = yscale.invert(y1 + event.clientY - y)
@@ -757,7 +757,7 @@ function init_plot(obj) {
 			const y = event.clientY
 			const w0 = width
 			const h0 = height
-			b.on('mousemove', () => {
+			b.on('mousemove', event => {
 				width = w0 + event.clientX - x
 				height = h0 + event.clientY - y
 				resize()
