@@ -1,4 +1,5 @@
-import { drag as d3drag, event, mouse } from 'd3'
+import { drag as d3drag } from 'd3-drag'
+import { pointer } from 'd3-selection'
 
 /*
 ********************** EXPORTED
@@ -29,13 +30,17 @@ export function d3lasso() {
 		const g = _this.append('g').attr('class', 'lasso')
 
 		// add the drawn path for the lasso
-		const drawn_path = g.append('path').attr('class', 'drawn')
+		const drawn_path = g
+			.append('path')
+			.attr('class', 'drawn')
 			.style('stroke', '#505050')
 			.style('stroke-width', '2px')
 			.style('fill-opacity', '.05')
 
 		// add an origin node (circle to indicate start of lasso)
-		const origin_node = g.append('circle').attr('class', 'origin')
+		const origin_node = g
+			.append('circle')
+			.attr('class', 'origin')
 			.style('fill', '#3399FF')
 			.style('fill-opacity', '.5')
 
@@ -53,7 +58,7 @@ export function d3lasso() {
 		// Call drag
 		targetArea.call(drag)
 
-		function dragstart() {
+		function dragstart(event) {
 			// Init coordinates
 			drawnCoords = []
 
@@ -72,10 +77,10 @@ export function d3lasso() {
 			})
 
 			// Run user defined start function
-			on.start()
+			on.start(event)
 		}
 
-		function dragmove() {
+		function dragmove(event) {
 			// Get mouse position within body, used for calculations
 			let x, y
 			if (event.sourceEvent.type === 'touchmove') {
@@ -87,8 +92,7 @@ export function d3lasso() {
 			}
 
 			// Get mouse position within drawing area, used for rendering
-			let tx = mouse(this)[0]
-			let ty = mouse(this)[1]
+			let [tx, ty] = pointer(event, this)
 
 			// Initialize the path or add the latest point to it
 			if (tpath === '') {
@@ -116,10 +120,10 @@ export function d3lasso() {
 			})
 
 			// Run user defined draw function
-			on.draw()
+			on.draw(event)
 		}
 
-		function dragend() {
+		function dragend(event) {
 			// Remove mouseover tagging function
 			items.on('mouseover.lasso', null)
 
@@ -133,7 +137,7 @@ export function d3lasso() {
 			origin_node.attr('display', 'none')
 
 			// Run user defined end function
-			on.end()
+			on.end(event)
 		}
 
 		// check if point is inside selected lasso or not

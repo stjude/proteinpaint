@@ -1,4 +1,3 @@
-import { event as d3event } from 'd3-selection'
 import * as client from './client'
 import * as bulk from '#shared/bulk'
 import * as bulksnv from '#shared/bulk.snv'
@@ -105,12 +104,12 @@ export function bulkui(x, y, genomes, hostURL, holder, header) {
 		const butt = filediv
 			.append('input')
 			.attr('type', 'file')
-			.on('change', () => {
+			.on('change', event => {
 				const flag = bulk.init_bulk_flag(genomes[gselect.options[gselect.selectedIndex].innerHTML])
 				flag.geneToUpper = geneToUpper.property('checked')
 
 				saydiv.text('')
-				const file = d3event.target.files[0]
+				const file = event.target.files[0]
 				if (!file) {
 					fileui()
 					return

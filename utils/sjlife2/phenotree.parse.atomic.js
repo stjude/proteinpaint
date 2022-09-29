@@ -287,6 +287,9 @@ function step2_parsematrix(key2terms) {
 					header_notermmatch.add(headerfield)
 					continue
 				}
+
+				// headerfield is term id
+
 				if (term.type == 'categorical') {
 					if (term._set) {
 						// to collect categories
@@ -312,7 +315,7 @@ function step2_parsematrix(key2terms) {
 					}
 				}
 				const value = Number(str)
-				if (Number.isNaN(value)) throw 'invalid value for a numeric term (' + term.id + ') at line ' + (i + 1)
+				if (Number.isNaN(value)) throw `invalid value (${str}) for a numeric term (${headerfield}) at line ${i + 1}`
 				term.bins._values.push(value)
 				if (term.bins._min == null) {
 					term.bins._min = value

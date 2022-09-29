@@ -1,4 +1,3 @@
-import { event as d3event } from 'd3-selection'
 /*
 Creates sandbox divs, containers running proteinpaint calls, forms, etc. 
 independent of one another. 
@@ -66,9 +65,9 @@ export function newSandboxDiv(sandbox_holder, opts = {}) {
 		.classed('sjpp-output-sandbox-close-bt', true)
 		.classed('sja_menuoption', true)
 		.html('&times;')
-		.on('mousedown', () => {
+		.on('mousedown', event => {
 			document.body.dispatchEvent(new Event('mousedown'))
-			d3event.stopPropagation()
+			event.stopPropagation()
 		})
 		.on('click', () => {
 			// clear event handlers

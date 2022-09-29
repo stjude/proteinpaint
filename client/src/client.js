@@ -5,7 +5,7 @@
 ///////////////////
 
 import { scaleLinear } from 'd3-scale'
-import { select as d3select, selectAll as d3selectAll, event as d3event } from 'd3-selection'
+import { select as d3select, selectAll as d3selectAll } from 'd3-selection'
 import { rgb as d3rgb } from 'd3-color'
 import { transition } from 'd3-transition'
 import * as common from '#shared/common'
@@ -161,15 +161,15 @@ export function newpane(pm) {
 		.duration(dur)
 		.style('opacity', 1)
 
-	const toprow = pp.pane.append('div').on('mousedown', () => {
-		d3event.preventDefault()
-		d3event.stopPropagation()
+	const toprow = pp.pane.append('div').on('mousedown', event => {
+		event.preventDefault()
+		event.stopPropagation()
 		const oldx = Number.parseInt(pp.pane.style('left')),
 			oldy = Number.parseInt(pp.pane.style('top'))
-		const x0 = d3event.clientX,
-			y0 = d3event.clientY
-		body.on('mousemove', () => {
-			pp.pane.style('left', oldx + d3event.clientX - x0 + 'px').style('top', oldy + d3event.clientY - y0 + 'px')
+		const x0 = event.clientX,
+			y0 = event.clientY
+		body.on('mousemove', event => {
+			pp.pane.style('left', oldx + event.clientX - x0 + 'px').style('top', oldy + event.clientY - y0 + 'px')
 		})
 		body.on('mouseup', function() {
 			body.on('mouseup', null).on('mousemove', null)
@@ -187,9 +187,9 @@ export function newpane(pm) {
 		.style('border-right', 'solid 1px white')
 		.style('cursor', 'default')
 		.style('font-size', '1.5em')
-		.on('mousedown', () => {
+		.on('mousedown', event => {
 			document.body.dispatchEvent(new Event('mousedown'))
-			d3event.stopPropagation()
+			event.stopPropagation()
 		})
 
 	if (pm.toshrink) {
@@ -1056,8 +1056,8 @@ export function rgb2hex(rgb) {
 		: ''
 }
 
-export function keyupEnter() {
-	return d3event.code == 'Enter' || d3event.code == 'NumpadEnter'
+export function keyupEnter(event) {
+	return event.code == 'Enter' || event.code == 'NumpadEnter'
 }
 
 export function may_findmatchingsnp(chr, poslst, genome, alleleLst) {

@@ -770,18 +770,15 @@ thus less things to worry about...
 	}
 
 	if (tables.sampleidmap) {
-		let cache
-		q.id2sampleName = id => {
-			if (!cache) {
-				const s = cn.prepare('SELECT * FROM sampleidmap')
-				cache = new Map()
-				// k: sample id, v: sample name
-				for (const { id, name } of s.all()) {
-					cache.set(id, name)
-				}
-			}
-			return cache.get(id) || id
+		const i2s = new Map(),
+			s2i = new Map()
+		const s = cn.prepare('SELECT * FROM sampleidmap')
+		for (const { id, name } of s.all()) {
+			i2s.set(id, name)
+			s2i.set(name, id)
 		}
+		q.id2sampleName = id => i2s.get(id)
+		q.sampleName2id = s => s2i.get(s)
 	}
 
 	if (tables.category2vcfsample) {

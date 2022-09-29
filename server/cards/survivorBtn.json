@@ -1,7 +1,7 @@
 {
     "button": {
         "name": "Survivorship Study",
-        "intro": "The survivorship dataset contains clinical, genomic, and patient-reported data from the <a href='https://sjlife.stjude.org/' target='sjlife'>St. Jude Life study</a> (SJLife) and <a href='https://ccss.stjude.org/' target='CCSS'> Childhood Cancer Survivor Study</a> (CCSS). The interface offers data analysis tools like regression analysis (linear, logistic, and Cox) and interactive statistical plots.<br><br>To change to the CCSS data or see combined data from both studies, click on the <span style='display: inline-block; opacity: 0.65;font-size:16px;'>COHORT</span> tab at the top, and select the desired dataset(s).",
+        "intro": "The survivorship dataset contains clinical, genomic, and patient-reported data from the <a href='https://sjlife.stjude.org/' target='sjlife'>St. Jude Life study</a> (SJLife) and <a href='https://ccss.stjude.org/' target='CCSS'> Childhood Cancer Survivor Study</a> (CCSS). The interface offers data analysis tools like regression analysis (linear, logistic, and Cox) and interactive statistical plots.",
         "searchBar": "none",
         "availableGenomes": ["hg38"],
         "runargs": {

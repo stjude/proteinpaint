@@ -1,4 +1,4 @@
-import { select as d3select, event as d3event } from 'd3-selection'
+import { select as d3select } from 'd3-selection'
 import {
 	itemtable,
 	runtimeattr_sv,
@@ -91,9 +91,9 @@ export default function dsmaketk(tk, block) {
 		tk.label_close = block
 			.maketklefthandle(tk, laby)
 			.text('Close')
-			.on('mousedown', () => {
-				d3event.stopPropagation()
-				d3event.preventDefault()
+			.on('mousedown', event => {
+				event.stopPropagation()
+				event.preventDefault()
 			})
 			.on('click', () => {
 				block.deletecustomdsbyname(tk.ds.label)

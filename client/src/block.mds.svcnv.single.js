@@ -2,7 +2,6 @@ import * as client from './client'
 import * as common from '#shared/common'
 import { scaleLinear, scaleLog } from 'd3-scale'
 import { axisRight } from 'd3-axis'
-import { event as d3event } from 'd3-selection'
 import { tooltip_singleitem, svcoord2html, make_svgraph, detailtable_singlesample } from './block.mds.svcnv.clickitem'
 import {
 	map_cnv,
@@ -839,7 +838,7 @@ function render_singlesample_sv(svlst, tk, block) {
 			.attr('stroke', color)
 			.attr('stroke-opacity', 0)
 			.attr('class', 'sja_aa_disckick')
-			.on('mouseover', () => {
+			.on('mouseover', event => {
 				if (sv.lst.length == 1) {
 					tooltip_singleitem({
 						item: sv.lst[0],
@@ -847,13 +846,13 @@ function render_singlesample_sv(svlst, tk, block) {
 					})
 					return
 				}
-				tooltip_multi_sv(sv.lst, tk)
+				tooltip_multi_sv(sv.lst, tk, event)
 			})
 			.on('mouseout', () => tk.tktip.hide())
-			.on('click', () => {
+			.on('click', event => {
 				if (sv.lst.length == 1) {
 					const m = sv.lst[0]
-					const pane = client.newpane({ x: d3event.clientX, y: d3event.clientY })
+					const pane = client.newpane({ x: event.clientX, y: event.clientY })
 					pane.header.text(m.sample)
 					pane.body.style('margin-top', '10px')
 
@@ -892,7 +891,7 @@ function render_singlesample_sv(svlst, tk, block) {
 
 					return
 				}
-				panel_multi_sv(sv.lst, tk, block)
+				panel_multi_sv(sv.lst, tk, block, event)
 			})
 
 		if (doubleleg) {
@@ -989,14 +988,14 @@ function map_sv(sv, block) {
 	}
 }
 
-function tooltip_multi_sv(lst, tk) {
+function tooltip_multi_sv(lst, tk, event) {
 	tk.tktip.clear()
 	showtable_multi_sv(lst, tk.tktip.d, tk)
-	tk.tktip.show(d3event.clientX, d3event.clientY)
+	tk.tktip.show(event.clientX, event.clientY)
 }
 
-function panel_multi_sv(lst, tk, block) {
-	const pane = client.newpane({ x: d3event.clientX, y: d3event.clientY })
+function panel_multi_sv(lst, tk, block, event) {
+	const pane = client.newpane({ x: event.clientX, y: event.clientY })
 	showtable_multi_sv(lst, pane.body, tk)
 }
 

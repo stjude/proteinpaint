@@ -1,22 +1,21 @@
 import { getAppInit } from '#rx'
-import { storeInit } from './store'
-import { compLayoutInit } from './layout'
-import { cardInit } from './card'
-import { buttonInit } from './dsButton'
-import { select } from 'd3-selection'
+import { mainBtnInit } from './mainBtn'
+import { dofetch3, sayerror } from '#src/client'
+import { appDrawerStoreInit } from './store'
 
 /*
 .opts{}
     .holder
-    .apps_sandbox_div
-    .apps_off()
     .genomes{}
         - client-side genome object
-    .indexJson{}
+	.drawerRow
+	.sandboxDiv
+	.genome_browser_btn
+	.debugmode
+	.headbox
+	.padw_sm
 
 TODOs: 
-- Accommodate layout = none
-- Update and add documentation link
 
 Questions: 
 */
@@ -24,26 +23,52 @@ Questions:
 class AppDrawerApp {
 	constructor(opts) {
 		this.type = 'app'
-		this.opts = this.validateOpts(opts)
-		this.dom = {
-			holder: this.opts.holder,
-			wrapper: this.opts.holder.append('div')
-		}
-		this.elements = this.opts.indexJson.elements.filter(e => !e.hidden) //TODO move to store.js
-	}
 
-	validateOpts(opts) {
-		if (!opts.indexJson.elements || opts.indexJson.elements.length == 0) throw `Missing elements to render`
-		return opts
+		const drawerDiv = opts.drawerRow
+			.append('div')
+			.style('position', 'relative')
+			.style('margin', '0 20px')
+			.style('padding', `0 ${opts.padw_sm}`)
+			.style('display', 'inline-block')
+			.style('overflow', 'hidden')
+			.style('border-radius', '0px 0px 5px 5px')
+			.style('width', '93vw')
+			.classed('sjpp-drawer-div', true)
+
+		const btnWrapper = opts.headbox
+			.append('div')
+			.style('position', 'relative')
+			.style('display', 'inline-block')
+			.style('margin-left', '5px')
+			.style('margin-right', '5px')
+			.style('border-radius', '5px')
+			.classed('sjpp-apps-btn-wrapper', true)
+
+		this.dom = {
+			drawerRow: opts.drawerRow,
+			drawerDiv,
+			sandboxDiv: opts.sandboxDiv,
+			btnWrapper,
+			btn: btnWrapper.append('div'),
+			drawerHint: btnWrapper.append('div'),
+			drawerArrow: btnWrapper.append('div'),
+			drawerArrowOpen: btnWrapper.append('div'),
+			wrapper: drawerDiv.append('div')
+		}
 	}
 
 	async init() {
 		try {
-			this.store = await storeInit({ app: this.api, state: this.opts.state })
-			// this.state = await this.store.copyState()
+			this.store = await appDrawerStoreInit({ app: this.api, state: this.opts.state })
+			this.state = await this.store.copyState()
+			this.indexJson = await getCardsJson(this.dom.drawerDiv)
 			this.components = {
-				// Only accounts for columnsLayout format
-				layout: await compLayoutInit({ app: this.api, dom: this.dom, index: this.opts.indexJson })
+				mainBtn: await mainBtnInit({
+					app: this.api,
+					dom: this.dom,
+					state: this.state,
+					indexJson: this.indexJson
+				})
 			}
 			await this.api.dispatch()
 		} catch (e) {
@@ -51,36 +76,17 @@ class AppDrawerApp {
 		}
 	}
 
-	async main() {
-		loadElements(this)
-	}
+	main() {}
 }
 
 export const appDrawerInit = getAppInit(AppDrawerApp)
 
-function loadElements(self) {
-	self.elements.forEach(element => {
-		//Still assumes the columnLayout
-		const holder = select(`#${element.section} > .sjpp-element-list`)
-		if (element.type == 'card' || element.type == 'nestedCard') {
-			cardInit({
-				app: self.api,
-				holder: holder
-					.style('display', 'grid')
-					.style('grid-template-columns', 'repeat(auto-fit, minmax(320px, 1fr))')
-					.style('gap', '10px')
-					.style('list-style', 'none')
-					.style('margin', '15px 0px'),
-				element,
-				pageArgs: self.opts
-			})
-		} else if (element.type == 'dsButton') {
-			buttonInit({
-				app: self.api,
-				holder,
-				element,
-				pageArgs: self.opts
-			})
-		}
-	})
+async function getCardsJson(holder) {
+	const re = await dofetch3('/cardsjson')
+	if (re.error) {
+		sayerror(holder.append('div'), re.error)
+		return
+	}
+
+	return re.json
 }

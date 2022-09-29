@@ -1,5 +1,6 @@
-import { scaleLinear, scaleOrdinal, schemeCategory10 } from 'd3-scale'
-import { select as d3select, event as d3event } from 'd3-selection'
+import { scaleLinear, scaleOrdinal } from 'd3-scale'
+import { schemeCategory10 } from 'd3-scale-chromatic'
+import { select as d3select } from 'd3-selection'
 import { transition } from 'd3-transition'
 import * as client from './client'
 import * as common from '#shared/common'
@@ -52,7 +53,7 @@ function makeTk(tk, block) {
 
 	// controller - # junctions
 	const thistip = new client.Menu({ padding: 'none' })
-	tk.label_mcount = block.maketklefthandle(tk, laby).on('click', () => {
+	tk.label_mcount = block.maketklefthandle(tk, laby).on('click', event => {
 		label_mcount_fillpane(tk, block, thistip)
 	})
 
@@ -64,7 +65,7 @@ function makeTk(tk, block) {
 	// no longer shows sample handle: label_samplecount
 
 	// config
-	tk.config_handle = block.maketkconfighandle(tk).on('click', () => configpanel(tk, block))
+	tk.config_handle = block.maketkconfighandle(tk).on('click', event => configpanel(tk, block))
 
 	if (tk.categories || tk.cohortsetting) {
 		/*
@@ -599,7 +600,7 @@ function label_mcount_fillpane(tk, block, tip) {
 		.append('div')
 		.text('Fold')
 		.classed('sja_menuoption', true)
-		.on('click', () => {
+		.on('click', event => {
 			tip.hide()
 			for (const j of tk.data) {
 				j.mode = modefold
@@ -611,7 +612,7 @@ function label_mcount_fillpane(tk, block, tip) {
 		.append('div')
 		.text('Expand')
 		.classed('sja_menuoption', true)
-		.on('click', () => {
+		.on('click', event => {
 			tip.hide()
 			for (const j of tk.data) {
 				j.modefix = false
@@ -627,7 +628,7 @@ function label_mcount_fillpane(tk, block, tip) {
 		.append('div')
 		.text('Download')
 		.classed('sja_menuoption', true)
-		.on('click', () => {
+		.on('click', event => {
 			tip.hide()
 			downloadjunctions(tk)
 		})
@@ -728,7 +729,7 @@ function label_samplecount_fillpane(tk, block, tip) {
 			.append('td')
 			.text(sampledata.tkobj.name)
 			.classed('sja_menuoption', true)
-			.on('click', () => {
+			.on('click', event => {
 				tkhandleclick(block, sampledata.tkobj, td1)
 			})
 		const td3 = tr.append('td').style('padding-left', '5px')
@@ -819,9 +820,9 @@ function configpanel(tk, block) {
 			.property('value', tk.readcountcutoff || 0)
 			.attr('type', 'number')
 			.style('width', '50px')
-			.on('keyup', () => {
-				if (!client.keyupEnter()) return
-				const v = Number.parseFloat(d3event.target.value)
+			.on('keyup', event => {
+				if (!client.keyupEnter(event)) return
+				const v = Number.parseFloat(event.target.value)
 				if (v == 0) {
 					if (tk.readcountcutoff) {
 						// cutoff has been set, cancel and refetch data

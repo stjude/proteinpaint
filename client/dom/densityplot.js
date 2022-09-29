@@ -1,5 +1,4 @@
 import { scaleLinear, axisBottom, axisLeft, line as d3line, curveMonotoneX, format, brushX } from 'd3'
-import { event as d3event } from 'd3-selection'
 
 /*
 ********************** EXPORTED
@@ -93,8 +92,8 @@ export async function make_densityplot(holder, data, callabck) {
 	g.call(
 		brushX()
 			.extent([[xpad, ypad], [width - xpad, height + ypad]])
-			.on('end', async () => {
-				const selection = d3event.selection
+			.on('end', async event => {
+				const selection = event.selection
 				const range_start = xscale.invert(selection[0])
 				const range_end = xscale.invert(selection[1])
 				callabck({ range_start, range_end })

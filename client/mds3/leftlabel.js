@@ -1,4 +1,3 @@
-import { event as d3event } from 'd3-selection'
 // variant label is always made
 import { makeVariantLabel } from './leftlabel.variant'
 

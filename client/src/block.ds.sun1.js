@@ -1,10 +1,11 @@
-import { select as d3select, event as d3event } from 'd3-selection'
+import { select as d3select } from 'd3-selection'
 import { stratify, partition } from 'd3-hierarchy'
 import { arc as d3arc } from 'd3-shape'
 import { rgb as d3rgb } from 'd3-color'
 import { itemtable } from './block.ds.itemtable'
 import { stratinput } from '#shared/tree'
-import { scaleOrdinal, schemeCategory10 } from 'd3-scale'
+import { scaleOrdinal } from 'd3-scale'
+import { schemeCategory10 } from 'd3-scale-chromatic'
 import * as client from './client'
 
 export default function(tk, block, arg) {
@@ -255,11 +256,11 @@ arg:
 
 			return c
 		})
-		.on('mouseover', d => {
+		.on('mouseover', (event, d) => {
 			if (!d.parent) return
 			if (sun.busy) return
 
-			d3event.target.setAttribute(
+			event.target.setAttribute(
 				'fill',
 				d3rgb(d._color)
 					.darker(0.5)
@@ -267,13 +268,13 @@ arg:
 			)
 			slicemouseover(d, pica, arg, cx, cy, tk, block)
 		})
-		.on('mouseout', d => {
+		.on('mouseout', (event, d) => {
 			pica.g.selectAll('*').remove()
 			if (!d.parent) return
-			d3event.target.setAttribute('fill', d._color)
+			event.target.setAttribute('fill', d._color)
 		})
 
-		.on('click', d => {
+		.on('click', (event, d) => {
 			// clicking on slice
 			if (arg.noclickring) {
 				// no clicking rings
@@ -287,22 +288,17 @@ arg:
 				// external annotation
 				if (d.data.lst.length == 1) {
 					// single sample
-					showsinglesample(
-						d.data.lst[0].k4a,
-						arg.cohort.annotation[d.data.lst[0].k4a],
-						d3event.clientX,
-						d3event.clientY
-					)
+					showsinglesample(d.data.lst[0].k4a, arg.cohort.annotation[d.data.lst[0].k4a], event.clientX, event.clientY)
 					return
 				}
-				showmanysample(d.data.lst, arg.cohort, d3event.clientX, d3event.clientY)
+				showmanysample(d.data.lst, arg.cohort, event.clientX, event.clientY)
 				return
 			}
 			// old style official ds
 			itemtable({
 				mlst: d.data.lst,
-				x: d3event.clientX,
-				y: d3event.clientY,
+				x: event.clientX,
+				y: event.clientY,
 				tk: tk,
 				block: block,
 				pane: true
@@ -370,19 +366,19 @@ arg:
 							if (sun.busy) return
 							remove(sun)
 						})
-						.on('mousedown', () => {
-							d3event.preventDefault()
-							d3event.stopPropagation()
+						.on('mousedown', event => {
+							event.preventDefault()
+							event.stopPropagation()
 							let cx0 = cx,
 								cy0 = cy,
-								mx = d3event.clientX,
-								my = d3event.clientY,
+								mx = event.clientX,
+								my = event.clientY,
 								body = d3select(document.body)
 							body
-								.on('mousemove', () => {
+								.on('mousemove', event => {
 									sun.busy = true // must set here but not mousedown
-									cx = cx0 + d3event.clientX - mx
-									cy = cy0 + d3event.clientY - my
+									cx = cx0 + event.clientX - mx
+									cy = cy0 + event.clientY - my
 									g.attr('transform', 'translate(' + cx + ',' + cy + ')')
 								})
 								.on('mouseup', () => {
@@ -422,21 +418,21 @@ arg:
 							listbutt_bg.attr('fill', '#d9d9d9')
 							listbutt_text.attr('fill', '#858585')
 						})
-						.on('click', () => {
+						.on('click', event => {
 							if (arg.m2detail) {
 								remove(sun)
 								itemtable({
 									mlst: [arg.m2detail],
 									pane: true,
-									x: d3event.clientX - radius,
-									y: d3event.clientY - radius * 2,
+									x: event.clientX - radius,
+									y: event.clientY - radius * 2,
 									tk: tk,
 									block: block
 								})
 								return
 							}
 
-							const p = d3event.target.getBoundingClientRect()
+							const p = event.target.getBoundingClientRect()
 							remove(sun)
 							setTimeout(
 								() =>

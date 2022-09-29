@@ -1,4 +1,3 @@
-import { event as d3event } from 'd3-selection'
 import * as client from './client'
 import { axisLeft } from 'd3-axis'
 import { scaleLinear } from 'd3-scale'
@@ -194,9 +193,9 @@ function renderTk(tk, block) {
 				.attr('height', h)
 				.attr('fill', fillcolor)
 				.attr('shape-rendering', 'crispEdges')
-				.on('mouseover', () => {
-					d3event.target.setAttribute('stroke', barcolor)
-					tk.tktip.clear().show(d3event.clientX, d3event.clientY)
+				.on('mouseover', event => {
+					event.target.setAttribute('stroke', barcolor)
+					tk.tktip.clear().show(event.clientX, event.clientY)
 
 					const lst = [
 						{ k: 'gene', v: i.gene },
@@ -214,12 +213,12 @@ function renderTk(tk, block) {
 
 					expressionstat.showsingleitem_table(i, tk.gecfg, table)
 				})
-				.on('mouseout', () => {
+				.on('mouseout', event => {
 					tk.tktip.hide()
-					d3event.target.setAttribute('stroke', '')
+					event.target.setAttribute('stroke', '')
 				})
-				.on('click', () => {
-					const pane = client.newpane({ x: d3event.clientX, y: d3event.clientY })
+				.on('click', event => {
+					const pane = client.newpane({ x: event.clientX, y: event.clientY })
 					pane.header.text(i.gene + ' ' + tk.gecfg.datatype)
 
 					const p = {
@@ -353,7 +352,7 @@ async function makeTk(tk, block) {
 	tk.config_handle = block
 		.maketkconfighandle(tk)
 		.attr('y', 10 + block.labelfontsize)
-		.on('click', () => {
+		.on('click', event => {
 			configPanel(tk, block)
 		})
 }
@@ -368,9 +367,9 @@ function configPanel(tk, block) {
 			.append('input')
 			.attr('size', 5)
 			.property('value', tk.barheight)
-			.on('keyup', () => {
-				if (d3event.key != 'Enter') return
-				const s = d3event.target.value
+			.on('keyup', event => {
+				if (event.key != 'Enter') return
+				const s = event.target.value
 				if (s == '') return
 				const v = Number.parseInt(s)
 				if (Number.isNaN(v) || v <= 1) {
@@ -402,7 +401,7 @@ function configPanel(tk, block) {
 				.attr('type', 'radio')
 				.attr('name', radioname)
 				.attr('id', radioname + 2)
-				.on('change', () => {
+				.on('change', event => {
 					tk.showrank = false
 					renderTk(tk, block)
 				})
@@ -420,7 +419,7 @@ function configPanel(tk, block) {
 				.attr('type', 'radio')
 				.attr('name', radioname)
 				.attr('id', radioname + 1)
-				.on('change', () => {
+				.on('change', event => {
 					tk.showrank = true
 					renderTk(tk, block)
 				})

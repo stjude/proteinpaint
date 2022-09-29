@@ -1,5 +1,5 @@
 import { keyupEnter } from '#src/client'
-import { select, event } from 'd3-selection'
+import { select } from 'd3-selection'
 import { filterInit } from '#filter'
 import { make_radios } from '#dom/radiobutton'
 
@@ -360,8 +360,8 @@ export function setGroupsettingMethods(self) {
 				.style('display', 'inline-block')
 				.style('font-size', '.8em')
 				.style('width', '87%')
-				.on('keyup', () => {
-					if (!keyupEnter()) return
+				.on('keyup', event => {
+					if (!keyupEnter(event)) return
 
 					customset.groups[i].name = group_name_input.node().value
 					self.q.type = 'custom-groupset'
@@ -405,7 +405,7 @@ export function setGroupsettingMethods(self) {
 
 			if (group_type !== 'filter') {
 				dragable_div
-					.on('dragover', () => {
+					.on('dragover', event => {
 						if (group_i == drag_native_grp) {
 							dragged_item
 								.style('transition-property', 'background-color')
@@ -417,18 +417,18 @@ export function setGroupsettingMethods(self) {
 						event.stopPropagation()
 						dragable_div.style('background-color', group_i !== drag_native_grp ? '#cfe2f3' : '#fff')
 					})
-					.on('dragenter', () => {
+					.on('dragenter', event => {
 						if (group_i == drag_native_grp) return
 						event.preventDefault()
 						event.stopPropagation()
 						dragable_div.style('background-color', group_i !== drag_native_grp ? '#cfe2f3' : '#fff')
 					})
-					.on('dragleave', () => {
+					.on('dragleave', event => {
 						event.preventDefault()
 						event.stopPropagation()
 						dragable_div.style('background-color', '#fff')
 					})
-					.on('dragend', () => {
+					.on('dragend', event => {
 						event.preventDefault()
 						event.stopPropagation()
 						dragable_div.style('background-color', '#fff')

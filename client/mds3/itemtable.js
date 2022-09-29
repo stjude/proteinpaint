@@ -1,7 +1,6 @@
 import { mclass, dtsnvindel, dtfusionrna, dtsv } from '#shared/common'
 import { init_sampletable } from './sampletable'
 import { get_list_cells } from '#dom/gridutils'
-import { event as d3event } from 'd3-selection'
 import { appear } from '#dom/animation'
 import { dofetch3 } from '#common/dofetch'
 

@@ -1,4 +1,3 @@
-import { event as d3event } from 'd3-selection'
 import * as client from './client'
 import { init_bulk_flag } from '#shared/bulk'
 import * as bulkui from './bulk.ui'
@@ -87,9 +86,9 @@ if(cohort.render) {
 			const butt = filediv
 				.append('input')
 				.attr('type', 'file')
-				.on('change', () => {
+				.on('change', event => {
 					saydiv.text('')
-					const file = d3event.target.files[0]
+					const file = event.target.files[0]
 					if (!file) {
 						fileui()
 						return

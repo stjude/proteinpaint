@@ -1,5 +1,4 @@
-import { event as d3event } from 'd3-selection'
-import { json as d3json } from 'd3-request'
+import { json as d3json } from 'd3-fetch'
 import * as client from './client'
 
 /*
@@ -203,12 +202,12 @@ function metadataselector4pca(cohort, obj, holder) {
 		.append('span')
 		.text('Choose metadata')
 		.attr('class', 'sja_clbtext')
-		.on('click', () => {
+		.on('click', event => {
 			/*
 		list all terms
 		*/
 			tip.clear()
-			tip.showunder(d3event.target)
+			tip.showunder(event.target)
 			for (const term of cohort.patientannotation.metadata) {
 				tip.d
 					.append('div')

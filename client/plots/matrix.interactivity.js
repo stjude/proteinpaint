@@ -5,7 +5,7 @@ import { icons } from '../dom/control.icons'
 let inputIndex = 0
 
 export function setInteractivity(self) {
-	self.showCellInfo = function() {
+	self.showCellInfo = function(event) {
 		if (self.activeLabel) return
 		const d = event.target.__data__
 		if (!d || !d.term || !d.sample) return
@@ -81,7 +81,7 @@ function setTermActions(self) {
 		})
 	}
 
-	self.showTermMenu = async function() {
+	self.showTermMenu = async function(event) {
 		const t = event.target.__data__
 		if (!t || !t.tw) return
 		self.activeLabel = t
@@ -131,7 +131,7 @@ function setTermActions(self) {
 		// must remember event target since it's cleared after async-await
 		const clickedElem = event.target
 		await self.pill.main(t.tw ? t.tw : { term: null, q: null })
-		self.pill.showMenu(clickedElem, self.dom.twMenuBar)
+		self.pill.showMenu(event, clickedElem, self.dom.twMenuBar)
 
 		self.dom.grpMenuDiv = self.dom.menutop.append('div').style('margin-top', '10px')
 		//self.showTermGroupInputs(self.dom.grpMenuDiv)
@@ -207,7 +207,7 @@ function setTermActions(self) {
 			})
 	}
 
-	self.sortSamplesAgainstCornerTerm = () => {
+	self.sortSamplesAgainstCornerTerm = event => {
 		event.stopPropagation()
 		const t = self.activeLabel
 		const termgroups = JSON.parse(JSON.stringify(self.termGroups))
@@ -246,7 +246,7 @@ function setTermActions(self) {
 		self.dom.tip.hide()
 	}
 
-	self.sortSamplesAgainstTerm = () => {
+	self.sortSamplesAgainstTerm = event => {
 		event.stopPropagation()
 		const t = self.activeLabel
 		const [tcopy] = self.getSorterTerms(t)
@@ -277,7 +277,7 @@ function setTermActions(self) {
 		self.dom.tip.hide()
 	}
 
-	self.moveTermUp = () => {
+	self.moveTermUp = event => {
 		event.stopPropagation()
 		const t = self.activeLabel
 		const grp = self.termGroups[t.grpIndex]
@@ -302,7 +302,7 @@ function setTermActions(self) {
 		self.dom.tip.hide()
 	}
 
-	self.moveTermDown = () => {
+	self.moveTermDown = event => {
 		event.stopPropagation()
 		const t = self.activeLabel
 		const grp = self.termGroups[t.grpIndex]
@@ -780,7 +780,7 @@ function setTermActions(self) {
 		self.dom.tip.hide()
 	}
 
-	self.launchBrowser = () => {
+	self.launchBrowser = event => {
 		event.stopPropagation()
 		const tw = self.activeLabel.tw
 		const custom_variants = []
@@ -826,7 +826,7 @@ function setSampleGroupActions(self) {
 			.attr('class', 'sja_menuoption sja_sharp_border')
 			.style('display', 'inline-block')
 			.html(d => d.label)
-			.on('click', d => {
+			.on('click', (event, d) => {
 				event.stopPropagation()
 				d.callback(d)
 			})
@@ -919,7 +919,7 @@ function setSampleGroupActions(self) {
 }
 
 function setTermGroupActions(self) {
-	self.showTermGroupMenu = function() {
+	self.showTermGroupMenu = function(event) {
 		const d = event.target.__data__
 		if (!d) return
 		self.activeLabel = d
@@ -979,7 +979,7 @@ function setTermGroupActions(self) {
 			.attr('class', 'sja_menuoption sja_sharp_border')
 			.style('display', 'inline-block')
 			.html(d => d.label)
-			.on('click', d => {
+			.on('click', (event, d) => {
 				event.stopPropagation()
 				self.dom.menutop.style('display', 'none')
 				d.callback(d)

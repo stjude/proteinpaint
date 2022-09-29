@@ -4,6 +4,7 @@ const fs = require('fs')
 const utils = require('./utils')
 const createCanvas = require('canvas').createCanvas
 const nt2aa = require('#shared/common').nt2aa
+const parseBedLine = require('./bedj.parseBed').parseBedLine
 
 /*
 should guard against file content error e.g. two tabs separating columns
@@ -132,6 +133,9 @@ async function do_query(req, genomes) {
 	const [e, tkfile, isurl] = app.fileurl(req)
 	if (e) throw e
 
+	// append new boolean flag to req.query{}
+	req.query.fileIsBigbed = await utils.testIfFileIsBigbed(tkfile)
+
 	let stackheight, stackspace, regionspace, width, fontsize
 	if (req.query.getdata) {
 		// no rendering, return list of parsed items
@@ -185,7 +189,7 @@ async function do_query(req, genomes) {
 	const __isgene = req.query.__isgene
 
 	let dir
-	if (isurl) {
+	if (!req.query.fileIsBigbed && isurl) {
 		dir = await utils.cache_index(tkfile, req.query.indexURL)
 	}
 
@@ -932,34 +936,40 @@ may return additional info for:
 	})
 }
 
+/*
+input:
+
+q={}
+	.fileIsBigbed=boolean
+tkfile=full path
+dir=
+flag_gm={ chr, start, stop }
+	undefined if track is not displayed on a gene
+gmisoform=string
+	accession of an isoform. if given, will filter items by item.isoform
+
+output:
+
+array of objects, each object is one bed item
+*/
 async function query_file(q, tkfile, dir, flag_gm, gmisoform) {
 	if (flag_gm) {
 		// query over the gene region, just one region
 		const items = []
 		let errlinecount = 0
-		await utils.get_lines_bigfile({
-			args: [tkfile, flag_gm.chr + ':' + flag_gm.start + '-' + flag_gm.stop],
-			dir,
-			callback: line => {
+
+		if (q.fileIsBigbed) {
+			const lines = await utils.query_bigbed_by_coord(tkfile, flag_gm.chr, flag_gm.start, flag_gm.stop)
+			for (const line of lines) {
 				const l = line.split('\t')
-				let j = {}
-				if (q.getBED) {
-					j.rest = l.slice(3)
-				} else if (l[3]) {
-					try {
-						j = JSON.parse(l[3])
-					} catch (e) {
-						errlinecount++
-						return
-					}
-				}
-				if (j.isoformonly && j.isoformonly != gmisoform) {
-					// this is specific for what? idr per isoforms?
-					return
-				}
+
+				// create one object for the line from the bigbed file
+				const j = parseBedLine(l)
+
+				// helper function does not add chr/start/stop/rglst
 				j.chr = l[0]
-				j.start = Number.parseInt(l[1])
-				j.stop = Number.parseInt(l[2])
+				j.start = Number(l[1])
+				j.stop = Number(l[2])
 				j.rglst = []
 				for (let i = 0; i < q.rglst.length; i++) {
 					const r = q.rglst[i]
@@ -968,41 +978,104 @@ async function query_file(q, tkfile, dir, flag_gm, gmisoform) {
 						j.rglst.push({ idx: i })
 					}
 				}
-				if (j.rglst.length == 0) return
+				if (j.rglst.length == 0) continue
+
 				items.push(j)
 			}
-		})
+		} else {
+			await utils.get_lines_bigfile({
+				args: [tkfile, flag_gm.chr + ':' + flag_gm.start + '-' + flag_gm.stop],
+				dir,
+				callback: line => {
+					const l = line.split('\t')
+					let j = {}
+					if (q.getBED) {
+						j.rest = l.slice(3)
+					} else if (l[3]) {
+						try {
+							j = JSON.parse(l[3])
+						} catch (e) {
+							errlinecount++
+							return
+						}
+					}
+					if (j.isoformonly && j.isoformonly != gmisoform) {
+						// this is specific for what? idr per isoforms?
+						return
+					}
+					j.chr = l[0]
+					j.start = Number(l[1])
+					j.stop = Number(l[2])
+
+					// TODO clarify reason
+					j.rglst = []
+					for (let i = 0; i < q.rglst.length; i++) {
+						const r = q.rglst[i]
+						// simply decide by the whole gene span, not by exons, otherwise there will result in gaps
+						if (Math.max(j.start, r.start) < Math.min(j.stop, r.stop)) {
+							j.rglst.push({ idx: i })
+						}
+					}
+					if (j.rglst.length == 0) return
+					items.push(j)
+				}
+			})
+		}
 		return [items]
 	}
+
 	// query over genomic regions
 	// each item belong to only one region
 	const regions = []
 
 	for (const [idx, r] of q.rglst.entries()) {
 		const itemofthisregion = []
-		await utils.get_lines_bigfile({
-			args: [tkfile, r.chr + ':' + r.start + '-' + r.stop],
-			dir,
-			callback: line => {
+
+		if (q.fileIsBigbed) {
+			const lines = await utils.query_bigbed_by_coord(tkfile, r.chr, r.start, r.stop)
+			for (const line of lines) {
 				const l = line.split('\t')
-				let j = {}
-				if (q.getBED) {
-					j.rest = l.slice(3)
-				} else if (l[3]) {
-					try {
-						j = JSON.parse(l[3])
-					} catch (e) {
-						errlinecount++
-						return
-					}
-				}
+
+				// create one object for the line from the bigbed file
+				const j = parseBedLine(l)
+
+				// helper function does not add chr/start/stop/rglst
 				j.chr = l[0]
-				j.start = Number.parseInt(l[1])
-				j.stop = Number.parseInt(l[2])
-				j.rglst = [{ idx }]
+				j.start = Number(l[1])
+				j.stop = Number(l[2])
+				j.rglst = [{ idx }] // can help with rendering later
+
 				itemofthisregion.push(j)
 			}
-		})
+		} else {
+			await utils.get_lines_bigfile({
+				args: [tkfile, r.chr + ':' + r.start + '-' + r.stop],
+				dir,
+				callback: line => {
+					const l = line.split('\t')
+
+					// create one object for the bed item
+					let j = {}
+
+					if (q.getBED) {
+						j.rest = l.slice(3)
+					} else if (l[3]) {
+						try {
+							j = JSON.parse(l[3])
+						} catch (e) {
+							errlinecount++
+							return
+						}
+					}
+					j.chr = l[0]
+					j.start = Number(l[1])
+					j.stop = Number(l[2])
+					j.rglst = [{ idx }] // can help with rendering later
+					itemofthisregion.push(j)
+				}
+			})
+		}
+
 		regions.push(itemofthisregion)
 	}
 	return regions

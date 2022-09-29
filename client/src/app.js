@@ -1,4 +1,4 @@
-import { select as d3select, selectAll as d3selectAll, event as d3event } from 'd3-selection'
+import { select as d3select, selectAll as d3selectAll } from 'd3-selection'
 import * as client from './client'
 import { dofetch3, setAuth } from '../common/dofetch'
 import { findgenemodel_bysymbol } from './gene'
@@ -12,7 +12,7 @@ import blockinit from './block.init'
 import { debounce } from 'debounce'
 import * as parseurl from './app.parseurl'
 import { init_mdsjson } from './app.mdsjson'
-import { drawer_init } from '../appdrawer/app.drawer'
+import { appDrawerInit } from '../appdrawer/app'
 import urlmap from '../common/urlmap'
 import { renderSandboxFormDiv, newSandboxDiv } from '../dom/sandbox'
 import { first_genetrack_tolist } from '../common/1stGenetk'
@@ -235,7 +235,7 @@ function setHostUrl(arg, app) {
 	sessionStorage.setItem('hostURL', app.hostURL)
 }
 
-function makeheader(app, obj, jwt) {
+async function makeheader(app, obj, jwt) {
 	/*
 	app
 	obj: server returned data
@@ -287,8 +287,8 @@ function makeheader(app, obj, jwt) {
 				.append('a')
 				.style('margin-left', '10px')
 				.text('Running BLAT')
-				.on('click', async () => {
-					headtip.clear().showunder(d3event.target)
+				.on('click', async event => {
+					headtip.clear().showunder(event.target)
 					const div = headtip.d.append('div').style('margin', '10px')
 					const wait = div.append('div').text('Loading...')
 					try {
@@ -324,7 +324,7 @@ function makeheader(app, obj, jwt) {
 	const tip = new client.Menu({ border: '', padding: '0px' })
 
 	function entersearch() {
-		app.drawer.apps_off()
+		app.drawer.dispatch({ type: 'is_apps_btn_active', value: false })
 		// by pressing enter, if not gene will search snp
 		d3selectAll('.sja_ep_pane').remove() // poor fix to remove existing epaint windows
 		let str = input.property('value').trim()
@@ -354,8 +354,8 @@ function makeheader(app, obj, jwt) {
 		.attr('size', 20)
 		.attr('placeholder', 'Gene, position, or SNP')
 		.attr('title', 'Search by gene, SNP, or position')
-		.on('keyup', () => {
-			if (client.keyupEnter()) entersearch()
+		.on('keyup', event => {
+			if (client.keyupEnter(event)) entersearch()
 			else debouncer()
 		})
 	// input.node().focus() Causes app drawer to unsmoothly open and close
@@ -383,16 +383,32 @@ function makeheader(app, obj, jwt) {
 	}
 	app.genome_browser_btn = make_genome_browser_btn(app, headbox, jwt)
 
-	app.drawer = drawer_init(app, obj.features)
-	app.drawer.addBtn(headbox, 'Apps', padw_sm, jwt)
+	app.drawer = await appDrawerInit({
+		holder: app.holder,
+		genomes: app.genomes,
+		drawerRow: app.holder
+			.append('div')
+			.style('position', 'relative')
+			.style('overflow-x', 'visible')
+			.style('overflow-y', 'hidden')
+			.classed('sjpp-drawer-row', true),
+		sandboxDiv: app.holder
+			.append('div')
+			.style('margin-top', '15px')
+			.classed('sjpp-drawer-sandbox', true),
+		genome_browser_btn: app.genome_browser_btn,
+		debugmode: app.debugmode,
+		headbox,
+		padw_sm
+	})
 
 	headbox
 		.append('span')
 		.classed('sja_menuoption', true)
 		.style('padding', padw_sm)
 		.text('Help')
-		.on('click', () => {
-			const p = d3event.target.getBoundingClientRect()
+		.on('click', event => {
+			const p = event.target.getBoundingClientRect()
 			const div = headtip
 				.clear()
 				.show(p.left - 0, p.top + p.height + 5)
@@ -434,7 +450,7 @@ function make_genome_browser_btn(app, headbox, jwt) {
 		.datum(genomename)
 		.text(genomename + ' genome browser')
 		.on('click', genomename => {
-			let sandbox_div = newSandboxDiv(app.drawer.apps_sandbox_div)
+			let sandbox_div = newSandboxDiv(app.drawer.opts.sandboxDiv)
 
 			const g = app.genomes[genomename]
 			if (!g) {
@@ -459,7 +475,7 @@ function make_genome_browser_btn(app, headbox, jwt) {
 			first_genetrack_tolist(g, par.tklst)
 
 			import('./block').then(b => new b.Block(par))
-			app.drawer.apps_off()
+			app.drawer.dispatch({ type: 'is_apps_btn_active', value: false })
 		})
 	return g_browser_btn
 }
@@ -496,7 +512,7 @@ function findgenelst(app, str, genome, tip, jwt) {
 					.attr('isgene', '1')
 					.text(name)
 					.on('click', () => {
-						app.drawer.apps_off()
+						app.drawer.dispatch({ type: 'is_apps_btn_active', value: false })
 						tip.hide()
 						findgene2paint(app, name, genome, jwt)
 					})
@@ -512,7 +528,7 @@ function findgenelst(app, str, genome, tip, jwt) {
 }
 
 async function findgene2paint(app, str, genomename, jwt) {
-	let sandbox_div = newSandboxDiv(app.drawer.apps_sandbox_div)
+	let sandbox_div = newSandboxDiv(app.drawer.opts.sandboxDiv)
 
 	const g = app.genomes[genomename]
 	if (!g) {

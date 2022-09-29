@@ -1,4 +1,4 @@
-import { select as d3select, selectAll as d3selectAll, event as d3event } from 'd3-selection'
+import { select as d3select, selectAll as d3selectAll } from 'd3-selection'
 
 // TODO may replace with radiobutton.js
 export function initRadioInputs(opts) {

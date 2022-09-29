@@ -1,5 +1,5 @@
 import { scaleLinear } from 'd3-scale'
-import { select as d3select, selectAll as d3selectAll, event as d3event, mouse as d3mouse } from 'd3-selection'
+import { select as d3select, selectAll as d3selectAll, pointer } from 'd3-selection'
 import { transition } from 'd3-transition'
 import { format as d3format } from 'd3-format'
 import { axisTop, axisLeft } from 'd3-axis'
@@ -278,8 +278,8 @@ export class Block {
 				.append('div') // contains svg and resize button
 				.style('position', 'relative')
 				.style('display', 'inline-block')
-			this.svg = inlinediv.append('svg').on('mousedown', () => {
-				d3event.preventDefault()
+			this.svg = inlinediv.append('svg').on('mousedown', event => {
+				event.preventDefault()
 			})
 			if (!arg.noresize) {
 				this.resizewidthbutton = inlinediv
@@ -289,12 +289,12 @@ export class Block {
 					.style('position', 'absolute')
 					.style('bottom', '-2px')
 					.style('font-size', '.7em')
-					.on('mousedown', () => {
-						d3event.preventDefault()
-						const x = d3event.clientX
+					.on('mousedown', event => {
+						event.preventDefault()
+						const x = event.clientX
 						const body = d3select(document.body)
 						body.on('mousemove', () => {
-							this.resizewidthbutton.style('right', this.rpad + this.rightheadw + x - d3event.clientX + 'px')
+							this.resizewidthbutton.style('right', this.rpad + this.rightheadw + x - event.clientX + 'px')
 						})
 						body.on('mouseup', () => {
 							this.resizewidthbutton.style('right', this.rpad + this.rightheadw + 'px')
@@ -308,7 +308,7 @@ export class Block {
 							// the only place to set it to true
 							this.resized = true
 
-							this.width += d3event.clientX - x
+							this.width += event.clientX - x
 
 							this.block_coord_updated()
 						})
@@ -405,8 +405,8 @@ export class Block {
 				.append('span')
 				.attr('class', 'sja_clbtext')
 				.html('<span style="font-size:1.5em;font-weight:bold">' + this.usegm.name + '</span> ' + this.usegm.isoform)
-				.on('click', () => {
-					d3event.stopPropagation()
+				.on('click', event => {
+					event.stopPropagation()
 					this.genemenu()
 				})
 			butrow.append('span').html('&nbsp;&nbsp;&nbsp;')
@@ -436,8 +436,8 @@ export class Block {
 					.style('font-family', client.font)
 					.attr('class', 'sja_opaque8 sjpp-plus-button')
 					.text('+')
-					.on('click', () => {
-						const p = d3event.target.getBoundingClientRect()
+					.on('click', event => {
+						const p = event.target.getBoundingClientRect()
 						this.tip.clear().show(p.left - 150, p.top + p.height - 15)
 						import('./block.ds.gmcustomdata').then(q => q.default(this))
 					})
@@ -522,12 +522,12 @@ export class Block {
 				.text('Tracks')
 				.style('margin-left', '10px')
 			const tip = new Menu({ padding: 'none' })
-			button.on('click', () => {
+			button.on('click', event => {
 				// remove past state for refreshing tk data
 				this.pannedpx = undefined
 				this.zoomedin = false
 				this.resized = false
-				const p = d3event.target.getBoundingClientRect()
+				const p = event.target.getBoundingClientRect()
 				import('./block.tk.menu').then(q => {
 					q.default(this, tip, p.left - 100, p.top + p.height - 15)
 				})
@@ -544,9 +544,9 @@ export class Block {
 				.append('button')
 				.style('margin-left', '10px')
 				.text('More')
-				.on('click', () => {
+				.on('click', event => {
 					tip.clear()
-					const p = d3event.target.getBoundingClientRect()
+					const p = event.target.getBoundingClientRect()
 					this.moremenu(tip)
 					// must create menu contents first then show, so the height-placement will work
 					tip.show(p.left - 50, p.top + p.height - 15)
@@ -670,8 +670,8 @@ export class Block {
 			.attr('x', 0)
 			.attr('y', -this.coordyp1 - this.rulerheight)
 			.attr('width', this.width)
-			.on('mousedown', () => {
-				this.rulermousedown(this)
+			.on('mousedown', event => {
+				this.rulermousedown(event, this)
 					.then(tmp => {
 						const [toofine, startpx, spanpx] = tmp
 
@@ -1359,7 +1359,7 @@ export class Block {
 		})
 	}
 
-	rulermousedown(panel) {
+	rulermousedown(event, panel) {
 		/*
 	pane is either block, or a sub panel, will operate zoom-in on it
 	*/
@@ -1424,15 +1424,15 @@ export class Block {
 			if (panel.rotated) {
 				const tmp = panel.coord.g0.node().getBoundingClientRect()
 				r_xleft = tmp.left
-				r_ytop = d3event.target.getBoundingClientRect().top
+				r_ytop = event.target.getBoundingClientRect().top
 				blockheight = this.totalheight()
-				y0 = d3event.clientY
+				y0 = event.clientY
 			} else {
-				xleft = d3event.target.getBoundingClientRect().left
+				xleft = event.target.getBoundingClientRect().left
 				const tmp = panel.coord.g0.node().getBoundingClientRect()
 				ytop = tmp.top
 				blockheight = this.totalheight()
-				x0 = d3event.clientX
+				x0 = event.clientX
 			}
 
 			if (panel.rotated) {
@@ -1456,10 +1456,10 @@ export class Block {
 			}
 
 			body
-				.on('mousemove', () => {
-					d3event.preventDefault()
+				.on('mousemove', event => {
+					event.preventDefault()
 					if (panel.rotated) {
-						const my = d3event.clientY
+						const my = event.clientY
 						let h = 0
 						if (my > y0) {
 							h = size + Math.min(r_ytop + panel.width, my) - y0
@@ -1475,7 +1475,7 @@ export class Block {
 						rect.attr('fill', color).attr('stroke', color)
 						printwidth(h)
 					} else {
-						const mx = d3event.clientX
+						const mx = event.clientX
 						let w = 0
 						if (mx > x0) {
 							w = size + Math.min(xleft + panel.width, mx) - x0
@@ -2092,7 +2092,7 @@ reverseorient() {
 				tk = this.block_addtk_template({ ds, type: client.tkt.ds })
 				blockds.dstkload(tk, this)
 			})
-			.on('mouseover', () => {
+			.on('mouseover', event => {
 				if (ds.iscustom) {
 					return
 				}
@@ -2100,7 +2100,7 @@ reverseorient() {
 					return
 				}
 				this.blocktip
-					.showunder(d3event.target)
+					.showunder(event.target)
 					.clear()
 					.d.append('div')
 					.style('font-size', '80%')
@@ -2383,10 +2383,10 @@ seekrange(chr,start,stop) {
 					.style('background-color', '#ccc')
 					.classed('sja_opaque8', true)
 					.text(1)
-					.on('click', () => {
+					.on('click', event => {
 						const div = this.tip
 							.clear()
-							.showunder(d3event.target)
+							.showunder(event.target)
 							.d.append('div')
 							.style('padding', '20px')
 						div
@@ -2647,20 +2647,20 @@ seekrange(chr,start,stop) {
 				tk.tktip.onHide = () => {
 					tktip_active = false
 				}
-				tk.tklabel.on('mouseover', () => {
+				tk.tklabel.on('mouseover', event => {
 					// Only fires if menu not active from click event
 					if (tktip_active == true) return
-					showTkLabelTooltip(tk, labeltruncated)
+					showTkLabelTooltip(event, tk, labeltruncated)
 					tktip_active = false
 				})
 				tk.tklabel.on('mouseout', () => {
 					if (tktip_active == true) return
 					tk.tktip.hide()
 				})
-				tk.tklabel.on('click', () => {
+				tk.tklabel.on('click', event => {
 					tktip_active = !tktip_active
 					if (tktip_active == true) {
-						showTkLabelTooltip(tk, labeltruncated)
+						showTkLabelTooltip(event, tk, labeltruncated)
 					}
 				})
 			}
@@ -2673,8 +2673,8 @@ seekrange(chr,start,stop) {
 			// its maketk will be responsible for filling the tklabel and setting tk.leftLabelMaxwidth
 			// fault is that the tooltip cannot be provided in this case
 		}
-		function showTkLabelTooltip(tk, labeltruncated) {
-			tk.tktip.clear().show(d3event.clientX, d3event.clientY - 30)
+		function showTkLabelTooltip(event, tk, labeltruncated) {
+			tk.tktip.clear().show(event.clientX, event.clientY - 30)
 			if (labeltruncated) {
 				const d = tk.tktip.d.append('div').text(tk.name)
 				if (tk.list_description) d.style('margin-bottom', '5px')
@@ -2771,9 +2771,9 @@ seekrange(chr,start,stop) {
 
 		/*******    pan    *******/
 
-		tk.gmiddle.on('mousedown', () => {
+		tk.gmiddle.on('mousedown', event => {
 			if (this.busy) return
-			if (d3event.which == 3) {
+			if (event.which == 3) {
 				// right click
 				return
 			}
@@ -2781,30 +2781,30 @@ seekrange(chr,start,stop) {
 			this.busy = true
 			this.resized = false
 
-			d3event.preventDefault()
+			event.preventDefault()
 			const body = d3select(document.body)
 
-			const x0 = this.rotated ? d3event.clientY : d3event.clientX
+			const x0 = this.rotated ? event.clientY : event.clientX
 
-			body.on('mousemove', () => {
-				const xoff = (this.rotated ? d3event.clientY : d3event.clientX) - x0
+			body.on('mousemove', event => {
+				const xoff = (this.rotated ? event.clientY : event.clientX) - x0
 				this.panning(xoff)
 			})
-			body.on('mouseup', () => {
+			body.on('mouseup', event => {
 				body.on('mousemove', null).on('mouseup', null)
-				const xoff = (this.rotated ? d3event.clientY : d3event.clientX) - x0
+				const xoff = (this.rotated ? event.clientY : event.clientX) - x0
 				this.pannedby(xoff)
 			})
 		})
 
 		/******* drag up down *******/
 
-		tk.gleft.on('mousedown', () => {
-			d3event.preventDefault()
+		tk.gleft.on('mousedown', event => {
+			event.preventDefault()
 			const body = d3select(document.body)
-			let y0 = d3event.clientY
-			body.on('mousemove', () => {
-				const dy = d3event.clientY - y0
+			let y0 = event.clientY
+			body.on('mousemove', event => {
+				const dy = event.clientY - y0
 
 				tk.g.attr('transform', 'translate(0,' + (tk.yoff + dy) + ')')
 
@@ -2837,7 +2837,7 @@ seekrange(chr,start,stop) {
 
 						t2.g.transition().attr('transform', 'translate(0,' + t2.yoff + ')')
 
-						y0 = d3event.clientY
+						y0 = event.clientY
 						if (tk.type == client.tkt.usegm && t2.type == client.tkt.ds && t2.aboveprotein) {
 							// t2 go down
 							blockds.skewer_flip(t2)
@@ -2868,7 +2868,7 @@ seekrange(chr,start,stop) {
 
 						t2.g.transition().attr('transform', 'translate(0,' + t2.yoff + ')')
 
-						y0 = d3event.clientY
+						y0 = event.clientY
 						if (tk.type == client.tkt.usegm && t2.type == client.tkt.ds && !t2.aboveprotein) {
 							// t2 go up
 							blockds.skewer_flip(t2)
@@ -3344,10 +3344,10 @@ seekrange(chr,start,stop) {
 
 		if (tipnum) {
 			img
-				.on('mousemove', () => {
+				.on('mousemove', event => {
 					if (this.busy) return
 					const lst = []
-					const p = d3mouse(img.node())
+					const p = pointer(event, img.node())
 					let stacknumber
 					if (data.mapisoform) {
 						for (const i of data.mapisoform) {
@@ -3406,7 +3406,7 @@ seekrange(chr,start,stop) {
 							tk.tktip.d.append('div').html(i)
 						}
 						tk.tktip.show(
-							d3event.clientX,
+							event.clientX,
 							img.node().getBoundingClientRect().top + stacknumber * (tk.stackheight + tk.stackspace) - 10
 						)
 					} else {
@@ -3425,8 +3425,8 @@ seekrange(chr,start,stop) {
 
 				if (tk.itemurl_appendname) {
 					// append item name to url for clicking
-					img.on('click', () => {
-						const p = d3mouse(img.node())
+					img.on('click', event => {
+						const p = pointer(event, img.node())
 						for (const i of data.mapisoform) {
 							const y = (i.y - 1) * (tk.stackheight + tk.stackspace)
 							if (i.x1 < p[0] && i.x2 > p[0] && y < p[1] && y + tk.stackheight > p[1] && i.name) {
@@ -3439,15 +3439,15 @@ seekrange(chr,start,stop) {
 				} else if (data.mapisoform.find(i => i.isoform)) {
 					// has isoform name, enable clicking on a isoform to launch protein view
 
-					img.on('click', () => {
-						const p = d3mouse(img.node())
+					img.on('click', event => {
+						const p = pointer(event, img.node())
 						for (const i of data.mapisoform) {
 							const y = (i.y - 1) * (tk.stackheight + tk.stackspace)
 							if (i.x1 < p[0] && i.x2 > p[0] && y < p[1] && y + tk.stackheight > p[1] && i.isoform) {
 								// hit an isoform
 								tk.tkconfigtip
 									.clear()
-									.show(d3event.clientX - 40, d3event.clientY)
+									.show(event.clientX - 40, event.clientY)
 									.d.append('div')
 									.attr('class', 'sja_menuoption')
 									.text('Gene/protein view for ' + i.isoform)
@@ -4183,16 +4183,16 @@ seekrange(chr,start,stop) {
 			height: 30 // default dummy height
 		}
 
-		obj.gtksubpanel = tk.gtksubpanels.append('g').on('mousedown', () => {
+		obj.gtksubpanel = tk.gtksubpanels.append('g').on('mousedown', event => {
 			// scrolling a sub panel
 
-			d3event.preventDefault()
+			event.preventDefault()
 			const body = d3select(document.body)
-			const x = d3event.clientX
+			const x = event.clientX
 
 			body
-				.on('mousemove', () => {
-					panelrecord.coord.g.attr('transform', 'translate(' + (d3event.clientX - x) + ',0)')
+				.on('mousemove', event => {
+					panelrecord.coord.g.attr('transform', 'translate(' + (event.clientX - x) + ',0)')
 
 					for (const t2 of this.tklst) {
 						if (t2.hidden) continue
@@ -4200,15 +4200,15 @@ seekrange(chr,start,stop) {
 							i => i.chr == panelrecord.chr && i.start == panelrecord.start && i.stop == panelrecord.stop
 						)
 						if (t2panel) {
-							t2panel.glider.attr('transform', 'translate(' + (d3event.clientX - x) + ',0)')
+							t2panel.glider.attr('transform', 'translate(' + (event.clientX - x) + ',0)')
 						} else {
 							console.log(panelrecord.chr, panelrecord.start, panelrecord.stop)
 						}
 					}
 				})
-				.on('mouseup', () => {
+				.on('mouseup', event => {
 					body.on('mousemove', null).on('mouseup', null)
-					const xoff = d3event.clientX - x
+					const xoff = event.clientX - x
 					if (xoff == 0) return
 					// set new view range
 					const bpspan = panelrecord.stop - panelrecord.start // bp span won't change when panning
@@ -4481,8 +4481,8 @@ seekrange(chr,start,stop) {
 			.attr('fill', 'white')
 			.attr('fill-opacity', 0)
 			.attr('y', -this.coordyp1 - this.rulerheight)
-			.on('mousedown', () => {
-				this.rulermousedown(panel)
+			.on('mousedown', event => {
+				this.rulermousedown(event, panel)
 					.then(tmp => {
 						panel.busy = false
 						const [toofine, startpx, spanpx] = tmp
@@ -4734,8 +4734,8 @@ seekrange(chr,start,stop) {
 						.append('input')
 						.attr('type', 'color')
 						.property('value', h.color)
-						.on('change', () => {
-							h.color = d3event.target.value
+						.on('change', event => {
+							h.color = event.target.value
 							h.rect.transition().attr('fill', h.color)
 						})
 				}
@@ -4833,8 +4833,8 @@ seekrange(chr,start,stop) {
 			.append('div')
 			.text(ds.label)
 			.attr('class', 'sja_handle_green')
-			.on('click', async () => {
-				this.blocktip.clear().showunder(d3event.target)
+			.on('click', async event => {
+				this.blocktip.clear().showunder(event.target)
 
 				if (ds.mdsIsUninitiated) {
 					const d = await dofetch3(`getDataset?genome=${this.genome.name}&dsname=${ds.label}`)
@@ -5119,26 +5119,26 @@ function makecoordinput(bb, butrow) {
 	}
 
 	bb.coord.input
-		.on('focus', () => {
-			d3event.target.select()
+		.on('focus', event => {
+			event.target.select()
 		})
-		.on('keyup', () => {
+		.on('keyup', event => {
 			bb.zoomedin = false
 			bb.pannedpx = undefined
 			bb.resized = false
-			const input = d3event.target
+			const input = event.target
 			const v = input.value.trim()
 			if (v.length <= 1) {
 				bb.coord.inputtip.hide()
 				return
 			}
-			if (client.keyupEnter()) {
+			if (client.keyupEnter(event)) {
 				bb.coord.inputtip.hide()
 				input.blur()
 				bb.jump_1basedcoordinate(v)
 				return
 			}
-			if (d3event.code == 'Escape') {
+			if (event.code == 'Escape') {
 				bb.coord.inputtip.hide()
 				if (bb.rglst.length == 1) {
 					const r = bb.rglst[0]
@@ -5286,11 +5286,11 @@ function init_cursorhlbar(block) {
 
 			if (block.rotated) {
 				// vertical, tk header at bottom
-				// as returned by d3mouse, the x position (vertical offset from left end of block) is negative, absolute value increases as moving up
-				x = -d3mouse(block.gbase.node())[1]
+				// as returned by pointer(), the x position (vertical offset from left end of block) is negative, absolute value increases as moving up
+				x = -pointer(event, block.gbase.node())[1]
 			} else {
 				// horizontal, tk header at left
-				x = d3mouse(block.gbase.node())[0]
+				x = pointer(block.gbase.node())[0]
 			}
 
 			// rest is independent of block rotation

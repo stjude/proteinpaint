@@ -1,6 +1,6 @@
 const tape = require('tape')
 const d3s = require('d3-selection')
-const dofetch3 = require('../../common/dofetch').dofetch3
+const dofetch3 = require('#common/dofetch').dofetch3
 
 /***********************************
  reusable helper vars and functions
@@ -67,14 +67,20 @@ async function runTests(data, test) {
 	// 1. Plan the tests
 	// Track examples that are testable and how they should be tested
 	const testable = [],
-		notTested = { hidden: [] }
+		notTested = { hidden: [], nonCards: [] }
 	let numPlannedTests = 1 // including the cardsjson download
 	for (const x of data.examples) {
-		if (!x.sandboxjson || x.hidden) {
+		for (const x of data.json.elements) {
+			if (x.type != 'card') {
+				notTested.nonCards.push(x.name)
+				continue
+			}
+		}
+		if (!x.sandboxjson || x.hidden ) {
 			notTested.hidden.push(x.name)
 			continue
 		}
-		const cardJson = await dofetch3(`/cardsjson?jsonfile=${x.sandboxjson}`)
+		const cardJson = await dofetch3(`/cardsjson?jsonfile=${x.sandboxJson}`)
 		const ppcalls = cardJson.jsonfile.ppcalls
 
 		// to limit to a particular test, uncomment the line below

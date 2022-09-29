@@ -1,4 +1,5 @@
-import { select as d3select, event as d3event, mouse as d3mouse } from 'd3-selection'
+import { select as d3select } from 'd3-selection'
+import { pointer } from 'd3-selection'
 import { axisRight, axisTop } from 'd3-axis'
 import { scaleLinear } from 'd3-scale'
 import { axisstyle } from '../dom/axisstyle'
@@ -578,8 +579,8 @@ function may_render_variant(data, tk, block) {
 	}
 
 	//Show information about FS in tooltip on click
-	tk.fs_string.on('click', () => {
-		tk.tktip.clear().showunder(d3event.target)
+	tk.fs_string.on('click', event => {
+		tk.tktip.clear().showunder(event.target)
 		tk.tktip.d
 			.append('div')
 			.style('width', '300px')
@@ -721,8 +722,8 @@ function may_render_variant(data, tk, block) {
 			.text('Diff Score')
 
 		//Show information about diff score in tooltip on click
-		diff_score_string.on('click', () => {
-			tk.tktip.clear().showunder(d3event.target)
+		diff_score_string.on('click', event => {
+			tk.tktip.clear().showunder(event.target)
 			tk.tktip.d
 				.append('div')
 				.style('width', '300px')
@@ -990,8 +991,8 @@ function makeTk(tk, block) {
 		tk.leftlabel_about = block
 			.maketklefthandle(tk, laby)
 			.text('About the BAM file')
-			.on('mouseover', () => {
-				tk.tktip.showunder(d3event.target).clear()
+			.on('mouseover', event => {
+				tk.tktip.showunder(event.target).clear()
 				make_table_2col(tk.tktip.d, tk.aboutThisFile)
 			})
 			.on('mouseout', () => {
@@ -1156,16 +1157,16 @@ function makeGroup(gd, tk, block, data) {
 		.attr('fill-opacity', 0)
 		.attr('width', group.data.width)
 		.attr('height', group.data.height)
-		.on('mousedown', () => {
-			mousedownx = d3event.clientX
+		.on('mousedown', event => {
+			mousedownx = event.clientX
 		})
-		.on('mousemove', () => {
+		.on('mousemove', event => {
 			if (group.data.allowpartstack) {
 				// TODO expand dom.box_move with full width and height to cover minimum expandable reads
 				return
 			}
 			if (!group.data.templatebox) return
-			const [mx, my] = d3mouse(group.dom.img_cover.node())
+			const [mx, my] = pointer(event, group.dom.img_cover.node())
 			let read_number = 0
 			for (const t of group.data.templatebox) {
 				read_number += 1
@@ -1188,9 +1189,9 @@ function makeGroup(gd, tk, block, data) {
 				}
 			}
 		})
-		.on('click', () => {
-			if (mousedownx != d3event.clientX) return
-			const [mx, my] = d3mouse(group.dom.img_cover.node())
+		.on('click', event => {
+			if (mousedownx != event.clientX) return
+			const [mx, my] = pointer(event, group.dom.img_cover.node())
 			group.my_partstack = my // Stores y-position of the mouse click in group
 			if (group.data.allowpartstack) {
 				enter_partstack(group, tk, block, my, data)
@@ -1281,15 +1282,15 @@ function makeGroup(gd, tk, block, data) {
 		.append('rect')
 		.attr('fill', slider_color)
 		.attr('width', 40)
-		.on('mousedown', () => {
-			d3event.preventDefault()
+		.on('mousedown', event => {
+			event.preventDefault()
 			group.dom.rightg.vslider.box.attr('fill', slider_color_dark)
 			const scrollableheight = group.data.height
-			const y0 = d3event.clientY
+			const y0 = event.clientY
 			let deltay = 0
 			const b = d3select(document.body)
-			b.on('mousemove', () => {
-				const y1 = d3event.clientY
+			b.on('mousemove', event => {
+				const y1 = event.clientY
 				const d = y1 - y0
 				if (d < 0) {
 					if (group.dom.rightg.vslider.boxy + d <= 0) return
@@ -1366,14 +1367,14 @@ function makeGroup(gd, tk, block, data) {
 		.attr('x2', 40)
 		.on('mouseover', () => group.dom.rightg.vslider.boxtopline.attr('stroke', slider_color_dark_line))
 		.on('mouseout', () => group.dom.rightg.vslider.boxtopline.attr('stroke', slider_color_dark))
-		.on('mousedown', () => {
-			d3event.preventDefault()
+		.on('mousedown', event => {
+			event.preventDefault()
 			const scrollableheight = group.data.height
-			const y0 = d3event.clientY
+			const y0 = event.clientY
 			let deltay = 0
 			const b = d3select(document.body)
-			b.on('mousemove', () => {
-				const y1 = d3event.clientY
+			b.on('mousemove', event => {
+				const y1 = event.clientY
 				const d = y1 - y0
 				if (d < 0) {
 					if (group.dom.rightg.vslider.boxy + d <= 0) return
@@ -1421,14 +1422,14 @@ function makeGroup(gd, tk, block, data) {
 		.attr('x2', 40)
 		.on('mouseover', () => group.dom.rightg.vslider.boxbotline.attr('stroke', slider_color_dark_line))
 		.on('mouseout', () => group.dom.rightg.vslider.boxbotline.attr('stroke', slider_color_dark))
-		.on('mousedown', () => {
-			d3event.preventDefault()
+		.on('mousedown', event => {
+			event.preventDefault()
 			const scrollableheight = group.data.height
-			const y0 = d3event.clientY
+			const y0 = event.clientY
 			let deltay = 0
 			const b = d3select(document.body)
-			b.on('mousemove', () => {
-				const y1 = d3event.clientY
+			b.on('mousemove', event => {
+				const y1 = event.clientY
 				const d = y1 - y0
 				if (d < 0) {
 					if (group.dom.rightg.vslider.boxh + d <= (stackpagesize * scrollableheight) / group.data_fullstack.stackcount)

@@ -5,6 +5,8 @@ const d3scale = require('d3-scale')
 const d3color = require('d3-color')
 const d3interpolate = require('d3-interpolate')
 const utils = require('./utils')
+const { schemeCategory10 } = require('d3-scale-chromatic')
+const { schemeCategory20 } = require('../../client/common/legacy-d3-polyfill')
 
 /*
 ********************** EXPORTED
@@ -107,14 +109,13 @@ may attach coloring scheme to result{} for returning to client
 
 	if (q.getpcd.category_autocolor) {
 		// using a category with automatic color
-		const auto_color_scale =
-			q.getpcd.values_count && q.getpcd.values_count <= 10 ? d3scale.schemeCategory10 : d3scale.schemeCategory20
+		const auto_color_scale = q.getpcd.values_count && q.getpcd.values_count <= 10 ? schemeCategory10 : schemeCategory20
 		categorical_color_function = d3scale.scaleOrdinal(auto_color_scale)
 		collect_category2color = {}
 		collect_category_count = {}
 		// k: category, v: color
 	} else if (q.getpcd.category_customcolor) {
-		const auto_color_fn = d3scale.scaleOrdinal(d3scale.schemeCategory20)
+		const auto_color_fn = d3scale.scaleOrdinal(schemeCategory20)
 		categorical_color_function = getCustomCatColor(q.getpcd.cat_values, auto_color_fn)
 		collect_category2color = {}
 		collect_category_count = {}
@@ -327,8 +328,8 @@ async function get_geneboxplot(q, gn, res) {
 	const ge = q.getgeneboxplot
 	const categorical_color_function =
 		q.getgeneboxplot.values_count && q.getgeneboxplot.values_count <= 10
-			? d3scale.scaleOrdinal(d3scale.schemeCategory10)
-			: d3scale.scaleOrdinal(d3scale.schemeCategory20)
+			? d3scale.scaleOrdinal(schemeCategory10)
+			: d3scale.scaleOrdinal(schemeCategory20)
 
 	if (!ge.expfile) throw 'getgeneboxplot.expfile missing'
 	{

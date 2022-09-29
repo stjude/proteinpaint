@@ -1,4 +1,3 @@
-import { event as d3event } from 'd3-selection'
 import * as common from '#shared/common'
 
 /*
@@ -149,11 +148,11 @@ export default function(cohort, button, folder) {
 		td.append('button')
 			.style('margin', '5px')
 			.text('Hide number')
-			.on('click', () => {
+			.on('click', event => {
 				const number = cholder.attr('shownumber') == '1'
 				showclst(lst, cholder, number)
 				cholder.attr('shownumber', number ? '0' : '1')
-				d3event.target.innerHTML = number ? 'Hide number' : 'Show number'
+				event.target.innerHTML = number ? 'Hide number' : 'Show number'
 			})
 	}
 	return totalcount ? ds2clst : null

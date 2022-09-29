@@ -1,4 +1,4 @@
-import { select as d3select, selectAll as d3selectAll, event as d3event, mouse as d3mouse } from 'd3-selection'
+import { select as d3select, selectAll as d3selectAll, pointer } from 'd3-selection'
 import { pie as d3pie, arc as d3arc } from 'd3-shape'
 import { scaleLinear, scaleOrdinal, schemeCategory10 } from 'd3-scale'
 import { pack as d3pack, hierarchy as d3hierarchy } from 'd3-hierarchy'
@@ -288,15 +288,15 @@ function makegraph(ds, json, holder, config) {
 		.attr('font-size',12)
 		.attr('font-family',client.font)
 		.attr('fill','black')
-		.on('mousedown',()=>{
-			d3event.preventDefault()
-			const x0=d3event.clientX
-			const y0=d3event.clientY
+		.on('mousedown',(event)=>{
+			event.preventDefault()
+			const x0=event.clientX
+			const y0=event.clientY
 			const body=d3select(document.body)
 			const width0=width, height0=height
 			body.on('mousemove',()=>{
-				width=width0+d3event.clientX-x0
-				height=height0+d3event.clientY-y0
+				width=width0+event.clientX-x0
+				height=height0+event.clientY-y0
 				render(true)
 			})
 			body.on('mouseup',()=>{
@@ -418,8 +418,8 @@ function makegraph(ds, json, holder, config) {
 							.on('drag', dragged)
 							.on('end', dragended)
 					)
-					.on('mouseover', () => {
-						tip.clear().show(d3event.clientX + 20, d3event.clientY + 20)
+					.on('mouseover', event => {
+						tip.clear().show(event.clientX + 20, event.clientY + 20)
 						const div = tip.d
 						div
 							.append('div')
@@ -654,26 +654,26 @@ function makegraph(ds, json, holder, config) {
 		}
 	}
 
-	function dragstarted(d) {
+	function dragstarted(event, d) {
 		/*
 		const lst=d.ancestors()
 		d=lst[lst.length-1].data.node
 		*/
-		if (!d3event.active) simulation.alphaTarget(0.1).restart()
+		if (!event.active) simulation.alphaTarget(0.1).restart()
 		d.fx = d.x
 		d.fy = d.y
 	}
-	function dragged(d) {
+	function dragged(event, d) {
 		/*
 		const lst=d.ancestors()
 		d=lst[lst.length-1].data.node
 		*/
-		const p = d3mouse(svg.node())
+		const p = pointer(event, this)
 		d.fx = p[0]
 		d.fy = p[1]
 	}
-	function dragended(d) {
-		if (!d3event.active) simulation.alphaTarget(0)
+	function dragended(event, d) {
+		if (!event.active) simulation.alphaTarget(0)
 		/*
 		const lst=d.ancestors()
 		d=lst[lst.length-1].data.node

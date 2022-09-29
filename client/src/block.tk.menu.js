@@ -1,6 +1,6 @@
 import * as client from './client'
-import { event as d3event } from 'd3-selection'
-import { scaleOrdinal, schemeCategory10 } from 'd3-scale'
+import { schemeCategory10 } from 'd3-scale-chromatic'
+import { scaleOrdinal } from 'd3-scale'
 import { rgb as d3rgb } from 'd3-color'
 import { Menu } from '../dom/menu'
 
@@ -122,10 +122,10 @@ function onesearchui(block, div) {
 		.append('span')
 		.style('font-size', '.8em')
 		.style('padding-left', '10px')
-	input.on('keyup', () => {
+	input.on('keyup', event => {
 		founddiv.selectAll('*').remove()
 		searchsays.text('')
-		const v = d3event.target.value
+		const v = event.target.value
 		if (v.length < 2) {
 			return
 		}
@@ -1059,15 +1059,15 @@ function facettrigger(block, holder, menutip) {
 					.style('display', 'inline-block')
 					.attr('class', 'sja_menuoption')
 					.text((flet.name ? flet.name + ': ' : '') + tkset.name)
-					.on('click', () => {
+					.on('click', event => {
 						menutip.hide()
 						if (flet.facetpane) {
 							document.body.appendChild(flet.facetpane.pane.node())
 							client.appear(flet.facetpane.pane)
 						} else {
 							const pane = client.newpane({
-								x: d3event.clientX - 100,
-								y: d3event.clientY - 20,
+								x: event.clientX - 100,
+								y: event.clientY - 20,
 								closekeep: true
 							})
 							flet.facetpane = pane
@@ -1083,15 +1083,15 @@ function facettrigger(block, holder, menutip) {
 			.style('display', 'inline-block')
 			.attr('class', 'sja_menuoption')
 			.text(tkset.tklst.length + ' tracks from ' + tkset.name)
-			.on('click', () => {
+			.on('click', event => {
 				menutip.hide()
 				if (tkset.facetpane) {
 					document.body.appendChild(tkset.facetpane.pane.node())
 					client.appear(tkset.facetpane.pane)
 				} else {
 					const pane = client.newpane({
-						x: d3event.clientX - 100,
-						y: d3event.clientY - 20,
+						x: event.clientX - 100,
+						y: event.clientY - 20,
 						closekeep: true
 					})
 					tkset.facetpane = pane
@@ -1297,9 +1297,9 @@ function facetmake(block, tkset, flet) {
 
 		if (tklst.length > 1) {
 			// multiple tracks, click to list
-			td.text(tklst.length).on('click', () => {
+			td.text(tklst.length).on('click', event => {
 				// list each track
-				tip.clear().show(d3event.clientX, d3event.clientY)
+				tip.clear().show(event.clientX, event.clientY)
 				const table = tip.d.append('table')
 				for (const t of tklst) {
 					const tr = table.append('tr')

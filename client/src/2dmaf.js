@@ -1,4 +1,4 @@
-import { select as d3select, event as d3event } from 'd3-selection'
+import { select as d3select } from 'd3-selection'
 import * as client from './client'
 import { scaleLinear } from 'd3-scale'
 import { axisLeft, axisTop, axisBottom } from 'd3-axis'
@@ -73,8 +73,8 @@ export function d2mafui(genomes, holder) {
 		const input = filediv
 			.append('input')
 			.attr('type', 'file')
-			.on('change', () => {
-				const file = d3event.target.files[0]
+			.on('change', event => {
+				const file = event.target.files[0]
 				if (!file) {
 					fileui()
 					return
@@ -936,8 +936,8 @@ function d2maf_render(showholder, pdata) {
 
 	{
 		// mclass filter
-		const mcselect = headerdiv.append('select').on('change', () => {
-			const v = d3event.target.options[d3event.target.selectedIndex].value
+		const mcselect = headerdiv.append('select').on('change', event => {
+			const v = event.target.options[event.target.selectedIndex].value
 			if (v == 'all') {
 				select_share.transition().attr('transform', d => d.posstring + ' scale(1)')
 				select_set1.transition().attr('transform', d => d.posstring + ' scale(1)')
@@ -973,8 +973,8 @@ if(pdata.purity1!=undefined) {
 	select.append('option').text('diploid').property('value','diploid')
 	select.append('option').text('1-copy loss').property('value','loss')
 	select.append('option').text('copy-neutral LOH').property('value','cnloh')
-	select.on('change',()=>{
-		const v=d3event.target.options[d3event.target.selectedIndex].value
+	select.on('change',(event)=>{
+		const v=event.target.options[event.target.selectedIndex].value
 		if(v=='off') {
 			emafline_1.transition().duration(1000).attr('fill-opacity',0)
 			return
@@ -1166,9 +1166,9 @@ if(pdata.purity2!=undefined) {
 			.attr('stroke', d => d.style.stroke)
 			.attr('stroke-opacity', d => d.style.strokeopacity)
 			.attr('stroke-dasharray', d => (d.chr == 'chrX' ? '5,5' : 'none'))
-			.on('mouseover', d => d2maf_dotmover(d, d3event.target, tooltip))
-			.on('mouseout', d => d2maf_dotmout(d, d3event.target, tooltip))
-			.on('click', d => d2maf_minfo(pdata.header, d))
+			.on('mouseover', (event, d) => d2maf_dotmover(event, d, tooltip))
+			.on('mouseout', (event, d) => d2maf_dotmout(event, d, tooltip))
+			.on('click', (event, d) => d2maf_minfo(event, pdata.header, d))
 	}
 	snv
 		.append('line')
@@ -1287,9 +1287,9 @@ select_share
 			.attr('stroke', d => d.style.stroke)
 			.attr('stroke-opacity', d => d.style.strokeopacity)
 			.attr('stroke-dasharray', d => (d.chr == 'chrX' ? '5,5' : 'none'))
-			.on('mouseover', d => d2maf_dotmover(d, d3event.target, tooltip))
-			.on('mouseout', d => d2maf_dotmout(d, d3event.target, tooltip))
-			.on('click', d => d2maf_minfo(pdata.header, d))
+			.on('mouseover', (event, d) => d2maf_dotmover(event, d, tooltip))
+			.on('mouseout', (event, d) => d2maf_dotmout(event, d, tooltip))
+			.on('click', (event, d) => d2maf_minfo(event, pdata.header, d))
 	}
 	snv
 		.append('line')
@@ -1406,9 +1406,9 @@ select_set1
 			.attr('stroke', d => d.style.stroke)
 			.attr('stroke-opacity', d => d.style.strokeopacity)
 			.attr('stroke-dasharray', d => (d.chr == 'chrX' ? '5,5' : 'none'))
-			.on('mouseover', d => d2maf_dotmover(d, d3event.target, tooltip))
-			.on('mouseout', d => d2maf_dotmout(d, d3event.target, tooltip))
-			.on('click', d => d2maf_minfo(pdata.header, d))
+			.on('mouseover', (event, d) => d2maf_dotmover(event, d, tooltip))
+			.on('mouseout', (event, d) => d2maf_dotmout(event, d, tooltip))
+			.on('click', (event, d) => d2maf_minfo(event, pdata.header, d))
 	}
 	snv
 		.append('line')
@@ -1734,8 +1734,8 @@ select_set2
 					.attr('class', 'sja_clbtext')
 					.style('color', m.style.fillhl)
 					.text(m.mname || '')
-					.on('click', () => {
-						click(d3event.target, m, select_set1)
+					.on('click', event => {
+						click(event.target, m, select_set1)
 					})
 
 				if (m.labelIsVisible) {
@@ -1751,8 +1751,8 @@ select_set2
 					.attr('class', 'sja_clbtext')
 					.style('color', m.style.fillhl)
 					.text(m.mname || '')
-					.on('click', () => {
-						click(d3event.target, m, select_set2)
+					.on('click', event => {
+						click(event.target, m, select_set2)
 					})
 
 				if (m.labelIsVisible) {
@@ -1768,8 +1768,8 @@ select_set2
 					.attr('class', 'sja_clbtext')
 					.style('color', m.style.fillhl)
 					.text(m.mname || '')
-					.on('click', () => {
-						click(d3event.target, m, select_share)
+					.on('click', event => {
+						click(event.target, m, select_share)
 					})
 
 				if (m.labelIsVisible) {
@@ -1826,18 +1826,18 @@ select_set2
 				.attr('height', m.radius)
 				.attr('fill', 'black')
 				.attr('fill-opacity', 0)
-				.on('mouseover', () => d3select(d3event.target).attr('fill-opacity', 0.2))
-				.on('mouseout', () => d3select(d3event.target).attr('fill-opacity', 0))
-				.on('mousedown', () => {
+				.on('mouseover', event => d3select(event.target).attr('fill-opacity', 0.2))
+				.on('mouseout', event => d3select(event.target).attr('fill-opacity', 0))
+				.on('mousedown', event => {
 					const x0 = x,
 						y0 = y,
-						mx = d3event.clientX,
-						my = d3event.clientY,
+						mx = event.clientX,
+						my = event.clientY,
 						body = d3select(document.body)
-					body.on('mousemove', () => {
-						d3event.preventDefault()
-						x = x0 + d3event.clientX - mx
-						y = y0 + d3event.clientY - my
+					body.on('mousemove', event => {
+						event.preventDefault()
+						x = x0 + event.clientX - mx
+						y = y0 + event.clientY - my
 						g.attr('transform', 'translate(' + x + ',' + y + ')')
 					})
 					body.on('mouseup', () => {
@@ -1851,14 +1851,14 @@ select_set2
 	return outtable
 }
 
-function d2maf_dotmover(m, ele, tooltip) {
+function d2maf_dotmover(event, m, tooltip) {
 	if (!m.selected) {
-		d3select(ele)
+		d3select(event.target)
 			.attr('fill', m.style.fillhl)
 			.attr('fill-opacity', 0.2)
 	}
 	tooltip.clear()
-	tooltip.show(d3event.clientX, d3event.clientY)
+	tooltip.show(event.clientX, event.clientY)
 	tooltip.d
 		.append('div')
 		.html(
@@ -1872,9 +1872,9 @@ function d2maf_dotmover(m, ele, tooltip) {
 		)
 }
 
-function d2maf_dotmout(m, ele, tooltip) {
+function d2maf_dotmout(event, m, tooltip) {
 	if (!m.selected) {
-		d3select(ele)
+		d3select(event.ele)
 			.attr('fill', m.style.fill)
 			.attr('fill-opacity', m.style.fillopacity)
 			.attr('stroke', m.style.stroke)
@@ -1882,8 +1882,8 @@ function d2maf_dotmout(m, ele, tooltip) {
 	tooltip.hide()
 }
 
-function d2maf_minfo(header, m) {
-	const pane = client.newpane({ x: d3event.clientX + 30, y: d3event.clientY - 30 })
+function d2maf_minfo(event, header, m) {
+	const pane = client.newpane({ x: event.clientX + 30, y: event.clientY - 30 })
 	pane.header.text((m.gene ? m.gene : 'No gene') + ' ' + (m.mname ? m.mname : ''))
 	var data = []
 	for (let i = 0; i < header.length; i++) {

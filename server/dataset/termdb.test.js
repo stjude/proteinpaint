@@ -119,8 +119,7 @@ const ds = {
 					id: 'subcohort',
 					type: 'categorical'
 				},
-				showMessageWhenNotSelected:
-					'To get started with the Clinical Browser, select the survivor population you wish to browse.',
+				prompt: 'To get started with the Clinical Browser, select the survivor population you wish to browse.',
 				values: [
 					// <ul><li> for items, with a radio button for each.
 					{
@@ -151,7 +150,7 @@ const ds = {
 			}
 		},
 		scatterplots: {
-			plot: [
+			plots: [
 				{
 					name: 'Methylome TSNE',
 					dimension: 2, // 2d requires x/y, 3d requires x/y/z

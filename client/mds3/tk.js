@@ -1,6 +1,3 @@
-import { select as d3select, event as d3event } from 'd3-selection'
-import { axisTop, axisLeft, axisRight } from 'd3-axis'
-import { scaleLinear } from 'd3-scale'
 import { dofetch3 } from '#common/dofetch'
 import { makeTk } from './makeTk'
 import { may_render_skewer } from './skewer'
@@ -117,15 +114,15 @@ function getParameter(tk, block) {
 		par.push('hiddenmclasslst=' + [...tk.legend.mclass.hiddenvalues].join(','))
 	}
 
-	if(tk.legend.bcfInfo){
+	if (tk.legend.bcfInfo) {
 		const infoFilter = {}
-		for (const k in tk.legend.bcfInfo){
-			if(tk.legend.bcfInfo[k].hiddenvalues.size){
+		for (const k in tk.legend.bcfInfo) {
+			if (tk.legend.bcfInfo[k].hiddenvalues.size) {
 				infoFilter[k] = [...tk.legend.bcfInfo[k].hiddenvalues]
 			}
 		}
-		if(Object.keys(infoFilter).length){
-			par.push('infoFilter=' +JSON.stringify(infoFilter))
+		if (Object.keys(infoFilter).length) {
+			par.push('infoFilter=' + JSON.stringify(infoFilter))
 		}
 	}
 	return [par.join('&'), headers]

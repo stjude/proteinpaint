@@ -1,6 +1,7 @@
 import { stratinput } from '#shared/tree'
 import { stratify } from 'd3-hierarchy'
-import { scaleOrdinal, schemeCategory20 } from 'd3-scale'
+import { scaleOrdinal } from 'd3-scale'
+import { schemeCategory20 } from '#common/legacy-d3-polyfill'
 
 /* legacy implementation, to work with "legacy" dataset
 can be deleted when dataset is migrated to mds3

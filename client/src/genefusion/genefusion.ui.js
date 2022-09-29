@@ -1,5 +1,5 @@
 import * as uiutils from '#dom/uiUtils'
-import { select as d3select, selectAll as d3selectAll, event as d3event } from 'd3-selection'
+import { select as d3select, selectAll as d3selectAll } from 'd3-selection'
 import { sayerror } from '../client'
 import { init_tabs } from '#dom/toggleButtons'
 import { appear } from '#dom/animation'

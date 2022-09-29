@@ -1,7 +1,8 @@
-import { scaleTime, scaleLinear, scaleLog, scaleOrdinal, schemeCategory10 } from 'd3-scale'
+import { scaleTime, scaleLinear, scaleLog, scaleOrdinal } from 'd3-scale'
+import { schemeCategory10 } from 'd3-scale-chromatic'
 import * as client from './client'
 import * as common from '#shared/common'
-import { select as d3select, event as d3event } from 'd3-selection'
+import { select as d3select } from 'd3-selection'
 import { timeFormat, timeParse } from 'd3-time-format'
 import { axisLeft, axisBottom } from 'd3-axis'
 import { format as d3format } from 'd3-format'
@@ -52,9 +53,9 @@ export default function maftimelineui(genomes, holder, sandbox_header) {
 		const butt = filediv
 			.append('input')
 			.attr('type', 'file')
-			.on('change', () => {
+			.on('change', event => {
 				saydiv.text('')
-				const file = d3event.target.files[0]
+				const file = event.target.files[0]
 				if (!file) {
 					fileui()
 					return
@@ -429,16 +430,16 @@ function makegraph(snvlst0, header, holder, issub) {
 		.text('drag to resize')
 		.attr('class', 'sja_clb')
 		.attr('text-anchor', 'end')
-		.on('mousedown', () => {
-			d3event.preventDefault()
-			const x = d3event.clientX
-			const y = d3event.clientY
+		.on('mousedown', event => {
+			event.preventDefault()
+			const x = event.clientX
+			const y = event.clientY
 			const w0 = width
 			const h0 = height
 			const body = d3select(document.body)
 			body
-				.on('mousemove', () => {
-					setsize(w0 + d3event.clientX - x, h0 + d3event.clientY - y)
+				.on('mousemove', event => {
+					setsize(w0 + event.clientX - x, h0 + event.clientY - y)
 				})
 				.on('mouseup', () => {
 					body.on('mousemove', null).on('mouseup', null)
@@ -465,10 +466,10 @@ function makegraph(snvlst0, header, holder, issub) {
 			//.attr('stroke',d=>d.color) .attr('fill','none')
 			.attr('fill', d => d.color)
 			.attr('fill-opacity', 0.1)
-			.on('mouseover', d => {
-				d3event.target.setAttribute('fill-opacity', 0.4)
+			.on('mouseover', (event, d) => {
+				event.target.setAttribute('fill-opacity', 0.4)
 				tip.clear()
-				tip.show(d3event.clientX, d3event.clientY)
+				tip.show(event.clientX, event.clientY)
 				const lst = []
 				for (const k in d) {
 					if (k == 'color') continue
@@ -485,8 +486,8 @@ function makegraph(snvlst0, header, holder, issub) {
 				}
 				client.make_table_2col(tip.d, lst)
 			})
-			.on('mouseout', () => {
-				d3event.target.setAttribute('fill-opacity', 0.1)
+			.on('mouseout', event => {
+				event.target.setAttribute('fill-opacity', 0.1)
 			})
 	}
 	const legend = svg.append('g')
@@ -596,12 +597,12 @@ function makegraph(snvlst0, header, holder, issub) {
 				.attr('y', y)
 				.attr('fill', snv.color)
 				.style('cursor', 'default')
-				.on('mouseover', () => {
-					d3event.target.setAttribute('font-weight', 'bold')
+				.on('mouseover', event => {
+					event.target.setAttribute('font-weight', 'bold')
 					lines.filter(d => d.mutationname == snv.mutationname).attr('stroke-width', 3)
 				})
-				.on('mouseout', () => {
-					d3event.target.setAttribute('font-weight', 'normal')
+				.on('mouseout', event => {
+					event.target.setAttribute('font-weight', 'normal')
 					lines.filter(d => d.mutationname == snv.mutationname).attr('stroke-width', 1)
 				})
 			y += fontsize + 10
@@ -654,8 +655,8 @@ function makecontrol(snvlst, header, holder, graphholder, g1, g2, g3, g4) {
 			.style('zoom', '150%')
 			.property('checked', snv.show)
 		snv.checkbox = checkbox
-		checkbox.on('change', () => {
-			snv.show = d3event.target.checked
+		checkbox.on('change', event => {
+			snv.show = event.target.checked
 			makegraph(snvlst, header, graphholder)
 		})
 		const butt = td2
@@ -677,7 +678,7 @@ function makecontrol(snvlst, header, holder, graphholder, g1, g2, g3, g4) {
 			.append('input')
 			.attr('type', 'checkbox')
 			.attr('id', cname)
-			.on('change', () => cchange(1, d3event.target))
+			.on('change', event => cchange(1, event.target))
 		td11
 			.append('label')
 			.html('&nbsp;shared')
@@ -689,7 +690,7 @@ function makecontrol(snvlst, header, holder, graphholder, g1, g2, g3, g4) {
 			.append('input')
 			.attr('type', 'checkbox')
 			.attr('id', cname)
-			.on('change', () => cchange(2, d3event.target))
+			.on('change', event => cchange(2, event.target))
 		td22
 			.append('label')
 			.html('&nbsp;rising')
@@ -701,7 +702,7 @@ function makecontrol(snvlst, header, holder, graphholder, g1, g2, g3, g4) {
 			.append('input')
 			.attr('type', 'checkbox')
 			.attr('id', cname)
-			.on('change', () => cchange(3, d3event.target))
+			.on('change', event => cchange(3, event.target))
 		td33
 			.append('label')
 			.html('&nbsp;falling')
@@ -713,7 +714,7 @@ function makecontrol(snvlst, header, holder, graphholder, g1, g2, g3, g4) {
 			.append('input')
 			.attr('type', 'checkbox')
 			.attr('id', cname)
-			.on('change', () => cchange(4, d3event.target))
+			.on('change', event => cchange(4, event.target))
 		td44
 			.append('label')
 			.html('&nbsp;R-only')

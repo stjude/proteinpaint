@@ -1,4 +1,3 @@
-import { event as d3event } from 'd3-selection'
 import * as client from './client'
 import * as common from '#shared/common'
 import * as vcf from '#shared/vcf'
@@ -189,8 +188,8 @@ function table_snvindel(mlst, holder, tk, block) {
 			const d = holder
 				.append('div')
 				.attr('class', 'sja_menuoption')
-				.on('click', () => {
-					const pane = client.newpane({ x: d3event.clientX + 100, y: Math.max(100, d3event.clientY - 100) })
+				.on('click', event => {
+					const pane = client.newpane({ x: event.clientX + 100, y: Math.max(100, event.clientY - 100) })
 					vcfmdetail(m, vcfobj, pane.body, tk, block)
 				})
 			if (m.mname) {
@@ -513,10 +512,10 @@ function table_snvindel(mlst, holder, tk, block) {
 				.append('div')
 				.classed('sja_variantpagesnv', true)
 				.text('Variant Page')
-				.on('click', () => {
+				.on('click', event => {
 					const table = tk.tktip
 						.clear()
-						.showunder(d3event.target)
+						.showunder(event.target)
 						.d.append('table')
 					for (const variant of vlst) {
 						const tr = table.append('tr')
@@ -1941,8 +1940,8 @@ function vcfsamplelistbutton(m, holder, tk) {
 		.style('display', 'inline-block')
 		.style('margin-right', '10px')
 		.text(samplelst.length + ' sample' + (samplelst.length > 1 ? 's' : ''))
-		.on('click', () => {
-			tk.tktip.showunder(d3event.target).clear()
+		.on('click', event => {
+			tk.tktip.showunder(event.target).clear()
 			const table = tk.tktip.d.append('table')
 			const tr = table
 				.append('tr')
@@ -1992,9 +1991,9 @@ function vcfvepbutton(csqlst, holder, tk, headers) {
 		.style('display', 'inline-block')
 		.style('margin-right', '10px')
 		.text('VEP annotation')
-		.on('click', () => {
+		.on('click', event => {
 			tk.tktip.clear()
-			tk.tktip.showunder(d3event.target)
+			tk.tktip.showunder(event.target)
 			for (const item of csqlst) {
 				let blown = false
 				let thislabel
@@ -2047,8 +2046,8 @@ function vcfvepbutton(csqlst, holder, tk, headers) {
 				.attr('type','checkbox')
 				.style('margin-right','5px')
 				.attr('id',id)
-				.on('change',()=>{
-					h.hidden = !d3event.target.checked
+				.on('change',(event)=>{
+					h.hidden = !event.target.checked
 					showtable()
 				})
 			if(!h.hidden) {
@@ -2069,9 +2068,9 @@ function vcfannbutton(annolst, holder, tk, headers) {
 		.style('display', 'inline-block')
 		.style('margin-right', '10px')
 		.text('Annotation')
-		.on('click', () => {
+		.on('click', event => {
 			tk.tktip.clear()
-			tk.tktip.showunder(d3event.target)
+			tk.tktip.showunder(event.target)
 			for (const item of annolst) {
 				let blown = false
 				let thislabel

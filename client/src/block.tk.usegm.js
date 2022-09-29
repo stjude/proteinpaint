@@ -2,11 +2,11 @@ import * as client from './client'
 import { scaleLinear } from 'd3-scale'
 import { axisBottom } from 'd3-axis'
 import { format as d3format } from 'd3-format'
-import { select as d3select, event as d3event, mouse as d3mouse } from 'd3-selection'
+import { select as d3select } from 'd3-selection'
 import * as coord from './coord'
 import { legend_newrow } from './block.legend'
 import { basecompliment } from '#shared/common'
-import {rgb} from 'd3-color'
+import { rgb } from 'd3-color'
 import { default_text_color } from '../shared/common'
 
 /*
@@ -136,9 +136,9 @@ function configpanel(tk, block) {
 		tr.append('td')
 			.append('button')
 			.text(tk.exonboundaryhide ? 'show lines' : 'hide lines')
-			.on('click', () => {
+			.on('click', event => {
 				tk.exonboundaryhide = !tk.exonboundaryhide
-				d3event.target.innerHTML = tk.exonboundaryhide ? 'show lines' : 'hide lines'
+				event.target.innerHTML = tk.exonboundaryhide ? 'show lines' : 'hide lines'
 				block.usegm.__tkg.selectAll('.' + exonboundaryclass).attr('stroke-opacity', tk.exonboundaryhide ? 0 : 1)
 			})
 	}
@@ -302,10 +302,10 @@ export function gmtkrender(tk, block) {
 				.each(function() {
 					collectlabw.push(this.getBBox().width)
 				})
-				.on('mousedown', () => {
-					d3event.preventDefault()
-					d3event.stopPropagation()
-					moveisoform(gm, block, d3event.clientY, h + tk.stackspace)
+				.on('mousedown', event => {
+					event.preventDefault()
+					event.stopPropagation()
+					moveisoform(gm, block, event.clientY, h + tk.stackspace)
 				})
 			tk.isoformnames.push(thislab)
 			y += h + tk.stackspace
@@ -825,10 +825,10 @@ block:
 			.attr('height', e.b.attr('height'))
 			.attr('fill', '#858585')
 			.attr('fill-opacity', 0)
-			.on('mouseover', () => d3event.target.setAttribute('fill-opacity', 0.2))
-			.on('mousemove', () => coord2legend(tk, d3event, e.r, e.start, e.stop, gm, block, h))
-			.on('mouseout', () => {
-				d3event.target.setAttribute('fill-opacity', 0)
+			.on('mouseover', event => event.target.setAttribute('fill-opacity', 0.2))
+			.on('mousemove', event => coord2legend(tk, event, e.r, e.start, e.stop, gm, block, h))
+			.on('mouseout', event => {
+				event.target.setAttribute('fill-opacity', 0)
 				tk.tktip.hide()
 			})
 	}
@@ -836,8 +836,8 @@ block:
 
 function moveisoform(gm, block, y0, height) {
 	const body = d3select(document.body)
-	body.on('mousemove', () => {
-		const dy = d3event.clientY - y0
+	body.on('mousemove', event => {
+		const dy = event.clientY - y0
 		gm.__tkg.attr('transform', 'translate(0,' + (gm.__tky + dy) + ')')
 		let gmidx = 0
 		for (let i = 0; i < block.allgm.length; i++) {
@@ -865,7 +865,7 @@ function moveisoform(gm, block, y0, height) {
 				gm.__tky = t2.__tky
 				t2.__tky += height
 				t2.__tkg.transition().attr('transform', 'translate(0,' + t2.__tky + ')')
-				y0 = d3event.clientY
+				y0 = event.clientY
 			}
 		} else if (dy > 0 && gmidx < block.allgm.length - 1) {
 			let t2idx = gmidx + 1,
@@ -887,7 +887,7 @@ function moveisoform(gm, block, y0, height) {
 				t2.__tky = gm.__tky
 				gm.__tky += height
 				t2.__tkg.transition().attr('transform', 'translate(0,' + t2.__tky + ')')
-				y0 = d3event.clientY
+				y0 = event.clientY
 			}
 		}
 	})
@@ -999,11 +999,11 @@ function domainlegend(tk, block) {
 			.style('cursor', 'default')
 			.style('font-family', 'Courier')
 			.html(block.usegm.domain_hidden[domaintype.key] ? '&times;' : '&nbsp;')
-			.on('click', () => {
+			.on('click', event => {
 				// toggle show/hide of a type of domain
 
 				if (domaintype.key in block.usegm.domain_hidden) {
-					d3event.target.innerHTML = '&nbsp;'
+					event.target.innerHTML = '&nbsp;'
 
 					if (block.gmmode == client.gmmode.gmsum) {
 						for (const m of block.allgm) {
@@ -1014,7 +1014,7 @@ function domainlegend(tk, block) {
 						delete block.usegm.domain_hidden[domaintype.key]
 					}
 				} else {
-					d3event.target.innerHTML = '&times;'
+					event.target.innerHTML = '&times;'
 					if (block.gmmode == client.gmmode.gmsum) {
 						for (const m of block.allgm) {
 							if (m.domain_hidden) m.domain_hidden[domaintype.key] = 1
@@ -1115,7 +1115,7 @@ function domainlegend(tk, block) {
 			.classed('sja_menuoption', true)
 			.style('font-size', '.8em')
 			.text('+ add protein domain')
-			.on('click', () => {
+			.on('click', event => {
 				if (block.customdomainui) {
 					if (block.customdomainui.pane.style('display') == 'none') {
 						client.appear(block.customdomainui.pane)
@@ -1123,7 +1123,7 @@ function domainlegend(tk, block) {
 						client.disappear(block.customdomainui.pane)
 					}
 				} else {
-					const p = d3event.target.getBoundingClientRect()
+					const p = event.target.getBoundingClientRect()
 					block.customdomainui = client.newpane({
 						x: p.left + p.width + 20,
 						y: p.top - 100,

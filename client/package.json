@@ -57,7 +57,7 @@
     "webpack-notifier": "^1.15.0"
   },
   "dependencies": {
-    "d3": "^4.12.2",
+    "d3": "^7.6.1",
     "d3-beeswarm": "0.0.4",
     "debounce": "^1.2.0",
     "highlight.js": "~11.2.0",

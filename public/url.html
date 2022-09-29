@@ -6,12 +6,15 @@
 <body>
 
 
-<!-- 
-by running makeURL(), rows of URLs are added to this <div>
-url host is window.location.origin, allowing to work as ppr.stjude.org/url.html and test things there
--->
+<div id='contentDiv' style='margin:10px;display:grid;grid-template-columns:150px 5vw 80vw;gap:5px;word-break:break-word'>
 
-<div id='div' style='margin:10px;display:grid;grid-template-columns:150px 80vw;gap:5px;word-break:break-word'></div>
+-- How it works --
+
+By running makeURL(), rows of URLs are added to this DIV.
+This message is also erased.
+URL host is window.location.origin, allowing ppr.stjude.org/url.html to work to test things there.
+
+</div>
 
 
 <!-- search "main" to jump to URL sections -->
@@ -125,7 +128,7 @@ const snplocusQ = {
 function __barchart(t1,t2) {
 	const chart = { chartType:'barchart', term:t1 }
 	if(t2) chart.term2 = t2
-	return '?noheader=1&mass='+JSON.stringify( { dslabel:'SJLife', genome:'hg38', plots: [ chart ] })
+	return '?noheader=1&mass='+JSON.stringify( { dslabel:'SJLife', genome:'hg38', plots: [ chart ], nav: { activeTab: 1 } })
 }
 function __cuminc({t1,t2,t0,grade,hidden}) {
 	const chart = {
@@ -141,7 +144,8 @@ function __cuminc({t1,t2,t0,grade,hidden}) {
 	return '?noheader=1&mass='+JSON.stringify( {
 		dslabel:'SJLife',
 		genome:'hg38',
-		plots: [ chart ]
+		plots: [ chart ],
+		nav: { activeTab: 1 }
 	})
 }
 
@@ -170,6 +174,7 @@ makeURL([
 
 
 { name: section_BAM,
+	card: 'bam',
 	links: [
 		[ 'TP53 18bp del', '?genome=hg19&block=1&position=chr17:7578191-7578591&bamfile=Test,proteinpaint_demo/hg19/bam/TP53_del.bam' ],
 		[ 'k-mer', '?genome=hg19&block=1&position=chr17:7578191-7578591&bamfile=Test,proteinpaint_demo/hg19/bam/TP53_del.bam&variant=chr17.7578383.AGCAGCGCTCATGGTGGGG.A' ],
@@ -216,6 +221,7 @@ makeURL([
 
 
 { name:section_GDCbam,
+	card: 'gdcbam',
 	links:[
 		['GBM EGFR by case id','?gdcbamslice=1&gdc_id=TCGA-06-0211&gdc_pos=chr7:55153818-55156225'],
 		['KRAS G12V by case uuid','?gdcbamslice=1&gdc_id=9a2a226e-9605-4214-9320-469305e664e6&gdc_var=chr12.25245350.C.A'],
@@ -256,6 +262,7 @@ makeURL([
 		['KRAS G12V','example.gdc.byssm.html'],
 		['SRP9 small gene','?genome=hg38&gene=ENST00000650651&mds3=GDC'],
 		['AKT1 lncRNA','?genome=hg38&gene=ENST00000557552&mds3=GDC'], // no ssm but has cases??
+		['IGKC','?genome=hg38&gene=IGKC&mds3=GDC'],
 	]
 },
 
@@ -269,6 +276,7 @@ makeURL([
 },
 
 {name:section_splicing,
+	card: 'junction',
 	links:[
 		['single','?block=on&genome=hg19&junctionfile=RNA%20splice%20junction,proteinpaint_demo/hg19/junction/file.gz'],
 		['rnapeg','?genome=hg19&block=1&junctionrnapeg=RNApeg,proteinpaint_demo/hg19/junction/rnapeg'],
@@ -278,6 +286,7 @@ makeURL([
 	]
 },
 {name:section_hic,
+	card: 'hic',
 	links:[
 		['hic genome','?genome=hg19&hicfile=proteinpaint_demo/hg19/hic/hic_demo.hic&enzyme=MboI'],
 		['hic tk file','?block=1&genome=hg19&position=chr7:13749862-20841903&hictkfile=Test_HiC,MboI,proteinpaint_demo/hg19/hic/hic_demo.hic'],
@@ -287,6 +296,7 @@ makeURL([
 },
 
 {name:section_bw,
+	card:'bigwig',
 	links:[
 		['local','?block=on&genome=hg19&bigwigfile=local,proteinpaint_demo/hg19/bigwig/file.bw'],
 		['local blank region','?block=on&genome=hg19&bigwigfile=local,proteinpaint_demo/hg19/bigwig/file.bw&position=chr17:7625542-7640838'],
@@ -299,10 +309,15 @@ makeURL([
 },
 
 {name:section_bedj,
+	card: 'bedj',
 	links:[
 		['bedj','?block=on&genome=hg19&bedjfile=JSON-BED,proteinpaint_demo/hg19/bedj/gencode.gz'],
 		['bed3','?genome=hg19&block=1&bedjfile=BED3_Example,proteinpaint_demo/hg19/bedj/bed3.gz'],
-		['pecan','?genome=hg19&block=1&bedjurl=bed,https://pecan.stjude.cloud/static/hg19/refGene.hg19.gz'],
+		['bigbed gencode','?genome=hg38&block=1&bedjfile=bigbed,proteinpaint_demo/hg38/bedj/gencodeV41.bb'],
+		['bigbed dbsnp','?block=on&genome=hg19&position=chr17:7579489-7579868&bedjfile=dbsnp,anno/dbsnp.hg19.bb'],
+		['pecan bedj','?genome=hg19&block=1&bedjurl=bed,https://pecan.stjude.cloud/static/hg19/refGene.hg19.gz'],
+		['prp1 bedj','?genome=hg19&block=1&bedjurl=bed,https://proteinpaint.stjude.org/ppdemo/hg19/bedj/gencode.gz'],
+		// TODO add examples using bb url
 		'ERR:',
 		['missing','?block=on&genome=hg19&bedjfile=JSON-BED,path/to/missing.gz'],
 		['text file','?genome=hg19&block=1&bedjfile=flag,proteinpaint_demo/hg19/junction/rnapeg'],
@@ -320,6 +335,7 @@ makeURL([
 },
 
 {name:section_study,
+	card: 'study',
 	links:[
 		['ERG','?study=proteinpaint_demo/hg19/heatmap/heatmapDemo.json'],
 	]
@@ -333,11 +349,13 @@ makeURL([
 },
 
 {name:section_scatterplot,
+	card: 'scatterplot',
 	links:[
 		['sjcloud', '?scatterplot=1&genome=hg38&tsnejson=proteinpaint_demo/hg38/mdstsne/file.json']
 	]
 },
 {name:section_singleCell,
+	card: 'singlecell',
 	links:[
 		['2D','?genome=hg19&singlecell=proteinpaint_demo/hg19/singlecell/singlecell.json']
 	]
@@ -356,14 +374,11 @@ makeURL([
 {name:section_mass,
 	links:[
 		['TermdbTest', '?noheader=1&mass={"genome":"hg38","dslabel":"TermdbTest"}'],
-		['SJLife', '?noheader=1&mass={"genome":"hg38","dslabel": "SJLife"}'],
-		['CCSS','?noheader=1&mass='+JSON.stringify( {
-			dslabel:'SJLife',
-			genome:'hg38',
-			activeCohort:1
-		})],
-		['PNET', '?noheader=1&mass={"genome":"hg19","dslabel": "PNET"}'],
-		['ASH', '?noheader=1&mass={"genome":"hg38","dslabel": "ASH"}'],
+		['SJLife', '?noheader=1&mass={"genome":"hg38","dslabel":"SJLife"}'],
+		['CCSS', '?noheader=1&mass={"genome":"hg38","dslabel":"SJLife","activeCohort":1}'],
+		['PNET', '?noheader=1&mass={"genome":"hg19","dslabel":"PNET"}'],
+		['ASH', '?noheader=1&mass={"genome":"hg38","dslabel":"ASH"}'],
+		['ALL-pharmacotyping', '?noheader=1&mass={"genome":"hg38","dslabel":"ALL-pharmacotyping"}'],
 
 		'barchart',
 
@@ -434,9 +449,12 @@ makeURL([
 		})],
 
 		'others',
+		
+		['scatter plot', '?noheader=1&mass={"dslabel":"PNET","genome":"hg19","plots":[{"chartType":"sampleScatter","name":"Methylome TSNE","term":{"id":"TSNE Category"}}]}'],
 
 		['survival','?noheader=1&mass='+JSON.stringify( {
 			dslabel:'TermdbTest',
+			nav: { activeTab: 1 },
 			genome:'hg38',
 			plots: [ {
 				chartType:'survival',
@@ -447,6 +465,7 @@ makeURL([
 
 		['matrix','?noheader=1&mass='+JSON.stringify({
 			dslabel:'SJLife',
+			nav: { activeTab: 1 },
 			genome:'hg38',
 			plots: [
 				{
@@ -547,6 +566,7 @@ makeURL([
 		['EF', '?noheader=1&mass='+JSON.stringify({
 			genome: 'hg38',
 			dslabel: 'SJLife',
+			nav: { activeTab: 1 },
 			plots: [
 				{
 					chartType: 'regression',
@@ -561,6 +581,7 @@ makeURL([
 		['EF ~ anthracycline', '?noheader=1&mass='+JSON.stringify({
 			genome: 'hg38',
 			dslabel: 'SJLife',
+			nav: { activeTab: 1 },
 			plots: [
 				{
 					chartType: 'regression',
@@ -592,6 +613,7 @@ makeURL([
 		['EF ~ agedx diaggrp', '?noheader=1&mass='+JSON.stringify({
 			genome: 'hg38',
 			dslabel: 'SJLife',
+			nav: { activeTab: 1 },
 			plots: [
 				{
 					chartType: 'regression',
@@ -610,6 +632,7 @@ makeURL([
 		['EF ~ agedxSpline diaggrp', '?noheader=1&mass='+JSON.stringify({
 			genome: 'hg38',
 			dslabel: 'SJLife',
+			nav: { activeTab: 1 },
 			plots: [
 				{
 					chartType: 'regression',
@@ -628,6 +651,7 @@ makeURL([
 		['EF ~ agedx*sex', '?noheader=1&mass='+JSON.stringify({
 			genome: 'hg38',
 			dslabel: 'SJLife',
+			nav: { activeTab: 1 },
 			plots: [
 				{
 					chartType: 'regression',
@@ -643,6 +667,7 @@ makeURL([
 		['EF ~ snplst sex', '?noheader=1&mass='+JSON.stringify({
 			genome: 'hg38',
 			dslabel: 'SJLife',
+			nav: { activeTab: 1 },
 			plots: [ {
 				chartType: 'regression',
 				regressionType: 'linear',
@@ -654,6 +679,7 @@ makeURL([
 		['EF ~ sex snplocus', '?noheader=1&mass='+JSON.stringify({
 			genome: 'hg38',
 			dslabel: 'SJLife',
+			nav: { activeTab: 1 },
 			plots: [ {
 				chartType: 'regression',
 				regressionType: 'linear',
@@ -671,6 +697,7 @@ makeURL([
 		['EF ~ snplocus*sex*agedx', '?noheader=1&mass='+JSON.stringify({
 			genome: 'hg38',
 			dslabel: 'SJLife',
+			nav: { activeTab: 1 },
 			plots: [ {
 				chartType: 'regression',
 				regressionType: 'linear',
@@ -690,6 +717,7 @@ makeURL([
 		['EF ~ snplocus agedxSpline', '?noheader=1&mass='+JSON.stringify({
 			genome: 'hg38',
 			dslabel: 'SJLife',
+			nav: { activeTab: 1 },
 			plots: [ {
 				chartType: 'regression',
 				regressionType: 'linear',
@@ -707,6 +735,7 @@ makeURL([
 		['Yadav EF 2021','?noheader=1&mass='+JSON.stringify({
 			genome:'hg38',
 			dslabel:'SJLife',
+			nav: { activeTab: 1 },
 			plots:[{
 				chartType: 'regression',
 				regressionType: 'linear',
@@ -742,6 +771,7 @@ makeURL([
 		['EF', '?noheader=1&mass='+JSON.stringify({
 			genome: 'hg38',
 			dslabel: 'SJLife',
+			nav: { activeTab: 1 },
 			plots: [{
 				chartType: 'regression',
 				regressionType: 'logistic',
@@ -754,6 +784,7 @@ makeURL([
 		['EF ~ agedx diaggrp', '?noheader=1&mass='+JSON.stringify({
 			genome: 'hg38',
 			dslabel: 'SJLife',
+			nav: { activeTab: 1 },
 			plots: [
 				{
 					chartType: 'regression',
@@ -770,6 +801,7 @@ makeURL([
 		['EF ~ agedxSpline diaggrp', '?noheader=1&mass='+JSON.stringify({
 			genome: 'hg38',
 			dslabel: 'SJLife',
+			nav: { activeTab: 1 },
 			plots: [
 				{
 					chartType: 'regression',
@@ -788,6 +820,7 @@ makeURL([
 		['EF ~ diaggrp hrtavg', '?noheader=1&mass='+JSON.stringify({
 			genome: 'hg38',
 			dslabel: 'SJLife',
+			nav: { activeTab: 1 },
 			plots: [{
 				chartType: 'regression',
 				regressionType: 'logistic',
@@ -822,6 +855,7 @@ makeURL([
 		['EF ~ snplst sex', '?noheader=1&mass='+JSON.stringify({
 			genome: 'hg38',
 			dslabel: 'SJLife',
+			nav: { activeTab: 1 },
 			plots: [ {
 				chartType: 'regression',
 				regressionType: 'logistic',
@@ -833,6 +867,7 @@ makeURL([
 		['EF ~ sex snplocus', '?noheader=1&mass='+JSON.stringify({
 			genome: 'hg38',
 			dslabel: 'SJLife',
+			nav: { activeTab: 1 },
 			plots: [ {
 				chartType: 'regression',
 				regressionType: 'logistic',
@@ -850,6 +885,7 @@ makeURL([
 		['EF ~ snplocus*sex', '?noheader=1&mass='+JSON.stringify({
 			genome: 'hg38',
 			dslabel: 'SJLife',
+			nav: { activeTab: 1 },
 			plots: [ {
 				chartType: 'regression',
 				regressionType: 'logistic',
@@ -868,6 +904,7 @@ makeURL([
 		['Arrhythmias', '?noheader=1&mass='+JSON.stringify({
 			genome: 'hg38',
 			dslabel: 'SJLife',
+			nav: { activeTab: 1 },
 			plots: [{
 				chartType: 'regression',
 				regressionType: 'logistic',
@@ -878,6 +915,7 @@ makeURL([
 		['Arrhythmias ~ chestrt', '?noheader=1&mass='+JSON.stringify({
 			genome: 'hg38',
 			dslabel: 'SJLife',
+			nav: { activeTab: 1 },
 			plots: [{
 				chartType: 'regression',
 				regressionType: 'logistic',
@@ -908,6 +946,7 @@ makeURL([
 		['BreastSN ~ PGS + age + chestRT', '?noheader=1&mass='+JSON.stringify({
 			genome: 'hg38',
 			dslabel: 'SJLife',
+			nav: { activeTab: 1 },
 			plots: [{
 				chartType: 'regression',
 				regressionType: 'logistic',
@@ -973,6 +1012,7 @@ makeURL([
 		['Arrhythmias ~ snplst sex', '?noheader=1&mass='+JSON.stringify({
 			genome: 'hg38',
 			dslabel: 'SJLife',
+			nav: { activeTab: 1 },
 			plots: [{
 				chartType: 'regression',
 				regressionType: 'logistic',
@@ -984,6 +1024,7 @@ makeURL([
 		['Arrhythmias ~ sex snplocus', '?noheader=1&mass='+JSON.stringify({
 			genome: 'hg38',
 			dslabel: 'SJLife',
+			nav: { activeTab: 1 },
 			plots: [ {
 				chartType: 'regression',
 				regressionType: 'logistic',
@@ -1005,6 +1046,7 @@ makeURL([
 		['Arrhythmias ~ snplocus*sex', '?noheader=1&mass='+JSON.stringify({
 			genome: 'hg38',
 			dslabel: 'SJLife',
+			nav: { activeTab: 1 },
 			plots: [ {
 				chartType: 'regression',
 				regressionType: 'logistic',
@@ -1032,6 +1074,7 @@ makeURL([
 		['Neuro ~ sex', '?noheader=1&mass='+JSON.stringify({
 			genome: 'hg38',
 			dslabel: 'SJLife',
+			nav: { activeTab: 1 },
 			plots: [ {
 				chartType: 'regression',
 				regressionType: 'cox',
@@ -1045,6 +1088,7 @@ makeURL([
 		['Cardio ~ chestrt', '?noheader=1&mass='+JSON.stringify({
 			genome: 'hg38',
 			dslabel: 'SJLife',
+			nav: { activeTab: 1 },
 			plots: [ {
 				chartType: 'regression',
 				regressionType: 'cox',
@@ -1070,6 +1114,7 @@ makeURL([
 		['Cardio ~ sex*agedx', '?noheader=1&mass='+JSON.stringify({
 			genome: 'hg38',
 			dslabel: 'SJLife',
+			nav: { activeTab: 1 },
 			plots: [ {
 				chartType: 'regression',
 				regressionType: 'cox',
@@ -1084,6 +1129,7 @@ makeURL([
 		['Neuro ~ snplst sex', '?noheader=1&mass='+JSON.stringify({
 			genome: 'hg38',
 			dslabel: 'SJLife',
+			nav: { activeTab: 1 },
 			plots: [{
 				chartType: 'regression',
 				regressionType: 'cox',
@@ -1095,6 +1141,7 @@ makeURL([
 		['Neuro ~ sex snplocus', '?noheader=1&mass='+JSON.stringify({
 			genome: 'hg38',
 			dslabel: 'SJLife',
+			nav: { activeTab: 1 },
 			plots: [ {
 				chartType: 'regression',
 				regressionType: 'cox',
@@ -1114,6 +1161,7 @@ makeURL([
 		['Yadav Cardiomyopathy 2021','?noheader=1&mass='+JSON.stringify({
 			genome:'hg38',
 			dslabel:'SJLife',
+			nav: { activeTab: 1 },
 			plots:[{
 				chartType: 'regression',
 				regressionType: 'cox',
@@ -1153,45 +1201,83 @@ makeURL([
 ])
 
 function makeURL(rows) {
-	const div = document.getElementById('div')
+	const div = document.getElementById('contentDiv')
+	div.innerHTML = '' // clear text
+
+	const headers = ['', 'App Card', 'Links']
+	for (const header of headers) {
+		const d = document.createElement('div')
+		d.innerHTML = header
+		d.style.fontWeight = '550'
+		div.appendChild(d)
+	}
+
 	for(const row of rows) {
-		// 1st column, header
-		const d1 = document.createElement('div')
-		d1.innerHTML = row.name || '.name missing'
-		div.appendChild(d1)
 
-		// 2nd column, links
-		const d2 = document.createElement('div')
-		div.appendChild(d2)
+		{
+			///////////////////////////////////////
+			// column 1: header
+			///////////////////////////////////////
 
-		if(!Array.isArray(row.links)) {
-			d2.innerHTML = '.links[] missing'
-			continue
+			const d = document.createElement('div')
+			d.innerHTML = row.name || '.name missing'
+			div.appendChild(d)
 		}
 
-		for(const [i,ele] of row.links.entries()) {
-			if(typeof ele == 'string') {
-				if(i!=0) {
-					// only create <br> if the string is not the first in array
-					d2.append(document.createElement('br'))
-				}
-				const s = document.createElement('span')
-				s.style.marginRight = '8px'
-				s.style.opacity = '.5'
-				s.innerHTML = ele
-				d2.appendChild(s)
+		{
+			///////////////////////////////////////
+			// column 2: card link
+			///////////////////////////////////////
+
+
+			const d = document.createElement('div')
+			div.appendChild(d)
+			if(row.card) {
+				const a = document.createElement('a')
+				a.innerHTML = row.card
+				a.setAttribute('href', `${window.location.origin}/?appcard=${row.card}`)
+				a.setAttribute('target', '_blank')
+				d.appendChild(a)
+			}
+
+		}
+
+		{
+			///////////////////////////////////////
+			// column 3: links
+			///////////////////////////////////////
+			const d = document.createElement('div')
+			div.appendChild(d)
+
+			if(!Array.isArray(row.links)) {
+				d.innerHTML = '.links[] missing'
 				continue
 			}
-			if(Array.isArray(ele)) {
-				// ele is [ name, link ]
-				const a = document.createElement('a')
-				a.innerHTML = ele[0]
-				a.setAttribute('href',window.location.origin+'/'+ele[1])
-				a.setAttribute('target','_blank')
-				a.style.paddingRight = '8px'
-				d2.appendChild(a)
-			} else {
-				window.alert('invalid element: '+ele)
+
+			for(const [i,ele] of row.links.entries()) {
+				if(typeof ele == 'string') {
+					if(i!=0) {
+						// only create <br> if the string is not the first in array
+						d.append(document.createElement('br'))
+					}
+					const s = document.createElement('span')
+					s.style.marginRight = '8px'
+					s.style.opacity = '.5'
+					s.innerHTML = ele
+					d.appendChild(s)
+					continue
+				}
+				if(Array.isArray(ele)) {
+					// ele is [ name, link ]
+					const a = document.createElement('a')
+					a.innerHTML = ele[0]
+					a.setAttribute('href',window.location.origin+'/'+ele[1])
+					a.setAttribute('target','_blank')
+					a.style.paddingRight = '8px'
+					d.appendChild(a)
+				} else {
+					window.alert('invalid element: '+ele)
+				}
 			}
 		}
 	}
@@ -1200,10 +1286,20 @@ function makeURL(rows) {
 </script>
 
 <div style="margin-top:30px;color:#858585">
-<p>Above links use files from "tp/proteinpaint_demo/" folder on your system, and share files with App Drawer and <code>server/cards/index.json</code>.<br>
-These test files should be publicly sharable (with patient identifier removed etc), and should be kept in sync between your computer, hpc, and prp1.<br>
+
+<p>Above links use files from "tp/proteinpaint_demo/" folder on your system, and share files with App Drawer and <code>server/cards/index.json</code>.
+
+<br>
+
+These test files should be publicly sharable (with patient identifier removed etc), and should be kept in sync between your computer, hpc, and prp1.
+
+<br>
+
 A tarball of the entire proteinpaint_demo/ folder is available at https://pecan.stjude.cloud/static/pp-support/pp.demo.tgz</p>
+
 <p>README listing <a href='/readme.html'>/readme.html</a>. Browser tests <a href='/testrun.html'>/testrun.html</a></p>
+
+<p>TODO how to open JS console automatically in the new tab by clicking a link? That helps with debugging.</p>
 </div>
 
 </body>

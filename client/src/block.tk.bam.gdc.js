@@ -1,4 +1,3 @@
-import { event as d3event } from 'd3-selection'
 import { debounce } from 'debounce'
 import { dofetch3 } from '../common/dofetch'
 import { sayerror } from '../dom/error'
@@ -92,7 +91,7 @@ export async function bamsliceui({ genomes, holder, filter0, disableSSM = false,
 	backBtnDiv
 		.append('button')
 		.html('&lt;&lt; back')
-		.on('click', () => {
+		.on('click', event => {
 			backBtnDiv.style('display', 'none')
 			blockHolder
 				.style('display', 'none')
@@ -142,7 +141,7 @@ export async function bamsliceui({ genomes, holder, filter0, disableSSM = false,
 			{
 				width: 140,
 				label: 'Select SSM',
-				callback: () => {
+				callback: event => {
 					gdc_args.useSsmOrGene = 'ssm'
 				}
 				// .tab and .holder are automatically added
@@ -150,7 +149,7 @@ export async function bamsliceui({ genomes, holder, filter0, disableSSM = false,
 			{
 				width: 140,
 				label: 'Gene or position',
-				callback: () => {
+				callback: event => {
 					gdc_args.useSsmOrGene = 'gene'
 				}
 				// .tab and .holder are automatically added
@@ -181,8 +180,8 @@ export async function bamsliceui({ genomes, holder, filter0, disableSSM = false,
 		const input = upload_div
 			.append('input')
 			.attr('type', 'file')
-			.on('change', () => {
-				const file = d3event.target.files[0]
+			.on('change', event => {
+				const file = event.target.files[0]
 				if (!file) {
 					input.property('value', '')
 					return
@@ -286,11 +285,13 @@ export async function bamsliceui({ genomes, holder, filter0, disableSSM = false,
 			.style('max-height', '20vh')
 
 		api.update = _arg => {
-			//Object.assign(arg, _arg)
-			gdc_search(_arg?.filter0 || filter0)
+			gdc_search(null, _arg?.filter0 || filter0)
 		}
 
-		async function gdc_search(filter) {
+		async function gdc_search(eventNotUsed, filter) {
+			/*
+			first argument is "event" which is unused, as gdc_search() is used as event listener
+			*/
 			const _filter0 = Object.keys(filter || {}).length ? filter : filter0 || null
 			try {
 				const gdc_id = gdcid_input.property('value').trim()
@@ -419,10 +420,10 @@ export async function bamsliceui({ genomes, holder, filter0, disableSSM = false,
 					.style('text-overflow', 'ellipsis')
 					.style('max-width', '10vw')
 					.style('background-clip', 'padding-box')
-					.on('mouseenter', () => {
+					.on('mouseenter', event => {
 						wrapper.style('background-color', '#fcfcca')
 					})
-					.on('mouseleave', () => {
+					.on('mouseleave', event => {
 						wrapper.style('background-color', '')
 					})
 				const file_checkbox = wrapper
@@ -431,7 +432,7 @@ export async function bamsliceui({ genomes, holder, filter0, disableSSM = false,
 					.style('padding', '3px 10px')
 					.style('margin-left', '25px')
 					.attr('type', 'checkbox')
-					.on('change', () => {
+					.on('change', event => {
 						if (file_checkbox.node().checked) {
 							gdc_args.bam_files.push({
 								file_id: onebam.file_uuid,
@@ -637,13 +638,13 @@ export async function bamsliceui({ genomes, holder, filter0, disableSSM = false,
 					.text(m.chr + ':' + m.pos + ' ' + m.ref + '>' + m.alt)
 				first = false
 
-				m.row.on('mouseover', () => {
+				m.row.on('mouseover', event => {
 					if (!m.isClicked) m.row.style('background-color', '#fcfcca')
 				})
-				m.row.on('mouseout', () => {
+				m.row.on('mouseout', event => {
 					if (!m.isClicked) m.row.style('background-color', '')
 				})
-				m.row.on('click', () => {
+				m.row.on('click', event => {
 					for (const m2 of data.mlst) {
 						m2.isClicked = false
 						m2.row.style('background-color', '')
@@ -669,7 +670,7 @@ export async function bamsliceui({ genomes, holder, filter0, disableSSM = false,
 			.style('padding', '5px 15px')
 			.style('border-radius', '15px')
 			.text('Submit')
-			.on('click', () => {
+			.on('click', event => {
 				try {
 					validateInputs(gdc_args, genome)
 				} catch (e) {

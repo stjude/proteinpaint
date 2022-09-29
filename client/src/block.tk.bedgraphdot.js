@@ -146,9 +146,9 @@ export function bigwigconfigpanel(tk, block, holder, loader) {
 			.append('input')
 			.attr('size', 5)
 			.property('value', tk.barheight)
-			.on('keyup', () => {
-				if (d3event.code != 'Enter') return
-				const s = d3event.target.value
+			.on('keyup', event => {
+				if (event.code != 'Enter') return
+				const s = event.target.value
 				if (s == '') return
 				const v = Number.parseInt(s)
 				if (Number.isNaN(v) || v <= 1) {
@@ -170,8 +170,8 @@ export function bigwigconfigpanel(tk, block, holder, loader) {
 		.append('input')
 		.attr('type', 'color')
 		.property('value', client.rgb2hex(tk.pcolor))
-		.on('change', () => {
-			tk.pcolor = d3event.target.value
+		.on('change', event => {
+			tk.pcolor = event.target.value
 			loader(client.bwSetting.pcolor)
 		})
 
@@ -185,8 +185,8 @@ export function bigwigconfigpanel(tk, block, holder, loader) {
 		.append('input')
 		.attr('type', 'color')
 		.property('value', client.rgb2hex(tk.ncolor))
-		.on('change', () => {
-			tk.ncolor = d3event.target.value
+		.on('change', event => {
+			tk.ncolor = event.target.value
 			loader(client.bwSetting.ncolor)
 		})
 
@@ -201,8 +201,8 @@ export function bigwigconfigpanel(tk, block, holder, loader) {
 			.append('input')
 			.attr('type', 'color')
 			.property('value', client.rgb2hex(tk.pcolor2))
-			.on('change', () => {
-				tk.pcolor2 = d3event.target.value
+			.on('change', event => {
+				tk.pcolor2 = event.target.value
 				loader(client.bwSetting.pcolor2)
 			})
 		// ncolor2
@@ -215,8 +215,8 @@ export function bigwigconfigpanel(tk, block, holder, loader) {
 			.append('input')
 			.attr('type', 'color')
 			.property('value', client.rgb2hex(tk.ncolor2))
-			.on('change', () => {
-				tk.ncolor2 = d3event.target.value
+			.on('change', event => {
+				tk.ncolor2 = event.target.value
 				loader(client.bwSetting.ncolor2)
 			})
 	}
@@ -229,8 +229,8 @@ export function bigwigconfigpanel(tk, block, holder, loader) {
 		const ssop1 = ss.append('option').text('automatic')
 		const ssop2 = ss.append('option').text('fixed')
 		const ssop3 = ss.append('option').text('percentile')
-		ss.on('change', () => {
-			const si = d3event.target.selectedIndex
+		ss.on('change', event => {
+			const si = event.target.selectedIndex
 			if (si == 0) {
 				fixed.style('display', 'none')
 				percentile.style('display', 'none')
@@ -341,8 +341,8 @@ export function bigwigconfigpanel(tk, block, holder, loader) {
 				tk.scale.percentile = v
 				loader(client.bwSetting.percentilescale)
 			}
-			input.on('keyup', () => {
-				if (d3event.code != 'Enter') return
+			input.on('keyup', event => {
+				if (event.code != 'Enter') return
 				setpercentile(input.property('value'))
 			})
 			percentile
@@ -359,12 +359,12 @@ export function bigwigconfigpanel(tk, block, holder, loader) {
 	{
 		config.dotplot.row = holder.append('div').style('margin-bottom', '15px')
 		config.dotplot.row.append('span').html('Dot plot&nbsp;&nbsp;')
-		const s = config.dotplot.row.append('select').on('change', () => {
-			const i = d3event.target.selectedIndex
+		const s = config.dotplot.row.append('select').on('change', event => {
+			const i = event.target.selectedIndex
 			if (i == 0) {
 				delete tk.dotplotfactor
 			} else {
-				tk.dotplotfactor = Number.parseInt(d3event.target.options[i].innerHTML)
+				tk.dotplotfactor = Number.parseInt(event.target.options[i].innerHTML)
 			}
 			loader(i == 0 ? client.bwSetting.nodotplot : client.bwSetting.usedotplot)
 		})
@@ -417,9 +417,9 @@ export function bigwigconfigpanel(tk, block, holder, loader) {
 			.attr('type', 'number')
 			.style('width', '60px')
 			.property('value', tk.normalize.dividefactor)
-			.on('keyup', () => {
-				if (d3event.code != 'Enter' && d3event.code != 'NumpadEnter') return
-				const v = d3event.target.value
+			.on('keyup', event => {
+				if (event.code != 'Enter' && event.code != 'NumpadEnter') return
+				const v = event.target.value
 				if (v <= 0) {
 					// don't allow
 					return
@@ -432,8 +432,8 @@ export function bigwigconfigpanel(tk, block, holder, loader) {
 			.text('Enter a value above zero')
 			.style('font-size', '.7em')
 			.style('color', '#858585')
-		input.on('change', () => {
-			if (d3event.target.checked) {
+		input.on('change', event => {
+			if (event.target.checked) {
 				client.appear(folder)
 				delete tk.normalize.disable
 				factorinput.property('value', tk.normalize.dividefactor)

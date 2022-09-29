@@ -1,4 +1,3 @@
-import { event as d3event } from 'd3-selection'
 import { init_sampletable } from './sampletable'
 import { itemtable } from './itemtable'
 import { skewer_sety, mayHighlightDiskBySsmid } from './skewer.render'
@@ -41,7 +40,12 @@ export async function click_variant(d, tk, block, tippos, eventTarget) {
 			tk.click_snvindel(d.mlst[0])
 			return
 		}
-		if ('occurrence' in d && d.occurrence >= minoccur4sunburst && tk.mds.variant2samples && tk.mds.variant2samples.sunburst_ids) {
+		if (
+			'occurrence' in d &&
+			d.occurrence >= minoccur4sunburst &&
+			tk.mds.variant2samples &&
+			tk.mds.variant2samples.sunburst_ids
+		) {
 			// show sunburst when meeting conditions: mutation have occurrence, have v2s.sunburst_ids[]
 			await click2sunburst(d, tk, block, tippos)
 			return
@@ -73,13 +77,13 @@ async function click2sunburst(d, tk, block, tippos) {
 		click_listbutton: (x, y) => {
 			variant_details({ mlst: d.mlst, tk, block, tippos })
 		},
-		click_ring: d2 => {
+		click_ring: (event, d2) => {
 			/* hardcoded attributes from d2.data{}, due to how stratinput structures the data
 			.id0, v0 should exist for all levels
 			.id1, v1 should exist for 2nd and next levels... etc
 			add the key/values to tid2value{}
 			*/
-			tk.itemtip.clear().show(d3event.clientX - 10, d3event.clientY - 10)
+			tk.itemtip.clear().show(event.clientX - 10, event.clientY - 10)
 			const arg = {
 				mlst: d.mlst,
 				tk,

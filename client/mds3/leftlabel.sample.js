@@ -1,4 +1,3 @@
-import { event as d3event } from 'd3-selection'
 import { makelabel } from './leftlabel'
 import { tab2box } from '../src/client'
 import { displaySampleTable } from './sampletable'
@@ -14,8 +13,8 @@ export function makeSampleLabel(data, tk, block, laby) {
 
 	tk.leftlabels.doms.samples
 		.text(`${data.sampleTotalNumber} case${data.sampleTotalNumber > 1 ? 's' : ''}`)
-		.on('click', async () => {
-			tk.menutip.clear().showunder(d3event.target)
+		.on('click', async event => {
+			tk.menutip.clear().showunder(event.target)
 
 			await mayShowSummary(tk, block)
 
@@ -212,7 +211,7 @@ function showSummary4oneTerm(termid, div, numbycategory, tk, block) {
 		const wait = div.append('div').text('Loading...')
 		const samples = await tk.mds.getSamples({ tid2value: { [termid]: category } })
 		wait.remove()
-		await displaySampleTable(samples, { div, tk, block, useRenderTable: true })
+		await displaySampleTable(samples, { div, tk, block })
 	}
 }
 
@@ -242,8 +241,7 @@ function menu_samples(data, tk, block) {
 				await displaySampleTable(samples, {
 					div: tk.menutip.d,
 					tk,
-					block,
-					useRenderTable: true
+					block
 				})
 				wait.remove()
 			} catch (e) {

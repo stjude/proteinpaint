@@ -1,4 +1,3 @@
-import { event as d3event } from 'd3-selection'
 import { bplen } from '#shared/common'
 import * as client from './client'
 import { rgb as d3rgb } from 'd3-color'
@@ -935,7 +934,7 @@ function makeTk(tk, block) {
 	// sneak canvas, render graph then copy to tk.img for showing
 	tk.hiddencanvas = block.holder.append('canvas').style('display', 'none')
 
-	tk.config_handle = block.maketkconfighandle(tk).on('click', () => {
+	tk.config_handle = block.maketkconfighandle(tk).on('click', event => {
 		configPanel(tk, block)
 	})
 }
@@ -954,7 +953,7 @@ function configPanel(tk, block) {
 			.attr('class', 'sja_menuoption')
 			.style('margin-bottom', '10px')
 			.text('Edit interaction data')
-			.on('click', () => {
+			.on('click', event => {
 				textdata_editUI(tk, block)
 			})
 	}
@@ -968,8 +967,8 @@ function configPanel(tk, block) {
 			.style('margin-left', '5px')
 			.attr('type', 'color')
 			.property('value', tk.color)
-			.on('change', () => {
-				tk.color = d3event.target.value
+			.on('change', event => {
+				tk.color = event.target.value
 				updatetkcolor_client(tk)
 				drawCanvas(tk, block)
 			})
@@ -982,9 +981,9 @@ function configPanel(tk, block) {
 			.attr('type', 'number')
 			.style('width', '40px')
 			.property('value', tk.percentile_max)
-			.on('keyup', () => {
-				if (d3event.code != 'Enter' && d3event.code != 'NumpadEnter') return
-				const v = Number.parseFloat(d3event.target.value)
+			.on('keyup', event => {
+				if (event.code != 'Enter' && event.code != 'NumpadEnter') return
+				const v = Number.parseFloat(event.target.value)
 				if (Number.isNaN(v) || v <= 0 || v >= 100) {
 					alert('Please enter a value between 0 and 100')
 					return
@@ -1003,9 +1002,9 @@ function configPanel(tk, block) {
 			.attr('type', 'number')
 			.style('width', '50px')
 			.property('value', tk.mincutoff)
-			.on('keyup', () => {
-				if (d3event.code != 'Enter' && d3event.code != 'NumpadEnter') return
-				const v = Number.parseFloat(d3event.target.value)
+			.on('keyup', event => {
+				if (event.code != 'Enter' && event.code != 'NumpadEnter') return
+				const v = Number.parseFloat(event.target.value)
 				if (Number.isNaN(v)) {
 					alert('Please enter a valid number')
 					return
@@ -1025,7 +1024,7 @@ function configPanel(tk, block) {
 		// hic straw normalization method
 		const row = tk.tkconfigtip.d.append('div').style('margin-bottom', '10px')
 		row.append('span').html('Normalization&nbsp;')
-		const s = row.append('select').on('change', () => {
+		const s = row.append('select').on('change', event => {
 			const ss = s.node()
 			tk.normalizationmethod = ss.options[ss.selectedIndex].innerHTML
 			loadTk(tk, block)
@@ -1050,7 +1049,7 @@ function configPanel(tk, block) {
 		row
 			.append('button')
 			.text(tk.domainoverlay.inuse ? 'No' : 'Yes')
-			.on('click', () => {
+			.on('click', event => {
 				tk.tkconfigtip.hide()
 				tk.domainoverlay.inuse = !tk.domainoverlay.inuse
 				loadTk(tk, block)
@@ -1067,8 +1066,8 @@ function configPanel(tk, block) {
 			.attr('id', id + '1')
 			.attr('type', 'radio')
 			.property('checked', tk.mode_hm)
-			.on('change', () => {
-				if (d3event.target.checked) {
+			.on('change', event => {
+				if (event.target.checked) {
 					tk.mode_hm = true
 					tk.mode_arc = false
 				} else {
@@ -1091,8 +1090,8 @@ function configPanel(tk, block) {
 			.attr('id', id + '2')
 			.attr('type', 'radio')
 			.property('checked', tk.mode_arc)
-			.on('change', () => {
-				if (d3event.target.checked) {
+			.on('change', event => {
+				if (event.target.checked) {
 					tk.mode_hm = false
 					tk.mode_arc = true
 				} else {
@@ -1122,7 +1121,7 @@ function configPanel(tk, block) {
 			.style('margin', '20px 0px 10px 0px')
 			.append('button')
 			.text('Point ' + (tk.pyramidup ? 'down' : 'up'))
-			.on('click', () => {
+			.on('click', event => {
 				tk.pyramidup = !tk.pyramidup
 				drawCanvas(tk, block)
 				tk.tkconfigtip.hide()
@@ -1146,7 +1145,7 @@ function textdata_editUI(tk, block) {
 	row2
 		.append('button')
 		.text('Update')
-		.on('click', () => {
+		.on('click', event => {
 			const text = ta.property('value')
 			if (!text) {
 				window.alert('Enter text interaction data')
@@ -1171,7 +1170,7 @@ function textdata_editUI(tk, block) {
 		.append('button')
 		.style('margin-left', '30px')
 		.text('Cancel')
-		.on('click', () => tk.tkconfigtip.hide())
+		.on('click', event => tk.tkconfigtip.hide())
 }
 
 function textdata_parseraw(tk, block) {

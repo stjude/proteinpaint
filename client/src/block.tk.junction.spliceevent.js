@@ -1,5 +1,4 @@
-import { select as d3select, event as d3event } from 'd3-selection'
-import { json as d3json } from 'd3-request'
+import { select as d3select } from 'd3-selection'
 import { axisLeft } from 'd3-axis'
 import { scaleLinear, scaleOrdinal, schemeCategory20 } from 'd3-scale'
 import { rgb as d3rgb } from 'd3-color'

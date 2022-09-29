@@ -1,7 +1,7 @@
 import * as client from './client'
 import * as common from '#shared/common'
 import { scaleLinear, scaleLog, scaleOrdinal, schemeCategory10 } from 'd3-scale'
-import { select as d3select, event as d3event } from 'd3-selection'
+import { select as d3select } from 'd3-selection'
 import { axisRight } from 'd3-axis'
 import * as d3force from 'd3-force'
 import { legend_newrow } from './block.legend'
@@ -699,9 +699,9 @@ jug2.filter(function(d){return d.rimwidth>0})
 		.attr('fill', 'white')
 		.attr('fill-opacity', 0)
 		.attr('stroke-opacity', 0)
-		.on('mouseover', d => {
+		.on('mouseover', (event, d) => {
 			// stop default trigger for block.cursorhlbar
-			d3event.stopPropagation()
+			event.stopPropagation()
 			d3select(d.disc).attr('fill-opacity', 0.8)
 			d3select(d.stem).attr('stroke-opacity', 1)
 			d3select(d.leg1).attr('stroke-opacity', 1)
@@ -710,11 +710,11 @@ jug2.filter(function(d){return d.rimwidth>0})
 			mouseoverSpanBackground(d, tk, block, viewpxwidth)
 			mouseoverBoxplot(d, tk)
 
-			const p = d3event.target.getBoundingClientRect()
+			const p = event.target.getBoundingClientRect()
 			tk.tktip.clear().show(p.left + p.width, p.top - 50)
 			showOneJunction(d, tk, tk.tktip.d, block)
 		})
-		.on('mouseout', d => {
+		.on('mouseout', (event, d) => {
 			tk.tktip.hide()
 			tk.pica.g.selectAll('*').remove()
 			block.cursorhlbar.attr('fill', block.cursorhlbarFillColor) // restore
@@ -723,15 +723,15 @@ jug2.filter(function(d){return d.rimwidth>0})
 			d3select(d.leg1).attr('stroke-opacity', lineopacity)
 			d3select(d.leg2).attr('stroke-opacity', lineopacity)
 		})
-		.on('mousedown', () => {
-			d3event.stopPropagation()
+		.on('mousedown', event => {
+			event.stopPropagation()
 		})
-		.on('mousemove', () => {
-			d3event.stopPropagation()
+		.on('mousemove', event => {
+			event.stopPropagation()
 		})
-		.on('click', j => {
+		.on('click', (event, j) => {
 			tk.tktip.hide()
-			const pane = client.newpane({ x: d3event.clientX, y: d3event.clientY })
+			const pane = client.newpane({ x: event.clientX, y: event.clientY })
 			if (!tk.iscustom) {
 				pane.header
 					.append('span')
@@ -1874,9 +1874,9 @@ function configPanel(tk, block) {
 			.property('value', tk.readcountCutoff || 0)
 			.attr('type', 'number')
 			.style('width', '50px')
-			.on('keyup', () => {
-				if (d3event.code != 'Enter' && d3event.code != 'NumpadEnter') return
-				let v = d3event.target.value
+			.on('keyup', event => {
+				if (event.code != 'Enter' && event.code != 'NumpadEnter') return
+				let v = event.target.value
 				if (!v || v < 0) {
 					// set to zero to cancel
 					v = 0
@@ -2357,8 +2357,8 @@ function listAllEvents(lst, holder, j, tk, block) {
 			.append('div')
 			.html(eventlabel(e))
 			.attr('class', 'sja_menuoption')
-			.on('click', () => {
-				tk.tktip.clear().show(d3event.clientX + 20, d3event.clientY - 40)
+			.on('click', event => {
+				tk.tktip.clear().show(event.clientX + 20, event.clientY - 40)
 				showEventdetail(e, tk.tktip.d, j, tk, block)
 			})
 	}
