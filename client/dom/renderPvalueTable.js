@@ -113,7 +113,7 @@ export function renderPvalues({ holder, plot, tests, s, bins, tip, setActiveMenu
 			.attr('class', `pp-${plot}-chartLegends-pvalue`)
 
 		if (plot == 'survival') {
-			tr.on('click', t => {
+			tr.on('click', (event, t) => {
 				const hiddenPvalues = s.hiddenPvalues.slice()
 				hiddenPvalues.push(t)
 				updateHiddenPvalues(hiddenPvalues)
