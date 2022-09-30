@@ -803,6 +803,7 @@ async function parseEmbedThenUrl(arg, app) {
 			holder: app.holder0,
 			state: res.state,
 			genome: app.genomes[res.state.vocab.genome],
+			massSessionDuration: res.massSessionDuration,
 			getDatasetAccessToken: arg.getDatasetAccessToken,
 			addLoginCallback: arg.addLoginCallback
 		}

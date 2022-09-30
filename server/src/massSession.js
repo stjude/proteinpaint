@@ -13,7 +13,10 @@ export async function save(req, res) {
 		const content = JSON.stringify(req.body)
 		await utils.write_file(path.join(serverconfig.cachedir_massSession, sessionID), content)
 
-		res.send({ id: sessionID })
+		res.send({
+			id: sessionID,
+			massSessionDuration: serverconfig.features.massSessionDuration ? serverconfig.features.massSessionDuration : 30
+		})
 	} catch (e) {
 		res.send({ error: e.message || e })
 	}
@@ -31,7 +34,10 @@ export async function get(req, res) {
 			throw 'invalid session'
 		}
 		const state = await utils.read_file(file)
-		res.send({ state: JSON.parse(state) })
+		res.send({
+			state: JSON.parse(state),
+			massSessionDuration: serverconfig.features.massSessionDuration ? serverconfig.features.massSessionDuration : 30
+		})
 	} catch (e) {
 		res.send({ error: e.message || e })
 	}

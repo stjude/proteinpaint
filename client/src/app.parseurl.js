@@ -88,9 +88,11 @@ upon error, throw err message as a string
 	if (urlp.has('mass')) {
 		const str = urlp.get('mass')
 		const state = JSON.parse(str)
+		const res = await client.dofetch('/massSession')
 		const opts = {
 			holder: arg.holder,
-			state
+			state,
+			massSessionDuration: res.massSessionDuration
 		}
 		if (state.genome) {
 			opts.genome = arg.genomes[state.genome]
@@ -104,10 +106,25 @@ upon error, throw err message as a string
 		const id = urlp.get('mass-session-id')
 		const res = await client.dofetch3(`/massSession?id=${id}`)
 		if (res.error) throw res.error
+		//DELETE THIS WHEN NO LONGER NECESSARY
+		if (new Date('2022-10-31') > new Date()) {
+			arg.holder
+				.append('div')
+				.style('display', 'block')
+				.style('border', '1px solid red')
+				.style('text-align', 'center')
+				.style('padding', '5px')
+				.style('margin', '10px')
+				.style('font-weight', '550')
+				.text(
+					`Starting soon sessions older than ${res.massSessionDuration} days will be deleted. To save a new session, click Save, and bookmark the new session URL`
+				)
+		}
 		const opts = {
 			holder: arg.holder,
 			state: res.state,
-			genome: arg.genomes[res.state.vocab.genome]
+			genome: arg.genomes[res.state.vocab.genome],
+			massSessionDuration: res.massSessionDuration
 		}
 		const _ = await import('../mass/app')
 		_.appInit(opts)

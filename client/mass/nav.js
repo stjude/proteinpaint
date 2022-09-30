@@ -37,6 +37,7 @@ class TdbNav {
 		this.activeCohort = 0 // -1 = unselected, 0,1,2... = selected
 		this.searching = false
 		this.samplecounts = {}
+		this.massSessionDuration = opts.massSessionDuration
 		setInteractivity(this)
 		setRenderers(this)
 	}
@@ -493,7 +494,7 @@ function setInteractivity(self) {
 			.append('div')
 			.style('margin', '10px')
 			.html(
-				`<a href='${url}' target=_blank>${url}</a><br><span style="font-size:.8em;opacity:.5">Click URL to recover this session. You can bookmark or share this URL.</span>`
+				`<a href='${url}' target=_blank>${url}</a><br><div style="font-size:.8em;opacity:.6"><span>Click URL to recover this session. You can bookmark or share this URL.</span><br><span>This session will be saved for ${self.massSessionDuration} days.</span></div>`
 			)
 	}
 }
