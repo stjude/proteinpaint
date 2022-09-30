@@ -15,7 +15,7 @@ module.exports = {
 					name: 'Transcriptome t-SNE',
 					dimension: 2,
 					file: 'files/hg38/ALL-pharmacotyping/clinical/transcriptome-tSNE.txt',
-					term: { id: 'Molecular subtype' }
+					colorTW: { id: 'Molecular subtype' }
 				}
 			]
 		}
