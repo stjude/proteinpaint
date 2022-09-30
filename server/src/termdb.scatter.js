@@ -31,6 +31,7 @@ trigger_getSampleScatter()
 
 // color of reference samples, they should be shown as a "cloud" of dots at backdrop
 const referenceSampleColor = '#ccc'
+const defaultShape = 0
 
 // called in mds3.init
 export async function mayInitiateScatterplots(ds) {
@@ -65,8 +66,11 @@ export async function mayInitiateScatterplots(ds) {
 				if (id == undefined) {
 					// no integer sample id found, this is a reference sample
 					// for rest of columns starting from 4th, attach as key/value pairs to the sample object for showing on client
-					for (let j = 3; j < headerFields.length; j++) {
-						sample[headerFields[j]] = l[j]
+					if (headerFields[3]) {
+						sample.info = {}
+						for (let j = 3; j < headerFields.length; j++) {
+							sample.info[headerFields[j]] = l[j]
+						}
 					}
 					referenceSamples.push(sample)
 				} else {
@@ -113,11 +117,7 @@ export async function trigger_getSampleScatter(q, res, ds) {
 		// array of all samples
 		// [ { sample=str, sampleId=int, x, y } ]
 
-		const [samples, categories] = await mayColorAndFilterSamples(allSamples, q, ds)
-		// array of plottable samples
-		// [ { sample=str, sampleId=int, x, y, category } ]
-
-		res.send({ samples, categories })
+		res.send(await mayColorAndFilterSamples(allSamples, q, ds))
 	} catch (e) {
 		res.send({ error: e.message || e })
 	}
@@ -139,9 +139,11 @@ async function getSampleLst(plot) {
 }
 
 /*
-if q.term{} is provided, use sample categories of this term to color dots
-later may rename q.term to q.termWrapper, as it's a termsetting object
-run q.get_rows() to get category assignment of all eligible samples
+colorTW is required
+shapeTW is optional
+
+if q.colorTW{} is provided, use sample categories of this term to color dots.
+Run q.get_rows() to get category assignment of all eligible samples
 
 as get_rows() accounts for filter, the samples dropped by filter are missing from result
 and should only retain samples passed filter for scatterplot
@@ -149,52 +151,87 @@ and should only retain samples passed filter for scatterplot
 whether to drop a sample from allSamples[] is depends on if sampleId is set
 if sampleId is set on a sample, it's a filter-able sample
 otherwise, it's un-filterable, e.g. reference sample
+
+input:
+
+allSamples = []
+q = {}
+ds = {}
+
+output:
+
+{
+	samples=[ {} ]
+		.sample=str
+		.category=str // rename to .colorCategory
+		.color=str
+		.shapeCategory=str
+		.shape=int
+	colorLegend=[]
+		each element [ category, {color=str, sampleCount=int} ]
+	shapeLegend=[]
+		each element [ category, {shape=int, sampleCount=int} ]
+}
 */
 async function mayColorAndFilterSamples(allSamples, q, ds) {
-	if (!q.term) return [allSamples] // no term to get sample category
+	if (!q.colorTW) {
+		// no term to get category assignments for color, nothing to do
+		return [allSamples]
+	}
 
-	// q.term{} is a termsetting
-	// TODO groupsetting
-	// TODO numeric bins
-	// TODO numeric continuous values
-	if (!('id' in q.term)) throw 'q.term.id missing'
-	if (typeof q.term.q != 'object') throw 'q.term.q is not object'
+	/******************************
+	!!!!!!!!!!!!!! following checks are stop-gap
+	fixes must be done in upstream and these can be deleted afterwards
+	*/
+	// if (typeof q.colorTW == 'string') {
+	// 	q.colorTW = JSON.parse(q.colorTW)
+	// 	console.log('warning!!!! colorTW is stringified json')
+	// }
+	// if (q.shapeTW == 'undefined') {
+	// 	delete q.shapeTW
+	// 	console.log('warning!!!! shapeTW="undefined"')
+	// }
+	// if (typeof q.shapeTW == 'string') {
+	// 	q.shapeTW = JSON.parse(q.shapeTW)
+	// 	console.log('warning!!!! shapeTW is stringified json')
+	// }
 
-	const rowsQ = {
+	const getRowsParam = {
 		ds,
-		term1_id: q.term.id,
-		term1_q: q.term.q,
 		filter: q.filter
 	}
 
-	const result = termdbsql.get_rows(rowsQ)
-	/*
-	result = {
-	  lst: [
-		{
-		  key0: '', val0: '',
-		  key1: 'HGG', val1: 'HGG',
-		  key2: '', val2: '',
-		  sample: 1
-		},
-		...
-	  ]
-	}
-	*/
+	if (!('id' in q.colorTW)) throw 'q.colorTW.id missing'
+	if (typeof q.colorTW.q != 'object') throw 'q.colorTW.q is not object'
+	getRowsParam.term1_id = q.colorTW.id
+	getRowsParam.term1_q = q.colorTW.q
 
-	const sampleId2category = new Map() // k: sample id, v: category
-	for (const i of result.lst) {
-		sampleId2category.set(i.sample, i.key1)
+	if (q.shapeTW) {
+		if (!('id' in q.shapeTW)) throw 'q.shapeTW.id missing'
+		if (typeof q.shapeTW.q != 'object') throw 'q.shapeTW.q is not object'
+		getRowsParam.term2_id = q.shapeTW.id
+		getRowsParam.term2_q = q.shapeTW.q
 	}
+
+	const [sampleId2colorCategory, sampleId2shapeCategory] = callGetRows(getRowsParam, q)
 
 	const samples = [] // samples pass filter and to be returned to client and display
-	const categories = new Map()
+
+	const colorCategories = new Map()
 	// key: category, value: {sampleCount=integer, color=str}
+
+	let shapeCategories
+	if (q.shapeTW) {
+		shapeCategories = new Map()
+		shapeCategories.set('None', { sampleCount: 0 })
+		// key: category, value: {sampleCount=integer, shape=int}
+	}
 
 	for (const s of allSamples) {
 		if ('sampleId' in s) {
 			// this sample has ID and is filterable
-			if (!sampleId2category.has(s.sampleId)) {
+
+			if (!sampleId2colorCategory.has(s.sampleId)) {
 				// this id is not present in the map, meaning the sample is dropped by filter
 				// and will exclude it from the scatterplot
 				continue
@@ -202,13 +239,23 @@ async function mayColorAndFilterSamples(allSamples, q, ds) {
 
 			// the sample is kept by filter and will show in scatterplot
 
-			if (sampleId2category.has(s.sampleId)) {
-				// sample has category assignment
-				s.category = sampleId2category.get(s.sampleId)
-				if (!categories.has(s.category)) {
-					categories.set(s.category, { sampleCount: 0 })
+			// sample has color category assignment
+			s.category = sampleId2colorCategory.get(s.sampleId) // change 'category' to 'colorCategory'
+			if (!colorCategories.has(s.category)) {
+				colorCategories.set(s.category, { sampleCount: 0 })
+			}
+			colorCategories.get(s.category).sampleCount++
+
+			if (sampleId2shapeCategory) {
+				// using shape
+				if (sampleId2shapeCategory.has(s.sampleId)) {
+					// sample has shape
+					s.shapeCategory = sampleId2shapeCategory.get(s.sampleId)
+					if (!shapeCategories.has(s.shapeCategory)) {
+						shapeCategories.set(s.shapeCategory, { sampleCount: 0 })
+					}
+					shapeCategories.get(s.shapeCategory).sampleCount++
 				}
-				categories.get(s.category).sampleCount++
 			}
 
 			delete s.sampleId // no need to send to client
@@ -222,31 +269,82 @@ async function mayColorAndFilterSamples(allSamples, q, ds) {
 
 	// assign color to unique categories, but not reference
 	const k2c = d3scale.scaleOrdinal(schemeCategory10)
-	for (const [category, o] of categories) {
-		if (q.term?.term?.values?.[category]?.color) {
-			o.color = q.term.term.values[category].color
+	for (const [category, o] of colorCategories) {
+		if (q.colorTW?.term?.values?.[category]?.color) {
+			o.color = q.colorTW.term.values[category].color
 		} else {
 			o.color = k2c(category)
 		}
 	}
 
-	// now each category gets an color, apply to samples
+	if (shapeCategories) {
+		let i = 0
+		for (const [category, o] of shapeCategories) {
+			o.shape = i++
+		}
+	}
+
+	// now each category gets an color/shape, apply to samples
+
 	let referenceSampleCount = 0
 	for (const s of samples) {
-		if (categories.has(s.category)) {
-			s.color = categories.get(s.category).color
+		if (colorCategories.has(s.category)) {
+			s.color = colorCategories.get(s.category).color
+
+			if (shapeCategories && shapeCategories.has(s.shapeCategory)) {
+				s.shape = shapeCategories.get(s.shapeCategory).shape
+			}
 		} else {
 			s.color = referenceSampleColor
 			referenceSampleCount++
 		}
+		if (!('shape' in s)) s.shape = defaultShape
 	}
 
 	// sort in descending order
-	const legendItems = [...categories].sort((a, b) => b[1].sampleCount - a[1].sampleCount)
+
+	const colorLegend = [...colorCategories].sort((a, b) => b[1].sampleCount - a[1].sampleCount)
 	// each element: [ 'categoryKey', { sampleCount=int, color=str } ]
 	if (referenceSampleCount) {
-		legendItems.push(['Reference samples', { sampleCount: referenceSampleCount, color: referenceSampleColor }])
+		colorLegend.push(['Reference samples', { sampleCount: referenceSampleCount, color: referenceSampleColor }])
 	}
 
-	return [samples, legendItems]
+	const result = { samples, colorLegend }
+
+	if (shapeCategories) {
+		result.shapeLegend = [...shapeCategories].sort((a, b) => b[1].sampleCount - a[1].sampleCount)
+	}
+	return result
+}
+
+function callGetRows(param, q) {
+	const result = termdbsql.get_rows(param)
+	/*
+	{
+	  lst: [
+		{
+		  key0: '', val0: '',
+		  key1: 'HGG', val1: 'HGG', // category value for color term
+		  key2: 'M', val2: 'Male', // optional category value for shape term
+		  sample: integer 
+		},
+		...
+	  ]
+	}
+	*/
+
+	const sampleId2colorCategory = new Map() // k: sample id, v: category
+	for (const i of result.lst) {
+		sampleId2colorCategory.set(i.sample, i.key1)
+	}
+
+	let sampleId2shapeCategory // k: sample id, v: category
+	if (q.shapeTW) {
+		sampleId2shapeCategory = new Map()
+		// k: sample id, v: category
+		for (const i of result.lst) {
+			sampleId2shapeCategory.set(i.sample, i.key2)
+		}
+	}
+	return [sampleId2colorCategory, sampleId2shapeCategory]
 }

@@ -459,9 +459,16 @@ function setRenderers(self) {
 				.attr('class', 'sja_menuoption sja_sharp_border')
 				.text(plot.name)
 				.on('click', () => {
+					let config = {
+						chartType: 'sampleScatter',
+						colorTW: JSON.parse(JSON.stringify(plot.colorTW)),
+						name: plot.name,
+						term: JSON.parse(JSON.stringify(plot.colorTW))
+					}
+					if ('shapeTW' in plot) config.shapeTW = JSON.parse(JSON.stringify(plot.shapeTW))
 					self.app.dispatch({
 						type: 'plot_create',
-						config: { chartType: 'sampleScatter', term: JSON.parse(JSON.stringify(plot.term)), name: plot.name }
+						config: config
 					})
 					self.dom.tip.hide()
 				})
