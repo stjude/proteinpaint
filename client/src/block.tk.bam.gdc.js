@@ -123,7 +123,7 @@ export async function bamsliceui({ genomes, holder, filter0, disableSSM = false,
 	const saydiv = formdiv.append('div').style('grid-column', 'span 2')
 	const api = {}
 	// upload toke file
-	makeTokenInput()
+	if (!hideTokenInput) makeTokenInput()
 
 	// <input> to enter gdc id, and doms for display case/file info
 	makeGdcIDinput()
@@ -672,7 +672,7 @@ export async function bamsliceui({ genomes, holder, filter0, disableSSM = false,
 			.text('Submit')
 			.on('click', event => {
 				try {
-					validateInputs(gdc_args, genome)
+					validateInputs(gdc_args, genome, hideTokenInput)
 				} catch (e) {
 					sayerror(saydiv, e.message || e)
 					if (e.stack) console.log(e.stack)
@@ -722,9 +722,11 @@ function show_input_check(holder, error_msg) {
 		.html(error_msg ? '&#10060; ' + error_msg : '&#10003;')
 }
 
-function validateInputs(args, genome) {
-	if (!args.gdc_token) throw 'GDC token missing'
-	if (typeof args.gdc_token !== 'string') throw 'GDC token is not string'
+function validateInputs(args, genome, hideTokenInput = false) {
+	if (!hideTokenInput) {
+		if (!args.gdc_token) throw 'GDC token missing'
+		if (typeof args.gdc_token !== 'string') throw 'GDC token is not string'
+	}
 	if (!args.bam_files.length) throw 'no bam file supplied'
 	for (const file of args.bam_files) {
 		if (!file.file_id) throw ' file uuid is missing'
