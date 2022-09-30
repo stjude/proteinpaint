@@ -175,6 +175,12 @@ class MassCumInc {
 		const controls = this.opts.controls ? null : opts.holder.append('div')
 		const holder = opts.controls ? opts.holder : opts.holder.append('div')
 		this.dom = {
+			loadingDiv: holder
+				.append('div')
+				.style('position', 'absolute')
+				.style('display', 'none')
+				.style('padding', '20px')
+				.html('Loading ...'),
 			header: opts.header,
 			controls,
 			holder,
@@ -327,12 +333,15 @@ class MassCumInc {
 						' <span style="opacity:.6;font-size:.7em;margin-left:10px;">CUMULATIVE INCIDENCE</span>'
 				)
 
+			this.toggleLoadingDiv()
+
 			Object.assign(this.settings, this.state.config.settings)
 			this.settings.defaultHidden = this.getDefaultHidden()
 			this.settings.hidden = this.settings.customHidden || this.settings.defaultHidden
 			this.settings.xTitleLabel = 'Years since diagnosis' // TODO: do not harcode time unit (see survival.js)
 			const reqOpts = this.getDataRequestOpts()
 			const data = await this.app.vocabApi.getNestedChartSeriesData(reqOpts)
+			this.toggleLoadingDiv('none')
 			this.app.vocabApi.syncTermData(this.state.config, data)
 			this.processData(data)
 			this.pj.refresh({ data: this.currData })
@@ -492,6 +501,22 @@ class MassCumInc {
 				}
 			}
 		}
+	}
+
+	// helper so that 'Loading...' does not flash when not needed
+	toggleLoadingDiv(display = '') {
+		if (display != 'none') {
+			this.dom.loadingDiv
+				.style('opacity', 0)
+				.style('display', display)
+				.transition()
+				.duration('loadingWait' in this ? this.loadingWait : 0)
+				.style('opacity', 1)
+		} else {
+			this.dom.loadingDiv.style('display', display)
+		}
+		// do not transition on initial chart load
+		this.loadingWait = 1000
 	}
 }
 

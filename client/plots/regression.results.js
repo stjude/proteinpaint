@@ -67,7 +67,9 @@ export class RegressionResults {
 		const holder = this.opts.holder
 		holder
 			.append('div')
-			.style('margin-top', '30px')
+			.attr('id', 'pp-regression-results-title')
+			.style('margin-top', '10px')
+			.style('padding-top', '20px')
 			.style('font-size', '1.2em')
 			.style('opacity', 0.3)
 			.html('Results')
@@ -111,6 +113,11 @@ export class RegressionResults {
 			this.dom.oneSetResultDiv.selectAll('*').remove()
 			this.dom.holder.style('display', 'block')
 			await this.displayResult(data)
+
+			// scroll to results
+			const resultsTitleYcoord =
+				document.getElementById('pp-regression-results-title').getBoundingClientRect().top + window.scrollY
+			window.scrollTo({ top: resultsTitleYcoord, behavior: 'smooth' })
 		} catch (e) {
 			this.hasError = true
 			this.dom.holder.style('display', 'block')
