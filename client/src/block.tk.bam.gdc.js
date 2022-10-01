@@ -6,7 +6,7 @@ import { contigNameNoChr2 } from '#shared/common'
 import urlmap from '../common/urlmap'
 import { addGeneSearchbox, string2variant } from '../dom/genesearch'
 import { Menu } from '../dom/menu'
-import { init_tabs_1 } from '../dom/toggleButtons'
+import { init_tabs } from '../dom/toggleButtons'
 
 /*
 *********** gdc_args{}
@@ -61,16 +61,27 @@ arguments:
 
 genomes{}
 holder
+debugmode=boolean
+
 disableSSM=true
 	temporary fix; to disable ssm query and selection for gdc phase9
 	to reenable, simply delete all uses of this flag
+
 hideTokenInput=true/false
 	set to true in gdc react wrapper
+
 filter0=str
 	optional, stringified json obj as the cohort filter from gdc ATF
 	simply pass to backend to include in api queries
 */
-export async function bamsliceui({ genomes, holder, filter0, disableSSM = false, hideTokenInput = false }) {
+export async function bamsliceui({
+	genomes,
+	holder,
+	filter0,
+	disableSSM = false,
+	hideTokenInput = false,
+	debugmode = false
+}) {
 	const genome = genomes[gdc_genome]
 	if (!genome) throw 'missing genome for ' + gdc_genome
 
@@ -471,7 +482,7 @@ export async function bamsliceui({ genomes, holder, filter0, disableSSM = false,
 	}
 
 	async function makeSsmGeneSearch() {
-		await init_tabs_1(ssmGeneArg)
+		await init_tabs(ssmGeneArg)
 
 		// argument for making search box
 		// gene searchbox is created in 2nd tab holder
@@ -682,7 +693,7 @@ export async function bamsliceui({ genomes, holder, filter0, disableSSM = false,
 				formdiv.style('display', 'none')
 				backBtnDiv.style('display', '')
 				blockHolder.style('display', '')
-				renderBamSlice(gdc_args, genome, blockHolder)
+				renderBamSlice(gdc_args, genome, blockHolder, debugmode)
 			})
 	}
 
@@ -770,12 +781,13 @@ function validateInputs(args, genome, hideTokenInput = false) {
 	}
 }
 
-function renderBamSlice(args, genome, holder) {
+function renderBamSlice(args, genome, holder, debugmode) {
 	// create arg for block init
 	const par = {
 		nobox: 1,
 		genome,
-		holder
+		holder,
+		debugmode
 	}
 	if (args.position) {
 		par.chr = args.position.chr

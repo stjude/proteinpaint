@@ -61,6 +61,7 @@ upon error, throw err message as a string
 		_.bamsliceui({
 			genomes: arg.genomes,
 			holder: arg.holder,
+			debugmode: arg.debugmode,
 			disableSSM: urlp.has('disablessm')
 		})
 		return
