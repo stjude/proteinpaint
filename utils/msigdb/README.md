@@ -13,11 +13,14 @@ Find a big XML file inside named like `msigdb_v2022.1.Hs.xml`
 run script:
 ```bash
 cd ~/dev/proteinpaint/utils/msigdb/
+
 node msigdb.js ~/data/tp/msigdb/msigdb_v2022.1.Hs_files_to_download_locally/msigdb_v2022.1.Hs.xml ~/data/tp/msigdb/
+
+node updateGenes.js ~/data/tp/msigdb/term2genes ~/data/tp/anno/human.genealias ~/data/tp/anno/tmp/wgEncodeGencodeAttrsV41.txt ~/data/tp/anno/tmp/knownCanonicalGenecode.txt ~/data/tp/anno/tmp/refseq.canonical > ~/data/tp/msigdb/term2genes.updated
 ```
-The following files are made at current directory:
+The following files are made at tp/msigndb/:
 1. "phenotree", as input to buildTermdb.bundle.js
-2. "term2genes"
+2. "term2genes.updated"
 3. "termhtmldef"
 
 
@@ -27,7 +30,7 @@ cd ../termdb/
 node buildTermdb.bundle.js \
 	phenotree=/Users/xzhou1/data/tp/msigdb/phenotree \
 	termHtmlDef=/Users/xzhou1/data/tp/msigdb/termhtmldef  \
-	term2genes=/Users/xzhou1/data/tp/msigdb/term2genes \
+	term2genes=/Users/xzhou1/data/tp/msigdb/term2genes.updated \
 	dbfile=/Users/xzhou1/data/tp/msigdb/db
 ```
 
