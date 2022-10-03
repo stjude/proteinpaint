@@ -65,9 +65,9 @@ exports.setDbRefreshRoute = function(ds, app, basepath) {
 	*/
 	app.post(`${basepath}/${r.route}`, async (req, res) => {
 		try {
-			const dbfile = ds.cohort.db.file.startsWith(serverconfig.tpmasterdir)
+			const dbfile = ds.cohort.db?.file?.startsWith(serverconfig.tpmasterdir)
 				? ds.cohort.db.file
-				: path.join(serverconfig.tpmasterdir, ds.cohort.db.file)
+				: path.join(serverconfig.tpmasterdir, ds.cohort.db.file || '')
 			// save file to text
 			const q = req.body
 			if (q.dbfile) {
@@ -79,7 +79,7 @@ exports.setDbRefreshRoute = function(ds, app, basepath) {
 				console.log(`copying ${source} to ${target}`)
 				await fs.copyFile(source, target)
 			} else {
-				throw `Updating input text files via the termd-refresh page has been deprecated.` +
+				throw `Updating input text files via the termdb-refresh page has been deprecated.` +
 					`Please use the buildTermdb.bundle.js. pipeline before triggering this route to replace the db file.`
 			}
 			await validate_termdb(ds)
