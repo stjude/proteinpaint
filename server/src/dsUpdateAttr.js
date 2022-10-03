@@ -1,4 +1,9 @@
-export function server_updateAttr(ds, sds) {
+const path = require('path')
+const fs = require('fs').promises
+const serverconfig = require('./serverconfig')
+const validate_termdb = require('./mds3.init').validate_termdb
+
+exports.server_updateAttr = function(ds, sds) {
 	/*
 	ds: 
 		an entry in genomes[{datasets:[ ... ]}]
@@ -40,7 +45,7 @@ export function server_updateAttr(ds, sds) {
 			  http://sub.domain.ext:port/termdb-refresh.html?route=pnet-refresh-r4Nd0m-5tr1n8
 */
 
-export function setDbRefreshRoute(ds, app, basepath) {
+exports.setDbRefreshRoute = function(ds, app, basepath) {
 	if (!ds.cohort?.db?.refresh) return
 	const r = ds.cohort.db.refresh
 	// delete the optional 'refresh' attribute
@@ -60,13 +65,16 @@ export function setDbRefreshRoute(ds, app, basepath) {
 	*/
 	app.post(`${basepath}/${r.route}`, async (req, res) => {
 		try {
+			const dbfile = ds.cohort.db.file.startsWith(serverconfig.tpmasterdir)
+				? ds.cohort.db.file
+				: path.join(serverconfig.tpmasterdir, ds.cohort.db.file)
 			// save file to text
 			const q = req.body
 			if (q.dbfile) {
 				const source = path.join(serverconfig.tpmasterdir, q.dbfile)
 				const stat = await fs.stat(source)
 				if (!stat) throw `dbfile not found: '${source}'`
-				const target = ds.cohort.db.file_fullpath || ds.cohort.db.file
+				const target = ds.cohort.db.file_fullpath || dbfile
 				if (source === target) throw `db file source and target are the same`
 				console.log(`copying ${source} to ${target}`)
 				await fs.copyFile(source, target)
@@ -74,7 +82,7 @@ export function setDbRefreshRoute(ds, app, basepath) {
 				throw `Updating input text files via the termd-refresh page has been deprecated.` +
 					`Please use the buildTermdb.bundle.js. pipeline before triggering this route to replace the db file.`
 			}
-			await init_db(ds)
+			await validate_termdb(ds)
 			res.send({ status: 'ok' })
 		} catch (e) {
 			console.log(e)

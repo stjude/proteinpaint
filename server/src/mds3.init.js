@@ -106,7 +106,7 @@ ds.cohort = {
 	termdb: {}
 }
 */
-async function validate_termdb(ds) {
+export async function validate_termdb(ds) {
 	if (ds.cohort) {
 		if (!ds.cohort.termdb) throw 'ds.cohort is set but cohort.termdb{} missing'
 		if (!ds.cohort.db) throw 'ds.cohort is set but cohort.db{} missing'
