@@ -137,7 +137,7 @@ export async function init_tabs_1(opts) {
 		.style('padding', '5px')
 		.style('display', 'inline-block')
 		.html(tab => tab.label)
-		.on('click', async tab => {
+		.on('click', async (event, tab) => {
 			for (const t of tabs) {
 				t.active = t === tab
 			}

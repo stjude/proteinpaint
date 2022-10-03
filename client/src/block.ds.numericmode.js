@@ -1042,7 +1042,7 @@ set:
 				}
 			})
 
-			.on('mouseout', m => {
+			.on('mouseout', (event, m) => {
 				m_mouseout(m, tk)
 				if (tk.disc_mouseout) {
 					tk.disc_mouseout(m)
@@ -1083,8 +1083,8 @@ set:
 		.on('mousedown', event => {
 			event.stopPropagation()
 		})
-		.on('mouseover', m => m_mouseover(m, tk))
-		.on('mouseout', m => m_mouseout(m, tk))
+		.on('mouseover', (event, m) => m_mouseover(m, tk))
+		.on('mouseout', (event, m) => m_mouseout(m, tk))
 		.on('click', (event, m) => {
 			m_click(m, { left: event.clientX, top: event.clientY }, tk, block)
 		})

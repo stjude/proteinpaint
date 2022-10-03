@@ -293,10 +293,10 @@ export class Block {
 						event.preventDefault()
 						const x = event.clientX
 						const body = d3select(document.body)
-						body.on('mousemove', () => {
+						body.on('mousemove', event => {
 							this.resizewidthbutton.style('right', this.rpad + this.rightheadw + x - event.clientX + 'px')
 						})
-						body.on('mouseup', () => {
+						body.on('mouseup', event => {
 							this.resizewidthbutton.style('right', this.rpad + this.rightheadw + 'px')
 							body.on('mousemove', null).on('mouseup', null)
 							if (this.busy) {
@@ -3439,26 +3439,30 @@ seekrange(chr,start,stop) {
 				} else if (data.mapisoform.find(i => i.isoform)) {
 					// has isoform name, enable clicking on a isoform to launch protein view
 
-					img.on('click', event => {
-						const p = pointer(event, img.node())
-						for (const i of data.mapisoform) {
-							const y = (i.y - 1) * (tk.stackheight + tk.stackspace)
-							if (i.x1 < p[0] && i.x2 > p[0] && y < p[1] && y + tk.stackheight > p[1] && i.isoform) {
-								// hit an isoform
-								tk.tkconfigtip
-									.clear()
-									.show(event.clientX - 40, event.clientY)
-									.d.append('div')
-									.attr('class', 'sja_menuoption')
-									.text('Gene/protein view for ' + i.isoform)
-									.on('click', () => {
-										tk.tkconfigtip.hide()
-										this.to_proteinview(i.isoform, tk)
-									})
-								return
+					if (tk.__isgene) {
+						// this flag is true for native gene tracks
+						// only allow this menu option for these tracks, and won't show it for custom gene tracks
+						img.on('click', event => {
+							const p = pointer(event, img.node())
+							for (const i of data.mapisoform) {
+								const y = (i.y - 1) * (tk.stackheight + tk.stackspace)
+								if (i.x1 < p[0] && i.x2 > p[0] && y < p[1] && y + tk.stackheight > p[1] && i.isoform) {
+									// hit an isoform
+									tk.tkconfigtip
+										.clear()
+										.show(event.clientX - 40, event.clientY)
+										.d.append('div')
+										.attr('class', 'sja_menuoption')
+										.text('Gene/protein view for ' + i.isoform)
+										.on('click', () => {
+											tk.tkconfigtip.hide()
+											this.to_proteinview(i.isoform, tk)
+										})
+									return
+								}
 							}
-						}
-					})
+						})
+					}
 				} else {
 					img.on('click', null)
 				}

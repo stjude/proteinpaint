@@ -29,7 +29,9 @@ tk.dom.variantg // if defined.
 ******* attributes ********
 
 tk.downloadgdc:true // Downloads bam file from gdc, single-use flag
-tk.gdcFileUUID: str // uuid of a bam file in gdc
+tk.gdcFile={} // the tk runs on a valid gdc bam slice
+	.uuid=str
+	.position=str
 tk.gdcToken // gdc token string
 tk.variants[ {} ]
 	.chr/pos/ref/alt

@@ -3,12 +3,24 @@ import { fillTermWrapper } from '../termsetting/termsetting'
 import { select } from 'd3-selection'
 import { scaleLinear as d3Linear } from 'd3-scale'
 import Partjson from 'partjson'
-import { zoom as d3zoom, zoomIdentity } from 'd3'
+import {
+	zoom as d3zoom,
+	zoomIdentity,
+	symbolCircle,
+	symbolTriangle,
+	symbolCross,
+	symbolSquare,
+	symbolWye,
+	symbolAsterisk,
+	symbolDiamond
+} from 'd3'
 import { d3lasso } from '../common/lasso'
 import { Menu } from '#dom/menu'
 import { controlsInit } from './controls'
 import { axisLeft, axisBottom } from 'd3-axis'
 import { make_table_2col } from '#dom/table2col'
+import { icons as icon_functions } from '../dom/control.icons'
+import { symbol } from 'd3-shape'
 
 /*
 sample object returned by server:
@@ -27,32 +39,28 @@ NOTE
 class Scatter {
 	constructor() {
 		this.type = 'sampleScatter'
+		this.lassoOn = false
 	}
 
 	async init(opts) {
 		const controls = this.opts.controls || this.opts.holder.append('div')
 		let holder = this.opts.controls ? opts.holder : this.opts.holder.append('div').style('display', 'inline-block')
 		const mainDiv = holder.append('div').style('display', 'inline-block')
-		const toolsDiv = mainDiv
-			.append('div')
-			.style('display', 'inline-block')
-			.style('float', 'right')
-			.style('width', '20vw')
+
 		const chartsDiv = mainDiv
 			.append('div')
 			.style('display', 'inline-block')
-			.style('width', '60vw')
-		const legendDiv = toolsDiv
-		// mainDiv
-		// 	.append('div')
-		// 	.style('display', 'inline-block')
-		// 	.style('width', '50vw')
+			.style('margin', '20px')
+		const legendDiv = mainDiv
+			.append('div')
+			.style('display', 'inline-block')
+			.style('float', 'right')
+			.style('margin-left', '100px')
 
 		this.dom = {
 			header: this.opts.header,
 			holder: chartsDiv,
 			controls,
-			toolsDiv,
 			legendDiv,
 			tip: new Menu({ padding: '5px' })
 		}
@@ -70,7 +78,6 @@ class Scatter {
 		if (!config) {
 			throw `No plot with id='${this.id}' found. Did you set this.id before this.api = getComponentApi(this)?`
 		}
-
 		return {
 			config,
 			termfilter: appState.termfilter
@@ -90,6 +97,7 @@ class Scatter {
 		const data = await this.app.vocabApi.getScatterData(reqOpts)
 		if (data.error) throw data.error
 		if (!Array.isArray(data.samples)) throw 'data.samples[] not array'
+		console.log(data)
 		this.pj.refresh({ data: data.samples })
 		// no option for dividing charts by term,
 		// so assume that the plot always corresponds to the first chart data
@@ -102,8 +110,18 @@ class Scatter {
 			.domain([chart0.yMax, chart0.yMin])
 			.range([this.settings.svgh, 0])
 		this.axisLeft = axisLeft(this.yAxisScale)
-		this.render()
-		this.renderLegend(this.dom.legendDiv, data.categories)
+		const mySymbols = [
+			symbolCircle,
+			symbolSquare,
+			symbolCross,
+			symbolWye,
+			symbolTriangle,
+			symbolAsterisk,
+			symbolDiamond
+		]
+		this.symbols = mySymbols.map(s => symbol(s).size(this.settings.radius))
+
+		this.render(data)
 	}
 
 	// creates an opts object for the vocabApi.someMethod(),
@@ -114,9 +132,10 @@ class Scatter {
 		const c = this.config
 		const opts = {
 			name: c.name, // the actual identifier of the plot, for retrieving data from server
-			term: c.term,
+			colorTW: c.colorTW,
 			filter: this.state.termfilter.filter
 		}
+		if (c.shapeTW) opts.shapeTW = c.shapeTW
 		return opts
 	}
 
@@ -135,11 +154,20 @@ class Scatter {
 				inputs: [
 					{
 						type: 'term',
-						configKey: 'term',
+						configKey: 'colorTW',
 						chartType: 'sampleScatter',
-						usecase: { target: 'sampleScatter', detail: 'term' },
+						usecase: { target: 'sampleScatter', detail: 'colorTW' },
 						title: 'The term to use to color the samples',
-						label: 'Term',
+						label: 'Color',
+						vocabApi: this.app.vocabApi
+					},
+					{
+						type: 'term',
+						configKey: 'shapeTW',
+						chartType: 'sampleScatter',
+						usecase: { target: 'sampleScatter', detail: 'shapeTW' },
+						title: 'The term to use to shape the samples',
+						label: 'Shape',
 						vocabApi: this.app.vocabApi
 					},
 					{
@@ -171,14 +199,15 @@ class Scatter {
 		this.components.controls.on('downloadClick.survival', () => alert('TODO: data download?'))
 	}
 
-	renderLegend(holder, categories) {
+	renderLegend(holder, categories, shapes) {
 		holder.selectAll('*').remove()
-		const row = holder
+		let row = holder
 			.append('div')
 			.attr('class', 'sja_clb')
 			.style('display', 'block')
 			.style('font-weight', 'bold')
-			.html('&nbsp;&nbsp;' + this.config.term.term.name)
+			.style('margin-top', '10px')
+			.html('&nbsp;' + this.config.colorTW.term.name)
 		let items = []
 		let item
 		for (const category of categories) {
@@ -201,44 +230,85 @@ class Scatter {
 				.style('color', color)
 				.html('&nbsp;' + name)
 		}
+		if (this.config.shapeTW) {
+			row = holder
+				.append('div')
+				.attr('class', 'sja_clb')
+				.style('display', 'block')
+				.style('font-weight', 'bold')
+				.style('margin-top', '10px')
+				.html('&nbsp;' + this.config.shapeTW.term.name)
+			items = []
+			let i = 0
+			const color = 'gray'
+
+			for (const shape of shapes) {
+				let category_shape = shape[1].shape
+				category_shape = this.symbols[category_shape].size(20)()
+				const name = shape[0]
+				const row = holder
+					.append('div')
+					.attr('class', 'sja_clb')
+					.style('display', 'block')
+
+				row
+					.append('div')
+					.style('display', 'inline-block')
+					.append('svg')
+					.attr('width', 20)
+					.attr('height', 20)
+
+					.append('path')
+					.attr('d', category_shape)
+					.attr('fill', color)
+					.attr('transform', c => `translate(15,15)`)
+
+				row
+					.append('div')
+					.style('display', 'inline-block')
+					.html('&nbsp;' + name)
+				i++
+			}
+		}
 	}
 }
 
 function setRenderers(self) {
-	self.render = function() {
+	self.render = function(data) {
 		const chartDivs = self.dom.holder.selectAll('.pp-scatter-chart').data(self.pj.tree.charts, d => d.chartId)
 
 		chartDivs.exit().remove()
 		chartDivs.each(self.updateCharts)
-		chartDivs.enter().each(self.addCharts)
+		chartDivs.enter().each(addCharts)
 		self.dom.holder.style('display', 'inline-block')
 		self.dom.holder.on('mouseover', self.mouseover).on('mouseout', self.mouseout)
-	}
+		self.renderLegend(self.dom.legendDiv, data.colorLegend, data.shapeLegend)
 
-	self.addCharts = function(d) {
-		const s = self.settings
-		const div = select(this)
-			.append('div')
-			.attr('class', 'pp-scatter-chart')
-			.style('opacity', 0)
-			//.style("position", "absolute")
-			.style('width', s.svgw + 100 + 'px')
-			.style('height', s.svgh + 50 + 'px')
-			.style('display', 'inline-block')
-			.style('margin', s.chartMargin + 'px')
-			.style('top', 0) //layout.byChc[d.chc].top)
-			.style('left', 0) //layout.byChc[d.chc].left)
-			.style('text-align', 'left')
-			.style('background', 1 || s.orderChartsBy == 'organ-system' ? d.color : '')
+		function addCharts(d) {
+			const s = self.settings
+			const div = select(this)
+				.append('div')
+				.attr('class', 'pp-scatter-chart')
+				.style('opacity', 0)
+				//.style("position", "absolute")
+				.style('width', s.svgw + 100 + 'px')
+				.style('height', s.svgh + 50 + 'px')
+				.style('display', 'inline-block')
+				.style('margin', s.chartMargin + 'px')
+				.style('top', 0) //layout.byChc[d.chc].top)
+				.style('left', 0) //layout.byChc[d.chc].left)
+				.style('text-align', 'left')
+				.style('background', 1 || s.orderChartsBy == 'organ-system' ? d.color : '')
 
-		const svg = div.append('svg')
-		renderSVG(svg, d, s, 0)
+			const svg = div.append('svg')
+			renderSVG(svg, d, s, 0)
 
-		div
-			.transition()
-			.duration(s.duration)
-			.style('opacity', 1)
-		setTools(self.dom, svg, d)
+			div
+				.transition()
+				.duration(s.duration)
+				.style('opacity', 1)
+			setTools(self.dom, svg, d)
+		}
 	}
 
 	self.updateCharts = function(d) {
@@ -325,54 +395,69 @@ function setRenderers(self) {
 	}
 
 	function renderSeries(g, chart, series, i, s, duration) {
-		// remove all circles as there is no data id for privacy
-		g.selectAll('circle').remove()
-		const circles = g.selectAll('circle').data(series.data, b => b.x)
-
-		circles.exit().remove()
-		const default_color = 'blue'
-		circles
+		// remove all symbols as there is no data id for privacy
+		g.selectAll('path').remove()
+		const symbols = g.selectAll('path').data(series.data, b => b.x)
+		symbols.exit().remove()
+		symbols
 			.transition()
 			.duration(duration)
-			.attr('r', s.radius)
-			.attr('cx', c => {
-				c.scaledX + 100
-			})
-			.attr('cy', c => {
-				c.scaledY
-			})
-			.style('fill', c => ('color' in c ? c.color : default_color))
+			.attr('transform', c => `translate(${c.scaledX + 100},${c.scaledY})`)
+			.attr('d', c => self.symbols[c.shape]())
+			.attr('fill', c => c.color)
+
 			.style('fill-opacity', s.fillOpacity)
-		//.style("stroke", color);
-		circles
+		symbols
 			.enter()
-			.append('circle')
-			.attr('r', s.radius)
-			.attr('cx', c => c.scaledX + 100)
-			.attr('cy', c => c.scaledY)
-			//.style("opacity", 0)
-			.style('fill', c => ('color' in c ? c.color : default_color))
+			.append('path')
+			/*** you'd need to set the symbol position using translate, instead of previously with cx, cy for a circle ***/
+			.attr('transform', c => `translate(${c.scaledX + 100},${c.scaledY})`)
+			.attr('d', c => self.symbols[c.shape]())
+			.attr('fill', c => c.color)
+
 			.style('fill-opacity', s.fillOpacity)
-			//.style("stroke", color)
 			.transition()
 			.duration(duration)
 	}
 
 	function setTools(dom, svg, d) {
+		const homeDiv = dom.controls
+			.insert('div')
+			.style('display', 'block')
+			.style('margin', '20px')
+		icon_functions['restart'](homeDiv, { handler: resetToIdentity })
+		const zoomInDiv = dom.controls
+			.insert('div')
+			.style('display', 'block')
+			.style('margin', '20px')
+		icon_functions['zoomIn'](zoomInDiv, { handler: zoomIn })
+		const zoomOutDiv = dom.controls
+			.insert('div')
+			.style('display', 'block')
+			.style('margin', '20px')
+		icon_functions['zoomOut'](zoomOutDiv, { handler: zoomOut })
+		const lassoDiv = dom.controls
+			.insert('div')
+			.style('display', 'block')
+			.style('margin', '20px')
+		icon_functions['lasso'](lassoDiv, { handler: toggle_lasso, enabled: false })
+
 		const mainG = svg.select('.sjpcb-scatter-mainG')
 		const seriesG = mainG.select('.sjpcb-scatter-series')
-		const circles = seriesG.selectAll('circle')
+		const symbols = seriesG.selectAll('path')
 		const axisG = mainG.select('.sjpcb-scatter-axis')
 		const rect = mainG.select('.zoom')
 		const xAxisG = axisG.select('.sjpcb-scatter-x-axis')
 		const yAxisG = axisG.select('.sjpcb-scatter-y-axis')
 		const zoom = d3zoom()
-			.scaleExtent([0.5, 5])
+			.scaleExtent([0.5, 10])
 			.on('zoom', handleZoom)
 
 		mainG.call(zoom)
 		rect.call(zoom)
-
+		let x = 0,
+			y = 0
+		let k = 1
 		function handleZoom(event) {
 			// create new scale ojects based on event
 			const new_xScale = event.transform.rescaleX(self.xAxisScale)
@@ -381,7 +466,8 @@ function setRenderers(self) {
 			xAxisG.call(self.axisBottom.scale(new_xScale))
 			yAxisG.call(self.axisLeft.scale(new_yScale))
 			seriesG.attr('transform', event.transform)
-			circles.attr('r', 5 / event.transform.scale(1).k)
+			k = event.transform.scale(1).k
+			symbols.attr('r', 4 / k)
 		}
 		function zoomIn() {
 			zoom.scaleBy(mainG.transition().duration(750), 1.5)
@@ -398,29 +484,30 @@ function setRenderers(self) {
 				.call(zoom.transform, zoomIdentity)
 		}
 
+		const minRadius = self.settings.radius / 2
 		const lasso = d3lasso()
-			.items(circles)
-			.targetArea(svg)
+			.items(symbols)
+			.targetArea(mainG)
 			.on('start', lasso_start)
 			.on('draw', lasso_draw)
 			.on('end', lasso_end)
 
-		function lasso_start() {
-			if (lasso_chb.checked)
-				lasso
-					.items()
-					.attr('r', 2)
-					.style('fill-opacity', '.5')
-					.classed('not_possible', true)
-					.classed('selected', false)
+		function lasso_start(event) {
+			lasso
+				.items()
+				.attr('d', c => self.symbols[c.shape].size(minRadius)())
+				.style('fill-opacity', '.5')
+				.classed('not_possible', true)
+				.classed('selected', false)
 		}
 
-		function lasso_draw() {
-			if (lasso_chb.checked) {
+		function lasso_draw(event) {
+			if (self.lassoOn) {
 				// Style the possible dots
+
 				lasso
 					.possibleItems()
-					.attr('r', self.settings.radius)
+					.attr('d', c => self.symbols[c.shape].size(self.settings.radius)())
 					.style('fill-opacity', '1')
 					.classed('not_possible', false)
 					.classed('possible', true)
@@ -428,7 +515,7 @@ function setRenderers(self) {
 				//Style the not possible dot
 				lasso
 					.notPossibleItems()
-					.attr('r', 2)
+					.attr('d', c => self.symbols[c.shape].size(minRadius)())
 					.style('fill-opacity', '.5')
 					.classed('not_possible', true)
 					.classed('possible', false)
@@ -436,7 +523,7 @@ function setRenderers(self) {
 		}
 
 		function lasso_end() {
-			if (lasso_chb.checked) {
+			if (self.lassoOn) {
 				// Reset classes of all items (.possible and .not_possible are useful
 				// only while drawing lasso. At end of drawing, only selectedItems()
 				// should be used)
@@ -446,8 +533,7 @@ function setRenderers(self) {
 					.classed('possible', false)
 
 				// Style the selected dots
-				lasso.selectedItems().attr('r', self.settings.radius)
-
+				lasso.selectedItems().attr('d', c => self.symbols[c.shape].size(self.settings.radius)())
 				// if none of the items are selected, reset radius of all dots or
 				// keep them as unselected with tiny radius
 				lasso.items().style('fill-opacity', '1')
@@ -455,20 +541,24 @@ function setRenderers(self) {
 		}
 
 		function toggle_lasso() {
-			lasso_chb.checked = lasso_chb.property('checked')
-			if (lasso_chb.checked) {
-				svg.on('.zoom', null)
-				svg.call(lasso)
+			self.lassoOn = !self.lassoOn
+			if (self.lassoOn) {
+				mainG.on('.zoom', null)
+				rect.on('.zoom', null)
+				mainG.call(lasso)
 			} else {
-				svg.on('mousedown.drag', null)
+				mainG.on('mousedown.drag', null)
 				lasso.items().classed('not_possible', false)
 				lasso.items().classed('possible', false)
 				lasso
 					.items()
 					.attr('r', self.settings.radius)
 					.style('fill-opacity', '1')
-				svg.call(zoom)
+				mainG.call(zoom)
+				rect.call(zoom)
 			}
+			lassoDiv.select('*').remove()
+			icon_functions['lasso'](lassoDiv, { handler: toggle_lasso, enabled: self.lassoOn })
 		}
 	}
 
@@ -480,17 +570,17 @@ function setRenderers(self) {
 
 		xTitle.select('text, title').remove()
 		const xTitleLabel =
-			self.config.term.term.name.length > 24
-				? self.config.term.term.name.slice(0, 20) + '...'
-				: self.config.term.term.name
+			self.config.colorTW.term.name.length > 24
+				? self.config.colorTW.term.name.slice(0, 20) + '...'
+				: self.config.colorTW.term.name
 		const xText = xTitle
 			.attr('transform', 'translate(' + (100 + s.svgw) / 2 + ',' + (50 + s.svgh) + ')')
 			.append('text')
 			.style('text-anchor', 'middle')
 			.style('font-size', s.axisTitleFontSize + 'px')
-			.text(xTitleLabel + (self.config.term.term.unit ? ', ' + self.config.term.term.unit : ''))
+			.text(xTitleLabel + (self.config.colorTW.term.unit ? ', ' + self.config.colorTW.term.unit : ''))
 
-		xText.append('title').text(self.config.term.term.name)
+		xText.append('title').text(self.config.colorTW.term.name)
 
 		const yTitleLabel = 'Y'
 		yTitle.select('text, title').remove()
@@ -504,15 +594,16 @@ function setRenderers(self) {
 
 function setInteractivity(self) {
 	self.mouseover = function(event) {
-		if (event.target.tagName == 'circle') {
+		if (!self.lassoOn && event.target.tagName == 'path') {
 			self.app.tip.clear().show(event.clientX, event.clientY)
-
 			const d = event.target.__data__
-
+			if (!d) return
 			const rows = [{ k: 'Sample', v: d.sample }]
 			if ('category' in d) {
-				rows.push({ k: self.config.term.id, v: d.category })
+				rows.push({ k: self.config.colorTW.id, v: d.category })
 			}
+			if ('info' in d) for (const [k, v] of Object.entries(d.info)) rows.push({ k: k, v: v })
+
 			make_table_2col(self.app.tip.d, rows)
 		} else {
 			self.app.tip.hide()
@@ -525,19 +616,21 @@ function setInteractivity(self) {
 }
 
 export async function getPlotConfig(opts, app) {
-	if (!opts.term) throw 'sampleScatter getPlotConfig: opts.term{} missing'
+	if (!opts.colorTW) throw 'sampleScatter getPlotConfig: opts.colorTW{} missing'
 	try {
-		await fillTermWrapper(opts.term, app.vocabApi)
+		await fillTermWrapper(opts.colorTW, app.vocabApi)
+		if (opts.shapeTW) await fillTermWrapper(opts.shapeTW, app.vocabApi)
+
 		const config = {
-			id: opts.term.id,
+			id: opts.colorTW.id,
 			settings: {
 				controls: {
 					isOpen: false // control panel is hidden by default
 				},
 				sampleScatter: {
 					radius: 5,
-					svgw: 550,
-					svgh: 550,
+					svgw: 500,
+					svgh: 500,
 					axisTitleFontSize: 16,
 					showAxes: false
 				}
@@ -584,6 +677,8 @@ function getPj(self) {
 									y: '$y',
 									sample: '$sample',
 									category: '$category',
+									info: '$info',
+									shape: '$shape',
 									'_1:scaledX': '=scaledX()',
 									'_1:scaledY': '=scaledY()'
 								},

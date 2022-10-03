@@ -138,7 +138,7 @@ export function renderAtRiskG({ g, s, chart, term2values, term2toColor }) {
 				.attr('transform', `translate(${s.atRiskLabelOffset}, 0)`)
 				.attr('text-anchor', 'end')
 				.attr('font-size', `${s.axisTitleFontSize - 4}px`)
-				.attr('cursor', 'pointer')
+				.attr('cursor', chart.visibleSerieses.length == 1 ? 'auto' : 'pointer')
 				.datum({ seriesId })
 				.text(seriesId && seriesId != '*' ? sObj.seriesLabel || seriesId : '')
 
@@ -163,7 +163,7 @@ function renderAtRiskTick(g, chart, xTickValues, s, seriesId, series) {
 		.attr('transform', d => `translate(${chart.xScale(d.tickVal)},0)`)
 		.attr('text-anchor', 'middle')
 		.attr('font-size', `${s.axisTitleFontSize - 4}px`)
-		.attr('cursor', 'pointer')
+		.attr('cursor', chart.visibleSerieses.length == 1 ? 'auto' : 'pointer')
 		.each(renderAtRiskLabel)
 
 	function renderAtRiskLabel(d) {

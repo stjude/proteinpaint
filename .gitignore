@@ -89,5 +89,6 @@ p4/public/dev.html
 *.ext
 *.crt
 .ssl
+ssl-proxy.json
 .RData
 log.txt

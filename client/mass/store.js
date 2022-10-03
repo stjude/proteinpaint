@@ -351,6 +351,10 @@ function validatePlot(p, vocabApi) {
 			for (const tw of p.terms) {
 				validatePlotTerm(tw, vocabApi)
 			}
+		} else if (p.chartType == 'sampleScatter') {
+			if (!p.name) throw `plot error: missing the plot name for '${p.chartType}'`
+			if (!p.colorTW) `plot error: missing the plot color term wrapper for '${p.chartType}'`
+			if (!p.file) `plot error: missing the plot coordinates file for '${p.chartType}'`
 		} else {
 			validateGenericPlot(p, vocabApi)
 		}

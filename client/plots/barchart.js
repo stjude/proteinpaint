@@ -27,6 +27,12 @@ class Barchart {
 		const controls = this.opts.controls ? null : opts.holder.append('div')
 		const holder = opts.controls ? opts.holder : opts.holder.append('div')
 		this.dom = {
+			loadingDiv: holder
+				.append('div')
+				.style('position', 'absolute')
+				.style('display', 'none')
+				.style('padding', '20px')
+				.html('Loading ...'),
 			header: opts.header,
 			controls,
 			holder,
@@ -152,8 +158,11 @@ class Barchart {
 					this.config.term.term.name + ` <span style="opacity:.6;font-size:.7em;margin-left:10px;">BARCHART</span>`
 				)
 
+			this.toggleLoadingDiv()
+
 			const reqOpts = this.getDataRequestOpts()
 			const data = await this.app.vocabApi.getNestedChartSeriesData(reqOpts)
+			this.toggleLoadingDiv('none')
 			this.app.vocabApi.syncTermData(this.config, data, this.prevConfig)
 			this.currServerData = data
 			if (this.currServerData.refs && this.currServerData.refs.q) {
@@ -502,6 +511,22 @@ class Barchart {
 			})
 		}
 		return legendGrps
+	}
+
+	// helper so that 'Loading...' does not flash when not needed
+	toggleLoadingDiv(display = '') {
+		if (display != 'none') {
+			this.dom.loadingDiv
+				.style('opacity', 0)
+				.style('display', display)
+				.transition()
+				.duration('loadingWait' in this ? this.loadingWait : 0)
+				.style('opacity', 1)
+		} else {
+			this.dom.loadingDiv.style('display', display)
+		}
+		// do not transition on initial chart load
+		this.loadingWait = 1000
 	}
 }
 

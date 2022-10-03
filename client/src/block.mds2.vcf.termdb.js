@@ -301,7 +301,7 @@ function phewas_svg(data, obj) {
 		.append('circle')
 		.attr('r', obj.svg.dotradius)
 		.attr('fill', 'red')
-		.on('mouseover', d => {
+		.on('mouseover', (event, d) => {
 			console.log(d)
 			obj.tip.clear()
 			const div = obj.tip.d.append('div').style('margin', '10px')

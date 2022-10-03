@@ -643,9 +643,9 @@ function table_sort(mlst, table, attrlst, tk, trclick) {
 			tr.on('click', () => trclick(s))
 		}
 		if (tk.eplst) {
-			tr.on('mouseover', m => {
+			tr.on('mouseover', (event, m) => {
 				for (const ep of tk.eplst) ep.may_hl([s], true)
-			}).on('mouseout', m => {
+			}).on('mouseout', (event, m) => {
 				for (const ep of tk.eplst) ep.may_hl([s], false)
 			})
 		}

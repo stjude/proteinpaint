@@ -255,9 +255,10 @@ module.exports = genomes => {
 				/* for every request with a gdc file uuid (slice bam, view a bam, view a read etc)
 				always make an api query to verify access to prevent unauthorized access
 				*/
+				const sessionid = req.cookies.sessionid
 				const token = req.get('x-auth-token')
-				if (!token) throw 'GDC token missing'
-				await gdcCheckPermission(req.query.gdcFileUUID, token)
+				if (!token && !sessionid) throw 'GDC token or sessionid missing'
+				await gdcCheckPermission(req.query.gdcFileUUID, token, sessionid)
 				/* authorized. compute persistent cache file name using uuid etc
 				cache file name is never revealed to client
 				*/
@@ -3167,14 +3168,15 @@ async function download_gdc_bam(req) {
 			r.stop,
 			req.get('x-auth-token'),
 			req.query.gdcFileUUID,
-			getGDCcacheFileName(req)
+			getGDCcacheFileName(req),
+			req.cookies.sessionid
 		)
 		gdc_bam_filenames.push({ filesize })
 	}
 	return gdc_bam_filenames
 }
 
-async function gdcCheckPermission(gdcFileUUID, token) {
+async function gdcCheckPermission(gdcFileUUID, token, sessionid) {
 	// suggested by Phil on 4/19/2022
 	// use the download endpoint and specify a zero byte range
 	const headers = {
@@ -3182,7 +3184,9 @@ async function gdcCheckPermission(gdcFileUUID, token) {
 		Accept: 'application/json',
 		Range: 'bytes=0-0'
 	}
-	headers['X-Auth-Token'] = token
+	if (sessionid) headers['Cookie'] = `sessionid=${sessionid}`
+	else headers['X-Auth-Token'] = token
+	//headers['Cookie'] = `tboidx3joqyu786qe5em8h42qx5zw6f5; csrftoken=32UVb0LOoDkOe7FLNckoP3MScyd6wK6AFofRSwK9KA3A5wACoq7whLFCphv0HFX8; _shibsession_64656661756c7468747470733a2f2f706f7274616c2e6764632e63616e6365722e676f762f617574682f73686962626f6c657468=_5d3baf416d7bb5f9edca9229d067ae25`
 	const url = apihost + '/data/' + gdcFileUUID
 	try {
 		const response = await got(url, { method: 'GET', headers })
@@ -3192,14 +3196,16 @@ async function gdcCheckPermission(gdcFileUUID, token) {
 			throw 'Invalid status code: ' + response.statusCode
 		}
 	} catch (e) {
+		console.log('gdcCheckPermission error: ', e?.code)
 		// TODO refer to e.code
 		throw 'Permission denied'
 	}
 }
 
-async function get_gdc_bam(chr, start, stop, token, gdcFileUUID, bamfilename) {
+async function get_gdc_bam(chr, start, stop, token, gdcFileUUID, bamfilename, sessionid) {
 	const headers = { 'Content-Type': 'application/json', Accept: 'application/json' }
-	headers['X-Auth-Token'] = token
+	if (sessionid) headers['Cookie'] = `sessionid=${sessionid}`
+	else headers['X-Auth-Token'] = token
 	const fullpath = path.join(serverconfig.cachedir_bam, bamfilename)
 	const url = apihost + '/slicing/view/' + gdcFileUUID + '?region=' + chr + ':' + start + '-' + stop
 	try {

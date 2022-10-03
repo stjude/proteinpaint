@@ -719,7 +719,7 @@ function showgeneplot(tk, block, gene) {
 							const lst = [{ k: 'sample', v: t.name }, { k: gvtk.multivaluekey, v: d.name }, { k: 'value', v: d.value }]
 							setTimeout(make_table_2col(tk.tktip.d, lst), 500)
 						})
-						.on('mouseout', d => {
+						.on('mouseout', (event, d) => {
 							const valuekeyname = d.name
 							// de-highlight
 							for (const t of tk.tracks) {

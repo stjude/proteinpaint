@@ -449,7 +449,7 @@ function make_genome_browser_btn(app, headbox, jwt) {
 		.style('padding', padw)
 		.datum(genomename)
 		.text(genomename + ' genome browser')
-		.on('click', genomename => {
+		.on('click', (event, genomename) => {
 			let sandbox_div = newSandboxDiv(app.drawer.opts.sandboxDiv)
 
 			const g = app.genomes[genomename]
@@ -457,7 +457,6 @@ function make_genome_browser_btn(app, headbox, jwt) {
 				alert('Invalid genome name: ' + genomename)
 				return
 			}
-
 			sandbox_div.header.text(genomename + ' genome browser')
 
 			const par = {
@@ -804,6 +803,7 @@ async function parseEmbedThenUrl(arg, app) {
 			holder: app.holder0,
 			state: res.state,
 			genome: app.genomes[res.state.vocab.genome],
+			massSessionDuration: res.massSessionDuration,
 			getDatasetAccessToken: arg.getDatasetAccessToken,
 			addLoginCallback: arg.addLoginCallback
 		}

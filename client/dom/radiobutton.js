@@ -42,7 +42,7 @@ export function make_radios(arg) {
 		.attr('type', 'radio')
 		.attr('name', inputName)
 		.attr('value', d => d.value)
-		.on('input', async d => {
+		.on('input', async (event, d) => {
 			inputs.property('disabled', true)
 			await callback(d.value)
 			inputs.property('disabled', false)

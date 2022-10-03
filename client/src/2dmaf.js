@@ -1202,9 +1202,9 @@ select_share
 		height:indelboxw,
 		'shape-rendering':'crispEdges'
 		})
-	.on('mouseover',function(d){ sja.f.crypt_2dmaf_dotmover(d,this) })
-	.on('mouseout',function(d){ sja.f.crypt_2dmaf_dotmout(d,this) })
-	.on('click',function(d){ sja.f.crypt_2dmaf_minfo(pdata.header,d) })
+	.on('mouseover',function(event,d){ sja.f.crypt_2dmaf_dotmover(d,this) })
+	.on('mouseout',function(event,d){ sja.f.crypt_2dmaf_dotmout(d,this) })
+	.on('click',function(event,d){ sja.f.crypt_2dmaf_minfo(pdata.header,d) })
 	*/
 
 	// set 1 - total coverage axis
@@ -1323,9 +1323,9 @@ select_set1
 		height:indelboxw,
 		'shape-rendering':'crispEdges'
 		})
-	.on('mouseover',function(d){ sja.f.crypt_2dmaf_dotmover(d,this) })
-	.on('mouseout',function(d){ sja.f.crypt_2dmaf_dotmout(d,this) })
-	.on('click',function(d){ sja.f.crypt_2dmaf_minfo(pdata.header,d) })
+	.on('mouseover',function(event,d){ sja.f.crypt_2dmaf_dotmover(d,this) })
+	.on('mouseout',function(event,d){ sja.f.crypt_2dmaf_dotmout(d,this) })
+	.on('click',function(event,d){ sja.f.crypt_2dmaf_minfo(pdata.header,d) })
 	*/
 
 	// set 2 - total coverage axis

@@ -492,10 +492,10 @@ function get_label4key(key, term, q, ds) {
 			return term.values[key].label
 		}
 		if (q.mode == 'cox') {
-			// key is event status from cox sql query (0 = no event; 1 = event; -1 = event before study enrollment)
+			// key is event status from cox sql query (0 = no event; 1 = event; -1 = Event before entry into the cohort)
 			// if key is -1, return descriptive label
 			// otherwise, use key to get label from q.groupNames
-			if (key === -1) return 'Event before study enrollment'
+			if (key === -1) return 'Event before entry into the cohort'
 			return q.groupNames[key]
 		}
 		// breaks[] has values, chart is by group and key should be group name
@@ -1058,7 +1058,7 @@ thus less things to worry about...
 	returned object will have "undefined" as key. make sure an object like {undefined:"xx"} can work in client side
 	*/
 	q.getSupportedChartTypes = embedder => {
-		const cred = serverconfig.dsCredentials?.[ds.label] || {}
+		const cred = serverconfig.dsCredentials?.[ds.label]
 
 		const rows = cn
 			.prepare(
@@ -1087,7 +1087,7 @@ thus less things to worry about...
 				if (ds.cohort.scatterplots) supportedChartTypes[r.cohort].add('sampleScatter')
 				numericTypeCount[r.cohort] = 0
 				if (ds.cohort.allowedChartTypes?.includes('matrix')) supportedChartTypes[r.cohort].add('matrix')
-				if (!cred.secret || embedder in cred.secret) {
+				if (cred?.embedders?.[embedder]) {
 					supportedChartTypes[r.cohort].add('dataDownload')
 				}
 			}

@@ -1105,7 +1105,7 @@ chrbar.filter(function(d){return d.pxwidth>d.labelwidth+10})
 				if (!d.gm) {
 					return
 				}
-				let aa = d.scale.invert(pointer(event, this)[0])
+				let aa = d.scale.invert(pointer(event)[0])
 				let pstr = null
 				const domainlst = []
 				if (d.upstream) {
@@ -1227,7 +1227,7 @@ chrbar.filter(function(d){return d.pxwidth>d.labelwidth+10})
 				const b = d3select(document.body)
 				const x0 = event.clientX,
 					y0 = event.clientY
-				b.on('mousemove', () => {
+				b.on('mousemove', event => {
 					event.preventDefault()
 					this.width = this.width0 + event.clientX - x0
 					setpxsize()
@@ -1703,7 +1703,7 @@ chrbar.filter(function(d){return d.pxwidth>d.labelwidth+10})
 									.style('background-color', e.fill)
 									.style('cursor', 'default')
 									.html('&nbsp;')
-									.on('click', () => {
+									.on('click', event => {
 										if (scf.gm.domain_hidden[e.key]) {
 											delete scf.gm.domain_hidden[e.key]
 										} else {
@@ -1712,7 +1712,7 @@ chrbar.filter(function(d){return d.pxwidth>d.labelwidth+10})
 										allpdomain
 											.filter(d => d.__scf.clipid == scf.clipid && d.name + d.description == e.key)
 											.transition()
-											.attr('height', event => {
+											.attr('height', () => {
 												if (e.key in scf.gm.domain_hidden) {
 													event.target.innerHTML = '&times;'
 													return 0

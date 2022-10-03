@@ -21,7 +21,7 @@ copy_term
 ********************** INTERNAL
 trigger_*
 */
-
+//temporary solution to make some requests to correctly decode parameters
 const encodedParams = [
 	'filter',
 	'tvslst',
@@ -31,7 +31,9 @@ const encodedParams = [
 	'info_fields',
 	'outcome',
 	'independent',
-	'terms'
+	'terms',
+	'colorTW',
+	'shapeTW'
 ]
 
 const limitSearchTermTo = 10
@@ -151,11 +153,9 @@ function trigger_gettermdbconfig(q, res, tdb, cohort) {
 		selectCohort: tdb.selectCohort, // optional
 		supportedChartTypes: tdb.q.getSupportedChartTypes(q.embedder),
 		allowedTermTypes: tdb.allowedTermTypes || [],
-		termMatch2geneSet: tdb.termMatch2geneSet,
-		scatterplots: cohort.scatterplots
+		termMatch2geneSet: tdb.termMatch2geneSet
 	}
 	if (tdb.helpPages) c.helpPages = tdb.helpPages
-	if (tdb.coxCumincXlab) c.coxCumincXlab = tdb.coxCumincXlab
 	if (tdb.timeScale) c.timeScale = tdb.timeScale
 	if (tdb.minTimeSinceDx) c.minTimeSinceDx = tdb.minTimeSinceDx
 	if (tdb.restrictAncestries) {
@@ -177,7 +177,7 @@ function trigger_gettermdbconfig(q, res, tdb, cohort) {
 	if (cohort.scatterplots) {
 		// this dataset has premade scatterplots. reveal to client
 		c.scatterplots = cohort.scatterplots.plots.map(p => {
-			return { name: p.name, dimensions: p.dimensions, term: p.term }
+			return { name: p.name, dimensions: p.dimensions, colorTW: p.colorTW, shapeTW: p.shapeTW }
 		})
 	}
 

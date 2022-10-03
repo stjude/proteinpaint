@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## 2.4.0
+
+- d3 upgrade to version 7
+- prototype the sample scatter plot in the MASS UI
+
+GDC-related
+- Use the portal.gdc.* URL to handle the sessionid cookie, instead of api.gdc.* with X-Auth-Token
+
 ## 2.3.1
 
 GDC-related

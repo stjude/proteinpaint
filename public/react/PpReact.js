@@ -118,7 +118,9 @@ function getBamTrack(props /*: PpProps*/, filter0 /*: any*/) {
 	// using the same domain as the GDC portal where PP is embedded
 	const arg /*: BamArg*/ = {
 		host: props.basepath || basepath /*as string*/,
-		gdcbamslice: true,
+		gdcbamslice: {
+			hideTokenInput: true
+		},
 		filter0
 	}
 

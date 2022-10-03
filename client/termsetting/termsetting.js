@@ -296,7 +296,7 @@ function setRenderers(self) {
 				.style('color', '#999')
 				.style('font-size', '.8em')
 				.html(d => d.toUpperCase())
-				.on('click', d => {
+				.on('click', (event, d) => {
 					if (d == 'delete') self.removeTerm()
 					else if (d == 'replace') {
 						self.showTree(event.target)
