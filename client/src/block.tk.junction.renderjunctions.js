@@ -1084,7 +1084,7 @@ function junctionsamplespread(j, tk, block) {
 			samplejunctiontooltip(j, bee.datum, tk, tk.tktip.d)
 		})
 		.on('mouseout', event => d3select(event.target).attr('fill-opacity', opacity))
-		.on('click', bee => {
+		.on('click', (event, bee) => {
 			if (tk.tracks) {
 				// FIXME need cohort
 				/*

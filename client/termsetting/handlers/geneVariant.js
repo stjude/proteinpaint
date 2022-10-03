@@ -106,7 +106,7 @@ function makeEditMenu(self, _div) {
 				.append('div')
 				.style('margin', '5px')
 				.style('display', 'inline-block')
-				.on('click', function(d) {
+				.on('click', function(event, d) {
 					const i = exclude.indexOf(d.key)
 					if (i == -1) exclude.push(d.key)
 					else exclude.splice(i, 1)
