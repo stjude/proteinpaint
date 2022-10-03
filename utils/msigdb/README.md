@@ -16,6 +16,19 @@ cd ~/dev/proteinpaint/utils/msigdb/
 
 node msigdb.js ~/data/tp/msigdb/msigdb_v2022.1.Hs_files_to_download_locally/msigdb_v2022.1.Hs.xml ~/data/tp/msigdb/
 
+# do below to get the gene annotation files if missing
+cd ~/data/tp/anno/tmp
+node ~/dev/proteinpaint/utils/genes/hgnc.alias.js human.genealias.raw > ../human.genealias
+# made anno/human.genealias
+curl https://hgdownload.soe.ucsc.edu/goldenPath/hg38/database/wgEncodeGencodeAttrsV41.txt.gz  |gunzip > wgEncodeGencodeAttrsV41.txt
+# made anno/tmp/wgEncodeGencodeAttrsV41.txt
+curl https://hgdownload.soe.ucsc.edu/goldenPath/hg38/database/knownCanonical.txt.gz | gunzip > knownCanonicalGenecode.txt
+# made anno/tmp/knownCanonicalGenecode.txt
+curl https://hgdownload.soe.ucsc.edu/goldenPath/hg38/database/ncbiRefSeqSelect.txt.gz  |gunzip > ncbiRefSeqSelect.txt
+node ~/dev/proteinpaint/utils/genes/refgene.canonical.js ncbiRefSeqSelect.txt > refseq.canonical
+# made anno/tmp/refseq.canonical
+
+# update term2genes
 node updateGenes.js ~/data/tp/msigdb/term2genes ~/data/tp/anno/human.genealias ~/data/tp/anno/tmp/wgEncodeGencodeAttrsV41.txt ~/data/tp/anno/tmp/knownCanonicalGenecode.txt ~/data/tp/anno/tmp/refseq.canonical > ~/data/tp/msigdb/term2genes.updated
 ```
 The following files are made at tp/msigndb/:
