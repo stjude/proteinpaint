@@ -119,7 +119,7 @@ class Scatter {
 			symbolCross,
 			symbolWye,
 			symbolTriangle,
-			symbolAsterisk,
+			//symbolAsterisk,
 			symbolDiamond,
 			symbolDiamond2,
 			symbolStar,
@@ -255,8 +255,9 @@ class Scatter {
 			const color = 'gray'
 			for (const shape of shapes) {
 				const index = shape[1].shape % this.symbols.length
-				const category_shape = this.symbols[index].size(20)()
+				const category_shape = this.symbols[index].size(64)()
 				const name = shape[0]
+
 				const row = shapeDiv
 					.append('div')
 					.attr('class', 'sja_clb')
@@ -265,14 +266,15 @@ class Scatter {
 				row
 					.append('div')
 					.style('display', 'inline-block')
+
 					.append('svg')
 					.attr('width', 20)
-					.attr('height', 20)
+					.attr('height', 22)
 
 					.append('path')
 					.attr('d', category_shape)
 					.attr('fill', color)
-					.attr('transform', c => `translate(15,15)`)
+					.attr('transform', c => `translate(10, 15)`)
 
 				row
 					.append('div')
@@ -493,6 +495,7 @@ function setRenderers(self) {
 			const k = event.transform.scale(1).k
 			//on zoom in the particle size is kept
 			symbols.attr('d', c => self.symbols[c.shape].size(self.settings.radius / k)())
+			if (self.lassoOn) lasso.selectedItems().attr('d', c => self.symbols[c.shape].size(self.settings.radius)())
 		}
 
 		function zoomIn() {
