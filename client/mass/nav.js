@@ -38,6 +38,7 @@ class TdbNav {
 		this.searching = false
 		this.samplecounts = {}
 		this.massSessionDuration = opts.massSessionDuration
+		this.sessionDaysElapsed = opts.app.opts.sessionDaysElapsed || null
 		setInteractivity(this)
 		setRenderers(this)
 	}
@@ -77,6 +78,7 @@ class TdbNav {
 					maxHistoryLen: 5
 				})
 			})
+			this.mayShowMessage_sessionDaysElapsed()
 		} catch (e) {
 			throw e
 		}
@@ -137,30 +139,29 @@ export const navInit = getCompInit(TdbNav)
 function setRenderers(self) {
 	self.initUI = appState => {
 		const header = self.opts.holder.append('div')
+		const tabDiv = header
+			.append('div')
+			.style('display', 'none')
+			.style('vertical-align', 'bottom')
+		const controlsDiv = header
+			//Fix for adding message underneath the search bar and buttons
+			.append('div')
+			.style('vertical-align', 'top')
+			.style('margin', '10px')
+			.style('display', 'inline-block')
 		self.dom = {
 			holder: self.opts.holder,
 			header,
-			tabDiv: header
-				.append('div')
-				.style('display', 'none')
-				.style('vertical-align', 'bottom'),
-			searchDiv: header
+			tabDiv,
+			controlsDiv,
+			searchDiv: controlsDiv
 				.append('div')
 				//.style('display', 'none')
-				.style('margin', '10px')
-				.style('vertical-align', 'top'),
-			sessionDiv: header
-				.append('div')
-				.style('display', 'inline-block')
-				.style('vertical-align', 'top'),
-			recoverDiv: header
-				.append('div')
-				.style('display', 'inline-block')
-				.style('vertical-align', 'top'),
-			helpDiv: header
-				.append('div')
-				.style('display', 'none')
-				.style('vertical-align', 'top'),
+				.style('margin', '10px'),
+			sessionDiv: controlsDiv.append('div').style('display', 'inline-block'),
+			recoverDiv: controlsDiv.append('div').style('display', 'inline-block'),
+			helpDiv: controlsDiv.append('div').style('display', 'none'),
+			sessionElapsedMessageDiv: controlsDiv.append('div').style('display', 'none'),
 			subheaderDiv: self.opts.holder
 				.append('div')
 				.style('display', 'block')
@@ -169,7 +170,6 @@ function setRenderers(self) {
 			messageDiv: self.opts.holder
 				.append('div')
 				.style('margin', '30px')
-				//.style('font-weight', 'bold')
 				.style('display', 'none'),
 			tip: new Menu({ padding: '5px' })
 		}
@@ -275,6 +275,19 @@ function setRenderers(self) {
 					}
 				})
 		}
+	}
+
+	self.mayShowMessage_sessionDaysElapsed = () => {
+		if (!Number.isFinite(self.sessionDaysElapsed)) {
+			// info not available, do not show msg
+			return
+		}
+		self.dom.sessionElapsedMessageDiv.style('display', 'block')
+		self.dom.remainingDaysMessage = self.dom.sessionElapsedMessageDiv
+			.append('div')
+			.style('display', 'block')
+			.style('opacity', '0.65')
+			.html(`<u>${self.sessionDaysElapsed} days</u> left till this session is removed. You can save a new one.`)
 	}
 
 	self.updateUI = () => {
@@ -483,6 +496,7 @@ function setInteractivity(self) {
 	}
 
 	self.getSessionUrl = async () => {
+		self.dom.saveBtn.property('disabled', true)
 		const res = await dofetch3('/massSession', {
 			method: 'POST',
 			body: JSON.stringify(self.app.getState())
@@ -494,7 +508,10 @@ function setInteractivity(self) {
 			.append('div')
 			.style('margin', '10px')
 			.html(
-				`<a href='${url}' target=_blank>${url}</a><br><div style="font-size:.8em;opacity:.6"><span>Click URL to recover this session. You can bookmark or share this URL.</span><br><span>This session will be saved for ${self.massSessionDuration} days.</span></div>`
+				`<a href='${url}' target=_blank>${res.id}</a><br><div style="font-size:.8em;opacity:.6"><span>Click the link to recover this session. You can bookmark or share this link.</span><br><span>This session will be saved for ${self.massSessionDuration} days.</span></div>`
 			)
+		setTimeout(() => {
+			self.dom.saveBtn.property('disabled', false)
+		}, 1000)
 	}
 }

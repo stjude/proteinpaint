@@ -153,7 +153,8 @@ function trigger_gettermdbconfig(q, res, tdb, cohort) {
 		selectCohort: tdb.selectCohort, // optional
 		supportedChartTypes: tdb.q.getSupportedChartTypes(q.embedder),
 		allowedTermTypes: tdb.allowedTermTypes || [],
-		termMatch2geneSet: tdb.termMatch2geneSet
+		termMatch2geneSet: tdb.termMatch2geneSet,
+		massSessionDuration: serverconfig.features.massSessionDuration || 30
 	}
 	if (tdb.helpPages) c.helpPages = tdb.helpPages
 	if (tdb.timeScale) c.timeScale = tdb.timeScale

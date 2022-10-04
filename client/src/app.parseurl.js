@@ -89,11 +89,9 @@ upon error, throw err message as a string
 	if (urlp.has('mass')) {
 		const str = urlp.get('mass')
 		const state = JSON.parse(str)
-		const res = await client.dofetch('/massSession')
 		const opts = {
 			holder: arg.holder,
-			state,
-			massSessionDuration: res.massSessionDuration
+			state
 		}
 		if (state.genome) {
 			opts.genome = arg.genomes[state.genome]
@@ -118,14 +116,14 @@ upon error, throw err message as a string
 				.style('margin', '10px')
 				.style('font-weight', '550')
 				.text(
-					`Starting soon sessions older than ${res.massSessionDuration} days will be deleted. To save a new session, click Save, and bookmark the new session URL`
+					`On Nov 1st, 2022, sessions older than ${res.massSessionDuration} days will be deleted. To save a new session, click Save, and bookmark the new session URL`
 				)
 		}
 		const opts = {
 			holder: arg.holder,
 			state: res.state,
 			genome: arg.genomes[res.state.vocab.genome],
-			massSessionDuration: res.massSessionDuration
+			sessionDaysElapsed: res.sessionDaysElapsed
 		}
 		const _ = await import('../mass/app')
 		_.appInit(opts)

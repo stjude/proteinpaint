@@ -14,8 +14,7 @@ export async function save(req, res) {
 		await utils.write_file(path.join(serverconfig.cachedir_massSession, sessionID), content)
 
 		res.send({
-			id: sessionID,
-			massSessionDuration: serverconfig.features.massSessionDuration ? serverconfig.features.massSessionDuration : 30
+			id: sessionID
 		})
 	} catch (e) {
 		res.send({ error: e.message || e })
@@ -28,15 +27,25 @@ export async function get(req, res) {
 	try {
 		if (!req.query.id) throw 'session id missing'
 		const file = path.join(serverconfig.cachedir_massSession, req.query.id)
+		let sessionCreationDate
 		try {
-			await fs.promises.stat(file)
+			const s = await fs.promises.stat(file)
+			sessionCreationDate = s.birthtime
 		} catch (e) {
 			throw 'invalid session'
 		}
 		const state = await utils.read_file(file)
+
+		//Calculate the remaining number of days before session files will be deleted
+		const today = new Date()
+		const fileDate = new Date(sessionCreationDate)
+		const massSessionDuration = serverconfig.features.massSessionDuration || 30
+		const sessionDaysElapsed =
+			massSessionDuration - Math.round((today.getTime() - fileDate.getTime()) / (1000 * 3600 * 24))
+
 		res.send({
 			state: JSON.parse(state),
-			massSessionDuration: serverconfig.features.massSessionDuration ? serverconfig.features.massSessionDuration : 30
+			sessionDaysElapsed
 		})
 	} catch (e) {
 		res.send({ error: e.message || e })
