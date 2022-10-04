@@ -265,9 +265,12 @@ async function step3(arg) {
 		since mds3 ds is loaded from mds3/makeTk, when initiating a track
 		*/
 		if (!Array.isArray(arg.dataset)) throw 'dataset is not array'
+
 		// load dataset client-side object, register in genome
 		for (const dsname of arg.dataset) {
-			if (arg.genome.datasets[dsname]) continue
+			// potentially problematic logic: only skip the dataset when that flag is false
+			// if the flag is true, tells the legacy ds is uninitiated
+			if (arg.genome.datasets[dsname] && !arg.genome.datasets[dsname].legacyDsIsUninitiated) continue
 			const d = await dofetch3(`getDataset?genome=${arg.genome.name}&dsname=${dsname}`)
 			if (d.error) throw `invalid name from dataset[]: ${d.error}`
 			if (!d.ds) throw '.ds missing'
