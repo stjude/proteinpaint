@@ -34,6 +34,7 @@ const section_BAM = 'BAM',
 	section_miscTk = 'Misc track types',
 	section_study = 'legacy study',
 	section_mds = 'mds',
+	section_legacyds = 'legacy ds', // to be replaced by mds3
 	section_scatterplot = 'scatterplot',
 	section_singleCell = 'single cell',
 	section_termdbTree = 'termdb tree',
@@ -342,6 +343,14 @@ makeURL([
 		['ERG','?study=proteinpaint_demo/hg19/heatmap/heatmapDemo.json'],
 	]
 },
+
+{name:section_legacyds,
+	links:[
+		['pediatric','?genome=hg19&gene=bcr&dataset=pediatric'],
+		['cosmic','?genome=hg19&gene=bcr&dataset=COSMIC'],
+	]
+},
+
 {name:section_mds,
 	card:'genomepaint',
 	links:[
