@@ -179,23 +179,6 @@ async function mayColorAndFilterSamples(allSamples, q, ds) {
 		return [allSamples]
 	}
 
-	/******************************
-	!!!!!!!!!!!!!! following checks are stop-gap
-	fixes must be done in upstream and these can be deleted afterwards
-	*/
-	// if (typeof q.colorTW == 'string') {
-	// 	q.colorTW = JSON.parse(q.colorTW)
-	// 	console.log('warning!!!! colorTW is stringified json')
-	// }
-	// if (q.shapeTW == 'undefined') {
-	// 	delete q.shapeTW
-	// 	console.log('warning!!!! shapeTW="undefined"')
-	// }
-	// if (typeof q.shapeTW == 'string') {
-	// 	q.shapeTW = JSON.parse(q.shapeTW)
-	// 	console.log('warning!!!! shapeTW is stringified json')
-	// }
-
 	const getRowsParam = {
 		ds,
 		filter: q.filter
@@ -221,11 +204,9 @@ async function mayColorAndFilterSamples(allSamples, q, ds) {
 	// key: category, value: {sampleCount=integer, color=str}
 
 	let shapeCategories
-	if (q.shapeTW) {
-		shapeCategories = new Map()
-		shapeCategories.set('None', { sampleCount: 0 })
-		// key: category, value: {sampleCount=integer, shape=int}
-	}
+	shapeCategories = new Map()
+	shapeCategories.set('None', { sampleCount: 0 })
+	// key: category, value: {sampleCount=integer, shape=int}
 
 	for (const s of allSamples) {
 		if ('sampleId' in s) {
@@ -256,7 +237,7 @@ async function mayColorAndFilterSamples(allSamples, q, ds) {
 					}
 					shapeCategories.get(s.shapeCategory).sampleCount++
 				}
-			}
+			} else shapeCategories.get('None').sampleCount++
 
 			delete s.sampleId // no need to send to client
 			samples.push(s)
@@ -264,6 +245,7 @@ async function mayColorAndFilterSamples(allSamples, q, ds) {
 			// this sample does not has ID, and is un-filterable
 			// always keep it in scatterplot
 			samples.push(s)
+			shapeCategories.get('None').sampleCount++
 		}
 	}
 

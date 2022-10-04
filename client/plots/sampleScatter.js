@@ -1,6 +1,6 @@
 import { getCompInit, copyMerge } from '../rx'
 import { fillTermWrapper } from '../termsetting/termsetting'
-import { select } from 'd3-selection'
+import { select, pointer } from 'd3-selection'
 import { scaleLinear as d3Linear } from 'd3-scale'
 import Partjson from 'partjson'
 import {
@@ -12,7 +12,10 @@ import {
 	symbolSquare,
 	symbolWye,
 	symbolAsterisk,
-	symbolDiamond
+	symbolDiamond,
+	symbolDiamond2,
+	symbolStar,
+	symbolSquare2
 } from 'd3'
 import { d3lasso } from '../common/lasso'
 import { Menu } from '#dom/menu'
@@ -117,7 +120,10 @@ class Scatter {
 			symbolWye,
 			symbolTriangle,
 			symbolAsterisk,
-			symbolDiamond
+			symbolDiamond,
+			symbolDiamond2,
+			symbolStar,
+			symbolSquare2
 		]
 		this.symbols = mySymbols.map(s => symbol(s).size(this.settings.radius))
 
@@ -201,8 +207,14 @@ class Scatter {
 
 	renderLegend(holder, categories, shapes) {
 		holder.selectAll('*').remove()
-		let row = holder
+		const colorDiv = holder.append('div').style('display', 'inline-block')
+		const shapeDiv = holder
 			.append('div')
+			.style('display', 'inline-block')
+			.style('vertical-align', 'top')
+
+		let row = colorDiv
+			.insert('div')
 			.attr('class', 'sja_clb')
 			.style('display', 'block')
 			.style('font-weight', 'bold')
@@ -214,7 +226,7 @@ class Scatter {
 			const color = category[1].color
 			const sample_count = category[1].sampleCount
 			const name = category[0]
-			const row = holder
+			const row = colorDiv
 				.append('div')
 				.attr('class', 'sja_clb')
 				.style('display', 'block')
@@ -231,8 +243,8 @@ class Scatter {
 				.html('&nbsp;' + name)
 		}
 		if (this.config.shapeTW) {
-			row = holder
-				.append('div')
+			row = shapeDiv
+				.insert('div')
 				.attr('class', 'sja_clb')
 				.style('display', 'block')
 				.style('font-weight', 'bold')
@@ -241,12 +253,11 @@ class Scatter {
 			items = []
 			let i = 0
 			const color = 'gray'
-
 			for (const shape of shapes) {
-				let category_shape = shape[1].shape
-				category_shape = this.symbols[category_shape].size(20)()
+				const index = shape[1].shape % this.symbols.length
+				const category_shape = this.symbols[index].size(20)()
 				const name = shape[0]
-				const row = holder
+				const row = shapeDiv
 					.append('div')
 					.attr('class', 'sja_clb')
 					.style('display', 'block')
@@ -266,7 +277,7 @@ class Scatter {
 				row
 					.append('div')
 					.style('display', 'inline-block')
-					.html('&nbsp;' + name)
+					.html('&nbsp;' + name + ` (${shape[1].sampleCount})`)
 				i++
 			}
 		}
@@ -337,7 +348,7 @@ function setRenderers(self) {
 		/* eslint-disable */
 		const [mainG, axisG, xAxis, yAxis, xTitle, yTitle] = getSvgSubElems(svg, chart)
 		/* eslint-enable */
-		//if (d.xVals) computeScales(d, s);
+		if (s.showAxes) mainG.attr('clip-path', `url(#${self.id + '-clip'})`)
 
 		const serieses = mainG
 			.selectAll('.sjpcb-scatter-series')
@@ -359,6 +370,7 @@ function setRenderers(self) {
 	function getSvgSubElems(svg, chart) {
 		let mainG, axisG, xAxis, yAxis, xTitle, yTitle
 		if (svg.select('.sjpcb-scatter-mainG').size() == 0) {
+			svg.append('defs')
 			mainG = svg.append('g').attr('class', 'sjpcb-scatter-mainG')
 			axisG = mainG.append('g').attr('class', 'sjpcb-scatter-axis')
 			xAxis = axisG
@@ -379,6 +391,16 @@ function setRenderers(self) {
 				.attr('width', self.settings.svgw)
 				.attr('height', self.settings.svgh)
 				.attr('fill', 'white')
+			//Adding clip path
+			svg
+				.append('defs')
+				.append('clipPath')
+				.attr('id', self.id + '-clip')
+				.append('rect')
+				.attr('x', 80)
+				.attr('y', 0)
+				.attr('width', self.settings.svgw)
+				.attr('height', self.settings.svgh + 20)
 			renderAxes(xAxis, xTitle, yAxis, yTitle, self.settings, chart)
 		} else {
 			mainG = svg.select('.sjpcb-scatter-mainG')
@@ -403,7 +425,7 @@ function setRenderers(self) {
 			.transition()
 			.duration(duration)
 			.attr('transform', c => `translate(${c.scaledX + 100},${c.scaledY})`)
-			.attr('d', c => self.symbols[c.shape]())
+			.attr('d', c => getShape(c))
 			.attr('fill', c => c.color)
 
 			.style('fill-opacity', s.fillOpacity)
@@ -412,12 +434,17 @@ function setRenderers(self) {
 			.append('path')
 			/*** you'd need to set the symbol position using translate, instead of previously with cx, cy for a circle ***/
 			.attr('transform', c => `translate(${c.scaledX + 100},${c.scaledY})`)
-			.attr('d', c => self.symbols[c.shape]())
+			.attr('d', c => getShape(c))
 			.attr('fill', c => c.color)
 
 			.style('fill-opacity', s.fillOpacity)
 			.transition()
 			.duration(duration)
+
+		function getShape(c) {
+			const index = c.shape % self.symbols.length
+			return self.symbols[index]()
+		}
 	}
 
 	function setTools(dom, svg, d) {
@@ -454,10 +481,7 @@ function setRenderers(self) {
 			.on('zoom', handleZoom)
 
 		mainG.call(zoom)
-		rect.call(zoom)
-		let x = 0,
-			y = 0
-		let k = 1
+
 		function handleZoom(event) {
 			// create new scale ojects based on event
 			const new_xScale = event.transform.rescaleX(self.xAxisScale)
@@ -466,9 +490,11 @@ function setRenderers(self) {
 			xAxisG.call(self.axisBottom.scale(new_xScale))
 			yAxisG.call(self.axisLeft.scale(new_yScale))
 			seriesG.attr('transform', event.transform)
-			k = event.transform.scale(1).k
-			symbols.attr('r', 4 / k)
+			const k = event.transform.scale(1).k
+			//on zoom in the particle size is kept
+			symbols.attr('d', c => self.symbols[c.shape].size(self.settings.radius / k)())
 		}
+
 		function zoomIn() {
 			zoom.scaleBy(mainG.transition().duration(750), 1.5)
 		}
@@ -544,7 +570,6 @@ function setRenderers(self) {
 			self.lassoOn = !self.lassoOn
 			if (self.lassoOn) {
 				mainG.on('.zoom', null)
-				rect.on('.zoom', null)
 				mainG.call(lasso)
 			} else {
 				mainG.on('mousedown.drag', null)
@@ -555,7 +580,6 @@ function setRenderers(self) {
 					.attr('r', self.settings.radius)
 					.style('fill-opacity', '1')
 				mainG.call(zoom)
-				rect.call(zoom)
 			}
 			lassoDiv.select('*').remove()
 			icon_functions['lasso'](lassoDiv, { handler: toggle_lasso, enabled: self.lassoOn })

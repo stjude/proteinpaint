@@ -457,7 +457,7 @@ export const icons = {
 		elem.html(svg).on('click', opts.handler)
 	},
 	lasso: (elem, opts) => {
-		const color = opts.enabled ? 'black' : 'gray'
+		const color = opts.enabled ? 'black' : 'LightGray'
 		const _opts = { color: color, width: 18, height: 18 }
 		Object.assign(_opts, opts)
 		const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${_opts.width}" height="${_opts.height}" fill="${_opts.color}" class="bi bi-zoom-in" viewBox="0 0 16 16">
