@@ -14,6 +14,13 @@
 				"nativetracks": "RefGene",
 				"tracks": [
 					{
+						"type": "bedj",
+						"file": "anno/refGene.hg19.gz",
+						"color": "#1D591D",
+						"name": "RefGene",
+						"filterByName": "NM_000222"
+					},
+					{
 						"type": "bam",
 						"file": "proteinpaint_demo/hg19/bam/kit.exon8.del.bam",
 						"name": "WES KIT exon mutation demo"
@@ -39,6 +46,13 @@
 				"nativetracks": "RefGene",
 				"tracks": [
 					{
+						"type": "bedj",
+						"file": "anno/refGene.hg19.gz",
+						"color": "#1D591D",
+						"name": "RefGene",
+						"filterByName": "NM_000546"
+					},
+					{
 						"type": "bam",
 						"file": "proteinpaint_demo/hg19/bam/TP53_del.bam",
 						"name": "TP53 deletion demo",
@@ -49,8 +63,7 @@
 								"ref": "AGCAGCGCTCATGGTGGGG",
 								"alt": "A"
 							}
-						],
-						"bedjfilterbyname": "NM_000546"
+						]
 					}
 				]
 			},
@@ -71,6 +84,13 @@
 				"position": "chr4:55589768-55589770",
 				"nativetracks": "RefGene",
 				"tracks": [
+					{
+						"type": "bedj",
+						"file": "anno/refGene.hg19.gz",
+						"color": "#1D591D",
+						"name": "RefGene",
+						"filterByName": "NM_000222"
+					},
 					{
 						"type": "bam",
 						"file": "proteinpaint_demo/hg19/bam/wrong_indel.bam",
@@ -104,6 +124,13 @@
 				"nativetracks": "RefGene",
 				"tracks": [
 					{
+						"type": "bedj",
+						"file": "anno/refGene.hg19.gz",
+						"color": "#1D591D",
+						"name": "RefGene",
+						"filterByName": "NM_014159"
+					},
+					{
 						"type": "bam",
 						"file": "proteinpaint_demo/hg19/bam/splice_junction_variant.bam",
 						"name": "SETD2 splice site 5-bp insertion",
@@ -136,6 +163,13 @@
 				"nativetracks": "RefGene",
 				"tracks": [
 					{
+						"type": "bedj",
+						"file": "anno/refGene.hg19.gz",
+						"color": "#1D591D",
+						"name": "RefGene",
+						"filterByName": "NM_000222"
+					},
+					{
 						"type": "bam",
 						"file": "proteinpaint_demo/hg19/bam/multi_allele.bam",
 						"name": "CTGACAGGCT Alternate Allele",
@@ -147,6 +181,13 @@
 								"alt": "CTGACAGGCT"
 							}
 						]
+					},
+					{
+						"type": "bedj",
+						"file": "anno/refGene.hg19.gz",
+						"color": "#1D591D",
+						"name": "RefGene",
+						"filterByName": "NM_000222"
 					},
 					{
 						"type": "bam",
@@ -190,6 +231,13 @@
 				"position": "chr16:3800245-3803429",
 				"nativetracks": "RefGene",
 				"tracks": [
+					{
+						"type": "bedj",
+						"file": "anno/refGene.hg19.gz",
+						"color": "#1D591D",
+						"name": "RefGene",
+						"filterByName": "NM_004380"
+					},
 					{
 						"type": "bam",
 						"file": "proteinpaint_demo/hg19/bam/crebbp.bam",
