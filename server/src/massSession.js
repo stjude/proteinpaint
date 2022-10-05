@@ -45,7 +45,8 @@ export async function get(req, res) {
 
 		res.send({
 			state: JSON.parse(state),
-			sessionDaysElapsed
+			sessionDaysElapsed,
+			massSessionDuration
 		})
 	} catch (e) {
 		res.send({ error: e.message || e })
