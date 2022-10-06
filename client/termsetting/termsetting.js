@@ -767,14 +767,14 @@ export async function fillTermWrapper(tw, vocabApi, defaultQ) {
 
 	if (!tw.q) tw.q = {}
 
-	// always set default q.mode if missing; this allows numeric continuous/discrete toggle to work when tw.q.mode is missing
-	if (!tw.q.mode) tw.q.mode = 'discrete'
-
-	if (typeof tw.q.mode != 'string') throw 'q.mode is not string'
-	if (!allowedQmodes.has(tw.q.mode)) throw 'invalid q.mode'
-
 	// call term-type specific logic to fill tw
 	await call_fillTW(tw, vocabApi, defaultQ)
+
+	if ('mode' in tw.q) {
+		// q.mode is set. validate
+		if (typeof tw.q.mode != 'string') throw 'q.mode not string'
+		if (!allowedQmodes.has(tw.q.mode)) throw 'invalid value for q.mode'
+	}
 }
 
 async function call_fillTW(tw, vocabApi, defaultQ) {
