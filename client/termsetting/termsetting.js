@@ -26,6 +26,8 @@ const defaultOpts = {
 	menuLayout: 'vertical'
 }
 
+const allowedQmodes = new Set(['discrete', 'binary', 'continuous', 'spline', 'cuminc', 'cox'])
+
 class TermSetting {
 	constructor(opts) {
 		this.opts = this.validateOpts(opts)
@@ -762,7 +764,15 @@ export async function fillTermWrapper(tw, vocabApi, defaultQ) {
 	} else if (tw.id != tw.term.id) {
 		throw 'the given ids (tw.id and tw.term.id) are different'
 	}
+
 	if (!tw.q) tw.q = {}
+
+	// always set default q.mode if missing; this allows numeric continuous/discrete toggle to work when tw.q.mode is missing
+	if (!tw.q.mode) tw.q.mode = 'discrete'
+
+	if (typeof tw.q.mode != 'string') throw 'q.mode is not string'
+	if (!allowedQmodes.has(tw.q.mode)) throw 'invalid q.mode'
+
 	// call term-type specific logic to fill tw
 	await call_fillTW(tw, vocabApi, defaultQ)
 }
