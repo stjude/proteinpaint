@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="theme/dist/images/favicon.icon">
+
+    <title>GenomePaint BAM Track</title></head>
+<style>
+
+img {
+    max-width:75vw;
+	display: block;
+	margin: 2vw 0vw 5vw 7vw;
+	border: 1px solid #f7f7f7;
+}
+
+.p-text {
+    margin:0px 0px 30px 30px;
+    font-family: Arial, Helvetica, sans-serif;
+}
+
+h3 {
+    font-size: 1.25em;
+}
+
+</style>
+<body >
+<script src="https://proteinpaint.stjude.org/bin/proteinpaint.js" charset="utf-8"></script>
+
+<h2 style='opacity:0.6; font-size: 2em; margin:2vw 0vw 0vw 2vw;'>Welcome to the ProteinPaint BAM track</h2>
+<div style="margin: 1vw 8vw 4vw 3vw; font-size: 1.15em; line-height: 1.25;">
+    <p class="p-text"><em>This site supports a manuscript under submission.</em></p>
+
+    <h3>Documentation</h3>
+    <div class="p-text">
+         <p><a href=https://docs.google.com/document/d/1LeadJcW9LBbUidsXo_j2m-O3ytNRUrj0zoHBNh3aGx4/edit# target=_blank>
+        BAM track tutorial</a>
+         </p>
+    </div>
+    
+    <h3>Variant review examples</h3>
+    <div class="p-text">
+        <p><a href=https://proteinpaint.stjude.org/?genome=hg19&block=1&bamfile=TP53_del,proteinpaint_demo/hg19/bam/TP53_del.bam&position=chr17:7578191-7578591&variant=chr17.7578383.AGCAGCGCTCATGGTGGGG.A&bedjfilterbyname=NM_000546 target=_blank>
+        TP53 exonic 18-bp deletion.</a>
+        Capture deep sequencing</p>
+        
+        <p>CBL exonic complex mutation:
+        <a href=https://proteinpaint.stjude.org/?genome=hg19&block=1&bamfile=SJAML040555_D2%20WES,proteinpaint_demo/hg19/bam/wrong_indel.bam&position=chr4:55589768-55589770&variant=chr4.55589768.CTTACGA.ACGG&bedjfilterbyname=NM_000222 target=_blank>
+        WRONG variant call,</a>
+        <a href=https://proteinpaint.stjude.org/?genome=hg19&block=1&bamfile=SJAML040555_D2%20WES,proteinpaint_demo/hg19/bam/wrong_indel.bam&position=chr4:55589768-55589770&variant=chr4.55589768.CTTACGA.AGGG&bedjfilterbyname=NM_000222 target=_blank>
+        CORRECTED variant call,</a>
+        <a href=https://proteinpaint.stjude.org/?genome=hg19&block=1&mds=Pediatric2,svcnv&sample=SJAML040555_D2-PANVGP&position=chr4:55589751-55589805&bedjfilterbyname=NM_000222 target=_blank>record of this variant</a>.
+        Exome-seq
+        </p>
+        
+        <p><a href=https://proteinpaint.stjude.org/?genome=hg19&block=1&position=chr3:47155260-47155500&hlregion=chr3:47155365-47155365&bamfile=splice_junction_variant,proteinpaint_demo/hg19/bam/splice_junction_variant.bam&variant=chr3.47155366.G.GGGGCT&bedjfilterbyname=NM_014159 target=_blank>
+        SETD2 splice site 5-bp insertion.</a> RNA-seq</p>
+        
+        <p>Multi-allelic KIT exonic complex mutations in one tumor:
+            <a href=https://proteinpaint.stjude.org/?genome=hg19&block=1&position=chr4:55589660-55589870&hlregion=chr4:55589768-55589768&bamfile=Alternate_allele1,proteinpaint_demo/hg19/bam/multi_allele.bam&variant=chr4.55589773.GACAGGC.CTGACAGGCT&bedjfilterbyname=NM_001385285 target=_blank>first mutant allele,</a>
+            <a href=https://proteinpaint.stjude.org/?genome=hg19&block=1&position=chr4:55589660-55589870&hlregion=chr4:55589768-55589768&bamfile=Alternate_allele2,proteinpaint_demo/hg19/bam/multi_allele.bam&variant=chr4.55589766.GACTTACGACA.GTTTC&bedjfilterbyname=NM_001385285 target=_blank>second mutant allele.</a>
+            RNA-seq
+        </p>
+    </div>
+    
+    <h3>Other features</h3>
+    <div class="p-text">
+        Discordant reads at
+        <a href=https://proteinpaint.stjude.org/?genome=hg19&block=1&bamfile=test,proteinpaint_demo/hg19/bam/crebbp.bam&position=chr16:3800245-3803429 target=_blank>focal deletion</a>,
+        <a href=https://proteinpaint.stjude.org/?genome=hg19&block=1&bamfile=test,proteinpaint_demo/hg19/bam/etv6runx1.bam&position=chr12:12022967-12024080 target=_blank>translocation</a>,
+        and
+        <a href=https://proteinpaint.stjude.org/?genome=hg19&block=1&bamfile=test,proteinpaint_demo/hg19/bam/CBFB-MYH11.bam&position=chr16:67115815-67117415 target=_blank>inversion</a>
+    </div>
+    
+    <h3><a href=https://proteinpaint.stjude.org/?noheader=1&gdcbamslice=1 target=_blank>Access BAM files in the NCI GDC portal</a></h3>
+    <div class="p-text">
+        Examples with
+        <a href=https://proteinpaint.stjude.org/?gdcbamslice=1&gdc_id=TCGA-OL-A5RU target=_blank>case ID</a>,
+        <a href=https://proteinpaint.stjude.org/?gdcbamslice=1&gdc_id=4b355c1d-4202-4291-93ec-7882e702bd20 target=_blank>case UUID</a>,
+        <a href=https://proteinpaint.stjude.org/?gdcbamslice=1&gdc_id=71c2d95b-0f1d-4c32-ba5b-eb99b89b8b67_wxs_gdc_realn.bam target=_blank>file ID</a>,
+        and
+        <a href=https://proteinpaint.stjude.org/?gdcbamslice=1&gdc_id=35918f42-c424-48ef-8c95-2d87b48fdf41 target=_blank>file UUID</a>
+    </div>
+
+    <h3>Download the DNAnexus FileViewer</h3>
+    <div class="p-text">
+        <p>DNAnexus provides a secure way to view unpublished/sensitive BAM files as custom ProteinPaint BAM tracks.
+        In doing so, randomized URLs are produced pointing to your files hosted on the DNAnexus platform, expiring in 24 hours.
+        Through the <a href=https://documentation.dnanexus.com/user/objects/visualizing-data#using-file-viewers>FileViewer mechanism</a>, ProteinPaint accesses these URLs and launches the track.
+        Only the index portions of your BAM files will be downloaded to the ProteinPaint server, but not the BAM files.
+        The index files do not contain actual sequencing reads.
+        </p>
+        
+        <p><a href=https://docs.google.com/document/d/1owXUQuqw5hBHFERm0Ria7anKtpyoPBaZY_MCiXXf5wE/edit#heading=h.k8yw0l1kjnzi>
+        Refer to procedures in this document</a>,
+        to obtain the ProteinPaint BAM FileViewer and run it in your DNAnexus project.</p>
+        
+        <a href="https://pecan.stjude.cloud/static/fileviewers/ProteinPaint (VCF, bigWig, BEDj, junction, BAM).gz" target="_self" >
+        Download the Fileviewer</a>
+    </div>
+    
+    <h3>Genotyping method</h3>
+    <img src=https://pecan.stjude.cloud/static/fileviewers/images/step1.svg>
+</div>
+
+</body>
+</html>
