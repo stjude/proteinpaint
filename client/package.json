@@ -26,7 +26,8 @@
     "tape": "cat ../public/bin/proteinpaint.js ./test/init.js | tape-run --static ../public",
     "examples": "node ./test/import-specs.js name=_x_.examples && npm run tape",
     "rollw": "rm -rf dist && rollup -c ./rollup.config.js -w",
-    "build": "rm -rf dist && rollup -c ./rollup.config.js && npm pack"
+    "build": "rollup -c ./rollup.config.js",
+    "prepack": "rollup -c ./rollup.config.js"
   },
   "author": "",
   "license": "UNLICENSED",

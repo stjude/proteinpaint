@@ -15,9 +15,7 @@ archive/*
 **/package/*
 package-lock.json
 
-public/bin/*
-*/*/public/bin/*
-*/*/public/public
+**/public/bin/*
 
 public/tmp/*
 public/data/*
@@ -61,9 +59,8 @@ server.js*
 !client/rx/server.js
 setup/*gz*
 setup/*
-tmpbuild/*
-tmppack*/*
-*/tmppack/*
+**/tmpbuild*/*
+**/tmppack*/*
 pp-server/*
 
 *-stash.js
@@ -92,3 +89,6 @@ p4/public/dev.html
 ssl-proxy.json
 .RData
 log.txt
+*-debug.*
+build/sj/env.sh
+rust/Dockerfile

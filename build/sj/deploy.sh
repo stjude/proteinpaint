@@ -175,7 +175,7 @@ else
 	# remote repo not used, use local repo for now
 	mkdir tmpbuild  # temporary empty workspace for checkedout commit
 	cd ../..
-	git archive HEAD | tar -x -C build/sj/tmpbuild/
+	git archive $REV | tar -x -C build/sj/tmpbuild/
 
 	cd build/sj/tmpbuild
 

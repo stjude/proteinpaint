@@ -13,7 +13,7 @@
     "start": "nodemon server.js --watch ./server*.js* --watch genome --watch dataset",
     "pretest": "./test/pretest.js",
     "test": "tape -r '@babel/register' */test/*.spec.js",
-    "build": "webpack --config=./webpack.config.js",
+    "prepack": "webpack",
     "response": "nodemon modules/test/test.server.js --watch src",
     "getconf": "../build/getConfigProp.js"
   },
@@ -36,7 +36,7 @@
     "webpack-notifier": "^1.15.0"
   },
   "dependencies": {
-    "@stjude/proteinpaint-rust": "^1.0.0",
+    "@stjude/proteinpaint-rust": "^2.4.3",
     "better-sqlite3": "^7.5.3",
     "body-parser": "^1.15.2",
     "canvas": "^2.9.3",

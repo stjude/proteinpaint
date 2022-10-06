@@ -1,16 +1,15 @@
 {
-  "version": "1.0.0",
+  "version": "2.4.0",
   "name": "@stjude/proteinpaint-rust",
   "description": "Rust-based utilities for proteinpaint",
   "main": "index.js",
   "bin": {
     "proteinpaint-rust": "index.js"
   },
-  "private": true,
   "scripts": {
     "dev": "cargo build --release",
     "build": "cargo build --release",
-    "postinstall": "cargo build --release",
+    "postinstall": "if [ \"$(basename $(dirname $PWD))\" != 'tmpbuild' & ! -d target ]; then cargo build --release; fi",
     "test": "tape **/test/*.spec.js"
   },
   "author": "Robin Paul",

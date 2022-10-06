@@ -6,10 +6,10 @@
   "bin": "server/bin.js",
   "private": true,
   "workspaces": [
-    "client",
+    "rust",
     "server",
-    "portal",
-    "rust"
+    "client",
+    "portal"
   ],
   "scripts": {
     "reset": "npm install",
@@ -24,7 +24,8 @@
     "prp1": "./build/deploy.sh prp1",
     "testws": "npm test --workspaces",
     "sethooks": "./utils/hooks/init.sh",
-    "getconf": "node -p 'JSON.stringify(require(\"./server/src/serverconfig.js\"),null,\"  \")'"
+    "getconf": "node -p 'JSON.stringify(require(\"./server/src/serverconfig.js\"),null,\"  \")'",
+    "clean": "git add -A; git stash --staged"
   },
   "author": "",
   "license": "UNLICENSED",

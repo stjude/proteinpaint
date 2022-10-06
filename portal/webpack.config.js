@@ -10,7 +10,7 @@ function getPortalConfig(env = {}) {
 		target: 'web',
 		entry: './index.js',
 		output: {
-			path: path.join(__dirname, '../public/bin'),
+			path: path.join(__dirname, 'public/bin'),
 			publicPath: (env.url || '') + '/bin/',
 			filename: 'proteinpaint.js',
 			chunkLoadingGlobal: 'ppJsonp',
