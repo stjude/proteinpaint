@@ -213,7 +213,7 @@ async function samples2columnsRows(samples, tk) {
 	// detect if these columns appear in the samples
 	const has_caseAccess = samples.some(i => 'caseIsOpenAccess' in i),
 		has_ssm_read_depth = samples.some(i => i.ssm_read_depth),
-		has_totalNormal = samples.some(i => i.totalNormal),
+		has_totalNormal = samples.some(i => i?.ssm_read_depth?.totalNormal),
 		has_ssm = samples.some(i => i.ssm_id) || samples.some(i => i.ssm_id_lst)
 
 	const columns = [{ label: 'Sample' }],
@@ -280,7 +280,7 @@ async function samples2columnsRows(samples, tk) {
 		}
 
 		if (has_totalNormal) {
-			row.push({ value: 'totalNormal' in sample ? sample.totalNormal : '' })
+			row.push({ value: sample?.ssm_read_depth.totalNormal || '' })
 		}
 
 		if (has_ssm) {
