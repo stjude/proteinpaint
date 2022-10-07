@@ -14,6 +14,11 @@ const fs = require('fs'),
 const L1skip = new Map()
 L1skip.set('ARCHIVED', 0) // count number of skipped
 
+// skip these gene sets with ID beginning with these words
+const idStartSkip = new Map()
+idStartSkip.set('BIOCARTA', 0)
+idStartSkip.set('KEGG', 0)
+
 const L1name = {
 	C1: 'C1: positional gene sets',
 	C2: 'C2: curated gene sets',
@@ -107,6 +112,13 @@ function parseLine(line) {
 		const termId = k2v.get('STANDARD_NAME').trim()
 		if (!termId) throw 'STANDARD_NAME missing or blank'
 		if (id2term.has(termId)) throw 'duplicating term ID: ' + termId
+
+		for (const skipWord of idStartSkip.keys()) {
+			if (termId.startsWith(skipWord)) {
+				idStartSkip.set(skipWord, idStartSkip.get(skipWord) + 1)
+				return
+			}
+		}
 
 		// CATEGORY* as hierarchy
 		const L1 = k2v.get('CATEGORY_CODE').trim()
@@ -245,6 +257,9 @@ function outputFiles() {
 	console.log('Missing genes:', missingGeneCount)
 	for (const [k, c] of L1skip) {
 		console.log('L1skip: ' + k, c)
+	}
+	for (const [k, c] of idStartSkip) {
+		console.log(`${k} skipped: ${c}`)
 	}
 }
 

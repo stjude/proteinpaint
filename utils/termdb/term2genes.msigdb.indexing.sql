@@ -12,8 +12,8 @@ create index term2genes_id on term2genes(id);
 -- under "C2: curated gene sets" > "CP: Canonical pathways"
 -- two non-leaf terms "WikiPathways subset of CP" and "REACTOME subset of CP" will appear out of order and not grouped to the top with other non-leaf terms
 -- the "CP" branch is the only one with children of both leaf and non-leaf terms, so this fix may be fine
-update terms set child_order=3.1 where id like 'WikiPathways subset of CP%';
-update terms set child_order=3.2 where id like 'REACTOME subset of CP%';
+update terms set child_order=1.1 where id like 'WikiPathways subset of CP%';
+update terms set child_order=1.2 where id like 'REACTOME subset of CP%';
 
 
 -- put the 'H: hallmark gene sets' to the first of all root terms
