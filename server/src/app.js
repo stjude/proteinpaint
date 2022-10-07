@@ -7095,6 +7095,10 @@ async function pp_init() {
 	// to ensure temp files saved in previous server session are accessible in current session
 	// must use consistent dir name but not random dir name that changes from last server boot
 	serverconfig.cachedir_massSession = await mayCreateSubdirInCache('massSession')
+
+	//DELETE THIS after process for deleting mass session files moved into production
+	serverconfig.cachedir_massSessionTrash = await mayCreateSubdirInCache('massSessionTrash')
+
 	serverconfig.cache_snpgt = {
 		dir: await mayCreateSubdirInCache('snpgt'),
 		fileNameRegexp: /[^\w]/, // client-provided cache file name matching with this are denied
@@ -7473,7 +7477,37 @@ async function pp_init() {
 			initLegacyDataset(ds, g)
 		}
 
+		//await deleteSessionFiles()
+
 		delete g.rawdslst
+	}
+}
+
+async function deleteSessionFiles() {
+	//Delete mass session files older than the massSessionDuration in serverconfig or 30 days default
+	const files = await fs.promises.readdir(serverconfig.cachedir_massSession)
+	try {
+		files.forEach(async file => {
+			//Return creation Time
+			const stats = await fs.promises.stat(path.join(serverconfig.cachedir_massSession, file))
+			const sessionCreationDate = stats.birthtime
+
+			//Determine file age against massSessionDuration
+			const today = new Date()
+			const fileDate = new Date(sessionCreationDate)
+			const massSessionDuration = serverconfig.features.massSessionDuration || 30
+			const sessionDaysElapsed = Math.round((today.getTime() - fileDate.getTime()) / (1000 * 3600 * 24))
+			if (sessionDaysElapsed > massSessionDuration) {
+				//On Nov 1, 2022 - change to delete function
+				await fs.promises.copyFile(
+					path.join(serverconfig.cachedir_massSession, file),
+					path.join(serverconfig.cachedir_massSessionTrash, file)
+				)
+				console.log('File deleted: ', file, sessionCreationDate)
+			}
+		})
+	} catch (e) {
+		throw `Error: ${e}`
 	}
 }
 
