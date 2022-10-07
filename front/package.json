@@ -1,0 +1,18 @@
+{
+	"name": "@stjude/proteinpaint-front",
+	"version": "2.4.0",
+	"main": "index.js",
+	"bin": "reset.sh",
+	"scripts": {
+		"dev": "rm -rf ../public/bin & webpack --env NODE_ENV=development --watch --progress --color",
+		"#dev": "webpack --env NODE_ENV=development --watch --progress --color",
+		"prepack": "webpack"
+	},
+	"dependencies": {
+		"@stjude/proteinpaint-client": "2.4.0"
+	},
+	"files": [
+		"public/bin",
+		"public/index.js"
+	]
+}

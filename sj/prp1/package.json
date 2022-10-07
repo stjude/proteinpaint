@@ -1,0 +1,14 @@
+{	
+	"name": "@stjude/proteinpaint-prp1",
+	"version": "2.4.0",
+	"private": true,
+	"dependencies": {
+		"@stjude/proteinpaint-front": "2.4.0",
+		"@stjude/proteinpaint-server": "2.4.0"
+	},
+	"files": [
+		"public",
+		"dataset",
+		"genomes"
+	]
+}

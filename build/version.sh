@@ -12,7 +12,7 @@ fi
 REMOTEHOST=$2
 HOST=pp-prt
 REMOTEDIR=/opt/data/pp/packages
-PKGURL=https://pp-test.stjude.org/Pk983gP.Rl2410y45
+PKGURL=https://pp-test.stjude.org/Pk983gP.Rl2410y45/packages
 WORKSPACES="client server portal" # $(node -p "require('./package.json').workspaces.join(' ')")
 
 for WS in ${WORKSPACES};
@@ -29,10 +29,10 @@ do
 		for WSP in ${WORKSPACES};
 		do
 			ISPRIVATE=$(node -p "require('./$WSP/package.json').private")
-			# no need to bump the version of a non-published package, unless it is being deployed
-			if [[ "$ISPRIVATE" != "true" || "$WSP" == "$REMOTEHOST" ]] && [[ "$WSP" != "$WS" && "$(grep -c proteinpaint-$WS $WSP/package.json)" != "0" ]]; then
+			# no need to bump the dependency versions in a non-published package, will do that in its deployed script
+			if [[ "$ISPRIVATE" != "true" && "$WSP" != "$WS" && "$(grep -c proteinpaint-$WS $WSP/package.json)" != "0" ]]; then
 				echo "setting $WSP/package.json to use $TGZ"
-				npm pkg set dependencies.@stjude/proteinpaint-$WS=$PKGURL/packages/$TGZ --workspace=$WSP
+				npm pkg set dependencies.@stjude/proteinpaint-$WS=$PKGURL/$TGZ --workspace=$WSP
 			fi
 		done
 	fi
