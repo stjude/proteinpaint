@@ -1,10 +1,9 @@
-const wpServer = require('../server/webpack.config.js')
 const WebpackNotifierPlugin = require('webpack-notifier')
 const NodePolyfillPlugin = require('node-polyfill-webpack-plugin')
 const path = require('path')
 const fs = require('fs')
 
-function getPortalConfig(env = {}) {
+module.exports = function getPortalConfig(env = {}) {
 	const config = {
 		mode: env.NODE_ENV ? env.NODE_ENV : 'production',
 		target: 'web',
@@ -42,7 +41,7 @@ function getPortalConfig(env = {}) {
 				}
 			]
 		},
-		devtool: env.devtool ? env.devtool : env.NODE_ENV == 'development' ? 'source-map' : false
+		devtool: 'source-map' //env.devtool ? env.devtool : env.NODE_ENV == 'development' ? 'source-map' : false
 	}
 
 	/*** OVERRIDES ***/
@@ -55,5 +54,4 @@ function getPortalConfig(env = {}) {
 	return config
 }
 
-module.exports = [wpServer, getPortalConfig]
 process.traceDeprecation = true

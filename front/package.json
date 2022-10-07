@@ -1,19 +1,24 @@
 {
 	"name": "@stjude/proteinpaint-front",
-	"version": "2.4.1-2",
+	"version": "2.4.1-29",
 	"main": "index.js",
 	"bin": "reset.sh",
 	"scripts": {
 		"dev": "rm -rf ../public/bin & webpack --env NODE_ENV=development --watch --progress --color",
 		"#dev": "webpack --env NODE_ENV=development --watch --progress --color",
-		"prepack": "webpack"
+		"prepack": "rm -rf public/bin && webpack"
 	},
-	"dependencies": {
-		"@stjude/proteinpaint-client": "^2.4.0"
+	"devDependencies": {
+		"@stjude/proteinpaint-client": "^2.4.1-20",
+		"webpack": "^5.7.3",
+    "webpack-cli": "^4.9.2",
+    "webpack-node-externals": "^3.0.0",
+    "webpack-notifier": "^1.15.0"
 	},
 	"files": [
 		"public/bin",
-		"public/index.js"
+		"public/index.js",
+		"reset.sh"
 	],
 	"repository": {
 		"type": "git",

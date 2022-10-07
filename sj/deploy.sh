@@ -30,6 +30,12 @@ fi
 # PROCESS COMMIT INFO
 ########################
 
+# workspace must be clean to deploy
+if [ ! -z "$(git status --porcelain)" ]; then
+	echo "There are untracked changes, either commit or delete them, or 'npm run clean'."
+	exit 1
+fi
+
 # convert $REV to standard numeric notation
 if [[ $REV == "HEAD" ]]; then
 	if [[ -d .git ]]; then
@@ -61,26 +67,26 @@ if [[ "$2" != "" ]]; then
 	VERSIONTYPE=$2
 fi
 
-./build/version.sh $VERSIONTYPE
-# git add --all
-# git commit -m "release to $ENV"
+./build/version.sh $VERSIONTYPE "release to $ENV"
 
-# npm publish --workspaces --dry-run
-
-for WS in server client front;
+WORKSPACES="server client front"
+cd sj/$ENV
+for WS in ${WORKSPACES};
 do
-	DEPVER=$(node -p "require('./sj/$ENV/package.json').dependencies['@stjude/proteinpaint-$WS']")
+	DEPVER=$(node -p "require('./package.json').dependencies['@stjude/proteinpaint-$WS'] || ''")
 	if [[ "$DEPVER" != "" ]]; then
-		echo "setting the dependencies[@stjude/proteinpaint-$WS] to $DEPVER"
-		npm pkg set dependencies.@stjude/proteinpaint-$WS=$PKGURL/$TGZ --workspace=$ENV
+		NEWVER=$(node -p "require('../../$WS/package.json').version")
+		echo "setting the dependencies[@stjude/proteinpaint-$WS] to ^$NEWVER"
+		npm pkg set dependencies.@stjude/proteinpaint-$WS="^$NEWVER"
 	fi
 done
 
-cd sj/$ENV
-npm pack
-mv stjude-proteinpaint-*.tgz $APP-$REV.tgz
+npm version $VERSIONTYPE --no-git-tag-version --no-workspaces-update
 
-exit 1
+echo "$ENV $REV $(date)" > public/rev.txt
+npm pack
+VER=
+mv stjude-proteinpaint-*.tgz $APP-$REV.tgz
 
 ##########
 # DEPLOY
@@ -91,24 +97,23 @@ scp $APP-$REV.tgz $ENV:~
 ssh -t $ENV "
 	tar --warning=no-unknown-keyword -xzf ~/$APP-$REV.tgz -C $REMOTEDIR/available/
 	rm ~/$APP-$REV.tgz
-
 	cd $REMOTEDIR
-	mv -f available/$APP available/$APP-$REV
+	mv -f available/package available/$APP-$REV
 	cp active/serverconfig.json available/$APP-$REV/
 
 	chmod -R 755 available/$APP-$REV
 	cd available/$APP-$REV
-	npm install --production
+	# npm install --production
 
 	cd $REMOTEDIR
-	ln -sfn available/$APP-$REV active
-	ln -sfn /opt/app/pecan/portal/www/sjcharts/public public/sjcharts
+	ln -sfn available/$APP-$REV active-0
+	ln -sfn /opt/app/pecan/portal/www/sjcharts/public available/$APP-$REV/public/sjcharts
 	# legacy support for embedders that required this
-	ln -sfn ./bin public/no-babel-polyfill
+	ln -sfn ./bin available/$APP-$REV/public/no-babel-polyfill
 	
-	./helpers/record.sh deployed
-	./proteinpaint_run_node.sh
-	./helpers/purge.sh \"pp-*\"
+	# ./helpers/record.sh deployed
+	# ./proteinpaint_run_node.sh
+	# ./helpers/purge.sh \"pp-*\"
 "
 
 #############

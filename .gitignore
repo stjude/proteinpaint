@@ -31,7 +31,7 @@ public/ALCL.html
 public/builds/*
 public/static/*.docx
 public/static/*.pdf
-public/rev.txt
+**/public/rev.txt
 
 /utils/vcf2genesamplematrix/bin.js
 /utils/vcf2genesamplematrix/output.html
@@ -72,10 +72,6 @@ pp-server/*
 
 deploys/
 
-p4/node_modules/
-p4/public/bin/*
-p4/config.json
-p4/public/dev.html
 .vscode/launch.json
 .vscode/settings.json
 .idea/

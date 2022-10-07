@@ -9,14 +9,15 @@
   "scripts": {
     "dev": "cargo build --release",
     "build": "cargo build --release",
-    "postinstall": "if [ \"$(basename $(dirname $PWD))\" != 'tmpbuild' & ! -d target ]; then cargo build --release; fi",
+    "postinstall": "cargo build --release",
     "test": "tape **/test/*.spec.js"
   },
   "author": "Robin Paul",
   "license": "UNLICENSED",
   "repository": {
     "type": "git",
-    "url": "https://github.com/stjude/proteinpaint.git"
+    "url": "https://github.com/stjude/proteinpaint.git",
+    "directory": "rust"
   },
   "files": [
     "index.js",

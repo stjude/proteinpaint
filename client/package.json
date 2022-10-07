@@ -1,6 +1,6 @@
 {
   "name": "@stjude/proteinpaint-client",
-  "version": "2.4.1-2",
+  "version": "2.4.1-29",
   "description": "a genomics visualization tool for exploring a cohort's genotype and phenotype data",
   "main": "dist/app.js",
   "module": "dist/app.js",
@@ -55,9 +55,7 @@
     "webpack": "^5.7.3",
     "webpack-cli": "^4.9.2",
     "webpack-node-externals": "^3.0.0",
-    "webpack-notifier": "^1.15.0"
-  },
-  "dependencies": {
+    "webpack-notifier": "^1.15.0",
     "d3": "^7.6.1",
     "d3-beeswarm": "0.0.4",
     "debounce": "^1.2.0",
