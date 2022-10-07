@@ -26,8 +26,6 @@ const defaultOpts = {
 	menuLayout: 'vertical'
 }
 
-const allowedQmodes = new Set(['discrete', 'binary', 'continuous', 'spline', 'cuminc', 'cox'])
-
 class TermSetting {
 	constructor(opts) {
 		this.opts = this.validateOpts(opts)
@@ -773,7 +771,9 @@ export async function fillTermWrapper(tw, vocabApi, defaultQ) {
 	if ('mode' in tw.q) {
 		// q.mode is set. validate
 		if (typeof tw.q.mode != 'string') throw 'q.mode not string'
-		if (!allowedQmodes.has(tw.q.mode)) throw 'invalid value for q.mode'
+		if (tw.q.mode == '') throw 'q.mode is empty string'
+		// it doesn't make sense to use mode=continuous for categorical term
+		// term-type specific verification should be carried out in handler script
 	}
 }
 
