@@ -1,6 +1,6 @@
 {
   "name": "@stjude/proteinpaint-server",
-  "version": "2.4.0",
+  "version": "2.4.1-2",
   "description": "a genomics visualization tool for exploring a cohort's genotype and phenotype data",
   "main": "server.js",
   "bin": "bin.js",
@@ -36,7 +36,7 @@
     "webpack-notifier": "^1.15.0"
   },
   "dependencies": {
-    "@stjude/proteinpaint-rust": "2.4.0",
+    "@stjude/proteinpaint-rust": "^2.4.0",
     "better-sqlite3": "^7.5.3",
     "body-parser": "^1.15.2",
     "canvas": "^2.9.3",
@@ -57,7 +57,8 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/stjude/pp-dist"
+    "url": "https://github.com/stjude/proteinpaint",
+    "directory": "server"
   },
   "publishConfig": {
     "registry": "https://npm.pkg.github.com/"

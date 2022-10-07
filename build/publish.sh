@@ -14,6 +14,8 @@ if [[ "$REMOTEHOST" == "" ]]; then
 	exit 1
 fi
 
+# npm ci ???
+
 # run this from the proteinpaint directory
 REV=$(git rev-parse --short HEAD)
 
@@ -22,11 +24,14 @@ if [[ "$2" != "" ]]; then
 	VERSIONTYPE=$2
 fi
 
-./build/version.sh $VERSIONTYPE $REMOTEHOST
+./build/version.sh $VERSIONTYPE
 git add --all
 git commit -m "release to $REMOTEHOST"
+git push
 
-# TODO: ??? do we need either of these ??? 
+npm publish --workspaces --dry-run
+
+# TODO: ??? do we need either of these before publish ??? 
 # npm ci
 # ------ OR ------
 # echo "making a tmpbuild dir for REV='$REV'"
@@ -43,30 +48,40 @@ git commit -m "release to $REMOTEHOST"
 # ln -s ../../client/node_modules client/node_modules
 # ln -s ../../server/node_modules server/node_modules
 
-TGZHOST=pp-prt
-REMOTEDIR=/opt/data/pp/packages
-PKGURL=https://pp-test.stjude.org/Pk983gP.Rl2410y45
-WORKSPACES="client server portal" # $(node -p "require('./package.json').workspaces.join(' ')")
-for WS in ${WORKSPACES};
-do
-	echo "checking for existing $WS version and build ..."
-	VERSION=$(node -p "require('./$WS/package.json').version")
-	TGZ=stjude-proteinpaint-$WS-$VERSION.tgz
-	
-	if ssh $TGZHOST "test -e $REMOTEDIR/$TGZ"; then
-  	echo "file $TGZ already deployed to $TGZHOST"
-	else
-		if [[ -f ./$WS/publish.sh ]]; then
-			# !!! TODO: use `npm publish` when using an npm-compatible registry !!!
-			cd $WS
-			./publish.sh $TGZHOST $TGZ
-			cd ..
-		fi
+# TGZHOST=pp-prt
+# REMOTEDIR=/opt/data/pp/packages
+# PKGURL=https://pp-test.stjude.org/Pk983gP.Rl2410y45
 
-		if [[ -f ./$WS/deploy.sh && "$WS" == "$REMOTEHOST" ]]; then
-			cd $WS
-			./deploy.sh $TGZ $VERSION
-			cd ..
-		fi
-	fi
-done
+# PUBLISHED="server client front"
+# for WS in ${PUBLISHED};
+# do
+# 	echo "checking for $WS version and build ..."
+# 	VERSION=$(node -p "require('./$WS/package.json').version")
+# 	TGZ=stjude-proteinpaint-$WS-$VERSION.tgz
+
+# 	# TODO: can use `npm show` if using a registry,
+# 	# instead of checking for the presense of similarly named tarball
+# 	if ssh $TGZHOST "test -e $REMOTEDIR/$TGZ"; then
+#   	echo "file $TGZ already deployed to $TGZHOST"
+# 	else
+# 		# !!! TODO: use `npm publish` when using an npm-compatible registry !!!
+# 		cd $WS
+# 		./publish.sh $TGZHOST $TGZ
+# 		cd ..
+# 		npm pkg set dependencies.@stjude/proteinpaint-$REMOTEHOST=$PKGURL/$TGZ --workspace=$REMOTEHOST
+# 	fi
+# done
+
+
+# echo "checking for $REMOTEHOST version and build ..."
+# VERSION=$(node -p "require('./$REMOTEHOST/package.json').version")
+# TGZ=stjude-proteinpaint-$REMOTEHOST-$VERSION.tgz
+
+# if ssh $TGZHOST "test -e $REMOTEDIR/$TGZ"; then
+# 	echo "file $TGZ already deployed to $TGZHOST"
+# elif [[ "$WS" == "$REMOTEHOST" ]]; then
+# 	cd sj/$WS
+# 	echo "deploying $TGZ"
+# 	#./deploy.sh $TGZ $VERSION
+# 	cd ../..
+# fi

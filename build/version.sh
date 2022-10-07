@@ -9,31 +9,40 @@ if [[ "$1" != "" ]]; then
 	TYPE=$1
 fi
 
-REMOTEHOST=$2
-HOST=pp-prt
-REMOTEDIR=/opt/data/pp/packages
-PKGURL=https://pp-test.stjude.org/Pk983gP.Rl2410y45/packages
-WORKSPACES="client server portal" # $(node -p "require('./package.json').workspaces.join(' ')")
+echo "setting package versions"
+
+# HOST=pp-prt
+# REMOTEDIR=/opt/data/pp/packages
+# PKGURL=https://pp-test.stjude.org/Pk983gP.Rl2410y45/packages
+
+BRANCH=$(git branch --show-current)
+
+# list workspaces in order of depedency chain, from children to parents
+# TODO: add rust later
+WORKSPACES="server client front"
 
 for WS in ${WORKSPACES};
 do
-	BRANCH=$(git branch --show-current)
-	REMOTESHA=$(git rev-parse origin/$BRANCH:$WS)
-	LOCALSHA=$(git rev-parse HEAD:$WS)
+	set +e
+	REMOTESHA=$(git rev-parse --verify -q origin/master:$WS)
+	LOCALSHA=$(git rev-parse --verify -q HEAD:$WS)
+	# echo "$WS [$REMOTESHA] [$LOCALSHA]"
+	set -e
 	if [[ "$REMOTESHA" != "$LOCALSHA" ]]; then
 		echo "Bumping the $WS version => $TYPE"
 		npm version $TYPE --workspace=$WS --no-git-tag-version --no-workspaces-update
 		
-		VERSION=$(node -p "require('./$WS/package.json').version")
-		TGZ=stjude-proteinpaint-$WS-$VERSION.tgz
-		for WSP in ${WORKSPACES};
-		do
-			ISPRIVATE=$(node -p "require('./$WSP/package.json').private")
-			# no need to bump the dependency versions in a non-published package, will do that in its deployed script
-			if [[ "$ISPRIVATE" != "true" && "$WSP" != "$WS" && "$(grep -c proteinpaint-$WS $WSP/package.json)" != "0" ]]; then
-				echo "setting $WSP/package.json to use $TGZ"
-				npm pkg set dependencies.@stjude/proteinpaint-$WS=$PKGURL/$TGZ --workspace=$WSP
-			fi
-		done
+		# VERSION=$(node -p "require('./$WS/package.json').version")
+		# TGZ=stjude-proteinpaint-$WS-$VERSION.tgz
+		# # no need to immediately bump the dependency versions here for a non-published package, 
+		# # will do that in its deploy script, so that its dependency versions reflect the last deployed state
+		# for WSP in ${WORKSPACES};
+		# do
+		# 	echo "[$WSP] [$WS]"
+		# 	if [[ "$WSP" != "$WS" && "$(grep -c proteinpaint-$WS $WSP/package.json)" != "0" ]]; then
+		# 		echo "setting $WSP/package.json to use $TGZ"
+		# 		npm pkg set dependencies.@stjude/proteinpaint-$WS=$PKGURL/$TGZ --workspace=$WSP
+		# 	fi
+		# done
 	fi
 done

@@ -9,8 +9,7 @@
     "rust",
     "server",
     "client",
-    "front",
-    "sj/*"
+    "front"
   ],
   "scripts": {
     "reset": "npm install",

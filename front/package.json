@@ -1,6 +1,6 @@
 {
 	"name": "@stjude/proteinpaint-front",
-	"version": "2.4.0",
+	"version": "2.4.1-2",
 	"main": "index.js",
 	"bin": "reset.sh",
 	"scripts": {
@@ -9,10 +9,18 @@
 		"prepack": "webpack"
 	},
 	"dependencies": {
-		"@stjude/proteinpaint-client": "2.4.0"
+		"@stjude/proteinpaint-client": "^2.4.0"
 	},
 	"files": [
 		"public/bin",
 		"public/index.js"
-	]
+	],
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/stjude/proteinpaint",
+		"directory": "front"
+	},
+	"publishConfig": {
+		"registry": "https://npm.pkg.github.com/"
+	}
 }
