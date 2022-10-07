@@ -762,9 +762,19 @@ export async function fillTermWrapper(tw, vocabApi, defaultQ) {
 	} else if (tw.id != tw.term.id) {
 		throw 'the given ids (tw.id and tw.term.id) are different'
 	}
+
 	if (!tw.q) tw.q = {}
+
 	// call term-type specific logic to fill tw
 	await call_fillTW(tw, vocabApi, defaultQ)
+
+	if ('mode' in tw.q) {
+		// q.mode is set. validate
+		if (typeof tw.q.mode != 'string') throw 'q.mode not string'
+		if (tw.q.mode == '') throw 'q.mode is empty string'
+		// it doesn't make sense to use mode=continuous for categorical term
+		// term-type specific verification should be carried out in handler script
+	}
 }
 
 async function call_fillTW(tw, vocabApi, defaultQ) {
