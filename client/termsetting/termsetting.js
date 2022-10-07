@@ -8,6 +8,8 @@ nonDictionaryTermTypes
 termsettingInit()
 getPillNameDefault()
 fillTermWrapper()
+	call_fillTW
+	mayValidateQmode
 set_hiddenvalues()
 ********************* Instance methods
 clickNoPillDiv
@@ -768,13 +770,7 @@ export async function fillTermWrapper(tw, vocabApi, defaultQ) {
 	// call term-type specific logic to fill tw
 	await call_fillTW(tw, vocabApi, defaultQ)
 
-	if ('mode' in tw.q) {
-		// q.mode is set. validate
-		if (typeof tw.q.mode != 'string') throw 'q.mode not string'
-		if (tw.q.mode == '') throw 'q.mode is empty string'
-		// it doesn't make sense to use mode=continuous for categorical term
-		// term-type specific verification should be carried out in handler script
-	}
+	mayValidateQmode(tw)
 }
 
 async function call_fillTW(tw, vocabApi, defaultQ) {
@@ -787,6 +783,18 @@ async function call_fillTW(tw, vocabApi, defaultQ) {
 		_ = await import(`./handlers/${type}.js`)
 	}
 	await _.fillTW(tw, vocabApi, defaultQ ? defaultQ[type] : null)
+}
+
+function mayValidateQmode(tw) {
+	if (!('mode' in tw.q)) {
+		// at this stage q.mode is allowed to be missing and will not validate
+		return
+	}
+	// q.mode is set. here will validate
+	if (typeof tw.q.mode != 'string') throw 'q.mode not string'
+	if (tw.q.mode == '') throw 'q.mode is empty string'
+	// handler code should implement term type-specific validations
+	// e.g. to prevent cases such as mode=continuous for categorical term
 }
 
 export function set_hiddenvalues(q, term) {
