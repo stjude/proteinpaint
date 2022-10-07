@@ -28,20 +28,38 @@ noheader:1,
 		type:'mds3',
 		name:'custom snvindel and fusion',
 		custom_variants:[
-			{"chr":"chr9","pos":37015165,"mname":"P80R","class":"M","dt":1,ref:'G',alt:'C'},
+			{"chr":"chr9","pos":37015165,"mname":"P80R","class":"M","dt":1,ref:'G',alt:'C',sample:'s1'},
 
 			{
 				gene1:'PAX5',chr1:'chr9',pos1:37002646, strand1:'-',
 				gene2:'JAK2',chr2:'chr9',pos2:5081726, strand2:'+',
 				dt:2,class:'Fuserna',
+				sample:'s2',
 			},
 
 			{
 				gene1:'ZCCHC7',chr1:'chr9',pos1:37257786, strand1:'-',
 				gene2:'PAX5',chr2:'chr9',pos2:37024824, strand2:'-',
 				dt:5,class:'SV',
+				sample:'s3',
 			},
 		],
+		sampleAnnotation:{
+			terms:[
+				{id:'diagnosis',type:'categorical'}
+			],
+			annotations:{
+				s1:{
+					diagnosis: 'AA'
+				},
+				s2:{
+					diagnosis: 'BB'
+				},
+				s3:{
+					diagnosis: 'AA'
+				},
+			}
+		}
 	}],
 })
 </script>
