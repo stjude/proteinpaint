@@ -507,6 +507,37 @@ class TermdbVocab extends Vocab {
 		}
 	}
 
+	async getViolinPlotData(arg) {
+		/*
+		should replace getDensityPlotData()
+
+		arg{}
+
+		arg.termid=str // main term to create violin/boxplot with
+		arg.term2={} // optional termwrapper of 2nd term to divide cohort
+			if term2 is given, will result in multiple plots
+			if missing, will result in one plot
+		arg.filter={}
+			optional
+
+		*/
+		const lst = [
+			'getViolinPlotData=1',
+			'genome=' + this.vocab.genome,
+			'dslabel=' + this.vocab.dslabel,
+			'termid=' + arg.termid
+		]
+		if (arg.term2) {
+			lst.push('term2=' + encodeURIComponent(JSON.stringify(arg.term2)))
+		}
+		if (arg.filter) {
+			const filterRoot = getNormalRoot(arg.filter)
+			lst.push('filter=' + encodeURIComponent(JSON.stringify(filterRoot)))
+		}
+		return await dofetch3('termdb?' + lst.join('&'))
+	}
+
+	// TODO replace with getViolinPlotData
 	async getDensityPlotData(term_id, num_obj, filter) {
 		let density_q =
 			'/termdb?density=1' +

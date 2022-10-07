@@ -13,6 +13,7 @@ const LDoverlay = require('./mds2.load.ld').overlay
 const getOrderedLabels = require('./termdb.barsql').getOrderedLabels
 const isUsableTerm = require('#shared/termdb.usecase').isUsableTerm
 const trigger_getSampleScatter = require('./termdb.scatter').trigger_getSampleScatter
+import * as d3 from 'd3'
 
 /*
 ********************** EXPORTED
@@ -86,6 +87,7 @@ export function handle_request_closure(genomes) {
 			if (q.getLDdata) return trigger_getLDdata(q, res, ds)
 			if (q.genesetByTermId) return trigger_genesetByTermId(q, res, tdb)
 			if (q.getSampleScatter) return await trigger_getSampleScatter(q, res, ds)
+			if (q.getViolinPlotData) return await trigger_getViolinPlotData(q, res, ds)
 
 			// TODO: use trigger flags like above?
 			if (q.for == 'termTypes') {
@@ -316,6 +318,145 @@ function trigger_getnumericcategories(q, res, tdb, ds) {
 	if (q.filter) arg.filter = q.filter
 	const lst = termdbsql.get_summary_numericcategories(arg)
 	res.send({ lst })
+}
+
+function trigger_getViolinPlotData(q, res, ds) {
+	/*
+	q={}
+	q.termid=str
+	q.filter={}
+	q.term2={} termwrapper
+	*/
+	const getRowsParam = {
+		ds,
+		filter: q.filter,
+		term1_id: q.termid,
+		term1_q: { mode: 'continuous' } // hardcode to retrieve numeric values for violin/boxplot computing on this term
+	}
+
+	if (q.term2) {
+		if (typeof q.term2 == 'string') q.term2 = JSON.parse(q.term2) // look into why term2 is not parsed beforehand
+
+		getRowsParam.term2_id = q.term2.id
+		getRowsParam.term2_q = q.term2.q
+	}
+
+	const result = termdbsql.get_rows(getRowsParam)
+	/*
+	result = {
+	  lst: [
+	  	{
+			sample=int
+			key0,val0,
+			key1,val1, // key1 and val1 are the same, with numeric values from term1
+			key2,val2
+				// if q.term2 is given, key2 is the group/bin label based on term2, using which the samples will be divided
+				// if q.term2 is missing, key2 is empty string and won't divide into groups
+		}, ...
+	  ]
+	}
+	*/
+
+	const valueSeries = []
+
+	if (q.term2) {
+		const key2_to_values = new Map() // k: key2 value, v: list of term1 values
+
+		for (const i of result.lst) {
+			if (!i.key2) {
+				// missing key2
+				throw 'key2 missing'
+			}
+			if (!key2_to_values.has(i.key2)) key2_to_values.set(i.key2, [])
+			key2_to_values.get(i.key2).push(i.key1)
+		}
+
+		for (const [label, values] of key2_to_values) {
+			valueSeries.push({ label, values })
+		}
+	} else {
+		// all numeric values go into one array
+		const values = result.lst.map(i => i.key1)
+		valueSeries.push({
+			values,
+			label: 'All samples'
+		})
+	}
+	// const mM = []
+
+	for (const item of valueSeries) {
+		// item: { label=str, values=[v1,v2,...] }
+
+		const bins0 = computeViolinData(item.values)
+
+		const bins = []
+		for (const b of bins0) {
+			const b2 = {
+				x0: b.x0,
+				x1: b.x1
+			}
+			delete b.x0
+			delete b.x1
+			b2.lst = b
+			bins.push(b2)
+		}
+
+		console.log('bins from backend', bins)
+		const mMdict = minMaxCompute(item.values)
+		const biggestBin = Math.max(...bins.map(b => b.length))
+
+		item.bins = bins
+		item.minmax = mMdict
+		item.biggestBin = biggestBin
+
+		// delete item.values
+	}
+
+	// console.log(valueSeries);
+	res.send(valueSeries)
+}
+
+export function minMaxCompute(values) {
+	let min = Math.min(...values),
+		max = Math.max(...values)
+
+	let yScaleMin = +Infinity,
+		yScaleMax = -Infinity
+
+	if (yScaleMin > min) {
+		yScaleMin = min
+	}
+	if (max > yScaleMax) {
+		yScaleMax = max
+	}
+	const mMdict = {}
+	mMdict['min'] = min
+	mMdict['max'] = max
+	mMdict['yScaleMax'] = yScaleMax
+	mMdict['yScaleMin'] = yScaleMin
+
+	return mMdict
+}
+// compute bins using d3
+export function computeViolinData(values) {
+	let min = Math.min(...values),
+		max = Math.max(...values)
+
+	// console.log('2',values.length);
+	let ticksCompute
+	if (values.length < 30) {
+		ticksCompute = 8
+	} else {
+		ticksCompute = 12
+	}
+
+	const binBuilder = d3
+		.bin()
+		.domain([min, max]) /* extent of the data that is lowest to highest*/
+		.thresholds(ticksCompute) /* buckets are created which are separated by the threshold*/
+		.value(d => d) /* bin the data points into this bucket*/
+
+	return binBuilder(values)
 }
 
 function trigger_scatter(q, res, tdb, ds) {
