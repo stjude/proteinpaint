@@ -153,14 +153,14 @@ const snplst = {
 		geneticModel: 0,
 		missingGenotype: 0,
 		restrictAncestry: {
-			name: 'African ancestry',
+			name: 'European ancestry',
 			tvs: {
 				term: {
 					id: 'genetic_race',
 					type: 'categorical',
 					name: 'Genetically defined race'
 				},
-				values: [{ key: 'African Ancestry', label: 'African Ancestry' }]
+				values: [{ key: 'European Ancestry', label: 'European Ancestry' }]
 			}
 		}
 	}
@@ -179,14 +179,14 @@ const snplocus = {
 		alleleType: 0,
 		geneticModel: 0,
 		restrictAncestry: {
-			name: 'African ancestry',
+			name: 'European ancestry',
 			tvs: {
 				term: {
 					id: 'genetic_race',
 					type: 'categorical',
 					name: 'Genetically defined race'
 				},
-				values: [{ key: 'African Ancestry', label: 'African Ancestry' }]
+				values: [{ key: 'European Ancestry', label: 'European Ancestry' }]
 			}
 		},
 		variant_filter: {
@@ -593,31 +593,24 @@ const activeTests = testList.filter(t => t.runthis)
 
 for (const item of activeTests.length ? activeTests : testList) {
 	tape('(LINEAR) EF ~ ' + item.name, test => {
-		test.timeoutAfter(10000)
-		if (item.name.includes('*snplocus')) {
-			// linear interaction with snplocus is not yet supported
-			// need the R package 'car' to be available on the pp servers
-			test.skip()
-			test.end()
-		} else {
-			runpp(
-				{
-					regressionType: 'linear',
-					outcome: { id: 'LV_Ejection_Fraction_3D' },
-					independent: item.independent
-				},
-				async reg => {
-					reg.on('postRender.test', null)
-					test.equal(findResultHeadings(reg), item.headingCount, 'result has ' + item.headingCount + ' headings')
-					mayDestroyDom(test, reg)
-					test.end()
-				},
-				test
-			)
-		}
+		test.timeoutAfter(50000)
+		runpp(
+			{
+				regressionType: 'linear',
+				outcome: { id: 'LV_Ejection_Fraction_3D' },
+				independent: item.independent
+			},
+			async reg => {
+				reg.on('postRender.test', null)
+				test.equal(findResultHeadings(reg), item.headingCount, 'result has ' + item.headingCount + ' headings')
+				mayDestroyDom(test, reg)
+				test.end()
+			},
+			test
+		)
 	})
 	tape('(LOGISTIC) EF ~ ' + item.name, test => {
-		test.timeoutAfter(10000)
+		test.timeoutAfter(50000)
 		runpp(
 			{
 				regressionType: 'logistic',
@@ -634,7 +627,7 @@ for (const item of activeTests.length ? activeTests : testList) {
 		)
 	})
 	tape('(LOGISTIC) Arrhythmias ~ ' + item.name, test => {
-		test.timeoutAfter(20000)
+		test.timeoutAfter(50000)
 		runpp(
 			{
 				regressionType: 'logistic',
@@ -651,7 +644,7 @@ for (const item of activeTests.length ? activeTests : testList) {
 		)
 	})
 	tape('(COX) Arrhythmias ~ ' + item.name, test => {
-		test.timeoutAfter(10000)
+		test.timeoutAfter(50000)
 		runpp(
 			{
 				regressionType: 'cox',

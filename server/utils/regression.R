@@ -76,7 +76,6 @@ suppressPackageStartupMessages({
   library(survival)
   library(parallel)
   library(lmtest)
-#  library(car) # disabled until package is available on servers
 })
 
 args <- commandArgs(trailingOnly = T)
