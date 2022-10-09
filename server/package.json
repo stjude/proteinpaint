@@ -3,7 +3,7 @@
   "version": "2.4.1-29",
   "description": "a genomics visualization tool for exploring a cohort's genotype and phenotype data",
   "main": "server.js",
-  "bin": "bin.js",
+  "bin": "start.js",
   "imports": {
     "#shared/*": "./shared/*.js",
     "#src/*": "./src/*.js"
