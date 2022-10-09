@@ -55,9 +55,7 @@ fi
 # CONTEXTUAL CONFIG
 #####################
 
-APP=pp # might be overridden below
-RUN_SERVER_SCRIPT=proteinpaint_run_node.sh # might be overridden below
-GIT_REMOTE=git@github.com:stjude/proteinpaint.git
+APP=pp
 WPSERVERMODE=production
 WPSERVERDEVTOOL=''
 WPCLIENTDEVTOOL=''

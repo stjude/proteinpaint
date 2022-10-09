@@ -14,21 +14,26 @@ set -e
 # ARGUMENTS
 ###############
 
-# default to deploying to ppdev
-if (($# == 0)); then
-	ENV="pp-prt"
-	REV="HEAD"
-elif (($# == 1)); then
+ENV=pp-prt
+if [[ "$1" != "" ]]; then
 	ENV=$1
-	REV="HEAD"
-else 
-	ENV=$1
-	REV=$2
 fi
 
-########################
-# PROCESS COMMIT INFO
-########################
+VERSIONTYPE=prerelease
+if [[ "$2" != "" ]]; then
+	VERSIONTYPE=$2
+fi
+
+#####################
+# CONSTANTS
+#####################
+
+APP=pp # might be overridden below
+REMOTEDIR=/opt/app/pp
+
+#################################
+# VERSION AND BUILD FROM COMMIT
+#################################
 
 # workspace must be clean to deploy
 if [ ! -z "$(git status --porcelain)" ]; then
@@ -36,80 +41,41 @@ if [ ! -z "$(git status --porcelain)" ]; then
 	exit 1
 fi
 
-# convert $REV to standard numeric notation
-if [[ $REV == "HEAD" ]]; then
-	if [[ -d .git ]]; then
-		REV=$(git rev-parse --short HEAD)
-	fi
-fi
+# npm ci ??? # 
 
-if [[ "$REV" == "HEAD" || "$REV" == "" ]]; then
-	echo "Unable to convert the HEAD revision into a Git commit hash."
-	exit 1
-fi
+# this version script will commit and publish changes,
+# unless in dry-run mode
+./build/version.sh $VERSIONTYPE $ENV
 
-#####################
-# CONTEXTUAL CONFIG
-#####################
-
-APP=pp # might be overridden below
-RUN_SERVER_SCRIPT=proteinpaint_run_node.sh # might be overridden below
-REMOTEDIR=/opt/app/pp
-
-#################################
-# EXTRACT AND BUILD FROM COMMIT
-#################################
-
-# npm ci ???
-
-VERSIONTYPE=prerelease
-if [[ "$2" != "" ]]; then
-	VERSIONTYPE=$2
-fi
-
-./build/version.sh $VERSIONTYPE "release to $ENV"
-
-WORKSPACES="server client front"
-cd sj/$ENV
-for WS in ${WORKSPACES};
-do
-	DEPVER=$(node -p "require('./package.json').dependencies['@stjude/proteinpaint-$WS'] || ''")
-	if [[ "$DEPVER" != "" ]]; then
-		NEWVER=$(node -p "require('../../$WS/package.json').version")
-		echo "setting the dependencies[@stjude/proteinpaint-$WS] to ^$NEWVER"
-		npm pkg set dependencies.@stjude/proteinpaint-$WS="^$NEWVER"
-	fi
-done
-
-npm version $VERSIONTYPE --no-git-tag-version --no-workspaces-update
-
+REV=$(git rev-parse --short HEAD)
 echo "$ENV $REV $(date)" > public/rev.txt
 npm pack
-VER=
-mv stjude-proteinpaint-*.tgz $APP-$REV.tgz
+
+VER=$(node -p "require('./package.json').version")
+mv stjude-proteinpaint-*.tgz $APP-$VER.tgz
 
 ##########
 # DEPLOY
 ##########
 
 echo "Transferring build to $ENV"
-scp $APP-$REV.tgz $ENV:~
+scp $APP-$VER.tgz $ENV:~
 ssh -t $ENV "
-	tar --warning=no-unknown-keyword -xzf ~/$APP-$REV.tgz -C $REMOTEDIR/available/
-	rm ~/$APP-$REV.tgz
+	tar --warning=no-unknown-keyword -xzf ~/$APP-$VER.tgz -C $REMOTEDIR/available/
+	rm ~/$APP-$VER.tgz
 	cd $REMOTEDIR
-	mv -f available/package available/$APP-$REV
-	cp active/serverconfig.json available/$APP-$REV/
+	mv -f available/package available/$APP-$VER
+	cp active/serverconfig.json available/$APP-$VER/
 
-	chmod -R 755 available/$APP-$REV
-	cd available/$APP-$REV
+	chmod -R 755 available/$APP-$VER
+	cd available/$APP-$VER
 	# npm install --production
 
 	cd $REMOTEDIR
-	ln -sfn available/$APP-$REV active-0
-	ln -sfn /opt/app/pecan/portal/www/sjcharts/public available/$APP-$REV/public/sjcharts
+	ln -sfn available/$APP-$VER active-0
+	ln -sfn /opt/app/pecan/portal/www/sjcharts/public available/$APP-$VER/public/sjcharts
 	# legacy support for embedders that required this
-	ln -sfn ./bin available/$APP-$REV/public/no-babel-polyfill
+	ln -sfn ./bin available/$APP-$VER/public/no-babel-polyfill
 	
 	# ./helpers/record.sh deployed
 	# ./proteinpaint_run_node.sh
