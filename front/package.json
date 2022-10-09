@@ -6,7 +6,7 @@
 	"scripts": {
 		"dev": "rm -rf ../public/bin & webpack --env NODE_ENV=development --watch --progress --color",
 		"#dev": "webpack --env NODE_ENV=development --watch --progress --color",
-		"prepack": "rm -rf public/bin && webpack"
+		"prepack": "rm -rf public/bin && rm -rf *.tgz && webpack && tar -czf bundles.tgz public/bin"
 	},
 	"devDependencies": {
 		"@stjude/proteinpaint-client": "^2.4.1-20",
@@ -16,9 +16,9 @@
     "webpack-notifier": "^1.15.0"
 	},
 	"files": [
-		"public/bin",
-		"public/index.js",
-		"reset.sh"
+		"public/index.html",
+		"init.sh",
+		"bundles.tgz"
 	],
 	"repository": {
 		"type": "git",

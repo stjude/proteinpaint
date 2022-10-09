@@ -32,11 +32,10 @@ npm run rollw
 
 # in another terminal
 cd ../front
-# will use 
 npm run dev
 
-# NOTE: the public/index.html assumes a running PP server in localhost,
-# you can edit it to use a remote host such as https://proteinpaint.stjude.org
+# NOTE: the public/index.html will use https://proteinpaint.stjude.org as runproteinpaint({host}),
+# you can edit it to use localhost or another remote host
 ```
 
 ## Build and Publish
