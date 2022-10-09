@@ -3,7 +3,7 @@
 	"version": "2.4.0",
 	"private": true,
 	"scripts": {
-		"postinstall": "proteinpaint-front",
+		"postinstall": "proteinpaint-front https://pp-prt.stjude.org",
 		"start": "proteinpaint-server"
 	},
 	"dependencies": {

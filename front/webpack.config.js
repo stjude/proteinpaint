@@ -7,7 +7,7 @@ module.exports = function getPortalConfig(env = {}) {
 	const config = {
 		mode: env.NODE_ENV ? env.NODE_ENV : 'production',
 		target: 'web',
-		entry: './index.js',
+		entry: './src/index.js',
 		output: {
 			path: path.join(__dirname, 'public/bin'),
 			publicPath: '__PP_URL__',

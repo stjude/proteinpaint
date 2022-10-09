@@ -1,8 +1,8 @@
 {
 	"name": "@stjude/proteinpaint-front",
 	"version": "2.4.1-29",
-	"main": "index.js",
-	"bin": "reset.sh",
+	"main": "src/index.js",
+	"bin": "init.js",
 	"scripts": {
 		"dev": "rm -rf ../public/bin & webpack --env NODE_ENV=development --watch --progress --color",
 		"#dev": "webpack --env NODE_ENV=development --watch --progress --color",
@@ -17,7 +17,7 @@
 	},
 	"files": [
 		"public/index.html",
-		"init.sh",
+		"init.js",
 		"bundles.tgz"
 	],
 	"repository": {

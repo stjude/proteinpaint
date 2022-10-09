@@ -11,17 +11,26 @@ an embedder.
 
 ## Usage
 
-You should have a [serverconfig.json](https://docs.google.com/document/d/12s4n1QSOWlxso9zK6L5aZAMuYYdX1Uz4Tu1ECW8tMsk/edit#)
-in you project root, with at least a URL property.
+The recommended usage is to include a postinstall script in your project as follows.
+```json
+	"scripts": {
+		"postinstall": "proteinpaint-front https://my.host.tld"
+	}
+```
 
-Run the following to set a valid public path for the dynamically loaded Proteinpaint bundles.
+You can manually test your project's postinstall lifecyle script by running the following
+to extract the Proteinpaint bundles, with the correct public path for the dynamically 
+loaded Proteinpaint bundles.
 ```bash
-npm run proteinpaint-front [URL_PUBLIC_PATH]
+npx proteinpaint-front [URL_PUBLIC_PATH]
 ```
 
 If you omit the URL_PUBLIC_PATH argument above, then it will default to `'.'`, which assumes that the bundle is served by 
 the same PP server. But note that in this case, the web bundle or server host may NOT be embedded or used as host from 
-other domains, even if CORS is allowed, since script bundles will not be sourced properly and loaded dynamically.  
+other domains, even if CORS is allowed, since script bundles will not be sourced properly and loaded dynamically.
+
+Note that you can serve the web bundle using the Proteinpaint server or any web server,
+see the example in the Develop section.
 
 ## Develop
 
@@ -35,11 +44,15 @@ cd ../front
 npm run dev
 
 # NOTE: the public/index.html will use https://proteinpaint.stjude.org as runproteinpaint({host}),
-# you can edit it to use localhost or another remote host
+# you can edit the host to use localhost or another remote host. You can use any web server to 
+# serve the web bundle separately from the PP API host, for example
+cd public # the subdirectory under proteinpaint/front/
+python3 -m http.server
 ```
 
 ## Build and Publish
 
 ```bash
-../deploy.sh
+cd path/to/proteinpaint
+../deploy.sh 
 ```

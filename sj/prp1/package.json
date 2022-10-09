@@ -3,7 +3,7 @@
 	"version": "2.4.0",
 	"private": true,
 	"scripts": {
-		"prepare": "npx @stjude/proteinpaint-front",
+		"postinstall": "proteinpaint-front https://proteinpaint.stjude.org",
 		"start": "proteinpaint-server"
 	},
 	"dependencies": {
