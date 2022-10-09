@@ -69,7 +69,7 @@ ssh -t $ENV "
 
 	chmod -R 755 available/$APP-$VER
 	cd available/$APP-$VER
-	# npm install --production
+	npm install --production
 
 	cd $REMOTEDIR
 	ln -sfn available/$APP-$VER active-0

@@ -54,8 +54,8 @@ done
 # A second argument implies a target deployment environment
 if [[ "$ENV" != "" ]]; then
 	BRANCH=$(git branch --show-current)
-	if [[ "$BRANCH" != "master" ]]; then
-		MSG="!!! ERROR: must be in the master branch to commit a version"
+	if [[ "$BRANCH" != "master" && "$BRANCH" != "ws-devops" ]]; then
+		MSG="!!! ERROR: must be in the master or ws-devops branch to commit a version"
 		if [[ "$MODE" == "dry" ]]; then
 			echo "(ignored in dry-run mode) $MSG"
 		else 
