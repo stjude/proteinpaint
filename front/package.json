@@ -1,6 +1,6 @@
 {
 	"name": "@stjude/proteinpaint-front",
-	"version": "2.4.1-30",
+	"version": "2.4.1-31",
 	"main": "src/index.js",
 	"bin": "init.js",
 	"scripts": {
