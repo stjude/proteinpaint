@@ -616,7 +616,7 @@ function may_render_variant(data, tk, block) {
 			.style('border-collapse', 'collapse')
 		const alternate_td = label_tr
 			.append('td')
-			.text('Alternate')
+			.text('Alternative')
 			.style('text-align', 'right')
 			.style('font-weight', '550')
 			.style('margin', '5px 5px 10px 5px')
@@ -731,7 +731,7 @@ function may_render_variant(data, tk, block) {
 				.style('width', '300px')
 				.style('font-size', '12px')
 				.html(
-					'Diff score = (Number of nucleotide matches of read vs alternate allele)/(Total length of alignment of read vs alternate allele) - (Number of nucleotide matches of read vs reference allele)/(Total length of alignment of read vs reference allele). In case of the none group, the diff_score reveals to which allele the read has greater sequence similarity.' +
+					'Diff score = (Number of nucleotide matches of read vs alternative allele)/(Total length of alignment of read vs alternative allele) - (Number of nucleotide matches of read vs reference allele)/(Total length of alignment of read vs reference allele). In case of the none group, the diff_score reveals to which allele the read has greater sequence similarity.' +
 						"<br><a href='https://proteinpaint.stjude.org/bam' target='_blank'>Click here to view details of this method</a>."
 				)
 		})
@@ -1598,7 +1598,7 @@ function configPanel(tk, block) {
 				},
 				{
 					label:
-						'Strict: Reads with non-reference and non-alternate nucleotides within variant region are classifed into none category',
+						'Strict: Reads with non-reference and non-alternative nucleotides within variant region are classifed into none category',
 					value: 1,
 					checked: tk.variants[0].strictness == 1
 				}
@@ -1701,7 +1701,7 @@ async function create_read_alignment_table(tk, multi_read_alig_data, group) {
 	if (group.data.type == 'support_alt') {
 		num_read_div = tk.alignpane.body // Printing number of reads aligned in alignment panel
 			.append('div')
-			.text('Number of reads aligned to alternate allele = ' + multi_read_alig_data.alignmentData.read_count)
+			.text('Number of reads aligned to alternative allele = ' + multi_read_alig_data.alignmentData.read_count)
 			.style('text-align', 'center')
 	} else if (group.data.type == 'support_ref') {
 		num_read_div = tk.alignpane.body // Printing number of reads aligned in alignment panel
@@ -1757,11 +1757,11 @@ async function create_read_alignment_table(tk, multi_read_alig_data, group) {
 	// Determine if alt/ref allele string needs to be placed inside variant box
 	let inside_variant_box = 1 // Flag for determining if variant string needs to be placed inside variant box or to the right of it. 0 for inside and 1 for being placed on the right
 	if (group.data.type == 'support_alt') {
-		variant_string = 'Alternate allele'
+		variant_string = 'Alternative allele'
 		if (variant_string.length < tk.variants[0].alt.length) {
 			inside_variant_box = 0
 		} else {
-			variant_string = ' Alternate allele'
+			variant_string = ' Alternative allele'
 		}
 	} else if (group.data.type == 'support_ref') {
 		variant_string = 'Reference allele'
