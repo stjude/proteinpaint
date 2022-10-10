@@ -29,6 +29,6 @@
 		"registry": "https://npm.pkg.github.com/"
 	},
 	"dependencies": {
-		"@stjude/proteinpaint-client": "^2.4.1-30"
+		"@stjude/proteinpaint-client": "^2.4.1-31"
 	}
 }
