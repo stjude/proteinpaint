@@ -173,7 +173,7 @@ else
 	# remote repo not used, use local repo for now
 	mkdir tmpbuild  # temporary empty workspace for checkedout commit
 	cd ../..
-	git archive $REV | tar -x -C build/sj/tmpbuild/
+	git archive HEAD | tar -x -C build/sj/tmpbuild/
 
 	cd build/sj/tmpbuild
 
@@ -209,10 +209,13 @@ else
 	mv rust/*.tgz $APP/rust
 	mv server/server.js* $APP/
 	mv server/package.json $APP/
+	
 	# need to modify the tarball name so that the rust build will be triggered via postinstall npm script
 	# TODO: use lerna to automate and cache builds
-	RUSTPKGVER="$(grep version rust/package.json | sed 's/.*"version": "\(.*\)".*/\1/')"
-	sed -i '.bak' "s%\"@stjude/proteinpaint-rust\": \"^1.0.0\"%\"@stjude/proteinpaint-rust\": \"./rust/stjude-proteinpaint-rust-$RUSTPKGVER.tgz\"%" $APP/package.json
+	RUSTPKGVER=$(node -p "require('./rust/package.json').version")
+	cd $APP
+	npm pkg set dependencies.@stjude/proteinpaint-rust=./rust/stjude-proteinpaint-rust-$RUSTPKGVER.tgz
+	cd ..
 
 	mv server/genome $APP/
 	mv server/dataset $APP/
