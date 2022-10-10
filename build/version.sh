@@ -82,7 +82,7 @@ if [[ "$ENV" != "" ]]; then
 	REMOTESHA=$(git rev-parse --verify -q v$ROOTVERSION^{commit}:sj/$ENV | tail -n1)
 	LOCALSHA=$(git rev-parse --verify -q HEAD:sj/$ENV | tail -n1)
 	set -e
-	if [[ "$UPDATEDWS" == *" $ENV-"* || "$REMOTESHA" != "$LOCALSHA" ]]; then
+	if [[ "$UPDATEDWS" == *" $ENV-"* || "$REMOTESHA" != "$LOCALSHA"  ]]; then
 		# the root version is >= max(sj/portal versions)
 		# set the current portal version to the root version, 
 		# in case the last version update did not apply to this portal=$ENV
@@ -100,6 +100,10 @@ if [[ "$ENV" != "" ]]; then
 	set -e
 	if [[ "$REMOTESHA" != "$LOCALSHA" ]]; then
 		NEWVER=$(node -p "require('./sj/$ENV/package.json').version")
+		if [[ "$NEWVER" == "$ROOTVERSION" ]]; then
+			NEWVER=$TYPE
+		fi
+		
 		git stash
 		echo "updating root package version to $NEWVER ..."
 		npm version $NEWVER --no-git-tag-version --no-workspaces-update
@@ -117,7 +121,7 @@ if [[ "$ENV" != "" ]]; then
 
 	echo "committing version change ..."
 	git add --all
-	git commit -m "$TAG"
+	git commit -m "$COMMITMSG"
 	git tag $TAG
 	git push origin $TAG
 
