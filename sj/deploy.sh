@@ -26,13 +26,6 @@ fi
 
 MODE=$3
 
-#####################
-# CONSTANTS
-#####################
-
-APP=pp # might be overridden below
-REMOTEDIR=/opt/app/pp
-
 #################################
 # VERSION AND BUILD FROM COMMIT
 #################################
@@ -54,43 +47,49 @@ fi
 # unless in dry-run mode
 ./build/version.sh $VERSIONTYPE $ENV $MODE
 
+cd sj/$ENV
+REV=$(git rev-parse --short HEAD)
+echo "$ENV $REV $(date)" > public/rev.txt
+npm pack
+VER=$(node -p "require('./package.json').version")
+mv stjude-proteinpaint-*.tgz $APP-$VER.tgz
+
 if [[ "$MODE" == "dry" ]]; then
 	echo "SKIPPED deployment in dry-run mode"
 	exit 0
 fi
 
-cd sj/$ENV
-REV=$(git rev-parse --short HEAD)
-echo "$ENV $REV $(date)" > public/rev.txt
-npm pack
-
-VER=$(node -p "require('./package.json').version")
-mv stjude-proteinpaint-*.tgz $APP-$VER.tgz
-
 ##########
 # DEPLOY
 ##########
 
+APP=pp
+REMOTEDIR=/opt/app/pp
+
 echo "Transferring build to $ENV"
 scp $APP-$VER.tgz $ENV:~
+
 ssh -t $ENV "
 	tar --warning=no-unknown-keyword -xzf ~/$APP-$VER.tgz -C $REMOTEDIR/available/
 	rm ~/$APP-$VER.tgz
+
 	cd $REMOTEDIR
 	mv -f available/package available/$APP-$VER
+	cp -r active/node_modules available/$APP-$VER
 	cp active/serverconfig.json available/$APP-$VER/
-	chmod -R 755 available/$APP-$VER
-	ln -sfn ~/.npmrc available/$APP-$VER/
+	# copy the symlink to .npmrc
+	cp active/.npmrc available/$APP-$VER/
 
-	cd available/$APP-$VER
-	npm install --production
+	cd available/$APP-$VER/
+	npm update @stjude/proteinpaint-server
+	npm update @stjude/proteinpaint-front
+	ln -sfn /opt/app/pecan/portal/www/sjcharts/public public/sjcharts
+	ln -sfn public/bin public/no-babel-polyfill
 
 	cd $REMOTEDIR
-	ln -sfn available/$APP-$VER active-0
-	ln -sfn /opt/app/pecan/portal/www/sjcharts/public available/$APP-$VER/public/sjcharts
-	# legacy support for embedders that required this
-	ln -sfn ./bin available/$APP-$VER/public/no-babel-polyfill
+	ln -sfn available/$APP-$REV active-0
 	
+	# TODO: should create the helper scripts under the project?
 	# ./helpers/record.sh deployed
 	# ./proteinpaint_run_node.sh
 	# ./helpers/purge.sh \"pp-*\"
