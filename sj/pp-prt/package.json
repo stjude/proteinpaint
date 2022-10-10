@@ -4,10 +4,12 @@
 	"private": true,
 	"scripts": {
 		"postinstall": "proteinpaint-front https://pp-prt.stjude.org",
+		"postupdate": "proteinpaint-front https://pp-prt.stjude.org",
 		"start": "proteinpaint-server"
 	},
 	"dependencies": {
-		"@stjude/proteinpaint-front": "^2.4.1-31"
+		"@stjude/proteinpaint-front": "2.4.1-31",
+		"@stjude/proteinpaint-server": "2.4.1-31"
 	},
 	"files": [
 		"public/*",

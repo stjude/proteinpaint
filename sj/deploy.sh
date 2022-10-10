@@ -50,8 +50,12 @@ fi
 cd sj/$ENV
 REV=$(git rev-parse --short HEAD)
 echo "$ENV $REV $(date)" > public/rev.txt
+# NOTE: npm pack does not include symbolink link as-is or its contents
+# will need to do that via rsync, which is optimal for syncing 
+# larger sized static files
 npm pack
 VER=$(node -p "require('./package.json').version")
+APP=pp
 mv stjude-proteinpaint-*.tgz $APP-$VER.tgz
 
 if [[ "$MODE" == "dry" ]]; then
@@ -63,7 +67,6 @@ fi
 # DEPLOY
 ##########
 
-APP=pp
 REMOTEDIR=/opt/app/pp
 
 echo "Transferring build to $ENV"
@@ -77,8 +80,6 @@ ssh -t $ENV "
 	mv -f available/package available/$APP-$VER
 	cp -r active/node_modules available/$APP-$VER
 	cp active/serverconfig.json available/$APP-$VER/
-	# copy the symlink to .npmrc
-	cp active/.npmrc available/$APP-$VER/
 
 	cd available/$APP-$VER/
 	npm update @stjude/proteinpaint-server
@@ -94,6 +95,10 @@ ssh -t $ENV "
 	# ./proteinpaint_run_node.sh
 	# ./helpers/purge.sh \"pp-*\"
 "
+
+# TODO: rsync symlinked content to $ENV, 
+# since package.files will not pack any symbolic link or its contents
+
 
 #############
 # CLEANUP

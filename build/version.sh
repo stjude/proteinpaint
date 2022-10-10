@@ -24,7 +24,7 @@ git fetch origin v$ROOTVERSION
 
 # list workspaces in order of depedency chain, from children to parents
 # TODO: add rust later or use package.workspaces.join(",")
-WORKSPACES="server client front"
+WORKSPACES="rust server client front"
 UPDATEDWS=""
 for WS in ${WORKSPACES};
 do
@@ -34,6 +34,11 @@ do
 	# echo "$WS [$REMOTESHA] [$LOCALSHA]"
 	set -e
 	if [[ "$REMOTESHA" != "$LOCALSHA" ]]; then
+		if [[ "$ENV" != "" && "$WS" != "server" ]]; then
+			echo "TODO: reactivate testing !!!"
+			# npm test --workspace=$WS
+		fi
+
 		echo "Bumping the $WS version => $TYPE"
 		npm version $TYPE --workspace=$WS --no-git-tag-version --no-workspaces-update
 		VERSION=$(node -p "require('./$WS/package.json').version")
@@ -42,10 +47,20 @@ do
 		# will do that in its deploy script, so that its dependency versions reflect the last deployed state
 		for WSP in ${WORKSPACES};
 		do
-			# echo "[$WSP] [$WS] [$(grep -c proteinpaint-$WS $WSP/package.json)]"
-			if [[ "$WSP" != "$WS" && "$(grep -c proteinpaint-$WS $WSP/package.json)" != "0" ]]; then
-				echo "setting $WSP/package.json to use $WS@^$VERSION"
-				npm pkg set dependencies.@stjude/proteinpaint-$WS="^$VERSION" --workspace=$WSP
+			if [[ "$WSP" != "$WS" ]]; then
+				DEVDEPS=$(npm pkg get devDependencies --workspace=$WSP)
+				if [[ "$DEVDEPS" == *"proteinpaint-$WS"* ]]; then
+					echo "setting $WSP devDependencies to use $WS@$VERSION"
+					npm pkg set devDependencies.@stjude/proteinpaint-$WS="$VERSION" --workspace=$WSP
+					UPDATEDWS="$UPDATEDWS $WSP:@$WS"
+				fi
+
+				DEPS=$(npm pkg get dependencies --workspace=$WSP)
+				if [[ "$DEPS" == *"proteinpaint-$WS"* ]]; then
+					echo "setting $WSP dependencies to use $WS@$VERSION"
+					npm pkg set dependencies.@stjude/proteinpaint-$WS="$VERSION" --workspace=$WSP
+					UPDATEDWS="$UPDATEDWS $WSP:@$WS"
+				fi
 			fi
 		done
 	fi
@@ -54,8 +69,9 @@ done
 # A second argument implies a target deployment environment
 if [[ "$ENV" != "" ]]; then
 	BRANCH=$(git branch --show-current)
-	if [[ "$BRANCH" != "master" && "$BRANCH" != "ws-devops" ]]; then
-		MSG="!!! ERROR: must be in the master or ws-devops branch to commit a version"
+	if [[ "$BRANCH" != "master" && "$BRANCH" != *"-devops"* ]]; then
+		# ws-devops branch is only for testing
+		MSG="!!! ERROR: must be in the master or a devops branch to commit a version"
 		if [[ "$MODE" == "dry" ]]; then
 			echo "(ignored in dry-run mode) $MSG"
 		else 
@@ -67,17 +83,27 @@ if [[ "$ENV" != "" ]]; then
 	cd sj/$ENV
 	for WS in ${WORKSPACES};
 	do
-		DEPVER=$(node -p "require('./package.json').dependencies['@stjude/proteinpaint-$WS'] || ''")
-		if [[ "$DEPVER" != "" ]]; then
-			NEWVER=$(node -p "require('../../$WS/package.json').version")
-			echo "$WS [$NEWVER] [$DEPVER]"
-			if [[ "^$NEWVER" != "$DEPVER" ]]; then
-				echo "setting $ENV dependencies[@stjude/proteinpaint-$WS] to ^$NEWVER"
-				npm pkg set dependencies.@stjude/proteinpaint-$WS="^$NEWVER"
-				UPDATEDWS="$UPDATEDWS $ENV:^$WS"
+		NEWVER=$(node -p "require('../../$WS/package.json').version")
+		DEVDEPVER=$(node -p "require('./package.json').devDependencies?.['@stjude/proteinpaint-$WS'] || ''")
+		if [[ "$DEVDEPVER" != "" && "$DEVDEPVER" != "$NEWVER" ]]; then
+			# echo "$WS [$NEWVER] [$DEPVER]"
+			if [[ "$NEWVER" != "$DEVDEPVER" ]]; then
+				echo "setting $ENV devDependencies[@stjude/proteinpaint-$WS] to $NEWVER"
+				npm pkg set devDependencies.@stjude/proteinpaint-$WS="$NEWVER"
+				UPDATEDWS="$UPDATEDWS $ENV:@$WS"
+			fi
+		fi
+		DEPVER=$(node -p "require('./package.json').dependencies?.['@stjude/proteinpaint-$WS'] || ''")
+		if [[ "$DEPVER" != "" && "$DEPVER" != "$NEWVER" ]]; then
+			# echo "$WS [$NEWVER] [$DEPVER]"
+			if [[ "$NEWVER" != "$DEPVER" ]]; then
+				echo "setting $ENV dependencies[@stjude/proteinpaint-$WS] to $NEWVER"
+				npm pkg set dependencies.@stjude/proteinpaint-$WS="$NEWVER"
+				UPDATEDWS="$UPDATEDWS $ENV:@$WS"
 			fi
 		fi
 	done
+	# echo "106 [$UPDATEDWS]"
 
 	set +e
 	REMOTESHA=$(git rev-parse --verify -q v$ROOTVERSION^{commit}:sj/$ENV | tail -n1)
@@ -87,18 +113,27 @@ if [[ "$ENV" != "" ]]; then
 		# the root version is >= max(sj/portal versions)
 		# set the current portal version to the root version, 
 		# in case the last version update did not apply to this portal=$ENV
-		npm version $ROOTVERSION --no-git-tag-version --no-workspaces-update
+		CURRENTVER=$(node -p "require('./package.json').version")
+		# echo "116 [$CURRENTVER] [$ROOTVERSION]"
+		if [[ "$CURRENTVER" != "$ROOTVERSION" ]]; then
+			echo "Bumping the $ENV version => $TYPE"
+			npm version $ROOTVERSION --no-git-tag-version --no-workspaces-update
+		fi
+
 		# then increment the version
 		npm version $TYPE --no-git-tag-version --no-workspaces-update
+		NEWVER=$(node -p "require('./package.json').version")
+		UPDATEDWS="$UPDATEDWS $ENV-$NEWVER"
 	fi
 
 	cd ../..
-
+	# get the new version before stashing
+	NEWVER=$(node -p "require('./sj/$ENV/package.json').version")
+	
 	if [[ "$UPDATEDWS" != "" ]]; then
 		git stash
 	fi
 
-	NEWVER=$(node -p "require('./sj/$ENV/package.json').version")
 	if [[ "$NEWVER" != "$ROOTVERSION" ]]; then
 		echo "updating root package version to $NEWVER ..."
 		npm version $NEWVER --no-git-tag-version --no-workspaces-update
@@ -116,7 +151,7 @@ if [[ "$ENV" != "" ]]; then
 			git stash drop
 		fi
 		echo "SKIPPED commit, tag, and publish in dry-run mode"
-		# exit 0
+		exit 0
 	fi
 	echo "120 [$UPDATEDWS] [$NEWVER] [$ROOTVERSION]"
 	
@@ -140,7 +175,7 @@ if [[ "$ENV" != "" ]]; then
 		if [[ "$PUBLISHEDVER" != "$CURRENTVER" ]]; then
 			echo "publishing $WS-$CURRENTVER"
 			cd $WS
-			# npm publish
+			npm publish
 			cd ..
 		fi
 	done
