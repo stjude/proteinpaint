@@ -15,9 +15,7 @@ archive/*
 **/package/*
 package-lock.json
 
-public/bin/*
-*/*/public/bin/*
-*/*/public/public
+**/public/bin/*
 
 public/tmp/*
 public/data/*
@@ -33,7 +31,7 @@ public/ALCL.html
 public/builds/*
 public/static/*.docx
 public/static/*.pdf
-public/rev.txt
+**/public/rev.txt
 
 /utils/vcf2genesamplematrix/bin.js
 /utils/vcf2genesamplematrix/output.html
@@ -61,9 +59,8 @@ server.js*
 !client/rx/server.js
 setup/*gz*
 setup/*
-tmpbuild/*
-tmppack*/*
-*/tmppack/*
+**/tmpbuild*/*
+**/tmppack*/*
 pp-server/*
 
 *-stash.js
@@ -75,10 +72,6 @@ pp-server/*
 
 deploys/
 
-p4/node_modules/
-p4/public/bin/*
-p4/config.json
-p4/public/dev.html
 .vscode/launch.json
 .vscode/settings.json
 .idea/
@@ -92,3 +85,6 @@ p4/public/dev.html
 ssl-proxy.json
 .RData
 log.txt
+*-debug.*
+build/sj/env.sh
+rust/Dockerfile

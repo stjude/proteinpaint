@@ -1,9 +1,9 @@
 {
   "name": "@stjude/proteinpaint-server",
-  "version": "2.4.0",
+  "version": "2.4.1-32",
   "description": "a genomics visualization tool for exploring a cohort's genotype and phenotype data",
   "main": "server.js",
-  "bin": "bin.js",
+  "bin": "start.js",
   "imports": {
     "#shared/*": "./shared/*.js",
     "#src/*": "./src/*.js"
@@ -13,7 +13,7 @@
     "start": "nodemon server.js --watch ./server*.js* --watch genome --watch dataset",
     "pretest": "./test/pretest.js",
     "test": "tape -r '@babel/register' */test/*.spec.js",
-    "build": "webpack --config=./webpack.config.js",
+    "prepack": "webpack",
     "response": "nodemon modules/test/test.server.js --watch src",
     "getconf": "../build/getConfigProp.js"
   },
@@ -36,7 +36,7 @@
     "webpack-notifier": "^1.15.0"
   },
   "dependencies": {
-    "@stjude/proteinpaint-rust": "^1.0.0",
+    "@stjude/proteinpaint-rust": "2.4.1-0",
     "better-sqlite3": "^7.5.3",
     "body-parser": "^1.15.2",
     "canvas": "^2.9.3",
@@ -57,7 +57,8 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/stjude/pp-dist"
+    "url": "https://github.com/stjude/proteinpaint",
+    "directory": "server"
   },
   "publishConfig": {
     "registry": "https://npm.pkg.github.com/"

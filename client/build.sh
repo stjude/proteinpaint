@@ -28,3 +28,4 @@ sed -i.bak 's%proteinpaint-client%proteinpaint%' package.json
 ##########
 
 npm pack 
+# test client change again one more time, again

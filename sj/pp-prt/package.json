@@ -1,0 +1,19 @@
+{
+	"name": "@stjude/proteinpaint-pp-prt",
+	"version": "2.4.2-3",
+	"private": true,
+	"scripts": {
+		"postinstall": "proteinpaint-front https://pp-prt.stjude.org",
+		"postupdate": "proteinpaint-front https://pp-prt.stjude.org",
+		"start": "proteinpaint-server"
+	},
+	"dependencies": {
+		"@stjude/proteinpaint-front": "2.4.1-32",
+		"@stjude/proteinpaint-server": "2.4.1-32"
+	},
+	"files": [
+		"public/*",
+		"dataset/*",
+		"genomes/*"
+	]
+}

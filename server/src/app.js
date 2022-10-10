@@ -132,11 +132,22 @@ if (serverconfig.users) {
 /* when using webpack, should no longer use __dirname, otherwise cannot find the html files!
 app.use(express.static(__dirname+'/public'))
 */
+
 const basepath = serverconfig.basepath || ''
-const staticDir = express.static(path.join(process.cwd(), './public'))
+
+function setHeaders(res) {
+	res.header('Access-Control-Allow-Origin', '*')
+	res.header(
+		'Access-Control-Allow-Headers',
+		'Origin, X-Requested-With, Content-Type, Accept, Authorization, X-Auth-Token, x-auth-token, x-ds-access-token'
+	)
+}
+
 if (!serverconfig.backend_only) {
+	const staticDir = express.static(path.join(process.cwd(), './public'), { setHeaders })
 	app.use(staticDir)
 }
+
 app.use(compression())
 
 app.use((req, res, next) => {
@@ -165,12 +176,7 @@ app.use((req, res, next) => {
 		Object.assign(req.query, req.body)
 	}
 	log(req)
-
-	res.header('Access-Control-Allow-Origin', '*')
-	res.header(
-		'Access-Control-Allow-Headers',
-		'Origin, X-Requested-With, Content-Type, Accept, Authorization, X-Auth-Token, x-auth-token, x-ds-access-token'
-	)
+	setHeaders(res)
 	if (req.method == 'GET' && !req.path.includes('.')) {
 		// immutable response before expiration, client must revalidate after max-age;
 		// by convention, any path that has a dot will be treated as
