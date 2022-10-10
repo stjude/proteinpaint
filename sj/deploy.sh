@@ -47,6 +47,7 @@ fi
 # unless in dry-run mode
 ./build/version.sh $VERSIONTYPE $ENV
 
+cd sj/$ENV
 REV=$(git rev-parse --short HEAD)
 echo "$ENV $REV $(date)" > public/rev.txt
 npm pack
@@ -66,8 +67,9 @@ ssh -t $ENV "
 	cd $REMOTEDIR
 	mv -f available/package available/$APP-$VER
 	cp active/serverconfig.json available/$APP-$VER/
-
 	chmod -R 755 available/$APP-$VER
+	ln -sfn ~/.npmrc available/$APP-$VER/
+
 	cd available/$APP-$VER
 	npm install --production
 

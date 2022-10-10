@@ -110,7 +110,7 @@ if [[ "$ENV" != "" ]]; then
 		git stash pop
 	fi
 
-	TAG="v$NEWVER"
+	TAG="v$(node -p "require('./package.json').version")"	
 	COMMITMSG="$TAG $UPDATEDWS"
 	if [[ "$MODE" == "dry" ]]; then
 		echo "SKIPPED commit, tag, and publish in dry-run mode: "
@@ -137,3 +137,5 @@ if [[ "$ENV" != "" ]]; then
 		fi
 	done
 fi
+
+exit 0

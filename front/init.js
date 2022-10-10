@@ -14,7 +14,9 @@ try {
 	}
 	if (fs.existsSync(`${CWD}/public/bin`)) {
 		console.log(`removing the old public/bin at ${CWD}`)
-		fs.rmSync(`${CWD}/public/bin`, { recursive: true, force: true }, () => {})
+		// TODO: node 12 in pp-prt does not support rmSync,
+		// should update as part of v16 upgrade
+		fs.rmdirSync(`${CWD}/public/bin`, { recursive: true, force: true }, () => {})
 	}
 	const tar = ps.spawnSync('tar', [`-xzf`, `${__dirname}/bundles.tgz`, `-C`, `${CWD}`], { encoding: 'utf8' })
 	if (tar.stderr) throw tar.stderr
