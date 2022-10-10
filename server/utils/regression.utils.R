@@ -209,7 +209,7 @@ linearRegression <- function(formula, dat) {
     snp_vars <- grep(formula$id, row.names(type3_table), value = T, fixed = T)
     formula_reduce <- update(formula$formula, paste0("~.",paste0("-", snp_vars, collapse = "")))
     res_reduce <- lm(formula_reduce, data = dat)
-    totalSnpEffect_table <- as.matrix(waldtest(res, res_reduce, test = "F"))[2, 2:4, drop = F]
+    totalSnpEffect_table <- as.matrix(anova(res, res_reduce, test = "F"))[2, c("Df","F","Pr(>F)"), drop = F]
     row.names(totalSnpEffect_table) <- "Total"
     totalSnpEffect_table[,"Df"] <- totalSnpEffect_table[,"Df"] * -1
     totalSnpEffect_table[,"F"] <- round(totalSnpEffect_table[,"F"], 3)
