@@ -24,6 +24,8 @@ if [[ "$2" != "" ]]; then
 	VERSIONTYPE=$2
 fi
 
+MODE=$3
+
 #####################
 # CONSTANTS
 #####################
@@ -37,15 +39,25 @@ REMOTEDIR=/opt/app/pp
 
 # workspace must be clean to deploy
 if [ ! -z "$(git status --porcelain)" ]; then
-	echo "There are untracked changes, either commit or delete them, or 'npm run clean'."
-	exit 1
+	ERRORMSG="!!! There are untracked changes, either commit or delete them, or 'npm run clean'."
+	if [[ "$MODE" == "dry" ]]; then
+		echo "(SKIPPED in dry-mode) $ERRORMSG"
+	else
+		echo $ERRORMSG
+		exit 1
+	fi
 fi
 
 # npm ci ??? # 
 
 # this version script will commit and publish changes,
 # unless in dry-run mode
-./build/version.sh $VERSIONTYPE $ENV
+./build/version.sh $VERSIONTYPE $ENV $MODE
+
+if [[ "$MODE" == "dry" ]]; then
+	echo "SKIPPED deployment in dry-run mode"
+	exit 0
+fi
 
 cd sj/$ENV
 REV=$(git rev-parse --short HEAD)
@@ -88,6 +100,4 @@ ssh -t $ENV "
 # CLEANUP
 #############
 
-cd ..
-# rm -rf tmpbuild
 exit 0

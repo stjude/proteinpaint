@@ -70,7 +70,8 @@ if [[ "$ENV" != "" ]]; then
 		DEPVER=$(node -p "require('./package.json').dependencies['@stjude/proteinpaint-$WS'] || ''")
 		if [[ "$DEPVER" != "" ]]; then
 			NEWVER=$(node -p "require('../../$WS/package.json').version")
-			if [[ "$NEWVER" != "$DEPVER" ]]; then
+			echo "$WS [$NEWVER] [$DEPVER]"
+			if [[ "^$NEWVER" != "$DEPVER" ]]; then
 				echo "setting $ENV dependencies[@stjude/proteinpaint-$WS] to ^$NEWVER"
 				npm pkg set dependencies.@stjude/proteinpaint-$WS="^$NEWVER"
 				UPDATEDWS="$UPDATEDWS $ENV:^$WS"
@@ -82,7 +83,7 @@ if [[ "$ENV" != "" ]]; then
 	REMOTESHA=$(git rev-parse --verify -q v$ROOTVERSION^{commit}:sj/$ENV | tail -n1)
 	LOCALSHA=$(git rev-parse --verify -q HEAD:sj/$ENV | tail -n1)
 	set -e
-	if [[ "$UPDATEDWS" == *" $ENV-"* || "$REMOTESHA" != "$LOCALSHA"  ]]; then
+	if [[ "$UPDATEDWS" == *" $ENV:"* || "$REMOTESHA" != "$LOCALSHA"  ]]; then
 		# the root version is >= max(sj/portal versions)
 		# set the current portal version to the root version, 
 		# in case the last version update did not apply to this portal=$ENV
@@ -93,46 +94,53 @@ if [[ "$ENV" != "" ]]; then
 
 	cd ../..
 
-	set +e
-	REMOTESHA=$(git rev-parse --verify -q v$ROOTVERSION^{commit} | tail -n1)
-	LOCALSHA=$(git rev-parse --verify -q HEAD | tail -n1)
-	echo "$BRANCH remote=$REMOTESHA local=$LOCALSHA"
-	set -e
-	if [[ "$REMOTESHA" != "$LOCALSHA" ]]; then
-		NEWVER=$(node -p "require('./sj/$ENV/package.json').version")
-		if [[ "$NEWVER" == "$ROOTVERSION" ]]; then
-			NEWVER=$TYPE
-		fi
-		
+	if [[ "$UPDATEDWS" != "" ]]; then
 		git stash
+	fi
+
+	NEWVER=$(node -p "require('./sj/$ENV/package.json').version")
+	if [[ "$NEWVER" != "$ROOTVERSION" ]]; then
 		echo "updating root package version to $NEWVER ..."
 		npm version $NEWVER --no-git-tag-version --no-workspaces-update
+	fi
+
+	TAG="v$(node -p "require('./package.json').version")" 
+	COMMITMSG="$TAG $UPDATEDWS"
+	if [[ "$MODE" == "dry" ]]; then
+		if [[ "$UPDATEDWS" != "" || "$NEWVER" != "$ROOTVERSION" ]]; then
+			echo "$COMMITMSG"
+			git restore .
+		fi
+		if [[ "$UPDATEDWS" != "" ]]; then
+			echo "dropping $UPDATEDWS"
+			git stash drop
+		fi
+		echo "SKIPPED commit, tag, and publish in dry-run mode"
+		# exit 0
+	fi
+	echo "120 [$UPDATEDWS] [$NEWVER] [$ROOTVERSION]"
+	
+	if [[ "$UPDATEDWS" != "" ]]; then
 		git stash pop
 	fi
 
-	TAG="v$(node -p "require('./package.json').version")"	
-	COMMITMSG="$TAG $UPDATEDWS"
-	if [[ "$MODE" == "dry" ]]; then
-		echo "SKIPPED commit, tag, and publish in dry-run mode: "
-		echo "$COMMITMSG"
-		git restore .
-		exit 0
+	if [[ "$UPDATEDWS" != "" || "$NEWVER" != "$ROOTVERSION" ]]; then
+		echo "committing version change ..."
+		git add --all
+		git commit -m "$COMMITMSG"
+		git tag $TAG
+		git push origin $TAG
 	fi
-
-	echo "committing version change ..."
-	git add --all
-	git commit -m "$COMMITMSG"
-	git tag $TAG
-	git push origin $TAG
 
 	for WS in ${WORKSPACES};
 	do
-		PUBLISHEDVER=$(npm view @stjude/proteinpaint-client version | tail -n1)
+		PUBLISHEDVER=$(npm view @stjude/proteinpaint-$WS version | tail -n1)
 		CURRENTVER=$(node -p "require('./$WS/package.json').version")
+		echo "$WS [$PUBLISHEDVER] [$CURRENTVER]"
 		if [[ "$PUBLISHEDVER" != "$CURRENTVER" ]]; then
 			echo "publishing $WS-$CURRENTVER"
 			cd $WS
-			npm publish
+			# npm publish
 			cd ..
 		fi
 	done
