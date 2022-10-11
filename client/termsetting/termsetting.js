@@ -747,6 +747,7 @@ defaultQ{}
 	with term types as keys
 */
 export async function fillTermWrapper(tw, vocabApi, defaultQ) {
+	tw.isAtomic = true
 	if (!tw.$id) tw.$id = `${$id++}${idSuffix}`
 
 	if (!tw.term) {
@@ -766,6 +767,7 @@ export async function fillTermWrapper(tw, vocabApi, defaultQ) {
 	}
 
 	if (!tw.q) tw.q = {}
+	tw.q.isAtomic = true
 
 	// call term-type specific logic to fill tw
 	await call_fillTW(tw, vocabApi, defaultQ)

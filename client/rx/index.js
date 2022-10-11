@@ -653,23 +653,14 @@ export function getComponents(components, dotSepNames) {
 	- see index.spec test for copyMerge details
 */
 export function copyMerge(base, ...args) {
-	const replaceKeyVals = []
-	if (Array.isArray(args[args.length - 1])) {
-		replaceKeyVals.push(...args.pop())
-	}
 	const target = typeof base == 'string' ? fromJson(base) : base
 	for (const arg of args) {
 		if (arg) {
 			const source = typeof base == 'string' ? fromJson(toJson(arg)) : arg
 			for (const key in source) {
-				if (
-					!target[key] ||
-					Array.isArray(target[key]) ||
-					typeof target[key] !== 'object' ||
-					replaceKeyVals.includes(key)
-				)
+				if (!target[key] || Array.isArray(target[key]) || typeof target[key] !== 'object' || target[key].isAtomic)
 					target[key] = source[key]
-				else copyMerge(target[key], source[key], replaceKeyVals)
+				else copyMerge(target[key], source[key])
 			}
 		}
 	}

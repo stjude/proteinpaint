@@ -365,9 +365,10 @@ tape('copyMerge', function(test) {
 			color: 'red'
 		}
 	}
-	const source1 = { settings: { a: 1 } }
+	const source1 = { settings: { a: 1 }, isAtomic: true }
+	const replaceKeyVals = ['settings']
 	test.deepEqual(
-		rx.copyMerge(target1, source1, ['settings']).settings,
+		rx.copyMerge(target1, source1, replaceKeyVals).settings,
 		source1.settings,
 		'should replace a target object value instead of extending it, if the last argument is an array with a matching key'
 	)
