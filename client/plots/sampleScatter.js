@@ -108,6 +108,7 @@ class Scatter {
 	// or current.state != replcament.state
 	async main() {
 		this.config = JSON.parse(JSON.stringify(this.state.config))
+
 		if (this.dom.header)
 			this.dom.header.html(
 				this.config.name + ` <span style="opacity:.6;font-size:.7em;margin-left:10px;">SCATTER PLOT</span>`
@@ -115,6 +116,7 @@ class Scatter {
 		copyMerge(this.settings, this.config.settings.sampleScatter)
 		const reqOpts = this.getDataRequestOpts()
 		const data = await this.app.vocabApi.getScatterData(reqOpts)
+
 		if (data.error) throw data.error
 		if (!Array.isArray(data.samples)) throw 'data.samples[] not array'
 		this.pj.refresh({ data: data.samples })
@@ -303,7 +305,7 @@ function setRenderers(self) {
 		const chartDivs = self.dom.holder.selectAll('.pp-scatter-chart').data(self.pj.tree.charts, d => d.chartId)
 
 		chartDivs.exit().remove()
-		chartDivs.each(self.updateCharts)
+		chartDivs.each(updateCharts)
 		chartDivs.enter().each(addCharts)
 		self.dom.holder.style('display', 'inline-block')
 		self.dom.holder.on('mouseover', self.mouseover).on('mouseout', self.mouseout)
@@ -336,7 +338,7 @@ function setRenderers(self) {
 			self.renderLegend(self.dom.legendDiv, data.colorLegend, data.shapeLegend)
 		}
 
-		self.updateCharts = function(d) {
+		function updateCharts(d) {
 			const s = self.settings
 			const div = select(this)
 
