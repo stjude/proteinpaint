@@ -1,8 +1,10 @@
 import { getCompInit, copyMerge } from '../rx'
 import { fillTermWrapper } from '../termsetting/termsetting'
-import { select, pointer } from 'd3-selection'
+import { select, pointer, event } from 'd3-selection'
 import { scaleLinear as d3Linear } from 'd3-scale'
 import Partjson from 'partjson'
+import { export_data } from '../src/client'
+
 import {
 	zoom as d3zoom,
 	zoomIdentity,
@@ -15,7 +17,8 @@ import {
 	symbolDiamond,
 	symbolDiamond2,
 	symbolStar,
-	symbolSquare2
+	symbolSquare2,
+	groups
 } from 'd3'
 import { d3lasso } from '../common/lasso'
 import { Menu } from '#dom/menu'
@@ -43,6 +46,20 @@ class Scatter {
 	constructor() {
 		this.type = 'sampleScatter'
 		this.lassoOn = false
+		this.groups = []
+		const mySymbols = [
+			symbolCircle,
+			symbolSquare,
+			symbolCross,
+			symbolWye,
+			symbolTriangle,
+			//symbolAsterisk,
+			symbolDiamond,
+			symbolDiamond2,
+			symbolStar,
+			symbolSquare2
+		]
+		this.symbols = mySymbols.map(s => symbol(s))
 	}
 
 	async init(opts) {
@@ -100,8 +117,8 @@ class Scatter {
 		const data = await this.app.vocabApi.getScatterData(reqOpts)
 		if (data.error) throw data.error
 		if (!Array.isArray(data.samples)) throw 'data.samples[] not array'
-		console.log(data)
 		this.pj.refresh({ data: data.samples })
+		this.shapes = data.shapeLegend
 		// no option for dividing charts by term,
 		// so assume that the plot always corresponds to the first chart data
 		const chart0 = this.pj.tree.charts[0]
@@ -113,21 +130,9 @@ class Scatter {
 			.domain([chart0.yMax, chart0.yMin])
 			.range([this.settings.svgh, 0])
 		this.axisLeft = axisLeft(this.yAxisScale)
-		const mySymbols = [
-			symbolCircle,
-			symbolSquare,
-			symbolCross,
-			symbolWye,
-			symbolTriangle,
-			//symbolAsterisk,
-			symbolDiamond,
-			symbolDiamond2,
-			symbolStar,
-			symbolSquare2
-		]
-		this.symbols = mySymbols.map(s => symbol(s).size(this.settings.radius))
 
 		this.render(data)
+		this.lassoReset()
 	}
 
 	// creates an opts object for the vocabApi.someMethod(),
@@ -175,6 +180,13 @@ class Scatter {
 						title: 'The term to use to shape the samples',
 						label: 'Shape',
 						vocabApi: this.app.vocabApi
+					},
+					{
+						label: 'Symbol size',
+						type: 'number',
+						chartType: 'sampleScatter',
+						settingsKey: 'size',
+						title: 'The internal width of the chart plot'
 					},
 					{
 						label: 'Chart width',
@@ -295,7 +307,6 @@ function setRenderers(self) {
 		chartDivs.enter().each(addCharts)
 		self.dom.holder.style('display', 'inline-block')
 		self.dom.holder.on('mouseover', self.mouseover).on('mouseout', self.mouseout)
-		self.renderLegend(self.dom.legendDiv, data.colorLegend, data.shapeLegend)
 
 		function addCharts(d) {
 			const s = self.settings
@@ -320,24 +331,25 @@ function setRenderers(self) {
 				.transition()
 				.duration(s.duration)
 				.style('opacity', 1)
+
 			setTools(self.dom, svg, d)
+			self.renderLegend(self.dom.legendDiv, data.colorLegend, data.shapeLegend)
 		}
-	}
 
-	self.updateCharts = function(d) {
-		const s = self.settings
-		const div = select(this)
+		self.updateCharts = function(d) {
+			const s = self.settings
+			const div = select(this)
 
-		div
-			.transition()
-			.duration(s.duration)
-			.style('width', s.svgw + 50 + 'px')
-		//.style("top", layout.byChc[d.chc].top)
-		//.style("left", layout.byChc[d.chc].left)
+			div
+				.transition()
+				.duration(s.duration)
+				.style('width', s.svgw + 50 + 'px')
 
-		div.selectAll('.sjpcb-unlock-icon').style('display', s.scale == 'byChart' ? 'none' : 'block')
+			div.selectAll('.sjpcb-unlock-icon').style('display', s.scale == 'byChart' ? 'none' : 'block')
 
-		renderSVG(div.select('svg'), d, s, s.duration)
+			renderSVG(div.select('svg'), d, s, s.duration)
+			self.renderLegend(self.dom.legendDiv, data.colorLegend, data.shapeLegend)
+		}
 	}
 
 	function renderSVG(svg, chart, s, duration) {
@@ -427,7 +439,7 @@ function setRenderers(self) {
 			.transition()
 			.duration(duration)
 			.attr('transform', c => `translate(${c.scaledX + 100},${c.scaledY})`)
-			.attr('d', c => getShape(c))
+			.attr('d', c => getShape(self, c))
 			.attr('fill', c => c.color)
 
 			.style('fill-opacity', s.fillOpacity)
@@ -436,17 +448,12 @@ function setRenderers(self) {
 			.append('path')
 			/*** you'd need to set the symbol position using translate, instead of previously with cx, cy for a circle ***/
 			.attr('transform', c => `translate(${c.scaledX + 100},${c.scaledY})`)
-			.attr('d', c => getShape(c))
+			.attr('d', c => getShape(self, c))
 			.attr('fill', c => c.color)
 
 			.style('fill-opacity', s.fillOpacity)
 			.transition()
 			.duration(duration)
-
-		function getShape(c) {
-			const index = c.shape % self.symbols.length
-			return self.symbols[index]()
-		}
 	}
 
 	function setTools(dom, svg, d) {
@@ -470,12 +477,15 @@ function setRenderers(self) {
 			.style('display', 'block')
 			.style('margin', '20px')
 		icon_functions['lasso'](lassoDiv, { handler: toggle_lasso, enabled: false })
+		const groupDiv = dom.controls
+			.insert('div')
+			.style('display', 'block')
+			.style('margin', '20px')
 
 		const mainG = svg.select('.sjpcb-scatter-mainG')
 		const seriesG = mainG.select('.sjpcb-scatter-series')
 		const symbols = seriesG.selectAll('path')
 		const axisG = mainG.select('.sjpcb-scatter-axis')
-		const rect = mainG.select('.zoom')
 		const xAxisG = axisG.select('.sjpcb-scatter-x-axis')
 		const yAxisG = axisG.select('.sjpcb-scatter-y-axis')
 		const zoom = d3zoom()
@@ -483,6 +493,8 @@ function setRenderers(self) {
 			.on('zoom', handleZoom)
 
 		mainG.call(zoom)
+		const minsize = self.settings.size / 2
+		const maxsize = self.settings.size * 2
 
 		function handleZoom(event) {
 			// create new scale ojects based on event
@@ -494,8 +506,8 @@ function setRenderers(self) {
 			seriesG.attr('transform', event.transform)
 			const k = event.transform.scale(1).k
 			//on zoom in the particle size is kept
-			symbols.attr('d', c => self.symbols[c.shape].size(self.settings.radius / k)())
-			if (self.lassoOn) lasso.selectedItems().attr('d', c => self.symbols[c.shape].size(self.settings.radius)())
+			symbols.attr('d', c => getShape(self, c, self.settings.size / k))
+			if (self.lassoOn) lasso.selectedItems().attr('d', c => getShape(self, c, maxsize))
 		}
 
 		function zoomIn() {
@@ -513,18 +525,22 @@ function setRenderers(self) {
 				.call(zoom.transform, zoomIdentity)
 		}
 
-		const minRadius = self.settings.radius / 2
 		const lasso = d3lasso()
-			.items(symbols)
-			.targetArea(mainG)
-			.on('start', lasso_start)
-			.on('draw', lasso_draw)
-			.on('end', lasso_end)
+		self.lassoReset = () => {
+			lasso
+				.items(seriesG.selectAll('path'))
+				.targetArea(mainG)
+				.on('start', lasso_start)
+				.on('draw', lasso_draw)
+				.on('end', lasso_end)
+		}
+
+		self.lassoReset()
 
 		function lasso_start(event) {
 			lasso
 				.items()
-				.attr('d', c => self.symbols[c.shape].size(minRadius)())
+				.attr('d', c => getShape(self, c, minsize))
 				.style('fill-opacity', '.5')
 				.classed('not_possible', true)
 				.classed('selected', false)
@@ -536,7 +552,7 @@ function setRenderers(self) {
 
 				lasso
 					.possibleItems()
-					.attr('d', c => self.symbols[c.shape].size(self.settings.radius)())
+					.attr('d', c => getShape(self, c, maxsize))
 					.style('fill-opacity', '1')
 					.classed('not_possible', false)
 					.classed('possible', true)
@@ -544,14 +560,14 @@ function setRenderers(self) {
 				//Style the not possible dot
 				lasso
 					.notPossibleItems()
-					.attr('d', c => self.symbols[c.shape].size(minRadius)())
+					.attr('d', c => getShape(self, c, minsize))
 					.style('fill-opacity', '.5')
 					.classed('not_possible', true)
 					.classed('possible', false)
 			}
 		}
 
-		function lasso_end() {
+		function lasso_end(dragEnd) {
 			if (self.lassoOn) {
 				// Reset classes of all items (.possible and .not_possible are useful
 				// only while drawing lasso. At end of drawing, only selectedItems()
@@ -562,10 +578,13 @@ function setRenderers(self) {
 					.classed('possible', false)
 
 				// Style the selected dots
-				lasso.selectedItems().attr('d', c => self.symbols[c.shape].size(self.settings.radius)())
-				// if none of the items are selected, reset radius of all dots or
-				// keep them as unselected with tiny radius
+				lasso.selectedItems().attr('d', c => getShape(self, c, maxsize))
 				lasso.items().style('fill-opacity', '1')
+
+				self.selectedItems = lasso.selectedItems()._groups[0]
+				lasso.notSelectedItems().attr('d', c => getShape(self, c))
+
+				showGroupMenu(dragEnd.sourceEvent)
 			}
 		}
 
@@ -580,12 +599,71 @@ function setRenderers(self) {
 				lasso.items().classed('possible', false)
 				lasso
 					.items()
-					.attr('r', self.settings.radius)
+					.attr('r', self.settings.size)
 					.style('fill-opacity', '1')
 				mainG.call(zoom)
+				self.selectedItems = null
+				groupDiv.select('*').remove()
 			}
 			lassoDiv.select('*').remove()
 			icon_functions['lasso'](lassoDiv, { handler: toggle_lasso, enabled: self.lassoOn })
+			groupDiv.select('*').remove()
+		}
+
+		function showGroupMenu(event) {
+			const isAdd = event.type !== 'click'
+			const text = isAdd ? 'Add group' : 'Remove groups'
+			self.app.tip.clear().hide()
+			if (self.selectedItems.length == 0) return
+			self.app.tip.show(event.clientX, event.clientY)
+
+			const menuDiv = self.app.tip.d.append('div')
+			menuDiv
+				.append('div')
+				.attr('class', 'sja_menuoption sja_sharp_border')
+				.text(text)
+				.on('click', () => {
+					if (isAdd) {
+						groupDiv.select('*').remove()
+						self.groups.push(self.selectedItems)
+						groupDiv
+							.append('button')
+							.text(`${self.groups.length}`)
+							.style('border', 'none')
+							.on('click', showGroupMenu)
+						const tooltip = `${self.groups.length} group samples`
+						groupDiv.attr('title', tooltip)
+					} else {
+						groupDiv.select('*').remove()
+						self.groups = []
+					}
+					self.app.tip.hide()
+				})
+			menuDiv
+				.append('div')
+				.attr('class', 'sja_menuoption sja_sharp_border')
+				.text('List samples')
+				.on('click', clickEvent => {
+					if (isAdd) showTable(self, self.selectedItems)
+					else {
+						const step = 1 / self.groups.length
+						let pos = step
+						for (const group of self.groups) {
+							showTable(self, group, pos)
+							pos += step
+						}
+					}
+					self.app.tip.hide()
+				})
+
+			// menuDiv
+			// .append('div')
+			// .attr('class', 'sja_menuoption sja_sharp_border')
+			// .text('Show matrix')
+			// .on('click', () => {
+			// 	//Show matrix logic to be implemented
+			// 	self.app.tip.hide()
+			// })
 		}
 	}
 
@@ -621,7 +699,8 @@ function setRenderers(self) {
 
 function setInteractivity(self) {
 	self.mouseover = function(event) {
-		if (!self.lassoOn && event.target.tagName == 'path') {
+		if (self.lassoOn) return
+		if (event.target.tagName == 'path') {
 			self.app.tip.clear().show(event.clientX, event.clientY)
 			const d = event.target.__data__
 			if (!d) return
@@ -630,7 +709,6 @@ function setInteractivity(self) {
 				rows.push({ k: self.config.colorTW.id, v: d.category })
 			}
 			if ('info' in d) for (const [k, v] of Object.entries(d.info)) rows.push({ k: k, v: v })
-
 			make_table_2col(self.app.tip.d, rows)
 		} else {
 			self.app.tip.hide()
@@ -638,7 +716,7 @@ function setInteractivity(self) {
 	}
 
 	self.mouseout = function() {
-		self.app.tip.hide()
+		if (!self.lassoOn) self.app.tip.hide()
 	}
 }
 
@@ -655,7 +733,7 @@ export async function getPlotConfig(opts, app) {
 					isOpen: false // control panel is hidden by default
 				},
 				sampleScatter: {
-					radius: 5,
+					size: 5,
 					svgw: 500,
 					svgh: 500,
 					axisTitleFontSize: 16,
@@ -722,7 +800,7 @@ function getPj(self) {
 			xScale(row, context) {
 				const cx = d3Linear()
 					.domain([context.self.xMin, context.self.xMax])
-					.range([3 * s.radius, s.svgw - 3 * s.radius])
+					.range([3 * s.size, s.svgw - 3 * s.size])
 				return cx
 			},
 			scaledX(row, context) {
@@ -737,10 +815,44 @@ function getPj(self) {
 				const domain = s.scale == 'byChart' ? [yMax, yMin] : [context.root.yMax, yMin]
 				const cy = d3Linear()
 					.domain(domain)
-					.range([3 * s.radius, s.svgh - 3 * s.radius])
+					.range([3 * s.size, s.svgh - 3 * s.size])
 				return cy
 			}
 		}
 	})
 	return pj
+}
+
+function showTable(self, group, pos = 1) {
+	let rows = []
+	const labels = ['Sample', self.config.colorTW.id]
+	if (self.config.shapeTW) labels.push(self.config.shapeTW.id)
+	rows.push(labels)
+	let row, data
+	for (const item of group) {
+		data = item.__data__
+		if (data.sample === 'Ref') continue
+		row = [data.sample]
+		if ('category' in data) row.push(data.category)
+		if (self.config.shapeTW) row.push(getShapeName(self.shapes, data))
+
+		if ('info' in data) for (const [k, v] of Object.entries(data.info)) row.push(v)
+		rows.push(row)
+	}
+	export_data('List of selected samples', [{ text: rows.join('\n') }], pos)
+}
+
+function getShape(self, c, size) {
+	const index = c.shape % self.symbols.length
+	if (!size) size = self.settings.size
+	return self.symbols[index].size(size)()
+}
+
+function getShapeName(shapes, data) {
+	for (const shape of shapes) {
+		const index = shape[1].shape
+		const name = shape[0]
+		if (data.shape === index) return name
+	}
+	return null
 }

@@ -56,7 +56,7 @@ class TdbStore {
 		this.prevGeneratedId = 0
 		// when using rx.copyMerge, replace the object values
 		// for these keys instead of extending them
-		this.replaceKeyVals = ['term', 'term2', 'term0', 'q', 'divideBy']
+		this.replaceKeyVals = ['term', 'term2', 'term0', 'q', 'divideBy', 'colorTW', 'shapeTW']
 	}
 
 	validateOpts(opts) {

@@ -701,12 +701,12 @@ export function filetypeselect(holder) {
 	return s
 }
 
-export function export_data(title, lst) {
+export function export_data(title, lst, pos = 1) {
 	// lst: {label, text}
 
 	const pane = newpane({
-		x: window.innerWidth / 2 - 200,
-		y: window.innerHeight / 2 - 150
+		x: (window.innerWidth / 2 - 200) * pos,
+		y: (window.innerHeight / 2 - 150) * pos
 	})
 	pane.header.text(title)
 	for (const w of lst) {
