@@ -682,7 +682,7 @@ export async function querySamples_gdcapi(q, termidlst, ds) {
 		samples.push(sample)
 	}
 
-	if (ds.variant2samples.sample_id_getter) {
+	if (typeof ds.variant2samples.sample_id_getter == 'function') {
 		// batch process, fire one graphql query to convert id for all samples
 		// must pass request header to getter in case requesting a controlled sample via a user token
 		// this is gdc-specific logic and should not impact generic mds3

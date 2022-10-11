@@ -4,9 +4,14 @@ module.exports = {
 
 	// termdb as a generic interface
 	// getters will be added to abstract the detailed implementations
-	termdb: {
-		dictionary: { dbFile: 'files/hg38/ash/db' },
-		termid2totalsize2: {}
+	cohort: {
+		// expose matrix for testing. should be okay to merge to master as for now the ash dataset is not exposed from mass ui
+		allowedChartTypes: ['barchart', 'matrix'],
+
+		db: { file: 'files/hg38/ash/db' },
+		termdb: {
+			termid2totalsize2: {}
+		}
 	},
 
 	variant2samples: {

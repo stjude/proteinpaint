@@ -2,6 +2,7 @@ const fs = require('fs')
 const path = require('path')
 const utils = require('./utils')
 const serverconfig = require('./serverconfig.js')
+const termdbConfig = require('./termdb.config')
 const termdbsql = require('./termdb.sql')
 const phewas = require('./termdb.phewas')
 const density_plot = require('./termdb.densityPlot')
@@ -75,7 +76,7 @@ export function handle_request_closure(genomes) {
 				return await phewas.trigger(q, res, ds)
 			}
 			if (q.density) return await density_plot(q, res, ds)
-			if (q.gettermdbconfig) return trigger_gettermdbconfig(q, res, tdb, ds.cohort)
+			if (q.gettermdbconfig) return termdbConfig.make(q, res, ds)
 			if (q.getcohortsamplecount) return trigger_getcohortsamplecount(q, res, ds)
 			if (q.getsamplecount) return trigger_getsamplecount(q, res, ds)
 			if (q.getsamples) return trigger_getsamples(q, res, ds)
@@ -147,44 +148,6 @@ function trigger_getsamples(q, res, ds) {
 	const lst = termdbsql.get_samples(q.filter, ds)
 	const samples = lst.map(i => ds.cohort.termdb.q.id2sampleName(i))
 	res.send({ samples })
-}
-
-function trigger_gettermdbconfig(q, res, tdb, cohort) {
-	// add attributes to this object for revealing to client
-	const c = {
-		selectCohort: tdb.selectCohort, // optional
-		supportedChartTypes: tdb.q.getSupportedChartTypes(q.embedder),
-		allowedTermTypes: tdb.allowedTermTypes || [],
-		termMatch2geneSet: tdb.termMatch2geneSet,
-		massSessionDuration: serverconfig.features.massSessionDuration || 30
-	}
-	if (tdb.helpPages) c.helpPages = tdb.helpPages
-	if (tdb.timeScale) c.timeScale = tdb.timeScale
-	if (tdb.minTimeSinceDx) c.minTimeSinceDx = tdb.minTimeSinceDx
-	if (tdb.restrictAncestries) {
-		c.restrictAncestries = []
-		for (const i of tdb.restrictAncestries) {
-			c.restrictAncestries.push({ name: i.name, tvs: i.tvs })
-		}
-	}
-	const cred = serverconfig.dsCredentials?.[q.dslabel]
-	if (cred) {
-		// TODO: may restrict required auth by chart type???
-		// currently, the client code assumes that it will only apply to the dataDownload MASS app
-		c.requiredAuth = {
-			type: cred.type || 'login',
-			headerKey: cred.headerKey
-		}
-	}
-
-	if (cohort.scatterplots) {
-		// this dataset has premade scatterplots. reveal to client
-		c.scatterplots = cohort.scatterplots.plots.map(p => {
-			return { name: p.name, dimensions: p.dimensions, colorTW: p.colorTW, shapeTW: p.shapeTW }
-		})
-	}
-
-	res.send({ termdbConfig: c })
 }
 
 function trigger_gettermbyid(q, res, tdb) {

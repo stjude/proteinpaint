@@ -525,14 +525,12 @@ async function sample_id_getter(samples, headers) {
 	// v: list of sample objects that are using the same tumor_sample_barcode
 	for (const sample of samples) {
 		const s = sample.tempcase
-		if (s.observation && s.observation[0].sample) {
+		if (s?.observation?.[0]?.sample?.tumor_sample_barcode) {
 			const n = s.observation[0].sample.tumor_sample_barcode
-			if (n) {
-				if (!id2sample.has(n)) id2sample.set(n, [])
-				id2sample.get(n).push(sample)
-			} else {
-				// TODO indicate on client that tumor_sample_barcode is missing for this case, to make things traceable
-			}
+			if (!id2sample.has(n)) id2sample.set(n, [])
+			id2sample.get(n).push(sample)
+		} else {
+			// TODO indicate on client that tumor_sample_barcode is missing for this case, to make things traceable
 		}
 		delete sample.tempcase
 	}

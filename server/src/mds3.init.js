@@ -6,7 +6,7 @@ const { variant2samples_getresult } = require('./mds3.variant2samples')
 const utils = require('./utils')
 const compute_mclass = require('./vcf.mclass').compute_mclass
 const serverconfig = require('./serverconfig')
-const { dtfusionrna, dtsv, mclassfusionrna, mclasssv } = require('#shared/common')
+const { dtsnvindel, dtfusionrna, dtsv, mclassfusionrna, mclasssv } = require('#shared/common')
 const { get_samples, server_init_db_queries } = require('./termdb.sql')
 const { get_barchart_data_sqlitedb } = require('./termdb.barsql')
 const { setDbRefreshRoute } = require('./dsUpdateAttr.js')
@@ -28,6 +28,9 @@ validate_query_snvindel
 validate_query_svfusion
 	svfusionByRangeGetter_file
 validate_variant2samples
+validate_ssm2canonicalisoform
+mayAdd_refseq2ensembl
+mayAdd_mayGetGeneVariantData
 */
 
 // in case chr name may contain '.', can change to __
@@ -46,7 +49,9 @@ export async function init(ds, genome, _servconfig, app = null, basepath = null)
 		validate_variant2samples(ds)
 		validate_ssm2canonicalisoform(ds)
 
-		may_add_refseq2ensembl(ds, genome)
+		mayAdd_refseq2ensembl(ds, genome)
+
+		mayAdd_mayGetGeneVariantData(ds, genome)
 	}
 
 	// the "refresh" attribute on ds.cohort.db should be set in serverconfig.json
@@ -414,7 +419,7 @@ add a convertor in ds to map refseq to ensembl
 this is required for gdc dataset
 so that gencode-annotated stuff can show under a refseq name
 */
-function may_add_refseq2ensembl(ds, genome) {
+function mayAdd_refseq2ensembl(ds, genome) {
 	if (!genome.genedb.hasTable_refseq2ensembl) return
 	ds.refseq2ensembl_query = genome.genedb.db.prepare('select ensembl from refseq2ensembl where refseq=?')
 }
@@ -947,4 +952,196 @@ export async function svfusionByRangeGetter_file(ds, genome) {
 		}
 		return [...key2variants.values()]
 	}
+}
+
+function mayAdd_mayGetGeneVariantData(ds, genome) {
+	if (!ds.queries.snvindel && !ds.queries.svfusion) {
+		// no eligible data types
+		return
+	}
+
+	/*
+	input:
+	tw{} // termwrapper
+	q{}
+
+	output a map:
+		k: sample id
+		v: {}
+			sample: int
+			<gene> : {}
+				key:<gene>
+				label:<gene>
+				values: [ {} ]
+					gene
+					isoform
+					chr/pos
+					mname/class
+					_SAMPLENAME_
+					_SAMPLEID_
+	*/
+	ds.mayGetGeneVariantData = async (tw, q) => {
+		if (typeof tw.term != 'object') throw 'tw.term{} is not object'
+
+		// for now requires tw.term.name to be gene symbol
+		// the requirement is reasonable as symbol is essential for matrix display
+		// isoform and coord are optional; if missing is derived from gene symbol on the fly
+		if (typeof tw.term.name != 'string') throw 'tw.term.name is not string'
+		if (!tw.term.name) throw 'tw.term.name should be gene symbol but is empty string'
+
+		const mlst = [] // keep raw snvindel and fusion
+
+		// has some code duplication with mds3.load.js query_snvindel() etc
+		// primary concern is tw.term may be missing coord/isoform to perform essential query
+
+		if (ds.queries.snvindel) {
+			const lst = await getSnvindelByTerm(ds, tw.term, genome)
+			mlst.push(...lst)
+		}
+
+		if (ds.queries.svfusion) {
+			const lst = await getSvfusionByTerm(ds, tw.term, genome)
+			mlst.push(...lst)
+		}
+
+		const bySampleId = new Map()
+
+		for (const m of mlst) {
+			/*
+			m={
+				class, mname,
+				samples:[ {
+					sample_id: int or string
+				},
+				... ]
+			}
+
+			for official datasets using a sqlite db that contains integer2string sample mapping, "sample_id" is integer id 
+
+			for gdc dataset not using a sqlite db, no sample integer id is kept on server. "sample_id" is string id
+			*/
+
+			if (!Array.isArray(m.samples)) continue
+
+			for (const s of m.samples) {
+				if (!bySampleId.has(s.sample_id)) {
+					bySampleId.set(s.sample_id, { sample: s.sample_id })
+				}
+				if (!bySampleId.get(s.sample_id)[tw.term.name]) {
+					bySampleId.get(s.sample_id)[tw.term.name] = { key: tw.term.name, label: tw.term.name, values: [] }
+				}
+
+				// create new m2{} for each mutation in each sample
+
+				const m2 = {
+					gene: tw.term.name,
+					isoform: m.isoform,
+					dt: m.dt,
+					chr: tw.term.chr,
+					class: m.class,
+					pos: m.pos,
+					mname: m.mname,
+					_SAMPLEID_: s.sample_id,
+					_SAMPLENAME_: s.sample_id
+				}
+
+				// can supply dt specific attributes
+				if (m.dt == dtsnvindel) {
+				} else if (m.dt == dtfusionrna || m.dt == dtsv) {
+				}
+
+				if (ds.cohort.termdb.q.id2sampleName && Number.isInteger(s.sample_id)) {
+					m2._SAMPLENAME_ = ds.cohort.termdb.q.id2sampleName(s.sample_id)
+				}
+
+				bySampleId.get(s.sample_id)[tw.term.name].values.push(m2)
+			}
+		}
+
+		/* lacks method to convert case uuid to submitter id
+		if(ds?.variant2samples?.sample_id_getter && typeof ds.variant2samples.sample_id_getter=='function') {
+			return await callSampleIdGetter_gdchardcoded(ds,bySampleId)
+		}
+		*/
+
+		return bySampleId
+	}
+}
+
+async function mayMapGeneName2coord(term, genome) {
+	if (term.chr && Number.isInteger(term.start) && Number.isInteger(term.stop)) return
+	// coord missing, fill in chr/start/stop by querying with name
+	if (!term.name) throw 'both term.name and term.chr/start/stop missing'
+	// may reuse code from route genelookup?deep=1
+	const lst = genome.genedb.getjsonbyname.all(term.name)
+	if (lst.length == 0) throw 'unknown gene name'
+	const tmp = lst.find(i => i.isdefault) || lst[0]
+	const gm = JSON.parse(tmp.genemodel)
+	if (!gm.chr || !Number.isInteger(gm.start) || !Number.isInteger(gm.stop))
+		throw 'invalid chr/start/stop from returned gm'
+	term.chr = gm.chr
+	term.start = gm.start
+	term.stop = gm.stop
+}
+async function mayMapGeneName2isoform(term, genome) {
+	if (term.isoform && typeof term.isoform == 'string') return
+	// isoform missing, query canonical isoform by name
+	if (!term.name) throw 'both term.name and term.isoform'
+	const lst = genome.genedb.getjsonbyname.all(term.name)
+	if (lst.length == 0) throw 'unknown gene name'
+	const tmp = lst.find(i => i.isdefault) || lst[0]
+	const gm = JSON.parse(tmp.genemodel)
+	if (!gm.isoform) throw 'isoform missing from returned gm'
+	term.isoform = gm.isoform
+}
+
+async function getSnvindelByTerm(ds, term, genome) {
+	const arg = {
+		// to keep cohort/session etc
+	}
+
+	if (ds.queries.snvindel.byisoform) {
+		await mayMapGeneName2isoform(term, genome)
+		// term.isoform is set
+		arg.isoform = term.isoform
+		return await ds.queries.snvindel.byisoform.get(arg)
+	}
+	if (ds.queries.snvindel.byrange) {
+		await mayMapGeneName2coord(term, genome)
+		// tw.term.chr/start/stop are set
+		arg.rglst = [term]
+		return await ds.queries.snvindel.byrange.get(arg)
+	}
+	throw 'unknown queries.snvindel method'
+}
+async function getSvfusionByTerm(ds, term, genome) {
+	const arg = {
+		// to keep cohort/session etc
+	}
+	if (ds.queries.svfusion.byrange) {
+		await mayMapGeneName2coord(term, genome)
+		// tw.term.chr/start/stop are set
+		arg.rglst = [term]
+		return await ds.queries.svfusion.byrange.get(arg)
+	}
+	throw 'unknown queries.svfusion method'
+}
+
+async function callSampleIdGetter_gdchardcoded(ds, bySampleId) {
+	// current case id is not tumor_sample_barcode and does not work with sample_id_getter()
+	const samples = []
+	for (const caseid of bySampleId.keys()) {
+		samples.push({
+			sample_id: caseid,
+			tempcase: {
+				observation: [{ sample: { tumor_sample_barcode: caseid } }]
+			}
+		})
+	}
+	await ds.variant2samples.sample_id_getter(
+		samples,
+		{ 'Content-Type': 'application/json', Accept: 'application/json' } // hardcoded header for gdc request
+	)
+
+	return bySampleId
 }
