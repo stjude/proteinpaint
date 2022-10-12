@@ -64,6 +64,10 @@ node ~/dev/proteinpaint/utils/sjlife2/parse.ctcaegradedef.js
 # created "termdb.updated"
 # created "termid2htmldef"
 mv termdb.updated termdb
+
+node ~/dev/proteinpaint/utils/sjlife2/checkPrsDuplicateTerms.js
+# halts upon any duplicating terms; send to Jian to handle in PRS data prep step
+
 cat PRS/termdb.prs >> termdb
 cat PRS/termid2htmldef.prs >> termid2htmldef
 
