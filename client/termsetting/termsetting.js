@@ -483,7 +483,7 @@ function setInteractivity(self) {
 				disable_terms: self.disable_terms,
 				click_term: async term => {
 					self.dom.tip.hide()
-					const data = { id: term.id, term, q: {} }
+					const data = { id: term.id, term, q: { isAtomic: true }, isAtomic: true }
 					let _term = term
 					if (self.opts.use_bins_less && (term.type == 'integer' || term.type == 'float') && term.bins.less) {
 						// instructed to use bins.less which is present
