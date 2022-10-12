@@ -101,8 +101,8 @@ const isoform2ssm_getcase = {
 	size: 100000,
 	fields: [
 		'ssm.ssm_id',
-		//'case.case_id',
-		'case.observation.sample.tumor_sample_barcode'
+		'case.case_id', // can be used to make sample url link
+		'case.observation.sample.tumor_sample_barcode' // gives aliquot id and convert to submitter id for display
 	],
 	filters: p => {
 		// p:{}
@@ -514,28 +514,27 @@ const aliquot2sample = {
 async function sample_id_getter(samples, headers) {
 	/*
 	samples[], each element:
-		{
-			tempcase:{observation[0].sample.tumor_sample_barcode}
-		}
-	convert tumor_sample_barcode to sample submitter id, assign to sample.sample_id
-	and delete sample.tempcase
+
+		{ sample_id }
+
+	the "sample_id" is the aliquot id
+	it will be converted to sample submitter id *in place*
 
 	fire one graphql query to convert id of all samples
 	the getter is a dataset-specific, generic feature, so it should be defined here
 	passing in headers is a gdc-specific logic for controlled data
 	*/
 	const id2sample = new Map()
-	// k: tumor_sample_barcode
-	// v: list of sample objects that are using the same tumor_sample_barcode
+	// k: aliquot id
+	// v: list of sample objects that are using the same aliquot id
 	for (const sample of samples) {
-		const n = sample?.tempcase?.observation?.[0]?.sample?.tumor_sample_barcode
+		const n = sample.sample_id
 		if (n) {
 			if (!id2sample.has(n)) id2sample.set(n, [])
 			id2sample.get(n).push(sample)
 		} else {
-			// TODO indicate on client that tumor_sample_barcode is missing for this case, to make things traceable
+			// TODO indicate on client that aliquot id is missing for this case, to make things traceable
 		}
-		delete sample.tempcase
 	}
 
 	if (id2sample.size == 0) {
@@ -545,6 +544,7 @@ async function sample_id_getter(samples, headers) {
 	}
 
 	const idmap = await aliquot2sample.get([...id2sample.keys()], headers)
+	console.log(idmap)
 
 	for (const [id, sampleLst] of id2sample) {
 		for (const s of sampleLst) {
@@ -643,7 +643,7 @@ module.exports = {
 			base: 'https://portal.gdc.cancer.gov/cases/',
 			// if "namekey" is provided, use the given key to obtain sample name to append to url
 			// if missing, will require sample_id_key
-			namekey: 'case_uuid'
+			namekey: 'sample_URLid'
 		},
 		gdcapi: variant2samplesGdcapi
 	},
