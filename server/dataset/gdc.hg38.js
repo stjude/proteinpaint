@@ -99,7 +99,11 @@ const isoform2ssm_getvariant = {
 const isoform2ssm_getcase = {
 	endpoint: '/ssm_occurrences',
 	size: 100000,
-	fields: ['ssm.ssm_id', 'case.case_id'],
+	fields: [
+		'ssm.ssm_id',
+		//'case.case_id',
+		'case.observation.sample.tumor_sample_barcode'
+	],
 	filters: p => {
 		// p:{}
 		// .isoform
@@ -524,9 +528,8 @@ async function sample_id_getter(samples, headers) {
 	// k: tumor_sample_barcode
 	// v: list of sample objects that are using the same tumor_sample_barcode
 	for (const sample of samples) {
-		const s = sample.tempcase
-		if (s?.observation?.[0]?.sample?.tumor_sample_barcode) {
-			const n = s.observation[0].sample.tumor_sample_barcode
+		const n = sample?.tempcase?.observation?.[0]?.sample?.tumor_sample_barcode
+		if (n) {
 			if (!id2sample.has(n)) id2sample.set(n, [])
 			id2sample.get(n).push(sample)
 		} else {
@@ -660,11 +663,14 @@ module.exports = {
 				}
 			},
 			byisoform: {
+				// tandem rest api method
 				gdcapi: {
 					query1: isoform2ssm_getvariant,
 					query2: isoform2ssm_getcase
 				}
-				/* using tandem api but not graphql query, as former returns list of samples
+
+				/* 
+				graphql method *not in use*, as former returns list of samples
 				and easier to summarize
 				gdcapi: protein_mutations
 				*/

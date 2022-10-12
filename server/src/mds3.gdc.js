@@ -173,7 +173,32 @@ export function validate_query_snvindel_byisoform(ds) {
 				only returns total number of unique cases to client
 				thus do not convert uuid to sample id for significant time-saving
 				*/
-				m.samples.push({ sample_id: c.case_id })
+
+				/*
+				uses tumor_sample_barcode(aliquot) rather than "case.case_id" 
+				to be able to correctly attribute mutation to the aliquot from which it's detected
+				case_id is the patient, and can correspond to multiple aliquots
+
+				the id is needed for two purposes:
+
+				1. counting occurrence for a mutation (both case_id and aliquot is fine)
+				2. showing sample name in matrix.
+					with case_id, can only convert to case name (method unknown)
+					with aliquot id, can convert to submitter id, has existing method (sample_id_getter) and is accurate
+
+				*/
+
+				// use case_id to identify patient
+				//m.samples.push({ sample_id: c.case_id })
+
+				// use aliquot to identify sample
+				const sample_id = c?.observation?.[0]?.sample?.tumor_sample_barcode
+				if (sample_id) {
+					m.samples.push({ sample_id })
+				} else {
+					// should not happen: quick way to alert
+					console.log('.observation.sample.tumor_sample_barcode missing from casse{}')
+				}
 			}
 			mlst.push(m)
 		}
@@ -902,7 +927,7 @@ export function validate_sampleSummaries2_mclassdetail(api, ds) {
 		for (const h of re_ssms.data.hits) {
 			if (!h.ssm_id) throw 'ssm_id missing from a ssms hit'
 			if (!h.consequence) throw '.consequence[] missing from a ssm'
-			const consequence = h.consequence.find(i => i.transcript.transcript_id == q.isoform) // xxx
+			const consequence = h.consequence.find(i => i.transcript.transcript_id == q.isoform)
 			snvindel_addclass(h, consequence)
 			h.samples = []
 			id2ssm.set(h.ssm_id, h)

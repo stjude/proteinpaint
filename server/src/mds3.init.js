@@ -20,11 +20,14 @@ client_copy
 ********************** INTERNAL
 validate_termdb
 validate_query_snvindel
+	gdc.validate_query_snvindel_byisoform
+	gdc.validate_query_snvindel_byrange
 	snvindelByRangeGetter_bcf
 		mayLimitSamples
 			tid2value2filter
 		addSamplesFromBcfLine
 			vcfFormat2sample
+	mayValidateSampleHeader
 validate_query_svfusion
 	svfusionByRangeGetter_file
 validate_variant2samples
@@ -1059,10 +1062,10 @@ function mayAdd_mayGetGeneVariantData(ds, genome) {
 		}
 
 		/* lacks method to convert case uuid to submitter id
-		if(ds?.variant2samples?.sample_id_getter && typeof ds.variant2samples.sample_id_getter=='function') {
-			return await callSampleIdGetter_gdchardcoded(ds,bySampleId)
+		 */
+		if (ds?.variant2samples?.sample_id_getter && typeof ds.variant2samples.sample_id_getter == 'function') {
+			return await callSampleIdGetter_gdchardcoded(ds, bySampleId)
 		}
-		*/
 
 		return bySampleId
 	}
@@ -1132,16 +1135,31 @@ async function callSampleIdGetter_gdchardcoded(ds, bySampleId) {
 	const samples = []
 	for (const caseid of bySampleId.keys()) {
 		samples.push({
+			old_id: caseid,
 			sample_id: caseid,
 			tempcase: {
 				observation: [{ sample: { tumor_sample_barcode: caseid } }]
 			}
 		})
 	}
+
 	await ds.variant2samples.sample_id_getter(
 		samples,
-		{ 'Content-Type': 'application/json', Accept: 'application/json' } // hardcoded header for gdc request
+		// hardcoded header for gdc request
+		{ 'Content-Type': 'application/json', Accept: 'application/json' }
 	)
 
-	return bySampleId
+	const old2new = new Map()
+	for (const s of samples) {
+		old2new.set(s.old_id, s.sample_id)
+	}
+
+	const newMap = new Map()
+	for (const [oldid, o] of bySampleId) {
+		const newid = old2new.get(oldid)
+		o.sample = newid
+		newMap.set(newid, o)
+	}
+
+	return newMap
 }
