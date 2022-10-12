@@ -269,9 +269,14 @@ function setRenderers(self) {
 						.clear()
 						.show(p.left - 0, p.top + p.height + 5)
 						.d.append('div')
-						.style('padding', '5px 20px')
 					for (const page of helpPages) {
-						div.append('p').html(`<a href=${page.url} target=_blank>${page.label}</a>`)
+						div
+							.append('div')
+							.style('margin', '15px')
+							.append('a')
+							.attr('href', page.url)
+							.attr('target', '_blank')
+							.text(page.label)
 					}
 				})
 		}
@@ -373,21 +378,22 @@ function setRenderers(self) {
 
 		if (selectCohort.title) {
 			self.dom.cohortTitle = self.dom.subheader.cohort
-				.append('div')
-				.html(`<h2 style="margin-left: 20px;">${selectCohort.title}</h2>`)
+				.append('h2')
+				.style('margin-left', '10px')
+				.text(selectCohort.title)
 		}
 
 		if (selectCohort.description) {
 			self.dom.cohortDescription = self.dom.subheader.cohort
 				.append('div')
-				.style('margin-left', '20px')
-				.text(selectCohort.description)
+				.style('margin-left', '10px')
+				.html(selectCohort.description)
 		}
 
 		if (selectCohort.prompt) {
 			self.dom.cohortPrompt = self.dom.subheader.cohort
 				.append('div')
-				.style('margin-left', '20px')
+				.style('margin-left', '10px')
 				.style('padding-top', '30px')
 				.style('padding-bottom', '10px')
 				.style('font-weight', 'bold')
@@ -397,7 +403,7 @@ function setRenderers(self) {
 		self.dom.cohortOpts = self.dom.subheader.cohort
 			.append('div')
 			.style('margin-bottom', '30px')
-			.style('margin-left', '13px')
+			.style('margin-left', '10px')
 
 		const trs = self.dom.cohortOpts
 			.append('table')
@@ -418,6 +424,7 @@ function setRenderers(self) {
 					.attr('value', i)
 					.property('checked', i === self.activeCohort)
 					.style('margin-right', '5px')
+					.style('margin-left', '0px')
 					.on('click', () => self.app.dispatch({ type: 'cohort_set', activeCohort: i }))
 
 				td0
@@ -441,7 +448,7 @@ function setRenderers(self) {
 		self.dom.cohortTable
 			.select('table')
 			.style('border-collapse', 'collapse')
-			.style('margin', '20px')
+			.style('margin', '10px')
 
 		self.dom.cohortTable
 			.select('thead')
@@ -462,7 +469,7 @@ function setRenderers(self) {
 		if (selectCohort.asterisk) {
 			self.dom.cohortAsterisk = self.dom.subheader.cohort
 				.append('div')
-				.style('margin-left', '20px')
+				.style('margin-left', '10px')
 				.style('padding-top', '20px')
 				.style('padding-bottom', '20px')
 				.style('font-size', 'small')
