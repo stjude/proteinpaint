@@ -1061,10 +1061,10 @@ function mayAdd_mayGetGeneVariantData(ds, genome) {
 			}
 		}
 
-		/* lacks method to convert case uuid to submitter id
-		 */
 		if (ds?.variant2samples?.sample_id_getter && typeof ds.variant2samples.sample_id_getter == 'function') {
-			return await callSampleIdGetter_gdchardcoded(ds, bySampleId)
+			// gdc method: current keys in bySampleId are aliquot ids
+			// call this helper to convert aliquot to submitter id for display
+			return await callSampleIdGetter(ds, bySampleId)
 		}
 
 		return bySampleId
@@ -1130,16 +1130,12 @@ async function getSvfusionByTerm(ds, term, genome) {
 	throw 'unknown queries.svfusion method'
 }
 
-async function callSampleIdGetter_gdchardcoded(ds, bySampleId) {
-	// current case id is not tumor_sample_barcode and does not work with sample_id_getter()
+async function callSampleIdGetter(ds, bySampleId) {
 	const samples = []
 	for (const caseid of bySampleId.keys()) {
 		samples.push({
 			old_id: caseid,
-			sample_id: caseid,
-			tempcase: {
-				observation: [{ sample: { tumor_sample_barcode: caseid } }]
-			}
+			sample_id: caseid
 		})
 	}
 

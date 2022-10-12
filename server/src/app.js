@@ -7518,6 +7518,11 @@ async function deleteSessionFiles() {
 }
 
 function checkDependenciesAndVersions() {
+	if (serverconfig.features.skip_checkDependenciesAndVersions) {
+		console.log('SKIPPED checkDependenciesAndVersions()')
+		return
+	}
+
 	// test if R has all required libraries
 	const rlibraries = ['jsonlite', 'cmprsk', 'hwde', 'lmtest']
 	for (const lib of rlibraries) {

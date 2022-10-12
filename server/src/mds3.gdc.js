@@ -676,21 +676,11 @@ export async function querySamples_gdcapi(q, termidlst, ds) {
 			sample.ssm_id = s.ssm.ssm_id
 		}
 
-		// get printable sample id
-		if (ds.variant2samples.sample_id_key) {
-			sample.sample_id = s.case[ds.variant2samples.sample_id_key] // "sample_id" field in sample is hardcoded
-		} else if (ds.variant2samples.sample_id_getter) {
-			// getter do batch process
-			// tempcase will be deleted after processing
-			sample.tempcase = s.case
-		}
+		// this is aliquot id; later all aliquot ids are gathered and converted to submitter id later
+		sample.sample_id = s.case?.observation?.[0]?.sample?.tumor_sample_barcode
 
-		/* gdc-specific logic
-		through tumor_sample_barcode, "TCGA-F4-6805" names are set as .sample_id for display
-		however case uuid is still needed to build the url link to a case
-		thus the hardcoded logic to provide the case_id as "case_uuid" to client side
-		*/
-		sample.case_uuid = s.case.case_id
+		// for making url link on a sample
+		sample.sample_URLid = s.case.case_id
 
 		for (const term of termObjs) {
 			flattenCaseByFields(sample, s.case, term)
