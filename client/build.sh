@@ -1,5 +1,5 @@
 #!/bin/bash
-
+# tests
 set -e
 
 ###############

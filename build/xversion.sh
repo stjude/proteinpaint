@@ -207,12 +207,50 @@ elif [[ "$PORTALVER" != "$ROOTVERSION" ]]; then
 	cd sj/$ENV
 	npm pkg set version=$ROOTVERSION
 	cd ../..
-# else	
-# 	mayBumpVersionOnDiff $WS $ROOTVERSION
+else	
+ 	
+ 	# mayBumpVersionOnDiff $WS $ROOTVERSION
 fi
 
 echo "UPDATED [$UPDATED]"
 $handlePkg "$WSPKG"
 
-# TODO: deploy as tarball (if not on the master branch) or publish to a registry
-exit 1
+if [[ "$MODE" == "dry" ]]; then
+	# git restore .
+	echo "SKIPPED commit, tag, and publish in dry-run mode"
+	exit 0
+fi
+
+#################
+# COMMIT CHANGES 
+#################
+
+TAG="v$(node -p "require('./package.json').version")"
+COMMITMSG="$TAG $UPDATED"
+echo "committing version change ..."
+git add --all
+git commit -m "$COMMITMSG"
+git tag $TAG
+git push origin $TAG
+
+#############################
+# PUBLISH CHANGED WORKSPACES 
+#############################
+
+for WS in ${WORKSPACES};
+do
+	if [[ "$BRANCH" == "master" ]]; then
+		PUBLISHEDVER=$(npm view @stjude/proteinpaint-$WS version | tail -n1)
+		CURRENTVER=$(node -p "require('./$WS/package.json').version")
+		echo "$WS [$PUBLISHEDVER] [$CURRENTVER]"
+		if [[ "$PUBLISHEDVER" != "$CURRENTVER" ]]; then
+			echo "publishing $WS-$CURRENTVER"
+			cd $WS
+			npm publish
+			cd ..
+		fi
+	else 
+ 		echo "TODO: scp versioned tarballs to $ENV if not previously deployed"
+ 		exit 1
+	fi
+done
