@@ -483,7 +483,7 @@ function setInteractivity(self) {
 				disable_terms: self.disable_terms,
 				click_term: async term => {
 					self.dom.tip.hide()
-					const data = { id: term.id, term, q: {} }
+					const data = { id: term.id, term, q: { isAtomic: true }, isAtomic: true }
 					let _term = term
 					if (self.opts.use_bins_less && (term.type == 'integer' || term.type == 'float') && term.bins.less) {
 						// instructed to use bins.less which is present
@@ -747,6 +747,7 @@ defaultQ{}
 	with term types as keys
 */
 export async function fillTermWrapper(tw, vocabApi, defaultQ) {
+	tw.isAtomic = true
 	if (!tw.$id) tw.$id = `${$id++}${idSuffix}`
 
 	if (!tw.term) {
@@ -766,6 +767,7 @@ export async function fillTermWrapper(tw, vocabApi, defaultQ) {
 	}
 
 	if (!tw.q) tw.q = {}
+	tw.q.isAtomic = true
 
 	// call term-type specific logic to fill tw
 	await call_fillTW(tw, vocabApi, defaultQ)

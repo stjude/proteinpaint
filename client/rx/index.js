@@ -649,14 +649,13 @@ export function getComponents(components, dotSepNames) {
 	- a base value that is an array or non-object will be replaced by matching arg key-value
 	- a base value that is an object will be extended by a matching arg key-value
 	- nested base object values will be extended recursively, instead of being swapped/replaced
-	  at the root level
+	  at the root level *** EXCEPT IF there is an isAtomic flag on one of these ****
+	  - the source
+	  - target object
+	  - target child object
 	- see index.spec test for copyMerge details
 */
 export function copyMerge(base, ...args) {
-	const replaceKeyVals = []
-	if (Array.isArray(args[args.length - 1])) {
-		replaceKeyVals.push(...args.pop())
-	}
 	const target = typeof base == 'string' ? fromJson(base) : base
 	for (const arg of args) {
 		if (arg) {
@@ -666,10 +665,14 @@ export function copyMerge(base, ...args) {
 					!target[key] ||
 					Array.isArray(target[key]) ||
 					typeof target[key] !== 'object' ||
-					replaceKeyVals.includes(key)
+					source === null ||
+					source === undefined ||
+					source.isAtomic ||
+					target?.isAtomic ||
+					target[key]?.isAtomic
 				)
 					target[key] = source[key]
-				else copyMerge(target[key], source[key], replaceKeyVals)
+				else copyMerge(target[key], source[key])
 			}
 		}
 	}

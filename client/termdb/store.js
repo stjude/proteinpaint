@@ -43,9 +43,6 @@ class TdbStore {
 		// use for assigning unique IDs where needed
 		// may be used later to simplify getting component state by type and id
 		this.prevGeneratedId = 0
-		// when using rx.copyMerge, replace the object values
-		// for these keys instead of extending them
-		this.replaceKeyVals = ['term', 'term2', 'term0', 'q']
 	}
 
 	validateOpts(opts) {
