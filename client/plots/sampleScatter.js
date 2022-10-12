@@ -3,7 +3,7 @@ import { fillTermWrapper } from '../termsetting/termsetting'
 import { select, pointer, event } from 'd3-selection'
 import { scaleLinear as d3Linear } from 'd3-scale'
 import Partjson from 'partjson'
-import { export_data } from '../src/client'
+import { export_data, newpane } from '../src/client'
 
 import {
 	zoom as d3zoom,
@@ -586,7 +586,7 @@ function setRenderers(self) {
 				self.selectedItems = lasso.selectedItems()._groups[0]
 				lasso.notSelectedItems().attr('d', c => getShape(self, c))
 
-				showGroupMenu(dragEnd.sourceEvent)
+				showLassoMenu(dragEnd.sourceEvent)
 			}
 		}
 
@@ -612,9 +612,7 @@ function setRenderers(self) {
 			groupDiv.select('*').remove()
 		}
 
-		function showGroupMenu(event) {
-			const isAdd = event.type !== 'click'
-			const text = isAdd ? 'Add group' : 'Remove groups'
+		function showLassoMenu(event) {
 			self.app.tip.clear().hide()
 			if (self.selectedItems.length == 0) return
 			self.app.tip.show(event.clientX, event.clientY)
@@ -623,49 +621,107 @@ function setRenderers(self) {
 			menuDiv
 				.append('div')
 				.attr('class', 'sja_menuoption sja_sharp_border')
-				.text(text)
-				.on('click', () => {
-					if (isAdd) {
-						groupDiv.select('*').remove()
-						self.groups.push(self.selectedItems)
-						groupDiv
-							.append('button')
-							.text(`${self.groups.length}`)
-							.style('border', 'none')
-							.on('click', showGroupMenu)
-						const tooltip = `${self.groups.length} group samples`
-						groupDiv.attr('title', tooltip)
-					} else {
-						groupDiv.select('*').remove()
-						self.groups = []
-					}
-					self.app.tip.hide()
-				})
-			menuDiv
-				.append('div')
-				.attr('class', 'sja_menuoption sja_sharp_border')
 				.text('List samples')
 				.on('click', clickEvent => {
-					if (isAdd) showTable(self, self.selectedItems)
-					else {
-						const step = 1 / self.groups.length
-						let pos = step
-						for (const group of self.groups) {
-							showTable(self, group, pos)
-							pos += step
-						}
-					}
+					showTable(self, self.selectedItems)
 					self.app.tip.hide()
 				})
 
-			// menuDiv
-			// .append('div')
-			// .attr('class', 'sja_menuoption sja_sharp_border')
-			// .text('Show matrix')
-			// .on('click', () => {
-			// 	//Show matrix logic to be implemented
-			// 	self.app.tip.hide()
-			// })
+			menuDiv
+				.append('div')
+				.attr('class', 'sja_menuoption sja_sharp_border')
+				.text('Add to a group')
+				.on('click', () => {
+					self.groups.push(self.selectedItems)
+					updateGroupsButton(groupDiv)
+					self.app.tip.hide()
+				})
+		}
+	}
+
+	function updateGroupsButton(groupDiv) {
+		groupDiv.select('*').remove()
+		groupDiv
+			.append('button')
+			.style('border', 'none')
+			.style('background', 'transparent')
+			.style('padding', 0)
+			.append('div')
+			.style('font-size', '1.1em')
+			.html(`&#931${self.groups.length + 1};`)
+			.on('click', event => showGroupsMenu(event, groupDiv))
+		const tooltip = `${self.groups.length} group samples`
+		groupDiv.attr('title', tooltip)
+	}
+
+	function showGroupsMenu(event, groupDiv) {
+		self.app.tip.clear()
+		self.app.tip.show(event.clientX, event.clientY)
+		const menuDiv = self.app.tip.d.append('div')
+
+		let row = menuDiv
+			.append('div')
+			.style('display', 'flex')
+			.style('justify-content', 'flex-end')
+		let deleteDiv = row.insert('div').attr('title', 'Delete all groups')
+		icon_functions['delete'](deleteDiv, {
+			handler: () => {
+				groupDiv.select('*').remove()
+				self.groups = []
+				self.app.tip.hide()
+			}
+		})
+		row = menuDiv.append('div')
+		row
+			.insert('div')
+			.style('display', 'inline-block')
+			.style('width', '5vw')
+			.text('Group')
+		row
+			.insert('div')
+			.style('display', 'inline-block')
+			.style('width', '5vw')
+			.text('Samples')
+		row
+			.insert('div')
+			.style('display', 'inline-block')
+			.style('width', '5vw')
+			.text('List')
+		row
+			.insert('div')
+			.style('display', 'inline-block')
+			.style('width', '5vw')
+			.text('Delete')
+		for (const [i, group] of self.groups.entries()) {
+			row = menuDiv.append('div').attr('class', 'sja_menuoption sja_sharp_border')
+
+			row
+				.insert('div')
+				.style('display', 'inline-block')
+				.style('width', '5vw')
+				.text(i + 1)
+			row
+				.insert('div')
+				.style('display', 'inline-block')
+				.style('width', '5vw')
+				.text(group.length)
+			const listDiv = row
+				.insert('div')
+				.style('display', 'inline-block')
+				.style('width', '5vw')
+			icon_functions['list'](listDiv, { handler: () => showTable(self, group) })
+			const deleteDiv = row
+				.insert('div')
+				.style('display', 'inline-block')
+				.style('width', '5vw')
+			icon_functions['delete'](deleteDiv, {
+				handler: () => {
+					self.groups.splice(i, 1)
+					if (self.groups.length == 0) groupDiv.select('*').remove()
+					else updateGroupsButton(groupDiv)
+					self.app.tip.hide()
+				}
+			})
 		}
 	}
 
