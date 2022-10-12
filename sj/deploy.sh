@@ -33,7 +33,7 @@ MODE=$3
 # workspace must be clean to deploy
 if [ ! -z "$(git status --porcelain)" ]; then
 	ERRORMSG="!!! There are untracked changes, either commit or delete them, or 'npm run clean'."
-	if [[ "$MODE" == "dry" ]]; then
+	if [[ "$MODE" == *"dry"* ]]; then
 		echo "(SKIPPED in dry-mode) $ERRORMSG"
 	else
 		echo $ERRORMSG
@@ -82,8 +82,7 @@ ssh -t $ENV "
 	cp active/serverconfig.json available/$APP-$VER/
 
 	cd available/$APP-$VER/
-	npm update @stjude/proteinpaint-server
-	npm update @stjude/proteinpaint-front
+	npm install --production
 	ln -sfn /opt/app/pecan/portal/www/sjcharts/public public/sjcharts
 	ln -sfn public/bin public/no-babel-polyfill
 
