@@ -649,7 +649,10 @@ export function getComponents(components, dotSepNames) {
 	- a base value that is an array or non-object will be replaced by matching arg key-value
 	- a base value that is an object will be extended by a matching arg key-value
 	- nested base object values will be extended recursively, instead of being swapped/replaced
-	  at the root level
+	  at the root level *** EXCEPT IF there is an isAtomic flag on one of these ****
+	  - the source
+	  - target object
+	  - target child object
 	- see index.spec test for copyMerge details
 */
 export function copyMerge(base, ...args) {
