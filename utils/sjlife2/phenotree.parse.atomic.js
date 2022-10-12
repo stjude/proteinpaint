@@ -68,7 +68,7 @@ if (subcohort_columnidx_str) {
 const fs = require('fs')
 const readline = require('readline')
 const path = require('path')
-const initBinConfig = require('../../server/shared/termdb.initbinconfig')
+const initBinConfig = require('./termdb.initbinconfig')
 
 const bins = {
 	// temporary values; to be deleted after parsing matrix file
