@@ -175,7 +175,7 @@ export function validate_query_snvindel_byisoform(ds) {
 				*/
 
 				/*
-				uses tumor_sample_barcode(aliquot) rather than "case.case_id" 
+				uses tumor_sample_uuid(aliquot) rather than "case.case_id" 
 				to be able to correctly attribute mutation to the aliquot from which it's detected
 				case_id is the patient, and can correspond to multiple aliquots
 
@@ -192,12 +192,12 @@ export function validate_query_snvindel_byisoform(ds) {
 				//m.samples.push({ sample_id: c.case_id })
 
 				// use aliquot to identify sample
-				const sample_id = c?.observation?.[0]?.sample?.tumor_sample_barcode
+				const sample_id = c?.observation?.[0]?.sample?.tumor_sample_uuid
 				if (sample_id) {
 					m.samples.push({ sample_id })
 				} else {
 					// should not happen: quick way to alert
-					console.log('.observation.sample.tumor_sample_barcode missing from casse{}')
+					console.log('.observation.sample.tumor_sample_uuid missing from casse{}')
 				}
 			}
 			mlst.push(m)
@@ -677,7 +677,7 @@ export async function querySamples_gdcapi(q, termidlst, ds) {
 		}
 
 		// this is aliquot id; later all aliquot ids are gathered and converted to submitter id later
-		sample.sample_id = s.case?.observation?.[0]?.sample?.tumor_sample_barcode
+		sample.sample_id = s.case?.observation?.[0]?.sample?.tumor_sample_uuid
 
 		// for making url link on a sample
 		sample.sample_URLid = s.case.case_id
