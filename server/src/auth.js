@@ -1,4 +1,5 @@
 const fs = require('fs').promises
+const existsSync = require('fs').existsSync
 const path = require('path')
 const jsonwebtoken = require('jsonwebtoken')
 const sleep = require('./utils').sleep
@@ -185,7 +186,7 @@ async function getSessions(creds, cacheFile, maxSessionAge) {
 		return sessions
 	} catch (e) {
 		// ok for the session backup to not exists, will be created later as needed
-		if (fs.fileExists(cacheFile)) console.log(e)
+		if (existsSync(cacheFile)) console.log(e)
 		return sessions
 	}
 }

@@ -50,12 +50,12 @@ docker run \
 	--mount type=bind,source=$PPDIR/server/test,target=$CONTAPP/server/test,readonly \
 	--mount type=bind,source=$PPDIR/server/cards,target=$CONTAPP/server/cards,readonly \
 	--mount type=bind,source=$PPDIR/server/utils,target=$CONTAPP/server/utils,readonly \
-	--mount type=bind,source=$PPDIR/server/bin.js,target=$CONTAPP/server/bin.js,readonly \
 	--mount type=bind,source=$PPDIR/server/webpack.config.js,target=$CONTAPP/server/webpack.config.js,readonly \
 	--mount type=bind,source=$PPDIR/server/.babelrc,target=$CONTAPP/server/.babelrc,readonly \
 	--mount type=bind,source=$PPDIR/serverconfig.json,target=$CONTAPP/serverconfig.json,readonly \
 	`# swap out the minimal for the full package.json's before starting the container` \
 	--mount type=bind,source=$PPDIR/package.json,target=$CONTAPP/package.json,readonly \
+	--mount type=bind,source=$PPDIR/README.md,target=$CONTAPP/README.md,readonly \
 	--mount type=bind,source=$PPDIR/server/package.json,target=$CONTAPP/server/package.json,readonly \
 	--mount type=bind,source=$PPDIR/client/package.json,target=$CONTAPP/client/package.json,readonly \
 	--mount type=bind,source=$PPDIR/build/dev,target=$CONTAPP/build/dev,readonly \
