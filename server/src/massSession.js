@@ -40,12 +40,12 @@ export async function get(req, res) {
 		const today = new Date()
 		const fileDate = new Date(sessionCreationDate)
 		const massSessionDuration = serverconfig.features.massSessionDuration || 30
-		const sessionDaysElapsed =
+		const sessionDaysLeft =
 			massSessionDuration - Math.round((today.getTime() - fileDate.getTime()) / (1000 * 3600 * 24))
 
 		res.send({
 			state: JSON.parse(state),
-			sessionDaysElapsed,
+			sessionDaysLeft,
 			massSessionDuration
 		})
 	} catch (e) {

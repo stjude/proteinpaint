@@ -101,6 +101,39 @@ upon error, throw err message as a string
 		return
 	}
 
+	if (urlp.has('mass-session-file') || urlp.has('mass-session-url')) {
+		let opts
+		if (urlp.has('mass-session-file')) {
+			const file = urlp.get('mass-session-file')
+			const jsonFile = await client.dofetch3(`/textfile`, {
+				method: 'POST',
+				body: JSON.stringify({ file })
+			})
+			const state = JSON.parse(jsonFile.text)
+			opts = {
+				holder: arg.holder,
+				state,
+				genome: arg.genomes[state.vocab.genome]
+			}
+		}
+		if (urlp.has('mass-session-url')) {
+			const url = urlp.get('mass-session-url')
+			const jsonURL = await client.dofetch3('/urltextfile', {
+				method: 'POST',
+				body: JSON.stringify({ url })
+			})
+			const state = JSON.parse(jsonURL.text)
+			opts = {
+				holder: arg.holder,
+				state,
+				genome: arg.genomes[state.vocab.genome]
+			}
+		}
+		const _ = await import('../mass/app')
+		_.appInit(opts)
+		return
+	}
+
 	if (urlp.has('mass-session-id')) {
 		const id = urlp.get('mass-session-id')
 		const res = await client.dofetch3(`/massSession?id=${id}`)
@@ -123,7 +156,8 @@ upon error, throw err message as a string
 			holder: arg.holder,
 			state: res.state,
 			genome: arg.genomes[res.state.vocab.genome],
-			sessionDaysElapsed: res.sessionDaysElapsed
+			sessionDaysLeft: res.sessionDaysLeft,
+			sessionId: id
 		}
 		const _ = await import('../mass/app')
 		_.appInit(opts)

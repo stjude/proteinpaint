@@ -38,7 +38,8 @@ class TdbNav {
 		this.searching = false
 		this.samplecounts = {}
 		this.massSessionDuration = opts.massSessionDuration
-		this.sessionDaysElapsed = opts.app.opts.sessionDaysElapsed || null
+		this.sessionDaysLeft = opts.app.opts.sessionDaysLeft || null
+		this.sessionId = opts.app.opts.sessionId || null
 		setInteractivity(this)
 		setRenderers(this)
 	}
@@ -78,7 +79,7 @@ class TdbNav {
 					maxHistoryLen: 5
 				})
 			})
-			this.mayShowMessage_sessionDaysElapsed()
+			this.mayShowMessage_sessionDaysLeft()
 		} catch (e) {
 			throw e
 		}
@@ -252,8 +253,19 @@ function setRenderers(self) {
 		self.dom.saveBtn = self.dom.sessionDiv
 			.append('button')
 			.style('margin', '10px')
-			.text('Save')
+			.text('New Session')
 			.on('click', self.getSessionUrl)
+
+		if (self.sessionDaysLeft != null) {
+			//Only show if called from `mass-session-id` URL
+			self.dom.fileBtn = self.dom.sessionDiv
+				.append('button')
+				.style('margin', '10px')
+				.text('Export Session')
+				.on('click', event => {
+					self.getSessionFile(event)
+				})
+		}
 
 		const helpPages = appState.termdbConfig.helpPages
 		if (helpPages) {
@@ -282,8 +294,8 @@ function setRenderers(self) {
 		}
 	}
 
-	self.mayShowMessage_sessionDaysElapsed = () => {
-		if (!Number.isFinite(self.sessionDaysElapsed)) {
+	self.mayShowMessage_sessionDaysLeft = () => {
+		if (!Number.isFinite(self.sessionDaysLeft)) {
 			// info not available, do not show msg
 			return
 		}
@@ -292,7 +304,7 @@ function setRenderers(self) {
 			.append('div')
 			.style('display', 'block')
 			.style('opacity', '0.65')
-			.html(`<u>${self.sessionDaysElapsed} days</u> left till this session is removed. You can save a new one.`)
+			.html(`<u>${self.sessionDaysLeft} days</u> left till this session is removed. You can save a new one.`)
 	}
 
 	self.updateUI = () => {
@@ -520,5 +532,16 @@ function setInteractivity(self) {
 		setTimeout(() => {
 			self.dom.saveBtn.property('disabled', false)
 		}, 1000)
+	}
+
+	self.getSessionFile = async event => {
+		//Download mass-session-id file
+		const res = await dofetch3(`/massSession?id=${self.sessionId}`)
+		const a = document.createElement('a')
+		const dataStr = 'data:application/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(res.state))
+		a.setAttribute('href', dataStr)
+		a.download = `${self.sessionId}.json`
+		a.click()
+		a.remove()
 	}
 }
