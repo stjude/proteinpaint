@@ -1053,35 +1053,23 @@ thus less things to worry about...
 		}
 	}
 
-	/* returns list of chart types based on term types from each subcohort combination
-	FIXME for a termdb without subcohort, r.cohort will be undefined
-	returned object will have "undefined" as key. make sure an object like {undefined:"xx"} can work in client side
+	/*
+	returns list of chart types based on term types from each subcohort combination
 	*/
 	q.getSupportedChartTypes = embedder => {
-		const cred = serverconfig.dsCredentials?.[ds.label]
+		mayComputeTermtypeByCohort(ds)
+		// ds.cohort.termdb.termtypeByCohort[] is set
 
-		const rows = cn
-			.prepare(
-				`WITH c AS (
-				SELECT cohort, term_id
-				FROM subcohort_terms s
-				GROUP BY cohort, term_id
-			) 
-			SELECT cohort, type, count(*) as samplecount
-			FROM terms t
-			JOIN c ON c.term_id = t.id
-			GROUP BY cohort, type`
-			)
-			.all()
+		const cred = serverconfig.dsCredentials?.[ds.label]
 
 		const supportedChartTypes = {}
 		const numericTypeCount = {}
-		// key: subcohort combinations, comma-joined, as in the subcohort_terms table
+		// key: subcohort combinations, comma-joined, alphabetically sorted, as in the subcohort_terms table
 		// value: array of chart types allowed by term types
 
-		for (const r of rows) {
-			if (!r.type) continue
-			// !!! r.cohort is undefined for dataset without subcohort
+		for (const r of ds.cohort.termdb.termtypeByCohort) {
+			if (!r.type) continue // skip ungraphable parent terms
+
 			if (!(r.cohort in supportedChartTypes)) {
 				supportedChartTypes[r.cohort] = new Set(['barchart', 'regression'])
 				if (ds.cohort.scatterplots) supportedChartTypes[r.cohort].add('sampleScatter')
@@ -1162,4 +1150,56 @@ export function interpolateSqlValues(sql, values) {
 			return char
 		})
 		.join('')
+}
+
+export function mayComputeTermtypeByCohort(ds) {
+	if (ds.cohort.termdb.termtypeByCohort) {
+		if (!Array.isArray(ds.cohort.termdb.termtypeByCohort)) throw 'termtypeByCohort is not array'
+		// already set, by one of two methods:
+		// 1. db query below
+		// 2. gdc dictionary building
+		return
+	}
+
+	if (!ds.cohort?.db?.connection) throw 'termtypeByCohort[] not set but cohort.db.connection missing'
+
+	/*
+	not available; perform db query for the first request, and cache the results
+
+	(as this query may be expensive thus do not want to run it for every request...)
+
+	for dataset with subcohort:
+	[
+	  { cohort: 'CCSS', type: '', samplecount: 615 },
+	  { cohort: 'CCSS', type: 'categorical', samplecount: 393 },
+	  { cohort: 'SJLIFE', type: '', samplecount: 636 },
+	  { cohort: 'SJLIFE', type: 'categorical', samplecount: 457 },
+	  ...
+	  { cohort: 'CCSS,SJLIFE', type: '', samplecount: 614 },
+	  { cohort: 'CCSS,SJLIFE', type: 'categorical', samplecount: 393 },
+	  ...
+	]
+
+	for dataset without subcohort:
+	[
+		  { cohort: '', type: '', samplecount: 11 },
+		  { cohort: '', type: 'categorical', samplecount: 65 },
+		  { cohort: '', type: 'float', samplecount: 1 },
+		  { cohort: '', type: 'survival', samplecount: 2 }
+	]
+
+	*/
+	ds.cohort.termdb.termtypeByCohort = ds.cohort.db.connection
+		.prepare(
+			`WITH c AS (
+			SELECT cohort, term_id
+			FROM subcohort_terms s
+			GROUP BY cohort, term_id
+		) 
+		SELECT cohort, type, count(*) as samplecount
+		FROM terms t
+		JOIN c ON c.term_id = t.id
+		GROUP BY cohort, type`
+		)
+		.all()
 }

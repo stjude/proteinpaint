@@ -1,4 +1,5 @@
 const serverconfig = require('./serverconfig.js')
+const { mayComputeTermtypeByCohort } = require('./termdb.sql')
 
 /*
 input:
@@ -76,12 +77,25 @@ function addScatterplots(c, ds) {
 // crucial for determining if a plot can function
 // e.g. survival plot can only work if allowedTermTypes.includes('survival')
 function getAllowedTermTypes(ds) {
-	const lst = ds.cohort.termdb.allowedTermTypes || []
+	mayComputeTermtypeByCohort(ds)
+	// ds.cohort.termdb.termtypeByCohort[] is set
 
-	if (ds?.queries?.snvindel) {
-		// has snvindel data, add in "geneVariant" if missing
-		if (!lst.includes('geneVariant')) lst.push('geneVariant')
+	// for now return list of term types irrespective of subcohorts
+
+	const typeSet = new Set()
+	for (const r of ds.cohort.termdb.termtypeByCohort) {
+		if (r.type) typeSet.add(r.type)
 	}
 
-	return lst
+	if (ds.cohort.termdb.allowedTermTypes) {
+		// optional predefined term types, append to set
+		for (const t of ds.cohort.termdb.allowedTermTypes) typeSet.add(t)
+	}
+
+	if (ds?.queries?.snvindel) {
+		// an mds3 dataset with snvindel data, add in "geneVariant"
+		typeSet.add('geneVariant')
+	}
+
+	return [...typeSet]
 }
