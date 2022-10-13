@@ -482,5 +482,13 @@ export const icons = {
   <path fill-rule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z"/>
 </svg>`
 		elem.html(svg).on('click', opts.handler)
+	},
+	survival: (elem, opts) => {
+		const _opts = { color: 'black', width: 18, height: 18 }
+		Object.assign(_opts, opts)
+		const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${_opts.width}" height="${_opts.height}" fill="${_opts.color}" class="bi bi-graph-dow" viewBox="0 0 16 16">
+		<path fill-rule="evenodd" d="M0 0h1v15h15v1H0V0Zm14.817 11.887a.5.5 0 0 0 .07-.704l-4.5-5.5a.5.5 0 0 0-.74-.037L7.06 8.233 3.404 3.206a.5.5 0 0 0-.808.588l4 5.5a.5.5 0 0 0 .758.06l2.609-2.61 4.15 5.073a.5.5 0 0 0 .704.07Z"/>
+		</svg>`
+		elem.html(svg).on('click', opts.handler)
 	}
 }

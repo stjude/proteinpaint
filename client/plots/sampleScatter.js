@@ -582,8 +582,12 @@ function setRenderers(self) {
 				// Style the selected dots
 				lasso.selectedItems().attr('d', c => getShape(self, c, maxsize))
 				lasso.items().style('fill-opacity', '1')
-
-				self.selectedItems = lasso.selectedItems()._groups[0]
+				self.selectedItems = []
+				let data
+				for (const item of lasso.selectedItems()._groups[0]) {
+					data = item.__data__
+					if (data.sample !== 'Ref') self.selectedItems.push(item)
+				}
 				lasso.notSelectedItems().attr('d', c => getShape(self, c))
 
 				showLassoMenu(dragEnd.sourceEvent)
@@ -621,7 +625,7 @@ function setRenderers(self) {
 			menuDiv
 				.append('div')
 				.attr('class', 'sja_menuoption sja_sharp_border')
-				.text('List samples')
+				.text(`List ${self.selectedItems.length} samples`)
 				.on('click', clickEvent => {
 					showTable(self, self.selectedItems)
 					self.app.tip.hide()
@@ -650,7 +654,7 @@ function setRenderers(self) {
 			.style('font-size', '1.1em')
 			.html(`&#931${self.groups.length + 1};`)
 			.on('click', event => showGroupsMenu(event, groupDiv))
-		const tooltip = `${self.groups.length} group samples`
+		const tooltip = `Lasso toolbox`
 		groupDiv.attr('title', tooltip)
 	}
 
@@ -659,12 +663,38 @@ function setRenderers(self) {
 		self.app.tip.show(event.clientX, event.clientY)
 		const menuDiv = self.app.tip.d.append('div')
 
-		let row = menuDiv
-			.append('div')
+		let row = menuDiv.append('div')
+		row
+			.insert('div')
+			.text('Lasso toolbox')
+			.style('text-align', 'center')
+		row = row
+			.insert('div')
 			.style('display', 'flex')
 			.style('justify-content', 'flex-end')
-		let deleteDiv = row.insert('div').attr('title', 'Delete all groups')
+
+		let survivalDiv = row
+			.insert('div')
+			.attr('title', 'Do survival analysis')
+			.style('padding', '5px')
+
+		icon_functions['survival'](survivalDiv, {
+			width: 20,
+			height: 20,
+			handler: () => {
+				console.log('show survival plot')
+				self.app.tip.hide()
+			}
+		})
+
+		let deleteDiv = row
+			.insert('div')
+			.attr('title', 'Delete all groups')
+			.style('padding', '5px')
+			.style('margin-right', '20px')
 		icon_functions['delete'](deleteDiv, {
+			width: 20,
+			height: 20,
 			handler: () => {
 				groupDiv.select('*').remove()
 				self.groups = []
@@ -672,6 +702,11 @@ function setRenderers(self) {
 			}
 		})
 		row = menuDiv.append('div')
+		row
+			.insert('div')
+			.style('display', 'inline-block')
+			.style('width', '5vw')
+			.text('Select')
 		row
 			.insert('div')
 			.style('display', 'inline-block')
@@ -694,7 +729,12 @@ function setRenderers(self) {
 			.text('Delete')
 		for (const [i, group] of self.groups.entries()) {
 			row = menuDiv.append('div').attr('class', 'sja_menuoption sja_sharp_border')
-
+			row
+				.insert('div')
+				.style('display', 'inline-block')
+				.style('width', '5vw')
+				.append('input')
+				.attr('type', 'checkbox')
 			row
 				.insert('div')
 				.style('display', 'inline-block')
@@ -889,7 +929,6 @@ function showTable(self, group, pos = 1) {
 	let row, data
 	for (const item of group) {
 		data = item.__data__
-		if (data.sample === 'Ref') continue
 		row = [data.sample]
 		if ('category' in data) row.push(data.category)
 		if (self.config.shapeTW) row.push(getShapeName(self.shapes, data))
