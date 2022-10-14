@@ -58,7 +58,7 @@ class Term1ui {
 			debug: this.opts.debug,
 
 			// temp change to enable toggling between continuous/discrete for numeric term1
-			// numericEditMenuVersion: ['continuous', 'discrete']
+			numericEditMenuVersion: ['continuous', 'discrete'],
 
 			callback: data => {
 				// data is object with only one needed attribute: q, never is null

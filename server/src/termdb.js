@@ -1,6 +1,3 @@
-const fs = require('fs')
-const path = require('path')
-const utils = require('./utils')
 const serverconfig = require('./serverconfig.js')
 const termdbConfig = require('./termdb.config')
 const termdbsql = require('./termdb.sql')
@@ -316,10 +313,11 @@ function trigger_getViolinPlotData(q, res, ds) {
 			key2,val2
 				// if q.term2 is given, key2 is the group/bin label based on term2, using which the samples will be divided
 				// if q.term2 is missing, key2 is empty string and won't divide into groups
-		}, ...
+		}, ...x
 	  ]
 	}
 	*/
+	result.lst.sort((a, b) => a.val2 - b.val2)
 
 	const valueSeries = []
 
@@ -346,9 +344,10 @@ function trigger_getViolinPlotData(q, res, ds) {
 			label: 'All samples'
 		})
 	}
-	// const mM = []
 
 	for (const item of valueSeries) {
+		let labelText
+		item.label == 'F' ? (labelText = 'Female') : item.label == 'M' ? (labelText = 'Male') : (labelText = item.label)
 		// item: { label=str, values=[v1,v2,...] }
 
 		const bins0 = computeViolinData(item.values)
@@ -364,52 +363,36 @@ function trigger_getViolinPlotData(q, res, ds) {
 			b2.lst = b
 			bins.push(b2)
 		}
-
-		console.log('bins from backend', bins)
-		const mMdict = minMaxCompute(item.values)
-		const biggestBin = Math.max(...bins.map(b => b.length))
+		const yScaleValues = []
+		for (const k of bins) {
+			if (k.lst.length >= 1) {
+				yScaleValues.push(...k.lst)
+			}
+		}
+		const biggestBin = Math.max(...bins0.map(b => b.length))
 
 		item.bins = bins
-		item.minmax = mMdict
-		item.biggestBin = biggestBin
 
-		// delete item.values
+		item.biggestBin = biggestBin
+		item.yScaleValues = yScaleValues
+		item.labelText = labelText
+
+		delete item.values
 	}
 
-	// console.log(valueSeries);
 	res.send(valueSeries)
 }
 
-export function minMaxCompute(values) {
-	let min = Math.min(...values),
-		max = Math.max(...values)
-
-	let yScaleMin = +Infinity,
-		yScaleMax = -Infinity
-
-	if (yScaleMin > min) {
-		yScaleMin = min
-	}
-	if (max > yScaleMax) {
-		yScaleMax = max
-	}
-	const mMdict = {}
-	mMdict['min'] = min
-	mMdict['max'] = max
-	mMdict['yScaleMax'] = yScaleMax
-	mMdict['yScaleMin'] = yScaleMin
-
-	return mMdict
-}
 // compute bins using d3
 export function computeViolinData(values) {
 	let min = Math.min(...values),
 		max = Math.max(...values)
 
-	// console.log('2',values.length);
+	const yScale = d3.scaleLinear().domain([min, max])
+
 	let ticksCompute
-	if (values.length < 30) {
-		ticksCompute = 8
+	if (values.length < 50) {
+		ticksCompute = 5
 	} else {
 		ticksCompute = 12
 	}
@@ -417,7 +400,7 @@ export function computeViolinData(values) {
 	const binBuilder = d3
 		.bin()
 		.domain([min, max]) /* extent of the data that is lowest to highest*/
-		.thresholds(ticksCompute) /* buckets are created which are separated by the threshold*/
+		.thresholds(yScale.ticks(ticksCompute)) /* buckets are created which are separated by the threshold*/
 		.value(d => d) /* bin the data points into this bucket*/
 
 	return binBuilder(values)

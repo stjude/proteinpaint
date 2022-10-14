@@ -11,7 +11,7 @@ import getHandlers from './barchart.events'
 import { controlsInit } from './controls'
 import { to_svg } from '../src/client'
 import { fillTermWrapper } from '../termsetting/termsetting'
-import * as d3 from 'd3'
+import { compViolinInit } from './violin'
 
 class Barchart {
 	constructor(opts) {
@@ -112,7 +112,8 @@ class Barchart {
 						},
 						'divideBy'
 					]
-				})
+				}),
+				violin: []
 			}
 
 			this.components.controls.on('downloadClick.boxplot', this.download)
@@ -191,97 +192,30 @@ class Barchart {
 			this.toggleLoadingDiv()
 
 			// TODO improve with handler{} design
+
 			if (this.state.visibleChartType == 'violin') {
-				// compute and render violin plot
 				this.dom.barDiv.style('display', 'none')
-				this.dom.violinDiv.style('display', 'inline-block')
-				// .style('border', '5px outset black')
+				this.dom.violinDiv
+					.style('display', 'inline-block')
+					.style('padding', '10px')
+					.style('overflow-x', 'auto')
+					.style('max-width', '70vw')
+					.style('scrollbar-width', 'none')
 
 				// TODO request by either config.term{} or config.term2 depending on which one is continuous
-
 				const arg = {
 					termid: this.state.config.term.id, // hardcoded to use term1
 					term2: this.state.config.term2,
-					filter: this.state.termfilter.filter
+					filter: this.state.termfilter.filter,
+					config: this.config
 				}
-
-				const data = await this.app.vocabApi.getViolinPlotData(arg)
-				const groups = []
-
-				// console.log('data', data)
-				if (data.error) throw data.error
 
 				this.toggleLoadingDiv('none')
+				this.components.violin = await compViolinInit({ app: this.app, dom: this.dom, violinArg: arg })
 
-				// Render the violin plot
-				const margin = { top: 30, right: 30, bottom: 30, left: 30 }
-				const width = 500 - margin.left - margin.right,
-					height = 500 - margin.top - margin.bottom
-
-				// append the svg object to the body of the page
-				let svg = this.dom.violinDiv
-					.append('svg')
-					.attr('width', width + margin.left + margin.right)
-					.attr('height', height + margin.top + margin.bottom)
-					.append('g')
-					.attr('transform', 'translate(' + margin.left + ',' + margin.top + ')')
-
-				const boundsWidth = width - margin.right - margin.left
-				const boundsHeight = height - margin.top - margin.bottom
-
-				for (const key of data) {
-					groups.push(key.label)
-					// console.log('key.min',key.biggestBin);
-					// console.log('key.bins', key.bins);
-
-					const yScale = d3
-						.scaleLinear()
-						.domain([key.minmax.yScaleMin, key.minmax.yScaleMax])
-						.range([boundsHeight, 0])
-					svg.append('g').call(d3.axisLeft(yScale))
-
-					const xScale = d3
-						.scaleBand()
-						.range([0, boundsWidth])
-						.domain(groups)
-						.padding(0.05)
-
-					svg
-						.append('g')
-						.attr('transform', 'translate(0,' + height + ')')
-						.call(d3.axisBottom(xScale))
-
-					const wScale = d3
-						.scaleLinear()
-						.domain([-key.biggestBin, key.biggestBin])
-						.range([0, xScale.bandwidth()])
-
-					const areaBuilder = d3
-						.area()
-						.x0(d => wScale(-d.length))
-						.x1(d => wScale(d.length))
-						.y(d => yScale(d.x0))
-						.curve(d3.curveBumpY)
-
-					// console.log(areaBuilder);
-
-					// Create the shape
-					// svg
-					// 	.selectAll("myViolin")
-					// 	.data(key.values)
-					// 	.enter()        // So now we are working group per group
-					// 	.append("g")
-					// 	.attr("transform", function(d){ return("translate(" + xScale(key.label) +" ,0)") } ) // Translation on the right to be at the group position
-					// 	.append("path")
-					// 	.datum(function(d){ return(d.value)})     // So now we are working bin per bin
-					// 	.style("stroke", "navy")
-					// 	.style("fill","#dfdef0")
-					// 	.style("opacity", 0.4)
-					// 	.style('padding', 1)
-					// 	.attr("d", areaBuilder(key.bins))
-				}
 				return
 			}
+
 			// compute and render barchart
 			this.dom.barDiv.style('display', 'inline-block')
 			this.dom.violinDiv.style('display', 'none')
