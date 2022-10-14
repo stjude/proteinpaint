@@ -617,20 +617,27 @@ function setRenderers(self) {
 		}
 
 		function showLassoMenu(event) {
-			self.app.tip.clear().hide()
+			self.dom.tip.clear().hide()
 			if (self.selectedItems.length == 0) return
-			self.app.tip.show(event.clientX, event.clientY)
+			self.dom.tip.show(event.clientX, event.clientY)
 
-			const menuDiv = self.app.tip.d.append('div')
+			const menuDiv = self.dom.tip.d.append('div')
 			menuDiv
 				.append('div')
 				.attr('class', 'sja_menuoption sja_sharp_border')
 				.text(`List ${self.selectedItems.length} samples`)
 				.on('click', clickEvent => {
 					showTable(self, self.selectedItems)
-					self.app.tip.hide()
+					self.dom.tip.hide()
 				})
-
+			menuDiv
+				.append('div')
+				.attr('class', 'sja_menuoption sja_sharp_border')
+				.text('Survival analysis')
+				.on('click', () => {
+					openSurvivalPlot(self, self.selectedItems)
+					self.dom.tip.hide()
+				})
 			menuDiv
 				.append('div')
 				.attr('class', 'sja_menuoption sja_sharp_border')
@@ -638,7 +645,7 @@ function setRenderers(self) {
 				.on('click', () => {
 					self.groups.push(self.selectedItems)
 					updateGroupsButton(groupDiv)
-					self.app.tip.hide()
+					self.dom.tip.hide()
 				})
 		}
 	}
@@ -659,9 +666,9 @@ function setRenderers(self) {
 	}
 
 	function showGroupsMenu(event, groupDiv) {
-		self.app.tip.clear()
-		self.app.tip.show(event.clientX, event.clientY)
-		const menuDiv = self.app.tip.d.append('div')
+		self.dom.tip.clear()
+		self.dom.tip.show(event.clientX, event.clientY)
+		const menuDiv = self.dom.tip.d.append('div').style('min-width', '20vw')
 
 		let row = menuDiv.append('div')
 		row
@@ -683,7 +690,7 @@ function setRenderers(self) {
 			height: 20,
 			handler: () => {
 				console.log('show survival plot')
-				self.app.tip.hide()
+				self.dom.tip.hide()
 			}
 		})
 
@@ -698,7 +705,7 @@ function setRenderers(self) {
 			handler: () => {
 				groupDiv.select('*').remove()
 				self.groups = []
-				self.app.tip.hide()
+				self.dom.tip.hide()
 			}
 		})
 		row = menuDiv.append('div')
@@ -722,6 +729,11 @@ function setRenderers(self) {
 			.style('display', 'inline-block')
 			.style('width', '5vw')
 			.text('List')
+		row
+			.insert('div')
+			.style('display', 'inline-block')
+			.style('width', '5vw')
+			.text('Survival')
 		row
 			.insert('div')
 			.style('display', 'inline-block')
@@ -750,6 +762,11 @@ function setRenderers(self) {
 				.style('display', 'inline-block')
 				.style('width', '5vw')
 			icon_functions['list'](listDiv, { handler: () => showTable(self, group) })
+			const survivalDiv = row
+				.insert('div')
+				.style('display', 'inline-block')
+				.style('width', '5vw')
+			icon_functions['survival'](survivalDiv, { handler: () => openSurvivalPlot(self, group) })
 			const deleteDiv = row
 				.insert('div')
 				.style('display', 'inline-block')
@@ -759,7 +776,7 @@ function setRenderers(self) {
 					self.groups.splice(i, 1)
 					if (self.groups.length == 0) groupDiv.select('*').remove()
 					else updateGroupsButton(groupDiv)
-					self.app.tip.hide()
+					self.dom.tip.hide()
 				}
 			})
 		}
@@ -799,7 +816,7 @@ function setInteractivity(self) {
 	self.mouseover = function(event) {
 		if (self.lassoOn) return
 		if (event.target.tagName == 'path') {
-			self.app.tip.clear().show(event.clientX, event.clientY)
+			self.dom.tip.clear().show(event.clientX, event.clientY)
 			const d = event.target.__data__
 			if (!d) return
 			const rows = [{ k: 'Sample', v: d.sample }]
@@ -807,14 +824,14 @@ function setInteractivity(self) {
 				rows.push({ k: self.config.colorTW.id, v: d.category })
 			}
 			if ('info' in d) for (const [k, v] of Object.entries(d.info)) rows.push({ k: k, v: v })
-			make_table_2col(self.app.tip.d, rows)
+			make_table_2col(self.dom.tip.d, rows)
 		} else {
-			self.app.tip.hide()
+			self.dom.tip.hide()
 		}
 	}
 
 	self.mouseout = function() {
-		if (!self.lassoOn) self.app.tip.hide()
+		if (!self.lassoOn) self.dom.tip.hide()
 	}
 }
 
@@ -952,4 +969,47 @@ function getShapeName(shapes, data) {
 		if (data.shape === index) return name
 	}
 	return null
+}
+
+function openSurvivalPlot(self, group) {
+	const values = []
+	let data
+	for (const item of group) {
+		data = item.__data__
+		values.push(data.sample)
+	}
+	let config = {
+		chartType: 'survival',
+		term: {
+			id: 'Event-free survival'
+		},
+		term2: {
+			term: { name: 'TSNE selected groups', type: 'samplelst' },
+			q: {
+				mode: 'custom-groupsetting',
+				groups: [
+					{
+						name: 'Group 1',
+						key: 'sample',
+						values: values
+					},
+					{
+						name: 'Others',
+						key: 'sample',
+						in: false,
+						values: values
+					}
+				]
+			}
+		},
+		settings: {
+			survival: {
+				xTickValues: [0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30]
+			}
+		}
+	}
+	self.app.dispatch({
+		type: 'plot_create',
+		config: config
+	})
 }

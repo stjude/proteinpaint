@@ -443,6 +443,8 @@ function validatePlotTerm(t, vocabApi) {
 		case 'snplocus':
 		case 'geneVariant':
 			break
+		case 'samplelst':
+			break
 		default:
 			if (t.term.isgenotype) {
 				// don't do anything for now

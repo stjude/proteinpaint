@@ -4,6 +4,7 @@ const getFilterCTEs = require('./termdb.filter').getFilterCTEs
 const numericSql = require('./termdb.sql.numeric')
 const categoricalSql = require('./termdb.sql.categorical')
 const conditionSql = require('./termdb.sql.condition')
+const sampleLstSql = require('./termdb.sql.samplelst').sampleLstSql
 const connect_db = require('./utils').connect_db
 const isUsableTerm = require('#shared/termdb.usecase').isUsableTerm
 const serverconfig = require('./serverconfig')
@@ -337,19 +338,21 @@ export function get_term_cte(q, values, index, filter, termWrapper = null) {
 	const twterm = (termWrapper && termWrapper.term) || q[`term${index}`]
 	const termid = twterm ? twterm.id : q['term' + index + '_id']
 	const term_is_genotype = termWrapper && twterm ? termWrapper.term.is_genotype : q['term' + index + '_is_genotype']
-	// legacy code support: index=1 is assumed to be barchart term
-	// when there is no termWrapper argument
-	if (!termWrapper && index == 1 && !term_is_genotype) {
-		// only term1 is required
-		if (!termid) throw 'missing term id'
-	} else if (!termid || term_is_genotype) {
-		// term2 and term0 are optional
-		// no table to query
-		const tablename = 'samplekey_' + index
-		return {
-			tablename,
-			sql: `${tablename} AS (\nSELECT null AS sample, '' as key, '' as value\n)`,
-			join_on_clause: ''
+	if (!(twterm?.type == 'samplelst')) {
+		// legacy code support: index=1 is assumed to be barchart term
+		// when there is no termWrapper argument
+		if (!termWrapper && index == 1 && !term_is_genotype) {
+			// only term1 is required
+			if (!termid) throw 'missing term id'
+		} else if (!termid || term_is_genotype) {
+			// term2 and term0 are optional
+			// no table to query
+			const tablename = 'samplekey_' + index
+			return {
+				tablename,
+				sql: `${tablename} AS (\nSELECT null AS sample, '' as key, '' as value\n)`,
+				join_on_clause: ''
+			}
 		}
 	}
 
@@ -390,6 +393,8 @@ export function get_term_cte(q, values, index, filter, termWrapper = null) {
 		CTE = conditionSql[mode].getCTE(tablename, term, q.ds, termq, values /*, filter*/)
 	} else if (term.type == 'survival') {
 		CTE = makesql_survival(tablename, term, q, values, filter)
+	} else if (term.type == 'samplelst') {
+		CTE = sampleLstSql.getCTE(tablename, term, q, values, filter)
 	} else {
 		throw 'unknown term type'
 	}

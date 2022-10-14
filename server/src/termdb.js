@@ -28,6 +28,7 @@ const encodedParams = [
 	'filter',
 	'tvslst',
 	'term1_q',
+	'term2_q',
 	'usecase',
 	'variant_filter',
 	'info_fields',

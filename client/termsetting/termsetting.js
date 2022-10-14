@@ -16,7 +16,7 @@ clickNoPillDiv
 showTree
 */
 
-export const nonDictionaryTermTypes = new Set(['snplst', 'prs', 'snplocus', 'geneVariant'])
+export const nonDictionaryTermTypes = new Set(['snplst', 'prs', 'snplocus', 'geneVariant', 'samplelst'])
 
 // append the common ID substring,
 // so that the first characters of $id is more indexable
