@@ -1,5 +1,4 @@
 /*
-********** TODO constructor options **********
 
 ********** test accessibility of serverconfig.tpmasterdir at two places **********
 if inaccessible, do not crash service. maintain server process to be able to return helpful message to all request
@@ -102,7 +101,8 @@ const express = require('express'),
 	validator = require('./validator'),
 	cookieParser = require('cookie-parser'),
 	authApi = require('./auth.js'),
-	{ server_init_db_queries } = require('./termdb.sql')
+	{ server_init_db_queries, listDbTables } = require('./termdb.sql'),
+	{ handle_healthcheck_closure } = require('./health')
 
 //////////////////////////////
 // Global variable (storing things in memory)
@@ -232,7 +232,7 @@ if (serverconfig.jwt) {
 // otherwise next() may not be called for a middleware in the optional routes
 setOptionalRoutes()
 authApi.maySetAuthRoutes(app, basepath, serverconfig)
-app.get(basepath + '/healthcheck', handle_healthcheck)
+app.get(basepath + '/healthcheck', handle_healthcheck_closure(genomes))
 app.get(basepath + '/cardsjson', handle_cards)
 app.post(basepath + '/mdsjsonform', handle_mdsjsonform)
 app.get(basepath + '/genomes', handle_genomes)
@@ -433,37 +433,6 @@ function setOptionalRoutes() {
 			const setRoutes = __non_webpack_require__(fname)
 			setRoutes(app, basepath)
 		}
-	}
-}
-
-async function handle_healthcheck(req, res) {
-	try {
-		const health = { status: 'ok' }
-		const keys = exports.features.healthcheck_keys || []
-
-		if (keys.includes('w')) {
-			health.w = child_process
-				.execSync('w | head -n1')
-				.toString()
-				.trim()
-				.split(' ')
-				.slice(-3)
-				.map(d => (d.endsWith(',') ? +d.slice(0, -1) : +d))
-		}
-
-		if (keys.includes('rs')) {
-			health.rs =
-				child_process
-					.execSync('ps aux | grep rsync -w')
-					.toString()
-					.trim()
-					.split('\n').length - 1
-		}
-
-		if (serverconfig.commitHash) health.version = serverconfig.commitHash
-		res.send(health)
-	} catch (e) {
-		throw { error: e }
 	}
 }
 
@@ -7275,44 +7244,34 @@ async function pp_init() {
 			- ideogram
 			- gene2canonicalisoform
 			- refseq2ensembl
+			- buildDate
 
 			if present, create getter to this table and attach to g.genedb{}
 			*/
-			const checkTable = g.genedb.db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name=?")
-			{
-				const s = checkTable.get('genealias')
-				if (s && s.name == 'genealias') {
-					g.genedb.getNameByAlias = g.genedb.db.prepare('select name from genealias where alias=?')
-				}
+			const tables = listDbTables(g.genedb.db)
+			if (tables.has('genealias')) {
+				g.genedb.getNameByAlias = g.genedb.db.prepare('select name from genealias where alias=?')
 			}
-			{
-				const s = checkTable.get('gene2coord')
-				if (s && s.name == 'gene2coord') {
-					g.genedb.getCoordByGene = g.genedb.db.prepare('select * from gene2coord where name=?')
-				}
+			if (tables.has('gene2coord')) {
+				g.genedb.getCoordByGene = g.genedb.db.prepare('select * from gene2coord where name=?')
 			}
-			{
-				const s = checkTable.get('ideogram')
-				if (s && s.name == 'ideogram') {
-					g.genedb.hasIdeogram = true
-					g.genedb.getIdeogramByChr = g.genedb.db.prepare('select * from ideogram where chromosome=?')
-				} else {
-					g.genedb.hasIdeogram = false
-				}
+			if (tables.has('ideogram')) {
+				g.genedb.hasIdeogram = true
+				g.genedb.getIdeogramByChr = g.genedb.db.prepare('select * from ideogram where chromosome=?')
+			} else {
+				g.genedb.hasIdeogram = false
 			}
-			{
-				const s = checkTable.get('gene2canonicalisoform')
-				if (s && s.name == 'gene2canonicalisoform') {
-					g.genedb.get_gene2canonicalisoform = g.genedb.db.prepare(
-						'select genemodel from gene2canonicalisoform as c, genes as g where c.gene=? AND c.isoform=g.isoform'
-					)
-				}
+			if (tables.has('gene2canonicalisoform')) {
+				g.genedb.get_gene2canonicalisoform = g.genedb.db.prepare(
+					'select genemodel from gene2canonicalisoform as c, genes as g where c.gene=? AND c.isoform=g.isoform'
+				)
 			}
-			{
-				// this table is only used for gdc dataset
-				const s = checkTable.get('refseq2ensembl')
-				g.genedb.hasTable_refseq2ensembl = s && s.name == 'refseq2ensembl'
+			if (tables.has('buildDate')) {
+				g.genedb.get_buildDate = g.genedb.db.prepare('select date from buildDate')
 			}
+
+			// this table is only used for gdc dataset
+			g.genedb.hasTable_refseq2ensembl = tables.has('refseq2ensembl')
 		}
 
 		// termdbs{} is optional

@@ -8,6 +8,7 @@ const sampleLstSql = require('./termdb.sql.samplelst').sampleLstSql
 const connect_db = require('./utils').connect_db
 const isUsableTerm = require('#shared/termdb.usecase').isUsableTerm
 const serverconfig = require('./serverconfig')
+
 /*
 
 ********************** EXPORTED
@@ -18,6 +19,7 @@ get_rows
 get_rows_by_one_key
 get_rows_by_two_keys
 server_init_db_queries
+listDbTables
 ********************** INTERNAL
 get_term_cte
 	makesql_oneterm
@@ -743,17 +745,22 @@ thus less things to worry about...
 
 	ds.cohort.db.connection = cn
 
-	const tables = test_tables(cn)
-	if (!tables.terms) throw 'terms table missing'
-	if (!tables.ancestry) throw 'ancestry table missing'
-	if (!tables.annotations) throw 'annotations table missing'
-	if (ds.cohort.termdb.selectCohort && !tables.subcohort_terms)
+	const tables = listDbTables(cn)
+
+	if (!tables.has('terms')) throw 'terms table missing'
+	if (!tables.has('ancestry')) throw 'ancestry table missing'
+	if (!tables.has('annotations')) throw 'annotations table missing'
+	if (ds.cohort.termdb.selectCohort && !tables.has('subcohort_terms'))
 		throw 'subcohort_terms table is missing while termdb.selectCohort is enabled'
 
 	ds.cohort.termdb.q = {}
 	const q = ds.cohort.termdb.q
 
-	if (tables.term2genes) {
+	if (tables.has('buildDate')) {
+		q.get_buildDate = cn.prepare('select date from buildDate')
+	}
+
+	if (tables.has('term2genes')) {
 		/*
 		this db has optional table that maps term id to gene set, right now only used for msigdb
 		set termMatch2geneSet flag to true for client termdb tree to be aware of it via termdbConfig{}
@@ -774,7 +781,7 @@ thus less things to worry about...
 		}
 	}
 
-	if (tables.sampleidmap) {
+	if (tables.has('sampleidmap')) {
 		const i2s = new Map(),
 			s2i = new Map()
 		const s = cn.prepare('SELECT * FROM sampleidmap')
@@ -786,7 +793,7 @@ thus less things to worry about...
 		q.sampleName2id = s => s2i.get(s)
 	}
 
-	if (tables.category2vcfsample) {
+	if (tables.has('category2vcfsample')) {
 		const s = cn.prepare('SELECT * FROM category2vcfsample')
 		// must be cached as there are lots of json parsing
 		let cache
@@ -800,7 +807,7 @@ thus less things to worry about...
 			return cache
 		}
 	}
-	if (tables.alltermsbyorder) {
+	if (tables.has('alltermsbyorder')) {
 		const s = cn.prepare('SELECT * FROM alltermsbyorder')
 		let cache
 		q.getAlltermsbyorder = () => {
@@ -1040,7 +1047,7 @@ thus less things to worry about...
 			return s.all(id)
 		}
 	}
-	if (tables.termhtmldef) {
+	if (tables.has('termhtmldef')) {
 		//get term_info for a term
 		//rightnow only few conditional terms have grade info
 		const s = cn.prepare('SELECT jsonhtml FROM termhtmldef WHERE id=?')
@@ -1113,23 +1120,6 @@ thus less things to worry about...
 		}
 
 		return supportedChartTypes
-	}
-}
-
-function test_tables(cn) {
-	const s = cn.prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name=?`)
-	return {
-		terms: s.get('terms'),
-		ancestry: s.get('ancestry'),
-		alltermsbyorder: s.get('alltermsbyorder'),
-		termhtmldef: s.get('termhtmldef'),
-		category2vcfsample: s.get('category2vcfsample'),
-		annotations: s.get('annotations'),
-		chronicevents: s.get('chronicevents'),
-		precomputed: s.get('precomputed'),
-		subcohort_terms: s.get('subcohort_terms'),
-		sampleidmap: s.get('sampleidmap'),
-		term2genes: s.get('term2genes')
 	}
 }
 
@@ -1207,4 +1197,9 @@ export function mayComputeTermtypeByCohort(ds) {
 		GROUP BY cohort, type`
 		)
 		.all()
+}
+
+export function listDbTables(cn) {
+	const rows = cn.prepare("SELECT name FROM sqlite_master WHERE type='table'").all()
+	return new Set(rows.map(i => i.name))
 }
