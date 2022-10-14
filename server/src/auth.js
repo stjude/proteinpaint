@@ -28,7 +28,8 @@ const processors = require('./custom-jwt-processors.js')
 */
 async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 	const serverconfig = _serverconfig || require('./serverconfig')
-	const cacheFile = path.join(serverconfig.cachedir, 'dsSessions')
+	const sessionsFile = path.join(serverconfig.cachedir, 'dsSessions')
+	const actionsFile = path.join(serverconfig.cachedir, 'authorizedActions')
 	const creds = serverconfig.dsCredentials
 
 	const maxSessionAge = serverconfig.maxSessionAge || 1000 * 3600 * 16
@@ -55,7 +56,7 @@ async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 			// jwt to only a few routes
 			creds[q.dslabel].type == 'jwt' ||
 			// check if not a jwt-protected route
-			!(req.path == '/termdb' && q.for == 'matrix')
+			!((req.path == '/termdb' && q.for == 'matrix') || req.path == '/authorizedActions')
 		) {
 			next()
 			return
@@ -73,7 +74,7 @@ async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 				including between subsequent checks of jwts, in order to avoid potentially expensive decryption 
 			*/
 			if (time - session.time > maxSessionAge) {
-				iat = checkDsSecret(q, req.headers, creds, session)
+				const { iat } = checkDsSecret(q, req.headers, creds, session)
 				const elapsedSinceIssue = time - iat
 				if (elapsedSinceIssue > maxSessionAge) {
 					delete sessions[q.dslabel][id]
@@ -100,7 +101,7 @@ async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 
 	try {
 		// 1. Get an empty or rehydrated sessions tracker object
-		sessions = await getSessions(creds, cacheFile, maxSessionAge)
+		sessions = await getSessions(creds, sessionsFile, maxSessionAge)
 	} catch (e) {
 		throw e
 	}
@@ -123,7 +124,7 @@ async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 			const [type, pwd] = req.headers.authorization.split(' ')
 			if (type.toLowerCase() != 'basic') throw `unsupported authorization type='${type}', allowed: 'Basic'`
 			if (Buffer.from(pwd, 'base64').toString() != creds[q.dslabel].password) throw 'invalid password'
-			await setSession(q, res, sessions, cacheFile)
+			await setSession(q, res, sessions, sessionsFile)
 			res.send({ status: 'ok' })
 		} catch (e) {
 			res.status(code)
@@ -134,12 +135,26 @@ async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 	app.post(basepath + '/jwt-status', async (req, res) => {
 		let code = 401
 		try {
-			await checkDsSecret(req.query, req.headers, creds)
-			await setSession(req.query, res, sessions, cacheFile)
+			const { email } = await checkDsSecret(req.query, req.headers, creds)
+			await setSession(req.query, res, sessions, sessionsFile, email)
 			res.send({ status: 'ok' })
 		} catch (e) {
-			//console.log(e, code)
+			console.log(e, code)
 			res.status(code)
+			res.send({ error: e })
+		}
+	})
+
+	app.post(basepath + '/authorizedActions', async (req, res) => {
+		const q = req.query
+		const id = req.cookies[`${q.dslabel}SessionId`]
+		const { email } = sessions[q.dslabel][id]
+		const time = Date.now()
+		try {
+			await fs.appendFile(actionsFile, `${q.dslabel}\t${email}\t${time}\t${q.action}\t${JSON.stringify(q.details)}\n`)
+			res.send({ status: 'ok' })
+		} catch (e) {
+			res.status(401)
 			res.send({ error: e })
 		}
 	})
@@ -155,7 +170,7 @@ async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 			return {
 				dslabel,
 				// type='jwt' will require a token in the initial runpp call
-				insession: cred.type != 'jwt' && +new Date() - sessionStart < maxSessionAge,
+				insession: (cred.type != 'jwt' || id) && Date.now() - sessionStart < maxSessionAge,
 				type: cred.type || 'login'
 			}
 		})
@@ -166,37 +181,37 @@ async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 	will return a sessions object that is used
 	for tracking sessions by [dslabel]{[id]: {id, time}}
 */
-async function getSessions(creds, cacheFile, maxSessionAge) {
+async function getSessions(creds, sessionsFile, maxSessionAge) {
 	const sessions = {}
 	for (const dslabel in creds) {
 		if (!sessions[dslabel]) sessions[dslabel] = {}
 	}
 
 	try {
-		const file = await fs.readFile(cacheFile, 'utf8')
+		const file = await fs.readFile(sessionsFile, 'utf8')
 		//rehydrate sessions from a cached file
 		const now = +new Date()
 		for (const line of file.split('\n')) {
 			if (!line) continue
-			const [dslabel, id, _time] = line.split('\t')
+			const [dslabel, id, _time, email] = line.split('\t')
 			const time = Number(_time)
 			if (!sessions[dslabel]) sessions[dslabel] = {}
-			if (now - time < maxSessionAge) sessions[dslabel][id] = { id, time }
+			if (now - time < maxSessionAge) sessions[dslabel][id] = { id, time, email }
 		}
 		return sessions
 	} catch (e) {
 		// ok for the session backup to not exists, will be created later as needed
-		if (existsSync(cacheFile)) console.log(e)
+		if (existsSync(sessionsFile)) console.log(e)
 		return sessions
 	}
 }
 
-async function setSession(q, res, sessions, cacheFile) {
-	const time = +new Date()
+async function setSession(q, res, sessions, sessionsFile, email) {
+	const time = Date.now()
 	const id = Math.random().toString() + '.' + time.toString().slice(4)
 	if (!sessions[q.dslabel]) sessions[q.dslabel] = {}
-	sessions[q.dslabel][id] = { id, time }
-	await fs.appendFile(cacheFile, `${q.dslabel}\t${id}\t${time}\n`)
+	sessions[q.dslabel][id] = { id, time, email }
+	await fs.appendFile(sessionsFile, `${q.dslabel}\t${id}\t${time}\t${email}\n`)
 	res.header('Set-cookie', `${q.dslabel}SessionId=${id}`)
 }
 
@@ -214,7 +229,21 @@ function checkDsSecret(q, headers, creds = {}, _time, session = null) {
 	if (!secret) throw `missing embedder setting`
 
 	const time = Math.floor((_time || Date.now()) / 1000)
-	//console.log(206, secret, jsonwebtoken.sign({ iat: time, exp: time + 300,  datasets: ['TermdbTest', "SJLife", "PNET", "sjlife", "ccss"] }, secret))
+	/*
+		for testing only
+		console.log(
+		206,
+		secret,
+		jsonwebtoken.sign(
+			{
+				iat: time,
+				exp: time + 3600,
+				datasets: ['TermdbTest', 'SJLife', 'PNET', 'sjlife', 'ccss'],
+				email: 'username@test.tld'
+			},
+			secret
+		)
+	)*/
 
 	const rawToken = headers[cred.headerKey]
 	if (!rawToken) throw `missing header['${cred.headerKey}']`
@@ -225,7 +254,7 @@ function checkDsSecret(q, headers, creds = {}, _time, session = null) {
 	// this verification will throw if the token is invalid in any way
 	const payload = jsonwebtoken.verify(token, secret)
 	// if there is a session, handle the expiration outside of this function
-	if (session) return payload.iat
+	if (session) return { iat: payload.iat, email: payload.email }
 
 	// the embedder may refer to a post-processor function to
 	// optionally transform, translate, reformat the payload
@@ -246,6 +275,7 @@ function checkDsSecret(q, headers, creds = {}, _time, session = null) {
 		throw `Please request access for these dataset(s): ${missingAccess.join(', ')}. ` +
 			(embedder.missingAccessMessage || '')
 	}
+	return { iat: payload.iat, email: payload.email }
 }
 
 /* NOTE: maySetAuthRoutes could replace api.getDsAuth() and .hasActiveSession() */

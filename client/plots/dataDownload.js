@@ -271,9 +271,8 @@ function setInteractivity(self) {
 		})
 	}
 
-	self.download = () => {
+	self.download = async () => {
 		const header = ['sample']
-		console.log(self.config.terms)
 		for (const tw of self.config.terms) {
 			if (tw.term.type == 'condition') {
 				header.push(tw.term.name + `(Event=Grades ${tw.q.breaks[0]}-5)`)
@@ -314,6 +313,12 @@ function setInteractivity(self) {
 			false
 		)
 		a.click()
+		self.app.vocabApi.trackDsAction({
+			action: 'download',
+			details: {
+				terms: self.config.terms.map(tw => (!('id' in tw.term) ? tw.term.name : tw.term.id))
+			}
+		})
 	}
 }
 

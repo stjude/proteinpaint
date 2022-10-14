@@ -113,6 +113,17 @@ class Vocab {
 		return !!this.verifiedToken
 	}
 
+	async trackDsAction({ action, details }) {
+		await dofetch3('/authorizedActions', {
+			method: 'POST',
+			body: Object.assign({
+				dslabel: this.vocab.dslabel,
+				action,
+				details
+			})
+		})
+	}
+
 	cacheTermQ(term, q) {
 		// only save q with a user or automatically assigned name
 		if (!q.reuseId) throw `missing term q.reuseId for term.id='${term.id}'`
