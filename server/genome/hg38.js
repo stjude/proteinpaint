@@ -9,11 +9,10 @@ module.exports = {
 
 	termdbs: {
 		msigdb: {
+			label: 'msigdb', // to be compatible with ds.label
 			cohort: {
-				db: { file: 'msigdb/db' },
-				termdb: {
-					//termMatch2geneSet:true
-				}
+				db: { file: 'anno/msigdb/db' },
+				termdb: {}
 			}
 		}
 	},
