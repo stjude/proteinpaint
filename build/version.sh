@@ -240,7 +240,9 @@ if [[ "$MODE" == "dry" ]]; then
 	exit 1
 elif [[ "$MODE" == "tgz" || "$BRANCH" != "master" ]]; then
 	echo "SKIPPED version commit and tag in tarball mode and/or non-master branch"
-else
+elif [[ "$UPDATED" == "" ]]; then
+	echo "No workspace package updates, will reuse previously published versions"
+else 
 	echo "committing version change ..."
 	git add --all
 	git commit -m "$COMMITMSG"

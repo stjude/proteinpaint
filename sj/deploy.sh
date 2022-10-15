@@ -87,12 +87,12 @@ ssh -t $ENV "
 	ln -sfn public/bin public/no-babel-polyfill
 
 	cd $REMOTEDIR
-	ln -sfn available/$APP-$REV active-0
+	ln -sfn available/$APP-$VER active
 	
-	# TODO: should create the helper scripts under the project?
-	# ./helpers/record.sh deployed
-	# ./proteinpaint_run_node.sh
-	# ./helpers/purge.sh \"pp-*\"
+	# TODO: should symlink the helper scripts under the project for better reproducibility?
+	./helpers/record.sh deployed
+	./proteinpaint_run_node.sh
+	./helpers/purge.sh \"pp-*\"
 "
 
 # TODO: rsync symlinked content to $ENV, 
