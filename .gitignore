@@ -31,7 +31,7 @@ public/ALCL.html
 public/builds/*
 public/static/*.docx
 public/static/*.pdf
-**/public/rev.txt
+**/rev.txt
 
 /utils/vcf2genesamplematrix/bin.js
 /utils/vcf2genesamplematrix/output.html

@@ -50,6 +50,7 @@ if [[ ${ARCH} == "arm64" ]]; then ARCH="aarch64"; fi
 #########################
 
 cd tmppack
+echo "$(git rev-parse --short HEAD) $(date)" > rev.txt
 
 # get the current tag
 #TAG="$(node -p "require('./package.json').version")"

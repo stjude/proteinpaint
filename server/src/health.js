@@ -5,7 +5,7 @@ const child_process = require('child_process')
 
 export function handle_healthcheck_closure(genomes) {
 	// only loaded once when this route handler is created
-	const revfile = path.join(process.cwd(), './public/rev.txt')
+	const revfile = path.join(process.cwd(), './rev.txt')
 	let rev = ''
 	if (fs.existsSync(revfile)) {
 		rev = fs.readFileSync(revfile, { encoding: 'utf8' })

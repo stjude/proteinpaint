@@ -21,6 +21,7 @@
     "server/server.js*",
     "server/utils/*.R",
     "server/cards",
+    "rev.txt",
     "rust/stjude-proteinpaint-rust-*.tgz",
     "utils/install.pp.js"
   ],
