@@ -7251,6 +7251,7 @@ async function pp_init() {
 			const tables = listDbTables(g.genedb.db)
 			if (tables.has('genealias')) {
 				g.genedb.getNameByAlias = g.genedb.db.prepare('select name from genealias where alias=?')
+				g.genedb.tableSize = g.genedb.db.prepare('select count(*) from genealias where alias=?')
 			}
 			if (tables.has('gene2coord')) {
 				g.genedb.getCoordByGene = g.genedb.db.prepare('select * from gene2coord where name=?')
@@ -7272,6 +7273,13 @@ async function pp_init() {
 
 			// this table is only used for gdc dataset
 			g.genedb.hasTable_refseq2ensembl = tables.has('refseq2ensembl')
+
+			g.genedb.sqlTables = [...tables]
+			g.genedb.tableSize = {}
+			for (const table of tables) {
+				if (table == 'buildDate') continue
+				g.genedb.tableSize[table] = g.genedb.db.prepare(`select count(*) as size from ${table}`).get().size
+			}
 		}
 
 		// termdbs{} is optional

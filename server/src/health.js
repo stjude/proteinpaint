@@ -1,17 +1,27 @@
 const serverconfig = require('./serverconfig')
+const fs = require('fs')
+const path = require('path')
+const child_process = require('child_process')
 
 export function handle_healthcheck_closure(genomes) {
+	// only loaded once when this route handler is created
+	const revfile = path.join(process.cwd(), './public/rev.txt')
+	let rev = ''
+	if (fs.existsSync(revfile)) {
+		rev = fs.readFileSync(revfile, { encoding: 'utf8' })
+	}
+
 	return async (req, res) => {
 		try {
-			res.send(await getStat(genomes))
+			res.send(await getStat(genomes, rev))
 		} catch (e) {
 			res.send({ error: e.message || e })
 		}
 	}
 }
 
-async function getStat(genomes) {
-	const health = { status: 'ok' } // object to be returned to client
+async function getStat(genomes, rev) {
+	const health = { status: 'ok', rev } // object to be returned to client
 
 	const keys = serverconfig.features.healthcheck_keys || []
 
@@ -40,17 +50,13 @@ async function getStat(genomes) {
 	for (const gn in genomes) {
 		health[gn] = {} // object to store status of this genome
 
-		const genome = genomes[gn]
+		const genome = genomes[gn] //; console.log(genome.genedb)
 
 		if (genome.genedb) {
 			// genedb status
 			health[gn].genedb = {
 				buildDate: genome.genedb.get_buildDate ? genome.genedb.get_buildDate.get().date : 'unknown',
-				has_alias: genome.genedb.getNameByAlias ? true : false,
-				has_gene2coord: genome.genedb.getCoordByGene ? true : false,
-				has_gene2canonicalisoform: genome.genedb.get_gene2canonicalisoform ? true : false,
-				has_refseq2ensembl: genome.genedb.hasTable_refseq2ensembl ? true : false,
-				has_ideogram: genome.genedb.hasIdeogram
+				tables: genome.genedb.tableSize
 			}
 		}
 
