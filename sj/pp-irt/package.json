@@ -15,6 +15,7 @@
 		"public/*",
 		"dataset/*",
 		"genomes/*",
+		"index.js",
 		"rev.txt"
 	]
 }
