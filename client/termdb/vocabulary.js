@@ -98,6 +98,7 @@ class Vocab {
 				this.verifiedToken = data.status === 'ok' && token
 				if (data.error) throw data.error
 				else {
+					this.sessionId = data['X-SjPPDs-Sessionid']
 					delete this.tokenVerificationMessage
 				}
 			} else {
@@ -116,10 +117,15 @@ class Vocab {
 	async trackDsAction({ action, details }) {
 		await dofetch3('/authorizedActions', {
 			method: 'POST',
+			credentials: 'include',
+			header: {
+				'X-SjPPDs-Sessionid': this.sessionId
+			},
 			body: Object.assign({
 				dslabel: this.vocab.dslabel,
 				action,
-				details
+				details,
+				'X-SjPPDs-Sessionid': this.sessionId
 			})
 		})
 	}
@@ -760,6 +766,7 @@ class TermdbVocab extends Vocab {
 			return
 		}
 		const headers = auth ? { [auth.headerKey]: this.verifiedToken } : {}
+		if (this.sessionId) headers['X-SjPPDs-Sessionid'] = this.sessionId
 
 		const filter = getNormalRoot(opts.filter)
 		const isNewFilter = !deepEqual(this.currAnnoData.lastFilter, filter)
@@ -783,6 +790,7 @@ class TermdbVocab extends Vocab {
 			const copies = this.getCopiesToUpdate(termsToUpdate)
 			const init = {
 				headers,
+				credentials: 'include',
 				body: {
 					for: 'matrix',
 					genome: this.vocab.genome,

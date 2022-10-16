@@ -53,23 +53,19 @@ async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 	app.use((req, res, next) => {
 		const q = req.query
 		if (
-			req.path == '/genomes' ||
-			req.path == '/dslogin' ||
-			req.path == '/jwt-status' ||
-			!q.dslabel ||
-			!(q.dslabel in creds) ||
-			// password protection applies to all routes for a dslabel,
-			// jwt to only a few routes
-			creds[q.dslabel].type == 'jwt' ||
-			// check if not a jwt-protected route
-			!((req.path == '/termdb' && q.for == 'matrix') || req.path == '/authorizedActions')
+			q.dslabel &&
+			q.dslabel in creds &&
+			(creds[q.dslabel].type != 'jwt' || (req.path == '/termdb' && q.for == 'matrix'))
 		) {
+			// will do the session check below
+		} else {
+			//console.log([64, '----- AUTH MIDDLEWARE -----', req.path, req.for])
 			next()
 			return
 		}
 
 		try {
-			const id = req.cookies[`${q.dslabel}SessionId`]
+			const id = getSessionId(req)
 			if (!id) throw 'missing session cookie'
 			const session = sessions[q.dslabel][id]
 			if (!session) throw `unestablished or expired browser session`
@@ -99,6 +95,7 @@ async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 			if (session.time - time < 900) session.time = time
 			next()
 		} catch (e) {
+			//console.log(e)
 			res.send({ error: e })
 		}
 	})
@@ -142,8 +139,9 @@ async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 		let code = 401
 		try {
 			const { email } = await checkDsSecret(req.query, req.headers, creds)
-			await setSession(req.query, res, sessions, sessionsFile, email)
-			res.send({ status: 'ok' })
+			const id = await setSession(req.query, res, sessions, sessionsFile, email)
+			// difficule to setup CORS cookie, will simply reply with cookie and use a custom header for now
+			res.send({ status: 'ok', 'X-SjPPDs-Sessionid': id })
 		} catch (e) {
 			res.status(code)
 			res.send({ error: e })
@@ -153,12 +151,13 @@ async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 	app.post(basepath + '/authorizedActions', async (req, res) => {
 		const q = req.query
 		try {
-			const id = req.cookies[`${q.dslabel}SessionId`]
+			const id = getSessionId(req)
 			const { email } = sessions[q.dslabel][id]
 			const time = Date.now()
 			await fs.appendFile(actionsFile, `${q.dslabel}\t${email}\t${time}\t${q.action}\t${JSON.stringify(q.details)}\n`)
 			res.send({ status: 'ok' })
 		} catch (e) {
+			//console.log(e)
 			res.status(401)
 			res.send({ error: e })
 		}
@@ -171,7 +170,7 @@ async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 		return Object.keys(creds || {}).map(dslabel => {
 			try {
 				const cred = creds[dslabel]
-				const id = req.cookies[`${dslabel}SessionId`]
+				const id = getSessionId(req)
 				const sessionStart = sessions[dslabel]?.[id]?.time || 0
 				return {
 					dslabel,
@@ -184,6 +183,12 @@ async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 			}
 		})
 	}
+}
+
+function getSessionId(req) {
+	return (
+		req.cookies[`${req.query.dslabel}SessionId`] || req.get('X-SjPPDs-Sessionid') || req.query['X-SjPPDs-Sessionid']
+	)
 }
 
 /*
@@ -221,7 +226,8 @@ async function setSession(q, res, sessions, sessionsFile, email) {
 	if (!sessions[q.dslabel]) sessions[q.dslabel] = {}
 	sessions[q.dslabel][id] = { id, time, email }
 	await fs.appendFile(sessionsFile, `${q.dslabel}\t${id}\t${time}\t${email}\n`)
-	res.header('Set-Cookie', `${q.dslabel}SessionId=${id}`)
+	res.header('Set-Cookie', `${q.dslabel}SessionId=${id}; HttpOnly; SameSite=None; Secure`)
+	return id
 }
 
 /*
@@ -238,9 +244,8 @@ function checkDsSecret(q, headers, creds = {}, _time, session = null) {
 	if (!secret) throw `missing embedder setting`
 
 	const time = Math.floor((_time || Date.now()) / 1000)
-	/*
-		for testing only
-		console.log(
+	//for testing only
+	console.log(
 		206,
 		secret,
 		jsonwebtoken.sign(
@@ -252,7 +257,7 @@ function checkDsSecret(q, headers, creds = {}, _time, session = null) {
 			},
 			secret
 		)
-	)*/
+	)
 
 	const rawToken = headers[cred.headerKey]
 	if (!rawToken) throw `missing header['${cred.headerKey}']`

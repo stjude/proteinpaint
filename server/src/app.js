@@ -139,7 +139,7 @@ function setHeaders(res) {
 	res.header('Access-Control-Allow-Origin', '*')
 	res.header(
 		'Access-Control-Allow-Headers',
-		'Origin, X-Requested-With, Content-Type, Accept, Authorization, X-Auth-Token, x-auth-token, x-ds-access-token'
+		'Origin, X-Requested-With, Content-Type, Accept, Authorization, X-Auth-Token, X-Ds-Access-Token, X-SjPPDs-Sessionid'
 	)
 }
 
@@ -177,6 +177,12 @@ app.use((req, res, next) => {
 	}
 	log(req)
 	setHeaders(res)
+	res.header(
+		'Access-Control-Allow-Origin',
+		req.get('origin') || req.get('referrer') || req.protocol + '://' + req.get('host').split(':')[0] || '*'
+	)
+	res.header('Access-Control-Allow-Credentials', true)
+
 	if (req.method == 'GET' && !req.path.includes('.')) {
 		// immutable response before expiration, client must revalidate after max-age;
 		// by convention, any path that has a dot will be treated as
@@ -237,6 +243,7 @@ app.get(basepath + '/cardsjson', handle_cards)
 app.post(basepath + '/mdsjsonform', handle_mdsjsonform)
 app.get(basepath + '/genomes', handle_genomes)
 app.get(basepath + '/getDataset', handle_getDataset)
+app.get(basepath + '/genelookup', handle_genelookup)
 app.post(basepath + '/genelookup', handle_genelookup)
 app.post(basepath + '/ntseq', handle_ntseq)
 app.post(basepath + '/pdomain', handle_pdomain)
