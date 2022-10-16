@@ -1,6 +1,6 @@
 import { select as d3select, selectAll as d3selectAll, pointer } from 'd3-selection'
 import { pie as d3pie, arc as d3arc } from 'd3-shape'
-import { scaleLinear, scaleOrdinal, schemeCategory10 } from 'd3-scale'
+import { scaleLinear, scaleOrdinal } from 'd3-scale'
 import { pack as d3pack, hierarchy as d3hierarchy } from 'd3-hierarchy'
 import * as d3drag from 'd3-drag'
 import * as d3force from 'd3-force'

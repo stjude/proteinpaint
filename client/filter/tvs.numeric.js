@@ -1,4 +1,4 @@
-import { select, event } from 'd3-selection'
+import { select } from 'd3-selection'
 import { scaleLinear } from 'd3'
 import * as client from '../src/client'
 import { addBrushes, addNewBrush } from './tvs.density'

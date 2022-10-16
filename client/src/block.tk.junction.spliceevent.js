@@ -1,6 +1,6 @@
 import { select as d3select } from 'd3-selection'
 import { axisLeft } from 'd3-axis'
-import { scaleLinear, scaleOrdinal, schemeCategory20 } from 'd3-scale'
+import { scaleLinear, scaleOrdinal } from 'd3-scale'
 import { rgb as d3rgb } from 'd3-color'
 import { exoncolor, IN_frame, OUT_frame, spliceeventchangegmexon } from '#shared/common'
 import * as client from './client'

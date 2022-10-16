@@ -1,4 +1,4 @@
-import { select, event } from 'd3-selection'
+import { select } from 'd3-selection'
 import { makeSnpSelect } from './snplst'
 import { filterInit, getNormalRoot } from '#filter'
 import { gmlst2loci } from '#src/client'

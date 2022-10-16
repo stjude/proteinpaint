@@ -1,6 +1,6 @@
 import { getCompInit, copyMerge } from '../rx'
 import { fillTermWrapper } from '../termsetting/termsetting'
-import { select, pointer, event } from 'd3-selection'
+import { select, pointer } from 'd3-selection'
 import { scaleLinear as d3Linear } from 'd3-scale'
 import Partjson from 'partjson'
 import { export_data, newpane } from '../src/client'
