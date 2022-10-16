@@ -92,7 +92,7 @@ tape(`initialization`, async test => {
 		const routes = Object.keys(app.routes)
 		routes.sort()
 		test.deepEqual(
-			['/dslogin', '/jwt-status'],
+			['/authorizedActions', '/dslogin', '/jwt-status'],
 			routes,
 			'should set the expected routes when there is a non-empty dsCredentials entry in serverconfig'
 		)
@@ -111,7 +111,8 @@ tape(`a valid request`, async test => {
 			ds0: {
 				embedders: {
 					localhost: {
-						secret
+						secret,
+						dsnames: [{ id: 'ds0', label: 'Dataset 0' }]
 					}
 				},
 				headerKey
@@ -130,10 +131,13 @@ tape(`a valid request`, async test => {
 		}
 		const res = {
 			send(data) {
-				test.deepEqual({ status: 'ok' }, data, 'should respond ok')
+				test.deepEqual(data, { status: 'ok' }, 'should respond ok')
 			},
 			header(key, val) {
-				test.equal(key, 'Set-cookie', 'should set a session cookie')
+				test.equal(key, 'Set-Cookie', 'should set a session cookie')
+			},
+			status(num) {
+				test.fail('should not set a status')
 			},
 			headers: {}
 		}
@@ -153,7 +157,8 @@ tape(`invalid embedder`, async test => {
 			ds0: {
 				embedders: {
 					localhost: {
-						secret
+						secret,
+						dsnames: [{ id: 'ds0', label: 'Dataset 0' }]
 					}
 				},
 				headerKey
@@ -203,7 +208,8 @@ tape(`invalid dataset access`, async test => {
 			ds0: {
 				embedders: {
 					localhost: {
-						secret
+						secret,
+						dsnames: [{ id: 'ds0', label: 'Dataset 0' }]
 					}
 				},
 				headerKey
@@ -224,7 +230,7 @@ tape(`invalid dataset access`, async test => {
 			send(data) {
 				test.deepEqual(
 					data,
-					{ error: `Please request access for these dataset(s): ["ds0"]. ` },
+					{ error: `Please request access for these dataset(s): Dataset 0. ` },
 					'should send instructions to request data access'
 				)
 			},
@@ -253,7 +259,8 @@ tape(`invalid jwt`, async test => {
 			ds0: {
 				embedders: {
 					localhost: {
-						secret
+						secret,
+						dsnames: [{ id: 'ds0', label: 'Dataset 0' }]
 					}
 				},
 				headerKey
@@ -356,7 +363,8 @@ tape(`session-handling by the middleware`, async test => {
 			ds0: {
 				embedders: {
 					localhost: {
-						secret
+						secret,
+						dsnames: [{ id: 'ds0', label: 'Dataset 0' }]
 					}
 				},
 				headerKey
@@ -394,10 +402,10 @@ tape(`session-handling by the middleware`, async test => {
 		let sessionId
 		const res = {
 			send(data) {
-				test.deepEqual({ status: 'ok' }, data, 'should respond ok on a valid jwt-status login')
+				test.deepEqual(data, { status: 'ok' }, 'should respond ok on a valid jwt-status login')
 			},
 			header(key, val) {
-				test.equal(key, 'Set-cookie', 'should set a session cookie on a valid jwt-status login')
+				test.equal(key, 'Set-Cookie', 'should set a session cookie on a valid jwt-status login')
 				sessionId = val.split('=')[1]
 			},
 			headers: {}

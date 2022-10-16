@@ -2,8 +2,14 @@ const fs = require('fs').promises
 const existsSync = require('fs').existsSync
 const path = require('path')
 const jsonwebtoken = require('jsonwebtoken')
-const sleep = require('./utils').sleep
+// TODO: may use this once babel is configured to transpile es6 node_modules
+//const sleep = require('./utils').sleep
 const processors = require('./custom-jwt-processors.js')
+
+// TODO: may use utils.sleep
+function sleep(ms) {
+	return new Promise(resolve => setTimeout(resolve, ms))
+}
 
 /*
 	One-time setup on server startup:
@@ -139,7 +145,6 @@ async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 			await setSession(req.query, res, sessions, sessionsFile, email)
 			res.send({ status: 'ok' })
 		} catch (e) {
-			console.log(e, code)
 			res.status(code)
 			res.send({ error: e })
 		}
@@ -147,10 +152,10 @@ async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 
 	app.post(basepath + '/authorizedActions', async (req, res) => {
 		const q = req.query
-		const id = req.cookies[`${q.dslabel}SessionId`]
-		const { email } = sessions[q.dslabel][id]
-		const time = Date.now()
 		try {
+			const id = req.cookies[`${q.dslabel}SessionId`]
+			const { email } = sessions[q.dslabel][id]
+			const time = Date.now()
 			await fs.appendFile(actionsFile, `${q.dslabel}\t${email}\t${time}\t${q.action}\t${JSON.stringify(q.details)}\n`)
 			res.send({ status: 'ok' })
 		} catch (e) {
@@ -164,14 +169,18 @@ async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 	*/
 	authApi.getDsAuth = function(req) {
 		return Object.keys(creds || {}).map(dslabel => {
-			const cred = creds[dslabel]
-			const id = req.cookies[`${dslabel}SessionId`]
-			const sessionStart = sessions[dslabel]?.[id]?.time || 0
-			return {
-				dslabel,
-				// type='jwt' will require a token in the initial runpp call
-				insession: (cred.type != 'jwt' || id) && Date.now() - sessionStart < maxSessionAge,
-				type: cred.type || 'login'
+			try {
+				const cred = creds[dslabel]
+				const id = req.cookies[`${dslabel}SessionId`]
+				const sessionStart = sessions[dslabel]?.[id]?.time || 0
+				return {
+					dslabel,
+					// type='jwt' will require a token in the initial runpp call
+					insession: (cred.type != 'jwt' || id) && Date.now() - sessionStart < maxSessionAge,
+					type: cred.type || 'login'
+				}
+			} catch (e) {
+				throw e
 			}
 		})
 	}
@@ -212,7 +221,7 @@ async function setSession(q, res, sessions, sessionsFile, email) {
 	if (!sessions[q.dslabel]) sessions[q.dslabel] = {}
 	sessions[q.dslabel][id] = { id, time, email }
 	await fs.appendFile(sessionsFile, `${q.dslabel}\t${id}\t${time}\t${email}\n`)
-	res.header('Set-cookie', `${q.dslabel}SessionId=${id}`)
+	res.header('Set-Cookie', `${q.dslabel}SessionId=${id}`)
 }
 
 /*
