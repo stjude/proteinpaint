@@ -37,8 +37,8 @@ export function mds3_request_closure(genomes) {
 			const q = init_q(req.query, genome)
 
 			// user token may be provided from request header, the logic could be specific to gdc or another dataset
-			if (req.get('x-auth-token')) {
-				q.token = req.get('x-auth-token')
+			if (req.get('X-Auth-Token')) {
+				q.token = req.get('X-Auth-Token')
 			}
 
 			const ds = await get_ds(q, genome)

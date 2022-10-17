@@ -256,7 +256,7 @@ module.exports = genomes => {
 				always make an api query to verify access to prevent unauthorized access
 				*/
 				const sessionid = req.cookies.sessionid
-				const token = req.get('x-auth-token')
+				const token = req.get('X-Auth-Token')
 				if (!token && !sessionid) throw 'GDC token or sessionid missing'
 				await gdcCheckPermission(req.query.gdcFileUUID, token, sessionid)
 				/* authorized. compute persistent cache file name using uuid etc
@@ -3153,7 +3153,7 @@ async function convertread2html(seg, genome, query) {
 function getGDCcacheFileName(req) {
 	const md5Hasher = crypto.createHmac('md5', gdcHashSecret)
 	return (
-		md5Hasher.update(req.get('x-auth-token') + req.query.gdcFileUUID + req.query.gdcFilePosition).digest('hex') + '.bam'
+		md5Hasher.update(req.get('X-Auth-Token') + req.query.gdcFileUUID + req.query.gdcFilePosition).digest('hex') + '.bam'
 	)
 }
 
@@ -3166,7 +3166,7 @@ async function download_gdc_bam(req) {
 			r.chr,
 			r.start,
 			r.stop,
-			req.get('x-auth-token'),
+			req.get('X-Auth-Token'),
 			req.query.gdcFileUUID,
 			getGDCcacheFileName(req),
 			req.cookies.sessionid
