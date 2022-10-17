@@ -272,11 +272,13 @@ do
 			npm publish
 			cd ..
 		else
-			npm pack
 			VER=$(node -p "($WSPKG)['$SP-$WS'].version")
 			HASH=$(node -p "($WSPKG)['$SP-$WS'].hash")
 			TGZ=$WS-$VER-$HASH.tgz
-			if [[ "$DEPLOYEDTGZ" != *"$TGZ"* ]]; then
+			if [[ "$DEPLOYEDTGZ" == *"$TGZ"* ]]; then
+				echo "will reuse a previously deployed $TGZ"
+			else
+				npm pack
 				mv stjude-proteinpaint-$WS-$VER.tgz $TGZ
 				echo "scp'ing $TGZ to $ENV ..."
 				scp $TGZ $ENV:$REMOTEDIR
