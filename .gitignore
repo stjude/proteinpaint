@@ -11,12 +11,10 @@ dist/*
 */*/dist/
 */*/*/dist/
 
-archive/*
-**/package/*
+
 package-lock.json
 
 **/public/bin/*
-
 public/tmp/*
 public/data/*
 public/stage/*
@@ -63,6 +61,9 @@ setup/*
 **/tmpbuild*/*
 **/tmppack*/*
 pp-server/*
+archive/*
+**/package/*
+**/package */*
 
 *-stash.js
 

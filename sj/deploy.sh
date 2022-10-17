@@ -54,11 +54,17 @@ echo "$ENV $REV $(date)" > public/rev.txt
 # will need to do that via rsync, which is optimal for syncing 
 # larger sized static files
 npm pack
-VER=$(node -p "require('./package.json').version")
+if [[ "$MODE" == *"tgz"* ]]; then
+	VER=$REV
+	git restore .
+else 
+	VER=$(node -p "require('./package.json').version")
+fi
+
 APP=pp
 mv stjude-proteinpaint-*.tgz $APP-$VER.tgz
 
-if [[ "$MODE" == "dry" ]]; then
+if [[ "$MODE" == *"dry"* ]]; then
 	echo "SKIPPED deployment in dry-run mode"
 	exit 0
 fi
@@ -97,7 +103,8 @@ ssh -t $ENV "
 
 # TODO: rsync symlinked content to $ENV, 
 # since package.files will not pack any symbolic link or its contents
-
+# !!! NOTE: needs more exclusions, like public/bin !!!
+# rsync -Lr --delete --exclude '*config.json' sj/$ENV/ $ENV:/opt/data/pp/active 
 
 #############
 # CLEANUP

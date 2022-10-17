@@ -77,8 +77,8 @@ mayBumpVersionOnDiff() {
 	local WS=$1
 	local REFVER=$2 # a potentially higher reference version that this package has fallen behind
 	set +e
-	local PREVIOUS=$(git rev-parse --verify -q v$ROOTVERSION^{commit}:$WS | tail -n1)
-	local CURRENT=$(git rev-parse --verify -q HEAD:$WS | tail -n1) 
+	local PREVIOUS=$(git rev-parse --verify -q v$ROOTVERSION^{commit}:$WS)
+	local CURRENT=$(git rev-parse --verify -q HEAD:$WS) 
 	# echo "$OKG [$PREVIOUS] [$CURRENT]"
 	set -e
 	if [[ "$PREVIOUS" != "$CURRENT" ]]; then
@@ -92,7 +92,8 @@ mayBumpVersionOnDiff() {
 		UPDATED="$UPDATED $WS-$VERSION"
 		updatePkg "[\"$SP-$WS\", \"version\", \"$VERSION\"]"
 	fi
-	updatePkg "[\"$SP-$WS\", \"hash\", \"$CURRENT\"]"
+	HASH=$(echo $CURRENT | cut -c1-6)
+	updatePkg "[\"$SP-$WS\", \"hash\", \"$HASH\"]"
 }
 
 maySetDepVer() {
@@ -274,9 +275,10 @@ do
 			npm pack
 			VER=$(node -p "($WSPKG)['$SP-$WS'].version")
 			HASH=$(node -p "($WSPKG)['$SP-$WS'].hash")
-			TGZ=$WS-$HASH.tgz
+			TGZ=$WS-$VER-$HASH.tgz
 			if [[ "$DEPLOYEDTGZ" != *"$TGZ"* ]]; then
 				mv stjude-proteinpaint-$WS-$VER.tgz $TGZ
+				echo "scp'ing $TGZ to $ENV ..."
 				scp $TGZ $ENV:$REMOTEDIR
 			fi
 			cd ..
@@ -303,8 +305,6 @@ done
 # CLEANUP
 ################
 
-if [[ "$BRANCH" != "master" || "$MODE" == *"tgz"* ]]; then
-	git restore .
-fi
-
-
+# if [[ "$BRANCH" != "master" || "$MODE" == *"tgz"* ]]; then
+# 	git restore .
+# fi
