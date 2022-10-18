@@ -18,7 +18,8 @@ import {
 	symbolDiamond2,
 	symbolStar,
 	symbolSquare2,
-	groups
+	groups,
+	group
 } from 'd3'
 import { d3lasso } from '../common/lasso'
 import { Menu } from '#dom/menu'
@@ -100,7 +101,8 @@ class Scatter {
 		}
 		return {
 			config,
-			termfilter: appState.termfilter
+			termfilter: appState.termfilter,
+			termdbConfig: appState.termdbConfig
 		}
 	}
 
@@ -622,22 +624,25 @@ function setRenderers(self) {
 			self.dom.tip.show(event.clientX, event.clientY)
 
 			const menuDiv = self.dom.tip.d.append('div')
-			menuDiv
-				.append('div')
-				.attr('class', 'sja_menuoption sja_sharp_border')
-				.text(`List ${self.selectedItems.length} samples`)
-				.on('click', clickEvent => {
-					showTable(self, self.selectedItems)
+			const listDiv = menuDiv.append('div').attr('class', 'sja_menuoption sja_sharp_border')
+			icon_functions['list'](listDiv, {
+				is_button: false,
+				text: `List ${self.selectedItems.length} samples`,
+				handler: () => {
+					showTable(self, self.selectedItems, `List of ${self.selectedItems.length} selected samples`)
 					self.dom.tip.hide()
+				}
+			})
+			if (self.state.termdbConfig.allowedTermTypes.includes('survival')) {
+				const survivalDiv = menuDiv.append('div').attr('class', 'sja_menuoption sja_sharp_border')
+				icon_functions['survival'](survivalDiv, {
+					is_button: false,
+					handler: () => {
+						openSurvivalPlot(self, self.selectedItems)
+						self.dom.tip.hide()
+					}
 				})
-			menuDiv
-				.append('div')
-				.attr('class', 'sja_menuoption sja_sharp_border')
-				.text('Survival analysis')
-				.on('click', () => {
-					openSurvivalPlot(self, self.selectedItems)
-					self.dom.tip.hide()
-				})
+			}
 			menuDiv
 				.append('div')
 				.attr('class', 'sja_menuoption sja_sharp_border')
@@ -678,107 +683,78 @@ function setRenderers(self) {
 		row = row
 			.insert('div')
 			.style('display', 'flex')
-			.style('justify-content', 'flex-end')
+			.style('justify-content', 'flex-start')
+		if (self.state.termdbConfig.allowedTermTypes.includes('survival')) {
+			let survivalDiv = row
+				.insert('div')
+				.style('padding', '5px')
+				.style('margin-left', '20px')
 
-		let survivalDiv = row
-			.insert('div')
-			.attr('title', 'Do survival analysis')
-			.style('padding', '5px')
-
-		icon_functions['survival'](survivalDiv, {
-			width: 20,
-			height: 20,
-			handler: () => {
-				console.log('show survival plot')
-				self.dom.tip.hide()
-			}
-		})
-
-		let deleteDiv = row
-			.insert('div')
-			.attr('title', 'Delete all groups')
-			.style('padding', '5px')
-			.style('margin-right', '20px')
+			icon_functions['survival'](survivalDiv, {
+				width: 20,
+				height: 20,
+				text: 'Survival analysis on all',
+				handler: () => {
+					openSurvivalPlots(self)
+					self.dom.tip.hide()
+				}
+			})
+		}
+		let deleteDiv = row.insert('div').style('padding', '5px')
 		icon_functions['delete'](deleteDiv, {
 			width: 20,
 			height: 20,
+			text: 'Delete all',
 			handler: () => {
 				groupDiv.select('*').remove()
 				self.groups = []
 				self.dom.tip.hide()
 			}
 		})
-		row = menuDiv.append('div')
-		row
-			.insert('div')
-			.style('display', 'inline-block')
-			.style('width', '5vw')
-			.text('Select')
-		row
-			.insert('div')
-			.style('display', 'inline-block')
-			.style('width', '5vw')
-			.text('Group')
-		row
-			.insert('div')
-			.style('display', 'inline-block')
-			.style('width', '5vw')
-			.text('Samples')
-		row
-			.insert('div')
-			.style('display', 'inline-block')
-			.style('width', '5vw')
-			.text('List')
-		row
-			.insert('div')
-			.style('display', 'inline-block')
-			.style('width', '5vw')
-			.text('Survival')
-		row
-			.insert('div')
-			.style('display', 'inline-block')
-			.style('width', '5vw')
-			.text('Delete')
 		for (const [i, group] of self.groups.entries()) {
 			row = menuDiv.append('div').attr('class', 'sja_menuoption sja_sharp_border')
 			row
 				.insert('div')
 				.style('display', 'inline-block')
-				.style('width', '5vw')
+				.style('width', '40px')
 				.append('input')
 				.attr('type', 'checkbox')
 			row
 				.insert('div')
 				.style('display', 'inline-block')
-				.style('width', '5vw')
-				.text(i + 1)
+				.style('width', '80px')
+				.text('Group ' + (i + 1))
 			row
 				.insert('div')
 				.style('display', 'inline-block')
-				.style('width', '5vw')
+				.style('width', '80px')
 				.text(group.length)
 			const listDiv = row
 				.insert('div')
 				.style('display', 'inline-block')
-				.style('width', '5vw')
-			icon_functions['list'](listDiv, { handler: () => showTable(self, group) })
-			const survivalDiv = row
-				.insert('div')
-				.style('display', 'inline-block')
-				.style('width', '5vw')
-			icon_functions['survival'](survivalDiv, { handler: () => openSurvivalPlot(self, group) })
-			const deleteDiv = row
-				.insert('div')
-				.style('display', 'inline-block')
-				.style('width', '5vw')
-			icon_functions['delete'](deleteDiv, {
-				handler: () => {
-					self.groups.splice(i, 1)
-					if (self.groups.length == 0) groupDiv.select('*').remove()
-					else updateGroupsButton(groupDiv)
-					self.dom.tip.hide()
-				}
+				.style('width', '80px')
+			icon_functions['list'](listDiv, {
+				handler: () => showTable(self, group, `List of ${group.length} samples in Group ${i + 1}`)
 			})
+			if (self.state.termdbConfig.allowedTermTypes.includes('survival')) {
+				const survivalDiv = row
+					.insert('div')
+					.style('display', 'inline-block')
+					.style('width', '180px')
+				icon_functions['survival'](survivalDiv, { handler: () => openSurvivalPlot(self, group) })
+				const deleteDiv = row
+					.insert('div')
+					.style('display', 'inline-block')
+					.style('width', '80px')
+				icon_functions['delete'](deleteDiv, {
+					handler: () => {
+						self.groups.splice(i, 1)
+						if (self.groups.length == 0) groupDiv.select('*').remove()
+						else updateGroupsButton(groupDiv)
+						self.dom.tip.hide()
+					}
+				})
+			}
 		}
 	}
 
@@ -938,7 +914,7 @@ function getPj(self) {
 	return pj
 }
 
-function showTable(self, group, pos = 1) {
+function showTable(self, group, title, pos = 1) {
 	let rows = []
 	const labels = ['Sample', self.config.colorTW.id]
 	if (self.config.shapeTW) labels.push(self.config.shapeTW.id)
@@ -953,7 +929,7 @@ function showTable(self, group, pos = 1) {
 		if ('info' in data) for (const [k, v] of Object.entries(data.info)) row.push(v)
 		rows.push(row)
 	}
-	export_data('List of selected samples', [{ text: rows.join('\n') }], pos)
+	export_data(title, [{ text: rows.join('\n') }], pos)
 }
 
 function getShape(self, c, size) {
@@ -1000,6 +976,47 @@ function openSurvivalPlot(self, group) {
 						values: values
 					}
 				]
+			}
+		},
+		settings: {
+			survival: {
+				xTickValues: [0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30]
+			}
+		}
+	}
+	self.app.dispatch({
+		type: 'plot_create',
+		config: config
+	})
+}
+
+function openSurvivalPlots(self) {
+	let groups = []
+	let values, tgroup, data
+
+	for (const [i, group] of self.groups.entries()) {
+		values = []
+		for (const item of group) {
+			data = item.__data__
+			values.push(data.sample)
+		}
+		;(tgroup = {
+			name: 'Group ' + (i + 1),
+			key: 'sample',
+			values: values
+		}),
+			groups.push(tgroup)
+	}
+	let config = {
+		chartType: 'survival',
+		term: {
+			id: 'Event-free survival'
+		},
+		term2: {
+			term: { name: 'TSNE selected groups', type: 'samplelst' },
+			q: {
+				mode: 'custom-groupsetting',
+				groups: groups
 			}
 		},
 		settings: {

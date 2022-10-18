@@ -1,20 +1,32 @@
+import { group } from 'd3'
+
 export const sampleLstSql = {
 	getCTE(tablename, term, q, values, filter) {
 		const t2q = q.term2_q
+		let sql = '',
+			samples,
+			samplesString
+		for (const [i, group] of t2q.groups.entries()) {
+			samples = group.values
+			samplesString = samples.map(() => '?').join(',')
+			if (i == 1 && group.name == 'Others') {
+				sql += `
+				SELECT id as sample, ? as key, ? as value
+				FROM sampleidmap
+				WHERE name NOT IN (${samplesString})`
+				values.push(group.name, group.name, ...samples)
+				break
+			}
 
-		const samples = t2q.groups[0].values
-		const samplesString = samples.map(() => '?').join(',')
+			sql += `SELECT id as sample, ? as key, ? as value
+				FROM sampleidmap
+				WHERE name IN (${samplesString})
+			`
+			if (i != t2q.groups.length - 1) sql += 'UNION ALL '
 
-		const sql = `SELECT id as sample, ? as key, ? as value
-			FROM sampleidmap
-			WHERE name IN (${samplesString})
-			UNION ALL
-			SELECT id as sample, ? as key, ? as value
-			FROM sampleidmap
-			WHERE name NOT IN (${samplesString})
-		`
-
-		values.push(t2q.groups[0].name, t2q.groups[0].name, ...samples, t2q.groups[1].name, t2q.groups[1].name, ...samples)
+			values.push(group.name, group.name, ...samples)
+		}
+		console.log(sql)
 		return { sql: `${tablename} AS (${sql})`, tablename }
 	}
 }
