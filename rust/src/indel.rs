@@ -306,6 +306,15 @@ fn main() {
                         alt_scores.push(item);
                     } else if diff_score <= 0.0 {
                         ref_scores.push(item);
+                    } else {
+                        // Should not happen
+                        println!("Problematic diff score:{}", diff_score);
+                        println!("correct_start_position:{}", correct_start_position);
+                        println!("correct_end_position:{}", correct_end_position);
+                        println!(
+                            "cigar_sequence:{}",
+                            &cigar_sequences_list[i as usize - 2].to_string()
+                        );
                     }
                 }
             }
@@ -457,6 +466,15 @@ fn main() {
                                 alt_scores_thread.push(item);
                             } else if diff_score <= 0.0 {
                                 ref_scores_thread.push(item);
+                            } else {
+                                // Should not happen
+                                println!("Problematic diff score:{}", diff_score);
+                                println!("correct_start_position:{}", correct_start_position);
+                                println!("correct_end_position:{}", correct_end_position);
+                                println!(
+                                    "cigar_sequence:{}",
+                                    &cigar_sequences_list[iter].to_string()
+                                );
                             }
                         }
                     }

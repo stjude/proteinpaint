@@ -770,8 +770,26 @@ const examples = [
 				g_0: 'alt'
 			},
 			{
+				n: 'Read supports none as it contains AGGG sequence (the correct indel sequence).',
+				s: 'AGGGATTAGAGAGGGAGTGAAGTGAATGTTGCTGAGGTTTTCCAGCACTCTGACATATGGCCATTTCTGTTTTCCTGTAGCAAAACCAGAAATTCTGAAG',
+				p: 55589670,
+				c: '98M3D2M',
+				f: 99,
+				g: 'none',
+				g_0: 'alt'
+			},
+			{
+				n: 'Read supports ref as it contains CTT sequence (first three nucleotides of ref allele).',
+				s: 'GGGATTAGAGAGGGAGTGAAGTGAATGTTGCTGAGGTTTTCCAGCACTCTGACATATGGCCATTTCTGTTTTCCTGTAGCAAAACCAGAAATCCTGACTT',
+				p: 55589671,
+				c: '100M',
+				f: 99,
+				g: 'ref',
+				g_0: 'ref'
+			},
+			{
 				n:
-					'Read supports none as it contains AGGG sequence (the correct indel sequence). Here the read should be right-aligned as indel is close to start position of read',
+					'Read supports none as it contains AGGG sequence (the correct indel sequence). Here the read should be left-aligned as indel is close to stop position of read',
 				s: 'GAAGGGCAGGCTCGTGAATGGCATGCTCCAATGTGTGGCAGCAGGATTCCCAGAGCCCACAATAGATTGGTATTTTTGTCCAGGAACTGAGCAGAGGTGA',
 				p: 55589766,
 				c: '2M3D98M',
@@ -842,6 +860,25 @@ const examples = [
 				c: '16S82M2S',
 				f: 163,
 				g: 'alt'
+			},
+			{
+				n:
+					'Read supports none as it contains AGGG sequence (the correct indel sequence). Here the read should be right-aligned as its softclipped to the left',
+				s: 'AGGGATTAGAGAGGGAGTGAAGTGAATGTTGCTGAGGTTTTCCAGCACTCTGACATATGGCCATTTCTGTTTTCCTGTAGCAAAACCAGAAATTCTGAAG',
+				p: 55589670,
+				c: '98M3D2M',
+				f: 99,
+				g: 'alt',
+				g_0: 'alt'
+			},
+			{
+				n: 'Read supports ref as it contains CTT sequence (first three nucleotides of ref allele).',
+				s: 'GGGATTAGAGAGGGAGTGAAGTGAATGTTGCTGAGGTTTTCCAGCACTCTGACATATGGCCATTTCTGTTTTCCTGTAGCAAAACCAGAAATCCTGACTT',
+				p: 55589671,
+				c: '100M',
+				f: 99,
+				g: 'ref',
+				g_0: 'ref'
 			},
 			{
 				n:
