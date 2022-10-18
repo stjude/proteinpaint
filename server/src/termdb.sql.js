@@ -299,6 +299,9 @@ opts{} options to tweak the query, see const default_opts = below
 		const lst = []
 		const scounts = new Map()
 		for (const s of smap.values()) {
+			// possible for a sample to not be annotated for the series term (term)
+			if (!('key1' in s)) continue
+			// supply empty string defaults as needed for chart (term0) and overlay (term2)
 			if (!('key0' in s)) {
 				s.key0 = ''
 				s.val0 = ''
