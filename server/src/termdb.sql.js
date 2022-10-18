@@ -243,24 +243,22 @@ opts{} options to tweak the query, see const default_opts = below
 	.columnas		  default to return all rows when 't1.sample AS sample',
 							  or set to "count(distinct t1.sample) as samplecount" to aggregate
 	
-	.endclause:   default to '',
-							  or "GROUP BY key0, key1, key2" when aggregating by samplecount
-							  or +" ORDER BY ..." + " LIMIT ..."
-
+	.groupby:   default to '',
+							or a column to group by, could be 'key', 'sample', 'value' 
+							!!! 
+								NOTE: after switching to UNION instead of JOIN,
+								this deprecated the support for the following never used options
+							  - "GROUP BY key1, key2" when aggregating by samplecount
+							  - +" ORDER BY ..." + " LIMIT ..."
+							!!!
 */
 
 	if (typeof q.filter == 'string') q.filter = JSON.parse(decodeURIComponent(q.filter))
 
-	// do not break code that still uses the opts.groupby key-value
-	// can take this out once all calling code has been migrated
-	if (_opts.groupby) {
-		_opts.endclause = _opts.groupby
-		delete _opts.groupby
-	}
 	const default_opts = {
 		withCTEs: true,
 		columnas: 't1.sample AS sample',
-		endclause: ''
+		groupby: ''
 	}
 	const opts = Object.assign(default_opts, _opts)
 	const filter = getFilterCTEs(q.filter, q.ds)
@@ -272,28 +270,57 @@ opts{} options to tweak the query, see const default_opts = below
 	const CTE0 = get_term_cte(q, values, 0, filter)
 	const CTE1 = get_term_cte(q, values, 1, filter)
 	const CTE2 = get_term_cte(q, values, 2, filter)
+	const CTEunion = [CTE0, CTE1, CTE2]
+		.map(
+			(c, i) => `
+		SELECT sample, key, value, ${i} as termNum
+		FROM ${c.tablename}
+		${filter ? 'WHERE sample IN ' + filter.CTEname : ''}
+	`
+		)
+		.join('\nUNION ALL\n')
 
 	const sql = `WITH
 		${filter ? filter.filters + ',' : ''}
 		${CTE0.sql},
 		${CTE1.sql},
 		${CTE2.sql}
-		SELECT
-      t0.key AS key0,
-      t0.value AS val0,
-      t1.key AS key1,
-      t1.value AS val1,
-      t2.key AS key2,
-      t2.value AS val2,
-      ${opts.columnas}
-		FROM ${CTE1.tablename} t1
-		JOIN ${CTE0.tablename} t0 ${CTE0.join_on_clause}
-		JOIN ${CTE2.tablename} t2 ${CTE2.join_on_clause}
-		${filter ? 'WHERE t1.sample IN ' + filter.CTEname : ''}
-		${opts.endclause}`
+		${CTEunion}`
 	//console.log(interpolateSqlValues(sql, values))
 	try {
-		const lst = q.ds.cohort.db.connection.prepare(sql).all(values)
+		const rows = q.ds.cohort.db.connection.prepare(sql).all(values)
+		const smap = new Map()
+		for (const r of rows) {
+			if (!smap.has(r.sample)) smap.set(r.sample, { sample: r.sample })
+			const s = smap.get(r.sample)
+			s[`key${r.termNum}`] = r.key
+			s[`val${r.termNum}`] = r.value
+		}
+		const lst = []
+		const scounts = new Map()
+		for (const s of smap.values()) {
+			if (!('key0' in s)) {
+				s.key0 = ''
+				s.val0 = ''
+			}
+			if (!('key2' in s)) {
+				s.key2 = ''
+				s.val2 = ''
+			}
+
+			if (!opts.groupby) {
+				lst.push(s)
+			} else {
+				// assume that the groupby option is used to get samplecounts
+				if (!scounts.has(s[opts.groupby])) {
+					const item = Object.assign({ samplecount: 0 }, s)
+					lst.push(item)
+					scounts.set(s[opts.groupby], item)
+				}
+				const l = scounts.get(s[opts.groupby])
+				l.samplecount++
+			}
+		}
 		return !opts.withCTEs ? lst : { lst, CTE0, CTE1, CTE2, filter }
 	} catch (e) {
 		console.log('error in sql:\n', interpolateSqlValues(sql, values))
@@ -412,10 +439,11 @@ q{}
 	.term[0,1,2]_id
 	.term[0,1,2]_q
 */
+	const key0 = 'term0_id' in q ? `key0,` : ''
+	const key2 = 'term2_id' in q ? `,key2` : ''
 	const result = get_rows(q, {
 		withCTEs: true,
-		columnas: 'count(distinct t1.sample) as samplecount',
-		endclause: 'GROUP BY key0, key1, key2'
+		groupby: `key1`
 	})
 
 	const nums = [0, 1, 2]
