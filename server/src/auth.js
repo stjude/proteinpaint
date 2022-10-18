@@ -153,7 +153,7 @@ async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 		try {
 			const id = getSessionId(req)
 			const { email } = sessions[q.dslabel][id]
-			const time = Date.now()
+			const time = new Date()
 			await fs.appendFile(actionsFile, `${q.dslabel}\t${email}\t${time}\t${q.action}\t${JSON.stringify(q.details)}\n`)
 			res.send({ status: 'ok' })
 		} catch (e) {

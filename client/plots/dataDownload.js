@@ -316,7 +316,8 @@ function setInteractivity(self) {
 		self.app.vocabApi.trackDsAction({
 			action: 'download',
 			details: {
-				terms: self.config.terms.map(tw => (!('id' in tw.term) ? tw.term.name : tw.term.id))
+				terms: self.config.terms.map(tw => (!('id' in tw.term) ? tw.term.name : tw.term.id)),
+				filter: self.state.termfilter.filter
 			}
 		})
 	}
