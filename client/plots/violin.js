@@ -33,29 +33,44 @@ class ViolinPlot {
 export const compViolinInit = getCompInit(ViolinPlot)
 
 async function setRenderers(self) {
+	const t2 = self.violinArg.term2
+	const termName = self.violinArg.config.term.term.name
+
+	if (self.data.length == 0) {
+		self.dom.violinDiv.html(
+			` <span style="opacity:.6;font-size:1em;margin-left:90px;">No data to render Violin Plot</span>`
+		)
+		return
+	}
+
 	const groups = [],
 		yScaleValues = []
 
-	if (self.violinArg.term2 != null && Object.keys(self.violinArg.term2.term.values).length > 0) {
-		//Return human readable labels from term2 if available
-		for (const value of Object.values(self.violinArg.term2.term.values)) groups.push(value.label)
-	}
-
 	for (const key of self.data) {
-		if (self.violinArg.term2 == null || Object.keys(self.violinArg.term2.term.values).length == 0) {
-			//If human readable labels in term2 not available, use label from db
-			groups.push(key.labelText)
-		}
+		const label =
+			t2 != null && t2.term.values != undefined && Object.keys(t2.term.values).length > 0
+				? t2.term.values[key.label].label
+				: key.label
+		groups.push(label)
+
 		yScaleValues.push(...key.yScaleValues)
 	}
 
 	// Render the violin plot
-	const margin = { top: 50, right: 50, bottom: 50, left: 70 },
-		width = groups.length * 300 - margin.left - margin.right,
-		height = 700 - margin.top - margin.bottom
+	const margin = { top: 50, right: 100, bottom: 50, left: 110 },
+		height = 700 - margin.top - margin.bottom,
+		width =
+			(groups.length < 2
+				? groups.length * 600
+				: groups.length >= 2 && groups.length < 4
+				? groups.length * 400
+				: groups.length * 250) -
+			margin.left -
+			margin.right
 
 	// append the svg object to the body of the page
 	select('.sjpp-violin-plot').remove()
+	self.dom.violinDiv.text('')
 
 	let svg = self.dom.violinDiv
 		.append('svg')
@@ -87,13 +102,23 @@ async function setRenderers(self) {
 
 	svg.append('g').call(axisLeft(yScale))
 
-	svg.selectAll('text').style('font-size', '18px')
+	svg.selectAll('text').style('font-size', '15px')
+
+	svg
+		.append('text')
+		.attr('transform', 'rotate(-90)')
+		.attr('y', 0 - margin.left)
+		.attr('x', 0 - height / 2.2)
+		.attr('dy', '1em')
+		.style('text-anchor', 'middle')
+		.text(termName)
 
 	for (const key of self.data) {
+		// console.log(key.yScaleValues.length); use this to compute values in the legend.
 		const label =
-			self.violinArg.term2 != null && Object.keys(self.violinArg.term2.term.values).length > 0
-				? self.violinArg.term2.term.values[key.label].label
-				: key.labelText
+			t2 != null && t2.term.values != undefined && Object.keys(t2.term.values).length > 0
+				? t2.term.values[key.label].label
+				: key.label
 
 		const wScale = scaleLinear()
 			.domain([-key.biggestBin, key.biggestBin])

@@ -288,6 +288,7 @@ function trigger_getViolinPlotData(q, res, ds) {
 	q.filter={}
 	q.term2={} termwrapper
 	*/
+
 	const getRowsParam = {
 		ds,
 		filter: q.filter,
@@ -317,15 +318,24 @@ function trigger_getViolinPlotData(q, res, ds) {
 	  ]
 	}
 	*/
+
 	result.lst.sort((a, b) => a.val2 - b.val2)
+
+	// some values may be negative float values so filter those out.
+	const updatedResult = []
+	for (const [i, v] of result.lst.entries()) {
+		if (Math.sign(v.key1) != -1) {
+			updatedResult.push(v)
+		}
+	}
 
 	const valueSeries = []
 
 	if (q.term2) {
 		const key2_to_values = new Map() // k: key2 value, v: list of term1 values
 
-		for (const i of result.lst) {
-			if (!i.key2) {
+		for (const i of updatedResult) {
+			if (i.key2 == undefined || i.key2 == null) {
 				// missing key2
 				throw 'key2 missing'
 			}
@@ -346,8 +356,6 @@ function trigger_getViolinPlotData(q, res, ds) {
 	}
 
 	for (const item of valueSeries) {
-		let labelText
-		item.label == 'F' ? (labelText = 'Female') : item.label == 'M' ? (labelText = 'Male') : (labelText = item.label)
 		// item: { label=str, values=[v1,v2,...] }
 
 		const bins0 = computeViolinData(item.values)
@@ -375,7 +383,6 @@ function trigger_getViolinPlotData(q, res, ds) {
 
 		item.biggestBin = biggestBin
 		item.yScaleValues = yScaleValues
-		item.labelText = labelText
 
 		delete item.values
 	}
