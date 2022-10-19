@@ -26,7 +26,6 @@ export const sampleLstSql = {
 
 			values.push(group.name, group.name, ...samples)
 		}
-		console.log(sql)
 		return { sql: `${tablename} AS (${sql})`, tablename }
 	}
 }

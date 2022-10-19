@@ -2,7 +2,6 @@ import { getCompInit, copyMerge } from '../rx'
 import { fillTermWrapper } from '../termsetting/termsetting'
 import { select, pointer } from 'd3-selection'
 import { scaleLinear as d3Linear } from 'd3-scale'
-import Partjson from 'partjson'
 import { export_data, newpane } from '../src/client'
 
 import {
@@ -88,7 +87,6 @@ class Scatter {
 
 		this.settings = {}
 		if (this.dom.header) this.dom.header.html('Scatter Plot')
-		if (!this.pj) this.pj = getPj(this)
 		await this.setControls()
 		setInteractivity(this)
 		setRenderers(this)
@@ -102,7 +100,7 @@ class Scatter {
 		return {
 			config,
 			termfilter: appState.termfilter,
-			termdbConfig: appState.termdbConfig
+			allowedTermTypes: appState.termdbConfig.allowedTermTypes
 		}
 	}
 
@@ -118,25 +116,26 @@ class Scatter {
 		copyMerge(this.settings, this.config.settings.sampleScatter)
 		const reqOpts = this.getDataRequestOpts()
 		const data = await this.app.vocabApi.getScatterData(reqOpts)
-
 		if (data.error) throw data.error
 		if (!Array.isArray(data.samples)) throw 'data.samples[] not array'
-		this.pj.refresh({ data: data.samples })
 		this.shapes = data.shapeLegend
-		// no option for dividing charts by term,
-		// so assume that the plot always corresponds to the first chart data
-		const chart0 = this.pj.tree.charts[0]
+		const X = data.samples.map(item => item.x)
+		const Y = data.samples.map(item => item.y)
+		const xMin = Math.min(...X)
+		const xMax = Math.max(...X)
+		const yMin = Math.min(...Y)
+		const yMax = Math.max(...Y)
 		this.xAxisScale = d3Linear()
-			.domain([chart0.xMin, chart0.xMax])
+			.domain([xMin, xMax])
 			.range([0, this.settings.svgw])
+
 		this.axisBottom = axisBottom(this.xAxisScale)
 		this.yAxisScale = d3Linear()
-			.domain([chart0.yMax, chart0.yMin])
-			.range([this.settings.svgh, 0])
+			.domain([yMax, yMin])
+			.range([0, this.settings.svgh])
 		this.axisLeft = axisLeft(this.yAxisScale)
 
 		this.render(data)
-		this.lassoReset()
 	}
 
 	// creates an opts object for the vocabApi.someMethod(),
@@ -304,17 +303,15 @@ class Scatter {
 
 function setRenderers(self) {
 	self.render = function(data) {
-		const chartDivs = self.dom.holder.selectAll('.pp-scatter-chart').data(self.pj.tree.charts, d => d.chartId)
-
-		chartDivs.exit().remove()
-		chartDivs.each(updateCharts)
-		chartDivs.enter().each(addCharts)
+		const chartDiv = self.dom.holder.select('.pp-scatter-chart')
+		if (chartDiv.size() > 0) updateCharts(chartDiv)
+		else addCharts()
 		self.dom.holder.style('display', 'inline-block')
 		self.dom.holder.on('mouseover', self.mouseover).on('mouseout', self.mouseout)
 
-		function addCharts(d) {
+		function addCharts() {
 			const s = self.settings
-			const div = select(this)
+			const div = self.dom.holder
 				.append('div')
 				.attr('class', 'pp-scatter-chart')
 				.style('opacity', 0)
@@ -326,23 +323,22 @@ function setRenderers(self) {
 				.style('top', 0) //layout.byChc[d.chc].top)
 				.style('left', 0) //layout.byChc[d.chc].left)
 				.style('text-align', 'left')
-				.style('background', 1 || s.orderChartsBy == 'organ-system' ? d.color : '')
 
 			const svg = div.append('svg')
-			renderSVG(svg, d, s, 0)
+			renderSVG(svg, div, s, 0, data)
 
 			div
 				.transition()
 				.duration(s.duration)
 				.style('opacity', 1)
 
-			setTools(self.dom, svg, d)
+			setTools(self.dom, svg, div)
 			self.renderLegend(self.dom.legendDiv, data.colorLegend, data.shapeLegend)
 		}
 
 		function updateCharts(d) {
 			const s = self.settings
-			const div = select(this)
+			const div = d
 
 			div
 				.transition()
@@ -351,12 +347,12 @@ function setRenderers(self) {
 
 			div.selectAll('.sjpcb-unlock-icon').style('display', s.scale == 'byChart' ? 'none' : 'block')
 
-			renderSVG(div.select('svg'), d, s, s.duration)
+			renderSVG(div.select('svg'), d, s, s.duration, data)
 			self.renderLegend(self.dom.legendDiv, data.colorLegend, data.shapeLegend)
 		}
 	}
 
-	function renderSVG(svg, chart, s, duration) {
+	function renderSVG(svg, chart, s, duration, data) {
 		svg
 			.transition()
 			.duration(duration)
@@ -368,21 +364,10 @@ function setRenderers(self) {
 		/* eslint-enable */
 		if (s.showAxes) mainG.attr('clip-path', `url(#${self.id + '-clip'})`)
 
-		const serieses = mainG
-			.selectAll('.sjpcb-scatter-series')
-			.data(chart.serieses, d => (d && d[0] ? d[0].seriesId : ''))
+		let serie = mainG.select('.sjpcb-scatter-series')
+		if (serie.size() == 0) serie = mainG.append('g').attr('class', 'sjpcb-scatter-series')
 
-		serieses.exit().remove()
-		serieses.each(function(series, i) {
-			renderSeries(select(this), chart, series, i, s, s.duration)
-		})
-		serieses
-			.enter()
-			.append('g')
-			.attr('class', 'sjpcb-scatter-series')
-			.each(function(series, i) {
-				renderSeries(select(this), chart, series, i, s, duration)
-			})
+		renderSerie(serie, chart, data, s, duration)
 	}
 
 	function getSvgSubElems(svg, chart) {
@@ -434,15 +419,15 @@ function setRenderers(self) {
 		return [mainG, axisG, xAxis, yAxis, xTitle, yTitle]
 	}
 
-	function renderSeries(g, chart, series, i, s, duration) {
+	function renderSerie(g, chart, data, s, duration) {
 		// remove all symbols as there is no data id for privacy
 		g.selectAll('path').remove()
-		const symbols = g.selectAll('path').data(series.data, b => b.x)
+		const symbols = g.selectAll('path').data(data.samples)
 		symbols.exit().remove()
 		symbols
 			.transition()
 			.duration(duration)
-			.attr('transform', c => `translate(${c.scaledX + 100},${c.scaledY})`)
+			.attr('transform', c => translate(self, c))
 			.attr('d', c => getShape(self, c))
 			.attr('fill', c => c.color)
 
@@ -451,13 +436,18 @@ function setRenderers(self) {
 			.enter()
 			.append('path')
 			/*** you'd need to set the symbol position using translate, instead of previously with cx, cy for a circle ***/
-			.attr('transform', c => `translate(${c.scaledX + 100},${c.scaledY})`)
+			.attr('transform', c => translate(self, c))
 			.attr('d', c => getShape(self, c))
 			.attr('fill', c => c.color)
 
 			.style('fill-opacity', s.fillOpacity)
 			.transition()
 			.duration(duration)
+	}
+
+	function translate(self, c) {
+		const transform = `translate(${self.xAxisScale(c.x) + 100},${self.yAxisScale(c.y)})`
+		return transform
 	}
 
 	function setTools(dom, svg, d) {
@@ -633,15 +623,37 @@ function setRenderers(self) {
 					self.dom.tip.hide()
 				}
 			})
-			if (self.state.termdbConfig.allowedTermTypes.includes('survival')) {
+			if (self.state.allowedTermTypes.includes('survival')) {
 				const survivalDiv = menuDiv.append('div').attr('class', 'sja_menuoption sja_sharp_border')
 				icon_functions['survival'](survivalDiv, {
 					is_button: false,
-					handler: () => {
-						openSurvivalPlot(self, self.selectedItems)
-						self.dom.tip.hide()
+					handler: async e => {
+						const subMenuDiv = new Menu({ padding: '5px' })
+						const termdb = await import('../termdb/app')
+						termdb.appInit({
+							holder: subMenuDiv.d,
+							vocabApi: self.app.vocabApi,
+							state: {
+								nav: {
+									header_mode: 'search_only'
+								},
+								tree: { usecase: { target: 'survival', detail: 'term' } }
+							},
+							tree: {
+								click_term: term => {
+									openSurvivalPlot(self, self.selectedItems, term)
+									self.dom.tip.hide()
+									subMenuDiv.hide()
+								}
+							}
+						})
+						subMenuDiv.show(event.clientX + 190, event.clientY + 36)
 					}
 				})
+				const startDiv = survivalDiv
+					.append('div')
+					.style('display', 'inline-block')
+					.html('&nbsp;&nbsp;›')
 			}
 			menuDiv
 				.append('div')
@@ -684,7 +696,7 @@ function setRenderers(self) {
 			.insert('div')
 			.style('display', 'flex')
 			.style('justify-content', 'flex-start')
-		if (self.state.termdbConfig.allowedTermTypes.includes('survival')) {
+		if (self.state.allowedTermTypes.includes('survival')) {
 			let survivalDiv = row
 				.insert('div')
 				.style('padding', '5px')
@@ -694,9 +706,27 @@ function setRenderers(self) {
 				width: 20,
 				height: 20,
 				text: 'Survival analysis on all',
-				handler: () => {
-					openSurvivalPlots(self)
-					self.dom.tip.hide()
+				handler: async () => {
+					const subMenuDiv = new Menu({ padding: '5px' })
+					const termdb = await import('../termdb/app')
+					termdb.appInit({
+						holder: subMenuDiv.d,
+						vocabApi: self.app.vocabApi,
+						state: {
+							nav: {
+								header_mode: 'search_only'
+							},
+							tree: { usecase: { target: 'survival', detail: 'term' } }
+						},
+						tree: {
+							click_term: term => {
+								openSurvivalPlots(self, term)
+								self.dom.tip.hide()
+								subMenuDiv.hide()
+							}
+						}
+					})
+					subMenuDiv.show(event.clientX + 190, event.clientY + 36)
 				}
 			})
 		}
@@ -736,7 +766,7 @@ function setRenderers(self) {
 			icon_functions['list'](listDiv, {
 				handler: () => showTable(self, group, `List of ${group.length} samples in Group ${i + 1}`)
 			})
-			if (self.state.termdbConfig.allowedTermTypes.includes('survival')) {
+			if (self.state.allowedTermTypes.includes('survival')) {
 				const survivalDiv = row
 					.insert('div')
 					.style('display', 'inline-block')
@@ -844,76 +874,6 @@ export const scatterInit = getCompInit(Scatter)
 // this alias will allow abstracted dynamic imports
 export const componentInit = scatterInit
 
-function getPj(self) {
-	const s = self.settings
-	const pj = new Partjson({
-		template: {
-			//"__:charts": "@.byChc.@values",
-			yMin: '>$y',
-			yMax: '<$y',
-			charts: [
-				{
-					chartId: '@key',
-					chc: '@key',
-					xMin: '>$x',
-					xMax: '<$x',
-					yMin: '>$y',
-					yMax: '<$y',
-					'__:xScale': '=xScale()',
-					'__:yScale': '=yScale()',
-					serieses: [
-						{
-							chartId: '@parent.@parent.@key',
-							seriesId: '@key',
-							data: [
-								{
-									'__:seriesId': '@parent.@parent.seriesId',
-									color: '$color',
-									x: '$x',
-									y: '$y',
-									sample: '$sample',
-									category: '$category',
-									info: '$info',
-									shape: '$shape',
-									'_1:scaledX': '=scaledX()',
-									'_1:scaledY': '=scaledY()'
-								},
-								'$y'
-							]
-						},
-						'-'
-					]
-				},
-				'$val0'
-			]
-		},
-		'=': {
-			xScale(row, context) {
-				const cx = d3Linear()
-					.domain([context.self.xMin, context.self.xMax])
-					.range([3 * s.size, s.svgw - 3 * s.size])
-				return cx
-			},
-			scaledX(row, context) {
-				return context.context.context.context.parent.xScale(context.self.x)
-			},
-			scaledY(row, context) {
-				return context.context.context.context.parent.yScale(context.self.y)
-			},
-			yScale(row, context) {
-				const yMin = context.self.yMin
-				const yMax = context.self.yMax
-				const domain = s.scale == 'byChart' ? [yMax, yMin] : [context.root.yMax, yMin]
-				const cy = d3Linear()
-					.domain(domain)
-					.range([3 * s.size, s.svgh - 3 * s.size])
-				return cy
-			}
-		}
-	})
-	return pj
-}
-
 function showTable(self, group, title, pos = 1) {
 	let rows = []
 	const labels = ['Sample', self.config.colorTW.id]
@@ -947,7 +907,7 @@ function getShapeName(shapes, data) {
 	return null
 }
 
-function openSurvivalPlot(self, group) {
+function openSurvivalPlot(self, group, term) {
 	const values = []
 	let data
 	for (const item of group) {
@@ -956,9 +916,7 @@ function openSurvivalPlot(self, group) {
 	}
 	let config = {
 		chartType: 'survival',
-		term: {
-			id: 'Event-free survival'
-		},
+		term: term,
 		term2: {
 			term: { name: 'TSNE selected groups', type: 'samplelst' },
 			q: {
@@ -990,7 +948,7 @@ function openSurvivalPlot(self, group) {
 	})
 }
 
-function openSurvivalPlots(self) {
+function openSurvivalPlots(self, term) {
 	let groups = []
 	let values, tgroup, data
 
@@ -1009,9 +967,7 @@ function openSurvivalPlots(self) {
 	}
 	let config = {
 		chartType: 'survival',
-		term: {
-			id: 'Event-free survival'
-		},
+		term: term,
 		term2: {
 			term: { name: 'TSNE selected groups', type: 'samplelst' },
 			q: {
