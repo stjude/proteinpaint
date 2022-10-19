@@ -71,6 +71,7 @@
     "src/serverconfig.js",
     "cards/index.json",
     "server.js*",
+    "start.js",
     "shared/common.js",
     "utils/*.R",
     "utils/rust/*.*",

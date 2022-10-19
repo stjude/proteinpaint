@@ -3,7 +3,7 @@
   "name": "@stjude/proteinpaint",
   "description": "a genomics visualization tool for exploring a cohort's genotype and phenotype data",
   "main": "server/main.js",
-  "bin": "server/bin.js",
+  "bin": "server/start.js",
   "private": true,
   "workspaces": [
     "rust",
