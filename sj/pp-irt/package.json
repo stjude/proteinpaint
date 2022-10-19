@@ -1,12 +1,12 @@
 {
 	"name": "@stjude/proteinpaint-pp-irt",
-	"version": "2.4.2-7",
+	"version": "2.4.2-8",
 	"private": true,
 	"scripts": {
 		"postinstall": "proteinpaint-front https://pp-int-test.stjude.org",
 		"postupdate": "proteinpaint-front https://pp-int-test.stjude.org",
 		"start": "proteinpaint-server",
-		"static": "rsync -Lr --verbose --compress --delete -e ssh --exclude-from '../exclude-list.txt' --dry-run --stats ./ pp-irt:/opt/app/pp/active/"
+		"static": "rsync -Lr --verbose --compress --delete -e ssh --exclude-from '../exclude-list.txt' --stats ./ pp-irt:/opt/app/pp/active/"
 	},
 	"dependencies": {
 		"@stjude/proteinpaint-front": "2.4.1-34",

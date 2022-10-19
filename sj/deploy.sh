@@ -109,6 +109,8 @@ ssh -t $ENV "
 # PKGFILES=$(node -p "require('./package.json').files.join(' ')")
 # for file in ${PKGFILES}; do rsync -Lr --delete --exclude "public/bin" --exclude="*config.json" sj/$ENV/public $ENV:/opt/data/pp/active; done
 
+npm run static
+
 #############
 # CLEANUP
 #############
