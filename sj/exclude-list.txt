@@ -1,0 +1,14 @@
+*config.json
+node_modules
+rev.txt
+public/bin
+public/rev.txt
+package.json
+package*.json
+*.tgz
+.*
+public/sjcharts
+public/no-babel-polyfill
+
+
+
