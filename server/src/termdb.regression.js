@@ -1313,6 +1313,7 @@ higher than cutoff:
 	keep in snp2sample
 monomorphic:
 	delete from snp2sample, do not analyze
+	// TODO: may report this to user
 */
 function categorizeSnpsByAF(tw, snp2sample) {
 	// same as snp2sample, to store snps with AF<cutoff, later to use for Fisher

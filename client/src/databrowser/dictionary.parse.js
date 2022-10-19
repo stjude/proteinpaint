@@ -1,8 +1,8 @@
 /*
 ------ EXPORTED ------ 
 parseDictionary()
-    - div
-    - input: STR
+	- div
+	- input: STR
 
 ------ Internal ------ 
 Traditional data dictionary parsing: 
@@ -10,10 +10,10 @@ Traditional data dictionary parsing:
 
 Phenotree parsing:
 	1. parseConfig()
-    2. trackMissingTerms
+	2. trackMissingTerms
 */
 
-export function parseDictionary(input) {
+exports.parseDictionary = function parseDictionary(input) {
 	// Returns terms array for appInit({state.vocab.terms})
 	const terms = {}
 
@@ -33,13 +33,13 @@ export function parseDictionary(input) {
 
 	function parseDataDictionary(lines, header) {
 		/*
-        Parses data dictionary in a term_id to parent_id format
-            - Parses tab delim data arranged in required cols: term_id, parent_id, name, type, values
-            - Assumptions:
-                1. Headers required
-                2. No blank or '-' values in the term_id, parent_id, name, or type columns. Top grandparents must include 'root' for the parent_id
-                3. No identical term ids 
-        */
+		Parses data dictionary in a term_id to parent_id format
+			- Parses tab delim data arranged in required cols: term_id, parent_id, name, type, values
+			- Assumptions:
+				1. Headers required
+				2. No blank or '-' values in the term_id, parent_id, name, or type columns. Top grandparents must include 'root' for the parent_id
+				3. No identical term ids 
+		*/
 		const parIdIndex = header.findIndex(l => l.toLowerCase().includes('parent_id'))
 		if (parIdIndex == -1) {
 			throw `Missing required 'parent_id' header`
@@ -126,17 +126,17 @@ export function parseDictionary(input) {
 
 	function parsePhenotree(lines, header) {
 		/* 
-        Parses phenotree:
-            - Parses tab delim data arranged in cols: levels(n), variable (i.e. term_id), type, and categories (i.e. previous configuration).
-            - Only the vairable and type cols are required
-            - Blank and '-' values for levels converted to null -- how to distinguish between no id vs no hierarchy??
-            - Assumptions:
-                1. Headers required. `Variable', 'Type', and 'Categories' may appear anywhere. 'Level_[XX]' for optional hierarchy/level columns. 
-                2. Levels are defined left to right, highest to lowest, and in order, no gaps.
-                3. No blanks or '-' between levels as well as no duplicate values in the same line.
-                4. No identical term ids
-                5. All non-leaf names/ids must be unique. 
-        */
+		Parses phenotree:
+			- Parses tab delim data arranged in cols: levels(n), variable (i.e. term_id), type, and categories (i.e. previous configuration).
+			- Only the vairable and type cols are required
+			- Blank and '-' values for levels converted to null -- how to distinguish between no id vs no hierarchy??
+			- Assumptions:
+				1. Headers required. `Variable', 'Type', and 'Categories' may appear anywhere. 'Level_[XX]' for optional hierarchy/level columns. 
+				2. Levels are defined left to right, highest to lowest, and in order, no gaps.
+				3. No blanks or '-' between levels as well as no duplicate values in the same line.
+				4. No identical term ids
+				5. All non-leaf names/ids must be unique. 
+		*/
 		if (variableIndex == -1) {
 			throw `Missing required 'Variable' header`
 		}
@@ -270,9 +270,9 @@ function trackMissingTerms(termNameToId, terms, parentTermNames, parent2ChildOrd
 				const id = termNameToId[name]
 				const ancestor = terms[id]
 				/* if this term's ancestor has no level above it, previous processing of this ancestor
-                should also not have a term parent,
-                OR if this ancestor another level above it,
-                check that it is the same parent_term as previousy processed */
+				should also not have a term parent,
+				OR if this ancestor another level above it,
+				check that it is the same parent_term as previousy processed */
 				if ((i - 1 < 0 && ancestor.parent_name) || ancestor.parent_name != term.ancestry[i - 1]) {
 					throw `Different parents for term=${name}, '${term.ancestry[i - 1]}' and '${ancestor.parent_name}'`
 				}

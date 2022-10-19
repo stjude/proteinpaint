@@ -5,10 +5,8 @@ otherwise, compute it based on the alleleType setting (from termwrapper.q{})
 snp: { effectAllele, alleles[ {allele, count, isRef} ] }
 */
 function get_effectAllele(alleleType, snp) {
-	if (snp.effectAllele) {
-		// already selected by user
-		return snp.effectAllele
-	}
+	let effectAllele
+	if (snp.effectAllele) return snp.effectAllele // already selected by user
 	if (alleleType == 0) {
 		// major/minor
 		// find the allele with smallest count
@@ -19,13 +17,27 @@ function get_effectAllele(alleleType, snp) {
 				a = b
 			}
 		}
-		return a.allele
+		effectAllele = a.allele
+	} else if (alleleType == 1) {
+		// alternative allele(s)
+		// if multiple alternative alleles, then choose most frequent
+		const altals = snp.alleles.filter(i => !i.isRef)
+		if (altals.length) {
+			const maxcnt = Math.max(...altals.map(al => al.count))
+			effectAllele = altals.find(al => al.count === maxcnt).allele
+		} else {
+			// variant has no alternative alleles
+			effectAllele = undefined
+		}
+	} else if (alleleType == 2) {
+		// custom
+		// let user select effect allele
+		effectAllele = undefined
+	} else {
+		throw 'unknown alleleType value'
 	}
-	if (alleleType == 1) {
-		// non-reference, what if there are multiple??
-		return snp.alleles.find(i => !i.isRef).allele
-	}
-	throw 'unknown alleleType value'
+	snp.effectAllele = effectAllele
+	return effectAllele
 }
 
 /*

@@ -198,7 +198,7 @@ function parseSnpText(text) {
 			snps.push({
 				rsid,
 				snpid: rsid,
-				invalid: true
+				invalid: 'INVALID RSID'
 			})
 		}
 		// may support chr:pos
@@ -251,7 +251,7 @@ async function mapRsid2chr(snps, genome) {
 		// unknown entry
 		snp.invalid = true
 	}
-	if (snps.reduce((i, j) => i + (j.invalid ? 0 : 1)) == 0) throw 'no valid snps'
+	if (!snps.find(snp => !snp.invalid)) throw 'no valid variants'
 }
 
 async function queryBcf(q, snps, ds) {
