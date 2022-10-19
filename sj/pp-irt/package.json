@@ -1,6 +1,6 @@
 {
 	"name": "@stjude/proteinpaint-pp-irt",
-	"version": "2.4.2-6",
+	"version": "2.4.2-7",
 	"private": true,
 	"scripts": {
 		"postinstall": "proteinpaint-front https://pp-int-test.stjude.org",
@@ -9,8 +9,8 @@
 		"static": "rsync -Lr --verbose --compress --delete -e ssh --exclude-from '../exclude-list.txt' --dry-run --stats ./ pp-irt:/opt/app/pp/active/"
 	},
 	"dependencies": {
-		"@stjude/proteinpaint-front": "2.4.1-33",
-		"@stjude/proteinpaint-server": "2.4.1-35"
+		"@stjude/proteinpaint-front": "2.4.1-34",
+		"@stjude/proteinpaint-server": "2.4.1-36"
 	},
 	"files": [
 		"public/*",
