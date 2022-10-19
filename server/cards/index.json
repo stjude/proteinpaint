@@ -119,6 +119,7 @@
             "description": "Coding mutations and gene fusions",
             "image": "https://pecan.stjude.cloud/static/examples/images/lollipop-square.png",
             "sandboxJson": "lollipop",
+            "ribbon":{ "text": "updated", "expireDate": "2022-11-06"},
             "searchterms": []
         },
         {

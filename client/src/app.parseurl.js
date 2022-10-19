@@ -89,14 +89,45 @@ upon error, throw err message as a string
 	if (urlp.has('mass')) {
 		const str = urlp.get('mass')
 		const state = JSON.parse(str)
-		const res = await client.dofetch('/massSession')
 		const opts = {
 			holder: arg.holder,
-			state,
-			massSessionDuration: res.massSessionDuration
+			state
 		}
 		if (state.genome) {
 			opts.genome = arg.genomes[state.genome]
+		}
+		const _ = await import('../mass/app')
+		_.appInit(opts)
+		return
+	}
+
+	if (urlp.has('mass-session-file') || urlp.has('mass-session-url')) {
+		let opts
+		if (urlp.has('mass-session-file')) {
+			const file = urlp.get('mass-session-file')
+			const jsonFile = await client.dofetch3(`/textfile`, {
+				method: 'POST',
+				body: JSON.stringify({ file })
+			})
+			const state = JSON.parse(jsonFile.text)
+			opts = {
+				holder: arg.holder,
+				state,
+				genome: arg.genomes[state.vocab.genome]
+			}
+		}
+		if (urlp.has('mass-session-url')) {
+			const url = urlp.get('mass-session-url')
+			const jsonURL = await client.dofetch3('/urltextfile', {
+				method: 'POST',
+				body: JSON.stringify({ url })
+			})
+			const state = JSON.parse(jsonURL.text)
+			opts = {
+				holder: arg.holder,
+				state,
+				genome: arg.genomes[state.vocab.genome]
+			}
 		}
 		const _ = await import('../mass/app')
 		_.appInit(opts)
@@ -118,14 +149,15 @@ upon error, throw err message as a string
 				.style('margin', '10px')
 				.style('font-weight', '550')
 				.text(
-					`Starting soon sessions older than ${res.massSessionDuration} days will be deleted. To save a new session, click Save, and bookmark the new session URL`
+					`On Nov 1st, 2022, sessions older than ${res.massSessionDuration} days will be deleted. To save a new session, click Save, and bookmark the new session URL`
 				)
 		}
 		const opts = {
 			holder: arg.holder,
 			state: res.state,
 			genome: arg.genomes[res.state.vocab.genome],
-			massSessionDuration: res.massSessionDuration
+			sessionDaysLeft: res.sessionDaysLeft,
+			sessionId: id
 		}
 		const _ = await import('../mass/app')
 		_.appInit(opts)

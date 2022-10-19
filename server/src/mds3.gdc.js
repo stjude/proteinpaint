@@ -173,7 +173,32 @@ export function validate_query_snvindel_byisoform(ds) {
 				only returns total number of unique cases to client
 				thus do not convert uuid to sample id for significant time-saving
 				*/
-				m.samples.push({ sample_id: c.case_id })
+
+				/*
+				uses tumor_sample_uuid(aliquot) rather than "case.case_id" 
+				to be able to correctly attribute mutation to the aliquot from which it's detected
+				case_id is the patient, and can correspond to multiple aliquots
+
+				the id is needed for two purposes:
+
+				1. counting occurrence for a mutation (both case_id and aliquot is fine)
+				2. showing sample name in matrix.
+					with case_id, can only convert to case name (method unknown)
+					with aliquot id, can convert to submitter id, has existing method (sample_id_getter) and is accurate
+
+				*/
+
+				// use case_id to identify patient
+				//m.samples.push({ sample_id: c.case_id })
+
+				// use aliquot to identify sample
+				const sample_id = c?.observation?.[0]?.sample?.tumor_sample_uuid
+				if (sample_id) {
+					m.samples.push({ sample_id })
+				} else {
+					// should not happen: quick way to alert
+					console.log('.observation.sample.tumor_sample_uuid missing from casse{}')
+				}
 			}
 			mlst.push(m)
 		}
@@ -651,21 +676,11 @@ export async function querySamples_gdcapi(q, termidlst, ds) {
 			sample.ssm_id = s.ssm.ssm_id
 		}
 
-		// get printable sample id
-		if (ds.variant2samples.sample_id_key) {
-			sample.sample_id = s.case[ds.variant2samples.sample_id_key] // "sample_id" field in sample is hardcoded
-		} else if (ds.variant2samples.sample_id_getter) {
-			// getter do batch process
-			// tempcase will be deleted after processing
-			sample.tempcase = s.case
-		}
+		// this is aliquot id; later all aliquot ids are gathered and converted to submitter id later
+		sample.sample_id = s.case?.observation?.[0]?.sample?.tumor_sample_uuid
 
-		/* gdc-specific logic
-		through tumor_sample_barcode, "TCGA-F4-6805" names are set as .sample_id for display
-		however case uuid is still needed to build the url link to a case
-		thus the hardcoded logic to provide the case_id as "case_uuid" to client side
-		*/
-		sample.case_uuid = s.case.case_id
+		// for making url link on a sample
+		sample.sample_URLid = s.case.case_id
 
 		for (const term of termObjs) {
 			flattenCaseByFields(sample, s.case, term)
@@ -682,7 +697,7 @@ export async function querySamples_gdcapi(q, termidlst, ds) {
 		samples.push(sample)
 	}
 
-	if (ds.variant2samples.sample_id_getter) {
+	if (typeof ds.variant2samples.sample_id_getter == 'function') {
 		// batch process, fire one graphql query to convert id for all samples
 		// must pass request header to getter in case requesting a controlled sample via a user token
 		// this is gdc-specific logic and should not impact generic mds3
@@ -902,7 +917,7 @@ export function validate_sampleSummaries2_mclassdetail(api, ds) {
 		for (const h of re_ssms.data.hits) {
 			if (!h.ssm_id) throw 'ssm_id missing from a ssms hit'
 			if (!h.consequence) throw '.consequence[] missing from a ssm'
-			const consequence = h.consequence.find(i => i.transcript.transcript_id == q.isoform) // xxx
+			const consequence = h.consequence.find(i => i.transcript.transcript_id == q.isoform)
 			snvindel_addclass(h, consequence)
 			h.samples = []
 			id2ssm.set(h.ssm_id, h)

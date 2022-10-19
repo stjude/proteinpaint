@@ -55,6 +55,7 @@ exports.mayGetGeneVariantData = async function(tw, q) {
 			sampleData[tname].values.push(d)
 		}
 	}
+	//console.log(JSON.stringify(bySampleId.get(63),null,2))
 
 	return bySampleId
 }

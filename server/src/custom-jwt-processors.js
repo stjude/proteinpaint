@@ -18,7 +18,11 @@ exports.AESRollingExp = function(embedder, payload, _time) {
 	const sub = JSON.parse(decryptedSub)
 	//console.log('sub', sub)
 	payload.exp = exp
-	payload.datasets = sub.datasets
+	// payload.datasets = sub.datasets
+	// payload.email = sub.email
+	for (const key in sub) {
+		payload[key] = sub[key]
+	}
 }
 
 function AESDecrypt(text, password) {

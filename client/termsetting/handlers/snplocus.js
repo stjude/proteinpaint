@@ -75,6 +75,17 @@ async function makeEditMenu(self, div) {
 		row: div.append('div').style('margin', '15px'),
 		defaultCoord: self.q && self.q.chr ? { chr: self.q.chr, start: self.q.start, stop: self.q.stop } : null
 	})
+	div
+		.append('span')
+		.style('margin-left', '15px')
+		.style('margin-top', '-10px')
+		.style('margin-bottom', '5px')
+		.style('display', 'inline-block')
+		.style('opacity', 0.4)
+		.style('font-size', '.7em')
+		.html(
+			'“Gene”: Gene name (e.g. AKT1)</br>“Position”: chr:start-stop (e.g. chr1:5000-6000)</br>“Variant”: dbSNP accession (e.g. rs1042522)'
+		)
 
 	await mayDisplayVariantFilter(self, div)
 
@@ -131,14 +142,6 @@ async function makeEditMenu(self, div) {
 
 			self.runCallback()
 		})
-
-	div
-		.append('div')
-		.style('display', 'inline-block')
-		.style('margin', '5px')
-		.style('opacity', 0.4)
-		.style('font-size', '.7em')
-		.text('Must press Submit button to apply changes.')
 }
 
 /* 

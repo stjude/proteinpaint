@@ -8,13 +8,15 @@ nonDictionaryTermTypes
 termsettingInit()
 getPillNameDefault()
 fillTermWrapper()
+	call_fillTW
+	mayValidateQmode
 set_hiddenvalues()
 ********************* Instance methods
 clickNoPillDiv
 showTree
 */
 
-export const nonDictionaryTermTypes = new Set(['snplst', 'prs', 'snplocus', 'geneVariant'])
+export const nonDictionaryTermTypes = new Set(['snplst', 'prs', 'snplocus', 'geneVariant', 'samplelst'])
 
 // append the common ID substring,
 // so that the first characters of $id is more indexable
@@ -481,7 +483,7 @@ function setInteractivity(self) {
 				disable_terms: self.disable_terms,
 				click_term: async term => {
 					self.dom.tip.hide()
-					const data = { id: term.id, term, q: {} }
+					const data = { id: term.id, term, q: { isAtomic: true }, isAtomic: true }
 					let _term = term
 					if (self.opts.use_bins_less && (term.type == 'integer' || term.type == 'float') && term.bins.less) {
 						// instructed to use bins.less which is present
@@ -745,6 +747,7 @@ defaultQ{}
 	with term types as keys
 */
 export async function fillTermWrapper(tw, vocabApi, defaultQ) {
+	tw.isAtomic = true
 	if (!tw.$id) tw.$id = `${$id++}${idSuffix}`
 
 	if (!tw.term) {
@@ -762,9 +765,14 @@ export async function fillTermWrapper(tw, vocabApi, defaultQ) {
 	} else if (tw.id != tw.term.id) {
 		throw 'the given ids (tw.id and tw.term.id) are different'
 	}
+
 	if (!tw.q) tw.q = {}
+	tw.q.isAtomic = true
+
 	// call term-type specific logic to fill tw
 	await call_fillTW(tw, vocabApi, defaultQ)
+
+	mayValidateQmode(tw)
 }
 
 async function call_fillTW(tw, vocabApi, defaultQ) {
@@ -777,6 +785,18 @@ async function call_fillTW(tw, vocabApi, defaultQ) {
 		_ = await import(`./handlers/${type}.js`)
 	}
 	await _.fillTW(tw, vocabApi, defaultQ ? defaultQ[type] : null)
+}
+
+function mayValidateQmode(tw) {
+	if (!('mode' in tw.q)) {
+		// at this stage q.mode is allowed to be missing and will not validate
+		return
+	}
+	// q.mode is set. here will validate
+	if (typeof tw.q.mode != 'string') throw 'q.mode not string'
+	if (tw.q.mode == '') throw 'q.mode is empty string'
+	// handler code should implement term type-specific validations
+	// e.g. to prevent cases such as mode=continuous for categorical term
 }
 
 export function set_hiddenvalues(q, term) {

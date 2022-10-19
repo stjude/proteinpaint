@@ -1,0 +1,21 @@
+{
+	"name": "@stjude/proteinpaint-pp-irt",
+	"version": "2.4.2-6",
+	"private": true,
+	"scripts": {
+		"postinstall": "proteinpaint-front https://pp-int-test.stjude.org",
+		"postupdate": "proteinpaint-front https://pp-int-test.stjude.org",
+		"start": "proteinpaint-server"
+	},
+	"dependencies": {
+		"@stjude/proteinpaint-front": "2.4.1-33",
+		"@stjude/proteinpaint-server": "2.4.1-35"
+	},
+	"files": [
+		"public/*",
+		"dataset/*",
+		"genomes/*",
+		"server.js",
+		"rev.txt"
+	]
+}

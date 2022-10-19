@@ -56,6 +56,10 @@ class Term1ui {
 			activeCohort: this.state.activeCohort,
 			holder: this.dom.td2.append('div').style('display', 'inline-block'),
 			debug: this.opts.debug,
+
+			// temp change to enable toggling between continuous/discrete for numeric term1
+			numericEditMenuVersion: ['continuous', 'discrete'],
+
 			callback: data => {
 				// data is object with only one needed attribute: q, never is null
 				if (!data.q) throw 'data.q{} missing from pill callback'

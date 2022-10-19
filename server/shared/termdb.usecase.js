@@ -6,7 +6,8 @@ export const graphableTypes = new Set([
 	'survival',
 	'snplst',
 	'snplocus',
-	'geneVariant'
+	'geneVariant',
+	'samplelst'
 ])
 /*
 	isUsableTerm() will
@@ -99,7 +100,7 @@ export function isUsableTerm(term, _usecase, ds) {
 			if (usecase.detail === 'term2') {
 				if (term.type != 'survival') {
 					// do not allow overlaying one survival term over another
-					if (term.isleaf || term.type == 'geneVariant') uses.add('plot')
+					if (term.isleaf || term.type == 'geneVariant' || term.type == 'samplelst') uses.add('plot')
 					if (hasNonSurvivalTermChild(child_types)) uses.add('branch')
 				}
 				return uses

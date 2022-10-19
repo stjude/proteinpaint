@@ -2,6 +2,10 @@ import { select } from 'd3-selection'
 import { initByInput } from './controls.config'
 import { to_svg } from '../src/client'
 import { fillTermWrapper } from '../termsetting/termsetting'
+import { addGeneSearchbox } from '#dom/genesearch'
+import { Menu } from '#dom/menu'
+
+const tip = new Menu({ padding: '' })
 
 export class MatrixControls {
 	constructor(opts, appState) {
@@ -22,7 +26,7 @@ export class MatrixControls {
 			.selectAll('button')
 			.data([
 				{ value: 'samples', label: 'Samples' },
-				{ value: 'anno', label: 'Terms' },
+				{ value: 'anno', label: 'Terms', customInputs: this.appendTermInputs },
 				{ value: 'cols', label: 'Column layout' },
 				{ value: 'rows', label: 'Row layout' },
 				{ value: 'legend', label: 'Legend layout' },
@@ -274,11 +278,44 @@ export class MatrixControls {
 					inputConfig
 				)
 			)
-
 			input.main(parent.config)
 		}
-
+		if (d.customInputs) d.customInputs(app, parent, table)
 		app.tip.showunder(event.target)
+	}
+
+	appendTermInputs(app, parent, table) {
+		const tr = table.append('tr')
+		// TODO: maybe add a second table cell for a dropdown
+		// to select which group to add the searched gene
+		const td = tr.append('td').attr('colspan', 2)
+		td.append('span').html('Add a gene &nbsp;')
+
+		const coordInput = addGeneSearchbox({
+			tip,
+			genome: app.opts.genome,
+			row: td.append('span'),
+			geneOnly: true,
+			callback: () => {
+				if (!coordInput.geneSymbol) throw 'geneSymbol missing'
+				// TODO: see above for input to select which group to add the gene
+				// right not it assumes the first group
+				parent.config.termgroups[0].lst.push({
+					term: {
+						name: coordInput.geneSymbol,
+						type: 'geneVariant'
+					}
+				})
+
+				app.dispatch({
+					type: 'plot_edit',
+					id: parent.id,
+					config: {
+						termgroups: parent.config.termgroups
+					}
+				})
+			}
+		})
 	}
 }
 

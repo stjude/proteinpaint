@@ -4,6 +4,17 @@ module.exports = {
 	genedb: {
 		dbfile: 'anno/genes.hg38.db'
 	},
+
+	termdbs: {
+		msigdb: {
+			label: 'msigdb', // to be compatible with ds.label
+			cohort: {
+				db: { file: 'anno/msigdb/db' },
+				termdb: {}
+			}
+		}
+	},
+
 	proteindomain: {
 		dbfile: 'anno/db/proteindomain.db',
 		statement: 'select data from domain where isoform=? collate nocase'

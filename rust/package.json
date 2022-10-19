@@ -1,12 +1,11 @@
 {
-  "version": "1.0.0",
+  "version": "2.4.1-0",
   "name": "@stjude/proteinpaint-rust",
   "description": "Rust-based utilities for proteinpaint",
   "main": "index.js",
   "bin": {
     "proteinpaint-rust": "index.js"
   },
-  "private": true,
   "scripts": {
     "dev": "cargo build --release",
     "build": "cargo build --release",
@@ -17,7 +16,8 @@
   "license": "UNLICENSED",
   "repository": {
     "type": "git",
-    "url": "https://github.com/stjude/proteinpaint.git"
+    "url": "https://github.com/stjude/proteinpaint.git",
+    "directory": "rust"
   },
   "files": [
     "index.js",

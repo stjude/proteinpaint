@@ -27,7 +27,7 @@ which goes against rust cargo's assumptions of having source code under `src/bin
 ## Build
 
 ```bash
-npm build # cargo build --release
+npm run build # cargo build --release
 ```
 
 The compiled dependencies and target binaries will be generated under `./target/release`.

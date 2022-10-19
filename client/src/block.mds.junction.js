@@ -1,6 +1,6 @@
 import * as client from './client'
 import * as common from '#shared/common'
-import { scaleLinear, scaleLog, scaleOrdinal, schemeCategory10 } from 'd3-scale'
+import { scaleLinear, scaleLog, scaleOrdinal } from 'd3-scale'
 import { select as d3select } from 'd3-selection'
 import { axisRight } from 'd3-axis'
 import * as d3force from 'd3-force'

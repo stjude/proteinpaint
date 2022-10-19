@@ -1,21 +1,21 @@
 {
-  "version": "2.4.0",
+  "version": "2.4.2-6",
   "name": "@stjude/proteinpaint",
   "description": "a genomics visualization tool for exploring a cohort's genotype and phenotype data",
   "main": "server/main.js",
-  "bin": "server/bin.js",
+  "bin": "server/start.js",
   "private": true,
   "workspaces": [
-    "client",
+    "rust",
     "server",
-    "portal",
-    "rust"
+    "client",
+    "front"
   ],
   "scripts": {
     "reset": "npm install",
     "predev": "if [[ -d ./client ]]; then node ./client/test/import-specs.js name=? && rm -f ../public/bin/*proteinpaint.js; fi",
     "dev": "webpack --config=./webpack.config.js --env NODE_ENV=development --watch --progress --color",
-    "start": "./build/dev/resetBundles.sh && nodemon server/bin.js --watch serverconfig.json --watch ./server/server*.js* --watch server/genome --watch server/dataset --watch server/src/test/routes",
+    "start": "./build/dev/resetBundles.sh && nodemon server/server.js --watch serverconfig.json --watch ./server/server*.js* --watch server/genome --watch server/dataset --watch server/src/test/routes",
     "dev1": "trap 'kill %1' INT; webpack --config=./webpack.config.js --env NODE_ENV=development --watch --color & npm start",
     "server": "trap 'kill %1' INT; npm run dev -w @stjude/proteinpaint-server & npm start",
     "client": "npm run dev -w @stjude/proteinpaint-client",
@@ -24,7 +24,8 @@
     "prp1": "./build/deploy.sh prp1",
     "testws": "npm test --workspaces",
     "sethooks": "./utils/hooks/init.sh",
-    "getconf": "node -p 'JSON.stringify(require(\"./server/src/serverconfig.js\"),null,\"  \")'"
+    "getconf": "node -p 'JSON.stringify(require(\"./server/src/serverconfig.js\"),null,\"  \")'",
+    "clean": "git add -A; git stash --staged"
   },
   "author": "",
   "license": "UNLICENSED",

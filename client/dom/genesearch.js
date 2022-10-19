@@ -115,7 +115,7 @@ export function addGeneSearchbox(arg) {
 	} else {
 		placeholder = 'Gene, position'
 		if (arg.genome.hasSNP) {
-			placeholder += ', SNP'
+			placeholder += ', variant'
 			width += 40
 		}
 		if (arg.allowVariant) {

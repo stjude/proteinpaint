@@ -4,9 +4,11 @@ const getFilterCTEs = require('./termdb.filter').getFilterCTEs
 const numericSql = require('./termdb.sql.numeric')
 const categoricalSql = require('./termdb.sql.categorical')
 const conditionSql = require('./termdb.sql.condition')
+const sampleLstSql = require('./termdb.sql.samplelst').sampleLstSql
 const connect_db = require('./utils').connect_db
 const isUsableTerm = require('#shared/termdb.usecase').isUsableTerm
 const serverconfig = require('./serverconfig')
+
 /*
 
 ********************** EXPORTED
@@ -17,6 +19,7 @@ get_rows
 get_rows_by_one_key
 get_rows_by_two_keys
 server_init_db_queries
+listDbTables
 ********************** INTERNAL
 get_term_cte
 	makesql_oneterm
@@ -240,24 +243,22 @@ opts{} options to tweak the query, see const default_opts = below
 	.columnas		  default to return all rows when 't1.sample AS sample',
 							  or set to "count(distinct t1.sample) as samplecount" to aggregate
 	
-	.endclause:   default to '',
-							  or "GROUP BY key0, key1, key2" when aggregating by samplecount
-							  or +" ORDER BY ..." + " LIMIT ..."
-
+	.groupby:   default to '',
+							or a column to group by, could be 'key', 'sample', 'value' 
+							!!! 
+								NOTE: after switching to UNION instead of JOIN,
+								this deprecated the support for the following never used options
+							  - "GROUP BY key1, key2" when aggregating by samplecount
+							  - +" ORDER BY ..." + " LIMIT ..."
+							!!!
 */
 
 	if (typeof q.filter == 'string') q.filter = JSON.parse(decodeURIComponent(q.filter))
 
-	// do not break code that still uses the opts.groupby key-value
-	// can take this out once all calling code has been migrated
-	if (_opts.groupby) {
-		_opts.endclause = _opts.groupby
-		delete _opts.groupby
-	}
 	const default_opts = {
 		withCTEs: true,
 		columnas: 't1.sample AS sample',
-		endclause: ''
+		groupby: ''
 	}
 	const opts = Object.assign(default_opts, _opts)
 	const filter = getFilterCTEs(q.filter, q.ds)
@@ -269,28 +270,60 @@ opts{} options to tweak the query, see const default_opts = below
 	const CTE0 = get_term_cte(q, values, 0, filter)
 	const CTE1 = get_term_cte(q, values, 1, filter)
 	const CTE2 = get_term_cte(q, values, 2, filter)
+	const CTEunion = [CTE0, CTE1, CTE2]
+		.map(
+			(c, i) => `
+		SELECT sample, key, value, ${i} as termNum
+		FROM ${c.tablename}
+		${filter ? 'WHERE sample IN ' + filter.CTEname : ''}
+	`
+		)
+		.join('\nUNION ALL\n')
 
 	const sql = `WITH
 		${filter ? filter.filters + ',' : ''}
 		${CTE0.sql},
 		${CTE1.sql},
 		${CTE2.sql}
-		SELECT
-      t0.key AS key0,
-      t0.value AS val0,
-      t1.key AS key1,
-      t1.value AS val1,
-      t2.key AS key2,
-      t2.value AS val2,
-      ${opts.columnas}
-		FROM ${CTE1.tablename} t1
-		JOIN ${CTE0.tablename} t0 ${CTE0.join_on_clause}
-		JOIN ${CTE2.tablename} t2 ${CTE2.join_on_clause}
-		${filter ? 'WHERE t1.sample IN ' + filter.CTEname : ''}
-		${opts.endclause}`
+		${CTEunion}`
 	//console.log(interpolateSqlValues(sql, values))
 	try {
-		const lst = q.ds.cohort.db.connection.prepare(sql).all(values)
+		const rows = q.ds.cohort.db.connection.prepare(sql).all(values)
+		const smap = new Map()
+		for (const r of rows) {
+			if (!smap.has(r.sample)) smap.set(r.sample, { sample: r.sample })
+			const s = smap.get(r.sample)
+			s[`key${r.termNum}`] = r.key
+			s[`val${r.termNum}`] = r.value
+		}
+		const lst = []
+		const scounts = new Map()
+		for (const s of smap.values()) {
+			// possible for a sample to not be annotated for the series term (term)
+			if (!('key1' in s)) continue
+			// supply empty string defaults as needed for chart (term0) and overlay (term2)
+			if (!('key0' in s)) {
+				s.key0 = ''
+				s.val0 = ''
+			}
+			if (!('key2' in s)) {
+				s.key2 = ''
+				s.val2 = ''
+			}
+
+			if (!opts.groupby) {
+				lst.push(s)
+			} else {
+				// assume that the groupby option is used to get samplecounts
+				if (!scounts.has(s[opts.groupby])) {
+					const item = Object.assign({ samplecount: 0 }, s)
+					lst.push(item)
+					scounts.set(s[opts.groupby], item)
+				}
+				const l = scounts.get(s[opts.groupby])
+				l.samplecount++
+			}
+		}
 		return !opts.withCTEs ? lst : { lst, CTE0, CTE1, CTE2, filter }
 	} catch (e) {
 		console.log('error in sql:\n', interpolateSqlValues(sql, values))
@@ -337,19 +370,21 @@ export function get_term_cte(q, values, index, filter, termWrapper = null) {
 	const twterm = (termWrapper && termWrapper.term) || q[`term${index}`]
 	const termid = twterm ? twterm.id : q['term' + index + '_id']
 	const term_is_genotype = termWrapper && twterm ? termWrapper.term.is_genotype : q['term' + index + '_is_genotype']
-	// legacy code support: index=1 is assumed to be barchart term
-	// when there is no termWrapper argument
-	if (!termWrapper && index == 1 && !term_is_genotype) {
-		// only term1 is required
-		if (!termid) throw 'missing term id'
-	} else if (!termid || term_is_genotype) {
-		// term2 and term0 are optional
-		// no table to query
-		const tablename = 'samplekey_' + index
-		return {
-			tablename,
-			sql: `${tablename} AS (\nSELECT null AS sample, '' as key, '' as value\n)`,
-			join_on_clause: ''
+	if (!(twterm?.type == 'samplelst')) {
+		// legacy code support: index=1 is assumed to be barchart term
+		// when there is no termWrapper argument
+		if (!termWrapper && index == 1 && !term_is_genotype) {
+			// only term1 is required
+			if (!termid) throw 'missing term id'
+		} else if (!termid || term_is_genotype) {
+			// term2 and term0 are optional
+			// no table to query
+			const tablename = 'samplekey_' + index
+			return {
+				tablename,
+				sql: `${tablename} AS (\nSELECT null AS sample, '' as key, '' as value\n)`,
+				join_on_clause: ''
+			}
 		}
 	}
 
@@ -390,6 +425,8 @@ export function get_term_cte(q, values, index, filter, termWrapper = null) {
 		CTE = conditionSql[mode].getCTE(tablename, term, q.ds, termq, values /*, filter*/)
 	} else if (term.type == 'survival') {
 		CTE = makesql_survival(tablename, term, q, values, filter)
+	} else if (term.type == 'samplelst') {
+		CTE = sampleLstSql.getCTE(tablename, term, q, values, filter)
 	} else {
 		throw 'unknown term type'
 	}
@@ -405,10 +442,11 @@ q{}
 	.term[0,1,2]_id
 	.term[0,1,2]_q
 */
+	const key0 = 'term0_id' in q ? `key0,` : ''
+	const key2 = 'term2_id' in q ? `,key2` : ''
 	const result = get_rows(q, {
 		withCTEs: true,
-		columnas: 'count(distinct t1.sample) as samplecount',
-		endclause: 'GROUP BY key0, key1, key2'
+		groupby: `key1`
 	})
 
 	const nums = [0, 1, 2]
@@ -738,17 +776,22 @@ thus less things to worry about...
 
 	ds.cohort.db.connection = cn
 
-	const tables = test_tables(cn)
-	if (!tables.terms) throw 'terms table missing'
-	if (!tables.ancestry) throw 'ancestry table missing'
-	if (!tables.annotations) throw 'annotations table missing'
-	if (ds.cohort.termdb.selectCohort && !tables.subcohort_terms)
+	const tables = listDbTables(cn)
+
+	if (!tables.has('terms')) throw 'terms table missing'
+	if (!tables.has('ancestry')) throw 'ancestry table missing'
+	if (!tables.has('annotations')) throw 'annotations table missing'
+	if (ds.cohort.termdb.selectCohort && !tables.has('subcohort_terms'))
 		throw 'subcohort_terms table is missing while termdb.selectCohort is enabled'
 
 	ds.cohort.termdb.q = {}
 	const q = ds.cohort.termdb.q
 
-	if (tables.term2genes) {
+	if (tables.has('buildDate')) {
+		q.get_buildDate = cn.prepare('select date from buildDate')
+	}
+
+	if (tables.has('term2genes')) {
 		/*
 		this db has optional table that maps term id to gene set, right now only used for msigdb
 		set termMatch2geneSet flag to true for client termdb tree to be aware of it via termdbConfig{}
@@ -769,7 +812,7 @@ thus less things to worry about...
 		}
 	}
 
-	if (tables.sampleidmap) {
+	if (tables.has('sampleidmap')) {
 		const i2s = new Map(),
 			s2i = new Map()
 		const s = cn.prepare('SELECT * FROM sampleidmap')
@@ -781,7 +824,7 @@ thus less things to worry about...
 		q.sampleName2id = s => s2i.get(s)
 	}
 
-	if (tables.category2vcfsample) {
+	if (tables.has('category2vcfsample')) {
 		const s = cn.prepare('SELECT * FROM category2vcfsample')
 		// must be cached as there are lots of json parsing
 		let cache
@@ -795,7 +838,7 @@ thus less things to worry about...
 			return cache
 		}
 	}
-	if (tables.alltermsbyorder) {
+	if (tables.has('alltermsbyorder')) {
 		const s = cn.prepare('SELECT * FROM alltermsbyorder')
 		let cache
 		q.getAlltermsbyorder = () => {
@@ -1035,7 +1078,7 @@ thus less things to worry about...
 			return s.all(id)
 		}
 	}
-	if (tables.termhtmldef) {
+	if (tables.has('termhtmldef')) {
 		//get term_info for a term
 		//rightnow only few conditional terms have grade info
 		const s = cn.prepare('SELECT jsonhtml FROM termhtmldef WHERE id=?')
@@ -1053,35 +1096,23 @@ thus less things to worry about...
 		}
 	}
 
-	/* returns list of chart types based on term types from each subcohort combination
-	FIXME for a termdb without subcohort, r.cohort will be undefined
-	returned object will have "undefined" as key. make sure an object like {undefined:"xx"} can work in client side
+	/*
+	returns list of chart types based on term types from each subcohort combination
 	*/
 	q.getSupportedChartTypes = embedder => {
-		const cred = serverconfig.dsCredentials?.[ds.label]
+		mayComputeTermtypeByCohort(ds)
+		// ds.cohort.termdb.termtypeByCohort[] is set
 
-		const rows = cn
-			.prepare(
-				`WITH c AS (
-				SELECT cohort, term_id
-				FROM subcohort_terms s
-				GROUP BY cohort, term_id
-			) 
-			SELECT cohort, type, count(*) as samplecount
-			FROM terms t
-			JOIN c ON c.term_id = t.id
-			GROUP BY cohort, type`
-			)
-			.all()
+		const cred = serverconfig.dsCredentials?.[ds.label]
 
 		const supportedChartTypes = {}
 		const numericTypeCount = {}
-		// key: subcohort combinations, comma-joined, as in the subcohort_terms table
+		// key: subcohort combinations, comma-joined, alphabetically sorted, as in the subcohort_terms table
 		// value: array of chart types allowed by term types
 
-		for (const r of rows) {
-			if (!r.type) continue
-			// !!! r.cohort is undefined for dataset without subcohort
+		for (const r of ds.cohort.termdb.termtypeByCohort) {
+			if (!r.type) continue // skip ungraphable parent terms
+
 			if (!(r.cohort in supportedChartTypes)) {
 				supportedChartTypes[r.cohort] = new Set(['barchart', 'regression'])
 				if (ds.cohort.scatterplots) supportedChartTypes[r.cohort].add('sampleScatter')
@@ -1123,23 +1154,6 @@ thus less things to worry about...
 	}
 }
 
-function test_tables(cn) {
-	const s = cn.prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name=?`)
-	return {
-		terms: s.get('terms'),
-		ancestry: s.get('ancestry'),
-		alltermsbyorder: s.get('alltermsbyorder'),
-		termhtmldef: s.get('termhtmldef'),
-		category2vcfsample: s.get('category2vcfsample'),
-		annotations: s.get('annotations'),
-		chronicevents: s.get('chronicevents'),
-		precomputed: s.get('precomputed'),
-		subcohort_terms: s.get('subcohort_terms'),
-		sampleidmap: s.get('sampleidmap'),
-		term2genes: s.get('term2genes')
-	}
-}
-
 // helper function to display or log the filled-in, constructed sql statement
 // use for debugging only, do not feed directly into better-sqlite3
 export function interpolateSqlValues(sql, values) {
@@ -1162,4 +1176,61 @@ export function interpolateSqlValues(sql, values) {
 			return char
 		})
 		.join('')
+}
+
+export function mayComputeTermtypeByCohort(ds) {
+	if (ds.cohort.termdb.termtypeByCohort) {
+		if (!Array.isArray(ds.cohort.termdb.termtypeByCohort)) throw 'termtypeByCohort is not array'
+		// already set, by one of two methods:
+		// 1. db query below
+		// 2. gdc dictionary building
+		return
+	}
+
+	if (!ds.cohort?.db?.connection) throw 'termtypeByCohort[] not set but cohort.db.connection missing'
+
+	/*
+	not available; perform db query for the first request, and cache the results
+
+	(as this query may be expensive thus do not want to run it for every request...)
+
+	for dataset with subcohort:
+	[
+	  { cohort: 'CCSS', type: '', samplecount: 615 },
+	  { cohort: 'CCSS', type: 'categorical', samplecount: 393 },
+	  { cohort: 'SJLIFE', type: '', samplecount: 636 },
+	  { cohort: 'SJLIFE', type: 'categorical', samplecount: 457 },
+	  ...
+	  { cohort: 'CCSS,SJLIFE', type: '', samplecount: 614 },
+	  { cohort: 'CCSS,SJLIFE', type: 'categorical', samplecount: 393 },
+	  ...
+	]
+
+	for dataset without subcohort:
+	[
+		  { cohort: '', type: '', samplecount: 11 },
+		  { cohort: '', type: 'categorical', samplecount: 65 },
+		  { cohort: '', type: 'float', samplecount: 1 },
+		  { cohort: '', type: 'survival', samplecount: 2 }
+	]
+
+	*/
+	ds.cohort.termdb.termtypeByCohort = ds.cohort.db.connection
+		.prepare(
+			`WITH c AS (
+			SELECT cohort, term_id
+			FROM subcohort_terms s
+			GROUP BY cohort, term_id
+		) 
+		SELECT cohort, type, count(*) as samplecount
+		FROM terms t
+		JOIN c ON c.term_id = t.id
+		GROUP BY cohort, type`
+		)
+		.all()
+}
+
+export function listDbTables(cn) {
+	const rows = cn.prepare("SELECT name FROM sqlite_master WHERE type='table'").all()
+	return new Set(rows.map(i => i.name))
 }

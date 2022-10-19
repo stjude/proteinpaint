@@ -38,6 +38,8 @@ class TdbNav {
 		this.searching = false
 		this.samplecounts = {}
 		this.massSessionDuration = opts.massSessionDuration
+		this.sessionDaysLeft = opts.app.opts.sessionDaysLeft || null
+		this.sessionId = opts.app.opts.sessionId || null
 		setInteractivity(this)
 		setRenderers(this)
 	}
@@ -77,6 +79,7 @@ class TdbNav {
 					maxHistoryLen: 5
 				})
 			})
+			this.mayShowMessage_sessionDaysLeft()
 		} catch (e) {
 			throw e
 		}
@@ -137,30 +140,29 @@ export const navInit = getCompInit(TdbNav)
 function setRenderers(self) {
 	self.initUI = appState => {
 		const header = self.opts.holder.append('div')
+		const tabDiv = header
+			.append('div')
+			.style('display', 'none')
+			.style('vertical-align', 'bottom')
+		const controlsDiv = header
+			//Fix for adding message underneath the search bar and buttons
+			.append('div')
+			.style('vertical-align', 'top')
+			.style('margin', '10px')
+			.style('display', 'inline-block')
 		self.dom = {
 			holder: self.opts.holder,
 			header,
-			tabDiv: header
-				.append('div')
-				.style('display', 'none')
-				.style('vertical-align', 'bottom'),
-			searchDiv: header
+			tabDiv,
+			controlsDiv,
+			searchDiv: controlsDiv
 				.append('div')
 				//.style('display', 'none')
-				.style('margin', '10px')
-				.style('vertical-align', 'top'),
-			sessionDiv: header
-				.append('div')
-				.style('display', 'inline-block')
-				.style('vertical-align', 'top'),
-			recoverDiv: header
-				.append('div')
-				.style('display', 'inline-block')
-				.style('vertical-align', 'top'),
-			helpDiv: header
-				.append('div')
-				.style('display', 'none')
-				.style('vertical-align', 'top'),
+				.style('margin', '10px'),
+			sessionDiv: controlsDiv.append('div').style('display', 'inline-block'),
+			recoverDiv: controlsDiv.append('div').style('display', 'inline-block'),
+			helpDiv: controlsDiv.append('div').style('display', 'none'),
+			sessionElapsedMessageDiv: controlsDiv.append('div').style('display', 'none'),
 			subheaderDiv: self.opts.holder
 				.append('div')
 				.style('display', 'block')
@@ -169,7 +171,6 @@ function setRenderers(self) {
 			messageDiv: self.opts.holder
 				.append('div')
 				.style('margin', '30px')
-				//.style('font-weight', 'bold')
 				.style('display', 'none'),
 			tip: new Menu({ padding: '5px' })
 		}
@@ -252,8 +253,19 @@ function setRenderers(self) {
 		self.dom.saveBtn = self.dom.sessionDiv
 			.append('button')
 			.style('margin', '10px')
-			.text('Save')
+			.text('New Session')
 			.on('click', self.getSessionUrl)
+
+		if (self.sessionDaysLeft != null) {
+			//Only show if called from `mass-session-id` URL
+			self.dom.fileBtn = self.dom.sessionDiv
+				.append('button')
+				.style('margin', '10px')
+				.text('Export Session')
+				.on('click', event => {
+					self.getSessionFile(event)
+				})
+		}
 
 		const helpPages = appState.termdbConfig.helpPages
 		if (helpPages) {
@@ -269,12 +281,30 @@ function setRenderers(self) {
 						.clear()
 						.show(p.left - 0, p.top + p.height + 5)
 						.d.append('div')
-						.style('padding', '5px 20px')
 					for (const page of helpPages) {
-						div.append('p').html(`<a href=${page.url} target=_blank>${page.label}</a>`)
+						div
+							.append('div')
+							.style('margin', '15px')
+							.append('a')
+							.attr('href', page.url)
+							.attr('target', '_blank')
+							.text(page.label)
 					}
 				})
 		}
+	}
+
+	self.mayShowMessage_sessionDaysLeft = () => {
+		if (!Number.isFinite(self.sessionDaysLeft)) {
+			// info not available, do not show msg
+			return
+		}
+		self.dom.sessionElapsedMessageDiv.style('display', 'block')
+		self.dom.remainingDaysMessage = self.dom.sessionElapsedMessageDiv
+			.append('div')
+			.style('display', 'block')
+			.style('opacity', '0.65')
+			.html(`<u>${self.sessionDaysLeft} days</u> left till this session is removed. You can save a new one.`)
 	}
 
 	self.updateUI = () => {
@@ -360,21 +390,22 @@ function setRenderers(self) {
 
 		if (selectCohort.title) {
 			self.dom.cohortTitle = self.dom.subheader.cohort
-				.append('div')
-				.html(`<h2 style="margin-left: 20px;">${selectCohort.title}</h2>`)
+				.append('h2')
+				.style('margin-left', '10px')
+				.text(selectCohort.title)
 		}
 
 		if (selectCohort.description) {
 			self.dom.cohortDescription = self.dom.subheader.cohort
 				.append('div')
-				.style('margin-left', '20px')
-				.text(selectCohort.description)
+				.style('margin-left', '10px')
+				.html(selectCohort.description)
 		}
 
 		if (selectCohort.prompt) {
 			self.dom.cohortPrompt = self.dom.subheader.cohort
 				.append('div')
-				.style('margin-left', '20px')
+				.style('margin-left', '10px')
 				.style('padding-top', '30px')
 				.style('padding-bottom', '10px')
 				.style('font-weight', 'bold')
@@ -384,7 +415,7 @@ function setRenderers(self) {
 		self.dom.cohortOpts = self.dom.subheader.cohort
 			.append('div')
 			.style('margin-bottom', '30px')
-			.style('margin-left', '13px')
+			.style('margin-left', '10px')
 
 		const trs = self.dom.cohortOpts
 			.append('table')
@@ -405,6 +436,7 @@ function setRenderers(self) {
 					.attr('value', i)
 					.property('checked', i === self.activeCohort)
 					.style('margin-right', '5px')
+					.style('margin-left', '0px')
 					.on('click', () => self.app.dispatch({ type: 'cohort_set', activeCohort: i }))
 
 				td0
@@ -428,7 +460,7 @@ function setRenderers(self) {
 		self.dom.cohortTable
 			.select('table')
 			.style('border-collapse', 'collapse')
-			.style('margin', '20px')
+			.style('margin', '10px')
 
 		self.dom.cohortTable
 			.select('thead')
@@ -449,7 +481,7 @@ function setRenderers(self) {
 		if (selectCohort.asterisk) {
 			self.dom.cohortAsterisk = self.dom.subheader.cohort
 				.append('div')
-				.style('margin-left', '20px')
+				.style('margin-left', '10px')
 				.style('padding-top', '20px')
 				.style('padding-bottom', '20px')
 				.style('font-size', 'small')
@@ -483,6 +515,7 @@ function setInteractivity(self) {
 	}
 
 	self.getSessionUrl = async () => {
+		self.dom.saveBtn.property('disabled', true)
 		const res = await dofetch3('/massSession', {
 			method: 'POST',
 			body: JSON.stringify(self.app.getState())
@@ -494,7 +527,21 @@ function setInteractivity(self) {
 			.append('div')
 			.style('margin', '10px')
 			.html(
-				`<a href='${url}' target=_blank>${url}</a><br><div style="font-size:.8em;opacity:.6"><span>Click URL to recover this session. You can bookmark or share this URL.</span><br><span>This session will be saved for ${self.massSessionDuration} days.</span></div>`
+				`<a href='${url}' target=_blank>${res.id}</a><br><div style="font-size:.8em;opacity:.6"><span>Click the link to recover this session. You can bookmark or share this link.</span><br><span>This session will be saved for ${self.massSessionDuration} days.</span></div>`
 			)
+		setTimeout(() => {
+			self.dom.saveBtn.property('disabled', false)
+		}, 1000)
+	}
+
+	self.getSessionFile = async event => {
+		//Download mass-session-id file
+		const res = await dofetch3(`/massSession?id=${self.sessionId}`)
+		const a = document.createElement('a')
+		const dataStr = 'data:application/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(res.state))
+		a.setAttribute('href', dataStr)
+		a.download = `${self.sessionId}.json`
+		a.click()
+		a.remove()
 	}
 }

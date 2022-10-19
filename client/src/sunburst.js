@@ -138,7 +138,7 @@ export default function(opts) {
 		.on('click', (event, d) => {
 			if (!click_ring) return
 			// TODO
-			click_ring(d)
+			click_ring(event, d)
 		})
 
 	const eyeheight = emptyspace * 2

@@ -34,6 +34,7 @@ const section_BAM = 'BAM',
 	section_miscTk = 'Misc track types',
 	section_study = 'legacy study',
 	section_mds = 'mds',
+	section_legacyds = 'legacy ds', // to be replaced by mds3
 	section_scatterplot = 'scatterplot',
 	section_singleCell = 'single cell',
 	section_termdbTree = 'termdb tree',
@@ -342,6 +343,14 @@ makeURL([
 		['ERG','?study=proteinpaint_demo/hg19/heatmap/heatmapDemo.json'],
 	]
 },
+
+{name:section_legacyds,
+	links:[
+		['pediatric','?genome=hg19&gene=bcr&dataset=pediatric'],
+		['cosmic','?genome=hg19&gene=bcr&dataset=COSMIC'],
+	]
+},
+
 {name:section_mds,
 	card:'genomepaint',
 	links:[
@@ -452,22 +461,9 @@ makeURL([
 			//hidden:['exposed, dose unknown','unknown exposure']
 		})],
 
-		'others',
-		
-		['scatter plot', '?noheader=1&mass={"dslabel":"PNET","genome":"hg19","plots":[{"chartType":"sampleScatter","name":"Methylome TSNE","colorTW":{"id":"TSNE Category"}}]}'],
+		'matrix',
 
-		['survival','?noheader=1&mass='+JSON.stringify( {
-			dslabel:'TermdbTest',
-			nav: { activeTab: 1 },
-			genome:'hg38',
-			plots: [ {
-				chartType:'survival',
-				term2: { id: 'diaggrp' },
-				term: { id: 'efs' }
-			} ],
-		})],
-
-		['matrix','?noheader=1&mass='+JSON.stringify({
+		['SJLife','?noheader=1&mass='+JSON.stringify({
 			dslabel:'SJLife',
 			nav: { activeTab: 1 },
 			genome:'hg38',
@@ -504,6 +500,88 @@ makeURL([
 				filter: {"type":"tvslst","in":true,"join":"and","lst":[{"tag":"cohortFilter","type":"tvs","tvs":{"term":{"id":"subcohort","type":"categorical"},"values":[{"key":"SJLIFE","label":"SJLIFE"}]}},{"type":"tvslst","in":true,"join":"","lst":[{"type":"tvs","tvs":{"term":{"type":"categorical","values":{"Non-Hodgkin lymphoma":{"label":"Non-Hodgkin lymphoma"},"Hodgkin lymphoma":{"label":"Hodgkin lymphoma"},"Central nervous system (CNS)":{"label":"Central nervous system (CNS)"},"Acute myeloid leukemia":{"label":"Acute myeloid leukemia"},"Wilms tumor":{"label":"Wilms tumor"},"Acute lymphoblastic leukemia":{"label":"Acute lymphoblastic leukemia"},"Ewing sarcoma family of tumors":{"label":"Ewing sarcoma family of tumors"},"Neuroblastoma":{"label":"Neuroblastoma"},"Rhabdomyosarcoma":{"label":"Rhabdomyosarcoma"},"Osteosarcoma":{"label":"Osteosarcoma"},"Other leukemia":{"label":"Other leukemia"},"MDS/Acute myeloid leukemia":{"label":"MDS/Acute myeloid leukemia"},"Germ cell tumor":{"label":"Germ cell tumor"},"Soft tissue sarcoma":{"label":"Soft tissue sarcoma"},"Other malignancy":{"label":"Other malignancy"},"Chronic myeloid leukemia":{"label":"Chronic myeloid leukemia"},"Retinoblastoma":{"label":"Retinoblastoma"},"Melanoma":{"label":"Melanoma"},"Liver malignancies":{"label":"Liver malignancies"},"Nasopharyngeal carcinoma":{"label":"Nasopharyngeal carcinoma"},"Other carcinoma":{"label":"Other carcinoma"},"Non-malignancy":{"label":"Non-malignancy"},"Histiocytosis":{"label":"Histiocytosis"},"Colon carcinoma":{"label":"Colon carcinoma"}},"groupsetting":{"inuse":false},"name":"Diagnosis Group","id":"diaggrp","isleaf":true,"included_types":["categorical"],"child_types":[]},"values":[{"samplecount":95,"label":"Germ cell tumor","key":"Germ cell tumor","bar_width_frac":0.0729}]},"$id":6}],"tag":"filterUiRoot","$id":2}]}
 			}
 		})],
+
+		['PNET','?noheader=1&mass='+JSON.stringify({
+			dslabel:'PNET',
+			genome:'hg19',
+			plots: [
+				{
+					chartType:'matrix',
+					termgroups: [{
+						lst: [{
+							term:{
+								name:'TP53',
+								type:'geneVariant'
+							}
+						}]
+					}]
+				}
+			]
+		})],
+
+		['ASH','?noheader=1&mass='+JSON.stringify({
+			dslabel:'ASH',
+			genome:'hg38',
+			plots: [
+				{
+					chartType:'matrix',
+					termgroups: [{
+						lst: [
+						{ term:{
+							name:'BCR',
+							type:'geneVariant'
+						} },
+						{ term:{
+							name:'KRAS',
+							type:'geneVariant'
+						} },
+						{ term:{
+							name:'NOTCH1',
+							type:'geneVariant'
+						} },
+						]
+					}]
+				}
+			]
+		})],
+
+		['GDC','?noheader=1&mass='+JSON.stringify({
+			dslabel:'GDC',
+			genome:'hg38',
+			plots: [
+				{
+					chartType:'matrix',
+					termgroups: [{
+						lst: [
+						{ term:{
+								name:'MYC',
+								type:'geneVariant'
+						} },
+						{ term:{
+								name:'HOXA1',
+								type:'geneVariant'
+						} },
+						// cannot use AKT1 for now due to incompatible refseq canonical isoform
+						]
+					}]
+				}
+			]
+		})],
+		'others',
+		
+		['scatter plot', '?noheader=1&mass={"dslabel":"PNET","genome":"hg19","plots":[{"chartType":"sampleScatter","name":"Methylome TSNE","colorTW":{"id":"TSNE Category"}}]}'],
+
+		['survival','?noheader=1&mass='+JSON.stringify( {
+			dslabel:'TermdbTest',
+			nav: { activeTab: 1 },
+			genome:'hg38',
+			plots: [ {
+				chartType:'survival',
+				term2: { id: 'diaggrp' },
+				term: { id: 'efs' }
+			} ],
+		})],
+
 
 		['num filter','?noheader=1&mass='+JSON.stringify( {
 			dslabel:'SJLife',
@@ -1303,7 +1381,11 @@ These test files should be publicly sharable (with patient identifier removed et
 
 A tarball of the entire proteinpaint_demo/ folder is available at https://pecan.stjude.cloud/static/pp-support/pp.demo.tgz</p>
 
-<p>README listing <a href='/readme.html'>/readme.html</a>. Browser tests <a href='/testrun.html'>/testrun.html</a></p>
+<p>
+README listing <a href=/readme.html>/readme.html</a>.
+Browser tests <a href=/testrun.html>/testrun.html</a>.
+Server health <a href=/healthcheck>/healthcheck</a>.
+</p>
 
 <p>TODO how to open JS console automatically in the new tab by clicking a link? That helps with debugging.</p>
 </div>

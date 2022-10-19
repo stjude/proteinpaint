@@ -1,7 +1,5 @@
-const fs = require('fs')
-const path = require('path')
-const utils = require('./utils')
 const serverconfig = require('./serverconfig.js')
+const termdbConfig = require('./termdb.config')
 const termdbsql = require('./termdb.sql')
 const phewas = require('./termdb.phewas')
 const density_plot = require('./termdb.densityPlot')
@@ -13,6 +11,7 @@ const LDoverlay = require('./mds2.load.ld').overlay
 const getOrderedLabels = require('./termdb.barsql').getOrderedLabels
 const isUsableTerm = require('#shared/termdb.usecase').isUsableTerm
 const trigger_getSampleScatter = require('./termdb.scatter').trigger_getSampleScatter
+import * as d3 from 'd3'
 
 /*
 ********************** EXPORTED
@@ -26,6 +25,7 @@ const encodedParams = [
 	'filter',
 	'tvslst',
 	'term1_q',
+	'term2_q',
 	'usecase',
 	'variant_filter',
 	'info_fields',
@@ -74,7 +74,7 @@ export function handle_request_closure(genomes) {
 				return await phewas.trigger(q, res, ds)
 			}
 			if (q.density) return await density_plot(q, res, ds)
-			if (q.gettermdbconfig) return trigger_gettermdbconfig(q, res, tdb, ds.cohort)
+			if (q.gettermdbconfig) return termdbConfig.make(q, res, ds)
 			if (q.getcohortsamplecount) return trigger_getcohortsamplecount(q, res, ds)
 			if (q.getsamplecount) return trigger_getsamplecount(q, res, ds)
 			if (q.getsamples) return trigger_getsamples(q, res, ds)
@@ -86,6 +86,7 @@ export function handle_request_closure(genomes) {
 			if (q.getLDdata) return trigger_getLDdata(q, res, ds)
 			if (q.genesetByTermId) return trigger_genesetByTermId(q, res, tdb)
 			if (q.getSampleScatter) return await trigger_getSampleScatter(q, res, ds)
+			if (q.getViolinPlotData) return await trigger_getViolinPlotData(q, res, ds)
 
 			// TODO: use trigger flags like above?
 			if (q.for == 'termTypes') {
@@ -145,43 +146,6 @@ function trigger_getsamples(q, res, ds) {
 	const lst = termdbsql.get_samples(q.filter, ds)
 	const samples = lst.map(i => ds.cohort.termdb.q.id2sampleName(i))
 	res.send({ samples })
-}
-
-function trigger_gettermdbconfig(q, res, tdb, cohort) {
-	// add attributes to this object for revealing to client
-	const c = {
-		selectCohort: tdb.selectCohort, // optional
-		supportedChartTypes: tdb.q.getSupportedChartTypes(q.embedder),
-		allowedTermTypes: tdb.allowedTermTypes || [],
-		termMatch2geneSet: tdb.termMatch2geneSet
-	}
-	if (tdb.helpPages) c.helpPages = tdb.helpPages
-	if (tdb.timeScale) c.timeScale = tdb.timeScale
-	if (tdb.minTimeSinceDx) c.minTimeSinceDx = tdb.minTimeSinceDx
-	if (tdb.restrictAncestries) {
-		c.restrictAncestries = []
-		for (const i of tdb.restrictAncestries) {
-			c.restrictAncestries.push({ name: i.name, tvs: i.tvs })
-		}
-	}
-	const cred = serverconfig.dsCredentials?.[q.dslabel]
-	if (cred) {
-		// TODO: may restrict required auth by chart type???
-		// currently, the client code assumes that it will only apply to the dataDownload MASS app
-		c.requiredAuth = {
-			type: cred.type || 'login',
-			headerKey: cred.headerKey
-		}
-	}
-
-	if (cohort.scatterplots) {
-		// this dataset has premade scatterplots. reveal to client
-		c.scatterplots = cohort.scatterplots.plots.map(p => {
-			return { name: p.name, dimensions: p.dimensions, colorTW: p.colorTW, shapeTW: p.shapeTW }
-		})
-	}
-
-	res.send({ termdbConfig: c })
 }
 
 function trigger_gettermbyid(q, res, tdb) {
@@ -315,6 +279,138 @@ function trigger_getnumericcategories(q, res, tdb, ds) {
 	if (q.filter) arg.filter = q.filter
 	const lst = termdbsql.get_summary_numericcategories(arg)
 	res.send({ lst })
+}
+
+function trigger_getViolinPlotData(q, res, ds) {
+	/*
+	q={}
+	q.termid=str
+	q.filter={}
+	q.term2={} termwrapper
+	*/
+
+	const getRowsParam = {
+		ds,
+		filter: q.filter,
+		term1_id: q.termid,
+		term1_q: { mode: 'continuous' } // hardcode to retrieve numeric values for violin/boxplot computing on this term
+	}
+
+	if (q.term2) {
+		if (typeof q.term2 == 'string') q.term2 = JSON.parse(q.term2) // look into why term2 is not parsed beforehand
+
+		getRowsParam.term2_id = q.term2.id
+		getRowsParam.term2_q = q.term2.q
+	}
+
+	const result = termdbsql.get_rows(getRowsParam)
+	/*
+	result = {
+	  lst: [
+	  	{
+			sample=int
+			key0,val0,
+			key1,val1, // key1 and val1 are the same, with numeric values from term1
+			key2,val2
+				// if q.term2 is given, key2 is the group/bin label based on term2, using which the samples will be divided
+				// if q.term2 is missing, key2 is empty string and won't divide into groups
+		}, ...x
+	  ]
+	}
+	*/
+
+	result.lst.sort((a, b) => a.val2 - b.val2)
+
+	// some values may be negative float values so filter those out.
+	const updatedResult = []
+	for (const [i, v] of result.lst.entries()) {
+		if (Math.sign(v.key1) != -1) {
+			updatedResult.push(v)
+		}
+	}
+
+	const valueSeries = []
+
+	if (q.term2) {
+		const key2_to_values = new Map() // k: key2 value, v: list of term1 values
+
+		for (const i of updatedResult) {
+			if (i.key2 == undefined || i.key2 == null) {
+				// missing key2
+				throw 'key2 missing'
+			}
+			if (!key2_to_values.has(i.key2)) key2_to_values.set(i.key2, [])
+			key2_to_values.get(i.key2).push(i.key1)
+		}
+
+		for (const [label, values] of key2_to_values) {
+			valueSeries.push({ label, values })
+		}
+	} else {
+		// all numeric values go into one array
+		const values = result.lst.map(i => i.key1)
+		valueSeries.push({
+			values,
+			label: 'All samples'
+		})
+	}
+
+	for (const item of valueSeries) {
+		// item: { label=str, values=[v1,v2,...] }
+
+		const bins0 = computeViolinData(item.values)
+
+		const bins = []
+		for (const b of bins0) {
+			const b2 = {
+				x0: b.x0,
+				x1: b.x1
+			}
+			delete b.x0
+			delete b.x1
+			b2.lst = b
+			bins.push(b2)
+		}
+		const yScaleValues = []
+		for (const k of bins) {
+			if (k.lst.length >= 1) {
+				yScaleValues.push(...k.lst)
+			}
+		}
+		const biggestBin = Math.max(...bins0.map(b => b.length))
+
+		item.bins = bins
+
+		item.biggestBin = biggestBin
+		item.yScaleValues = yScaleValues
+
+		delete item.values
+	}
+
+	res.send(valueSeries)
+}
+
+// compute bins using d3
+export function computeViolinData(values) {
+	let min = Math.min(...values),
+		max = Math.max(...values)
+
+	const yScale = d3.scaleLinear().domain([min, max])
+
+	let ticksCompute
+	if (values.length < 50) {
+		ticksCompute = 5
+	} else {
+		ticksCompute = 12
+	}
+
+	const binBuilder = d3
+		.bin()
+		.domain([min, max]) /* extent of the data that is lowest to highest*/
+		.thresholds(yScale.ticks(ticksCompute)) /* buckets are created which are separated by the threshold*/
+		.value(d => d) /* bin the data points into this bucket*/
+
+	return binBuilder(values)
 }
 
 function trigger_scatter(q, res, tdb, ds) {

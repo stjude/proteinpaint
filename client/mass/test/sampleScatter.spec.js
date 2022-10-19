@@ -9,8 +9,8 @@ const helpers = require('../../test/front.helpers.js')
 const runpp = helpers.getRunPp('mass', {
 	state: {
 		vocab: {
-			dslabel: 'TermdbTest',
-			genome: 'hg38'
+			dslabel: 'PNET',
+			genome: 'hg19'
 		}
 	},
 	debug: 1
@@ -28,7 +28,7 @@ tape('\n', function(test) {
 	test.end()
 })
 
-tape('initial tests', function(test) {
+tape.only('initial tests', function(test) {
 	test.timeoutAfter(3000)
 
 	runpp({
@@ -36,8 +36,8 @@ tape('initial tests', function(test) {
 			plots: [
 				{
 					chartType: 'sampleScatter',
-					term: {
-						id: 'diaggrp'
+					colorTW: {
+						id: 'TSNE Category'
 					},
 					name: 'Methylome TSNE'
 				}
@@ -61,12 +61,12 @@ tape('initial tests', function(test) {
 
 	let scatterDiv
 	function testSymbolCount(scatter) {
-		scatterDiv = scatter.Inner.dom.div
+		scatterDiv = scatter.Inner.dom.holder
 		const minSymbols = 50
-		const numSymbols = scatterDiv.selectAll('circle').size()
+		const numSymbols = scatterDiv.selectAll('path').size()
 		test.true(
 			numSymbols > minSymbols,
-			`There are ${numSymbols} circles. It should have more than ${minSymbols} scatter circles`
+			`There are ${numSymbols} symbols. It should have more than ${minSymbols} symbols`
 		)
 	}
 })

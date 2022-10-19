@@ -177,7 +177,10 @@ export function runproteinpaint(arg) {
 			if (
 				!arg.noheader &&
 				!window.location.search.includes('noheader') &&
-				!window.location.search.includes('mass-session-id')
+				!window.location.search.includes('mass-session-id') &&
+				//Fix for header appearing on URL parameters
+				!window.location.search.includes('mass-session-file') &&
+				!window.location.search.includes('mass-session-url')
 			) {
 				makeheader(app, data, arg.jwt)
 			}

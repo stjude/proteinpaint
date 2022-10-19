@@ -94,6 +94,7 @@ if (!serverconfig.binpath) {
 				if (fs.existsSync('./server')) serverconfig.binpath = fs.realpathSync('./server')
 				else if (fs.existsSync('./src')) serverconfig.binpath = fs.realpathSync('./src/..')
 				else if (__dirname.includes('/server/')) serverconfig.binpath = __dirname.split('/server/')[0] + '/server'
+				else if (__dirname.includes('/proteinpaint')) serverconfig.binpath = __dirname
 				else throw 'unable to determine the serverconfig.binpath'
 			}
 		}

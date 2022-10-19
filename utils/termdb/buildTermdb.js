@@ -240,6 +240,7 @@ function loadTermsFile(scriptArg) {
 	/* use "terms" file
 	 */
 	const terms = []
+	const parent_ids = new Set() //To store parent_id for each term in terms
 	for (const line of fs
 		.readFileSync(scriptArg.get('terms'), { encoding: 'utf8' })
 		.trim()
@@ -258,9 +259,16 @@ function loadTermsFile(scriptArg) {
 		}
 
 		term.parent_id = parent_id
+		parent_ids.add(parent_id)
 		term.child_order = child_order // not an official json attribute
-		term.isleaf = isleaf ? true : false
+		term.isleaf = Number(isleaf) ? true : false
 		terms.push(term)
+	}
+	//parent term, whose term.id is found as a parent_id for another term, should have isleaf: 0
+	for (const term of terms) {
+		if (parent_ids.has(term.id) && term.isleaf) {
+			throw term.id + ': isleaf cannot be true for a parent term'
+		}
 	}
 	return terms
 }

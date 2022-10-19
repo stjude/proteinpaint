@@ -33,11 +33,14 @@ main
 const allNonDictionaryTerms = [
 	{
 		termtype: 'snplst',
-		html: 'A list of SNPs <span style="font-size:.7em">All SNPs are analyzed in one model</span>'
+		//html: 'A list of SNPs <span style="font-size:.7em">All SNPs are analyzed in one model</span>'
+		html: 'A list of variants'
 	},
+
 	{
 		termtype: 'snplocus',
-		html: 'Variants in a locus <span style="font-size:.7em">Variants are analyzed individually</span>'
+		//html: 'Variants in a locus <span style="font-size:.7em">Variants are analyzed individually</span>'
+		html: 'Variants in a locus'
 	},
 	{
 		termtype: 'prs',

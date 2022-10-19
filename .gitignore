@@ -11,14 +11,10 @@ dist/*
 */*/dist/
 */*/*/dist/
 
-archive/*
-**/package/*
+
 package-lock.json
 
-public/bin/*
-*/*/public/bin/*
-*/*/public/public
-
+**/public/bin/*
 public/tmp/*
 public/data/*
 public/stage/*
@@ -33,7 +29,7 @@ public/ALCL.html
 public/builds/*
 public/static/*.docx
 public/static/*.pdf
-public/rev.txt
+**/rev.txt
 
 /utils/vcf2genesamplematrix/bin.js
 /utils/vcf2genesamplematrix/output.html
@@ -57,14 +53,17 @@ cairo-*/*
 canvas/*
 pixman-*/*
 serverconfig.json
-server.js*
+**/server.js*
 !client/rx/server.js
+!sj/**/server.js
 setup/*gz*
 setup/*
-tmpbuild/*
-tmppack*/*
-*/tmppack/*
+**/tmpbuild*/*
+**/tmppack*/*
 pp-server/*
+archive/*
+**/package/*
+**/package */*
 
 *-stash.js
 
@@ -75,10 +74,6 @@ pp-server/*
 
 deploys/
 
-p4/node_modules/
-p4/public/bin/*
-p4/config.json
-p4/public/dev.html
 .vscode/launch.json
 .vscode/settings.json
 .idea/
@@ -92,3 +87,6 @@ p4/public/dev.html
 ssl-proxy.json
 .RData
 log.txt
+*-debug.*
+build/sj/env.sh
+rust/Dockerfile

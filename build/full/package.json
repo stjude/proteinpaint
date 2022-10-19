@@ -1,7 +1,7 @@
 {
   "private": false,
   "name": "@stjude/proteinpaint",
-  "bin": "server/bin.js",
+  "bin": "server/start.js",
   "main": "client/dist/app.js",
   "browser": "public/bin/proteinpaint.js",
   "repository": {
@@ -19,8 +19,10 @@
     "server/genome",
     "server/src/serverconfig.js",
     "server/server.js*",
+    "server/start.js",
     "server/utils/*.R",
     "server/cards",
+    "rev.txt",
     "rust/stjude-proteinpaint-rust-*.tgz",
     "utils/install.pp.js"
   ],

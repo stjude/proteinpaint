@@ -55,9 +55,7 @@ fi
 # CONTEXTUAL CONFIG
 #####################
 
-APP=pp # might be overridden below
-RUN_SERVER_SCRIPT=proteinpaint_run_node.sh # might be overridden below
-GIT_REMOTE=git@github.com:stjude/proteinpaint.git
+APP=pp
 WPSERVERMODE=production
 WPSERVERDEVTOOL=''
 WPCLIENTDEVTOOL=''
@@ -211,10 +209,13 @@ else
 	mv rust/*.tgz $APP/rust
 	mv server/server.js* $APP/
 	mv server/package.json $APP/
+	
 	# need to modify the tarball name so that the rust build will be triggered via postinstall npm script
 	# TODO: use lerna to automate and cache builds
-	RUSTPKGVER="$(grep version rust/package.json | sed 's/.*"version": "\(.*\)".*/\1/')"
-	sed -i '.bak' "s%\"@stjude/proteinpaint-rust\": \"^1.0.0\"%\"@stjude/proteinpaint-rust\": \"./rust/stjude-proteinpaint-rust-$RUSTPKGVER.tgz\"%" $APP/package.json
+	RUSTPKGVER=$(node -p "require('./rust/package.json').version")
+	cd $APP
+	npm pkg set dependencies.@stjude/proteinpaint-rust=./rust/stjude-proteinpaint-rust-$RUSTPKGVER.tgz
+	cd ..
 
 	mv server/genome $APP/
 	mv server/dataset $APP/

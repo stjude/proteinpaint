@@ -698,6 +698,7 @@ fn check_first_last_nucleotide_correctly_aligned(
         // This will work only if the nucleotide at the end of the sequence is wrong (not beginning)
         let correct_alignment_length =
             r_seq.len() - first_unmatched_sequence.len() - first_matched_nucleotides.len();
+        //println!("correct_alignment_length:{}", correct_alignment_length);
         for i in 0..correct_alignment_length {
             //Adding those nucleotides that are correctly aligned
             q_seq_correct.push(q_seq_chars[i]);
@@ -814,6 +815,9 @@ fn check_first_last_nucleotide_correctly_aligned(
             )
         }
         alignment_changed = true;
+        //println!("q_seq_correct:{}", q_seq_correct);
+        //println!("align_correct:{}", align_correct);
+        //println!("r_seq_correct:{}", r_seq_correct);
     } else if wrong_substitution == true {
         let correct_alignment_length =
             r_seq.len() - first_unmatched_sequence.len() - first_substituted_nucleotides.len();
@@ -1151,6 +1155,10 @@ fn check_first_last_nucleotide_correctly_aligned(
         //println!("align_correct:{}", align_correct);
         //println!("r_seq_correct:{}", r_seq_correct);
 
+        let q_seq_correct_old = q_seq_correct.clone();
+        let align_correct_old = align_correct.clone();
+        let r_seq_correct_old = r_seq_correct.clone();
+
         q_seq_correct = String::new();
         align_correct = String::new();
         r_seq_correct = String::new();
@@ -1263,8 +1271,15 @@ fn check_first_last_nucleotide_correctly_aligned(
             }
             alignment_changed = true;
         }
+
+        if align_correct.len() == 0 {
+            // Reverting to earlier sequence before consideration of the left side of the sequence, only happens when no suitable alignment found to the left
+            q_seq_correct = q_seq_correct_old;
+            r_seq_correct = r_seq_correct_old;
+            align_correct = align_correct_old;
+        }
     }
-    if alignment_changed == false {
+    if alignment_changed == false || align_correct.len() == 0 {
         // In case no better alignment is found, output original alignment
         q_seq_correct = q_seq_original.to_owned();
         r_seq_correct = r_seq_original.to_owned();

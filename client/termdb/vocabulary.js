@@ -98,6 +98,7 @@ class Vocab {
 				this.verifiedToken = data.status === 'ok' && token
 				if (data.error) throw data.error
 				else {
+					this.sessionId = data['X-SjPPDs-Sessionid']
 					delete this.tokenVerificationMessage
 				}
 			} else {
@@ -111,6 +112,22 @@ class Vocab {
 
 	hasVerifiedToken() {
 		return !!this.verifiedToken
+	}
+
+	async trackDsAction({ action, details }) {
+		await dofetch3('/authorizedActions', {
+			method: 'POST',
+			credentials: 'include',
+			header: {
+				'X-SjPPDs-Sessionid': this.sessionId
+			},
+			body: Object.assign({
+				dslabel: this.vocab.dslabel,
+				action,
+				details,
+				'X-SjPPDs-Sessionid': this.sessionId
+			})
+		})
 	}
 
 	cacheTermQ(term, q) {
@@ -289,7 +306,9 @@ class TermdbVocab extends Vocab {
 			const key = _key == 'term' ? 'term1' : _key
 			if ('id' in term.term) {
 				params.push(key + '_id=' + encodeURIComponent(term.term.id))
-			} else if (term.term.type == 'geneVariant') {
+			}
+			//we'll assume that it is okay to handle all nonDictionaryTerms this way, not just geneVariant term //if (term.term.type == 'geneVariant')
+			else {
 				params.push(key + '=' + encodeURIComponent(JSON.stringify(term.term)))
 			}
 
@@ -507,6 +526,37 @@ class TermdbVocab extends Vocab {
 		}
 	}
 
+	async getViolinPlotData(arg) {
+		/*
+		should replace getDensityPlotData()
+
+		arg{}
+
+		arg.termid=str // main term to create violin/boxplot with
+		arg.term2={} // optional termwrapper of 2nd term to divide cohort
+			if term2 is given, will result in multiple plots
+			if missing, will result in one plot
+		arg.filter={}
+			optional
+
+		*/
+		const lst = [
+			'getViolinPlotData=1',
+			'genome=' + this.vocab.genome,
+			'dslabel=' + this.vocab.dslabel,
+			'termid=' + arg.termid
+		]
+		if (arg.term2) {
+			lst.push('term2=' + encodeURIComponent(JSON.stringify(arg.term2)))
+		}
+		if (arg.filter) {
+			const filterRoot = getNormalRoot(arg.filter)
+			lst.push('filter=' + encodeURIComponent(JSON.stringify(filterRoot)))
+		}
+		return await dofetch3('termdb?' + lst.join('&'))
+	}
+
+	// TODO replace with getViolinPlotData
 	async getDensityPlotData(term_id, num_obj, filter) {
 		let density_q =
 			'/termdb?density=1' +
@@ -716,6 +766,7 @@ class TermdbVocab extends Vocab {
 			return
 		}
 		const headers = auth ? { [auth.headerKey]: this.verifiedToken } : {}
+		if (this.sessionId) headers['X-SjPPDs-Sessionid'] = this.sessionId
 
 		const filter = getNormalRoot(opts.filter)
 		const isNewFilter = !deepEqual(this.currAnnoData.lastFilter, filter)
@@ -739,6 +790,7 @@ class TermdbVocab extends Vocab {
 			const copies = this.getCopiesToUpdate(termsToUpdate)
 			const init = {
 				headers,
+				credentials: 'include',
 				body: {
 					for: 'matrix',
 					genome: this.vocab.genome,

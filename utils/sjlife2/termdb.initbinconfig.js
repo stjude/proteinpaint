@@ -1,0 +1,1 @@
+../../server/shared/termdb.initbinconfig.js

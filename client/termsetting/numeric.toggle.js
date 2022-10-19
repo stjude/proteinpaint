@@ -110,6 +110,9 @@ export async function getHandler(self) {
 }
 
 export function fillTW(tw, vocabApi) {
+	// when missing, defaults mode to discrete
+	if (!tw.q.mode) tw.q.mode = 'discrete'
+
 	if (tw.q?.mode !== 'continuous' && !valid_binscheme(tw.q)) {
 		/*
 		if q is already initiated, do not overwrite
@@ -132,13 +135,12 @@ function valid_binscheme(q) {
 		// throw `${JSON.stringify(unsupportedKeys)} not supported for q.mode='continuous'`
 		return true
 	}*/
+
 	if (q.type == 'custom-bin') {
 		if (!Array.isArray(q.lst)) return false
-		if (!q.mode) q.mode = 'discrete'
 		return true
 	}
 	if (Number.isFinite(q.bin_size) && q.first_bin) {
-		if (!q.mode) q.mode = 'discrete'
 		if (q.first_bin.startunbounded) {
 			if (Number.isInteger(q.first_bin.stop_percentile) || Number.isFinite(q.first_bin.stop)) {
 				return true

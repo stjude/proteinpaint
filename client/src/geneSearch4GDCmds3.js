@@ -4,6 +4,10 @@ import { dofetch3 } from '#common/dofetch'
 import blockinit from './block.init'
 
 /*
+
+TODO make it a generic mechanism to type in gene and launch any tk
+the hardcoded "GDC mutations" phrase should be configurable as well...
+
 test with http://localhost:3000/example.gdc.html
 runpp({ geneSearch4GDCmds3:true })
 
@@ -15,6 +19,7 @@ arg = {}
 	runpp() argument object
 holder
 genomes = { hg38 : {} }
+
 */
 
 const gdcGenome = 'hg38'
@@ -26,7 +31,7 @@ export async function init(arg, holder, genomes) {
 
 	// first row, gene search
 	const geneInputDiv = holder.append('div')
-	geneInputDiv.append('div').text('To view GDC mutations on a gene, essssnter gene symbol or alias below.')
+	geneInputDiv.append('div').text('To view GDC mutations on a gene, enter gene symbol or alias below.')
 
 	// second row, display graph
 	const graphDiv = holder.append('div')

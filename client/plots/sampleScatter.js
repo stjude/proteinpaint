@@ -1,8 +1,9 @@
 import { getCompInit, copyMerge } from '../rx'
 import { fillTermWrapper } from '../termsetting/termsetting'
-import { select } from 'd3-selection'
+import { select, pointer } from 'd3-selection'
 import { scaleLinear as d3Linear } from 'd3-scale'
-import Partjson from 'partjson'
+import { export_data, newpane } from '../src/client'
+
 import {
 	zoom as d3zoom,
 	zoomIdentity,
@@ -12,7 +13,12 @@ import {
 	symbolSquare,
 	symbolWye,
 	symbolAsterisk,
-	symbolDiamond
+	symbolDiamond,
+	symbolDiamond2,
+	symbolStar,
+	symbolSquare2,
+	groups,
+	group
 } from 'd3'
 import { d3lasso } from '../common/lasso'
 import { Menu } from '#dom/menu'
@@ -40,6 +46,20 @@ class Scatter {
 	constructor() {
 		this.type = 'sampleScatter'
 		this.lassoOn = false
+		this.groups = []
+		const mySymbols = [
+			symbolCircle,
+			symbolSquare,
+			symbolCross,
+			symbolWye,
+			symbolTriangle,
+			//symbolAsterisk,
+			symbolDiamond,
+			symbolDiamond2,
+			symbolStar,
+			symbolSquare2
+		]
+		this.symbols = mySymbols.map(s => symbol(s))
 	}
 
 	async init(opts) {
@@ -67,7 +87,6 @@ class Scatter {
 
 		this.settings = {}
 		if (this.dom.header) this.dom.header.html('Scatter Plot')
-		if (!this.pj) this.pj = getPj(this)
 		await this.setControls()
 		setInteractivity(this)
 		setRenderers(this)
@@ -80,7 +99,8 @@ class Scatter {
 		}
 		return {
 			config,
-			termfilter: appState.termfilter
+			termfilter: appState.termfilter,
+			allowedTermTypes: appState.termdbConfig.allowedTermTypes
 		}
 	}
 
@@ -88,6 +108,7 @@ class Scatter {
 	// or current.state != replcament.state
 	async main() {
 		this.config = JSON.parse(JSON.stringify(this.state.config))
+
 		if (this.dom.header)
 			this.dom.header.html(
 				this.config.name + ` <span style="opacity:.6;font-size:.7em;margin-left:10px;">SCATTER PLOT</span>`
@@ -97,29 +118,22 @@ class Scatter {
 		const data = await this.app.vocabApi.getScatterData(reqOpts)
 		if (data.error) throw data.error
 		if (!Array.isArray(data.samples)) throw 'data.samples[] not array'
-		console.log(data)
-		this.pj.refresh({ data: data.samples })
-		// no option for dividing charts by term,
-		// so assume that the plot always corresponds to the first chart data
-		const chart0 = this.pj.tree.charts[0]
+		this.shapes = data.shapeLegend
+		const X = data.samples.map(item => item.x)
+		const Y = data.samples.map(item => item.y)
+		const xMin = Math.min(...X)
+		const xMax = Math.max(...X)
+		const yMin = Math.min(...Y)
+		const yMax = Math.max(...Y)
 		this.xAxisScale = d3Linear()
-			.domain([chart0.xMin, chart0.xMax])
+			.domain([xMin, xMax])
 			.range([0, this.settings.svgw])
+
 		this.axisBottom = axisBottom(this.xAxisScale)
 		this.yAxisScale = d3Linear()
-			.domain([chart0.yMax, chart0.yMin])
-			.range([this.settings.svgh, 0])
+			.domain([yMax, yMin])
+			.range([0, this.settings.svgh])
 		this.axisLeft = axisLeft(this.yAxisScale)
-		const mySymbols = [
-			symbolCircle,
-			symbolSquare,
-			symbolCross,
-			symbolWye,
-			symbolTriangle,
-			symbolAsterisk,
-			symbolDiamond
-		]
-		this.symbols = mySymbols.map(s => symbol(s).size(this.settings.radius))
 
 		this.render(data)
 	}
@@ -171,6 +185,13 @@ class Scatter {
 						vocabApi: this.app.vocabApi
 					},
 					{
+						label: 'Symbol size',
+						type: 'number',
+						chartType: 'sampleScatter',
+						settingsKey: 'size',
+						title: 'The internal width of the chart plot'
+					},
+					{
 						label: 'Chart width',
 						type: 'number',
 						chartType: 'sampleScatter',
@@ -201,8 +222,14 @@ class Scatter {
 
 	renderLegend(holder, categories, shapes) {
 		holder.selectAll('*').remove()
-		let row = holder
+		const colorDiv = holder.append('div').style('display', 'inline-block')
+		const shapeDiv = holder
 			.append('div')
+			.style('display', 'inline-block')
+			.style('vertical-align', 'top')
+
+		let row = colorDiv
+			.insert('div')
 			.attr('class', 'sja_clb')
 			.style('display', 'block')
 			.style('font-weight', 'bold')
@@ -214,7 +241,7 @@ class Scatter {
 			const color = category[1].color
 			const sample_count = category[1].sampleCount
 			const name = category[0]
-			const row = holder
+			const row = colorDiv
 				.append('div')
 				.attr('class', 'sja_clb')
 				.style('display', 'block')
@@ -231,8 +258,8 @@ class Scatter {
 				.html('&nbsp;' + name)
 		}
 		if (this.config.shapeTW) {
-			row = holder
-				.append('div')
+			row = shapeDiv
+				.insert('div')
 				.attr('class', 'sja_clb')
 				.style('display', 'block')
 				.style('font-weight', 'bold')
@@ -241,12 +268,12 @@ class Scatter {
 			items = []
 			let i = 0
 			const color = 'gray'
-
 			for (const shape of shapes) {
-				let category_shape = shape[1].shape
-				category_shape = this.symbols[category_shape].size(20)()
+				const index = shape[1].shape % this.symbols.length
+				const category_shape = this.symbols[index].size(64)()
 				const name = shape[0]
-				const row = holder
+
+				const row = shapeDiv
 					.append('div')
 					.attr('class', 'sja_clb')
 					.style('display', 'block')
@@ -254,19 +281,20 @@ class Scatter {
 				row
 					.append('div')
 					.style('display', 'inline-block')
+
 					.append('svg')
 					.attr('width', 20)
-					.attr('height', 20)
+					.attr('height', 22)
 
 					.append('path')
 					.attr('d', category_shape)
 					.attr('fill', color)
-					.attr('transform', c => `translate(15,15)`)
+					.attr('transform', c => `translate(10, 15)`)
 
 				row
 					.append('div')
 					.style('display', 'inline-block')
-					.html('&nbsp;' + name)
+					.html('&nbsp;' + name + ` (${shape[1].sampleCount})`)
 				i++
 			}
 		}
@@ -275,18 +303,15 @@ class Scatter {
 
 function setRenderers(self) {
 	self.render = function(data) {
-		const chartDivs = self.dom.holder.selectAll('.pp-scatter-chart').data(self.pj.tree.charts, d => d.chartId)
-
-		chartDivs.exit().remove()
-		chartDivs.each(self.updateCharts)
-		chartDivs.enter().each(addCharts)
+		const chartDiv = self.dom.holder.select('.pp-scatter-chart')
+		if (chartDiv.size() > 0) updateCharts(chartDiv)
+		else addCharts()
 		self.dom.holder.style('display', 'inline-block')
 		self.dom.holder.on('mouseover', self.mouseover).on('mouseout', self.mouseout)
-		self.renderLegend(self.dom.legendDiv, data.colorLegend, data.shapeLegend)
 
-		function addCharts(d) {
+		function addCharts() {
 			const s = self.settings
-			const div = select(this)
+			const div = self.dom.holder
 				.append('div')
 				.attr('class', 'pp-scatter-chart')
 				.style('opacity', 0)
@@ -298,36 +323,36 @@ function setRenderers(self) {
 				.style('top', 0) //layout.byChc[d.chc].top)
 				.style('left', 0) //layout.byChc[d.chc].left)
 				.style('text-align', 'left')
-				.style('background', 1 || s.orderChartsBy == 'organ-system' ? d.color : '')
 
 			const svg = div.append('svg')
-			renderSVG(svg, d, s, 0)
+			renderSVG(svg, div, s, 0, data)
 
 			div
 				.transition()
 				.duration(s.duration)
 				.style('opacity', 1)
-			setTools(self.dom, svg, d)
+
+			setTools(self.dom, svg, div)
+			self.renderLegend(self.dom.legendDiv, data.colorLegend, data.shapeLegend)
+		}
+
+		function updateCharts(d) {
+			const s = self.settings
+			const div = d
+
+			div
+				.transition()
+				.duration(s.duration)
+				.style('width', s.svgw + 50 + 'px')
+
+			div.selectAll('.sjpcb-unlock-icon').style('display', s.scale == 'byChart' ? 'none' : 'block')
+
+			renderSVG(div.select('svg'), d, s, s.duration, data)
+			self.renderLegend(self.dom.legendDiv, data.colorLegend, data.shapeLegend)
 		}
 	}
 
-	self.updateCharts = function(d) {
-		const s = self.settings
-		const div = select(this)
-
-		div
-			.transition()
-			.duration(s.duration)
-			.style('width', s.svgw + 50 + 'px')
-		//.style("top", layout.byChc[d.chc].top)
-		//.style("left", layout.byChc[d.chc].left)
-
-		div.selectAll('.sjpcb-unlock-icon').style('display', s.scale == 'byChart' ? 'none' : 'block')
-
-		renderSVG(div.select('svg'), d, s, s.duration)
-	}
-
-	function renderSVG(svg, chart, s, duration) {
+	function renderSVG(svg, chart, s, duration, data) {
 		svg
 			.transition()
 			.duration(duration)
@@ -337,28 +362,18 @@ function setRenderers(self) {
 		/* eslint-disable */
 		const [mainG, axisG, xAxis, yAxis, xTitle, yTitle] = getSvgSubElems(svg, chart)
 		/* eslint-enable */
-		//if (d.xVals) computeScales(d, s);
+		if (s.showAxes) mainG.attr('clip-path', `url(#${self.id + '-clip'})`)
 
-		const serieses = mainG
-			.selectAll('.sjpcb-scatter-series')
-			.data(chart.serieses, d => (d && d[0] ? d[0].seriesId : ''))
+		let serie = mainG.select('.sjpcb-scatter-series')
+		if (serie.size() == 0) serie = mainG.append('g').attr('class', 'sjpcb-scatter-series')
 
-		serieses.exit().remove()
-		serieses.each(function(series, i) {
-			renderSeries(select(this), chart, series, i, s, s.duration)
-		})
-		serieses
-			.enter()
-			.append('g')
-			.attr('class', 'sjpcb-scatter-series')
-			.each(function(series, i) {
-				renderSeries(select(this), chart, series, i, s, duration)
-			})
+		renderSerie(serie, chart, data, s, duration)
 	}
 
 	function getSvgSubElems(svg, chart) {
 		let mainG, axisG, xAxis, yAxis, xTitle, yTitle
 		if (svg.select('.sjpcb-scatter-mainG').size() == 0) {
+			svg.append('defs')
 			mainG = svg.append('g').attr('class', 'sjpcb-scatter-mainG')
 			axisG = mainG.append('g').attr('class', 'sjpcb-scatter-axis')
 			xAxis = axisG
@@ -379,6 +394,16 @@ function setRenderers(self) {
 				.attr('width', self.settings.svgw)
 				.attr('height', self.settings.svgh)
 				.attr('fill', 'white')
+			//Adding clip path
+			svg
+				.append('defs')
+				.append('clipPath')
+				.attr('id', self.id + '-clip')
+				.append('rect')
+				.attr('x', 80)
+				.attr('y', 0)
+				.attr('width', self.settings.svgw)
+				.attr('height', self.settings.svgh + 20)
 			renderAxes(xAxis, xTitle, yAxis, yTitle, self.settings, chart)
 		} else {
 			mainG = svg.select('.sjpcb-scatter-mainG')
@@ -394,16 +419,16 @@ function setRenderers(self) {
 		return [mainG, axisG, xAxis, yAxis, xTitle, yTitle]
 	}
 
-	function renderSeries(g, chart, series, i, s, duration) {
+	function renderSerie(g, chart, data, s, duration) {
 		// remove all symbols as there is no data id for privacy
 		g.selectAll('path').remove()
-		const symbols = g.selectAll('path').data(series.data, b => b.x)
+		const symbols = g.selectAll('path').data(data.samples)
 		symbols.exit().remove()
 		symbols
 			.transition()
 			.duration(duration)
-			.attr('transform', c => `translate(${c.scaledX + 100},${c.scaledY})`)
-			.attr('d', c => self.symbols[c.shape]())
+			.attr('transform', c => translate(self, c))
+			.attr('d', c => getShape(self, c))
 			.attr('fill', c => c.color)
 
 			.style('fill-opacity', s.fillOpacity)
@@ -411,13 +436,18 @@ function setRenderers(self) {
 			.enter()
 			.append('path')
 			/*** you'd need to set the symbol position using translate, instead of previously with cx, cy for a circle ***/
-			.attr('transform', c => `translate(${c.scaledX + 100},${c.scaledY})`)
-			.attr('d', c => self.symbols[c.shape]())
+			.attr('transform', c => translate(self, c))
+			.attr('d', c => getShape(self, c))
 			.attr('fill', c => c.color)
 
 			.style('fill-opacity', s.fillOpacity)
 			.transition()
 			.duration(duration)
+	}
+
+	function translate(self, c) {
+		const transform = `translate(${self.xAxisScale(c.x) + 100},${self.yAxisScale(c.y)})`
+		return transform
 	}
 
 	function setTools(dom, svg, d) {
@@ -441,12 +471,15 @@ function setRenderers(self) {
 			.style('display', 'block')
 			.style('margin', '20px')
 		icon_functions['lasso'](lassoDiv, { handler: toggle_lasso, enabled: false })
+		const groupDiv = dom.controls
+			.insert('div')
+			.style('display', 'block')
+			.style('margin', '20px')
 
 		const mainG = svg.select('.sjpcb-scatter-mainG')
 		const seriesG = mainG.select('.sjpcb-scatter-series')
 		const symbols = seriesG.selectAll('path')
 		const axisG = mainG.select('.sjpcb-scatter-axis')
-		const rect = mainG.select('.zoom')
 		const xAxisG = axisG.select('.sjpcb-scatter-x-axis')
 		const yAxisG = axisG.select('.sjpcb-scatter-y-axis')
 		const zoom = d3zoom()
@@ -454,10 +487,9 @@ function setRenderers(self) {
 			.on('zoom', handleZoom)
 
 		mainG.call(zoom)
-		rect.call(zoom)
-		let x = 0,
-			y = 0
-		let k = 1
+		const minsize = self.settings.size / 2
+		const maxsize = self.settings.size * 2
+
 		function handleZoom(event) {
 			// create new scale ojects based on event
 			const new_xScale = event.transform.rescaleX(self.xAxisScale)
@@ -466,9 +498,12 @@ function setRenderers(self) {
 			xAxisG.call(self.axisBottom.scale(new_xScale))
 			yAxisG.call(self.axisLeft.scale(new_yScale))
 			seriesG.attr('transform', event.transform)
-			k = event.transform.scale(1).k
-			symbols.attr('r', 4 / k)
+			const k = event.transform.scale(1).k
+			//on zoom in the particle size is kept
+			symbols.attr('d', c => getShape(self, c, self.settings.size / k))
+			if (self.lassoOn) lasso.selectedItems().attr('d', c => getShape(self, c, maxsize))
 		}
+
 		function zoomIn() {
 			zoom.scaleBy(mainG.transition().duration(750), 1.5)
 		}
@@ -484,18 +519,22 @@ function setRenderers(self) {
 				.call(zoom.transform, zoomIdentity)
 		}
 
-		const minRadius = self.settings.radius / 2
 		const lasso = d3lasso()
-			.items(symbols)
-			.targetArea(mainG)
-			.on('start', lasso_start)
-			.on('draw', lasso_draw)
-			.on('end', lasso_end)
+		self.lassoReset = () => {
+			lasso
+				.items(seriesG.selectAll('path'))
+				.targetArea(mainG)
+				.on('start', lasso_start)
+				.on('draw', lasso_draw)
+				.on('end', lasso_end)
+		}
+
+		self.lassoReset()
 
 		function lasso_start(event) {
 			lasso
 				.items()
-				.attr('d', c => self.symbols[c.shape].size(minRadius)())
+				.attr('d', c => getShape(self, c, minsize))
 				.style('fill-opacity', '.5')
 				.classed('not_possible', true)
 				.classed('selected', false)
@@ -507,7 +546,7 @@ function setRenderers(self) {
 
 				lasso
 					.possibleItems()
-					.attr('d', c => self.symbols[c.shape].size(self.settings.radius)())
+					.attr('d', c => getShape(self, c, maxsize))
 					.style('fill-opacity', '1')
 					.classed('not_possible', false)
 					.classed('possible', true)
@@ -515,14 +554,14 @@ function setRenderers(self) {
 				//Style the not possible dot
 				lasso
 					.notPossibleItems()
-					.attr('d', c => self.symbols[c.shape].size(minRadius)())
+					.attr('d', c => getShape(self, c, minsize))
 					.style('fill-opacity', '.5')
 					.classed('not_possible', true)
 					.classed('possible', false)
 			}
 		}
 
-		function lasso_end() {
+		function lasso_end(dragEnd) {
 			if (self.lassoOn) {
 				// Reset classes of all items (.possible and .not_possible are useful
 				// only while drawing lasso. At end of drawing, only selectedItems()
@@ -533,10 +572,17 @@ function setRenderers(self) {
 					.classed('possible', false)
 
 				// Style the selected dots
-				lasso.selectedItems().attr('d', c => self.symbols[c.shape].size(self.settings.radius)())
-				// if none of the items are selected, reset radius of all dots or
-				// keep them as unselected with tiny radius
+				lasso.selectedItems().attr('d', c => getShape(self, c, maxsize))
 				lasso.items().style('fill-opacity', '1')
+				self.selectedItems = []
+				let data
+				for (const item of lasso.selectedItems()._groups[0]) {
+					data = item.__data__
+					if (data.sample !== 'Ref') self.selectedItems.push(item)
+				}
+				lasso.notSelectedItems().attr('d', c => getShape(self, c))
+
+				showLassoMenu(dragEnd.sourceEvent)
 			}
 		}
 
@@ -544,7 +590,6 @@ function setRenderers(self) {
 			self.lassoOn = !self.lassoOn
 			if (self.lassoOn) {
 				mainG.on('.zoom', null)
-				rect.on('.zoom', null)
 				mainG.call(lasso)
 			} else {
 				mainG.on('mousedown.drag', null)
@@ -552,13 +597,194 @@ function setRenderers(self) {
 				lasso.items().classed('possible', false)
 				lasso
 					.items()
-					.attr('r', self.settings.radius)
+					.attr('r', self.settings.size)
 					.style('fill-opacity', '1')
 				mainG.call(zoom)
-				rect.call(zoom)
+				self.selectedItems = null
+				groupDiv.select('*').remove()
 			}
 			lassoDiv.select('*').remove()
 			icon_functions['lasso'](lassoDiv, { handler: toggle_lasso, enabled: self.lassoOn })
+			groupDiv.select('*').remove()
+		}
+
+		function showLassoMenu(event) {
+			self.dom.tip.clear().hide()
+			if (self.selectedItems.length == 0) return
+			self.dom.tip.show(event.clientX, event.clientY)
+
+			const menuDiv = self.dom.tip.d.append('div')
+			const listDiv = menuDiv.append('div').attr('class', 'sja_menuoption sja_sharp_border')
+			icon_functions['list'](listDiv, {
+				is_button: false,
+				text: `List ${self.selectedItems.length} samples`,
+				handler: () => {
+					showTable(self, self.selectedItems, `List of ${self.selectedItems.length} selected samples`)
+					self.dom.tip.hide()
+				}
+			})
+			if (self.state.allowedTermTypes.includes('survival')) {
+				const survivalDiv = menuDiv.append('div').attr('class', 'sja_menuoption sja_sharp_border')
+				icon_functions['survival'](survivalDiv, {
+					is_button: false,
+					handler: async e => {
+						const subMenuDiv = new Menu({ padding: '5px' })
+						const termdb = await import('../termdb/app')
+						termdb.appInit({
+							holder: subMenuDiv.d,
+							vocabApi: self.app.vocabApi,
+							state: {
+								nav: {
+									header_mode: 'search_only'
+								},
+								tree: { usecase: { target: 'survival', detail: 'term' } }
+							},
+							tree: {
+								click_term: term => {
+									openSurvivalPlot(self, self.selectedItems, term)
+									self.dom.tip.hide()
+									subMenuDiv.hide()
+								}
+							}
+						})
+						subMenuDiv.show(event.clientX + 190, event.clientY + 36)
+					}
+				})
+				const startDiv = survivalDiv
+					.append('div')
+					.style('display', 'inline-block')
+					.html('&nbsp;&nbsp;›')
+			}
+			menuDiv
+				.append('div')
+				.attr('class', 'sja_menuoption sja_sharp_border')
+				.text('Add to a group')
+				.on('click', () => {
+					self.groups.push(self.selectedItems)
+					updateGroupsButton(groupDiv)
+					self.dom.tip.hide()
+				})
+		}
+	}
+
+	function updateGroupsButton(groupDiv) {
+		groupDiv.select('*').remove()
+		groupDiv
+			.append('button')
+			.style('border', 'none')
+			.style('background', 'transparent')
+			.style('padding', 0)
+			.append('div')
+			.style('font-size', '1.1em')
+			.html(`&#931${self.groups.length + 1};`)
+			.on('click', event => showGroupsMenu(event, groupDiv))
+		const tooltip = `Lasso toolbox`
+		groupDiv.attr('title', tooltip)
+	}
+
+	function showGroupsMenu(event, groupDiv) {
+		self.dom.tip.clear()
+		self.dom.tip.show(event.clientX, event.clientY)
+		const menuDiv = self.dom.tip.d.append('div').style('min-width', '20vw')
+
+		let row = menuDiv.append('div')
+		row
+			.insert('div')
+			.text('Lasso toolbox')
+			.style('text-align', 'center')
+		row = row
+			.insert('div')
+			.style('display', 'flex')
+			.style('justify-content', 'flex-start')
+		if (self.state.allowedTermTypes.includes('survival')) {
+			let survivalDiv = row
+				.insert('div')
+				.style('padding', '5px')
+				.style('margin-left', '20px')
+
+			icon_functions['survival'](survivalDiv, {
+				width: 20,
+				height: 20,
+				text: 'Survival analysis on all',
+				handler: async () => {
+					const subMenuDiv = new Menu({ padding: '5px' })
+					const termdb = await import('../termdb/app')
+					termdb.appInit({
+						holder: subMenuDiv.d,
+						vocabApi: self.app.vocabApi,
+						state: {
+							nav: {
+								header_mode: 'search_only'
+							},
+							tree: { usecase: { target: 'survival', detail: 'term' } }
+						},
+						tree: {
+							click_term: term => {
+								openSurvivalPlots(self, term)
+								self.dom.tip.hide()
+								subMenuDiv.hide()
+							}
+						}
+					})
+					subMenuDiv.show(event.clientX + 190, event.clientY + 36)
+				}
+			})
+		}
+		let deleteDiv = row.insert('div').style('padding', '5px')
+		icon_functions['delete'](deleteDiv, {
+			width: 20,
+			height: 20,
+			text: 'Delete all',
+			handler: () => {
+				groupDiv.select('*').remove()
+				self.groups = []
+				self.dom.tip.hide()
+			}
+		})
+		for (const [i, group] of self.groups.entries()) {
+			row = menuDiv.append('div').attr('class', 'sja_menuoption sja_sharp_border')
+			row
+				.insert('div')
+				.style('display', 'inline-block')
+				.style('width', '40px')
+				.append('input')
+				.attr('type', 'checkbox')
+			row
+				.insert('div')
+				.style('display', 'inline-block')
+				.style('width', '80px')
+				.text('Group ' + (i + 1))
+			row
+				.insert('div')
+				.style('display', 'inline-block')
+				.style('width', '80px')
+				.text(group.length)
+			const listDiv = row
+				.insert('div')
+				.style('display', 'inline-block')
+				.style('width', '80px')
+			icon_functions['list'](listDiv, {
+				handler: () => showTable(self, group, `List of ${group.length} samples in Group ${i + 1}`)
+			})
+			if (self.state.allowedTermTypes.includes('survival')) {
+				const survivalDiv = row
+					.insert('div')
+					.style('display', 'inline-block')
+					.style('width', '180px')
+				icon_functions['survival'](survivalDiv, { handler: () => openSurvivalPlot(self, group) })
+				const deleteDiv = row
+					.insert('div')
+					.style('display', 'inline-block')
+					.style('width', '80px')
+				icon_functions['delete'](deleteDiv, {
+					handler: () => {
+						self.groups.splice(i, 1)
+						if (self.groups.length == 0) groupDiv.select('*').remove()
+						else updateGroupsButton(groupDiv)
+						self.dom.tip.hide()
+					}
+				})
+			}
 		}
 	}
 
@@ -594,8 +820,9 @@ function setRenderers(self) {
 
 function setInteractivity(self) {
 	self.mouseover = function(event) {
-		if (!self.lassoOn && event.target.tagName == 'path') {
-			self.app.tip.clear().show(event.clientX, event.clientY)
+		if (self.lassoOn) return
+		if (event.target.tagName == 'path') {
+			self.dom.tip.clear().show(event.clientX, event.clientY)
 			const d = event.target.__data__
 			if (!d) return
 			const rows = [{ k: 'Sample', v: d.sample }]
@@ -603,15 +830,14 @@ function setInteractivity(self) {
 				rows.push({ k: self.config.colorTW.id, v: d.category })
 			}
 			if ('info' in d) for (const [k, v] of Object.entries(d.info)) rows.push({ k: k, v: v })
-
-			make_table_2col(self.app.tip.d, rows)
+			make_table_2col(self.dom.tip.d, rows)
 		} else {
-			self.app.tip.hide()
+			self.dom.tip.hide()
 		}
 	}
 
 	self.mouseout = function() {
-		self.app.tip.hide()
+		if (!self.lassoOn) self.dom.tip.hide()
 	}
 }
 
@@ -628,7 +854,7 @@ export async function getPlotConfig(opts, app) {
 					isOpen: false // control panel is hidden by default
 				},
 				sampleScatter: {
-					radius: 5,
+					size: 5,
 					svgw: 500,
 					svgh: 500,
 					axisTitleFontSize: 16,
@@ -648,72 +874,115 @@ export const scatterInit = getCompInit(Scatter)
 // this alias will allow abstracted dynamic imports
 export const componentInit = scatterInit
 
-function getPj(self) {
-	const s = self.settings
-	const pj = new Partjson({
-		template: {
-			//"__:charts": "@.byChc.@values",
-			yMin: '>$y',
-			yMax: '<$y',
-			charts: [
-				{
-					chartId: '@key',
-					chc: '@key',
-					xMin: '>$x',
-					xMax: '<$x',
-					yMin: '>$y',
-					yMax: '<$y',
-					'__:xScale': '=xScale()',
-					'__:yScale': '=yScale()',
-					serieses: [
-						{
-							chartId: '@parent.@parent.@key',
-							seriesId: '@key',
-							data: [
-								{
-									'__:seriesId': '@parent.@parent.seriesId',
-									color: '$color',
-									x: '$x',
-									y: '$y',
-									sample: '$sample',
-									category: '$category',
-									info: '$info',
-									shape: '$shape',
-									'_1:scaledX': '=scaledX()',
-									'_1:scaledY': '=scaledY()'
-								},
-								'$y'
-							]
-						},
-						'-'
-					]
-				},
-				'$val0'
-			]
+function showTable(self, group, title, pos = 1) {
+	let rows = []
+	const labels = ['Sample', self.config.colorTW.id]
+	if (self.config.shapeTW) labels.push(self.config.shapeTW.id)
+	rows.push(labels)
+	let row, data
+	for (const item of group) {
+		data = item.__data__
+		row = [data.sample]
+		if ('category' in data) row.push(data.category)
+		if (self.config.shapeTW) row.push(getShapeName(self.shapes, data))
+
+		if ('info' in data) for (const [k, v] of Object.entries(data.info)) row.push(v)
+		rows.push(row)
+	}
+	export_data(title, [{ text: rows.join('\n') }], pos)
+}
+
+function getShape(self, c, size) {
+	const index = c.shape % self.symbols.length
+	if (!size) size = self.settings.size
+	return self.symbols[index].size(size)()
+}
+
+function getShapeName(shapes, data) {
+	for (const shape of shapes) {
+		const index = shape[1].shape
+		const name = shape[0]
+		if (data.shape === index) return name
+	}
+	return null
+}
+
+function openSurvivalPlot(self, group, term) {
+	const values = []
+	let data
+	for (const item of group) {
+		data = item.__data__
+		values.push(data.sample)
+	}
+	let config = {
+		chartType: 'survival',
+		term: term,
+		term2: {
+			term: { name: 'TSNE selected groups', type: 'samplelst' },
+			q: {
+				mode: 'custom-groupsetting',
+				groups: [
+					{
+						name: 'Group 1',
+						key: 'sample',
+						values: values
+					},
+					{
+						name: 'Others',
+						key: 'sample',
+						in: false,
+						values: values
+					}
+				]
+			}
 		},
-		'=': {
-			xScale(row, context) {
-				const cx = d3Linear()
-					.domain([context.self.xMin, context.self.xMax])
-					.range([3 * s.radius, s.svgw - 3 * s.radius])
-				return cx
-			},
-			scaledX(row, context) {
-				return context.context.context.context.parent.xScale(context.self.x)
-			},
-			scaledY(row, context) {
-				return context.context.context.context.parent.yScale(context.self.y)
-			},
-			yScale(row, context) {
-				const yMin = context.self.yMin
-				const yMax = context.self.yMax
-				const domain = s.scale == 'byChart' ? [yMax, yMin] : [context.root.yMax, yMin]
-				const cy = d3Linear()
-					.domain(domain)
-					.range([3 * s.radius, s.svgh - 3 * s.radius])
-				return cy
+		settings: {
+			survival: {
+				xTickValues: [0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30]
 			}
 		}
+	}
+	self.app.dispatch({
+		type: 'plot_create',
+		config: config
 	})
-	return pj
+}
+
+function openSurvivalPlots(self, term) {
+	let groups = []
+	let values, tgroup, data
+
+	for (const [i, group] of self.groups.entries()) {
+		values = []
+		for (const item of group) {
+			data = item.__data__
+			values.push(data.sample)
+		}
+		;(tgroup = {
+			name: 'Group ' + (i + 1),
+			key: 'sample',
+			values: values
+		}),
+			groups.push(tgroup)
+	}
+	let config = {
+		chartType: 'survival',
+		term: term,
+		term2: {
+			term: { name: 'TSNE selected groups', type: 'samplelst' },
+			q: {
+				mode: 'custom-groupsetting',
+				groups: groups
+			}
+		},
+		settings: {
+			survival: {
+				xTickValues: [0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30]
+			}
+		}
+	}
+	self.app.dispatch({
+		type: 'plot_create',
+		config: config
+	})
 }

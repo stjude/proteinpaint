@@ -1,5 +1,5 @@
 import { getCompInit } from '#rx'
-import { select, selectAll, event } from 'd3-selection'
+import { select, selectAll } from 'd3-selection'
 import { dofetch3, sayerror } from '#src/client'
 import { debounce } from 'debounce'
 import { root_ID } from './tree'

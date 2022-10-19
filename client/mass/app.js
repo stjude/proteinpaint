@@ -88,7 +88,7 @@ class MassApp {
 					holder: this.dom.topbar,
 					header_mode: this.state && this.state.nav && this.state.nav.header_mode,
 					vocab: this.state.vocab,
-					massSessionDuration: this.opts.massSessionDuration
+					massSessionDuration: this.state.termdbConfig.massSessionDuration // this.opts.massSessionDuration
 				}),
 				plots: {}
 			}

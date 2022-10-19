@@ -3,6 +3,9 @@ if (process.argv.length < 4) {
 	process.exit()
 }
 
+const fs = require('fs'),
+	readline = require('readline')
+
 /*
 <in file>
 Required
@@ -26,6 +29,7 @@ will keep the header line in output
 as only sample id column is kept, will write "sample_id" into the header at corresponding column (if "0,1", will write to first column)
 */
 
+const idmapFile = 'samples.idmap'
 const infile = process.argv[2]
 const columns = process.argv[3].split(',').map(Number)
 for (const i of columns) {
@@ -33,62 +37,77 @@ for (const i of columns) {
 }
 const keepheader = process.argv[4]
 
-const fs = require('fs')
+main()
 
-const str2id = new Map()
-// k: sample string name
-// v: integer id
-for (const line of fs
-	.readFileSync('samples.idmap', { encoding: 'utf8' })
-	.trim()
-	.split('\n')) {
-	const [i, s] = line.split('\t')
-	str2id.set(s, i)
+async function main() {
+	const str2id = await read_idmap()
+
+	await processInputFile(str2id)
 }
 
-const missingsamples = new Set()
+async function read_idmap() {
+	const str2id = new Map()
+	// k: sample string name
+	// v: integer id
+	return new Promise((resolve, reject) => {
+		const rl = readline.createInterface({ input: fs.createReadStream(idmapFile) })
+		rl.on('line', line => {
+			const [i, s] = line.split('\t')
+			str2id.set(s, i)
+		})
+		rl.on('close', () => resolve(str2id))
+	})
+}
 
-const lines = fs
-	.readFileSync(infile, { encoding: 'utf8' })
-	.trim()
-	.split('\n')
-for (let i = 0; i < lines.length; i++) {
-	const l = lines[i].split('\t')
-	if (i == 0) {
-		if (keepheader) {
-			if (columns.length > 1) {
-				// must be 0 and 1, drop a column
-				l.shift()
-				l[0] = 'sample_id'
-				console.log(l.join('\t'))
-			} else {
-				l[columns[0]] = 'sample_id'
-				console.log(l.join('\t'))
+function processInputFile(str2id) {
+	const missingsamples = new Set()
+
+	const rl = readline.createInterface({ input: fs.createReadStream(infile) })
+
+	let i = -1
+
+	rl.on('line', line => {
+		i++
+		const l = line.split('\t')
+		if (i == 0) {
+			if (keepheader) {
+				if (columns.length > 1) {
+					// must be 0 and 1, drop a column
+					l.shift()
+					l[0] = 'sample_id'
+					console.log(l.join('\t'))
+				} else {
+					l[columns[0]] = 'sample_id'
+					console.log(l.join('\t'))
+				}
 			}
+			return
 		}
-		continue
-	}
-	if (columns.length == 1) {
-		const cid = columns[0]
-		const id = str2id.get(l[cid])
+		if (columns.length == 1) {
+			const cid = columns[0]
+			const id = str2id.get(l[cid])
+			if (id == undefined) {
+				missingsamples.add(l[cid])
+				return
+			}
+			l[cid] = id
+			console.log(l.join('\t'))
+			return
+		}
+		// must be 0 and 1
+		const id = str2id.get(l[0] || l[1])
 		if (id == undefined) {
-			missingsamples.add(l[cid])
-			continue
+			missingsamples.add(l[0] || l[1])
+			return
 		}
-		l[cid] = id
+		l.shift()
+		l[0] = id
 		console.log(l.join('\t'))
-		continue
-	}
-	// must be 0 and 1
-	const id = str2id.get(l[0] || l[1])
-	if (id == undefined) {
-		missingsamples.add(l[0] || l[1])
-		continue
-	}
-	l.shift()
-	l[0] = id
-	console.log(l.join('\t'))
-}
-if (missingsamples.size) {
-	console.error(infile + ': ' + missingsamples.size + ' samples skipped: ' + [...missingsamples].join(','))
+	})
+
+	rl.on('close', () => {
+		if (missingsamples.size) {
+			console.error(infile + ': ' + missingsamples.size + ' samples skipped: ' + [...missingsamples].join(','))
+		}
+	})
 }

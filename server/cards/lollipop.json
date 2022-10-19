@@ -56,16 +56,25 @@
                         {
                             "gene1":"PAX5", "chr1":"chr9", "pos1":37002646, "strand1":"-",
                             "gene2":"JAK2", "chr2":"chr9", "pos2":5081726, "strand2":"+",
-                            "dt":2, "class":"Fuserna"
+                            "dt":2, "class":"Fuserna", "sample": "Fusion Sample ID"
                         },
                         {
                             "gene1":"ZCCHC7", "chr1":"chr9", "pos1":37257786, "strand1":"-",
                             "gene2":"PAX5", "chr2":"chr9", "pos2":37024824, "strand2":"-",
-                            "dt":5, "class":"SV"
+                            "dt":5, "class":"SV", "sample": "SV Sample ID"
                         }
                     ]
                 }]
-            }
+            },
+            "testSpec": {
+                "expected": { "circle": 2 }
+            },
+            "buttons":[
+                {
+                    "name": "Custom Data Documentation",
+                    "link": "https://docs.google.com/document/d/1k50EWReR3jmJ1-Y1_jACaPkHTA65k6vLe5b-UbMgK1A/edit#heading=h.wi6hqrtn3tuq"
+                }
+            ]
         },
         {
             "label": "Custom Data (Differential Phosphorylation)",
@@ -313,5 +322,6 @@
             "link": "https://docs.google.com/document/d/1D78jKVaQrWBhAjnfmCqj0Cirf6s-CdcbfPkuZQMT8Co/edit#heading=h.tyjcwt"
         }
     ],
+    "ribbonMessage": "Please see the newest Custom Variant example!",
     "citation_id": 1001
 } 

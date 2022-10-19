@@ -54,14 +54,14 @@ const fields = [
 			const consequence = hit.ssm.consequence.find(i => i.transcript.transcript_id == p.isoform)
 			const aa = consequence.transcript.aa_change || consequence.transcript.consequence_type // no aa change for utr variants
 			if (!aa2case.has(aa)) aa2case.set(aa, { type: consequence.transcript.consequence_type, cases: [] })
-			aa2case.get(aa).cases.push(hit.case)
+			aa2case.get(aa).cases.push(hit.case.case_id)
 
 			caseidset.add(hit.case.case_id)
 			projectset.add(hit.case.project.project_id)
 			siteset.add(hit.case.primary_site)
 		}
 		for (const [aa, o] of aa2case) {
-			console.log(aa, o.type, o.cases.length)
+			console.log(aa, o.type, o.cases)
 		}
 
 		console.log(aa2case.size, ' variants')

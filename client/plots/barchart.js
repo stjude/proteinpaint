@@ -11,6 +11,7 @@ import getHandlers from './barchart.events'
 import { controlsInit } from './controls'
 import { to_svg } from '../src/client'
 import { fillTermWrapper } from '../termsetting/termsetting'
+import { compViolinInit } from './violin'
 
 class Barchart {
 	constructor(opts) {
@@ -44,6 +45,7 @@ class Barchart {
 				.style('font-size', '16px')
 				.style('color', '#aaa'),
 			barDiv: holder.append('div').style('white-space', 'normal'),
+			violinDiv: holder.append('div').style('white-space', 'normal'),
 			legendDiv: holder.append('div').style('margin', '5px 5px 15px 5px')
 		}
 		if (this.dom.header) this.dom.header.html('Barchart')
@@ -110,7 +112,8 @@ class Barchart {
 						},
 						'divideBy'
 					]
-				})
+				}),
+				violin: []
 			}
 
 			this.components.controls.on('downloadClick.boxplot', this.download)
@@ -144,8 +147,36 @@ class Barchart {
 			bar_click_menu: appState.bar_click_menu || {},
 			// optional
 			activeCohort: appState.activeCohort,
-			termdbConfig: appState.termdbConfig
+			termdbConfig: appState.termdbConfig,
+			visibleChartType: this.getVisibleChartType(config)
 		}
+	}
+
+	getVisibleChartType(config) {
+		/*
+		input:
+		
+		config{}
+			.term={ q={ mode=str } }
+			.term2={ q={ mode=str} }
+
+		output:
+		
+		a string barchart/violin/boxplot
+		*/
+
+		if (config.term.q.mode == 'continuous') {
+			// TODO decide if to show boxplot vs violin
+			return 'violin'
+		}
+
+		/*
+		if(config.term2?.q.mode=='continuous') {
+			return 'violin'
+		}
+		*/
+
+		return 'barchart'
 	}
 
 	async main() {
@@ -159,6 +190,37 @@ class Barchart {
 				)
 
 			this.toggleLoadingDiv()
+
+			// TODO improve with handler{} design
+
+			if (this.state.visibleChartType == 'violin') {
+				this.dom.barDiv.style('display', 'none')
+				this.dom.banner.text('').style('display', 'none')
+				this.dom.legendDiv.style('display', 'none')
+				this.dom.violinDiv
+					.style('display', 'inline-block')
+					.style('padding', '10px')
+					.style('overflow-x', 'auto')
+					.style('max-width', '70vw')
+					.style('scrollbar-width', 'none')
+
+				// TODO request by either config.term{} or config.term2 depending on which one is continuous
+				const arg = {
+					termid: this.state.config.term.id, // hardcoded to use term1
+					term2: this.state.config.term2,
+					filter: this.state.termfilter.filter,
+					config: this.config
+				}
+
+				this.toggleLoadingDiv('none')
+				this.components.violin = await compViolinInit({ app: this.app, dom: this.dom, violinArg: arg })
+
+				return
+			}
+
+			// compute and render barchart
+			this.dom.barDiv.style('display', 'inline-block')
+			this.dom.violinDiv.style('display', 'none')
 
 			const reqOpts = this.getDataRequestOpts()
 			const data = await this.app.vocabApi.getNestedChartSeriesData(reqOpts)

@@ -11,8 +11,8 @@ termTotalSizeGdcapi
 	termid2size_query
 	termid2size_filters
 ssm2canonicalisoform
-aliquot2sample
 sample_id_getter
+	aliquot2sample
 */
 
 const GDC_HOST = process.env.PP_GDC_HOST || 'https://api.gdc.cancer.gov'
@@ -99,7 +99,11 @@ const isoform2ssm_getvariant = {
 const isoform2ssm_getcase = {
 	endpoint: '/ssm_occurrences',
 	size: 100000,
-	fields: ['ssm.ssm_id', 'case.case_id'],
+	fields: [
+		'ssm.ssm_id',
+		'case.case_id', // can be used to make sample url link
+		'case.observation.sample.tumor_sample_uuid' // gives aliquot id and convert to submitter id for display
+	],
 	filters: p => {
 		// p:{}
 		// .isoform
@@ -408,98 +412,62 @@ const ssm2canonicalisoform = {
 	fields: ['consequence.transcript.is_canonical', 'consequence.transcript.transcript_id']
 }
 
-/* gdc-specific logic, for converting aliquot id to sample id
-
-per greg: Confusingly, the tumor_sample_barcode is actually the submitter ID of the tumor aliquot for which a variant was called. If you want to display the submitter ID of the sample, you’ll have to query the GDC case API for the sample for that aliquot.
-
-per phil's suggestion, setting first "first=1000" works
-
-questions:
-- 433c2eb6-560f-4387-93af-6c2e1a_D6_1 is converted to 433c2eb6-560f-4387-93af-6c2e1a but not but not case id (15BR003, CPTAC-2)
-- why setting (first: 100, filters: $filters) at two places
-*/
 const aliquot2sample = {
-	query: `query barcode($filters: FiltersArgument) {
-  repository {
-    cases {
-      hits(first: 1000, filters: $filters) { edges { node {
-        samples {
-          hits (first: 100, filters: $filters) { edges { node {
-            submitter_id
-            portions {
-              hits { edges { node {
-			    analytes {
-				  hits { edges { node { 
-				    aliquots {
-					  hits { edges { node { submitter_id }}}
-					}
-				  }}}
-				}
-              } } }
-            }
-          } } }
-        }
-      } } }
-    }
-  }
-}`,
-	variables: aliquotidLst => {
-		return {
-			filters: {
-				op: '=',
-				content: {
-					// one aliquot id will match with one sample id
-					field: 'samples.portions.analytes.aliquots.submitter_id',
-					value: aliquotidLst
+	getMatch: (sample, aliquotSet) => {
+		// for a sample, decide if it contains an aliquot in given list
+		// if true, return matching aliquot id; otherwise return undefined
+		if (!sample.portions) return
+		for (const portion of sample.portions) {
+			if (!portion.analytes) continue
+			for (const analyte of portion.analytes) {
+				if (!analyte.aliquots) continue
+				for (const a of analyte.aliquots) {
+					if (aliquotSet.has(a.aliquot_id)) return a.aliquot_id
 				}
 			}
 		}
 	},
-	get: async (aliquotidLst, headers) => {
-		//const _t = new Date()
 
-		const response = await got.post(GDC_HOST + '/v0/graphql', {
+	cache: new Map(),
+	// k: aliquot id, v: submitter id
+
+	get: async (aliquotidLst, headers) => {
+		// TODO check cache
+
+		const filters = {
+			op: 'and',
+			content: [
+				{
+					op: '=',
+					content: {
+						field: 'samples.portions.analytes.aliquots.aliquot_id',
+						value: aliquotidLst.length > 300 ? aliquotidLst.slice(0, 300) : aliquotidLst
+					}
+				}
+			]
+		}
+
+		const response = await got.post(GDC_HOST + '/cases', {
 			headers,
 			body: JSON.stringify({
-				query: aliquot2sample.query,
-				variables: aliquot2sample.variables(aliquotidLst.slice(0, 100))
+				size: 10000,
+				fields: 'samples.submitter_id,samples.portions.analytes.aliquots.aliquot_id',
+				filters
 			})
 		})
 
-		//console.log('aliquot2sample', new Date() - _t, aliquotidLst.length)
-		/*
-		Time consuming!!! the query takes 28.9 seconds for 604 cases
-		Observed on 7/18/2022
-		added quick fix to only run on first 100 ids of the list (if longer than 100)
-		which takes 3-4 seconds
-		*/
-
-		const json = JSON.parse(response.body)
-		if (
-			!json.data ||
-			!json.data.repository ||
-			!json.data.repository.cases ||
-			!json.data.repository.cases.hits ||
-			!json.data.repository.cases.hits.edges
-		)
-			throw 'structure not data.repository.cases.hits.edges'
-
-		const aset = new Set(aliquotidLst)
+		const aliquotSet = new Set(aliquotidLst)
 		const idmap = new Map() // k: input id, v: output id
 
-		for (const c of json.data.repository.cases.hits.edges) {
-			for (const s of c.node.samples.hits.edges) {
-				const submitter_id = s.node.submitter_id
-				for (const p of s.node.portions.hits.edges) {
-					for (const a of p.node.analytes.hits.edges) {
-						for (const al of a.node.aliquots.hits.edges) {
-							const al_id = al.node.submitter_id
-							if (aset.has(al_id)) {
-								// a match!
-								idmap.set(al_id, submitter_id)
-							}
-						}
-					}
+		const re = JSON.parse(response.body)
+
+		for (const h of re.data.hits) {
+			for (const sample of h.samples) {
+				const matchingAliquot = aliquot2sample.getMatch(sample, aliquotSet)
+
+				if (matchingAliquot) {
+					// has a match
+					idmap.set(matchingAliquot, sample.submitter_id)
 				}
 			}
 		}
@@ -510,31 +478,27 @@ const aliquot2sample = {
 async function sample_id_getter(samples, headers) {
 	/*
 	samples[], each element:
-		{
-			tempcase:{observation[0].sample.tumor_sample_barcode}
-		}
-	convert tumor_sample_barcode to sample submitter id, assign to sample.sample_id
-	and delete sample.tempcase
+
+		{ sample_id }
+
+	the "sample_id" is the aliquot id
+	it will be converted to sample submitter id *in place*
 
 	fire one graphql query to convert id of all samples
 	the getter is a dataset-specific, generic feature, so it should be defined here
 	passing in headers is a gdc-specific logic for controlled data
 	*/
 	const id2sample = new Map()
-	// k: tumor_sample_barcode
-	// v: list of sample objects that are using the same tumor_sample_barcode
+	// k: aliquot id
+	// v: list of sample objects that are using the same aliquot id
 	for (const sample of samples) {
-		const s = sample.tempcase
-		if (s.observation && s.observation[0].sample) {
-			const n = s.observation[0].sample.tumor_sample_barcode
-			if (n) {
-				if (!id2sample.has(n)) id2sample.set(n, [])
-				id2sample.get(n).push(sample)
-			} else {
-				// TODO indicate on client that tumor_sample_barcode is missing for this case, to make things traceable
-			}
+		const n = sample.sample_id
+		if (n) {
+			if (!id2sample.has(n)) id2sample.set(n, [])
+			id2sample.get(n).push(sample)
+		} else {
+			// TODO indicate on client that aliquot id is missing for this case, to make things traceable
 		}
-		delete sample.tempcase
 	}
 
 	if (id2sample.size == 0) {
@@ -627,7 +591,7 @@ module.exports = {
 			'case.observation.read_depth.t_alt_count',
 			'case.observation.read_depth.t_depth',
 			'case.observation.read_depth.n_depth',
-			'case.observation.sample.tumor_sample_barcode'
+			'case.observation.sample.tumor_sample_uuid'
 		],
 
 		// quick fix: flag to indicate availability of these fields, so as to create new columns in sample table
@@ -642,7 +606,7 @@ module.exports = {
 			base: 'https://portal.gdc.cancer.gov/cases/',
 			// if "namekey" is provided, use the given key to obtain sample name to append to url
 			// if missing, will require sample_id_key
-			namekey: 'case_uuid'
+			namekey: 'sample_URLid'
 		},
 		gdcapi: variant2samplesGdcapi
 	},
@@ -662,11 +626,14 @@ module.exports = {
 				}
 			},
 			byisoform: {
+				// tandem rest api method
 				gdcapi: {
 					query1: isoform2ssm_getvariant,
 					query2: isoform2ssm_getcase
 				}
-				/* using tandem api but not graphql query, as former returns list of samples
+
+				/* 
+				graphql method *not in use*, as former returns list of samples
 				and easier to summarize
 				gdcapi: protein_mutations
 				*/

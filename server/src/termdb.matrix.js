@@ -97,7 +97,10 @@ async function getSampleData(q, terms) {
 	// dictionary and non-dictionary terms require different methods for data query
 	const [dictTerms, nonDictTerms] = divideTerms(terms)
 	const { samples, refs } = getSampleData_dictionaryTerms(q, dictTerms)
-	refs.bySampleId = q.ds.getSampleIdMap(samples)
+
+	if (q.ds.getSampleIdMap) {
+		refs.bySampleId = q.ds.getSampleIdMap(samples)
+	}
 
 	// return early if all samples are filtered out by not having matching dictionary term values
 	if (dictTerms.length && !Object.keys(samples).length) return { samples, refs }

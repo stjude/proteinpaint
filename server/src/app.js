@@ -1,5 +1,4 @@
 /*
-********** TODO constructor options **********
 
 ********** test accessibility of serverconfig.tpmasterdir at two places **********
 if inaccessible, do not crash service. maintain server process to be able to return helpful message to all request
@@ -102,7 +101,8 @@ const express = require('express'),
 	validator = require('./validator'),
 	cookieParser = require('cookie-parser'),
 	authApi = require('./auth.js'),
-	{ server_init_db_queries } = require('./termdb.sql')
+	{ server_init_db_queries, listDbTables } = require('./termdb.sql'),
+	{ handle_healthcheck_closure } = require('./health')
 
 //////////////////////////////
 // Global variable (storing things in memory)
@@ -132,11 +132,22 @@ if (serverconfig.users) {
 /* when using webpack, should no longer use __dirname, otherwise cannot find the html files!
 app.use(express.static(__dirname+'/public'))
 */
+
 const basepath = serverconfig.basepath || ''
-const staticDir = express.static(path.join(process.cwd(), './public'))
+
+function setHeaders(res) {
+	res.header('Access-Control-Allow-Origin', '*')
+	res.header(
+		'Access-Control-Allow-Headers',
+		'Origin, X-Requested-With, Content-Type, Accept, Authorization, X-Auth-Token, X-Ds-Access-Token, X-SjPPDs-Sessionid'
+	)
+}
+
 if (!serverconfig.backend_only) {
+	const staticDir = express.static(path.join(process.cwd(), './public'), { setHeaders })
 	app.use(staticDir)
 }
+
 app.use(compression())
 
 app.use((req, res, next) => {
@@ -165,12 +176,13 @@ app.use((req, res, next) => {
 		Object.assign(req.query, req.body)
 	}
 	log(req)
-
-	res.header('Access-Control-Allow-Origin', '*')
+	setHeaders(res)
 	res.header(
-		'Access-Control-Allow-Headers',
-		'Origin, X-Requested-With, Content-Type, Accept, Authorization, X-Auth-Token, x-auth-token, x-ds-access-token'
+		'Access-Control-Allow-Origin',
+		req.get('origin') || req.get('referrer') || req.protocol + '://' + req.get('host').split(':')[0] || '*'
 	)
+	res.header('Access-Control-Allow-Credentials', true)
+
 	if (req.method == 'GET' && !req.path.includes('.')) {
 		// immutable response before expiration, client must revalidate after max-age;
 		// by convention, any path that has a dot will be treated as
@@ -226,11 +238,12 @@ if (serverconfig.jwt) {
 // otherwise next() may not be called for a middleware in the optional routes
 setOptionalRoutes()
 authApi.maySetAuthRoutes(app, basepath, serverconfig)
-app.get(basepath + '/healthcheck', handle_healthcheck)
+app.get(basepath + '/healthcheck', handle_healthcheck_closure(genomes))
 app.get(basepath + '/cardsjson', handle_cards)
 app.post(basepath + '/mdsjsonform', handle_mdsjsonform)
 app.get(basepath + '/genomes', handle_genomes)
 app.get(basepath + '/getDataset', handle_getDataset)
+app.get(basepath + '/genelookup', handle_genelookup)
 app.post(basepath + '/genelookup', handle_genelookup)
 app.post(basepath + '/ntseq', handle_ntseq)
 app.post(basepath + '/pdomain', handle_pdomain)
@@ -427,37 +440,6 @@ function setOptionalRoutes() {
 			const setRoutes = __non_webpack_require__(fname)
 			setRoutes(app, basepath)
 		}
-	}
-}
-
-async function handle_healthcheck(req, res) {
-	try {
-		const health = { status: 'ok' }
-		const keys = exports.features.healthcheck_keys || []
-
-		if (keys.includes('w')) {
-			health.w = child_process
-				.execSync('w | head -n1')
-				.toString()
-				.trim()
-				.split(' ')
-				.slice(-3)
-				.map(d => (d.endsWith(',') ? +d.slice(0, -1) : +d))
-		}
-
-		if (keys.includes('rs')) {
-			health.rs =
-				child_process
-					.execSync('ps aux | grep rsync -w')
-					.toString()
-					.trim()
-					.split('\n').length - 1
-		}
-
-		if (serverconfig.commitHash) health.version = serverconfig.commitHash
-		res.send(health)
-	} catch (e) {
-		throw { error: e }
 	}
 }
 
@@ -7095,6 +7077,10 @@ async function pp_init() {
 	// to ensure temp files saved in previous server session are accessible in current session
 	// must use consistent dir name but not random dir name that changes from last server boot
 	serverconfig.cachedir_massSession = await mayCreateSubdirInCache('massSession')
+
+	//DELETE THIS after process for deleting mass session files moved into production
+	serverconfig.cachedir_massSessionTrash = await mayCreateSubdirInCache('massSessionTrash')
+
 	serverconfig.cache_snpgt = {
 		dir: await mayCreateSubdirInCache('snpgt'),
 		fileNameRegexp: /[^\w]/, // client-provided cache file name matching with this are denied
@@ -7265,43 +7251,41 @@ async function pp_init() {
 			- ideogram
 			- gene2canonicalisoform
 			- refseq2ensembl
+			- buildDate
 
 			if present, create getter to this table and attach to g.genedb{}
 			*/
-			const checkTable = g.genedb.db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name=?")
-			{
-				const s = checkTable.get('genealias')
-				if (s && s.name == 'genealias') {
-					g.genedb.getNameByAlias = g.genedb.db.prepare('select name from genealias where alias=?')
-				}
+			const tables = listDbTables(g.genedb.db)
+			if (tables.has('genealias')) {
+				g.genedb.getNameByAlias = g.genedb.db.prepare('select name from genealias where alias=?')
+				g.genedb.tableSize = g.genedb.db.prepare('select count(*) from genealias where alias=?')
 			}
-			{
-				const s = checkTable.get('gene2coord')
-				if (s && s.name == 'gene2coord') {
-					g.genedb.getCoordByGene = g.genedb.db.prepare('select * from gene2coord where name=?')
-				}
+			if (tables.has('gene2coord')) {
+				g.genedb.getCoordByGene = g.genedb.db.prepare('select * from gene2coord where name=?')
 			}
-			{
-				const s = checkTable.get('ideogram')
-				if (s && s.name == 'ideogram') {
-					g.genedb.hasIdeogram = true
-					g.genedb.getIdeogramByChr = g.genedb.db.prepare('select * from ideogram where chromosome=?')
-				} else {
-					g.genedb.hasIdeogram = false
-				}
+			if (tables.has('ideogram')) {
+				g.genedb.hasIdeogram = true
+				g.genedb.getIdeogramByChr = g.genedb.db.prepare('select * from ideogram where chromosome=?')
+			} else {
+				g.genedb.hasIdeogram = false
 			}
-			{
-				const s = checkTable.get('gene2canonicalisoform')
-				if (s && s.name == 'gene2canonicalisoform') {
-					g.genedb.get_gene2canonicalisoform = g.genedb.db.prepare(
-						'select genemodel from gene2canonicalisoform as c, genes as g where c.gene=? AND c.isoform=g.isoform'
-					)
-				}
+			if (tables.has('gene2canonicalisoform')) {
+				g.genedb.get_gene2canonicalisoform = g.genedb.db.prepare(
+					'select genemodel from gene2canonicalisoform as c, genes as g where c.gene=? AND c.isoform=g.isoform'
+				)
 			}
-			{
-				// this table is only used for gdc dataset
-				const s = checkTable.get('refseq2ensembl')
-				g.genedb.hasTable_refseq2ensembl = s && s.name == 'refseq2ensembl'
+			if (tables.has('buildDate')) {
+				g.genedb.get_buildDate = g.genedb.db.prepare('select date from buildDate')
+			}
+
+			// this table is only used for gdc dataset
+			g.genedb.hasTable_refseq2ensembl = tables.has('refseq2ensembl')
+
+			g.genedb.sqlTables = [...tables]
+			g.genedb.tableSize = {}
+			for (const table of tables) {
+				if (table == 'buildDate') continue
+				g.genedb.tableSize[table] = g.genedb.db.prepare(`select count(*) as size from ${table}`).get().size
 			}
 		}
 
@@ -7473,11 +7457,46 @@ async function pp_init() {
 			initLegacyDataset(ds, g)
 		}
 
+		//await deleteSessionFiles()
+
 		delete g.rawdslst
 	}
 }
 
+async function deleteSessionFiles() {
+	//Delete mass session files older than the massSessionDuration in serverconfig or 30 days default
+	const files = await fs.promises.readdir(serverconfig.cachedir_massSession)
+	try {
+		files.forEach(async file => {
+			//Return creation Time
+			const stats = await fs.promises.stat(path.join(serverconfig.cachedir_massSession, file))
+			const sessionCreationDate = stats.birthtime
+
+			//Determine file age against massSessionDuration
+			const today = new Date()
+			const fileDate = new Date(sessionCreationDate)
+			const massSessionDuration = serverconfig.features.massSessionDuration || 30
+			const sessionDaysElapsed = Math.round((today.getTime() - fileDate.getTime()) / (1000 * 3600 * 24))
+			if (sessionDaysElapsed > massSessionDuration) {
+				//On Nov 1, 2022 - change to delete function
+				await fs.promises.copyFile(
+					path.join(serverconfig.cachedir_massSession, file),
+					path.join(serverconfig.cachedir_massSessionTrash, file)
+				)
+				console.log('File deleted: ', file, sessionCreationDate)
+			}
+		})
+	} catch (e) {
+		throw `Error: ${e}`
+	}
+}
+
 function checkDependenciesAndVersions() {
+	if (serverconfig.features.skip_checkDependenciesAndVersions) {
+		console.log('SKIPPED checkDependenciesAndVersions()')
+		return
+	}
+
 	// test if R has all required libraries
 	const rlibraries = ['jsonlite', 'cmprsk', 'hwde', 'lmtest']
 	for (const lib of rlibraries) {

@@ -23,7 +23,7 @@ get_ds
 		validateCustomSnvindel
 		validateCustomSvfusion
 	mayDeriveSkewerOccurrence4samples
-init_termdb
+mayInitTermdb
 mayInitSkewer
 	setSkewerMode
 mayaddGetter_m2csq
@@ -99,7 +99,7 @@ export async function makeTk(tk, block) {
 	// tk.mds{} is created for both official and custom track
 	// following procedures are only based on tk.mds
 
-	await init_termdb(tk, block)
+	await mayInitTermdb(tk, block)
 
 	mayaddGetter_variant2samples(tk, block)
 	mayaddGetter_m2csq(tk, block)
@@ -283,6 +283,7 @@ async function get_ds(tk, block) {
 	}
 
 	// this tk loads as a custom track
+
 	if (!tk.name) tk.name = 'Custom data'
 	// create the dataset object
 	tk.mds = {}
@@ -300,10 +301,21 @@ async function get_ds(tk, block) {
 	} else {
 		throw 'unknown data source for custom track'
 	}
-	// if variant2samples is enabled for custom ds, it will also have the async get()
+
+	mayProcessSampleAnnotation(tk)
 }
 
-async function init_termdb(tk, block) {
+function mayProcessSampleAnnotation(tk) {
+	// temp function to process custom sample annotation
+	if (!tk.sampleAnnotation) return
+	// use this data to initiate tk.mds.termdb{}
+	if (!Array.isArray(tk.sampleAnnotation.terms)) throw 'sampleAnnotation.terms is not array'
+	if (!tk.mds.termdb) tk.mds.termdb = {}
+	tk.mds.termdb.terms = tk.sampleAnnotation.terms
+	tk.mds.termdb.annotations = tk.sampleAnnotation.annotations
+}
+
+async function mayInitTermdb(tk, block) {
 	const tdb = tk.mds.termdb
 	if (!tdb) return
 
@@ -317,7 +329,10 @@ async function init_termdb(tk, block) {
 			}
 		} else if (tdb.terms) {
 			// custom dataset
-			arg.terms = tdb.terms
+			arg.vocab = {
+				terms: tdb.terms,
+				sampleannotation: tdb.annotations
+			}
 		} else {
 			throw 'do not know how to init vocab'
 		}

@@ -370,10 +370,12 @@ returns:
 	db connector
 */
 exports.connect_db = function(file, override = {}) {
-	return new bettersqlite(
-		file[0] == '/' ? file : path.join(serverconfig.tpmasterdir, file),
-		Object.assign({ readonly: true, fileMustExist: true }, override)
-	)
+	const dbfile = file[0] == '/' ? file : path.join(serverconfig.tpmasterdir, file)
+	try {
+		return new bettersqlite(dbfile, Object.assign({ readonly: true, fileMustExist: true }, override))
+	} catch (e) {
+		throw `error connecting to ${dbfile}: ${e}`
+	}
 }
 
 const genotype_type_set = new Set(['Homozygous reference', 'Homozygous alternative', 'Heterozygous'])

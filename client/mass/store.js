@@ -54,9 +54,6 @@ class TdbStore {
 		// use for assigning unique IDs where needed
 		// may be used later to simplify getting component state by type and id
 		this.prevGeneratedId = 0
-		// when using rx.copyMerge, replace the object values
-		// for these keys instead of extending them
-		this.replaceKeyVals = ['term', 'term2', 'term0', 'q', 'divideBy']
 	}
 
 	validateOpts(opts) {
@@ -228,7 +225,7 @@ TdbStore.prototype.actions = {
 	plot_edit(action) {
 		const plot = this.state.plots.find(p => p.id === action.id)
 		if (!plot) throw `missing plot id='${action.id}' in store.plot_edit()`
-		this.copyMerge(plot, action.config, action.opts ? action.opts : {}, this.replaceKeyVals)
+		this.copyMerge(plot, action.config, action.opts ? action.opts : {})
 		validatePlot(plot, this.app.vocabApi)
 
 		if ('cutoff' in action.config) {
@@ -445,6 +442,8 @@ function validatePlotTerm(t, vocabApi) {
 		case 'snplst':
 		case 'snplocus':
 		case 'geneVariant':
+			break
+		case 'samplelst':
 			break
 		default:
 			if (t.term.isgenotype) {
