@@ -28,7 +28,7 @@ tape('\n', function(test) {
 	test.end()
 })
 
-tape.only('initial tests', function(test) {
+tape('initial tests', function(test) {
 	test.timeoutAfter(3000)
 
 	runpp({
