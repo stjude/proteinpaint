@@ -180,6 +180,9 @@ class TermdbVocab extends Vocab {
 				'&gettermdbconfig=1' +
 				`&embedder=${window.location.hostname}`
 		)
+
+		if (data.error) throw data.error
+
 		// note: in case of error such as missing dataset, supply empty object
 		this.termdbConfig = data.termdbConfig || {}
 		return this.termdbConfig
