@@ -196,7 +196,7 @@ class Barchart {
 			if (this.state.visibleChartType == 'violin') {
 				this.dom.barDiv.style('display', 'none')
 				this.dom.banner.text('').style('display', 'none')
-				this.dom.legendDiv.style('display', 'none')
+				this.dom.legendDiv.text('')
 				this.dom.violinDiv
 					.style('display', 'inline-block')
 					.style('padding', '10px')

@@ -416,6 +416,10 @@ makeURL([
 		['Neurology/hrtavg', __barchart( { id: 'Neurology System' }, { id: 'hrtavg' })],
 		['Neurology/Cardio', __barchart( { id: 'Neurology System' }, { id: 'Cardiovascular System' })],
 
+		'violin',
+		['hrtavg', __barchart( { id: 'hrtavg', q:{mode:'continuous'} })],
+		['hrtavg/race', __barchart( { id: 'hrtavg', q:{mode:'continuous'} }, {id:'racegrp'})],
+
 		'cuminc',
 
 		['Cardio-1', __cuminc({t1:{id: 'Cardiovascular System'},grade:1})],

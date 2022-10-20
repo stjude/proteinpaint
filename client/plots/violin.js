@@ -27,6 +27,7 @@ class ViolinPlot {
 
 	async main() {
 		setRenderers(this)
+		getLegendGrps(this)
 	}
 }
 
@@ -47,10 +48,14 @@ async function setRenderers(self) {
 		yScaleValues = []
 
 	for (const key of self.data) {
-		const label =
+		let label =
 			t2 != null && t2.term.values != undefined && Object.keys(t2.term.values).length > 0
 				? t2.term.values[key.label].label
 				: key.label
+
+		if (key.yScaleValues) {
+			label = `${label} (${key.yScaleValues.length})`
+		}
 		groups.push(label)
 
 		yScaleValues.push(...key.yScaleValues)
@@ -64,7 +69,7 @@ async function setRenderers(self) {
 				? groups.length * 600
 				: groups.length >= 2 && groups.length < 4
 				? groups.length * 400
-				: groups.length * 250) -
+				: groups.length * 300) -
 			margin.left -
 			margin.right
 
@@ -75,7 +80,7 @@ async function setRenderers(self) {
 	let svg = self.dom.violinDiv
 		.append('svg')
 		.attr('width', width + margin.left + margin.right)
-		.attr('height', height + margin.top + margin.bottom)
+		.attr('height', height)
 		.classed('sjpp-violin-plot', true)
 		.append('g')
 		.attr('transform', 'translate(' + margin.left + ',' + margin.top + ')')
@@ -104,6 +109,7 @@ async function setRenderers(self) {
 
 	svg.selectAll('text').style('font-size', '15px')
 
+	//create y axis label
 	svg
 		.append('text')
 		.attr('transform', 'rotate(-90)')
@@ -113,12 +119,26 @@ async function setRenderers(self) {
 		.style('text-anchor', 'middle')
 		.text(termName)
 
+	// // Add x axis label
+	// if(t2 != null && t2.term.name != null && t2.term.name != undefined) {
+	// 	svg.append("text")
+	// 	.attr("class", "x label")
+	// 	.attr("text-anchor", "front")
+	// 	.attr('dy', '1em')
+	// 	.attr("x", -110)
+	// 	.attr("y", boundsHeight + 20)
+	// 	.text(`${t2.term.name}`);
+	// }
+
 	for (const key of self.data) {
-		// console.log(key.yScaleValues.length); use this to compute values in the legend.
-		const label =
+		let label =
 			t2 != null && t2.term.values != undefined && Object.keys(t2.term.values).length > 0
 				? t2.term.values[key.label].label
 				: key.label
+
+		if (key.yScaleValues) {
+			label = `${label} (${key.yScaleValues.length})`
+		}
 
 		const wScale = scaleLinear()
 			.domain([-key.biggestBin, key.biggestBin])
@@ -139,6 +159,9 @@ async function setRenderers(self) {
 				return 'translate(' + xScale(label) + ' ,0)'
 			}) // Translation on the right to be at the group position
 			.append('path')
+			// .style("fill",function() {
+			// 	return "hsl(" + Math.random() * 360 + ",100%,90%)";
+			// 	})
 			.datum(function(d) {
 				return d.lst
 			}) // So now we are working bin per bin
@@ -148,4 +171,44 @@ async function setRenderers(self) {
 			.style('opacity', 0.7)
 			.attr('d', areaBuilder(key.bins))
 	}
+}
+
+async function getLegendGrps(self) {
+	self.opts.dom.legendDiv.style('display', 'block')
+	const t2 = self.violinArg.term2
+	// const headingStyle = 'color: #aaa; font-weight: 400'
+
+	//add header to the legend div
+	if (t2 != null && t2 != undefined) {
+		const legendTitle = self.violinArg.term2.term.name
+
+		const violinDiv = self.opts.dom.legendDiv
+			.append('div')
+			.classed('sjpp-legend-div', true)
+			.style('display', 'block')
+
+		violinDiv
+			.append('span')
+			.style('color', '#aaa')
+			.style('font-weight', '400')
+			.text(legendTitle)
+
+		for (const key of self.data) {
+			let label =
+				t2 != null && t2.term.values != undefined && Object.keys(t2.term.values).length > 0
+					? t2.term.values[key.label].label
+					: key.label
+
+			if (key.yScaleValues) {
+				label = `${label}, n = ${key.yScaleValues.length}`
+			}
+
+			violinDiv
+				.append('div')
+				.style('display', 'block')
+				.append('span')
+				.text(label)
+		}
+	}
+	return
 }
