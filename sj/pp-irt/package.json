@@ -10,7 +10,7 @@
 	},
 	"dependencies": {
 		"@stjude/proteinpaint-front": "2.4.1-34",
-		"@stjude/proteinpaint-server": "2.4.1-36"
+		"@stjude/proteinpaint-server": "2.4.1-37"
 	},
 	"files": [
 		"public/*",
