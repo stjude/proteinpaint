@@ -787,6 +787,7 @@ class TermdbVocab extends Vocab {
 		// separate request to a filtered sample list can be applied on the client side
 		const samplesToShow = isNewFilter || !this.currAnnoData.samplesToShow ? new Set() : this.currAnnoData.samplesToShow
 		while (termsToUpdate.length) {
+			// TODO: remove the request batching code to simplify and allow faster parallel requests
 			const copies = this.getCopiesToUpdate(termsToUpdate)
 			const init = {
 				headers,
@@ -874,6 +875,8 @@ class TermdbVocab extends Vocab {
 		return data
 	}
 
+	// batch the term requests together to not hammer the server
+	// TODO: ??? may not need this optimization, do not use ???
 	getCopiesToUpdate(terms) {
 		const usedIdsOrNames = new Set()
 		const copies = []
@@ -893,6 +896,9 @@ class TermdbVocab extends Vocab {
 				}
 				copies.push({ copy, idn, $id: tw.$id, tw })
 			}
+			// !!! FORCE A SINGLE TERM REQUEST BY BREAKING HERE !!!
+			if (copies.length) break
+			console.log(897)
 		}
 		terms.push(...next)
 		return copies

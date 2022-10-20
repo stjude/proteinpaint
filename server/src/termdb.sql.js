@@ -804,7 +804,7 @@ thus less things to worry about...
 			if (cache.has(id)) return cache.get(id)
 			const t = s.get(id)
 			if (t && t.genes) {
-				const lst = t.genes.split(',')
+				const lst = JSON.parse(t.genes)
 				cache.set(id, lst)
 				return lst
 			}

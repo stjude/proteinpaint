@@ -1,7 +1,7 @@
 import { select } from 'd3-selection'
 import { initByInput } from './controls.config'
 import { to_svg } from '../src/client'
-import { fillTermWrapper } from '../termsetting/termsetting'
+import { fillTermWrapper, termsettingInit } from '../termsetting/termsetting'
 import { addGeneSearchbox } from '#dom/genesearch'
 import { Menu } from '#dom/menu'
 
@@ -280,16 +280,46 @@ export class MatrixControls {
 			)
 			input.main(parent.config)
 		}
-		if (d.customInputs) d.customInputs(app, parent, table)
+		if (d.customInputs) d.customInputs(this, app, parent, table)
 		app.tip.showunder(event.target)
 	}
 
-	appendTermInputs(app, parent, table) {
-		const tr = table.append('tr')
-		// TODO: maybe add a second table cell for a dropdown
-		// to select which group to add the searched gene
+	appendTermInputs(self, app, parent, table) {
+		tip.clear()
+		if (!parent.selectedGroup) parent.selectedGroup = 0
+		if (parent.config.termgroups.length > 1) {
+			self.addTermGroupSelector(app, parent, table.append('tr'))
+		}
+		self.addGeneSearch(app, parent, table.append('tr'))
+		if (app.opts.genome.termdbs) {
+			for (const key in app.opts.genome.termdbs) {
+				self.addMsigdbMenu(app, parent, table.append('tr'), key)
+			}
+		}
+		// TODO: reenable once the backend can handle non-db terms source
+		//self.addDictMenu(app, parent, table.append('tr'))
+	}
+
+	addTermGroupSelector(app, parent, tr) {
 		const td = tr.append('td').attr('colspan', 2)
-		td.append('span').html('Add a gene &nbsp;')
+		td.append('span').html('Add to term group &nbsp;')
+		const tg = parent.config.termgroups
+		td.append('select')
+			.selectAll('option')
+			.data(tg)
+			.enter()
+			.append('option')
+			.attr('selected', (d, i) => tg.length < 2 || parent.selectedGroup === i)
+			.attr('value', (d, i) => i)
+			.html((d, i) => d.name || `Unlabeled group #${i + 1}`)
+			.on('change', (d, i) => {
+				parent.selectedGroup = i
+			})
+	}
+
+	addGeneSearch(app, parent, tr) {
+		const td = tr.append('td').attr('colspan', 2)
+		td.append('span').html('Add a single gene &nbsp;')
 
 		const coordInput = addGeneSearchbox({
 			tip,
@@ -298,14 +328,16 @@ export class MatrixControls {
 			geneOnly: true,
 			callback: () => {
 				if (!coordInput.geneSymbol) throw 'geneSymbol missing'
-				// TODO: see above for input to select which group to add the gene
-				// right not it assumes the first group
-				parent.config.termgroups[0].lst.push({
+				// TODO: see above for input to select which group to add the gene,
+				// right now it assumes the first group; also may use fillTermWrapper
+				const tw = {
 					term: {
+						$id: get$id(),
 						name: coordInput.geneSymbol,
 						type: 'geneVariant'
 					}
-				})
+				}
+				parent.config.termgroups[0].lst.push(tw)
 
 				app.dispatch({
 					type: 'plot_edit',
@@ -316,6 +348,108 @@ export class MatrixControls {
 				})
 			}
 		})
+	}
+
+	// should be fine to name this method Msigdb as this is the only eligible geneset db for now
+	addMsigdbMenu(app, parent, tr, termdbKey) {
+		const tdb = app.opts.genome.termdbs[termdbKey]
+
+		const td = tr.append('td').attr('colspan', 2)
+		const span = td
+			.append('span')
+			.style('cursor', 'pointer')
+			.html(`Select an ${tdb.label} gene group`)
+			.on('click', async () => {
+				tip.clear()
+				const termdb = await import('../termdb/app')
+				termdb.appInit({
+					holder: tip.d,
+					state: {
+						dslabel: termdbKey,
+						genome: app.opts.genome.name,
+						nav: {
+							header_mode: 'search_only'
+						}
+					},
+					tree: {
+						click_term: term => {
+							const geneset = term._geneset
+							const tws = geneset.map(d => {
+								const tw = {
+									$id: get$id(),
+									term: {
+										name: d.symbol,
+										type: 'geneVariant'
+									},
+									q: {}
+								}
+								return tw
+							})
+
+							// TODO: see above for input to select which group to add the gene
+							// right not it assumes the first group
+							parent.config.termgroups[parent.selectedGroup].lst.push(...tws)
+
+							app.dispatch({
+								type: 'plot_edit',
+								id: parent.id,
+								config: {
+									termgroups: parent.config.termgroups
+								}
+							})
+
+							tip.hide()
+							app.tip.hide()
+						}
+					}
+				})
+
+				tip.showunder(span.node())
+			})
+	}
+
+	addDictMenu(app, parent, tr) {
+		const td = tr.append('td').attr('colspan', 2)
+		const span = td
+			.append('span')
+			.style('cursor', 'pointer')
+			.html('Select a dictionary term')
+			.on('click', async () => {
+				tip.clear()
+				const termdb = await import('../termdb/app')
+				termdb.appInit({
+					holder: tip.d,
+					state: {
+						dslabel: app.vocabApi.vocab.dslabel,
+						genome: app.vocabApi.vocab.genome,
+						nav: {
+							header_mode: 'search_only'
+						}
+					},
+					tree: {
+						click_term: term => {
+							console.log(term)
+
+							// TODO: see above for input to select which group to add the gene
+							// right not it assumes the first group
+							parent.config.termgroups[0].lst.push({ id: term.id, term })
+
+							app.dispatch({
+								type: 'plot_edit',
+								id: parent.id,
+								config: {
+									termgroups: parent.config.termgroups
+								}
+							})
+
+							tip.hide()
+							app.tip.hide()
+						}
+					}
+				})
+
+				tip.showunder(span.node())
+			})
 	}
 }
 
@@ -363,4 +497,11 @@ class Recover {
 		console.log(227, i, this.currIndex, state)
 		this.app.dispatch({ type: 'app_refresh', state })
 	}
+}
+
+let i = 0
+function get$id() {
+	return `_${i}_${Date.now()
+		.toString()
+		.slice(5)}_${Math.random()}`
 }

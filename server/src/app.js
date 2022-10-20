@@ -635,6 +635,14 @@ function clientcopy_genome(genomename) {
 		hicenzymefragment: g.hicenzymefragment,
 		datasets: {}
 	}
+
+	if (g.termdbs) {
+		g2.termdbs = {}
+		for (const k in g.termdbs) {
+			g2.termdbs[k] = { label: g.termdbs[k].label }
+		}
+	}
+
 	for (const dsname in g.datasets) {
 		const ds = g.datasets[dsname]
 
