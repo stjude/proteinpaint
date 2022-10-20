@@ -69,9 +69,6 @@
     "url": "https://github.com/stjude/proteinpaint",
     "directory": "client"
   },
-  "publishConfig": {
-    "registry": "https://npm.pkg.github.com/"
-  },
   "files": [
     "dist/*"
   ],

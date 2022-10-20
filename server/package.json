@@ -60,9 +60,6 @@
     "url": "https://github.com/stjude/proteinpaint",
     "directory": "server"
   },
-  "publishConfig": {
-    "registry": "https://npm.pkg.github.com/"
-  },
   "files": [
     "bin.js",
     "dataset/clinvar*.js",
