@@ -282,6 +282,11 @@ export async function initGDCdictionary(ds) {
 
 	makeTermdbQueries(ds, id2term)
 
+	ds.cohort.termdb.termtypeByCohort = []
+	if (categoricalCount) ds.cohort.termdb.termtypeByCohort.push({ cohort: '', type: 'categorical' })
+	if (integerCount) ds.cohort.termdb.termtypeByCohort.push({ cohort: '', type: 'integer' })
+	if (floatCount) ds.cohort.termdb.termtypeByCohort.push({ cohort: '', type: 'float' })
+
 	await getOpenProjects(ds)
 }
 
