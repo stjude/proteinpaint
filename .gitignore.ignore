@@ -1,6 +1,0 @@
-docker-build-jenkins.sh
-Jenkinsfile.backend
-Jenkinsfile.frontend
-Jenkinsfile.security
-npm-publish-jenkins.sh
-npm-test-jenkins.sh
