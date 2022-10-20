@@ -119,12 +119,11 @@ class Scatter {
 		if (data.error) throw data.error
 		if (!Array.isArray(data.samples)) throw 'data.samples[] not array'
 		this.shapes = data.shapeLegend
-		const X = data.samples.map(item => item.x)
-		const Y = data.samples.map(item => item.y)
-		const xMin = Math.min(...X)
-		const xMax = Math.max(...X)
-		const yMin = Math.min(...Y)
-		const yMax = Math.max(...Y)
+		const s0 = data.samples[0]
+		const [xMin, xMax, yMin, yMax] = data.samples.reduce(
+			(s, d) => [d.x < s[0] ? d.x : s[0], d.x > s[1] ? d.x : s[1], d.y < s[2] ? d.y : s[2], d.y > s[3] ? d.y : s[3]],
+			[s0.x, s0.x, s0.y, s0.y]
+		)
 		this.xAxisScale = d3Linear()
 			.domain([xMin, xMax])
 			.range([0, this.settings.svgw])
@@ -340,10 +339,8 @@ function setRenderers(self) {
 			const s = self.settings
 			const div = d
 
-			div
-				.transition()
-				.duration(s.duration)
-				.style('width', s.svgw + 50 + 'px')
+			div.transition().duration(s.duration)
+			//.style('width', s.svgw + 50 + 'px')
 
 			div.selectAll('.sjpcb-unlock-icon').style('display', s.scale == 'byChart' ? 'none' : 'block')
 
@@ -362,7 +359,9 @@ function setRenderers(self) {
 		/* eslint-disable */
 		const [mainG, axisG, xAxis, yAxis, xTitle, yTitle] = getSvgSubElems(svg, chart)
 		/* eslint-enable */
-		if (s.showAxes) mainG.attr('clip-path', `url(#${self.id + '-clip'})`)
+
+		if (s.showAxes) mainG.attr('clip-path', `url(#clip)`)
+		else mainG.attr('clip-path', '')
 
 		let serie = mainG.select('.sjpcb-scatter-series')
 		if (serie.size() == 0) serie = mainG.append('g').attr('class', 'sjpcb-scatter-series')
@@ -398,7 +397,7 @@ function setRenderers(self) {
 			svg
 				.append('defs')
 				.append('clipPath')
-				.attr('id', self.id + '-clip')
+				.attr('id', 'clip')
 				.append('rect')
 				.attr('x', 80)
 				.attr('y', 0)
@@ -427,7 +426,7 @@ function setRenderers(self) {
 		symbols
 			.transition()
 			.duration(duration)
-			.attr('transform', c => translate(self, c))
+			.attr('transform', translate)
 			.attr('d', c => getShape(self, c))
 			.attr('fill', c => c.color)
 
@@ -436,7 +435,7 @@ function setRenderers(self) {
 			.enter()
 			.append('path')
 			/*** you'd need to set the symbol position using translate, instead of previously with cx, cy for a circle ***/
-			.attr('transform', c => translate(self, c))
+			.attr('transform', translate)
 			.attr('d', c => getShape(self, c))
 			.attr('fill', c => c.color)
 
@@ -445,7 +444,7 @@ function setRenderers(self) {
 			.duration(duration)
 	}
 
-	function translate(self, c) {
+	function translate(c) {
 		const transform = `translate(${self.xAxisScale(c.x) + 100},${self.yAxisScale(c.y)})`
 		return transform
 	}
@@ -500,8 +499,8 @@ function setRenderers(self) {
 			seriesG.attr('transform', event.transform)
 			const k = event.transform.scale(1).k
 			//on zoom in the particle size is kept
-			symbols.attr('d', c => getShape(self, c, self.settings.size / k))
-			if (self.lassoOn) lasso.selectedItems().attr('d', c => getShape(self, c, maxsize))
+			symbols.attr('d', c => getShape(self, c, size / k))
+			if (self.lassoOn) lasso.selectedItems().attr('d', c => getShape(self, c, maxsize / k))
 		}
 
 		function zoomIn() {
@@ -916,7 +915,7 @@ function openSurvivalPlot(self, group, term) {
 	}
 	let config = {
 		chartType: 'survival',
-		term: term,
+		term,
 		term2: {
 			term: { name: 'TSNE selected groups', type: 'samplelst' },
 			q: {
@@ -967,7 +966,7 @@ function openSurvivalPlots(self, term) {
 	}
 	let config = {
 		chartType: 'survival',
-		term: term,
+		term,
 		term2: {
 			term: { name: 'TSNE selected groups', type: 'samplelst' },
 			q: {
