@@ -2,7 +2,7 @@ import { getCompInit, copyMerge } from '../rx'
 import { fillTermWrapper } from '../termsetting/termsetting'
 import { select, pointer } from 'd3-selection'
 import { scaleLinear as d3Linear } from 'd3-scale'
-import { export_data, newpane } from '../src/client'
+import { newpane } from '../src/client'
 
 import {
 	zoom as d3zoom,
@@ -876,22 +876,56 @@ export const componentInit = scatterInit
 
 function showTable(self, group, title) {
 	let rows = []
-	const labels = ['Sample', self.config.colorTW.id]
-	if (self.config.shapeTW) labels.push(self.config.shapeTW.id)
-	rows.push(labels)
-	let row, data
+	const labels = [formatColumn('Sample'), formatColumn(self.config.colorTW.id)]
+	if (self.config.shapeTW) labels.push(formatColumn(self.config.shapeTW.id))
+	labels.push(formatColumn('Info'))
+	rows.push(labels.join(''))
+	let row, data, row2
+	let values
 	for (const item of group) {
 		data = item.__data__
 		row = [data.sample]
-		if ('category' in data) row.push(data.category)
+		if ('category' in data) row.push(formatColumn(data.category))
+		else row.push(formatColumn(''))
 		if (self.config.shapeTW) row.push(getShapeName(self.shapes, data))
-
-		if ('info' in data) for (const [k, v] of Object.entries(data.info)) row.push(v)
-		rows.push(row)
+		if ('info' in data) {
+			values = []
+			for (const [k, v] of Object.entries(data.info)) values.push(`${k}: ${v}`)
+			row.push(formatColumn(values.join(', '), 50))
+		}
+		row2 = []
+		for (const column of row) row2.push(formatColumn(column))
+		rows.push(row2.join(''))
 	}
-	const posx = 1,
+	const posx = 0.5,
 		posy = 0.25
-	export_data(title, [{ text: rows.join('\n') }], posx, posy, 25, 50)
+	console.log(rows.join('\n'))
+
+	openWindow(title, rows.join('\n'), posx, posy)
+	function formatColumn(column, length = 20) {
+		if (length < column.length) length = column.length
+		return column + ' '.repeat(length - column.length)
+	}
+}
+
+export function openWindow(title, text, posx = 1, posy = 1) {
+	// lst: {label, text}
+
+	const pane = newpane({
+		x: (window.innerWidth / 2 - 200) * posx,
+		y: (window.innerHeight / 2 - 150) * posy
+	})
+	pane.header.text(title)
+
+	pane.body
+		.append('div')
+		.style('max-height', '60vh')
+		.style('max-width', '80vw')
+		.style('overflow', 'auto')
+		.append('pre')
+		.text(text)
+
+	pane.body
 }
 
 function getShape(self, c, size) {
@@ -967,7 +1001,6 @@ function openSurvivalPlots(self, term) {
 		}),
 			groups.push(tgroup)
 	}
-	console.log(groups)
 	let config = {
 		chartType: 'survival',
 		term,
