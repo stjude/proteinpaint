@@ -289,6 +289,8 @@ function trigger_getViolinPlotData(q, res, ds) {
 	q.term2={} termwrapper
 	*/
 
+	const term = ds.cohort.termdb.q.termjsonByOneid(q.termid)
+
 	const getRowsParam = {
 		ds,
 		filter: q.filter,
@@ -324,7 +326,15 @@ function trigger_getViolinPlotData(q, res, ds) {
 	// some values may be negative float values so filter those out.
 	const updatedResult = []
 	for (const [i, v] of result.lst.entries()) {
+		/*
 		if (Math.sign(v.key1) != -1) {
+			updatedResult.push(v)
+		}
+		*/
+		if (term.values && term.values[v.key1]) {
+			// skip this value
+		} else {
+			// keep
 			updatedResult.push(v)
 		}
 	}
@@ -348,7 +358,7 @@ function trigger_getViolinPlotData(q, res, ds) {
 		}
 	} else {
 		// all numeric values go into one array
-		const values = result.lst.map(i => i.key1)
+		const values = updatedResult.map(i => i.key1)
 		valueSeries.push({
 			values,
 			label: 'All samples'
