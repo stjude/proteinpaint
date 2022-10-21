@@ -1592,13 +1592,13 @@ function configPanel(tk, block) {
 			holder: row,
 			options: [
 				{
-					label: 'Lenient: "None category" is not generated.',
+					label: 'Lenient: "None group" is not generated.',
 					value: 0,
 					checked: tk.variants[0].strictness == 0
 				},
 				{
 					label:
-						'Strict: "None category" is generated for reads with imperfect match to both reference and alternative alleles.',
+						'Strict: "None group" is generated for reads with imperfect match to both reference and alternative alleles.',
 					value: 1,
 					checked: tk.variants[0].strictness == 1
 				}
