@@ -155,6 +155,7 @@ class TdbApp {
 
 	async setComponents() {
 		try {
+			const header_mode = this.state.nav?.header_mode
 			const compPromises = {
 				/*
 			 	TODO: may need to handle a cohort filter option as an OPTIONAL component 
@@ -165,14 +166,15 @@ class TdbApp {
 				***/
 				search: searchInit({
 					app: this.api,
-					holder: this.dom.searchDiv
+					holder: this.dom.searchDiv,
+					isVisible: header_mode !== 'hide_search'
 				}),
 				tree: treeInit({
 					app: this.api,
-					holder: this.dom.holder.append('div').style('display', 'block')
+					holder: this.dom.holder.append('div').style('display', 'block'),
+					expandAll: header_mode == 'hide_search'
 				})
 			}
-
 			if (this.opts.tree && this.opts.tree.click_term2select_tvs) {
 				compPromises.submenu = submenuInit({
 					app: this.api,

@@ -33,6 +33,8 @@ class TermSearch {
 		setRenderers(this)
 		setInteractivity(this)
 		this.dom = { holder: opts.holder }
+
+		this.isVisible = 'isVisible' in opts ? opts.isVisible : true
 	}
 
 	async init() {
@@ -48,7 +50,7 @@ class TermSearch {
 
 	getState(appState) {
 		return {
-			isVisible: !appState.submenu.term,
+			isVisible: !appState.submenu.term && this.isVisible,
 			cohortStr:
 				appState.activeCohort == -1 || !appState.termdbConfig.selectCohort
 					? ''

@@ -488,6 +488,7 @@ function setRenderers(self) {
 		mainG.call(zoom)
 		const minsize = self.settings.size / 2
 		const maxsize = self.settings.size * 2
+		const size = self.settings.size
 
 		function handleZoom(event) {
 			// create new scale ojects based on event
@@ -634,7 +635,7 @@ function setRenderers(self) {
 							vocabApi: self.app.vocabApi,
 							state: {
 								nav: {
-									header_mode: 'search_only'
+									header_mode: 'hide_search'
 								},
 								tree: { usecase: { target: 'survival', detail: 'term' } }
 							},
@@ -713,7 +714,7 @@ function setRenderers(self) {
 						vocabApi: self.app.vocabApi,
 						state: {
 							nav: {
-								header_mode: 'search_only'
+								header_mode: 'hide_search'
 							},
 							tree: { usecase: { target: 'survival', detail: 'term' } }
 						},
@@ -873,7 +874,7 @@ export const scatterInit = getCompInit(Scatter)
 // this alias will allow abstracted dynamic imports
 export const componentInit = scatterInit
 
-function showTable(self, group, title, pos = 1) {
+function showTable(self, group, title) {
 	let rows = []
 	const labels = ['Sample', self.config.colorTW.id]
 	if (self.config.shapeTW) labels.push(self.config.shapeTW.id)
@@ -888,7 +889,9 @@ function showTable(self, group, title, pos = 1) {
 		if ('info' in data) for (const [k, v] of Object.entries(data.info)) row.push(v)
 		rows.push(row)
 	}
-	export_data(title, [{ text: rows.join('\n') }], pos)
+	const posx = 1,
+		posy = 0.25
+	export_data(title, [{ text: rows.join('\n') }], posx, posy, 25, 50)
 }
 
 function getShape(self, c, size) {
@@ -917,7 +920,7 @@ function openSurvivalPlot(self, group, term) {
 		chartType: 'survival',
 		term,
 		term2: {
-			term: { name: 'TSNE selected groups', type: 'samplelst' },
+			term: { name: self.config.name + ' groups', type: 'samplelst' },
 			q: {
 				mode: 'custom-groupsetting',
 				groups: [
@@ -964,11 +967,12 @@ function openSurvivalPlots(self, term) {
 		}),
 			groups.push(tgroup)
 	}
+	console.log(groups)
 	let config = {
 		chartType: 'survival',
 		term,
 		term2: {
-			term: { name: 'TSNE selected groups', type: 'samplelst' },
+			term: { name: self.config.name + ' groups', type: 'samplelst' },
 			q: {
 				mode: 'custom-groupsetting',
 				groups: groups
