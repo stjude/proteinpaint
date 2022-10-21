@@ -174,7 +174,6 @@ async function setRenderers(self) {
 }
 
 async function getLegendGrps(self) {
-	self.opts.dom.legendDiv.style('display', 'block')
 	const t2 = self.violinArg.term2
 	// const headingStyle = 'color: #aaa; font-weight: 400'
 
@@ -182,12 +181,14 @@ async function getLegendGrps(self) {
 	if (t2 != null && t2 != undefined) {
 		const legendTitle = self.violinArg.term2.term.name
 
-		const violinDiv = self.opts.dom.legendDiv
+		self.opts.dom.violinLegendDiv.selectAll('*').remove()
+
+		const violinLegendDiv = self.opts.dom.violinLegendDiv
 			.append('div')
 			.classed('sjpp-legend-div', true)
 			.style('display', 'block')
 
-		violinDiv
+		violinLegendDiv
 			.append('span')
 			.style('color', '#aaa')
 			.style('font-weight', '400')
@@ -203,12 +204,14 @@ async function getLegendGrps(self) {
 				label = `${label}, n = ${key.yScaleValues.length}`
 			}
 
-			violinDiv
+			violinLegendDiv
 				.append('div')
 				.style('display', 'block')
 				.append('span')
 				.text(label)
 		}
+	} else {
+		self.opts.dom.violinLegendDiv.selectAll('*').remove()
 	}
 	return
 }

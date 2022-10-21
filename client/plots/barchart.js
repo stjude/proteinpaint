@@ -46,7 +46,8 @@ class Barchart {
 				.style('color', '#aaa'),
 			barDiv: holder.append('div').style('white-space', 'normal'),
 			violinDiv: holder.append('div').style('white-space', 'normal'),
-			legendDiv: holder.append('div').style('margin', '5px 5px 15px 5px')
+			legendDiv: holder.append('div').style('margin', '5px 5px 15px 5px'),
+			violinLegendDiv: holder.append('div').style('margin', '5px 5px 15px 5px')
 		}
 		if (this.dom.header) this.dom.header.html('Barchart')
 		this.settings = JSON.parse(rendererSettings)
@@ -112,8 +113,8 @@ class Barchart {
 						},
 						'divideBy'
 					]
-				}),
-				violin: []
+				})
+				// violin: []
 			}
 
 			this.components.controls.on('downloadClick.boxplot', this.download)
@@ -197,6 +198,7 @@ class Barchart {
 				this.dom.barDiv.style('display', 'none')
 				this.dom.banner.text('').style('display', 'none')
 				this.dom.legendDiv.text('')
+
 				this.dom.violinDiv
 					.style('display', 'inline-block')
 					.style('padding', '10px')
@@ -221,6 +223,7 @@ class Barchart {
 			// compute and render barchart
 			this.dom.barDiv.style('display', 'inline-block')
 			this.dom.violinDiv.style('display', 'none')
+			this.dom.violinLegendDiv.remove('*')
 
 			const reqOpts = this.getDataRequestOpts()
 			const data = await this.app.vocabApi.getNestedChartSeriesData(reqOpts)
@@ -629,6 +632,7 @@ function setRenderers(self) {
 	}
 
 	self.updateChart = function(chart) {
+		// this.dom.legendDiv.remove("*")
 		chart.settings.cols.sort(self.barSorter)
 		chart.maxAcrossCharts = self.chartsData.maxAcrossCharts
 		chart.handlers = self.handlers
