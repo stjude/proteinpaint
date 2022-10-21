@@ -299,14 +299,26 @@ opts{} options to tweak the query, see const default_opts = below
 		const lst = []
 		const scounts = new Map()
 		for (const s of smap.values()) {
-			// possible for a sample to not be annotated for the series term (term)
+			// series term (term1)
+			// discard sample if not annotated for term1
 			if (!('key1' in s)) continue
-			// supply empty string defaults as needed for chart (term0) and overlay (term2)
-			if (!('key0' in s)) {
+
+			// chart term (term0)
+			if (q.term0_q) {
+				// term0 is defined, discard sample if not annotated for term0
+				if (!('key0' in s)) continue
+			} else {
+				// term0 is not defined, supply empty string default
 				s.key0 = ''
 				s.val0 = ''
 			}
-			if (!('key2' in s)) {
+
+			// overlay term (term2)
+			if (q.term2_q) {
+				// term2 is defined, discard sample if not annotated for term2
+				if (!('key2' in s)) continue
+			} else {
+				// term2 is not defined, supply empty string default
 				s.key2 = ''
 				s.val2 = ''
 			}
