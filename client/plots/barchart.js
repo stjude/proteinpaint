@@ -198,6 +198,7 @@ class Barchart {
 				this.dom.barDiv.style('display', 'none')
 				this.dom.banner.text('').style('display', 'none')
 				this.dom.legendDiv.text('')
+				this.dom.violinLegendDiv.style('display', 'inline-block')
 
 				this.dom.violinDiv
 					.style('display', 'inline-block')
@@ -223,7 +224,7 @@ class Barchart {
 			// compute and render barchart
 			this.dom.barDiv.style('display', 'inline-block')
 			this.dom.violinDiv.style('display', 'none')
-			this.dom.violinLegendDiv.remove('*')
+			this.dom.violinLegendDiv.style('display', 'none')
 
 			const reqOpts = this.getDataRequestOpts()
 			const data = await this.app.vocabApi.getNestedChartSeriesData(reqOpts)
