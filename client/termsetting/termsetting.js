@@ -103,7 +103,7 @@ class TermSetting {
 		the override tw serves the "atypical" termsetting usage
 		as used in snplocus block pan/zoom update in regression.results.js
 		*/
-		const arg = this.term ? { id: this.term.id, term: this.term, q: this.q } : {}
+		const arg = this.term ? JSON.parse(JSON.stringify({ id: this.term.id, term: this.term, q: this.q })) : {}
 		if ('$id' in this) arg.$id = this.$id
 		if (arg.q?.reuseId && arg.q.reuseId === this.data.q?.reuseId) {
 			if (!deepEqual(arg.q, this.data.q)) {
