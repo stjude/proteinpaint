@@ -34,7 +34,7 @@ class TermSetting {
 		this.vocabApi = opts.vocabApi
 		this.activeCohort = opts.activeCohort
 		this.placeholder = opts.placeholder
-		this.durations = { exit: 500 }
+		this.durations = { exit: 0 }
 		this.disable_terms = opts.disable_terms
 		this.usecase = opts.usecase
 		this.abbrCutoff = opts.abbrCutoff
@@ -103,7 +103,7 @@ class TermSetting {
 		the override tw serves the "atypical" termsetting usage
 		as used in snplocus block pan/zoom update in regression.results.js
 		*/
-		const arg = this.term ? JSON.parse(JSON.stringify({ id: this.term.id, term: this.term, q: this.q })) : {}
+		const arg = this.term ? { id: this.term.id, term: this.term, q: this.q, isAtomic: true } : {}
 		if ('$id' in this) arg.$id = this.$id
 		if (arg.q?.reuseId && arg.q.reuseId === this.data.q?.reuseId) {
 			if (!deepEqual(arg.q, this.data.q)) {
@@ -773,6 +773,7 @@ export async function fillTermWrapper(tw, vocabApi, defaultQ) {
 	await call_fillTW(tw, vocabApi, defaultQ)
 
 	mayValidateQmode(tw)
+	return tw
 }
 
 async function call_fillTW(tw, vocabApi, defaultQ) {
