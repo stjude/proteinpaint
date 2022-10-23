@@ -4,6 +4,7 @@ mv -f .git/hooks/pre-commit .git/hooks/pre-commit-bkup
 cd .git/hooks
 ln -s ../../utils/hooks/pre-commit pre-commit
 ln -s ../../utils/hooks/post-checkout post-checkout
+ln -s ../../utils/hooks/pre-merge pre-merge
 chmod 755 post-checkout
 cd ../..
 
