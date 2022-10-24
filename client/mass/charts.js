@@ -237,7 +237,7 @@ function getChartTypeList(self) {
 			}
 		},
 		{
-			label: 'Sample Scatter',
+			label: 'Scatter Plot',
 			chartType: 'sampleScatter',
 			clickTo: self.showScatterPlot
 		}

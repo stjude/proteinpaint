@@ -135,6 +135,7 @@ class Scatter {
 		this.axisLeft = axisLeft(this.yAxisScale)
 
 		this.render(data)
+		this.lassoReset()
 	}
 
 	// creates an opts object for the vocabApi.someMethod(),
