@@ -76,7 +76,7 @@ class Term1ui {
 							*/
 							isAtomic: true,
 							id: this.state.plot.term.term.id,
-							term: this.state.plot.term.term,
+							term: JSON.parse(JSON.stringify(this.state.plot.term.term)),
 							q: data.q
 						}
 					}

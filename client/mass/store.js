@@ -87,6 +87,7 @@ class TdbStore {
 				const plot = await _.getPlotConfig(savedPlot, this.app)
 				this.state.plots[i] = plot
 				if (!('id' in plot)) plot.id = `_AUTOID_${id++}_${i}`
+				if (plot.mayAdjustConfig) plot.mayAdjustConfig(plot)
 			}
 		} catch (e) {
 			throw e
@@ -191,6 +192,12 @@ TdbStore.prototype.actions = {
 		// initial render is not meant to be modified yet
 		//
 		this.state = this.copyMerge(this.toJson(this.state), action.state ? action.state : {}, this.replaceKeyVals)
+		for (const plot in this.state.plots) {
+			if (plot.mayAdjustConfig) {
+				console.log('mayAdjustConfig() used by mass store in dispatched action=app_refresh')
+				plot.mayAdjustConfig(plot, action.config)
+			}
+		}
 	},
 	tab_set(action) {
 		this.state.nav.activeTab = action.activeTab
@@ -219,6 +226,10 @@ TdbStore.prototype.actions = {
 		const plot = await _.getPlotConfig(action.config, this.app)
 		if (!('id' in action)) action.id = getId()
 		plot.id = action.id
+		if (plot.mayAdjustConfig) {
+			console.log('mayAdjustConfig() used by mass store in dispatched action=plot_create')
+			plot.mayAdjustConfig(plot, action.config)
+		}
 		this.state.plots.push(plot)
 	},
 
@@ -226,6 +237,10 @@ TdbStore.prototype.actions = {
 		const plot = this.state.plots.find(p => p.id === action.id)
 		if (!plot) throw `missing plot id='${action.id}' in store.plot_edit()`
 		this.copyMerge(plot, action.config, action.opts ? action.opts : {})
+		if (plot.mayAdjustConfig) {
+			console.log('mayAdjustConfig() used by mass store in dispatched action=plot_edit')
+			plot.mayAdjustConfig(plot, action.config)
+		}
 		validatePlot(plot, this.app.vocabApi)
 
 		if ('cutoff' in action.config) {

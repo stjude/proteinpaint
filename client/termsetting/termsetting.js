@@ -111,7 +111,8 @@ class TermSetting {
 				delete arg.q.name
 			}
 		}
-		this.opts.callback(overrideTw ? copyMerge(JSON.stringify(arg), overrideTw) : arg)
+		const otw = overrideTw ? JSON.parse(JSON.stringify(otw)) : {}
+		this.opts.callback(overrideTw ? copyMerge(JSON.stringify(arg), otw) : arg)
 	}
 
 	validateOpts(_opts) {

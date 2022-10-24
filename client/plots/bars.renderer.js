@@ -254,7 +254,7 @@ export default function barsRenderer(barsapp, holder) {
 			rowlabtickspace: 4,
 			collabtickspace: 4,
 			collabelh: 150,
-			rowlabelw: 150,
+			rowlabelw: 250,
 			rowheadleft: true,
 			colheadtop: false,
 

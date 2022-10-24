@@ -1126,7 +1126,7 @@ thus less things to worry about...
 			if (!r.type) continue // skip ungraphable parent terms
 
 			if (!(r.cohort in supportedChartTypes)) {
-				supportedChartTypes[r.cohort] = new Set(['barchart', 'regression'])
+				supportedChartTypes[r.cohort] = new Set(['barchart', 'regression', 'summary'])
 				if (ds.cohort.scatterplots) supportedChartTypes[r.cohort].add('sampleScatter')
 				numericTypeCount[r.cohort] = 0
 				if (ds.cohort.allowedChartTypes?.includes('matrix')) supportedChartTypes[r.cohort].add('matrix')
@@ -1152,6 +1152,7 @@ thus less things to worry about...
 
 		// convert to array
 		for (const cohort in supportedChartTypes) {
+			if (supportedChartTypes[cohort].has('summary')) supportedChartTypes[cohort].delete('barchart')
 			supportedChartTypes[cohort] = [...supportedChartTypes[cohort]]
 		}
 

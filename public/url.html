@@ -131,6 +131,11 @@ function __barchart(t1,t2) {
 	if(t2) chart.term2 = t2
 	return '?noheader=1&mass='+JSON.stringify( { dslabel:'SJLife', genome:'hg38', plots: [ chart ], nav: { activeTab: 1 } })
 }
+function __summary(t1,t2) {
+	const chart = { chartType:'summary', term:t1 }
+	if(t2) chart.term2 = t2
+	return '?noheader=1&mass='+JSON.stringify( { dslabel:'SJLife', genome:'hg38', plots: [ chart ], nav: { activeTab: 1 } })
+}
 function __cuminc({t1,t2,t0,grade,hidden}) {
 	const chart = {
 		chartType:'cuminc',
@@ -419,6 +424,12 @@ makeURL([
 		'violin',
 		['hrtavg', __barchart( { id: 'hrtavg', q:{mode:'continuous'} })],
 		['hrtavg/race', __barchart( { id: 'hrtavg', q:{mode:'continuous'} }, {id:'racegrp'})],
+		
+
+		'summary',
+		['hrtavg', __summary( { id: 'hrtavg', q:{mode:'continuous'} })],
+		['hrtavg/race', __summary( { id: 'hrtavg', q:{mode:'continuous'} }, {id:'racegrp'})],
+
 
 		'cuminc',
 

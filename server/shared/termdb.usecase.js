@@ -53,6 +53,7 @@ export function isUsableTerm(term, _usecase, ds) {
 	// default handling
 	switch (usecase.target) {
 		case 'barchart':
+		case 'summary':
 			if (term.type == 'geneVariant') return uses
 			if (term.type && term.type !== 'survival') uses.add('plot')
 			if (hasNonSurvivalTermChild(child_types)) uses.add('branch')

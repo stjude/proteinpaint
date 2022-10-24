@@ -4,6 +4,7 @@ import { storeInit } from './store'
 import { vocabInit } from '#termdb/vocabulary'
 import { navInit } from './nav'
 import { plotInit } from './plot'
+import { summaryInit } from '#plots/summary'
 import { sayerror } from '#dom/error'
 import { Menu } from '#dom/menu'
 import { newSandboxDiv } from '#dom/sandbox'
@@ -104,7 +105,7 @@ class MassApp {
 
 		const newPlots = {}
 		let sandbox
-		for (const [index, plot] of this.state.plots.entries()) {
+		for (const plot of this.state.plots) {
 			if (!(plot.id in this.components.plots)) {
 				sandbox = newSandboxDiv(this.dom.plotDiv, {
 					close: () => {
@@ -119,7 +120,9 @@ class MassApp {
 						width: '98.5%'
 					}
 				})
-				newPlots[plot.id] = plotInit(Object.assign({}, { app: this.api, holder: sandbox }, plot))
+				if (plot.chartType == 'summary')
+					newPlots[plot.id] = summaryInit(Object.assign({ app: this.api, holder: sandbox }, plot))
+				else newPlots[plot.id] = plotInit(Object.assign({ app: this.api, holder: sandbox }, plot))
 			}
 		}
 
