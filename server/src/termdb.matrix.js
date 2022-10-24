@@ -147,9 +147,29 @@ function divideTerms(lst) {
 	return [dict, nonDict]
 }
 
+/*
+input:
+
+q{}
+termWrappers[]
+	list of tw objects based on dictionary terms
+
+output:
+
+{
+	samples: {}
+		key: stringified integer id
+		val: {}
+			sample: int id
+			<term id>: { key: str, value: str }
+	refs:{}
+		{ byTermId: {} }
+}
+*/
 async function getSampleData_dictionaryTerms(q, termWrappers) {
 	const samples = {}
 	const refs = { byTermId: {} }
+
 	if (!termWrappers.length) return { samples, refs }
 
 	if (q.ds?.variant2samples?.gdcapi) {
@@ -217,13 +237,33 @@ async function getSampleData_dictionaryTerms(q, termWrappers) {
 	return { samples, refs }
 }
 
+/*
+******** all gdc-specific logic **********
+makes same return as getSampleData_dictionaryTerms()
+*/
 async function getSampleData_gdc(q, termWrappers) {
 	const param = {
 		get: 'samples',
 		isoform: 'ENST00000407796' // just a test!!!
 	}
 
-	const samples = await querySamples_gdcapi(param, termWrappers.map(i => i.term.id), q.ds)
+	const sampleLst = await querySamples_gdcapi(param, ['case.case_id', ...termWrappers.map(i => i.term.id)], q.ds)
 
-	console.log(samples)
+	const samples = {}
+	const refs = { byTermId: {} }
+
+	for (const s of sampleLst) {
+		const s2 = {
+			sample: s.sample_id
+		}
+		for (const tw of termWrappers) {
+			const v = s[tw.term.id]
+			s2[tw.term.id] = {
+				key: v,
+				value: v
+			}
+		}
+		samples[s.sample_id] = s2
+	}
+	return { samples, refs }
 }
