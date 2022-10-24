@@ -267,7 +267,19 @@ class MassCumInc {
 							}
 						},
 
-						'divideBy',
+						{
+							label: 'Divide by',
+							title: 'Divide by',
+							type: 'divideBy',
+							defaultQ4fillTW: {
+								'numeric.toggle': {
+									isAtomic: true, // if this is needed?
+									mode: 'discrete',
+									type: 'custom-bin',
+									preferredBins: 'median'
+								}
+							}
+						},
 
 						{
 							label: 'Minimum sample size',
