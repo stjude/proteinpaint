@@ -51,17 +51,24 @@ const fields = [
 		const projectset = new Set()
 		const siteset = new Set()
 		for (const hit of re.data.hits) {
-			const consequence = hit.ssm.consequence.find(i => i.transcript.transcript_id == p.isoform)
+			const consequence = hit.ssm.consequence.find(i => p.isoforms.has(i.transcript.transcript_id))
 			const aa = consequence.transcript.aa_change || consequence.transcript.consequence_type // no aa change for utr variants
-			if (!aa2case.has(aa)) aa2case.set(aa, { type: consequence.transcript.consequence_type, cases: [] })
+			if (!aa2case.has(aa)) {
+				aa2case.set(aa, {
+					type: consequence.transcript.consequence_type,
+					transcript: consequence.transcript.transcript_id,
+					cases: []
+				})
+			}
 			aa2case.get(aa).cases.push(hit.case.case_id)
 
 			caseidset.add(hit.case.case_id)
 			projectset.add(hit.case.project.project_id)
 			siteset.add(hit.case.primary_site)
 		}
+
 		for (const [aa, o] of aa2case) {
-			console.log(aa, o.type, o.cases)
+			console.log(o.transcript, aa, o.type, o.cases)
 		}
 
 		console.log(aa2case.size, ' variants')
@@ -81,7 +88,7 @@ function get_parameter() {
 		const [k, v] = process.argv[i].split('=')
 		p[k] = v
 	}
-	if (!p.gene && !p.isoform) {
+	if (!p.gene && !p.isoform && !p.isoforms) {
 		// if missing gene/isoform, use AKT1
 		p.isoform = 'ENST00000407796'
 	}
@@ -99,6 +106,25 @@ function get_filters(p) {
 			op: '=',
 			content: { field: 'ssms.consequence.transcript.transcript_id', value: [p.isoform] }
 		})
+
+		p.isoforms = new Set([p.isoform])
+	} else if (p.isoforms) {
+		/*
+		const content = []
+		for(const i of p.isoforms.split(',')) {
+			content.push({
+				op: '=',
+				content: { field: 'ssms.consequence.transcript.transcript_id', value: [i] }
+			})
+		}
+		filters.content.push({ op:'or', content})
+		*/
+		filters.content.push({
+			op: 'in',
+			content: { field: 'ssms.consequence.transcript.transcript_id', value: p.isoforms.split(',') }
+		})
+
+		p.isoforms = new Set(p.isoforms.split(','))
 	}
 
 	if (p.case_id) {
