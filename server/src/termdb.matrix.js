@@ -7,6 +7,7 @@ const imagesize = require('image-size')
 const serverconfig = require('./serverconfig')
 const utils = require('./utils')
 const termdbsql = require('./termdb.sql')
+const { querySamples_gdcapi } = require('./mds3.gdc')
 
 /*
 q {}
@@ -96,7 +97,7 @@ Returns
 async function getSampleData(q, terms) {
 	// dictionary and non-dictionary terms require different methods for data query
 	const [dictTerms, nonDictTerms] = divideTerms(terms)
-	const { samples, refs } = getSampleData_dictionaryTerms(q, dictTerms)
+	const { samples, refs } = await getSampleData_dictionaryTerms(q, dictTerms)
 
 	if (q.ds.getSampleIdMap) {
 		refs.bySampleId = q.ds.getSampleIdMap(samples)
@@ -146,11 +147,25 @@ function divideTerms(lst) {
 	return [dict, nonDict]
 }
 
-function getSampleData_dictionaryTerms(q, termWrappers) {
+async function getSampleData_dictionaryTerms(q, termWrappers) {
 	const samples = {}
-	const twByTermId = {}
 	const refs = { byTermId: {} }
 	if (!termWrappers.length) return { samples, refs }
+
+	if (q.ds?.variant2samples?.gdcapi) {
+		/*
+
+		************** quick fix ****************
+
+		to tell it is gdc dataset, and uses the special method to query cases
+		TODO should provide complete list of genes to add to gdcapi query
+		to restrict cases to only those mutated on the given genes
+		rather than retrieving all 80K cases from gdc
+		*/
+		return await getSampleData_gdc(q, termWrappers)
+	}
+
+	const twByTermId = {}
 
 	const filter = getFilterCTEs(q.filter, q.ds)
 	// must copy filter.values as its copy may be used in separate SQL statements,
@@ -200,4 +215,15 @@ function getSampleData_dictionaryTerms(q, termWrappers) {
 	}
 
 	return { samples, refs }
+}
+
+async function getSampleData_gdc(q, termWrappers) {
+	const param = {
+		get: 'samples',
+		isoform: 'ENST00000407796' // just a test!!!
+	}
+
+	const samples = await querySamples_gdcapi(param, termWrappers.map(i => i.term.id), q.ds)
+
+	console.log(samples)
 }

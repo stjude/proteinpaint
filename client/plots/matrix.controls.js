@@ -296,8 +296,7 @@ export class MatrixControls {
 				self.addMsigdbMenu(app, parent, table.append('tr'), key)
 			}
 		}
-		// TODO: reenable once the backend can handle non-db terms source
-		//self.addDictMenu(app, parent, table.append('tr'))
+		self.addDictMenu(app, parent, table.append('tr'))
 	}
 
 	addTermGroupSelector(app, parent, tr) {
