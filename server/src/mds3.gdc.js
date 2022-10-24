@@ -676,8 +676,19 @@ export async function querySamples_gdcapi(q, termidlst, ds) {
 			sample.ssm_id = s.ssm.ssm_id
 		}
 
-		// this is aliquot id; later all aliquot ids are gathered and converted to submitter id later
-		sample.sample_id = s.case?.observation?.[0]?.sample?.tumor_sample_uuid
+		/******* tricky logic *******
+		s.case.observation[0].sample.tumor_sample_uuid may be retrieved from api (depending on fields[])
+		when avaiable, the value is assigned to sample.tumor_sample_uuid,
+		which will next be converted into submitter id
+		the submitter id is assigned to sample.sample_id for display (and counting occurrence)
+
+		as s.case.case_id is expected to always available from fields[]
+		it is assigned to sample.sample_id
+		in case when tumor_sample_uuid is not retrieved,
+		sample.sample_id is still available for counting occurrence
+		*/
+		sample.tumor_sample_uuid = s.case?.observation?.[0]?.sample?.tumor_sample_uuid
+		sample.sample_id = s.case?.case_id
 
 		// for making url link on a sample
 		sample.sample_URLid = s.case.case_id
@@ -698,7 +709,7 @@ export async function querySamples_gdcapi(q, termidlst, ds) {
 	}
 
 	if (typeof ds.variant2samples.sample_id_getter == 'function') {
-		// batch process, fire one graphql query to convert id for all samples
+		// batch process, fire one query to convert all tumor_sample_uuid into submitter id for display
 		// must pass request header to getter in case requesting a controlled sample via a user token
 		// this is gdc-specific logic and should not impact generic mds3
 		await ds.variant2samples.sample_id_getter(samples, headers)
