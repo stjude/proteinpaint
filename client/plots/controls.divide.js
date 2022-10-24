@@ -37,6 +37,7 @@ class Divide {
 			use_bins_less: true,
 			debug: this.opts.debug,
 			menuOptions: 'all', // to show edit/replace/remove menu upon clicking pill
+			defaultQ4fillTW: this.opts.defaultQ4fillTW,
 			callback: term0 => {
 				// term0 is {term,q} and can be null
 				if (term0) {
