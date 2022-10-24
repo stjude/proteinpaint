@@ -47,6 +47,7 @@ class TdbConfigUiInit {
 							holder: this.dom.table.append('tr'),
 							id: this.id,
 							usecase: obj.usecase,
+							defaultQ4fillTW: obj.defaultQ4fillTW,
 							debug: this.opts.debug
 						})
 					}

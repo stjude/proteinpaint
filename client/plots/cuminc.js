@@ -251,8 +251,24 @@ class MassCumInc {
 					holder: this.dom.controls.attr('class', 'pp-termdb-plot-controls').style('display', 'inline-block'),
 					inputs: [
 						'term1',
-						'overlay',
+
+						{
+							label: 'Overlay',
+							title: 'Overlay',
+							type: 'overlay',
+							defaultQ4fillTW: {
+								// use of "numeric.toggle" is a bit confusing; numeric.discrete.js feels more appropriate
+								'numeric.toggle': {
+									isAtomic: true, // if this is needed?
+									mode: 'discrete',
+									type: 'custom-bin',
+									preferredBins: 'median'
+								}
+							}
+						},
+
 						'divideBy',
+
 						{
 							label: 'Minimum sample size',
 							title: 'Minimum number of samples in series',

@@ -109,11 +109,11 @@ export async function getHandler(self) {
 	}
 }
 
-export function fillTW(tw, vocabApi) {
+export async function fillTW(tw, vocabApi, defaultQ) {
 	// when missing, defaults mode to discrete
 	if (!tw.q.mode) tw.q.mode = 'discrete'
 
-	if (tw.q?.mode !== 'continuous' && !valid_binscheme(tw.q)) {
+	if (tw.q.mode !== 'continuous' && !valid_binscheme(tw.q)) {
 		/*
 		if q is already initiated, do not overwrite
 		to be tested if can work with partially declared state
@@ -121,9 +121,47 @@ export function fillTW(tw, vocabApi) {
 		*/
 		copyMerge(tw.q, tw.term.bins.default)
 	}
+
+	if (defaultQ) {
+		if (defaultQ.preferredBins == 'median') {
+			/*
+			do following computing to fill the q{} object
+			call vocab method to get median value (without filter)
+			and create custom list of two bins
+			used for cuminc overlay/divideby
+			*/
+
+			const result = await vocabApi.getPercentile(tw.term.id, [50])
+			if (!result.values) throw '.values[] missing from vocab.getPercentile()'
+			const median = result.values[0]
+			if (!Number.isFinite(median)) throw 'median value not a number'
+			tw.q = JSON.parse(JSON.stringify(defaultQ))
+			delete tw.q.preferredBins
+			tw.q.lst = [
+				{
+					startunbounded: true,
+					stop: median,
+					stopinclusive: false,
+					label: '<' + median // if label is missing, cuminc will break with "unexpected seriesId", cuminc.js:367
+				},
+				{
+					start: median,
+					startinclusive: true,
+					stopunbounded: true,
+					label: '≥' + median
+				}
+			]
+		} else if (defaultQ.preferredBins == 'less') {
+			/* this flag is true, use term.bins.less
+			in this case, defaultQ{} is not an actual q{} object
+			*/
+			tw.q = JSON.parse(JSON.stringify(tw.term.bins?.less || tw.term.bins.default))
+		} else {
+			console.log('treat defaultQ as an actual q object and call copyMerge()?')
+		}
+	}
+
 	set_hiddenvalues(tw.q, tw.term)
-	// binconfig.termtype may be used to improve bin labels
-	//if (!tw.q.termtype) tw.q.termtype = term.type
 }
 
 function valid_binscheme(q) {

@@ -68,7 +68,7 @@ tape('hidden uncomputable', function(test) {
 						id: 'Cardiac dysrhythmia'
 					},
 					term2: {
-						id: 'hrtavg'
+						id: 'hrtavg' // FIXME this term is not in dictionary
 					},
 					settings: {
 						cuminc: {
@@ -87,7 +87,11 @@ tape('hidden uncomputable', function(test) {
 
 	async function runTests(cuminc) {
 		const hiddenDiv = cuminc.Inner.dom.hiddenDiv
-		test.equal(hiddenDiv && hiddenDiv.selectAll('.legend-row').size(), 2, 'should hide 2 series')
+		test.equal(
+			hiddenDiv && hiddenDiv.selectAll('.legend-row').size(),
+			1,
+			'should hide 1 series (exposed, dose unknown)'
+		)
 		test.end()
 	}
 })
