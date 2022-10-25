@@ -798,14 +798,14 @@ function setRenderers(self) {
 
 		serieses.exit().remove()
 		serieses.each(function(series, i) {
-			renderSeries(select(this), chart, series, i, s, s.duration)
+			renderSeries(select(this), series, s)
 		})
 		serieses
 			.enter()
 			.append('g')
 			.attr('class', 'sjpcb-cuminc-series')
 			.each(function(series, i) {
-				renderSeries(select(this), chart, series, i, s, duration)
+				renderSeries(select(this), series, s)
 			})
 
 		renderAxes(xAxis, xTitle, yAxis, yTitle, s, chart)
@@ -916,9 +916,20 @@ function setRenderers(self) {
 		return [mainG, seriesesG, axisG, xAxis, yAxis, xTitle, yTitle, atRiskG, plotRect]
 	}
 
-	function renderSeries(g, chart, series, i, s, duration) {
+	function renderSeries(g, series, s) {
 		g.selectAll('path').remove()
 
+		// cumulative incidence line
+		g.append('path')
+			.attr('d', self.lineFxn(series.data.map(d => ({ scaledX: d.scaledX, scaledY: d.scaledY[0] }))))
+			.style('fill', 'none')
+			.style('stroke', self.term2toColor[series.seriesId].adjusted)
+			.style('stroke-width', 2)
+			.style('stroke-linecap', 'square')
+			.style('opacity', 1)
+			.style('stroke-opacity', 1)
+
+		// confidence intervals
 		g.append('path')
 			.attr(
 				'd',
@@ -932,72 +943,6 @@ function setRenderers(self) {
 			.style('fill', self.term2toColor[series.seriesId].adjusted)
 			.style('opacity', '0.15')
 			.style('stroke', 'none')
-
-		renderSubseries(
-			s,
-			g,
-			series.data.map(d => {
-				return {
-					seriesId: d.seriesId,
-					x: d.x,
-					y: d.y,
-					scaledX: d.scaledX,
-					scaledY: d.scaledY[0],
-					seriesName: 'cuminc',
-					seriesLabel: series.seriesLabel
-				}
-			})
-		)
-
-		renderSubseries(
-			s,
-			g.append('g'),
-			series.data.map(d => {
-				return {
-					seriesId: d.seriesId,
-					x: d.x,
-					y: d.low,
-					scaledX: d.scaledX,
-					scaledY: d.scaledY[1],
-					seriesName: 'low',
-					seriesLabel: series.seriesLabel
-				}
-			})
-		)
-
-		renderSubseries(
-			s,
-			g.append('g'),
-			series.data.map(d => {
-				return {
-					seriesId: d.seriesId,
-					x: d.x,
-					y: d.high,
-					scaledX: d.scaledX,
-					scaledY: d.scaledY[2],
-					seriesName: 'high',
-					seriesLabel: series.seriesLabel
-				}
-			})
-		)
-	}
-
-	function renderSubseries(s, g, data) {
-		g.selectAll('g').remove()
-		const subg = g.append('g')
-
-		const seriesName = data[0].seriesName
-		const color = self.term2toColor[data[0].seriesId].adjusted
-
-		if (seriesName == 'cuminc') {
-			g.append('path')
-				.attr('d', self.lineFxn(data))
-				.style('fill', 'none')
-				.style('stroke', color)
-				.style('stroke-width', 2)
-				.style('opacity', 1)
-				.style('stroke-opacity', 1)
-		}
 	}
 
 	function renderAxes(xAxis, xTitle, yAxis, yTitle, s, chart) {

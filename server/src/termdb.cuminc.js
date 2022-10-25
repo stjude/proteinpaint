@@ -24,8 +24,6 @@ export async function get_incidence(q, ds) {
 			const time = d.val1
 			const event = d.key1
 			const series = d.key2
-			// do not include data when years_to_event < 0
-			if (time < 0) continue //TODO: this should be handled in sql
 			if (!(chartId in byChartSeries)) byChartSeries[chartId] = []
 			byChartSeries[chartId].push({ time, event, series })
 		}

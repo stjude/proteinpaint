@@ -631,9 +631,13 @@ module.exports = {
 
 			minTimeSinceDx: 5, // enrollment in sjlife requires 5 years since cancer diagnosis
 
-			ageStartTermId: 'agedx', // term id for starting age of patients
-			// for cox outcome with timeScale='age'
-			// starting age of patients is age at cancer diagnosis
+			// term ids specific to dataset
+			termIds: {
+				ageDxId: 'agedx', // age at diagnosis
+				ageLastVisitId: 'agelastvisit', // age at last visit
+				ageNdiId: 'a_ndi', // age at last NDI seach
+				ageDeathId: 'a_death' // age at death
+			},
 
 			ageEndOffset: 0.00274, // number of years to offset ending age of patients
 			// for cox outcome with timeScale='age'
