@@ -247,7 +247,7 @@ const ssmid2csq = {
 /*
 this is gdc api-specific implementation
 
-query by variants or isoform:
+query by variants or isoform(s):
 - a list of variants, get samples harboring the variants
 - an isoform, get samples harboring any variant of the isoform
 
@@ -286,6 +286,14 @@ const variant2samplesGdcapi = {
 				content: {
 					field: 'ssms.consequence.transcript.transcript_id',
 					value: [p.isoform]
+				}
+			})
+		} else if (p.isoforms) {
+			f.content.push({
+				op: 'in',
+				content: {
+					field: 'ssms.consequence.transcript.transcript_id',
+					value: p.isoforms.split(',')
 				}
 			})
 		} else {

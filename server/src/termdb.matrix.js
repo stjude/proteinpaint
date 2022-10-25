@@ -244,7 +244,8 @@ makes same return as getSampleData_dictionaryTerms()
 async function getSampleData_gdc(q, termWrappers) {
 	const param = {
 		get: 'samples',
-		isoform: 'ENST00000377970' // just a test!!!
+		isoforms: 'ENST00000377970,ENST00000643460' // just a test!!!
+		//isoform: 'ENST00000377970' // just a test!!!
 	}
 
 	const sampleLst = await querySamples_gdcapi(param, ['case.case_id', ...termWrappers.map(i => i.term.id)], q.ds)
