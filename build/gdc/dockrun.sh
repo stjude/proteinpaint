@@ -29,7 +29,7 @@ fi
 # docker build --file Dockerfile --tag ppbase:latest .
 
 set +e
-docker stop pp && docker rm pp
+docker stop $CONTAINER_ID && docker rm $CONTAINER_ID
 set -e
 
 EXPOSED_PORT=3000
