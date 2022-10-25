@@ -1,37 +1,32 @@
 import { getCompInit } from '../rx'
 import { controlsInit } from './controls'
-import { select } from 'd3-selection'
 import { axisLeft, axisBottom } from 'd3-axis'
 import { scaleLinear, scaleBand } from 'd3-scale'
 import { extent } from 'd3-array'
 import { area, curveBumpY } from 'd3-shape'
-import htmlLegend from '../dom/html.legend'
 
 class ViolinPlot {
 	constructor(opts) {
 		this.type = 'violin'
+		setRenderers(this)
 	}
 
 	async init() {
-		const holder = this.opts.holder.append('div')
+		// const holder = this.opts.controls ? this.opts.holder : this.opts.holder.append('div')
 		this.dom = {
-			holder,
-			controls: holder
+			controls: this.opts.holder
 				.append('div')
 				.attr('class', 'sjpp-plot-controls')
 				.style('display', 'inline-block'),
 
-			violinDiv: holder
+			holder: this.opts.holder
 				.append('div')
 				.style('display', 'inline-block')
 				.style('padding', '10px')
-				.style('overflow-x', 'auto')
-				.style('max-width', '70vw')
-				.style('scrollbar-width', 'none'),
-
-			legendDiv: holder.append('div').style('margin', '5px 5px 15px 5px')
+			// .style('overflow-x', 'auto')
+			// .style('max-height', '70vw')
+			// .style('scrollbar-width', 'none')
 		}
-		setRenderers(this)
 
 		this.components = {
 			controls: await controlsInit({
@@ -48,14 +43,15 @@ class ViolinPlot {
 						type: 'overlay',
 						// TODO: when used under the summary chart, this.opts.usecase may replace the usecase here
 						usecase: { target: 'violin', detail: 'term2' }
-					},
-					{
-						label: 'Orientation',
-						type: 'radio',
-						chartType: 'violin',
-						settingsKey: 'orientation',
-						options: [{ label: 'Vertical', value: 'vertical' }, { label: 'Horizontal', value: 'horizontal' }]
 					}
+					//disable orientation.
+					// {
+					// 	label: 'Orientation',
+					// 	type: 'radio',
+					// 	chartType: 'violin',
+					// 	settingsKey: 'orientation',
+					// 	options: [{ label: 'Vertical', value: 'vertical' }, { label: 'Horizontal', value: 'horizontal' }]
+					// }
 				]
 			})
 		}
@@ -103,19 +99,19 @@ class ViolinPlot {
 
 	getLegendGrps() {
 		const t2 = this.config.term2
+		this.dom.holder.select('sjpp-legend-div').remove()
 
 		//add header to the legend div
 		if (t2 != null && t2 != undefined) {
-			//Only add legend if more than one violin plot renders
-			this.dom.legendDiv.selectAll('*').remove()
 			const legendTitle = this.config.term2.term.name
 
-			const legend = this.dom.legendDiv
+			const holder = this.dom.holder
 				.append('div')
+				.classed('sjpp-legend-div', true)
 				.style('display', 'block')
 				.style('padding', '40px')
 
-			legend
+			holder
 				.append('span')
 				.style('color', '#aaa')
 				.style('font-weight', '400')
@@ -131,7 +127,7 @@ class ViolinPlot {
 					label = `${label}, n = ${key.yScaleValues.length}`
 				}
 
-				legend
+				holder
 					.append('div')
 					.style('display', 'block')
 					.append('span')
@@ -150,7 +146,7 @@ async function setRenderers(self) {
 		const termName = self.config.term.term.name
 
 		if (self.data.length == 0) {
-			self.dom.violinDiv.html(
+			self.dom.holder.html(
 				` <span style="opacity:.6;font-size:1em;margin-left:90px;">No data to render Violin Plot</span>`
 			)
 			return
@@ -174,22 +170,33 @@ async function setRenderers(self) {
 		}
 
 		// Render the violin plot
-		const margin = { top: 50, right: 100, bottom: 50, left: 110 },
-			height = 800 - margin.top - margin.bottom,
-			width =
-				(groups.length < 2
-					? groups.length * 600
-					: groups.length >= 2 && groups.length < 4
-					? groups.length * 400
-					: groups.length * 300) -
-				margin.left -
-				margin.right
+		const margin = { top: 50, right: 50, bottom: 50, left: 250 },
+			// height = (groups.length < 2
+			// 	? groups.length * 300
+			// 	: groups.length >= 2 && groups.length < 4
+			// 	? groups.length * 400
+			// 	: groups.length * 100) - margin.top - margin.bottom,
+
+			// width = 1000 -
+			// 	margin.left -
+			// 	margin.right
+
+			height = 1000 - margin.top - margin.bottom,
+			width = 1000 - margin.left - margin.right
 
 		// append the svg object to the body of the page
-		self.dom.violinDiv.selectAll('*').remove()
-		self.dom.violinDiv.text('')
+		self.dom.holder.select('.sjpp-violin-plot').remove()
+		self.dom.holder.text('')
 
-		let svg = self.dom.violinDiv
+		let violinDiv = self.dom.holder
+			.append('div')
+			.style('display', 'inline-block')
+			.style('padding', '10px')
+			.style('overflow-y', 'auto')
+			.style('max-height', '70vw')
+			.style('scrollbar-width', 'none')
+
+		let svg = violinDiv
 			.append('svg')
 			.attr('width', width + margin.left + margin.right)
 			.attr('height', height)
@@ -197,8 +204,8 @@ async function setRenderers(self) {
 			.append('g')
 			.attr('transform', 'translate(' + margin.left + ',' + margin.top + ')')
 
-		const boundsWidth = width - margin.right - margin.left,
-			boundsHeight = height - margin.top - margin.bottom
+		const boundsWidth = height - margin.right - margin.left,
+			boundsHeight = width - margin.top - margin.bottom
 
 		const xScale = scaleBand()
 			.range([0, boundsWidth])
@@ -207,8 +214,13 @@ async function setRenderers(self) {
 
 		svg
 			.append('g')
-			.attr('transform', 'translate(0,' + 620 + ')')
+			.attr('transform', 'translate(-8,' + 600 + ')')
 			.call(axisBottom(xScale))
+			.selectAll('text')
+			.style('text-anchor', 'end')
+			.attr('dx', '-.8em')
+			.attr('dy', '.15em')
+			.attr('transform', 'rotate(-90)')
 
 		svg.select('.domain').remove()
 		svg.selectAll('line').remove()
@@ -221,25 +233,26 @@ async function setRenderers(self) {
 
 		svg.selectAll('text').style('font-size', '15px')
 
-		//create y axis label
+		// create y axis label
 		svg
 			.append('text')
 			.attr('transform', 'rotate(-90)')
-			.attr('y', 0 - margin.left)
-			.attr('x', 0 - height / 2.2)
+			.attr('y', 0 - margin.bottom - margin.top - 50)
+			.attr('x', 0 - height / 3)
 			.attr('dy', '1em')
 			.style('text-anchor', 'middle')
 			.text(termName)
 
-		// // Add x axis label
+		// Add x axis label
 		// if(t2 != null && t2.term.name != null && t2.term.name != undefined) {
 		// 	svg.append("text")
 		// 	.attr("class", "x label")
 		// 	.attr("text-anchor", "front")
 		// 	.attr('dy', '1em')
 		// 	.attr("x", -110)
-		// 	.attr("y", boundsHeight + 20)
-		// 	.text(`${t2.term.name}`);
+		// 	.attr("y", boundsHeight + 70)
+		// 	// .attr('transform','rotate(90)')
+		// 	.text(termName);
 		// }
 
 		for (const key of self.data) {
@@ -268,7 +281,7 @@ async function setRenderers(self) {
 				.enter() // So now we are working group per group
 				.append('g')
 				.attr('transform', function(d) {
-					return 'translate(' + xScale(label) + ' ,0)'
+					return 'translate(' + xScale(label) + ' , 0)'
 				}) // Translation on the right to be at the group position
 				.append('path')
 				// .style("fill",function() {
@@ -282,6 +295,8 @@ async function setRenderers(self) {
 				.style('padding', 5)
 				.style('opacity', 0.7)
 				.attr('d', areaBuilder(key.bins))
+
+			violinDiv.style('transform', 'rotate(90deg)')
 		}
 		self.getLegendGrps()
 	}
