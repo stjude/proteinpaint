@@ -2,8 +2,11 @@ const got = require('got')
 const path = require('path')
 
 /*
-hardcoded logic to work with gdc apis
 exports one function
+
+hardcoded logic to work with gdc APIs
+  /files/ to get list of files
+  /cases/ to test if a case if case id
 
 input: <inputId>
 	a gdc id of unspecified type entered by user on the ui
@@ -101,10 +104,25 @@ async function get_gdc_data(gdc_id, filter0) {
 		// no bam file found
 		if (bamdata.is_case_id || bamdata.is_case_uuid) {
 			// id is valid case_id/case_uuid, then respond that bam files are not available for this case_id
-			throw 'No bam files available for this case'
+			throw 'No bam files available for this case.'
 		}
-		// id must be invalid
-		throw 'Invalid GDC ID'
+
+		// no id found
+
+		if (filter0) {
+			// is using filter
+			// try again without filter. if found hit, meaning case not in filter
+			const re = await try_query(gdc_id, bamdata)
+			if (re.data.hits.length) {
+				// has hit without filter
+				throw 'Case not in current cohort.'
+			}
+			// still no hit
+			throw 'Invalid input ID.'
+		} else {
+			// no filter; id must be invalid
+			throw 'Invalid input ID.'
+		}
 	}
 
 	// 1 or multiple hits/files are available for submitted gdc id
