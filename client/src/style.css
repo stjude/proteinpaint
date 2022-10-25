@@ -955,7 +955,7 @@ h2 {
     margin: 0;
     display: inline-block;
     border: 1px solid #aaa;
-    color: #999;
+    color: rgb(83, 83, 83);
     background-color: #fff;
     cursor: pointer;
     font-weight: 300;
