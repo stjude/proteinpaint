@@ -5,15 +5,16 @@ import { axisLeft, axisBottom } from 'd3-axis'
 import { scaleLinear, scaleBand } from 'd3-scale'
 import { extent } from 'd3-array'
 import { area, curveBumpY } from 'd3-shape'
+import htmlLegend from '../dom/html.legend'
 
 class ViolinPlot {
 	constructor(opts) {
 		this.type = 'violin'
 		setRenderers(this)
-		// getLegendGrps(this)
 	}
 
 	async init() {
+		// const holder = this.opts.controls ? this.opts.holder : this.opts.holder.append('div')
 		this.dom = {
 			controls: this.opts.holder
 				.append('div')
@@ -96,6 +97,45 @@ class ViolinPlot {
 		})
 		this.render()
 	}
+
+	getLegendGrps() {
+		const t2 = this.config.term2
+		select('sjpp-legend-div').remove()
+
+		//add header to the legend div
+		if (t2 != null && t2 != undefined) {
+			const legendTitle = this.config.term2.term.name
+
+			const holder = this.dom.holder
+				.append('div')
+				.classed('sjpp-legend-div', true)
+				.style('display', 'block')
+				.style('padding', '40px')
+
+			holder
+				.append('span')
+				.style('color', '#aaa')
+				.style('font-weight', '400')
+				.text(legendTitle)
+
+			for (const key of this.data) {
+				let label =
+					t2 != null && t2.term.values != undefined && Object.keys(t2.term.values).length > 0
+						? t2.term.values[key.label].label
+						: key.label
+
+				if (key.yScaleValues) {
+					label = `${label}, n = ${key.yScaleValues.length}`
+				}
+
+				holder
+					.append('div')
+					.style('display', 'block')
+					.append('span')
+					.text(label)
+			}
+		}
+	}
 }
 
 export const violinInit = getCompInit(ViolinPlot)
@@ -132,7 +172,7 @@ async function setRenderers(self) {
 
 		// Render the violin plot
 		const margin = { top: 50, right: 100, bottom: 50, left: 110 },
-			height = 700 - margin.top - margin.bottom,
+			height = 800 - margin.top - margin.bottom,
 			width =
 				(groups.length < 2
 					? groups.length * 600
@@ -164,7 +204,7 @@ async function setRenderers(self) {
 
 		svg
 			.append('g')
-			.attr('transform', 'translate(0,' + 520 + ')')
+			.attr('transform', 'translate(0,' + 620 + ')')
 			.call(axisBottom(xScale))
 
 		svg.select('.domain').remove()
@@ -240,49 +280,8 @@ async function setRenderers(self) {
 				.style('opacity', 0.7)
 				.attr('d', areaBuilder(key.bins))
 		}
+		self.getLegendGrps()
 	}
-}
-
-async function getLegendGrps(self) {
-	self.opts.dom.legendDiv.style('display', 'block')
-	const t2 = self.config.term2
-	// const headingStyle = 'color: #aaa; font-weight: 400'
-
-	//add header to the legend div
-	if (t2 != null && t2 != undefined) {
-		const legendTitle = self.config.term2.term.name
-
-		const holder = self.opts.dom.legendDiv
-			.append('div')
-			.classed('sjpp-legend-div', true)
-			.style('display', 'block')
-
-		holder
-			.append('span')
-			.style('color', '#aaa')
-			.style('font-weight', '400')
-			.text(legendTitle)
-
-		for (const key of self.data) {
-			let label =
-				t2 != null && t2.term.values != undefined && Object.keys(t2.term.values).length > 0
-					? t2.term.values[key.label].label
-					: key.label
-
-			if (key.yScaleValues) {
-				label = `${label}, n = ${key.yScaleValues.length}`
-			}
-
-			holder
-				.append('div')
-				.style('display', 'block')
-				.append('span')
-				.text(label)
-		}
-	} else {
-		self.opts.dom.violinLegendDiv.selectAll('*').remove()
-	}
-	return
 }
 
 export async function getPlotConfig(opts, app) {

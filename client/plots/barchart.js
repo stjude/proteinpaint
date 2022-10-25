@@ -11,7 +11,6 @@ import getHandlers from './barchart.events'
 import { controlsInit } from './controls'
 import { to_svg } from '../src/client'
 import { fillTermWrapper } from '../termsetting/termsetting'
-import { compViolinInit } from './violin'
 
 class Barchart {
 	constructor(opts) {
