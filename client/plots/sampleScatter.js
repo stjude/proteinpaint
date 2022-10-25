@@ -1,6 +1,6 @@
 import { getCompInit, copyMerge } from '../rx'
 import { fillTermWrapper } from '../termsetting/termsetting'
-import { select, pointer } from 'd3-selection'
+import { renderTable } from '../dom/table'
 import { scaleLinear as d3Linear } from 'd3-scale'
 import { newpane } from '../src/client'
 
@@ -877,56 +877,39 @@ export const componentInit = scatterInit
 
 function showTable(self, group, title) {
 	let rows = []
-	const labels = [formatColumn('Sample'), formatColumn(self.config.colorTW.id)]
-	if (self.config.shapeTW) labels.push(formatColumn(self.config.shapeTW.id))
-	labels.push(formatColumn('Info'))
-	rows.push(labels.join(''))
-	let row, data, row2
+	const columns = [formatCell('Sample', 'label'), formatCell(self.config.colorTW.id, 'label')]
+	if (self.config.shapeTW) columns.push(formatCell(self.config.shapeTW.id))
+	columns.push(formatCell('Info', 'label'))
+	let row, data
 	let values
 	for (const item of group) {
 		data = item.__data__
-		row = [data.sample]
-		if ('category' in data) row.push(formatColumn(data.category))
-		else row.push(formatColumn(''))
-		if (self.config.shapeTW) row.push(getShapeName(self.shapes, data))
+		row = [formatCell(data.sample)]
+		if ('category' in data) row.push(formatCell(data.category))
+		else row.push(formatCell(''))
+		if (self.config.shapeTW) row.push(formatCell(getShapeName(self.shapes, data)))
 		if ('info' in data) {
 			values = []
 			for (const [k, v] of Object.entries(data.info)) values.push(`${k}: ${v}`)
-			row.push(formatColumn(values.join(', '), 50))
-		}
-		row2 = []
-		for (const column of row) row2.push(formatColumn(column))
-		rows.push(row2.join(''))
+			row.push(formatCell(values.join(', ')))
+		} else row.push({ value: '' })
+		rows.push(row)
 	}
-	const posx = 0.5,
-		posy = 0.25
-	console.log(rows.join('\n'))
-
-	openWindow(title, rows.join('\n'), posx, posy)
-	function formatColumn(column, length = 20) {
-		if (length < column.length) length = column.length
-		return column + ' '.repeat(length - column.length)
-	}
-}
-
-export function openWindow(title, text, posx = 1, posy = 1) {
-	// lst: {label, text}
-
+	const posx = 0.5
+	const posy = 0.5
 	const pane = newpane({
-		x: (window.innerWidth / 2 - 200) * posx,
-		y: (window.innerHeight / 2 - 150) * posy
+		x: (window.innerWidth / 2) * posx,
+		y: (window.innerHeight / 2) * posy
 	})
 	pane.header.text(title)
 
-	pane.body
-		.append('div')
-		.style('max-height', '60vh')
-		.style('max-width', '80vw')
-		.style('overflow', 'auto')
-		.append('pre')
-		.text(text)
+	renderTable({ rows, columns, div: pane.body })
 
-	pane.body
+	function formatCell(column, name = 'value') {
+		let dict = {}
+		dict[name] = column
+		return dict
+	}
 }
 
 function getShape(self, c, size) {

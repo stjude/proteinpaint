@@ -1140,3 +1140,17 @@ h2 {
   /* gap:3px; */
   position:sticky
 }
+
+.grid-row-wrapper {
+    display: contents;
+}
+  
+.grid-row-wrapper:hover > .grid-item {
+    background: #fcfcca !important; 
+}
+
+.grid-item {
+    padding: 5px;
+    font-size: 1em;
+    align-items: center;
+  }
