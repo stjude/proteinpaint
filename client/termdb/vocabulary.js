@@ -841,7 +841,7 @@ class TermdbVocab extends Vocab {
 			const lst = []
 			// NOTE: for testingonly, use
 			// if (1 || !dictTerm$ids.length)) to force the use of any annotated samples even non-dict only
-			if (!dictTerm$ids.length) {
+			if (1 || !dictTerm$ids.length) {
 				// If there are no dictionary terms, okay to show any samples with geneVariants
 				lst.push(...Object.values(samples))
 			} else {

@@ -281,6 +281,7 @@ const variant2samplesGdcapi = {
 			})
 		} else if (p.isoform) {
 			// note purpose!!
+			if (typeof p.isoform != 'string') throw 'p.isoform is not string'
 			f.content.push({
 				op: '=',
 				content: {
@@ -289,15 +290,16 @@ const variant2samplesGdcapi = {
 				}
 			})
 		} else if (p.isoforms) {
+			let value
+			if (Array.isArray(p.isoforms)) value = p.isoforms
+			else if (typeof p.isoforms == 'string') value = p.isoforms.split(',')
+			else throw 'p.isoforms not array or string'
 			f.content.push({
 				op: 'in',
-				content: {
-					field: 'ssms.consequence.transcript.transcript_id',
-					value: p.isoforms.split(',')
-				}
+				content: { field: 'ssms.consequence.transcript.transcript_id', value }
 			})
 		} else {
-			throw '.ssm_id_lst and .isoform are both missing'
+			throw '.ssm_id_lst, .isoform, .isoforms are all missing'
 		}
 
 		if (p.set_id) {
