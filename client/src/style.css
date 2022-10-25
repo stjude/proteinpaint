@@ -1122,7 +1122,7 @@ h2 {
 }
 /* client/dom/sandbox.js end */
 
-.grid-container{
+.sjpp_grid_container{
     display:grid;
     padding:1px 1;
 	/* gap: 3px; */
@@ -1131,25 +1131,15 @@ h2 {
 	padding:0.2em
 }
 
-.header-container{
-  display: grid;
-  background:color white;
-  font-size: 1em;
-  opacity:0.5;
-  padding:1px 1;
-  /* gap:3px; */
-  position:sticky
-}
-
-.grid-row-wrapper {
+.sjpp_grid_row_wrapper {
     display: contents;
 }
   
-.grid-row-wrapper:hover > .grid-item {
+.sjpp_grid_row_wrapper:hover > .sjpp_grid_item {
     background: #fcfcca !important; 
 }
 
-.grid-item {
+.sjpp_grid_item {
     padding: 5px;
     font-size: 1em;
     align-items: center;

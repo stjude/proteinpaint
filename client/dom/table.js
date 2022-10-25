@@ -40,7 +40,7 @@ export async function renderTable({ columns, rows, div }) {
 		.style('max-width', '80vw')
 		.style('min-width', '40vw')
 		.style('background-color', 'white')
-		.attr('class', 'grid-container')
+		.attr('class', 'sjpp_grid_container')
 		.style('grid-template-columns', `2vw repeat(${numColumns}, ${1 / numColumns}fr) `)
 	if (numColumns > 5) ParentDiv.style('width', '80vw')
 
@@ -48,14 +48,14 @@ export async function renderTable({ columns, rows, div }) {
 	const divH = ParentDiv.append('div').style('display', 'contents')
 
 	// append empty div element to header to adjust columns
-	divH.append('div').attr('class', 'grid-item')
+	divH.append('div').attr('class', 'sjpp_grid_item')
 
 	// header values
 	for (const c of columns) {
 		divH
 			.append('div')
 			.text(c.label)
-			.attr('class', 'grid-item')
+			.attr('class', 'sjpp_grid_item')
 			.style('font-family', 'Arial')
 			.style('font-size', '1em')
 			.style('opacity', 0.5)
@@ -64,19 +64,19 @@ export async function renderTable({ columns, rows, div }) {
 	// iterate over each row in rows and create a div for each row that has a grid layout similar to the header grid.
 	for (const [i, row] of rows.entries()) {
 		const rowGrid = ParentDiv.append('div')
-		rowGrid.attr('class', 'grid-row-wrapper')
+		rowGrid.attr('class', 'sjpp_grid_row_wrapper')
 
 		const lineDiv = rowGrid
 			.append('div')
 			.text(i + 1)
-			.attr('class', 'grid-item')
+			.attr('class', 'sjpp_grid_item')
 			.style('background-color', i % 2 == 0 ? 'rgb(237, 237, 237)' : 'white')
 
 		// each row comprises of cell and each cell has values that will get appended to div elements of the rowGrid stored in td.
 		for (const [colIdx, cell] of row.entries()) {
 			const td = rowGrid
 				.append('div')
-				.attr('class', 'grid-item')
+				.attr('class', 'sjpp_grid_item')
 				.style('background-color', i % 2 == 0 ? 'rgb(237, 237, 237)' : 'white')
 
 			// if index of each row is even then the background of that row should be grey and also add hovering in yellow.
