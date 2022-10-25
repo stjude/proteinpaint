@@ -44,9 +44,7 @@ class Barchart {
 				.style('font-size', '16px')
 				.style('color', '#aaa'),
 			barDiv: holder.append('div').style('white-space', 'normal'),
-			violinDiv: holder.append('div').style('white-space', 'normal'),
-			legendDiv: holder.append('div').style('margin', '5px 5px 15px 5px'),
-			violinLegendDiv: holder.append('div').style('margin', '5px 5px 15px 5px')
+			legendDiv: holder.append('div').style('margin', '5px 5px 15px 5px')
 		}
 		if (this.dom.header) this.dom.header.html('Barchart')
 		this.settings = JSON.parse(rendererSettings)
@@ -113,7 +111,6 @@ class Barchart {
 						'divideBy'
 					]
 				})
-				// violin: []
 			}
 
 			this.components.controls.on('downloadClick.boxplot', this.download)

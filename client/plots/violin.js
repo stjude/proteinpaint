@@ -10,25 +10,28 @@ import htmlLegend from '../dom/html.legend'
 class ViolinPlot {
 	constructor(opts) {
 		this.type = 'violin'
-		setRenderers(this)
 	}
 
 	async init() {
-		// const holder = this.opts.controls ? this.opts.holder : this.opts.holder.append('div')
+		const holder = this.opts.holder.append('div')
 		this.dom = {
-			controls: this.opts.holder
+			holder,
+			controls: holder
 				.append('div')
 				.attr('class', 'sjpp-plot-controls')
 				.style('display', 'inline-block'),
 
-			holder: this.opts.holder
+			violinDiv: holder
 				.append('div')
 				.style('display', 'inline-block')
 				.style('padding', '10px')
 				.style('overflow-x', 'auto')
 				.style('max-width', '70vw')
-				.style('scrollbar-width', 'none')
+				.style('scrollbar-width', 'none'),
+
+			legendDiv: holder.append('div').style('margin', '5px 5px 15px 5px')
 		}
+		setRenderers(this)
 
 		this.components = {
 			controls: await controlsInit({
@@ -100,19 +103,19 @@ class ViolinPlot {
 
 	getLegendGrps() {
 		const t2 = this.config.term2
-		select('sjpp-legend-div').remove()
 
 		//add header to the legend div
 		if (t2 != null && t2 != undefined) {
+			//Only add legend if more than one violin plot renders
+			this.dom.legendDiv.selectAll('*').remove()
 			const legendTitle = this.config.term2.term.name
 
-			const holder = this.dom.holder
+			const legend = this.dom.legendDiv
 				.append('div')
-				.classed('sjpp-legend-div', true)
 				.style('display', 'block')
 				.style('padding', '40px')
 
-			holder
+			legend
 				.append('span')
 				.style('color', '#aaa')
 				.style('font-weight', '400')
@@ -128,7 +131,7 @@ class ViolinPlot {
 					label = `${label}, n = ${key.yScaleValues.length}`
 				}
 
-				holder
+				legend
 					.append('div')
 					.style('display', 'block')
 					.append('span')
@@ -147,7 +150,7 @@ async function setRenderers(self) {
 		const termName = self.config.term.term.name
 
 		if (self.data.length == 0) {
-			self.dom.holder.html(
+			self.dom.violinDiv.html(
 				` <span style="opacity:.6;font-size:1em;margin-left:90px;">No data to render Violin Plot</span>`
 			)
 			return
@@ -183,10 +186,10 @@ async function setRenderers(self) {
 				margin.right
 
 		// append the svg object to the body of the page
-		select('.sjpp-violin-plot').remove()
-		self.dom.holder.text('')
+		self.dom.violinDiv.selectAll('*').remove()
+		self.dom.violinDiv.text('')
 
-		let svg = self.dom.holder
+		let svg = self.dom.violinDiv
 			.append('svg')
 			.attr('width', width + margin.left + margin.right)
 			.attr('height', height)

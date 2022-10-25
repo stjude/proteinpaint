@@ -10,11 +10,26 @@ class SummaryPlot {
 		this.chartsByType = {}
 	}
 
-	init(appState) {
+	async init(appState) {
 		this.state = this.getState(appState)
 		this.config = JSON.parse(JSON.stringify(this.state.config))
 		setRenderers(this)
 		this.initUi(this.opts)
+
+		//Moved from main to fix default barchart not appearing when summary plot sandbox is created
+		if (!this.components[this.config.childType]) {
+			await this.setComponent(this.config)
+		}
+
+		for (const childType in this.components) {
+			const chart = this.components[childType]
+			// hide non-active charts first, so not to momentarily have two visible charts
+			if (chart.type != this.config.childType) {
+				this.dom.plotDivs[chart.type].style('display', 'none')
+			}
+		}
+
+		this.dom.plotDivs[this.config.childType].style('display', '')
 	}
 
 	reactsTo(action) {
@@ -192,7 +207,6 @@ function setRenderers(self) {
 			//self.dom.errdiv.text(e)
 		}
 	}
-
 	/*
 		TODO: may create option for a custom filter for this plot only,
 		which will override the app-wide filter that is set from the nav tab
