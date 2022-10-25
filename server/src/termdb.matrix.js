@@ -242,7 +242,8 @@ async function getSampleData_dictionaryTerms(q, termWrappers) {
 makes same return as getSampleData_dictionaryTerms()
 */
 async function getSampleData_gdc(q, termWrappers) {
-	const isoforms = ['ENST00000377970', 'ENST00000643460'] // TODO matrix/vocab to supply all geneVariant terms
+	console.log(244, termWrappers.map(i => i.term.id), q.isoforms)
+	const isoforms = /*q.isoforms*/ ['ENST00000377970', 'ENST00000643460'] // TODO matrix/vocab to supply all geneVariant terms
 
 	const param = {
 		get: 'samples',

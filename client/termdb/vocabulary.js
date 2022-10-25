@@ -781,6 +781,7 @@ class TermdbVocab extends Vocab {
 		const promises = []
 		const samplesToShow = new Set()
 		const termsToUpdate = opts.terms.slice()
+		const isoforms = opts.terms.filter(tw => tw.term.type === 'geneVariant').map(tw => tw.term.name)
 
 		// fetch the annotated sample for each term
 		while (termsToUpdate.length) {
@@ -799,6 +800,8 @@ class TermdbVocab extends Vocab {
 				}
 			}
 
+			// quick fix
+			if (this.vocab.dslabel == 'GDC' && tw.term.id && isoforms.length) init.body.isoforms = isoforms
 			if (auth) init.body.embedder = window.location.hostname
 
 			promises.push(

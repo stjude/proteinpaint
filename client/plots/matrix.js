@@ -753,7 +753,7 @@ export async function getPlotConfig(opts, app) {
 				sampleNameFilter: '',
 				sortSamplesBy: 'selectedTerms',
 				sortSamplesTieBreakers: [{ $id: 'sample', sortSamples: {} /*split: {char: '', index: 0}*/ }],
-				sortTermsBy: 'asListed', // or sampleCount
+				sortTermsBy: 'sampleCount', // or 'as listed'
 				samplecount4gene: true,
 				cellbg: '#ececec',
 				colw: 14,
