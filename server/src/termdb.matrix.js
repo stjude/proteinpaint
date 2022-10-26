@@ -244,31 +244,22 @@ async function getSampleData_dictionaryTerms(q, termWrappers) {
 makes same return as getSampleData_dictionaryTerms()
 
 q{}
-	.currentGeneNames=[ str ]
+	.currentGeneNames=[ symbol, ... ]
 */
 async function getSampleData_gdc(q, termWrappers) {
 	if (!q.genome.genedb.get_gene2canonicalisoform) throw 'gene2canonicalisoform not supported on this genome'
+
 	// currentGeneNames[] contains gene symbols
-	// convert to isoforms to work with gdc api
+	// convert to ENST isoforms to work with gdc api
 	const isoforms = []
 	for (const n of JSON.parse(q.currentGeneNames)) {
-		/*
-		use this query once the table is fixed
-
 		const data = q.genome.genedb.get_gene2canonicalisoform.get(n)
-		const j = JSON.parse(data.genemodel)
-		*/
-		const tmp = q.genome.genedb.getjsonbyname.all(n)
-		const lst = tmp.map(i => JSON.parse(i.genemodel))
-		let isoform
-		for (const i of lst) {
-			if (i.isdefault) isoform = i.isoform
+		if (!data.isoform) {
+			// no isoform found
+			continue
 		}
-		if (!isoform) isoform = lst[0].isoform
-
-		isoforms.push(isoform)
+		isoforms.push(data.isoform)
 	}
-	//const isoforms = /*q.isoforms*/ ['ENST00000377970', 'ENST00000643460'] // TODO matrix/vocab to supply all geneVariant terms
 
 	const param = {
 		get: 'samples',

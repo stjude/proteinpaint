@@ -55,11 +55,15 @@ export async function init(arg, holder, genomes) {
 		if (data.error) throw data.error
 		if (!data.isoform) throw 'no canonical isoform for given gene accession'
 		selectedIsoform = data.isoform
+
+		const gmlst = await dofetch3(`genelookup?deep=1&input=${data.isoform}&genome=${gdcGenome}`)
+		// retrieve full gene models to find out if any is coding or all are noncoding
+
 		const pa = {
 			query: data.isoform,
 			genome,
 			holder: graphDiv,
-			gmmode: data.coding ? 'protein' : 'exon only',
+			gmmode: gmlst.gmlst.some(i => i.coding) ? 'protein' : 'exon only',
 			hide_dsHandles: arg.hide_dsHandles,
 			tklst: arg.tracks ? arg.tracks : [{ type: 'mds3', dslabel: 'GDC' }]
 		}
