@@ -228,6 +228,13 @@ async function setRenderers(self) {
 
 		svg.selectAll('text').style('font-size', '12px')
 
+		svg
+			.selectAll('text')
+			.style('text-anchor', 'end')
+			.attr('dx', '-.8em')
+			.attr('dy', '.15em')
+			.attr('transform', 'translate(-20, -25) rotate(-90)')
+
 		// create y axis label
 		svg
 			.append('text')
@@ -237,13 +244,6 @@ async function setRenderers(self) {
 			.attr('dy', '1em')
 			.style('text-anchor', 'middle')
 			.text(termName)
-
-		svg
-			.selectAll('text')
-			.style('text-anchor', 'end')
-			.attr('dx', '-.8em')
-			.attr('dy', '.15em')
-			.attr('transform', 'translate(-20, -25) rotate(-90)')
 
 		// Add x axis label
 		// if(t2 != null && t2.term.name != null && t2.term.name != undefined) {
