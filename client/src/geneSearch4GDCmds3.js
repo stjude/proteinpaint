@@ -5,21 +5,28 @@ import blockinit from './block.init'
 
 /*
 
-TODO make it a generic mechanism to type in gene and launch any tk
-the hardcoded "GDC mutations" phrase should be configurable as well...
-
 test with http://localhost:3000/example.gdc.html
 runpp({ geneSearch4GDCmds3:true })
 
 designed to work for ssm lollipop app in GDC Analysis Tools Framework
 
-parameters:
+********* parameters
 
 arg = {}
 	runpp() argument object
 holder
 genomes = { hg38 : {} }
 
+
+********* returns
+
+{ update() }
+
+this may work with react wrapper?
+
+
+TODO make it a generic mechanism to type in gene and launch any tk
+the hardcoded "GDC mutations" phrase should be configurable as well...
 */
 
 const gdcGenome = 'hg38'
@@ -46,6 +53,7 @@ export async function init(arg, holder, genomes) {
 	const coordInput = addGeneSearchbox(searchOpt)
 
 	let selectedIsoform
+
 	async function launchView() {
 		if (!coordInput.geneSymbol) throw 'geneSymbol missing'
 

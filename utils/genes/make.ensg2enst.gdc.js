@@ -23,6 +23,14 @@ for (const line of fs
 	symbol2ensg.set(symbol, ensg)
 }
 
+// extra step!
+// write a new file with ensg to symbol mapping, and load to alias table (pretending ensg is alias thus ENSG will be visible to geneOnly search)
+const lines = []
+for (const [s, e] of symbol2ensg) {
+	lines.push(e + '\t' + s)
+}
+fs.writeFileSync('ensg2symbol', lines.join('\n'))
+
 /* from GDC override, output HUGO symbol to ENST mapping
 for each symbol, if matching ENSG is found, output ENSG to ENST mapping
 

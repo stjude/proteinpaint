@@ -34,6 +34,15 @@ for (const line of fs
 	const symbol = l[1]
 	symbol2ensg.set(symbol, ensg)
 }
+
+// extra step!
+// write a new file with ensg to symbol mapping, and load to alias table (pretending ensg is alias thus ENSG will be visible to geneOnly search)
+const lines = []
+for (const [s, e] of symbol2ensg) {
+	lines.push(e + '\t' + s)
+}
+fs.writeFileSync('ensg2symbol', lines.join('\n'))
+
 for (const [symbol, ensg] of symbol2ensg) {
 	const enst = ensg2enst.get(ensg)
 	if (enst) console.log(symbol + '\t' + enst)

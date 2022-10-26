@@ -243,8 +243,7 @@ app.get(basepath + '/cardsjson', handle_cards)
 app.post(basepath + '/mdsjsonform', handle_mdsjsonform)
 app.get(basepath + '/genomes', handle_genomes)
 app.get(basepath + '/getDataset', handle_getDataset)
-app.get(basepath + '/genelookup', handle_genelookup)
-app.post(basepath + '/genelookup', handle_genelookup)
+app.all(basepath + '/genelookup', handle_genelookup)
 app.post(basepath + '/ntseq', handle_ntseq)
 app.post(basepath + '/pdomain', handle_pdomain)
 app.post(basepath + '/tkbedj', bedj_request_closure(genomes))
@@ -986,6 +985,7 @@ function handle_genelookup(req, res) {
 
 	if (req.query.deep) {
 		///////////// deep
+
 		// isoform query must be converted to symbol first, so as to retrieve all gene models related to this gene
 		const result = {} // object to collect results of gene query and send back
 		let symbol
@@ -1003,7 +1003,7 @@ function handle_genelookup(req, res) {
 			}
 		}
 		if (!symbol) {
-			if (g.genedb.get_gene2canonicalisoform && req.query.input.toLowerCase().startsWith('ensg')) {
+			if (g.genedb.get_gene2canonicalisoform && req.query.input.toUpperCase().startsWith('ENSG')) {
 				/* db has this table and input looks like ENSG accession
 				convert it to ENST canonical isoform 
 				currently db does not have a direct mapping from ENSG to symbol
@@ -1035,7 +1035,9 @@ function handle_genelookup(req, res) {
 		res.send(result)
 		return
 	}
+
 	////////////// shallow
+
 	const input = req.query.input.toUpperCase()
 	const lst = []
 	const s = input.substr(0, 2)
@@ -1053,6 +1055,7 @@ function handle_genelookup(req, res) {
 			return
 		}
 	}
+	// no hit by alias
 	res.send({ hits: [] })
 }
 

@@ -1,5 +1,5 @@
 const help = `
-Connect VPN.
+Connect VPN when pulling dataset; no need when pulling gene db.
 Run this script anywhere.
 
 node ~/dev/proteinpaint/utils/getDataset.js <dataset1> <dataset2> ...
@@ -22,7 +22,8 @@ const fs = require('fs'),
 const datasets = {
 	cosmic,
 	pnet,
-	ihg
+	ihg,
+	hg38gene
 	// add more datasets
 }
 
@@ -38,6 +39,7 @@ for (let i = 2; i < process.argv.length; i++) {
 //////////////////////// helpers
 
 // function name is dataset identifier used in commandline argument
+
 function cosmic() {
 	checkDir('anno/db/')
 	exec('scp hpc:~/tp/jwang/TASK/MDS/COSMIC/cosmic.slice.hg19.db ~/data/tp/anno/db/cosmic.hg19.db')
@@ -80,6 +82,15 @@ function ihg() {
 	exec(
 		'scp hpc:~/tp/sdhanda/mb_portal/BT_database/SNVindel_IHG.tsv  ~/data/tp/sdhanda/mb_portal/BT_database/SNVindel_IHG.tsv'
 	)
+}
+
+function hg38gene() {
+	checkDir('anno/')
+	exec('curl https://proteinpaint.stjude.org/ppSupport/refGene.hg38.gz -o anno/refGene.hg38.gz')
+	exec('curl https://proteinpaint.stjude.org/ppSupport/refGene.hg38.gz.tbi -o anno/refGene.hg38.gz.tbi')
+	exec('curl https://proteinpaint.stjude.org/ppSupport/gencode.v41.hg38.gz -o anno/gencode.v41.hg38.gz')
+	exec('curl https://proteinpaint.stjude.org/ppSupport/gencode.v41.hg38.gz.tbi -o anno/gencode.v41.hg38.gz.tbi')
+	exec('curl https://proteinpaint.stjude.org/ppSupport/genes.hg38.db -o anno/genes.hg38.db')
 }
 
 function checkDir(p) {
