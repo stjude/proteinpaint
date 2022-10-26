@@ -758,6 +758,27 @@ async function parseRoutput(Rinput, Routput, id2originalId, q, result) {
 		// warnings
 		if (data.warnings) analysisResult.data.warnings = data.warnings
 
+		// add warnings for snplst variants that are either
+		// monomorphic or have effect allele frequency below the cutoff
+		// because these variants were discarded from the analysis.
+		const snplst = q.independent.find(v => v.type == 'snplst')
+		if (snplst) {
+			// snplst is in q.independent
+			if (snplst.lowAFsnps && snplst.lowAFsnps.size) {
+				// variants with effect allele frequency below cutoff present
+				if (!analysisResult.data.warnings) analysisResult.data.warnings = []
+				for (const key of snplst.lowAFsnps.keys()) {
+					analysisResult.data.warnings.push(`${key}: effect allele frequency below cutoff, excluded from analysis`)
+				}
+			}
+			if (snplst.monomorphicLst && snplst.monomorphicLst.length) {
+				// monomorphic variants present
+				if (!analysisResult.data.warnings) analysisResult.data.warnings = []
+				for (const snp of snplst.monomorphicLst) {
+					analysisResult.data.warnings.push(`${snp}: monomorphic, excluded from analysis`)
+				}
+			}
+		}
 		result.resultLst.push(analysisResult)
 	}
 }

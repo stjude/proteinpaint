@@ -121,6 +121,11 @@ async function makeEditMenu(self, div) {
 		// snps not given
 		// hide setting options
 		tdright.style('display', 'none')
+		// empty the snplst_table
+		// this is necessary if user deletes the snplst variable and
+		// adds a new snplst variable
+		// when snplst_table is empty then initSnpEditTable will be called (instead of renderSnpEditTable) to build new edit table
+		snplst_table = undefined
 	}
 
 	// submit button
