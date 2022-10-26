@@ -21,6 +21,7 @@ export default function getHandlers(self) {
 			id: self.id,
 			config: {
 				term: {
+					isAtomic: true,
 					id: term.id,
 					term: term.term,
 					q: getUpdatedQfromClick(d, term, true)
@@ -138,6 +139,7 @@ export default function getHandlers(self) {
 					id: self.id,
 					config: {
 						[termNum]: {
+							isAtomic: true,
 							id: term.id,
 							term: term.term,
 							q: getUpdatedQfromClick(d, term, isHidden)
@@ -255,6 +257,7 @@ function handle_click(event, self) {
 				callback: () => {
 					const term2 = self.config.term2
 					self.app.dispatch({
+						isAtomic: true,
 						type: 'plot_edit',
 						id: self.id,
 						config: {
