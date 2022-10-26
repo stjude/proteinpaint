@@ -19,10 +19,17 @@
 
 <h1>Examples and details about ProteinPaint integration with NCI GDC Portal</h1>
 
+
+
+
 <h2>SSM lollipop plot</h2>
 <p>
 <a href=https://proteinpaint.stjude.org/?genome=hg38&gene=ENST00000311936&mds3=GDC target=_blank>KRAS ENST00000311936</a>
 </p>
+<p>TODO example using cohort filter</p>
+
+
+
 
 
 <h2>Sequence reads visualization UI</h2>
@@ -35,8 +42,12 @@
 
 
 
+
 <h2>Dictionary variables</h2>
 <p><a href=termdb.html target=_blank>Click here</a></p>
+
+
+
 
 
 <h2>MSigDB</h2>
@@ -46,6 +57,14 @@
   <li><a href=https://proteinpaint.stjude.org/termdb?genome=hg38&dslabel=msigdb&findterm=adipogenesis target=_blank>Query genesets by keyword "adipogenesis"</a></li>
   <li><a href=https://proteinpaint.stjude.org/termdb?genome=hg38&dslabel=msigdb&genesetByTermId=HALLMARK_ADIPOGENESIS target=_blank>List genes for "HALLMARK_ADIPOGENESIS"</a></li>
 </ul>
+
+
+
+
+<h2>Oncoprint/Matrix</h2>
+<p>
+<a href=http://localhost:3000/?noheader=1&mass={"dslabel":"GDC","genome":"hg38","plots":[{"chartType":"matrix","termgroups":[{"lst":[{"term":{"name":"MYC","type":"geneVariant"}},{"term":{"name":"HOXA1","type":"geneVariant"}},{"id":"case.disease_type"}]}],"settings":{"matrix":{"colw":8}}}]}' target=_blank>Click here for prototype</a>.
+</p>
 
 
 
