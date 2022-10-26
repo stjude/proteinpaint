@@ -296,8 +296,7 @@ export class MatrixControls {
 				self.addMsigdbMenu(app, parent, table.append('tr'), key)
 			}
 		}
-		// TODO: reenable once the backend can handle non-db terms source
-		//self.addDictMenu(app, parent, table.append('tr'))
+		self.addDictMenu(app, parent, table.append('tr'))
 	}
 
 	addTermGroupSelector(app, parent, tr) {
@@ -337,7 +336,7 @@ export class MatrixControls {
 						type: 'geneVariant'
 					}
 				}
-				parent.config.termgroups[0].lst.push(tw)
+				parent.config.termgroups[parent.selectedGroup].lst.push(tw)
 
 				app.dispatch({
 					type: 'plot_edit',
@@ -428,12 +427,7 @@ export class MatrixControls {
 					},
 					tree: {
 						click_term: term => {
-							console.log(term)
-
-							// TODO: see above for input to select which group to add the gene
-							// right not it assumes the first group
-							parent.config.termgroups[0].lst.push({ id: term.id, term })
-
+							parent.config.termgroups[parent.selectedGroup].lst.push({ id: term.id, term, $id: get$id(), q: {} })
 							app.dispatch({
 								type: 'plot_edit',
 								id: parent.id,

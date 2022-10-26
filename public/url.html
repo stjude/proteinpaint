@@ -525,12 +525,14 @@ makeURL([
 				{
 					chartType:'matrix',
 					termgroups: [{
-						lst: [{
-							term:{
+						lst: [
+							{ term:{
 								name:'TP53',
 								type:'geneVariant'
-							}
-						}]
+							} },
+							{id:'Gender'},
+							{id:'TSNE Category'},
+						]
 					}]
 				}
 			]
@@ -579,13 +581,10 @@ makeURL([
 								type:'geneVariant'
 						} },
 						// cannot use AKT1 for now due to incompatible refseq canonical isoform
+
+						{ id:'case.disease_type' },
 						]
-					}],
-					settings: {
-						matrix: {
-							colw: 8
-						}
-					}
+					}]
 				}
 			]
 		})],

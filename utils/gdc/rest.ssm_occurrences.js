@@ -9,6 +9,8 @@ node rest.ssm_occurrences.js token=<yourGdcToken>
 
 node rest.ssm_occurrences.js isoform=ENST00000407796
 
+node rest.ssm_occurrences.js isoforms=ENST00000407796,ENST00000650651
+
 node rest.ssm_occurrences.js case_id=0772cdbe-8b0d-452b-8df1-bd70d1306363
 
 node rest.ssm_occurrences.js filter='{ "op": "and", "content": [ { "op": "in", "content": { "field": "cases.primary_site", "value": [ "breast", "bronchus and lung" ] } } ] }'
@@ -109,16 +111,6 @@ function get_filters(p) {
 
 		p.isoforms = new Set([p.isoform])
 	} else if (p.isoforms) {
-		/*
-		const content = []
-		for(const i of p.isoforms.split(',')) {
-			content.push({
-				op: '=',
-				content: { field: 'ssms.consequence.transcript.transcript_id', value: [i] }
-			})
-		}
-		filters.content.push({ op:'or', content})
-		*/
 		filters.content.push({
 			op: 'in',
 			content: { field: 'ssms.consequence.transcript.transcript_id', value: p.isoforms.split(',') }

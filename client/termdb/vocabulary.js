@@ -723,18 +723,10 @@ class TermdbVocab extends Vocab {
 	}
 
 	/*
-	This will fill-in this.currAnnoData{} with annotations by sample ID.
-	It will only request annotations for terms that have changed,
-	or when the filter has changed, using rx.deepEqual(). 
-
 	The server data sample annotations and refs are both indexed 
 	by term id, but will be remapped to be annotated instead with 
 	tw.$id. This will prevent conflicts when the same term.id is used
 	multiple times in the terms[] argument, such as for the matrix plot.
-
-	Other tracking data are attached to this.currAnnoData{}, to be able to
-	compare the previous version of term wrappers against future
-	server requests.
 
 	Arguments:
 
@@ -746,7 +738,19 @@ class TermdbVocab extends Vocab {
 								 such as in matrix plot
 		
 	Returns 
-	undefined
+	{
+		lst: [{
+			sample, 
+			term1: {key, value}, 
+			term2: {key, values}, 
+			...
+		}],
+		refs: {
+			byTermId: {termIdorName1: {term, q}},
+			bySampleId: {...}
+		}
+	}
+	
 	
 	Expected server-data response
 	{}
@@ -772,26 +776,22 @@ class TermdbVocab extends Vocab {
 		if (this.sessionId) headers['X-SjPPDs-Sessionid'] = this.sessionId
 
 		const filter = getNormalRoot(opts.filter)
-		const isNewFilter = !deepEqual(this.currAnnoData.lastFilter, filter)
-		if (isNewFilter) {
-			this.currAnnoData = { samples: {}, refs: { byTermId: {}, bySampleId: {} }, lastTerms: [], lastFilter: {} }
-		}
-		const termsToUpdate = opts.terms.filter(tw => {
-			const lastTw = this.currAnnoData.lastTerms.find(lt => lt.$id === tw.$id)
-			return !lastTw || !deepEqual(lastTw, tw)
-		})
-		/* NOTE: ok to continue processing with unchanged currAnnoData  */
-		//if (!termsToUpdate.length) return
-
-		const currSampleIds = Object.keys(this.currAnnoData.samples)
+		const samples = {}
+		const refs = { byTermId: {}, bySampleId: {} }
 		const promises = []
-		// TODO: do not apply the filter to the term data request,
-		// so that a term will have annotated samples, while a
-		// separate request to a filtered sample list can be applied on the client side
-		const samplesToShow = isNewFilter || !this.currAnnoData.samplesToShow ? new Set() : this.currAnnoData.samplesToShow
+		const samplesToShow = new Set()
+		const termsToUpdate = opts.terms.slice()
+
+		/************** quick fix
+		need list of gene names of current geneVariant terms,
+		so that a dictionary term will only retrieve samples mutated on this gene list, rather than whole cohort (e.g. gdc)
+		*/
+		const currentGeneNames = opts.terms.filter(tw => tw.term.type === 'geneVariant').map(tw => tw.term.name)
+
+		// fetch the annotated sample for each term
 		while (termsToUpdate.length) {
-			// TODO: remove the request batching code to simplify and allow faster parallel requests
-			const copies = this.getCopiesToUpdate(termsToUpdate)
+			const tw = termsToUpdate.pop()
+			const copy = this.getTwMinCopy(tw)
 			const init = {
 				headers,
 				credentials: 'include',
@@ -799,38 +799,40 @@ class TermdbVocab extends Vocab {
 					for: 'matrix',
 					genome: this.vocab.genome,
 					dslabel: this.vocab.dslabel,
-					terms: copies.map(c => c.copy),
+					// one request per term
+					terms: [copy],
 					filter
 				}
 			}
 
+			// quick fix
+			if (this.vocab.dslabel == 'GDC' && tw.term.id && currentGeneNames.length)
+				init.body.currentGeneNames = currentGeneNames
 			if (auth) init.body.embedder = window.location.hostname
 
 			promises.push(
-				dofetch3('termdb', init, this.opts.fetchOpts).then(data => {
+				dofetch3('termdb', init).then(data => {
 					if (data.error) throw data.error
+					const idn = 'id' in tw.term ? tw.term.id : tw.term.name
+
 					for (const sampleId in data.samples) {
 						samplesToShow.add(sampleId)
 						const sample = data.samples[sampleId]
-						if (!(sampleId in this.currAnnoData.samples)) {
-							this.currAnnoData.samples[sampleId] = { sample: sampleId }
+						if (!(sampleId in samples)) {
+							samples[sampleId] = { sample: sampleId }
 						}
-						const row = this.currAnnoData.samples[sampleId]
-						for (const tw of copies) {
-							if (tw.idn in sample) {
-								row[tw.$id] = sample[tw.idn]
-							}
+						const row = samples[sampleId]
+						if (idn in sample) {
+							row[tw.$id] = sample[idn]
 						}
 					}
 
 					for (const sampleId in data.refs.bySampleId) {
-						this.currAnnoData.refs.bySampleId[sampleId] = data.refs.bySampleId[sampleId]
+						refs.bySampleId[sampleId] = data.refs.bySampleId[sampleId]
 					}
 
-					for (const tw of copies) {
-						if (tw.idn in data.refs.byTermId) {
-							this.currAnnoData.refs.byTermId[tw.$id] = data.refs.byTermId[tw.idn]
-						}
+					if (idn in data.refs.byTermId) {
+						refs.byTermId[tw.$id] = data.refs.byTermId[idn]
 					}
 				})
 			)
@@ -843,68 +845,56 @@ class TermdbVocab extends Vocab {
 			throw e
 		}
 
-		const dictTerm$ids = opts.terms.filter(tw => !nonDictionaryTermTypes.has(tw.term.type)).map(tw => tw.$id)
-		if (!dictTerm$ids.length) {
-			this.currAnnoData.lst = Object.values(this.currAnnoData.samples)
-		} else {
-			this.currAnnoData.lst = []
-			for (const sampleId in this.currAnnoData.samples) {
-				const row = this.currAnnoData.samples[sampleId]
-				for (const $id in row) {
-					if (dictTerm$ids.includes($id)) {
-						this.currAnnoData.lst.push(row)
-						break
+		try {
+			const dictTerm$ids = opts.terms.filter(tw => !nonDictionaryTermTypes.has(tw.term.type)).map(tw => tw.$id)
+			const lst = []
+			// NOTE: for testingonly, use
+			// if (1 || !dictTerm$ids.length)) to force the use of any annotated samples even non-dict only
+			if (1 || !dictTerm$ids.length) {
+				// If there are no dictionary terms, okay to show any samples with geneVariants
+				lst.push(...Object.values(samples))
+			} else {
+				// If there are dictionary terms, only show samples that have been annotated
+				// for at least one dictionary terms, otherwise do NOT show samples that
+				// are only annotated for non-dictionary terms like gene variants
+				for (const sampleId in samples) {
+					const row = samples[sampleId]
+					for (const $id in row) {
+						if (dictTerm$ids.includes($id)) {
+							lst.push(row)
+							break
+						}
 					}
 				}
 			}
+
+			const sampleFilter = new RegExp(opts.sampleNameFilter || '.*')
+			const data = {
+				lst: lst.filter(row => samplesToShow.has(row.sample) && sampleFilter.test(row.sample)),
+				refs
+			}
+			data.samples = data.lst.reduce((obj, row) => {
+				obj[row.sample] = row
+				return obj
+			}, {})
+
+			return data
+		} catch (e) {
+			throw e
 		}
-
-		this.currAnnoData.lastFilter = filter
-		this.currAnnoData.lastTerms = opts.terms
-		this.currAnnoData.samplesToShow = samplesToShow
-
-		const sampleFilter = new RegExp(opts.sampleNameFilter || '.*')
-		const data = {
-			lst: this.currAnnoData.lst.filter(
-				row => this.currAnnoData.samplesToShow.has(row.sample) && sampleFilter.test(row.sample)
-			),
-			refs: this.currAnnoData.refs
-		}
-		data.samples = data.lst.reduce((obj, row) => {
-			obj[row.sample] = row
-			return obj
-		}, {})
-
-		return data
 	}
 
-	// batch the term requests together to not hammer the server
-	// TODO: ??? may not need this optimization, do not use ???
-	getCopiesToUpdate(terms) {
-		const usedIdsOrNames = new Set()
-		const copies = []
-		const next = []
-		while (terms.length) {
-			const tw = terms.shift()
-			const idn = 'id' in tw.term ? tw.term.id : tw.term.name
-			// force only 1 tw copy at a time to benchmark
-			if (usedIdsOrNames.has(idn)) next.push(tw)
-			else {
-				usedIdsOrNames.add(idn)
-				const copy = { term: {}, q: tw.q }
-				if ('id' in tw) copy.term.id = tw.term.id
-				else {
-					copy.term.name = tw.term.name
-					copy.term.type = tw.term.type
-				}
-				copies.push({ copy, idn, $id: tw.$id, tw })
-			}
-			// !!! FORCE A SINGLE TERM REQUEST BY BREAKING HERE !!!
-			if (copies.length) break
-			console.log(897)
+	// get a tw copy with the correct identifier and without $id
+	// for better GET caching by the browser
+	getTwMinCopy(tw) {
+		const idn = 'id' in tw.term ? tw.term.id : tw.term.name
+		const copy = { term: {}, q: tw.q }
+		if ('id' in tw) copy.term.id = tw.term.id
+		else {
+			copy.term.name = tw.term.name
+			copy.term.type = tw.term.type
 		}
-		terms.push(...next)
-		return copies
+		return copy
 	}
 
 	// ids: [str], where str are string term IDS or names

@@ -7,6 +7,7 @@ const imagesize = require('image-size')
 const serverconfig = require('./serverconfig')
 const utils = require('./utils')
 const termdbsql = require('./termdb.sql')
+const { querySamples_gdcapi } = require('./mds3.gdc')
 
 /*
 q {}
@@ -53,9 +54,9 @@ get_regression()
 // minimum number of samples to run analysis
 const minimumSample = 1
 
-export async function getData(q, ds) {
+export async function getData(q, ds, genome) {
 	try {
-		parse_q(q, ds)
+		parse_q(q, ds, genome)
 		return await getSampleData(q, q.terms)
 	} catch (e) {
 		if (e.stack) console.log(e.stack)
@@ -63,9 +64,10 @@ export async function getData(q, ds) {
 	}
 }
 
-function parse_q(q, ds) {
+function parse_q(q, ds, genome) {
 	if (!ds.cohort) throw 'cohort missing from ds'
 	q.ds = ds
+	q.genome = genome
 	if (!q.terms) throw `missing 'terms' parameter`
 	q.terms.map(tw => {
 		if (!tw.term.name) tw.term = q.ds.cohort.termdb.q.termjsonByOneid(tw.term.id)
@@ -82,6 +84,7 @@ Arguments
 q{}
 	.filter
 	.ds
+	.genome
 
 terms[]
 	array of {id, term, q}
@@ -96,7 +99,7 @@ Returns
 async function getSampleData(q, terms) {
 	// dictionary and non-dictionary terms require different methods for data query
 	const [dictTerms, nonDictTerms] = divideTerms(terms)
-	const { samples, refs } = getSampleData_dictionaryTerms(q, dictTerms)
+	const { samples, refs } = await getSampleData_dictionaryTerms(q, dictTerms)
 
 	if (q.ds.getSampleIdMap) {
 		refs.bySampleId = q.ds.getSampleIdMap(samples)
@@ -146,11 +149,45 @@ function divideTerms(lst) {
 	return [dict, nonDict]
 }
 
-function getSampleData_dictionaryTerms(q, termWrappers) {
+/*
+input:
+
+q{}
+termWrappers[]
+	list of tw objects based on dictionary terms
+
+output:
+
+{
+	samples: {}
+		key: stringified integer id
+		val: {}
+			sample: int id
+			<term id>: { key: str, value: str }
+	refs:{}
+		{ byTermId: {} }
+}
+*/
+async function getSampleData_dictionaryTerms(q, termWrappers) {
 	const samples = {}
-	const twByTermId = {}
 	const refs = { byTermId: {} }
+
 	if (!termWrappers.length) return { samples, refs }
+
+	if (q.ds?.variant2samples?.gdcapi) {
+		/*
+
+		************** quick fix ****************
+
+		to tell it is gdc dataset, and uses the special method to query cases
+		TODO should provide complete list of genes to add to gdcapi query
+		to restrict cases to only those mutated on the given genes
+		rather than retrieving all 80K cases from gdc
+		*/
+		return await getSampleData_gdc(q, termWrappers)
+	}
+
+	const twByTermId = {}
 
 	const filter = getFilterCTEs(q.filter, q.ds)
 	// must copy filter.values as its copy may be used in separate SQL statements,
@@ -199,5 +236,68 @@ function getSampleData_dictionaryTerms(q, termWrappers) {
 		}
 	}
 
+	return { samples, refs }
+}
+
+/*
+******** all gdc-specific logic **********
+makes same return as getSampleData_dictionaryTerms()
+
+q{}
+	.currentGeneNames=[ symbol, ... ]
+*/
+async function getSampleData_gdc(q, termWrappers) {
+	if (!q.genome.genedb.get_gene2canonicalisoform) throw 'gene2canonicalisoform not supported on this genome'
+
+	// currentGeneNames[] contains gene symbols
+	// convert to ENST isoforms to work with gdc api
+	const isoforms = []
+	for (const n of JSON.parse(q.currentGeneNames)) {
+		const data = q.genome.genedb.get_gene2canonicalisoform.get(n)
+		if (!data.isoform) {
+			// no isoform found
+			continue
+		}
+		isoforms.push(data.isoform)
+	}
+
+	const param = {
+		get: 'samples',
+		isoforms
+	}
+
+	const sampleLst = await querySamples_gdcapi(
+		param,
+		['case.observation.sample.tumor_sample_uuid', ...termWrappers.map(i => i.term.id)],
+		q.ds
+	)
+
+	/*
+	here returned samples are using submitter ids as .sample_id
+	while other geneVariant terms in the matrix are using tumor_sample_uuid (unconverted)
+	lucky the tumor_sample_uuid is still there, assign it to sample_id to be able to match with geneVariant terms
+
+	here the submitter id conversion is wasted but later with cached mapping (no api query) will be trivial to ignore
+	*/
+	for (const s of sampleLst) {
+		s.sample_id = s.tumor_sample_uuid
+	}
+
+	const samples = {}
+	const refs = { byTermId: {} }
+
+	for (const s of sampleLst) {
+		const s2 = {
+			sample: s.sample_id
+		}
+		for (const tw of termWrappers) {
+			const v = s[tw.term.id]
+			s2[tw.term.id] = {
+				key: v,
+				value: v
+			}
+		}
+		samples[s.sample_id] = s2
+	}
 	return { samples, refs }
 }

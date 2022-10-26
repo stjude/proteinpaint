@@ -154,6 +154,7 @@ class Matrix {
 			// get the data
 			const reqOpts = await this.getDataRequestOpts()
 			this.data = await this.app.vocabApi.getAnnotatedSampleData(reqOpts)
+			this.setAutoDimensions()
 			this.setSampleGroups(this.data)
 			this.setTermOrder(this.data)
 			this.setSampleOrder(this.data)
@@ -237,7 +238,35 @@ class Matrix {
 				})
 			)
 		}
+		this.numTerms = terms.length
 		return { terms, filter: this.state.filter }
+	}
+
+	setAutoDimensions() {
+		const m = this.state.config.settings.matrix
+		if (!this.autoDimensions) this.autoDimensions = new Set()
+
+		if (!m.colw) this.autoDimensions.add('colw')
+		else this.autoDimensions.delete('colw')
+
+		if (!m.rowh) this.autoDimensions.add('rowh')
+		else this.autoDimensions.delete('rowh')
+
+		const s = this.settings.matrix
+		if (this.autoDimensions.has('colw')) {
+			const offset = !s.transpose
+				? s.termLabelOffset + s.termGrpLabelOffset
+				: s.sampleLabelOffset + s.sampleGrpLabelOffset
+			s.colw = Math.min(
+				16,
+				Math.max(1, Math.round((screen.availWidth - offset - 300) / this.data.lst.length - s.colspace))
+			)
+			if (s.colw == 1) s.colspace = 0
+		}
+
+		if (this.autoDimensions.has('rowh')) {
+			s.rowh = Math.max(5, Math.round(screen.availHeight / this.numTerms))
+		}
 	}
 
 	setSampleGroups(data) {
@@ -445,6 +474,10 @@ class Matrix {
 				label: this[`${d}Label`],
 				render: this[`render${Direction}Label`],
 				isGroup: sides[direction].includes('Grp')
+			}
+
+			if (!s.transpose) {
+				if (`${d}Label` == 'sampleLabel' && s.colw < 8) layout[direction].display = 'none'
 			}
 		}
 
@@ -753,10 +786,10 @@ export async function getPlotConfig(opts, app) {
 				sampleNameFilter: '',
 				sortSamplesBy: 'selectedTerms',
 				sortSamplesTieBreakers: [{ $id: 'sample', sortSamples: {} /*split: {char: '', index: 0}*/ }],
-				sortTermsBy: 'asListed', // or sampleCount
+				sortTermsBy: 'sampleCount', // or 'as listed'
 				samplecount4gene: true,
 				cellbg: '#ececec',
-				colw: 14,
+				colw: 0,
 				colspace: 1,
 				colgspace: 8,
 				collabelpos: 'bottom',

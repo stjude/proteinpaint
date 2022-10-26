@@ -451,8 +451,8 @@ function handle_gene2canonicalisoform(req, res) {
 		if (!genome) throw 'unknown genome'
 		if (!genome.genedb.get_gene2canonicalisoform) throw 'gene2canonicalisoform not supported on this genome'
 		const data = genome.genedb.get_gene2canonicalisoform.get(req.query.gene)
-		const j = JSON.parse(data.genemodel)
-		res.send(j)
+		// data = { isoform: str }
+		res.send(data)
 	} catch (e) {
 		res.send({ error: e.message || e })
 		if (e.stack) console.log(e.stack)
@@ -1011,12 +1011,12 @@ function handle_genelookup(req, res) {
 				which can cause a refseq isoform to be shown instead
 				*/
 				const data = g.genedb.get_gene2canonicalisoform.get(req.query.input)
-				if (data) {
-					const j = JSON.parse(data.genemodel)
+				if (data && data.isoform) {
 					// mapped into an ENST isoform
-					result.found_isoform = j.isoform
+					const enstIsoform = data.isoform
+					result.found_isoform = enstIsoform
 					// convert isoform back to symbol as in the beginning
-					const tmp = g.genedb.getnamebynameorisoform.get(j.isoform, j.isoform)
+					const tmp = g.genedb.getnamebynameorisoform.get(enstIsoform, enstIsoform)
 					if (!tmp) throw 'cannot map enst isoform to symbol'
 					symbol = tmp.name
 				}
@@ -7279,7 +7279,7 @@ async function pp_init() {
 			}
 			if (tables.has('gene2canonicalisoform')) {
 				g.genedb.get_gene2canonicalisoform = g.genedb.db.prepare(
-					'select genemodel from gene2canonicalisoform as c, genes as g where c.gene=? AND c.isoform=g.isoform'
+					'select isoform from gene2canonicalisoform where gene=?'
 				)
 			}
 			if (tables.has('buildDate')) {
