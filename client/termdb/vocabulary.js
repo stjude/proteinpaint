@@ -781,7 +781,12 @@ class TermdbVocab extends Vocab {
 		const promises = []
 		const samplesToShow = new Set()
 		const termsToUpdate = opts.terms.slice()
-		const isoforms = opts.terms.filter(tw => tw.term.type === 'geneVariant').map(tw => tw.term.name)
+
+		/************** quick fix
+		need list of gene names of current geneVariant terms,
+		so that a dictionary term will only retrieve samples mutated on this gene list, rather than whole cohort (e.g. gdc)
+		*/
+		const currentGeneNames = opts.terms.filter(tw => tw.term.type === 'geneVariant').map(tw => tw.term.name)
 
 		// fetch the annotated sample for each term
 		while (termsToUpdate.length) {
@@ -801,7 +806,8 @@ class TermdbVocab extends Vocab {
 			}
 
 			// quick fix
-			if (this.vocab.dslabel == 'GDC' && tw.term.id && isoforms.length) init.body.isoforms = isoforms
+			if (this.vocab.dslabel == 'GDC' && tw.term.id && currentGeneNames.length)
+				init.body.currentGeneNames = currentGeneNames
 			if (auth) init.body.embedder = window.location.hostname
 
 			promises.push(

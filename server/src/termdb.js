@@ -93,7 +93,7 @@ export function handle_request_closure(genomes) {
 				res.send(await ds.getTermTypes(q))
 				return
 			} else if (q.for == 'matrix') {
-				const data = await require(`./termdb.matrix.js`).getData(q, ds)
+				const data = await require(`./termdb.matrix.js`).getData(q, ds, genome)
 				res.send(data)
 				return
 			} else if (q.for == 'validateToken') {
