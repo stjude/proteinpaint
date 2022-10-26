@@ -1152,7 +1152,7 @@ thus less things to worry about...
 
 		// convert to array
 		for (const cohort in supportedChartTypes) {
-			if (supportedChartTypes[cohort].has('summary')) supportedChartTypes[cohort].delete('barchart')
+			//if (supportedChartTypes[cohort].has('summary')) supportedChartTypes[cohort].delete('barchart')
 			supportedChartTypes[cohort] = [...supportedChartTypes[cohort]]
 		}
 
