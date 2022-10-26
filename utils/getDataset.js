@@ -20,7 +20,9 @@ const fs = require('fs'),
 	path = require('path')
 
 const datasets = {
-	cosmic
+	cosmic,
+	pnet,
+	ihg
 	// add more datasets
 }
 
@@ -40,6 +42,44 @@ function cosmic() {
 	checkDir('anno/db/')
 	exec('scp hpc:~/tp/jwang/TASK/MDS/COSMIC/cosmic.slice.hg19.db ~/data/tp/anno/db/cosmic.hg19.db')
 	exec('scp hpc:~/tp/jwang/TASK/MDS/COSMIC/cosmic.slice.hg38.db ~/data/tp/anno/db/cosmic.hg38.db')
+}
+
+function pnet() {
+	checkDir('files/hg19/pnet/clinical/')
+	exec('scp ppr:/opt/data/pp/tp_native_dir/files/hg19/pnet/clinical/db ~/data/tp/files/hg19/pnet/clinical/db')
+	checkDir('files/hg19/pnet/classification/')
+	exec(
+		'scp hpc:tp/files/hg19/pnet/classification/pnet_apr13_tnse.txt ~/data/tp/files/hg19/pnet/classification/pnet_apr13_tnse.txt'
+	)
+	checkDir('sdhanda/mb_portal/BT_database/')
+	exec(
+		'scp ppr:/opt/data/pp/tp_native_dir/sdhanda/mb_portal/BT_database/SNVindel_pnet.tsv  ~/data/tp/sdhanda/mb_portal/BT_database/SNVindel_pnet.tsv'
+	)
+	exec(
+		'scp ppr:/opt/data/pp/tp_native_dir/sdhanda/mb_portal/BT_database/fusion_pnet.tsv  ~/data/tp/sdhanda/mb_portal/BT_database/fusion_pnet.tsv'
+	)
+	exec(
+		'scp ppr:/opt/data/pp/tp_native_dir/sdhanda/mb_portal/BT_database/CNV_data_pnet.tsv  ~/data/tp/sdhanda/mb_portal/BT_database/CNV_data_pnet.tsv'
+	)
+}
+
+function ihg() {
+	checkDir('files/hg19/ihg/clinical/')
+	exec('scp ppr:/opt/data/pp/tp_native_dir/files/hg19/ihg/clinical/db ~/data/tp/files/hg19/ihg/clinical/db')
+	checkDir('files/hg19/ihg/classification/')
+	exec(
+		'scp ppr:/opt/data/pp/tp_native_dir/files/hg19/ihg/classification/ihg_oct20_TSNE.txt ~/data/tp/files/hg19/ihg/classification/ihg_oct20_TSNE.txt'
+	)
+	checkDir('sdhanda/mb_portal/BT_database/')
+	exec(
+		'scp ppr:/opt/data/pp/tp_native_dir/sdhanda/mb_portal/BT_database/CNV_data_IHG.tsv  ~/data/tp/sdhanda/mb_portal/BT_database/CNV_data_IHG.tsv'
+	)
+	exec(
+		'scp ppr:/opt/data/pp/tp_native_dir/sdhanda/mb_portal/BT_database/fusion_IHG.tsv  ~/data/tp/sdhanda/mb_portal/BT_database/fusion_IHG.tsv'
+	)
+	exec(
+		'scp hpc:~/tp/sdhanda/mb_portal/BT_database/SNVindel_IHG.tsv  ~/data/tp/sdhanda/mb_portal/BT_database/SNVindel_IHG.tsv'
+	)
 }
 
 function checkDir(p) {
