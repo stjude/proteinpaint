@@ -83,16 +83,17 @@ class MassApp {
 		try {
 			this.store = await storeInit({ app: this.api, state: this.opts.state })
 			this.state = await this.store.copyState()
-			this.components = {
-				nav: await navInit({
+			this.components = {}
+			if (this.state.nav.header_mode != 'hidden') {
+				this.components.nav = await navInit({
 					app: this.api,
 					holder: this.dom.topbar,
 					header_mode: this.state && this.state.nav && this.state.nav.header_mode,
 					vocab: this.state.vocab,
 					massSessionDuration: this.state.termdbConfig.massSessionDuration // this.opts.massSessionDuration
-				}),
-				plots: {}
+				})
 			}
+			this.components.plots = {}
 			await this.api.dispatch()
 		} catch (e) {
 			this.printError(e)
