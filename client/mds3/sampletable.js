@@ -80,6 +80,7 @@ async function make_singleSampleTable(sampledata, arg) {
 			.style('align-items', 'center')
 			.style('justify-items', 'left')
 			.style('padding', '10px')
+			.style('width', '100%')
 
 	if (sampledata.sample_id) {
 		// sample_id is hardcoded
@@ -158,7 +159,7 @@ async function make_singleSampleTable(sampledata, arg) {
 			.style('height', '35px')
 			.text('Tumor DNA MAF')
 			.style('text-overflow', 'ellipsis')
-		cell2.style('height', '35px').style('text-overflow', 'ellipsis')
+		cell2.style('height', '35px')
 		fillbar(cell2, { f: sm.altTumor / sm.totalTumor })
 		cell2
 			.append('span')
@@ -269,12 +270,7 @@ async function samples2columnsRows(samples, tk) {
 			const sm = sample.ssm_read_depth
 			if (sm) {
 				cell.html =
-					fillbar(null, { f: sm.altTumor / sm.totalTumor }) +
-					'<span style="margin:0px 10px">' +
-					sm.altTumor +
-					' / ' +
-					sm.totalTumor +
-					'</span>'
+					fillbar(null, { f: sm.altTumor / sm.totalTumor }) + '<br/>' + sm.altTumor + '/' + sm.totalTumor + '</span>'
 			}
 			row.push(cell)
 		}

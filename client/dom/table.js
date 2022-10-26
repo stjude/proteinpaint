@@ -30,22 +30,23 @@ rows = [ [] ]
 */
 export async function renderTable({ columns, rows, div }) {
 	const numColumns = columns.length
+	const sampleWidth = numColumns < 10 ? 'auto' : '5vw'
 
 	// create a Parent Div element to which the header and sample grid will be appended as divH and divS.
-	const ParentDiv = div
+	const parentDiv = div
 		.append('div')
 		.style('overflow', 'auto')
 		.style('scrollbar-width', 'none')
-		.style('max-height', '30vw')
-		.style('max-width', '80vw')
+		.style('max-height', '25vw')
+		.style('max-width', '70vw')
+
 		.style('min-width', '40vw')
 		.style('background-color', 'white')
 		.attr('class', 'sjpp_grid_container')
-		.style('grid-template-columns', `2vw repeat(${numColumns}, ${1 / numColumns}fr) `)
-	if (numColumns > 5) ParentDiv.style('width', '80vw')
+		.style('grid-template-columns', `1vw repeat(${numColumns}, auto)`)
 
 	// header div
-	const divH = ParentDiv.append('div').style('display', 'contents')
+	const divH = parentDiv.append('div').style('display', 'contents')
 
 	// append empty div element to header to adjust columns
 	divH.append('div').attr('class', 'sjpp_grid_item')
@@ -63,7 +64,7 @@ export async function renderTable({ columns, rows, div }) {
 	// sample values
 	// iterate over each row in rows and create a div for each row that has a grid layout similar to the header grid.
 	for (const [i, row] of rows.entries()) {
-		const rowGrid = ParentDiv.append('div')
+		const rowGrid = parentDiv.append('div')
 		rowGrid.attr('class', 'sjpp_grid_row_wrapper')
 
 		const lineDiv = rowGrid

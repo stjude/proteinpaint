@@ -1114,7 +1114,7 @@ h2 {
 {
     display: inline-block;
     padding: 4px 10px;
-    margin:0px;
+    margin: 0px;
     border-right: solid 2px white;
     border-radius: 5px 0 0 0;
     font-size: 1.5em;
@@ -1124,11 +1124,9 @@ h2 {
 
 .sjpp_grid_container{
     display:grid;
-    padding:1px 1;
-	/* gap: 3px; */
-	top:0px;
 	background-color:white;
-	padding:0.2em
+	padding:0.2em;
+    margin: 0 auto;
 }
 
 .sjpp_grid_row_wrapper {

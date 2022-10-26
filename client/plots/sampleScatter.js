@@ -619,8 +619,8 @@ function setRenderers(self) {
 			icon_functions['list'](listDiv, {
 				is_button: false,
 				text: `List ${self.selectedItems.length} samples`,
-				handler: () => {
-					showTable(self, self.selectedItems, `List of ${self.selectedItems.length} selected samples`)
+				handler: event => {
+					showTable(self, self.selectedItems, event.clientX, event.clientY)
 					self.dom.tip.hide()
 				}
 			})
@@ -765,7 +765,7 @@ function setRenderers(self) {
 				.style('display', 'inline-block')
 				.style('width', '80px')
 			icon_functions['list'](listDiv, {
-				handler: () => showTable(self, group, `List of ${group.length} samples in Group ${i + 1}`)
+				handler: () => showTable(self, group, event.clientX, event.clientY)
 			})
 			if (self.state.allowedTermTypes.includes('survival')) {
 				const survivalDiv = row
@@ -875,7 +875,7 @@ export const scatterInit = getCompInit(Scatter)
 // this alias will allow abstracted dynamic imports
 export const componentInit = scatterInit
 
-function showTable(self, group, title) {
+function showTable(self, group, x, y) {
 	let rows = []
 	const columns = [formatCell('Sample', 'label'), formatCell(self.config.colorTW.id, 'label')]
 	if (self.config.shapeTW) columns.push(formatCell(self.config.shapeTW.id))
@@ -895,15 +895,11 @@ function showTable(self, group, title) {
 		} else row.push({ value: '' })
 		rows.push(row)
 	}
-	const posx = 0.5
-	const posy = 0.5
-	const pane = newpane({
-		x: (window.innerWidth / 2) * posx,
-		y: (window.innerHeight / 2) * posy
-	})
-	pane.header.text(title)
+	const menu = new Menu()
+	//listdiv.text(title)
 
-	renderTable({ rows, columns, div: pane.body })
+	renderTable({ rows, columns, div: menu.d })
+	menu.show(x, y)
 
 	function formatCell(column, name = 'value') {
 		let dict = {}
