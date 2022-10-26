@@ -185,7 +185,7 @@ function setRenderers(self) {
 				])
 				.enter()
 				.append('button')
-				.style('display', d => d.isVisible())
+				.style('display', d => (d.isVisible() ? ' ' : 'none'))
 				.style('margin', '2px')
 				// TODO: may use other logic for disabling a chart type, insteead of hiding/showing
 				.property('disabled', d => d.disabled())

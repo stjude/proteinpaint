@@ -214,13 +214,8 @@ async function setRenderers(self) {
 
 		svg
 			.append('g')
-			.attr('transform', 'translate(-8,' + 600 + ')')
+			.attr('transform', 'translate(13,' + 630 + ')')
 			.call(axisBottom(xScale))
-			.selectAll('text')
-			.style('text-anchor', 'end')
-			.attr('dx', '-.8em')
-			.attr('dy', '.15em')
-			.attr('transform', 'rotate(-90)')
 
 		svg.select('.domain').remove()
 		svg.selectAll('line').remove()
@@ -231,7 +226,14 @@ async function setRenderers(self) {
 
 		svg.append('g').call(axisLeft(yScale))
 
-		svg.selectAll('text').style('font-size', '15px')
+		svg.selectAll('text').style('font-size', '12px')
+
+		svg
+			.selectAll('text')
+			.style('text-anchor', 'end')
+			.attr('dx', '-.8em')
+			.attr('dy', '.15em')
+			.attr('transform', 'translate(-20, -25) rotate(-90)')
 
 		// create y axis label
 		svg

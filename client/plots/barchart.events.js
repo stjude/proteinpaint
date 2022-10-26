@@ -258,6 +258,7 @@ function handle_click(event, self) {
 				callback: () => {
 					const term2 = self.config.term2
 					self.app.dispatch({
+						isAtomic: true,
 						type: 'plot_edit',
 						id: self.id,
 						config: {
