@@ -577,12 +577,11 @@ class Matrix {
 				if (!anno) continue
 				const termid = 'id' in t.tw.term ? t.tw.term.id : t.tw.term.name
 				const key = anno.key
-				const values = t.tw.term.values || {}
-				const label = 'label' in anno ? anno.label : key in values && values[key].label ? values[key].label : key
+				const values = anno.filteredValues || anno.values || [anno.value]
+				const height = !s.transpose ? s.rowh / values.length : s.colw
+				const width = !s.transpose ? s.colw : s.colw / values.length
 
-				if ('value' in anno) {
-					const fill = values[key]?.color
-					// only one rect for this sample annotation
+				for (const [i, value] of values.entries()) {
 					const cell = {
 						sample: row.sample,
 						tw: t.tw,
@@ -590,75 +589,23 @@ class Matrix {
 						termid,
 						$id,
 						key,
-						label,
-						fill: anno.color || values[key]?.color,
-						x: !s.transpose ? 0 : t.totalIndex * dx + t.visibleGrpIndex * s.colgspace + t.totalHtAdjustments,
-						y: !s.transpose ? t.totalIndex * dy + t.visibleGrpIndex * s.rowgspace + t.totalHtAdjustments : 0,
-						order: t.ref.bins ? t.ref.bins.findIndex(bin => bin.name == key) : 0,
-						fill
+						x: !s.transpose
+							? 0
+							: t.totalIndex * dx + t.visibleGrpIndex * s.colgspace + width * i + t.totalHtAdjustments,
+						y: !s.transpose
+							? t.totalIndex * dy + t.visibleGrpIndex * s.rowgspace + height * i + t.totalHtAdjustments
+							: 0
 					}
 
-					if (t.tw.q?.mode == 'continuous') {
-						// TODO: may use color scale instead of bars
-						if (s.transpose) {
-							cell.width = t.scale(cell.key)
-							cell.x += t.tw.settings.gap // - cell.width
-						} else {
-							cell.height = t.scale(cell.key)
-							cell.y += t.tw.settings.barh + t.tw.settings.gap - cell.height
-						}
+					// will assign fill, label, order, etc
+					const legend = setCellProps[t.tw.term.type](cell, t.tw, anno, value, s, t)
+					if (legend) {
+						if (!legendGroups[legend.group]) legendGroups[legend.group] = { ref: legend.ref, values: {} }
+						if (!legendGroups[legend.group].values[legend.value])
+							legendGroups[legend.group].values[legend.value] = legend.entry
 					}
 
 					series.cells.push(cell)
-
-					// TODO: improve logic for excluding data from legend
-					if (t.tw.q.mode != 'continuous') {
-						const legendGrp = t.tw.legend?.group || t.tw.$id
-						if (legendGrp) {
-							if (!legendGroups[legendGrp]) legendGroups[legendGrp] = { ref: t.ref, values: {} }
-							if (!legendGroups[legendGrp].values[key]) legendGroups[legendGrp].values[key] = { key, label, fill }
-						}
-					}
-				} else {
-					// some term types like geneVariant can have multiple values for the same term,
-					// which will be renderd as multiple smaller, non-overlapping rects within the same cell
-					const values = anno.filteredValues || anno.values || [anno.value]
-					const height = !s.transpose ? s.rowh / values.length : s.colw
-					const width = !s.transpose ? s.colw : s.colw / values.length
-					for (const [i, value] of values.entries()) {
-						const label = value.label || (value.class ? mclass[value.class].label : '')
-						const fill = value.color || mclass[value.class].color
-
-						series.cells.push({
-							sample: row.sample,
-							tw: t.tw,
-							term: t.tw.term,
-							termid,
-							$id,
-							key,
-							label,
-							value,
-							x: !s.transpose
-								? 0
-								: t.totalIndex * dx + t.visibleGrpIndex * s.colgspace + width * i + t.totalHtAdjustments,
-							y: !s.transpose
-								? t.totalIndex * dy + t.visibleGrpIndex * s.rowgspace + height * i + t.totalHtAdjustments
-								: 0,
-							height,
-							width,
-							fill,
-							class: value.class,
-							order: t.ref.bins ? t.ref.bins.findIndex(bin => bin.name == key) : 0
-						})
-
-						if (t.tw.term.type == 'geneVariant') {
-							const legendGrp = t.tw.legend?.group || 'Mutation Types'
-							if (!legendGroups[legendGrp]) legendGroups[legendGrp] = { values: {} }
-							if (!legendGroups[legendGrp][value.class]) {
-								legendGroups[legendGrp].values[value.class] = { key: value.class, label, fill }
-							}
-						}
-					}
 				}
 			}
 			serieses.push(series)
@@ -757,6 +704,73 @@ class Matrix {
 		}
 
 		this.legendData = legendData
+	}
+}
+
+/*
+	cell: a matrix cell data
+	tw: termwrapper
+	anno: the current annotation
+	values: the available annotation values for a term
+	t: an entry in this.termOrder
+	s: plotConfig.settings.matrix
+*/
+function setNumericCellProps(cell, tw, anno, value, s, t) {
+	const key = anno.key
+	const values = tw.term.values || {}
+	cell.label = 'label' in anno ? anno.label : values[key]?.label ? values[key].label : key
+	cell.fill = anno.color || values[anno.key]?.color
+
+	cell.order = t.ref.bins ? t.ref.bins.findIndex(bin => bin.name == key) : 0
+	if (tw.q?.mode == 'continuous') {
+		// TODO: may use color scale instead of bars
+		if (s.transpose) {
+			cell.width = t.scale(cell.key)
+			cell.x += tw.settings.gap // - cell.width
+		} else {
+			cell.height = t.scale(cell.key)
+			cell.y += tw.settings.barh + t.tw.settings.gap - cell.height
+		}
+	} else {
+		const group = tw.legend?.group || tw.$id
+		return { ref: t.ref, group, value: key, entry: { key, label: cell.label, fill: cell.fill } }
+	}
+}
+
+// NOTE: may move these code by term.type to matrix.[categorical|*].js
+// if more term.type specific logic becomes harder to maintain here
+
+/*
+  Arguments
+	cell: a matrix cell data
+	tw: termwrapper
+	anno: the current annotation
+	value
+	t: an entry in this.termOrder
+	s: plotConfig.settings.matrix
+*/
+const setCellProps = {
+	categorical: (cell, tw, anno, value, s, t) => {
+		const values = tw.term.values || {}
+		const key = anno.key
+		cell.label = 'label' in anno ? anno.label : values[key]?.label ? values[key].label : key
+		cell.fill = anno.color || values[key]?.color
+		const group = tw.legend?.group || tw.$id
+		return { ref: t.ref, group, value, entry: { key, label: cell.label, fill: cell.fill } }
+	},
+	integer: setNumericCellProps,
+	float: setNumericCellProps,
+	geneVariant: (cell, tw, anno, value, s, t) => {
+		const values = anno.filteredValues || anno.values || [anno.value]
+		cell.height = !s.transpose ? s.rowh / values.length : s.colw
+		cell.width = !s.transpose ? s.colw : s.colw / values.length
+		cell.label = value.label || mclass[value.class].label
+		cell.fill = value.color || mclass[value.class].color
+		cell.class = value.class
+		cell.value = value
+
+		const group = tw.legend?.group || 'Mutation Types'
+		return { ref: t.ref, group, value: value.class, entry: { key: value.class, label: cell.label, fill: cell.fill } }
 	}
 }
 
