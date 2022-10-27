@@ -91,7 +91,12 @@ function getSortSamplesByValues($id, self, rows) {
 
 	if (t.tw.q?.mode == 'continuous') {
 		return (a, b) => {
-			return a[$id].key - b[$id].key
+			if ($id in a && $id in b) {
+				return a[$id]?.value - b[$id]?.value
+			}
+			if ($id in a) return -1
+			if ($id in b) return 1
+			return 0
 		}
 	}
 
