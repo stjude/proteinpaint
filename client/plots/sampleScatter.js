@@ -82,7 +82,8 @@ class Scatter {
 			holder: chartsDiv,
 			controls,
 			legendDiv,
-			tip: new Menu({ padding: '5px' })
+			tip: new Menu({ padding: '5px' }),
+			subtip: new Menu()
 		}
 
 		this.settings = {}
@@ -212,6 +213,14 @@ class Scatter {
 						chartType: 'sampleScatter',
 						settingsKey: 'showAxes',
 						title: `Option to show/hide plot axes`
+					},
+					{
+						boxLabel: 'Visible',
+						label: 'Show reference',
+						type: 'checkbox',
+						chartType: 'sampleScatter',
+						settingsKey: 'showRef',
+						title: `Option to show/hide ref samples`
 					}
 				]
 			})
@@ -307,7 +316,10 @@ function setRenderers(self) {
 		if (chartDiv.size() > 0) updateCharts(chartDiv)
 		else addCharts()
 		self.dom.holder.style('display', 'inline-block')
-		self.dom.holder.on('mouseover', self.mouseover).on('mouseout', self.mouseout)
+		self.dom.holder
+			.on('mouseover', self.mouseover)
+			.on('mouseout', self.mouseout)
+			.on('click', self.click)
 
 		function addCharts() {
 			const s = self.settings
@@ -431,7 +443,7 @@ function setRenderers(self) {
 			.attr('d', c => getShape(self, c))
 			.attr('fill', c => c.color)
 
-			.style('fill-opacity', s.fillOpacity)
+			.style('fill-opacity', c => (c.sample !== 'Ref' || (c.sample == 'Ref' && s.showRef) ? 1 : 0))
 		symbols
 			.enter()
 			.append('path')
@@ -440,7 +452,7 @@ function setRenderers(self) {
 			.attr('d', c => getShape(self, c))
 			.attr('fill', c => c.color)
 
-			.style('fill-opacity', s.fillOpacity)
+			.style('fill-opacity', c => (c.sample !== 'Ref' || (c.sample == 'Ref' && s.showRef) ? 1 : 0))
 			.transition()
 			.duration(duration)
 	}
@@ -840,6 +852,10 @@ function setInteractivity(self) {
 	self.mouseout = function() {
 		if (!self.lassoOn) self.dom.tip.hide()
 	}
+
+	self.click = function() {
+		self.dom.subtip.hide()
+	}
 }
 
 export async function getPlotConfig(opts, app) {
@@ -859,7 +875,8 @@ export async function getPlotConfig(opts, app) {
 					svgw: 500,
 					svgh: 500,
 					axisTitleFontSize: 16,
-					showAxes: false
+					showAxes: false,
+					showRef: true
 				}
 			}
 		}
@@ -895,11 +912,9 @@ function showTable(self, group, x, y) {
 		} else row.push({ value: '' })
 		rows.push(row)
 	}
-	const menu = new Menu()
-	//listdiv.text(title)
-
-	renderTable({ rows, columns, div: menu.d })
-	menu.show(x, y)
+	self.dom.subtip.clear()
+	renderTable({ rows, columns, div: self.dom.subtip.d })
+	self.dom.subtip.show(x, y)
 
 	function formatCell(column, name = 'value') {
 		let dict = {}
