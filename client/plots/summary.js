@@ -1,6 +1,7 @@
 import { getCompInit, copyMerge } from '#rx'
 import { Menu } from '#src/client'
 import { fillTermWrapper } from '../termsetting/termsetting'
+import { select } from 'd3-selection'
 //import {  } from ''
 
 class SummaryPlot {
@@ -61,19 +62,19 @@ class SummaryPlot {
 			await this.setComponent(config)
 		}
 
-		for (const childType in this.components) {
-			const chart = this.components[childType]
-			// hide non-active charts first, so not to momentarily have two visible charts
-			if (chart.type != this.config.childType) {
-				this.dom.plotDivs[chart.type].style('display', 'none')
-			}
-		}
-
-		this.dom.plotDivs[config.childType].style('display', '')
+		this.render()
 	}
 
 	async setComponent(config) {
-		const _ = await import(`./${config.childType}.js`)
+		// !!! quick fix for rollup to bundle,
+		// will eventually need to move to a subnested folder structure
+		let _
+		if (config.childType == 'barchart') _ = await import(`./barchart.js`)
+		else if (config.childType == 'violin') _ = await import(`./violin.js`)
+		else if (config.childType == 'table') _ = await import(`./table.js`)
+		else if (config.childType == 'boxplot') _ = await import(`./boxplot.js`)
+		else throw `unsupported childType='${config.childType}'`
+
 		this.dom.plotDivs[config.childType] = this.dom.viz.append('div')
 
 		// assumes only 1 chart per chartType would be rendered in the summary sandbox
@@ -156,7 +157,7 @@ function setRenderers(self) {
 						childType: 'violin',
 						label: 'Violin',
 						disabled: d => false,
-						isVisible: () => self.config.term.type === 'integer' || self.config.term.type === 'float',
+						isVisible: () => self.config.term.term.type === 'integer' || self.config.term.term.type === 'float',
 						getTw: tw => {
 							tw.q = { mode: 'continuous' }
 							return tw
@@ -185,7 +186,7 @@ function setRenderers(self) {
 				])
 				.enter()
 				.append('button')
-				.style('display', d => (d.isVisible() ? ' ' : 'none'))
+				//.style('display', d => (d.isVisible() ? '' : 'none'))
 				.style('margin', '2px')
 				// TODO: may use other logic for disabling a chart type, insteead of hiding/showing
 				.property('disabled', d => d.disabled())
@@ -206,6 +207,27 @@ function setRenderers(self) {
 			throw e
 			//self.dom.errdiv.text(e)
 		}
+	}
+
+	self.render = function() {
+		for (const childType in self.components) {
+			const chart = self.components[childType]
+			// hide non-active charts first, so not to momentarily have two visible charts
+			if (chart.type != self.config.childType) {
+				self.dom.plotDivs[chart.type].style('display', 'none')
+			}
+		}
+
+		self.dom.chartToggles.each(function(d) {
+			if (!d) return
+			d.active = d.childType == self.config.childType
+			// this === DOM element
+			select(this).style('display', d => (d.isVisible() ? '' : 'none'))
+			//.style('background-color', d => (d.active ? '#cfe2f3' : 'white'))
+			//.style('border-style', d => (d.active ? 'solid solid none' : 'none none solid'))
+		})
+
+		self.dom.plotDivs[self.config.childType].style('display', '')
 	}
 	/*
 		TODO: may create option for a custom filter for this plot only,

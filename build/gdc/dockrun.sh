@@ -41,4 +41,5 @@ docker run -d \
 	-e PP_PORT=$EXPOSED_PORT \
 	-e PP_CUSTOMER=gdc \
 	-e PP_MODE=container-test \
+	-e PP_GDC_HOST=https://portal.gdc.cancer.gov/auth/api/v0 \
 	$IMAGE_NAME
