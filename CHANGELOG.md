@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## 2.5.0
+
+- support for MSigDb genesets
+- violin and TSNE plot prototypes
+- auto-column width and more sorting options for the matrix plot
+- improvements to other MASS UI plots
+
+GDC-related
+- handle sessionid cookie for the portal.gdc.cancer.gov
+- oncoprint-like prototype
+
 ## 2.4.0
 
 - d3 upgrade to version 7
