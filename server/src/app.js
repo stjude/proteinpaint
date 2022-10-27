@@ -243,8 +243,7 @@ app.get(basepath + '/cardsjson', handle_cards)
 app.post(basepath + '/mdsjsonform', handle_mdsjsonform)
 app.get(basepath + '/genomes', handle_genomes)
 app.get(basepath + '/getDataset', handle_getDataset)
-app.get(basepath + '/genelookup', handle_genelookup)
-app.post(basepath + '/genelookup', handle_genelookup)
+app.all(basepath + '/genelookup', handle_genelookup)
 app.post(basepath + '/ntseq', handle_ntseq)
 app.post(basepath + '/pdomain', handle_pdomain)
 app.post(basepath + '/tkbedj', bedj_request_closure(genomes))
@@ -451,8 +450,8 @@ function handle_gene2canonicalisoform(req, res) {
 		if (!genome) throw 'unknown genome'
 		if (!genome.genedb.get_gene2canonicalisoform) throw 'gene2canonicalisoform not supported on this genome'
 		const data = genome.genedb.get_gene2canonicalisoform.get(req.query.gene)
-		const j = JSON.parse(data.genemodel)
-		res.send(j)
+		// data = { isoform: str }
+		res.send(data)
 	} catch (e) {
 		res.send({ error: e.message || e })
 		if (e.stack) console.log(e.stack)
@@ -635,6 +634,14 @@ function clientcopy_genome(genomename) {
 		hicenzymefragment: g.hicenzymefragment,
 		datasets: {}
 	}
+
+	if (g.termdbs) {
+		g2.termdbs = {}
+		for (const k in g.termdbs) {
+			g2.termdbs[k] = { label: g.termdbs[k].label }
+		}
+	}
+
 	for (const dsname in g.datasets) {
 		const ds = g.datasets[dsname]
 
@@ -978,6 +985,7 @@ function handle_genelookup(req, res) {
 
 	if (req.query.deep) {
 		///////////// deep
+
 		// isoform query must be converted to symbol first, so as to retrieve all gene models related to this gene
 		const result = {} // object to collect results of gene query and send back
 		let symbol
@@ -995,7 +1003,7 @@ function handle_genelookup(req, res) {
 			}
 		}
 		if (!symbol) {
-			if (g.genedb.get_gene2canonicalisoform && req.query.input.toLowerCase().startsWith('ensg')) {
+			if (g.genedb.get_gene2canonicalisoform && req.query.input.toUpperCase().startsWith('ENSG')) {
 				/* db has this table and input looks like ENSG accession
 				convert it to ENST canonical isoform 
 				currently db does not have a direct mapping from ENSG to symbol
@@ -1003,12 +1011,12 @@ function handle_genelookup(req, res) {
 				which can cause a refseq isoform to be shown instead
 				*/
 				const data = g.genedb.get_gene2canonicalisoform.get(req.query.input)
-				if (data) {
-					const j = JSON.parse(data.genemodel)
+				if (data && data.isoform) {
 					// mapped into an ENST isoform
-					result.found_isoform = j.isoform
+					const enstIsoform = data.isoform
+					result.found_isoform = enstIsoform
 					// convert isoform back to symbol as in the beginning
-					const tmp = g.genedb.getnamebynameorisoform.get(j.isoform, j.isoform)
+					const tmp = g.genedb.getnamebynameorisoform.get(enstIsoform, enstIsoform)
 					if (!tmp) throw 'cannot map enst isoform to symbol'
 					symbol = tmp.name
 				}
@@ -1027,7 +1035,9 @@ function handle_genelookup(req, res) {
 		res.send(result)
 		return
 	}
+
 	////////////// shallow
+
 	const input = req.query.input.toUpperCase()
 	const lst = []
 	const s = input.substr(0, 2)
@@ -1045,6 +1055,7 @@ function handle_genelookup(req, res) {
 			return
 		}
 	}
+	// no hit by alias
 	res.send({ hits: [] })
 }
 
@@ -7271,7 +7282,7 @@ async function pp_init() {
 			}
 			if (tables.has('gene2canonicalisoform')) {
 				g.genedb.get_gene2canonicalisoform = g.genedb.db.prepare(
-					'select genemodel from gene2canonicalisoform as c, genes as g where c.gene=? AND c.isoform=g.isoform'
+					'select isoform from gene2canonicalisoform where gene=?'
 				)
 			}
 			if (tables.has('buildDate')) {

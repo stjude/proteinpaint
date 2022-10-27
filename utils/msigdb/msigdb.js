@@ -67,6 +67,7 @@ key: term id
 value: { type:str, L1:str, L2:str, L3:str, genes }
 */
 const nonHumanCount = new Map() // k: organism, v: count
+let missingOrganism = 0
 let missingGeneCount = 0
 
 const rl = readline.createInterface({ input: fs.createReadStream(xmlFile) })
@@ -89,14 +90,18 @@ function parseLine(line) {
 
 	const k2v = xmlLine2kv(line)
 
-	{
-		let tmp = k2v.get('ORGANISM').trim()
-		if (!tmp) tmp = 'none'
+	const organism = k2v.get('ORGANISM').trim()
+	if (!organism) {
+		missingOrganism++
+		return
+	}
+	/*
+		do not skip non-human sets, as genes are human orthologs
 		if (tmp != 'Homo sapiens') {
 			nonHumanCount.set(tmp, 1 + (nonHumanCount.get(tmp) || 0))
 			return
 		}
-	}
+		*/
 
 	// an object representing this geneset, with attributes parsed from the xml line {L1, L2, L3, genes, ...}
 	// to be kept in id2term
@@ -162,6 +167,7 @@ function parseLine(line) {
 		// term details
 
 		term.def.push({ label: 'Gene count', value: term.genes.split(',').length })
+		term.def.push({ label: 'Organism', value: organism })
 
 		if (k2v.has('DESCRIPTION_BRIEF')) {
 			const tmp = k2v.get('DESCRIPTION_BRIEF').trim()
@@ -251,6 +257,7 @@ function outputFiles() {
 	outputPhenotree()
 	outputGenes()
 	outputTermHtmlDef()
+	console.log('Missing organism:', missingOrganism)
 	for (const [k, v] of nonHumanCount) {
 		console.log('Non-human skipped: ' + k, v)
 	}

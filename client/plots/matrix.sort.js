@@ -18,11 +18,33 @@ export function getSampleSorter(self, s, rows) {
 		throw `unsupported s.sortSamplesBy='${s.sortSamplesBy}'`
 	}
 
+	const selectedTerms = self.termOrder
+		.filter(t => t.tw.sortSamples) // sortSamples property indicates a term is selected
+		.map(t => t.tw)
+		.sort((a, b) => a.sortSamples.priority - b.sortSamples.priority)
+
+	// !!! QUICK FIX:
+	// make sure to not affect the publised PNET matrix figure
+	const unSelectedDictTerms =
+		self.app.vocabApi.vocab?.dslabel == 'PNET'
+			? []
+			: self.termOrder
+					// sort against only dictionary terms in this tie-breaker
+					.filter(t => !t.tw.sortSamples && t.tw.id)
+					.map(t => Object.assign({ sortSamples: { by: 'values' } }, t.tw))
+
+	const unSelectedNonDictTerms =
+		self.app.vocabApi.vocab?.dslabel == 'PNET'
+			? []
+			: self.termOrder
+					// sort against only non-dictionary terms in this tie-breaker
+					.filter(t => !t.tw.sortSamples && !t.tw.id)
+					.map(t => Object.assign({ sortSamples: { by: 'hits' } }, t.tw))
+
 	const sorterTerms = [
-		...self.termOrder
-			.filter(t => t.tw.sortSamples)
-			.map(t => t.tw)
-			.sort((a, b) => a.sortSamples.priority - b.sortSamples.priority),
+		...selectedTerms,
+		...unSelectedDictTerms,
+		...unSelectedNonDictTerms,
 		...self.config.settings.matrix.sortSamplesTieBreakers.map(st => st)
 	]
 	self.sampleSorters = []
@@ -69,7 +91,12 @@ function getSortSamplesByValues($id, self, rows) {
 
 	if (t.tw.q?.mode == 'continuous') {
 		return (a, b) => {
-			return a[$id].key - b[$id].key
+			if ($id in a && $id in b) {
+				return a[$id]?.value - b[$id]?.value
+			}
+			if ($id in a) return -1
+			if ($id in b) return 1
+			return 0
 		}
 	}
 
@@ -118,6 +145,13 @@ export function getTermSorter(self, s) {
 	}
 
 	return (a, b) => {
+		// !!! QUICK FIX: put dictionary terms above non-dictionary terms
+		// make sure to not affect the publised PNET matrix figure
+		if (self.app.vocabApi.vocab?.dslabel === 'GDC') {
+			if (a.tw?.term?.id && !b.tw?.term?.id) return -1
+			if (!a.tw?.term?.id && b.tw?.term?.id) return 1
+		} // !!! end quick fix
+
 		if (a.counts.samples === b.counts.samples) return b.counts.hits - a.counts.hits
 		if (a.counts.samples === b.counts.samples) return a.index - b.index
 		return b.counts.samples - a.counts.samples

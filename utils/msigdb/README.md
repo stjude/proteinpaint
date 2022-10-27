@@ -14,7 +14,7 @@ run script:
 ```bash
 cd ~/dev/proteinpaint/utils/msigdb/
 
-node msigdb.js ~/data/tp/msigdb/msigdb_v2022.1.Hs_files_to_download_locally/msigdb_v2022.1.Hs.xml ~/data/tp/msigdb/
+node msigdb.js ~/data/tp/anno/msigdb/msigdb_v2022.1.Hs_files_to_download_locally/msigdb_v2022.1.Hs.xml ~/data/tp/anno/msigdb/
 
 # do below to get the gene annotation files if missing
 cd ~/data/tp/anno/tmp
@@ -29,7 +29,7 @@ node ~/dev/proteinpaint/utils/genes/refgene.canonical.js ncbiRefSeqSelect.txt > 
 # made anno/tmp/refseq.canonical
 
 # update term2genes
-node updateGenes.js ~/data/tp/msigdb/term2genes ~/data/tp/anno/human.genealias ~/data/tp/anno/tmp/wgEncodeGencodeAttrsV41.txt ~/data/tp/anno/tmp/knownCanonicalGenecode.txt ~/data/tp/anno/tmp/refseq.canonical > ~/data/tp/msigdb/term2genes.updated
+node updateGenes.js ~/data/tp/anno/msigdb/term2genes ~/data/tp/anno/human.genealias ~/data/tp/anno/tmp/wgEncodeGencodeAttrsV41.txt ~/data/tp/anno/tmp/knownCanonicalGenecode.txt ~/data/tp/anno/tmp/refseq.canonical > ~/data/tp/anno/msigdb/term2genes.updated
 ```
 The following files are made at tp/msigndb/:
 1. "phenotree", as input to buildTermdb.bundle.js
@@ -41,10 +41,10 @@ The following files are made at tp/msigndb/:
 ```bash
 cd ../termdb/
 node buildTermdb.bundle.js \
-	phenotree=/Users/xzhou1/data/tp/msigdb/phenotree \
-	termHtmlDef=/Users/xzhou1/data/tp/msigdb/termhtmldef  \
-	term2genes=/Users/xzhou1/data/tp/msigdb/term2genes.updated \
-	dbfile=/Users/xzhou1/data/tp/msigdb/db
+	phenotree=/Users/xzhou1/data/tp/anno/msigdb/phenotree \
+	termHtmlDef=/Users/xzhou1/data/tp/anno/msigdb/termhtmldef  \
+	term2genes=/Users/xzhou1/data/tp/anno/msigdb/term2genes.updated \
+	dbfile=/Users/xzhou1/data/tp/anno/msigdb/db
 ```
 
 

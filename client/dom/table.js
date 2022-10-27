@@ -7,8 +7,7 @@ div = d3-wrapped holder
 
 columns = [ {label} ]
 	each element is an object describing a column
-	.label = str
-		the text to show as header of a column
+	label: str, the text to show as header of a column
 
 rows = [ [] ]
 	each element is an array of cells for a row, with array length must matching columns.length
@@ -18,7 +17,8 @@ rows = [ [] ]
 	{
 		url: string, to print in <a> element
 		html: string, to print with .html() d3 method, may be susceptible to attack
-		value, to print with .text() d3 method
+		value: to print with .text() d3 method
+		
 	}
 
 	multi-value cell:
@@ -29,88 +29,72 @@ rows = [ [] ]
 	}
 */
 export async function renderTable({ columns, rows, div }) {
-	const numColumns = columns.length - 1
+	const numColumns = columns.length
+	const sampleWidth = numColumns < 10 ? 'auto' : '5vw'
 
 	// create a Parent Div element to which the header and sample grid will be appended as divH and divS.
-	const ParentDiv = div
+	const parentDiv = div
 		.append('div')
 		.style('overflow', 'auto')
 		.style('scrollbar-width', 'none')
-		.style('max-height', '30vw')
+		.style('max-height', '25vw')
 		.style('max-width', '70vw')
+
+		.style('min-width', '40vw')
 		.style('background-color', 'white')
-	// .style('border', '2px outset black')
+		.attr('class', 'sjpp_grid_container')
+		.style('grid-template-columns', `1vw repeat(${numColumns}, auto)`)
 
 	// header div
-	const divH = ParentDiv.append('div')
-		.attr('class', 'grid-container')
-		.style('grid-template-columns', `2vw repeat(${numColumns}, 0.5fr) 1fr`)
-		.style('position', 'sticky')
-		.style('z-index', '2')
-	// .style('border', '2px outset black')
-
-	// sample div
-	const divS = ParentDiv.append('div').style('position', 'relative')
-	// .style('z-index', '1')
-	// .style('border', '2px outset red')
+	const divH = parentDiv.append('div').style('display', 'contents')
 
 	// append empty div element to header to adjust columns
-	divH.append('div').attr('header-container')
+	divH.append('div').attr('class', 'sjpp_grid_item')
 
 	// header values
 	for (const c of columns) {
 		divH
 			.append('div')
 			.text(c.label)
+			.attr('class', 'sjpp_grid_item')
 			.style('font-family', 'Arial')
 			.style('font-size', '1em')
 			.style('opacity', 0.5)
 	}
-
 	// sample values
 	// iterate over each row in rows and create a div for each row that has a grid layout similar to the header grid.
 	for (const [i, row] of rows.entries()) {
-		const rowGrid = divS
+		const rowGrid = parentDiv.append('div')
+		rowGrid.attr('class', 'sjpp_grid_row_wrapper')
+
+		const lineDiv = rowGrid
 			.append('div')
-			.attr('class', 'grid-container')
-			.style('grid-template-columns', `2vw repeat(${numColumns}, 0.5fr) 1fr`)
 			.text(i + 1)
-			.style('font-size', '1em')
-			.style('align-items', 'center')
-			// .style('border', '2px outset green')
-			.style('transition', '0.4s')
-		// .style('z-index', '3')
+			.attr('class', 'sjpp_grid_item')
+			.style('background-color', i % 2 == 0 ? 'rgb(237, 237, 237)' : 'white')
 
 		// each row comprises of cell and each cell has values that will get appended to div elements of the rowGrid stored in td.
 		for (const [colIdx, cell] of row.entries()) {
 			const td = rowGrid
 				.append('div')
-				.style('display', 'flex')
-				.style('word-break', 'break-word')
-				.style('padding', '1px')
-			// .style('align-items', 'center')
+				.attr('class', 'sjpp_grid_item')
+				.style('background-color', i % 2 == 0 ? 'rgb(237, 237, 237)' : 'white')
 
 			// if index of each row is even then the background of that row should be grey and also add hovering in yellow.
-			rowGrid
-				.style('background-color', i % 2 == 0 ? 'rgb(237, 237, 237)' : 'white')
-				.on('mouseover', () => rowGrid.style('background-color', '#fcfcca'))
-				.on('mouseout', () => rowGrid.style('background-color', i % 2 == 0 ? 'rgb(237, 237, 237)' : 'white'))
 
 			// if cell has values then append those values in new divs on td which is stored in d.
 			if (cell.values) {
 				for (const v of cell.values) {
-					const d = td.append('div')
-
 					// if those values have url in them then tag it to the sample name/id otherwise just append the value of that cell onto the div
 					if (v.url) {
-						d.append('a')
+						td.append('a')
 							.text(v.value)
 							.attr('href', v.url)
 							.attr('target', '_blank')
 					} else if (v.html) {
-						d.html(v.html)
+						td.html(v.html)
 					} else {
-						d.text(v.value)
+						td.text(v.value)
 					}
 				}
 			} else if (cell.url) {

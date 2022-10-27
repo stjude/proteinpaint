@@ -131,6 +131,11 @@ function __barchart(t1,t2) {
 	if(t2) chart.term2 = t2
 	return '?noheader=1&mass='+JSON.stringify( { dslabel:'SJLife', genome:'hg38', plots: [ chart ], nav: { activeTab: 1 } })
 }
+function __summary(t1,t2) {
+	const chart = { chartType:'summary', term:t1 }
+	if(t2) chart.term2 = t2
+	return '?noheader=1&mass='+JSON.stringify( { dslabel:'SJLife', genome:'hg38', plots: [ chart ], nav: { activeTab: 1 } })
+}
 function __cuminc({t1,t2,t0,grade,hidden}) {
 	const chart = {
 		chartType:'cuminc',
@@ -243,6 +248,8 @@ makeURL([
 		['PTPN4 X605 mnv','?gdcbamslice=1&gdc_id=8577ef8a-f071-49cc-8158-05dfc52f3c70&gdc_var=chr2:g.119955155_119955159delinsTTTTT'],
 
 		['Skipped by workflow','?gdcbamslice=1&gdc_id=e2d8ca95-6a3d-48e3-abfc-ce5ee294e954'],
+		['not found in cohort','example.gdc.bam.html?gdc_id=TCGA-06-0211'],
+
 		['6 ssm','?gdcbamslice=1&gdc_id=TCGA-4V-A9QQ'],
 		['No ssm','?gdcbamslice=1&gdc_id=DLBCL10969'],
 		['disableSSM','?gdcbamslice=1&disableSSM=1']
@@ -416,6 +423,16 @@ makeURL([
 		['Neurology/hrtavg', __barchart( { id: 'Neurology System' }, { id: 'hrtavg' })],
 		['Neurology/Cardio', __barchart( { id: 'Neurology System' }, { id: 'Cardiovascular System' })],
 
+		'violin',
+		['hrtavg', __barchart( { id: 'hrtavg', q:{mode:'continuous'} })],
+		['hrtavg/race', __barchart( { id: 'hrtavg', q:{mode:'continuous'} }, {id:'racegrp'})],
+		
+
+		'summary',
+		['hrtavg', __summary( { id: 'hrtavg', q:{mode:'continuous'} })],
+		['hrtavg/race', __summary( { id: 'hrtavg', q:{mode:'continuous'} }, {id:'racegrp'})],
+
+
 		'cuminc',
 
 		['Cardio-1', __cuminc({t1:{id: 'Cardiovascular System'},grade:1})],
@@ -508,12 +525,14 @@ makeURL([
 				{
 					chartType:'matrix',
 					termgroups: [{
-						lst: [{
-							term:{
+						lst: [
+							{ term:{
 								name:'TP53',
 								type:'geneVariant'
-							}
-						}]
+							} },
+							{id:'Gender'},
+							{id:'TSNE Category'},
+						]
 					}]
 				}
 			]
@@ -548,6 +567,9 @@ makeURL([
 		['GDC','?noheader=1&mass='+JSON.stringify({
 			dslabel:'GDC',
 			genome:'hg38',
+			nav: {
+				header_mode: 'hidden'
+			},
 			plots: [
 				{
 					chartType:'matrix',
@@ -562,6 +584,8 @@ makeURL([
 								type:'geneVariant'
 						} },
 						// cannot use AKT1 for now due to incompatible refseq canonical isoform
+
+						{ id:'case.disease_type' },
 						]
 					}]
 				}

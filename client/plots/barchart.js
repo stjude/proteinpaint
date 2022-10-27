@@ -11,14 +11,13 @@ import getHandlers from './barchart.events'
 import { controlsInit } from './controls'
 import { to_svg } from '../src/client'
 import { fillTermWrapper } from '../termsetting/termsetting'
-import { compViolinInit } from './violin'
 
 class Barchart {
 	constructor(opts) {
 		// rx.getComponentInit() will set this.app, this.id, this.opts
 		this.type = 'barchart'
 	}
-
+	//freeze the api of this class. don't want embedder functions to modify it.
 	preApiFreeze(api) {
 		api.download = this.download
 	}
@@ -45,7 +44,6 @@ class Barchart {
 				.style('font-size', '16px')
 				.style('color', '#aaa'),
 			barDiv: holder.append('div').style('white-space', 'normal'),
-			violinDiv: holder.append('div').style('white-space', 'normal'),
 			legendDiv: holder.append('div').style('margin', '5px 5px 15px 5px')
 		}
 		if (this.dom.header) this.dom.header.html('Barchart')
@@ -112,12 +110,18 @@ class Barchart {
 						},
 						'divideBy'
 					]
-				}),
-				violin: []
+				})
 			}
 
 			this.components.controls.on('downloadClick.boxplot', this.download)
 		}
+	}
+
+	reactsTo(action) {
+		if (action.type.startsWith('plot_')) {
+			return action.id === this.id && (!action.config.childType || action.config.childType == this.type)
+		}
+		return true
 	}
 
 	getState(appState) {
@@ -126,61 +130,22 @@ class Barchart {
 			throw `No plot with id='${this.id}' found. Did you set this.id before this.api = getComponentApi(this)?`
 		}
 
-		const displayAsSurvival =
-			config.term.term.type == 'survival' || (config.term2 && config.term2.term.type == 'survival')
-
 		return {
 			genome: appState.vocab.genome,
 			dslabel: appState.vocab.dslabel,
-			nav: appState.nav,
 			termfilter: appState.termfilter,
-			config: {
-				term: JSON.parse(JSON.stringify(config.term)),
-				term0: config.term0 ? JSON.parse(JSON.stringify(config.term0)) : null,
-				term2: config.term2 ? JSON.parse(JSON.stringify(config.term2)) : null,
-				settings: {
-					common: config.settings.common,
-					barchart: config.settings.barchart
-				}
-			},
+			config,
 			ssid: appState.ssid,
 			bar_click_menu: appState.bar_click_menu || {},
 			// optional
 			activeCohort: appState.activeCohort,
-			termdbConfig: appState.termdbConfig,
-			visibleChartType: this.getVisibleChartType(config)
+			termdbConfig: appState.termdbConfig
 		}
-	}
-
-	getVisibleChartType(config) {
-		/*
-		input:
-		
-		config{}
-			.term={ q={ mode=str } }
-			.term2={ q={ mode=str} }
-
-		output:
-		
-		a string barchart/violin/boxplot
-		*/
-
-		if (config.term.q.mode == 'continuous') {
-			// TODO decide if to show boxplot vs violin
-			return 'violin'
-		}
-
-		/*
-		if(config.term2?.q.mode=='continuous') {
-			return 'violin'
-		}
-		*/
-
-		return 'barchart'
 	}
 
 	async main() {
 		try {
+			this.config = JSON.parse(JSON.stringify(this.state.config))
 			if (!this.currServerData) this.dom.barDiv.style('max-width', window.innerWidth + 'px')
 			this.prevConfig = this.config || {}
 			this.config = this.state.config
@@ -190,37 +155,6 @@ class Barchart {
 				)
 
 			this.toggleLoadingDiv()
-
-			// TODO improve with handler{} design
-
-			if (this.state.visibleChartType == 'violin') {
-				this.dom.barDiv.style('display', 'none')
-				this.dom.banner.text('').style('display', 'none')
-				this.dom.legendDiv.style('display', 'none')
-				this.dom.violinDiv
-					.style('display', 'inline-block')
-					.style('padding', '10px')
-					.style('overflow-x', 'auto')
-					.style('max-width', '70vw')
-					.style('scrollbar-width', 'none')
-
-				// TODO request by either config.term{} or config.term2 depending on which one is continuous
-				const arg = {
-					termid: this.state.config.term.id, // hardcoded to use term1
-					term2: this.state.config.term2,
-					filter: this.state.termfilter.filter,
-					config: this.config
-				}
-
-				this.toggleLoadingDiv('none')
-				this.components.violin = await compViolinInit({ app: this.app, dom: this.dom, violinArg: arg })
-
-				return
-			}
-
-			// compute and render barchart
-			this.dom.barDiv.style('display', 'inline-block')
-			this.dom.violinDiv.style('display', 'none')
 
 			const reqOpts = this.getDataRequestOpts()
 			const data = await this.app.vocabApi.getNestedChartSeriesData(reqOpts)
@@ -629,6 +563,7 @@ function setRenderers(self) {
 	}
 
 	self.updateChart = function(chart) {
+		// this.dom.legendDiv.remove("*")
 		chart.settings.cols.sort(self.barSorter)
 		chart.maxAcrossCharts = self.chartsData.maxAcrossCharts
 		chart.handlers = self.handlers
@@ -761,7 +696,8 @@ export async function getPlotConfig(opts, app) {
 				orientation: 'horizontal',
 				unit: 'abs',
 				overlay: 'none',
-				divideBy: 'none'
+				divideBy: 'none',
+				rowlabelw: 250
 			}
 		}
 	}

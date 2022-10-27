@@ -16,7 +16,7 @@
 #   chartId: [
 #     {
 #       time: time to event
-#       event: event code (0 = censored, 1 = event)
+#       event: event code (0 = censored, 1 = event, 2 = competing risk event)
 #       series: series ID
 #     }
 #   ]
@@ -34,6 +34,7 @@
 #           low: 95% confidence interval - lower bound
 #           up: 95% confidence intervals - upper bound
 #           nrisk: # at-risk samples at timepoint
+#           ncensor: # censored samples at timepoint
 #         }
 #       ]
 #     },
@@ -65,7 +66,8 @@ run_cuminc <- function(chart, startTime) {
   if (length(levels(chart$series)) == 1) {
     # single series
     res <- cuminc(ftime = chart$time, fstatus = chart$event, cencode = 0)
-    seriesRes <- as.data.frame(res[[1]])
+    # extract results of series for event of interest (i.e. event=1)
+    seriesRes <- as.data.frame(res[["1 1"]])
     # if a custom start time is given, then this start time
     # should serve as the first time point of the curve
     if (!is.na(startTime)) {
@@ -104,6 +106,7 @@ run_cuminc <- function(chart, startTime) {
       # get curve estimates
       for (series in pair) {
         if (series %in% names(estimates)) next
+        # extract results of series for event of interest (i.e. event=1)
         seriesRes <- as.data.frame(res[[paste(series,1)]])
         # if a custom start time is given, then this start time
         # should serve as the first time point of the curve
@@ -129,6 +132,7 @@ run_cuminc <- function(chart, startTime) {
       # build an event-series contingency table
       # if expected count of any cell in table is <5, then permutation test is needed
       tbl <- table(pairDat$event, pairDat$series)
+      tbl <- tbl[c("0","1"),] # remove event2 samples
       rmarg <- rowSums(tbl)
       cmarg <- colSums(tbl)
       tmarg <- sum(tbl)
@@ -137,14 +141,15 @@ run_cuminc <- function(chart, startTime) {
         # expected count of at least one cell in table is <5
         # perform permutation test
         usedPermutation[i] <- TRUE
-        tsO <- res$Tests[1,"stat"] # test statistic of original data
+        tsO <- res$Tests["1","stat"] # test statistic computed for event of interest based on original data
         pvalue <- permutationTest(pairDat, tsO)
       } else {
         # expected counts of all cells in table are >=5
         # permutation test is not needed
-        # use computed p-value from Gray's test
+        # use computed Gray's test p-value for event
+        # of interest
         usedPermutation[i] <- FALSE
-        pvalue <- signif(res$Tests[1,"pv"], 2)
+        pvalue <- signif(res$Tests["1","pv"], 2)
       }
       if (pvalue == 0) pvalue <- "<1e-16" # see https://stacks.cdc.gov/view/cdc/22757/cdc_22757_DS11.pdf
       pvalues[i] <- pvalue
@@ -187,7 +192,7 @@ permutationTest <- function(dat, tsO) {
 #   - compute the test statistic of Gray's test
 # return all permuted test statistics
 runPermutations <- function(M, dat) {
-  tsPs <- replicate(M, cuminc(ftime = dat$time, fstatus = dat$event, group = sample(dat$series), cencode = 0)$Tests[1,"stat"], simplify = T)
+  tsPs <- replicate(M, cuminc(ftime = dat$time, fstatus = dat$event, group = sample(dat$series), cencode = 0)$Tests["1","stat"], simplify = T)
   return(tsPs)
 }
 
@@ -225,6 +230,7 @@ compute_counts <- function(res, chart) {
   chart <- cbind(chart, "bin" = findInterval(chart$time, times))
   res <- cbind(res, "bin" = findInterval(res$time, times))
   m <- table(chart$bin, chart$event)
+  m <- m[, c("0","1"), drop = F] # remove competing risk events
   colnames(m) <- c("ncensor", "nevent")
   m <- cbind(m, "bin" = as.numeric(row.names(m)))
   res <- merge(res, m, by = "bin", all.x = T)
@@ -246,8 +252,9 @@ startTime <- ifelse("startTime" %in% names(input), input$startTime, NA)
 
 # perform cumulative incidence analysis
 # parallelize the analysis across charts/variants
-cores <- detectCores()
-if (is.na(cores)) stop("unable to detect number of cores")
+availCores <- detectCores()
+if (is.na(availCores)) stop("unable to detect number of available cores")
+cores <- ifelse(length(dat) < availCores, length(dat), availCores)
 ci_results <- mclapply(X = dat, FUN = run_cuminc, startTime = startTime, mc.cores = cores)
 
 # output results in json format

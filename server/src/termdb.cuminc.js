@@ -24,8 +24,6 @@ export async function get_incidence(q, ds) {
 			const time = d.val1
 			const event = d.key1
 			const series = d.key2
-			// do not include data when years_to_event < 0
-			if (time < 0) continue //TODO: this should be handled in sql
 			if (!(chartId in byChartSeries)) byChartSeries[chartId] = []
 			byChartSeries[chartId].push({ time, event, series })
 		}
@@ -162,21 +160,17 @@ export async function runCumincR(Rinput, final_data) {
 
 	// parse cumulative incidence results
 	// first revert placeholders
-	if (Object.keys(ci_data).length == 1) {
-		if (Object.keys(ci_data)[0] === '*') {
-			ci_data[''] = ci_data['*']
-			delete ci_data['*']
-		} else {
-			throw 'unexpected chartId'
+	for (const chartId in ci_data) {
+		if (chartId === '*') {
+			ci_data[''] = ci_data[chartId]
+			delete ci_data[chartId]
 		}
 	}
 	for (const chartId in ci_data) {
-		if (Object.keys(ci_data[chartId].estimates).length == 1) {
-			if (Object.keys(ci_data[chartId].estimates)[0] === '*') {
-				ci_data[chartId].estimates[''] = ci_data[chartId].estimates['*']
-				delete ci_data[chartId].estimates['*']
-			} else {
-				throw 'unexpected seriesId'
+		for (const seriesId in ci_data[chartId].estimates) {
+			if (seriesId === '*') {
+				ci_data[chartId].estimates[''] = ci_data[chartId].estimates[seriesId]
+				delete ci_data[chartId].estimates[seriesId]
 			}
 		}
 	}

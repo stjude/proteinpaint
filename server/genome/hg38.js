@@ -9,7 +9,7 @@ module.exports = {
 
 	termdbs: {
 		msigdb: {
-			label: 'msigdb', // to be compatible with ds.label
+			label: 'MSigDB', // to be compatible with ds.label
 			cohort: {
 				db: { file: 'anno/msigdb/db' },
 				termdb: {}

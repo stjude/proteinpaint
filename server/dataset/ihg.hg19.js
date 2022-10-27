@@ -1,9 +1,9 @@
 module.exports = function() {
 	return {
-		isMds: true,
+		isMds3: true,
 
 		cohort: {
-			allowedChartTypes: ['barchart', 'survival', 'matrix'],
+			allowedChartTypes: ['barchart', 'survival', 'matrix', 'sampleScatter'],
 			mutationset: [
 				{
 					snvindel: 'sdhanda/mb_portal/BT_database/SNVindel_IHG.tsv',
@@ -16,6 +16,19 @@ module.exports = function() {
 			},
 			termdb: {
 				allowedTermTypes: ['geneVariant']
+			},
+			scatterplots: {
+				plots: [
+					{
+						name: 'Methylome TSNE',
+						dimension: 2, // 2d requires x/y, 3d requires x/y/z
+						file: 'files/hg19/ihg/classification/ihg_oct20_TSNE.txt',
+						colorTW: { id: 'TSNE-Cluster' }
+
+						// allow additional config for this plot
+						// allow additional config for this plot
+					}
+				]
 			}
 		}
 	}

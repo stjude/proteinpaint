@@ -131,7 +131,7 @@ tape(`a valid request`, async test => {
 		}
 		const res = {
 			send(data) {
-				test.deepEqual(data, { status: 'ok' }, 'should respond ok')
+				test.deepEqual(data.status, 'ok', 'should respond ok')
 			},
 			header(key, val) {
 				test.equal(key, 'Set-Cookie', 'should set a session cookie')
@@ -361,6 +361,7 @@ tape(`session-handling by the middleware`, async test => {
 	const serverconfig = {
 		dsCredentials: {
 			ds0: {
+				type: 'jwt',
 				embedders: {
 					localhost: {
 						secret,
@@ -376,16 +377,24 @@ tape(`session-handling by the middleware`, async test => {
 	const app = appInit()
 	await auth.maySetAuthRoutes(app, '', serverconfig)
 	{
+		const message = 'should call the next function on a non-protected route'
 		const req = {
 			query: { embedder: 'localhost', dslabel: 'ds0' },
 			headers: {
 				[headerKey]: validToken
 			},
-			path: '/non-protected'
+			path: '/non-protected',
+			cookies: {},
+			get() {}
 		}
-		const res = {}
+		const res = {
+			send(data) {
+				if (data.error) test.fail(message + ': ' + data.error)
+				else test.pass(message)
+			}
+		}
 		function next() {
-			test.pass('should call the next function on a non-protected route')
+			test.pass(message)
 		}
 
 		await app.middlewares['*'](req, res, next)
@@ -402,11 +411,11 @@ tape(`session-handling by the middleware`, async test => {
 		let sessionId
 		const res = {
 			send(data) {
-				test.deepEqual(data, { status: 'ok' }, 'should respond ok on a valid jwt-status login')
+				test.deepEqual(data.status, 'ok', 'should respond ok on a valid jwt-status login')
 			},
 			header(key, val) {
 				test.equal(key, 'Set-Cookie', 'should set a session cookie on a valid jwt-status login')
-				sessionId = val.split('=')[1]
+				sessionId = val.split(';')[0].split('=')[1]
 			},
 			headers: {}
 		}
@@ -428,9 +437,14 @@ tape(`session-handling by the middleware`, async test => {
 			}
 		}
 
-		const res1 = {}
+		const message1 = 'should call the next function on a valid session'
+		const res1 = {
+			send(data) {
+				if (data.error) test.fail(message1 + ': ' + data.error)
+			}
+		}
 		function next1() {
-			test.pass('should call the next function on a valid session')
+			test.pass(message1)
 		}
 		await app.middlewares['*'](req1, res1, next1)
 

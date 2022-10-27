@@ -1592,13 +1592,13 @@ function configPanel(tk, block) {
 			holder: row,
 			options: [
 				{
-					label: 'Lenient: No post-processing after genotyping of reads',
+					label: 'Lenient: "None group" is not generated.',
 					value: 0,
 					checked: tk.variants[0].strictness == 0
 				},
 				{
 					label:
-						'Strict: Reads with non-reference and non-alternative nucleotides within variant region are classifed into none category',
+						'Strict: "None group" is generated for reads with imperfect match to both reference and alternative alleles.',
 					value: 1,
 					checked: tk.variants[0].strictness == 1
 				}
@@ -1635,7 +1635,9 @@ function configPanel(tk, block) {
 	d.append('div')
 		.style('margin-top', '10px')
 		.append('img')
-		.attr('src', tk.colorscale)
+		.attr('width', tk.colorscale.width)
+		.attr('height', tk.colorscale.height)
+		.attr('src', tk.colorscale.src)
 	d.append('div').style('font-size', '.8em').html(`
 `)
 }

@@ -22,7 +22,8 @@ NOTE: Running `npm test` at the project root will run both client and server tes
 
 `npm test` to run all available frontend tests.
 
-To run a specific file with a $namepattern (such as filter): `node ./test/import-specs.js name=$namepattern && npm run tape`
+To run a specific file with a $namepattern (such as filter): `node ./test/import-specs.js name=$namepattern && npm run tape`.
+For example, `node ./test/import-specs.js name=**/termsetting* && npm run tape`
 
 ## Build
 

@@ -29,7 +29,7 @@ fi
 # docker build --file Dockerfile --tag ppbase:latest .
 
 set +e
-docker stop pp && docker rm pp
+docker stop $CONTAINER_ID && docker rm $CONTAINER_ID
 set -e
 
 EXPOSED_PORT=3000
@@ -41,4 +41,5 @@ docker run -d \
 	-e PP_PORT=$EXPOSED_PORT \
 	-e PP_CUSTOMER=gdc \
 	-e PP_MODE=container-test \
+	-e PP_GDC_HOST=https://portal.gdc.cancer.gov/auth/api/v0 \
 	$IMAGE_NAME

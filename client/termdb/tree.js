@@ -62,6 +62,7 @@ class TdbTree {
 		// for terms waiting for server response for children terms, transient, not state
 		this.loadingTermSet = new Set()
 		this.termsByCohort = {}
+		this.expandAll = 'expandAll' in opts ? opts.expandAll : false
 		//getCompInit(TdbTree) will set this.id, .app, .opts, .api
 	}
 
@@ -320,7 +321,11 @@ function setRenderers(self) {
 				.style('font-family', 'courier')
 				.text('+')
 				// always allow show/hide children even this term is already in use
-				.on('click', self.toggleBranch)
+				.on('click', event => {
+					event.stopPropagation()
+					self.toggleBranch(term)
+				})
+			if (self.expandAll) self.toggleBranch(term)
 		}
 
 		const isSelected = self.state.selectedTerms.find(t => t.name === term.name && t.type === term.type)
@@ -410,8 +415,8 @@ function setInteractivity(self) {
 	// !!! no free-floating variable declarations here !!!
 	// use self in TdbTree constructor to create properties
 
-	self.toggleBranch = function(event, term) {
-		event.stopPropagation()
+	self.toggleBranch = function(term) {
+		//event.stopPropagation()
 		if (term.isleaf) return
 		const t0 = self.termsById[term.id]
 		if (!t0) throw 'invalid term id'

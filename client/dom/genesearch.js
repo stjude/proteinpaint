@@ -1,7 +1,7 @@
-import { keyupEnter, gmlst2loci } from '../src/client'
+import { keyupEnter, gmlst2loci } from '#src/client'
 import { debounce } from 'debounce'
-import { dofetch3 } from '../common/dofetch'
-import { invalidcoord, string2pos } from '../src/coord'
+import { dofetch3 } from '#common/dofetch'
+import { invalidcoord, string2pos } from '#src/coord'
 
 /*
 *********************************** EXPORT
@@ -13,6 +13,7 @@ TODO
 -- allow to hide searchStat dom
 -- dedup code with block.js
 -- dedup code with app header
+-- unify help message from gdc bam slicing ui and termsetting.snplst
 
 ***********************************
 function argument object {}
@@ -55,6 +56,7 @@ function argument object {}
 	optional
 	triggered when a valid hit is found, and has been written to returned result{} object
 
+
 ***********************************
 result object returned by the function
 
@@ -69,6 +71,7 @@ result object returned by the function
 .ref
 .alt
 	"pos/ref/alt" are included when entered a variant
+
 
 ***********************************
 partial support of hgvs https://varnomen.hgvs.org/recommendations/DNA/

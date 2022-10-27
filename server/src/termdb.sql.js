@@ -299,14 +299,26 @@ opts{} options to tweak the query, see const default_opts = below
 		const lst = []
 		const scounts = new Map()
 		for (const s of smap.values()) {
-			// possible for a sample to not be annotated for the series term (term)
+			// series term (term1)
+			// discard sample if not annotated for term1
 			if (!('key1' in s)) continue
-			// supply empty string defaults as needed for chart (term0) and overlay (term2)
-			if (!('key0' in s)) {
+
+			// chart term (term0)
+			if (q.term0_q) {
+				// term0 is defined, discard sample if not annotated for term0
+				if (!('key0' in s)) continue
+			} else {
+				// term0 is not defined, supply empty string default
 				s.key0 = ''
 				s.val0 = ''
 			}
-			if (!('key2' in s)) {
+
+			// overlay term (term2)
+			if (q.term2_q) {
+				// term2 is defined, discard sample if not annotated for term2
+				if (!('key2' in s)) continue
+			} else {
+				// term2 is not defined, supply empty string default
 				s.key2 = ''
 				s.val2 = ''
 			}
@@ -804,7 +816,7 @@ thus less things to worry about...
 			if (cache.has(id)) return cache.get(id)
 			const t = s.get(id)
 			if (t && t.genes) {
-				const lst = t.genes.split(',')
+				const lst = JSON.parse(t.genes)
 				cache.set(id, lst)
 				return lst
 			}
@@ -1114,7 +1126,7 @@ thus less things to worry about...
 			if (!r.type) continue // skip ungraphable parent terms
 
 			if (!(r.cohort in supportedChartTypes)) {
-				supportedChartTypes[r.cohort] = new Set(['barchart', 'regression'])
+				supportedChartTypes[r.cohort] = new Set(['barchart', 'regression', 'summary'])
 				if (ds.cohort.scatterplots) supportedChartTypes[r.cohort].add('sampleScatter')
 				numericTypeCount[r.cohort] = 0
 				if (ds.cohort.allowedChartTypes?.includes('matrix')) supportedChartTypes[r.cohort].add('matrix')
@@ -1140,6 +1152,7 @@ thus less things to worry about...
 
 		// convert to array
 		for (const cohort in supportedChartTypes) {
+			//if (supportedChartTypes[cohort].has('summary')) supportedChartTypes[cohort].delete('barchart')
 			supportedChartTypes[cohort] = [...supportedChartTypes[cohort]]
 		}
 

@@ -89,7 +89,7 @@ async function makeEditMenu(self, div) {
 
 	await mayDisplayVariantFilter(self, div)
 
-	const [input_AFcutoff, select_alleleType, select_geneticModel] = makeSnpSelect(
+	const [input_AFcutoff, select_alleleType, select_geneticModel, select_missingGenotype] = makeSnpSelect(
 		div.append('div').style('margin', '15px'),
 		self,
 		'snplocus'

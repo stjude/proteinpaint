@@ -31,6 +31,7 @@ const apihost = 'https://api.gdc.cancer.gov'
 /************************************************
 following part is copied from bam.gdc.js (lines 63 to the end)
 */
+
 // used in getFileByCaseId() and getFileByCaseId()
 const filesApi = {
 	end_point: path.join(apihost, 'files/'),
@@ -67,10 +68,25 @@ async function get_gdc_data(gdc_id, filter0) {
 		// no bam file found
 		if (bamdata.is_case_id || bamdata.is_case_uuid) {
 			// id is valid case_id/case_uuid, then respond that bam files are not available for this case_id
-			throw 'No bam files available for this case'
+			throw 'No bam files available for this case.'
 		}
-		// id must be invalid
-		throw 'Invalid GDC ID'
+
+		// no id found
+
+		if (filter0) {
+			// is using filter
+			// try again without filter. if found hit, meaning case not in filter
+			const re = await try_query(gdc_id, bamdata)
+			if (re.data.hits.length) {
+				// has hit without filter
+				throw 'Case not in current cohort.'
+			}
+			// still no hit
+			throw 'Invalid input ID.'
+		} else {
+			// no filter; id must be invalid
+			throw 'Invalid input ID.'
+		}
 	}
 
 	// 1 or multiple hits/files are available for submitted gdc id

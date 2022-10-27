@@ -4,6 +4,7 @@ import { storeInit } from './store'
 import { vocabInit } from '#termdb/vocabulary'
 import { navInit } from './nav'
 import { plotInit } from './plot'
+import { summaryInit } from '#plots/summary'
 import { sayerror } from '#dom/error'
 import { Menu } from '#dom/menu'
 import { newSandboxDiv } from '#dom/sandbox'
@@ -82,16 +83,17 @@ class MassApp {
 		try {
 			this.store = await storeInit({ app: this.api, state: this.opts.state })
 			this.state = await this.store.copyState()
-			this.components = {
-				nav: await navInit({
+			this.components = {}
+			if (this.state.nav.header_mode != 'hidden') {
+				this.components.nav = await navInit({
 					app: this.api,
 					holder: this.dom.topbar,
 					header_mode: this.state && this.state.nav && this.state.nav.header_mode,
 					vocab: this.state.vocab,
 					massSessionDuration: this.state.termdbConfig.massSessionDuration // this.opts.massSessionDuration
-				}),
-				plots: {}
+				})
 			}
+			this.components.plots = {}
 			await this.api.dispatch()
 		} catch (e) {
 			this.printError(e)
@@ -104,7 +106,7 @@ class MassApp {
 
 		const newPlots = {}
 		let sandbox
-		for (const [index, plot] of this.state.plots.entries()) {
+		for (const plot of this.state.plots) {
 			if (!(plot.id in this.components.plots)) {
 				sandbox = newSandboxDiv(this.dom.plotDiv, {
 					close: () => {
@@ -119,7 +121,9 @@ class MassApp {
 						width: '98.5%'
 					}
 				})
-				newPlots[plot.id] = plotInit(Object.assign({}, { app: this.api, holder: sandbox }, plot))
+				if (plot.chartType == 'summary')
+					newPlots[plot.id] = summaryInit(Object.assign({ app: this.api, holder: sandbox }, plot))
+				else newPlots[plot.id] = plotInit(Object.assign({ app: this.api, holder: sandbox }, plot))
 			}
 		}
 

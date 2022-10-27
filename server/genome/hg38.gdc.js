@@ -2,7 +2,7 @@ module.exports = {
 	species: 'human',
 	genomefile: 'genomes/hg38.gz',
 	genedb: {
-		dbfile: 'anno/genes.hg38.db'
+		dbfile: 'anno/genes.hg38.gdc.db'
 	},
 
 	termdbs: {
@@ -33,7 +33,7 @@ module.exports = {
 				pseudo: { color: '#FF00CC', label: 'Pseudogene' }
 			},
 			// gencode version is removed from file name to make it easier for version change
-			file: 'anno/gencode.hg38.gz',
+			file: 'anno/gencode.v36.hg38.gz',
 			type: 'bedj',
 			name: 'GENCODE',
 			stackheight: 16,

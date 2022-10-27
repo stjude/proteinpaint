@@ -22,7 +22,7 @@ Each subdirectory in this folder tracks the portal deployment to the similarly n
 should be mostly relative symlinks to the public/* files and/or dirs
 - **genomes**: relative symlinks to server/genomes, overrides, or additional ones
 - **datasets**: relative symlinks to server/dataset, overrides, or additional ones
-- **README.md**: optional, for adidtional information and any special instructions
+- **README.md**: optional, for additional information and any special instructions
 
 [Workspace and Portal Topography](https://docs.google.com/drawings/d/1mNADxpq78wdl578CNLiI0YFVhGmgfZ9Qsya_ES9uSRc/edit?usp=sharing)
 

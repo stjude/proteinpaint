@@ -1,6 +1,6 @@
 {
   "name": "@stjude/proteinpaint-client",
-  "version": "2.4.1-34",
+  "version": "2.5.0",
   "description": "a genomics visualization tool for exploring a cohort's genotype and phenotype data",
   "main": "dist/app.js",
   "module": "dist/app.js",
@@ -68,9 +68,6 @@
     "type": "git",
     "url": "https://github.com/stjude/proteinpaint",
     "directory": "client"
-  },
-  "publishConfig": {
-    "registry": "https://npm.pkg.github.com/"
   },
   "files": [
     "dist/*"

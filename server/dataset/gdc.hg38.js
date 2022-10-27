@@ -247,7 +247,7 @@ const ssmid2csq = {
 /*
 this is gdc api-specific implementation
 
-query by variants or isoform:
+query by variants or isoform(s):
 - a list of variants, get samples harboring the variants
 - an isoform, get samples harboring any variant of the isoform
 
@@ -281,6 +281,7 @@ const variant2samplesGdcapi = {
 			})
 		} else if (p.isoform) {
 			// note purpose!!
+			if (typeof p.isoform != 'string') throw 'p.isoform is not string'
 			f.content.push({
 				op: '=',
 				content: {
@@ -288,8 +289,17 @@ const variant2samplesGdcapi = {
 					value: [p.isoform]
 				}
 			})
+		} else if (p.isoforms) {
+			let value
+			if (Array.isArray(p.isoforms)) value = p.isoforms
+			else if (typeof p.isoforms == 'string') value = p.isoforms.split(',')
+			else throw 'p.isoforms not array or string'
+			f.content.push({
+				op: 'in',
+				content: { field: 'ssms.consequence.transcript.transcript_id', value }
+			})
 		} else {
-			throw '.ssm_id_lst and .isoform are both missing'
+			throw '.ssm_id_lst, .isoform, .isoforms are all missing'
 		}
 
 		if (p.set_id) {
@@ -479,12 +489,19 @@ async function sample_id_getter(samples, headers) {
 	/*
 	samples[], each element:
 
-		{ sample_id }
+		{
+			tumor_sample_uuid: str,
+			sample_id: str
+		}
 
-	the "sample_id" is the aliquot id
+	the "tumor_sample_uuid" is the aliquot id
 	it will be converted to sample submitter id *in place*
+	resulting submitter id is assigned to "sample_id"
 
-	fire one graphql query to convert id of all samples
+	the use of "tumor_sample_uuid" key is arbitrary logic in gdc and should not impact mds3
+	if tumor_sample_uuid is not present, the "sample_id" value will not be assigned
+
+	fire one query to convert id of all samples
 	the getter is a dataset-specific, generic feature, so it should be defined here
 	passing in headers is a gdc-specific logic for controlled data
 	*/
@@ -492,12 +509,10 @@ async function sample_id_getter(samples, headers) {
 	// k: aliquot id
 	// v: list of sample objects that are using the same aliquot id
 	for (const sample of samples) {
-		const n = sample.sample_id
+		const n = sample.tumor_sample_uuid
 		if (n) {
 			if (!id2sample.has(n)) id2sample.set(n, [])
 			id2sample.get(n).push(sample)
-		} else {
-			// TODO indicate on client that aliquot id is missing for this case, to make things traceable
 		}
 	}
 

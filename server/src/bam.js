@@ -881,7 +881,7 @@ async function do_query(q) {
 		templates_total = [...templates_total, ...templates]
 	}
 	if (q.readcount_skipped) result.count.skipped = q.readcount_skipped
-	if (q.getcolorscale) result.colorscale = getcolorscale()
+	if (q.getcolorscale) result.colorscale = getcolorscale(q)
 	if (!q.partstack) {
 		// not in partstack mode, may do pileup plot
 		if (result.count.r == 0) {
@@ -2564,7 +2564,7 @@ if b.qual is available, set text color based on it
 	}
 }
 
-function getcolorscale() {
+function getcolorscale(q) {
 	/*
            base quality
            40  30  20  10  0
@@ -2583,11 +2583,13 @@ Insertion  BBBBBBBBBBBBBBBBB
 		rightpad = 10,
 		ticksize = 4
 
-	const canvas = createCanvas(
-		leftpad + barwidth + rightpad,
-		fontsize * 2 + labyspace + ticksize + (barheight + barspace) * 4
-	)
+	const imgWidth = leftpad + barwidth + rightpad,
+		imgHeight = fontsize * 2 + labyspace + ticksize + (barheight + barspace) * 4
+	const canvas = createCanvas(q.devicePixelRatio * imgWidth, q.devicePixelRatio * imgHeight)
 	const ctx = canvas.getContext('2d')
+	if (q.devicePixelRatio > 1) {
+		ctx.scale(q.devicePixelRatio, q.devicePixelRatio)
+	}
 
 	ctx.fillStyle = 'black'
 	ctx.font = fontsize + 'pt Arial'
@@ -2649,7 +2651,7 @@ Insertion  BBBBBBBBBBBBBBBBB
 		ctx.fillRect(x, y, barwidth, barheight)
 	}
 
-	return canvas.toDataURL()
+	return { width: imgWidth, height: imgHeight, src: canvas.toDataURL() }
 }
 
 ////////////////////// get one read/template

@@ -67,6 +67,7 @@ export function setRenderers(self) {
 		for (const direction of ['top', 'btm', 'left', 'right']) {
 			const side = l[direction]
 			side.box
+				.style('display', side.display || '')
 				.transition()
 				.duration(duration)
 				.attr('transform', side.attr.boxTransform)

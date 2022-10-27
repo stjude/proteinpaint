@@ -1,8 +1,8 @@
 import { getCompInit, copyMerge } from '../rx'
 import { fillTermWrapper } from '../termsetting/termsetting'
-import { select, pointer } from 'd3-selection'
+import { renderTable } from '../dom/table'
 import { scaleLinear as d3Linear } from 'd3-scale'
-import { export_data, newpane } from '../src/client'
+import { newpane } from '../src/client'
 
 import {
 	zoom as d3zoom,
@@ -119,12 +119,11 @@ class Scatter {
 		if (data.error) throw data.error
 		if (!Array.isArray(data.samples)) throw 'data.samples[] not array'
 		this.shapes = data.shapeLegend
-		const X = data.samples.map(item => item.x)
-		const Y = data.samples.map(item => item.y)
-		const xMin = Math.min(...X)
-		const xMax = Math.max(...X)
-		const yMin = Math.min(...Y)
-		const yMax = Math.max(...Y)
+		const s0 = data.samples[0]
+		const [xMin, xMax, yMin, yMax] = data.samples.reduce(
+			(s, d) => [d.x < s[0] ? d.x : s[0], d.x > s[1] ? d.x : s[1], d.y < s[2] ? d.y : s[2], d.y > s[3] ? d.y : s[3]],
+			[s0.x, s0.x, s0.y, s0.y]
+		)
 		this.xAxisScale = d3Linear()
 			.domain([xMin, xMax])
 			.range([0, this.settings.svgw])
@@ -136,6 +135,7 @@ class Scatter {
 		this.axisLeft = axisLeft(this.yAxisScale)
 
 		this.render(data)
+		this.lassoReset()
 	}
 
 	// creates an opts object for the vocabApi.someMethod(),
@@ -340,10 +340,8 @@ function setRenderers(self) {
 			const s = self.settings
 			const div = d
 
-			div
-				.transition()
-				.duration(s.duration)
-				.style('width', s.svgw + 50 + 'px')
+			div.transition().duration(s.duration)
+			//.style('width', s.svgw + 50 + 'px')
 
 			div.selectAll('.sjpcb-unlock-icon').style('display', s.scale == 'byChart' ? 'none' : 'block')
 
@@ -362,7 +360,9 @@ function setRenderers(self) {
 		/* eslint-disable */
 		const [mainG, axisG, xAxis, yAxis, xTitle, yTitle] = getSvgSubElems(svg, chart)
 		/* eslint-enable */
-		if (s.showAxes) mainG.attr('clip-path', `url(#${self.id + '-clip'})`)
+
+		if (s.showAxes) mainG.attr('clip-path', `url(#clip)`)
+		else mainG.attr('clip-path', '')
 
 		let serie = mainG.select('.sjpcb-scatter-series')
 		if (serie.size() == 0) serie = mainG.append('g').attr('class', 'sjpcb-scatter-series')
@@ -398,7 +398,7 @@ function setRenderers(self) {
 			svg
 				.append('defs')
 				.append('clipPath')
-				.attr('id', self.id + '-clip')
+				.attr('id', 'clip')
 				.append('rect')
 				.attr('x', 80)
 				.attr('y', 0)
@@ -427,7 +427,7 @@ function setRenderers(self) {
 		symbols
 			.transition()
 			.duration(duration)
-			.attr('transform', c => translate(self, c))
+			.attr('transform', translate)
 			.attr('d', c => getShape(self, c))
 			.attr('fill', c => c.color)
 
@@ -436,7 +436,7 @@ function setRenderers(self) {
 			.enter()
 			.append('path')
 			/*** you'd need to set the symbol position using translate, instead of previously with cx, cy for a circle ***/
-			.attr('transform', c => translate(self, c))
+			.attr('transform', translate)
 			.attr('d', c => getShape(self, c))
 			.attr('fill', c => c.color)
 
@@ -445,7 +445,7 @@ function setRenderers(self) {
 			.duration(duration)
 	}
 
-	function translate(self, c) {
+	function translate(c) {
 		const transform = `translate(${self.xAxisScale(c.x) + 100},${self.yAxisScale(c.y)})`
 		return transform
 	}
@@ -489,6 +489,7 @@ function setRenderers(self) {
 		mainG.call(zoom)
 		const minsize = self.settings.size / 2
 		const maxsize = self.settings.size * 2
+		const size = self.settings.size
 
 		function handleZoom(event) {
 			// create new scale ojects based on event
@@ -500,8 +501,8 @@ function setRenderers(self) {
 			seriesG.attr('transform', event.transform)
 			const k = event.transform.scale(1).k
 			//on zoom in the particle size is kept
-			symbols.attr('d', c => getShape(self, c, self.settings.size / k))
-			if (self.lassoOn) lasso.selectedItems().attr('d', c => getShape(self, c, maxsize))
+			symbols.attr('d', c => getShape(self, c, size / k))
+			if (self.lassoOn) lasso.selectedItems().attr('d', c => getShape(self, c, maxsize / k))
 		}
 
 		function zoomIn() {
@@ -618,8 +619,8 @@ function setRenderers(self) {
 			icon_functions['list'](listDiv, {
 				is_button: false,
 				text: `List ${self.selectedItems.length} samples`,
-				handler: () => {
-					showTable(self, self.selectedItems, `List of ${self.selectedItems.length} selected samples`)
+				handler: event => {
+					showTable(self, self.selectedItems, event.clientX, event.clientY)
 					self.dom.tip.hide()
 				}
 			})
@@ -635,7 +636,7 @@ function setRenderers(self) {
 							vocabApi: self.app.vocabApi,
 							state: {
 								nav: {
-									header_mode: 'search_only'
+									header_mode: 'hide_search'
 								},
 								tree: { usecase: { target: 'survival', detail: 'term' } }
 							},
@@ -714,7 +715,7 @@ function setRenderers(self) {
 						vocabApi: self.app.vocabApi,
 						state: {
 							nav: {
-								header_mode: 'search_only'
+								header_mode: 'hide_search'
 							},
 							tree: { usecase: { target: 'survival', detail: 'term' } }
 						},
@@ -764,7 +765,7 @@ function setRenderers(self) {
 				.style('display', 'inline-block')
 				.style('width', '80px')
 			icon_functions['list'](listDiv, {
-				handler: () => showTable(self, group, `List of ${group.length} samples in Group ${i + 1}`)
+				handler: () => showTable(self, group, event.clientX, event.clientY)
 			})
 			if (self.state.allowedTermTypes.includes('survival')) {
 				const survivalDiv = row
@@ -874,22 +875,37 @@ export const scatterInit = getCompInit(Scatter)
 // this alias will allow abstracted dynamic imports
 export const componentInit = scatterInit
 
-function showTable(self, group, title, pos = 1) {
+function showTable(self, group, x, y) {
 	let rows = []
-	const labels = ['Sample', self.config.colorTW.id]
-	if (self.config.shapeTW) labels.push(self.config.shapeTW.id)
-	rows.push(labels)
+	const columns = [formatCell('Sample', 'label'), formatCell(self.config.colorTW.id, 'label')]
+	if (self.config.shapeTW) columns.push(formatCell(self.config.shapeTW.id))
+	columns.push(formatCell('Info', 'label'))
 	let row, data
+	let values
 	for (const item of group) {
 		data = item.__data__
-		row = [data.sample]
-		if ('category' in data) row.push(data.category)
-		if (self.config.shapeTW) row.push(getShapeName(self.shapes, data))
-
-		if ('info' in data) for (const [k, v] of Object.entries(data.info)) row.push(v)
+		row = [formatCell(data.sample)]
+		if ('category' in data) row.push(formatCell(data.category))
+		else row.push(formatCell(''))
+		if (self.config.shapeTW) row.push(formatCell(getShapeName(self.shapes, data)))
+		if ('info' in data) {
+			values = []
+			for (const [k, v] of Object.entries(data.info)) values.push(`${k}: ${v}`)
+			row.push(formatCell(values.join(', ')))
+		} else row.push({ value: '' })
 		rows.push(row)
 	}
-	export_data(title, [{ text: rows.join('\n') }], pos)
+	const menu = new Menu()
+	//listdiv.text(title)
+
+	renderTable({ rows, columns, div: menu.d })
+	menu.show(x, y)
+
+	function formatCell(column, name = 'value') {
+		let dict = {}
+		dict[name] = column
+		return dict
+	}
 }
 
 function getShape(self, c, size) {
@@ -916,9 +932,9 @@ function openSurvivalPlot(self, group, term) {
 	}
 	let config = {
 		chartType: 'survival',
-		term: term,
+		term,
 		term2: {
-			term: { name: 'TSNE selected groups', type: 'samplelst' },
+			term: { name: self.config.name + ' groups', type: 'samplelst' },
 			q: {
 				mode: 'custom-groupsetting',
 				groups: [
@@ -967,9 +983,9 @@ function openSurvivalPlots(self, term) {
 	}
 	let config = {
 		chartType: 'survival',
-		term: term,
+		term,
 		term2: {
-			term: { name: 'TSNE selected groups', type: 'samplelst' },
+			term: { name: self.config.name + ' groups', type: 'samplelst' },
 			q: {
 				mode: 'custom-groupsetting',
 				groups: groups

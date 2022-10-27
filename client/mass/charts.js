@@ -3,11 +3,6 @@ import { Menu } from '../dom/menu'
 import { getNormalRoot } from '../filter/filter'
 import { select } from 'd3-selection'
 
-// to assign chart ID to distinguish
-// between chart instances
-const idPrefix = '_CHART_AUTOID_' // to distinguish from user-assigned chart IDs
-let id = +new Date()
-
 class MassCharts {
 	constructor(opts = {}) {
 		this.type = 'charts'
@@ -118,10 +113,18 @@ function getChartTypeList(self) {
 			}
 		},
 		{
+			// TODO: may eventually remove this chart option ????
+			//if summary chart is enabled (look at line 1156 in server/src/termdb.sql.js) then it will remove this barchart.
 			label: 'Bar Chart',
 			chartType: 'barchart',
 			clickTo: self.showTree_select1term,
 			usecase: { target: 'barchart', detail: 'term' }
+		},
+		{
+			label: 'Summary Plots',
+			chartType: 'summary',
+			clickTo: self.showTree_select1term,
+			usecase: { target: 'summary', detail: 'term' }
 		},
 		/*
 		{
@@ -237,7 +240,7 @@ function getChartTypeList(self) {
 			}
 		},
 		{
-			label: 'Sample Scatter',
+			label: 'Scatter Plot',
 			chartType: 'sampleScatter',
 			clickTo: self.showScatterPlot
 		}
@@ -324,9 +327,11 @@ function setRenderers(self) {
 
 		const action = {
 			type: 'plot_create',
-			id: idPrefix + id++,
+			id: getId(),
 			config: { chartType: chart.chartType }
 		}
+
+		if (chart.parentId) action.parentId = chart.parentId
 
 		const termdb = await import('../termdb/app')
 		termdb.appInit({
@@ -340,11 +345,13 @@ function setRenderers(self) {
 				tree: { usecase: chart.usecase }
 			},
 			tree: {
-				click_term: term => {
-					action.config[chart.usecase.detail] = term
-					self.dom.tip.hide()
-					self.app.dispatch(action)
-				}
+				click_term:
+					chart.click_term ||
+					(term => {
+						action.config[chart.usecase.detail] = term
+						self.dom.tip.hide()
+						self.app.dispatch(action)
+					})
 			}
 		})
 	}
@@ -361,7 +368,7 @@ function setRenderers(self) {
 
 		const action = {
 			type: 'plot_create',
-			id: idPrefix + id++,
+			id: getId(),
 			config: { chartType: chart.chartType }
 		}
 
@@ -404,7 +411,7 @@ function setRenderers(self) {
 				self.dom.tip.hide()
 				const action = {
 					type: 'plot_create',
-					id: idPrefix + id++,
+					id: getId(),
 					config: {
 						chartType: opt.usecase.target,
 						[opt.usecase.detail]: data
@@ -440,7 +447,7 @@ function setRenderers(self) {
 		example: table, scatterplot which requires user to select two terms
 	*/
 	self.prepPlot = function(chart) {
-		const action = { type: 'plot_prep', config: chart.config, id: idPrefix + id++ }
+		const action = { type: 'plot_prep', config: chart.config, id: getId() }
 		self.app.dispatch(action)
 	}
 
@@ -474,4 +481,12 @@ function setRenderers(self) {
 				})
 		}
 	}
+}
+
+// to assign chart ID to distinguish between chart instances
+const idPrefix = '_CHART_AUTOID_' // to distinguish from user-assigned chart IDs
+let id = Date.now()
+
+function getId() {
+	return idPrefix + id++
 }

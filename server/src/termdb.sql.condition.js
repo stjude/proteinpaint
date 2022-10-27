@@ -67,16 +67,84 @@ export const cuminc = {
 
 	SQL output: sample|key|value
 		- sample: sample id
-		- key: exit code (0 = censored; 1 = event)
-			- An event is defined by the grade breakpoint given in q.breaks
-				- E.g. if q.breaks[0] == 3, then an event is an occurrence of any grade between grades 3-5
-		- value: years from cancer diagnosis until last assessment (exit code = 0) or first occurrence of event (exit code = 1)
-			- the first time point in the cuminc plot needs to be minTimeSinceDx, so if years < minTimeSinceDx, then set years to minTimeSinceDx
+		- key: event status
+			0 = censored
+			1 = event of interest
+			2 = competing risk event (i.e. death)
+		- value: time-to-event
+	
+	Event of interest
+		- sample has event of interest if sample had a grade >= q.breaks[0] of the event of interest before the last visit or had a grade 5 of the event of interest before the last NDI search
+		- time-to-event: years since diagnosis to first occurrence of event
+		   - if time < minTimeSinceDx, then set time = minTimeSinceDx
+	
+	Competing risk event (i.e. death)
+		- sample has competing risk event if sample died before the last NDI search and is not an event 1 sample
+		- time-to-event: years since diagnosis to death
+	
+	Censored
+		- sample is censored if sample is neiter an event 1 or an event 2 sample
+		- time-to-event: years since diagnosis to last visit
 	*/
 	getCTE(tablename, term, ds, q, values, filter) {
 		if (!q.breaks || q.breaks.length != 1) throw 'one break is required'
 		const minTimeSinceDx = ds.cohort.termdb.minTimeSinceDx
-		if (!minTimeSinceDx) throw 'min years since dx is missing'
+		const termIds = ds.cohort.termdb.termIds
+		const { ageDxId, ageLastVisitId, ageNdiId, ageDeathId } = termIds
+
+		// CTE for age at diagnosis
+		const ageDx = `ageDx AS (
+			SELECT *
+			FROM ${'anno_' + ds.cohort.termdb.q.termjsonByOneid(ageDxId).type}
+			WHERE term_id = ?
+		)`
+		values.push(ageDxId)
+
+		// CTE for age at last visit
+		const ageLastVisit = `ageLastVisit AS (
+			SELECT *
+			FROM ${'anno_' + ds.cohort.termdb.q.termjsonByOneid(ageLastVisitId).type}
+			WHERE term_id = ?
+		)`
+		values.push(ageLastVisitId)
+
+		// CTE for age at last NDI search
+		const ageNdi = `ageNdi AS (
+			SELECT *
+			FROM ${'anno_' + ds.cohort.termdb.q.termjsonByOneid(ageNdiId).type}
+			WHERE term_id = ?
+		)`
+		values.push(ageNdiId)
+
+		// CTE for dead samples
+		const dead = `dead AS (
+			SELECT anno.sample, ageDx.value AS ageDx, ageNdi.value AS ageNdi, anno.value AS ageDeath
+			FROM ${'anno_' + ds.cohort.termdb.q.termjsonByOneid(ageDeathId).type} anno
+			JOIN ageNdi ON anno.sample = ageNdi.sample
+			JOIN ageDx ON anno.sample = ageDx.sample
+			WHERE anno.term_id = ?
+		)`
+		values.push(ageDeathId)
+
+		/*
+		CTE for generating the time-to-event table
+			- pre-process the chronicevents table
+				- discard negative years_to_event values (i.e. events that
+		occurred prior to cancer diagnosis)
+				- dicard entries with grade > 5 (i.e. uncomputable grades)
+				- filter samples by 'filter' parameter
+			- join age values to chronicevents table
+		*/
+		const timeToEvent = `timeToEvent AS (
+			SELECT c.*, ageDx.value AS ageDx, ageLastVisit.value AS ageLastVisit, ageNdi.value AS ageNdi
+			FROM chronicevents c
+			JOIN ageDx ON c.sample = ageDx.sample
+			JOIN ageLastVisit ON c.sample = ageLastVisit.sample
+			JOIN ageNdi ON c.sample = ageNdi.sample
+			WHERE c.years_to_event > 0
+			AND c.grade <= 5
+			${filter ? 'AND c.sample IN ' + filter.CTEname : ''}
+		)`
 
 		// CTE for gathering event term(s)
 		// conditioned on whether or not the term is a leaf term
@@ -101,53 +169,65 @@ export const cuminc = {
 		}
 		values.push(term.id)
 
-		// CTE for discarding entries with negative years_to_event values
-		const positiveYears = `positiveYears AS (
-			SELECT *
-			FROM chronicevents
-			WHERE years_to_event > 0
-		)`
-
-		// CTE for extracting event 1 entries
+		// CTE for samples with event of interest (event=1)
 		const event1 = `event1 AS (
-			SELECT sample, 1 as key, CASE
+			SELECT sample, 1 AS key, CASE
 				WHEN MIN(years_to_event) < ? THEN ?
 				ELSE MIN(years_to_event)
 				END value
-			FROM positiveYears
-			WHERE term_id in eventTerms
-			AND grade >= ?
-			AND grade <= 5
-			${filter ? 'AND sample IN ' + filter.CTEname : ''}
+			FROM timeToEvent
+			WHERE term_id IN eventTerms
+			AND (
+				(grade >= ? AND age_graded <= ageLastVisit)
+				OR
+				(grade = 5 AND age_graded <= ageNdi)
+			)
 			GROUP BY sample
 		)`
 		values.push(minTimeSinceDx, minTimeSinceDx, q.breaks[0])
 
-		// CTE for extracting event 0 entries
-		const event0 = `event0 AS (
-			SELECT sample, 0 as key, CASE
-				WHEN MAX(years_to_event) < ? THEN ?
-				ELSE MAX(years_to_event)
-				END value
-			FROM positiveYears
-			WHERE grade <= 5 
-			AND sample NOT IN event1samples
-			${filter ? 'AND sample IN ' + filter.CTEname : ''}
-			GROUP BY sample
+		const event1samples = `event1samples AS (
+			SELECT sample
+			FROM event1
 		)`
-		values.push(minTimeSinceDx, minTimeSinceDx)
+
+		// CTE for samples with competing risk event (event=2)
+		const event2 = `event2 AS (
+			SELECT sample, 2 AS key, ageDeath - ageDx AS value
+			FROM dead
+			WHERE ageDeath <= ageNdi
+			AND sample NOT IN event1samples
+		)`
+
+		const event2samples = `event2samples AS (
+			SELECT sample
+			FROM event2
+		)`
+
+		// CTE for censored samples (event=0)
+		const event0 = `event0 AS (
+			SELECT sample, 0 AS key, ageLastVisit - ageDx AS value
+			FROM timeToEvent
+			WHERE sample NOT IN event1samples
+			AND sample NOT IN event2samples
+		)`
 
 		return {
-			sql: `${eventTerms},
-			${positiveYears},
+			sql: `${ageDx},
+			${ageLastVisit},
+			${ageNdi},
+			${dead},
+			${timeToEvent},
+			${eventTerms},
 			${event1},
-			event1samples AS (
-				SELECT sample
-				FROM event1
-			),
+			${event1samples},
+			${event2},
+			${event2samples},
 			${event0},
 			${tablename} AS (
 				SELECT * FROM event1
+				UNION ALL
+				SELECT * FROM event2
 				UNION ALL
 				SELECT * FROM event0
 			)`,
@@ -177,6 +257,11 @@ export const cox = {
 						- time is included in this output so that cuminc analysis can run for rare variants when age scale is selected for cox regression
 	
 	An event is defined by the grade breakpoint given in q.breaks. For example, if q.breaks[0] == 3, then an event is the first occurrence of grade between grades 3-5.
+
+	FIXME: cox method will currently break, need to apply changes from cuminc method to this method
+	FIXME: after applying changes to cox method, need to notify edgar of these changes because he will need to change the data download code
+
+	TODO: should column names not be hardcoded and instead be retrieved from dataset file?
 	*/
 	getCTE(tablename, term, ds, q, values, filter) {
 		if (!q.breaks || q.breaks.length != 1) throw 'one break is required'
@@ -259,16 +344,17 @@ export const cox = {
 			)`
 		} else if (q.timeScale == 'age') {
 			// time scale is 'age'
-			const ageStartTermId = ds.cohort.termdb.ageStartTermId
+			const termIds = ds.cohort.termdb.termIds
+			const { ageDxId } = termIds
 			const ageEndOffset = ds.cohort.termdb.ageEndOffset
-			if (!ageStartTermId) throw 'age start term id missing'
+			if (!ageDxId) throw 'age dx id missing'
 			if (!ageEndOffset) throw 'age end offset missing'
 
-			// determine the term id of the starting age and its
+			// determine the term id of the age at diagnosis and its
 			// associated annotation table from the dataset
-			const ageStartTerm = ds.cohort.termdb.q.termjsonByOneid(ageStartTermId)
-			if (!ageStartTerm) throw 'age start term missing'
-			const annoTable = 'anno_' + ageStartTerm.type
+			const ageDxTerm = ds.cohort.termdb.q.termjsonByOneid(ageDxId)
+			if (!ageDxTerm) throw 'age dx term missing'
+			const annoTable = 'anno_' + ageDxTerm.type
 
 			// age of samples at beginning of study
 			agestart = `agestart AS (
@@ -276,7 +362,7 @@ export const cox = {
 				FROM ${annoTable}
 				WHERE term_id = ?
 			)`
-			values.push(minTimeSinceDx, ageStartTermId)
+			values.push(minTimeSinceDx, ageDxId)
 
 			// event 1 samples
 			event1 = `event1 AS (

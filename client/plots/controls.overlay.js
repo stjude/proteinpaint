@@ -40,6 +40,7 @@ class Overlay {
 			use_bins_less: true,
 			debug: this.opts.debug,
 			menuOptions: 'all', // to show edit/replace/remove menu upon clicking pill
+			defaultQ4fillTW: this.opts.defaultQ4fillTW,
 			callback: term2 => {
 				// term2 is {term,q} and can be null
 				if (term2) {

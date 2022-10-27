@@ -34,7 +34,7 @@ class TermSetting {
 		this.vocabApi = opts.vocabApi
 		this.activeCohort = opts.activeCohort
 		this.placeholder = opts.placeholder
-		this.durations = { exit: 500 }
+		this.durations = { exit: 0 }
 		this.disable_terms = opts.disable_terms
 		this.usecase = opts.usecase
 		this.abbrCutoff = opts.abbrCutoff
@@ -103,7 +103,7 @@ class TermSetting {
 		the override tw serves the "atypical" termsetting usage
 		as used in snplocus block pan/zoom update in regression.results.js
 		*/
-		const arg = this.term ? { id: this.term.id, term: this.term, q: this.q } : {}
+		const arg = this.term ? { id: this.term.id, term: this.term, q: this.q, isAtomic: true } : {}
 		if ('$id' in this) arg.$id = this.$id
 		if (arg.q?.reuseId && arg.q.reuseId === this.data.q?.reuseId) {
 			if (!deepEqual(arg.q, this.data.q)) {
@@ -111,7 +111,8 @@ class TermSetting {
 				delete arg.q.name
 			}
 		}
-		this.opts.callback(overrideTw ? copyMerge(JSON.stringify(arg), overrideTw) : arg)
+		const otw = overrideTw ? JSON.parse(JSON.stringify(otw)) : {}
+		this.opts.callback(overrideTw ? copyMerge(JSON.stringify(arg), otw) : arg)
 	}
 
 	validateOpts(_opts) {
@@ -483,16 +484,13 @@ function setInteractivity(self) {
 				disable_terms: self.disable_terms,
 				click_term: async term => {
 					self.dom.tip.hide()
-					const data = { id: term.id, term, q: { isAtomic: true }, isAtomic: true }
-					let _term = term
-					if (self.opts.use_bins_less && (term.type == 'integer' || term.type == 'float') && term.bins.less) {
-						// instructed to use bins.less which is present
-						// make a decoy term replacing bins.default with bins.less
-						_term = JSON.parse(JSON.stringify(term))
-						_term.bins.default = _term.bins.less
-					}
-					await call_fillTW(data, self.vocabApi, self.opts.defaultQ4fillTW)
-					self.opts.callback(data)
+
+					const tw = { id: term.id, term, q: { isAtomic: true }, isAtomic: true }
+
+					await call_fillTW(tw, self.vocabApi, self.opts.defaultQ4fillTW)
+					// tw is now furbished
+
+					self.opts.callback(tw)
 				}
 			}
 		})
@@ -773,6 +771,7 @@ export async function fillTermWrapper(tw, vocabApi, defaultQ) {
 	await call_fillTW(tw, vocabApi, defaultQ)
 
 	mayValidateQmode(tw)
+	return tw
 }
 
 async function call_fillTW(tw, vocabApi, defaultQ) {

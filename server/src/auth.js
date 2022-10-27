@@ -245,7 +245,7 @@ function checkDsSecret(q, headers, creds = {}, _time, session = null) {
 
 	const time = Math.floor((_time || Date.now()) / 1000)
 	//for testing only
-	console.log(
+	/*console.log(
 		206,
 		secret,
 		jsonwebtoken.sign(
@@ -257,7 +257,7 @@ function checkDsSecret(q, headers, creds = {}, _time, session = null) {
 			},
 			secret
 		)
-	)
+	)*/
 
 	const rawToken = headers[cred.headerKey]
 	if (!rawToken) throw `missing header['${cred.headerKey}']`

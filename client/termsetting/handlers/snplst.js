@@ -104,8 +104,11 @@ async function makeEditMenu(self, div) {
 
 	// right column
 	const tdright = tr.append('td').style('vertical-align', 'top')
-
-	const [input_AFcutoff, select_geneticModel, select_missingGenotype] = makeSnpSelect(tdright, self, 'snplst')
+	const snpSelect = makeSnpSelect(tdright, self, 'snplst')
+	const input_AFcutoff = snpSelect[0]
+	select_alleleType = snpSelect[1]
+	const select_geneticModel = snpSelect[2]
+	const select_missingGenotype = snpSelect[3]
 
 	if (self.term && self.term.snps && self.term.snps.length) {
 		// snps given, generate snplst table
@@ -118,6 +121,11 @@ async function makeEditMenu(self, div) {
 		// snps not given
 		// hide setting options
 		tdright.style('display', 'none')
+		// empty the snplst_table
+		// this is necessary if user deletes the snplst variable and
+		// adds a new snplst variable
+		// when snplst_table is empty then initSnpEditTable will be called (instead of renderSnpEditTable) to build new edit table
+		snplst_table = undefined
 	}
 
 	// submit button
@@ -642,7 +650,7 @@ export function makeSnpSelect(div, self, termtype) {
 		}
 	}
 
-	return [input_AFcutoff, select_geneticModel, select_missingGenotype]
+	return [input_AFcutoff, select_alleleType, select_geneticModel, select_missingGenotype]
 }
 
 export async function mayRestrictAncestry(self, holder) {

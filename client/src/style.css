@@ -955,7 +955,7 @@ h2 {
     margin: 0;
     display: inline-block;
     border: 1px solid #aaa;
-    color: #999;
+    color: rgb(83, 83, 83);
     background-color: #fff;
     cursor: pointer;
     font-weight: 300;
@@ -1114,7 +1114,7 @@ h2 {
 {
     display: inline-block;
     padding: 4px 10px;
-    margin:0px;
+    margin: 0px;
     border-right: solid 2px white;
     border-radius: 5px 0 0 0;
     font-size: 1.5em;
@@ -1122,21 +1122,23 @@ h2 {
 }
 /* client/dom/sandbox.js end */
 
-.grid-container{
+.sjpp_grid_container{
     display:grid;
-    padding:1px 1;
-	/* gap: 3px; */
-	top:0px;
 	background-color:white;
-	padding:0.2em
+	padding:0.2em;
+    margin: 0 auto;
 }
 
-.header-container{
-  display: grid;
-  background:color white;
-  font-size: 1em;
-  opacity:0.5;
-  padding:1px 1;
-  /* gap:3px; */
-  position:sticky
+.sjpp_grid_row_wrapper {
+    display: contents;
 }
+  
+.sjpp_grid_row_wrapper:hover > .sjpp_grid_item {
+    background: #fcfcca !important; 
+}
+
+.sjpp_grid_item {
+    padding: 5px;
+    font-size: 1em;
+    align-items: center;
+  }

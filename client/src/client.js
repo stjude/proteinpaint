@@ -701,12 +701,12 @@ export function filetypeselect(holder) {
 	return s
 }
 
-export function export_data(title, lst, pos = 1) {
+export function export_data(title, lst, posx = 1, posy = 1, rows = 10, cols = 100) {
 	// lst: {label, text}
 
 	const pane = newpane({
-		x: (window.innerWidth / 2 - 200) * pos,
-		y: (window.innerHeight / 2 - 150) * pos
+		x: (window.innerWidth / 2 - 200) * posx,
+		y: (window.innerHeight / 2 - 150) * posy
 	})
 	pane.header.text(title)
 	for (const w of lst) {
@@ -721,8 +721,8 @@ export function export_data(title, lst, pos = 1) {
 			.append('textarea')
 			.text(w.text)
 			.attr('readonly', 1)
-			.attr('rows', 10)
-			.attr('cols', 100)
+			.attr('rows', rows)
+			.attr('cols', cols)
 	}
 	pane.body
 		.append('p')

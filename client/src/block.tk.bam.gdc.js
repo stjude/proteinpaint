@@ -7,6 +7,7 @@ import urlmap from '../common/urlmap'
 import { addGeneSearchbox, string2variant } from '../dom/genesearch'
 import { Menu } from '../dom/menu'
 import { init_tabs } from '../dom/toggleButtons'
+import { default_text_color } from '../shared/common'
 
 /*
 *********** gdc_args{}
@@ -245,6 +246,7 @@ export async function bamsliceui({
 			.append('input')
 			.attr('type', 'search')
 			.attr('size', 40)
+			.attr('aria-label', 'Specify file name / File UUID / Case ID / Case UUID')
 			.style('padding', '3px 10px')
 			.property('placeholder', 'File name / File UUID / Case ID / Case UUID')
 			.on('keyup', debounce(gdc_search, 500))
@@ -621,7 +623,7 @@ export async function bamsliceui({
 					.append('div')
 					.text(i++)
 					.style('font-size', '.7em')
-					.style('color', '#b0aeae') //Fix for numbers appearing over sticky header
+					.style('color', default_text_color) //Fix for numbers appearing over sticky header
 				m.row
 					.append('div')
 					.text(first ? gene : '')
@@ -645,7 +647,7 @@ export async function bamsliceui({
 				m.row
 					.append('div')
 					.style('font-size', '.8em')
-					.style('color', '#b0aeae') //Fix for numbers appearing over sticky header
+					.style('color', default_text_color) //Fix for numbers appearing over sticky header
 					.text(m.chr + ':' + m.pos + ' ' + m.ref + '>' + m.alt)
 				first = false
 

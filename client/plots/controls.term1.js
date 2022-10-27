@@ -74,8 +74,9 @@ class Term1ui {
 							which copyMerge( plot, {term:{q:{...}}}, ['term']) won't allow to work
 							will replace plot.term with {q}
 							*/
+							isAtomic: true,
 							id: this.state.plot.term.term.id,
-							term: this.state.plot.term.term,
+							term: JSON.parse(JSON.stringify(this.state.plot.term.term)),
 							q: data.q
 						}
 					}
