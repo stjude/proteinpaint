@@ -73,7 +73,7 @@ class TdbBoxplot {
 
 	async main() {
 		try {
-			this.config = copyMerge('{}', this.state.config)
+			this.config = structuredClone(this.state.config)
 			const t2 = this.config.term2
 			if (!t2 || !t2.termtype == 'float') {
 				this.dom.div.style('display', 'none')

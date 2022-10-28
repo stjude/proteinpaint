@@ -133,6 +133,7 @@ class Barchart {
 		return {
 			genome: appState.vocab.genome,
 			dslabel: appState.vocab.dslabel,
+			nav: appState.nav,
 			termfilter: appState.termfilter,
 			config,
 			ssid: appState.ssid,
@@ -148,7 +149,6 @@ class Barchart {
 			this.config = JSON.parse(JSON.stringify(this.state.config))
 			if (!this.currServerData) this.dom.barDiv.style('max-width', window.innerWidth + 'px')
 			this.prevConfig = this.config || {}
-			this.config = this.state.config
 			if (this.dom.header)
 				this.dom.header.html(
 					this.config.term.term.name + ` <span style="opacity:.6;font-size:.7em;margin-left:10px;">BARCHART</span>`

@@ -27,6 +27,7 @@ class Cuminc
 */
 export class Cuminc {
 	constructor(opts) {
+		this.type = 'cuminc'
 		this.pj = getPj(this)
 		this.state = {
 			config: copyMerge(
@@ -63,7 +64,8 @@ export class Cuminc {
 	}
 
 	main(data) {
-		this.settings = this.state.config.settings.cuminc
+		this.config = structuredClone(this.state.config)
+		this.settings = this.config.settings.cuminc
 		this.settings.xTitleLabel = 'Years since entry into the cohort' // TODO: do not harcode time unit (see survival.js)
 		this.settings.atRiskVisible = false
 		this.processData(data)
@@ -130,10 +132,10 @@ export class Cuminc {
 				})
 			}
 		}
-		if (this.state.config.term2 && legendItems.length) {
+		if (this.config.term2 && legendItems.length) {
 			this.legendData = [
 				{
-					name: this.state.config.term2.term.name,
+					name: this.config.term2.term.name,
 					items: legendItems
 				}
 			]
@@ -355,6 +357,8 @@ class MassCumInc {
 
 	async main() {
 		try {
+			this.config = structuredClone(this.state.config)
+
 			if (this.dom.header)
 				this.dom.header.html(
 					this.state.config.term.term.name +
@@ -362,15 +366,14 @@ class MassCumInc {
 				)
 
 			this.toggleLoadingDiv()
-
-			Object.assign(this.settings, this.state.config.settings)
+			Object.assign(this.settings, this.config.settings)
 			this.settings.defaultHidden = this.getDefaultHidden()
 			this.settings.hidden = this.settings.customHidden || this.settings.defaultHidden
 			this.settings.xTitleLabel = 'Years since diagnosis' // TODO: do not harcode time unit (see survival.js)
 			const reqOpts = this.getDataRequestOpts()
 			const data = await this.app.vocabApi.getNestedChartSeriesData(reqOpts)
 			this.toggleLoadingDiv('none')
-			this.app.vocabApi.syncTermData(this.state.config, data)
+			this.app.vocabApi.syncTermData(this.config, data)
 			this.processData(data)
 			this.pj.refresh({ data: this.currData })
 			this.setTerm2Color(this.pj.tree.charts)
@@ -383,7 +386,7 @@ class MassCumInc {
 
 	// creates an opts object for the vocabApi.getNestedChartsData()
 	getDataRequestOpts() {
-		const c = this.state.config
+		const c = this.config
 		const opts = {
 			chartType: 'cuminc',
 			term: c.term,
@@ -398,7 +401,7 @@ class MassCumInc {
 
 	getDefaultHidden() {
 		const hidden = []
-		const term2 = this.state.config.term2
+		const term2 = this.config.term2
 		if (!term2) return hidden
 		const hiddenValues = term2.q.hiddenValues
 		if (hiddenValues && Object.keys(hiddenValues).length) {
@@ -493,10 +496,10 @@ class MassCumInc {
 				}
 			}
 		}
-		if (this.state.config.term2 && legendItems.length) {
+		if (this.config.term2 && legendItems.length) {
 			this.legendData = [
 				{
-					name: this.state.config.term2.term.name,
+					name: this.config.term2.term.name,
 					items: legendItems.filter(s => !s.isHidden)
 				}
 			]
@@ -813,7 +816,7 @@ function setRenderers(self) {
 			g: atRiskG,
 			s,
 			chart,
-			term2values: self.state.config.term2?.values,
+			term2values: self.config.term2?.values,
 			term2toColor: self.term2toColor
 		})
 
@@ -1036,7 +1039,7 @@ function setInteractivity(self) {
 			const y = d.y.toPrecision(2)
 			const rows = [
 				`<tr><td colspan=2 style='text-align: center'>${
-					d.seriesLabel ? d.seriesLabel : self.state.config.term.term.name
+					d.seriesLabel ? d.seriesLabel : self.config.term.term.name
 				}</td></tr>`,
 				`<tr><td style='padding:3px; color:#aaa'>Time to event:</td><td style='padding:3px; text-align:center'>${x} years</td></tr>`,
 				`<tr><td style='padding:3px; color:#aaa'>${label}:</td><td style='padding:3px; text-align:center'>${y}%</td></tr>`
@@ -1176,20 +1179,20 @@ function getPj(self) {
 			chartTitle(row) {
 				if (!self.state?.config?.term) return row.chartId
 				const s = self.settings
-				const cutoff = self.state.config.term.q.breaks[0]
+				const cutoff = self.config.term.q.breaks[0]
 				if (!row.chartId || row.chartId == '-') {
 					return cutoff == 5 ? 'CTCAE grade 5' : `CTCAE grade ${cutoff}-5`
 				}
-				const t0 = self.state.config.term0
+				const t0 = self.config.term0
 				if (!t0 || !t0.term.values) return row.chartId
 				if (t0.q && t0.q.groupsetting && t0.q.groupsetting.inuse) {
 					return row.chartId
 				}
-				const value = self.state.config.term0.term.values[row.chartId]
+				const value = self.config.term0.term.values[row.chartId]
 				return value && value.label ? value.label : row.chartId
 			},
 			seriesLabel(row, context) {
-				const t2 = self.state.config?.term2
+				const t2 = self.config?.term2
 				if (!t2) return context.self.seriesId
 				const seriesId = context.self.seriesId
 				if (t2 && t2.q && t2.q.groupsetting && t2.q.groupsetting.inuse) return seriesId

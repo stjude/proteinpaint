@@ -67,7 +67,7 @@ class TdbTable {
 
 	async main() {
 		try {
-			this.config = this.state.config
+			this.config = structuredClone(this.state.config)
 			if (!this.config.term2) {
 				this.dom.div.style('display', 'none')
 				throw 'term2 is required for table view'

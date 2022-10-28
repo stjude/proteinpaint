@@ -63,7 +63,7 @@ class TdbScatter {
 
 	async main() {
 		try {
-			this.config = this.state.config
+			this.config = structuredClone(this.state.config)
 			if (this.dom.header) this.dom.header.html(this.config.term.term.name + ' vs ' + this.config.term2.term.name)
 			copyMerge(this.settings, this.state.config.settings.scatter)
 			if (!this.pj) this.pj = getPj(this)
