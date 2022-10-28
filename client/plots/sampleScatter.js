@@ -696,8 +696,14 @@ function setRenderers(self) {
 			row = menuDiv
 				.append('div')
 				.attr('class', 'sja_menuoption sja_sharp_border')
-				.text('Compare survival')
-			const treeDiv = row.insert('div').style('display', 'none')
+				.html('Compare survival&nbsp;&nbsp;›')
+				.style('position', 'relative')
+
+			const treeDiv = row
+				.insert('div')
+				.style('display', 'none')
+				.style('position', 'absolute')
+				.attr('class', 'sjpp_submenu')
 			row.on('click', async e => {
 				const display = treeDiv.style('display')
 				if (display === 'block') {
@@ -757,35 +763,40 @@ function setRenderers(self) {
 			const survivalDiv = menuDiv
 				.append('div')
 				.attr('class', 'sja_menuoption sja_sharp_border')
-				.text('Survival analysis')
-				.on('click', async e => {
-					const display = treeDiv.style('display')
-					if (display === 'block') {
-						treeDiv.style('display', 'none')
-						treeDiv.selectAll('*').remove()
-						return
-					}
-					//self.dom.subtip.clear()
-					const termdb = await import('../termdb/app')
-					termdb.appInit({
-						holder: treeDiv.style('display', 'block'),
-						vocabApi: self.app.vocabApi,
-						state: {
-							nav: {
-								header_mode: 'hide_search'
-							},
-							tree: { usecase: { target: 'survival', detail: 'term' } }
+				.html('Survival analysis&nbsp;&nbsp;&nbsp;›')
+				.style('position', 'relative')
+			const treeDiv = survivalDiv
+				.insert('div')
+				.style('display', 'none')
+				.style('position', 'absolute')
+				.attr('class', 'sjpp_submenu')
+			survivalDiv.on('click', async e => {
+				const display = treeDiv.style('display')
+				if (display === 'block') {
+					treeDiv.style('display', 'none')
+					treeDiv.selectAll('*').remove()
+					return
+				}
+				//self.dom.subtip.clear()
+				const termdb = await import('../termdb/app')
+				termdb.appInit({
+					holder: treeDiv.style('display', 'block'),
+					vocabApi: self.app.vocabApi,
+					state: {
+						nav: {
+							header_mode: 'hide_search'
 						},
-						tree: {
-							click_term: term => {
-								openSurvivalPlot(self, group, term)
-								self.dom.tip.hide()
-								absDiv.style('display', 'none')
-							}
+						tree: { usecase: { target: 'survival', detail: 'term' } }
+					},
+					tree: {
+						click_term: term => {
+							openSurvivalPlot(self, group, term)
+							self.dom.tip.hide()
+							treeDiv.style('display', 'none')
 						}
-					})
+					}
 				})
-			const treeDiv = survivalDiv.insert('div').style('display', 'none')
+			})
 		}
 		const deleteDiv = menuDiv
 			.append('div')
