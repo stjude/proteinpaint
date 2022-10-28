@@ -33,7 +33,8 @@ node ./scripts/matrix.string2intID.js > matrix
 node ./scripts/matrix2db.js matrix > annotation.matrix
 # created "annotation.matrix"
 node ./scripts/replace.sampleid.js PRS/annotation.scores 0 >> annotation.matrix
-# appended to "annotation.matrix"
+node ./scripts/replace.sampleid.js pub.samples 0 >> annotation.matrix
+# appended two extra files to "annotation.matrix"
 
 node ./scripts/replace.sampleid.js raw/outcomes_sjlife.txt 0 yes > raw/intID/outcomes_sjlife.txt
 node ./scripts/replace.sampleid.js raw/outcomes_ccss.txt 0 yes > raw/intID/outcomes_ccss.txt
@@ -54,6 +55,9 @@ node ./scripts/phenotree.parse.atomic.js phenotree/matrix.tree matrix
 
 sh ./scripts/phenotree.makeentiretree.sh
 # created "phenotree/entire.tree"
+
+# append new line to describe the adhoc "publication" term annotated to samples from CH paper
+printf 'Publication\t\t\t\t\tpublication\tstring; CH=Clona Hematopoiesis study\n' >> phenotree/entire.tree
 
 node ./scripts/phenotree.2phewastermlist.js phenotree/entire.tree > alltermsbyorder.grouped
 # created "alltermsbyorder.grouped"
@@ -85,7 +89,7 @@ node ./scripts/precompute.ctcae.js termdb annotation.outcome > chronicevents.pre
 node ./scripts/precompute.ctcae.addNotTested.js >> chronicevents.precomputed
 # grade=-1 rows appended to indicate "not tested" cases
 
-node ./scripts/term2subcohort.js termdb annotation.matrix annotation.outcome > term2subcohort
+node --max-old-space-size=10240 ./scripts/term2subcohort.js termdb annotation.matrix annotation.outcome > term2subcohort
 # created "term2subcohort"
 
 
