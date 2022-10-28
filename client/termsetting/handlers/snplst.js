@@ -141,6 +141,8 @@ async function makeEditMenu(self, div) {
 				// if user provides custom effect allele in input text
 				// then set the select_alleleType option to be 'custom'
 				select_alleleType.selectAll('option').nodes()[2].selected = 'selected'
+				//no hint message shown for "SET EFFECT ALLELE AS" when users provide custome effect allele in input text.
+				self.dom.setEffectAlleleAsHint.text('')
 			}
 			if (self.term) {
 				if (!self.term.snps) self.term.snps = [] // possible if term of a different type was there before?
@@ -591,15 +593,41 @@ export function makeSnpSelect(div, self, termtype) {
 	if (termtype !== 'snplocus') {
 		select_alleleType.append('option').text('Custom allele') //snplocus has two options, snplist has three options
 	}
+
+	//a hint message to indicate which allele will be used as the effect allele.
+	//if users select minor allele, the most common minor allele is used as the effect allele
+	//if users select alternative allele, the most common alternative allele is used as the effect allele
+	//if users select/provide custom effect allele, the custome effect allele is used as the effect allele
+	let setEffectAlleleAsHint = div
+		.append('div')
+		.style('display', 'inline-block')
+		.style('margin-left', '15px')
+		.style('opacity', 0.4)
+		.style('font-size', '.7em')
+		.html('If multiple minor alleles exist, the most common minor allele is used as the effect allele')
+	self.dom.setEffectAlleleAsHint = setEffectAlleleAsHint
 	select_alleleType.on('change', async () => {
-		for (const snp of self.term.snps) {
-			// clear effect alleles when user changes
-			// the 'set effect allele as' setting
-			snp.effectAllele = false
-		}
 		self.q.alleleType = select_alleleType.property('selectedIndex')
-		await makeSampleSummary(self)
-		renderSnpEditTable(self, select_alleleType)
+		if (self.q.alleleType == 0) {
+			setEffectAlleleAsHint.text(
+				'If multiple minor alleles exist, the most common minor allele is used as the effect allele'
+			)
+		} else if (self.q.alleleType == 1) {
+			setEffectAlleleAsHint.text(
+				'If multiple alternative alleles exist, the most common alternative allele is used as the effect allele'
+			)
+		} else {
+			setEffectAlleleAsHint.text('')
+		}
+		if (termtype !== 'snplocus') {
+			for (const snp of self.term.snps) {
+				// clear effect alleles when user changes
+				// the 'set effect allele as' setting
+				snp.effectAllele = false
+			}
+			await makeSampleSummary(self)
+			renderSnpEditTable(self, select_alleleType)
+		}
 	})
 
 	// select - genetic model
@@ -644,6 +672,17 @@ export function makeSnpSelect(div, self, termtype) {
 		// .term and .q is available on the instance; populate UI with values
 		input_AFcutoff.property('value', self.q.AFcutoff)
 		select_alleleType.property('selectedIndex', self.q.alleleType)
+		if (self.q.alleleType == 0) {
+			setEffectAlleleAsHint.text(
+				'If multiple minor alleles exist, the most common minor allele is used as the effect allele'
+			)
+		} else if (self.q.alleleType == 1) {
+			setEffectAlleleAsHint.text(
+				'If multiple alternative alleles exist, the most common alternative allele is used as the effect allele'
+			)
+		} else {
+			setEffectAlleleAsHint.text('')
+		}
 		select_geneticModel.property('selectedIndex', self.q.geneticModel)
 		if (select_missingGenotype) {
 			select_missingGenotype.property('selectedIndex', self.q.missingGenotype)
