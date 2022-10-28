@@ -431,7 +431,7 @@ export function getComponentApi(self) {
 			if (self.dom) {
 				if (self.dom.holder) self.dom.holder.selectAll('*').remove()
 				for (const key in self.dom) {
-					if (typeof self.dom[key].remove == 'function') self.dom[key].remove()
+					if (typeof self.dom[key]?.remove == 'function') self.dom[key].remove()
 					delete self.dom[key]
 				}
 			}
