@@ -2,7 +2,6 @@ import { getCompInit, copyMerge } from '../rx'
 import { fillTermWrapper } from '../termsetting/termsetting'
 import { renderTable } from '../dom/table'
 import { scaleLinear as d3Linear } from 'd3-scale'
-import { newpane } from '../src/client'
 
 import {
 	zoom as d3zoom,
@@ -83,7 +82,7 @@ class Scatter {
 			controls,
 			legendDiv,
 			tip: new Menu({ padding: '5px' }),
-			subtip: new Menu()
+			subtip: new Menu({ padding: '5px' })
 		}
 
 		this.settings = {}
@@ -186,25 +185,32 @@ class Scatter {
 						vocabApi: this.app.vocabApi
 					},
 					{
-						label: 'Symbol size',
+						label: 'Sample size',
 						type: 'number',
 						chartType: 'sampleScatter',
 						settingsKey: 'size',
-						title: 'The internal width of the chart plot'
+						title: 'The size of the samples',
+						min: 0
+					},
+					{
+						label: 'Ref sample size',
+						type: 'number',
+						chartType: 'sampleScatter',
+						settingsKey: 'refSize',
+						title: 'The size of the references',
+						min: 0
 					},
 					{
 						label: 'Chart width',
 						type: 'number',
 						chartType: 'sampleScatter',
-						settingsKey: 'svgw',
-						title: 'The internal width of the chart plot'
+						settingsKey: 'svgw'
 					},
 					{
 						label: 'Chart height',
 						type: 'number',
 						chartType: 'sampleScatter',
-						settingsKey: 'svgh',
-						title: 'The internal height of the chart plot'
+						settingsKey: 'svgh'
 					},
 					{
 						boxLabel: 'Visible',
@@ -499,10 +505,7 @@ function setRenderers(self) {
 			.on('zoom', handleZoom)
 
 		mainG.call(zoom)
-		const minsize = self.settings.size / 2
-		const maxsize = self.settings.size * 2
-		const size = self.settings.size
-
+		const s = self.settings
 		function handleZoom(event) {
 			// create new scale ojects based on event
 			const new_xScale = event.transform.rescaleX(self.xAxisScale)
@@ -513,8 +516,8 @@ function setRenderers(self) {
 			seriesG.attr('transform', event.transform)
 			const k = event.transform.scale(1).k
 			//on zoom in the particle size is kept
-			symbols.attr('d', c => getShape(self, c, size / k))
-			if (self.lassoOn) lasso.selectedItems().attr('d', c => getShape(self, c, maxsize / k))
+			symbols.attr('d', c => getShape(self, c, 1 / k))
+			if (self.lassoOn) lasso.selectedItems().attr('d', c => getShape(self, c, 2 / k))
 		}
 
 		function zoomIn() {
@@ -547,7 +550,7 @@ function setRenderers(self) {
 		function lasso_start(event) {
 			lasso
 				.items()
-				.attr('d', c => getShape(self, c, minsize))
+				.attr('d', c => getShape(self, c, 1 / 2))
 				.style('fill-opacity', '.5')
 				.classed('not_possible', true)
 				.classed('selected', false)
@@ -559,7 +562,7 @@ function setRenderers(self) {
 
 				lasso
 					.possibleItems()
-					.attr('d', c => getShape(self, c, maxsize))
+					.attr('d', c => getShape(self, c, 2))
 					.style('fill-opacity', '1')
 					.classed('not_possible', false)
 					.classed('possible', true)
@@ -567,7 +570,7 @@ function setRenderers(self) {
 				//Style the not possible dot
 				lasso
 					.notPossibleItems()
-					.attr('d', c => getShape(self, c, minsize))
+					.attr('d', c => getShape(self, c, 1 / 2))
 					.style('fill-opacity', '.5')
 					.classed('not_possible', true)
 					.classed('possible', false)
@@ -585,7 +588,7 @@ function setRenderers(self) {
 					.classed('possible', false)
 
 				// Style the selected dots
-				lasso.selectedItems().attr('d', c => getShape(self, c, maxsize))
+				lasso.selectedItems().attr('d', c => getShape(self, c, 2))
 				lasso.items().style('fill-opacity', '1')
 				self.selectedItems = []
 				let data
@@ -627,53 +630,21 @@ function setRenderers(self) {
 			self.dom.tip.show(event.clientX, event.clientY)
 
 			const menuDiv = self.dom.tip.d.append('div')
-			const listDiv = menuDiv.append('div').attr('class', 'sja_menuoption sja_sharp_border')
-			icon_functions['list'](listDiv, {
-				is_button: false,
-				text: `List ${self.selectedItems.length} samples`,
-				handler: event => {
-					showTable(self, self.selectedItems, event.clientX, event.clientY)
+			const listDiv = menuDiv
+				.append('div')
+				.attr('class', 'sja_menuoption sja_sharp_border')
+				.text(`List ${self.selectedItems.length} samples`)
+				.on('click', event => {
+					showTable(self, { name: 'Selected samples', items: self.selectedItems }, event.clientX, event.clientY)
 					self.dom.tip.hide()
-				}
-			})
-			if (self.state.allowedTermTypes.includes('survival')) {
-				const survivalDiv = menuDiv.append('div').attr('class', 'sja_menuoption sja_sharp_border')
-				icon_functions['survival'](survivalDiv, {
-					is_button: false,
-					handler: async e => {
-						const subMenuDiv = new Menu({ padding: '5px' })
-						const termdb = await import('../termdb/app')
-						termdb.appInit({
-							holder: subMenuDiv.d,
-							vocabApi: self.app.vocabApi,
-							state: {
-								nav: {
-									header_mode: 'hide_search'
-								},
-								tree: { usecase: { target: 'survival', detail: 'term' } }
-							},
-							tree: {
-								click_term: term => {
-									openSurvivalPlot(self, self.selectedItems, term)
-									self.dom.tip.hide()
-									subMenuDiv.hide()
-								}
-							}
-						})
-						subMenuDiv.show(event.clientX + 190, event.clientY + 36)
-					}
 				})
-				const startDiv = survivalDiv
-					.append('div')
-					.style('display', 'inline-block')
-					.html('&nbsp;&nbsp;›')
-			}
+
 			menuDiv
 				.append('div')
 				.attr('class', 'sja_menuoption sja_sharp_border')
 				.text('Add to a group')
 				.on('click', () => {
-					self.groups.push(self.selectedItems)
+					self.groups.push({ name: `Group ${self.groups.length + 1}`, items: self.selectedItems, index: groups.length })
 					updateGroupsButton(groupDiv)
 					self.dom.tip.hide()
 				})
@@ -690,40 +661,114 @@ function setRenderers(self) {
 			.append('div')
 			.style('font-size', '1.1em')
 			.html(`&#931${self.groups.length + 1};`)
-			.on('click', event => showGroupsMenu(event, groupDiv))
-		const tooltip = `Lasso toolbox`
-		groupDiv.attr('title', tooltip)
+			.on('click', event => {
+				if (self.groups.length == 1) showGroupMenu(event, self.groups[0], groupDiv)
+				else showGroupsMenu(event, groupDiv)
+			})
 	}
 
 	function showGroupsMenu(event, groupDiv) {
 		self.dom.tip.clear()
 		self.dom.tip.show(event.clientX, event.clientY)
-		const menuDiv = self.dom.tip.d.append('div').style('min-width', '20vw')
+		const menuDiv = self.dom.tip.d.append('div')
 
 		let row = menuDiv.append('div')
-		row
-			.insert('div')
-			.text('Lasso toolbox')
-			.style('text-align', 'center')
-		row = row
-			.insert('div')
-			.style('display', 'flex')
-			.style('justify-content', 'flex-start')
-		if (self.state.allowedTermTypes.includes('survival')) {
-			let survivalDiv = row
-				.insert('div')
-				.style('padding', '5px')
-				.style('margin-left', '20px')
 
-			icon_functions['survival'](survivalDiv, {
-				width: 20,
-				height: 20,
-				text: 'Survival analysis on all',
-				handler: async () => {
-					const subMenuDiv = new Menu({ padding: '5px' })
+		for (const [i, group] of self.groups.entries()) {
+			row = menuDiv.append('div').attr('class', 'sja_menuoption sja_sharp_border')
+			row
+				.insert('div')
+				.style('display', 'inline-block')
+				.text(` ${group.name}: ${group.items.length} `)
+
+			row
+				.append('div')
+				.style('display', 'inline-block')
+				.style('float', 'right')
+				.html('&nbsp;&nbsp;›')
+			row.on('click', e => {
+				self.dom.tip.hide()
+				self.dom.tip.clear()
+				showGroupMenu(event, group, groupDiv)
+			})
+		}
+		if (self.state.allowedTermTypes.includes('survival')) {
+			row = menuDiv
+				.append('div')
+				.attr('class', 'sja_menuoption sja_sharp_border')
+				.text('Compare survival')
+			const treeDiv = row.insert('div').style('display', 'none')
+			row.on('click', async e => {
+				const display = treeDiv.style('display')
+				if (display === 'block') {
+					treeDiv.style('display', 'none')
+					treeDiv.selectAll('*').remove()
+					return
+				}
+				const termdb = await import('../termdb/app')
+				termdb.appInit({
+					holder: treeDiv.style('display', 'block'),
+					vocabApi: self.app.vocabApi,
+					state: {
+						nav: {
+							header_mode: 'hide_search'
+						},
+						tree: { usecase: { target: 'survival', detail: 'term' } }
+					},
+					tree: {
+						click_term: term => {
+							openSurvivalPlots(self, term)
+							self.dom.tip.hide()
+						}
+					}
+				})
+			})
+		}
+		row = menuDiv
+			.append('div')
+			.attr('class', 'sja_menuoption sja_sharp_border')
+			.text('Delete groups')
+			.on('click', event => {
+				groupDiv.select('*').remove()
+				self.groups = []
+				self.dom.tip.hide()
+			})
+	}
+
+	function showGroupMenu(event, group, groupDiv) {
+		self.dom.tip.clear()
+		self.dom.tip.show(event.clientX, event.clientY)
+
+		const menuDiv = self.dom.tip.d.append('div')
+		menuDiv
+			.append('div')
+			.html('&nbsp;' + group.name)
+			.style('font-size', '0.7rem')
+		const listDiv = menuDiv
+			.append('div')
+			.attr('class', 'sja_menuoption sja_sharp_border')
+			.text(`List ${group.items.length} samples`)
+			.on('click', e => {
+				showTable(self, group, event.clientX, event.clientY)
+				self.dom.tip.hide()
+			})
+
+		if (self.state.allowedTermTypes.includes('survival')) {
+			const survivalDiv = menuDiv
+				.append('div')
+				.attr('class', 'sja_menuoption sja_sharp_border')
+				.text('Survival analysis')
+				.on('click', async e => {
+					const display = treeDiv.style('display')
+					if (display === 'block') {
+						treeDiv.style('display', 'none')
+						treeDiv.selectAll('*').remove()
+						return
+					}
+					//self.dom.subtip.clear()
 					const termdb = await import('../termdb/app')
 					termdb.appInit({
-						holder: subMenuDiv.d,
+						holder: treeDiv.style('display', 'block'),
 						vocabApi: self.app.vocabApi,
 						state: {
 							nav: {
@@ -733,72 +778,26 @@ function setRenderers(self) {
 						},
 						tree: {
 							click_term: term => {
-								openSurvivalPlots(self, term)
+								openSurvivalPlot(self, group, term)
 								self.dom.tip.hide()
-								subMenuDiv.hide()
+								absDiv.style('display', 'none')
 							}
 						}
 					})
-					subMenuDiv.show(event.clientX + 190, event.clientY + 36)
-				}
-			})
-		}
-		let deleteDiv = row.insert('div').style('padding', '5px')
-		icon_functions['delete'](deleteDiv, {
-			width: 20,
-			height: 20,
-			text: 'Delete all',
-			handler: () => {
-				groupDiv.select('*').remove()
-				self.groups = []
-				self.dom.tip.hide()
-			}
-		})
-		for (const [i, group] of self.groups.entries()) {
-			row = menuDiv.append('div').attr('class', 'sja_menuoption sja_sharp_border')
-			row
-				.insert('div')
-				.style('display', 'inline-block')
-				.style('width', '40px')
-				.append('input')
-				.attr('type', 'checkbox')
-			row
-				.insert('div')
-				.style('display', 'inline-block')
-				.style('width', '80px')
-				.text('Group ' + (i + 1))
-			row
-				.insert('div')
-				.style('display', 'inline-block')
-				.style('width', '80px')
-				.text(group.length)
-			const listDiv = row
-				.insert('div')
-				.style('display', 'inline-block')
-				.style('width', '80px')
-			icon_functions['list'](listDiv, {
-				handler: () => showTable(self, group, event.clientX, event.clientY)
-			})
-			if (self.state.allowedTermTypes.includes('survival')) {
-				const survivalDiv = row
-					.insert('div')
-					.style('display', 'inline-block')
-					.style('width', '180px')
-				icon_functions['survival'](survivalDiv, { handler: () => openSurvivalPlot(self, group) })
-				const deleteDiv = row
-					.insert('div')
-					.style('display', 'inline-block')
-					.style('width', '80px')
-				icon_functions['delete'](deleteDiv, {
-					handler: () => {
-						self.groups.splice(i, 1)
-						if (self.groups.length == 0) groupDiv.select('*').remove()
-						else updateGroupsButton(groupDiv)
-						self.dom.tip.hide()
-					}
 				})
-			}
+			const treeDiv = survivalDiv.insert('div').style('display', 'none')
 		}
+		const deleteDiv = menuDiv
+			.append('div')
+			.attr('class', 'sja_menuoption sja_sharp_border')
+			.text(`Delete group`)
+			.on('click', e => {
+				self.groups = self.groups.splice(group.index, 1)
+				if (self.groups.length > 0) updateGroupsButton(groupDiv)
+				else groupDiv.select('*').remove()
+
+				self.dom.tip.hide()
+			})
 	}
 
 	function renderAxes(xAxis, xTitle, yAxis, yTitle, s) {
@@ -854,6 +853,7 @@ function setInteractivity(self) {
 	}
 
 	self.click = function() {
+		self.dom.tip.hide()
 		self.dom.subtip.hide()
 	}
 }
@@ -872,6 +872,7 @@ export async function getPlotConfig(opts, app) {
 				},
 				sampleScatter: {
 					size: 5,
+					refSize: 5,
 					svgw: 500,
 					svgh: 500,
 					axisTitleFontSize: 16,
@@ -899,7 +900,7 @@ function showTable(self, group, x, y) {
 	columns.push(formatCell('Info', 'label'))
 	let row, data
 	let values
-	for (const item of group) {
+	for (const item of group.items) {
 		data = item.__data__
 		row = [formatCell(data.sample)]
 		if ('category' in data) row.push(formatCell(data.category))
@@ -913,6 +914,7 @@ function showTable(self, group, x, y) {
 		rows.push(row)
 	}
 	self.dom.subtip.clear()
+	self.dom.subtip.d.append('div').html('&nbsp;' + group.name)
 	renderTable({ rows, columns, div: self.dom.subtip.d })
 	self.dom.subtip.show(x, y)
 
@@ -923,10 +925,10 @@ function showTable(self, group, x, y) {
 	}
 }
 
-function getShape(self, c, size) {
+function getShape(self, c, k = 1) {
 	const index = c.shape % self.symbols.length
-	if (!size) size = self.settings.size
-	return self.symbols[index].size(size)()
+	const size = c.sample === 'Ref' ? self.settings.refSize : self.settings.size
+	return self.symbols[index].size(size * k)()
 }
 
 function getShapeName(shapes, data) {
@@ -941,7 +943,7 @@ function getShapeName(shapes, data) {
 function openSurvivalPlot(self, group, term) {
 	const values = []
 	let data
-	for (const item of group) {
+	for (const item of group.items) {
 		data = item.__data__
 		values.push(data.sample)
 	}
@@ -985,7 +987,7 @@ function openSurvivalPlots(self, term) {
 
 	for (const [i, group] of self.groups.entries()) {
 		values = []
-		for (const item of group) {
+		for (const item of group.items) {
 			data = item.__data__
 			values.push(data.sample)
 		}
