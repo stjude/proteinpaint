@@ -183,7 +183,7 @@ app.use((req, res, next) => {
 	)
 	res.header('Access-Control-Allow-Credentials', true)
 
-	if (req.method == 'GET' && !req.path.includes('.')) {
+	if (req.method == 'GET' && (!req.path.includes('.') || req.path.endsWith('proteinpaint.js'))) {
 		// immutable response before expiration, client must revalidate after max-age;
 		// by convention, any path that has a dot will be treated as
 		// a static file and not handled here with cache-control
