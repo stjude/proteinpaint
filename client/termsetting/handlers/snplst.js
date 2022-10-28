@@ -594,31 +594,20 @@ export function makeSnpSelect(div, self, termtype) {
 		select_alleleType.append('option').text('Custom allele') //snplocus has two options, snplist has three options
 	}
 
-	//a hint message to indicate which allele will be used as the effect allele.
-	//if users select minor allele, the most common minor allele is used as the effect allele
-	//if users select alternative allele, the most common alternative allele is used as the effect allele
-	//if users select/provide custom effect allele, the custome effect allele is used as the effect allele
+	// hint message to indicate which allele will be used as the effect allele
+	// for multi-allelic variants
+	// TODO: review all other occurrences of setEffectAlleleAsHint
 	let setEffectAlleleAsHint = div
 		.append('div')
 		.style('display', 'inline-block')
 		.style('margin-left', '15px')
 		.style('opacity', 0.4)
 		.style('font-size', '.7em')
-		.html('If multiple minor alleles exist, the most common minor allele is used as the effect allele')
+		.text(getSetEffectAlleleAsHint())
 	self.dom.setEffectAlleleAsHint = setEffectAlleleAsHint
 	select_alleleType.on('change', async () => {
+		setEffectAlleleAsHint.text(getSetEffectAlleleAsHint())
 		self.q.alleleType = select_alleleType.property('selectedIndex')
-		if (self.q.alleleType == 0) {
-			setEffectAlleleAsHint.text(
-				'If multiple minor alleles exist, the most common minor allele is used as the effect allele'
-			)
-		} else if (self.q.alleleType == 1) {
-			setEffectAlleleAsHint.text(
-				'If multiple alternative alleles exist, the most common alternative allele is used as the effect allele'
-			)
-		} else {
-			setEffectAlleleAsHint.text('')
-		}
 		if (termtype !== 'snplocus') {
 			for (const snp of self.term.snps) {
 				// clear effect alleles when user changes
@@ -714,4 +703,17 @@ export async function mayRestrictAncestry(self, holder) {
 		select.property('selectedIndex', i)
 	}
 	return select
+}
+
+function getSetEffectAlleleAsHint() {
+	let hint
+	const i = select_alleleType.property('selectedIndex')
+	if (i == 0) {
+		hint = 'For multi-allelic variants, the second most common allele is used as the effect allele'
+	} else if (i == 1) {
+		hint = 'For multi-allelic variants, the most common alternative allele is used as the effect allele'
+	} else {
+		hint = ''
+	}
+	return hint
 }
