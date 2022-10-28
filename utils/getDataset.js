@@ -100,6 +100,6 @@ function checkDir(p) {
 	try {
 		fs.statSync(p2)
 	} catch (e) {
-		fs.mkdirSync(p2)
+		fs.mkdirSync(p2, { recursive: true })
 	}
 }
