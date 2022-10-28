@@ -37,10 +37,7 @@ class AppDrawerCard {
 	}
 
 	validateOpts(opts) {
-		//Move these main validation to layout.js
 		if (!opts.element.name) throw `Card .name is missing`
-		//TODO: only required if columnsLayout provided
-		if (!opts.element.section) throw `.section is missing for card=${opts.element.name}`
 		if (opts.element.type == 'card') {
 			if (!opts.element.sandboxJson && !opts.element.sandboxHtml)
 				throw `Either .sandboxJson or .sandboxHtml is missing for card=${opts.element.name}`

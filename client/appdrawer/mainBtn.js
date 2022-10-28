@@ -6,11 +6,8 @@ import { layoutInit } from './layout'
     .app{}
 	.dom{}
 	.state{}
-	.indexJson{}
-
 
 TODOs: 
-- Move cardsjson logic to layout
 - Replace drawerFullHeight with a different approach
 	- Causes the drawer to only partially appear when the window zooms in
 */
@@ -57,8 +54,7 @@ class MainHeadboxBtn {
 				await layoutInit({
 					app: this.app,
 					dom: this.dom,
-					state: this.state,
-					index: this.opts.indexJson
+					state: this.state
 				})
 			)
 			//Give the drawerDiv time to render before calculating height
