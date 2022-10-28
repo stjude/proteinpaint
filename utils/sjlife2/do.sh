@@ -57,7 +57,7 @@ sh ./scripts/phenotree.makeentiretree.sh
 # created "phenotree/entire.tree"
 
 # append new line to describe the adhoc "publication" term annotated to samples from CH paper
-printf 'Publication\t\t\t\t\tpublication\tstring; CH=Clona Hematopoiesis study\n' >> phenotree/entire.tree
+printf 'Publication\t-\t-\t-\t-\tpublication\tstring; CH=Clona Hematopoiesis study\n' >> phenotree/entire.tree
 
 node ./scripts/phenotree.2phewastermlist.js phenotree/entire.tree > alltermsbyorder.grouped
 # created "alltermsbyorder.grouped"
