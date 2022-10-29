@@ -606,6 +606,24 @@ makeURL([
 			} ],
 		})],
 
+		['cat filter','?noheader=1&mass='+JSON.stringify( {
+			dslabel:'SJLife',
+			genome:'hg38',
+			nav: { activeTab:2, },
+			termfilter: {
+				filter:{
+					type:'tvslst',
+					join:'',
+					in:true,
+					lst:[
+						{type:'tvs',tvs: {
+							term:{id:'diaggrp'},
+							values:[{key:'Acute lymphoblastic leukemia',label:'Acute lymphoblastic leukemia'}]
+						}}
+					]
+				}
+			},
+		})],
 
 		['num filter','?noheader=1&mass='+JSON.stringify( {
 			dslabel:'SJLife',
