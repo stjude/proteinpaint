@@ -16,10 +16,20 @@ set -e
 set -u
 set -o pipefail
 
+
 ###############################################
-# this is a temporary step!
+# temporary step
+# copy "matrix.tree.original" to "matrix.tree" and append new line to describe the adhoc "publication" term annotated to samples from CH paper
+# subsequent steps all use "matrix.tree"
+cp phenotree/matrix.tree.original phenotree/matrix.tree
+printf '\nPublication\t-\t-\t-\t-\tpublication\tstring; CH=Clona Hematopoiesis study\n' >> phenotree/matrix.tree
+
+
+###############################################
+# temporary step
 # updates file "phenotree/matrix.tree" in place
 node ./scripts/phenotree.tempfix.chemo.js
+
 
 ###############################################
 # procedures to build database table files
@@ -56,8 +66,6 @@ node ./scripts/phenotree.parse.atomic.js phenotree/matrix.tree matrix
 sh ./scripts/phenotree.makeentiretree.sh
 # created "phenotree/entire.tree"
 
-# append new line to describe the adhoc "publication" term annotated to samples from CH paper
-printf '\nPublication\t-\t-\t-\t-\tpublication\tstring; CH=Clona Hematopoiesis study\n' >> phenotree/entire.tree
 
 node ./scripts/phenotree.2phewastermlist.js phenotree/entire.tree > alltermsbyorder.grouped
 # created "alltermsbyorder.grouped"
