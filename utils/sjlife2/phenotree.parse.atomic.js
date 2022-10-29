@@ -151,7 +151,7 @@ function step1_parsephenotree() {
 				L5 = t5.trim(),
 				configstr = configstr0.trim()
 
-			const name = get_name(L2, L3, L4, L5) // must have a name; throws if not
+			const name = get_name(L1, L2, L3, L4, L5) // must have a name; throws if not
 			// if key0 is missing, use name
 			let key = key0 ? key0.trim() : ''
 
@@ -180,7 +180,7 @@ function step1_parsephenotree() {
 	return key2terms
 }
 
-function get_name(L2, L3, L4, L5) {
+function get_name(L1, L2, L3, L4, L5) {
 	/* tolerate blank fields
 
 	if (!L2) throw 'L2 missing'
@@ -192,6 +192,7 @@ function get_name(L2, L3, L4, L5) {
 	if (L4 && L4 != '-') return L4
 	if (L3 && L3 != '-') return L3
 	if (L2 && L2 != '-') return L2
+	if (L1 && L1 != '-') return L1
 	throw 'name missing'
 }
 
