@@ -596,7 +596,6 @@ export function makeSnpSelect(div, self, termtype) {
 
 	// hint message to indicate which allele will be used as the effect allele
 	// for multi-allelic variants
-	// TODO: review all other occurrences of setEffectAlleleAsHint
 	let setEffectAlleleAsHint = div
 		.append('div')
 		.style('display', 'inline-block')
@@ -661,17 +660,7 @@ export function makeSnpSelect(div, self, termtype) {
 		// .term and .q is available on the instance; populate UI with values
 		input_AFcutoff.property('value', self.q.AFcutoff)
 		select_alleleType.property('selectedIndex', self.q.alleleType)
-		if (self.q.alleleType == 0) {
-			setEffectAlleleAsHint.text(
-				'If multiple minor alleles exist, the most common minor allele is used as the effect allele'
-			)
-		} else if (self.q.alleleType == 1) {
-			setEffectAlleleAsHint.text(
-				'If multiple alternative alleles exist, the most common alternative allele is used as the effect allele'
-			)
-		} else {
-			setEffectAlleleAsHint.text('')
-		}
+		setEffectAlleleAsHint.text(getSetEffectAlleleAsHint()) //set the correct hint message base on which option is chosen for "SET EFFECT ALLELE AS"
 		select_geneticModel.property('selectedIndex', self.q.geneticModel)
 		if (select_missingGenotype) {
 			select_missingGenotype.property('selectedIndex', self.q.missingGenotype)
@@ -705,6 +694,7 @@ export async function mayRestrictAncestry(self, holder) {
 	return select
 }
 
+// return corresponding hint messages based on the option users select for "SET EFFECT ALLELE AS"
 function getSetEffectAlleleAsHint() {
 	let hint
 	const i = select_alleleType.property('selectedIndex')
