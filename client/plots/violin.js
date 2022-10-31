@@ -101,6 +101,19 @@ class ViolinPlot {
 			termid: this.config.term.term.id,
 			term2: this.config.term2
 		})
+		if (this.data.error) throw this.data.error
+		/*
+		.min
+		.max
+		.plots[]
+			.biggestBin
+			.label
+			.plotValueCount
+			.bins[]
+				.x0
+				.x1
+				.binValueCount
+		*/
 		this.render()
 	}
 
@@ -119,22 +132,15 @@ class ViolinPlot {
 			.selectAll('*')
 			.remove()
 
+		if (this.data.plots.length == 0) return
+
 		this.dom.legendHolder.append('div').text(this.config.term2.term.name)
 
-		for (const key of this.data) {
-			let label =
-				t2 != null && t2.term.values != undefined && Object.keys(t2.term.values).length > 0
-					? t2.term.values[key.label].label
-					: key.label
-
-			if (key.yScaleValues) {
-				label = `${label}, n = ${key.yScaleValues.length}`
-			}
-
+		for (const plot of this.data.plots) {
 			this.dom.legendHolder
 				.append('div')
 				.style('font-size', '15px')
-				.text(label)
+				.text(plot.label)
 		}
 	}
 }
@@ -144,36 +150,14 @@ export const componentInit = violinInit
 
 async function setRenderers(self) {
 	self.render = function() {
+		self.getLegendGrps()
 		const t2 = self.config.term2
 
-		if (self.data.length == 0) {
+		if (self.data.plots.length == 0) {
 			self.dom.holder.html(
 				` <span style="opacity:.6;font-size:1em;margin-left:90px;">No data to render Violin Plot</span>`
 			)
 			return
-		}
-
-		const labels = [], // array of string labels, as names of each violin plot
-			numericValues = []
-
-		/*
-data=[ {} ]
-	.bins=[]
-		{x0, x1, lst=[]}
-FIXME server computes min/max and do not return bin.lst[]
-*/
-		for (const key of self.data) {
-			let label =
-				t2 != null && t2.term.values != undefined && Object.keys(t2.term.values).length > 0
-					? t2.term.values[key.label]?.label
-					: key.label
-
-			if (key.yScaleValues) {
-				label = `${label} (${key.yScaleValues.length})`
-			}
-			labels.push(label)
-
-			numericValues.push(...key.yScaleValues)
 		}
 
 		// append the svg object to the body of the page
@@ -190,8 +174,8 @@ FIXME server computes min/max and do not return bin.lst[]
 
 		// test render all labels to get max label width
 		let maxLabelSize = 0
-		for (const n of labels) {
-			const l = svg.append('text').text(n)
+		for (const p of self.data.plots) {
+			const l = svg.append('text').text(p.label)
 			maxLabelSize = Math.max(maxLabelSize, l.node().getBBox().width)
 			l.remove()
 		}
@@ -210,19 +194,19 @@ FIXME server computes min/max and do not return bin.lst[]
 		const plotLength = 470, // span length of a plot, not including margin
 			// thickness of a plot
 			plotThickness =
-				labels.length < 2
+				self.data.plots.length < 2
 					? 100
-					: labels.length >= 2 && labels.length < 5
+					: self.data.plots.length >= 2 && self.data.plots.length < 5
 					? 80
-					: labels.length >= 5 && labels.length < 8
+					: self.data.plots.length >= 5 && self.data.plots.length < 8
 					? 60
-					: labels.length >= 8 && labels.length < 11
+					: self.data.plots.length >= 8 && self.data.plots.length < 11
 					? 50
 					: 40
 
 		svg
-			.attr('width', margin.left + margin.right + (isH ? plotLength : plotThickness * labels.length))
-			.attr('height', margin.bottom + margin.top + (isH ? plotThickness * labels.length : plotLength))
+			.attr('width', margin.left + margin.right + (isH ? plotLength : plotThickness * self.data.plots.length))
+			.attr('height', margin.bottom + margin.top + (isH ? plotThickness * self.data.plots.length : plotLength))
 			.classed('sjpp-violin-plot', true)
 
 		// a <g> in which everything is rendered into
@@ -230,11 +214,11 @@ FIXME server computes min/max and do not return bin.lst[]
 
 		// creates numeric axis
 		const axisScale = scaleLinear()
-			.domain(extent([...numericValues]))
+			.domain([self.data.min, self.data.max])
 			.range(isH ? [0, plotLength] : [plotLength, 0])
 
 		{
-			// <g> in which numeric axis is rendered
+			// <g>: holder of numeric axis
 			const g = svgG.append('g')
 			g.call((isH ? axisTop : axisLeft)().scale(axisScale))
 			const lab = svgG.append('text').text(self.config.term.term.name)
@@ -252,21 +236,21 @@ FIXME server computes min/max and do not return bin.lst[]
 			}
 		}
 
-		for (const [itemI, item] of self.data.entries()) {
+		for (const [plotIdx, plot] of self.data.plots.entries()) {
 			// <g> of one plot
-			// adding .5 to itemI allows to anchor each plot <g> to the middle point
+			// adding .5 to plotIdx allows to anchor each plot <g> to the middle point
 
 			const violinG = svgG
 				.append('g')
 				.attr(
 					'transform',
 					isH
-						? 'translate(0,' + plotThickness * (itemI + 0.5) + ')'
-						: 'translate(' + plotThickness * (itemI + 0.5) + ',0)'
+						? 'translate(0,' + plotThickness * (plotIdx + 0.5) + ')'
+						: 'translate(' + plotThickness * (plotIdx + 0.5) + ',0)'
 				)
 
 			// create label
-			const label = violinG.append('text').text(labels[itemI])
+			const label = violinG.append('text').text(plot.label)
 			if (isH) {
 				label
 					.attr('x', -5)
@@ -284,20 +268,20 @@ FIXME server computes min/max and do not return bin.lst[]
 
 			// times 0.45 will leave out 10% as spacing between plots
 			const wScale = scaleLinear()
-				.domain([-item.biggestBin, item.biggestBin])
+				.domain([-plot.biggestBin, plot.biggestBin])
 				.range([-plotThickness * 0.45, plotThickness * 0.45])
 
 			let areaBuilder
 			if (isH) {
 				areaBuilder = area()
-					.y0(d => wScale(-d.lst.length))
-					.y1(d => wScale(d.lst.length))
+					.y0(d => wScale(-d.binValueCount))
+					.y1(d => wScale(d.binValueCount))
 					.x(d => axisScale(d.x0))
 					.curve(curveBumpX)
 			} else {
 				areaBuilder = area()
-					.x0(d => wScale(-d.lst.length))
-					.x1(d => wScale(d.lst.length))
+					.x0(d => wScale(-d.binValueCount))
+					.x1(d => wScale(d.binValueCount))
 					.y(d => axisScale(d.x0))
 					.curve(curveBumpY)
 			}
@@ -305,10 +289,8 @@ FIXME server computes min/max and do not return bin.lst[]
 			violinG
 				.append('path')
 				.style('fill', plotColor)
-				.attr('d', areaBuilder(item.bins))
+				.attr('d', areaBuilder(plot.bins))
 		}
-
-		self.getLegendGrps()
 	}
 }
 

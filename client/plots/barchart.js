@@ -552,6 +552,7 @@ function setRenderers(self) {
 			self.dom.banner
 				.html(`<span>No visible barchart data to render</span>${clickLegendMessage}`)
 				.style('display', 'block')
+			self.dom.legendDiv.selectAll('*').remove()
 		} else {
 			self.dom.banner.text('').style('display', 'none')
 		}
