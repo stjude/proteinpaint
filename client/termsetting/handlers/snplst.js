@@ -141,6 +141,8 @@ async function makeEditMenu(self, div) {
 				// if user provides custom effect allele in input text
 				// then set the select_alleleType option to be 'custom'
 				select_alleleType.selectAll('option').nodes()[2].selected = 'selected'
+				//no hint message shown for "SET EFFECT ALLELE AS" when users provide custome effect allele in input text.
+				self.dom.setEffectAlleleAsHint.text('')
 			}
 			if (self.term) {
 				if (!self.term.snps) self.term.snps = [] // possible if term of a different type was there before?
@@ -591,15 +593,29 @@ export function makeSnpSelect(div, self, termtype) {
 	if (termtype !== 'snplocus') {
 		select_alleleType.append('option').text('Custom allele') //snplocus has two options, snplist has three options
 	}
+
+	// hint message to indicate which allele will be used as the effect allele
+	// for multi-allelic variants
+	let setEffectAlleleAsHint = div
+		.append('div')
+		.style('display', 'inline-block')
+		.style('margin-left', '15px')
+		.style('opacity', 0.4)
+		.style('font-size', '.7em')
+		.text(getSetEffectAlleleAsHint())
+	self.dom.setEffectAlleleAsHint = setEffectAlleleAsHint
 	select_alleleType.on('change', async () => {
-		for (const snp of self.term.snps) {
-			// clear effect alleles when user changes
-			// the 'set effect allele as' setting
-			snp.effectAllele = false
-		}
+		setEffectAlleleAsHint.text(getSetEffectAlleleAsHint())
 		self.q.alleleType = select_alleleType.property('selectedIndex')
-		await makeSampleSummary(self)
-		renderSnpEditTable(self, select_alleleType)
+		if (termtype !== 'snplocus') {
+			for (const snp of self.term.snps) {
+				// clear effect alleles when user changes
+				// the 'set effect allele as' setting
+				snp.effectAllele = false
+			}
+			await makeSampleSummary(self)
+			renderSnpEditTable(self, select_alleleType)
+		}
 	})
 
 	// select - genetic model
@@ -644,6 +660,7 @@ export function makeSnpSelect(div, self, termtype) {
 		// .term and .q is available on the instance; populate UI with values
 		input_AFcutoff.property('value', self.q.AFcutoff)
 		select_alleleType.property('selectedIndex', self.q.alleleType)
+		setEffectAlleleAsHint.text(getSetEffectAlleleAsHint()) //set the correct hint message base on which option is chosen for "SET EFFECT ALLELE AS"
 		select_geneticModel.property('selectedIndex', self.q.geneticModel)
 		if (select_missingGenotype) {
 			select_missingGenotype.property('selectedIndex', self.q.missingGenotype)
@@ -675,4 +692,18 @@ export async function mayRestrictAncestry(self, holder) {
 		select.property('selectedIndex', i)
 	}
 	return select
+}
+
+// return corresponding hint messages based on the option users select for "SET EFFECT ALLELE AS"
+function getSetEffectAlleleAsHint() {
+	let hint
+	const i = select_alleleType.property('selectedIndex')
+	if (i == 0) {
+		hint = 'For multi-allelic variants, the second most common allele is used as the effect allele'
+	} else if (i == 1) {
+		hint = 'For multi-allelic variants, the most common alternative allele is used as the effect allele'
+	} else {
+		hint = ''
+	}
+	return hint
 }

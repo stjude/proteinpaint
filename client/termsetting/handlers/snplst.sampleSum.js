@@ -8,16 +8,17 @@ function get_effectAllele(alleleType, snp) {
 	let effectAllele
 	if (snp.effectAllele) return snp.effectAllele // already selected by user
 	if (alleleType == 0) {
-		// major/minor
-		// find the allele with smallest count
-		let a = snp.alleles[0]
-		for (let i = 1; i < snp.alleles.length; i++) {
-			const b = snp.alleles[i]
-			if (b.count < a.count) {
-				a = b
-			}
+		// minor allele(s)
+		// if multiple minor alleles, then choose most frequent
+		const majorAlleleCount = Math.max(...snp.alleles.map(al => al.count))
+		const otherAlleles = snp.alleles.filter(i => i.count != majorAlleleCount)
+		if (otherAlleles.length) {
+			const maxOtherAlleleCount = Math.max(...otherAlleles.map(al => al.count))
+			effectAllele = otherAlleles.find(al => al.count == maxOtherAlleleCount).allele
+		} else {
+			// variant has no minor alleles
+			effectAllele = undefined
 		}
-		effectAllele = a.allele
 	} else if (alleleType == 1) {
 		// alternative allele(s)
 		// if multiple alternative alleles, then choose most frequent
