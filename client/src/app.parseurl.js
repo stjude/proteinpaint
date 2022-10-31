@@ -138,20 +138,6 @@ upon error, throw err message as a string
 		const id = urlp.get('mass-session-id')
 		const res = await client.dofetch3(`/massSession?id=${id}`)
 		if (res.error) throw res.error
-		//DELETE THIS WHEN NO LONGER NECESSARY
-		if (new Date('2022-10-31') > new Date()) {
-			arg.holder
-				.append('div')
-				.style('display', 'block')
-				.style('border', '1px solid red')
-				.style('text-align', 'center')
-				.style('padding', '5px')
-				.style('margin', '10px')
-				.style('font-weight', '550')
-				.text(
-					`On Nov 1st, 2022, sessions older than ${res.massSessionDuration} days will be deleted. To save a new session, click Save, and bookmark the new session URL`
-				)
-		}
 		const opts = {
 			holder: arg.holder,
 			state: res.state,
