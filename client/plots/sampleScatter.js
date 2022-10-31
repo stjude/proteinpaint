@@ -598,7 +598,7 @@ function setRenderers(self) {
 				}
 				lasso.notSelectedItems().attr('d', c => getShape(self, c))
 
-				showLassoMenu(dragEnd.sourceEvent)
+				showLassoMenu(dragEnd.sourceEvent, groupDiv)
 			}
 		}
 
@@ -624,7 +624,7 @@ function setRenderers(self) {
 			groupDiv.select('*').remove()
 		}
 
-		function showLassoMenu(event) {
+		function showLassoMenu(event, groupDiv) {
 			self.dom.tip.clear().hide()
 			if (self.selectedItems.length == 0) return
 			self.dom.tip.show(event.clientX, event.clientY)
@@ -635,7 +635,7 @@ function setRenderers(self) {
 				.attr('class', 'sja_menuoption sja_sharp_border')
 				.text(`List ${self.selectedItems.length} samples`)
 				.on('click', event => {
-					showTable(self, { name: 'Selected samples', items: self.selectedItems }, event.clientX, event.clientY)
+					showTable({ name: 'Selected samples', items: self.selectedItems }, event.clientX, event.clientY, groupDiv)
 					self.dom.tip.hide()
 				})
 
@@ -839,21 +839,73 @@ function setRenderers(self) {
 			.style('text-anchor', 'middle')
 			.style('font-size', s.axisTitleFontSize + 'px')
 	}
+
+	function showTable(group, x, y, groupDiv) {
+		let rows = []
+		const columns = [formatCell('Sample', 'label'), formatCell(self.config.colorTW.id, 'label')]
+		if (self.config.shapeTW) columns.push(formatCell(self.config.shapeTW.id))
+		columns.push(formatCell('Info', 'label'))
+		let row, data
+		let values
+		for (const item of group.items) {
+			data = item.__data__
+			row = [formatCell(data.sample)]
+			if ('category' in data) row.push(formatCell(data.category))
+			else row.push(formatCell(''))
+			if (self.config.shapeTW) row.push(formatCell(getShapeName(self.shapes, data)))
+			if ('info' in data) {
+				values = []
+				for (const [k, v] of Object.entries(data.info)) values.push(`${k}: ${v}`)
+				row.push(formatCell(values.join(', ')))
+			} else row.push({ value: '' })
+			rows.push(row)
+		}
+		self.dom.subtip.clear()
+		const headerDiv = self.dom.subtip.d.append('div')
+		headerDiv
+			.insert('div')
+			.html('&nbsp;' + group.name)
+			.style('display', 'inline-block')
+			.style('font-weight', 'bold')
+			.style('margin-top', '5px')
+		headerDiv
+			.insert('div')
+			.style('display', 'inline-block')
+			.style('float', 'right')
+			.append('button')
+			.style('margin-right', '10px')
+			.text('Add to a group')
+			.on('click', e => {
+				self.groups.push({ name: `Group ${self.groups.length + 1}`, items: self.selectedItems, index: groups.length })
+				updateGroupsButton(groupDiv)
+			})
+		renderTable({ rows, columns, div: self.dom.subtip.d })
+		self.dom.subtip.show(x, y)
+
+		function formatCell(column, name = 'value') {
+			let dict = {}
+			dict[name] = column
+			return dict
+		}
+	}
 }
 
 function setInteractivity(self) {
 	self.mouseover = function(event) {
 		if (self.lassoOn) return
 		if (event.target.tagName == 'path') {
-			self.dom.tip.clear().show(event.clientX, event.clientY)
 			const d = event.target.__data__
 			if (!d) return
+			if (d.sample == 'Ref' && (!self.settings.showRef || self.settings.refSize == 0)) return
+			self.dom.tip.clear()
+
 			const rows = [{ k: 'Sample', v: d.sample }]
 			if ('category' in d) {
 				rows.push({ k: self.config.colorTW.id, v: d.category })
 			}
 			if ('info' in d) for (const [k, v] of Object.entries(d.info)) rows.push({ k: k, v: v })
 			make_table_2col(self.dom.tip.d, rows)
+			self.dom.tip.show(event.clientX, event.clientY)
 		} else {
 			self.dom.tip.hide()
 		}
@@ -903,38 +955,6 @@ export async function getPlotConfig(opts, app) {
 export const scatterInit = getCompInit(Scatter)
 // this alias will allow abstracted dynamic imports
 export const componentInit = scatterInit
-
-function showTable(self, group, x, y) {
-	let rows = []
-	const columns = [formatCell('Sample', 'label'), formatCell(self.config.colorTW.id, 'label')]
-	if (self.config.shapeTW) columns.push(formatCell(self.config.shapeTW.id))
-	columns.push(formatCell('Info', 'label'))
-	let row, data
-	let values
-	for (const item of group.items) {
-		data = item.__data__
-		row = [formatCell(data.sample)]
-		if ('category' in data) row.push(formatCell(data.category))
-		else row.push(formatCell(''))
-		if (self.config.shapeTW) row.push(formatCell(getShapeName(self.shapes, data)))
-		if ('info' in data) {
-			values = []
-			for (const [k, v] of Object.entries(data.info)) values.push(`${k}: ${v}`)
-			row.push(formatCell(values.join(', ')))
-		} else row.push({ value: '' })
-		rows.push(row)
-	}
-	self.dom.subtip.clear()
-	self.dom.subtip.d.append('div').html('&nbsp;' + group.name)
-	renderTable({ rows, columns, div: self.dom.subtip.d })
-	self.dom.subtip.show(x, y)
-
-	function formatCell(column, name = 'value') {
-		let dict = {}
-		dict[name] = column
-		return dict
-	}
-}
 
 function getShape(self, c, k = 1) {
 	const index = c.shape % self.symbols.length

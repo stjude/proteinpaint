@@ -40,7 +40,7 @@ export async function renderTable({ columns, rows, div }) {
 		.style('max-height', '25vw')
 		.style('max-width', '70vw')
 
-		.style('min-width', '40vw')
+		.style('min-width', '30vw')
 		.style('background-color', 'white')
 		.attr('class', 'sjpp_grid_container')
 		.style('grid-template-columns', `1vw repeat(${numColumns}, auto)`)
