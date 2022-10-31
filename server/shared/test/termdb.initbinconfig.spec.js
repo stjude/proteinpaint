@@ -58,6 +58,42 @@ tape('integers: round to nearest hundreds', function(test) {
 	test.end()
 })
 
+tape('integers: single unique value (0)', function(test) {
+	const input = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+	const output = initBinConfig(input)
+	test.deepEqual(
+		output,
+		{
+			type: 'custom-bin',
+			lst: [
+				{ stop: 0, stopinclusive: false, startunbounded: true, label: '<' + 0 },
+				{ start: 0, stop: 0, startinclusive: true, stopinclusive: true, label: '=' + 0 },
+				{ start: 0, startinclusive: false, stopunbounded: true, label: '>' + 0 }
+			]
+		},
+		'should match expected output'
+	)
+	test.end()
+})
+
+tape('integers: single unique value (3)', function(test) {
+	const input = [3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3]
+	const output = initBinConfig(input)
+	test.deepEqual(
+		output,
+		{
+			type: 'custom-bin',
+			lst: [
+				{ stop: 3, stopinclusive: false, startunbounded: true, label: '<' + 3 },
+				{ start: 3, stop: 3, startinclusive: true, stopinclusive: true, label: '=' + 3 },
+				{ start: 3, startinclusive: false, stopunbounded: true, label: '>' + 3 }
+			]
+		},
+		'should match expected output'
+	)
+	test.end()
+})
+
 tape('fractions: round to nearest tenths', function(test) {
 	const input = [0.715, 0.423, 0.417, 0.152, 0.836, 1.672, 1.291, 0.371, 2.357, 0.263]
 	const output = initBinConfig(input)
@@ -103,6 +139,24 @@ tape('floats greater than 1', function(test) {
 			startinclusive: true,
 			bin_size: 10,
 			first_bin: { stop: 35 }
+		},
+		'should match expected output'
+	)
+	test.end()
+})
+
+tape('floats: single unique value (8.2317)', function(test) {
+	const input = [8.2317, 8.2317, 8.2317, 8.2317, 8.2317, 8.2317, 8.2317, 8.2317, 8.2317, 8.2317]
+	const output = initBinConfig(input)
+	test.deepEqual(
+		output,
+		{
+			type: 'custom-bin',
+			lst: [
+				{ stop: 8.2317, stopinclusive: false, startunbounded: true, label: '<' + 8.2317 },
+				{ start: 8.2317, stop: 8.2317, startinclusive: true, stopinclusive: true, label: '=' + 8.2317 },
+				{ start: 8.2317, startinclusive: false, stopunbounded: true, label: '>' + 8.2317 }
+			]
 		},
 		'should match expected output'
 	)

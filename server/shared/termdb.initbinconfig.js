@@ -6,31 +6,52 @@ Initialize a bin configuration for a numeric dataset
     {format: 'string'}: output bin config as JSON string
 */
 module.exports = function initBinConfig(data, opts = {}) {
-	for (const x of data) {
-		if (!Number.isFinite(x)) throw 'Cannot compute bin config. Data contains non-numeric values.'
+	if (data.find(d => !Number.isFinite(d))) throw 'non-numeric values found'
+	let binConfig
+	const s = new Set(data)
+	if (s.size === 1) {
+		// single unique value in data array
+		// prepare custom bin config for 3 bins: first bin
+		// for values less than the value, second bin for values
+		// equal to the value, and third bin one for values
+		// greater than the value
+		// all data values will fall into the second bin
+		const value = [...s][0]
+		binConfig = {
+			type: 'custom-bin',
+			lst: [
+				{ stop: value, stopinclusive: false, startunbounded: true, label: '<' + value },
+				{ start: value, stop: value, startinclusive: true, stopinclusive: true, label: '=' + value },
+				{ start: value, startinclusive: false, stopunbounded: true, label: '>' + value }
+			]
+		}
+	} else {
+		// multiple unique values in data array
+		// prepare regular bin config
+
+		// compute the bin size for a maximum bin number of 8
+		data.sort((a, b) => a - b)
+		const l = data.length
+		const min = data[0]
+		const max = data[l - 1]
+		const binSize = (max - min) / 8
+		// first bin stop will equal either (minimum + bin size) or (5th percentile), whichever is larger.
+		let p5idx = Math.round(l * 0.05) - 1
+		if (p5idx < 0) p5idx = 0
+		const p5 = data[p5idx]
+		const firstBinStop = Math.max(min + binSize, p5)
+		// round the bin values
+		let [binSize_rnd, firstBinStop_rnd, lastBinStart_rnd, rounding] = roundBinVals(binSize, firstBinStop, max, min)
+		// generate the bin configuration
+		binConfig = {
+			type: 'regular-bin',
+			startinclusive: true,
+			bin_size: binSize_rnd,
+			first_bin: { stop: firstBinStop_rnd }
+		}
+		if (lastBinStart_rnd) binConfig.last_bin = { start: lastBinStart_rnd }
+		if (rounding) binConfig.rounding = rounding
 	}
-	// compute the bin size for a maximum bin number of 8
-	data.sort((a, b) => a - b)
-	const l = data.length
-	const min = data[0]
-	const max = data[l - 1]
-	const binSize = (max - min) / 8
-	// first bin stop will equal either (minimum + bin size) or (5th percentile), whichever is larger.
-	let p5idx = Math.round(l * 0.05) - 1
-	if (p5idx < 0) p5idx = 0
-	const p5 = data[p5idx]
-	const firstBinStop = Math.max(min + binSize, p5)
-	// round the bin values
-	let [binSize_rnd, firstBinStop_rnd, lastBinStart_rnd, rounding] = roundBinVals(binSize, firstBinStop, max, min)
-	// generate the bin configuration
-	const binConfig = {
-		type: 'regular-bin',
-		startinclusive: true,
-		bin_size: binSize_rnd,
-		first_bin: { stop: firstBinStop_rnd }
-	}
-	if (lastBinStart_rnd) binConfig.last_bin = { start: lastBinStart_rnd }
-	if (rounding) binConfig.rounding = rounding
 	if ('format' in opts) {
 		if (opts.format === 'string') {
 			return JSON.stringify(binConfig)

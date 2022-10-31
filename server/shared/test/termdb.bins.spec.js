@@ -681,3 +681,45 @@ tape('compute_bins() custom', function(test) {
 	test.deepEqual(b.compute_bins(binconfig), binconfig.lst, 'should simply copy binconfig.lst')
 	test.end()
 })
+
+tape('compute_bins() single unique value (0)', function(test) {
+	const binconfig = {
+		type: 'custom-bin',
+		lst: [
+			{ stop: 0, stopinclusive: false, startunbounded: true, label: '<' + 0 },
+			{ start: 0, stop: 0, startinclusive: true, stopinclusive: true, label: '=' + 0 },
+			{ start: 0, startinclusive: false, stopunbounded: true, label: '>' + 0 }
+		]
+	}
+	test.deepEqual(
+		b.compute_bins(binconfig),
+		[
+			{ stop: 0, stopinclusive: false, startunbounded: true, label: '<' + 0 },
+			{ start: 0, stop: 0, startinclusive: true, stopinclusive: true, label: '=' + 0 },
+			{ start: 0, startinclusive: false, stopunbounded: true, label: '>' + 0 }
+		],
+		'should create 3 bins: one less than value, one equal to value, and one greater than value'
+	)
+	test.end()
+})
+
+tape('compute_bins() single unique value (3)', function(test) {
+	const binconfig = {
+		type: 'custom-bin',
+		lst: [
+			{ stop: 3, stopinclusive: false, startunbounded: true, label: '<' + 3 },
+			{ start: 3, stop: 3, startinclusive: true, stopinclusive: true, label: '=' + 3 },
+			{ start: 3, startinclusive: false, stopunbounded: true, label: '>' + 3 }
+		]
+	}
+	test.deepEqual(
+		b.compute_bins(binconfig),
+		[
+			{ stop: 3, stopinclusive: false, startunbounded: true, label: '<' + 3 },
+			{ start: 3, stop: 3, startinclusive: true, stopinclusive: true, label: '=' + 3 },
+			{ start: 3, startinclusive: false, stopunbounded: true, label: '>' + 3 }
+		],
+		'should create 3 bins: one less than value, one equal to value, and one greater than value'
+	)
+	test.end()
+})
