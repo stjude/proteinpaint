@@ -45,7 +45,6 @@ class Scatter {
 	constructor() {
 		this.type = 'sampleScatter'
 		this.lassoOn = false
-		this.groups = []
 		const mySymbols = [
 			symbolCircle,
 			symbolSquare,
@@ -136,6 +135,7 @@ class Scatter {
 
 		this.render(data)
 		this.lassoReset()
+		this.updateGroupsButton()
 	}
 
 	// creates an opts object for the vocabApi.someMethod(),
@@ -489,7 +489,7 @@ function setRenderers(self) {
 			.style('display', 'block')
 			.style('margin', '20px')
 		icon_functions['lasso'](lassoDiv, { handler: toggle_lasso, enabled: false })
-		const groupDiv = dom.controls
+		self.dom.groupDiv = dom.controls
 			.insert('div')
 			.style('display', 'block')
 			.style('margin', '20px')
@@ -598,7 +598,7 @@ function setRenderers(self) {
 				}
 				lasso.notSelectedItems().attr('d', c => getShape(self, c))
 
-				showLassoMenu(dragEnd.sourceEvent, groupDiv)
+				showLassoMenu(dragEnd.sourceEvent)
 			}
 		}
 
@@ -617,14 +617,12 @@ function setRenderers(self) {
 					.style('fill-opacity', '1')
 				mainG.call(zoom)
 				self.selectedItems = null
-				groupDiv.select('*').remove()
 			}
 			lassoDiv.select('*').remove()
 			icon_functions['lasso'](lassoDiv, { handler: toggle_lasso, enabled: self.lassoOn })
-			groupDiv.select('*').remove()
 		}
 
-		function showLassoMenu(event, groupDiv) {
+		function showLassoMenu(event) {
 			self.dom.tip.clear().hide()
 			if (self.selectedItems.length == 0) return
 			self.dom.tip.show(event.clientX, event.clientY)
@@ -635,7 +633,7 @@ function setRenderers(self) {
 				.attr('class', 'sja_menuoption sja_sharp_border')
 				.text(`List ${self.selectedItems.length} samples`)
 				.on('click', event => {
-					showTable({ name: 'Selected samples', items: self.selectedItems }, event.clientX, event.clientY, groupDiv)
+					showTable({ name: 'Selected samples', items: self.selectedItems }, event.clientX, event.clientY)
 					self.dom.tip.hide()
 				})
 
@@ -644,37 +642,42 @@ function setRenderers(self) {
 				.attr('class', 'sja_menuoption sja_sharp_border')
 				.text('Add to a group')
 				.on('click', () => {
-					self.groups.push({ name: `Group ${self.groups.length + 1}`, items: self.selectedItems, index: groups.length })
-					updateGroupsButton(groupDiv)
-					self.dom.tip.hide()
+					self.config.groups.push({
+						name: `Group ${self.config.groups.length + 1}`,
+						items: self.selectedItems,
+						index: groups.length
+					})
+					self.app.dispatch({ type: 'plot_edit', id: self.id, config: { groups: self.config.groups } })
 				})
 		}
 	}
 
-	function updateGroupsButton(groupDiv) {
-		groupDiv.select('*').remove()
-		groupDiv
+	self.updateGroupsButton = function() {
+		self.dom.groupDiv.selectAll('*').remove()
+		self.dom.tip.hide()
+		if (self.config.groups.length == 0) return
+		self.dom.groupDiv
 			.append('button')
 			.style('border', 'none')
 			.style('background', 'transparent')
 			.style('padding', 0)
 			.append('div')
 			.style('font-size', '1.1em')
-			.html(`&#931${self.groups.length + 1};`)
+			.html(`&#931${self.config.groups.length + 1};`)
 			.on('click', event => {
-				if (self.groups.length == 1) showGroupMenu(event, self.groups[0], groupDiv)
-				else showGroupsMenu(event, groupDiv)
+				if (self.config.groups.length == 1) showGroupMenu(event, self.config.groups[0])
+				else showGroupsMenu(event)
 			})
 	}
 
-	function showGroupsMenu(event, groupDiv) {
+	function showGroupsMenu(event) {
 		self.dom.tip.clear()
 		self.dom.tip.show(event.clientX, event.clientY)
 		const menuDiv = self.dom.tip.d.append('div')
 
 		let row = menuDiv.append('div')
 
-		for (const [i, group] of self.groups.entries()) {
+		for (const [i, group] of self.config.groups.entries()) {
 			row = menuDiv.append('div').attr('class', 'sja_menuoption sja_sharp_border')
 			row
 				.insert('div')
@@ -689,7 +692,7 @@ function setRenderers(self) {
 			row.on('click', e => {
 				self.dom.tip.hide()
 				self.dom.tip.clear()
-				showGroupMenu(event, group, groupDiv)
+				showGroupMenu(event, group)
 			})
 		}
 		if (self.state.allowedTermTypes.includes('survival')) {
@@ -735,13 +738,11 @@ function setRenderers(self) {
 			.attr('class', 'sja_menuoption sja_sharp_border')
 			.text('Delete groups')
 			.on('click', event => {
-				groupDiv.select('*').remove()
-				self.groups = []
-				self.dom.tip.hide()
+				self.app.dispatch({ type: 'plot_edit', id: self.id, config: { groups: [] } })
 			})
 	}
 
-	function showGroupMenu(event, group, groupDiv) {
+	function showGroupMenu(event, group) {
 		self.dom.tip.clear()
 		self.dom.tip.show(event.clientX, event.clientY)
 
@@ -755,7 +756,7 @@ function setRenderers(self) {
 			.attr('class', 'sja_menuoption sja_sharp_border')
 			.text(`List ${group.items.length} samples`)
 			.on('click', e => {
-				showTable(self, group, event.clientX, event.clientY)
+				showTable(group, event.clientX, event.clientY)
 				self.dom.tip.hide()
 			})
 
@@ -803,11 +804,8 @@ function setRenderers(self) {
 			.attr('class', 'sja_menuoption sja_sharp_border')
 			.text(`Delete group`)
 			.on('click', e => {
-				self.groups = self.groups.splice(group.index, 1)
-				if (self.groups.length > 0) updateGroupsButton(groupDiv)
-				else groupDiv.select('*').remove()
-
-				self.dom.tip.hide()
+				self.config.groups = self.config.groups.splice(group.index, 1)
+				self.app.dispatch({ type: 'plot_edit', id: self.id, config: { groups: self.config.groups } })
 			})
 	}
 
@@ -840,7 +838,7 @@ function setRenderers(self) {
 			.style('font-size', s.axisTitleFontSize + 'px')
 	}
 
-	function showTable(group, x, y, groupDiv) {
+	function showTable(group, x, y) {
 		let rows = []
 		const columns = [formatCell('Sample', 'label'), formatCell(self.config.colorTW.id, 'label')]
 		if (self.config.shapeTW) columns.push(formatCell(self.config.shapeTW.id))
@@ -861,7 +859,7 @@ function setRenderers(self) {
 			rows.push(row)
 		}
 		self.dom.subtip.clear()
-		const headerDiv = self.dom.subtip.d.append('div')
+		const headerDiv = self.dom.subtip.d.style('width', '30vw').append('div')
 		headerDiv
 			.insert('div')
 			.html('&nbsp;' + group.name)
@@ -876,8 +874,12 @@ function setRenderers(self) {
 			.style('margin-right', '10px')
 			.text('Add to a group')
 			.on('click', e => {
-				self.groups.push({ name: `Group ${self.groups.length + 1}`, items: self.selectedItems, index: groups.length })
-				updateGroupsButton(groupDiv)
+				self.config.groups.push({
+					name: `Group ${self.config.groups.length + 1}`,
+					items: self.selectedItems,
+					index: groups.length
+				})
+				self.app.dispatch({ type: 'plot_edit', id: self.id, config: { groups: self.config.groups } })
 			})
 		renderTable({ rows, columns, div: self.dom.subtip.d })
 		self.dom.subtip.show(x, y)
@@ -929,6 +931,7 @@ export async function getPlotConfig(opts, app) {
 
 		const config = {
 			id: opts.colorTW.id,
+			groups: [],
 			settings: {
 				controls: {
 					isOpen: false // control panel is hidden by default
@@ -1016,7 +1019,7 @@ function openSurvivalPlots(self, term) {
 	let groups = []
 	let values, tgroup, data
 
-	for (const [i, group] of self.groups.entries()) {
+	for (const [i, group] of self.config.groups.entries()) {
 		values = []
 		for (const item of group.items) {
 			data = item.__data__
