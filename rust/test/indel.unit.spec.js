@@ -11,7 +11,7 @@ console.log(9, 'test')
 to compile rust, see server/utils/rust/README.md
 Syntax for compiling the rust code: cd ~/proteinpaint/server/utils/rust && cargo build --release
 
-run as: $ node indel.spec.js
+run as: $ node indel.unit.spec.js
 
 "examples[]" array structure
 [

@@ -8,7 +8,7 @@ module.exports = function(env = {}) {
 	const config = {
 		mode: 'development',
 		target: 'node',
-		entry: path.join(__dirname, './test/internals.js'),
+		entry: path.join(__dirname, './test/context/' + env.exportsFilename),
 		externals: [
 			nodeExternals({
 				allowlist: [/\/src\//, /d3-*/],

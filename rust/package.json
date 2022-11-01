@@ -10,7 +10,8 @@
     "dev": "cargo build --release",
     "build": "cargo build --release",
     "postinstall": "cargo build --release",
-    "test": "tape **/test/*.spec.js"
+    "test": "tape **/test/*.spec.js",
+    "test:unit": "tape **/test/*.unit.spec.js"
   },
   "author": "Robin Paul",
   "license": "UNLICENSED",

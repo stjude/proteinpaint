@@ -52,7 +52,7 @@ client/test/wpCompileTime.js
 cairo-*/*
 canvas/*
 pixman-*/*
-serverconfig.json
+/serverconfig.json
 **/server.js*
 !client/rx/server.js
 !sj/**/server.js
