@@ -22,7 +22,7 @@ set -o pipefail
 # copy "matrix.tree.original" to "matrix.tree" and append new line to describe the adhoc "publication" term annotated to samples from CH paper
 # subsequent steps all use "matrix.tree"
 cp phenotree/matrix.tree.original phenotree/matrix.tree
-printf '\nPublication\t-\t-\t-\t-\tpublication\tstring; CH=Clona Hematopoiesis study\n' >> phenotree/matrix.tree
+printf '\nPublication\tClonal hematopoiesis\t-\t-\t-\tpublication_CH\tstring; 1=Yes\n' >> phenotree/matrix.tree
 
 
 ###############################################
@@ -43,7 +43,7 @@ node ./scripts/matrix.string2intID.js > matrix
 node ./scripts/matrix2db.js matrix > annotation.matrix
 # created "annotation.matrix"
 node ./scripts/replace.sampleid.js PRS/annotation.scores 0 >> annotation.matrix
-node ./scripts/replace.sampleid.js pub.samples 0 >> annotation.matrix
+node ./scripts/replace.sampleid.js annotation.publication.stringId 0 >> annotation.matrix
 # appended two extra files to "annotation.matrix"
 
 node ./scripts/replace.sampleid.js raw/outcomes_sjlife.txt 0 yes > raw/intID/outcomes_sjlife.txt
@@ -87,6 +87,7 @@ node ./scripts/checkPrsDuplicateTerms.js
 
 cat PRS/termdb.prs >> termdb
 cat PRS/termid2htmldef.prs >> termid2htmldef
+cat termid2htmldef.pub >> termid2htmldef
 
 node ./scripts/validate.ctcae.js phenotree/sjlifectcae.tree raw/intID/outcomes_sjlife.txt > annotation.outcome
 node ./scripts/validate.ctcae.js phenotree/ccssctcae.tree raw/intID/outcomes_ccss.txt >> annotation.outcome
