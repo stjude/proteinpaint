@@ -14,7 +14,7 @@ const serverconfig = require('../serverconfig')
 const termjson = require('./termjson').termjson
 
 const ssid = 'genotype-test.txt'
-const src = path.join(__dirname, '../../test/testdata', ssid)
+const src = path.join(__dirname, '/testdata', ssid)
 const dest = path.join(serverconfig.cachedir, 'ssid', ssid)
 console.log(src, dest)
 try {

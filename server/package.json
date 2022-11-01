@@ -12,7 +12,7 @@
     "dev": "webpack --config=./webpack.config.js --env NODE_ENV=development --watch --color",
     "start": "nodemon server.js --watch ./server*.js* --watch genome --watch dataset",
     "pretest": "./test/pretest.js",
-    "test": "tape -r '@babel/register' */test/*.spec.js",
+    "test": "webpack --config=./webpack.test.config.js && node test/serverTests.js",
     "prepack": "webpack",
     "response": "nodemon modules/test/test.server.js --watch src",
     "getconf": "../build/getConfigProp.js"
