@@ -3,20 +3,12 @@ Connect VPN when pulling dataset (scp from hpc); no need when pulling gene db (c
 Run this script anywhere on your computer.
 
 node ~/dev/proteinpaint/utils/getDataset.js <dataset1> <dataset2> ...
+(dry run without arg to list all datasets)
 
 Existing files are overwritten.
 "tp" folder is hardcoded to be ~/data/tp/ on your computer.
 Folders under tp/ are auto-created if missing.
 `
-
-if (process.argv.length == 2) {
-	console.log(help)
-	process.exit()
-}
-
-const fs = require('fs'),
-	exec = require('child_process').execSync,
-	path = require('path')
 
 const datasets = {
 	cosmic,
@@ -26,6 +18,17 @@ const datasets = {
 	allPharmacotyping
 	// add more datasets
 }
+
+if (process.argv.length == 2) {
+	// no argument; print list of datasets for download
+	console.log('Supported datasets:')
+	for (const k in datasets) console.log('*', k)
+	process.exit()
+}
+
+const fs = require('fs'),
+	exec = require('child_process').execSync,
+	path = require('path')
 
 for (let i = 2; i < process.argv.length; i++) {
 	const dsname = process.argv[i]
