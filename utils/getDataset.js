@@ -1,10 +1,9 @@
 const help = `
-Connect VPN when pulling dataset; no need when pulling gene db.
-Run this script anywhere.
+Connect VPN when pulling dataset (scp from hpc); no need when pulling gene db (curl from prp1).
+Run this script anywhere on your computer.
 
 node ~/dev/proteinpaint/utils/getDataset.js <dataset1> <dataset2> ...
 
-Files are downloaded from HPC via scp.
 Existing files are overwritten.
 "tp" folder is hardcoded to be ~/data/tp/ on your computer.
 Folders under tp/ are auto-created if missing.
@@ -23,7 +22,8 @@ const datasets = {
 	cosmic,
 	pnet,
 	ihg,
-	hg38gene
+	hg38gene,
+	allPharmacotyping
 	// add more datasets
 }
 
@@ -81,6 +81,14 @@ function ihg() {
 	)
 	exec(
 		'scp hpc:~/tp/sdhanda/mb_portal/BT_database/SNVindel_IHG.tsv  ~/data/tp/sdhanda/mb_portal/BT_database/SNVindel_IHG.tsv'
+	)
+}
+
+function allPharmacotyping() {
+	checkDir('files/hg38/ALL-pharmacotyping/clinical/')
+	exec('scp hpc:~/tp/files/hg38/ALL-pharmacotyping/clinical/db  ~/data/tp/files/hg38/ALL-pharmacotyping/clinical/db')
+	exec(
+		'scp hpc:~/tp/files/hg38/ALL-pharmacotyping/clinical/transcriptome-tSNE.txt ~/data/tp/files/hg38/ALL-pharmacotyping/clinical/transcriptome-tSNE.txt'
 	)
 }
 
