@@ -1,4 +1,5 @@
 import { getCompInit, multiInit } from '../rx'
+import { icons as icon_functions } from '../dom/control.icons'
 
 class TdbControlsTopBar {
 	constructor(opts) {
@@ -23,7 +24,7 @@ class TdbControlsTopBar {
 			}),
 			downloadbtn: downloadBtnInit({
 				id: opts.id,
-				holder: this.dom.button_bar.append('div'),
+				holder: this.dom.holder.insert('div'),
 				callback: opts.downloadHandler,
 				debug
 			})
@@ -82,18 +83,14 @@ function burgerBtnInit(opts) {
 }
 
 function downloadBtnInit(opts) {
+	const downloadDiv = opts.holder.style('margin-left', '20px')
+
+	icon_functions['download'](downloadDiv, { handler: opts.callback })
+
 	const self = {
 		plotTypes: ['barchart', 'boxplot', 'scatter'],
 		dom: {
-			btn: opts.holder
-				.style('margin', '10px')
-				.style('margin-top', '15px')
-				.style('margin-left', '24px')
-				.style('font-family', 'verdana')
-				.style('font-size', '18px')
-				.style('cursor', 'pointer')
-				.html('&#10515;')
-				.on('click', opts.callback)
+			btn: downloadDiv
 		}
 	}
 

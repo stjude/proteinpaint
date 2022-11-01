@@ -17,7 +17,8 @@ import {
 	symbolStar,
 	symbolSquare2,
 	groups,
-	group
+	group,
+	style
 } from 'd3'
 import { d3lasso } from '../common/lasso'
 import { Menu } from '#dom/menu'
@@ -62,22 +63,23 @@ class Scatter {
 
 	async init(opts) {
 		const controls = this.opts.controls || this.opts.holder.append('div')
-		let holder = this.opts.controls ? opts.holder : this.opts.holder.append('div').style('display', 'inline-block')
-		const mainDiv = holder.append('div').style('display', 'inline-block')
+		const controlsDiv = this.opts.controls
+			? opts.holder
+			: this.opts.holder.append('div').style('display', 'inline-block')
+		const mainDiv = controlsDiv.append('div').style('display', 'inline-block')
 
-		const chartsDiv = mainDiv
-			.append('div')
-			.style('display', 'inline-block')
-			.style('margin', '20px')
+		const chartDiv = mainDiv.append('div').style('display', 'inline-block')
 		const legendDiv = mainDiv
 			.append('div')
 			.style('display', 'inline-block')
 			.style('float', 'right')
 			.style('margin-left', '100px')
 
+		const holder = chartDiv.insert('div')
+
 		this.dom = {
 			header: this.opts.header,
-			holder: chartsDiv,
+			holder: holder,
 			controls,
 			legendDiv,
 			tip: new Menu({ padding: '5px' }),
@@ -134,6 +136,7 @@ class Scatter {
 		this.axisLeft = axisLeft(this.yAxisScale)
 
 		this.render(data)
+		this.setTools()
 		this.lassoReset()
 		this.updateGroupsButton()
 	}
@@ -154,17 +157,13 @@ class Scatter {
 	}
 
 	async setControls() {
-		this.dom.holder
-			.attr('class', 'pp-termdb-plot-viz')
-			.style('display', 'inline-block')
-			.style('min-width', '300px')
-			.style('margin-left', '50px')
+		const controlsHolder = this.dom.controls.attr('class', 'pp-termdb-plot-controls').style('display', 'inline-block')
 
 		this.components = {
 			controls: await controlsInit({
 				app: this.app,
 				id: this.id,
-				holder: this.dom.controls.attr('class', 'pp-termdb-plot-controls').style('display', 'inline-block'),
+				holder: controlsHolder,
 				inputs: [
 					{
 						type: 'term',
@@ -232,7 +231,8 @@ class Scatter {
 			})
 		}
 
-		this.components.controls.on('downloadClick.survival', () => alert('TODO: data download?'))
+		this.components.controls.on('downloadClick.scatter', () => downloadSVG(this.svg))
+		this.dom.toolsDiv = this.dom.controls.insert('div')
 	}
 
 	renderLegend(holder, categories, shapes) {
@@ -318,10 +318,9 @@ class Scatter {
 
 function setRenderers(self) {
 	self.render = function(data) {
-		const chartDiv = self.dom.holder.select('.pp-scatter-chart')
-		if (chartDiv.size() > 0) updateCharts(chartDiv)
+		const chartDiv = self.dom.holder
+		if (chartDiv.selectAll('*').size() > 0) updateCharts()
 		else addCharts()
-		self.dom.holder.style('display', 'inline-block')
 		self.dom.holder
 			.on('mouseover', self.mouseover)
 			.on('mouseout', self.mouseout)
@@ -329,41 +328,27 @@ function setRenderers(self) {
 
 		function addCharts() {
 			const s = self.settings
-			const div = self.dom.holder
-				.append('div')
-				.attr('class', 'pp-scatter-chart')
+			chartDiv
 				.style('opacity', 0)
-				//.style("position", "absolute")
 				.style('width', s.svgw + 100 + 'px')
 				.style('height', s.svgh + 50 + 'px')
-				.style('display', 'inline-block')
-				.style('margin', s.chartMargin + 'px')
-				.style('top', 0) //layout.byChc[d.chc].top)
-				.style('left', 0) //layout.byChc[d.chc].left)
 				.style('text-align', 'left')
 
-			const svg = div.append('svg')
-			renderSVG(svg, div, s, 0, data)
+			self.svg = chartDiv.append('svg')
+			renderSVG(self.svg, chartDiv, s, 0, data)
 
-			div
+			chartDiv
 				.transition()
 				.duration(s.duration)
 				.style('opacity', 1)
 
-			setTools(self.dom, svg, div)
 			self.renderLegend(self.dom.legendDiv, data.colorLegend, data.shapeLegend)
 		}
 
-		function updateCharts(d) {
+		function updateCharts() {
 			const s = self.settings
-			const div = d
-
-			div.transition().duration(s.duration)
-			//.style('width', s.svgw + 50 + 'px')
-
-			div.selectAll('.sjpcb-unlock-icon').style('display', s.scale == 'byChart' ? 'none' : 'block')
-
-			renderSVG(div.select('svg'), d, s, s.duration, data)
+			chartDiv.transition().duration(s.duration)
+			renderSVG(chartDiv.select('svg'), chartDiv, s, s.duration, data)
 			self.renderLegend(self.dom.legendDiv, data.colorLegend, data.shapeLegend)
 		}
 	}
@@ -373,23 +358,21 @@ function setRenderers(self) {
 			.transition()
 			.duration(duration)
 			.attr('width', s.svgw + 100)
-			.attr('height', s.svgh + 100)
+			.attr('height', s.svgh + 110) //leaving 100 px for the y-axis and 10 to leave some space on top
 
 		/* eslint-disable */
-		const [mainG, axisG, xAxis, yAxis, xTitle, yTitle] = getSvgSubElems(svg, chart)
+		const [mainG, axisG, xAxis, yAxis] = getSvgSubElems(svg, chart)
 		/* eslint-enable */
 
 		if (s.showAxes) mainG.attr('clip-path', `url(#clip)`)
 		else mainG.attr('clip-path', '')
-
-		let serie = mainG.select('.sjpcb-scatter-series')
-		if (serie.size() == 0) serie = mainG.append('g').attr('class', 'sjpcb-scatter-series')
-
-		renderSerie(serie, chart, data, s, duration)
+		if (mainG.select('.sjpcb-scatter-series').size() == 0) mainG.append('g').attr('class', 'sjpcb-scatter-series')
+		const serie = mainG.select('.sjpcb-scatter-series')
+		renderSerie(serie, data, s, duration)
 	}
 
 	function getSvgSubElems(svg, chart) {
-		let mainG, axisG, xAxis, yAxis, xTitle, yTitle
+		let mainG, axisG, xAxis, yAxis
 		if (svg.select('.sjpcb-scatter-mainG').size() == 0) {
 			svg.append('defs')
 			mainG = svg.append('g').attr('class', 'sjpcb-scatter-mainG')
@@ -402,8 +385,6 @@ function setRenderers(self) {
 				.append('g')
 				.attr('class', 'sjpcb-scatter-y-axis')
 				.attr('transform', 'translate(100, 0)')
-			xTitle = axisG.append('g').attr('class', 'sjpcb-scatter-x-title')
-			yTitle = axisG.append('g').attr('class', 'sjpcb-scatter-y-title')
 			mainG
 				.append('rect')
 				.attr('class', 'zoom')
@@ -422,24 +403,25 @@ function setRenderers(self) {
 				.attr('y', 0)
 				.attr('width', self.settings.svgw)
 				.attr('height', self.settings.svgh + 20)
-			renderAxes(xAxis, xTitle, yAxis, yTitle, self.settings, chart)
+
+			xAxis.call(self.axisBottom)
+			yAxis.call(self.axisLeft)
 		} else {
 			mainG = svg.select('.sjpcb-scatter-mainG')
 			axisG = svg.select('.sjpcb-scatter-axis')
 
 			xAxis = axisG.select('.sjpcb-scatter-x-axis')
 			yAxis = axisG.select('.sjpcb-scatter-y-axis')
-			xTitle = axisG.select('.sjpcb-scatter-x-title')
-			yTitle = axisG.select('.sjpcb-scatter-y-title')
 		}
 		if (self.settings.showAxes) axisG.style('opacity', 1)
 		else axisG.style('opacity', 0)
-		return [mainG, axisG, xAxis, yAxis, xTitle, yTitle]
+		return [mainG, axisG, xAxis, yAxis]
 	}
 
-	function renderSerie(g, chart, data, s, duration) {
+	function renderSerie(g, data, s, duration) {
 		// remove all symbols as there is no data id for privacy
-		g.selectAll('path').remove()
+		//g.selectAll('path').remove()
+
 		const symbols = g.selectAll('path').data(data.samples)
 		symbols.exit().remove()
 		symbols
@@ -464,34 +446,136 @@ function setRenderers(self) {
 	}
 
 	function translate(c) {
-		const transform = `translate(${self.xAxisScale(c.x) + 100},${self.yAxisScale(c.y)})`
+		const transform = `translate(${self.xAxisScale(c.x) + 100},${self.yAxisScale(c.y) + 10})`
 		return transform
 	}
 
-	function setTools(dom, svg, d) {
-		const homeDiv = dom.controls
+	self.lassoReset = () => {
+		const mainG = self.dom.holder.select('.sjpcb-scatter-mainG')
+
+		if (self.lasso)
+			self.lasso
+				.items(mainG.select('.sjpcb-scatter-series').selectAll('path'))
+				.targetArea(mainG)
+				.on('start', lasso_start)
+				.on('draw', lasso_draw)
+				.on('end', lasso_end)
+		function lasso_start(event) {
+			self.lasso
+				.items()
+				.attr('d', c => getShape(self, c, 1 / 2))
+				.style('fill-opacity', '.5')
+				.classed('not_possible', true)
+				.classed('selected', false)
+		}
+
+		function lasso_draw(event) {
+			if (self.lassoOn) {
+				// Style the possible dots
+
+				self.lasso
+					.possibleItems()
+					.attr('d', c => getShape(self, c, 2))
+					.style('fill-opacity', '1')
+					.classed('not_possible', false)
+					.classed('possible', true)
+
+				//Style the not possible dot
+				self.lasso
+					.notPossibleItems()
+					.attr('d', c => getShape(self, c, 1 / 2))
+					.style('fill-opacity', '.5')
+					.classed('not_possible', true)
+					.classed('possible', false)
+			}
+		}
+
+		function lasso_end(dragEnd) {
+			if (self.lassoOn) {
+				// Reset classes of all items (.possible and .not_possible are useful
+				// only while drawing lasso. At end of drawing, only selectedItems()
+				// should be used)
+				self.lasso
+					.items()
+					.classed('not_possible', false)
+					.classed('possible', false)
+
+				// Style the selected dots
+				self.lasso.selectedItems().attr('d', c => getShape(self, c, 2))
+				self.lasso.items().style('fill-opacity', '1')
+				self.selectedItems = []
+				let data
+				for (const item of self.lasso.selectedItems()._groups[0]) {
+					data = item.__data__
+					if (data.sample !== 'Ref') self.selectedItems.push(item)
+				}
+				self.lasso.notSelectedItems().attr('d', c => getShape(self, c))
+
+				showLassoMenu(dragEnd.sourceEvent)
+			}
+		}
+
+		function showLassoMenu(event) {
+			self.dom.tip.clear().hide()
+			if (self.selectedItems.length == 0) return
+			self.dom.tip.show(event.clientX, event.clientY)
+
+			const menuDiv = self.dom.tip.d.append('div')
+			const listDiv = menuDiv
+				.append('div')
+				.attr('class', 'sja_menuoption sja_sharp_border')
+				.text(`List ${self.selectedItems.length} samples`)
+				.on('click', event => {
+					showTable({ name: 'Selected samples', items: self.selectedItems }, event.clientX, event.clientY)
+					self.dom.tip.hide()
+				})
+
+			menuDiv
+				.append('div')
+				.attr('class', 'sja_menuoption sja_sharp_border')
+				.text('Add to a group')
+				.on('click', () => {
+					self.config.groups.push({
+						name: `Group ${self.config.groups.length + 1}`,
+						items: self.selectedItems,
+						index: groups.length
+					})
+					self.app.dispatch({ type: 'plot_edit', id: self.id, config: { groups: self.config.groups } })
+				})
+		}
+	}
+
+	self.setTools = function() {
+		const inline = self.config.settings.controls.isOpen
+		const svg = self.svg
+		const toolsDiv = self.dom.toolsDiv
+		toolsDiv.selectAll('*').remove()
+		let display = 'block'
+		if (inline) display = 'inline-block'
+
+		const homeDiv = toolsDiv
 			.insert('div')
-			.style('display', 'block')
+			.style('display', display)
 			.style('margin', '20px')
 		icon_functions['restart'](homeDiv, { handler: resetToIdentity })
-		const zoomInDiv = dom.controls
+		const zoomInDiv = toolsDiv
 			.insert('div')
-			.style('display', 'block')
+			.style('display', display)
 			.style('margin', '20px')
 		icon_functions['zoomIn'](zoomInDiv, { handler: zoomIn })
-		const zoomOutDiv = dom.controls
+		const zoomOutDiv = toolsDiv
 			.insert('div')
-			.style('display', 'block')
+			.style('display', display)
 			.style('margin', '20px')
 		icon_functions['zoomOut'](zoomOutDiv, { handler: zoomOut })
-		const lassoDiv = dom.controls
+		const lassoDiv = toolsDiv
 			.insert('div')
-			.style('display', 'block')
+			.style('display', display)
 			.style('margin', '20px')
 		icon_functions['lasso'](lassoDiv, { handler: toggle_lasso, enabled: false })
-		self.dom.groupDiv = dom.controls
+		self.dom.groupDiv = toolsDiv
 			.insert('div')
-			.style('display', 'block')
+			.style('display', display)
 			.style('margin', '20px')
 
 		const mainG = svg.select('.sjpcb-scatter-mainG')
@@ -535,83 +619,20 @@ function setRenderers(self) {
 				.call(zoom.transform, zoomIdentity)
 		}
 
-		const lasso = d3lasso()
-		self.lassoReset = () => {
-			lasso
-				.items(seriesG.selectAll('path'))
-				.targetArea(mainG)
-				.on('start', lasso_start)
-				.on('draw', lasso_draw)
-				.on('end', lasso_end)
-		}
+		self.lasso = d3lasso()
 
 		self.lassoReset()
-
-		function lasso_start(event) {
-			lasso
-				.items()
-				.attr('d', c => getShape(self, c, 1 / 2))
-				.style('fill-opacity', '.5')
-				.classed('not_possible', true)
-				.classed('selected', false)
-		}
-
-		function lasso_draw(event) {
-			if (self.lassoOn) {
-				// Style the possible dots
-
-				lasso
-					.possibleItems()
-					.attr('d', c => getShape(self, c, 2))
-					.style('fill-opacity', '1')
-					.classed('not_possible', false)
-					.classed('possible', true)
-
-				//Style the not possible dot
-				lasso
-					.notPossibleItems()
-					.attr('d', c => getShape(self, c, 1 / 2))
-					.style('fill-opacity', '.5')
-					.classed('not_possible', true)
-					.classed('possible', false)
-			}
-		}
-
-		function lasso_end(dragEnd) {
-			if (self.lassoOn) {
-				// Reset classes of all items (.possible and .not_possible are useful
-				// only while drawing lasso. At end of drawing, only selectedItems()
-				// should be used)
-				lasso
-					.items()
-					.classed('not_possible', false)
-					.classed('possible', false)
-
-				// Style the selected dots
-				lasso.selectedItems().attr('d', c => getShape(self, c, 2))
-				lasso.items().style('fill-opacity', '1')
-				self.selectedItems = []
-				let data
-				for (const item of lasso.selectedItems()._groups[0]) {
-					data = item.__data__
-					if (data.sample !== 'Ref') self.selectedItems.push(item)
-				}
-				lasso.notSelectedItems().attr('d', c => getShape(self, c))
-
-				showLassoMenu(dragEnd.sourceEvent)
-			}
-		}
 
 		function toggle_lasso() {
 			self.lassoOn = !self.lassoOn
 			if (self.lassoOn) {
 				mainG.on('.zoom', null)
-				mainG.call(lasso)
+				mainG.call(self.lasso)
 			} else {
 				mainG.on('mousedown.drag', null)
-				lasso.items().classed('not_possible', false)
-				lasso.items().classed('possible', false)
-				lasso
+				self.lasso.items().classed('not_possible', false)
+				self.lasso.items().classed('possible', false)
+				self.lasso
 					.items()
 					.attr('r', self.settings.size)
 					.style('fill-opacity', '1')
@@ -620,35 +641,6 @@ function setRenderers(self) {
 			}
 			lassoDiv.select('*').remove()
 			icon_functions['lasso'](lassoDiv, { handler: toggle_lasso, enabled: self.lassoOn })
-		}
-
-		function showLassoMenu(event) {
-			self.dom.tip.clear().hide()
-			if (self.selectedItems.length == 0) return
-			self.dom.tip.show(event.clientX, event.clientY)
-
-			const menuDiv = self.dom.tip.d.append('div')
-			const listDiv = menuDiv
-				.append('div')
-				.attr('class', 'sja_menuoption sja_sharp_border')
-				.text(`List ${self.selectedItems.length} samples`)
-				.on('click', event => {
-					showTable({ name: 'Selected samples', items: self.selectedItems }, event.clientX, event.clientY)
-					self.dom.tip.hide()
-				})
-
-			menuDiv
-				.append('div')
-				.attr('class', 'sja_menuoption sja_sharp_border')
-				.text('Add to a group')
-				.on('click', () => {
-					self.config.groups.push({
-						name: `Group ${self.config.groups.length + 1}`,
-						items: self.selectedItems,
-						index: groups.length
-					})
-					self.app.dispatch({ type: 'plot_edit', id: self.id, config: { groups: self.config.groups } })
-				})
 		}
 	}
 
@@ -807,35 +799,6 @@ function setRenderers(self) {
 				self.config.groups = self.config.groups.splice(group.index, 1)
 				self.app.dispatch({ type: 'plot_edit', id: self.id, config: { groups: self.config.groups } })
 			})
-	}
-
-	function renderAxes(xAxis, xTitle, yAxis, yTitle, s) {
-		// create new scale ojects based on event
-
-		xAxis.call(self.axisBottom)
-		yAxis.call(self.axisLeft)
-
-		xTitle.select('text, title').remove()
-		const xTitleLabel =
-			self.config.colorTW.term.name.length > 24
-				? self.config.colorTW.term.name.slice(0, 20) + '...'
-				: self.config.colorTW.term.name
-		const xText = xTitle
-			.attr('transform', 'translate(' + (100 + s.svgw) / 2 + ',' + (50 + s.svgh) + ')')
-			.append('text')
-			.style('text-anchor', 'middle')
-			.style('font-size', s.axisTitleFontSize + 'px')
-			.text(xTitleLabel + (self.config.colorTW.term.unit ? ', ' + self.config.colorTW.term.unit : ''))
-
-		xText.append('title').text(self.config.colorTW.term.name)
-
-		const yTitleLabel = 'Y'
-		yTitle.select('text, title').remove()
-		const yText = yTitle
-			.attr('transform', 'translate(' + -s.axisTitleFontSize + ',' + s.svgh / 2 + ')rotate(-90)')
-			.append('text')
-			.style('text-anchor', 'middle')
-			.style('font-size', s.axisTitleFontSize + 'px')
 	}
 
 	function showTable(group, x, y) {
@@ -1052,4 +1015,21 @@ function openSurvivalPlots(self, term) {
 		type: 'plot_create',
 		config: config
 	})
+}
+
+function downloadSVG(svg) {
+	const link = document.createElement('a')
+	// If you don't know the name or want to use
+	// the webserver default set name = ''
+	link.setAttribute('download', 'scatter.svg')
+	document.body.appendChild(link)
+	link.click()
+	link.remove()
+	const serializer = new XMLSerializer()
+	const svg_blob = new Blob([serializer.serializeToString(svg.node())], {
+		type: 'image/svg+xml'
+	})
+	link.href = URL.createObjectURL(svg_blob)
+	link.click()
+	link.remove()
 }
