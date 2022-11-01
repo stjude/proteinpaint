@@ -619,31 +619,30 @@ q{}
 	.ssm_id_lst=str, comma-delimited
 	.isoform=str
 	.tid2value={}
-termidlst[]
-	array of term ids to append to "&fields="
+twLst[]
+	array of termwrapper objects; tw.id will be appended to "&fields="
 	and to parse out as sample attributes
 ds{}
 */
-export async function querySamples_gdcapi(q, termidlst, ds) {
-	if (q.get == 'summary' && !termidlst.includes('case.case_id')) {
+export async function querySamples_gdcapi(q, twLst, ds) {
+	if (q.get == 'summary' && !twLst.some(i => i.id == 'case.case_id')) {
 		/*
 		(from variant2sample) to summarize samples that can be retrieved here
 		which requires case_uuid to count unique list of samples per category
 		when 'case.case_id' is missing from term ids, must add it to the list so case_uuid will be available from resulting sample objects
 		*/
-		termidlst.push('case.case_id')
+		twLst.push({ id: 'case.case_id' })
 	}
 
 	const api = ds.variant2samples.gdcapi
 
 	const termObjs = []
-	for (const id of termidlst) {
-		const t = ds.cohort.termdb.q.termjsonByOneid(id)
+	for (const tw of twLst) {
+		const t = ds.cohort.termdb.q.termjsonByOneid(tw.id)
 		if (t) termObjs.push(t)
 	}
 
-	const param = ['size=10000', 'fields=' + termidlst.join(',')]
-	// no longer paginates
+	const param = ['size=10000', 'fields=' + twLst.map(i => i.id).join(',')]
 	//'&size=' + (q.size || api.size) + '&from=' + (q.from || 0)
 
 	// it may query with isoform
@@ -743,7 +742,7 @@ function may_add_projectAccess(sample, ds) {
 for termid2totalsize2
 
 input:
-	termidlst=[ termids ]
+	twLst=[ tw, ... ]
 	q{}
 		.tid2value={ termid: v}
 		.ssm_id_lst=str
@@ -758,22 +757,20 @@ output
 	}
 	if combination is given, returns [ map, combination ] instead
 */
-export async function get_termlst2size(termidlst, q, combination, ds) {
+export async function get_termlst2size(twLst, q, combination, ds) {
 	const api = ds.cohort.termdb.termid2totalsize2.gdcapi
 
 	// convert each term id to {path}
 	// id=case.project.project_id, convert to path=project__project_id, for graphql
 	// required for termid2size_query() of gdc.hg38.js
 	const termPaths = []
-	for (const id of termidlst) {
-		const t = ds.cohort.termdb.q.termjsonByOneid(id)
-		if (t) {
-			termPaths.push({
-				id,
-				path: id.replace('case.', '').replace(/\./g, '__'),
-				type: t.type
-			})
-		}
+	for (const tw of twLst) {
+		if (!tw.term) continue
+		termPaths.push({
+			id: tw.id,
+			path: tw.id.replace('case.', '').replace(/\./g, '__'),
+			type: tw.term.type
+		})
 	}
 
 	const query = api.query(termPaths)

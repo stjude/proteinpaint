@@ -1,17 +1,19 @@
 const { stratinput } = require('#shared/tree')
-const { querySamples_gdcapi } = require('./mds3.gdc')
+const gdc = require('./mds3.gdc')
 const { get_densityplot } = require('./mds3.densityPlot')
 const { ssmIdFieldsSeparator } = require('./mds3.init')
 const utils = require('./utils')
 const { dtfusionrna, dtsv } = require('#shared/common')
 
 /*
+validate_variant2samples()
 variant2samples_getresult()
 	ifUsingBarchartQuery
 	queryMutatedSamples
 		querySamples_gdcapi
 		queryServerFileBySsmid
 		queryServerFileByRglst
+			mayAddSampleAnnotationByTwLst
 	make_sunburst
 		get_crosstabCombinations()
 		addCrosstabCount_tonodes
@@ -19,7 +21,81 @@ variant2samples_getresult()
 		make_summary_categorical
 	summary2barchart
 
+*/
 
+export function validate_variant2samples(ds) {
+	const vs = ds.variant2samples
+	if (!vs) return
+	vs.type_samples = 'samples'
+	vs.type_sunburst = 'sunburst'
+	vs.type_summary = 'summary'
+	if (!vs.variantkey) throw '.variantkey missing from variant2samples'
+	if (['ssm_id'].indexOf(vs.variantkey) == -1) throw 'invalid value of variantkey'
+
+	if (vs.twLst) {
+		if (!Array.isArray(vs.twLst)) throw 'variant2samples.twLst[] is not array'
+		if (vs.twLst.length == 0) throw 'variant2samples.twLst[] empty array'
+		if (!ds.cohort || !ds.cohort.termdb) throw 'ds.cohort.termdb missing when variant2samples.twLst is in use'
+		for (const tw of vs.twLst) {
+			if (!tw.id) throw 'tw.id missing from one of variant2samples.twLst[]'
+			const term = ds.cohort.termdb.q.termjsonByOneid(tw.id)
+			if (!term) throw 'term not found for one of variant2samples.twLst: ' + tw.id
+			tw.term = term
+			// tw.q{} must be set
+			if (!tw.q) throw 'tw.q{} missing for one of variant2samples.twLst: ' + tw.id
+			// validate tw.q by term type?
+		}
+	}
+
+	if (vs.sunburst_twLst) {
+		if (!Array.isArray(vs.sunburst_twLst)) throw '.sunburst_twLst[] not array from variant2samples'
+		if (vs.sunburst_twLst.length == 0) throw '.sunburst_twLst[] empty array from variant2samples'
+		if (!ds.cohort || !ds.cohort.termdb) throw 'ds.cohort.termdb missing when variant2samples.sunburst_twLst is in use'
+		for (const tw of vs.sunburst_twLst) {
+			if (!tw.id) throw 'tw.id missing from one of variant2samples.sunburst_twLst[]'
+			const term = ds.cohort.termdb.q.termjsonByOneid(tw.id)
+			if (!term) throw 'term not found for one of variant2samples.sunburst_twLst: ' + tw.id
+			tw.term = term
+			// tw.q{} must be set
+			if (!tw.q) throw 'tw.q{} missing for one of variant2samples.sunburst_twLst: ' + tw.id
+		}
+	}
+
+	if (vs.gdcapi) {
+		gdc.validate_variant2sample(vs.gdcapi)
+	} else {
+		// look for server-side vcf/bcf/tabix file
+		// file header should already been parsed and samples obtain if any
+		let hasSamples = false
+		if (ds.queries?.snvindel?.byrange?._tk?.samples) {
+			// this file has samples
+			hasSamples = true
+		}
+		if (ds.queries?.svfusion?.byrange?.samples) {
+			hasSamples = true
+		}
+		if (!hasSamples) throw 'cannot find a sample source from ds.queries{}'
+	}
+
+	vs.get = async q => {
+		return await variant2samples_getresult(q, ds)
+	}
+
+	if (vs.url) {
+		if (!vs.url.base) throw '.variant2samples.url.base missing'
+
+		if (vs.sample_id_key) {
+			// has a way to get sample name
+		} else if (vs.sample_id_getter) {
+			if (typeof vs.sample_id_getter != 'function') throw '.sample_id_getter is not function'
+			// has a way to get sample name
+		} else {
+			throw 'both .sample_id_key and .sample_id_getter are missing while .variant2samples.url is used'
+		}
+	}
+}
+
+/*
 from one or more variants, get list of samples harboring any of the variants
 
 always require a ds found at genome.datasets{}
@@ -41,12 +117,12 @@ q{}
 
 	either "ssm_id_lst", "isoform", or "rglst" must be supplied, and must be consistent with dataset setup
 
-.termidlst=str
+.twLst=str
 	Optional.
-	comma-joined term ids, to retrieve value for each sample,
+	list of tw objects, to retrieve value for each sample,
 	resulting sample obj will be like {sample_id:str, term1id:value1, term2id:value2, ...}
 	client always provides this, to reflect any user changes
-	if get=sunburst, termidlst is an ordered array of terms, for which to build layered sunburst
+	if get=sunburst, twLst is an ordered array of terms, for which to build layered sunburst
 	otherwise element order is not essential
 
 	should be replaced with barchart parameters with term1_id, term1_q etc
@@ -57,13 +133,17 @@ q{}
 .term1_id=str
 	quick fix
 	value is dictionary term id
-	indicating the set of termdb-barsql parmeters are used, instead of .termidlst
+	indicating the set of termdb-barsql parmeters are used, instead of .twLst
 	for now term1_q and term2_q are ignored
 
 .term2=(stringified json)
 	hardcoded to be a geneVariant term, carries isoform/rglst/etc for querying variant
 */
-export async function variant2samples_getresult(q, ds) {
+async function variant2samples_getresult(q, ds) {
+	if (q.twLst && typeof q.twLst == 'string') {
+		q.twLst = JSON.parse(decodeURIComponent(q.twLst))
+	}
+
 	ifUsingBarchartQuery(q, ds)
 
 	// each sample obj has keys from .terms[].id
@@ -139,7 +219,7 @@ q={
 the function converts it to:
 
 q={
-	termidlst:'Lineage', // copy of term1_id
+	twLst:[ {} ], // term1 wrapper
 	isoform:'NM_004327', // copied from term2{}
 	rglst:[{chr,start,stop}],
 	...
@@ -157,8 +237,16 @@ function ifUsingBarchartQuery(q, ds) {
 		throw 'using barchart query and q.get=samples (should only be "summary" for now)'
 	}
 
-	q.termidlst = q.term1_id
+	// reformat q.term1_id and q.term1_q to q.twLst[]
+	const term1tw = {
+		id: q.term1_id,
+		q: q.term1_q
+	}
+	term1tw.term = ds.cohort.termdb.q.termjsonByOneid(q.term1_id)
+	if (!term1tw.term) throw 'no term found for q.term1_id'
+	q.twLst = [term1tw]
 
+	// extract isoform and rglst from geneVariant term2
 	if (!q.term2) throw 'q.term2=string missing'
 	const t = JSON.parse(q.term2)
 	if (!t.isoform) throw 'q.term2.isoform missing'
@@ -180,17 +268,23 @@ async function queryMutatedSamples(q, ds) {
 	!!!tricky!!!
 
 	make temporary term id list that's only used in this function
-	and keep q.termidlst=str unchanged
-	as when using gdc api, observation.read_depth stuff are not in termidlst but are only added here to pull out that data
+	and keep q.twLst unchanged
+	as when using gdc api, observation.read_depth stuff are not in q.twLst but are only added here to pull out that data
 	*/
-	const tempTermidlst = q.termidlst ? q.termidlst.split(',') : []
+	const twLst = q.twLst ? q.twLst.slice() : []
+
 	if (q.get == ds.variant2samples.type_samples && ds.variant2samples.extra_termids_samples) {
-		// extra term ids to add for get=samples query
-		tempTermidlst.push(...ds.variant2samples.extra_termids_samples)
+		/*********** gdc-specific logic *************
+		adds extra fields required for api query
+		they are not actual dictionary terms, thus no q{}
+		*/
+		for (const termid of ds.variant2samples.extra_termids_samples) {
+			twLst.push({ id: termid })
+		}
 	}
 
 	if (ds.variant2samples.gdcapi) {
-		return await querySamples_gdcapi(q, tempTermidlst, ds)
+		return await gdc.querySamples_gdcapi(q, twLst, ds)
 	}
 
 	/* from server-side files
@@ -201,11 +295,11 @@ async function queryMutatedSamples(q, ds) {
 	*/
 
 	if (q.ssm_id_lst) {
-		return await queryServerFileBySsmid(q, tempTermidlst, ds)
+		return await queryServerFileBySsmid(q, twLst, ds)
 	}
 
 	if (q.rglst) {
-		return await queryServerFileByRglst(q, tempTermidlst, ds)
+		return await queryServerFileByRglst(q, twLst, ds)
 	}
 
 	throw 'unknown q{} option when querying server side files'
@@ -221,7 +315,7 @@ snvindel id has 4 fields, svfusion id has 6 fields, thus be able to differentiat
 
 TODO no need to collect ssm_id_lst for each sample e.g. doing sunburst
 */
-async function queryServerFileBySsmid(q, termidlst, ds) {
+async function queryServerFileBySsmid(q, twLst, ds) {
 	const samples = new Map() // must use sample id in map to dedup samples from multiple variants
 	// k: sample_id, v: {ssm_id_lst:[], ...}
 
@@ -279,25 +373,29 @@ async function queryServerFileBySsmid(q, termidlst, ds) {
 		throw 'unknown format of ssm id'
 	}
 
-	if (termidlst && termidlst.length) {
-		// append term values to each sample
-		for (const s of samples.values()) {
-			for (const tid of termidlst) {
-				const v = ds.cohort.termdb.q.getSample2value(tid, s.sample_id)
-				if (v[0]) {
-					s[tid] = v[0].value
-				}
+	mayAddSampleAnnotationByTwLst(samples, twLst, ds)
+
+	return [...samples.values()]
+}
+
+function mayAddSampleAnnotationByTwLst(samples, twLst, ds) {
+	if (!twLst) return
+	// for every term, append term values to each sample
+	// right now does not observe tw setting
+	for (const s of samples.values()) {
+		for (const tw of twLst) {
+			const v = ds.cohort.termdb.q.getSample2value(tw.id, s.sample_id)
+			if (v[0]) {
+				s[tw.id] = v[0].value
 			}
 		}
 	}
-
-	return [...samples.values()]
 }
 
 /*
 get list of samples that harbor any variant in rglst[]
 */
-async function queryServerFileByRglst(q, termidlst, ds) {
+async function queryServerFileByRglst(q, twLst, ds) {
 	const samples = new Map() // same as in previous function
 
 	if (ds.queries.snvindel) {
@@ -320,29 +418,17 @@ async function queryServerFileByRglst(q, termidlst, ds) {
 		}
 	}
 
-	if (termidlst && termidlst.length) {
-		// append term values to each sample
-		for (const s of samples.values()) {
-			for (const tid of termidlst) {
-				const v = ds.cohort.termdb.q.getSample2value(tid, s.sample_id)
-				if (v[0]) {
-					s[tid] = v[0].value
-				}
-			}
-		}
-	}
+	mayAddSampleAnnotationByTwLst(samples, twLst, ds)
 
 	return [...samples.values()]
 }
 
 async function make_sunburst(mutatedSamples, ds, q) {
-	const termidlst = q.termidlst.split(',')
-
 	// to use stratinput, convert each attr to {k} where k is term id
 	const nodes = stratinput(
 		mutatedSamples,
-		termidlst.map(i => {
-			return { k: i }
+		q.twLst.map(tw => {
+			return { k: tw.id }
 		})
 	)
 	for (const node of nodes) {
@@ -384,7 +470,7 @@ async function make_sunburst(mutatedSamples, ds, q) {
 	*/
 
 	if (ds?.cohort?.termdb?.termid2totalsize2) {
-		const combinations = await get_crosstabCombinations(termidlst, ds, q, nodes)
+		const combinations = await get_crosstabCombinations(q.twLst, ds, q, nodes)
 		await addCrosstabCount_tonodes(nodes, combinations, ds)
 		// .cohortsize=int is added to applicable elements of nodes[]
 	}
@@ -396,6 +482,8 @@ async function make_sunburst(mutatedSamples, ds, q) {
 given a list of cases, summarize over a set of terms
 */
 async function make_summary(mutatedSamples, ds, q) {
+	if (!q.twLst) throw 'q.twLst[] missing for make_summary()'
+
 	const entries = []
 	/* one element for a term
 	{
@@ -405,26 +493,23 @@ async function make_summary(mutatedSamples, ds, q) {
 		density_data=[]
 	}
 	*/
-	const termidlst = q.termidlst.split(',')
-	for (const termid of termidlst) {
-		const term = ds.cohort.termdb.q.termjsonByOneid(termid)
-		if (!term) continue
 
-		if (term.type == 'categorical') {
-			const cat2count = make_summary_categorical(mutatedSamples, termid)
+	for (const tw of q.twLst) {
+		if (!tw.term) continue
+		if (tw.term.type == 'categorical') {
+			const cat2count = make_summary_categorical(mutatedSamples, tw.id)
 			// k: category string, v: sample count
 
 			entries.push({
-				termid: term.id,
-				termname: term.name,
+				termid: tw.id,
+				termname: tw.term.name,
 				numbycategory: [...cat2count].sort((i, j) => j[1] - i[1])
 			})
-		} else if (term.type == 'integer' || term.type == 'float') {
-			// TODO do binning instead
-			const density_data = await get_densityplot(term, mutatedSamples)
+		} else if (tw.term.type == 'integer' || tw.term.type == 'float') {
+			const density_data = await get_densityplot(tw.term, mutatedSamples)
 			entries.push({
-				termid: term.id,
-				termname: term.name,
+				termid: tw.id,
+				termname: tw.term.name,
 				density_data
 			})
 		} else {
@@ -432,7 +517,7 @@ async function make_summary(mutatedSamples, ds, q) {
 		}
 	}
 	if (ds.cohort.termdb.termid2totalsize2) {
-		const tv2counts = await ds.cohort.termdb.termid2totalsize2.get(termidlst, q)
+		const tv2counts = await ds.cohort.termdb.termid2totalsize2.get(q.twLst, q)
 		for (const { termid, numbycategory } of entries) {
 			const categories = tv2counts.get(termid)
 			// array ele: [category, total]
@@ -529,7 +614,7 @@ steps:
 todo: define input and output
 
 <input>
-termidlst[]
+twLst[]
 	ordered array of term ids
 	must always get category list from first term
 	as the list cannot be predetermined due to api and token permissions
@@ -545,9 +630,9 @@ combinations[]
 	level 2: {count, id0, v0, id1, v1}
 	level 3: {count, id0, v0, id1, v1, id2, v2}
 */
-export async function get_crosstabCombinations(termidlst, ds, q, nodes) {
-	if (termidlst.length == 0) throw 'zero terms for crosstab'
-	if (termidlst.length > 3) throw 'crosstab will not work with more than 3 levels'
+export async function get_crosstabCombinations(twLst, ds, q, nodes) {
+	if (twLst.length == 0) throw 'zero terms for crosstab'
+	if (twLst.length > 3) throw 'crosstab will not work with more than 3 levels'
 
 	const combinations = []
 
@@ -557,7 +642,7 @@ export async function get_crosstabCombinations(termidlst, ds, q, nodes) {
 	// v: set of category labels
 	// if term id is not found, it will use all categories retrieved from api queries
 	const id2categories = new Map()
-	for (const i of termidlst) id2categories.set(i, new Set())
+	for (const tw of twLst) id2categories.set(tw.id, new Set())
 
 	const useall = nodes ? false : true // to use all categories returned from api query
 
@@ -573,14 +658,14 @@ export async function get_crosstabCombinations(termidlst, ds, q, nodes) {
 				}
 				id2categories.get(n.id0).add(ds.cohort.termdb.useLower ? n.v0.toLowerCase() : n.v0)
 			}
-			if (n.id1 && termidlst[1]) {
+			if (n.id1 && twLst[1]) {
 				if (!n.v1) {
 					// see above comments
 					continue
 				}
 				id2categories.get(n.id1).add(ds.cohort.termdb.useLower ? n.v1.toLowerCase() : n.v1)
 			}
-			if (n.id2 && termidlst[2]) {
+			if (n.id2 && twLst[2]) {
 				if (!n.v2) {
 					continue
 				}
@@ -590,9 +675,9 @@ export async function get_crosstabCombinations(termidlst, ds, q, nodes) {
 	}
 
 	// get term[0] category total, not dependent on other terms
-	const id0 = termidlst[0]
+	const id0 = twLst[0].id
 	{
-		const tv2counts = await ds.cohort.termdb.termid2totalsize2.get([id0])
+		const tv2counts = await ds.cohort.termdb.termid2totalsize2.get([twLst[0]])
 		for (const [v, count] of tv2counts.get(id0)) {
 			const v0 = ds.cohort.termdb.useLower ? v.toLowerCase() : v
 			if (useall) {
@@ -607,12 +692,12 @@ export async function get_crosstabCombinations(termidlst, ds, q, nodes) {
 	}
 
 	// get term[1] category total, conditional on id0
-	const id1 = termidlst[1]
+	const id1 = twLst?.[1]?.id
 	if (id1) {
 		const promises = []
 		// for every id0 category, get id1 category/count conditional on it
 		for (const v0 of id2categories.get(id0)) {
-			promises.push(ds.cohort.termdb.termid2totalsize2.get([id1], { tid2value: { [id0]: v0 } }, v0))
+			promises.push(ds.cohort.termdb.termid2totalsize2.get([twLst[1]], { tid2value: { [id0]: v0 } }, v0))
 		}
 		const lst = await Promise.all(promises)
 		for (const [tv2counts, v0] of lst) {
@@ -631,7 +716,7 @@ export async function get_crosstabCombinations(termidlst, ds, q, nodes) {
 	}
 
 	// get term[2] category total, conditional on term1+term2 combinations
-	const id2 = termidlst[2]
+	const id2 = twLst?.[2]?.id
 	if (id2) {
 		// has query method for this term, query in combination with id0 & id1 categories
 		const promises = []
@@ -639,7 +724,7 @@ export async function get_crosstabCombinations(termidlst, ds, q, nodes) {
 			for (const v1 of id2categories.get(id1)) {
 				const q2 = JSON.parse(JSON.stringify(q))
 				promises.push(
-					ds.cohort.termdb.termid2totalsize2.get([id2], { tid2value: { [id0]: v0, [id1]: v1 } }, { v0, v1 })
+					ds.cohort.termdb.termid2totalsize2.get([twLst[2]], { tid2value: { [id0]: v0, [id1]: v1 } }, { v0, v1 })
 				)
 			}
 		}

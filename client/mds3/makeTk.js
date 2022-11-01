@@ -371,7 +371,7 @@ function mayaddGetter_variant2samples(tk, block) {
 	if (!tk.mds.variant2samples) return
 
 	if (tk.custom_variants) {
-		// TODO auto generate variant2samples.termidlst[] based on sample data
+		// TODO auto generate variant2samples.twLst[] based on sample data
 
 		/* getter implemented for custom data
 		currently only provides list of samples
@@ -474,12 +474,16 @@ function mayaddGetter_variant2samples(tk, block) {
 		// supply list of terms based on querytype
 		if (arg.querytype == tk.mds.variant2samples.type_sunburst) {
 			// TODO may change to vocabApi.getNestedChartSeriesData
-			if (tk.mds.variant2samples.sunburst_ids) par.push('termidlst=' + tk.mds.variant2samples.sunburst_ids)
+			if (tk.mds.variant2samples.sunburst_twLst) {
+				par.push('twLst=' + encodeURIComponent(JSON.stringify(tk.mds.variant2samples.sunburst_twLst)))
+			}
 		} else if (arg.querytype == tk.mds.variant2samples.type_samples) {
-			if (tk.mds.variant2samples.termidlst) par.push('termidlst=' + tk.mds.variant2samples.termidlst)
+			if (tk.mds.variant2samples.twLst)
+				par.push('twLst=' + encodeURIComponent(JSON.stringify(tk.mds.variant2samples.twLst)))
 		} else if (arg.querytype == tk.mds.variant2samples.type_summary) {
 			// TODO querytype=summary should be replaced by client barchar issuing its own query
-			if (tk.mds.variant2samples.termidlst) par.push('termidlst=' + tk.mds.variant2samples.termidlst)
+			if (tk.mds.variant2samples.twLst)
+				par.push('twLst=' + encodeURIComponent(JSON.stringify(tk.mds.variant2samples.twLst)))
 		} else {
 			throw 'unknown querytype'
 		}
@@ -494,7 +498,7 @@ function mayaddGetter_variant2samples(tk, block) {
 	this function is called for 2 uses in #cases menu
 	arg{}
 	.isSummary=true
-		true: return summaries for v2s.termidlst
+		true: return summaries for v2s.twLst
 		false: return list of samples
 	.tid2value={}
 		optional, to filter samples

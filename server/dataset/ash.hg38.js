@@ -17,16 +17,18 @@ module.exports = {
 	variant2samples: {
 		variantkey: 'ssm_id', // required, tells client to return ssm_id for identifying variants
 
-		//////////////////////////////
-		// termidlst and sunburst_ids are sent to client as default lists for different purposes
-		// subject to user-customization there, and sent back via request arg for computing
-		// not to be used on server-side!
-
 		// list of term ids as sample details
-		termidlst: ['Lineage', 'Primary_subtype', 'Secondary_subtype', 'Sex', 'Age', 'race'],
+		twLst: [
+			{ id: 'Lineage', q: {} },
+			{ id: 'Primary_subtype', q: {} },
+			{ id: 'Secondary_subtype', q: {} },
+			{ id: 'Sex', q: {} },
+			{ id: 'Age', q: {} },
+			{ id: 'race', q: {} }
+		],
 
 		// small list of terms for sunburst rings
-		sunburst_ids: ['Lineage', 'Primary_subtype'],
+		sunburst_ids: [{ id: 'Lineage', q: {} }, { id: 'Primary_subtype', q: {} }],
 
 		// quick fix: flag to indicate availability of these fields, so as to create new columns in sample table
 		sampleHasSsmReadDepth: true, // corresponds to .ssm_read_depth{} of a sample

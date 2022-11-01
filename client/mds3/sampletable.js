@@ -22,7 +22,7 @@ samples2columnsRows
 .mlst[]
 	used for v2s.get() query
 .tk
-	.mds.variant2samples.termidlst
+	.mds.variant2samples.twLst[]
 .block
 .div
 .tid2value={}
@@ -97,18 +97,16 @@ async function make_singleSampleTable(sampledata, arg) {
 		cell2.text(sampledata.caseIsOpenAccess ? 'Open' : 'Controlled')
 	}
 
-	if (arg.tk.mds.variant2samples.termidlst) {
-		for (const termid of arg.tk.mds.variant2samples.termidlst) {
-			const term = await arg.tk.mds.termdb.vocabApi.getterm(termid)
-			if (!term) throw 'unknown term id: ' + termid
+	if (arg.tk.mds.variant2samples.twLst) {
+		for (const tw of arg.tk.mds.variant2samples.twLst) {
 			const [cell1, cell2] = get_list_cells(grid_div)
-			cell1.text(term.name).style('text-overflow', 'ellipsis')
+			cell1.text(tw.term.name).style('text-overflow', 'ellipsis')
 			cell2.style('text-overflow', 'ellipsis')
-			if (termid in sampledata) {
-				if (Array.isArray(sampledata[termid])) {
-					cell2.html(sampledata[termid].join('<br>'))
+			if (tw.id in sampledata) {
+				if (Array.isArray(sampledata[tw.id])) {
+					cell2.html(sampledata[tw.id].join('<br>'))
 				} else {
-					cell2.text(sampledata[termid])
+					cell2.text(sampledata[tw.id])
 				}
 			}
 		}
@@ -224,14 +222,9 @@ async function samples2columnsRows(samples, tk) {
 		columns.push({ label: 'Access' })
 	}
 
-	if (tk.mds.variant2samples.termidlst) {
-		for (const id of tk.mds.variant2samples.termidlst) {
-			const t = await tk.mds.termdb.vocabApi.getterm(id)
-			if (t) {
-				columns.push({ label: t.name })
-			} else {
-				columns.push({ isinvalid: true })
-			}
+	if (tk.mds.variant2samples.twLst) {
+		for (const tw of tk.mds.variant2samples.twLst) {
+			columns.push({ label: tw.term.name })
 		}
 	}
 
@@ -259,9 +252,9 @@ async function samples2columnsRows(samples, tk) {
 			row.push({ value: sample.caseIsOpenAccess ? 'Open' : 'Controlled' })
 		}
 
-		if (tk.mds.variant2samples.termidlst) {
-			for (const id of tk.mds.variant2samples.termidlst) {
-				row.push({ value: sample[id] })
+		if (tk.mds.variant2samples.twLst) {
+			for (const tw of tk.mds.variant2samples.twLst) {
+				row.push({ value: sample[tw.id] })
 			}
 		}
 

@@ -583,19 +583,19 @@ module.exports = {
 		// not to be used on server-side!
 
 		// list of term ids as sample details
-		termidlst: [
-			'case.disease_type',
-			'case.primary_site',
-			'case.project.project_id',
-			'case.demographic.gender',
+		twLst: [
+			{ id: 'case.disease_type', q: {} },
+			{ id: 'case.primary_site', q: {} },
+			{ id: 'case.project.project_id', q: {} },
+			{ id: 'case.demographic.gender', q: {} },
 			//'case.diagnoses.age_at_diagnosis',
 			//'case.diagnoses.treatments.therapeutic_agents',
-			'case.demographic.race',
-			'case.demographic.ethnicity'
+			{ id: 'case.demographic.race', q: {} },
+			{ id: 'case.demographic.ethnicity', q: {} }
 		],
 
 		// small list of terms for sunburst rings
-		sunburst_ids: ['case.disease_type', 'case.primary_site'],
+		sunburst_twLst: [{ id: 'case.disease_type', q: {} }, { id: 'case.primary_site', q: {} }],
 
 		//////////////////////////////
 		// optional extra terms to append to client-provided term ids when get='samples'
