@@ -139,6 +139,8 @@ class Scatter {
 		this.setTools()
 		this.lassoReset()
 		this.updateGroupsButton()
+		this.dom.tip.hide()
+		this.dom.subtip.hide()
 	}
 
 	// creates an opts object for the vocabApi.someMethod(),
@@ -321,10 +323,7 @@ function setRenderers(self) {
 		const chartDiv = self.dom.holder
 		if (chartDiv.selectAll('*').size() > 0) updateCharts()
 		else addCharts()
-		self.dom.holder
-			.on('mouseover', self.mouseover)
-			.on('mouseout', self.mouseout)
-			.on('click', self.click)
+		self.dom.holder.on('mouseover', self.mouseover).on('mouseout', self.mouseout)
 
 		function addCharts() {
 			const s = self.settings
@@ -725,6 +724,45 @@ function setRenderers(self) {
 				})
 			})
 		}
+		const summarizeDiv = menuDiv
+			.append('div')
+			.attr('class', 'sja_menuoption sja_sharp_border')
+			.html('Summarize')
+			.style('position', 'relative')
+		summarizeDiv
+			.insert('div')
+			.html('›')
+			.style('float', 'right')
+		const termsDiv = summarizeDiv
+			.insert('div')
+			.style('display', 'none')
+			.style('position', 'absolute')
+			.attr('class', 'sjpp_submenu')
+		summarizeDiv.on('click', async e => {
+			const display = termsDiv.style('display')
+			if (display === 'block') {
+				termsDiv.style('display', 'none')
+				termsDiv.selectAll('*').remove()
+				return
+			}
+			//self.dom.subtip.clear()
+			const termdb = await import('../termdb/app')
+			termdb.appInit({
+				holder: termsDiv.style('display', 'block'),
+				vocabApi: self.app.vocabApi,
+				state: {
+					nav: {},
+					tree: { usecase: { detail: 'term' } }
+				},
+				tree: {
+					click_term: term => {
+						openSummaryPlots(self, group, term)
+						self.dom.tip.hide()
+						termsDiv.style('display', 'none')
+					}
+				}
+			})
+		})
 		row = menuDiv
 			.append('div')
 			.attr('class', 'sja_menuoption sja_sharp_border')
@@ -791,6 +829,47 @@ function setRenderers(self) {
 				})
 			})
 		}
+		const summarizeDiv = menuDiv
+			.append('div')
+			.attr('class', 'sja_menuoption sja_sharp_border')
+			.html('Summarize')
+			.style('position', 'relative')
+		summarizeDiv
+			.insert('div')
+			.html('›')
+			.style('float', 'right')
+		const termsDiv = summarizeDiv
+			.insert('div')
+			.style('display', 'none')
+			.style('position', 'absolute')
+			.attr('class', 'sjpp_submenu')
+		summarizeDiv.on('click', async e => {
+			const display = termsDiv.style('display')
+			if (display === 'block') {
+				termsDiv.style('display', 'none')
+				termsDiv.selectAll('*').remove()
+				return
+			}
+			//self.dom.subtip.clear()
+			const termdb = await import('../termdb/app')
+			termdb.appInit({
+				holder: termsDiv.style('display', 'block'),
+				vocabApi: self.app.vocabApi,
+				state: {
+					nav: {},
+					tree: { usecase: { detail: 'term' } }
+				},
+				tree: {
+					click_term: term => {
+						console.log(term)
+						if (!term) return
+						openSummaryPlot(self, group, term)
+						self.dom.tip.hide()
+						termsDiv.style('display', 'none')
+					}
+				}
+			})
+		})
 		const deleteDiv = menuDiv
 			.append('div')
 			.attr('class', 'sja_menuoption sja_sharp_border')
@@ -879,11 +958,6 @@ function setInteractivity(self) {
 	self.mouseout = function() {
 		if (!self.lassoOn) self.dom.tip.hide()
 	}
-
-	self.click = function() {
-		self.dom.tip.hide()
-		self.dom.subtip.hide()
-	}
 }
 
 export async function getPlotConfig(opts, app) {
@@ -955,13 +1029,13 @@ function openSurvivalPlot(self, group, term) {
 					{
 						name: 'Group 1',
 						key: 'sample',
-						values: values
+						values
 					},
 					{
 						name: 'Others',
 						key: 'sample',
 						in: false,
-						values: values
+						values
 					}
 				]
 			}
@@ -974,7 +1048,7 @@ function openSurvivalPlot(self, group, term) {
 	}
 	self.app.dispatch({
 		type: 'plot_create',
-		config: config
+		config
 	})
 }
 
@@ -1032,4 +1106,77 @@ function downloadSVG(svg) {
 	link.href = URL.createObjectURL(svg_blob)
 	link.click()
 	link.remove()
+}
+
+function openSummaryPlot(self, group, term) {
+	console.log(term)
+	const values = []
+	let data
+	for (const item of group.items) {
+		data = item.__data__
+		values.push(data.sample)
+	}
+	let config = {
+		chartType: 'summary',
+		childType: 'barchart',
+		term,
+		term2: {
+			term: { name: self.config.name + ' groups', type: 'samplelst' },
+			q: {
+				mode: 'custom-groupsetting',
+				groups: [
+					{
+						name: 'Group 1',
+						key: 'sample',
+						values
+					},
+					{
+						name: 'Others',
+						key: 'sample',
+						in: false,
+						values
+					}
+				]
+			}
+		}
+	}
+	self.app.dispatch({
+		type: 'plot_create',
+		config
+	})
+}
+
+function openSummaryPlots(self, term) {
+	let groups = []
+	let values, tgroup, data
+
+	for (const [i, group] of self.config.groups.entries()) {
+		values = []
+		for (const item of group.items) {
+			data = item.__data__
+			values.push(data.sample)
+		}
+		;(tgroup = {
+			name: 'Group ' + (i + 1),
+			key: 'sample',
+			values: values
+		}),
+			groups.push(tgroup)
+	}
+	let config = {
+		chartType: 'barchart',
+		term,
+		term2: {
+			term: { name: self.config.name + ' groups', type: 'samplelst' },
+			q: {
+				mode: 'custom-groupsetting',
+				groups: groups
+			}
+		},
+		settings: {}
+	}
+	self.app.dispatch({
+		type: 'plot_create',
+		config: config
+	})
 }
