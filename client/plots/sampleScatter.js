@@ -708,7 +708,7 @@ function setRenderers(self) {
 					},
 					tree: {
 						click_term: term => {
-							openSurvivalPlots(self, term)
+							openSurvivalPlot(self, term, getGroupsOverlay(self.config.groups))
 							self.dom.tip.hide()
 							self.dom.subtip.hide()
 						}
@@ -738,7 +738,7 @@ function setRenderers(self) {
 				},
 				tree: {
 					click_term: term => {
-						openSummaryPlots(self, term)
+						openSummaryPlot(self, term, getGroupsOverlay(self.config.groups))
 						self.dom.tip.hide()
 						self.dom.subtip.hide()
 					}
@@ -794,7 +794,7 @@ function setRenderers(self) {
 					},
 					tree: {
 						click_term: term => {
-							openSurvivalPlot(self, group, term)
+							openSurvivalPlot(self, term, getGroupvsOthersOverlay(group))
 							self.dom.tip.hide()
 							self.dom.subtip.hide()
 						}
@@ -826,7 +826,7 @@ function setRenderers(self) {
 					click_term: term => {
 						console.log(term)
 						if (!term) return
-						openSummaryPlot(self, group, term)
+						openSummaryPlot(self, term, getGroupvsOthersOverlay(group))
 						self.dom.tip.hide()
 						self.dom.subtip.hide()
 					}
@@ -974,64 +974,7 @@ function getShapeName(shapes, data) {
 	return null
 }
 
-function openSurvivalPlot(self, group, term) {
-	const values = []
-	let data
-	for (const item of group.items) {
-		data = item.__data__
-		values.push(data.sample)
-	}
-	let config = {
-		chartType: 'survival',
-		term,
-		term2: {
-			term: { name: self.config.name + ' groups', type: 'samplelst' },
-			q: {
-				mode: 'custom-groupsetting',
-				groups: [
-					{
-						name: 'Group 1',
-						key: 'sample',
-						values
-					},
-					{
-						name: 'Others',
-						key: 'sample',
-						in: false,
-						values
-					}
-				]
-			}
-		},
-		settings: {
-			survival: {
-				xTickValues: [0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30]
-			}
-		}
-	}
-	self.app.dispatch({
-		type: 'plot_create',
-		config
-	})
-}
-
-function openSurvivalPlots(self, term) {
-	let groups = []
-	let values, tgroup, data
-
-	for (const [i, group] of self.config.groups.entries()) {
-		values = []
-		for (const item of group.items) {
-			data = item.__data__
-			values.push(data.sample)
-		}
-		;(tgroup = {
-			name: 'Group ' + (i + 1),
-			key: 'sample',
-			values: values
-		}),
-			groups.push(tgroup)
-	}
+function openSurvivalPlot(self, term, groups) {
 	let config = {
 		chartType: 'survival',
 		term,
@@ -1071,61 +1014,8 @@ function downloadSVG(svg) {
 	link.remove()
 }
 
-function openSummaryPlot(self, group, term) {
-	console.log(term)
-	const values = []
-	let data
-	for (const item of group.items) {
-		data = item.__data__
-		values.push(data.sample)
-	}
-	let config = {
-		chartType: 'summary',
-		childType: 'barchart',
-		term,
-		term2: {
-			term: { name: self.config.name + ' groups', type: 'samplelst' },
-			q: {
-				mode: 'custom-groupsetting',
-				groups: [
-					{
-						name: 'Group 1',
-						key: 'sample',
-						values
-					},
-					{
-						name: 'Others',
-						key: 'sample',
-						in: false,
-						values
-					}
-				]
-			}
-		}
-	}
-	self.app.dispatch({
-		type: 'plot_create',
-		config
-	})
-}
-
-function openSummaryPlots(self, term) {
-	let groups = []
-	let values, tgroup, data
-
-	for (const [i, group] of self.config.groups.entries()) {
-		values = []
-		for (const item of group.items) {
-			data = item.__data__
-			values.push(data.sample)
-		}
-		;(tgroup = {
-			name: 'Group ' + (i + 1),
-			key: 'sample',
-			values: values
-		}),
-			groups.push(tgroup)
-	}
+function openSummaryPlot(self, term, groups) {
+	console.log(groups)
 	let config = {
 		chartType: 'summary',
 		childType: 'barchart',
@@ -1136,11 +1026,51 @@ function openSummaryPlots(self, term) {
 				mode: 'custom-groupsetting',
 				groups: groups
 			}
-		},
-		settings: {}
+		}
 	}
 	self.app.dispatch({
 		type: 'plot_create',
-		config: config
+		config
 	})
+}
+
+function getGroupsOverlay(groups) {
+	const overlayGroups = []
+	let values, tgroup, data
+	for (const [i, group] of groups.entries()) {
+		values = []
+		for (const item of group.items) {
+			data = item.__data__
+			values.push(data.sample)
+		}
+		;(tgroup = {
+			name: 'Group ' + (i + 1),
+			key: 'sample',
+			values: values
+		}),
+			overlayGroups.push(tgroup)
+	}
+	return overlayGroups
+}
+
+function getGroupvsOthersOverlay(group) {
+	const values = []
+	let data
+	for (const item of group.items) {
+		data = item.__data__
+		values.push(data.sample)
+	}
+	return [
+		{
+			name: 'Group 1',
+			key: 'sample',
+			values
+		},
+		{
+			name: 'Others',
+			key: 'sample',
+			in: false,
+			values
+		}
+	]
 }
