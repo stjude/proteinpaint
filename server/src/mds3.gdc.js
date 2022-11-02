@@ -50,6 +50,7 @@ export async function testGDCapi() {
 	await testRestApi(apihost + '/ssm_occurrences')
 	await testRestApi(apihost + '/cases')
 	await testRestApi(apihost + '/files')
+	// /data/ and /slicing/view/ are not tested as they require file uuid which is unstable across data releases
 	await testGraphqlApi(apihostGraphql)
 }
 
