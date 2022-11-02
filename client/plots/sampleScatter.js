@@ -83,7 +83,7 @@ class Scatter {
 			controls,
 			legendDiv,
 			tip: new Menu({ padding: '5px' }),
-			subtip: new Menu({ padding: '5px' })
+			subtip: new Menu({ padding: '5px', offsetX: 170, offsetY: -34 })
 		}
 
 		this.settings = {}
@@ -139,6 +139,8 @@ class Scatter {
 		this.setTools()
 		this.lassoReset()
 		this.updateGroupsButton()
+		this.dom.tip.hide()
+		this.dom.subtip.hide()
 	}
 
 	// creates an opts object for the vocabApi.someMethod(),
@@ -321,10 +323,7 @@ function setRenderers(self) {
 		const chartDiv = self.dom.holder
 		if (chartDiv.selectAll('*').size() > 0) updateCharts()
 		else addCharts()
-		self.dom.holder
-			.on('mouseover', self.mouseover)
-			.on('mouseout', self.mouseout)
-			.on('click', self.click)
+		self.dom.holder.on('mouseover', self.mouseover).on('mouseout', self.mouseout)
 
 		function addCharts() {
 			const s = self.settings
@@ -684,47 +683,45 @@ function setRenderers(self) {
 			row.on('click', e => {
 				self.dom.tip.hide()
 				self.dom.tip.clear()
+				self.dom.subtip.hide()
 				showGroupMenu(event, group)
 			})
 		}
 		if (self.state.allowedTermTypes.includes('survival')) {
-			row = menuDiv
+			const survivalDiv = menuDiv
 				.append('div')
 				.attr('class', 'sja_menuoption sja_sharp_border')
 				.html('Compare survival&nbsp;&nbsp;›')
-				.style('position', 'relative')
 
-			const treeDiv = row
-				.insert('div')
-				.style('display', 'none')
-				.style('position', 'absolute')
-				.attr('class', 'sjpp_submenu')
-			row.on('click', async e => {
-				const display = treeDiv.style('display')
-				if (display === 'block') {
-					treeDiv.style('display', 'none')
-					treeDiv.selectAll('*').remove()
-					return
+			survivalDiv.on('click', async e => {
+				const state = {
+					nav: { header_mode: 'hide_search' },
+					tree: { usecase: { target: 'survival', detail: 'term' } }
 				}
-				const termdb = await import('../termdb/app')
-				termdb.appInit({
-					holder: treeDiv.style('display', 'block'),
-					vocabApi: self.app.vocabApi,
-					state: {
-						nav: {
-							header_mode: 'hide_search'
-						},
-						tree: { usecase: { target: 'survival', detail: 'term' } }
+				showTermsTree(
+					self,
+					survivalDiv,
+					term => {
+						openSurvivalPlot(self, term, getGroupsOverlay(self.config.groups))
 					},
-					tree: {
-						click_term: term => {
-							openSurvivalPlots(self, term)
-							self.dom.tip.hide()
-						}
-					}
-				})
+					state
+				)
 			})
 		}
+		const summarizeDiv = menuDiv
+			.append('div')
+			.attr('class', 'sja_menuoption sja_sharp_border')
+			.html('Summarize')
+		summarizeDiv
+			.insert('div')
+			.html('›')
+			.style('float', 'right')
+
+		summarizeDiv.on('click', async e => {
+			showTermsTree(self, summarizeDiv, term => {
+				openSummaryPlot(self, term, getGroupsOverlay(self.config.groups))
+			})
+		})
 		row = menuDiv
 			.append('div')
 			.attr('class', 'sja_menuoption sja_sharp_border')
@@ -756,41 +753,36 @@ function setRenderers(self) {
 			const survivalDiv = menuDiv
 				.append('div')
 				.attr('class', 'sja_menuoption sja_sharp_border')
-				.html('Survival analysis&nbsp;&nbsp;&nbsp;›')
 				.style('position', 'relative')
-			const treeDiv = survivalDiv
-				.insert('div')
-				.style('display', 'none')
-				.style('position', 'absolute')
-				.attr('class', 'sjpp_submenu')
+				.html('Survival analysis&nbsp;&nbsp;&nbsp;›')
+
 			survivalDiv.on('click', async e => {
-				const display = treeDiv.style('display')
-				if (display === 'block') {
-					treeDiv.style('display', 'none')
-					treeDiv.selectAll('*').remove()
-					return
+				const state = {
+					nav: { header_mode: 'hide_search' },
+					tree: { usecase: { target: 'survival', detail: 'term' } }
 				}
-				//self.dom.subtip.clear()
-				const termdb = await import('../termdb/app')
-				termdb.appInit({
-					holder: treeDiv.style('display', 'block'),
-					vocabApi: self.app.vocabApi,
-					state: {
-						nav: {
-							header_mode: 'hide_search'
-						},
-						tree: { usecase: { target: 'survival', detail: 'term' } }
+				showTermsTree(
+					self,
+					survivalDiv,
+					term => {
+						openSurvivalPlot(self, term, getGroupvsOthersOverlay(group))
 					},
-					tree: {
-						click_term: term => {
-							openSurvivalPlot(self, group, term)
-							self.dom.tip.hide()
-							treeDiv.style('display', 'none')
-						}
-					}
-				})
+					state
+				)
 			})
 		}
+		const summarizeDiv = menuDiv
+			.append('div')
+			.attr('class', 'sja_menuoption sja_sharp_border')
+			.html('Summarize')
+		summarizeDiv
+			.insert('div')
+			.html('›')
+			.style('float', 'right')
+
+		summarizeDiv.on('click', async e => {
+			showTermsTree(self, summarizeDiv, term => openSummaryPlot(self, term, getGroupvsOthersOverlay(group)))
+		})
 		const deleteDiv = menuDiv
 			.append('div')
 			.attr('class', 'sja_menuoption sja_sharp_border')
@@ -879,11 +871,6 @@ function setInteractivity(self) {
 	self.mouseout = function() {
 		if (!self.lassoOn) self.dom.tip.hide()
 	}
-
-	self.click = function() {
-		self.dom.tip.hide()
-		self.dom.subtip.hide()
-	}
 }
 
 export async function getPlotConfig(opts, app) {
@@ -937,64 +924,7 @@ function getShapeName(shapes, data) {
 	return null
 }
 
-function openSurvivalPlot(self, group, term) {
-	const values = []
-	let data
-	for (const item of group.items) {
-		data = item.__data__
-		values.push(data.sample)
-	}
-	let config = {
-		chartType: 'survival',
-		term,
-		term2: {
-			term: { name: self.config.name + ' groups', type: 'samplelst' },
-			q: {
-				mode: 'custom-groupsetting',
-				groups: [
-					{
-						name: 'Group 1',
-						key: 'sample',
-						values: values
-					},
-					{
-						name: 'Others',
-						key: 'sample',
-						in: false,
-						values: values
-					}
-				]
-			}
-		},
-		settings: {
-			survival: {
-				xTickValues: [0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30]
-			}
-		}
-	}
-	self.app.dispatch({
-		type: 'plot_create',
-		config: config
-	})
-}
-
-function openSurvivalPlots(self, term) {
-	let groups = []
-	let values, tgroup, data
-
-	for (const [i, group] of self.config.groups.entries()) {
-		values = []
-		for (const item of group.items) {
-			data = item.__data__
-			values.push(data.sample)
-		}
-		;(tgroup = {
-			name: 'Group ' + (i + 1),
-			key: 'sample',
-			values: values
-		}),
-			groups.push(tgroup)
-	}
+function openSurvivalPlot(self, term, groups) {
 	let config = {
 		chartType: 'survival',
 		term,
@@ -1032,4 +962,83 @@ function downloadSVG(svg) {
 	link.href = URL.createObjectURL(svg_blob)
 	link.click()
 	link.remove()
+}
+
+function openSummaryPlot(self, term, groups) {
+	console.log(groups)
+	let config = {
+		chartType: 'summary',
+		childType: 'barchart',
+		term,
+		term2: {
+			term: { name: self.config.name + ' groups', type: 'samplelst' },
+			q: {
+				mode: 'custom-groupsetting',
+				groups: groups
+			}
+		}
+	}
+	self.app.dispatch({
+		type: 'plot_create',
+		config
+	})
+}
+
+function getGroupsOverlay(groups) {
+	const overlayGroups = []
+	let values, tgroup, data
+	for (const [i, group] of groups.entries()) {
+		values = []
+		for (const item of group.items) {
+			data = item.__data__
+			values.push(data.sample)
+		}
+		;(tgroup = {
+			name: 'Group ' + (i + 1),
+			key: 'sample',
+			values: values
+		}),
+			overlayGroups.push(tgroup)
+	}
+	return overlayGroups
+}
+
+function getGroupvsOthersOverlay(group) {
+	const values = []
+	let data
+	for (const item of group.items) {
+		data = item.__data__
+		values.push(data.sample)
+	}
+	return [
+		{
+			name: 'Group 1',
+			key: 'sample',
+			values
+		},
+		{
+			name: 'Others',
+			key: 'sample',
+			in: false,
+			values
+		}
+	]
+}
+
+async function showTermsTree(self, div, callback, state = { tree: { usecase: { detail: 'term' } } }) {
+	self.dom.subtip.clear()
+	self.dom.subtip.showunderoffset(div.node())
+	const termdb = await import('../termdb/app')
+	termdb.appInit({
+		holder: self.dom.subtip.d,
+		vocabApi: self.app.vocabApi,
+		state,
+		tree: {
+			click_term: term => {
+				callback(term)
+				self.dom.tip.hide()
+				self.dom.subtip.hide()
+			}
+		}
+	})
 }

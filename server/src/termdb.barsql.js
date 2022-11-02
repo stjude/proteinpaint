@@ -22,6 +22,8 @@ export function handle_request_closure(genomes) {
 			const termnum_id = termnum + '_id'
 			if (typeof q[termnum_id] == 'string') {
 				q[termnum_id] = decodeURIComponent(q[termnum_id])
+			} else if (typeof q[termnum] == 'string') {
+				q[termnum] = JSON.parse(decodeURIComponent(q[termnum]))
 			}
 			const termnum_q = termnum + '_q'
 			if (typeof q[termnum_q] == 'string') {
