@@ -738,7 +738,7 @@ function setRenderers(self) {
 				},
 				tree: {
 					click_term: term => {
-						openSummaryPlots(self, group, term)
+						openSummaryPlots(self, term)
 						self.dom.tip.hide()
 						self.dom.subtip.hide()
 					}

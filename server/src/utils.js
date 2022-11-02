@@ -193,7 +193,7 @@ also works for bcf
 */
 exports.validate_tabixfile = async function(file) {
 	if (!file.endsWith('.gz')) throw 'tabix file not ending with .gz'
-	if (await file_not_exist(file)) throw '.gz file not exist'
+	if (await file_not_exist(file)) throw file + ' file not exist'
 	if (await file_not_readable(file)) throw '.gz file not readable'
 
 	const tbi = file + '.tbi'
