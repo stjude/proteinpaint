@@ -694,26 +694,18 @@ function setRenderers(self) {
 				.html('Compare survival&nbsp;&nbsp;›')
 
 			survivalDiv.on('click', async e => {
-				self.dom.subtip.clear()
-				self.dom.subtip.showunderoffset(survivalDiv.node())
-				const termdb = await import('../termdb/app')
-				termdb.appInit({
-					holder: self.dom.subtip.d,
-					vocabApi: self.app.vocabApi,
-					state: {
-						nav: {
-							header_mode: 'hide_search'
-						},
-						tree: { usecase: { target: 'survival', detail: 'term' } }
+				const state = {
+					nav: { header_mode: 'hide_search' },
+					tree: { usecase: { target: 'survival', detail: 'term' } }
+				}
+				showTermsTree(
+					self,
+					survivalDiv,
+					term => {
+						openSurvivalPlot(self, term, getGroupsOverlay(self.config.groups))
 					},
-					tree: {
-						click_term: term => {
-							openSurvivalPlot(self, term, getGroupsOverlay(self.config.groups))
-							self.dom.tip.hide()
-							self.dom.subtip.hide()
-						}
-					}
-				})
+					state
+				)
 			})
 		}
 		const summarizeDiv = menuDiv
@@ -726,23 +718,8 @@ function setRenderers(self) {
 			.style('float', 'right')
 
 		summarizeDiv.on('click', async e => {
-			self.dom.subtip.clear()
-			self.dom.subtip.showunderoffset(summarizeDiv.node())
-			const termdb = await import('../termdb/app')
-			termdb.appInit({
-				holder: self.dom.subtip.d,
-				vocabApi: self.app.vocabApi,
-				state: {
-					nav: {},
-					tree: { usecase: { detail: 'term' } }
-				},
-				tree: {
-					click_term: term => {
-						openSummaryPlot(self, term, getGroupsOverlay(self.config.groups))
-						self.dom.tip.hide()
-						self.dom.subtip.hide()
-					}
-				}
+			showTermsTree(self, summarizeDiv, term => {
+				openSummaryPlot(self, term, getGroupsOverlay(self.config.groups))
 			})
 		})
 		row = menuDiv
@@ -780,26 +757,18 @@ function setRenderers(self) {
 				.html('Survival analysis&nbsp;&nbsp;&nbsp;›')
 
 			survivalDiv.on('click', async e => {
-				self.dom.subtip.clear()
-				self.dom.subtip.showunderoffset(survivalDiv.node())
-				const termdb = await import('../termdb/app')
-				termdb.appInit({
-					holder: self.dom.subtip.d,
-					vocabApi: self.app.vocabApi,
-					state: {
-						nav: {
-							header_mode: 'hide_search'
-						},
-						tree: { usecase: { target: 'survival', detail: 'term' } }
+				const state = {
+					nav: { header_mode: 'hide_search' },
+					tree: { usecase: { target: 'survival', detail: 'term' } }
+				}
+				showTermsTree(
+					self,
+					survivalDiv,
+					term => {
+						openSurvivalPlot(self, term, getGroupvsOthersOverlay(group))
 					},
-					tree: {
-						click_term: term => {
-							openSurvivalPlot(self, term, getGroupvsOthersOverlay(group))
-							self.dom.tip.hide()
-							self.dom.subtip.hide()
-						}
-					}
-				})
+					state
+				)
 			})
 		}
 		const summarizeDiv = menuDiv
@@ -812,26 +781,7 @@ function setRenderers(self) {
 			.style('float', 'right')
 
 		summarizeDiv.on('click', async e => {
-			self.dom.subtip.clear()
-			self.dom.subtip.showunderoffset(summarizeDiv.node())
-			const termdb = await import('../termdb/app')
-			termdb.appInit({
-				holder: self.dom.subtip.d,
-				vocabApi: self.app.vocabApi,
-				state: {
-					nav: {},
-					tree: { usecase: { detail: 'term' } }
-				},
-				tree: {
-					click_term: term => {
-						console.log(term)
-						if (!term) return
-						openSummaryPlot(self, term, getGroupvsOthersOverlay(group))
-						self.dom.tip.hide()
-						self.dom.subtip.hide()
-					}
-				}
-			})
+			showTermsTree(self, summarizeDiv, term => openSummaryPlot(self, term, getGroupvsOthersOverlay(group)))
 		})
 		const deleteDiv = menuDiv
 			.append('div')
@@ -1073,4 +1023,22 @@ function getGroupvsOthersOverlay(group) {
 			values
 		}
 	]
+}
+
+async function showTermsTree(self, div, callback, state = { tree: { usecase: { detail: 'term' } } }) {
+	self.dom.subtip.clear()
+	self.dom.subtip.showunderoffset(div.node())
+	const termdb = await import('../termdb/app')
+	termdb.appInit({
+		holder: self.dom.subtip.d,
+		vocabApi: self.app.vocabApi,
+		state,
+		tree: {
+			click_term: term => {
+				callback(term)
+				self.dom.tip.hide()
+				self.dom.subtip.hide()
+			}
+		}
+	})
 }
