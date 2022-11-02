@@ -5,6 +5,13 @@ import { fillbar } from '#dom/fillbar'
 import { make_densityplot } from '#dom/densityplot'
 import { rangequery_rglst } from './tk'
 
+/*
+makes the "# samples" sub label on the left.
+click label to view summaries about samples that have mutation data in the view range
+
+
+*/
+
 export function makeSampleLabel(data, tk, block, laby) {
 	// skewer subtrack is visible, create leftlabel based on #variants that is displayed/total
 	if (!tk.leftlabels.doms.samples) {
@@ -22,6 +29,14 @@ export function makeSampleLabel(data, tk, block, laby) {
 		})
 }
 
+/*
+*******************************************
+      this function will be redesigned
+*******************************************
+should not be based on variant2samples.twLst
+but using mds.termdb.vocabApi, show a tree, select a term and display a summary plot
+(may still need a default list of terms though)
+*/
 async function mayShowSummary(tk, block) {
 	if (!tk.mds.variant2samples.twLst) {
 		// no terms to summarize for
@@ -69,7 +84,7 @@ async function mayShowSummary(tk, block) {
 
 /* show summaries over a list of terms
 data is array, each ele: {termid, termname, numbycategory}
- */
+*/
 async function showSummary4terms(data, div, tk, block) {
 	const tabs = []
 	for (const { termid, termname, numbycategory, density_data } of data) {
@@ -202,6 +217,24 @@ function showSummary4oneTerm(termid, div, numbycategory, tk, block) {
 	async function listSamples(category) {
 		// for a selected category, list the samples
 		tk.menutip.clear()
+
+		//////////////////////////////////////////////
+		// temp change to launch subtrack
+		//////////////////////////////////////////////
+		const tkarg = {
+			type: 'mds3',
+			dslabel: tk.dslabel,
+			filter0: tk.filter0,
+			filterObj: {
+				// later use actual filter object
+				termid,
+				category
+			}
+		}
+		const tk2 = block.block_addtk_template(tkarg)
+		block.tk_load(tk2)
+		return
+
 		const div = tk.menutip.d.append('div').style('margin', '2px')
 		const wait = div.append('div').text('Loading...')
 		const samples = await tk.mds.getSamples({ tid2value: { [termid]: category } })

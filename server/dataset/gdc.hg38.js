@@ -92,6 +92,9 @@ const isoform2ssm_getvariant = {
 		if (p.filter0) {
 			f.content.push(p.filter0)
 		}
+		if (p.filterObj) {
+			f.content.push(filter2GDCfilter(p.filterObj))
+		}
 		return f
 	}
 }
@@ -135,8 +138,36 @@ const isoform2ssm_getcase = {
 		if (p.filter0) {
 			f.content.push(p.filter0)
 		}
+		if (p.filterObj) {
+			f.content.push(filter2GDCfilter(p.filterObj))
+		}
 		return f
 	}
+}
+
+/*
+f{}
+	filter object
+	{termid, category}
+	later to use full-blown filter object with tvslst
+returns a GDC filter object
+*/
+function filter2GDCfilter(f) {
+	if (!f.termid) throw 'f.termid missing'
+	if (!f.category) throw 'f.category missing'
+	const obj = {
+		op: 'and',
+		content: [
+			{
+				op: 'in',
+				content: {
+					field: f.termid,
+					value: [f.category]
+				}
+			}
+		]
+	}
+	return obj
 }
 
 /*

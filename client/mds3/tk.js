@@ -78,8 +78,11 @@ function getParameter(tk, block) {
 		if (tk.filter0) {
 			// expecting to be a simple filter such as
 			// {"op":"and","content":[{"op":"in","content":{"field":"cases.project.project_id","value":["TCGA-BRCA"]}}]}
-			// XXX any other possibilities from gdc portal
 			par.push('filter0=' + encodeURIComponent(JSON.stringify(tk.filter0)))
+		}
+		if (tk.filterObj) {
+			// json filter object
+			par.push('filterObj=' + encodeURIComponent(JSON.stringify(tk.filterObj)))
 		}
 		if (tk.token) headers['X-Auth-Token'] = tk.token
 	} else {
@@ -147,6 +150,7 @@ async function getData(tk, block) {
 		// request data from server, either official or custom sources
 		const [par, headers] = getParameter(tk, block)
 		data = await dofetch3('mds3?' + par, { headers })
+		console.log(data)
 	}
 	if (data.error) throw data.error
 	return data
