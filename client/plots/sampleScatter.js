@@ -83,7 +83,7 @@ class Scatter {
 			controls,
 			legendDiv,
 			tip: new Menu({ padding: '5px' }),
-			subtip: new Menu({ padding: '5px' })
+			subtip: new Menu({ padding: '5px', offsetX: 170, offsetY: -34 })
 		}
 
 		this.settings = {}
@@ -683,31 +683,22 @@ function setRenderers(self) {
 			row.on('click', e => {
 				self.dom.tip.hide()
 				self.dom.tip.clear()
+				self.dom.subtip.hide()
 				showGroupMenu(event, group)
 			})
 		}
 		if (self.state.allowedTermTypes.includes('survival')) {
-			row = menuDiv
+			const survivalDiv = menuDiv
 				.append('div')
 				.attr('class', 'sja_menuoption sja_sharp_border')
 				.html('Compare survival&nbsp;&nbsp;›')
-				.style('position', 'relative')
 
-			const treeDiv = row
-				.insert('div')
-				.style('display', 'none')
-				.style('position', 'absolute')
-				.attr('class', 'sjpp_submenu')
-			row.on('click', async e => {
-				const display = treeDiv.style('display')
-				if (display === 'block') {
-					treeDiv.style('display', 'none')
-					treeDiv.selectAll('*').remove()
-					return
-				}
+			survivalDiv.on('click', async e => {
+				self.dom.subtip.clear()
+				self.dom.subtip.showunderoffset(survivalDiv.node())
 				const termdb = await import('../termdb/app')
 				termdb.appInit({
-					holder: treeDiv.style('display', 'block'),
+					holder: self.dom.subtip.d,
 					vocabApi: self.app.vocabApi,
 					state: {
 						nav: {
@@ -719,6 +710,7 @@ function setRenderers(self) {
 						click_term: term => {
 							openSurvivalPlots(self, term)
 							self.dom.tip.hide()
+							self.dom.subtip.hide()
 						}
 					}
 				})
@@ -728,27 +720,17 @@ function setRenderers(self) {
 			.append('div')
 			.attr('class', 'sja_menuoption sja_sharp_border')
 			.html('Summarize')
-			.style('position', 'relative')
 		summarizeDiv
 			.insert('div')
 			.html('›')
 			.style('float', 'right')
-		const termsDiv = summarizeDiv
-			.insert('div')
-			.style('display', 'none')
-			.style('position', 'absolute')
-			.attr('class', 'sjpp_submenu')
+
 		summarizeDiv.on('click', async e => {
-			const display = termsDiv.style('display')
-			if (display === 'block') {
-				termsDiv.style('display', 'none')
-				termsDiv.selectAll('*').remove()
-				return
-			}
-			//self.dom.subtip.clear()
+			self.dom.subtip.clear()
+			self.dom.subtip.showunderoffset(summarizeDiv.node())
 			const termdb = await import('../termdb/app')
 			termdb.appInit({
-				holder: termsDiv.style('display', 'block'),
+				holder: self.dom.subtip.d,
 				vocabApi: self.app.vocabApi,
 				state: {
 					nav: {},
@@ -758,7 +740,7 @@ function setRenderers(self) {
 					click_term: term => {
 						openSummaryPlots(self, group, term)
 						self.dom.tip.hide()
-						termsDiv.style('display', 'none')
+						self.dom.subtip.hide()
 					}
 				}
 			})
@@ -794,24 +776,15 @@ function setRenderers(self) {
 			const survivalDiv = menuDiv
 				.append('div')
 				.attr('class', 'sja_menuoption sja_sharp_border')
-				.html('Survival analysis&nbsp;&nbsp;&nbsp;›')
 				.style('position', 'relative')
-			const treeDiv = survivalDiv
-				.insert('div')
-				.style('display', 'none')
-				.style('position', 'absolute')
-				.attr('class', 'sjpp_submenu')
+				.html('Survival analysis&nbsp;&nbsp;&nbsp;›')
+
 			survivalDiv.on('click', async e => {
-				const display = treeDiv.style('display')
-				if (display === 'block') {
-					treeDiv.style('display', 'none')
-					treeDiv.selectAll('*').remove()
-					return
-				}
-				//self.dom.subtip.clear()
+				self.dom.subtip.clear()
+				self.dom.subtip.showunderoffset(survivalDiv.node())
 				const termdb = await import('../termdb/app')
 				termdb.appInit({
-					holder: treeDiv.style('display', 'block'),
+					holder: self.dom.subtip.d,
 					vocabApi: self.app.vocabApi,
 					state: {
 						nav: {
@@ -823,7 +796,7 @@ function setRenderers(self) {
 						click_term: term => {
 							openSurvivalPlot(self, group, term)
 							self.dom.tip.hide()
-							treeDiv.style('display', 'none')
+							self.dom.subtip.hide()
 						}
 					}
 				})
@@ -833,27 +806,17 @@ function setRenderers(self) {
 			.append('div')
 			.attr('class', 'sja_menuoption sja_sharp_border')
 			.html('Summarize')
-			.style('position', 'relative')
 		summarizeDiv
 			.insert('div')
 			.html('›')
 			.style('float', 'right')
-		const termsDiv = summarizeDiv
-			.insert('div')
-			.style('display', 'none')
-			.style('position', 'absolute')
-			.attr('class', 'sjpp_submenu')
+
 		summarizeDiv.on('click', async e => {
-			const display = termsDiv.style('display')
-			if (display === 'block') {
-				termsDiv.style('display', 'none')
-				termsDiv.selectAll('*').remove()
-				return
-			}
-			//self.dom.subtip.clear()
+			self.dom.subtip.clear()
+			self.dom.subtip.showunderoffset(summarizeDiv.node())
 			const termdb = await import('../termdb/app')
 			termdb.appInit({
-				holder: termsDiv.style('display', 'block'),
+				holder: self.dom.subtip.d,
 				vocabApi: self.app.vocabApi,
 				state: {
 					nav: {},
@@ -865,7 +828,7 @@ function setRenderers(self) {
 						if (!term) return
 						openSummaryPlot(self, group, term)
 						self.dom.tip.hide()
-						termsDiv.style('display', 'none')
+						self.dom.subtip.hide()
 					}
 				}
 			})
@@ -1164,7 +1127,8 @@ function openSummaryPlots(self, term) {
 			groups.push(tgroup)
 	}
 	let config = {
-		chartType: 'barchart',
+		chartType: 'summary',
+		childType: 'barchart',
 		term,
 		term2: {
 			term: { name: self.config.name + ' groups', type: 'samplelst' },
