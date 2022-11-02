@@ -136,6 +136,9 @@ export async function validate_termdb(ds) {
 	 */
 
 	if (tdb?.dictionary?.gdcapi) {
+		// this pp instance runs the gdc dataset; test gdc APIs
+		await gdc.testGDCapi()
+
 		await initGDCdictionary(ds)
 		/* creates ds.cohort.termdb.q={}
 		and ds.gdcOpenProjects=set
