@@ -548,7 +548,7 @@ function setRenderers(self) {
 	self.setTools = function() {
 		const inline = self.config.settings.controls.isOpen
 		const svg = self.svg
-		const toolsDiv = self.dom.toolsDiv
+		const toolsDiv = self.dom.toolsDiv.style('background-color', 'white')
 		toolsDiv.selectAll('*').remove()
 		let display = 'block'
 		if (inline) display = 'inline-block'
@@ -601,7 +601,7 @@ function setRenderers(self) {
 			const k = event.transform.scale(1).k
 			//on zoom in the particle size is kept
 			symbols.attr('d', c => getShape(self, c, 1 / k))
-			if (self.lassoOn) lasso.selectedItems().attr('d', c => getShape(self, c, 2 / k))
+			if (self.lassoOn) self.lasso.selectedItems().attr('d', c => getShape(self, c, 2 / k))
 		}
 
 		function zoomIn() {
