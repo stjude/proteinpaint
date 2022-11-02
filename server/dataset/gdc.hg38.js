@@ -538,7 +538,6 @@ async function sample_id_getter(samples, headers) {
 module.exports = {
 	isMds3: true,
 	genome: 'hg38',
-	apihost: GDC_HOST + '/v0/graphql',
 
 	validate_filter0,
 

@@ -25,12 +25,66 @@ getheaders
 validate_sampleSummaries2_number
 validate_sampleSummaries2_mclassdetail
 handle_gdc_ssms
+testGDCapi
+	testRestApi
+	testGraphqlApi
 
 **************** internal
 mayMapRefseq2ensembl
-*/
 
-const apihost = process.env.PP_GDC_HOST || 'https://api.gdc.cancer.gov'
+
+**************** api hosts
+for the pp docker instance running in gdc backend, the api host should be defined by environmental variable
+otherwise, e.g. in sj prod server it uses the public api https://api.gdc.cancer.gov
+
+for now the api host is not attached to the pp-backend dataset object (as defined by dataset/gdc.hg38.js)
+as there are usages not involving the "dataset", e.g. in bam slicing
+thus need to define the "apihost" as global variables in multiple places
+*/
+const apihost = process.env.PP_GDC_HOST || 'https://api.gdc.cancer.gov' // rest api host
+const apihostGraphql = apihost + (apihost.includes('/v0') ? '' : '/v0') + '/graphql'
+
+export async function testGDCapi() {
+	// this function is called when the gdc mds3 dataset is initiated on a pp instance
+	await testRestApi(apihost + '/ssms')
+	await testRestApi(apihost + '/ssm_occurrences')
+	await testRestApi(apihost + '/cases')
+	await testRestApi(apihost + '/files')
+	// /data/ and /slicing/view/ are not tested as they require file uuid which is unstable across data releases
+	await testGraphqlApi(apihostGraphql)
+}
+
+async function testRestApi(url) {
+	try {
+		const t = new Date()
+		await got(url)
+		console.log('GDC API okay: ' + url, new Date() - t, 'ms')
+	} catch (e) {
+		throw 'gdc api down: ' + url
+	}
+}
+
+async function testGraphqlApi(url) {
+	// FIXME lightweight method to test if graphql is accessible?
+	const t = new Date()
+	try {
+		const query = `query termislst2total( $filters: FiltersArgument) {
+		explore {
+			cases {
+				aggregations (filters: $filters, aggregations_filter_themselves: true) {
+					primary_site {buckets { doc_count, key }}
+				}
+			}
+		}}`
+		await got.post(url, {
+			headers: getheaders({}),
+			body: JSON.stringify({ query, variables: {} })
+		})
+	} catch (e) {
+		throw 'gdc api down: ' + apihostGraphql
+	}
+	console.log('GDC GraphQL API okay: ' + apihostGraphql, new Date() - t, 'ms')
+}
 
 export async function validate_ssm2canonicalisoform(api) {
 	if (!api.endpoint) throw '.endpoint missing from ssm2canonicalisoform'
@@ -65,7 +119,7 @@ export function validate_query_snvindel_byrange(ds) {
 	if (typeof api.query != 'string') throw '.query not string in byrange.gdcapi'
 	if (typeof api.variables != 'function') throw '.byrange.gdcapi.variables() not a function'
 	ds.queries.snvindel.byrange.get = async opts => {
-		const response = await got.post(ds.apihost, {
+		const response = await got.post(apihostGraphql, {
 			headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
 			body: JSON.stringify({ query: api.query, variables: api.variables(opts) })
 		})
@@ -570,7 +624,7 @@ export function validate_query_genecnv(ds) {
 		variables.cnvTestedByGene.content[1].content.value = [name]
 		variables.cnvAll.content[2].content.value = [name]
 		variables.ssmFilters.content[1].content.value = [name]
-		const response = await got.post(ds.apihost, {
+		const response = await got.post(apihostGraphql, {
 			headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
 			body: JSON.stringify({ query: api.query, variables })
 		})
@@ -775,7 +829,7 @@ export async function get_termlst2size(twLst, q, combination, ds) {
 
 	const query = api.query(termPaths)
 	const variables = api.filters(q, ds)
-	const response = await got.post(ds.apihost, {
+	const response = await got.post(apihostGraphql, {
 		headers: getheaders(q),
 		body: JSON.stringify({ query, variables })
 	})
