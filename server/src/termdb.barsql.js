@@ -5,6 +5,9 @@ const Partjson = require('partjson')
 const d3format = require('d3-format')
 const binLabelFormatter = d3format.format('.3r')
 const termdbsql = require('./termdb.sql')
+//const run_rust = require('../../utils/benchmark/fisher.rust.r').run_rust
+const Readable = require('stream').Readable
+const spawn = require('child_process').spawn
 
 /*
 ********************** EXPORTED
@@ -38,6 +41,12 @@ export function handle_request_closure(genomes) {
 			if (!tdb) throw 'no termdb for this dataset'
 
 			const data = await barchart_data(q, ds, tdb)
+			console.log('what is data at line 40', data)
+			console.log('what is data.charts[0].serieses', data.charts[0].serieses)
+			console.log('what is data.charts[0].serieses[2].data', data.charts[0].serieses[2].data)
+
+			await computePvalues(data)
+
 			res.send(data)
 		} catch (e) {
 			res.send({ error: e.message || e })
@@ -456,4 +465,119 @@ arguments:
 		}
 	}
 	return AN == 0 || AC == 0 ? 0 : (AC / AN).toFixed(3)
+}
+
+//Given below, generate an array that is composed of `0\t1005\t1180\t1000\t1200` element, then join that array, call the
+//run_rust() function: run_rust('fisher', 'fisher_limits\t' + 300 + '\t' + 150 + '-' + data.join('-')), add the returned
+//value into data as a new property data.pvalues.
+//
+/*
+{
+	charts: [
+	  {
+		chartId: '',
+		serieses: [Array],
+		total: 7169,
+		maxSeriesTotal: 2846
+	  }
+	],
+	refs: {
+	  cols: [ '<5', '5 to <10', '10 to <15', '15 to <20', '≥20' ],
+	  colgrps: [ '-' ],
+	  rows: [ '' ],
+	  rowgrps: [ '-' ],
+	  col2name: {
+		'15 to <20': [Object],
+		'10 to <15': [Object],
+		'<5': [Object],
+		'5 to <10': [Object],
+		'≥20': [Object]
+	  },
+	  row2name: { '': [Object] },
+	  useColOrder: true,
+	  useRowOrder: false,
+	  bins: [ [], [Array], [] ],
+	  q: [ {}, [Object], {} ]
+	},
+	min: 0,
+	max: 23.556164384,
+	boxplot: {
+	  w1: 0,
+	  w2: 23.556164384,
+	  p05: 0.62696783,
+	  p25: 2.9726027397,
+	  p50: 6.8821917808,
+	  p75: 12.991780822,
+	  p95: 17.69472964,
+	  iqr: 10.019178082300002,
+	  out: [],
+	  mean: 8.040492786493099,
+	  sd: 5.683212839591836,
+	  min: 0,
+	  max: 23.556164384
+	},
+	maxAcrossCharts: 2846,
+	times: { sql: 490, pj: { parse: 1, total: 49 } }
+  }
+
+
+what is data.charts[0].serieses 
+[
+  { seriesId: '5 to <10', data: [ [Object], [Object] ], total: 999 },
+  { seriesId: '15 to <20', data: [ [Object], [Object] ], total: 649 },
+  { seriesId: '<5', data: [ [Object], [Object] ], total: 1924 },
+  { seriesId: '10 to <15', data: [ [Object], [Object] ], total: 924 },
+  { seriesId: '≥20', data: [ [Object], [Object] ], total: 32 }
+]
+
+
+what is data.charts[0].serieses[0].data 
+[ { dataId: '1', total: 544 }, { dataId: '2', total: 455 } ]
+
+  */
+async function computePvalues(data, fisher_limit = 300, individual_fisher_limit = 150) {
+	if (data.refs.rows.length == 1 && data.refs.rows[0] == '') return
+
+	const fisherAndChiInputData = [] //One element is input for one test, format: `0\t1005\t1180\t1000\t1200`
+	const colSums = {} // stores sum of each columns (term2)
+	for (let row of data.charts[0].serieses) {
+		for (let col of row.data) {
+			colSums[col.dataId] = colSums[col.dataId] === undefined ? col.total : colSums[col.dataId] + col.total
+		}
+	}
+	let ind = 0
+	for (let row of data.charts[0].serieses) {
+		fisherAndChiInputData.push(
+			`${ind}\t${row.data[0].total}\t${row.data[1].total}\t${colSums[row.data[0].dataId] -
+				row.data[0].total}\t${colSums[row.data[1].dataId] - row.data[1].total}`
+		)
+		ind++
+	}
+	console.log('what is fisherAndChiInputData', fisherAndChiInputData)
+	//const otherArg = 'fisher_limits\t' + fisher_limit + '\t' + individual_fisher_limit + '-' + fisherAndChiInputData.join('-')
+	//console.log("what is the other arg", otherArg)
+	//const resultWithPvalue = await run_rust('fisher', 'fisher_limits\t' + fisher_limit + '\t' + individual_fisher_limit + '-' + fisherAndChiInputData.join('-'))
+	//console.log("what is resultWithPvalue", resultWithPvalue)
+}
+
+function run_rust(binfile, input_data) {
+	console.log('what is binfile', binfile)
+	console.log('what is input_data', input_data)
+	return new Promise((resolve, reject) => {
+		const binpath = path.join('../../rust/target/release/', binfile)
+		const ps = spawn(binpath)
+		const stdout = []
+		const stderr = []
+		Readable.from(input_data).pipe(ps.stdin)
+		ps.stdout.on('data', data => stdout.push(data))
+		ps.stderr.on('data', data => stderr.push(data))
+		ps.on('error', err => {
+			reject(err)
+		})
+		ps.on('close', code => {
+			if (code !== 0) reject(`spawned '${binfile}' exited with a non-zero status and this stderr:\n${stderr.join('')}`)
+			//console.log("stdout:",stdout)
+			resolve(stdout.join('').toString())
+		})
+	})
 }
