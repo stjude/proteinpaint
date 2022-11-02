@@ -42,7 +42,7 @@ as there are usages not involving the "dataset", e.g. in bam slicing
 thus need to define the "apihost" as global variables in multiple places
 */
 const apihost = process.env.PP_GDC_HOST || 'https://api.gdc.cancer.gov' // rest api host
-const apihostGraphql = apihost + '/v0/graphql'
+const apihostGraphql = apihost + (apihost.includes('/v0') ? '' : '/v0') + '/graphql'
 
 export async function testGDCapi() {
 	// this function is called when the gdc mds3 dataset is initiated on a pp instance
