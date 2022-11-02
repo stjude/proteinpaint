@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## 2.5.1
+
+- fixes to server tests
+
+GDC-related
+- fix the handling of optional environment variable for GDC API URL
+
 ## 2.5.0
 
 - support for MSigDb genesets

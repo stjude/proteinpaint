@@ -56,7 +56,7 @@ if [[ ! $(git tag -l "v$ROOTVERSION") ]]; then
 fi
 
 COMMITMSG=$(git log --format=%B -n 1 v$ROOTVERSION)
-if [[ "$COMMITMSG" != "v$ROOTVERSION "* ]]; then
+if [[ "$COMMITMSG" != "v$ROOTVERSION "* && "$COMMITMSG" != "release $ROOTVERSION"* ]]; then
 	echo "tag=v$ROOTVERSION should be the starting substring in its commit message"
 	echo "you may need to move back the tag to the correct commit"
 	exit 1
