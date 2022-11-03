@@ -1,6 +1,11 @@
+const fs = require('fs')
 const termdbsql = require('./termdb.sql')
 const { scaleLinear } = require('d3-scale')
 const { bin } = require('d3-array')
+const serverconfig = require('./serverconfig')
+const lines2R = require('./lines2R')
+const path = require('path')
+const utils = require('./utils')
 
 /*
 q={}
@@ -104,6 +109,36 @@ export function trigger_getViolinPlotData(q, res, ds) {
 		})
 	}
 
+	async function wilcoxon() {
+		const wilcoxInput = {} // { plot.label: {plot.values for term1: [], plot.values for term2: []} }
+
+		const group1values = [],
+			group2values = []
+
+		if (term2) {
+			for (let [i, v] of result.plots.entries()) {
+				for (let x = i; x < Object.keys(result.plots).length; x++) {
+					if (x === i) continue
+					group1values.push(...result.plots[i].values)
+					group2values.push(...result.plots[x].values)
+
+					wilcoxInput[`${result.plots[i].label} vs ${result.plots[x].label}`] = { group1values, group2values }
+				}
+			}
+		}
+
+		const tmpfile = path.join(serverconfig.cachedir, Math.random().toString() + '.json')
+		await utils.write_file(tmpfile, JSON.stringify(wilcoxInput))
+		const wilcoxOutput = await lines2R(path.join(serverconfig.binpath, 'utils/wilcoxon.R'), [], [tmpfile])
+		fs.unlink(tmpfile, () => {})
+
+		const pvalues = JSON.parse(wilcoxOutput)
+
+		// console.log(pvalues)
+		return pvalues
+	}
+	// wilcoxon()
+
 	for (const plot of result.plots) {
 		// item: { label=str, values=[v1,v2,...] }
 
@@ -130,6 +165,8 @@ export function trigger_getViolinPlotData(q, res, ds) {
 
 		delete plot.values
 	}
+	// console.log(Object.keys(wilcox).length);
+	// console.log(wilcoxInput);
 
 	res.send(result)
 }
