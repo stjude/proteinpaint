@@ -3,12 +3,11 @@ this script is hosted at https://proteinpaint.stjude.org/GDC/rest.aliquot2submit
 
 examples:
 
-node rest.aliquot2submitter.js # uses 	TCGA-E7-A5KF with AKT1 E17K
+node rest.aliquot2submitter.js # uses default set of ids
+node rest.aliquot2submitter.js aliquot=9092e087-3e6a-4c5b-a8d7-a7e38a16959e
 
-// AKT1 E17K with only one case of stomach cancer
-node rest.ssm2readdepth.js ssmid=ab96fb54-dfc0-58d9-b727-20a857d58dad filter='{ "op": "and", "content": [ { "op": "in", "content": { "field": "cases.primary_site", "value": [ "stomach" ] } } ] }'
 
-corresponds to variant2samples query in gdc.hg38.js
+corresponds to fetchIdsFromGdcApi()
 */
 const got = require('got')
 const path = require('path')
@@ -143,6 +142,7 @@ function get_filters(p) {
 			}
 		]
 	}
+	console.log(JSON.stringify(filters))
 
 	return filters
 }

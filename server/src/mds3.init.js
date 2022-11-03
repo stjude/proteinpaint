@@ -137,12 +137,15 @@ export async function validate_termdb(ds) {
 	 */
 
 	if (tdb?.dictionary?.gdcapi) {
-		// this pp instance runs the gdc dataset; test gdc APIs
-		await gdc.testGDCapi()
-
 		await initGDCdictionary(ds)
-		/* creates ds.cohort.termdb.q={}
-		and ds.gdcOpenProjects=set
+		/*
+		creates ds.cohort.termdb.q={}
+		*****************************
+		*   clandestine gdc stuff   *
+		*****************************
+		- apis tested
+		- ds.gdcOpenProjects
+		- aliquot-submitter cached
 		*/
 	} else if (tdb?.dictionary?.dbFile) {
 		ds.cohort.db = { file: tdb.dictionary.dbFile }
@@ -1018,12 +1021,6 @@ function mayAdd_mayGetGeneVariantData(ds, genome) {
 			}
 		}
 
-		if (ds?.variant2samples?.sample_id_getter && typeof ds.variant2samples.sample_id_getter == 'function') {
-			// gdc method: current keys in bySampleId are aliquot ids
-			// call this helper to convert aliquot to submitter id for display
-			return await callSampleIdGetter(ds, bySampleId)
-		}
-
 		return bySampleId
 	}
 }
@@ -1085,34 +1082,4 @@ async function getSvfusionByTerm(ds, term, genome) {
 		return await ds.queries.svfusion.byrange.get(arg)
 	}
 	throw 'unknown queries.svfusion method'
-}
-
-async function callSampleIdGetter(ds, bySampleId) {
-	const samples = []
-	for (const caseid of bySampleId.keys()) {
-		samples.push({
-			old_id: caseid,
-			sample_id: caseid
-		})
-	}
-
-	await ds.variant2samples.sample_id_getter(
-		samples,
-		// hardcoded header for gdc request
-		{ 'Content-Type': 'application/json', Accept: 'application/json' }
-	)
-
-	const old2new = new Map()
-	for (const s of samples) {
-		old2new.set(s.old_id, s.sample_id)
-	}
-
-	const newMap = new Map()
-	for (const [oldid, o] of bySampleId) {
-		const newid = old2new.get(oldid)
-		o.sample = newid
-		newMap.set(newid, o)
-	}
-
-	return newMap
 }

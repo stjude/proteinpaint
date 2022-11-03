@@ -12,8 +12,6 @@ termTotalSizeGdcapi
 	termid2size_query
 	termid2size_filters
 ssm2canonicalisoform
-sample_id_getter
-	aliquot2sample
 */
 
 const GDC_HOST = process.env.PP_GDC_HOST || 'https://api.gdc.cancer.gov'
@@ -475,115 +473,6 @@ const ssm2canonicalisoform = {
 	fields: ['consequence.transcript.is_canonical', 'consequence.transcript.transcript_id']
 }
 
-const aliquot2sample = {
-	getMatch: (sample, aliquotSet) => {
-		// for a sample, decide if it contains an aliquot in given list
-		// if true, return matching aliquot id; otherwise return undefined
-		if (!sample.portions) return
-		for (const portion of sample.portions) {
-			if (!portion.analytes) continue
-			for (const analyte of portion.analytes) {
-				if (!analyte.aliquots) continue
-				for (const a of analyte.aliquots) {
-					if (aliquotSet.has(a.aliquot_id)) return a.aliquot_id
-				}
-			}
-		}
-	},
-
-	cache: new Map(),
-	// k: aliquot id, v: submitter id
-
-	get: async (aliquotidLst, headers) => {
-		// TODO check cache
-
-		const filters = {
-			op: 'and',
-			content: [
-				{
-					op: '=',
-					content: {
-						field: 'samples.portions.analytes.aliquots.aliquot_id',
-						value: aliquotidLst.length > 300 ? aliquotidLst.slice(0, 300) : aliquotidLst
-					}
-				}
-			]
-		}
-
-		const response = await got.post(GDC_HOST + '/cases', {
-			headers,
-			body: JSON.stringify({
-				size: 10000,
-				fields: 'samples.submitter_id,samples.portions.analytes.aliquots.aliquot_id',
-				filters
-			})
-		})
-
-		const aliquotSet = new Set(aliquotidLst)
-		const idmap = new Map() // k: input id, v: output id
-
-		const re = JSON.parse(response.body)
-
-		for (const h of re.data.hits) {
-			for (const sample of h.samples) {
-				const matchingAliquot = aliquot2sample.getMatch(sample, aliquotSet)
-
-				if (matchingAliquot) {
-					// has a match
-					idmap.set(matchingAliquot, sample.submitter_id)
-				}
-			}
-		}
-		return idmap
-	}
-}
-
-async function sample_id_getter(samples, headers) {
-	/*
-	samples[], each element:
-
-		{
-			tumor_sample_uuid: str,
-			sample_id: str
-		}
-
-	the "tumor_sample_uuid" is the aliquot id
-	it will be converted to sample submitter id *in place*
-	resulting submitter id is assigned to "sample_id"
-
-	the use of "tumor_sample_uuid" key is arbitrary logic in gdc and should not impact mds3
-	if tumor_sample_uuid is not present, the "sample_id" value will not be assigned
-
-	fire one query to convert id of all samples
-	the getter is a dataset-specific, generic feature, so it should be defined here
-	passing in headers is a gdc-specific logic for controlled data
-	*/
-	const id2sample = new Map()
-	// k: aliquot id
-	// v: list of sample objects that are using the same aliquot id
-	for (const sample of samples) {
-		const n = sample.tumor_sample_uuid
-		if (n) {
-			if (!id2sample.has(n)) id2sample.set(n, [])
-			id2sample.get(n).push(sample)
-		}
-	}
-
-	if (id2sample.size == 0) {
-		// no applicable sample id to map
-		// possible when query didn't ask for sample name
-		return
-	}
-
-	const idmap = await aliquot2sample.get([...id2sample.keys()], headers)
-
-	for (const [id, sampleLst] of id2sample) {
-		for (const s of sampleLst) {
-			s.sample_id = idmap.get(id) || id
-		}
-	}
-}
-
 ///////////////////////////////// end of query strings ///////////////
 
 // mds3 hardcodes to use .sample_id to dedup samples
@@ -664,10 +553,6 @@ module.exports = {
 		// quick fix: flag to indicate availability of these fields, so as to create new columns in sample table
 		sampleHasSsmReadDepth: true, // corresponds to .ssm_read_depth{} of a sample
 		sampleHasSsmTotalNormal: true, // corresponds to .totalNormal:int of a sample
-
-		// either of sample_id_key or sample_id_getter will be required for making url link for a sample
-		//sample_id_key: 'case_id',
-		sample_id_getter,
 
 		url: {
 			base: 'https://portal.gdc.cancer.gov/cases/',

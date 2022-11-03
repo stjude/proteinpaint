@@ -44,48 +44,6 @@ thus need to define the "apihost" as global variables in multiple places
 const apihost = process.env.PP_GDC_HOST || 'https://api.gdc.cancer.gov' // rest api host
 const apihostGraphql = apihost + (apihost.includes('/v0') ? '' : '/v0') + '/graphql'
 
-export async function testGDCapi() {
-	// this function is called when the gdc mds3 dataset is initiated on a pp instance
-	await testRestApi(apihost + '/ssms')
-	await testRestApi(apihost + '/ssm_occurrences')
-	await testRestApi(apihost + '/cases')
-	await testRestApi(apihost + '/files')
-	// /data/ and /slicing/view/ are not tested as they require file uuid which is unstable across data releases
-	await testGraphqlApi(apihostGraphql)
-}
-
-async function testRestApi(url) {
-	try {
-		const t = new Date()
-		await got(url)
-		console.log('GDC API okay: ' + url, new Date() - t, 'ms')
-	} catch (e) {
-		throw 'gdc api down: ' + url
-	}
-}
-
-async function testGraphqlApi(url) {
-	// FIXME lightweight method to test if graphql is accessible?
-	const t = new Date()
-	try {
-		const query = `query termislst2total( $filters: FiltersArgument) {
-		explore {
-			cases {
-				aggregations (filters: $filters, aggregations_filter_themselves: true) {
-					primary_site {buckets { doc_count, key }}
-				}
-			}
-		}}`
-		await got.post(url, {
-			headers: getheaders({}),
-			body: JSON.stringify({ query, variables: {} })
-		})
-	} catch (e) {
-		throw 'gdc api down: ' + apihostGraphql
-	}
-	console.log('GDC GraphQL API okay: ' + apihostGraphql, new Date() - t, 'ms')
-}
-
 export async function validate_ssm2canonicalisoform(api) {
 	if (!api.endpoint) throw '.endpoint missing from ssm2canonicalisoform'
 	if (!api.fields) throw '.fields[] missing from ssm2canonicalisoform'
@@ -740,8 +698,15 @@ export async function querySamples_gdcapi(q, twLst, ds) {
 		in case when tumor_sample_uuid is not retrieved,
 		sample.sample_id is still available for counting occurrence
 		*/
-		sample.tumor_sample_uuid = s.case?.observation?.[0]?.sample?.tumor_sample_uuid
-		sample.sample_id = s.case?.case_id
+		//sample.tumor_sample_uuid = s.case?.observation?.[0]?.sample?.tumor_sample_uuid
+
+		if (s.case?.observation?.[0]?.sample?.tumor_sample_uuid) {
+			sample.sample_id = await ds.aliquot2submitter.get(s.case.observation[0].sample.tumor_sample_uuid)
+		}
+
+		if (!sample.sample_id) {
+			sample.sample_id = s.case?.case_id
+		}
 
 		// for making url link on a sample
 		sample.sample_URLid = s.case.case_id
@@ -761,12 +726,14 @@ export async function querySamples_gdcapi(q, twLst, ds) {
 		samples.push(sample)
 	}
 
+	/*
 	if (typeof ds.variant2samples.sample_id_getter == 'function') {
 		// batch process, fire one query to convert all tumor_sample_uuid into submitter id for display
 		// must pass request header to getter in case requesting a controlled sample via a user token
 		// this is gdc-specific logic and should not impact generic mds3
 		await ds.variant2samples.sample_id_getter(samples, headers)
 	}
+	*/
 
 	return samples
 }
