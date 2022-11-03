@@ -226,9 +226,19 @@ function showSummary4oneTerm(termid, div, numbycategory, tk, block) {
 			dslabel: tk.dslabel,
 			filter0: tk.filter0,
 			filterObj: {
-				// later use actual filter object
-				termid,
-				category
+				type: 'tvslst',
+				in: true,
+				join: 'and',
+				lst: [
+					{
+						type: 'tvs',
+						tvs: {
+							term: await tk.mds.termdb.vocabApi.getterm(termid),
+							// assuming categorical term
+							values: [{ key: category }]
+						}
+					}
+				]
 			}
 		}
 		const tk2 = block.block_addtk_template(tkarg)

@@ -469,6 +469,7 @@ function mayaddGetter_variant2samples(tk, block) {
 		if (tk.set_id) par.push('set_id=' + tk.set_id)
 		if (tk.token) headers['X-Auth-Token'] = tk.token
 		if (tk.filter0) par.push('filter0=' + encodeURIComponent(JSON.stringify(tk.filter0)))
+		if (tk.filterObj) par.push('filterObj=' + encodeURIComponent(JSON.stringify(tk.filterObj)))
 		if (arg.tid2value) par.push('tid2value=' + encodeURIComponent(JSON.stringify(arg.tid2value)))
 
 		// supply list of terms based on querytype

@@ -140,9 +140,7 @@ q{}
 	hardcoded to be a geneVariant term, carries isoform/rglst/etc for querying variant
 */
 async function variant2samples_getresult(q, ds) {
-	if (q.twLst && typeof q.twLst == 'string') {
-		q.twLst = JSON.parse(decodeURIComponent(q.twLst))
-	}
+	prep_q(q)
 
 	ifUsingBarchartQuery(q, ds)
 
@@ -201,6 +199,15 @@ async function variant2samples_getresult(q, ds) {
 	}
 
 	throw 'unknown get type'
+}
+
+function prep_q(q) {
+	if (q.twLst && typeof q.twLst == 'string') {
+		q.twLst = JSON.parse(decodeURIComponent(q.twLst))
+	}
+	if (q.filterObj && typeof q.filterObj == 'string') {
+		q.filterObj = JSON.parse(decodeURIComponent(q.filterObj))
+	}
 }
 
 /*

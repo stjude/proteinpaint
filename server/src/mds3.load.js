@@ -305,7 +305,7 @@ function may_validate_filters(q, ds) {
 		)
 		q.filter0 = ds.validate_filter0(f)
 	}
-	if (q.filterObj) {
+	if (q.filterObj && typeof q.filterObj == 'string') {
 		q.filterObj = JSON.parse(
 			typeof q.filterObj == 'string' && q.filterObj.startsWith('%') ? decodeURIComponent(q.filterObj) : q.filterObj
 		)

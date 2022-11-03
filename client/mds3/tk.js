@@ -150,7 +150,6 @@ async function getData(tk, block) {
 		// request data from server, either official or custom sources
 		const [par, headers] = getParameter(tk, block)
 		data = await dofetch3('mds3?' + par, { headers })
-		console.log(data)
 	}
 	if (data.error) throw data.error
 	return data

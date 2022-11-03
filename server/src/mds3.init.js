@@ -26,7 +26,8 @@ validate_query_snvindel
 	gdc.validate_query_snvindel_byrange
 	snvindelByRangeGetter_bcf
 		mayLimitSamples
-			tid2value2filter
+			param2filter
+				tid2value2filter
 		addSamplesFromBcfLine
 			vcfFormat2sample
 	mayValidateSampleHeader
@@ -572,8 +573,8 @@ export async function snvindelByRangeGetter_bcf(ds, genome) {
 input:
 param={}
 	.tid2value = { term1id: v1, term2id:v2, ... }
-	if present, return list of samples matching the given k/v pairs, assuming AND
-	TODO replace with filter
+		if present, return list of samples matching the given k/v pairs, assuming AND
+	.filterObj = bona fide filter
 allSamples=[]
 	whole list of samples, each ele: {name: int}
 	presumably the set of samples from a bcf file or tabix file
@@ -586,9 +587,11 @@ function mayLimitSamples(param, allSamples, ds) {
 	if (!allSamples) return null // no samples from this big file
 
 	// later should be param.filter, no need for conversion
-	if (!param.tid2value) return null // no limit, use all samples
-	if (typeof param.tid2value != 'object') throw 'q.tid2value{} not object'
-	const filter = tid2value2filter(param.tid2value, ds)
+	const filter = param2filter(param, ds)
+	if (!filter) {
+		// no filtering, use all samples
+		return null
+	}
 
 	const filterSamples = get_samples(filter, ds)
 	// filterSamples is the list of samples retrieved from termdb that are matching filter
@@ -600,6 +603,14 @@ function mayLimitSamples(param, allSamples, ds) {
 		.map(i => {
 			return { name: i }
 		})
+}
+
+function param2filter(param, ds) {
+	if (param.filterObj) return param.filterObj
+	if (param.tid2value) {
+		if (typeof param.tid2value != 'object') throw 'q.tid2value{} not object'
+		return tid2value2filter(param.tid2value, ds)
+	}
 }
 
 // temporary function to convert tid2value={} to filter, can delete later when it's replaced by filter

@@ -15,6 +15,8 @@ node rest.ssms.js case_id=0772cdbe-8b0d-452b-8df1-bd70d1306363
 
 node rest.ssms.js filter='{ "op": "and", "content": [ { "op": "in", "content": { "field": "cases.primary_site", "value": [ "breast", "bronchus and lung" ] } } ] }'
 
+node rest.ssms.js filterObj='{"type":"tvslst","in":true,"join":"and","lst":[{"type":"tvs","tvs":{"term":{"id":"case.disease_type","name":"Disease type","isleaf":true,"type":"categorical","values":{},"samplecount":{}},"values":[{"key":"Adenomas and Adenocarcinomas"}]}}]}'
+
 corresponds to isoform2ssm_getvariant{} in gdc.hg38.js
 */
 
@@ -118,7 +120,54 @@ function get_filters(p) {
 		const f = JSON.parse(p.filter)
 		filters.content.push(f)
 	}
+	if (p.filterObj) {
+		const f = JSON.parse(p.filterObj)
+		filters.content.push(filter2GDCfilter(f))
+	}
 
 	//if (p.set_id) filters.content.push({ op: 'in', content: { field: 'cases.case_id', value: [p.set_id] } })
 	return filters
+}
+
+/*
+f{}
+	filter object
+returns a GDC filter object
+TODO support nested filter
+*/
+function filter2GDCfilter(f) {
+	// gdc filter
+	const obj = {
+		op: 'and',
+		content: []
+	}
+	if (!Array.isArray(f.lst)) throw 'filter.lst[] not array'
+	for (const item of f.lst) {
+		if (item.type != 'tvs') throw 'filter.lst[] item.type!="tvs"'
+		if (!item.tvs) throw 'item.tvs missing'
+		if (!item.tvs.term) throw 'item.tvs.term missing'
+		const f = {
+			op: 'in',
+			content: {
+				field: mayChangeCase2Cases(item.tvs.term.id),
+				value: item.tvs.values.map(i => i.key)
+			}
+		}
+		obj.content.push(f)
+	}
+	return obj
+}
+
+/*
+input: case.disease_type
+output: cases.disease_type
+
+when a term id begins with "case"
+for the term to be used as a field in filter,
+it must be written as "cases"
+*/
+function mayChangeCase2Cases(s) {
+	const l = s.split('.')
+	if (l[0] == 'case') l[0] = 'cases'
+	return l.join('.')
 }

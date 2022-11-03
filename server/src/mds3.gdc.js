@@ -469,7 +469,6 @@ async function snvindel_byisoform(api, opts) {
 		h.cases = []
 		id2ssm.set(h.ssm_id, h)
 	}
-	console.log(id2ssm)
 
 	// assign case to ssm by ssm_id
 	for (const h of re_cases.data.hits) {
