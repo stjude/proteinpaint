@@ -16,10 +16,20 @@ set -e
 set -u
 set -o pipefail
 
+
 ###############################################
-# this is a temporary step!
+# temporary step
+# copy "matrix.tree.original" to "matrix.tree" and append new line to describe the adhoc "publication" term annotated to samples from CH paper
+# subsequent steps all use "matrix.tree"
+cp phenotree/matrix.tree.original phenotree/matrix.tree
+printf '\nPublication\tClonal hematopoiesis\t-\t-\t-\tpublication_CH\tstring; 1=Yes\n' >> phenotree/matrix.tree
+
+
+###############################################
+# temporary step
 # updates file "phenotree/matrix.tree" in place
 node ./scripts/phenotree.tempfix.chemo.js
+
 
 ###############################################
 # procedures to build database table files
@@ -33,7 +43,8 @@ node ./scripts/matrix.string2intID.js > matrix
 node ./scripts/matrix2db.js matrix > annotation.matrix
 # created "annotation.matrix"
 node ./scripts/replace.sampleid.js PRS/annotation.scores 0 >> annotation.matrix
-# appended to "annotation.matrix"
+node ./scripts/replace.sampleid.js annotation.publication.stringId 0 >> annotation.matrix
+# appended two extra files to "annotation.matrix"
 
 node ./scripts/replace.sampleid.js raw/outcomes_sjlife.txt 0 yes > raw/intID/outcomes_sjlife.txt
 node ./scripts/replace.sampleid.js raw/outcomes_ccss.txt 0 yes > raw/intID/outcomes_ccss.txt
@@ -55,6 +66,7 @@ node ./scripts/phenotree.parse.atomic.js phenotree/matrix.tree matrix
 sh ./scripts/phenotree.makeentiretree.sh
 # created "phenotree/entire.tree"
 
+
 node ./scripts/phenotree.2phewastermlist.js phenotree/entire.tree > alltermsbyorder.grouped
 # created "alltermsbyorder.grouped"
 
@@ -75,6 +87,7 @@ node ./scripts/checkPrsDuplicateTerms.js
 
 cat PRS/termdb.prs >> termdb
 cat PRS/termid2htmldef.prs >> termid2htmldef
+cat termid2htmldef.pub >> termid2htmldef
 
 node ./scripts/validate.ctcae.js phenotree/sjlifectcae.tree raw/intID/outcomes_sjlife.txt > annotation.outcome
 node ./scripts/validate.ctcae.js phenotree/ccssctcae.tree raw/intID/outcomes_ccss.txt >> annotation.outcome
@@ -85,7 +98,7 @@ node ./scripts/precompute.ctcae.js termdb annotation.outcome > chronicevents.pre
 node ./scripts/precompute.ctcae.addNotTested.js >> chronicevents.precomputed
 # grade=-1 rows appended to indicate "not tested" cases
 
-node ./scripts/term2subcohort.js termdb annotation.matrix annotation.outcome > term2subcohort
+node --max-old-space-size=10240 ./scripts/term2subcohort.js termdb annotation.matrix annotation.outcome > term2subcohort
 # created "term2subcohort"
 
 

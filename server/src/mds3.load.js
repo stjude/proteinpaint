@@ -72,8 +72,8 @@ function init_q(query, genome) {
 		query.hiddenmclass = new Set(query.hiddenmclasslst.split(','))
 		delete query.hiddenmclasslst
 	}
-	if (query.rglst) query.rglst = JSON.parse(query.rglst)
-	if (query.tid2value) query.tid2value = JSON.parse(query.tid2value)
+	if (query.rglst && typeof query.rglst == 'string') query.rglst = JSON.parse(query.rglst)
+	if (query.tid2value && typeof query.tid2value == 'string') query.tid2value = JSON.parse(query.tid2value)
 	return query
 }
 

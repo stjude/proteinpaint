@@ -4,28 +4,24 @@ import { defaultcolor } from '../shared/common'
 import { cardInit } from './card'
 import { buttonInit } from './dsButton'
 import { select } from 'd3-selection'
+import { dofetch3, sayerror } from '#src/client'
 
 /*
 .opts{}
     .app{}
 	.dom{}
 	.state{}
-	.index{}
 
 Questions: 
 	- Organize in window based on section size to make best use of space?
     - For the column layout: 
         1. Cap number of columns?
         2. Allow y overflow for >2 columns (like Trello)?
-
-TODOs:
-- get rid of column.name -> not used
 */
 
 class AppDrawerLayoutComp {
 	constructor(opts) {
 		this.type = 'layout'
-		this.opts = this.validateOpts(opts)
 		this.dom = {
 			holder: opts.dom.drawerDiv,
 			wrapper: opts.dom.wrapper,
@@ -34,18 +30,16 @@ class AppDrawerLayoutComp {
 		this.state = opts.state
 	}
 
-	validateOpts(opts) {
-		if (!opts.index.elements) throw `Missing elements array`
-		if (!opts.index.elements.length) throw `No element objects provided`
-		//TODO simplify element validation and move here
-		if (opts.index.columnsLayout) {
-			if (opts.index.columnsLayout.length == 0) throw `Missing column objects`
-			const allGridAreaValues = opts.index.columnsLayout.map(s => s.gridarea)
+	async validateIndexJson() {
+		const index = await this.getIndexJson()
+		if (!index.elements) throw `Missing elements array`
+		if (!index.elements.length) throw `No element objects provided`
+		if (index.columnsLayout) {
+			if (index.columnsLayout.length == 0) throw `Missing column objects`
+			const allGridAreaValues = index.columnsLayout.map(s => s.gridarea)
 			if (allGridAreaValues.length != new Set(allGridAreaValues).size) throw `Duplicate values for .gridarea found`
 			const allSectionIdValues = []
-			for (const col of opts.index.columnsLayout) {
-				//TODO: get rid of col.name - not used
-				if (!col.name) throw `Missing column .name`
+			for (const col of index.columnsLayout) {
 				if (!col.gridarea) throw `Missing column .gridarea for column = ${col.name}`
 				if (!col.sections || col.sections.length == 0) throw `Missing section objects for column = ${col.name}`
 				for (const section of col.sections) {
@@ -58,15 +52,35 @@ class AppDrawerLayoutComp {
 				}
 			}
 			if (allSectionIdValues.length != new Set(allSectionIdValues).size) throw `Duplicate values for section.id found`
+
+			// Required element attributes when columnsLayout specified
+			for (const element of index.elements) {
+				if (!element.section) throw `.section is missing for ${element.type} = ${element.name}`
+				if (!allSectionIdValues.some(d => d == element.section))
+					throw `section = ${element.section} for ${element.type} = ${element.name} is not a column section`
+			}
 		}
-		return opts
+		return index
+	}
+
+	async getIndexJson() {
+		// Proteinpaint specific index.
+		// TODO: Later modifiy to accept user index.
+		const re = await dofetch3('/cardsjson')
+		if (re.error) {
+			sayerror(this.dom.holder.append('div'), re.error)
+			return
+		}
+
+		return re.json
 	}
 
 	async init() {
+		this.index = await this.validateIndexJson()
 		this.elementsRendered = false
 		setRenderers(this)
-		this.elements = this.opts.index.elements.filter(e => !e.hidden)
-		this.layout = this.opts.index.columnsLayout ? this.opts.index.columnsLayout : null
+		this.elements = this.index.elements.filter(e => !e.hidden)
+		this.layout = this.index.columnsLayout ? this.index.columnsLayout : null
 		this.components = {
 			elements: []
 		}
@@ -113,8 +127,8 @@ class AppDrawerLayoutComp {
 export const layoutInit = getCompInit(AppDrawerLayoutComp)
 
 function setRenderers(self) {
-	if (!self.opts.index.columnsLayout) noDefinedLayout(self)
-	if (self.opts.index.columnsLayout) columnsLayout(self)
+	if (!self.index.columnsLayout) noDefinedLayout(self)
+	if (self.index.columnsLayout) columnsLayout(self)
 }
 
 function noDefinedLayout(self) {
@@ -138,9 +152,9 @@ function columnsLayout(self) {
 
 	//Allow user to create multiple parent columns in columnsLayout
 	const gridareas = []
-	for (const column of self.opts.index.columnsLayout) gridareas.push(column.gridarea)
+	for (const column of self.index.columnsLayout) gridareas.push(column.gridarea)
 	parentGrid.style('grid-template-areas', `"${gridareas.toString().replace(',', ' ')}"`)
-	for (const col of self.opts.index.columnsLayout) {
+	for (const col of self.index.columnsLayout) {
 		const newCol = parentGrid
 			.append('div')
 			.style('grid-area', col.gridarea)

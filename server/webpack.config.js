@@ -3,16 +3,7 @@ const webpack = require('webpack')
 const path = require('path')
 const fs = require('fs')
 
-let babelrc
-try {
-	babelrc = fs.readFileSync(path.join(__dirname, '.babelrc'))
-	babelrc = JSON.parse(babelrc)
-	if (process.env.PP_MODE?.startsWith('container')) {
-		babelrc.presets[0][1].targets.node = 16
-	}
-} catch (e) {
-	throw e
-}
+const babelrc = require('./utils/babel/readBabelConfig').readBabelConfig(__dirname, 16)
 
 module.exports = function(env = {}) {
 	// the env object is passed to webpack cli call by

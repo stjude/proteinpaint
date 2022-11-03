@@ -23,7 +23,7 @@
                 }
             },
             "testSpec": {
-                "expected": {"rect": 1, "svg": 1, "table": 1 }
+                "expected": {"rect": 2, "svg": 1 }
             }
         },
         {

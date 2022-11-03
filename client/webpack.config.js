@@ -3,6 +3,7 @@ const NodePolyfillPlugin = require('node-polyfill-webpack-plugin')
 const path = require('path')
 const fs = require('fs')
 const SpecHelpersWpPlugin = require('./test/specHelpers.js').SpecHelpersWpPlugin
+//const HtmlWebpackPlugin = require('html-webpack-plugin')
 
 let babelrc
 try {
@@ -24,6 +25,7 @@ module.exports = function(env = {}) {
 		output: {
 			path: path.join(__dirname, '../public/bin'),
 			publicPath: (env.url || '') + '/bin/',
+			//filename: '[contenthash].proteinpaint.js',
 			filename: 'proteinpaint.js',
 			chunkLoadingGlobal: 'ppJsonp',
 			// the library name exposed by this bundle
@@ -44,7 +46,12 @@ module.exports = function(env = {}) {
 				process: require.resolve('process')
 			}*/
 		},
-		plugins: [new NodePolyfillPlugin()],
+		plugins: [
+			new NodePolyfillPlugin()
+			/*new HtmlWebpackPlugin({
+				title: 'Caching'
+			})*/
+		],
 		module: {
 			strictExportPresence: true,
 			rules: [

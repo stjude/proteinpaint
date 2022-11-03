@@ -55,6 +55,7 @@ async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 		if (
 			q.dslabel &&
 			q.dslabel in creds &&
+			req.path != '/dslogin' &&
 			(creds[q.dslabel].type != 'jwt' || (req.path == '/termdb' && q.for == 'matrix'))
 		) {
 			// will do the session check below

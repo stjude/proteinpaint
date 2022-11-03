@@ -1,0 +1,155 @@
+const termdbsql = require('./termdb.sql')
+const { scaleLinear } = require('d3-scale')
+const { bin } = require('d3-array')
+
+/*
+q={}
+.termid=str
+	must be a numeric term; data is used to produce violin plot
+.term2={ id=str, q={} }
+	optional; a termwrapper object to divide samples to groups
+	if provided, generate multiple violin plots
+	else generate only one plot
+.filter={}
+*/
+export function trigger_getViolinPlotData(q, res, ds) {
+	const term = ds.cohort.termdb.q.termjsonByOneid(q.termid)
+	if (!term) throw '.termid invalid'
+	if (term.type != 'integer' && term.type != 'float') throw 'termid type is not integer/float'
+
+	const getRowsParam = {
+		ds,
+		filter: q.filter,
+		term1_id: q.termid,
+		term1_q: { mode: 'continuous' } // hardcode to retrieve numeric values for violin/boxplot computing on this term
+	}
+	// term2 is optional
+	let term2
+
+	if (q.term2) {
+		if (typeof q.term2 == 'string') q.term2 = JSON.parse(q.term2) // look into why term2 is not parsed beforehand
+		if (!q.term2.id) throw 'term2.id missing'
+		term2 = ds.cohort.termdb.q.termjsonByOneid(q.term2.id)
+		if (!term2) throw '.term2.id invalid'
+		if (typeof q.term2.q != 'object') throw 'term2.q{} missing'
+		getRowsParam.term2_id = q.term2.id
+		getRowsParam.term2_q = q.term2.q
+	}
+
+	const rows = termdbsql.get_rows(getRowsParam)
+	/*
+	rows = {
+	  lst: [
+	  	{
+			sample=int
+			key0,val0,
+			key1,val1, // key1 and val1 are the same, with numeric values from term1
+			key2,val2
+				// if q.term2 is given, key2 is the group/bin label based on term2, using which the samples will be divided
+				// if q.term2 is missing, key2 is empty string and won't divide into groups
+		},
+		...
+	  ]
+	}
+	*/
+
+	// plot data to return to client
+	const result = {
+		min: rows.lst[0]?.key1,
+		max: rows.lst[0]?.key1,
+		plots: [] // each element is data for one plot: {label=str, values=[]}
+	}
+
+	const updatedResult = []
+	for (const v of rows.lst) {
+		if (term?.values?.[v.key1]) {
+			// this value is uncomputable from term1, skip
+		} else {
+			// keep
+			updatedResult.push(v)
+			result.min = Math.min(result.min, v.key1)
+			result.max = Math.max(result.max, v.key1)
+		}
+	}
+
+	if (q.term2) {
+		const key2_to_values = new Map() // k: key2 value, v: list of term1 values
+
+		for (const i of updatedResult) {
+			if (i.key2 == undefined || i.key2 == null) {
+				// missing key2
+				throw 'key2 missing'
+			}
+			if (!key2_to_values.has(i.key2)) key2_to_values.set(i.key2, [])
+			key2_to_values.get(i.key2).push(i.key1)
+		}
+
+		for (const [key, values] of key2_to_values) {
+			result.plots.push({
+				label: (term2?.values?.[key]?.label || key) + ', n=' + values.length,
+				values,
+				plotValueCount: values.length
+			})
+		}
+	} else {
+		// all numeric values go into one array
+		const values = updatedResult.map(i => i.key1)
+		result.plots.push({
+			label: 'All samples, n=' + values.length,
+			values,
+			plotValueCount: values.length
+		})
+	}
+
+	for (const plot of result.plots) {
+		// item: { label=str, values=[v1,v2,...] }
+
+		const bins0 = computeViolinData(plot.values)
+		// array; each element is an array of values belonging to this bin
+		// NOTE .x0 .x1 attributes are also assigned to this array (safe to do?)
+
+		// map messy bins0 to tidy set of bins and return to client
+		const bins = []
+		for (const b of bins0) {
+			const b2 = {
+				x0: b.x0,
+				x1: b.x1
+			}
+			delete b.x0
+			delete b.x1
+			b2.binValueCount = b.length
+			bins.push(b2)
+		}
+
+		plot.bins = bins
+
+		plot.biggestBin = Math.max(...bins0.map(b => b.length))
+
+		delete plot.values
+	}
+
+	res.send(result)
+}
+
+// compute bins using d3
+// need unit test!!!
+export function computeViolinData(values) {
+	let min = Math.min(...values),
+		max = Math.max(...values)
+
+	const yScale = scaleLinear().domain([min, max])
+
+	let ticksCompute // purpuse??
+	if (values.length < 50) {
+		ticksCompute = 5
+	} else {
+		ticksCompute = 12
+	}
+
+	const binBuilder = bin()
+		.domain([min, max]) /* extent of the data that is lowest to highest*/
+		.thresholds(yScale.ticks(ticksCompute)) /* buckets are created which are separated by the threshold*/
+		.value(d => d) /* bin the data points into this bucket*/
+
+	return binBuilder(values)
+}

@@ -36,7 +36,7 @@ class TdbStatTable {
 
 	async main() {
 		try {
-			this.config = this.state.config
+			this.config = structuredClone(this.state.config)
 			if (this.state.isVisible) {
 				const reqOpts = this.getDataRequestOpts()
 				const data = await this.app.vocabApi.getNestedChartSeriesData(reqOpts)

@@ -158,6 +158,8 @@ function setNumberInput(opts) {
 	self.dom.input = self.dom.inputTd
 		.append('input')
 		.attr('type', 'number')
+		.attr('min', 'min' in opts ? opts.min : null) // verify that null gives the default html input behavior
+		.attr('max', 'max' in opts ? opts.max : null) // same
 		.style('width', (opts.width || 100) + 'px')
 		.on('change', () => {
 			const value = Number(self.dom.input.property('value'))

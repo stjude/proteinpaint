@@ -69,17 +69,16 @@ async function runTests(data, test) {
 	const testable = [],
 		notTested = { hidden: [], nonCards: [] }
 	let numPlannedTests = 1 // including the cardsjson download
-	for (const x of data.examples) {
-		for (const x of data.json.elements) {
-			if (x.type != 'card') {
-				notTested.nonCards.push(x.name)
-				continue
-			}
+	for (const x of data.json.elements) {
+		if (x.type != 'card') {
+			notTested.nonCards.push(x.name)
+			continue
 		}
-		if (!x.sandboxjson || x.hidden ) {
+		if (!x.sandboxJson || x.hidden) {
 			notTested.hidden.push(x.name)
 			continue
 		}
+
 		const cardJson = await dofetch3(`/cardsjson?jsonfile=${x.sandboxJson}`)
 		const ppcalls = cardJson.jsonfile.ppcalls
 

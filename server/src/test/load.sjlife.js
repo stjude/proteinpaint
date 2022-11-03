@@ -37,8 +37,9 @@ function init(dslabel) {
 exports.init = init
 
 function get_dataset(dslabel) {
-	const dsfilename = path.join('../../dataset', dslabel)
-	const ds = require(dsfilename)
+	// const dsfilename = path.join('../../dataset/', dslabel)
+	//TODO figure out why it doesn't work like: const ds = require(dsfilename)
+	const ds = require('../../dataset/' + dslabel)
 	if (!ds) throw 'invalid dslabel'
 	if (!ds.cohort) throw 'ds.cohort missing'
 

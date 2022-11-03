@@ -183,7 +183,7 @@ app.use((req, res, next) => {
 	)
 	res.header('Access-Control-Allow-Credentials', true)
 
-	if (req.method == 'GET' && !req.path.includes('.')) {
+	if (req.method == 'GET' && (!req.path.includes('.') || req.path.endsWith('proteinpaint.js'))) {
 		// immutable response before expiration, client must revalidate after max-age;
 		// by convention, any path that has a dot will be treated as
 		// a static file and not handled here with cache-control
@@ -7468,7 +7468,7 @@ async function pp_init() {
 			initLegacyDataset(ds, g)
 		}
 
-		//await deleteSessionFiles()
+		await deleteSessionFiles()
 
 		delete g.rawdslst
 	}
@@ -7489,11 +7489,15 @@ async function deleteSessionFiles() {
 			const massSessionDuration = serverconfig.features.massSessionDuration || 30
 			const sessionDaysElapsed = Math.round((today.getTime() - fileDate.getTime()) / (1000 * 3600 * 24))
 			if (sessionDaysElapsed > massSessionDuration) {
-				//On Nov 1, 2022 - change to delete function
+				// Move file to massSessionTrash
+				// Process in place until users get use to it
 				await fs.promises.copyFile(
 					path.join(serverconfig.cachedir_massSession, file),
 					path.join(serverconfig.cachedir_massSessionTrash, file)
 				)
+				// Delete file out of massSession
+				await fs.promises.unlink(path.join(serverconfig.cachedir_massSession, file))
+
 				console.log('File deleted: ', file, sessionCreationDate)
 			}
 		})

@@ -304,7 +304,9 @@ function setRenderers(self) {
 			.append('div')
 			.style('display', 'block')
 			.style('opacity', '0.65')
-			.html(`<u>${self.sessionDaysLeft} days</u> left till this session is removed. You can save a new one.`)
+			.html(
+				`<u>${self.sessionDaysLeft} days</u> left till this session is removed. Click the New Session button to create a new one.`
+			)
 	}
 
 	self.updateUI = () => {
@@ -527,7 +529,7 @@ function setInteractivity(self) {
 			.append('div')
 			.style('margin', '10px')
 			.html(
-				`<a href='${url}' target=_blank>${res.id}</a><br><div style="font-size:.8em;opacity:.6"><span>Click the link to recover this session. You can bookmark or share this link.</span><br><span>This session will be saved for ${self.massSessionDuration} days.</span></div>`
+				`<a href='${url}' target=_blank>${res.id}</a><br><div style="font-size:.8em;opacity:.6"><span>Click the link to recover this session. Bookmark or share this link.</span><br><span>This session will be saved for ${self.massSessionDuration} days.</span></div>`
 			)
 		setTimeout(() => {
 			self.dom.saveBtn.property('disabled', false)

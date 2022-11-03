@@ -44,9 +44,9 @@ export async function click_variant(d, tk, block, tippos, eventTarget) {
 			'occurrence' in d &&
 			d.occurrence >= minoccur4sunburst &&
 			tk.mds.variant2samples &&
-			tk.mds.variant2samples.sunburst_ids
+			tk.mds.variant2samples.sunburst_twLst
 		) {
-			// show sunburst when meeting conditions: mutation have occurrence, have v2s.sunburst_ids[]
+			// show sunburst when meeting conditions: mutation have occurrence, have v2s.sunburst_twLst[]
 			await click2sunburst(d, tk, block, tippos)
 			return
 		}

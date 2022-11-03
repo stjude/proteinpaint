@@ -12,7 +12,7 @@ export function makeSampleLabel(data, tk, block, laby) {
 	}
 
 	tk.leftlabels.doms.samples
-		.text(`${data.sampleTotalNumber} case${data.sampleTotalNumber > 1 ? 's' : ''}`)
+		.text(`${data.sampleTotalNumber} sample${data.sampleTotalNumber > 1 ? 's' : ''}`)
 		.on('click', async event => {
 			tk.menutip.clear().showunder(event.target)
 
@@ -23,7 +23,7 @@ export function makeSampleLabel(data, tk, block, laby) {
 }
 
 async function mayShowSummary(tk, block) {
-	if (!tk.mds.variant2samples.termidlst) {
+	if (!tk.mds.variant2samples.twLst) {
 		// no terms to summarize for
 		return
 	}
@@ -45,14 +45,9 @@ async function mayShowSummary(tk, block) {
 		}
 		rangequery_rglst(tk, block, geneTerm) // creates geneTerm.rglst=[{}]
 
-		const termid = tk.mds.variant2samples.termidlst[0]
 		const arg = {
 			get: 'summary',
-			term: {
-				id: termid,
-				term: await tk.mds.termdb.vocabApi.getterm(termid),
-				q: {}
-			},
+			term: tk.mds.variant2samples.twLst[0],
 			term2: { term: geneTerm, q: {} }
 		}
 
@@ -221,10 +216,6 @@ function showDensity4oneTerm(termid, div, density_data, tk, block) {
 
 function menu_samples(data, tk, block) {
 	// subject to change
-
-	if (tk.mds.variant2samples.termidlst) {
-		// list terms for selecting one and summarize
-	}
 
 	tk.menutip.d
 		.append('div')

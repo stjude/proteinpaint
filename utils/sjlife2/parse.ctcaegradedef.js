@@ -21,6 +21,9 @@ const dir = process.cwd()
 const fs = require('fs')
 const path = require('path')
 
+// hardcoded fix, see below
+const publication_parent_term = 'Publication'
+
 const termdbfile = path.join(dir, 'termdb')
 const ID2term = new Map()
 for (const line of fs
@@ -89,6 +92,18 @@ for (const k in rawgrading.chcs) {
 		} else {
 			console.error(g.condition)
 		}
+	}
+}
+
+/**********************************************************
+***************        hardcoded fix       ****************
+***********************************************************
+
+to enable html detail for "paper" terms, under the "Publication" branch
+*/
+for (const [id, d] of ID2term) {
+	if (d.parentid == publication_parent_term) {
+		d.json.hashtmldetail = true
 	}
 }
 

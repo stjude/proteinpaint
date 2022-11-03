@@ -1,6 +1,5 @@
 import { getAppInit } from '#rx'
 import { mainBtnInit } from './mainBtn'
-import { dofetch3, sayerror } from '#src/client'
 import { appDrawerStoreInit } from './store'
 
 /*
@@ -61,7 +60,6 @@ class AppDrawerApp {
 		try {
 			this.store = await appDrawerStoreInit({ app: this.api, state: this.opts.state })
 			this.state = await this.store.copyState()
-			this.indexJson = await getCardsJson(this.dom.drawerDiv)
 			this.components = {
 				mainBtn: await mainBtnInit({
 					app: this.api,
@@ -80,13 +78,3 @@ class AppDrawerApp {
 }
 
 export const appDrawerInit = getAppInit(AppDrawerApp)
-
-async function getCardsJson(holder) {
-	const re = await dofetch3('/cardsjson')
-	if (re.error) {
-		sayerror(holder.append('div'), re.error)
-		return
-	}
-
-	return re.json
-}

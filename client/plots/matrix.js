@@ -737,6 +737,15 @@ function setNumericCellProps(cell, tw, anno, value, s, t) {
 	}
 }
 
+function setCategoricalCellProps(cell, tw, anno, value, s, t) {
+	const values = tw.term.values || {}
+	const key = anno.key
+	cell.label = 'label' in anno ? anno.label : values[key]?.label ? values[key].label : key
+	cell.fill = anno.color || values[key]?.color
+	const group = tw.legend?.group || tw.$id
+	return { ref: t.ref, group, value, entry: { key, label: cell.label, fill: cell.fill } }
+}
+
 // NOTE: may move these code by term.type to matrix.[categorical|*].js
 // if more term.type specific logic becomes harder to maintain here
 
@@ -750,16 +759,12 @@ function setNumericCellProps(cell, tw, anno, value, s, t) {
 	s: plotConfig.settings.matrix
 */
 const setCellProps = {
-	categorical: (cell, tw, anno, value, s, t) => {
-		const values = tw.term.values || {}
-		const key = anno.key
-		cell.label = 'label' in anno ? anno.label : values[key]?.label ? values[key].label : key
-		cell.fill = anno.color || values[key]?.color
-		const group = tw.legend?.group || tw.$id
-		return { ref: t.ref, group, value, entry: { key, label: cell.label, fill: cell.fill } }
-	},
+	categorical: setCategoricalCellProps,
 	integer: setNumericCellProps,
 	float: setNumericCellProps,
+	/* !!! TODO: later, may allow survival terms as a matrix row in server/shared/termdb.usecase.js, 
+	   but how - quantitative, categorical, etc? */
+	//survival: setNumericCellProps,
 	geneVariant: (cell, tw, anno, value, s, t) => {
 		const values = anno.filteredValues || anno.values || [anno.value]
 		cell.height = !s.transpose ? s.rowh / values.length : s.colw

@@ -1,7 +1,9 @@
 import { getCompInit, copyMerge } from '#rx'
 import { Menu } from '#src/client'
 import { fillTermWrapper } from '../termsetting/termsetting'
-import { select } from 'd3-selection'
+
+import { select, selectAll } from 'd3-selection'
+
 //import {  } from ''
 
 class SummaryPlot {
@@ -62,7 +64,25 @@ class SummaryPlot {
 			await this.setComponent(config)
 		}
 
-		this.render()
+
+		for (const childType in this.components) {
+			const chart = this.components[childType]
+			// hide non-active charts first, so not to momentarily have two visible charts
+			if (chart.type != this.config.childType) {
+				this.dom.plotDivs[chart.type].style('display', 'none')
+			}
+		}
+
+		this.dom.plotDivs[config.childType].style('display', '')
+
+		// toggle header buttons
+		this.dom.chartToggles.each(function(d) {
+			d.active = d.childType == config.childType
+			select(this)
+				.style('background-color', d => (d.active ? '#cfe2f3' : 'white'))
+				.style('border-style', d => (d.active ? 'solid solid none' : 'none'))
+		})
+
 	}
 
 	async setComponent(config) {
@@ -141,7 +161,8 @@ function setRenderers(self) {
 				.append('div')
 				.style('display', 'inline-block')
 				.style('margin-left', '10px')
-				.selectAll('button') /*** TODO: change to a better looking button/div ***/
+				.style('margin-bottom', '-6px')
+				.selectAll('button')
 				.data([
 					{
 						childType: 'barchart',
@@ -151,7 +172,8 @@ function setRenderers(self) {
 						getTw: tw => {
 							if (tw.term.bins) tw.q = tw.term.bins.default
 							return tw
-						}
+						},
+						active: true
 					},
 					{
 						childType: 'violin',
@@ -161,19 +183,22 @@ function setRenderers(self) {
 						getTw: tw => {
 							tw.q = { mode: 'continuous' }
 							return tw
-						}
+						},
+						active: false
 					},
 					{
 						childType: 'table',
 						label: 'Crosstab - TODO',
 						disabled: d => true,
-						isVisible: () => true
+						isVisible: () => true,
+						active: false
 					},
 					{
 						childType: 'boxplot',
 						label: 'Boxplot - TODO',
 						disabled: d => true,
-						isVisible: () => self.config.term.type === 'integer' || self.config.term.type === 'float'
+						isVisible: () => self.config.term.type === 'integer' || self.config.term.type === 'float',
+						active: false
 					},
 					{
 						childType: 'scatter',
@@ -181,13 +206,26 @@ function setRenderers(self) {
 						disabled: d => true,
 						isVisible: () =>
 							(self.config.term.type === 'integer' || self.config.term.type === 'float') &&
-							(self.config.term2?.type === 'integer' || self.config.term2?.type === 'float')
+							(self.config.term2?.type === 'integer' || self.config.term2?.type === 'float'),
+						active: false
 					}
 				])
 				.enter()
 				.append('button')
-				//.style('display', d => (d.isVisible() ? '' : 'none'))
-				.style('margin', '2px')
+
+				.style('display', d => (d.isVisible() ? ' ' : 'none'))
+				.style('padding', '5px 10px')
+
+				//Styles for tab-like design
+				.style('cursor', d => (d.disabled() ? 'not-allowed' : 'pointer'))
+				.style('background-color', d => (d.active ? '#cfe2f3' : 'white'))
+				.style('border-style', d => (d.active ? 'solid solid none' : 'none'))
+				.style('border-color', '#ccc8c8')
+				.style('border-width', '1px')
+				.style('border-radius', '5px 5px 0px 0px')
+				.style('margin', '0px 2px -1px')
+
+
 				// TODO: may use other logic for disabling a chart type, insteead of hiding/showing
 				.property('disabled', d => d.disabled())
 				.html(d => d.label)

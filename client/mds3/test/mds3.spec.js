@@ -102,6 +102,8 @@ tape('Run GDC dataset, ensembl transcript: ENST00000407796', test => {
 
 tape('Run GDC dataset, ensembl gene: ENSG00000133703', test => {
 	// kras, should map to canonical isoform ENST00000311936
+	// due to change of genedb in which ENSG are treated as aliases, they now map to refseq instead
+	// can change back when this behavior is restored
 	test.timeoutAfter(8000)
 	const holder = getHolder()
 
@@ -129,8 +131,8 @@ tape('Run GDC dataset, ensembl gene: ENSG00000133703', test => {
 		test.ok(mds3Track.dslabel == 'GDC', 'Should render GDC dataset')
 
 		//Confirm gene symbol used to call track
-		console.log(bb.usegm.isoform)
-		test.ok(bb.usegm.isoform == 'ENST00000311936', 'Should render ENST00000311936 track in GDC dataset')
+		// used to be ENST00000311936
+		test.ok(bb.usegm.isoform == 'NM_004985', 'Should render NM_004985 track in GDC dataset')
 
 		if (test._ok) holder.remove()
 		test.end()

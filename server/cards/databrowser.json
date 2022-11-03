@@ -452,7 +452,7 @@
       },
       "testSpec": {
         "timeout": 7000,
-        "expected": { "input": 2, "button": 1 }
+        "expected": { "button": 1 }
     }
     },
     {
@@ -477,7 +477,7 @@
       ],
       "testSpec": {
         "timeout": 7000,
-        "expected": { "input": 2, "button": 1 }
+        "expected": { "input": 1, "button": 1 }
       }
     },
     {
@@ -502,7 +502,7 @@
       ],
       "testSpec": {
         "timeout": 7000,
-        "expected": { "input": 2, "button": 1 }
+        "expected": { "input": 1, "button": 1 }
       }
     }
   ]

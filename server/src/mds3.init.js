@@ -2,7 +2,7 @@ const gdc = require('./mds3.gdc')
 const fs = require('fs')
 const path = require('path')
 const { initGDCdictionary } = require('./termdb.gdc')
-const { variant2samples_getresult } = require('./mds3.variant2samples')
+const { validate_variant2samples } = require('./mds3.variant2samples')
 const utils = require('./utils')
 const compute_mclass = require('./vcf.mclass').compute_mclass
 const serverconfig = require('./serverconfig')
@@ -19,6 +19,8 @@ client_copy
 	copy_queries
 ********************** INTERNAL
 validate_termdb
+	getBarchartDataFromSqlitedb
+		get_barchart_data_sqlitedb
 validate_query_snvindel
 	gdc.validate_query_snvindel_byisoform
 	gdc.validate_query_snvindel_byrange
@@ -90,8 +92,8 @@ export function client_copy(ds) {
 	if (ds.variant2samples) {
 		const v = ds.variant2samples
 		ds2_client.variant2samples = {
-			sunburst_ids: v.sunburst_ids,
-			termidlst: v.termidlst,
+			sunburst_twLst: v.sunburst_twLst,
+			twLst: v.twLst,
 			type_samples: v.type_samples,
 			type_summary: v.type_summary,
 			type_sunburst: v.type_sunburst,
@@ -134,6 +136,9 @@ export async function validate_termdb(ds) {
 	 */
 
 	if (tdb?.dictionary?.gdcapi) {
+		// this pp instance runs the gdc dataset; test gdc APIs
+		await gdc.testGDCapi()
+
 		await initGDCdictionary(ds)
 		/* creates ds.cohort.termdb.q={}
 		and ds.gdcOpenProjects=set
@@ -162,7 +167,7 @@ export async function validate_termdb(ds) {
 
 		/* add getter
 		input:
-			termidlst=[ id1, ...]
+			twLst=[ tw, ...]
 			q={}
 				.tid2value={id1:v1, ...}
 				.ssm_id_lst=str
@@ -171,11 +176,11 @@ export async function validate_termdb(ds) {
 		output:
 			a map, key is termid, value is array, each element: [category, total]
 		*/
-		tdb.termid2totalsize2.get = async (termidlst, q = {}, combination = null) => {
+		tdb.termid2totalsize2.get = async (twLst, q = {}, combination = null) => {
 			if (tdb.termid2totalsize2.gdcapi) {
-				return await gdc.get_termlst2size(termidlst, q, combination, ds)
+				return await gdc.get_termlst2size(twLst, q, combination, ds)
 			}
-			return await getBarchartDataFromSqlitedb(termidlst, q, combination, ds)
+			return await getBarchartDataFromSqlitedb(twLst, q, combination, ds)
 		}
 	}
 
@@ -218,13 +223,15 @@ export async function validate_termdb(ds) {
 	}
 }
 
-async function getBarchartDataFromSqlitedb(termidlst, q, combination, ds) {
+async function getBarchartDataFromSqlitedb(twLst, q, combination, ds) {
 	const termid2values = new Map()
-	for (const tid of termidlst) {
-		const term = ds.cohort.termdb.q.termjsonByOneid(tid)
-		if (term.type == 'categorical') {
+	// k: term id
+	// v: [], element is [category, totalCount]
+	for (const tw of twLst) {
+		if (!tw.term) continue
+		if (tw.term.type == 'categorical') {
 			const _q = {
-				term1_id: tid,
+				term1_id: tw.id,
 				term1_q: { type: 'values' }
 			}
 			if (q.tid2value) {
@@ -241,72 +248,11 @@ async function getBarchartDataFromSqlitedb(termidlst, q, combination, ds) {
 			for (const s of out.charts[0].serieses) {
 				lst.push([s.seriesId, s.total])
 			}
-			termid2values.set(tid, lst)
+			termid2values.set(tw.id, lst)
 		}
 	}
 	if (combination) return [termid2values, combination]
 	return termid2values
-}
-
-function validate_variant2samples(ds) {
-	const vs = ds.variant2samples
-	if (!vs) return
-	vs.type_samples = 'samples'
-	vs.type_sunburst = 'sunburst'
-	vs.type_summary = 'summary'
-	if (!vs.variantkey) throw '.variantkey missing from variant2samples'
-	if (['ssm_id'].indexOf(vs.variantkey) == -1) throw 'invalid value of variantkey'
-	if (vs.termidlst) {
-		if (!Array.isArray(vs.termidlst)) throw 'variant2samples.termidlst[] is not array'
-		if (vs.termidlst.length == 0) throw '.termidlst[] empty array from variant2samples'
-		if (!ds.cohort || !ds.cohort.termdb) throw 'ds.cohort.termdb missing when variant2samples.termidlst is in use'
-		for (const id of vs.termidlst) {
-			if (!ds.cohort.termdb.q.termjsonByOneid(id)) throw 'term not found for an id of variant2samples.termidlst: ' + id
-		}
-	}
-
-	if (vs.sunburst_ids) {
-		if (!Array.isArray(vs.sunburst_ids)) throw '.sunburst_ids[] not array from variant2samples'
-		if (vs.sunburst_ids.length == 0) throw '.sunburst_ids[] empty array from variant2samples'
-		if (!ds.cohort || !ds.cohort.termdb) throw 'ds.cohort.termdb missing when variant2samples.sunburst_ids is in use'
-		for (const id of vs.sunburst_ids) {
-			if (!ds.cohort.termdb.q.termjsonByOneid(id))
-				throw 'term not found for an id of variant2samples.sunburst_ids: ' + id
-		}
-	}
-
-	if (vs.gdcapi) {
-		gdc.validate_variant2sample(vs.gdcapi)
-	} else {
-		// look for server-side vcf/bcf/tabix file
-		// file header should already been parsed and samples obtain if any
-		let hasSamples = false
-		if (ds.queries?.snvindel?.byrange?._tk?.samples) {
-			// this file has samples
-			hasSamples = true
-		}
-		if (ds.queries?.svfusion?.byrange?.samples) {
-			hasSamples = true
-		}
-		if (!hasSamples) throw 'cannot find a sample source from ds.queries{}'
-	}
-
-	vs.get = async q => {
-		return await variant2samples_getresult(q, ds)
-	}
-
-	if (vs.url) {
-		if (!vs.url.base) throw '.variant2samples.url.base missing'
-
-		if (vs.sample_id_key) {
-			// has a way to get sample name
-		} else if (vs.sample_id_getter) {
-			if (typeof vs.sample_id_getter != 'function') throw '.sample_id_getter is not function'
-			// has a way to get sample name
-		} else {
-			throw 'both .sample_id_key and .sample_id_getter are missing while .variant2samples.url is used'
-		}
-	}
 }
 
 function copy_queries(ds, dscopy) {
