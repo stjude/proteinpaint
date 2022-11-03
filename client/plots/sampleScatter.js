@@ -238,82 +238,72 @@ class Scatter {
 		this.dom.toolsDiv = this.dom.controls.insert('div')
 	}
 
-	renderLegend(holder, categories, shapes) {
-		holder.selectAll('*').remove()
-		const colorDiv = holder.append('div').style('display', 'inline-block')
-		const shapeDiv = holder
-			.append('div')
-			.style('display', 'inline-block')
-			.style('vertical-align', 'top')
-
-		let row = colorDiv
-			.insert('div')
-			.attr('class', 'sja_clb')
-			.style('display', 'block')
+	renderLegend(svg, categories, shapes) {
+		const step = 30
+		let offsetX = 0
+		let offsetY = 60
+		let title = this.config.colorTW.term.name
+		svg
+			.append('text')
+			.attr('x', offsetX)
+			.attr('y', 30)
+			.text(title)
 			.style('font-weight', 'bold')
-			.style('margin-top', '10px')
-			.html('&nbsp;' + this.config.colorTW.term.name)
-		let items = []
-		let item
+
+		const radius = 6
+		let category, count, name, color
 		for (const category of categories) {
-			const color = category[1].color
-			const sample_count = category[1].sampleCount
-			const name = category[0]
-			const row = colorDiv
-				.append('div')
-				.attr('class', 'sja_clb')
-				.style('display', 'block')
-			row
-				.append('div')
-				.style('display', 'inline-block')
-				.attr('class', 'sja_mcdot')
-				.style('background', color)
-				.html(sample_count)
-			row
-				.append('div')
-				.style('display', 'inline-block')
-				.style('color', color)
-				.html('&nbsp;' + name)
+			color = category[1].color
+			count = category[1].sampleCount
+			name = category[0]
+
+			svg
+				.append('circle')
+				.attr('cx', offsetX)
+				.attr('cy', offsetY)
+				.attr('r', radius)
+				.style('fill', color)
+			svg
+				.append('text')
+				.attr('x', offsetX + 10)
+				.attr('y', offsetY)
+				.text(`${name}, n=${count}`)
+				.style('font-size', '15px')
+				.attr('alignment-baseline', 'middle')
+			offsetY += step
 		}
 		if (this.config.shapeTW) {
-			row = shapeDiv
-				.insert('div')
-				.attr('class', 'sja_clb')
-				.style('display', 'block')
+			offsetX = 200
+			offsetY = 60
+			title = this.config.shapeTW.term.name
+			svg
+				.append('text')
+				.attr('x', offsetX)
+				.attr('y', 30)
+				.text(title)
 				.style('font-weight', 'bold')
-				.style('margin-top', '10px')
-				.html('&nbsp;' + this.config.shapeTW.term.name)
-			items = []
-			let i = 0
-			const color = 'gray'
+
+			let index, symbol
+			color = 'gray'
 			for (const shape of shapes) {
-				const index = shape[1].shape % this.symbols.length
-				const category_shape = this.symbols[index].size(64)()
-				const name = shape[0]
+				index = shape[1].shape % this.symbols.length
+				symbol = this.symbols[index].size(64)()
+				name = shape[0]
+				count = shape[1].sampleCount
 
-				const row = shapeDiv
-					.append('div')
-					.attr('class', 'sja_clb')
-					.style('display', 'block')
-
-				row
-					.append('div')
-					.style('display', 'inline-block')
-
-					.append('svg')
-					.attr('width', 20)
-					.attr('height', 22)
-
+				svg
 					.append('path')
-					.attr('d', category_shape)
-					.attr('fill', color)
-					.attr('transform', c => `translate(10, 15)`)
-
-				row
-					.append('div')
-					.style('display', 'inline-block')
-					.html('&nbsp;' + name + ` (${shape[1].sampleCount})`)
-				i++
+					.attr('transform', c => `translate(${offsetX}, ${offsetY})`)
+					.style('fill', color)
+					.attr('d', symbol)
+				svg
+					.append('text')
+					.attr('x', offsetX + 10)
+					.attr('y', offsetY)
+					.text(`${name}, n=${count}`)
+					.style('font-size', '15px')
+					.attr('alignment-baseline', 'middle')
+				offsetY += step
 			}
 		}
 	}
@@ -328,11 +318,7 @@ function setRenderers(self) {
 
 		function addCharts() {
 			const s = self.settings
-			chartDiv
-				.style('opacity', 0)
-				.style('width', s.svgw + 100 + 'px')
-				.style('height', s.svgh + 50 + 'px')
-				.style('text-align', 'left')
+			chartDiv.style('opacity', 0)
 
 			self.svg = chartDiv.append('svg')
 			renderSVG(self.svg, chartDiv, s, 0, data)
@@ -341,15 +327,12 @@ function setRenderers(self) {
 				.transition()
 				.duration(s.duration)
 				.style('opacity', 1)
-
-			self.renderLegend(self.dom.legendDiv, data.colorLegend, data.shapeLegend)
 		}
 
 		function updateCharts() {
 			const s = self.settings
 			chartDiv.transition().duration(s.duration)
 			renderSVG(chartDiv.select('svg'), chartDiv, s, s.duration, data)
-			self.renderLegend(self.dom.legendDiv, data.colorLegend, data.shapeLegend)
 		}
 	}
 
@@ -357,11 +340,11 @@ function setRenderers(self) {
 		svg
 			.transition()
 			.duration(duration)
-			.attr('width', s.svgw + 100)
+			.attr('width', s.svgw + 600)
 			.attr('height', s.svgh + 110) //leaving 100 px for the y-axis and 10 to leave some space on top
 
 		/* eslint-disable */
-		const [mainG, axisG, xAxis, yAxis] = getSvgSubElems(svg, chart)
+		const [mainG, axisG, xAxis, yAxis, legendG] = getSvgSubElems(svg, chart)
 		/* eslint-enable */
 
 		if (s.showAxes) mainG.attr('clip-path', `url(#clip)`)
@@ -369,10 +352,11 @@ function setRenderers(self) {
 		if (mainG.select('.sjpcb-scatter-series').size() == 0) mainG.append('g').attr('class', 'sjpcb-scatter-series')
 		const serie = mainG.select('.sjpcb-scatter-series')
 		renderSerie(serie, data, s, duration)
+		self.renderLegend(legendG, data.colorLegend, data.shapeLegend)
 	}
 
 	function getSvgSubElems(svg, chart) {
-		let mainG, axisG, xAxis, yAxis
+		let mainG, axisG, xAxis, yAxis, legendG
 		if (svg.select('.sjpcb-scatter-mainG').size() == 0) {
 			svg.append('defs')
 			mainG = svg.append('g').attr('class', 'sjpcb-scatter-mainG')
@@ -406,16 +390,22 @@ function setRenderers(self) {
 
 			xAxis.call(self.axisBottom)
 			yAxis.call(self.axisLeft)
+
+			legendG = svg
+				.append('g')
+				.attr('class', 'sjpcb-scatter-legend')
+				.attr('transform', `translate(${self.settings.svgw + 200}, 0)`)
 		} else {
 			mainG = svg.select('.sjpcb-scatter-mainG')
 			axisG = svg.select('.sjpcb-scatter-axis')
 
 			xAxis = axisG.select('.sjpcb-scatter-x-axis')
 			yAxis = axisG.select('.sjpcb-scatter-y-axis')
+			legendG = svg.select('sjpcb-scatter-legend')
 		}
 		if (self.settings.showAxes) axisG.style('opacity', 1)
 		else axisG.style('opacity', 0)
-		return [mainG, axisG, xAxis, yAxis]
+		return [mainG, axisG, xAxis, yAxis, legendG]
 	}
 
 	function renderSerie(g, data, s, duration) {
@@ -879,7 +869,6 @@ export async function getPlotConfig(opts, app) {
 	try {
 		await fillTermWrapper(opts.colorTW, app.vocabApi)
 		if (opts.shapeTW) await fillTermWrapper(opts.shapeTW, app.vocabApi)
-
 		const config = {
 			id: opts.colorTW.id,
 			groups: [],
@@ -967,7 +956,6 @@ function downloadSVG(svg) {
 }
 
 function openSummaryPlot(self, term, groups) {
-	console.log(groups)
 	let config = {
 		chartType: 'summary',
 		childType: 'barchart',
