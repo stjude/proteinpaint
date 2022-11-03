@@ -238,12 +238,14 @@ class Scatter {
 		this.dom.toolsDiv = this.dom.controls.insert('div')
 	}
 
-	renderLegend(svg, categories, shapes) {
+	renderLegend(legendG, categories, shapes) {
+		legendG.selectAll('*').remove()
 		const step = 30
 		let offsetX = 0
 		let offsetY = 60
 		let title = this.config.colorTW.term.name
-		svg
+		const colorG = legendG.append('g')
+		colorG
 			.append('text')
 			.attr('x', offsetX)
 			.attr('y', 30)
@@ -257,13 +259,13 @@ class Scatter {
 			count = category[1].sampleCount
 			name = category[0]
 
-			svg
+			colorG
 				.append('circle')
 				.attr('cx', offsetX)
 				.attr('cy', offsetY)
 				.attr('r', radius)
 				.style('fill', color)
-			svg
+			colorG
 				.append('text')
 				.attr('x', offsetX + 10)
 				.attr('y', offsetY)
@@ -273,10 +275,12 @@ class Scatter {
 			offsetY += step
 		}
 		if (this.config.shapeTW) {
-			offsetX = 200
+			offsetX = 250
 			offsetY = 60
 			title = this.config.shapeTW.term.name
-			svg
+
+			const shapeG = legendG.append('g')
+			shapeG
 				.append('text')
 				.attr('x', offsetX)
 				.attr('y', 30)
@@ -291,12 +295,12 @@ class Scatter {
 				name = shape[0]
 				count = shape[1].sampleCount
 
-				svg
+				shapeG
 					.append('path')
 					.attr('transform', c => `translate(${offsetX}, ${offsetY})`)
 					.style('fill', color)
 					.attr('d', symbol)
-				svg
+				shapeG
 					.append('text')
 					.attr('x', offsetX + 10)
 					.attr('y', offsetY)
@@ -347,8 +351,6 @@ function setRenderers(self) {
 		const [mainG, axisG, xAxis, yAxis, legendG] = getSvgSubElems(svg, chart)
 		/* eslint-enable */
 
-		if (s.showAxes) mainG.attr('clip-path', `url(#clip)`)
-		else mainG.attr('clip-path', '')
 		if (mainG.select('.sjpcb-scatter-series').size() == 0) mainG.append('g').attr('class', 'sjpcb-scatter-series')
 		const serie = mainG.select('.sjpcb-scatter-series')
 		renderSerie(serie, data, s, duration)
@@ -381,13 +383,13 @@ function setRenderers(self) {
 			svg
 				.append('defs')
 				.append('clipPath')
-				.attr('id', 'clip')
+				.attr('id', 'sjpp_clip')
 				.append('rect')
 				.attr('x', 80)
 				.attr('y', 0)
 				.attr('width', self.settings.svgw)
 				.attr('height', self.settings.svgh + 20)
-
+			mainG.attr('clip-path', `url(#sjpp_clip)`)
 			xAxis.call(self.axisBottom)
 			yAxis.call(self.axisLeft)
 
@@ -401,7 +403,7 @@ function setRenderers(self) {
 
 			xAxis = axisG.select('.sjpcb-scatter-x-axis')
 			yAxis = axisG.select('.sjpcb-scatter-y-axis')
-			legendG = svg.select('sjpcb-scatter-legend')
+			legendG = svg.select('.sjpcb-scatter-legend')
 		}
 		if (self.settings.showAxes) axisG.style('opacity', 1)
 		else axisG.style('opacity', 0)
@@ -879,8 +881,8 @@ export async function getPlotConfig(opts, app) {
 				sampleScatter: {
 					size: 5,
 					refSize: 5,
-					svgw: 500,
-					svgh: 500,
+					svgw: 600,
+					svgh: 600,
 					axisTitleFontSize: 16,
 					showAxes: false,
 					showRef: true
