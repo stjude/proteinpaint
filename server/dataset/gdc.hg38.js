@@ -3,6 +3,7 @@ const got = require('got')
 /*
 validate_filter0
 isoform2ssm_getvariant
+	filter2GDCfilter
 isoform2ssm_getcase
 query_range2variants
 variables_range2variants
@@ -92,6 +93,9 @@ const isoform2ssm_getvariant = {
 		if (p.filter0) {
 			f.content.push(p.filter0)
 		}
+		if (p.filterObj) {
+			f.content.push(filter2GDCfilter(p.filterObj))
+		}
 		return f
 	}
 }
@@ -135,8 +139,54 @@ const isoform2ssm_getcase = {
 		if (p.filter0) {
 			f.content.push(p.filter0)
 		}
+		if (p.filterObj) {
+			f.content.push(filter2GDCfilter(p.filterObj))
+		}
 		return f
 	}
+}
+
+/*
+f{}
+	filter object
+returns a GDC filter object
+TODO support nested filter
+*/
+function filter2GDCfilter(f) {
+	// gdc filter
+	const obj = {
+		op: 'and',
+		content: []
+	}
+	if (!Array.isArray(f.lst)) throw 'filter.lst[] not array'
+	for (const item of f.lst) {
+		if (item.type != 'tvs') throw 'filter.lst[] item.type!="tvs"'
+		if (!item.tvs) throw 'item.tvs missing'
+		if (!item.tvs.term) throw 'item.tvs.term missing'
+		const f = {
+			op: 'in',
+			content: {
+				field: mayChangeCase2Cases(item.tvs.term.id),
+				value: item.tvs.values.map(i => i.key)
+			}
+		}
+		obj.content.push(f)
+	}
+	return obj
+}
+
+/*
+input: case.disease_type
+output: cases.disease_type
+
+when a term id begins with "case"
+for the term to be used as a field in filter,
+it must be written as "cases"
+*/
+function mayChangeCase2Cases(s) {
+	const l = s.split('.')
+	if (l[0] == 'case') l[0] = 'cases'
+	return l.join('.')
 }
 
 /*
@@ -314,6 +364,9 @@ const variant2samplesGdcapi = {
 		}
 		if (p.filter0) {
 			f.content.push(p.filter0)
+		}
+		if (p.filterObj) {
+			f.content.push(filter2GDCfilter(p.filterObj))
 		}
 		if (p.tid2value) {
 			for (const termid in p.tid2value) {

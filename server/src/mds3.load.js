@@ -43,7 +43,7 @@ export function mds3_request_closure(genomes) {
 
 			const ds = await get_ds(q, genome)
 
-			may_validate_filter0(q, ds)
+			may_validate_filters(q, ds)
 
 			const result = await load_driver(q, ds)
 			res.send(result)
@@ -298,11 +298,16 @@ the validation function is defined in ds
 cannot do it in init_q() as ds is not available
 this ensures filter0 and its validation is generic and not specific to gdc
 */
-function may_validate_filter0(q, ds) {
+function may_validate_filters(q, ds) {
 	if (q.filter0) {
 		const f = JSON.parse(
 			typeof q.filter0 == 'string' && q.filter0.startsWith('%') ? decodeURIComponent(q.filter0) : q.filter0
 		)
 		q.filter0 = ds.validate_filter0(f)
+	}
+	if (q.filterObj && typeof q.filterObj == 'string') {
+		q.filterObj = JSON.parse(
+			typeof q.filterObj == 'string' && q.filterObj.startsWith('%') ? decodeURIComponent(q.filterObj) : q.filterObj
+		)
 	}
 }

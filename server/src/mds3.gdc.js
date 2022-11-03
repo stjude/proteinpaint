@@ -12,7 +12,7 @@ validate_query_snvindel_byrange
 	makeSampleObj
 validate_query_snvindel_byisoform
 	snvindel_byisoform
-validate_query_snvindel_byisoform_2
+validate_query_snvindel_byisoform_2 // protein_mutations, not in use
 validate_query_genecnv
 querySamples_gdcapi
 	flattenCaseByFields
