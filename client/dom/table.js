@@ -42,7 +42,7 @@ export async function renderTable({ columns, rows, div }) {
 		.style('width', '100%')
 		.style('background-color', 'white')
 		.attr('class', 'sjpp_grid_container')
-		.style('grid-template-columns', `1vw repeat(${numColumns}, auto)`)
+		.style('grid-template-columns', `2vw repeat(${numColumns}, auto)`)
 
 	// header div
 	const divH = parentDiv.append('div').style('display', 'contents')
