@@ -18,7 +18,8 @@ module.exports = {
 					{
 						name: 'Clinical Significance',
 						key: 'CLNSIG',
-						categories: clinvar.clinsig
+						categories: clinvar.clinsig,
+						separator: '|'
 					}
 				]
 			},

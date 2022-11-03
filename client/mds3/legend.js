@@ -26,6 +26,10 @@ may_update_infoFields
 .variantShapeName{}
 	.row
 */
+
+const unknown_infoCategory_bgcolor = 'white',
+	unknown_infoCategory_textcolor = 'black'
+
 export function initLegend(tk, block) {
 	/*
 run only once, called by makeTk
@@ -112,9 +116,6 @@ function may_create_variantShapeName(tk) {
 }
 
 function may_create_infoFields(tk) {
-	// console.log(field_category)
-	// console.log(tk)
-
 	if (!tk.mds.bcf || !tk.mds.bcf.info) {
 		// not using bcf with info fields
 		return
@@ -208,35 +209,32 @@ function may_update_variantShapeName(data, tk) {
 	vl.circleCount.text(circle)
 }
 
+/*
+update legend for all info fields of this track
+TODO allow filtering
+*/
 function may_update_infoFields(data, tk) {
-	// TODO allow filtering
-
 	if (!tk.legend.bcfInfo) return
 	if (!data.skewer) {
 		console.log('data.skewer[] is not present and cannot show INFO legend')
 		return
 	}
-	let field_category = {}
-	for (let key in tk.mds.bcf.info) {
-		let field = tk.mds.bcf.info[key]
-		if (field.categories) {
-			field_category = field.categories
-		}
-	}
-	// console.log(field_category)
 
 	for (const infoKey in tk.legend.bcfInfo) {
+		// key of an INFO field and will create a legend section
+
 		// clear holder
 		tk.legend.bcfInfo[infoKey].holder.selectAll('*').remove()
+
 		if (tk.mds.bcf.info[infoKey].Type == 'String') {
-			// categorical field, show unique list of categories and variant count
+			// data for the INFO field is categorical, in the legend show unique list of categories and variant count
 			// TODO later use "termType=categorical/integer/float"
 
 			const category2variantCount = new Map() // key: category of this INFO field, v: number of variants
 			for (const m of data.skewer) {
-				if (!m.info) continue
-				if (!(infoKey in m.info)) continue
-				const category = m.info[infoKey]
+				const category = m?.info?.[infoKey]
+				if (category == undefined) continue // this variant is not annotated by this field
+
 				if (Array.isArray(category)) {
 					for (const c of category) {
 						category2variantCount.set(c, 1 + (category2variantCount.get(c) || 0))
@@ -271,12 +269,7 @@ function may_update_infoFields(data, tk) {
 			}
 
 			for (const c of show_lst) {
-				let desc
-				for (let [key, value] of Object.entries(field_category)) {
-					if (c.category == key) {
-						desc = value.desc
-					}
-				}
+				// c={category:str, count:int}
 
 				const cell = tk.legend.bcfInfo[infoKey].holder
 					.append('div')
@@ -322,12 +315,16 @@ function may_update_infoFields(data, tk) {
 								})
 						}
 
-						tk.legend.tip.d
-							.append('div')
-							.style('padding', '10px')
-							.style('font-size', '.8em')
-							.style('width', '150px')
-							.html(desc)
+						// optional description of this category
+						const desc = tk.mds.bcf.info[infoKey].categories?.[c.category]?.desc
+						if (desc) {
+							tk.legend.tip.d
+								.append('div')
+								.style('padding', '10px')
+								.style('font-size', '.8em')
+								.style('width', '150px')
+								.html(desc)
+						}
 
 						tk.legend.tip.showunder(cell.node())
 					})
@@ -336,13 +333,13 @@ function may_update_infoFields(data, tk) {
 					.append('div')
 					.style('display', 'inline-block')
 					.attr('class', 'sja_mcdot')
-					.style('background', tk.mds.bcf.info[infoKey].categories[c.category].color)
+					.style('background', tk.mds.bcf.info[infoKey].categories?.[c.category]?.color || unknown_infoCategory_bgcolor)
 					.html(c.count > 1 ? c.count : '&nbsp;')
 				cell
 					.append('div')
 					.style('display', 'inline-block')
-					.style('color', tk.mds.bcf.info[infoKey].categories[c.category].color)
-					.html('&nbsp;' + tk.mds.bcf.info[infoKey].categories[c.category].label)
+					.style('color', tk.mds.bcf.info[infoKey].categories?.[c.category]?.color || unknown_infoCategory_textcolor)
+					.html('&nbsp;' + tk.mds.bcf.info[infoKey].categories?.[c.category]?.label || c.category)
 			}
 
 			// hidden ones
