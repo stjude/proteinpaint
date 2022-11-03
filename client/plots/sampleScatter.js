@@ -275,7 +275,7 @@ class Scatter {
 			offsetY += step
 		}
 		if (this.config.shapeTW) {
-			offsetX = 250
+			offsetX = 300
 			offsetY = 60
 			title = this.config.shapeTW.term.name
 
@@ -344,7 +344,7 @@ function setRenderers(self) {
 		svg
 			.transition()
 			.duration(duration)
-			.attr('width', s.svgw + 600)
+			.attr('width', s.svgw + 700)
 			.attr('height', s.svgh + 110) //leaving 100 px for the y-axis and 10 to leave some space on top
 
 		/* eslint-disable */
