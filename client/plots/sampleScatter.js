@@ -59,6 +59,7 @@ class Scatter {
 			symbolSquare2
 		]
 		this.symbols = mySymbols.map(s => symbol(s))
+		this.k = 1
 	}
 
 	async init(opts) {
@@ -597,10 +598,10 @@ function setRenderers(self) {
 			xAxisG.call(self.axisBottom.scale(new_xScale))
 			yAxisG.call(self.axisLeft.scale(new_yScale))
 			seriesG.attr('transform', event.transform)
-			const k = event.transform.scale(1).k
+			self.k = event.transform.scale(1).k
 			//on zoom in the particle size is kept
-			symbols.attr('d', c => getShape(self, c, 1 / k))
-			if (self.lassoOn) self.lasso.selectedItems().attr('d', c => getShape(self, c, 2 / k))
+			symbols.attr('d', c => getShape(self, c))
+			if (self.lassoOn) self.lasso.selectedItems().attr('d', c => getShape(self, c, 2))
 		}
 
 		function zoomIn() {
@@ -909,10 +910,10 @@ export const scatterInit = getCompInit(Scatter)
 // this alias will allow abstracted dynamic imports
 export const componentInit = scatterInit
 
-function getShape(self, c, k = 1) {
+function getShape(self, c, factor = 1) {
 	const index = c.shape % self.symbols.length
 	const size = c.sample === 'Ref' ? self.settings.refSize : self.settings.size
-	return self.symbols[index].size(size * k)()
+	return self.symbols[index].size((size * factor) / self.k)()
 }
 
 function getShapeName(shapes, data) {
