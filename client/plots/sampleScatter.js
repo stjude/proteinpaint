@@ -175,7 +175,8 @@ class Scatter {
 						usecase: { target: 'sampleScatter', detail: 'colorTW' },
 						title: 'The term to use to color the samples',
 						label: 'Color',
-						vocabApi: this.app.vocabApi
+						vocabApi: this.app.vocabApi,
+						notRemovable: true
 					},
 					{
 						type: 'term',
@@ -380,19 +381,20 @@ function setRenderers(self) {
 				.attr('height', self.settings.svgh)
 				.attr('fill', 'white')
 			//Adding clip path
+			const idclip = `sjpp_clip_${Date.now()}`
 			svg
 				.append('defs')
 				.append('clipPath')
-				.attr('id', 'sjpp_clip')
+				.attr('id', idclip)
 				.append('rect')
 				.attr('x', 80)
 				.attr('y', 0)
 				.attr('width', self.settings.svgw)
 				.attr('height', self.settings.svgh + 20)
-			mainG.attr('clip-path', `url(#sjpp_clip)`)
+			mainG.attr('clip-path', `url(#${idclip})`)
 			xAxis.call(self.axisBottom)
 			yAxis.call(self.axisLeft)
-
+			console.log('self.id', self.id)
 			legendG = svg
 				.append('g')
 				.attr('class', 'sjpcb-scatter-legend')
