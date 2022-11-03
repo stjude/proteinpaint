@@ -35,6 +35,10 @@ export function trigger_getViolinPlotData(q, res, ds) {
 		if (typeof q.term2 == 'string') q.term2 = JSON.parse(decodeURIComponent(q.term2)) // look into why term2 is not parsed beforehand
 		if (!q.term2.id) {
 			if (q.term2.term.type != 'samplelst') throw 'term2.id missing'
+			else {
+				getRowsParam.term2 = q.term2.term
+				getRowsParam.term2_q = q.term2.q
+			}
 		} else {
 			term2 = ds.cohort.termdb.q.termjsonByOneid(q.term2.id)
 			if (!term2) throw '.term2.id invalid'
@@ -70,7 +74,9 @@ export function trigger_getViolinPlotData(q, res, ds) {
 
 	const updatedResult = []
 	for (const v of rows.lst) {
-		if (term?.values?.[v.key1]) {
+		// TODO: db terms table for numeric value should not have
+		// terms.values{} entries for computable values
+		if (term?.values?.[v.key1]?.uncomputable) {
 			// this value is uncomputable from term1, skip
 		} else {
 			// keep
