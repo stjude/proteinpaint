@@ -27,13 +27,16 @@ export function trigger_getViolinPlotData(q, res, ds) {
 	let term2
 
 	if (q.term2) {
-		if (typeof q.term2 == 'string') q.term2 = JSON.parse(q.term2) // look into why term2 is not parsed beforehand
-		if (!q.term2.id) throw 'term2.id missing'
-		term2 = ds.cohort.termdb.q.termjsonByOneid(q.term2.id)
-		if (!term2) throw '.term2.id invalid'
+		if (typeof q.term2 == 'string') q.term2 = JSON.parse(decodeURIComponent(q.term2)) // look into why term2 is not parsed beforehand
+		if (!q.term2.id) {
+			if (q.term2.term.type != 'samplelst') throw 'term2.id missing'
+		} else {
+			term2 = ds.cohort.termdb.q.termjsonByOneid(q.term2.id)
+			if (!term2) throw '.term2.id invalid'
+			getRowsParam.term2_id = q.term2.id
+			getRowsParam.term2_q = q.term2.q
+		}
 		if (typeof q.term2.q != 'object') throw 'term2.q{} missing'
-		getRowsParam.term2_id = q.term2.id
-		getRowsParam.term2_q = q.term2.q
 	}
 
 	const rows = termdbsql.get_rows(getRowsParam)

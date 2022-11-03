@@ -936,6 +936,7 @@ function openSurvivalPlot(self, term, groups) {
 				groups: groups
 			}
 		},
+		insertBefore: self.id,
 		settings: {
 			survival: {
 				xTickValues: [0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30]
@@ -977,7 +978,8 @@ function openSummaryPlot(self, term, groups) {
 				mode: 'custom-groupsetting',
 				groups: groups
 			}
-		}
+		},
+		insertBefore: self.id
 	}
 	self.app.dispatch({
 		type: 'plot_create',
