@@ -56,6 +56,7 @@ export default function svgLegend(opts) {
 		opts.holder.selectAll('g').remove()
 		const d = settings.dimensions
 		if (!opts.holder.attr('transform')) {
+			// d.yOffset should be used instead of settings.svgh ???
 			opts.holder.attr('transform', settings.ontop ? null : `translate(${d.xOffset},${settings.svgh})`)
 		}
 
