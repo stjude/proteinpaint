@@ -183,34 +183,9 @@ export function validate_query_snvindel_byisoform(ds) {
 			for (const c of ssm.cases) {
 				/* make simple sample obj for counting, with sample_id
 				only returns total number of unique cases to client
-				thus do not convert uuid to sample id for significant time-saving
 				*/
 
-				/*
-				uses tumor_sample_uuid(aliquot) rather than "case.case_id" 
-				to be able to correctly attribute mutation to the aliquot from which it's detected
-				case_id is the patient, and can correspond to multiple aliquots
-
-				the id is needed for two purposes:
-
-				1. counting occurrence for a mutation (both case_id and aliquot is fine)
-				2. showing sample name in matrix.
-					with case_id, can only convert to case name (method unknown)
-					with aliquot id, can convert to submitter id, has existing method (sample_id_getter) and is accurate
-
-				*/
-
-				// use case_id to identify patient
-				//m.samples.push({ sample_id: c.case_id })
-
-				// use aliquot to identify sample
-				const sample_id = c?.observation?.[0]?.sample?.tumor_sample_uuid
-				if (sample_id) {
-					m.samples.push({ sample_id })
-				} else {
-					// should not happen: quick way to alert
-					console.log('.observation.sample.tumor_sample_uuid missing from casse{}')
-				}
+				m.samples.push({ sample_id: await decideSampleId(c, ds) })
 			}
 			mlst.push(m)
 		}
@@ -687,26 +662,7 @@ export async function querySamples_gdcapi(q, twLst, ds) {
 			sample.ssm_id = s.ssm.ssm_id
 		}
 
-		/******* tricky logic *******
-		s.case.observation[0].sample.tumor_sample_uuid may be retrieved from api (depending on fields[])
-		when avaiable, the value is assigned to sample.tumor_sample_uuid,
-		which will next be converted into submitter id
-		the submitter id is assigned to sample.sample_id for display (and counting occurrence)
-
-		as s.case.case_id is expected to always available from fields[]
-		it is assigned to sample.sample_id
-		in case when tumor_sample_uuid is not retrieved,
-		sample.sample_id is still available for counting occurrence
-		*/
-		//sample.tumor_sample_uuid = s.case?.observation?.[0]?.sample?.tumor_sample_uuid
-
-		if (s.case?.observation?.[0]?.sample?.tumor_sample_uuid) {
-			sample.sample_id = await ds.aliquot2submitter.get(s.case.observation[0].sample.tumor_sample_uuid)
-		}
-
-		if (!sample.sample_id) {
-			sample.sample_id = s.case?.case_id
-		}
+		sample.sample_id = await decideSampleId(s.case, ds)
 
 		// for making url link on a sample
 		sample.sample_URLid = s.case.case_id
@@ -726,16 +682,24 @@ export async function querySamples_gdcapi(q, twLst, ds) {
 		samples.push(sample)
 	}
 
-	/*
-	if (typeof ds.variant2samples.sample_id_getter == 'function') {
-		// batch process, fire one query to convert all tumor_sample_uuid into submitter id for display
-		// must pass request header to getter in case requesting a controlled sample via a user token
-		// this is gdc-specific logic and should not impact generic mds3
-		await ds.variant2samples.sample_id_getter(samples, headers)
-	}
-	*/
-
 	return samples
+}
+
+/*
+c is case{}
+decide the generic sample_id used by pp
+*/
+async function decideSampleId(c, ds) {
+	if (c?.observation?.[0]?.sample?.tumor_sample_uuid) {
+		// hardcoded logic to
+		if (serverconfig.features.stopGdcCacheAliquot) {
+			// only on dev machine, do not trigger api call to speed up testing
+			return c.observation[0].sample.tumor_sample_uuid
+		}
+		// on prod server
+		return await ds.aliquot2submitter.get(c.observation[0].sample.tumor_sample_uuid)
+	}
+	return c.case_id
 }
 
 function may_add_readdepth(acase, sample) {
