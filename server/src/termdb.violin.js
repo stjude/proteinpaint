@@ -17,7 +17,7 @@ q={}
 	else generate only one plot
 .filter={}
 */
-export function trigger_getViolinPlotData(q, res, ds) {
+export async function trigger_getViolinPlotData(q, res, ds) {
 	const term = ds.cohort.termdb.q.termjsonByOneid(q.termid)
 	if (!term) throw '.termid invalid'
 	if (term.type != 'integer' && term.type != 'float') throw 'termid type is not integer/float'
@@ -69,7 +69,8 @@ export function trigger_getViolinPlotData(q, res, ds) {
 	const result = {
 		min: rows.lst[0]?.key1,
 		max: rows.lst[0]?.key1,
-		plots: [] // each element is data for one plot: {label=str, values=[]}
+		plots: [], // each element is data for one plot: {label=str, values=[]}
+		pvalues: []
 	}
 
 	const updatedResult = []
@@ -115,35 +116,7 @@ export function trigger_getViolinPlotData(q, res, ds) {
 		})
 	}
 
-	async function wilcoxon() {
-		const wilcoxInput = {} // { plot.label: {plot.values for term1: [], plot.values for term2: []} }
-
-		const group1values = [],
-			group2values = []
-
-		if (term2) {
-			for (let [i, v] of result.plots.entries()) {
-				for (let x = i; x < Object.keys(result.plots).length; x++) {
-					if (x === i) continue
-					group1values.push(...result.plots[i].values)
-					group2values.push(...result.plots[x].values)
-
-					wilcoxInput[`${result.plots[i].label} vs ${result.plots[x].label}`] = { group1values, group2values }
-				}
-			}
-		}
-
-		const tmpfile = path.join(serverconfig.cachedir, Math.random().toString() + '.json')
-		await utils.write_file(tmpfile, JSON.stringify(wilcoxInput))
-		const wilcoxOutput = await lines2R(path.join(serverconfig.binpath, 'utils/wilcoxon.R'), [], [tmpfile])
-		fs.unlink(tmpfile, () => {})
-
-		const pvalues = JSON.parse(wilcoxOutput)
-
-		// console.log(pvalues)
-		return pvalues
-	}
-	// wilcoxon()
+	await wilcoxon(term2, result)
 
 	for (const plot of result.plots) {
 		// item: { label=str, values=[v1,v2,...] }
@@ -171,9 +144,6 @@ export function trigger_getViolinPlotData(q, res, ds) {
 
 		delete plot.values
 	}
-	// console.log(Object.keys(wilcox).length);
-	// console.log(wilcoxInput);
-
 	res.send(result)
 }
 
@@ -198,4 +168,39 @@ export function computeViolinData(values) {
 		.value(d => d) /* bin the data points into this bucket*/
 
 	return binBuilder(values)
+}
+
+//compute pvalues using wilcoxon rank sum test
+export async function wilcoxon(term2, result) {
+	if (!term2) {
+		return
+	}
+	const wilcoxInput = {} // { plot.label: {plot.values for term1: [], plot.values for term2: []} }
+
+	const group1values = [],
+		group2values = []
+
+	//if term2 is present then run two loops. the second loop index begins with the index of the first loop.
+
+	for (let [i, v] of result.plots.entries()) {
+		for (let x = i; x < Object.keys(result.plots).length; x++) {
+			if (x === i) continue
+			group1values.push(...result.plots[i].values)
+			group2values.push(...result.plots[x].values)
+
+			wilcoxInput[`${result.plots[i].label.split(',')[0]} , ${result.plots[x].label.split(',')[0]}`] = {
+				group1values,
+				group2values
+			}
+		}
+	}
+
+	const tmpfile = path.join(serverconfig.cachedir, Math.random().toString() + '.json')
+	await utils.write_file(tmpfile, JSON.stringify(wilcoxInput))
+	const wilcoxOutput = await lines2R(path.join(serverconfig.binpath, 'utils/wilcoxon.R'), [], [tmpfile])
+	fs.unlink(tmpfile, () => {})
+
+	for (const [k, v] of Object.entries(JSON.parse(wilcoxOutput))) {
+		result.pvalues.push({ group1: k.split(',')[0], group2: k.split(',')[1], pvalue: v })
+	}
 }

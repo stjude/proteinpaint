@@ -19,12 +19,14 @@ class ViolinPlot {
 				.style('display', 'inline-block')
 				.style('padding', '5px'),
 
-			legendHolder: this.opts.holder
+			tableHolder: this.opts.holder
 				.append('div')
-				.classed('sjpp-legend-div', true)
-				.style('margin-left', '10px')
-				.style('margin-top', '80px')
-			// .style('padding', '5px')
+				.classed('sjpp-tableHolder', true)
+				.style('display', 'inline-block')
+				.style('padding', '5px')
+				.style('vertical-align', 'top')
+				.style('margin-left', '0px')
+				.style('margin-top', '30px')
 		}
 		violinRenderer(this)
 
@@ -111,28 +113,98 @@ class ViolinPlot {
 
 	getLegendGrps() {
 		const t2 = this.config.term2
+		const maxPvalsToShow = 5
 
-		if (t2 == undefined || t2 == null) {
-			// no term2, no legend to show
-			this.dom.legendHolder.style('display', 'none')
-			return
-		}
-
-		// show legend
-		this.dom.legendHolder
+		this.dom.tableHolder
 			.style('display', 'inline-block')
 			.style('vertical-align', 'top')
 			.selectAll('*')
 			.remove()
 
-		this.dom.legendHolder.append('div').text(this.config.term2.term.name)
-
-		for (const plot of this.data.plots) {
-			this.dom.legendHolder
-				.append('div')
-				.style('font-size', '15px')
-				.text(plot.label)
+		if (t2 == undefined || t2 == null) {
+			// no term2, no legend to show
+			this.dom.tableHolder.style('display', 'none')
+			return
 		}
+
+		//disabled separate legend for now
+
+		// const legendHolder = this.dom.tableHolder.append('div').classed('sjpp-legend-div', true)
+
+		// legendHolder.append('div').text(this.config.term2.term.name)
+
+		// for (const plot of this.data.plots) {
+		// 	legendHolder
+		// 		.append('div')
+		// 		.style('font-size', '15px')
+		// 		.text(plot.label)
+		// }
+
+		//show pvalue table
+		// TODO cleanup in a separate component
+		let title
+		if (this.type == 'violin') {
+			title = "Group comparisons (Wilcoxon's rank sum test)"
+		}
+
+		const pvalueHolder = this.dom.tableHolder
+			.append('div')
+			.classed('sjpp-pvalue-div', true)
+			.style('margin-top', '30px')
+			.style('margin-right', '30px')
+
+		pvalueHolder
+			.append('div')
+			.style('font-weight', 'bold')
+			.style('font-size', '15px')
+			.text(title)
+
+		const tablediv = pvalueHolder
+			.append('div')
+			.style('position', 'inline-block')
+			.style('border', '1px solid #ccc')
+
+		console.log(this.data.pvalues.length)
+
+		if (this.data.pvalues.length > maxPvalsToShow) {
+			tablediv.style('overflow', 'auto').style('height', '250px')
+		}
+
+		const table = tablediv.append('table').style('width', '70%')
+
+		table
+			.append('thead')
+			.append('tr')
+			.selectAll('td')
+			.data(['Group 1', 'Group 2', 'P-value'])
+			.enter()
+			.append('td')
+			.style('padding', '1px 8px 1px')
+			.style('color', '#858585')
+			.style('position', 'sticky')
+			.style('top', '0px')
+			.style('background', 'white')
+			.style('font-size', '15px')
+			.text(column => column)
+
+		const tbody = table.append('tbody')
+		const tr = tbody
+			.selectAll('tr')
+			.data(this.data.pvalues)
+			.enter()
+			.append('tr')
+			.attr('class', `pp-${this.type}-chartLegends-pvalue`)
+
+		tr.selectAll('td')
+			.data(d => [d.group1, d.group2, d.pvalue])
+			.enter()
+			.append('td')
+			.attr('title', this.type == 'violin' ? 'Click to hide a p-value' : '')
+			.style('color', 'black')
+			.style('padding', '1px 8px 1px')
+			.style('font-size', '15px')
+			.style('cursor', this.type == 'violin' ? 'pointer' : 'auto')
+			.text(d => d)
 	}
 }
 

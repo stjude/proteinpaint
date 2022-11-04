@@ -3,9 +3,9 @@ import { scaleLinear } from 'd3-scale'
 import { area, curveBumpX, curveBumpY } from 'd3-shape'
 
 export default function violinRenderer(self) {
-	self.render = function() {
-		const plotColor = '#c6c4f2'
+	const plotColor = '#c6c4f2'
 
+	self.render = function() {
 		if (self.data.plots.length == 0) {
 			self.dom.holder.html(
 				` <span style="opacity:.6;font-size:1em;margin-left:90px;">No data to render Violin Plot</span>`
@@ -63,7 +63,7 @@ export default function violinRenderer(self) {
 				'width',
 				margin.left +
 					margin.right +
-					(isH ? plotLength : plotThickness * self.data.plots.length + self.config.term.term.name.length * 5)
+					(isH ? plotLength : plotThickness * self.data.plots.length + self.config.term.term.name.length)
 			)
 			.attr(
 				'height',
@@ -98,7 +98,7 @@ export default function violinRenderer(self) {
 			} else {
 				lab
 					.attr('y', 0 - margin.top / 2)
-					.attr('x', svgWidth / 2 + margin.left)
+					.attr('x', svgWidth / 2)
 					.attr('text-anchor', 'middle')
 					.attr('transform', 'rotate(0)')
 			}

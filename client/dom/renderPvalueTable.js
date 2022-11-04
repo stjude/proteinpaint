@@ -30,8 +30,6 @@ export function renderPvalues({ holder, plot, tests, s, bins, tip, setActiveMenu
 		title = 'Group comparisons (log-rank test)'
 	} else if (plot == 'cuminc') {
 		title = "Group comparisons (Gray's test)"
-	} else if (plot == 'violin') {
-		title = "Group comparisons (Wilcoxon's rank sum test)"
 	} else {
 		throw `plot type '${plot}' not recognized`
 	}
