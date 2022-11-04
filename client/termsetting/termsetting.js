@@ -1,6 +1,7 @@
 import { getInitFxn, copyMerge, deepEqual } from '#rx'
 import { Menu } from '#dom/menu'
 import { select } from 'd3-selection'
+import minimatch from 'minimatch'
 
 /*
 ********************* EXPORTED
@@ -24,7 +25,7 @@ const idSuffix = `_ts_${(+new Date()).toString().slice(-8)}`
 let $id = 0
 
 const defaultOpts = {
-	menuOptions: 'edit', // ['edit', 'replace', 'save', 'remove'],
+	menuOptions: '{edit,reuse}', // ['edit', 'replace', 'save', 'remove'],
 	menuLayout: 'vertical'
 }
 
@@ -182,8 +183,13 @@ class TermSetting {
 	}
 
 	validateMenuOptions(o) {
-		const allowedOptions = ['all', 'edit']
-		if (!allowedOptions.includes(o.menuOptions)) throw `unsupported ts.opts.menuOptions='${o.menuOptions}'`
+		if (!o.menuOptions) o.menuOptions = defaultOpts.menuOptions
+		// support legacy options, now converted to use glob-style pattern matching
+		if (o.menuOptions == 'all') o.menuOptions = '*'
+		for (const opt of ['edit', 'reuse', 'replace', 'remove']) {
+			if (minimatch(opt, o.menuOptions)) return // matched at least one menu option
+		}
+		throw `no matches found for termsetting opts.menuOptions='${o.menuOptions}'`
 	}
 
 	mayValidate_noTermPromptOptions(o) {
@@ -509,14 +515,20 @@ function setInteractivity(self) {
 		}
 
 		const options = []
-		if (self.q && !self.q.groupsetting?.disabled) {
+		if (self.q && !self.q.groupsetting?.disabled && minimatch('edit', self.opts.menuOptions)) {
 			options.push({ label: 'Edit', callback: self.handler.showEditMenu })
 		}
 
-		options.push({ label: 'Reuse', callback: self.showReuseMenu })
+		if (minimatch('reuse', self.opts.menuOptions)) {
+			options.push({ label: 'Reuse', callback: self.showReuseMenu })
+		}
 
-		if (self.opts.menuOptions == 'all') {
-			options.push({ label: 'Replace', callback: self.showTree }, { label: 'Remove', callback: self.removeTerm })
+		if (minimatch('replace', self.opts.menuOptions)) {
+			options.push({ label: 'Replace', callback: self.showTree })
+		}
+
+		if (minimatch('remove', self.opts.menuOptions)) {
+			options.push({ label: 'Remove', callback: self.removeTerm })
 		}
 
 		const d3elem = menuHolder || tip.d

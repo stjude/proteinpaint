@@ -176,7 +176,7 @@ class Scatter {
 						title: 'The term to use to color the samples',
 						label: 'Color',
 						vocabApi: this.app.vocabApi,
-						notRemovable: true
+						menuOptions: '!remove'
 					},
 					{
 						type: 'term',

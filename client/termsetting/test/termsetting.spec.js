@@ -27,7 +27,7 @@ async function getOpts(_opts = {}, genome = 'hg38', dslabel = 'TermdbTest') {
 		.style('padding', '5px')
 		.style('border', '1px solid #000')
 
-	const opts = Object.assign({ holder, menuOptions: 'edit' }, _opts)
+	const opts = Object.assign({ holder }, _opts)
 	const vocab = opts.vocab ? opts.vocab : { route: 'termdb', genome, dslabel }
 	const state = {
 		vocab,
@@ -94,7 +94,7 @@ tape('\n', test => {
 
 tape('menuOptions', async test => {
 	test.timeoutAfter(500)
-	test.plan(5)
+	test.plan(6)
 
 	{
 		const message = `should throw on invalid menuOptions`
@@ -137,7 +137,16 @@ tape('menuOptions', async test => {
 	// if pill.opts is frozen in future, just create a new pill
 	opts.pill.Inner.opts.menuOptions = 'edit'
 	pilldiv.click()
-	test.equal(tipd.selectAll('.sja_menuoption').size(), 2, `should show two menu options when menuOptions='edit'`)
+	test.equal(tipd.selectAll('.sja_menuoption').size(), 1, `should show 1 menu options when menuOptions='edit'`)
+
+	opts.pill.Inner.opts.menuOptions = ''
+	opts.pill.Inner.validateMenuOptions(opts.pill.Inner.opts)
+	pilldiv.click()
+	test.equal(
+		tipd.selectAll('.sja_menuoption').size(),
+		2,
+		`should show 2 menu options when menuOptions is empty/undefined`
+	)
 
 	opts.pill.Inner.dom.tip.hide()
 	test.end()
