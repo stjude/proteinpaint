@@ -529,8 +529,16 @@ async function cacheAliquot2submitterMapping(ds) {
 			cache: new Map(),
 			get: async aliquot_id => {
 				if (ds.aliquot2submitter.cache.has(aliquot_id)) return ds.aliquot2submitter.cache.get(aliquot_id)
-				await fetchIdsFromGdcApi(ds, null, null, aliquot_id)
-				return ds.aliquot2submitter.cache.get(aliquot_id)
+
+				/* 
+				as on the fly api query is still slow, especially to query one at a time for hundreds of ids
+				simply return unconverted id to preserve performance
+				*/
+				return aliquot_id
+
+				// converts one id on the fly while the cache is still loading
+				//await fetchIdsFromGdcApi(ds, null, null, aliquot_id)
+				//return ds.aliquot2submitter.cache.get(aliquot_id)
 			}
 		}
 

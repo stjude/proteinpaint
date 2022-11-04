@@ -1,7 +1,6 @@
 const common = require('#shared/common')
 const got = require('got')
 const { get_crosstabCombinations } = require('./mds3.variant2samples')
-const serverconfig = require('./serverconfig')
 
 /*
 GDC API
@@ -692,11 +691,6 @@ decide the generic sample_id used by pp
 async function decideSampleId(c, ds) {
 	if (c?.observation?.[0]?.sample?.tumor_sample_uuid) {
 		// hardcoded logic to
-		if (serverconfig.features.stopGdcCacheAliquot) {
-			// only on dev machine, do not trigger api call to speed up testing
-			return c.observation[0].sample.tumor_sample_uuid
-		}
-		// on prod server
 		return await ds.aliquot2submitter.get(c.observation[0].sample.tumor_sample_uuid)
 	}
 	return c.case_id
