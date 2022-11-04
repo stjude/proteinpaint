@@ -4,6 +4,7 @@ const got = require('got')
 validate_filter0
 isoform2ssm_query1_getvariant
 	filter2GDCfilter
+		mayChangeCase2Cases
 isoform2ssm_query2_getcase
 query_range2variants
 variables_range2variants
