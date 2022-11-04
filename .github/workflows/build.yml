@@ -1,6 +1,7 @@
 name: Build and run tests
 
 on:
+  push:
   pull_request:
     branches:
       - master
