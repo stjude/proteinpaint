@@ -2,9 +2,9 @@ const got = require('got')
 
 /*
 validate_filter0
-isoform2ssm_getvariant
+isoform2ssm_query1_getvariant
 	filter2GDCfilter
-isoform2ssm_getcase
+isoform2ssm_query2_getcase
 query_range2variants
 variables_range2variants
 variant2samplesGdcapi
@@ -41,13 +41,13 @@ query list of variants by isoform
 
 /*
 REST: get list of ssm with consequence, no case info and occurrence
-isoform2ssm_getvariant and isoform2ssm_getcase are the "tandem REST api"
+isoform2ssm_query1_getvariant and isoform2ssm_query2_getcase are the "tandem REST api"
 yields list of ssm, each with .samples[{sample_id}]
 can use .samples[] to derive .occurrence for each ssm, and overal number of unique samples
 
 in comparison to "protein_mutations" graphql query
 */
-const isoform2ssm_getvariant = {
+const isoform2ssm_query1_getvariant = {
 	endpoint: '/ssms',
 	size: 100000,
 	fields: [
@@ -98,7 +98,7 @@ const isoform2ssm_getvariant = {
 	}
 }
 // REST: get case details for each ssm, no variant-level info
-const isoform2ssm_getcase = {
+const isoform2ssm_query2_getcase = {
 	endpoint: '/ssm_occurrences',
 	size: 100000,
 	fields: [
@@ -580,8 +580,8 @@ module.exports = {
 			byisoform: {
 				// tandem rest api method
 				gdcapi: {
-					query1: isoform2ssm_getvariant,
-					query2: isoform2ssm_getcase
+					query1: isoform2ssm_query1_getvariant,
+					query2: isoform2ssm_query2_getcase
 				}
 
 				/* 

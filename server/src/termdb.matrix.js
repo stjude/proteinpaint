@@ -266,22 +266,10 @@ async function getSampleData_gdc(q, termWrappers) {
 		isoforms
 	}
 
-	const sampleLst = await querySamples_gdcapi(
-		param,
-		['case.observation.sample.tumor_sample_uuid', ...termWrappers.map(i => i.term.id)],
-		q.ds
-	)
+	const twLst = termWrappers.slice() // duplicate array to insert new ones, do not modify orignal
+	twLst.push({ id: 'case.observation.sample.tumor_sample_uuid' }) // allow submitter id to be assigned to sample_id
 
-	/*
-	here returned samples are using submitter ids as .sample_id
-	while other geneVariant terms in the matrix are using tumor_sample_uuid (unconverted)
-	lucky the tumor_sample_uuid is still there, assign it to sample_id to be able to match with geneVariant terms
-
-	here the submitter id conversion is wasted but later with cached mapping (no api query) will be trivial to ignore
-	*/
-	for (const s of sampleLst) {
-		s.sample_id = s.tumor_sample_uuid
-	}
+	const sampleLst = await querySamples_gdcapi(param, twLst, q.ds)
 
 	const samples = {}
 	const refs = { byTermId: {} }

@@ -534,6 +534,8 @@ async function cacheAliquot2submitterMapping(ds) {
 			}
 		}
 
+		if (serverconfig.features.stopGdcCacheAliquot) return console.log('GDC aliquot2submitter not cached!')
+
 		// key: aliquot uuid
 		// value: submitter id
 		const totalCases = await fetchIdsFromGdcApi(ds, 1, 0)
@@ -544,7 +546,6 @@ async function cacheAliquot2submitterMapping(ds) {
 
 		const size = 1000 // fetch 1000 ids at a time
 		for (let i = 0; i < Math.ceil(totalCases / size); i++) {
-			if (serverconfig.features.stopGdcCacheAliquot) break // only on dev machines
 			await fetchIdsFromGdcApi(ds, size, i * 1000)
 		}
 

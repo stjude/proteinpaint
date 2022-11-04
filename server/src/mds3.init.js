@@ -37,6 +37,10 @@ validate_variant2samples
 validate_ssm2canonicalisoform
 mayAdd_refseq2ensembl
 mayAdd_mayGetGeneVariantData
+	getSnvindelByTerm
+	getSvfusionByTerm
+		mayMapGeneName2isoform
+		mayMapGeneName2coord
 */
 
 // in case chr name may contain '.', can change to __
