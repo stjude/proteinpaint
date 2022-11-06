@@ -293,7 +293,8 @@ export async function initGDCdictionary(ds) {
 	       additional prepping
 	**********************************/
 	await getOpenProjects(ds)
-	await testGDCapi()
+
+	testGDCapi() // do not await
 	cacheAliquot2submitterMapping(ds) // do not await on this
 }
 
@@ -481,14 +482,29 @@ async function getOpenProjects(ds) {
 	}
 }
 
+/* this function is called when the gdc mds3 dataset is initiated on a pp instance
+primary purpose is to catch malformed api URLs
+when running this on sj prod server, the gdc api can be down due to maintainance, and we do not want to prevent our server from launching
+thus do not halt process if api is down
+*/
 async function testGDCapi() {
-	// this function is called when the gdc mds3 dataset is initiated on a pp instance
-	await testRestApi(apihost + '/ssms')
-	await testRestApi(apihost + '/ssm_occurrences')
-	await testRestApi(apihost + '/cases')
-	await testRestApi(apihost + '/files')
-	// /data/ and /slicing/view/ are not tested as they require file uuid which is unstable across data releases
-	await testGraphqlApi(apihostGraphql)
+	try {
+		await testRestApi(apihost + '/ssms')
+		await testRestApi(apihost + '/ssm_occurrences')
+		await testRestApi(apihost + '/cases')
+		await testRestApi(apihost + '/files')
+		// /data/ and /slicing/view/ are not tested as they require file uuid which is unstable across data releases
+		await testGraphqlApi(apihostGraphql)
+	} catch (e) {
+		console.error(`
+##########################################
+#
+#   GDC API unavailable
+#   ${apihost}
+#   ${apihostGraphql}
+#
+##########################################`)
+	}
 }
 
 async function testRestApi(url) {
