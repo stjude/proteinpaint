@@ -53,6 +53,7 @@ cairo-*/*
 canvas/*
 pixman-*/*
 **/serverconfig.json
+!/server/test/serverconfig.json
 **/server.js*
 !client/rx/server.js
 !sj/**/server.js
