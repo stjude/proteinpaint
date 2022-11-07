@@ -120,9 +120,9 @@ function hg38gene() {
 	)
 	exec(
 		'curl https://proteinpaint.stjude.org/ppSupport/gencode.v41.hg38.gz.tbi -o ' +
-			path.join(tp, +'anno/gencode.v41.hg38.gz.tbi')
+			path.join(tp, 'anno/gencode.v41.hg38.gz.tbi')
 	)
-	exec('curl https://proteinpaint.stjude.org/ppSupport/genes.hg38.db -o ' + path.join(tp, +'anno/genes.hg38.db'))
+	exec('curl https://proteinpaint.stjude.org/ppSupport/genes.hg38.db -o ' + path.join(tp, 'anno/genes.hg38.db'))
 }
 
 function checkDir(p) {
