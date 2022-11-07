@@ -5,6 +5,8 @@ const utils = require('./utils')
 const serverconfig = require('./serverconfig')
 const d3scale = require('d3-scale')
 const schemeCategory10 = require('d3-scale-chromatic').schemeCategory10
+import { mclass } from '#shared/common'
+import { map } from 'jstat'
 
 /*
 works with "canned" scatterplots in a dataset, e.g. data from a text file of tSNE coordinates from a pre-analyzed cohort (contrary to on-the-fly analysis)
@@ -30,7 +32,7 @@ trigger_getSampleScatter()
 */
 
 // color of reference samples, they should be shown as a "cloud" of dots at backdrop
-const referenceSampleColor = '#ccc'
+const defaultColor = '#ccc'
 const defaultShape = 0
 
 // called in mds3.init
@@ -179,116 +181,142 @@ async function mayColorAndFilterSamples(allSamples, q, ds) {
 		return [allSamples]
 	}
 
-	const getRowsParam = {
-		ds,
-		filter: q.filter
-	}
-
-	if (!('id' in q.colorTW)) throw 'q.colorTW.id missing'
-	if (typeof q.colorTW.q != 'object') throw 'q.colorTW.q is not object'
-	getRowsParam.term1_id = q.colorTW.id
-	getRowsParam.term1_q = q.colorTW.q
-
-	if (q.shapeTW) {
-		if (!('id' in q.shapeTW)) throw 'q.shapeTW.id missing'
-		if (typeof q.shapeTW.q != 'object') throw 'q.shapeTW.q is not object'
-		getRowsParam.term2_id = q.shapeTW.id
-		getRowsParam.term2_q = q.shapeTW.q
-	}
-
-	const [sampleId2colorCategory, sampleId2shapeCategory] = callGetRows(getRowsParam, q)
-
 	const samples = [] // samples pass filter and to be returned to client and display
+	let colorLegend
+	let shapeCategories = new Map()
+	shapeCategories.set('None', { sampleCount: 0, shape: defaultShape })
+	if (q.colorTW.term.type == 'geneVariant') {
+		console.log(allSamples)
+		let row, color, sample, coords, sampleCount, label
+		let colorMap = new Map()
+		colorMap.set('None', ['None', { sampleCount: 0, color: defaultColor }])
 
-	const colorCategories = new Map()
-	// key: category, value: {sampleCount=integer, color=str}
+		const bySampleId = await ds.mayGetGeneVariantData(q.colorTW, q)
+		for (const [sampleId, value] of bySampleId.entries()) {
+			if (!(q.colorTW.term.name in value)) continue
+			row = value[q.colorTW.term.name].values[0]
 
-	let shapeCategories
-	shapeCategories = new Map()
-	shapeCategories.set('None', { sampleCount: 0 })
-	// key: category, value: {sampleCount=integer, shape=int}
-
-	for (const s of allSamples) {
-		if ('sampleId' in s) {
-			// this sample has ID and is filterable
-
-			if (!sampleId2colorCategory.has(s.sampleId)) {
-				// this id is not present in the map, meaning the sample is dropped by filter
-				// and will exclude it from the scatterplot
+			coords = allSamples.find(s => s.sample == row.sample)
+			if (!coords)
+				// this id is not present and will be excluded from the scatterplot
 				continue
+			console.log('row', row)
+			color = mclass[row.class].color
+			label = mclass[row.class].label
+			sample = { sample: row.sample, category: label, color, shape: defaultShape, x: coords.x, y: coords.y }
+			samples.push(sample)
+			if (!colorMap.has(row.class)) colorMap.set(row.class, [label, { sampleCount: 0, color }])
+			else {
+				sampleCount = colorMap.get(row.class)[1].sampleCount + 1
+				colorMap.set(row.class, [label, { sampleCount, color }])
 			}
+		}
+		colorLegend = Array.from(colorMap.values())
+	} else {
+		const getRowsParam = {
+			ds,
+			filter: q.filter
+		}
+		if (!('id' in q.colorTW)) throw 'q.colorTW.id missing'
+		if (typeof q.colorTW.q != 'object') throw 'q.colorTW.q is not object'
 
-			// the sample is kept by filter and will show in scatterplot
+		getRowsParam.term1_id = q.colorTW.id
+		getRowsParam.term1_q = q.colorTW.q
 
-			// sample has color category assignment
-			s.category = sampleId2colorCategory.get(s.sampleId) // change 'category' to 'colorCategory'
-			if (!colorCategories.has(s.category)) {
-				colorCategories.set(s.category, { sampleCount: 0 })
-			}
-			colorCategories.get(s.category).sampleCount++
+		if (q.shapeTW) {
+			if (!('id' in q.shapeTW)) throw 'q.shapeTW.id missing'
+			if (typeof q.shapeTW.q != 'object') throw 'q.shapeTW.q is not object'
+			getRowsParam.term2_id = q.shapeTW.id
+			getRowsParam.term2_q = q.shapeTW.q
+		}
 
-			if (sampleId2shapeCategory) {
-				// using shape
-				if (sampleId2shapeCategory.has(s.sampleId)) {
-					// sample has shape
-					s.shapeCategory = sampleId2shapeCategory.get(s.sampleId)
-					if (!shapeCategories.has(s.shapeCategory)) {
-						shapeCategories.set(s.shapeCategory, { sampleCount: 0 })
-					}
-					shapeCategories.get(s.shapeCategory).sampleCount++
+		const [sampleId2colorCategory, sampleId2shapeCategory] = callGetRows(getRowsParam, q)
+
+		const colorCategories = new Map()
+		// key: category, value: {sampleCount=integer, color=str}
+
+		// key: category, value: {sampleCount=integer, shape=int}
+
+		for (const s of allSamples) {
+			if ('sampleId' in s) {
+				// this sample has ID and is filterable
+
+				if (!sampleId2colorCategory.has(s.sampleId)) {
+					// this id is not present in the map, meaning the sample is dropped by filter
+					// and will exclude it from the scatterplot
+					continue
 				}
-			} else shapeCategories.get('None').sampleCount++
 
-			delete s.sampleId // no need to send to client
-			samples.push(s)
-		} else {
-			// this sample does not has ID, and is un-filterable
-			// always keep it in scatterplot
-			samples.push(s)
-			shapeCategories.get('None').sampleCount++
-		}
-	}
+				// the sample is kept by filter and will show in scatterplot
 
-	// assign color to unique categories, but not reference
-	const k2c = d3scale.scaleOrdinal(schemeCategory10)
-	for (const [category, o] of colorCategories) {
-		if (q.colorTW?.term?.values?.[category]?.color) {
-			o.color = q.colorTW.term.values[category].color
-		} else {
-			o.color = k2c(category)
-		}
-	}
+				// sample has color category assignment
+				s.category = sampleId2colorCategory.get(s.sampleId) // change 'category' to 'colorCategory'
+				if (!colorCategories.has(s.category)) {
+					colorCategories.set(s.category, { sampleCount: 0 })
+				}
+				colorCategories.get(s.category).sampleCount++
 
-	if (shapeCategories) {
-		let i = 0
-		for (const [category, o] of shapeCategories) {
-			o.shape = i++
-		}
-	}
+				if (sampleId2shapeCategory) {
+					// using shape
+					if (sampleId2shapeCategory.has(s.sampleId)) {
+						// sample has shape
+						s.shapeCategory = sampleId2shapeCategory.get(s.sampleId)
+						if (!shapeCategories.has(s.shapeCategory)) {
+							shapeCategories.set(s.shapeCategory, { sampleCount: 0 })
+						}
+						shapeCategories.get(s.shapeCategory).sampleCount++
+					}
+				} else shapeCategories.get('None').sampleCount++
 
-	// now each category gets an color/shape, apply to samples
-
-	let referenceSampleCount = 0
-	for (const s of samples) {
-		if (colorCategories.has(s.category)) {
-			s.color = colorCategories.get(s.category).color
-
-			if (shapeCategories && shapeCategories.has(s.shapeCategory)) {
-				s.shape = shapeCategories.get(s.shapeCategory).shape
+				delete s.sampleId // no need to send to client
+				samples.push(s)
+			} else {
+				// this sample does not has ID, and is un-filterable
+				// always keep it in scatterplot
+				samples.push(s)
+				shapeCategories.get('None').sampleCount++
 			}
-		} else {
-			s.color = referenceSampleColor
-			referenceSampleCount++
 		}
-		if (!('shape' in s)) s.shape = defaultShape
-	}
+		// assign color to unique categories, but not reference
+		const k2c = d3scale.scaleOrdinal(schemeCategory10)
+		for (const [category, o] of colorCategories) {
+			if (q.colorTW?.term?.values?.[category]?.color) {
+				o.color = q.colorTW.term.values[category].color
+			} else {
+				o.color = k2c(category)
+			}
+		}
 
-	// sort in descending order
+		if (shapeCategories) {
+			let i = 0
+			for (const [category, o] of shapeCategories) {
+				o.shape = i++
+			}
+		}
+		// now each category gets an color/shape, apply to samples
 
-	const colorLegend = [...colorCategories].sort((a, b) => b[1].sampleCount - a[1].sampleCount)
-	// each element: [ 'categoryKey', { sampleCount=int, color=str } ]
-	if (referenceSampleCount) {
-		colorLegend.push(['Reference samples', { sampleCount: referenceSampleCount, color: referenceSampleColor }])
+		let referenceSampleCount = 0
+		for (const s of samples) {
+			if (colorCategories.has(s.category)) {
+				s.color = colorCategories.get(s.category).color
+
+				if (shapeCategories && shapeCategories.has(s.shapeCategory)) {
+					s.shape = shapeCategories.get(s.shapeCategory).shape
+				}
+			} else {
+				s.color = defaultColor
+				referenceSampleCount++
+			}
+			if (!('shape' in s)) s.shape = defaultShape
+		}
+
+		// sort in descending order
+
+		colorLegend = [...colorCategories].sort((a, b) => b[1].sampleCount - a[1].sampleCount)
+		// each element: [ 'categoryKey', { sampleCount=int, color=str } ]
+		if (referenceSampleCount) {
+			colorLegend.push(['Reference samples', { sampleCount: referenceSampleCount, color: defaultColor }])
+		}
 	}
 
 	const result = { samples, colorLegend }

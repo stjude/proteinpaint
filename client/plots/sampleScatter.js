@@ -120,6 +120,7 @@ class Scatter {
 		const data = await this.app.vocabApi.getScatterData(reqOpts)
 		if (data.error) throw data.error
 		if (!Array.isArray(data.samples)) throw 'data.samples[] not array'
+		console.log(data)
 		this.shapes = data.shapeLegend
 		const s0 = data.samples[0]
 		const [xMin, xMax, yMin, yMax] = data.samples.reduce(
@@ -394,7 +395,6 @@ function setRenderers(self) {
 			mainG.attr('clip-path', `url(#${idclip})`)
 			xAxis.call(self.axisBottom)
 			yAxis.call(self.axisLeft)
-			console.log('self.id', self.id)
 			legendG = svg
 				.append('g')
 				.attr('class', 'sjpcb-scatter-legend')
@@ -440,7 +440,10 @@ function setRenderers(self) {
 	}
 
 	function translate(c) {
+		console.log(c)
+
 		const transform = `translate(${self.xAxisScale(c.x) + 100},${self.yAxisScale(c.y) + 10})`
+		console.log(transform)
 		return transform
 	}
 
