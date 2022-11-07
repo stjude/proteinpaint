@@ -7468,7 +7468,7 @@ async function pp_init() {
 			initLegacyDataset(ds, g)
 		}
 
-		await deleteSessionFiles()
+		deleteSessionFiles()
 
 		delete g.rawdslst
 	}
@@ -7489,21 +7489,16 @@ async function deleteSessionFiles() {
 			const massSessionDuration = serverconfig.features.massSessionDuration || 30
 			const sessionDaysElapsed = Math.round((today.getTime() - fileDate.getTime()) / (1000 * 3600 * 24))
 			if (sessionDaysElapsed > massSessionDuration) {
-				if (file == 'SJPNET') {
-					// ignore
-					// Fix for mass-session-id=SJPNET in published manuscript
-				} else {
-					// Move file to massSessionTrash
-					// Process in place until users get use to it
-					await fs.promises.copyFile(
-						path.join(serverconfig.cachedir_massSession, file),
-						path.join(serverconfig.cachedir_massSessionTrash, file)
-					)
-					// Delete file out of massSession
-					await fs.promises.unlink(path.join(serverconfig.cachedir_massSession, file))
+				// Move file to massSessionTrash
+				// Process in place until users get use to it
+				await fs.promises.copyFile(
+					path.join(serverconfig.cachedir_massSession, file),
+					path.join(serverconfig.cachedir_massSessionTrash, file)
+				)
+				// Delete file out of massSession
+				await fs.promises.unlink(path.join(serverconfig.cachedir_massSession, file))
 
-					console.log('File deleted: ', file, sessionCreationDate)
-				}
+				console.log('File deleted: ', file, sessionCreationDate)
 			}
 		})
 	} catch (e) {
