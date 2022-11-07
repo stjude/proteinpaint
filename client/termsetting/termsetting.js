@@ -2,7 +2,7 @@ import { getInitFxn, copyMerge, deepEqual } from '#rx'
 import { Menu } from '#dom/menu'
 import { select } from 'd3-selection'
 import minimatch from 'minimatch'
-
+import { nonDictionaryTermTypes } from '#shared/termdb.usecase'
 /*
 ********************* EXPORTED
 nonDictionaryTermTypes
@@ -16,8 +16,6 @@ set_hiddenvalues()
 clickNoPillDiv
 showTree
 */
-
-export const nonDictionaryTermTypes = new Set(['snplst', 'prs', 'snplocus', 'geneVariant', 'samplelst'])
 
 // append the common ID substring,
 // so that the first characters of $id is more indexable

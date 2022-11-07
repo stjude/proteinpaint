@@ -1,4 +1,5 @@
-import { termsettingInit, nonDictionaryTermTypes } from '#termsetting'
+import { termsettingInit } from '#termsetting'
+import { nonDictionaryTermTypes } from '#shared/termdb.usecase'
 import { getNormalRoot } from '#filter'
 import { get_bin_label } from '#shared/termdb.bins'
 import { InputValuesTable } from './regression.inputs.values.table'

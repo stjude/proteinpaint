@@ -1,6 +1,6 @@
 import { dofetch3, isInSession } from '../common/dofetch'
 import { getBarchartData, getCategoryData } from '../plots/barchart.data'
-import { nonDictionaryTermTypes } from '../termsetting/termsetting'
+import { nonDictionaryTermTypes } from '#shared/termdb.usecase'
 import { getNormalRoot } from '../filter/filter'
 import { scaleLinear } from 'd3-scale'
 import { sample_match_termvaluesetting } from '../common/termutils'

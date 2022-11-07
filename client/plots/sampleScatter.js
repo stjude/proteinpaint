@@ -192,7 +192,7 @@ class Scatter {
 						type: 'number',
 						chartType: 'sampleScatter',
 						settingsKey: 'size',
-						title: 'The size of the samples',
+						title: 'It represents the area of the symbols in square pixels',
 						min: 0
 					},
 					{
@@ -200,7 +200,7 @@ class Scatter {
 						type: 'number',
 						chartType: 'sampleScatter',
 						settingsKey: 'refSize',
-						title: 'The size of the references',
+						title: 'It represents the area of the reference samples in square pixels',
 						min: 0
 					},
 					{
@@ -881,8 +881,8 @@ export async function getPlotConfig(opts, app) {
 					isOpen: false // control panel is hidden by default
 				},
 				sampleScatter: {
-					size: 5,
-					refSize: 5,
+					size: 16,
+					refSize: 9,
 					svgw: 600,
 					svgh: 600,
 					axisTitleFontSize: 16,

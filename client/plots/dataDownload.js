@@ -1,7 +1,7 @@
 import { getCompInit, copyMerge } from '../rx'
 import { select } from 'd3-selection'
 import { sayerror } from '../dom/error'
-import { termsettingInit, fillTermWrapper, nonDictionaryTermTypes } from '#termsetting'
+import { termsettingInit, fillTermWrapper } from '#termsetting'
 import { appInit } from '#termdb/app'
 
 /*
