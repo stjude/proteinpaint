@@ -43,8 +43,11 @@ getPvalue <- function(x) {
   }
   # break any ties between values
   # this will allow exact p-values to be computed
+  # only add jitter to sample size less than 50
+if (length(x$group1values) <= 50 || length(x$group2values) <= 50) {
   if(anyDuplicated(x$group1values)) x$group1values <- jitter(x$group1values)
   if(anyDuplicated(x$group2values)) x$group2values <- jitter(x$group2values)
+}
   # perform wilcox test between groups
   # by default, exact p-values will be computed if groups contain < 50 values and there are no ties
   # do not set exact=TRUE because this will use large amounts of memory when groups have large numbers of values

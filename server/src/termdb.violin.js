@@ -177,16 +177,13 @@ export async function wilcoxon(term2, result) {
 	}
 	const wilcoxInput = {} // { plot.label: {plot.values for term1: [], plot.values for term2: []} }
 
-	const group1values = [],
-		group2values = []
-
 	//if term2 is present then run two loops. the second loop index begins with the index of the first loop.
-
 	for (let [i, v] of result.plots.entries()) {
 		for (let x = i; x < Object.keys(result.plots).length; x++) {
 			if (x === i) continue
-			group1values.push(...result.plots[i].values)
-			group2values.push(...result.plots[x].values)
+
+			const group1values = result.plots[i].values,
+				group2values = result.plots[x].values
 
 			wilcoxInput[`${result.plots[i].label.split(',')[0]} , ${result.plots[x].label.split(',')[0]}`] = {
 				group1values,
