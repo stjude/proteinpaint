@@ -250,6 +250,9 @@ input <- fromJSON(infile)
 dat <- input$data
 startTime <- ifelse("startTime" %in% names(input), input$startTime, NA)
 
+#save.image("~/test.RData")
+#stop("stop here")
+
 # perform cumulative incidence analysis
 # parallelize the analysis across charts/variants
 availCores <- detectCores()

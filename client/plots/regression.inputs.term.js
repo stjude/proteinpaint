@@ -293,13 +293,9 @@ export class InputTerm {
 					this.termStatus.topInfoStatus.push(
 						`Time axis: ${tw.q.timeScale == 'time' ? 'years since entry into the cohort' : 'age'} (begins at ${
 							this.parent.state.minTimeSinceDx
-						} ${this.parent.state.timeScale} post cancer diagnosis)`
+						} years post cancer diagnosis)`
 					)
 					this.termStatus.topInfoStatus.push(`Event: first occurrence of grade ${tw.q.breaks[0]} or higher`)
-					this.termStatus.topInfoStatus.push('')
-					this.termStatus.topInfoStatus.push(
-						`Samples with events before entry into the cohort (i.e. within ${this.parent.state.minTimeSinceDx} ${this.parent.state.timeScale} of cancer diagnosis) are excluded`
-					)
 				}
 			}
 			this.maySet_refGrp(tw)

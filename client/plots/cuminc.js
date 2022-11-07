@@ -452,7 +452,7 @@ class MassCumInc {
 			// hide skipped series of hidden series
 			for (const chart in data.lowSampleSize) {
 				const serieses = data.lowSampleSize[chart].filter(series => !this.settings.hidden.includes(series))
-				if (serieses) this.lowSampleSize[chart] = serieses
+				if (serieses.length) this.lowSampleSize[chart] = serieses
 			}
 		}
 
@@ -461,11 +461,11 @@ class MassCumInc {
 			// hide skipped series of hidden series
 			for (const chart in data.lowEventCnt) {
 				const serieses = data.lowEventCnt[chart].filter(series => !this.settings.hidden.includes(series))
-				if (serieses) this.lowEventCnt[chart] = serieses
+				if (serieses.length) this.lowEventCnt[chart] = serieses
 			}
 		}
 
-		// process skipped charts
+		// skipped charts
 		this.skippedCharts = data.skippedCharts
 	}
 
@@ -582,7 +582,6 @@ function setRenderers(self) {
 			.attr('class', 'pp-cuminc-chart')
 			.style('opacity', chart.serieses ? 0 : 1) // if the data can be plotted, slowly reveal plot
 			//.style("position", "absolute")
-			//.style('width', s.svgw + 50 + 'px')
 			.style('display', 'inline-block')
 			.style('margin', s.chartMargin + 'px')
 			.style('padding', '10px')
@@ -680,7 +679,6 @@ function setRenderers(self) {
 		div
 			.transition()
 			.duration(s.duration)
-			.style('width', s.svgw + 50 + 'px')
 			.style('background', 1 || s.orderChartsBy == 'organ-system' ? chart.color : '')
 
 		div
@@ -1085,7 +1083,7 @@ const defaultSettings = JSON.stringify({
 		term0: null
 	},
 	cuminc: {
-		minSampleSize: 5,
+		minSampleSize: 0,
 		atRiskVisible: true,
 		atRiskLabelOffset: -10,
 		xTickValues: [], // if undefined or empty, will be ignored
@@ -1114,7 +1112,7 @@ export async function getPlotConfig(opts, app) {
 	if (!opts.term) throw 'cuminc: opts.term{} missing'
 	try {
 		await fillTermWrapper(opts.term, app.vocabApi, {
-			condition: { mode: 'cuminc', breaks: [2] }
+			condition: { mode: 'cuminc' }
 		})
 		if (opts.term2) await fillTermWrapper(opts.term2, app.vocabApi)
 		if (opts.term0) await fillTermWrapper(opts.term0, app.vocabApi)

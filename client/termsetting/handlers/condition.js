@@ -339,22 +339,25 @@ export function fillTW(tw, vocabApi, defaultQ) {
 	// assign breaks and group names
 	if (!tw.q.breaks) tw.q.breaks = []
 	if (!tw.q.groupNames) tw.q.groupNames = []
-	if (tw.q.mode == 'binary' || tw.q.mode == 'cox') {
-		// mode is binary or cox, must have a single break
+	if (tw.q.mode == 'binary' || tw.q.mode == 'cox' || tw.q.mode == 'cuminc') {
+		// must have a single break
 		const defaultBreak = tw.q.mode == 'binary' ? 1 : 2 // hardcode for now
 		if (!tw.q.breaks || tw.q.breaks.length == 0) tw.q.breaks = [defaultBreak]
 		if (tw.q.breaks.length != 1 || ![1, 2, 3, 4, 5].includes(tw.q.breaks[0])) throw 'invalid tw.q.breaks'
-		if (!tw.q.groupNames || tw.q.groupNames.length == 0) {
-			if (tw.q.mode == 'binary') {
-				tw.q.groupNames[0] = 'Grade < ' + tw.q.breaks[0]
-				tw.q.groupNames[1] = 'Grade >= ' + tw.q.breaks[0]
+		if (tw.q.mode == 'binary' || tw.q.mode == 'cox') {
+			// assign group names for binary and cox terms
+			if (!tw.q.groupNames || tw.q.groupNames.length == 0) {
+				if (tw.q.mode == 'binary') {
+					tw.q.groupNames[0] = 'Grade < ' + tw.q.breaks[0]
+					tw.q.groupNames[1] = 'Grade >= ' + tw.q.breaks[0]
+				}
+				if (tw.q.mode == 'cox') {
+					tw.q.groupNames[0] = 'No event / censored'
+					tw.q.groupNames[1] = `Event (grade >= ${tw.q.breaks[0]})`
+				}
 			}
-			if (tw.q.mode == 'cox') {
-				tw.q.groupNames[0] = 'No event / censored'
-				tw.q.groupNames[1] = `Event (grade >= ${tw.q.breaks[0]})`
-			}
+			if (tw.q.groupNames.length != 2) throw 'invalid tw.q.groupNames'
 		}
-		if (tw.q.groupNames.length != 2) throw 'invalid tw.q.groupNames'
 	}
 	if (tw.q.breaks.length >= cutoffGrades.length) throw 'too many values from tw.q.breaks[]'
 

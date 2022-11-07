@@ -346,19 +346,13 @@ function makeRinput(q, sampledata) {
 		}
 		if (q.regressionType == 'cox') {
 			// cox regression, therefore time-to-event outcome
-			// use both key and value
+			// use both key (event status) and value (time)
 			entry[outcome.timeToEvent.eventId] = out.key
-			if (q.outcome.q.timeScale == 'time') {
-				// time from enrollment time scale
-				entry[outcome.timeToEvent.timeId] = out.value
-			} else if (q.outcome.q.timeScale == 'age') {
-				// age time scale
-				const values = JSON.parse(out.value)
-				entry[outcome.timeToEvent.agestartId] = values.age_start
-				entry[outcome.timeToEvent.ageendId] = values.age_end
-				entry[outcome.timeToEvent.timeId] = values.time
-			} else {
-				throw 'unknown cox regression time scale'
+			const { age_start, age_end } = out.value
+			entry[outcome.timeToEvent.timeId] = age_end - age_start
+			if (q.outcome.q.timeScale == 'age') {
+				entry[outcome.timeToEvent.agestartId] = age_start
+				entry[outcome.timeToEvent.ageendId] = age_end
 			}
 		}
 
@@ -553,13 +547,11 @@ function validateRinput(Rinput) {
 	// validate outcome variable
 	if (regressionType == 'logistic') {
 		const vals = new Set(Rinput.data.map(entry => entry[outcome.id]))
-		if (vals.size != 2) throw 'outcome is not binary'
-		if (!vals.has(0) || !vals.has(1)) throw 'outcome is not 0/1 binary'
+		if ([...vals].find(v => ![0, 1].includes(v))) throw 'non-0/1 outcome values found'
 	}
 	if (regressionType == 'cox') {
 		const vals = new Set(Rinput.data.map(entry => entry[outcome.timeToEvent.eventId]))
-		if (vals.size != 2) throw 'outcome event is not binary'
-		if (!vals.has(0) || !vals.has(1)) throw 'outcome event is not 0/1 binary'
+		if ([...vals].find(v => ![0, 1].includes(v))) throw 'non-0/1 outcome event values found'
 	}
 
 	// validate independent variables
@@ -977,7 +969,7 @@ async function lowAFsnps_cuminc(tw, sampledata, Rinput, result) {
 		for (const { sample, noOutcome } of sampledata) {
 			if (noOutcome) continue
 			const d = Rinput.data[RinputDataidx++]
-			if (d.outcome_event != 0 && d.outcome_event != 1) throw 'd.outcome_event is not 0/1'
+			if (d.outcome_event !== 0 && d.outcome_event !== 1) throw 'd.outcome_event is not 0/1'
 			if (!Number.isFinite(d.outcome_time)) throw 'd.outcome_time is not numeric'
 
 			// data point of this sample, to add to snpData[]
@@ -1189,17 +1181,61 @@ function getSampleData_dictionaryTerms(q, terms) {
 
 	const rows = q.ds.cohort.db.connection.prepare(sql).all(values)
 
-	// filter rows
-	let frows = rows
+	// process rows
+	let prows
 	if (q.regressionType == 'cox') {
 		// cox regression
-		// need to remove rows with key=-1 for cox outcome
-		// because these samples had Event before entry into the cohort
-		frows = rows.filter(row => !(row.term_id == q.outcome.id && row.key === -1))
+		// process cox outcome rows
+		prows = []
+		const minTimeSinceDx = q.ds.cohort.termdb.minTimeSinceDx
+		const ageEndOffset = q.ds.cohort.termdb.ageEndOffset
+		if (!minTimeSinceDx) throw 'missing min time since dx'
+		if (!ageEndOffset) throw 'missing age end offset'
+		for (const row of rows) {
+			if (row.term_id == q.outcome.id) {
+				// cox outcome row
+
+				// convert event=2 to event=0 because competing
+				// risks events should not be treated as a separate
+				// event category in cox regression
+				// these events should be treated as censored at
+				// time of death
+				const key = row.key === 2 ? 0 : row.key
+
+				// convert age values to age_start and age_end
+				// age_start: age at beginning of follow-up
+				// age_end: age at event or age at censoring
+				const { age_dx, age_event } = JSON.parse(row.value)
+				const age_start = age_dx + minTimeSinceDx
+				if (age_event - age_start < 0) {
+					// discard samples that had events before follow-up
+					continue
+				}
+
+				// for timeScale='age', add a small offset to age_end
+				// to prevent age_end = age_start (which would cause
+				// R to error out)
+				const age_end = q.outcome.q.timeScale == 'age' ? age_event + ageEndOffset : age_event
+
+				const value = { age_start, age_end }
+				prows.push({
+					sample: row.sample,
+					key,
+					value,
+					term_id: row.term_id
+				})
+			} else {
+				prows.push(row)
+			}
+		}
+	} else {
+		// not cox regression
+		// no need to process rows
+		prows = rows
 	}
 
-	// parse filtered rows
-	for (const { sample, term_id, key, value } of frows) {
+	// parse the processed rows
+	for (const { sample, term_id, key, value } of prows) {
 		if (!samples.has(sample)) {
 			samples.set(sample, { sample, id2value: new Map() })
 		}

@@ -248,8 +248,7 @@ function setInteractivity(self) {
 						termlst.map(async term => {
 							const q = {}
 							if (term.type == 'condition') {
-								q.mode = 'cox'
-								q.timeScale = 'age'
+								q.mode = 'cuminc'
 							} else if (term.type == 'float' || term.type == 'integer') {
 								/*** ADD THIS ***/
 								q.mode = 'continuous'
@@ -275,8 +274,10 @@ function setInteractivity(self) {
 		const header = ['sample']
 		for (const tw of self.config.terms) {
 			if (tw.term.type == 'condition') {
-				header.push(tw.term.name + `(Event=Grades ${tw.q.breaks[0]}-5)`)
-				header.push(tw.term.name + '(Age at event)')
+				header.push(
+					tw.term.name + `_event code(0="censored", 1="grade ${tw.q.breaks[0]}-5", 2="non-${tw.term.name} death")`
+				)
+				header.push(tw.term.name + '_age at event')
 			} else {
 				header.push(tw.term.name)
 			}
@@ -289,8 +290,9 @@ function setInteractivity(self) {
 				if (!s[tw.$id]) row.push('')
 				else {
 					if (tw.term.type == 'condition') {
-						row.push(s[tw.$id].key == 0 ? 'No' : 'Yes')
-						row.push(s[tw.$id].value)
+						row.push(s[tw.$id].key)
+						const v = JSON.parse(s[tw.$id].value)
+						row.push(v.age_event)
 					} else {
 						const v = tw.term.values?.[s[tw.$id].key] || s[tw.$id]
 						row.push(v.label || v.key)

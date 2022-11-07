@@ -14,14 +14,18 @@ export async function get_incidence(q, ds) {
 	try {
 		if (!ds.cohort) throw 'cohort missing from ds'
 		const minTimeSinceDx = ds.cohort.termdb.minTimeSinceDx
-		if (minTimeSinceDx === undefined) throw 'missing min time since dx'
+		if (!minTimeSinceDx) throw 'missing min time since dx'
 		q.ds = ds
 		const results = get_rows(q)
 		const byChartSeries = {}
 		for (const d of results.lst) {
 			// if no applicable term0 or term2, the d.key0/d.key2 is just a placeholder empty string (see comments in get_rows())
 			const chartId = d.key0
-			const time = d.val1
+			// determine time component (years from diagnosis to event)
+			// if time < min time since diagnosis, then set time to this min time
+			const { age_dx, age_event } = JSON.parse(d.val1)
+			const t = age_event - age_dx
+			const time = t < minTimeSinceDx ? minTimeSinceDx : t
 			const event = d.key1
 			const series = d.key2
 			if (!(chartId in byChartSeries)) byChartSeries[chartId] = []
@@ -101,7 +105,8 @@ export async function get_incidence(q, ds) {
 			const samples = byChartSeries[chartId].filter(
 				sample => !lowSampleSize.has(sample.series) && !lowEventCnt.has(sample.series)
 			)
-			if (samples) {
+
+			if (samples.length) {
 				Rinput.data[chartId] = samples
 			} else {
 				// skip the chart if all series have been skipped

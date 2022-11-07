@@ -627,9 +627,7 @@ module.exports = {
 				// to add 'snplocus' 'prs' later
 			],
 
-			timeScale: 'years',
-
-			minTimeSinceDx: 5, // enrollment in sjlife requires 5 years since cancer diagnosis
+			minTimeSinceDx: 5, // minimum number of years since cancer diagnosis for enrollment in the SJLIFE study
 
 			// term ids specific to dataset
 			termIds: {
