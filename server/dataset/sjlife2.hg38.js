@@ -629,6 +629,10 @@ module.exports = {
 
 			minTimeSinceDx: 5, // minimum number of years since cancer diagnosis for enrollment in the SJLIFE study
 
+			coxTimeMsg: 'years since entry into the cohort',
+
+			coxStartTimeMsg: `begins at 5 years post cancer diagnosis`,
+
 			// term ids specific to dataset
 			termIds: {
 				ageDxId: 'agedx', // age at diagnosis

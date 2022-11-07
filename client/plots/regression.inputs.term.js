@@ -291,9 +291,9 @@ export class InputTerm {
 				if (this.section.configKey == 'outcome' && this.parent.opts.regressionType == 'cox') {
 					if (!['age', 'time'].includes(tw.q.timeScale)) throw 'invalid q.timeScale'
 					this.termStatus.topInfoStatus.push(
-						`Time axis: ${tw.q.timeScale == 'time' ? 'years since entry into the cohort' : 'age'} (begins at ${
-							this.parent.state.minTimeSinceDx
-						} years post cancer diagnosis)`
+						`Time axis: ${tw.q.timeScale == 'time' ? this.parent.state.coxTimeMsg : 'age'} (${
+							this.parent.state.coxStartTimeMsg
+						})`
 					)
 					this.termStatus.topInfoStatus.push(`Event: first occurrence of grade ${tw.q.breaks[0]} or higher`)
 				}

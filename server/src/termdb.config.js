@@ -40,6 +40,8 @@ export function make(q, res, ds) {
 	if (tdb.helpPages) c.helpPages = tdb.helpPages
 	if (tdb.timeScale) c.timeScale = tdb.timeScale
 	if (tdb.minTimeSinceDx) c.minTimeSinceDx = tdb.minTimeSinceDx
+	if (tdb.coxTimeMsg) c.coxTimeMsg = tdb.coxTimeMsg
+	if (tdb.coxStartTimeMsg) c.coxStartTimeMsg = tdb.coxStartTimeMsg
 	if (tdb.restrictAncestries) {
 		c.restrictAncestries = []
 		for (const i of tdb.restrictAncestries) {
