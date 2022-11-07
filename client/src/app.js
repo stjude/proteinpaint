@@ -814,6 +814,36 @@ async function parseEmbedThenUrl(arg, app) {
 		_.appInit(opts)
 		return
 	}
+
+	if (arg.massSessionFile || arg.massSessionURL) {
+		let state
+		if (arg.massSessionFile) {
+			const file = arg.massSessionFile
+			const jsonFile = await client.dofetch3(`/textfile`, {
+				method: 'POST',
+				body: JSON.stringify({ file })
+			})
+			if (jsonFile.error) throw jsonFile.error
+			state = JSON.parse(jsonFile.text)
+		} else {
+			const url = arg.massSessionURL
+			const jsonURL = await client.dofetch3(`/urltextfile`, {
+				method: 'POST',
+				body: JSON.stringify({ url })
+			})
+			console.log(jsonURL)
+			if (jsonURL.error) throw jsonURL.error
+			state = JSON.parse(jsonURL.text)
+		}
+		const opts = {
+			holder: app.holder0,
+			state,
+			genome: app.genomes[state.vocab.genome]
+		}
+		const _ = await import('../mass/app')
+		_.appInit(opts)
+		return
+	}
 }
 
 async function may_launchGeneView(arg, app) {
