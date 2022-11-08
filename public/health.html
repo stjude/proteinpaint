@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en" style="margin:0px;width:100%;height:100%">
+<head>
+	 <meta charset="utf-8">
+	 <title>Health Check</title>
+</head>
+<body style="margin:0px;width:100%;height:100%">
+
+<noscript>This page requires JavaScript. Please enable it in your browser settings.</noscript>
+
+<div id=aaa style="margin:10px"></div>
+
+<script>
+fetch('/healthcheck')
+.then(r=>r.json())
+.then(r=>{
+  document.querySelector('#aaa').innerHTML = `<pre>${JSON.stringify(r, null, 2)}</pre>`
+})
+</script>
+
+</body>
+</html>
