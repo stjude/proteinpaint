@@ -1,6 +1,7 @@
 import { getCompInit } from '../rx'
 import { controlsInit } from './controls'
 import violinRenderer from './violin.renderer'
+import { renderPvalues } from '#dom/renderPvalueTable'
 
 class ViolinPlot {
 	constructor(opts) {
@@ -23,10 +24,11 @@ class ViolinPlot {
 				.append('div')
 				.classed('sjpp-tableHolder', true)
 				.style('display', 'inline-block')
-				.style('padding', '5px')
+				.style('padding', '10px')
 				.style('vertical-align', 'top')
 				.style('margin-left', '0px')
-				.style('margin-top', '30px')
+				.style('margin-top', '50px')
+				.style('margin-right', '30px')
 		}
 		violinRenderer(this)
 
@@ -141,70 +143,13 @@ class ViolinPlot {
 		// }
 
 		//show pvalue table
-		// TODO cleanup in a separate component
-		let title
-		if (this.type == 'violin') {
-			title = "Group comparisons (Wilcoxon's rank sum test)"
-		}
-
-		const pvalueHolder = this.dom.tableHolder
-			.append('div')
-			.classed('sjpp-pvalue-div', true)
-			.style('margin-top', '30px')
-			.style('margin-right', '30px')
-
-		pvalueHolder
-			.append('div')
-			.style('font-weight', 'bold')
-			.style('font-size', '15px')
-			.text(title)
-
-		const tablediv = pvalueHolder
-			.append('div')
-			.style('position', 'inline-block')
-			.style('border', '1px solid #ccc')
-
-		console.log(this.data.pvalues.length)
-
-		if (this.data.pvalues.length > maxPvalsToShow) {
-			tablediv.style('overflow', 'auto').style('height', '250px')
-		}
-
-		const table = tablediv.append('table').style('width', '70%')
-
-		table
-			.append('thead')
-			.append('tr')
-			.selectAll('td')
-			.data(['Group 1', 'Group 2', 'P-value'])
-			.enter()
-			.append('td')
-			.style('padding', '1px 8px 1px')
-			.style('color', '#858585')
-			.style('position', 'sticky')
-			.style('top', '0px')
-			.style('background', 'white')
-			.style('font-size', '15px')
-			.text(column => column)
-
-		const tbody = table.append('tbody')
-		const tr = tbody
-			.selectAll('tr')
-			.data(this.data.pvalues)
-			.enter()
-			.append('tr')
-			.attr('class', `pp-${this.type}-chartLegends-pvalue`)
-
-		tr.selectAll('td')
-			.data(d => [d.group1, d.group2, d.pvalue])
-			.enter()
-			.append('td')
-			.attr('title', this.type == 'violin' ? 'Click to hide a p-value' : '')
-			.style('color', 'black')
-			.style('padding', '1px 8px 1px')
-			.style('font-size', '15px')
-			.style('cursor', this.type == 'violin' ? 'pointer' : 'auto')
-			.text(d => d)
+		renderPvalues({
+			holder: this.dom.tableHolder,
+			plot: this.type,
+			tests: this.data,
+			s: this.config.settings,
+			title: "Group comparisons (Wilcoxon's rank sum test)"
+		})
 	}
 }
 

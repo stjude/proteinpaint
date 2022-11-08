@@ -97,10 +97,10 @@ export default function violinRenderer(self) {
 					.attr('text-anchor', 'middle')
 			} else {
 				lab
-					.attr('y', 0 - margin.top / 2)
-					.attr('x', svgWidth / 2)
+					.attr('y', 0 - margin.top - 5)
+					.attr('x', -plotLength / 2)
 					.attr('text-anchor', 'middle')
-					.attr('transform', 'rotate(0)')
+					.attr('transform', 'rotate(-90)')
 			}
 		}
 
@@ -116,7 +116,6 @@ export default function violinRenderer(self) {
 						? 'translate(0,' + plotThickness * (plotIdx + 0.5) + ')'
 						: 'translate(' + plotThickness * (plotIdx + 0.5) + ',0)'
 				)
-
 			// create label
 			const label = violinG.append('text').text(plot.label)
 			if (isH) {
@@ -127,11 +126,11 @@ export default function violinRenderer(self) {
 					.attr('dominant-baseline', 'central')
 			} else {
 				label
-					.attr('x', plotLength + 10)
+					.attr('x', 0 - plotLength - 5)
 					.attr('y', 0)
-					.attr('text-anchor', 'front')
+					.attr('text-anchor', 'end')
 					.attr('dominant-baseline', 'central')
-					.attr('transform', 'rotate(90)')
+					.attr('transform', 'rotate(-90)')
 			}
 
 			// times 0.45 will leave out 10% as spacing between plots

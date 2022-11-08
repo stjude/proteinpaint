@@ -198,6 +198,6 @@ export async function wilcoxon(term2, result) {
 	fs.unlink(tmpfile, () => {})
 
 	for (const [k, v] of Object.entries(JSON.parse(wilcoxOutput))) {
-		result.pvalues.push({ group1: k.split(',')[0], group2: k.split(',')[1], pvalue: v })
+		result.pvalues.push({ series1: k.split(',')[0], series2: k.split(',')[1], pvalue: v })
 	}
 }
