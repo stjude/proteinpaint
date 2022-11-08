@@ -1,12 +1,12 @@
-const termdbsql = require('./termdb.sql')
+const { getData } = require('./termdb.matrix')
 const fs = require('fs')
 const path = require('path')
 const utils = require('./utils')
 const serverconfig = require('./serverconfig')
 const d3scale = require('d3-scale')
 const schemeCategory10 = require('d3-scale-chromatic').schemeCategory10
-import { mclass } from '#shared/common'
-import { rgb } from 'd3-color'
+const { mclass } = require('#shared/common')
+const { rgb } = require('d3-color')
 
 /*
 works with "canned" scatterplots in a dataset, e.g. data from a text file of tSNE coordinates from a pre-analyzed cohort (contrary to on-the-fly analysis)
@@ -110,7 +110,7 @@ q={
 	filter={}
 }
 */
-export async function trigger_getSampleScatter(q, res, ds) {
+export async function trigger_getSampleScatter(q, res, ds, genome) {
 	try {
 		if (!ds.cohort.scatterplots || !ds.cohort.scatterplots.plots) throw 'not supported'
 
@@ -120,8 +120,13 @@ export async function trigger_getSampleScatter(q, res, ds) {
 		const allSamples = await getSampleLst(plot)
 		// array of all samples
 		// [ { sample=str, sampleId=int, x, y } ]
+		const terms = [q.colorTW]
+		if (q.shapeTW) terms.push(q.shapeTW)
+		const data = await getData(Object.assign({}, q, { for: 'matrix', terms }), ds, genome)
+		if (data.error) throw data.error
+		res.send({ status: 'ok', data })
 
-		res.send(await mayColorAndFilterSamples(allSamples, q, ds))
+		//res.send(await mayColorAndFilterSamples(allSamples, q, ds, data.samples))
 	} catch (e) {
 		res.send({ error: e.message || e })
 	}
@@ -177,7 +182,7 @@ output:
 		each element [ category, {shape=int, sampleCount=int} ]
 }
 */
-async function mayColorAndFilterSamples(allSamples, q, ds) {
+async function mayColorAndFilterSamples(allSamples, q, ds, anno) {
 	if (!q.colorTW) {
 		// no term to get category assignments for color, nothing to do
 		return [allSamples]
@@ -192,7 +197,7 @@ async function mayColorAndFilterSamples(allSamples, q, ds) {
 		let colorMap = new Map()
 		colorMap.set('None', ['None', { sampleCount: 0, color: defaultColor }])
 
-		let geneVariants = await ds.mayGetGeneVariantData(q.colorTW, q)
+		//let geneVariants = await ds.mayGetGeneVariantData(q.colorTW, q)
 		const name = q.colorTW.term.name
 		for (const sample of allSamples) {
 			geneVariant = null
@@ -228,17 +233,22 @@ async function mayColorAndFilterSamples(allSamples, q, ds) {
 			ds,
 			filter: q.filter
 		}
-		if (!('id' in q.colorTW)) throw 'q.colorTW.id missing'
+		console.log(230, q)
+		if (!('id' in q.colorTW) && q.colorTW?.term.type != 'geneVariant') throw 'q.colorTW.id missing'
 		if (typeof q.colorTW.q != 'object') throw 'q.colorTW.q is not object'
-
-		getRowsParam.term1_id = q.colorTW.id
-		getRowsParam.term1_q = q.colorTW.q
+		if (q.colorTW?.term.type != 'geneVariant') {
+			getRowsParam.term1_id = q.colorTW.id
+			getRowsParam.term1_q = q.colorTW.q
+		}
 
 		if (q.shapeTW) {
-			if (!('id' in q.shapeTW)) throw 'q.shapeTW.id missing'
+			if (!('id' in q.shapeTW) && q.shapeTW?.term.type != 'geneVariant') throw 'q.shapeTW.id missing'
 			if (typeof q.shapeTW.q != 'object') throw 'q.shapeTW.q is not object'
-			getRowsParam.term2_id = q.shapeTW.id
-			getRowsParam.term2_q = q.shapeTW.q
+			if (q.shapeTW?.term.type != 'geneVariant') {
+				getRowsParam.term2_id = q.shapeTW.id
+				getRowsParam.term2_q = q.shapeTW.q
+			} else {
+			}
 		}
 
 		const [sampleId2colorCategory, sampleId2shapeCategory] = callGetRows(getRowsParam, q)

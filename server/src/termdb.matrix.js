@@ -99,6 +99,7 @@ Returns
 async function getSampleData(q, terms) {
 	// dictionary and non-dictionary terms require different methods for data query
 	const [dictTerms, nonDictTerms] = divideTerms(terms)
+	console.log(dictTerms, nonDictTerms)
 	const { samples, refs } = await getSampleData_dictionaryTerms(q, dictTerms)
 
 	if (q.ds.getSampleIdMap) {
