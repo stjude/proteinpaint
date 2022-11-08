@@ -11,6 +11,7 @@ import getHandlers from './barchart.events'
 import { controlsInit } from './controls'
 import { to_svg } from '../src/client'
 import { fillTermWrapper } from '../termsetting/termsetting'
+//import { renderPvalues } from '#dom/renderPvalueTable'
 
 class Barchart {
 	constructor(opts) {
@@ -439,6 +440,7 @@ class Barchart {
 		const s = this.settings
 		const t1 = this.config.term
 		const t2 = this.config.term2
+
 		const headingStyle = 'color: #aaa; font-weight: 400'
 		if (s.cols && s.exclude.cols.length) {
 			const reducer = (sum, b) => sum + b.total
@@ -571,6 +573,19 @@ function setRenderers(self) {
 		chart.maxSeriesLogTotal = 0
 		chart.visibleSerieses.forEach(series => self.sortStacking(series, chart, self.chartsData))
 		self.renderers[chart.chartId](chart)
+
+		const div = select(this)
+
+		div
+			.select('.pp-sbar-div-chartLengends')
+			.selectAll('*')
+			.remove()
+
+		const pvalueTable = self.chartsData.pvalueTable
+		const term1Order = self.chartsData.refs.cols
+		const term2Order = self.chartsData.refs.rows
+
+		if (pvalueTable) renderPvalueTable(pvalueTable, term1Order, term2Order, self.dom.holder, self.config)
 	}
 
 	self.addChart = function(chart, i) {
@@ -579,9 +594,91 @@ function setRenderers(self) {
 			.style('display', 'inline-block')
 			.style('padding', '20px')
 			.style('vertical-align', 'top')
-
 		self.renderers[chart.chartId] = barsRenderer(self, select(this))
-		self.updateChart(chart)
+		//self.updateChart.call(this, chart)
+		chart.settings.cols.sort(self.barSorter)
+		chart.maxAcrossCharts = self.chartsData.maxAcrossCharts
+		chart.handlers = self.handlers
+		chart.maxSeriesLogTotal = 0
+		chart.visibleSerieses.forEach(series => self.sortStacking(series, chart, self.chartsData))
+		self.renderers[chart.chartId](chart)
+
+		// div for chart-specific legends
+		div
+			.append('div')
+			.attr('class', 'pp-sbar-div-chartLengends')
+			.style('vertical-align', 'top')
+			.style('margin', '10px 10px 10px 30px')
+			.style('display', 'none')
+
+		const pvalueTable = self.chartsData.pvalueTable
+		const term1Order = self.chartsData.refs.cols
+		const term2Order = self.chartsData.refs.rows
+
+		if (pvalueTable) renderPvalueTable(pvalueTable, term1Order, term2Order, self.dom.holder, self.config)
+	}
+}
+
+function renderPvalueTable(pvalueTable, term1Order, term2Order, h, chartConfig) {
+	// loop over the pvalueTable to sort the term1 categories based on term2Order and change pvalues to 4 digits after decimal point
+	for (const i of pvalueTable) {
+		i.term2tests.sort(function(a, b) {
+			return term2Order.indexOf(a.term2id) - term2Order.indexOf(b.term2id)
+		})
+		for (const j of i.term2tests) {
+			j.pvalue = Number(j.pvalue).toFixed(4)
+		}
+	}
+
+	// sort the order of term1 groups in pvalutTable based on term1Order
+	pvalueTable.sort(function(a, b) {
+		return (
+			term1Order.indexOf(a.term1comparison.split(' vs.')[0]) - term1Order.indexOf(b.term1comparison.split(' vs.')[0])
+		)
+	})
+
+	const holder = h
+		.select('.pp-sbar-div-chartLengends')
+		.style('display', 'inline-block')
+		.append('div')
+
+	holder
+		.append('div')
+		.style('padding-bottom', '5px')
+		.style('vertical-align', 'top')
+		.style('font-size', '16px')
+		.style('font-weight', 'bold')
+		.style('text-align', 'center')
+		.style('margin-top', '-10px')
+		.html("Group comparisons <br> (Fisher's exact test/Chi-squared test)")
+
+	const treediv = holder.append('div').style('border', '1px solid #ccc')
+	if (pvalueTable.length > 3) {
+		treediv.style('overflow', 'auto').style('height', '220px')
+	}
+
+	for (const t1c of pvalueTable) {
+		let t1label = t1c.term1comparison
+		if (chartConfig.term.term.values) t1label = chartConfig.term.term.values[t1label].label
+		t1label = `${t1label}: vs. not ${t1label}`
+		const t1cDiv = treediv
+			.append('div')
+			.style('margin-left', '10px')
+			.text(t1label)
+
+		for (const t2t of t1c.term2tests) {
+			let t2label = t2t.term2id
+			if (chartConfig.term2.term.values) {
+				t2label = chartConfig.term2.term.values[t2t.term2id].label
+			}
+
+			t1cDiv
+				.append('div')
+				.style('margin-left', '30px')
+				.style('margin-right', '10px')
+				.html(`${t2label}: ${t2t.pvalue}`)
+		}
+		t1cDiv.append('div').html('<br>')
 	}
 }
 

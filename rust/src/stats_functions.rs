@@ -4,10 +4,10 @@ use std::panic;
 
 pub fn strand_analysis_one_iteration(
     // Runs fisher's exact test or Chisquare test
-    alternate_forward_count: u32, //R1C1 in 2X2 contingency table
-    alternate_reverse_count: u32, //R1C2 in 2X2 contingency table
-    reference_forward_count: u32, //R2C1 in 2X2 contingency table
-    reference_reverse_count: u32, //R2C2 in 2X2 contingency table
+    alternate_forward_count: u32, //for Fisher/Chi test, represents R1C1 in 2X2 contingency table
+    alternate_reverse_count: u32, //for Fisher/Chi test, represents R2C1 in 2X2 contingency table
+    reference_forward_count: u32, //for Fisher/Chi test, represents R1C2 in 2X2 contingency table
+    reference_reverse_count: u32, //for Fisher/Chi test, represents R2C2 in 2X2 contingency table
     fisher_chisq_test: u64, // This option is useful in the event this function has been run previously, we can ask to run the spcific test only rather than having to try out both tests each time. This decreases execution time. 0 = first time (both tests will be tried), 1 = fisher test, 2 = chi-sq test
 ) -> (f64, u64) {
     let mut p_value: f64 = 0.0;
