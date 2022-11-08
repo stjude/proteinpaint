@@ -22,7 +22,7 @@ set -o pipefail
 # copy "matrix.tree.original" to "matrix.tree" and append new line to describe the adhoc "publication" term annotated to samples from CH paper
 # subsequent steps all use "matrix.tree"
 cp phenotree/matrix.tree.original phenotree/matrix.tree
-printf '\nPublication\tClonal hematopoiesis\t-\t-\t-\tpublication_CH\tstring; 1=Yes\n' >> phenotree/matrix.tree
+printf '\nPublication sample filter\tSJLIFE clonal hematopoiesis study, Hagiwara et. al. under review\t-\t-\t-\tpublication_CH\tstring; 1=Yes\n' >> phenotree/matrix.tree
 
 
 ###############################################
