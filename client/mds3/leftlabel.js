@@ -34,6 +34,25 @@ export async function make_leftlabels(data, tk, block) {
 		const _ = await import('./leftlabel.sample')
 		_.makeSampleLabel(data, tk, block, laby)
 		if (tk.leftlabels.doms.samples) laby += labyspace + block.labelfontsize // later delete if
+
+		if (tk.filterObj) {
+			// this tk has a modifiable sample filter
+			_.makeSampleFilterLabel(data, tk, block, laby)
+			laby += labyspace + block.labelfontsize
+		}
+	}
+
+	if (tk.showCloseLeftlabel) {
+		makelabel(tk, block, laby)
+			.text('Close')
+			.on('click', () => {
+				for (const [i, t] of block.tklst.entries()) {
+					if (t.tkid == tk.tkid) {
+						block.tk_remove(i)
+					}
+				}
+			})
+		laby += labyspace + block.labelfontsize
 	}
 
 	// done creating all possible left labels

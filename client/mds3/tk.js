@@ -4,15 +4,12 @@ import { may_render_skewer } from './skewer'
 import { make_leftlabels } from './leftlabel'
 
 /*
-********************** EXPORTED
 loadTk
-rangequery_rglst
-********************** INTERNAL
-getParameter
-loadTk_finish_closure
+	getData
+		dataFromCustomVariants
+		getParameter
+			rangequery_rglst
 rangequery_add_variantfilters
-getData
-	dataFromCustomVariants
 */
 
 export async function loadTk(tk, block) {

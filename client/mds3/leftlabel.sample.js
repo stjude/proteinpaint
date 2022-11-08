@@ -25,18 +25,35 @@ export function makeSampleLabel(data, tk, block, laby) {
 
 			await mayShowSummary(tk, block)
 
-			menu_samples(data, tk, block)
+			const buttonrow = tk.menutip.d.append('div').style('margin', '10px')
+
+			menu_samples(buttonrow, data, tk, block)
+			// TODO new button "Customize variables", launch tree in submit_lst mode to update tk.mds.variant2samples.twLst
 		})
 }
 
-/*
-*******************************************
-      this function will be redesigned
-*******************************************
-should not be based on variant2samples.twLst
-but using mds.termdb.vocabApi, show a tree, select a term and display a summary plot
-(may still need a default list of terms though)
-*/
+export function makeSampleFilterLabel(data, tk, block, laby) {
+	// track has a modifiable sample filter. add a new label to access the filter UI
+	if (!tk.leftlabels.doms.filterObj) {
+		tk.leftlabels.doms.filterObj = makelabel(tk, block, laby)
+	}
+
+	tk.leftlabels.doms.filterObj.text('Filter').on('click', async event => {
+		tk.menutip.clear().showunder(event.target)
+		const { filterInit } = await import('#filter')
+		const filterApi = filterInit({
+			holder: tk.menutip.d.append('div').style('margin', '10px'),
+			vocab: tk.mds.termdb.vocabApi.state.vocab,
+			callback: f => {
+				tk.filterObj = f
+				tk.uninitialized = true
+				tk.load()
+			}
+		})
+		filterApi.main(tk.filterObj)
+	})
+}
+
 async function mayShowSummary(tk, block) {
 	if (!tk.mds.variant2samples.twLst) {
 		// no terms to summarize for
@@ -48,6 +65,7 @@ async function mayShowSummary(tk, block) {
 		.text('Loading...')
 		.style('margin', '10px')
 
+	/*
 	if (tk.mds?.termdb?.vocabApi) {
 		// just a test!! to demo the vocab barchart api works with mds3 backend
 		// when barchart can be integrated, show barchart instead of using getSamples()
@@ -69,12 +87,18 @@ async function mayShowSummary(tk, block) {
 		//const chartSeriesData = await tk.mds.termdb.vocabApi.getNestedChartSeriesData(arg)
 		//console.log('test barchart', chartSeriesData)
 	}
+	*/
 
 	tk.mds
 		.getSamples({ isSummary: true })
 		.then(async data => {
-			wait.html('')
-			await showSummary4terms(data, wait, tk, block)
+			wait
+				.text('')
+				.append('div')
+				.style('margin', '10px')
+				.style('font-size', '.8em')
+				.text('Click a category to create a new track.')
+			await showSummary4terms(data, wait.append('div'), tk, block)
 		})
 		.catch(e => {
 			wait.text(`Error: ${e.message || e}`)
@@ -97,55 +121,9 @@ async function showSummary4terms(data, div, tk, block) {
 					  '</span>'
 					: ''),
 			callback: async function(div) {
-				const features = JSON.parse(sessionStorage.getItem('optionalFeatures') || `{}`)
-				if (!features.mds3barapp) {
-					if (numbycategory) return showSummary4oneTerm(termid, div, numbycategory, tk, block)
-					if (density_data) return showDensity4oneTerm(termid, div, density_data, tk, block)
-					throw 'unknown summary data'
-				}
-
-				// will use the "barapp" when serverconfig.features.mds3barapp evaluates to true
-				const holder = div.append('div')
-				/*.style('display', 'inline-grid')
-						.style('grid-template-columns', 'auto auto auto')
-						.style('grid-row-gap', '3px')
-						.style('align-items', 'center')
-						.style('justify-items', 'left')*/
-
-				const geneTerm = {
-					type: 'geneVariant',
-					isoform: block.usegm.isoform
-				}
-				rangequery_rglst(tk, block, geneTerm)
-
-				try {
-					const plot = await import('#plots/plot.app')
-					await plot.appInit({
-						holder,
-						vocabApi: tk.mds.termdb.vocabApi,
-						state: {
-							plots: [
-								{
-									chartType: 'barchart',
-									term: {
-										id: termid
-									},
-									term2: {
-										term: geneTerm,
-										q: { mode: 'summary' }
-									},
-									settings: {
-										barchart: {
-											unit: 'pct'
-										}
-									}
-								}
-							]
-						}
-					})
-				} catch (e) {
-					throw e
-				}
+				if (numbycategory) return showSummary4oneTerm(termid, div, numbycategory, tk, block)
+				if (density_data) return showDensity4oneTerm(termid, div, density_data, tk, block)
+				throw 'unknown summary data'
 			}
 		})
 	}
@@ -168,73 +146,44 @@ function showSummary4oneTerm(termid, div, numbycategory, tk, block) {
 		const cat_div = grid_div
 			.append('div')
 			.style('padding-right', '10px')
-			.style('cursor', 'pointer')
+			.attr('class', 'sja_clbtext2')
 			.text(category_name)
-			.on('mouseover', () => {
-				cat_div.style('color', 'blue').style('text-decoration', 'underline')
-			})
-			.on('mouseout', () => {
-				cat_div.style('color', '#000').style('text-decoration', 'none')
-			})
-			.on('click', () => listSamples(category_name))
+			.on('click', () => clickCategory(category_name))
 
 		const percent_div = grid_div.append('div')
 		if (total != undefined) {
 			// show percent bar
-			percent_div
-				.on('mouseover', () => {
-					cat_div.style('color', 'blue').style('text-decoration', 'underline')
-				})
-				.on('mouseout', () => {
-					cat_div.style('color', '#000').style('text-decoration', 'none')
-				})
-				.on('click', () => listSamples(category_name))
+			percent_div.on('click', () => clickCategory(category_name))
 
 			fillbar(percent_div, { f: count / total, v1: count, v2: total }, { fillbg: '#ECE5FF', fill: '#9F80FF' })
 		}
 
-		{
-			const d = grid_div
-				.append('div')
-				.style('margin-left', '10px')
-				.on('mouseover', () => {
-					cat_div.style('color', 'blue').style('text-decoration', 'underline')
-				})
-				.on('mouseout', () => {
-					cat_div.style('color', '#000').style('text-decoration', 'none')
-				})
-				.on('click', () => listSamples(category_name))
-			d.append('span').text(count)
-			if (total) {
-				d.append('span')
-					.text('/ ' + total)
-					.style('margin-left', '5px')
-					.style('font-size', '.8em')
-			}
-		}
+		grid_div
+			.append('div')
+			.style('margin-left', '10px')
+			.attr('class', 'sja_clbtext2')
+			.on('click', () => clickCategory(category_name))
+			.html(count + (total ? ' <span style="font-size:.8em">/ ' + total + '</span>' : ''))
 	}
 
-	async function listSamples(category) {
-		// for a selected category, list the samples
+	async function clickCategory(category) {
+		// for a selected category, launch subtrack
 		tk.menutip.clear()
 
-		//////////////////////////////////////////////
-		// temp change to launch subtrack
-		//////////////////////////////////////////////
 		const tkarg = {
 			type: 'mds3',
 			dslabel: tk.dslabel,
 			filter0: tk.filter0,
+			showCloseLeftlabel: true,
 			filterObj: {
 				type: 'tvslst',
 				in: true,
-				join: 'and',
+				join: '',
 				lst: [
 					{
 						type: 'tvs',
 						tvs: {
 							term: await tk.mds.termdb.vocabApi.getterm(termid),
-							// assuming categorical term
 							values: [{ key: category }]
 						}
 					}
@@ -243,13 +192,14 @@ function showSummary4oneTerm(termid, div, numbycategory, tk, block) {
 		}
 		const tk2 = block.block_addtk_template(tkarg)
 		block.tk_load(tk2)
-		return
 
+		/*
 		const div = tk.menutip.d.append('div').style('margin', '2px')
 		const wait = div.append('div').text('Loading...')
 		const samples = await tk.mds.getSamples({ tid2value: { [termid]: category } })
 		wait.remove()
 		await displaySampleTable(samples, { div, tk, block })
+		*/
 	}
 }
 
@@ -257,12 +207,12 @@ function showDensity4oneTerm(termid, div, density_data, tk, block) {
 	make_densityplot(div, density_data, () => {})
 }
 
-function menu_samples(data, tk, block) {
+function menu_samples(buttonrow, data, tk, block) {
 	// subject to change
 
-	tk.menutip.d
+	buttonrow
 		.append('div')
-		.text('List')
+		.text(`List ${data.sampleTotalNumber} sample${data.sampleTotalNumber > 1 ? 's' : ''}`)
 		.attr('class', 'sja_menuoption')
 		.on('click', async () => {
 			tk.menutip.clear()
@@ -283,4 +233,52 @@ function menu_samples(data, tk, block) {
 				console.log(e)
 			}
 		})
+}
+
+async function unusedCode() {
+	const features = JSON.parse(sessionStorage.getItem('optionalFeatures') || `{}`)
+	if (!features.mds3barapp) {
+	}
+	// will use the "barapp" when serverconfig.features.mds3barapp evaluates to true
+	const holder = div.append('div')
+	/*.style('display', 'inline-grid')
+						.style('grid-template-columns', 'auto auto auto')
+						.style('grid-row-gap', '3px')
+						.style('align-items', 'center')
+						.style('justify-items', 'left')*/
+
+	const geneTerm = {
+		type: 'geneVariant',
+		isoform: block.usegm.isoform
+	}
+	rangequery_rglst(tk, block, geneTerm)
+
+	try {
+		const plot = await import('#plots/plot.app')
+		await plot.appInit({
+			holder,
+			vocab: tk.mds.termdb.vocabApi.state.vocab,
+			state: {
+				plots: [
+					{
+						chartType: 'barchart',
+						term: {
+							id: termid
+						},
+						term2: {
+							term: geneTerm,
+							q: { mode: 'summary' }
+						},
+						settings: {
+							barchart: {
+								unit: 'pct'
+							}
+						}
+					}
+				]
+			}
+		})
+	} catch (e) {
+		throw e
+	}
 }
