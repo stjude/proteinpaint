@@ -15,7 +15,8 @@ const datasets = {
 	pnet,
 	ihg,
 	hg38gene,
-	allPharmacotyping
+	allPharmacotyping,
+	ash
 	// add more datasets
 }
 
@@ -43,6 +44,11 @@ for (let i = 2; i < process.argv.length; i++) {
 
 //////////////////////// helpers
 
+function scpHpc(file) {
+	// scp from hpc:~/tp/file, to local tp/file
+	exec('scp ' + path.join('hpc:~/tp', file) + path.join(tp, file))
+}
+
 // function name is dataset identifier used in commandline argument
 
 function cosmic() {
@@ -55,10 +61,7 @@ function pnet() {
 	checkDir('files/hg19/pnet/clinical/')
 	exec('scp ppr:/opt/data/pp/tp_native_dir/files/hg19/pnet/clinical/db ' + path.join(tp, 'files/hg19/pnet/clinical/db'))
 	checkDir('files/hg19/pnet/classification/')
-	exec(
-		'scp hpc:tp/files/hg19/pnet/classification/pnet_apr13_tnse.txt ' +
-			path.join(tp, 'files/hg19/pnet/classification/pnet_apr13_tnse.txt')
-	)
+	scpHpc('files/hg19/pnet/classification/pnet_apr13_tnse.txt')
 	checkDir('sdhanda/mb_portal/BT_database/')
 	exec(
 		'scp ppr:/opt/data/pp/tp_native_dir/sdhanda/mb_portal/BT_database/SNVindel_pnet.tsv ' +
@@ -91,22 +94,22 @@ function ihg() {
 		'scp ppr:/opt/data/pp/tp_native_dir/sdhanda/mb_portal/BT_database/fusion_IHG.tsv ' +
 			path.join(tp, 'sdhanda/mb_portal/BT_database/fusion_IHG.tsv')
 	)
-	exec(
-		'scp hpc:~/tp/sdhanda/mb_portal/BT_database/SNVindel_IHG.tsv ' +
-			path.join(tp, 'sdhanda/mb_portal/BT_database/SNVindel_IHG.tsv')
-	)
+	scpHpc('sdhanda/mb_portal/BT_database/SNVindel_IHG.tsv')
 }
 
 function allPharmacotyping() {
 	checkDir('files/hg38/ALL-pharmacotyping/clinical/')
-	exec(
-		'scp hpc:~/tp/files/hg38/ALL-pharmacotyping/clinical/db ' +
-			path.join(tp, 'files/hg38/ALL-pharmacotyping/clinical/db')
-	)
-	exec(
-		'scp hpc:~/tp/files/hg38/ALL-pharmacotyping/clinical/transcriptome-tSNE.txt ' +
-			path.join(tp, 'files/hg38/ALL-pharmacotyping/clinical/transcriptome-tSNE.txt')
-	)
+	scpHpc('files/hg38/ALL-pharmacotyping/clinical/db')
+	scpHpc('files/hg38/ALL-pharmacotyping/clinical/transcriptome-tSNE.txt')
+}
+
+function ash() {
+	checkDir('files/hg38/ash/')
+	scpHpc('files/hg38/ash/db')
+	scpHpc('files/hg38/ash/panall.hg38.bcf.gz')
+	scpHpc('files/hg38/ash/panall.hg38.bcf.gz.tbi')
+	scpHpc('files/hg38/ash/panall.svfusion.hg38.gz')
+	scpHpc('files/hg38/ash/panall.svfusion.hg38.gz.tbi')
 }
 
 function hg38gene() {
