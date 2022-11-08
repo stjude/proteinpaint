@@ -6,7 +6,7 @@ const serverconfig = require('./serverconfig')
 const d3scale = require('d3-scale')
 const schemeCategory10 = require('d3-scale-chromatic').schemeCategory10
 import { mclass } from '#shared/common'
-import { map } from 'jstat'
+import { rgb } from 'd3-color'
 
 /*
 works with "canned" scatterplots in a dataset, e.g. data from a text file of tSNE coordinates from a pre-analyzed cohort (contrary to on-the-fly analysis)
@@ -32,7 +32,9 @@ trigger_getSampleScatter()
 */
 
 // color of reference samples, they should be shown as a "cloud" of dots at backdrop
-const defaultColor = '#ccc'
+const refColor = '#ccc'
+const defaultColor = 'gray'
+
 const defaultShape = 0
 
 // called in mds3.init
@@ -181,35 +183,44 @@ async function mayColorAndFilterSamples(allSamples, q, ds) {
 		return [allSamples]
 	}
 
-	const samples = [] // samples pass filter and to be returned to client and display
+	const samples = [...allSamples] // samples pass filter and to be returned to client and display
 	let colorLegend
 	let shapeCategories = new Map()
 	shapeCategories.set('None', { sampleCount: 0, shape: defaultShape })
 	if (q.colorTW.term.type == 'geneVariant') {
-		console.log(allSamples)
-		let row, color, sample, coords, sampleCount, label
+		let geneVariant, key
 		let colorMap = new Map()
 		colorMap.set('None', ['None', { sampleCount: 0, color: defaultColor }])
 
-		const bySampleId = await ds.mayGetGeneVariantData(q.colorTW, q)
-		for (const [sampleId, value] of bySampleId.entries()) {
-			if (!(q.colorTW.term.name in value)) continue
-			row = value[q.colorTW.term.name].values[0]
-
-			coords = allSamples.find(s => s.sample == row.sample)
-			if (!coords)
-				// this id is not present and will be excluded from the scatterplot
-				continue
-			console.log('row', row)
-			color = mclass[row.class].color
-			label = mclass[row.class].label
-			sample = { sample: row.sample, category: label, color, shape: defaultShape, x: coords.x, y: coords.y }
-			samples.push(sample)
-			if (!colorMap.has(row.class)) colorMap.set(row.class, [label, { sampleCount: 0, color }])
-			else {
-				sampleCount = colorMap.get(row.class)[1].sampleCount + 1
-				colorMap.set(row.class, [label, { sampleCount, color }])
+		let geneVariants = await ds.mayGetGeneVariantData(q.colorTW, q)
+		const name = q.colorTW.term.name
+		for (const sample of allSamples) {
+			geneVariant = null
+			key = 'None'
+			if (sample.sample !== 'Ref')
+				for (const [id, values] of geneVariants.entries()) {
+					if (!(name in values)) continue
+					if (values[name].values[0].sample === sample.sample) {
+						geneVariant = values[name].values[0]
+						break
+					}
+				}
+			if (geneVariant == null && sample.sample != 'Ref')
+				console.log(`The sample ${sample.sample} does not exist in the database`)
+			if (geneVariant) {
+				key = geneVariant.class
+				sample.color = geneVariant ? mclass[key].color : refColor
+				sample.category = mclass[geneVariant.class].label
+			} else {
+				if (sample.sample == 'Ref') {
+					sample.category = 'Ref'
+					key = 'Ref'
+				}
+				sample.color = sample.sample == 'Ref' ? refColor : defaultColor
 			}
+			sample.shape = defaultShape
+			if (!colorMap.has(key)) colorMap.set(key, [sample.category, { sampleCount: 0, color: sample.color }])
+			else colorMap.get(key)[1].sampleCount++
 		}
 		colorLegend = Array.from(colorMap.values())
 	} else {
@@ -295,7 +306,8 @@ async function mayColorAndFilterSamples(allSamples, q, ds) {
 		}
 		// now each category gets an color/shape, apply to samples
 
-		let referenceSampleCount = 0
+		let referenceSampleCount = 0,
+			noCategoryCount = 0
 		for (const s of samples) {
 			if (colorCategories.has(s.category)) {
 				s.color = colorCategories.get(s.category).color
@@ -304,8 +316,13 @@ async function mayColorAndFilterSamples(allSamples, q, ds) {
 					s.shape = shapeCategories.get(s.shapeCategory).shape
 				}
 			} else {
-				s.color = defaultColor
-				referenceSampleCount++
+				if (s.sample == 'Ref') {
+					s.color = refColor
+					referenceSampleCount++
+				} else {
+					s.color = defaultColor
+					noCategoryCount++
+				}
 			}
 			if (!('shape' in s)) s.shape = defaultShape
 		}
@@ -315,7 +332,10 @@ async function mayColorAndFilterSamples(allSamples, q, ds) {
 		colorLegend = [...colorCategories].sort((a, b) => b[1].sampleCount - a[1].sampleCount)
 		// each element: [ 'categoryKey', { sampleCount=int, color=str } ]
 		if (referenceSampleCount) {
-			colorLegend.push(['Reference samples', { sampleCount: referenceSampleCount, color: defaultColor }])
+			colorLegend.push(['Reference samples', { sampleCount: referenceSampleCount, color: refColor }])
+		}
+		if (noCategoryCount) {
+			colorLegend.push(['None', { sampleCount: noCategoryCount, color: defaultColor }])
 		}
 	}
 

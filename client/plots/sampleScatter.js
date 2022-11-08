@@ -120,7 +120,6 @@ class Scatter {
 		const data = await this.app.vocabApi.getScatterData(reqOpts)
 		if (data.error) throw data.error
 		if (!Array.isArray(data.samples)) throw 'data.samples[] not array'
-		console.log(data)
 		this.shapes = data.shapeLegend
 		const s0 = data.samples[0]
 		const [xMin, xMax, yMin, yMax] = data.samples.reduce(
@@ -440,10 +439,7 @@ function setRenderers(self) {
 	}
 
 	function translate(c) {
-		console.log(c)
-
 		const transform = `translate(${self.xAxisScale(c.x) + 100},${self.yAxisScale(c.y) + 10})`
-		console.log(transform)
 		return transform
 	}
 
@@ -877,7 +873,6 @@ export async function getPlotConfig(opts, app) {
 		await fillTermWrapper(opts.colorTW, app.vocabApi)
 		if (opts.shapeTW) await fillTermWrapper(opts.shapeTW, app.vocabApi)
 		const config = {
-			id: opts.colorTW.id,
 			groups: [],
 			settings: {
 				controls: {
