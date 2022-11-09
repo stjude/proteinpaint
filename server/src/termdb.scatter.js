@@ -218,20 +218,19 @@ async function colorAndShapeSamples(refSamples, cohortSamples, dbSamples, q) {
 }
 
 function getCategory(dbSample, tw) {
-	const category = tw.term.name
-	let color, value, variant
-	if (dbSample && category in dbSample) {
-		color = null
-		value = tw.term.type == 'geneVariant' ? dbSample[category].values[0] : dbSample[category].value
-		if (value) {
-			if (tw.term.type == 'geneVariant') {
-				variant = mclass[value.class]
-				if (variant) {
-					value = variant.label
-					color = variant.color
-				} else console.log(`${value} does not have an mclass associated`)
-			}
+	let color = null,
+		value = null
+	if (!dbSample) return [value, color]
+
+	if (tw.term.type == 'geneVariant') {
+		const mutation = dbSample?.[tw.term.name]?.values?.[0]
+		if (mutation) {
+			value = mclass?.[mutation.class]?.label
+			color = mclass?.[mutation.class]?.color || 'black' // should be invalid_mclass_color
+			// TODO mutation.mname is amino acid change. pass mname to sample to be shown in tooltip
 		}
+	} else {
+		value = dbSample?.[tw.id]?.value
 	}
 	return [value, color]
 }
