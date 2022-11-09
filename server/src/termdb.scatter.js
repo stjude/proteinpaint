@@ -103,19 +103,14 @@ export async function mayInitiateScatterplots(ds) {
 /*
 
 
-colorTW is required
-shapeTW is optional
+q.colorTW is required
+q.shapeTW is optional
 
-if q.colorTW{} is provided, use sample categories of this term to color dots.
-Run q.get_rows() to get category assignment of all eligible samples
+Uses q.colorTW{}  categories to color dots.
+If q.shapeTW is provided uses categories to assign different shapes to dots
+Runs getData to get category assignment of all eligible samples(filtered) for colorTW and shapeTW
 
-as get_rows() accounts for filter, the samples dropped by filter are missing from result
-and should only retain samples passed filter for scatterplot
-
-whether to drop a sample from allSamples[] is depends on if sampleId is set
-if sampleId is set on a sample, it's a filter-able sample
-otherwise, it's un-filterable, e.g. reference sample
-
+The samples dropped by filter are missing from result.
 input:
 
 allSamples = []
@@ -128,13 +123,11 @@ output:
 	samples=[ {} ]
 		.sample=str
 		.category=str // rename to .colorCategory
-		.color=str
-		.shapeCategory=str
 		.shape=int
-	colorLegend=[]
-		each element [ category, {color=str, sampleCount=int} ]
+	colorLegend={}
+		each element { category: {color=str, sampleCount=int} }
 	shapeLegend=[]
-		each element [ category, {shape=int, sampleCount=int} ]
+		each element {category, {shape=int, sampleCount=int} }
 }
 */
 export async function trigger_getSampleScatter(q, res, ds, genome) {
@@ -145,8 +138,6 @@ export async function trigger_getSampleScatter(q, res, ds, genome) {
 		if (!plot) throw 'plot not found with plotName'
 
 		const [refSamples, cohortSamples] = await getSamples(plot)
-		// array of all samples
-		// [ { sample=str, sampleId=int, x, y } ]
 		const terms = [q.colorTW]
 		if (q.shapeTW) terms.push(q.shapeTW)
 		const data = await getData(Object.assign({}, q, { for: 'matrix', terms }), ds, genome)
