@@ -236,8 +236,6 @@ q.tid = str
 q.term1_q = {}
 	optional q object
 
-TODO change to q.tw={}
-
 Returns:
 {
 	lst:[]
@@ -247,6 +245,7 @@ Returns:
 			key:str
 		}
 	orderedLabels:[]
+		list of string names
 }
 */
 async function trigger_getcategories(q, res, tdb, ds, genome) {
@@ -288,15 +287,9 @@ async function trigger_getcategories(q, res, tdb, ds, genome) {
 		lst,
 		orderedLabels: getOrderedLabels(term, data.refs.byTermId?.[q.tid]?.bins || [])
 	})
-
-	/*
-
-	const result = termdbsql.get_summary(arg)
-	const bins = result.CTE1.bins ? result.CTE1.bins : []
-
-	*/
 }
 
+// may reuse or already done elsewhere?
 function getDefaultQ(term, q) {
 	if (term.type == 'categorical') return {}
 	if (term.type == 'integer' || term.type == 'float') return term.bins.default
