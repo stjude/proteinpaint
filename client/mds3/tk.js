@@ -79,7 +79,10 @@ function getParameter(tk, block) {
 		}
 		if (tk.filterObj) {
 			// json filter object
-			par.push('filterObj=' + encodeURIComponent(JSON.stringify(tk.filterObj)))
+			if (tk.filterObj?.lst.length) {
+				// when user deletes the only tvs from the filter ui, the lst[] will be empty and can cause issue in backend
+				par.push('filterObj=' + encodeURIComponent(JSON.stringify(tk.filterObj)))
+			}
 		}
 		if (tk.token) headers['X-Auth-Token'] = tk.token
 	} else {

@@ -130,8 +130,14 @@ async function showSummary4terms(data, div, tk, block) {
 	tab2box(div, tabs)
 }
 
-/* show categories and #case for one term
-click a category to list cases
+/*
+show categories and #case for one term
+click a category to launch subtrack
+numbycategory = []
+	each element is array of length 3 representing one category, from a categorical term
+	[0] = category name
+	[1] = number of cases mutated in current gene
+	[2] = total number of cases from this category
 */
 function showSummary4oneTerm(termid, div, numbycategory, tk, block) {
 	const grid_div = div
@@ -170,6 +176,28 @@ function showSummary4oneTerm(termid, div, numbycategory, tk, block) {
 		// for a selected category, launch subtrack
 		tk.menutip.clear()
 
+		const term = await tk.mds.termdb.vocabApi.getterm(termid)
+
+		if (!term.values || Object.keys(term.values).length == 0) {
+			/////////////////////////////////////
+			//
+			// GDC specific logic:
+			// a gdc term will have blank .values{}, fill in term.values{} here
+			// adding .samplecount is according to vocabApi.getCategories() line 634
+			//
+			/////////////////////////////////////
+			term.values = {}
+			term.samplecount = {}
+			for (const c of numbycategory) {
+				term.values[c[0]] = { label: c[0], samplecount: c[1] }
+				term.samplecount[c[0]] = {
+					key: c[0], // must have .key for tvs to work
+					label: c[0],
+					samplecount: c[1]
+				}
+			}
+		}
+
 		const tkarg = {
 			type: 'mds3',
 			dslabel: tk.dslabel,
@@ -183,7 +211,7 @@ function showSummary4oneTerm(termid, div, numbycategory, tk, block) {
 					{
 						type: 'tvs',
 						tvs: {
-							term: await tk.mds.termdb.vocabApi.getterm(termid),
+							term,
 							values: [{ key: category }]
 						}
 					}
