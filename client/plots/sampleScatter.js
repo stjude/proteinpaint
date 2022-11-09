@@ -911,7 +911,7 @@ function getColor(self, c) {
 }
 
 function getShape(self, c, factor = 1) {
-	console.log(self.shapeLegend.get(c.shape))
+	console.log(c)
 	const index = self.shapeLegend.get(c.shape).shape % self.symbols.length
 	const size = 'sampleId' in c ? self.settings.size : self.settings.refSize
 	return self.symbols[index].size((size * factor) / self.k)()

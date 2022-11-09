@@ -177,7 +177,7 @@ async function getSamples(plot) {
 
 async function colorAndShapeSamples(refSamples, cohortSamples, dbSamples, q) {
 	let samples = [...refSamples] // samples pass filter and to be returned to client and display
-	samples = samples.map(sample => ({ ...sample, category: noCategory, shape: 'Ref' }))
+	samples = samples.map(sample => ({ ...sample, category: 'Ref', shape: 'Ref' }))
 
 	let shapeMap = new Map()
 	let colorMap = new Map()
@@ -213,13 +213,14 @@ async function colorAndShapeSamples(refSamples, cohortSamples, dbSamples, q) {
 			else value.color = k2c(category)
 		}
 	}
-	let i = 2
+	shapeMap.set(noCategory, { sampleCount: noShapeCount, shape: 0 })
+	let i = 1
+
+	shapeMap.set('Ref', { sampleCount: refSamples.length, shape: q.shapeTW ? i++ : 0 })
 	for (const [category, value] of shapeMap) {
-		value.shape = i
+		if (!('shape' in value)) value.shape = i
 		i++
 	}
-	shapeMap.set(noCategory, { sampleCount: noShapeCount, shape: 0 })
-	shapeMap.set('Ref', { sampleCount: refSamples.length, shape: 1 })
 
 	colorMap.set(noCategory, { sampleCount: noColorCount, color: defaultColor })
 	colorMap.set('Ref', { sampleCount: refSamples.length, color: refColor })
