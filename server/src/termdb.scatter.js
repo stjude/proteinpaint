@@ -176,12 +176,13 @@ async function colorAndShapeSamples(refSamples, cohortSamples, dbSamples, q) {
 		noShapeCount = 0
 	for (const sample of cohortSamples) {
 		const dbSample = dbSamples[sample.sampleId.toString()]
+		sample.category_info = {}
 		assignCategory(dbSample, sample, q.colorTW, colorMap, 'category')
 		if (!('category' in sample)) noColorCount++
 		sample.shape = noCategory
 		if (q.shapeTW) {
 			assignCategory(dbSample, sample, q.shapeTW, shapeMap, 'shape')
-			if (!('category' in sample)) noShapeCount++
+			if (!('shape' in sample)) noShapeCount++
 		}
 		samples.push(sample)
 	}
@@ -216,15 +217,17 @@ function assignCategory(dbSample, sample, tw, categoryMap, category) {
 	if (tw.term.type == 'geneVariant') {
 		const mutation = dbSample?.[tw.term.name]?.values?.[0]
 		if (mutation) {
-			value = mclass?.[mutation.class]?.label
-			color = mclass?.[mutation.class]?.color || 'black' // should be invalid_mclass_color
+			console.log(mutation)
+			value = mclass[mutation.class]?.label
+			color = mclass[mutation.class]?.color || 'black' // should be invalid_mclass_color
+			sample.category_info[category] = mutation.mname
 			// TODO mutation.mname is amino acid change. pass mname to sample to be shown in tooltip
 		}
 	} else {
 		value = dbSample?.[tw.id]?.value
 	}
 	if (value) {
-		sample[category] = value
+		sample[category] = value.toString()
 		if (!categoryMap.has(value)) categoryMap.set(value, { sampleCount: 1, color })
 		else categoryMap.get(value).sampleCount++
 	}

@@ -791,26 +791,24 @@ function setRenderers(self) {
 
 	function showTable(group, x, y) {
 		let rows = []
-		const columns = [formatCell('Sample', 'label'), formatCell(self.config.colorTW.id, 'label')]
-		if (self.config.shapeTW) columns.push(formatCell(self.config.shapeTW.id))
+		const columns = [formatCell('Sample', 'label'), formatCell(self.config.colorTW.term.name, 'label')]
+		if (self.config.shapeTW) columns.push(formatCell(self.config.shapeTW.term.name, 'label'))
 		columns.push(formatCell('Info', 'label'))
-		let row, data
-		let values
 		for (const item of group.items) {
-			data = item.__data__
-			row = [formatCell(data.sample)]
-			if ('category' in data) row.push(formatCell(data.category))
+			const data = item.__data__
+			const row = [formatCell(data.sample)]
+			if ('category' in data) row.push(formatCell(getCategoryInfo(data, 'category')))
 			else row.push(formatCell(''))
-			if (self.config.shapeTW) row.push(formatCell(getShapeName(self.shapeLegend, data)))
+			if (self.config.shapeTW) row.push(formatCell(getCategoryInfo(data, 'shape')))
 			if ('info' in data) {
-				values = []
+				const values = []
 				for (const [k, v] of Object.entries(data.info)) values.push(`${k}: ${v}`)
 				row.push(formatCell(values.join(', ')))
 			} else row.push({ value: '' })
 			rows.push(row)
 		}
 		self.dom.subtip.clear()
-		const headerDiv = self.dom.subtip.d.style('width', '30vw').append('div')
+		const headerDiv = self.dom.subtip.d.append('div')
 		headerDiv
 			.insert('div')
 			.html('&nbsp;' + group.name)
@@ -853,8 +851,11 @@ function setInteractivity(self) {
 			self.dom.tip.clear()
 
 			const rows = [{ k: 'Sample', v: d.sample }]
-			if ('category' in d) {
-				rows.push({ k: self.config.colorTW.id, v: d.category })
+			const cat_info = getCategoryInfo(d, 'category')
+			rows.push({ k: self.config.colorTW.term.name, v: cat_info })
+			if (self.config.shapeTW) {
+				const cat_info = getCategoryInfo(d, 'shape')
+				rows.push({ k: self.config.shapeTW.term.name, v: cat_info })
 			}
 			if ('info' in d) for (const [k, v] of Object.entries(d.info)) rows.push({ k: k, v: v })
 			make_table_2col(self.dom.tip.d, rows)
@@ -903,6 +904,12 @@ export const scatterInit = getCompInit(Scatter)
 // this alias will allow abstracted dynamic imports
 export const componentInit = scatterInit
 
+function getCategoryInfo(d, category) {
+	if (!(category in d)) return ''
+	console.log(d, category)
+	return d.category_info?.[category] ? `${d.category_info[category]} ${d[category]}` : d[category]
+}
+
 function getColor(self, c) {
 	const color = 'category' in c ? self.colorLegend.get(c.category).color : self.colorLegend.get('None').color
 	return color
@@ -912,15 +919,6 @@ function getShape(self, c, factor = 1) {
 	const index = self.shapeLegend.get(c.shape).shape % self.symbols.length
 	const size = 'sampleId' in c ? self.settings.size : self.settings.refSize
 	return self.symbols[index].size((size * factor) / self.k)()
-}
-
-function getShapeName(shapes, data) {
-	for (const [key, shape] of shapes) {
-		const index = shape[1].shape
-		const name = shape[0]
-		if (data.shape === index) return name
-	}
-	return null
 }
 
 function openSurvivalPlot(self, term, groups) {
