@@ -173,11 +173,10 @@ async function colorAndShapeSamples(refSamples, cohortSamples, dbSamples, q) {
 	const shapeMap = new Map()
 	const colorMap = new Map()
 
-	let dbSample
 	let noColorCount = 0,
 		noShapeCount = 0
 	for (const sample of cohortSamples) {
-		dbSample = dbSamples[sample.sampleId.toString()]
+		const dbSample = dbSamples[sample.sampleId.toString()]
 		const [category, color] = getCategory(dbSample, q.colorTW)
 		if (category) {
 			sample.category = category
