@@ -119,7 +119,6 @@ class Scatter {
 		const reqOpts = this.getDataRequestOpts()
 		const data = await this.app.vocabApi.getScatterData(reqOpts)
 		if (data.error) throw data.error
-		console.log(data)
 		if (!Array.isArray(data.samples)) throw 'data.samples[] not array'
 		this.shapeLegend = new Map(Object.entries(data.shapeLegend))
 		this.colorLegend = new Map(Object.entries(data.colorLegend))
@@ -427,7 +426,7 @@ function setRenderers(self) {
 			.attr('d', c => getShape(self, c))
 			.attr('fill', c => getColor(self, c))
 
-			.style('fill-opacity', c => (c.sample !== 'Ref' || (c.sample == 'Ref' && s.showRef) ? 1 : 0))
+			.style('fill-opacity', c => ('sampleId' in c || s.showRef ? 1 : 0))
 		symbols
 			.enter()
 			.append('path')
@@ -436,7 +435,7 @@ function setRenderers(self) {
 			.attr('d', c => getShape(self, c))
 			.attr('fill', c => getColor(self, c))
 
-			.style('fill-opacity', c => (c.sample !== 'Ref' || (c.sample == 'Ref' && s.showRef) ? 1 : 0))
+			.style('fill-opacity', c => ('sampleId' in c || s.showRef ? 1 : 0))
 			.transition()
 			.duration(duration)
 	}
@@ -503,7 +502,7 @@ function setRenderers(self) {
 				let data
 				for (const item of self.lasso.selectedItems()._groups[0]) {
 					data = item.__data__
-					if (data.sample !== 'Ref') self.selectedItems.push(item)
+					if ('sampleId' in data) self.selectedItems.push(item)
 				}
 				self.lasso.notSelectedItems().attr('d', c => getShape(self, c))
 
@@ -850,7 +849,7 @@ function setInteractivity(self) {
 		if (event.target.tagName == 'path') {
 			const d = event.target.__data__
 			if (!d) return
-			if (d.sample == 'Ref' && (!self.settings.showRef || self.settings.refSize == 0)) return
+			if (!('sampleId' in d) && (!self.settings.showRef || self.settings.refSize == 0)) return
 			self.dom.tip.clear()
 
 			const rows = [{ k: 'Sample', v: d.sample }]
@@ -905,13 +904,11 @@ export const scatterInit = getCompInit(Scatter)
 export const componentInit = scatterInit
 
 function getColor(self, c) {
-	if ('color' in c) return c.color
 	const color = 'category' in c ? self.colorLegend.get(c.category).color : self.colorLegend.get('None').color
 	return color
 }
 
 function getShape(self, c, factor = 1) {
-	console.log(c)
 	const index = self.shapeLegend.get(c.shape).shape % self.symbols.length
 	const size = 'sampleId' in c ? self.settings.size : self.settings.refSize
 	return self.symbols[index].size((size * factor) / self.k)()
