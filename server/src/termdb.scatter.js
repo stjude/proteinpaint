@@ -177,20 +177,12 @@ async function colorAndShapeSamples(refSamples, cohortSamples, dbSamples, q) {
 		noShapeCount = 0
 	for (const sample of cohortSamples) {
 		const dbSample = dbSamples[sample.sampleId.toString()]
-		const [category, color] = getCategory(dbSample, q.colorTW)
-		if (category) {
-			sample.category = category
-			if (!colorMap.has(category)) colorMap.set(category, { sampleCount: 1, color })
-			else colorMap.get(category).sampleCount++
-		} else noColorCount++
+		assignCategory(dbSample, sample, q.colorTW, colorMap, 'category')
+		if (!('category' in sample)) noColorCount++
 		sample.shape = noCategory
 		if (q.shapeTW) {
-			const [shape, color2] = getCategory(dbSample, q.shapeTW)
-			if (shape) {
-				sample.shape = shape
-				if (!shapeMap.has(shape)) shapeMap.set(shape, { sampleCount: 1 })
-				else shapeMap.get(shape).sampleCount++
-			} else noShapeCount++
+			assignCategory(dbSample, sample, q.shapeTW, shapeMap, 'shape')
+			if (!('category' in sample)) noShapeCount++
 		}
 		samples.push(sample)
 	}
@@ -217,10 +209,10 @@ async function colorAndShapeSamples(refSamples, cohortSamples, dbSamples, q) {
 	return { samples, colorLegend: Object.fromEntries(colorMap), shapeLegend: Object.fromEntries(shapeMap) }
 }
 
-function getCategory(dbSample, tw) {
+function assignCategory(dbSample, sample, tw, categoryMap, category) {
 	let color = null,
 		value = null
-	if (!dbSample) return [value, color]
+	if (!dbSample) return
 
 	if (tw.term.type == 'geneVariant') {
 		const mutation = dbSample?.[tw.term.name]?.values?.[0]
@@ -232,5 +224,9 @@ function getCategory(dbSample, tw) {
 	} else {
 		value = dbSample?.[tw.id]?.value
 	}
-	return [value, color]
+	if (value) {
+		sample[category] = value
+		if (!categoryMap.has(value)) categoryMap.set(value, { sampleCount: 1, color })
+		else categoryMap.get(value).sampleCount++
+	}
 }
