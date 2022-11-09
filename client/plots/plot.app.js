@@ -6,6 +6,11 @@ import { sayerror } from '#dom/error'
 import { Menu } from '#dom/menu'
 
 /*
+
+the purpose of this wrapper is to allow a mass plot to be used with control options outside of mass app
+
+TODO allow to hide controls. e.g. in the cuminc plot integrated into cox-snplocus, allowing to get rid of duplicating code of Cuminc class in cuminc.js
+
 	opts{}
 	.holder 	d3-wrapped DOM container
 
