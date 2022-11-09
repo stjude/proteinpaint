@@ -570,6 +570,7 @@ function setRenderers(self) {
 				.style('display', 'inline-block')
 				.append('div')
 			renderPvalues({
+				title: 'Group comparisons (log-rank test)',
 				holder,
 				plot: 'survival',
 				tests: self.tests[chart.rawChartId],

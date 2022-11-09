@@ -708,14 +708,12 @@ function setRenderers(self) {
 					.style('display', 'inline-block')
 					.append('div')
 				renderPvalues({
+					title: "Group comparisons (Gray's test)",
 					holder,
 					plot: 'cuminc',
 					tests: self.tests[chart.chartId],
 					s,
-					bins: self.refs.bins,
-					tip: null,
-					setActiveMenu: null,
-					showHiddenTests: null
+					bins: self.refs.bins
 				})
 			}
 

@@ -105,6 +105,7 @@ export function renderPvalues({ title, holder, plot, tests, s, bins, tip, setAct
 
 		// table rows
 		const tbody = table.append('tbody')
+
 		const tr = tbody
 			.selectAll('tr')
 			.data(plot == 'violin' ? visibleTests.pvalues : visibleTests)
