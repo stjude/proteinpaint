@@ -33,6 +33,8 @@ class Matrix {
 			.append('svg')
 			.style('margin', '20px 10px')
 			.style('overflow', 'visible')
+			.on('mousemove.label', this.svgMousemove)
+			.on('mouseup.label', this.svgMouseup)
 		const mainG = svg
 			.append('g')
 			.on('mouseover', this.showCellInfo)
@@ -53,14 +55,27 @@ class Matrix {
 			termGrpLabelG: mainG
 				.append('g')
 				.attr('class', 'sjpp-matrix-term-group-label-g')
-				.on('click', this.showTermGroupMenu),
+				.on('mouseover', this.termGrpLabelMouseover)
+				.on('mouseout', this.termGrpLabelMouseout)
+				.on('mousedown', this.termGrpLabelMousedown)
+				.on('mousemove', this.termGrpLabelMousemove)
+				.on('mouseup', this.termGrpLabelMouseup),
 			cluster: mainG.append('g').attr('class', 'sjpp-matrix-cluster-g'),
 			seriesesG: mainG.append('g').attr('class', 'sjpp-matrix-serieses-g'),
 			sampleLabelG: mainG.append('g').attr('class', 'sjpp-matrix-series-label-g'),
-			termLabelG: mainG
+			/* // TODO: sample label drag to move
+				.on('mouseover', this.sampleLabelMouseover)
+				.on('mouseout', this.sampleLabelMouseout)
+				.on('mousedown', this.sampleLabelMousedown)
+				.on('mousemove', this.sampleLabelMousemove)
+				.on('mouseup', this.sampleLabelMouseup)*/ termLabelG: mainG
 				.append('g')
 				.attr('class', 'sjpp-matrix-term-label-g')
-				.on('click', this.showTermMenu),
+				.on('mouseover', this.termLabelMouseover)
+				.on('mouseout', this.termLabelMouseout)
+				.on('mousedown', this.termLabelMousedown)
+				.on('mousemove', this.termLabelMousemove)
+				.on('mouseup', this.termLabelMouseup),
 			//legendDiv: holder.append('div').style('margin', '5px 5px 15px 50px'),
 			legendG: mainG.append('g'),
 			tip,
@@ -832,7 +847,7 @@ export async function getPlotConfig(opts, app) {
 				sampleGrpLabelOffset: 120,
 				termLabelOffset: 80,
 				termGrpLabelOffset: 80,
-				duration: 250
+				duration: 100
 			},
 			legend: {
 				ontop: false,

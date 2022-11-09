@@ -60,7 +60,7 @@ export function dofetch(path, arg, opts = null) {
 }
 
 const cachedServerDataKeys = []
-const maxNumOfServerDataKeys = 20
+const maxNumOfServerDataKeys = 50
 
 export function dofetch2(path, init = {}, opts = {}) {
 	/*
