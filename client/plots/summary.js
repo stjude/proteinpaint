@@ -64,7 +64,6 @@ class SummaryPlot {
 			await this.setComponent(config)
 		}
 
-
 		for (const childType in this.components) {
 			const chart = this.components[childType]
 			// hide non-active charts first, so not to momentarily have two visible charts
@@ -82,7 +81,6 @@ class SummaryPlot {
 				.style('background-color', d => (d.active ? '#cfe2f3' : 'white'))
 				.style('border-style', d => (d.active ? 'solid solid none' : 'none'))
 		})
-
 	}
 
 	async setComponent(config) {
@@ -188,7 +186,7 @@ function setRenderers(self) {
 					},
 					{
 						childType: 'table',
-						label: 'Crosstab - TODO',
+						label: 'Crosstab - in development',
 						disabled: d => true,
 						isVisible: () => true,
 						active: false
@@ -224,7 +222,6 @@ function setRenderers(self) {
 				.style('border-width', '1px')
 				.style('border-radius', '5px 5px 0px 0px')
 				.style('margin', '0px 2px -1px')
-
 
 				// TODO: may use other logic for disabling a chart type, insteead of hiding/showing
 				.property('disabled', d => d.disabled())

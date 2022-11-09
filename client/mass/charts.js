@@ -32,7 +32,7 @@ class MassCharts {
 			vocab: appState.vocab,
 			activeCohort: appState.activeCohort,
 			termfilter: appState.termfilter,
-			supportedChartTypes: chartTypes[cohortStr] || ['barchart'],
+			supportedChartTypes: chartTypes[cohortStr] || ['summary'],
 			termdbConfig: appState.termdbConfig
 		}
 		if (appState.termfilter && appState.termfilter.filter) {
@@ -111,14 +111,6 @@ function getChartTypeList(self) {
 			config: {
 				chartType: 'dictionary'
 			}
-		},
-		{
-			// TODO: may eventually remove this chart option ????
-			//if summary chart is enabled (look at line 1156 in server/src/termdb.sql.js) then it will remove this barchart.
-			label: 'Bar Chart',
-			chartType: 'barchart',
-			clickTo: self.showTree_select1term,
-			usecase: { target: 'barchart', detail: 'term' }
 		},
 		{
 			label: 'Summary Plots',
@@ -313,7 +305,7 @@ function setRenderers(self) {
 	/*	
 		show termdb tree to select a term
 		once selected, dispatch "plot_create" action (with the selected term) to produce the plot
-		example: barchart
+		example: summary
 	*/
 	self.showTree_select1term = async chart => {
 		if (chart.usecase.label) {

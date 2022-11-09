@@ -6,7 +6,7 @@ module.exports = {
 	// getters will be added to abstract the detailed implementations
 	cohort: {
 		// expose matrix for testing. should be okay to merge to master as for now the ash dataset is not exposed from mass ui
-		allowedChartTypes: ['barchart', 'matrix'],
+		allowedChartTypes: ['summary', 'matrix'],
 
 		db: { file: 'files/hg38/ash/db' },
 		termdb: {

@@ -28,7 +28,8 @@ TODO allow to hide controls. e.g. in the cuminc plot integrated into cox-snplocu
 		plots[{}] options for rendering 1 or more plot(s), for example:
 
 		[{
-			chartType: 'barchart',
+			chartType: 'summary',
+			childType: 'barchart',
 			term: {},
 			term2: {},
 			settings: {

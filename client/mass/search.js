@@ -135,7 +135,7 @@ function setRenderers(self) {
 					self.app.dispatch({
 						type: 'plot_create',
 						config: {
-							chartType: term.type == 'survival' ? 'survival' : 'barchart',
+							chartType: term.type == 'survival' ? 'survival' : 'summary',
 							term: { id: term.id, term }
 						}
 					})

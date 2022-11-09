@@ -88,7 +88,7 @@ function downloadBtnInit(opts) {
 	icon_functions['download'](downloadDiv, { handler: opts.callback })
 
 	const self = {
-		plotTypes: ['barchart', 'boxplot', 'scatter'],
+		plotTypes: ['summary', 'boxplot', 'scatter'],
 		dom: {
 			btn: downloadDiv
 		}

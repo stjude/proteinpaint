@@ -613,7 +613,7 @@ module.exports = {
 	},*/
 
 	cohort: {
-		allowedChartTypes: ['barchart', 'cuminc', 'survival', 'regression'],
+		allowedChartTypes: ['summary', 'cuminc', 'survival', 'regression'],
 
 		db: {
 			file: 'files/hg38/sjlife/clinical/db'

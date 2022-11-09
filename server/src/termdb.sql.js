@@ -1168,7 +1168,7 @@ thus less things to worry about...
 			if (!r.type) continue // skip ungraphable parent terms
 
 			if (!(r.cohort in supportedChartTypes)) {
-				supportedChartTypes[r.cohort] = new Set(['barchart', 'regression', 'summary'])
+				supportedChartTypes[r.cohort] = new Set(['regression', 'summary'])
 				if (ds.cohort.scatterplots) supportedChartTypes[r.cohort].add('sampleScatter')
 				numericTypeCount[r.cohort] = 0
 				if (ds.cohort.allowedChartTypes?.includes('matrix')) supportedChartTypes[r.cohort].add('matrix')

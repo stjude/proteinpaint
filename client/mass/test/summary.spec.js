@@ -38,7 +38,8 @@ tape('single barchart, categorical bars', function(test) {
 		state: {
 			plots: [
 				{
-					chartType: 'barchart',
+					chartType: 'summary',
+					childType: 'barchart',
 					term: {
 						id: 'diaggrp'
 					}
@@ -85,7 +86,8 @@ tape('single chart, with overlay', function(test) {
 			termfilter,
 			plots: [
 				{
-					chartType: 'barchart',
+					chartType: 'summary',
+					childType: 'barchart',
 					term: { id: 'diaggrp' },
 					term2: { id: 'agedx' },
 					settings: {
@@ -197,7 +199,8 @@ tape('multiple charts', function(test) {
 		state: {
 			plots: [
 				{
-					chartType: 'barchart',
+					chartType: 'summary',
+					childType: 'barchart',
 					term: { id: 'diaggrp' },
 					term0: { id: 'agedx' },
 					settings: {
@@ -237,7 +240,8 @@ tape('series visibility - q.hiddenValues', function(test) {
 		state: {
 			plots: [
 				{
-					chartType: 'barchart',
+					chartType: 'summary',
+					childType: 'barchart',
 					term: {
 						id: 'sex',
 						q: {
@@ -278,7 +282,8 @@ tape('series visibility - numeric', function(test) {
 		state: {
 			plots: [
 				{
-					chartType: 'barchart',
+					chartType: 'summary',
+					childType: 'barchart',
 					term: { id: 'aaclassic_5' }
 				}
 			]
@@ -371,7 +376,8 @@ tape('series visibility - condition', function(test) {
 		state: {
 			plots: [
 				{
-					chartType: 'barchart',
+					chartType: 'summary',
+					childType: 'barchart',
 					term: {
 						id: 'Arrhythmias',
 						q: {
@@ -428,7 +434,8 @@ tape('single barchart, filtered', function(test) {
 			},
 			plots: [
 				{
-					chartType: 'barchart',
+					chartType: 'summary',
+					childType: 'barchart',
 					term: {
 						id: 'sex'
 					}
@@ -471,7 +478,8 @@ tape('click non-group bar to add filter', function(test) {
 			termfilter,
 			plots: [
 				{
-					chartType: 'barchart',
+					chartType: 'summary',
+					childType: 'barchart',
 					term: { id: 'agedx', term: termjson['agedx'], q: termjson['agedx'].bins.less },
 					term2: {
 						id: 'Arrhythmias',
@@ -617,7 +625,8 @@ tape('click custom categorical group bar to add filter', function(test) {
 			termfilter,
 			plots: [
 				{
-					chartType: 'barchart',
+					chartType: 'summary',
+					childType: 'barchart',
 					term: {
 						id: 'diaggrp',
 						term: termjson['diaggrp'],
@@ -753,7 +762,7 @@ tape.skip('click custom subcondition group bar to add filter', function(test) {
 		state: {
 			termfilter,
 			plots: [{
-				chartType: 'barchart',
+				chartType: 'summary',
 				term: {
 					id: 'Arrhythmias',
 					term: termjson['Arrhythmias'],
@@ -844,7 +853,8 @@ tape.skip('single chart, genotype overlay', function(test) {
 		state: {
 			plots: [
 				{
-					chartType: 'barchart',
+					chartType: 'summary',
+					childType: 'barchart',
 					term: { id: 'diaggrp', term: termjson['diaggrp'] },
 					term2: 'genotype'
 				}
@@ -886,7 +896,8 @@ tape('numeric exclude range', function(test) {
 		state: {
 			plots: [
 				{
-					chartType: 'barchart',
+					chartType: 'summary',
+					childType: 'barchart',
 					term: { id: 'aaclassic_5', term: termjson['aaclassic_5'] },
 					term2: { id: 'sex' }
 				}
@@ -955,7 +966,8 @@ tape.skip('numeric filter - only special value', function(test) {
 		state: {
 			plots: [
 				{
-					chartType: 'barchart',
+					chartType: 'summary',
+					childType: 'barchart',
 					term: { id: 'aaclassic_5' }
 				}
 			],
@@ -1048,7 +1060,8 @@ tape.skip('custom vocab: categorical terms with numeric filter', test => {
 			},
 			plots: [
 				{
-					chartType: 'barchart',
+					chartType: 'summary',
+					childType: 'barchart',
 					term: {
 						term: vocabData.terms.find(t => t.id == 'c')
 					}
@@ -1112,7 +1125,8 @@ tape.skip('custom vocab: numeric terms with categorical filter', test => {
 			},
 			plots: [
 				{
-					chartType: 'barchart',
+					chartType: 'summary',
+					childType: 'barchart',
 					term: {
 						term: dterm,
 						q: dterm.bins.default
@@ -1151,7 +1165,8 @@ tape('max number of bins: exceeded', test => {
 		state: {
 			plots: [
 				{
-					chartType: 'barchart',
+					chartType: 'summary',
+					childType: 'barchart',
 					term: {
 						term: termjson['aaclassic_5'],
 						q: {
@@ -1230,7 +1245,8 @@ tape.skip('no visible series data, no overlay', function(test) {
 			},
 			plots: [
 				{
-					chartType: 'barchart',
+					chartType: 'summary',
+					childType: 'barchart',
 					term: {
 						id: 'cisplateq_5'
 					}
@@ -1319,7 +1335,8 @@ tape.skip('all hidden + with overlay, legend click', function(test) {
 			},
 			plots: [
 				{
-					chartType: 'barchart',
+					chartType: 'summary',
+					childType: 'barchart',
 					term: {
 						id: 'cisplateq_5'
 					},
@@ -1438,7 +1455,8 @@ tape.skip('unhidden chart and legend', test => {
 			},
 			plots: [
 				{
-					chartType: 'barchart',
+					chartType: 'summary',
+					childType: 'barchart',
 					term: {
 						term: termjson['aaclassic_5'],
 						q: {
@@ -1524,7 +1542,8 @@ tape.skip('customized bins', test => {
 			},
 			plots: [
 				{
-					chartType: 'barchart',
+					chartType: 'summary',
+					childType: 'barchart',
 					term: {
 						term: termjson['aaclassic_5']
 					}

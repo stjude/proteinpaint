@@ -127,7 +127,7 @@ const snplocusQ = {
 }
 
 function __barchart(t1,t2) {
-	const chart = { chartType:'barchart', term:t1 }
+	const chart = { chartType:'summary', term:t1 }
 	if(t2) chart.term2 = t2
 	return '?noheader=1&mass='+JSON.stringify( { dslabel:'SJLife', genome:'hg38', plots: [ chart ], nav: { activeTab: 1 } })
 }

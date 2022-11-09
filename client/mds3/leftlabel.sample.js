@@ -289,7 +289,8 @@ async function unusedCode() {
 			state: {
 				plots: [
 					{
-						chartType: 'barchart',
+						chartType: 'summary',
+						childType: 'barchart',
 						term: {
 							id: termid
 						},
