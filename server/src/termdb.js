@@ -11,6 +11,7 @@ const LDoverlay = require('./mds2.load.ld').overlay
 const getOrderedLabels = require('./termdb.barsql').getOrderedLabels
 const isUsableTerm = require('#shared/termdb.usecase').isUsableTerm
 const trigger_getSampleScatter = require('./termdb.scatter').trigger_getSampleScatter
+const trigger_getViolinPlotData = require('./termdb.violin').trigger_getViolinPlotData
 const getData = require('./termdb.matrix').getData
 
 /*
