@@ -130,7 +130,7 @@ export function renderPvalues({ title, holder, plot, tests, s, bins, tip, setAct
 			.style('color', plot == 'violin' ? 'black' : d => d.color)
 			.style('padding', '1px 8px 1px 2px')
 			.style('font-size', fontSize + 'px')
-			.style('cursor', plot ? 'pointer' : 'auto')
+			.style('cursor', plot == 'survival' ? 'pointer' : 'auto')
 			.text(d => (plot == 'violin' ? d : d.text))
 
 		// footnote div
