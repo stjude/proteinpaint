@@ -167,8 +167,7 @@ async function getSamples(plot) {
 }
 
 async function colorAndShapeSamples(refSamples, cohortSamples, dbSamples, q) {
-	let samples = [...refSamples] // samples pass filter and to be returned to client and display
-	samples = samples.map(sample => ({ ...sample, category: 'Ref', shape: 'Ref' }))
+	const samples = refSamples.map(sample => ({ ...sample, category: 'Ref', shape: 'Ref' }))
 
 	const shapeMap = new Map()
 	const colorMap = new Map()
