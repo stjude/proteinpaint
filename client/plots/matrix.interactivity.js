@@ -51,6 +51,7 @@ export function setInteractivity(self) {
 		if (!self.dragged) return
 		self.dragged.clone.remove()
 		delete self.dragged
+		delete self.clicked
 	}
 
 	//setSampleActions(self)
