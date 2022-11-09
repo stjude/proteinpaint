@@ -1,3 +1,5 @@
+import { sampleLstSql } from './termdb.sql.samplelst'
+
 const { getData } = require('./termdb.matrix')
 const fs = require('fs')
 const path = require('path')
@@ -34,8 +36,7 @@ trigger_getSampleScatter()
 // color of reference samples, they should be shown as a "cloud" of dots at backdrop
 const refColor = '#ccc'
 const defaultColor = 'gray'
-
-const defaultShape = 0
+const noCategory = 'None'
 
 // called in mds3.init
 export async function mayInitiateScatterplots(ds) {
@@ -100,54 +101,8 @@ export async function mayInitiateScatterplots(ds) {
 }
 
 /*
-get a pre-generated plot from a dataset
-e.g. plot encoded in a text file
-apply sample coloring and filtering
 
-q={
-	plotName=str
-	term={} // optional, a term wrapper
-	filter={}
-}
-*/
-export async function trigger_getSampleScatter(q, res, ds, genome) {
-	try {
-		if (!ds.cohort.scatterplots || !ds.cohort.scatterplots.plots) throw 'not supported'
 
-		const plot = ds.cohort.scatterplots.plots.find(p => p.name == q.plotName)
-		if (!plot) throw 'plot not found with plotName'
-
-		const allSamples = await getSampleLst(plot)
-		// array of all samples
-		// [ { sample=str, sampleId=int, x, y } ]
-		const terms = [q.colorTW]
-		if (q.shapeTW) terms.push(q.shapeTW)
-		const data = await getData(Object.assign({}, q, { for: 'matrix', terms }), ds, genome)
-		if (data.error) throw data.error
-		res.send({ status: 'ok', data })
-
-		//res.send(await mayColorAndFilterSamples(allSamples, q, ds, data.samples))
-	} catch (e) {
-		res.send({ error: e.message || e })
-	}
-}
-
-async function getSampleLst(plot) {
-	if (plot.filterableSamples) {
-		// must make in-memory duplication of the objects as they will be modified by assigning .color/shape
-		const samples = []
-		if (plot.referenceSamples) {
-			// put reference samples in front of the returned array, so they are rendered as "background"
-			for (const i of JSON.parse(JSON.stringify(plot.referenceSamples))) samples.push(i)
-		}
-		for (const i of JSON.parse(JSON.stringify(plot.filterableSamples))) samples.push(i)
-		return samples
-	}
-	if (plot.gdcapi) throw 'gdcapi not implemented yet'
-	throw 'do not know how to load data from this plot'
-}
-
-/*
 colorTW is required
 shapeTW is optional
 
@@ -182,209 +137,111 @@ output:
 		each element [ category, {shape=int, sampleCount=int} ]
 }
 */
-async function mayColorAndFilterSamples(allSamples, q, ds, anno) {
-	if (!q.colorTW) {
-		// no term to get category assignments for color, nothing to do
-		return [allSamples]
+export async function trigger_getSampleScatter(q, res, ds, genome) {
+	try {
+		if (!ds.cohort.scatterplots || !ds.cohort.scatterplots.plots) throw 'not supported'
+
+		const plot = ds.cohort.scatterplots.plots.find(p => p.name == q.plotName)
+		if (!plot) throw 'plot not found with plotName'
+
+		const [refSamples, cohortSamples] = await getSamples(plot)
+		// array of all samples
+		// [ { sample=str, sampleId=int, x, y } ]
+		const terms = [q.colorTW]
+		if (q.shapeTW) terms.push(q.shapeTW)
+		const data = await getData(Object.assign({}, q, { for: 'matrix', terms }), ds, genome)
+		if (data.error) throw data.error
+		//res.send({ status: 'ok', data })
+		const result = await colorAndShapeSamples(refSamples, cohortSamples, data.samples, q)
+		res.send(result)
+	} catch (e) {
+		res.send({ error: e.message || e })
 	}
-
-	const samples = [...allSamples] // samples pass filter and to be returned to client and display
-	let colorLegend
-	let shapeCategories = new Map()
-	shapeCategories.set('None', { sampleCount: 0, shape: defaultShape })
-	if (q.colorTW.term.type == 'geneVariant') {
-		let geneVariant, key
-		let colorMap = new Map()
-		colorMap.set('None', ['None', { sampleCount: 0, color: defaultColor }])
-
-		//let geneVariants = await ds.mayGetGeneVariantData(q.colorTW, q)
-		const name = q.colorTW.term.name
-		for (const sample of allSamples) {
-			geneVariant = null
-			key = 'None'
-			if (sample.sample !== 'Ref')
-				for (const [id, values] of geneVariants.entries()) {
-					if (!(name in values)) continue
-					if (values[name].values[0].sample === sample.sample) {
-						geneVariant = values[name].values[0]
-						break
-					}
-				}
-			if (geneVariant == null && sample.sample != 'Ref')
-				console.log(`The sample ${sample.sample} does not exist in the database`)
-			if (geneVariant) {
-				key = geneVariant.class
-				sample.color = geneVariant ? mclass[key].color : refColor
-				sample.category = mclass[geneVariant.class].label
-			} else {
-				if (sample.sample == 'Ref') {
-					sample.category = 'Ref'
-					key = 'Ref'
-				}
-				sample.color = sample.sample == 'Ref' ? refColor : defaultColor
-			}
-			sample.shape = defaultShape
-			if (!colorMap.has(key)) colorMap.set(key, [sample.category, { sampleCount: 0, color: sample.color }])
-			else colorMap.get(key)[1].sampleCount++
-		}
-		colorLegend = Array.from(colorMap.values())
-	} else {
-		const getRowsParam = {
-			ds,
-			filter: q.filter
-		}
-		console.log(230, q)
-		if (!('id' in q.colorTW) && q.colorTW?.term.type != 'geneVariant') throw 'q.colorTW.id missing'
-		if (typeof q.colorTW.q != 'object') throw 'q.colorTW.q is not object'
-		if (q.colorTW?.term.type != 'geneVariant') {
-			getRowsParam.term1_id = q.colorTW.id
-			getRowsParam.term1_q = q.colorTW.q
-		}
-
-		if (q.shapeTW) {
-			if (!('id' in q.shapeTW) && q.shapeTW?.term.type != 'geneVariant') throw 'q.shapeTW.id missing'
-			if (typeof q.shapeTW.q != 'object') throw 'q.shapeTW.q is not object'
-			if (q.shapeTW?.term.type != 'geneVariant') {
-				getRowsParam.term2_id = q.shapeTW.id
-				getRowsParam.term2_q = q.shapeTW.q
-			} else {
-			}
-		}
-
-		const [sampleId2colorCategory, sampleId2shapeCategory] = callGetRows(getRowsParam, q)
-
-		const colorCategories = new Map()
-		// key: category, value: {sampleCount=integer, color=str}
-
-		// key: category, value: {sampleCount=integer, shape=int}
-
-		for (const s of allSamples) {
-			if ('sampleId' in s) {
-				// this sample has ID and is filterable
-
-				if (!sampleId2colorCategory.has(s.sampleId)) {
-					// this id is not present in the map, meaning the sample is dropped by filter
-					// and will exclude it from the scatterplot
-					continue
-				}
-
-				// the sample is kept by filter and will show in scatterplot
-
-				// sample has color category assignment
-				s.category = sampleId2colorCategory.get(s.sampleId) // change 'category' to 'colorCategory'
-				if (!colorCategories.has(s.category)) {
-					colorCategories.set(s.category, { sampleCount: 0 })
-				}
-				colorCategories.get(s.category).sampleCount++
-
-				if (sampleId2shapeCategory) {
-					// using shape
-					if (sampleId2shapeCategory.has(s.sampleId)) {
-						// sample has shape
-						s.shapeCategory = sampleId2shapeCategory.get(s.sampleId)
-						if (!shapeCategories.has(s.shapeCategory)) {
-							shapeCategories.set(s.shapeCategory, { sampleCount: 0 })
-						}
-						shapeCategories.get(s.shapeCategory).sampleCount++
-					}
-				} else shapeCategories.get('None').sampleCount++
-
-				delete s.sampleId // no need to send to client
-				samples.push(s)
-			} else {
-				// this sample does not has ID, and is un-filterable
-				// always keep it in scatterplot
-				samples.push(s)
-				shapeCategories.get('None').sampleCount++
-			}
-		}
-		// assign color to unique categories, but not reference
-		const k2c = d3scale.scaleOrdinal(schemeCategory10)
-		for (const [category, o] of colorCategories) {
-			if (q.colorTW?.term?.values?.[category]?.color) {
-				o.color = q.colorTW.term.values[category].color
-			} else {
-				o.color = k2c(category)
-			}
-		}
-
-		if (shapeCategories) {
-			let i = 0
-			for (const [category, o] of shapeCategories) {
-				o.shape = i++
-			}
-		}
-		// now each category gets an color/shape, apply to samples
-
-		let referenceSampleCount = 0,
-			noCategoryCount = 0
-		for (const s of samples) {
-			if (colorCategories.has(s.category)) {
-				s.color = colorCategories.get(s.category).color
-
-				if (shapeCategories && shapeCategories.has(s.shapeCategory)) {
-					s.shape = shapeCategories.get(s.shapeCategory).shape
-				}
-			} else {
-				if (s.sample == 'Ref') {
-					s.color = refColor
-					referenceSampleCount++
-				} else {
-					s.color = defaultColor
-					noCategoryCount++
-				}
-			}
-			if (!('shape' in s)) s.shape = defaultShape
-		}
-
-		// sort in descending order
-
-		colorLegend = [...colorCategories].sort((a, b) => b[1].sampleCount - a[1].sampleCount)
-		// each element: [ 'categoryKey', { sampleCount=int, color=str } ]
-		if (referenceSampleCount) {
-			colorLegend.push(['Reference samples', { sampleCount: referenceSampleCount, color: refColor }])
-		}
-		if (noCategoryCount) {
-			colorLegend.push(['None', { sampleCount: noCategoryCount, color: defaultColor }])
-		}
-	}
-
-	const result = { samples, colorLegend }
-
-	if (shapeCategories) {
-		result.shapeLegend = [...shapeCategories].sort((a, b) => b[1].sampleCount - a[1].sampleCount)
-	}
-	return result
 }
 
-function callGetRows(param, q) {
-	const result = termdbsql.get_rows(param)
-	/*
-	{
-	  lst: [
-		{
-		  key0: '', val0: '',
-		  key1: 'HGG', val1: 'HGG', // category value for color term
-		  key2: 'M', val2: 'Male', // optional category value for shape term
-		  sample: integer 
-		},
-		...
-	  ]
+async function getSamples(plot) {
+	if (plot.filterableSamples) {
+		// must make in-memory duplication of the objects as they will be modified by assigning .color/shape
+		const samples = [],
+			refSamples = []
+		if (plot.referenceSamples) {
+			// put reference samples in front of the returned array, so they are rendered as "background"
+			for (const i of JSON.parse(JSON.stringify(plot.referenceSamples))) refSamples.push(i)
+		}
+		for (const i of JSON.parse(JSON.stringify(plot.filterableSamples))) samples.push(i)
+		return [refSamples, samples]
 	}
-	*/
+	if (plot.gdcapi) throw 'gdcapi not implemented yet'
+	throw 'do not know how to load data from this plot'
+}
 
-	const sampleId2colorCategory = new Map() // k: sample id, v: category
-	for (const i of result.lst) {
-		sampleId2colorCategory.set(i.sample, i.key1)
+async function colorAndShapeSamples(refSamples, cohortSamples, dbSamples, q) {
+	let samples = [...refSamples] // samples pass filter and to be returned to client and display
+	samples = samples.map(sample => ({ ...sample, category: noCategory, shape: 'Ref' }))
+
+	let shapeMap = new Map()
+	let colorMap = new Map()
+
+	let dbSample
+	let noColorCount = 0,
+		noShapeCount
+	for (const sample of cohortSamples) {
+		dbSample = dbSamples[sample.sampleId.toString()]
+		const [category, color] = getCategory(dbSample, q.colorTW)
+		console.log(category, color)
+		if (category) {
+			sample.category = category
+			if (!colorMap.has(category)) colorMap.set(category, { sampleCount: 1, color })
+			else colorMap.get(category).sampleCount++
+		} else noColorCount++
+		sample.shape = noCategory
+		if (q.shapeTW) {
+			const [shape, color2] = getCategory(dbSample, q.shapeTW)
+			if (shape) {
+				sample.shape = shape
+				if (!shapeMap.has(shape)) shapeMap.set(shape, { sampleCount: 1 })
+				else shapeMap.get(shape).sampleCount++
+			} else noShapeCount++
+		}
+		samples.push(sample)
 	}
 
-	let sampleId2shapeCategory // k: sample id, v: category
-	if (q.shapeTW) {
-		sampleId2shapeCategory = new Map()
-		// k: sample id, v: category
-		for (const i of result.lst) {
-			sampleId2shapeCategory.set(i.sample, i.key2)
+	const k2c = d3scale.scaleOrdinal(schemeCategory10)
+	for (const [category, value] of colorMap) {
+		if (!value.color) {
+			if (q.colorTW?.term?.values?.[category]?.color) value.color = q.colorTW.term.values[category].color
+			else value.color = k2c(category)
 		}
 	}
-	return [sampleId2colorCategory, sampleId2shapeCategory]
+	let i = 2
+	for (const [category, value] of shapeMap) {
+		value.shape = i
+		i++
+	}
+	shapeMap.set(noCategory, { sampleCount: noShapeCount, shape: 0 })
+	shapeMap.set('Ref', { sampleCount: refSamples.length, shape: 1 })
+
+	colorMap.set(noCategory, { sampleCount: noColorCount, color: defaultColor })
+	colorMap.set('Ref', { sampleCount: refSamples.length, color: refColor })
+
+	return { samples, colorLegend: Object.fromEntries(colorMap), shapeLegend: Object.fromEntries(shapeMap) }
+}
+
+function getCategory(dbSample, tw) {
+	const category = tw.term.name
+	let color, value, variant
+	if (dbSample && category in dbSample) {
+		color = null
+		value = tw.term.type == 'geneVariant' ? dbSample[category].values[0] : dbSample[category].value
+		if (value) {
+			if (tw.term.type == 'geneVariant') {
+				variant = mclass[value.class]
+				if (variant) {
+					value = variant.label
+					color = variant.color
+				} else console.log(`${value} does not have an mclass associated`)
+			}
+		}
+	}
+	return [value, color]
 }

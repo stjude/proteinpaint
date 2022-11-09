@@ -119,8 +119,11 @@ class Scatter {
 		const reqOpts = this.getDataRequestOpts()
 		const data = await this.app.vocabApi.getScatterData(reqOpts)
 		if (data.error) throw data.error
+		console.log(data)
 		if (!Array.isArray(data.samples)) throw 'data.samples[] not array'
-		this.shapes = data.shapeLegend
+		this.shapeLegend = new Map(Object.entries(data.shapeLegend))
+		this.colorLegend = new Map(Object.entries(data.colorLegend))
+
 		const s0 = data.samples[0]
 		const [xMin, xMax, yMin, yMax] = data.samples.reduce(
 			(s, d) => [d.x < s[0] ? d.x : s[0], d.x > s[1] ? d.x : s[1], d.y < s[2] ? d.y : s[2], d.y > s[3] ? d.y : s[3]],
@@ -239,7 +242,7 @@ class Scatter {
 		this.dom.toolsDiv = this.dom.controls.insert('div')
 	}
 
-	renderLegend(legendG, categories, shapes) {
+	renderLegend(legendG) {
 		legendG.selectAll('*').remove()
 		const step = 30
 		let offsetX = 0
@@ -255,10 +258,10 @@ class Scatter {
 
 		const radius = 6
 		let category, count, name, color
-		for (const category of categories) {
-			color = category[1].color
-			count = category[1].sampleCount
-			name = category[0]
+		for (const [key, category] of this.colorLegend) {
+			color = category.color
+			count = category.sampleCount
+			name = key
 
 			colorG
 				.append('circle')
@@ -290,11 +293,11 @@ class Scatter {
 
 			let index, symbol
 			color = 'gray'
-			for (const shape of shapes) {
-				index = shape[1].shape % this.symbols.length
+			for (const [key, shape] of this.shapeLegend) {
+				index = shape.shape % this.symbols.length
 				symbol = this.symbols[index].size(64)()
-				name = shape[0]
-				count = shape[1].sampleCount
+				name = key
+				count = shape.sampleCount
 
 				shapeG
 					.append('path')
@@ -355,7 +358,7 @@ function setRenderers(self) {
 		if (mainG.select('.sjpcb-scatter-series').size() == 0) mainG.append('g').attr('class', 'sjpcb-scatter-series')
 		const serie = mainG.select('.sjpcb-scatter-series')
 		renderSerie(serie, data, s, duration)
-		self.renderLegend(legendG, data.colorLegend, data.shapeLegend)
+		self.renderLegend(legendG)
 	}
 
 	function getSvgSubElems(svg, chart) {
@@ -422,7 +425,7 @@ function setRenderers(self) {
 			.duration(duration)
 			.attr('transform', translate)
 			.attr('d', c => getShape(self, c))
-			.attr('fill', c => c.color)
+			.attr('fill', c => getColor(self, c))
 
 			.style('fill-opacity', c => (c.sample !== 'Ref' || (c.sample == 'Ref' && s.showRef) ? 1 : 0))
 		symbols
@@ -431,7 +434,7 @@ function setRenderers(self) {
 			/*** you'd need to set the symbol position using translate, instead of previously with cx, cy for a circle ***/
 			.attr('transform', translate)
 			.attr('d', c => getShape(self, c))
-			.attr('fill', c => c.color)
+			.attr('fill', c => getColor(self, c))
 
 			.style('fill-opacity', c => (c.sample !== 'Ref' || (c.sample == 'Ref' && s.showRef) ? 1 : 0))
 			.transition()
@@ -799,7 +802,7 @@ function setRenderers(self) {
 			row = [formatCell(data.sample)]
 			if ('category' in data) row.push(formatCell(data.category))
 			else row.push(formatCell(''))
-			if (self.config.shapeTW) row.push(formatCell(getShapeName(self.shapes, data)))
+			if (self.config.shapeTW) row.push(formatCell(getShapeName(self.shapeLegend, data)))
 			if ('info' in data) {
 				values = []
 				for (const [k, v] of Object.entries(data.info)) values.push(`${k}: ${v}`)
@@ -901,14 +904,21 @@ export const scatterInit = getCompInit(Scatter)
 // this alias will allow abstracted dynamic imports
 export const componentInit = scatterInit
 
+function getColor(self, c) {
+	if ('color' in c) return c.color
+	const color = 'category' in c ? self.colorLegend.get(c.category).color : self.colorLegend.get('None').color
+	return color
+}
+
 function getShape(self, c, factor = 1) {
-	const index = c.shape % self.symbols.length
-	const size = c.sample === 'Ref' ? self.settings.refSize : self.settings.size
+	console.log(self.shapeLegend.get(c.shape))
+	const index = self.shapeLegend.get(c.shape).shape % self.symbols.length
+	const size = 'sampleId' in c ? self.settings.size : self.settings.refSize
 	return self.symbols[index].size((size * factor) / self.k)()
 }
 
 function getShapeName(shapes, data) {
-	for (const shape of shapes) {
+	for (const [key, shape] of shapes) {
 		const index = shape[1].shape
 		const name = shape[0]
 		if (data.shape === index) return name
