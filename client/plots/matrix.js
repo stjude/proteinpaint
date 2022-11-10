@@ -599,6 +599,7 @@ class Matrix {
 				for (const [i, value] of values.entries()) {
 					const cell = {
 						sample: row.sample,
+						_SAMPLENAME_: data.refs.bySampleId[row.sample],
 						tw: t.tw,
 						term: t.tw.term,
 						termid,
