@@ -25,8 +25,17 @@ export class MatrixControls {
 			.style('margin', '10px 10px 20px 10px')
 			.selectAll('button')
 			.data([
-				{ value: 'samples', label: 'Samples' },
-				{ value: 'anno', label: 'Terms', customInputs: this.appendTermInputs },
+				{
+					value: 'samples',
+					label: 'Samples',
+					customHeaderRows: (matrix, table) => this.prependInfo(table, 'Samples number', matrix.sampleOrder.length)
+				},
+				{
+					value: 'anno',
+					label: 'Terms',
+					customHeaderRows: (matrix, table) => this.prependInfo(table, 'Terms number', matrix.termOrder.length),
+					customInputs: this.appendTermInputs
+				},
 				{ value: 'cols', label: 'Column layout' },
 				{ value: 'rows', label: 'Row layout' },
 				{ value: 'legend', label: 'Legend layout' },
@@ -262,6 +271,7 @@ export class MatrixControls {
 		const app = this.opts.app
 		const parent = this.opts.parent
 		const table = app.tip.clear().d.append('table')
+		if (d.customHeaderRows) d.customHeaderRows(parent, table)
 
 		for (const inputConfig of this.inputGroups[d.value]) {
 			const input = await initByInput[inputConfig.type](
@@ -282,6 +292,12 @@ export class MatrixControls {
 		}
 		if (d.customInputs) d.customInputs(this, app, parent, table)
 		app.tip.showunder(event.target)
+	}
+
+	prependInfo(table, header, value) {
+		const tr = table.append('tr')
+		tr.append('td').text(header)
+		tr.append('td').text(value)
 	}
 
 	appendTermInputs(self, app, parent, table) {
