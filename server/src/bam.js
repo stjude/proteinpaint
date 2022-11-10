@@ -373,7 +373,7 @@ async function plot_pileup(q, templates) {
 			const x0 = (bp.position - r.start) * r.ntwidth + r.x
 			const x = r.ntwidth >= 1 ? x0 : Math.floor(x0) // floor() is necessary to remove white lines when zoomed out for unknown reason
 
-			const barwidth = Math.max(1, r.ntwidth) * (r.width / q.canvaswidth) // when in zoomed out mode, each bar is one pixel, thus the width=1
+			const barwidth = Math.max(1, r.ntwidth) // * (r.width / q.canvaswidth) // when in zoomed out mode, each bar is one pixel, thus the width=1
 
 			// total coverage of this bp
 			{
@@ -1883,25 +1883,81 @@ function stack_templates(group, q, templates) {
 	// actual y position will be set later after stackheight is determined
 	// adds q.stacks[]
 	// stacking code not reusable for the special spacing calculation
-	templates.sort((i, j) => i.x1 - j.x1) //group.templates
-	group.stacks = [] // each value is screen pixel pos of each stack
-	for (const template of templates) {
-		// group.templates
-		let stackidx = null
-		if (!q.variant) {
-			for (let i = 0; i < group.stacks.length; i++) {
-				if (group.stacks[i] + q.stacksegspacing < template.x1) {
-					stackidx = i
-					group.stacks[i] = template.x2
-					break
+	if (!q.asPaired) {
+		// Single read view
+		templates.sort((i, j) => i.x1 - j.x1) //group.templates
+		for (let region_idx = 0; region_idx < q.regions.length; region_idx++) {
+			group.stacks = [] // each value is screen pixel pos of each stack
+			for (const template of templates) {
+				// group.templates
+				if (template.segments[0].ridx == region_idx) {
+					let stackidx = null
+					if (!q.variant) {
+						for (let i = 0; i < group.stacks.length; i++) {
+							if (group.stacks[i] + q.stacksegspacing < template.x1) {
+								stackidx = i
+								group.stacks[i] = template.x2
+								break
+							}
+						}
+					}
+					if (stackidx == null) {
+						stackidx = group.stacks.length
+						group.stacks[stackidx] = template.x2
+					}
+					template.y = stackidx
 				}
 			}
 		}
-		if (stackidx == null) {
-			stackidx = group.stacks.length
-			group.stacks[stackidx] = template.x2
+	} else {
+		// Paired end view
+		group.stacks = [] // each value is screen pixel pos of each stack
+		for (const template of templates) {
+			let region_idx = template.segments[0].ridx
+			// Determine stackable template coordinates template.x1 and template.x2
+			if (template.segments.length == 1) {
+				template.x1 = Math.max(q.regions[region_idx].x, template.x1)
+				template.x2 = Math.min(q.regions[region_idx].x + q.regions[region_idx].width, template.x2)
+			} else if (template.segments.length == 2 && template.segments[0].ridx == template.segments[1].ridx) {
+				// Paired end template in same region
+				template.x1 = Math.max(q.regions[region_idx].x, template.x1)
+				template.x2 = Math.min(q.regions[region_idx].x + q.regions[region_idx].width, template.x2)
+			} else if (template.segments.length == 2 && template.segments[0].ridx != template.segments[1].ridx) {
+				//Paired-end template in multiple regions
+				template.x1 = template.x1
+				template.x2 = template.x2
+			}
 		}
-		template.y = stackidx
+		templates.sort((i, j) => i.x1 - j.x1) //group.templates
+		for (const template of templates) {
+			let region_idx = template.segments[0].ridx
+			//console.log('q.regions[region_idx].x:', q.regions[region_idx].x)
+			//console.log('q.regions[region_idx].width:', q.regions[region_idx].x + q.regions[region_idx].width)
+			//console.log('template.qname:', template.segments[0].qname)
+			//console.log('template.x1:', template.x1)
+			//console.log('template.x2:', template.x2)
+			//console.log('template.segments[0].ridx:', template.segments[0].ridx)
+			//if (template.segments.length == 2) {
+			//	console.log('template.segments[1].ridx:', template.segments[1].ridx)
+			//}
+
+			// group.templates
+			let stackidx = null
+			if (!q.variant) {
+				for (let i = 0; i < group.stacks.length; i++) {
+					if (group.stacks[i] + q.stacksegspacing < template.x1) {
+						stackidx = i
+						group.stacks[i] = template.x2
+						break
+					}
+				}
+			}
+			if (stackidx == null) {
+				stackidx = group.stacks.length
+				group.stacks[stackidx] = template.x2
+			}
+			template.y = stackidx
+		}
 	}
 	templates = may_trimstacks(group, templates, q)
 	return templates
@@ -2298,14 +2354,22 @@ function plot_segment(ctx, segment, y, group, q) {
 				for (let i = 0; i < b.qual.length; i++) {
 					const v = b.qual[i] / maxqual
 					ctx.fillStyle = b.opr == 'S' ? qual2softclipbg(v) : qual2mismatchbg(v)
-					if (xoff + r.ntwidth + ntboxwidthincrement < r.width && xoff <= r.width && r.x < xoff) {
+					//if (xoff + r.ntwidth + ntboxwidthincrement < r.width && xoff <= r.width && r.x < xoff) {
+					//	ctx.fillRect(xoff, y, r.ntwidth + ntboxwidthincrement, group.stackheight)
+					//} else if (xoff < r.width && xoff + r.ntwidth + ntboxwidthincrement >= r.width && r.x < xoff) {
+					//	ctx.fillRect(xoff, y, r.width - xoff, group.stackheight)
+					//} else if (xoff + r.ntwidth + ntboxwidthincrement > r.x && xoff <= r.x) {
+					//	ctx.fillRect(r.x, y, xoff + r.ntwidth + ntboxwidthincrement, group.stackheight)
+					//} else if (xoff + r.ntwidth + ntboxwidthincrement < r.width && xoff > r.x) {
+					//	ctx.fillRect(xoff, y, xoff + r.ntwidth + ntboxwidthincrement, group.stackheight)
+					//}
+
+					if (xoff + r.ntwidth + ntboxwidthincrement < r.width && r.x <= xoff) {
 						ctx.fillRect(xoff, y, r.ntwidth + ntboxwidthincrement, group.stackheight)
-					} else if (xoff < r.width && xoff + r.ntwidth + ntboxwidthincrement >= r.width && r.x < xoff) {
+					} else if (xoff < r.width && xoff + r.ntwidth + ntboxwidthincrement >= r.width && r.x <= xoff) {
 						ctx.fillRect(xoff, y, r.width - xoff, group.stackheight)
-					} else if (xoff + r.ntwidth + ntboxwidthincrement > r.x && xoff <= r.x) {
-						ctx.fillRect(r.x, y, xoff + r.ntwidth + ntboxwidthincrement, group.stackheight)
-					} else if (xoff + r.ntwidth + ntboxwidthincrement > r.x && xoff > r.x) {
-						ctx.fillRect(xoff, y, xoff + r.ntwidth + ntboxwidthincrement, group.stackheight)
+					} else if (xoff <= r.x && xoff + r.ntwidth + ntboxwidthincrement > r.x) {
+						ctx.fillRect(r.x, y, r.ntwidth + ntboxwidthincrement + xoff - r.x, group.stackheight)
 					}
 					if (r.to_printnt) {
 						if (!b.qual) {
@@ -2487,7 +2551,7 @@ function mayClipArrowhead(ctx, segment, group, r, y) {
 		}
 	} else {
 		const x = segment.x1
-		if (x >= 0) {
+		if (x >= r.x) {
 			ctx.fillStyle = 'white'
 			ctx.beginPath()
 			ctx.moveTo(x + group.stackheight / 2, y)
@@ -3127,6 +3191,7 @@ async function convertread2html(seg, genome, query) {
 			  <tr style="color:white">${querylst.join('')}</tr>
 			</table>`,
 		info: `<div style='margin-top:10px'>
+			<span style="opacity:.5;font-size:.7em">CHR</span>: ${query.chr.replace('chr', '')},
 			<span style="opacity:.5;font-size:.7em">START</span>: ${seg.segstart_original + 1},
 			<span style="opacity:.5;font-size:.7em">STOP</span>: ${refstop},
 			<span style="opacity:.5;font-size:.7em">THIS READ</span>: ${seg.seq.length} bp,
