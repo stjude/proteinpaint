@@ -10,19 +10,23 @@ export function setInteractivity(self) {
 		const d = event.target.__data__
 		if (!d || !d.term || !d.sample) return
 		if (event.target.tagName == 'rect') {
-			const rows = [
-				`<tr><td>Sample:</td><td>${d.sample}</td></tr>`,
-				`<tr><td>${d.term.name}</td><td style='color: ${d.fill == '#fff' ? '' : d.fill}'>${d.label}</td></tr>`
-			]
-
-			if (d.term.type == 'geneVariant' && d.value) {
+			const rows = []
+			if (d.term.type != 'geneVariant') {
+				rows.push(`<tr><td>Sample:</td><td>${d._SAMPLENAME_ || d.sample}</td></tr>`)
+				rows.push(
+					`<tr><td>${d.term.name}:</td><td style='color: ${d.fill == '#fff' ? '' : d.fill}'> ${d.label}</td></tr>`
+				)
+			} else if (d.term.type == 'geneVariant' && d.value) {
 				const value = d.value
-				if (value.label && value.label !== d.label)
-					rows.push(`<tr><td style='text-align: center'>${value.label}</td></tr>`)
-				if (value.alt) rows.push(`<tr><td style='text-align: center'>ref=${value.ref}, alt=${value.alt}</td></tr>`)
-				if (value.isoform) rows.push(`<tr><td style='text-align: center'>Isoform: ${value.isoform}</td></tr>`)
-				if (value.mname) rows.push(`<tr><td style='text-align: center'>${value.mname}</td></tr>`)
-				if (value.chr) rows.push(`<tr><td style='text-align: center'>${value.chr}:${value.pos}</td></tr>`)
+				rows.push(`<tr><td>Sample:</td><td>${d._SAMPLENAME_ || value.sample}</td></tr>`)
+				const label = value.mname ? `${value.mname} ${d.label}` : d.label
+				rows.push(
+					`<tr><td>${d.term.name}:</td><td style='color: ${d.fill == value.color ? '' : d.fill}'>${label}</td></tr>`
+				)
+
+				if (value.label && value.label !== d.label) rows.push(`<tr><td></td><td>${value.label}</td></tr>`)
+				if (value.alt) rows.push(`<tr><td>ref=${value.ref}</td><td>alt=${value.alt}</td></tr>`)
+				if (value.chr) rows.push(`<tr><td>Position:</td><td>${value.chr}:${value.pos}</td></tr>`)
 			}
 
 			self.dom.menutop.selectAll('*').remove()
