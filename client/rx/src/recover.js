@@ -1,6 +1,13 @@
 import { getCompInit, toJson } from '../index.js'
 import { Menu } from '../../dom/menu.js'
 
+/*
+opts:{}
+	app:{} (required)
+	holder: STR (required)
+	maxHistoryLen: INT (required)
+*/
+
 class Recover {
 	constructor(opts = {}) {
 		this.type = 'recover'
@@ -14,6 +21,9 @@ class Recover {
 				.style('text-align', 'right')
 		}
 		this.menu = new Menu({ padding: '5px' })
+		this.state = opts.getState || (appState => appState)
+		this.reactsTo = opts.reactsTo || (() => true) // could be undefined
+		this.getState = opts.getState || (appState => appState)
 	}
 
 	init() {
@@ -22,15 +32,10 @@ class Recover {
 		// turn off during testing of other components for lighter memory usage
 		this.isActive = !isNaN(this.opts.maxHistoryLen) && +this.opts.maxHistoryLen > 0
 		if (this.isActive) {
-			setInteractivity(this)
 			setRenderers(this)
 			this.initUi()
 		}
 		this.eventTypes = ['postInit', 'postRender']
-	}
-
-	getState(appState) {
-		return appState
 	}
 
 	async main() {
@@ -39,8 +44,6 @@ class Recover {
 		if (!this.isActive) return
 		this.trackState()
 		this.render()
-		// if autosave == true
-		//if (this.projectName) this.saveState()
 	}
 
 	trackState() {
@@ -66,8 +69,10 @@ class Recover {
 		else if (i > 0 && this.currIndex + i < this.history.length) this.currIndex += i
 		else return
 		this.isRecovering = true
-		const state = this.history[this.currIndex] //console.log(state)
-		this.app.dispatch({ type: 'app_refresh', state })
+		const state = this.history[this.currIndex]
+		if (this.opts.plot_id)
+			this.app.dispatch({ type: 'plot_edit', id: this.opts.plot_id, config: structuredClone(state.config) })
+		else this.app.dispatch({ type: 'app_refresh', state })
 	}
 }
 
@@ -77,106 +82,20 @@ function setRenderers(self) {
 	self.initUi = function() {
 		self.dom.undoBtn = self.dom.holder
 			.append('button')
-			.html('undo')
-			//.style('margin', '2px 0')
+			//Maybe change to bootstrap icon? Add to dom/control.icons
+			.html('&#8634;')
+			.style('padding', '2px 5px')
 			.on('click', () => self.goto(-1))
 
 		self.dom.redoBtn = self.dom.holder
 			.append('button')
-			.html('redo')
-			//.style('margin', '2px 0')
+			.html('&#8635;')
+			.style('padding', '2px 5px')
 			.on('click', () => self.goto(1))
-
-		/*self.dom.projectBtn = self.dom.holder
-			.append('button')
-			.html('Project ...')
-			.style('margin', '2px 0')
-			.on('click', self.openMenu)
-
-		const table = self.menu.d.append('table')
-		const projectRow = table.append('tr')
-		projectRow.append('td').html('Project')
-		const td0 = projectRow.append('td')
-		self.dom.projectInput = td0
-			.append('input')
-			.attr('type', 'text')
-			//.attr('placeholder', '')
-			//.on('change', self.openProject)
-			.on('input', self.toggleSaveBtn)
-
-		const local = table.append('tr') //.style('padding', '5px').style('text-align', 'center')
-		local.append('td').html('Disk')
-		const td1 = local.append('td').style('text-align', 'center')
-		self.dom.localOpenBtn = td1
-			.append('button')
-			.style('width', '45%')
-			.html('Open')
-			.on('click', self.openProject)
-		self.dom.localSaveBtn = td1
-			.append('button')
-			.style('width', '45%')
-			.html('Save')
-			.on('click', self.saveState)
-
-		const cloud = table.append('tr')
-		cloud.append('td').html('Cloud')
-		const td2 = cloud.append('td').style('text-align', 'center')
-		self.dom.cloudOpenBtn = td2
-			.append('button')
-			.style('width', '45%')
-			.html('Open')
-			.on('click', self.openProject)
-		self.dom.cloudSaveBtn = td2
-			.append('button')
-			.style('width', '45%')
-			.html('Save')
-			.on('click', () => alert('feature under development'))*/
 	}
 
 	self.render = function() {
 		self.dom.undoBtn.property('disabled', self.currIndex < 1)
 		self.dom.redoBtn.property('disabled', self.history.length < 2 || self.currIndex >= self.history.length - 1)
-	}
-
-	self.openMenu = function() {
-		self.dom.localSaveBtn.property('disabled', self.dom.projectInput.property('value') ? false : true)
-		self.dom.cloudOpenBtn.property('disabled', true)
-		self.dom.cloudSaveBtn.property('disabled', true) // to-do !self.projectName)
-		self.menu.showunder(self.dom.projectBtn.node())
-	}
-
-	self.toggleSaveBtn = function() {
-		self.dom.localSaveBtn.property('disabled', self.dom.projectInput.property('value') ? false : true)
-		self.dom.projectInput.node().focus()
-	}
-}
-
-function setInteractivity(self) {
-	self.openProject = function() {
-		const projectName = self.dom.projectInput.property('value')
-		if (projectName == self.projectName) return
-		self.projectName = 'tdbApp-' + projectName
-		const nameStr = window.localStorage.getItem('tdbProjectNames')
-		const names = nameStr ? JSON.parse(nameStr) : []
-		if (names.includes(projectName)) {
-			const state = JSON.parse(window.localStorage.getItem(self.projectName))
-			self.app.dispatch({ type: 'app_refresh', state })
-		} else {
-			alert(`Project=${projectName} not found`)
-		}
-		self.menu.hide()
-	}
-
-	self.saveState = function() {
-		const projectName = self.dom.projectInput.property('value')
-		if (!projectName) return
-		self.projectName = 'tdbApp-' + projectName
-		window.localStorage.setItem(self.projectName, toJson(self.state))
-		const nameStr = window.localStorage.getItem('tdbProjectNames')
-		const names = nameStr ? JSON.parse(nameStr) : []
-		if (!names.includes(projectName)) {
-			names.push(projectName)
-			window.localStorage.setItem('tdbProjectNames', JSON.stringify(names))
-		}
 	}
 }

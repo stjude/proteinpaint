@@ -95,7 +95,8 @@ class ViolinPlot {
 
 		this.data = await this.app.vocabApi.getViolinPlotData({
 			termid: this.config.term.term.id,
-			term2: this.config.term2
+			term2: this.config.term2,
+			filter: this.state.termfilter.filter
 		})
 		if (this.data.error) throw this.data.error
 		/*

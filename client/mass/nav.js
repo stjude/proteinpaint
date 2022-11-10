@@ -76,6 +76,9 @@ class TdbNav {
 				recover: recoverInit({
 					app: this.app,
 					holder: this.dom.recoverDiv,
+					// TODO: ???? may limit the tracked state to only the filter, activeCohort ???
+					getState: appState => appState,
+					reactsTo: action => action.type != 'plot_edit',
 					maxHistoryLen: 5
 				})
 			})
@@ -85,10 +88,15 @@ class TdbNav {
 		}
 	}
 
-	/* for now, make the nav react to all state changes
 	reactsTo(action) {
-		return true 
-	}*/
+		if (action.type.includes('cache_termq')) return true
+		if (action.type.startsWith('filter')) return true
+		if (action.type.startsWith('cohort')) return true
+		if (action.type.startsWith('tab')) return true
+		if (action.type == 'plot_create') return true
+		if (action.type == 'plot_destroy') return true
+		if (action.type == 'app_refresh') return true
+	}
 
 	getState(appState) {
 		return {

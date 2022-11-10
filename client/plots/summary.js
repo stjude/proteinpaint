@@ -1,6 +1,7 @@
 import { getCompInit, copyMerge } from '#rx'
 import { Menu } from '#src/client'
 import { fillTermWrapper } from '../termsetting/termsetting'
+import { recoverInit } from '../rx/src/recover'
 
 import { select, selectAll } from 'd3-selection'
 
@@ -9,7 +10,10 @@ import { select, selectAll } from 'd3-selection'
 class SummaryPlot {
 	constructor(opts) {
 		this.type = 'summary'
-		this.components = {}
+		this.components = {
+			recover: {},
+			plots: {}
+		}
 		this.chartsByType = {}
 	}
 
@@ -19,13 +23,22 @@ class SummaryPlot {
 		setRenderers(this)
 		this.initUi(this.opts)
 
+		this.components.recover = await recoverInit({
+			app: this.app,
+			holder: this.dom.localRecoverDiv,
+			getState: appState => this.getState(appState),
+			reactsTo: action => action.id == this.id && action.type == 'plot_edit' && !action.notTracked,
+			plot_id: this.id,
+			maxHistoryLen: 10
+		})
+
 		//Moved from main to fix default barchart not appearing when summary plot sandbox is created
-		if (!this.components[this.config.childType]) {
+		if (!this.components.plots[this.config.childType]) {
 			await this.setComponent(this.config)
 		}
 
-		for (const childType in this.components) {
-			const chart = this.components[childType]
+		for (const childType in this.components.plots) {
+			const chart = this.components.plots[childType]
 			// hide non-active charts first, so not to momentarily have two visible charts
 			if (chart.type != this.config.childType) {
 				this.dom.plotDivs[chart.type].style('display', 'none')
@@ -60,12 +73,13 @@ class SummaryPlot {
 		const config = JSON.parse(JSON.stringify(this.state.config))
 		this.config = config
 
-		if (!this.components[config.childType]) {
+		if (!this.components.plots[config.childType]) {
 			await this.setComponent(config)
 		}
 
-		for (const childType in this.components) {
-			const chart = this.components[childType]
+		for (const childType in this.components.plots) {
+			const chart = this.components.plots[childType]
+
 			// hide non-active charts first, so not to momentarily have two visible charts
 			if (chart.type != this.config.childType) {
 				this.dom.plotDivs[chart.type].style('display', 'none')
@@ -96,7 +110,7 @@ class SummaryPlot {
 		this.dom.plotDivs[config.childType] = this.dom.viz.append('div')
 
 		// assumes only 1 chart per chartType would be rendered in the summary sandbox
-		this.components[config.childType] = await _.componentInit({
+		this.components.plots[config.childType] = await _.componentInit({
 			app: this.app,
 			holder: this.dom.plotDivs[config.childType],
 			id: this.id,
@@ -238,6 +252,39 @@ function setRenderers(self) {
 						config: { childType: d.childType, term: d.getTw(tw) }
 					})
 				})
+
+			// // Edit global filter for local
+			// self.dom.localFilterDiv = self.dom.paneTitleDiv
+			// 	.append('div')
+			// 	.style('display', 'inline-block')
+			// 	.append('button')
+			// 	.style('margin-left', '10px')
+			// 	.text('Edit Filter')
+			// 	.on('click', (event, d) => {
+			// 		self.renderFilter(d)
+			// 	})
+
+			// self.dom.localUndoDiv = self.dom.paneTitleDiv
+			// 	.append('div')
+			// 	.style('display', 'inline-block')
+			// 	.append('button')
+			// 	.style('margin-left', '10px')
+			// 	.html('&#8634;')
+			// 	.on('click', (event, d) => {
+
+			// 	})
+
+			// self.dom.localRedoDiv = self.dom.paneTitleDiv
+			// 	.append('div')
+			// 	.style('display', 'inline-block')
+			// 	.append('button')
+			// 	.html('&#8635;')
+			// 	.on('click', (event, d) => {
+
+			// })
+
+			// Placeholder for recover component
+			self.dom.localRecoverDiv = self.dom.paneTitleDiv.append('div').style('display', 'inline-block')
 		} catch (e) {
 			throw e
 			//self.dom.errdiv.text(e)
@@ -264,11 +311,6 @@ function setRenderers(self) {
 
 		self.dom.plotDivs[self.config.childType].style('display', '')
 	}
-	/*
-		TODO: may create option for a custom filter for this plot only,
-		which will override the app-wide filter that is set from the nav tab
-	*/
-	// self.renderFilter = function() {...}
 }
 
 export async function getPlotConfig(opts, app) {
