@@ -1050,7 +1050,7 @@ function domainlegend(tk, block) {
 		if (domaintype.Pfam) {
 			row
 				.append('a')
-				.attr('href', 'https://pfam.xfam.org/family/PF' + domaintype.Pfam.substr(4))
+				.attr('href', 'https://www.ebi.ac.uk/interpro/entry/pfam/PF' + domaintype.Pfam.substr(4))
 				.attr('target', '_blank')
 				.text('Pfam')
 				.style('font-size', '.7em')
