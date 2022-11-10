@@ -459,7 +459,7 @@ function setRenderers(self) {
 			self.lasso
 				.items()
 				.attr('d', c => getShape(self, c, 1 / 2))
-				.style('fill-opacity', '.5')
+				.style('fill-opacity', c => ('sampleId' in c || self.settings.showRef ? 0.5 : 0))
 				.classed('not_possible', true)
 				.classed('selected', false)
 		}
@@ -471,7 +471,7 @@ function setRenderers(self) {
 				self.lasso
 					.possibleItems()
 					.attr('d', c => getShape(self, c, 2))
-					.style('fill-opacity', '1')
+					.style('fill-opacity', c => ('sampleId' in c || self.settings.showRef ? 1 : 0))
 					.classed('not_possible', false)
 					.classed('possible', true)
 
@@ -479,7 +479,7 @@ function setRenderers(self) {
 				self.lasso
 					.notPossibleItems()
 					.attr('d', c => getShape(self, c, 1 / 2))
-					.style('fill-opacity', '.5')
+					.style('fill-opacity', c => ('sampleId' in c || self.settings.showRef ? 0.5 : 0))
 					.classed('not_possible', true)
 					.classed('possible', false)
 			}
@@ -497,7 +497,7 @@ function setRenderers(self) {
 
 				// Style the selected dots
 				self.lasso.selectedItems().attr('d', c => getShape(self, c, 2))
-				self.lasso.items().style('fill-opacity', '1')
+				self.lasso.items().style('fill-opacity', c => ('sampleId' in c || self.settings.showRef ? 1 : 0))
 				self.selectedItems = []
 				let data
 				for (const item of self.lasso.selectedItems()._groups[0]) {
@@ -906,7 +906,6 @@ export const componentInit = scatterInit
 
 function getCategoryInfo(d, category) {
 	if (!(category in d)) return ''
-	console.log(d, category)
 	return d.category_info?.[category] ? `${d.category_info[category]} ${d[category]}` : d[category]
 }
 
