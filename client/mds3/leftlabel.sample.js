@@ -13,23 +13,35 @@ click label to view summaries about samples that have mutation data in the view 
 */
 
 export function makeSampleLabel(data, tk, block, laby) {
-	// skewer subtrack is visible, create leftlabel based on #variants that is displayed/total
 	if (!tk.leftlabels.doms.samples) {
+		// "Samples" label is missing. create
 		tk.leftlabels.doms.samples = makelabel(tk, block, laby)
 	}
 
-	tk.leftlabels.doms.samples
-		.text(`${data.sampleTotalNumber} sample${data.sampleTotalNumber > 1 ? 's' : ''}`)
-		.on('click', async event => {
-			tk.menutip.clear().showunder(event.target)
+	if (data.sampleTotalNumber) {
+		// current data has samples, activate label
+		tk.leftlabels.doms.samples
+			.attr('class', 'sja_clbtext2')
+			.style('opacity', 1)
+			.text(`${data.sampleTotalNumber} sample${data.sampleTotalNumber > 1 ? 's' : ''}`)
+			.on('click', async event => {
+				tk.menutip.clear().showunder(event.target)
 
-			await mayShowSummary(tk, block)
+				await mayShowSummary(tk, block)
 
-			const buttonrow = tk.menutip.d.append('div').style('margin', '10px')
+				const buttonrow = tk.menutip.d.append('div').style('margin', '10px')
 
-			menu_samples(buttonrow, data, tk, block)
-			// TODO new button "Customize variables", launch tree in submit_lst mode to update tk.mds.variant2samples.twLst
-		})
+				menu_samples(buttonrow, data, tk, block)
+				// TODO new button "Customize variables", launch tree in submit_lst mode to update tk.mds.variant2samples.twLst
+			})
+	} else {
+		// current data has no sample, disable label
+		tk.leftlabels.doms.samples
+			.text('No samples')
+			.attr('class', '')
+			.style('opacity', 0.5)
+			.on('click', null)
+	}
 }
 
 export function makeSampleFilterLabel(data, tk, block, laby) {
