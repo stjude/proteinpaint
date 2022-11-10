@@ -599,6 +599,18 @@ export function validate_query_genecnv(ds) {
 	}
 }
 
+function prepTwLst(lst) {
+	// {id} and {term:{id}} are both converted to {id, term:{id}}
+	for (const tw of lst) {
+		if (tw.id == undefined || tw.id == '') {
+			if (!tw?.term?.id) throw 'tw.id and tw.term are both missing'
+			tw.id = tw.term.id
+		} else if (!tw.term) {
+			tw.term = { id: tw.id }
+		}
+	}
+}
+
 /* for variant2samples query
 q{}
 	.get=str
@@ -610,25 +622,27 @@ twLst[]
 	and to parse out as sample attributes
 ds{}
 */
+
 export async function querySamples_gdcapi(q, twLst, ds) {
+	prepTwLst(twLst)
 	if (q.get == 'summary' && !twLst.some(i => i.id == 'case.case_id')) {
 		/*
 		(from variant2sample) to summarize samples that can be retrieved here
 		which requires case_uuid to count unique list of samples per category
 		when 'case.case_id' is missing from term ids, must add it to the list so case_uuid will be available from resulting sample objects
 		*/
-		twLst.push({ id: 'case.case_id' })
+		twLst.push({ term: { id: 'case.case_id' } })
 	}
 
 	const api = ds.variant2samples.gdcapi
 
 	const termObjs = []
 	for (const tw of twLst) {
-		const t = ds.cohort.termdb.q.termjsonByOneid(tw.id)
-		if (t) termObjs.push(t)
+		const t = ds.cohort.termdb.q.termjsonByOneid(tw.term.id)
+		if (t) termObjs.push({ term: t })
 	}
 
-	const param = ['size=10000', 'fields=' + twLst.map(i => i.id).join(',')]
+	const param = ['size=10000', 'fields=' + twLst.map(tw => tw.term.id).join(',')]
 	//'&size=' + (q.size || api.size) + '&from=' + (q.from || 0)
 
 	// it may query with isoform
@@ -666,8 +680,8 @@ export async function querySamples_gdcapi(q, twLst, ds) {
 		// for making url link on a sample
 		sample.sample_URLid = s.case.case_id
 
-		for (const term of termObjs) {
-			flattenCaseByFields(sample, s.case, term)
+		for (const tw of termObjs) {
+			flattenCaseByFields(sample, s.case, tw.term)
 		}
 
 		/////////////////// hardcoded logic to add read depth using .observation
@@ -737,6 +751,7 @@ output
 	if combination is given, returns [ map, combination ] instead
 */
 export async function get_termlst2size(twLst, q, combination, ds) {
+	prepTwLst(twLst)
 	const api = ds.cohort.termdb.termid2totalsize2.gdcapi
 
 	// convert each term id to {path}

@@ -267,7 +267,7 @@ async function getSampleData_gdc(q, termWrappers) {
 	}
 
 	const twLst = termWrappers.slice() // duplicate array to insert new ones, do not modify orignal
-	twLst.push({ id: 'case.observation.sample.tumor_sample_uuid' }) // allow submitter id to be assigned to sample_id
+	twLst.push({ term: { id: 'case.observation.sample.tumor_sample_uuid' } }) // allow submitter id to be assigned to sample_id
 
 	const sampleLst = await querySamples_gdcapi(param, twLst, q.ds)
 
