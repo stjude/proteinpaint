@@ -11,9 +11,8 @@ export function setInteractivity(self) {
 		if (!d || !d.term || !d.sample) return
 		if (event.target.tagName == 'rect') {
 			const rows = [
-				`<tr><td style='text-align: center'>Sample: ${d.sample}</td></tr>`,
-				`<tr><td style='text-align: center'>${d.term.name}</td></tr>`,
-				`<tr><td style='text-align: center; color: ${d.fill == '#fff' ? '' : d.fill}'>${d.label}</td></tr>`
+				`<tr><td>Sample:</td><td>${d.sample}</td></tr>`,
+				`<tr><td>${d.term.name}</td><td style='color: ${d.fill == '#fff' ? '' : d.fill}'>${d.label}</td></tr>`
 			]
 
 			if (d.term.type == 'geneVariant' && d.value) {
