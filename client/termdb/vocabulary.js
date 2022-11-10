@@ -631,8 +631,6 @@ class TermdbVocab extends Vocab {
 	}
 
 	async getCategories(term, filter, lst = []) {
-		if (term.samplecount) return { lst: Object.values(term.samplecount) }
-
 		// works for both dictionary and non-dict term types
 		// for non-dict terms, will handle each type individually
 		// for dictionary terms, use same method to query backend termdb

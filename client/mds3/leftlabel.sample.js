@@ -40,8 +40,10 @@ export function makeSampleFilterLabel(data, tk, block, laby) {
 
 	tk.leftlabels.doms.filterObj.text('Filter').on('click', async event => {
 		tk.menutip.clear().showunder(event.target)
-		const { filterInit } = await import('#filter')
-		const filterApi = filterInit({
+
+		// display filter UI
+
+		const arg = {
 			holder: tk.menutip.d.append('div').style('margin', '10px'),
 			vocab: tk.mds.termdb.vocabApi.state.vocab,
 			callback: f => {
@@ -49,7 +51,21 @@ export function makeSampleFilterLabel(data, tk, block, laby) {
 				tk.uninitialized = true
 				tk.load()
 			}
-		})
+		}
+		if (block.usegm) {
+			/////////////////////////////////////
+			//
+			// GDC specific logic
+			// in gene mode, supply the current gene name as a new parameter
+			// for the vocabApi getCategories() query, so it can pull the number of mutated samples for a term
+			// this parameter is used by some sneaky gdc-specific logic in termdb.matrix.js getData()
+			// should not impact non-gdc datasets
+			//
+			/////////////////////////////////////
+			arg.getCategoriesArguments = ['currentGeneNames=["' + block.usegm.name + '"]']
+		}
+		const { filterInit } = await import('#filter')
+		const filterApi = filterInit(arg)
 		filterApi.main(tk.filterObj)
 	})
 }
@@ -182,19 +198,12 @@ function showSummary4oneTerm(termid, div, numbycategory, tk, block) {
 			/////////////////////////////////////
 			//
 			// GDC specific logic:
-			// a gdc term will have blank .values{}, fill in term.values{} here
-			// adding .samplecount is according to vocabApi.getCategories() line 634
+			// a gdc term will have blank .values{}, fill in term.values{} so filter/tvs won't break
 			//
 			/////////////////////////////////////
 			term.values = {}
-			term.samplecount = {}
 			for (const c of numbycategory) {
 				term.values[c[0]] = { label: c[0], samplecount: c[1] }
-				term.samplecount[c[0]] = {
-					key: c[0], // must have .key for tvs to work
-					label: c[0],
-					samplecount: c[1]
-				}
 			}
 		}
 

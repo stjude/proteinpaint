@@ -22,7 +22,7 @@ export const handler = {
 }
 
 async function fillMenu(self, div, tvs) {
-	const data = await self.opts.vocabApi.getCategories(tvs.term, self.filter, [])
+	const data = await self.opts.vocabApi.getCategories(tvs.term, self.filter, self.opts.getCategoriesArguments || [])
 	const sortedVals = data.lst.sort((a, b) => {
 		return b.samplecount - a.samplecount
 	})

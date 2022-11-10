@@ -235,6 +235,8 @@ q.tid = str
 	term id, dictionary term
 q.term1_q = {}
 	optional q object
+q.currentGeneNames = str
+	optional stringified array of gene names, to pull samples mutated on given genes for this term (gdc only)
 
 Returns:
 {
@@ -259,7 +261,11 @@ async function trigger_getcategories(q, res, tdb, ds, genome) {
 		q: q.term1_q || getDefaultQ(term, q)
 	}
 
-	const arg = { filter: q.filter, terms: [tw] }
+	const arg = {
+		filter: q.filter,
+		terms: [tw],
+		currentGeneNames: q.currentGeneNames
+	}
 
 	const data = await getData(arg, ds, genome)
 
