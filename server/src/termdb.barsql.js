@@ -503,65 +503,68 @@ example of data.charts[0].serieses[0].data
 
   */
 async function computePvalues(data, fisher_limit = 300, individual_fisher_limit = 150, pvalueCutoff = 0.05) {
-	if (data.refs.rows.length < 2) return //no term2, cannot calculate p-value
+	if (data.refs.rows.length < 2) return //0 or 1 term2, cannot calculate p-value
 
-	// calculate sum of each term2 category. Structure: {term2Catergory1: num of samples, term2Catergory2: num of samples, ...}
-	const colSums = {}
-	for (const row of data.charts[0].serieses) {
-		for (const col of row.data) {
-			colSums[col.dataId] = colSums[col.dataId] === undefined ? col.total : colSums[col.dataId] + col.total
-		}
-	}
-
-	//generate inputs for Fisher's exact test/Chi-squared test. format for each input: `label\tR1C1\tR2C1\tR1C2\tR2C2`
-	const fisherAndChiInputData = []
-	for (const row of data.charts[0].serieses) {
-		for (const term2cat of row.data) {
-			let R1C1 = term2cat.total //# of term2 category of interest in term1 category of interest (e.g. # of male in age group < 5), represents R1C1 in 2X2 contingency table
-			let R2C1 = colSums[term2cat.dataId] - term2cat.total //# of term2 category of interest in term1 not category of interest (e.g. # of male in age group not < 5),  represents R2C1 in 2X2 contingency table
-			let R1C2 = row.total - term2cat.total //# of term2 not category of interest in term1 category of interest (e.g. # of not male in age group < 5), represents R1C2 in 2X2 contingency table
-			let R2C2 = data.charts[0].total - colSums[term2cat.dataId] - (row.total - term2cat.total) //# of term2 not category of interest in term1 not category of interest (e.g. # of not male in age group not < 5), represents R2C2 in 2X2 contingency table
-
-			//replace hyphen/tab in seriesId and dataId with @hyphen@ and @tab@ to avoid being split in fisher.rs, which uses '-' and '\t' to split input
-			let seriesId = row.seriesId.replace('-', '@hyphen@').replace('\t', '@tab@')
-			let dataId = term2cat.dataId.replace('-', '@hyphen@').replace('\t', '@tab@')
-
-			fisherAndChiInputData.push(`${seriesId}@@${dataId}\t${R1C1}\t${R2C1}\t${R1C2}\t${R2C2}`)
-		}
-	}
-	const resultWithPvalue = await run_rust(
-		'fisher',
-		'fisher_limits\t' + fisher_limit + '\t' + individual_fisher_limit + '-' + fisherAndChiInputData.join('-')
-	)
-
-	const pvalueTable = []
-	let group = {
-		term1comparison: undefined,
-		term2tests: []
-	}
-	for (const test of resultWithPvalue.split('\n').filter(Boolean)) {
-		let seriesId = test.split('@@')[0]
-		seriesId = seriesId.replace('@hyphen@', '-').replace('@tab@', '\t') //change @hyphen@ and @tab@ in seriesId back to hyphen/tab
-		let term1comparison = seriesId
-
-		if (group.term1comparison !== undefined && group.term1comparison !== term1comparison) {
-			pvalueTable.push(group)
-			group = {
-				term1comparison: undefined,
-				term2tests: []
+	data.tests = {}
+	for (const chart of data.charts) {
+		// calculate sum of each term2 category. Structure: {term2Catergory1: num of samples, term2Catergory2: num of samples, ...}
+		const colSums = {}
+		for (const row of chart.serieses) {
+			for (const col of row.data) {
+				colSums[col.dataId] = colSums[col.dataId] === undefined ? col.total : colSums[col.dataId] + col.total
 			}
 		}
-		group.term1comparison = term1comparison
 
-		let dataId = test.split('@@')[1].split('\t')[0]
-		dataId = dataId.replace('@hyphen@', '-').replace('@tab@', '\t') //change @hyphen@ and @tab@ in dataId back to hyphen/tab
-		group.term2tests.push({
-			term2id: dataId,
-			pvalue: test.split('@@')[1].split('\t')[5],
-			significant: test.split('@@')[1].split('\t')[5] < pvalueCutoff
-		})
+		//generate inputs for Fisher's exact test/Chi-squared test. format for each input: `label\tR1C1\tR2C1\tR1C2\tR2C2`
+		const fisherAndChiInputData = []
+		for (const row of chart.serieses) {
+			for (const term2cat of row.data) {
+				const R1C1 = term2cat.total //# of term2 category of interest in term1 category of interest (e.g. # of male in age group < 5), represents R1C1 in 2X2 contingency table
+				const R2C1 = colSums[term2cat.dataId] - term2cat.total //# of term2 category of interest in term1 not category of interest (e.g. # of male in age group not < 5),  represents R2C1 in 2X2 contingency table
+				const R1C2 = row.total - term2cat.total //# of term2 not category of interest in term1 category of interest (e.g. # of not male in age group < 5), represents R1C2 in 2X2 contingency table
+				const R2C2 = chart.total - colSums[term2cat.dataId] - (row.total - term2cat.total) //# of term2 not category of interest in term1 not category of interest (e.g. # of not male in age group not < 5), represents R2C2 in 2X2 contingency table
+
+				//replace hyphen/tab in seriesId and dataId with @hyphen@ and @tab@ to avoid being split in fisher.rs, which uses '-' and '\t' to split input
+				const seriesId = row.seriesId.replace('-', '@hyphen@').replace('\t', '@tab@')
+				const dataId = term2cat.dataId.replace('-', '@hyphen@').replace('\t', '@tab@')
+
+				fisherAndChiInputData.push(`${seriesId}@@${dataId}\t${R1C1}\t${R2C1}\t${R1C2}\t${R2C2}`)
+			}
+		}
+		const resultWithPvalue = await run_rust(
+			'fisher',
+			'fisher_limits\t' + fisher_limit + '\t' + individual_fisher_limit + '-' + fisherAndChiInputData.join('-')
+		)
+
+		const pvalueTable = []
+		let group = {
+			term1comparison: undefined,
+			term2tests: []
+		}
+		for (const test of resultWithPvalue.split('\n').filter(Boolean)) {
+			let seriesId = test.split('@@')[0]
+			seriesId = seriesId.replace('@hyphen@', '-').replace('@tab@', '\t') //change @hyphen@ and @tab@ in seriesId back to hyphen/tab
+			let term1comparison = seriesId
+
+			if (group.term1comparison !== undefined && group.term1comparison !== term1comparison) {
+				pvalueTable.push(group)
+				group = {
+					term1comparison: undefined,
+					term2tests: []
+				}
+			}
+			group.term1comparison = term1comparison
+
+			let dataId = test.split('@@')[1].split('\t')[0]
+			dataId = dataId.replace('@hyphen@', '-').replace('@tab@', '\t') //change @hyphen@ and @tab@ in dataId back to hyphen/tab
+			group.term2tests.push({
+				term2id: dataId,
+				pvalue: test.split('@@')[1].split('\t')[5],
+				significant: test.split('@@')[1].split('\t')[5] < pvalueCutoff
+			})
+		}
+		pvalueTable.push(group)
+
+		data.tests[chart.chartId] = pvalueTable
 	}
-	pvalueTable.push(group)
-
-	data.pvalueTable = pvalueTable
 }

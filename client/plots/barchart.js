@@ -393,8 +393,8 @@ class Barchart {
 			result.rowgrp = '-'
 			result.chartId = chart.chartId
 			result.seriesId = series.seriesId
-			if (chartsData.pvalueTable)
-				result.groupPvalues = chartsData.pvalueTable.find(x => x.term1comparison === series.seriesId)
+			if (chartsData.tests)
+				result.groupPvalues = chartsData.tests[chart.chartId].find(x => x.term1comparison === series.seriesId)
 			result.seriesTotal = series.total
 			result.chartTotal = chart.visibleTotal
 			result.logTotal = Math.log10(result.total)
@@ -583,11 +583,12 @@ function setRenderers(self) {
 			.selectAll('*')
 			.remove()
 
-		const pvalueTable = self.chartsData.pvalueTable
-		const term1Order = self.chartsData.refs.cols
-		const term2Order = self.chartsData.refs.rows
+		if (self.chartsData.tests && self.chartsData.tests[chart.chartId]) {
+			const term1Order = self.chartsData.refs.cols
+			const term2Order = self.chartsData.refs.rows
 
-		if (pvalueTable) renderPvalueTable(pvalueTable, term1Order, term2Order, self.dom.holder, self.config)
+			renderPvalueTable(self.chartsData.tests[chart.chartId], term1Order, term2Order, self.dom.holder, self.config)
+		}
 	}
 
 	self.addChart = function(chart, i) {
@@ -613,11 +614,12 @@ function setRenderers(self) {
 			.style('margin', '10px 10px 10px 30px')
 			.style('display', 'none')
 
-		const pvalueTable = self.chartsData.pvalueTable
-		const term1Order = self.chartsData.refs.cols
-		const term2Order = self.chartsData.refs.rows
+		if (self.chartsData.tests && self.chartsData.tests[chart.chartId]) {
+			const term1Order = self.chartsData.refs.cols
+			const term2Order = self.chartsData.refs.rows
 
-		if (pvalueTable) renderPvalueTable(pvalueTable, term1Order, term2Order, self.dom.holder, self.config)
+			renderPvalueTable(self.chartsData.tests[chart.chartId], term1Order, term2Order, self.dom.holder, self.config)
+		}
 	}
 }
 
