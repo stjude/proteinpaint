@@ -28,12 +28,12 @@ export class MatrixControls {
 				{
 					value: 'samples',
 					label: 'Samples',
-					customHeaderRows: (matrix, table) => this.prependInfo(table, 'Samples number', matrix.sampleOrder.length)
+					customHeaderRows: (matrix, table) => this.prependInfo(table, 'Samples count', matrix.sampleOrder.length)
 				},
 				{
 					value: 'anno',
 					label: 'Terms',
-					customHeaderRows: (matrix, table) => this.prependInfo(table, 'Terms number', matrix.termOrder.length),
+					customHeaderRows: (matrix, table) => this.prependInfo(table, 'Terms count', matrix.termOrder.length),
 					customInputs: this.appendTermInputs
 				},
 				{ value: 'cols', label: 'Column layout' },
@@ -296,7 +296,9 @@ export class MatrixControls {
 
 	prependInfo(table, header, value) {
 		const tr = table.append('tr')
-		tr.append('td').text(header)
+		tr.append('td')
+			.text(header)
+			.attr('class', 'sja-termdb-config-row-label')
 		tr.append('td').text(value)
 	}
 
