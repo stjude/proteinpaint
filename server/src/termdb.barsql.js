@@ -38,7 +38,7 @@ export function handle_request_closure(genomes) {
 			const tdb = ds.cohort.termdb
 			if (!tdb) throw 'no termdb for this dataset'
 			const data = await barchart_data(q, ds, tdb)
-			await computePvalues(data) //Generate and attach to data the object stores p-values of Fisher's exact/Chi-squared test
+			await computePvalues(data) //Generate and attach to data the pvalueTable object, which stores p-values of Fisher's exact/Chi-squared test
 			res.send(data)
 		} catch (e) {
 			res.send({ error: e.message || e })
@@ -501,9 +501,8 @@ example of data.charts[0].serieses[0].data
   { dataId: 'Unknown', total: 2 }
 ]
 
-
   */
-async function computePvalues(data, fisher_limit = 300, individual_fisher_limit = 150) {
+async function computePvalues(data, fisher_limit = 300, individual_fisher_limit = 150, pvalueCutoff = 0.05) {
 	if (data.refs.rows.length < 2) return //no term2, cannot calculate p-value
 
 	// calculate sum of each term2 category. Structure: {term2Catergory1: num of samples, term2Catergory2: num of samples, ...}
@@ -523,15 +522,13 @@ async function computePvalues(data, fisher_limit = 300, individual_fisher_limit 
 			let R1C2 = row.total - term2cat.total //# of term2 not category of interest in term1 category of interest (e.g. # of not male in age group < 5), represents R1C2 in 2X2 contingency table
 			let R2C2 = data.charts[0].total - colSums[term2cat.dataId] - (row.total - term2cat.total) //# of term2 not category of interest in term1 not category of interest (e.g. # of not male in age group not < 5), represents R2C2 in 2X2 contingency table
 
-			//replace hyphen/tab in seriesId and dataId with @hyphen@ and @tab@ to avoid being splitted in fisher.rs, which uses '-' and '\t' to split input
+			//replace hyphen/tab in seriesId and dataId with @hyphen@ and @tab@ to avoid being split in fisher.rs, which uses '-' and '\t' to split input
 			let seriesId = row.seriesId.replace('-', '@hyphen@').replace('\t', '@tab@')
 			let dataId = term2cat.dataId.replace('-', '@hyphen@').replace('\t', '@tab@')
 
 			fisherAndChiInputData.push(`${seriesId}@@${dataId}\t${R1C1}\t${R2C1}\t${R1C2}\t${R2C2}`)
 		}
 	}
-
-	//*******************TODO: check if label has '-' or \t ******************************
 	const resultWithPvalue = await run_rust(
 		'fisher',
 		'fisher_limits\t' + fisher_limit + '\t' + individual_fisher_limit + '-' + fisherAndChiInputData.join('-')
@@ -557,14 +554,14 @@ async function computePvalues(data, fisher_limit = 300, individual_fisher_limit 
 		group.term1comparison = term1comparison
 
 		let dataId = test.split('@@')[1].split('\t')[0]
-		dataId = dataId.replace('@hyphen@', '-').replace('@tab@', '\t') ////change @hyphen@ and @tab@ in dataId back to hyphen/tab
+		dataId = dataId.replace('@hyphen@', '-').replace('@tab@', '\t') //change @hyphen@ and @tab@ in dataId back to hyphen/tab
 		group.term2tests.push({
 			term2id: dataId,
 			pvalue: test.split('@@')[1].split('\t')[5],
-			significant: test.split('@@')[1].split('\t')[5]
+			significant: test.split('@@')[1].split('\t')[5] < pvalueCutoff
 		})
 	}
-
 	pvalueTable.push(group)
+
 	data.pvalueTable = pvalueTable
 }

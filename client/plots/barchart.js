@@ -393,6 +393,8 @@ class Barchart {
 			result.rowgrp = '-'
 			result.chartId = chart.chartId
 			result.seriesId = series.seriesId
+			if (chartsData.pvalueTable)
+				result.groupPvalues = chartsData.pvalueTable.find(x => x.term1comparison === series.seriesId)
 			result.seriesTotal = series.total
 			result.chartTotal = chart.visibleTotal
 			result.logTotal = Math.log10(result.total)
@@ -620,22 +622,21 @@ function setRenderers(self) {
 }
 
 function renderPvalueTable(pvalueTable, term1Order, term2Order, h, chartConfig) {
-	// loop over the pvalueTable to sort the term1 categories based on term2Order and change pvalues to 4 digits after decimal point
-	for (const i of pvalueTable) {
-		i.term2tests.sort(function(a, b) {
+	// sort term1 categories based on term1Order
+	pvalueTable.sort(function(a, b) {
+		return term1Order.indexOf(a.term1comparison) - term1Order.indexOf(b.term1comparison)
+	})
+
+	// sort term2 categories based on term2Order
+	for (const t1c of pvalueTable) {
+		t1c.term2tests.sort(function(a, b) {
 			return term2Order.indexOf(a.term2id) - term2Order.indexOf(b.term2id)
 		})
-		for (const j of i.term2tests) {
-			j.pvalue = Number(j.pvalue).toFixed(4)
+		//round pvalues to have 4 digits after decimal point
+		for (const t2c of t1c.term2tests) {
+			t2c.pvalue = Number(t2c.pvalue).toFixed(4)
 		}
 	}
-
-	// sort the order of term1 groups in pvalutTable based on term1Order
-	pvalueTable.sort(function(a, b) {
-		return (
-			term1Order.indexOf(a.term1comparison.split(' vs.')[0]) - term1Order.indexOf(b.term1comparison.split(' vs.')[0])
-		)
-	})
 
 	const holder = h
 		.select('.pp-sbar-div-chartLengends')
@@ -659,7 +660,11 @@ function renderPvalueTable(pvalueTable, term1Order, term2Order, h, chartConfig) 
 
 	for (const t1c of pvalueTable) {
 		let t1label = t1c.term1comparison
-		if (chartConfig.term.term.values) t1label = chartConfig.term.term.values[t1label].label
+
+		//Only when t1label is numerical number like 0, 1, 2, change it to the corresponding textual label stored in chartConfig.term.term.values
+		if (!isNaN(t1label) && chartConfig.term && chartConfig.term.term && chartConfig.term.term.values)
+			t1label = chartConfig.term.term.values[t1label].label
+
 		t1label = `${t1label}: vs. not ${t1label}`
 		const t1cDiv = treediv
 			.append('div')
@@ -668,9 +673,10 @@ function renderPvalueTable(pvalueTable, term1Order, term2Order, h, chartConfig) 
 
 		for (const t2t of t1c.term2tests) {
 			let t2label = t2t.term2id
-			if (chartConfig.term2.term.values) {
+
+			//Only when t1label is numerical number like 0, 1, 2, change it to the corresponding textual label stored in chartConfig.term.term.values
+			if (!isNaN(t2label) && chartConfig.term2 && chartConfig.term2.term && chartConfig.term2.term.values)
 				t2label = chartConfig.term2.term.values[t2t.term2id].label
-			}
 
 			t1cDiv
 				.append('div')
