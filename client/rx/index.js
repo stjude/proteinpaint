@@ -223,6 +223,9 @@ export function getStoreApi(self) {
 				throw `invalid action type=${action.type}`
 			}
 			await actions[action.type].call(self, action)
+			// quick fix?? add custom state properties to the state to trigger special action-related handling
+			// _scope_: 'none' | 'local' | 'global', indicates where this action should be tracked by a history tracker such as a recover component
+			self.state._scope_ = action._scope_
 			return await api.copyState()
 		},
 		async copyState() {

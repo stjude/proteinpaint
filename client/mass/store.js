@@ -238,7 +238,7 @@ TdbStore.prototype.actions = {
 		if (!plot) throw `missing plot id='${action.id}' in store.plot_edit()`
 		this.copyMerge(plot, action.config, action.opts ? action.opts : {})
 		if (plot.mayAdjustConfig) {
-			console.log('mayAdjustConfig() used by mass store in dispatched action=plot_edit')
+			// console.log('mayAdjustConfig() used by mass store in dispatched action=plot_edit')
 			plot.mayAdjustConfig(plot, action.config)
 		}
 		validatePlot(plot, this.app.vocabApi)

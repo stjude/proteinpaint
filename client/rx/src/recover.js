@@ -51,6 +51,8 @@ class Recover {
 			this.isRecovering = false
 			return
 		}
+		if (this.state._scope_ == 'none') return
+
 		this.isRecovering = false
 		if (this.currIndex < this.history.length - 1) {
 			this.history.splice(this.currIndex, this.history.length - (this.currIndex + 1))

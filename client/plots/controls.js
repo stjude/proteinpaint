@@ -106,7 +106,8 @@ function setInteractivity(self) {
 				settings: {
 					controls: { isOpen }
 				}
-			}
+			},
+			_scope_: 'none'
 		})
 	}
 }

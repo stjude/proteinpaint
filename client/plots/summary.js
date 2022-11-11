@@ -27,7 +27,7 @@ class SummaryPlot {
 			app: this.app,
 			holder: this.dom.localRecoverDiv,
 			getState: appState => this.getState(appState),
-			reactsTo: action => action.id == this.id && action.type == 'plot_edit' && !action.notTracked,
+			reactsTo: action => action.id == this.id && action.type == 'plot_edit' && action._scope_ != 'none',
 			plot_id: this.id,
 			maxHistoryLen: 10
 		})
@@ -64,7 +64,9 @@ class SummaryPlot {
 			throw `No plot with id='${this.id}' found. Did you set this.id before this.api = getComponentApi(this)?`
 		}
 		return {
-			config
+			config,
+			// quick fix to skip history tracking as needed
+			_scope_: appState._scope_
 		}
 	}
 
@@ -144,6 +146,8 @@ function setRenderers(self) {
 				viz: holder.body.append('div'),
 				plotDivs: {}
 			}
+
+			holder.header.style('padding', 0)
 
 			// holder is assumed to be a sandbox, which has a header
 			self.dom.paneTitleDiv = self.dom.holder.header
