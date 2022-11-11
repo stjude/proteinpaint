@@ -128,7 +128,7 @@ export default function barsRenderer(barsapp, holder) {
 		setDimensions()
 
 		chartTitle
-			//.style("width", hm.svgw + "px")
+			.style('width', hm.svgw + 100 + 'px')
 			.style('font-weight', 600)
 			.style('font-size', '20px')
 			.style('margin-bottom', '24px')
