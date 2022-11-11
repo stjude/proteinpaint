@@ -523,8 +523,8 @@ async function computePvalues(data, fisher_limit = 300, individual_fisher_limit 
 				const R2C2 = chart.total - colSums[term2cat.dataId] - (row.total - term2cat.total) //# of term2 not category of interest in term1 not category of interest (e.g. # of not male in not white), represents R2C2 in 2X2 contingency table
 
 				//replace hyphen/tab in seriesId and dataId with @hyphen@ and @tab@ to avoid being split in fisher.rs, which uses '-' and '\t' to split input
-				const seriesId = row.seriesId.replace('-', '@hyphen@').replace('\t', '@tab@')
-				const dataId = term2cat.dataId.replace('-', '@hyphen@').replace('\t', '@tab@')
+				const seriesId = row.seriesId.replaceAll('-', '@hyphen@').replace('\t', '@tab@')
+				const dataId = term2cat.dataId.replaceAll('-', '@hyphen@').replace('\t', '@tab@')
 
 				//use seriesId@@dataId as label to be able to parse seriesId and dataId from the test result later
 				fisherAndChiInputData.push([`${seriesId}@@${dataId}`, R1C1, R2C1, R1C2, R2C2].join('\t'))
@@ -537,7 +537,6 @@ async function computePvalues(data, fisher_limit = 300, individual_fisher_limit 
 			'fisher',
 			'fisher_limits\t' + fisher_limit + '\t' + individual_fisher_limit + '-' + fisherAndChiInputData.join('-')
 		)
-
 		/*
 		parse the multi-line string result into pvalueTable array: 
 		[
@@ -554,16 +553,16 @@ async function computePvalues(data, fisher_limit = 300, individual_fisher_limit 
 			// change @hyphen@ and @tab@ in seriesId back to hyphen/tab
 			const seriesId = test
 				.split('@@')[0]
-				.replace('@hyphen@', '-')
-				.replace('@tab@', '\t')
+				.replaceAll('@hyphen@', '-')
+				.replaceAll('@tab@', '\t')
 
 			// test.split('@@')[1].split('\t')[0] is always going to be the dataId
 			// change @hyphen@ and @tab@ in dataId back to hyphen/tab
 			const dataId = test
 				.split('@@')[1]
 				.split('\t')[0]
-				.replace('@hyphen@', '-')
-				.replace('@tab@', '\t')
+				.replaceAll('@hyphen@', '-')
+				.replaceAll('@tab@', '\t')
 
 			// test.split('@@')[1].split('\t')[5] is always going to be the pvalue
 			const pvalue = test.split('@@')[1].split('\t')[5]
