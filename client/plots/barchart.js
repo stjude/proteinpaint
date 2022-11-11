@@ -340,12 +340,12 @@ class Barchart {
 					t1.term.values && t1c.term1comparison in t1.term.values
 						? t1.term.values[t1c.term1comparison].label
 						: t1c.term1comparison
-				t1c.term1comparison = `${t1label}: vs. not ${t1label}`
+				t1c.term1comparisonLabel = `${t1label}: vs. not ${t1label}`
 
 				for (const t2t of t1c.term2tests) {
 					const t2label =
 						t2.term.values && t2t.term2id in t2.term.values ? t2.term.values[t2t.term2id].label : t2t.term2id
-					t2t.term2id = t2label
+					t2t.term2Label = t2label
 				}
 			}
 		}
@@ -651,7 +651,6 @@ function setRenderers(self) {
 				.append('div')
 			const term1Order = self.chartsData.refs.cols
 			const term2Order = self.chartsData.refs.rows
-
 			renderPvalueTable(self.chartsData.tests[chart.chartId], term1Order, term2Order, holder)
 		}
 	}
@@ -677,6 +676,7 @@ input parameter:
 }
 */
 function renderPvalueTable(pvalueTable, term1Order, term2Order, holder) {
+	console.log('what is pvalueTable', pvalueTable)
 	const maxPvalsToShow = 3
 
 	// sort term1 categories based on term1Order
@@ -717,14 +717,14 @@ function renderPvalueTable(pvalueTable, term1Order, term2Order, holder) {
 		const t1cDiv = treediv
 			.append('div')
 			.style('margin-left', '10px')
-			.text(t1c.term1comparison)
+			.text(t1c.term1comparisonLabel)
 
 		for (const t2t of t1c.term2tests) {
 			t1cDiv
 				.append('div')
 				.style('margin-left', '30px')
 				.style('margin-right', '10px')
-				.text(`${t2t.term2id}: ${t2t.pvalue}`)
+				.text(`${t2t.term2Label}: ${t2t.pvalue}`)
 		}
 		t1cDiv.append('div').html('<br>')
 	}
