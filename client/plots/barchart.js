@@ -329,7 +329,7 @@ class Barchart {
 
 		self.visibleCharts = chartsData.charts.filter(chart => chart.visibleSerieses.length)
 
-		// when t1label or t2label is numerical value (e.g. 0, 1, 2), change it to the alternative textual label if exists
+		// add term1comparisonLabel (same location as term1comparison) and term2Label (same location as term2id) to chartsData.tests to be used as labels for the barchart pvalue table
 		const t1 = this.config.term
 		const t2 = this.config.term2
 		const chartsTests = chartsData.tests
@@ -676,7 +676,6 @@ input parameter:
 }
 */
 function renderPvalueTable(pvalueTable, term1Order, term2Order, holder) {
-	console.log('what is pvalueTable', pvalueTable)
 	const maxPvalsToShow = 3
 
 	// sort term1 categories based on term1Order
