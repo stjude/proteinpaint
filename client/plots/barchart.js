@@ -393,8 +393,11 @@ class Barchart {
 			result.rowgrp = '-'
 			result.chartId = chart.chartId
 			result.seriesId = series.seriesId
-			if (chartsData.tests)
+			if (chartsData.tests) {
+				// statistical tests result exist
+				// put the pvalues corresponding to series.seriesId to result.groupPvalues
 				result.groupPvalues = chartsData.tests[chart.chartId].find(x => x.term1comparison === series.seriesId)
+			}
 			result.seriesTotal = series.total
 			result.chartTotal = chart.visibleTotal
 			result.logTotal = Math.log10(result.total)
@@ -442,7 +445,6 @@ class Barchart {
 		const s = this.settings
 		const t1 = this.config.term
 		const t2 = this.config.term2
-
 		const headingStyle = 'color: #aaa; font-weight: 400'
 		if (s.cols && s.exclude.cols.length) {
 			const reducer = (sum, b) => sum + b.total
@@ -577,17 +579,33 @@ function setRenderers(self) {
 		self.renderers[chart.chartId](chart)
 
 		const div = select(this)
-
 		div
 			.select('.pp-sbar-div-chartLengends')
 			.selectAll('*')
 			.remove()
 
 		if (self.chartsData.tests && self.chartsData.tests[chart.chartId]) {
+			//chart has pvalues
+
+			const holder = div
+				.select('.pp-sbar-div-chartLengends')
+				.style('display', 'inline-block')
+				.append('div')
 			const term1Order = self.chartsData.refs.cols
 			const term2Order = self.chartsData.refs.rows
 
-			renderPvalueTable(self.chartsData.tests[chart.chartId], term1Order, term2Order, self.dom.holder, self.config)
+			// if term.values object for term1/term2 labels exist, store in term1AltLabel/term2AltLabel
+			const term1AltLabel = self.config.term && self.config.term.term && self.config.term.term.values
+			const term2AltLabel = self.config.term2 && self.config.term2.term && self.config.term2.term.values
+
+			renderPvalueTable(
+				self.chartsData.tests[chart.chartId],
+				term1Order,
+				term2Order,
+				holder,
+				term1AltLabel,
+				term2AltLabel
+			)
 		}
 	}
 
@@ -615,15 +633,55 @@ function setRenderers(self) {
 			.style('display', 'none')
 
 		if (self.chartsData.tests && self.chartsData.tests[chart.chartId]) {
+			//chart has pvalues
+
+			const holder = div
+				.select('.pp-sbar-div-chartLengends')
+				.style('display', 'inline-block')
+				.append('div')
 			const term1Order = self.chartsData.refs.cols
 			const term2Order = self.chartsData.refs.rows
 
-			renderPvalueTable(self.chartsData.tests[chart.chartId], term1Order, term2Order, self.dom.holder, self.config)
+			// if term.values object for term1/term2 labels exist, store in term1AltLabel/term2AltLabel
+			const term1AltLabel = self.config.term && self.config.term.term && self.config.term.term.values
+			const term2AltLabel = self.config.term2 && self.config.term2.term && self.config.term2.term.values
+
+			renderPvalueTable(
+				self.chartsData.tests[chart.chartId],
+				term1Order,
+				term2Order,
+				holder,
+				term1AltLabel,
+				term2AltLabel
+			)
 		}
 	}
 }
 
-function renderPvalueTable(pvalueTable, term1Order, term2Order, h, chartConfig) {
+/*
+render a container of p-values that has hierarchical structure: 
+
+A vs. B
+	x:pvalue
+	y:pvalue
+...
+
+used by barchart
+
+input parameter:
+{
+	pvalueTable: an array of objects, each object has one first level term and the second level terms and pvalues associated 
+				 with the first term (structure for each object is {term1comparison: term1, term2tests:[term2id: term2, pvalue: ..., significant: true/false]} ),
+	term1Order: an array of term1 categories with desired order,
+	term2Order: an array of term2 categories with desired order,
+	holder: holder div,
+	term1AltLabel: an object that has alternative labels for numberical term1 labels
+	term2AltLabel: an object that has alternative labels for numberical term2 labels
+}
+*/
+function renderPvalueTable(pvalueTable, term1Order, term2Order, holder, term1AltLabel, term2AltLabel) {
+	const maxPvalsToShow = 3
+
 	// sort term1 categories based on term1Order
 	pvalueTable.sort(function(a, b) {
 		return term1Order.indexOf(a.term1comparison) - term1Order.indexOf(b.term1comparison)
@@ -634,17 +692,13 @@ function renderPvalueTable(pvalueTable, term1Order, term2Order, h, chartConfig) 
 		t1c.term2tests.sort(function(a, b) {
 			return term2Order.indexOf(a.term2id) - term2Order.indexOf(b.term2id)
 		})
-		//round pvalues to have 4 digits after decimal point
+		//round pvalues to keep 4 digits after decimal point
 		for (const t2c of t1c.term2tests) {
 			t2c.pvalue = Number(t2c.pvalue).toFixed(4)
 		}
 	}
 
-	const holder = h
-		.select('.pp-sbar-div-chartLengends')
-		.style('display', 'inline-block')
-		.append('div')
-
+	//holder.selectAll('*').remove()
 	holder
 		.append('div')
 		.style('padding-bottom', '5px')
@@ -656,16 +710,17 @@ function renderPvalueTable(pvalueTable, term1Order, term2Order, h, chartConfig) 
 		.html("Group comparisons <br> (Fisher's exact test/Chi-squared test)")
 
 	const treediv = holder.append('div').style('border', '1px solid #ccc')
-	if (pvalueTable.length > 3) {
+
+	if (pvalueTable.length > maxPvalsToShow) {
+		//table scrolling
 		treediv.style('overflow', 'auto').style('height', '220px')
 	}
 
 	for (const t1c of pvalueTable) {
 		let t1label = t1c.term1comparison
 
-		//Only when t1label is numerical number like 0, 1, 2, change it to the corresponding textual label stored in chartConfig.term.term.values
-		if (!isNaN(t1label) && chartConfig.term && chartConfig.term.term && chartConfig.term.term.values)
-			t1label = chartConfig.term.term.values[t1label].label
+		// when t1label is numerical value (e.g. 0, 1, 2), change it to the alternative textual label if exists
+		if (!isNaN(t1label) && term1AltLabel) t1label = term1AltLabel[t1label].label
 
 		t1label = `${t1label}: vs. not ${t1label}`
 		const t1cDiv = treediv
@@ -676,9 +731,8 @@ function renderPvalueTable(pvalueTable, term1Order, term2Order, h, chartConfig) 
 		for (const t2t of t1c.term2tests) {
 			let t2label = t2t.term2id
 
-			//Only when t1label is numerical number like 0, 1, 2, change it to the corresponding textual label stored in chartConfig.term.term.values
-			if (!isNaN(t2label) && chartConfig.term2 && chartConfig.term2.term && chartConfig.term2.term.values)
-				t2label = chartConfig.term2.term.values[t2t.term2id].label
+			// when t2label is numerical value (e.g. 0, 1, 2), change it to the alternative textual label if exists
+			if (!isNaN(t2label) && term2AltLabel) t2label = term2AltLabel[t2t.term2id].label
 
 			t1cDiv
 				.append('div')

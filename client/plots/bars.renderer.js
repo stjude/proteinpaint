@@ -128,7 +128,7 @@ export default function barsRenderer(barsapp, holder) {
 		setDimensions()
 
 		chartTitle
-			//.style("width", hm.svgw + "px")
+			.style('width', hm.svgw + 100 + 'px')
 			.style('font-weight', 600)
 			.style('font-size', '20px')
 			.style('margin-bottom', '24px')
@@ -463,10 +463,6 @@ export default function barsRenderer(barsapp, holder) {
 			.attr('height', d => d.height)
 			.attr('fill', hm.handlers.series.rectFill)
 
-		// g.data(series.data.filter(filterData), cellKey)
-		// 	.append('g')
-		// 	.each(addCell)
-
 		g.enter()
 			.append('g')
 			.each(addCell)
@@ -508,34 +504,6 @@ export default function barsRenderer(barsapp, holder) {
 			.delay(hm.delay)
 			.duration(hm.duration)
 			.style('opacity', 1)
-
-		// // if term2test exist, add asterisks to significant term2
-		// const term2test = d.groupPvalues && d.groupPvalues.term2tests && d.groupPvalues.term2tests.find(x => x.term2id == d.dataId)
-		// if (term2test && term2test.significant) {
-		// 	if (hm.orientation == 'horizontal') {
-		// 		let bartext = g.append("text")
-		// 			.text("*")
-		// 			.attr('x', d => d.x + (d.width / 2))
-		// 			.attr('y', d => d.y + (d.height))
-		// 			//.attr('dominant-baseline', 'middle')
-		// 			.attr('dy', '-.1em')
-		// 			//.attr('width', d => d.width)
-		// 			//.attr('height', d => d.height)
-		// 			.style("text-anchor", "middle")
-		// 	} else {
-		// 		let bartext2 = g.append("text")
-		// 			.text("*")
-		// 			.attr('x', d => d.x + (d.width / 2))
-		// 			.attr('y', d => d.y + (d.height / 2.4))
-		// 			// .attr('x', d => d.x + (d.width / 2))
-		// 			// .attr('y', d => d.y + (d.height))
-		// 			.attr('dominant-baseline', 'middle')
-		// 			.attr('dy', '0.5em')
-		// 			//.attr('width', d => d.width)
-		// 			//.attr('height', d => d.height)
-		// 			.style("text-anchor", "middle")
-		// 	}
-		// }
 	}
 
 	function seriesGrpTransform() {
