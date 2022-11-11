@@ -45,6 +45,7 @@ class ViolinPlot {
 					},
 					{
 						type: 'overlay',
+						//TODO: when term is numeric use 'overlay' otherwise for categories use 'Divide by'
 						// TODO: when used under the summary chart, this.opts.usecase may replace the usecase here
 						usecase: { target: 'violin', detail: 'term2' }
 					},

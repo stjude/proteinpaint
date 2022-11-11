@@ -6,6 +6,7 @@ const serverconfig = require('./serverconfig')
 const lines2R = require('./lines2R')
 const path = require('path')
 const utils = require('./utils')
+import { median } from '../../client/dom/median'
 
 /*
 q={}
@@ -49,7 +50,7 @@ export async function trigger_getViolinPlotData(q, res, ds) {
 	}
 
 	const rows = termdbsql.get_rows(getRowsParam)
-	// console.log(rows);
+
 	/*
 	rows = {
 	  lst: [
@@ -89,7 +90,7 @@ export async function trigger_getViolinPlotData(q, res, ds) {
 	for (const v of rows.lst) {
 		// TODO: db terms table for numeric value should not have
 		// terms.values{} entries for computable values
-		if (term?.values?.[v.key1]?.uncomputable) {
+		if (term?.values?.[v.key1]?.uncomputable || q.term2?.term?.values?.[v.key2]?.uncomputable) {
 			// this value is uncomputable from term1, skip
 		} else {
 			if (term.type == 'integer' || term.type == 'float') {
@@ -163,10 +164,14 @@ export async function trigger_getViolinPlotData(q, res, ds) {
 			b2.binValueCount = b.length
 			bins.push(b2)
 		}
+		//generate median values
+		const medianValue = median(plot.values)
 
 		plot.bins = bins
 
 		plot.biggestBin = Math.max(...bins0.map(b => b.length))
+
+		plot.median = medianValue
 
 		delete plot.values
 	}
