@@ -340,7 +340,7 @@ class Barchart {
 					t1.term.values && t1c.term1comparison in t1.term.values
 						? t1.term.values[t1c.term1comparison].label
 						: t1c.term1comparison
-				t1c.term1comparisonLabel = `${t1label}: vs. not ${t1label}`
+				t1c.term1comparisonLabel = `${t1label} vs. not ${t1label}`
 
 				for (const t2t of t1c.term2tests) {
 					const t2label =
@@ -699,13 +699,16 @@ function renderPvalueTable(pvalueTable, term1Order, term2Order, holder) {
 		.append('div')
 		.style('padding-bottom', '5px')
 		.style('vertical-align', 'top')
-		.style('font-size', '16px')
+		.style('font-size', '14px')
 		.style('font-weight', 'bold')
 		.style('text-align', 'center')
 		.style('margin-top', '-10px')
-		.html("Group comparisons <br> (Fisher's exact test/Chi-squared test)")
+		.html('Group comparisons <br> (Chi-squared test P-values)')
 
-	const treediv = holder.append('div').style('border', '1px solid #ccc')
+	const treediv = holder
+		.append('div')
+		.style('border', '1px solid #ccc')
+		.style('font-size', '14px')
 
 	if (pvalueTable.length > maxPvalsToShow) {
 		//table scrolling
@@ -715,7 +718,8 @@ function renderPvalueTable(pvalueTable, term1Order, term2Order, holder) {
 	for (const t1c of pvalueTable) {
 		const t1cDiv = treediv
 			.append('div')
-			.style('margin-left', '10px')
+			.style('margin-left', '5px')
+			.style('margin-right', '10px')
 			.text(t1c.term1comparisonLabel)
 
 		for (const t2t of t1c.term2tests) {
