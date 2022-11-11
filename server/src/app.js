@@ -7058,7 +7058,11 @@ async function pp_init() {
 		genomes[g.name] = g2
 
 		if (!g2.genomefile) throw '.genomefile missing from .js file of genome ' + g.name
-		g2.genomefile = path.join(serverconfig.tpmasterdir, g2.genomefile)
+		if (g2.genomefile == 'NA') {
+			// not available
+		} else {
+			g2.genomefile = path.join(serverconfig.tpmasterdir, g2.genomefile)
+		}
 
 		// for testing if gene/isoform/chr/snp names have only allowed characters
 		// test to true if name has extra characters which could be attack strings

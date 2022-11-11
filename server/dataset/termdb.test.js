@@ -154,7 +154,7 @@ const ds = {
 				{
 					name: 'Methylome TSNE',
 					dimension: 2,
-					file: 'files/hg19/pnet/classification/pnet_apr13_tnse.txt',
+					file: 'files/hg38/TermdbTest/tnse.txt',
 					term: { id: 'diaggrp' }
 				}
 			]
@@ -162,13 +162,11 @@ const ds = {
 	}
 }
 
+const targetDir = path.join(serverconfig.binpath, 'test/tp/files/hg38/TermdbTest')
 const datadir = path.join(serverconfig.tpmasterdir, 'files/hg38/TermdbTest')
-if (!fs.existsSync(datadir)) fs.mkdirSync(datadir, { recursive: true }) // create missing path
 
-const srcdb = path.join(serverconfig.binpath, 'test/testdata/db2')
-const destdb = path.join(serverconfig.tpmasterdir, ds.cohort.db.file)
-if (!process.env.PP_MODE?.startsWith('container-')) {
-	fs.copyFileSync(srcdb, destdb)
+if (!targetDir.endsWith(datadir) && !fs.existsSync(datadir)) {
+	fs.symlinkSync(targetDir, datadir)
 }
 
 module.exports = ds

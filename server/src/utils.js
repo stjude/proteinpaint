@@ -350,6 +350,14 @@ function read_file(file) {
 exports.read_file = read_file
 
 exports.get_fasta = async (gn, pos) => {
+	if (gn.genomefile == 'NA') {
+		// not using a real fasta file, return Ns by the length of region
+		const tmp = pos.split(/[:-]/)
+		const fakent = []
+		for (let i = Number(tmp[1]); i <= Number(tmp[2]); i++) fakent.push('N')
+		return `>${pos}\n${fakent.join('')}` // must include fasta header line
+	}
+
 	// chr:start-stop, positions are 1-based
 	const lines = []
 	await exports.get_lines_bigfile({
