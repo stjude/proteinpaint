@@ -1,5 +1,3 @@
-import { sampleLstSql } from './termdb.sql.samplelst'
-
 const { getData } = require('./termdb.matrix')
 const fs = require('fs')
 const path = require('path')
@@ -140,9 +138,8 @@ export async function trigger_getSampleScatter(q, res, ds, genome) {
 		const [refSamples, cohortSamples] = await getSamples(plot)
 		const terms = [q.colorTW]
 		if (q.shapeTW) terms.push(q.shapeTW)
-		const data = await getData(Object.assign({}, q, { for: 'matrix', terms }), ds, genome)
+		const data = await getData({ filter: q.filter, terms }, ds, genome)
 		if (data.error) throw data.error
-		//res.send({ status: 'ok', data })
 		const result = await colorAndShapeSamples(refSamples, cohortSamples, data.samples, q)
 		res.send(result)
 	} catch (e) {
@@ -217,7 +214,6 @@ function assignCategory(dbSample, sample, tw, categoryMap, category) {
 	if (tw.term.type == 'geneVariant') {
 		const mutation = dbSample?.[tw.term.name]?.values?.[0]
 		if (mutation) {
-			console.log(mutation)
 			value = mclass[mutation.class]?.label
 			color = mclass[mutation.class]?.color || 'black' // should be invalid_mclass_color
 			sample.category_info[category] = mutation.mname
