@@ -465,19 +465,30 @@ arguments:
 
 /*
 Run Fisher's exact test or Chi-squared test to determine if the proportion of a spcific term2 category is significantly different
-between a specific term1 group and the rest of term1 groups combined. For example, when term1 is Race (White, Black, Other, Unknown)
-and term2 is Sex (male, female), the function generates a pvavlue for comparing the proportion of: Male between white and not white,
-Female between white and not white, Male between black and not black, Female between black and not black, etc. 
-Using a 2x2 contingency table, for example
+between a specific term1 group and the rest of term1 groups combined, using a 2x2 contingency table:
 
             [Male]  [not Male]
 [white]       R1C1     R1C2
 [not white]   R2C1     R2C2
 
-To use the chi-squared test, in the 2x2 table, the sum of the four values must be larger than fisher_limit(default = 300) and each of 
-the four values must be larger than individual_fisher_limit (default = 150), otherwise Fisher's exact test is used.
+input parameter: 
+{
+	data: an object contains data of barcharts, structure is 
 
-The function has no returns but appends the statistically results to the provided data object as data.tests
+			.charts=[]
+			.serieses=[]
+				.seriesId=str // key of term1 category
+				.total=int // total of this category
+				.data=[]
+					.dataId=str // key of term2 category, '' if no term2
+					.total=int // size of this term1-term2 combination
+
+	fisher_limit:  the sum of the four values in the 2x2 table must be larger than fisher_limit(default = 300) to use chi-squared test
+	individual_fisher_limit: each of the four values in the 2x2 table must be larger than individual_fisher_limit (default = 150) to use chi-squared test
+	pvalueCutoff: comparisions with a pvalue less than pvalueCutoff are considered to be significantly different
+}
+
+Output: The function has no return but appends the statistical results to the provided data object as data.tests:
 {
 	chartId:[
 		{
@@ -538,10 +549,6 @@ async function computePvalues(data, fisher_limit = 300, individual_fisher_limit 
 		]
 		*/
 		const pvalueTable = []
-		let group = {
-			term1comparison: undefined,
-			term2tests: []
-		}
 		for (const test of resultWithPvalue.split('\n').filter(Boolean)) {
 			// the first element of test.split('@@') is always the seriesId
 			// change @hyphen@ and @tab@ in seriesId back to hyphen/tab
@@ -550,36 +557,37 @@ async function computePvalues(data, fisher_limit = 300, individual_fisher_limit 
 				.replace('@hyphen@', '-')
 				.replace('@tab@', '\t')
 
-			if (seriesId !== group.term1comparison && group.term1comparison !== undefined) {
-				// this seriesId is different from the seriesId from the previous line
-				pvalueTable.push(group)
-				group = {
-					term1comparison: undefined,
-					term2tests: []
-				}
-			}
-			group.term1comparison = seriesId
-
 			// test.split('@@')[1].split('\t')[0] is always going to be the dataId
 			// change @hyphen@ and @tab@ in dataId back to hyphen/tab
 			const dataId = test
 				.split('@@')[1]
 				.split('\t')[0]
 				.replace('@hyphen@', '-')
-				.replace('@tab@', '\t') //change @hyphen@ and @tab@ in dataId back to hyphen/tab
+				.replace('@tab@', '\t')
 
 			// test.split('@@')[1].split('\t')[5] is always going to be the pvalue
 			const pvalue = test.split('@@')[1].split('\t')[5]
 
-			group.term2tests.push({
-				term2id: dataId,
-				pvalue: pvalue,
-				significant: pvalue < pvalueCutoff
-			})
+			const t1c = pvalueTable.find(t1c => t1c.term1comparison === seriesId)
+			if (!t1c) {
+				pvalueTable.push({
+					term1comparison: seriesId,
+					term2tests: [
+						{
+							term2id: dataId,
+							pvalue: pvalue,
+							significant: pvalue < pvalueCutoff
+						}
+					]
+				})
+			} else {
+				t1c.term2tests.push({
+					term2id: dataId,
+					pvalue: pvalue,
+					significant: pvalue < pvalueCutoff
+				})
+			}
 		}
-		// push the last group into pvalueTable
-		pvalueTable.push(group)
-
 		data.tests[chart.chartId] = pvalueTable
 	}
 }

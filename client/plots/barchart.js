@@ -328,6 +328,27 @@ class Barchart {
 						: 1
 
 		self.visibleCharts = chartsData.charts.filter(chart => chart.visibleSerieses.length)
+
+		// when t1label or t2label is numerical value (e.g. 0, 1, 2), change it to the alternative textual label if exists
+		const t1 = this.config.term
+		const t2 = this.config.term2
+		const chartsTests = chartsData.tests
+		for (const chartId in chartsTests) {
+			const chartTests = chartsTests[chartId]
+			for (const t1c of chartTests) {
+				const t1label =
+					t1.term.values && t1c.term1comparison in t1.term.values
+						? t1.term.values[t1c.term1comparison].label
+						: t1c.term1comparison
+				t1c.term1comparison = `${t1label}: vs. not ${t1label}`
+
+				for (const t2t of t1c.term2tests) {
+					const t2label =
+						t2.term.values && t2t.term2id in t2.term.values ? t2.term.values[t2t.term2id].label : t2t.term2id
+					t2t.term2id = t2label
+				}
+			}
+		}
 		return chartsData
 	}
 
@@ -594,18 +615,7 @@ function setRenderers(self) {
 			const term1Order = self.chartsData.refs.cols
 			const term2Order = self.chartsData.refs.rows
 
-			// if term.values object for term1/term2 labels exist, store in term1AltLabel/term2AltLabel
-			const term1AltLabel = self.config.term && self.config.term.term && self.config.term.term.values
-			const term2AltLabel = self.config.term2 && self.config.term2.term && self.config.term2.term.values
-
-			renderPvalueTable(
-				self.chartsData.tests[chart.chartId],
-				term1Order,
-				term2Order,
-				holder,
-				term1AltLabel,
-				term2AltLabel
-			)
+			renderPvalueTable(self.chartsData.tests[chart.chartId], term1Order, term2Order, holder)
 		}
 	}
 
@@ -642,18 +652,7 @@ function setRenderers(self) {
 			const term1Order = self.chartsData.refs.cols
 			const term2Order = self.chartsData.refs.rows
 
-			// if term.values object for term1/term2 labels exist, store in term1AltLabel/term2AltLabel
-			const term1AltLabel = self.config.term && self.config.term.term && self.config.term.term.values
-			const term2AltLabel = self.config.term2 && self.config.term2.term && self.config.term2.term.values
-
-			renderPvalueTable(
-				self.chartsData.tests[chart.chartId],
-				term1Order,
-				term2Order,
-				holder,
-				term1AltLabel,
-				term2AltLabel
-			)
+			renderPvalueTable(self.chartsData.tests[chart.chartId], term1Order, term2Order, holder)
 		}
 	}
 }
@@ -675,11 +674,9 @@ input parameter:
 	term1Order: an array of term1 categories with desired order,
 	term2Order: an array of term2 categories with desired order,
 	holder: holder div,
-	term1AltLabel: an object that has alternative labels for numberical term1 labels
-	term2AltLabel: an object that has alternative labels for numberical term2 labels
 }
 */
-function renderPvalueTable(pvalueTable, term1Order, term2Order, holder, term1AltLabel, term2AltLabel) {
+function renderPvalueTable(pvalueTable, term1Order, term2Order, holder) {
 	const maxPvalsToShow = 3
 
 	// sort term1 categories based on term1Order
@@ -717,28 +714,17 @@ function renderPvalueTable(pvalueTable, term1Order, term2Order, holder, term1Alt
 	}
 
 	for (const t1c of pvalueTable) {
-		let t1label = t1c.term1comparison
-
-		// when t1label is numerical value (e.g. 0, 1, 2), change it to the alternative textual label if exists
-		if (!isNaN(t1label) && term1AltLabel) t1label = term1AltLabel[t1label].label
-
-		t1label = `${t1label}: vs. not ${t1label}`
 		const t1cDiv = treediv
 			.append('div')
 			.style('margin-left', '10px')
-			.text(t1label)
+			.text(t1c.term1comparison)
 
 		for (const t2t of t1c.term2tests) {
-			let t2label = t2t.term2id
-
-			// when t2label is numerical value (e.g. 0, 1, 2), change it to the alternative textual label if exists
-			if (!isNaN(t2label) && term2AltLabel) t2label = term2AltLabel[t2t.term2id].label
-
 			t1cDiv
 				.append('div')
 				.style('margin-left', '30px')
 				.style('margin-right', '10px')
-				.html(`${t2label}: ${t2t.pvalue}`)
+				.text(`${t2t.term2id}: ${t2t.pvalue}`)
 		}
 		t1cDiv.append('div').html('<br>')
 	}
