@@ -241,13 +241,15 @@ function setRenderers(self) {
 				.on('mouseout', () => {
 					value_tr.style('background', 'white')
 				})
+				.on('click', e => {
+					if (e.target !== checkbox.node())
+						//not a checkbox
+						checkbox.node().checked = !checkbox.node().checked
+				})
 
-			const value_label = value_tr
-				.append('td')
-				.style('padding', '2px 5px')
-				.append('label')
+			const label_td = value_tr.append('td').style('padding', '2px 5px')
 
-			value_label
+			const checkbox = label_td
 				.append('input')
 				.attr('class', 'value_checkbox')
 				.attr('type', 'checkbox')
@@ -266,7 +268,7 @@ function setRenderers(self) {
 				})
 
 			const nlabel = d.samplecount ? ' (n=' + d.samplecount + ')' : ''
-			value_label
+			const span = label_td
 				.append('span')
 				.style('padding', '2px 5px')
 				.style('font-size', '.8em')
@@ -275,9 +277,7 @@ function setRenderers(self) {
 			const maxBarWidth = 100
 			const barWidth = maxBarWidth * d.bar_width_frac
 
-			const bar_td = value_tr.append('td').on('click', () => {
-				value_label.node().click()
-			})
+			const bar_td = value_tr.append('td')
 
 			bar_td
 				.append('div')
