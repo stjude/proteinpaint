@@ -79,22 +79,9 @@ class SummaryPlot {
 
 		for (const childType in this.components.plots) {
 			const chart = this.components.plots[childType]
-
-			// hide non-active charts first, so not to momentarily have two visible charts
-			if (chart.type != this.config.childType) {
-				this.dom.plotDivs[chart.type].style('display', 'none')
-			}
 		}
 
-		this.dom.plotDivs[config.childType].style('display', '')
-
-		// toggle header buttons
-		this.dom.chartToggles.each(function(d) {
-			d.active = d.childType == config.childType
-			select(this)
-				.style('background-color', d => (d.active ? '#cfe2f3' : 'white'))
-				.style('border-style', d => (d.active ? 'solid solid none' : 'none'))
-		})
+		this.render()
 	}
 
 	async setComponent(config) {
@@ -134,6 +121,7 @@ class SummaryPlot {
 export const summaryInit = getCompInit(SummaryPlot)
 
 function setRenderers(self) {
+	// console.log(self);
 	self.initUi = function(opts) {
 		const holder = opts.holder
 		try {
@@ -191,7 +179,11 @@ function setRenderers(self) {
 						childType: 'violin',
 						label: 'Violin',
 						disabled: d => false,
-						isVisible: () => self.config.term.term.type === 'integer' || self.config.term.term.type === 'float',
+						isVisible: () =>
+							self.config.term.term.type === 'integer' ||
+							self.config.term.term.type === 'float' ||
+							self.config.term2?.term.type === 'integer' ||
+							self.config.term2?.term.type === 'float',
 						getTw: tw => {
 							tw.q = { mode: 'continuous' }
 							return tw
@@ -245,11 +237,20 @@ function setRenderers(self) {
 						alert(`TODO: ${d.label}`)
 						return
 					}
-					const tw = JSON.parse(JSON.stringify(self.config.term))
+
+					const termKey =
+						(self.config.term?.q?.mode !== undefined && self.config.term?.q?.mode == 'continuous') ||
+						(!self.config.term2 && self.config.childType != 'violin')
+							? 'term'
+							: 'term2'
+
+					const termT = self.config[termKey]
+
+					const tw = JSON.parse(JSON.stringify(termT))
 					self.app.dispatch({
 						type: 'plot_edit',
 						id: self.id,
-						config: { childType: d.childType, term: d.getTw(tw) }
+						config: { childType: d.childType, [termKey]: d.getTw(tw) }
 					})
 				})
 
@@ -292,8 +293,8 @@ function setRenderers(self) {
 	}
 
 	self.render = function() {
-		for (const childType in self.components) {
-			const chart = self.components[childType]
+		for (const childType in self.components.plots) {
+			const chart = self.components.plots[childType]
 			// hide non-active charts first, so not to momentarily have two visible charts
 			if (chart.type != self.config.childType) {
 				self.dom.plotDivs[chart.type].style('display', 'none')
@@ -358,7 +359,7 @@ export async function getPlotConfig(opts, app) {
 		},
 		mayAdjustConfig(config, edits = {}) {
 			if (!edits.childType) {
-				if (config.term?.q?.mode == 'continuous') config.childType = 'violin'
+				if (config.term?.q?.mode == 'continuous' || config.term2?.q?.mode == 'continuous') config.childType = 'violin'
 				else config.childType = 'barchart'
 			}
 		}

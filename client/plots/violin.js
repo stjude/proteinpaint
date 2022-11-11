@@ -93,11 +93,20 @@ class ViolinPlot {
 				this.config.term.term.name + ` <span style="opacity:.6;font-size:1em;margin-left:10px;">Violin Plot</span>`
 			)
 
+		// console.log(this.config);
+
+		// if(this.config.term.type == 'float' || this.config.term.type == 'integer' && this.config.term2.term.type == 'categorical'){
 		this.data = await this.app.vocabApi.getViolinPlotData({
 			termid: this.config.term.term.id,
 			term2: this.config.term2,
 			filter: this.state.termfilter.filter
 		})
+		// } else {
+		// 	this.data = await this.app.vocabApi.getViolinPlotData({
+		// 		termid: this.config.term2,
+		// 		term2: this.config.term.term.id
+		// 	})
+		// }
 		if (this.data.error) throw this.data.error
 		/*
 		.min

@@ -88,7 +88,11 @@ export default function violinRenderer(self) {
 			const g = svgG.append('g')
 			g.call((isH ? axisTop : axisLeft)().scale(axisScale))
 
-			const lab = svgG.append('text').text(self.config.term.term.name)
+			let lab
+
+			if (self.config.term2?.term?.type == 'float' || self.config.term2?.term?.type == 'integer') {
+				lab = svgG.append('text').text(self.config.term2.term.name)
+			} else lab = svgG.append('text').text(self.config.term.term.name)
 
 			if (isH) {
 				lab

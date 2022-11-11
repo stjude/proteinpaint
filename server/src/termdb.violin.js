@@ -20,7 +20,7 @@ q={}
 export async function trigger_getViolinPlotData(q, res, ds) {
 	const term = ds.cohort.termdb.q.termjsonByOneid(q.termid)
 	if (!term) throw '.termid invalid'
-	if (term.type != 'integer' && term.type != 'float') throw 'termid type is not integer/float'
+	// if (term.type != 'integer' && term.type != 'float') throw 'termid type is not integer/float'
 
 	const getRowsParam = {
 		ds,
@@ -49,6 +49,7 @@ export async function trigger_getViolinPlotData(q, res, ds) {
 	}
 
 	const rows = termdbsql.get_rows(getRowsParam)
+	// console.log(rows);
 	/*
 	rows = {
 	  lst: [
@@ -66,11 +67,22 @@ export async function trigger_getViolinPlotData(q, res, ds) {
 	*/
 
 	// plot data to return to client
-	const result = {
-		min: rows.lst[0]?.key1,
-		max: rows.lst[0]?.key1,
-		plots: [], // each element is data for one plot: {label=str, values=[]}
-		pvalues: []
+	let result
+
+	if (term.type == 'integer' || term.type == 'float') {
+		result = {
+			min: rows.lst[0]?.key1,
+			max: rows.lst[0]?.key1,
+			plots: [], // each element is data for one plot: {label=str, values=[]}
+			pvalues: []
+		}
+	} else {
+		result = {
+			min: rows.lst[0]?.val2,
+			max: rows.lst[0]?.val2,
+			plots: [], // each element is data for one plot: {label=str, values=[]}
+			pvalues: []
+		}
 	}
 
 	const updatedResult = []
@@ -80,10 +92,16 @@ export async function trigger_getViolinPlotData(q, res, ds) {
 		if (term?.values?.[v.key1]?.uncomputable) {
 			// this value is uncomputable from term1, skip
 		} else {
-			// keep
-			updatedResult.push(v)
-			result.min = Math.min(result.min, v.key1)
-			result.max = Math.max(result.max, v.key1)
+			if (term.type == 'integer' || term.type == 'float') {
+				// keep
+				updatedResult.push(v)
+				result.min = Math.min(result.min, v.key1)
+				result.max = Math.max(result.max, v.key1)
+			} else {
+				updatedResult.push(v)
+				result.min = Math.min(result.min, v.val2)
+				result.max = Math.max(result.max, v.val2)
+			}
 		}
 	}
 
@@ -95,10 +113,14 @@ export async function trigger_getViolinPlotData(q, res, ds) {
 				// missing key2
 				throw 'key2 missing'
 			}
-			if (!key2_to_values.has(i.key2)) key2_to_values.set(i.key2, [])
-			key2_to_values.get(i.key2).push(i.key1)
+			if (term.type == 'integer' || term.type == 'float') {
+				if (!key2_to_values.has(i.key2)) key2_to_values.set(i.key2, [])
+				key2_to_values.get(i.key2).push(i.key1)
+			} else {
+				if (!key2_to_values.has(i.key1)) key2_to_values.set(i.key1, [])
+				key2_to_values.get(i.key1).push(i.val2)
+			}
 		}
-
 		for (const [key, values] of key2_to_values) {
 			result.plots.push({
 				label: (term2?.values?.[key]?.label || key) + ', n=' + values.length,
@@ -116,7 +138,11 @@ export async function trigger_getViolinPlotData(q, res, ds) {
 		})
 	}
 
-	await wilcoxon(term2, result)
+	if (term.type == 'integer' || term.type == 'float') {
+		await wilcoxon(term2, result)
+	} else {
+		await wilcoxon(term, result)
+	}
 
 	for (const plot of result.plots) {
 		// item: { label=str, values=[v1,v2,...] }
@@ -171,8 +197,8 @@ export function computeViolinData(values) {
 }
 
 //compute pvalues using wilcoxon rank sum test
-export async function wilcoxon(term2, result) {
-	if (!term2) {
+export async function wilcoxon(term, result) {
+	if (!term) {
 		return
 	}
 	const wilcoxInput = {} // { plot.label: {plot.values for term1: [], plot.values for term2: []} }

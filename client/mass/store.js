@@ -194,7 +194,7 @@ TdbStore.prototype.actions = {
 		this.state = this.copyMerge(this.toJson(this.state), action.state ? action.state : {}, this.replaceKeyVals)
 		for (const plot in this.state.plots) {
 			if (plot.mayAdjustConfig) {
-				console.log('mayAdjustConfig() used by mass store in dispatched action=app_refresh')
+				// console.log('mayAdjustConfig() used by mass store in dispatched action=app_refresh')
 				plot.mayAdjustConfig(plot, action.config)
 			}
 		}
@@ -227,7 +227,7 @@ TdbStore.prototype.actions = {
 		if (!('id' in action)) action.id = getId()
 		plot.id = action.id
 		if (plot.mayAdjustConfig) {
-			console.log('mayAdjustConfig() used by mass store in dispatched action=plot_create')
+			// console.log('mayAdjustConfig() used by mass store in dispatched action=plot_create')
 			plot.mayAdjustConfig(plot, action.config)
 		}
 		this.state.plots.push(plot)
