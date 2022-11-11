@@ -4,6 +4,7 @@ import { displaySampleTable } from './sampletable'
 import { fillbar } from '#dom/fillbar'
 import { make_densityplot } from '#dom/densityplot'
 import { rangequery_rglst } from './tk'
+import { filterInit, getNormalRoot } from '#filter'
 
 /*
 makes the "# samples" sub label on the left.
@@ -31,7 +32,7 @@ export function makeSampleLabel(data, tk, block, laby) {
 
 				const buttonrow = tk.menutip.d.append('div').style('margin', '10px')
 
-				menu_samples(buttonrow, data, tk, block)
+				menu_listSamples(buttonrow, data, tk, block)
 				// TODO new button "Customize variables", launch tree in submit_lst mode to update tk.mds.variant2samples.twLst
 			})
 	} else {
@@ -76,9 +77,7 @@ export function makeSampleFilterLabel(data, tk, block, laby) {
 			/////////////////////////////////////
 			arg.getCategoriesArguments = ['currentGeneNames=["' + block.usegm.name + '"]']
 		}
-		const { filterInit } = await import('#filter')
-		const filterApi = filterInit(arg)
-		filterApi.main(tk.filterObj)
+		filterInit(arg).main(tk.filterObj)
 	})
 }
 
@@ -92,30 +91,6 @@ async function mayShowSummary(tk, block) {
 		.append('div')
 		.text('Loading...')
 		.style('margin', '10px')
-
-	/*
-	if (tk.mds?.termdb?.vocabApi) {
-		// just a test!! to demo the vocab barchart api works with mds3 backend
-		// when barchart can be integrated, show barchart instead of using getSamples()
-
-		// make up term2 as geneVariant
-		const geneTerm = {
-			type: 'geneVariant',
-			isoform: block.usegm.isoform,
-			name: block.usegm.isoform
-		}
-		rangequery_rglst(tk, block, geneTerm) // creates geneTerm.rglst=[{}]
-
-		const arg = {
-			get: 'summary',
-			term: tk.mds.variant2samples.twLst[0],
-			term2: { term: geneTerm, q: {} }
-		}
-
-		//const chartSeriesData = await tk.mds.termdb.vocabApi.getNestedChartSeriesData(arg)
-		//console.log('test barchart', chartSeriesData)
-	}
-	*/
 
 	tk.mds
 		.getSamples({ isSummary: true })
@@ -219,25 +194,34 @@ function showSummary4oneTerm(termid, div, numbycategory, tk, block) {
 			}
 		}
 
+		const newTvs = {
+			type: 'tvs',
+			tvs: { term, values: [{ key: category }] }
+		}
+		let filter
+		if (tk.filterObj) {
+			// merge new tvs to current filter
+			filter = getNormalRoot({
+				type: 'tvslst',
+				join: 'and',
+				in: true,
+				lst: [tk.filterObj, newTvs]
+			})
+		} else {
+			filter = {
+				type: 'tvslst',
+				in: true,
+				join: '',
+				lst: [newTvs]
+			}
+		}
+
 		const tkarg = {
 			type: 'mds3',
 			dslabel: tk.dslabel,
 			filter0: tk.filter0,
 			showCloseLeftlabel: true,
-			filterObj: {
-				type: 'tvslst',
-				in: true,
-				join: '',
-				lst: [
-					{
-						type: 'tvs',
-						tvs: {
-							term,
-							values: [{ key: category }]
-						}
-					}
-				]
-			}
+			filterObj: filter
 		}
 		const tk2 = block.block_addtk_template(tkarg)
 		block.tk_load(tk2)
@@ -256,7 +240,7 @@ function showDensity4oneTerm(termid, div, density_data, tk, block) {
 	make_densityplot(div, density_data, () => {})
 }
 
-function menu_samples(buttonrow, data, tk, block) {
+function menu_listSamples(buttonrow, data, tk, block) {
 	// subject to change
 
 	buttonrow

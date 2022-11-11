@@ -263,7 +263,8 @@ async function getSampleData_gdc(q, termWrappers) {
 
 	const param = {
 		get: 'samples',
-		isoforms
+		isoforms,
+		filterObj: q.filter
 	}
 
 	const twLst = termWrappers.slice() // duplicate array to insert new ones, do not modify orignal
