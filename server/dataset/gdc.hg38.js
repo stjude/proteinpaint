@@ -1,5 +1,3 @@
-const got = require('got')
-
 /*
 validate_filter0
 isoform2ssm_query1_getvariant
