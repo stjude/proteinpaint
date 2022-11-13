@@ -36,7 +36,17 @@ const filters = get_filters(p)
 		}
 		*/
 
-const fields = ['cnv_id', 'chromosome', 'start_position', 'end_position', 'cnv_change', 'gene_level_cn']
+const fields = [
+	'cnv_id',
+	'chromosome',
+	'start_position',
+	'end_position',
+	'cnv_change',
+	'gene_level_cn',
+	'occurrence.case.primary_site',
+	'occurrence.case.case_id',
+	'occurrence.case.observation.sample.tumor_sample_uuid'
+]
 
 ;(async () => {
 	try {
