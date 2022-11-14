@@ -55,6 +55,7 @@ export async function init(ds, genome, _servconfig, app = null, basepath = null)
 		// as vcf header must be parsed to supply samples for variant2samples
 		await validate_query_snvindel(ds, genome)
 		await validate_query_svfusion(ds, genome)
+		await validate_query_geneCnv(ds, genome)
 
 		validate_variant2samples(ds)
 		validate_ssm2canonicalisoform(ds)
@@ -298,6 +299,19 @@ function sort_mclass(set) {
 	}
 	lst.sort((i, j) => j[1] - i[1])
 	return lst
+}
+
+async function validate_query_geneCnv(ds, genome) {
+	const q = ds.queries.geneCnv
+	if (!q) return
+	if (q.bygene) {
+		if (q.bygene.gdcapi) {
+			gdc.validate_query_geneCnv(ds)
+			// q.bygene.get() added
+		}
+	} else {
+		throw 'geneCnv.bygene missing'
+	}
 }
 
 async function validate_query_snvindel(ds, genome) {

@@ -594,6 +594,12 @@ module.exports = {
 				by: 'ssm_id',
 				gdcapi: ssmid2csq
 			}
+		},
+		geneCnv: {
+			// gene=level cnv with samples
+			bygene: {
+				gdcapi: true // see mds3.gdc.js for detailed implementations
+			}
 		}
 
 		/*

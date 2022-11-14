@@ -1,5 +1,6 @@
 const common = require('#shared/common')
 const got = require('got')
+const path = require('path')
 const { get_crosstabCombinations } = require('./mds3.variant2samples')
 
 /*
@@ -12,6 +13,7 @@ validate_query_snvindel_byrange
 validate_query_snvindel_byisoform
 	snvindel_byisoform
 validate_query_snvindel_byisoform_2 // protein_mutations, not in use
+validate_query_geneCnv
 validate_query_genecnv
 querySamples_gdcapi
 	flattenCaseByFields
@@ -342,6 +344,95 @@ function snvindel_addclass(m, consequence) {
 	}
 }
 
+export function validate_query_geneCnv(ds) {
+	const fields = [
+		'cnv_id',
+		'cnv_change',
+		'gene_level_cn',
+		'occurrence.case.case_id',
+		'occurrence.case.observation.sample.tumor_sample_uuid'
+	]
+
+	/*
+	opts{}
+		.gene=str
+	*/
+	ds.queries.geneCnv.bygene.get = async opts => {
+		const headers = getheaders(opts)
+		const tmp = await got(
+			path.join(apihost, 'cnvs?size=100000') +
+				'&fields=' +
+				fields.join(',') +
+				'&filters=' +
+				encodeURIComponent(JSON.stringify(getFilter(opts))),
+			{ method: 'GET', headers }
+		)
+		const re = JSON.parse(tmp.body)
+		if (!Array.isArray(re?.data?.hits)) throw 'geneCnv response body is not {data:hits[]}'
+		const lst = [] // collect list of cnv events to return
+		for (const hit of re.data.hits) {
+			// details to come
+		}
+		// returning blank array shouldn't break anything
+		return lst
+	}
+
+	function getFilter(p) {
+		const filters = {
+			op: 'and',
+			content: [{ op: '=', content: { field: 'consequence.gene.symbol', value: p.gene } }]
+		}
+
+		if (p.case_id) {
+			filters.content.push({ op: 'in', content: { field: 'cases.case_id', value: [p.case_id] } })
+		}
+
+		if (p.filter0) {
+			filters.content.push(typeof p.filter0 == 'string' ? JSON.parse(p.filter0) : p.filter0)
+		}
+		if (p.filterObj) {
+			filters.content.push(filter2GDCfilter(typeof p.filterObj == 'string' ? JSON.parse(p.filterObj) : p.filterObj))
+		}
+
+		return filters
+	}
+
+	/*
+	f{}
+		filter object
+	returns a GDC filter object
+	TODO support nested filter
+	*/
+	function filter2GDCfilter(f) {
+		// gdc filter
+		const obj = {
+			op: 'and',
+			content: []
+		}
+		if (!Array.isArray(f.lst)) throw 'filter.lst[] not array'
+		for (const item of f.lst) {
+			if (item.type != 'tvs') throw 'filter.lst[] item.type!="tvs"'
+			if (!item.tvs) throw 'item.tvs missing'
+			if (!item.tvs.term) throw 'item.tvs.term missing'
+			const f = {
+				op: 'in',
+				content: {
+					field: mayChangeCase2Cases(item.tvs.term.id),
+					value: item.tvs.values.map(i => i.key)
+				}
+			}
+			obj.content.push(f)
+		}
+		return obj
+	}
+}
+
+function mayChangeCase2Cases(s) {
+	const l = s.split('.')
+	if (l[0] == 'case') l[0] = 'cases'
+	return l.join('.')
+}
+
 function getheaders(q) {
 	// q is req.query{}
 	const h = { 'Content-Type': 'application/json', Accept: 'application/json' }
@@ -540,7 +631,8 @@ function flattenCaseByFields(sample, caseObj, term) {
 	}
 }
 
-export function validate_query_genecnv(ds) {
+// old function not-in-use: for old sample-less graphql api
+function validate_query_genecnv(ds) {
 	const api = ds.queries.genecnv.byisoform.gdcapi
 	if (!api.query) throw '.query missing for byisoform.gdcapi'
 	if (typeof api.query != 'string') throw '.query not string for byisoform.gdcapi'

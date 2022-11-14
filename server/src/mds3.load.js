@@ -204,6 +204,13 @@ async function load_driver(q, ds) {
 				result.skewer.push(...d)
 			}
 
+			if (ds.queries.geneCnv) {
+				// just a test; can allow gene-level cnv to be indicated as leftlabel
+				// or delete if decided not to show it in skewer tk
+				const lst = await query_geneCnv(q, ds)
+				result.skewer.push(...lst)
+			}
+
 			filter_data(q, result)
 
 			result.mclass2variantcount = summarize_mclass(result.skewer)
@@ -252,7 +259,15 @@ async function query_svfusion(q, ds) {
 	}
 	throw 'insufficient query parameters for svfusion'
 }
+async function query_geneCnv(q, ds) {
+	if (q.gene) {
+		if (!ds.queries.geneCnv.bygene) throw 'q.gene provided but geneCnv.bygene missing'
+		return await ds.queries.geneCnv.bygene.get(q)
+	}
+	throw 'insufficient query parameters for geneCnv'
+}
 
+// not in use
 async function query_genecnv(q, ds) {
 	if (q.isoform) {
 		if (ds.queries.genecnv.byisoform) {
