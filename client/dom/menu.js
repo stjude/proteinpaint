@@ -109,16 +109,19 @@ export class Menu {
 		return this
 	}
 
-	show(x, y, shift = true, down = true) {
-		this.prevX = x
-		this.prevY = y
+	show(_x, _y, shift = true, down = true, scroll = true) {
+		let x = _x
+		let y = _y
+		this.prevX = _x
+		this.prevY = _y
 
 		// show around a given point
 		document.body.appendChild(this.dnode)
-
 		this.d.style('display', 'block')
-		x = x + window.scrollX
-		y = y + window.scrollY
+		if (scroll) {
+			x = x + window.scrollX
+			y = y + window.scrollY
+		}
 		if (shift) {
 			x = x + this.offsetX
 			y = y + this.offsetY
@@ -137,7 +140,6 @@ export class Menu {
 		if (!down && height - y < middley && y - window.scrollY - p.height > 0)
 			this.d.style('top', null).style('bottom', height - y + 'px')
 		else this.d.style('top', y + 'px').style('bottom', null)
-
 		this.d.transition().style('opacity', 1)
 		return this
 	}
@@ -145,7 +147,10 @@ export class Menu {
 	showunder(dom, yspace) {
 		// route to .show()
 		const p = dom.getBoundingClientRect()
-		return this.show(p.left - this.offsetX, p.top + p.height + (yspace || 5) - this.offsetY)
+		const dnodeRect = this.dnode.getBoundingClientRect()
+		const x = p.left
+		const y = p.top + p.height + window.scrollY
+		return this.show(x, y + (yspace || 5), false, true, false)
 
 		/*
 		this.d
@@ -162,7 +167,8 @@ export class Menu {
 	showunderoffset(dom, yspace) {
 		// route to .show()
 		const p = dom.getBoundingClientRect()
-		return this.show(p.left, p.top + p.height + (yspace || 5), true, true)
+		const y = p.top + p.height + window.scrollY
+		return this.show(p.left, y + (yspace || 5), true, true, false)
 
 		/*
 		this.d
