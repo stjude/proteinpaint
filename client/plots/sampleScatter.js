@@ -84,7 +84,7 @@ class Scatter {
 			controls,
 			legendDiv,
 			tip: new Menu({ padding: '5px' }),
-			subtip: new Menu({ padding: '5px', offsetX: 170, offsetY: -34 })
+			termstip: new Menu({ padding: '5px', offsetX: 170, offsetY: -34 })
 		}
 
 		this.settings = {}
@@ -143,7 +143,7 @@ class Scatter {
 		this.lassoReset()
 		this.updateGroupsButton()
 		this.dom.tip.hide()
-		this.dom.subtip.hide()
+		this.dom.termstip.hide()
 	}
 
 	// creates an opts object for the vocabApi.someMethod(),
@@ -456,12 +456,14 @@ function setRenderers(self) {
 				.on('draw', lasso_draw)
 				.on('end', lasso_end)
 		function lasso_start(event) {
-			self.lasso
-				.items()
-				.attr('d', c => getShape(self, c, 1 / 2))
-				.style('fill-opacity', c => ('sampleId' in c || self.settings.showRef ? 0.5 : 0))
-				.classed('not_possible', true)
-				.classed('selected', false)
+			if (self.lassoOn) {
+				self.lasso
+					.items()
+					.attr('d', c => getShape(self, c, 1 / 2))
+					.style('fill-opacity', c => ('sampleId' in c || self.settings.showRef ? 0.5 : 0))
+					.classed('not_possible', true)
+					.classed('selected', false)
+			}
 		}
 
 		function lasso_draw(event) {
@@ -521,8 +523,8 @@ function setRenderers(self) {
 				.attr('class', 'sja_menuoption sja_sharp_border')
 				.text(`List ${self.selectedItems.length} samples`)
 				.on('click', event => {
-					showTable({ name: 'Selected samples', items: self.selectedItems }, event.clientX, event.clientY)
 					self.dom.tip.hide()
+					showTable({ name: 'Selected samples', items: self.selectedItems }, event.clientX, event.clientY)
 				})
 
 			menuDiv
@@ -567,7 +569,7 @@ function setRenderers(self) {
 			.insert('div')
 			.style('display', display)
 			.style('margin', '20px')
-		icon_functions['lasso'](lassoDiv, { handler: toggle_lasso, enabled: false })
+		icon_functions['lasso'](lassoDiv, { handler: toggle_lasso, enabled: self.lassoOn })
 		self.dom.groupDiv = toolsDiv
 			.insert('div')
 			.style('display', display)
@@ -677,9 +679,7 @@ function setRenderers(self) {
 				.style('float', 'right')
 				.html('&nbsp;&nbsp;›')
 			row.on('click', e => {
-				self.dom.tip.hide()
-				self.dom.tip.clear()
-				self.dom.subtip.hide()
+				self.dom.tip.clear().hide()
 				showGroupMenu(event, group)
 			})
 		}
@@ -741,8 +741,8 @@ function setRenderers(self) {
 			.attr('class', 'sja_menuoption sja_sharp_border')
 			.text(`List ${group.items.length} samples`)
 			.on('click', e => {
-				showTable(group, event.clientX, event.clientY)
 				self.dom.tip.hide()
+				showTable(group, event.clientX, event.clientY)
 			})
 
 		if (self.state.allowedTermTypes.includes('survival')) {
@@ -807,8 +807,8 @@ function setRenderers(self) {
 			} else row.push({ value: '' })
 			rows.push(row)
 		}
-		self.dom.subtip.clear()
-		const headerDiv = self.dom.subtip.d.append('div')
+		self.dom.tip.clear()
+		const headerDiv = self.dom.tip.d.append('div')
 		headerDiv
 			.insert('div')
 			.html('&nbsp;' + group.name)
@@ -830,8 +830,16 @@ function setRenderers(self) {
 				})
 				self.app.dispatch({ type: 'plot_edit', id: self.id, config: { groups: self.config.groups } })
 			})
-		renderTable({ rows, columns, div: self.dom.subtip.d })
-		self.dom.subtip.show(x, y)
+		renderTable({
+			rows,
+			columns,
+			div: self.dom.tip.d,
+			deleteCallback: i => {
+				group.items = group.items.slice(i)
+				showTable(group, x, y)
+			}
+		})
+		self.dom.tip.show(x, y)
 
 		function formatCell(column, name = 'value') {
 			let dict = {}
@@ -862,6 +870,7 @@ function setInteractivity(self) {
 			self.dom.tip.show(event.clientX, event.clientY)
 		} else {
 			self.dom.tip.hide()
+			self.dom.termstip.hide()
 		}
 	}
 
@@ -1023,18 +1032,18 @@ function getGroupvsOthersOverlay(group) {
 }
 
 async function showTermsTree(self, div, callback, state = { tree: { usecase: { detail: 'term' } } }) {
-	self.dom.subtip.clear()
-	self.dom.subtip.showunderoffset(div.node())
+	self.dom.termstip.clear()
+	self.dom.termstip.showunderoffset(div.node())
 	const termdb = await import('../termdb/app')
 	termdb.appInit({
-		holder: self.dom.subtip.d,
+		holder: self.dom.termstip.d,
 		vocabApi: self.app.vocabApi,
 		state,
 		tree: {
 			click_term: term => {
 				callback(term)
 				self.dom.tip.hide()
-				self.dom.subtip.hide()
+				self.dom.termstip.hide()
 			}
 		}
 	})

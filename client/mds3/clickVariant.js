@@ -77,13 +77,13 @@ async function click2sunburst(d, tk, block, tippos) {
 		click_listbutton: (x, y) => {
 			variant_details({ mlst: d.mlst, tk, block, tippos })
 		},
-		click_ring: (event, d2) => {
+		click_ring: async (event, d2) => {
 			/* hardcoded attributes from d2.data{}, due to how stratinput structures the data
 			.id0, v0 should exist for all levels
 			.id1, v1 should exist for 2nd and next levels... etc
 			add the key/values to tid2value{}
 			*/
-			tk.itemtip.clear().show(event.clientX - 10, event.clientY - 10)
+			tk.itemtip.clear()
 			const arg = {
 				mlst: d.mlst,
 				tk,
@@ -109,10 +109,23 @@ async function click2sunburst(d, tk, block, tippos) {
 			})
 			arg.mlst[0].occurrence = d2.value
 
+			const x = event.clientX
+			const y = event.clientY
+			const width = window.innerWidth
+			const height = window.innerHeight
+			const middlex = width / 2
+			const middley = height / 2
+
+			arg.max_width = width - x > middlex ? width - x : x
+			arg.max_height = height - y > middley ? height - y : y
+			arg.max_width = arg.max_width - 150 + 'px'
+			arg.max_height = arg.max_height - 150 + 'px'
+
 			/* do not call variant_details() as no need to show info on variants
 			only need to show sample display
 			*/
-			init_sampletable(arg)
+			await init_sampletable(arg)
+			tk.itemtip.show(x, y, false, false)
 		}
 	}
 	if (d.aa) {
