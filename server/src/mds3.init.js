@@ -613,7 +613,14 @@ function mayLimitSamples(param, allSamples, ds) {
 }
 
 function param2filter(param, ds) {
-	if (param.filterObj) return param.filterObj
+	if (param.filterObj) {
+		if (!Array.isArray(param.filterObj.lst)) throw 'filterObj.lst is not array'
+		if (param.filterObj.lst.length == 0) {
+			// blank filter, do not return obj as that will break get_samples()
+			return null
+		}
+		return param.filterObj
+	}
 	if (param.tid2value) {
 		if (typeof param.tid2value != 'object') throw 'q.tid2value{} not object'
 		return tid2value2filter(param.tid2value, ds)
