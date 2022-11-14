@@ -198,7 +198,7 @@ function setRenderers(self) {
 						childType: 'table',
 						label: 'Crosstab - in development',
 						disabled: d => true,
-						isVisible: () => true,
+						isVisible: () => false,
 						active: false
 					},
 					{
@@ -258,36 +258,6 @@ function setRenderers(self) {
 					})
 				})
 
-			// // Edit global filter for local
-			// self.dom.localFilterDiv = self.dom.paneTitleDiv
-			// 	.append('div')
-			// 	.style('display', 'inline-block')
-			// 	.append('button')
-			// 	.style('margin-left', '10px')
-			// 	.text('Edit Filter')
-			// 	.on('click', (event, d) => {
-			// 		self.renderFilter(d)
-			// 	})
-
-			// self.dom.localUndoDiv = self.dom.paneTitleDiv
-			// 	.append('div')
-			// 	.style('display', 'inline-block')
-			// 	.append('button')
-			// 	.style('margin-left', '10px')
-			// 	.html('&#8634;')
-			// 	.on('click', (event, d) => {
-
-			// 	})
-
-			// self.dom.localRedoDiv = self.dom.paneTitleDiv
-			// 	.append('div')
-			// 	.style('display', 'inline-block')
-			// 	.append('button')
-			// 	.html('&#8635;')
-			// 	.on('click', (event, d) => {
-
-			// })
-
 			// Placeholder for recover component
 			self.dom.localRecoverDiv = self.dom.paneTitleDiv.append('div').style('display', 'inline-block')
 		} catch (e) {
@@ -309,9 +279,10 @@ function setRenderers(self) {
 			if (!d) return
 			d.active = d.childType == self.config.childType
 			// this === DOM element
-			select(this).style('display', d => (d.isVisible() ? '' : 'none'))
-			//.style('background-color', d => (d.active ? '#cfe2f3' : 'white'))
-			//.style('border-style', d => (d.active ? 'solid solid none' : 'none none solid'))
+			select(this)
+				.style('display', d => (d.isVisible() ? '' : 'none'))
+				.style('background-color', d => (d.active ? '#cfe2f3' : 'white'))
+				.style('border-style', d => (d.active ? 'solid solid none' : 'none'))
 		})
 
 		self.dom.plotDivs[self.config.childType].style('display', '')
