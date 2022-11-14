@@ -145,7 +145,9 @@ const ds = {
 				],
 				highlightCohortBy: 'cssSelector',
 				htmlinfo: cohorthtmltable
-			}
+			},
+
+			dataDownloadFailHelpLink: 'https://university.stjude.cloud/docs/visualization-community/data-download/'
 		},
 		scatterplots: {
 			plots: [
