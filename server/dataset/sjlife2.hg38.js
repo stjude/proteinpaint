@@ -818,6 +818,9 @@ module.exports = {
 				highlightCohortBy: 'cssSelector',
 				htmlinfo: cohorthtmltable
 			},
+
+			dataDownloadFailHelpLink: 'https://university.stjude.cloud/docs/visualization-community/data-download/',
+
 			helpPages: [
 				// to use for help button in MASS UI
 				// array of url links to help pages

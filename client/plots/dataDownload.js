@@ -56,6 +56,8 @@ class DataDownload {
 			throw `No plot with id='${this.id}' found. Did you set this.id before this.api = getComponentApi(this)?`
 		}
 
+		this.termdbConfig = appState.termdbConfig
+
 		return {
 			vocab: appState.vocab,
 			activeCohort: appState.activeCohort,
@@ -103,7 +105,14 @@ class DataDownload {
 			this.dom.submitDiv.style('display', '')
 			return false
 		} else {
-			this.dom.titleDiv.style('color', '#e44').html(this.state.tokenVerificationMessage || 'Requires login')
+			this.dom.titleDiv
+				.style('color', '#e44')
+				.html(
+					(this.state.tokenVerificationMessage || 'Requires login') +
+						(this.termdbConfig.dataDownloadFailHelpLink
+							? ' <a href=' + this.termdbConfig.dataDownloadFailHelpLink + ' target=_blank>Tutorial</a>'
+							: '')
+				)
 			this.dom.terms.style('display', 'none')
 			this.dom.addBtn.style('display', 'none')
 			this.dom.submitDiv.style('display', 'none')

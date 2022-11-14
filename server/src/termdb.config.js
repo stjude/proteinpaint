@@ -31,7 +31,8 @@ export function make(q, res, ds) {
 		supportedChartTypes: tdb.q.getSupportedChartTypes(q.embedder),
 		allowedTermTypes: getAllowedTermTypes(ds),
 		termMatch2geneSet: tdb.termMatch2geneSet,
-		massSessionDuration: serverconfig.features.massSessionDuration || 30
+		massSessionDuration: serverconfig.features.massSessionDuration || 30,
+		dataDownloadFailHelpLink: tdb.dataDownloadFailHelpLink
 	}
 
 	// optional attributes
