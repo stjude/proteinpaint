@@ -198,46 +198,58 @@ function showSummary4oneTerm(termid, div, numbycategory, tk, block) {
 			type: 'tvs',
 			tvs: { term, values: [{ key: category }] }
 		}
-		let filter
-		if (tk.filterObj) {
-			// merge new tvs to current filter
-			filter = getNormalRoot({
-				type: 'tvslst',
-				join: 'and',
-				in: true,
-				lst: [tk.filterObj, newTvs]
-			})
-		} else {
-			filter = {
-				type: 'tvslst',
-				in: true,
-				join: '',
-				lst: [newTvs]
-			}
-		}
 
 		const tkarg = {
 			type: 'mds3',
 			dslabel: tk.dslabel,
 			filter0: tk.filter0,
 			showCloseLeftlabel: true,
-			filterObj: filter
+			filterObj: getNewFilter(tk, newTvs)
 		}
 		const tk2 = block.block_addtk_template(tkarg)
 		block.tk_load(tk2)
-
-		/*
-		const div = tk.menutip.d.append('div').style('margin', '2px')
-		const wait = div.append('div').text('Loading...')
-		const samples = await tk.mds.getSamples({ tid2value: { [termid]: category } })
-		wait.remove()
-		await displaySampleTable(samples, { div, tk, block })
-		*/
 	}
 }
 
+function getNewFilter(tk, tvs) {
+	if (tk.filterObj) {
+		// merge new tvs to current filter
+		return getNormalRoot({
+			type: 'tvslst',
+			join: 'and',
+			in: true,
+			lst: [tk.filterObj, tvs]
+		})
+	}
+	// create new filter
+	return {
+		type: 'tvslst',
+		in: true,
+		join: '',
+		lst: [tvs]
+	}
+}
+
+// will be nice if the data computing and rendering can both be replaced by violin
 function showDensity4oneTerm(termid, div, density_data, tk, block) {
-	make_densityplot(div, density_data, () => {})
+	make_densityplot(div, density_data, async range => {
+		// a range is selected
+		tk.menutip.clear()
+		const term = await tk.mds.termdb.vocabApi.getterm(termid)
+		const tvs = {
+			type: 'tvs',
+			tvs: { term, ranges: [{ start: range.range_start, stop: range.range_end }] }
+		}
+		const tkarg = {
+			type: 'mds3',
+			dslabel: tk.dslabel,
+			filter0: tk.filter0,
+			showCloseLeftlabel: true,
+			filterObj: getNewFilter(tk, tvs)
+		}
+		const tk2 = block.block_addtk_template(tkarg)
+		block.tk_load(tk2)
+	})
 }
 
 function menu_listSamples(buttonrow, data, tk, block) {
