@@ -5,6 +5,7 @@ import { Menu } from '#dom/menu'
 export function getHandler(self) {
 	return {
 		showEditMenu(div) {
+			div.style('padding', '4px')
 			const group2 = self.q.groups[1]
 			if (group2.name === 'Others') {
 				showSamples()
