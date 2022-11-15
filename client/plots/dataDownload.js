@@ -110,11 +110,8 @@ class DataDownload {
 				.html(
 					(this.state.tokenVerificationMessage || 'Requires login') +
 						(this.termdbConfig.dataDownloadFailHelpLink
-							? '. For login/access help, please refer <a href=' +
-							  this.termdbConfig.dataDownloadFailHelpLink +
-							  ' target=_blank>here</a>' +
-							  '.'
-							: '.')
+							? ' <a href=' + this.termdbConfig.dataDownloadFailHelpLink + ' target=_blank>Tutorial</a>'
+							: '')
 				)
 			this.dom.terms.style('display', 'none')
 			this.dom.addBtn.style('display', 'none')

@@ -94,20 +94,19 @@ class ViolinPlot {
 				this.config.term.term.name + ` <span style="opacity:.6;font-size:1em;margin-left:10px;">Violin Plot</span>`
 			)
 
-		// console.log(this.config);
+		const arg = { filter: this.state.termfilter.filter }
+		if (this.config.term.type == 'float' || this.config.term.type == 'integer') {
+			arg.termid = this.config.term.id
+			arg.divideTw = this.config.term2
+		} else if (this.config.term2?.term?.type == 'float' || this.config.term2?.term?.type == 'integer') {
+			arg.termid = this.config.term2.id
+			arg.divideTw = this.config.term
+		} else {
+			throw 'both term1 and term2 are not numeric/continuous'
+		}
 
-		// if(this.config.term.type == 'float' || this.config.term.type == 'integer' && this.config.term2.term.type == 'categorical'){
-		this.data = await this.app.vocabApi.getViolinPlotData({
-			termid: this.config.term.term.id,
-			term2: this.config.term2,
-			filter: this.state.termfilter.filter
-		})
-		// } else {
-		// 	this.data = await this.app.vocabApi.getViolinPlotData({
-		// 		termid: this.config.term2,
-		// 		term2: this.config.term.term.id
-		// 	})
-		// }
+		this.data = await this.app.vocabApi.getViolinPlotData(arg)
+
 		if (this.data.error) throw this.data.error
 		/*
 		.min

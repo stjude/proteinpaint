@@ -6,7 +6,8 @@ const serverconfig = require('./serverconfig')
 const lines2R = require('./lines2R')
 const path = require('path')
 const utils = require('./utils')
-import { median } from '../../client/dom/median'
+import { median } from '../../server/shared/median'
+const { getData } = require('./termdb.matrix')
 
 /*
 q={}
@@ -18,132 +19,83 @@ q={}
 	else generate only one plot
 .filter={}
 */
-export async function trigger_getViolinPlotData(q, res, ds) {
+export async function trigger_getViolinPlotData(q, res, ds, genome) {
+	// console.log(23, q)
 	const term = ds.cohort.termdb.q.termjsonByOneid(q.termid)
+	// console.log(25, term)
+
 	if (!term) throw '.termid invalid'
-	// if (term.type != 'integer' && term.type != 'float') throw 'termid type is not integer/float'
 
-	const getRowsParam = {
-		ds,
-		filter: q.filter,
-		term1_id: q.termid,
-		term1_q: { mode: 'continuous' } // hardcode to retrieve numeric values for violin/boxplot computing on this term
+	const twLst = [{ id: q.termid, term, q: { mode: 'continuous' } }]
+	// console.log(30, twLst)
+
+	let divideTw
+
+	if (q.divideTw) {
+		typeof q.divideTw == 'string' ? (divideTw = JSON.parse(q.divideTw)) : (divideTw = q.divideTw)
+		twLst.push(divideTw)
 	}
-	// term2 is optional
-	let term2
+	// console.log(38, divideTw)
 
-	if (q.term2) {
-		if (typeof q.term2 == 'string') q.term2 = JSON.parse(decodeURIComponent(q.term2)) // look into why term2 is not parsed beforehand
-		if (!q.term2.id) {
-			if (q.term2.term.type != 'samplelst') throw 'term2.id missing'
-			else {
-				getRowsParam.term2 = q.term2.term
-				getRowsParam.term2_q = q.term2.q
-			}
+	const data = await getData({ terms: twLst, filter: q.filter }, ds, genome)
+	if (data.error) throw data.error
+	// console.log(42, data)
+
+	let min = Number.MAX_VALUE,
+		max = -Number.MAX_VALUE
+
+	let key2values = new Map()
+
+	for (const [c, v] of Object.entries(data.samples)) {
+		// console.log(50, v)
+		// console.log(51, v[term.id].value);
+		// console.log(52,v[divideTw.id].value);
+		// console.log(52, term.values[v[term.id].value].uncomputable);
+		// console.log(53,term.values[v[divideTw.id].value]);
+		if (term.values[(v[term.id]?.value)]?.uncomputable || !v[term.id]?.value) {
+			//skip these values
+			continue
+		}
+		if (q.divideTw) {
+			if (!key2values.has(v[divideTw.id]?.value)) key2values.set(v[divideTw.id]?.value, [])
+			key2values.get(v[divideTw.id]?.value).push(v[term.id]?.value)
 		} else {
-			term2 = ds.cohort.termdb.q.termjsonByOneid(q.term2.id)
-			if (!term2) throw '.term2.id invalid'
-			getRowsParam.term2_id = q.term2.id
-			getRowsParam.term2_q = q.term2.q
+			if (!key2values.has('All samples')) key2values.set('All samples', [])
+			key2values.get('All samples').push(v[term.id]?.value)
 		}
-		if (typeof q.term2.q != 'object') throw 'term2.q{} missing'
-	}
 
-	const rows = termdbsql.get_rows(getRowsParam)
-
-	/*
-	rows = {
-	  lst: [
-	  	{
-			sample=int
-			key0,val0,
-			key1,val1, // key1 and val1 are the same, with numeric values from term1
-			key2,val2
-				// if q.term2 is given, key2 is the group/bin label based on term2, using which the samples will be divided
-				// if q.term2 is missing, key2 is empty string and won't divide into groups
-		},
-		...
-	  ]
-	}
-	*/
-
-	// plot data to return to client
-	let result
-
-	if (term.type == 'integer' || term.type == 'float') {
-		result = {
-			min: rows.lst[0]?.key1,
-			max: rows.lst[0]?.key1,
-			plots: [], // each element is data for one plot: {label=str, values=[]}
-			pvalues: []
-		}
-	} else {
-		result = {
-			min: rows.lst[0]?.val2,
-			max: rows.lst[0]?.val2,
-			plots: [], // each element is data for one plot: {label=str, values=[]}
-			pvalues: []
+		if (term.type == 'float' || (term.type == 'integer' && v[term.id])) {
+			min = Math.min(min, v[term.id].value)
+			max = Math.max(max, v[term.id].value)
 		}
 	}
+	// console.log(63, key2values)
 
-	const updatedResult = []
-	for (const v of rows.lst) {
-		// TODO: db terms table for numeric value should not have
-		// terms.values{} entries for computable values
-		if (term?.values?.[v.key1]?.uncomputable || q.term2?.term?.values?.[v.key2]?.uncomputable) {
-			// this value is uncomputable from term1, skip
-		} else {
-			if (term.type == 'integer' || term.type == 'float') {
-				// keep
-				updatedResult.push(v)
-				result.min = Math.min(result.min, v.key1)
-				result.max = Math.max(result.max, v.key1)
-			} else {
-				updatedResult.push(v)
-				result.min = Math.min(result.min, v.val2)
-				result.max = Math.max(result.max, v.val2)
-			}
-		}
+	const result = {
+		min: min,
+		max: max,
+		plots: [], // each element is data for one plot: {label=str, values=[]}
+		pvalues: []
 	}
 
-	if (q.term2) {
-		const key2_to_values = new Map() // k: key2 value, v: list of term1 values
-
-		for (const i of updatedResult) {
-			if (i.key2 == undefined || i.key2 == null) {
-				// missing key2
-				throw 'key2 missing'
-			}
-			if (term.type == 'integer' || term.type == 'float') {
-				if (!key2_to_values.has(i.key2)) key2_to_values.set(i.key2, [])
-				key2_to_values.get(i.key2).push(i.key1)
-			} else {
-				if (!key2_to_values.has(i.key1)) key2_to_values.set(i.key1, [])
-				key2_to_values.get(i.key1).push(i.val2)
-			}
-		}
-		for (const [key, values] of key2_to_values) {
+	for (const [key, values] of key2values) {
+		if (q.divideTw) {
 			result.plots.push({
-				label: (term2?.values?.[key]?.label || key) + ', n=' + values.length,
+				label: (divideTw.term?.values[key]?.label || key) + ', n=' + values.length,
+				values,
+				plotValueCount: values.length
+			})
+		} else {
+			result.plots.push({
+				label: 'All samples, n=' + values.length,
 				values,
 				plotValueCount: values.length
 			})
 		}
-	} else {
-		// all numeric values go into one array
-		const values = updatedResult.map(i => i.key1)
-		result.plots.push({
-			label: 'All samples, n=' + values.length,
-			values,
-			plotValueCount: values.length
-		})
 	}
 
-	if (term.type == 'integer' || term.type == 'float') {
-		await wilcoxon(term2, result)
-	} else {
-		await wilcoxon(term, result)
-	}
+	// plot data to return to client
+	await wilcoxon(divideTw, result)
 
 	for (const plot of result.plots) {
 		// item: { label=str, values=[v1,v2,...] }
@@ -178,15 +130,15 @@ export async function trigger_getViolinPlotData(q, res, ds) {
 	res.send(result)
 }
 
-// compute bins using d3
-// need unit test!!!
+// // compute bins using d3
+// // need unit test!!!
 export function computeViolinData(values) {
 	let min = Math.min(...values),
 		max = Math.max(...values)
 
 	const yScale = scaleLinear().domain([min, max])
 
-	let ticksCompute // purpuse??
+	let ticksCompute
 	if (values.length < 50) {
 		ticksCompute = 5
 	} else {
@@ -201,7 +153,7 @@ export function computeViolinData(values) {
 	return binBuilder(values)
 }
 
-//compute pvalues using wilcoxon rank sum test
+// //compute pvalues using wilcoxon rank sum test
 export async function wilcoxon(term, result) {
 	if (!term) {
 		return

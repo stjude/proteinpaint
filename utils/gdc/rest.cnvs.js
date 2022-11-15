@@ -25,61 +25,26 @@ const filters = get_filters(p)
 
 /*
 {
-	"data": {
-		"hits": [
-
-		// Loss event
-
-		{
-			"id": "b4cd1937-2fc4-551b-b119-64b901ae1cf0",
+			"id": "e4d3e9b9-4abf-5f84-93c8-925224312213",
+			"start_position": 18196784,
 			"gene_level_cn": true,
 			"cnv_change": "Loss",
-			"occurrence": [
-				{
-					"case": {
-						"primary_site": "Liver and intrahepatic bile ducts",
-						"case_id": "41b97b11-acaa-4fbc-b3b0-0abc1bcac13b"
-					}
-				}, {
-					"case": {
-						"primary_site": "Other and ill-defined sites in lip, oral cavity and pharynx",
-						"case_id": "2c985b30-0f8f-4c8f-a924-cc6aad7ebf0d"
-					}
-				},
-				... more cases ...
-			]
-		},
-
-		// Gain event
-
-		{
-			"id": "b4cd1937-2fc4-551b-b119-64b901ae1cf0",
-			"gene_level_cn": true,
-			"cnv_change": "Gain",
-			"occurrence": [
-				{
-					"case": {
-						"primary_site": "Liver and intrahepatic bile ducts",
-						"case_id": "41b97b11-acaa-4fbc-b3b0-0abc1bcac13b"
-					}
-				}, {
-					"case": {
-						"primary_site": "Other and ill-defined sites in lip, oral cavity and pharynx",
-						"case_id": "2c985b30-0f8f-4c8f-a924-cc6aad7ebf0d"
-					}
-				},
-				... more cases ...
-			]
+			"ncbi_build": "GRCh38",
+			"chromosome": "19",
+			"cnv_id": "e4d3e9b9-4abf-5f84-93c8-925224312213",
+			"end_position": 18204074
 		}
-*/
+		*/
 
 const fields = [
 	'cnv_id',
-	//'chromosome', 'start_position', 'end_position',
+	'chromosome',
+	'start_position',
+	'end_position',
 	'cnv_change',
 	'gene_level_cn',
-	'occurrence.case.case_id',
 	'occurrence.case.primary_site',
+	'occurrence.case.case_id',
 	'occurrence.case.observation.sample.tumor_sample_uuid'
 ]
 
@@ -87,32 +52,19 @@ const fields = [
 	try {
 		const headers = { 'Content-Type': 'application/json', Accept: 'application/json' }
 		if (p.token) headers['X-Auth-Token'] = p.token
-
-		const url =
+		const response = await got(
 			'https://api.gdc.cancer.gov/cnvs?size=10000000&fields=' +
-			fields.join(',') +
-			'&filters=' +
-			encodeURIComponent(JSON.stringify(filters))
-
-		const response = await got(url, { method: 'GET', headers })
+				fields.join(',') +
+				'&filters=' +
+				encodeURIComponent(JSON.stringify(filters)),
+			{ method: 'GET', headers }
+		)
 
 		const re = JSON.parse(response.body)
-
-		let totalevents = 0
-
 		for (const hit of re.data.hits) {
-			if (!hit.cnv_id) throw 'hit.cnv_id missing'
-			if (typeof hit.cnv_change != 'string') throw 'hit.cnv_change not string'
-			if (typeof hit.gene_level_cn != 'boolean') throw 'hit.gene_level_cn not boolean'
-			if (!Array.isArray(hit.occurrence)) throw 'hit.occurrence[] missing'
-			for (const acase of hit.occurrence) {
-				if (!acase.case) throw 'hit.occurrence[].case{} missing'
-				if (!acase.case_id) throw 'case.case_id missing'
-				console.log(`${hit.cnv_change}\t${hit.gene_level_cn}\t${acase.case_id}`)
-				totalevents++
-			}
+			console.log(`${hit.chromosome} ${hit.start_position} ${hit.end_position} ${hit.cnv_change}`)
 		}
-		console.log(totalevents, 'events total')
+		console.log(re.data.hits.length, 'cnv total')
 	} catch (error) {
 		console.log(error)
 	}
@@ -126,8 +78,6 @@ function get_parameter() {
 		const [k, v] = process.argv[i].split('=')
 		p[k] = v
 	}
-
-	if (!p.gene) p.gene = 'AKT1'
 
 	/*
 	if (!p.position) {
@@ -156,7 +106,7 @@ function get_filters(p) {
 	}
 
 	if (p.gene) {
-		filters.content.push({ op: '=', content: { field: 'consequence.gene.symbol', value: p.gene } })
+		filter.content.push({ op: '=', content: { field: 'consequence.gene.symbol', value: p.gene } })
 	}
 
 	if (p.case_id) {

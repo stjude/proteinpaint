@@ -549,12 +549,12 @@ class TermdbVocab extends Vocab {
 			'dslabel=' + this.vocab.dslabel,
 			'termid=' + arg.termid
 		]
-		if (arg.term2) {
-			lst.push('term2=' + encodeURIComponent(JSON.stringify(arg.term2)))
-		}
 		if (arg.filter) {
 			const filterRoot = getNormalRoot(arg.filter)
 			lst.push('filter=' + encodeURIComponent(JSON.stringify(filterRoot)))
+		}
+		if (arg.divideTw) {
+			lst.push('divideTw=' + encodeURIComponent(JSON.stringify(arg.divideTw)))
 		}
 		return await dofetch3('termdb?' + lst.join('&'))
 	}
