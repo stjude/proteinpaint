@@ -59,12 +59,12 @@ export async function renderTable({
 	// append empty div element to header to adjust columns
 	divH
 		.append('div')
-		.attr('class', 'sjpp_grid_item')
+		.attr('class', 'sjpp_grid_item sjpp_grid_header')
 		.text('#')
 	if (deleteCallback)
 		divH
 			.append('div')
-			.attr('class', 'sjpp_grid_item')
+			.attr('class', 'sjpp_grid_item sjpp_grid_header')
 			.text('Delete')
 
 	// header values
@@ -72,10 +72,7 @@ export async function renderTable({
 		divH
 			.append('div')
 			.text(c.label)
-			.attr('class', 'sjpp_grid_item')
-			.style('font-family', 'Arial')
-			.style('font-size', '1em')
-			.style('opacity', 0.5)
+			.attr('class', 'sjpp_grid_item sjpp_grid_header')
 	}
 
 	// sample values

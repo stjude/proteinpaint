@@ -1137,6 +1137,12 @@ h2 {
     background: #fcfcca !important; 
 }
 
+.sjpp_grid_header {
+    font-family: 'Arial';
+    font-size: 1em;
+    opacity: 0.5;
+}
+
 .sjpp_grid_item {
     padding: 5px;
     font-size: 1em;
