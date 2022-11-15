@@ -5,8 +5,8 @@ import { Menu } from '#dom/menu'
 export function getHandler(self) {
 	return {
 		showEditMenu(div) {
-			const group2 = self.q.groups[1].name
-			if (group2 === 'Others') {
+			const group2 = self.q.groups[1]
+			if (group2.name === 'Others') {
 				showSamples()
 
 				function showSamples() {
@@ -20,6 +20,7 @@ export function getHandler(self) {
 						columns,
 						div,
 						deleteCallback: i => {
+							group2.values.splice(i, 1)
 							values.splice(i, 1)
 							showSamples()
 							self.runCallback()
