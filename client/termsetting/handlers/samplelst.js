@@ -22,6 +22,7 @@ export function getHandler(self) {
 						deleteCallback: i => {
 							values.splice(i, 1)
 							showSamples()
+							self.runCallback()
 						}
 					})
 				}
