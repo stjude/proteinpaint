@@ -816,12 +816,13 @@ function setRenderers(self) {
 			.style('display', 'inline-block')
 			.style('font-weight', 'bold')
 			.style('margin-top', '5px')
-		headerDiv
-			.insert('div')
+		const tableDiv = self.dom.tip.d.append('div')
+		const footerDiv = self.dom.tip.d
+			.append('div')
 			.style('display', 'inline-block')
 			.style('float', 'right')
 			.append('button')
-			.style('margin-right', '10px')
+			.style('margin', '10px 20px 0 0')
 			.text('Add to a group')
 			.on('click', e => {
 				self.config.groups.push({
@@ -834,7 +835,7 @@ function setRenderers(self) {
 		renderTable({
 			rows,
 			columns,
-			div: self.dom.tip.d,
+			div: tableDiv,
 			deleteCallback: i => {
 				group.items.splice(i, 1)
 				showTable(group, x, y)
