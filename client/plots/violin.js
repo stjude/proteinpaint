@@ -95,10 +95,18 @@ class ViolinPlot {
 			)
 
 		const arg = { filter: this.state.termfilter.filter }
-		if (this.config.term.type == 'float' || this.config.term.type == 'integer') {
+		if (
+			this.config.term.type == 'float' ||
+			this.config.term.type == 'integer' ||
+			this.config.term.q.mode == 'continuous'
+		) {
 			arg.termid = this.config.term.id
 			arg.divideTw = this.config.term2
-		} else if (this.config.term2?.term?.type == 'float' || this.config.term2?.term?.type == 'integer') {
+		} else if (
+			this.config.term2?.term?.type == 'float' ||
+			this.config.term2?.term?.type == 'integer' ||
+			this.config.term.q.mode == 'continuous'
+		) {
 			arg.termid = this.config.term2.id
 			arg.divideTw = this.config.term
 		} else {

@@ -20,14 +20,11 @@ q={}
 .filter={}
 */
 export async function trigger_getViolinPlotData(q, res, ds, genome) {
-	// console.log(23, q)
 	const term = ds.cohort.termdb.q.termjsonByOneid(q.termid)
-	// console.log(25, term)
 
 	if (!term) throw '.termid invalid'
 
 	const twLst = [{ id: q.termid, term, q: { mode: 'continuous' } }]
-	// console.log(30, twLst)
 
 	let divideTw
 
@@ -35,11 +32,9 @@ export async function trigger_getViolinPlotData(q, res, ds, genome) {
 		typeof q.divideTw == 'string' ? (divideTw = JSON.parse(q.divideTw)) : (divideTw = q.divideTw)
 		twLst.push(divideTw)
 	}
-	// console.log(38, divideTw)
 
 	const data = await getData({ terms: twLst, filter: q.filter }, ds, genome)
 	if (data.error) throw data.error
-	// console.log(42, data)
 
 	let min = Number.MAX_VALUE,
 		max = -Number.MAX_VALUE
@@ -47,29 +42,24 @@ export async function trigger_getViolinPlotData(q, res, ds, genome) {
 	let key2values = new Map()
 
 	for (const [c, v] of Object.entries(data.samples)) {
-		// console.log(50, v)
-		// console.log(51, v[term.id].value);
-		// console.log(52,v[divideTw.id].value);
-		// console.log(52, term.values[v[term.id].value].uncomputable);
-		// console.log(53,term.values[v[divideTw.id].value]);
-		if (term.values[(v[term.id]?.value)]?.uncomputable || !v[term.id]?.value) {
+		if ((term.values && term.values[(v[term.id]?.value)]?.uncomputable) || !v[term.id]) {
 			//skip these values
 			continue
 		}
-		if (q.divideTw) {
-			if (!key2values.has(v[divideTw.id]?.value)) key2values.set(v[divideTw.id]?.value, [])
-			key2values.get(v[divideTw.id]?.value).push(v[term.id]?.value)
+
+		if (q.divideTw && v[term.id]) {
+			if (!key2values.has(v[divideTw.id]?.key)) key2values.set(v[divideTw.id]?.key, [])
+			key2values.get(v[divideTw.id]?.key).push(v[term.id]?.value)
 		} else {
 			if (!key2values.has('All samples')) key2values.set('All samples', [])
 			key2values.get('All samples').push(v[term.id]?.value)
 		}
 
 		if (term.type == 'float' || (term.type == 'integer' && v[term.id])) {
-			min = Math.min(min, v[term.id].value)
-			max = Math.max(max, v[term.id].value)
+			min = Math.min(min, v[term.id]?.value)
+			max = Math.max(max, v[term.id]?.value)
 		}
 	}
-	// console.log(63, key2values)
 
 	const result = {
 		min: min,
