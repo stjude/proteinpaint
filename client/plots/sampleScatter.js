@@ -321,7 +321,10 @@ function setRenderers(self) {
 		const chartDiv = self.dom.holder
 		if (chartDiv.selectAll('*').size() > 0) updateCharts()
 		else addCharts()
-		self.dom.holder.on('mouseover', self.mouseover).on('mouseout', self.mouseout)
+		self.dom.holder
+			.on('mouseover', self.mouseover)
+			.on('mouseout', self.mouseout)
+			.on('click', self.mouseclick)
 
 		function addCharts() {
 			const s = self.settings
@@ -835,7 +838,7 @@ function setRenderers(self) {
 			columns,
 			div: self.dom.tip.d,
 			deleteCallback: i => {
-				group.items = group.items.slice(i)
+				group.items.splice(i, 1)
 				showTable(group, x, y)
 			}
 		})
@@ -876,6 +879,11 @@ function setInteractivity(self) {
 
 	self.mouseout = function() {
 		if (!self.lassoOn) self.dom.tip.hide()
+	}
+
+	self.mouseclick = function() {
+		if (!self.lassoOn) self.dom.tip.hide()
+		self.dom.termstip.hide()
 	}
 }
 

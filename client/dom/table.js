@@ -93,7 +93,7 @@ export async function renderTable({
 				.append('div')
 				.attr('class', 'sjpp_grid_item')
 				.style('background-color', i % 2 == 0 ? 'rgb(237, 237, 237)' : 'white')
-			icon_functions['delete'](deleteDiv, { handler: () => deleteCallback(i + 1) })
+			icon_functions['delete'](deleteDiv, { handler: () => deleteCallback(i) })
 		}
 		// each row comprises of cell and each cell has values that will get appended to div elements of the rowGrid stored in td.
 		for (const [colIdx, cell] of row.entries()) {
