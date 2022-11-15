@@ -1,13 +1,14 @@
 const path = require('path')
 const baseConfig = require('./webpack.base.config')
+const { merge } = require('webpack-merge')
 
 module.exports = function(env = {}) {
-	const config = baseConfig(env)
-	config.mode = 'development'
-	config.entry = path.join(__dirname, './test/context/' + env.exportsFilename)
-	config.output = {
-		path: path.join(__dirname, './'),
-		filename: './test/serverTests.js'
-	}
-	return config
+	return merge(baseConfig(env), {
+		mode: 'development',
+		entry: path.join(__dirname, './test/context/' + env.exportsFilename),
+		output: {
+			path: path.join(__dirname, './'),
+			filename: './test/serverTests.js'
+		}
+	})
 }

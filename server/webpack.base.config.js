@@ -15,16 +15,8 @@ try {
 
 module.exports = function(env = {}) {
 	// the env object is passed to webpack cli call by
-	// adding --env NODE_ENV='...', --env devtool='...', etc
+	// adding eg: --env NODE_ENV='...', --env devtool='...', etc
 	return {
-		// see https://v4.webpack.js.org/configuration/mode/
-		//
-		// note that webpack applies commonly used plugins
-		// by mode, such as the terser plugin to
-		// minify production bundles, so there are less
-		// manual configuration settings needed here
-		//
-		mode: env.NODE_ENV ? env.NODE_ENV : 'production',
 		target: 'node',
 		externals: [
 			nodeExternals({
