@@ -144,12 +144,12 @@ export class Menu {
 		return this
 	}
 
-	showunder(dom, yspace) {
+	showunder(dom) {
 		// route to .show()
 		const p = dom.getBoundingClientRect()
 		const x = p.left
-		const y = p.top + p.height + window.scrollY
-		return this.show(x, y + (yspace || 5), false, true, false)
+		const y = p.top + p.height + window.scrollY + 5
+		return this.show(x, y, false, true, false)
 
 		/*
 		this.d
@@ -163,11 +163,11 @@ export class Menu {
 		*/
 	}
 
-	showunderoffset(dom, yspace) {
+	showunderoffset(dom) {
 		// route to .show()
 		const p = dom.getBoundingClientRect()
-		const y = p.top + p.height + window.scrollY
-		return this.show(p.left, y + (yspace || 5), true, true, false)
+		const y = p.top + p.height + window.scrollY + 5
+		return this.show(p.left, y, true, true, false)
 
 		/*
 		this.d
