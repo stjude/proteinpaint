@@ -77,7 +77,7 @@ export class Menu {
 			this.d.style('z-index', base_zindex + 1)
 		}
 
-		this.d.style('padding', 'padding' in arg ? arg.padding : '20px')
+		this.d.style('padding', 'padding' in arg ? arg.padding : '10px')
 		if (arg.border) {
 			this.d.style('border', arg.border)
 		} else {
