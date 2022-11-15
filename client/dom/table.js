@@ -57,7 +57,10 @@ export async function renderTable({
 	const divH = parentDiv.append('div').style('display', 'contents')
 
 	// append empty div element to header to adjust columns
-	divH.append('div').attr('class', 'sjpp_grid_item')
+	divH
+		.append('div')
+		.attr('class', 'sjpp_grid_item')
+		.text('#')
 	if (deleteCallback)
 		divH
 			.append('div')

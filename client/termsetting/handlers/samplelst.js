@@ -11,15 +11,16 @@ export function getHandler(self) {
 			div
 				.style('padding', '6px')
 				.append('div')
-				.style('font-size', '0.7rem')
-				.html(`&nbsp;<b> ${group1.name}</b> samples. <b>Others</b> group excludes these samples`)
+				.style('margin', '10px')
+				.style('font-size', '0.8rem')
+				.html(`<b> ${group1.name}</b> samples. <b>Others</b> excludes these samples`)
 			const tableDiv = div.append('div').style('border', '1px solid gray')
 
 			div
 				.append('div')
 				.append('button')
 				.style('float', 'right')
-				.style('margin', '10px')
+				.style('margin', '10px 10px 0 0')
 				.text('Submit')
 				.on('click', () => self.runCallback())
 			if (group2.name === 'Others') {
