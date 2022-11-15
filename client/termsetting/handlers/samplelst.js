@@ -9,15 +9,22 @@ export function getHandler(self) {
 			const group2 = self.q.groups[1]
 
 			div
-				.style('padding', '4px')
+				.style('padding', '6px')
 				.append('div')
 				.html('&nbsp;' + group1.name)
 				.style('font-size', '0.7rem')
-			const tableDiv = div.append('div')
+			const tableDiv = div.append('div').style('border', '1px solid gray')
 			div
 				.append('div')
 				.html('<b>Others</b> group excludes these samples')
 				.style('font-size', '0.7rem')
+			div
+				.append('div')
+				.append('button')
+				.style('float', 'right')
+				.style('margin', '10px')
+				.text('Submit')
+				.on('click', () => self.runCallback())
 			if (group2.name === 'Others') {
 				showSamples()
 
@@ -34,7 +41,6 @@ export function getHandler(self) {
 							group2.values.splice(i, 1)
 							group1.values.splice(i, 1)
 							showSamples()
-							self.runCallback()
 						}
 					})
 				}

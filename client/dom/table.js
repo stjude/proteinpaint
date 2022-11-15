@@ -47,7 +47,7 @@ export async function renderTable({
 		.style('overflow', 'scroll')
 		.style('scrollbar-width', 'none')
 
-		.style('width', '100%')
+		.style('width', '98%')
 		.style('background-color', 'white')
 		.attr('class', 'sjpp_grid_container')
 		.style('grid-template-columns', `2vw ${deleteCallback ? '4vw' : ''} repeat(${numColumns}, auto)`)
