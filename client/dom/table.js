@@ -35,7 +35,7 @@ export async function renderTable({
 	rows,
 	div,
 	max_width = '90vw',
-	max_height = '90vh',
+	max_height = '50vh',
 	deleteCallback = null
 }) {
 	const numColumns = columns.length

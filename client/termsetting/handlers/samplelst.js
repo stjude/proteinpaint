@@ -11,13 +11,10 @@ export function getHandler(self) {
 			div
 				.style('padding', '6px')
 				.append('div')
-				.html('&nbsp;' + group1.name)
 				.style('font-size', '0.7rem')
+				.html(`&nbsp;<b> ${group1.name}</b> samples. <b>Others</b> group excludes these samples`)
 			const tableDiv = div.append('div').style('border', '1px solid gray')
-			div
-				.append('div')
-				.html('<b>Others</b> group excludes these samples')
-				.style('font-size', '0.7rem')
+
 			div
 				.append('div')
 				.append('button')
