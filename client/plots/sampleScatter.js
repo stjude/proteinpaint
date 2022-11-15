@@ -16,9 +16,7 @@ import {
 	symbolDiamond2,
 	symbolStar,
 	symbolSquare2,
-	groups,
-	group,
-	style
+	groups
 } from 'd3'
 import { d3lasso } from '../common/lasso'
 import { Menu } from '#dom/menu'
@@ -842,6 +840,7 @@ function setRenderers(self) {
 				showTable(group, x, y)
 			}
 		})
+
 		self.dom.tip.show(x, y)
 
 		function formatCell(column, name = 'value') {

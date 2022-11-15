@@ -147,7 +147,6 @@ export class Menu {
 	showunder(dom, yspace) {
 		// route to .show()
 		const p = dom.getBoundingClientRect()
-		const dnodeRect = this.dnode.getBoundingClientRect()
 		const x = p.left
 		const y = p.top + p.height + window.scrollY
 		return this.show(x, y + (yspace || 5), false, true, false)

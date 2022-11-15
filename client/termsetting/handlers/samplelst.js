@@ -1,8 +1,32 @@
 import { getPillNameDefault } from '#termsetting'
+import { renderTable } from '#dom/table'
+import { Menu } from '#dom/menu'
 
 export function getHandler(self) {
 	return {
-		showEditMenu() {},
+		showEditMenu(div) {
+			const group2 = self.q.groups[1].name
+			if (group2 === 'Others') {
+				showSamples()
+
+				function showSamples() {
+					div.selectAll('*').remove()
+					const values = self.q.groups[0].values
+					const rows = []
+					for (const value of values) rows.push([{ value: value }])
+					const columns = [{ label: 'Sample' }]
+					renderTable({
+						rows,
+						columns,
+						div,
+						deleteCallback: i => {
+							values.splice(i, 1)
+							showSamples()
+						}
+					})
+				}
+			}
+		},
 		getPillStatus() {},
 		getPillName(d) {
 			return getPillNameDefault(self, d)
