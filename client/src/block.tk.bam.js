@@ -1153,6 +1153,8 @@ function makeGroup(gd, tk, block, data) {
 		.attr('fill', 'none')
 
 	let mousedownx // not to trigger clicking after press and drag on a read
+	const left_margin = tk.regions[0].x
+	const right_margin = tk.regions[tk.regions.length - 1].x + tk.regions[tk.regions.length - 1].width
 	group.dom.img_cover = group.dom.imgg
 		.append('rect')
 		.attr('fill', 'white')
@@ -1169,27 +1171,27 @@ function makeGroup(gd, tk, block, data) {
 			}
 			if (!group.data.templatebox) return
 			const [mx, my] = pointer(event, group.dom.img_cover.node())
-			for (let region_idx = 0; region_idx < tk.regions.length; region_idx += 1) {
-				let read_number = 0
-				for (const t of group.data.templatebox) {
-					read_number += 1
-					const bx1 = Math.max(tk.regions[region_idx].x, t.x1)
-					const bx2 = Math.min(tk.regions[region_idx].x + tk.regions[region_idx].width, t.x2)
-					if (mx > bx1 && mx < bx2 && my > t.y1 && my < t.y2) {
-						group.dom.box_move
-							.attr('width', bx2 - bx1)
-							.attr('height', t.y2 - t.y1)
-							.attr('transform', 'translate(' + bx1 + ',' + t.y1 + ')')
-						if (tk.readAlignmentTable && tk.readAlignmentTableGroup == group.data.type) {
-							// Checking to see if the group being hovered over is the same as that whose reads have been realigned
-							updateExistingMultiReadAligInfo(tk, read_number)
-						} else if (tk.readAlignmentTable && tk.readAlignmentTableGroup != group.data.type) {
-							// Checking to see if the group being hovered over is the same as that whose reads have been realigned. In this case it is not, so removing the yellow highlighting and bolding of text from the read that was previously being highlighted.
-							// NOTE: This logic does not work if adjoining group has lot of reads and requires partstack mode to view it. In that case the hover function does not work.
-							updateExistingMultiReadAligInfo(tk, group.data.templatebox.length + 10) // Adding an arbitary number so that read_number never matches and all reads turn white
-						}
-						return
+			let read_number = 0
+			for (const t of group.data.templatebox) {
+				read_number += 1
+				const bx1 = Math.max(t.x1, left_margin)
+				const bx2 = Math.min(t.x2, right_margin)
+				//const bx1 = Math.max(tk.regions[region_idx].x, t.x1)
+				//const bx2 = Math.min(tk.regions[region_idx].x + tk.regions[region_idx].width, t.x2)
+				if (mx > bx1 && mx < bx2 && my > t.y1 && my < t.y2) {
+					group.dom.box_move
+						.attr('width', bx2 - bx1)
+						.attr('height', t.y2 - t.y1)
+						.attr('transform', 'translate(' + bx1 + ',' + t.y1 + ')')
+					if (tk.readAlignmentTable && tk.readAlignmentTableGroup == group.data.type) {
+						// Checking to see if the group being hovered over is the same as that whose reads have been realigned
+						updateExistingMultiReadAligInfo(tk, read_number)
+					} else if (tk.readAlignmentTable && tk.readAlignmentTableGroup != group.data.type) {
+						// Checking to see if the group being hovered over is the same as that whose reads have been realigned. In this case it is not, so removing the yellow highlighting and bolding of text from the read that was previously being highlighted.
+						// NOTE: This logic does not work if adjoining group has lot of reads and requires partstack mode to view it. In that case the hover function does not work.
+						updateExistingMultiReadAligInfo(tk, group.data.templatebox.length + 10) // Adding an arbitary number so that read_number never matches and all reads turn white
 					}
+					return
 				}
 			}
 		})
@@ -1197,8 +1199,6 @@ function makeGroup(gd, tk, block, data) {
 			if (mousedownx != event.clientX) return
 			const [mx, my] = pointer(event, group.dom.img_cover.node())
 			group.my_partstack = my // Stores y-position of the mouse click in group
-			//console.log('mx:', mx)
-			//console.log('my:', my)
 			if (group.data.allowpartstack) {
 				enter_partstack(group, tk, block, my, data)
 				if (tk.readAlignmentTable) {
@@ -1214,6 +1214,8 @@ function makeGroup(gd, tk, block, data) {
 			if (!group.data.templatebox) return
 			for (let region_idx = 0; region_idx < tk.regions.length; region_idx += 1) {
 				for (const t of group.data.templatebox) {
+					const cx1 = Math.max(t.x1, left_margin)
+					const cx2 = Math.min(t.x2, right_margin)
 					const bx1 = Math.max(tk.regions[region_idx].x, t.x1)
 					const bx2 = Math.min(tk.regions[region_idx].x + tk.regions[region_idx].width, t.x2)
 					if (mx > bx1 && mx < bx2 && my > t.y1 && my < t.y2) {
@@ -1232,6 +1234,7 @@ function makeGroup(gd, tk, block, data) {
 								return
 							}
 						}
+
 						// a different template or different read from the same template
 						// overwrite
 						group.clickedtemplate = {
@@ -1244,12 +1247,14 @@ function makeGroup(gd, tk, block, data) {
 							if (t.islast) group.clickedtemplate.islast = true
 						}
 						group.dom.box_stay
-							.attr('width', bx2 - bx1)
+							.attr('width', cx2 - cx1)
 							.attr('height', t.y2 - t.y1)
-							.attr('transform', 'translate(' + bx1 + ',' + t.y1 + ')')
-
+							.attr('transform', 'translate(' + cx1 + ',' + t.y1 + ')')
 						getReadInfo(tk, block, t, region_idx)
-						return
+						//return
+					} else if (tk.asPaired && mx > cx1 && mx < cx2 && my > t.y1 && my < t.y2 && t.multi_region) {
+						// In case of templates extending into multiple regions
+						getReadInfo(tk, block, t, region_idx)
 					}
 				}
 			}

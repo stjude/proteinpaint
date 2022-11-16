@@ -1912,23 +1912,49 @@ function stack_templates(group, q, templates) {
 	} else {
 		// Paired end view
 		group.stacks = [] // each value is screen pixel pos of each stack
+		const single_region_templates = []
+		const multi_region_templates = []
 		for (const template of templates) {
 			let region_idx = template.segments[0].ridx
 			// Determine stackable template coordinates template.x1 and template.x2
 			if (template.segments.length == 1) {
 				template.x1 = Math.max(q.regions[region_idx].x, template.x1)
 				template.x2 = Math.min(q.regions[region_idx].x + q.regions[region_idx].width, template.x2)
+				single_region_templates.push(template)
 			} else if (template.segments.length == 2 && template.segments[0].ridx == template.segments[1].ridx) {
 				// Paired end template in same region
 				template.x1 = Math.max(q.regions[region_idx].x, template.x1)
 				template.x2 = Math.min(q.regions[region_idx].x + q.regions[region_idx].width, template.x2)
+				single_region_templates.push(template)
 			} else if (template.segments.length == 2 && template.segments[0].ridx != template.segments[1].ridx) {
 				//Paired-end template in multiple regions
 				template.x1 = template.x1
 				template.x2 = template.x2
+				multi_region_templates.push(template)
 			}
 		}
-		templates.sort((i, j) => i.x1 - j.x1) //group.templates
+		single_region_templates.sort((i, j) => i.x1 - j.x1) //group.templates
+		multi_region_templates.sort((i, j) => i.x1 - j.x1) //group.templates
+
+		if (multi_region_templates.length > 0) {
+			const left_templates = []
+			const right_templates = []
+			const first_multi_region_template = multi_region_templates[0]
+			for (const template of single_region_templates) {
+				if (template.x1 < first_multi_region_template.x1) {
+					if (template.x2 < first_multi_region_template.x1) {
+						left_templates.push(template)
+					} else {
+						right_templates.push(template)
+					}
+				} else {
+					right_templates.push(template)
+				}
+			}
+			templates = [...left_templates, ...multi_region_templates, ...right_templates]
+		}
+
+		//templates.sort((i, j) => i.x1 - j.x1) //group.templates
 		for (const template of templates) {
 			let region_idx = template.segments[0].ridx
 			//console.log('q.regions[region_idx].x:', q.regions[region_idx].x)
@@ -1945,7 +1971,11 @@ function stack_templates(group, q, templates) {
 			let stackidx = null
 			if (!q.variant) {
 				for (let i = 0; i < group.stacks.length; i++) {
-					if (group.stacks[i] + q.stacksegspacing < template.x1) {
+					if (template.x2 == q.regions[region_idx].x + q.regions[region_idx].width && group.stacks[i] < template.x1) {
+						stackidx = i
+						group.stacks[i] = template.x2
+						break
+					} else if (group.stacks[i] + q.stacksegspacing < template.x1) {
 						stackidx = i
 						group.stacks[i] = template.x2
 						break
@@ -2045,7 +2075,7 @@ function get_stacky(group, templates, q) {
 		// expand row height for stacks with overlapping read pairs
 		for (const template of templates) {
 			//group.templates
-			if (template.segments.length <= 1) continue
+			if (template.segments.length <= 1 || template.segments[0].ridx != template.segments[1].ridx) continue // It is not a good idea to hardcode templates in multiple regions to not have overlap. It is possible when their is a common region between the two regions. Will need better logic later which checks for common regions
 			template.height = getrowheight_template_overlapread(template, group.stackheight)
 			stackrowheight[template.y] = Math.max(stackrowheight[template.y], template.height)
 		}
@@ -2150,7 +2180,7 @@ function plot_template(ctx, template, group, q) {
 			// In paired end mode
 			if (template.segments.length == 2) {
 				if (template.segments[0].ridx != template.segments[1].ridx) {
-					// When read pairs are discordant exapanding past expected insert size and possibly in different chromosomes altogether
+					// When read pairs are discordant expanding past expected insert size and possibly in different chromosomes altogether
 					box = {
 						qname: template.segments[0].qname,
 						x1: template.x1,
@@ -2158,7 +2188,8 @@ function plot_template(ctx, template, group, q) {
 						y1: template.y,
 						y2: template.y + (template.height || group.stackheight),
 						start: Math.min(...template.segments.map(i => i.segstart)),
-						stop: Math.max(...template.segments.map(i => i.segstop))
+						stop: Math.max(...template.segments.map(i => i.segstop)),
+						multi_region: true
 					}
 				} else {
 					box = {
@@ -2202,7 +2233,8 @@ function plot_template(ctx, template, group, q) {
 		const prevseg = template.segments[i - 1]
 		const prev_r = group.regions[prevseg.ridx]
 		prev_r.width = group.widths[prevseg.ridx]
-		if (prevseg.x2 <= seg.x1) {
+		if (prevseg.x2 <= seg.x1 || template.segments[0].ridx != template.segments[1].ridx) {
+			// It is not a good idea to hardcode templates in multiple regions to not have overlap. It is possible when their is a common region between the two regions. Will need better logic which takes into account possibility of common region.
 			// two segments are apart; render this segment the same way, draw dashed line connecting with last
 			plot_segment(ctx, seg, template.y, group, q)
 			const y = Math.floor(template.y + group.stackheight / 2) + 0.5
