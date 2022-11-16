@@ -104,7 +104,7 @@ class ViolinPlot {
 			arg.divideTw = this.config.term2
 		} else if (
 			(this.config.term2?.term?.type == 'float' || this.config.term2?.term?.type == 'integer') &&
-			this.config.term.q.mode == 'continuous'
+			this.config.term2.q.mode == 'continuous'
 		) {
 			arg.termid = this.config.term2.id
 			arg.divideTw = this.config.term

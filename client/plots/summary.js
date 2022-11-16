@@ -242,11 +242,19 @@ function setRenderers(self) {
 						return
 					}
 
-					const tw = JSON.parse(JSON.stringify(self.config.term))
+					const termKey =
+						(self.config.term?.q?.mode !== undefined && self.config.term?.term.type == 'float') ||
+						self.config.term?.term.type == 'integer'
+							? 'term'
+							: 'term2'
+
+					const termT = self.config[termKey]
+
+					const tw = JSON.parse(JSON.stringify(termT))
 					self.app.dispatch({
 						type: 'plot_edit',
 						id: self.id,
-						config: { childType: d.childType, term: d.getTw(tw) }
+						config: { childType: d.childType, [termKey]: d.getTw(tw) }
 					})
 				})
 
