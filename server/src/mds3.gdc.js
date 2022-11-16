@@ -2,6 +2,7 @@ const common = require('#shared/common')
 const got = require('got')
 const path = require('path')
 const { get_crosstabCombinations } = require('./mds3.variant2samples')
+const filter2GDCfilter = require('./mds3.gdc.filter').filter2GDCfilter
 
 /*
 GDC API
@@ -14,6 +15,7 @@ validate_query_snvindel_byisoform
 	snvindel_byisoform
 validate_query_snvindel_byisoform_2 // protein_mutations, not in use
 validate_query_geneCnv
+	filter2GDCfilter
 validate_query_genecnv
 querySamples_gdcapi
 	flattenCaseByFields
@@ -396,41 +398,6 @@ export function validate_query_geneCnv(ds) {
 
 		return filters
 	}
-
-	/*
-	f{}
-		filter object
-	returns a GDC filter object
-	TODO support nested filter
-	*/
-	function filter2GDCfilter(f) {
-		// gdc filter
-		const obj = {
-			op: 'and',
-			content: []
-		}
-		if (!Array.isArray(f.lst)) throw 'filter.lst[] not array'
-		for (const item of f.lst) {
-			if (item.type != 'tvs') throw 'filter.lst[] item.type!="tvs"'
-			if (!item.tvs) throw 'item.tvs missing'
-			if (!item.tvs.term) throw 'item.tvs.term missing'
-			const f = {
-				op: 'in',
-				content: {
-					field: mayChangeCase2Cases(item.tvs.term.id),
-					value: item.tvs.values.map(i => i.key)
-				}
-			}
-			obj.content.push(f)
-		}
-		return obj
-	}
-}
-
-function mayChangeCase2Cases(s) {
-	const l = s.split('.')
-	if (l[0] == 'case') l[0] = 'cases'
-	return l.join('.')
 }
 
 function getheaders(q) {
@@ -852,6 +819,7 @@ export async function get_termlst2size(twLst, q, combination, ds) {
 	const termPaths = []
 	for (const tw of twLst) {
 		if (!tw.term) continue
+		if (tw.term.type != 'categorical') continue // only run for categorical terms
 		termPaths.push({
 			id: tw.id,
 			path: tw.id.replace('case.', '').replace(/\./g, '__'),

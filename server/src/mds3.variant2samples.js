@@ -517,6 +517,7 @@ async function make_summary(mutatedSamples, ds, q) {
 	if (ds.cohort.termdb.termid2totalsize2) {
 		const tv2counts = await ds.cohort.termdb.termid2totalsize2.get(q.twLst, q)
 		for (const { termid, numbycategory } of entries) {
+			if (!numbycategory) continue // should be numeric
 			const categories = tv2counts.get(termid)
 			// array ele: [category, total]
 			if (categories) {

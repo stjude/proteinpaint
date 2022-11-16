@@ -13,6 +13,8 @@ termTotalSizeGdcapi
 ssm2canonicalisoform
 */
 
+const filter2GDCfilter = require('../src/mds3.gdc.filter').filter2GDCfilter
+
 const GDC_HOST = process.env.PP_GDC_HOST || 'https://api.gdc.cancer.gov'
 
 /* if filter0 is missing necessary attr, adding it to api query will cause error
@@ -141,49 +143,6 @@ const isoform2ssm_query2_getcase = {
 		}
 		return f
 	}
-}
-
-/*
-f{}
-	filter object
-returns a GDC filter object
-TODO support nested filter
-*/
-function filter2GDCfilter(f) {
-	// gdc filter
-	const obj = {
-		op: 'and',
-		content: []
-	}
-	if (!Array.isArray(f.lst)) throw 'filter.lst[] not array'
-	for (const item of f.lst) {
-		if (item.type != 'tvs') throw 'filter.lst[] item.type!="tvs"'
-		if (!item.tvs) throw 'item.tvs missing'
-		if (!item.tvs.term) throw 'item.tvs.term missing'
-		const f = {
-			op: 'in',
-			content: {
-				field: mayChangeCase2Cases(item.tvs.term.id),
-				value: item.tvs.values.map(i => i.key)
-			}
-		}
-		obj.content.push(f)
-	}
-	return obj
-}
-
-/*
-input: case.disease_type
-output: cases.disease_type
-
-when a term id begins with "case"
-for the term to be used as a field in filter,
-it must be written as "cases"
-*/
-function mayChangeCase2Cases(s) {
-	const l = s.split('.')
-	if (l[0] == 'case') l[0] = 'cases'
-	return l.join('.')
 }
 
 /*
@@ -528,6 +487,7 @@ module.exports = {
 			{ id: 'case.primary_site', q: {} },
 			{ id: 'case.project.project_id', q: {} },
 			{ id: 'case.demographic.gender', q: {} },
+			{ id: 'case.diagnoses.age_at_diagnosis', q: {} },
 			//'case.diagnoses.age_at_diagnosis',
 			//'case.diagnoses.treatments.therapeutic_agents',
 			{ id: 'case.demographic.race', q: {} },
@@ -548,10 +508,6 @@ module.exports = {
 			'case.observation.read_depth.n_depth',
 			'case.observation.sample.tumor_sample_uuid'
 		],
-
-		// quick fix: flag to indicate availability of these fields, so as to create new columns in sample table
-		sampleHasSsmReadDepth: true, // corresponds to .ssm_read_depth{} of a sample
-		sampleHasSsmTotalNormal: true, // corresponds to .totalNormal:int of a sample
 
 		url: {
 			base: 'https://portal.gdc.cancer.gov/cases/',
