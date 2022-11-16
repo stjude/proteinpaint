@@ -525,8 +525,16 @@ async function computePvalues(data, fisher_limit = 300, individual_fisher_limit 
 				const R2C2 = chart.total - colSums[term2cat.dataId] - (row.total - term2cat.total) //# of term2 not category of interest in term1 not category of interest (e.g. # of not male in not white), represents R2C2 in 2X2 contingency table
 
 				//replace hyphen/tab in seriesId and dataId with @hyphen@ and @tab@ to avoid being split in fisher.rs, which uses '-' and '\t' to split input
-				const seriesId = row.seriesId.replaceAll('-', '@hyphen@').replace('\t', '@tab@')
-				const dataId = term2cat.dataId.replaceAll('-', '@hyphen@').replace('\t', '@tab@')
+				// Backwards compatitable logic for old barchart code for older mass session JSONs
+
+				const seriesId =
+					typeof row.seriesId == 'string'
+						? row.seriesId.replaceAll('-', '@hyphen@').replace('\t', '@tab@')
+						: row.seriesId.toString()
+				const dataId =
+					typeof term2cat.dataId == 'string'
+						? term2cat.dataId.replaceAll('-', '@hyphen@').replace('\t', '@tab@')
+						: term2cat.dataId.toString()
 
 				//use seriesId@@dataId as label to be able to parse seriesId and dataId from the test result later
 				fisherAndChiInputData.push([`${seriesId}@@${dataId}`, R1C1, R2C1, R1C2, R2C2].join('\t'))
