@@ -242,19 +242,11 @@ function setRenderers(self) {
 						return
 					}
 
-					const termKey =
-						(self.config.term?.q?.mode !== undefined && self.config.term?.q?.mode == 'continuous') ||
-						(!self.config.term2 && self.config.childType != 'violin')
-							? 'term'
-							: 'term2'
-
-					const termT = self.config[termKey]
-
-					const tw = JSON.parse(JSON.stringify(termT))
+					const tw = JSON.parse(JSON.stringify(self.config.term))
 					self.app.dispatch({
 						type: 'plot_edit',
 						id: self.id,
-						config: { childType: d.childType, [termKey]: d.getTw(tw) }
+						config: { childType: d.childType, term: d.getTw(tw) }
 					})
 				})
 

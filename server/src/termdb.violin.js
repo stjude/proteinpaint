@@ -71,7 +71,7 @@ export async function trigger_getViolinPlotData(q, res, ds, genome) {
 	for (const [key, values] of key2values) {
 		if (q.divideTw) {
 			result.plots.push({
-				label: (divideTw.term?.values[key]?.label || key) + ', n=' + values.length,
+				label: (divideTw.term.values ? divideTw.term.values[key].label : key) + ', n=' + values.length,
 				values,
 				plotValueCount: values.length
 			})
@@ -143,7 +143,7 @@ export function computeViolinData(values) {
 	return binBuilder(values)
 }
 
-// //compute pvalues using wilcoxon rank sum test
+// compute pvalues using wilcoxon rank sum test
 export async function wilcoxon(term, result) {
 	if (!term) {
 		return
