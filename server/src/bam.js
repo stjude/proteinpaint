@@ -3279,21 +3279,37 @@ async function gdcCheckPermission(gdcFileUUID, token, sessionid) {
 	// suggested by Phil on 4/19/2022
 	// use the download endpoint and specify a zero byte range
 	const headers = {
-		'Content-Type': 'application/json',
-		Accept: 'application/json',
+		// since the expected response is binary data, should not set Accept: application/json as a request header
+		// also no body is submitted with a GET request, should not set a Content-type request header
 		Range: 'bytes=0-0'
 	}
 	if (sessionid) headers['Cookie'] = `sessionid=${sessionid}`
 	else headers['X-Auth-Token'] = token
-	//headers['Cookie'] = `tboidx3joqyu786qe5em8h42qx5zw6f5; csrftoken=32UVb0LOoDkOe7FLNckoP3MScyd6wK6AFofRSwK9KA3A5wACoq7whLFCphv0HFX8; _shibsession_64656661756c7468747470733a2f2f706f7274616c2e6764632e63616e6365722e676f762f617574682f73686962626f6c657468=_5d3baf416d7bb5f9edca9229d067ae25`
+
 	const url = apihost + '/data/' + gdcFileUUID
 	try {
-		const response = await got(url, { method: 'GET', headers })
+		// decompress: false prevents got from setting an 'Accept-encoding: gz' request header,
+		// which may not be handled properly by the GDC API in qa-uat
+		// per Phil, should only be used as a temporary workaround
+		const response = await got(url, { headers, decompress: false })
 		if (response.statusCode >= 200 && response.statusCode < 400) {
 			// permission okay
 		} else {
+			console.log(`gdcCheckPermission() error for got(${url})`, response)
 			throw 'Invalid status code: ' + response.statusCode
 		}
+		/* 
+		// 
+		// TODO: may use node-fetch if it provides more informative error status and/or messages
+		// for example, got sometimes emits non_2XX_3XX_status status instead of the more informative Status 400
+		//
+		const fetch = require('node-fetch')
+		const response = await fetch(url, { headers, compress: false }); 
+		const body = await response.text(); console.log(3267, body, response, Object.fromEntries(response.headers), response.disturbed, response.error)
+		if (response.status > 399) { console.log(3268, Object.fromEntries(response.headers))
+			throw 'Invalid status code: ' + response.status
+		}
+		*/
 	} catch (e) {
 		console.log('gdcCheckPermission error: ', e?.code)
 		// TODO refer to e.code
