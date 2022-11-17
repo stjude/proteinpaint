@@ -18,6 +18,7 @@
     "server/dataset",
     "server/genome",
     "server/src/serverconfig.js",
+    "server/src/mds3.gdc.filter.js",
     "server/server.js*",
     "server/start.js",
     "server/utils/*.R",

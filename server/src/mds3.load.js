@@ -315,9 +315,12 @@ this ensures filter0 and its validation is generic and not specific to gdc
 */
 function may_validate_filters(q, ds) {
 	if (q.filter0) {
-		const f = JSON.parse(
-			typeof q.filter0 == 'string' && q.filter0.startsWith('%') ? decodeURIComponent(q.filter0) : q.filter0
-		)
+		const f =
+			typeof q.filter0 == 'object'
+				? q.filter0
+				: JSON.parse(
+						typeof q.filter0 == 'string' && q.filter0.startsWith('%') ? decodeURIComponent(q.filter0) : q.filter0
+				  )
 		q.filter0 = ds.validate_filter0(f)
 	}
 	if (q.filterObj && typeof q.filterObj == 'string') {

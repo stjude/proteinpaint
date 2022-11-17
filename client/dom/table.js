@@ -1,4 +1,5 @@
-import { icons as icon_functions } from '../dom/control.icons'
+import { select } from 'd3'
+import { defaultcolor } from '../shared/common'
 
 /*
 print an html table, using the specified columns and rows
@@ -30,16 +31,8 @@ rows = [ [] ]
 		]
 	}
 */
-export async function renderTable({
-	columns,
-	rows,
-	div,
-	max_width = '90vw',
-	max_height = '50vh',
-	deleteCallback = null
-}) {
+export async function renderTable({ columns, rows, div, max_width = '90vw', max_height = '50vh', buttons }) {
 	const numColumns = columns.length
-	const sampleWidth = numColumns < 10 ? 'auto' : '5vw'
 
 	// create a Parent Div element to which the header and sample grid will be appended as divH and divS.
 	const parentDiv = div
@@ -49,23 +42,26 @@ export async function renderTable({
 		.style('width', '98%')
 		.style('background-color', 'white')
 		.attr('class', 'sjpp_grid_container')
-		.style('grid-template-columns', `2vw ${deleteCallback ? '4vw' : ''} repeat(${numColumns}, auto)`)
+		.style('grid-template-columns', `1.5vw ${buttons ? '2vw' : ''} repeat(${numColumns}, auto)`)
 		.style('max-width', max_width)
 		.style('max-height', max_height)
 
 	// header div
 	const divH = parentDiv.append('div').style('display', 'contents')
-
-	// append empty div element to header to adjust columns
 	divH
 		.append('div')
 		.attr('class', 'sjpp_grid_item sjpp_grid_header')
 		.text('#')
-	if (deleteCallback)
-		divH
-			.append('div')
-			.attr('class', 'sjpp_grid_item sjpp_grid_header')
-			.text('Delete')
+	if (buttons) {
+		const cell = divH.append('div').attr('class', 'sjpp_grid_item')
+		const checkboxH = cell
+			.append('input')
+			.attr('type', 'checkbox')
+			.on('change', () => {
+				table.selectAll('input').property('checked', checkboxH.node().checked)
+				enableButtons()
+			})
+	}
 
 	// header values
 	for (const c of columns) {
@@ -77,23 +73,31 @@ export async function renderTable({
 
 	// sample values
 	// iterate over each row in rows and create a div for each row that has a grid layout similar to the header grid.
+	const table = parentDiv.append('div').style('display', 'contents')
 
 	for (const [i, row] of rows.entries()) {
-		const rowGrid = parentDiv.append('div')
+		const rowGrid = table.append('div')
 		rowGrid.attr('class', 'sjpp_grid_row_wrapper')
-
 		const lineDiv = rowGrid
 			.append('div')
 			.text(i + 1)
+			.style('font-size', '0.8rem')
+			.style('color', defaultcolor)
 			.attr('class', 'sjpp_grid_item')
 			.style('background-color', i % 2 == 0 ? 'rgb(237, 237, 237)' : 'white')
-		if (deleteCallback) {
-			const deleteDiv = rowGrid
+
+		if (buttons) {
+			const checkbox = rowGrid
 				.append('div')
 				.attr('class', 'sjpp_grid_item')
 				.style('background-color', i % 2 == 0 ? 'rgb(237, 237, 237)' : 'white')
-			icon_functions['delete'](deleteDiv, { handler: () => deleteCallback(i) })
+				.style('float', 'center')
+				.append('input')
+				.attr('type', 'checkbox')
+				.attr('value', i)
+				.on('change', () => enableButtons())
 		}
+
 		// each row comprises of cell and each cell has values that will get appended to div elements of the rowGrid stored in td.
 		for (const [colIdx, cell] of row.entries()) {
 			const td = rowGrid
@@ -129,5 +133,37 @@ export async function renderTable({
 				td.text(cell.value)
 			}
 		}
+	}
+	if (buttons) {
+		const footerDiv = div
+			.append('div')
+			.style('display', 'inline-block')
+			.style('float', 'right')
+			.style('margin', '5px 5px')
+
+		for (const button of buttons) {
+			const values = []
+
+			button.button = footerDiv
+				.append('button')
+				.attr('disabled', true)
+				.text(button.text)
+				.style('margin-right', '10px')
+				.on('click', e => {
+					const checkboxs = table.selectAll('input:checked')
+					if (!checkboxs.empty()) {
+						checkboxs.each((d, i, nodes) => {
+							const node = nodes[i]
+							values.push(parseInt(node.value))
+						})
+						button.callback(values)
+					}
+				})
+		}
+	}
+
+	function enableButtons() {
+		const checkboxs = table.selectAll('input:checked')
+		for (const button of buttons) button.button.node().disabled = checkboxs.empty()
 	}
 }

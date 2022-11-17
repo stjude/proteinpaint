@@ -82,6 +82,7 @@ class Scatter {
 			controls,
 			legendDiv,
 			tip: new Menu({ padding: '5px' }),
+			tooltip: new Menu({ padding: '5px' }),
 			termstip: new Menu({ padding: '5px', offsetX: 170, offsetY: -34 })
 		}
 
@@ -525,7 +526,7 @@ function setRenderers(self) {
 				.text(`List ${self.selectedItems.length} samples`)
 				.on('click', event => {
 					self.dom.tip.hide()
-					showTable({ name: 'Selected samples', items: self.selectedItems }, event.clientX, event.clientY)
+					showTable({ name: 'Selected samples', items: self.selectedItems }, event.clientX, event.clientY, true)
 				})
 
 			menuDiv
@@ -627,7 +628,7 @@ function setRenderers(self) {
 				mainG.on('.zoom', null)
 				mainG.call(self.lasso)
 			} else {
-				mainG.on('mousedown.drag', null)
+				mainG.on('mousedown.drag', self.lassoReset())
 				self.lasso.items().classed('not_possible', false)
 				self.lasso.items().classed('possible', false)
 				self.lasso
@@ -740,10 +741,10 @@ function setRenderers(self) {
 		const listDiv = menuDiv
 			.append('div')
 			.attr('class', 'sja_menuoption sja_sharp_border')
-			.text(`List ${group.items.length} samples`)
+			.text(`Edit ${group.items.length} samples`)
 			.on('click', e => {
 				self.dom.tip.hide()
-				showTable(group, event.clientX, event.clientY)
+				showTable(group, event.clientX, event.clientY, false)
 			})
 
 		if (self.state.allowedTermTypes.includes('survival')) {
@@ -790,7 +791,7 @@ function setRenderers(self) {
 			})
 	}
 
-	function showTable(group, x, y) {
+	function showTable(group, x, y, addGroup) {
 		let rows = []
 		const columns = [formatCell('Sample', 'label'), formatCell(self.config.colorTW.term.name, 'label')]
 		if (self.config.shapeTW) columns.push(formatCell(self.config.shapeTW.term.name, 'label'))
@@ -817,29 +818,36 @@ function setRenderers(self) {
 			.style('font-weight', 'bold')
 			.style('margin-top', '5px')
 		const tableDiv = self.dom.tip.d.append('div')
-		const footerDiv = self.dom.tip.d
-			.append('div')
-			.style('display', 'inline-block')
-			.style('float', 'right')
-			.append('button')
-			.style('margin', '10px 20px 0 0')
-			.text('Add to a group')
-			.on('click', e => {
-				self.config.groups.push({
-					name: `Group ${self.config.groups.length + 1}`,
-					items: self.selectedItems,
-					index: groups.length
-				})
-				self.app.dispatch({ type: 'plot_edit', id: self.id, config: { groups: self.config.groups } })
-			})
+		const buttons = []
+		if (addGroup) {
+			const addGroup = {
+				text: 'Add to a group',
+				callback: indexes => {
+					const items = []
+					for (const i of indexes) items.push(self.selectedItems[i])
+					self.config.groups.push({
+						name: `Group ${self.config.groups.length + 1}`,
+						items,
+						index: groups.length
+					})
+					self.app.dispatch({ type: 'plot_edit', id: self.id, config: { groups: self.config.groups } })
+				}
+			}
+			buttons.push(addGroup)
+		}
+		const deleteSamples = {
+			text: 'Delete samples',
+			callback: indexes => {
+				group.items = group.items.filter((elem, index, array) => !(index in indexes))
+				showTable(group, x, y, addGroup)
+			}
+		}
+		buttons.push(deleteSamples)
 		renderTable({
 			rows,
 			columns,
 			div: tableDiv,
-			deleteCallback: i => {
-				group.items.splice(i, 1)
-				showTable(group, x, y)
-			}
+			buttons
 		})
 
 		self.dom.tip.show(x, y)
@@ -859,7 +867,7 @@ function setInteractivity(self) {
 			const d = event.target.__data__
 			if (!d) return
 			if (!('sampleId' in d) && (!self.settings.showRef || self.settings.refSize == 0)) return
-			self.dom.tip.clear()
+			self.dom.tooltip.clear().hide()
 
 			const rows = [{ k: 'Sample', v: d.sample }]
 			const cat_info = getCategoryInfo(d, 'category')
@@ -869,16 +877,13 @@ function setInteractivity(self) {
 				rows.push({ k: self.config.shapeTW.term.name, v: cat_info })
 			}
 			if ('info' in d) for (const [k, v] of Object.entries(d.info)) rows.push({ k: k, v: v })
-			make_table_2col(self.dom.tip.d, rows)
-			self.dom.tip.show(event.clientX, event.clientY)
-		} else {
-			self.dom.tip.hide()
-			self.dom.termstip.hide()
-		}
+			make_table_2col(self.dom.tooltip.d, rows)
+			self.dom.tooltip.show(event.clientX, event.clientY)
+		} else self.dom.tooltip.hide()
 	}
 
 	self.mouseout = function() {
-		if (!self.lassoOn) self.dom.tip.hide()
+		if (!self.lassoOn) self.dom.tooltip.hide()
 	}
 
 	self.mouseclick = function() {
