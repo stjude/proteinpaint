@@ -5,6 +5,7 @@ cd .git/hooks
 ln -s ../../utils/hooks/pre-commit pre-commit
 ln -s ../../utils/hooks/post-checkout post-checkout
 ln -s ../../utils/hooks/pre-merge pre-merge
+ln -s ../../utils/hooks/pre-push pre-push
 chmod 755 post-checkout
 cd ../..
 
