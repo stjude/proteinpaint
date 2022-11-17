@@ -454,5 +454,6 @@ function add_bcf_variant_filter(variant_filter, bcfargs) {
 			throw `unknown tvs spec for info_field: type=${i.type}, term.id=${i.tvs.term.id}`
 		}
 	}
+	if (lst.length == 0) return
 	bcfargs.push('-i', lst.join(' && '))
 }
