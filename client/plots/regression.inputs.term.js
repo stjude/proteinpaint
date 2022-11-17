@@ -1,4 +1,5 @@
-import { termsettingInit, nonDictionaryTermTypes } from '#termsetting'
+import { termsettingInit } from '#termsetting'
+import { nonDictionaryTermTypes } from '#shared/termdb.usecase'
 import { getNormalRoot } from '#filter'
 import { get_bin_label } from '#shared/termdb.bins'
 import { InputValuesTable } from './regression.inputs.values.table'
@@ -290,15 +291,11 @@ export class InputTerm {
 				if (this.section.configKey == 'outcome' && this.parent.opts.regressionType == 'cox') {
 					if (!['age', 'time'].includes(tw.q.timeScale)) throw 'invalid q.timeScale'
 					this.termStatus.topInfoStatus.push(
-						`Time axis: ${tw.q.timeScale == 'time' ? 'years since entry into the cohort' : 'age'} (begins at ${
-							this.parent.state.minTimeSinceDx
-						} ${this.parent.state.timeScale} post cancer diagnosis)`
+						`Time axis: ${tw.q.timeScale == 'time' ? this.parent.state.coxTimeMsg : 'age'} (${
+							this.parent.state.coxStartTimeMsg
+						})`
 					)
 					this.termStatus.topInfoStatus.push(`Event: first occurrence of grade ${tw.q.breaks[0]} or higher`)
-					this.termStatus.topInfoStatus.push('')
-					this.termStatus.topInfoStatus.push(
-						`Samples with events before entry into the cohort (i.e. within ${this.parent.state.minTimeSinceDx} ${this.parent.state.timeScale} of cancer diagnosis) are excluded`
-					)
 				}
 			}
 			this.maySet_refGrp(tw)

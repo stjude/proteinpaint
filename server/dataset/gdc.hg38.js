@@ -1,9 +1,9 @@
-const got = require('got')
-
 /*
 validate_filter0
-isoform2ssm_getvariant
-isoform2ssm_getcase
+isoform2ssm_query1_getvariant
+	filter2GDCfilter
+		mayChangeCase2Cases
+isoform2ssm_query2_getcase
 query_range2variants
 variables_range2variants
 variant2samplesGdcapi
@@ -11,9 +11,9 @@ termTotalSizeGdcapi
 	termid2size_query
 	termid2size_filters
 ssm2canonicalisoform
-sample_id_getter
-	aliquot2sample
 */
+
+const filter2GDCfilter = require('../src/mds3.gdc.filter').filter2GDCfilter
 
 const GDC_HOST = process.env.PP_GDC_HOST || 'https://api.gdc.cancer.gov'
 
@@ -42,13 +42,13 @@ query list of variants by isoform
 
 /*
 REST: get list of ssm with consequence, no case info and occurrence
-isoform2ssm_getvariant and isoform2ssm_getcase are the "tandem REST api"
+isoform2ssm_query1_getvariant and isoform2ssm_query2_getcase are the "tandem REST api"
 yields list of ssm, each with .samples[{sample_id}]
 can use .samples[] to derive .occurrence for each ssm, and overal number of unique samples
 
 in comparison to "protein_mutations" graphql query
 */
-const isoform2ssm_getvariant = {
+const isoform2ssm_query1_getvariant = {
 	endpoint: '/ssms',
 	size: 100000,
 	fields: [
@@ -92,11 +92,14 @@ const isoform2ssm_getvariant = {
 		if (p.filter0) {
 			f.content.push(p.filter0)
 		}
+		if (p.filterObj) {
+			f.content.push(filter2GDCfilter(p.filterObj))
+		}
 		return f
 	}
 }
 // REST: get case details for each ssm, no variant-level info
-const isoform2ssm_getcase = {
+const isoform2ssm_query2_getcase = {
 	endpoint: '/ssm_occurrences',
 	size: 100000,
 	fields: [
@@ -134,6 +137,9 @@ const isoform2ssm_getcase = {
 		}
 		if (p.filter0) {
 			f.content.push(p.filter0)
+		}
+		if (p.filterObj) {
+			f.content.push(filter2GDCfilter(p.filterObj))
 		}
 		return f
 	}
@@ -315,6 +321,9 @@ const variant2samplesGdcapi = {
 		if (p.filter0) {
 			f.content.push(p.filter0)
 		}
+		if (p.filterObj) {
+			f.content.push(filter2GDCfilter(p.filterObj))
+		}
 		if (p.tid2value) {
 			for (const termid in p.tid2value) {
 				const t = ds.cohort.termdb.q.termjsonByOneid(termid)
@@ -422,115 +431,6 @@ const ssm2canonicalisoform = {
 	fields: ['consequence.transcript.is_canonical', 'consequence.transcript.transcript_id']
 }
 
-const aliquot2sample = {
-	getMatch: (sample, aliquotSet) => {
-		// for a sample, decide if it contains an aliquot in given list
-		// if true, return matching aliquot id; otherwise return undefined
-		if (!sample.portions) return
-		for (const portion of sample.portions) {
-			if (!portion.analytes) continue
-			for (const analyte of portion.analytes) {
-				if (!analyte.aliquots) continue
-				for (const a of analyte.aliquots) {
-					if (aliquotSet.has(a.aliquot_id)) return a.aliquot_id
-				}
-			}
-		}
-	},
-
-	cache: new Map(),
-	// k: aliquot id, v: submitter id
-
-	get: async (aliquotidLst, headers) => {
-		// TODO check cache
-
-		const filters = {
-			op: 'and',
-			content: [
-				{
-					op: '=',
-					content: {
-						field: 'samples.portions.analytes.aliquots.aliquot_id',
-						value: aliquotidLst.length > 300 ? aliquotidLst.slice(0, 300) : aliquotidLst
-					}
-				}
-			]
-		}
-
-		const response = await got.post(GDC_HOST + '/cases', {
-			headers,
-			body: JSON.stringify({
-				size: 10000,
-				fields: 'samples.submitter_id,samples.portions.analytes.aliquots.aliquot_id',
-				filters
-			})
-		})
-
-		const aliquotSet = new Set(aliquotidLst)
-		const idmap = new Map() // k: input id, v: output id
-
-		const re = JSON.parse(response.body)
-
-		for (const h of re.data.hits) {
-			for (const sample of h.samples) {
-				const matchingAliquot = aliquot2sample.getMatch(sample, aliquotSet)
-
-				if (matchingAliquot) {
-					// has a match
-					idmap.set(matchingAliquot, sample.submitter_id)
-				}
-			}
-		}
-		return idmap
-	}
-}
-
-async function sample_id_getter(samples, headers) {
-	/*
-	samples[], each element:
-
-		{
-			tumor_sample_uuid: str,
-			sample_id: str
-		}
-
-	the "tumor_sample_uuid" is the aliquot id
-	it will be converted to sample submitter id *in place*
-	resulting submitter id is assigned to "sample_id"
-
-	the use of "tumor_sample_uuid" key is arbitrary logic in gdc and should not impact mds3
-	if tumor_sample_uuid is not present, the "sample_id" value will not be assigned
-
-	fire one query to convert id of all samples
-	the getter is a dataset-specific, generic feature, so it should be defined here
-	passing in headers is a gdc-specific logic for controlled data
-	*/
-	const id2sample = new Map()
-	// k: aliquot id
-	// v: list of sample objects that are using the same aliquot id
-	for (const sample of samples) {
-		const n = sample.tumor_sample_uuid
-		if (n) {
-			if (!id2sample.has(n)) id2sample.set(n, [])
-			id2sample.get(n).push(sample)
-		}
-	}
-
-	if (id2sample.size == 0) {
-		// no applicable sample id to map
-		// possible when query didn't ask for sample name
-		return
-	}
-
-	const idmap = await aliquot2sample.get([...id2sample.keys()], headers)
-
-	for (const [id, sampleLst] of id2sample) {
-		for (const s of sampleLst) {
-			s.sample_id = idmap.get(id) || id
-		}
-	}
-}
-
 ///////////////////////////////// end of query strings ///////////////
 
 // mds3 hardcodes to use .sample_id to dedup samples
@@ -587,6 +487,7 @@ module.exports = {
 			{ id: 'case.primary_site', q: {} },
 			{ id: 'case.project.project_id', q: {} },
 			{ id: 'case.demographic.gender', q: {} },
+			{ id: 'case.diagnoses.age_at_diagnosis', q: {} },
 			//'case.diagnoses.age_at_diagnosis',
 			//'case.diagnoses.treatments.therapeutic_agents',
 			{ id: 'case.demographic.race', q: {} },
@@ -607,14 +508,6 @@ module.exports = {
 			'case.observation.read_depth.n_depth',
 			'case.observation.sample.tumor_sample_uuid'
 		],
-
-		// quick fix: flag to indicate availability of these fields, so as to create new columns in sample table
-		sampleHasSsmReadDepth: true, // corresponds to .ssm_read_depth{} of a sample
-		sampleHasSsmTotalNormal: true, // corresponds to .totalNormal:int of a sample
-
-		// either of sample_id_key or sample_id_getter will be required for making url link for a sample
-		//sample_id_key: 'case_id',
-		sample_id_getter,
 
 		url: {
 			base: 'https://portal.gdc.cancer.gov/cases/',
@@ -642,8 +535,8 @@ module.exports = {
 			byisoform: {
 				// tandem rest api method
 				gdcapi: {
-					query1: isoform2ssm_getvariant,
-					query2: isoform2ssm_getcase
+					query1: isoform2ssm_query1_getvariant,
+					query2: isoform2ssm_query2_getcase
 				}
 
 				/* 
@@ -656,6 +549,12 @@ module.exports = {
 				// may also support querying a vcf by chr.pos.ref.alt
 				by: 'ssm_id',
 				gdcapi: ssmid2csq
+			}
+		},
+		geneCnv: {
+			// gene=level cnv with samples
+			bygene: {
+				gdcapi: true // see mds3.gdc.js for detailed implementations
 			}
 		}
 

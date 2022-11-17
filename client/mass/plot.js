@@ -1,5 +1,6 @@
 import { getCompInit, copyMerge } from '../rx'
 import { Menu } from '../src/client'
+import { recoverInit } from '../rx/src/recover'
 
 class MassPlot {
 	constructor(opts) {
@@ -18,25 +19,40 @@ class MassPlot {
 		if (action.type == 'app_refresh') return true
 	}
 
+	getState(appState) {
+		const config = appState.plots.find(p => p.id === this.id)
+		if (!config) {
+			throw `No plot with id='${this.id}' found. Did you set this.id before this.api = getComponentApi(this)?`
+		}
+		return {
+			config,
+			// quick fix to skip history tracking as needed
+			_scope_: appState._scope_
+		}
+	}
+
 	async main() {
 		this.dom.errdiv.style('display', 'none')
 		if (!this.components) await this.setComponents(this.opts)
 	}
 
 	async setComponents(opts) {
-		this.components = {}
-
-		const paneTitleDiv = this.dom.holder.header
-			.append('div')
-			.style('display', 'inline-block')
-			.style('color', '#999')
-			.style('padding-left', '7px')
+		this.components = {
+			recover: await recoverInit({
+				app: this.app,
+				holder: this.dom.localRecoverDiv,
+				getState: appState => this.getState(appState),
+				reactsTo: action => action.id == this.id && action.type == 'plot_edit' && action._track_ != 'none',
+				plot_id: this.id,
+				maxHistoryLen: 10
+			})
+		}
 
 		const _ = await import(`../plots/${opts.chartType}.js`)
 		this.components.chart = await _.componentInit({
 			app: this.app,
 			holder: this.dom.viz,
-			header: paneTitleDiv,
+			header: this.dom.paneTitleDiv,
 			id: this.id
 		})
 	}
@@ -59,10 +75,20 @@ export const plotInit = getCompInit(MassPlot)
 function setRenderers(self) {
 	self.initUi = function(opts) {
 		const holder = opts.holder
+		holder.header.style('padding', 0)
+
 		try {
 			self.dom = {
 				tip: new Menu({ padding: '0px' }),
 				holder,
+				paneTitleDiv: holder.header
+					.append('div')
+					.style('display', 'inline-block')
+					.style('color', '#999')
+					.style('padding-left', '7px'),
+
+				localRecoverDiv: holder.header.append('div').style('display', 'inline-block'),
+
 				body: holder.body
 					// .style('margin-top', '-1px')
 					.style('white-space', 'nowrap')

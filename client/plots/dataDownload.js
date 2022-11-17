@@ -1,7 +1,7 @@
 import { getCompInit, copyMerge } from '../rx'
 import { select } from 'd3-selection'
 import { sayerror } from '../dom/error'
-import { termsettingInit, fillTermWrapper, nonDictionaryTermTypes } from '#termsetting'
+import { termsettingInit, fillTermWrapper } from '#termsetting'
 import { appInit } from '#termdb/app'
 
 /*
@@ -56,6 +56,8 @@ class DataDownload {
 			throw `No plot with id='${this.id}' found. Did you set this.id before this.api = getComponentApi(this)?`
 		}
 
+		this.termdbConfig = appState.termdbConfig
+
 		return {
 			vocab: appState.vocab,
 			activeCohort: appState.activeCohort,
@@ -103,7 +105,14 @@ class DataDownload {
 			this.dom.submitDiv.style('display', '')
 			return false
 		} else {
-			this.dom.titleDiv.style('color', '#e44').html(this.state.tokenVerificationMessage || 'Requires login')
+			this.dom.titleDiv
+				.style('color', '#e44')
+				.html(
+					(this.state.tokenVerificationMessage || 'Requires login') +
+						(this.termdbConfig.dataDownloadFailHelpLink
+							? ' <a href=' + this.termdbConfig.dataDownloadFailHelpLink + ' target=_blank>Tutorial</a>'
+							: '')
+				)
 			this.dom.terms.style('display', 'none')
 			this.dom.addBtn.style('display', 'none')
 			this.dom.submitDiv.style('display', 'none')
@@ -248,8 +257,7 @@ function setInteractivity(self) {
 						termlst.map(async term => {
 							const q = {}
 							if (term.type == 'condition') {
-								q.mode = 'cox'
-								q.timeScale = 'age'
+								q.mode = 'cuminc'
 							} else if (term.type == 'float' || term.type == 'integer') {
 								/*** ADD THIS ***/
 								q.mode = 'continuous'
@@ -275,8 +283,10 @@ function setInteractivity(self) {
 		const header = ['sample']
 		for (const tw of self.config.terms) {
 			if (tw.term.type == 'condition') {
-				header.push(tw.term.name + `(Event=Grades ${tw.q.breaks[0]}-5)`)
-				header.push(tw.term.name + '(Age at event)')
+				header.push(
+					tw.term.name + `_event code(0="censored", 1="grade ${tw.q.breaks[0]}-5", 2="non-${tw.term.name} death")`
+				)
+				header.push(tw.term.name + '_age at event')
 			} else {
 				header.push(tw.term.name)
 			}
@@ -289,8 +299,9 @@ function setInteractivity(self) {
 				if (!s[tw.$id]) row.push('')
 				else {
 					if (tw.term.type == 'condition') {
-						row.push(s[tw.$id].key == 0 ? 'No' : 'Yes')
-						row.push(s[tw.$id].value)
+						row.push(s[tw.$id].key)
+						const v = JSON.parse(s[tw.$id].value)
+						row.push(v.age_event)
 					} else {
 						const v = tw.term.values?.[s[tw.$id].key] || s[tw.$id]
 						row.push(v.label || v.key)

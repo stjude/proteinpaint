@@ -82,6 +82,7 @@ class Filter {
 		if (o.getVisibleRoot && typeof o.getVisibleRoot != 'function')
 			throw '.getVisibleRoot() must be a function if set as an option'
 		if (!o.emptyLabel) o.emptyLabel = '+NEW'
+		// o.getCategoriesArguments is not validated and simply passed to tree UI then tvs
 		return o
 	}
 
@@ -662,6 +663,7 @@ function setRenderers(self) {
 				vocabApi: self.vocabApi,
 				holder,
 				debug: self.opts.debug,
+				getCategoriesArguments: self.opts.getCategoriesArguments,
 				callback: tvs => {
 					const filterUiRoot = JSON.parse(JSON.stringify(self.filter))
 					const filterCopy = findItem(filterUiRoot, filter.$id)
@@ -948,6 +950,7 @@ function setInteractivity(self) {
 		const termdb = await import('../termdb/app')
 		termdb.appInit({
 			holder: self.dom.termSrcDiv,
+			getCategoriesArguments: self.opts.getCategoriesArguments,
 			state: {
 				vocab: self.opts.vocab,
 				activeCohort: self.activeCohort,
@@ -1048,6 +1051,7 @@ function setInteractivity(self) {
 		const termdb = await import('../termdb/app')
 		termdb.appInit({
 			holder: self.dom.termSrcDiv,
+			getCategoriesArguments: self.opts.getCategoriesArguments,
 			state: {
 				vocab: self.opts.vocab,
 				activeCohort: self.activeCohort,

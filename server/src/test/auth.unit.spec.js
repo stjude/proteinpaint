@@ -228,11 +228,7 @@ tape(`invalid dataset access`, async test => {
 		}
 		const res = {
 			send(data) {
-				test.deepEqual(
-					data,
-					{ error: `Please request access for these dataset(s): Dataset 0. ` },
-					'should send instructions to request data access'
-				)
+				test.deepEqual(data, { error: `Access denied` }, 'should send instructions to request data access')
 			},
 			header(key, val) {
 				test.fail('should NOT set a session cookie')

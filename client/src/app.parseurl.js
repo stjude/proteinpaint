@@ -292,12 +292,27 @@ upon error, throw err message as a string
 		let position = null
 		let rglst = null
 		if (urlp.has('position')) {
-			const ll = urlp.get('position').split(/[:-]/)
-			const chr = ll[0]
-			const start = Number.parseInt(ll[1])
-			const stop = Number.parseInt(ll[2])
-			if (Number.isNaN(start) || Number.isNaN(stop)) throw 'Invalid start/stop value in position'
-			position = { chr: chr, start: start, stop: stop }
+			const subpanels = []
+			let i = 0
+			for (const p of urlp.get('position').split(';')) {
+				if (i == 0) {
+					const ll = p.toString().split(/[:-]/)
+					const chr = ll[0]
+					const start = Number.parseInt(ll[1])
+					const stop = Number.parseInt(ll[2])
+					if (Number.isNaN(start) || Number.isNaN(stop)) throw 'Invalid start/stop value in position'
+					position = { chr: chr, start: start, stop: stop }
+				} else {
+					const ll = p.toString().split(/[:-]/)
+					const chr = ll[0]
+					const start = Number.parseInt(ll[1])
+					const stop = Number.parseInt(ll[2])
+					if (Number.isNaN(start) || Number.isNaN(stop)) throw 'Invalid start/stop value in position'
+					subpanels.push({ chr: chr, start: start, stop: stop, width: 800, leftborder: 'rgba(200,0,0,.1)', leftpad: 5 }) // In case of multi-region, hardcoding region width to 800, leftpad = 5 for both regions. Later will need better logic to calculate this on the fly
+				}
+				i += 1
+			}
+			par.subpanels = subpanels
 		}
 		if (urlp.has('regions')) {
 			// multi
@@ -346,7 +361,6 @@ upon error, throw err message as a string
 		first_genetrack_tolist(arg.genomes[genomename], par.tklst)
 
 		mayAddBedjfilterbyname(urlp, par.tklst)
-
 		const b = await import('./block')
 		new b.Block(par)
 		return

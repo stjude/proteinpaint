@@ -3,9 +3,9 @@ import { scaleLinear } from 'd3-scale'
 import { area, curveBumpX, curveBumpY } from 'd3-shape'
 
 export default function violinRenderer(self) {
-	self.render = function() {
-		const plotColor = '#c6c4f2'
+	const plotColor = '#c6c4f2'
 
+	self.render = function() {
 		if (self.data.plots.length == 0) {
 			self.dom.holder.html(
 				` <span style="opacity:.6;font-size:1em;margin-left:90px;">No data to render Violin Plot</span>`
@@ -63,7 +63,7 @@ export default function violinRenderer(self) {
 				'width',
 				margin.left +
 					margin.right +
-					(isH ? plotLength : plotThickness * self.data.plots.length + self.config.term.term.name.length * 5)
+					(isH ? plotLength : plotThickness * self.data.plots.length + self.config.term.term.name.length)
 			)
 			.attr(
 				'height',
@@ -88,7 +88,11 @@ export default function violinRenderer(self) {
 			const g = svgG.append('g')
 			g.call((isH ? axisTop : axisLeft)().scale(axisScale))
 
-			const lab = svgG.append('text').text(self.config.term.term.name)
+			let lab
+
+			if (self.config.term2?.term?.type == 'float' || self.config.term2?.term?.type == 'integer') {
+				lab = svgG.append('text').text(self.config.term2.term.name)
+			} else lab = svgG.append('text').text(self.config.term.term.name)
 
 			if (isH) {
 				lab
@@ -97,10 +101,10 @@ export default function violinRenderer(self) {
 					.attr('text-anchor', 'middle')
 			} else {
 				lab
-					.attr('y', 0 - margin.top / 2)
-					.attr('x', svgWidth / 2 + margin.left)
+					.attr('y', 0 - margin.top - 5)
+					.attr('x', -plotLength / 2)
 					.attr('text-anchor', 'middle')
-					.attr('transform', 'rotate(0)')
+					.attr('transform', 'rotate(-90)')
 			}
 		}
 
@@ -116,7 +120,6 @@ export default function violinRenderer(self) {
 						? 'translate(0,' + plotThickness * (plotIdx + 0.5) + ')'
 						: 'translate(' + plotThickness * (plotIdx + 0.5) + ',0)'
 				)
-
 			// create label
 			const label = violinG.append('text').text(plot.label)
 			if (isH) {
@@ -127,11 +130,11 @@ export default function violinRenderer(self) {
 					.attr('dominant-baseline', 'central')
 			} else {
 				label
-					.attr('x', plotLength + 10)
+					.attr('x', 0 - plotLength - 5)
 					.attr('y', 0)
-					.attr('text-anchor', 'front')
+					.attr('text-anchor', 'end')
 					.attr('dominant-baseline', 'central')
-					.attr('transform', 'rotate(90)')
+					.attr('transform', 'rotate(-90)')
 			}
 
 			// times 0.45 will leave out 10% as spacing between plots

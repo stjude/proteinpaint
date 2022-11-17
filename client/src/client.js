@@ -1215,6 +1215,7 @@ this function attaches .box (d3 dom) to each tab of tabs[]
 			.style('padding', '5px 10px')
 			.style('margin', '0px')
 			.style('border-top', 'solid 1px #ddd')
+			.style('border-radius', '0px')
 			.classed('sja_menuoption', !has_acitve_tab && i != 0)
 			.html(tab.label)
 

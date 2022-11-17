@@ -1,5 +1,4 @@
 import { getCompInit, multiInit } from '../rx'
-import { select as d3select } from 'd3-selection'
 import { topBarInit } from './controls.btns'
 import { configUiInit } from './controls.config'
 
@@ -107,7 +106,8 @@ function setInteractivity(self) {
 				settings: {
 					controls: { isOpen }
 				}
-			}
+			},
+			_scope_: 'none'
 		})
 	}
 }

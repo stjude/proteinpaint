@@ -373,7 +373,7 @@ async function plot_pileup(q, templates) {
 			const x0 = (bp.position - r.start) * r.ntwidth + r.x
 			const x = r.ntwidth >= 1 ? x0 : Math.floor(x0) // floor() is necessary to remove white lines when zoomed out for unknown reason
 
-			const barwidth = Math.max(1, r.ntwidth) * (r.width / q.canvaswidth) // when in zoomed out mode, each bar is one pixel, thus the width=1
+			const barwidth = Math.max(1, r.ntwidth) // * (r.width / q.canvaswidth) // when in zoomed out mode, each bar is one pixel, thus the width=1
 
 			// total coverage of this bp
 			{
@@ -1883,25 +1883,111 @@ function stack_templates(group, q, templates) {
 	// actual y position will be set later after stackheight is determined
 	// adds q.stacks[]
 	// stacking code not reusable for the special spacing calculation
-	templates.sort((i, j) => i.x1 - j.x1) //group.templates
-	group.stacks = [] // each value is screen pixel pos of each stack
-	for (const template of templates) {
-		// group.templates
-		let stackidx = null
-		if (!q.variant) {
-			for (let i = 0; i < group.stacks.length; i++) {
-				if (group.stacks[i] + q.stacksegspacing < template.x1) {
-					stackidx = i
-					group.stacks[i] = template.x2
-					break
+	if (!q.asPaired) {
+		// Single read view
+		templates.sort((i, j) => i.x1 - j.x1) //group.templates
+		for (let region_idx = 0; region_idx < q.regions.length; region_idx++) {
+			group.stacks = [] // each value is screen pixel pos of each stack
+			for (const template of templates) {
+				// group.templates
+				if (template.segments[0].ridx == region_idx) {
+					let stackidx = null
+					if (!q.variant) {
+						for (let i = 0; i < group.stacks.length; i++) {
+							if (group.stacks[i] + q.stacksegspacing < template.x1) {
+								stackidx = i
+								group.stacks[i] = template.x2
+								break
+							}
+						}
+					}
+					if (stackidx == null) {
+						stackidx = group.stacks.length
+						group.stacks[stackidx] = template.x2
+					}
+					template.y = stackidx
 				}
 			}
 		}
-		if (stackidx == null) {
-			stackidx = group.stacks.length
-			group.stacks[stackidx] = template.x2
+	} else {
+		// Paired end view
+		group.stacks = [] // each value is screen pixel pos of each stack
+		const single_region_templates = []
+		const multi_region_templates = []
+		for (const template of templates) {
+			let region_idx = template.segments[0].ridx
+			// Determine stackable template coordinates template.x1 and template.x2
+			if (template.segments.length == 1) {
+				template.x1 = Math.max(q.regions[region_idx].x, template.x1)
+				template.x2 = Math.min(q.regions[region_idx].x + q.regions[region_idx].width, template.x2)
+				single_region_templates.push(template)
+			} else if (template.segments.length == 2 && template.segments[0].ridx == template.segments[1].ridx) {
+				// Paired end template in same region
+				template.x1 = Math.max(q.regions[region_idx].x, template.x1)
+				template.x2 = Math.min(q.regions[region_idx].x + q.regions[region_idx].width, template.x2)
+				single_region_templates.push(template)
+			} else if (template.segments.length == 2 && template.segments[0].ridx != template.segments[1].ridx) {
+				//Paired-end template in multiple regions
+				template.x1 = template.x1
+				template.x2 = template.x2
+				multi_region_templates.push(template)
+			}
 		}
-		template.y = stackidx
+		single_region_templates.sort((i, j) => i.x1 - j.x1) //group.templates
+		multi_region_templates.sort((i, j) => i.x1 - j.x1) //group.templates
+
+		if (multi_region_templates.length > 0) {
+			const left_templates = []
+			const right_templates = []
+			const first_multi_region_template = multi_region_templates[0]
+			for (const template of single_region_templates) {
+				if (template.x1 < first_multi_region_template.x1) {
+					if (template.x2 < first_multi_region_template.x1) {
+						left_templates.push(template)
+					} else {
+						right_templates.push(template)
+					}
+				} else {
+					right_templates.push(template)
+				}
+			}
+			templates = [...left_templates, ...multi_region_templates, ...right_templates]
+		}
+
+		//templates.sort((i, j) => i.x1 - j.x1) //group.templates
+		for (const template of templates) {
+			let region_idx = template.segments[0].ridx
+			//console.log('q.regions[region_idx].x:', q.regions[region_idx].x)
+			//console.log('q.regions[region_idx].width:', q.regions[region_idx].x + q.regions[region_idx].width)
+			//console.log('template.qname:', template.segments[0].qname)
+			//console.log('template.x1:', template.x1)
+			//console.log('template.x2:', template.x2)
+			//console.log('template.segments[0].ridx:', template.segments[0].ridx)
+			//if (template.segments.length == 2) {
+			//	console.log('template.segments[1].ridx:', template.segments[1].ridx)
+			//}
+
+			// group.templates
+			let stackidx = null
+			if (!q.variant) {
+				for (let i = 0; i < group.stacks.length; i++) {
+					if (template.x2 == q.regions[region_idx].x + q.regions[region_idx].width && group.stacks[i] < template.x1) {
+						stackidx = i
+						group.stacks[i] = template.x2
+						break
+					} else if (group.stacks[i] + q.stacksegspacing < template.x1) {
+						stackidx = i
+						group.stacks[i] = template.x2
+						break
+					}
+				}
+			}
+			if (stackidx == null) {
+				stackidx = group.stacks.length
+				group.stacks[stackidx] = template.x2
+			}
+			template.y = stackidx
+		}
 	}
 	templates = may_trimstacks(group, templates, q)
 	return templates
@@ -1989,7 +2075,7 @@ function get_stacky(group, templates, q) {
 		// expand row height for stacks with overlapping read pairs
 		for (const template of templates) {
 			//group.templates
-			if (template.segments.length <= 1) continue
+			if (template.segments.length <= 1 || template.segments[0].ridx != template.segments[1].ridx) continue // It is not a good idea to hardcode templates in multiple regions to not have overlap. It is possible when their is a common region between the two regions. Will need better logic later which checks for common regions
 			template.height = getrowheight_template_overlapread(template, group.stackheight)
 			stackrowheight[template.y] = Math.max(stackrowheight[template.y], template.height)
 		}
@@ -2094,7 +2180,7 @@ function plot_template(ctx, template, group, q) {
 			// In paired end mode
 			if (template.segments.length == 2) {
 				if (template.segments[0].ridx != template.segments[1].ridx) {
-					// When read pairs are discordant exapanding past expected insert size and possibly in different chromosomes altogether
+					// When read pairs are discordant expanding past expected insert size and possibly in different chromosomes altogether
 					box = {
 						qname: template.segments[0].qname,
 						x1: template.x1,
@@ -2102,7 +2188,8 @@ function plot_template(ctx, template, group, q) {
 						y1: template.y,
 						y2: template.y + (template.height || group.stackheight),
 						start: Math.min(...template.segments.map(i => i.segstart)),
-						stop: Math.max(...template.segments.map(i => i.segstop))
+						stop: Math.max(...template.segments.map(i => i.segstop)),
+						multi_region: true
 					}
 				} else {
 					box = {
@@ -2146,7 +2233,8 @@ function plot_template(ctx, template, group, q) {
 		const prevseg = template.segments[i - 1]
 		const prev_r = group.regions[prevseg.ridx]
 		prev_r.width = group.widths[prevseg.ridx]
-		if (prevseg.x2 <= seg.x1) {
+		if (prevseg.x2 <= seg.x1 || template.segments[0].ridx != template.segments[1].ridx) {
+			// It is not a good idea to hardcode templates in multiple regions to not have overlap. It is possible when their is a common region between the two regions. Will need better logic which takes into account possibility of common region.
 			// two segments are apart; render this segment the same way, draw dashed line connecting with last
 			plot_segment(ctx, seg, template.y, group, q)
 			const y = Math.floor(template.y + group.stackheight / 2) + 0.5
@@ -2298,14 +2386,22 @@ function plot_segment(ctx, segment, y, group, q) {
 				for (let i = 0; i < b.qual.length; i++) {
 					const v = b.qual[i] / maxqual
 					ctx.fillStyle = b.opr == 'S' ? qual2softclipbg(v) : qual2mismatchbg(v)
-					if (xoff + r.ntwidth + ntboxwidthincrement < r.width && xoff <= r.width && r.x < xoff) {
+					//if (xoff + r.ntwidth + ntboxwidthincrement < r.width && xoff <= r.width && r.x < xoff) {
+					//	ctx.fillRect(xoff, y, r.ntwidth + ntboxwidthincrement, group.stackheight)
+					//} else if (xoff < r.width && xoff + r.ntwidth + ntboxwidthincrement >= r.width && r.x < xoff) {
+					//	ctx.fillRect(xoff, y, r.width - xoff, group.stackheight)
+					//} else if (xoff + r.ntwidth + ntboxwidthincrement > r.x && xoff <= r.x) {
+					//	ctx.fillRect(r.x, y, xoff + r.ntwidth + ntboxwidthincrement, group.stackheight)
+					//} else if (xoff + r.ntwidth + ntboxwidthincrement < r.width && xoff > r.x) {
+					//	ctx.fillRect(xoff, y, xoff + r.ntwidth + ntboxwidthincrement, group.stackheight)
+					//}
+
+					if (xoff + r.ntwidth + ntboxwidthincrement < r.width && r.x <= xoff) {
 						ctx.fillRect(xoff, y, r.ntwidth + ntboxwidthincrement, group.stackheight)
-					} else if (xoff < r.width && xoff + r.ntwidth + ntboxwidthincrement >= r.width && r.x < xoff) {
+					} else if (xoff < r.width && xoff + r.ntwidth + ntboxwidthincrement >= r.width && r.x <= xoff) {
 						ctx.fillRect(xoff, y, r.width - xoff, group.stackheight)
-					} else if (xoff + r.ntwidth + ntboxwidthincrement > r.x && xoff <= r.x) {
-						ctx.fillRect(r.x, y, xoff + r.ntwidth + ntboxwidthincrement, group.stackheight)
-					} else if (xoff + r.ntwidth + ntboxwidthincrement > r.x && xoff > r.x) {
-						ctx.fillRect(xoff, y, xoff + r.ntwidth + ntboxwidthincrement, group.stackheight)
+					} else if (xoff <= r.x && xoff + r.ntwidth + ntboxwidthincrement > r.x) {
+						ctx.fillRect(r.x, y, r.ntwidth + ntboxwidthincrement + xoff - r.x, group.stackheight)
 					}
 					if (r.to_printnt) {
 						if (!b.qual) {
@@ -2487,7 +2583,7 @@ function mayClipArrowhead(ctx, segment, group, r, y) {
 		}
 	} else {
 		const x = segment.x1
-		if (x >= 0) {
+		if (x >= r.x) {
 			ctx.fillStyle = 'white'
 			ctx.beginPath()
 			ctx.moveTo(x + group.stackheight / 2, y)
@@ -3127,6 +3223,7 @@ async function convertread2html(seg, genome, query) {
 			  <tr style="color:white">${querylst.join('')}</tr>
 			</table>`,
 		info: `<div style='margin-top:10px'>
+			<span style="opacity:.5;font-size:.7em">CHR</span>: ${query.chr.replace('chr', '')},
 			<span style="opacity:.5;font-size:.7em">START</span>: ${seg.segstart_original + 1},
 			<span style="opacity:.5;font-size:.7em">STOP</span>: ${refstop},
 			<span style="opacity:.5;font-size:.7em">THIS READ</span>: ${seg.seq.length} bp,
@@ -3182,21 +3279,37 @@ async function gdcCheckPermission(gdcFileUUID, token, sessionid) {
 	// suggested by Phil on 4/19/2022
 	// use the download endpoint and specify a zero byte range
 	const headers = {
-		'Content-Type': 'application/json',
-		Accept: 'application/json',
+		// since the expected response is binary data, should not set Accept: application/json as a request header
+		// also no body is submitted with a GET request, should not set a Content-type request header
 		Range: 'bytes=0-0'
 	}
 	if (sessionid) headers['Cookie'] = `sessionid=${sessionid}`
 	else headers['X-Auth-Token'] = token
-	//headers['Cookie'] = `tboidx3joqyu786qe5em8h42qx5zw6f5; csrftoken=32UVb0LOoDkOe7FLNckoP3MScyd6wK6AFofRSwK9KA3A5wACoq7whLFCphv0HFX8; _shibsession_64656661756c7468747470733a2f2f706f7274616c2e6764632e63616e6365722e676f762f617574682f73686962626f6c657468=_5d3baf416d7bb5f9edca9229d067ae25`
+
 	const url = apihost + '/data/' + gdcFileUUID
 	try {
-		const response = await got(url, { method: 'GET', headers })
+		// decompress: false prevents got from setting an 'Accept-encoding: gz' request header,
+		// which may not be handled properly by the GDC API in qa-uat
+		// per Phil, should only be used as a temporary workaround
+		const response = await got(url, { headers, decompress: false })
 		if (response.statusCode >= 200 && response.statusCode < 400) {
 			// permission okay
 		} else {
+			console.log(`gdcCheckPermission() error for got(${url})`, response)
 			throw 'Invalid status code: ' + response.statusCode
 		}
+		/* 
+		// 
+		// TODO: may use node-fetch if it provides more informative error status and/or messages
+		// for example, got sometimes emits non_2XX_3XX_status status instead of the more informative Status 400
+		//
+		const fetch = require('node-fetch')
+		const response = await fetch(url, { headers, compress: false }); 
+		const body = await response.text(); console.log(3267, body, response, Object.fromEntries(response.headers), response.disturbed, response.error)
+		if (response.status > 399) { console.log(3268, Object.fromEntries(response.headers))
+			throw 'Invalid status code: ' + response.status
+		}
+		*/
 	} catch (e) {
 		console.log('gdcCheckPermission error: ', e?.code)
 		// TODO refer to e.code

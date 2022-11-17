@@ -62,8 +62,9 @@ class Regression {
 			termfilter: appState.termfilter,
 			config,
 			allowedTermTypes: appState.termdbConfig.allowedTermTypes,
-			timeScale: appState.termdbConfig.timeScale,
-			minTimeSinceDx: appState.termdbConfig.minTimeSinceDx
+			minTimeSinceDx: appState.termdbConfig.minTimeSinceDx,
+			coxTimeMsg: appState.termdbConfig.coxTimeMsg,
+			coxStartTimeMsg: appState.termdbConfig.coxStartTimeMsg
 		}
 	}
 

@@ -1,6 +1,7 @@
 import { getCompInit, copyMerge } from '#rx'
 import { Menu } from '#src/client'
 import { fillTermWrapper } from '../termsetting/termsetting'
+import { recoverInit } from '../rx/src/recover'
 
 import { select, selectAll } from 'd3-selection'
 
@@ -9,7 +10,10 @@ import { select, selectAll } from 'd3-selection'
 class SummaryPlot {
 	constructor(opts) {
 		this.type = 'summary'
-		this.components = {}
+		this.components = {
+			recover: {},
+			plots: {}
+		}
 		this.chartsByType = {}
 	}
 
@@ -19,13 +23,22 @@ class SummaryPlot {
 		setRenderers(this)
 		this.initUi(this.opts)
 
+		this.components.recover = await recoverInit({
+			app: this.app,
+			holder: this.dom.localRecoverDiv,
+			getState: appState => this.getState(appState),
+			reactsTo: action => action.id == this.id && action.type == 'plot_edit' && action._scope_ != 'none',
+			plot_id: this.id,
+			maxHistoryLen: 10
+		})
+
 		//Moved from main to fix default barchart not appearing when summary plot sandbox is created
-		if (!this.components[this.config.childType]) {
+		if (!this.components.plots[this.config.childType]) {
 			await this.setComponent(this.config)
 		}
 
-		for (const childType in this.components) {
-			const chart = this.components[childType]
+		for (const childType in this.components.plots) {
+			const chart = this.components.plots[childType]
 			// hide non-active charts first, so not to momentarily have two visible charts
 			if (chart.type != this.config.childType) {
 				this.dom.plotDivs[chart.type].style('display', 'none')
@@ -51,7 +64,9 @@ class SummaryPlot {
 			throw `No plot with id='${this.id}' found. Did you set this.id before this.api = getComponentApi(this)?`
 		}
 		return {
-			config
+			config,
+			// quick fix to skip history tracking as needed
+			_scope_: appState._scope_
 		}
 	}
 
@@ -60,29 +75,15 @@ class SummaryPlot {
 		const config = JSON.parse(JSON.stringify(this.state.config))
 		this.config = config
 
-		if (!this.components[config.childType]) {
+		if (!this.components.plots[config.childType]) {
 			await this.setComponent(config)
 		}
 
-
-		for (const childType in this.components) {
-			const chart = this.components[childType]
-			// hide non-active charts first, so not to momentarily have two visible charts
-			if (chart.type != this.config.childType) {
-				this.dom.plotDivs[chart.type].style('display', 'none')
-			}
+		for (const childType in this.components.plots) {
+			const chart = this.components.plots[childType]
 		}
 
-		this.dom.plotDivs[config.childType].style('display', '')
-
-		// toggle header buttons
-		this.dom.chartToggles.each(function(d) {
-			d.active = d.childType == config.childType
-			select(this)
-				.style('background-color', d => (d.active ? '#cfe2f3' : 'white'))
-				.style('border-style', d => (d.active ? 'solid solid none' : 'none'))
-		})
-
+		this.render()
 	}
 
 	async setComponent(config) {
@@ -98,7 +99,7 @@ class SummaryPlot {
 		this.dom.plotDivs[config.childType] = this.dom.viz.append('div')
 
 		// assumes only 1 chart per chartType would be rendered in the summary sandbox
-		this.components[config.childType] = await _.componentInit({
+		this.components.plots[config.childType] = await _.componentInit({
 			app: this.app,
 			holder: this.dom.plotDivs[config.childType],
 			id: this.id,
@@ -122,6 +123,7 @@ class SummaryPlot {
 export const summaryInit = getCompInit(SummaryPlot)
 
 function setRenderers(self) {
+	// console.log(self);
 	self.initUi = function(opts) {
 		const holder = opts.holder
 		try {
@@ -144,6 +146,8 @@ function setRenderers(self) {
 				viz: holder.body.append('div'),
 				plotDivs: {}
 			}
+
+			holder.header.style('padding', 0)
 
 			// holder is assumed to be a sandbox, which has a header
 			self.dom.paneTitleDiv = self.dom.holder.header
@@ -179,7 +183,11 @@ function setRenderers(self) {
 						childType: 'violin',
 						label: 'Violin',
 						disabled: d => false,
-						isVisible: () => self.config.term.term.type === 'integer' || self.config.term.term.type === 'float',
+						isVisible: () =>
+							self.config.term.term.type === 'integer' ||
+							self.config.term.term.type === 'float' ||
+							self.config.term2?.term.type === 'integer' ||
+							self.config.term2?.term.type === 'float',
 						getTw: tw => {
 							tw.q = { mode: 'continuous' }
 							return tw
@@ -188,9 +196,9 @@ function setRenderers(self) {
 					},
 					{
 						childType: 'table',
-						label: 'Crosstab - TODO',
+						label: 'Crosstab - in development',
 						disabled: d => true,
-						isVisible: () => true,
+						isVisible: () => false,
 						active: false
 					},
 					{
@@ -225,7 +233,6 @@ function setRenderers(self) {
 				.style('border-radius', '5px 5px 0px 0px')
 				.style('margin', '0px 2px -1px')
 
-
 				// TODO: may use other logic for disabling a chart type, insteead of hiding/showing
 				.property('disabled', d => d.disabled())
 				.html(d => d.label)
@@ -234,13 +241,25 @@ function setRenderers(self) {
 						alert(`TODO: ${d.label}`)
 						return
 					}
-					const tw = JSON.parse(JSON.stringify(self.config.term))
+
+					const termKey =
+						(self.config.term?.q?.mode !== undefined && self.config.term?.term.type == 'float') ||
+						self.config.term?.term.type == 'integer'
+							? 'term'
+							: 'term2'
+
+					const termT = self.config[termKey]
+
+					const tw = JSON.parse(JSON.stringify(termT))
 					self.app.dispatch({
 						type: 'plot_edit',
 						id: self.id,
-						config: { childType: d.childType, term: d.getTw(tw) }
+						config: { childType: d.childType, [termKey]: d.getTw(tw) }
 					})
 				})
+
+			// Placeholder for recover component
+			self.dom.localRecoverDiv = self.dom.paneTitleDiv.append('div').style('display', 'inline-block')
 		} catch (e) {
 			throw e
 			//self.dom.errdiv.text(e)
@@ -248,8 +267,8 @@ function setRenderers(self) {
 	}
 
 	self.render = function() {
-		for (const childType in self.components) {
-			const chart = self.components[childType]
+		for (const childType in self.components.plots) {
+			const chart = self.components.plots[childType]
 			// hide non-active charts first, so not to momentarily have two visible charts
 			if (chart.type != self.config.childType) {
 				self.dom.plotDivs[chart.type].style('display', 'none')
@@ -260,18 +279,14 @@ function setRenderers(self) {
 			if (!d) return
 			d.active = d.childType == self.config.childType
 			// this === DOM element
-			select(this).style('display', d => (d.isVisible() ? '' : 'none'))
-			//.style('background-color', d => (d.active ? '#cfe2f3' : 'white'))
-			//.style('border-style', d => (d.active ? 'solid solid none' : 'none none solid'))
+			select(this)
+				.style('display', d => (d.isVisible() ? '' : 'none'))
+				.style('background-color', d => (d.active ? '#cfe2f3' : 'white'))
+				.style('border-style', d => (d.active ? 'solid solid none' : 'none'))
 		})
 
 		self.dom.plotDivs[self.config.childType].style('display', '')
 	}
-	/*
-		TODO: may create option for a custom filter for this plot only,
-		which will override the app-wide filter that is set from the nav tab
-	*/
-	// self.renderFilter = function() {...}
 }
 
 export async function getPlotConfig(opts, app) {
@@ -319,7 +334,7 @@ export async function getPlotConfig(opts, app) {
 		},
 		mayAdjustConfig(config, edits = {}) {
 			if (!edits.childType) {
-				if (config.term?.q?.mode == 'continuous') config.childType = 'violin'
+				if (config.term?.q?.mode == 'continuous' || config.term2?.q?.mode == 'continuous') config.childType = 'violin'
 				else config.childType = 'barchart'
 			}
 		}

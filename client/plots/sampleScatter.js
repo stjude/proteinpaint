@@ -16,9 +16,7 @@ import {
 	symbolDiamond2,
 	symbolStar,
 	symbolSquare2,
-	groups,
-	group,
-	style
+	groups
 } from 'd3'
 import { d3lasso } from '../common/lasso'
 import { Menu } from '#dom/menu'
@@ -59,6 +57,7 @@ class Scatter {
 			symbolSquare2
 		]
 		this.symbols = mySymbols.map(s => symbol(s))
+		this.k = 1
 	}
 
 	async init(opts) {
@@ -83,7 +82,7 @@ class Scatter {
 			controls,
 			legendDiv,
 			tip: new Menu({ padding: '5px' }),
-			subtip: new Menu({ padding: '5px' })
+			termstip: new Menu({ padding: '5px', offsetX: 170, offsetY: -34 })
 		}
 
 		this.settings = {}
@@ -119,7 +118,9 @@ class Scatter {
 		const data = await this.app.vocabApi.getScatterData(reqOpts)
 		if (data.error) throw data.error
 		if (!Array.isArray(data.samples)) throw 'data.samples[] not array'
-		this.shapes = data.shapeLegend
+		this.shapeLegend = new Map(Object.entries(data.shapeLegend))
+		this.colorLegend = new Map(Object.entries(data.colorLegend))
+
 		const s0 = data.samples[0]
 		const [xMin, xMax, yMin, yMax] = data.samples.reduce(
 			(s, d) => [d.x < s[0] ? d.x : s[0], d.x > s[1] ? d.x : s[1], d.y < s[2] ? d.y : s[2], d.y > s[3] ? d.y : s[3]],
@@ -139,6 +140,8 @@ class Scatter {
 		this.setTools()
 		this.lassoReset()
 		this.updateGroupsButton()
+		this.dom.tip.hide()
+		this.dom.termstip.hide()
 	}
 
 	// creates an opts object for the vocabApi.someMethod(),
@@ -172,7 +175,8 @@ class Scatter {
 						usecase: { target: 'sampleScatter', detail: 'colorTW' },
 						title: 'The term to use to color the samples',
 						label: 'Color',
-						vocabApi: this.app.vocabApi
+						vocabApi: this.app.vocabApi,
+						menuOptions: '!remove'
 					},
 					{
 						type: 'term',
@@ -188,7 +192,7 @@ class Scatter {
 						type: 'number',
 						chartType: 'sampleScatter',
 						settingsKey: 'size',
-						title: 'The size of the samples',
+						title: 'It represents the area of the symbols in square pixels',
 						min: 0
 					},
 					{
@@ -196,7 +200,7 @@ class Scatter {
 						type: 'number',
 						chartType: 'sampleScatter',
 						settingsKey: 'refSize',
-						title: 'The size of the references',
+						title: 'It represents the area of the reference samples in square pixels',
 						min: 0
 					},
 					{
@@ -235,82 +239,76 @@ class Scatter {
 		this.dom.toolsDiv = this.dom.controls.insert('div')
 	}
 
-	renderLegend(holder, categories, shapes) {
-		holder.selectAll('*').remove()
-		const colorDiv = holder.append('div').style('display', 'inline-block')
-		const shapeDiv = holder
-			.append('div')
-			.style('display', 'inline-block')
-			.style('vertical-align', 'top')
-
-		let row = colorDiv
-			.insert('div')
-			.attr('class', 'sja_clb')
-			.style('display', 'block')
+	renderLegend(legendG) {
+		legendG.selectAll('*').remove()
+		const step = 30
+		let offsetX = 0
+		let offsetY = 60
+		let title = this.config.colorTW.term.name
+		const colorG = legendG.append('g')
+		colorG
+			.append('text')
+			.attr('x', offsetX)
+			.attr('y', 30)
+			.text(title)
 			.style('font-weight', 'bold')
-			.style('margin-top', '10px')
-			.html('&nbsp;' + this.config.colorTW.term.name)
-		let items = []
-		let item
-		for (const category of categories) {
-			const color = category[1].color
-			const sample_count = category[1].sampleCount
-			const name = category[0]
-			const row = colorDiv
-				.append('div')
-				.attr('class', 'sja_clb')
-				.style('display', 'block')
-			row
-				.append('div')
-				.style('display', 'inline-block')
-				.attr('class', 'sja_mcdot')
-				.style('background', color)
-				.html(sample_count)
-			row
-				.append('div')
-				.style('display', 'inline-block')
-				.style('color', color)
-				.html('&nbsp;' + name)
+
+		const radius = 6
+		let category, count, name, color
+		for (const [key, category] of this.colorLegend) {
+			color = category.color
+			count = category.sampleCount
+			name = key
+
+			colorG
+				.append('circle')
+				.attr('cx', offsetX)
+				.attr('cy', offsetY)
+				.attr('r', radius)
+				.style('fill', color)
+			colorG
+				.append('text')
+				.attr('x', offsetX + 10)
+				.attr('y', offsetY)
+				.text(`${name}, n=${count}`)
+				.style('font-size', '15px')
+				.attr('alignment-baseline', 'middle')
+			offsetY += step
 		}
 		if (this.config.shapeTW) {
-			row = shapeDiv
-				.insert('div')
-				.attr('class', 'sja_clb')
-				.style('display', 'block')
+			offsetX = 300
+			offsetY = 60
+			title = this.config.shapeTW.term.name
+
+			const shapeG = legendG.append('g')
+			shapeG
+				.append('text')
+				.attr('x', offsetX)
+				.attr('y', 30)
+				.text(title)
 				.style('font-weight', 'bold')
-				.style('margin-top', '10px')
-				.html('&nbsp;' + this.config.shapeTW.term.name)
-			items = []
-			let i = 0
-			const color = 'gray'
-			for (const shape of shapes) {
-				const index = shape[1].shape % this.symbols.length
-				const category_shape = this.symbols[index].size(64)()
-				const name = shape[0]
 
-				const row = shapeDiv
-					.append('div')
-					.attr('class', 'sja_clb')
-					.style('display', 'block')
+			let index, symbol
+			color = 'gray'
+			for (const [key, shape] of this.shapeLegend) {
+				index = shape.shape % this.symbols.length
+				symbol = this.symbols[index].size(64)()
+				name = key
+				count = shape.sampleCount
 
-				row
-					.append('div')
-					.style('display', 'inline-block')
-
-					.append('svg')
-					.attr('width', 20)
-					.attr('height', 22)
-
+				shapeG
 					.append('path')
-					.attr('d', category_shape)
-					.attr('fill', color)
-					.attr('transform', c => `translate(10, 15)`)
-
-				row
-					.append('div')
-					.style('display', 'inline-block')
-					.html('&nbsp;' + name + ` (${shape[1].sampleCount})`)
-				i++
+					.attr('transform', c => `translate(${offsetX}, ${offsetY})`)
+					.style('fill', color)
+					.attr('d', symbol)
+				shapeG
+					.append('text')
+					.attr('x', offsetX + 10)
+					.attr('y', offsetY)
+					.text(`${name}, n=${count}`)
+					.style('font-size', '15px')
+					.attr('alignment-baseline', 'middle')
+				offsetY += step
 			}
 		}
 	}
@@ -324,15 +322,11 @@ function setRenderers(self) {
 		self.dom.holder
 			.on('mouseover', self.mouseover)
 			.on('mouseout', self.mouseout)
-			.on('click', self.click)
+			.on('click', self.mouseclick)
 
 		function addCharts() {
 			const s = self.settings
-			chartDiv
-				.style('opacity', 0)
-				.style('width', s.svgw + 100 + 'px')
-				.style('height', s.svgh + 50 + 'px')
-				.style('text-align', 'left')
+			chartDiv.style('opacity', 0)
 
 			self.svg = chartDiv.append('svg')
 			renderSVG(self.svg, chartDiv, s, 0, data)
@@ -341,15 +335,12 @@ function setRenderers(self) {
 				.transition()
 				.duration(s.duration)
 				.style('opacity', 1)
-
-			self.renderLegend(self.dom.legendDiv, data.colorLegend, data.shapeLegend)
 		}
 
 		function updateCharts() {
 			const s = self.settings
 			chartDiv.transition().duration(s.duration)
 			renderSVG(chartDiv.select('svg'), chartDiv, s, s.duration, data)
-			self.renderLegend(self.dom.legendDiv, data.colorLegend, data.shapeLegend)
 		}
 	}
 
@@ -357,22 +348,21 @@ function setRenderers(self) {
 		svg
 			.transition()
 			.duration(duration)
-			.attr('width', s.svgw + 100)
+			.attr('width', s.svgw + 700)
 			.attr('height', s.svgh + 110) //leaving 100 px for the y-axis and 10 to leave some space on top
 
 		/* eslint-disable */
-		const [mainG, axisG, xAxis, yAxis] = getSvgSubElems(svg, chart)
+		const [mainG, axisG, xAxis, yAxis, legendG] = getSvgSubElems(svg, chart)
 		/* eslint-enable */
 
-		if (s.showAxes) mainG.attr('clip-path', `url(#clip)`)
-		else mainG.attr('clip-path', '')
 		if (mainG.select('.sjpcb-scatter-series').size() == 0) mainG.append('g').attr('class', 'sjpcb-scatter-series')
 		const serie = mainG.select('.sjpcb-scatter-series')
 		renderSerie(serie, data, s, duration)
+		self.renderLegend(legendG)
 	}
 
 	function getSvgSubElems(svg, chart) {
-		let mainG, axisG, xAxis, yAxis
+		let mainG, axisG, xAxis, yAxis, legendG
 		if (svg.select('.sjpcb-scatter-mainG').size() == 0) {
 			svg.append('defs')
 			mainG = svg.append('g').attr('class', 'sjpcb-scatter-mainG')
@@ -394,28 +384,34 @@ function setRenderers(self) {
 				.attr('height', self.settings.svgh)
 				.attr('fill', 'white')
 			//Adding clip path
+			const idclip = `sjpp_clip_${Date.now()}`
 			svg
 				.append('defs')
 				.append('clipPath')
-				.attr('id', 'clip')
+				.attr('id', idclip)
 				.append('rect')
 				.attr('x', 80)
 				.attr('y', 0)
 				.attr('width', self.settings.svgw)
 				.attr('height', self.settings.svgh + 20)
-
+			mainG.attr('clip-path', `url(#${idclip})`)
 			xAxis.call(self.axisBottom)
 			yAxis.call(self.axisLeft)
+			legendG = svg
+				.append('g')
+				.attr('class', 'sjpcb-scatter-legend')
+				.attr('transform', `translate(${self.settings.svgw + 200}, 0)`)
 		} else {
 			mainG = svg.select('.sjpcb-scatter-mainG')
 			axisG = svg.select('.sjpcb-scatter-axis')
 
 			xAxis = axisG.select('.sjpcb-scatter-x-axis')
 			yAxis = axisG.select('.sjpcb-scatter-y-axis')
+			legendG = svg.select('.sjpcb-scatter-legend')
 		}
 		if (self.settings.showAxes) axisG.style('opacity', 1)
 		else axisG.style('opacity', 0)
-		return [mainG, axisG, xAxis, yAxis]
+		return [mainG, axisG, xAxis, yAxis, legendG]
 	}
 
 	function renderSerie(g, data, s, duration) {
@@ -429,18 +425,18 @@ function setRenderers(self) {
 			.duration(duration)
 			.attr('transform', translate)
 			.attr('d', c => getShape(self, c))
-			.attr('fill', c => c.color)
+			.attr('fill', c => getColor(self, c))
 
-			.style('fill-opacity', c => (c.sample !== 'Ref' || (c.sample == 'Ref' && s.showRef) ? 1 : 0))
+			.style('fill-opacity', c => ('sampleId' in c || s.showRef ? 1 : 0))
 		symbols
 			.enter()
 			.append('path')
 			/*** you'd need to set the symbol position using translate, instead of previously with cx, cy for a circle ***/
 			.attr('transform', translate)
 			.attr('d', c => getShape(self, c))
-			.attr('fill', c => c.color)
+			.attr('fill', c => getColor(self, c))
 
-			.style('fill-opacity', c => (c.sample !== 'Ref' || (c.sample == 'Ref' && s.showRef) ? 1 : 0))
+			.style('fill-opacity', c => ('sampleId' in c || s.showRef ? 1 : 0))
 			.transition()
 			.duration(duration)
 	}
@@ -461,12 +457,14 @@ function setRenderers(self) {
 				.on('draw', lasso_draw)
 				.on('end', lasso_end)
 		function lasso_start(event) {
-			self.lasso
-				.items()
-				.attr('d', c => getShape(self, c, 1 / 2))
-				.style('fill-opacity', '.5')
-				.classed('not_possible', true)
-				.classed('selected', false)
+			if (self.lassoOn) {
+				self.lasso
+					.items()
+					.attr('d', c => getShape(self, c, 1 / 2))
+					.style('fill-opacity', c => ('sampleId' in c || self.settings.showRef ? 0.5 : 0))
+					.classed('not_possible', true)
+					.classed('selected', false)
+			}
 		}
 
 		function lasso_draw(event) {
@@ -476,7 +474,7 @@ function setRenderers(self) {
 				self.lasso
 					.possibleItems()
 					.attr('d', c => getShape(self, c, 2))
-					.style('fill-opacity', '1')
+					.style('fill-opacity', c => ('sampleId' in c || self.settings.showRef ? 1 : 0))
 					.classed('not_possible', false)
 					.classed('possible', true)
 
@@ -484,7 +482,7 @@ function setRenderers(self) {
 				self.lasso
 					.notPossibleItems()
 					.attr('d', c => getShape(self, c, 1 / 2))
-					.style('fill-opacity', '.5')
+					.style('fill-opacity', c => ('sampleId' in c || self.settings.showRef ? 0.5 : 0))
 					.classed('not_possible', true)
 					.classed('possible', false)
 			}
@@ -502,12 +500,12 @@ function setRenderers(self) {
 
 				// Style the selected dots
 				self.lasso.selectedItems().attr('d', c => getShape(self, c, 2))
-				self.lasso.items().style('fill-opacity', '1')
+				self.lasso.items().style('fill-opacity', c => ('sampleId' in c || self.settings.showRef ? 1 : 0))
 				self.selectedItems = []
 				let data
 				for (const item of self.lasso.selectedItems()._groups[0]) {
 					data = item.__data__
-					if (data.sample !== 'Ref') self.selectedItems.push(item)
+					if ('sampleId' in data) self.selectedItems.push(item)
 				}
 				self.lasso.notSelectedItems().attr('d', c => getShape(self, c))
 
@@ -526,8 +524,8 @@ function setRenderers(self) {
 				.attr('class', 'sja_menuoption sja_sharp_border')
 				.text(`List ${self.selectedItems.length} samples`)
 				.on('click', event => {
-					showTable({ name: 'Selected samples', items: self.selectedItems }, event.clientX, event.clientY)
 					self.dom.tip.hide()
+					showTable({ name: 'Selected samples', items: self.selectedItems }, event.clientX, event.clientY)
 				})
 
 			menuDiv
@@ -572,7 +570,7 @@ function setRenderers(self) {
 			.insert('div')
 			.style('display', display)
 			.style('margin', '20px')
-		icon_functions['lasso'](lassoDiv, { handler: toggle_lasso, enabled: false })
+		icon_functions['lasso'](lassoDiv, { handler: toggle_lasso, enabled: self.lassoOn })
 		self.dom.groupDiv = toolsDiv
 			.insert('div')
 			.style('display', display)
@@ -598,10 +596,10 @@ function setRenderers(self) {
 			xAxisG.call(self.axisBottom.scale(new_xScale))
 			yAxisG.call(self.axisLeft.scale(new_yScale))
 			seriesG.attr('transform', event.transform)
-			const k = event.transform.scale(1).k
+			self.k = event.transform.scale(1).k
 			//on zoom in the particle size is kept
-			symbols.attr('d', c => getShape(self, c, 1 / k))
-			if (self.lassoOn) self.lasso.selectedItems().attr('d', c => getShape(self, c, 2 / k))
+			symbols.attr('d', c => getShape(self, c))
+			if (self.lassoOn) self.lasso.selectedItems().attr('d', c => getShape(self, c, 2))
 		}
 
 		function zoomIn() {
@@ -682,49 +680,45 @@ function setRenderers(self) {
 				.style('float', 'right')
 				.html('&nbsp;&nbsp;›')
 			row.on('click', e => {
-				self.dom.tip.hide()
-				self.dom.tip.clear()
+				self.dom.tip.clear().hide()
 				showGroupMenu(event, group)
 			})
 		}
 		if (self.state.allowedTermTypes.includes('survival')) {
-			row = menuDiv
+			const survivalDiv = menuDiv
 				.append('div')
 				.attr('class', 'sja_menuoption sja_sharp_border')
 				.html('Compare survival&nbsp;&nbsp;›')
-				.style('position', 'relative')
 
-			const treeDiv = row
-				.insert('div')
-				.style('display', 'none')
-				.style('position', 'absolute')
-				.attr('class', 'sjpp_submenu')
-			row.on('click', async e => {
-				const display = treeDiv.style('display')
-				if (display === 'block') {
-					treeDiv.style('display', 'none')
-					treeDiv.selectAll('*').remove()
-					return
+			survivalDiv.on('click', async e => {
+				const state = {
+					nav: { header_mode: 'hide_search' },
+					tree: { usecase: { target: 'survival', detail: 'term' } }
 				}
-				const termdb = await import('../termdb/app')
-				termdb.appInit({
-					holder: treeDiv.style('display', 'block'),
-					vocabApi: self.app.vocabApi,
-					state: {
-						nav: {
-							header_mode: 'hide_search'
-						},
-						tree: { usecase: { target: 'survival', detail: 'term' } }
+				showTermsTree(
+					self,
+					survivalDiv,
+					term => {
+						openSurvivalPlot(self, term, getGroupsOverlay(self.config.groups))
 					},
-					tree: {
-						click_term: term => {
-							openSurvivalPlots(self, term)
-							self.dom.tip.hide()
-						}
-					}
-				})
+					state
+				)
 			})
 		}
+		const summarizeDiv = menuDiv
+			.append('div')
+			.attr('class', 'sja_menuoption sja_sharp_border')
+			.html('Summarize')
+		summarizeDiv
+			.insert('div')
+			.html('›')
+			.style('float', 'right')
+
+		summarizeDiv.on('click', async e => {
+			showTermsTree(self, summarizeDiv, term => {
+				openSummaryPlot(self, term, getGroupsOverlay(self.config.groups))
+			})
+		})
 		row = menuDiv
 			.append('div')
 			.attr('class', 'sja_menuoption sja_sharp_border')
@@ -748,49 +742,44 @@ function setRenderers(self) {
 			.attr('class', 'sja_menuoption sja_sharp_border')
 			.text(`List ${group.items.length} samples`)
 			.on('click', e => {
-				showTable(group, event.clientX, event.clientY)
 				self.dom.tip.hide()
+				showTable(group, event.clientX, event.clientY)
 			})
 
 		if (self.state.allowedTermTypes.includes('survival')) {
 			const survivalDiv = menuDiv
 				.append('div')
 				.attr('class', 'sja_menuoption sja_sharp_border')
-				.html('Survival analysis&nbsp;&nbsp;&nbsp;›')
 				.style('position', 'relative')
-			const treeDiv = survivalDiv
-				.insert('div')
-				.style('display', 'none')
-				.style('position', 'absolute')
-				.attr('class', 'sjpp_submenu')
+				.html('Survival analysis&nbsp;&nbsp;&nbsp;›')
+
 			survivalDiv.on('click', async e => {
-				const display = treeDiv.style('display')
-				if (display === 'block') {
-					treeDiv.style('display', 'none')
-					treeDiv.selectAll('*').remove()
-					return
+				const state = {
+					nav: { header_mode: 'hide_search' },
+					tree: { usecase: { target: 'survival', detail: 'term' } }
 				}
-				//self.dom.subtip.clear()
-				const termdb = await import('../termdb/app')
-				termdb.appInit({
-					holder: treeDiv.style('display', 'block'),
-					vocabApi: self.app.vocabApi,
-					state: {
-						nav: {
-							header_mode: 'hide_search'
-						},
-						tree: { usecase: { target: 'survival', detail: 'term' } }
+				showTermsTree(
+					self,
+					survivalDiv,
+					term => {
+						openSurvivalPlot(self, term, getGroupvsOthersOverlay(group))
 					},
-					tree: {
-						click_term: term => {
-							openSurvivalPlot(self, group, term)
-							self.dom.tip.hide()
-							treeDiv.style('display', 'none')
-						}
-					}
-				})
+					state
+				)
 			})
 		}
+		const summarizeDiv = menuDiv
+			.append('div')
+			.attr('class', 'sja_menuoption sja_sharp_border')
+			.html('Summarize')
+		summarizeDiv
+			.insert('div')
+			.html('›')
+			.style('float', 'right')
+
+		summarizeDiv.on('click', async e => {
+			showTermsTree(self, summarizeDiv, term => openSummaryPlot(self, term, getGroupvsOthersOverlay(group)))
+		})
 		const deleteDiv = menuDiv
 			.append('div')
 			.attr('class', 'sja_menuoption sja_sharp_border')
@@ -803,38 +792,37 @@ function setRenderers(self) {
 
 	function showTable(group, x, y) {
 		let rows = []
-		const columns = [formatCell('Sample', 'label'), formatCell(self.config.colorTW.id, 'label')]
-		if (self.config.shapeTW) columns.push(formatCell(self.config.shapeTW.id))
+		const columns = [formatCell('Sample', 'label'), formatCell(self.config.colorTW.term.name, 'label')]
+		if (self.config.shapeTW) columns.push(formatCell(self.config.shapeTW.term.name, 'label'))
 		columns.push(formatCell('Info', 'label'))
-		let row, data
-		let values
 		for (const item of group.items) {
-			data = item.__data__
-			row = [formatCell(data.sample)]
-			if ('category' in data) row.push(formatCell(data.category))
+			const data = item.__data__
+			const row = [formatCell(data.sample)]
+			if ('category' in data) row.push(formatCell(getCategoryInfo(data, 'category')))
 			else row.push(formatCell(''))
-			if (self.config.shapeTW) row.push(formatCell(getShapeName(self.shapes, data)))
+			if (self.config.shapeTW) row.push(formatCell(getCategoryInfo(data, 'shape')))
 			if ('info' in data) {
-				values = []
+				const values = []
 				for (const [k, v] of Object.entries(data.info)) values.push(`${k}: ${v}`)
 				row.push(formatCell(values.join(', ')))
 			} else row.push({ value: '' })
 			rows.push(row)
 		}
-		self.dom.subtip.clear()
-		const headerDiv = self.dom.subtip.d.style('width', '30vw').append('div')
+		self.dom.tip.clear()
+		const headerDiv = self.dom.tip.d.append('div')
 		headerDiv
 			.insert('div')
 			.html('&nbsp;' + group.name)
 			.style('display', 'inline-block')
 			.style('font-weight', 'bold')
 			.style('margin-top', '5px')
-		headerDiv
-			.insert('div')
+		const tableDiv = self.dom.tip.d.append('div')
+		const footerDiv = self.dom.tip.d
+			.append('div')
 			.style('display', 'inline-block')
 			.style('float', 'right')
 			.append('button')
-			.style('margin-right', '10px')
+			.style('margin', '10px 20px 0 0')
 			.text('Add to a group')
 			.on('click', e => {
 				self.config.groups.push({
@@ -844,8 +832,17 @@ function setRenderers(self) {
 				})
 				self.app.dispatch({ type: 'plot_edit', id: self.id, config: { groups: self.config.groups } })
 			})
-		renderTable({ rows, columns, div: self.dom.subtip.d })
-		self.dom.subtip.show(x, y)
+		renderTable({
+			rows,
+			columns,
+			div: tableDiv,
+			deleteCallback: i => {
+				group.items.splice(i, 1)
+				showTable(group, x, y)
+			}
+		})
+
+		self.dom.tip.show(x, y)
 
 		function formatCell(column, name = 'value') {
 			let dict = {}
@@ -861,18 +858,22 @@ function setInteractivity(self) {
 		if (event.target.tagName == 'path') {
 			const d = event.target.__data__
 			if (!d) return
-			if (d.sample == 'Ref' && (!self.settings.showRef || self.settings.refSize == 0)) return
+			if (!('sampleId' in d) && (!self.settings.showRef || self.settings.refSize == 0)) return
 			self.dom.tip.clear()
 
 			const rows = [{ k: 'Sample', v: d.sample }]
-			if ('category' in d) {
-				rows.push({ k: self.config.colorTW.id, v: d.category })
+			const cat_info = getCategoryInfo(d, 'category')
+			rows.push({ k: self.config.colorTW.term.name, v: cat_info })
+			if (self.config.shapeTW) {
+				const cat_info = getCategoryInfo(d, 'shape')
+				rows.push({ k: self.config.shapeTW.term.name, v: cat_info })
 			}
 			if ('info' in d) for (const [k, v] of Object.entries(d.info)) rows.push({ k: k, v: v })
 			make_table_2col(self.dom.tip.d, rows)
 			self.dom.tip.show(event.clientX, event.clientY)
 		} else {
 			self.dom.tip.hide()
+			self.dom.termstip.hide()
 		}
 	}
 
@@ -880,9 +881,9 @@ function setInteractivity(self) {
 		if (!self.lassoOn) self.dom.tip.hide()
 	}
 
-	self.click = function() {
-		self.dom.tip.hide()
-		self.dom.subtip.hide()
+	self.mouseclick = function() {
+		if (!self.lassoOn) self.dom.tip.hide()
+		self.dom.termstip.hide()
 	}
 }
 
@@ -891,19 +892,17 @@ export async function getPlotConfig(opts, app) {
 	try {
 		await fillTermWrapper(opts.colorTW, app.vocabApi)
 		if (opts.shapeTW) await fillTermWrapper(opts.shapeTW, app.vocabApi)
-
 		const config = {
-			id: opts.colorTW.id,
 			groups: [],
 			settings: {
 				controls: {
 					isOpen: false // control panel is hidden by default
 				},
 				sampleScatter: {
-					size: 5,
-					refSize: 5,
-					svgw: 500,
-					svgh: 500,
+					size: 16,
+					refSize: 9,
+					svgw: 600,
+					svgh: 600,
 					axisTitleFontSize: 16,
 					showAxes: false,
 					showRef: true
@@ -922,79 +921,23 @@ export const scatterInit = getCompInit(Scatter)
 // this alias will allow abstracted dynamic imports
 export const componentInit = scatterInit
 
-function getShape(self, c, k = 1) {
-	const index = c.shape % self.symbols.length
-	const size = c.sample === 'Ref' ? self.settings.refSize : self.settings.size
-	return self.symbols[index].size(size * k)()
+function getCategoryInfo(d, category) {
+	if (!(category in d)) return ''
+	return d.category_info?.[category] ? `${d.category_info[category]} ${d[category]}` : d[category]
 }
 
-function getShapeName(shapes, data) {
-	for (const shape of shapes) {
-		const index = shape[1].shape
-		const name = shape[0]
-		if (data.shape === index) return name
-	}
-	return null
+function getColor(self, c) {
+	const color = 'category' in c ? self.colorLegend.get(c.category).color : self.colorLegend.get('None').color
+	return color
 }
 
-function openSurvivalPlot(self, group, term) {
-	const values = []
-	let data
-	for (const item of group.items) {
-		data = item.__data__
-		values.push(data.sample)
-	}
-	let config = {
-		chartType: 'survival',
-		term,
-		term2: {
-			term: { name: self.config.name + ' groups', type: 'samplelst' },
-			q: {
-				mode: 'custom-groupsetting',
-				groups: [
-					{
-						name: 'Group 1',
-						key: 'sample',
-						values: values
-					},
-					{
-						name: 'Others',
-						key: 'sample',
-						in: false,
-						values: values
-					}
-				]
-			}
-		},
-		settings: {
-			survival: {
-				xTickValues: [0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30]
-			}
-		}
-	}
-	self.app.dispatch({
-		type: 'plot_create',
-		config: config
-	})
+function getShape(self, c, factor = 1) {
+	const index = self.shapeLegend.get(c.shape).shape % self.symbols.length
+	const size = 'sampleId' in c ? self.settings.size : self.settings.refSize
+	return self.symbols[index].size((size * factor) / self.k)()
 }
 
-function openSurvivalPlots(self, term) {
-	let groups = []
-	let values, tgroup, data
-
-	for (const [i, group] of self.config.groups.entries()) {
-		values = []
-		for (const item of group.items) {
-			data = item.__data__
-			values.push(data.sample)
-		}
-		;(tgroup = {
-			name: 'Group ' + (i + 1),
-			key: 'sample',
-			values: values
-		}),
-			groups.push(tgroup)
-	}
+function openSurvivalPlot(self, term, groups) {
 	let config = {
 		chartType: 'survival',
 		term,
@@ -1005,6 +948,7 @@ function openSurvivalPlots(self, term) {
 				groups: groups
 			}
 		},
+		insertBefore: self.id,
 		settings: {
 			survival: {
 				xTickValues: [0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30]
@@ -1032,4 +976,83 @@ function downloadSVG(svg) {
 	link.href = URL.createObjectURL(svg_blob)
 	link.click()
 	link.remove()
+}
+
+function openSummaryPlot(self, term, groups) {
+	let config = {
+		chartType: 'summary',
+		childType: 'barchart',
+		term,
+		term2: {
+			term: { name: self.config.name + ' groups', type: 'samplelst' },
+			q: {
+				mode: 'custom-groupsetting',
+				groups: groups
+			}
+		},
+		insertBefore: self.id
+	}
+	self.app.dispatch({
+		type: 'plot_create',
+		config
+	})
+}
+
+function getGroupsOverlay(groups) {
+	const overlayGroups = []
+	let values, tgroup, data
+	for (const [i, group] of groups.entries()) {
+		values = []
+		for (const item of group.items) {
+			data = item.__data__
+			values.push(data.sample)
+		}
+		;(tgroup = {
+			name: 'Group ' + (i + 1),
+			key: 'sample',
+			values: values
+		}),
+			overlayGroups.push(tgroup)
+	}
+	return overlayGroups
+}
+
+function getGroupvsOthersOverlay(group) {
+	const values = []
+	let data
+	for (const item of group.items) {
+		data = item.__data__
+		values.push(data.sample)
+	}
+	return [
+		{
+			name: 'Group 1',
+			key: 'sample',
+			values
+		},
+		{
+			name: 'Others',
+			key: 'sample',
+			in: false,
+			values
+		}
+	]
+}
+
+async function showTermsTree(self, div, callback, state = { tree: { usecase: { detail: 'term' } } }) {
+	self.dom.termstip.clear()
+	self.dom.termstip.showunderoffset(div.node())
+	const termdb = await import('../termdb/app')
+	termdb.appInit({
+		holder: self.dom.termstip.d,
+		vocabApi: self.app.vocabApi,
+		state,
+		tree: {
+			click_term: term => {
+				callback(term)
+				self.dom.tip.hide()
+				self.dom.termstip.hide()
+			}
+		}
+	})
 }

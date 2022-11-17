@@ -613,7 +613,7 @@ module.exports = {
 	},*/
 
 	cohort: {
-		allowedChartTypes: ['barchart', 'cuminc', 'survival', 'regression'],
+		allowedChartTypes: ['summary', 'cuminc', 'survival', 'regression'],
 
 		db: {
 			file: 'files/hg38/sjlife/clinical/db'
@@ -627,9 +627,11 @@ module.exports = {
 				// to add 'snplocus' 'prs' later
 			],
 
-			timeScale: 'years',
+			minTimeSinceDx: 5, // minimum number of years since cancer diagnosis for enrollment in the SJLIFE study
 
-			minTimeSinceDx: 5, // enrollment in sjlife requires 5 years since cancer diagnosis
+			coxTimeMsg: 'years since entry into the cohort',
+
+			coxStartTimeMsg: `begins at 5 years post cancer diagnosis`,
 
 			// term ids specific to dataset
 			termIds: {
@@ -816,6 +818,9 @@ module.exports = {
 				highlightCohortBy: 'cssSelector',
 				htmlinfo: cohorthtmltable
 			},
+
+			dataDownloadFailHelpLink: 'https://university.stjude.cloud/docs/visualization-community/data-download/',
+
 			helpPages: [
 				// to use for help button in MASS UI
 				// array of url links to help pages

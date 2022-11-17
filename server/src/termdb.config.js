@@ -31,7 +31,8 @@ export function make(q, res, ds) {
 		supportedChartTypes: tdb.q.getSupportedChartTypes(q.embedder),
 		allowedTermTypes: getAllowedTermTypes(ds),
 		termMatch2geneSet: tdb.termMatch2geneSet,
-		massSessionDuration: serverconfig.features.massSessionDuration || 30
+		massSessionDuration: serverconfig.features.massSessionDuration || 30,
+		dataDownloadFailHelpLink: tdb.dataDownloadFailHelpLink
 	}
 
 	// optional attributes
@@ -40,6 +41,8 @@ export function make(q, res, ds) {
 	if (tdb.helpPages) c.helpPages = tdb.helpPages
 	if (tdb.timeScale) c.timeScale = tdb.timeScale
 	if (tdb.minTimeSinceDx) c.minTimeSinceDx = tdb.minTimeSinceDx
+	if (tdb.coxTimeMsg) c.coxTimeMsg = tdb.coxTimeMsg
+	if (tdb.coxStartTimeMsg) c.coxStartTimeMsg = tdb.coxStartTimeMsg
 	if (tdb.restrictAncestries) {
 		c.restrictAncestries = []
 		for (const i of tdb.restrictAncestries) {

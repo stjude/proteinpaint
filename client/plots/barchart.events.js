@@ -62,10 +62,16 @@ export default function getHandlers(self) {
 					  d.color +
 					  "'>&nbsp;</div>"
 				const rows = [`<tr><td colspan=2 style='padding:3px; text-align:center'>${seriesLabel}</td></tr>`]
-				if (t2)
+				if (t2) {
 					rows.push(
 						`<tr><td colspan=2 style='padding:3px; text-align:center'>${icon} <span>${dataLabel}</span></td></tr>`
 					)
+					const pvalue = d.groupPvalues.term2tests.find(x => x.term2id === d.dataId).pvalue
+					rows.push(
+						`<tr><td style='padding:3px; color:#aaa'>p-value</td><td style='padding:3px; text-align:center'>${pvalue}</td></tr>`
+					)
+				}
+
 				rows.push(
 					`<tr><td style='padding:3px; color:#aaa'>#Individuals</td><td style='padding:3px; text-align:center'>n=${d.total}</td></tr>`
 				)

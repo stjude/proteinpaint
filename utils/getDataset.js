@@ -1,5 +1,3 @@
-const serverconfig = require('../server/src/serverconfig.js')
-
 const help = `
 Connect VPN when pulling dataset (scp from hpc); no need when pulling gene db (curl from prp1).
 Run this script anywhere on your computer.
@@ -12,14 +10,13 @@ Path of local "tp" folder is determined from serverconfig.json.
 Folders under tp/ are auto-created if missing.
 `
 
-const tp = serverconfig.tpmasterdir
-
 const datasets = {
 	cosmic,
 	pnet,
 	ihg,
 	hg38gene,
-	allPharmacotyping
+	allPharmacotyping,
+	ash
 	// add more datasets
 }
 
@@ -32,7 +29,9 @@ if (process.argv.length == 2) {
 
 const fs = require('fs'),
 	exec = require('child_process').execSync,
-	path = require('path')
+	path = require('path'),
+	serverconfig = require('../server/src/serverconfig.js'),
+	tp = serverconfig.tpmasterdir
 
 for (let i = 2; i < process.argv.length; i++) {
 	const dsname = process.argv[i]
@@ -45,87 +44,88 @@ for (let i = 2; i < process.argv.length; i++) {
 
 //////////////////////// helpers
 
+function scpHpc(file) {
+	// scp from hpc:~/tp/file, to local tp/file
+	exec('scp ' + path.join('hpc:~/tp', file) + path.join(tp, file))
+}
+
 // function name is dataset identifier used in commandline argument
 
 function cosmic() {
 	checkDir('anno/db/')
-	exec('scp hpc:~/tp/jwang/TASK/MDS/COSMIC/cosmic.slice.hg19.db ' + tp + 'anno/db/cosmic.hg19.db')
-	exec('scp hpc:~/tp/jwang/TASK/MDS/COSMIC/cosmic.slice.hg38.db ' + tp + 'anno/db/cosmic.hg38.db')
+	exec('scp hpc:~/tp/jwang/TASK/MDS/COSMIC/cosmic.slice.hg19.db ' + path.join(tp, 'anno/db/cosmic.hg19.db'))
+	exec('scp hpc:~/tp/jwang/TASK/MDS/COSMIC/cosmic.slice.hg38.db ' + path.join(tp, 'anno/db/cosmic.hg38.db'))
 }
 
 function pnet() {
 	checkDir('files/hg19/pnet/clinical/')
-	exec('scp ppr:/opt/data/pp/tp_native_dir/files/hg19/pnet/clinical/db ' + tp + 'files/hg19/pnet/clinical/db')
+	exec('scp ppr:/opt/data/pp/tp_native_dir/files/hg19/pnet/clinical/db ' + path.join(tp, 'files/hg19/pnet/clinical/db'))
 	checkDir('files/hg19/pnet/classification/')
-	exec(
-		'scp hpc:tp/files/hg19/pnet/classification/pnet_apr13_tnse.txt ' +
-			tp +
-			'files/hg19/pnet/classification/pnet_apr13_tnse.txt'
-	)
+	scpHpc('files/hg19/pnet/classification/pnet_apr13_tnse.txt')
 	checkDir('sdhanda/mb_portal/BT_database/')
 	exec(
 		'scp ppr:/opt/data/pp/tp_native_dir/sdhanda/mb_portal/BT_database/SNVindel_pnet.tsv ' +
-			tp +
-			'sdhanda/mb_portal/BT_database/SNVindel_pnet.tsv'
+			path.join(tp, 'sdhanda/mb_portal/BT_database/SNVindel_pnet.tsv')
 	)
 	exec(
 		'scp ppr:/opt/data/pp/tp_native_dir/sdhanda/mb_portal/BT_database/fusion_pnet.tsv ' +
-			tp +
-			'sdhanda/mb_portal/BT_database/fusion_pnet.tsv'
+			path.join(tp, 'sdhanda/mb_portal/BT_database/fusion_pnet.tsv')
 	)
 	exec(
 		'scp ppr:/opt/data/pp/tp_native_dir/sdhanda/mb_portal/BT_database/CNV_data_pnet.tsv ' +
-			tp +
-			'sdhanda/mb_portal/BT_database/CNV_data_pnet.tsv'
+			path.join(tp, 'sdhanda/mb_portal/BT_database/CNV_data_pnet.tsv')
 	)
 }
 
 function ihg() {
 	checkDir('files/hg19/ihg/clinical/')
-	exec('scp ppr:/opt/data/pp/tp_native_dir/files/hg19/ihg/clinical/db ' + tp + 'files/hg19/ihg/clinical/db')
+	exec('scp ppr:/opt/data/pp/tp_native_dir/files/hg19/ihg/clinical/db ' + path.join(tp, 'files/hg19/ihg/clinical/db'))
 	checkDir('files/hg19/ihg/classification/')
 	exec(
 		'scp ppr:/opt/data/pp/tp_native_dir/files/hg19/ihg/classification/ihg_oct20_TSNE.txt ' +
-			tp +
-			'files/hg19/ihg/classification/ihg_oct20_TSNE.txt'
+			path.join(tp, 'files/hg19/ihg/classification/ihg_oct20_TSNE.txt')
 	)
 	checkDir('sdhanda/mb_portal/BT_database/')
 	exec(
 		'scp ppr:/opt/data/pp/tp_native_dir/sdhanda/mb_portal/BT_database/CNV_data_IHG.tsv ' +
-			tp +
-			'sdhanda/mb_portal/BT_database/CNV_data_IHG.tsv'
+			path.join(tp, 'sdhanda/mb_portal/BT_database/CNV_data_IHG.tsv')
 	)
 	exec(
 		'scp ppr:/opt/data/pp/tp_native_dir/sdhanda/mb_portal/BT_database/fusion_IHG.tsv ' +
-			tp +
-			'sdhanda/mb_portal/BT_database/fusion_IHG.tsv'
+			path.join(tp, 'sdhanda/mb_portal/BT_database/fusion_IHG.tsv')
 	)
-	exec(
-		'scp hpc:~/tp/sdhanda/mb_portal/BT_database/SNVindel_IHG.tsv ' +
-			tp +
-			'sdhanda/mb_portal/BT_database/SNVindel_IHG.tsv'
-	)
+	scpHpc('sdhanda/mb_portal/BT_database/SNVindel_IHG.tsv')
 }
 
 function allPharmacotyping() {
 	checkDir('files/hg38/ALL-pharmacotyping/clinical/')
-	exec('scp hpc:~/tp/files/hg38/ALL-pharmacotyping/clinical/db ' + tp + 'files/hg38/ALL-pharmacotyping/clinical/db')
-	exec(
-		'scp hpc:~/tp/files/hg38/ALL-pharmacotyping/clinical/transcriptome-tSNE.txt ' +
-			tp +
-			'files/hg38/ALL-pharmacotyping/clinical/transcriptome-tSNE.txt'
-	)
+	scpHpc('files/hg38/ALL-pharmacotyping/clinical/db')
+	scpHpc('files/hg38/ALL-pharmacotyping/clinical/transcriptome-tSNE.txt')
+}
+
+function ash() {
+	checkDir('files/hg38/ash/')
+	scpHpc('files/hg38/ash/db')
+	scpHpc('files/hg38/ash/panall.hg38.bcf.gz')
+	scpHpc('files/hg38/ash/panall.hg38.bcf.gz.tbi')
+	scpHpc('files/hg38/ash/panall.svfusion.hg38.gz')
+	scpHpc('files/hg38/ash/panall.svfusion.hg38.gz.tbi')
 }
 
 function hg38gene() {
 	checkDir('anno/')
-	exec('curl https://proteinpaint.stjude.org/ppSupport/refGene.hg38.gz -o ' + tp + 'anno/refGene.hg38.gz')
-	exec('curl https://proteinpaint.stjude.org/ppSupport/refGene.hg38.gz.tbi -o ' + tp + 'anno/refGene.hg38.gz.tbi')
-	exec('curl https://proteinpaint.stjude.org/ppSupport/gencode.v41.hg38.gz -o ' + tp + 'anno/gencode.v41.hg38.gz')
+	exec('curl https://proteinpaint.stjude.org/ppSupport/refGene.hg38.gz -o ' + path.join(tp, 'anno/refGene.hg38.gz'))
 	exec(
-		'curl https://proteinpaint.stjude.org/ppSupport/gencode.v41.hg38.gz.tbi -o ' + tp + 'anno/gencode.v41.hg38.gz.tbi'
+		'curl https://proteinpaint.stjude.org/ppSupport/refGene.hg38.gz.tbi -o ' + path.join(tp, 'anno/refGene.hg38.gz.tbi')
 	)
-	exec('curl https://proteinpaint.stjude.org/ppSupport/genes.hg38.db -o ' + tp + 'anno/genes.hg38.db')
+	exec(
+		'curl https://proteinpaint.stjude.org/ppSupport/gencode.v41.hg38.gz -o ' + path.join(tp, 'anno/gencode.v41.hg38.gz')
+	)
+	exec(
+		'curl https://proteinpaint.stjude.org/ppSupport/gencode.v41.hg38.gz.tbi -o ' +
+			path.join(tp, 'anno/gencode.v41.hg38.gz.tbi')
+	)
+	exec('curl https://proteinpaint.stjude.org/ppSupport/genes.hg38.db -o ' + path.join(tp, 'anno/genes.hg38.db'))
 }
 
 function checkDir(p) {

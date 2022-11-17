@@ -54,23 +54,37 @@ function argument object {}
 
 .callback()
 	optional
-	triggered when a valid hit is found, and has been written to returned result{} object
+	triggered when a valid hit is found, and has been written to RESULT object (see below)
+	no parameter is supplied
 
 
 ***********************************
-result object returned by the function
+by calling addGeneSearchbox(), it redirectly returns a RESULT object detailed below without await
 
-.chr
-	"chr" is always included
-.start
-.stop
-	"start/stop" are included when entered a coordinate or the coord is mapped from a gene/snp
-.geneSymbol
+RESULT{}
+	.chr
+		"chr" is always included
+	.start
+	.stop
+		"start/stop" are included when entered a coordinate or the coord is mapped from a gene/snp
+	.geneSymbol
+	.pos
+	.ref
+	.alt
+		"pos/ref/alt" are included when entered a variant
 
-.pos
-.ref
-.alt
-	"pos/ref/alt" are included when entered a variant
+***********************************
+if arg.callback() is not provided:
+	any match is silently written to RESULT
+	with repeated search the latest match is written to RESULT
+	common pattern is that user will press a button to launch some logic that will check RESULT
+	it's up to the calling code to decide when to access RESULT (e.g. pressing some button in caller's ui)
+	usecase: block.tk.bam.gdc.js
+
+if arg.callback() is provided:
+	upon a match, RESULT is updated and callback is triggered
+	as a way to notify caller to do subsequent steps
+	usecase: geneSearch4GDCmds3.js
 
 
 ***********************************
@@ -106,6 +120,7 @@ insertion
 	chr5:g.171410539_171410540insTCTG
 	parse to chr5.171410539.-.TCTG
 */
+
 export function addGeneSearchbox(arg) {
 	const tip = arg.tip,
 		row = arg.row
@@ -156,7 +171,7 @@ export function addGeneSearchbox(arg) {
 					if (hitgene.size() > 0 && hitgene.attr('isgene')) {
 						// matched with gene names, use the first one
 						const geneSymbol = hitgene.text()
-						getResult({ geneSymbol })
+						getResult({ geneSymbol }, v)
 					} else {
 						// err
 						getResult(null, 'not a gene')
@@ -269,12 +284,13 @@ export function addGeneSearchbox(arg) {
 				tip.d
 					.append('div')
 					.text(s)
-					.attr('class', 'sja_menuoption sja_sharp_border')
+					.attr('class', 'sja_menuoption')
+					.style('border-radius', '0px')
 					.attr('isgene', 1)
 					.on('click', () => {
 						if (arg.geneOnly) {
 							// finding gene only, got result
-							getResult({ geneSymbol: s })
+							getResult({ geneSymbol: s }, s)
 							tip.hide()
 						} else {
 							// convert gene symbol to coord
@@ -325,6 +341,7 @@ export function addGeneSearchbox(arg) {
 				tip.d
 					.append('div')
 					.attr('class', 'sja_menuoption')
+					.style('border-radius', '0px')
 					.text(r.name + ' ' + r.chr + ':' + r.start + '-' + r.stop)
 					.on('click', () => {
 						tip.hide()
@@ -398,13 +415,20 @@ export function addGeneSearchbox(arg) {
 				// tell caller they found a gene
 				result.geneSymbol = geneSymbol
 			}
-
-			if (arg.callback) await arg.callback()
 		} else {
 			// no hit
 			searchStat.mark.style('color', 'red').html('&cross;')
 		}
 		searchStat.word.text(fromWhat || '')
+
+		// fromWhat is the original search string. pass it to caller as extra piece of info
+		// useful when user enters isoform accession and matches to genesymbol, and wants to be able to refer back to which isoform was entered
+		result.fromWhat = fromWhat
+
+		if (r && arg.callback) {
+			// has valid result, trigger callback (no need to await?)
+			await arg.callback()
+		}
 	}
 
 	return result //searchbox

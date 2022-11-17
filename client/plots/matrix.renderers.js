@@ -37,7 +37,7 @@ export function setRenderers(self) {
 			.attr('transform', `translate(${series.x},${series.y})`)
 			.style('opacity', 1)
 
-		const rects = g.selectAll('rect').data(series.cells, (cell, i) => cell.sample + ';;' + cell.tw.$id)
+		const rects = g.selectAll('rect').data(series.cells, (cell, i) => cell.sample + ';;' + cell.tw.$id + ';;' + i)
 		rects.exit().remove()
 		rects.each(self.renderCell)
 		rects
@@ -52,10 +52,13 @@ export function setRenderers(self) {
 		const s = self.settings.matrix
 		const rect = select(this)
 			.transition()
-			.duration('x' in this ? s.duration : 0)
-			.attr('x', cell.x)
-			.attr('y', cell.y)
-			.attr('width', cell.width ? cell.width : s.colw)
+			// TODO: use s.duration if there is a way to avoid any remaining glitchy transitions
+			// using the cell index in the .data() bind function seems to fix glitches in split cells,
+			// but cells with overriden values flashes during a transition
+			.duration(0) //'x' in cell ? s.duration : 0)
+			.attr('x', 'x' in cell ? cell.x : 0)
+			.attr('y', 'y' in cell ? cell.y : 0)
+			.attr('width', 'width' in cell ? cell.width : s.colw)
 			.attr('height', 'height' in cell ? cell.height : s.rowh)
 			.attr('shape-rendering', 'crispEdges')
 			//.attr('stroke', cell.fill)

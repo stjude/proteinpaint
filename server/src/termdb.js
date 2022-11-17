@@ -12,6 +12,7 @@ const getOrderedLabels = require('./termdb.barsql').getOrderedLabels
 const isUsableTerm = require('#shared/termdb.usecase').isUsableTerm
 const trigger_getSampleScatter = require('./termdb.scatter').trigger_getSampleScatter
 const trigger_getViolinPlotData = require('./termdb.violin').trigger_getViolinPlotData
+const getData = require('./termdb.matrix').getData
 
 /*
 ********************** EXPORTED
@@ -60,7 +61,7 @@ export function handle_request_closure(genomes) {
 
 			// process triggers
 			if (q.gettermbyid) return trigger_gettermbyid(q, res, tdb)
-			if (q.getcategories) return trigger_getcategories(q, res, tdb, ds)
+			if (q.getcategories) return await trigger_getcategories(q, res, tdb, ds, genome)
 			if (q.getpercentile) return trigger_getpercentile(q, res, ds)
 			if (q.getnumericcategories) return trigger_getnumericcategories(q, res, tdb, ds)
 			if (q.default_rootterm) return await trigger_rootterm(q, res, tdb)
@@ -85,7 +86,7 @@ export function handle_request_closure(genomes) {
 			if (q.getvariantfilter) return trigger_getvariantfilter(res, ds)
 			if (q.getLDdata) return trigger_getLDdata(q, res, ds)
 			if (q.genesetByTermId) return trigger_genesetByTermId(q, res, tdb)
-			if (q.getSampleScatter) return await trigger_getSampleScatter(q, res, ds)
+			if (q.getSampleScatter) return await trigger_getSampleScatter(q, res, ds, genome)
 			if (q.getViolinPlotData) return await trigger_getViolinPlotData(q, res, ds)
 
 			// TODO: use trigger flags like above?
@@ -93,7 +94,7 @@ export function handle_request_closure(genomes) {
 				res.send(await ds.getTermTypes(q))
 				return
 			} else if (q.for == 'matrix') {
-				const data = await require(`./termdb.matrix.js`).getData(q, ds, genome)
+				const data = await getData(q, ds, genome)
 				res.send(data)
 				return
 			} else if (q.for == 'validateToken') {
@@ -225,49 +226,93 @@ async function trigger_findterm(q, res, termdb, ds) {
 	res.send({ lst: terms })
 }
 
-function trigger_getcategories(q, res, tdb, ds) {
+/*
+Input:
+
+q.filter = {}
+	optional filter to limit samples
+q.tid = str
+	term id, dictionary term
+q.term1_q = {}
+	optional q object
+q.currentGeneNames = str
+	optional stringified array of gene names, to pull samples mutated on given genes for this term (gdc only)
+
+Returns:
+{
+	lst:[]
+		{
+			samplecount:int
+			label:str
+			key:str
+		}
+	orderedLabels:[]
+		list of string names
+}
+*/
+async function trigger_getcategories(q, res, tdb, ds, genome) {
 	// thin wrapper of get_summary
 	// works for all types of terms
 	if (!q.tid) throw '.tid missing'
 	const term = tdb.q.termjsonByOneid(q.tid)
-	const arg = {
-		ds,
-		term1_id: q.tid
+	const tw = {
+		id: q.tid,
+		term,
+		q: q.term1_q || getDefaultQ(term, q)
 	}
-	if (q.term1_q) arg.term1_q = q.term1_q
-	switch (term.type) {
-		case 'categorical':
-			break
-		case 'integer':
-		case 'float':
-			if (q.term1_q == undefined) arg.term1_q = term.bins.default
-			break
-		case 'condition':
-			if (q.term1_q == undefined) {
-				arg.term1_q = {
-					mode: q.mode,
-					breaks: q.breaks,
-					bar_by_grade: q.bar_by_grade,
-					bar_by_children: q.bar_by_children,
-					value_by_max_grade: q.value_by_max_grade,
-					value_by_most_recent: q.value_by_most_recent,
-					value_by_computable_grade: q.value_by_computable_grade
-				}
-			}
-			break
-		default:
-			throw 'unknown term type'
-	}
-	if (q.filter) arg.filter = q.filter
 
-	const result = termdbsql.get_summary(arg)
-	const bins = result.CTE1.bins ? result.CTE1.bins : []
+	const arg = {
+		filter: q.filter,
+		terms: [tw],
+		currentGeneNames: q.currentGeneNames
+	}
+
+	const data = await getData(arg, ds, genome)
+
+	const key2count = new Map()
+	// k: category key
+	// v: number of samples
+
+	for (const sid in data.samples) {
+		const v = data.samples[sid][q.tid]
+		if (!v) continue
+		if (!('key' in v)) continue
+		key2count.set(v.key, 1 + (key2count.get(v.key) || 0))
+	}
+
+	const lst = []
+	for (const [key, count] of key2count) {
+		lst.push({
+			samplecount: count,
+			key,
+			label: term?.values?.[key]?.label || key
+		})
+	}
 
 	res.send({
-		lst: result.lst,
-		orderedLabels: getOrderedLabels(term, bins)
+		lst,
+		orderedLabels: getOrderedLabels(term, data.refs.byTermId?.[q.tid]?.bins || [])
 	})
 }
+
+// may reuse or already done elsewhere?
+function getDefaultQ(term, q) {
+	if (term.type == 'categorical') return {}
+	if (term.type == 'integer' || term.type == 'float') return term.bins.default
+	if (term.type == 'condition') {
+		return {
+			mode: q.mode,
+			breaks: q.breaks,
+			bar_by_grade: q.bar_by_grade,
+			bar_by_children: q.bar_by_children,
+			value_by_max_grade: q.value_by_max_grade,
+			value_by_most_recent: q.value_by_most_recent,
+			value_by_computable_grade: q.value_by_computable_grade
+		}
+	}
+	throw 'unknown term type'
+}
+
 function trigger_getnumericcategories(q, res, tdb, ds) {
 	if (!q.tid) throw '.tid missing'
 	const term = tdb.q.termjsonByOneid(q.tid)

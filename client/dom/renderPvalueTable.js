@@ -7,6 +7,7 @@ used by survival plot and cuminc plot
 
 input parameter:
 {
+	title: 'str' value specified by user,
     holder: holder div,
     plot: plot type ('survial' or 'cuminc'),
     tests: [] chart tests,
@@ -18,21 +19,21 @@ input parameter:
 }
 */
 
-export function renderPvalues({ holder, plot, tests, s, bins, tip, setActiveMenu, updateHiddenPvalues }) {
-	const fontSize = s.axisTitleFontSize - 2
+export function renderPvalues({ title, holder, plot, tests, s, bins, tip, setActiveMenu, updateHiddenPvalues }) {
+	let fontSize
+
+	if (s.axisTitleFontSize) {
+		fontSize = s.axisTitleFontSize - 2
+	} else fontSize = 15
 	const maxPvalsToShow = 10
 
 	holder.selectAll('*').remove()
 
 	// title div
-	let title
-	if (plot == 'survival') {
-		title = 'Group comparisons (log-rank test)'
-	} else if (plot == 'cuminc') {
-		title = "Group comparisons (Gray's test)"
-	} else {
+	if (!plot) {
 		throw `plot type '${plot}' not recognized`
 	}
+
 	holder
 		.append('div')
 		.style('padding-bottom', '5px')
@@ -44,17 +45,16 @@ export function renderPvalues({ holder, plot, tests, s, bins, tip, setActiveMenu
 	// need separate divs for title and table
 	// to support table scrolling
 	const tablediv = holder.append('div').style('border', '1px solid #ccc')
-	if (tests.length > maxPvalsToShow) {
+	if ((plot == 'violin' && tests.pvalues.length > maxPvalsToShow) || tests.length > maxPvalsToShow) {
 		tablediv.style('overflow', 'auto').style('height', '220px')
 	}
-
 	// in survival plot, individual tests can be hidden by s.hiddenPvalues
 	// in cuminc plot, s.hiddenPvalues is not defined
 	const visibleTests = s.hiddenPvalues
 		? tests.filter(t => !s.hiddenPvalues.find(p => p.series1.id === t.series1.id && p.series2.id === t.series2.id))
 		: tests
 
-	if (visibleTests.length) {
+	if (plot == 'violin' ? visibleTests.pvalues.length : visibleTests.length) {
 		const binOrder = bins && bins.length > 0 ? bins.map(b => b.label) : null
 		if (binOrder) {
 			// series are numeric bins
@@ -105,9 +105,10 @@ export function renderPvalues({ holder, plot, tests, s, bins, tip, setActiveMenu
 
 		// table rows
 		const tbody = table.append('tbody')
+
 		const tr = tbody
 			.selectAll('tr')
-			.data(visibleTests)
+			.data(plot == 'violin' ? visibleTests.pvalues : visibleTests)
 			.enter()
 			.append('tr')
 			.attr('class', `pp-${plot}-chartLegends-pvalue`)
@@ -125,20 +126,22 @@ export function renderPvalues({ holder, plot, tests, s, bins, tip, setActiveMenu
 			.data(d => [d.series1, d.series2, d.pvalue])
 			.enter()
 			.append('td')
-			.attr('title', plot == 'survival' ? 'Click to hide a p-value' : '')
-			.style('color', d => d.color)
+			.attr('title', plot ? 'Click to hide a p-value' : '')
+			.style('color', plot == 'violin' ? 'black' : d => d.color)
 			.style('padding', '1px 8px 1px 2px')
 			.style('font-size', fontSize + 'px')
 			.style('cursor', plot == 'survival' ? 'pointer' : 'auto')
-			.text(d => d.text)
+			.text(d => (plot == 'violin' ? d : d.text))
 
 		// footnote div
-		if (visibleTests.find(test => test.permutation)) {
-			holder
-				.append('div')
-				.style('margin-top', '10px')
-				.style('font-size', fontSize - 2 + 'px')
-				.text("*computed by permutation of Gray's test statistic")
+		if (plot == 'cuminc') {
+			if (visibleTests.find(test => test.permutation)) {
+				holder
+					.append('div')
+					.style('margin-top', '10px')
+					.style('font-size', fontSize - 2 + 'px')
+					.text("*computed by permutation of Gray's test statistic")
+			}
 		}
 	}
 

@@ -41,19 +41,22 @@ getPvalue <- function(x) {
     # return NA p-value
     return(unbox("NA"))
   }
-  # break any ties between values
-  # this will allow exact p-values to be computed
-  if(anyDuplicated(x$group1values)) x$group1values <- jitter(x$group1values)
-  if(anyDuplicated(x$group2values)) x$group2values <- jitter(x$group2values)
-  # perform wilcox test between groups
-  # by default, exact p-values will be computed if groups contain < 50 values and there are no ties
-  # do not set exact=TRUE because this will use large amounts of memory when groups have large numbers of values
-  wt <- wilcox.test(x$group1values, x$group2values)
+  
+  # perform Wilcox test between groups
+  # suppress warnings because a warning message will be
+  # generated when sample size is small (<50) and ties
+  # are present because an exact p-value cannot be computed
+  # it is fine to ignore this message because a p-value will
+  # still be computed using a normal approximation
+  # NOTE: do not set exact=TRUE because this will use large
+  # amounts of memory when sample sizes are large
+  wt <- suppressWarnings(wilcox.test(x$group1values, x$group2values))
+  
   # return p-value
   return(unbox(wt$p.value))
 }
 
-# compute wilcox p-value for each data entry
+# compute Wilcox p-value for each data entry
 pvalues <- lapply(dat, getPvalue)
 
 # output p-values

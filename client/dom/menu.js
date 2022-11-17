@@ -77,7 +77,7 @@ export class Menu {
 			this.d.style('z-index', base_zindex + 1)
 		}
 
-		this.d.style('padding', 'padding' in arg ? arg.padding : '20px')
+		this.d.style('padding', 'padding' in arg ? arg.padding : '10px')
 		if (arg.border) {
 			this.d.style('border', arg.border)
 		} else {
@@ -109,51 +109,47 @@ export class Menu {
 		return this
 	}
 
-	show(x, y) {
-		this.prevX = x
-		this.prevY = y
+	show(_x, _y, shift = true, down = true, scroll = true) {
+		let x = _x
+		let y = _y
+		this.prevX = _x
+		this.prevY = _y
 
 		// show around a given point
 		document.body.appendChild(this.dnode)
-
 		this.d.style('display', 'block')
-		const leftx = x + this.offsetX
-		const topy = y + this.offsetY
+		if (scroll) {
+			x = x + window.scrollX
+			y = y + window.scrollY
+		}
+		if (shift) {
+			x = x + this.offsetX
+			y = y + this.offsetY
+		}
+		const width = window.innerWidth
+		const height = window.innerHeight
+		const middlex = width / 2
+		const middley = height / 2
 		const p = this.dnode.getBoundingClientRect()
 
-		// x adjust
-		if (leftx + p.width > window.innerWidth) {
-			//if(window.innerWidth-x > p.width)
-			if (x > p.width) {
-				this.d.style('left', null).style('right', window.innerWidth - x - window.scrollX + this.offsetX + 'px')
-			} else {
-				// still apply 'left', shift to left instead
-				this.d.style('left', Math.max(0, window.innerWidth - p.width) + window.scrollX + 'px').style('right', null)
-			}
-		} else {
-			this.d.style('left', leftx + window.scrollX + 'px').style('right', null)
-		}
+		//does not fit to the left
+		if (width - x < middlex && x + p.width > width) this.d.style('left', null).style('right', width - x + 'px')
+		else this.d.style('left', x + 'px').style('right', null)
 
-		if (topy + p.height > window.innerHeight) {
-			//if(window.innerHeight-y > p.height)
-			if (y > p.height) {
-				this.d.style('top', null).style('bottom', window.innerHeight - y - window.scrollY + this.offsetY + 'px')
-			} else {
-				// still apply 'top', shift to top instead
-				this.d.style('top', Math.max(0, window.innerHeight - p.height) + window.scrollY + 'px').style('bottom', null)
-			}
-		} else {
-			this.d.style('top', topy + window.scrollY + 'px').style('bottom', null)
-		}
-
+		//does not fit to the bottom
+		if (!down && height - y < middley && y - window.scrollY - p.height > 0)
+			this.d.style('top', null).style('bottom', height - y + 'px')
+		else this.d.style('top', y + 'px').style('bottom', null)
 		this.d.transition().style('opacity', 1)
 		return this
 	}
 
-	showunder(dom, yspace) {
+	showunder(dom) {
 		// route to .show()
 		const p = dom.getBoundingClientRect()
-		return this.show(p.left - this.offsetX, p.top + p.height + (yspace || 5) - this.offsetY)
+		const x = p.left
+		const y = p.top + p.height + window.scrollY + 5
+		return this.show(x, y, false, true, false)
 
 		/*
 		this.d
@@ -167,10 +163,11 @@ export class Menu {
 		*/
 	}
 
-	showunderoffset(dom, yspace) {
+	showunderoffset(dom) {
 		// route to .show()
 		const p = dom.getBoundingClientRect()
-		return this.show(p.left, p.top + p.height + (yspace || 5))
+		const y = p.top + p.height + window.scrollY + 5
+		return this.show(p.left, y, true, true, false)
 
 		/*
 		this.d

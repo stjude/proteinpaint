@@ -1,6 +1,6 @@
 import { dofetch3, isInSession } from '../common/dofetch'
 import { getBarchartData, getCategoryData } from '../plots/barchart.data'
-import { nonDictionaryTermTypes } from '../termsetting/termsetting'
+import { nonDictionaryTermTypes } from '#shared/termdb.usecase'
 import { getNormalRoot } from '../filter/filter'
 import { scaleLinear } from 'd3-scale'
 import { sample_match_termvaluesetting } from '../common/termutils'
@@ -549,12 +549,12 @@ class TermdbVocab extends Vocab {
 			'dslabel=' + this.vocab.dslabel,
 			'termid=' + arg.termid
 		]
-		if (arg.term2) {
-			lst.push('term2=' + encodeURIComponent(JSON.stringify(arg.term2)))
-		}
 		if (arg.filter) {
 			const filterRoot = getNormalRoot(arg.filter)
 			lst.push('filter=' + encodeURIComponent(JSON.stringify(filterRoot)))
+		}
+		if (arg.divideTw) {
+			lst.push('divideTw=' + encodeURIComponent(JSON.stringify(arg.divideTw)))
 		}
 		return await dofetch3('termdb?' + lst.join('&'))
 	}
@@ -631,8 +631,6 @@ class TermdbVocab extends Vocab {
 	}
 
 	async getCategories(term, filter, lst = []) {
-		if (term.samplecount) return { lst: Object.values(term.samplecount) }
-
 		// works for both dictionary and non-dict term types
 		// for non-dict terms, will handle each type individually
 		// for dictionary terms, use same method to query backend termdb
@@ -785,8 +783,12 @@ class TermdbVocab extends Vocab {
 		/************** quick fix
 		need list of gene names of current geneVariant terms,
 		so that a dictionary term will only retrieve samples mutated on this gene list, rather than whole cohort (e.g. gdc)
+		NOTE: sort the gene names by the default alphanumeric order to improve cache reuse even when terms are resorted
 		*/
-		const currentGeneNames = opts.terms.filter(tw => tw.term.type === 'geneVariant').map(tw => tw.term.name)
+		const currentGeneNames = opts.terms
+			.filter(tw => tw.term.type === 'geneVariant')
+			.map(tw => tw.term.name)
+			.sort()
 
 		// fetch the annotated sample for each term
 		while (termsToUpdate.length) {

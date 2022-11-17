@@ -52,6 +52,7 @@ function setRenderers(self) {
 			holder: self.dom.holder.append('div'),
 			vocabApi: self.app.vocabApi,
 			debug: self.app.debug,
+			getCategoriesArguments: self.app.opts.getCategoriesArguments,
 			callback: self.app.opts.tree.click_term2select_tvs
 		})
 	}

@@ -83,15 +83,6 @@ export function validate_variant2samples(ds) {
 
 	if (vs.url) {
 		if (!vs.url.base) throw '.variant2samples.url.base missing'
-
-		if (vs.sample_id_key) {
-			// has a way to get sample name
-		} else if (vs.sample_id_getter) {
-			if (typeof vs.sample_id_getter != 'function') throw '.sample_id_getter is not function'
-			// has a way to get sample name
-		} else {
-			throw 'both .sample_id_key and .sample_id_getter are missing while .variant2samples.url is used'
-		}
 	}
 }
 
@@ -140,9 +131,7 @@ q{}
 	hardcoded to be a geneVariant term, carries isoform/rglst/etc for querying variant
 */
 async function variant2samples_getresult(q, ds) {
-	if (q.twLst && typeof q.twLst == 'string') {
-		q.twLst = JSON.parse(decodeURIComponent(q.twLst))
-	}
+	prep_q(q)
 
 	ifUsingBarchartQuery(q, ds)
 
@@ -201,6 +190,15 @@ async function variant2samples_getresult(q, ds) {
 	}
 
 	throw 'unknown get type'
+}
+
+function prep_q(q) {
+	if (q.twLst && typeof q.twLst == 'string') {
+		q.twLst = JSON.parse(decodeURIComponent(q.twLst))
+	}
+	if (q.filterObj && typeof q.filterObj == 'string') {
+		q.filterObj = JSON.parse(decodeURIComponent(q.filterObj))
+	}
 }
 
 /*
@@ -519,6 +517,7 @@ async function make_summary(mutatedSamples, ds, q) {
 	if (ds.cohort.termdb.termid2totalsize2) {
 		const tv2counts = await ds.cohort.termdb.termid2totalsize2.get(q.twLst, q)
 		for (const { termid, numbycategory } of entries) {
+			if (!numbycategory) continue // should be numeric
 			const categories = tv2counts.get(termid)
 			// array ele: [category, total]
 			if (categories) {

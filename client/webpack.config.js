@@ -98,5 +98,9 @@ module.exports = function(env = {}) {
 		config.optimization.minimizer = []
 	}
 
+	if (config.mode == 'production') {
+		config.output['chunkFilename'] = '[name].[contenthash].proteinpaint.js'
+	}
+
 	return config
 }

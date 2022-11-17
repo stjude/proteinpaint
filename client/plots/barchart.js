@@ -11,6 +11,7 @@ import getHandlers from './barchart.events'
 import { controlsInit } from './controls'
 import { to_svg } from '../src/client'
 import { fillTermWrapper } from '../termsetting/termsetting'
+//import { renderPvalues } from '#dom/renderPvalueTable'
 
 class Barchart {
 	constructor(opts) {
@@ -327,6 +328,27 @@ class Barchart {
 						: 1
 
 		self.visibleCharts = chartsData.charts.filter(chart => chart.visibleSerieses.length)
+
+		// add term1comparisonLabel (same location as term1comparison) and term2Label (same location as term2id) to chartsData.tests to be used as labels for the barchart pvalue table
+		const t1 = this.config.term
+		const t2 = this.config.term2
+		const chartsTests = chartsData.tests
+		for (const chartId in chartsTests) {
+			const chartTests = chartsTests[chartId]
+			for (const t1c of chartTests) {
+				const t1label =
+					t1.term.values && t1c.term1comparison in t1.term.values
+						? t1.term.values[t1c.term1comparison].label
+						: t1c.term1comparison
+				t1c.term1comparisonLabel = `${t1label} vs. not ${t1label}`
+
+				for (const t2t of t1c.term2tests) {
+					const t2label =
+						t2.term.values && t2t.term2id in t2.term.values ? t2.term.values[t2t.term2id].label : t2t.term2id
+					t2t.term2Label = t2label
+				}
+			}
+		}
 		return chartsData
 	}
 
@@ -392,6 +414,11 @@ class Barchart {
 			result.rowgrp = '-'
 			result.chartId = chart.chartId
 			result.seriesId = series.seriesId
+			if (chartsData.tests) {
+				// statistical tests result exist
+				// put the pvalues corresponding to series.seriesId to result.groupPvalues
+				result.groupPvalues = chartsData.tests[chart.chartId].find(x => x.term1comparison === series.seriesId)
+			}
 			result.seriesTotal = series.total
 			result.chartTotal = chart.visibleTotal
 			result.logTotal = Math.log10(result.total)
@@ -571,6 +598,25 @@ function setRenderers(self) {
 		chart.maxSeriesLogTotal = 0
 		chart.visibleSerieses.forEach(series => self.sortStacking(series, chart, self.chartsData))
 		self.renderers[chart.chartId](chart)
+
+		const div = select(this)
+		div
+			.select('.pp-sbar-div-chartLengends')
+			.selectAll('*')
+			.remove()
+
+		if (self.chartsData.tests && self.chartsData.tests[chart.chartId]) {
+			//chart has pvalues
+
+			const holder = div
+				.select('.pp-sbar-div-chartLengends')
+				.style('display', 'inline-block')
+				.append('div')
+			const term1Order = self.chartsData.refs.cols
+			const term2Order = self.chartsData.refs.rows
+
+			renderPvalueTable(self.chartsData.tests[chart.chartId], term1Order, term2Order, holder)
+		}
 	}
 
 	self.addChart = function(chart, i) {
@@ -579,9 +625,111 @@ function setRenderers(self) {
 			.style('display', 'inline-block')
 			.style('padding', '20px')
 			.style('vertical-align', 'top')
-
 		self.renderers[chart.chartId] = barsRenderer(self, select(this))
-		self.updateChart(chart)
+		//self.updateChart.call(this, chart)
+		chart.settings.cols.sort(self.barSorter)
+		chart.maxAcrossCharts = self.chartsData.maxAcrossCharts
+		chart.handlers = self.handlers
+		chart.maxSeriesLogTotal = 0
+		chart.visibleSerieses.forEach(series => self.sortStacking(series, chart, self.chartsData))
+		self.renderers[chart.chartId](chart)
+
+		// div for chart-specific legends
+		div
+			.append('div')
+			.attr('class', 'pp-sbar-div-chartLengends')
+			.style('vertical-align', 'top')
+			.style('margin', '10px 10px 10px 30px')
+			.style('display', 'none')
+
+		if (self.chartsData.tests && self.chartsData.tests[chart.chartId]) {
+			//chart has pvalues
+
+			const holder = div
+				.select('.pp-sbar-div-chartLengends')
+				.style('display', 'inline-block')
+				.append('div')
+			const term1Order = self.chartsData.refs.cols
+			const term2Order = self.chartsData.refs.rows
+			renderPvalueTable(self.chartsData.tests[chart.chartId], term1Order, term2Order, holder)
+		}
+	}
+}
+
+/*
+render a container of p-values that has hierarchical structure: 
+
+A vs. B
+	x:pvalue
+	y:pvalue
+...
+
+used by barchart
+
+input parameter:
+{
+	pvalueTable: an array of objects, each object has one first level term and the second level terms and pvalues associated 
+				 with the first term (structure for each object is {term1comparison: term1, term2tests:[term2id: term2, pvalue: ..., significant: true/false]} ),
+	term1Order: an array of term1 categories with desired order,
+	term2Order: an array of term2 categories with desired order,
+	holder: holder div,
+}
+*/
+function renderPvalueTable(pvalueTable, term1Order, term2Order, holder) {
+	const maxPvalsToShow = 3
+
+	// sort term1 categories based on term1Order
+	pvalueTable.sort(function(a, b) {
+		return term1Order.indexOf(a.term1comparison) - term1Order.indexOf(b.term1comparison)
+	})
+
+	// sort term2 categories based on term2Order
+	for (const t1c of pvalueTable) {
+		t1c.term2tests.sort(function(a, b) {
+			return term2Order.indexOf(a.term2id) - term2Order.indexOf(b.term2id)
+		})
+		//round pvalues to keep 4 digits after decimal point
+		for (const t2c of t1c.term2tests) {
+			t2c.pvalue = Number(t2c.pvalue).toFixed(4)
+		}
+	}
+
+	//holder.selectAll('*').remove()
+	holder
+		.append('div')
+		.style('padding-bottom', '5px')
+		.style('vertical-align', 'top')
+		.style('font-size', '14px')
+		.style('font-weight', 'bold')
+		.style('text-align', 'center')
+		.style('margin-top', '-10px')
+		.html('Group comparisons <br> (Chi-squared test P-values)')
+
+	const treediv = holder
+		.append('div')
+		.style('border', '1px solid #ccc')
+		.style('font-size', '14px')
+
+	if (pvalueTable.length > maxPvalsToShow) {
+		//table scrolling
+		treediv.style('overflow', 'auto').style('height', '220px')
+	}
+
+	for (const t1c of pvalueTable) {
+		const t1cDiv = treediv
+			.append('div')
+			.style('margin-left', '5px')
+			.style('margin-right', '10px')
+			.text(t1c.term1comparisonLabel)
+
+		for (const t2t of t1c.term2tests) {
+			t1cDiv
+				.append('div')
+				.style('margin-left', '30px')
+				.style('margin-right', '10px')
+				.text(`${t2t.term2Label}: ${t2t.pvalue}`)
+		}
+		t1cDiv.append('div').html('<br>')
 	}
 }
 

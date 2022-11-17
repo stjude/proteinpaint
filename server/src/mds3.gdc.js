@@ -1,7 +1,8 @@
 const common = require('#shared/common')
 const got = require('got')
+const path = require('path')
 const { get_crosstabCombinations } = require('./mds3.variant2samples')
-const serverconfig = require('./serverconfig')
+const filter2GDCfilter = require('./mds3.gdc.filter').filter2GDCfilter
 
 /*
 GDC API
@@ -12,7 +13,9 @@ validate_query_snvindel_byrange
 	makeSampleObj
 validate_query_snvindel_byisoform
 	snvindel_byisoform
-validate_query_snvindel_byisoform_2
+validate_query_snvindel_byisoform_2 // protein_mutations, not in use
+validate_query_geneCnv
+	filter2GDCfilter
 validate_query_genecnv
 querySamples_gdcapi
 	flattenCaseByFields
@@ -43,48 +46,6 @@ thus need to define the "apihost" as global variables in multiple places
 */
 const apihost = process.env.PP_GDC_HOST || 'https://api.gdc.cancer.gov' // rest api host
 const apihostGraphql = apihost + (apihost.includes('/v0') ? '' : '/v0') + '/graphql'
-
-export async function testGDCapi() {
-	// this function is called when the gdc mds3 dataset is initiated on a pp instance
-	await testRestApi(apihost + '/ssms')
-	await testRestApi(apihost + '/ssm_occurrences')
-	await testRestApi(apihost + '/cases')
-	await testRestApi(apihost + '/files')
-	// /data/ and /slicing/view/ are not tested as they require file uuid which is unstable across data releases
-	await testGraphqlApi(apihostGraphql)
-}
-
-async function testRestApi(url) {
-	try {
-		const t = new Date()
-		await got(url)
-		console.log('GDC API okay: ' + url, new Date() - t, 'ms')
-	} catch (e) {
-		throw 'gdc api down: ' + url
-	}
-}
-
-async function testGraphqlApi(url) {
-	// FIXME lightweight method to test if graphql is accessible?
-	const t = new Date()
-	try {
-		const query = `query termislst2total( $filters: FiltersArgument) {
-		explore {
-			cases {
-				aggregations (filters: $filters, aggregations_filter_themselves: true) {
-					primary_site {buckets { doc_count, key }}
-				}
-			}
-		}}`
-		await got.post(url, {
-			headers: getheaders({}),
-			body: JSON.stringify({ query, variables: {} })
-		})
-	} catch (e) {
-		throw 'gdc api down: ' + apihostGraphql
-	}
-	console.log('GDC GraphQL API okay: ' + apihostGraphql, new Date() - t, 'ms')
-}
 
 export async function validate_ssm2canonicalisoform(api) {
 	if (!api.endpoint) throw '.endpoint missing from ssm2canonicalisoform'
@@ -225,34 +186,9 @@ export function validate_query_snvindel_byisoform(ds) {
 			for (const c of ssm.cases) {
 				/* make simple sample obj for counting, with sample_id
 				only returns total number of unique cases to client
-				thus do not convert uuid to sample id for significant time-saving
 				*/
 
-				/*
-				uses tumor_sample_uuid(aliquot) rather than "case.case_id" 
-				to be able to correctly attribute mutation to the aliquot from which it's detected
-				case_id is the patient, and can correspond to multiple aliquots
-
-				the id is needed for two purposes:
-
-				1. counting occurrence for a mutation (both case_id and aliquot is fine)
-				2. showing sample name in matrix.
-					with case_id, can only convert to case name (method unknown)
-					with aliquot id, can convert to submitter id, has existing method (sample_id_getter) and is accurate
-
-				*/
-
-				// use case_id to identify patient
-				//m.samples.push({ sample_id: c.case_id })
-
-				// use aliquot to identify sample
-				const sample_id = c?.observation?.[0]?.sample?.tumor_sample_uuid
-				if (sample_id) {
-					m.samples.push({ sample_id })
-				} else {
-					// should not happen: quick way to alert
-					console.log('.observation.sample.tumor_sample_uuid missing from casse{}')
-				}
+				m.samples.push({ sample_id: await decideSampleId(c, ds) })
 			}
 			mlst.push(m)
 		}
@@ -407,6 +343,60 @@ function snvindel_addclass(m, consequence) {
 				m.class = common.mclassmnv
 			}
 		}
+	}
+}
+
+export function validate_query_geneCnv(ds) {
+	const fields = [
+		'cnv_id',
+		'cnv_change',
+		'gene_level_cn',
+		'occurrence.case.case_id',
+		'occurrence.case.observation.sample.tumor_sample_uuid'
+	]
+
+	/*
+	opts{}
+		.gene=str
+	*/
+	ds.queries.geneCnv.bygene.get = async opts => {
+		const headers = getheaders(opts)
+		const tmp = await got(
+			path.join(apihost, 'cnvs?size=100000') +
+				'&fields=' +
+				fields.join(',') +
+				'&filters=' +
+				encodeURIComponent(JSON.stringify(getFilter(opts))),
+			{ method: 'GET', headers }
+		)
+		const re = JSON.parse(tmp.body)
+		if (!Array.isArray(re?.data?.hits)) throw 'geneCnv response body is not {data:hits[]}'
+		const lst = [] // collect list of cnv events to return
+		for (const hit of re.data.hits) {
+			// details to come
+		}
+		// returning blank array shouldn't break anything
+		return lst
+	}
+
+	function getFilter(p) {
+		const filters = {
+			op: 'and',
+			content: [{ op: '=', content: { field: 'consequence.gene.symbol', value: p.gene } }]
+		}
+
+		if (p.case_id) {
+			filters.content.push({ op: 'in', content: { field: 'cases.case_id', value: [p.case_id] } })
+		}
+
+		if (p.filter0) {
+			filters.content.push(typeof p.filter0 == 'string' ? JSON.parse(p.filter0) : p.filter0)
+		}
+		if (p.filterObj) {
+			filters.content.push(filter2GDCfilter(typeof p.filterObj == 'string' ? JSON.parse(p.filterObj) : p.filterObj))
+		}
+
+		return filters
 	}
 }
 
@@ -608,7 +598,8 @@ function flattenCaseByFields(sample, caseObj, term) {
 	}
 }
 
-export function validate_query_genecnv(ds) {
+// old function not-in-use: for old sample-less graphql api
+function validate_query_genecnv(ds) {
 	const api = ds.queries.genecnv.byisoform.gdcapi
 	if (!api.query) throw '.query missing for byisoform.gdcapi'
 	if (typeof api.query != 'string') throw '.query not string for byisoform.gdcapi'
@@ -667,6 +658,18 @@ export function validate_query_genecnv(ds) {
 	}
 }
 
+function prepTwLst(lst) {
+	// {id} and {term:{id}} are both converted to {id, term:{id}}
+	for (const tw of lst) {
+		if (tw.id == undefined || tw.id == '') {
+			if (!tw?.term?.id) throw 'tw.id and tw.term are both missing'
+			tw.id = tw.term.id
+		} else if (!tw.term) {
+			tw.term = { id: tw.id }
+		}
+	}
+}
+
 /* for variant2samples query
 q{}
 	.get=str
@@ -678,25 +681,27 @@ twLst[]
 	and to parse out as sample attributes
 ds{}
 */
+
 export async function querySamples_gdcapi(q, twLst, ds) {
+	prepTwLst(twLst)
 	if (q.get == 'summary' && !twLst.some(i => i.id == 'case.case_id')) {
 		/*
 		(from variant2sample) to summarize samples that can be retrieved here
 		which requires case_uuid to count unique list of samples per category
 		when 'case.case_id' is missing from term ids, must add it to the list so case_uuid will be available from resulting sample objects
 		*/
-		twLst.push({ id: 'case.case_id' })
+		twLst.push({ term: { id: 'case.case_id' } })
 	}
 
 	const api = ds.variant2samples.gdcapi
 
 	const termObjs = []
 	for (const tw of twLst) {
-		const t = ds.cohort.termdb.q.termjsonByOneid(tw.id)
-		if (t) termObjs.push(t)
+		const t = ds.cohort.termdb.q.termjsonByOneid(tw.term.id)
+		if (t) termObjs.push({ term: t })
 	}
 
-	const param = ['size=10000', 'fields=' + twLst.map(i => i.id).join(',')]
+	const param = ['size=10000', 'fields=' + twLst.map(tw => tw.term.id).join(',')]
 	//'&size=' + (q.size || api.size) + '&from=' + (q.from || 0)
 
 	// it may query with isoform
@@ -729,25 +734,13 @@ export async function querySamples_gdcapi(q, twLst, ds) {
 			sample.ssm_id = s.ssm.ssm_id
 		}
 
-		/******* tricky logic *******
-		s.case.observation[0].sample.tumor_sample_uuid may be retrieved from api (depending on fields[])
-		when avaiable, the value is assigned to sample.tumor_sample_uuid,
-		which will next be converted into submitter id
-		the submitter id is assigned to sample.sample_id for display (and counting occurrence)
-
-		as s.case.case_id is expected to always available from fields[]
-		it is assigned to sample.sample_id
-		in case when tumor_sample_uuid is not retrieved,
-		sample.sample_id is still available for counting occurrence
-		*/
-		sample.tumor_sample_uuid = s.case?.observation?.[0]?.sample?.tumor_sample_uuid
-		sample.sample_id = s.case?.case_id
+		sample.sample_id = await decideSampleId(s.case, ds)
 
 		// for making url link on a sample
 		sample.sample_URLid = s.case.case_id
 
-		for (const term of termObjs) {
-			flattenCaseByFields(sample, s.case, term)
+		for (const tw of termObjs) {
+			flattenCaseByFields(sample, s.case, tw.term)
 		}
 
 		/////////////////// hardcoded logic to add read depth using .observation
@@ -761,14 +754,19 @@ export async function querySamples_gdcapi(q, twLst, ds) {
 		samples.push(sample)
 	}
 
-	if (typeof ds.variant2samples.sample_id_getter == 'function') {
-		// batch process, fire one query to convert all tumor_sample_uuid into submitter id for display
-		// must pass request header to getter in case requesting a controlled sample via a user token
-		// this is gdc-specific logic and should not impact generic mds3
-		await ds.variant2samples.sample_id_getter(samples, headers)
-	}
-
 	return samples
+}
+
+/*
+c is case{}
+decide the generic sample_id used by pp
+*/
+async function decideSampleId(c, ds) {
+	if (c?.observation?.[0]?.sample?.tumor_sample_uuid) {
+		// hardcoded logic to
+		return await ds.aliquot2submitter.get(c.observation[0].sample.tumor_sample_uuid)
+	}
+	return c.case_id
 }
 
 function may_add_readdepth(acase, sample) {
@@ -812,6 +810,7 @@ output
 	if combination is given, returns [ map, combination ] instead
 */
 export async function get_termlst2size(twLst, q, combination, ds) {
+	prepTwLst(twLst)
 	const api = ds.cohort.termdb.termid2totalsize2.gdcapi
 
 	// convert each term id to {path}
@@ -820,6 +819,7 @@ export async function get_termlst2size(twLst, q, combination, ds) {
 	const termPaths = []
 	for (const tw of twLst) {
 		if (!tw.term) continue
+		if (tw.term.type != 'categorical') continue // only run for categorical terms
 		termPaths.push({
 			id: tw.id,
 			path: tw.id.replace('case.', '').replace(/\./g, '__'),

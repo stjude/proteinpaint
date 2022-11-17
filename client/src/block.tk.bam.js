@@ -1153,6 +1153,8 @@ function makeGroup(gd, tk, block, data) {
 		.attr('fill', 'none')
 
 	let mousedownx // not to trigger clicking after press and drag on a read
+	const left_margin = tk.regions[0].x
+	const right_margin = tk.regions[tk.regions.length - 1].x + tk.regions[tk.regions.length - 1].width
 	group.dom.img_cover = group.dom.imgg
 		.append('rect')
 		.attr('fill', 'white')
@@ -1172,8 +1174,10 @@ function makeGroup(gd, tk, block, data) {
 			let read_number = 0
 			for (const t of group.data.templatebox) {
 				read_number += 1
-				const bx1 = Math.max(0, t.x1)
-				const bx2 = Math.min(block.width, t.x2)
+				const bx1 = Math.max(t.x1, left_margin)
+				const bx2 = Math.min(t.x2, right_margin)
+				//const bx1 = Math.max(tk.regions[region_idx].x, t.x1)
+				//const bx2 = Math.min(tk.regions[region_idx].x + tk.regions[region_idx].width, t.x2)
 				if (mx > bx1 && mx < bx2 && my > t.y1 && my < t.y2) {
 					group.dom.box_move
 						.attr('width', bx2 - bx1)
@@ -1208,43 +1212,50 @@ function makeGroup(gd, tk, block, data) {
 				return
 			}
 			if (!group.data.templatebox) return
-			for (const t of group.data.templatebox) {
-				const bx1 = Math.max(0, t.x1)
-				const bx2 = Math.min(block.width, t.x2)
-				if (mx > bx1 && mx < bx2 && my > t.y1 && my < t.y2) {
-					if (group.clickedtemplate && group.clickedtemplate.qname == t.qname) {
-						// same template
-						if (
-							tk.asPaired ||
-							(t.isfirst && group.clickedtemplate.isfirst) ||
-							(t.islast && group.clickedtemplate.islast)
-						) {
-							// paired mode
-							// or single mode and correct read
-							// box under cursor is highlighted, cancel
-							delete group.clickedtemplate
-							group.dom.box_stay.attr('width', 0)
-							return
+			for (let region_idx = 0; region_idx < tk.regions.length; region_idx += 1) {
+				for (const t of group.data.templatebox) {
+					const cx1 = Math.max(t.x1, left_margin)
+					const cx2 = Math.min(t.x2, right_margin)
+					const bx1 = Math.max(tk.regions[region_idx].x, t.x1)
+					const bx2 = Math.min(tk.regions[region_idx].x + tk.regions[region_idx].width, t.x2)
+					if (mx > bx1 && mx < bx2 && my > t.y1 && my < t.y2) {
+						if (group.clickedtemplate && group.clickedtemplate.qname == t.qname) {
+							// same template
+							if (
+								tk.asPaired ||
+								(t.isfirst && group.clickedtemplate.isfirst) ||
+								(t.islast && group.clickedtemplate.islast)
+							) {
+								// paired mode
+								// or single mode and correct read
+								// box under cursor is highlighted, cancel
+								delete group.clickedtemplate
+								group.dom.box_stay.attr('width', 0)
+								return
+							}
 						}
-					}
-					// a different template or different read from the same template
-					// overwrite
-					group.clickedtemplate = {
-						qname: t.qname
-					}
-					if (tk.asPaired) {
-						group.clickedtemplate.isfirst = true
-					} else {
-						if (t.isfirst) group.clickedtemplate.isfirst = true
-						if (t.islast) group.clickedtemplate.islast = true
-					}
-					group.dom.box_stay
-						.attr('width', bx2 - bx1)
-						.attr('height', t.y2 - t.y1)
-						.attr('transform', 'translate(' + bx1 + ',' + t.y1 + ')')
 
-					getReadInfo(tk, block, t, block.pxoff2region(mx)[0])
-					return
+						// a different template or different read from the same template
+						// overwrite
+						group.clickedtemplate = {
+							qname: t.qname
+						}
+						if (tk.asPaired) {
+							group.clickedtemplate.isfirst = true
+						} else {
+							if (t.isfirst) group.clickedtemplate.isfirst = true
+							if (t.islast) group.clickedtemplate.islast = true
+						}
+						group.dom.box_stay
+							.attr('width', cx2 - cx1)
+							.attr('height', t.y2 - t.y1)
+							.attr('transform', 'translate(' + cx1 + ',' + t.y1 + ')')
+						getReadInfo(tk, block, t, region_idx)
+						//return
+					} else if (tk.asPaired && mx > cx1 && mx < cx2 && my > t.y1 && my < t.y2 && t.multi_region) {
+						// In case of templates extending into multiple regions
+						getReadInfo(tk, block, t, region_idx)
+					}
 				}
 			}
 		})
@@ -2401,7 +2412,6 @@ async function getReadInfo(tk, block, box, ridx) {
 				let local_alignment_width = 0 // This variable stores the width of each gene model that needs to be rendered using bedj track
 				const tbodyRef = read_reference_div.node().children[0].getElementsByTagName('tbody')[0]
 				const gene_model_tr = tbodyRef.insertRow()
-				//const blank_gene_td = gene_model_tr.append('td').text('Hello')
 				const heading_gene_cell = gene_model_tr.insertCell()
 				const heading_gene_text = document.createTextNode('')
 				heading_gene_cell.appendChild(heading_gene_text)
@@ -2505,7 +2515,7 @@ async function getReadInfo(tk, block, box, ridx) {
 
 	function getparam(extra) {
 		// reusable helper
-		const r = block.rglst[ridx]
+		const r = tk.regions[ridx]
 		const headers = { 'Content-Type': 'application/json', Accept: 'application/json' }
 		if (tk.gdcToken) headers['X-Auth-Token'] = tk.gdcToken
 		const lst = [

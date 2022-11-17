@@ -34,7 +34,7 @@ samples2columnsRows
 const cutoff_tableview = 10
 
 export async function init_sampletable(arg) {
-	// run variant2samples.get() to map variants to samples
+	//run variant2samples.get() to map variants to samples
 	const wait = arg.div
 		.append('div')
 		.text('Loading...')
@@ -61,12 +61,15 @@ export async function init_sampletable(arg) {
 	}
 }
 
-export async function displaySampleTable(samples, arg) {
+export async function displaySampleTable(samples, args) {
 	if (samples.length == 1) {
-		return await make_singleSampleTable(samples[0], arg)
+		return await make_singleSampleTable(samples[0], args)
 	}
-	const [columns, rows] = await samples2columnsRows(samples, arg.tk)
-	renderTable({ rows, columns, div: arg.div })
+	const [columns, rows] = await samples2columnsRows(samples, args.tk)
+	const params = { rows, columns, div: args.div }
+	if (args.max_width) params.max_width = args.max_width
+	if (args.max_height) params.max_height = args.max_height
+	return renderTable(params)
 }
 
 async function make_singleSampleTable(sampledata, arg) {

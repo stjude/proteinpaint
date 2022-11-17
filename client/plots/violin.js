@@ -1,6 +1,7 @@
 import { getCompInit } from '../rx'
 import { controlsInit } from './controls'
 import violinRenderer from './violin.renderer'
+import { renderPvalues } from '#dom/renderPvalueTable'
 
 class ViolinPlot {
 	constructor(opts) {
@@ -19,12 +20,15 @@ class ViolinPlot {
 				.style('display', 'inline-block')
 				.style('padding', '5px'),
 
-			legendHolder: this.opts.holder
+			tableHolder: this.opts.holder
 				.append('div')
-				.classed('sjpp-legend-div', true)
-				.style('margin-left', '10px')
-				.style('margin-top', '80px')
-			// .style('padding', '5px')
+				.classed('sjpp-tableHolder', true)
+				.style('display', 'inline-block')
+				.style('padding', '10px')
+				.style('vertical-align', 'top')
+				.style('margin-left', '0px')
+				.style('margin-top', '50px')
+				.style('margin-right', '30px')
 		}
 		violinRenderer(this)
 
@@ -41,6 +45,7 @@ class ViolinPlot {
 					},
 					{
 						type: 'overlay',
+						//TODO: when term is numeric use 'overlay' otherwise for categories use 'Divide by'
 						// TODO: when used under the summary chart, this.opts.usecase may replace the usecase here
 						usecase: { target: 'violin', detail: 'term2' }
 					},
@@ -89,10 +94,26 @@ class ViolinPlot {
 				this.config.term.term.name + ` <span style="opacity:.6;font-size:1em;margin-left:10px;">Violin Plot</span>`
 			)
 
-		this.data = await this.app.vocabApi.getViolinPlotData({
-			termid: this.config.term.term.id,
-			term2: this.config.term2
-		})
+		const arg = { filter: this.state.termfilter.filter }
+
+		if (
+			(this.config.term.term.type == 'float' || this.config.term.term.type == 'integer') &&
+			this.config.term.q.mode == 'continuous'
+		) {
+			arg.termid = this.config.term.id
+			arg.divideTw = this.config.term2
+		} else if (
+			(this.config.term2?.term?.type == 'float' || this.config.term2?.term?.type == 'integer') &&
+			this.config.term2.q.mode == 'continuous'
+		) {
+			arg.termid = this.config.term2.id
+			arg.divideTw = this.config.term
+		} else {
+			throw 'both term1 and term2 are not numeric/continuous'
+		}
+
+		this.data = await this.app.vocabApi.getViolinPlotData(arg)
+
 		if (this.data.error) throw this.data.error
 		/*
 		.min
@@ -111,28 +132,41 @@ class ViolinPlot {
 
 	getLegendGrps() {
 		const t2 = this.config.term2
+		const maxPvalsToShow = 5
 
-		if (t2 == undefined || t2 == null) {
-			// no term2, no legend to show
-			this.dom.legendHolder.style('display', 'none')
-			return
-		}
-
-		// show legend
-		this.dom.legendHolder
+		this.dom.tableHolder
 			.style('display', 'inline-block')
 			.style('vertical-align', 'top')
 			.selectAll('*')
 			.remove()
 
-		this.dom.legendHolder.append('div').text(this.config.term2.term.name)
-
-		for (const plot of this.data.plots) {
-			this.dom.legendHolder
-				.append('div')
-				.style('font-size', '15px')
-				.text(plot.label)
+		if (t2 == undefined || t2 == null) {
+			// no term2, no legend to show
+			this.dom.tableHolder.style('display', 'none')
+			return
 		}
+
+		//disabled separate legend for now
+
+		// const legendHolder = this.dom.tableHolder.append('div').classed('sjpp-legend-div', true)
+
+		// legendHolder.append('div').text(this.config.term2.term.name)
+
+		// for (const plot of this.data.plots) {
+		// 	legendHolder
+		// 		.append('div')
+		// 		.style('font-size', '15px')
+		// 		.text(plot.label)
+		// }
+
+		//show pvalue table
+		renderPvalues({
+			holder: this.dom.tableHolder,
+			plot: this.type,
+			tests: this.data,
+			s: this.config.settings,
+			title: "Group comparisons (Wilcoxon's rank sum test)"
+		})
 	}
 }
 

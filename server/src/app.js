@@ -102,7 +102,8 @@ const express = require('express'),
 	cookieParser = require('cookie-parser'),
 	authApi = require('./auth.js'),
 	{ server_init_db_queries, listDbTables } = require('./termdb.sql'),
-	{ handle_healthcheck_closure } = require('./health')
+	{ handle_healthcheck_closure } = require('./health'),
+	{ handle_genelookup_closure } = require('./gene')
 
 //////////////////////////////
 // Global variable (storing things in memory)
@@ -243,7 +244,7 @@ app.get(basepath + '/cardsjson', handle_cards)
 app.post(basepath + '/mdsjsonform', handle_mdsjsonform)
 app.get(basepath + '/genomes', handle_genomes)
 app.get(basepath + '/getDataset', handle_getDataset)
-app.all(basepath + '/genelookup', handle_genelookup)
+app.all(basepath + '/genelookup', handle_genelookup_closure(genomes))
 app.post(basepath + '/ntseq', handle_ntseq)
 app.post(basepath + '/pdomain', handle_pdomain)
 app.post(basepath + '/tkbedj', bedj_request_closure(genomes))
@@ -975,88 +976,6 @@ function mds_clientcopy(ds) {
 		ds2.queries[k] = clientquery
 	}
 	return ds2
-}
-
-function handle_genelookup(req, res) {
-	const g = genomes[req.query.genome]
-	if (!g) return res.send({ error: 'invalid genome name' })
-
-	if (g.genomicNameRegexp.test(req.query.input)) return res.send({ error: 'invalid character in gene name' })
-
-	if (req.query.deep) {
-		///////////// deep
-
-		// isoform query must be converted to symbol first, so as to retrieve all gene models related to this gene
-		const result = {} // object to collect results of gene query and send back
-		let symbol
-		{
-			// see if query string match directly with gene symbol
-			const tmp = g.genedb.getnamebynameorisoform.get(req.query.input, req.query.input)
-			if (tmp) symbol = tmp.name
-		}
-		if (!symbol) {
-			// input does not directly match with symbol
-			if (g.genedb.getNameByAlias) {
-				// see if input is alias; if so convert alias to official symbol
-				const tmp = g.genedb.getNameByAlias.get(req.query.input)
-				if (tmp) symbol = tmp.name
-			}
-		}
-		if (!symbol) {
-			if (g.genedb.get_gene2canonicalisoform && req.query.input.toUpperCase().startsWith('ENSG')) {
-				/* db has this table and input looks like ENSG accession
-				convert it to ENST canonical isoform 
-				currently db does not have a direct mapping from ENSG to symbol
-				also it is more fitting to convert ENSG to ENST, rather than to symbol
-				which can cause a refseq isoform to be shown instead
-				*/
-				const data = g.genedb.get_gene2canonicalisoform.get(req.query.input)
-				if (data && data.isoform) {
-					// mapped into an ENST isoform
-					const enstIsoform = data.isoform
-					result.found_isoform = enstIsoform
-					// convert isoform back to symbol as in the beginning
-					const tmp = g.genedb.getnamebynameorisoform.get(enstIsoform, enstIsoform)
-					if (!tmp) throw 'cannot map enst isoform to symbol'
-					symbol = tmp.name
-				}
-			}
-		}
-		if (!symbol) {
-			// no other means of matching it to symbol
-			symbol = req.query.input
-		}
-		const tmp = g.genedb.getjsonbyname.all(symbol)
-		result.gmlst = tmp.map(i => {
-			const j = JSON.parse(i.genemodel)
-			if (i.isdefault) j.isdefault = true
-			return j
-		})
-		res.send(result)
-		return
-	}
-
-	////////////// shallow
-
-	const input = req.query.input.toUpperCase()
-	const lst = []
-	const s = input.substr(0, 2)
-	const tmp = g.genedb.getnameslike.all(input + '%')
-	if (tmp.length) {
-		tmp.sort()
-		res.send({ hits: tmp.map(i => i.name) })
-		return
-	}
-	// no direct name match, try alias
-	if (g.genedb.getNameByAlias) {
-		const tmp = g.genedb.getNameByAlias.all(input)
-		if (tmp.length) {
-			res.send({ hits: tmp.map(i => i.name) })
-			return
-		}
-	}
-	// no hit by alias
-	res.send({ hits: [] })
 }
 
 async function handle_img(req, res) {
@@ -7468,7 +7387,7 @@ async function pp_init() {
 			initLegacyDataset(ds, g)
 		}
 
-		await deleteSessionFiles()
+		deleteSessionFiles()
 
 		delete g.rawdslst
 	}

@@ -1,39 +1,71 @@
-// variant label is always made
 import { makeVariantLabel } from './leftlabel.variant'
+// variant label is always made. sample label is optional and dynamically loads script when needed
 
 const labyspace = 5
 const font = 'Arial'
 
 /*
-********************** EXPORTED
 make_leftlabels
-positionLeftlabelg
-makelabel
-********************** INTERNAL
+	makeVariantLabel
+	makeSampleLabel
+	makeSampleFilterLabel
+	positionLeftlabelg
+	makelabel
 
 
-make left labels on main track render
+make a column of functional labels on the left, under the track label
 labels are based on server data
 labels are kept persistent by keys in tk.leftlabels.doms{}
 must call after rendering skewer track
 must reset tk.leftlabels.maxwidth
 
-TODO may not update every label when only updating certain sub track
 */
 
 export async function make_leftlabels(data, tk, block) {
 	tk.leftlabels.maxwidth = tk.tklabel.node().getBBox().width
 
-	let laby = 0
+	let laby = 0 // cumulative y offset for various labels created here
 
 	makeVariantLabel(data, tk, block, laby)
-	if (tk.leftlabels.doms.variants) laby += labyspace + block.labelfontsize // later delete if
+	if (tk.leftlabels.doms.variants) {
+		// has variants label, increment laby
+		laby += labyspace + block.labelfontsize
+	}
 
-	if ('sampleTotalNumber' in data) {
-		// only make sample label when there's sample count
+	if ('sampleTotalNumber' in data || tk.leftlabels.doms.samples) {
+		/* if either of two conditions is met, will create/update sample label
+		1: data has sample. create label if missing (first time starting tk)
+		2: data has no sample but label exists. should be that filtering dropped all samples
+		*/
 		const _ = await import('./leftlabel.sample')
 		_.makeSampleLabel(data, tk, block, laby)
-		if (tk.leftlabels.doms.samples) laby += labyspace + block.labelfontsize // later delete if
+		laby += labyspace + block.labelfontsize
+
+		if (tk.filterObj) {
+			// this tk has a modifiable sample filter, create Filter label
+			_.makeSampleFilterLabel(data, tk, block, laby)
+		}
+		if (tk.leftlabels.doms.filterObj) {
+			laby += labyspace + block.labelfontsize
+		}
+	}
+
+	if (tk.showCloseLeftlabel) {
+		// allow shorthand to close tk
+		if (!tk.leftlabels.doms.close) {
+			// "Close" is missing, create
+			tk.leftlabels.doms.close = makelabel(tk, block, laby)
+				.text('Close')
+				.on('click', () => {
+					for (const [i, t] of block.tklst.entries()) {
+						if (t.tkid == tk.tkid) {
+							block.tk_remove(i)
+						}
+					}
+				})
+		}
+		// Close label is present, increment laby
+		laby += labyspace + block.labelfontsize
 	}
 
 	// done creating all possible left labels

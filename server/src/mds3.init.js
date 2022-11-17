@@ -26,7 +26,8 @@ validate_query_snvindel
 	gdc.validate_query_snvindel_byrange
 	snvindelByRangeGetter_bcf
 		mayLimitSamples
-			tid2value2filter
+			param2filter
+				tid2value2filter
 		addSamplesFromBcfLine
 			vcfFormat2sample
 	mayValidateSampleHeader
@@ -36,6 +37,10 @@ validate_variant2samples
 validate_ssm2canonicalisoform
 mayAdd_refseq2ensembl
 mayAdd_mayGetGeneVariantData
+	getSnvindelByTerm
+	getSvfusionByTerm
+		mayMapGeneName2isoform
+		mayMapGeneName2coord
 */
 
 // in case chr name may contain '.', can change to __
@@ -50,6 +55,7 @@ export async function init(ds, genome, _servconfig, app = null, basepath = null)
 		// as vcf header must be parsed to supply samples for variant2samples
 		await validate_query_snvindel(ds, genome)
 		await validate_query_svfusion(ds, genome)
+		await validate_query_geneCnv(ds, genome)
 
 		validate_variant2samples(ds)
 		validate_ssm2canonicalisoform(ds)
@@ -136,12 +142,15 @@ export async function validate_termdb(ds) {
 	 */
 
 	if (tdb?.dictionary?.gdcapi) {
-		// this pp instance runs the gdc dataset; test gdc APIs
-		await gdc.testGDCapi()
-
 		await initGDCdictionary(ds)
-		/* creates ds.cohort.termdb.q={}
-		and ds.gdcOpenProjects=set
+		/*
+		creates ds.cohort.termdb.q={}
+		*****************************
+		*   clandestine gdc stuff   *
+		*****************************
+		- apis tested
+		- ds.gdcOpenProjects
+		- aliquot-submitter cached
 		*/
 	} else if (tdb?.dictionary?.dbFile) {
 		ds.cohort.db = { file: tdb.dictionary.dbFile }
@@ -290,6 +299,19 @@ function sort_mclass(set) {
 	}
 	lst.sort((i, j) => j[1] - i[1])
 	return lst
+}
+
+async function validate_query_geneCnv(ds, genome) {
+	const q = ds.queries.geneCnv
+	if (!q) return
+	if (q.bygene) {
+		if (q.bygene.gdcapi) {
+			gdc.validate_query_geneCnv(ds)
+			// q.bygene.get() added
+		}
+	} else {
+		throw 'geneCnv.bygene missing'
+	}
 }
 
 async function validate_query_snvindel(ds, genome) {
@@ -572,8 +594,8 @@ export async function snvindelByRangeGetter_bcf(ds, genome) {
 input:
 param={}
 	.tid2value = { term1id: v1, term2id:v2, ... }
-	if present, return list of samples matching the given k/v pairs, assuming AND
-	TODO replace with filter
+		if present, return list of samples matching the given k/v pairs, assuming AND
+	.filterObj = bona fide filter
 allSamples=[]
 	whole list of samples, each ele: {name: int}
 	presumably the set of samples from a bcf file or tabix file
@@ -586,9 +608,11 @@ function mayLimitSamples(param, allSamples, ds) {
 	if (!allSamples) return null // no samples from this big file
 
 	// later should be param.filter, no need for conversion
-	if (!param.tid2value) return null // no limit, use all samples
-	if (typeof param.tid2value != 'object') throw 'q.tid2value{} not object'
-	const filter = tid2value2filter(param.tid2value, ds)
+	const filter = param2filter(param, ds)
+	if (!filter) {
+		// no filtering, use all samples
+		return null
+	}
 
 	const filterSamples = get_samples(filter, ds)
 	// filterSamples is the list of samples retrieved from termdb that are matching filter
@@ -600,6 +624,21 @@ function mayLimitSamples(param, allSamples, ds) {
 		.map(i => {
 			return { name: i }
 		})
+}
+
+function param2filter(param, ds) {
+	if (param.filterObj) {
+		if (!Array.isArray(param.filterObj.lst)) throw 'filterObj.lst is not array'
+		if (param.filterObj.lst.length == 0) {
+			// blank filter, do not return obj as that will break get_samples()
+			return null
+		}
+		return param.filterObj
+	}
+	if (param.tid2value) {
+		if (typeof param.tid2value != 'object') throw 'q.tid2value{} not object'
+		return tid2value2filter(param.tid2value, ds)
+	}
 }
 
 // temporary function to convert tid2value={} to filter, can delete later when it's replaced by filter
@@ -1007,12 +1046,6 @@ function mayAdd_mayGetGeneVariantData(ds, genome) {
 			}
 		}
 
-		if (ds?.variant2samples?.sample_id_getter && typeof ds.variant2samples.sample_id_getter == 'function') {
-			// gdc method: current keys in bySampleId are aliquot ids
-			// call this helper to convert aliquot to submitter id for display
-			return await callSampleIdGetter(ds, bySampleId)
-		}
-
 		return bySampleId
 	}
 }
@@ -1074,34 +1107,4 @@ async function getSvfusionByTerm(ds, term, genome) {
 		return await ds.queries.svfusion.byrange.get(arg)
 	}
 	throw 'unknown queries.svfusion method'
-}
-
-async function callSampleIdGetter(ds, bySampleId) {
-	const samples = []
-	for (const caseid of bySampleId.keys()) {
-		samples.push({
-			old_id: caseid,
-			sample_id: caseid
-		})
-	}
-
-	await ds.variant2samples.sample_id_getter(
-		samples,
-		// hardcoded header for gdc request
-		{ 'Content-Type': 'application/json', Accept: 'application/json' }
-	)
-
-	const old2new = new Map()
-	for (const s of samples) {
-		old2new.set(s.old_id, s.sample_id)
-	}
-
-	const newMap = new Map()
-	for (const [oldid, o] of bySampleId) {
-		const newid = old2new.get(oldid)
-		o.sample = newid
-		newMap.set(newid, o)
-	}
-
-	return newMap
 }

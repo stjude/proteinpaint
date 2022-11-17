@@ -4132,6 +4132,9 @@ seekrange(chr,start,stop) {
 				this.updateruler_subpanel(panelrecord)
 
 				switch (tk.type) {
+					case client.tkt.bam:
+						bamload(tk, this)
+						break
 					case client.tkt.bedj:
 						bedjloadsubpanel(tk, this, thispanel)
 						break

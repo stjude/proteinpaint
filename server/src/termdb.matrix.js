@@ -10,95 +10,76 @@ const termdbsql = require('./termdb.sql')
 const { querySamples_gdcapi } = require('./mds3.gdc')
 
 /*
-q {}
-.regressionType
-.filter
-.outcome{}
-	.id
-	.type // type will be required later to support molecular datatypes
-	.term{} // rehydrated
-	.q{}
-		.computableValuesOnly:true // always added
-	.refGrp
-.independent[{}]
-	.id
-	.type
-	.term{} // rehydrated
-	.q{}
-		.scale
-		.computableValuesOnly:true // always added
-	.refGrp
-	.interactions[] // always added; empty if no interaction
-	.snpidlst[] // list of snp ids, for type=snplst, added when parsing cache file
 
-input to R is an json object {type, outcome:{rtype}, independent:[ {rtype} ]}
-rtype with values numeric/factor is used instead of actual term type
-so that R script will not need to interpret term type
+for a list of termwrappers, get the sample annotation data to these terms, by obeying categorization method defined in tw.q{}
 
-***  function cascade  ***
-get_regression()
-	parse_q
-	getSampleData
-		divideTerms
-		getSampleData_dictionaryTerms
-		getSampleData_snplstOrLocus
-			doImputation
-			applyGeneticModel
-	makeRinput
-	validateRinput
-	replaceTermId
-	... run R ...
-	parseRoutput
+this method abstracts away lots of details:
+1. term types, including dictionary term and non-dict terms (geneVariant and samplelst etc)
+2. data source, including sqlite termdb, gdc api, and md3 mutation
+
+
+Inputs:
+
+q{}
+	.filter{}
+	.terms[]
+		each element is {id=str, term={}, q={}}
+ds{}
+	server-side dataset object
+genome{}
+	server-side genome object
+
+Returns:
+
+{
+	samples: {}
+		key: stringified integer sample id (TODO use integer)
+		value: { 
+			sample: integerId,
+			<termid>: {key, value},
+			<more terms...>
+			<geneName>:{ 
+				key, label, // these two are both gene names and useless
+				values:[]
+					{gene/isoform/chr/pos/ref/alt/class/mname/dt}
+			}
+		}
+	
+	byTermId:{}
+	bySampleId:{}
+		key: stringified integer id
+		value: sample name
+}
 */
-
-// minimum number of samples to run analysis
-const minimumSample = 1
 
 export async function getData(q, ds, genome) {
 	try {
-		parse_q(q, ds, genome)
-		return await getSampleData(q, q.terms)
+		validateArg(q, ds, genome)
+		return await getSampleData(q)
 	} catch (e) {
 		if (e.stack) console.log(e.stack)
 		return { error: e.message || e }
 	}
 }
 
-function parse_q(q, ds, genome) {
+function validateArg(q, ds, genome) {
 	if (!ds.cohort) throw 'cohort missing from ds'
+	if (!q.terms) throw `missing 'terms' parameter`
+
+	// needed by some helper functions
 	q.ds = ds
 	q.genome = genome
-	if (!q.terms) throw `missing 'terms' parameter`
-	q.terms.map(tw => {
+
+	for (const tw of q.terms) {
+		// TODO clean up
 		if (!tw.term.name) tw.term = q.ds.cohort.termdb.q.termjsonByOneid(tw.term.id)
-	})
+		if (!tw.q) console.log('do something??')
+	}
 }
 
-/*
-may move to termdb.sql.js later
-
-works for only termdb terms; non-termdb attributes will not work
-gets data for regression analysis, one row for each sample
-
-Arguments
-q{}
-	.filter
-	.ds
-	.genome
-
-terms[]
-	array of {id, term, q}
-
-Returns 
-	{
-		lst: [
-			{sample, termid1: {key, value(s)}, }
-		]
-	}
-*/
-async function getSampleData(q, terms) {
+async function getSampleData(q) {
 	// dictionary and non-dictionary terms require different methods for data query
-	const [dictTerms, nonDictTerms] = divideTerms(terms)
+	const [dictTerms, nonDictTerms] = divideTerms(q.terms)
 	const { samples, refs } = await getSampleData_dictionaryTerms(q, dictTerms)
 
 	if (q.ds.getSampleIdMap) {
@@ -263,25 +244,14 @@ async function getSampleData_gdc(q, termWrappers) {
 
 	const param = {
 		get: 'samples',
-		isoforms
+		isoforms,
+		filterObj: q.filter
 	}
 
-	const sampleLst = await querySamples_gdcapi(
-		param,
-		['case.observation.sample.tumor_sample_uuid', ...termWrappers.map(i => i.term.id)],
-		q.ds
-	)
+	const twLst = termWrappers.slice() // duplicate array to insert new ones, do not modify orignal
+	twLst.push({ term: { id: 'case.observation.sample.tumor_sample_uuid' } }) // allow submitter id to be assigned to sample_id
 
-	/*
-	here returned samples are using submitter ids as .sample_id
-	while other geneVariant terms in the matrix are using tumor_sample_uuid (unconverted)
-	lucky the tumor_sample_uuid is still there, assign it to sample_id to be able to match with geneVariant terms
-
-	here the submitter id conversion is wasted but later with cached mapping (no api query) will be trivial to ignore
-	*/
-	for (const s of sampleLst) {
-		s.sample_id = s.tumor_sample_uuid
-	}
+	const sampleLst = await querySamples_gdcapi(param, twLst, q.ds)
 
 	const samples = {}
 	const refs = { byTermId: {} }

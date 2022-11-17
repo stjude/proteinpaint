@@ -286,10 +286,7 @@ function checkDsSecret(q, headers, creds = {}, _time, session = null) {
 
 	const dsnames = embedder.dsnames || [q.dslabel]
 	const missingAccess = dsnames.filter(d => !payload.datasets.includes(d.id)).map(d => d.label || d.id)
-	if (missingAccess.length) {
-		throw `Please request access for these dataset(s): ${missingAccess.join(', ')}. ` +
-			(embedder.missingAccessMessage || '')
-	}
+	if (missingAccess.length) throw 'Access denied'
 	return { iat: payload.iat, email: payload.email }
 }
 

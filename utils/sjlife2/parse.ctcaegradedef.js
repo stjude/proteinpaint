@@ -22,7 +22,7 @@ const fs = require('fs')
 const path = require('path')
 
 // hardcoded fix, see below
-const publication_parent_term = 'Publication'
+const publication_parent_term = 'Publication sample filter'
 
 const termdbfile = path.join(dir, 'termdb')
 const ID2term = new Map()

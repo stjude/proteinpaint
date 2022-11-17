@@ -4,8 +4,7 @@ import { dofetch3, sayerror } from '#src/client'
 import { debounce } from 'debounce'
 import { root_ID } from './tree'
 import { isUsableTerm } from '#shared/termdb.usecase'
-import { nonDictionaryTermTypes } from '#termsetting'
-
+import { nonDictionaryTermTypes } from '#shared/termdb.usecase'
 /*
 steps:
 user input at <input> will call doSearch()

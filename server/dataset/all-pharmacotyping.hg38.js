@@ -4,7 +4,7 @@ module.exports = {
 
 	cohort: {
 		// data downloading is disabled, can reenable later
-		allowedChartTypes: ['barchart', 'matrix', 'sampleScatter', 'summary'],
+		allowedChartTypes: ['matrix', 'sampleScatter', 'summary'],
 
 		db: { file: 'files/hg38/ALL-pharmacotyping/clinical/db' },
 		termdb: {},

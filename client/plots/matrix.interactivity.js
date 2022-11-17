@@ -10,20 +10,23 @@ export function setInteractivity(self) {
 		const d = event.target.__data__
 		if (!d || !d.term || !d.sample) return
 		if (event.target.tagName == 'rect') {
-			const rows = [
-				`<tr><td style='text-align: center'>Sample: ${d.sample}</td></tr>`,
-				`<tr><td style='text-align: center'>${d.term.name}</td></tr>`,
-				`<tr><td style='text-align: center; color: ${d.fill == '#fff' ? '' : d.fill}'>${d.label}</td></tr>`
-			]
-
-			if (d.term.type == 'geneVariant' && d.value) {
+			const rows = []
+			if (d.term.type != 'geneVariant') {
+				rows.push(`<tr><td>Sample:</td><td>${d._SAMPLENAME_ || d.sample}</td></tr>`)
+				rows.push(
+					`<tr><td>${d.term.name}:</td><td style='color: ${d.fill == '#fff' ? '' : d.fill}'> ${d.label}</td></tr>`
+				)
+			} else if (d.term.type == 'geneVariant' && d.value) {
 				const value = d.value
-				if (value.label && value.label !== d.label)
-					rows.push(`<tr><td style='text-align: center'>${value.label}</td></tr>`)
-				if (value.alt) rows.push(`<tr><td style='text-align: center'>ref=${value.ref}, alt=${value.alt}</td></tr>`)
-				if (value.isoform) rows.push(`<tr><td style='text-align: center'>Isoform: ${value.isoform}</td></tr>`)
-				if (value.mname) rows.push(`<tr><td style='text-align: center'>${value.mname}</td></tr>`)
-				if (value.chr) rows.push(`<tr><td style='text-align: center'>${value.chr}:${value.pos}</td></tr>`)
+				rows.push(`<tr><td>Sample:</td><td>${d._SAMPLENAME_ || value.sample}</td></tr>`)
+				const label = value.mname ? `${value.mname} ${d.label}` : d.label
+				rows.push(
+					`<tr><td>${d.term.name}:</td><td style='color: ${d.fill == value.color ? '' : d.fill}'>${label}</td></tr>`
+				)
+
+				if (value.label && value.label !== d.label) rows.push(`<tr><td></td><td>${value.label}</td></tr>`)
+				if (value.alt) rows.push(`<tr><td>ref=${value.ref}</td><td>alt=${value.alt}</td></tr>`)
+				if (value.chr) rows.push(`<tr><td>Position:</td><td>${value.chr}:${value.pos}</td></tr>`)
 			}
 
 			self.dom.menutop.selectAll('*').remove()
@@ -37,12 +40,147 @@ export function setInteractivity(self) {
 	}
 
 	self.legendClick = function() {}
+
+	self.svgMousemove = function(event) {
+		if (!self.dragged) return
+		const s = self.config.settings.matrix
+		const d = self.dragged
+		const x2 = !s.transpose ? d.x : d.x - d.clientX + event.clientX
+		const y2 = !s.transpose ? d.y - d.clientY + event.clientY : d.y
+		d.clone.attr('transform', `translate(${x2},${y2})`)
+	}
+
+	self.svgMouseup = function(event) {
+		if (!self.dragged) return
+		self.dragged.clone.remove()
+		delete self.dragged
+		delete self.clicked
+	}
+
+	//setSampleActions(self)
 	setTermActions(self)
 	setTermGroupActions(self)
 	setSampleGroupActions(self)
 }
+/*
+// TODO: may add drag events for sample labels
+function setSampleActions(self) {
+	self.sampleLabelMousedown = (event, d) => {
+		self.clicked = { event, d }
+	}
 
+	self.sampleLabelMouseover = (event, t) => {
+		select(event.target).style('fill', 'blue')
+		if (!self.dragged) return
+		// TODO: why is the element-bound __data__ (t) not provided as a second argument by d3??
+		self.hovered = event.target.__data__
+	}
+
+	self.sampleLabelMouseout = event => {
+		select(event.target).style('fill', '')
+		//if (!this.dragged) return
+	}
+
+	self.sampleLabelMousemove = () => {
+		const s = self.config.settings.matrix
+		if (self.clicked && !self.dragged) {
+			self.dom.sampleLabelG
+				.selectAll('text')
+				.style('-webkit-user-select', 'none')
+				.style('-moz-user-select', 'none')
+				.style('-ms-user-select', 'none')
+				.style('user-select', 'none')
+
+			const label = self.clicked.event.target.closest('.sjpp-matrix-label') //console.log(68, label)
+			// TODO: use a native or D3 transform accessor
+			const [x, y] = select(label)
+				.attr('transform')
+				.split('translate(')[1]
+				.split(')')[0]
+				.split(',')
+				.map(Number)
+			const node = label.cloneNode(true)
+			self.dom.sampleLabelG.node().prepend(node)
+			self.dragged = {
+				orig: label,
+				clone: select(node)
+					.style('cursor', 'move')
+					.style('pointer-events', 'none'),
+				node,
+				x,
+				y,
+				clientX: event.clientX,
+				clientY: event.clientY
+			} //; console.log(this.dragged)
+			self.dragged.clone.selectAll('text').style('fill', 'red')
+		}
+		if (!self.dragged) return
+		const d = self.dragged
+		const x2 = s.transpose ? d.x : d.x - d.clientX + event.clientX
+		const y2 = s.transpose ? d.y - d.clientY + event.clientY : d.y
+		self.dragged.clone.attr('transform', `translate(${x2},${y2})`)
+	}
+
+	self.sampleLabelMouseup = event => {
+		delete self.clicked
+		const s = self.config.settings.matrix
+		if (self.dragged) {
+			self.dragged.clone.remove()
+			if (self.hovered) {
+				// reposition the dragged row/column
+				const d = self.dragged
+				const t = d.orig.__data__; console.log(t.grpIndex, self.sampleGroups)
+				const h = self.hovered
+				// console.log(t, self.config.termgroups)
+				// console.log([99, numRows, t.index, toIndex], self.config.termgroups[t.grpIndex].lst.slice())
+				// NOTE: currently, the rendered order does not have to match the termgroup.lst order
+				// ??? actually resort termgroup.lst to reflect the current term order ???
+				for (const grp of self.sampleGroups) {
+					grp.lst.sort((a, b) => {
+						const a1 = self.sampleOrder.find(t => t.sample === a.sample)
+						const b1 = self.sampleOrder.find(t => t.sample === b.sample)
+						if (!a1 && !b1) return 0
+						if (!a1) return 1
+						if (!b1) return -1
+						return a1.totalIndex - b1.totalIndex
+					})
+				}
+
+				const sample = self.sampleGroups[t.grpIndex].lst.splice(t.index, 1)[0] //if (tw != t.tw) {console.log(tw, t.tw); throw `t????`}
+				self.config.termgroups[h.grpIndex].lst.splice(h.index, 0, sample)
+
+				self.app.dispatch({
+					type: 'plot_edit',
+					id: self.id,
+					config: {
+						samplegroups: self.config.samplegroups,
+						settings: {
+							matrix: {
+								sortSamplesBy: 'asListed'
+							}
+						}
+					}
+				})
+			}
+
+			self.dom.sampleLabelG
+				.selectAll('text')
+				.style('fill', '')
+				.style('-webkit-user-select', '')
+				.style('-moz-user-select', '')
+				.style('-ms-user-select', '')
+				.style('user-select', '')
+
+			delete self.dragged
+		} else {
+			self.showTermMenu(event)
+		}
+	}
+}
+*/
 function setTermActions(self) {
+	setLabelDragEvents(self, 'term')
+
 	self.setPill = function(appState) {
 		// will reuse a pill instance to show term edit menu
 		self.pill = termsettingInit({
@@ -919,6 +1057,8 @@ function setSampleGroupActions(self) {
 }
 
 function setTermGroupActions(self) {
+	setLabelDragEvents(self, 'termGrp')
+
 	self.showTermGroupMenu = function(event) {
 		const d = event.target.__data__
 		if (!d) return
@@ -1057,5 +1197,130 @@ function setTermGroupActions(self) {
 			}
 		})
 		self.dom.tip.hide()
+	}
+}
+
+// prefix = "term" | "termGrp"
+function setLabelDragEvents(self, prefix) {
+	self[`${prefix}LabelMousedown`] = (event, d) => {
+		self.clicked = { event, d }
+	}
+
+	self[`${prefix}LabelMouseover`] = (event, t) => {
+		if (event.target.tagName === 'text') select(event.target).style('fill', 'blue')
+		if (!self.dragged) return
+		// TODO: why is the element-bound __data__ (t) not provided as a second argument by d3??
+		self.hovered = event.target.__data__
+	}
+
+	self[`${prefix}LabelMouseout`] = event => {
+		select(event.target).style('fill', '')
+		//if (!this.dragged) return
+	}
+
+	self[`${prefix}LabelMousemove`] = () => {
+		const s = self.config.settings.matrix
+		if (self.clicked && !self.dragged) {
+			self.dom[`${prefix}LabelG`]
+				.selectAll('text')
+				.style('-webkit-user-select', 'none')
+				.style('-moz-user-select', 'none')
+				.style('-ms-user-select', 'none')
+				.style('user-select', 'none')
+
+			const label = self.clicked.event.target.closest('.sjpp-matrix-label') //console.log(68, label)
+			// TODO: use a native or D3 transform accessor
+			const [x, y] = select(label)
+				.attr('transform')
+				.split('translate(')[1]
+				.split(')')[0]
+				.split(',')
+				.map(Number)
+			const node = label.cloneNode(true)
+			self.dom[`${prefix}LabelG`].node().prepend(node)
+			self.dragged = {
+				orig: label,
+				clone: select(node)
+					.style('cursor', 'move')
+					.style('pointer-events', 'none'),
+				node,
+				x,
+				y,
+				clientX: event.clientX,
+				clientY: event.clientY
+			} //; console.log(this.dragged)
+			self.dragged.clone.selectAll('text').style('fill', 'red')
+		}
+		if (!self.dragged) return
+		const d = self.dragged
+		const x2 = !s.transpose ? d.x : d.x - d.clientX + event.clientX
+		const y2 = !s.transpose ? d.y - d.clientY + event.clientY : d.y
+		d.clone.attr('transform', `translate(${x2},${y2})`)
+	}
+
+	self[`${prefix}LabelMouseup`] = event => {
+		delete self.clicked
+		const s = self.config.settings.matrix
+		if (self.dragged) {
+			self.dragged.clone.remove()
+			//self.dragged.bgrect.remove()
+			if (self.hovered) {
+				// reposition the dragged row/column
+				const d = self.dragged
+				const t = d.orig.__data__
+				const h = self.hovered
+
+				if (prefix == 'termGrp') {
+					const grp = self.config.termgroups.splice(t.grpIndex, 1)[0] //if (tw != t.tw) {console.log(tw, t.tw); throw `t????`}
+					self.config.termgroups.splice(h.grpIndex, 0, grp)
+				} else {
+					// console.log(t, self.config.termgroups)
+					// console.log([99, numRows, t.index, toIndex], self.config.termgroups[t.grpIndex].lst.slice())
+					// NOTE: currently, the rendered order does not have to match the termgroup.lst order
+					// ??? actually resort termgroup.lst to reflect the current term order ???
+					for (const grp of self.config.termgroups) {
+						grp.lst.sort((a, b) => {
+							const a1 = self.termOrder.find(t => t.tw.$id === a.$id)
+							const b1 = self.termOrder.find(t => t.tw.$id === b.$id)
+							if (!a1 && !b1) return 0
+							if (!a1) return 1
+							if (!b1) return -1
+							return a1.totalIndex - b1.totalIndex
+						})
+					}
+
+					const tw = self.config.termgroups[t.grpIndex].lst.splice(t.index, 1)[0] //if (tw != t.tw) {console.log(tw, t.tw); throw `t????`}
+					self.config.termgroups[h.grpIndex].lst.splice(h.index, 0, t.tw)
+				}
+
+				const sortKey = prefix == 'term' ? 'sortTermsBy' : 'sortTermGroupsBy'
+				self.app.dispatch({
+					type: 'plot_edit',
+					id: self.id,
+					config: {
+						termgroups: self.config.termgroups,
+						settings: {
+							matrix: {
+								[sortKey]: 'asListed'
+							}
+						}
+					}
+				})
+			}
+
+			self.dom[`${prefix}LabelG`]
+				.selectAll('text')
+				.style('fill', '')
+				.style('-webkit-user-select', '')
+				.style('-moz-user-select', '')
+				.style('-ms-user-select', '')
+				.style('user-select', '')
+
+			delete self.dragged
+		} else if (prefix == 'term') {
+			self.showTermMenu(event)
+		} else {
+			self.showTermGroupMenu(event)
+		}
 	}
 }

@@ -1,6 +1,7 @@
 const got = require('got')
 const path = require('path')
 const isUsableTerm = require('#shared/termdb.usecase').isUsableTerm
+const serverconfig = require('./serverconfig')
 
 /*
 
@@ -22,10 +23,11 @@ adds following things:
 
 */
 
-const gdcHost = process.env.PP_GDC_HOST || 'https://api.gdc.cancer.gov'
+const apihost = process.env.PP_GDC_HOST || 'https://api.gdc.cancer.gov'
+const apihostGraphql = apihost + (apihost.includes('/v0') ? '' : '/v0') + '/graphql'
 
 // TODO switch to https://api.gdc.cancer.gov/cases/_mapping
-const dictUrl = path.join(gdcHost, 'ssm_occurrences/_mapping')
+const dictUrl = path.join(apihost, 'ssm_occurrences/_mapping')
 
 /*
 adding a dummy default term.bins as it's required
@@ -287,7 +289,13 @@ export async function initGDCdictionary(ds) {
 	if (integerCount) ds.cohort.termdb.termtypeByCohort.push({ cohort: '', type: 'integer' })
 	if (floatCount) ds.cohort.termdb.termtypeByCohort.push({ cohort: '', type: 'float' })
 
+	/**********************************
+	       additional prepping
+	**********************************/
 	await getOpenProjects(ds)
+
+	testGDCapi() // do not await
+	cacheAliquot2submitterMapping(ds) // do not await on this
 }
 
 function mayAddTermAttribute(t) {
@@ -458,7 +466,7 @@ async function getOpenProjects(ds) {
 		size: 0
 	}
 
-	const tmp = await got(path.join(gdcHost, 'files'), { method: 'POST', headers, body: JSON.stringify(data) })
+	const tmp = await got(path.join(apihost, 'files'), { method: 'POST', headers, body: JSON.stringify(data) })
 
 	const re = JSON.parse(tmp.body)
 
@@ -472,4 +480,175 @@ async function getOpenProjects(ds) {
 	} else {
 		console.log("getting open project_id but return is not re.data.aggregations['cases.project.project_id'].buckets")
 	}
+}
+
+/* this function is called when the gdc mds3 dataset is initiated on a pp instance
+primary purpose is to catch malformed api URLs
+when running this on sj prod server, the gdc api can be down due to maintainance, and we do not want to prevent our server from launching
+thus do not halt process if api is down
+*/
+async function testGDCapi() {
+	try {
+		await testRestApi(apihost + '/ssms')
+		await testRestApi(apihost + '/ssm_occurrences')
+		await testRestApi(apihost + '/cases')
+		await testRestApi(apihost + '/files')
+		// /data/ and /slicing/view/ are not tested as they require file uuid which is unstable across data releases
+		await testGraphqlApi(apihostGraphql)
+	} catch (e) {
+		console.error(`
+##########################################
+#
+#   GDC API unavailable
+#   ${apihost}
+#   ${apihostGraphql}
+#
+##########################################`)
+	}
+}
+
+async function testRestApi(url) {
+	try {
+		const t = new Date()
+		await got(url)
+		console.log('GDC API okay: ' + url, new Date() - t, 'ms')
+	} catch (e) {
+		throw 'gdc api down: ' + url
+	}
+}
+
+async function testGraphqlApi(url) {
+	// FIXME lightweight method to test if graphql is accessible?
+	const t = new Date()
+	try {
+		const query = `query termislst2total( $filters: FiltersArgument) {
+		explore {
+			cases {
+				aggregations (filters: $filters, aggregations_filter_themselves: true) {
+					primary_site {buckets { doc_count, key }}
+				}
+			}
+		}}`
+		await got.post(url, {
+			headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+			body: JSON.stringify({ query, variables: {} })
+		})
+	} catch (e) {
+		throw 'gdc api down: ' + url
+	}
+	console.log('GDC GraphQL API okay: ' + url, new Date() - t, 'ms')
+}
+
+async function cacheAliquot2submitterMapping(ds) {
+	try {
+		ds.aliquot2submitter = {
+			cache: new Map(),
+			get: async aliquot_id => {
+				if (ds.aliquot2submitter.cache.has(aliquot_id)) return ds.aliquot2submitter.cache.get(aliquot_id)
+
+				/* 
+				as on the fly api query is still slow, especially to query one at a time for hundreds of ids
+				simply return unconverted id to preserve performance
+				*/
+				return aliquot_id
+
+				// converts one id on the fly while the cache is still loading
+				//await fetchIdsFromGdcApi(ds, null, null, aliquot_id)
+				//return ds.aliquot2submitter.cache.get(aliquot_id)
+			}
+		}
+
+		if (serverconfig.features.stopGdcCacheAliquot) return console.log('GDC aliquot2submitter not cached!')
+
+		// key: aliquot uuid
+		// value: submitter id
+		const totalCases = await fetchIdsFromGdcApi(ds, 1, 0)
+		if (!Number.isInteger(totalCases)) throw 'gdc totalCases not integer'
+
+		const begin = new Date()
+		console.log('Start to cache aliquot IDs of', totalCases, 'cases...')
+
+		const size = 1000 // fetch 1000 ids at a time
+		for (let i = 0; i < Math.ceil(totalCases / size); i++) {
+			await fetchIdsFromGdcApi(ds, size, i * 1000)
+		}
+
+		console.log('Done caching', ds.aliquot2submitter.cache.size, 'aliquot IDs.', new Date() - begin, 'ms')
+	} catch (e) {
+		console.log('Error at caching: ' + e)
+	}
+}
+
+/*
+input:
+	ds:
+		gdc dataset object
+	size:int
+	from:int
+		null or integer
+		if null, aliquot_id must be given
+	aliquot_id:str
+
+output:
+	re.data.pagination.total
+
+aliquot-to-submitter mapping are automatically cached
+*/
+async function fetchIdsFromGdcApi(ds, size, from, aliquot_id) {
+	const param = ['fields=samples.portions.analytes.aliquots.aliquot_id,samples.submitter_id']
+	if (aliquot_id) {
+		param.push(
+			'filters={"op":"and","content":[{"op":"=","content":{"field":"samples.portions.analytes.aliquots.aliquot_id","value":["' +
+				aliquot_id +
+				'"]}}]}'
+		)
+	} else {
+		if (!Number.isInteger(size) || !Number.isInteger(from)) throw 'size and from not integers'
+		param.push('size=' + size)
+		param.push('from=' + from)
+	}
+
+	const tmp = await got(apihost + '/cases?' + param.join('&'))
+	const re = JSON.parse(tmp.body)
+	if (!Array.isArray(re?.data?.hits)) throw 're.data.hits[] not array'
+	/*
+	re.data.hits = [
+	  {
+		"id": "c2829ab9-d5b2-5a82-a134-de9c591363de",
+		"samples": [
+		  {
+			"submitter_id": "TARGET-50-PAJNID-01A",
+			"portions": [
+			  {
+				"analytes": [
+				  {
+					"aliquots": [
+					  {
+						"aliquot_id": "123bd4c3-6e36-4514-8d06-9f1f408cd1aa"
+					  }
+					]
+				  }
+				]
+			  },
+			  { ... more analytes ... }
+	*/
+	for (const h of re.data.hits) {
+		if (!Array.isArray(h.samples)) continue //throw 'hit.samples[] not array'
+		for (const sample of h.samples) {
+			const submitter_id = sample.submitter_id
+			if (!Array.isArray(sample.portions)) continue // throw 'sample.portions[] not array'
+			for (const portion of sample.portions) {
+				if (!Array.isArray(portion.analytes)) continue //throw 'portion.analytes not array'
+				for (const analyte of portion.analytes) {
+					if (!Array.isArray(analyte.aliquots)) continue //throw 'analyte.aliquots not array'
+					for (const aliquot of analyte.aliquots) {
+						const aliquot_id = aliquot.aliquot_id
+						if (!aliquot_id) throw 'aliquot.aliquot_id missing'
+						ds.aliquot2submitter.cache.set(aliquot_id, submitter_id)
+					}
+				}
+			}
+		}
+	}
+	return re.data?.pagination?.total
 }

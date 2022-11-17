@@ -127,7 +127,7 @@ const snplocusQ = {
 }
 
 function __barchart(t1,t2) {
-	const chart = { chartType:'barchart', term:t1 }
+	const chart = { chartType:'summary', term:t1 }
 	if(t2) chart.term2 = t2
 	return '?noheader=1&mass='+JSON.stringify( { dslabel:'SJLife', genome:'hg38', plots: [ chart ], nav: { activeTab: 1 } })
 }
@@ -214,12 +214,15 @@ makeURL([
 		['CBFB inversion','?genome=hg19&block=1&bamfile=test,proteinpaint_demo/hg19/bam/CBFB-MYH11.bam&position=chr16:67115815-67117415'],
 		['long read, no qual','?genome=hg38&block=1&bamfile=test,proteinpaint_demo/hg38/bam/control.BCL11A-218.bam&position=chr2:60450049-60563872'],
 		['FLAG 0/16','?genome=hg19&block=1&position=chr12:25380685-25381606&bamfile=flag,proteinpaint_demo/hg19/bam/flagproblem.bam'],
+	        ['multi-region inversion example','?genome=hg19&block=1&bamfile=inversion_example,proteinpaint_demo/hg19/bam/CBFB-MYH11.bam&position=chr16:67116400-67116600;chr16:15814303-15816118'],
+	        ['multi-region translocation example','?genome=hg19&block=1&bamfile=translocation_example,proteinpaint_demo/hg19/bam/etv6runx1.bam&position=chr12:12023000-12023560;chr21:36315404-36315804'],
 		'ERR:',
 		['missing','?genome=hg19&block=1&bamfile=flag,path/to/missing.bam'],
 		['text','?genome=hg19&block=1&bamfile=flag,proteinpaint_demo/hg19/junction/rnapeg'],
 		['gz','?genome=hg19&block=1&bamfile=flag,proteinpaint_demo/hg19/junction/file.gz'],
 		['no index','?genome=hg19&block=1&bamfile=test,proteinpaint_demo/hg19/bam/noIndex.bam'],
 		['wrong index','?genome=hg19&block=1&bamfile=test,proteinpaint_demo/hg19/bam/wrongIndex.bam'],
+                ['incorrect diff_score axis rendering','?genome=hg38&block=1&bamfile=wrong_diff_score_axis_bar,proteinpaint_demo/hg38/bam/wrong_diffscore_ticks.bam&position=chr7:148846501-148846701&hlregion=chr7:148846600-148846600&variant=chr7.148846602.A.'],
 	]
 },
 
@@ -594,6 +597,9 @@ makeURL([
 		'others',
 		
 		['scatter plot', '?noheader=1&mass={"dslabel":"PNET","genome":"hg19","plots":[{"chartType":"sampleScatter","name":"Methylome TSNE","colorTW":{"id":"TSNE Category"}}]}'],
+
+
+		['scatter plot + gene', '?noheader=1&mass={"dslabel":"PNET","genome":"hg19","plots":[{"chartType":"sampleScatter","name":"Methylome TSNE","colorTW":{"id":"TSNE Category"}, "shapeTW": {"term": {"name": "KRAS", "type": "geneVariant"}}}]}'],
 
 		['survival','?noheader=1&mass='+JSON.stringify( {
 			dslabel:'TermdbTest',
@@ -1398,7 +1404,7 @@ function makeURL(rows) {
 					const a = document.createElement('a')
 					a.innerHTML = ele[0]
 					a.setAttribute('href',window.location.origin+'/'+ele[1])
-					a.setAttribute('target','_blank')
+					//a.setAttribute('target','_blank')
 					a.style.paddingRight = '8px'
 					d.appendChild(a)
 				} else {

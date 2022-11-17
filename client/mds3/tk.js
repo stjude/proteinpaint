@@ -4,15 +4,12 @@ import { may_render_skewer } from './skewer'
 import { make_leftlabels } from './leftlabel'
 
 /*
-********************** EXPORTED
 loadTk
-rangequery_rglst
-********************** INTERNAL
-getParameter
-loadTk_finish_closure
+	getData
+		dataFromCustomVariants
+		getParameter
+			rangequery_rglst
 rangequery_add_variantfilters
-getData
-	dataFromCustomVariants
 */
 
 export async function loadTk(tk, block) {
@@ -78,8 +75,14 @@ function getParameter(tk, block) {
 		if (tk.filter0) {
 			// expecting to be a simple filter such as
 			// {"op":"and","content":[{"op":"in","content":{"field":"cases.project.project_id","value":["TCGA-BRCA"]}}]}
-			// XXX any other possibilities from gdc portal
 			par.push('filter0=' + encodeURIComponent(JSON.stringify(tk.filter0)))
+		}
+		if (tk.filterObj) {
+			// json filter object
+			if (tk.filterObj?.lst.length) {
+				// when user deletes the only tvs from the filter ui, the lst[] will be empty and can cause issue in backend
+				par.push('filterObj=' + encodeURIComponent(JSON.stringify(tk.filterObj)))
+			}
 		}
 		if (tk.token) headers['X-Auth-Token'] = tk.token
 	} else {
@@ -175,6 +178,7 @@ export function rangequery_rglst(tk, block, par) {
 		}
 		rglst.push(r)
 		add('isoform', block.usegm.isoform)
+		add('gene', block.usegm.name)
 		if (block.gmmode == 'genomic') {
 			// TODO if can delete the isoform parameter to simply make the query by genomic pos
 			add('atgenomic', 1)

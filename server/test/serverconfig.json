@@ -1,0 +1,18 @@
+{
+  "debugmode": true,
+  "defaultgenome": "hg38",
+  "genomes": [
+    {
+      "name": "hg38",
+      "species": "human",
+      "datasets": [
+        {
+          "name": "TermdbTest",
+          "jsfile": "./dataset/termdb.test.js"
+        }
+      ]
+    }
+  ],
+  "tpmasterdir": "tpmasterdir",
+  "cachedir": "cache"
+}

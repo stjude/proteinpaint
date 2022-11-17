@@ -1,0 +1,38 @@
+name: Build and run tests
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+jobs:
+  build:
+    if: github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 16
+
+      - name: Install packages
+        run: npm install
+
+      - name: Copy serverconfig.json to root
+        run: mv server/test/serverconfig.json .
+
+      - name: Create cache folder
+        run: mkdir server/cache
+
+      - name: Client unit tests
+        run: npx tape client/**/*.unit.spec.js
+
+      - name: Server unit tests
+        run: npm run test:unit --workspace="server"
+
+      - name: Rust unit tests
+        run: npm run test:unit --workspace="rust"

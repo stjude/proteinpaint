@@ -1137,20 +1137,15 @@ h2 {
     background: #fcfcca !important; 
 }
 
+.sjpp_grid_header {
+    font-family: 'Arial';
+    font-size: 1em;
+    opacity: 0.5;
+}
+
 .sjpp_grid_item {
     padding: 5px;
     font-size: 1em;
     align-items: center;
 }
 
-.sjpp_submenu
-{
-    position: absolute;
-    background-color: white;
-    font-family: Arial;
-    margin: 5px;
-    box-shadow: rgb(153, 153, 153) 0px 2px 4px 1px;
-    top: 0px;
-    left: 166px;
-    width: 200px
-}

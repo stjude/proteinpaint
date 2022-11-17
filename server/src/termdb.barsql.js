@@ -5,6 +5,7 @@ const Partjson = require('partjson')
 const d3format = require('d3-format')
 const binLabelFormatter = d3format.format('.3r')
 const termdbsql = require('./termdb.sql')
+const run_rust = require('@stjude/proteinpaint-rust').run_rust
 
 /*
 ********************** EXPORTED
@@ -22,6 +23,8 @@ export function handle_request_closure(genomes) {
 			const termnum_id = termnum + '_id'
 			if (typeof q[termnum_id] == 'string') {
 				q[termnum_id] = decodeURIComponent(q[termnum_id])
+			} else if (typeof q[termnum] == 'string') {
+				q[termnum] = JSON.parse(decodeURIComponent(q[termnum]))
 			}
 			const termnum_q = termnum + '_q'
 			if (typeof q[termnum_q] == 'string') {
@@ -36,8 +39,12 @@ export function handle_request_closure(genomes) {
 			if (!ds.cohort) throw 'ds.cohort missing'
 			const tdb = ds.cohort.termdb
 			if (!tdb) throw 'no termdb for this dataset'
-
 			const data = await barchart_data(q, ds, tdb)
+			if (q.term2_q) {
+				//term2 is present
+				//compute pvalues using Fisher's exact/Chi-squared test
+				await computePvalues(data)
+			}
 			res.send(data)
 		} catch (e) {
 			res.send({ error: e.message || e })
@@ -456,4 +463,140 @@ arguments:
 		}
 	}
 	return AN == 0 || AC == 0 ? 0 : (AC / AN).toFixed(3)
+}
+
+/*
+Run Fisher's exact test or Chi-squared test to determine if the proportion of a spcific term2 category is significantly different
+between a specific term1 group and the rest of term1 groups combined, using a 2x2 contingency table:
+
+            [Male]  [not Male]
+[white]       R1C1     R1C2
+[not white]   R2C1     R2C2
+
+input parameter: 
+{
+	data: an object contains data of barcharts, structure is 
+
+			.charts=[]
+			.serieses=[]
+				.seriesId=str // key of term1 category
+				.total=int // total of this category
+				.data=[]
+					.dataId=str // key of term2 category, '' if no term2
+					.total=int // size of this term1-term2 combination
+
+	fisher_limit:  the sum of the four values in the 2x2 table must be larger than fisher_limit(default = 300) to use chi-squared test
+	individual_fisher_limit: each of the four values in the 2x2 table must be larger than individual_fisher_limit (default = 150) to use chi-squared test
+	pvalueCutoff: comparisions with a pvalue less than pvalueCutoff are considered to be significantly different
+}
+
+Output: The function has no return but appends the statistical results to the provided data object as data.tests:
+{
+	chartId:[
+		{
+			term1comparison: term1,
+			term2tests:[
+				term2id: term2,
+				pvalue: ...
+				significant: true/false
+			]
+		}
+	]
+}
+*/
+async function computePvalues(data, fisher_limit = 300, individual_fisher_limit = 150, pvalueCutoff = 0.05) {
+	data.tests = {}
+	for (const chart of data.charts) {
+		// calculate sum of each term2 category. Structure: {term2Catergory1: num of samples, term2Catergory2: num of samples, ...}
+		const colSums = {}
+		for (const row of chart.serieses) {
+			for (const col of row.data) {
+				colSums[col.dataId] = colSums[col.dataId] === undefined ? col.total : colSums[col.dataId] + col.total
+			}
+		}
+
+		//generate inputs for Fisher's exact test/Chi-squared test. format for each input: `label\tR1C1\tR2C1\tR1C2\tR2C2`
+		const fisherAndChiInputData = []
+		for (const row of chart.serieses) {
+			for (const term2cat of row.data) {
+				const R1C1 = term2cat.total //# of term2 category of interest in term1 category of interest (e.g. # of male in white), represents R1C1 in 2X2 contingency table
+				const R2C1 = colSums[term2cat.dataId] - term2cat.total //# of term2 category of interest in term1 not category of interest (e.g. # of male in not white),  represents R2C1 in 2X2 contingency table
+				const R1C2 = row.total - term2cat.total //# of term2 not category of interest in term1 category of interest (e.g. # of not male in white), represents R1C2 in 2X2 contingency table
+				const R2C2 = chart.total - colSums[term2cat.dataId] - (row.total - term2cat.total) //# of term2 not category of interest in term1 not category of interest (e.g. # of not male in not white), represents R2C2 in 2X2 contingency table
+
+				//replace hyphen/tab in seriesId and dataId with @hyphen@ and @tab@ to avoid being split in fisher.rs, which uses '-' and '\t' to split input
+				// Backwards compatitable logic for old barchart code for older mass session JSONs
+
+				const seriesId =
+					typeof row.seriesId == 'string'
+						? row.seriesId.replaceAll('-', '@hyphen@').replace('\t', '@tab@')
+						: row.seriesId.toString()
+				const dataId =
+					typeof term2cat.dataId == 'string'
+						? term2cat.dataId.replaceAll('-', '@hyphen@').replace('\t', '@tab@')
+						: term2cat.dataId.toString()
+
+				//use seriesId@@dataId as label to be able to parse seriesId and dataId from the test result later
+				fisherAndChiInputData.push([`${seriesId}@@${dataId}`, R1C1, R2C1, R1C2, R2C2].join('\t'))
+			}
+		}
+		// run Fisher's exact test/Chi-squared test, result returned is a multi-line string
+		// each line is the result of one test with format: `label\tR1C1\tR2C1\tR1C2\tR2C2\tpvalue`
+		// for example: White@@1	2169	486	1923	475	0.1739808650460909
+		const resultWithPvalue = await run_rust(
+			'fisher',
+			'fisher_limits\t' + fisher_limit + '\t' + individual_fisher_limit + '-' + fisherAndChiInputData.join('-')
+		)
+		/*
+		parse the multi-line string result into pvalueTable array: 
+		[
+			{
+				term1comparison: term1,
+				term2tests:[term2id: term2, pvalue: ..., significant: true/false]
+			},
+			...
+		]
+		*/
+		const pvalueTable = []
+		for (const test of resultWithPvalue.split('\n').filter(Boolean)) {
+			// the first element of test.split('@@') is always the seriesId
+			// change @hyphen@ and @tab@ in seriesId back to hyphen/tab
+			const seriesId = test
+				.split('@@')[0]
+				.replaceAll('@hyphen@', '-')
+				.replaceAll('@tab@', '\t')
+
+			// test.split('@@')[1].split('\t')[0] is always going to be the dataId
+			// change @hyphen@ and @tab@ in dataId back to hyphen/tab
+			const dataId = test
+				.split('@@')[1]
+				.split('\t')[0]
+				.replaceAll('@hyphen@', '-')
+				.replaceAll('@tab@', '\t')
+
+			// test.split('@@')[1].split('\t')[5] is always going to be the pvalue
+			const pvalue = test.split('@@')[1].split('\t')[5]
+
+			const t1c = pvalueTable.find(t1c => t1c.term1comparison === seriesId)
+			if (!t1c) {
+				pvalueTable.push({
+					term1comparison: seriesId,
+					term2tests: [
+						{
+							term2id: dataId,
+							pvalue: pvalue,
+							significant: pvalue < pvalueCutoff
+						}
+					]
+				})
+			} else {
+				t1c.term2tests.push({
+					term2id: dataId,
+					pvalue: pvalue,
+					significant: pvalue < pvalueCutoff
+				})
+			}
+		}
+		data.tests[chart.chartId] = pvalueTable
+	}
 }

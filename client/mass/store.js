@@ -194,7 +194,7 @@ TdbStore.prototype.actions = {
 		this.state = this.copyMerge(this.toJson(this.state), action.state ? action.state : {}, this.replaceKeyVals)
 		for (const plot in this.state.plots) {
 			if (plot.mayAdjustConfig) {
-				console.log('mayAdjustConfig() used by mass store in dispatched action=app_refresh')
+				// console.log('mayAdjustConfig() used by mass store in dispatched action=app_refresh')
 				plot.mayAdjustConfig(plot, action.config)
 			}
 		}
@@ -227,7 +227,7 @@ TdbStore.prototype.actions = {
 		if (!('id' in action)) action.id = getId()
 		plot.id = action.id
 		if (plot.mayAdjustConfig) {
-			console.log('mayAdjustConfig() used by mass store in dispatched action=plot_create')
+			// console.log('mayAdjustConfig() used by mass store in dispatched action=plot_create')
 			plot.mayAdjustConfig(plot, action.config)
 		}
 		this.state.plots.push(plot)
@@ -238,7 +238,7 @@ TdbStore.prototype.actions = {
 		if (!plot) throw `missing plot id='${action.id}' in store.plot_edit()`
 		this.copyMerge(plot, action.config, action.opts ? action.opts : {})
 		if (plot.mayAdjustConfig) {
-			console.log('mayAdjustConfig() used by mass store in dispatched action=plot_edit')
+			// console.log('mayAdjustConfig() used by mass store in dispatched action=plot_edit')
 			plot.mayAdjustConfig(plot, action.config)
 		}
 		validatePlot(plot, this.app.vocabApi)
@@ -329,7 +329,7 @@ TdbStore.prototype.actions = {
 // to return all the term wrappers in the plot config
 const getNestedChartSeriesDataTws = plot => [plot.term0, plot.term, plot.term2].filter(d => !!d)
 const getTwsByChartType = {
-	barchart: getNestedChartSeriesDataTws,
+	summary: getNestedChartSeriesDataTws,
 	survival: getNestedChartSeriesDataTws,
 	cuminc: getNestedChartSeriesDataTws,
 	regression: plot => [plot.outcome, ...plot.independent].filter(d => !!d),
