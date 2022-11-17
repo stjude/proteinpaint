@@ -67,6 +67,7 @@
     "dataset/gdc*.js",
     "genome",
     "src/serverconfig.js",
+    "src/mds3.gdc.filter.js",
     "cards/index.json",
     "server.js*",
     "start.js",
