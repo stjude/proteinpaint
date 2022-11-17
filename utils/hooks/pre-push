@@ -4,6 +4,6 @@ set -e
 
 FILES=$(git diff-tree --no-commit-id --name-only -r HEAD..origin/master)
 # doing this per GDC requirements
-pre-commit run --files "$FILES"
+pre-commit run --files $FILES
 
 exit 0
