@@ -2,10 +2,8 @@
 
 set -e
 
-BRANCH=$(git rev-parse --abbrev-ref HEAD)
-FILES=$(git diff-tree --no-commit-id --name-only -r HEAD..origin/$BRANCH)
-
-# doing per GDC requirements
+FILES=$(git diff-tree --no-commit-id --name-only -r HEAD..origin/master)
+# doing this per GDC requirements
 pre-commit run --files "$FILES"
 
 exit 0
