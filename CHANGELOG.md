@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## 2.6.0
+- support a samplelst term-type
+- Github Actions for unit tests
+
+GDC-related
+- launch a separate SSM lollipop track using a term/variable filter
+- fix the package files list for the GDC build
+- temporary fix to GDC permission check request
+
 ## 2.5.1
 
 - fixes to server tests

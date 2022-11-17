@@ -7,41 +7,40 @@ export function getHandler(self) {
 		showEditMenu(div) {
 			const group1 = self.q.groups[0]
 			const group2 = self.q.groups[1]
+			let values = [...group1.values]
+			if (group2.name !== 'Others') return
 
 			div
 				.style('padding', '6px')
 				.append('div')
 				.style('margin', '10px')
 				.style('font-size', '0.8rem')
-				.html(`<b> ${group1.name}</b> samples. <b>Others</b> excludes these samples`)
+				.html(`<b>Select ${group1.name}</b> samples. <b>Others</b> excludes these samples`)
 			const tableDiv = div.append('div').style('border', '1px solid gray')
 
-			div
-				.append('div')
-				.append('button')
-				.style('float', 'right')
-				.style('margin', '10px 10px 0 0')
-				.text('Submit')
-				.on('click', () => self.runCallback())
-			if (group2.name === 'Others') {
-				showSamples()
+			showSamples()
 
-				function showSamples() {
-					tableDiv.selectAll('*').remove()
-					const rows = []
-					for (const value of group1.values) rows.push([{ value: value }])
-					const columns = [{ label: 'Sample' }]
-					renderTable({
-						rows,
-						columns,
-						div: tableDiv,
-						deleteCallback: i => {
-							group2.values.splice(i, 1)
-							group1.values.splice(i, 1)
-							showSamples()
+			function showSamples() {
+				tableDiv.selectAll('*').remove()
+				const rows = []
+				for (const value of values) rows.push([{ value: value }])
+				const columns = [{ label: 'Sample' }]
+				renderTable({
+					rows,
+					columns,
+					div: tableDiv,
+					buttons: [
+						{
+							text: 'Submit',
+							callback: indexes => {
+								values = values.filter((elem, index, array) => !(index in indexes))
+								group2.values = values
+								group1.values = values
+								self.runCallback()
+							}
 						}
-					})
-				}
+					]
+				})
 			}
 		},
 		getPillStatus() {},
