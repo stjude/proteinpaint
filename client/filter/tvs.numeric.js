@@ -117,7 +117,12 @@ async function fillMenu(self, div, tvs) {
 	}
 
 	try {
-		self.num_obj.density_data = await self.opts.vocabApi.getDensityPlotData(tvs.term.id, self.num_obj, self.filter)
+		const data = await self.opts.vocabApi.getViolinPlotData(
+			{ termid: tvs.term.id, filter: self.filter },
+			self.opts.getCategoriesArguments
+		)
+		self.num_obj.density_data = convertViolinData(data)
+		//self.num_obj.density_data = await self.opts.vocabApi.getDensityPlotData(tvs.term.id, self.num_obj, self.filter)
 	} catch (err) {
 		console.log(err)
 	}
@@ -178,6 +183,21 @@ async function fillMenu(self, div, tvs) {
 	}
 	self.num_obj.brushes.forEach(brush => brush.init())
 	await showCheckList_numeric(self, tvs, div)
+}
+
+// convert violin data (vd) to old density data (dd)
+function convertViolinData(vd) {
+	const p = vd.plots[0] // assuming only one plot
+	const dd = {
+		minvalue: vd.min,
+		maxvalue: vd.max,
+		samplecount: p.plotValueCount,
+		densitymax: p.biggestBin,
+		density: p.bins.map(i => {
+			return [i.x0, i.binValueCount]
+		})
+	}
+	return dd
 }
 
 function setTvsDefaults(tvs) {

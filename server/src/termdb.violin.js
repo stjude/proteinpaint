@@ -33,7 +33,7 @@ export async function trigger_getViolinPlotData(q, res, ds, genome) {
 		twLst.push(divideTw)
 	}
 
-	const data = await getData({ terms: twLst, filter: q.filter }, ds, genome)
+	const data = await getData({ terms: twLst, filter: q.filter, currentGeneNames: q.currentGeneNames }, ds, genome)
 	if (data.error) throw data.error
 
 	let min = Number.MAX_VALUE,

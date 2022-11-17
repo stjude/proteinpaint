@@ -529,25 +529,47 @@ class TermdbVocab extends Vocab {
 		}
 	}
 
-	async getViolinPlotData(arg) {
-		/*
-		should replace getDensityPlotData()
+	/*
+	to replace getDensityPlotData()
 
-		arg{}
+	Inputs:
 
-		arg.termid=str // main term to create violin/boxplot with
-		arg.term2={} // optional termwrapper of 2nd term to divide cohort
-			if term2 is given, will result in multiple plots
+	arg{}
+		.termid=str
+			main term to create violin/boxplot with
+		.divideTw={}
+			optional termwrapper of 2nd term to divide cohort
+			if given, will result in multiple plots, and pvalue computed for each pair of plots
 			if missing, will result in one plot
-		arg.filter={}
+		.filter={}
 			optional
 
-		*/
+	additionalArgs[]
+		optional list of parameters
+	
+	Output: {}
+		min:num
+		max:num
+		pvalues[] array of pvalues, empty if just one plot
+		plots[ {} ]
+			plotValueCount:int
+				total number of samples plotted
+			median:num
+			label:str
+			biggestBin: int
+				as the thickest point of the violin plot
+			bins[]
+				x0: number
+				x1: number
+				binValueCount: int
+	*/
+	async getViolinPlotData(arg, additionalArgs) {
 		const lst = [
 			'getViolinPlotData=1',
 			'genome=' + this.vocab.genome,
 			'dslabel=' + this.vocab.dslabel,
-			'termid=' + arg.termid
+			'termid=' + arg.termid,
+			...(additionalArgs || [])
 		]
 		if (arg.filter) {
 			const filterRoot = getNormalRoot(arg.filter)
