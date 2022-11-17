@@ -268,15 +268,20 @@ async function getSampleData_gdc(q, termWrappers) {
 			const v = s[tw.term.id]
 
 			////////////////////////////
-			// "v" can be array!!!
+			// somehow value can be undefined! must skip them
 			////////////////////////////
 
-			if (Array.isArray(v)) {
+			if (Array.isArray(v) && v[0] != undefined && v[0] != null) {
+				////////////////////////////
+				// "v" can be array
+				// e.g. "age of diagnosis"
+				////////////////////////////
+
 				s2[tw.term.id] = {
 					key: v[0],
 					value: v[0]
 				}
-			} else {
+			} else if (v != undefined && v != null) {
 				s2[tw.term.id] = {
 					key: v,
 					value: v
