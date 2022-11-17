@@ -3,10 +3,20 @@ include:
     ref: master
     file:
       - templates/global/full.yaml
+      - templates/deployments/salt-service.yaml
+
+.services:
+  allow_failure: true
+  stage: deploy
+  when: manual
+  parallel:
+    matrix:
+      - DEPLOY_SERVICE_LIST: [ custom-proteinpaint ]
 
 stages:
   - test
   - build
+  - deploy
 
 image: docker.osdc.io/node:12
 variables:
@@ -14,6 +24,16 @@ variables:
   DOCKER_BUILDKIT: 1
   PP_CUSTOMER: gdc
   NPM_RELEASE_REGISTRY: https://nexus.osdc.io/repository/npm-local/
+
+workflow:
+  rules:
+    - if: $CI_COMMIT_TAG
+      variables:
+        DEPLOY_SERVICE_TAG: ${CI_COMMIT_TAG}
+    - if: $CI_COMMIT_BRANCH
+      variables:
+        DEPLOY_SERVICE_TAG: ${CI_COMMIT_REF_SLUG}-${CI_COMMIT_SHORT_SHA}
+    - when: always
 
 client-test:
   allow_failure: true
@@ -91,35 +111,38 @@ npm-build:
       - /root/.npm/_logs/
       - "@stjude/proteinpaint-client-*.tgz"
 
+Backend Build - hash:
+  except:
+    - tags
+  stage: build
+  services:
+    - docker:${DOCKER_VERSION}-dind
+  tags:
+    - dind
+  image: docker:${DOCKER_VERSION}-dind
+  before_script:
+    - apk add git bash
+  script:
+    - bash ./build/gdc/build.sh -r HEAD -d "${DOCKER_RELEASE_REGISTRY}/ncigdc/${CI_PROJECT_NAME}:${CI_COMMIT_REF_SLUG}-${CI_COMMIT_SHORT_SHA}" -x -p --
+    - docker push "${DOCKER_RELEASE_REGISTRY}/ncigdc/${CI_PROJECT_NAME}:${CI_COMMIT_REF_SLUG}-${CI_COMMIT_SHORT_SHA}"
+
 Backend Build - latest:
   only:
     - master
+  except:
+    - tags
   stage: build
   services:
     - docker:${DOCKER_VERSION}-dind
   tags:
     - dind
   image: docker:${DOCKER_VERSION}-dind
-  before_script:
-    - apk add git bash
+  needs:
+    - Backend Build - hash
   script:
-    - - bash ./build/gdc/build.sh -r HEAD -d "${DOCKER_RELEASE_REGISTRY}/ncigdc/${CI_PROJECT_NAME}:latest" -p --
-      - docker push "${DOCKER_RELEASE_REGISTRY}/ncigdc/${CI_PROJECT_NAME}:latest"
-
-Backend Build - hash:
-  stage: build
-  services:
-    - docker:${DOCKER_VERSION}-dind
-  tags:
-    - dind
-  image: docker:${DOCKER_VERSION}-dind
-  before_script:
-    - apk add git bash
-  script:
-    - export CLEAN_BRANCH_NAME=${CI_COMMIT_BRANCH/\//_}
-    - export LOWERCASE_BRANCH_NAME="$(bash -c 'tr "[:upper:]" "[:lower:]" <<< "$CLEAN_BRANCH_NAME"')"
-    - - bash ./build/gdc/build.sh -r HEAD -d "${DOCKER_RELEASE_REGISTRY}/ncigdc/${CI_PROJECT_NAME}:${LOWERCASE_BRANCH_NAME}-${CI_COMMIT_SHORT_SHA}" -x -p --
-      - docker push "${DOCKER_RELEASE_REGISTRY}/ncigdc/${CI_PROJECT_NAME}:${LOWERCASE_BRANCH_NAME}-${CI_COMMIT_SHORT_SHA}"
+    - docker pull "${DOCKER_RELEASE_REGISTRY}/ncigdc/${CI_PROJECT_NAME}:${CI_COMMIT_REF_SLUG}-${CI_COMMIT_SHORT_SHA}"
+    - docker tag "${DOCKER_RELEASE_REGISTRY}/ncigdc/${CI_PROJECT_NAME}:${CI_COMMIT_REF_SLUG}-${CI_COMMIT_SHORT_SHA}" "${DOCKER_RELEASE_REGISTRY}/ncigdc/${CI_PROJECT_NAME}:latest"
+    - docker push "${DOCKER_RELEASE_REGISTRY}/ncigdc/${CI_PROJECT_NAME}:latest"
 
 Backend Build - tag:
   stage: build
@@ -130,8 +153,7 @@ Backend Build - tag:
   tags:
     - dind
   image: docker:${DOCKER_VERSION}-dind
-  before_script:
-    - apk add git bash
   script:
-    - - bash ./build/gdc/build.sh -r HEAD -d "${DOCKER_RELEASE_REGISTRY}/ncigdc/${CI_PROJECT_NAME}:${CI_COMMIT_TAG}" -p --
-      - docker push "${DOCKER_RELEASE_REGISTRY}/ncigdc/${CI_PROJECT_NAME}:${CI_COMMIT_TAG}"
+    - docker pull "${DOCKER_RELEASE_REGISTRY}/ncigdc/${CI_PROJECT_NAME}:${CI_COMMIT_REF_SLUG}-${CI_COMMIT_SHORT_SHA}"
+    - docker tag "${DOCKER_RELEASE_REGISTRY}/ncigdc/${CI_PROJECT_NAME}:${CI_COMMIT_REF_SLUG}-${CI_COMMIT_SHORT_SHA}" "${DOCKER_RELEASE_REGISTRY}/ncigdc/${CI_PROJECT_NAME}:${CI_COMMIT_TAG}"
+    - docker push "${DOCKER_RELEASE_REGISTRY}/ncigdc/${CI_PROJECT_NAME}:${CI_COMMIT_TAG}"
