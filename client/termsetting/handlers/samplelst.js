@@ -7,7 +7,7 @@ export function getHandler(self) {
 		showEditMenu(div) {
 			const group1 = self.q.groups[0]
 			const group2 = self.q.groups[1]
-			const values = [...group1.values]
+			let values = [...group1.values]
 			if (group2.name !== 'Others') return
 
 			div
@@ -15,7 +15,7 @@ export function getHandler(self) {
 				.append('div')
 				.style('margin', '10px')
 				.style('font-size', '0.8rem')
-				.html(`<b> ${group1.name}</b> samples. <b>Others</b> excludes these samples`)
+				.html(`<b>Select ${group1.name}</b> samples. <b>Others</b> excludes these samples`)
 			const tableDiv = div.append('div').style('border', '1px solid gray')
 
 			showSamples()
@@ -30,22 +30,12 @@ export function getHandler(self) {
 					columns,
 					div: tableDiv,
 					buttons: [
-						// {
-						// 	text: 'Delete samples',
-						// 	callback: indexes => {
-						// 		for (const i of indexes) {
-						// 			values.splice(i, 1)
-						// 		}
-						// 		showSamples()
-						// 	}
-						// },
 						{
 							text: 'Submit',
 							callback: indexes => {
-								for (const i of indexes) {
-									group2.values.splice(i, 1)
-									group1.values.splice(i, 1)
-								}
+								values = values.filter((elem, index, array) => !(index in indexes))
+								group2.values = values
+								group1.values = values
 								self.runCallback()
 							}
 						}

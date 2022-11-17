@@ -838,7 +838,7 @@ function setRenderers(self) {
 		const deleteSamples = {
 			text: 'Delete samples',
 			callback: indexes => {
-				for (const i of indexes) group.items.splice(i, 1)
+				group.items = group.items.filter((elem, index, array) => !(index in indexes))
 				showTable(group, x, y, addGroup)
 			}
 		}
