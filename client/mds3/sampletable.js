@@ -66,9 +66,11 @@ export async function displaySampleTable(samples, args) {
 		return await make_singleSampleTable(samples[0], args)
 	}
 	const [columns, rows] = await samples2columnsRows(samples, args.tk)
-	const params = { rows, columns, div: args.div }
-	if (args.max_width) params.max_width = args.max_width
-	if (args.max_height) params.max_height = args.max_height
+	const style = { row_height: '4vh' }
+	if (args.max_width) style.max_width = args.max_width
+	if (args.max_height) style.max_height = args.max_height
+	const params = { rows, columns, div: args.div, style }
+
 	return renderTable(params)
 }
 
@@ -222,20 +224,23 @@ async function samples2columnsRows(samples, tk) {
 		rows = []
 
 	if (has_caseAccess) {
-		columns.push({ label: 'Access' })
+		columns.push({ label: 'Access', width: '4vw' })
 	}
 
 	if (tk.mds.variant2samples.twLst) {
 		for (const tw of tk.mds.variant2samples.twLst) {
-			columns.push({ label: tw.term.name })
+			const cell = { label: tw.term.name }
+			columns.push(cell)
+			if (tw.term.name === 'Disease type') cell.width = '8vw'
+			if (tw.term.name === 'Gender') cell.width = '4vw'
 		}
 	}
 
 	if (has_ssm_read_depth) {
-		columns.push({ label: 'Tumor DNA MAF' })
+		columns.push({ label: 'Tumor DNA MAF', width: '6vw' })
 	}
 	if (has_totalNormal) {
-		columns.push({ label: 'Normal depth' })
+		columns.push({ label: 'Normal depth', width: '4vw' })
 	}
 
 	if (has_ssm) {
@@ -266,7 +271,7 @@ async function samples2columnsRows(samples, tk) {
 			const sm = sample.ssm_read_depth
 			if (sm) {
 				cell.html =
-					fillbar(null, { f: sm.altTumor / sm.totalTumor }) + '<br/>' + sm.altTumor + '/' + sm.totalTumor + '</span>'
+					fillbar(null, { f: sm.altTumor / sm.totalTumor }) + ' ' + sm.altTumor + '/' + sm.totalTumor + '</span>'
 			}
 			row.push(cell)
 		}
@@ -296,7 +301,7 @@ async function samples2columnsRows(samples, tk) {
 							}
 						} else if (m.dt == dtsv || m.dt == dtfusionrna) {
 							const p = m.pairlst[0]
-							ssm.html = `${p.a.name || ''} ${p.a.chr}:${p.a.pos} ${p.a.strand == '+' ? 'forward' : 'reverse'} > ${p.b
+							ssm.html = `${p.a.name || ''} ${p.a.chr}:${p.a.pos} ${p.a.strand == '+' ? 'forward' : 'reverse'} ${p.b
 								.name || ''} ${p.b.chr}:${p.b.pos} ${p.b.strand == '+' ? 'forward' : 'reverse'}`
 						} else {
 							throw 'unknown dt'

@@ -119,6 +119,8 @@ class Scatter {
 		const data = await this.app.vocabApi.getScatterData(reqOpts)
 		if (data.error) throw data.error
 		if (!Array.isArray(data.samples)) throw 'data.samples[] not array'
+
+		console.log(data)
 		this.shapeLegend = new Map(Object.entries(data.shapeLegend))
 		this.colorLegend = new Map(Object.entries(data.colorLegend))
 
@@ -834,26 +836,28 @@ function setRenderers(self) {
 				}
 			}
 			buttons.push(addGroup)
-		}
-		const deleteSamples = {
-			text: 'Delete samples',
-			callback: indexes => {
-				group.items = group.items.filter((elem, index, array) => !(index in indexes))
-				showTable(group, x, y, addGroup)
+		} else {
+			const deleteSamples = {
+				text: 'Delete samples',
+				callback: indexes => {
+					group.items = group.items.filter((elem, index, array) => !(index in indexes))
+					showTable(group, x, y, addGroup)
+				}
 			}
+			buttons.push(deleteSamples)
 		}
-		buttons.push(deleteSamples)
 		renderTable({
 			rows,
 			columns,
 			div: tableDiv,
+			style: { max_width: '30vw' },
 			buttons
 		})
 
 		self.dom.tip.show(x, y)
 
 		function formatCell(column, name = 'value') {
-			let dict = {}
+			let dict = { width: '9vw' }
 			dict[name] = column
 			return dict
 		}
@@ -862,7 +866,6 @@ function setRenderers(self) {
 
 function setInteractivity(self) {
 	self.mouseover = function(event) {
-		if (self.lassoOn) return
 		if (event.target.tagName == 'path') {
 			const d = event.target.__data__
 			if (!d) return

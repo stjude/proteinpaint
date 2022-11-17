@@ -1,4 +1,4 @@
-import { select } from 'd3'
+import { select, style } from 'd3'
 import { defaultcolor } from '../shared/common'
 
 /*
@@ -11,6 +11,7 @@ div = d3-wrapped holder
 columns = [ {label} ]
 	each element is an object describing a column
 	label: str, the text to show as header of a column
+	width: str, column width
 
 rows = [ [] ]
 	each element is an array of cells for a row, with array length must matching columns.length
@@ -30,30 +31,50 @@ rows = [ [] ]
 			{url/html/value}, {}, ...
 		]
 	}
+style = {}
+
+	max_width: str, the max width of the table, if not provided is set to 90vw
+	max_height: str, the max height of the table, if not provided is set to 40vh
+	row_height: str, the height of the row
+
+buttons = [ {button} ]
+	Each element is an object describing a button:
+	text: str, the text to show in the button
+	callback: function, the function to be called when the button is clicked
+	
 */
-export async function renderTable({ columns, rows, div, max_width = '90vw', max_height = '50vh', buttons }) {
+export async function renderTable({ columns, rows, div, style = {}, buttons }) {
 	const numColumns = columns.length
 
-	// create a Parent Div element to which the header and sample grid will be appended as divH and divS.
+	// create a Parent Div element to which the header and sample table will be appended as divH and divS.
 	const parentDiv = div
-		.append('div')
-		.style('overflow', 'scroll')
-		.style('scrollbar-width', 'none')
-		.style('width', '98%')
+		.style('padding', '5px')
 		.style('background-color', 'white')
-		.attr('class', 'sjpp_grid_container')
-		.style('grid-template-columns', `1.5vw ${buttons ? '2vw' : ''} repeat(${numColumns}, auto)`)
-		.style('max-width', max_width)
-		.style('max-height', max_height)
+		.append('table')
+		.style('display', 'block')
+		.style('background-color', 'white')
+		//.attr('class', 'sjpp_table_container')
+		//.style('table-template-columns', `1.5vw ${buttons ? '2vw' : ''} repeat(${numColumns}, auto)`)
+		.style('max-width', style.max_width ? style.max_width : '90vw')
 
 	// header div
-	const divH = parentDiv.append('div').style('display', 'contents')
+	const divH = parentDiv
+		.append('thead')
+		.style('display', 'table')
+		.style('table-layout', 'fixed')
+		.style('width', '100%')
+		.append('tr')
 	divH
-		.append('div')
-		.attr('class', 'sjpp_grid_item sjpp_grid_header')
+		.append('th')
+		.attr('class', 'sjpp_table_item sjpp_table_header')
 		.text('#')
+		.style('width', '1.5vw')
 	if (buttons) {
-		const cell = divH.append('div').attr('class', 'sjpp_grid_item')
+		const cell = divH
+			.append('th')
+			.attr('class', 'sjpp_table_header sjpp_table_item')
+			.style('width', '1.5vw')
+
 		const checkboxH = cell
 			.append('input')
 			.attr('type', 'checkbox')
@@ -65,32 +86,40 @@ export async function renderTable({ columns, rows, div, max_width = '90vw', max_
 
 	// header values
 	for (const c of columns) {
-		divH
-			.append('div')
+		const th = divH
+			.append('th')
 			.text(c.label)
-			.attr('class', 'sjpp_grid_item sjpp_grid_header')
+			.attr('class', 'sjpp_table_item sjpp_table_header')
+		if (c.width) th.style('width', c.width)
 	}
 
-	// sample values
-	// iterate over each row in rows and create a div for each row that has a grid layout similar to the header grid.
-	const table = parentDiv.append('div').style('display', 'contents')
+	const table = parentDiv
+		.append('tbody')
+		.style('display', 'block')
+		.style('max-height', style.max_height ? style.max_height : '40vw')
+		.style('overflow', 'scroll')
 
 	for (const [i, row] of rows.entries()) {
-		const rowGrid = table.append('div')
-		rowGrid.attr('class', 'sjpp_grid_row_wrapper')
-		const lineDiv = rowGrid
-			.append('div')
+		const rowtable = table
+			.append('tr')
+			.attr('class', 'sjpp_row_wrapper')
+			.style('display', 'table')
+			.style('table-layout', 'fixed')
+			.style('width', '100%')
+
+		const lineDiv = rowtable
+			.append('td')
 			.text(i + 1)
+			.style('width', '1.5vw')
 			.style('font-size', '0.8rem')
 			.style('color', defaultcolor)
-			.attr('class', 'sjpp_grid_item')
-			.style('background-color', i % 2 == 0 ? 'rgb(237, 237, 237)' : 'white')
+			.attr('class', 'sjpp_table_item')
 
 		if (buttons) {
-			const checkbox = rowGrid
-				.append('div')
-				.attr('class', 'sjpp_grid_item')
-				.style('background-color', i % 2 == 0 ? 'rgb(237, 237, 237)' : 'white')
+			const checkbox = rowtable
+				.append('td')
+				.style('width', '1.5vw')
+				.attr('class', 'sjpp_table_item')
 				.style('float', 'center')
 				.append('input')
 				.attr('type', 'checkbox')
@@ -98,19 +127,14 @@ export async function renderTable({ columns, rows, div, max_width = '90vw', max_
 				.on('change', () => enableButtons())
 		}
 
-		// each row comprises of cell and each cell has values that will get appended to div elements of the rowGrid stored in td.
 		for (const [colIdx, cell] of row.entries()) {
-			const td = rowGrid
-				.append('div')
-				.attr('class', 'sjpp_grid_item')
-				.style('background-color', i % 2 == 0 ? 'rgb(237, 237, 237)' : 'white')
+			const td = rowtable.append('td').attr('class', 'sjpp_table_item')
+			const column = columns[colIdx]
+			if (column.width) td.style('width', column.width)
 
-			// if index of each row is even then the background of that row should be grey and also add hovering in yellow.
-
-			// if cell has values then append those values in new divs on td which is stored in d.
 			if (cell.values) {
 				for (const v of cell.values) {
-					// if those values have url in them then tag it to the sample name/id otherwise just append the value of that cell onto the div
+					// if those values have url in them then tag it to the sample name/id otherwise just append the value of that cell onto the td
 					if (v.url) {
 						td.append('a')
 							.text(v.value)

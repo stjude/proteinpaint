@@ -200,7 +200,7 @@ exports.validate_tabixfile = async function(file) {
 	if (await file_not_exist(tbi)) {
 		// tbi not found, try csi
 		const csi = file + '.csi'
-		if (await file_not_exist(csi)) throw 'neither .tbi .csi index file exist'
+		if (await file_not_exist(csi)) throw 'neither .tbi .csi index file exist for ' + file
 		if (await file_not_readable(csi)) throw '.csi index file not readable'
 	} else {
 		// tbi exists
