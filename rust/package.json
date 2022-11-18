@@ -11,7 +11,8 @@
     "build": "cargo build --release",
     "postinstall": "cargo build --release",
     "test": "tape **/test/*.spec.js",
-    "test:unit": "tape **/test/*.unit.spec.js"
+    "test:unit": "tape **/test/*.unit.spec.js",
+    "test:integration": "echo 'TODO: rust integration tests'"
   },
   "author": "Robin Paul",
   "license": "UNLICENSED",

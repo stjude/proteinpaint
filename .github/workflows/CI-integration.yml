@@ -1,13 +1,8 @@
 name: Integration tests
 
-## on:
-  ## schedule:
-    ## - cron:  '0 6 * * *'
 on:
-  push:
-  pull_request:
-    branches:
-      - integration-tests
+  schedule:
+    - cron:  '0 6 * * *'
 
 jobs:
   build:
@@ -45,6 +40,7 @@ jobs:
 
       - name: Post build results on slack
         id: slack
+        if: always()
         uses: slackapi/slack-github-action@v1.23.0
         with:
           payload: |

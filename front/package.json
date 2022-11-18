@@ -6,7 +6,9 @@
 	"scripts": {
 		"dev": "rm -rf ../public/bin & webpack --env NODE_ENV=development --watch --progress --color",
 		"#dev": "webpack --env NODE_ENV=development --watch --progress --color",
-		"prepack": "rm -rf public/bin && rm -rf *.tgz && webpack && tar -czf bundles.tgz public/bin"
+		"prepack": "rm -rf public/bin && rm -rf *.tgz && webpack && tar -czf bundles.tgz public/bin",
+    "test:unit": "echo 'TODO: front integration tests'",
+    "test:integration": "echo 'TODO: front integration tests'"
 	},
 	"devDependencies": {
 		"@stjude/proteinpaint-client": "2.6.0",
