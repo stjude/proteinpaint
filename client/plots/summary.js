@@ -257,6 +257,7 @@ function setRenderers(self) {
 						config: { childType: d.childType, [termKey]: d.getTw(tw) }
 					})
 				})
+			console.log(260, self.config)
 
 			// Placeholder for recover component
 			self.dom.localRecoverDiv = self.dom.paneTitleDiv.append('div').style('display', 'inline-block')
