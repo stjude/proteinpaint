@@ -174,6 +174,7 @@ function setRenderers(self) {
 						isVisible: () => true,
 						disabled: d => false,
 						getTw: tw => {
+							if (tw?.q?.mode !== 'discrete') tw.q = { mode: 'discrete' }
 							if (tw.term.bins) tw.q = tw.term.bins.default
 							return tw
 						},
@@ -243,8 +244,8 @@ function setRenderers(self) {
 					}
 
 					const termKey =
-						(self.config.term?.q?.mode !== undefined &&
-							(self.config.term?.term.type == 'float' || self.config.term?.term.type == 'integer')) ||
+						self.config.term?.term.type == 'float' ||
+						self.config.term?.term.type == 'integer' ||
 						this.config.term.q.mode == 'continuous'
 							? 'term'
 							: 'term2'

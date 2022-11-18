@@ -132,16 +132,15 @@ class Barchart {
 		}
 
 		return {
-			genome: appState.vocab.genome,
-			dslabel: appState.vocab.dslabel,
-			nav: appState.nav,
 			termfilter: appState.termfilter,
-			config,
+			config: Object.assign({}, config, {
+				settings: {
+					barchart: config.settings.barchart,
+					common: config.settings.common
+				}
+			}),
 			ssid: appState.ssid,
-			bar_click_menu: appState.bar_click_menu || {},
-			// optional
-			activeCohort: appState.activeCohort,
-			termdbConfig: appState.termdbConfig
+			bar_click_menu: appState.bar_click_menu || {}
 		}
 	}
 
@@ -848,6 +847,7 @@ export async function getPlotConfig(opts, app) {
 				overlay: 'none',
 				divideBy: 'none',
 				rowlabelw: 250
+				// duration: 0
 			}
 		}
 	}
