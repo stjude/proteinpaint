@@ -243,8 +243,9 @@ function setRenderers(self) {
 					}
 
 					const termKey =
-						(self.config.term?.q?.mode !== undefined && self.config.term?.term.type == 'float') ||
-						self.config.term?.term.type == 'integer'
+						(self.config.term?.q?.mode !== undefined &&
+							(self.config.term?.term.type == 'float' || self.config.term?.term.type == 'integer')) ||
+						this.config.term.q.mode == 'continuous'
 							? 'term'
 							: 'term2'
 
@@ -257,7 +258,6 @@ function setRenderers(self) {
 						config: { childType: d.childType, [termKey]: d.getTw(tw) }
 					})
 				})
-			console.log(260, self.config)
 
 			// Placeholder for recover component
 			self.dom.localRecoverDiv = self.dom.paneTitleDiv.append('div').style('display', 'inline-block')
