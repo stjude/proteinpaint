@@ -146,6 +146,7 @@ class Barchart {
 	}
 
 	async main() {
+		if (this.state.config.childType != this.type) return
 		try {
 			this.config = JSON.parse(JSON.stringify(this.state.config))
 			if (!this.currServerData) this.dom.barDiv.style('max-width', window.innerWidth + 'px')

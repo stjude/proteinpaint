@@ -88,6 +88,7 @@ class ViolinPlot {
 	}
 
 	async main() {
+		if (this.state.config.childType != this.type) return
 		this.config = this.state.config
 		if (this.dom.header)
 			this.dom.header.html(
