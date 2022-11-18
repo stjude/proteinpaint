@@ -850,14 +850,14 @@ function setRenderers(self) {
 			rows,
 			columns,
 			div: tableDiv,
-			style: { max_width: '30vw' },
+			style: { max_width: '550px', max_height: '35vh' },
 			buttons
 		})
 
 		self.dom.tip.show(x, y)
-
+		//scroll(x, y)
 		function formatCell(column, name = 'value') {
-			let dict = { width: '9vw' }
+			let dict = { width: '150px' }
 			dict[name] = column
 			return dict
 		}

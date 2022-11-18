@@ -34,7 +34,7 @@ rows = [ [] ]
 style = {}
 
 	max_width: str, the max width of the table, if not provided is set to 90vw
-	max_height: str, the max height of the table, if not provided is set to 40vh
+	max_height: str, the max height of the table, if not provided is set to 50vh
 	row_height: str, the height of the row
 
 buttons = [ {button} ]
@@ -49,6 +49,7 @@ export async function renderTable({ columns, rows, div, style = {}, buttons }) {
 	// create a Parent Div element to which the header and sample table will be appended as divH and divS.
 	const parentDiv = div
 		.style('padding', '5px')
+
 		.style('background-color', 'white')
 		.append('table')
 		.style('display', 'block')
@@ -68,12 +69,12 @@ export async function renderTable({ columns, rows, div, style = {}, buttons }) {
 		.append('th')
 		.attr('class', 'sjpp_table_item sjpp_table_header')
 		.text('#')
-		.style('width', '1.5vw')
+		.style('width', '10px')
 	if (buttons) {
 		const cell = divH
 			.append('th')
 			.attr('class', 'sjpp_table_header sjpp_table_item')
-			.style('width', '1.5vw')
+			.style('width', '10px')
 
 		const checkboxH = cell
 			.append('input')
@@ -96,7 +97,7 @@ export async function renderTable({ columns, rows, div, style = {}, buttons }) {
 	const table = parentDiv
 		.append('tbody')
 		.style('display', 'block')
-		.style('max-height', style.max_height ? style.max_height : '40vw')
+		.style('max-height', style.max_height ? style.max_height : '50vh')
 		.style('overflow', 'scroll')
 
 	for (const [i, row] of rows.entries()) {
@@ -110,7 +111,7 @@ export async function renderTable({ columns, rows, div, style = {}, buttons }) {
 		const lineDiv = rowtable
 			.append('td')
 			.text(i + 1)
-			.style('width', '1.5vw')
+			.style('width', '10px')
 			.style('font-size', '0.8rem')
 			.style('color', defaultcolor)
 			.attr('class', 'sjpp_table_item')
@@ -118,7 +119,7 @@ export async function renderTable({ columns, rows, div, style = {}, buttons }) {
 		if (buttons) {
 			const checkbox = rowtable
 				.append('td')
-				.style('width', '1.5vw')
+				.style('width', '10px')
 				.attr('class', 'sjpp_table_item')
 				.style('float', 'center')
 				.append('input')
@@ -161,9 +162,9 @@ export async function renderTable({ columns, rows, div, style = {}, buttons }) {
 	if (buttons) {
 		const footerDiv = div
 			.append('div')
+			.insert('div')
 			.style('display', 'inline-block')
 			.style('float', 'right')
-			.style('margin', '5px 5px')
 
 		for (const button of buttons) {
 			const values = []
@@ -172,7 +173,7 @@ export async function renderTable({ columns, rows, div, style = {}, buttons }) {
 				.append('button')
 				.attr('disabled', true)
 				.text(button.text)
-				.style('margin-right', '10px')
+				.style('margin', '10px 10px 0 0')
 				.on('click', e => {
 					const checkboxs = table.selectAll('input:checked')
 					if (!checkboxs.empty()) {

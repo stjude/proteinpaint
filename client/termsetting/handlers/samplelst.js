@@ -29,7 +29,7 @@ export function getHandler(self) {
 					rows,
 					columns,
 					div: tableDiv,
-					style: { max_width: '16vw' },
+					style: { max_width: '250px' },
 					buttons: [
 						{
 							text: 'Submit',
