@@ -3251,9 +3251,12 @@ async function convertread2html(seg, genome, query) {
 
 function getGDCcacheFileName(req) {
 	const md5Hasher = crypto.createHmac('md5', gdcHashSecret)
-	return (
-		md5Hasher.update(req.get('X-Auth-Token') + req.query.gdcFileUUID + req.query.gdcFilePosition).digest('hex') + '.bam'
-	)
+	const lst = [
+		req.get('X-Auth-Token') || req.cookies.sessionid, // use token or session, whichever is given
+		req.query.gdcFileUUID,
+		req.query.gdcFilePosition
+	]
+	return md5Hasher.update(lst.join('')).digest('hex') + '.bam'
 }
 
 async function download_gdc_bam(req) {
@@ -3323,13 +3326,34 @@ async function get_gdc_bam(chr, start, stop, token, gdcFileUUID, bamfilename, se
 	else headers['X-Auth-Token'] = token
 	const fullpath = path.join(serverconfig.cachedir_bam, bamfilename)
 	const url = apihost + '/slicing/view/' + gdcFileUUID + '?region=' + chr + ':' + start + '-' + stop
+
 	try {
-		await pipeline(got.stream(url, { method: 'GET', headers }), fs.createWriteStream(fullpath))
-		await index_bam(fullpath)
+		if (await utils.file_not_exist(fullpath)) {
+			// bam file not found. download
+			await pipeline(got.stream(url, { method: 'GET', headers }), fs.createWriteStream(fullpath))
+			// file is supposed to be downloaded
+			if (await utils.file_not_exist(fullpath)) {
+				throw 'BAM file slice is not found after downloading'
+			}
+		} else {
+			// bam file found, no need to re-download
+		}
+
+		const baiFilePath = fullpath + '.bai'
+		if (await utils.file_not_exist(baiFilePath)) {
+			// index file not found. do indexing
+			await index_bam(fullpath)
+			// index file is supposed to be produced
+			if (await utils.file_not_exist(baiFilePath)) {
+				throw 'index file is missing after indexing'
+			}
+		}
+
 		const s = await fs.promises.stat(fullpath)
 		return bplen(s.size, true)
-	} catch (error) {
-		throw 'Permission denied'
+	} catch (e) {
+		if (e.stack) console.log(e.stack)
+		throw 'Error with BAM slicing: ' + (e.message || e)
 	}
 }
 
