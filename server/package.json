@@ -9,13 +9,13 @@
     "#src/*": "./src/*.js"
   },
   "scripts": {
-    "dev": "webpack --config=./webpack.config.js --env NODE_ENV=development --watch --color",
+    "dev": "webpack --env NODE_ENV=development --watch --color",
     "start": "nodemon server.js --watch ./server*.js* --watch genome --watch dataset",
     "pretest": "./test/pretest.js",
-    "test": "webpack --config=./webpack.test.config.js --env exportsFilename=all-test-context.js && node test/serverTests.js",
-    "test:unit": "webpack --config=./webpack.test.config.js --env exportsFilename=unit-test-context.js && node test/serverTests.js",
+    "test": "webpack --env NODE_ENV=development exportsFilename=all-test-context.js && node test/serverTests.js",
+    "test:unit": "webpack --env NODE_ENV=development exportsFilename=unit-test-context.js && node test/serverTests.js",
     "test:integration": "echo 'TODO: server integration tests'",
-    "prepack": "webpack",
+    "prepack": "webpack --env NODE_ENV=production",
     "response": "nodemon modules/test/test.server.js --watch src",
     "getconf": "../build/getConfigProp.js"
   },
