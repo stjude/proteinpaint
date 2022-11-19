@@ -120,7 +120,6 @@ class Scatter {
 		if (data.error) throw data.error
 		if (!Array.isArray(data.samples)) throw 'data.samples[] not array'
 
-		console.log(data)
 		this.shapeLegend = new Map(Object.entries(data.shapeLegend))
 		this.colorLegend = new Map(Object.entries(data.colorLegend))
 
@@ -850,14 +849,14 @@ function setRenderers(self) {
 			rows,
 			columns,
 			div: tableDiv,
-			style: { max_width: '550px', max_height: '35vh' },
+			style: { max_width: '35vw', max_height: '35vh' },
 			buttons
 		})
 
 		self.dom.tip.show(x, y)
 		//scroll(x, y)
 		function formatCell(column, name = 'value') {
-			let dict = { width: '150px' }
+			let dict = { width: '10vw' }
 			dict[name] = column
 			return dict
 		}

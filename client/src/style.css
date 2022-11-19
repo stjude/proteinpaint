@@ -1139,6 +1139,8 @@ h2 {
     padding: 5px;
     font-size: 1em;
     align-items: center;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 
