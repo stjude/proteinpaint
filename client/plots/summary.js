@@ -174,8 +174,11 @@ function setRenderers(self) {
 						isVisible: () => true,
 						disabled: d => false,
 						getTw: tw => {
-							if (tw?.q?.mode !== 'discrete') tw.q = { mode: 'discrete' }
-							if (tw.term.bins) tw.q = tw.term.bins.default
+							if (!tw.qCacheByMode) tw.qCacheByMode = {}
+							tw.qCacheByMode[tw.q.mode] = tw.q
+							// If tw.q is empty/undefined, the default q
+							// will be assigned by fillTw by term type
+							tw.q = tw.qCacheByMode.discrete
 							return tw
 						},
 						active: true
@@ -190,7 +193,9 @@ function setRenderers(self) {
 							self.config.term2?.term.type === 'integer' ||
 							self.config.term2?.term.type === 'float',
 						getTw: tw => {
-							tw.q = { mode: 'continuous' }
+							if (!tw.qCacheByMode) tw.qCacheByMode = {}
+							tw.qCacheByMode[tw.q.mode] = tw.q
+							tw.q = tw.qCacheByMode.continuous || { mode: 'continuous' }
 							return tw
 						},
 						active: false
