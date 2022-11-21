@@ -54,7 +54,8 @@ const commonConfig = {
 }
 
 module.exports = env => {
-	switch (env.NODE_ENV) {
+	const NODE_ENV = env.NODE_ENV || 'production'
+	switch (NODE_ENV) {
 		case 'production':
 			return merge(commonConfig, {
 				mode: 'production',
