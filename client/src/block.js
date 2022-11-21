@@ -287,7 +287,7 @@ export class Block {
 					.text('drag to resize')
 					.attr('class', 'sja_clbtext')
 					.style('position', 'absolute')
-					.style('bottom', '-2px')
+					.style('bottom', '-5px') // push down enough not to touch protein bar
 					.style('font-size', '.7em')
 					.on('mousedown', event => {
 						event.preventDefault()

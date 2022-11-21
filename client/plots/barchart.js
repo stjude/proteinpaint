@@ -141,20 +141,20 @@ class Barchart {
 		}
 
 		return {
-			genome: appState.vocab.genome,
-			dslabel: appState.vocab.dslabel,
-			nav: appState.nav,
 			termfilter: appState.termfilter,
-			config,
+			config: Object.assign({}, config, {
+				settings: {
+					barchart: config.settings.barchart,
+					common: config.settings.common
+				}
+			}),
 			ssid: appState.ssid,
-			bar_click_menu: appState.bar_click_menu || {},
-			// optional
-			activeCohort: appState.activeCohort,
-			termdbConfig: appState.termdbConfig
+			bar_click_menu: appState.bar_click_menu || {}
 		}
 	}
 
 	async main() {
+		if (this.state.config.childType != this.type) return
 		try {
 			this.config = JSON.parse(JSON.stringify(this.state.config))
 			if (!this.currServerData) this.dom.barDiv.style('max-width', window.innerWidth + 'px')

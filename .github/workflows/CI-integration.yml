@@ -38,6 +38,10 @@ jobs:
           format: E, MMM dd yyyy HH:mm:ss Z
           utcOffset: "-06:00"
 
+      - name: Set short git commit SHA
+        id: vars
+        run: echo "SHORT_SHA=$(git rev-parse --short ${{ github.sha }})" >> $GITHUB_ENV
+
       - name: Post build results on slack
         id: slack
         if: always()
@@ -46,7 +50,7 @@ jobs:
           payload: |
             {
               "status": "${{ job.status }}",
-              "commit": "${{ github.event.head_commit.url }}",
+              "commit": "${{ env.SHORT_SHA }}",
               "date-time": "${{ steps.current-time.outputs.formattedTime }}"
             }
         env:

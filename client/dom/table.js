@@ -65,16 +65,18 @@ export async function renderTable({ columns, rows, div, style = {}, buttons }) {
 		.style('table-layout', 'fixed')
 		.style('width', '100%')
 		.append('tr')
-	divH
-		.append('th')
-		.attr('class', 'sjpp_table_item sjpp_table_header')
-		.text('#')
-		.style('width', '10px')
+	if (style.show_lines) {
+		divH
+			.append('th')
+			.attr('class', 'sjpp_table_header')
+			.text('#')
+			.style('width', '15px')
+	}
 	if (buttons) {
 		const cell = divH
 			.append('th')
-			.attr('class', 'sjpp_table_header sjpp_table_item')
-			.style('width', '10px')
+			.attr('class', 'sjpp_table_header')
+			.style('width', '15px')
 
 		const checkboxH = cell
 			.append('input')
@@ -107,20 +109,19 @@ export async function renderTable({ columns, rows, div, style = {}, buttons }) {
 			.style('display', 'table')
 			.style('table-layout', 'fixed')
 			.style('width', '100%')
-
-		const lineDiv = rowtable
-			.append('td')
-			.text(i + 1)
-			.style('width', '10px')
-			.style('font-size', '0.8rem')
-			.style('color', defaultcolor)
-			.attr('class', 'sjpp_table_item')
+		if (style.show_lines) {
+			const lineDiv = rowtable
+				.append('td')
+				.text(i + 1)
+				.style('width', '15px')
+				.style('font-size', '0.8rem')
+				.style('color', defaultcolor)
+		}
 
 		if (buttons) {
 			const checkbox = rowtable
 				.append('td')
-				.style('width', '10px')
-				.attr('class', 'sjpp_table_item')
+				.style('width', '15px')
 				.style('float', 'center')
 				.append('input')
 				.attr('type', 'checkbox')

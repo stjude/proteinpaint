@@ -66,7 +66,7 @@ export async function displaySampleTable(samples, args) {
 		return await make_singleSampleTable(samples[0], args)
 	}
 	const [columns, rows] = await samples2columnsRows(samples, args.tk)
-	const style = { row_height: '4vh' }
+	const style = { show_lines: true }
 	if (args.max_width) style.max_width = args.max_width
 	if (args.max_height) style.max_height = args.max_height
 	const params = { rows, columns, div: args.div, style }
@@ -301,7 +301,7 @@ async function samples2columnsRows(samples, tk) {
 							}
 						} else if (m.dt == dtsv || m.dt == dtfusionrna) {
 							const p = m.pairlst[0]
-							ssm.html = `${p.a.name || ''} ${p.a.chr}:${p.a.pos} ${p.a.strand == '+' ? 'forward' : 'reverse'} ${p.b
+							ssm.html = `${p.a.name || ''} ${p.a.chr}:${p.a.pos} ${p.a.strand == '+' ? 'forward' : 'reverse'} > ${p.b
 								.name || ''} ${p.b.chr}:${p.b.pos} ${p.b.strand == '+' ? 'forward' : 'reverse'}`
 						} else {
 							throw 'unknown dt'
