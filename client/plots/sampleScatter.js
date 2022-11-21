@@ -527,7 +527,12 @@ function setRenderers(self) {
 				.text(`List ${self.selectedItems.length} samples`)
 				.on('click', event => {
 					self.dom.tip.hide()
-					showTable({ name: 'Selected samples', items: self.selectedItems }, event.clientX, event.clientY, true)
+					showTable(
+						{ name: 'Group ' + (self.config.groups.length + 1), items: self.selectedItems },
+						event.clientX,
+						event.clientY,
+						true
+					)
 				})
 
 			menuDiv
@@ -811,13 +816,17 @@ function setRenderers(self) {
 			rows.push(row)
 		}
 		self.dom.tip.clear()
-		const headerDiv = self.dom.tip.d.append('div')
-		headerDiv
-			.insert('div')
-			.html('&nbsp;' + group.name)
-			.style('display', 'inline-block')
-			.style('font-weight', 'bold')
-			.style('margin-top', '5px')
+		const headerDiv = self.dom.tip.d.append('div').style('margin-top', '5px')
+
+		headerDiv.insert('label').html('&nbsp;Group: ')
+		const groupInput = headerDiv
+			.insert('input')
+			.attr('value', group.name)
+			.on('change', e => {
+				const value = groupInput.node().value
+				if (value) group.name = value
+				else groupInput.node().value = group.name
+			})
 		const tableDiv = self.dom.tip.d.append('div')
 		const buttons = []
 		if (addGroup) {
@@ -827,10 +836,11 @@ function setRenderers(self) {
 					const items = []
 					for (const i of indexes) items.push(self.selectedItems[i])
 					self.config.groups.push({
-						name: `Group ${self.config.groups.length + 1}`,
+						name: group.name,
 						items,
 						index: groups.length
 					})
+					console.log(self.config.groups)
 					self.app.dispatch({ type: 'plot_edit', id: self.id, config: { groups: self.config.groups } })
 				}
 			}
@@ -849,7 +859,7 @@ function setRenderers(self) {
 			rows,
 			columns,
 			div: tableDiv,
-			style: { max_width: '35vw', max_height: '35vh' },
+			style: { show_lines: true, max_width: '35vw', max_height: '35vh' },
 			buttons
 		})
 

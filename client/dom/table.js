@@ -65,11 +65,13 @@ export async function renderTable({ columns, rows, div, style = {}, buttons }) {
 		.style('table-layout', 'fixed')
 		.style('width', '100%')
 		.append('tr')
-	divH
-		.append('th')
-		.attr('class', 'sjpp_table_header')
-		.text('#')
-		.style('width', '15px')
+	if (style.show_lines) {
+		divH
+			.append('th')
+			.attr('class', 'sjpp_table_header')
+			.text('#')
+			.style('width', '15px')
+	}
 	if (buttons) {
 		const cell = divH
 			.append('th')
@@ -107,13 +109,14 @@ export async function renderTable({ columns, rows, div, style = {}, buttons }) {
 			.style('display', 'table')
 			.style('table-layout', 'fixed')
 			.style('width', '100%')
-
-		const lineDiv = rowtable
-			.append('td')
-			.text(i + 1)
-			.style('width', '15px')
-			.style('font-size', '0.8rem')
-			.style('color', defaultcolor)
+		if (style.show_lines) {
+			const lineDiv = rowtable
+				.append('td')
+				.text(i + 1)
+				.style('width', '15px')
+				.style('font-size', '0.8rem')
+				.style('color', defaultcolor)
+		}
 
 		if (buttons) {
 			const checkbox = rowtable
