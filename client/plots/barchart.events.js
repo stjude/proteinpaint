@@ -66,15 +66,41 @@ export default function getHandlers(self) {
 					rows.push(
 						`<tr><td colspan=2 style='padding:3px; text-align:center'>${icon} <span>${dataLabel}</span></td></tr>`
 					)
-					const pvalue = d.groupPvalues.term2tests.find(x => x.term2id === d.dataId).pvalue
-					rows.push(
-						`<tr><td style='padding:3px; color:#aaa'>p-value</td><td style='padding:3px; text-align:center'>${pvalue}</td></tr>`
-					)
 				}
-
 				rows.push(
 					`<tr><td style='padding:3px; color:#aaa'>#Individuals</td><td style='padding:3px; text-align:center'>n=${d.total}</td></tr>`
 				)
+
+				//mouse-over p-value and 2x2 table
+				if (t2) {
+					const pvalue = d.groupPvalues.term2tests.find(x => x.term2id === d.dataId).pvalue
+					const term1Label = d.groupPvalues.term1Label
+					const term2Label = d.groupPvalues.term2tests.find(x => x.term2id === d.dataId).term2Label
+					const tableValues = d.groupPvalues.term2tests.find(x => x.term2id === d.dataId).tableValues
+					rows.push(
+						`<tr>
+							<td style='padding:3px; color:#aaa'>p-value</td>
+							<td style='padding:3px; text-align:center'>${Number(pvalue).toFixed(4)}</td>
+						</tr>
+						<table style="margin: 5px; text-align:left; font-size: 0.8em; border-spacing: 5px; border-collapse: separate;"
+							<tr>
+								<td style='color:#aaa'></td>
+								<td style='color:#aaa'>${term2Label}</td>
+								<td style='color:#aaa'>not ${term2Label}</td>
+							</tr>
+							<tr>
+								<td style='color:#aaa'>${term1Label}</td>
+								<td>${tableValues.R1C1}</td>
+								<td>${tableValues.R1C2}</td>
+							</tr>
+							<tr>
+								<td style='color:#aaa'>not ${term1Label}</td>
+								<td>${tableValues.R2C1}</td>
+								<td>${tableValues.R2C2}</td>
+							</tr>
+						</table>`
+					)
+				}
 				if (!t1.type == 'condition' && (!t2 || !t2.type == 'condition')) {
 					rows.push(
 						`<tr><td style='padding:3px; color:#aaa'>Percentage</td><td style='padding:3px; text-align:center'>${(

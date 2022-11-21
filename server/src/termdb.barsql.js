@@ -485,9 +485,8 @@ input parameter:
 					.dataId=str // key of term2 category, '' if no term2
 					.total=int // size of this term1-term2 combination
 
-	fisher_limit:  the sum of the four values in the 2x2 table must be larger than fisher_limit(default = 300) to use chi-squared test
-	individual_fisher_limit: each of the four values in the 2x2 table must be larger than individual_fisher_limit (default = 150) to use chi-squared test
-	pvalueCutoff: comparisions with a pvalue less than pvalueCutoff are considered to be significantly different
+	fisher_limit:  the sum of the four values in the 2x2 table must be larger than fisher_limit(default = 1000) to use chi-squared test
+	individual_fisher_limit: each of the four values in the 2x2 table must be larger than individual_fisher_limit (default = 0) to use chi-squared test
 }
 
 Output: The function has no return but appends the statistical results to the provided data object as data.tests:
@@ -497,14 +496,14 @@ Output: The function has no return but appends the statistical results to the pr
 			term1comparison: term1,
 			term2tests:[
 				term2id: term2,
-				pvalue: ...
-				significant: true/false
+				pvalue: ...,
+				tableValues: {R1C1, R2C1, R1C2, R2C2}
 			]
 		}
 	]
 }
 */
-async function computePvalues(data, fisher_limit = 300, individual_fisher_limit = 150, pvalueCutoff = 0.05) {
+async function computePvalues(data, fisher_limit = 1000, individual_fisher_limit = 0) {
 	data.tests = {}
 	for (const chart of data.charts) {
 		// calculate sum of each term2 category. Structure: {term2Catergory1: num of samples, term2Catergory2: num of samples, ...}
@@ -575,7 +574,8 @@ async function computePvalues(data, fisher_limit = 300, individual_fisher_limit 
 				.replaceAll('@tab@', '\t')
 
 			// test.split('@@')[1].split('\t')[5] is always going to be the pvalue
-			const pvalue = test.split('@@')[1].split('\t')[5]
+			const otherOutputs = test.split('@@')[1].split('\t')
+			const pvalue = otherOutputs[5]
 
 			const t1c = pvalueTable.find(t1c => t1c.term1comparison === seriesId)
 			if (!t1c) {
@@ -585,7 +585,12 @@ async function computePvalues(data, fisher_limit = 300, individual_fisher_limit 
 						{
 							term2id: dataId,
 							pvalue: pvalue,
-							significant: pvalue < pvalueCutoff
+							tableValues: {
+								R1C1: otherOutputs[1],
+								R2C1: otherOutputs[2],
+								R1C2: otherOutputs[3],
+								R2C2: otherOutputs[4]
+							}
 						}
 					]
 				})
@@ -593,7 +598,12 @@ async function computePvalues(data, fisher_limit = 300, individual_fisher_limit 
 				t1c.term2tests.push({
 					term2id: dataId,
 					pvalue: pvalue,
-					significant: pvalue < pvalueCutoff
+					tableValues: {
+						R1C1: otherOutputs[1],
+						R2C1: otherOutputs[2],
+						R1C2: otherOutputs[3],
+						R2C2: otherOutputs[4]
+					}
 				})
 			}
 		}

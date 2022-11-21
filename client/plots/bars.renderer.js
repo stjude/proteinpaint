@@ -466,6 +466,9 @@ export default function barsRenderer(barsapp, holder) {
 		g.enter()
 			.append('g')
 			.each(addCell)
+
+		g.selectAll('text').remove()
+		addAsterisks(g)
 	}
 
 	function seriesEnter(series) {
@@ -499,6 +502,41 @@ export default function barsRenderer(barsapp, holder) {
 			.attr('height', d => d.height)
 			.attr('fill', hm.handlers.series.rectFill)
 			.attr('shape-rendering', 'crispEdges')
+			.style('opacity', 0)
+			.transition()
+			.delay(hm.delay)
+			.duration(hm.duration)
+			.style('opacity', 1)
+
+		addAsterisks(g)
+	}
+
+	// used by addCell and seriesUpdate to add an asterisk to bar with p-value below cutoff.
+	function addAsterisks(g) {
+		if (!barsapp.config.settings.barchart.asterisksVisible) {
+			// if Asterisks visible checkbox is not checked.
+			return
+		}
+
+		// calculate total number of tests
+		let testNum = 0
+		for (const chartId in barsapp.chartsData.tests) {
+			testNum += barsapp.chartsData.tests[chartId].reduce((a, b) => a + b.term2tests.length, 0)
+		}
+
+		g.append('text')
+			.text(d =>
+				d.groupPvalues &&
+				d.groupPvalues.term2tests &&
+				d.groupPvalues.term2tests.find(x => x.term2id == d.dataId) &&
+				d.groupPvalues.term2tests.find(x => x.term2id == d.dataId).pvalue < 0.05 / testNum
+					? '*'
+					: ''
+			)
+			.attr('x', d => d.x + d.width / 2)
+			.attr('y', d => d.y + d.height / 2)
+			.attr('dy', '0.6em')
+			.style('text-anchor', 'middle')
 			.style('opacity', 0)
 			.transition()
 			.delay(hm.delay)
