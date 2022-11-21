@@ -64,6 +64,7 @@ export function handle_request_closure(genomes) {
 			if (q.getcategories) return await trigger_getcategories(q, res, tdb, ds, genome)
 			if (q.getpercentile) return trigger_getpercentile(q, res, ds)
 			if (q.getnumericcategories) return trigger_getnumericcategories(q, res, tdb, ds)
+			if (q.getconditioncategories) return trigger_getconditioncategories(q, res, tdb, ds)
 			if (q.default_rootterm) return await trigger_rootterm(q, res, tdb)
 			if (q.get_children) return await trigger_children(q, res, tdb)
 			if (q.findterm) return await trigger_findterm(q, res, tdb, ds)
@@ -324,6 +325,23 @@ function trigger_getnumericcategories(q, res, tdb, ds) {
 	if (q.filter) arg.filter = q.filter
 	const lst = termdbsql.get_summary_numericcategories(arg)
 	res.send({ lst })
+}
+
+function trigger_getconditioncategories(q, res, tdb, ds) {
+	if (!q.tid) throw '.tid missing'
+	const term = tdb.q.termjsonByOneid(q.tid)
+	const arg = {
+		ds,
+		term1_id: q.tid,
+		term1_q: q.term1_q || getDefaultQ(term, q)
+	}
+	if (q.filter) arg.filter = q.filter
+	const result = termdbsql.get_summary_conditioncategories(arg)
+	const bins = result.CTE1.bins ? result.CTE1.bins : []
+	res.send({
+		lst: result.lst,
+		orderedLabels: getOrderedLabels(term, bins)
+	})
 }
 
 function trigger_scatter(q, res, tdb, ds) {

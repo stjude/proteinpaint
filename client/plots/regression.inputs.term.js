@@ -211,7 +211,10 @@ export class InputTerm {
 		const filter = { type: 'tvslst', join: 'and', lst: [...extraFilters] }
 		if (this.parent.state.termfilter.filter) filter.lst.push(this.parent.state.termfilter.filter)
 
-		const data = await this.parent.app.vocabApi.getCategories(tw.term, filter, qlst)
+		const data =
+			tw.term.type == 'condition'
+				? await this.parent.app.vocabApi.getConditionCategories(tw.term, filter, qlst)
+				: await this.parent.app.vocabApi.getCategories(tw.term, filter, qlst)
 		if (!data) throw `no data for term.id='${tw.id}'`
 		if (data.error) throw data.error
 		mayRunSnplstTask(tw, data)
