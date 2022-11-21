@@ -41,21 +41,24 @@ buttons = [ {button} ]
 	Each element is an object describing a button:
 	text: str, the text to show in the button
 	callback: function, the function to be called when the button is clicked
+
+noButtonCallback = (index, node) => {}
+	Function that will be called when a row is selected	
+
+singleMode = false, boolean
+	Specifies if a radio button should be rendered instead
 	
 */
-export async function renderTable({ columns, rows, div, style = {}, buttons }) {
+export async function renderTable({ columns, rows, div, style = {}, buttons, noButtonCallback, singleMode = false }) {
 	const numColumns = columns.length
 
 	// create a Parent Div element to which the header and sample table will be appended as divH and divS.
 	const parentDiv = div
 		.style('padding', '5px')
-
 		.style('background-color', 'white')
 		.append('table')
 		.style('display', 'block')
 		.style('background-color', 'white')
-		//.attr('class', 'sjpp_table_container')
-		//.style('table-template-columns', `1.5vw ${buttons ? '2vw' : ''} repeat(${numColumns}, auto)`)
 		.style('max-width', style.max_width ? style.max_width : '90vw')
 
 	// header div
@@ -72,19 +75,21 @@ export async function renderTable({ columns, rows, div, style = {}, buttons }) {
 			.text('#')
 			.style('width', '15px')
 	}
-	if (buttons) {
+
+	if (buttons || noButtonCallback) {
 		const cell = divH
 			.append('th')
 			.attr('class', 'sjpp_table_header')
-			.style('width', '15px')
-
-		const checkboxH = cell
-			.append('input')
-			.attr('type', 'checkbox')
-			.on('change', () => {
-				table.selectAll('input').property('checked', checkboxH.node().checked)
-				enableButtons()
-			})
+			.style('width', '20px')
+		if (!singleMode) {
+			const checkboxH = cell
+				.append('input')
+				.attr('type', 'checkbox')
+				.on('change', () => {
+					table.selectAll('input').property('checked', checkboxH.node().checked)
+					enableButtons()
+				})
+		}
 	}
 
 	// header values
@@ -118,15 +123,19 @@ export async function renderTable({ columns, rows, div, style = {}, buttons }) {
 				.style('color', defaultcolor)
 		}
 
-		if (buttons) {
+		if (buttons || noButtonCallback) {
 			const checkbox = rowtable
 				.append('td')
-				.style('width', '15px')
+				.style('width', '20px')
 				.style('float', 'center')
 				.append('input')
-				.attr('type', 'checkbox')
+				.attr('type', singleMode ? 'radio' : 'checkbox')
+				.attr('name', 'select')
 				.attr('value', i)
-				.on('change', () => enableButtons())
+				.on('change', () => {
+					if (buttons) enableButtons()
+					else noButtonCallback(i, checkbox.node())
+				})
 		}
 
 		for (const [colIdx, cell] of row.entries()) {

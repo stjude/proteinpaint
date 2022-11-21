@@ -8,6 +8,7 @@ import { addGeneSearchbox, string2variant } from '../dom/genesearch'
 import { Menu } from '../dom/menu'
 import { init_tabs } from '../dom/toggleButtons'
 import { default_text_color } from '../shared/common'
+import { renderTable } from '#dom/table'
 
 /*
 *********** gdc_args{}
@@ -295,7 +296,6 @@ export async function bamsliceui({
 			.style('align-items', 'center')
 			.style('justify-items', 'left')
 			.style('overflow', 'scroll') //Fix for grid rows appearring defined area
-			.style('max-height', '20vh')
 
 		api.update = _arg => {
 			gdc_search(null, _arg?.filter0 || filter0)
@@ -403,83 +403,44 @@ export async function bamsliceui({
 		}
 
 		function update_multifile_table(files) {
+			const columns = []
+			for (const row of baminfo_rows) columns.push({ label: row.title })
+			const rows = []
+			for (const [i, onebam] of files.entries()) {
+				const row = []
+				for (const column of baminfo_rows)
+					if (column.url)
+						row.push({ html: `<a href=${row.url}${onebam.file_uuid} target=_blank>${onebam[row.key]}</a>` })
+					else row.push({ value: onebam[column.key] })
+				rows.push(row)
+			}
+
 			baminfo_div.style('display', 'block')
 			bamselection_table
-				.style('display', 'grid')
+				.style('display', 'block')
 				.selectAll('*')
 				.remove()
-			baminfo_table.style('display', 'none')
-
-			bamselection_table.style('grid-template-rows', 'repeat(' + files.length + ', 20px)').append('div') //Placeholder div over checkboxes
-
-			for (const row of baminfo_rows) {
-				bamselection_table
-					.append('div')
-					.style('padding', '3px 10px')
-					.text(row.title)
-					.style('opacity', 0.5)
-					.style('white-space', 'nowrap') //Fix for values overlapping on window resize
-					.style('text-overflow', 'ellipsis')
-					.style('overflow', 'hidden')
-					.style('max-width', '10vw')
-			}
-
-			for (const onebam of files) {
-				const wrapper = bamselection_table
-					.append('label') //Creates a row wrapper where all text is clickable
-					.style('display', 'contents')
-					.style('white-space', 'nowrap')
-					.style('overflow', 'hidden')
-					.style('text-overflow', 'ellipsis')
-					.style('max-width', '10vw')
-					.style('background-clip', 'padding-box')
-					.on('mouseenter', event => {
-						wrapper.style('background-color', '#fcfcca')
-					})
-					.on('mouseleave', event => {
-						wrapper.style('background-color', '')
-					})
-				const file_checkbox = wrapper
-					// .append('div')
-					.append('input')
-					.style('padding', '3px 10px')
-					.style('margin-left', '25px')
-					.attr('type', 'checkbox')
-					.on('change', event => {
-						if (file_checkbox.node().checked) {
-							gdc_args.bam_files.push({
-								file_id: onebam.file_uuid,
-								track_name: onebam.sample_type + ', ' + onebam.experimental_strategy + ', ' + onebam.entity_id,
-								about: baminfo_rows.map(i => {
-									return { k: i.title, v: onebam[i.key] }
-								})
+			renderTable({
+				rows,
+				columns,
+				div: bamselection_table,
+				noButtonCallback: (i, node) => {
+					const onebam = files[i]
+					if (node.checked) {
+						gdc_args.bam_files.push({
+							file_id: onebam.file_uuid,
+							track_name: onebam.sample_type + ', ' + onebam.experimental_strategy + ', ' + onebam.entity_id,
+							about: baminfo_rows.map(i => {
+								return { k: i.title, v: onebam[i.key] }
 							})
-						} else {
-							// remove from array if checkbox unchecked
-							gdc_args.bam_files = gdc_args.bam_files.filter(f => f.file_id != onebam.file_uuid)
-						}
-					})
-				for (const row of baminfo_rows) {
-					const d = wrapper
-						// const d = bamselection_table
-						.append('div')
-						.style('padding', '3px 10px')
-						.style('background', 'inherit')
-					if (row.url) {
-						d.html(`<a href=${row.url}${onebam.file_uuid} target=_blank>${onebam[row.key]}</a>`)
+						})
 					} else {
-						d.text(onebam[row.key])
+						// remove from array if checkbox unchecked
+						gdc_args.bam_files = gdc_args.bam_files.filter(f => f.file_id != onebam.file_uuid)
 					}
-				}
-			}
-
-			bamselection_table
-				.style('height', '0')
-				.transition()
-				.duration(500)
-				.style('height', 'auto')
-				.style('max-height', '20vh')
-			// .style('height', files.length * 24 + 'px') //Creates a gap between the 2nd to last and last row
+				},
+				singleMode: false
+			})
 		}
 	}
 
