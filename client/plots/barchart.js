@@ -11,7 +11,7 @@ import getHandlers from './barchart.events'
 import { controlsInit } from './controls'
 import { to_svg } from '../src/client'
 import { fillTermWrapper } from '../termsetting/termsetting'
-//import { renderPvalues } from '#dom/renderPvalueTable'
+import { renderTable } from '../dom/table'
 
 class Barchart {
 	constructor(opts) {
@@ -109,7 +109,16 @@ class Barchart {
 								{ label: 'Proportion', value: 'pct', getDisplayStyle: plot => (plot.term2 ? 'inline-block' : 'none') }
 							]
 						},
-						'divideBy'
+						'divideBy',
+						// a checkbox to allow users to show or hide asterisks on bars
+						{
+							label: 'Asterisks',
+							boxLabel: 'Visible',
+							type: 'checkbox',
+							chartType: 'barchart',
+							settingsKey: 'asterisksVisible',
+							title: 'Display the asterisks'
+						}
 					]
 				})
 			}
@@ -198,6 +207,7 @@ class Barchart {
 			term2: config.term2 ? config.term2.term.id : '',
 			unit: config.settings.barchart.unit,
 			orientation: config.settings.barchart.orientation,
+			asterisksVisible: config.settings.barchart.asterisksVisible,
 			// normalize bar thickness regardless of orientation
 			colw: config.settings.common.barwidth,
 			rowh: config.settings.common.barwidth,
@@ -329,10 +339,11 @@ class Barchart {
 
 		self.visibleCharts = chartsData.charts.filter(chart => chart.visibleSerieses.length)
 
-		// add term1comparisonLabel (same location as term1comparison) and term2Label (same location as term2id) to chartsData.tests to be used as labels for the barchart pvalue table
 		const t1 = this.config.term
 		const t2 = this.config.term2
 		const chartsTests = chartsData.tests
+
+		//get term1 and term2 labels
 		for (const chartId in chartsTests) {
 			const chartTests = chartsTests[chartId]
 			for (const t1c of chartTests) {
@@ -340,7 +351,7 @@ class Barchart {
 					t1.term.values && t1c.term1comparison in t1.term.values
 						? t1.term.values[t1c.term1comparison].label
 						: t1c.term1comparison
-				t1c.term1comparisonLabel = `${t1label} vs. not ${t1label}`
+				t1c.term1Label = t1label
 
 				for (const t2t of t1c.term2tests) {
 					const t2label =
@@ -533,6 +544,19 @@ class Barchart {
 					.sort(this.overlaySorter)
 			})
 		}
+		if (t2) {
+			//calculate total number of tests
+			let testNum = 0
+			for (const chartId in this.chartsData.tests) {
+				testNum += this.chartsData.tests[chartId].reduce((a, b) => a + b.term2tests.length, 0)
+			}
+
+			legendGrps.push({
+				name: `<span style="${headingStyle}">Statistical Significance</span>`,
+				items: [{ text: `* p-value < (0.05 / ${testNum} tests)` }]
+			})
+		}
+
 		return legendGrps
 	}
 
@@ -607,15 +631,7 @@ function setRenderers(self) {
 
 		if (self.chartsData.tests && self.chartsData.tests[chart.chartId]) {
 			//chart has pvalues
-
-			const holder = div
-				.select('.pp-sbar-div-chartLengends')
-				.style('display', 'inline-block')
-				.append('div')
-			const term1Order = self.chartsData.refs.cols
-			const term2Order = self.chartsData.refs.rows
-
-			renderPvalueTable(self.chartsData.tests[chart.chartId], term1Order, term2Order, holder)
+			generatePvalueTable(chart, div)
 		}
 	}
 
@@ -644,92 +660,76 @@ function setRenderers(self) {
 
 		if (self.chartsData.tests && self.chartsData.tests[chart.chartId]) {
 			//chart has pvalues
-
-			const holder = div
-				.select('.pp-sbar-div-chartLengends')
-				.style('display', 'inline-block')
-				.append('div')
-			const term1Order = self.chartsData.refs.cols
-			const term2Order = self.chartsData.refs.rows
-			renderPvalueTable(self.chartsData.tests[chart.chartId], term1Order, term2Order, holder)
-		}
-	}
-}
-
-/*
-render a container of p-values that has hierarchical structure: 
-
-A vs. B
-	x:pvalue
-	y:pvalue
-...
-
-used by barchart
-
-input parameter:
-{
-	pvalueTable: an array of objects, each object has one first level term and the second level terms and pvalues associated 
-				 with the first term (structure for each object is {term1comparison: term1, term2tests:[term2id: term2, pvalue: ..., significant: true/false]} ),
-	term1Order: an array of term1 categories with desired order,
-	term2Order: an array of term2 categories with desired order,
-	holder: holder div,
-}
-*/
-function renderPvalueTable(pvalueTable, term1Order, term2Order, holder) {
-	const maxPvalsToShow = 3
-
-	// sort term1 categories based on term1Order
-	pvalueTable.sort(function(a, b) {
-		return term1Order.indexOf(a.term1comparison) - term1Order.indexOf(b.term1comparison)
-	})
-
-	// sort term2 categories based on term2Order
-	for (const t1c of pvalueTable) {
-		t1c.term2tests.sort(function(a, b) {
-			return term2Order.indexOf(a.term2id) - term2Order.indexOf(b.term2id)
-		})
-		//round pvalues to keep 4 digits after decimal point
-		for (const t2c of t1c.term2tests) {
-			t2c.pvalue = Number(t2c.pvalue).toFixed(4)
+			generatePvalueTable(chart, div)
 		}
 	}
 
-	//holder.selectAll('*').remove()
-	holder
-		.append('div')
-		.style('padding-bottom', '5px')
-		.style('vertical-align', 'top')
-		.style('font-size', '14px')
-		.style('font-weight', 'bold')
-		.style('text-align', 'center')
-		.style('margin-top', '-10px')
-		.html('Group comparisons <br> (Chi-squared test P-values)')
-
-	const treediv = holder
-		.append('div')
-		.style('border', '1px solid #ccc')
-		.style('font-size', '14px')
-
-	if (pvalueTable.length > maxPvalsToShow) {
-		//table scrolling
-		treediv.style('overflow', 'auto').style('height', '220px')
-	}
-
-	for (const t1c of pvalueTable) {
-		const t1cDiv = treediv
+	/*
+	A function to generate a p-value table for Chi-squared/Fisher's exact tests
+	*/
+	function generatePvalueTable(chart, div) {
+		const holder = div
+			.select('.pp-sbar-div-chartLengends')
+			.style('display', 'inline-block')
+			.style('vertical-align', 'top')
+			.style('text-align', 'center')
+			.style('font-size', '12px')
 			.append('div')
-			.style('margin-left', '5px')
-			.style('margin-right', '10px')
-			.text(t1c.term1comparisonLabel)
 
-		for (const t2t of t1c.term2tests) {
-			t1cDiv
-				.append('div')
-				.style('margin-left', '30px')
-				.style('margin-right', '10px')
-				.text(`${t2t.term2Label}: ${t2t.pvalue}`)
+		//adding a title for the pvalue table
+		const title = holder
+			.append('div')
+			.style('font-weight', 'bold')
+			.html('Group comparisons (Chi-squared test)')
+
+		const table = holder.append('div')
+
+		// sort term1 categories based on self.chartsData.refs.cols
+		self.chartsData.tests[chart.chartId].sort(function(a, b) {
+			return self.chartsData.refs.cols.indexOf(a.term1comparison) - self.chartsData.refs.cols.indexOf(b.term1comparison)
+		})
+
+		// sort term2 categories based on self.chartsData.refs.rows
+		for (const t1c of self.chartsData.tests[chart.chartId]) {
+			t1c.term2tests.sort(function(a, b) {
+				return self.chartsData.refs.rows.indexOf(a.term2id) - self.chartsData.refs.rows.indexOf(b.term2id)
+			})
 		}
-		t1cDiv.append('div').html('<br>')
+		const columns = [
+			{ label: 'Group 1' },
+			{ label: 'Group 2' },
+			{ label: 'Group 3' },
+			{ label: 'Group 4' },
+			{ label: 'P-value' }
+		]
+		const rows = []
+		for (const term1 of self.chartsData.tests[chart.chartId]) {
+			for (const term2 of term1.term2tests) {
+				rows.push([
+					{ value: term1.term1Label },
+					{ value: 'not ' + term1.term1Label },
+					{ value: term2.term2Label },
+					{ value: 'not ' + term2.term2Label },
+					//if the test was computed by Fisher's exact test, add a superscript letter 'a' after the pvalue.
+					{
+						html:
+							(term2.pvalue > 1e-4
+								? Number(term2.pvalue.toFixed(4))
+								: Number(term2.pvalue.toPrecision(4)).toExponential()) + (term2.isChi ? '' : '<sup><b>a</b></sup>')
+					}
+				])
+			}
+		}
+		renderTable({ columns, rows, div: table, style: { max_width: '350px', max_height: '20vh' } })
+
+		//Adding a footnote to tell users that superscript letter 'a' indicates the pvalue was computed by Fisher's exact test
+		table
+			.append('div')
+			.style('margin-top', '10px')
+			.style('text-align', 'left')
+			.style('font-size', '10px')
+			.style('font-weight', 'normal')
+			.html("<sup><b>a</b></sup> computed by Fisher's exact test")
 	}
 }
 
@@ -846,8 +846,8 @@ export async function getPlotConfig(opts, app) {
 				unit: 'abs',
 				overlay: 'none',
 				divideBy: 'none',
-				rowlabelw: 250
-				// duration: 0
+				rowlabelw: 250,
+				asterisksVisible: true
 			}
 		}
 	}
