@@ -329,7 +329,9 @@ export async function getPlotConfig(opts, app) {
 				orientation: 'horizontal',
 				unit: 'abs',
 				overlay: 'none',
-				divideBy: 'none'
+				divideBy: 'none',
+				rowlabelw: 250,
+				asterisksVisible: true
 			},
 			//TODO can import getPlotConfig from violinplot
 			violin: {

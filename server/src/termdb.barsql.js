@@ -497,7 +497,8 @@ Output: The function has no return but appends the statistical results to the pr
 			term2tests:[
 				term2id: term2,
 				pvalue: ...,
-				tableValues: {R1C1, R2C1, R1C2, R2C2}
+				tableValues: {R1C1, R2C1, R1C2, R2C2},
+				isChi
 			]
 		}
 	]
@@ -575,7 +576,17 @@ async function computePvalues(data, fisher_limit = 1000, individual_fisher_limit
 
 			// test.split('@@')[1].split('\t')[5] is always going to be the pvalue
 			const otherOutputs = test.split('@@')[1].split('\t')
-			const pvalue = otherOutputs[5]
+			const pvalue = Number(otherOutputs[5])
+			const R1C1 = Number(otherOutputs[1])
+			const R2C1 = Number(otherOutputs[2])
+			const R1C2 = Number(otherOutputs[3])
+			const R2C2 = Number(otherOutputs[4])
+			const isChi =
+				R1C1 > individual_fisher_limit &&
+				R2C1 > individual_fisher_limit &&
+				R1C2 > individual_fisher_limit &&
+				R2C2 > individual_fisher_limit &&
+				R1C1 + R2C1 + R1C2 + R2C2 > fisher_limit
 
 			const t1c = pvalueTable.find(t1c => t1c.term1comparison === seriesId)
 			if (!t1c) {
@@ -586,11 +597,12 @@ async function computePvalues(data, fisher_limit = 1000, individual_fisher_limit
 							term2id: dataId,
 							pvalue: pvalue,
 							tableValues: {
-								R1C1: otherOutputs[1],
-								R2C1: otherOutputs[2],
-								R1C2: otherOutputs[3],
-								R2C2: otherOutputs[4]
-							}
+								R1C1,
+								R2C1,
+								R1C2,
+								R2C2
+							},
+							isChi
 						}
 					]
 				})
@@ -599,11 +611,12 @@ async function computePvalues(data, fisher_limit = 1000, individual_fisher_limit
 					term2id: dataId,
 					pvalue: pvalue,
 					tableValues: {
-						R1C1: otherOutputs[1],
-						R2C1: otherOutputs[2],
-						R1C2: otherOutputs[3],
-						R2C2: otherOutputs[4]
-					}
+						R1C1,
+						R2C1,
+						R1C2,
+						R2C2
+					},
+					isChi
 				})
 			}
 		}

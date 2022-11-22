@@ -80,7 +80,9 @@ export default function getHandlers(self) {
 					rows.push(
 						`<tr>
 							<td style='padding:3px; color:#aaa'>p-value</td>
-							<td style='padding:3px; text-align:center'>${Number(pvalue).toFixed(4)}</td>
+							<td style='padding:3px; text-align:center'>${
+								pvalue > 1e-4 ? Number(pvalue.toFixed(4)) : Number(pvalue.toPrecision(4)).toExponential()
+							}</td>
 						</tr>
 						<table style="margin: 5px; text-align:left; font-size: 0.8em; border-spacing: 5px; border-collapse: separate;"
 							<tr>

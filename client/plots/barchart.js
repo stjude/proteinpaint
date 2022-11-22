@@ -207,6 +207,7 @@ class Barchart {
 			term2: config.term2 ? config.term2.term.id : '',
 			unit: config.settings.barchart.unit,
 			orientation: config.settings.barchart.orientation,
+			asterisksVisible: config.settings.barchart.asterisksVisible,
 			// normalize bar thickness regardless of orientation
 			colw: config.settings.common.barwidth,
 			rowh: config.settings.common.barwidth,
@@ -341,10 +342,10 @@ class Barchart {
 		const t1 = this.config.term
 		const t2 = this.config.term2
 		const chartsTests = chartsData.tests
+
+		//get term1 and term2 labels
 		for (const chartId in chartsTests) {
 			const chartTests = chartsTests[chartId]
-
-			// add term1Label/term1comparisonLabel (same location as term1comparison) and term2Label (same location as term2id) to chartsData.tests to be used as labels for the barchart pvalue table
 			for (const t1c of chartTests) {
 				const t1label =
 					t1.term.values && t1c.term1comparison in t1.term.values
@@ -552,7 +553,7 @@ class Barchart {
 
 			legendGrps.push({
 				name: `<span style="${headingStyle}">Statistical Significance</span>`,
-				items: [{ text: `* p-value < (0.05/${testNum}), # of tests = ${testNum}` }]
+				items: [{ text: `* p-value < (0.05 / ${testNum} tests)` }]
 			})
 		}
 
@@ -664,25 +665,24 @@ function setRenderers(self) {
 	}
 
 	/*
-	use renderTable function to generate a p-value table for Chi-squared/Fisher's exact tests
-	used by addChart and updateChart
+	A function to generate a p-value table for Chi-squared/Fisher's exact tests
 	*/
 	function generatePvalueTable(chart, div) {
 		const holder = div
 			.select('.pp-sbar-div-chartLengends')
 			.style('display', 'inline-block')
+			.style('vertical-align', 'top')
+			.style('text-align', 'center')
+			.style('font-size', '12px')
 			.append('div')
 
 		//adding a title for the pvalue table
-		const holderWithTitle = holder
+		const title = holder
 			.append('div')
-			.style('padding-bottom', '5px')
-			.style('vertical-align', 'top')
-			.style('font-size', '12px')
-			//.style('font-weight', 'bold')
-			.style('text-align', 'center')
-			.style('margin-top', '-10px')
+			.style('font-weight', 'bold')
 			.html('Group comparisons (Chi-squared test)')
+
+		const table = holder.append('div')
 
 		// sort term1 categories based on self.chartsData.refs.cols
 		self.chartsData.tests[chart.chartId].sort(function(a, b) {
@@ -695,38 +695,35 @@ function setRenderers(self) {
 				return self.chartsData.refs.rows.indexOf(a.term2id) - self.chartsData.refs.rows.indexOf(b.term2id)
 			})
 		}
-
 		const columns = [
-			{ label: 'Group1' },
-			{ label: 'Group2' },
-			{ label: 'Group3' },
-			{ label: 'Group4' },
+			{ label: 'Group 1' },
+			{ label: 'Group 2' },
+			{ label: 'Group 3' },
+			{ label: 'Group 4' },
 			{ label: 'P-value' }
 		]
 		const rows = []
 		for (const term1 of self.chartsData.tests[chart.chartId]) {
 			for (const term2 of term1.term2tests) {
-				//If sample size > 1000, the test was done using Chi-squared test (instead of Fisher's exact test)
-				const R1C1 = Number(term2.tableValues.R1C1)
-				const R2C1 = Number(term2.tableValues.R2C1)
-				const R1C2 = Number(term2.tableValues.R1C2)
-				const R2C2 = Number(term2.tableValues.R2C2)
-				const isChi = R1C1 + R1C2 + R2C1 + R2C2 > 1000
-
 				rows.push([
 					{ value: term1.term1Label },
 					{ value: 'not ' + term1.term1Label },
 					{ value: term2.term2Label },
 					{ value: 'not ' + term2.term2Label },
 					//if the test was computed by Fisher's exact test, add a superscript letter 'a' after the pvalue.
-					{ html: Number(term2.pvalue).toFixed(4) + (isChi ? '' : '<sup><b>a</b></sup>') }
+					{
+						html:
+							(term2.pvalue > 1e-4
+								? Number(term2.pvalue.toFixed(4))
+								: Number(term2.pvalue.toPrecision(4)).toExponential()) + (term2.isChi ? '' : '<sup><b>a</b></sup>')
+					}
 				])
 			}
 		}
-		renderTable({ columns, rows, div: holderWithTitle, style: { max_width: '400px', max_height: '30vh' } })
+		renderTable({ columns, rows, div: table, style: { max_width: '350px', max_height: '20vh' } })
 
 		//Adding a footnote to tell users that superscript letter 'a' indicates the pvalue was computed by Fisher's exact test
-		holderWithTitle
+		table
 			.append('div')
 			.style('margin-top', '10px')
 			.style('text-align', 'left')
@@ -850,7 +847,7 @@ export async function getPlotConfig(opts, app) {
 				overlay: 'none',
 				divideBy: 'none',
 				rowlabelw: 250,
-				asterisksVisible: false
+				asterisksVisible: true
 			}
 		}
 	}
