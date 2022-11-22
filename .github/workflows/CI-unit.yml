@@ -16,6 +16,11 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
+      - uses: pre-commit/action@v3.0.0
+        with:
+          extra_args:
+            detect-secrets --all-files
+
       - uses: actions/setup-node@v3
         with:
           node-version: 16
