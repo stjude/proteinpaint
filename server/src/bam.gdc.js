@@ -76,7 +76,6 @@ const filesApi = {
 		'file_size',
 		'experimental_strategy',
 		'associated_entities.entity_submitter_id', // semi human readable
-		'associated_entities.entity_type',
 		'associated_entities.case_id', // case uuid
 		'cases.samples.sample_type',
 		'analysis.workflow_type' // to drop out those as skip_workflow_type
@@ -139,7 +138,6 @@ async function get_gdc_data(gdc_id, filter0) {
 		file.file_size = (Number.parseFloat(s.file_size) / 10e8).toFixed(2) + ' GB'
 		file.experimental_strategy = s.experimental_strategy
 		file.entity_id = s.associated_entities[0].entity_submitter_id
-		file.entity_type = s.associated_entities[0].entity_type
 		file.case_id = s.associated_entities[0].case_id
 		file.sample_type = s.cases[0].samples[0].sample_type
 

@@ -28,7 +28,6 @@ tk.dom.variantg // if defined.
 
 ******* attributes ********
 
-tk.downloadgdc:true // Downloads bam file from gdc, single-use flag
 tk.gdcFile={} // the tk runs on a valid gdc bam slice
 	.uuid=str
 	.position=str
@@ -226,24 +225,6 @@ async function getData(tk, block, additional = []) {
 		lst.push('gdcFilePosition=' + tk.gdcFile.position)
 	}
 
-	if (tk.downloadgdc) {
-		if (!tk.gdcFile) throw '.gdcFile{} missing'
-		// ask backend to call gdc slicing api to slice the uuid on this tk
-		delete tk.downloadgdc
-		tk.cloaktext.text('Downloading BAM slice ...')
-		const gdc_bam_files = await dofetch3('tkbam?downloadgdc=1&' + lst.join('&'), { headers })
-
-		if (gdc_bam_files.error) throw gdc_bam_files.error
-		if (!Array.isArray(gdc_bam_files) || gdc_bam_files.length == 0) throw 'invalid returned data'
-		// This will need to be changed to a loop when viewing multiple regions in the same sample
-		const { filesize } = gdc_bam_files[0]
-		tk.cloaktext.text('BAM slice downloaded. File size: ' + filesize)
-		block.gdcBamSliceDownloadBtn.style('display', 'inline-block')
-		if (tk.aboutThisFile) {
-			tk.aboutThisFile.push({ k: 'Slice file size', v: filesize })
-		}
-	}
-
 	if (tk.variants) {
 		lst.push(
 			'variant=' + tk.variants.map(m => m.chr + '.' + m.pos + '.' + m.ref + '.' + m.alt + '.' + m.strictness).join('.')
@@ -424,12 +405,12 @@ or update existing groups, in which groupidx will be provided
 	} else {
 		tk.leftlabel_skip.text('')
 	}
-	block.setllabel() // calculate left margin based on max left width
 	if (!tk.show_readnames) {
 		tk.OriginalleftLabelMaxwidth = tk.leftLabelMaxwidth // Original leftlabelmaxwidth without read names
 	} else {
 		tk.leftLabelMaxwidth = tk.OriginalleftLabelMaxwidth
 	}
+	block.setllabel() // calculate left margin based on max left width
 	tk.read_alignment_diff_scores_asc = data.read_alignment_diff_scores_asc
 }
 
@@ -903,6 +884,10 @@ function update_box_stay(group, tk, block) {
 }
 
 function makeTk(tk, block) {
+	if (tk.gdcFile) {
+		block.gdcBamSliceDownloadBtn.style('display', 'inline-block')
+	}
+
 	may_add_urlparameter(tk, block)
 
 	// if to hide PCR or optical duplicates
@@ -1048,21 +1033,6 @@ function may_add_urlparameter(tk, block) {
 				}
 				tk.variants.push({ chr: tmp[i], pos: pos - 1, ref: tmp[i + 2], alt: tmp[i + 3], strictness: strictness })
 			}
-		}
-	}
-
-	// Checking to see if need to query GDC for bam file
-	if (u2p.has('gdc')) {
-		const str = u2p.get('gdc')
-		const [file, token] = str.split(',')
-		if (file && token) {
-			tk.gdcToken = token
-			const r = block.rglst[0]
-			tk.gdcFile = {
-				uuid: file,
-				position: r.chr + '.' + r.start + '.' + r.stop
-			}
-			tk.downloadgdc = true // single use
 		}
 	}
 }

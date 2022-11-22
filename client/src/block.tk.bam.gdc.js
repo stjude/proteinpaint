@@ -11,6 +11,10 @@ import { default_text_color } from '../shared/common'
 import { renderTable } from '#dom/table'
 
 /*
+TODO
+
+SV_EXPAND: to be expanded to support SV review using subpanel
+
 *********** gdc_args{}
 gdc_args {}
 	gdc_token: <string>,
@@ -43,16 +47,15 @@ makeGdcIDinput
 makeSsmGeneSearch
 	makeArg_geneSearchbox
 	geneSearchInstruction
-makeSubmit
+makeSubmitAndNoPermissionDiv
 	validateInputs
-	renderBamSlice
+	sliceBamAndRender
 */
 
 const gdc_genome = 'hg38'
 const variantFlankingSize = 60 // bp
 const baminfo_rows = [
 	{ title: 'Entity ID', key: 'entity_id' },
-	{ title: 'Entity Type', key: 'entity_type' },
 	{ title: 'Experimental Strategy', key: 'experimental_strategy' },
 	{ title: 'Sample Type', key: 'sample_type' },
 	{ title: 'Size', key: 'file_size' }
@@ -75,6 +78,10 @@ hideTokenInput=true/false
 filter0=str
 	optional, stringified json obj as the cohort filter from gdc ATF
 	simply pass to backend to include in api queries
+
+Returns:
+
+a public API object with callbacks
 */
 export async function bamsliceui({
 	genomes,
@@ -84,6 +91,9 @@ export async function bamsliceui({
 	hideTokenInput = false,
 	debugmode = false
 }) {
+	// public api obj to be returned
+	const publicApi = {}
+
 	const genome = genomes[gdc_genome]
 	if (!genome) throw 'missing genome for ' + gdc_genome
 
@@ -134,7 +144,7 @@ export async function bamsliceui({
 
 	// for showing err
 	const saydiv = formdiv.append('div').style('grid-column', 'span 2')
-	const api = {}
+
 	// upload toke file
 	if (!hideTokenInput) makeTokenInput()
 
@@ -172,8 +182,8 @@ export async function bamsliceui({
 	}
 	await makeSsmGeneSearch()
 
-	// submit button
-	makeSubmit()
+	// submit button, "no permission" alert
+	const noPermissionDiv = makeSubmitAndNoPermissionDiv()
 
 	//////////////////////// helper functions
 
@@ -291,7 +301,7 @@ export async function bamsliceui({
 
 		const bamselection_table = baminfo_div.append('div')
 
-		api.update = _arg => {
+		publicApi.update = _arg => {
 			gdc_search(null, _arg?.filter0 || filter0)
 		}
 
@@ -299,7 +309,12 @@ export async function bamsliceui({
 			/*
 			first argument is "event" which is unused, as gdc_search() is used as event listener
 			*/
+
+			noPermissionDiv.style('display', 'none')
+
+			// TODO explain usage of _filter0
 			const _filter0 = Object.keys(filter || {}).length ? filter : filter0 || null
+
 			try {
 				const gdc_id = gdcid_input.property('value').trim()
 				if (!gdc_id.length) {
@@ -327,7 +342,6 @@ export async function bamsliceui({
 				{
 					case_id: "9a2a226e-9605-4214-9320-469305e664e6"
 					entity_id: "TCGA-49-AARQ-11A-21D-A413-08"
-					entity_type: "aliquot"
 					experimental_strategy: "WXS"
 					file_size: "10.43 GB"
 					file_uuid: "f383b776-b162-4c61-909b-3b92d1853511"
@@ -564,33 +578,62 @@ export async function bamsliceui({
 			singleMode: true
 		})
 	}
+	function makeSubmitAndNoPermissionDiv() {
+		const d1 = formdiv.append('div')
+		const d2 = formdiv.append('div')
 
-	function makeSubmit() {
-		formdiv
-			.append('div')
-			.style('grid-column', 'span 2')
+		const button = d1
 			.append('button')
-			.style('margin', '20px 20px 20px 100px')
-			.style('padding', '5px 15px')
-			.style('border-radius', '15px')
+			.style('margin', '20px 20px 20px 40px')
+			.style('padding', '10px 25px')
+			.style('border-radius', '35px')
 			.text('Submit')
-			.on('click', event => {
+			.on('click', async () => {
 				try {
 					validateInputs(gdc_args, genome, hideTokenInput)
+					button.text = 'Loading ...'
+					button.property('disabled', true)
+					await sliceBamAndRender(gdc_args, genome, blockHolder, debugmode)
+					formdiv.style('display', 'none')
+					backBtnDiv.style('display', 'block')
+					blockHolder.style('display', 'block')
 				} catch (e) {
-					sayerror(saydiv, e.message || e)
-					if (e.stack) console.log(e.stack)
-					return
+					if (e == 'Permission denied') {
+						// backend throws {error:'Permission denied'} to signal the display of this alert
+						noPermissionDiv.style('display', 'block')
+					} else {
+						sayerror(saydiv, e.message || e)
+						if (e.stack) console.log(e.stack)
+					}
 				}
-				// success
-				formdiv.style('display', 'none')
-				backBtnDiv.style('display', '')
-				blockHolder.style('display', '')
-				renderBamSlice(gdc_args, genome, blockHolder, debugmode)
+				// turn submit button back to active so ui can be reused later
+				button.text = 'Submit'
+				button.property('disabled', false)
 			})
+
+		const noPermissionDiv = d2
+			.append('div')
+			.style('display', 'none')
+			.style('grid-column', 'span 2')
+			.style('margin', '20px')
+		noPermissionDiv
+			.append('div')
+			.text('Access Alert')
+			.style('font-size', '1.5em')
+			.style('opacity', 0.4)
+		noPermissionDiv
+			.append('div')
+			.style('border-top', 'solid 1px #eee')
+			.style('border-bottom', 'solid 1px #eee')
+			.style('padding', '20px 0px')
+			.style('margin-top', '5px')
+			.html(
+				'You are attempting to visualize a Sequence Read file that you are not authorized to access. Please request dbGaP Access to the project (click here for more information).'
+			)
+		return noPermissionDiv
 	}
 
-	return api
+	return publicApi
 }
 
 function geneSearchInstruction(d) {
@@ -674,7 +717,7 @@ function validateInputs(args, genome, hideTokenInput = false) {
 	}
 }
 
-function renderBamSlice(args, genome, holder, debugmode) {
+async function sliceBamAndRender(args, genome, holder, debugmode) {
 	// create arg for block init
 	const par = {
 		nobox: 1,
@@ -682,6 +725,7 @@ function renderBamSlice(args, genome, holder, debugmode) {
 		holder,
 		debugmode
 	}
+
 	if (args.position) {
 		par.chr = args.position.chr
 		par.start = args.position.start
@@ -690,8 +734,46 @@ function renderBamSlice(args, genome, holder, debugmode) {
 		par.chr = args.variant.chr
 		par.start = args.variant.pos - variantFlankingSize
 		par.stop = args.variant.pos + variantFlankingSize
+	} else {
+		throw 'SV_EXPAND here'
 	}
 
+	const headers = { 'Content-Type': 'application/json', Accept: 'application/json' }
+	if (args.gdc_token) {
+		headers['X-Auth-Token'] = args.gdc_token
+	}
+
+	//////////////////////////////////////////////
+	//
+	// call backend to slice bam and write to cache file
+	//
+	//////////////////////////////////////////////
+	for (const file of args.bam_files) {
+		// file = {file_id}
+		const lst = [
+			'gdcFileUUID=' + file.file_id,
+			'gdcFilePosition=' + par.chr + '.' + par.start + '.' + par.stop,
+			// SV_EXPAND
+			'regions=' + JSON.stringify([{ chr: par.chr, start: par.start, stop: par.stop }])
+		]
+
+		const gdc_bam_files = await dofetch3('tkbam?downloadgdc=1&' + lst.join('&'), { headers })
+		if (gdc_bam_files.error) throw gdc_bam_files.error
+		if (!Array.isArray(gdc_bam_files) || gdc_bam_files.length == 0) throw 'gdc_bam_files not non empty array'
+
+		// This will need to be changed to a loop when viewing multiple regions in the same sample
+		const { filesize } = gdc_bam_files[0]
+		//tk.cloaktext.text('BAM slice downloaded. File size: ' + filesize)
+
+		//block.gdcBamSliceDownloadBtn.style('display', 'inline-block')
+		file.about.push({ k: 'Slice file size', v: filesize })
+	}
+
+	//////////////////////////////////////////////
+	//
+	// file slices are cached. launch block
+	//
+	//////////////////////////////////////////////
 	par.tklst = []
 	for (const file of args.bam_files) {
 		const tk = {
@@ -700,9 +782,10 @@ function renderBamSlice(args, genome, holder, debugmode) {
 			gdcToken: args.gdc_token,
 			gdcFile: {
 				uuid: file.file_id,
+				// SV_EXPAND
+				// tk remembers position for which slice is requested. this position is sent to backend to make the hashed cache file name persistent
 				position: par.chr + '.' + par.start + '.' + par.stop
 			},
-			downloadgdc: true,
 			aboutThisFile: file.about
 		}
 		if (args.variant) {
@@ -711,7 +794,6 @@ function renderBamSlice(args, genome, holder, debugmode) {
 		par.tklst.push(tk)
 	}
 	first_genetrack_tolist(genome, par.tklst)
-	import('./block').then(b => {
-		new b.Block(par)
-	})
+	const _ = await import('./block')
+	new _.Block(par)
 }
