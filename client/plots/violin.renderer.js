@@ -90,9 +90,9 @@ export default function violinRenderer(self) {
 
 			let lab
 
-			if (self.config.term2?.term?.type == 'float' || self.config.term2?.term?.type == 'integer') {
-				lab = svgG.append('text').text(self.config.term2.term.name)
-			} else lab = svgG.append('text').text(self.config.term.term.name)
+			// TODO need to add term2 label onto the svg
+			if (self.config.term2?.q?.mode == 'continuous') lab = svgG.append('text').text(self.config.term2.term.name)
+			else lab = svgG.append('text').text(self.config.term.term.name)
 
 			if (isH) {
 				lab

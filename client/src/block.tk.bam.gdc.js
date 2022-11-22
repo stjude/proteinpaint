@@ -8,8 +8,13 @@ import { addGeneSearchbox, string2variant } from '../dom/genesearch'
 import { Menu } from '../dom/menu'
 import { init_tabs } from '../dom/toggleButtons'
 import { default_text_color } from '../shared/common'
+import { renderTable } from '#dom/table'
 
 /*
+TODO
+
+SV_EXPAND: to be expanded to support SV review using subpanel
+
 *********** gdc_args{}
 gdc_args {}
 	gdc_token: <string>,
@@ -42,16 +47,15 @@ makeGdcIDinput
 makeSsmGeneSearch
 	makeArg_geneSearchbox
 	geneSearchInstruction
-makeSubmit
+makeSubmitAndNoPermissionDiv
 	validateInputs
-	renderBamSlice
+	sliceBamAndRender
 */
 
 const gdc_genome = 'hg38'
 const variantFlankingSize = 60 // bp
 const baminfo_rows = [
 	{ title: 'Entity ID', key: 'entity_id' },
-	{ title: 'Entity Type', key: 'entity_type' },
 	{ title: 'Experimental Strategy', key: 'experimental_strategy' },
 	{ title: 'Sample Type', key: 'sample_type' },
 	{ title: 'Size', key: 'file_size' }
@@ -74,6 +78,10 @@ hideTokenInput=true/false
 filter0=str
 	optional, stringified json obj as the cohort filter from gdc ATF
 	simply pass to backend to include in api queries
+
+Returns:
+
+a public API object with callbacks
 */
 export async function bamsliceui({
 	genomes,
@@ -83,6 +91,9 @@ export async function bamsliceui({
 	hideTokenInput = false,
 	debugmode = false
 }) {
+	// public api obj to be returned
+	const publicApi = {}
+
 	const genome = genomes[gdc_genome]
 	if (!genome) throw 'missing genome for ' + gdc_genome
 
@@ -133,7 +144,7 @@ export async function bamsliceui({
 
 	// for showing err
 	const saydiv = formdiv.append('div').style('grid-column', 'span 2')
-	const api = {}
+
 	// upload toke file
 	if (!hideTokenInput) makeTokenInput()
 
@@ -171,8 +182,8 @@ export async function bamsliceui({
 	}
 	await makeSsmGeneSearch()
 
-	// submit button
-	makeSubmit()
+	// submit button, "no permission" alert
+	const noPermissionDiv = makeSubmitAndNoPermissionDiv()
 
 	//////////////////////// helper functions
 
@@ -275,7 +286,6 @@ export async function bamsliceui({
 			.append('div')
 			.style('grid-column', 'span 2')
 			.style('display', 'none')
-			.style('border-left', '1px solid #ccc')
 			.style('margin', '20px 20px 20px 40px')
 			.style('overflow', 'hidden')
 		// either baminfo_table or bamselection_table is displayed
@@ -289,15 +299,9 @@ export async function bamsliceui({
 			.style('align-items', 'center')
 			.style('justify-items', 'left')
 
-		const bamselection_table = baminfo_div
-			.append('div')
-			.style('grid-template-columns', 'repeat(6, auto)')
-			.style('align-items', 'center')
-			.style('justify-items', 'left')
-			.style('overflow', 'scroll') //Fix for grid rows appearring defined area
-			.style('max-height', '20vh')
+		const bamselection_table = baminfo_div.append('div')
 
-		api.update = _arg => {
+		publicApi.update = _arg => {
 			gdc_search(null, _arg?.filter0 || filter0)
 		}
 
@@ -305,7 +309,12 @@ export async function bamsliceui({
 			/*
 			first argument is "event" which is unused, as gdc_search() is used as event listener
 			*/
+
+			noPermissionDiv.style('display', 'none')
+
+			// TODO explain usage of _filter0
 			const _filter0 = Object.keys(filter || {}).length ? filter : filter0 || null
+
 			try {
 				const gdc_id = gdcid_input.property('value').trim()
 				if (!gdc_id.length) {
@@ -333,7 +342,6 @@ export async function bamsliceui({
 				{
 					case_id: "9a2a226e-9605-4214-9320-469305e664e6"
 					entity_id: "TCGA-49-AARQ-11A-21D-A413-08"
-					entity_type: "aliquot"
 					experimental_strategy: "WXS"
 					file_size: "10.43 GB"
 					file_uuid: "f383b776-b162-4c61-909b-3b92d1853511"
@@ -403,83 +411,44 @@ export async function bamsliceui({
 		}
 
 		function update_multifile_table(files) {
+			const columns = []
+			for (const row of baminfo_rows) columns.push({ label: row.title })
+			const rows = []
+			for (const [i, onebam] of files.entries()) {
+				const row = []
+				for (const column of baminfo_rows)
+					if (column.url)
+						row.push({ html: `<a href=${row.url}${onebam.file_uuid} target=_blank>${onebam[row.key]}</a>` })
+					else row.push({ value: onebam[column.key] })
+				rows.push(row)
+			}
+
 			baminfo_div.style('display', 'block')
 			bamselection_table
-				.style('display', 'grid')
+				.style('display', 'block')
 				.selectAll('*')
 				.remove()
-			baminfo_table.style('display', 'none')
-
-			bamselection_table.style('grid-template-rows', 'repeat(' + files.length + ', 20px)').append('div') //Placeholder div over checkboxes
-
-			for (const row of baminfo_rows) {
-				bamselection_table
-					.append('div')
-					.style('padding', '3px 10px')
-					.text(row.title)
-					.style('opacity', 0.5)
-					.style('white-space', 'nowrap') //Fix for values overlapping on window resize
-					.style('text-overflow', 'ellipsis')
-					.style('overflow', 'hidden')
-					.style('max-width', '10vw')
-			}
-
-			for (const onebam of files) {
-				const wrapper = bamselection_table
-					.append('label') //Creates a row wrapper where all text is clickable
-					.style('display', 'contents')
-					.style('white-space', 'nowrap')
-					.style('overflow', 'hidden')
-					.style('text-overflow', 'ellipsis')
-					.style('max-width', '10vw')
-					.style('background-clip', 'padding-box')
-					.on('mouseenter', event => {
-						wrapper.style('background-color', '#fcfcca')
-					})
-					.on('mouseleave', event => {
-						wrapper.style('background-color', '')
-					})
-				const file_checkbox = wrapper
-					// .append('div')
-					.append('input')
-					.style('padding', '3px 10px')
-					.style('margin-left', '25px')
-					.attr('type', 'checkbox')
-					.on('change', event => {
-						if (file_checkbox.node().checked) {
-							gdc_args.bam_files.push({
-								file_id: onebam.file_uuid,
-								track_name: onebam.sample_type + ', ' + onebam.experimental_strategy + ', ' + onebam.entity_id,
-								about: baminfo_rows.map(i => {
-									return { k: i.title, v: onebam[i.key] }
-								})
+			renderTable({
+				rows,
+				columns,
+				div: bamselection_table,
+				noButtonCallback: (i, node) => {
+					const onebam = files[i]
+					if (node.checked) {
+						gdc_args.bam_files.push({
+							file_id: onebam.file_uuid,
+							track_name: onebam.sample_type + ', ' + onebam.experimental_strategy + ', ' + onebam.entity_id,
+							about: baminfo_rows.map(i => {
+								return { k: i.title, v: onebam[i.key] }
 							})
-						} else {
-							// remove from array if checkbox unchecked
-							gdc_args.bam_files = gdc_args.bam_files.filter(f => f.file_id != onebam.file_uuid)
-						}
-					})
-				for (const row of baminfo_rows) {
-					const d = wrapper
-						// const d = bamselection_table
-						.append('div')
-						.style('padding', '3px 10px')
-						.style('background', 'inherit')
-					if (row.url) {
-						d.html(`<a href=${row.url}${onebam.file_uuid} target=_blank>${onebam[row.key]}</a>`)
+						})
 					} else {
-						d.text(onebam[row.key])
+						// remove from array if checkbox unchecked
+						gdc_args.bam_files = gdc_args.bam_files.filter(f => f.file_id != onebam.file_uuid)
 					}
-				}
-			}
-
-			bamselection_table
-				.style('height', '0')
-				.transition()
-				.duration(500)
-				.style('height', 'auto')
-				.style('max-height', '20vh')
-			// .style('height', files.length * 24 + 'px') //Creates a gap between the 2nd to last and last row
+				},
+				singleMode: false
+			})
 		}
 	}
 
@@ -570,42 +539,10 @@ export async function bamsliceui({
 		ssmGeneArg.noSsmMessageInGeneHolder.style('display', 'none')
 		ssmGeneArg.tabs[0].tab.text(`${data.mlst.length} variant${data.mlst.length > 1 ? 's' : ''}`)
 
-		const variantsResults_div = ssmGeneArg.tabs[0].holder
-			.append('div')
-			// Creates the wrapper for the variant result rows
-			// Maintains the height and scroll bars
-			.style('overflow', 'scroll')
-			.style('max-height', '30vw')
+		const variantsResults_div = ssmGeneArg.tabs[0].holder.append('div')
 
-		function addRow() {
-			// Creates the rows with the positions 'fixed'
-			// Use rows for event listeners
-			const row = variantsResults_div
-				.append('div')
-				.style('display', 'grid')
-				.style('grid-template-columns', '2vw minmax(8vw,10vw) minmax(10vw,15vw) minmax(10vw,15vw) minmax(10vw,15vw)')
-				.style('gap', '5px')
-				.style('padding', '0.3em')
-				.style('align-items', 'center')
-				.style('justify-content', 'left')
-			return row
-		}
-
-		// header
-		{
-			const row = addRow()
-			row
-				.style('position', 'sticky')
-				.style('background-color', 'white')
-				.style('top', '0')
-			for (const h of ['', 'Gene', 'AAChange', 'Consequence', 'Position']) {
-				row
-					.append('div')
-					.style('top', '0')
-					.style('opacity', 0.3)
-					.text(h)
-			}
-		}
+		const columns = []
+		for (const column of ['Gene', 'AAChange', 'Consequence', 'Position']) columns.push({ label: column })
 
 		// group by gene
 		const gene2mlst = new Map()
@@ -613,93 +550,90 @@ export async function bamsliceui({
 			if (!gene2mlst.has(m.gene)) gene2mlst.set(m.gene, [])
 			gene2mlst.get(m.gene).push(m)
 		}
-
-		let i = 1
+		const rows = []
 		for (const [gene, mlst] of gene2mlst) {
-			let first = true
 			for (const m of mlst) {
-				m.row = addRow()
-				m.row
-					.append('div')
-					.text(i++)
-					.style('font-size', '.7em')
-					.style('color', default_text_color) //Fix for numbers appearing over sticky header
-				m.row
-					.append('div')
-					.text(first ? gene : '')
-					.style('font-style', 'italic')
-					.style('white-space', 'nowrap') //Fix for value overlapping position on small screen
-					.style('overflow', 'hidden')
-					.style('text-overflow', 'ellipsis')
-				m.row
-					.append('div')
-					.style('white-space', 'nowrap') //Fix for value overlapping consequence on small screen
-					.style('overflow', 'hidden')
-					.style('text-overflow', 'ellipsis')
-					.text(m.mname)
-				m.row
-					.append('div')
-					.text(m.consequence)
-					.style('font-size', '.8em')
-					.style('white-space', 'nowrap') //Fix for value overlapping position on small screen
-					.style('overflow', 'hidden')
-					.style('text-overflow', 'ellipsis')
-				m.row
-					.append('div')
-					.style('font-size', '.8em')
-					.style('color', default_text_color) //Fix for numbers appearing over sticky header
-					.text(m.chr + ':' + m.pos + ' ' + m.ref + '>' + m.alt)
-				first = false
-
-				m.row.on('mouseover', event => {
-					if (!m.isClicked) m.row.style('background-color', '#fcfcca')
-				})
-				m.row.on('mouseout', event => {
-					if (!m.isClicked) m.row.style('background-color', '')
-				})
-				m.row.on('click', event => {
-					for (const m2 of data.mlst) {
-						m2.isClicked = false
-						m2.row.style('background-color', '')
-					}
-					m.isClicked = true
-					m.row.style('background-color', '#ffe3e4')
-					gdc_args.ssmInput = {
-						chr: m.chr,
-						pos: m.pos - 1, // convert 1-based to 0-based
-						ref: m.ref,
-						alt: m.alt
-					}
-				})
+				const row = []
+				row.push({ value: gene, data: m })
+				row.push({ value: m.mname })
+				row.push({ value: m.consequence })
+				row.push({ value: m.chr + ':' + m.pos + ' ' + m.ref + '>' + m.alt })
+				rows.push(row)
 			}
 		}
+
+		renderTable({
+			rows,
+			columns,
+			div: variantsResults_div,
+			noButtonCallback: (i, node) => {
+				const m = rows[i][0].data
+				gdc_args.ssmInput = {
+					chr: m.chr,
+					pos: m.pos - 1, // convert 1-based to 0-based
+					ref: m.ref,
+					alt: m.alt
+				}
+			},
+			singleMode: true
+		})
 	}
-	function makeSubmit() {
-		formdiv
-			.append('div')
-			.style('grid-column', 'span 2')
+	function makeSubmitAndNoPermissionDiv() {
+		const d1 = formdiv.append('div')
+		const d2 = formdiv.append('div')
+
+		const button = d1
 			.append('button')
-			.style('margin', '20px 20px 20px 100px')
-			.style('padding', '5px 15px')
-			.style('border-radius', '15px')
+			.style('margin', '20px 20px 20px 40px')
+			.style('padding', '10px 25px')
+			.style('border-radius', '35px')
 			.text('Submit')
-			.on('click', event => {
+			.on('click', async () => {
 				try {
 					validateInputs(gdc_args, genome, hideTokenInput)
+					button.text = 'Loading ...'
+					button.property('disabled', true)
+					await sliceBamAndRender(gdc_args, genome, blockHolder, debugmode)
+					formdiv.style('display', 'none')
+					backBtnDiv.style('display', 'block')
+					blockHolder.style('display', 'block')
 				} catch (e) {
-					sayerror(saydiv, e.message || e)
-					if (e.stack) console.log(e.stack)
-					return
+					if (e == 'Permission denied') {
+						// backend throws {error:'Permission denied'} to signal the display of this alert
+						noPermissionDiv.style('display', 'block')
+					} else {
+						sayerror(saydiv, e.message || e)
+						if (e.stack) console.log(e.stack)
+					}
 				}
-				// success
-				formdiv.style('display', 'none')
-				backBtnDiv.style('display', '')
-				blockHolder.style('display', '')
-				renderBamSlice(gdc_args, genome, blockHolder, debugmode)
+				// turn submit button back to active so ui can be reused later
+				button.text = 'Submit'
+				button.property('disabled', false)
 			})
+
+		const noPermissionDiv = d2
+			.append('div')
+			.style('display', 'none')
+			.style('grid-column', 'span 2')
+			.style('margin', '20px')
+		noPermissionDiv
+			.append('div')
+			.text('Access Alert')
+			.style('font-size', '1.5em')
+			.style('opacity', 0.4)
+		noPermissionDiv
+			.append('div')
+			.style('border-top', 'solid 1px #eee')
+			.style('border-bottom', 'solid 1px #eee')
+			.style('padding', '20px 0px')
+			.style('margin-top', '5px')
+			.html(
+				'You are attempting to visualize a Sequence Read file that you are not authorized to access. Please request dbGaP Access to the project (click here for more information).'
+			)
+		return noPermissionDiv
 	}
 
-	return api
+	return publicApi
 }
 
 function geneSearchInstruction(d) {
@@ -783,7 +717,7 @@ function validateInputs(args, genome, hideTokenInput = false) {
 	}
 }
 
-function renderBamSlice(args, genome, holder, debugmode) {
+async function sliceBamAndRender(args, genome, holder, debugmode) {
 	// create arg for block init
 	const par = {
 		nobox: 1,
@@ -791,6 +725,7 @@ function renderBamSlice(args, genome, holder, debugmode) {
 		holder,
 		debugmode
 	}
+
 	if (args.position) {
 		par.chr = args.position.chr
 		par.start = args.position.start
@@ -799,8 +734,46 @@ function renderBamSlice(args, genome, holder, debugmode) {
 		par.chr = args.variant.chr
 		par.start = args.variant.pos - variantFlankingSize
 		par.stop = args.variant.pos + variantFlankingSize
+	} else {
+		throw 'SV_EXPAND here'
 	}
 
+	const headers = { 'Content-Type': 'application/json', Accept: 'application/json' }
+	if (args.gdc_token) {
+		headers['X-Auth-Token'] = args.gdc_token
+	}
+
+	//////////////////////////////////////////////
+	//
+	// call backend to slice bam and write to cache file
+	//
+	//////////////////////////////////////////////
+	for (const file of args.bam_files) {
+		// file = {file_id}
+		const lst = [
+			'gdcFileUUID=' + file.file_id,
+			'gdcFilePosition=' + par.chr + '.' + par.start + '.' + par.stop,
+			// SV_EXPAND
+			'regions=' + JSON.stringify([{ chr: par.chr, start: par.start, stop: par.stop }])
+		]
+
+		const gdc_bam_files = await dofetch3('tkbam?downloadgdc=1&' + lst.join('&'), { headers })
+		if (gdc_bam_files.error) throw gdc_bam_files.error
+		if (!Array.isArray(gdc_bam_files) || gdc_bam_files.length == 0) throw 'gdc_bam_files not non empty array'
+
+		// This will need to be changed to a loop when viewing multiple regions in the same sample
+		const { filesize } = gdc_bam_files[0]
+		//tk.cloaktext.text('BAM slice downloaded. File size: ' + filesize)
+
+		//block.gdcBamSliceDownloadBtn.style('display', 'inline-block')
+		file.about.push({ k: 'Slice file size', v: filesize })
+	}
+
+	//////////////////////////////////////////////
+	//
+	// file slices are cached. launch block
+	//
+	//////////////////////////////////////////////
 	par.tklst = []
 	for (const file of args.bam_files) {
 		const tk = {
@@ -809,9 +782,10 @@ function renderBamSlice(args, genome, holder, debugmode) {
 			gdcToken: args.gdc_token,
 			gdcFile: {
 				uuid: file.file_id,
+				// SV_EXPAND
+				// tk remembers position for which slice is requested. this position is sent to backend to make the hashed cache file name persistent
 				position: par.chr + '.' + par.start + '.' + par.stop
 			},
-			downloadgdc: true,
 			aboutThisFile: file.about
 		}
 		if (args.variant) {
@@ -820,7 +794,6 @@ function renderBamSlice(args, genome, holder, debugmode) {
 		par.tklst.push(tk)
 	}
 	first_genetrack_tolist(genome, par.tklst)
-	import('./block').then(b => {
-		new b.Block(par)
-	})
+	const _ = await import('./block')
+	new _.Block(par)
 }

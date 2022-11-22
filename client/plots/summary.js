@@ -174,7 +174,11 @@ function setRenderers(self) {
 						isVisible: () => true,
 						disabled: d => false,
 						getTw: tw => {
-							if (tw.term.bins) tw.q = tw.term.bins.default
+							if (!tw.qCacheByMode) tw.qCacheByMode = {}
+							tw.qCacheByMode[tw.q.mode] = tw.q
+							// If tw.q is empty/undefined, the default q
+							// will be assigned by fillTw by term type
+							tw.q = tw.qCacheByMode.discrete
 							return tw
 						},
 						active: true
@@ -189,7 +193,9 @@ function setRenderers(self) {
 							self.config.term2?.term.type === 'integer' ||
 							self.config.term2?.term.type === 'float',
 						getTw: tw => {
-							tw.q = { mode: 'continuous' }
+							if (!tw.qCacheByMode) tw.qCacheByMode = {}
+							tw.qCacheByMode[tw.q.mode] = tw.q
+							tw.q = tw.qCacheByMode.continuous || { mode: 'continuous' }
 							return tw
 						},
 						active: false
@@ -243,8 +249,9 @@ function setRenderers(self) {
 					}
 
 					const termKey =
-						(self.config.term?.q?.mode !== undefined && self.config.term?.term.type == 'float') ||
-						self.config.term?.term.type == 'integer'
+						self.config.term?.term.type == 'float' ||
+						self.config.term?.term.type == 'integer' ||
+						this.config.term.q.mode == 'continuous'
 							? 'term'
 							: 'term2'
 
@@ -322,7 +329,9 @@ export async function getPlotConfig(opts, app) {
 				orientation: 'horizontal',
 				unit: 'abs',
 				overlay: 'none',
-				divideBy: 'none'
+				divideBy: 'none',
+				rowlabelw: 250,
+				asterisksVisible: true
 			},
 			//TODO can import getPlotConfig from violinplot
 			violin: {

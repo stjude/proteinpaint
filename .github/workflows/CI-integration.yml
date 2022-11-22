@@ -1,0 +1,57 @@
+name: Integration tests
+
+on:
+  schedule:
+    - cron:  '0 6 * * *'
+
+jobs:
+  build:
+    if: github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 16
+
+      - name: Install packages
+        run: npm install
+
+      - name: Copy serverconfig.json to root
+        run: mv server/test/serverconfig.json .
+
+      - name: Create cache folder
+        run: mkdir cache
+
+      - name: install xvfb
+        run: sudo apt-get install xvfb
+
+      - name: Run local server and integration tests
+        run: xvfb-run --auto-servernum npm run test:integration
+
+      - name: Get current time
+        uses: josStorer/get-current-time@v2.0.2
+        id: current-time
+        with:
+          format: E, MMM dd yyyy HH:mm:ss Z
+          utcOffset: "-06:00"
+
+      - name: Set short git commit SHA
+        id: vars
+        run: echo "SHORT_SHA=$(git rev-parse --short ${{ github.sha }})" >> $GITHUB_ENV
+
+      - name: Post build results on slack
+        id: slack
+        if: always()
+        uses: slackapi/slack-github-action@v1.23.0
+        with:
+          payload: |
+            {
+              "status": "${{ job.status }}",
+              "commit": "${{ env.SHORT_SHA }}",
+              "date-time": "${{ steps.current-time.outputs.formattedTime }}"
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}

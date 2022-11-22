@@ -1,5 +1,4 @@
 const fs = require('fs')
-const termdbsql = require('./termdb.sql')
 const { scaleLinear } = require('d3-scale')
 const { bin } = require('d3-array')
 const serverconfig = require('./serverconfig')
@@ -23,6 +22,8 @@ export async function trigger_getViolinPlotData(q, res, ds, genome) {
 	const term = ds.cohort.termdb.q.termjsonByOneid(q.termid)
 
 	if (!term) throw '.termid invalid'
+	//term on backend should always be an integer term
+	if (term.type != 'integer' && term.type != 'float') throw 'term type is not integer/float.'
 
 	const twLst = [{ id: q.termid, term, q: { mode: 'continuous' } }]
 
@@ -33,7 +34,7 @@ export async function trigger_getViolinPlotData(q, res, ds, genome) {
 		twLst.push(divideTw)
 	}
 
-	const data = await getData({ terms: twLst, filter: q.filter }, ds, genome)
+	const data = await getData({ terms: twLst, filter: q.filter, currentGeneNames: q.currentGeneNames }, ds, genome)
 	if (data.error) throw data.error
 
 	let min = Number.MAX_VALUE,
@@ -42,12 +43,22 @@ export async function trigger_getViolinPlotData(q, res, ds, genome) {
 	let key2values = new Map()
 
 	for (const [c, v] of Object.entries(data.samples)) {
-		if ((term.values && term.values[(v[term.id]?.value)]?.uncomputable) || !v[term.id]) {
+		// v = {<termId> : {key, value}, ...}
+
+		//if there is no value for term then skip that.
+		if (!v[term.id]) continue
+
+		if (term.values?.[v[term.id]?.value]?.uncomputable) {
 			//skip these values
 			continue
 		}
 
-		if (q.divideTw && v[term.id]) {
+		if (divideTw) {
+			if (!v[divideTw.id]) {
+				// if there is no value for divideTw then skip this
+				continue
+			}
+
 			if (!key2values.has(v[divideTw.id]?.key)) key2values.set(v[divideTw.id]?.key, [])
 			key2values.get(v[divideTw.id]?.key).push(v[term.id]?.value)
 		} else {
@@ -61,6 +72,8 @@ export async function trigger_getViolinPlotData(q, res, ds, genome) {
 		}
 	}
 
+	key2values = [...key2values.entries()].sort()
+
 	const result = {
 		min: min,
 		max: max,
@@ -71,9 +84,9 @@ export async function trigger_getViolinPlotData(q, res, ds, genome) {
 	for (const [key, values] of key2values) {
 		if (q.divideTw) {
 			result.plots.push({
-				label: (divideTw.term.values ? divideTw.term.values[key].label : key) + ', n=' + values.length,
+				label: (divideTw?.term?.values?.[key]?.label || key) + ', n=' + values.length,
 				values,
-				plotValueCount: values.length
+				plotValueCount: values?.length
 			})
 		} else {
 			result.plots.push({

@@ -1,6 +1,6 @@
 {
   "name": "@stjude/proteinpaint-client",
-  "version": "2.6.0",
+  "version": "2.6.1",
   "description": "a genomics visualization tool for exploring a cohort's genotype and phenotype data",
   "main": "dist/app.js",
   "module": "dist/app.js",
@@ -25,6 +25,9 @@
     "test": "node ./test/import-specs.js && npm run tape",
     "test:unit": "npx tape **/*.unit.spec.js",
     "tape": "cat ../public/bin/proteinpaint.js ./test/init.js | tape-run --static ../public",
+    "pretest:integration": "webpack --config=./webpack.test.config.js",
+    "test:integration": "npm run tape:integration",
+    "tape:integration": "cat ../public/bin/testrunproteinpaint.js ./test/initIntegration.js | tape-run --static ../public",
     "examples": "node ./test/import-specs.js name=_x_.examples && npm run tape",
     "rollw": "rm -rf dist && rollup -c ./rollup.config.js -w",
     "build": "rm -rf dist && rollup -c ./rollup.config.js",

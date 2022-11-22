@@ -75,6 +75,10 @@ function validateArg(q, ds, genome) {
 		if (!tw.term.name) tw.term = q.ds.cohort.termdb.q.termjsonByOneid(tw.term.id)
 		if (!tw.q) console.log('do something??')
 	}
+	if (q.currentGeneNames) {
+		if (typeof q.currentGeneNames == 'string') q.currentGeneNames = JSON.parse(q.currentGeneNames)
+		if (!Array.isArray(q.currentGeneNames)) throw 'currentGeneNames[] is not array'
+	}
 }
 
 async function getSampleData(q) {
@@ -233,7 +237,7 @@ async function getSampleData_gdc(q, termWrappers) {
 	// currentGeneNames[] contains gene symbols
 	// convert to ENST isoforms to work with gdc api
 	const isoforms = []
-	for (const n of JSON.parse(q.currentGeneNames)) {
+	for (const n of q.currentGeneNames) {
 		const data = q.genome.genedb.get_gene2canonicalisoform.get(n)
 		if (!data.isoform) {
 			// no isoform found
@@ -262,9 +266,26 @@ async function getSampleData_gdc(q, termWrappers) {
 		}
 		for (const tw of termWrappers) {
 			const v = s[tw.term.id]
-			s2[tw.term.id] = {
-				key: v,
-				value: v
+
+			////////////////////////////
+			// somehow value can be undefined! must skip them
+			////////////////////////////
+
+			if (Array.isArray(v) && v[0] != undefined && v[0] != null) {
+				////////////////////////////
+				// "v" can be array
+				// e.g. "age of diagnosis"
+				////////////////////////////
+
+				s2[tw.term.id] = {
+					key: v[0],
+					value: v[0]
+				}
+			} else if (v != undefined && v != null) {
+				s2[tw.term.id] = {
+					key: v,
+					value: v
+				}
 			}
 		}
 		samples[s.sample_id] = s2

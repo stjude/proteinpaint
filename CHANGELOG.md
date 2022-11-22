@@ -2,7 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## 2.6.1
+
+- fixes to the summary plot toggling
+- track integration test data including minimal reference data slices
+
+GDC-related
+- more checks for gdc bam slice download, indexing
+
 ## 2.6.0
+
 - support a samplelst term-type
 - Github Actions for unit tests
 

@@ -1,4 +1,4 @@
-name: Build and run tests
+name: Unit tests
 
 on:
   push:
@@ -11,9 +11,15 @@ jobs:
   build:
     if: github.event.pull_request.draft == false
     runs-on: ubuntu-latest
+    timeout-minutes: 20
 
     steps:
       - uses: actions/checkout@v3
+
+      - uses: pre-commit/action@v3.0.0
+        with:
+          extra_args:
+            detect-secrets --all-files
 
       - uses: actions/setup-node@v3
         with:

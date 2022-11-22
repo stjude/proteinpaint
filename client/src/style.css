@@ -1122,31 +1122,25 @@ h2 {
 }
 /* client/dom/sandbox.js end */
 
-.sjpp_grid_container{
-    display:grid;
-	background-color:white;
-	padding:0.2em;
-    margin: 0 auto;
-}
 
-.sjpp_grid_row_wrapper {
-    display: contents;
-}
-  
-.sjpp_grid_row_wrapper:hover > .sjpp_grid_item {
+.sjpp_row_wrapper:hover {
     background: #fcfcca !important; 
 }
+.sjpp_row_wrapper:nth-child(odd) {background: rgb(237, 237, 237)}
 
-.sjpp_grid_header {
+.sjpp_table_header {
     font-family: 'Arial';
     font-size: 1em;
     opacity: 0.5;
+    text-align: left;
 }
 
-.sjpp_grid_item {
+.sjpp_table_item {
     padding: 5px;
     font-size: 1em;
-    align-items: center;
+    text-align: left;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 

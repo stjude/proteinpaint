@@ -1,0 +1,1 @@
+Closest	x	y	Input label	Closest cluster

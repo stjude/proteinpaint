@@ -75,19 +75,17 @@ class ViolinPlot {
 		}
 
 		return {
-			genome: appState.vocab.genome,
-			dslabel: appState.vocab.dslabel,
-			nav: appState.nav,
 			termfilter: appState.termfilter,
-			config,
-			bar_click_menu: appState.bar_click_menu || {},
-			// optional
-			activeCohort: appState.activeCohort,
-			termdbConfig: appState.termdbConfig
+			config: Object.assign({}, config, {
+				settings: {
+					violin: config.settings.violin
+				}
+			})
 		}
 	}
 
 	async main() {
+		if (this.state.config.childType != this.type) return
 		this.config = this.state.config
 		if (this.dom.header)
 			this.dom.header.html(

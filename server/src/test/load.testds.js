@@ -37,7 +37,8 @@ function init(dslabel) {
 exports.init = init
 
 function get_dataset(dslabel) {
-	const ds = require('../../dataset/' + dslabel)
+	const _ds = require('../../dataset/' + dslabel)
+	const ds = typeof _ds == 'function' ? _ds({}) : _ds
 	if (!ds) throw 'invalid dslabel'
 	if (!ds.cohort) throw 'ds.cohort missing'
 

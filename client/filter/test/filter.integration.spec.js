@@ -36,7 +36,7 @@ function getOpts(_opts = {}) {
 		_opts
 	)
 
-	const vocab = _opts.vocab ? _opts.vocab : { route: 'termdb', genome: 'hg38', dslabel: 'TermdbTest' }
+	const vocab = _opts.vocab ? _opts.vocab : { route: 'termdb', genome: 'hg38-test', dslabel: 'TermdbTest' }
 
 	opts.filter = filterInit({
 		btn: holder.append('div'),
@@ -166,6 +166,8 @@ tape('\n', test => {
 })
 
 tape('empty filter: visible controls', async test => {
+	test.timeoutAfter(3000)
+	test.plan(3)
 	const opts = getOpts({
 		filterData: {
 			type: 'tvslst',
@@ -200,6 +202,8 @@ tape('empty filter: visible controls', async test => {
 })
 
 tape('1-entry root filter: visible controls', async test => {
+	test.timeoutAfter(3000)
+	test.plan(9)
 	const opts = getOpts({
 		filterData: {
 			type: 'tvslst',
@@ -267,6 +271,8 @@ tape('1-entry root filter: visible controls', async test => {
 })
 
 tape('2-entry root filter: visible controls', async test => {
+	test.timeoutAfter(5000)
+	test.plan(19)
 	const opts = getOpts({
 		filterData: {
 			type: 'tvslst',

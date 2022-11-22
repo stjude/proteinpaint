@@ -2,16 +2,16 @@ import { select as d3select } from 'd3-selection'
 import { pointer } from 'd3-selection'
 import { axisRight, axisTop } from 'd3-axis'
 import { scaleLinear } from 'd3-scale'
-import { axisstyle } from '../dom/axisstyle'
-import { newpane } from './client'
-import { Menu } from '../dom/menu'
-import { sayerror } from '../dom/sayerror'
-import { appear } from '../dom/animation'
-import { dofetch3 } from '../common/dofetch'
-import { make_radios } from '../dom/radiobutton'
-import { make_table_2col } from '../dom/table2col'
-import { make_one_checkbox } from '../dom/checkbox'
-import urlmap from '../common/urlmap'
+import { axisstyle } from '#dom/axisstyle'
+import { newpane } from '#src/client'
+import { Menu } from '#dom/menu'
+import { sayerror } from '#dom/sayerror'
+import { appear } from '#dom/animation'
+import { dofetch3 } from '#common/dofetch'
+import { make_radios } from '#dom/radiobutton'
+import { make_table_2col } from '#dom/table2col'
+import { make_one_checkbox } from '#dom/checkbox'
+import urlmap from '#common/urlmap'
 
 /*
 important: tk.uninitialized will be deleted by getData at the first launch
@@ -28,7 +28,6 @@ tk.dom.variantg // if defined.
 
 ******* attributes ********
 
-tk.downloadgdc:true // Downloads bam file from gdc, single-use flag
 tk.gdcFile={} // the tk runs on a valid gdc bam slice
 	.uuid=str
 	.position=str
@@ -201,8 +200,16 @@ export async function loadTk(tk, block) {
 			}
 		}
 		tk.height_main = tk.height = 100
+
+		if (typeof e == 'string' && e.startsWith('No reads in view range')) {
+			// makeshift method for server to signal "no read" to client and wipe these labels
+			tk.leftlabel_count.text('')
+			tk.leftlabel_skip.text('')
+		}
+
 		block.tkcloakoff(tk, { error: e.message || e })
 	}
+	setLeftlabelWidth(tk, block)
 
 	block.block_setheight()
 }
@@ -224,24 +231,6 @@ async function getData(tk, block, additional = []) {
 	if (tk.gdcFile) {
 		lst.push('gdcFileUUID=' + tk.gdcFile.uuid)
 		lst.push('gdcFilePosition=' + tk.gdcFile.position)
-	}
-
-	if (tk.downloadgdc) {
-		if (!tk.gdcFile) throw '.gdcFile{} missing'
-		// ask backend to call gdc slicing api to slice the uuid on this tk
-		delete tk.downloadgdc
-		tk.cloaktext.text('Downloading BAM slice ...')
-		const gdc_bam_files = await dofetch3('tkbam?downloadgdc=1&' + lst.join('&'), { headers })
-
-		if (gdc_bam_files.error) throw gdc_bam_files.error
-		if (!Array.isArray(gdc_bam_files) || gdc_bam_files.length == 0) throw 'invalid returned data'
-		// This will need to be changed to a loop when viewing multiple regions in the same sample
-		const { filesize } = gdc_bam_files[0]
-		tk.cloaktext.text('BAM slice downloaded. File size: ' + filesize)
-		block.gdcBamSliceDownloadBtn.style('display', 'inline-block')
-		if (tk.aboutThisFile) {
-			tk.aboutThisFile.push({ k: 'Slice file size', v: filesize })
-		}
 	}
 
 	if (tk.variants) {
@@ -397,9 +386,6 @@ or update existing groups, in which groupidx will be provided
 			}
 			y += messagerowheight
 		}
-		if (tk.show_readnames) {
-			tk.leftLabelMaxwidth = Math.max(tk.leftLabelMaxwidth, g.ReadNameMaxwidth)
-		}
 	}
 
 	setTkHeight(tk)
@@ -412,34 +398,32 @@ or update existing groups, in which groupidx will be provided
 			countt += g.data.count.t
 		}
 	}
-	tk.leftlabel_count
-		.text((countr ? countr + ' reads' : '') + (countt ? ', ' + countt + ' templates' : ''))
-		.each(function() {
-			tk.leftLabelMaxwidth = Math.max(tk.leftLabelMaxwidth, this.getBBox().width)
-		})
+
+	tk.leftlabel_count.text(
+		(countr ? countr + ' read' + (countr > 1 ? 's' : '') : '') +
+			(countt ? ', ' + countt + ' template' + (countt > 1 ? 's' : '') : '')
+	)
+
 	if (data.count.skipped) {
-		tk.leftlabel_skip.text(data.count.skipped + ' reads skipped').each(function() {
-			tk.leftLabelMaxwidth = Math.max(tk.leftLabelMaxwidth, this.getBBox().width)
-		})
+		tk.leftlabel_skip.text(`${data.count.skipped} read${data.count.skipped > 1 ? 's' : ''} skipped`)
 	} else {
 		tk.leftlabel_skip.text('')
-	}
-	block.setllabel() // calculate left margin based on max left width
-	if (!tk.show_readnames) {
-		tk.OriginalleftLabelMaxwidth = tk.leftLabelMaxwidth // Original leftlabelmaxwidth without read names
-	} else {
-		tk.leftLabelMaxwidth = tk.OriginalleftLabelMaxwidth
 	}
 	tk.read_alignment_diff_scores_asc = data.read_alignment_diff_scores_asc
 }
 
-function update_left_margin(tk, block) {
-	tk.leftLabelMaxwidth = tk.OriginalleftLabelMaxwidth
-	for (const g of tk.groups) {
-		if (g.ReadNameMaxwidth) {
-			tk.leftLabelMaxwidth = Math.max(tk.leftLabelMaxwidth, g.ReadNameMaxwidth)
-		}
+// update tk.leftLabelMaxwidth and call block.setllabel() at the end of normal and error rendering
+function setLeftlabelWidth(tk, block) {
+	const lst = [
+		tk.tklabel.node().getBBox().width,
+		tk.leftlabel_count.node().getBBox().width,
+		tk.leftlabel_skip.node().getBBox().width,
+		tk.leftlabel_about ? tk.leftlabel_about.node().getBBox().width : 0
+	]
+	if (tk.show_readnames) {
+		for (const g of tk.groups) lst.push(g.ReadNameMaxwidth)
 	}
+	tk.leftLabelMaxwidth = Math.max(...lst)
 	block.setllabel() // calculate left margin based on max left width
 }
 
@@ -843,7 +827,6 @@ function updateExistingGroups(data, tk, block) {
 					group.dom.read_names_g.selectAll('*').remove()
 					group.ReadNameMaxwidth = 0
 				}
-				update_left_margin(tk, block)
 				if (group.my_partstack) {
 					// Checks if the y-position of click is defined or not. Helpful when show_readnames button is clicked without having to click again to invoke partstack
 					if (group.data.allowpartstack) {
@@ -903,6 +886,10 @@ function update_box_stay(group, tk, block) {
 }
 
 function makeTk(tk, block) {
+	if (tk.gdcFile) {
+		block.gdcBamSliceDownloadBtn.style('display', 'inline-block')
+	}
+
 	may_add_urlparameter(tk, block)
 
 	// if to hide PCR or optical duplicates
@@ -1050,21 +1037,6 @@ function may_add_urlparameter(tk, block) {
 			}
 		}
 	}
-
-	// Checking to see if need to query GDC for bam file
-	if (u2p.has('gdc')) {
-		const str = u2p.get('gdc')
-		const [file, token] = str.split(',')
-		if (file && token) {
-			tk.gdcToken = token
-			const r = block.rglst[0]
-			tk.gdcFile = {
-				uuid: file,
-				position: r.chr + '.' + r.start + '.' + r.stop
-			}
-			tk.downloadgdc = true // single use
-		}
-	}
 }
 
 function makeGroup(gd, tk, block, data) {
@@ -1115,11 +1087,12 @@ function makeGroup(gd, tk, block, data) {
 			// When reads are downsampled a new row is created, therefore an additional row is needed, so the diff_score_axis needs to be pushed one row down so that it does not overlap with "Diff Score" text
 			diff_score_height = tk.pileupheight + tk.dom.variantrowheight * 3
 		}
+
 		const axis = axisTop()
-			.tickValues([tk.min_diff_score.toFixed(1), tk.max_diff_score.toFixed(1)])
+			.tickValues([tk.min_diff_score, tk.max_diff_score])
 			.scale(
 				scaleLinear()
-					.domain([tk.min_diff_score.toFixed(1), tk.max_diff_score.toFixed(1)])
+					.domain([tk.min_diff_score, tk.max_diff_score])
 					.range([0, gd.diff_scores_img.width])
 			)
 		axisstyle({
@@ -1282,9 +1255,6 @@ function makeGroup(gd, tk, block, data) {
 				delete group.my_partstack // y-position of click that invoked partstack originally
 			}
 			group.ReadNameMaxwidth = 0
-			if (tk.show_readnames) {
-				update_left_margin(tk, block)
-			}
 			group.data = group.data_fullstack
 			renderGroup(group, tk, block)
 			setTkHeight(tk)
@@ -2954,13 +2924,9 @@ function renderGroup(group, tk, block) {
 				.attr('height', group.data.diff_scores_img.height)
 			if (tk.show_readnames) {
 				group.dom.read_names_g.selectAll('*').remove()
-				tk.leftLabelMaxwidth = tk.OriginalleftLabelMaxwidth
 			}
 		}
 		group.dom.rightg.vslider.g.transition().attr('transform', 'scale(0)')
 	}
 	group.dom.img_cover.attr('width', group.data.width).attr('height', group.data.height)
-	if (tk.show_readnames) {
-		update_left_margin(tk, block)
-	}
 }

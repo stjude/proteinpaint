@@ -15,7 +15,7 @@ export function getHandler(self) {
 				.append('div')
 				.style('margin', '10px')
 				.style('font-size', '0.8rem')
-				.html(`<b>Select ${group1.name}</b> samples. <b>Others</b> excludes these samples`)
+				.html(`<b>Select ${group1.name}</b> samples. <br><b>Others</b> excludes these samples`)
 			const tableDiv = div.append('div').style('border', '1px solid gray')
 
 			showSamples()
@@ -29,6 +29,7 @@ export function getHandler(self) {
 					rows,
 					columns,
 					div: tableDiv,
+					style: { max_width: '250px' },
 					buttons: [
 						{
 							text: 'Submit',

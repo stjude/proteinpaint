@@ -248,7 +248,7 @@ makeURL([
 
 		['ACVR2A K437fs','?gdcbamslice=1&gdc_id=fe42ed1d-e913-4214-a3a4-7baf5288dbb7_wxs_gdc_realn.bam&gdc_var=chr2:g.147926117delA'], // chr2.147926116.TA.T
 
-		['PTPN4 X605 mnv','?gdcbamslice=1&gdc_id=8577ef8a-f071-49cc-8158-05dfc52f3c70&gdc_var=chr2:g.119955155_119955159delinsTTTTT'],
+		['PTPN4 X605 mnv (no permission)','?gdcbamslice=1&gdc_id=8577ef8a-f071-49cc-8158-05dfc52f3c70&gdc_var=chr2:g.119955155_119955159delinsTTTTT'],
 
 		['Skipped by workflow','?gdcbamslice=1&gdc_id=e2d8ca95-6a3d-48e3-abfc-ce5ee294e954'],
 		['not found in cohort','example.gdc.bam.html?gdc_id=TCGA-06-0211'],
@@ -594,25 +594,10 @@ makeURL([
 				}
 			]
 		})],
-		'others',
-		
-		['scatter plot', '?noheader=1&mass={"dslabel":"PNET","genome":"hg19","plots":[{"chartType":"sampleScatter","name":"Methylome TSNE","colorTW":{"id":"TSNE Category"}}]}'],
 
+		'filter',
 
-		['scatter plot + gene', '?noheader=1&mass={"dslabel":"PNET","genome":"hg19","plots":[{"chartType":"sampleScatter","name":"Methylome TSNE","colorTW":{"id":"TSNE Category"}, "shapeTW": {"term": {"name": "KRAS", "type": "geneVariant"}}}]}'],
-
-		['survival','?noheader=1&mass='+JSON.stringify( {
-			dslabel:'TermdbTest',
-			nav: { activeTab: 1 },
-			genome:'hg38',
-			plots: [ {
-				chartType:'survival',
-				term2: { id: 'diaggrp' },
-				term: { id: 'efs' }
-			} ],
-		})],
-
-		['cat filter','?noheader=1&mass='+JSON.stringify( {
+		['categorical','?noheader=1&mass='+JSON.stringify( {
 			dslabel:'SJLife',
 			genome:'hg38',
 			nav: { activeTab:2, },
@@ -630,8 +615,32 @@ makeURL([
 				}
 			},
 		})],
+		['cat&num','?noheader=1&mass='+JSON.stringify( {
+			dslabel:'SJLife',
+			genome:'hg38',
+			nav: { activeTab:2, },
+			termfilter: {
+				filter:{
+					type:'tvslst',
+					join:'and',
+					in:true,
+					lst:[
+						{type:'tvs',tvs: {
+							term:{id:'diaggrp'},
+							values:[{key:'Acute lymphoblastic leukemia',label:'Acute lymphoblastic leukemia'}]
+						}},
+						{type:'tvs',tvs: {
+							term: {id: "agedx", name: "agedx", type:'float' },
+							ranges: [
+								{startunbounded:true,stop:10,stopinclusive:true}
+							]
+						}}
+					]
+				}
+			},
+		})],
 
-		['num filter','?noheader=1&mass='+JSON.stringify( {
+		['numeric','?noheader=1&mass='+JSON.stringify( {
 			dslabel:'SJLife',
 			genome:'hg38',
 			nav: { activeTab:2, },
@@ -659,7 +668,7 @@ makeURL([
 			},
 		})],
 
-		['!num filter','?noheader=1&mass='+JSON.stringify( {
+		['!numeric','?noheader=1&mass='+JSON.stringify( {
 			dslabel:'SJLife',
 			genome:'hg38',
 			nav: { activeTab:2, },
@@ -686,6 +695,26 @@ makeURL([
 				}
 			},
 		})],
+
+
+		'others',
+		
+		['scatter plot', '?noheader=1&mass={"dslabel":"PNET","genome":"hg19","plots":[{"chartType":"sampleScatter","name":"Methylome TSNE","colorTW":{"id":"TSNE Category"}}]}'],
+
+
+		['scatter plot + gene', '?noheader=1&mass={"dslabel":"PNET","genome":"hg19","plots":[{"chartType":"sampleScatter","name":"Methylome TSNE","colorTW":{"id":"TSNE Category"}, "shapeTW": {"term": {"name": "KRAS", "type": "geneVariant"}}}]}'],
+
+		['survival','?noheader=1&mass='+JSON.stringify( {
+			dslabel:'TermdbTest',
+			nav: { activeTab: 1 },
+			genome:'hg38',
+			plots: [ {
+				chartType:'survival',
+				term2: { id: 'diaggrp' },
+				term: { id: 'efs' }
+			} ],
+		})],
+
 	]
 },
 {name:section_regression,
