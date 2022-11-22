@@ -850,7 +850,7 @@ export default function barsRenderer(barsapp, holder) {
 		const t = event.target.tagName == 'tspan' ? event.target.parentNode : event.target
 		const d = t.__data__
 
-		if (d && t.tagName == 'rect') {
+		if (d && (t.tagName == 'rect' || t.nodeName == 'text')) {
 			//console.log(_data_)
 			//if (!hm.h.isEmptyCell(d)) {
 			currCell = d
