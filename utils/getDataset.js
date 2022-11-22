@@ -46,7 +46,7 @@ for (let i = 2; i < process.argv.length; i++) {
 
 function scpHpc(file) {
 	// scp from hpc:~/tp/file, to local tp/file
-	exec('scp ' + path.join('hpc:~/tp', file) + path.join(tp, file))
+	exec(`scp ${path.join('hpc:~/tp', file)} ${path.join(tp, file)}`)
 }
 
 // function name is dataset identifier used in commandline argument
