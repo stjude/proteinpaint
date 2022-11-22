@@ -276,7 +276,6 @@ export async function bamsliceui({
 			.append('div')
 			.style('grid-column', 'span 2')
 			.style('display', 'none')
-			.style('border-left', '1px solid #ccc')
 			.style('margin', '20px 20px 20px 40px')
 			.style('overflow', 'hidden')
 		// either baminfo_table or bamselection_table is displayed
@@ -290,12 +289,7 @@ export async function bamsliceui({
 			.style('align-items', 'center')
 			.style('justify-items', 'left')
 
-		const bamselection_table = baminfo_div
-			.append('div')
-			.style('grid-template-columns', 'repeat(6, auto)')
-			.style('align-items', 'center')
-			.style('justify-items', 'left')
-			.style('overflow', 'scroll') //Fix for grid rows appearring defined area
+		const bamselection_table = baminfo_div.append('div')
 
 		api.update = _arg => {
 			gdc_search(null, _arg?.filter0 || filter0)
@@ -531,42 +525,10 @@ export async function bamsliceui({
 		ssmGeneArg.noSsmMessageInGeneHolder.style('display', 'none')
 		ssmGeneArg.tabs[0].tab.text(`${data.mlst.length} variant${data.mlst.length > 1 ? 's' : ''}`)
 
-		const variantsResults_div = ssmGeneArg.tabs[0].holder
-			.append('div')
-			// Creates the wrapper for the variant result rows
-			// Maintains the height and scroll bars
-			.style('overflow', 'scroll')
-			.style('max-height', '30vw')
+		const variantsResults_div = ssmGeneArg.tabs[0].holder.append('div')
 
-		function addRow() {
-			// Creates the rows with the positions 'fixed'
-			// Use rows for event listeners
-			const row = variantsResults_div
-				.append('div')
-				.style('display', 'grid')
-				.style('grid-template-columns', '2vw minmax(8vw,10vw) minmax(10vw,15vw) minmax(10vw,15vw) minmax(10vw,15vw)')
-				.style('gap', '5px')
-				.style('padding', '0.3em')
-				.style('align-items', 'center')
-				.style('justify-content', 'left')
-			return row
-		}
-
-		// header
-		{
-			const row = addRow()
-			row
-				.style('position', 'sticky')
-				.style('background-color', 'white')
-				.style('top', '0')
-			for (const h of ['', 'Gene', 'AAChange', 'Consequence', 'Position']) {
-				row
-					.append('div')
-					.style('top', '0')
-					.style('opacity', 0.3)
-					.text(h)
-			}
-		}
+		const columns = []
+		for (const column of ['Gene', 'AAChange', 'Consequence', 'Position']) columns.push({ label: column })
 
 		// group by gene
 		const gene2mlst = new Map()
@@ -574,67 +536,35 @@ export async function bamsliceui({
 			if (!gene2mlst.has(m.gene)) gene2mlst.set(m.gene, [])
 			gene2mlst.get(m.gene).push(m)
 		}
-
-		let i = 1
+		const rows = []
 		for (const [gene, mlst] of gene2mlst) {
-			let first = true
 			for (const m of mlst) {
-				m.row = addRow()
-				m.row
-					.append('div')
-					.text(i++)
-					.style('font-size', '.7em')
-					.style('color', default_text_color) //Fix for numbers appearing over sticky header
-				m.row
-					.append('div')
-					.text(first ? gene : '')
-					.style('font-style', 'italic')
-					.style('white-space', 'nowrap') //Fix for value overlapping position on small screen
-					.style('overflow', 'hidden')
-					.style('text-overflow', 'ellipsis')
-				m.row
-					.append('div')
-					.style('white-space', 'nowrap') //Fix for value overlapping consequence on small screen
-					.style('overflow', 'hidden')
-					.style('text-overflow', 'ellipsis')
-					.text(m.mname)
-				m.row
-					.append('div')
-					.text(m.consequence)
-					.style('font-size', '.8em')
-					.style('white-space', 'nowrap') //Fix for value overlapping position on small screen
-					.style('overflow', 'hidden')
-					.style('text-overflow', 'ellipsis')
-				m.row
-					.append('div')
-					.style('font-size', '.8em')
-					.style('color', default_text_color) //Fix for numbers appearing over sticky header
-					.text(m.chr + ':' + m.pos + ' ' + m.ref + '>' + m.alt)
-				first = false
-
-				m.row.on('mouseover', event => {
-					if (!m.isClicked) m.row.style('background-color', '#fcfcca')
-				})
-				m.row.on('mouseout', event => {
-					if (!m.isClicked) m.row.style('background-color', '')
-				})
-				m.row.on('click', event => {
-					for (const m2 of data.mlst) {
-						m2.isClicked = false
-						m2.row.style('background-color', '')
-					}
-					m.isClicked = true
-					m.row.style('background-color', '#ffe3e4')
-					gdc_args.ssmInput = {
-						chr: m.chr,
-						pos: m.pos - 1, // convert 1-based to 0-based
-						ref: m.ref,
-						alt: m.alt
-					}
-				})
+				const row = []
+				row.push({ value: gene, data: m })
+				row.push({ value: m.mname })
+				row.push({ value: m.consequence })
+				row.push({ value: m.chr + ':' + m.pos + ' ' + m.ref + '>' + m.alt })
+				rows.push(row)
 			}
 		}
+
+		renderTable({
+			rows,
+			columns,
+			div: variantsResults_div,
+			noButtonCallback: (i, node) => {
+				const m = rows[i][0].data
+				gdc_args.ssmInput = {
+					chr: m.chr,
+					pos: m.pos - 1, // convert 1-based to 0-based
+					ref: m.ref,
+					alt: m.alt
+				}
+			},
+			singleMode: true
+		})
 	}
+
 	function makeSubmit() {
 		formdiv
 			.append('div')

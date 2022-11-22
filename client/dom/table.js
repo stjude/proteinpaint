@@ -108,12 +108,23 @@ export async function renderTable({ columns, rows, div, style = {}, buttons, noB
 		.style('overflow', 'scroll')
 
 	for (const [i, row] of rows.entries()) {
+		let checkbox
 		const rowtable = table
 			.append('tr')
 			.attr('class', 'sjpp_row_wrapper')
 			.style('display', 'table')
 			.style('table-layout', 'fixed')
 			.style('width', '100%')
+		if (buttons || noButtonCallback)
+			rowtable.on('click', e => {
+				if (e.target !== checkbox.node()) {
+					if (singleMode)
+						//not a checkbox
+						checkbox.node().checked = true
+					else checkbox.node().checked = !checkbox.node().checked
+					checkbox.dispatch('change')
+				}
+			})
 		if (style.show_lines) {
 			const lineDiv = rowtable
 				.append('td')
@@ -124,7 +135,7 @@ export async function renderTable({ columns, rows, div, style = {}, buttons, noB
 		}
 
 		if (buttons || noButtonCallback) {
-			const checkbox = rowtable
+			checkbox = rowtable
 				.append('td')
 				.style('width', '20px')
 				.style('float', 'center')
