@@ -15,9 +15,10 @@ jobs:
       - uses: actions/setup-node@v3
         with:
           node-version: 16
+          cache: 'npm'
 
       - name: Install packages
-        run: npm install
+        run: npm ci
 
       - name: Copy serverconfig.json to root
         run: mv server/test/serverconfig.json .
