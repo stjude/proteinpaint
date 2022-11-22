@@ -2,16 +2,16 @@ import { select as d3select } from 'd3-selection'
 import { pointer } from 'd3-selection'
 import { axisRight, axisTop } from 'd3-axis'
 import { scaleLinear } from 'd3-scale'
-import { axisstyle } from '../dom/axisstyle'
-import { newpane } from './client'
-import { Menu } from '../dom/menu'
-import { sayerror } from '../dom/sayerror'
-import { appear } from '../dom/animation'
-import { dofetch3 } from '../common/dofetch'
-import { make_radios } from '../dom/radiobutton'
-import { make_table_2col } from '../dom/table2col'
-import { make_one_checkbox } from '../dom/checkbox'
-import urlmap from '../common/urlmap'
+import { axisstyle } from '#dom/axisstyle'
+import { newpane } from '#src/client'
+import { Menu } from '#dom/menu'
+import { sayerror } from '#dom/sayerror'
+import { appear } from '#dom/animation'
+import { dofetch3 } from '#common/dofetch'
+import { make_radios } from '#dom/radiobutton'
+import { make_table_2col } from '#dom/table2col'
+import { make_one_checkbox } from '#dom/checkbox'
+import urlmap from '#common/urlmap'
 
 /*
 important: tk.uninitialized will be deleted by getData at the first launch
@@ -200,8 +200,16 @@ export async function loadTk(tk, block) {
 			}
 		}
 		tk.height_main = tk.height = 100
+
+		if (typeof e == 'string' && e.startsWith('No reads in view range')) {
+			// makeshift method for server to signal "no read" to client and wipe these labels
+			tk.leftlabel_count.text('')
+			tk.leftlabel_skip.text('')
+		}
+
 		block.tkcloakoff(tk, { error: e.message || e })
 	}
+	setLeftlabelWidth(tk, block)
 
 	block.block_setheight()
 }
@@ -378,9 +386,6 @@ or update existing groups, in which groupidx will be provided
 			}
 			y += messagerowheight
 		}
-		if (tk.show_readnames) {
-			tk.leftLabelMaxwidth = Math.max(tk.leftLabelMaxwidth, g.ReadNameMaxwidth)
-		}
 	}
 
 	setTkHeight(tk)
@@ -393,34 +398,32 @@ or update existing groups, in which groupidx will be provided
 			countt += g.data.count.t
 		}
 	}
-	tk.leftlabel_count
-		.text((countr ? countr + ' reads' : '') + (countt ? ', ' + countt + ' templates' : ''))
-		.each(function() {
-			tk.leftLabelMaxwidth = Math.max(tk.leftLabelMaxwidth, this.getBBox().width)
-		})
+
+	tk.leftlabel_count.text(
+		(countr ? countr + ' read' + (countr > 1 ? 's' : '') : '') +
+			(countt ? ', ' + countt + ' template' + (countt > 1 ? 's' : '') : '')
+	)
+
 	if (data.count.skipped) {
-		tk.leftlabel_skip.text(data.count.skipped + ' reads skipped').each(function() {
-			tk.leftLabelMaxwidth = Math.max(tk.leftLabelMaxwidth, this.getBBox().width)
-		})
+		tk.leftlabel_skip.text(`${data.count.skipped} read${data.count.skipped > 1 ? 's' : ''} skipped`)
 	} else {
 		tk.leftlabel_skip.text('')
 	}
-	if (!tk.show_readnames) {
-		tk.OriginalleftLabelMaxwidth = tk.leftLabelMaxwidth // Original leftlabelmaxwidth without read names
-	} else {
-		tk.leftLabelMaxwidth = tk.OriginalleftLabelMaxwidth
-	}
-	block.setllabel() // calculate left margin based on max left width
 	tk.read_alignment_diff_scores_asc = data.read_alignment_diff_scores_asc
 }
 
-function update_left_margin(tk, block) {
-	tk.leftLabelMaxwidth = tk.OriginalleftLabelMaxwidth
-	for (const g of tk.groups) {
-		if (g.ReadNameMaxwidth) {
-			tk.leftLabelMaxwidth = Math.max(tk.leftLabelMaxwidth, g.ReadNameMaxwidth)
-		}
+// update tk.leftLabelMaxwidth and call block.setllabel() at the end of normal and error rendering
+function setLeftlabelWidth(tk, block) {
+	const lst = [
+		tk.tklabel.node().getBBox().width,
+		tk.leftlabel_count.node().getBBox().width,
+		tk.leftlabel_skip.node().getBBox().width,
+		tk.leftlabel_about ? tk.leftlabel_about.node().getBBox().width : 0
+	]
+	if (tk.show_readnames) {
+		for (const g of tk.groups) lst.push(g.ReadNameMaxwidth)
 	}
+	tk.leftLabelMaxwidth = Math.max(...lst)
 	block.setllabel() // calculate left margin based on max left width
 }
 
@@ -824,7 +827,6 @@ function updateExistingGroups(data, tk, block) {
 					group.dom.read_names_g.selectAll('*').remove()
 					group.ReadNameMaxwidth = 0
 				}
-				update_left_margin(tk, block)
 				if (group.my_partstack) {
 					// Checks if the y-position of click is defined or not. Helpful when show_readnames button is clicked without having to click again to invoke partstack
 					if (group.data.allowpartstack) {
@@ -1085,11 +1087,12 @@ function makeGroup(gd, tk, block, data) {
 			// When reads are downsampled a new row is created, therefore an additional row is needed, so the diff_score_axis needs to be pushed one row down so that it does not overlap with "Diff Score" text
 			diff_score_height = tk.pileupheight + tk.dom.variantrowheight * 3
 		}
+
 		const axis = axisTop()
-			.tickValues([tk.min_diff_score.toFixed(1), tk.max_diff_score.toFixed(1)])
+			.tickValues([tk.min_diff_score, tk.max_diff_score])
 			.scale(
 				scaleLinear()
-					.domain([tk.min_diff_score.toFixed(1), tk.max_diff_score.toFixed(1)])
+					.domain([tk.min_diff_score, tk.max_diff_score])
 					.range([0, gd.diff_scores_img.width])
 			)
 		axisstyle({
@@ -1252,9 +1255,6 @@ function makeGroup(gd, tk, block, data) {
 				delete group.my_partstack // y-position of click that invoked partstack originally
 			}
 			group.ReadNameMaxwidth = 0
-			if (tk.show_readnames) {
-				update_left_margin(tk, block)
-			}
 			group.data = group.data_fullstack
 			renderGroup(group, tk, block)
 			setTkHeight(tk)
@@ -2924,13 +2924,9 @@ function renderGroup(group, tk, block) {
 				.attr('height', group.data.diff_scores_img.height)
 			if (tk.show_readnames) {
 				group.dom.read_names_g.selectAll('*').remove()
-				tk.leftLabelMaxwidth = tk.OriginalleftLabelMaxwidth
 			}
 		}
 		group.dom.rightg.vslider.g.transition().attr('transform', 'scale(0)')
 	}
 	group.dom.img_cover.attr('width', group.data.width).attr('height', group.data.height)
-	if (tk.show_readnames) {
-		update_left_margin(tk, block)
-	}
 }
