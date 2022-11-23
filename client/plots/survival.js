@@ -300,7 +300,11 @@ class TdbSurvival {
 		for (const chart of charts) {
 			for (const series of chart.serieses) {
 				const v = values.find(
-					v => v.key === series.seriesId || v.name === series.seriesId || v.label === series.seriesId
+					v =>
+						v.seriesId === series.seriesId ||
+						v.key === series.seriesId ||
+						v.name === series.seriesId ||
+						v.label === series.seriesId
 				)
 				const c = {
 					orig: v?.color || this.colorScale(series.seriesId)
@@ -1152,9 +1156,9 @@ function setInteractivity(self) {
 	self.adjustColor = (value, d, adjust = '') => {
 		if (adjust && adjust != 'darker' && adjust != 'brighter') throw 'invalid color adjustment option'
 		const t2 = self.state.config.term2
-		const values = JSON.parse(JSON.stringify(t2?.values || self.legendValues))
-		const term2 = JSON.parse(JSON.stringify(self.state.config.term2))
-		term2.values = values
+		const values = structuredClone(t2?.term.values || self.legendValues)
+		const term2 = structuredClone(t2)
+		term2.term.values = values
 		const color = rgb(value)
 		const adjustedColor = !adjust ? color : adjust == 'darker' ? color.darker() : color.brighter()
 		values[d.seriesId].color = adjustedColor.toString()
