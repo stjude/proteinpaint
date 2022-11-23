@@ -886,7 +886,9 @@ async function lowAFsnps_wilcoxon(tw, sampledata, Rinput, result) {
 
 async function lowAFsnps_fisher(tw, sampledata, Rinput, result) {
 	// for logistic, perform fisher's exact test for low-AF snps
-	const lines = [] // one line per snp
+	const input = [] //input for run_rust()
+	let index = 0
+	const index2snpid = new Map()
 	for (const [snpid, snpO] of tw.lowAFsnps) {
 		// a snp with low AF, run fisher on it
 		// count 4 numbers for this snp across all samples
@@ -919,22 +921,32 @@ async function lowAFsnps_fisher(tw, sampledata, Rinput, result) {
 				else outcome1noale++
 			}
 		}
-		/* a line forming 2x2 table:
+		/* a test forming 2x2 table:
 		     has ale  no ale
 		Yes  -        - 
 		No   -        -
 		*/
-		const line = [snpid, outcome1hasale, outcome0hasale, outcome1noale, outcome0noale]
-		lines.push(line.join('\t'))
+		index2snpid.set(index, snpid)
+		const test = {
+			index: index,
+			n1: outcome1hasale,
+			n2: outcome0hasale,
+			n3: outcome1noale,
+			n4: outcome0noale
+		}
+		input.push(test)
+		index++
 	}
 
 	//const plines = await lines2R(path.join(serverconfig.binpath, 'utils/fisher.R'), lines)
-	const plines = (await run_rust('fisher', 'fisher_limits\t300\t150-' + lines.join('-'))).trim().split('\n')
-	for (const line of plines) {
-		const l = line.split('\t')
-		const snpid = l[0]
+	const tests = await run_rust(
+		'fisher',
+		JSON.stringify({ fisher_limit: 40, individual_fisher_limit: 10, input: input })
+	)
+	for (const test of JSON.parse(tests)) {
+		const snpid = index2snpid.get(test.index)
 		const { effAle } = tw.lowAFsnps.get(snpid)
-		const pvalue = Number(l[5])
+		const pvalue = test.p_value
 
 		// make a result object for this snp
 		const analysisResult = {
@@ -946,8 +958,8 @@ async function lowAFsnps_fisher(tw, sampledata, Rinput, result) {
 					pvalue: Number(pvalue.toFixed(4)),
 					rows: [
 						['', 'Carry ' + effAle + ' allele', 'No ' + effAle + ' allele'],
-						['Have event', l[1], l[3]],
-						['No event', l[2], l[4]]
+						['Have event', test.n1, test.n3],
+						['No event', test.n2, test.n4]
 					]
 				}
 			}

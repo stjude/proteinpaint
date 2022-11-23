@@ -485,8 +485,8 @@ input parameter:
 					.dataId=str // key of term2 category, '' if no term2
 					.total=int // size of this term1-term2 combination
 
-	fisher_limit:  the sum of the four values in the 2x2 table must be larger than fisher_limit(default = 1000) to use chi-squared test
-	individual_fisher_limit: each of the four values in the 2x2 table must be larger than individual_fisher_limit (default = 0) to use chi-squared test
+	fisher_limit:  the sum of the four values in the 2x2 table must be larger than fisher_limit(default = 40) to use chi-squared test
+	individual_fisher_limit: each of the four values in the 2x2 table must be larger than individual_fisher_limit (default = 10) to use chi-squared test
 }
 
 Output: The function has no return but appends the statistical results to the provided data object as data.tests:
@@ -504,7 +504,7 @@ Output: The function has no return but appends the statistical results to the pr
 	]
 }
 */
-async function computePvalues(data, fisher_limit = 1000, individual_fisher_limit = 0) {
+async function computePvalues(data, fisher_limit = 40, individual_fisher_limit = 10) {
 	data.tests = {}
 	for (const chart of data.charts) {
 		// calculate sum of each term2 category. Structure: {term2Catergory1: num of samples, term2Catergory2: num of samples, ...}
@@ -515,8 +515,10 @@ async function computePvalues(data, fisher_limit = 1000, individual_fisher_limit
 			}
 		}
 
-		//generate inputs for Fisher's exact test/Chi-squared test. format for each input: `label\tR1C1\tR2C1\tR1C2\tR2C2`
-		const fisherAndChiInputData = []
+		//generate input for Fisher's exact test/Chi-squared test
+		const input = []
+		let testIndex = 0
+		const index2labels = new Map()
 		for (const row of chart.serieses) {
 			for (const term2cat of row.data) {
 				const R1C1 = term2cat.total //# of term2 category of interest in term1 category of interest (e.g. # of male in white), represents R1C1 in 2X2 contingency table
@@ -524,63 +526,47 @@ async function computePvalues(data, fisher_limit = 1000, individual_fisher_limit
 				const R1C2 = row.total - term2cat.total //# of term2 not category of interest in term1 category of interest (e.g. # of not male in white), represents R1C2 in 2X2 contingency table
 				const R2C2 = chart.total - colSums[term2cat.dataId] - (row.total - term2cat.total) //# of term2 not category of interest in term1 not category of interest (e.g. # of not male in not white), represents R2C2 in 2X2 contingency table
 
-				//replace hyphen/tab in seriesId and dataId with @hyphen@ and @tab@ to avoid being split in fisher.rs, which uses '-' and '\t' to split input
-				// Backwards compatitable logic for old barchart code for older mass session JSONs
-
-				const seriesId =
-					typeof row.seriesId == 'string'
-						? row.seriesId.replaceAll('-', '@hyphen@').replace('\t', '@tab@')
-						: row.seriesId.toString()
-				const dataId =
-					typeof term2cat.dataId == 'string'
-						? term2cat.dataId.replaceAll('-', '@hyphen@').replace('\t', '@tab@')
-						: term2cat.dataId.toString()
-
-				//use seriesId@@dataId as label to be able to parse seriesId and dataId from the test result later
-				fisherAndChiInputData.push([`${seriesId}@@${dataId}`, R1C1, R2C1, R1C2, R2C2].join('\t'))
+				// // Backwards compatitable logic for old barchart code for older mass session JSONs
+				// const seriesId = typeof row.seriesId == 'string' ? row.seriesId : row.seriesId.toString()
+				// const dataId = typeof term2cat.dataId == 'string' ? term2cat.dataId : term2cat.dataId.toString()
+				const seriesId = row.seriesId
+				const dataId = term2cat.dataId
+				input.push({
+					index: testIndex,
+					n1: R1C1,
+					n2: R2C1,
+					n3: R1C2,
+					n4: R2C2
+				})
+				index2labels.set(testIndex, { seriesId, dataId })
+				testIndex++
 			}
 		}
-		// run Fisher's exact test/Chi-squared test, result returned is a multi-line string
-		// each line is the result of one test with format: `label\tR1C1\tR2C1\tR1C2\tR2C2\tpvalue`
-		// for example: White@@1	2169	486	1923	475	0.1739808650460909
-		const resultWithPvalue = await run_rust(
-			'fisher',
-			'fisher_limits\t' + fisher_limit + '\t' + individual_fisher_limit + '-' + fisherAndChiInputData.join('-')
-		)
+
+		// run Fisher's exact test/Chi-squared test
+		const resultWithPvalue = await run_rust('fisher', JSON.stringify({ fisher_limit, individual_fisher_limit, input }))
+
 		/*
-		parse the multi-line string result into pvalueTable array: 
-		[
-			{
-				term1comparison: term1,
-				term2tests:[term2id: term2, pvalue: ..., significant: true/false]
-			},
-			...
-		]
+		parse the test result into pvalueTable array:
+		[{
+			term1comparison: seriesId,
+			term2tests:[
+				term2id: dataId,
+				pvalue: ...,
+				tableValues: {R1C1, R2C1, R1C2, R2C2},
+				isChi
+			]
+		}, ...]
 		*/
 		const pvalueTable = []
-		for (const test of resultWithPvalue.split('\n').filter(Boolean)) {
-			// the first element of test.split('@@') is always the seriesId
-			// change @hyphen@ and @tab@ in seriesId back to hyphen/tab
-			const seriesId = test
-				.split('@@')[0]
-				.replaceAll('@hyphen@', '-')
-				.replaceAll('@tab@', '\t')
-
-			// test.split('@@')[1].split('\t')[0] is always going to be the dataId
-			// change @hyphen@ and @tab@ in dataId back to hyphen/tab
-			const dataId = test
-				.split('@@')[1]
-				.split('\t')[0]
-				.replaceAll('@hyphen@', '-')
-				.replaceAll('@tab@', '\t')
-
-			// test.split('@@')[1].split('\t')[5] is always going to be the pvalue
-			const otherOutputs = test.split('@@')[1].split('\t')
-			const pvalue = Number(otherOutputs[5])
-			const R1C1 = Number(otherOutputs[1])
-			const R2C1 = Number(otherOutputs[2])
-			const R1C2 = Number(otherOutputs[3])
-			const R2C2 = Number(otherOutputs[4])
+		for (const test of JSON.parse(resultWithPvalue)) {
+			const seriesId = index2labels.get(test.index).seriesId
+			const dataId = index2labels.get(test.index).dataId
+			const R1C1 = test.n1
+			const R2C1 = test.n2
+			const R1C2 = test.n3
+			const R2C2 = test.n4
+			const pvalue = test.p_value
 			const isChi =
 				R1C1 > individual_fisher_limit &&
 				R2C1 > individual_fisher_limit &&

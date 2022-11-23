@@ -30,8 +30,9 @@ async function main() {
 	R/rust milliseconds: 1364 55
 	*/
 	for (let i = 0; i < 10; i++) {
-		const data = makeData()
-		const t2 = await testRust(data)
+		const { data_json, data } = makeData()
+		//const data = makeData()
+		const t2 = await testRust(data_json)
 		const t1 = await testR(data)
 		console.log('R/rust milliseconds:', t1, t2)
 	}
@@ -45,7 +46,8 @@ async function main() {
 }
 
 async function comparePvalues() {
-	const data = makeData()
+	const { data_json, data } = makeData()
+
 	// collect pvalues from r and rust, over the same set of input data
 	const r_pv = [],
 		rust_pv = []
@@ -53,10 +55,14 @@ async function comparePvalues() {
 		r_pv.push(-Math.log10(Number(line.split('\t')[5])))
 	}
 
-	for (const line of (await run_rust(
-		'fisher',
-		'fisher_limits\t' + fisher_limit + '\t' + individual_fisher_limit + '-' + data.join('-')
-	)).split('\n')) {
+	//const input_data = { fisher_limit: fisher_limit, individual_fisher_limit: individual_fisher_limit, input: data_json }
+	const input_data = {
+		fisher_limit: fisher_limit,
+		fdr: true,
+		individual_fisher_limit: individual_fisher_limit,
+		input: data_json
+	}
+	for (const line of (await run_rust('fisher', JSON.stringify(input_data))).split('\n')) {
 		rust_pv.push(-Math.log10(Number(line.split('\t')[5])))
 	}
 
@@ -78,16 +84,29 @@ async function testR(data) {
 
 async function testRust(data) {
 	const t = new Date()
-	await run_rust('fisher', 'fisher_limits\t' + fisher_limit + '\t' + individual_fisher_limit + '-' + data.join('-'))
+	//const input_data = { fisher_limit: fisher_limit, individual_fisher_limit: individual_fisher_limit, input: data }
+	const input_data = {
+		fisher_limit: fisher_limit,
+		fdr: true,
+		individual_fisher_limit: individual_fisher_limit,
+		input: data
+	}
+	await run_rust('fisher', JSON.stringify(input_data))
 	return new Date() - t
 }
 
 function makeData() {
+	const data_json = []
 	const data = []
 	for (let i = 0; i < 1000; i++) {
-		data.push(`${i}\t${int()}\t${int()}\t${int()}\t${int()}`)
+		const n1 = int()
+		const n2 = int()
+		const n3 = int()
+		const n4 = int()
+		data_json.push({ index: i, n1: n1, n2: n2, n3: n3, n4: n4 })
+		data.push(`${i}\t${n1}\t${n2}\t${n3}\t${n4}`)
 	}
-	return data
+	return { data_json, data }
 }
 
 function int() {
@@ -111,7 +130,7 @@ function run_rust(binfile, input_data) {
 		})
 		ps.on('close', code => {
 			if (code !== 0) reject(`spawned '${binfile}' exited with a non-zero status and this stderr:\n${stderr.join('')}`)
-			//console.log("stdout:",stdout)
+			//console.log('stdout:', stdout.toString())
 			resolve(stdout.join('').toString())
 		})
 	})
