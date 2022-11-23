@@ -74,11 +74,11 @@ class Scatter {
 			.style('float', 'right')
 			.style('margin-left', '100px')
 
-		const holder = chartDiv.insert('div')
+		const holder = chartDiv.insert('div').style('margin-left', '50px')
 
 		this.dom = {
 			header: this.opts.header,
-			holder: holder,
+			holder,
 			controls,
 			legendDiv,
 			tip: new Menu({ padding: '5px' }),
@@ -123,6 +123,8 @@ class Scatter {
 		this.shapeLegend = new Map(Object.entries(data.shapeLegend))
 		this.colorLegend = new Map(Object.entries(data.colorLegend))
 
+		this.axisOffset = { x: 30, y: this.settings.svgh }
+
 		const s0 = data.samples[0]
 		const [xMin, xMax, yMin, yMax] = data.samples.reduce(
 			(s, d) => [d.x < s[0] ? d.x : s[0], d.x > s[1] ? d.x : s[1], d.y < s[2] ? d.y : s[2], d.y > s[3] ? d.y : s[3]],
@@ -135,7 +137,7 @@ class Scatter {
 		this.axisBottom = axisBottom(this.xAxisScale)
 		this.yAxisScale = d3Linear()
 			.domain([yMax, yMin])
-			.range([0, this.settings.svgh])
+			.range([20, this.settings.svgh + 20])
 		this.axisLeft = axisLeft(this.yAxisScale)
 
 		this.render(data)
@@ -351,7 +353,7 @@ function setRenderers(self) {
 			.transition()
 			.duration(duration)
 			.attr('width', s.svgw + 700)
-			.attr('height', s.svgh + 110) //leaving 100 px for the y-axis and 10 to leave some space on top
+			.attr('height', s.svgh + 60) //leaving some space for top/bottom padding and y axis
 
 		/* eslint-disable */
 		const [mainG, axisG, xAxis, yAxis, legendG] = getSvgSubElems(svg, chart)
@@ -372,15 +374,15 @@ function setRenderers(self) {
 			xAxis = axisG
 				.append('g')
 				.attr('class', 'sjpcb-scatter-x-axis')
-				.attr('transform', 'translate(100,' + self.settings.svgh + ')')
+				.attr('transform', `translate(${self.axisOffset.x}, ${self.settings.svgh})`)
 			yAxis = axisG
 				.append('g')
 				.attr('class', 'sjpcb-scatter-y-axis')
-				.attr('transform', 'translate(100, 0)')
+				.attr('transform', `translate(${self.axisOffset.x}, 0)`)
 			mainG
 				.append('rect')
 				.attr('class', 'zoom')
-				.attr('x', 101)
+				.attr('x', self.axisOffset.x)
 				.attr('y', 0)
 				.attr('width', self.settings.svgw)
 				.attr('height', self.settings.svgh)
@@ -392,10 +394,10 @@ function setRenderers(self) {
 				.append('clipPath')
 				.attr('id', idclip)
 				.append('rect')
-				.attr('x', 80)
+				.attr('x', 0)
 				.attr('y', 0)
-				.attr('width', self.settings.svgw)
-				.attr('height', self.settings.svgh + 20)
+				.attr('width', self.settings.svgw + self.axisOffset.x)
+				.attr('height', self.settings.svgh + self.axisOffset.x)
 			mainG.attr('clip-path', `url(#${idclip})`)
 			xAxis.call(self.axisBottom)
 			yAxis.call(self.axisLeft)
@@ -444,7 +446,7 @@ function setRenderers(self) {
 	}
 
 	function translate(c) {
-		const transform = `translate(${self.xAxisScale(c.x) + 100},${self.yAxisScale(c.y) + 10})`
+		const transform = `translate(${self.xAxisScale(c.x)},${self.yAxisScale(c.y)})`
 		return transform
 	}
 
@@ -840,7 +842,6 @@ function setRenderers(self) {
 						items,
 						index: groups.length
 					})
-					console.log(self.config.groups)
 					self.app.dispatch({ type: 'plot_edit', id: self.id, config: { groups: self.config.groups } })
 				}
 			}
@@ -1025,7 +1026,7 @@ function getGroupsOverlay(groups) {
 			values.push(data.sample)
 		}
 		;(tgroup = {
-			name: 'Group ' + (i + 1),
+			name: group.name,
 			key: 'sample',
 			values: values
 		}),
@@ -1043,7 +1044,7 @@ function getGroupvsOthersOverlay(group) {
 	}
 	return [
 		{
-			name: 'Group 1',
+			name: group.name,
 			key: 'sample',
 			values
 		},
