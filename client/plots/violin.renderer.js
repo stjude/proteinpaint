@@ -1,9 +1,13 @@
 import { axisLeft, axisTop } from 'd3-axis'
-import { scaleLinear } from 'd3-scale'
+import { scaleLinear, scaleOrdinal } from 'd3-scale'
 import { area, curveBumpX, curveBumpY } from 'd3-shape'
+import { schemeCategory10 } from 'd3-scale-chromatic'
+import { brushX } from 'd3'
+import { renderPvalues } from '#dom/renderPvalueTable'
 
 export default function violinRenderer(self) {
-	const plotColor = '#c6c4f2'
+	// const plotColor = '#c6c4f2'
+	const k2c = scaleOrdinal(schemeCategory10)
 
 	self.render = function() {
 		if (self.data.plots.length == 0) {
@@ -120,6 +124,8 @@ export default function violinRenderer(self) {
 						? 'translate(0,' + plotThickness * (plotIdx + 0.5) + ')'
 						: 'translate(' + plotThickness * (plotIdx + 0.5) + ',0)'
 				)
+				.attr('classed', 'sjpp-violinG')
+
 			// create label
 			const label = violinG.append('text').text(plot.label)
 			if (isH) {
@@ -159,10 +165,110 @@ export default function violinRenderer(self) {
 
 			violinG
 				.append('path')
-				.style('fill', plotColor)
+				.style('fill', k2c(plotIdx))
+				.style('opacity', '0.7')
 				.attr('d', areaBuilder(plot.bins))
+
+			//	create svg element for bean plot
+			const beanG = svgG
+				.append('g')
+				.attr(
+					'transform',
+					isH
+						? 'translate(0,' + plotThickness * (plotIdx + 0.5) + ')'
+						: 'translate(' + plotThickness * (plotIdx + 0.5) + ',0)'
+				)
+				.attr('classed', 'sjpp-beanG')
+
+			let beanLine
+
+			//render bean plot on plot.values
+			for (let i = 0; i < plot.values.length; i++) {
+				beanLine = beanG
+					.append('g')
+					.append('line')
+					.attr('transform', isH ? 'rotate(-90)' : 'rotate(0)')
+					.attr('class', 'bean line')
+					.style('stroke-width', '0.5')
+					.style('stroke', 'black')
+					.style('opacity', '0.6')
+					.attr('x1', -7)
+					.attr('x2', 7)
+					.attr('y1', axisScale(plot.values[i]))
+					.attr('y2', axisScale(plot.values[i]))
+			}
+
+			beanG
+				.append('g')
+				.attr('classed', 'sjpp-brush')
+				.call(
+					brushX()
+						.extent([[0, -15], [plotLength, 15]])
+						.on('end', async event => {
+							const selection = event.selection
+							if (!selection) return
+							const start = axisScale.invert(selection[0])
+							const end = axisScale.invert(selection[1])
+							self.app.dispatch({
+								type: 'plot_edit',
+								id: self.id,
+								config: {
+									settings: {
+										violin: {
+											range: { start, end, plotIdx }
+										}
+									}
+								}
+							})
+						})
+				)
+		}
+	}
+
+	self.renderBrushValues = function() {
+		// console.log(self.config.settings.violin.range);
+		const range = self.config.settings.violin.range
+		if (!range) return //also delete the table
+		const plot = self.data.plots[range.plotIdx]
+		const values = plot.values.filter(v => v >= range.start && v <= range.end)
+	}
+
+	self.renderPvalueTable = function() {
+		const t2 = this.config.term2
+		const maxPvalsToShow = 5
+
+		this.dom.tableHolder
+			.style('display', 'inline-block')
+			.style('vertical-align', 'top')
+			.selectAll('*')
+			.remove()
+
+		if (t2 == undefined || t2 == null) {
+			// no term2, no legend to show
+			this.dom.tableHolder.style('display', 'none')
+			return
 		}
 
-		self.getLegendGrps()
+		//disabled separate legend for now
+
+		// const legendHolder = this.dom.tableHolder.append('div').classed('sjpp-legend-div', true)
+
+		// legendHolder.append('div').text(this.config.term2.term.name)
+
+		// for (const plot of this.data.plots) {
+		// 	legendHolder
+		// 		.append('div')
+		// 		.style('font-size', '15px')
+		// 		.text(plot.label)
+		// }
+
+		//show pvalue table
+		renderPvalues({
+			holder: this.dom.tableHolder,
+			plot: this.type,
+			tests: this.data,
+			s: this.config.settings,
+			title: "Group comparisons (Wilcoxon's rank sum test)"
+		})
 	}
 }

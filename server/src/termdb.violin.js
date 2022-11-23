@@ -128,7 +128,7 @@ export async function trigger_getViolinPlotData(q, res, ds, genome) {
 
 		plot.median = medianValue
 
-		delete plot.values
+		// delete plot.values
 	}
 	res.send(result)
 }
