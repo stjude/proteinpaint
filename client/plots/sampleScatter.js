@@ -349,11 +349,13 @@ function setRenderers(self) {
 	}
 
 	function renderSVG(svg, chart, s, duration, data) {
+		const legendHeight = Math.max(self.colorLegend.size, self.shapeLegend.size) * 30 + 60 //legend step and header
+
 		svg
 			.transition()
 			.duration(duration)
 			.attr('width', s.svgw + 700)
-			.attr('height', s.svgh + 60) //leaving some space for top/bottom padding and y axis
+			.attr('height', Math.max(s.svgh + 60, legendHeight)) //leaving some space for top/bottom padding and y axis
 
 		/* eslint-disable */
 		const [mainG, axisG, xAxis, yAxis, legendG] = getSvgSubElems(svg, chart)
