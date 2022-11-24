@@ -34,7 +34,8 @@ const encodedParams = [
 	'independent',
 	'terms',
 	'colorTW',
-	'shapeTW'
+	'shapeTW',
+	'divideTw'
 ]
 
 const limitSearchTermTo = 10

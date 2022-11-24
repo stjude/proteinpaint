@@ -1,13 +1,12 @@
-import { group } from 'd3'
-
 export const sampleLstSql = {
 	getCTE(tablename, term, q, values, filter) {
-		const t2q = q.term2_q
+		const t2q = q.term2_q || q.terms?.[1].q
 		let sql = '',
 			samples,
 			samplesString
 		for (const [i, group] of t2q.groups.entries()) {
 			samples = group.values
+			console.log(10, samples)
 			samplesString = samples.map(() => '?').join(',')
 			if (i == 1 && group.name == 'Others') {
 				sql += `
@@ -26,6 +25,7 @@ export const sampleLstSql = {
 
 			values.push(group.name, group.name, ...samples)
 		}
+		// console.log(28, sql, values)
 		return { sql: `${tablename} AS (${sql})`, tablename }
 	}
 }

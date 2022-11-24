@@ -191,7 +191,7 @@ export default function violinRenderer(self) {
 					.attr('class', 'bean line')
 					.style('stroke-width', '0.5')
 					.style('stroke', 'black')
-					.style('opacity', '0.6')
+					.style('opacity', '0.5')
 					.attr('x1', -7)
 					.attr('x2', 7)
 					.attr('y1', axisScale(plot.values[i]))
