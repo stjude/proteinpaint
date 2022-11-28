@@ -119,7 +119,7 @@ class Scatter {
 		const data = await this.app.vocabApi.getScatterData(reqOpts)
 		if (data.error) throw data.error
 		if (!Array.isArray(data.samples)) throw 'data.samples[] not array'
-
+		console.log(data)
 		this.shapeLegend = new Map(Object.entries(data.shapeLegend))
 		this.colorLegend = new Map(Object.entries(data.colorLegend))
 
@@ -644,7 +644,7 @@ function setRenderers(self) {
 				self.lasso
 					.items()
 					.attr('r', self.settings.size)
-					.style('fill-opacity', '1')
+					.style('fill-opacity', c => ('sampleId' in c || s.showRef ? 1 : 0))
 				mainG.call(zoom)
 				self.selectedItems = null
 			}

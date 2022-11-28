@@ -33,8 +33,6 @@ trigger_getSampleScatter()
 
 // color of reference samples, they should be shown as a "cloud" of dots at backdrop
 const refColor = '#ccc'
-const defaultColor = 'gray'
-const noCategory = 'None'
 
 // called in mds3.init
 export async function mayInitiateScatterplots(ds) {
@@ -169,17 +167,15 @@ async function colorAndShapeSamples(refSamples, cohortSamples, dbSamples, q) {
 	const shapeMap = new Map()
 	const colorMap = new Map()
 
-	let noColorCount = 0,
-		noShapeCount = 0
 	for (const sample of cohortSamples) {
 		const dbSample = dbSamples[sample.sampleId.toString()]
 		sample.category_info = {}
 		assignCategory(dbSample, sample, q.colorTW, colorMap, 'category')
-		if (!('category' in sample)) noColorCount++
-		sample.shape = noCategory
+		if (!('category' in sample)) continue
+		sample.shape = 'Ref'
 		if (q.shapeTW) {
 			assignCategory(dbSample, sample, q.shapeTW, shapeMap, 'shape')
-			if (!('shape' in sample)) noShapeCount++
+			if (!('shape' in sample)) continue
 		}
 		samples.push(sample)
 	}
@@ -191,16 +187,14 @@ async function colorAndShapeSamples(refSamples, cohortSamples, dbSamples, q) {
 			else value.color = k2c(category)
 		}
 	}
-	shapeMap.set(noCategory, { sampleCount: noShapeCount, shape: 0 })
+	shapeMap.set('Ref', { sampleCount: refSamples.length, shape: 0 })
 	let i = 1
-
-	shapeMap.set('Ref', { sampleCount: refSamples.length, shape: q.shapeTW ? i++ : 0 })
 	for (const [category, value] of shapeMap) {
 		if (!('shape' in value)) value.shape = i
 		i++
 	}
 
-	colorMap.set(noCategory, { sampleCount: noColorCount, color: defaultColor })
+	//colorMap.set(noCategory, { sampleCount: noColorCount, color: defaultColor })
 	colorMap.set('Ref', { sampleCount: refSamples.length, color: refColor })
 
 	return { samples, colorLegend: Object.fromEntries(colorMap), shapeLegend: Object.fromEntries(shapeMap) }
@@ -209,7 +203,10 @@ async function colorAndShapeSamples(refSamples, cohortSamples, dbSamples, q) {
 function assignCategory(dbSample, sample, tw, categoryMap, category) {
 	let color = null,
 		value = null
-	if (!dbSample) return
+	if (!dbSample) {
+		console.log(JSON.stringify(sample) + ' not in the database or filtered')
+		return
+	}
 
 	if (tw.term.type == 'geneVariant') {
 		const mutation = dbSample?.[tw.term.name]?.values?.[0]
