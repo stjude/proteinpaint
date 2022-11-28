@@ -248,10 +248,14 @@ export async function bamsliceui({
 			.append('input')
 			.attr('type', 'search')
 			.attr('size', 45)
-			.attr('aria-label', 'Specify file name / File UUID / Case ID / Case UUID')
+			.attr('aria-label', 'Specify File name / File UUID / Case ID / Case UUID')
 			.style('padding', '3px 10px')
 			.property('placeholder', 'File name / File UUID / Case ID / Case UUID')
+			// debounce event listener on keyup
 			.on('keyup', debounce(gdc_search, 500))
+			// clicking X in <input> fires "search" event. must listen to it and call callback without delay in order to clear the UI
+			.on('search', gdc_search)
+
 		if (urlp.has('gdc_id')) {
 			gdcid_input
 				.property('value', urlp.get('gdc_id'))
