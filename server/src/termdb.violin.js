@@ -41,7 +41,6 @@ export async function trigger_getViolinPlotData(q, res, ds, genome) {
 
 	const data = await getData({ terms: twLst, filter: q.filter, currentGeneNames: q.currentGeneNames }, ds, genome)
 	if (data.error) throw data.error
-	console.log(40, data.samples['1'])
 
 	let min = Number.MAX_VALUE,
 		max = -Number.MAX_VALUE
@@ -148,9 +147,7 @@ export function computeViolinData(values) {
 	const yScale = scaleLinear().domain([min, max])
 
 	let ticksCompute
-	if (values.length < 500) {
-		ticksCompute = 10
-	} else if (500 > values.length > 1000) {
+	if (values.length < 100) {
 		ticksCompute = 20
 	} else ticksCompute = 40
 

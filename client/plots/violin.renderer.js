@@ -49,7 +49,7 @@ export default function violinRenderer(self) {
 			margin = { left: axisHeight, top: 50, right: 50, bottom: maxLabelSize }
 		}
 
-		const plotLength = 500, // span length of a plot, not including margin
+		const plotLength = 800, // span length of a plot, not including margin
 			// thickness of a plot
 			plotThickness =
 				self.data.plots.length < 2
@@ -153,13 +153,13 @@ export default function violinRenderer(self) {
 				areaBuilder = area()
 					.y0(d => wScale(-d.binValueCount))
 					.y1(d => wScale(d.binValueCount))
-					.x(d => axisScale(d.x0))
+					.x(d => axisScale(d.x0 * 1.01))
 					.curve(curveBumpX)
 			} else {
 				areaBuilder = area()
 					.x0(d => wScale(-d.binValueCount))
 					.x1(d => wScale(d.binValueCount))
-					.y(d => axisScale(d.x0))
+					.y(d => axisScale(d.x0 * 1.01))
 					.curve(curveBumpY)
 			}
 
@@ -180,31 +180,27 @@ export default function violinRenderer(self) {
 				)
 				.attr('classed', 'sjpp-beanG')
 
-			let beanLine
-
 			//render bean plot on plot.values
-			for (let i = 0; i < plot.values.length; i++) {
-				beanLine = beanG
-					.append('g')
+			plot.values.forEach(element => {
+				beanG
 					.append('line')
-					.attr('transform', isH ? 'rotate(-90)' : 'rotate(0)')
 					.attr('class', 'bean line')
 					.style('stroke-width', '0.5')
 					.style('stroke', 'black')
 					.style('opacity', '0.5')
-					.attr('x1', -7)
-					.attr('x2', 7)
-					.attr('y1', axisScale(plot.values[i]))
-					.attr('y2', axisScale(plot.values[i]))
-			}
+					.attr('y1', isH ? -7 : axisScale(element))
+					.attr('y2', isH ? 7 : axisScale(element))
+					.attr('x1', isH ? axisScale(element) : -7)
+					.attr('x2', isH ? axisScale(element) : 7)
+			})
 
 			beanG
 				.append('g')
 				.attr('classed', 'sjpp-brush')
 				.call(
 					brushX()
-						.extent([[0, -15], [plotLength, 15]])
-						.on('end', async event => {
+						.extent([[0, -35], [plotLength, 35]])
+						.on('', async event => {
 							const selection = event.selection
 							if (!selection) return
 							const start = axisScale.invert(selection[0])
@@ -226,7 +222,6 @@ export default function violinRenderer(self) {
 	}
 
 	self.renderBrushValues = function() {
-		// console.log(self.config.settings.violin.range);
 		const range = self.config.settings.violin.range
 		if (!range) return //also delete the table
 		const plot = self.data.plots[range.plotIdx]
