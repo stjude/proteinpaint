@@ -133,7 +133,7 @@ export function addGeneSearchbox(arg) {
 	} else {
 		placeholder = 'Gene, position'
 		if (arg.genome.hasSNP) {
-			placeholder += ', variant'
+			placeholder += ', dbSNP'
 			width += 40
 		}
 		if (arg.allowVariant) {
