@@ -1,0 +1,13 @@
+name: "Branch For Release"
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+    # Runs a single command using the runners shell
+    - name: Send greeting
+      run: echo "Hello world!"
