@@ -107,7 +107,7 @@ function ash() {
 	checkDir('files/hg38/ash/')
 	scpHpc('files/hg38/ash/db')
 	scpHpc('files/hg38/ash/panall.hg38.bcf.gz')
-	scpHpc('files/hg38/ash/panall.hg38.bcf.gz.tbi')
+	scpHpc('files/hg38/ash/panall.hg38.bcf.gz.csi')
 	scpHpc('files/hg38/ash/panall.svfusion.hg38.gz')
 	scpHpc('files/hg38/ash/panall.svfusion.hg38.gz.tbi')
 }
