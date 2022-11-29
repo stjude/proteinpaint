@@ -59,7 +59,7 @@ const baminfo_rows = [
 	{ title: 'Entity ID', key: 'entity_id' },
 	{ title: 'Experimental Strategy', key: 'experimental_strategy' },
 	{ title: 'Sample Type', key: 'sample_type' },
-	{ title: 'Size', key: 'file_size' }
+	{ title: 'Size', key: 'file_size', width: '10vw' }
 ]
 
 /*
@@ -384,19 +384,12 @@ export async function bamsliceui({
 				file.about.push({ k: row.title, v: onebam[row.key] })
 			}
 			make_table_2col(baminfo_table, rows)
-			/*
-			baminfo_table
-				.style('height', '0')
-				.transition()
-				.duration(500)
-				// .style('height', '100px')
-				.style('height', 'auto')
-				*/
 		}
 
 		function update_multifile_table(files) {
-			const columns = []
-			for (const row of baminfo_rows) columns.push({ label: row.title })
+			const columns = baminfo_rows.map(i => {
+				return { label: i.title, width: i.width }
+			})
 			const rows = []
 			for (const [i, onebam] of files.entries()) {
 				const row = []
@@ -527,9 +520,14 @@ export async function bamsliceui({
 		ssmGeneArg.tabs[0].tab.text(`${data.mlst.length} variant${data.mlst.length > 1 ? 's' : ''}`)
 
 		const variantsResults_div = ssmGeneArg.tabs[0].holder.append('div')
+		//.style('margin-left','30px') // may not need to left-align with bam table
 
-		const columns = []
-		for (const column of ['Gene', 'AAChange', 'Consequence', 'Position']) columns.push({ label: column })
+		const columns = [
+			{ label: 'Gene', width: '10vw' },
+			{ label: 'Mutation' },
+			{ label: 'Consequence' },
+			{ label: 'Position' }
+		]
 
 		// group by gene
 		const gene2mlst = new Map()
