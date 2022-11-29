@@ -2,6 +2,7 @@ import { getCompInit, copyMerge } from '../rx'
 import { fillTermWrapper } from '../termsetting/termsetting'
 import { renderTable } from '../dom/table'
 import { scaleLinear as d3Linear } from 'd3-scale'
+import { filterJoin, getFilterItemByTag } from '../filter/filter'
 
 import {
 	zoom as d3zoom,
@@ -119,7 +120,6 @@ class Scatter {
 		const data = await this.app.vocabApi.getScatterData(reqOpts)
 		if (data.error) throw data.error
 		if (!Array.isArray(data.samples)) throw 'data.samples[] not array'
-		console.log(data)
 		this.shapeLegend = new Map(Object.entries(data.shapeLegend))
 		this.colorLegend = new Map(Object.entries(data.colorLegend))
 
@@ -551,6 +551,20 @@ function setRenderers(self) {
 					})
 					self.app.dispatch({ type: 'plot_edit', id: self.id, config: { groups: self.config.groups } })
 				})
+			menuDiv
+				.append('div')
+				.attr('class', 'sja_menuoption sja_sharp_border')
+				.text('Add to a group and filter')
+				.on('click', () => {
+					const group = {
+						name: `Group ${self.config.groups.length + 1}`,
+						items: self.selectedItems,
+						index: groups.length
+					}
+					self.config.groups.push(group)
+					add_to_filter(self, group)
+					self.app.dispatch({ type: 'plot_edit', id: self.id, config: { groups: self.config.groups } })
+				})
 		}
 	}
 
@@ -797,6 +811,14 @@ function setRenderers(self) {
 			.text(`Delete group`)
 			.on('click', e => {
 				self.config.groups = self.config.groups.splice(group.index, 1)
+				self.app.dispatch({ type: 'plot_edit', id: self.id, config: { groups: self.config.groups } })
+			})
+		menuDiv
+			.append('div')
+			.attr('class', 'sja_menuoption sja_sharp_border')
+			.text('Add to filter')
+			.on('click', () => {
+				add_to_filter(self, group)
 				self.app.dispatch({ type: 'plot_edit', id: self.id, config: { groups: self.config.groups } })
 			})
 	}
@@ -1074,5 +1096,37 @@ async function showTermsTree(self, div, callback, state = { tree: { usecase: { d
 				self.dom.termstip.hide()
 			}
 		}
+	})
+}
+
+function add_to_filter(self, group) {
+	const lst = []
+	let data
+	for (const item of group.items) {
+		data = item.__data__
+		lst.push(data.sample)
+	}
+	const filterUiRoot = getFilterItemByTag(self.state.termfilter.filter, 'filterUiRoot')
+	const filter = filterJoin([
+		filterUiRoot,
+		{
+			type: 'tvslst',
+			in: true,
+			join: '',
+			lst: [
+				{
+					type: 'tvs',
+					tvs: {
+						term: { type: 'samplelst', name: group.name },
+						values: lst
+					}
+				}
+			]
+		}
+	])
+	filter.tag = 'filterUiRoot'
+	self.app.dispatch({
+		type: 'filter_replace',
+		filter
 	})
 }

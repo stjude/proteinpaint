@@ -1,5 +1,5 @@
 const path = require('path')
-const { get_term_cte } = require('./termdb.sql')
+const { get_term_cte, interpolateSqlValues } = require('./termdb.sql')
 const { getFilterCTEs } = require('./termdb.filter')
 const lines2R = require('./lines2R')
 const fs = require('fs')
@@ -209,7 +209,7 @@ async function getSampleData_dictionaryTerms(q, termWrappers) {
 			${filter ? `WHERE sample IN ${filter.CTEname}` : ''}
 			`
 		).join(`UNION ALL`)}`
-	// console.log(require('./termdb.sql').interpolateSql(sql, values))
+	//console.log(interpolateSqlValues(sql, values))
 	const rows = q.ds.cohort.db.connection.prepare(sql).all(values)
 	for (const { sample, term_id, key, value } of rows) {
 		if (!samples[sample]) samples[sample] = { sample }

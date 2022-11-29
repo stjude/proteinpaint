@@ -32,10 +32,9 @@ rows = [ [] ]
 		]
 	}
 style = {}
-
+	show_lines: boolean, Shows/hides line column. If not provided line is shown.
 	max_width: str, the max width of the table, if not provided is set to 90vw
 	max_height: str, the max height of the table, if not provided is set to 50vh
-	row_height: str, the height of the row
 
 buttons = [ {button} ]
 	Each element is an object describing a button:
