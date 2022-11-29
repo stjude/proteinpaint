@@ -55,6 +55,7 @@ launch_singlecell
 
 ********** quick fix parameters
 geneSearch4GDCmds3
+launchGdcMatrix
 */
 
 const headtip = new client.Menu({ padding: '0px', offsetX: 0, offsetY: 0 })
@@ -744,7 +745,9 @@ async function parseEmbedThenUrl(arg, app) {
 		so it's no longer hardcoded for one dataset of one track type
 		*/
 		return await launchGeneSearch4GDCmds3(arg, app)
-		//return
+	}
+	if (arg.launchGdcMatrix) {
+		return await launchGdcMatrix(arg, app)
 	}
 
 	if (arg.parseurl && location.search.length) {
@@ -1358,6 +1361,10 @@ async function launchSelectGenomeWithTklst(arg, app) {
 
 async function launchGeneSearch4GDCmds3(arg, app) {
 	const _ = await import('./geneSearch4GDCmds3')
+	return await _.init(arg, app.holder0, app.genomes)
+}
+async function launchGdcMatrix(arg, app) {
+	const _ = await import('./launchGdcMatrix')
 	return await _.init(arg, app.holder0, app.genomes)
 }
 

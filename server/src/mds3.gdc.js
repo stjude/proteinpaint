@@ -1217,3 +1217,37 @@ export function handle_gdc_ssms(genomes) {
 		}
 	}
 }
+
+export function handle_filter2topGenes(genomes) {
+	return async (req, res) => {
+		/* query{}
+		.genome: required
+		.filter0: required
+		*/
+		try {
+			const genome = genomes[req.query.genome]
+			if (!genome) throw 'invalid genome'
+			if (!req.query.filter0) throw '.filter0 missing'
+			const response = await got(
+				apihost +
+					'/analysis/top_mutated_genes_by_project' +
+					'?size=' +
+					(req.query.size || 20) +
+					'&fields=symbol' +
+					'&filters=' +
+					req.query.filter0,
+				{ method: 'GET', headers: { 'Content-Type': 'application/json', Accept: 'application/json' } }
+			)
+			const re = JSON.parse(response.body)
+			const genes = []
+			for (const hit of re.data.hits) {
+				if (!hit.symbol) continue
+				genes.push(hit.symbol)
+			}
+			res.send({ genes })
+		} catch (e) {
+			if (e.stack) console.log(e.stack)
+			res.send({ error: e.message || e })
+		}
+	}
+}
