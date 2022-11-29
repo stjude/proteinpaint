@@ -42,7 +42,10 @@ class MassPlot {
 				app: this.app,
 				holder: this.dom.localRecoverDiv,
 				getState: appState => this.getState(appState),
-				reactsTo: action => action.id == this.id && action.type == 'plot_edit' && action._track_ != 'none',
+				reactsTo: action =>
+					action.id == this.id &&
+					(action.type == 'plot_edit' || action.type == 'plot_nestedEdits') &&
+					action._track_ != 'none',
 				plot_id: this.id,
 				maxHistoryLen: 10
 			})

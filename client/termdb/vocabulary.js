@@ -893,10 +893,11 @@ class TermdbVocab extends Vocab {
 
 		try {
 			const dictTerm$ids = opts.terms.filter(tw => !nonDictionaryTermTypes.has(tw.term.type)).map(tw => tw.$id)
+			const lst = Object.values(samples)
+			/*
+			// NOTE: for testingonly, may reactivate this code for legacy published sessions
 			const lst = []
-			// NOTE: for testingonly, use
-			// if (1 || !dictTerm$ids.length)) to force the use of any annotated samples even non-dict only
-			if (1 || !dictTerm$ids.length) {
+			if (!dictTerm$ids.length) {
 				// If there are no dictionary terms, okay to show any samples with geneVariants
 				lst.push(...Object.values(samples))
 			} else {
@@ -912,7 +913,7 @@ class TermdbVocab extends Vocab {
 						}
 					}
 				}
-			}
+			}*/
 
 			const sampleFilter = new RegExp(opts.sampleNameFilter || '.*')
 			const data = {

@@ -85,6 +85,7 @@ async function getSampleData(q) {
 	// dictionary and non-dictionary terms require different methods for data query
 	const [dictTerms, nonDictTerms] = divideTerms(q.terms)
 	const { samples, refs } = await getSampleData_dictionaryTerms(q, dictTerms)
+	console.log(samples)
 
 	if (q.ds.getSampleIdMap) {
 		refs.bySampleId = q.ds.getSampleIdMap(samples)
@@ -208,7 +209,7 @@ async function getSampleData_dictionaryTerms(q, termWrappers) {
 			${filter ? `WHERE sample IN ${filter.CTEname}` : ''}
 			`
 		).join(`UNION ALL`)}`
-
+	// console.log(require('./termdb.sql').interpolateSql(sql, values))
 	const rows = q.ds.cohort.db.connection.prepare(sql).all(values)
 	for (const { sample, term_id, key, value } of rows) {
 		if (!samples[sample]) samples[sample] = { sample }
@@ -233,11 +234,11 @@ q{}
 */
 async function getSampleData_gdc(q, termWrappers) {
 	if (!q.genome.genedb.get_gene2canonicalisoform) throw 'gene2canonicalisoform not supported on this genome'
-
+	const currentGeneNames = q.currentGeneNames || []
 	// currentGeneNames[] contains gene symbols
 	// convert to ENST isoforms to work with gdc api
 	const isoforms = []
-	for (const n of q.currentGeneNames) {
+	for (const n of currentGeneNames) {
 		const data = q.genome.genedb.get_gene2canonicalisoform.get(n)
 		if (!data.isoform) {
 			// no isoform found
@@ -245,6 +246,7 @@ async function getSampleData_gdc(q, termWrappers) {
 		}
 		isoforms.push(data.isoform)
 	}
+	if (!isoforms.length) throw 'no matching GDC isoforms found, at least one is needed to limit the sample query'
 
 	const param = {
 		get: 'samples',
