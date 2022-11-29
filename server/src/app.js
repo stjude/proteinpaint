@@ -462,6 +462,7 @@ async function startServer() {
 			const server = await http.createServer(app)
 			// second optional argument is host, formatted so that req.ip will be ipv4
 			server.listen(port, '0.0.0.0', () => {
+				process.send('ready')
 				console.log(message)
 			})
 			return server

@@ -1,4 +1,4 @@
-const serverconfig = require('../src/serverconfig.js')
+const serverconfig = require('@stjude/proteinpaint-server/src/serverconfig')
 const fs = require('fs')
 const path = require('path')
 

@@ -8,7 +8,7 @@ variables_range2variants
 ssm2canonicalisoform
 */
 
-const filter2GDCfilter = require('../src/mds3.gdc.filter').filter2GDCfilter
+const filter2GDCfilter = require('@stjude/proteinpaint-server/src/mds3.gdc.filter').filter2GDCfilter
 
 const GDC_HOST = process.env.PP_GDC_HOST || 'https://api.gdc.cancer.gov'
 
