@@ -952,6 +952,7 @@ function mayAdd_mayGetGeneVariantData(ds, genome) {
 	input:
 	tw{} // termwrapper
 	q{}
+		.filter0
 
 	output a map:
 		k: sample id
@@ -983,12 +984,12 @@ function mayAdd_mayGetGeneVariantData(ds, genome) {
 		// primary concern is tw.term may be missing coord/isoform to perform essential query
 
 		if (ds.queries.snvindel) {
-			const lst = await getSnvindelByTerm(ds, tw.term, genome)
+			const lst = await getSnvindelByTerm(ds, tw.term, genome, q)
 			mlst.push(...lst)
 		}
 
 		if (ds.queries.svfusion) {
-			const lst = await getSvfusionByTerm(ds, tw.term, genome)
+			const lst = await getSvfusionByTerm(ds, tw.term, genome, q)
 			mlst.push(...lst)
 		}
 
@@ -1077,9 +1078,10 @@ async function mayMapGeneName2isoform(term, genome) {
 	term.isoform = gm.isoform
 }
 
-async function getSnvindelByTerm(ds, term, genome) {
+async function getSnvindelByTerm(ds, term, genome, q) {
+	// to keep cohort/session etc
 	const arg = {
-		// to keep cohort/session etc
+		filter0: q.filter0
 	}
 
 	if (ds.queries.snvindel.byisoform) {
@@ -1096,9 +1098,10 @@ async function getSnvindelByTerm(ds, term, genome) {
 	}
 	throw 'unknown queries.snvindel method'
 }
-async function getSvfusionByTerm(ds, term, genome) {
+async function getSvfusionByTerm(ds, term, genome, q) {
 	const arg = {
 		// to keep cohort/session etc
+		filter0: q.filter0
 	}
 	if (ds.queries.svfusion.byrange) {
 		await mayMapGeneName2coord(term, genome)

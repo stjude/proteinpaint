@@ -774,6 +774,7 @@ class TermdbVocab extends Vocab {
 
 	opts{}
 	.filter        a filter object
+	.filter0       currently the gdc cohort filter obj
 	.terms[tw{}]   an array of termWrapper objects
 		tw.$id       id to disambugate when multiple terms
 		             with the same ID are in terms[],
@@ -850,6 +851,7 @@ class TermdbVocab extends Vocab {
 					filter
 				}
 			}
+			if (opts.filter0) init.body.filter0 = opts.filter0 // avoid adding "undefined" value
 
 			// quick fix
 			if (this.vocab.dslabel == 'GDC' && tw.term.id && currentGeneNames.length)

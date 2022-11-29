@@ -47,6 +47,7 @@ export async function init(arg, holder, genomes) {
 
 	if (arg.filter0) {
 		// cohort filter is provided. query top genes to use in default matrix
+		if (typeof arg.filter0 != 'object') throw 'filter0 not object'
 		const data = await dofetch3(
 			`gdc_filter2topGenes?genome=${gdcGenome}&filter0=${encodeURIComponent(JSON.stringify(arg.filter0))}`
 		)
@@ -59,7 +60,8 @@ export async function init(arg, holder, genomes) {
 }
 
 async function launchMatrix(genes, arg, holder, genome) {
-	const termlst = genes.map(i => {
+	// slicing is for temp testing
+	const termlst = genes.slice(5, 10).map(i => {
 		return { term: { name: i, type: 'geneVariant' } }
 	})
 	const _ = await import('#mass/app')
@@ -69,6 +71,7 @@ async function launchMatrix(genes, arg, holder, genome) {
 		state: {
 			genome: gdcGenome,
 			dslabel: gdcDslabel,
+			termfilter: { filter0: arg.filter0 },
 			nav: { header_mode: 'hidden' },
 			plots: [
 				{

@@ -153,6 +153,7 @@ class Matrix {
 			isVisible: true,
 			config,
 			filter: appState.termfilter.filter,
+			filter0: appState.termfilter.filter0, // read-only, invisible filter currently only used for gdc dataset
 			hasVerifiedToken: this.app.vocabApi.hasVerifiedToken(),
 			tokenVerificationMessage: this.app.vocabApi.tokenVerificationMessage
 		}
@@ -254,7 +255,11 @@ class Matrix {
 			)
 		}
 		this.numTerms = terms.length
-		return { terms, filter: this.state.filter }
+		return {
+			terms,
+			filter: this.state.filter,
+			filter0: this.state.filter0
+		}
 	}
 
 	setAutoDimensions() {

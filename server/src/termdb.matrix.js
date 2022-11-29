@@ -22,6 +22,7 @@ Inputs:
 
 q{}
 	.filter{}
+	.filter0
 	.terms[]
 		each element is {id=str, term={}, q={}}
 ds{}
@@ -79,13 +80,15 @@ function validateArg(q, ds, genome) {
 		if (typeof q.currentGeneNames == 'string') q.currentGeneNames = JSON.parse(q.currentGeneNames)
 		if (!Array.isArray(q.currentGeneNames)) throw 'currentGeneNames[] is not array'
 	}
+	if (q.filter0) {
+		if (typeof q.filter0 == 'string') q.filter0 = JSON.parse(q.filter0)
+	}
 }
 
 async function getSampleData(q) {
 	// dictionary and non-dictionary terms require different methods for data query
 	const [dictTerms, nonDictTerms] = divideTerms(q.terms)
 	const { samples, refs } = await getSampleData_dictionaryTerms(q, dictTerms)
-	console.log(samples)
 
 	if (q.ds.getSampleIdMap) {
 		refs.bySampleId = q.ds.getSampleIdMap(samples)
