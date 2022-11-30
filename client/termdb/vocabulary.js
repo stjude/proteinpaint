@@ -569,6 +569,9 @@ class TermdbVocab extends Vocab {
 			'genome=' + this.vocab.genome,
 			'dslabel=' + this.vocab.dslabel,
 			'termid=' + arg.termid,
+			'svgw=' + arg.svgw,
+			'orientation=' + arg.orientation,
+			'devicePixelRatio=' + arg.devicePixelRatio,
 			...(additionalArgs || [])
 		]
 		if (arg.filter) {

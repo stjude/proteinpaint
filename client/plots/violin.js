@@ -114,20 +114,20 @@ class ViolinPlot {
 	}
 
 	validateArg() {
-		const arg = { filter: this.state.termfilter.filter }
+		const { term, term2, settings } = this.config
+		const arg = {
+			filter: this.state.termfilter.filter,
+			svgw: settings.violin.svgw,
+			orientation: settings.violin.orientation,
+			devicePixelRatio: settings.violin.devicePixelRatio
+		}
 
-		if (
-			(this.config.term.term.type == 'float' || this.config.term.term.type == 'integer') &&
-			this.config.term.q.mode == 'continuous'
-		) {
-			arg.termid = this.config.term.id
-			arg.divideTw = this.config.term2
-		} else if (
-			(this.config.term2?.term?.type == 'float' || this.config.term2?.term?.type == 'integer') &&
-			this.config.term2.q.mode == 'continuous'
-		) {
-			arg.termid = this.config.term2.id
-			arg.divideTw = this.config.term
+		if ((term.term.type == 'float' || term.term.type == 'integer') && term.q.mode == 'continuous') {
+			arg.termid = term.id
+			arg.divideTw = term2
+		} else if ((term2?.term?.type == 'float' || term2?.term?.type == 'integer') && term2.q.mode == 'continuous') {
+			arg.termid = term2.id
+			arg.divideTw = term
 		} else {
 			throw 'both term1 and term2 are not numeric/continuous'
 		}
@@ -137,6 +137,19 @@ class ViolinPlot {
 
 export const violinInit = getCompInit(ViolinPlot)
 export const componentInit = violinInit
+
+export function getDefaultViolinSettings() {
+	return {
+		orientation: 'horizontal',
+		rowlabelw: 250,
+		brushRange: null, //object with start and end if there is a brush selection
+		svgw: 500,
+		devicePixelRatio: window.devicePixelRatio > 1 ? window.devicePixelRatio : 1
+		// unit: 'abs',
+		// overlay: 'none',
+		// divideBy: 'none',
+	}
+}
 
 export async function getPlotConfig(opts, app) {
 	if (!opts.term) throw 'violin getPlotConfig: opts.term{} missing'
@@ -163,14 +176,7 @@ export async function getPlotConfig(opts, app) {
 			// 	barwidth: 20, // bar thickness
 			// 	barspace: 2 // space between two bars
 			// },
-			violin: {
-				orientation: 'horizontal',
-				// unit: 'abs',
-				// overlay: 'none',
-				// divideBy: 'none',
-				rowlabelw: 250,
-				range: null //object with start and end if there is a brush selection
-			}
+			violin: getDefaultViolinSettings()
 		}
 	}
 

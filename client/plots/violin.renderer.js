@@ -49,18 +49,18 @@ export default function violinRenderer(self) {
 			margin = { left: axisHeight, top: 50, right: 50, bottom: maxLabelSize }
 		}
 
-		const plotLength = 800, // span length of a plot, not including margin
+		const plotLength = 1000, // span length of a plot, not including margin
 			// thickness of a plot
 			plotThickness =
 				self.data.plots.length < 2
-					? 100
+					? 150
 					: self.data.plots.length >= 2 && self.data.plots.length < 5
-					? 80
+					? 120
 					: self.data.plots.length >= 5 && self.data.plots.length < 8
-					? 60
+					? 90
 					: self.data.plots.length >= 8 && self.data.plots.length < 11
-					? 50
-					: 40
+					? 75
+					: 60
 
 		svg
 			.attr(
@@ -76,8 +76,6 @@ export default function violinRenderer(self) {
 					(isH ? plotThickness * self.data.plots.length : plotLength + self.config.term.term.name.length)
 			)
 			.classed('sjpp-violin-plot', true)
-
-		const svgWidth = margin.left + margin.right + plotThickness * self.data.plots.length
 
 		// a <g> in which everything is rendered into
 		const svgG = svg.append('g').attr('transform', 'translate(' + margin.left + ',' + margin.top + ')')
@@ -153,13 +151,13 @@ export default function violinRenderer(self) {
 				areaBuilder = area()
 					.y0(d => wScale(-d.binValueCount))
 					.y1(d => wScale(d.binValueCount))
-					.x(d => axisScale(d.x0 * 1.01))
+					.x(d => axisScale(d.x0))
 					.curve(curveBumpX)
 			} else {
 				areaBuilder = area()
 					.x0(d => wScale(-d.binValueCount))
 					.x1(d => wScale(d.binValueCount))
-					.y(d => axisScale(d.x0 * 1.01))
+					.y(d => axisScale(d.x0))
 					.curve(curveBumpY)
 			}
 
@@ -169,32 +167,12 @@ export default function violinRenderer(self) {
 				.style('opacity', '0.7')
 				.attr('d', areaBuilder(plot.bins))
 
-			//	create svg element for bean plot
-			const beanG = svgG
-				.append('g')
-				.attr(
-					'transform',
-					isH
-						? 'translate(0,' + plotThickness * (plotIdx + 0.5) + ')'
-						: 'translate(' + plotThickness * (plotIdx + 0.5) + ',0)'
-				)
-				.attr('classed', 'sjpp-beanG')
+			violinG
+				.append('image')
+				.attr('xlink:href', plot.src)
+				.attr('transform', isH ? 'translate(0, -7)' : 'translate(-7, 0)')
 
-			//render bean plot on plot.values
-			plot.values.forEach(element => {
-				beanG
-					.append('line')
-					.attr('class', 'bean line')
-					.style('stroke-width', '0.5')
-					.style('stroke', 'black')
-					.style('opacity', '0.5')
-					.attr('y1', isH ? -7 : axisScale(element))
-					.attr('y2', isH ? 7 : axisScale(element))
-					.attr('x1', isH ? axisScale(element) : -7)
-					.attr('x2', isH ? axisScale(element) : 7)
-			})
-
-			beanG
+			violinG
 				.append('g')
 				.attr('classed', 'sjpp-brush')
 				.call(
@@ -202,6 +180,7 @@ export default function violinRenderer(self) {
 						.extent([[0, -35], [plotLength, 35]])
 						.on('', async event => {
 							const selection = event.selection
+							// console.log(187, selection);
 							if (!selection) return
 							const start = axisScale.invert(selection[0])
 							const end = axisScale.invert(selection[1])
@@ -211,7 +190,7 @@ export default function violinRenderer(self) {
 								config: {
 									settings: {
 										violin: {
-											range: { start, end, plotIdx }
+											brushRange: { start, end, plotIdx }
 										}
 									}
 								}
@@ -222,10 +201,11 @@ export default function violinRenderer(self) {
 	}
 
 	self.renderBrushValues = function() {
-		const range = self.config.settings.violin.range
+		const range = self.config.settings.violin.brushRange
 		if (!range) return //also delete the table
 		const plot = self.data.plots[range.plotIdx]
 		const values = plot.values.filter(v => v >= range.start && v <= range.end)
+		// console.log(212, values);
 	}
 
 	self.renderPvalueTable = function() {
@@ -243,19 +223,6 @@ export default function violinRenderer(self) {
 			this.dom.tableHolder.style('display', 'none')
 			return
 		}
-
-		//disabled separate legend for now
-
-		// const legendHolder = this.dom.tableHolder.append('div').classed('sjpp-legend-div', true)
-
-		// legendHolder.append('div').text(this.config.term2.term.name)
-
-		// for (const plot of this.data.plots) {
-		// 	legendHolder
-		// 		.append('div')
-		// 		.style('font-size', '15px')
-		// 		.text(plot.label)
-		// }
 
 		//show pvalue table
 		renderPvalues({

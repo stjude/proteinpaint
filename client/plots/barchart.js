@@ -816,6 +816,17 @@ function setInteractivity(self) {
 	}
 }
 
+export function getDefaultBarSettings() {
+	return {
+		orientation: 'horizontal',
+		unit: 'abs',
+		overlay: 'none',
+		divideBy: 'none',
+		rowlabelw: 250,
+		asterisksVisible: true
+	}
+}
+
 export async function getPlotConfig(opts, app) {
 	if (!opts.term) throw 'barchart getPlotConfig: opts.term{} missing'
 	try {
@@ -841,14 +852,7 @@ export async function getPlotConfig(opts, app) {
 				barwidth: 20, // bar thickness
 				barspace: 2 // space between two bars
 			},
-			barchart: {
-				orientation: 'horizontal',
-				unit: 'abs',
-				overlay: 'none',
-				divideBy: 'none',
-				rowlabelw: 250,
-				asterisksVisible: true
-			}
+			barchart: getDefaultBarSettings()
 		}
 	}
 
