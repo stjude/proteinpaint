@@ -66,10 +66,9 @@ export async function displaySampleTable(samples, args) {
 		return await make_singleSampleTable(samples[0], args)
 	}
 	const [columns, rows] = await samples2columnsRows(samples, args.tk)
-	const style = { show_lines: true }
-	if (args.max_width) style.max_width = args.max_width
-	if (args.max_height) style.max_height = args.max_height
-	const params = { rows, columns, div: args.div, style }
+	const params = { rows, columns, div: args.div }
+	if (args.maxWidth) params.maxWidth = args.maxWidth
+	if (args.maxHeight) params.maxHeight = args.maxHeight
 
 	return renderTable(params)
 }

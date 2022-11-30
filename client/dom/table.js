@@ -31,10 +31,6 @@ rows = [ [] ]
 			{url/html/value}, {}, ...
 		]
 	}
-style = {}
-	show_lines: boolean, Shows/hides line column. If not provided line is shown.
-	max_width: str, the max width of the table, if not provided is set to 90vw
-	max_height: str, the max height of the table, if not provided is set to 50vh
 
 buttons = [ {button} ]
 	Each element is an object describing a button:
@@ -48,7 +44,16 @@ noButtonCallback = (index, node) => {}
 singleMode = false, boolean
 	Specifies if a radio button should be rendered instead
 
-striped: boolean, When active makes the table rows to alternate colors
+showLines = true: boolean.
+	Shows/hides line column. 
+
+striped = true, boolean
+	When active makes the table rows to alternate colors
+
+maxWidth = 90vw, string
+	The max width of the table
+maxHeight = 50vw, string
+	The max height of the table
 
 	
 */
@@ -56,12 +61,14 @@ export async function renderTable({
 	columns,
 	rows,
 	div,
-	style = {},
 	buttons,
 	noButtonCallback,
 	singleMode = false,
+	showLines = true,
 	striped = true,
-	showHeader = true
+	showHeader = true,
+	maxWidth = '90vw',
+	maxHeight = '40vh'
 }) {
 	// create a Parent Div element to which the header and sample table will be appended as divH and divS.
 	const parentDiv = div
@@ -70,7 +77,7 @@ export async function renderTable({
 		.append('table')
 		.style('display', 'block')
 		.style('background-color', 'white')
-		.style('max-width', style.max_width ? style.max_width : '90vw')
+		.style('max-width', maxWidth)
 
 	// header div
 	const divH = parentDiv
@@ -79,7 +86,7 @@ export async function renderTable({
 		.style('table-layout', 'fixed')
 		.style('width', '100%')
 		.append('tr')
-	if (style.show_lines) {
+	if (showLines) {
 		divH
 			.append('th')
 			.attr('class', 'sjpp_table_header')
@@ -120,7 +127,7 @@ export async function renderTable({
 	const table = parentDiv
 		.append('tbody')
 		.style('display', 'block')
-		.style('max-height', style.max_height ? style.max_height : '50vh')
+		.style('max-height', maxHeight)
 		.style('overflow', 'scroll')
 
 	for (const [i, row] of rows.entries()) {
@@ -143,7 +150,7 @@ export async function renderTable({
 					checkbox.dispatch('change')
 				}
 			})
-		if (style.show_lines) {
+		if (showLines) {
 			const lineDiv = rowtable
 				.append('td')
 				.text(i + 1)

@@ -29,7 +29,7 @@ export function getHandler(self) {
 					rows,
 					columns,
 					div: tableDiv,
-					style: { max_width: '210px' },
+					maxWidth: '210px',
 					buttons: [
 						{
 							text: 'APPLY',

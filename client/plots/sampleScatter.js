@@ -916,7 +916,9 @@ function setRenderers(self) {
 			rows,
 			columns,
 			div: tableDiv,
-			style: { show_lines: true, max_width: '35vw', max_height: '35vh' },
+			showLines: true,
+			maxWidth: '35vw',
+			maxHeight: '35vh',
 			buttons
 		})
 

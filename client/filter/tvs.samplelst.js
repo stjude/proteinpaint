@@ -20,7 +20,7 @@ async function fillMenu(self, div, tvs) {
 		rows,
 		columns,
 		div,
-		style: { max_width: '250px' },
+		maxWidth: '250px',
 		buttons: [
 			{
 				text: 'APPLY',

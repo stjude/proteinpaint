@@ -720,7 +720,7 @@ function setRenderers(self) {
 				])
 			}
 		}
-		renderTable({ columns, rows, div: table, style: { max_width: '350px', max_height: '20vh' } })
+		renderTable({ columns, rows, div: table, maxWidth: '30vw', maxHeight: '20vh' })
 
 		//Adding a footnote to tell users that superscript letter 'a' indicates the pvalue was computed by Fisher's exact test
 		table
