@@ -40,17 +40,29 @@ buttons = [ {button} ]
 	Each element is an object describing a button:
 	text: str, the text to show in the button
 	callback: function, the function to be called when the button is clicked
+	class: class to customize the button style
 
 noButtonCallback = (index, node) => {}
 	Function that will be called when a row is selected	
 
 singleMode = false, boolean
 	Specifies if a radio button should be rendered instead
+
+striped: boolean, When active makes the table rows to alternate colors
+
 	
 */
-export async function renderTable({ columns, rows, div, style = {}, buttons, noButtonCallback, singleMode = false }) {
-	const numColumns = columns.length
-
+export async function renderTable({
+	columns,
+	rows,
+	div,
+	style = {},
+	buttons,
+	noButtonCallback,
+	singleMode = false,
+	striped = true,
+	showHeader = true
+}) {
 	// create a Parent Div element to which the header and sample table will be appended as divH and divS.
 	const parentDiv = div
 		.style('padding', '5px')
@@ -83,22 +95,27 @@ export async function renderTable({ columns, rows, div, style = {}, buttons, noB
 		if (!singleMode) {
 			const checkboxH = cell
 				.append('input')
+				.attr('id', 'checkboxHeader')
 				.attr('type', 'checkbox')
 				.on('change', () => {
 					table.selectAll('input').property('checked', checkboxH.node().checked)
 					enableButtons()
 				})
 		}
+		if (!showHeader)
+			divH
+				.append('th')
+				.text('Check/Uncheck All')
+				.attr('class', 'sjpp_table_header')
 	}
-
-	// header values
-	for (const c of columns) {
-		const th = divH
-			.append('th')
-			.text(c.label)
-			.attr('class', 'sjpp_table_item sjpp_table_header')
-		if (c.width) th.style('width', c.width)
-	}
+	if (showHeader)
+		for (const c of columns) {
+			const th = divH
+				.append('th')
+				.text(c.label)
+				.attr('class', 'sjpp_table_item sjpp_table_header')
+			if (c.width) th.style('width', c.width)
+		}
 
 	const table = parentDiv
 		.append('tbody')
@@ -114,6 +131,8 @@ export async function renderTable({ columns, rows, div, style = {}, buttons, noB
 			.style('display', 'table')
 			.style('table-layout', 'fixed')
 			.style('width', '100%')
+		if (striped && i % 2 == 1) rowtable.style('background-color', 'rgb(237, 237, 237)')
+
 		if (buttons || noButtonCallback)
 			rowtable.on('click', e => {
 				if (e.target !== checkbox.node()) {
@@ -204,6 +223,7 @@ export async function renderTable({ columns, rows, div, style = {}, buttons, noB
 						button.callback(values)
 					}
 				})
+			if (button.class) button.button.attr('class', button.class)
 		}
 	}
 

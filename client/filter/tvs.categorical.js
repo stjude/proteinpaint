@@ -34,8 +34,6 @@ async function fillMenu(self, div, tvs) {
 		.append('div')
 		.attr('class', 'apply_btn sja_filter_tag_btn')
 		.style('display', 'inline-block')
-		.style('border-radius', '13px')
-		.style('padding', '7px 15px')
 		.style('margin', '5px')
 		.style('text-align', 'center')
 		.style('font-size', '.8em')
