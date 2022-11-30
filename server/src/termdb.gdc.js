@@ -4,10 +4,16 @@ const isUsableTerm = require('#shared/termdb.usecase').isUsableTerm
 const serverconfig = require('./serverconfig')
 
 /*
+******************** functions *************
 initGDCdictionary
-testGDCapi
-	testRestApi
-	testGraphqlApi
+	makeTermdbQueries
+	getOpenProjects
+	testGDCapi
+		testRestApi
+		testGraphqlApi
+	cacheAliquot2submitterMapping
+		fetchIdsFromGdcApi
+
 
 - parsing gdc variables and constructing in-memory termdb:
   HARDCODED LOGIC, does not need any configuration in server/dataset/mds3.gdc.js
@@ -17,8 +23,6 @@ testGDCapi
 
 
 standard termdb "interface" functions are added to ds.cohort.termdb.q{}
-
-exports one function: initGDCdictionary
 
 adds following things:
 
