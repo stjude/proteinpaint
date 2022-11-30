@@ -75,7 +75,7 @@ class Scatter {
 			.style('float', 'right')
 			.style('margin-left', '100px')
 
-		const holder = chartDiv.insert('div').style('margin-left', '50px')
+		const holder = chartDiv.insert('div')
 
 		this.dom = {
 			header: this.opts.header,
@@ -123,7 +123,7 @@ class Scatter {
 		this.shapeLegend = new Map(Object.entries(data.shapeLegend))
 		this.colorLegend = new Map(Object.entries(data.colorLegend))
 
-		this.axisOffset = { x: 30, y: this.settings.svgh }
+		this.axisOffset = { x: 80, y: 20 }
 
 		const s0 = data.samples[0]
 		const [xMin, xMax, yMin, yMax] = data.samples.reduce(
@@ -132,12 +132,12 @@ class Scatter {
 		)
 		this.xAxisScale = d3Linear()
 			.domain([xMin, xMax])
-			.range([0, this.settings.svgw])
+			.range([this.axisOffset.x, this.settings.svgw + this.axisOffset.x])
 
 		this.axisBottom = axisBottom(this.xAxisScale)
 		this.yAxisScale = d3Linear()
 			.domain([yMax, yMin])
-			.range([20, this.settings.svgh + 20])
+			.range([this.axisOffset.y, this.settings.svgh + this.axisOffset.y])
 		this.axisLeft = axisLeft(this.yAxisScale)
 
 		this.render(data)
@@ -355,7 +355,7 @@ function setRenderers(self) {
 			.transition()
 			.duration(duration)
 			.attr('width', s.svgw + 700)
-			.attr('height', Math.max(s.svgh + 60, legendHeight)) //leaving some space for top/bottom padding and y axis
+			.attr('height', Math.max(s.svgh + 100, legendHeight)) //leaving some space for top/bottom padding and y axis
 
 		/* eslint-disable */
 		const [mainG, axisG, xAxis, yAxis, legendG] = getSvgSubElems(svg, chart)
@@ -376,7 +376,7 @@ function setRenderers(self) {
 			xAxis = axisG
 				.append('g')
 				.attr('class', 'sjpcb-scatter-x-axis')
-				.attr('transform', `translate(${self.axisOffset.x}, ${self.settings.svgh})`)
+				.attr('transform', `translate(0, ${self.settings.svgh + self.axisOffset.y})`)
 			yAxis = axisG
 				.append('g')
 				.attr('class', 'sjpcb-scatter-y-axis')
@@ -385,7 +385,7 @@ function setRenderers(self) {
 				.append('rect')
 				.attr('class', 'zoom')
 				.attr('x', self.axisOffset.x)
-				.attr('y', 0)
+				.attr('y', self.axisOffset.y)
 				.attr('width', self.settings.svgw)
 				.attr('height', self.settings.svgh)
 				.attr('fill', 'white')
@@ -396,10 +396,10 @@ function setRenderers(self) {
 				.append('clipPath')
 				.attr('id', idclip)
 				.append('rect')
-				.attr('x', 0)
-				.attr('y', 0)
+				.attr('x', self.axisOffset.x - 30)
+				.attr('y', self.axisOffset.y - 10)
 				.attr('width', self.settings.svgw + self.axisOffset.x)
-				.attr('height', self.settings.svgh + self.axisOffset.x)
+				.attr('height', self.settings.svgh + 30)
 			mainG.attr('clip-path', `url(#${idclip})`)
 			xAxis.call(self.axisBottom)
 			yAxis.call(self.axisLeft)
@@ -756,12 +756,27 @@ function setRenderers(self) {
 	function showGroupMenu(event, group) {
 		self.dom.tip.clear()
 		self.dom.tip.show(event.clientX, event.clientY)
-
 		const menuDiv = self.dom.tip.d.append('div')
-		menuDiv
+		const groupDiv = menuDiv
 			.append('div')
 			.html('&nbsp;' + group.name)
-			.style('font-size', '0.7rem')
+			.style('font-size', '0.9rem')
+			.on('click', () => {
+				const isEdit = groupDiv.select('input').empty()
+				if (!isEdit) return
+				groupDiv.html('')
+				const input = groupDiv
+					.append('input')
+					.attr('value', group.name)
+					.on('change', () => {
+						const value = input.node().value
+						if (value) group.name = value
+						else input.node().value = group.name
+						groupDiv.html('&nbsp;' + group.name)
+					})
+				input.node().focus()
+				input.node().select()
+			})
 		const listDiv = menuDiv
 			.append('div')
 			.attr('class', 'sja_menuoption sja_sharp_border')
@@ -825,9 +840,10 @@ function setRenderers(self) {
 
 	function showTable(group, x, y, addGroup) {
 		let rows = []
-		const columns = [formatCell('Sample', 'label'), formatCell(self.config.colorTW.term.name, 'label')]
+		const sampleColumn = formatCell('Sample', 'label')
+		const columns = [sampleColumn, formatCell(self.config.colorTW.term.name, 'label')]
 		if (self.config.shapeTW) columns.push(formatCell(self.config.shapeTW.term.name, 'label'))
-		columns.push(formatCell('Info', 'label'))
+		let info = false
 		for (const item of group.items) {
 			const data = item.__data__
 			const row = [formatCell(data.sample)]
@@ -835,23 +851,38 @@ function setRenderers(self) {
 			else row.push(formatCell(''))
 			if (self.config.shapeTW) row.push(formatCell(getCategoryInfo(data, 'shape')))
 			if ('info' in data) {
+				info = true
 				const values = []
 				for (const [k, v] of Object.entries(data.info)) values.push(`${k}: ${v}`)
 				row.push(formatCell(values.join(', ')))
-			} else row.push({ value: '' })
+			}
 			rows.push(row)
 		}
+		if (info) columns.push(formatCell('Info', 'label'))
+		console.log(columns, rows)
+
 		self.dom.tip.clear()
 		const headerDiv = self.dom.tip.d.append('div').style('margin-top', '5px')
 
-		headerDiv.insert('label').html('&nbsp;Group: ')
-		const groupInput = headerDiv
-			.insert('input')
-			.attr('value', group.name)
-			.on('change', e => {
-				const value = groupInput.node().value
-				if (value) group.name = value
-				else groupInput.node().value = group.name
+		const groupDiv = headerDiv
+			.append('div')
+			.html('&nbsp;' + group.name)
+			.style('font-size', '0.9rem')
+			.on('click', () => {
+				const isEdit = groupDiv.select('input').empty()
+				if (!isEdit) return
+				groupDiv.html('')
+				const input = groupDiv
+					.append('input')
+					.attr('value', group.name)
+					.on('change', () => {
+						const value = input.node().value
+						if (value) group.name = value
+						else input.node().value = group.name
+						groupDiv.html('&nbsp;' + group.name)
+					})
+				input.node().focus()
+				input.node().select()
 			})
 		const tableDiv = self.dom.tip.d.append('div')
 		const buttons = []
@@ -889,9 +920,8 @@ function setRenderers(self) {
 		})
 
 		self.dom.tip.show(x, y)
-		//scroll(x, y)
 		function formatCell(column, name = 'value') {
-			let dict = { width: '10vw' }
+			let dict = {}
 			dict[name] = column
 			return dict
 		}
@@ -943,8 +973,8 @@ export async function getPlotConfig(opts, app) {
 				sampleScatter: {
 					size: 16,
 					refSize: 9,
-					svgw: 600,
-					svgh: 600,
+					svgw: 550,
+					svgh: 550,
 					axisTitleFontSize: 16,
 					showAxes: false,
 					showRef: true

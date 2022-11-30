@@ -217,7 +217,7 @@ h2 {
     cursor: default
 }
 
-.apply_btn {
+.sjpp_apply_btn {
     background-color: #d0e0e3;
     border-radius: 13px !important; 
     padding: 7px 15px !important;
@@ -225,7 +225,7 @@ h2 {
 }
 
 
-.delete_btn,
+.sjpp_delete_btn,
 .remove_btn {
     background-color: #f4cccc;
 }

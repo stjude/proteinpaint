@@ -39,7 +39,7 @@ export function getHandler(self) {
 								group1.values = values
 								self.runCallback()
 							},
-							class: 'apply_btn sja_filter_tag_btn'
+							class: 'sjpp_apply_btn sja_filter_tag_btn'
 						}
 					],
 					striped: false,

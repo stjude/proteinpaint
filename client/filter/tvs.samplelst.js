@@ -1,4 +1,3 @@
-
 import { renderTable } from '#dom/table'
 
 export const handler = {
@@ -25,7 +24,7 @@ async function fillMenu(self, div, tvs) {
 		buttons: [
 			{
 				text: 'APPLY',
-				class: 'apply_btn sja_filter_tag_btn',
+				class: 'sjpp_apply_btn sja_filter_tag_btn',
 				callback: indexes => {
 					const values = []
 					for (const index of indexes) values.push(tvs.values[index])

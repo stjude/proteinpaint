@@ -32,7 +32,7 @@ async function fillMenu(self, div, tvs) {
 		.append('div')
 		.style('text-align', 'center')
 		.append('div')
-		.attr('class', 'apply_btn sja_filter_tag_btn')
+		.attr('class', 'sjpp_apply_btn sja_filter_tag_btn')
 		.style('display', 'inline-block')
 		.style('margin', '5px')
 		.style('text-align', 'center')

@@ -93,9 +93,8 @@ export function setGroupsettingMethods(self) {
 		// 'Apply' button
 		cutoff_div
 			.append('div')
-			.attr('class', 'apply_btn sja_filter_tag_btn')
+			.attr('class', 'sjpp_apply_btn sja_filter_tag_btn')
 			.style('display', 'inline-block')
-			.style('border-radius', '13px')
 			.style('text-align', 'center')
 			.style('font-size', '.8em')
 			.style('float', 'right')
@@ -303,7 +302,7 @@ export function setGroupsettingMethods(self) {
 		// 'Apply' button
 		header_buttons_div
 			.append('div')
-			.attr('class', 'apply_btn sja_filter_tag_btn')
+			.attr('class', 'sjpp_apply_btn sja_filter_tag_btn')
 			.style('display', 'inline-block')
 			.style('border-radius', '13px')
 			.style('text-align', 'center')
