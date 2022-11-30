@@ -18,7 +18,7 @@ export function setInteractivity(self) {
 				)
 			} else if (d.term.type == 'geneVariant' && d.value) {
 				const value = d.value
-				rows.push(`<tr><td>Sample:</td><td>${d._SAMPLENAME_ || value.sample}</td></tr>`)
+				rows.push(`<tr><td>Sample:</td><td>${d._SAMPLENAME_ || value._SAMPLENAME_ || value.sample}</td></tr>`)
 				const label = value.mname ? `${value.mname} ${d.label}` : d.label
 				rows.push(
 					`<tr><td>${d.term.name}:</td><td style='color: ${d.fill == value.color ? '' : d.fill}'>${label}</td></tr>`
