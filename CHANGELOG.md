@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## 2.6.2
+
+- samplelst edit UI
+- bean plot over violin plot
+
+GDC-related
+- preliminary support for the GDC filter0 in the matrix plot 
+
 ## 2.6.1
 
 - fixes to the summary plot toggling
