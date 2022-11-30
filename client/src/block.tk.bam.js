@@ -273,7 +273,7 @@ async function getData(tk, block, additional = []) {
 	const data = await dofetch3('tkbam?' + lst.join('&'), { headers })
 
 	// reset text
-	tk.cloaktext.text('Loading ...')
+	//tk.cloaktext.text('Loading ...')
 
 	if (tk.variants && !tk.alleleAlreadyUpdated) {
 		tk.variants[0].refseq = data.refseq

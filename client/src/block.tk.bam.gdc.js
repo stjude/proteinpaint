@@ -51,6 +51,13 @@ makeSsmGeneSearch
 makeSubmitAndNoPermissionDiv
 	validateInputs
 	sliceBamAndRender
+
+**************** url parameters
+gdc_id=TCGA-06-0211
+gdc_ssm=E17K
+gdc_var=chr14:g.104780214C>T
+gdc_pos=chr7:55153818-55156225
+
 */
 
 const gdc_genome = 'hg38'
@@ -562,6 +569,22 @@ export async function bamsliceui({
 			},
 			singleMode: true
 		})
+
+		if (urlp.has('gdc_ssm')) {
+			// a quick fix. can delete these lines later when table accepts array index of item selected by default
+			for (const [gene, mlst] of gene2mlst) {
+				for (const m of mlst) {
+					if (m.mname == urlp.get('gdc_ssm')) {
+						gdc_args.ssmInput = {
+							chr: m.chr,
+							pos: m.pos - 1, // convert 1-based to 0-based
+							ref: m.ref,
+							alt: m.alt
+						}
+					}
+				}
+			}
+		}
 	}
 	function makeSubmitAndNoPermissionDiv() {
 		const tr = formdiv.append('table').append('tr') // one row with two cells
@@ -754,9 +777,7 @@ async function sliceBamAndRender(args, genome, holder, debugmode) {
 
 		// This will need to be changed to a loop when viewing multiple regions in the same sample
 		const { filesize } = gdc_bam_files[0]
-		//tk.cloaktext.text('BAM slice downloaded. File size: ' + filesize)
 
-		//block.gdcBamSliceDownloadBtn.style('display', 'inline-block')
 		file.about.push({ k: 'Slice file size', v: filesize })
 	}
 
