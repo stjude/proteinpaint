@@ -370,7 +370,6 @@ function setRenderers(self) {
 	function getSvgSubElems(svg, chart) {
 		let mainG, axisG, xAxis, yAxis, legendG
 		if (svg.select('.sjpcb-scatter-mainG').size() == 0) {
-			svg.append('defs')
 			mainG = svg.append('g').attr('class', 'sjpcb-scatter-mainG')
 			axisG = mainG.append('g').attr('class', 'sjpcb-scatter-axis')
 			xAxis = axisG
@@ -400,6 +399,7 @@ function setRenderers(self) {
 				.attr('y', self.axisOffset.y - 10)
 				.attr('width', self.settings.svgw + self.axisOffset.x)
 				.attr('height', self.settings.svgh + 30)
+
 			mainG.attr('clip-path', `url(#${idclip})`)
 			xAxis.call(self.axisBottom)
 			yAxis.call(self.axisLeft)
@@ -417,6 +417,7 @@ function setRenderers(self) {
 		}
 		if (self.settings.showAxes) axisG.style('opacity', 1)
 		else axisG.style('opacity', 0)
+
 		return [mainG, axisG, xAxis, yAxis, legendG]
 	}
 

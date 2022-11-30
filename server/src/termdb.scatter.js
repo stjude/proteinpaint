@@ -217,7 +217,7 @@ function assignCategory(dbSample, sample, tw, categoryMap, category) {
 			// TODO mutation.mname is amino acid change. pass mname to sample to be shown in tooltip
 		}
 	} else {
-		value = dbSample?.[tw.id]?.value
+		value = dbSample?.[tw.id]?.key
 	}
 	if (value) {
 		sample[category] = value.toString()
