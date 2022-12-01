@@ -1084,7 +1084,7 @@ const defaultSettings = JSON.stringify({
 		atRiskLabelOffset: -10,
 		xTickValues: [], // if undefined or empty, will be ignored
 		seriesTipDecimals: 0,
-		ciVisible: false,
+		ciVisible: true,
 		radius: 5,
 		fill: '#fff',
 		stroke: '#000',
