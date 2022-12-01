@@ -17,7 +17,7 @@ class Recover {
 				.style('position', 'sticky')
 				.style('top', '12px')
 				.style('right', '20px')
-				.style('margin', '10px')
+				.style('margin', opts.margin ? opts.margin : '10px')
 				.style('text-align', 'right')
 		}
 		this.menu = new Menu({ padding: '5px' })

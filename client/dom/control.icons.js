@@ -63,27 +63,27 @@ export const icons = {
 			.on('click', o.handler)
 	},
 	expand: (elem, o) => {
+		const color = 'color' in o ? o.color : 'rgb(100,100,255)'
 		return (
 			elem
 				.attr('title', o.title)
-				.style('padding', '0 3px')
 				.style('height', '16px')
-				.style('color', 'rgb(100,100,255)')
+				.style('color', color)
 				.style('opacity', 0.9)
-				.style('font-size', '16px')
-				.style('padding', '0 2px')
-				.style('margin', '0 2px 2px 1px')
+				.style('font-size', 'fontSize' in o ? o.fontSize : '16px')
+				.style('padding', 'padding' in o ? o.padding : '0 2px')
+				// .style('margin', '0 2px 2px 1px')
 				.style('display', 'display' in o ? o.display : 'inline-block')
 				.style('cursor', 'pointer')
 				//.style('border','1px solid #aaa')
 				//.style('background-color','#ccc')
 				.html(
-					`<svg width='16' height='12' style='margin:0;overflow:visible'>
+					`<svg width='16' height='14' style='margin:0;overflow:visible'>
 				<g transform='translate(0,0)'>
-					<line x1='1' y1='0' x2='1' y2='12' style='stroke:rgb(100,100,255);stroke-width:2px'></line>
-					<path d='M2,6L7,3L7,9Z' style='fill:rgb(100,100,255)'></path>
-					<path d='M9,3L14,6L9,9Z' style='fill:rgb(100,100,255)'></path>
-					<line x1='15' y1='0' x2='15' y2='12' style='stroke:rgb(100,100,255);stroke-width:2px'></line>
+					<line x1='1' y1='0' x2='1' y2='12' style='stroke:${color};stroke-width:2px'></line>
+					<path d='M2,6L7,3L7,9Z' style='fill:${color}'></path>
+					<path d='M9,3L14,6L9,9Z' style='fill:${color}'></path>
+					<line x1='15' y1='0' x2='15' y2='12' style='stroke:${color};stroke-width:2px'></line>
 				</g>
 			</svg>`
 				)
@@ -91,27 +91,27 @@ export const icons = {
 		)
 	},
 	collapse: (elem, o) => {
+		const color = 'color' in o ? o.color : 'rgb(100,100,255)'
 		return (
 			elem
 				.attr('title', o.title)
-				.style('padding', '0 3px')
-				.style('height', '16px')
-				.style('color', 'rgb(100,100,255)')
+				.style('height', 'auto')
+				.style('color', color)
 				.style('opacity', 0.9)
-				.style('font-size', '16px')
-				.style('padding', '0 2px')
-				.style('margin', '0 1px 2px 1px')
+				.style('font-size', 'fontSize' in o ? o.fontSize : '16px')
+				.style('padding', 'padding' in o ? o.padding : '0 2px')
+				// .style('margin', '0 1px 2px 1px')
 				.style('display', 'display' in o ? o.display : 'inline-block')
 				.style('cursor', 'pointer')
 				//.style('border','1px solid #aaa')
 				//.style('background-color','#ccc')
 				.html(
-					`<svg width='16' height='12' style='margin:0;overflow:visible'>
+					`<svg width='16' height='14' style='margin:0;overflow:visible'>
 				<g transform='translate(0,0)'>
-					<line x1='6' y1='0' x2='6' y2='12' style='stroke:rgb(100,100,255);stroke-width:2px'></line>
-					<path d='M0,3L5,6L0,9Z' style='fill:rgb(100,100,255)'></path>
-					<path d='M10,6L16,3L16,9Z' style='fill:rgb(100,100,255)'></path>
-					<line x1='9' y1='0' x2='9' y2='12' style='stroke:rgb(100,100,255);stroke-width:2px'></line>
+					<line x1='6' y1='0' x2='6' y2='12' style='stroke:${color};stroke-width:2px'></line>
+					<path d='M0,3L5,6L0,9Z' style='fill:${color}'></path>
+					<path d='M10,6L16,3L16,9Z' style='fill:${color}'></path>
+					<line x1='9' y1='0' x2='9' y2='12' style='stroke:${color};stroke-width:2px'></line>
 				</g>
 			</svg>`
 				)

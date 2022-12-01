@@ -1116,6 +1116,8 @@ h2 {
     border-radius: 0  0 5px 5px;
 }
 
+.sjpp-output-sandbox-collapse-btn,
+.sjpp-output-sandbox-expand-btn,
 .sjpp-output-sandbox-close-bt
 {
     display: inline-block;

@@ -1,3 +1,5 @@
+import { icons } from './control.icons'
+
 /*
 Creates sandbox divs, containers running proteinpaint calls, forms, etc. 
 independent of one another. 
@@ -76,6 +78,19 @@ export function newSandboxDiv(sandbox_holder, opts = {}) {
 			if (typeof opts.close === 'function') opts.close()
 		})
 
+	// placeholder for collapse btn
+	const collapseBtnDiv = header_row
+		.append('div')
+		.classed('sjpp-output-sandbox-collapse-btn', true)
+		.classed('sja_menuoption', true)
+
+	// placeholder for expand btn
+	const expandBtnDiv = header_row
+		.append('div')
+		.classed('sjpp-output-sandbox-expand-btn', true)
+		.classed('sja_menuoption', true)
+		.style('display', 'none')
+
 	const header = header_row
 		.append('div')
 		.style('display', 'inline-block')
@@ -85,6 +100,31 @@ export function newSandboxDiv(sandbox_holder, opts = {}) {
 		.append('div')
 		.attr('class', 'sjpp-output-sandbox-content')
 		.style('width', opts.style?.width || '95vw')
+
+	let isSandboxContentVisible = true
+
+	// Collapse btn
+	icons['collapse'](collapseBtnDiv, {
+		fontSize: '1.5em',
+		padding: '4px 10px',
+		color: 'black',
+		handler: expandCollapse
+	})
+	// Expand btn
+	icons['expand'](expandBtnDiv, {
+		fontSize: '1.5em',
+		padding: '4px 10px',
+		color: 'black',
+		display: 'none',
+		handler: expandCollapse
+	})
+
+	function expandCollapse() {
+		isSandboxContentVisible = !isSandboxContentVisible
+		collapseBtnDiv.style('display', isSandboxContentVisible == true ? 'inline-block' : 'none')
+		expandBtnDiv.style('display', isSandboxContentVisible == true ? 'none' : 'inline-block')
+		body.style('display', isSandboxContentVisible == true ? 'block' : 'none')
+	}
 
 	return { header_row, header, body, app_div, id: sandboxId }
 }

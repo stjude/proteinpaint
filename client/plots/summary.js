@@ -30,7 +30,8 @@ class SummaryPlot {
 			getState: appState => this.getState(appState),
 			reactsTo: action => action.id == this.id && action.type == 'plot_edit' && action._scope_ != 'none',
 			plot_id: this.id,
-			maxHistoryLen: 10
+			maxHistoryLen: 10,
+			margin: '5px 10px' //Prevents a gap appearing between the tabs and sandbox content
 		})
 
 		//Moved from main to fix default barchart not appearing when summary plot sandbox is created
@@ -165,7 +166,6 @@ function setRenderers(self) {
 				.append('div')
 				.style('display', 'inline-block')
 				.style('margin-left', '10px')
-				.style('margin-bottom', '-6px')
 				.selectAll('button')
 				.data([
 					{
@@ -211,7 +211,8 @@ function setRenderers(self) {
 						childType: 'boxplot',
 						label: 'Boxplot - TODO',
 						disabled: d => true,
-						isVisible: () => self.config.term.type === 'integer' || self.config.term.type === 'float',
+						isVisible: () => false, // remove during development
+						// isVisible: () => self.config.term.type === 'integer' || self.config.term.type === 'float',
 						active: false
 					},
 					{
@@ -233,11 +234,12 @@ function setRenderers(self) {
 				//Styles for tab-like design
 				.style('cursor', d => (d.disabled() ? 'not-allowed' : 'pointer'))
 				.style('background-color', d => (d.active ? '#cfe2f3' : 'white'))
-				.style('border-style', d => (d.active ? 'solid solid none' : 'none'))
-				.style('border-color', '#ccc8c8')
+				.style('border-style', d => (d.active ? 'solid solid none' : 'solid'))
+				.style('border-color', d => (d.active ? 'white' : '#ccc8c8')) //fix to keep tabs the same size
 				.style('border-width', '1px')
 				.style('border-radius', '5px 5px 0px 0px')
-				.style('margin', '0px 2px -1px')
+				//Aligns tabs to bottom of header div
+				.style('vertical-align', 'sub')
 
 				// TODO: may use other logic for disabling a chart type, insteead of hiding/showing
 				.property('disabled', d => d.disabled())
