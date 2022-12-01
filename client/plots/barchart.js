@@ -141,6 +141,9 @@ class Barchart {
 		}
 
 		return {
+			nav: {
+				header_mode: appState.nav.header_mode
+			},
 			termfilter: appState.termfilter,
 			config: Object.assign({}, config, {
 				settings: {
@@ -154,9 +157,10 @@ class Barchart {
 	}
 
 	async main() {
-		if (this.state.config.childType != this.type) return
+		const c = this.state.config
+		if (c.chartType != this.type && c.childType != this.type) return
 		try {
-			this.config = JSON.parse(JSON.stringify(this.state.config))
+			this.config = structuredClone(c)
 			if (!this.currServerData) this.dom.barDiv.style('max-width', window.innerWidth + 'px')
 			this.prevConfig = this.config || {}
 			if (this.dom.header)
