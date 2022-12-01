@@ -44,7 +44,7 @@ class Barchart {
 				.style('padding', '24px')
 				.style('font-size', '16px')
 				.style('color', '#aaa'),
-			barDiv: holder.append('div').style('white-space', 'normal'),
+			barDiv: holder.append('div'),
 			legendDiv: holder.append('div').style('margin', '5px 5px 15px 5px')
 		}
 		if (this.dom.header) this.dom.header.html('Barchart')

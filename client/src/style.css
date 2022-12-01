@@ -55,7 +55,9 @@ h2 {
     border-spacing: 2px;
 }
 
-
+.sja_root_holder svg {
+    display: 'inline-block' !important
+}
 /*
     override the thicker button border
     that results when a button's 
