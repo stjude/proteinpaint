@@ -1322,18 +1322,14 @@ export class Block {
 		// measure coordinate text width to decide how many ticks to use
 		let maxticknumber
 		{
-			let w
 			const pos = Math.max(this.rglst[this.startidx].stop, this.rglst[this.stopidx].stop)
-			rulerg
+			const t = rulerg
 				.append('text')
 				.text(pos > 1000000 ? d3format('s')(pos) : d3format(',d')(pos))
 				.attr('font-size', this.rulerfontsize)
 				.attr('font-family', client.font)
-				.each(function() {
-					w = this.getBBox().width
-				})
-				.remove()
-			maxticknumber = Math.floor(this.width / (w + 60))
+			maxticknumber = Math.floor(this.width / (t.node().getBBox().width + 60))
+			t.remove()
 		}
 
 		const r = this.rglst[this.startidx]
