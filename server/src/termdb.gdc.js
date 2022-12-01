@@ -4,6 +4,16 @@ const isUsableTerm = require('#shared/termdb.usecase').isUsableTerm
 const serverconfig = require('./serverconfig')
 
 /*
+******************** functions *************
+initGDCdictionary
+	makeTermdbQueries
+	getOpenProjects
+	testGDCapi
+		testRestApi
+		testGraphqlApi
+	cacheAliquot2submitterMapping
+		fetchIdsFromGdcApi
+
 
 - parsing gdc variables and constructing in-memory termdb:
   HARDCODED LOGIC, does not need any configuration in server/dataset/mds3.gdc.js
@@ -13,8 +23,6 @@ const serverconfig = require('./serverconfig')
 
 
 standard termdb "interface" functions are added to ds.cohort.termdb.q{}
-
-exports one function: initGDCdictionary
 
 adds following things:
 
@@ -493,6 +501,7 @@ async function testGDCapi() {
 		await testRestApi(apihost + '/ssm_occurrences')
 		await testRestApi(apihost + '/cases')
 		await testRestApi(apihost + '/files')
+		await testRestApi(apihost + '/analysis/top_mutated_genes_by_project')
 		// /data/ and /slicing/view/ are not tested as they require file uuid which is unstable across data releases
 		await testGraphqlApi(apihostGraphql)
 	} catch (e) {

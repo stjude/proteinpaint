@@ -294,7 +294,7 @@ tape('tvs: Numeric', async test => {
 	const tipd = opts.filter.Inner.dom.termSrcDiv
 
 	test.equal(tipd.selectAll('.apply_btn').size(), 2, 'Should have 2 button to apply value change')
-	test.equal(tipd.selectAll('.delete_btn').size(), 1, 'Should have 1 button to remove the range')
+	test.equal(tipd.selectAll('.sjpp_delete_btn').size(), 1, 'Should have 1 button to remove the range')
 	test.equal(tipd.node().querySelectorAll('.start_text')[0].innerHTML, '1000', 'Should match start value with data')
 	test.equal(tipd.node().querySelectorAll('.stop_text')[0].innerHTML, '2000', 'Should match stop value with data')
 
@@ -389,7 +389,7 @@ tape('tvs: Numeric', async test => {
 	test.equal(
 		tipd
 			.selectAll('table')
-			.selectAll('.delete_btn')
+			.selectAll('.sjpp_delete_btn')
 			.size(),
 		2,
 		'Should have buttons to delete the ranges'
@@ -407,7 +407,7 @@ tape('tvs: Numeric', async test => {
 	//delete new range without applying new range
 	tipd
 		.node()
-		.querySelectorAll('.delete_btn')[1]
+		.querySelectorAll('.sjpp_delete_btn')[1]
 		.click()
 
 	await sleep(800)

@@ -16,7 +16,8 @@ const datasets = {
 	ihg,
 	hg38gene,
 	allPharmacotyping,
-	ash
+	ash,
+	mbmeta
 	// add more datasets
 }
 
@@ -97,6 +98,33 @@ function ihg() {
 	scpHpc('sdhanda/mb_portal/BT_database/SNVindel_IHG.tsv')
 }
 
+function mbmeta() {
+	checkDir('files/hg38/mbmeta/clinical/')
+	exec(
+		'scp ppr:/opt/data/pp/tp_native_dir/files/hg38/mbmeta/clinical/db ' + path.join(tp, 'files/hg38/mbmeta/clinical/db')
+	)
+	checkDir('files/hg38/mbmeta/classification/')
+	exec(
+		'scp ppr:/opt/data/pp/tp_native_dir/files/hg38/mbmeta/classification/meta_analysis_coordinates.txt ' +
+			path.join(tp, 'files/hg38/mbmeta/classification/meta_analysis_coordinates.txt')
+	)
+	checkDir('sdhanda/mb_portal/BT_database/MB03_meta_analysis/data_jan7_2022/Metadata/Alterations/')
+	exec(
+		'scp ppr:/opt/data/pp/tp_native_dir/sdhanda/mb_portal/BT_database/MB03_meta_analysis/data_jan7_2022/Metadata/Alterations/snv_indel1.tsv ' +
+			path.join(
+				tp,
+				'sdhanda/mb_portal/BT_database/MB03_meta_analysis/data_jan7_2022/Metadata/Alterations/snv_indel1.tsv'
+			)
+	)
+	exec(
+		'scp ppr:/opt/data/pp/tp_native_dir/sdhanda/mb_portal/BT_database/MB03_meta_analysis/data_jan7_2022/Metadata/Alterations/cnv_focal1.tsv ' +
+			path.join(
+				tp,
+				'sdhanda/mb_portal/BT_database/MB03_meta_analysis/data_jan7_2022/Metadata/Alterations/cnv_focal1.tsv'
+			)
+	)
+}
+
 function allPharmacotyping() {
 	checkDir('files/hg38/ALL-pharmacotyping/clinical/')
 	scpHpc('files/hg38/ALL-pharmacotyping/clinical/db')
@@ -107,7 +135,7 @@ function ash() {
 	checkDir('files/hg38/ash/')
 	scpHpc('files/hg38/ash/db')
 	scpHpc('files/hg38/ash/panall.hg38.bcf.gz')
-	scpHpc('files/hg38/ash/panall.hg38.bcf.gz.tbi')
+	scpHpc('files/hg38/ash/panall.hg38.bcf.gz.csi')
 	scpHpc('files/hg38/ash/panall.svfusion.hg38.gz')
 	scpHpc('files/hg38/ash/panall.svfusion.hg38.gz.tbi')
 }

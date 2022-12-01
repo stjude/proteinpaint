@@ -1,5 +1,5 @@
 const path = require('path')
-const { get_term_cte } = require('./termdb.sql')
+const { get_term_cte, interpolateSqlValues } = require('./termdb.sql')
 const { getFilterCTEs } = require('./termdb.filter')
 const lines2R = require('./lines2R')
 const fs = require('fs')
@@ -22,6 +22,7 @@ Inputs:
 
 q{}
 	.filter{}
+	.filter0
 	.terms[]
 		each element is {id=str, term={}, q={}}
 ds{}
@@ -78,6 +79,9 @@ function validateArg(q, ds, genome) {
 	if (q.currentGeneNames) {
 		if (typeof q.currentGeneNames == 'string') q.currentGeneNames = JSON.parse(q.currentGeneNames)
 		if (!Array.isArray(q.currentGeneNames)) throw 'currentGeneNames[] is not array'
+	}
+	if (q.filter0) {
+		if (typeof q.filter0 == 'string') q.filter0 = JSON.parse(q.filter0)
 	}
 }
 
@@ -208,7 +212,7 @@ async function getSampleData_dictionaryTerms(q, termWrappers) {
 			${filter ? `WHERE sample IN ${filter.CTEname}` : ''}
 			`
 		).join(`UNION ALL`)}`
-
+	//console.log(interpolateSqlValues(sql, values))
 	const rows = q.ds.cohort.db.connection.prepare(sql).all(values)
 	for (const { sample, term_id, key, value } of rows) {
 		if (!samples[sample]) samples[sample] = { sample }
@@ -233,11 +237,11 @@ q{}
 */
 async function getSampleData_gdc(q, termWrappers) {
 	if (!q.genome.genedb.get_gene2canonicalisoform) throw 'gene2canonicalisoform not supported on this genome'
-
+	const currentGeneNames = q.currentGeneNames || []
 	// currentGeneNames[] contains gene symbols
 	// convert to ENST isoforms to work with gdc api
 	const isoforms = []
-	for (const n of q.currentGeneNames) {
+	for (const n of currentGeneNames) {
 		const data = q.genome.genedb.get_gene2canonicalisoform.get(n)
 		if (!data.isoform) {
 			// no isoform found
@@ -245,6 +249,7 @@ async function getSampleData_gdc(q, termWrappers) {
 		}
 		isoforms.push(data.isoform)
 	}
+	if (!isoforms.length) throw 'no matching GDC isoforms found, at least one is needed to limit the sample query'
 
 	const param = {
 		get: 'samples',

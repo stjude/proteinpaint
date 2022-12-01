@@ -2,6 +2,7 @@ import { getCompInit, copyMerge } from '../rx'
 import { fillTermWrapper } from '../termsetting/termsetting'
 import { renderTable } from '../dom/table'
 import { scaleLinear as d3Linear } from 'd3-scale'
+import { filterJoin, getFilterItemByTag } from '../filter/filter'
 
 import {
 	zoom as d3zoom,
@@ -78,7 +79,7 @@ class Scatter {
 
 		this.dom = {
 			header: this.opts.header,
-			holder: holder,
+			holder,
 			controls,
 			legendDiv,
 			tip: new Menu({ padding: '5px' }),
@@ -119,9 +120,10 @@ class Scatter {
 		const data = await this.app.vocabApi.getScatterData(reqOpts)
 		if (data.error) throw data.error
 		if (!Array.isArray(data.samples)) throw 'data.samples[] not array'
-
 		this.shapeLegend = new Map(Object.entries(data.shapeLegend))
 		this.colorLegend = new Map(Object.entries(data.colorLegend))
+
+		this.axisOffset = { x: 80, y: 20 }
 
 		const s0 = data.samples[0]
 		const [xMin, xMax, yMin, yMax] = data.samples.reduce(
@@ -130,12 +132,12 @@ class Scatter {
 		)
 		this.xAxisScale = d3Linear()
 			.domain([xMin, xMax])
-			.range([0, this.settings.svgw])
+			.range([this.axisOffset.x, this.settings.svgw + this.axisOffset.x])
 
 		this.axisBottom = axisBottom(this.xAxisScale)
 		this.yAxisScale = d3Linear()
 			.domain([yMax, yMin])
-			.range([0, this.settings.svgh])
+			.range([this.axisOffset.y, this.settings.svgh + this.axisOffset.y])
 		this.axisLeft = axisLeft(this.yAxisScale)
 
 		this.render(data)
@@ -347,11 +349,13 @@ function setRenderers(self) {
 	}
 
 	function renderSVG(svg, chart, s, duration, data) {
+		const legendHeight = Math.max(self.colorLegend.size, self.shapeLegend.size) * 30 + 60 //legend step and header
+
 		svg
 			.transition()
 			.duration(duration)
 			.attr('width', s.svgw + 700)
-			.attr('height', s.svgh + 110) //leaving 100 px for the y-axis and 10 to leave some space on top
+			.attr('height', Math.max(s.svgh + 100, legendHeight)) //leaving some space for top/bottom padding and y axis
 
 		/* eslint-disable */
 		const [mainG, axisG, xAxis, yAxis, legendG] = getSvgSubElems(svg, chart)
@@ -366,22 +370,21 @@ function setRenderers(self) {
 	function getSvgSubElems(svg, chart) {
 		let mainG, axisG, xAxis, yAxis, legendG
 		if (svg.select('.sjpcb-scatter-mainG').size() == 0) {
-			svg.append('defs')
 			mainG = svg.append('g').attr('class', 'sjpcb-scatter-mainG')
 			axisG = mainG.append('g').attr('class', 'sjpcb-scatter-axis')
 			xAxis = axisG
 				.append('g')
 				.attr('class', 'sjpcb-scatter-x-axis')
-				.attr('transform', 'translate(100,' + self.settings.svgh + ')')
+				.attr('transform', `translate(0, ${self.settings.svgh + self.axisOffset.y})`)
 			yAxis = axisG
 				.append('g')
 				.attr('class', 'sjpcb-scatter-y-axis')
-				.attr('transform', 'translate(100, 0)')
+				.attr('transform', `translate(${self.axisOffset.x}, 0)`)
 			mainG
 				.append('rect')
 				.attr('class', 'zoom')
-				.attr('x', 101)
-				.attr('y', 0)
+				.attr('x', self.axisOffset.x)
+				.attr('y', self.axisOffset.y)
 				.attr('width', self.settings.svgw)
 				.attr('height', self.settings.svgh)
 				.attr('fill', 'white')
@@ -392,10 +395,11 @@ function setRenderers(self) {
 				.append('clipPath')
 				.attr('id', idclip)
 				.append('rect')
-				.attr('x', 80)
-				.attr('y', 0)
-				.attr('width', self.settings.svgw)
-				.attr('height', self.settings.svgh + 20)
+				.attr('x', self.axisOffset.x - 30)
+				.attr('y', self.axisOffset.y - 10)
+				.attr('width', self.settings.svgw + self.axisOffset.x)
+				.attr('height', self.settings.svgh + 30)
+
 			mainG.attr('clip-path', `url(#${idclip})`)
 			xAxis.call(self.axisBottom)
 			yAxis.call(self.axisLeft)
@@ -413,6 +417,7 @@ function setRenderers(self) {
 		}
 		if (self.settings.showAxes) axisG.style('opacity', 1)
 		else axisG.style('opacity', 0)
+
 		return [mainG, axisG, xAxis, yAxis, legendG]
 	}
 
@@ -444,7 +449,7 @@ function setRenderers(self) {
 	}
 
 	function translate(c) {
-		const transform = `translate(${self.xAxisScale(c.x) + 100},${self.yAxisScale(c.y) + 10})`
+		const transform = `translate(${self.xAxisScale(c.x)},${self.yAxisScale(c.y)})`
 		return transform
 	}
 
@@ -547,6 +552,20 @@ function setRenderers(self) {
 					})
 					self.app.dispatch({ type: 'plot_edit', id: self.id, config: { groups: self.config.groups } })
 				})
+			menuDiv
+				.append('div')
+				.attr('class', 'sja_menuoption sja_sharp_border')
+				.text('Add to a group and filter')
+				.on('click', () => {
+					const group = {
+						name: `Group ${self.config.groups.length + 1}`,
+						items: self.selectedItems,
+						index: groups.length
+					}
+					self.config.groups.push(group)
+					add_to_filter(self, group)
+					self.app.dispatch({ type: 'plot_edit', id: self.id, config: { groups: self.config.groups } })
+				})
 		}
 	}
 
@@ -640,7 +659,7 @@ function setRenderers(self) {
 				self.lasso
 					.items()
 					.attr('r', self.settings.size)
-					.style('fill-opacity', '1')
+					.style('fill-opacity', c => ('sampleId' in c || s.showRef ? 1 : 0))
 				mainG.call(zoom)
 				self.selectedItems = null
 			}
@@ -738,12 +757,27 @@ function setRenderers(self) {
 	function showGroupMenu(event, group) {
 		self.dom.tip.clear()
 		self.dom.tip.show(event.clientX, event.clientY)
-
 		const menuDiv = self.dom.tip.d.append('div')
-		menuDiv
+		const groupDiv = menuDiv
 			.append('div')
 			.html('&nbsp;' + group.name)
-			.style('font-size', '0.7rem')
+			.style('font-size', '0.9rem')
+			.on('click', () => {
+				const isEdit = groupDiv.select('input').empty()
+				if (!isEdit) return
+				groupDiv.html('')
+				const input = groupDiv
+					.append('input')
+					.attr('value', group.name)
+					.on('change', () => {
+						const value = input.node().value
+						if (value) group.name = value
+						else input.node().value = group.name
+						groupDiv.html('&nbsp;' + group.name)
+					})
+				input.node().focus()
+				input.node().select()
+			})
 		const listDiv = menuDiv
 			.append('div')
 			.attr('class', 'sja_menuoption sja_sharp_border')
@@ -795,13 +829,22 @@ function setRenderers(self) {
 				self.config.groups = self.config.groups.splice(group.index, 1)
 				self.app.dispatch({ type: 'plot_edit', id: self.id, config: { groups: self.config.groups } })
 			})
+		menuDiv
+			.append('div')
+			.attr('class', 'sja_menuoption sja_sharp_border')
+			.text('Add to filter')
+			.on('click', () => {
+				add_to_filter(self, group)
+				self.app.dispatch({ type: 'plot_edit', id: self.id, config: { groups: self.config.groups } })
+			})
 	}
 
 	function showTable(group, x, y, addGroup) {
 		let rows = []
-		const columns = [formatCell('Sample', 'label'), formatCell(self.config.colorTW.term.name, 'label')]
+		const sampleColumn = formatCell('Sample', 'label')
+		const columns = [sampleColumn, formatCell(self.config.colorTW.term.name, 'label')]
 		if (self.config.shapeTW) columns.push(formatCell(self.config.shapeTW.term.name, 'label'))
-		columns.push(formatCell('Info', 'label'))
+		let info = false
 		for (const item of group.items) {
 			const data = item.__data__
 			const row = [formatCell(data.sample)]
@@ -809,23 +852,38 @@ function setRenderers(self) {
 			else row.push(formatCell(''))
 			if (self.config.shapeTW) row.push(formatCell(getCategoryInfo(data, 'shape')))
 			if ('info' in data) {
+				info = true
 				const values = []
 				for (const [k, v] of Object.entries(data.info)) values.push(`${k}: ${v}`)
 				row.push(formatCell(values.join(', ')))
-			} else row.push({ value: '' })
+			}
 			rows.push(row)
 		}
+		if (info) columns.push(formatCell('Info', 'label'))
+		console.log(columns, rows)
+
 		self.dom.tip.clear()
 		const headerDiv = self.dom.tip.d.append('div').style('margin-top', '5px')
 
-		headerDiv.insert('label').html('&nbsp;Group: ')
-		const groupInput = headerDiv
-			.insert('input')
-			.attr('value', group.name)
-			.on('change', e => {
-				const value = groupInput.node().value
-				if (value) group.name = value
-				else groupInput.node().value = group.name
+		const groupDiv = headerDiv
+			.append('div')
+			.html('&nbsp;' + group.name)
+			.style('font-size', '0.9rem')
+			.on('click', () => {
+				const isEdit = groupDiv.select('input').empty()
+				if (!isEdit) return
+				groupDiv.html('')
+				const input = groupDiv
+					.append('input')
+					.attr('value', group.name)
+					.on('change', () => {
+						const value = input.node().value
+						if (value) group.name = value
+						else input.node().value = group.name
+						groupDiv.html('&nbsp;' + group.name)
+					})
+				input.node().focus()
+				input.node().select()
 			})
 		const tableDiv = self.dom.tip.d.append('div')
 		const buttons = []
@@ -840,7 +898,6 @@ function setRenderers(self) {
 						items,
 						index: groups.length
 					})
-					console.log(self.config.groups)
 					self.app.dispatch({ type: 'plot_edit', id: self.id, config: { groups: self.config.groups } })
 				}
 			}
@@ -859,14 +916,15 @@ function setRenderers(self) {
 			rows,
 			columns,
 			div: tableDiv,
-			style: { show_lines: true, max_width: '35vw', max_height: '35vh' },
+			showLines: true,
+			maxWidth: '35vw',
+			maxHeight: '35vh',
 			buttons
 		})
 
 		self.dom.tip.show(x, y)
-		//scroll(x, y)
 		function formatCell(column, name = 'value') {
-			let dict = { width: '10vw' }
+			let dict = {}
 			dict[name] = column
 			return dict
 		}
@@ -918,8 +976,8 @@ export async function getPlotConfig(opts, app) {
 				sampleScatter: {
 					size: 16,
 					refSize: 9,
-					svgw: 600,
-					svgh: 600,
+					svgw: 550,
+					svgh: 550,
 					axisTitleFontSize: 16,
 					showAxes: false,
 					showRef: true
@@ -1025,7 +1083,7 @@ function getGroupsOverlay(groups) {
 			values.push(data.sample)
 		}
 		;(tgroup = {
-			name: 'Group ' + (i + 1),
+			name: group.name,
 			key: 'sample',
 			values: values
 		}),
@@ -1043,7 +1101,7 @@ function getGroupvsOthersOverlay(group) {
 	}
 	return [
 		{
-			name: 'Group 1',
+			name: group.name,
 			key: 'sample',
 			values
 		},
@@ -1071,5 +1129,37 @@ async function showTermsTree(self, div, callback, state = { tree: { usecase: { d
 				self.dom.termstip.hide()
 			}
 		}
+	})
+}
+
+function add_to_filter(self, group) {
+	const lst = []
+	let data
+	for (const item of group.items) {
+		data = item.__data__
+		lst.push(data.sample)
+	}
+	const filterUiRoot = getFilterItemByTag(self.state.termfilter.filter, 'filterUiRoot')
+	const filter = filterJoin([
+		filterUiRoot,
+		{
+			type: 'tvslst',
+			in: true,
+			join: '',
+			lst: [
+				{
+					type: 'tvs',
+					tvs: {
+						term: { type: 'samplelst', name: group.name },
+						values: lst
+					}
+				}
+			]
+		}
+	])
+	filter.tag = 'filterUiRoot'
+	self.app.dispatch({
+		type: 'filter_replace',
+		filter
 	})
 }

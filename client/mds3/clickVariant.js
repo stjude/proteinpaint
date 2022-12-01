@@ -116,10 +116,10 @@ async function click2sunburst(d, tk, block, tippos) {
 			const middlex = width / 2
 			const middley = height / 2
 
-			arg.max_width = width - x > middlex ? width - x : x
-			arg.max_height = height - y > middley ? height - y : y
-			arg.max_width = arg.max_width - 150 + 'px'
-			arg.max_height = arg.max_height - 150 + 'px'
+			arg.maxWidth = width - x > middlex ? width - x : x
+			arg.maxHeight = height - y > middley ? height - y : y
+			arg.maxWidth = arg.maxWidth - 150 + 'px'
+			arg.maxHeight = arg.maxHeight - 150 + 'px'
 
 			/* do not call variant_details() as no need to show info on variants
 			only need to show sample display

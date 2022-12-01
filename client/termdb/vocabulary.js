@@ -569,6 +569,9 @@ class TermdbVocab extends Vocab {
 			'genome=' + this.vocab.genome,
 			'dslabel=' + this.vocab.dslabel,
 			'termid=' + arg.termid,
+			'svgw=' + arg.svgw,
+			'orientation=' + arg.orientation,
+			'devicePixelRatio=' + arg.devicePixelRatio,
 			...(additionalArgs || [])
 		]
 		if (arg.filter) {
@@ -774,6 +777,7 @@ class TermdbVocab extends Vocab {
 
 	opts{}
 	.filter        a filter object
+	.filter0       currently the gdc cohort filter obj
 	.terms[tw{}]   an array of termWrapper objects
 		tw.$id       id to disambugate when multiple terms
 		             with the same ID are in terms[],
@@ -850,6 +854,7 @@ class TermdbVocab extends Vocab {
 					filter
 				}
 			}
+			if (opts.filter0) init.body.filter0 = opts.filter0 // avoid adding "undefined" value
 
 			// quick fix
 			if (this.vocab.dslabel == 'GDC' && tw.term.id && currentGeneNames.length)
@@ -893,10 +898,11 @@ class TermdbVocab extends Vocab {
 
 		try {
 			const dictTerm$ids = opts.terms.filter(tw => !nonDictionaryTermTypes.has(tw.term.type)).map(tw => tw.$id)
+			const lst = Object.values(samples)
+			/*
+			// NOTE: for testingonly, may reactivate this code for legacy published sessions
 			const lst = []
-			// NOTE: for testingonly, use
-			// if (1 || !dictTerm$ids.length)) to force the use of any annotated samples even non-dict only
-			if (1 || !dictTerm$ids.length) {
+			if (!dictTerm$ids.length) {
 				// If there are no dictionary terms, okay to show any samples with geneVariants
 				lst.push(...Object.values(samples))
 			} else {
@@ -912,7 +918,7 @@ class TermdbVocab extends Vocab {
 						}
 					}
 				}
-			}
+			}*/
 
 			const sampleFilter = new RegExp(opts.sampleNameFilter || '.*')
 			const data = {

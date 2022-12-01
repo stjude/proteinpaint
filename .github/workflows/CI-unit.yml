@@ -5,7 +5,7 @@ on:
     branches:
       - master
   pull_request:
-    types: [opened, synchronize, reopened, ready_for_review]
+    types: [ opened, synchronize, reopened, ready_for_review ]
 
 jobs:
   build:
@@ -24,9 +24,10 @@ jobs:
       - uses: actions/setup-node@v3
         with:
           node-version: 16
+          cache: 'npm'
 
       - name: Install packages
-        run: npm install
+        run: npm ci
 
       - name: Copy serverconfig.json to root
         run: mv server/test/serverconfig.json .

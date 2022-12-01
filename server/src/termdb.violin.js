@@ -7,6 +7,7 @@ const path = require('path')
 const utils = require('./utils')
 import { median } from '../../server/shared/median'
 const { getData } = require('./termdb.matrix')
+const createCanvas = require('canvas').createCanvas
 
 /*
 q={}
@@ -27,11 +28,16 @@ export async function trigger_getViolinPlotData(q, res, ds, genome) {
 
 	const twLst = [{ id: q.termid, term, q: { mode: 'continuous' } }]
 
-	let divideTw
-
+	if (typeof q.divideTw == 'string') q.divideTw = JSON.parse(q.divideTw)
 	if (q.divideTw) {
-		typeof q.divideTw == 'string' ? (divideTw = JSON.parse(q.divideTw)) : (divideTw = q.divideTw)
-		twLst.push(divideTw)
+		if (!('id' in q.divideTw)) {
+			q.divideTw.id = q.divideTw.term.name
+			q.divideTw.term.id = q.divideTw.term.name
+		}
+	}
+	if (q.divideTw) {
+		twLst.push(q.divideTw)
+		q.term2_q = q.divideTw.q
 	}
 
 	const data = await getData({ terms: twLst, filter: q.filter, currentGeneNames: q.currentGeneNames }, ds, genome)
@@ -53,14 +59,14 @@ export async function trigger_getViolinPlotData(q, res, ds, genome) {
 			continue
 		}
 
-		if (divideTw) {
-			if (!v[divideTw.id]) {
-				// if there is no value for divideTw then skip this
+		if (q.divideTw) {
+			if (!v[q.divideTw.id]) {
+				// if there is no value for q.divideTw then skip this
 				continue
 			}
 
-			if (!key2values.has(v[divideTw.id]?.key)) key2values.set(v[divideTw.id]?.key, [])
-			key2values.get(v[divideTw.id]?.key).push(v[term.id]?.value)
+			if (!key2values.has(v[q.divideTw.id]?.key)) key2values.set(v[q.divideTw.id]?.key, [])
+			key2values.get(v[q.divideTw.id]?.key).push(v[term.id]?.value)
 		} else {
 			if (!key2values.has('All samples')) key2values.set('All samples', [])
 			key2values.get('All samples').push(v[term.id]?.value)
@@ -84,7 +90,7 @@ export async function trigger_getViolinPlotData(q, res, ds, genome) {
 	for (const [key, values] of key2values) {
 		if (q.divideTw) {
 			result.plots.push({
-				label: (divideTw?.term?.values?.[key]?.label || key) + ', n=' + values.length,
+				label: (q.divideTw?.term?.values?.[key]?.label || key) + ', n=' + values.length,
 				values,
 				plotValueCount: values?.length
 			})
@@ -97,13 +103,45 @@ export async function trigger_getViolinPlotData(q, res, ds, genome) {
 		}
 	}
 
+	//create scale object
+	let axisScale
+	q.orientation == 'horizontal'
+		? (axisScale = scaleLinear()
+				.domain([result.min, result.max])
+				.range([0, q.svgw]))
+		: (axisScale = scaleLinear()
+				.domain([result.min, result.max])
+				.range([q.svgw, 0]))
+
 	// plot data to return to client
-	await wilcoxon(divideTw, result)
+	await wilcoxon(q.divideTw, result)
 
 	for (const plot of result.plots) {
 		// item: { label=str, values=[v1,v2,...] }
 
-		const bins0 = computeViolinData(plot.values)
+		//backend rendering bean plot on top of violin plot based on orientation of chart
+		let canvas
+		q.orientation == 'horizontal'
+			? (canvas = createCanvas(q.svgw * q.devicePixelRatio, 20 * q.devicePixelRatio))
+			: (canvas = createCanvas(20 * q.devicePixelRatio, q.svgw * q.devicePixelRatio))
+		const ctx = canvas.getContext('2d')
+		ctx.strokeStyle = 'black'
+		ctx.lineWidth = 0.5
+		if (q.devicePixelRatio > 1) {
+			ctx.scale(q.devicePixelRatio, q.devicePixelRatio)
+		}
+
+		ctx.beginPath()
+		plot.values.forEach(i => {
+			q.orientation == 'horizontal' ? ctx.moveTo(axisScale(i), 0) : ctx.moveTo(0, axisScale(i))
+			q.orientation == 'horizontal' ? ctx.lineTo(axisScale(i), 7) : ctx.lineTo(7, axisScale(i))
+		})
+		ctx.stroke()
+
+		plot.src = canvas.toDataURL()
+
+		//create bins for violins
+		const bins0 = computeViolinData(axisScale, plot.values)
 		// array; each element is an array of values belonging to this bin
 		// NOTE .x0 .x1 attributes are also assigned to this array (safe to do?)
 
@@ -135,22 +173,20 @@ export async function trigger_getViolinPlotData(q, res, ds, genome) {
 
 // // compute bins using d3
 // // need unit test!!!
-export function computeViolinData(values) {
-	let min = Math.min(...values),
+export function computeViolinData(scale, values) {
+	const min = Math.min(...values),
 		max = Math.max(...values)
 
-	const yScale = scaleLinear().domain([min, max])
-
-	let ticksCompute
-	if (values.length < 50) {
-		ticksCompute = 5
-	} else {
-		ticksCompute = 12
-	}
+	// let ticksCompute
+	// if (values.length <= 100) {
+	// 	ticksCompute = 150
+	// } else {
+	// 	ticksCompute = 150
+	// }
 
 	const binBuilder = bin()
 		.domain([min, max]) /* extent of the data that is lowest to highest*/
-		.thresholds(yScale.ticks(ticksCompute)) /* buckets are created which are separated by the threshold*/
+		.thresholds(scale.ticks(150)) /* buckets are created which are separated by the threshold*/
 		.value(d => d) /* bin the data points into this bucket*/
 
 	return binBuilder(values)

@@ -11,9 +11,6 @@ dist/*
 */*/dist/
 */*/*/dist/
 
-
-package-lock.json
-
 **/public/bin/*
 public/tmp/*
 public/data/*

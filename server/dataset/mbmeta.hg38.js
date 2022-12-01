@@ -1,9 +1,9 @@
 module.exports = function() {
 	return {
-		isMds: true,
+		isMds3: true,
 
 		cohort: {
-			allowedChartTypes: ['summary', 'survival', 'matrix'],
+			allowedChartTypes: ['summary', 'survival', 'matrix', 'sampleScatter'],
 			mutationset: [
 				{
 					snvindel:
@@ -16,6 +16,19 @@ module.exports = function() {
 			},
 			termdb: {
 				allowedTermTypes: ['geneVariant']
+			},
+			scatterplots: {
+				plots: [
+					{
+						name: 'Methylome TSNE',
+						dimension: 2, // 2d requires x/y, 3d requires x/y/z
+						file: 'files/hg38/mbmeta/classification/meta_analysis_coordinates.txt',
+						colorTW: { id: 'Subgroup' }
+
+						// allow additional config for this plot
+						// allow additional config for this plot
+					}
+				]
 			}
 		}
 	}

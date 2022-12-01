@@ -2,8 +2,9 @@ import { getCompInit, copyMerge } from '#rx'
 import { Menu } from '#src/client'
 import { fillTermWrapper } from '../termsetting/termsetting'
 import { recoverInit } from '../rx/src/recover'
-
-import { select, selectAll } from 'd3-selection'
+import { select } from 'd3-selection'
+import { getDefaultViolinSettings } from './violin.js'
+import { getDefaultBarSettings } from './barchart.js'
 
 //import {  } from ''
 
@@ -123,7 +124,6 @@ class SummaryPlot {
 export const summaryInit = getCompInit(SummaryPlot)
 
 function setRenderers(self) {
-	// console.log(self);
 	self.initUi = function(opts) {
 		const holder = opts.holder
 		try {
@@ -324,22 +324,10 @@ export async function getPlotConfig(opts, app) {
 				barwidth: 20, // bar thickness
 				barspace: 2 // space between two bars
 			},
-			// TODO: maybe import chart specific config
-			barchart: {
-				orientation: 'horizontal',
-				unit: 'abs',
-				overlay: 'none',
-				divideBy: 'none',
-				rowlabelw: 250,
-				asterisksVisible: true
-			},
-			//TODO can import getPlotConfig from violinplot
-			violin: {
-				orientation: 'horizontal'
-				// unit: 'abs',
-				// overlay: 'none',
-				// divideBy: 'none'
-			}
+
+			barchart: getDefaultBarSettings(),
+
+			violin: getDefaultViolinSettings()
 		},
 		mayAdjustConfig(config, edits = {}) {
 			if (!edits.childType) {

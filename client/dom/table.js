@@ -31,27 +31,45 @@ rows = [ [] ]
 			{url/html/value}, {}, ...
 		]
 	}
-style = {}
-
-	max_width: str, the max width of the table, if not provided is set to 90vw
-	max_height: str, the max height of the table, if not provided is set to 50vh
-	row_height: str, the height of the row
 
 buttons = [ {button} ]
 	Each element is an object describing a button:
 	text: str, the text to show in the button
 	callback: function, the function to be called when the button is clicked
+	class: class to customize the button style
 
 noButtonCallback = (index, node) => {}
 	Function that will be called when a row is selected	
 
 singleMode = false, boolean
 	Specifies if a radio button should be rendered instead
+
+showLines = true: boolean.
+	Shows/hides line column. 
+
+striped = true, boolean
+	When active makes the table rows to alternate colors
+
+maxWidth = 90vw, string
+	The max width of the table
+maxHeight = 50vw, string
+	The max height of the table
+
 	
 */
-export async function renderTable({ columns, rows, div, style = {}, buttons, noButtonCallback, singleMode = false }) {
-	const numColumns = columns.length
-
+export async function renderTable({
+	columns,
+	rows,
+	div,
+	buttons,
+	noButtonCallback,
+	singleMode = false,
+	showLines = true,
+	striped = true,
+	showHeader = true,
+	maxWidth = '90vw',
+	maxHeight = '40vh'
+}) {
 	// create a Parent Div element to which the header and sample table will be appended as divH and divS.
 	const parentDiv = div
 		.style('padding', '5px')
@@ -59,7 +77,7 @@ export async function renderTable({ columns, rows, div, style = {}, buttons, noB
 		.append('table')
 		.style('display', 'block')
 		.style('background-color', 'white')
-		.style('max-width', style.max_width ? style.max_width : '90vw')
+		.style('max-width', maxWidth)
 
 	// header div
 	const divH = parentDiv
@@ -68,7 +86,7 @@ export async function renderTable({ columns, rows, div, style = {}, buttons, noB
 		.style('table-layout', 'fixed')
 		.style('width', '100%')
 		.append('tr')
-	if (style.show_lines) {
+	if (showLines) {
 		divH
 			.append('th')
 			.attr('class', 'sjpp_table_header')
@@ -84,27 +102,32 @@ export async function renderTable({ columns, rows, div, style = {}, buttons, noB
 		if (!singleMode) {
 			const checkboxH = cell
 				.append('input')
+				.attr('id', 'checkboxHeader')
 				.attr('type', 'checkbox')
 				.on('change', () => {
 					table.selectAll('input').property('checked', checkboxH.node().checked)
 					enableButtons()
 				})
 		}
+		if (!showHeader)
+			divH
+				.append('th')
+				.text('Check/Uncheck All')
+				.attr('class', 'sjpp_table_header')
 	}
-
-	// header values
-	for (const c of columns) {
-		const th = divH
-			.append('th')
-			.text(c.label)
-			.attr('class', 'sjpp_table_item sjpp_table_header')
-		if (c.width) th.style('width', c.width)
-	}
+	if (showHeader)
+		for (const c of columns) {
+			const th = divH
+				.append('th')
+				.text(c.label)
+				.attr('class', 'sjpp_table_item sjpp_table_header')
+			if (c.width) th.style('width', c.width)
+		}
 
 	const table = parentDiv
 		.append('tbody')
 		.style('display', 'block')
-		.style('max-height', style.max_height ? style.max_height : '50vh')
+		.style('max-height', maxHeight)
 		.style('overflow', 'scroll')
 
 	for (const [i, row] of rows.entries()) {
@@ -115,6 +138,8 @@ export async function renderTable({ columns, rows, div, style = {}, buttons, noB
 			.style('display', 'table')
 			.style('table-layout', 'fixed')
 			.style('width', '100%')
+		if (striped && i % 2 == 1) rowtable.style('background-color', 'rgb(237, 237, 237)')
+
 		if (buttons || noButtonCallback)
 			rowtable.on('click', e => {
 				if (e.target !== checkbox.node()) {
@@ -125,7 +150,7 @@ export async function renderTable({ columns, rows, div, style = {}, buttons, noB
 					checkbox.dispatch('change')
 				}
 			})
-		if (style.show_lines) {
+		if (showLines) {
 			const lineDiv = rowtable
 				.append('td')
 				.text(i + 1)
@@ -205,6 +230,7 @@ export async function renderTable({ columns, rows, div, style = {}, buttons, noB
 						button.callback(values)
 					}
 				})
+			if (button.class) button.button.attr('class', button.class)
 		}
 	}
 

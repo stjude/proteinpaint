@@ -1,9 +1,13 @@
 import { axisLeft, axisTop } from 'd3-axis'
-import { scaleLinear } from 'd3-scale'
+import { scaleLinear, scaleOrdinal } from 'd3-scale'
 import { area, curveBumpX, curveBumpY } from 'd3-shape'
+import { schemeCategory10 } from 'd3-scale-chromatic'
+import { brushX } from 'd3'
+import { renderPvalues } from '#dom/renderPvalueTable'
 
 export default function violinRenderer(self) {
-	const plotColor = '#c6c4f2'
+	// const plotColor = '#c6c4f2'
+	const k2c = scaleOrdinal(schemeCategory10)
 
 	self.render = function() {
 		if (self.data.plots.length == 0) {
@@ -45,18 +49,18 @@ export default function violinRenderer(self) {
 			margin = { left: axisHeight, top: 50, right: 50, bottom: maxLabelSize }
 		}
 
-		const plotLength = 500, // span length of a plot, not including margin
+		const plotLength = 1000, // span length of a plot, not including margin
 			// thickness of a plot
 			plotThickness =
 				self.data.plots.length < 2
-					? 100
+					? 150
 					: self.data.plots.length >= 2 && self.data.plots.length < 5
-					? 80
+					? 120
 					: self.data.plots.length >= 5 && self.data.plots.length < 8
-					? 60
+					? 90
 					: self.data.plots.length >= 8 && self.data.plots.length < 11
-					? 50
-					: 40
+					? 75
+					: 60
 
 		svg
 			.attr(
@@ -72,8 +76,6 @@ export default function violinRenderer(self) {
 					(isH ? plotThickness * self.data.plots.length : plotLength + self.config.term.term.name.length)
 			)
 			.classed('sjpp-violin-plot', true)
-
-		const svgWidth = margin.left + margin.right + plotThickness * self.data.plots.length
 
 		// a <g> in which everything is rendered into
 		const svgG = svg.append('g').attr('transform', 'translate(' + margin.left + ',' + margin.top + ')')
@@ -120,6 +122,8 @@ export default function violinRenderer(self) {
 						? 'translate(0,' + plotThickness * (plotIdx + 0.5) + ')'
 						: 'translate(' + plotThickness * (plotIdx + 0.5) + ',0)'
 				)
+				.attr('classed', 'sjpp-violinG')
+
 			// create label
 			const label = violinG.append('text').text(plot.label)
 			if (isH) {
@@ -159,10 +163,74 @@ export default function violinRenderer(self) {
 
 			violinG
 				.append('path')
-				.style('fill', plotColor)
+				.style('fill', k2c(plotIdx))
+				.style('opacity', '0.7')
 				.attr('d', areaBuilder(plot.bins))
+
+			violinG
+				.append('image')
+				.attr('xlink:href', plot.src)
+				.attr('transform', isH ? 'translate(0, -7)' : 'translate(-7, 0)')
+
+			violinG
+				.append('g')
+				.attr('classed', 'sjpp-brush')
+				.call(
+					brushX()
+						.extent([[0, -35], [plotLength, 35]])
+						.on('', async event => {
+							const selection = event.selection
+							// console.log(187, selection);
+							if (!selection) return
+							const start = axisScale.invert(selection[0])
+							const end = axisScale.invert(selection[1])
+							self.app.dispatch({
+								type: 'plot_edit',
+								id: self.id,
+								config: {
+									settings: {
+										violin: {
+											brushRange: { start, end, plotIdx }
+										}
+									}
+								}
+							})
+						})
+				)
+		}
+	}
+
+	self.renderBrushValues = function() {
+		const range = self.config.settings.violin.brushRange
+		if (!range) return //also delete the table
+		const plot = self.data.plots[range.plotIdx]
+		const values = plot.values.filter(v => v >= range.start && v <= range.end)
+		// console.log(212, values);
+	}
+
+	self.renderPvalueTable = function() {
+		const t2 = this.config.term2
+		const maxPvalsToShow = 5
+
+		this.dom.tableHolder
+			.style('display', 'inline-block')
+			.style('vertical-align', 'top')
+			.selectAll('*')
+			.remove()
+
+		if (t2 == undefined || t2 == null) {
+			// no term2, no legend to show
+			this.dom.tableHolder.style('display', 'none')
+			return
 		}
 
-		self.getLegendGrps()
+		//show pvalue table
+		renderPvalues({
+			holder: this.dom.tableHolder,
+			plot: this.type,
+			tests: this.data,
+			s: this.config.settings,
+			title: "Group comparisons (Wilcoxon's rank sum test)"
+		})
 	}
 }

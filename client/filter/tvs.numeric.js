@@ -762,7 +762,7 @@ function makeRangeButtons(self, brush) {
 	//'Delete' button
 	buttons_td
 		.append('td')
-		.attr('class', 'sja_filter_tag_btn delete_btn')
+		.attr('class', 'sja_filter_tag_btn sjpp_delete_btn')
 		.style(
 			'display',
 			self.tvs.ranges.length == 1 && orig_range.start != '' && orig_range.stop != '' ? 'none' : 'inline-block'
@@ -929,10 +929,8 @@ async function showCheckList_numeric(self, tvs, div) {
 		.append('div')
 		.style('text-align', 'center')
 		.append('div')
-		.attr('class', 'apply_btn sja_filter_tag_btn')
+		.attr('class', 'sjpp_apply_btn sja_filter_tag_btn')
 		.style('display', 'none')
-		.style('border-radius', '13px')
-		// .style('padding', '7px 15px')
 		.style('margin', '5px')
 		.style('text-align', 'center')
 		.style('text-transform', 'uppercase')

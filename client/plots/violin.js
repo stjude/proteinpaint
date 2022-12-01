@@ -1,7 +1,6 @@
 import { getCompInit } from '../rx'
 import { controlsInit } from './controls'
 import violinRenderer from './violin.renderer'
-import { renderPvalues } from '#dom/renderPvalueTable'
 
 class ViolinPlot {
 	constructor(opts) {
@@ -92,23 +91,7 @@ class ViolinPlot {
 				this.config.term.term.name + ` <span style="opacity:.6;font-size:1em;margin-left:10px;">Violin Plot</span>`
 			)
 
-		const arg = { filter: this.state.termfilter.filter }
-
-		if (
-			(this.config.term.term.type == 'float' || this.config.term.term.type == 'integer') &&
-			this.config.term.q.mode == 'continuous'
-		) {
-			arg.termid = this.config.term.id
-			arg.divideTw = this.config.term2
-		} else if (
-			(this.config.term2?.term?.type == 'float' || this.config.term2?.term?.type == 'integer') &&
-			this.config.term2.q.mode == 'continuous'
-		) {
-			arg.termid = this.config.term2.id
-			arg.divideTw = this.config.term
-		} else {
-			throw 'both term1 and term2 are not numeric/continuous'
-		}
+		const arg = this.validateArg()
 
 		this.data = await this.app.vocabApi.getViolinPlotData(arg)
 
@@ -126,50 +109,47 @@ class ViolinPlot {
 				.binValueCount
 		*/
 		this.render()
+		this.renderPvalueTable()
+		this.renderBrushValues()
 	}
 
-	getLegendGrps() {
-		const t2 = this.config.term2
-		const maxPvalsToShow = 5
-
-		this.dom.tableHolder
-			.style('display', 'inline-block')
-			.style('vertical-align', 'top')
-			.selectAll('*')
-			.remove()
-
-		if (t2 == undefined || t2 == null) {
-			// no term2, no legend to show
-			this.dom.tableHolder.style('display', 'none')
-			return
+	validateArg() {
+		const { term, term2, settings } = this.config
+		const arg = {
+			filter: this.state.termfilter.filter,
+			svgw: settings.violin.svgw,
+			orientation: settings.violin.orientation,
+			devicePixelRatio: settings.violin.devicePixelRatio
 		}
 
-		//disabled separate legend for now
-
-		// const legendHolder = this.dom.tableHolder.append('div').classed('sjpp-legend-div', true)
-
-		// legendHolder.append('div').text(this.config.term2.term.name)
-
-		// for (const plot of this.data.plots) {
-		// 	legendHolder
-		// 		.append('div')
-		// 		.style('font-size', '15px')
-		// 		.text(plot.label)
-		// }
-
-		//show pvalue table
-		renderPvalues({
-			holder: this.dom.tableHolder,
-			plot: this.type,
-			tests: this.data,
-			s: this.config.settings,
-			title: "Group comparisons (Wilcoxon's rank sum test)"
-		})
+		if ((term.term.type == 'float' || term.term.type == 'integer') && term.q.mode == 'continuous') {
+			arg.termid = term.id
+			arg.divideTw = term2
+		} else if ((term2?.term?.type == 'float' || term2?.term?.type == 'integer') && term2.q.mode == 'continuous') {
+			arg.termid = term2.id
+			arg.divideTw = term
+		} else {
+			throw 'both term1 and term2 are not numeric/continuous'
+		}
+		return arg
 	}
 }
 
 export const violinInit = getCompInit(ViolinPlot)
 export const componentInit = violinInit
+
+export function getDefaultViolinSettings() {
+	return {
+		orientation: 'horizontal',
+		rowlabelw: 250,
+		brushRange: null, //object with start and end if there is a brush selection
+		svgw: 500,
+		devicePixelRatio: window.devicePixelRatio > 1 ? window.devicePixelRatio : 1
+		// unit: 'abs',
+		// overlay: 'none',
+		// divideBy: 'none',
+	}
+}
 
 export async function getPlotConfig(opts, app) {
 	if (!opts.term) throw 'violin getPlotConfig: opts.term{} missing'
@@ -196,13 +176,7 @@ export async function getPlotConfig(opts, app) {
 			// 	barwidth: 20, // bar thickness
 			// 	barspace: 2 // space between two bars
 			// },
-			violin: {
-				orientation: 'horizontal',
-				// unit: 'abs',
-				// overlay: 'none',
-				// divideBy: 'none',
-				rowlabelw: 250
-			}
+			violin: getDefaultViolinSettings()
 		}
 	}
 

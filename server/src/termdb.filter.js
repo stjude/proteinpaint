@@ -50,6 +50,8 @@ function getFilterCTEs(filter, ds, CTEname = 'f') {
 			// .CTEs: []
 			// .values:[]
 			// .CTEname
+		} else if (item.tvs.term.type == 'samplelst') {
+			f = get_samplelst(item.tvs, CTEname_i)
 		} else if (item.tvs.term.type == 'integer' || item.tvs.term.type == 'float') {
 			f = get_numerical(item.tvs, CTEname_i, ds)
 		} else if (item.tvs.term.type == 'condition') {
@@ -107,6 +109,21 @@ function get_categorical(tvs, CTEname) {
 			)`
 		],
 		values: [tvs.term.id, ...tvs.values.map(i => i.key)],
+		CTEname
+	}
+}
+
+function get_samplelst(tvs, CTEname) {
+	return {
+		CTEs: [
+			`
+		  ${CTEname} AS (
+				SELECT id
+				FROM sampleidmap
+				WHERE name IN (${tvs.values.map(i => '?').join(', ')})
+			)`
+		],
+		values: [...tvs.values],
 		CTEname
 	}
 }

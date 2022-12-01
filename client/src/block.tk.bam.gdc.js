@@ -1,14 +1,15 @@
 import { debounce } from 'debounce'
-import { dofetch3 } from '../common/dofetch'
-import { sayerror } from '../dom/error'
-import { first_genetrack_tolist } from '../common/1stGenetk'
+import { dofetch3 } from '#common/dofetch'
+import { sayerror } from '#dom/error'
+import { first_genetrack_tolist } from '#common/1stGenetk'
 import { contigNameNoChr2 } from '#shared/common'
-import urlmap from '../common/urlmap'
-import { addGeneSearchbox, string2variant } from '../dom/genesearch'
-import { Menu } from '../dom/menu'
-import { init_tabs } from '../dom/toggleButtons'
-import { default_text_color } from '../shared/common'
+import urlmap from '#common/urlmap'
+import { addGeneSearchbox, string2variant } from '#dom/genesearch'
+import { Menu } from '#dom/menu'
+import { init_tabs } from '#dom/toggleButtons'
+import { default_text_color } from '#shared/common'
 import { renderTable } from '#dom/table'
+import { make_table_2col } from '#dom/table2col'
 
 /*
 TODO
@@ -50,6 +51,13 @@ makeSsmGeneSearch
 makeSubmitAndNoPermissionDiv
 	validateInputs
 	sliceBamAndRender
+
+**************** url parameters
+gdc_id=TCGA-06-0211
+gdc_ssm=E17K
+gdc_var=chr14:g.104780214C>T
+gdc_pos=chr7:55153818-55156225
+
 */
 
 const gdc_genome = 'hg38'
@@ -58,7 +66,7 @@ const baminfo_rows = [
 	{ title: 'Entity ID', key: 'entity_id' },
 	{ title: 'Experimental Strategy', key: 'experimental_strategy' },
 	{ title: 'Sample Type', key: 'sample_type' },
-	{ title: 'Size', key: 'file_size' }
+	{ title: 'Size', key: 'file_size', width: '10vw' }
 ]
 
 /*
@@ -73,7 +81,8 @@ disableSSM=true
 	to reenable, simply delete all uses of this flag
 
 hideTokenInput=true/false
-	set to true in gdc react wrapper
+	set to true in pp react wrapper that's integrated into gdc portal
+	will be using cookie session id instead of token
 
 filter0=str
 	optional, stringified json obj as the cohort filter from gdc ATF
@@ -110,40 +119,34 @@ export async function bamsliceui({
 	// formdiv collects multiple rows
 	// each row is for a ui input
 	// formdiv will be cleared upon submission
-	const backBtnDiv = holder.append('div').style('display', 'none')
+
+	const backBtnDiv = holder
+		.append('div')
+		.style('margin-left', '30px')
+		.style('display', 'none')
 	backBtnDiv
 		.append('button')
-		.html('&lt;&lt; back')
+		.html('&#171; Back to input form')
 		.on('click', event => {
 			backBtnDiv.style('display', 'none')
 			blockHolder
 				.style('display', 'none')
 				.selectAll('*')
 				.remove()
-			formdiv.style('display', 'grid')
+			formdiv.style('display', 'block')
 		})
 
-	const formdiv = holder
-		.append('div')
-		.style('margin', '40px 20px 20px 20px')
-		.style('display', 'grid')
-		.style('grid-template-columns', '300px auto')
-		.style('grid-template-rows', 'repeat(6, auto)')
-		.style('gap', '5px')
-		.style('align-items', 'center')
-		.style('justify-items', 'left')
+	const formdiv = holder.append('div').style('margin-left', '30px')
+
+	const formtable = formdiv.append('table')
+	// table with two columns
+	// has two rows for inputting token and input string
 
 	// show block & bam tk
-	const blockHolder = holder
-		.append('div')
-		.style('display', 'none')
-		.style('margin', '20px')
+	const blockHolder = holder.append('div').style('display', 'none')
 
 	/////////////////////////////////////////////////////
 	// create UI components in formdiv
-
-	// for showing err
-	const saydiv = formdiv.append('div').style('grid-column', 'span 2')
 
 	// upload toke file
 	if (!hideTokenInput) makeTokenInput()
@@ -157,7 +160,6 @@ export async function bamsliceui({
 	const ssmGeneArg = {
 		holder: formdiv
 			.append('div')
-			.style('grid-column', 'span 2')
 			.style('padding', '3px 10px')
 			.style('display', 'none'),
 		tabs: [
@@ -183,84 +185,84 @@ export async function bamsliceui({
 	await makeSsmGeneSearch()
 
 	// submit button, "no permission" alert
-	const noPermissionDiv = makeSubmitAndNoPermissionDiv()
+	const [saydiv, noPermissionDiv] = makeSubmitAndNoPermissionDiv()
 
 	//////////////////////// helper functions
 
 	function makeTokenInput() {
-		// col 1
-		formdiv
-			.append('div')
-			.style('padding', '3px 10px')
-			.text('GDC Token file')
-		// col 2
-		const upload_holder = formdiv.append('div')
-		const upload_div = upload_holder.append('div').style('display', 'inline-block')
-		const file_error_div = upload_holder
-			.append('div')
+		// make one <tr> with two cells
+		const tr = formtable.append('tr')
+
+		// cell 1
+		tr.append('td').text('GDC token file')
+
+		// cell 2
+		const td = tr.append('td')
+		const input = td.append('input').attr('type', 'file')
+		const file_error_div = td
+			.append('span')
+			.style('margin-left', '20px')
 			.style('display', 'none')
-			.style('padding', '2px 5px')
-		const input = upload_div
-			.append('input')
-			.attr('type', 'file')
-			.on('change', event => {
-				const file = event.target.files[0]
-				if (!file) {
+		input.on('change', event => {
+			const file = event.target.files[0]
+			if (!file) {
+				input.property('value', '')
+				return
+			}
+			if (!file.size) {
+				input.property('value', '')
+				show_input_check(file_error_div, 'Blank file ' + file.name)
+				return
+			}
+			const reader = new FileReader()
+			reader.onload = event => {
+				const text = event.target.result.trim()
+				if (text.length < 100) {
 					input.property('value', '')
+					show_input_check(file_error_div, 'Does not look like a toke file (content too short)')
 					return
 				}
-				if (!file.size) {
+				if (text.length > 1000) {
 					input.property('value', '')
-					show_input_check(file_error_div, 'Blank file ' + file.name)
+					show_input_check(file_error_div, 'Does not look like a toke file (content too long)')
 					return
 				}
-				const reader = new FileReader()
-				reader.onload = event => {
-					const text = event.target.result.trim()
-					if (text.length < 100) {
-						input.property('value', '')
-						show_input_check(file_error_div, 'Does not look like a toke file (content too short)')
-						return
-					}
-					if (text.length > 1000) {
-						input.property('value', '')
-						show_input_check(file_error_div, 'Does not look like a toke file (content too long)')
-						return
-					}
-					gdc_args.gdc_token = text
-				}
-				reader.onerror = function() {
-					input.property('value', '')
-					show_input_check(file_error_div, 'Error reading file ' + file.name)
-					return
-				}
-				show_input_check(file_error_div)
-				reader.readAsText(file, 'utf8')
-			})
+				gdc_args.gdc_token = text
+			}
+			reader.onerror = function() {
+				input.property('value', '')
+				show_input_check(file_error_div, 'Error reading file ' + file.name)
+				return
+			}
+			show_input_check(file_error_div)
+			reader.readAsText(file, 'utf8')
+		})
 
 		setTimeout(() => input.node().focus(), 1100)
 	}
 
 	function makeGdcIDinput() {
-		//////////////////////////
-		// row 1, for <input>
-		// col 1
-		formdiv
-			.append('div')
-			.style('padding', '3px 10px')
-			.text('Enter file name, file UUID, case ID, or case UUID')
+		// make one <tr> with two cells
+		const tr = formtable.append('tr')
 
-		// col 2
-		const gdcid_inputdiv = formdiv.append('div')
+		// cell 1
+		tr.append('td').text('Enter search string')
 
-		const gdcid_input = gdcid_inputdiv
+		// cell 2
+		const td = tr.append('td')
+
+		const gdcid_input = td
 			.append('input')
 			.attr('type', 'search')
-			.attr('size', 40)
-			.attr('aria-label', 'Specify file name / File UUID / Case ID / Case UUID')
+			.attr('size', 45)
+			.attr('aria-label', 'Specify File name / File UUID / Case ID / Case UUID')
 			.style('padding', '3px 10px')
 			.property('placeholder', 'File name / File UUID / Case ID / Case UUID')
+			// debounce event listener on keyup
 			.on('keyup', debounce(gdc_search, 500))
+			// clicking X in <input> fires "search" event. must listen to it and call callback without delay in order to clear the UI
+			.on('search', gdc_search)
+
 		if (urlp.has('gdc_id')) {
 			gdcid_input
 				.property('value', urlp.get('gdc_id'))
@@ -268,14 +270,14 @@ export async function bamsliceui({
 				.dispatchEvent(new Event('keyup'))
 		}
 
-		const gdc_loading = gdcid_inputdiv
+		const gdc_loading = td
 			.append('span')
 			.style('padding-left', '10px')
 			.style('color', '#999')
 			.style('display', 'none')
 			.html('loading...')
 
-		const gdcid_error_div = gdcid_inputdiv
+		const gdcid_error_div = td
 			.append('span')
 			.style('display', 'none')
 			.style('padding', '2px 5px')
@@ -284,21 +286,13 @@ export async function bamsliceui({
 		// row 2, to display details of case/file
 		const baminfo_div = formdiv
 			.append('div')
-			.style('grid-column', 'span 2')
 			.style('display', 'none')
 			.style('margin', '20px 20px 20px 40px')
-			.style('overflow', 'hidden')
+		//.style('overflow', 'hidden')
 		// either baminfo_table or bamselection_table is displayed
 		// baminfo_table is a static table showing details about one bam file
 		// bamselection_table lists multiple bam files available from a sample, allowing user to select some forslicing
-		const baminfo_table = baminfo_div
-			.append('div')
-			.style('grid-template-columns', 'auto auto')
-			// Fix for autosizing table height. No need to repeat rows
-			// .style('grid-template-rows', 'repeat(15, 20px)')
-			.style('align-items', 'center')
-			.style('justify-items', 'left')
-
+		const baminfo_table = baminfo_div.append('div')
 		const bamselection_table = baminfo_div.append('div')
 
 		publicApi.update = _arg => {
@@ -375,7 +369,7 @@ export async function bamsliceui({
 			// will update table display, and also insert element into gdc_args.bam_files[]
 			baminfo_div.style('display', 'block')
 			baminfo_table
-				.style('display', 'grid')
+				.style('display', 'block')
 				.selectAll('*')
 				.remove()
 			bamselection_table.style('display', 'none')
@@ -388,38 +382,31 @@ export async function bamsliceui({
 			}
 			gdc_args.bam_files.push(file)
 
+			const rows = []
 			for (const row of baminfo_rows) {
-				baminfo_table
-					.append('div')
-					.style('padding', '3px 10px')
-					.text(row.title)
-					.style('opacity', 0.5)
-				const d = baminfo_table.append('div').style('padding', '3px 10px')
-				if (row.url) {
-					d.html(`<a href=${row.url}${onebam.file_uuid} target=_blank>${onebam[row.key]}</a>`)
-				} else {
-					d.text(onebam[row.key])
-				}
+				rows.push({
+					k: row.title,
+					v: row.url ? `<a href=${row.url}${onebam.file_uuid} target=_blank>${onebam[row.key]}</a>` : onebam[row.key]
+				})
 				file.about.push({ k: row.title, v: onebam[row.key] })
 			}
-			baminfo_table
-				.style('height', '0')
-				.transition()
-				.duration(500)
-				// .style('height', '100px')
-				.style('height', 'auto')
+			make_table_2col(baminfo_table, rows)
 		}
 
 		function update_multifile_table(files) {
-			const columns = []
-			for (const row of baminfo_rows) columns.push({ label: row.title })
+			const columns = baminfo_rows.map(i => {
+				return { label: i.title, width: i.width }
+			})
 			const rows = []
 			for (const [i, onebam] of files.entries()) {
 				const row = []
-				for (const column of baminfo_rows)
-					if (column.url)
+				for (const column of baminfo_rows) {
+					if (column.url) {
 						row.push({ html: `<a href=${row.url}${onebam.file_uuid} target=_blank>${onebam[row.key]}</a>` })
-					else row.push({ value: onebam[column.key] })
+					} else {
+						row.push({ value: onebam[column.key] })
+					}
+				}
 				rows.push(row)
 			}
 
@@ -428,6 +415,7 @@ export async function bamsliceui({
 				.style('display', 'block')
 				.selectAll('*')
 				.remove()
+			baminfo_table.style('display', 'none')
 			renderTable({
 				rows,
 				columns,
@@ -446,8 +434,7 @@ export async function bamsliceui({
 						// remove from array if checkbox unchecked
 						gdc_args.bam_files = gdc_args.bam_files.filter(f => f.file_id != onebam.file_uuid)
 					}
-				},
-				singleMode: false
+				}
 			})
 		}
 	}
@@ -540,9 +527,14 @@ export async function bamsliceui({
 		ssmGeneArg.tabs[0].tab.text(`${data.mlst.length} variant${data.mlst.length > 1 ? 's' : ''}`)
 
 		const variantsResults_div = ssmGeneArg.tabs[0].holder.append('div')
+		//.style('margin-left','30px') // may not need to left-align with bam table
 
-		const columns = []
-		for (const column of ['Gene', 'AAChange', 'Consequence', 'Position']) columns.push({ label: column })
+		const columns = [
+			{ label: 'Gene', width: '10vw' },
+			{ label: 'Mutation' },
+			{ label: 'Consequence' },
+			{ label: 'Position' }
+		]
 
 		// group by gene
 		const gene2mlst = new Map()
@@ -577,12 +569,29 @@ export async function bamsliceui({
 			},
 			singleMode: true
 		})
+
+		if (urlp.has('gdc_ssm')) {
+			// a quick fix. can delete these lines later when table accepts array index of item selected by default
+			for (const [gene, mlst] of gene2mlst) {
+				for (const m of mlst) {
+					if (m.mname == urlp.get('gdc_ssm')) {
+						gdc_args.ssmInput = {
+							chr: m.chr,
+							pos: m.pos - 1, // convert 1-based to 0-based
+							ref: m.ref,
+							alt: m.alt
+						}
+					}
+				}
+			}
+		}
 	}
 	function makeSubmitAndNoPermissionDiv() {
-		const d1 = formdiv.append('div')
-		const d2 = formdiv.append('div')
+		const tr = formdiv.append('table').append('tr') // one row with two cells
 
-		const button = d1
+		// 1st <td> with submit button
+		const button = tr
+			.append('td')
 			.append('button')
 			.style('margin', '20px 20px 20px 40px')
 			.style('padding', '10px 25px')
@@ -590,10 +599,12 @@ export async function bamsliceui({
 			.text('Submit')
 			.on('click', async () => {
 				try {
+					saydiv.selectAll('*').remove()
 					validateInputs(gdc_args, genome, hideTokenInput)
-					button.text = 'Loading ...'
+					button.text('Loading ...')
 					button.property('disabled', true)
 					await sliceBamAndRender(gdc_args, genome, blockHolder, debugmode)
+					// bam is successfully sliced
 					formdiv.style('display', 'none')
 					backBtnDiv.style('display', 'block')
 					blockHolder.style('display', 'block')
@@ -602,19 +613,22 @@ export async function bamsliceui({
 						// backend throws {error:'Permission denied'} to signal the display of this alert
 						noPermissionDiv.style('display', 'block')
 					} else {
+						saydiv.selectAll('*').remove()
 						sayerror(saydiv, e.message || e)
 						if (e.stack) console.log(e.stack)
 					}
 				}
 				// turn submit button back to active so ui can be reused later
-				button.text = 'Submit'
+				button.text('Submit')
 				button.property('disabled', false)
 			})
 
-		const noPermissionDiv = d2
+		// 2nd <td> as notification holder
+		const td = tr.append('td')
+		const saydiv = td.append('div')
+		const noPermissionDiv = td
 			.append('div')
 			.style('display', 'none')
-			.style('grid-column', 'span 2')
 			.style('margin', '20px')
 		noPermissionDiv
 			.append('div')
@@ -630,7 +644,7 @@ export async function bamsliceui({
 			.html(
 				'You are attempting to visualize a Sequence Read file that you are not authorized to access. Please request dbGaP Access to the project (click here for more information).'
 			)
-		return noPermissionDiv
+		return [saydiv, noPermissionDiv]
 	}
 
 	return publicApi
@@ -674,9 +688,9 @@ function validateInputs(args, genome, hideTokenInput = false) {
 		if (!args.gdc_token) throw 'GDC token missing'
 		if (typeof args.gdc_token !== 'string') throw 'GDC token is not string'
 	}
-	if (!args.bam_files.length) throw 'no bam file supplied'
+	if (!args.bam_files.length) throw 'No BAM file supplied'
 	for (const file of args.bam_files) {
-		if (!file.file_id) throw ' file uuid is missing'
+		if (!file.file_id) throw 'file uuid is missing'
 		if (typeof file.file_id !== 'string') throw 'file uuid is not string'
 	}
 
@@ -763,9 +777,7 @@ async function sliceBamAndRender(args, genome, holder, debugmode) {
 
 		// This will need to be changed to a loop when viewing multiple regions in the same sample
 		const { filesize } = gdc_bam_files[0]
-		//tk.cloaktext.text('BAM slice downloaded. File size: ' + filesize)
 
-		//block.gdcBamSliceDownloadBtn.style('display', 'inline-block')
 		file.about.push({ k: 'Slice file size', v: filesize })
 	}
 

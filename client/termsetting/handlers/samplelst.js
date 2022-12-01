@@ -16,7 +16,7 @@ export function getHandler(self) {
 				.style('margin', '10px')
 				.style('font-size', '0.8rem')
 				.html(`<b>Select ${group1.name}</b> samples. <br><b>Others</b> excludes these samples`)
-			const tableDiv = div.append('div').style('border', '1px solid gray')
+			const tableDiv = div.append('div').style('font-size', '0.8rem')
 
 			showSamples()
 
@@ -29,18 +29,21 @@ export function getHandler(self) {
 					rows,
 					columns,
 					div: tableDiv,
-					style: { max_width: '250px' },
+					maxWidth: '210px',
 					buttons: [
 						{
-							text: 'Submit',
+							text: 'APPLY',
 							callback: indexes => {
 								values = values.filter((elem, index, array) => !(index in indexes))
 								group2.values = values
 								group1.values = values
 								self.runCallback()
-							}
+							},
+							class: 'sjpp_apply_btn sja_filter_tag_btn'
 						}
-					]
+					],
+					striped: false,
+					showHeader: false
 				})
 			}
 		},

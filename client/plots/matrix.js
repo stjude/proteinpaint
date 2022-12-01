@@ -153,6 +153,7 @@ class Matrix {
 			isVisible: true,
 			config,
 			filter: appState.termfilter.filter,
+			filter0: appState.termfilter.filter0, // read-only, invisible filter currently only used for gdc dataset
 			hasVerifiedToken: this.app.vocabApi.hasVerifiedToken(),
 			tokenVerificationMessage: this.app.vocabApi.tokenVerificationMessage
 		}
@@ -254,7 +255,11 @@ class Matrix {
 			)
 		}
 		this.numTerms = terms.length
-		return { terms, filter: this.state.filter }
+		return {
+			terms,
+			filter: this.state.filter,
+			filter0: this.state.filter0
+		}
 	}
 
 	setAutoDimensions() {
@@ -502,10 +507,11 @@ class Matrix {
 		const nx = this[`${col}s`].length
 		const dy = s.rowh + s.rowspace
 		const ny = this[`${row}s`].length
+		console.log(col, this[`${col}Grps`], this[`${col}s`])
 		const mainw =
-			nx * dx + (this[`${col}Grps`].length - 1) * s.colgspace + this[`${col}s`].slice(-1)[0].totalHtAdjustments
+			nx * dx + (this[`${col}Grps`].length - 1) * s.colgspace + (this[`${col}s`].slice(-1)[0]?.totalHtAdjustments || 0)
 		const mainh =
-			ny * dy + (this[`${row}Grps`].length - 1) * s.rowgspace + this[`${row}s`].slice(-1)[0].totalHtAdjustments
+			ny * dy + (this[`${row}Grps`].length - 1) * s.rowgspace + (this[`${row}s`].slice(-1)[0]?.totalHtAdjustments || 0)
 
 		const topFontSize =
 			_t_ == 'Grp' ? s.grpLabelFontSize : Math.max(s.colw + s.colspace - 2 * s.collabelpad, s.minLabelFontSize)
