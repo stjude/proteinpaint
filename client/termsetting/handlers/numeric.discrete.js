@@ -640,7 +640,7 @@ export function renderBoundaryInputDivs(self, data) {
 	rangeDivs
 		.enter()
 		.append('div')
-		.style('margin', '9px')
+		.style('height', '30px')
 		.each(function(d, i) {
 			select(this)
 				.style('color', 'rgb(136, 136, 136)')
@@ -660,10 +660,10 @@ export function renderBoundaryInputDivs(self, data) {
 	inputDivs
 		.enter()
 		.append('div')
+		.style('height', '30px')
 		.each(function(d, i) {
 			select(this)
 				.append('input')
-				.style('margin', '2px')
 				.attr('type', 'text')
 				.property('value', d.label)
 				.on('change', function() {
