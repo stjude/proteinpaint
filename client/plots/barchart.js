@@ -838,7 +838,7 @@ export function getDefaultBarSettings() {
 		overlay: 'none',
 		divideBy: 'none',
 		rowlabelw: 250,
-		asterisksVisible: false
+		asterisksVisible: true
 	}
 }
 
