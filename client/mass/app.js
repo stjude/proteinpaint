@@ -135,11 +135,6 @@ class MassApp {
 			await Promise.all(Object.values(newPlots))
 			for (const plotId in newPlots) {
 				this.components.plots[plotId] = await newPlots[plotId]
-				if (numNewPlots === 1) {
-					select(`#${sandbox.id}`)
-						.node()
-						.scrollIntoView({ behavior: 'smooth' })
-				}
 			}
 		}
 

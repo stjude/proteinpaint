@@ -123,6 +123,7 @@ export async function fillTW(tw, vocabApi, defaultQ) {
 	}
 
 	if (defaultQ) {
+		defaultQ.isAtomic = true
 		if (defaultQ.preferredBins == 'median') {
 			/*
 			do following computing to fill the q{} object
@@ -157,7 +158,9 @@ export async function fillTW(tw, vocabApi, defaultQ) {
 			*/
 			tw.q = JSON.parse(JSON.stringify(tw.term.bins?.less || tw.term.bins.default))
 		} else {
-			console.log('treat defaultQ as an actual q object and call copyMerge()?')
+			// defaultQ is an actual q{} object
+			// merge it into tw.q
+			copyMerge(tw.q, defaultQ)
 		}
 	}
 

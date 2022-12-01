@@ -131,9 +131,11 @@ export async function getPlotConfig(opts, app) {
 	if (opts.independent) {
 		if (!Array.isArray(opts.independent)) throw '.independent[] is not array'
 		for (const t of opts.independent) {
+			// for numeric variables, set default mode to continuous
+			const defaultQ = !t.q?.mode ? { 'numeric.toggle': { mode: 'continuous' } } : undefined
 			// condition term cannot be used as independent terms
 			// thus no need to specify context
-			await fillTermWrapper(t, app.vocabApi)
+			await fillTermWrapper(t, app.vocabApi, defaultQ)
 		}
 		config.independent = opts.independent
 		delete opts.independent

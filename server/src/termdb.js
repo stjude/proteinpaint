@@ -270,6 +270,7 @@ async function trigger_getcategories(q, res, tdb, ds, genome) {
 	}
 
 	const data = await getData(arg, ds, genome)
+	if (data.error) throw data.error
 
 	const key2count = new Map()
 	// k: category key
@@ -291,7 +292,7 @@ async function trigger_getcategories(q, res, tdb, ds, genome) {
 		})
 	}
 
-	const orderedLabels = getOrderedLabels(term, data.refs.byTermId?.[q.tid]?.bins || [])
+	const orderedLabels = getOrderedLabels(term, data.refs?.byTermId?.[q.tid]?.bins || [])
 	if (orderedLabels.length) {
 		lst.sort((a, b) => orderedLabels.indexOf(a.label) - orderedLabels.indexOf(b.label))
 	}
