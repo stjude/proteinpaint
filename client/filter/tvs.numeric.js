@@ -358,7 +358,7 @@ function addRangeTableNoDensity(self, tvs) {
 
 	brush.apply_btn = tr
 		.append('td')
-		.attr('class', 'sja_filter_tag_btn apply_btn')
+		.attr('class', 'sja_filter_tag_btn sjpp_apply_btn')
 		//.style('display', 'inline-block')
 		.style('border-radius', '13px')
 		.style('margin', '5px')
@@ -725,7 +725,7 @@ function makeRangeButtons(self, brush) {
 	//'Apply' button
 	brush.apply_btn = buttons_td
 		.append('td')
-		.attr('class', 'sja_filter_tag_btn apply_btn')
+		.attr('class', 'sja_filter_tag_btn sjpp_apply_btn')
 		.style('display', similarRanges || (range.start === '' && range.stop === '') ? 'none' : 'inline-block')
 		.style('border-radius', '13px')
 		.style('margin', '5px')

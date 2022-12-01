@@ -111,6 +111,10 @@ async function fillMenu(self, div, tvs) {
 
 	const data = await self.opts.vocabApi.getCategories(tvs.term, self.filter, lst)
 
+	if (data.lst && data.orderedLabels) {
+		//data.lst.sort((a,b)=>data.orderedLabels.indexOf(a.label) - data.orderedLabels.indexOf(b.label))
+	}
+
 	// 'Apply' button
 	div
 		.append('div')

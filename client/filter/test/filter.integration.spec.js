@@ -70,7 +70,7 @@ async function addDemographicSexFilter(opts, btn) {
 
 	tipd.querySelector('.value_checkbox').click()
 	await sleep(150)
-	tipd.querySelector('.apply_btn').click()
+	tipd.querySelector('.sjpp_apply_btn').click()
 	await sleep(300)
 }
 
@@ -563,7 +563,7 @@ tape('pill Edit interaction', async test => {
 	)
 	await sleep(120)
 	test.equal(
-		opts.filter.Inner.dom.treeTip.d.node().querySelectorAll('.apply_btn').length,
+		opts.filter.Inner.dom.treeTip.d.node().querySelectorAll('.sjpp_apply_btn').length,
 		1,
 		'should display an apply button in the edit menu'
 	)
