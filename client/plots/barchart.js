@@ -698,15 +698,17 @@ function setRenderers(self) {
 		const allChi = self.chartsData.tests[chart.chartId].every(term1 => term1.term2tests.every(term2 => term2.isChi))
 		const rows = []
 
-		for (const term1 of self.chartsData.tests[chart.chartId].filter(term1Data =>
+		const visibleTests = self.chartsData.tests[chart.chartId].filter(term1Data =>
 			chart.visibleSerieses.some(visibleTerm1 => visibleTerm1.seriesId === term1Data.term1comparison)
-		)) {
-			const visibleTerm1Data = chart.visibleSerieses.filter(
+		)
+		for (const term1 of visibleTests) {
+			const visibleTerm1Data = chart.visibleSerieses.find(
 				visibleTerm1 => visibleTerm1.seriesId === term1.term1comparison
-			)[0]
-			for (const term2 of term1.term2tests.filter(term2Data =>
+			)
+			const visibleTerm2Data = term1.term2tests.filter(term2Data =>
 				visibleTerm1Data.visibleData.some(visibleTerm2 => visibleTerm2.dataId === term2Data.term2id)
-			)) {
+			)
+			for (const term2 of visibleTerm2Data) {
 				rows.push([
 					{ value: term1.term1Label },
 					{ value: 'not ' + term1.term1Label },
@@ -733,7 +735,7 @@ function setRenderers(self) {
 
 		const table = holder.append('div')
 
-		renderTable({ columns, rows, div: table, showLines: false, maxWidth: '18vw', maxHeight: '12vh' })
+		renderTable({ columns, rows, div: table, showLines: false, maxWidth: '20vw', maxHeight: '20vh' })
 
 		//footnote: superscript letter 'a' indicates the pvalue was computed by Fisher's exact test
 		table
@@ -836,7 +838,7 @@ export function getDefaultBarSettings() {
 		overlay: 'none',
 		divideBy: 'none',
 		rowlabelw: 250,
-		asterisksVisible: true
+		asterisksVisible: false
 	}
 }
 

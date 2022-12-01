@@ -376,8 +376,7 @@ function menuoption_add_filter(self, tvslst) {
 		if barchart is two-term overlay, tvslst will have two elements, one for term1, the other for term2
   	*/
 	if (!tvslst) return
-
-	if (!self.state.termfilter || (self.state && self.state.nav && self.state.nav.header_mode !== 'with_tabs')) {
+	if (!self.state.termfilter || self.state.nav?.header_mode !== 'with_tabs') {
 		// do not display ui, and do not collect callbacks
 		return
 	}
@@ -511,7 +510,7 @@ function getTermValues(d, self) {
     d: clicked bar data
   */
 	const termValues = []
-	if (self.state && self.state.nav && self.state.nav.header_mode == 'with_cohortHtmlSelect') {
+	if (self.state.nav?.header_mode == 'with_cohortHtmlSelect') {
 		// pass the cohort filter information back to calling app
 		// do not set the renderAs in here since that is decided by the calling app
 		const cohortFilter = getFilterItemByTag(self.state.termfilter.filter, 'cohortFilter')
