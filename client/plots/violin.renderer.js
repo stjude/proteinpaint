@@ -6,7 +6,6 @@ import { brushX } from 'd3'
 import { renderPvalues } from '#dom/renderPvalueTable'
 
 export default function violinRenderer(self) {
-	// const plotColor = '#c6c4f2'
 	const k2c = scaleOrdinal(schemeCategory10)
 
 	self.render = function() {
@@ -49,7 +48,7 @@ export default function violinRenderer(self) {
 			margin = { left: axisHeight, top: 50, right: 50, bottom: maxLabelSize }
 		}
 
-		const plotLength = 1000, // span length of a plot, not including margin
+		const plotLength = 500, // span length of a plot, not including margin
 			// thickness of a plot
 			plotThickness =
 				self.data.plots.length < 2
@@ -165,12 +164,12 @@ export default function violinRenderer(self) {
 				.append('path')
 				.style('fill', k2c(plotIdx))
 				.style('opacity', '0.7')
-				.attr('d', areaBuilder(plot.bins))
+				.attr('d', areaBuilder(plot.plotValueCount > 3 ? plot.bins : 0)) //do not build violin plots for values 3 or less than 3.
 
 			violinG
 				.append('image')
 				.attr('xlink:href', plot.src)
-				.attr('transform', isH ? 'translate(0, -7)' : 'translate(-7, 0)')
+				.attr('transform', isH ? 'translate(0, -6)' : 'translate(-6, 0)')
 
 			violinG
 				.append('g')

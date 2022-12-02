@@ -20,7 +20,7 @@ class SummaryPlot {
 
 	async init(appState) {
 		this.state = this.getState(appState)
-		this.config = JSON.parse(JSON.stringify(this.state.config))
+		this.config = structuredClone(this.state.config)
 		setRenderers(this)
 		this.initUi(this.opts)
 
@@ -74,7 +74,7 @@ class SummaryPlot {
 
 	async main() {
 		this.dom.errdiv.style('display', 'none')
-		const config = JSON.parse(JSON.stringify(this.state.config))
+		const config = structuredClone(this.state.config)
 		this.config = config
 
 		if (!this.components.plots[config.childType]) {
@@ -259,7 +259,7 @@ function setRenderers(self) {
 
 					const termT = self.config[termKey]
 
-					const tw = JSON.parse(JSON.stringify(termT))
+					const tw = structuredClone(termT)
 					self.app.dispatch({
 						type: 'plot_edit',
 						id: self.id,

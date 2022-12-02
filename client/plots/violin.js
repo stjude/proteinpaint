@@ -143,8 +143,8 @@ export function getDefaultViolinSettings() {
 		orientation: 'horizontal',
 		rowlabelw: 250,
 		brushRange: null, //object with start and end if there is a brush selection
-		svgw: 500,
-		devicePixelRatio: window.devicePixelRatio > 1 ? window.devicePixelRatio : 1
+		devicePixelRatio: window.devicePixelRatio > 1 ? window.devicePixelRatio : 1,
+		svgw: 500 / devicePixelRatio
 		// unit: 'abs',
 		// overlay: 'none',
 		// divideBy: 'none',
