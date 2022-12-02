@@ -317,14 +317,18 @@ function setRenderers(self) {
 			)
 	}
 
-	self.updateUI = () => {
+	self.updateUI = (toggleSubheaderdiv = false) => {
 		if (self.activeTab && self.state.termdbConfig.selectCohort && self.activeCohort == -1) {
 			// showing charts or filter tab; cohort selection is enabled but no cohort is selected
 			self.dom.subheaderDiv.style('display', 'none')
 			self.dom.messageDiv.selectAll('text').remove()
 			self.dom.messageDiv.style('display', '').text('No cohort selected. Please select a cohort in the "COHORT" tab.')
 		} else {
-			self.dom.subheaderDiv.style('display', 'block')
+			let display = 'block'
+			if (toggleSubheaderdiv) {
+				display = self.dom.subheaderDiv.style('display') == 'none' ? 'block' : 'none'
+			}
+			self.dom.subheaderDiv.style('display', display)
 			self.dom.messageDiv.style('display', 'none')
 		}
 		const selectCohort = self.state.termdbConfig.selectCohort
@@ -502,9 +506,9 @@ function setRenderers(self) {
 
 function setInteractivity(self) {
 	self.setTab = (event, d) => {
-		if (d.colNum == self.activeTab && !self.searching) {
+		if (d.colNum === self.activeTab && !self.searching) {
 			self.prevCohort = self.activeCohort
-			self.updateUI()
+			self.updateUI(true)
 			// since the app.dispatch() is not called directly,
 			// must trigger the event bus here
 			if (self.bus) self.bus.emit('postRender')
