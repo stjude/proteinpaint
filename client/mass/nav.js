@@ -94,7 +94,7 @@ class TdbNav {
 		if (action.type.startsWith('cohort')) return true
 		if (action.type.startsWith('tab')) return true
 		if (action.type == 'plot_create') return true
-		if (action.type == 'plot_destroy') return true
+		if (action.type == 'plot_delete') return true
 		if (action.type == 'app_refresh') return true
 	}
 

@@ -78,14 +78,9 @@ export const icons = {
 				//.style('border','1px solid #aaa')
 				//.style('background-color','#ccc')
 				.html(
-					`<svg width='16' height='14' style='margin:0;overflow:visible'>
-				<g transform='translate(0,0)'>
-					<line x1='1' y1='0' x2='1' y2='12' style='stroke:${color};stroke-width:2px'></line>
-					<path d='M2,6L7,3L7,9Z' style='fill:${color}'></path>
-					<path d='M9,3L14,6L9,9Z' style='fill:${color}'></path>
-					<line x1='15' y1='0' x2='15' y2='12' style='stroke:${color};stroke-width:2px'></line>
-				</g>
-			</svg>`
+					`<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="${color}" class="bi bi-square" viewBox="0 0 16 16">
+					  <path stroke='${color}' stroke-width='1' d="M14 1a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1h12zM2 0a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2H2z"/>
+					</svg>`
 				)
 				.on('click', o.handler)
 		)
@@ -106,14 +101,9 @@ export const icons = {
 				//.style('border','1px solid #aaa')
 				//.style('background-color','#ccc')
 				.html(
-					`<svg width='16' height='14' style='margin:0;overflow:visible'>
-				<g transform='translate(0,0)'>
-					<line x1='6' y1='0' x2='6' y2='12' style='stroke:${color};stroke-width:2px'></line>
-					<path d='M0,3L5,6L0,9Z' style='fill:${color}'></path>
-					<path d='M10,6L16,3L16,9Z' style='fill:${color}'></path>
-					<line x1='9' y1='0' x2='9' y2='12' style='stroke:${color};stroke-width:2px'></line>
-				</g>
-			</svg>`
+					`<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="${color}" class="bi bi-dash-lg" viewBox="0 0 16 16">
+					  <path stroke='${color}' stroke-width='1' fill-rule="evenodd" d="M2 8a.5.5 0 0 1 .5-.5h11a.5.5 0 0 1 0 1h-11A.5.5 0 0 1 2 8Z"/>
+					</svg>`
 				)
 				.on('click', o.handler)
 		)
