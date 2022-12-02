@@ -1125,7 +1125,7 @@ h2 {
     margin: 0px;
     border-right: solid 2px white;
     border-radius: 5px 0 0 0;
-    font-size: 1.5em;
+    font-size: 16px;
     cursor: default;
 }
 /* client/dom/sandbox.js end */

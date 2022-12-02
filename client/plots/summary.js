@@ -19,10 +19,10 @@ class SummaryPlot {
 	}
 
 	async init(appState) {
-		this.state = this.getState(appState)
-		this.config = structuredClone(this.state.config)
+		const state = this.getState(appState)
+		const config = structuredClone(state.config)
 		setRenderers(this)
-		this.initUi(this.opts)
+		this.initUi(this.opts, config)
 
 		this.components.recover = await recoverInit({
 			app: this.app,
@@ -33,21 +33,6 @@ class SummaryPlot {
 			maxHistoryLen: 10,
 			margin: '5px 10px' //Prevents a gap appearing between the tabs and sandbox content
 		})
-
-		//Moved from main to fix default barchart not appearing when summary plot sandbox is created
-		if (!this.components.plots[this.config.childType]) {
-			await this.setComponent(this.config)
-		}
-
-		for (const childType in this.components.plots) {
-			const chart = this.components.plots[childType]
-			// hide non-active charts first, so not to momentarily have two visible charts
-			if (chart.type != this.config.childType) {
-				this.dom.plotDivs[chart.type].style('display', 'none')
-			}
-		}
-
-		this.dom.plotDivs[this.config.childType].style('display', '')
 	}
 
 	reactsTo(action) {
@@ -74,11 +59,10 @@ class SummaryPlot {
 
 	async main() {
 		this.dom.errdiv.style('display', 'none')
-		const config = structuredClone(this.state.config)
-		this.config = config
+		this.config = structuredClone(this.state.config)
 
-		if (!this.components.plots[config.childType]) {
-			await this.setComponent(config)
+		if (!this.components.plots[this.config.childType]) {
+			await this.setComponent(this.config)
 		}
 
 		for (const childType in this.components.plots) {
@@ -125,7 +109,7 @@ class SummaryPlot {
 export const summaryInit = getCompInit(SummaryPlot)
 
 function setRenderers(self) {
-	self.initUi = function(opts) {
+	self.initUi = function(opts, config) {
 		const holder = opts.holder
 		try {
 			self.dom = {
@@ -160,7 +144,8 @@ function setRenderers(self) {
 			self.dom.paneTitleDiv
 				.append('div')
 				.style('display', 'inline-block')
-				.html(self.config.term.term.name)
+				.style('vertical-align', 'sub')
+				.html(config.term.term.name)
 
 			self.dom.chartToggles = self.dom.paneTitleDiv
 				.append('div')
@@ -227,12 +212,12 @@ function setRenderers(self) {
 				])
 				.enter()
 				.append('button')
-
-				.style('display', d => (d.isVisible() ? ' ' : 'none'))
+				.style('display', d => (self.config && d.isVisible() ? '' : 'none'))
 				.style('padding', '5px 10px')
-
+				.style('font-size', '16px')
+				.style('font-weight', 400)
 				//Styles for tab-like design
-				.style('cursor', d => (d.disabled() ? 'not-allowed' : 'pointer'))
+				.style('cursor', d => (self.config && d.disabled() ? 'not-allowed' : 'pointer'))
 				.style('background-color', d => (d.active ? '#cfe2f3' : 'white'))
 				.style('border-style', d => (d.active ? 'solid solid none' : 'solid'))
 				.style('border-color', d => (d.active ? 'white' : '#ccc8c8')) //fix to keep tabs the same size
@@ -240,6 +225,7 @@ function setRenderers(self) {
 				.style('border-radius', '5px 5px 0px 0px')
 				//Aligns tabs to bottom of header div
 				.style('vertical-align', 'sub')
+				.style('line-height', '26px')
 
 				// TODO: may use other logic for disabling a chart type, insteead of hiding/showing
 				.property('disabled', d => d.disabled())
