@@ -566,7 +566,7 @@ function setRenderers(self) {
 
 		self.legendRenderer(self.settings.atRiskVisible ? [] : self.legendData)
 
-		if (!self.hiddenData?.[0]?.items.length) self.dom.hiddenDiv.style('display', 'none')
+		if (!self.hiddenData?.[0]?.items.length || !self.config.term2) self.dom.hiddenDiv.style('display', 'none')
 		else {
 			self.dom.hiddenDiv.style('display', '')
 			self.hiddenRenderer(self.hiddenData)
