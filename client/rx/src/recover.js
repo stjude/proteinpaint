@@ -84,15 +84,28 @@ function setRenderers(self) {
 	self.initUi = function() {
 		self.dom.undoBtn = self.dom.holder
 			.append('button')
-			//Maybe change to bootstrap icon? Add to dom/control.icons
-			.html('&#8634;')
-			.style('padding', '2px 5px')
+			.style('border', '1px solid #ccc')
+			.style('margin', '2px 1px')
+			.html(
+				`<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="#000" class="bi bi-arrow-counterclockwise" viewBox="0 0 16 16" style='vertical-align: middle'>
+			  <path stroke='#000' stroke-width='0.25' fill-rule="evenodd" d="M8 3a5 5 0 1 1-4.546 2.914.5.5 0 0 0-.908-.417A6 6 0 1 0 8 2v1z"/>
+			  <path d="M8 4.466V.534a.25.25 0 0 0-.41-.192L5.23 2.308a.25.25 0 0 0 0 .384l2.36 1.966A.25.25 0 0 0 8 4.466z"/>
+			</svg>`
+			)
+			//.style('padding', '2px')
 			.on('click', () => self.goto(-1))
 
 		self.dom.redoBtn = self.dom.holder
 			.append('button')
-			.html('&#8635;')
-			.style('padding', '2px 5px')
+			.style('border', '1px solid #ccc')
+			.style('margin', '2px 1px')
+			.html(
+				`<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="#000" class="bi bi-arrow-clockwise" viewBox="0 0 16 16" style='vertical-align: middle'>
+			  <path stroke='#000' stroke-width='0.25' fill-rule="evenodd" d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2v1z"/>
+			  <path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466z"/>
+			</svg>`
+			)
+			//.style('padding', '2px')
 			.on('click', () => self.goto(1))
 	}
 
