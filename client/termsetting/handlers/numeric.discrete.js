@@ -640,6 +640,8 @@ export function renderBoundaryInputDivs(self, data) {
 	rangeDivs
 		.enter()
 		.append('div')
+		.style('display', 'flex')
+		.style('align-items', 'center')
 		.style('height', '30px')
 		.each(function(d, i) {
 			select(this)
@@ -660,6 +662,8 @@ export function renderBoundaryInputDivs(self, data) {
 	inputDivs
 		.enter()
 		.append('div')
+		.style('display', 'flex')
+		.style('align-items', 'center')
 		.style('height', '30px')
 		.each(function(d, i) {
 			select(this)
