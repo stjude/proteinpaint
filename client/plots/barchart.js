@@ -739,7 +739,7 @@ function setRenderers(self) {
 
 		const table = holder.append('div')
 
-		renderTable({ columns, rows, div: table, showLines: false, maxWidth: '25vw', maxHeight: '25vh' })
+		renderTable({ columns, rows, div: table, showLines: false, maxWidth: '20vw', maxHeight: '20vh' })
 
 		//footnote: superscript letter 'a' indicates the pvalue was computed by Fisher's exact test
 		table
