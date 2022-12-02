@@ -37,7 +37,7 @@ jobs:
         id: current-time
         if: always()
         with:
-          format: E, MMM dd yyyy HH:mm:ss Z
+          format: EEE, MMM d yyyy HH:mm:ss Z
           utcOffset: "-06:00"
 
       - name: Set short git commit SHA
