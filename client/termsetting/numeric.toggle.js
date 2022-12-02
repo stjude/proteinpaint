@@ -87,8 +87,6 @@ export async function getHandler(self) {
 		},
 
 		async showEditMenu(div) {
-			div.style('padding', '10px')
-
 			for (const t of tabs) {
 				// reset the tracked state of each tab data on each call of showEditMenu();
 				// NOTE: when clicking on a tab on the parent menu, showEditMenu() will not be called again,
@@ -97,7 +95,7 @@ export async function getHandler(self) {
 				t.active = self.q.mode == t.subType || (t.subType == 'continuous' && !self.q.mode)
 			}
 
-			const topBar = div.append('div')
+			const topBar = div.append('div').style('padding', '10px')
 			topBar.append('span').html('Use as&nbsp;')
 
 			init_tabs({
