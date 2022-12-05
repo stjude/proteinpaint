@@ -15,7 +15,7 @@
 	"files": [
 		"public/*",
 		"dataset/*",
-		"genomes/*",
+		"genome/*",
 		"server.js",
 		"rev.txt"
 	]
