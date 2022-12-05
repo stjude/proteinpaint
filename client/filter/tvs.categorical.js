@@ -27,39 +27,28 @@ async function fillMenu(self, div, tvs) {
 		return b.samplecount - a.samplecount
 	})
 
-	// 'Apply' button
-	div
-		.append('div')
-		.style('text-align', 'center')
-		.append('div')
-		.attr('class', 'sjpp_apply_btn sja_filter_tag_btn')
-		.style('display', 'inline-block')
-		.style('margin', '5px')
-		.style('text-align', 'center')
-		.style('font-size', '.8em')
-		.style('text-transform', 'uppercase')
-		.text('Apply')
-		.on('click', () => {
-			// update term values by ckeckbox values
-			const checked_vals = [...values_table.querySelectorAll('.value_checkbox')]
-				.filter(elem => elem.checked)
-				.map(elem => elem.value)
-			// for categorical terms, force v.key to a string
-			const new_vals = sortedVals.filter(v => checked_vals.includes('' + v.key))
-			const new_tvs = JSON.parse(JSON.stringify(tvs))
-			delete new_tvs.groupset_label
-			new_tvs.values = new_vals
-			try {
-				validateCategoricalTvs(new_tvs)
-			} catch (e) {
-				window.alert(e)
-				return
-			}
-			self.dom.tip.hide()
-			self.opts.callback(new_tvs)
-		})
+	const callback = indexes => {
+		//update term values by ckeckbox values
 
-	const values_table = self.makeValueTable(div, tvs, sortedVals).node()
+		// for categorical terms, force v.key to a string
+		const new_vals = sortedVals.filter((v, index, array) =>
+			tvs.isnot ? !indexes.includes(index) : indexes.includes(index)
+		)
+		console.log(new_vals)
+		const new_tvs = JSON.parse(JSON.stringify(tvs))
+		delete new_tvs.groupset_label
+		new_tvs.values = new_vals
+		try {
+			validateCategoricalTvs(new_tvs)
+		} catch (e) {
+			window.alert(e)
+			return
+		}
+		self.dom.tip.hide()
+		self.opts.callback(new_tvs)
+	}
+
+	const values_table = self.makeValueTable(div, tvs, sortedVals, callback).node()
 }
 
 function term_name_gen(d) {

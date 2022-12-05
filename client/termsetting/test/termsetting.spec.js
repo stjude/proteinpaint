@@ -329,7 +329,7 @@ tape('Categorical term', async test => {
 		Object.keys(opts.tsData.term.values).length,
 		'Should have rows for each category'
 	)
-	test.equal(tip.d.selectAll('.apply_btn').size(), 1, 'Should have "Apply" button to apply group changes')
+	test.equal(tip.d.selectAll('.sjpp_apply_btn').size(), 1, 'Should have "Apply" button to apply group changes')
 	test.equal(
 		tip.d.selectAll('.group_edit_div > label').html(),
 		'Number of groups',
@@ -357,7 +357,7 @@ tape('Categorical term', async test => {
 	// 	.selectAll('input')
 	// 	._groups[0][2].click()
 	// tip.d
-	// 	.selectAll('.apply_btn')
+	// 	.selectAll('.sjpp_apply_btn')
 	// 	.node()
 	// 	.click()
 
@@ -975,7 +975,7 @@ tape('Conditional term', async test => {
 	// tip.d.selectAll('.group_btn')._groups[0][2].click()
 	// tip.d.selectAll('input')._groups[0][1].innerText = '1'
 	// tip.d
-	// 	.selectAll('.apply_btn')
+	// 	.selectAll('.sjpp_apply_btn')
 	// 	.node()
 	// 	.click()
 	// await sleep(50)

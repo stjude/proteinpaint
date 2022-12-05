@@ -1,6 +1,7 @@
 import * as rx from '../rx'
 import { select } from 'd3-selection'
 import { Menu } from '../dom/menu'
+import { renderTable } from '../dom/table'
 
 /*
 ********************** EXPORTED
@@ -181,112 +182,57 @@ function setRenderers(self) {
 			.remove()
 	}
 
-	self.makeValueTable = function(div, tvs, values) {
-		const values_table = div.append('table').style('border-collapse', 'collapse')
+	self.makeValueTable = function(div, tvs, values, callback = null) {
+		if (values?.length == 0) return div
+		const containerDiv = div.append('div').style('font-size', '0.8rem')
+		containerDiv
+			.append('div')
+			.style('font-weight', 'bold')
+			.style('margin', '10px 0px 5px 10px')
+			.text('Select category:')
+		const tableDiv = containerDiv.append('div')
 		// add barchart bar_width for values
 		const maxCount = Math.max(...values.map(v => v.samplecount), 0)
 		values.forEach(v => (v.bar_width_frac = Number((1 - (maxCount - v.samplecount) / maxCount).toFixed(4))))
 
-		// this row will have group names/number
-		const all_checkbox_tr = values_table.append('tr').style('height', '20px')
-
-		const all_checkbox_label = all_checkbox_tr.append('td').style('padding', '2px 5px')
-
-		const all_checkbox = all_checkbox_label
-			.append('input')
-			.attr('type', 'checkbox')
-			.style('position', 'relative')
-			.style('vertical-align', 'middle')
-			.style('bottom', '3px')
-			.on('change', () => {
-				values_table
-					.selectAll('.value_checkbox')
-					.property('checked', all_checkbox.node().checked)
-					.dispatch('change')
-			})
-
-		all_checkbox_label
-			.append('span')
-			.style('padding', '2px 5px')
-			.style('font-size', '.8em')
-			.style('font-weight', 'bold')
-			.html('Check/ Uncheck All')
-
-		const value_trs = values_table.selectAll('.value_tr').data(values, d => d.key)
-
-		value_trs
-			.exit()
-			.style('opacity', 1)
-			.transition()
-			.duration(self.durations.exit)
-			.style('opacity', 0)
-			.remove()
-
-		value_trs
-			.enter()
-			.append('tr')
-			.attr('class', 'value_tr')
-			.style('height', '15px')
-			.style('opacity', 0)
-			.transition()
-			.duration(200)
-			.style('opacity', 1)
-			.each(enter_td)
-
-		function enter_td(d) {
-			const value_tr = select(this)
-				.on('mouseover', () => {
-					value_tr.style('background', '#fff6dc')
-				})
-				.on('mouseout', () => {
-					value_tr.style('background', 'white')
-				})
-				.on('click', e => {
-					if (e.target !== checkbox.node())
-						//not a checkbox
-						checkbox.node().checked = !checkbox.node().checked
-				})
-
-			const label_td = value_tr.append('td').style('padding', '2px 5px')
-
-			const checkbox = label_td
-				.append('input')
-				.attr('class', 'value_checkbox')
-				.attr('type', 'checkbox')
-				.attr('value', 'key' in d ? d.key : d.value)
-				.style('position', 'relative')
-				.style('vertical-align', 'middle')
-				.style('bottom', '3px')
-				.property('checked', () => {
-					if (tvs.term.type == 'categorical') {
-						return tvs.values.find(a => a.key === d.key)
-					} else if (tvs.term.type == 'float' || tvs.term.type == 'integer') {
-						return tvs.ranges.find(a => String(a.value) === d.value.toString())
-					} else if (tvs.term.type == 'condition') {
-						return tvs.values.find(a => String(a.key) === String(d.key))
-					}
-				})
-
-			const nlabel = d.samplecount ? ' (n=' + d.samplecount + ')' : ''
-			const span = label_td
-				.append('span')
-				.style('padding', '2px 5px')
-				.style('font-size', '.8em')
-				.html((d.label || d.key) + nlabel)
-
-			const maxBarWidth = 100
-			const barWidth = maxBarWidth * d.bar_width_frac
-
-			const bar_td = value_tr.append('td')
-
-			bar_td
-				.append('div')
-				.style('margin', '1px 10px')
-				.style('width', barWidth + 'px')
-				.style('height', '15px')
-				.style('background-color', '#ddd')
+		const maxBarWidth = 100
+		const rows = []
+		const selectedIdxs = []
+		for (const [i, value] of values.entries()) {
+			let label = value.label || value.key
+			if (value.samplecount) label += ' (n=' + value.samplecount + ')'
+			const barWidth = maxBarWidth * value.bar_width_frac
+			const bar_td = `<div style='margin:1px 10px;width:${barWidth}px;height:15px;background-color:#ddd'>`
+			rows.push([{ value: label }, { html: bar_td }])
+			let checked = false
+			if (tvs.term.type == 'categorical') checked = tvs.values.find(a => a.key === value.key)
+			else if (tvs.term.type == 'float' || tvs.term.type == 'integer')
+				checked = tvs.ranges.find(a => String(a.value) === value.value.toString())
+			else if (tvs.term.type == 'condition') checked = tvs.values.find(a => String(a.key) === String(value.key))
+			if (checked) selectedIdxs.push(i)
 		}
-		return values_table
+		const columns = [{ label: 'tvs', width: '15vw' }, { label: 'bar', width: '5vw' }]
+		const applybt = {
+			text: 'APPLY',
+			class: 'sjpp_apply_btn sja_filter_tag_btn',
+			callback: indexes => {
+				if (callback) callback(indexes)
+			}
+		}
+		renderTable({
+			rows,
+			columns,
+			div: tableDiv,
+			maxWidth: '30vw',
+			maxHeight: '80vh',
+			buttons: [applybt],
+			showHeader: false,
+			striped: false,
+			showLines: false,
+			selectedRows: selectedIdxs
+		})
+
+		return tableDiv
 	}
 
 	self.removeValueBtn = function(d, j) {
@@ -338,8 +284,7 @@ function addExcludeCheckbox(holder, tvs) {
 		.style('vertical-align', 'top')
 		.style('margin-right', '3px')
 		.on('change', () => {
-			if (isNotInput.property('checked')) tvs.isnot = true
-			else if (isNotInput.property('checked') == false) tvs.isnot = false
+			tvs.isnot = isNotInput.node().checked
 		})
 	isNotLabels
 		.append('span')

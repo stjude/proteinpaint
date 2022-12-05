@@ -922,67 +922,41 @@ async function showCheckList_numeric(self, tvs, div) {
 		.style('border-width', '2px')
 		.style('border-color', '#eee')
 
-	const values_table = self.makeValueTable(unanno_div, tvs, sortedVals).node()
-
 	// 'Apply' button
-	const apply_btn = unanno_div
-		.append('div')
-		.style('text-align', 'center')
-		.append('div')
-		.attr('class', 'sjpp_apply_btn sja_filter_tag_btn')
-		.style('display', 'none')
-		.style('margin', '5px')
-		.style('text-align', 'center')
-		.style('text-transform', 'uppercase')
-		.text('Apply')
-		.on('click', () => {
-			//update term values by ckeckbox values
-			try {
-				const new_tvs = JSON.parse(JSON.stringify(tvs))
-				delete new_tvs.groupset_label
-				const checked_vals = [...values_table.querySelectorAll('.value_checkbox')]
-					.filter(elem => elem.checked)
-					.map(elem => elem.value)
-				const current_vals = new_tvs.ranges.map(a => 'value' in a && a.value)
-				for (const v of sortedVals) {
-					const i = checked_vals.indexOf(v.value)
-					const j = current_vals.indexOf(v.value)
-					if (i === -1 && j !== -1) new_tvs.ranges.splice(j, 1)
-					else if (i !== -1 && j === -1) new_tvs.ranges.push({ value: v.value, label: v.label })
-				}
-
-				self.dom.tip.hide()
-				if (new_tvs.ranges.length == 0) throw 'select at least one range or category'
-				//callback only if tvs is changed
-				if (JSON.parse(JSON.stringify(tvs) != new_tvs)) {
-					try {
-						validateNumericTvs(new_tvs)
-					} catch (e) {
-						window.alert(e)
-						return
-					}
-					self.opts.callback(new_tvs)
-				}
-			} catch (e) {
-				window.alert(e)
+	const callback = indexes => {
+		//update term values by ckeckbox values
+		try {
+			const new_tvs = JSON.parse(JSON.stringify(tvs))
+			delete new_tvs.groupset_label
+			const checked_vals = sortedVals.filter((elem, i, array) =>
+				tvs.isnot ? !indexes.includes(i) : indexes.includes(i)
+			)
+			const current_vals = new_tvs.ranges.map(a => 'value' in a && a.value)
+			for (const v of sortedVals) {
+				const i = checked_vals.indexOf(v.value)
+				const j = current_vals.indexOf(v.value)
+				if (i === -1 && j !== -1) new_tvs.ranges.splice(j, 1)
+				else if (i !== -1 && j === -1) new_tvs.ranges.push({ value: v.value, label: v.label })
 			}
-		})
 
-	const checkboxes = values_table.querySelectorAll('.value_checkbox')
-	// checked values when tip lauch
-	const orig_vals = [...checkboxes].filter(elem => elem.checked).map(elem => elem.value)
-
-	for (const [i, checkbox] of checkboxes.entries()) {
-		select(checkbox).on('change', () => {
-			//changed values after tip launch
-			const changed_vals = [...values_table.querySelectorAll('.value_checkbox')]
-				.filter(elem => elem.checked)
-				.map(elem => elem.value)
-			const similarVals = JSON.stringify(orig_vals) === JSON.stringify(changed_vals)
-			//show apply button if values changed
-			apply_btn.style('display', similarVals ? 'none' : 'inline-block')
-		})
+			self.dom.tip.hide()
+			if (new_tvs.ranges.length == 0) throw 'select at least one range or category'
+			//callback only if tvs is changed
+			if (JSON.parse(JSON.stringify(tvs) != new_tvs)) {
+				try {
+					validateNumericTvs(new_tvs)
+				} catch (e) {
+					window.alert(e)
+					return
+				}
+				self.opts.callback(new_tvs)
+			}
+		} catch (e) {
+			window.alert(e)
+		}
 	}
+
+	const values_table = self.makeValueTable(unanno_div, tvs, sortedVals, callback).node()
 }
 
 function validateNumericTvs(tvs) {

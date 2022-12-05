@@ -186,22 +186,13 @@ tape('tvs: Categorical', async test => {
 	const tipd = opts.filter.Inner.dom.termSrcDiv
 
 	test.equal(tipd.selectAll('.sjpp_apply_btn').size(), 1, 'Should have 1 button to apply value change')
-	test.equal(tipd.selectAll('.value_checkbox').size(), 10, 'Should have checkbox for each value')
-	test.equal(
-		tipd
-			.selectAll('.value_checkbox')
-			.filter(function(d) {
-				return this.checked == true
-			})
-			.size(),
-		1,
-		'Should have 1 box checked for Wilms tumor'
-	)
+	test.equal(tipd.selectAll("input[name^='select']").size(), 10, 'Should have a checkbox for each value')
+	test.equal(tipd.selectAll("input[name^='select']:checked").size(), 1, 'Should have 1 box checked for Wilms tumor')
 
 	//trigger and test addition of new value
 	tipd
 		.node()
-		.querySelectorAll('.value_checkbox')[0]
+		.querySelectorAll("input[name^='select']")[0]
 		.click()
 	tipd
 		.selectAll('.sjpp_apply_btn')
@@ -343,7 +334,7 @@ tape('tvs: Numeric', async test => {
 
 	tipd
 		.node()
-		.querySelectorAll('.value_checkbox')[0]
+		.querySelectorAll("input[name^='select']")[0]
 		.click()
 
 	tipd.selectAll('.sjpp_apply_btn')._groups[0][1].click()
@@ -354,7 +345,7 @@ tape('tvs: Numeric', async test => {
 			.node()
 			.querySelectorAll('.value_btn')[0]
 			.innerHTML.split('<')[0],
-		'2 intervals',
+		'1331.8 &lt; ',
 		'should change value btn text after selecting unannotated value'
 	)
 
@@ -430,7 +421,7 @@ tape('tvs: Numeric', async test => {
 	// hide the visible uncomputable bin
 	tipd
 		.node()
-		.querySelectorAll('.value_checkbox')[0]
+		.querySelectorAll("input[name^='select']")[0]
 		.click()
 
 	// test merging ranges by adding new range
@@ -592,22 +583,13 @@ tape('tvs: Condition', async test => {
 	const tipd = opts.filter.Inner.dom.termSrcDiv
 
 	test.equal(tipd.selectAll('.sjpp_apply_btn').size(), 1, 'Should have 1 button to apply value change')
-	test.equal(tipd.selectAll('.value_checkbox').size(), 4, 'Should have checkbox for each value')
-	test.equal(
-		tipd
-			.selectAll('.value_checkbox')
-			.filter(function(d) {
-				return this.checked == true
-			})
-			.size(),
-		1,
-		'Should have 1 box checked for Grade 0'
-	)
+	test.equal(tipd.selectAll("input[name^='select']").size(), 4, 'Should have checkbox for each value')
+	test.equal(tipd.selectAll("input[name^='select']:checked").size(), 1, 'Should have 1 box checked for Grade 0')
 
 	// trigger and test grade change
 	tipd
 		.node()
-		.querySelectorAll('.value_checkbox')[1]
+		.querySelectorAll("input[name^='select']")[1]
 		.click()
 	tipd
 		.selectAll('.sjpp_apply_btn')
@@ -663,7 +645,7 @@ tape('tvs: Condition', async test => {
 	await sleep(800)
 	tipd
 		.node()
-		.querySelectorAll('.value_checkbox')[1]
+		.querySelectorAll("input[name^='select']")[1]
 		.click()
 
 	tipd

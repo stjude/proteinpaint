@@ -52,7 +52,7 @@ striped = true, boolean
 
 maxWidth = 90vw, string
 	The max width of the table
-maxHeight = 50vw, string
+maxHeight = 40vw, string
 	The max height of the table
 
 	
@@ -68,8 +68,10 @@ export async function renderTable({
 	striped = true,
 	showHeader = true,
 	maxWidth = '90vw',
-	maxHeight = '40vh'
+	maxHeight = '40vh',
+	selectedRows = []
 }) {
+	if (rows?.length == 0) return
 	// create a Parent Div element to which the header and sample table will be appended as divH and divS.
 	const parentDiv = div
 		.style('padding', '5px')
@@ -172,6 +174,7 @@ export async function renderTable({
 					if (buttons) enableButtons()
 					else noButtonCallback(i, checkbox.node())
 				})
+			if (selectedRows.includes(i)) checkbox.node().checked = true
 		}
 
 		for (const [colIdx, cell] of row.entries()) {
@@ -217,7 +220,6 @@ export async function renderTable({
 
 			button.button = footerDiv
 				.append('button')
-				.attr('disabled', true)
 				.text(button.text)
 				.style('margin', '10px 10px 0 0')
 				.on('click', e => {
@@ -231,6 +233,7 @@ export async function renderTable({
 					}
 				})
 			if (button.class) button.button.attr('class', button.class)
+			button.button.node().disabled = selectedRows.length == 0
 		}
 	}
 
