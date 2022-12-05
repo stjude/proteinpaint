@@ -1,4 +1,3 @@
-const serverconfig = require('../src/serverconfig')
 const clinvar = require('../dataset/clinvar')
 module.exports = {
 	species: 'human',
