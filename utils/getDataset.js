@@ -2,8 +2,11 @@ const help = `
 Connect VPN when pulling dataset (scp from hpc); no need when pulling gene db (curl from prp1).
 Run this script anywhere on your computer.
 
-node ~/dev/proteinpaint/utils/getDataset.js <dataset1> <dataset2> ...
-(dry run without arg to list all datasets)
+	node ~/dev/proteinpaint/utils/getDataset.js <dataset1> <dataset2> ...
+
+Dry run without arg to list all datasets:
+
+	node ~/dev/proteinpaint/utils/getDataset.js
 
 Existing files are overwritten.
 Path of local "tp" folder is determined from serverconfig.json.
@@ -17,7 +20,8 @@ const datasets = {
 	hg38gene,
 	allPharmacotyping,
 	ash,
-	mbmeta
+	mbmeta,
+	sjlife2
 	// add more datasets
 }
 
@@ -43,19 +47,15 @@ for (let i = 2; i < process.argv.length; i++) {
 	datasets[dsname]()
 }
 
-//////////////////////// helpers
-
-function scpHpc(file) {
-	// scp from hpc:~/tp/file, to local tp/file
-	exec(`scp ${path.join('hpc:~/tp', file)} ${path.join(tp, file)}`)
-}
+////////////////////////////////////////////
+//         one function per dataset       //
+////////////////////////////////////////////
 
 // function name is dataset identifier used in commandline argument
 
 function cosmic() {
-	checkDir('anno/db/')
-	exec('scp hpc:~/tp/jwang/TASK/MDS/COSMIC/cosmic.slice.hg19.db ' + path.join(tp, 'anno/db/cosmic.hg19.db'))
-	exec('scp hpc:~/tp/jwang/TASK/MDS/COSMIC/cosmic.slice.hg38.db ' + path.join(tp, 'anno/db/cosmic.hg38.db'))
+	scpHpc('anno/db/cosmic.hg19.db')
+	scpHpc('anno/db/cosmic.hg38.db')
 }
 
 function pnet() {
@@ -126,18 +126,31 @@ function mbmeta() {
 }
 
 function allPharmacotyping() {
-	checkDir('files/hg38/ALL-pharmacotyping/clinical/')
 	scpHpc('files/hg38/ALL-pharmacotyping/clinical/db')
 	scpHpc('files/hg38/ALL-pharmacotyping/clinical/transcriptome-tSNE.txt')
 }
 
 function ash() {
-	checkDir('files/hg38/ash/')
 	scpHpc('files/hg38/ash/db')
 	scpHpc('files/hg38/ash/panall.hg38.bcf.gz')
 	scpHpc('files/hg38/ash/panall.hg38.bcf.gz.csi')
 	scpHpc('files/hg38/ash/panall.svfusion.hg38.gz')
 	scpHpc('files/hg38/ash/panall.svfusion.hg38.gz.tbi')
+}
+
+function sjlife2() {
+	scpHpc('files/hg38/sjlife/clinical/db')
+
+	scpHpc('files/hg38/sjlife/clinical/PCA/*')
+
+	checkDir('files/hg38/sjlife/bcf/INFOGT/')
+	exec('scp "hpc:~/tp/files/hg38/sjlife/bcf/INFOGT/min/chr*" ' + path.join(tp, 'files/hg38/sjlife/bcf/INFOGT'))
+
+	checkDir('files/hg38/sjlife/bcf/AD/')
+	exec('scp "hpc:~/tp/files/hg38/sjlife/bcf/AD/min/chr*" ' + path.join(tp, 'files/hg38/sjlife/bcf/AD'))
+
+	checkDir('files/hg38/sjlife/ld/')
+	exec('scp "hpc:~/tp/files/hg38/sjlife/ld/small/*.gz*" ' + path.join(tp, 'files/hg38/sjlife/ld'))
 }
 
 function hg38gene() {
@@ -154,6 +167,19 @@ function hg38gene() {
 			path.join(tp, 'anno/gencode.v41.hg38.gz.tbi')
 	)
 	exec('curl https://proteinpaint.stjude.org/ppSupport/genes.hg38.db -o ' + path.join(tp, 'anno/genes.hg38.db'))
+}
+
+////////////////////////////////////////////
+//               helpers                  //
+////////////////////////////////////////////
+
+function scpHpc(file) {
+	// scp from hpc:~/tp/file, to local tp/file
+
+	// always check file dir and create if missing
+	checkDir(path.dirname(file))
+
+	exec(`scp ${path.join('hpc:~/tp', file)} ${path.join(tp, file.endsWith('*') ? path.dirname(file) : file)}`)
 }
 
 function checkDir(p) {
