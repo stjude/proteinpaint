@@ -34,7 +34,8 @@ async function fillMenu(self, div, tvs) {
 			}
 		],
 		striped: false,
-		showHeader: false
+		showHeader: false,
+		selectAll: true
 	})
 }
 

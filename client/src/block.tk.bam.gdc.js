@@ -198,7 +198,11 @@ export async function bamsliceui({
 
 		// cell 2
 		const td = tr.append('td')
-		const input = td.append('input').attr('type', 'file')
+		const input = td
+			.append('input')
+			.attr('type', 'file')
+			.attr('aria-label', 'GDC token file')
+
 		const file_error_div = td
 			.append('span')
 			.style('margin-left', '20px')

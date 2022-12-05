@@ -919,7 +919,8 @@ function setRenderers(self) {
 			showLines: true,
 			maxWidth: '35vw',
 			maxHeight: '35vh',
-			buttons
+			buttons,
+			selectAll: true
 		})
 
 		self.dom.tip.show(x, y)

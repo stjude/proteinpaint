@@ -55,6 +55,11 @@ maxWidth = 90vw, string
 maxHeight = 40vw, string
 	The max height of the table
 
+selectedRows=[]
+	Each element is an index indicating that the corresponding row should be selected
+	
+selectAll = false, boolean
+	When active makes all the rows selected by default
 	
 */
 export async function renderTable({
@@ -69,7 +74,8 @@ export async function renderTable({
 	showHeader = true,
 	maxWidth = '90vw',
 	maxHeight = '40vh',
-	selectedRows = []
+	selectedRows = [],
+	selectAll = false
 }) {
 	if (rows?.length == 0) return
 	// create a Parent Div element to which the header and sample table will be appended as divH and divS.
@@ -93,23 +99,25 @@ export async function renderTable({
 			.append('th')
 			.attr('class', 'sjpp_table_header')
 			.text('#')
-			.style('width', '15px')
+			.style('width', '20px')
 	}
 
 	if (buttons || noButtonCallback) {
 		const cell = divH
-			.append('th')
+			.append('td')
 			.attr('class', 'sjpp_table_header')
 			.style('width', '20px')
 		if (!singleMode) {
 			const checkboxH = cell
 				.append('input')
+				.attr('aria-label', 'Check/Uncheck All')
 				.attr('id', 'checkboxHeader')
 				.attr('type', 'checkbox')
 				.on('change', () => {
 					table.selectAll('input').property('checked', checkboxH.node().checked)
 					enableButtons()
 				})
+			checkboxH.node().checked = selectAll
 		}
 		if (!showHeader)
 			divH
@@ -156,9 +164,8 @@ export async function renderTable({
 			const lineDiv = rowtable
 				.append('td')
 				.text(i + 1)
-				.style('width', '15px')
+				.style('width', '20px')
 				.style('font-size', '0.8rem')
-				.style('color', defaultcolor)
 		}
 
 		if (buttons || noButtonCallback) {
@@ -167,6 +174,7 @@ export async function renderTable({
 				.style('width', '20px')
 				.style('float', 'center')
 				.append('input')
+				.attr('aria-label', 'Select row')
 				.attr('type', singleMode ? 'radio' : 'checkbox')
 				.attr('name', 'select')
 				.attr('value', i)
@@ -174,7 +182,7 @@ export async function renderTable({
 					if (buttons) enableButtons()
 					else noButtonCallback(i, checkbox.node())
 				})
-			if (selectedRows.includes(i)) checkbox.node().checked = true
+			if (selectAll || selectedRows.includes(i)) checkbox.node().checked = true
 		}
 
 		for (const [colIdx, cell] of row.entries()) {
