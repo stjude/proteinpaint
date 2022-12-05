@@ -68,7 +68,7 @@ async function addDemographicSexFilter(opts, btn) {
 	termdivSex.querySelectorAll('.termlabel')[0].click()
 	await sleep(800)
 
-	tipd.querySelector('.value_checkbox').click()
+	tipd.querySelector("input[name^='select']").click()
 	await sleep(150)
 	tipd.querySelector('.sjpp_apply_btn').click()
 	await sleep(300)
