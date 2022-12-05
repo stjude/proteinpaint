@@ -317,11 +317,12 @@ export async function bamsliceui({
 				const gdc_id = gdcid_input.property('value').trim()
 				if (!gdc_id.length) {
 					baminfo_div.style('display', 'none')
-					saydiv.style('display', 'none')
+					saydiv.selectAll('*').remove()
 					gdcid_error_div.style('display', 'none')
 					ssmGeneArg.holder.style('display', 'none')
 					return
 				}
+
 				// disable input field and show 'loading...' until response returned from gdc api
 				gdcid_input.attr('disabled', 1)
 				gdc_loading.style('display', 'inline-block')
