@@ -306,7 +306,7 @@ async function samples2columnsRows(samples, tk) {
 						} else {
 							throw 'unknown dt'
 						}
-						ssm.html += ` <span style="color:${rgb(mclass[m.class].color).darker()};font-size:0.8em;font-weight:bold">${
+						ssm.html += ` <span style="color:${rgb(mclass[m.class].color).darker()};font-size:0.8em;">${
 							mclass[m.class].label
 						}</span>`
 					} else {
