@@ -730,10 +730,12 @@ makeURL([
 
 		'others',
 		
-		['scatter plot', '?noheader=1&mass={"dslabel":"PNET","genome":"hg19","plots":[{"chartType":"sampleScatter","name":"Methylome TSNE","colorTW":{"id":"TSNE Category"}}]}'],
+		['scatter', '?noheader=1&mass={"dslabel":"PNET","genome":"hg19","plots":[{"chartType":"sampleScatter","name":"Methylome TSNE","colorTW":{"id":"TSNE Category"}}]}'],
 
 
-		['scatter plot + gene', '?noheader=1&mass={"dslabel":"PNET","genome":"hg19","plots":[{"chartType":"sampleScatter","name":"Methylome TSNE","colorTW":{"id":"TSNE Category"}, "shapeTW": {"term": {"name": "KRAS", "type": "geneVariant"}}}]}'],
+		['scatter+gene', '?noheader=1&mass={"dslabel":"PNET","genome":"hg19","plots":[{"chartType":"sampleScatter","name":"Methylome TSNE","colorTW":{"id":"TSNE Category"}, "shapeTW": {"term": {"name": "KRAS", "type": "geneVariant"}}}]}'],
+
+		['scatter noRef', '?noheader=1&mass={"dslabel":"MB_meta_analysis","genome":"hg38","plots":[{"chartType":"sampleScatter","name":"Methylome TSNE","colorTW":{"id":"Subgroup"}}]}'],
 
 		['survival','?noheader=1&mass='+JSON.stringify( {
 			dslabel:'TermdbTest',
