@@ -153,5 +153,4 @@ tape('fillTermWrapper - continuous term', async function(test) {
 		},
 		'should merge defaultQ into tw.q when defaultQ.preferredBins is not defined'
 	)
-	test.end()
 })
