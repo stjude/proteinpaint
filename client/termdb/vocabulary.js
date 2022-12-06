@@ -1199,9 +1199,32 @@ class FrontendVocab extends Vocab {
 		}
 	}
 
-	async getPercentile(term_id, percentile, filter) {
+	async getPercentile(term_id, percentile_lst, filter) {
 		// for a numeric term, convert a percentile to an actual value, with respect to a given filter
-		throw 'getPercentile() is not implemented yet for front-end vocab, should be easy...'
+		if (percentile_lst.find(p => !Number.isInteger(p))) throw 'non-integer percentiles found'
+		if (Math.max(...percentile_lst) > 99 || Math.min(...percentile_lst) < 1) throw 'percentiles must be between 1-99'
+		const perc_values = []
+		const values = []
+		const samples = {}
+		for (const anno of this.datarows) {
+			if (samples[anno.sample]) continue
+			const data = anno.s || anno.data
+			if (data && sample_match_termvaluesetting(data, filter)) {
+				samples[anno.sample] = this.vocab.sampleannotation[anno.sample]
+			}
+		}
+		for (const sample in samples) {
+			if (!(term_id in this.vocab.sampleannotation[sample])) continue
+			const _v = Number(this.vocab.sampleannotation[sample][term_id])
+			if (!Number.isFinite(_v)) throw 'non-numeric value'
+			values.push(_v)
+		}
+		values.sort((a, b) => a - b)
+		for (const p of percentile_lst) {
+			const value = values[Math.floor((values.length * p) / 100)]
+			perc_values.push(value)
+		}
+		return { values: perc_values }
 	}
 
 	async getterm(termid) {

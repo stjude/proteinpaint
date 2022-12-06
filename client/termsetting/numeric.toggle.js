@@ -130,6 +130,7 @@ export async function fillTW(tw, vocabApi, defaultQ) {
 			used for cuminc overlay/divideby
 			*/
 
+			if (!defaultQ.type || defaultQ.type != 'custom-bin') throw '.type must be custom-bin when .preferredBins=median'
 			const result = await vocabApi.getPercentile(tw.term.id, [50])
 			if (!result.values) throw '.values[] missing from vocab.getPercentile()'
 			const median = result.values[0]
