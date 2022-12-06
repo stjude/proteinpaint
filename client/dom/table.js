@@ -148,7 +148,7 @@ export async function renderTable({
 			.style('display', 'table')
 			.style('table-layout', 'fixed')
 			.style('width', '100%')
-		if (striped && i % 2 == 1) rowtable.style('background-color', 'rgb(237, 237, 237)')
+		if (striped && i % 2 == 1) rowtable.style('background-color', 'rgb(245,245,245)')
 
 		if (buttons || noButtonCallback)
 			rowtable.on('click', e => {
