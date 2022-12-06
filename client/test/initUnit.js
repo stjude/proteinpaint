@@ -4,7 +4,8 @@
 window.testHost = 'http://localhost:3000'
 sessionStorage.setItem('hostURL', window.testHost)
 
-window.structuredClone = val => JSON.parse(JSON.stringify(val))
+// polyfill only for testing
+if (!window.structuredClone) window.structuredClone = val => JSON.parse(JSON.stringify(val))
 
 // trigger the test
 window.unittest()
