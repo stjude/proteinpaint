@@ -809,7 +809,6 @@ output
 */
 export async function get_termlst2size(twLst, q, combination, ds) {
 	prepTwLst(twLst)
-	const api = ds.cohort.termdb.termid2totalsize2.gdcapi
 
 	// convert each term id to {path}
 	// id=case.project.project_id, convert to path=project__project_id, for graphql
@@ -825,24 +824,30 @@ export async function get_termlst2size(twLst, q, combination, ds) {
 		})
 	}
 
-	const query = api.query(termPaths)
-	const variables = api.filters(q, ds)
+	const query = termid2size_query(termPaths)
+	const variables = termid2size_filters(q, ds)
+
 	const response = await got.post(apihostGraphql, {
 		headers: getheaders(q),
 		body: JSON.stringify({ query, variables })
 	})
+
 	let re
 	try {
 		re = JSON.parse(response.body)
 	} catch (e) {
 		throw 'invalid JSON from GDC for cohortTotal for query :' + query + ' and filter: ' + filter
 	}
-	let h = re[api.keys[0]]
-	for (let i = 1; i < api.keys.length; i++) {
-		h = h[api.keys[i]]
+
+	// levels to traverse in api return
+	const keys = ['data', 'explore', 'cases', 'aggregations']
+
+	let h = re[keys[0]]
+	for (let i = 1; i < keys.length; i++) {
+		h = h[keys[i]]
 		if (!h)
 			throw '.' +
-				api.keys[i] +
+				keys[i] +
 				' missing from data structure of termid2totalsize2 for query :' +
 				query +
 				' and filter: ' +
@@ -850,9 +855,9 @@ export async function get_termlst2size(twLst, q, combination, ds) {
 	}
 	for (const term of termPaths) {
 		if (term.type == 'categorical' && !Array.isArray(h[term.path]['buckets']))
-			throw api.keys.join('.') + ' not array for query :' + query + ' and filter: ' + filter
+			throw keys.join('.') + ' not array for query :' + query + ' and filter: ' + filter
 		if ((term.type == 'integer' || term.type == 'float') && typeof h[term.path]['stats'] != 'object') {
-			throw api.keys.join('.') + ' not object for query :' + query + ' and filter: ' + filter
+			throw keys.join('.') + ' not object for query :' + query + ' and filter: ' + filter
 		}
 	}
 	// return total size here attached to entires
@@ -1249,4 +1254,74 @@ export function handle_filter2topGenes(genomes) {
 			res.send({ error: e.message || e })
 		}
 	}
+}
+
+/*
+argument is array, each element: {type, id}
+
+for term id of 'case.project.project_id', convert to "project__project_id", for graphql
+*/
+function termid2size_query(termlst) {
+	const lst = []
+	for (const term of termlst) {
+		if (!term.id) continue
+		if ((term.type = 'categorical')) {
+			lst.push(term.path + ' {buckets { doc_count, key }}')
+		} else if (term.type == 'integer' || term.type == 'float') {
+			lst.push(term.path + ' {stats { count }}')
+		} else {
+			throw 'unknown term type'
+		}
+	}
+
+	// for all terms from termidlst will be added to single query
+	const query = `query termislst2total( $filters: FiltersArgument) {
+		explore {
+			cases {
+				aggregations (filters: $filters, aggregations_filter_themselves: true) {
+					${lst.join('\n')}
+				}
+			}
+		}
+	}`
+	return query
+}
+
+function termid2size_filters(p, ds) {
+	const f = {
+		filters: {
+			op: 'and',
+			content: [{ op: 'in', content: { field: 'cases.available_variation_data', value: ['ssm'] } }]
+		}
+	}
+
+	if (p && p.tid2value) {
+		for (const termid in p.tid2value) {
+			const t = ds.cohort.termdb.q.termjsonByOneid(termid)
+			if (t) {
+				f.filters.content.push({
+					op: 'in',
+					content: {
+						/*********************
+						extremely tricky, no explanation
+						**********************
+						term id all starts with "case.**"
+						but in this graphql query, fields must start with "cases.**"
+						*/
+						field: termid.replace(/^case\./, 'cases.'),
+						value: [p.tid2value[termid]]
+					}
+				})
+			}
+		}
+	}
+
+	if (p && p.ssm_id_lst) {
+		f.filters.content.push({
+			op: '=',
+			content: { field: 'cases.gene.ssm.ssm_id', value: p.ssm_id_lst.split(',') }
+		})
+	}
+	//console.log(JSON.stringify(f,null,2))
+	return f
 }
