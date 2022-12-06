@@ -138,7 +138,7 @@ export async function bamsliceui({
 
 	const formdiv = holder.append('div').style('margin-left', '30px')
 
-	const formtable = formdiv.append('table')
+	const formDiv = formdiv.append('div')
 	// table with two columns
 	// has two rows for inputting token and input string
 
@@ -185,19 +185,22 @@ export async function bamsliceui({
 	await makeSsmGeneSearch()
 
 	// submit button, "no permission" alert
-	const [saydiv, noPermissionDiv] = makeSubmitAndNoPermissionDiv()
+	const [submitButton, saydiv, noPermissionDiv] = makeSubmitAndNoPermissionDiv()
 
 	//////////////////////// helper functions
 
 	function makeTokenInput() {
 		// make one <tr> with two cells
-		const tr = formtable.append('tr')
+		const tr = formDiv.insert('div')
 
 		// cell 1
-		tr.append('td').text('GDC token file')
+		tr.insert('div')
+			.style('display', 'inline-block')
+			.style('width', '15vw')
+			.text('GDC token file')
 
 		// cell 2
-		const td = tr.append('td')
+		const td = tr.insert('div').style('display', 'inline-block')
 		const input = td
 			.append('input')
 			.attr('type', 'file')
@@ -247,13 +250,16 @@ export async function bamsliceui({
 
 	function makeGdcIDinput() {
 		// make one <tr> with two cells
-		const tr = formtable.append('tr')
+		const tr = formDiv.insert('div')
 
 		// cell 1
-		tr.append('td').text('Enter search string')
+		tr.insert('div')
+			.style('display', 'inline-block')
+			.style('width', '15vw')
+			.text('Enter search string')
 
 		// cell 2
-		const td = tr.append('td')
+		const td = tr.insert('div').style('display', 'inline-block')
 
 		const gdcid_input = td
 			.append('input')
@@ -309,6 +315,7 @@ export async function bamsliceui({
 			*/
 
 			noPermissionDiv.style('display', 'none')
+			submitButton.style('display', 'inline-block')
 
 			// TODO explain usage of _filter0
 			const _filter0 = Object.keys(filter || {}).length ? filter : filter0 || null
@@ -593,11 +600,12 @@ export async function bamsliceui({
 		}
 	}
 	function makeSubmitAndNoPermissionDiv() {
-		const tr = formdiv.append('table').append('tr') // one row with two cells
+		const div = formdiv.append('div')
 
 		// 1st <td> with submit button
-		const button = tr
-			.append('td')
+		const submitButton = div
+			.insert('div')
+			.style('display', 'inline-block')
 			.append('button')
 			.style('margin', '20px 20px 20px 40px')
 			.style('padding', '10px 25px')
@@ -607,13 +615,14 @@ export async function bamsliceui({
 				try {
 					saydiv.selectAll('*').remove()
 					validateInputs(gdc_args, genome, hideTokenInput)
-					button.text('Loading ...')
-					button.property('disabled', true)
-					await sliceBamAndRender(button)
+					submitButton.text('Loading ...')
+					submitButton.property('disabled', true)
+					await sliceBamAndRender()
 				} catch (e) {
 					if (e == 'Permission denied') {
 						// backend throws {error:'Permission denied'} to signal the display of this alert
-						noPermissionDiv.style('display', 'block')
+						noPermissionDiv.style('display', 'inline-block')
+						submitButton.style('display', 'none')
 					} else {
 						saydiv.selectAll('*').remove()
 						sayerror(saydiv, e.message || e)
@@ -621,15 +630,14 @@ export async function bamsliceui({
 					}
 				}
 				// turn submit button back to active so ui can be reused later
-				button.text('Submit')
-				button.property('disabled', false)
+				submitButton.text('Submit')
+				submitButton.property('disabled', false)
 			})
 
 		// 2nd <td> as notification holder
-		const td = tr.append('td')
-		const saydiv = td.append('div')
-		const noPermissionDiv = td
-			.append('div')
+		const saydiv = div.insert('div').style('display', 'inline-block')
+		const noPermissionDiv = div
+			.insert('div')
 			.style('display', 'none')
 			.style('margin', '20px')
 		noPermissionDiv
@@ -646,10 +654,10 @@ export async function bamsliceui({
 			.html(
 				'You are attempting to visualize a Sequence Read file that you are not authorized to access. Please request dbGaP Access to the project (click here for more information).'
 			)
-		return [saydiv, noPermissionDiv]
+		return [submitButton, saydiv, noPermissionDiv]
 	}
 
-	async function sliceBamAndRender(button) {
+	async function sliceBamAndRender() {
 		const args = gdc_args
 		// create arg for block init
 		const par = {
@@ -682,7 +690,7 @@ export async function bamsliceui({
 		//
 		//////////////////////////////////////////////
 		for (const [idx, file] of args.bam_files.entries()) {
-			button.text(`Slicing BAM file ${idx + 1} of ${args.bam_files.length}...`)
+			submitButton.text(`Slicing BAM file ${idx + 1} of ${args.bam_files.length}...`)
 
 			// file = {file_id}
 			const lst = [

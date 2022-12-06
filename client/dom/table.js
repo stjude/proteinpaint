@@ -99,14 +99,14 @@ export async function renderTable({
 			.append('th')
 			.attr('class', 'sjpp_table_header')
 			.text('#')
-			.style('width', '20px')
+			.style('width', '1vw')
 	}
 
 	if (buttons || noButtonCallback) {
 		const cell = divH
 			.append('td')
 			.attr('class', 'sjpp_table_header')
-			.style('width', '20px')
+			.style('width', '1.5vw')
 		if (!singleMode) {
 			const checkboxH = cell
 				.append('input')
@@ -123,7 +123,7 @@ export async function renderTable({
 			divH
 				.append('th')
 				.text('Check/Uncheck All')
-				.attr('class', 'sjpp_table_header')
+				.attr('class', 'sjpp_table_header sjpp_table_item')
 	}
 	if (showHeader)
 		for (const c of columns) {
@@ -164,14 +164,14 @@ export async function renderTable({
 			const lineDiv = rowtable
 				.append('td')
 				.text(i + 1)
-				.style('width', '20px')
+				.style('width', '1vw')
 				.style('font-size', '0.8rem')
 		}
 
 		if (buttons || noButtonCallback) {
 			checkbox = rowtable
 				.append('td')
-				.style('width', '20px')
+				.style('width', '1.5vw')
 				.style('float', 'center')
 				.append('input')
 				.attr('aria-label', 'Select row')

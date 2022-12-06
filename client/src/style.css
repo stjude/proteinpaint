@@ -150,7 +150,7 @@ h2 {
     background-color: rgba(200, 0, 0, .1);
     color: rgba(190, 0, 0, .5);
     border: solid 1px rgba(200, 0, 0, .2);
-    border-width: 1px 0px;
+    /*border-width: 1px 0px;*/
 }
 
 .sja_errorbar>:nth-child(2) {
@@ -1144,7 +1144,7 @@ h2 {
 }
 
 .sjpp_table_item {
-    padding: 3px;
+    padding: 3px 5px;
     font-size: 1em;
     text-align: left;
     overflow: hidden;
