@@ -158,12 +158,13 @@ function setRenderers(self) {
 						label: 'Barchart',
 						isVisible: () => true,
 						disabled: d => false,
-						getTw: tw => {
+						getTw: async tw => {
 							if (!tw.qCacheByMode) tw.qCacheByMode = {}
 							tw.qCacheByMode[tw.q.mode] = tw.q
 							// If tw.q is empty/undefined, the default q
 							// will be assigned by fillTw by term type
 							tw.q = tw.qCacheByMode.discrete
+							await fillTermWrapper(tw, self.app.vocabApi)
 							return tw
 						},
 						active: true
@@ -177,10 +178,11 @@ function setRenderers(self) {
 							self.config.term.term.type === 'float' ||
 							self.config.term2?.term.type === 'integer' ||
 							self.config.term2?.term.type === 'float',
-						getTw: tw => {
+						getTw: async tw => {
 							if (!tw.qCacheByMode) tw.qCacheByMode = {}
 							tw.qCacheByMode[tw.q.mode] = tw.q
 							tw.q = tw.qCacheByMode.continuous || { mode: 'continuous' }
+							await fillTermWrapper(tw, self.app.vocabApi)
 							return tw
 						},
 						active: false
@@ -230,7 +232,7 @@ function setRenderers(self) {
 				// TODO: may use other logic for disabling a chart type, insteead of hiding/showing
 				.property('disabled', d => d.disabled())
 				.html(d => d.label)
-				.on('click', (event, d) => {
+				.on('click', async (event, d) => {
 					if (!d.getTw) {
 						alert(`TODO: ${d.label}`)
 						return
@@ -249,7 +251,7 @@ function setRenderers(self) {
 					self.app.dispatch({
 						type: 'plot_edit',
 						id: self.id,
-						config: { childType: d.childType, [termKey]: d.getTw(tw) }
+						config: { childType: d.childType, [termKey]: await d.getTw(tw) }
 					})
 				})
 
