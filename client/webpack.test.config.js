@@ -1,40 +1,65 @@
 const NodePolyfillPlugin = require('node-polyfill-webpack-plugin')
 const path = require('path')
 const fs = require('fs')
+const { merge } = require('webpack-merge')
 
 babelrc = fs.readFileSync(path.join(__dirname, '.babelrc'))
 babelrc = JSON.parse(babelrc)
 
-module.exports = function(env = {}) {
-	return {
-		mode: 'development',
-		target: 'web',
-		entry: path.join(__dirname, './test/appTestRunner.js'),
-		output: {
-			path: path.join(__dirname, '../public/bin'),
-			publicPath: (env.url || '') + '/bin/',
-			filename: 'testrunproteinpaint.js',
-			chunkLoadingGlobal: 'ppJsonp',
-			library: 'testrunproteinpaint',
-			libraryExport: 'testrunproteinpaint',
-			libraryTarget: 'window'
-		},
-		plugins: [new NodePolyfillPlugin()],
+const commonConfig = {
+	mode: 'development',
+	target: 'web',
+	plugins: [new NodePolyfillPlugin()],
 
-		module: {
-			strictExportPresence: true,
-			rules: [
-				{
-					test: /\.js$/,
-					exclude: /\.spec\.js$/,
-					use: [
-						{
-							loader: 'babel-loader',
-							options: babelrc
-						}
-					]
+	module: {
+		strictExportPresence: true,
+		rules: [
+			{
+				test: /\.js$/,
+				exclude: /\.spec\.js$/,
+				use: [
+					{
+						loader: 'babel-loader',
+						options: babelrc
+					}
+				]
+			}
+		]
+	}
+}
+
+module.exports = env => {
+	const TEST_TYPE = env.TEST_TYPE || 'integration'
+	switch (TEST_TYPE) {
+		case 'unit':
+			return merge(commonConfig, {
+				entry: path.join(__dirname, './test/unitTestRunner.js'),
+				output: {
+					path: path.join(__dirname, '../public/bin'),
+					publicPath: (env.url || '') + '/bin/',
+					filename: 'unittest.js',
+					chunkLoadingGlobal: 'ppJsonp',
+					library: 'unittest',
+					libraryExport: 'unittest',
+					libraryTarget: 'window'
 				}
-			]
-		}
+			})
+
+		case 'integration':
+			return merge(commonConfig, {
+				entry: path.join(__dirname, './test/integrationTestRunner.js'),
+				output: {
+					path: path.join(__dirname, '../public/bin'),
+					publicPath: (env.url || '') + '/bin/',
+					filename: 'testrunproteinpaint.js',
+					chunkLoadingGlobal: 'ppJsonp',
+					library: 'testrunproteinpaint',
+					libraryExport: 'testrunproteinpaint',
+					libraryTarget: 'window'
+				}
+			})
+
+		default:
+			throw new Error('No matching configuration was found!')
 	}
 }
