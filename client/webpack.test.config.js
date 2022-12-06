@@ -8,6 +8,7 @@ babelrc = JSON.parse(babelrc)
 
 const commonConfig = {
 	mode: 'development',
+	devtool: 'source-map',
 	target: 'web',
 	plugins: [new NodePolyfillPlugin()],
 
