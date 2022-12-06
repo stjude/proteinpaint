@@ -169,14 +169,28 @@ export default function violinRenderer(self) {
 			violinG
 				.append('image')
 				.attr('xlink:href', plot.src)
-				.attr('transform', isH ? 'translate(0, -6)' : 'translate(-6, 0)')
+				.attr('transform', isH ? 'translate(0, -7)' : 'translate(-7, 0)')
+
+			//render median values on plots
+			if (plot.plotValueCount >= 2) {
+				violinG
+					.append('line')
+					.attr('class', 'sjpp-median-line')
+					.style('stroke-width', '3')
+					.style('stroke', 'red')
+					.style('opacity', '1')
+					.attr('y1', isH ? -7 : axisScale(plot.median))
+					.attr('y2', isH ? 7 : axisScale(plot.median))
+					.attr('x1', isH ? axisScale(plot.median) : -7)
+					.attr('x2', isH ? axisScale(plot.median) : 7)
+			} else return
 
 			violinG
 				.append('g')
 				.attr('classed', 'sjpp-brush')
 				.call(
 					brushX()
-						.extent([[0, -35], [plotLength, 35]])
+						.extent([[0, -20], [plotLength, 20]])
 						.on('', async event => {
 							const selection = event.selection
 							// console.log(187, selection);

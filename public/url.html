@@ -167,15 +167,17 @@ const yadav2021_snp1 = {
 }
 
 function __barchart(t1,t2) {
-	const chart = { chartType:'summary', term:t1 }
+	const chart = { chartType:'summary', term:t1}
 	if(t2) chart.term2 = t2
 	return '?noheader=1&mass='+JSON.stringify( { dslabel:'SJLife', genome:'hg38', plots: [ chart ], nav: { activeTab: 1 } })
 }
-function __summary(t1,t2) {
-	const chart = { chartType:'summary', term:t1 }
+function __violin(t1,t2) {
+	const chart = { chartType:'summary', term:t1}
 	if(t2) chart.term2 = t2
+	// if(t1.q?.mode != 'continuous' && !t2.q) t2.q = {mode:'continuous'}
 	return '?noheader=1&mass='+JSON.stringify( { dslabel:'SJLife', genome:'hg38', plots: [ chart ], nav: { activeTab: 1 } })
 }
+
 function __cuminc({t1,t2,t0,grade,hidden}) {
 	const chart = {
 		chartType:'cuminc',
@@ -194,11 +196,6 @@ function __cuminc({t1,t2,t0,grade,hidden}) {
 		nav: { activeTab: 1 }
 	})
 }
-
-
-
-
-
 
 ///////////// main ////////////////////
 
@@ -453,7 +450,7 @@ makeURL([
 			{ id: 'Neurology System', q:{breaks:[2], groupNames:['No condition/not tested','Has condition']} })
 		],
 
-		['hrtavg', __barchart( { id: 'hrtavg' })],
+		['hrtavg', __barchart( { id: 'hrtavg'})],
 		['hrtavg/diaggrp', __barchart( { id: 'hrtavg' }, { id: 'diaggrp' })],
 		['hrtavg/agedx', __barchart( { id: 'hrtavg' }, { id: 'agedx' })],
 		['hrtavg/Neurology', __barchart( { id: 'hrtavg' }, { id: 'Neurology System' })],
@@ -467,14 +464,8 @@ makeURL([
 		['Neurology/Cardio', __barchart( { id: 'Neurology System' }, { id: 'Cardiovascular System' })],
 
 		'violin',
-		['hrtavg', __barchart( { id: 'hrtavg', q:{mode:'continuous'} })],
-		['hrtavg/race', __barchart( { id: 'hrtavg', q:{mode:'continuous'} }, {id:'racegrp'})],
-		
-
-		'summary',
-		['hrtavg', __summary( { id: 'hrtavg', q:{mode:'continuous'} })],
-		['hrtavg/race', __summary( { id: 'hrtavg', q:{mode:'continuous'} }, {id:'racegrp'})],
-
+		['hrtavg', __violin( { id: 'hrtavg', q:{mode:'continuous'}})],
+		['hrtavg/race', __violin( { id: 'hrtavg', q:{mode:'continuous'}}, {id:'racegrp'})],
 
 		'cuminc',
 

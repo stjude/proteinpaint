@@ -241,7 +241,7 @@ function setRenderers(self) {
 					const termKey =
 						self.config.term?.term.type == 'float' ||
 						self.config.term?.term.type == 'integer' ||
-						this.config.term.q.mode == 'continuous'
+						this.config.term.q?.mode == 'continuous'
 							? 'term'
 							: 'term2'
 
