@@ -1,0 +1,153 @@
+import tape from 'tape'
+import { fillTermWrapper } from '#termsetting'
+import { vocabInit } from '#termdb/vocabulary'
+import { getExample } from '#termdb/test/vocabData'
+
+const vocab = getExample()
+const vocabApi = vocabInit({ state: { vocab } })
+
+/**************
+ test sections
+***************/
+
+tape('\n', function(test) {
+	test.pass('-***- termsetting -***-')
+	test.end()
+})
+
+tape('fillTermWrapper - continuous term', async function(test) {
+	let defaultQ, expectedQ, testMsg
+
+	////////// undefined tw.q.mode
+	const tw = structuredClone(await vocabApi.getterm('d'))
+	await fillTermWrapper(tw, vocabApi)
+	test.equal(tw.q.mode, 'discrete', 'should set q.mode=discrete when q.mode is undefined and defaultQ is not supplied')
+	test.equal(tw.isAtomic, true, 'should set tw.isAtomic=true')
+	test.equal(tw.q.isAtomic, true, 'should set tw.q.isAtomic=true')
+	test.deepEqual(
+		tw.q,
+		{
+			isAtomic: true,
+			mode: 'discrete',
+			type: 'regular-bin',
+			bin_size: 0.2,
+			stopinclusive: true,
+			first_bin: {
+				startunbounded: true,
+				stop: 0.2,
+				stopinclusive: true
+			},
+			hiddenValues: {}
+		},
+		'should fill q with bin info when q.mode=discrete'
+	)
+
+	/////////// defined tw.q.mode
+	const tw2 = structuredClone(await vocabApi.getterm('d'))
+	tw2.q = { mode: 'continuous' }
+	await fillTermWrapper(tw2, vocabApi)
+	test.equal(tw2.q.mode, 'continuous', 'should not change q.mode when q.mode is defined and defaultQ is not supplied')
+	test.deepEqual(
+		tw2.q,
+		{
+			mode: 'continuous',
+			isAtomic: true,
+			hiddenValues: {}
+		},
+		'should not fill q with bin info when mode=continuous'
+	)
+
+	/////////// defaultQ.preferredBins='median'
+	defaultQ = {
+		'numeric.toggle': {
+			mode: 'discrete',
+			type: 'custom-bin',
+			preferredBins: 'median'
+		}
+	}
+	expectedQ = {
+		mode: 'discrete',
+		type: 'custom-bin',
+		isAtomic: true,
+		lst: [
+			{
+				startunbounded: true,
+				stop: 0.5,
+				stopinclusive: false,
+				label: '<0.5'
+			},
+			{
+				start: 0.5,
+				startinclusive: true,
+				stopunbounded: true,
+				label: '≥0.5'
+			}
+		],
+		hiddenValues: {}
+	}
+	const tw3 = structuredClone(await vocabApi.getterm('d'))
+	await fillTermWrapper(tw3, vocabApi, defaultQ)
+	test.deepEqual(tw3.q, expectedQ, 'should fill q with defaultQ when defaultQ.preferredBins=median')
+	const tw4 = structuredClone(await vocabApi.getterm('d'))
+	tw4.q = { mode: 'continuous' }
+	await fillTermWrapper(tw4, vocabApi, defaultQ)
+	test.deepEqual(tw4.q, expectedQ, 'should overwrite tw.q with defaultQ when defaultQ.preferredBins=median')
+
+	defaultQ = {
+		'numeric.toggle': {
+			mode: 'discrete',
+			preferredBins: 'median'
+		}
+	}
+	testMsg = 'should throw error when defaultQ.type is not defined'
+	try {
+		const tw5 = structuredClone(await vocabApi.getterm('d'))
+		await fillTermWrapper(tw5, vocabApi, defaultQ)
+		test.fail(testMsg)
+	} catch (e) {
+		test.equal(e, '.type must be custom-bin when .preferredBins=median', testMsg)
+	}
+
+	/////////// defaultQ.preferredBins='less'
+	const tw6 = structuredClone(await vocabApi.getterm('d'))
+	defaultQ = {
+		'numeric.toggle': {
+			test: 'apple',
+			preferredBins: 'less'
+		}
+	}
+	await fillTermWrapper(tw6, vocabApi, defaultQ)
+	test.deepEqual(
+		tw6.q,
+		{
+			type: 'regular-bin',
+			bin_size: 0.4,
+			stopinclusive: true,
+			first_bin: { startunbounded: true, stop: 0.2, stopinclusive: true },
+			hiddenValues: {}
+		},
+		'should fill tw.q with tw.term.bins.less when defaultQ.preferredBins=less'
+	)
+
+	/////////// defaultQ, undefined .preferredBins
+	const tw7 = structuredClone(await vocabApi.getterm('d'))
+	defaultQ = { 'numeric.toggle': { mode: 'continuous' } }
+	await fillTermWrapper(tw7, vocabApi, defaultQ)
+	test.deepEqual(
+		tw7.q,
+		{
+			isAtomic: true,
+			mode: 'continuous',
+			type: 'regular-bin',
+			bin_size: 0.2,
+			stopinclusive: true,
+			first_bin: {
+				startunbounded: true,
+				stop: 0.2,
+				stopinclusive: true
+			},
+			hiddenValues: {}
+		},
+		'should merge defaultQ into tw.q when defaultQ.preferredBins is not defined'
+	)
+})

@@ -60,7 +60,7 @@ export class InputTerm {
 				disable_terms,
 				abbrCutoff: 50,
 				genomeObj: this.parent.parent.genomeObj, // required for snplocus
-				defaultQ4fillTW: get_defaultQ4fillTW(config.regressionType, this.section.configKey == 'outcome'),
+				defaultQ4fillTW: get_defaultQ4fillTW(config.regressionType),
 				callback: term => {
 					this.parent.editConfig(this, term)
 				}
