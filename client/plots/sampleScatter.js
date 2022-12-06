@@ -122,7 +122,6 @@ class Scatter {
 		if (!Array.isArray(data.samples)) throw 'data.samples[] not array'
 		this.shapeLegend = new Map(Object.entries(data.shapeLegend))
 		this.colorLegend = new Map(Object.entries(data.colorLegend))
-		this.refCategory = this.colorLegend.get('Ref')
 
 		this.axisOffset = { x: 80, y: 20 }
 
@@ -259,7 +258,7 @@ class Scatter {
 			.text(title)
 			.style('font-weight', 'bold')
 
-		const radius = 6
+		const radius = 5
 		let category, count, name, color
 		for (const [key, category] of this.colorLegend) {
 			if (key == 'Ref') continue
@@ -282,8 +281,8 @@ class Scatter {
 				.attr('alignment-baseline', 'middle')
 			offsetY += step
 		}
-
-		if (this.refCategory) {
+		const colorRefCategory = this.colorLegend.get('Ref')
+		if (colorRefCategory.sampleCount > 0) {
 			offsetY = offsetY + step
 			const colorG = legendG.append('g')
 			colorG
@@ -293,17 +292,18 @@ class Scatter {
 				.text('Reference')
 				.style('font-weight', 'bold')
 			offsetY = offsetY + step
+
+			let symbol = this.symbols[0].size(64)()
 			colorG
-				.append('circle')
-				.attr('cx', offsetX)
-				.attr('cy', offsetY)
-				.attr('r', radius)
-				.style('fill', this.refCategory.color)
+				.append('path')
+				.attr('transform', c => `translate(${offsetX}, ${offsetY})`)
+				.style('fill', colorRefCategory.color)
+				.attr('d', symbol)
 			colorG
 				.append('text')
 				.attr('x', offsetX + 10)
 				.attr('y', offsetY)
-				.text(`n=${this.refCategory.sampleCount}`)
+				.text(`n=${colorRefCategory.sampleCount}`)
 				.style('font-size', '15px')
 				.attr('alignment-baseline', 'middle')
 		}
@@ -379,7 +379,7 @@ function setRenderers(self) {
 
 	function renderSVG(svg, chart, s, duration, data) {
 		let colorLegends = self.colorLegend.size * 30
-		if (self.refCategory) colorLegends += 60
+		if (self.colorLegend.get('Ref').sampleCount > 0) colorLegends += 60
 		const legendHeight = Math.max(colorLegends, self.shapeLegend.size * 30) + 60 //legend step and header
 
 		svg
