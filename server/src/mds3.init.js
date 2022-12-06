@@ -165,10 +165,6 @@ export async function validate_termdb(ds) {
 	if (tdb.termid2totalsize2) {
 		if (tdb.termid2totalsize2.gdcapi) {
 			// validate gdcapi
-			const gdcapi = tdb.termid2totalsize2.gdcapi
-			if (typeof gdcapi.query != 'function') throw '.query() not function in termid2totalsize2'
-			if (!gdcapi.keys && !gdcapi.keys.length) throw 'termid2totalsize2 missing keys[]'
-			if (typeof gdcapi.filters != 'function') throw '.filters is not in termid2totalsize2'
 		} else {
 			// query through termdb methods
 			// since termdb.dictionary is a required attribute

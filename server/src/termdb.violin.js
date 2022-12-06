@@ -78,7 +78,7 @@ export async function trigger_getViolinPlotData(q, res, ds, genome) {
 		}
 	}
 
-	key2values = [...key2values.entries()].sort()
+	key2values = [...key2values.entries()].sort((a, b) => a[0] - b[0])
 
 	const result = {
 		min: min,
@@ -174,19 +174,11 @@ export async function trigger_getViolinPlotData(q, res, ds, genome) {
 // // compute bins using d3
 // // need unit test!!!
 export function computeViolinData(scale, values) {
-	const min = Math.min(...values),
-		max = Math.max(...values)
-
-	// let ticksCompute
-	// if (values.length <= 100) {
-	// 	ticksCompute = 150
-	// } else {
-	// 	ticksCompute = 150
-	// }
+	const ticksCompute = values.length <= 200 ? 10 : values.length < 800 ? 30 : 10
 
 	const binBuilder = bin()
-		.domain([min, max]) /* extent of the data that is lowest to highest*/
-		.thresholds(scale.ticks(150)) /* buckets are created which are separated by the threshold*/
+		.domain(scale.domain()) /* extent of the data that is lowest to highest*/
+		.thresholds(scale.ticks(ticksCompute)) /* buckets are created which are separated by the threshold*/
 		.value(d => d) /* bin the data points into this bucket*/
 
 	return binBuilder(values)

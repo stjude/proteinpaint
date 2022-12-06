@@ -87,8 +87,6 @@ export async function getHandler(self) {
 		},
 
 		async showEditMenu(div) {
-			div.style('padding', '10px')
-
 			for (const t of tabs) {
 				// reset the tracked state of each tab data on each call of showEditMenu();
 				// NOTE: when clicking on a tab on the parent menu, showEditMenu() will not be called again,
@@ -97,7 +95,7 @@ export async function getHandler(self) {
 				t.active = self.q.mode == t.subType || (t.subType == 'continuous' && !self.q.mode)
 			}
 
-			const topBar = div.append('div')
+			const topBar = div.append('div').style('padding', '10px')
 			topBar.append('span').html('Use as&nbsp;')
 
 			init_tabs({
@@ -123,6 +121,7 @@ export async function fillTW(tw, vocabApi, defaultQ) {
 	}
 
 	if (defaultQ) {
+		defaultQ.isAtomic = true
 		if (defaultQ.preferredBins == 'median') {
 			/*
 			do following computing to fill the q{} object
@@ -131,6 +130,7 @@ export async function fillTW(tw, vocabApi, defaultQ) {
 			used for cuminc overlay/divideby
 			*/
 
+			if (!defaultQ.type || defaultQ.type != 'custom-bin') throw '.type must be custom-bin when .preferredBins=median'
 			const result = await vocabApi.getPercentile(tw.term.id, [50])
 			if (!result.values) throw '.values[] missing from vocab.getPercentile()'
 			const median = result.values[0]
@@ -157,7 +157,9 @@ export async function fillTW(tw, vocabApi, defaultQ) {
 			*/
 			tw.q = JSON.parse(JSON.stringify(tw.term.bins?.less || tw.term.bins.default))
 		} else {
-			console.log('treat defaultQ as an actual q object and call copyMerge()?')
+			// defaultQ is an actual q{} object
+			// merge it into tw.q
+			copyMerge(tw.q, defaultQ)
 		}
 	}
 

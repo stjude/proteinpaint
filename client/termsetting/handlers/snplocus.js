@@ -84,7 +84,7 @@ async function makeEditMenu(self, div) {
 		.style('opacity', 0.4)
 		.style('font-size', '.7em')
 		.html(
-			'“Gene”: Gene name (e.g. AKT1)</br>“Position”: chr:start-stop (e.g. chr1:5000-6000)</br>“Variant”: dbSNP accession (e.g. rs1042522)'
+			'“Gene”: Gene name (e.g. AKT1)</br>“Position”: chr:start-stop (e.g. chr1:5000-6000)</br>"dbSNP": dbSNP accession (e.g. rs1042522)'
 		)
 
 	await mayDisplayVariantFilter(self, div)

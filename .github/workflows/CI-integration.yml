@@ -35,12 +35,14 @@ jobs:
       - name: Get current time
         uses: josStorer/get-current-time@v2.0.2
         id: current-time
+        if: always()
         with:
-          format: E, MMM dd yyyy HH:mm:ss Z
+          format: EEE, MMM d yyyy HH:mm:ss Z
           utcOffset: "-06:00"
 
       - name: Set short git commit SHA
         id: vars
+        if: always()
         run: echo "SHORT_SHA=$(git rev-parse --short ${{ github.sha }})" >> $GITHUB_ENV
 
       - name: Post build results on slack

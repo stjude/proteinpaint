@@ -142,7 +142,7 @@ tape('tvs (common): buttons', async test => {
 		.querySelector('input[name=sja_filter_isnot_input]')
 		.click()
 	opts.filter.Inner.dom.termSrcDiv
-		.select('.apply_btn')
+		.select('.sjpp_apply_btn')
 		.node()
 		.click()
 	await sleep(50)
@@ -185,26 +185,17 @@ tape('tvs: Categorical', async test => {
 	await sleep(1000)
 	const tipd = opts.filter.Inner.dom.termSrcDiv
 
-	test.equal(tipd.selectAll('.apply_btn').size(), 1, 'Should have 1 button to apply value change')
-	test.equal(tipd.selectAll('.value_checkbox').size(), 10, 'Should have checkbox for each value')
-	test.equal(
-		tipd
-			.selectAll('.value_checkbox')
-			.filter(function(d) {
-				return this.checked == true
-			})
-			.size(),
-		1,
-		'Should have 1 box checked for Wilms tumor'
-	)
+	test.equal(tipd.selectAll('.sjpp_apply_btn').size(), 1, 'Should have 1 button to apply value change')
+	test.equal(tipd.selectAll("input[name^='select']").size(), 10, 'Should have a checkbox for each value')
+	test.equal(tipd.selectAll("input[name^='select']:checked").size(), 1, 'Should have 1 box checked for Wilms tumor')
 
 	//trigger and test addition of new value
 	tipd
 		.node()
-		.querySelectorAll('.value_checkbox')[0]
+		.querySelectorAll("input[name^='select']")[0]
 		.click()
 	tipd
-		.selectAll('.apply_btn')
+		.selectAll('.sjpp_apply_btn')
 		.node()
 		.click()
 
@@ -293,7 +284,7 @@ tape('tvs: Numeric', async test => {
 	await sleep(700)
 	const tipd = opts.filter.Inner.dom.termSrcDiv
 
-	test.equal(tipd.selectAll('.apply_btn').size(), 2, 'Should have 2 button to apply value change')
+	test.equal(tipd.selectAll('.sjpp_apply_btn').size(), 2, 'Should have 2 button to apply value change')
 	test.equal(tipd.selectAll('.sjpp_delete_btn').size(), 1, 'Should have 1 button to remove the range')
 	test.equal(tipd.node().querySelectorAll('.start_text')[0].innerHTML, '1000', 'Should match start value with data')
 	test.equal(tipd.node().querySelectorAll('.stop_text')[0].innerHTML, '2000', 'Should match stop value with data')
@@ -304,7 +295,7 @@ tape('tvs: Numeric', async test => {
 	test.equal(
 		tipd
 			.selectAll('table')
-			.selectAll('.apply_btn')
+			.selectAll('.sjpp_apply_btn')
 			.size(),
 		1,
 		'Should have button to apply value change'
@@ -320,7 +311,7 @@ tape('tvs: Numeric', async test => {
 
 	tipd
 		.selectAll('table')
-		.selectAll('.apply_btn')
+		.selectAll('.sjpp_apply_btn')
 		.node()
 		.click()
 
@@ -343,10 +334,10 @@ tape('tvs: Numeric', async test => {
 
 	tipd
 		.node()
-		.querySelectorAll('.value_checkbox')[0]
+		.querySelectorAll("input[name^='select']")[0]
 		.click()
 
-	tipd.selectAll('.apply_btn')._groups[0][1].click()
+	tipd.selectAll('.sjpp_apply_btn')._groups[0][1].click()
 	await sleep(800)
 
 	test.equal(
@@ -354,7 +345,7 @@ tape('tvs: Numeric', async test => {
 			.node()
 			.querySelectorAll('.value_btn')[0]
 			.innerHTML.split('<')[0],
-		'2 intervals',
+		'1331.8 &lt; ',
 		'should change value btn text after selecting unannotated value'
 	)
 
@@ -380,7 +371,7 @@ tape('tvs: Numeric', async test => {
 	test.equal(
 		tipd
 			.selectAll('table')
-			.selectAll('.apply_btn')
+			.selectAll('.sjpp_apply_btn')
 			.size(),
 		2,
 		'Should have button to apply new range'
@@ -430,11 +421,11 @@ tape('tvs: Numeric', async test => {
 	// hide the visible uncomputable bin
 	tipd
 		.node()
-		.querySelectorAll('.value_checkbox')[0]
+		.querySelectorAll("input[name^='select']")[0]
 		.click()
 
 	// test merging ranges by adding new range
-	tipd.selectAll('.apply_btn')._groups[0][1].click()
+	tipd.selectAll('.sjpp_apply_btn')._groups[0][1].click()
 	await sleep(800)
 
 	pill.click()
@@ -460,7 +451,7 @@ tape('tvs: Numeric', async test => {
 	stop_input.addEventListener('keyup', () => {})
 	stop_input.dispatchEvent(enter_event)
 
-	tipd.selectAll('.apply_btn')._groups[0][1].click()
+	tipd.selectAll('.sjpp_apply_btn')._groups[0][1].click()
 	await sleep(800)
 
 	test.true(
@@ -494,7 +485,7 @@ tape('tvs: Numeric', async test => {
 	d3s.select(tr.querySelector('.stop_select')).on('change')()
 	await sleep(100)
 	tr.querySelector('.stop_select').dispatchEvent(enter_event)
-	tr.querySelector('.apply_btn').click()
+	tr.querySelector('.sjpp_apply_btn').click()
 	await sleep(300)
 	test.true(
 		opts.holder
@@ -520,7 +511,7 @@ tape('tvs: Numeric', async test => {
 	d3s.select(tr1.querySelector('.start_select')).on('change')()
 	await sleep(100)
 	tr1.querySelector('.start_select').dispatchEvent(enter_event)
-	tr1.querySelector('.apply_btn').click()
+	tr1.querySelector('.sjpp_apply_btn').click()
 	await sleep(300)
 	test.true(
 		opts.holder
@@ -591,26 +582,17 @@ tape('tvs: Condition', async test => {
 	await sleep(1200)
 	const tipd = opts.filter.Inner.dom.termSrcDiv
 
-	test.equal(tipd.selectAll('.apply_btn').size(), 1, 'Should have 1 button to apply value change')
-	test.equal(tipd.selectAll('.value_checkbox').size(), 4, 'Should have checkbox for each value')
-	test.equal(
-		tipd
-			.selectAll('.value_checkbox')
-			.filter(function(d) {
-				return this.checked == true
-			})
-			.size(),
-		1,
-		'Should have 1 box checked for Grade 0'
-	)
+	test.equal(tipd.selectAll('.sjpp_apply_btn').size(), 1, 'Should have 1 button to apply value change')
+	test.equal(tipd.selectAll("input[name^='select']").size(), 4, 'Should have checkbox for each value')
+	test.equal(tipd.selectAll("input[name^='select']:checked").size(), 1, 'Should have 1 box checked for Grade 0')
 
 	// trigger and test grade change
 	tipd
 		.node()
-		.querySelectorAll('.value_checkbox')[1]
+		.querySelectorAll("input[name^='select']")[1]
 		.click()
 	tipd
-		.selectAll('.apply_btn')
+		.selectAll('.sjpp_apply_btn')
 		.node()
 		.click()
 
@@ -637,7 +619,7 @@ tape('tvs: Condition', async test => {
 		.dispatchEvent(new Event('change'))
 	await sleep(100)
 	tipd
-		.selectAll('.apply_btn')
+		.selectAll('.sjpp_apply_btn')
 		.node()
 		.click()
 
@@ -663,12 +645,12 @@ tape('tvs: Condition', async test => {
 	await sleep(800)
 	tipd
 		.node()
-		.querySelectorAll('.value_checkbox')[1]
+		.querySelectorAll("input[name^='select']")[1]
 		.click()
 
 	tipd
 		.node()
-		.querySelector('.apply_btn')
+		.querySelector('.sjpp_apply_btn')
 		.click()
 
 	await sleep(800)

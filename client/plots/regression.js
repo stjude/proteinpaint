@@ -121,7 +121,7 @@ export async function getPlotConfig(opts, app) {
 		*/
 		const plot = app.opts.state.plots.find(i => i.chartType == 'regression')
 		if (!plot) throw 'regression plot missing in state'
-		await fillTermWrapper(opts.outcome, app.vocabApi, get_defaultQ4fillTW(plot.regressionType, true))
+		await fillTermWrapper(opts.outcome, app.vocabApi, get_defaultQ4fillTW(plot.regressionType))
 	}
 
 	const id = 'id' in opts ? opts.id : `_REGRESSION_${_ID_++}`
@@ -131,9 +131,9 @@ export async function getPlotConfig(opts, app) {
 	if (opts.independent) {
 		if (!Array.isArray(opts.independent)) throw '.independent[] is not array'
 		for (const t of opts.independent) {
-			// condition term cannot be used as independent terms
-			// thus no need to specify context
-			await fillTermWrapper(t, app.vocabApi)
+			// for numeric variables, set default mode to continuous
+			const defaultQ = !t.q?.mode ? { 'numeric.toggle': { mode: 'continuous' } } : undefined
+			await fillTermWrapper(t, app.vocabApi, defaultQ)
 		}
 		config.independent = opts.independent
 		delete opts.independent
@@ -144,14 +144,21 @@ export async function getPlotConfig(opts, app) {
 	return copyMerge(config, opts)
 }
 
-export function get_defaultQ4fillTW(regressionType, isOutcome) {
-	if (!isOutcome) return
-	// need default q{} for condition term
-	const q = { mode: 'binary' }
-	if (regressionType == 'cox') {
-		// should not preset timeScale to 'time' here,
-		// that can cause copyMerge to overwrite saved setting. fillTW will auto fill missing value
-		q.mode = 'cox'
+export function get_defaultQ4fillTW(regressionType) {
+	// default q{} for numeric term
+	// will apply to both outcome and independent terms
+	const numericQ = { mode: 'continuous' }
+
+	// default q{} for condition term
+	// will only apply to outcome term because condition
+	// term cannot be an independent term
+	// note: for mode='cox', do not preset timeScale to 'time' here because
+	// that can cause copyMerge to overwrite saved setting. fillTW will
+	// auto fill missing value
+	const conditionQ = regressionType == 'cox' ? { mode: 'cox' } : { mode: 'binary' }
+
+	return {
+		'numeric.toggle': numericQ,
+		condition: conditionQ
 	}
-	return { condition: q }
 }

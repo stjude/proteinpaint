@@ -126,16 +126,58 @@ const snplocusQ = {
 	}
 }
 
+const yadav2021_snp1 = {
+	term: {type:'snplocus'},
+	q: {
+		chr:'chr1',
+		start:113559000,
+		stop:113559200,
+		AFcutoff:5,
+		alleleType:0,
+		geneticModel:0,
+		restrictAncestry:{
+			name:'African ancestry',
+			//name:'European ancestry',
+			tvs: {
+				term: {
+					id: 'genetic_race',
+					type: 'categorical',
+					name: 'Genetically defined race'
+				},
+				values: [{ key: 'African Ancestry', label: 'African Ancestry' }]
+				//values: [{ key: 'European Ancestry', label: 'European Ancestry' }]
+			}
+		},
+		variant_filter: {
+			"type":"tvslst",
+			"join":"and",
+			"in":true,
+			"lst":[
+				{"type":"tvs","tvs":{"isnot":true,"values":[{"label":"Bad","key":"Bad"}],"term":{"id":"QC","name":"Classification","parent_id":null,"isleaf":true,"type":"categorical","values":{"Good":{"label":"Good","key":"Good"},"Bad":{"label":"Bad","key":"Bad"}}}}},
+				{"type":"tvs","tvs":{"ranges":[{"start":0.95,"startinclusive":true,"stopunbounded":true}],"term":{"id":"SJcontrol_CR","name":"SJLIFE control call rate","parent_id":null,"isleaf":true,"type":"float"}}},
+				{"type":"tvs","tvs":{"ranges":[{"start":0.95,"startinclusive":true,"stopunbounded":true}],"term":{"id":"CR","name":"Call rate, SJLIFE+CCSS","parent_id":null,"isleaf":true,"type":"float"}}},
+				{"type":"tvs","tvs":{"ranges":[{"start":0.95,"startinclusive":true,"stopunbounded":true}],"term":{"id":"CR_sjlife","name":"SJLIFE call rate","parent_id":null,"isleaf":true,"type":"float"}}},
+				{"type":"tvs","tvs":{"ranges":[{"start":0.95,"startinclusive":true,"stopunbounded":true}],"term":{"id":"CR_ccss","name":"CCSS call rate","parent_id":null,"isleaf":true,"type":"float"}}},
+				//{"type":"tvs","tvs":{"ranges":[{"start":0.95,"startinclusive":true,"stopunbounded":true}],"term":{"id":"gnomAD_CR","name":"gnmoAD call rate","parent_id":null,"isleaf":true,"type":"float"}}},
+				//{"type":"tvs","tvs":{"ranges":[{"start":0.1,"startinclusive":true,"stopunbounded":true}],"term":{"id":"gnomAD_AF","name":"gnomAD allele frequency","parent_id":null,"isleaf":true,"type":"float","min":0,"max":1,"values":{}}}},
+				{"type":"tvs","tvs":{"isnot":true,"values":[{"label":"yes","key":"1"}],"term":{"id":"Polymer_region","name":"Polymer region","parent_id":null,"isleaf":true,"type":"categorical"}}}
+			]
+		}
+	}
+}
+
 function __barchart(t1,t2) {
-	const chart = { chartType:'summary', term:t1 }
+	const chart = { chartType:'summary', term:t1}
 	if(t2) chart.term2 = t2
 	return '?noheader=1&mass='+JSON.stringify( { dslabel:'SJLife', genome:'hg38', plots: [ chart ], nav: { activeTab: 1 } })
 }
-function __summary(t1,t2) {
-	const chart = { chartType:'summary', term:t1 }
+function __violin(t1,t2) {
+	const chart = { chartType:'summary', term:t1}
 	if(t2) chart.term2 = t2
+	// if(t1.q?.mode != 'continuous' && !t2.q) t2.q = {mode:'continuous'}
 	return '?noheader=1&mass='+JSON.stringify( { dslabel:'SJLife', genome:'hg38', plots: [ chart ], nav: { activeTab: 1 } })
 }
+
 function __cuminc({t1,t2,t0,grade,hidden}) {
 	const chart = {
 		chartType:'cuminc',
@@ -154,11 +196,6 @@ function __cuminc({t1,t2,t0,grade,hidden}) {
 		nav: { activeTab: 1 }
 	})
 }
-
-
-
-
-
 
 ///////////// main ////////////////////
 
@@ -236,7 +273,7 @@ makeURL([
 		['KRAS G12V by case uuid','?gdcbamslice=1&gdc_id=9a2a226e-9605-4214-9320-469305e664e6&gdc_var=chr12.25245350.C.A'],
 		['IDH1 R132H by file id','?gdcbamslice=1&gdc_id=00493087-9d9d-40ca-86d5-936f1b951c93_wxs_gdc_realn.bam&gdc_var=chr2:g.208248388C>T'], // chr2.208248388.C.T
 
-		['AKT1 E17K file uuid','?gdcbamslice=1&gdc_id=35918f42-c424-48ef-8c95-2d87b48fdf41&gdc_var=chr14:g.104780214C>T'], // chr14.104780214.C.T
+		['AKT1 E17K file uuid','?gdcbamslice=1&gdc_id=35918f42-c424-48ef-8c95-2d87b48fdf41&gdc_ssm=E17K'], // chr14.104780214.C.T
 
 		['bam link','?genome=hg38&block=1&position=chr14:104780136-104780318&variant=chr14.104780214.C.T&bamfile=xx,yy&gdc=35918f42-c424-48ef-8c95-2d87b48fdf41,<yourTokenHere>'],
 		['KRAS G12D','?gdcbamslice=1&gdc_id=17284ec9-c3cb-4c80-96a7-312e35e7c1d9&gdc_var=chr12.25245350.C.T'],
@@ -413,7 +450,7 @@ makeURL([
 			{ id: 'Neurology System', q:{breaks:[2], groupNames:['No condition/not tested','Has condition']} })
 		],
 
-		['hrtavg', __barchart( { id: 'hrtavg' })],
+		['hrtavg', __barchart( { id: 'hrtavg'})],
 		['hrtavg/diaggrp', __barchart( { id: 'hrtavg' }, { id: 'diaggrp' })],
 		['hrtavg/agedx', __barchart( { id: 'hrtavg' }, { id: 'agedx' })],
 		['hrtavg/Neurology', __barchart( { id: 'hrtavg' }, { id: 'Neurology System' })],
@@ -427,14 +464,8 @@ makeURL([
 		['Neurology/Cardio', __barchart( { id: 'Neurology System' }, { id: 'Cardiovascular System' })],
 
 		'violin',
-		['hrtavg', __barchart( { id: 'hrtavg', q:{mode:'continuous'} })],
-		['hrtavg/race', __barchart( { id: 'hrtavg', q:{mode:'continuous'} }, {id:'racegrp'})],
-		
-
-		'summary',
-		['hrtavg', __summary( { id: 'hrtavg', q:{mode:'continuous'} })],
-		['hrtavg/race', __summary( { id: 'hrtavg', q:{mode:'continuous'} }, {id:'racegrp'})],
-
+		['hrtavg', __violin( { id: 'hrtavg', q:{mode:'continuous'}})],
+		['hrtavg/race', __violin( { id: 'hrtavg', q:{mode:'continuous'}}, {id:'racegrp'})],
 
 		'cuminc',
 
@@ -891,7 +922,9 @@ makeURL([
 			} ]
 		})],
 
-		['Yadav EF 2021','?noheader=1&mass='+JSON.stringify({
+		// https://pubmed.ncbi.nlm.nih.gov/33288658/
+		// snp rsID: rs6689879
+		['Yadav2021_EF_snp1','?noheader=1&mass='+JSON.stringify({
 			genome:'hg38',
 			dslabel:'SJLife',
 			nav: { activeTab: 1 },
@@ -902,25 +935,46 @@ makeURL([
 				independent: [
 					{id:'sex'},
 					{id:'agedx'},
-					{id:'agelastvisit'},
-					{id:'anthracyclines_cog_5',q:{
-						mode:'discrete',type:'custom-bin',lst:[
-							{startunbounded:true, stopinclusive:true,stop:0,label:'Not exposed'},
-							{stopinclusive:true,start:0,stop:250,label:'>0 to 250'},
-							{startinclusive:false,stopunbounded:true,start:250,label:'>250'}
-						]
-					}},
-					{id:'hrtavg',q:{
-						mode:'discrete',type:'custom-bin',lst:[
-							{startunbounded:true, stopinclusive:true,stop:200,label:'Lower than 200'},
-							{stopinclusive:true,start:200,stop:2000,label:'>200 to 2000'},
-							{startinclusive:false,stopunbounded:true,start:2000,label:'>2000'}
-						]
-					}},
 					{
-						term:{ type:'snplocus', },
-						q: (()=>{const a = JSON.parse(JSON.stringify(snplocusQ));a.chr='chr1';a.start=113558796;a.stop=113559396;return a})()
-					}
+						id:'agelastvisit',
+						q: {
+							mode: 'discrete',
+							last_bin: {
+								start: 55,
+								stopunbounded: true
+							}
+						},
+						refGrp: '25 to <35'
+					},
+					{
+						id:'anthracyclines_cog_5',
+						q: {
+							mode:'discrete',
+							type:'custom-bin',
+							lst:[
+								{startunbounded:true, stopinclusive:true,stop:0,label:'Not exposed'},
+								{stopinclusive:true,start:0,stop:100,label:'>0 to 100'},
+								{stopinclusive:true,start:100,stop:250,label:'>100 to 250'},
+								{startinclusive:false,stopunbounded:true,start:250,label:'>250'}
+							]
+						},
+						refGrp:'Not exposed'
+					},
+					{
+						id:'hrtavg',
+						q: {
+							mode:'discrete',
+							type:'custom-bin',
+							lst:[
+								{startunbounded:true, stopinclusive:true,stop:0,label:'Not exposed'},
+								{stopinclusive:true,start:0,stop:1000,label:'>0 to 1000'},
+								{stopinclusive:true,start:1000,stop:3000,label:'>1000 to 3000'},
+								{startinclusive:false,stopunbounded:true,start:3000,label:'>3000'}
+							]
+						},
+						refGrp:'Not exposed'
+					},
+					yadav2021_snp1
 				]
 			}]
 		})],
@@ -1316,8 +1370,10 @@ makeURL([
 				]
 			} ]
 		})],
+
 		// https://pubmed.ncbi.nlm.nih.gov/33288658/
-		['Yadav Cardiomyopathy 2021','?noheader=1&mass='+JSON.stringify({
+		// snp rsID: rs6689879
+		['Yadav2021_Cardiomyopathy_snp1','?noheader=1&mass='+JSON.stringify({
 			genome:'hg38',
 			dslabel:'SJLife',
 			nav: { activeTab: 1 },
@@ -1326,35 +1382,54 @@ makeURL([
 				regressionType: 'cox',
 				outcome: {
 					id: 'Cardiomyopathy',
-					q:{timeScale:'age'}
+					q:{timeScale:'age', breaks: [3]}
 				},
 				independent: [
 					{id:'sex'},
 					{id:'agedx'},
-					{id:'agelastvisit'},
-					{id:'anthracyclines_cog_5',q:{
-						mode:'discrete',type:'custom-bin',lst:[
-							{startunbounded:true, stopinclusive:true,stop:0,label:'Not exposed'},
-							{stopinclusive:true,start:0,stop:250,label:'>0 to 250'},
-							{startinclusive:false,stopunbounded:true,start:250,label:'>250'}
-						]
-					}},
-					{id:'hrtavg',q:{
-						mode:'discrete',type:'custom-bin',lst:[
-							{startunbounded:true, stopinclusive:true,stop:200,label:'Lower than 200'},
-							{stopinclusive:true,start:200,stop:2000,label:'>200 to 2000'},
-							{startinclusive:false,stopunbounded:true,start:2000,label:'>2000'}
-						]
-					}},
-					// chr1:113558796-113559396 for rs6689879
-					// chr15:87090755-87090824 for rs9788776
 					{
-						term:{ type:'snplocus', },
-						q: (()=>{const a = JSON.parse(JSON.stringify(snplocusQ));a.chr='chr1';a.start=113558796;a.stop=113559396;return a})()
-					}
+						id:'agelastvisit',
+						q: {
+							mode: 'discrete',
+							last_bin: {
+								start: 55,
+								stopunbounded: true
+							}
+						},
+						refGrp: '25 to <35'
+					},
+					{
+						id:'anthracyclines_cog_5',
+						q: {
+							mode:'discrete',
+							type:'custom-bin',
+							lst:[
+								{startunbounded:true, stopinclusive:true,stop:0,label:'Not exposed'},
+								{stopinclusive:true,start:0,stop:100,label:'>0 to 100'},
+								{stopinclusive:true,start:100,stop:250,label:'>100 to 250'},
+								{startinclusive:false,stopunbounded:true,start:250,label:'>250'}
+							]
+						},
+						refGrp:'Not exposed'
+					},
+					{
+						id:'hrtavg',
+						q: {
+							mode:'discrete',
+							type:'custom-bin',
+							lst:[
+								{startunbounded:true, stopinclusive:true,stop:0,label:'Not exposed'},
+								{stopinclusive:true,start:0,stop:1000,label:'>0 to 1000'},
+								{stopinclusive:true,start:1000,stop:3000,label:'>1000 to 3000'},
+								{startinclusive:false,stopunbounded:true,start:3000,label:'>3000'}
+							]
+						},
+						refGrp:'Not exposed'
+					},
+					yadav2021_snp1
 				]
 			}]
-		})],
+		})]
 	]
 },
 ])

@@ -507,7 +507,6 @@ class Matrix {
 		const nx = this[`${col}s`].length
 		const dy = s.rowh + s.rowspace
 		const ny = this[`${row}s`].length
-		console.log(col, this[`${col}Grps`], this[`${col}s`])
 		const mainw =
 			nx * dx + (this[`${col}Grps`].length - 1) * s.colgspace + (this[`${col}s`].slice(-1)[0]?.totalHtAdjustments || 0)
 		const mainh =

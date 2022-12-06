@@ -44,7 +44,7 @@ class Barchart {
 				.style('padding', '24px')
 				.style('font-size', '16px')
 				.style('color', '#aaa'),
-			barDiv: holder.append('div').style('white-space', 'normal'),
+			barDiv: holder.append('div'),
 			legendDiv: holder.append('div').style('margin', '5px 5px 15px 5px')
 		}
 		if (this.dom.header) this.dom.header.html('Barchart')
@@ -141,6 +141,9 @@ class Barchart {
 		}
 
 		return {
+			nav: {
+				header_mode: appState.nav.header_mode
+			},
 			termfilter: appState.termfilter,
 			config: Object.assign({}, config, {
 				settings: {
@@ -154,9 +157,10 @@ class Barchart {
 	}
 
 	async main() {
-		if (this.state.config.childType != this.type) return
+		const c = this.state.config
+		if (c.chartType != this.type && c.childType != this.type) return
 		try {
-			this.config = JSON.parse(JSON.stringify(this.state.config))
+			this.config = structuredClone(c)
 			if (!this.currServerData) this.dom.barDiv.style('max-width', window.innerWidth + 'px')
 			this.prevConfig = this.config || {}
 			if (this.dom.header)
@@ -676,14 +680,6 @@ function setRenderers(self) {
 			.style('font-size', '12px')
 			.append('div')
 
-		//adding a title for the pvalue table
-		const title = holder
-			.append('div')
-			.style('font-weight', 'bold')
-			.html('Group comparisons (Chi-squared test)')
-
-		const table = holder.append('div')
-
 		// sort term1 categories based on self.chartsData.refs.cols
 		self.chartsData.tests[chart.chartId].sort(function(a, b) {
 			return self.chartsData.refs.cols.indexOf(a.term1comparison) - self.chartsData.refs.cols.indexOf(b.term1comparison)
@@ -702,34 +698,57 @@ function setRenderers(self) {
 			{ label: 'Group 4' },
 			{ label: 'P-value' }
 		]
+		const allFisher = self.chartsData.tests[chart.chartId].every(term1 => term1.term2tests.every(term2 => !term2.isChi))
+		const allChi = self.chartsData.tests[chart.chartId].every(term1 => term1.term2tests.every(term2 => term2.isChi))
 		const rows = []
-		for (const term1 of self.chartsData.tests[chart.chartId]) {
-			for (const term2 of term1.term2tests) {
+
+		const visibleTests = self.chartsData.tests[chart.chartId].filter(term1Data =>
+			chart.visibleSerieses.some(visibleTerm1 => visibleTerm1.seriesId === term1Data.term1comparison)
+		)
+		for (const term1 of visibleTests) {
+			const visibleTerm1Data = chart.visibleSerieses.find(
+				visibleTerm1 => visibleTerm1.seriesId === term1.term1comparison
+			)
+			const visibleTerm2Data = term1.term2tests.filter(term2Data =>
+				visibleTerm1Data.visibleData.some(visibleTerm2 => visibleTerm2.dataId === term2Data.term2id)
+			)
+			for (const term2 of visibleTerm2Data) {
 				rows.push([
 					{ value: term1.term1Label },
 					{ value: 'not ' + term1.term1Label },
 					{ value: term2.term2Label },
 					{ value: 'not ' + term2.term2Label },
-					//if the test was computed by Fisher's exact test, add a superscript letter 'a' after the pvalue.
+					//if both chi-square and Fisher's exact tests were used. for the tests computed by Fisher's exact test, add a superscript letter 'a' after the pvalue.
 					{
 						html:
 							(term2.pvalue > 1e-4
 								? Number(term2.pvalue.toFixed(4))
-								: Number(term2.pvalue.toPrecision(4)).toExponential()) + (term2.isChi ? '' : '<sup><b>a</b></sup>')
+								: Number(term2.pvalue.toPrecision(4)).toExponential()) +
+							(allFisher || term2.isChi ? '' : '<sup><b>a</b></sup>')
 					}
 				])
 			}
 		}
-		renderTable({ columns, rows, div: table, maxWidth: '30vw', maxHeight: '20vh' })
 
-		//Adding a footnote to tell users that superscript letter 'a' indicates the pvalue was computed by Fisher's exact test
+		//adding a title for the pvalue table
+		//title is "Group comparisons (Fisher's exact test)" if all tests are Fisher's exact test, otherwise title is 'Group comparisons (Chi-square test)'
+		const title = holder
+			.append('div')
+			.style('font-weight', 'bold')
+			.html(allFisher ? "Group comparisons (Fisher's exact test)" : 'Group comparisons (Chi-square test)')
+
+		const table = holder.append('div')
+
+		renderTable({ columns, rows, div: table, showLines: false, maxWidth: '25vw', maxHeight: '20vh' })
+
+		//footnote: superscript letter 'a' indicates the pvalue was computed by Fisher's exact test
 		table
 			.append('div')
 			.style('margin-top', '10px')
 			.style('text-align', 'left')
 			.style('font-size', '10px')
 			.style('font-weight', 'normal')
-			.html("<sup><b>a</b></sup> computed by Fisher's exact test")
+			.html(allFisher || allChi ? '' : "<sup><b>a</b></sup> computed by Fisher's exact test")
 	}
 }
 

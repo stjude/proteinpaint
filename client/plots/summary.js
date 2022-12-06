@@ -19,10 +19,10 @@ class SummaryPlot {
 	}
 
 	async init(appState) {
-		this.state = this.getState(appState)
-		this.config = JSON.parse(JSON.stringify(this.state.config))
+		const state = this.getState(appState)
+		const config = structuredClone(state.config)
 		setRenderers(this)
-		this.initUi(this.opts)
+		this.initUi(this.opts, config)
 
 		this.components.recover = await recoverInit({
 			app: this.app,
@@ -30,23 +30,9 @@ class SummaryPlot {
 			getState: appState => this.getState(appState),
 			reactsTo: action => action.id == this.id && action.type == 'plot_edit' && action._scope_ != 'none',
 			plot_id: this.id,
-			maxHistoryLen: 10
+			maxHistoryLen: 10,
+			margin: '5px 10px' //Prevents a gap appearing between the tabs and sandbox content
 		})
-
-		//Moved from main to fix default barchart not appearing when summary plot sandbox is created
-		if (!this.components.plots[this.config.childType]) {
-			await this.setComponent(this.config)
-		}
-
-		for (const childType in this.components.plots) {
-			const chart = this.components.plots[childType]
-			// hide non-active charts first, so not to momentarily have two visible charts
-			if (chart.type != this.config.childType) {
-				this.dom.plotDivs[chart.type].style('display', 'none')
-			}
-		}
-
-		this.dom.plotDivs[this.config.childType].style('display', '')
 	}
 
 	reactsTo(action) {
@@ -73,11 +59,10 @@ class SummaryPlot {
 
 	async main() {
 		this.dom.errdiv.style('display', 'none')
-		const config = JSON.parse(JSON.stringify(this.state.config))
-		this.config = config
+		this.config = structuredClone(this.state.config)
 
-		if (!this.components.plots[config.childType]) {
-			await this.setComponent(config)
+		if (!this.components.plots[this.config.childType]) {
+			await this.setComponent(this.config)
 		}
 
 		for (const childType in this.components.plots) {
@@ -124,7 +109,7 @@ class SummaryPlot {
 export const summaryInit = getCompInit(SummaryPlot)
 
 function setRenderers(self) {
-	self.initUi = function(opts) {
+	self.initUi = function(opts, config) {
 		const holder = opts.holder
 		try {
 			self.dom = {
@@ -159,13 +144,13 @@ function setRenderers(self) {
 			self.dom.paneTitleDiv
 				.append('div')
 				.style('display', 'inline-block')
-				.html(self.config.term.term.name)
+				.style('vertical-align', 'sub')
+				.html(config.term.term.name)
 
 			self.dom.chartToggles = self.dom.paneTitleDiv
 				.append('div')
 				.style('display', 'inline-block')
 				.style('margin-left', '10px')
-				.style('margin-bottom', '-6px')
 				.selectAll('button')
 				.data([
 					{
@@ -173,12 +158,13 @@ function setRenderers(self) {
 						label: 'Barchart',
 						isVisible: () => true,
 						disabled: d => false,
-						getTw: tw => {
+						getTw: async tw => {
 							if (!tw.qCacheByMode) tw.qCacheByMode = {}
 							tw.qCacheByMode[tw.q.mode] = tw.q
 							// If tw.q is empty/undefined, the default q
 							// will be assigned by fillTw by term type
 							tw.q = tw.qCacheByMode.discrete
+							await fillTermWrapper(tw, self.app.vocabApi)
 							return tw
 						},
 						active: true
@@ -192,10 +178,11 @@ function setRenderers(self) {
 							self.config.term.term.type === 'float' ||
 							self.config.term2?.term.type === 'integer' ||
 							self.config.term2?.term.type === 'float',
-						getTw: tw => {
+						getTw: async tw => {
 							if (!tw.qCacheByMode) tw.qCacheByMode = {}
 							tw.qCacheByMode[tw.q.mode] = tw.q
 							tw.q = tw.qCacheByMode.continuous || { mode: 'continuous' }
+							await fillTermWrapper(tw, self.app.vocabApi)
 							return tw
 						},
 						active: false
@@ -211,7 +198,8 @@ function setRenderers(self) {
 						childType: 'boxplot',
 						label: 'Boxplot - TODO',
 						disabled: d => true,
-						isVisible: () => self.config.term.type === 'integer' || self.config.term.type === 'float',
+						isVisible: () => false, // remove during development
+						// isVisible: () => self.config.term.type === 'integer' || self.config.term.type === 'float',
 						active: false
 					},
 					{
@@ -226,23 +214,25 @@ function setRenderers(self) {
 				])
 				.enter()
 				.append('button')
-
-				.style('display', d => (d.isVisible() ? ' ' : 'none'))
+				.style('display', d => (self.config && d.isVisible() ? '' : 'none'))
 				.style('padding', '5px 10px')
-
+				.style('font-size', '16px')
+				.style('font-weight', 400)
 				//Styles for tab-like design
-				.style('cursor', d => (d.disabled() ? 'not-allowed' : 'pointer'))
+				.style('cursor', d => (self.config && d.disabled() ? 'not-allowed' : 'pointer'))
 				.style('background-color', d => (d.active ? '#cfe2f3' : 'white'))
-				.style('border-style', d => (d.active ? 'solid solid none' : 'none'))
-				.style('border-color', '#ccc8c8')
+				.style('border-style', d => (d.active ? 'solid solid none' : 'solid'))
+				.style('border-color', d => (d.active ? 'white' : '#ccc8c8')) //fix to keep tabs the same size
 				.style('border-width', '1px')
 				.style('border-radius', '5px 5px 0px 0px')
-				.style('margin', '0px 2px -1px')
+				//Aligns tabs to bottom of header div
+				.style('vertical-align', 'sub')
+				.style('line-height', '26px')
 
 				// TODO: may use other logic for disabling a chart type, insteead of hiding/showing
 				.property('disabled', d => d.disabled())
 				.html(d => d.label)
-				.on('click', (event, d) => {
+				.on('click', async (event, d) => {
 					if (!d.getTw) {
 						alert(`TODO: ${d.label}`)
 						return
@@ -251,17 +241,17 @@ function setRenderers(self) {
 					const termKey =
 						self.config.term?.term.type == 'float' ||
 						self.config.term?.term.type == 'integer' ||
-						this.config.term.q.mode == 'continuous'
+						this.config.term.q?.mode == 'continuous'
 							? 'term'
 							: 'term2'
 
 					const termT = self.config[termKey]
 
-					const tw = JSON.parse(JSON.stringify(termT))
+					const tw = structuredClone(termT)
 					self.app.dispatch({
 						type: 'plot_edit',
 						id: self.id,
-						config: { childType: d.childType, [termKey]: d.getTw(tw) }
+						config: { childType: d.childType, [termKey]: await d.getTw(tw) }
 					})
 				})
 

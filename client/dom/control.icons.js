@@ -63,57 +63,47 @@ export const icons = {
 			.on('click', o.handler)
 	},
 	expand: (elem, o) => {
+		const color = 'color' in o ? o.color : 'rgb(100,100,255)'
 		return (
 			elem
 				.attr('title', o.title)
-				.style('padding', '0 3px')
 				.style('height', '16px')
-				.style('color', 'rgb(100,100,255)')
+				.style('color', color)
 				.style('opacity', 0.9)
-				.style('font-size', '16px')
-				.style('padding', '0 2px')
-				.style('margin', '0 2px 2px 1px')
+				.style('font-size', 'fontSize' in o ? o.fontSize : '16px')
+				.style('padding', 'padding' in o ? o.padding : '0 2px')
+				// .style('margin', '0 2px 2px 1px')
 				.style('display', 'display' in o ? o.display : 'inline-block')
 				.style('cursor', 'pointer')
 				//.style('border','1px solid #aaa')
 				//.style('background-color','#ccc')
 				.html(
-					`<svg width='16' height='12' style='margin:0;overflow:visible'>
-				<g transform='translate(0,0)'>
-					<line x1='1' y1='0' x2='1' y2='12' style='stroke:rgb(100,100,255);stroke-width:2px'></line>
-					<path d='M2,6L7,3L7,9Z' style='fill:rgb(100,100,255)'></path>
-					<path d='M9,3L14,6L9,9Z' style='fill:rgb(100,100,255)'></path>
-					<line x1='15' y1='0' x2='15' y2='12' style='stroke:rgb(100,100,255);stroke-width:2px'></line>
-				</g>
-			</svg>`
+					`<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="${color}" class="bi bi-square" viewBox="0 0 16 16">
+					  <path stroke='${color}' stroke-width='1' d="M14 1a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1h12zM2 0a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2H2z"/>
+					</svg>`
 				)
 				.on('click', o.handler)
 		)
 	},
 	collapse: (elem, o) => {
+		const color = 'color' in o ? o.color : 'rgb(100,100,255)'
 		return (
 			elem
 				.attr('title', o.title)
-				.style('padding', '0 3px')
-				.style('height', '16px')
-				.style('color', 'rgb(100,100,255)')
+				.style('height', 'auto')
+				.style('color', color)
 				.style('opacity', 0.9)
-				.style('font-size', '16px')
-				.style('padding', '0 2px')
-				.style('margin', '0 1px 2px 1px')
+				.style('font-size', 'fontSize' in o ? o.fontSize : '16px')
+				.style('padding', 'padding' in o ? o.padding : '0 2px')
+				// .style('margin', '0 1px 2px 1px')
 				.style('display', 'display' in o ? o.display : 'inline-block')
 				.style('cursor', 'pointer')
 				//.style('border','1px solid #aaa')
 				//.style('background-color','#ccc')
 				.html(
-					`<svg width='16' height='12' style='margin:0;overflow:visible'>
-				<g transform='translate(0,0)'>
-					<line x1='6' y1='0' x2='6' y2='12' style='stroke:rgb(100,100,255);stroke-width:2px'></line>
-					<path d='M0,3L5,6L0,9Z' style='fill:rgb(100,100,255)'></path>
-					<path d='M10,6L16,3L16,9Z' style='fill:rgb(100,100,255)'></path>
-					<line x1='9' y1='0' x2='9' y2='12' style='stroke:rgb(100,100,255);stroke-width:2px'></line>
-				</g>
-			</svg>`
+					`<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="${color}" class="bi bi-dash-lg" viewBox="0 0 16 16">
+					  <path stroke='${color}' stroke-width='1' fill-rule="evenodd" d="M2 8a.5.5 0 0 1 .5-.5h11a.5.5 0 0 1 0 1h-11A.5.5 0 0 1 2 8Z"/>
+					</svg>`
 				)
 				.on('click', o.handler)
 		)

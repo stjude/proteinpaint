@@ -55,7 +55,9 @@ h2 {
     border-spacing: 2px;
 }
 
-
+.sja_root_holder svg {
+    display: inline-block !important
+}
 /*
     override the thicker button border
     that results when a button's 
@@ -148,7 +150,7 @@ h2 {
     background-color: rgba(200, 0, 0, .1);
     color: rgba(190, 0, 0, .5);
     border: solid 1px rgba(200, 0, 0, .2);
-    border-width: 1px 0px;
+    /*border-width: 1px 0px;*/
 }
 
 .sja_errorbar>:nth-child(2) {
@@ -1114,6 +1116,8 @@ h2 {
     border-radius: 0  0 5px 5px;
 }
 
+.sjpp-output-sandbox-collapse-btn,
+.sjpp-output-sandbox-expand-btn,
 .sjpp-output-sandbox-close-bt
 {
     display: inline-block;
@@ -1121,7 +1125,7 @@ h2 {
     margin: 0px;
     border-right: solid 2px white;
     border-radius: 5px 0 0 0;
-    font-size: 1.5em;
+    font-size: 16px;
     cursor: default;
 }
 /* client/dom/sandbox.js end */
@@ -1140,7 +1144,7 @@ h2 {
 }
 
 .sjpp_table_item {
-    padding: 5px;
+    padding: 3px 5px;
     font-size: 1em;
     text-align: left;
     overflow: hidden;

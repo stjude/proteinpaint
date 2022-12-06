@@ -34,7 +34,7 @@ export function getHandler(self) {
 						{
 							text: 'APPLY',
 							callback: indexes => {
-								values = values.filter((elem, index, array) => !(index in indexes))
+								values = values.filter((elem, index, array) => indexes.includes(index))
 								group2.values = values
 								group1.values = values
 								self.runCallback()
@@ -43,7 +43,8 @@ export function getHandler(self) {
 						}
 					],
 					striped: false,
-					showHeader: false
+					showHeader: false,
+					selectAll: true
 				})
 			}
 		},

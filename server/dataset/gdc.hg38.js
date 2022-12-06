@@ -7,9 +7,6 @@ isoform2ssm_query2_getcase
 query_range2variants
 variables_range2variants
 variant2samplesGdcapi
-termTotalSizeGdcapi
-	termid2size_query
-	termid2size_filters
 ssm2canonicalisoform
 */
 
@@ -347,82 +344,6 @@ const variant2samplesGdcapi = {
 	}
 }
 
-/*
-argument is array, each element: {type, id}
-
-for term id of 'case.project.project_id', convert to "project__project_id", for graphql
-*/
-function termid2size_query(termlst) {
-	const lst = []
-	for (const term of termlst) {
-		if (!term.id) continue
-		if ((term.type = 'categorical')) {
-			lst.push(term.path + ' {buckets { doc_count, key }}')
-		} else if (term.type == 'integer' || term.type == 'float') {
-			lst.push(term.path + ' {stats { count }}')
-		} else {
-			throw 'unknown term type'
-		}
-	}
-
-	// for all terms from termidlst will be added to single query
-	const query = `query termislst2total( $filters: FiltersArgument) {
-		explore {
-			cases {
-				aggregations (filters: $filters, aggregations_filter_themselves: true) {
-					${lst.join('\n')}
-				}
-			}
-		}
-	}`
-	return query
-}
-
-function termid2size_filters(p, ds) {
-	const f = {
-		filters: {
-			op: 'and',
-			content: [{ op: 'in', content: { field: 'cases.available_variation_data', value: ['ssm'] } }]
-		}
-	}
-
-	if (p && p.tid2value) {
-		for (const termid in p.tid2value) {
-			const t = ds.cohort.termdb.q.termjsonByOneid(termid)
-			if (t) {
-				f.filters.content.push({
-					op: 'in',
-					content: {
-						/*********************
-						extremely tricky, no explanation
-						**********************
-						term id all starts with "case.**"
-						but in this graphql query, fields must start with "cases.**"
-						*/
-						field: termid.replace(/^case\./, 'cases.'),
-						value: [p.tid2value[termid]]
-					}
-				})
-			}
-		}
-	}
-
-	if (p && p.ssm_id_lst) {
-		f.filters.content.push({
-			op: '=',
-			content: { field: 'cases.gene.ssm.ssm_id', value: p.ssm_id_lst.split(',') }
-		})
-	}
-	//console.log(JSON.stringify(f,null,2))
-	return f
-}
-
-const termTotalSizeGdcapi = {
-	query: termid2size_query,
-	keys: ['data', 'explore', 'cases', 'aggregations'],
-	filters: termid2size_filters
-}
-
 /* not part of generic mds3 dataset
 to map a SSM id to a canonical ENST name
 */
@@ -451,9 +372,7 @@ module.exports = {
 
 		// for each term from an input list, get total sizes for each category
 		// used for sunburst and summary
-		termid2totalsize2: {
-			gdcapi: termTotalSizeGdcapi
-		},
+		termid2totalsize2: { gdcapi: true },
 
 		dictionary: {
 			// runs termdb.gdc.js to init gdc dictionary

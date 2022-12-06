@@ -52,9 +52,14 @@ striped = true, boolean
 
 maxWidth = 90vw, string
 	The max width of the table
-maxHeight = 50vw, string
+maxHeight = 40vw, string
 	The max height of the table
 
+selectedRows=[]
+	Each element is an index indicating that the corresponding row should be selected
+	
+selectAll = false, boolean
+	When active makes all the rows selected by default
 	
 */
 export async function renderTable({
@@ -68,8 +73,11 @@ export async function renderTable({
 	striped = true,
 	showHeader = true,
 	maxWidth = '90vw',
-	maxHeight = '40vh'
+	maxHeight = '40vh',
+	selectedRows = [],
+	selectAll = false
 }) {
+	if (rows?.length == 0) return
 	// create a Parent Div element to which the header and sample table will be appended as divH and divS.
 	const parentDiv = div
 		.style('padding', '5px')
@@ -91,29 +99,31 @@ export async function renderTable({
 			.append('th')
 			.attr('class', 'sjpp_table_header')
 			.text('#')
-			.style('width', '15px')
+			.style('width', '1vw')
 	}
 
 	if (buttons || noButtonCallback) {
 		const cell = divH
-			.append('th')
+			.append('td')
 			.attr('class', 'sjpp_table_header')
-			.style('width', '20px')
+			.style('width', '1.5vw')
 		if (!singleMode) {
 			const checkboxH = cell
 				.append('input')
+				.attr('aria-label', 'Check/Uncheck All')
 				.attr('id', 'checkboxHeader')
 				.attr('type', 'checkbox')
 				.on('change', () => {
 					table.selectAll('input').property('checked', checkboxH.node().checked)
 					enableButtons()
 				})
+			checkboxH.node().checked = selectAll
 		}
 		if (!showHeader)
 			divH
 				.append('th')
 				.text('Check/Uncheck All')
-				.attr('class', 'sjpp_table_header')
+				.attr('class', 'sjpp_table_header sjpp_table_item')
 	}
 	if (showHeader)
 		for (const c of columns) {
@@ -154,17 +164,17 @@ export async function renderTable({
 			const lineDiv = rowtable
 				.append('td')
 				.text(i + 1)
-				.style('width', '15px')
+				.style('width', '1vw')
 				.style('font-size', '0.8rem')
-				.style('color', defaultcolor)
 		}
 
 		if (buttons || noButtonCallback) {
 			checkbox = rowtable
 				.append('td')
-				.style('width', '20px')
+				.style('width', '1.5vw')
 				.style('float', 'center')
 				.append('input')
+				.attr('aria-label', 'Select row')
 				.attr('type', singleMode ? 'radio' : 'checkbox')
 				.attr('name', 'select')
 				.attr('value', i)
@@ -172,6 +182,7 @@ export async function renderTable({
 					if (buttons) enableButtons()
 					else noButtonCallback(i, checkbox.node())
 				})
+			if (selectAll || selectedRows.includes(i)) checkbox.node().checked = true
 		}
 
 		for (const [colIdx, cell] of row.entries()) {
@@ -217,7 +228,6 @@ export async function renderTable({
 
 			button.button = footerDiv
 				.append('button')
-				.attr('disabled', true)
 				.text(button.text)
 				.style('margin', '10px 10px 0 0')
 				.on('click', e => {
@@ -231,6 +241,7 @@ export async function renderTable({
 					}
 				})
 			if (button.class) button.button.attr('class', button.class)
+			button.button.node().disabled = selectedRows.length == 0
 		}
 	}
 

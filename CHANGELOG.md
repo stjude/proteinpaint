@@ -2,7 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
-## 2.6.2
+
+## 2.7.1
+
+- improve tvs and filter UIs, and fix the integration tests
+
+GDC-related
+- fix the alert visibility when submitting a BAM slice + variant selection
+
+## 2.7.0
 
 - samplelst edit UI
 - bean plot over violin plot

@@ -110,45 +110,28 @@ async function fillMenu(self, div, tvs) {
 	)
 
 	const data = await self.opts.vocabApi.getCategories(tvs.term, self.filter, lst)
+	const callback = indexes => {
+		const new_vals = data.lst.filter((v, i, array) => (tvs.isnot ? !indexes.includes(i) : indexes.includes(i)))
+		const new_tvs = JSON.parse(JSON.stringify(tvs))
+		delete new_tvs.groupset_label
+		new_tvs.values = new_vals
+		// update bar_by_*
+		const bar_by_value = bar_by_select.node().value
+		new_tvs.bar_by_grade = bar_by_value !== 'sub'
+		new_tvs.bar_by_children = bar_by_value === 'sub'
+		// update value_by_*
+		update_value_by(new_tvs)
+		try {
+			validateConditionTvs(new_tvs)
+		} catch (e) {
+			window.alert(e)
+			return
+		}
+		self.dom.tip.hide()
+		self.opts.callback(new_tvs)
+	}
 
-	// 'Apply' button
-	div
-		.append('div')
-		.style('text-align', 'center')
-		.append('div')
-		.attr('class', 'sjpp_apply_btn sja_filter_tag_btn')
-		.style('display', 'inline-block')
-		.style('margin', '5px')
-		.style('text-align', 'center')
-		.style('font-size', '.9em')
-		.style('text-transform', 'uppercase')
-		.text('Apply')
-		.on('click', () => {
-			//update term values by ckeckbox values
-			const checked_vals = [...self.values_table.querySelectorAll('.value_checkbox')]
-				.filter(elem => elem.checked)
-				.map(elem => elem.value)
-			const new_vals = data.lst.filter(v => checked_vals.includes(v.key.toString()))
-			const new_tvs = JSON.parse(JSON.stringify(tvs))
-			delete new_tvs.groupset_label
-			new_tvs.values = new_vals
-			// update bar_by_*
-			const bar_by_value = bar_by_select.node().value
-			new_tvs.bar_by_grade = bar_by_value !== 'sub'
-			new_tvs.bar_by_children = bar_by_value === 'sub'
-			// update value_by_*
-			update_value_by(new_tvs)
-			try {
-				validateConditionTvs(new_tvs)
-			} catch (e) {
-				window.alert(e)
-				return
-			}
-			self.dom.tip.hide()
-			self.opts.callback(new_tvs)
-		})
-
-	self.values_table = self.makeValueTable(div, tvs, data.lst).node()
+	self.values_table = self.makeValueTable(div, tvs, data.lst, callback).node()
 
 	function update_value_by(new_tvs) {
 		const bar_by_value = bar_by_select.property('value')

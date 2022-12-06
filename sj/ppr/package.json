@@ -1,9 +1,9 @@
 {
-    "name": "@stjude/proteinpaint-prp1",
+    "name": "@stjude/proteinpaint-ppr",
     "version": "2.7.0",
     "private": true,
     "scripts": {
-        "postinstall": "proteinpaint-front https://proteinpaint.stjude.org",
+        "postinstall": "proteinpaint-front https://ppr.stjude.org",
         "start": "proteinpaint-server"
     },
     "dependencies": {

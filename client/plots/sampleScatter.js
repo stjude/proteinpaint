@@ -177,7 +177,7 @@ class Scatter {
 						configKey: 'colorTW',
 						chartType: 'sampleScatter',
 						usecase: { target: 'sampleScatter', detail: 'colorTW' },
-						title: 'The term to use to color the samples',
+						title: 'Categories to color the samples',
 						label: 'Color',
 						vocabApi: this.app.vocabApi,
 						menuOptions: '!remove'
@@ -187,26 +187,19 @@ class Scatter {
 						configKey: 'shapeTW',
 						chartType: 'sampleScatter',
 						usecase: { target: 'sampleScatter', detail: 'shapeTW' },
-						title: 'The term to use to shape the samples',
+						title: 'Categories to assign a shape',
 						label: 'Shape',
 						vocabApi: this.app.vocabApi
 					},
 					{
-						label: 'Sample size',
+						label: 'Symbol size',
 						type: 'number',
 						chartType: 'sampleScatter',
 						settingsKey: 'size',
-						title: 'It represents the area of the symbols in square pixels',
+						title: 'It represents the area of a symbol in square pixels',
 						min: 0
 					},
-					{
-						label: 'Ref sample size',
-						type: 'number',
-						chartType: 'sampleScatter',
-						settingsKey: 'refSize',
-						title: 'It represents the area of the reference samples in square pixels',
-						min: 0
-					},
+
 					{
 						label: 'Chart width',
 						type: 'number',
@@ -234,6 +227,14 @@ class Scatter {
 						chartType: 'sampleScatter',
 						settingsKey: 'showRef',
 						title: `Option to show/hide ref samples`
+					},
+					{
+						label: 'Reference size',
+						type: 'number',
+						chartType: 'sampleScatter',
+						settingsKey: 'refSize',
+						title: 'It represents the area of the reference symbol in square pixels',
+						min: 0
 					}
 				]
 			})
@@ -257,9 +258,10 @@ class Scatter {
 			.text(title)
 			.style('font-weight', 'bold')
 
-		const radius = 6
+		const radius = 5
 		let category, count, name, color
 		for (const [key, category] of this.colorLegend) {
+			if (key == 'Ref') continue
 			color = category.color
 			count = category.sampleCount
 			name = key
@@ -279,6 +281,32 @@ class Scatter {
 				.attr('alignment-baseline', 'middle')
 			offsetY += step
 		}
+		const colorRefCategory = this.colorLegend.get('Ref')
+		if (colorRefCategory.sampleCount > 0) {
+			offsetY = offsetY + step
+			const colorG = legendG.append('g')
+			colorG
+				.append('text')
+				.attr('x', offsetX)
+				.attr('y', offsetY)
+				.text('Reference')
+				.style('font-weight', 'bold')
+			offsetY = offsetY + step
+
+			let symbol = this.symbols[0].size(64)()
+			colorG
+				.append('path')
+				.attr('transform', c => `translate(${offsetX}, ${offsetY})`)
+				.style('fill', colorRefCategory.color)
+				.attr('d', symbol)
+			colorG
+				.append('text')
+				.attr('x', offsetX + 10)
+				.attr('y', offsetY)
+				.text(`n=${colorRefCategory.sampleCount}`)
+				.style('font-size', '15px')
+				.attr('alignment-baseline', 'middle')
+		}
 		if (this.config.shapeTW) {
 			offsetX = 300
 			offsetY = 60
@@ -295,6 +323,7 @@ class Scatter {
 			let index, symbol
 			color = 'gray'
 			for (const [key, shape] of this.shapeLegend) {
+				if (key == 'Ref') continue
 				index = shape.shape % this.symbols.length
 				symbol = this.symbols[index].size(64)()
 				name = key
@@ -349,7 +378,9 @@ function setRenderers(self) {
 	}
 
 	function renderSVG(svg, chart, s, duration, data) {
-		const legendHeight = Math.max(self.colorLegend.size, self.shapeLegend.size) * 30 + 60 //legend step and header
+		let colorLegends = self.colorLegend.size * 30
+		if (self.colorLegend.get('Ref').sampleCount > 0) colorLegends += 60
+		const legendHeight = Math.max(colorLegends, self.shapeLegend.size * 30) + 60 //legend step and header
 
 		svg
 			.transition()
@@ -919,7 +950,8 @@ function setRenderers(self) {
 			showLines: true,
 			maxWidth: '35vw',
 			maxHeight: '35vh',
-			buttons
+			buttons,
+			selectAll: true
 		})
 
 		self.dom.tip.show(x, y)

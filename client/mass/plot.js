@@ -88,7 +88,8 @@ function setRenderers(self) {
 					.append('div')
 					.style('display', 'inline-block')
 					.style('color', '#999')
-					.style('padding-left', '7px'),
+					.style('padding-left', '7px')
+					.style('vertical-align', 'sub'),
 
 				localRecoverDiv: holder.header.append('div').style('display', 'inline-block'),
 
