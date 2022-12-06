@@ -36,7 +36,7 @@ jobs:
         run: mkdir server/cache
 
       - name: Client unit tests
-        run: npx tape client/**/*.unit.spec.js
+        run: npm run test:unit --workspace="client"
 
       - name: Server unit tests
         run: npm run test:unit --workspace="server"
