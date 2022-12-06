@@ -8,6 +8,7 @@ runpp({ launchGdcMatrix:true })
 
 designed to work for Oncoprint app in GDC Analysis Tools Framework
 
+
 ********* parameters
 
 arg = {}
@@ -47,7 +48,7 @@ export async function init(arg, holder, genomes) {
 	const genes = await getGenes(arg, gdcCohort)
 
 	// TODO limit number of cases, backend?
-	return await launchMatrix(genes, arg, holder, genome)
+	return await launchMatrix(genes, gdcCohort, holder, genome)
 }
 
 function getGdcCohort(arg) {
@@ -57,10 +58,14 @@ function getGdcCohort(arg) {
 		return arg.filter0
 	}
 	// no filter. as discussed Dec/6, 2022, use GBM as a default
-	return {
+	return { op: 'in', content: { field: 'cases.disease_type', value: ['Gliomas'] } }
+	/*
+	{
 		op: 'and',
-		content: [{ op: 'in', content: { field: 'cases.disease_type', value: ['Gliomas'] } }]
+		content: [
+		{ op: 'in', content: { field: 'cases.disease_type', value: ['Gliomas'] } }]
 	}
+	*/
 }
 
 async function getGenes(arg, gdcCohort) {
@@ -79,7 +84,7 @@ async function getGenes(arg, gdcCohort) {
 	return data.genes
 }
 
-async function launchMatrix(genes, arg, holder, genome) {
+async function launchMatrix(genes, gdcCohort, holder, genome) {
 	const termlst = genes.map(i => {
 		return { term: { name: i, type: 'geneVariant' } }
 	})
@@ -90,7 +95,7 @@ async function launchMatrix(genes, arg, holder, genome) {
 		state: {
 			genome: gdcGenome,
 			dslabel: gdcDslabel,
-			termfilter: { filter0: arg.filter0 },
+			termfilter: { filter0: gdcCohort },
 			nav: { header_mode: 'hidden' },
 			plots: [
 				{
