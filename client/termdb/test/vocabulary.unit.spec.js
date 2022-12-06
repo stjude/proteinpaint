@@ -15,6 +15,9 @@ tape('\n', function(test) {
 })
 
 tape('getPercentile', async function(test) {
+	test.timeoutAfter(100)
+	test.plan(11)
+
 	let percentile_lst, result, testMsg, filter
 
 	percentile_lst = [10]
@@ -88,4 +91,5 @@ tape('getPercentile', async function(test) {
 	}
 	result = await vocabApi.getPercentile('d', percentile_lst, filter)
 	test.equal(result.values[0], 0.4, 'should get correct 50th percentile with numeric filter')
+	test.end()
 })

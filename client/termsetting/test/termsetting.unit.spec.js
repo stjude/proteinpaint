@@ -16,6 +16,9 @@ tape('\n', function(test) {
 })
 
 tape('fillTermWrapper - continuous term', async function(test) {
+	test.timeoutAfter(100)
+	test.plan(11)
+
 	let defaultQ, expectedQ, testMsg
 
 	////////// undefined tw.q.mode
@@ -150,4 +153,5 @@ tape('fillTermWrapper - continuous term', async function(test) {
 		},
 		'should merge defaultQ into tw.q when defaultQ.preferredBins is not defined'
 	)
+	test.end()
 })
