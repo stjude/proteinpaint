@@ -35,8 +35,11 @@ jobs:
       - name: Create cache folder
         run: mkdir server/cache
 
-      - name: Client unit tests
-        run: npm run test:unit --workspace="client"
+      - name: install xvfb
+        run: sudo apt-get install xvfb
+
+      - name: Run client tests
+        run: xvfb-run --auto-servernum npm run test:unit --workspace="client"
 
       - name: Server unit tests
         run: npm run test:unit --workspace="server"
