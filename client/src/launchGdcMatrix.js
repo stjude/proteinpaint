@@ -1,6 +1,7 @@
 import { Menu } from '#dom/menu'
 import { dofetch3 } from '#common/dofetch'
 import { make_one_checkbox } from '#dom/checkbox'
+import { appInit } from '#plots/plot.app'
 
 /*
 
@@ -50,11 +51,57 @@ export async function init(arg, holder, genomes) {
 		//divstyle: { display: 'block', margin: '10px 5px', height: '10px', 'margin-left': '6.5px' },
 		callback: async () => {
 			CGConly = !CGConly
-			await launchView(arg)
+			// await launchView(arg)
+			console.log(['use plotAppApi.dispatch?', plotAppApi, ' -OR- use matrixApi.update()', matrixApi])
+			/* suggested:
+			const genes = await getGenes(arg, gdcCohort) // !!! include CGC filter !!!
+			const termlst = genes.map(i => {
+				return { term: { name: i, type: 'geneVariant' } }
+			})
+			plotAppApi.dispatch({
+				type: 'plot_edit',
+				id: matrixApi.id,
+				config: {
+					termgroups: [{ lst: termlst }]
+				}
+			})
+			*/
 		}
 	})
 
-	async function launchView(param) {
+	const gdcCohort = getGdcCohort(arg)
+	const genes = await getGenes(arg, gdcCohort)
+	const termlst = genes.map(i => {
+		return { term: { name: i, type: 'geneVariant' } }
+	})
+
+	const opts = {
+		holder,
+		genome,
+		state: {
+			genome: gdcGenome,
+			dslabel: gdcDslabel,
+			termfilter: { filter0: gdcCohort },
+			//nav: { header_mode: 'hidden' },
+			plots: [
+				{
+					chartType: 'matrix',
+					termgroups: [{ lst: termlst }],
+					settings: {
+						matrix: {
+							colspace: 0
+						}
+					}
+				}
+			]
+		}
+	}
+
+	const plotAppApi = await appInit(opts)
+	const matrixApi = plotAppApi.getComponents('plots.0')
+	return matrixApi
+
+	/*async function launchView(param) {
 		// always require a gdc cohort filter
 		const gdcCohort = getGdcCohort(param)
 
@@ -72,7 +119,7 @@ export async function init(arg, holder, genomes) {
 			await launchView(arg)
 		}
 	}
-	return api
+	return api*/
 }
 
 function getGdcCohort(arg) {
