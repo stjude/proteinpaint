@@ -1,5 +1,6 @@
 import { Menu } from '#dom/menu'
 import { dofetch3 } from '#common/dofetch'
+import { make_one_checkbox } from '#dom/checkbox'
 
 /*
 
@@ -27,9 +28,7 @@ genomes = { hg38 : {} }
 
 ********* returns
 
-none
-
-this may work with react wrapper?
+{ update(_arg) }
 
 
 */
@@ -42,13 +41,38 @@ export async function init(arg, holder, genomes) {
 	const genome = genomes[gdcGenome]
 	if (!genome) throw gdcGenome + ' missing'
 
-	// always require a gdc cohort filter
-	const gdcCohort = getGdcCohort(arg)
+	// per discussion on Dec 6, 2022, restrict to cancer gene census genes by default and allow user to change
+	let CGConly = true
+	make_one_checkbox({
+		holder: holder.append('div'),
+		labeltext: 'Show only Cancer Gene Census genes',
+		checked: CGConly,
+		//divstyle: { display: 'block', margin: '10px 5px', height: '10px', 'margin-left': '6.5px' },
+		callback: async () => {
+			CGConly = !CGConly
+			await launchView(arg)
+		}
+	})
 
-	const genes = await getGenes(arg, gdcCohort)
+	async function launchView(param) {
+		// always require a gdc cohort filter
+		const gdcCohort = getGdcCohort(param)
 
-	// TODO limit number of cases, backend?
-	return await launchMatrix(genes, gdcCohort, holder, genome)
+		const genes = await getGenes(param, gdcCohort)
+
+		// TODO limit number of cases, backend?
+		await launchMatrix(genes, gdcCohort, holder, genome)
+	}
+
+	await launchView(arg)
+
+	const api = {
+		update: async _arg => {
+			Object.assign(arg, _arg)
+			await launchView(arg)
+		}
+	}
+	return api
 }
 
 function getGdcCohort(arg) {
@@ -85,6 +109,7 @@ async function getGenes(arg, gdcCohort) {
 }
 
 async function launchMatrix(genes, gdcCohort, holder, genome) {
+	// TODO hide sandbox
 	const termlst = genes.map(i => {
 		return { term: { name: i, type: 'geneVariant' } }
 	})
