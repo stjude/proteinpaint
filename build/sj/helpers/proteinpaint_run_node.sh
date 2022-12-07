@@ -2,7 +2,11 @@
 
 set -e 
 
-cd /opt/app/pp/active
+ACTIVEDIR=active
+if (($# == 1)); then
+  ACTIVEDIR=available/$1
+fi
+cd /opt/app/pp/$ACTIVEDIR
 
 echo "*** RESTARTING proteinpaint node server ***"
 
@@ -47,7 +51,10 @@ do
 
   # detect if the post-app.listen() message has been logged
   if [[ -f $logdir/log ]]; then
-    logtail=$(tail -n1 $logdir/log | grep "PORT 3000" | sed -r 's/\x1B\[(;?[0-9]{1,3})+[mGK]//g')
+    # NOTE: cannot assume the launched express server app logs 'listening at PORT 3000'
+    # as the last line prior to listening, as non-critical async validation may be logged
+    # afterwards
+    logtail=$(tail -n100 $logdir/log | grep "PORT 3000" | sed -r 's/\x1B\[(;?[0-9]{1,3})+[mGK]//g')
   fi
   
   if [[ "$logtail" != "" ]]; then

@@ -272,10 +272,10 @@ ssh -t $USERatREMOTE "
 	cd $REMOTEDIR
 	ln -sfn /opt/app/pecan/portal/www/sjcharts/public available/$APP-$REV/public/sjcharts
 	ln -sfn ./bin available/$APP-$REV/public/no-babel-polyfill
-	ln -sfn available/$APP-$REV active
 	
 	./helpers/record.sh deployed
-	./proteinpaint_run_node.sh
+	./proteinpaint_run_node.sh $APP-$REV
+	ln -sfn available/$APP-$REV active
 	./helpers/purge.sh \"pp-*\"
 "
 
