@@ -1,6 +1,3 @@
-import { select, style } from 'd3'
-import { defaultcolor } from '../shared/common'
-
 /*
 print an html table, using the specified columns and rows
 

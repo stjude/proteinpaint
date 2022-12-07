@@ -3,7 +3,7 @@ import { scaleLinear, scaleOrdinal } from 'd3-scale'
 import { area, curveBumpX, curveBumpY } from 'd3-shape'
 import { schemeCategory10 } from 'd3-scale-chromatic'
 import { brushX } from 'd3'
-import { renderPvalues } from '#dom/renderPvalueTable'
+import { renderTable } from '../dom/table'
 
 export default function violinRenderer(self) {
 	const k2c = scaleOrdinal(schemeCategory10)
@@ -65,7 +65,7 @@ export default function violinRenderer(self) {
 			.attr(
 				'width',
 				margin.left +
-					margin.right +
+					margin.top +
 					(isH ? plotLength : plotThickness * self.data.plots.length + self.config.term.term.name.length)
 			)
 			.attr(
@@ -81,7 +81,7 @@ export default function violinRenderer(self) {
 
 		// creates numeric axis
 		const axisScale = scaleLinear()
-			.domain([self.data.min, self.data.max])
+			.domain([self.data.min - self.data.max / 10, self.data.max + self.data.max / 10])
 			.range(isH ? [0, plotLength] : [plotLength, 0])
 
 		{
@@ -163,13 +163,13 @@ export default function violinRenderer(self) {
 			violinG
 				.append('path')
 				.style('fill', k2c(plotIdx))
-				.style('opacity', '0.7')
+				.style('opacity', '0.8')
 				.attr('d', areaBuilder(plot.plotValueCount > 3 ? plot.bins : 0)) //do not build violin plots for values 3 or less than 3.
 
 			violinG
 				.append('image')
 				.attr('xlink:href', plot.src)
-				.attr('transform', isH ? 'translate(0, -7)' : 'translate(-7, 0)')
+				.attr('transform', isH ? 'translate(0, -9)' : 'translate(-9, 0)')
 
 			//render median values on plots
 			if (plot.plotValueCount >= 2) {
@@ -222,28 +222,30 @@ export default function violinRenderer(self) {
 	}
 
 	self.renderPvalueTable = function() {
-		const t2 = this.config.term2
-		const maxPvalsToShow = 5
-
 		this.dom.tableHolder
 			.style('display', 'inline-block')
 			.style('vertical-align', 'top')
 			.selectAll('*')
 			.remove()
 
+		const t2 = this.config.term2
+
 		if (t2 == undefined || t2 == null) {
-			// no term2, no legend to show
+			// no term2, no table to show
 			this.dom.tableHolder.style('display', 'none')
 			return
 		}
 
-		//show pvalue table
-		renderPvalues({
-			holder: this.dom.tableHolder,
-			plot: this.type,
-			tests: this.data,
-			s: this.config.settings,
-			title: "Group comparisons (Wilcoxon's rank sum test)"
-		})
+		const title = this.dom.tableHolder
+			.append('div')
+			.style('font-weight', 'bold')
+			.html("Group comparisons (Wilcoxon's rank sum test)")
+
+		const table = this.dom.tableHolder.append('div')
+
+		const columns = [{ label: 'Group 1' }, { label: 'Group 2' }, { label: 'P-value' }]
+		const rows = this.data.pvalues
+
+		renderTable({ columns, rows, div: this.dom.tableHolder, showLines: false, maxWidth: '25vw', maxHeight: '20vh' })
 	}
 }

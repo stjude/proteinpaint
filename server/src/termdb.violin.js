@@ -78,7 +78,17 @@ export async function trigger_getViolinPlotData(q, res, ds, genome) {
 		}
 	}
 
-	key2values = [...key2values.entries()].sort((a, b) => a[0] - b[0])
+	//sort the key2values map object. for categorical sort in descending to ascending order (that's the only way it seems works for age groups) and for numerical variable sort in lowest to highest numeric values
+	q.divideTw?.term?.type === 'categorical'
+		? (key2values = [...key2values.entries()].sort((a, b) => b[1].length - a[1].length))
+		: (key2values = [...key2values].sort((a, b) => {
+				return a
+					.toString()
+					.replace(/[^a-zA-Z0-9< ]/g, '')
+					.localeCompare(b.toString().replace(/[^a-zA-Z0-9< ]/g, ''), undefined, {
+						numeric: true
+					})
+		  }))
 
 	const result = {
 		min: min,
@@ -107,10 +117,10 @@ export async function trigger_getViolinPlotData(q, res, ds, genome) {
 	let axisScale
 	q.orientation == 'horizontal'
 		? (axisScale = scaleLinear()
-				.domain([result.min, result.max])
+				.domain([result.min - result.max / 10, result.max + result.max / 10])
 				.range([0, q.svgw]))
 		: (axisScale = scaleLinear()
-				.domain([result.min, result.max])
+				.domain([result.min - result.max / 10, result.max + result.max / 10])
 				.range([q.svgw, 0]))
 
 	// plot data to return to client
@@ -126,16 +136,21 @@ export async function trigger_getViolinPlotData(q, res, ds, genome) {
 			: (canvas = createCanvas(20 * q.devicePixelRatio, q.svgw * q.devicePixelRatio))
 		const ctx = canvas.getContext('2d')
 		ctx.strokeStyle = 'black'
-		ctx.lineWidth = 0.5
+		ctx.lineWidth = 0.2
+		ctx.fillStyle = '#ffe6e6'
+
+		//scaling for sharper image
 		if (q.devicePixelRatio > 1) {
 			ctx.scale(q.devicePixelRatio, q.devicePixelRatio)
 		}
 
 		ctx.beginPath()
 		plot.values.forEach(i => {
-			q.orientation == 'horizontal' ? ctx.moveTo(axisScale(i), 0) : ctx.moveTo(0, axisScale(i))
-			q.orientation == 'horizontal' ? ctx.lineTo(axisScale(i), 7) : ctx.lineTo(7, axisScale(i))
+			q.orientation == 'horizontal'
+				? ctx.arc(axisScale(i), 5, 1.7, 0, 2 * Math.PI)
+				: ctx.arc(5, axisScale(i), 1.7, -1.5, 2 * Math.PI)
 		})
+		ctx.fill()
 		ctx.stroke()
 
 		plot.src = canvas.toDataURL()
@@ -212,6 +227,6 @@ export async function wilcoxon(term, result) {
 	fs.unlink(tmpfile, () => {})
 
 	for (const [k, v] of Object.entries(JSON.parse(wilcoxOutput))) {
-		result.pvalues.push({ series1: k.split(',')[0], series2: k.split(',')[1], pvalue: v })
+		result.pvalues.push([{ value: k.split(',')[0] }, { value: k.split(',')[1] }, { html: v }])
 	}
 }
