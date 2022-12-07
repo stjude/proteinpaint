@@ -1226,6 +1226,7 @@ export function handle_filter2topGenes(genomes) {
 		/* query{}
 		.genome: required
 		.filter0: required
+		.CGConly: boolean
 		*/
 		try {
 			const genome = genomes[req.query.genome]
@@ -1239,7 +1240,7 @@ export function handle_filter2topGenes(genomes) {
 					(req.query.size || 50) +
 					'&fields=symbol' +
 					'&filters=' +
-					req.query.filter0,
+					mayAddCGC2filter(req.query.filter0, req.query.CGConly),
 				{ method: 'GET', headers: { 'Content-Type': 'application/json', Accept: 'application/json' } }
 			)
 			const re = JSON.parse(response.body)
@@ -1254,6 +1255,47 @@ export function handle_filter2topGenes(genomes) {
 			res.send({ error: e.message || e })
 		}
 	}
+}
+
+/*
+str:
+	stringified gdc filter object, should not include the "genes.is_cancer_gene_census" filter element
+CGConly: boolean
+	if true, insert following element into the filter and return stringified obj
+
+	{
+		"op":"and",
+		"content":[
+			{
+				"content":{ "field":"genes.is_cancer_gene_census", "value":["true"] },
+				"op":"in"
+			}
+		]
+	}
+*/
+function mayAddCGC2filter(str, CGConly) {
+	if (!CGConly) {
+		// not using CGC genes. no need to modify filter
+		return str
+	}
+	const f = JSON.parse(decodeURIComponent(str))
+
+	if (f.op == 'in') {
+		// create new filter obj with AND join of CGC element and existing filter
+		const f2 = {
+			op: 'and',
+			content: [f, { op: 'in', content: { field: 'genes.is_cancer_gene_census', value: ['true'] } }]
+		}
+		return encodeURIComponent(JSON.stringify(f2))
+	}
+
+	if (f.op == 'and') {
+		// filter is already "and"; insert CGC element into list
+		f.content.push({ op: 'in', content: { field: 'genes.is_cancer_gene_census', value: ['true'] } })
+		return encodeURIComponent(JSON.stringify(f))
+	}
+
+	throw 'mayAddCGC2filter: f.op is not "in" or "and"'
 }
 
 /*

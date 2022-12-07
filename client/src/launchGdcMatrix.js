@@ -1,4 +1,3 @@
-import { Menu } from '#dom/menu'
 import { dofetch3 } from '#common/dofetch'
 import { make_one_checkbox } from '#dom/checkbox'
 import { appInit } from '#plots/plot.app'
@@ -9,6 +8,9 @@ test with http://localhost:3000/example.gdc.matrix.html
 runpp({ launchGdcMatrix:true })
 
 designed to work for Oncoprint app in GDC Analysis Tools Framework
+
+initiates a "plot" app instance that wraps around the matrix component
+and returns the plot app API
 
 
 ********* parameters
@@ -29,14 +31,21 @@ genomes = { hg38 : {} }
 
 ********* returns
 
-{ update(_arg) }
+matrix API object with following methods; pp react wrapper can call api.update() when user updates cohort in the GDC portal
+TODO revise to a simpler object
 
-
+{
+	destroy()
+	getComponents()
+	id:str
+	type:'matrix'
+	on()
+	update()
+}
 */
 
 const gdcGenome = 'hg38'
 const gdcDslabel = 'GDC'
-const tip = new Menu({ padding: '' })
 
 export async function init(arg, holder, genomes) {
 	const genome = genomes[gdcGenome]
@@ -51,29 +60,19 @@ export async function init(arg, holder, genomes) {
 		//divstyle: { display: 'block', margin: '10px 5px', height: '10px', 'margin-left': '6.5px' },
 		callback: async () => {
 			CGConly = !CGConly
-			// await launchView(arg)
-			console.log(['use plotAppApi.dispatch?', plotAppApi, ' -OR- use matrixApi.update()', matrixApi])
-			/* suggested:
-			const genes = await getGenes(arg, gdcCohort) // !!! include CGC filter !!!
-			const termlst = genes.map(i => {
-				return { term: { name: i, type: 'geneVariant' } }
-			})
+			const genes = await getGenes(arg, gdcCohort, CGConly)
 			plotAppApi.dispatch({
 				type: 'plot_edit',
 				id: matrixApi.id,
 				config: {
-					termgroups: [{ lst: termlst }]
+					termgroups: [{ lst: genes }]
 				}
 			})
-			*/
 		}
 	})
 
 	const gdcCohort = getGdcCohort(arg)
-	const genes = await getGenes(arg, gdcCohort)
-	const termlst = genes.map(i => {
-		return { term: { name: i, type: 'geneVariant' } }
-	})
+	const genes = await getGenes(arg, gdcCohort, CGConly)
 
 	const opts = {
 		holder,
@@ -82,11 +81,10 @@ export async function init(arg, holder, genomes) {
 			genome: gdcGenome,
 			dslabel: gdcDslabel,
 			termfilter: { filter0: gdcCohort },
-			//nav: { header_mode: 'hidden' },
 			plots: [
 				{
 					chartType: 'matrix',
-					termgroups: [{ lst: termlst }],
+					termgroups: [{ lst: genes }],
 					settings: {
 						matrix: {
 							colspace: 0
@@ -139,20 +137,30 @@ function getGdcCohort(arg) {
 	*/
 }
 
-async function getGenes(arg, gdcCohort) {
+/*
+arg={}
+	.genes=[ str, ... ]
+gdcCohort={}
+CGConly=boolean
+*/
+async function getGenes(arg, gdcCohort, CGConly) {
 	if (arg.genes) {
 		// genes are predefined
 		if (!Array.isArray(arg.genes) || arg.genes.length == 0) throw '.genes[] is not non-empty array'
-		return arg.genes
+		return arg.genes.map(i => {
+			return { term: { name: i, type: 'geneVariant' } }
+		})
 	}
 
 	// genes are not predefined. query to get top genes using the current cohort
-	const data = await dofetch3(
-		`gdc_filter2topGenes?genome=${gdcGenome}&filter0=${encodeURIComponent(JSON.stringify(gdcCohort))}`
-	)
+	const lst = ['genome=' + gdcGenome, 'filter0=' + encodeURIComponent(JSON.stringify(gdcCohort))]
+	if (CGConly) lst.push('CGConly=1')
+	const data = await dofetch3('gdc_filter2topGenes?' + lst.join('&'))
 	if (data.error) throw data.error
 	if (!data.genes) throw 'no top genes found using the cohort filter'
-	return data.genes
+	return data.genes.map(i => {
+		return { term: { name: i, type: 'geneVariant' } }
+	})
 }
 
 async function launchMatrix(genes, gdcCohort, holder, genome) {
