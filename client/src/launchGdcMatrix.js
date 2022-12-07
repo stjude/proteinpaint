@@ -1,6 +1,7 @@
 import { dofetch3 } from '#common/dofetch'
 import { make_one_checkbox } from '#dom/checkbox'
 import { appInit } from '#plots/plot.app'
+import { fillTermWrapper } from '#termsetting'
 
 /*
 
@@ -61,13 +62,7 @@ export async function init(arg, holder, genomes) {
 		callback: async () => {
 			CGConly = !CGConly
 			const genes = await getGenes(arg, gdcCohort, CGConly)
-			plotAppApi.dispatch({
-				type: 'plot_edit',
-				id: matrixApi.id,
-				config: {
-					termgroups: [{ lst: genes }]
-				}
-			})
+			api.update({ termgroups: [{ lst: genes }] })
 		}
 	})
 
@@ -97,27 +92,18 @@ export async function init(arg, holder, genomes) {
 
 	const plotAppApi = await appInit(opts)
 	const matrixApi = plotAppApi.getComponents('plots.0')
-	return matrixApi
-
-	/*async function launchView(param) {
-		// always require a gdc cohort filter
-		const gdcCohort = getGdcCohort(param)
-
-		const genes = await getGenes(param, gdcCohort)
-
-		// TODO limit number of cases, backend?
-		await launchMatrix(genes, gdcCohort, holder, genome)
-	}
-
-	await launchView(arg)
 
 	const api = {
-		update: async _arg => {
-			Object.assign(arg, _arg)
-			await launchView(arg)
+		update: config => {
+			plotAppApi.dispatch({
+				type: 'plot_edit',
+				id: matrixApi.id,
+				config
+			})
 		}
 	}
-	return api*/
+
+	return api
 }
 
 function getGdcCohort(arg) {
@@ -147,9 +133,11 @@ async function getGenes(arg, gdcCohort, CGConly) {
 	if (arg.genes) {
 		// genes are predefined
 		if (!Array.isArray(arg.genes) || arg.genes.length == 0) throw '.genes[] is not non-empty array'
-		return arg.genes.map(i => {
-			return { term: { name: i, type: 'geneVariant' } }
-		})
+		return await Promise.all(
+			arg.genes.map(async i => {
+				return await fillTermWrapper({ term: { name: i, type: 'geneVariant' } })
+			})
+		)
 	}
 
 	// genes are not predefined. query to get top genes using the current cohort
@@ -158,32 +146,9 @@ async function getGenes(arg, gdcCohort, CGConly) {
 	const data = await dofetch3('gdc_filter2topGenes?' + lst.join('&'))
 	if (data.error) throw data.error
 	if (!data.genes) throw 'no top genes found using the cohort filter'
-	return data.genes.map(i => {
-		return { term: { name: i, type: 'geneVariant' } }
-	})
-}
-
-async function launchMatrix(genes, gdcCohort, holder, genome) {
-	// TODO hide sandbox
-	const termlst = genes.map(i => {
-		return { term: { name: i, type: 'geneVariant' } }
-	})
-	const _ = await import('#mass/app')
-	const opt = {
-		holder,
-		genome,
-		state: {
-			genome: gdcGenome,
-			dslabel: gdcDslabel,
-			termfilter: { filter0: gdcCohort },
-			nav: { header_mode: 'hidden' },
-			plots: [
-				{
-					chartType: 'matrix',
-					termgroups: [{ lst: termlst }]
-				}
-			]
-		}
-	}
-	_.appInit(opt)
+	return await Promise.all(
+		data.genes.map(async i => {
+			return await fillTermWrapper({ term: { name: i, type: 'geneVariant' } })
+		})
+	)
 }
