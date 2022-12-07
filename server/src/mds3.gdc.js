@@ -27,6 +27,9 @@ validate_ssm2canonicalisoform
 getheaders
 validate_sampleSummaries2_number
 validate_sampleSummaries2_mclassdetail
+
+
+**************** route handlers
 handle_gdc_ssms
 handle_filter2topGenes
 
@@ -1117,6 +1120,76 @@ function sort_mclass(set) {
 	return lst
 }
 
+/*
+argument is array, each element: {type, id}
+
+for term id of 'case.project.project_id', convert to "project__project_id", for graphql
+*/
+function termid2size_query(termlst) {
+	const lst = []
+	for (const term of termlst) {
+		if (!term.id) continue
+		if ((term.type = 'categorical')) {
+			lst.push(term.path + ' {buckets { doc_count, key }}')
+		} else if (term.type == 'integer' || term.type == 'float') {
+			lst.push(term.path + ' {stats { count }}')
+		} else {
+			throw 'unknown term type'
+		}
+	}
+
+	// for all terms from termidlst will be added to single query
+	const query = `query termislst2total( $filters: FiltersArgument) {
+		explore {
+			cases {
+				aggregations (filters: $filters, aggregations_filter_themselves: true) {
+					${lst.join('\n')}
+				}
+			}
+		}
+	}`
+	return query
+}
+
+function termid2size_filters(p, ds) {
+	const f = {
+		filters: {
+			op: 'and',
+			content: [{ op: 'in', content: { field: 'cases.available_variation_data', value: ['ssm'] } }]
+		}
+	}
+
+	if (p && p.tid2value) {
+		for (const termid in p.tid2value) {
+			const t = ds.cohort.termdb.q.termjsonByOneid(termid)
+			if (t) {
+				f.filters.content.push({
+					op: 'in',
+					content: {
+						/*********************
+						extremely tricky, no explanation
+						**********************
+						term id all starts with "case.**"
+						but in this graphql query, fields must start with "cases.**"
+						*/
+						field: termid.replace(/^case\./, 'cases.'),
+						value: [p.tid2value[termid]]
+					}
+				})
+			}
+		}
+	}
+
+	if (p && p.ssm_id_lst) {
+		f.filters.content.push({
+			op: '=',
+			content: { field: 'cases.gene.ssm.ssm_id', value: p.ssm_id_lst.split(',') }
+		})
+	}
+	//console.log(JSON.stringify(f,null,2))
+	return f
+}
+
 /************************************************
 for gdc bam slicing UI
 it shares some logic with mds3, but does not require a mds3 dataset to function
@@ -1231,30 +1304,39 @@ export function handle_filter2topGenes(genomes) {
 		try {
 			const genome = genomes[req.query.genome]
 			if (!genome) throw 'invalid genome'
-			if (!req.query.filter0) throw '.filter0 missing'
-			if (typeof req.query.filter0 != 'string') throw '.filter0 not string'
-			const response = await got(
-				apihost +
-					'/analysis/top_mutated_genes_by_project' +
-					'?size=' +
-					(req.query.size || 50) +
-					'&fields=symbol' +
-					'&filters=' +
-					mayAddCGC2filter(req.query.filter0, req.query.CGConly),
-				{ method: 'GET', headers: { 'Content-Type': 'application/json', Accept: 'application/json' } }
-			)
-			const re = JSON.parse(response.body)
-			const genes = []
-			for (const hit of re.data.hits) {
-				if (!hit.symbol) continue
-				genes.push(hit.symbol)
-			}
-			res.send({ genes })
+
+			res.send({ genes: await get_filter2topGenes({ filter: req.query.filter0, CGConly: req.query.CGConly }) })
 		} catch (e) {
 			if (e.stack) console.log(e.stack)
 			res.send({ error: e.message || e })
 		}
 	}
+}
+
+/*
+get_filter2topGenes() and mayAddCGC2filter() are copied to
+/utils/gdc/topSSMgenes.js
+and hosted on https://proteinpaint.stjude.org/GDC/
+*/
+async function get_filter2topGenes({ filter, CGConly }) {
+	if (!filter) throw 'filter missing'
+	if (typeof filter != 'string') throw 'filter not string'
+	const response = await got(
+		apihost +
+			'/analysis/top_mutated_genes_by_project' +
+			'?size=50' +
+			'&fields=symbol' +
+			'&filters=' +
+			mayAddCGC2filter(filter, CGConly),
+		{ method: 'GET', headers: { 'Content-Type': 'application/json', Accept: 'application/json' } }
+	)
+	const re = JSON.parse(response.body)
+	const genes = []
+	for (const hit of re.data.hits) {
+		if (!hit.symbol) continue
+		genes.push(hit.symbol)
+	}
+	return genes
 }
 
 /*
@@ -1296,74 +1378,4 @@ function mayAddCGC2filter(str, CGConly) {
 	}
 
 	throw 'mayAddCGC2filter: f.op is not "in" or "and"'
-}
-
-/*
-argument is array, each element: {type, id}
-
-for term id of 'case.project.project_id', convert to "project__project_id", for graphql
-*/
-function termid2size_query(termlst) {
-	const lst = []
-	for (const term of termlst) {
-		if (!term.id) continue
-		if ((term.type = 'categorical')) {
-			lst.push(term.path + ' {buckets { doc_count, key }}')
-		} else if (term.type == 'integer' || term.type == 'float') {
-			lst.push(term.path + ' {stats { count }}')
-		} else {
-			throw 'unknown term type'
-		}
-	}
-
-	// for all terms from termidlst will be added to single query
-	const query = `query termislst2total( $filters: FiltersArgument) {
-		explore {
-			cases {
-				aggregations (filters: $filters, aggregations_filter_themselves: true) {
-					${lst.join('\n')}
-				}
-			}
-		}
-	}`
-	return query
-}
-
-function termid2size_filters(p, ds) {
-	const f = {
-		filters: {
-			op: 'and',
-			content: [{ op: 'in', content: { field: 'cases.available_variation_data', value: ['ssm'] } }]
-		}
-	}
-
-	if (p && p.tid2value) {
-		for (const termid in p.tid2value) {
-			const t = ds.cohort.termdb.q.termjsonByOneid(termid)
-			if (t) {
-				f.filters.content.push({
-					op: 'in',
-					content: {
-						/*********************
-						extremely tricky, no explanation
-						**********************
-						term id all starts with "case.**"
-						but in this graphql query, fields must start with "cases.**"
-						*/
-						field: termid.replace(/^case\./, 'cases.'),
-						value: [p.tid2value[termid]]
-					}
-				})
-			}
-		}
-	}
-
-	if (p && p.ssm_id_lst) {
-		f.filters.content.push({
-			op: '=',
-			content: { field: 'cases.gene.ssm.ssm_id', value: p.ssm_id_lst.split(',') }
-		})
-	}
-	//console.log(JSON.stringify(f,null,2))
-	return f
 }

@@ -71,26 +71,40 @@
 
 
 <h2>GDC API usage</h2>
+
 <p>/ssms <a href=./rest.ssms.js target=_blank>Query list of ssm by isoform/gene/case id</a></p>
+
 <p>/ssms <a href=./ssmid2csq.js target=_blank>Get canonical isoform using an SSM id</a></p>
+
 <p>/ssm_occurrences <a href=./rest.ssm_occurrences.js target=_blank>Query list of cases harboring ssm for a gene/isoform</a></p>
+
 <p>/ssm_occurrences <a href=./rest.ssm2readdepth.js target=_blank>Query ssm read depth</a></p>
 
 <p>/cases <a href=./rest.aliquot2submitter.js target=_blank>Batch convertion of aliquot IDs to submitter IDs</a></p>
 
 <p>/files <a href=./rest.openproject.js target=_blank>Get list of open-access projects (otherwise are controlled)</a></p>
+
 <p>/files and /cases <a href=./fileCase2bam.js target=_blank>Query eligible BAM files by a case/file name</a></p>
+
+<p>/analysis/top_mutated_genes_by_project <a href=./topSSMgenes.js target=_blank>Top genes (CGC or not) with most SSM from a cohort</a></p>
+
 <p>/data/&lt;fileUUID&gt;
    <a href=./fileAccess.js target=_blank>To check if a user has access to the BAM file (by passing token in request header)</a>
 </p>
+
 <p>/slicing/view/&lt;fileUUID&gt;?region=chr:start-stop
    <a href=https://api.gdc.cancer.gov/slicing/view/35918f42-c424-48ef-8c95-2d87b48fdf41 target=_blank>Example</a>
    To slice a BAM file at given position (by passing token in request header)
 </p>
+
 <p>(graphql) <a href=./termid2totalsize.js target=_blank>Get number of cases breakdown by variables</a></p>
+
 <p>(not in use) <a href=./graph.submitterid.js target=_blank>Convert a batch of aliquot IDs to submitter IDs</a></p>
 
-<h2>Revised Build and Deploy</h2>
+
+
+
+<h2>Build and Deploy</h2>
 
 <p><a href='https://docs.google.com/document/d/1qB4vtWd_vP4RDlNDGPux9cBEcVLQU1WCzt76euoRi7k/edit?usp=sharing'>Proteinpaint Build and Release (draft)</a></p>
 
