@@ -207,7 +207,7 @@ function assignCategory(dbSample, sample, tw, categoryMap, category) {
 		console.log(JSON.stringify(sample) + ' not in the database or filtered')
 		return
 	}
-
+	sample.hidden = dbSample?.[tw.id]?.key in tw.q.hiddenValues
 	if (tw.term.type == 'geneVariant') {
 		const mutation = dbSample?.[tw.term.name]?.values?.[0]
 		if (mutation) {

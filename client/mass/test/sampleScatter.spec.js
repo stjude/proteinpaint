@@ -52,21 +52,26 @@ tape('initial tests', function(test) {
 
 	function runTests(scatter) {
 		console.log('running test...')
-		testSymbolCount(scatter)
+		const scatterDiv = scatter.Inner.dom.holder
+
+		testPlot()
+		testLegend()
 		//testAxisDimension(scatter)
 		//test.fail('...')
 		if (test._ok) scatter.Inner.app.destroy()
 		test.end()
-	}
 
-	let scatterDiv
-	function testSymbolCount(scatter) {
-		scatterDiv = scatter.Inner.dom.holder
-		const minSymbols = 50
-		const numSymbols = scatterDiv.selectAll('path').size()
-		test.true(
-			numSymbols > minSymbols,
-			`There are ${numSymbols} symbols. It should have more than ${minSymbols} symbols`
-		)
+		function testPlot() {
+			const serieG = scatterDiv.select('.sjpcb-scatter-series')
+			const total = 2882 //For this dataset
+			const numSymbols = serieG.selectAll('path').size()
+			test.true(numSymbols == total, `There are ${numSymbols} symbols. Should be ${total}`)
+		}
+
+		function testLegend() {
+			const legendG = scatterDiv.select('.sjpcb-scatter-legend')
+			test.true(legendG != null, 'should have a legend')
+			test.equal(legendG.select('#legendTitle').text(), 'TSNE Category', 'Should be named as the term')
+		}
 	}
 })

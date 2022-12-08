@@ -157,6 +157,7 @@ class Barchart {
 	}
 
 	async main() {
+		console.log('main')
 		const c = this.state.config
 		if (c.chartType != this.type && c.childType != this.type) return
 		try {

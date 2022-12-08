@@ -253,6 +253,7 @@ class Scatter {
 		const colorG = legendG.append('g')
 		colorG
 			.append('text')
+			.attr('id', 'legendTitle')
 			.attr('x', offsetX)
 			.attr('y', 30)
 			.text(title)
@@ -265,21 +266,37 @@ class Scatter {
 			color = category.color
 			count = category.sampleCount
 			name = key
-
-			colorG
+			category.value = this.config.colorTW.term.values[key]
+			const hidden = key in this.config.colorTW.q.hiddenValues
+			const itemG = colorG.append('g')
+			itemG
 				.append('circle')
 				.attr('cx', offsetX)
 				.attr('cy', offsetY)
 				.attr('r', radius)
 				.style('fill', color)
-			colorG
+			itemG
 				.append('text')
 				.attr('x', offsetX + 10)
 				.attr('y', offsetY)
 				.text(`${name}, n=${count}`)
 				.style('font-size', '15px')
+				.style('text-decoration', hidden ? 'line-through' : 'none')
 				.attr('alignment-baseline', 'middle')
 			offsetY += step
+			itemG.on('click', () => {
+				itemG.style('text-decoration', hidden ? 'none' : 'line-through')
+				if (hidden) delete this.config.colorTW.q.hiddenValues[key]
+				else this.config.colorTW.q.hiddenValues[key] = category.value
+
+				this.app.dispatch({
+					type: 'plot_edit',
+					id: this.id,
+					config: {
+						colorTW: this.config.colorTW
+					}
+				})
+			})
 		}
 		const colorRefCategory = this.colorLegend.get('Ref')
 		if (colorRefCategory.sampleCount > 0) {
@@ -328,20 +345,37 @@ class Scatter {
 				symbol = this.symbols[index].size(64)()
 				name = key
 				count = shape.sampleCount
+				shape.value = this.config.shapeTW.term.values[key]
+				const hidden = key in this.config.shapeTW.q.hiddenValues
+				const itemG = shapeG.append('g')
 
-				shapeG
+				itemG
 					.append('path')
 					.attr('transform', c => `translate(${offsetX}, ${offsetY})`)
 					.style('fill', color)
 					.attr('d', symbol)
-				shapeG
+				itemG
 					.append('text')
 					.attr('x', offsetX + 10)
 					.attr('y', offsetY)
 					.text(`${name}, n=${count}`)
 					.style('font-size', '15px')
+					.style('text-decoration', hidden ? 'line-through' : 'none')
 					.attr('alignment-baseline', 'middle')
 				offsetY += step
+				itemG.on('click', () => {
+					itemG.style('text-decoration', hidden ? 'none' : 'line-through')
+					if (hidden) delete this.config.shapeTW.q.hiddenValues[key]
+					else this.config.shapeTW.q.hiddenValues[key] = shape.value
+
+					this.app.dispatch({
+						type: 'plot_edit',
+						id: this.id,
+						config: {
+							shapeTW: this.config.shapeTW
+						}
+					})
+				})
 			}
 		}
 	}
@@ -389,7 +423,7 @@ function setRenderers(self) {
 			.attr('height', Math.max(s.svgh + 100, legendHeight)) //leaving some space for top/bottom padding and y axis
 
 		/* eslint-disable */
-		const [mainG, axisG, xAxis, yAxis, legendG] = getSvgSubElems(svg, chart)
+		const [mainG, legendG] = getSvgSubElems(svg, chart)
 		/* eslint-enable */
 
 		if (mainG.select('.sjpcb-scatter-series').size() == 0) mainG.append('g').attr('class', 'sjpcb-scatter-series')
@@ -449,7 +483,7 @@ function setRenderers(self) {
 		if (self.settings.showAxes) axisG.style('opacity', 1)
 		else axisG.style('opacity', 0)
 
-		return [mainG, axisG, xAxis, yAxis, legendG]
+		return [mainG, legendG]
 	}
 
 	function renderSerie(g, data, s, duration) {
@@ -465,7 +499,7 @@ function setRenderers(self) {
 			.attr('d', c => getShape(self, c))
 			.attr('fill', c => getColor(self, c))
 
-			.style('fill-opacity', c => ('sampleId' in c || s.showRef ? 1 : 0))
+			.style('fill-opacity', c => getOpacity(self, c))
 		symbols
 			.enter()
 			.append('path')
@@ -474,7 +508,7 @@ function setRenderers(self) {
 			.attr('d', c => getShape(self, c))
 			.attr('fill', c => getColor(self, c))
 
-			.style('fill-opacity', c => ('sampleId' in c || s.showRef ? 1 : 0))
+			.style('fill-opacity', c => getOpacity(self, c))
 			.transition()
 			.duration(duration)
 	}
@@ -499,7 +533,7 @@ function setRenderers(self) {
 				self.lasso
 					.items()
 					.attr('d', c => getShape(self, c, 1 / 2))
-					.style('fill-opacity', c => ('sampleId' in c || self.settings.showRef ? 0.5 : 0))
+					.style('fill-opacity', c => (getOpacity(self, c) == 1 ? 0.5 : 0))
 					.classed('not_possible', true)
 					.classed('selected', false)
 			}
@@ -512,7 +546,7 @@ function setRenderers(self) {
 				self.lasso
 					.possibleItems()
 					.attr('d', c => getShape(self, c, 2))
-					.style('fill-opacity', c => ('sampleId' in c || self.settings.showRef ? 1 : 0))
+					.style('fill-opacity', c => getOpacity(self, c))
 					.classed('not_possible', false)
 					.classed('possible', true)
 
@@ -520,7 +554,7 @@ function setRenderers(self) {
 				self.lasso
 					.notPossibleItems()
 					.attr('d', c => getShape(self, c, 1 / 2))
-					.style('fill-opacity', c => ('sampleId' in c || self.settings.showRef ? 0.5 : 0))
+					.style('fill-opacity', c => (getOpacity(self, c) == 1 ? 0.5 : 0))
 					.classed('not_possible', true)
 					.classed('possible', false)
 			}
@@ -538,12 +572,12 @@ function setRenderers(self) {
 
 				// Style the selected dots
 				self.lasso.selectedItems().attr('d', c => getShape(self, c, 2))
-				self.lasso.items().style('fill-opacity', c => ('sampleId' in c || self.settings.showRef ? 1 : 0))
+				self.lasso.items().style('fill-opacity', c => getOpacity(self, c))
 				self.selectedItems = []
 				let data
 				for (const item of self.lasso.selectedItems()._groups[0]) {
 					data = item.__data__
-					if ('sampleId' in data) self.selectedItems.push(item)
+					if ('sampleId' in data && !data.hidden) self.selectedItems.push(item)
 				}
 				self.lasso.notSelectedItems().attr('d', c => getShape(self, c))
 
@@ -690,7 +724,7 @@ function setRenderers(self) {
 				self.lasso
 					.items()
 					.attr('r', self.settings.size)
-					.style('fill-opacity', c => ('sampleId' in c || s.showRef ? 1 : 0))
+					.style('fill-opacity', c => getOpacity(self, c))
 				mainG.call(zoom)
 				self.selectedItems = null
 			}
@@ -891,7 +925,6 @@ function setRenderers(self) {
 			rows.push(row)
 		}
 		if (info) columns.push(formatCell('Info', 'label'))
-		console.log(columns, rows)
 
 		self.dom.tip.clear()
 		const headerDiv = self.dom.tip.d.append('div').style('margin-top', '5px')
@@ -1034,8 +1067,13 @@ function getCategoryInfo(d, category) {
 }
 
 function getColor(self, c) {
-	const color = 'category' in c ? self.colorLegend.get(c.category).color : self.colorLegend.get('None').color
+	const color = self.colorLegend.get(c.category).color
 	return color
+}
+
+function getOpacity(self, c) {
+	if ('sampleId' in c) return c.hidden ? 0 : 1
+	return self.settings.showRef ? 1 : 0
 }
 
 function getShape(self, c, factor = 1) {
