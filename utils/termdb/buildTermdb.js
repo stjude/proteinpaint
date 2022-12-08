@@ -506,6 +506,7 @@ function writeFiles(terms) {
 function buildDb(annotationData, survivalData, scriptArg) {
 	console.log('importing data into the db file ...')
 	const cmd = scriptArg.get('sqlite3') + ' ' + scriptArg.get('dbfile')
+	exec(`${cmd}  'PRAGMA foreign_keys=0'`)
 
 	// create db with blank tables
 	exec(`${cmd} < ${path.join(__dirname, './create.sql')}`)
@@ -555,6 +556,7 @@ function buildDb(annotationData, survivalData, scriptArg) {
 	// create 3 separate tables anno-categorical/integer/float
 	console.log('creating anno-by-type ...')
 	exec(`${cmd} < ${path.join(__dirname, 'anno-by-type.sql')}`)
+	exec(`${cmd} 'PRAGMA foreign_keys=1'`)
 
 	fs.unlink(loadScript, () => {})
 	fs.unlink(termdbFile, () => {})
