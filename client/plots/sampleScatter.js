@@ -258,8 +258,7 @@ class Scatter {
 			color = category.color
 			count = category.sampleCount
 			name = key
-			category.value = this.config.colorTW.term.values[key]
-			const hidden = key in this.config.colorTW.q.hiddenValues
+			const hidden = this.config.colorTW.q.hiddenValues ? key in this.config.colorTW.q.hiddenValues : false
 			const itemG = colorG.append('g')
 			itemG
 				.append('circle')
@@ -277,9 +276,15 @@ class Scatter {
 				.attr('alignment-baseline', 'middle')
 			offsetY += step
 			itemG.on('click', () => {
+				if (!this.config.colorTW.q.hiddenValues) this.config.colorTW.q.hiddenValues = {}
+
+				const value =
+					this.config.colorTW.term.type != 'geneVariant'
+						? this.config.colorTW.term.values[key]
+						: { key: key, label: key }
 				itemG.style('text-decoration', hidden ? 'none' : 'line-through')
 				if (hidden) delete this.config.colorTW.q.hiddenValues[key]
-				else this.config.colorTW.q.hiddenValues[key] = category.value
+				else this.config.colorTW.q.hiddenValues[key] = value
 
 				this.app.dispatch({
 					type: 'plot_edit',
