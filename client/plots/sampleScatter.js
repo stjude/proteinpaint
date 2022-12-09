@@ -221,14 +221,6 @@ class Scatter {
 						title: `Option to show/hide plot axes`
 					},
 					{
-						boxLabel: 'Visible',
-						label: 'Show reference',
-						type: 'checkbox',
-						chartType: 'sampleScatter',
-						settingsKey: 'showRef',
-						title: `Option to show/hide ref samples`
-					},
-					{
 						label: 'Reference size',
 						type: 'number',
 						chartType: 'sampleScatter',
@@ -301,8 +293,8 @@ class Scatter {
 		const colorRefCategory = this.colorLegend.get('Ref')
 		if (colorRefCategory.sampleCount > 0) {
 			offsetY = offsetY + step
-			const colorG = legendG.append('g')
-			colorG
+			const titleG = legendG.append('g')
+			titleG
 				.append('text')
 				.attr('x', offsetX)
 				.attr('y', offsetY)
@@ -311,18 +303,33 @@ class Scatter {
 			offsetY = offsetY + step
 
 			let symbol = this.symbols[0].size(64)()
-			colorG
+			const refG = legendG.append('g')
+			refG
 				.append('path')
 				.attr('transform', c => `translate(${offsetX}, ${offsetY})`)
 				.style('fill', colorRefCategory.color)
 				.attr('d', symbol)
-			colorG
+			refG
 				.append('text')
 				.attr('x', offsetX + 10)
 				.attr('y', offsetY)
 				.text(`n=${colorRefCategory.sampleCount}`)
+				.style('text-decoration', !this.settings.showRef ? 'line-through' : 'none')
 				.style('font-size', '15px')
 				.attr('alignment-baseline', 'middle')
+
+			refG.on('click', () => {
+				refG.style('text-decoration', !this.settings.showRef ? 'none' : 'line-through')
+				this.settings.showRef = !this.settings.showRef
+
+				this.app.dispatch({
+					type: 'plot_edit',
+					id: this.id,
+					config: {
+						settings: { sampleScatter: this.settings }
+					}
+				})
+			})
 		}
 		if (this.config.shapeTW) {
 			offsetX = 300
@@ -471,7 +478,7 @@ function setRenderers(self) {
 			legendG = svg
 				.append('g')
 				.attr('class', 'sjpcb-scatter-legend')
-				.attr('transform', `translate(${self.settings.svgw + 200}, 0)`)
+				.attr('transform', `translate(${self.settings.svgw + 180}, 0)`)
 		} else {
 			mainG = svg.select('.sjpcb-scatter-mainG')
 			axisG = svg.select('.sjpcb-scatter-axis')

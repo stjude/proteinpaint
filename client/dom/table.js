@@ -238,7 +238,7 @@ export async function renderTable({
 					}
 				})
 			if (button.class) button.button.attr('class', button.class)
-			button.button.node().disabled = selectedRows.length == 0
+			button.button.node().disabled = selectedRows.length == 0 && !selectAll
 		}
 	}
 
