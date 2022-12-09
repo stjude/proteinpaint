@@ -103,8 +103,8 @@ drop index if exists p_sample;
 drop index if exists p_termid;
 drop index if exists p_value_for;
 CREATE TABLE precomputed(
-  sample integer,
-  term_id TEXT,
+  sample integer not null,
+  term_id TEXT not null,
   value_for TEXT,
   value TEXT,
   computable_grade integer,
@@ -126,13 +126,13 @@ DROP TABLE IF EXISTS subcohort_terms;
 DROP INDEX IF EXISTS subcohort_terms_cohort;
 DROP INDEX IF EXISTS subcohort_terms_termid;
 CREATE TABLE subcohort_terms (
- cohort TEXT,
- term_id TEXT,
+ cohort TEXT not null,
+ term_id TEXT not null,
  count INT,
  included_types TEXT,
  child_types TEXT,
-  --primary key(cohort, term_id),
-  foreign key(term_id) references terms(id)
+--primary key(cohort, term_id),
+foreign key(term_id) references terms(id)
 );
 
 
@@ -141,8 +141,8 @@ DROP TABLE IF EXISTS survival;
 DROP INDEX IF EXISTS survival_term;
 DROP INDEX IF EXISTS survival_sample;
 CREATE TABLE survival(
- sample INT,
- term_id TEXT,
+ sample INT not null,
+ term_id TEXT not null,
  tte INT, -- time-to-event
  exit_code INT, -- cohort defined exit code, may be 0=death, 1=censored, or similar
 primary key(sample, term_id),
