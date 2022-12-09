@@ -136,7 +136,7 @@ export async function trigger_getViolinPlotData(q, res, ds, genome) {
 			: (canvas = createCanvas(20 * q.devicePixelRatio, q.svgw * q.devicePixelRatio))
 		const ctx = canvas.getContext('2d')
 		ctx.strokeStyle = 'black'
-		ctx.lineWidth = 0.2
+		ctx.lineWidth = 0.1
 		ctx.fillStyle = '#ffe6e6'
 
 		//scaling for sharper image
@@ -146,9 +146,9 @@ export async function trigger_getViolinPlotData(q, res, ds, genome) {
 
 		ctx.beginPath()
 		plot.values.forEach(i => {
-			q.orientation == 'horizontal'
-				? ctx.arc(axisScale(i), 5, 1.7, 0, 2 * Math.PI)
-				: ctx.arc(5, axisScale(i), 1.7, -1.5, 2 * Math.PI)
+			q.orientation === 'horizontal'
+				? ctx.arc(+axisScale(i), 5, 2, 0, 2 * Math.PI)
+				: ctx.arc(5, +axisScale(i), 2, 0, 2 * Math.PI)
 		})
 		ctx.fill()
 		ctx.stroke()

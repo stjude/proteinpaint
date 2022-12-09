@@ -162,6 +162,7 @@ export default function violinRenderer(self) {
 
 			violinG
 				.append('path')
+				.attr('class', 'sjpp-vp-path')
 				.style('fill', k2c(plotIdx))
 				.style('opacity', '0.8')
 				.attr('d', areaBuilder(plot.plotValueCount > 3 ? plot.bins : 0)) //do not build violin plots for values 3 or less than 3.
@@ -169,7 +170,7 @@ export default function violinRenderer(self) {
 			violinG
 				.append('image')
 				.attr('xlink:href', plot.src)
-				.attr('transform', isH ? 'translate(0, -9)' : 'translate(-9, 0)')
+				.attr('transform', isH ? `translate(0, -9)` : 'translate(-9, 0)')
 
 			//render median values on plots
 			if (plot.plotValueCount >= 2) {
