@@ -304,7 +304,88 @@ upon error, throw err message as a string
 					const start = Number.parseInt(ll[1])
 					const stop = Number.parseInt(ll[2])
 					if (Number.isNaN(start) || Number.isNaN(stop)) throw 'Invalid start/stop value in position'
-					subpanels.push({ chr: chr, start: start, stop: stop, width: 800, leftborder: 'rgba(200,0,0,.1)', leftpad: 5 }) // In case of multi-region, hardcoding region width to 800, leftpad = 5 for both regions. Later will need better logic to calculate this on the fly
+					// Check if there are any common region between the two regions
+					if (chr == position.chr && position.start <= start && start <= position.stop) {
+						position.stop = stop
+					} else if (chr == position.chr && start <= position.start && position.start <= stop) {
+						position.start = start
+					} else {
+						// No common regions
+
+						// Sorting both regions first based on chr and then based on position (if in same chromosome)
+						if (position.chr.replace('chr', '') != chr.replace('chr', '')) {
+							// When regions are in two separate chromosomes
+							if (
+								Number.isNaN(Number.parseInt(position.chr.replace('chr', ''))) &&
+								Number.isNaN(Number.parseInt(chr.replace('chr', '')))
+							)
+								// Keep same orientation
+								subpanels.push({
+									chr: chr,
+									start: start,
+									stop: stop,
+									width: 800,
+									leftborder: 'rgba(200,0,0,.1)',
+									leftpad: 5
+								})
+							// In case of multi-region, hardcoding region width to 800, leftpad = 5 for both regions. Later will need better logic to calculate this on the fly
+							else {
+								// Keep chromosome with lower number first
+								if (Number.parseInt(position.chr.replace('chr', '')) > Number.parseInt(chr.replace('chr', ''))) {
+									const temp_chr = chr
+									const temp_start = start
+									const temp_stop = stop
+									subpanels.push({
+										chr: position.chr,
+										start: position.start,
+										stop: position.stop,
+										width: 800,
+										leftborder: 'rgba(200,0,0,.1)',
+										leftpad: 5
+									}) // In case of multi-region, hardcoding region width to 800, leftpad = 5 for both regions. Later will need better logic to calculate this on the fly
+									position.chr = temp_chr
+									position.start = temp_start
+									position.stop = temp_stop
+								} else {
+									subpanels.push({
+										chr: chr,
+										start: start,
+										stop: stop,
+										width: 800,
+										leftborder: 'rgba(200,0,0,.1)',
+										leftpad: 5
+									}) // In case of multi-region, hardcoding region width to 800, leftpad = 5 for both regions. Later will need better logic to calculate this on the fly
+								}
+							}
+						} else {
+							// When both regions are in the same chromosome, the left region should always contain the region with the lower position
+							if (position.stop < start) {
+								subpanels.push({
+									chr: chr,
+									start: start,
+									stop: stop,
+									width: 800,
+									leftborder: 'rgba(200,0,0,.1)',
+									leftpad: 5
+								}) // In case of multi-region, hardcoding region width to 800, leftpad = 5 for both regions. Later will need better logic to calculate this on the fly
+							} else {
+								const temp_chr = chr
+								const temp_start = start
+								const temp_stop = stop
+								subpanels.push({
+									chr: position.chr,
+									start: position.start,
+									stop: position.stop,
+									width: 800,
+									leftborder: 'rgba(200,0,0,.1)',
+									leftpad: 5
+								}) // In case of multi-region, hardcoding region width to 800, leftpad = 5 for both regions. Later will need better logic to calculate this on the fly
+								position.chr = temp_chr
+								position.start = temp_start
+								position.stop = temp_stop
+							}
+						}
+					}
 				}
 				i += 1
 			}

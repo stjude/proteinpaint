@@ -697,15 +697,19 @@ async function get_q(genome, req) {
 		if (Number.isNaN(q.variant.pos)) throw 'variant pos not integer'
 	} else if (req.query.sv) {
 		const t = req.query.sv.split('.')
-		if (t.length != 4) throw 'invalid sv, not chrA.posA.chrB.posB'
+		if (t.length < 6) throw 'invalid sv, not chrA.posA.chrB.posB'
 		q.sv = {
 			chrA: t[0],
-			posA: Number(t[1]),
-			chrB: t[2],
-			posB: Number(t[3])
+			startA: Number(t[1]),
+			startB: Number(t[2]),
+			chrB: t[3],
+			startB: Number(t[4]),
+			stopB: Number(t[5])
 		}
-		if (Number.isNaN(q.sv.posA)) throw 'sv.posA not integer'
-		if (Number.isNaN(q.sv.posB)) throw 'sv.posB not integer'
+		if (Number.isNaN(q.sv.startA)) throw 'sv.startA not integer'
+		if (Number.isNaN(q.sv.startB)) throw 'sv.startB not integer'
+		if (Number.isNaN(q.sv.stopA)) throw 'sv.stopA not integer'
+		if (Number.isNaN(q.sv.stopB)) throw 'sv.stopB not integer'
 	}
 
 	if (req.query.stackstart) {
@@ -821,7 +825,6 @@ async function do_query(q) {
 		templates = stack_templates(group, q, templates) // add .stacks[], .returntemplatebox[]
 		return await do_alignOneGroup(group, q, templates)
 	}
-
 	// render read alignment for all groups
 
 	// XXX TODO not to collect all reads into array
@@ -1159,14 +1162,14 @@ async function query_reads(q) {
 		return
 	}
 
-	if (q.sv) {
-		/*
-		if sv, query at the two breakends, and assign reads to two regions one for each breakend
-		assume two regions
-		otherwise, query for every region in q.regions
-		*/
-		return
-	}
+	//if (q.sv) {
+	//	/*
+	//	if sv, query at the two breakends, and assign reads to two regions one for each breakend
+	//	assume two regions
+	//	otherwise, query for every region in q.regions
+	//	*/
+	//	return
+	//}
 
 	// query reads for all regions in q.regions
 	await determine_downsampling(q, q.regions)
@@ -1408,8 +1411,9 @@ async function divide_reads_togroups(q) {
 			console.log('Indel pipeline works only in single region. Please check!')
 		}
 	}
-	if (q.sv) {
-		return match_sv(templates, q)
+	if (q.sv && q.regions.length > 1) {
+		// For SVs and fusions
+		return match_sv(templates_info, q, widths)
 	}
 
 	// no variant, return single group
@@ -1427,8 +1431,73 @@ async function divide_reads_togroups(q) {
 	}
 }
 
-function match_sv(templates, q) {
+function match_sv(templates, q, region_widths) {
 	// TODO templates may not be all in one array?
+	const type2group = bamcommon.make_type2group(q)
+
+	// Assuming there are only two regions in an SV/fusion
+	const region1_qnames = []
+	const region2_qnames = []
+
+	// This loop can be expensive and could be parsed in query_region() itself
+	for (let i = 0; i < q.regions.length; i++) {
+		const r = q.regions[i]
+		for (const line of r.lines) {
+			//line.r = r
+			//line.ridx = i
+			if (i == 0) {
+				region1_qnames.push(line.split('\t')[0])
+			} else if (i == 1) {
+				region2_qnames.push(line.split('\t')[0])
+			}
+		}
+	}
+	// Finding templates that extend into both regions
+	const multi_region_templates = region1_qnames.filter(value => region2_qnames.includes(value))
+
+	for (let i = 0; i < q.regions.length; i++) {
+		const r = q.regions[i]
+		for (const line of r.lines) {
+			if (multi_region_templates.includes(line.split('\t')[0]) && !q.grouptype) {
+				// fullstack mode
+				type2group[bamcommon.type_supportsv].templates.push({ sam_info: line, tempscore: '', ridx: i })
+			} else if (multi_region_templates.includes(line.split('\t')[0]) && q.grouptype == 'support_sv') {
+				// partstack mode
+				type2group[bamcommon.type_supportsv].templates.push({ sam_info: line, tempscore: '', ridx: i })
+			} else if (multi_region_templates.includes(line.split('\t')[0]) && q.grouptype == 'support_ref') {
+				// Ensure templates/reads supporting SV do not go into reference category
+			} else {
+				type2group[bamcommon.type_supportref].templates.push({ sam_info: line, tempscore: '', ridx: i })
+			}
+		}
+	}
+
+	const groups = []
+	for (const k in type2group) {
+		const g = type2group[k]
+		if (g.templates.length == 0) continue // empty group, do not include
+		if (k == bamcommon.type_supportsv) {
+			if (g.templates.length == 1) {
+				g.messages.push({
+					isheader: true,
+					t: g.templates.length + ' read supporting SV/fusion'
+				})
+			} else {
+				g.messages.push({
+					isheader: true,
+					t: g.templates.length + ' reads supporting SV/fusion'
+				})
+			}
+		} else if (k == bamcommon.type_supportref) {
+			g.messages.push({
+				isheader: true,
+				t: g.templates.length + ' reads supporting reference allele'
+			})
+		}
+		g.widths = region_widths
+		groups.push(g)
+	}
+	return { groups }
 }
 
 function get_templates(q, group) {
@@ -1445,9 +1514,9 @@ function get_templates(q, group) {
 		for (let i = 0; i < q.regions.length; i++) {
 			const r = q.regions[i]
 			for (const line of group.templates) {
-				line.r = r
+				//line.r = r
 				line.ridx = i
-				const segment = parse_one_segment(line, q)
+				const segment = parse_one_segment(line, r, q)
 				if (!segment) continue
 				lst.push({
 					x1: segment.x1,
@@ -1466,9 +1535,9 @@ function get_templates(q, group) {
 	for (let i = 0; i < q.regions.length; i++) {
 		const r = q.regions[i]
 		for (const line of group.templates) {
-			line.r = r
+			//line.r = r
 			line.ridx = i
-			const segment = parse_one_segment(line, q)
+			const segment = parse_one_segment(line, r, q)
 			if (!segment || !segment.qname) continue
 			const temp = qname2template.get(segment.qname)
 			if (temp) {
@@ -1477,8 +1546,8 @@ function get_templates(q, group) {
 				temp.x2 = Math.max(temp.x2, segment.x2)
 			} else {
 				qname2template.set(segment.qname, {
-					x1: segment.x1,
-					x2: segment.x2,
+					x1: Math.max(segment.x1, r.x),
+					x2: Math.min(segment.x2, r.x + r.width),
 					__tempscore: segment.tempscore,
 					segments: [segment]
 				})
@@ -1504,11 +1573,11 @@ may skip insertion if on screen width shorter than minimum width
 when seq or cigar is *, will still return segment object for rendering
 the returned object may not have any boxes, in that case will render a blank box to mark out the read
 */
-function parse_one_segment(arg, q) {
+function parse_one_segment(arg, r, q) {
 	const {
 		sam_info, // sam line
 		tempscore, // ?
-		r, // region
+		//r, // region
 		ridx, // array index for current region in q.regions[]
 		// set following to true when getting details for a read
 		keepallboxes, // even if only part of the read is shown in view range
@@ -2167,7 +2236,7 @@ function plot_template(ctx, template, group, q) {
 			box = {
 				qname: template.segments[0].qname,
 				x1: Math.max(r.x, template.x1),
-				x2: Math.min(template.x2, r.width),
+				x2: Math.min(template.x2, r.x + r.width),
 				y1: template.y,
 				y2: template.y + (template.height || group.stackheight),
 				start: Math.min(...template.segments.map(i => i.segstart)),
@@ -2319,13 +2388,13 @@ function plot_segment(ctx, segment, y, group, q) {
 			ctx.setLineDash([]) // use solid lines
 			const y2 = Math.floor(y + group.stackheight / 2) + 0.5
 			ctx.beginPath()
-			ctx.moveTo(x, y2)
-			ctx.lineTo(x + b.len * r.ntwidth, y2)
+			ctx.moveTo(Math.max(x, r.x), y2)
+			ctx.lineTo(Math.min(x + b.len * r.ntwidth, r.x + r.width), y2)
 			ctx.stroke()
 			if (group.stackheight > minstackheight2printbplenDN) {
 				// b boundaries may be out of range
-				const x1 = Math.max(0, x)
-				const x2 = Math.min(r.width, x + b.len * r.ntwidth)
+				const x1 = Math.max(r.x, x)
+				const x2 = Math.min(r.x + r.width, x + b.len * r.ntwidth)
 				if (x2 - x1 >= 50) {
 					const fontsize = Math.min(maxfontsize2printbplenDN, Math.max(minfontsize2printbplenDN, group.stackheight - 2))
 					ctx.font = fontsize + 'pt Arial'
@@ -2831,7 +2900,7 @@ async function query_oneread(req, r) {
 		dir,
 		callback: (line, ps) => {
 			if (line.split('\t')[0] != req.query.qname) return
-			const s = parse_one_segment({ sam_info: line, r, keepallboxes: true, keepmatepos: true, keepunmappedread: true })
+			const s = parse_one_segment({ sam_info: line, keepallboxes: true, keepmatepos: true, keepunmappedread: true }, r)
 			if (!s) return
 			else if (req.query.show_unmapped && s.discord_unmapped2) return // Make sure the read being parse is mapped, especially in cases where the umapped mate is missing
 			if (req.query.show_unmapped && req.query.getfirst) {
