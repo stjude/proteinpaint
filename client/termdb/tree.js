@@ -7,6 +7,12 @@ import { termInfoInit } from './termInfo'
 const childterm_indent = '25px'
 export const root_ID = 'root'
 
+// when the total number of children at one branch exceeds this limit, the <div class=cls_termchilddiv> will scroll
+// this only count immediate children, not counting grandchildren
+const minTermCount2scroll = 20
+// max height of aforementioned scrolling <div>
+const scrollDivMaxHeight = '400px'
+
 // class names TODO they should be shared between test/tree.spec.js
 const cls_termdiv = 'termdiv',
 	cls_termchilddiv = 'termchilddiv',
@@ -205,18 +211,44 @@ function setRenderers(self) {
 	// !!! no free-floating variable declarations here !!!
 	// set properties within the class declarations
 
+	/*
+	term{}
+		must be from termsById
+		.terms[]
+			list of children terms
+	div
+		the childdiv of this term
+	button
+		optional, the toggle button
+	*/
 	self.renderBranch = (term, div, button) => {
-		/*
-		term must be from termsById
-		div is the childdiv of this term
-		button, optional, the toggle button
-		*/
 		if (!term || !term.terms) return
+
+		if (term.terms.length >= minTermCount2scroll) {
+			// too many children. scroll
+			if (div.style('overflow-y') == 'scroll') {
+				// already scrolling. the style has been applied from a previous click. do not reset
+			} else {
+				div
+					.style('height', scrollDivMaxHeight)
+					.style('overflow-y', 'scroll')
+					.style('resize', 'vertical')
+
+				/***************************
+				remaining issues
+
+				1. if there's a way to make scrollbar always visible, as a clear indication you need to scroll to see more hidden stuff
+				*/
+			}
+		}
+
 		// add disabled terms to opts.disable_terms
-		if (self.opts.disable_terms)
+		if (self.opts.disable_terms) {
 			term.terms.forEach(t => {
 				if (t.disabled) self.opts.disable_terms.push(t.id)
 			})
+		}
+
 		self.included_terms = []
 		if (self.state.usecase) {
 			for (const t of term.terms) {
