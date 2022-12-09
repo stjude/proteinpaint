@@ -485,8 +485,8 @@ input parameter:
 					.dataId=str // key of term2 category, '' if no term2
 					.total=int // size of this term1-term2 combination
 
-	fisher_limit:  the sum of the four values in the 2x2 table must be larger than fisher_limit(default = 40) to use chi-squared test
-	individual_fisher_limit: each of the four values in the 2x2 table must be larger than individual_fisher_limit (default = 10) to use chi-squared test
+	fisher_limit:  the sum of the four values in the 2x2 table must be larger than fisher_limit(default = 20) to use chi-squared test
+	individual_fisher_limit: each of the four values in the 2x2 table must be larger than individual_fisher_limit (default = 5) to use chi-squared test
 }
 
 Output: The function has no return but appends the statistical results to the provided data object as data.tests:
@@ -498,13 +498,14 @@ Output: The function has no return but appends the statistical results to the pr
 				term2id: term2,
 				pvalue: ...,
 				tableValues: {R1C1, R2C1, R1C2, R2C2},
-				isChi
+				isChi,
+				skipped
 			]
 		}
 	]
 }
 */
-async function computePvalues(data, fisher_limit = 40, individual_fisher_limit = 10) {
+async function computePvalues(data, fisher_limit = 20, individual_fisher_limit = 5) {
 	data.tests = {}
 	for (const chart of data.charts) {
 		// calculate sum of each term2 category. Structure: {term2Catergory1: num of samples, term2Catergory2: num of samples, ...}
@@ -573,6 +574,19 @@ async function computePvalues(data, fisher_limit = 40, individual_fisher_limit =
 				R1C2 > individual_fisher_limit &&
 				R2C2 > individual_fisher_limit &&
 				R1C1 + R2C1 + R1C2 + R2C2 > fisher_limit
+			/*
+				The association test may have extremely low power if a group (row sum or column sum of 2x2 table) is too small compared to 
+				the total participants, regardless of the value in each cell. Including too many non-powerful tests in this portal may affect
+				the detection of ‘true’ association in multiple testing. So, the total participant is less than 2000 and if either of the 
+				4 groups is <3% of all participants, the test is skipped.
+				*/
+			const totalP = R1C1 + R2C1 + R1C2 + R2C2
+			const skipped =
+				totalP < 2000 &&
+				((R1C1 + R2C1) / totalP < 0.03 ||
+					(R1C1 + R1C2) / totalP < 0.03 ||
+					(R2C1 + R2C2) / totalP < 0.03 ||
+					(R1C2 + R2C2) / totalP < 0.03)
 
 			const t1c = pvalueTable.find(t1c => t1c.term1comparison === seriesId)
 			if (!t1c) {
@@ -588,7 +602,8 @@ async function computePvalues(data, fisher_limit = 40, individual_fisher_limit =
 								R1C2,
 								R2C2
 							},
-							isChi
+							isChi,
+							skipped
 						}
 					]
 				})
@@ -602,7 +617,8 @@ async function computePvalues(data, fisher_limit = 40, individual_fisher_limit =
 						R1C2,
 						R2C2
 					},
-					isChi
+					isChi,
+					skipped
 				})
 			}
 		}

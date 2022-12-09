@@ -77,11 +77,16 @@ export default function getHandlers(self) {
 					const term1Label = d.groupPvalues.term1Label
 					const term2Label = d.groupPvalues.term2tests.find(x => x.term2id === d.dataId).term2Label
 					const tableValues = d.groupPvalues.term2tests.find(x => x.term2id === d.dataId).tableValues
+					const skipped = d.groupPvalues.term2tests.find(x => x.term2id === d.dataId).skipped
 					rows.push(
 						`<tr>
 							<td style='padding:3px; color:#aaa'>p-value</td>
 							<td style='padding:3px; text-align:center'>${
-								pvalue > 1e-4 ? Number(pvalue.toFixed(4)) : Number(pvalue.toPrecision(4)).toExponential()
+								skipped
+									? 'N/A'
+									: pvalue > 1e-4
+									? Number(pvalue.toFixed(4))
+									: Number(pvalue.toPrecision(4)).toExponential()
 							}</td>
 						</tr>
 						<table style="margin: 5px; text-align:left; font-size: 0.8em; border-spacing: 5px; border-collapse: separate;"
