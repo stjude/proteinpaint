@@ -693,10 +693,10 @@ function setRenderers(self) {
 			})
 		}
 		const columns = [
-			{ label: 'Group 1' },
-			{ label: 'Group 2' },
-			{ label: 'Group 3' },
-			{ label: 'Group 4' },
+			{ label: 'Category 1' },
+			{ label: 'Category 2' },
+			{ label: 'Category 3' },
+			{ label: 'Category 4' },
 			{ label: 'P-value' }
 		]
 		const allFisher = self.chartsData.tests[chart.chartId].every(term1 =>
