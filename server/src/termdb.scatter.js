@@ -170,6 +170,8 @@ async function colorAndShapeSamples(refSamples, cohortSamples, dbSamples, q) {
 	for (const sample of cohortSamples) {
 		const dbSample = dbSamples[sample.sampleId.toString()]
 		sample.category_info = {}
+		sample.hidden = {}
+
 		assignCategory(dbSample, sample, q.colorTW, colorMap, 'category')
 		if (!('category' in sample)) continue
 		sample.shape = 'Ref'
@@ -207,20 +209,18 @@ function assignCategory(dbSample, sample, tw, categoryMap, category) {
 		console.log(JSON.stringify(sample) + ' not in the database or filtered')
 		return
 	}
-	sample.hidden = tw.q.hiddenValues ? dbSample?.[tw.id]?.key in tw.q.hiddenValues : false
 	if (tw.term.type == 'geneVariant') {
 		const mutation = dbSample?.[tw.term.name]?.values?.[0]
 		if (mutation) {
 			value = mclass[mutation.class]?.label
 			color = mclass[mutation.class]?.color || 'black' // should be invalid_mclass_color
 			sample.category_info[category] = mutation.mname
-			sample.hidden = tw.q.hiddenValues ? value in tw.q.hiddenValues : false
-
+			sample.hidden[category] = tw.q.hiddenValues ? value in tw.q.hiddenValues : false
 			// TODO mutation.mname is amino acid change. pass mname to sample to be shown in tooltip
 		}
 	} else {
 		value = dbSample?.[tw.id]?.key
-		sample.hidden = tw.q.hiddenValues ? dbSample?.[tw.id]?.key in tw.q.hiddenValues : false
+		sample.hidden[category] = tw.q.hiddenValues ? dbSample?.[tw.id]?.key in tw.q.hiddenValues : false
 	}
 	if (value) {
 		sample[category] = value.toString()

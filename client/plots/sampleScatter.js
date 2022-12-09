@@ -275,25 +275,7 @@ class Scatter {
 				.style('text-decoration', hidden ? 'line-through' : 'none')
 				.attr('alignment-baseline', 'middle')
 			offsetY += step
-			itemG.on('click', () => {
-				if (!this.config.colorTW.q.hiddenValues) this.config.colorTW.q.hiddenValues = {}
-
-				const value =
-					this.config.colorTW.term.type != 'geneVariant'
-						? this.config.colorTW.term.values[key]
-						: { key: key, label: key }
-				itemG.style('text-decoration', hidden ? 'none' : 'line-through')
-				if (hidden) delete this.config.colorTW.q.hiddenValues[key]
-				else this.config.colorTW.q.hiddenValues[key] = value
-
-				this.app.dispatch({
-					type: 'plot_edit',
-					id: this.id,
-					config: {
-						colorTW: this.config.colorTW
-					}
-				})
-			})
+			itemG.on('click', () => this.onLegendClick(this.config.colorTW, 'colorTW', key, itemG, hidden))
 		}
 		const colorRefCategory = this.colorLegend.get('Ref')
 		if (colorRefCategory.sampleCount > 0) {
@@ -357,8 +339,7 @@ class Scatter {
 				symbol = this.symbols[index].size(64)()
 				name = key
 				count = shape.sampleCount
-				shape.value = this.config.shapeTW.term.values[key]
-				const hidden = key in this.config.shapeTW.q.hiddenValues
+				const hidden = this.config.shapeTW.q.hiddenValues ? key in this.config.shapeTW.q.hiddenValues : false
 				const itemG = shapeG.append('g')
 
 				itemG
@@ -375,21 +356,24 @@ class Scatter {
 					.style('text-decoration', hidden ? 'line-through' : 'none')
 					.attr('alignment-baseline', 'middle')
 				offsetY += step
-				itemG.on('click', () => {
-					itemG.style('text-decoration', hidden ? 'none' : 'line-through')
-					if (hidden) delete this.config.shapeTW.q.hiddenValues[key]
-					else this.config.shapeTW.q.hiddenValues[key] = shape.value
-
-					this.app.dispatch({
-						type: 'plot_edit',
-						id: this.id,
-						config: {
-							shapeTW: this.config.shapeTW
-						}
-					})
-				})
+				itemG.on('click', () => this.onLegendClick(this.config.shapeTW, 'shapeTW', key, itemG, hidden))
 			}
 		}
+	}
+
+	onLegendClick(tw, name, key, itemG, hidden) {
+		if (!tw.q.hiddenValues) tw.q.hiddenValues = {}
+		const value = tw.term.type != 'geneVariant' ? tw.term.values[key] : { key: key, label: key }
+		itemG.style('text-decoration', hidden ? 'none' : 'line-through')
+		if (hidden) delete tw.q.hiddenValues[key]
+		else tw.q.hiddenValues[key] = value
+		const config = {}
+		config[name] = tw
+		this.app.dispatch({
+			type: 'plot_edit',
+			id: this.id,
+			config
+		})
 	}
 }
 
@@ -1084,7 +1068,7 @@ function getColor(self, c) {
 }
 
 function getOpacity(self, c) {
-	if ('sampleId' in c) return c.hidden ? 0 : 1
+	if ('sampleId' in c) return c.hidden['category'] || c.hidden['shape'] ? 0 : 1
 	return self.settings.showRef ? 1 : 0
 }
 
