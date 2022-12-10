@@ -573,7 +573,7 @@ function setRenderers(self) {
 				let data
 				for (const item of self.lasso.selectedItems()._groups[0]) {
 					data = item.__data__
-					if ('sampleId' in data && !data.hidden) self.selectedItems.push(item)
+					if ('sampleId' in data && !(data.hidden['category'] || data.hidden['shape'])) self.selectedItems.push(item)
 				}
 				self.lasso.notSelectedItems().attr('d', c => getShape(self, c))
 
