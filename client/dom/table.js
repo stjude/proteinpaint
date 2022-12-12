@@ -76,20 +76,25 @@ export async function renderTable({
 }) {
 	if (rows?.length == 0) return
 	const parentDiv = div
-		.style('padding', '5px')
-		.style('background-color', 'white')
-		.append('table')
-		.style('display', 'block')
+		.append('div')
 		.style('background-color', 'white')
 		.style('max-width', maxWidth)
+		.style('max-height', maxHeight)
+		.style('overflow-y', 'scroll')
+		.append('table')
+		.style('width', '100%')
+		.style('table-layout', 'fixed')
 
 	// header div
 	const thead = parentDiv
 		.append('thead')
-		.style('display', 'table')
-		.style('table-layout', 'fixed')
+		.style('position', 'sticky')
+		.style('top', '0')
+		.style('background-color', 'white')
+		.style('padding', '5px')
+
 	const theadRow = thead.append('tr')
-	if (showLines) theadRow.append('th').style('width', '1vw')
+	if (showLines) theadRow.append('td').style('width', '1vw')
 
 	if (buttons || noButtonCallback) {
 		const cell = theadRow
@@ -123,20 +128,10 @@ export async function renderTable({
 			if (c.width) th.style('width', c.width)
 		}
 
-	const tbody = parentDiv
-		.append('tbody')
-		.style('display', 'block')
-		.style('max-height', maxHeight)
-		.style('overflow-y', 'auto')
-	let rowtable
+	const tbody = parentDiv.append('tbody')
 	for (const [i, row] of rows.entries()) {
 		let checkbox
-		rowtable = tbody
-			.append('tr')
-			.attr('class', 'sjpp_row_wrapper')
-			.style('display', 'table')
-			.style('table-layout', 'fixed')
-			.style('width', '100%')
+		const rowtable = tbody.append('tr').attr('class', 'sjpp_row_wrapper')
 		if (striped && i % 2 == 1) rowtable.style('background-color', 'rgb(245,245,245)')
 
 		if (buttons || noButtonCallback)
@@ -153,6 +148,7 @@ export async function renderTable({
 			const lineDiv = rowtable
 				.append('td')
 				.text(i + 1)
+				.style('text-align', 'center')
 				.style('width', '1vw')
 				.style('font-size', '0.8rem')
 		}
@@ -208,6 +204,8 @@ export async function renderTable({
 	if (buttons) {
 		const footerDiv = div
 			.append('div')
+			.style('position', 'sticky')
+			.style('bottom', '0')
 			.insert('div')
 			.style('display', 'inline-block')
 			.style('float', 'right')
@@ -230,12 +228,10 @@ export async function renderTable({
 					}
 				})
 			if (button.class) button.button.attr('class', button.class)
+			else button.button.attr('class', 'sjpp_apply_btn')
 			button.button.node().disabled = selectedRows.length == 0 && !selectAll
 		}
 	}
-	let proportion = rowtable.node().getBoundingClientRect().width / tbody.node().getBoundingClientRect().width
-	if (isNaN(proportion)) proportion = 0.975 //Scatter plot returns 0 as width
-	thead.style('width', `${proportion * 100}%`)
 
 	function enableButtons() {
 		const checkboxs = tbody.selectAll('input:checked')

@@ -231,8 +231,8 @@ function setRenderers(self) {
 			} else {
 				div
 					.style('height', scrollDivMaxHeight)
-					.style('overflow-y', 'scroll')
 					.style('resize', 'vertical')
+					.style('overflow-y', 'scroll')
 
 				/***************************
 				remaining issues
