@@ -2,6 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
+## 2.7.2
+
+GDC-related
+- fit the gdc bam slice request by not using compression
 
 ## 2.7.1
 
