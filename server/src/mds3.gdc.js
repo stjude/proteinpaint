@@ -393,7 +393,10 @@ export function validate_query_geneCnv(ds) {
 function getheaders(q) {
 	// q is req.query{}
 	const h = { 'Content-Type': 'application/json', Accept: 'application/json' }
-	if (q && q.token) h['X-Auth-Token'] = q.token
+	if (q) {
+		if (q.token) h['X-Auth-Token'] = q.token
+		if (q.sessionid) h['Cookie'] = 'sessionid=' + q.sessionid
+	}
 	return h
 }
 

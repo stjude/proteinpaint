@@ -34,12 +34,8 @@ export function mds3_request_closure(genomes) {
 			if (!req.query.genome) throw '.genome missing'
 			const genome = genomes[req.query.genome]
 			if (!genome) throw 'invalid genome'
-			const q = init_q(req.query, genome)
 
-			// user token may be provided from request header, the logic could be specific to gdc or another dataset
-			if (req.get('X-Auth-Token')) {
-				q.token = req.get('X-Auth-Token')
-			}
+			const q = init_q(req, genome)
 
 			const ds = await get_ds(q, genome)
 
@@ -66,7 +62,18 @@ function summarize_mclass(mlst) {
 	return [...cc].sort((i, j) => j[1] - i[1])
 }
 
-function init_q(query, genome) {
+function init_q(req, genome) {
+	const query = req.query
+
+	if (req.get('X-Auth-Token')) {
+		// user token may be provided from request header, the logic could be specific to gdc or another dataset
+		query.token = req.get('X-Auth-Token')
+	}
+	if (req.cookies.sessionid) {
+		// sessionid is available after user logs into gdc portal
+		query.sessionid = req.cookies.sessionid
+	}
+
 	// cannot validate filter0 here as ds will be required and is not made yet
 	if (query.hiddenmclasslst) {
 		query.hiddenmclass = new Set(query.hiddenmclasslst.split(','))
