@@ -35,7 +35,8 @@ handle_filter2topGenes
 
 **************** internal
 mayMapRefseq2ensembl
-
+isoform2ssm_query1_getvariant{}
+isoform2ssm_query2_getcase{}
 
 **************** api hosts
 for the pp docker instance running in gdc backend, the api host should be defined by environmental variable
@@ -137,18 +138,6 @@ export function validate_query_snvindel_byrange(ds) {
 2. cases
 */
 export function validate_query_snvindel_byisoform(ds) {
-	const api = ds.queries.snvindel.byisoform.gdcapi
-	if (!api.query1) throw 'api.query1 is missing'
-	if (!api.query1.endpoint) throw 'query1.endpoint missing'
-	if (!api.query1.fields) throw 'query1.fields missing'
-	if (!api.query1.filters) throw 'query1.filters missing'
-	if (typeof api.query1.filters != 'function') throw 'query1.filters() is not a function'
-	if (!api.query2) throw 'api.query2 is missing'
-	if (!api.query2.endpoint) throw 'query2.endpoint missing'
-	if (!Array.isArray(api.query2.fields)) throw 'query2.fields[] not array'
-	if (!api.query2.filters) throw 'query2.filters missing'
-	if (typeof api.query2.filters != 'function') throw 'query2.filters() is not a function'
-
 	ds.queries.snvindel.byisoform.get = async opts => {
 		/* opts{}
 		.isoform= str
@@ -169,7 +158,7 @@ export function validate_query_snvindel_byisoform(ds) {
 		*/
 		const refseq = mayMapRefseq2ensembl(opts, ds)
 
-		const ssmLst = await snvindel_byisoform(api, opts)
+		const ssmLst = await snvindel_byisoform(opts)
 		const mlst = [] // parse final ssm into this list
 		for (const ssm of ssmLst) {
 			const m = {
@@ -408,29 +397,31 @@ function getheaders(q) {
 	return h
 }
 
-async function snvindel_byisoform(api, opts) {
-	// query is ds.queries.snvindel
+async function snvindel_byisoform(opts) {
+	const query1 = isoform2ssm_query1_getvariant,
+		query2 = isoform2ssm_query2_getcase
+
 	const headers = getheaders(opts)
 	const p1 = got(
 		apihost +
-			api.query1.endpoint +
+			query1.endpoint +
 			'?size=' +
-			api.query1.size +
+			query1.size +
 			'&fields=' +
-			api.query1.fields.join(',') +
+			query1.fields.join(',') +
 			'&filters=' +
-			encodeURIComponent(JSON.stringify(api.query1.filters(opts))),
+			encodeURIComponent(JSON.stringify(query1.filters(opts))),
 		{ method: 'GET', headers }
 	)
 	const p2 = got(
 		apihost +
-			api.query2.endpoint +
+			query2.endpoint +
 			'?size=' +
-			api.query2.size +
+			query2.size +
 			'&fields=' +
-			api.query2.fields.join(',') +
+			query2.fields.join(',') +
 			'&filters=' +
-			encodeURIComponent(JSON.stringify(api.query2.filters(opts))),
+			encodeURIComponent(JSON.stringify(query2.filters(opts))),
 		{ method: 'GET', headers }
 	)
 	const [tmp1, tmp2] = await Promise.all([p1, p2])
@@ -1192,19 +1183,7 @@ function termid2size_filters(p, ds) {
 
 /************************************************
 for gdc bam slicing UI
-it shares some logic with mds3, but does not require a mds3 dataset to function
 */
-const ssms_fields = [
-	'ssm_id',
-	'chromosome',
-	'start_position',
-	'reference_allele',
-	'tumor_allele',
-	'consequence.transcript.transcript_id',
-	'consequence.transcript.aa_change',
-	'consequence.transcript.consequence_type',
-	'consequence.transcript.gene.symbol'
-]
 
 export function handle_gdc_ssms(genomes) {
 	return async (req, res) => {
@@ -1218,29 +1197,15 @@ export function handle_gdc_ssms(genomes) {
 			const genome = genomes[req.query.genome]
 			if (!genome) throw 'invalid genome'
 			if (!req.query.case_id) throw '.case_id missing'
-			// make query to genome genedb to get canonical isoform of the gene
-			const filters = {
-				op: 'and',
-				content: [
-					{
-						op: 'in',
-						content: { field: 'cases.case_id', value: [req.query.case_id] }
-					}
-				]
-			}
-			if (req.query.isoform) {
-				filters.content.push({
-					op: '=',
-					content: { field: 'consequence.transcript.transcript_id', value: [req.query.isoform] }
-				})
-			}
+
+			const filters = isoform2ssm_query1_getvariant.filters(req.query)
 
 			const headers = { 'Content-Type': 'application/json', Accept: 'application/json' }
 			const response = await got(
 				apihost +
-					'/ssms' +
+					isoform2ssm_query1_getvariant.endpoint +
 					'?size=1000&fields=' +
-					ssms_fields.join(',') +
+					isoform2ssm_query1_getvariant.fields.join(',') +
 					'&filters=' +
 					encodeURIComponent(JSON.stringify(filters)),
 				{ method: 'GET', headers }
@@ -1249,27 +1214,26 @@ export function handle_gdc_ssms(genomes) {
 			const mlst = []
 			for (const hit of re.data.hits) {
 				// for each hit, create an element
-				// from list of consequences, find one based on isoform info
-				let isoform = req.query.isoform
-				if (!isoform) {
-					// no isoform given, use the canonical isoform of the gene
-					// collect gene into a set over all consequences
-					const genes = new Set()
-					for (const c of hit.consequence) {
-						if (c.transcript && c.transcript.gene && c.transcript.gene.symbol) {
-							genes.add(c.transcript.gene.symbol)
-						}
+				// from list of consequences, find one from canonical isoform
+
+				// quick code to get canonical isoform of this gene
+				let gene
+				for (const c of hit.consequence) {
+					if (c.transcript && c.transcript.gene && c.transcript.gene.symbol) {
+						gene = c.transcript.gene.symbol
+						break
 					}
-					if (genes.size == 0) {
-						// no gene?
-						continue
-					}
-					// has gene. the case of having multiple genes is not dealt with
-					const gene = [...genes][0]
-					const data = genome.genedb.get_gene2canonicalisoform.get(gene)
-					if (data && data.isoform) isoform = data.isoform
 				}
-				let c = hit.consequence.find(i => i.transcript.transcript_id == isoform)
+				if (!gene) {
+					// no gene?
+					continue
+				}
+				const data = genome.genedb.get_gene2canonicalisoform.get(gene)
+				if (!data || !data.isoform) {
+					// no canonical isoform
+					continue
+				}
+				let c = hit.consequence.find(i => i.transcript.transcript_id == data.isoform)
 				if (!c) {
 					// no consequence match with given isoform, just use the first one
 					c = hit.consequence[0]
@@ -1378,4 +1342,129 @@ function mayAddCGC2filter(str, CGConly) {
 	}
 
 	throw 'mayAddCGC2filter: f.op is not "in" or "and"'
+}
+
+/*
+REST: get list of ssm with consequence, no case info and occurrence
+isoform2ssm_query1_getvariant and isoform2ssm_query2_getcase are the "tandem REST api"
+yields list of ssm, each with .samples[{sample_id}]
+can use .samples[] to derive .occurrence for each ssm, and overal number of unique samples
+
+in comparison to "protein_mutations" graphql query
+*/
+const isoform2ssm_query1_getvariant = {
+	endpoint: '/ssms',
+	size: 100000,
+	fields: [
+		'ssm_id',
+		'chromosome',
+		'start_position',
+		'reference_allele',
+		'tumor_allele',
+		'consequence.transcript.transcript_id',
+		'consequence.transcript.consequence_type',
+		'consequence.transcript.aa_change',
+		// gene symbol is not required for mds3 tk, but is used in gdc bam slicing ui
+		'consequence.transcript.gene.symbol'
+	],
+
+	/*
+	p={}
+		.isoform
+			isoform is provided for mds3 tk loading using isoform,
+		.case_id
+			case_id is provided for loading ssm from a case in gdc bam slicing ui 
+		.set_id, obsolete
+		.filter0{}
+		.filterObj{}
+	*/
+	filters: p => {
+		const f = {
+			op: 'and',
+			content: []
+		}
+		if (p.isoform) {
+			if (typeof p.isoform != 'string') throw '.isoform value not string'
+			f.content.push({
+				op: '=',
+				content: {
+					field: 'consequence.transcript.transcript_id',
+					value: [p.isoform]
+				}
+			})
+		}
+		if (p.case_id) {
+			if (typeof p.case_id != 'string') throw '.case_id value not string'
+			f.content.push({
+				op: '=',
+				content: {
+					field: 'cases.case_id',
+					value: [p.case_id]
+				}
+			})
+		}
+		if (p.set_id) {
+			if (typeof p.set_id != 'string') throw '.set_id value not string'
+			f.content.push({
+				op: 'in',
+				content: {
+					field: 'cases.case_id',
+					value: [p.set_id]
+				}
+			})
+		}
+		if (p.filter0) {
+			f.content.push(p.filter0)
+		}
+		if (p.filterObj) {
+			f.content.push(filter2GDCfilter(p.filterObj))
+		}
+		return f
+	}
+}
+// REST: get case details for each ssm, no variant-level info
+const isoform2ssm_query2_getcase = {
+	endpoint: '/ssm_occurrences',
+	size: 100000,
+	fields: [
+		'ssm.ssm_id',
+		'case.case_id', // can be used to make sample url link
+		'case.observation.sample.tumor_sample_uuid' // gives aliquot id and convert to submitter id for display
+	],
+	filters: p => {
+		// p:{}
+		// .isoform
+		// .set_id
+		if (!p.isoform) throw '.isoform missing'
+		if (typeof p.isoform != 'string') throw '.isoform value not string'
+		const f = {
+			op: 'and',
+			content: [
+				{
+					op: '=',
+					content: {
+						field: 'ssms.consequence.transcript.transcript_id',
+						value: [p.isoform]
+					}
+				}
+			]
+		}
+		if (p.set_id) {
+			if (typeof p.set_id != 'string') throw '.set_id value not string'
+			f.content.push({
+				op: 'in',
+				content: {
+					field: 'cases.case_id',
+					value: [p.set_id]
+				}
+			})
+		}
+		if (p.filter0) {
+			f.content.push(p.filter0)
+		}
+		if (p.filterObj) {
+			f.content.push(filter2GDCfilter(p.filterObj))
+		}
+		return f
+	}
 }
