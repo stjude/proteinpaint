@@ -4,6 +4,7 @@ import { newSandboxDiv } from '#dom/sandbox'
 import * as utils from './utils'
 import { addGeneSearchbox } from '#dom/genesearch'
 import { Menu } from '#dom/menu'
+import { BreadcrumbTrail } from '#dom/breadcrumbs'
 import hljs from 'highlight.js/lib/core'
 import javascript from 'highlight.js/lib/languages/javascript'
 hljs.registerLanguage('javascript', javascript)
@@ -21,19 +22,23 @@ openDatasetButtonSandbox()
 
 
 TODOs: 
-- add breadcrumb trail in sandbox headers -> ***Removed the nested card back button for now
+- ***Removed the nested card back button for now
 - add icon link to copy appcard= link for each sandbox and views (i.e. examples, UIs, etc.) in sandbox headers
 - combine vertical and horizontal tab functions into one
 - fix nestcard background not in margins when sandbox called from ?appcard=
-
-Questions: 
 
 */
 
 export async function openSandbox(element, pageArgs) {
 	const sandboxDiv = newSandboxDiv(pageArgs.sandboxDiv)
 	sandboxDiv.header_row
-	sandboxDiv.header.text(element.name)
+	sandboxDiv.header.append('span').text(element.name)
+	sandboxDiv.header.trail = new BreadcrumbTrail({
+		holder: sandboxDiv.header,
+		crumbs: []
+	})
+	sandboxDiv.header.trail.main()
+
 	sandboxDiv.body.style('overflow', 'hidden').style('background-color', 'white')
 
 	if (element.type == 'nestedCard') return openNestedCardSandbox(element, sandboxDiv, pageArgs)
@@ -64,6 +69,7 @@ async function openNestedCardSandbox(nestedCard, sandboxDiv, pageArgs) {
 		.style('gap', '5px')
 
 	const filteredChildren = nestedCard.children.filter(e => !e.hidden)
+	sandboxDiv.header.trail.crumbs = filteredChildren
 	//joins together all the use cases objects from index.json and displays them as cards in a newly created sandbox.
 	filteredChildren.forEach(child => {
 		const uc = ucList.append('li')
@@ -86,7 +92,11 @@ async function openNestedCardSandbox(nestedCard, sandboxDiv, pageArgs) {
 					return
 				}
 
-				if (child.type == 'card') return openCardSandbox(child, res, sandboxDiv)
+				if (child.type == 'card') {
+					sandboxDiv.header.trail.addCrumb(child)
+					sandboxDiv.header.trail.updateTrail()
+					return openCardSandbox(child, res, sandboxDiv)
+				}
 				if (child.type == 'dsButton') return openDatasetButtonSandbox(pageArgs, child, res, sandboxDiv) //only for .sandboxJson
 			})
 		return JSON.stringify(uc)
@@ -144,7 +154,7 @@ function openCardSandbox(card, res, sandboxDiv) {
 			.style('width', '100%')
 		const tabsContentDiv = sandboxDiv.body.append('div')
 
-		makeParentTabsMenu(sandboxArgs.ppcalls, card, topTabsDiv, tabsContentDiv)
+		makeParentTabsMenu(sandboxArgs.ppcalls, card, topTabsDiv, tabsContentDiv, sandboxDiv)
 	}
 }
 
@@ -183,7 +193,7 @@ function renderContent(ppcalls, div, card) {
 
 //********* Tab Menu Functions *********
 
-function makeTopTabs(ppcalls, card) {
+function makeTopTabs(ppcalls, card, sandboxDiv) {
 	const tabs = []
 	const ui = ppcalls.findIndex(t => t.isUi == true)
 	const notui = ppcalls.findIndex(t => t.isUi == (false || undefined))
@@ -232,7 +242,8 @@ function makeTopTabs(ppcalls, card) {
 			callback: async div => {
 				try {
 					const examplesOnly = ppcalls.filter(p => p.isUi != true) //Fix to rm UIs from Examples tab
-					makeLeftsideTabMenu(card, div, examplesOnly)
+					sandboxDiv.header.trail.crumbs = examplesOnly
+					makeLeftsideTabMenu(card, div, examplesOnly, sandboxDiv)
 				} catch (e) {
 					alert('Error: ' + (e.message || e))
 				}
@@ -242,8 +253,8 @@ function makeTopTabs(ppcalls, card) {
 	return tabs
 }
 //Creates the main tab menu over the examples and/or app uis
-function makeParentTabsMenu(ppcalls, card, tabsDiv, contentDiv) {
-	const tabs = makeTopTabs(ppcalls, card)
+function makeParentTabsMenu(ppcalls, card, tabsDiv, contentDiv, sandboxDiv) {
+	const tabs = makeTopTabs(ppcalls, card, sandboxDiv)
 
 	for (const tab of tabs) {
 		tabs[0].active = true
@@ -284,7 +295,7 @@ function makeParentTabsMenu(ppcalls, card, tabsDiv, contentDiv) {
 	}
 }
 
-async function makeLeftsideTabMenu(card, div, examplesOnly) {
+async function makeLeftsideTabMenu(card, div, examplesOnly, sandboxDiv) {
 	const tabs = examplesOnly.map((p, index) => getTabData(p, index, card.section))
 
 	const menuWrapper = div.append('div').classed('sjpp-vertical-tab-menu', true)
@@ -314,6 +325,8 @@ async function makeLeftsideTabMenu(card, div, examplesOnly) {
 		tab.content = tabsContentDiv.append('div').style('display', tab.active ? 'block' : 'none')
 
 		if (tab.active) {
+			sandboxDiv.header.trail.addCrumb(tab)
+			sandboxDiv.header.trail.updateTrail()
 			tab.callback(tab.content)
 			delete tab.callback
 		}
@@ -324,11 +337,14 @@ async function makeLeftsideTabMenu(card, div, examplesOnly) {
 				t.tab.style('border-right', t.active ? '8px solid #1575ad' : 'none')
 				t.tab.style('color', t.active ? '#1575ad' : '#757373')
 				t.content.style('display', t.active ? 'block' : 'none')
+				if (t.active) sandboxDiv.header.trail.addCrumb(t)
+				else sandboxDiv.header.trail.removeCrumb(t)
 			}
 			if (tab.callback) {
 				tab.callback(tab.content)
 				delete tab.callback
 			}
+			sandboxDiv.header.trail.updateTrail()
 		})
 	}
 }

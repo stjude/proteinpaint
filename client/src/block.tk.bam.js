@@ -150,6 +150,29 @@ export async function loadTk(tk, block) {
 		})
 		xoff += r.width
 	}
+	// Check if there ia any common region between the two regions (assuming there are only two regions), if yes then show only one region
+	// This does not fully work on testing. When pan/zoomed into common region but only one region shows reads, the other is empty
+	//if (regions.length == 2) {
+	//	if (
+	//		regions[0].chr == regions[1].chr &&
+	//		regions[0].start <= regions[1].start &&
+	//		regions[1].start <= regions[0].stop
+	//	) {
+	//		regions[0].stop = regions[1].stop
+	//		tk.regions = [regions[0]]
+	//	} else if (
+	//		regions[0].chr == regions[1].chr &&
+	//		regions[1].start <= regions[0].start &&
+	//		regions[0].start <= regions[1].stop
+	//	) {
+	//		regions[0].start = regions[1].start
+	//		tk.regions = [regions[0]]
+	//	} else {
+	//		tk.regions = regions
+	//	}
+	//} else {
+	//	tk.regions = regions
+	//}
 	tk.regions = regions
 
 	try {
@@ -242,7 +265,15 @@ async function getData(tk, block, additional = []) {
 			lst.push('max_diff_score=' + tk.max_diff_score)
 			lst.push('min_diff_score=' + tk.min_diff_score)
 		}
+	} else if (tk.sv) {
+		lst.push(
+			'sv=' +
+				tk.sv
+					.map(m => m.chrA + '.' + m.startA + '.' + m.stopA + '.' + m.chrB + '.' + m.startB + '.' + m.stopB)
+					.join('.')
+		)
 	}
+
 	if (tk.variants && tk.alleleAlreadyUpdated) {
 		// Prevent passing of refseq and altseq from server to client side in subsequent request
 		lst.push('alleleAlreadyUpdated=1')
@@ -269,7 +300,6 @@ async function getData(tk, block, additional = []) {
 	if (tk.drop_pcrduplicates) lst.push('drop_pcrduplicates=1')
 
 	if (window.devicePixelRatio > 1) lst.push('devicePixelRatio=' + window.devicePixelRatio)
-
 	const data = await dofetch3('tkbam?' + lst.join('&'), { headers })
 
 	// reset text
@@ -431,7 +461,7 @@ function may_render_variant(data, tk, block) {
 	// call everytime track is updated, so that variant box can be positioned based on view range; even when there's no variant
 	// in tk.dom.variantg, indicate location and status of the variant
 	// TODO show variant info alongside box, when box is wide enough, show
-	if (!tk.dom.variantg) return
+	if (!tk.dom.variantg || tk.sv) return
 	tk.dom.variantg.selectAll('*').remove()
 	let x1, x2 // on screen pixel start/stop of the variant box
 	{
@@ -958,6 +988,11 @@ function makeTk(tk, block) {
 		tk.dom.diff_score_axis = tk.gright.append('g') // For storing axis of bar plot of diff_score
 		tk.dom.diff_score_plotwidth = 50
 		tk.fs_string = block.maketklefthandle(tk, tk.pileupheight + tk.dom.variantrowheight / 2) // Will contain Fisher strand value which will be added in may_render_variant function
+	} else if (tk.sv) {
+		// assuming that variant will only be added upon track initiation
+		tk.dom.variantg = tk.glider.append('g')
+		tk.dom.variantrowheight = 15
+		tk.dom.variantrowbottompad = 5
 	}
 
 	///////////// row #4: gdc region XXX delete and replace with bedj indicator track
@@ -1007,7 +1042,8 @@ function may_add_urlparameter(tk, block) {
 		const tmp = u2p.get('variant').split('.')
 		if (tmp.length < 4) {
 			console.log('urlparam variant should be at least 4 fields joined by .')
-		} else {
+		} else if (tmp.length <= 5) {
+			// SNVs and indels
 			tk.variants = []
 			//for (let i = 0; i < tmp.length; i += 4) {
 			//	const pos = Number(tmp[i + 1])
@@ -1034,6 +1070,30 @@ function may_add_urlparameter(tk, block) {
 					strictness = Number(tmp[i + 4])
 				}
 				tk.variants.push({ chr: tmp[i], pos: pos - 1, ref: tmp[i + 2], alt: tmp[i + 3], strictness: strictness })
+			}
+		} else {
+			// tmp.length >= 6
+			// SVs
+			tk.sv = []
+			if (tmp.length == 7) {
+				tk.sv.push({
+					chrA: tmp[0],
+					startA: tmp[1],
+					stopA: tmp[2],
+					chrB: tmp[3],
+					startB: tmp[4],
+					stopB: tmp[5],
+					contig: tmp[6]
+				})
+			} else if (tmp.length == 6) {
+				tk.sv.push({
+					chrA: tmp[0],
+					startA: tmp[1],
+					stopA: tmp[2],
+					chrB: tmp[3],
+					startB: tmp[4],
+					stopB: tmp[5]
+				})
 			}
 		}
 	}

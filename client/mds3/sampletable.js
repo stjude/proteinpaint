@@ -2,6 +2,7 @@ import { fillbar } from '#dom/fillbar'
 import { get_list_cells } from '#dom/gridutils'
 import { mclass, dtsnvindel, dtsv, dtfusionrna } from '#shared/common'
 import { renderTable } from '#dom/table'
+import { rgb } from 'd3-color'
 
 /*
 ********************** EXPORTED
@@ -305,7 +306,9 @@ async function samples2columnsRows(samples, tk) {
 						} else {
 							throw 'unknown dt'
 						}
-						ssm.html += ` <span style="color:${mclass[m.class].color};font-size:.7em">${mclass[m.class].label}</span>`
+						ssm.html += ` <span style="color:${rgb(mclass[m.class].color).darker()};font-size:0.8em;">${
+							mclass[m.class].label
+						}</span>`
 					} else {
 						// m datapoint not found on client
 						ssm.value = ssm_id

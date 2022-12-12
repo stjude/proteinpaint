@@ -1,6 +1,3 @@
-import { select, style } from 'd3'
-import { defaultcolor } from '../shared/common'
-
 /*
 print an html table, using the specified columns and rows
 
@@ -78,7 +75,6 @@ export async function renderTable({
 	selectAll = false
 }) {
 	if (rows?.length == 0) return
-	// create a Parent Div element to which the header and sample table will be appended as divH and divS.
 	const parentDiv = div
 		.style('padding', '5px')
 		.style('background-color', 'white')
@@ -88,22 +84,15 @@ export async function renderTable({
 		.style('max-width', maxWidth)
 
 	// header div
-	const divH = parentDiv
+	const thead = parentDiv
 		.append('thead')
 		.style('display', 'table')
 		.style('table-layout', 'fixed')
-		.style('width', '100%')
-		.append('tr')
-	if (showLines) {
-		divH
-			.append('th')
-			.attr('class', 'sjpp_table_header')
-			.text('#')
-			.style('width', '1vw')
-	}
+	const theadRow = thead.append('tr')
+	if (showLines) theadRow.append('th').style('width', '1vw')
 
 	if (buttons || noButtonCallback) {
-		const cell = divH
+		const cell = theadRow
 			.append('td')
 			.attr('class', 'sjpp_table_header')
 			.style('width', '1.5vw')
@@ -114,41 +103,41 @@ export async function renderTable({
 				.attr('id', 'checkboxHeader')
 				.attr('type', 'checkbox')
 				.on('change', () => {
-					table.selectAll('input').property('checked', checkboxH.node().checked)
+					tbody.selectAll('input').property('checked', checkboxH.node().checked)
 					enableButtons()
 				})
 			checkboxH.node().checked = selectAll
 		}
 		if (!showHeader)
-			divH
+			theadRow
 				.append('th')
 				.text('Check/Uncheck All')
 				.attr('class', 'sjpp_table_header sjpp_table_item')
 	}
 	if (showHeader)
 		for (const c of columns) {
-			const th = divH
+			const th = theadRow
 				.append('th')
 				.text(c.label)
 				.attr('class', 'sjpp_table_item sjpp_table_header')
 			if (c.width) th.style('width', c.width)
 		}
 
-	const table = parentDiv
+	const tbody = parentDiv
 		.append('tbody')
 		.style('display', 'block')
 		.style('max-height', maxHeight)
-		.style('overflow', 'scroll')
-
+		.style('overflow-y', 'auto')
+	let rowtable
 	for (const [i, row] of rows.entries()) {
 		let checkbox
-		const rowtable = table
+		rowtable = tbody
 			.append('tr')
 			.attr('class', 'sjpp_row_wrapper')
 			.style('display', 'table')
 			.style('table-layout', 'fixed')
 			.style('width', '100%')
-		if (striped && i % 2 == 1) rowtable.style('background-color', 'rgb(237, 237, 237)')
+		if (striped && i % 2 == 1) rowtable.style('background-color', 'rgb(245,245,245)')
 
 		if (buttons || noButtonCallback)
 			rowtable.on('click', e => {
@@ -231,7 +220,7 @@ export async function renderTable({
 				.text(button.text)
 				.style('margin', '10px 10px 0 0')
 				.on('click', e => {
-					const checkboxs = table.selectAll('input:checked')
+					const checkboxs = tbody.selectAll('input:checked')
 					if (!checkboxs.empty()) {
 						checkboxs.each((d, i, nodes) => {
 							const node = nodes[i]
@@ -241,12 +230,15 @@ export async function renderTable({
 					}
 				})
 			if (button.class) button.button.attr('class', button.class)
-			button.button.node().disabled = selectedRows.length == 0
+			button.button.node().disabled = selectedRows.length == 0 && !selectAll
 		}
 	}
+	let proportion = rowtable.node().getBoundingClientRect().width / tbody.node().getBoundingClientRect().width
+	if (isNaN(proportion)) proportion = 0.975 //Scatter plot returns 0 as width
+	thead.style('width', `${proportion * 100}%`)
 
 	function enableButtons() {
-		const checkboxs = table.selectAll('input:checked')
+		const checkboxs = tbody.selectAll('input:checked')
 		for (const button of buttons) button.button.node().disabled = checkboxs.empty()
 	}
 }

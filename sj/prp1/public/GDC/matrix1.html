@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang=en>
+<head>
+	 <meta charset="utf-8">
+	 <title>ProteinPaint</title>
+</head>
+<body>
+
+<script src="../bin/proteinpaint.js" charset="utf-8"></script>
+
+
+<div id=aaa style="margin:10px"></div>
+
+<script>
+
+runproteinpaint({
+	holder:document.getElementById('aaa'),
+	noheder:1,
+	launchGdcMatrix:true,
+	filter0: {"op":"and","content":[
+		{"op":"in","content":{"field":"cases.primary_site","value":["breast","bronchus and lung"]}},
+		{"op":">=","content":{"field":"cases.diagnoses.age_at_diagnosis","value":10000}},
+		{"op":"<=","content":{"field":"cases.diagnoses.age_at_diagnosis","value":20000}},
+	]}
+})
+
+</script>
+
+</body>
+</html>

@@ -38,111 +38,6 @@ query list of variants by isoform
 */
 
 /*
-REST: get list of ssm with consequence, no case info and occurrence
-isoform2ssm_query1_getvariant and isoform2ssm_query2_getcase are the "tandem REST api"
-yields list of ssm, each with .samples[{sample_id}]
-can use .samples[] to derive .occurrence for each ssm, and overal number of unique samples
-
-in comparison to "protein_mutations" graphql query
-*/
-const isoform2ssm_query1_getvariant = {
-	endpoint: '/ssms',
-	size: 100000,
-	fields: [
-		'ssm_id',
-		'chromosome',
-		'start_position',
-		'reference_allele',
-		'tumor_allele',
-		'consequence.transcript.transcript_id',
-		'consequence.transcript.consequence_type',
-		'consequence.transcript.aa_change'
-	],
-	filters: p => {
-		// p:{}
-		// .isoform
-		// .set_id
-		if (!p.isoform) throw '.isoform missing'
-		if (typeof p.isoform != 'string') throw '.isoform value not string'
-		const f = {
-			op: 'and',
-			content: [
-				{
-					op: '=',
-					content: {
-						field: 'consequence.transcript.transcript_id',
-						value: [p.isoform]
-					}
-				}
-			]
-		}
-		if (p.set_id) {
-			if (typeof p.set_id != 'string') throw '.set_id value not string'
-			f.content.push({
-				op: 'in',
-				content: {
-					field: 'cases.case_id',
-					value: [p.set_id]
-				}
-			})
-		}
-		if (p.filter0) {
-			f.content.push(p.filter0)
-		}
-		if (p.filterObj) {
-			f.content.push(filter2GDCfilter(p.filterObj))
-		}
-		return f
-	}
-}
-// REST: get case details for each ssm, no variant-level info
-const isoform2ssm_query2_getcase = {
-	endpoint: '/ssm_occurrences',
-	size: 100000,
-	fields: [
-		'ssm.ssm_id',
-		'case.case_id', // can be used to make sample url link
-		'case.observation.sample.tumor_sample_uuid' // gives aliquot id and convert to submitter id for display
-	],
-	filters: p => {
-		// p:{}
-		// .isoform
-		// .set_id
-		if (!p.isoform) throw '.isoform missing'
-		if (typeof p.isoform != 'string') throw '.isoform value not string'
-		const f = {
-			op: 'and',
-			content: [
-				{
-					op: '=',
-					content: {
-						field: 'ssms.consequence.transcript.transcript_id',
-						value: [p.isoform]
-					}
-				}
-			]
-		}
-		if (p.set_id) {
-			if (typeof p.set_id != 'string') throw '.set_id value not string'
-			f.content.push({
-				op: 'in',
-				content: {
-					field: 'cases.case_id',
-					value: [p.set_id]
-				}
-			})
-		}
-		if (p.filter0) {
-			f.content.push(p.filter0)
-		}
-		if (p.filterObj) {
-			f.content.push(filter2GDCfilter(p.filterObj))
-		}
-		return f
-	}
-}
-
-/*
 TODO if can be done in protein_mutations
 query list of variants by genomic range (of a gene/transcript)
 does not include info on individual tumors
@@ -451,19 +346,12 @@ module.exports = {
 					variables: variables_range2variants
 				}
 			},
-			byisoform: {
-				// tandem rest api method
-				gdcapi: {
-					query1: isoform2ssm_query1_getvariant,
-					query2: isoform2ssm_query2_getcase
-				}
 
-				/* 
-				graphql method *not in use*, as former returns list of samples
-				and easier to summarize
-				gdcapi: protein_mutations
-				*/
+			byisoform: {
+				// implementation details are in mds3.gdc.js
+				gdcapi: true
 			},
+
 			m2csq: {
 				// may also support querying a vcf by chr.pos.ref.alt
 				by: 'ssm_id',

@@ -13,15 +13,19 @@
 
 <script>
 
-runproteinpaint({
-	holder:document.getElementById('aaa'),
-	launchGdcMatrix:true,
-	filter0: {"op":"and","content":[
-		{"op":"in","content":{"field":"cases.primary_site","value":["breast","bronchus and lung"]}},
-		{"op":">=","content":{"field":"cases.diagnoses.age_at_diagnosis","value":10000}},
-		{"op":"<=","content":{"field":"cases.diagnoses.age_at_diagnosis","value":20000}},
-	]},
-})
+(async ()=>{
+	const matrixApi = await runproteinpaint({
+		holder:document.getElementById('aaa'),
+		launchGdcMatrix:true,
+		filter0: {"op":"and","content":[
+			{"op":"in","content":{"field":"cases.primary_site","value":["breast","bronchus and lung"]}},
+			{"op":">=","content":{"field":"cases.diagnoses.age_at_diagnosis","value":10000}},
+			{"op":"<=","content":{"field":"cases.diagnoses.age_at_diagnosis","value":20000}},
+		]},
+	})
+
+	console.log(matrixApi)
+})()
 
 </script>
 

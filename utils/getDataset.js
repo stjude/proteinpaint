@@ -21,7 +21,8 @@ const datasets = {
 	allPharmacotyping,
 	ash,
 	mbmeta,
-	sjlife2
+	sjlife2,
+	mbunder6
 	// add more datasets
 }
 
@@ -122,6 +123,27 @@ function mbmeta() {
 				tp,
 				'sdhanda/mb_portal/BT_database/MB03_meta_analysis/data_jan7_2022/Metadata/Alterations/cnv_focal1.tsv'
 			)
+	)
+}
+
+function mbunder6() {
+	checkDir('files/hg38/mbunder6/clinical/')
+	exec(
+		'scp ppr:/opt/data/pp/tp_native_dir/files/hg38/mbunder6/clinical/db ' +
+			path.join(tp, 'files/hg38/mbunder6/clinical/db')
+	)
+	checkDir('sdhanda/mb_portal/BT_database/mb_review/')
+	exec(
+		'scp ppr:/opt/data/pp/tp_native_dir/sdhanda/mb_portal/BT_database/mb_review/CNV_data_firstcase.tsv ' +
+			path.join(tp, 'sdhanda/mb_portal/BT_database/mb_review/CNV_data_firstcase.tsv')
+	)
+	exec(
+		'scp ppr:/opt/data/pp/tp_native_dir/sdhanda/mb_portal/BT_database/mb_review/fusion_firstcase.tsv ' +
+			path.join(tp, 'sdhanda/mb_portal/BT_database/mb_review/fusion_firstcase.tsv')
+	)
+	exec(
+		'scp ppr:/opt/data/pp/tp_native_dir/sdhanda/mb_portal/BT_database/mb_review/SNVindel_firstcase.tsv ' +
+			path.join(tp, 'sdhanda/mb_portal/BT_database/mb_review/SNVindel_firstcase.tsv')
 	)
 }
 

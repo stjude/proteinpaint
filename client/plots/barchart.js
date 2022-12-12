@@ -157,6 +157,7 @@ class Barchart {
 	}
 
 	async main() {
+		console.log('main')
 		const c = this.state.config
 		if (c.chartType != this.type && c.childType != this.type) return
 		try {
@@ -549,10 +550,10 @@ class Barchart {
 			})
 		}
 		if (t2) {
-			//calculate total number of tests
+			//calculate total number of unskipped tests
 			let testNum = 0
 			for (const chartId in this.chartsData.tests) {
-				testNum += this.chartsData.tests[chartId].reduce((a, b) => a + b.term2tests.length, 0)
+				testNum += this.chartsData.tests[chartId].reduce((a, b) => a + b.term2tests.filter(a => !a.skipped).length, 0)
 			}
 
 			legendGrps.push({
@@ -692,14 +693,21 @@ function setRenderers(self) {
 			})
 		}
 		const columns = [
-			{ label: 'Group 1' },
-			{ label: 'Group 2' },
-			{ label: 'Group 3' },
-			{ label: 'Group 4' },
+			{ label: 'Category 1' },
+			{ label: 'Category 2' },
+			{ label: 'Category 3' },
+			{ label: 'Category 4' },
 			{ label: 'P-value' }
 		]
-		const allFisher = self.chartsData.tests[chart.chartId].every(term1 => term1.term2tests.every(term2 => !term2.isChi))
-		const allChi = self.chartsData.tests[chart.chartId].every(term1 => term1.term2tests.every(term2 => term2.isChi))
+		const allFisher = self.chartsData.tests[chart.chartId].every(term1 =>
+			term1.term2tests.every(term2 => !term2.isChi || term2.skipped)
+		)
+		const allChi = self.chartsData.tests[chart.chartId].every(term1 =>
+			term1.term2tests.every(term2 => term2.isChi || term2.skipped)
+		)
+		const noSkipped = self.chartsData.tests[chart.chartId].every(term1 =>
+			term1.term2tests.every(term2 => !term2.skipped)
+		)
 		const rows = []
 
 		const visibleTests = self.chartsData.tests[chart.chartId].filter(term1Data =>
@@ -720,11 +728,12 @@ function setRenderers(self) {
 					{ value: 'not ' + term2.term2Label },
 					//if both chi-square and Fisher's exact tests were used. for the tests computed by Fisher's exact test, add a superscript letter 'a' after the pvalue.
 					{
-						html:
-							(term2.pvalue > 1e-4
-								? Number(term2.pvalue.toFixed(4))
-								: Number(term2.pvalue.toPrecision(4)).toExponential()) +
-							(allFisher || term2.isChi ? '' : '<sup><b>a</b></sup>')
+						html: term2.skipped
+							? 'N/A'
+							: (term2.pvalue > 1e-4
+									? Number(term2.pvalue.toFixed(4))
+									: Number(term2.pvalue.toPrecision(4)).toExponential()) +
+							  (allFisher || term2.isChi ? '' : '<sup><b>a</b></sup>')
 					}
 				])
 			}
@@ -748,7 +757,10 @@ function setRenderers(self) {
 			.style('text-align', 'left')
 			.style('font-size', '10px')
 			.style('font-weight', 'normal')
-			.html(allFisher || allChi ? '' : "<sup><b>a</b></sup> computed by Fisher's exact test")
+			.html(
+				(noSkipped ? '' : 'N/A: association test skipped because of limited sample size <br>') +
+					(allFisher || allChi ? '' : "<sup><b>a</b></sup> computed by Fisher's exact test")
+			)
 	}
 }
 
