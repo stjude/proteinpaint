@@ -3383,14 +3383,20 @@ async function gdcCheckPermission(gdcFileUUID, token, sessionid) {
 		}
 		*/
 	} catch (e) {
-		console.log('gdcCheckPermission error: ', e?.code)
+		console.log('gdcCheckPermission error: ', e?.code || e)
 		// TODO refer to e.code
 		throw 'Permission denied'
 	}
 }
 
 async function get_gdc_bam(chr, start, stop, token, gdcFileUUID, bamfilename, sessionid) {
-	const headers = { 'Content-Type': 'application/json', Accept: 'application/json' }
+	// decompress: false prevents got from setting an 'Accept-encoding: gz' request header,
+	// which may not be handled properly by the GDC API in qa-uat
+	// per Phil, should only be used as a temporary workaround
+	// Also:
+	// since the expected response is binary data, should not set Accept: application/json as a request header
+	// also no body is submitted with a GET request, should not set a Content-type request header
+	const headers = { compression: false }
 	if (sessionid) headers['Cookie'] = `sessionid=${sessionid}`
 	else headers['X-Auth-Token'] = token
 	const fullpath = path.join(serverconfig.cachedir_bam, bamfilename)
