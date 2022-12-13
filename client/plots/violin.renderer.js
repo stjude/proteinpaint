@@ -223,76 +223,74 @@ export default function violinRenderer(self) {
 	}
 	self.displayLabelClickMenu = function(plot, selection) {
 		self.app.tip.d.selectAll('*').remove()
-
 		const options = []
 
 		if (self.config.term2) {
-			options.push(
-				{
+			if (self.config.term.term.type != 'categorical') {
+				options.push({
 					label: `Add filter: ${plot.label.split(',')[0]}`,
 					callback: self.getAddFilterCallback(plot, selection, 'term2')
-				}
-				// {
-				// 	label: 'Add filter: both term and overlay',
-				// 	callback: self.getAddFilterCallback(plot, selection)
-				// }
-			)
-		}
-
-		self.app.tip.d
-			.append('div')
-			.selectAll('div')
-			.data(options)
-			.enter()
-			.append('div')
-			.attr('class', 'sja_menuoption')
-			.html(d => d.label)
-			.on('click', (event, d) => {
-				self.app.tip.hide()
-				d.callback()
-			})
-		self.app.tip.show(event.clientX, event.clientY) //self.dom.holder.select('.sjpp-brush'))
-	}
-
-	self.displayBrushMenu = function(plot, selection) {
-		console.log(224, plot, selection)
-		const elem = this
-		self.app.tip.d.selectAll('*').remove()
-
-		const options = [
-			{
-				label: 'Add filter: term only',
-				callback: self.getAddFilterCallback(plot, selection, 'term1')
+				})
+			} else {
+				options.push({
+					label: `Add filter: ${plot.label.split(',')[0]}`,
+					callback: self.getAddFilterCallback(plot, selection, 'term1')
+				})
 			}
-		]
 
-		if (self.config.term2) {
-			options.push(
-				{
-					label: 'Add filter: overlay only',
-					callback: self.getAddFilterCallback(plot, selection, 'term2')
-				},
-				{
-					label: 'Add filter: both term and overlay',
-					callback: self.getAddFilterCallback(plot, selection)
-				}
-			)
+			self.app.tip.d
+				.append('div')
+				.selectAll('div')
+				.data(options)
+				.enter()
+				.append('div')
+				.attr('class', 'sja_menuoption')
+				.html(d => d.label)
+				.on('click', (event, d) => {
+					self.app.tip.hide()
+					d.callback()
+				})
+			self.app.tip.show(event.clientX, event.clientY) //self.dom.holder.select('.sjpp-brush'))
 		}
-
-		self.app.tip.d
-			.append('div')
-			.selectAll('div')
-			.data(options)
-			.enter()
-			.append('div')
-			.attr('class', 'sja_menuoption')
-			.html(d => d.label)
-			.on('click', (event, d) => {
-				self.app.tip.hide()
-				d.callback()
-			})
-		self.app.tip.show(event.clientX, event.clientY) //self.dom.holder.select('.sjpp-brush'))
 	}
+
+	// self.displayBrushMenu = function(plot, selection) {
+	// 	self.app.tip.d.selectAll('*').remove()
+
+	// 	const options = [
+	// 		{
+	// 			label: 'Add filter: term only',
+	// 			callback: self.getAddFilterCallback(plot, selection, 'term1')
+	// 		}
+	// 	]
+
+	// 	if (self.config.term2) {
+	// 		options.push(
+	// 			{
+	// 				label: 'Add filter: overlay only',
+	// 				callback: self.getAddFilterCallback(plot, selection, 'term2')
+	// 			},
+	// 			{
+	// 				label: 'Add filter: both term and overlay',
+	// 				callback: self.getAddFilterCallback(plot, selection)
+	// 			}
+	// 		)
+	// 	}
+
+	// 	self.app.tip.d
+	// 		.append('div')
+	// 		.selectAll('div')
+	// 		.data(options)
+	// 		.enter()
+	// 		.append('div')
+	// 		.attr('class', 'sja_menuoption')
+	// 		.html(d => d.label)
+	// 		.on('click', (event, d) => {
+	// 			self.app.tip.hide()
+	// 			d.callback()
+	// 		})
+	// 	self.app.tip.show(event.clientX, event.clientY) //self.dom.holder.select('.sjpp-brush'))
+	// }
 
 	self.getAddFilterCallback = (plot, selection, term = '') => {
 		const tvslst = {
@@ -309,6 +307,7 @@ export default function violinRenderer(self) {
 					term: self.config.term.term
 				}
 			})
+			// console.log(306,tvslst);
 
 			if (self.config.term.q?.mode == 'continuous') {
 				tvslst.lst[0].tvs.ranges = [
@@ -327,6 +326,7 @@ export default function violinRenderer(self) {
 				]
 			}
 		}
+		// console.log(325,tvslst);
 		if ((!term || term == 'term2') && self.config.term2) {
 			const t2 = self.config.term2
 			tvslst.lst.push({
@@ -358,7 +358,6 @@ export default function violinRenderer(self) {
 			const filterUiRoot = getFilterItemByTag(self.state.termfilter.filter, 'filterUiRoot')
 			const filter = filterJoin([filterUiRoot, tvslst])
 			filter.tag = 'filterUiRoot'
-			console.log(302, filter)
 			self.app.dispatch({
 				type: 'filter_replace',
 				filter

@@ -101,9 +101,6 @@ export async function trigger_getViolinPlotData(q, res, ds, genome) {
 		if (q.divideTw) {
 			result.plots.push({
 				label: (q.divideTw?.term?.values?.[key]?.label || key) + ', n=' + values.length,
-				seriesId: key,
-				values,
-				seriesId: key,
 				values,
 				seriesId: key,
 				plotValueCount: values?.length,
