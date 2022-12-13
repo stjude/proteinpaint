@@ -60,91 +60,33 @@ function cosmic() {
 }
 
 function pnet() {
-	checkDir('files/hg19/pnet/clinical/')
-	exec('scp ppr:/opt/data/pp/tp_native_dir/files/hg19/pnet/clinical/db ' + path.join(tp, 'files/hg19/pnet/clinical/db'))
-	checkDir('files/hg19/pnet/classification/')
+	scpHpc('files/hg19/pnet/clinical/db')
 	scpHpc('files/hg19/pnet/classification/pnet_apr13_tnse.txt')
-	checkDir('sdhanda/mb_portal/BT_database/')
-	exec(
-		'scp ppr:/opt/data/pp/tp_native_dir/sdhanda/mb_portal/BT_database/SNVindel_pnet.tsv ' +
-			path.join(tp, 'sdhanda/mb_portal/BT_database/SNVindel_pnet.tsv')
-	)
-	exec(
-		'scp ppr:/opt/data/pp/tp_native_dir/sdhanda/mb_portal/BT_database/fusion_pnet.tsv ' +
-			path.join(tp, 'sdhanda/mb_portal/BT_database/fusion_pnet.tsv')
-	)
-	exec(
-		'scp ppr:/opt/data/pp/tp_native_dir/sdhanda/mb_portal/BT_database/CNV_data_pnet.tsv ' +
-			path.join(tp, 'sdhanda/mb_portal/BT_database/CNV_data_pnet.tsv')
-	)
+	scpHpc('sdhanda/mb_portal/BT_database/SNVindel_pnet.tsv')
+	scpHpc('sdhanda/mb_portal/BT_database/fusion_pnet.tsv')
+	scpHpc('sdhanda/mb_portal/BT_database/CNV_data_pnet.tsv')
 }
 
 function ihg() {
-	checkDir('files/hg19/ihg/clinical/')
-	exec('scp ppr:/opt/data/pp/tp_native_dir/files/hg19/ihg/clinical/db ' + path.join(tp, 'files/hg19/ihg/clinical/db'))
-	checkDir('files/hg19/ihg/classification/')
-	exec(
-		'scp ppr:/opt/data/pp/tp_native_dir/files/hg19/ihg/classification/ihg_oct20_TSNE.txt ' +
-			path.join(tp, 'files/hg19/ihg/classification/ihg_oct20_TSNE.txt')
-	)
-	checkDir('sdhanda/mb_portal/BT_database/')
-	exec(
-		'scp ppr:/opt/data/pp/tp_native_dir/sdhanda/mb_portal/BT_database/CNV_data_IHG.tsv ' +
-			path.join(tp, 'sdhanda/mb_portal/BT_database/CNV_data_IHG.tsv')
-	)
-	exec(
-		'scp ppr:/opt/data/pp/tp_native_dir/sdhanda/mb_portal/BT_database/fusion_IHG.tsv ' +
-			path.join(tp, 'sdhanda/mb_portal/BT_database/fusion_IHG.tsv')
-	)
+	scpHpc('files/hg19/ihg/clinical/db')
+	scpHpc('files/hg19/ihg/classification/ihg_oct20_TSNE.txt')
+	scpHpc('sdhanda/mb_portal/BT_database/CNV_data_IHG.tsv')
+	scpHpc('sdhanda/mb_portal/BT_database/fusion_IHG.tsv')
 	scpHpc('sdhanda/mb_portal/BT_database/SNVindel_IHG.tsv')
 }
 
 function mbmeta() {
-	checkDir('files/hg38/mbmeta/clinical/')
-	exec(
-		'scp ppr:/opt/data/pp/tp_native_dir/files/hg38/mbmeta/clinical/db ' + path.join(tp, 'files/hg38/mbmeta/clinical/db')
-	)
-	checkDir('files/hg38/mbmeta/classification/')
-	exec(
-		'scp ppr:/opt/data/pp/tp_native_dir/files/hg38/mbmeta/classification/meta_analysis_coordinates.txt ' +
-			path.join(tp, 'files/hg38/mbmeta/classification/meta_analysis_coordinates.txt')
-	)
-	checkDir('sdhanda/mb_portal/BT_database/MB03_meta_analysis/data_jan7_2022/Metadata/Alterations/')
-	exec(
-		'scp ppr:/opt/data/pp/tp_native_dir/sdhanda/mb_portal/BT_database/MB03_meta_analysis/data_jan7_2022/Metadata/Alterations/snv_indel1.tsv ' +
-			path.join(
-				tp,
-				'sdhanda/mb_portal/BT_database/MB03_meta_analysis/data_jan7_2022/Metadata/Alterations/snv_indel1.tsv'
-			)
-	)
-	exec(
-		'scp ppr:/opt/data/pp/tp_native_dir/sdhanda/mb_portal/BT_database/MB03_meta_analysis/data_jan7_2022/Metadata/Alterations/cnv_focal1.tsv ' +
-			path.join(
-				tp,
-				'sdhanda/mb_portal/BT_database/MB03_meta_analysis/data_jan7_2022/Metadata/Alterations/cnv_focal1.tsv'
-			)
-	)
+	scpHpc('files/hg38/mbmeta/clinical/db')
+	scpHpc('files/hg38/mbmeta/classification/meta_analysis_coordinates.txt')
+	scpHpc('sdhanda/mb_portal/BT_database/MB03_meta_analysis/data_jan7_2022/Metadata/Alterations/snv_indel1.tsv')
+	scpHpc('sdhanda/mb_portal/BT_database/MB03_meta_analysis/data_jan7_2022/Metadata/Alterations/cnv_focal1.tsv')
 }
 
 function mbunder6() {
-	checkDir('files/hg38/mbunder6/clinical/')
-	exec(
-		'scp ppr:/opt/data/pp/tp_native_dir/files/hg38/mbunder6/clinical/db ' +
-			path.join(tp, 'files/hg38/mbunder6/clinical/db')
-	)
-	checkDir('sdhanda/mb_portal/BT_database/mb_review/')
-	exec(
-		'scp ppr:/opt/data/pp/tp_native_dir/sdhanda/mb_portal/BT_database/mb_review/CNV_data_firstcase.tsv ' +
-			path.join(tp, 'sdhanda/mb_portal/BT_database/mb_review/CNV_data_firstcase.tsv')
-	)
-	exec(
-		'scp ppr:/opt/data/pp/tp_native_dir/sdhanda/mb_portal/BT_database/mb_review/fusion_firstcase.tsv ' +
-			path.join(tp, 'sdhanda/mb_portal/BT_database/mb_review/fusion_firstcase.tsv')
-	)
-	exec(
-		'scp ppr:/opt/data/pp/tp_native_dir/sdhanda/mb_portal/BT_database/mb_review/SNVindel_firstcase.tsv ' +
-			path.join(tp, 'sdhanda/mb_portal/BT_database/mb_review/SNVindel_firstcase.tsv')
-	)
+	scpHpc('files/hg38/mbunder6/clinical/db')
+	scpHpc('sdhanda/mb_portal/BT_database/mb_review/CNV_data_firstcase.tsv')
+	scpHpc('sdhanda/mb_portal/BT_database/mb_review/fusion_firstcase.tsv')
+	scpHpc('sdhanda/mb_portal/BT_database/mb_review/SNVindel_firstcase.tsv')
 }
 
 function allPharmacotyping() {
