@@ -70,6 +70,10 @@ ln -sfn $logdir /opt/data/pp/pp-log/forever
 
 echo "RESTARTED"
 cd ..
+if [[ -d "../helpers" ]]; then
+  # assumed to be under /opt/app/pp/available/ directory if there is $1 argument
+  cd ..
+fi 
 ./helpers/record.sh restart 
 
 # restart blat server if it is not running AND if there is a blat script
