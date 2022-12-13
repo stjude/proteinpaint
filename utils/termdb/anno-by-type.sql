@@ -1,11 +1,12 @@
 drop table if exists anno_integer;
-drop index if exists a_int_sample;
-drop index if exists a_int_termid;
-drop index if exists a_int_value;
+drop index if exists anno_int_sample;
+drop index if exists anno_int_value;
 create table anno_integer (
   sample integer not null,
   term_id character varying(100) not null,
-  value integer not null
+  value integer not null,
+  primary key(term_id, sample)
+
 );
 
 -- copy entries from the annotations table
@@ -14,9 +15,8 @@ select sample, term_id, CAST(value as integer)
 from annotations a 
 join terms t on t.id=a.term_id and t.type='integer';
 
-create index a_int_sample on anno_integer(sample);
-create index a_int_termid on anno_integer(term_id);
-create index a_int_value on anno_integer(value);
+create index anno_int_sample on anno_integer(sample);
+create index anno_int_value on anno_integer(value);
 
 
 -- compare the unique sample and term counts to verify
@@ -37,13 +37,14 @@ where t.type = 'integer' and cohort not like '%,%';
 ----------------------------------
 
 drop table if exists anno_float;
-drop index if exists a_float_sample;
-drop index if exists a_float_termid;
-drop index if exists a_float_value;
+drop index if exists anno_float_sample;
+drop index if exists anno_float_value;
 create table anno_float (
   sample integer not null,
   term_id character varying(100) not null,
-  value REAL not null
+  value REAL not null,
+    primary key(term_id, sample)
+
 );
 -- copy entries from the annotations table
 insert into anno_float (sample, term_id, value) 
@@ -51,9 +52,8 @@ select sample, term_id, CAST(value as real)
 from annotations a 
 join terms t on t.id=a.term_id and t.type='float';
 
-create index a_float_sample on anno_float(sample);
-create index a_float_termid on anno_float(term_id);
-create index a_float_value on anno_float(value);
+create index anno_float_sample on anno_float(sample);
+create index anno_float_value on anno_float(value);
 
 
 
@@ -72,13 +72,13 @@ where t.type = 'float' and cohort not like '%,%';
 ----------------------------------
 
 drop table if exists anno_categorical;
-drop index if exists a_cat_sample;
-drop index if exists a_cat_termid;
-drop index if exists a_cat_value;
+drop index if exists anno_cat_sample;
+drop index if exists anno_cat_value;
 create table anno_categorical (
   sample integer not null,
   term_id character varying(100) not null,
-  value character varying(255) not null
+  value character varying(255) not null,
+  primary key(term_id, sample)
 );
 
 -- copy entries from the annotations table
@@ -87,9 +87,8 @@ select sample, term_id, value
 from annotations a 
 join terms t on t.id=a.term_id and t.type='categorical';
 
-create index a_cat_sample on anno_categorical(sample);
-create index a_cat_termid on anno_categorical(term_id);
-create index a_cat_value on anno_categorical(value);
+create index anno_cat_sample on anno_categorical(sample);
+create index anno_cat_value on anno_categorical(value);
 
 -- compare the unique sample and term counts to verify
 select '----   #annotated samples, #terms   ------';
