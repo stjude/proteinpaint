@@ -61,34 +61,47 @@ function getParameter(tk, block) {
 	// including skewer or non-skewer
 	par.push('forTrack=1')
 
+	/*
+	temporary change: 
+	disable efficiency check and always issue data request, even when zooming in on same isoform (and the data are there)
+	this is to be able to let server properly count the number of samples with a mutation in the current range
+	to address ui issue
+
 	if (tk.uninitialized || !block.usegm || block.gmmode == 'genomic' || block.gmmodepast == 'genomic') {
 		// assumption is that api will return the same amount of variants for different mode (protein/exon/splicerna)
 		// so there's no need to re-request data in these modes (but not genomic mode)
-		if (tk.mds.has_skewer) {
-			// need to load skewer data
-			par.push('skewer=1')
-		}
-		if (tk.set_id) {
-			// quick fix!!!
-			par.push('set_id=' + tk.set_id)
-		}
-		if (tk.filter0) {
-			// expecting to be a simple filter such as
-			// {"op":"and","content":[{"op":"in","content":{"field":"cases.project.project_id","value":["TCGA-BRCA"]}}]}
-			par.push('filter0=' + encodeURIComponent(JSON.stringify(tk.filter0)))
-		}
-		if (tk.filterObj) {
-			// json filter object
-			if (tk.filterObj?.lst.length) {
-				// when user deletes the only tvs from the filter ui, the lst[] will be empty and can cause issue in backend
-				par.push('filterObj=' + encodeURIComponent(JSON.stringify(tk.filterObj)))
-			}
-		}
-		if (tk.token) headers['X-Auth-Token'] = tk.token
 	} else {
 		// in gmmode and not first time loading the track,
 		// do not request skewer data as all skewer data has already been loaded for current isoform
 		// still need to request other track data e.g. cnvpileup
+	}
+	*/
+
+	if (tk.mds.has_skewer) {
+		// need to load skewer data
+		par.push('skewer=1')
+	}
+	if (tk.set_id) {
+		// quick fix!!!
+		par.push('set_id=' + tk.set_id)
+	}
+	if (tk.filter0) {
+		// expecting to be a simple filter such as
+		// {"op":"and","content":[{"op":"in","content":{"field":"cases.project.project_id","value":["TCGA-BRCA"]}}]}
+		par.push('filter0=' + encodeURIComponent(JSON.stringify(tk.filter0)))
+	}
+	if (tk.filterObj) {
+		// json filter object
+		if (tk.filterObj?.lst.length) {
+			// when user deletes the only tvs from the filter ui, the lst[] will be empty and can cause issue in backend
+			par.push('filterObj=' + encodeURIComponent(JSON.stringify(tk.filterObj)))
+		}
+	}
+
+	if (tk.token) {
+		// quick fix for testing with gdc token, which is submitted as url parameter
+		// this method is not used in production
+		headers['X-Auth-Token'] = tk.token
 	}
 
 	if (tk.mds.label) {

@@ -300,13 +300,28 @@ function filter_data(q, result) {
 	// will not be needed when filters are combined into graphql query language
 	if (result.skewer) {
 		const newskewer = []
+
 		for (const m of result.skewer) {
 			if (q.hiddenmclass && q.hiddenmclass.has(m.class)) continue
+
+			if (q.rglst) {
+				/* when rglst[{chr/start/stop}] is given, filter skewer data points to only keep those in view range
+				this is to address an issue that zooming in when gmmode=protein, tk shows "No samples"
+				client has changed that will always issue request when zooming in on same isoform
+				server will re-request data, though inefficient
+				so as to calculate the number of samples with mutations in zoomed in region of protein
+				*/
+				if (!q.rglst.find(r => m.chr == r.chr && m.pos >= r.start && m.pos <= r.stop)) {
+					// not in any region
+					continue
+				}
+			}
 
 			// filter by other variant attributes
 
 			newskewer.push(m)
 		}
+
 		result.skewer = newskewer
 	}
 

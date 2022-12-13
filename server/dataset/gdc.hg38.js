@@ -200,6 +200,23 @@ const variant2samplesGdcapi = {
 			throw '.ssm_id_lst, .isoform, .isoforms are all missing'
 		}
 
+		if (p.rglst) {
+			/* to filter out variants that are out of view range (e.g. zoomed in on protein)
+			necessary when zooming in
+
+			!!!hardcoded to only one region!!!
+
+			*/
+			f.content.push({
+				op: '>=',
+				content: { field: 'ssms.start_position', value: p.rglst[0].start }
+			})
+			f.content.push({
+				op: '<=',
+				content: { field: 'ssms.start_position', value: p.rglst[0].stop }
+			})
+		}
+
 		if (p.set_id) {
 			if (typeof p.set_id != 'string') throw '.set_id value not string'
 			f.content.push({
