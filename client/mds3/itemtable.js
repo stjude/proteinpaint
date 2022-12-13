@@ -42,7 +42,10 @@ export async function itemtable(arg) {
 		if (m.dt != dtsnvindel && m.dt != dtfusionrna && m.dt != dtsv) throw 'mlst[] contains unknown dt'
 	}
 
-	const grid = arg.div.append('div').style('display', 'inline-grid')
+	const grid = arg.div
+		.append('div')
+		.style('display', 'inline-grid')
+		.style('overflow-y', 'scroll')
 
 	if (arg.mlst.length == 1) {
 		await itemtable_oneItem(arg, grid)

@@ -80,7 +80,7 @@ export async function renderTable({
 		.style('background-color', 'white')
 		.style('max-width', maxWidth)
 		.style('max-height', maxHeight)
-		.style('overflow-y', 'scroll')
+		.attr('class', 'sjpp_hide_scrollbar')
 		.append('table')
 		.style('width', '100%')
 		.style('table-layout', 'fixed')

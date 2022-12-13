@@ -226,13 +226,13 @@ function setRenderers(self) {
 
 		if (term.terms.length >= minTermCount2scroll) {
 			// too many children. scroll
-			if (div.style('overflow-y') == 'scroll') {
+			if (div.classed('sjpp_hide_scrollbar')) {
 				// already scrolling. the style has been applied from a previous click. do not reset
 			} else {
 				div
 					.style('height', scrollDivMaxHeight)
 					.style('resize', 'vertical')
-					.style('overflow-y', 'scroll')
+					.classed('sjpp_hide_scrollbar', true)
 
 				/***************************
 				remaining issues
