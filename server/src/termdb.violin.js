@@ -84,8 +84,8 @@ export async function trigger_getViolinPlotData(q, res, ds, genome) {
 		: (key2values = [...key2values].sort((a, b) => {
 				return a
 					.toString()
-					.replace(/[^a-zA-Z0-9< ]/g, '')
-					.localeCompare(b.toString().replace(/[^a-zA-Z0-9< ]/g, ''), undefined, {
+					.replace(/[^a-zA-Z0-9]/g, '')
+					.localeCompare(b.toString().replace(/[^a-zA-Z0-9]/g, ''), undefined, {
 						numeric: true
 					})
 		  }))
@@ -101,8 +101,13 @@ export async function trigger_getViolinPlotData(q, res, ds, genome) {
 		if (q.divideTw) {
 			result.plots.push({
 				label: (q.divideTw?.term?.values?.[key]?.label || key) + ', n=' + values.length,
+				seriesId: key,
 				values,
-				plotValueCount: values?.length
+				seriesId: key,
+				values,
+				seriesId: key,
+				plotValueCount: values?.length,
+				color: q.divideTw?.term?.values[key]?.color || null
 			})
 		} else {
 			result.plots.push({
@@ -149,6 +154,9 @@ export async function trigger_getViolinPlotData(q, res, ds, genome) {
 			q.orientation === 'horizontal'
 				? ctx.arc(+axisScale(i), 5, 2, 0, 2 * Math.PI)
 				: ctx.arc(5, +axisScale(i), 2, 0, 2 * Math.PI)
+			q.orientation == 'horizontal'
+				? ctx.arc(+axisScale(i), 5, 1.7, 0, 2 * Math.PI)
+				: ctx.arc(5, +axisScale(i), 1.7, 0, 2 * Math.PI)
 		})
 		ctx.fill()
 		ctx.stroke()

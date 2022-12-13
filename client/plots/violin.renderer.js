@@ -2,8 +2,9 @@ import { axisLeft, axisTop } from 'd3-axis'
 import { scaleLinear, scaleOrdinal } from 'd3-scale'
 import { area, curveBumpX, curveBumpY } from 'd3-shape'
 import { schemeCategory10 } from 'd3-scale-chromatic'
-import { brushX } from 'd3'
-import { renderTable } from '../dom/table'
+import { brushX, brushY } from 'd3'
+import { renderTable } from '#dom/table'
+import { filterJoin, getFilterItemByTag } from '../filter/filter'
 
 export default function violinRenderer(self) {
 	const k2c = scaleOrdinal(schemeCategory10)
@@ -13,7 +14,7 @@ export default function violinRenderer(self) {
 			self.dom.holder.html(
 				` <span style="opacity:.6;font-size:1em;margin-left:90px;">No data to render Violin Plot</span>`
 			)
-			self.dom.legendHolder.selectAll('*').remove()
+			self.dom.tableHolder.selectAll('*').remove()
 			return
 		} else self.dom.holder.select('*').remove()
 
@@ -115,16 +116,24 @@ export default function violinRenderer(self) {
 
 			const violinG = svgG
 				.append('g')
+				.datum(plot)
 				.attr(
 					'transform',
 					isH
 						? 'translate(0,' + plotThickness * (plotIdx + 0.5) + ')'
 						: 'translate(' + plotThickness * (plotIdx + 0.5) + ',0)'
 				)
-				.attr('classed', 'sjpp-violinG')
+				.attr('class', 'sjpp-violinG')
 
 			// create label
-			const label = violinG.append('text').text(plot.label)
+			const label = violinG
+				.append('text')
+				.text(plot.label)
+				.style('cursor', 'pointer')
+				.on('click', function(event) {
+					if (!event.target) return
+					self.displayLabelClickMenu(plot, event.target)
+				})
 			if (isH) {
 				label
 					.attr('x', -5)
@@ -163,14 +172,14 @@ export default function violinRenderer(self) {
 			violinG
 				.append('path')
 				.attr('class', 'sjpp-vp-path')
-				.style('fill', k2c(plotIdx))
+				.style('fill', plot.color ? plot.color : k2c(plotIdx))
 				.style('opacity', '0.8')
 				.attr('d', areaBuilder(plot.plotValueCount > 3 ? plot.bins : 0)) //do not build violin plots for values 3 or less than 3.
 
 			violinG
 				.append('image')
 				.attr('xlink:href', plot.src)
-				.attr('transform', isH ? `translate(0, -9)` : 'translate(-9, 0)')
+				.attr('transform', isH ? 'translate(0, -10)' : 'translate(-10, 0)')
 
 			//render median values on plots
 			if (plot.plotValueCount >= 2) {
@@ -188,38 +197,178 @@ export default function violinRenderer(self) {
 
 			violinG
 				.append('g')
-				.attr('classed', 'sjpp-brush')
+				.classed('sjpp-brush', true)
 				.call(
-					brushX()
-						.extent([[0, -20], [plotLength, 20]])
-						.on('', async event => {
-							const selection = event.selection
-							// console.log(187, selection);
-							if (!selection) return
-							const start = axisScale.invert(selection[0])
-							const end = axisScale.invert(selection[1])
-							self.app.dispatch({
-								type: 'plot_edit',
-								id: self.id,
-								config: {
-									settings: {
-										violin: {
-											brushRange: { start, end, plotIdx }
-										}
-									}
-								}
-							})
-						})
+					isH
+						? brushX()
+								.extent([[0, -20], [plotLength, 20]])
+								.on('end', async event => {
+									const selection = event.selection
+
+									if (!selection) return
+
+									// self.displayBrushMenu(plot, selection)
+								})
+						: brushY()
+								.extent([[-20, 0], [20, plotLength]])
+								.on('end', async event => {
+									const selection = event.selection
+
+									if (!selection) return
+
+									// self.displayBrushMenu(plot, selection)
+								})
 				)
+		}
+	}
+	self.displayLabelClickMenu = function(plot, selection) {
+		self.app.tip.d.selectAll('*').remove()
+
+		const options = []
+
+		if (self.config.term2) {
+			options.push(
+				{
+					label: `Add filter: ${plot.label.split(',')[0]}`,
+					callback: self.getAddFilterCallback(plot, selection, 'term2')
+				}
+				// {
+				// 	label: 'Add filter: both term and overlay',
+				// 	callback: self.getAddFilterCallback(plot, selection)
+				// }
+			)
+		}
+
+		self.app.tip.d
+			.append('div')
+			.selectAll('div')
+			.data(options)
+			.enter()
+			.append('div')
+			.attr('class', 'sja_menuoption')
+			.html(d => d.label)
+			.on('click', (event, d) => {
+				self.app.tip.hide()
+				d.callback()
+			})
+		self.app.tip.show(event.clientX, event.clientY) //self.dom.holder.select('.sjpp-brush'))
+	}
+
+	self.displayBrushMenu = function(plot, selection) {
+		console.log(224, plot, selection)
+		const elem = this
+		self.app.tip.d.selectAll('*').remove()
+
+		const options = [
+			{
+				label: 'Add filter: term only',
+				callback: self.getAddFilterCallback(plot, selection, 'term1')
+			}
+		]
+
+		if (self.config.term2) {
+			options.push(
+				{
+					label: 'Add filter: overlay only',
+					callback: self.getAddFilterCallback(plot, selection, 'term2')
+				},
+				{
+					label: 'Add filter: both term and overlay',
+					callback: self.getAddFilterCallback(plot, selection)
+				}
+			)
+		}
+
+		self.app.tip.d
+			.append('div')
+			.selectAll('div')
+			.data(options)
+			.enter()
+			.append('div')
+			.attr('class', 'sja_menuoption')
+			.html(d => d.label)
+			.on('click', (event, d) => {
+				self.app.tip.hide()
+				d.callback()
+			})
+		self.app.tip.show(event.clientX, event.clientY) //self.dom.holder.select('.sjpp-brush'))
+	}
+
+	self.getAddFilterCallback = (plot, selection, term = '') => {
+		const tvslst = {
+			type: 'tvslst',
+			in: true,
+			join: 'and',
+			lst: []
+		}
+
+		if (!term || term == 'term1') {
+			tvslst.lst.push({
+				type: 'tvs',
+				tvs: {
+					term: self.config.term.term
+				}
+			})
+
+			if (self.config.term.q?.mode == 'continuous') {
+				tvslst.lst[0].tvs.ranges = [
+					{
+						start: selection[0],
+						stop: selection[1],
+						startinclusive: true,
+						stopinclusive: true
+					}
+				]
+			} else {
+				tvslst.lst[0].tvs.values = [
+					{
+						key: plot.seriesId
+					}
+				]
+			}
+		}
+		if ((!term || term == 'term2') && self.config.term2) {
+			const t2 = self.config.term2
+			tvslst.lst.push({
+				type: 'tvs',
+				tvs: {
+					term: t2.term
+				}
+			})
+			const item = tvslst.lst[1] || tvslst.lst[0]
+			if (t2.q?.mode == 'continuous') {
+				item.tvs.ranges = [
+					{
+						start: selection[0],
+						stop: selection[1],
+						startinclusive: true,
+						stopinclusive: true
+					}
+				]
+			} else {
+				item.tvs.values = [
+					{
+						key: plot.seriesId
+					}
+				]
+			}
+		}
+
+		return () => {
+			const filterUiRoot = getFilterItemByTag(self.state.termfilter.filter, 'filterUiRoot')
+			const filter = filterJoin([filterUiRoot, tvslst])
+			filter.tag = 'filterUiRoot'
+			console.log(302, filter)
+			self.app.dispatch({
+				type: 'filter_replace',
+				filter
+			})
 		}
 	}
 
 	self.renderBrushValues = function() {
 		const range = self.config.settings.violin.brushRange
 		if (!range) return //also delete the table
-		const plot = self.data.plots[range.plotIdx]
-		const values = plot.values.filter(v => v >= range.start && v <= range.end)
-		// console.log(212, values);
 	}
 
 	self.renderPvalueTable = function() {
@@ -237,12 +386,10 @@ export default function violinRenderer(self) {
 			return
 		}
 
-		const title = this.dom.tableHolder
+		this.dom.tableHolder
 			.append('div')
 			.style('font-weight', 'bold')
 			.html("Group comparisons (Wilcoxon's rank sum test)")
-
-		const table = this.dom.tableHolder.append('div')
 
 		const columns = [{ label: 'Group 1' }, { label: 'Group 2' }, { label: 'P-value' }]
 		const rows = this.data.pvalues
