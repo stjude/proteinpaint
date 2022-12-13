@@ -77,7 +77,7 @@ create table annotations (
   sample integer not null,
   term_id character varying(100) not null,
   value character varying(255) not null,
-  primary key(sample, term_id),
+  primary key(term_id, sample),
   foreign key(sample) references sampleidmap(id),
   foreign key(term_id) references terms(id)
 );
@@ -92,7 +92,7 @@ create table chronicevents (
   grade integer not null,
   age_graded real not null,
   years_to_event real not null,
-  primary key(sample, term_id),
+  primary key(term_id, sample),
   foreign key(sample) references sampleidmap(id),
   foreign key(term_id) references terms(id)
 );
@@ -110,7 +110,7 @@ CREATE TABLE precomputed(
   computable_grade integer,
   max_grade integer,
   most_recent integer,
-  primary key(sample, term_id),
+  primary key(term_id, sample),
   foreign key(sample) references sampleidmap(id),
   foreign key(term_id) references terms(id)
 );
@@ -145,7 +145,7 @@ CREATE TABLE survival(
  term_id TEXT not null,
  tte INT, -- time-to-event
  exit_code INT, -- cohort defined exit code, may be 0=death, 1=censored, or similar
-primary key(sample, term_id),
+primary key(term_id, sample),
 foreign key(sample) references sampleidmap(id),
 foreign key(term_id) references terms(id)
 );
