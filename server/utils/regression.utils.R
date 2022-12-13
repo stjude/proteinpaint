@@ -518,7 +518,7 @@ plot_spline <- function(splineVariable, dat, outcome, res, regtype) {
     # use only finite predicted data
     toKeep <- rowSums(!is.finite(preddat_ci_adj)) == 0
     preddat_ci_adj <- preddat_ci_adj[toKeep,]
-    newdat <- newdat[toKeep,]
+    newdat <- newdat[toKeep,,drop = F]
     # first plot actual (not predicted) data
     # predicted data will be overlayed later
     plot(dat[,splineVariable$id],
@@ -538,7 +538,7 @@ plot_spline <- function(splineVariable, dat, outcome, res, regtype) {
     # use only finite predicted data
     toKeep <- rowSums(!is.finite(preddat_ci_adj)) == 0
     preddat_ci_adj <- preddat_ci_adj[toKeep,]
-    newdat <- newdat[toKeep,]
+    newdat <- newdat[toKeep,,drop = F]
     pointtype <- 16
     pointsize <- 0.3
     ylab <- "Hazard Ratio"
