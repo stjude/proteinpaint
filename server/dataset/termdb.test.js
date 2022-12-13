@@ -110,6 +110,14 @@ module.exports = function() {
 				// to age_end to prevent age_end = age_start (which
 				// would cause regression analysis to fail in R)
 
+				// term ids specific to dataset
+				termIds: {
+					ageDxId: 'agedx', // age at diagnosis
+					ageLastVisitId: 'agelastvisit', // age at last visit
+					ageNdiId: 'a_ndi', // age at last NDI seach
+					ageDeathId: 'a_death' // age at death
+				},
+
 				selectCohort: {
 					// wrap term.id into a term json object so as to use it in tvs;
 					// the term is not required to exist in termdb
