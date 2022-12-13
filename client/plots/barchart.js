@@ -91,6 +91,7 @@ class Barchart {
 					inputs: [
 						'term1',
 						'overlay',
+						'divideBy',
 						{
 							label: 'Orientation',
 							type: 'radio',
@@ -109,7 +110,6 @@ class Barchart {
 								{ label: 'Proportion', value: 'pct', getDisplayStyle: plot => (plot.term2 ? 'inline-block' : 'none') }
 							]
 						},
-						'divideBy',
 						// a checkbox to allow users to show or hide asterisks on bars
 						{
 							label: 'Asterisks',

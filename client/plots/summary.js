@@ -1,5 +1,5 @@
 import { getCompInit, copyMerge } from '#rx'
-import { Menu } from '#src/client'
+import { Menu } from '#dom/menu'
 import { fillTermWrapper } from '../termsetting/termsetting'
 import { recoverInit } from '../rx/src/recover'
 import { select } from 'd3-selection'

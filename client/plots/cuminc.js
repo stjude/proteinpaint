@@ -249,6 +249,7 @@ class MassCumInc {
 					app: this.app,
 					id: this.id,
 					holder: this.dom.controls.attr('class', 'pp-termdb-plot-controls').style('display', 'inline-block'),
+
 					inputs: [
 						'term1',
 
@@ -256,6 +257,11 @@ class MassCumInc {
 							label: 'Overlay',
 							title: 'Overlay',
 							type: 'overlay',
+
+							// when numeric term is used as overlay, do not allow continuous mode
+							// must set it, as it defaults to ['continuous','discrete']
+							numericEditMenuVersion: ['discrete'],
+
 							defaultQ4fillTW: {
 								// use of "numeric.toggle" is a bit confusing; numeric.discrete.js feels more appropriate
 								'numeric.toggle': {

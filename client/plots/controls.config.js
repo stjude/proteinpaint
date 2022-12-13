@@ -48,6 +48,7 @@ class TdbConfigUiInit {
 							id: this.id,
 							usecase: obj.usecase,
 							defaultQ4fillTW: obj.defaultQ4fillTW,
+							numericEditMenuVersion: obj.numericEditMenuVersion,
 							debug: this.opts.debug
 						})
 					}

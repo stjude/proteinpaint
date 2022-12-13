@@ -95,7 +95,11 @@ class TdbSurvival {
 					inputs: [
 						{
 							type: 'overlay',
-							usecase: { target: 'survival', detail: 'term2' }
+							usecase: { target: 'survival', detail: 'term2' },
+
+							// when numeric term is used as overlay, do not allow continuous mode
+							// must set it, as it defaults to ['continuous','discrete']
+							numericEditMenuVersion: ['discrete']
 						},
 						{
 							type: 'divideBy',

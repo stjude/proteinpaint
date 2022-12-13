@@ -2,6 +2,14 @@ import { getCompInit, multiInit } from '../rx'
 import { topBarInit } from './controls.btns'
 import { configUiInit } from './controls.config'
 
+/*
+constructor options:
+
+.inputs = []
+	see an example
+
+*/
+
 const panel_bg_color = '#fdfaf4'
 const panel_border_color = '#D3D3D3'
 let i = 0 // track controls "instances" for assigning unambiguous unique input names
@@ -42,8 +50,6 @@ class TdbPlotControls {
 					id: this.id,
 					holder: this.dom.config_div,
 					tip: this.app.tip,
-					isleaf: this.opts.isleaf,
-					iscondition: this.opts.iscondition,
 					inputs: this.opts.inputs
 				})
 			})

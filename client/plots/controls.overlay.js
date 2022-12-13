@@ -1,6 +1,6 @@
 import { getCompInit } from '../rx'
 import { termsettingInit } from '../termsetting/termsetting'
-import { Menu } from '../src/client'
+import { Menu } from '#dom/menu'
 import { getNormalRoot } from '../filter/filter'
 
 /*
@@ -42,8 +42,8 @@ class Overlay {
 			menuOptions: 'all', // to show edit/replace/remove menu upon clicking pill
 			defaultQ4fillTW: this.opts.defaultQ4fillTW,
 
-			// temp change to enable toggling between continuous/discrete for numeric term1
-			numericEditMenuVersion: ['continuous', 'discrete'],
+			// overlay term can be continous for bar/violin; but not for cuminc plot, thus the option
+			numericEditMenuVersion: this.opts.numericEditMenuVersion || ['continuous', 'discrete'],
 
 			callback: term2 => {
 				// term2 is {term,q} and can be null
