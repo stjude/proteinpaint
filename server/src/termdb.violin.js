@@ -43,6 +43,14 @@ export async function trigger_getViolinPlotData(q, res, ds, genome) {
 	const data = await getData({ terms: twLst, filter: q.filter, currentGeneNames: q.currentGeneNames }, ds, genome)
 	if (data.error) throw data.error
 
+	//create numeric bins for the overlay term to provide filtering options
+	const divideTwBins = new Map()
+	if (q.divideTw && data.refs.byTermId[(q.divideTw?.term?.id)]) {
+		for (const c of data.refs.byTermId?.[q.divideTw?.term?.id].bins) {
+			divideTwBins.set(c.label, c)
+		}
+	}
+
 	let min = Number.MAX_VALUE,
 		max = -Number.MAX_VALUE
 
@@ -104,7 +112,8 @@ export async function trigger_getViolinPlotData(q, res, ds, genome) {
 				values,
 				seriesId: key,
 				plotValueCount: values?.length,
-				color: q.divideTw?.term?.values[key]?.color || null
+				color: q.divideTw?.term?.values?.[key]?.color || null,
+				divideTwBins: divideTwBins.has(key) ? divideTwBins.get(key) : null
 			})
 		} else {
 			result.plots.push({

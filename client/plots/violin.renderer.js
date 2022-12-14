@@ -10,7 +10,7 @@ export default function violinRenderer(self) {
 	const k2c = scaleOrdinal(schemeCategory10)
 
 	self.render = function() {
-		if (self.data.plots.length == 0) {
+		if (self.data.plots.length === 0) {
 			self.dom.holder.html(
 				` <span style="opacity:.6;font-size:1em;margin-left:90px;">No data to render Violin Plot</span>`
 			)
@@ -129,11 +129,12 @@ export default function violinRenderer(self) {
 			const label = violinG
 				.append('text')
 				.text(plot.label)
-				.style('cursor', 'pointer')
+				.style('cursor', self.config.term2 ? 'pointer' : 'default')
 				.on('click', function(event) {
-					if (!event.target) return
-					self.displayLabelClickMenu(plot, event.target)
+					if (!event) return
+					self.displayLabelClickMenu(plot, event)
 				})
+
 			if (isH) {
 				label
 					.attr('x', -5)
@@ -221,20 +222,22 @@ export default function violinRenderer(self) {
 				)
 		}
 	}
-	self.displayLabelClickMenu = function(plot, selection) {
+
+	self.displayLabelClickMenu = function(plot, event) {
 		self.app.tip.d.selectAll('*').remove()
+
 		const options = []
 
 		if (self.config.term2) {
-			if (self.config.term.term.type != 'categorical') {
+			if (self.config.term.term.type === 'categorical') {
 				options.push({
 					label: `Add filter: ${plot.label.split(',')[0]}`,
-					callback: self.getAddFilterCallback(plot, selection, 'term2')
+					callback: self.getAddFilterCallback(plot, 'term1')
 				})
 			} else {
 				options.push({
 					label: `Add filter: ${plot.label.split(',')[0]}`,
-					callback: self.getAddFilterCallback(plot, selection, 'term1')
+					callback: self.getAddFilterCallback(plot, 'term2')
 				})
 			}
 
@@ -249,8 +252,9 @@ export default function violinRenderer(self) {
 				.on('click', (event, d) => {
 					self.app.tip.hide()
 					d.callback()
+					self.dom.tableHolder.style('display', 'none')
 				})
-			self.app.tip.show(event.clientX, event.clientY) //self.dom.holder.select('.sjpp-brush'))
+			self.app.tip.show(event.clientX, event.clientY)
 		}
 	}
 
@@ -292,7 +296,7 @@ export default function violinRenderer(self) {
 	// 	self.app.tip.show(event.clientX, event.clientY) //self.dom.holder.select('.sjpp-brush'))
 	// }
 
-	self.getAddFilterCallback = (plot, selection, term = '') => {
+	self.getAddFilterCallback = (plot, term = '') => {
 		const tvslst = {
 			type: 'tvslst',
 			in: true,
@@ -300,24 +304,23 @@ export default function violinRenderer(self) {
 			lst: []
 		}
 
-		if (!term || term == 'term1') {
+		if (!term || term === 'term1') {
 			tvslst.lst.push({
 				type: 'tvs',
 				tvs: {
 					term: self.config.term.term
 				}
 			})
-			// console.log(306,tvslst);
 
-			if (self.config.term.q?.mode == 'continuous') {
-				tvslst.lst[0].tvs.ranges = [
-					{
-						start: selection[0],
-						stop: selection[1],
-						startinclusive: true,
-						stopinclusive: true
-					}
-				]
+			if (self.config.term?.q?.mode === 'continuous') {
+				// tvslst.lst[0].tvs.ranges = [
+				// 	{
+				// 		start: selection[0],
+				// 		stop: selection[1],
+				// 		startinclusive: true,
+				// 		stopinclusive: true
+				// 	}
+				// ]
 			} else {
 				tvslst.lst[0].tvs.values = [
 					{
@@ -326,7 +329,6 @@ export default function violinRenderer(self) {
 				]
 			}
 		}
-		// console.log(325,tvslst);
 		if ((!term || term == 'term2') && self.config.term2) {
 			const t2 = self.config.term2
 			tvslst.lst.push({
@@ -336,13 +338,15 @@ export default function violinRenderer(self) {
 				}
 			})
 			const item = tvslst.lst[1] || tvslst.lst[0]
-			if (t2.q?.mode == 'continuous') {
+			if (t2.q?.mode === 'continuous' || (t2.term?.type === 'float' || t2.term?.type === 'integer')) {
 				item.tvs.ranges = [
 					{
-						start: selection[0],
-						stop: selection[1],
-						startinclusive: true,
-						stopinclusive: true
+						start: plot.divideTwBins?.start ? plot.divideTwBins.start : null,
+						stop: plot.divideTwBins?.stop ? plot.divideTwBins.stop : null,
+						startinclusive: plot.divideTwBins?.startinclusive,
+						stopinclusive: plot.divideTwBins?.stopinclusive,
+						startunbounded: plot.divideTwBins?.startunbounded ? plot.divideTwBins?.startunbounded : null,
+						stopunbounded: plot.divideTwBins?.stopunbounded ? plot.divideTwBins?.stopunbounded : null
 					}
 				]
 			} else {
@@ -372,7 +376,6 @@ export default function violinRenderer(self) {
 
 	self.renderPvalueTable = function() {
 		this.dom.tableHolder
-			.style('display', 'inline-block')
 			.style('vertical-align', 'top')
 			.selectAll('*')
 			.remove()
@@ -387,8 +390,9 @@ export default function violinRenderer(self) {
 
 		this.dom.tableHolder
 			.append('div')
+			.attr('class', 'sjpp-pvalue-title')
 			.style('font-weight', 'bold')
-			.html("Group comparisons (Wilcoxon's rank sum test)")
+			.text("Group comparisons (Wilcoxon's rank sum test)")
 
 		const columns = [{ label: 'Group 1' }, { label: 'Group 2' }, { label: 'P-value' }]
 		const rows = this.data.pvalues
