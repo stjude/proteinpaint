@@ -158,14 +158,45 @@ async function load_driver(q, ds) {
 
 			out[] must be list of sample obj, each with .ssm_id
 			*/
-			const id2samples = new Map() // k: sample_id, v: { key:val, ssm_id_lst:[] }
+			const id2samples = new Map()
+			/*
+			k: sample_id
+			v: sample obj {}
+				obj contains key:value pairs for sample attributes
+				"ssm_id_lst[]" array is always created to store list of ssmids from this sample, even just one variant
+				
+				if ssm_read_depth{altTumor,...} is found on sample, it is changed to ssm_read_depth_bySsmid:{ ssmid: {altTumor...} }
+			*/
 			for (const s of out) {
-				if (id2samples.has(s.sample_id)) {
-					if (s.ssm_id_lst) id2samples.get(s.sample_id).ssm_id_lst.push(...s.ssm_id_lst)
-					else id2samples.get(s.sample_id).ssm_id_lst.push(s.ssm_id)
+				let sRegister = id2samples.get(s.sample_id) // sample obj registered in id2samples
+				if (sRegister) {
+					// already registered, append ssm info from s{} to sRegister{}
+					if (s.ssm_id_lst) {
+						// s{} already has ssm_id_lst[]
+						sRegister.ssm_id_lst.push(...s.ssm_id_lst)
+						if (s.ssm_read_depth_bySsmid) {
+							// since s.ssm_id_lst is there, expect maf data is indexed by ssmid
+							if (!sRegister.ssm_read_depth_bySsmid) sRegister.ssm_read_depth_bySsmid = {}
+							Object.assign(sRegister.ssm_read_depth_bySsmid, s.ssm_read_depth_bySsmid)
+						}
+					} else if ('ssm_id' in s) {
+						// s.ssm_id but not ssm_id_lst[]
+						sRegister.ssm_id_lst.push(s.ssm_id)
+						if (s.ssm_read_depth) {
+							if (!sRegister.ssm_read_depth_bySsmid) sRegister.ssm_read_depth_bySsmid = {}
+							sRegister.ssm_read_depth_bySsmid[s.ssm_id] = s.ssm_read_depth
+						}
+					} else {
+						console.log('unusable sample obj: missing both ssm_id and ssm_id_lst')
+					}
 				} else {
+					// not registered
 					if (!s.ssm_id_lst) {
 						s.ssm_id_lst = [s.ssm_id]
+						if (s.ssm_read_depth) {
+							s.ssm_read_depth_bySsmid = { [s.ssm_id]: s.ssm_read_depth }
+							delete s.ssm_read_depth
+						}
 						delete s.ssm_id
 					}
 					id2samples.set(s.sample_id, s)

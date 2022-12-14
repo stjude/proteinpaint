@@ -15,7 +15,7 @@ displaySampleTable()
 	call this function to render one or multiple samples
 	calls make_singleSampleTable() or renderTable()
 
-samples2columnsRows
+samples2columnsRows()
 
 ********************** INTERNAL
 make_singleSampleTable
@@ -214,17 +214,21 @@ function printSampleName(sample, tk, div) {
 
 /***********************************************
 converts list of samples into inputs for renderTable()
+
+samples with multiple variants must have been grouped to the same sample obj
+
 */
 export async function samples2columnsRows(samples, tk) {
 	// detect if these columns appear in the samples
 	const has_caseAccess = samples.some(i => 'caseIsOpenAccess' in i),
-		has_ssm_read_depth = samples.some(i => i.ssm_read_depth),
-		has_totalNormal = samples.some(i => i?.ssm_read_depth?.totalNormal),
 		has_ssm = samples.some(i => i.ssm_id) || samples.some(i => i.ssm_id_lst)
+	const [has_ssm_read_depth, has_totalNormal] = checkMafAvailability(samples)
 
+	// variables to be returned by this function
 	const columns = [{ label: 'Sample' }],
-		rows = []
+		rows = [] // has same number
 
+	///////////////// fill in columns[]
 	if (has_caseAccess) {
 		columns.push({ label: 'Access', width: '4vw' })
 	}
@@ -239,19 +243,29 @@ export async function samples2columnsRows(samples, tk) {
 	}
 
 	if (has_ssm_read_depth) {
-		columns.push({ label: 'Tumor DNA MAF', width: '6vw' })
+		columns.push({
+			label: 'Tumor DNA MAF',
+			width: '6vw',
+			isMaf: true // flag for text file downloader to do detect and do special treatment on this field
+		})
 	}
 	if (has_totalNormal) {
 		columns.push({ label: 'Normal depth', width: '4vw' })
 	}
 
 	if (has_ssm) {
-		columns.push({ label: 'Mutations', isSsm: true })
+		columns.push({
+			label: 'Mutations',
+			isSsm: true // flag for text file downloader to do detect and do special treatment on this field
+		})
 	}
 
 	// done making columns[]
+	///////////////// fill in rows[]
 
 	for (const sample of samples) {
+		// create one row[] for each sample
+		// elements are by the same order as columns[]
 		const row = [{ value: sample.sample_id }]
 
 		if (tk.mds.variant2samples.url) {
@@ -270,59 +284,118 @@ export async function samples2columnsRows(samples, tk) {
 
 		if (has_ssm_read_depth) {
 			const cell = {}
-			const sm = sample.ssm_read_depth
-			if (sm) {
+			if (sample.ssm_read_depth) {
+				// sample has just one ssm
+				const sm = sample.ssm_read_depth
 				cell.html =
 					fillbar(null, { f: sm.altTumor / sm.totalTumor }) + ' ' + sm.altTumor + '/' + sm.totalTumor + '</span>'
+				cell.altTumor = sm.altTumor
+				cell.totalTumor = sm.totalTumor
+			} else if (sample.ssm_read_depth_bySsmid) {
+				const htmls = []
+				cell.bySsmid = {}
+				for (const ssmid in sample.ssm_read_depth_bySsmid) {
+					const sm = sample.ssm_read_depth_bySsmid[ssmid]
+					htmls.push(
+						fillbar(null, { f: sm.altTumor / sm.totalTumor }) + ' ' + sm.altTumor + '/' + sm.totalTumor + '</span>'
+					)
+					cell.bySsmid[ssmid] = {
+						altTumor: sm.altTumor,
+						totalTumor: sm.totalTumor
+					}
+				}
+				cell.html = htmls.join('<br>')
 			}
 			row.push(cell)
 		}
 
 		if (has_totalNormal) {
-			row.push({ value: sample?.ssm_read_depth.totalNormal || '' })
+			if (sample.ssm_read_depth) {
+				row.push({ value: sample.ssm_read_depth.totalNormal || '' })
+			} else if (sample.ssm_read_depth_bySsmid) {
+				const bySsmid = {}
+				const htmls = []
+				for (const ssmid in sample.ssm_read_depth_bySsmid) {
+					const total = sample.ssm_read_depth_bySsmid[ssmid].totalNormal
+					if (total) {
+						bySsmid[ssmid] = total
+						htmls.push(total)
+					}
+				}
+				row.push({ bySsmid, html: htmls.join('<br>') })
+			} else {
+				row.push({ value: '' })
+			}
 		}
 
 		if (has_ssm) {
-			const ssmCell = { values: [] }
-
 			let ssm_id_lst = sample.ssm_id_lst
 			if (sample.ssm_id) ssm_id_lst = [sample.ssm_id]
 
 			if (ssm_id_lst) {
+				const htmls = []
 				for (const ssm_id of ssm_id_lst) {
+					const oneHtml = []
 					const m = (tk.skewer.rawmlst || tk.custom_variants).find(i => i.ssm_id == ssm_id)
-					const ssm = {}
 					if (m) {
 						// found m data point
 						if (m.dt == dtsnvindel) {
-							ssm.value = m.mname
 							if (tk.mds.queries && tk.mds.queries.snvindel && tk.mds.queries.snvindel.url) {
-								ssm.html = `<a href=${tk.mds.queries.snvindel.url.base + m.ssm_id} target=_blank>${m.mname}</a>`
+								oneHtml.push(`<a href=${tk.mds.queries.snvindel.url.base + m.ssm_id} target=_blank>${m.mname}</a>`)
 							} else {
-								ssm.html = m.mname
+								oneHtml.push(m.mname)
 							}
 						} else if (m.dt == dtsv || m.dt == dtfusionrna) {
 							const p = m.pairlst[0]
-							ssm.html = `${p.a.name || ''} ${p.a.chr}:${p.a.pos} ${p.a.strand == '+' ? 'forward' : 'reverse'} > ${p.b
-								.name || ''} ${p.b.chr}:${p.b.pos} ${p.b.strand == '+' ? 'forward' : 'reverse'}`
+							oneHtml.push(
+								`${p.a.name || ''} ${p.a.chr}:${p.a.pos} ${p.a.strand == '+' ? 'forward' : 'reverse'} > ${p.b.name ||
+									''} ${p.b.chr}:${p.b.pos} ${p.b.strand == '+' ? 'forward' : 'reverse'}`
+							)
 						} else {
 							throw 'unknown dt'
 						}
-						ssm.html += ` <span style="color:${rgb(mclass[m.class].color).darker()};font-size:0.8em;">${
-							mclass[m.class].label
-						}</span>`
+						oneHtml.push(
+							`<span style="color:${rgb(mclass[m.class].color).darker()};font-size:0.8em;">${
+								mclass[m.class].label
+							}</span>`
+						)
+
+						htmls.push(oneHtml.join(' '))
 					} else {
 						// m datapoint not found on client
-						ssm.value = ssm_id
+						htmls.push(ssm_id)
 					}
-					ssmCell.values.push(ssm)
 				}
+				row.push({ html: htmls.join('<br>') })
+			} else {
+				// sample has no ssm, shouldn't happen
+				row.push({ value: '' })
 			}
-
-			row.push(ssmCell)
 		}
 
 		rows.push(row)
 	}
 	return [columns, rows]
+}
+
+function checkMafAvailability(samples) {
+	// slightly complex logic to determine availability of these two flags:
+	// maf can be indexed by ssm_id in ssm_read_depth_bySsmid{}
+	let has_ssm_read_depth = false,
+		has_totalNormal = false
+	if (samples.some(i => i.ssm_read_depth)) {
+		has_ssm_read_depth = true
+		has_totalNormal = samples.some(i => i?.ssm_read_depth?.totalNormal)
+	}
+	if (samples.some(i => i.ssm_read_depth_bySsmid)) {
+		has_ssm_read_depth = true
+		for (const s of samples) {
+			if (s.ssm_read_depth_bySsmid) {
+				for (const ssmid in s.ssm_read_depth_bySsmid) {
+					if (s.ssm_read_depth_bySsmid[ssmid].totalNormal) has_totalNormal = true
+				}
+			}
+		}
+	}
+	return [has_ssm_read_depth, has_totalNormal]
 }

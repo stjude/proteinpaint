@@ -273,9 +273,16 @@ async function downloadVariants(tk, block) {
 	// FIXME for custom_variants, somehow arg requries .mlst=[]
 
 	const samples = await tk.mds.variant2samples.get(arg)
-	const [columns, rows] = await samples2columnsRows(samples, tk)
-
 	/*
+	array of sample objects
+	each sample will have 1 or more variants
+	*/
+
+	const [columns, rows] = await samples2columnsRows(samples, tk)
+	/*
+	columns[] is array of text file columns
+	rows[] is same length as samples[]
+
 	to output text file:
 
 	column with {isSsm=true} is skipped, and is replaced with adhoc columns 
@@ -285,10 +292,16 @@ async function downloadVariants(tk, block) {
 	const headerline = []
 	for (const c of columns) {
 		if (c.isSsm) {
-			// skip the field as the value is html; replace with breakdown fields
+			// skip the field as the value is html; replace with sub fields
 			headerline.push('AAchange')
 			headerline.push('Consequence')
 			headerline.push('Mutation')
+			continue
+		}
+		if (c.isMaf) {
+			// skip the field as the value is svg; replace with sub fields
+			headerline.push('Alternative allele depth in tumor')
+			headerline.push('Total depth in tumor')
 			continue
 		}
 		headerline.push(c.label)
@@ -336,7 +349,32 @@ async function downloadVariants(tk, block) {
 					}
 					continue
 				}
-				line.push(rows[sidx][cidx].value)
+
+				// the data cell returned by table builder
+				const cell = rows[sidx][cidx]
+
+				if (cell.bySsmid) {
+					// value is per ssm
+					if (ssmid in cell.bySsmid) {
+						const v = cell.bySsmid[ssmid]
+						if (c.isMaf) {
+							line.push(v.altTumor)
+							line.push(v.totalTumor)
+						} else {
+							line.push(v)
+						}
+					} else {
+						// no value for this ssm
+						line.push('')
+					}
+					continue
+				}
+				if (c.isMaf) {
+					line.push(cell.altTumor)
+					line.push(cell.totalTumor)
+					continue
+				}
+				line.push(cell.value)
 			}
 
 			lines.push(line.join('\t'))
