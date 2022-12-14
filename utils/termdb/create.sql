@@ -1,4 +1,3 @@
-drop index if exists sidmap_id;
 drop table if exists sampleidmap;
 create table sampleidmap (
   id integer primary key not null,
@@ -6,9 +5,6 @@ create table sampleidmap (
 );
 
 
-drop index if exists terms_id;
-drop index if exists terms_p;
-drop index if exists terms_n;
 drop table if exists terms;
 create table terms (
   id character varying(100) not null primary key,
@@ -22,8 +18,6 @@ create table terms (
 
 );
 
-drop index if exists ancestry_tid;
-drop index if exists ancestry_pid;
 drop table if exists ancestry;
 create table ancestry (
   term_id character varying(100) not null,
@@ -45,7 +39,6 @@ create table alltermsbyorder (
 
 
 DROP TABLE IF EXISTS termhtmldef;
-DROP INDEX IF EXISTS termhtmldef_id;
 CREATE TABLE termhtmldef (
   id character primary key not null,
   jsonhtml json not null,
@@ -70,9 +63,6 @@ create table category2vcfsample (
 
 
 drop table if exists annotations;
-drop index if exists a_sample;
-drop index if exists a_termid;
-drop index if exists a_value;
 create table annotations (
   sample integer not null,
   term_id character varying(100) not null,
@@ -83,9 +73,6 @@ create table annotations (
 );
 
 drop table if exists chronicevents;
-drop index if exists c_sample;
-drop index if exists c_termid;
-drop index if exists c_grade;
 create table chronicevents (
   sample integer not null,
   term_id character varying(100) not null,
@@ -99,9 +86,6 @@ create table chronicevents (
 
 
 DROP TABLE IF EXISTS precomputed;
-drop index if exists p_sample;
-drop index if exists p_termid;
-drop index if exists p_value_for;
 CREATE TABLE precomputed(
   sample integer not null,
   term_id TEXT not null,
@@ -123,8 +107,6 @@ CREATE TABLE precomputed(
 ---------------------------------------------
 
 DROP TABLE IF EXISTS subcohort_terms;
-DROP INDEX IF EXISTS subcohort_terms_cohort;
-DROP INDEX IF EXISTS subcohort_terms_termid;
 CREATE TABLE subcohort_terms (
  cohort TEXT not null,
  term_id TEXT not null,
@@ -138,8 +120,6 @@ foreign key(term_id) references terms(id)
 
 
 DROP TABLE IF EXISTS survival;
-DROP INDEX IF EXISTS survival_term;
-DROP INDEX IF EXISTS survival_sample;
 CREATE TABLE survival(
  sample INT not null,
  term_id TEXT not null,
