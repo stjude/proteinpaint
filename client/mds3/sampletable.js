@@ -10,13 +10,15 @@ init_sampletable()
 	using mds.variant2samples.get() to map mlst[] to samples
 	always return list of samples, does not return summaries
 	mlst can be mixture of data types, doesn't matter
+
 displaySampleTable()
 	call this function to render one or multiple samples
 	calls make_singleSampleTable() or renderTable()
 
+samples2columnsRows
+
 ********************** INTERNAL
 make_singleSampleTable
-samples2columnsRows
 
 
 ********************** arg{}
@@ -213,7 +215,7 @@ function printSampleName(sample, tk, div) {
 /***********************************************
 converts list of samples into inputs for renderTable()
 */
-async function samples2columnsRows(samples, tk) {
+export async function samples2columnsRows(samples, tk) {
 	// detect if these columns appear in the samples
 	const has_caseAccess = samples.some(i => 'caseIsOpenAccess' in i),
 		has_ssm_read_depth = samples.some(i => i.ssm_read_depth),

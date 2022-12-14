@@ -2,8 +2,11 @@ import { fold_glyph, settle_glyph } from './skewer.render'
 import { may_render_skewer } from './skewer'
 import { itemtable } from './itemtable'
 import { makelabel, positionLeftlabelg } from './leftlabel'
-import { tab2box } from '../src/client'
+import { tab2box, to_textfile } from '../src/client'
 import { dt2label } from '#shared/common'
+import { rangequery_rglst } from './tk'
+import { samples2columnsRows } from './sampletable'
+import { mclass, dtsnvindel, dtsv, dtfusionrna } from '#shared/common'
 
 /*
 the "#variants" label should always be made as it is about any content displayed in mds3 track
@@ -139,6 +142,18 @@ function menu_variants(tk, block) {
 		}
 	}
 
+	if (!tk.custom_variants) {
+		// FIXME enable download for custom data
+		tk.menutip.d
+			.append('div')
+			.text('Download')
+			.attr('class', 'sja_menuoption')
+			.on('click', () => {
+				downloadVariants(tk, block)
+				tk.menutip.hide()
+			})
+	}
+
 	mayAddSkewerModeOption(tk, block)
 }
 
@@ -216,7 +231,6 @@ function mayAddSkewerModeOption(tk, block) {
 		.append('div')
 		.style('margin', '10px 10px 3px 10px')
 		.style('font-size', '.7em')
-		.style('opacity', 0.5)
 		.text(getViewmodeName(tk.skewer.viewModes.find(n => n.inuse)))
 	// show available modes
 	for (const n of tk.skewer.viewModes) {
@@ -242,4 +256,91 @@ function getViewmodeName(n) {
 	if (n.type == 'skewer') return 'As lollipops'
 	if (n.type == 'numeric') return n.label + ' as Y axis'
 	return 'unknown mode'
+}
+
+async function downloadVariants(tk, block) {
+	if (!tk.mds.variant2samples) {
+		console.log('TODO: variant-only')
+		return
+	}
+	// call variant2samples.get() to get sample-level data
+	const arg = {
+		querytype: 'samples'
+	}
+
+	rangequery_rglst(tk, block, arg)
+
+	// FIXME for custom_variants, somehow arg requries .mlst=[]
+
+	const samples = await tk.mds.variant2samples.get(arg)
+	const [columns, rows] = await samples2columnsRows(samples, tk)
+
+	/*
+	to output text file:
+
+	column with {isSsm=true} is skipped, and is replaced with adhoc columns 
+	*/
+
+	// header line of text file
+	const headerline = []
+	for (const c of columns) {
+		if (c.isSsm) {
+			// skip the field as the value is html; replace with breakdown fields
+			headerline.push('AAchange')
+			headerline.push('Consequence')
+			headerline.push('Mutation')
+			continue
+		}
+		headerline.push(c.label)
+	}
+
+	// one line for each mutation per sample, with the same set of columns as headerline
+	const lines = []
+	for (const [sidx, sample] of samples.entries()) {
+		// sidx is used on rows[]
+
+		let ssm_id_lst // a sample can have >= 1 mutations
+		if (Array.isArray(sample.ssm_id_lst)) {
+			ssm_id_lst = sample.ssm_id_lst
+		} else if (sample.ssm_id) {
+			ssm_id_lst = [sample.ssm_id]
+		} else {
+			console.log('sample obj lacks ssm_id and ssm_id_lst')
+			continue
+		}
+
+		for (const ssmid of ssm_id_lst) {
+			const m = tk.skewer.rawmlst.find(i => i.ssm_id == ssmid)
+			if (!m) {
+				console.log('ssm not found by id: ' + ssmid)
+				continue
+			}
+
+			// create one line for this m{} from this sample{}
+
+			const line = []
+
+			for (const [cidx, c] of columns.entries()) {
+				if (c.isSsm) {
+					// skip the field as the value is html; replace with breakdown fields
+					if (m.dt == dtsnvindel) {
+						line.push(m.mname)
+						line.push(mclass[m.class].label)
+						line.push(m.chr + ':' + (m.pos + 1) + ' ' + m.ref + '>' + m.alt)
+					} else if (m.dt == dtsv || m.dt == dtfusionrna) {
+						line.push('')
+						line.push(mclass[m.class].label)
+						line.push(
+							m.pairlst[0].a.chr + ':' + m.pairlst[0].a.pos + '>' + m.pairlst[0].b.chr + ':' + m.pairlst[0].b.pos
+						)
+					}
+					continue
+				}
+				line.push(rows[sidx][cidx].value)
+			}
+
+			lines.push(line.join('\t'))
+		}
+	}
+	to_textfile('Mutations.txt', headerline.join('\t') + '\n' + lines.join('\n'))
 }

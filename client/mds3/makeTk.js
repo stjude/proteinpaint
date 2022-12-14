@@ -431,7 +431,6 @@ function mayaddGetter_variant2samples(tk, block) {
 
 	arg{}
 	.querytype=sunburst/samples/summary
-	.listSamples=1
 	.mlst
 	.isoform 
 	.rglst[] // requires one of (mlst, isoform, rglst)
@@ -443,10 +442,6 @@ function mayaddGetter_variant2samples(tk, block) {
 			// from getSamples(), is a modifier of querytype=samples, to return .ssm_id_lst[] with each sample
 			par.push('groupSsmBySample=1')
 		}
-
-		// pagination, not used
-		//if (arg.size) par.push('size=' + arg.size)
-		//if (arg.from != undefined) par.push('from=' + arg.from)
 
 		if (arg.mlst) {
 			if (tk.mds.variant2samples.variantkey == 'ssm_id') {
