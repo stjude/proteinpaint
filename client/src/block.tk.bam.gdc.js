@@ -707,7 +707,17 @@ export async function bamsliceui({
 			// This will need to be changed to a loop when viewing multiple regions in the same sample
 			const { filesize } = gdc_bam_files[0]
 
-			file.about.push({ k: 'Slice file size', v: filesize })
+			{
+				// update file size
+				const i = file.about.find(i => i.k == 'Slice file size')
+				if (i) {
+					// this file has been sliced before and already has the record; do not add duplicate record
+					i.v = filesize
+				} else {
+					// this file does not have the record
+					file.about.push({ k: 'Slice file size', v: filesize })
+				}
+			}
 		}
 
 		formdiv.style('display', 'none')
