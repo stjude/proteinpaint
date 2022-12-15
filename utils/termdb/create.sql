@@ -1,7 +1,15 @@
-drop table if exists sampleidmap;
-create table sampleidmap (
+drop table if exists sample;
+create table sample (
   id integer primary key not null,
   name character varying(100) not null
+);
+
+drop table if exists sampleidmap;
+create table sampleidmap (
+  id integer not null,
+  name character varying(100) not null,
+  primary key(id, name),
+  foreign key(id) references sample(id)
 );
 
 
@@ -68,7 +76,7 @@ create table annotations (
   term_id character varying(100) not null,
   value character varying(255) not null,
   primary key(term_id, sample),
-  foreign key(sample) references sampleidmap(id),
+  foreign key(sample) references sample(id),
   foreign key(term_id) references terms(id)
 );
 
@@ -80,7 +88,7 @@ create table chronicevents (
   age_graded real not null,
   years_to_event real not null,
   primary key(term_id, sample),
-  foreign key(sample) references sampleidmap(id),
+  foreign key(sample) references sample(id),
   foreign key(term_id) references terms(id)
 );
 
@@ -95,7 +103,7 @@ CREATE TABLE precomputed(
   max_grade integer,
   most_recent integer,
   primary key(term_id, sample),
-  foreign key(sample) references sampleidmap(id),
+  foreign key(sample) references sample(id),
   foreign key(term_id) references terms(id)
 );
 
@@ -126,7 +134,7 @@ CREATE TABLE survival(
  tte INT, -- time-to-event
  exit_code INT, -- cohort defined exit code, may be 0=death, 1=censored, or similar
 primary key(term_id, sample),
-foreign key(sample) references sampleidmap(id),
+foreign key(sample) references sample(id),
 foreign key(term_id) references terms(id)
 );
 
