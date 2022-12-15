@@ -12,16 +12,13 @@ set -e
 ###############
 
 ENV=""
-if [[ "$1" != "" ]]; then
-	ENV=$1
-fi
 
 VERSIONTYPE=prerelease
-if [[ "$2" != "" ]]; then
-	VERSIONTYPE=$2
+if [[ "$1" != "" ]]; then
+	VERSIONTYPE=$1
 fi
 
-MODE=$3
+MODE=$2
 
 ###########
 # VERSION
@@ -38,8 +35,8 @@ if [ ! -z "$(git status --porcelain)" ]; then
 	fi
 fi
 
-./build/version.sh $VERSIONTYPE "" $MODE
-exit 1
+./build/version.sh $VERSIONTYPE $ENV $MODE
+
 ##############################
 # PUBLISH SELECTED WORKSPACES 
 ##############################

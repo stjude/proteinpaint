@@ -170,14 +170,6 @@ do
 	cd ..
 done
 
-if [[ "$ENV" == "" ]]; then
-	if [[ "$MODE" == "dry" ]]; then
-		echo "[$UPDATED]"
-	fi
-	git restore .
-	exit 0
-fi
-
 ########################
 # UPDATE THE PORTAL ENV
 ########################
