@@ -2,6 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
+## 2.7.3
+
+Fix the duplicate rows in about:filesize in bam track 
+
 ## 2.7.2
 
 GDC-related
