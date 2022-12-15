@@ -701,15 +701,13 @@ async function get_q(genome, req) {
 		q.sv = {
 			chrA: t[0],
 			startA: Number(t[1]),
-			startB: Number(t[2]),
+			strandA: Number(t[2]),
 			chrB: t[3],
 			startB: Number(t[4]),
-			stopB: Number(t[5])
+			strandB: Number(t[5])
 		}
 		if (Number.isNaN(q.sv.startA)) throw 'sv.startA not integer'
 		if (Number.isNaN(q.sv.startB)) throw 'sv.startB not integer'
-		if (Number.isNaN(q.sv.stopA)) throw 'sv.stopA not integer'
-		if (Number.isNaN(q.sv.stopB)) throw 'sv.stopB not integer'
 	}
 
 	if (req.query.stackstart) {
@@ -836,7 +834,6 @@ async function do_query(q) {
 		// parse reads and cigar
 		let templates = get_templates(q, group)
 		templates = stack_templates(group, q, templates) // add .stacks[], .returntemplatebox[]
-
 		await poststack_adjustq(group, q, templates)
 
 		// read quality is not parsed yet
@@ -1431,13 +1428,32 @@ async function divide_reads_togroups(q) {
 	}
 }
 
-function match_sv(templates, q, region_widths) {
+async function match_sv(templates, q, region_widths) {
 	// TODO templates may not be all in one array?
 	const type2group = bamcommon.make_type2group(q)
 
 	// Assuming there are only two regions in an SV/fusion
 	const region1_qnames = []
 	const region2_qnames = []
+
+	const input_data = []
+	for (let i = 0; i < q.regions.length; i++) {
+		const r = q.regions[i]
+		const region_refseq = (await utils.get_fasta(q.genome, r.chr + ':' + r.start + '-' + r.stop))
+			.split('\n')
+			.slice(1)
+			.join('')
+			.toUpperCase()
+		const reads_in_current_region = []
+		for (const line of r.lines) {
+			reads_in_current_region.push({ sam_info: line, tempscore: '', ridx: i })
+		}
+		const region_data = { refseq: region_refseq, entries: reads_in_current_region }
+		input_data.push(region_data)
+	}
+
+	const rust_output = await run_rust('sv', JSON.stringify(input_data)) // Classifying SV reads
+	//console.log('rust_output:', rust_output)
 
 	// This loop can be expensive and could be parsed in query_region() itself
 	for (let i = 0; i < q.regions.length; i++) {
@@ -1644,7 +1660,6 @@ function parse_one_segment(arg, r, q) {
 		// may collect number of unmapped reads in view range and report
 		return
 	}
-
 	// from here, read is mapped
 	if (cigarstr != '*') {
 		// has valid cigar string to be parsed
@@ -1772,6 +1787,7 @@ function parse_one_segment(arg, r, q) {
 			}
 			console.log('unknown cigar: ' + cigar)
 		}
+
 		if (segment.boxes.length == 0) {
 			// no visible boxes, do not show this segment
 			// this is the case for rnaseq reads split across the viewing intron and no need to show
@@ -1955,15 +1971,18 @@ function stack_templates(group, q, templates) {
 	if (!q.asPaired) {
 		// Single read view
 		templates.sort((i, j) => i.x1 - j.x1) //group.templates
+		group.stacks = [] // each value is screen pixel pos of each stack
 		for (let region_idx = 0; region_idx < q.regions.length; region_idx++) {
-			group.stacks = [] // each value is screen pixel pos of each stack
 			for (const template of templates) {
 				// group.templates
 				if (template.segments[0].ridx == region_idx) {
 					let stackidx = null
 					if (!q.variant) {
 						for (let i = 0; i < group.stacks.length; i++) {
-							if (group.stacks[i] + q.stacksegspacing < template.x1) {
+							if (
+								group.stacks[i] + q.stacksegspacing < template.x1 &&
+								group.stacks[i] + q.stacksegspacing < q.regions[region_idx].x + q.regions[region_idx].width
+							) {
 								stackidx = i
 								group.stacks[i] = template.x2
 								break
@@ -2149,6 +2168,7 @@ function get_stacky(group, templates, q) {
 			stackrowheight[template.y] = Math.max(stackrowheight[template.y], template.height)
 		}
 	}
+
 	const stacky = []
 	let y = group.stackspace
 	for (const h of stackrowheight) {
@@ -2465,10 +2485,10 @@ function plot_segment(ctx, segment, y, group, q) {
 					//	ctx.fillRect(xoff, y, xoff + r.ntwidth + ntboxwidthincrement, group.stackheight)
 					//}
 
-					if (xoff + r.ntwidth + ntboxwidthincrement < r.width && r.x <= xoff) {
+					if (xoff + r.ntwidth + ntboxwidthincrement < r.x + r.width && r.x <= xoff) {
 						ctx.fillRect(xoff, y, r.ntwidth + ntboxwidthincrement, group.stackheight)
-					} else if (xoff < r.width && xoff + r.ntwidth + ntboxwidthincrement >= r.width && r.x <= xoff) {
-						ctx.fillRect(xoff, y, r.width - xoff, group.stackheight)
+					} else if (xoff < r.x + r.width && xoff + r.ntwidth + ntboxwidthincrement >= r.x + r.width && r.x <= xoff) {
+						ctx.fillRect(xoff, y, r.width + r.x - xoff, group.stackheight)
 					} else if (xoff <= r.x && xoff + r.ntwidth + ntboxwidthincrement > r.x) {
 						ctx.fillRect(r.x, y, r.ntwidth + ntboxwidthincrement + xoff - r.x, group.stackheight)
 					}
@@ -2492,7 +2512,7 @@ function plot_segment(ctx, segment, y, group, q) {
 					ctx.fillRect(x, y, b.len * r.ntwidth + ntboxwidthincrement, group.stackheight)
 				} else if (x + b.len * r.ntwidth + ntboxwidthincrement < r.width && r.x >= x) {
 					ctx.fillRect(r.x, y, b.len * r.ntwidth + ntboxwidthincrement + x - r.x, group.stackheight)
-				} else if (x + b.len * r.ntwidth + ntboxwidthincrement >= r.width && r.x < x) {
+				} else if (x + b.len * r.ntwidth + ntboxwidthincrement <= r.width && r.x < x) {
 					ctx.fillRect(x, y, r.width - x, group.stackheight)
 				}
 				if (r.to_printnt && !b.qual) {

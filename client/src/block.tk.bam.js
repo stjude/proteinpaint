@@ -266,10 +266,21 @@ async function getData(tk, block, additional = []) {
 			lst.push('min_diff_score=' + tk.min_diff_score)
 		}
 	} else if (tk.sv) {
+		if (tk.sv[0].strandA == '+') {
+			tk.sv[0].strandA = 'positive'
+		} else if (tk.sv[0].strandA == '-') {
+			tk.sv[0].strandA = 'negative'
+		}
+		if (tk.sv[0].strandB == '+') {
+			tk.sv[0].strandB = 'positive'
+		} else if (tk.sv[0].strandB == '-') {
+			tk.sv[0].strandB = 'negative'
+		}
+
 		lst.push(
 			'sv=' +
 				tk.sv
-					.map(m => m.chrA + '.' + m.startA + '.' + m.stopA + '.' + m.chrB + '.' + m.startB + '.' + m.stopB)
+					.map(m => m.chrA + '.' + m.startA + '.' + m.strandA + '.' + m.chrB + '.' + m.startB + '.' + m.strandB)
 					.join('.')
 		)
 	}
@@ -1079,20 +1090,20 @@ function may_add_urlparameter(tk, block) {
 				tk.sv.push({
 					chrA: tmp[0],
 					startA: tmp[1],
-					stopA: tmp[2],
+					strandA: tmp[2],
 					chrB: tmp[3],
 					startB: tmp[4],
-					stopB: tmp[5],
+					strandB: tmp[5],
 					contig: tmp[6]
 				})
 			} else if (tmp.length == 6) {
 				tk.sv.push({
 					chrA: tmp[0],
 					startA: tmp[1],
-					stopA: tmp[2],
+					strandA: tmp[2],
 					chrB: tmp[3],
 					startB: tmp[4],
-					stopB: tmp[5]
+					strandB: tmp[5]
 				})
 			}
 		}

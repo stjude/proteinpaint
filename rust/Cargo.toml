@@ -43,3 +43,7 @@ path="src/fisher.rs"
 [[bin]]
 name="bigwig"
 path="src/bigwig.rs"
+
+[[bin]]
+name="sv"
+path="src/sv.rs"
