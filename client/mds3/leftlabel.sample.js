@@ -7,10 +7,11 @@ import { rangequery_rglst } from './tk'
 import { filterInit, getNormalRoot } from '#filter'
 
 /*
-makes the "# samples" sub label on the left.
-click label to view summaries about samples that have mutation data in the view range
+makeSampleLabel()
+	makes the "# samples" sub label on the left.
+	click label to view summaries about samples that have mutation data in the view range
 
-
+makeSampleFilterLabel()
 */
 
 export function makeSampleLabel(data, tk, block, laby) {
@@ -51,7 +52,7 @@ export function makeSampleFilterLabel(data, tk, block, laby) {
 		tk.leftlabels.doms.filterObj = makelabel(tk, block, laby)
 	}
 
-	tk.leftlabels.doms.filterObj.text('Filter').on('click', async event => {
+	tk.leftlabels.doms.filterObj.text(getFilterName(tk.filterObj)).on('click', async event => {
 		tk.menutip.clear().showunder(event.target)
 
 		// display filter UI
@@ -79,6 +80,55 @@ export function makeSampleFilterLabel(data, tk, block, laby) {
 		}
 		filterInit(arg).main(tk.filterObj)
 	})
+}
+
+function getFilterName(f) {
+	// try to provide a meaningful name based on filter content
+
+	if (f.lst.length == 0) {
+		// this is possible when user has deleted the only tvs
+		return 'No filter'
+	}
+
+	if (f.lst.length == 1 && f.lst[0].type == 'tvs') {
+		// has only one tvs
+		const tvs = f.lst[0].tvs
+		if (!tvs) throw 'f.lst[0].tvs{} missing'
+		const ttype = tvs?.term?.type
+		if (ttype == 'categorical') {
+			// tvs is categorical
+			if (!Array.isArray(tvs.values)) throw 'f.lst[0].tvs.values not array'
+			if (tvs.values.length == 1) {
+				// tvs uses only 1 category
+				// set label as key of first category
+				const str = tvs.values[0].key
+				return str.length < 15 ? str : str.substring(0, 13) + '...'
+			}
+			// tvs uses more than 1 category
+			// set label of first category + (3)
+			const str = tvs.values[0].key
+			return `${str.length < 12 ? str : str.substring(0, 10) + '...'} (${tvs.values.length})`
+		} else if (ttype == 'integer' || ttype == 'float') {
+			// if tvs is numeric, may show numeric range
+			if (!Array.isArray(tvs.ranges)) throw 'tvs.ranges not array'
+			if (tvs.ranges.length == 1) {
+				// single range
+				const r = tvs.ranges[0]
+				if (r.startunbounded)
+					return 'x' + (r.stopinclusive ? '&le;' : '<') + (ttype == 'integer' ? Math.floor(r.stop) : r.stop)
+				if (r.stopunbounded)
+					return 'x' + (r.startinclusive ? '&ge;' : '>') + (ttype == 'integer' ? Math.floor(r.start) : r.start)
+				return `${ttype == 'integer' ? Math.floor(r.start) : r.start}${r.startinclusive ? '&le;' : '<'}x${
+					r.stopinclusive ? '&ge;' : '<'
+				}${ttype == 'integer' ? Math.floor(r.stop) : r.stop}`
+			}
+			// multiple ranges
+		} else {
+			throw 'unknown tvs term type'
+		}
+	}
+	// more than 1 tvs, may not able to generate
+	return 'Filter (' + f.lst.length + ')'
 }
 
 async function mayShowSummary(tk, block) {
