@@ -1,3 +1,5 @@
+
+
 drop table if exists sample;
 create table sample (
   id integer primary key not null,
@@ -9,7 +11,7 @@ create table sampleidmap (
   id integer not null,
   name character varying(100) not null,
   primary key(id, name),
-  foreign key(id) references sample(id)
+  foreign key(id) references sample(id) on delete cascade
 );
 
 
@@ -22,7 +24,7 @@ create table terms (
   child_order integer not null,
   type text,
   isleaf integer,
-  foreign key(parent_id) references terms(id)
+  foreign key(parent_id) references terms(id) on delete cascade
 
 );
 
@@ -32,7 +34,7 @@ create table ancestry (
   ancestor_id character varying(100) not null,
   primary key(term_id, ancestor_id)
   foreign key(term_id) references terms(id),
-  foreign key(ancestor_id) references terms(id)
+  foreign key(ancestor_id) references terms(id) on delete cascade
 );
 
 
@@ -42,7 +44,7 @@ drop table if exists alltermsbyorder;
 create table alltermsbyorder (
   group_name character not null,
   id character varying(100) primary key not null,
-  foreign key(id) references terms(id)
+  foreign key(id) references terms(id) on delete cascade
 );
 
 
@@ -50,7 +52,7 @@ DROP TABLE IF EXISTS termhtmldef;
 CREATE TABLE termhtmldef (
   id character primary key not null,
   jsonhtml json not null,
-  foreign key(id) references terms(id)
+  foreign key(id) references terms(id) on delete cascade
 
 );
 
@@ -76,8 +78,8 @@ create table annotations (
   term_id character varying(100) not null,
   value character varying(255) not null,
   primary key(term_id, sample),
-  foreign key(sample) references sample(id),
-  foreign key(term_id) references terms(id)
+  foreign key(sample) references sample(id) on delete cascade,
+  foreign key(term_id) references terms(id) on delete cascade
 );
 
 drop table if exists chronicevents;
@@ -88,8 +90,8 @@ create table chronicevents (
   age_graded real not null,
   years_to_event real not null,
   primary key(term_id, sample),
-  foreign key(sample) references sample(id),
-  foreign key(term_id) references terms(id)
+  foreign key(sample) references sample(id) on delete cascade,
+  foreign key(term_id) references terms(id) on delete cascade
 );
 
 
@@ -103,8 +105,8 @@ CREATE TABLE precomputed(
   max_grade integer,
   most_recent integer,
   primary key(term_id, sample),
-  foreign key(sample) references sample(id),
-  foreign key(term_id) references terms(id)
+  foreign key(sample) references sample(id) on delete cascade,
+  foreign key(term_id) references terms(id) on delete cascade
 );
 
 
@@ -122,7 +124,7 @@ CREATE TABLE subcohort_terms (
  included_types TEXT,
  child_types TEXT,
 --primary key(cohort, term_id),
-foreign key(term_id) references terms(id)
+foreign key(term_id) references terms(id) on delete cascade
 );
 
 
@@ -134,8 +136,8 @@ CREATE TABLE survival(
  tte INT, -- time-to-event
  exit_code INT, -- cohort defined exit code, may be 0=death, 1=censored, or similar
 primary key(term_id, sample),
-foreign key(sample) references sample(id),
-foreign key(term_id) references terms(id)
+foreign key(sample) references sample(id) on delete cascade,
+foreign key(term_id) references terms(id) on delete cascade
 );
 
 
