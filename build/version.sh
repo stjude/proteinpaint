@@ -186,42 +186,48 @@ fi
 # let other enviroments' package.jsons each remain in its 
 # last applicable deployed version
 
-cd sj/$ENV
-PORTALPKG="$(npm pkg get version dependencies devDependencies)"
-# echo "[$SP-$ENV] $PORTALPKG"
-updatePkg "[\"$SP-$ENV\", $PORTALPKG]"
+if [[ "$ENV" != "" ]]; then
+	cd sj/$ENV
+	PORTALPKG="$(npm pkg get version dependencies devDependencies)"
+	# echo "[$SP-$ENV] $PORTALPKG"
+	updatePkg "[\"$SP-$ENV\", $PORTALPKG]"
 
-for WS in ${WORKSPACES};
-do
-	if [[ "$UPDATED" == *" $WS-"* ]]; then
-		maySetDepVer $WS $ENV devDependencies
-		maySetDepVer $WS $ENV dependencies
+	for WS in ${WORKSPACES};
+	do
+		if [[ "$UPDATED" == *" $WS-"* ]]; then
+			maySetDepVer $WS $ENV devDependencies
+			maySetDepVer $WS $ENV dependencies
+		fi
+	done
+	mayBumpImporterVersion $ENV $ROOTVERSION
+
+	if [[ "$UPDATED" != *" $ENV-"* ]]; then
+		mayBumpVersionOnDiff $WS $ROOTVERSION
 	fi
-done
-mayBumpImporterVersion $ENV $ROOTVERSION
 
-if [[ "$UPDATED" != *" $ENV-"* ]]; then
-	mayBumpVersionOnDiff $WS $ROOTVERSION
+	cd ../..
 fi
-
-cd ../..
 
 ##########################
 # UPDATE THE ROOT PACKAGE
 ##########################
 
-PORTALVER=$(node -p "($WSPKG)['$SP-$ENV'].version")
-if [[ "$UPDATED" == *" $ENV-"* ]]; then
-	npm pkg set version=$PORTALVER
-	updatePkg "[\"version\", \"$PORTALVER\"]"
-elif [[ "$PORTALVER" != "$ROOTVERSION" ]]; then
-	cd sj/$ENV
-	npm pkg set version=$ROOTVERSION
-	cd ../..
-else	
-	echo "TODO: may bump the root version for non-workpsace, non-portal related changes"
- 	# so as long as something gets deployed, via registry or traball, increment the root version?
- 	# mayBumpVersionOnDiff $WS $ROOTVERSION
+if [[ "$ENV" == "" ]]; then
+	npm version $TYPE --no-git-tag-version --no-workspaces-update 
+else
+	PORTALVER=$(node -p "($WSPKG)['$SP-$ENV'].version")
+	if [[ "$UPDATED" == *" $ENV-"* ]]; then
+		npm pkg set version=$PORTALVER
+		updatePkg "[\"version\", \"$PORTALVER\"]"
+	elif [[ "$PORTALVER" != "$ROOTVERSION" ]]; then
+		cd sj/$ENV
+		npm pkg set version=$ROOTVERSION
+		cd ../..
+	else	
+		echo "TODO: may bump the root version for non-workpsace, non-portal related changes"
+	 	# so as long as something gets deployed, via registry or traball, increment the root version?
+	 	# mayBumpVersionOnDiff $WS $ROOTVERSION
+	fi
 fi
 
 # display the current versions as JSON
@@ -234,7 +240,7 @@ $handlePkg "$WSPKG"
 TAG="v$(node -p "require('./package.json').version")"
 COMMITMSG="$TAG $UPDATED"
 echo "$COMMITMSG"
-
+exit 1
 if [[ "$MODE" == "dry" ]]; then
 	# git restore .
 	echo "SKIPPED version commit, tag, and publish in dry-run mode"
@@ -251,9 +257,17 @@ else
 	git push origin $TAG
 fi
 
-#############################
+#################################
 # PUBLISH CHANGED WORKSPACES 
-#############################
+# 
+# TODO: separate publishing out 
+#
+#################################
+
+if [[ "$ENV" == "" ]]; then
+	echo "Unspecified sj environment"
+	exit 0
+fi
 
 if [[ "$MODE" == *"tgz"* ]]; then
 	REMOTEDIR=/opt/data/pp/packages

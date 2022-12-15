@@ -44,7 +44,7 @@ fi
 # npm ci ??? # 
 
 # this version script will commit and publish changes,
-# unless in dry-run mode
+# unless env=="" or in dry-run mode
 ./build/version.sh $VERSIONTYPE $ENV $MODE
 
 cd sj/$ENV
