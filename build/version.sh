@@ -232,7 +232,7 @@ $handlePkg "$WSPKG"
 TAG="v$(node -p "require('./package.json').version")"
 COMMITMSG="$TAG $UPDATED"
 echo "$COMMITMSG"
-exit 1
+
 if [[ "$MODE" == "dry" ]]; then
 	# git restore .
 	echo "SKIPPED version commit, tag, and publish in dry-run mode"
