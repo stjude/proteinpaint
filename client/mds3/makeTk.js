@@ -116,9 +116,11 @@ export async function makeTk(tk, block) {
 	// TODO <g> for other file types
 
 	// config
+	/*
 	tk.config_handle = block.maketkconfighandle(tk).on('click', () => {
 		configPanel(tk, block)
 	})
+	*/
 
 	initLegend(tk, block)
 
