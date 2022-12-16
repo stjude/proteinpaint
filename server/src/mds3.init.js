@@ -1067,7 +1067,8 @@ async function mayMapGeneName2isoform(term, genome) {
 	// isoform missing, query canonical isoform by name
 	if (!term.name) throw 'both term.name and term.isoform'
 	const lst = genome.genedb.getjsonbyname.all(term.name)
-	if (lst.length == 0) throw 'unknown gene name'
+	if (lst.length == 0) return // no match, do not crash
+
 	const tmp = lst.find(i => i.isdefault) || lst[0]
 	const gm = JSON.parse(tmp.genemodel)
 	if (!gm.isoform) throw 'isoform missing from returned gm'
@@ -1082,6 +1083,10 @@ async function getSnvindelByTerm(ds, term, genome, q) {
 
 	if (ds.queries.snvindel.byisoform) {
 		await mayMapGeneName2isoform(term, genome)
+		if (!term.isoform) {
+			// isoform missing, could be unknown gene name
+			return []
+		}
 		// term.isoform is set
 		arg.isoform = term.isoform
 		return await ds.queries.snvindel.byisoform.get(arg)
