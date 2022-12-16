@@ -1,4 +1,7 @@
-
+drop table if exists cohort;
+create table cohort (
+  cohort character primary key not null
+);
 
 drop table if exists sample;
 create table sample (
@@ -43,7 +46,8 @@ create table ancestry (
 drop table if exists alltermsbyorder;
 create table alltermsbyorder (
   group_name character not null,
-  id character varying(100) primary key not null,
+  id character varying(100) not null,
+  primary key(group_name, id),
   foreign key(id) references terms(id) on delete cascade
 );
 
@@ -65,10 +69,9 @@ create table category2vcfsample (
   parent_name character varying(200) null,
   q text not null,
   categories text not null,
-  primary key(subcohort, term_id, parent_name),
-  foreign key(subcohort) references cohort(cohort),
-  foreign key(term_id) references terms(id),
-  foreign key(parent_name) references terms(id)
+  foreign key(subcohort) references cohort(cohort) on delete cascade,
+  foreign key(group_name, term_id) references alltermsbyorder(group_name, id) on delete cascade
+  foreign key(parent_name) references terms(id) on delete cascade
 );
 
 
@@ -89,7 +92,6 @@ create table chronicevents (
   grade integer not null,
   age_graded real not null,
   years_to_event real not null,
-  primary key(term_id, sample),
   foreign key(sample) references sample(id) on delete cascade,
   foreign key(term_id) references terms(id) on delete cascade
 );
@@ -104,7 +106,6 @@ CREATE TABLE precomputed(
   computable_grade integer,
   max_grade integer,
   most_recent integer,
-  primary key(term_id, sample),
   foreign key(sample) references sample(id) on delete cascade,
   foreign key(term_id) references terms(id) on delete cascade
 );
@@ -125,9 +126,19 @@ CREATE TABLE subcohort_terms (
  child_types TEXT,
 --primary key(cohort, term_id),
 foreign key(term_id) references terms(id) on delete cascade
+foreign key(cohort) references cohort(cohort) on delete cascade
+
 );
 
+DROP TABLE IF EXISTS subcohort_samples;
+CREATE TABLE subcohort_samples (
+subcohort TEXT not null,
+sample integer not null,
+primary key(subcohort, sample),
+foreign key(subcohort) references cohort(cohort) on delete cascade,
+foreign key(sample) references sample(id) on delete cascade
 
+);
 
 DROP TABLE IF EXISTS survival;
 CREATE TABLE survival(

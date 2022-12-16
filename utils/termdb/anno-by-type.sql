@@ -1,11 +1,11 @@
 drop table if exists anno_integer;
-drop index if exists anno_int_sample;
-drop index if exists anno_int_value;
 create table anno_integer (
   sample integer not null,
   term_id character varying(100) not null,
   value integer not null,
-  primary key(term_id, sample)
+  primary key(term_id, sample),
+  foreign key(term_id) references terms(id) on delete cascade,
+  foreign key(sample) references sample(sample) on delete cascade
 
 );
 
@@ -37,13 +37,13 @@ where t.type = 'integer' and cohort not like '%,%';
 ----------------------------------
 
 drop table if exists anno_float;
-drop index if exists anno_float_sample;
-drop index if exists anno_float_value;
 create table anno_float (
   sample integer not null,
   term_id character varying(100) not null,
   value REAL not null,
-    primary key(term_id, sample)
+  primary key(term_id, sample),
+  foreign key(term_id) references terms(id),
+  foreign key(sample) references sample(sample)
 
 );
 -- copy entries from the annotations table
@@ -72,13 +72,13 @@ where t.type = 'float' and cohort not like '%,%';
 ----------------------------------
 
 drop table if exists anno_categorical;
-drop index if exists anno_cat_sample;
-drop index if exists anno_cat_value;
 create table anno_categorical (
   sample integer not null,
   term_id character varying(100) not null,
   value character varying(255) not null,
-  primary key(term_id, sample)
+  primary key(term_id, sample),
+  foreign key(term_id) references terms(id),
+  foreign key(sample) references sample(sample)
 );
 
 -- copy entries from the annotations table
