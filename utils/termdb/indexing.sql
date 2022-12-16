@@ -10,9 +10,12 @@ create index annotations_sample on annotations(sample);
 create index a_value on annotations(value);
 
 create index chronicevents_sample on chronicevents(sample);
+create index chronicevents_term_id on chronicevents(term_id);
+
 create index c_grade on chronicevents(grade);
 
-CREATE INDEX precomputed_term_id on precomputed(sample);
+CREATE INDEX precomputed_sample on precomputed(sample);
+create index precomputed_term_id on precomputed(term_id);
 CREATE INDEX p_value_for on precomputed(value_for);
 
 CREATE INDEX subcohort_terms_cohort ON subcohort_terms(cohort);
