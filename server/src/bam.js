@@ -644,6 +644,8 @@ async function get_q(genome, req) {
 			//_numofreads: 0, // temp, to count num of reads while loading and detect above limit
 			devicePixelRatio: req.query.devicePixelRatio ? Number(req.query.devicePixelRatio) : 1
 		}
+
+		await mayReSliceFile(req, q.file)
 	} else {
 		const [e, _file, isurl] = app.fileurl(req)
 		if (e) throw e
@@ -750,6 +752,39 @@ async function get_q(genome, req) {
 	q.readcount_skipped = 0 // count number of reads retrieved from view range but not visible e.g. spliced intron
 
 	return q
+}
+
+/*
+***************  stop gap measure  *********************
+to deal with case where slice file not found in cache dir
+this happens on gdc backend where multiple pp container processes are launched
+and each using its own cachedir
+first the slicing request goes to 1st container, writing to its cachedir
+then visualization requests goes to 2nd container, there the slice file is not found in cachedir
+call this function to force download
+can delete this function when gdc containers share a cachedir
+*/
+async function mayReSliceFile(req, cachefile) {
+	/* uncomment these two lines to test on local
+	await fs.promises.unlink(cachefile)
+	await fs.promises.unlink(cachefile+'.bai')
+	*/
+
+	if (!(await utils.file_not_exist(cachefile))) {
+		// bam file exists
+		return
+	}
+
+	// slice file not found; force to download slice here
+
+	if (!req.query.gdcFilePosition) throw '.gdcFilePosition missing'
+	const bakRegions = req.query.regions
+	const tmp = req.query.gdcFilePosition.split('.')
+	req.query.regions = [{ chr: tmp[0], start: Number(tmp[1]), stop: Number(tmp[2]) }]
+
+	await download_gdc_bam(req)
+
+	req.query.regions = bakRegions
 }
 
 async function do_query(q) {
@@ -2896,6 +2931,7 @@ async function query_oneread(req, r) {
 
 	if (req.query.isFileSlice) {
 		_file = path.join(serverconfig.cachedir_bam, req.query.file)
+		await mayReSliceFile(req, _file)
 	} else {
 		;[e, _file, isurl] = app.fileurl(req)
 		if (e) throw e
@@ -3348,11 +3384,24 @@ function getGDCcacheFileName(req) {
 	return md5Hasher.update(lst.join('')).digest('hex') + '.bam'
 }
 
+/*
+req{}
+	X-Auth-Token
+	cookies
+	query{}
+		gdcFileUUID:str
+		gdcFilePosition:str // same as regions[0]
+		regions:[ {chr/start/stop}, ... ]
+
+function is also called during visualization requests
+*/
 async function download_gdc_bam(req) {
 	// query gdc bam slicing api using the uuid of one bam file
 	// download one bam slice for each region
+	const regions = typeof req.query.regions == 'string' ? JSON.parse(req.query.regions) : req.query.regions
+	if (!Array.isArray(regions)) throw 'req.query.regions[] not array'
 	const gdc_bam_filenames = []
-	for (const r of JSON.parse(req.query.regions)) {
+	for (const r of regions) {
 		const filesize = await get_gdc_bam(
 			r.chr,
 			r.start,
