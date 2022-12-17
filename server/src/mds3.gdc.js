@@ -32,6 +32,8 @@ validate_sampleSummaries2_mclassdetail
 **************** route handlers
 handle_gdc_ssms
 handle_filter2topGenes
+	get_filter2topGenes
+		mayAddCGC2filter
 
 **************** internal
 mayMapRefseq2ensembl
@@ -1323,28 +1325,44 @@ CGConly: boolean
 	}
 */
 function mayAddCGC2filter(str, CGConly) {
-	if (!CGConly) {
-		// not using CGC genes. no need to modify filter
-		return str
-	}
 	const f = JSON.parse(decodeURIComponent(str))
 
+	// reformulate f into f2
+	// f may be "in" or "and". f2 is always "and", in order to join in additional filters
+	let f2
+
 	if (f.op == 'in') {
-		// create new filter obj with AND join of CGC element and existing filter
-		const f2 = {
-			op: 'and',
-			content: [f, { op: 'in', content: { field: 'genes.is_cancer_gene_census', value: ['true'] } }]
+		// wrap f into f2
+		f2 = { op: 'and', content: [f] }
+	} else if (f.op == 'and') {
+		// no need to wrap
+		f2 = f
+	} else {
+		throw 'f.op not "in" or "and"'
+	}
+
+	// per Phil on 12/16/2022, following filters ensure to return IDH1 as 1st gene for gliomas
+	f2.content.push({
+		op: 'NOT',
+		content: {
+			field: 'ssms.consequence.transcript.annotation.vep_impact',
+			value: 'missing'
 		}
-		return encodeURIComponent(JSON.stringify(f2))
+	})
+	f2.content.push({
+		op: 'in',
+		content: {
+			field: 'ssms.consequence.transcript.consequence_type',
+			value: ['missense_variant', 'frameshift_variant', 'start_lost', 'stop_lost', 'stop_gained']
+		}
+	})
+
+	if (CGConly) {
+		// using CGC genes, add in filter
+		f2.content.push({ op: 'in', content: { field: 'genes.is_cancer_gene_census', value: ['true'] } })
 	}
 
-	if (f.op == 'and') {
-		// filter is already "and"; insert CGC element into list
-		f.content.push({ op: 'in', content: { field: 'genes.is_cancer_gene_census', value: ['true'] } })
-		return encodeURIComponent(JSON.stringify(f))
-	}
-
-	throw 'mayAddCGC2filter: f.op is not "in" or "and"'
+	return encodeURIComponent(JSON.stringify(f2))
 }
 
 /*
