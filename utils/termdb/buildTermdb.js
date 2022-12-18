@@ -526,23 +526,21 @@ function buildDb(annotationData, survivalData, scriptArg) {
 	if (scriptArg.has('term2genes')) runDBScript('term2genes.msigdb.sql')
 
 	// ".import" commands
-	const importLines = ['PRAGMA foreign_keys=ON;', '.mode tabs', `.import ${termdbFile} terms`]
-
+	const importLines = ['PRAGMA foreign_keys=ON;', '.mode tabs']
+	if (sampleCollect.name2id.size) {
+		importLines.push(`.import ${sampleidFile} samples`)
+		importLines.push(`.import ${sampleidmapFile} sampleidmap`)
+	}
+	importLines.push(`.import ${termdbFile} terms`)
 	if (annotationData) importLines.push(`.import ${annotationFile} annotations`)
 
 	if (survivalData) importLines.push(`.import ${survivalFile} survival`)
-
-	if (sampleCollect.name2id.size) {
-		importLines.push(`.import ${sampleidFile} sample`)
-		importLines.push(`.import ${sampleidmapFile} sampleidmap`)
-	}
 
 	if (scriptArg.has('termHtmlDef')) importLines.push(`.import ${scriptArg.get('termHtmlDef')} termhtmldef`)
 
 	if (scriptArg.has('term2genes')) importLines.push(`.import ${scriptArg.get('term2genes')} term2genes`)
 
 	// temp script to load tables
-
 	fs.writeFileSync(loadScript, importLines.join('\n'))
 
 	// load db
