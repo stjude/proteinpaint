@@ -504,59 +504,64 @@ function writeFiles(terms) {
 }
 
 function buildDb(annotationData, survivalData, scriptArg) {
-	console.log('importing data into the db file ...')
-	const cmd = scriptArg.get('sqlite3') + ' ' + scriptArg.get('dbfile')
-	exec(`${cmd}  'PRAGMA foreign_keys=0'`)
-
-	// create db with blank tables
-	exec(`${cmd} < ${path.join(__dirname, './create.sql')}`)
-	if (scriptArg.has('term2genes')) {
-		exec(`${cmd} < ${path.join(__dirname, './term2genes.msigdb.sql')}`)
+	function runDBScript(script) {
+		console.log(`Running script ${script}`)
+		const script_path = path.join(__dirname, script)
+		exec(`${scriptArg.get('sqlite3')} ${scriptArg.get('dbfile')} < ${script_path}`)
 	}
 
+	// create db with blank tables
+	runDBScript('create.sql')
+	console.log('importing data into the db file ...')
+
+	if (scriptArg.has('term2genes')) runDBScript('term2genes.msigdb.sql')
+
 	// ".import" commands
-	const importLines = ['.mode tabs', `.import ${termdbFile} terms`]
+	const importLines = ['PRAGMA foreign_keys=ON;', '.mode tabs', `.import ${termdbFile} terms`]
+
 	if (annotationData) importLines.push(`.import ${annotationFile} annotations`)
+
 	if (survivalData) importLines.push(`.import ${survivalFile} survival`)
+
 	if (sampleCollect.name2id.size) importLines.push(`.import ${sampleidFile} sampleidmap`)
+
 	if (scriptArg.has('termHtmlDef')) importLines.push(`.import ${scriptArg.get('termHtmlDef')} termhtmldef`)
+
 	if (scriptArg.has('term2genes')) importLines.push(`.import ${scriptArg.get('term2genes')} term2genes`)
 
 	// temp script to load tables
+
 	fs.writeFileSync(loadScript, importLines.join('\n'))
 
 	// load db
-	exec(cmd + ' < ' + loadScript)
+	exec(`${scriptArg.get('sqlite3')} ${scriptArg.get('dbfile')} < ${loadScript}`)
 
 	// populate ancestry table
 	console.log('setting ancestry data ...')
-	exec(`${cmd} < ${path.join(__dirname, 'setancestry.sql')}`)
+	runDBScript('setancestry.sql')
 
 	// index all tables
 	console.log('indexing tables ...')
-	exec(`${cmd} < ${path.join(__dirname, 'indexing.sql')}`)
-	if (scriptArg.has('term2genes')) {
-		exec(`${cmd} < ${path.join(__dirname, './term2genes.msigdb.indexing.sql')}`)
-	}
+	runDBScript('indexing.sql')
+	if (scriptArg.has('term2genes')) runDBScript('term2genes.msigdb.indexing.sql')
 
 	// populate cohort,term_id,count fields from subcohort_terms table
 	// only works for dataset without subcohort, fill blank string to cohort
 	if (annotationData || survivalData) {
 		console.log('setting default subcohort ...')
-		exec(`${cmd} < ${path.join(__dirname, 'set-default-subcohort.sql')}`)
+		runDBScript('set-default-subcohort.sql')
 	} else {
 		console.log('setting default subcohort with no sample ...')
-		exec(`${cmd} < ${path.join(__dirname, 'set-default-subcohort-no-sample.sql')}`)
+		runDBScript('set-default-subcohort-no-sample.sql')
 	}
 
 	// populate included_types and child_types fields from subcohort_terms table
 	console.log('setting included types ...')
-	exec(`${cmd} < ${path.join(__dirname, 'set-included-types.sql')}`)
+	runDBScript('set-included-types.sql')
 
 	// create 3 separate tables anno-categorical/integer/float
 	console.log('creating anno-by-type ...')
-	exec(`${cmd} < ${path.join(__dirname, 'anno-by-type.sql')}`)
-	exec(`${cmd} 'PRAGMA foreign_keys=1'`)
+	runDBScript('anno-by-type.sql')
 
 	fs.unlink(loadScript, () => {})
 	fs.unlink(termdbFile, () => {})

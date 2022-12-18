@@ -1,5 +1,14 @@
 
 
+drop table if exists cohort;
+create table cohort (
+  cohort character primary key not null,
+  name character not null,
+  abbrev character not null,
+  sample_count integer not null
+);
+
+
 drop table if exists sample;
 create table sample (
   id integer primary key not null,
@@ -66,6 +75,7 @@ create table category2vcfsample (
   parent_name character varying(200) null,
   q text not null,
   categories text not null,
+  foreign key(subcohort) references cohort(cohort) on delete cascade,
   foreign key(group_name, term_id) references alltermsbyorder(group_name, id) on delete cascade
   foreign key(parent_name) references terms(id) on delete cascade
 );
@@ -122,6 +132,7 @@ CREATE TABLE subcohort_terms (
  included_types TEXT,
  child_types TEXT,
 --primary key(cohort, term_id),
+foreign key(cohort) references cohort(cohort) on delete cascade
 foreign key(term_id) references terms(id) on delete cascade
 );
 
