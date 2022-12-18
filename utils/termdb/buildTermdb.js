@@ -106,7 +106,8 @@ const runId = Math.ceil(Math.random() * 100000)
 // create file names with runId as suffix, to avoid overwriting existing files
 // while other files can be temporary, sampleidmap must be kept for reheadering bcf/tabix files
 const termdbFile = 'termdb.' + runId,
-	sampleidFile = 'sampleidmap.' + runId,
+	sampleidmapFile = 'sampleidmap.' + runId,
+	sampleidFile = 'sampleid.' + runId,
 	annotationFile = 'annotation.' + runId,
 	survivalFile = 'survival.' + runId,
 	loadScript = 'load.sql.' + runId
@@ -498,8 +499,16 @@ function writeFiles(terms) {
 
 	if (sampleCollect.name2id.size) {
 		const lines = []
-		for (const [s, i] of sampleCollect.name2id) lines.push(i + '\t' + s)
-		fs.writeFileSync(sampleidFile, lines.join('\n') + '\n')
+		let ids = []
+		for (const [s, i] of sampleCollect.name2id) {
+			ids.push(i)
+			lines.push(i + '\t' + s)
+		}
+		ids = [...new Set(ids)]
+
+		fs.writeFileSync(sampleidmapFile, lines.join('\n') + '\n')
+		if (ids.length == lines.length) fs.writeFileSync(sampleidFile, lines.join('\n') + '\n')
+		else fs.writeFileSync(sampleidFile, ids.join('\n') + '\n')
 	}
 }
 
@@ -523,7 +532,10 @@ function buildDb(annotationData, survivalData, scriptArg) {
 
 	if (survivalData) importLines.push(`.import ${survivalFile} survival`)
 
-	if (sampleCollect.name2id.size) importLines.push(`.import ${sampleidFile} sampleidmap`)
+	if (sampleCollect.name2id.size) {
+		importLines.push(`.import ${sampleidFile} sample`)
+		importLines.push(`.import ${sampleidmapFile} sampleidmap`)
+	}
 
 	if (scriptArg.has('termHtmlDef')) importLines.push(`.import ${scriptArg.get('termHtmlDef')} termhtmldef`)
 
@@ -563,6 +575,10 @@ function buildDb(annotationData, survivalData, scriptArg) {
 	console.log('creating anno-by-type ...')
 	runDBScript('anno-by-type.sql')
 
+	fs.unlink(sampleidFile, () => {})
+	fs.unlink(sampleidmapFile, () => {})
+	fs.unlink(annotationFile, () => {})
+	fs.unlink(survivalFile, () => {})
 	fs.unlink(loadScript, () => {})
 	fs.unlink(termdbFile, () => {})
 	fs.unlink(annotationFile, () => {})

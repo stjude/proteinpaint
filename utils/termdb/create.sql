@@ -12,7 +12,7 @@ create table cohort (
 drop table if exists sample;
 create table sample (
   id integer primary key not null,
-  name character varying(100) not null
+  cname character varying(100)
 );
 
 
