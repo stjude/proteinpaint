@@ -168,7 +168,6 @@ app.use((req, res, next) => {
 				(value.startsWith('[') && value.endsWith(']'))
 			)
 				req.query[key] = JSON.parse(value)
-			console.log([170, key, req.query[key]])
 		}
 	} catch (e) {
 		res.send({ error: e })
@@ -197,7 +196,6 @@ app.use(bodyParser.text({ limit: '5mb' }))
 app.use(bodyParser.urlencoded({ extended: true }))
 
 app.use((req, res, next) => {
-	console.log(168)
 	if (req.method.toUpperCase() == 'POST' && req.body && req.headers['content-type'] != 'application/json') {
 		res.send({ error: `invalid HTTP request.header['content-type'], must be 'application/json'` })
 		return
