@@ -75,7 +75,7 @@ class Barchart {
 
 	async setControls() {
 		if (this.opts.controls) {
-			this.opts.controls.on('downloadClick.boxplot', this.download)
+			this.opts.controls.on('downloadClick.barchart', this.download)
 		} else {
 			this.dom.holder
 				.attr('class', 'pp-termdb-plot-viz')
@@ -123,7 +123,7 @@ class Barchart {
 				})
 			}
 
-			this.components.controls.on('downloadClick.boxplot', this.download)
+			this.components.controls.on('downloadClick.barchart', this.download)
 		}
 	}
 
@@ -767,7 +767,8 @@ function setInteractivity(self) {
 	self.handlers = getHandlers(self)
 
 	self.download = function() {
-		if (!self.state || !self.state.isVisible) return
+		console.log(769)
+		if (!self.state) return
 		// has to be able to handle multichart view
 		const mainGs = []
 		const translate = { x: undefined, y: undefined }

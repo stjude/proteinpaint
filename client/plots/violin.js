@@ -1,10 +1,12 @@
 import { getCompInit } from '../rx'
 import { controlsInit } from './controls'
 import violinRenderer from './violin.renderer'
+import { to_svg } from '#src/client'
 
 class ViolinPlot {
 	constructor(opts) {
 		this.type = 'violin'
+		setInteractivity(this)
 	}
 
 	async init() {
@@ -65,6 +67,7 @@ class ViolinPlot {
 				]
 			})
 		}
+		this.components.controls.on('downloadClick.violin', this.download)
 	}
 
 	reactsTo(action) {
@@ -145,6 +148,26 @@ class ViolinPlot {
 
 export const violinInit = getCompInit(ViolinPlot)
 export const componentInit = violinInit
+
+function setInteractivity(self) {
+	self.download = function() {
+		if (!self.state) return
+
+		// has to be able to handle multichart view
+		const mainGs = []
+		const translate = { x: undefined, y: undefined }
+		const titles = []
+		let maxw = 0,
+			maxh = 0,
+			tboxh = 0
+		let prevY = 0,
+			numChartsPerRow = 0
+
+		self.dom.holder.selectAll('.sjpp-violin-plot').each(function() {
+			to_svg(this, 'violin', { apply_dom_styles: true })
+		})
+	}
+}
 
 export function getDefaultViolinSettings() {
 	return {
