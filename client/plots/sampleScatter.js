@@ -118,6 +118,7 @@ class Scatter {
 		copyMerge(this.settings, this.config.settings.sampleScatter)
 		const reqOpts = this.getDataRequestOpts()
 		const data = await this.app.vocabApi.getScatterData(reqOpts)
+		this.currData = data //For unit tests only
 		if (data.error) throw data.error
 		if (!Array.isArray(data.samples)) throw 'data.samples[] not array'
 		this.shapeLegend = new Map(Object.entries(data.shapeLegend))
@@ -268,6 +269,7 @@ class Scatter {
 				.style('fill', color)
 			itemG
 				.append('text')
+				.classed('sjpp-scatter-legend-label', true)
 				.attr('x', offsetX + 10)
 				.attr('y', offsetY)
 				.text(`${name}, n=${count}`)
@@ -642,16 +644,19 @@ function setRenderers(self) {
 			.insert('div')
 			.style('display', display)
 			.style('margin', '20px')
+			.classed('sjpp-reset-btn', true) //For unit tests
 		icon_functions['restart'](homeDiv, { handler: resetToIdentity })
 		const zoomInDiv = toolsDiv
 			.insert('div')
 			.style('display', display)
 			.style('margin', '20px')
+			.classed('sjpp-zoom-in-btn', true) //For unit tests
 		icon_functions['zoomIn'](zoomInDiv, { handler: zoomIn })
 		const zoomOutDiv = toolsDiv
 			.insert('div')
 			.style('display', display)
 			.style('margin', '20px')
+			.classed('sjpp-zoom-out-btn', true) //For unit tests
 		icon_functions['zoomOut'](zoomOutDiv, { handler: zoomOut })
 		const lassoDiv = toolsDiv
 			.insert('div')

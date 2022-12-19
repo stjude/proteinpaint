@@ -294,7 +294,10 @@ export function setGroupsettingMethods(self) {
 			addOnDrop(exclude_list, 0)
 		})
 
-		const exclude_list = exclude_div.append('div').style('margin', '5px')
+		const exclude_list = exclude_div
+			.append('div')
+			.style('margin', '5px')
+			.classed('sjpp-drag-list-div', true) //For unit testing
 
 		// show excluded categories
 		addGroupItems(exclude_list, excluded_cats)
@@ -370,7 +373,10 @@ export function setGroupsettingMethods(self) {
 					}
 				})
 
-			const group_items_div = group_div.append('div').style('margin', '5px')
+			const group_items_div = group_div
+				.append('div')
+				.style('margin', '5px')
+				.classed('sjpp-drag-list-div', true) //For unit testing
 			// show categories from the group
 			if (!group.type || group.type == 'values') addGroupItems(group_items_div, group.values)
 			else if (group.type == 'filter') {
@@ -401,6 +407,7 @@ export function setGroupsettingMethods(self) {
 				.style('display', 'block')
 				.style('padding', '10px')
 				.style('vertical-align', 'top')
+				.classed('sjpp-drag-drop-div', true) //For unit testing
 
 			if (group_type !== 'filter') {
 				dragable_div
