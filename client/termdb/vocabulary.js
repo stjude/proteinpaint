@@ -678,6 +678,16 @@ class TermdbVocab extends Vocab {
 		}
 		if (term.category2samplecount) {
 			// grab directly from term and not the server
+			// { categoryKey: count }
+			const l2 = []
+			for (const key in term.category2samplecount) {
+				l2.push({
+					key,
+					label: term?.values?.[key]?.label || key,
+					samplecount: term.category2samplecount[key]
+				})
+			}
+			return { lst: l2 }
 		}
 
 		// use same query method for all dictionary terms
@@ -777,11 +787,10 @@ class TermdbVocab extends Vocab {
 
 	opts{}
 	.filter        a filter object
-	.filter0       currently the gdc cohort filter obj
-	.terms[tw{}]   an array of termWrapper objects
+	.filter0       read-only json object, only used for gdc dataset to store the cohort filter obj built by CohortBuilder
+	.terms[{}]     an array of termWrapper objects
 		tw.$id       id to disambugate when multiple terms
-		             with the same ID are in terms[],
-								 such as in matrix plot
+		             with the same ID are in terms[], such as in matrix plot
 		
 	Returns 
 	{
@@ -810,6 +819,13 @@ class TermdbVocab extends Vocab {
 		.byTermId{}
 			.$id: {bins, etc}   metadata for processed terms, useful
 													for specifying value order, colors, etc.
+
+	!!! NOTE !!!
+	May fill in following attributes on term object if missing or met conditions:
+	(the modifications are on term object and not tracked in state)
+
+	tw.term.category2samplecount = {}
+	tw.term.values={}
 	*/
 	async getAnnotatedSampleData(opts) {
 		// may check against required auth credentials for the server route
@@ -856,7 +872,7 @@ class TermdbVocab extends Vocab {
 			}
 			if (opts.filter0) init.body.filter0 = opts.filter0 // avoid adding "undefined" value
 
-			// quick fix
+			// quick fix TODO do this via some settings via this.termdbConfig, replace hardcoded logic
 			if (this.vocab.dslabel == 'GDC' && tw.term.id && currentGeneNames.length)
 				init.body.currentGeneNames = currentGeneNames
 			if (auth) init.body.embedder = window.location.hostname
@@ -929,6 +945,10 @@ class TermdbVocab extends Vocab {
 				obj[row.sample] = row
 				return obj
 			}, {})
+
+			for (const tw of opts.terms) {
+				mayFillInCategory2samplecount4term(tw, data.lst)
+			}
 
 			return data
 		} catch (e) {
@@ -1360,5 +1380,52 @@ function get_histogram(ticks) {
 			}
 		}
 		return bins
+	}
+}
+
+/*
+Input:
+	tw {
+		$id
+		term { type }
+	}
+	lst[]
+		each element is annotation object for a sample
+		sample: samplename
+		[$termid] : {}
+			.key
+				category key for this category?
+			.value
+				category label for this category?
+			.filteredValues[]
+Output:
+	none
+
+if a term is eligible, modify term object as below:
+- create tw.term.category2samplecount = {categoryKey: count}
+- fill in tw.term.values{}
+*/
+function mayFillInCategory2samplecount4term(tw, lst) {
+	// define conditions when not to do it
+	if (tw.term.type != 'categorical') {
+		// for now only do it for categorical term
+		return
+	}
+	if (!('$id' in tw)) {
+		// tw.$id not found
+		return
+	}
+	const k2c = {} // key: category key, value: sample count annotated to this category
+	const k2label = {} // key: category key, value: category label
+	for (const s of lst) {
+		if (!s[tw.$id]) continue // sample is not annotated by this term
+		const categoryKey = s[tw.$id].key
+		k2c[categoryKey] = 1 + (k2c[categoryKey] || 0)
+		k2label[categoryKey] = { key: categoryKey, label: categoryKey }
+	}
+	tw.term.category2samplecount = k2c
+	if (!tw.term.values || Object.keys(tw.term.values).length == 0) {
+		// term.values{} is blank for this categorical term, fill in
+		tw.term.values = k2label
 	}
 }
