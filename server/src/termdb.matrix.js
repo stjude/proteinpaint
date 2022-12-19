@@ -77,7 +77,6 @@ function validateArg(q, ds, genome) {
 		if (!tw.q) console.log('do something??')
 	}
 	if (q.currentGeneNames) {
-		if (typeof q.currentGeneNames == 'string') q.currentGeneNames = JSON.parse(q.currentGeneNames)
 		if (!Array.isArray(q.currentGeneNames)) throw 'currentGeneNames[] is not array'
 	}
 	if (q.filter0) {

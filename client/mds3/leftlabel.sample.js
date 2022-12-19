@@ -76,7 +76,7 @@ export function makeSampleFilterLabel(data, tk, block, laby) {
 			// should not impact non-gdc datasets
 			//
 			/////////////////////////////////////
-			arg.getCategoriesArguments = { currentGeneNames: block.usegm.name }
+			arg.getCategoriesArguments = { currentGeneNames: [block.usegm.name] }
 		}
 		filterInit(arg).main(tk.filterObj)
 	})
