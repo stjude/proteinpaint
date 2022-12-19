@@ -5,6 +5,7 @@ import { schemeCategory10 } from 'd3-scale-chromatic'
 import { brushX, brushY } from 'd3'
 import { renderTable } from '#dom/table'
 import { filterJoin, getFilterItemByTag } from '../filter/filter'
+import { drag as d3drag } from 'd3-drag'
 
 export default function violinRenderer(self) {
 	const k2c = scaleOrdinal(schemeCategory10)
@@ -82,7 +83,7 @@ export default function violinRenderer(self) {
 
 		// creates numeric axis
 		const axisScale = scaleLinear()
-			.domain([self.data.min - self.data.max / 10, self.data.max + self.data.max / 10])
+			.domain([self.data.min, self.data.max + self.data.max / 20])
 			.range(isH ? [0, plotLength] : [plotLength, 0])
 
 		{
@@ -205,6 +206,8 @@ export default function violinRenderer(self) {
 								.extent([[0, -20], [plotLength, 20]])
 								.on('end', async event => {
 									const selection = event.selection
+									// console.log(209,axisScale.invert(selection[0]));
+									// console.log(210,axisScale.invert(selection[1]));
 
 									if (!selection) return
 
@@ -240,7 +243,6 @@ export default function violinRenderer(self) {
 					callback: self.getAddFilterCallback(plot, 'term2')
 				})
 			}
-
 			self.app.tip.d
 				.append('div')
 				.selectAll('div')
@@ -254,7 +256,17 @@ export default function violinRenderer(self) {
 					d.callback()
 					self.dom.tableHolder.style('display', 'none')
 				})
+
+			//show median values as text under menu options
+			self.app.tip.d
+				.append('div')
+				.text(`Median Value: ${plot.median}`)
+				.style('padding-left', '10px')
+				.style('font-size', '15px')
+
 			self.app.tip.show(event.clientX, event.clientY)
+		} else if (plot.divideTwBins != null) {
+			self.app.tip.style('display', 'none')
 		}
 	}
 
@@ -312,23 +324,13 @@ export default function violinRenderer(self) {
 				}
 			})
 
-			if (self.config.term?.q?.mode === 'continuous') {
-				// tvslst.lst[0].tvs.ranges = [
-				// 	{
-				// 		start: selection[0],
-				// 		stop: selection[1],
-				// 		startinclusive: true,
-				// 		stopinclusive: true
-				// 	}
-				// ]
-			} else {
-				tvslst.lst[0].tvs.values = [
-					{
-						key: plot.seriesId
-					}
-				]
-			}
+			tvslst.lst[0].tvs.values = [
+				{
+					key: plot.seriesId
+				}
+			]
 		}
+
 		if ((!term || term == 'term2') && self.config.term2) {
 			const t2 = self.config.term2
 			tvslst.lst.push({
@@ -338,15 +340,22 @@ export default function violinRenderer(self) {
 				}
 			})
 			const item = tvslst.lst[1] || tvslst.lst[0]
-			if (t2.q?.mode === 'continuous' || (t2.term?.type === 'float' || t2.term?.type === 'integer')) {
+			if (
+				t2.q?.mode === 'continuous' ||
+				((t2.term?.type === 'float' || t2.term?.type === 'integer') && plot.divideTwBins != null)
+			) {
 				item.tvs.ranges = [
 					{
-						start: plot.divideTwBins?.start ? plot.divideTwBins.start : null,
-						stop: plot.divideTwBins?.stop ? plot.divideTwBins.stop : null,
-						startinclusive: plot.divideTwBins?.startinclusive,
-						stopinclusive: plot.divideTwBins?.stopinclusive,
-						startunbounded: plot.divideTwBins?.startunbounded ? plot.divideTwBins?.startunbounded : null,
-						stopunbounded: plot.divideTwBins?.stopunbounded ? plot.divideTwBins?.stopunbounded : null
+						start: structuredClone(plot.divideTwBins?.start) || null,
+						stop: structuredClone(plot.divideTwBins?.stop) || null,
+						startinclusive: structuredClone(plot.divideTwBins?.startinclusive) || null,
+						stopinclusive: structuredClone(plot.divideTwBins?.stopinclusive) || null,
+						startunbounded: structuredClone(plot.divideTwBins?.startunbounded)
+							? structuredClone(plot.divideTwBins?.startunbounded)
+							: null,
+						stopunbounded: structuredClone(plot.divideTwBins?.stopunbounded)
+							? structuredClone(plot.divideTwBins?.stopunbounded)
+							: null
 					}
 				]
 			} else {

@@ -54,6 +54,13 @@ class ViolinPlot {
 						chartType: 'violin',
 						settingsKey: 'orientation',
 						options: [{ label: 'Vertical', value: 'vertical' }, { label: 'Horizontal', value: 'horizontal' }]
+					},
+					{
+						label: 'Data points',
+						type: 'radio',
+						chartType: 'violin',
+						settingsKey: 'datapoints',
+						options: [{ label: 'Rug plot', value: 'rug' }, { label: 'Bean plot', value: 'bean' }]
 					}
 				]
 			})
@@ -119,7 +126,8 @@ class ViolinPlot {
 			filter: this.state.termfilter.filter,
 			svgw: settings.violin.svgw,
 			orientation: settings.violin.orientation,
-			devicePixelRatio: settings.violin.devicePixelRatio
+			devicePixelRatio: settings.violin.devicePixelRatio,
+			datapoints: settings.violin.datapoints
 		}
 
 		if ((term.term.type == 'float' || term.term.type == 'integer') && term.q.mode == 'continuous') {
@@ -144,7 +152,8 @@ export function getDefaultViolinSettings() {
 		rowlabelw: 250,
 		brushRange: null, //object with start and end if there is a brush selection
 		devicePixelRatio: window.devicePixelRatio > 1 ? window.devicePixelRatio : 1,
-		svgw: 500 / devicePixelRatio
+		svgw: 500 / devicePixelRatio,
+		datapoints: 'bean'
 		// unit: 'abs',
 		// overlay: 'none',
 		// divideBy: 'none',

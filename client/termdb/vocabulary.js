@@ -5,7 +5,6 @@ import { getNormalRoot } from '../filter/filter'
 import { scaleLinear } from 'd3-scale'
 import { sample_match_termvaluesetting } from '../common/termutils'
 import initBinConfig from '#shared/termdb.initbinconfig'
-import { deepEqual } from '../rx'
 import { isUsableTerm, graphableTypes } from '#shared/termdb.usecase'
 
 const qCacheByTermId = {}
@@ -572,6 +571,7 @@ class TermdbVocab extends Vocab {
 			'svgw=' + arg.svgw,
 			'orientation=' + arg.orientation,
 			'devicePixelRatio=' + arg.devicePixelRatio,
+			'datapoints=' + arg.datapoints,
 			...(additionalArgs || [])
 		]
 		if (arg.filter) {

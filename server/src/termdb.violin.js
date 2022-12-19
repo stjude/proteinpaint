@@ -92,8 +92,8 @@ export async function trigger_getViolinPlotData(q, res, ds, genome) {
 		: (key2values = [...key2values].sort((a, b) => {
 				return a
 					.toString()
-					.replace(/[^a-zA-Z0-9]/g, '')
-					.localeCompare(b.toString().replace(/[^a-zA-Z0-9]/g, ''), undefined, {
+					.replace(/[^a-zA-Z0-9<]/g, '')
+					.localeCompare(b.toString().replace(/[^a-zA-Z0-9<]/g, ''), undefined, {
 						numeric: true
 					})
 		  }))
@@ -128,10 +128,10 @@ export async function trigger_getViolinPlotData(q, res, ds, genome) {
 	let axisScale
 	q.orientation == 'horizontal'
 		? (axisScale = scaleLinear()
-				.domain([result.min - result.max / 10, result.max + result.max / 10])
+				.domain([result.min, result.max + result.max / 20])
 				.range([0, q.svgw]))
 		: (axisScale = scaleLinear()
-				.domain([result.min - result.max / 10, result.max + result.max / 10])
+				.domain([result.min, result.max + result.max / 20])
 				.range([q.svgw, 0]))
 
 	// plot data to return to client
@@ -140,14 +140,15 @@ export async function trigger_getViolinPlotData(q, res, ds, genome) {
 	for (const plot of result.plots) {
 		// item: { label=str, values=[v1,v2,...] }
 
-		//backend rendering bean plot on top of violin plot based on orientation of chart
+		//backend rendering bean/rug plot on top of violin plot based on orientation of chart
 		let canvas
 		q.orientation == 'horizontal'
 			? (canvas = createCanvas(q.svgw * q.devicePixelRatio, 20 * q.devicePixelRatio))
 			: (canvas = createCanvas(20 * q.devicePixelRatio, q.svgw * q.devicePixelRatio))
 		const ctx = canvas.getContext('2d')
-		ctx.strokeStyle = 'black'
-		ctx.lineWidth = 0.1
+		ctx.strokeStyle = 'rgba(0,0,0,0.8)'
+		ctx.lineWidth = 0.2
+		ctx.globalAlpha = 0.5
 		ctx.fillStyle = '#ffe6e6'
 
 		//scaling for sharper image
@@ -155,17 +156,21 @@ export async function trigger_getViolinPlotData(q, res, ds, genome) {
 			ctx.scale(q.devicePixelRatio, q.devicePixelRatio)
 		}
 
-		ctx.beginPath()
-		plot.values.forEach(i => {
-			q.orientation === 'horizontal'
-				? ctx.arc(+axisScale(i), 5, 2, 0, 2 * Math.PI)
-				: ctx.arc(5, +axisScale(i), 2, 0, 2 * Math.PI)
-			q.orientation == 'horizontal'
-				? ctx.arc(+axisScale(i), 5, 1.7, 0, 2 * Math.PI)
-				: ctx.arc(5, +axisScale(i), 1.7, 0, 2 * Math.PI)
-		})
-		ctx.fill()
-		ctx.stroke()
+		q.datapoints === 'rug'
+			? plot.values.forEach(i => {
+					ctx.beginPath()
+					q.orientation == 'horizontal' ? ctx.moveTo(axisScale(i), 0) : ctx.moveTo(0, axisScale(i))
+					q.orientation == 'horizontal' ? ctx.lineTo(axisScale(i), 10) : ctx.lineTo(10, axisScale(i))
+					ctx.stroke()
+			  })
+			: plot.values.forEach(i => {
+					ctx.beginPath()
+					q.orientation === 'horizontal'
+						? ctx.arc(+axisScale(i), 5, 2, 0, 2 * Math.PI)
+						: ctx.arc(5, +axisScale(i), 2, 0, 2 * Math.PI)
+					ctx.fill()
+					ctx.stroke()
+			  })
 
 		plot.src = canvas.toDataURL()
 
@@ -203,7 +208,7 @@ export async function trigger_getViolinPlotData(q, res, ds, genome) {
 // // compute bins using d3
 // // need unit test!!!
 export function computeViolinData(scale, values) {
-	const ticksCompute = values.length <= 200 ? 10 : values.length < 800 ? 30 : 10
+	const ticksCompute = values.length <= 200 ? 10 : values.length < 800 ? 30 : 15
 
 	const binBuilder = bin()
 		.domain(scale.domain()) /* extent of the data that is lowest to highest*/
