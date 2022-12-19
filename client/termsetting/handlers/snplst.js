@@ -474,14 +474,14 @@ thus this function is not needed
 if there's a way to automatically update menu then can delete it TODO
 */
 async function makeSampleSummary(self) {
-	const qlst = [`cacheid=${self.q.cacheid}`]
+	const body = { cacheid: self.q.cacheid }
 
 	// ** duplicated_and_flawed ** logic of handling tw.q.restrictAncestry
 	const extraFilters = []
 	if (self.q.restrictAncestry) extraFilters.push({ type: 'tvs', tvs: self.q.restrictAncestry.tvs })
 	const filter = { type: 'tvslst', join: 'and', lst: [...extraFilters] }
 	if (self.filter) filter.lst.push(self.filter)
-	const data = await self.vocabApi.getCategories(self.term, filter, qlst)
+	const data = await self.vocabApi.getCategories(self.term, filter, body)
 	mayRunSnplstTask({ term: self.term, q: self.q }, data)
 }
 

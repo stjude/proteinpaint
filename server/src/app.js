@@ -157,6 +157,37 @@ app.use((req, res, next) => {
 		// TODO: change all client-side fetch(new Request(...)) to use dofetch*() to preset the content-type
 		req.headers['content-type'] = 'application/json'
 	}
+
+	// detect URL parameter values with matching JSON start-stop encoding characters
+	try {
+		for (const key in req.query) {
+			const value = req.query[key]
+			if (
+				(value.startsWith('"') && value.endsWith('"')) ||
+				(value.startsWith('{') && value.endsWith('}')) ||
+				(value.startsWith('[') && value.endsWith(']'))
+			)
+				req.query[key] = JSON.parse(value)
+			console.log([170, key, req.query[key]])
+		}
+	} catch (e) {
+		res.send({ error: e })
+		return
+	}
+
+	/*
+	// TODO: may simplify the above detection by using the paramEncoding parameter
+	if (req.query.paramEncoding=='json') {
+		for(const key in req.query) {
+			if (key == 'paramEncoding' || key.startsWith('get')) continue
+			try {
+				req.query[key] = JSON.parse(req.query[key])
+			} catch(e) { console.log(key, req.query[key])
+				res.send({error: 'JSON.parse: ' + e})
+			}
+		}
+	}
+	*/
 	next()
 })
 
@@ -166,6 +197,7 @@ app.use(bodyParser.text({ limit: '5mb' }))
 app.use(bodyParser.urlencoded({ extended: true }))
 
 app.use((req, res, next) => {
+	console.log(168)
 	if (req.method.toUpperCase() == 'POST' && req.body && req.headers['content-type'] != 'application/json') {
 		res.send({ error: `invalid HTTP request.header['content-type'], must be 'application/json'` })
 		return

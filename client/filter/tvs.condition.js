@@ -98,7 +98,11 @@ async function fillMenu(self, div, tvs) {
 		.style('color', '#888')
 		.html('Using any grade per patient')
 
-	const lst = tvs.bar_by_grade ? ['bar_by_grade=1'] : tvs.bar_by_children ? ['bar_by_children=1'] : []
+	const body = {} // tvs.bar_by_grade ? {bar_by_grade: 1} : tvs.bar_by_children ? {bar_by_children: 1} : {}
+	for (const key in tvs) {
+		if (key.includes('_by_')) body[key] = tvs[key]
+	}
+	/*
 	lst.push(
 		tvs.value_by_max_grade
 			? 'value_by_max_grade=1'
@@ -107,9 +111,9 @@ async function fillMenu(self, div, tvs) {
 			: tvs.value_by_computable_grade
 			? 'value_by_computable_grade=1'
 			: null
-	)
+	)*/
 
-	const data = await self.opts.vocabApi.getCategories(tvs.term, self.filter, lst)
+	const data = await self.opts.vocabApi.getCategories(tvs.term, self.filter, body)
 	const callback = indexes => {
 		const new_vals = data.lst.filter((v, i, array) => (tvs.isnot ? !indexes.includes(i) : indexes.includes(i)))
 		const new_tvs = JSON.parse(JSON.stringify(tvs))

@@ -101,7 +101,7 @@ export function handle_request_closure(genomes) {
 				return
 			} else if (q.for == 'validateToken') {
 			}
-
+			console.log(104, q)
 			throw "termdb: don't know what to do"
 		} catch (e) {
 			res.send({ error: e.message || e })
@@ -399,7 +399,7 @@ async function trigger_getpercentile(q, res, ds) {
 	const term = ds.cohort.termdb.q.termjsonByOneid(q.tid)
 	if (!term) throw 'invalid termid'
 	if (term.type != 'float' && term.type != 'integer') throw 'not numerical term'
-	const percentile_lst = q.getpercentile.split(',').map(p => parseInt(p))
+	const percentile_lst = q.getpercentile
 	const perc_values = []
 	const values = []
 	const rows = termdbsql.get_rows_by_one_key({

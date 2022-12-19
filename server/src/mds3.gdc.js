@@ -1289,7 +1289,7 @@ and hosted on https://proteinpaint.stjude.org/GDC/
 */
 async function get_filter2topGenes({ filter, CGConly }) {
 	if (!filter) throw 'filter missing'
-	if (typeof filter != 'string') throw 'filter not string'
+	if (typeof filter != 'object') throw 'filter not object'
 	const response = await got(
 		apihost +
 			'/analysis/top_mutated_genes_by_project' +
@@ -1324,9 +1324,7 @@ CGConly: boolean
 		]
 	}
 */
-function mayAddCGC2filter(str, CGConly) {
-	const f = JSON.parse(decodeURIComponent(str))
-
+function mayAddCGC2filter(f, CGConly) {
 	// reformulate f into f2
 	// f may be "in" or "and". f2 is always "and", in order to join in additional filters
 	let f2

@@ -617,16 +617,16 @@ class TermdbVocab extends Vocab {
 
 	async getPercentile(term_id, percentile_lst, filter) {
 		// for a numeric term, convert a percentile to an actual value, with respect to a given filter
-		const lst = [
-			'termdb?getpercentile=' + percentile_lst,
-			'tid=' + term_id,
-			'genome=' + this.vocab.genome,
-			'dslabel=' + this.vocab.dslabel
-		]
-		if (filter) {
-			lst.push('filter=' + encodeURIComponent(JSON.stringify(getNormalRoot(filter))))
+		const body = {
+			getpercentile: percentile_lst,
+			tid: term_id,
+			genome: this.vocab.genome,
+			dslabel: this.vocab.dslabel
 		}
-		return await dofetch3(lst.join('&'))
+		if (filter) {
+			body.filter = getNormalRoot(filter)
+		}
+		return await dofetch3('/termdb', { body })
 	}
 
 	async getterm(termid, dslabel = null, genome = null) {
@@ -655,26 +655,29 @@ class TermdbVocab extends Vocab {
 		return isUsableTerm(term).has('plot')
 	}
 
-	async getCategories(term, filter, lst = []) {
+	async getCategories(term, filter, _body = {}) {
 		// works for both dictionary and non-dict term types
 		// for non-dict terms, will handle each type individually
 		// for dictionary terms, use same method to query backend termdb
 		// return number of samples per category/bin/grade/group etc
-		// optionally, caller can supply parameter "term1_q=stringifiedJSON" in lst[]
+		// optionally, caller can supply a {term1_q: {...}} key-object value in _body
 		// as this function does not deal with q by default
 
 		if (term.type == 'snplst' || term.type == 'snplocus') {
-			const args = [
-				'validateSnps=1',
-				'sumSamples=1',
-				'genome=' + this.state.vocab.genome,
-				'dslabel=' + this.state.vocab.dslabel,
-				...lst
-			]
+			const body = Object.assign(
+				{
+					validateSnps: 1,
+					sumSamples: 1,
+					genome: this.state.vocab.genome,
+					dslabel: this.state.vocab.dslabel
+				},
+				_body
+			)
+
 			if (filter) {
-				args.push('filter=' + encodeURIComponent(JSON.stringify(getNormalRoot(filter))))
+				body.filter = getNormalRoot(filter)
 			}
-			return await dofetch3('/termdb?' + args.join('&'))
+			return await dofetch3('/termdb', { body })
 		}
 		if (term.category2samplecount) {
 			// grab directly from term and not the server
@@ -691,19 +694,19 @@ class TermdbVocab extends Vocab {
 		}
 
 		// use same query method for all dictionary terms
-		const args = [
-			'getcategories=1',
-			'genome=' + this.state.vocab.genome,
-			'dslabel=' + this.state.vocab.dslabel,
-			'tid=' + term.id,
-			...lst
-		]
+		const body = {
+			getcategories: 1,
+			genome: this.state.vocab.genome,
+			dslabel: this.state.vocab.dslabel,
+			tid: term.id,
+			..._body
+		}
 		if (filter) {
-			args.push('filter=' + encodeURIComponent(JSON.stringify(getNormalRoot(filter))))
+			body.filter = getNormalRoot(filter)
 		}
 
 		try {
-			const data = await dofetch3('/termdb?' + args.join('&'))
+			const data = await dofetch3('/termdb', { body })
 			if (data.error) throw data.error
 			return data
 		} catch (e) {
@@ -714,17 +717,17 @@ class TermdbVocab extends Vocab {
 	async getNumericUncomputableCategories(term, filter) {
 		// for numeric term
 		// return number of samples per uncomputable categories
-		const args = [
-			'getnumericcategories=1',
-			'genome=' + this.state.vocab.genome,
-			'dslabel=' + this.state.vocab.dslabel,
-			'tid=' + term.id
-		]
+		const body = {
+			getnumericcategories: 1,
+			genome: this.state.vocab.genome,
+			dslabel: this.state.vocab.dslabel,
+			tid: term.id
+		}
 		if (filter) {
-			args.push('filter=' + encodeURIComponent(JSON.stringify(getNormalRoot(filter))))
+			body.filter = getNormalRoot(filter)
 		}
 		try {
-			const data = await dofetch3('/termdb?' + args.join('&'))
+			const data = await dofetch3('/termdb', { body })
 			if (data.error) throw data.error
 			return data
 		} catch (e) {
@@ -732,21 +735,21 @@ class TermdbVocab extends Vocab {
 		}
 	}
 
-	async getConditionCategories(term, filter, lst = []) {
+	async getConditionCategories(term, filter, _body = {}) {
 		// for condition term
 		// return number of samples per grade
-		const args = [
-			'getconditioncategories=1',
-			'genome=' + this.state.vocab.genome,
-			'dslabel=' + this.state.vocab.dslabel,
-			'tid=' + term.id,
-			...lst
-		]
+		const body = {
+			getconditioncategories: 1,
+			genome: this.state.vocab.genome,
+			dslabel: this.state.vocab.dslabel,
+			tid: term.id,
+			..._body
+		}
 		if (filter) {
-			args.push('filter=' + encodeURIComponent(JSON.stringify(getNormalRoot(filter))))
+			body.filter = getNormalRoot(filter)
 		}
 		try {
-			const data = await dofetch3('/termdb?' + args.join('&'))
+			const data = await dofetch3('/termdb', { body })
 			if (data.error) throw data.error
 			return data
 		} catch (e) {

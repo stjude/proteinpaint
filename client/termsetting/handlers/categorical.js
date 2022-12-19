@@ -90,23 +90,15 @@ export function getHandler(self) {
 		},
 
 		async postMain() {
-			const lst = []
+			const body = {}
 			if (self.term.type == 'condition') {
-				// bar_by_grade / bar_by_children
-				lst.push(self.q.bar_by_grade ? 'bar_by_grade=1' : self.q.bar_by_children ? 'bar_by_children=1' : null)
-				// value_by_max_grade / value_by_most_recent / value_by_computable_grade
-				lst.push(
-					self.q.value_by_max_grade
-						? 'value_by_max_grade=1'
-						: self.q.value_by_most_recent
-						? 'value_by_most_recent=1'
-						: self.q.value_by_computable_grade
-						? 'value_by_computable_grade=1'
-						: null
-				)
+				for (const key in self.q) {
+					// detect bar_by_* and value_by_* flags
+					if (key.includes('_by_')) body[key] = self.q[key]
+				}
 			}
 
-			const data = await self.vocabApi.getCategories(self.term, self.filter, lst)
+			const data = await self.vocabApi.getCategories(self.term, self.filter, body)
 			self.category2samplecount = []
 			for (const i of data.lst) {
 				self.category2samplecount.push({ key: i.key, count: i.samplecount })

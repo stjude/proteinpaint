@@ -22,7 +22,7 @@ export const handler = {
 }
 
 async function fillMenu(self, div, tvs) {
-	const data = await self.opts.vocabApi.getCategories(tvs.term, self.filter, self.opts.getCategoriesArguments || [])
+	const data = await self.opts.vocabApi.getCategories(tvs.term, self.filter, self.opts.getCategoriesArguments || {})
 	const sortedVals = data.lst.sort((a, b) => {
 		return b.samplecount - a.samplecount
 	})
@@ -34,7 +34,6 @@ async function fillMenu(self, div, tvs) {
 		const new_vals = sortedVals.filter((v, index, array) =>
 			tvs.isnot ? !indexes.includes(index) : indexes.includes(index)
 		)
-		console.log(new_vals)
 		const new_tvs = JSON.parse(JSON.stringify(tvs))
 		delete new_tvs.groupset_label
 		new_tvs.values = new_vals

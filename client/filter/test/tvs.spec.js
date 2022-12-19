@@ -624,11 +624,8 @@ tape('tvs: Condition', async test => {
 		.click()
 
 	await sleep(800)
-	test.equal(
-		opts.holder.node().querySelectorAll('.grade_type_btn')[0].innerHTML,
-		'[Most Recent Grade]',
-		'should have grade type changed'
-	)
+	const value = opts.holder.node()
+	test.equal(tipd.node().querySelector('.grade_select').value, 'recent', 'should have grade type changed')
 	/* Do not test the inactivated subcondition option, may reactivate later
 	// trigger and test subcondition selection
 	pill.click()

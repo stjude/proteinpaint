@@ -198,10 +198,7 @@ export class InputTerm {
 		if (q.mode == 'continuous' || q.mode == 'spline') delete q.mode
 
 		// the 3rd argument to getCategories() is different for snplst and dictionary term types
-		const qlst =
-			tw.term.type == 'snplst' || tw.term.type == 'snplocus'
-				? [`cacheid=${tw.q.cacheid}`]
-				: ['term1_q=' + encodeURIComponent(JSON.stringify(q))]
+		const body = tw.term.type == 'snplst' || tw.term.type == 'snplocus' ? { cacheid: tw.q.cacheid } : { term1_q: q }
 
 		// tw.q.restrictAncestry is not included in state filter
 		// must account for it to get accurate sample count
@@ -213,8 +210,8 @@ export class InputTerm {
 
 		const data =
 			tw.term.type == 'condition'
-				? await this.parent.app.vocabApi.getConditionCategories(tw.term, filter, qlst)
-				: await this.parent.app.vocabApi.getCategories(tw.term, filter, qlst)
+				? await this.parent.app.vocabApi.getConditionCategories(tw.term, filter, body)
+				: await this.parent.app.vocabApi.getCategories(tw.term, filter, body)
 		if (!data) throw `no data for term.id='${tw.id}'`
 		if (data.error) throw data.error
 		mayRunSnplstTask(tw, data)
@@ -562,8 +559,8 @@ async function maySetTwoGroups(tw, vocabApi, filter, state) {
 
 	// q should not have groupsetting enabled, as we only want to get number of cases for categories/grades
 	// TODO detect if groupsetting is enabled, then turn it off??
-	const lst = ['term1_q=' + encodeURIComponent(JSON.stringify(q))]
-	const data = await vocabApi.getCategories(term, filter, lst)
+	const body = { term1_q: q }
+	const data = await vocabApi.getCategories(term, filter, body)
 	if (data.error) throw 'cannot get categories: ' + data.error
 	const category2samplecount = new Map() // k: category/grade, v: number of samples
 	const computableCategories = [] // list of computable keys

@@ -201,12 +201,14 @@ function mayAdjustRequest(url, init) {
 		const params = []
 		for (const key in init.body) {
 			const value = init.body[key]
-			if (typeof value == 'object') params.push(`${key}=${encodeURIComponent(JSON.stringify(value))}`)
-			else params.push(`${key}=${value}`)
+			params.push(`${key}=${encodeURIComponent(JSON.stringify(value))}`)
+			//else params.push(`${key}=${value}`)
 		}
 
 		if (!url.includes('?')) url += '?'
 		url += params.join('&')
+		// TODO: may use paramEncoding later to indicate all the other parameter values are json-encoded
+		//url += '&paramEncoding=json'
 	}
 
 	if (url.length < urlMaxLength) {
