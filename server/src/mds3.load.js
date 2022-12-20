@@ -244,9 +244,12 @@ async function load_driver(q, ds) {
 
 			if (ds.queries.geneCnv) {
 				// just a test; can allow gene-level cnv to be indicated as leftlabel
-				// or delete if decided not to show it in skewer tk
+				// can disable this step if not to show it in skewer tk
+				// trouble is that it's using case id as event.samples[].sample_id
+				// compared to ssm where it is sample id for m.samples[].sample_id
 				const lst = await query_geneCnv(q, ds)
-				result.skewer.push(...lst)
+				// this is not appended to result.skewer[]
+				result.geneCnv = lst
 			}
 
 			filter_data(q, result)

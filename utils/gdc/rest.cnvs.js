@@ -5,6 +5,8 @@ examples:
 
 node rest.cnvs.js # uses AKT1 by default
 
+node rest.cnvs.js gene=MYC
+
 node rest.cnvs.js token=<yourGdcToken>
 
 node rest.cnvs.js position=chr.start.stop

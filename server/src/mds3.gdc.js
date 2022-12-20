@@ -16,7 +16,7 @@ validate_query_snvindel_byisoform
 validate_query_snvindel_byisoform_2 // protein_mutations, not in use
 validate_query_geneCnv
 	filter2GDCfilter
-validate_query_genecnv
+validate_query_genecnv // not in use
 querySamples_gdcapi
 	flattenCaseByFields
 	may_add_readdepth
@@ -339,13 +339,7 @@ function snvindel_addclass(m, consequence) {
 }
 
 export function validate_query_geneCnv(ds) {
-	const fields = [
-		'cnv_id',
-		'cnv_change',
-		'gene_level_cn',
-		'occurrence.case.case_id',
-		'occurrence.case.observation.sample.tumor_sample_uuid'
-	]
+	const fields = ['cnv_id', 'cnv_change', 'gene_level_cn', 'occurrence.case.case_id']
 
 	/*
 	opts{}
@@ -363,15 +357,47 @@ export function validate_query_geneCnv(ds) {
 		)
 		const re = JSON.parse(tmp.body)
 		if (!Array.isArray(re?.data?.hits)) throw 'geneCnv response body is not {data:hits[]}'
-		const lst = [] // collect list of cnv events to return
+
+		const cnvevents = [] // collect list of cnv events to return
+
 		for (const hit of re.data.hits) {
-			// details to come
+			if (!hit.gene_level_cn) throw 'hit.gene_level_cn is not true'
+			if (!hit.cnv_id) throw 'hit.cnv_id missing'
+			// each hit is one gain/loss event, and is reshaped into m{ samples[] }
+			const m = {
+				ssm_id: hit.cnv_id, // keep using ssm_id
+				dt: common.dtcnv,
+				samples: []
+			}
+			if (hit.cnv_change == 'Gain') m.class = common.mclasscnvgain
+			else if (hit.cnv_change == 'Loss') m.class = common.mclasscnvloss
+			else {
+				// NOTE!!
+				console.log('cnv_change not Gain/Loss')
+				m.class = hit.cnv_change
+			}
+			if (!Array.isArray(hit.occurrence)) throw 'hit.occurrence[] not array'
+			for (const h of hit.occurrence) {
+				if (!h.case) throw 'hit.occurrence[].case{} missing'
+				if (!h.case.case_id) throw 'hit.occurrence[].case.case_id missing'
+				const sample = {
+					sample_id: h.case.case_id
+				}
+				m.samples.push(sample)
+			}
+			cnvevents.push(m)
 		}
-		// returning blank array shouldn't break anything
-		return lst
+		return cnvevents
 	}
 
 	function getFilter(p) {
+		/* p={}
+		.gene=str, required
+		.case_id=str
+		.filter0, read-only gdc filter
+		.filterObj, pp filter
+		*/
+		if (!p.gene && typeof p.gene != 'string') throw 'p.gene does not provide non-empty string'
 		const filters = {
 			op: 'and',
 			content: [{ op: '=', content: { field: 'consequence.gene.symbol', value: p.gene } }]
@@ -387,7 +413,6 @@ export function validate_query_geneCnv(ds) {
 		if (p.filterObj) {
 			filters.content.push(filter2GDCfilter(typeof p.filterObj == 'string' ? JSON.parse(p.filterObj) : p.filterObj))
 		}
-
 		return filters
 	}
 }
@@ -595,7 +620,8 @@ function flattenCaseByFields(sample, caseObj, term) {
 	}
 }
 
-// old function not-in-use: for old sample-less graphql api
+// not-in-use!!
+// for old sample-less graphql api
 function validate_query_genecnv(ds) {
 	const api = ds.queries.genecnv.byisoform.gdcapi
 	if (!api.query) throw '.query missing for byisoform.gdcapi'
