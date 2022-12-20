@@ -43,28 +43,28 @@ const fields = [
 	'end_position',
 	'cnv_change',
 	'gene_level_cn',
-	'occurrence.case.primary_site',
 	'occurrence.case.case_id',
-	'occurrence.case.observation.sample.tumor_sample_uuid'
+	'occurrence.case.primary_site'
 ]
 
 ;(async () => {
 	try {
 		const headers = { 'Content-Type': 'application/json', Accept: 'application/json' }
 		if (p.token) headers['X-Auth-Token'] = p.token
-		const response = await got(
-			'https://api.gdc.cancer.gov/cnvs?size=10000000&fields=' +
-				fields.join(',') +
-				'&filters=' +
-				encodeURIComponent(JSON.stringify(filters)),
-			{ method: 'GET', headers }
-		)
+		const url =
+			'https://api.gdc.cancer.gov/cnvs?size=1000&fields=' +
+			fields.join(',') +
+			'&filters=' +
+			encodeURIComponent(JSON.stringify(filters))
+		const response = await got(url, { method: 'GET', headers })
 
 		const re = JSON.parse(response.body)
 		for (const hit of re.data.hits) {
-			console.log(`${hit.chromosome} ${hit.start_position} ${hit.end_position} ${hit.cnv_change}`)
+			console.log(`Gene level=${hit.gene_level_cn} change=${hit.cnv_change} #cases=${hit.occurrence.length}`)
+			for (let i = 0; i < Math.min(5, hit.occurrence.length); i++) {
+				console.log('\t' + JSON.stringify(hit.occurrence[i].case))
+			}
 		}
-		console.log(re.data.hits.length, 'cnv total')
 	} catch (error) {
 		console.log(error)
 	}
@@ -78,6 +78,8 @@ function get_parameter() {
 		const [k, v] = process.argv[i].split('=')
 		p[k] = v
 	}
+
+	if (!p.gene) p.gene = 'AKT1'
 
 	/*
 	if (!p.position) {
@@ -105,13 +107,9 @@ function get_filters(p) {
 		]
 	}
 
-	if (p.gene) {
-		filter.content.push({ op: '=', content: { field: 'consequence.gene.symbol', value: p.gene } })
-	}
+	if (p.gene) filters.content.push({ op: '=', content: { field: 'consequence.gene.symbol', value: p.gene } })
 
-	if (p.case_id) {
-		filters.content.push({ op: 'in', content: { field: 'cases.case_id', value: [p.case_id] } })
-	}
+	if (p.case_id) filters.content.push({ op: 'in', content: { field: 'cases.case_id', value: [p.case_id] } })
 
 	if (p.filter) {
 		const f = JSON.parse(p.filter)
