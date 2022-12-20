@@ -1121,12 +1121,25 @@ h2 {
 .sjpp-output-sandbox-close-bt
 {
     display: inline-block;
-    padding: 4px 10px;
     margin: 0px;
     border-right: solid 2px white;
     border-radius: 5px 0 0 0;
     font-size: 16px;
     cursor: default;
+}
+
+/* 
+Separated padding for sandbox buttons to fix close button's
+right, white border not extending to total height of
+sandbox header
+*/
+.sjpp-output-sandbox-collapse-btn,
+.sjpp-output-sandbox-expand-btn {
+    padding: 4px 10px;
+}
+
+.sjpp-output-sandbox-close-bt {
+    padding: 8px 10px;
 }
 /* client/dom/sandbox.js end */
 
