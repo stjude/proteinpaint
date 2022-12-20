@@ -245,6 +245,13 @@ export default function violinRenderer(self) {
 					callback: self.getAddFilterCallback(plot, 'term2')
 				})
 			}
+			//show median values as text under menu options
+			self.app.tip.d
+				.append('div')
+				.text(`Median Value: ${plot.median}`)
+				.style('padding-left', '10px')
+				.style('font-size', '15px')
+
 			self.app.tip.d
 				.append('div')
 				.selectAll('div')
@@ -258,13 +265,6 @@ export default function violinRenderer(self) {
 					d.callback()
 					self.dom.tableHolder.style('display', 'none')
 				})
-
-			//show median values as text under menu options
-			self.app.tip.d
-				.append('div')
-				.text(`Median Value: ${plot.median}`)
-				.style('padding-left', '10px')
-				.style('font-size', '15px')
 
 			self.app.tip.show(event.clientX, event.clientY)
 		} else if (plot.divideTwBins != null) {

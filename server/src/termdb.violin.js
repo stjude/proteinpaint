@@ -29,6 +29,7 @@ export async function trigger_getViolinPlotData(q, res, ds, genome) {
 	const twLst = [{ id: q.termid, term, q: { mode: 'continuous' } }]
 
 	q.radius = Number(q.radius)
+
 	if (typeof q.divideTw == 'string') q.divideTw = JSON.parse(q.divideTw)
 	if (q.divideTw) {
 		if (!('id' in q.divideTw)) {
@@ -50,7 +51,7 @@ export async function trigger_getViolinPlotData(q, res, ds, genome) {
 	const divideBins = data.refs.byTermId[(q.divideTw?.term?.id)]?.bins
 	if (divideBins) {
 		for (const bin of divideBins) {
-			divideTwBins.set(bin.label, c)
+			divideTwBins.set(bin.label, bin)
 		}
 	}
 
