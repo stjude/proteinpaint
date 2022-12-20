@@ -88,17 +88,20 @@ export async function trigger_getViolinPlotData(q, res, ds, genome) {
 		}
 	}
 
-	//sort the key2values map object. for categorical sort in descending to ascending order (that's the only way it seems works for age groups) and for numerical variable sort in lowest to highest numeric values
-	q.divideTw?.term?.type === 'categorical'
-		? (key2values = [...key2values.entries()].sort((a, b) => b[1].length - a[1].length))
-		: (key2values = [...key2values].sort((a, b) => {
-				return a
-					.toString()
-					.replace(/[^a-zA-Z0-9<]/g, '')
-					.localeCompare(b.toString().replace(/[^a-zA-Z0-9<]/g, ''), undefined, {
-						numeric: true
-					})
-		  }))
+	const keyOrder = data.refs.byTermId[(q.divideTw?.term?.id)]?.keyOrder
+	key2values = new Map(
+		[...key2values].sort(
+			keyOrder
+				? (a, b) => keyOrder.indexOf(a[0]) - keyOrder.indexOf(b[0])
+				: q.divideTw?.term?.type === 'categorical'
+				? (a, b) => b[1].length - a[1].length
+				: (a, b) =>
+						a
+							.toString()
+							.replace(/[^a-zA-Z0-9<]/g, '')
+							.localeCompare(b.toString().replace(/[^a-zA-Z0-9<]/g, ''), undefined, { numeric: true })
+		)
+	)
 
 	const result = {
 		min: min,
