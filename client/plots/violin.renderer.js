@@ -384,24 +384,22 @@ export default function violinRenderer(self) {
 	}
 
 	self.renderPvalueTable = function() {
-		this.dom.tableHolder
-			.style('vertical-align', 'top')
-			.selectAll('*')
-			.remove()
+		this.dom.tableHolder.selectAll('*').remove()
 
 		const t2 = this.config.term2
 
-		if (t2 == undefined || t2 == null) {
+		if (t2 === undefined || t2 === null) {
 			// no term2, no table to show
 			this.dom.tableHolder.style('display', 'none')
 			return
 		}
 
 		this.dom.tableHolder
+			.style('display', 'inline-block')
+			.style('vertical-align', 'top')
 			.append('div')
-			.attr('class', 'sjpp-pvalue-title')
 			.style('font-weight', 'bold')
-			.text("Group comparisons (Wilcoxon's rank sum test)")
+			.html(self.data.pvalues.length > 0 ? "Group comparisons (Wilcoxon's rank sum test)" : '')
 
 		const columns = [{ label: 'Group 1' }, { label: 'Group 2' }, { label: 'P-value' }]
 		const rows = this.data.pvalues
