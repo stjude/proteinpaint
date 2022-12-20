@@ -45,9 +45,11 @@ export async function trigger_getViolinPlotData(q, res, ds, genome) {
 
 	//create numeric bins for the overlay term to provide filtering options
 	const divideTwBins = new Map()
-	if (q.divideTw && data.refs.byTermId[(q.divideTw?.term?.id)]) {
-		for (const c of data.refs.byTermId?.[q.divideTw?.term?.id].bins) {
-			divideTwBins.set(c.label, c)
+	// TODO: handle .keyOrder as an alternative to .bins ???
+	const bins = data.refs.byTermId[(q.divideTw?.term?.id)]?.bins
+	if (bins) {
+		for (const bin of bins) {
+			divideTwBins.set(bin.label, c)
 		}
 	}
 
