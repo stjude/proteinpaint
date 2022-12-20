@@ -5,11 +5,10 @@ import { schemeCategory10 } from 'd3-scale-chromatic'
 import { brushX, brushY } from 'd3'
 import { renderTable } from '#dom/table'
 import { filterJoin, getFilterItemByTag } from '../filter/filter'
-import { drag as d3drag } from 'd3-drag'
+// import { drag as d3drag } from 'd3-drag'
 
 export default function violinRenderer(self) {
 	const k2c = scaleOrdinal(schemeCategory10)
-
 	self.render = function() {
 		if (self.data.plots.length === 0) {
 			self.dom.holder.html(
@@ -39,7 +38,7 @@ export default function violinRenderer(self) {
 			l.remove()
 		}
 
-		const isH = self.config.settings.violin.orientation == 'horizontal'
+		const isH = self.config.settings.violin.orientation === 'horizontal'
 		const axisHeight = 80
 
 		// Render the violin plot
@@ -83,7 +82,7 @@ export default function violinRenderer(self) {
 
 		// creates numeric axis
 		const axisScale = scaleLinear()
-			.domain([self.data.min, self.data.max + self.data.max / 20])
+			.domain([self.data.min, self.data.max + self.data.max / (self.config.settings.violin.radius * 4)])
 			.range(isH ? [0, plotLength] : [plotLength, 0])
 
 		{
@@ -132,7 +131,7 @@ export default function violinRenderer(self) {
 			const label = violinG
 				.append('text')
 				.text(plot.label)
-				.style('cursor', self.config.term2 ? 'pointer' : 'default')
+				.style('cursor', 'pointer')
 				.on('click', function(event) {
 					if (!event) return
 					self.displayLabelClickMenu(plot, event)
@@ -245,31 +244,30 @@ export default function violinRenderer(self) {
 					callback: self.getAddFilterCallback(plot, 'term2')
 				})
 			}
-			//show median values as text under menu options
-			self.app.tip.d
-				.append('div')
-				.text(`Median Value: ${plot.median}`)
-				.style('padding-left', '10px')
-				.style('font-size', '15px')
-
-			self.app.tip.d
-				.append('div')
-				.selectAll('div')
-				.data(options)
-				.enter()
-				.append('div')
-				.attr('class', 'sja_menuoption')
-				.html(d => d.label)
-				.on('click', (event, d) => {
-					self.app.tip.hide()
-					d.callback()
-					self.dom.tableHolder.style('display', 'none')
-				})
-
-			self.app.tip.show(event.clientX, event.clientY)
-		} else if (plot.divideTwBins != null) {
-			self.app.tip.style('display', 'none')
 		}
+		//show median values as text above menu options
+		self.app.tip.d
+			.append('div')
+			.text(`Median Value: ${plot.median}`)
+			.style('padding-left', '10px')
+			.style('font-size', '15px')
+
+		//show menu options for term2
+		self.app.tip.d
+			.append('div')
+			.selectAll('div')
+			.data(options)
+			.enter()
+			.append('div')
+			.attr('class', 'sja_menuoption')
+			.html(d => d.label)
+			.on('click', (event, d) => {
+				self.app.tip.hide()
+				d.callback()
+				self.dom.tableHolder.style('display', 'none')
+			})
+
+		self.app.tip.show(event.clientX, event.clientY)
 	}
 
 	// self.displayBrushMenu = function(plot, selection) {

@@ -278,8 +278,8 @@ function setRenderers(self) {
 			// this === DOM element
 			select(this)
 				.style('display', d => (d.isVisible() ? '' : 'none'))
-				.style('background-color', d => (d.active ? '#cfe2f3' : 'white'))
-				.style('border-style', d => (d.active ? 'solid solid none' : 'none'))
+				.style('background-color', d => (d.active ? 'white' : '#cfe2f3'))
+				.style('border-style', d => (d.active ? 'none' : 'solid solid none'))
 		})
 
 		self.dom.plotDivs[self.config.childType].style('display', '')

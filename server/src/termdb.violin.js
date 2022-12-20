@@ -28,9 +28,6 @@ export async function trigger_getViolinPlotData(q, res, ds, genome) {
 
 	const twLst = [{ id: q.termid, term, q: { mode: 'continuous' } }]
 
-	q.radius = Number(q.radius)
-
-	if (typeof q.divideTw == 'string') q.divideTw = JSON.parse(q.divideTw)
 	if (q.divideTw) {
 		if (!('id' in q.divideTw)) {
 			q.divideTw.id = q.divideTw.term.name
@@ -51,6 +48,7 @@ export async function trigger_getViolinPlotData(q, res, ds, genome) {
 	const divideBins = data.refs.byTermId[(q.divideTw?.term?.id)]?.bins
 	if (divideBins) {
 		for (const bin of divideBins) {
+			divideTwBins.set(bin.label, bin)
 			divideTwBins.set(bin.label, bin)
 		}
 	}
@@ -130,6 +128,11 @@ export async function trigger_getViolinPlotData(q, res, ds, genome) {
 			})
 		}
 	}
+	// wilcoxon test data to return to client
+	await wilcoxon(q.divideTw, result)
+
+	//size on x-y for creating circle and ticks
+	q.radius = Number(q.radius)
 
 	const refSize = q.radius * 4
 	//create scale object
@@ -137,16 +140,13 @@ export async function trigger_getViolinPlotData(q, res, ds, genome) {
 		.domain([result.min, result.max + result.max / refSize])
 		.range(q.orientation == 'horizontal' ? [0, q.svgw] : [q.svgw, 0])
 
-	// plot data to return to client
-	await wilcoxon(q.divideTw, result)
-
 	const [width, height] =
 		q.orientation == 'horizontal'
 			? [q.svgw * q.devicePixelRatio, refSize * q.devicePixelRatio]
 			: [refSize * q.devicePixelRatio, q.svgw * q.devicePixelRatio]
 
 	const scaledRadius = q.radius / q.devicePixelRatio
-	const halfCirmcuference = scaledRadius * Math.PI
+	const arcEndAngle = scaledRadius * Math.PI
 
 	for (const plot of result.plots) {
 		// item: { label=str, values=[v1,v2,...] }
@@ -178,8 +178,8 @@ export async function trigger_getViolinPlotData(q, res, ds, genome) {
 			  })
 			: plot.values.forEach(i => {
 					ctx.beginPath()
-					if (q.orientation === 'horizontal') ctx.arc(+axisScale(i), q.radius, scaledRadius, 0, halfCirmcuference)
-					else ctx.arc(q.radius, +axisScale(i), scaledRadius, 0, halfCirmcuference)
+					if (q.orientation === 'horizontal') ctx.arc(+axisScale(i), q.radius, scaledRadius, 0, arcEndAngle)
+					else ctx.arc(q.radius, +axisScale(i), scaledRadius, 0, arcEndAngle)
 					ctx.fill()
 					ctx.stroke()
 			  })

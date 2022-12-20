@@ -62,7 +62,7 @@ class ViolinPlot {
 						type: 'radio',
 						chartType: 'violin',
 						settingsKey: 'datasymbol',
-						options: [{ label: 'ticks', value: 'rug' }, { label: 'circles', value: 'bean' }]
+						options: [{ label: 'Ticks', value: 'rug' }, { label: 'Circles', value: 'bean' }]
 					},
 					{
 						label: 'Symbol size',
@@ -148,7 +148,9 @@ class ViolinPlot {
 			strokeWidth: s.strokeWidth
 		}
 
-		if ((term.term.type == 'float' || term.term.type == 'integer') && term.q.mode == 'continuous') {
+		if (term?.q?.mode === 'continuous' && term2?.q?.mode === 'continuous') {
+			throw 'both term1 and term2 are numeric/continuous, please use Scatter plot'
+		} else if ((term.term.type == 'float' || term.term.type == 'integer') && term.q.mode == 'continuous') {
 			arg.termid = term.id
 			arg.divideTw = term2
 		} else if ((term2?.term?.type == 'float' || term2?.term?.type == 'integer') && term2.q.mode == 'continuous') {
