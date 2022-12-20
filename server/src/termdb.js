@@ -101,7 +101,7 @@ export function handle_request_closure(genomes) {
 				return
 			} else if (q.for == 'validateToken') {
 			}
-			console.log(104, q)
+
 			throw "termdb: don't know what to do"
 		} catch (e) {
 			res.send({ error: e.message || e })

@@ -562,26 +562,23 @@ class TermdbVocab extends Vocab {
 				x1: number
 				binValueCount: int
 	*/
-	async getViolinPlotData(arg, additionalArgs) {
-		const lst = [
-			'getViolinPlotData=1',
-			'genome=' + this.vocab.genome,
-			'dslabel=' + this.vocab.dslabel,
-			'termid=' + arg.termid,
-			'svgw=' + arg.svgw,
-			'orientation=' + arg.orientation,
-			'devicePixelRatio=' + arg.devicePixelRatio,
-			'datapoints=' + arg.datapoints,
-			...(additionalArgs || [])
-		]
-		if (arg.filter) {
-			const filterRoot = getNormalRoot(arg.filter)
-			lst.push('filter=' + encodeURIComponent(JSON.stringify(filterRoot)))
+	async getViolinPlotData(arg, _body = {}) {
+		const body = {
+			getViolinPlotData: 1,
+			genome: this.vocab.genome,
+			dslabel: this.vocab.dslabel,
+			termid: arg.termid,
+			svgw: arg.svgw, ///window.devicePixelRatio,
+			orientation: arg.orientation,
+			datasymbol: arg.datasymbol,
+			radius: arg.radius,
+			devicePixelRatio: window.devicePixelRatio,
+			strokeWidth: arg.strokeWidth,
+			..._body
 		}
-		if (arg.divideTw) {
-			lst.push('divideTw=' + encodeURIComponent(JSON.stringify(arg.divideTw)))
-		}
-		return await dofetch3('termdb?' + lst.join('&'))
+		if (arg.filter) body.filter = getNormalRoot(arg.filter)
+		if (arg.divideTw) body.divideTw = arg.divideTw
+		return await dofetch3('termdb', { body })
 	}
 
 	// TODO replace with getViolinPlotData

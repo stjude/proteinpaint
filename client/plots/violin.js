@@ -58,11 +58,23 @@ class ViolinPlot {
 						options: [{ label: 'Vertical', value: 'vertical' }, { label: 'Horizontal', value: 'horizontal' }]
 					},
 					{
-						label: 'Data points',
+						label: 'Data symbol',
 						type: 'radio',
 						chartType: 'violin',
-						settingsKey: 'datapoints',
-						options: [{ label: 'Rug plot', value: 'rug' }, { label: 'Bean plot', value: 'bean' }]
+						settingsKey: 'datasymbol',
+						options: [{ label: 'ticks', value: 'rug' }, { label: 'circles', value: 'bean' }]
+					},
+					{
+						label: 'Symbol size',
+						type: 'number',
+						chartType: 'violin',
+						settingsKey: 'radius'
+					},
+					{
+						label: 'Stroke width',
+						type: 'number',
+						chartType: 'violin',
+						settingsKey: 'strokeWidth'
 					}
 				]
 			})
@@ -125,12 +137,15 @@ class ViolinPlot {
 
 	validateArg() {
 		const { term, term2, settings } = this.config
+		const s = settings.violin
 		const arg = {
 			filter: this.state.termfilter.filter,
-			svgw: settings.violin.svgw,
-			orientation: settings.violin.orientation,
-			devicePixelRatio: settings.violin.devicePixelRatio,
-			datapoints: settings.violin.datapoints
+			svgw: s.svgw / window.devicePixelRatio,
+			orientation: s.orientation,
+			devicePixelRatio: window.devicePixelRatio,
+			datasymbol: s.datasymbol,
+			radius: s.radius,
+			strokeWidth: s.strokeWidth
 		}
 
 		if ((term.term.type == 'float' || term.term.type == 'integer') && term.q.mode == 'continuous') {
@@ -174,12 +189,10 @@ export function getDefaultViolinSettings() {
 		orientation: 'horizontal',
 		rowlabelw: 250,
 		brushRange: null, //object with start and end if there is a brush selection
-		devicePixelRatio: window.devicePixelRatio > 1 ? window.devicePixelRatio : 1,
-		svgw: 500 / devicePixelRatio,
-		datapoints: 'bean'
-		// unit: 'abs',
-		// overlay: 'none',
-		// divideBy: 'none',
+		svgw: 500, // / window.devicePixelRatio,
+		datasymbol: 'bean',
+		radius: 5,
+		strokeWidth: 0.2
 	}
 }
 

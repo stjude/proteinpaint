@@ -28,6 +28,7 @@ export async function trigger_getViolinPlotData(q, res, ds, genome) {
 
 	const twLst = [{ id: q.termid, term, q: { mode: 'continuous' } }]
 
+	q.radius = Number(q.radius)
 	if (typeof q.divideTw == 'string') q.divideTw = JSON.parse(q.divideTw)
 	if (q.divideTw) {
 		if (!('id' in q.divideTw)) {
@@ -46,9 +47,9 @@ export async function trigger_getViolinPlotData(q, res, ds, genome) {
 	//create numeric bins for the overlay term to provide filtering options
 	const divideTwBins = new Map()
 	// TODO: handle .keyOrder as an alternative to .bins ???
-	const bins = data.refs.byTermId[(q.divideTw?.term?.id)]?.bins
-	if (bins) {
-		for (const bin of bins) {
+	const divideBins = data.refs.byTermId[(q.divideTw?.term?.id)]?.bins
+	if (divideBins) {
+		for (const bin of divideBins) {
 			divideTwBins.set(bin.label, c)
 		}
 	}
@@ -129,50 +130,55 @@ export async function trigger_getViolinPlotData(q, res, ds, genome) {
 		}
 	}
 
+	const refSize = q.radius * 4
 	//create scale object
-	let axisScale
-	q.orientation == 'horizontal'
-		? (axisScale = scaleLinear()
-				.domain([result.min, result.max + result.max / 20])
-				.range([0, q.svgw]))
-		: (axisScale = scaleLinear()
-				.domain([result.min, result.max + result.max / 20])
-				.range([q.svgw, 0]))
+	const axisScale = scaleLinear()
+		.domain([result.min, result.max + result.max / refSize])
+		.range(q.orientation == 'horizontal' ? [0, q.svgw] : [q.svgw, 0])
 
 	// plot data to return to client
 	await wilcoxon(q.divideTw, result)
+
+	const [width, height] =
+		q.orientation == 'horizontal'
+			? [q.svgw * q.devicePixelRatio, refSize * q.devicePixelRatio]
+			: [refSize * q.devicePixelRatio, q.svgw * q.devicePixelRatio]
+
+	const scaledRadius = q.radius / q.devicePixelRatio
+	const halfCirmcuference = scaledRadius * Math.PI
 
 	for (const plot of result.plots) {
 		// item: { label=str, values=[v1,v2,...] }
 
 		//backend rendering bean/rug plot on top of violin plot based on orientation of chart
-		let canvas
-		q.orientation == 'horizontal'
-			? (canvas = createCanvas(q.svgw * q.devicePixelRatio, 20 * q.devicePixelRatio))
-			: (canvas = createCanvas(20 * q.devicePixelRatio, q.svgw * q.devicePixelRatio))
+		const canvas = createCanvas(width, height)
 		const ctx = canvas.getContext('2d')
 		ctx.strokeStyle = 'rgba(0,0,0,0.8)'
-		ctx.lineWidth = 0.2
+		ctx.lineWidth = q.strokeWidth / q.devicePixelRatio
 		ctx.globalAlpha = 0.5
 		ctx.fillStyle = '#ffe6e6'
 
 		//scaling for sharper image
-		if (q.devicePixelRatio > 1) {
+		if (q.devicePixelRatio != 1) {
 			ctx.scale(q.devicePixelRatio, q.devicePixelRatio)
 		}
 
-		q.datapoints === 'rug'
+		q.datasymbol === 'rug'
 			? plot.values.forEach(i => {
 					ctx.beginPath()
-					q.orientation == 'horizontal' ? ctx.moveTo(axisScale(i), 0) : ctx.moveTo(0, axisScale(i))
-					q.orientation == 'horizontal' ? ctx.lineTo(axisScale(i), 10) : ctx.lineTo(10, axisScale(i))
+					if (q.orientation == 'horizontal') {
+						ctx.moveTo(+axisScale(i), 0)
+						ctx.lineTo(+axisScale(i), scaledRadius * 2)
+					} else {
+						ctx.moveTo(0, +axisScale(i))
+						ctx.lineTo(scaledRadius * 2, +axisScale(i))
+					}
 					ctx.stroke()
 			  })
 			: plot.values.forEach(i => {
 					ctx.beginPath()
-					q.orientation === 'horizontal'
-						? ctx.arc(+axisScale(i), 5, 2, 0, 2 * Math.PI)
-						: ctx.arc(5, +axisScale(i), 2, 0, 2 * Math.PI)
+					if (q.orientation === 'horizontal') ctx.arc(+axisScale(i), q.radius, scaledRadius, 0, halfCirmcuference)
+					else ctx.arc(q.radius, +axisScale(i), scaledRadius, 0, halfCirmcuference)
 					ctx.fill()
 					ctx.stroke()
 			  })

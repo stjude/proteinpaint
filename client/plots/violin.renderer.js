@@ -111,6 +111,8 @@ export default function violinRenderer(self) {
 			}
 		}
 
+		const s = self.config.settings.violin
+		const imageOffset = s.datasymbol == 'bean' ? s.radius * window.devicePixelRatio : s.radius
 		for (const [plotIdx, plot] of self.data.plots.entries()) {
 			// <g> of one plot
 			// adding .5 to plotIdx allows to anchor each plot <g> to the middle point
@@ -181,7 +183,7 @@ export default function violinRenderer(self) {
 			violinG
 				.append('image')
 				.attr('xlink:href', plot.src)
-				.attr('transform', isH ? 'translate(0, -10)' : 'translate(-10, 0)')
+				.attr('transform', isH ? `translate(0, -${imageOffset})` : `translate(-${imageOffset}, 0)`)
 
 			//render median values on plots
 			if (plot.plotValueCount >= 2) {
