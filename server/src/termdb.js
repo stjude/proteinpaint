@@ -21,22 +21,6 @@ copy_term
 ********************** INTERNAL
 trigger_*
 */
-//temporary solution to make some requests to correctly decode parameters
-const encodedParams = [
-	'filter',
-	'tvslst',
-	'term1_q',
-	'term2_q',
-	'usecase',
-	'variant_filter',
-	'info_fields',
-	'outcome',
-	'independent',
-	'terms',
-	'colorTW',
-	'shapeTW',
-	'divideTw'
-]
 
 const limitSearchTermTo = 10
 
@@ -52,13 +36,6 @@ export function handle_request_closure(genomes) {
 			if (!genome) throw 'invalid genome'
 
 			const [ds, tdb] = get_ds_tdb(genome, q)
-
-			for (const param of encodedParams) {
-				if (typeof q[param] == 'string') {
-					const strvalue = q[param].startsWith('%') ? decodeURIComponent(q[param]) : q[param]
-					q[param] = JSON.parse(strvalue)
-				}
-			}
 
 			// process triggers
 			if (q.gettermbyid) return trigger_gettermbyid(q, res, tdb)
