@@ -939,7 +939,7 @@ export async function svfusionByRangeGetter_file(ds, genome) {
 }
 
 function mayAdd_mayGetGeneVariantData(ds, genome) {
-	if (!ds.queries.snvindel && !ds.queries.svfusion) {
+	if (!ds.queries.snvindel && !ds.queries.svfusion && !ds.queries.geneCnv) {
 		// no eligible data types
 		return
 	}
@@ -949,6 +949,7 @@ function mayAdd_mayGetGeneVariantData(ds, genome) {
 	tw{} // termwrapper
 	q{}
 		.filter0
+			json obj, the read-only gdc cohort filter supplied to gdc api
 
 	output a map:
 		k: sample id
@@ -986,6 +987,11 @@ function mayAdd_mayGetGeneVariantData(ds, genome) {
 
 		if (ds.queries.svfusion) {
 			const lst = await getSvfusionByTerm(ds, tw.term, genome, q)
+			mlst.push(...lst)
+		}
+
+		if (ds.queries.geneCnv) {
+			const lst = await getGenecnvByTerm(ds, tw.term, genome, q)
 			mlst.push(...lst)
 		}
 
@@ -1081,6 +1087,12 @@ async function getSnvindelByTerm(ds, term, genome, q) {
 		filter0: q.filter0
 	}
 
+	if (ds.queries.geneCnv) {
+		// FIXME !!!!!!!!
+		// may need a boolean flag to specify the geneCnv query is asking for case but not sample id, thus all queries must return data with case id
+		arg.useCaseid4sample = true
+	}
+
 	if (ds.queries.snvindel.byisoform) {
 		await mayMapGeneName2isoform(term, genome)
 		if (!term.isoform) {
@@ -1111,4 +1123,20 @@ async function getSvfusionByTerm(ds, term, genome, q) {
 		return await ds.queries.svfusion.byrange.get(arg)
 	}
 	throw 'unknown queries.svfusion method'
+}
+async function getGenecnvByTerm(ds, term, genome, q) {
+	const arg = {
+		filter0: q.filter0
+	}
+
+	if (ds.queries.geneCnv.bygene) {
+		// term.name should be gene name
+		if (!term.name) {
+			// gene name missing
+			return []
+		}
+		arg.gene = term.name
+		return await ds.queries.geneCnv.bygene.get(arg)
+	}
+	throw 'unknown queries.geneCnv method'
 }

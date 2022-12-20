@@ -13,7 +13,8 @@ validate_query_snvindel_byrange
 	makeSampleObj
 validate_query_snvindel_byisoform
 	snvindel_byisoform
-validate_query_snvindel_byisoform_2 // protein_mutations, not in use
+	decideSampleId
+validate_query_snvindel_byisoform_2 // "protein_mutations" graphql, not in use
 validate_query_geneCnv
 	filter2GDCfilter
 validate_query_genecnv // not in use
@@ -140,12 +141,20 @@ export function validate_query_snvindel_byrange(ds) {
 2. cases
 */
 export function validate_query_snvindel_byisoform(ds) {
-	ds.queries.snvindel.byisoform.get = async opts => {
-		/* opts{}
-		.isoform= str
-		TODO .tid2value can be used to filter samples
-		*/
+	/*
 
+	getter opts{}
+
+	.isoform:str
+		required
+	.useCaseid4sample:true
+		if true, use case id for sample_id
+		otherwise, use sample(aliquot) id
+	.filter0
+		read-only gdc cohort filter, pass to gdc api as-is
+	TODO .tid2value can be used to filter samples
+	*/
+	ds.queries.snvindel.byisoform.get = async opts => {
 		/*
 		hardcoded logic!!
 
@@ -180,7 +189,7 @@ export function validate_query_snvindel_byisoform(ds) {
 				only returns total number of unique cases to client
 				*/
 
-				m.samples.push({ sample_id: await decideSampleId(c, ds) })
+				m.samples.push({ sample_id: await decideSampleId(c, ds, opts.useCaseid4sample) })
 			}
 			mlst.push(m)
 		}
@@ -784,7 +793,13 @@ export async function querySamples_gdcapi(q, twLst, ds) {
 c is case{}
 decide the generic sample_id used by pp
 */
-async function decideSampleId(c, ds) {
+async function decideSampleId(c, ds, useCaseid4sample) {
+	if (useCaseid4sample) {
+		// asking for case id
+		if (!c.case_id) throw 'asking for case_id but case.case_id is missing'
+		return c.case_id
+	}
+
 	if (c?.observation?.[0]?.sample?.tumor_sample_uuid) {
 		// hardcoded logic to
 		return await ds.aliquot2submitter.get(c.observation[0].sample.tumor_sample_uuid)
