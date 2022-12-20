@@ -21,7 +21,7 @@ module.exports = async (req, res) => {
 		if (!Number.isInteger(regionspace)) throw 'regionspace is not integer'
 		// width could be float!!
 		if (!Number.isFinite(width)) throw 'width is not a number'
-		const rglst = JSON.parse(req.query.rglst)
+		const rglst = typeof req.query.rglst == 'string' ? JSON.parse(req.query.rglst) : req.query.rglst
 		if (!rglst) throw 'no rglst[]'
 		if (!Array.isArray(rglst)) throw 'rglst is not an array'
 		if (rglst.length == 0) throw 'empty rglst'

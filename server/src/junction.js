@@ -8,7 +8,7 @@ module.exports = async (req, res) => {
 		const [e, file, isurl] = app.fileurl(req)
 		if (e) throw e
 		if (!req.query.rglst) throw 'rglst[] missing'
-		req.query.rglst = JSON.parse(req.query.rglst)
+		if (typeof req.query.rglst == 'string') req.query.rglst = JSON.parse(req.query.rglst)
 		if (!Array.isArray(req.query.rglst)) throw 'rglst[] not an array'
 
 		if (req.query.rglst.reduce((i, j) => j.stop - j.start + i, 0) > 1000000)

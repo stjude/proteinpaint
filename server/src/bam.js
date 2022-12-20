@@ -728,7 +728,7 @@ async function get_q(genome, req) {
 
 	if (req.query.gdc) {
 	} else if (req.query.nochr) {
-		q.nochr = JSON.parse(req.query.nochr) // parse "true" into json true
+		q.nochr = typeof req.query.nochr == 'string' ? JSON.parse(req.query.nochr) : req.query.nochr // parse "true" into json true
 	} else {
 		// info not provided
 		q.nochr = await utils.bam_ifnochr(q.file, genome, q.dir)

@@ -414,7 +414,6 @@ function trigger_getvariantfilter(res, ds) {
 }
 
 async function trigger_getLDdata(q, res, ds) {
-	q.m = JSON.parse(q.m)
 	if (ds.track && ds.track.ld && ds.track.ld.tracks.find(i => i.name == q.ldtkname)) return await LDoverlay(q, ds, res)
 	res.send({ nodata: 1 })
 }

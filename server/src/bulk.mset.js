@@ -64,7 +64,7 @@ exports.getTermTypes = async function getData(q) {
 	// assumes this function will get attached as a method of a dataset bootstrap object
 	const ds = this
 	try {
-		const ids = JSON.parse(q.ids)
+		const ids = typeof q.ids == 'string' ? JSON.parse(q.ids) : q.ids
 		const qmarks = ids.map(() => '?').join(',')
 		const sql = `SELECT id, name, type, jsondata, parent_id FROM terms WHERE id IN (${qmarks}) OR name IN (${qmarks})`
 		const rows = ds.cohort.db.connection.prepare(sql).all([...ids, ...ids])

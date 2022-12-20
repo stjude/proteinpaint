@@ -48,7 +48,7 @@ export async function gdc_bam_request(req, res) {
 
 		// optional gdc cohort filter
 		let filter0
-		if (req.query.filter0) {
+		if (req.query.filter0 && typeof req.query.filter0 == 'string') {
 			filter0 = JSON.parse(req.query.filter0)
 		}
 

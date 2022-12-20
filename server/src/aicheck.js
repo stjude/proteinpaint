@@ -35,7 +35,7 @@ async function do_query(req) {
 	const dotsize = Number(req.query.dotsize) || 1
 	if (!Number.isInteger(dotsize)) throw 'invalid dotsize'
 	if (!req.query.rglst) throw '.rglst missing'
-	req.query.rglst = JSON.parse(req.query.rglst)
+	if (typeof req.query.rglst == 'string') req.query.rglst = JSON.parse(req.query.rglst)
 
 	const gtotalcutoff = req.query.gtotalcutoff
 	const gmafrestrict = req.query.gmafrestrict
