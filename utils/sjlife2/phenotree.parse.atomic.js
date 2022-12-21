@@ -157,6 +157,8 @@ function step1_parsephenotree() {
 
 			if (!key) key = name
 
+			if (key2terms[key]) throw 'phenotree duplicating term ID: ' + key
+
 			const term = parseconfig(configstr)
 			term.name = name
 			key2terms[key] = term

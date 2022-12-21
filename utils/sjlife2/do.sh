@@ -98,6 +98,9 @@ node ./scripts/precompute.ctcae.js termdb annotation.outcome > chronicevents.pre
 node ./scripts/precompute.ctcae.addNotTested.js >> chronicevents.precomputed
 # grade=-1 rows appended to indicate "not tested" cases
 
+node ./scripts/findUnknownTerms.js annotation.matrix termdb
+# detect and report unknown terms
+
 node --max-old-space-size=10240 ./scripts/term2subcohort.js termdb annotation.matrix annotation.outcome > term2subcohort
 # created "term2subcohort"
 
