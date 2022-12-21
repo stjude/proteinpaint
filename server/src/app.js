@@ -447,13 +447,15 @@ async function startServer() {
 				cert: fs.readFileSync(serverconfig.ssl.cert)
 			}
 			const server = await https.createServer(options, app)
-			server.listen(port, () => {
+			// second optional argument is host, formatted so that req.ip will be ipv4
+			server.listen(port, '0.0.0.0', () => {
 				console.log(`HTTPS ${message}`)
 			})
 			return server
 		} else {
 			const server = await http.createServer(app)
-			server.listen(port, () => {
+			// second optional argument is host, formatted so that req.ip will be ipv4
+			server.listen(port, '0.0.0.0', () => {
 				console.log(message)
 			})
 			return server

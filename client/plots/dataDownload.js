@@ -64,7 +64,7 @@ class DataDownload {
 			termfilter: appState.termfilter,
 			config,
 			hasVerifiedToken: this.app.vocabApi.hasVerifiedToken(),
-			tokenVerificationMessage: this.app.vocabApi.tokenVerificationMessage
+			tokenVerificationPayload: this.app.vocabApi.tokenVerificationPayload
 		}
 	}
 
@@ -105,13 +105,17 @@ class DataDownload {
 			this.dom.submitDiv.style('display', '')
 			return false
 		} else {
+			const e = this.state.tokenVerificationPayload
+			const missingAccess = e?.error == 'Missing access' && this.termdbConfig.dataDownloadCatch?.missingAccess
+			const message = missingAccess?.message?.replace('MISSING-ACCESS-LINK', missingAccess?.links[e?.linkKey])
+			const helpLink = this.termdbConfig.dataDownloadCatch?.helpLink
+
 			this.dom.titleDiv
 				.style('color', '#e44')
 				.html(
-					(this.state.tokenVerificationMessage || 'Requires login') +
-						(this.termdbConfig.dataDownloadFailHelpLink
-							? ' <a href=' + this.termdbConfig.dataDownloadFailHelpLink + ' target=_blank>Tutorial</a>'
-							: '')
+					message ||
+						(this.state.tokenVerificationMessage || 'Requires login') +
+							(helpLink ? ` <a href='${helpLink}' target=_blank>Tutorial</a>` : '')
 				)
 			this.dom.terms.style('display', 'none')
 			this.dom.addBtn.style('display', 'none')

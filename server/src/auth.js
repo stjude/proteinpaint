@@ -69,7 +69,9 @@ async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 			const id = getSessionId(req)
 			if (!id) throw 'missing session cookie'
 			const session = sessions[q.dslabel][id]
+			const ip = req.ip // || req.ips
 			if (!session) throw `unestablished or expired browser session`
+			if (session.ip != ip) throw `invalid session ip address [${session.ip} vs ${ip}]`
 
 			const time = Date.now()
 			/* !!! TODO: may rethink the following assumption !!!
@@ -96,8 +98,7 @@ async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 			if (session.time - time < 900) session.time = time
 			next()
 		} catch (e) {
-			//console.log(e)
-			res.send({ error: e })
+			res.send(typeof e == 'object' ? e : { error: e })
 		}
 	})
 
@@ -128,7 +129,7 @@ async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 			const [type, pwd] = req.headers.authorization.split(' ')
 			if (type.toLowerCase() != 'basic') throw `unsupported authorization type='${type}', allowed: 'Basic'`
 			if (Buffer.from(pwd, 'base64').toString() != creds[q.dslabel].password) throw 'invalid password'
-			await setSession(q, res, sessions, sessionsFile)
+			await setSession(q, res, sessions, sessionsFile, req)
 			res.send({ status: 'ok' })
 		} catch (e) {
 			res.status(code)
@@ -139,13 +140,13 @@ async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 	app.post(basepath + '/jwt-status', async (req, res) => {
 		let code = 401
 		try {
-			const { email } = await checkDsSecret(req.query, req.headers, creds)
-			const id = await setSession(req.query, res, sessions, sessionsFile, email)
+			const { email, ip } = await checkDsSecret(req.query, req.headers, creds)
+			const id = await setSession(req.query, res, sessions, sessionsFile, email, req)
 			// difficule to setup CORS cookie, will simply reply with cookie and use a custom header for now
 			res.send({ status: 'ok', 'X-SjPPDs-Sessionid': id })
 		} catch (e) {
 			res.status(code)
-			res.send({ error: e })
+			res.send(e instanceof Error || typeof e != 'object' ? { error: e } : e)
 		}
 	})
 
@@ -158,9 +159,8 @@ async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 			await fs.appendFile(actionsFile, `${q.dslabel}\t${email}\t${time}\t${q.action}\t${JSON.stringify(q.details)}\n`)
 			res.send({ status: 'ok' })
 		} catch (e) {
-			//console.log(e)
 			res.status(401)
-			res.send({ error: e })
+			res.send(typeof e == 'object' ? e : { error: e })
 		}
 	})
 
@@ -208,10 +208,10 @@ async function getSessions(creds, sessionsFile, maxSessionAge) {
 		const now = +new Date()
 		for (const line of file.split('\n')) {
 			if (!line) continue
-			const [dslabel, id, _time, email] = line.split('\t')
+			const [dslabel, id, _time, email, ip] = line.split('\t')
 			const time = Number(_time)
 			if (!sessions[dslabel]) sessions[dslabel] = {}
-			if (now - time < maxSessionAge) sessions[dslabel][id] = { id, time, email }
+			if (now - time < maxSessionAge) sessions[dslabel][id] = { id, time, email, ip }
 		}
 		return sessions
 	} catch (e) {
@@ -221,12 +221,13 @@ async function getSessions(creds, sessionsFile, maxSessionAge) {
 	}
 }
 
-async function setSession(q, res, sessions, sessionsFile, email) {
+async function setSession(q, res, sessions, sessionsFile, email, req) {
 	const time = Date.now()
 	const id = Math.random().toString() + '.' + time.toString().slice(4)
+	const ip = req.ip // may use req.ips?
 	if (!sessions[q.dslabel]) sessions[q.dslabel] = {}
-	sessions[q.dslabel][id] = { id, time, email }
-	await fs.appendFile(sessionsFile, `${q.dslabel}\t${id}\t${time}\t${email}\n`)
+	sessions[q.dslabel][id] = { id, time, email, ip }
+	await fs.appendFile(sessionsFile, `${q.dslabel}\t${id}\t${time}\t${email}\n${ip}`)
 	res.header('Set-Cookie', `${q.dslabel}SessionId=${id}; HttpOnly; SameSite=None; Secure`)
 	return id
 }
@@ -247,14 +248,15 @@ function checkDsSecret(q, headers, creds = {}, _time, session = null) {
 	const time = Math.floor((_time || Date.now()) / 1000)
 	//for testing only
 	/*console.log(
-		206,
+		251,
 		secret,
 		jsonwebtoken.sign(
 			{
 				iat: time,
 				exp: time + 3600,
 				datasets: ['TermdbTest', 'SJLife', 'PNET', 'sjlife', 'ccss'],
-				email: 'username@test.tld'
+				email: 'username@test.tld',
+				ip: '127.0.0.1'
 			},
 			secret
 		)
@@ -269,7 +271,7 @@ function checkDsSecret(q, headers, creds = {}, _time, session = null) {
 	// this verification will throw if the token is invalid in any way
 	const payload = jsonwebtoken.verify(token, secret)
 	// if there is a session, handle the expiration outside of this function
-	if (session) return { iat: payload.iat, email: payload.email }
+	if (session) return { iat: payload.iat, email: payload.email, ip: payload.ip }
 
 	// the embedder may refer to a post-processor function to
 	// optionally transform, translate, reformat the payload
@@ -285,9 +287,11 @@ function checkDsSecret(q, headers, creds = {}, _time, session = null) {
 	if (time > payload.exp) throw `Please login again to access this feature. (expired token)`
 
 	const dsnames = embedder.dsnames || [q.dslabel]
-	const missingAccess = dsnames.filter(d => !payload.datasets.includes(d.id)).map(d => d.label || d.id)
-	if (missingAccess.length) throw 'Access denied'
-	return { iat: payload.iat, email: payload.email }
+	const missingAccess = dsnames.filter(d => !payload.datasets.includes(d.id)).map(d => d.id)
+	if (missingAccess.length) {
+		throw { error: 'Missing access', linkKey: missingAccess.join(',') }
+	}
+	return { iat: payload.iat, email: payload.email, ip: payload.ip }
 }
 
 /* NOTE: maySetAuthRoutes could replace api.getDsAuth() and .hasActiveSession() */

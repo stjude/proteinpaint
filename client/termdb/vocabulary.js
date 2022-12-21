@@ -95,10 +95,13 @@ class Vocab {
 				})
 				// TODO: later may check against expiration time in response if included
 				this.verifiedToken = data.status === 'ok' && token
-				if (data.error) throw data.error
-				else {
+				if (data.error) {
+					this.tokenVerificationPayload = data
+					throw data.error
+				} else {
 					this.sessionId = data['X-SjPPDs-Sessionid']
 					delete this.tokenVerificationMessage
+					delete this.tokenVerificationPayload
 				}
 			} else {
 				throw `unsupported requiredAuth='${auth.type}'`

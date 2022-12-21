@@ -156,7 +156,22 @@ module.exports = function() {
 					htmlinfo: cohorthtmltable
 				},
 
-				dataDownloadFailHelpLink: 'https://university.stjude.cloud/docs/visualization-community/data-download/'
+				dataDownloadCatch: {
+					helpLink: 'https://university.stjude.cloud/docs/visualization-community/data-download/',
+					missingAccess: {
+						message:
+							"You are missing approval to one or more of the required datasets. Please go to <a target=_blank href='MISSING-ACCESS-LINK'>Genomics Platform Data Browser</a> to request access. For more information, please see this <a target=_blank href='https://university.stjude.cloud/docs/visualization-community/data-download/'>tutorial.</a>",
+						links: {
+							sjlife: 'https://platform.stjude.cloud/data/cohorts?selected_tags=SJC-DS-1002',
+							ccss: 'https://platform.stjude.cloud/data/cohorts?selected_tags=SJC-DS-1005',
+							'sjlife,ccss': 'https://platform.stjude.cloud/data/cohorts?selected_tags=SJC-DS-1002,SJC-DS-1005',
+							'fake-ds': 'https://platform.stjude.cloud/data/cohorts?selected_tags=SJC-DS-1002'
+						}
+					},
+					jwt: {
+						'Invalid token': 'https://university.stjude.cloud/docs/visualization-community/data-download/'
+					}
+				}
 			},
 			scatterplots: {
 				plots: [
