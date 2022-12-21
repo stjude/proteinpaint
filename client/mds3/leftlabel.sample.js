@@ -3,7 +3,6 @@ import { tab2box } from '../src/client'
 import { displaySampleTable } from './sampletable'
 import { fillbar } from '#dom/fillbar'
 import { make_densityplot } from '#dom/densityplot'
-import { rangequery_rglst } from './tk'
 import { filterInit, getNormalRoot } from '#filter'
 
 /*

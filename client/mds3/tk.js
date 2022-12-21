@@ -55,11 +55,13 @@ export async function loadTk(tk, block) {
 function getParameter(tk, block) {
 	// to get data for current view range
 
-	const par = ['genome=' + block.genome.name]
+	const par = {
+		genome: block.genome.name,
+		// instructs server to return data types associated with tracks
+		// including skewer or non-skewer
+		forTrack: 1
+	}
 	const headers = { 'Content-Type': 'application/json', Accept: 'application/json' }
-	// instructs server to return data types associated with tracks
-	// including skewer or non-skewer
-	par.push('forTrack=1')
 
 	/*
 	temporary change: 
@@ -79,22 +81,22 @@ function getParameter(tk, block) {
 
 	if (tk.mds.has_skewer) {
 		// need to load skewer data
-		par.push('skewer=1')
+		par.skewer = 1
 	}
 	if (tk.set_id) {
 		// quick fix!!!
-		par.push('set_id=' + tk.set_id)
+		par.set_id = tk.set_id
 	}
 	if (tk.filter0) {
 		// expecting to be a simple filter such as
 		// {"op":"and","content":[{"op":"in","content":{"field":"cases.project.project_id","value":["TCGA-BRCA"]}}]}
-		par.push('filter0=' + encodeURIComponent(JSON.stringify(tk.filter0)))
+		par.filter0 = tk.filter0
 	}
 	if (tk.filterObj) {
 		// json filter object
 		if (tk.filterObj?.lst.length) {
 			// when user deletes the only tvs from the filter ui, the lst[] will be empty and can cause issue in backend
-			par.push('filterObj=' + encodeURIComponent(JSON.stringify(tk.filterObj)))
+			par.filterObj = tk.filterObj
 		}
 	}
 
@@ -106,15 +108,15 @@ function getParameter(tk, block) {
 
 	if (tk.mds.label) {
 		// official
-		par.push('dslabel=' + tk.mds.label)
+		par.dslabel = tk.mds.label
 	} else {
 		// should be custom track with data files on backend
 		if (tk.bcf) {
 			if (tk.bcf.file) {
-				par.push('bcffile=' + tk.bcf.file)
+				par.bcffile = tk.bcf.file
 			} else if (tk.bcf.url) {
-				par.push('bcfurl=' + tk.bcf.url)
-				if (tk.bcf.indexURL) par.push('bcfindexURL=' + tk.bcf.indexURL)
+				par.bcfurl = tk.bcf.url
+				if (tk.bcf.indexURL) par.bcfindexURL = tk.bcf.indexURL
 			} else {
 				throw '.file and .url missing for tk.bcf{}'
 			}
@@ -127,7 +129,7 @@ function getParameter(tk, block) {
 	rangequery_rglst(tk, block, par)
 
 	if (tk.legend.mclass.hiddenvalues.size) {
-		par.push('hiddenmclasslst=' + [...tk.legend.mclass.hiddenvalues].join(','))
+		par.hiddenmclasslst = [...tk.legend.mclass.hiddenvalues].join(',')
 	}
 
 	if (tk.legend.bcfInfo) {
@@ -138,10 +140,10 @@ function getParameter(tk, block) {
 			}
 		}
 		if (Object.keys(infoFilter).length) {
-			par.push('infoFilter=' + JSON.stringify(infoFilter))
+			par.infoFilter = infoFilter
 		}
 	}
-	return [par.join('&'), headers]
+	return [par, headers]
 }
 
 /*
@@ -161,8 +163,8 @@ async function getData(tk, block) {
 		data = dataFromCustomVariants(tk, block)
 	} else {
 		// request data from server, either official or custom sources
-		const [par, headers] = getParameter(tk, block)
-		data = await dofetch3('mds3?' + par, { headers })
+		const [body, headers] = getParameter(tk, block)
+		data = await dofetch3('mds3', { body, headers })
 	}
 	if (data.error) throw data.error
 	return data

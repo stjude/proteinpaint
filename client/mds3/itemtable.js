@@ -506,7 +506,7 @@ async function makeSvgraph(m, div, block) {
 }
 async function getGm(p, block) {
 	// p={chr, position}
-	const d = await dofetch3(`isoformbycoord?genome=${block.genome.name}&chr=${p.chr}&pos=${p.position}`)
+	const d = await dofetch3('isoformbycoord', { body: { genome: block.genome.name, chr: p.chr, pos: p.position } })
 	if (d.error) throw d.error
 	const u = d.lst.find(i => i.isdefault) || d.lst[0]
 	if (u) {

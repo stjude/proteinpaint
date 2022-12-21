@@ -276,7 +276,7 @@ for custom dataset, generate an object from scratch
 async function get_ds(tk, block) {
 	if (tk.dslabel) {
 		// this tk loads from an official dataset
-		const data = await dofetch3(`getDataset?genome=${block.genome.name}&dsname=${tk.dslabel}`)
+		const data = await dofetch3('getDataset', { body: { genome: block.genome.name, dsname: tk.dslabel } })
 		if (data.error) throw 'Error: ' + data.error
 		if (!data.ds) throw 'data.ds{} missing'
 		tk.mds = data.ds
@@ -350,15 +350,15 @@ async function mayInitTermdb(tk, block) {
 function mayaddGetter_m2csq(tk, block) {
 	if (!tk.mds.queries || !tk.mds.queries.snvindel || !tk.mds.queries.snvindel.m2csq) return
 	tk.mds.queries.snvindel.m2csq.get = async m => {
-		const lst = ['genome=' + block.genome.name, 'dslabel=' + tk.mds.label, 'm2csq=1']
+		const lst = { genome: block.genome.name, dslabel: tk.mds.label, m2csq: 1 }
 		if (tk.mds.queries.snvindel.m2csq.by == 'ssm_id') {
-			lst.push('ssm_id=' + m.ssm_id)
+			lst.ssm_id = m.ssm_id
 		} else {
 			return { error: 'unknown query method' }
 		}
 		const headers = { 'Content-Type': 'application/json', Accept: 'application/json' }
 		if (tk.token) headers['X-Auth-Token'] = tk.token
-		return await dofetch3('mds3?' + lst.join('&'), { headers }, { serverData: tk.cache })
+		return await dofetch3('mds3', { body: lst, headers }, { serverData: tk.cache })
 	}
 }
 
@@ -439,10 +439,15 @@ function mayaddGetter_variant2samples(tk, block) {
 	.tid2value{}
 	*/
 	tk.mds.variant2samples.get = async arg => {
-		const par = ['genome=' + block.genome.name, 'dslabel=' + tk.mds.label, 'variant2samples=1', 'get=' + arg.querytype]
+		const par = {
+			genome: block.genome.name,
+			dslabel: tk.mds.label,
+			variant2samples: 1,
+			get: arg.querytype
+		}
 		if (arg.groupSsmBySample) {
 			// from getSamples(), is a modifier of querytype=samples, to return .ssm_id_lst[] with each sample
-			par.push('groupSsmBySample=1')
+			par.groupSsmBySample = 1
 		}
 
 		if (arg.mlst) {
@@ -450,43 +455,41 @@ function mayaddGetter_variant2samples(tk, block) {
 				// TODO detect too long string length that will result url-too-long error
 				// in such case, need alternative query method
 				// call encodeURIComponent to pass plus strand from sv/fusion
-				par.push('ssm_id_lst=' + encodeURIComponent(arg.mlst.map(i => i.ssm_id).join(',')))
+				par.ssm_id_lst = arg.mlst.map(i => i.ssm_id).join(',')
 			} else {
 				throw 'unknown variantkey for variant2samples'
 			}
 		}
 		if (arg.isoform) {
-			par.push('isoform=' + arg.isoform)
+			par.isoform = arg.isoform
 		}
 		if (arg.rglst) {
-			par.push('rglst=' + arg.rglst)
+			par.rglst = arg.rglst
 		}
 
 		const headers = { 'Content-Type': 'application/json', Accept: 'application/json' }
-		if (tk.set_id) par.push('set_id=' + tk.set_id)
+		if (tk.set_id) par.set_id = tk.set_id
 		if (tk.token) headers['X-Auth-Token'] = tk.token
-		if (tk.filter0) par.push('filter0=' + encodeURIComponent(JSON.stringify(tk.filter0)))
-		if (tk.filterObj) par.push('filterObj=' + encodeURIComponent(JSON.stringify(tk.filterObj)))
-		if (arg.tid2value) par.push('tid2value=' + encodeURIComponent(JSON.stringify(arg.tid2value)))
+		if (tk.filter0) par.filter0 = tk.filter0
+		if (tk.filterObj) par.filterObj = tk.filterObj
+		if (arg.tid2value) par.tid2value = arg.tid2value
 
 		// supply list of terms based on querytype
 		if (arg.querytype == tk.mds.variant2samples.type_sunburst) {
 			// TODO may change to vocabApi.getNestedChartSeriesData
 			if (tk.mds.variant2samples.sunburst_twLst) {
-				par.push('twLst=' + encodeURIComponent(JSON.stringify(tk.mds.variant2samples.sunburst_twLst)))
+				par.twLst = tk.mds.variant2samples.sunburst_twLst
 			}
 		} else if (arg.querytype == tk.mds.variant2samples.type_samples) {
-			if (tk.mds.variant2samples.twLst)
-				par.push('twLst=' + encodeURIComponent(JSON.stringify(tk.mds.variant2samples.twLst)))
+			if (tk.mds.variant2samples.twLst) par.twLst = tk.mds.variant2samples.twLst
 		} else if (arg.querytype == tk.mds.variant2samples.type_summary) {
 			// TODO querytype=summary should be replaced by client barchar issuing its own query
-			if (tk.mds.variant2samples.twLst)
-				par.push('twLst=' + encodeURIComponent(JSON.stringify(tk.mds.variant2samples.twLst)))
+			if (tk.mds.variant2samples.twLst) par.twLst = tk.mds.variant2samples.twLst
 		} else {
 			throw 'unknown querytype'
 		}
 
-		const data = await dofetch3('mds3?' + par.join('&'), { headers }, { serverData: tk.cache })
+		const data = await dofetch3('mds3', { body: par, headers }, { serverData: tk.cache })
 		if (data.error) throw data.error
 		if (!data.variant2samples) throw 'result error'
 		return data.variant2samples
@@ -755,15 +758,15 @@ input:
 		client-side genome object
 */
 async function getbcfheader_customtk(tk, genome) {
-	const arg = ['genome=' + genome.name]
+	const arg = { genome: genome.name }
 	if (tk.bcf.file) {
-		arg.push('file=' + tk.bcf.file)
+		arg.file = tk.bcf.file
 	} else {
-		arg.push('url=' + tk.bcf.url)
-		if (tk.bcf.indexURL) arg.push('indexURL=' + tk.bcf.indexURL)
+		arg.url = tk.bcf.url
+		if (tk.bcf.indexURL) arg.indexURL = tk.bcf.indexURL
 	}
 	// FIXME if vcf and bcf files can both be used?
-	const data = await dofetch3('vcfheader?' + arg.join('&'))
+	const data = await dofetch3('vcfheader', { body: arg })
 	if (data.error) throw data.error
 	const [info, format, samples, errs] = vcfparsemeta(data.metastr.split('\n'))
 	if (errs) throw 'Error parsing VCF meta lines: ' + errs.join('; ')
