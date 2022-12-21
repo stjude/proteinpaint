@@ -7,6 +7,7 @@ import { select } from 'd3-selection'
 import { dofetch3 } from '../common/dofetch'
 import { Menu } from '../dom/menu'
 import { getNormalRoot, getFilterItemByTag } from '../filter/filter'
+import { renderTable } from '../dom/table'
 
 // to be used for assigning unique
 // radio button names by object instance
@@ -391,7 +392,7 @@ function setRenderers(self) {
 		}
 	}
 
-	self.initCohort = appState => {
+	self.initCohort = async appState => {
 		const selectCohort = appState.termdbConfig.selectCohort
 		if (!selectCohort) return
 		self.dom.tds.filter(d => d.colNum === 0).style('display', '')
@@ -468,27 +469,35 @@ function setRenderers(self) {
 			})
 
 		self.dom.cohortInputs = self.dom.cohortOpts.selectAll('input')
+		self.dom.cohortTable = self.dom.subheader.cohort.append('div')
 
-		self.dom.cohortTable = self.dom.subheader.cohort.append('div').html(selectCohort.htmlinfo)
+		const columns = [{ label: 'Feature' }]
+		const rows = []
+		const result = await self.app.vocabApi.getCohortsData()
+
+		if ('error' in result) alert(result.error)
+		for (const feature of result.features) rows.push([{ value: feature.name }])
+		for (const cohort of result.cohorts) columns.push({ label: `${cohort.name} (${cohort.abbrev})` })
+
+		for (const cf of result.cfeatures) {
+			for (const [i, feature] of result.features.entries()) {
+				if (cf.idfeature === feature.idfeature) rows[i].push({ value: cf.value })
+			}
+		}
+
+		self.dom.cohortTable = self.dom.subheader.cohort.append('div')
+		renderTable({
+			rows,
+			columns,
+			div: self.dom.cohortTable,
+			showLines: false,
+			maxHeight: '60vw'
+		})
 
 		self.dom.cohortTable
 			.select('table')
 			.style('border-collapse', 'collapse')
 			.style('margin', '10px')
-
-		self.dom.cohortTable
-			.select('thead')
-			.selectAll('tr')
-			.style('text-align', 'center')
-			.style('background-color', 'rgba(20, 20, 180, 0.8)')
-			.style('color', '#fff')
-
-		self.dom.cohortTable.select('tbody').selectAll('tr')
-		//.style('background-color', (d, i) => (i % 2 == 0 ? 'rgba(220, 180, 0, 0.4)' : '#fff'))
-
-		self.dom.cohortTable.selectAll('td').style('padding', '5px')
-
-		self.dom.cohortTable.selectAll('td').style('border', 'solid 2px rgba(220, 180, 0, 1)')
 
 		self.highlightCohortBy = selectCohort.highlightCohortBy
 

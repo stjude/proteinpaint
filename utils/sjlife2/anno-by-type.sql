@@ -1,1 +1,0 @@
-../termdb/anno-by-type.sql

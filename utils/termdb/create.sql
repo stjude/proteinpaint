@@ -1,7 +1,6 @@
 
-
-drop table if exists cohort;
-create table cohort (
+drop table if exists cohorts;
+create table cohorts (
   cohort character primary key not null,
   name character not null,
   abbrev character not null,
@@ -9,10 +8,11 @@ create table cohort (
 );
 
 
+
 drop table if exists samples;
 create table samples (
   id integer primary key not null,
-  cname character varying(100)
+  cname character varying(100) default null
 );
 
 
@@ -44,8 +44,8 @@ create table ancestry (
   term_id character varying(100) not null,
   ancestor_id character varying(100) not null,
   primary key(term_id, ancestor_id)
-  foreign key(term_id) references terms(id),
-  foreign key(ancestor_id) references terms(id) on delete cascade
+  foreign key(term_id) references terms(id)  on delete cascade
+  --foreign key(ancestor_id) references terms(id) on delete cascade
 );
 
 
@@ -54,7 +54,7 @@ drop table if exists alltermsbyorder;
 create table alltermsbyorder (
   group_name character not null,
   id character varying(100) not null,
-  primary key(group_name, id),
+  --primary key(group_name, id),
   foreign key(id) references terms(id) on delete cascade
 );
 
@@ -76,7 +76,7 @@ create table category2vcfsample (
   parent_name character varying(200) null,
   q text not null,
   categories text not null,
-  foreign key(subcohort) references cohort(cohort) on delete cascade,
+  foreign key(subcohort) references cohorts(cohort) on delete cascade,
   foreign key(group_name, term_id) references alltermsbyorder(group_name, id) on delete cascade
   foreign key(parent_name) references terms(id) on delete cascade
 );
@@ -88,7 +88,7 @@ create table annotations (
   term_id character varying(100) not null,
   value character varying(255) not null,
   primary key(term_id, sample),
-  foreign key(sample) references samples(id) on delete cascade,
+  foreign key(sample) references samples(id) on delete cascade
   foreign key(term_id) references terms(id) on delete cascade
 );
 
@@ -132,8 +132,8 @@ CREATE TABLE subcohort_terms (
  count INT,
  included_types TEXT,
  child_types TEXT,
---primary key(cohort, term_id),
-foreign key(cohort) references cohort(cohort) on delete cascade
+ --primary key(cohort, term_id),
+foreign key(cohort) references cohorts(cohort) on delete cascade,
 foreign key(term_id) references terms(id) on delete cascade
 );
 
@@ -143,8 +143,8 @@ CREATE TABLE subcohort_samples (
 subcohort TEXT not null,
 sample integer not null,
 primary key(subcohort, sample),
-foreign key(sample) references samples(id) on delete cascade
-
+foreign key(sample) references samples(id) on delete cascade,
+foreign key(subcohort) references cohorts(cohort) on delete cascade
 );
 
 
@@ -160,5 +160,22 @@ foreign key(term_id) references terms(id) on delete cascade
 );
 
 
+
+DROP TABLE IF EXISTS features;
+CREATE TABLE features(
+  idfeature integer primary key autoincrement,
+  name character not null
+);
+
+DROP TABLE IF EXISTS cohort_features;
+CREATE TABLE cohort_features(
+cohort character not null,
+idfeature integer not null,
+value character not null,
+primary key(cohort, idfeature),
+foreign key(cohort) references cohorts(cohort) on delete cascade
+foreign key(idfeature) references features(idfeature) on delete cascade
+
+);
 
 

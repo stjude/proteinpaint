@@ -1,5 +1,8 @@
 delete from subcohort_terms;
 
+insert into cohorts(cohort, name, abbrev, sample_count)
+values('', '', '', 0);
+
 insert into subcohort_terms (cohort, term_id, count)
 select '', t.id, count(distinct a.sample)
 from terms t

@@ -1012,6 +1012,17 @@ class TermdbVocab extends Vocab {
 		if (opts.shapeTW) body.shapeTW = opts.shapeTW
 		return await dofetch3('termdb', { body })
 	}
+
+	async getCohortsData(opts) {
+		// dofetch* mayAdjustRequest() will automatically
+		// convert to GET query params or POST body, as needed
+		const body = {
+			getCohortsData: 1,
+			genome: this.state.vocab.genome,
+			dslabel: this.state.vocab.dslabel
+		}
+		return await dofetch3('termdb', { body })
+	}
 }
 
 function q_to_param(q) {

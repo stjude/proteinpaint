@@ -513,9 +513,9 @@ function writeFiles(terms) {
 }
 
 function buildDb(annotationData, survivalData, scriptArg) {
-	function runDBScript(script) {
+	function runDBScript(script, dir = __dirname) {
 		console.log(`Running script ${script}`)
-		const script_path = path.join(__dirname, script)
+		const script_path = path.join(dir, script)
 		exec(`${scriptArg.get('sqlite3')} ${scriptArg.get('dbfile')} < ${script_path}`)
 	}
 
@@ -547,30 +547,21 @@ function buildDb(annotationData, survivalData, scriptArg) {
 	exec(`${scriptArg.get('sqlite3')} ${scriptArg.get('dbfile')} < ${loadScript}`)
 
 	// populate ancestry table
-	console.log('setting ancestry data ...')
 	runDBScript('setancestry.sql')
 
 	// index all tables
-	console.log('indexing tables ...')
 	runDBScript('indexing.sql')
 	if (scriptArg.has('term2genes')) runDBScript('term2genes.msigdb.indexing.sql')
 
 	// populate cohort,term_id,count fields from subcohort_terms table
 	// only works for dataset without subcohort, fill blank string to cohort
-	if (annotationData || survivalData) {
-		console.log('setting default subcohort ...')
-		runDBScript('set-default-subcohort.sql')
-	} else {
-		console.log('setting default subcohort with no sample ...')
-		runDBScript('set-default-subcohort-no-sample.sql')
-	}
+	if (annotationData || survivalData) runDBScript('set-default-subcohort.sql')
+	else runDBScript('set-default-subcohort-no-sample.sql')
 
 	// populate included_types and child_types fields from subcohort_terms table
-	console.log('setting included types ...')
 	runDBScript('set-included-types.sql')
 
 	// create 3 separate tables anno-categorical/integer/float
-	console.log('creating anno-by-type ...')
 	runDBScript('anno-by-type.sql')
 
 	fs.unlink(sampleidFile, () => {})

@@ -1,65 +1,3 @@
-const cohorthtmltable = `<table>
-<thead>
-  <tr>
-    <td>Features</td>
-	<td>St. Jude Lifetime Cohort Study (SJLIFE)</td>
-	<td>Childhood Cancer Survivor Study (CCSS)</td>
-  </tr>
-</thead>
-<tbody>
-  <tr>
-    <td>Survivors on Portal</td>
-	<td>5053</td>
-	<td>2688</td>
-  </tr>
-  <tr>
-	<td>Years of cancer diagnosis</td>
-	<td>1962-2012</td>
-	<td>1987-1999 ("Expanded Cohort")</td>
-  </tr>
-  <tr>
-	<td>Inclusion criteria</td>
-	<td>Survived &ge; 5 years from diagnosis</td>
-	<td>Survived &ge; 5 years from diagnosis</td>
-  </tr>
-  <tr>
-	<td>Age at cancer diagnosis</td>
-	<td><25 years</td>
-	<td><21 years</td>
-  </tr>
-  <tr>
-	<td>Cancer diagnosis</td>
-	<td>All diagnoses</td>
-	<td>Leukemia, CNS, HL, NHL, neuroblastoma, soft tissue sarcoma, Wilms, bone tumors</td>
-  </tr>
-  <tr>
-	<td>Study design</td>
-	<td>Retrospective cohort with prospective follow-up, hospital-based</td>
-	<td>Retrospective cohort with prospective follow-up, hospital-based</td>
-  </tr>
-  <tr>
-	<td>Methods of contact</td>
-	<td>Clinic visits and surveys</td>
-	<td>Surveys</td>
-  </tr>
-  <tr>
-	<td>Source of sequenced germline DNA</td>
-	<td>Blood</td>
-	<td>Saliva or blood</td>
-  </tr>
-  <tr>
-	<td>Therapeutic exposures</td>
-	<td>Chemotherapy, radiation, surgery</td>
-	<td>Chemotherapy, radiation, surgery</td>
-  </tr>
-  <tr>
-	<td>Methods for ascertainment of outcomes</td>
-	<td><span style="font-weight:bold;text-decoration:underline">Clinical assessments<span>, medical records, self-report, NDI</td>
-	<td>Self-report, pathology reports (secondary neoplasm), NDI</td>
-  </tr>
-</tbody>
-</table>`
-
 /* when using snplocus term in regression analysis, restrict to an ancestry
 each correspond to a tvs to be added for filtering samples
 and the set of pc values to be used as co-variates
@@ -815,8 +753,7 @@ module.exports = {
 				],
 				asterisk:
 					'*The combined cohort is limited to those variables that are comparable between SJLIFE and CCSS. For example, clinical assessment variables are not available for the combined cohort because they are only available for the SJLIFE cohort.',
-				highlightCohortBy: 'cssSelector',
-				htmlinfo: cohorthtmltable
+				highlightCohortBy: 'cssSelector'
 			},
 
 			dataDownloadCatch: {

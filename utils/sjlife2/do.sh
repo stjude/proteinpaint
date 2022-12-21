@@ -2,7 +2,7 @@
 # hpc:~/tp/files/hg38/sjlife/clinical/
 
 # deploy scripts from dev computer to hpc:
-# % scp * hpc:~/tp/files/hg38/sjlife/clinical/scripts/
+# % scp * ../termdb/create.sql ../termdb/anno-by-type.sql ../termdb/set-included-types.sql ../../server/shared/termdb.initbinconfig.js hpc:~/tp/files/hg38/sjlife/clinical/scripts/
 
 # one time setup on hpc:
 # $ npm install partjson
@@ -104,10 +104,16 @@ node --max-old-space-size=10240 ./scripts/term2subcohort.js termdb annotation.ma
 
 #node ./scripts/phewas.precompute.url.js
 #node ./scripts/category2sample.removegrade9.js category2vcfsample termdb annotation.outcome > category2vcfsample.nograde9
-
+echo 'Creating db schema...'
+sqlite3 db < ./scripts/create.sql
+sqlite3 db < ./scripts/init-cohorts.sql
+echo 'Loading data...'
 sqlite3 db < ./scripts/load.sql
 sqlite3 db < ./scripts/set-included-types.sql
+echo 'Adding annotation by type tables'
 sqlite3 db < ./scripts/anno-by-type.sql
+sqlite3 db < ./scripts/indexing.sql
+
 
 # scp db $ppr:/opt/data/pp/tp_native_dir/files/hg38/sjlife/clinical/
 # scp db $prp1:~/data-pp/files/hg38/sjlife/clinical/

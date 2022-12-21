@@ -1170,6 +1170,8 @@ sandbox header
 
 .sjpp_hide_scrollbar{
     overflow-y: scroll;
+    overflow-x: hidden;
+
 }
 
 .sjpp_hide_scrollbar::-webkit-scrollbar{

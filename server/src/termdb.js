@@ -13,6 +13,7 @@ const isUsableTerm = require('#shared/termdb.usecase').isUsableTerm
 const trigger_getSampleScatter = require('./termdb.scatter').trigger_getSampleScatter
 const trigger_getViolinPlotData = require('./termdb.violin').trigger_getViolinPlotData
 const getData = require('./termdb.matrix').getData
+const trigger_getCohortsData = require('./termdb.cohort').trigger_getCohortsData
 
 /*
 ********************** EXPORTED
@@ -66,6 +67,7 @@ export function handle_request_closure(genomes) {
 			if (q.getLDdata) return trigger_getLDdata(q, res, ds)
 			if (q.genesetByTermId) return trigger_genesetByTermId(q, res, tdb)
 			if (q.getSampleScatter) return await trigger_getSampleScatter(q, res, ds, genome)
+			if (q.getCohortsData) return await trigger_getCohortsData(q, res, ds)
 			if (q.getViolinPlotData) return await trigger_getViolinPlotData(q, res, ds, genome)
 
 			// TODO: use trigger flags like above?
