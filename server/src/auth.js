@@ -69,9 +69,8 @@ async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 			const id = getSessionId(req)
 			if (!id) throw 'missing session cookie'
 			const session = sessions[q.dslabel][id]
-			const ip = req.ip // || req.ips
 			if (!session) throw `unestablished or expired browser session`
-			if (session.ip != ip) throw `invalid session ip address [${session.ip} vs ${ip}]`
+			checkIPaddress(req, session.ip)
 
 			const time = Date.now()
 			/* !!! TODO: may rethink the following assumption !!!
@@ -141,6 +140,7 @@ async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 		let code = 401
 		try {
 			const { email, ip } = await checkDsSecret(req.query, req.headers, creds)
+			checkIPaddress(req, ip)
 			const id = await setSession(req.query, res, sessions, sessionsFile, email, req)
 			// difficule to setup CORS cookie, will simply reply with cookie and use a custom header for now
 			res.send({ status: 'ok', 'X-SjPPDs-Sessionid': id })
@@ -292,6 +292,12 @@ function checkDsSecret(q, headers, creds = {}, _time, session = null) {
 		throw { error: 'Missing access', linkKey: missingAccess.join(',') }
 	}
 	return { iat: payload.iat, email: payload.email, ip: payload.ip }
+}
+
+function checkIPaddress(req, ip) {
+	// must have a serverconfig.appEnable: ['trust proxy'] entry
+	if (req.ip != ip && req.ips[0] != ip && req.connection.remoteAddress != ip)
+		throw `the request ip address does not match the jwt ip address [${req.ip} vs ${ip}]`
 }
 
 /* NOTE: maySetAuthRoutes could replace api.getDsAuth() and .hasActiveSession() */

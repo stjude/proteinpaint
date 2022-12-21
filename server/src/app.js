@@ -437,6 +437,12 @@ async function startServer() {
 			console.log(ps.stdout)
 		}
 
+		// serverconfig.appEnable is an array of strings that are
+		// valid arguments to http://expressjs.com/en/4x/api.html#app.enabled
+		// For example, when the server sits behind a trusted reverse proxy,
+		// "appEnable": ["trust proxy"]
+		if (serverconfig.appEnable) serverconfig.appEnable.forEach(d => app.enable(d))
+
 		const port = serverconfig.port
 		// !!! DO NOT CHANGE THE FOLLOWING MESSAGE !!!
 		// a serverconfig.preListenScript may rely on detecting this exact post-listen() message

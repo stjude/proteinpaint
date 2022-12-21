@@ -22,10 +22,7 @@ class DataDownload {
 		this.dom = {
 			header: this.opts.header, // header is optional
 			errordiv: this.opts.holder.append('div'),
-			titleDiv: this.opts.holder
-				.append('div')
-				.style('margin', '10px')
-				.style('font-weight', 600),
+			titleDiv: this.opts.holder.append('div').style('margin', '10px'),
 			terms: this.opts.holder.append('div'),
 			addBtn: this.opts.holder
 				.append('div')
@@ -114,7 +111,7 @@ class DataDownload {
 				.style('color', '#e44')
 				.html(
 					message ||
-						(this.state.tokenVerificationMessage || 'Requires login') +
+						(this.state.tokenVerificationMessage || 'Requires sign-in') +
 							(helpLink ? ` <a href='${helpLink}' target=_blank>Tutorial</a>` : '')
 				)
 			this.dom.terms.style('display', 'none')
