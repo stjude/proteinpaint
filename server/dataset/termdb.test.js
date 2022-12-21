@@ -165,7 +165,7 @@ module.exports = function() {
 							sjlife: 'https://platform.stjude.cloud/data/cohorts?selected_tags=SJC-DS-1002',
 							ccss: 'https://platform.stjude.cloud/data/cohorts?selected_tags=SJC-DS-1005',
 							'sjlife,ccss': 'https://platform.stjude.cloud/data/cohorts?selected_tags=SJC-DS-1002,SJC-DS-1005',
-							'fake-ds': 'https://platform.stjude.cloud/data/cohorts?selected_tags=SJC-DS-1002'
+							fake: 'https://platform.stjude.cloud/data/cohorts?selected_tags=SJC-DS-1002'
 						}
 					},
 					jwt: {

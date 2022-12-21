@@ -11,7 +11,7 @@ const cachedir = serverconfig.cachedir
 const headerKey = 'x-ds-token'
 const secret = 'abc123' // pragma: allowlist secret
 const time = Math.floor(Date.now() / 1000)
-const validToken = jsonwebtoken.sign({ iat: time, exp: time + 300, datasets: ['ds0'] }, secret)
+const validToken = jsonwebtoken.sign({ iat: time, exp: time + 300, datasets: ['ds0'], ip: '127.0.0.1' }, secret)
 
 function appInit() {
 	// mock the express router api
@@ -127,7 +127,8 @@ tape(`a valid request`, async test => {
 			query: { embedder: 'localhost', dslabel: 'ds0' },
 			headers: {
 				[headerKey]: validToken
-			}
+			},
+			ip: '127.0.0.1'
 		}
 		const res = {
 			send(data) {
@@ -400,15 +401,17 @@ tape(`session-handling by the middleware`, async test => {
 		await app.middlewares['*'](req, res, next)
 	}
 
+	let sessionId
 	{
 		const req = {
 			query: { embedder: 'localhost', dslabel: 'ds0', for: 'matrix' },
 			headers: {
 				[headerKey]: validToken
 			},
-			path: '/jwt-status'
+			path: '/jwt-status',
+			ip: '127.0.0.1'
 		}
-		let sessionId
+		//let sessionId
 		const res = {
 			send(data) {
 				test.deepEqual(data.status, 'ok', 'should respond ok on a valid jwt-status login')
@@ -426,6 +429,7 @@ tape(`session-handling by the middleware`, async test => {
 
 		await app.middlewares['*'](req, res, next)
 		await sleep(100)
+		/*** valid session ***/
 		const req1 = {
 			query: { embedder: 'localhost', dslabel: 'ds0', for: 'matrix' },
 			headers: {
@@ -434,7 +438,8 @@ tape(`session-handling by the middleware`, async test => {
 			path: '/termdb',
 			cookies: {
 				ds0SessionId: sessionId
-			}
+			},
+			ip: '127.0.0.1'
 		}
 
 		const message1 = 'should call the next function on a valid session'
@@ -448,6 +453,7 @@ tape(`session-handling by the middleware`, async test => {
 		}
 		await app.middlewares['*'](req1, res1, next1)
 
+		// **** invalid session id ***/
 		const req2 = {
 			query: { embedder: 'localhost', dslabel: 'ds0', for: 'matrix' },
 			headers: {
@@ -475,6 +481,90 @@ tape(`session-handling by the middleware`, async test => {
 		function next2() {
 			test.fail('should NOT call the next function on an invalid session')
 		}
-		await app.middlewares['*'](req2, res2, next2)
+
+		/*** invalid ip address ****/
+		const req3 = {
+			query: { embedder: 'localhost', dslabel: 'ds0', for: 'matrix' },
+			headers: {
+				[headerKey]: validToken
+			},
+			path: '/termdb',
+			cookies: {
+				ds0SessionId: sessionId
+			},
+			ip: '127.0.0.x'
+		}
+		const res3 = {
+			send(data) {
+				if (data.error) delete data.error.expiredAt
+				test.deepEqual(
+					data,
+					{ error: `Your connection has changed, please refresh your page or sign in again.` },
+					'should send a changed connection message'
+				)
+			},
+			header(key, val) {
+				test.fail('should NOT set a session cookie')
+			},
+			headers: {}
+		}
+		function next3() {
+			test.fail('should NOT call the next function on an invalid session')
+		}
+
+		await app.middlewares['*'](req3, res3, next3)
+	}
+})
+
+tape.skip(`invalid ip address`, async test => {
+	test.timeoutAfter(500)
+	test.plan(1)
+
+	const app = appInit()
+	const serverconfig = {
+		dsCredentials: {
+			ds0: {
+				embedders: {
+					localhost: {
+						secret,
+						dsnames: [{ id: 'ds0', label: 'Dataset 0' }]
+					}
+				},
+				headerKey
+			}
+		},
+		cachedir
+	}
+
+	await auth.maySetAuthRoutes(app, '', serverconfig) //; console.log(app.routes)
+
+	const req = {
+		query: { embedder: 'localhost', dslabel: 'ds0', for: 'matrix' },
+		headers: {
+			[headerKey]: validToken
+		},
+		path: '/jwt-status',
+		cookies: {
+			ds0SessionId: sessionId
+		},
+		ip: '127.0.0.x'
+	}
+	let sessionId
+	const res = {
+		send(data) {
+			console.log(517, data)
+			test.deepEqual(data.status, 'ok', 'should respond ok on a valid jwt-status login')
+		},
+		header(key, val) {
+			test.equal(key, 'Set-Cookie', 'should set a session cookie on a valid jwt-status login')
+			sessionId = val.split(';')[0].split('=')[1]
+		},
+		headers: {},
+		status(num) {
+			test.equal(num, 401, 'should reply with status 401 for invalid ip address')
+		}
+	}
+	async function next() {
+		test.fail('should not call the next() function for jwt-login')
 	}
 })

@@ -48,9 +48,9 @@ runproteinpaint({
 function login(btn) {
 	// token = 'dataset.Access.Token12345'
 	
-	// a valid token value is logged by the server for testing, see server/src/auth.js checkDsSecret()
-	// you will need to paste the logged value here, which is generated using your own 
-	// serverconfig.dsCredentials['TermdbTest'].secret
+	// a valid token value is logged by the server for testing,
+	// it can be generated using `./server/test/fake-jwt.js [dslabel=TermdbTest]`
+	// and added as the value for the URL ?token= parameter
 	if (!token) {
 		alert('missing token')
 		return
