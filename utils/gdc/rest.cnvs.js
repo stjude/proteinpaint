@@ -61,12 +61,31 @@ const fields = [
 		const response = await got(url, { method: 'GET', headers })
 
 		const re = JSON.parse(response.body)
+
+		const caseset = new Map()
+		// key: case id
+		// value: array of calls
+
 		for (const hit of re.data.hits) {
-			console.log(`Gene level=${hit.gene_level_cn} change=${hit.cnv_change} #cases=${hit.occurrence.length}`)
-			for (let i = 0; i < Math.min(5, hit.occurrence.length); i++) {
-				console.log('\t' + JSON.stringify(hit.occurrence[i].case))
+			for (const o of hit.occurrence) {
+				const caseid = o.case.case_id
+				if (caseset.has(caseid)) caseset.get(caseid).push(hit.cnv_change)
+				else caseset.set(caseid, [hit.cnv_change])
 			}
 		}
+
+		let gain = 0,
+			loss = 0,
+			both = 0
+		for (const v of caseset.values()) {
+			if (v.length == 1) {
+				if (v[0] == 'Gain') gain++
+				else loss++
+			} else {
+				both++
+			}
+		}
+		console.log('total=', caseset.size, 'gain=', gain, 'loss=', loss, 'both=', both)
 	} catch (error) {
 		console.log(error)
 	}
@@ -81,7 +100,8 @@ function get_parameter() {
 		p[k] = v
 	}
 
-	if (!p.gene) p.gene = 'AKT1'
+	if (p.gene) p.gene = p.gene.split(',')
+	else p.gene = 'AKT1'
 
 	/*
 	if (!p.position) {

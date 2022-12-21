@@ -236,7 +236,21 @@ q{}
 */
 async function getSampleData_gdc(q, termWrappers) {
 	if (!q.genome.genedb.get_gene2canonicalisoform) throw 'gene2canonicalisoform not supported on this genome'
+
 	const currentGeneNames = q.currentGeneNames || []
+	/* TODO
+
+	currentGeneNames values should be termwrappers, instead of gene names
+	each tw{}
+		name: gene name
+		isoform: isoform, if available
+		q:{}
+			determines allowed datatypes, including snvindel and geneCnv
+
+	pass this array of tw to querySamples_gdcapi
+	so it can query samples that has required datatypes on these genes
+	*/
+
 	// currentGeneNames[] contains gene symbols
 	// convert to ENST isoforms to work with gdc api
 	const isoforms = []

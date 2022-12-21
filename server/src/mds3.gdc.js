@@ -709,12 +709,17 @@ q{}
 	.isoform=str
 	.tid2value={}
 twLst[]
-	array of termwrapper objects; tw.id will be appended to "&fields="
+	array of termwrapper objects, for sample-annotating terms (not geneVariant)
+	tw.id is appended to "&fields="
 	and to parse out as sample attributes
 ds{}
+geneTwLst[]
+	optional list of geneVariant tw objects
+	if provided, query samples with alterations on these genes
+	tw.q{} determines required datatype, e.g. snvindel and cnv
 */
 
-export async function querySamples_gdcapi(q, twLst, ds) {
+export async function querySamples_gdcapi(q, twLst, ds, geneTwLst) {
 	prepTwLst(twLst)
 	if (q.get == 'summary' && !twLst.some(i => i.id == 'case.case_id')) {
 		/*
@@ -722,6 +727,14 @@ export async function querySamples_gdcapi(q, twLst, ds) {
 		which requires case_uuid to count unique list of samples per category
 		when 'case.case_id' is missing from term ids, must add it to the list so case_uuid will be available from resulting sample objects
 		*/
+		twLst.push({ term: { id: 'case.case_id' } })
+	}
+
+	// TODO determine this flag with geneTwLst
+	const useCaseid4sample = false
+
+	if (useCaseid4sample && !twLst.some(i => i.id == 'case.case_id')) {
+		// to use case id as sample id, append field if missing
 		twLst.push({ term: { id: 'case.case_id' } })
 	}
 
@@ -766,7 +779,7 @@ export async function querySamples_gdcapi(q, twLst, ds) {
 			sample.ssm_id = s.ssm.ssm_id
 		}
 
-		sample.sample_id = await decideSampleId(s.case, ds)
+		sample.sample_id = await decideSampleId(s.case, ds, useCaseid4sample)
 
 		// for making url link on a sample
 		sample.sample_URLid = s.case.case_id
