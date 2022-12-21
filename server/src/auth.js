@@ -227,7 +227,7 @@ async function setSession(q, res, sessions, sessionsFile, email, req) {
 	const ip = req.ip // may use req.ips?
 	if (!sessions[q.dslabel]) sessions[q.dslabel] = {}
 	sessions[q.dslabel][id] = { id, time, email, ip }
-	await fs.appendFile(sessionsFile, `${q.dslabel}\t${id}\t${time}\t${email}\n${ip}`)
+	await fs.appendFile(sessionsFile, `${q.dslabel}\t${id}\t${time}\t${email}\t${ip}\n`)
 	res.header('Set-Cookie', `${q.dslabel}SessionId=${id}; HttpOnly; SameSite=None; Secure`)
 	return id
 }
@@ -296,8 +296,9 @@ function checkDsSecret(q, headers, creds = {}, _time, session = null) {
 
 function checkIPaddress(req, ip) {
 	// must have a serverconfig.appEnable: ['trust proxy'] entry
+	if (!ip) throw `Server error: missing ip address in saved session`
 	if (req.ip != ip && req.ips[0] != ip && req.connection.remoteAddress != ip)
-		throw `the request ip address does not match the jwt ip address [${req.ip} vs ${ip}]`
+		throw `Your connection has changed, please refresh your page or sign in again.`
 }
 
 /* NOTE: maySetAuthRoutes could replace api.getDsAuth() and .hasActiveSession() */
