@@ -171,8 +171,8 @@ async function getData(tk, block) {
 }
 
 export function rangequery_rglst(tk, block, par) {
-	// if par is array, push "k=v" string to it; otherwise add to obj: par[k] = v
-	// makes no return
+	// adds new key:value pairs to par{} and makes no return
+	if (typeof par != 'object') throw 'par{} is not object'
 	let rglst = []
 	if (block.usegm) {
 		/* to merge par.rglst[] into one region
@@ -192,11 +192,11 @@ export function rangequery_rglst(tk, block, par) {
 			r.stop = r.stop == null ? j.stop : Math.max(r.stop, j.stop)
 		}
 		rglst.push(r)
-		add('isoform', block.usegm.isoform)
-		add('gene', block.usegm.name)
+		par.isoform = block.usegm.isoform
+		par.gene = block.usegm.name
 		if (block.gmmode == 'genomic') {
 			// TODO if can delete the isoform parameter to simply make the query by genomic pos
-			add('atgenomic', 1)
+			par.atgenomic = 1
 		}
 	} else {
 		rglst = block.tkarg_rglst(tk)
@@ -225,14 +225,7 @@ export function rangequery_rglst(tk, block, par) {
 			xoff += r.width + r.leftpad
 		}
 	}
-	add('rglst', JSON.stringify(rglst))
-	function add(k, v) {
-		if (Array.isArray(par)) {
-			par.push(k + '=' + v)
-		} else {
-			par[k] = v
-		}
-	}
+	par.rglst = rglst
 }
 
 function rangequery_add_variantfilters(par, tk) {

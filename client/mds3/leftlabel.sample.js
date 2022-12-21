@@ -76,6 +76,7 @@ export function makeSampleFilterLabel(data, tk, block, laby) {
 			//
 			/////////////////////////////////////
 			arg.getCategoriesArguments = { currentGeneNames: [block.usegm.name] }
+			// TODO {name: block.usegm.name, isoform, q:{allowedDt}}
 		}
 		filterInit(arg).main(tk.filterObj)
 	})
