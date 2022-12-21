@@ -532,8 +532,6 @@ class TermdbVocab extends Vocab {
 	}
 
 	/*
-	to replace getDensityPlotData()
-
 	Inputs:
 
 	arg{}
@@ -545,9 +543,15 @@ class TermdbVocab extends Vocab {
 			if missing, will result in one plot
 		.filter={}
 			optional
+		.svgw=int
+			required
+		.orientation='horizontal'
+		.datasymbol='bean'
+		.radius=5
+		.strokeWidth=0.2
 
-	additionalArgs[]
-		optional list of parameters
+	additionalArgs{}
+		optional bag of key:value pairs
 	
 	Output: {}
 		min:num
@@ -581,38 +585,8 @@ class TermdbVocab extends Vocab {
 		}
 		if (arg.filter) body.filter = getNormalRoot(arg.filter)
 		if (arg.divideTw) body.divideTw = arg.divideTw
-		return await dofetch3('termdb', { body })
-	}
-
-	// TODO replace with getViolinPlotData
-	async getDensityPlotData(term_id, num_obj, filter) {
-		let density_q =
-			'/termdb?density=1' +
-			'&genome=' +
-			this.vocab.genome +
-			'&dslabel=' +
-			this.vocab.dslabel +
-			'&termid=' +
-			term_id +
-			'&width=' +
-			num_obj.plot_size.width +
-			'&height=' +
-			num_obj.plot_size.height +
-			'&xpad=' +
-			num_obj.plot_size.xpad +
-			'&ypad=' +
-			num_obj.plot_size.ypad
-
-		// must use the filter as supplied from a tvs pill,
-		// since that filter excludes the tvs itself in order
-		// to show all available values for its term
-		if (filter) {
-			const filterRoot = getNormalRoot(filter)
-			density_q = density_q + '&filter=' + encodeURIComponent(JSON.stringify(filterRoot))
-		}
-		const density_data = await dofetch3(density_q)
-		if (density_data.error) throw density_data.error
-		return density_data
+		const d = await dofetch3('termdb', { body })
+		return d
 	}
 
 	async getPercentile(term_id, percentile_lst, filter) {
