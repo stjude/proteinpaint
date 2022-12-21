@@ -161,6 +161,7 @@ function setNumberInput(opts) {
 		.attr('type', 'number')
 		.attr('min', 'min' in opts ? opts.min : null) // verify that null gives the default html input behavior
 		.attr('max', 'max' in opts ? opts.max : null) // same
+		.attr('step', 'step' in opts ? opts.step : null) //step gives the amount by which user can increment
 		.style('width', (opts.width || 100) + 'px')
 		.on('change', () => {
 			const value = Number(self.dom.input.property('value'))

@@ -49,7 +49,6 @@ export async function trigger_getViolinPlotData(q, res, ds, genome) {
 	if (divideBins) {
 		for (const bin of divideBins) {
 			divideTwBins.set(bin.label, bin)
-			divideTwBins.set(bin.label, bin)
 		}
 	}
 
@@ -58,8 +57,29 @@ export async function trigger_getViolinPlotData(q, res, ds, genome) {
 
 	let key2values = new Map()
 
+	// send sample Id's with their values to client to display table on brushing.
+	// let sampleIdObj = {}
+
 	for (const [c, v] of Object.entries(data.samples)) {
 		// v = {<termId> : {key, value}, ...}
+		// if (v[term.id]?.value !== undefined) {
+		// 	let termValueObj = {}
+
+		// 	if (data.refs.bySampleId[c]) {
+		// 		termValueObj[data.refs.bySampleId[c]] = v[term.id]?.value
+		// 	}
+		// 	if (q.divideTw) {
+		// 		if (!(v[(q.divideTw.term?.id)]?.value in sampleIdObj)) {
+		// 			let arr = []
+		// 			arr.push(termValueObj)
+		// 			sampleIdObj[(v[(q.divideTw.term?.id)]?.value)] = arr
+		// 		} else {
+		// 			sampleIdObj[(v[(q.divideTw.term?.id)]?.value)].push(termValueObj)
+		// 		}
+		// 	} else {
+		// 		sampleIdObj[data.refs.bySampleId[c]] = v[term.id]?.value
+		// 	}
+		// }
 
 		//if there is no value for term then skip that.
 		if (!v[term.id]) continue
@@ -119,12 +139,14 @@ export async function trigger_getViolinPlotData(q, res, ds, genome) {
 				plotValueCount: values?.length,
 				color: q.divideTw?.term?.values?.[key]?.color || null,
 				divideTwBins: divideTwBins.has(key) ? divideTwBins.get(key) : null
+				// sampleIdObj: sampleIdObj[key] ? sampleIdObj[key] : null
 			})
 		} else {
 			result.plots.push({
 				label: 'All samples, n=' + values.length,
 				values,
 				plotValueCount: values.length
+				// sampleIdObj: sampleIdObj
 			})
 		}
 	}
@@ -212,7 +234,7 @@ export async function trigger_getViolinPlotData(q, res, ds, genome) {
 
 		plot.median = medianValue
 
-		delete plot.values
+		// delete plot.values
 	}
 	res.send(result)
 }

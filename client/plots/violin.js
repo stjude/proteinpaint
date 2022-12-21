@@ -68,13 +68,17 @@ class ViolinPlot {
 						label: 'Symbol size',
 						type: 'number',
 						chartType: 'violin',
-						settingsKey: 'radius'
+						settingsKey: 'radius',
+						step: 1,
+						max: 15
 					},
 					{
 						label: 'Stroke width',
 						type: 'number',
 						chartType: 'violin',
-						settingsKey: 'strokeWidth'
+						settingsKey: 'strokeWidth',
+						step: 0.1,
+						max: 2
 					}
 				]
 			})

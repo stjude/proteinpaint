@@ -207,12 +207,10 @@ export default function violinRenderer(self) {
 								.extent([[0, -20], [plotLength, 20]])
 								.on('end', async event => {
 									const selection = event.selection
-									// console.log(209,axisScale.invert(selection[0]));
-									// console.log(210,axisScale.invert(selection[1]));
 
 									if (!selection) return
 
-									// self.displayBrushMenu(plot, selection)
+									self.displayBrushMenu(plot, selection, axisScale)
 								})
 						: brushY()
 								.extent([[-20, 0], [20, plotLength]])
@@ -270,43 +268,13 @@ export default function violinRenderer(self) {
 		self.app.tip.show(event.clientX, event.clientY)
 	}
 
-	// self.displayBrushMenu = function(plot, selection) {
-	// 	self.app.tip.d.selectAll('*').remove()
+	self.displayBrushMenu = function(plot, selection, scale) {
+		const start = scale.invert(selection[0])
+		const end = scale.invert(selection[1])
 
-	// 	const options = [
-	// 		{
-	// 			label: 'Add filter: term only',
-	// 			callback: self.getAddFilterCallback(plot, selection, 'term1')
-	// 		}
-	// 	]
-
-	// 	if (self.config.term2) {
-	// 		options.push(
-	// 			{
-	// 				label: 'Add filter: overlay only',
-	// 				callback: self.getAddFilterCallback(plot, selection, 'term2')
-	// 			},
-	// 			{
-	// 				label: 'Add filter: both term and overlay',
-	// 				callback: self.getAddFilterCallback(plot, selection)
-	// 			}
-	// 		)
-	// 	}
-
-	// 	self.app.tip.d
-	// 		.append('div')
-	// 		.selectAll('div')
-	// 		.data(options)
-	// 		.enter()
-	// 		.append('div')
-	// 		.attr('class', 'sja_menuoption')
-	// 		.html(d => d.label)
-	// 		.on('click', (event, d) => {
-	// 			self.app.tip.hide()
-	// 			d.callback()
-	// 		})
-	// 	self.app.tip.show(event.clientX, event.clientY) //self.dom.holder.select('.sjpp-brush'))
-	// }
+		const brushValues = plot.values.filter(i => i > start && i < end)
+		// console.log(brushValues);
+	}
 
 	self.getAddFilterCallback = (plot, term = '') => {
 		const tvslst = {
