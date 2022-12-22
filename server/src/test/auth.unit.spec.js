@@ -144,6 +144,55 @@ tape(`a valid request`, async test => {
 		}
 		await app.routes['/jwt-status'].post(req, res)
 	}
+})
+
+tape(`mismatched ip address in /jwt-status`, async test => {
+	test.timeoutAfter(500)
+	test.plan(2)
+
+	const app = appInit()
+	const serverconfig = {
+		dsCredentials: {
+			ds0: {
+				embedders: {
+					localhost: {
+						secret,
+						dsnames: [{ id: 'ds0', label: 'Dataset 0' }]
+					}
+				},
+				headerKey
+			}
+		},
+		cachedir
+	}
+
+	await auth.maySetAuthRoutes(app, '', serverconfig) //; console.log(app.routes)
+	{
+		const req = {
+			query: { embedder: 'localhost', dslabel: 'ds0' },
+			headers: {
+				[headerKey]: validToken
+			},
+			ip: 'invalid-127.0.0.1'
+		}
+		const res = {
+			send(data) {
+				test.deepEqual(
+					data,
+					{ error: 'Your connection has changed, please refresh your page or sign in again.' },
+					'should detect mismatched IP address on jwt-status check'
+				)
+			},
+			header(key, val) {
+				test.fail('should NOT set a session cookie')
+			},
+			status(num) {
+				test.equal(num, 401, 'should set a 401 status')
+			},
+			headers: {}
+		}
+		await app.routes['/jwt-status'].post(req, res)
+	}
 
 	test.end()
 })
@@ -513,58 +562,5 @@ tape(`session-handling by the middleware`, async test => {
 		}
 
 		await app.middlewares['*'](req3, res3, next3)
-	}
-})
-
-tape.skip(`invalid ip address`, async test => {
-	test.timeoutAfter(500)
-	test.plan(1)
-
-	const app = appInit()
-	const serverconfig = {
-		dsCredentials: {
-			ds0: {
-				embedders: {
-					localhost: {
-						secret,
-						dsnames: [{ id: 'ds0', label: 'Dataset 0' }]
-					}
-				},
-				headerKey
-			}
-		},
-		cachedir
-	}
-
-	await auth.maySetAuthRoutes(app, '', serverconfig) //; console.log(app.routes)
-
-	const req = {
-		query: { embedder: 'localhost', dslabel: 'ds0', for: 'matrix' },
-		headers: {
-			[headerKey]: validToken
-		},
-		path: '/jwt-status',
-		cookies: {
-			ds0SessionId: sessionId
-		},
-		ip: '127.0.0.x'
-	}
-	let sessionId
-	const res = {
-		send(data) {
-			console.log(517, data)
-			test.deepEqual(data.status, 'ok', 'should respond ok on a valid jwt-status login')
-		},
-		header(key, val) {
-			test.equal(key, 'Set-Cookie', 'should set a session cookie on a valid jwt-status login')
-			sessionId = val.split(';')[0].split('=')[1]
-		},
-		headers: {},
-		status(num) {
-			test.equal(num, 401, 'should reply with status 401 for invalid ip address')
-		}
-	}
-	async function next() {
-		test.fail('should not call the next() function for jwt-login')
 	}
 })
