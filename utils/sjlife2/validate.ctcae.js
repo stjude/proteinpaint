@@ -98,10 +98,12 @@ for (let i = 1; i < lines.length; i++) {
 const rl = readline.createInterface({ input: fs.createReadStream(outcomefile) })
 
 let first = true
-const L1err = new Set(),
-	L2err = new Set(),
-	L3err = new Set(),
-	L4err = new Set()
+
+// record term ids from annotation file but not found in phenotree
+const L1err = new Map(), // key: termid, value: number of annotation file lines skipped from it
+	L2err = new Map(),
+	L3err = new Map(),
+	L4err = new Map()
 
 const patient2condition = new Map()
 /*
@@ -167,28 +169,32 @@ rl.on('line', line => {
 		if (L1words.has(w1)) {
 			L1words.get(w1).set(grade, 1 + (L1words.get(w1).get(grade) || 0))
 		} else {
-			L1err.add(w1)
+			L1err.set(w1, 1 + (L1err.get(w1) || 0))
+			return // skip this line so not to cause
 		}
 	}
 	if (w2) {
 		if (L2words.has(w2)) {
 			L2words.get(w2).set(grade, 1 + (L2words.get(w2).get(grade) || 0))
 		} else {
-			L2err.add(w2)
+			L2err.set(w2, 1 + (L2err.get(w2) || 0))
+			return // skip this line so not to cause
 		}
 	}
 	if (w3) {
 		if (L3words.has(w3)) {
 			L3words.get(w3).set(grade, 1 + (L3words.get(w3).get(grade) || 0))
 		} else {
-			L3err.add(w3)
+			L3err.set(w3, 1 + (L3err.get(w3) || 0))
+			return // skip this line so not to cause
 		}
 	}
 	if (w4) {
 		if (L4words.has(w4)) {
 			L4words.get(w4).set(grade, 1 + (L4words.get(w4).get(grade) || 0))
 		} else {
-			L4err.add(w4)
+			L4err.set(w4, 1 + (L4err.get(w4) || 0))
+			return // skip this line so not to cause
 		}
 	}
 
@@ -208,10 +214,10 @@ rl.on('line', line => {
 rl.on('close', () => {
 	if (L1err.size + L2err.size + L3err.size + L4err.size) {
 		console.error(`${outcomefile} has unknown variables not found in ${phenotreefile}:`)
-		if (L1err.size) for (const w of L1err) console.error(`1st branch unknown name: ${w}`)
-		if (L2err.size) for (const w of L2err) console.error(`2nd branch unknown name: ${w}`)
-		if (L3err.size) for (const w of L3err) console.error(`3rd branch unknown name: ${w}`)
-		if (L4err.size) for (const w of L4err) console.error(`4th branch unknown name: ${w}`)
+		if (L1err.size) for (const [w, c] of L1err) console.error(`1st branch unknown name: ${w} (${c} lines skipped)`)
+		if (L2err.size) for (const [w, c] of L2err) console.error(`2nd branch unknown name: ${w} (${c} lines skipped)`)
+		if (L3err.size) for (const [w, c] of L3err) console.error(`3rd branch unknown name: ${w} (${c} lines skipped)`)
+		if (L4err.size) for (const [w, c] of L4err) console.error(`4th branch unknown name: ${w} (${c} lines skipped)`)
 	}
 
 	let numberofevents = 0
