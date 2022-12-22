@@ -1470,7 +1470,6 @@ async function match_sv(templates, q, region_widths) {
 	// Assuming there are only two regions in an SV/fusion
 	const region1_qnames = []
 	const region2_qnames = []
-
 	const input_data = []
 	for (let i = 0; i < q.regions.length; i++) {
 		const r = q.regions[i]
@@ -1483,43 +1482,47 @@ async function match_sv(templates, q, region_widths) {
 		for (const line of r.lines) {
 			reads_in_current_region.push({ sam_info: line, tempscore: '', ridx: i })
 		}
-		const region_data = { refseq: region_refseq, entries: reads_in_current_region }
+		const region_data = { refseq: region_refseq, start: r.start, stop: r.stop, entries: reads_in_current_region }
+		if (i == 0) {
+			region_data.chr = q.sv.chrA
+			region_data.pos = q.sv.startA
+		} else if (i == 1) {
+			region_data.chr = q.sv.chrB
+			region_data.pos = q.sv.startB
+		} else {
+			console.log('More than two regions, please check')
+		}
 		input_data.push(region_data)
 	}
+	//console.log('input_data:', input_data)
 
-	const rust_output = await run_rust('sv', JSON.stringify(input_data)) // Classifying SV reads
-	//console.log('rust_output:', rust_output)
+	const time1 = new Date()
+	const rust_output_list = (await run_rust('sv', JSON.stringify(input_data))).split('\n') // Classifying SV reads
+	const time2 = new Date()
+	console.log('Time taken to run rust SV pipeline:', time2 - time1, 'ms')
+	//console.log('rust_output_list:', rust_output_list)
 
-	// This loop can be expensive and could be parsed in query_region() itself
-	for (let i = 0; i < q.regions.length; i++) {
-		const r = q.regions[i]
-		for (const line of r.lines) {
-			//line.r = r
-			//line.ridx = i
-			if (i == 0) {
-				region1_qnames.push(line.split('\t')[0])
-			} else if (i == 1) {
-				region2_qnames.push(line.split('\t')[0])
-			}
+	let multi_region_templates
+	let single_region_templates
+	for (let item of rust_output_list) {
+		if (item.includes('multi_region_templates:')) {
+			multi_region_templates = JSON.parse(item.replace('multi_region_templates:', ''))
+		} else if (item.includes('single_region_templates:')) {
+			single_region_templates = JSON.parse(item.replace('single_region_templates:', ''))
 		}
 	}
-	// Finding templates that extend into both regions
-	const multi_region_templates = region1_qnames.filter(value => region2_qnames.includes(value))
+	//console.log('multi_region_templates:', multi_region_templates)
+	//console.log('single_region_templates:', single_region_templates)
 
-	for (let i = 0; i < q.regions.length; i++) {
-		const r = q.regions[i]
-		for (const line of r.lines) {
-			if (multi_region_templates.includes(line.split('\t')[0]) && !q.grouptype) {
-				// fullstack mode
-				type2group[bamcommon.type_supportsv].templates.push({ sam_info: line, tempscore: '', ridx: i })
-			} else if (multi_region_templates.includes(line.split('\t')[0]) && q.grouptype == 'support_sv') {
-				// partstack mode
-				type2group[bamcommon.type_supportsv].templates.push({ sam_info: line, tempscore: '', ridx: i })
-			} else if (multi_region_templates.includes(line.split('\t')[0]) && q.grouptype == 'support_ref') {
-				// Ensure templates/reads supporting SV do not go into reference category
-			} else {
-				type2group[bamcommon.type_supportref].templates.push({ sam_info: line, tempscore: '', ridx: i })
-			}
+	if (!q.grouptype || q.grouptype == 'support_sv') {
+		for (const item of multi_region_templates) {
+			type2group[bamcommon.type_supportsv].templates.push(item)
+		}
+	}
+
+	if (!q.grouptype || q.grouptype == 'support_ref') {
+		for (const item of single_region_templates) {
+			type2group[bamcommon.type_supportref].templates.push(item)
 		}
 	}
 
@@ -2012,7 +2015,7 @@ function stack_templates(group, q, templates) {
 				// group.templates
 				if (template.segments[0].ridx == region_idx) {
 					let stackidx = null
-					if (!q.variant) {
+					if (!q.variant && !q.sv) {
 						for (let i = 0; i < group.stacks.length; i++) {
 							if (
 								group.stacks[i] + q.stacksegspacing < template.x1 &&
