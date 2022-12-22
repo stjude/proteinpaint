@@ -2,6 +2,7 @@ import { select } from 'd3-selection'
 import { setDensityPlot } from './density'
 import { keyupEnter } from '#src/client'
 import { getPillNameDefault } from '#termsetting'
+import { convertViolinData } from '#filter/tvs.numeric'
 
 /*
 ********************** EXPORTED
@@ -47,7 +48,16 @@ export function getHandler(self) {
 				ypad: 20
 			}
 			try {
-				self.num_obj.density_data = await self.vocabApi.getDensityPlotData(self.term.id, self.num_obj, self.filter)
+				const d = await self.vocabApi.getViolinPlotData({
+					termid: self.term.id,
+					filter: self.filter,
+					svgw: self.num_obj.plot_size.width,
+					orientation: 'horizontal',
+					datasymbol: 'bean',
+					radius: 5,
+					strokeWidth: 0.2
+				})
+				self.num_obj.density_data = convertViolinData(d)
 			} catch (err) {
 				console.log(err)
 			}

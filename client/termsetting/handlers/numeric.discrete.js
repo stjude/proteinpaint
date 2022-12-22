@@ -6,6 +6,7 @@ import { get_bin_label, get_bin_range_equation } from '#shared/termdb.bins'
 import { init_tabs } from '#dom/toggleButtons'
 import { make_radios } from '#dom/radiobutton'
 import { getPillNameDefault } from '#termsetting'
+import { convertViolinData } from '#filter/tvs.numeric'
 
 /*
 ********************** EXPORTED
@@ -68,7 +69,16 @@ async function showBinsMenu(self, div) {
 		ypad: 20
 	}
 	try {
-		self.num_obj.density_data = await self.vocabApi.getDensityPlotData(self.term.id, self.num_obj, self.filter)
+		const d = await self.vocabApi.getViolinPlotData({
+			termid: self.term.id,
+			filter: self.filter,
+			svgw: self.num_obj.plot_size.width,
+			orientation: 'horizontal',
+			datasymbol: 'bean',
+			radius: 5,
+			strokeWidth: 0.2
+		})
+		self.num_obj.density_data = convertViolinData(d)
 	} catch (err) {
 		console.log(err)
 	}

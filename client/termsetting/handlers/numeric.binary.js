@@ -3,6 +3,7 @@ import { renderBoundaryInclusionInput, renderBoundaryInputDivs } from './numeric
 import { get_bin_label, get_bin_range_equation } from '#shared/termdb.bins'
 import { make_one_checkbox } from '#dom/checkbox'
 import { getPillNameDefault } from '#termsetting'
+import { convertViolinData } from '#filter/tvs.numeric'
 
 /*
 ********************** EXPORTED
@@ -43,7 +44,16 @@ export function getHandler(self) {
 				ypad: 20
 			}
 			try {
-				self.num_obj.density_data = await self.vocabApi.getDensityPlotData(self.term.id, self.num_obj, self.filter)
+				const d = await self.vocabApi.getViolinPlotData({
+					termid: self.term.id,
+					filter: self.filter,
+					svgw: self.num_obj.plot_size.width,
+					orientation: 'horizontal',
+					datasymbol: 'bean',
+					radius: 5,
+					strokeWidth: 0.2
+				})
+				self.num_obj.density_data = convertViolinData(d)
 			} catch (e) {
 				throw e
 			}

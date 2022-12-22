@@ -1,6 +1,6 @@
 import { select } from 'd3-selection'
 import { scaleLinear } from 'd3'
-import * as client from '../src/client'
+import { keyupEnter } from '../src/client'
 import { addBrushes, addNewBrush } from './tvs.density'
 import { makeDensityPlot } from './densityplot'
 
@@ -193,7 +193,7 @@ async function fillMenu(self, div, tvs) {
 }
 
 // convert violin data (vd) to old density data (dd)
-function convertViolinData(vd) {
+export function convertViolinData(vd) {
 	const p = vd.plots[0] // assuming only one plot
 	const dd = {
 		minvalue: vd.min,
@@ -503,7 +503,7 @@ function enterRange(self, tr, brush, i) {
 		.style('margin-left', '15px')
 		.attr('value', range.start)
 		.on('keyup', async event => {
-			if (!client.keyupEnter(event)) return
+			if (!keyupEnter(event)) return
 			brush.start_input.property('disabled', true)
 			try {
 				if (brush.start_input.node().value < minvalue) throw 'entered value is lower than minimum value'
@@ -659,7 +659,7 @@ function enterRange(self, tr, brush, i) {
 		.style('margin-left', '15px')
 		.attr('value', range.stop)
 		.on('keyup', async event => {
-			if (!client.keyupEnter(event)) return
+			if (!keyupEnter(event)) return
 			brush.stop_input.property('disabled', true)
 			try {
 				if (+brush.stop_input.node().value > maxvalue) throw 'entered value is higher than maximum value'
