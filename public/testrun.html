@@ -49,8 +49,12 @@
 </head>
 <body>
 <div style='padding: 10px 15px; background: #3a3a3a; color: #fff; font-family: Menlo, Courier'>
-  <p><span id='pp-test-runner-banner' class='code-snippet'>$ npm run dev</span> must be active 
-    to (re)compile <span class='code-snippet'>*.spec.js</span> files.</span></p>
+  <p>
+    <span id='pp-test-runner-banner' class='code-snippet'>$ npm run dev</span> 
+    must be active to (re)compile 
+    <span class='code-snippet'>*.spec.js</span> files.
+    <span>For faster repeated reload of the same test(s), add a '&reuse=1' parameter to the URL.</span>
+  </p>
 </div>
 <div style='padding: 5px 30px'>
   <h1>
@@ -147,6 +151,18 @@ async function triggerImportSpecs(params) {
   if (params.name && params.name.startsWith('_x_.')) {
     if (!('exclude' in params)) params.exclude = ''
   }
+  
+  if (params.reuse) {
+    d3.select('body')
+      .append('script')
+      .attr('src', '/bin/proteinpaint.js')
+      .on('load', async ()=>{
+        runproteinpaint({noheader: true, testInternals: true})
+      })
+
+    return
+  }
+
   try {
     const opts = {
       method: 'POST',

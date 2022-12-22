@@ -2,7 +2,8 @@
 	Sorting code are
 */
 
-export function getSampleSorter(self, s, rows) {
+export function getSampleSorter(self, settings, rows) {
+	const s = settings
 	if (s.sortSamplesBy == 'asListed') {
 		//no additional logic required
 		return (a, b) => {
