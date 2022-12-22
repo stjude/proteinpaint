@@ -12,6 +12,10 @@ insert into samples(id) select distinct(id) from sampleidmap;
 -- using * for parent id of subcohort makes it hidden from the tree (but still searchable by name)
 INSERT INTO terms VALUES ('subcohort', 'Cohort', '*', '{"name":"Cohort","type":"categorical","values":{"SJLIFE":{"label":"SJLIFE"},"CCSS":{"label":"CCSS"}}}', 0, NULL, 0);
 
+INSERT INTO terms VALUES ('ASA', 'ASA', '*', '{"name":"ASA","type":"float"}', 0, "float", 0);
+INSERT INTO terms VALUES ('CEU', 'CEU', '*', '{"name":"CEU","type":"float"}', 0, "float", 0);
+INSERT INTO terms VALUES ('YRI', 'YRI', '*', '{"name":"YRI","type":"float"}', 0, "float", 0);
+
 .import ancestry ancestry
 
 .import 'alltermsbyorder.grouped' alltermsbyorder

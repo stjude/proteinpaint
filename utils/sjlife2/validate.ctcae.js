@@ -206,10 +206,13 @@ rl.on('line', line => {
 })
 
 rl.on('close', () => {
-	if (L1err.size) for (const w of L1err) console.error('First branch mismatch:', w)
-	if (L2err.size) for (const w of L2err) console.error('Second branch mismatch:', w)
-	if (L3err.size) for (const w of L3err) console.error('Third branch mismatch:', w)
-	if (L4err.size) for (const w of L4err) console.error('Forth branch mismatch:', w)
+	if (L1err.size + L2err.size + L3err.size + L4err.size) {
+		console.error(`${outcomefile} has unknown variables not found in ${phenotreefile}:`)
+		if (L1err.size) for (const w of L1err) console.error(`1st branch unknown name: ${w}`)
+		if (L2err.size) for (const w of L2err) console.error(`2nd branch unknown name: ${w}`)
+		if (L3err.size) for (const w of L3err) console.error(`3rd branch unknown name: ${w}`)
+		if (L4err.size) for (const w of L4err) console.error(`4th branch unknown name: ${w}`)
+	}
 
 	let numberofevents = 0
 	const condition2samples = new Map()
