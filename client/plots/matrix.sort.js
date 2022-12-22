@@ -81,7 +81,7 @@ function getSortSamplesByHits($id, self, rows) {
 	const hits = {}
 	for (const row of rows) {
 		if (!($id in row)) hits[row.sample] = 0
-		else hits[row.sample] = row[$id].values ? row[$id].values.length : 1
+		else hits[row.sample] = 1 // row[$id].values?.length || 1
 	}
 
 	return (a, b) => (hits[a.sample] == hits[b.sample] ? 0 : hits[a.sample] > hits[b.sample] ? -1 : 1)
