@@ -209,7 +209,7 @@ const abort = m => {
 
 if (process.argv.length < 3) abort('<phenotree txt file> <keep/termjson> outputs to: termdb, ancestry')
 const infile_phenotree = process.argv[2]
-const keep_file = process.argv[3] // optional
+const keep_file = process.argv[3]
 
 const fs = require('fs')
 const path = require('path')
@@ -298,16 +298,15 @@ function validate_levels() {
 function build_termjson() {
 	const keep_termjson = new Map()
 
-	if (keep_file) {
-		/* keep file is one single object, of key:value pairs
-		key: term id
-		value: term json definition
-		*/
-		const j = JSON.parse(fs.readFileSync(keep_file, { encoding: 'utf8' }))
-		for (const id in j) {
-			keep_termjson.set(id, j[id])
-		}
+	/* keep file is one single object, of key:value pairs
+	key: term id
+	value: term json definition
+	*/
+	const j = JSON.parse(fs.readFileSync(keep_file, { encoding: 'utf8' }))
+	for (const id in j) {
+		keep_termjson.set(id, j[id])
 	}
+
 	return keep_termjson
 }
 
@@ -316,6 +315,8 @@ function parse_phenotree() {
 		.readFileSync(infile_phenotree, { encoding: 'utf8' })
 		.trim()
 		.split('\n')
+
+	const termIdSet = new Set()
 
 	for (let i = 1; i < lines.length; i++) {
 		const line = lines[i]
@@ -336,6 +337,11 @@ function parse_phenotree() {
 			level3 = str2level(l[2]),
 			level4 = str2level(l[3]),
 			level5 = str2level(l[4] || '-') // level 5 is missing from certain terms e.g. ccss ctcae events
+
+		if (level4 == 'No applicable ctcae condition') {
+			console.log('SKIPPED LINE', line)
+			continue
+		}
 
 		// if a level is non empty, will record its id, for use with its sub-levels
 		let id1, id2, id3, id4, id5
@@ -390,6 +396,9 @@ function parse_phenotree() {
 				} else {
 					id1 = level1
 				}
+
+				if (termIdSet.has(id1)) throw 'duplicate leaf id1: ' + id1
+				termIdSet.add(id1)
 			} else {
 				// not a leaf, so tempid doesn't apply to it, has to recall id
 				id1 = name2id.get(level1) || level1
@@ -413,6 +422,9 @@ function parse_phenotree() {
 				} else {
 					id2 = level2
 				}
+
+				if (termIdSet.has(id2)) throw 'duplicate leaf id2: ' + id2
+				termIdSet.add(id2)
 			} else {
 				// recall id
 				id2 = name2id.get(level2) || level2
@@ -451,6 +463,9 @@ function parse_phenotree() {
 				} else {
 					id3 = level3
 				}
+
+				if (termIdSet.has(id3)) throw 'duplicate leaf id3: ' + id3
+				termIdSet.add(id3)
 			} else {
 				id3 = name2id.get(level3) || level3
 			}
@@ -483,6 +498,9 @@ function parse_phenotree() {
 				} else {
 					id4 = level4
 				}
+
+				if (termIdSet.has(id4)) throw 'duplicate leaf id4: ' + id4
+				termIdSet.add(id4)
 			} else {
 				id4 = name2id.get(level4) || level4
 			}
@@ -515,6 +533,9 @@ function parse_phenotree() {
 				} else {
 					id5 = level5
 				}
+
+				if (termIdSet.has(id5)) throw 'duplicate leaf id5: ' + id5
+				termIdSet.add(id5)
 			} else {
 				id5 = name2id.get(level5) || level5
 			}
