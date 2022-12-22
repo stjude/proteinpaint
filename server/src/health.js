@@ -2,7 +2,7 @@ const serverconfig = require('./serverconfig')
 const fs = require('fs')
 const path = require('path')
 const child_process = require('child_process')
-const util = require('node:util')
+const util = require('util')
 const execPromise = util.promisify(child_process.exec)
 
 export function handle_healthcheck_closure(genomes) {
