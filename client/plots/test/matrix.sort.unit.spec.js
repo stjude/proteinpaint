@@ -1,6 +1,5 @@
-const tape = require('tape')
-const matrix = require('../matrix').prototype
-const ms = require('../matrix.sort')
+import tape from 'tape'
+import * as ms from '../matrix.sort'
 
 /*************************
  reusable helper functions
@@ -37,7 +36,7 @@ function getArgs(settings = {}) {
 		3: {
 			sample: 3,
 			aaa: {
-				values: [{ dt: 1, class: 'M' }]
+				values: [{ dt: 1, class: 'M' }, { dt: 2, class: 'F' }]
 			},
 			ccc: {
 				values: [{ dt: 1, class: 'M' }]

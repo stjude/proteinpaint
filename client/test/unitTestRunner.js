@@ -8,6 +8,5 @@ sessionStorage.setItem('hostURL', window.testHost)
 if (!window.structuredClone) window.structuredClone = val => JSON.parse(JSON.stringify(val))
 
 const context = require.context('../', true, /\.unit.spec.js$/)
-console.log(6, context)
 context.keys().forEach(context)
 module.exports = context
