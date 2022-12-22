@@ -2,6 +2,8 @@ const serverconfig = require('./serverconfig')
 const fs = require('fs')
 const path = require('path')
 const child_process = require('child_process')
+const util = require('node:util')
+const execPromise = util.promisify(child_process.exec)
 
 export function handle_healthcheck_closure(genomes) {
 	// only loaded once when this route handler is created
@@ -26,8 +28,9 @@ async function getStat(genomes, rev) {
 	const keys = serverconfig.features.healthcheck_keys || []
 
 	if (keys.includes('w')) {
-		health.w = child_process
-			.execSync('w | head -n1')
+		const { stdout, stderr } = await execPromise('w | head -n1')
+		if (stderr) throw stderr
+		health.w = stdout
 			.toString()
 			.trim()
 			.split(' ')
@@ -36,9 +39,10 @@ async function getStat(genomes, rev) {
 	}
 
 	if (keys.includes('rs')) {
+		const { stdout, stderr } = await execPromise('ps aux | grep rsync -w')
+		if (stderr) throw stderr
 		health.rs =
-			child_process
-				.execSync('ps aux | grep rsync -w')
+			stdout
 				.toString()
 				.trim()
 				.split('\n').length - 1
