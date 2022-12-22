@@ -733,8 +733,8 @@ async function get_q(genome, req) {
 		// info not provided
 		q.nochr = await utils.bam_ifnochr(q.file, genome, q.dir)
 	}
-	if (!req.query.regions) throw '.regions[] missing'
-	q.regions = JSON.parse(req.query.regions)
+	q.regions = req.query.regions
+	if (!Array.isArray(q.regions) || q.regions.length == 0) throw 'q.regions[] not non-empty array'
 
 	let maxntwidth = 0
 	for (const r of q.regions) {
@@ -3398,8 +3398,8 @@ function is also called during visualization requests
 async function download_gdc_bam(req) {
 	// query gdc bam slicing api using the uuid of one bam file
 	// download one bam slice for each region
-	const regions = typeof req.query.regions == 'string' ? JSON.parse(req.query.regions) : req.query.regions
-	if (!Array.isArray(regions)) throw 'req.query.regions[] not array'
+	const regions = req.query.regions
+	if (!Array.isArray(regions) || regions.length == 0) throw 'req.query.regions[] not non-empty array'
 	const gdc_bam_filenames = []
 	for (const r of regions) {
 		const filesize = await get_gdc_bam(
