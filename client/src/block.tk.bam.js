@@ -237,33 +237,26 @@ export async function loadTk(tk, block) {
 	block.block_setheight()
 }
 
-async function getData(tk, block, additional = []) {
-	const lst = [
-		'genome=' + block.genome.name,
-		'regions=' + JSON.stringify(tk.regions),
-		'nucleotide_length=' + block.exonsf,
-		'pileupheight=' + tk.pileupheight,
+async function getData(tk, block, additional = {}) {
+	const body = {
+		genome: block.genome.name,
+		regions: tk.regions,
+		nucleotide_length: block.exonsf,
+		pileupheight: tk.pileupheight,
 		...additional
-	]
-	let headers
-	if (tk.gdcToken) {
-		headers = { 'Content-Type': 'application/json', Accept: 'application/json' }
-		headers['X-Auth-Token'] = tk.gdcToken
 	}
 
 	if (tk.gdcFile) {
-		lst.push('gdcFileUUID=' + tk.gdcFile.uuid)
-		lst.push('gdcFilePosition=' + tk.gdcFile.position)
+		body.gdcFileUUID = tk.gdcFile.uuid
+		body.gdcFilePosition = tk.gdcFile.position
 	}
 
 	if (tk.variants) {
-		lst.push(
-			'variant=' + tk.variants.map(m => m.chr + '.' + m.pos + '.' + m.ref + '.' + m.alt + '.' + m.strictness).join('.')
-		)
-		lst.push('diff_score_plotwidth=' + tk.dom.diff_score_plotwidth)
+		body.variant = tk.variants.map(m => m.chr + '.' + m.pos + '.' + m.ref + '.' + m.alt + '.' + m.strictness).join('.')
+		body.diff_score_plotwidth = tk.dom.diff_score_plotwidth
 		if (Number.isFinite(tk.max_diff_score)) {
-			lst.push('max_diff_score=' + tk.max_diff_score)
-			lst.push('min_diff_score=' + tk.min_diff_score)
+			body.max_diff_score = tk.max_diff_score
+			body.min_diff_score = tk.min_diff_score
 		}
 	} else if (tk.sv) {
 		if (tk.sv[0].strandA == '+') {
@@ -277,44 +270,34 @@ async function getData(tk, block, additional = []) {
 			tk.sv[0].strandB = 'negative'
 		}
 
-		lst.push(
-			'sv=' +
-				tk.sv
-					.map(m => m.chrA + '.' + m.startA + '.' + m.strandA + '.' + m.chrB + '.' + m.startB + '.' + m.strandB)
-					.join('.')
-		)
+		body.sv = tk.sv
+			.map(m => m.chrA + '.' + m.startA + '.' + m.strandA + '.' + m.chrB + '.' + m.startB + '.' + m.strandB)
+			.join('.')
 	}
 
 	if (tk.variants && tk.alleleAlreadyUpdated) {
 		// Prevent passing of refseq and altseq from server to client side in subsequent request
-		lst.push('alleleAlreadyUpdated=1')
-		lst.push('refseq=' + tk.variants[0].refseq)
-		lst.push('altseq=' + tk.variants[0].altseq)
-		lst.push('leftflankseq=' + tk.variants[0].leftflankseq)
-		lst.push('rightflankseq=' + tk.variants[0].rightflankseq)
+		body.alleleAlreadyUpdated = 1
+		body.refseq = tk.variants[0].refseq
+		body.altseq = tk.variants[0].altseq
+		body.leftflankseq = tk.variants[0].leftflankseq
+		body.rightflankseq = tk.variants[0].rightflankseq
 	}
 	if (tk.uninitialized) {
-		lst.push('getcolorscale=1')
+		body.getcolorscale = 1
 		delete tk.uninitialized
 	}
-	if (tk.asPaired) {
-		lst.push('asPaired=1')
-	}
-	if ('nochr' in tk) {
-		lst.push('nochr=' + tk.nochr)
-	}
+	if (tk.asPaired) body.asPaired = 1
+	if ('nochr' in tk) body.nochr = tk.nochr
 
-	if (tk.file) lst.push('file=' + tk.file)
-	if (tk.url) lst.push('url=' + tk.url)
-	if (tk.indexURL) lst.push('indexURL=' + tk.indexURL)
+	if (tk.file) body.file = tk.file
+	if (tk.url) body.url = tk.url
+	if (tk.indexURL) body.indexURL = tk.indexURL
 
-	if (tk.drop_pcrduplicates) lst.push('drop_pcrduplicates=1')
+	if (tk.drop_pcrduplicates) body.drop_pcrduplicates = 1
+	if (window.devicePixelRatio > 1) body.devicePixelRatio = window.devicePixelRatio
 
-	if (window.devicePixelRatio > 1) lst.push('devicePixelRatio=' + window.devicePixelRatio)
-	const data = await dofetch3('tkbam?' + lst.join('&'), { headers })
-
-	// reset text
-	//tk.cloaktext.text('Loading ...')
+	const data = await dofetch3('tkbam', { headers: getHeaders(tk), body })
 
 	if (tk.variants && !tk.alleleAlreadyUpdated) {
 		tk.variants[0].refseq = data.refseq
@@ -1393,11 +1376,11 @@ function makeGroup(gd, tk, block, data) {
 				group.partstack.start += delta
 				group.partstack.stop += delta
 				block.tkcloakon(tk)
-				const _d = await getData(tk, block, [
-					'stackstart=' + group.partstack.start,
-					'stackstop=' + group.partstack.stop,
-					'grouptype=' + group.data.type
-				])
+				const _d = await getData(tk, block, {
+					stackstart: group.partstack.start,
+					stackstop: group.partstack.stop,
+					grouptype: group.data.type
+				})
 				if (tk.readAlignmentTable) {
 					delete tk.readAlignmentTable
 					delete tk.readAlignmentTableGroup
@@ -1449,11 +1432,11 @@ function makeGroup(gd, tk, block, data) {
 				group.dom.rightg.vslider.boxy += deltay
 				group.partstack.start += Math.ceil((group.data_fullstack.stackcount * deltay) / scrollableheight)
 				block.tkcloakon(tk)
-				const _d = await getData(tk, block, [
-					'stackstart=' + group.partstack.start,
-					'stackstop=' + group.partstack.stop,
-					'grouptype=' + group.data.type
-				])
+				const _d = await getData(tk, block, {
+					stackstart: group.partstack.start,
+					stackstop: group.partstack.stop,
+					grouptype: group.data.type
+				})
 				if (tk.readAlignmentTable) {
 					delete tk.readAlignmentTable
 					delete tk.readAlignmentTableGroup
@@ -1503,11 +1486,11 @@ function makeGroup(gd, tk, block, data) {
 				group.dom.rightg.vslider.boxh += deltay
 				group.partstack.stop += Math.ceil((group.data_fullstack.stackcount * deltay) / scrollableheight)
 				block.tkcloakon(tk)
-				const _d = await getData(tk, block, [
-					'stackstart=' + group.partstack.start,
-					'stackstop=' + group.partstack.stop,
-					'grouptype=' + group.data.type
-				])
+				const _d = await getData(tk, block, {
+					stackstart: group.partstack.start,
+					stackstop: group.partstack.stop,
+					grouptype: group.data.type
+				})
 				if (tk.readAlignmentTable) {
 					delete tk.readAlignmentTable
 					delete tk.readAlignmentTableGroup
@@ -1529,47 +1512,42 @@ function makeGroup(gd, tk, block, data) {
 
 async function align_reads_to_allele(tk, group, block) {
 	// Read alignment against allele is only done when tk.variants is defined
-	const alig_lst = []
-	alig_lst.push('alignOneGroup=' + group.data.type)
-	alig_lst.push('genome=' + block.genome.name)
-	alig_lst.push('regions=' + JSON.stringify(tk.regions))
-	if (tk.file) alig_lst.push('file=' + tk.file)
-	if (tk.url) alig_lst.push('url=' + tk.url)
-	if (tk.indexURL) alig_lst.push('indexURL=' + tk.indexURL)
-	if (tk.gdcFile) {
-		alig_lst.push('gdcFileUUID=' + tk.gdcFile.uuid)
-		alig_lst.push('gdcFilePosition=' + tk.gdcFile.position)
+	const body = {
+		alignOneGroup: group.data.type,
+		genome: block.genome.name,
+		regions: tk.regions,
+		variant: tk.variants.map(m => m.chr + '.' + m.pos + '.' + m.ref + '.' + m.alt + '.' + m.strictness).join('.')
 	}
-	alig_lst.push(
-		'variant=' + tk.variants.map(m => m.chr + '.' + m.pos + '.' + m.ref + '.' + m.alt + '.' + m.strictness).join('.')
-	)
+	if (tk.file) body.file = tk.file
+	if (tk.url) body.url = tk.url
+	if (tk.indexURL) body.indexURL = tk.indexURL
+	if (tk.gdcFile) {
+		body.gdcFileUUID = tk.gdcFile.uuid
+		body.gdcFilePosition = tk.gdcFile.position
+	}
 	if (tk.alleleAlreadyUpdated) {
 		// This should always be true when this function is invoked, but adding this if condition for safety sake
-		alig_lst.push('alleleAlreadyUpdated=1')
-		alig_lst.push('refseq=' + tk.variants[0].refseq)
-		alig_lst.push('altseq=' + tk.variants[0].altseq)
-		alig_lst.push('leftflankseq=' + tk.variants[0].leftflankseq)
-		alig_lst.push('rightflankseq=' + tk.variants[0].rightflankseq)
+		body.alleleAlreadyUpdated = 1
+		body.refseq = tk.variants[0].refseq
+		body.altseq = tk.variants[0].altseq
+		body.leftflankseq = tk.variants[0].leftflankseq
+		body.rightflankseq = tk.variants[0].rightflankseq
 	}
-	if (tk.uninitialized) {
-		alig_lst.push('getcolorscale=1')
-		delete tk.uninitialized
-	}
-	if (tk.asPaired) {
-		alig_lst.push('asPaired=1')
-	}
-	if ('nochr' in tk) {
-		alig_lst.push('nochr=' + tk.nochr)
-	}
-	if (tk.drop_pcrduplicates) alig_lst.push('drop_pcrduplicates=1')
+	if (tk.asPaired) body.asPaired = 1
+	if ('nochr' in tk) body.nochr = tk.nochr
+	if (tk.drop_pcrduplicates) body.drop_pcrduplicates = 1
 	if (group.partstack) {
-		alig_lst.push('stackstart=' + group.partstack.start)
-		alig_lst.push('stackstop=' + group.partstack.stop)
-		alig_lst.push('grouptype=' + group.data.type)
+		body.stackstart = group.partstack.start
+		body.stackstop = group.partstack.stop
+		body.grouptype = group.data.type
 	}
+	return await dofetch3('tkbam', { headers: getHeaders(tk), body })
+}
+
+function getHeaders(tk) {
 	const headers = { 'Content-Type': 'application/json', Accept: 'application/json' }
 	if (tk.gdcToken) headers['X-Auth-Token'] = tk.gdcToken
-	return await dofetch3('tkbam?' + alig_lst.join('&'), { headers })
+	return headers
 }
 
 function configPanel(tk, block) {
@@ -2006,15 +1984,8 @@ async function create_gene_models_refalt(tk, block, multi_read_alig_data, group)
 	const gene_model_order = [] // This array stores the order of gene models and breaks as needed from the left
 	// Determine breaks in reference/alternate sequence (if gene model button is clicked)
 	let refalt_seq = multi_read_alig_data.alignmentData.final_read_align[0]
-	//console.log('refalt_seq:', refalt_seq)
 	let left_most_pos = tk.variants[0].pos - tk.variants[0].leftflankseq.length
 	let right_most_pos = tk.variants[0].pos + tk.variants[0].rightflankseq.length
-	//console.log('group.data.type:', group.data.type)
-	//console.log('left_most_pos:', left_most_pos)
-	//console.log('right_most_pos:', right_most_pos)
-	//console.log('tk.variants[0].pos:', tk.variants[0].pos)
-	//console.log('tk.variants[0].alt.length:', tk.variants[0].alt.length)
-	//console.log('tk.variants[0].ref.length:', tk.variants[0].ref.length)
 	let segstart = left_most_pos // This variable stores the left most position of a segment (spliced unit) of reference/alternate sequence, the first segment is initialized to the left most position of the reference/alternate sequence
 	let segstop = left_most_pos // This variable stores the right most position of a segment (spliced unit) of reference/alternate sequence
 	let local_alignment_width = 0 // This variable stores the width of each gene model that needs to be rendered using bedj track
@@ -2034,11 +2005,6 @@ async function create_gene_models_refalt(tk, block, multi_read_alig_data, group)
 			} else {
 				// Break in reference/alternate sequence caused by a read(s), will invoke a bedj request here
 
-				//console.log('nclt_count1:', nclt_count)
-				//console.log('segstart1:', segstart)
-				//console.log('segstop1:', segstop)
-				//console.log('gm_nuc_count1:', gm_nuc_count)
-				//console.log('local_alignment_width1:', local_alignment_width)
 				const gene_model_image = await get_gene_models_refalt(block, tk, segstart, segstop - 1, local_alignment_width) // Send bedj server side request to render gene model for this segment
 				const gm = {
 					src: gene_model_image.src,
@@ -2201,16 +2167,19 @@ async function getReadInfo(tk, block, box, ridx) {
 	tk.readpane.header.text('Read info')
 	tk.readpane.body.selectAll('*').remove()
 	const wait = tk.readpane.body.append('div').text('Loading...')
-	const req_data = getparam()
-	if (tk.variants) {
-		req_data.lst.push('refseq=' + tk.variants[0].refseq)
-		req_data.lst.push('altseq=' + tk.variants[0].altseq)
-		req_data.lst.push('chrom=' + tk.variants[0].chr)
-		req_data.lst.push('pos=' + tk.variants[0].pos)
-		req_data.lst.push('ref=' + tk.variants[0].ref)
-		req_data.lst.push('alt=' + tk.variants[0].alt)
-	}
-	const data = await dofetch3('tkbam?' + req_data.lst.join('&'), { headers: req_data.headers })
+	const param = getparam(
+		tk.variants
+			? {
+					refseq: tk.variants[0].refseq,
+					altseq: tk.variants[0].altseq,
+					chrom: tk.variants[0].chr,
+					pos: tk.variants[0].pos,
+					ref: tk.variants[0].ref,
+					alt: tk.variants[0].alt
+			  }
+			: {}
+	)
+	const data = await dofetch3('tkbam', param)
 	if (data.error) {
 		sayerror(wait, data.error)
 		return
@@ -2408,8 +2377,7 @@ async function getReadInfo(tk, block, box, ridx) {
 				.on('click', async () => {
 					mate_button.property('disabled', true) // disable this button
 					const wait = tk.readpane.body.append('div').text('Loading...')
-					const req_data = getparam('show_unmapped=1')
-					const data2 = await dofetch3('tkbam?' + req_data.lst.join('&'), { headers: req_data.headers })
+					const data2 = await dofetch3('tkbam', getparam({ show_unmapped: 1 }))
 					if (data2.error) {
 						wait.text('')
 						sayerror(wait, data2.error)
@@ -2554,44 +2522,42 @@ async function getReadInfo(tk, block, box, ridx) {
 		const variantAlignmentTable = div.append('div').style('display', 'none')
 	}
 
-	function getparam(extra) {
+	function getparam(extra = {}) {
 		// reusable helper
 		const r = tk.regions[ridx]
-		const headers = { 'Content-Type': 'application/json', Accept: 'application/json' }
-		if (tk.gdcToken) headers['X-Auth-Token'] = tk.gdcToken
-		const lst = [
-			'getread=1',
-			'qname=' + encodeURIComponent(box.qname), // convert + to %2B, so it can be kept the same but not a space instead
-			'genome=' + block.genome.name,
-			'chr=' + r.chr,
-			'start=' + r.start,
-			'stop=' + r.stop
-		]
-		if (tk.gdcFile) {
-			lst.push('gdcFileUUID=' + tk.gdcFile.uuid)
-			lst.push('gdcFilePosition=' + tk.gdcFile.position)
+		const body = {
+			getread: 1,
+			qname: encodeURIComponent(box.qname), // convert + to %2B, so it can be kept the same but not a space instead
+			genome: block.genome.name,
+			chr: r.chr,
+			start: r.start,
+			stop: r.stop,
+			...extra
 		}
-		if (tk.nochr) lst.push('nochr=1')
-		if (tk.file) lst.push('file=' + tk.file)
-		if (tk.url) lst.push('url=' + tk.url)
-		if (tk.indexURL) lst.push('indexURL=' + tk.indexURL)
+		if (tk.gdcFile) {
+			body.gdcFileUUID = tk.gdcFile.uuid
+			body.gdcFilePosition = tk.gdcFile.position
+		}
+		if (tk.nochr) body.nochr = 1
+		if (tk.file) body.file = tk.file
+		if (tk.url) body.url = tk.url
+		if (tk.indexURL) body.indexURL = tk.indexURL
 		if (tk.asPaired) {
-			lst.push('getpair=1')
+			body.getpair = 1
 		} else {
 			if (box.isfirst) {
-				lst.push('getfirst=1')
+				body.getfirst = 1
 			} else if (box.islast) {
-				lst.push('getlast=1')
+				body.getlast = 1
 			} else {
 				// unknown order for this read
 				// supply read position to identify it on server
-				lst.push('unknownorder=1')
-				lst.push('readstart=' + box.start)
-				lst.push('readstop=' + box.stop)
+				body.unknownorder = 1
+				body.readstart = box.start
+				body.readstop = box.stop
 			}
 		}
-		if (extra) lst.push(extra)
-		return { lst, headers }
+		return { headers: getHeaders(tk), body }
 	}
 }
 
@@ -2680,16 +2646,14 @@ function mayshow_blatbutton(read, div, tk, block) {
 			blatdiv.selectAll('*').remove()
 			const wait = blatdiv.append('div').text('Loading...')
 			try {
-				const data = await dofetch3(
-					'blat?genome=' +
-						block.genome.name +
-						'&seq=' +
-						read.seq +
-						'&soft_starts=' +
-						read.soft_starts +
-						'&soft_stops=' +
-						read.soft_stops
-				)
+				const data = await dofetch3('blat', {
+					body: {
+						genome: block.genome.name,
+						seq: read.seq,
+						soft_starts: read.soft_starts,
+						soft_stops: read.soft_stops
+					}
+				})
 				if (data.error) throw data.error
 				if (data.nohit) throw 'No hit'
 				if (!data.hits) throw '.hits[] missing'
@@ -2877,11 +2841,11 @@ async function enter_partstack(group, tk, block, y, data) {
 		}
 	}
 	block.tkcloakon(tk)
-	const _d = await getData(tk, block, [
-		'stackstart=' + group.partstack.start,
-		'stackstop=' + group.partstack.stop,
-		'grouptype=' + group.data.type
-	])
+	const _d = await getData(tk, block, {
+		stackstart: group.partstack.start,
+		stackstop: group.partstack.stop,
+		grouptype: group.data.type
+	})
 	if (tk.readAlignmentTable) {
 		delete tk.readAlignmentTable
 		delete tk.readAlignmentTableGroup

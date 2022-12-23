@@ -333,9 +333,11 @@ export async function bamsliceui({
 				// disable input field and show 'loading...' until response returned from gdc api
 				gdcid_input.attr('disabled', 1)
 				gdc_loading.style('display', 'inline-block')
-				const data = await dofetch3(
-					`gdcbam?gdc_id=${gdc_id}${_filter0 ? '&filter0=' + encodeURIComponent(JSON.stringify(_filter0)) : ''}`
-				)
+
+				const body = { gdc_id }
+				if (_filter0) body.filter0 = _filter0
+				const data = await dofetch3('gdcbam', { body })
+
 				// enable input field and hide 'Loading...'
 				gdcid_input.attr('disabled', null)
 				gdc_loading.style('display', 'none')
@@ -524,7 +526,7 @@ export async function bamsliceui({
 
 		ssmGeneArg.tabs[0].holder.selectAll('*').remove()
 		ssmGeneArg.tabs[0].tab.text('Loading')
-		const data = await dofetch3(`gdc_ssms?case_id=${case_id}&genome=${gdc_genome}`)
+		const data = await dofetch3('gdc_ssms', { body: { case_id, genome: gdc_genome } })
 		if (data.error) throw data.error
 		if (data.mlst.length == 0) {
 			// clear holder
@@ -690,17 +692,19 @@ export async function bamsliceui({
 		//
 		//////////////////////////////////////////////
 		for (const [idx, file] of args.bam_files.entries()) {
+			// file = {file_id}
+
 			submitButton.text(`Slicing BAM file ${idx + 1} of ${args.bam_files.length}...`)
 
-			// file = {file_id}
-			const lst = [
-				'gdcFileUUID=' + file.file_id,
-				'gdcFilePosition=' + par.chr + '.' + par.start + '.' + par.stop,
+			const body = {
+				downloadgdc: 1,
+				gdcFileUUID: file.file_id,
+				gdcFilePosition: par.chr + '.' + par.start + '.' + par.stop,
 				// SV_EXPAND
-				'regions=' + JSON.stringify([{ chr: par.chr, start: par.start, stop: par.stop }])
-			]
+				regions: [{ chr: par.chr, start: par.start, stop: par.stop }]
+			}
 
-			const gdc_bam_files = await dofetch3('tkbam?downloadgdc=1&' + lst.join('&'), { headers })
+			const gdc_bam_files = await dofetch3('tkbam', { headers, body })
 			if (gdc_bam_files.error) throw gdc_bam_files.error
 			if (!Array.isArray(gdc_bam_files) || gdc_bam_files.length == 0) throw 'gdc_bam_files not non empty array'
 

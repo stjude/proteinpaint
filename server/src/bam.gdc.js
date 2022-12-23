@@ -46,13 +46,10 @@ export async function gdc_bam_request(req, res) {
 	try {
 		if (!req.query.gdc_id) throw 'query.gdc_id missing'
 
-		// optional gdc cohort filter
-		let filter0
-		if (req.query.filter0 && typeof req.query.filter0 == 'string') {
-			filter0 = JSON.parse(req.query.filter0)
-		}
-
-		const bamdata = await get_gdc_data(req.query.gdc_id, filter0)
+		const bamdata = await get_gdc_data(
+			req.query.gdc_id,
+			req.query.filter0 // optional gdc cohort filter
+		)
 
 		res.send(bamdata)
 	} catch (e) {
