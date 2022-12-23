@@ -93,6 +93,10 @@ node ./scripts/validate.ctcae.js phenotree/sjlifectcae.tree raw/intID/outcomes_s
 node ./scripts/validate.ctcae.js phenotree/ccssctcae.tree raw/intID/outcomes_ccss.txt >> annotation.outcome
 node ./scripts/validate.ctcae.js phenotree/sn.tree raw/intID/subneoplasms.txt >> annotation.outcome
 # created "annotation.outcome"
+
+node ./scripts/filter.annotation.outcome.js termdb annotation.outcome
+# updated annotation.outcome by removing lines with unknown terms
+
 node ./scripts/precompute.ctcae.js termdb annotation.outcome > chronicevents.precomputed
 # created "chronicevents.precomputed"
 node ./scripts/precompute.ctcae.addNotTested.js >> chronicevents.precomputed
