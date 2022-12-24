@@ -201,9 +201,9 @@ function mayAdjustRequest(url, init) {
 		const params = []
 		for (const key in init.body) {
 			const value = init.body[key]
-			if (typeof value == 'string' && encodeURIComponent(value) === value) {
-				// no need to json-encode a URL-safe string value
-				params.push(`${key}=${value}`)
+			if (typeof value == 'string') {
+				// no need to json-encode a string before percent encoding
+				params.push(`${key}=${encodeURIComponent(value)}`)
 			} else {
 				params.push(`${key}=${encodeURIComponent(JSON.stringify(value))}`)
 			}
