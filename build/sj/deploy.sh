@@ -252,6 +252,9 @@ PPRUSTACTIVEDIR=$REMOTEDIR/active/$PPRUSTMODDIR/target
 echo "Transferring build to $USERatREMOTE"
 scp $APP-$REV.tgz $USERatREMOTE:~
 ssh -t $USERatREMOTE "
+	# should exit on any error
+	set -e
+	
 	tar --warning=no-unknown-keyword -xzf ~/$APP-$REV.tgz -C $REMOTEDIR/available/
 	rm ~/$APP-$REV.tgz
 
