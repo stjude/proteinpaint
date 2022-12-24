@@ -477,11 +477,11 @@ function setRenderers(self) {
 
 		if ('error' in result) alert(result.error)
 		for (const feature of result.features) rows.push([{ value: feature.name }])
-		for (const cohort of result.cohorts) columns.push({ label: `${cohort.name} (${cohort.abbrev})` })
-
-		for (const cf of result.cfeatures) {
+		for (const cohort of result.cohorts) {
+			columns.push({ label: `${cohort.name} (${cohort.abbrev})` })
 			for (const [i, feature] of result.features.entries()) {
-				if (cf.idfeature === feature.idfeature) rows[i].push({ value: cf.value })
+				const cf = result.cfeatures.find(cf => cf.idfeature === feature.idfeature && cf.cohort === cohort.cohort)
+				if (cf) rows[i].push({ value: cf.value })
 			}
 		}
 
