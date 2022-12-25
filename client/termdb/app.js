@@ -5,7 +5,8 @@ import { treeInit } from './tree'
 import { submenuInit } from './submenu'
 import { searchInit } from './search'
 import { select } from 'd3-selection'
-import { sayerror, Menu } from '../src/client'
+import { Menu } from '#dom/menu'
+import { sayerror } from '#dom/error'
 import { dofetch3 } from '#common/dofetch'
 
 /*
@@ -103,12 +104,13 @@ class TdbApp {
 						and attaches to the term object as an ad-hoc attribute
 						the same behaviors are maintained in that the click_term() callback gets the term obj as well as the genes
 						*/
-						const lst = [
-							'genome=' + this.state.vocab.genome,
-							'dslabel=' + this.state.vocab.dslabel,
-							'genesetByTermId=' + term.id
-						]
-						const geneset = await dofetch3('termdb?' + lst.join('&'))
+						const geneset = await dofetch3('termdb', {
+							body: {
+								genome: this.state.vocab.genome,
+								dslabel: this.state.vocab.dslabel,
+								genesetByTermId: term.id
+							}
+						})
 						term._geneset = geneset
 					}
 

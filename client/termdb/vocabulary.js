@@ -174,14 +174,14 @@ class Vocab {
 class TermdbVocab extends Vocab {
 	// migrated from termdb/store
 	async getTermdbConfig() {
-		const data = await dofetch3(
-			'termdb?genome=' +
-				this.vocab.genome +
-				'&dslabel=' +
-				this.vocab.dslabel +
-				'&gettermdbconfig=1' +
-				`&embedder=${window.location.hostname}`
-		)
+		const data = await dofetch3('termdb', {
+			body: {
+				genome: this.vocab.genome,
+				dslabel: this.vocab.dslabel,
+				gettermdbconfig: 1,
+				embedder: window.location.hostname
+			}
+		})
 
 		if (data.error) throw data.error
 
@@ -190,26 +190,27 @@ class TermdbVocab extends Vocab {
 		return this.termdbConfig
 	}
 
-	// migrated from termdb/tree
 	async getTermChildren(term, cohortValuelst) {
-		const lst = [
-			'genome=' + this.vocab.genome,
-			'dslabel=' + this.vocab.dslabel,
-			term.__tree_isroot ? 'default_rootterm=1' : 'get_children=1&tid=' + term.id
-		]
+		const body = {
+			genome: this.vocab.genome,
+			dslabel: this.vocab.dslabel
+		}
+		if (term.__tree_isroot) {
+			body.default_rootterm = 1
+		} else {
+			body.get_children = 1
+			body.tid = term.id
+		}
 		if (cohortValuelst) {
-			lst.push(
-				'cohortValues=' +
-					cohortValuelst
-						.slice()
-						.sort()
-						.join(',')
-			)
+			body.cohortValues = cohortValuelst
+				.slice()
+				.sort()
+				.join(',')
 		}
 		if (this.state.treeFilter) {
-			lst.push('treeFilter=' + encodeURIComponent(JSON.stringify(this.state.treeFilter)))
+			body.treeFilter = this.state.treeFilter
 		}
-		const data = await dofetch3('/termdb?' + lst.join('&'), {}, this.opts.fetchOpts)
+		const data = await dofetch3('termdb', { body }, this.opts.fetchOpts)
 		if (data.error) throw data.error
 		for (const term of data.lst) {
 			if (term.type == 'integer' || term.type == 'float') {
@@ -428,64 +429,51 @@ class TermdbVocab extends Vocab {
 			}
 		}
 
-		const params = [
-			'getregression=1',
-			`regressionType=${opts.regressionType}`,
-			`outcome=${encodeURIComponent(JSON.stringify(outcome))}`,
-			'independent=' +
-				encodeURIComponent(
-					JSON.stringify(
-						opts.independent.map(t => {
-							const q = JSON.parse(JSON.stringify(t.q))
-							delete q.values
-							delete q.totalCount
-							if (t.q.mode == 'continuous') {
-								// remove unneeded parameters from q
-								for (const key in q) {
-									if (!contQkeys.includes(key)) delete q[key]
-								}
-							}
-							return {
-								id: t.id,
-								q,
-								type: t.term.type,
-								refGrp: t.q.mode == 'continuous' ? 'NA' : t.refGrp,
-								interactions: t.interactions || [],
-								values: t.term.values
-							}
-						})
-					)
-				)
-		]
+		const body = {
+			getregression: 1,
+			genome: this.vocab.genome,
+			dslabel: this.vocab.dslabel,
+			regressionType: opts.regressionType,
+			outcome,
+			independent: opts.independent.map(t => {
+				const q = JSON.parse(JSON.stringify(t.q))
+				delete q.values
+				delete q.totalCount
+				if (t.q.mode == 'continuous') {
+					// remove unneeded parameters from q
+					for (const key in q) {
+						if (!contQkeys.includes(key)) delete q[key]
+					}
+				}
+				return {
+					id: t.id,
+					q,
+					type: t.term.type,
+					refGrp: t.q.mode == 'continuous' ? 'NA' : t.refGrp,
+					interactions: t.interactions || [],
+					values: t.term.values
+				}
+			})
+		}
 
 		const filterData = getNormalRoot(opts.filter)
-		if (filterData.lst.length) {
-			params.push('filter=' + encodeURIComponent(JSON.stringify(filterData))) //encodeNestedFilter(state.termfilter.filter))
-		}
-		const url = `/termdb?${params.join('&')}&genome=${this.vocab.genome}&dslabel=${this.vocab.dslabel}`
-		const data = await dofetch3(url, {}, this.opts.fetchOpts)
+		if (filterData.lst.length) body.filter = filterData
+		const data = await dofetch3('termdb', { body }, this.opts.fetchOpts)
 		if (data.error) throw data.error
 		return data
 	}
 
-	// from termdb/search
 	async findTerm(str, cohortStr, usecase = null, type = '') {
-		const lst = [
-			'genome=' + this.vocab.genome,
-			'dslabel=' + this.vocab.dslabel,
-			'findterm=' + encodeURIComponent(str),
-			'cohortStr=' + cohortStr
-		]
-		if (usecase) {
-			lst.push('usecase=' + encodeURIComponent(JSON.stringify(usecase)))
+		const body = {
+			genome: this.vocab.genome,
+			dslabel: this.vocab.dslabel,
+			findterm: encodeURIComponent(str),
+			cohortStr: cohortStr
 		}
-		if (this.state.treeFilter) {
-			lst.push('treeFilter=' + encodeURIComponent(JSON.stringify(this.state.treeFilter)))
-		}
-		if (type) {
-			lst.push('type=' + type)
-		}
-		const data = await dofetch3('termdb?' + lst.join('&'))
+		if (usecase) body.usecase = usecase
+		if (this.state.treeFilter) body.treeFilter = this.state.treeFilter
+		if (type) body.type = type
+		const data = await dofetch3('termdb', { body })
 		if (data.error) throw data.error
 		return data
 	}
@@ -750,8 +738,9 @@ class TermdbVocab extends Vocab {
 
 	async get_variantFilter() {
 		// used for snplocus term type
-		const args = ['getvariantfilter=1', 'genome=' + this.state.vocab.genome, 'dslabel=' + this.state.vocab.dslabel]
-		return await dofetch3('/termdb?' + args.join('&'))
+		return await dofetch3('termdb', {
+			body: { getvariantfilter: 1, genome: this.state.vocab.genome, dslabel: this.state.vocab.dslabel }
+		})
 	}
 
 	/*
@@ -962,14 +951,14 @@ class TermdbVocab extends Vocab {
 	}
 
 	async getLDdata(tkname, m) {
-		const args = [
-			'getLDdata=1',
-			'genome=' + this.state.vocab.genome,
-			'dslabel=' + this.state.vocab.dslabel,
-			'ldtkname=' + tkname,
-			'm=' + JSON.stringify({ chr: m.chr, pos: m.pos, ref: m.ref, alt: m.alt })
-		]
-		return await dofetch3('termdb?' + args.join('&'))
+		const body = {
+			getLDdata: 1,
+			genome: this.state.vocab.genome,
+			dslabel: this.state.vocab.dslabel,
+			ldtkname: tkname,
+			m: { chr: m.chr, pos: m.pos, ref: m.ref, alt: m.alt }
+		}
+		return await dofetch3('termdb', { body })
 	}
 
 	async getScatterData(opts) {

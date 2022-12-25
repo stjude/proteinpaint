@@ -28,7 +28,7 @@ runproteinpaint({
 		},
 		tree: {
 			click_term: term => {
-				document.getElementById('genes').innerHTML = term._geneset.join(', ')
+				document.getElementById('genes').innerHTML = JSON.stringify(term._geneset)
 			}
 		}
 	}

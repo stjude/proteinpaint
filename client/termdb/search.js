@@ -1,6 +1,6 @@
 import { getCompInit } from '#rx'
 import { select, selectAll } from 'd3-selection'
-import { dofetch3, sayerror } from '#src/client'
+import { sayerror } from '#dom/error'
 import { debounce } from 'debounce'
 import { root_ID } from './tree'
 import { isUsableTerm } from '#shared/termdb.usecase'
