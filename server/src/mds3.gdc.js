@@ -348,7 +348,7 @@ function snvindel_addclass(m, consequence) {
 }
 
 export function validate_query_geneCnv(ds) {
-	const fields = ['cnv_id', 'cnv_change', 'gene_level_cn', 'occurrence.case.case_id']
+	const defaultFields = ['cnv_id', 'cnv_change', 'gene_level_cn', 'occurrence.case.submitter_id']
 
 	/*
 	opts{}
@@ -359,7 +359,7 @@ export function validate_query_geneCnv(ds) {
 		const tmp = await got(
 			path.join(apihost, 'cnvs?size=100000') +
 				'&fields=' +
-				fields.join(',') +
+				getFields(opts) +
 				'&filters=' +
 				encodeURIComponent(JSON.stringify(getFilter(opts))),
 			{ method: 'GET', headers }
@@ -388,15 +388,37 @@ export function validate_query_geneCnv(ds) {
 			if (!Array.isArray(hit.occurrence)) throw 'hit.occurrence[] not array'
 			for (const h of hit.occurrence) {
 				if (!h.case) throw 'hit.occurrence[].case{} missing'
-				if (!h.case.case_id) throw 'hit.occurrence[].case.case_id missing'
+				if (!h.case.submitter_id) throw 'hit.occurrence[].case.submitter_id missing'
 				const sample = {
-					sample_id: h.case.case_id
+					sample_id: h.case.submitter_id
 				}
+
+				if (opts.twLst) {
+					for (const tw of opts.twLst) {
+						flattenCaseByFields(sample, h.case, tw.term)
+					}
+				}
+
 				m.samples.push(sample)
 			}
 			cnvevents.push(m)
 		}
 		return cnvevents
+	}
+
+	function getFields(p) {
+		/* p={}
+		.twLst=[]
+		*/
+		const lst = defaultFields.slice()
+		if (p.twLst) {
+			for (const t of p.twLst) {
+				let id = t.term.id
+				if (id.startsWith('case.')) id = lst.push('occurrence.' + id)
+				lst.push(id)
+			}
+		}
+		return lst.join(',')
 	}
 
 	function getFilter(p) {
@@ -409,7 +431,7 @@ export function validate_query_geneCnv(ds) {
 		if (!p.gene && typeof p.gene != 'string') throw 'p.gene does not provide non-empty string'
 		const filters = {
 			op: 'and',
-			content: [{ op: '=', content: { field: 'consequence.gene.symbol', value: p.gene } }]
+			content: [{ op: '=', content: { field: 'consequence.gene.symbol', value: p.gene.split(',') } }]
 		}
 
 		if (p.case_id) {
@@ -703,51 +725,89 @@ function prepTwLst(lst) {
 }
 
 /* for variant2samples query
+obtain a list of samples, to be used for subsequent purposes (sent to client for table/matrix, summarize etc)
+
+inputs:
+
 q{}
 	.get=str
 	.ssm_id_lst=str, comma-delimited
 	.isoform=str
+	.isoforms=[]
 	.tid2value={}
+
 twLst[]
 	array of termwrapper objects, for sample-annotating terms (not geneVariant)
 	tw.id is appended to "&fields="
 	and to parse out as sample attributes
+
 ds{}
+
 geneTwLst[]
 	optional list of geneVariant tw objects
 	if provided, query samples with alterations on these genes
 	tw.q{} determines required datatype, e.g. snvindel and cnv
+
+returns a list of sample objects:
+	sample.sample_id is the unique identifier of a sample
+	value is variable, dependens on context
 */
 
 export async function querySamples_gdcapi(q, twLst, ds, geneTwLst) {
 	prepTwLst(twLst)
-	if (q.get == 'summary' && !twLst.some(i => i.id == 'case.case_id')) {
-		/*
-		(from variant2sample) to summarize samples that can be retrieved here
-		which requires case_uuid to count unique list of samples per category
-		when 'case.case_id' is missing from term ids, must add it to the list so case_uuid will be available from resulting sample objects
-		*/
-		twLst.push({ term: { id: 'case.case_id' } })
+
+	if (q.get == 'samples') {
+		// getting list of samples (e.g. for table display)
+		// need following fields for table display, add to twLst[] if missing:
+
+		if (q.ssm_id_lst || q.isoform) {
+			// querying using list of ssm or single isoform
+			// must be from mds3 tk; in such case should return following info
+
+			// need ssm id to associate with ssm (when displaying in sample table?)
+			if (!twLst.some(i => i.id == 'ssm.ssm_id')) twLst.push({ term: { id: 'ssm.ssm_id' } })
+
+			// need read depth info
+			// TODO should only add when getting list of samples with mutation for a gene
+			// TODO not when adding a dict term in matrix?
+			if (!twLst.some(i => i.id == 'case.observation.read_depth.t_alt_count'))
+				twLst.push({ term: { id: 'case.observation.read_depth.t_alt_count' } })
+			if (!twLst.some(i => i.id == 'case.observation.read_depth.t_depth'))
+				twLst.push({ term: { id: 'case.observation.read_depth.t_depth' } })
+			if (!twLst.some(i => i.id == 'case.observation.read_depth.n_depth'))
+				twLst.push({ term: { id: 'case.observation.read_depth.n_depth' } })
+
+			// get aliquot id for converting to sample name from which the mutation is detected
+			// TODO no need when
+			if (!twLst.some(i => i.id == 'case.observation.sample.tumor_sample_uuid'))
+				twLst.push({ term: { id: 'case.observation.sample.tumor_sample_uuid' } })
+		}
+
+		if (q.isoforms) {
+			// using isoforms, should be from matrix to get annotated samples for dictionary term
+			// use submitter id to be able to align with geneVariant terms
+			if (!twLst.some(i => i.id == 'case.submitter_id')) twLst.push({ term: { id: 'case.submitter_id' } })
+		}
+
+		// need case_id to generate url/cases/<ID> link in table display; submitter and aliquot id won't work
+		if (!twLst.some(i => i.id == 'case.case_id')) twLst.push({ term: { id: 'case.case_id' } })
 	}
 
-	// TODO determine this flag with geneTwLst
-	const useCaseid4sample = false
-
-	if (useCaseid4sample && !twLst.some(i => i.id == 'case.case_id')) {
-		// to use case id as sample id, append field if missing
-		twLst.push({ term: { id: 'case.case_id' } })
+	if (q.get == 'summary' || q.get == 'sunburst') {
+		// submitter id is sufficient to count unique number of samples
+		// no need for case_id
+		if (!twLst.some(i => i.id == 'case.submitter_id')) twLst.push({ term: { id: 'case.submitter_id' } })
 	}
 
 	const api = ds.variant2samples.gdcapi
 
-	const termObjs = []
+	const dictTwLst = []
 	for (const tw of twLst) {
 		const t = ds.cohort.termdb.q.termjsonByOneid(tw.term.id)
-		if (t) termObjs.push({ term: t })
+		if (t) dictTwLst.push({ term: t })
 	}
 
 	const param = ['size=10000', 'fields=' + twLst.map(tw => tw.term.id).join(',')]
-	//'&size=' + (q.size || api.size) + '&from=' + (q.from || 0)
 
 	// it may query with isoform
 	mayMapRefseq2ensembl(q, ds)
@@ -779,12 +839,15 @@ export async function querySamples_gdcapi(q, twLst, ds, geneTwLst) {
 			sample.ssm_id = s.ssm.ssm_id
 		}
 
-		sample.sample_id = await decideSampleId(s.case, ds, useCaseid4sample)
+		// set last flag to true to give priority to submitter_id
+		sample.sample_id = await decideSampleId(s.case, ds, true)
 
-		// for making url link on a sample
-		sample.sample_URLid = s.case.case_id
+		if (s.case.case_id) {
+			// for making url link on a sample
+			sample.sample_URLid = s.case.case_id
+		}
 
-		for (const tw of termObjs) {
+		for (const tw of dictTwLst) {
 			flattenCaseByFields(sample, s.case, tw.term)
 		}
 
@@ -799,6 +862,19 @@ export async function querySamples_gdcapi(q, twLst, ds, geneTwLst) {
 		samples.push(sample)
 	}
 
+	if (geneTwLst) {
+		const param = {
+			gene: geneTwLst.map(i => i.term.name).join(','),
+			twLst: dictTwLst
+		}
+		const cnvdata = await ds.queries.geneCnv.bygene.get(param)
+		for (const h of cnvdata) {
+			for (const s of h.samples) {
+				samples.push(s)
+			}
+		}
+	}
+
 	return samples
 }
 
@@ -807,17 +883,17 @@ c is case{}
 decide the generic sample_id used by pp
 */
 async function decideSampleId(c, ds, useCaseid4sample) {
-	if (useCaseid4sample) {
-		// asking for case id
-		if (!c.case_id) throw 'asking for case_id but case.case_id is missing'
-		return c.case_id
+	if (useCaseid4sample && c.submitter_id) {
+		// asking for submitter id (not case id) and the id is present, then return it
+		return c.submitter_id
 	}
 
 	if (c?.observation?.[0]?.sample?.tumor_sample_uuid) {
 		// hardcoded logic to
 		return await ds.aliquot2submitter.get(c.observation[0].sample.tumor_sample_uuid)
 	}
-	return c.case_id
+
+	return c.case_id || c.submitter_id
 }
 
 function may_add_readdepth(acase, sample) {
@@ -1501,7 +1577,8 @@ const isoform2ssm_query2_getcase = {
 	size: 100000,
 	fields: [
 		'ssm.ssm_id',
-		'case.case_id', // can be used to make sample url link
+		//'case.case_id', // can be used to make sample url link
+		'case.submitter_id', // can be used to make sample url link
 		'case.observation.sample.tumor_sample_uuid' // gives aliquot id and convert to submitter id for display
 	],
 	filters: p => {

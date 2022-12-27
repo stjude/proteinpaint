@@ -328,18 +328,6 @@ module.exports = {
 		// small list of terms for sunburst rings
 		sunburst_twLst: [{ id: 'case.disease_type', q: {} }, { id: 'case.primary_site', q: {} }],
 
-		//////////////////////////////
-		// optional extra terms to append to client-provided term ids when get='samples'
-		// not to send to client but secretly used in backend computing
-		extra_termids_samples: [
-			'ssm.ssm_id',
-			'case.case_id',
-			'case.observation.read_depth.t_alt_count',
-			'case.observation.read_depth.t_depth',
-			'case.observation.read_depth.n_depth',
-			'case.observation.sample.tumor_sample_uuid'
-		],
-
 		url: {
 			base: 'https://portal.gdc.cancer.gov/cases/',
 			// if "namekey" is provided, use the given key to obtain sample name to append to url

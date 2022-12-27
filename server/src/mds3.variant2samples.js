@@ -265,25 +265,14 @@ async function queryMutatedSamples(q, ds) {
 	/*
 	!!!tricky!!!
 
-	make temporary term id list that's only used in this function
-	and keep q.twLst unchanged
-	as when using gdc api, observation.read_depth stuff are not in q.twLst but are only added here to pull out that data
+	make copy of twLst[] that's only used in this function
+	as new array elements can be added when using gdc api (e.g. case_id and read counts)
+	q.twLst must remained unchanged
+	in order for summary to work for given dictionary terms in q.twLst[], while the temporarily added terms can break summary code
 	*/
 	const twLst = q.twLst ? q.twLst.slice() : []
 
-	if (q.get == ds.variant2samples.type_samples && ds.variant2samples.extra_termids_samples) {
-		/*********** gdc-specific logic *************
-		adds extra fields required for api query
-		they are not actual dictionary terms, thus no q{}
-		*/
-		for (const termid of ds.variant2samples.extra_termids_samples) {
-			twLst.push({ id: termid })
-		}
-	}
-
-	if (ds.variant2samples.gdcapi) {
-		return await gdc.querySamples_gdcapi(q, twLst, ds)
-	}
+	if (ds.variant2samples.gdcapi) return await gdc.querySamples_gdcapi(q, twLst, ds)
 
 	/* from server-side files
 	action depends on details:
@@ -292,13 +281,9 @@ async function queryMutatedSamples(q, ds) {
 	- query by what (ssm id, region, or isoform)
 	*/
 
-	if (q.ssm_id_lst) {
-		return await queryServerFileBySsmid(q, twLst, ds)
-	}
+	if (q.ssm_id_lst) return await queryServerFileBySsmid(q, twLst, ds)
 
-	if (q.rglst) {
-		return await queryServerFileByRglst(q, twLst, ds)
-	}
+	if (q.rglst) return await queryServerFileByRglst(q, twLst, ds)
 
 	throw 'unknown q{} option when querying server side files'
 }

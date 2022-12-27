@@ -46,6 +46,7 @@ const fields = [
 	'cnv_change',
 	'gene_level_cn',
 	'occurrence.case.case_id',
+	'occurrence.case.submitter_id',
 	'occurrence.case.primary_site'
 ]
 
@@ -67,6 +68,8 @@ const fields = [
 		// value: array of calls
 
 		for (const hit of re.data.hits) {
+			console.log(hit.occurrence[0])
+
 			for (const o of hit.occurrence) {
 				const caseid = o.case.case_id
 				if (caseset.has(caseid)) caseset.get(caseid).push(hit.cnv_change)
@@ -100,8 +103,12 @@ function get_parameter() {
 		p[k] = v
 	}
 
+	if (!p.gene && !p.isoform) {
+		p.gene = 'AKT1'
+	}
+
 	if (p.gene) p.gene = p.gene.split(',')
-	else p.gene = 'AKT1'
+	if (p.isoform) p.isoform = p.isoform.split(',')
 
 	/*
 	if (!p.position) {

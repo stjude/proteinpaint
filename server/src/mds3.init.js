@@ -946,7 +946,11 @@ function mayAdd_mayGetGeneVariantData(ds, genome) {
 
 	/*
 	input:
-	tw{} // termwrapper
+	tw{}
+		a termwrapper on a geneVariant term
+		for now requires tw.term.name to be gene symbol
+		the requirement is reasonable as symbol is essential for matrix display
+		isoform and coord are optional; if missing is derived from gene symbol on the fly
 	q{}
 		.filter0
 			json obj, the read-only gdc cohort filter supplied to gdc api
@@ -967,15 +971,13 @@ function mayAdd_mayGetGeneVariantData(ds, genome) {
 					_SAMPLEID_
 	*/
 	ds.mayGetGeneVariantData = async (tw, q) => {
+		// validate tw
 		if (typeof tw.term != 'object') throw 'tw.term{} is not object'
-
-		// for now requires tw.term.name to be gene symbol
-		// the requirement is reasonable as symbol is essential for matrix display
-		// isoform and coord are optional; if missing is derived from gene symbol on the fly
+		if (tw.term.type != 'geneVariant') throw 'tw.term.type is not geneVariant'
 		if (typeof tw.term.name != 'string') throw 'tw.term.name is not string'
 		if (!tw.term.name) throw 'tw.term.name should be gene symbol but is empty string'
 
-		const mlst = [] // keep raw snvindel and fusion
+		const mlst = [] // collect raw data points
 
 		// has some code duplication with mds3.load.js query_snvindel() etc
 		// primary concern is tw.term may be missing coord/isoform to perform essential query
@@ -1000,11 +1002,15 @@ function mayAdd_mayGetGeneVariantData(ds, genome) {
 		for (const m of mlst) {
 			/*
 			m={
-				class, mname,
-				samples:[ {
+				dt
+				class
+				mname
+				samples:[
+					{
 					sample_id: int or string
-				},
-				... ]
+					...
+					},
+				]
 			}
 
 			for official datasets using a sqlite db that contains integer2string sample mapping, "sample_id" is integer id 

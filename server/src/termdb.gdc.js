@@ -485,6 +485,7 @@ async function getOpenProjects(ds) {
 			// key is project_id value
 			if (b.key) ds.gdcOpenProjects.add(b.key)
 		}
+		console.log('GDC open-access projects:', ds.gdcOpenProjects.size)
 	} else {
 		console.log("getting open project_id but return is not re.data.aggregations['cases.project.project_id'].buckets")
 	}

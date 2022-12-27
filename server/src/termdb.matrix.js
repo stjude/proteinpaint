@@ -230,6 +230,8 @@ async function getSampleData_dictionaryTerms(q, termWrappers) {
 /*
 ******** all gdc-specific logic **********
 makes same return as getSampleData_dictionaryTerms()
+TODO may move this function to mds3.gdc.js
+or merge with querySamples_gdcapi
 
 q{}
 	.currentGeneNames=[ symbol, ... ]
@@ -254,7 +256,9 @@ async function getSampleData_gdc(q, termWrappers) {
 	// currentGeneNames[] contains gene symbols
 	// convert to ENST isoforms to work with gdc api
 	const isoforms = []
+	const geneTwLst = []
 	for (const n of currentGeneNames) {
+		geneTwLst.push({ term: { name: n, type: 'geneVariant' } })
 		const data = q.genome.genedb.get_gene2canonicalisoform.get(n)
 		if (!data.isoform) {
 			// no isoform found
@@ -273,7 +277,7 @@ async function getSampleData_gdc(q, termWrappers) {
 	const twLst = termWrappers.slice() // duplicate array to insert new ones, do not modify orignal
 	twLst.push({ term: { id: 'case.observation.sample.tumor_sample_uuid' } }) // allow submitter id to be assigned to sample_id
 
-	const sampleLst = await querySamples_gdcapi(param, twLst, q.ds)
+	const sampleLst = await querySamples_gdcapi(param, twLst, q.ds, geneTwLst)
 
 	const samples = {}
 	const refs = { byTermId: {} }
