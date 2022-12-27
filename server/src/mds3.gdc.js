@@ -414,7 +414,7 @@ export function validate_query_geneCnv(ds) {
 		if (p.twLst) {
 			for (const t of p.twLst) {
 				let id = t.term.id
-				if (id.startsWith('case.')) id = lst.push('occurrence.' + id)
+				if (id.startsWith('case.')) id = 'occurrence.' + id
 				lst.push(id)
 			}
 		}
