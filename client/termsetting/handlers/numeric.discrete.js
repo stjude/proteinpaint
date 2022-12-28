@@ -642,7 +642,7 @@ export function renderBoundaryInputDivs(self, data) {
 	// TODO: follwing code can be improved by using flex rather than table and td
 	// bin range equations, read-only
 	// get bin range equation using get_bin_range_equation()
-	for (const d of data) {
+	for (const [i, d] of data.entries()) {
 		const tr = self.dom.customBintbody.append('tr').attr('name', 'bin')
 		const td = tr
 			.append('td')
