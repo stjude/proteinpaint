@@ -13,7 +13,9 @@ parameters:
 export function handle_genelookup_closure(genomes) {
 	return (req, res) => {
 		try {
-			res.send(getResult(genomes, req.query))
+			const g = genomes[req.query.genome]
+			if (!g) throw 'invalid genome name'
+			res.send(getResult(g, req.query))
 		} catch (e) {
 			res.send({ error: e.message || e })
 			if (e.stack) console.log(e.stack)
@@ -21,9 +23,11 @@ export function handle_genelookup_closure(genomes) {
 	}
 }
 
-function getResult(genomes, q) {
-	const g = genomes[q.genome]
-	if (!g) throw 'invalid genome name'
+/*
+g: server side genome obj
+q: {deep:true, input:str}
+*/
+export function getResult(g, q) {
 	if (g.genomicNameRegexp.test(q.input)) throw 'invalid character in gene name'
 
 	if (q.deep) {

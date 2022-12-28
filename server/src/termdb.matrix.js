@@ -7,7 +7,6 @@ const imagesize = require('image-size')
 const serverconfig = require('./serverconfig')
 const utils = require('./utils')
 const termdbsql = require('./termdb.sql')
-const { querySamples_gdcapi } = require('./mds3.gdc')
 
 /*
 
@@ -162,17 +161,9 @@ async function getSampleData_dictionaryTerms(q, termWrappers) {
 
 	if (!termWrappers.length) return { samples, refs }
 
-	if (q.ds?.variant2samples?.gdcapi) {
-		/*
-
-		************** quick fix ****************
-
-		to tell it is gdc dataset, and uses the special method to query cases
-		TODO should provide complete list of genes to add to gdcapi query
-		to restrict cases to only those mutated on the given genes
-		rather than retrieving all 80K cases from gdc
-		*/
-		return await getSampleData_gdc(q, termWrappers)
+	if (q.ds?.variant2samples?.get) {
+		// call mds3 dataset method
+		return await call_variant2samples(q, termWrappers)
 	}
 
 	const twByTermId = {}
@@ -228,57 +219,21 @@ async function getSampleData_dictionaryTerms(q, termWrappers) {
 }
 
 /*
-******** all gdc-specific logic **********
-makes same return as getSampleData_dictionaryTerms()
-TODO may move this function to mds3.gdc.js
-or merge with querySamples_gdcapi
-
-q{}
-	.currentGeneNames=[ symbol, ... ]
+using mds3 dataset
 */
-async function getSampleData_gdc(q, termWrappers) {
-	if (!q.genome.genedb.get_gene2canonicalisoform) throw 'gene2canonicalisoform not supported on this genome'
-
-	const currentGeneNames = q.currentGeneNames || []
-	/* TODO
-
-	currentGeneNames values should be termwrappers, instead of gene names
-	each tw{}
-		name: gene name
-		isoform: isoform, if available
-		q:{}
-			determines allowed datatypes, including snvindel and geneCnv
-
-	pass this array of tw to querySamples_gdcapi
-	so it can query samples that has required datatypes on these genes
-	*/
-
-	// currentGeneNames[] contains gene symbols
-	// convert to ENST isoforms to work with gdc api
-	const isoforms = []
-	const geneTwLst = []
-	for (const n of currentGeneNames) {
-		geneTwLst.push({ term: { name: n, type: 'geneVariant' } })
-		const data = q.genome.genedb.get_gene2canonicalisoform.get(n)
-		if (!data.isoform) {
-			// no isoform found
-			continue
-		}
-		isoforms.push(data.isoform)
-	}
-	if (!isoforms.length) throw 'no matching GDC isoforms found, at least one is needed to limit the sample query'
-
-	const param = {
+async function call_variant2samples(q, termWrappers) {
+	const q2 = {
+		genome: q.genome,
 		get: 'samples',
-		isoforms,
-		filterObj: q.filter
+		twLst: termWrappers
 	}
-
-	const twLst = termWrappers.slice() // duplicate array to insert new ones, do not modify orignal
-	twLst.push({ term: { id: 'case.observation.sample.tumor_sample_uuid' } }) // allow submitter id to be assigned to sample_id
-
-	const sampleLst = await querySamples_gdcapi(param, twLst, q.ds, geneTwLst)
-
+	if (q.currentGeneNames) {
+		q2.geneTwLst = []
+		for (const n of q.currentGeneNames) {
+			q2.geneTwLst.push({ term: { name: n, type: 'geneVariant' } })
+		}
+	}
+	const sampleLst = await q.ds.variant2samples.get(q2)
 	const samples = {}
 	const refs = { byTermId: {} }
 

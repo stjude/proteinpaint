@@ -730,10 +730,10 @@ obtain a list of samples, to be used for subsequent purposes (sent to client for
 inputs:
 
 q{}
+	.genome{}
 	.get=str
 	.ssm_id_lst=str, comma-delimited
-	.isoform=str
-	.isoforms=[]
+	.isoform=str, one isoform accession
 	.tid2value={}
 
 twLst[]
@@ -755,6 +755,30 @@ returns a list of sample objects:
 
 export async function querySamples_gdcapi(q, twLst, ds, geneTwLst) {
 	prepTwLst(twLst)
+
+	if (geneTwLst) {
+		if (!Array.isArray(geneTwLst)) throw 'geneTwLst not array'
+		// temporarily create q.isoforms[] to do ssm query
+		q.isoforms = []
+		for (const tw of geneTwLst) {
+			if (!tw?.term?.name) throw 'gene tw missing .term.name'
+			if (tw.term.isoform) {
+				// may need to convert refseq to gencode
+				q.isoforms.push(tw.term.isoform)
+			} else {
+				// convert
+				if (typeof q.genome != 'object')
+					throw 'serverside genome obj missing, needed to map gene name to canonical isoform'
+				if (!q.genome?.genedb?.get_gene2canonicalisoform) throw 'gene2canonicalisoform not supported on this genome'
+				const data = q.genome.genedb.get_gene2canonicalisoform.get(tw.term.name)
+				if (!data.isoform) {
+					// no isoform found
+					continue
+				}
+				q.isoforms.push(data.isoform)
+			}
+		}
+	}
 
 	if (q.get == 'samples') {
 		// getting list of samples (e.g. for table display)
@@ -783,7 +807,7 @@ export async function querySamples_gdcapi(q, twLst, ds, geneTwLst) {
 				twLst.push({ term: { id: 'case.observation.sample.tumor_sample_uuid' } })
 		}
 
-		if (q.isoforms) {
+		if (geneTwLst) {
 			// using isoforms, should be from matrix to get annotated samples for dictionary term
 			// use submitter id to be able to align with geneVariant terms
 			if (!twLst.some(i => i.id == 'case.submitter_id')) twLst.push({ term: { id: 'case.submitter_id' } })
@@ -817,6 +841,9 @@ export async function querySamples_gdcapi(q, twLst, ds, geneTwLst) {
 	const headers = getheaders(q) // will be reused below
 
 	const response = await got(apihost + api.endpoint + '?' + param.join('&'), { method: 'GET', headers })
+
+	delete q.isoforms
+
 	let re
 	try {
 		re = JSON.parse(response.body)

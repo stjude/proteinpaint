@@ -4,6 +4,7 @@ const { get_densityplot } = require('./mds3.densityPlot')
 const { ssmIdFieldsSeparator } = require('./mds3.init')
 const utils = require('./utils')
 const { dtfusionrna, dtsv } = require('#shared/common')
+const geneDbSearch = require('./gene')
 
 /*
 validate_variant2samples()
@@ -96,19 +97,33 @@ only requires ds.variant2samples{}
 client instructs if to return sample list or sunburst summary; server may deny that request based on certain config
 
 q{}
-.get = "samples", or "sunburst", or "summary"
-	Required. Value determines what's returned
+
+.genome{}
+	optional
+	server-side genome obj
+
+.get = "samples/sunburst/summary"
+	Required.
+	"samples" - return list of sample objects with annotations for twLst[]
+	"summary/sunburst" - return summary on twLst[]
+
+****** mutation/genomic filters; one of below must be provided
 
 .ssm_id_lst=str
 	Optional, comma-joined list of ssm_id (snvindel or fusion)
 .isoform=str
-	Optional, used for query gdc api to get all samples with mutation on an isoform
+	Optional, one isoform accession
+	used for query gdc api to get all samples with mutation on an isoform
 .rglst=[ {chr,start,stop}, .. ]
 	Optional, used for querying bcf/tabix file with range
-
 	either "ssm_id_lst", "isoform", or "rglst" must be supplied, and must be consistent with dataset setup
+.geneTwLst=[ ]
+	optional
+	list of tw, each for a gene, to find samples with mutations on any of the genes
 
-.twLst=str
+******* dictionary terms
+
+.twLst=[]
 	Optional.
 	list of tw objects, to retrieve value for each sample,
 	resulting sample obj will be like {sample_id:str, term1id:value1, term2id:value2, ...}
@@ -131,11 +146,9 @@ q{}
 	hardcoded to be a geneVariant term, carries isoform/rglst/etc for querying variant
 */
 async function variant2samples_getresult(q, ds) {
-	prep_q(q)
+	// not used right now
+	//ifUsingBarchartQuery(q, ds)
 
-	ifUsingBarchartQuery(q, ds)
-
-	// each sample obj has keys from .terms[].id
 	const mutatedSamples = await queryMutatedSamples(q, ds)
 
 	if (q.get == ds.variant2samples.type_samples) {
@@ -190,15 +203,6 @@ async function variant2samples_getresult(q, ds) {
 	}
 
 	throw 'unknown get type'
-}
-
-function prep_q(q) {
-	if (q.twLst && typeof q.twLst == 'string') {
-		q.twLst = JSON.parse(decodeURIComponent(q.twLst))
-	}
-	if (q.filterObj && typeof q.filterObj == 'string') {
-		q.filterObj = JSON.parse(decodeURIComponent(q.filterObj))
-	}
 }
 
 /*
@@ -272,7 +276,9 @@ async function queryMutatedSamples(q, ds) {
 	*/
 	const twLst = q.twLst ? q.twLst.slice() : []
 
-	if (ds.variant2samples.gdcapi) return await gdc.querySamples_gdcapi(q, twLst, ds)
+	if (ds.variant2samples.gdcapi) {
+		return await gdc.querySamples_gdcapi(q, twLst, ds, q.geneTwLst)
+	}
 
 	/* from server-side files
 	action depends on details:
@@ -285,7 +291,27 @@ async function queryMutatedSamples(q, ds) {
 
 	if (q.rglst) return await queryServerFileByRglst(q, twLst, ds)
 
-	throw 'unknown q{} option when querying server side files'
+	if (q.geneTwLst) {
+		// convert geneTwLst to rglst[] to query
+		if (typeof q.genome != 'object') throw 'serverside genome obj needed'
+		q.rglst = []
+		for (const tw of q.geneTwLst) {
+			if (tw.term.chr && tw.term.start && tw.term.stop) {
+				q.rglst.push({ chr: tw.term.chr, start: tw.term.start, stop: tw.term.stop })
+			} else {
+				const result = geneDbSearch.getResult(q.genome, { deep: 1, input: tw.term.name })
+				if (result.gmlst) {
+					const g = result.gmlst[0]
+					q.rglst.push({ chr: g.chr, start: g.start, stop: g.stop })
+				}
+			}
+		}
+		const out = await queryServerFileByRglst(q, twLst, ds)
+		delete q.rglst
+		return out
+	}
+
+	throw 'no genomic parameters, should get all samples' // TODO
 }
 
 /*
