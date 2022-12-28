@@ -156,7 +156,27 @@ if [[ $(echo -e "$RECENT" | grep -l $REV) != "" ]]; then
 	echo -e "Re-activating this build in the remote server ..."
 	ssh -t $USERatREMOTE "
 	cd $REMOTEDIR
-	./helpers/activate.sh $REV
+
+	cp -rf active/node_modules available/$APP-$REV
+	cp -f active/serverconfig.json available/$APP-$REV/
+	cp -Rnf active/public/ available/$APP-$REV/
+	cp -Rnf active/dataset/ available/$APP-$REV/
+
+	chmod -R 755 available/$APP-$REV
+	
+	cd available/$APP-$REV
+	# copy previous builds to allow reuse if validated by sccache and cargo
+	[[ -d $PPRUSTACTIVEDIR ]] && mkdir -p $PPRUSTMODDIR && cp -rf $PPRUSTACTIVEDIR ./$PPRUSTMODDIR/
+	npm install @stjude/proteinpaint-rust
+
+	cd $REMOTEDIR
+	ln -sfn /opt/app/pecan/portal/www/sjcharts/public available/$APP-$REV/public/sjcharts
+	ln -sfn ./bin available/$APP-$REV/public/no-babel-polyfill
+	
+	./helpers/record.sh deployed
+	./proteinpaint_run_node.sh $APP-$REV
+	ln -sfn available/$APP-$REV active
+	./helpers/purge.sh \"pp-*\"
 	"
 	exit 0
 fi
