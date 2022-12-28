@@ -1,6 +1,6 @@
-const serverconfig = require('@stjude/proteinpaint-server/src/serverconfig')
-const fs = require('fs')
 const path = require('path')
+const serverconfig = require(path.join(__dirname, '../src/serverconfig'))
+const fs = require('fs')
 
 /*
 this will automatically create path under tp/ if missing,
