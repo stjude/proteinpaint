@@ -23,6 +23,38 @@ function sleep(ms) {
 	return new Promise(resolve => setTimeout(resolve, ms))
 }
 
+const state = {
+	plots: [
+		{
+			chartType: 'sampleScatter',
+			colorTW: {
+				id: 'TSNE Category'
+			},
+			name: 'Methylome TSNE'
+		}
+	]
+}
+
+const open_state = {
+	nav: {
+		header_mode: 'hide_search'
+	},
+	plots: [
+		{
+			chartType: 'sampleScatter',
+			colorTW: {
+				id: 'TSNE Category'
+			},
+			name: 'Methylome TSNE',
+			settings: {
+				controls: {
+					isOpen: true
+				}
+			}
+		}
+	]
+}
+
 /**************
  test sections
 ***************/
@@ -35,22 +67,7 @@ tape('Render PNET scatter plot', function(test) {
 	test.timeoutAfter(3000)
 
 	runpp({
-		state: {
-			plots: [
-				{
-					chartType: 'sampleScatter',
-					colorTW: {
-						id: 'TSNE Category'
-					},
-					name: 'Methylome TSNE',
-					settings: {
-						sampleScatter: {
-							showAxes: true
-						}
-					}
-				}
-			]
-		},
+		state,
 		sampleScatter: {
 			callbacks: {
 				'postRender.test': runTests
@@ -97,17 +114,7 @@ tape('Click behavior of category legend', function(test) {
 	test.timeoutAfter(3000)
 
 	runpp({
-		state: {
-			plots: [
-				{
-					chartType: 'sampleScatter',
-					colorTW: {
-						id: 'TSNE Category'
-					},
-					name: 'Methylome TSNE'
-				}
-			]
-		},
+		state,
 		sampleScatter: {
 			callbacks: {
 				'postRender.test': runTests
@@ -138,10 +145,7 @@ tape('Click behavior of category legend', function(test) {
 				.selectAll('.sjpcb-scatter-series > path')
 				.nodes()
 				.some(c => c.style.fill == testColor)
-			test.ok(
-				findColorDots == false,
-				`Should remove all ${testCategory.value.label} colored dots, color = ${testColor}`
-			)
+			test.ok(findColorDots == false, `Should remove all ETMR colored dots, color = ${testColor}`)
 		}
 
 		// function clickCategory(){
@@ -159,25 +163,7 @@ tape('Edit color from burger menu', function(test) {
 	test.timeoutAfter(3000)
 
 	runpp({
-		state: {
-			nav: {
-				header_mode: 'hide_search'
-			},
-			plots: [
-				{
-					chartType: 'sampleScatter',
-					colorTW: {
-						id: 'TSNE Category'
-					},
-					name: 'Methylome TSNE',
-					settings: {
-						controls: {
-							isOpen: true
-						}
-					}
-				}
-			]
-		},
+		state: open_state,
 
 		sampleScatter: {
 			callbacks: {
@@ -248,7 +234,7 @@ tape('Edit color from burger menu', function(test) {
 	}
 
 	function testGroups(scatter) {
-		const legendLabels = scatter.Inner.dom.holder.selectAll('.sjpp-scatter-legend-label').nodes()
+		const legendLabels = scatter.Inner.dom.holder.selectAll('text[name="sjpp-scatter-legend-label"]').nodes()
 		let groups = []
 		for (const group of legendLabels) {
 			const label = group.innerHTML.split(',')
@@ -274,29 +260,11 @@ tape('Edit color from burger menu', function(test) {
 	}
 })
 
-tape.only('Replace color from burger menu', function(test) {
+tape('Replace color from burger menu', function(test) {
 	test.timeoutAfter(3000)
 
 	runpp({
-		state: {
-			nav: {
-				header_mode: 'hide_search'
-			},
-			plots: [
-				{
-					chartType: 'sampleScatter',
-					colorTW: {
-						id: 'TSNE Category'
-					},
-					name: 'Methylome TSNE',
-					settings: {
-						controls: {
-							isOpen: true
-						}
-					}
-				}
-			]
-		},
+		state: open_state,
 
 		sampleScatter: {
 			callbacks: {
@@ -337,17 +305,7 @@ tape.skip('Edit shape from burger menu', function(test) {
 	test.timeoutAfter(3000)
 
 	runpp({
-		state: {
-			plots: [
-				{
-					chartType: 'sampleScatter',
-					colorTW: {
-						id: 'TSNE Category'
-					},
-					name: 'Methylome TSNE'
-				}
-			]
-		},
+		state,
 		sampleScatter: {
 			callbacks: {
 				'postRender.test': runTests
@@ -365,17 +323,7 @@ tape.skip('Replace shape from burger menu', function(test) {
 	test.timeoutAfter(3000)
 
 	runpp({
-		state: {
-			plots: [
-				{
-					chartType: 'sampleScatter',
-					colorTW: {
-						id: 'TSNE Category'
-					},
-					name: 'Methylome TSNE'
-				}
-			]
-		},
+		state,
 		sampleScatter: {
 			callbacks: {
 				'postRender.test': runTests
@@ -393,22 +341,7 @@ tape('Change symbol and reference size from menu', function(test) {
 	test.timeoutAfter(3000)
 
 	runpp({
-		state: {
-			plots: [
-				{
-					chartType: 'sampleScatter',
-					colorTW: {
-						id: 'TSNE Category'
-					},
-					name: 'Methylome TSNE',
-					settings: {
-						controls: {
-							isOpen: true
-						}
-					}
-				}
-			]
-		},
+		state: open_state,
 		sampleScatter: {
 			callbacks: {
 				'postRender.test': runTests
@@ -460,22 +393,7 @@ tape('Change chart width and height from menu', function(test) {
 	test.timeoutAfter(3000)
 
 	runpp({
-		state: {
-			plots: [
-				{
-					chartType: 'sampleScatter',
-					colorTW: {
-						id: 'TSNE Category'
-					},
-					name: 'Methylome TSNE',
-					settings: {
-						controls: {
-							isOpen: true
-						}
-					}
-				}
-			]
-		},
+		state: open_state,
 		sampleScatter: {
 			callbacks: {
 				'postRender.test': runTests
@@ -537,22 +455,7 @@ tape('Check/uncheck Show axes from menu', function(test) {
 	test.timeoutAfter(4000)
 
 	runpp({
-		state: {
-			plots: [
-				{
-					chartType: 'sampleScatter',
-					colorTW: {
-						id: 'TSNE Category'
-					},
-					name: 'Methylome TSNE',
-					settings: {
-						controls: {
-							isOpen: true
-						}
-					}
-				}
-			]
-		},
+		state: open_state,
 		sampleScatter: {
 			callbacks: {
 				'postRender.test': runTests
@@ -600,22 +503,7 @@ tape.skip('Check/uncheck Show reference from menu', function(test) {
 	test.timeoutAfter(3000)
 
 	runpp({
-		state: {
-			plots: [
-				{
-					chartType: 'sampleScatter',
-					colorTW: {
-						id: 'TSNE Category'
-					},
-					name: 'Methylome TSNE',
-					settings: {
-						controls: {
-							isOpen: true
-						}
-					}
-				}
-			]
-		},
+		state: open_state,
 		sampleScatter: {
 			callbacks: {
 				'postRender.test': runTests
@@ -641,17 +529,7 @@ tape.skip('Click download button for SVG', function(test) {
 	test.timeoutAfter(3000)
 
 	runpp({
-		state: {
-			plots: [
-				{
-					chartType: 'sampleScatter',
-					colorTW: {
-						id: 'TSNE Category'
-					},
-					name: 'Methylome TSNE'
-				}
-			]
-		},
+		state,
 		sampleScatter: {
 			callbacks: {
 				'postRender.test': runTests
@@ -665,26 +543,11 @@ tape.skip('Click download button for SVG', function(test) {
 	}
 })
 
-tape.skip('Click zoom in, zoom out, and reset buttons', function(test) {
+tape('Click zoom in, zoom out, and reset buttons', function(test) {
 	test.timeoutAfter(10000)
 
 	runpp({
-		state: {
-			plots: [
-				{
-					chartType: 'sampleScatter',
-					colorTW: {
-						id: 'TSNE Category'
-					},
-					name: 'Methylome TSNE',
-					settings: {
-						sampleScatter: {
-							showAxes: true
-						}
-					}
-				}
-			]
-		},
+		state,
 		sampleScatter: {
 			callbacks: {
 				'postRender.test': runTests
@@ -696,51 +559,44 @@ tape.skip('Click zoom in, zoom out, and reset buttons', function(test) {
 		helpers
 			.rideInit({ arg: scatter, bus: scatter, eventType: 'postRender.test' })
 			.run(clickZoomIn)
-			.run(testZoomIn, { wait: 2000 })
-			.use(triggerReset, { wait: 1000 })
-			.to(testReset, { wait: 2000 })
-			.use(clickZoomOut, { wait: 300 })
-			.to(testZoomOut, { wait: 2000 })
+			.run(testZoomIn, 2000)
+			.run(triggerReset)
+			.run(testReset, 2000)
+			.run(clickZoomOut)
+			.run(testZoomOut, 2000)
 			.done(test)
 	}
 
 	function clickZoomIn(scatter) {
-		scatter.Inner.dom.toolsDiv
-			.node()
-			.querySelector('.sjpp-zoom-in-btn')
-			.click()
+		const zoomin_bt = scatter.Inner.dom.toolsDiv.node().querySelector('div[name="sjpp-zoom-in-btn"]')
+		zoomin_bt.click()
 	}
 
 	function testZoomIn(scatter) {
-		const scatterDiv = scatter.Inner.dom.holder.select('g.sjpcb-scatter-series').node()
-		const scale = scatterDiv.attributes.transform.value.match(/[\d\.]+/g)
-		test.ok(scale[2] > 1, `Plot should zoom in`)
+		const scale = scatter.Inner.k
+		test.ok(scale > 1, `Plot should zoom in`)
 	}
 
 	function triggerReset(scatter) {
-		scatter.Inner.dom.toolsDiv
-			.node()
-			.querySelector('.sjpp-reset-btn')
-			.click()
+		const reset_bt = scatter.Inner.dom.toolsDiv.node().querySelector('div[name="sjpp-reset-btn"]')
+		reset_bt.click()
 	}
 
 	function testReset(scatter) {
-		const scatterDiv = scatter.Inner.dom.holder.select('g.sjpcb-scatter-series').node()
-		const scale = scatterDiv.attributes.transform.value.match(/[\d\.]+/g)
-		test.ok(scale[2] == 1, `Plot should reset`)
+		const scale = scatter.Inner.k
+		test.ok(scale == 1, `Plot should reset`)
 	}
 
 	function clickZoomOut(scatter) {
 		scatter.Inner.dom.toolsDiv
 			.node()
-			.querySelector('.sjpp-zoom-out-btn')
+			.querySelector('div[name="sjpp-zoom-out-btn"]')
 			.click()
 	}
 
 	function testZoomOut(scatter) {
-		const scatterDiv = scatter.Inner.dom.holder.select('g.sjpcb-scatter-series').node()
-		const scale = scatterDiv.attributes.transform.value.match(/[\d\.]+/g)
-		test.ok(scale[2] < 1, `Plot should zoom out`)
+		const scale = scatter.Inner.k
+		test.ok(scale < 1, `Plot should zoom out`)
 	}
 
 	//Add tests for changes in axes
@@ -750,22 +606,7 @@ tape.skip('Zoom in and zoom out on mousedown', function(test) {
 	test.timeoutAfter(3000)
 
 	runpp({
-		state: {
-			plots: [
-				{
-					chartType: 'sampleScatter',
-					colorTW: {
-						id: 'TSNE Category'
-					},
-					name: 'Methylome TSNE',
-					settings: {
-						sampleScatter: {
-							showAxes: true
-						}
-					}
-				}
-			]
-		},
+		state,
 		sampleScatter: {
 			callbacks: {
 				'postRender.test': runTests
@@ -783,17 +624,7 @@ tape.skip('Lasso samples', function(test) {
 	test.timeoutAfter(3000)
 
 	runpp({
-		state: {
-			plots: [
-				{
-					chartType: 'sampleScatter',
-					colorTW: {
-						id: 'TSNE Category'
-					},
-					name: 'Methylome TSNE'
-				}
-			]
-		},
+		state,
 		sampleScatter: {
 			callbacks: {
 				'postRender.test': runTests
@@ -810,17 +641,7 @@ tape.skip('Lasso samples, list', function(test) {
 	test.timeoutAfter(3000)
 
 	runpp({
-		state: {
-			plots: [
-				{
-					chartType: 'sampleScatter',
-					colorTW: {
-						id: 'TSNE Category'
-					},
-					name: 'Methylome TSNE'
-				}
-			]
-		},
+		state,
 		sampleScatter: {
 			callbacks: {
 				'postRender.test': runTests
@@ -837,17 +658,7 @@ tape.skip('Lasso samples, add group', function(test) {
 	test.timeoutAfter(3000)
 
 	runpp({
-		state: {
-			plots: [
-				{
-					chartType: 'sampleScatter',
-					colorTW: {
-						id: 'TSNE Category'
-					},
-					name: 'Methylome TSNE'
-				}
-			]
-		},
+		state,
 		sampleScatter: {
 			callbacks: {
 				'postRender.test': runTests
@@ -864,17 +675,7 @@ tape.skip('Lasso samples, add group and filter', function(test) {
 	test.timeoutAfter(3000)
 
 	runpp({
-		state: {
-			plots: [
-				{
-					chartType: 'sampleScatter',
-					colorTW: {
-						id: 'TSNE Category'
-					},
-					name: 'Methylome TSNE'
-				}
-			]
-		},
+		state,
 		sampleScatter: {
 			callbacks: {
 				'postRender.test': runTests

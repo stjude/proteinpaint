@@ -269,7 +269,7 @@ class Scatter {
 				.style('fill', color)
 			itemG
 				.append('text')
-				.classed('sjpp-scatter-legend-label', true)
+				.attr('name', 'sjpp-scatter-legend-label')
 				.attr('x', offsetX + 10)
 				.attr('y', offsetY)
 				.text(`${name}, n=${count}`)
@@ -644,19 +644,19 @@ function setRenderers(self) {
 			.insert('div')
 			.style('display', display)
 			.style('margin', '20px')
-			.classed('sjpp-reset-btn', true) //For unit tests
+			.attr('name', 'sjpp-reset-btn') //For unit tests
 		icon_functions['restart'](homeDiv, { handler: resetToIdentity })
 		const zoomInDiv = toolsDiv
 			.insert('div')
 			.style('display', display)
 			.style('margin', '20px')
-			.classed('sjpp-zoom-in-btn', true) //For unit tests
+			.attr('name', 'sjpp-zoom-in-btn') //For unit tests
 		icon_functions['zoomIn'](zoomInDiv, { handler: zoomIn })
 		const zoomOutDiv = toolsDiv
 			.insert('div')
 			.style('display', display)
 			.style('margin', '20px')
-			.classed('sjpp-zoom-out-btn', true) //For unit tests
+			.attr('name', 'sjpp-zoom-out-btn') //For unit tests
 		icon_functions['zoomOut'](zoomOutDiv, { handler: zoomOut })
 		const lassoDiv = toolsDiv
 			.insert('div')
