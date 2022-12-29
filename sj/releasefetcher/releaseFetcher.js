@@ -133,9 +133,14 @@ function downloadAndApplyUpdate(lastRepoPersistedTime, fs) {
 function installAndRunNewVesion() {
 	console.log('running npm install && pm2 reload')
 	try {
-		execSync(`cd ${activeFolder} && npm install`, { stdio: 'inherit' })
-		execSync(`cd ${activeFolder} && mkdir cache`, { stdio: 'inherit' })
-		execSync(`cd ${activeFolder} && pm2 reload ecosystem.config.js`, { stdio: 'inherit' })
+		process.chdir(activeFolder)
+		execSync(`npm install`, { stdio: 'inherit' })
+
+		process.chdir(activeFolder)
+		execSync(`mkdir cache`, { stdio: 'inherit' })
+
+		process.chdir(activeFolder)
+		execSync(`pm2 reload ecosystem.config.js`, { stdio: 'inherit' })
 	} catch (e) {
 		console.log(e)
 		throw e
