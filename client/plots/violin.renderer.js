@@ -272,8 +272,34 @@ export default function violinRenderer(self) {
 		const start = scale.invert(selection[0])
 		const end = scale.invert(selection[1])
 
-		const brushValues = plot.values.filter(i => i > start && i < end)
-		// console.log(brushValues);
+		self.app.tip.d.selectAll('*').remove()
+
+		const options = []
+
+		// if (self.config.term2) {
+		options.push({
+			label: `Add filter`,
+			callback: self.filterBrushValuesCallback(plot, start, end)
+		})
+		// }
+		//show menu options for term2
+		self.app.tip.d
+			.append('div')
+			.selectAll('div')
+			.data(options)
+			.enter()
+			.append('div')
+			.attr('class', 'sja_menuoption')
+			.html(d => d.label)
+			.on('click', (event, d) => {
+				self.app.tip.hide()
+				d.callback()
+				self.dom.tableHolder.style('display', 'none')
+			})
+
+		self.app.tip.show(event.clientX, event.clientY)
+
+		// const brushValues = plot.values.filter(i => i > start && i < end)
 	}
 
 	self.getAddFilterCallback = (plot, term = '') => {
@@ -346,9 +372,130 @@ export default function violinRenderer(self) {
 		}
 	}
 
-	self.renderBrushValues = function() {
-		const range = self.config.settings.violin.brushRange
-		if (!range) return //also delete the table
+	self.filterBrushValuesCallback = function(plot, rangeStart, rangeStop) {
+		const tvslst = {
+			type: 'tvslst',
+			in: true,
+			join: 'and',
+			lst: []
+		}
+		const t1 = self.config.term
+		const t2 = self.config.term2
+
+		if (t2) {
+			if (t1.term.type === 'categorical') {
+				tvslst.lst.push({
+					type: 'tvs',
+					tvs: {
+						term: t1.term
+					}
+				})
+
+				tvslst.lst[0].tvs.values = [
+					{
+						key: plot.seriesId
+					}
+				]
+
+				tvslst.lst.push({
+					type: 'tvs',
+					tvs: {
+						term: t2.term
+					}
+				})
+
+				tvslst.lst[1].tvs.ranges = [
+					{
+						start: rangeStart,
+						stop: rangeStop
+					}
+				]
+			} else if (
+				t2.q?.mode === 'continuous' ||
+				((t2.term?.type === 'float' || t2.term?.type === 'integer') && plot.divideTwBins != null)
+			) {
+				tvslst.lst.push({
+					type: 'tvs',
+					tvs: {
+						term: t2.term
+					}
+				})
+				tvslst.lst[0].tvs.ranges = [
+					{
+						start: structuredClone(plot.divideTwBins?.start) || null,
+						stop: structuredClone(plot.divideTwBins?.stop) || null,
+						startinclusive: structuredClone(plot.divideTwBins?.startinclusive) || null,
+						stopinclusive: structuredClone(plot.divideTwBins?.stopinclusive) || null,
+						startunbounded: structuredClone(plot.divideTwBins?.startunbounded)
+							? structuredClone(plot.divideTwBins?.startunbounded)
+							: null,
+						stopunbounded: structuredClone(plot.divideTwBins?.stopunbounded)
+							? structuredClone(plot.divideTwBins?.stopunbounded)
+							: null
+					}
+				]
+				tvslst.lst.push({
+					type: 'tvs',
+					tvs: {
+						term: t1.term
+					}
+				})
+				tvslst.lst[1].tvs.ranges = [
+					{
+						start: rangeStart,
+						stop: rangeStop
+					}
+				]
+			} else {
+				tvslst.lst.push({
+					type: 'tvs',
+					tvs: {
+						term: t2.term
+					}
+				})
+				tvslst.lst[0].tvs.values = [
+					{
+						key: plot.seriesId
+					}
+				]
+				tvslst.lst.push({
+					type: 'tvs',
+					tvs: {
+						term: t1.term
+					}
+				})
+				tvslst.lst[1].tvs.ranges = [
+					{
+						start: rangeStart,
+						stop: rangeStop
+					}
+				]
+			}
+		} else {
+			tvslst.lst.push({
+				type: 'tvs',
+				tvs: {
+					term: t1.term
+				}
+			})
+
+			tvslst.lst[0].tvs.ranges = [
+				{
+					start: rangeStart,
+					stop: rangeStop
+				}
+			]
+		}
+
+		return () => {
+			const filterUiRoot = getFilterItemByTag(self.state.termfilter.filter, 'filterUiRoot')
+			const filter = filterJoin([filterUiRoot, tvslst])
+			filter.tag = 'filterUiRoot'
+			self.app.dispatch({
+				type: 'filter_replace',
+				filter
+			})
+		}
 	}
 
 	self.renderPvalueTable = function() {

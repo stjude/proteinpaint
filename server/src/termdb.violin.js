@@ -42,20 +42,89 @@ export async function trigger_getViolinPlotData(q, res, ds, genome) {
 	const data = await getData({ terms: twLst, filter: q.filter, currentGeneNames: q.currentGeneNames }, ds, genome)
 	if (data.error) throw data.error
 
-	//create numeric bins for the overlay term to provide filtering options
+	const valuesObject = key2values(data, term, q.divideTw)
+
+	const result = resultObj(valuesObject, data, q.divideTw)
+
+	// wilcoxon test data to return to client
+	await wilcoxon(q.divideTw, result)
+
+	createCanvasImg(q, result)
+
+	res.send(result)
+}
+
+// // compute bins using d3
+// // need unit test!!!
+export function computeViolinData(scale, values) {
+	const ticksCompute = values.length <= 200 ? 10 : values.length < 800 ? 30 : 15
+
+	const binBuilder = bin()
+		.domain(scale.domain()) /* extent of the data that is lowest to highest*/
+		.thresholds(scale.ticks(ticksCompute)) /* buckets are created which are separated by the threshold*/
+		.value(d => d) /* bin the data points into this bucket*/
+
+	return binBuilder(values)
+}
+
+// compute pvalues using wilcoxon rank sum test
+export async function wilcoxon(term, result) {
+	if (!term) {
+		return
+	}
+	const wilcoxInput = {} // { plot.label: {plot.values for term1: [], plot.values for term2: []} }
+
+	//if term2 is present then run two loops. the second loop index begins with the index of the first loop.
+	for (let [i, v] of result.plots.entries()) {
+		for (let x = i; x < Object.keys(result.plots).length; x++) {
+			if (x === i) continue
+
+			const group1values = result.plots[i].values,
+				group2values = result.plots[x].values
+
+			wilcoxInput[`${result.plots[i].label.split(',')[0]} , ${result.plots[x].label.split(',')[0]}`] = {
+				group1values,
+				group2values
+			}
+		}
+	}
+
+	const tmpfile = path.join(serverconfig.cachedir, Math.random().toString() + '.json')
+	await utils.write_file(tmpfile, JSON.stringify(wilcoxInput))
+	const wilcoxOutput = await lines2R(path.join(serverconfig.binpath, 'utils/wilcoxon.R'), [], [tmpfile])
+	fs.unlink(tmpfile, () => {})
+
+	for (const [k, v] of Object.entries(JSON.parse(wilcoxOutput))) {
+		result.pvalues.push([{ value: k.split(',')[0] }, { value: k.split(',')[1] }, { html: v }])
+	}
+}
+
+//create numeric bins for the overlay term to provide filtering options
+// TODO: handle .keyOrder as an alternative to .bins ???
+function numericBins(overlayTerm, data) {
 	const divideTwBins = new Map()
-	// TODO: handle .keyOrder as an alternative to .bins ???
-	const divideBins = data.refs.byTermId[(q.divideTw?.term?.id)]?.bins
+	const divideBins = data.refs.byTermId[(overlayTerm?.term?.id)]?.bins
 	if (divideBins) {
 		for (const bin of divideBins) {
 			divideTwBins.set(bin.label, bin)
 		}
 	}
+	return divideTwBins
+}
 
+function minMax(v, term, minMaxObject) {
+	if (term.type == 'float' || (term.type == 'integer' && v[term.id])) {
+		minMaxObject.min = Math.min(minMaxObject.min, v[term.id]?.value)
+		minMaxObject.max = Math.max(minMaxObject.max, v[term.id]?.value)
+	}
+}
+
+function key2values(data, term, overlayTerm) {
+	let key2values = new Map()
 	let min = Number.MAX_VALUE,
 		max = -Number.MAX_VALUE
 
-	let key2values = new Map()
+	let minMaxObject = { min: min, max: max }
 
 	// send sample Id's with their values to client to display table on brushing.
 	// let sampleIdObj = {}
@@ -88,32 +157,31 @@ export async function trigger_getViolinPlotData(q, res, ds, genome) {
 			//skip these values
 			continue
 		}
+		minMax(v, term, minMaxObject)
 
-		if (q.divideTw) {
-			if (!v[q.divideTw.id]) {
+		if (overlayTerm) {
+			if (!v[overlayTerm.id]) {
 				// if there is no value for q.divideTw then skip this
 				continue
 			}
 
-			if (!key2values.has(v[q.divideTw.id]?.key)) key2values.set(v[q.divideTw.id]?.key, [])
-			key2values.get(v[q.divideTw.id]?.key).push(v[term.id]?.value)
+			if (!key2values.has(v[overlayTerm.id]?.key)) key2values.set(v[overlayTerm.id]?.key, [])
+			key2values.get(v[overlayTerm.id]?.key).push(v[term.id]?.value)
 		} else {
 			if (!key2values.has('All samples')) key2values.set('All samples', [])
 			key2values.get('All samples').push(v[term.id]?.value)
 		}
-
-		if (term.type == 'float' || (term.type == 'integer' && v[term.id])) {
-			min = Math.min(min, v[term.id]?.value)
-			max = Math.max(max, v[term.id]?.value)
-		}
 	}
+	return { key2values: key2values, minMaxValues: minMaxObject }
+}
 
-	const keyOrder = data.refs.byTermId[(q.divideTw?.term?.id)]?.keyOrder
+function sortKey2values(data, key2values, overlayTerm) {
+	const keyOrder = data.refs.byTermId[(overlayTerm?.term?.id)]?.keyOrder
 	key2values = new Map(
 		[...key2values].sort(
 			keyOrder
 				? (a, b) => keyOrder.indexOf(a[0]) - keyOrder.indexOf(b[0])
-				: q.divideTw?.term?.type === 'categorical'
+				: overlayTerm?.term?.type === 'categorical'
 				? (a, b) => b[1].length - a[1].length
 				: (a, b) =>
 						a
@@ -122,23 +190,26 @@ export async function trigger_getViolinPlotData(q, res, ds, genome) {
 							.localeCompare(b.toString().replace(/[^a-zA-Z0-9<]/g, ''), undefined, { numeric: true })
 		)
 	)
+	return key2values
+}
 
+function resultObj(valuesObject, data, overlayTerm) {
 	const result = {
-		min: min,
-		max: max,
+		min: valuesObject.minMaxValues.min,
+		max: valuesObject.minMaxValues.max,
 		plots: [], // each element is data for one plot: {label=str, values=[]}
 		pvalues: []
 	}
 
-	for (const [key, values] of key2values) {
-		if (q.divideTw) {
+	for (const [key, values] of sortKey2values(data, valuesObject.key2values, overlayTerm)) {
+		if (overlayTerm) {
 			result.plots.push({
-				label: (q.divideTw?.term?.values?.[key]?.label || key) + ', n=' + values.length,
+				label: (overlayTerm?.term?.values?.[key]?.label || key) + ', n=' + values.length,
 				values,
 				seriesId: key,
 				plotValueCount: values?.length,
-				color: q.divideTw?.term?.values?.[key]?.color || null,
-				divideTwBins: divideTwBins.has(key) ? divideTwBins.get(key) : null
+				color: overlayTerm?.term?.values?.[key]?.color || null,
+				divideTwBins: numericBins(overlayTerm, data).has(key) ? numericBins(overlayTerm, data).get(key) : null
 				// sampleIdObj: sampleIdObj[key] ? sampleIdObj[key] : null
 			})
 		} else {
@@ -150,11 +221,32 @@ export async function trigger_getViolinPlotData(q, res, ds, genome) {
 			})
 		}
 	}
-	// wilcoxon test data to return to client
-	await wilcoxon(q.divideTw, result)
+	return result
+}
 
+function violinBins(axisScale, plot) {
+	const bins0 = computeViolinData(axisScale, plot.values)
+	// array; each element is an array of values belonging to this bin
+	// NOTE .x0 .x1 attributes are also assigned to this array (safe to do?)
+
+	// map messy bins0 to tidy set of bins and return to client
+	const bins = []
+	for (const b of bins0) {
+		const b2 = {
+			x0: b.x0,
+			x1: b.x1
+		}
+		delete b.x0
+		delete b.x1
+		b2.binValueCount = b.length
+		bins.push(b2)
+	}
+	return { bins0, bins }
+}
+
+function createCanvasImg(q, result) {
 	//size on x-y for creating circle and ticks
-	q.radius = Number(q.radius)
+	q.radius = +q.radius
 
 	const refSize = q.radius * 4
 	//create scale object
@@ -208,78 +300,16 @@ export async function trigger_getViolinPlotData(q, res, ds, genome) {
 
 		plot.src = canvas.toDataURL()
 
-		//create bins for violins
-		const bins0 = computeViolinData(axisScale, plot.values)
-		// array; each element is an array of values belonging to this bin
-		// NOTE .x0 .x1 attributes are also assigned to this array (safe to do?)
+		// create bins for violins
+		const finalVpBins = violinBins(axisScale, plot)
 
-		// map messy bins0 to tidy set of bins and return to client
-		const bins = []
-		for (const b of bins0) {
-			const b2 = {
-				x0: b.x0,
-				x1: b.x1
-			}
-			delete b.x0
-			delete b.x1
-			b2.binValueCount = b.length
-			bins.push(b2)
-		}
+		plot.bins = finalVpBins.bins
+
+		plot.biggestBin = Math.max(...finalVpBins.bins0.map(b => b.length))
+
 		//generate median values
-		const medianValue = median(plot.values)
+		plot.median = median(plot.values)
 
-		plot.bins = bins
-
-		plot.biggestBin = Math.max(...bins0.map(b => b.length))
-
-		plot.median = medianValue
-
-		// delete plot.values
-	}
-	res.send(result)
-}
-
-// // compute bins using d3
-// // need unit test!!!
-export function computeViolinData(scale, values) {
-	const ticksCompute = values.length <= 200 ? 10 : values.length < 800 ? 30 : 15
-
-	const binBuilder = bin()
-		.domain(scale.domain()) /* extent of the data that is lowest to highest*/
-		.thresholds(scale.ticks(ticksCompute)) /* buckets are created which are separated by the threshold*/
-		.value(d => d) /* bin the data points into this bucket*/
-
-	return binBuilder(values)
-}
-
-// compute pvalues using wilcoxon rank sum test
-export async function wilcoxon(term, result) {
-	if (!term) {
-		return
-	}
-	const wilcoxInput = {} // { plot.label: {plot.values for term1: [], plot.values for term2: []} }
-
-	//if term2 is present then run two loops. the second loop index begins with the index of the first loop.
-	for (let [i, v] of result.plots.entries()) {
-		for (let x = i; x < Object.keys(result.plots).length; x++) {
-			if (x === i) continue
-
-			const group1values = result.plots[i].values,
-				group2values = result.plots[x].values
-
-			wilcoxInput[`${result.plots[i].label.split(',')[0]} , ${result.plots[x].label.split(',')[0]}`] = {
-				group1values,
-				group2values
-			}
-		}
-	}
-
-	const tmpfile = path.join(serverconfig.cachedir, Math.random().toString() + '.json')
-	await utils.write_file(tmpfile, JSON.stringify(wilcoxInput))
-	const wilcoxOutput = await lines2R(path.join(serverconfig.binpath, 'utils/wilcoxon.R'), [], [tmpfile])
-	fs.unlink(tmpfile, () => {})
-
-	for (const [k, v] of Object.entries(JSON.parse(wilcoxOutput))) {
-		result.pvalues.push([{ value: k.split(',')[0] }, { value: k.split(',')[1] }, { html: v }])
+		delete plot.values
 	}
 }

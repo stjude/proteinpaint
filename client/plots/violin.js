@@ -70,7 +70,8 @@ class ViolinPlot {
 						chartType: 'violin',
 						settingsKey: 'radius',
 						step: 1,
-						max: 15
+						max: 15,
+						min: 3
 					},
 					{
 						label: 'Stroke width',
@@ -78,7 +79,8 @@ class ViolinPlot {
 						chartType: 'violin',
 						settingsKey: 'strokeWidth',
 						step: 0.1,
-						max: 2
+						max: 2,
+						min: 0.1
 					}
 				]
 			})
@@ -136,7 +138,6 @@ class ViolinPlot {
 		*/
 		this.render()
 		this.renderPvalueTable()
-		this.renderBrushValues()
 	}
 
 	validateArg() {
