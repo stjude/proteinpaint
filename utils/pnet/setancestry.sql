@@ -1,1 +1,0 @@
-../termdb/setancestry.sql
