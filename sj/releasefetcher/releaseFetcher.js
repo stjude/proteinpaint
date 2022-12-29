@@ -3,7 +3,7 @@ const path = require('path')
 const zlib = require('zlib')
 const tar = require('tar')
 const fs = require('fs')
-const exec = require('child_process')
+const exec = require('child_process').exec
 const execSync = require('child_process').execSync
 
 let username
@@ -95,18 +95,15 @@ function downloadAndApplyUpdate(lastRepoPersistedTime, fs) {
 	execSync(`curl  -H "X-JFrog-Art-Api:${jFrogArtApiKey}" ` + `-O -L "${artifactoryUrl}/${repoName}"`)
 	console.log(`New archive downloaded`)
 
-	let archiveFolder = '../pp_server' + lastRepoPersistedTime
-	console.log(`Creating archive folder: ${archiveFolder}`)
-	execSync('mkdir ' + archiveFolder)
-	execSync(`cp ${repoName}  ${archiveFolder}`)
-	console.log(`Coping repo to archive folder: ${archiveFolder}`)
+	let newActiveFolderName = 'pp-' + lastRepoPersistedTime
+	let newActiveFolder = '../' + newActiveFolderName
+	console.log(`Creating archive folder: ${newActiveFolder}`)
+	execSync('mkdir ' + newActiveFolder)
 
-	let removeOldActive = `rm -r ${activeFolder}`
-	let createNewActive = `mkdir ${activeFolder}`
+	execSync(`ln -sfn ${newActiveFolderName}  ${activeFolder}`)
 
-	execSync(`${removeOldActive}; ${createNewActive}`)
+	execSync('cp serverconfig.json ' + newActiveFolder)
 
-	execSync('cp serverconfig.json ' + activeFolder)
 	console.log(`Copied serverconfig.json to active folder`)
 
 	const unzip = fs
@@ -115,13 +112,13 @@ function downloadAndApplyUpdate(lastRepoPersistedTime, fs) {
 		.pipe(zlib.Unzip())
 		.pipe(
 			tar.x({
-				C: activeFolder,
+				C: newActiveFolder,
 				strip: 1
 			})
 		)
 
 	unzip.on('end', () => {
-		console.log(`Unpacked repo to active folder`)
+		console.log(`Unpacked repo to new active folder`)
 		installAndRunNewVesion()
 	})
 
