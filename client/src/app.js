@@ -113,6 +113,11 @@ export function runproteinpaint(arg) {
 		sessionStorage.setItem('jwt', arg.jwt)
 	}
 
+	// replace the stored value for this option
+	// for multiple runpp calls in the same page, the last call may override
+	// previous stored values for this option in the same browser tab
+	sessionStorage.setItem('suppressErrors', JSON.stringify(arg.suppressErrors))
+
 	if (arg.variantPageCall_snv) {
 		app.variantPageCall_snv = arg.variantPageCall_snv
 	}
