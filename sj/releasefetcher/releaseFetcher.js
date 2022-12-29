@@ -49,16 +49,18 @@ async function pollForNewVersion() {
 				const repo = JSON.parse(d.toString())
 				const date = new Date(repo.lastModified)
 
-				console.log(`Current date-time: ${date}`)
-				console.log(`Current timestamp: ${date.getTime()}`)
+				console.log(`Repo version date-time: ${date}`)
+				console.log(`Repo version timestamp: ${date.getTime()}`)
 
 				const lastRepoPersistedTime = getLastRepoPersistedTime(fs)
 
-				console.log(`Latest timestamp: ${lastRepoPersistedTime}`)
+				console.log(`Active version timestamp: ${lastRepoPersistedTime}`)
 
 				if (date.getTime() > lastRepoPersistedTime) {
 					downloadAndApplyUpdate(lastRepoPersistedTime, fs)
 					saveLastRepoPersistedTime(date, fs)
+				} else {
+					console.log(`No new versions available`)
 				}
 			})
 		})
@@ -81,6 +83,7 @@ function sleep(ms) {
 
 function getLastRepoPersistedTime(fs) {
 	let lastRepoPersistedTime = 0
+
 	if (fs.existsSync('version.json')) {
 		let rawdata = fs.readFileSync('version.json')
 		let version = JSON.parse(rawdata)
@@ -129,25 +132,14 @@ function downloadAndApplyUpdate(lastRepoPersistedTime, fs) {
 
 function installAndRunNewVesion() {
 	console.log('running npm install && pm2 reload')
-
-	let goToFolder = 'cd ' + activeFolder
-	let npmInstall = 'npm install'
-	let createCacheFolder = 'mkdir cache'
-	let pm2Reload = 'pm2 reload ecosystem.config.js'
-
-	exec(`${goToFolder} && ${npmInstall} && ${createCacheFolder} && ${pm2Reload}`, (error, stdout, stderr) => {
-		if (error) {
-			console.log(`error: ${error.message}`)
-		}
-
-		if (stderr) {
-			console.log(`stderr: ${stderr}`)
-		}
-
-		console.log(`Output: ${stdout}`)
-
-		fs.unlinkSync(repoName)
-	})
+	try {
+		execSync(`cd ${activeFolder} && npm install`, { stdio: 'inherit' })
+		execSync(`cd ${activeFolder} && mkdir cache`, { stdio: 'inherit' })
+		execSync(`cd ${activeFolder} && pm2 reload ecosystem.config.js`, { stdio: 'inherit' })
+	} catch (e) {
+		console.log(e)
+		throw e
+	}
 }
 
 function saveLastRepoPersistedTime(date, fs) {
