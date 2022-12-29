@@ -132,7 +132,7 @@ CREATE TABLE subcohort_terms (
  count INT,
  included_types TEXT,
  child_types TEXT,
- --primary key(cohort, term_id),
+primary key(cohort, term_id),
 foreign key(cohort) references cohorts(cohort) on delete cascade,
 foreign key(term_id) references terms(id) on delete cascade
 );

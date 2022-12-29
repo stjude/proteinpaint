@@ -1,4 +1,5 @@
 delete from subcohort_terms;
+PRAGMA foreign_keys=ON;
 
 insert into subcohort_terms (cohort, term_id, count)
 select '', t.id, 0

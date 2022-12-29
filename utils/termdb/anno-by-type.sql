@@ -1,3 +1,5 @@
+PRAGMA foreign_keys=ON;
+
 drop table if exists anno_integer;
 create table anno_integer (
   sample integer not null,
@@ -5,7 +7,7 @@ create table anno_integer (
   value integer not null,
   primary key(term_id, sample),
   foreign key(term_id) references terms(id) on delete cascade,
-  foreign key(sample) references sample(sample) on delete cascade
+  foreign key(sample) references samples(id) on delete cascade
 
 );
 
@@ -43,7 +45,7 @@ create table anno_float (
   value REAL not null,
   primary key(term_id, sample),
   foreign key(term_id) references terms(id),
-  foreign key(sample) references sample(sample)
+  foreign key(sample) references samples(id)
 
 );
 -- copy entries from the annotations table
@@ -78,7 +80,7 @@ create table anno_categorical (
   value character varying(255) not null,
   primary key(term_id, sample),
   foreign key(term_id) references terms(id),
-  foreign key(sample) references sample(sample)
+  foreign key(sample) references samples(id)
 );
 
 -- copy entries from the annotations table
