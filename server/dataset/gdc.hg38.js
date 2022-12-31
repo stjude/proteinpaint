@@ -3,10 +3,8 @@ validate_filter0
 isoform2ssm_query1_getvariant
 	filter2GDCfilter
 		mayChangeCase2Cases
-isoform2ssm_query2_getcase
 query_range2variants
 variables_range2variants
-variant2samplesGdcapi
 ssm2canonicalisoform
 */
 
@@ -142,120 +140,6 @@ const ssmid2csq = {
 	]
 }
 
-/*
-this is gdc api-specific implementation
-
-query by variants or isoform(s):
-- a list of variants, get samples harboring the variants
-- an isoform, get samples harboring any variant of the isoform
-
-variant2samples intends to be a generic mechanism for fetching tumors harboring a variant
-same name attribute will be exposed to client
-
-on client, get() is added to tk.ds.variant2samples to make GET request for list of variants
-this happens for sunburst and itemtable
-
-query mode: samples/sunburst/summaries
-difference is how many sample attributes are included
-don't know a js method to alter the list of attributes in `case { }` part
-- samples
-  return entire list of attributes on the sample
-  use for returning list of samples, or summarizing all attributes
-- sunburst
-  only return subset of attributes selected for sunburst chart
-*/
-const variant2samplesGdcapi = {
-	endpoint: '/ssm_occurrences',
-
-	filters: (p, ds) => {
-		const f = { op: 'and', content: [] }
-		if (p.ssm_id_lst) {
-			f.content.push({
-				op: '=',
-				content: {
-					field: 'ssm.ssm_id',
-					value: p.ssm_id_lst.split(',')
-				}
-			})
-		} else if (p.isoform) {
-			// note purpose!!
-			if (typeof p.isoform != 'string') throw 'p.isoform is not string'
-			f.content.push({
-				op: '=',
-				content: {
-					field: 'ssms.consequence.transcript.transcript_id',
-					value: [p.isoform]
-				}
-			})
-		} else if (p.isoforms) {
-			let value
-			if (Array.isArray(p.isoforms)) value = p.isoforms
-			else if (typeof p.isoforms == 'string') value = p.isoforms.split(',')
-			else throw 'p.isoforms not array or string'
-			f.content.push({
-				op: 'in',
-				content: { field: 'ssms.consequence.transcript.transcript_id', value }
-			})
-		} else {
-			throw '.ssm_id_lst, .isoform, .isoforms are all missing'
-		}
-
-		if (p.rglst) {
-			/* to filter out variants that are out of view range (e.g. zoomed in on protein)
-			necessary when zooming in
-
-			!!!hardcoded to only one region!!!
-
-			*/
-			f.content.push({
-				op: '>=',
-				content: { field: 'ssms.start_position', value: p.rglst[0].start }
-			})
-			f.content.push({
-				op: '<=',
-				content: { field: 'ssms.start_position', value: p.rglst[0].stop }
-			})
-		}
-
-		if (p.set_id) {
-			if (typeof p.set_id != 'string') throw '.set_id value not string'
-			f.content.push({
-				op: 'in',
-				content: {
-					field: 'cases.case_id',
-					value: [p.set_id]
-				}
-			})
-		}
-		if (p.filter0) {
-			f.content.push(p.filter0)
-		}
-		if (p.filterObj) {
-			f.content.push(filter2GDCfilter(p.filterObj))
-		}
-		if (p.tid2value) {
-			for (const termid in p.tid2value) {
-				const t = ds.cohort.termdb.q.termjsonByOneid(termid)
-				if (!t) continue
-				if (t.type == 'categorical') {
-					f.content.push({
-						op: 'in',
-						content: { field: termid, value: [p.tid2value[termid]] }
-					})
-				} else if (t.type == 'integer') {
-					for (const val of p.tid2value[termid]) {
-						f.content.push({
-							op: val.op,
-							content: { field: termid, value: val.range }
-						})
-					}
-				}
-			}
-		}
-		return f
-	}
-}
-
 /* not part of generic mds3 dataset
 to map a SSM id to a canonical ENST name
 */
@@ -334,7 +218,7 @@ module.exports = {
 			// if missing, will require sample_id_key
 			namekey: 'sample_URLid'
 		},
-		gdcapi: variant2samplesGdcapi
+		gdcapi: true
 	},
 
 	queries: {

@@ -169,7 +169,7 @@ export function validate_query_snvindel_byisoform(ds) {
 		*/
 		const refseq = mayMapRefseq2ensembl(opts, ds)
 
-		const ssmLst = await snvindel_byisoform(opts)
+		const ssmLst = await snvindel_byisoform(opts, ds)
 		const mlst = [] // parse final ssm into this list
 		for (const ssm of ssmLst) {
 			const m = {
@@ -458,7 +458,10 @@ function getheaders(q) {
 	return h
 }
 
-async function snvindel_byisoform(opts) {
+async function snvindel_byisoform(opts, ds) {
+	if (!opts.isoform) throw 'snvindel_byisoform: .isoform missing'
+	if (typeof opts.isoform != 'string') throw '.isoform value not string'
+
 	const query1 = isoform2ssm_query1_getvariant,
 		query2 = isoform2ssm_query2_getcase
 
@@ -482,7 +485,7 @@ async function snvindel_byisoform(opts) {
 			'&fields=' +
 			query2.fields.join(',') +
 			'&filters=' +
-			encodeURIComponent(JSON.stringify(query2.filters(opts))),
+			encodeURIComponent(JSON.stringify(query2.filters(opts, ds))),
 		{ method: 'GET', headers }
 	)
 	const [tmp1, tmp2] = await Promise.all([p1, p2])
@@ -823,8 +826,6 @@ export async function querySamples_gdcapi(q, twLst, ds, geneTwLst) {
 		if (!twLst.some(i => i.id == 'case.submitter_id')) twLst.push({ term: { id: 'case.submitter_id' } })
 	}
 
-	const api = ds.variant2samples.gdcapi
-
 	const dictTwLst = []
 	for (const tw of twLst) {
 		const t = ds.cohort.termdb.q.termjsonByOneid(tw.term.id)
@@ -836,11 +837,14 @@ export async function querySamples_gdcapi(q, twLst, ds, geneTwLst) {
 	// it may query with isoform
 	mayMapRefseq2ensembl(q, ds)
 
-	param.push('filters=' + encodeURIComponent(JSON.stringify(api.filters(q, ds))))
+	param.push('filters=' + encodeURIComponent(JSON.stringify(isoform2ssm_query2_getcase.filters(q, ds))))
 
 	const headers = getheaders(q) // will be reused below
 
-	const response = await got(apihost + api.endpoint + '?' + param.join('&'), { method: 'GET', headers })
+	const response = await got(apihost + isoform2ssm_query2_getcase.endpoint + '?' + param.join('&'), {
+		method: 'GET',
+		headers
+	})
 
 	delete q.isoforms
 
@@ -1604,28 +1608,63 @@ const isoform2ssm_query2_getcase = {
 	size: 100000,
 	fields: [
 		'ssm.ssm_id',
-		//'case.case_id', // can be used to make sample url link
 		'case.submitter_id', // can be used to make sample url link
 		'case.observation.sample.tumor_sample_uuid' // gives aliquot id and convert to submitter id for display
 	],
-	filters: p => {
-		// p:{}
-		// .isoform
-		// .set_id
-		if (!p.isoform) throw '.isoform missing'
-		if (typeof p.isoform != 'string') throw '.isoform value not string'
-		const f = {
-			op: 'and',
-			content: [
-				{
-					op: '=',
-					content: {
-						field: 'ssms.consequence.transcript.transcript_id',
-						value: [p.isoform]
-					}
+	filters: (p, ds) => {
+		/* p:{}
+		.isoform = one isoform accession
+		.isoforms=[] array of isoforms
+		.ssm_id_lst = comma-joined string ids
+		.rglst=[]
+		.set_id=str
+		.tid2value={}
+		*/
+		const f = { op: 'and', content: [] }
+		if (p.ssm_id_lst) {
+			if (typeof p.ssm_id_lst != 'string') throw 'ssm_id_lst not string'
+			f.content.push({
+				op: '=',
+				content: {
+					field: 'ssm.ssm_id',
+					value: p.ssm_id_lst.split(',')
 				}
-			]
+			})
+		} else if (p.isoform) {
+			f.content.push({
+				op: '=',
+				content: {
+					field: 'ssms.consequence.transcript.transcript_id',
+					value: [p.isoform]
+				}
+			})
+		} else if (p.isoforms) {
+			if (!Array.isArray(p.isoforms)) throw '.isoforms[] not array'
+			f.content.push({
+				op: 'in',
+				content: { field: 'ssms.consequence.transcript.transcript_id', value: p.isoforms }
+			})
+		} else {
+			throw '.ssm_id_lst, .isoform, .isoforms are all missing'
 		}
+
+		if (p.rglst) {
+			/* to filter out variants that are out of view range (e.g. zoomed in on protein)
+			necessary when zooming in
+
+			!!!hardcoded to only one region!!!
+
+			*/
+			f.content.push({
+				op: '>=',
+				content: { field: 'ssms.start_position', value: p.rglst[0].start }
+			})
+			f.content.push({
+				op: '<=',
+				content: { field: 'ssms.start_position', value: p.rglst[0].stop }
+			})
+		}
+
 		if (p.set_id) {
 			if (typeof p.set_id != 'string') throw '.set_id value not string'
 			f.content.push({
@@ -1641,6 +1680,25 @@ const isoform2ssm_query2_getcase = {
 		}
 		if (p.filterObj) {
 			f.content.push(filter2GDCfilter(p.filterObj))
+		}
+		if (p.tid2value) {
+			for (const termid in p.tid2value) {
+				const t = ds.cohort.termdb.q.termjsonByOneid(termid)
+				if (!t) continue
+				if (t.type == 'categorical') {
+					f.content.push({
+						op: 'in',
+						content: { field: termid, value: [p.tid2value[termid]] }
+					})
+				} else if (t.type == 'integer') {
+					for (const val of p.tid2value[termid]) {
+						f.content.push({
+							op: val.op,
+							content: { field: termid, value: val.range }
+						})
+					}
+				}
+			}
 		}
 		return f
 	}

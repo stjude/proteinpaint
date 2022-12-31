@@ -1,5 +1,5 @@
 const { stratinput } = require('#shared/tree')
-const gdc = require('./mds3.gdc')
+const { querySamples_gdcapi } = require('./mds3.gdc')
 const { get_densityplot } = require('./mds3.densityPlot')
 const { ssmIdFieldsSeparator } = require('./mds3.init')
 const utils = require('./utils')
@@ -63,7 +63,7 @@ export function validate_variant2samples(ds) {
 	}
 
 	if (vs.gdcapi) {
-		gdc.validate_variant2sample(vs.gdcapi)
+		// only a boolean flag
 	} else {
 		// look for server-side vcf/bcf/tabix file
 		// file header should already been parsed and samples obtain if any
@@ -277,7 +277,7 @@ async function queryMutatedSamples(q, ds) {
 	const twLst = q.twLst ? q.twLst.slice() : []
 
 	if (ds.variant2samples.gdcapi) {
-		return await gdc.querySamples_gdcapi(q, twLst, ds, q.geneTwLst)
+		return await querySamples_gdcapi(q, twLst, ds, q.geneTwLst)
 	}
 
 	/* from server-side files
