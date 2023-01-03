@@ -88,8 +88,8 @@ tape('Render PNET scatter plot', function(test) {
 			const serieG = scatterDiv.select('.sjpcb-scatter-series')
 			const numSymbols = serieG.selectAll('path').size()
 			test.true(
-				numSymbols == scatter.Inner.currData.samples.length,
-				`Should be ${scatter.Inner.currData.samples.length}. Rendered ${numSymbols} symbols.`
+				numSymbols == scatter.Inner.data.samples.length,
+				`Should be ${scatter.Inner.data.samples.length}. Rendered ${numSymbols} symbols.`
 			)
 		}
 

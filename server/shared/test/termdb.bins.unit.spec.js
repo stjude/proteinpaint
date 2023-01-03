@@ -391,7 +391,8 @@ tape('get_bin_label(), last bin start === stop', test => {
 			startinclusive: true,
 			stopinclusive: undefined,
 			start: 0.0554539,
-			label: '≥0.06'
+			label: '≥0.06',
+			color: last_bin.color
 		},
 		'should simplify the last bin label to a one-sided value when bin start === stop'
 	)
@@ -427,8 +428,10 @@ tape('get_bin_label(), force label_offset == 1', function(test) {
 })
 
 tape('compute_bins() unbounded', function(test) {
+	let bins = b.compute_bins({ bin_size: 5, label_offset: 1, first_bin: { startunbounded: 1, stop: 5 } }, get_summary)
+	removeColorAttr(bins)
 	test.deepLooseEqual(
-		b.compute_bins({ bin_size: 5, label_offset: 1, first_bin: { startunbounded: 1, stop: 5 } }, get_summary),
+		bins,
 		[
 			{ startunbounded: 1, start: undefined, stop: 5, startinclusive: 1, stopinclusive: 0, label: '<5' },
 			{ startinclusive: 1, stopinclusive: 0, start: 5, stop: 10, label: '5 to 9' },
@@ -437,9 +440,10 @@ tape('compute_bins() unbounded', function(test) {
 		],
 		'should default to unbounded firt and last bins, equally sized bins'
 	)
-
+	bins = b.compute_bins({ bin_size: 4, label_offset: 1, first_bin: { startunbounded: 1, stop: 2 } }, get_summary)
+	removeColorAttr(bins)
 	test.deepLooseEqual(
-		b.compute_bins({ bin_size: 4, label_offset: 1, first_bin: { startunbounded: 1, stop: 2 } }, get_summary),
+		bins,
 		[
 			{ startunbounded: 1, start: undefined, stop: 2, startinclusive: 1, stopinclusive: 0, label: '<2' },
 			{ startinclusive: 1, stopinclusive: 0, start: 2, stop: 6, label: '2 to 5' },
@@ -450,12 +454,13 @@ tape('compute_bins() unbounded', function(test) {
 		],
 		'should default to unbounded firt and last bins, not equally sized bins'
 	)
-
+	bins = b.compute_bins(
+		{ bin_size: 6, label_offset: 1, first_bin: { startunbounded: 1, start_percentile: 4, start: 5, stop: 10 } },
+		get_summary
+	)
+	removeColorAttr(bins)
 	test.deepLooseEqual(
-		b.compute_bins(
-			{ bin_size: 6, label_offset: 1, first_bin: { startunbounded: 1, start_percentile: 4, start: 5, stop: 10 } },
-			get_summary
-		),
+		bins,
 		[
 			{ startunbounded: 1, start: undefined, stop: 10, startinclusive: 1, stopinclusive: 0, label: '<10' },
 			{ startinclusive: 1, stopinclusive: 0, start: 10, stop: 16, label: '10 to 15' },
@@ -463,9 +468,10 @@ tape('compute_bins() unbounded', function(test) {
 		],
 		'should override start_percentile or start with startunbounded'
 	)
-
+	bins = b.compute_bins({ bin_size: 1, first_bin: { stop: 22, startinclusive: true } }, get_summary)
+	removeColorAttr(bins)
 	test.deepEqual(
-		b.compute_bins({ bin_size: 1, first_bin: { stop: 22, startinclusive: true } }, get_summary),
+		bins,
 		[
 			{
 				startunbounded: true,
@@ -482,10 +488,15 @@ tape('compute_bins() unbounded', function(test) {
 
 	test.end()
 })
+function removeColorAttr(bins) {
+	for (const bin of bins) delete bin.color
+}
 
 tape('compute_bins() non-percentile', function(test) {
+	let bins = b.compute_bins({ bin_size: 3, label_offset: 1, first_bin: { stop: 8 } }, get_summary)
+	removeColorAttr(bins)
 	test.deepLooseEqual(
-		b.compute_bins({ bin_size: 3, label_offset: 1, first_bin: { stop: 8 } }, get_summary),
+		bins,
 		[
 			{ startunbounded: true, start: undefined, stop: 8, startinclusive: 1, stopinclusive: 0, label: '<8' },
 			{ startinclusive: 1, stopinclusive: 0, start: 8, stop: 11, label: '8 to 10' },
@@ -495,9 +506,11 @@ tape('compute_bins() non-percentile', function(test) {
 		],
 		'should handle first_bin.stop'
 	)
+	bins = b.compute_bins({ bin_size: 4, label_offset: 1, first_bin: { stop: 8 }, last_bin: { start: 12 } }, get_summary)
+	removeColorAttr(bins)
 
 	test.deepLooseEqual(
-		b.compute_bins({ bin_size: 4, label_offset: 1, first_bin: { stop: 8 }, last_bin: { start: 12 } }, get_summary),
+		bins,
 		[
 			{ startunbounded: true, start: undefined, stop: 8, startinclusive: 1, stopinclusive: 0, label: '<8' },
 			{ startinclusive: 1, stopinclusive: 0, start: 8, stop: 12, label: '8 to 11' },
@@ -505,12 +518,13 @@ tape('compute_bins() non-percentile', function(test) {
 		],
 		'should handle last_bin.start'
 	)
-
+	bins = b.compute_bins(
+		{ bin_size: 3, label_offset: 1, first_bin: { startunbounded: 1, stop: 3 }, last_bin: { start: 15 } },
+		get_summary
+	)
+	removeColorAttr(bins)
 	test.deepLooseEqual(
-		b.compute_bins(
-			{ bin_size: 3, label_offset: 1, first_bin: { startunbounded: 1, stop: 3 }, last_bin: { start: 15 } },
-			get_summary
-		),
+		bins,
 		[
 			{ startunbounded: 1, start: undefined, stop: 3, startinclusive: 1, stopinclusive: 0, label: '<3' },
 			{ startinclusive: 1, stopinclusive: 0, start: 3, stop: 6, label: '3 to 5' },
@@ -521,17 +535,18 @@ tape('compute_bins() non-percentile', function(test) {
 		],
 		'should handle last_bin.start + stop'
 	)
-
+	bins = b.compute_bins(
+		{
+			bin_size: 1,
+			label_offset: 1,
+			first_bin: { start: 5, stopunbounded: 1, stop: 7, stopinclusive: 1 },
+			last_bin: { start: 12, stopunbounded: 1 }
+		},
+		get_summary
+	)
+	removeColorAttr(bins)
 	test.deepLooseEqual(
-		b.compute_bins(
-			{
-				bin_size: 1,
-				label_offset: 1,
-				first_bin: { start: 5, stopunbounded: 1, stop: 7, stopinclusive: 1 },
-				last_bin: { start: 12, stopunbounded: 1 }
-			},
-			get_summary
-		),
+		bins,
 		[
 			{ startunbounded: 1, start: undefined, stop: 7, startinclusive: 1, stopinclusive: 0, label: '<7' },
 			{ startinclusive: 1, stopinclusive: 0, start: 7, stop: 8, label: 7 },
@@ -589,8 +604,10 @@ tape('target_percentiles()', function(test) {
 })
 
 tape('compute_bins() percentile', function(test) {
+	let bins = b.compute_bins({ bin_size: 3, label_offset: 1, first_bin: { stop_percentile: 25 } }, get_summary)
+	removeColorAttr(bins)
 	test.deepLooseEqual(
-		b.compute_bins({ bin_size: 3, label_offset: 1, first_bin: { stop_percentile: 25 } }, get_summary),
+		bins,
 		[
 			{ startunbounded: 1, start: undefined, stop: 5, startinclusive: 1, stopinclusive: 0, label: '<5' },
 			{ startinclusive: 1, stopinclusive: 0, start: 5, stop: 8, label: '5 to 7' },
@@ -601,12 +618,13 @@ tape('compute_bins() percentile', function(test) {
 		],
 		'should handle first_bin.stop_percentile'
 	)
-
+	bins = b.compute_bins(
+		{ bin_size: 4, label_offset: 1, first_bin: { stop: 8 }, last_bin: { start_percentile: 90 } },
+		get_summary
+	)
+	removeColorAttr(bins)
 	test.deepLooseEqual(
-		b.compute_bins(
-			{ bin_size: 4, label_offset: 1, first_bin: { stop: 8 }, last_bin: { start_percentile: 90 } },
-			get_summary
-		),
+		bins,
 		[
 			{ startunbounded: 1, start: undefined, stop: 8, startinclusive: 1, stopinclusive: 0, label: '<8' },
 			{ startinclusive: 1, stopinclusive: 0, start: 8, stop: 12, label: '8 to 11' },
@@ -691,8 +709,10 @@ tape('compute_bins() single unique value (0)', function(test) {
 			{ start: 0, startinclusive: false, stopunbounded: true, label: '>' + 0 }
 		]
 	}
+	let bins = b.compute_bins(binconfig)
+	removeColorAttr(bins)
 	test.deepEqual(
-		b.compute_bins(binconfig),
+		bins,
 		[
 			{ stop: 0, stopinclusive: false, startunbounded: true, label: '<' + 0 },
 			{ start: 0, stop: 0, startinclusive: true, stopinclusive: true, label: '=' + 0 },
@@ -712,8 +732,10 @@ tape('compute_bins() single unique value (3)', function(test) {
 			{ start: 3, startinclusive: false, stopunbounded: true, label: '>' + 3 }
 		]
 	}
+	let bins = b.compute_bins(binconfig)
+	removeColorAttr(bins)
 	test.deepEqual(
-		b.compute_bins(binconfig),
+		bins,
 		[
 			{ stop: 3, stopinclusive: false, startunbounded: true, label: '<' + 3 },
 			{ start: 3, stop: 3, startinclusive: true, stopinclusive: true, label: '=' + 3 },

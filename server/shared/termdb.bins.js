@@ -1,4 +1,6 @@
 import { format } from 'd3-format'
+const schemeCategory10 = require('d3-scale-chromatic').schemeCategory10
+const d3scale = require('d3-scale')
 
 export function validate_bins(binconfig) {
 	// Number.isFinite('1') returns false, which is desired
@@ -122,7 +124,9 @@ summaryfxn (percentiles)=> return {min, max, pX, pY, ...}
   }
 */
 	const bc = binconfig
+	const k2c = d3scale.scaleOrdinal(schemeCategory10) //to color bins
 	validate_bins(bc)
+	if (bc.lst) for (const bin of bc.lst) bin.color = k2c(bin.label)
 	if (bc.type == 'custom-bin') return JSON.parse(JSON.stringify(bc.lst))
 	if (typeof summaryfxn != 'function') throw 'summaryfxn required for modules/termdb.bins.js compute_bins()'
 	const percentiles = target_percentiles(bc)
@@ -191,7 +195,8 @@ summaryfxn (percentiles)=> return {min, max, pX, pY, ...}
 			? +bc.first_bin.stop
 			: min + bc.bin_size,
 		startinclusive: bc.startinclusive,
-		stopinclusive: bc.stopinclusive
+		stopinclusive: bc.stopinclusive,
+		color: k2c(min)
 	}
 
 	if (!isNumeric(currBin.stop)) throw 'the computed first_bin.stop is non-numeric' + currBin.stop
@@ -220,7 +225,8 @@ summaryfxn (percentiles)=> return {min, max, pX, pY, ...}
 					? last_stop
 					: numericLastStart && upper > last_start && previousStop != last_start
 					? last_start
-					: upper
+					: upper,
+			color: k2c(previousStop)
 		}
 
 		if (currBin.stop >= max) {
@@ -323,7 +329,7 @@ export function get_bin_range_equation(bin, binconfig) {
 	const bin_label = get_bin_label(bin, binconfig)
 	if (bin.startunbounded || bin.stopunbounded) {
 		// first or last bins, e.g. x ≤ 14 and x > 16
-			range_eq = x + '&nbsp;' + bin_label
+		range_eq = x + '&nbsp;' + bin_label
 	} else if (bin.startinclusive) {
 		// bins with startinclusive, e.g. 14 ≤ x < 16
 		range_eq = bin_label.replace('to <', '≤ ' + x + ' <')

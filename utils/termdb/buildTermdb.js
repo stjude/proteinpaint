@@ -3,6 +3,8 @@ const exec = require('child_process').execSync
 const path = require('path')
 const { parseDictionary } = require('../../client/src/databrowser/dictionary.parse')
 const initBinConfig = require('../../server/shared/termdb.initbinconfig')
+const schemeCategory10 = require('d3-scale-chromatic').schemeCategory10
+const d3scale = require('d3-scale')
 
 /*
 TODO
@@ -116,6 +118,7 @@ const sampleCollect = {
 	name2id: new Map(), // k: sample name, v: integer id
 	id: 1 // sample id enumerator
 }
+const k2c = d3scale.scaleOrdinal(schemeCategory10)
 
 //////////////////////////////////// main sequence
 
@@ -386,6 +389,7 @@ function loadAnnotationFile(scriptArg, terms, sampleCollect) {
 				// the category is missing from .values{}, auto add
 				term.values[v] = { label: v }
 			}
+			if (!('color' in term.values[v])) term.values[v].color = k2c(v)
 		} else if (term.type == 'float') {
 			const n = Number(v)
 			if (Number.isNaN(n)) throw `value=${v} not number for type=float, term=${term.id}, line=${i + 1}`

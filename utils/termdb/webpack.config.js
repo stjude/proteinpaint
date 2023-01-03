@@ -15,7 +15,12 @@ module.exports = {
 		path: path.join(__dirname, './'),
 		filename: 'buildTermdb.bundle.js'
 	},
-	externals: [nodeExternals()],
+	externals: [
+		nodeExternals({
+			allowlist: [/\/src\//, /d3-*/, 'internmap', 'delaunator', 'robust-predicates'],
+			additionalModuleDirs: [path.resolve(__dirname, '../../node_modules')]
+		})
+	],
 	module: {
 		rules: [
 			{

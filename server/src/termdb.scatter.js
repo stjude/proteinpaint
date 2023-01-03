@@ -137,8 +137,9 @@ export async function trigger_getSampleScatter(q, res, ds, genome) {
 		const terms = [q.colorTW]
 		if (q.shapeTW) terms.push(q.shapeTW)
 		const data = await getData({ filter: q.filter, terms }, ds, genome)
+
 		if (data.error) throw data.error
-		const result = await colorAndShapeSamples(refSamples, cohortSamples, data.samples, q)
+		const result = await colorAndShapeSamples(refSamples, cohortSamples, data, q)
 		res.send(result)
 	} catch (e) {
 		res.send({ error: e.message || e })
@@ -161,14 +162,14 @@ async function getSamples(plot) {
 	throw 'do not know how to load data from this plot'
 }
 
-async function colorAndShapeSamples(refSamples, cohortSamples, dbSamples, q) {
+async function colorAndShapeSamples(refSamples, cohortSamples, data, q) {
 	const samples = refSamples.map(sample => ({ ...sample, category: 'Ref', shape: 'Ref' }))
 
 	const shapeMap = new Map()
 	const colorMap = new Map()
 
 	for (const sample of cohortSamples) {
-		const dbSample = dbSamples[sample.sampleId.toString()]
+		const dbSample = data.samples[sample.sampleId.toString()]
 		sample.category_info = {}
 		sample.hidden = {}
 
@@ -184,10 +185,14 @@ async function colorAndShapeSamples(refSamples, cohortSamples, dbSamples, q) {
 
 	const k2c = d3scale.scaleOrdinal(schemeCategory10)
 	for (const [category, value] of colorMap) {
-		if (!value.color) {
-			if (q.colorTW?.term?.values?.[category]?.color) value.color = q.colorTW.term.values[category].color
-			else value.color = k2c(category)
-		}
+		const tvalue = q.colorTW.term.values?.[category]
+		if (tvalue?.color) value.color = tvalue.color
+		else if (data.refs?.byTermId[q.colorTW.term.id]?.bins) {
+			const bin = data.refs.byTermId[q.colorTW.term.id].bins.find(bin => bin.name === category)
+			value.color = bin.color
+		} else if (q.colorTW.term.type == 'geneVariant') value.color = mclass[value.mclass]?.color || 'black'
+		// should be invalid_mclass_color
+		else value.color = k2c(category)
 	}
 	shapeMap.set('Ref', { sampleCount: refSamples.length, shape: 0 })
 	let i = 1
@@ -199,7 +204,22 @@ async function colorAndShapeSamples(refSamples, cohortSamples, dbSamples, q) {
 	//colorMap.set(noCategory, { sampleCount: noColorCount, color: defaultColor })
 	colorMap.set('Ref', { sampleCount: refSamples.length, color: refColor })
 
-	return { samples, colorLegend: Object.fromEntries(colorMap), shapeLegend: Object.fromEntries(shapeMap) }
+	return {
+		samples,
+		colorLegend: order(colorMap, q.colorTW, data.refs),
+		shapeLegend: order(shapeMap, q.shapeTW, data.refs)
+	}
+}
+
+function order(map, tw, refs) {
+	if (!tw) return Object.fromEntries(map)
+
+	if (!refs?.byTermId[tw.term.id]?.bins) return Object.fromEntries(map)
+	const bins = refs.byTermId[tw.term.id].bins
+	const entries = []
+	for (const bin of bins) if (map.get(bin.name)) entries.push([bin.name, map.get(bin.name)])
+	entries.push(['Ref', map.get('Ref')])
+	return Object.fromEntries(entries)
 }
 
 function assignCategory(dbSample, sample, tw, categoryMap, category) {
@@ -209,11 +229,11 @@ function assignCategory(dbSample, sample, tw, categoryMap, category) {
 		console.log(JSON.stringify(sample) + ' not in the database or filtered')
 		return
 	}
+	let mutation = null
 	if (tw.term.type == 'geneVariant') {
-		const mutation = dbSample?.[tw.term.name]?.values?.[0]
+		mutation = dbSample?.[tw.term.name]?.values?.[0]
 		if (mutation) {
 			value = mclass[mutation.class]?.label
-			color = mclass[mutation.class]?.color || 'black' // should be invalid_mclass_color
 			sample.category_info[category] = mutation.mname
 			sample.hidden[category] = tw.q.hiddenValues ? value in tw.q.hiddenValues : false
 			// TODO mutation.mname is amino acid change. pass mname to sample to be shown in tooltip
@@ -224,7 +244,8 @@ function assignCategory(dbSample, sample, tw, categoryMap, category) {
 	}
 	if (value) {
 		sample[category] = value.toString()
-		if (!categoryMap.has(value)) categoryMap.set(value, { sampleCount: 1, color })
+		if (!categoryMap.has(value)) categoryMap.set(value, { sampleCount: 1 })
 		else categoryMap.get(value).sampleCount++
+		if (tw.term.type == 'geneVariant') categoryMap.get(value).mclass = mutation?.class
 	}
 }

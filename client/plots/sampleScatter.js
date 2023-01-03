@@ -117,17 +117,16 @@ class Scatter {
 			)
 		copyMerge(this.settings, this.config.settings.sampleScatter)
 		const reqOpts = this.getDataRequestOpts()
-		const data = await this.app.vocabApi.getScatterData(reqOpts)
-		this.currData = data //For unit tests only
-		if (data.error) throw data.error
-		if (!Array.isArray(data.samples)) throw 'data.samples[] not array'
-		this.shapeLegend = new Map(Object.entries(data.shapeLegend))
-		this.colorLegend = new Map(Object.entries(data.colorLegend))
+		this.data = await this.app.vocabApi.getScatterData(reqOpts)
+		if (this.data.error) throw this.data.error
+		if (!Array.isArray(this.data.samples)) throw 'data.samples[] not array'
 
+		this.colorLegend = new Map(Object.entries(this.data.colorLegend))
+		this.shapeLegend = new Map(Object.entries(this.data.shapeLegend))
 		this.axisOffset = { x: 80, y: 20 }
 
-		const s0 = data.samples[0]
-		const [xMin, xMax, yMin, yMax] = data.samples.reduce(
+		const s0 = this.data.samples[0]
+		const [xMin, xMax, yMin, yMax] = this.data.samples.reduce(
 			(s, d) => [d.x < s[0] ? d.x : s[0], d.x > s[1] ? d.x : s[1], d.y < s[2] ? d.y : s[2], d.y > s[3] ? d.y : s[3]],
 			[s0.x, s0.x, s0.y, s0.y]
 		)
@@ -141,7 +140,7 @@ class Scatter {
 			.range([this.axisOffset.y, this.settings.svgh + this.axisOffset.y])
 		this.axisLeft = axisLeft(this.yAxisScale)
 
-		this.render(data)
+		this.render()
 		this.setTools()
 		this.lassoReset()
 		this.updateGroupsButton()
@@ -253,20 +252,23 @@ class Scatter {
 			.style('font-weight', 'bold')
 
 		const radius = 5
-		let category, count, name, color
+		let count, name, color
 		for (const [key, category] of this.colorLegend) {
 			if (key == 'Ref') continue
 			color = category.color
 			count = category.sampleCount
 			name = key
 			const hidden = this.config.colorTW.q.hiddenValues ? key in this.config.colorTW.q.hiddenValues : false
-			const itemG = colorG.append('g')
-			itemG
+			const circleG = colorG.append('g')
+			circleG
 				.append('circle')
 				.attr('cx', offsetX)
 				.attr('cy', offsetY)
 				.attr('r', radius)
 				.style('fill', color)
+
+			circleG.on('click', e => this.onColorClick(e, key, category))
+			const itemG = colorG.append('g')
 			itemG
 				.append('text')
 				.attr('name', 'sjpp-scatter-legend-label')
@@ -363,9 +365,32 @@ class Scatter {
 		}
 	}
 
+	onColorClick(e, key, category) {
+		const menu = new Menu()
+		const input = menu.d
+			.append('input')
+			.attr('type', 'color')
+			.attr('value', category.color)
+			.on('change', () => {
+				const tw = this.config.colorTW
+				if (tw.term.type != 'geneVariant' && tw.term.values[key]) tw.term.values[key].color = input.node().value
+				else {
+					if (!tw.term.values) tw.term.values = {}
+					tw.term.values[key] = { key: key, label: key, color: input.node().value }
+				}
+				this.app.dispatch({
+					type: 'plot_edit',
+					id: this.id,
+					config: { colorTW: tw }
+				})
+				menu.hide()
+			})
+		menu.show(e.clientX, e.clientY, false)
+	}
+
 	onLegendClick(tw, name, key, itemG, hidden) {
 		if (!tw.q.hiddenValues) tw.q.hiddenValues = {}
-		const value = tw.term.type != 'geneVariant' ? tw.term.values[key] : { key: key, label: key }
+		const value = tw.term.type != 'geneVariant' && tw.term.values[key] ? tw.term.values[key] : { key: key, label: key }
 		itemG.style('text-decoration', hidden ? 'none' : 'line-through')
 		if (hidden) delete tw.q.hiddenValues[key]
 		else tw.q.hiddenValues[key] = value
@@ -380,7 +405,8 @@ class Scatter {
 }
 
 function setRenderers(self) {
-	self.render = function(data) {
+	self.render = function() {
+		const data = self.data
 		const chartDiv = self.dom.holder
 		if (chartDiv.selectAll('*').size() > 0) updateCharts()
 		else addCharts()
