@@ -202,13 +202,17 @@ export default function getHandlers(self) {
 					return s.unit == 'pct' ? '% of patients' : '# of patients'
 				} else {
 					const term = self.config.term
-					return term.type == 'condition' && self.config.term.q.value_by_max_grade
-						? 'Maximum grade'
-						: term.type == 'condition' && self.config.term.q.value_by_most_recent
-						? 'Most recent grade'
+					return term.q.bar_by_children
+						? 'Sub-condition'
+						: term.q.value_by_max_grade
+						? 'Max. Grade'
+						: term.q.value_by_most_recent
+						? 'Most Recent Grade'
+						: term.q.value_by_computable_grade
+						? 'Any Grade'
 						: term.type == 'categorical' || !term.unit
 						? ''
-						: term.unit //term.name[0].toUpperCase() + term.name.slice(1)
+						: term.unit
 				}
 			}
 		},
