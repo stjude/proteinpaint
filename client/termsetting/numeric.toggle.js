@@ -107,9 +107,9 @@ export async function getHandler(self) {
 	}
 }
 
-export async function fillTW(tw, vocabApi, defaultQ) {
+export async function fillTW(tw, vocabApi, defaultQ = null) {
 	// when missing, defaults mode to discrete
-	if (!tw.q.mode) tw.q.mode = 'discrete'
+	if (!tw.q.mode && !defaultQ?.mode) tw.q.mode = 'discrete'
 
 	if (tw.q.mode !== 'continuous' && !valid_binscheme(tw.q)) {
 		/*

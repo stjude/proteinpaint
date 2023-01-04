@@ -335,13 +335,14 @@ export class MatrixControls {
 	}
 
 	addGeneSearch(app, parent, tr) {
-		const td = tr.append('td').attr('colspan', 2)
-		td.append('span').html('Add a single gene &nbsp;')
+		tr.append('td')
+			.attr('class', 'sja-termdb-config-row-label')
+			.html('Add a single gene &nbsp;')
 
 		const coordInput = addGeneSearchbox({
 			tip,
 			genome: app.opts.genome,
-			row: td.append('span'),
+			row: tr.append('td'),
 			geneOnly: true,
 			callback: () => {
 				if (!coordInput.geneSymbol) throw 'geneSymbol missing'
@@ -425,43 +426,41 @@ export class MatrixControls {
 			})
 	}
 
-	addDictMenu(app, parent, tr) {
-		const td = tr.append('td').attr('colspan', 2)
-		const span = td
-			.append('span')
-			.style('cursor', 'pointer')
-			.html('Select a dictionary term')
-			.on('click', async () => {
-				tip.clear()
-				const termdb = await import('../termdb/app')
-				termdb.appInit({
-					holder: tip.d,
-					state: {
-						dslabel: app.vocabApi.vocab.dslabel,
-						genome: app.vocabApi.vocab.genome,
-						nav: {
-							header_mode: 'search_only'
-						}
-					},
-					tree: {
-						click_term: term => {
-							parent.config.termgroups[parent.selectedGroup].lst.push({ id: term.id, term, $id: get$id(), q: {} })
-							app.dispatch({
-								type: 'plot_edit',
-								id: parent.id,
-								config: {
-									termgroups: parent.config.termgroups
-								}
-							})
+	async addDictMenu(app, parent, tr) {
+		const td = tr
+			.append('td')
+			.attr('colspan', 2)
+			.style('padding-left', 0)
 
-							tip.hide()
-							app.tip.hide()
-						}
+		const pill = await termsettingInit({
+			vocabApi: app.vocabApi,
+			placeholder: 'Select a dictionary term',
+			placeholderIcon: '',
+			holder: td,
+			debug: this.opts.debug,
+			callback: tw => {
+				if (tw && !tw.q) throw 'data.q{} missing from pill callback'
+				parent.config.termgroups[parent.selectedGroup].lst.push(tw)
+				app.dispatch({
+					type: 'plot_edit',
+					id: parent.id,
+					config: {
+						termgroups: parent.config.termgroups
 					}
 				})
 
-				tip.showunder(span.node())
-			})
+				tip.hide()
+				app.tip.hide()
+			},
+			customFillTw(tw) {
+				const term = tw.term
+				if (term.type == 'integer' || term.type == 'float') {
+					// is numeric term, to plot individual values as barchart, must set below
+					tw.q.mode = 'continuous'
+					tw.settings = { barh: 30, gap: 0 } // TODO improve this hardcoded attributes
+				}
+			}
+		})
 	}
 }
 

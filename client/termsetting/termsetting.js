@@ -490,7 +490,7 @@ function setInteractivity(self) {
 					self.dom.tip.hide()
 
 					const tw = { id: term.id, term, q: { isAtomic: true }, isAtomic: true }
-
+					if (self.opts.customFillTw) self.opts.customFillTw(tw)
 					await call_fillTW(tw, self.vocabApi, self.opts.defaultQ4fillTW)
 					// tw is now furbished
 
@@ -785,6 +785,8 @@ export async function fillTermWrapper(tw, vocabApi, defaultQ) {
 }
 
 async function call_fillTW(tw, vocabApi, defaultQ) {
+	if (!tw.$id) tw.$id = `${$id++}${idSuffix}`
+
 	const t = tw.term.type
 	const type = t == 'float' || t == 'integer' ? 'numeric.toggle' : t
 	let _

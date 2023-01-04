@@ -744,6 +744,9 @@ function setNumericCellProps(cell, tw, anno, value, s, t) {
 
 	cell.order = t.ref.bins ? t.ref.bins.findIndex(bin => bin.name == key) : 0
 	if (tw.q?.mode == 'continuous') {
+		if (!tw.settings) tw.settings = {}
+		if (!tw.settings.barh) tw.settings.barh = 30
+		if (!('gap' in tw.settings)) tw.settings.gap = 0
 		// TODO: may use color scale instead of bars
 		if (s.transpose) {
 			cell.width = t.scale(cell.key)
