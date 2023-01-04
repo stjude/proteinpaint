@@ -243,7 +243,6 @@ else
 		# may need to support cohort.db.refresh,
 		# as set via serverconfig dataset updateAttr
 		mv utils/termdb $APP/utils/
-		mv utils/pnet  $APP/utils/
 	fi
 	mv public/bin $APP/public/bin
 	echo "$ENV $REV $(date)" > $APP/public/rev.txt
