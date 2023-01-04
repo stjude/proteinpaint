@@ -205,11 +205,11 @@ export default function getHandlers(self) {
 					return term.q.bar_by_children
 						? 'Sub-condition'
 						: term.q.value_by_max_grade
-						? 'Max. Grade'
+						? 'Maximum grade'
 						: term.q.value_by_most_recent
-						? 'Most Recent Grade'
+						? 'Most recent grade'
 						: term.q.value_by_computable_grade
-						? 'Any Grade'
+						? 'Any grade'
 						: term.type == 'categorical' || !term.unit
 						? ''
 						: term.unit
