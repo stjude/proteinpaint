@@ -41,7 +41,7 @@
 //
 // Example of json input containing the fdr flag
 
-// cd ~/proteinpaint/rust && cargo build --release && json='{"fdr":true,"input":[{ "index": 0, "n1": 1, "n2": 2, "n3": 3, "n4": 2 },{ "index": 6, "n1": 10, "n2": 22, "n3": 9, "n4": 15 },{ "index": 7, "n1": 14, "n2": 18, "n3": 8, "n4": 16 }]}' && time echo "$json" | target/release/fisher
+// cd ~/proteinpaint/rust && cargo build --release && json='{"fdr":true,"input":[{ "index": 0, "n1": 2, "n2": 4, "n3": 300, "n4": 400 },{ "index": 1, "n1": 1, "n2": 2, "n3": 3, "n4": 2 },{ "index": 2, "n1": 10, "n2": 22, "n3": 9, "n4": 15 },{ "index": 3, "n1": 14, "n2": 18, "n3": 8, "n4": 16 }]}' && time echo "$json" | target/release/fisher
 
 // cd ~/proteinpaint/rust && cargo build --release && json='{"fdr":true,"input":[{"index":0,"n1":514,"n2":626,"n3":45,"n4":106},{"index":1,"n1":11,"n2":948,"n3":364,"n4":292},{"index":2,"n1":129,"n2":951,"n3":531,"n4":268},{"index":3,"n1":677,"n2":40,"n3":11,"n4":837},{"index":4,"n1":947,"n2":937,"n3":245,"n4":817},{"index":5,"n1":589,"n2":889,"n3":934,"n4":400},{"index":6,"n1":5,"n2":119,"n3":278,"n4":641},{"index":7,"n1":873,"n2":113,"n3":771,"n4":109},{"index":8,"n1":495,"n2":69,"n3":759,"n4":884},{"index":9,"n1":266,"n2":192,"n3":686,"n4":761},{"index":10,"n1":484,"n2":814,"n3":754,"n4":521},{"index":11,"n1":50,"n2":615,"n3":357,"n4":470},{"index":12,"n1":416,"n2":109,"n3":472,"n4":462},{"index":13,"n1":535,"n2":935,"n3":969,"n4":35},{"index":14,"n1":605,"n2":667,"n3":553,"n4":359},{"index":15,"n1":483,"n2":719,"n3":879,"n4":254},{"index":16,"n1":940,"n2":32,"n3":259,"n4":373},{"index":17,"n1":228,"n2":565,"n3":154,"n4":155},{"index":18,"n1":23,"n2":57,"n3":232,"n4":238},{"index":19,"n1":356,"n2":39,"n3":771,"n4":887},{"index":20,"n1":481,"n2":307,"n3":776,"n4":952},{"index":21,"n1":463,"n2":202,"n3":57,"n4":218},{"index":22,"n1":658,"n2":68,"n3":431,"n4":774},{"index":23,"n1":334,"n2":266,"n3":266,"n4":677},{"index":24,"n1":97,"n2":544,"n3":532,"n4":863},{"index":25,"n1":562,"n2":313,"n3":725,"n4":574}]}' && time echo "$json" | target/release/fisher
 
@@ -136,10 +136,9 @@ fn calculate_fisher_chisq_test(variants: &JsonValue, individual_fisher_limit: u3
             let n4 = variant["n4"].as_u32().unwrap();
             let total: f64 = (n1 + n2 + n3 + n4) as f64;
 
-            let mut p_value_original: Option<f64> = None;
+            let mut p_value_original = Option::<f64>::None;
             let p_value_final;
-            let mut fisher_chisq_test_string: String = "".to_string();
-            let fisher_chisq_test_final;
+            let fisher_chisq_test_string;
             if total < 2000.0
                 && ((n1 + n2) as f64 / total < 0.03
                     || (n1 + n3) as f64 / total < 0.03
@@ -148,7 +147,7 @@ fn calculate_fisher_chisq_test(variants: &JsonValue, individual_fisher_limit: u3
                     == true
             {
                 // Sample size too low for doing association test
-                p_value_original = None;
+                //p_value_original = None;
                 fisher_chisq_test_string = "NA".to_string();
             } else if n1 > individual_fisher_limit
                 && n2 > individual_fisher_limit
@@ -156,16 +155,29 @@ fn calculate_fisher_chisq_test(variants: &JsonValue, individual_fisher_limit: u3
                 && n4 > individual_fisher_limit
             {
                 fisher_chisq_test = 2; // Setting test = chi-sq
-            }
-            (p_value_final, fisher_chisq_test_final) =
-                stats_functions::strand_analysis_one_iteration(n1, n2, n3, n4, fisher_chisq_test);
-
-            if fisher_chisq_test_final == 1 {
-                fisher_chisq_test_string = "fisher".to_string();
+                let _fisher_chisq_test_final;
+                (p_value_final, _fisher_chisq_test_final) =
+                    stats_functions::strand_analysis_one_iteration(
+                        n1,
+                        n2,
+                        n3,
+                        n4,
+                        fisher_chisq_test,
+                    );
+                fisher_chisq_test_string = "chisq".to_string();
                 p_value_original = Some(p_value_final);
                 num_of_tests += 1.0;
-            } else if fisher_chisq_test_final == 2 {
-                fisher_chisq_test_string = "chisq".to_string();
+            } else {
+                let _fisher_chisq_test_final;
+                (p_value_final, _fisher_chisq_test_final) =
+                    stats_functions::strand_analysis_one_iteration(
+                        n1,
+                        n2,
+                        n3,
+                        n4,
+                        fisher_chisq_test,
+                    );
+                fisher_chisq_test_string = "fisher".to_string();
                 p_value_original = Some(p_value_final);
                 num_of_tests += 1.0;
             }
