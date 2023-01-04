@@ -224,7 +224,7 @@ function resultObj(valuesObject, data, overlayTerm) {
 	return result
 }
 
-function violinBins(axisScale, plot) {
+export function violinBins(axisScale, plot) {
 	const bins0 = computeViolinData(axisScale, plot.values)
 	// array; each element is an array of values belonging to this bin
 	// NOTE .x0 .x1 attributes are also assigned to this array (safe to do?)
