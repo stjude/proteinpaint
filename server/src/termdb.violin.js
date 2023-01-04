@@ -5,7 +5,7 @@ const serverconfig = require('./serverconfig')
 const lines2R = require('./lines2R')
 const path = require('path')
 const utils = require('./utils')
-import { median } from '../../server/shared/median'
+const { median } = require('../../server/shared/median')
 const { getData } = require('./termdb.matrix')
 const createCanvas = require('canvas').createCanvas
 
@@ -198,7 +198,8 @@ function resultObj(valuesObject, data, overlayTerm) {
 		min: valuesObject.minMaxValues.min,
 		max: valuesObject.minMaxValues.max,
 		plots: [], // each element is data for one plot: {label=str, values=[]}
-		pvalues: []
+		pvalues: [],
+		plotThickness: Number
 	}
 
 	for (const [key, values] of sortKey2values(data, valuesObject.key2values, overlayTerm)) {
@@ -220,6 +221,9 @@ function resultObj(valuesObject, data, overlayTerm) {
 				// sampleIdObj: sampleIdObj
 			})
 		}
+	}
+	if (result.plots.length >= 1) {
+		result.plotThickness = plotThickness(result)
 	}
 	return result
 }
@@ -312,4 +316,18 @@ function createCanvasImg(q, result) {
 
 		delete plot.values
 	}
+}
+
+function plotThickness(result) {
+	const plotThickness =
+		result.plots.length < 2
+			? 150
+			: result.plots.length >= 2 && result.plots.length < 5
+			? 120
+			: result.plots.length >= 5 && result.plots.length < 8
+			? 90
+			: result.plots.length >= 8 && result.plots.length < 11
+			? 75
+			: 60
+	return plotThickness
 }
