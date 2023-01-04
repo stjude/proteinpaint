@@ -209,12 +209,6 @@ else
 	echo "Packing backend bundle ..."
 	npx webpack --config=server/webpack.config.js --env NODE_ENV=$WPSERVERMODE --env devtool=$WPSERVERDEVTOOL
 
-	if [[ "$SUBDOMAIN" == "ppr" ]]; then
-		# may need to support cohort.db.refresh,
-		# as set via serverconfig dataset updateAttr
-		npx webpack --config=utils/pnet/webpack.config.js
-	fi
-
 	cd rust
 	npm pack
 	cd ..
