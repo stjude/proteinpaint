@@ -5,11 +5,11 @@ const { ssmIdFieldsSeparator } = require('./mds3.init')
 const utils = require('./utils')
 const { dtfusionrna, dtsv } = require('#shared/common')
 const geneDbSearch = require('./gene')
+const { getSampleData_dictionaryTerms_termdb } = require('./termdb.matrix')
 
 /*
 validate_variant2samples()
 variant2samples_getresult()
-	ifUsingBarchartQuery
 	queryMutatedSamples
 		querySamples_gdcapi
 		queryServerFileBySsmid
@@ -20,8 +20,6 @@ variant2samples_getresult()
 		addCrosstabCount_tonodes
 	make_summary
 		make_summary_categorical
-	summary2barchart
-
 */
 
 export function validate_variant2samples(ds) {
@@ -107,6 +105,11 @@ q{}
 	"samples" - return list of sample objects with annotations for twLst[]
 	"summary/sunburst" - return summary on twLst[]
 
+.filter0
+	read-only gdc filter
+.filterObj
+	actual pp filter
+
 ****** mutation/genomic filters; one of below must be provided
 
 .ssm_id_lst=str
@@ -146,9 +149,6 @@ q{}
 	hardcoded to be a geneVariant term, carries isoform/rglst/etc for querying variant
 */
 async function variant2samples_getresult(q, ds) {
-	// not used right now
-	//ifUsingBarchartQuery(q, ds)
-
 	const mutatedSamples = await queryMutatedSamples(q, ds)
 
 	if (q.get == ds.variant2samples.type_samples) {
@@ -167,94 +167,10 @@ async function variant2samples_getresult(q, ds) {
 
 	if (get == ds.variant2samples.type_summary) {
 		const summary = await make_summary(mutatedSamples, ds, q)
-		if (q.term1_id) {
-			// using barchart query, convert data to barchart format
-			const results = summary2barchart(summary, q)
-
-			// start creating reference metadata
-			const row2name = {}
-			const col2name = {}
-			for (const chart of results.charts) {
-				for (const s of chart.serieses) {
-					if (!col2name[s.seriesId]) col2name[s.seriesId] = { name: s.seriesId, grp: '-' }
-					for (const d of s.data) {
-						if (!row2name[d.dataId]) row2name[d.dataId] = { name: d.dataId, grp: '-' }
-					}
-				}
-			}
-
-			// these are "reference" metadata for plots, to help with sorting, etc.
-			// the reference data is computed by the server because groupsetting and bins may not
-			// be fully computable within the client, for example start and stop bins when
-			// the sample values for a term are not known client-side
-			results.refs = {
-				cols: Object.keys(col2name),
-				colgrps: ['-'],
-				rows: Object.keys(row2name),
-				rowgrps: ['-'],
-				bins: [[], [], []],
-				col2name,
-				row2name,
-				q: [{}, {}, {}]
-			}
-			return results
-		}
 		return summary
 	}
 
 	throw 'unknown get type'
-}
-
-/*
-when coming from "termdb-barsql" route, q{} looks like:
-
-q={
-  term1_id: 'Lineage',
-  term1_q: {},
-  term2: '{"type":"geneVariant","isoform":"NM_004327","rglst":"[{\\"chr\\":\\"chr22\\",\\"reverse\\":false,\\"width\\":979,\\"start\\":23180960,\\"stop\\":23315522,\\"xoff\\":0}]"}',
-  term2_q: {},
-  get: 'summary',
-  genome: 'hg38',
-  dslabel: 'ASH'
-}
-
-the function converts it to:
-
-q={
-	twLst:[ {} ], // term1 wrapper
-	isoform:'NM_004327', // copied from term2{}
-	rglst:[{chr,start,stop}],
-	...
-	term1_id:'Lineage' // keep it
-}
-*/
-function ifUsingBarchartQuery(q, ds) {
-	if (!q.term1_id) {
-		// not using barchart query
-		return
-	}
-	// using barchart query; q{} carries parameters from termdb-barsql
-
-	if (q.get == ds.variant2samples.type_samples) {
-		throw 'using barchart query and q.get=samples (should only be "summary" for now)'
-	}
-
-	// reformat q.term1_id and q.term1_q to q.twLst[]
-	const term1tw = {
-		id: q.term1_id,
-		q: q.term1_q
-	}
-	term1tw.term = ds.cohort.termdb.q.termjsonByOneid(q.term1_id)
-	if (!term1tw.term) throw 'no term found for q.term1_id'
-	q.twLst = [term1tw]
-
-	// extract isoform and rglst from geneVariant term2
-	if (!q.term2) throw 'q.term2=string missing'
-	const t = JSON.parse(q.term2)
-	if (!t.isoform) throw 'q.term2.isoform missing'
-	q.isoform = t.isoform
-	if (!t.rglst) throw 'q.term2.rglst missing'
-	q.rglst = JSON.parse(t.rglst)
 }
 
 /*
@@ -311,7 +227,29 @@ async function queryMutatedSamples(q, ds) {
 		return out
 	}
 
-	throw 'no genomic parameters, should get all samples' // TODO
+	// no genomic parameters. can only do sql query to get all annotated samples
+	if (!ds?.cohort?.termdb) throw 'unable to do sql query: .cohort.termdb missing for ds'
+	const q2 = {
+		ds,
+		filter: q.filterObj
+	}
+	const out = await getSampleData_dictionaryTerms_termdb(q2, q.twLst)
+	// quick fix to reshape result data TODO somehow the samples are not aligning in resulting matrix
+	const samples = []
+	for (const k in out.samples) {
+		const s = out.samples[k]
+		// s = { sample: <sampleId>, <termId>: {key,value} }
+		s.sample_id = s.sample
+		delete s.sample
+
+		for (const tw of q.twLst) {
+			if (s[tw.term.id]) {
+				s[tw.term.id] = s[tw.term.id].key
+			}
+		}
+		samples.push(s)
+	}
+	return samples
 }
 
 /*
@@ -797,6 +735,45 @@ async function addCrosstabCount_tonodes(nodes, combinations, ds) {
 	}
 }
 
+//////////////////////
+// below are unused code for processing queries from barsql
+//////////////////////
+
+/*
+		if (q.term1_id) {
+			// using barchart query, convert data to barchart format
+			const results = summary2barchart(summary, q)
+
+			// start creating reference metadata
+			const row2name = {}
+			const col2name = {}
+			for (const chart of results.charts) {
+				for (const s of chart.serieses) {
+					if (!col2name[s.seriesId]) col2name[s.seriesId] = { name: s.seriesId, grp: '-' }
+					for (const d of s.data) {
+						if (!row2name[d.dataId]) row2name[d.dataId] = { name: d.dataId, grp: '-' }
+					}
+				}
+			}
+
+			// these are "reference" metadata for plots, to help with sorting, etc.
+			// the reference data is computed by the server because groupsetting and bins may not
+			// be fully computable within the client, for example start and stop bins when
+			// the sample values for a term are not known client-side
+			results.refs = {
+				cols: Object.keys(col2name),
+				colgrps: ['-'],
+				rows: Object.keys(row2name),
+				rowgrps: ['-'],
+				bins: [[], [], []],
+				col2name,
+				row2name,
+				q: [{}, {}, {}]
+			}
+			return results
+		}
+		*/
+
 /*
 input:
 summary=[ {} ]
@@ -836,4 +813,56 @@ function summary2barchart(input, q) {
 		})
 	}
 	return data
+}
+
+/*
+when coming from "termdb-barsql" route, q{} looks like:
+
+q={
+  term1_id: 'Lineage',
+  term1_q: {},
+  term2: '{"type":"geneVariant","isoform":"NM_004327","rglst":"[{\\"chr\\":\\"chr22\\",\\"reverse\\":false,\\"width\\":979,\\"start\\":23180960,\\"stop\\":23315522,\\"xoff\\":0}]"}',
+  term2_q: {},
+  get: 'summary',
+  genome: 'hg38',
+  dslabel: 'ASH'
+}
+
+the function converts it to:
+
+q={
+	twLst:[ {} ], // term1 wrapper
+	isoform:'NM_004327', // copied from term2{}
+	rglst:[{chr,start,stop}],
+	...
+	term1_id:'Lineage' // keep it
+}
+*/
+function ifUsingBarchartQuery(q, ds) {
+	if (!q.term1_id) {
+		// not using barchart query
+		return
+	}
+	// using barchart query; q{} carries parameters from termdb-barsql
+
+	if (q.get == ds.variant2samples.type_samples) {
+		throw 'using barchart query and q.get=samples (should only be "summary" for now)'
+	}
+
+	// reformat q.term1_id and q.term1_q to q.twLst[]
+	const term1tw = {
+		id: q.term1_id,
+		q: q.term1_q
+	}
+	term1tw.term = ds.cohort.termdb.q.termjsonByOneid(q.term1_id)
+	if (!term1tw.term) throw 'no term found for q.term1_id'
+	q.twLst = [term1tw]
+
+	// extract isoform and rglst from geneVariant term2
+	if (!q.term2) throw 'q.term2=string missing'
+	const t = JSON.parse(q.term2)
+	if (!t.isoform) throw 'q.term2.isoform missing'
+	q.isoform = t.isoform
+	if (!t.rglst) throw 'q.term2.rglst missing'
+	q.rglst = JSON.parse(t.rglst)
 }

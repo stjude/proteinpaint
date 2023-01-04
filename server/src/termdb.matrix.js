@@ -156,15 +156,19 @@ output:
 }
 */
 async function getSampleData_dictionaryTerms(q, termWrappers) {
-	const samples = {}
-	const refs = { byTermId: {} }
-
-	if (!termWrappers.length) return { samples, refs }
+	if (!termWrappers.length) return { samples: {}, refs: { byTermId: {} } }
 
 	if (q.ds?.variant2samples?.get) {
 		// call mds3 dataset method
-		return await call_variant2samples(q, termWrappers)
+		return await getSampleData_dictionaryTerms_v2s(q, termWrappers)
 	}
+
+	return getSampleData_dictionaryTerms_termdb(q, termWrappers)
+}
+
+export function getSampleData_dictionaryTerms_termdb(q, termWrappers) {
+	const samples = {}
+	const refs = { byTermId: {} }
 
 	const twByTermId = {}
 
@@ -221,7 +225,7 @@ async function getSampleData_dictionaryTerms(q, termWrappers) {
 /*
 using mds3 dataset
 */
-async function call_variant2samples(q, termWrappers) {
+async function getSampleData_dictionaryTerms_v2s(q, termWrappers) {
 	const q2 = {
 		genome: q.genome,
 		get: 'samples',
