@@ -23,7 +23,7 @@
 //      n2:
 //      n3:
 //      n4:
-//      p_value: p-value from fisher/chisq test, "None" for cases with low sample sizes
+//      p_value: p-value from fisher/chisq test, "null" for cases with low sample sizes
 //      fisher_chisq: "NA" for cases with low sample size, "fisher" when fisher test is used, "chisq" when chisq test is used
 //    }]
 
@@ -34,8 +34,8 @@
 //      n2:
 //      n3:
 //      n4:
-//      p_value: p-value from fisher/chisq test, "None" for cases with low sample sizes
-//      adjusted_p_value: adjusted p-value using Benjamini-Hochberg correction
+//      p_value: p-value from fisher/chisq test, "null" for cases with low sample sizes
+//      adjusted_p_value: adjusted p-value using Benjamini-Hochberg correction, "null" for cases with low sample sizes
 //      fisher_chisq: "NA" for cases with low sample size, "fisher" when fisher test is used, "chisq" when chisq test is used
 //    }]
 //
