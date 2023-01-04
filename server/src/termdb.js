@@ -177,8 +177,11 @@ do not directly hand over the term object to client; many attr to be kept on ser
 
 async function trigger_findterm(q, res, termdb, ds) {
 	// TODO also search categories
+
 	const matches = { equals: [], startsWith: [], startsWord: [], includes: [] }
-	const str = q.findterm.toUpperCase()
+
+	// to allow search to work, must unescape special char, e.g. %20 to space
+	const str = decodeURIComponent(q.findterm).toUpperCase()
 
 	if (ds.mayGetMatchingGeneNames) {
 		// harcoded gene name length limit to exclude fusion/comma-separated gene names
@@ -189,14 +192,7 @@ async function trigger_findterm(q, res, termdb, ds) {
 	}
 
 	if (typeof q.cohortStr !== 'string') q.cohortStr = ''
-	const terms_ = await termdb.q.findTermByName(
-		q.findterm,
-		limitSearchTermTo,
-		q.cohortStr,
-		q.treeFilter,
-		q.usecase,
-		matches
-	)
+	const terms_ = await termdb.q.findTermByName(str, limitSearchTermTo, q.cohortStr, q.treeFilter, q.usecase, matches)
 	const terms = terms_.map(copy_term)
 	const id2ancestors = {}
 	terms.forEach(term => {
