@@ -368,7 +368,7 @@ opts{} options to tweak the query, see const default_opts = below
 			// so must use an array to capture all possible term key-values for each sample
 			const k = `key${r.termNum}`
 			if (!(k in s)) s[k] = []
-			s[k].push({ key: r.key, val: r.value })
+			s[k].push(r)
 		}
 		const lst = []
 		const scounts = new Map()
@@ -383,7 +383,7 @@ opts{} options to tweak the query, see const default_opts = below
 				if (!('key0' in v)) continue
 			} else {
 				// term0 is not defined, supply empty string default
-				v.key0 = [{ key: '', val: '' }]
+				v.key0 = [{ key: '', value: '' }]
 			}
 
 			// overlay term (term2)
@@ -392,7 +392,7 @@ opts{} options to tweak the query, see const default_opts = below
 				if (!('key2' in v)) continue
 			} else {
 				// term2 is not defined, supply empty string default
-				v.key2 = [{ key: '', val: '' }]
+				v.key2 = [{ key: '', value: '' }]
 			}
 
 			v.rows = []
@@ -406,11 +406,11 @@ opts{} options to tweak the query, see const default_opts = below
 						v.rows.push({
 							sample: v.sample,
 							key0: v0.key,
-							val0: v0.val,
+							val0: v0.value,
 							key1: v1.key,
-							val1: v1.val,
+							val1: v1.value,
 							key2: v2.key,
-							val2: v2.val
+							val2: v2.value
 						})
 					}
 				}
