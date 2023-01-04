@@ -484,9 +484,6 @@ input parameter:
 				.data=[]
 					.dataId=str // key of term2 category, '' if no term2
 					.total=int // size of this term1-term2 combination
-
-	fisher_limit:  the sum of the four values in the 2x2 table must be larger than fisher_limit(default = 20) to use chi-squared test
-	individual_fisher_limit: each of the four values in the 2x2 table must be larger than individual_fisher_limit (default = 5) to use chi-squared test
 }
 
 Output: The function has no return but appends the statistical results to the provided data object as data.tests:
@@ -505,7 +502,7 @@ Output: The function has no return but appends the statistical results to the pr
 	]
 }
 */
-async function computePvalues(data, fisher_limit = 20, individual_fisher_limit = 5) {
+async function computePvalues(data) {
 	data.tests = {}
 	for (const chart of data.charts) {
 		// calculate sum of each term2 category. Structure: {term2Catergory1: num of samples, term2Catergory2: num of samples, ...}
@@ -527,9 +524,6 @@ async function computePvalues(data, fisher_limit = 20, individual_fisher_limit =
 				const R1C2 = row.total - term2cat.total //# of term2 not category of interest in term1 category of interest (e.g. # of not male in white), represents R1C2 in 2X2 contingency table
 				const R2C2 = chart.total - colSums[term2cat.dataId] - (row.total - term2cat.total) //# of term2 not category of interest in term1 not category of interest (e.g. # of not male in not white), represents R2C2 in 2X2 contingency table
 
-				// // Backwards compatitable logic for old barchart code for older mass session JSONs
-				// const seriesId = typeof row.seriesId == 'string' ? row.seriesId : row.seriesId.toString()
-				// const dataId = typeof term2cat.dataId == 'string' ? term2cat.dataId : term2cat.dataId.toString()
 				const seriesId = row.seriesId
 				const dataId = term2cat.dataId
 				input.push({
@@ -545,8 +539,7 @@ async function computePvalues(data, fisher_limit = 20, individual_fisher_limit =
 		}
 
 		// run Fisher's exact test/Chi-squared test
-		const resultWithPvalue = await run_rust('fisher', JSON.stringify({ fisher_limit, individual_fisher_limit, input }))
-
+		const resultWithPvalue = await run_rust('fisher', JSON.stringify({ input }))
 		/*
 		parse the test result into pvalueTable array:
 		[{
@@ -556,6 +549,7 @@ async function computePvalues(data, fisher_limit = 20, individual_fisher_limit =
 				pvalue: ...,
 				tableValues: {R1C1, R2C1, R1C2, R2C2},
 				isChi
+				skipped
 			]
 		}, ...]
 		*/
@@ -567,26 +561,9 @@ async function computePvalues(data, fisher_limit = 20, individual_fisher_limit =
 			const R2C1 = test.n2
 			const R1C2 = test.n3
 			const R2C2 = test.n4
-			const pvalue = test.p_value
-			const isChi =
-				R1C1 > individual_fisher_limit &&
-				R2C1 > individual_fisher_limit &&
-				R1C2 > individual_fisher_limit &&
-				R2C2 > individual_fisher_limit &&
-				R1C1 + R2C1 + R1C2 + R2C2 > fisher_limit
-			/*
-				The association test may have extremely low power if a group (row sum or column sum of 2x2 table) is too small compared to 
-				the total participants, regardless of the value in each cell. Including too many non-powerful tests in this portal may affect
-				the detection of ‘true’ association in multiple testing. So, the total participant is less than 2000 and if either of the 
-				4 groups is <3% of all participants, the test is skipped.
-				*/
-			const totalP = R1C1 + R2C1 + R1C2 + R2C2
-			const skipped =
-				totalP < 2000 &&
-				((R1C1 + R2C1) / totalP < 0.03 ||
-					(R1C1 + R1C2) / totalP < 0.03 ||
-					(R2C1 + R2C2) / totalP < 0.03 ||
-					(R1C2 + R2C2) / totalP < 0.03)
+			const pvalue = test.p_value //null for cases with low sample sizes
+			const isChi = test.fisher_chisq === 'chisq'
+			const skipped = pvalue === null
 
 			const t1c = pvalueTable.find(t1c => t1c.term1comparison === seriesId)
 			if (!t1c) {
