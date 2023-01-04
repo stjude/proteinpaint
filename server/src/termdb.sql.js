@@ -362,49 +362,52 @@ opts{} options to tweak the query, see const default_opts = below
 		const rows = q.ds.cohort.db.connection.prepare(sql).all(values)
 		const smap = new Map()
 		for (const r of rows) {
-			if (!smap.has(r.sample)) smap.set(r.sample, { sample: r.sample })
+			if (!smap.has(r.sample)) smap.set(r.sample, { rows: [] })
 			const s = smap.get(r.sample)
-			s[`key${r.termNum}`] = r.key
-			s[`val${r.termNum}`] = r.value
+			// NOTE: condition terms may have more than one data row per sample,
+			// so must use an array to capture all possible term key-values for each sample
+			s.rows.push({ sample: r.sample, [`key${r.termNum}`]: r.key, [`val${r.termNum}`]: r.value })
 		}
 		const lst = []
 		const scounts = new Map()
-		for (const s of smap.values()) {
-			// series term (term1)
-			// discard sample if not annotated for term1
-			if (!('key1' in s)) continue
+		for (const v of smap.values()) {
+			for (const s of v.rows) {
+				// series term (term1)
+				// discard sample if not annotated for term1
+				if (!('key1' in s)) continue
 
-			// chart term (term0)
-			if (q.term0_q) {
-				// term0 is defined, discard sample if not annotated for term0
-				if (!('key0' in s)) continue
-			} else {
-				// term0 is not defined, supply empty string default
-				s.key0 = ''
-				s.val0 = ''
-			}
-
-			// overlay term (term2)
-			if (q.term2_q) {
-				// term2 is defined, discard sample if not annotated for term2
-				if (!('key2' in s)) continue
-			} else {
-				// term2 is not defined, supply empty string default
-				s.key2 = ''
-				s.val2 = ''
-			}
-
-			if (!opts.groupby) {
-				lst.push(s)
-			} else {
-				// assume that the groupby option is used to get samplecounts
-				if (!scounts.has(s[opts.groupby])) {
-					const item = Object.assign({ samplecount: 0 }, s)
-					lst.push(item)
-					scounts.set(s[opts.groupby], item)
+				// chart term (term0)
+				if (q.term0_q) {
+					// term0 is defined, discard sample if not annotated for term0
+					if (!('key0' in s)) continue
+				} else {
+					// term0 is not defined, supply empty string default
+					s.key0 = ''
+					s.val0 = ''
 				}
-				const l = scounts.get(s[opts.groupby])
-				l.samplecount++
+
+				// overlay term (term2)
+				if (q.term2_q) {
+					// term2 is defined, discard sample if not annotated for term2
+					if (!('key2' in s)) continue
+				} else {
+					// term2 is not defined, supply empty string default
+					s.key2 = ''
+					s.val2 = ''
+				}
+
+				if (!opts.groupby) {
+					lst.push(s)
+				} else {
+					// assume that the groupby option is used to get samplecounts
+					if (!scounts.has(s[opts.groupby])) {
+						const item = Object.assign({ samplecount: 0 }, s)
+						lst.push(item)
+						scounts.set(s[opts.groupby], item)
+					}
+					const l = scounts.get(s[opts.groupby])
+					l.samplecount++
+				}
 			}
 		}
 		return !opts.withCTEs ? lst : { lst, CTE0, CTE1, CTE2, filter }
