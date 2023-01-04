@@ -309,7 +309,7 @@ export function skewer_make(tk, block) {
 		.attr('stroke', 'none')
 		.attr('r', d => d.maxradius + 1)
 		.attr('cy', d => (tk.aboveprotein ? -1 : 1) * d.maxradius)
-		.attr('transform', d => 'scale(' + (d.showmode == modefold ? 1 : 0) + ')')
+		.attr('transform', d => `scale(${d.showmode == modefold ? '1,1' : '0.01,0,01'})`) // "scale(0)" will not make the circle disappear on safari
 		.on('mouseover', (event, d) => {
 			const abp = tk.aboveprotein
 			let cumh = 0
@@ -647,7 +647,7 @@ export function unfold_glyph(newlst, tk, block) {
 			.selectAll('.sja_aa_ssk_text')
 			.attr('transform', 'scale(1)')
 			.attr('y', ((abp ? 1 : -1) * tk.skewer.stem1) / 2)
-		set.selectAll('.sja_aa_skkick').attr('transform', 'scale(0)')
+		set.selectAll('.sja_aa_skkick').attr('transform', 'scale(0.01,0.01)') // safari fix
 		let counter = 0
 		set
 			.selectAll('.sja_aa_stem')
