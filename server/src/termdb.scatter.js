@@ -4,7 +4,7 @@ const path = require('path')
 const utils = require('./utils')
 const serverconfig = require('./serverconfig')
 const d3scale = require('d3-scale')
-const schemeCategory10 = require('d3-scale-chromatic').schemeCategory10
+import { schemeCategory20 } from '#shared/common'
 const { mclass } = require('#shared/common')
 const { rgb } = require('d3-color')
 
@@ -183,7 +183,7 @@ async function colorAndShapeSamples(refSamples, cohortSamples, data, q) {
 		samples.push(sample)
 	}
 
-	const k2c = d3scale.scaleOrdinal(schemeCategory10)
+	const k2c = d3scale.scaleOrdinal(schemeCategory20)
 	for (const [category, value] of colorMap) {
 		const tvalue = q.colorTW.term.values?.[category]
 		if (tvalue?.color) value.color = tvalue.color
@@ -213,12 +213,19 @@ async function colorAndShapeSamples(refSamples, cohortSamples, data, q) {
 
 function order(map, tw, refs) {
 	if (!tw) return Object.fromEntries(map)
+	let entries = []
 
-	if (!refs?.byTermId[tw.term.id]?.bins) return Object.fromEntries(map)
-	const bins = refs.byTermId[tw.term.id].bins
-	const entries = []
-	for (const bin of bins) if (map.get(bin.name)) entries.push([bin.name, map.get(bin.name)])
-	entries.push(['Ref', map.get('Ref')])
+	if (!refs?.byTermId[tw.term.id]?.bins) {
+		entries = [...map.entries()]
+		entries.sort((a, b) => {
+			if (a[1].sampleCount > b[1].sampleCount) return -1
+			else return 1
+		})
+	} else {
+		const bins = refs.byTermId[tw.term.id].bins
+		for (const bin of bins) if (map.get(bin.name)) entries.push([bin.name, map.get(bin.name)])
+		entries.push(['Ref', map.get('Ref')])
+	}
 	return Object.fromEntries(entries)
 }
 

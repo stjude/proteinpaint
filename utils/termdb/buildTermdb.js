@@ -3,7 +3,7 @@ const exec = require('child_process').execSync
 const path = require('path')
 const { parseDictionary } = require('../../client/src/databrowser/dictionary.parse')
 const initBinConfig = require('../../server/shared/termdb.initbinconfig')
-const schemeCategory10 = require('d3-scale-chromatic').schemeCategory10
+import { schemeCategory20 } from '../../server/shared/common'
 const d3scale = require('d3-scale')
 
 /*
@@ -118,7 +118,7 @@ const sampleCollect = {
 	name2id: new Map(), // k: sample name, v: integer id
 	id: 1 // sample id enumerator
 }
-const k2c = d3scale.scaleOrdinal(schemeCategory10)
+const k2c = d3scale.scaleOrdinal(schemeCategory20)
 
 //////////////////////////////////// main sequence
 
