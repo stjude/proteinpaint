@@ -373,6 +373,8 @@ opts{} options to tweak the query, see const default_opts = below
 		const lst = []
 		const scounts = new Map()
 		for (const v of smap.values()) {
+			// series term (term1)
+			// discard sample if not annotated for term1
 			if (!('key1' in v)) continue
 
 			// chart term (term0)
