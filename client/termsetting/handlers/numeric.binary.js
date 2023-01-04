@@ -69,26 +69,26 @@ export function getHandler(self) {
 			self.dom.cutoff_div = self.dom.bins_div.append('div').style('margin', '10px')
 			renderCuttoffInput(self)
 
-			// render bin equations
-			const ranges_div = self.dom.bins_div.append('div').style('display', 'inline-block')
-			ranges_div
+			self.dom.bins_table = self.dom.bins_div
 				.append('div')
-				.style('padding', '5px')
-				.style('padding-left', '15px')
-				.style('font-size', '.8em')
+				.append('table')
 				.style('color', 'rgb(136, 136, 136)')
-				.html('Range')
-			self.dom.customBinRangeTd = ranges_div.append('div').style('padding', '5px')
+				.style('width', '100%')
+			const thead = self.dom.bins_table
+				.append('thead')
+				.append('tr')
+				.style('text-align', 'left')
 
-			// render bin labels
-			const labels_div = self.dom.bins_div.append('div').style('display', 'inline-block')
-			labels_div
-				.append('div')
-				.style('padding', '5px 8px')
-				.style('font-size', '.8em')
-				.style('color', 'rgb(136, 136, 136)')
-				.html('Bin labels')
-			self.dom.customBinLabelDiv = labels_div.append('div').style('padding', '5px')
+			thead
+				.append('th')
+				.style('font-weight', 'normal')
+				.html('Range')
+			thead
+				.append('th')
+				.style('font-weight', 'normal')
+				.html('Bin Label')
+			self.dom.customBintbody = self.dom.bins_table.append('tbody').style('vertical-align', 'top')
+
 			renderBoundaryInputDivs(self, self.q.lst)
 
 			const btndiv = div.append('div').style('padding', '3px 10px')
@@ -119,7 +119,7 @@ export function getHandler(self) {
 					// if it must be reset at median, the logic must be changned
 					delete self.q
 					delete self.numqByTermIdModeType[self.term.id]
-					showEditMenu(self, self.dom.num_holder)
+					getHandler(self).showEditMenu(self.dom.num_holder)
 				})
 		}
 	}
@@ -224,6 +224,7 @@ async function renderCuttoffInput(self) {
 		self.q.lst[1].start = cutoff
 		self.q.lst.forEach(bin => {
 			bin.label = get_bin_label(bin, self.q)
+			bin.range = get_bin_range_equation(bin, self.q)
 		})
 		setDensityPlot(self)
 		renderBoundaryInputDivs(self, self.q.lst)
@@ -252,7 +253,7 @@ async function renderCuttoffInput(self) {
 function processCustomBinInputs(self) {
 	const startinclusive = self.dom.boundaryInput.property('value') == 'startinclusive'
 	const stopinclusive = self.dom.boundaryInput.property('value') == 'stopinclusive'
-	const inputDivs = self.dom.customBinLabelDiv.node().querySelectorAll('div')
+	const inputDivs = self.dom.customBintbody.node().querySelectorAll('input')
 	let prevBin
 	const val = self.q.lst[0].stop // should not get value from dom.customBinBoundaryInput as value can be percentile
 
@@ -274,7 +275,7 @@ function processCustomBinInputs(self) {
 	// assign bin labels
 	bins.forEach((bin, i) => {
 		// may use user assigned labels if not empty string
-		const label = inputDivs[i].querySelector('input').value
+		const label = inputDivs[i].value
 		bin.label = label ? label : get_bin_label(bin, self.q)
 	})
 

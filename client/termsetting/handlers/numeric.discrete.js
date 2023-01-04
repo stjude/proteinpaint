@@ -273,6 +273,7 @@ export function renderBoundaryInclusionInput(self) {
 				self.q.mode == 'binary'
 					? self.numqByTermIdModeType[self.term.id].binary
 					: self.numqByTermIdModeType[self.term.id].discrete[self.q.type]
+			c.lst = self.q.lst
 			if (c.type == 'regular-bin') {
 				setBinsInclusion(c)
 			} else {
@@ -653,7 +654,7 @@ export function renderBoundaryInputDivs(self, data) {
 			.attr('type', 'text')
 			.property('value', d.label)
 			.on('change', function() {
-				self.q.lst[i].label = this.value
+				data[i].label = this.value
 			})
 	}
 	const tr = self.dom.customBintbody.append('tr').attr('name', 'bin')
