@@ -362,40 +362,59 @@ opts{} options to tweak the query, see const default_opts = below
 		const rows = q.ds.cohort.db.connection.prepare(sql).all(values)
 		const smap = new Map()
 		for (const r of rows) {
-			if (!smap.has(r.sample)) smap.set(r.sample, { rows: [] })
+			if (!smap.has(r.sample)) smap.set(r.sample, { sample: r.sample })
 			const s = smap.get(r.sample)
 			// NOTE: condition terms may have more than one data row per sample,
 			// so must use an array to capture all possible term key-values for each sample
-			s.rows.push({ sample: r.sample, [`key${r.termNum}`]: r.key, [`val${r.termNum}`]: r.value })
+			const k = `key${r.termNum}`
+			if (!(k in s)) s[k] = []
+			s[k].push({ key: r.key, val: r.value })
 		}
 		const lst = []
 		const scounts = new Map()
 		for (const v of smap.values()) {
+			if (!('key1' in v)) continue
+
+			// chart term (term0)
+			if (q.term0_q) {
+				// term0 is defined, discard sample if not annotated for term0
+				if (!('key0' in v)) continue
+			} else {
+				// term0 is not defined, supply empty string default
+				v.key0 = [{ key: '', val: '' }]
+			}
+
+			// overlay term (term2)
+			if (q.term2_q) {
+				// term2 is defined, discard sample if not annotated for term2
+				if (!('key2' in v)) continue
+			} else {
+				// term2 is not defined, supply empty string default
+				v.key2 = [{ key: '', val: '' }]
+			}
+
+			v.rows = []
+			// create a separate data row for each combination of unique term annotations
+			// NOTE: when there is only 1 unique annotated value by term for each sample,
+			// then only one row will be created. This will not be the case for condition terms
+			// where a sample is annotated by multiple grades or conditions.
+			for (const v0 of v.key0) {
+				for (const v1 of v.key1) {
+					for (const v2 of v.key2) {
+						v.rows.push({
+							sample: v.sample,
+							key0: v0.key,
+							val0: v0.val,
+							key1: v1.key,
+							val1: v1.val,
+							key2: v2.key,
+							val2: v2.val
+						})
+					}
+				}
+			}
+
 			for (const s of v.rows) {
-				// series term (term1)
-				// discard sample if not annotated for term1
-				if (!('key1' in s)) continue
-
-				// chart term (term0)
-				if (q.term0_q) {
-					// term0 is defined, discard sample if not annotated for term0
-					if (!('key0' in s)) continue
-				} else {
-					// term0 is not defined, supply empty string default
-					s.key0 = ''
-					s.val0 = ''
-				}
-
-				// overlay term (term2)
-				if (q.term2_q) {
-					// term2 is defined, discard sample if not annotated for term2
-					if (!('key2' in s)) continue
-				} else {
-					// term2 is not defined, supply empty string default
-					s.key2 = ''
-					s.val2 = ''
-				}
-
 				if (!opts.groupby) {
 					lst.push(s)
 				} else {

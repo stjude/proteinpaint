@@ -475,7 +475,7 @@ function setRenderers(self) {
 		const rows = []
 		const result = await self.app.vocabApi.getCohortsData()
 
-		if ('error' in result) alert(result.error)
+		if ('error' in result) throw result.error
 		for (const feature of result.features) rows.push([{ value: feature.name }])
 		for (const cohort of result.cohorts) {
 			columns.push({ label: `${cohort.name} (${cohort.abbrev})` })
