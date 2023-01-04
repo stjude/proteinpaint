@@ -684,6 +684,6 @@ function renderButtons(self) {
 		.on('click', () => {
 			delete self.q
 			delete self.numqByTermIdModeType[self.term.id]
-			self.handler.showEditMenu(self.dom.num_holder)
+			showBinsMenu(self, self.dom.num_holder)
 		})
 }
