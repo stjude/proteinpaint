@@ -560,17 +560,7 @@ class Barchart {
 				items: [{ text: `* p-value < (0.05 / ${testNum} tests)` }]
 			})
 		}
-		//console.log("what is this", this)
-		// if (this.chartsData.boxplot) {
-		// 	const median = this.chartsData.boxplot.p50
-		// 	const mean = this.chartsData.boxplot.mean
-		// 	const SD = this.chartsData.boxplot.sd
-		// 	const totalN = Object.values(this.totalsByDataId).reduce((a, b) => a + b, 0)
-		// 	legendGrps.push({
-		// 		name: `<span style="${headingStyle}">Summary Statistics</span>`,
-		// 		items: [{ text: `sample size=${totalN}, median=${median.toFixed(2)}, SD=${SD.toFixed(2)}` }]
-		// 	})
-		// }
+
 		return legendGrps
 	}
 
