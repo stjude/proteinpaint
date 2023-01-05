@@ -15,9 +15,9 @@
 // }
 
 /*
-    The association test may have extremely low power if a group (row sum or column sum of 2x2 table) is too small compared to 
+    The association test may have extremely low power if a group (row sum or column sum of 2x2 table) is too small compared to
     the total participants, regardless of the value in each cell. Including too many non-powerful tests in this portal may affect
-    the detection of ‘true’ association in multiple testing. So, the total participant is less than 2000 and if either of the 
+    the detection of ‘true’ association in multiple testing. So, the total participant is less than 2000 and if either of the
     4 groups is <3% of all participants, the sample size is too low and the test is skipped (has a pvalue of null)
 */
 
@@ -52,6 +52,10 @@
 
 // cd ~/proteinpaint/rust && cargo build --release && json='{"fdr":true,"input":[{"index":0,"n1":514,"n2":626,"n3":45,"n4":106},{"index":1,"n1":11,"n2":948,"n3":364,"n4":292},{"index":2,"n1":129,"n2":951,"n3":531,"n4":268},{"index":3,"n1":677,"n2":40,"n3":11,"n4":837},{"index":4,"n1":947,"n2":937,"n3":245,"n4":817},{"index":5,"n1":589,"n2":889,"n3":934,"n4":400},{"index":6,"n1":5,"n2":119,"n3":278,"n4":641},{"index":7,"n1":873,"n2":113,"n3":771,"n4":109},{"index":8,"n1":495,"n2":69,"n3":759,"n4":884},{"index":9,"n1":266,"n2":192,"n3":686,"n4":761},{"index":10,"n1":484,"n2":814,"n3":754,"n4":521},{"index":11,"n1":50,"n2":615,"n3":357,"n4":470},{"index":12,"n1":416,"n2":109,"n3":472,"n4":462},{"index":13,"n1":535,"n2":935,"n3":969,"n4":35},{"index":14,"n1":605,"n2":667,"n3":553,"n4":359},{"index":15,"n1":483,"n2":719,"n3":879,"n4":254},{"index":16,"n1":940,"n2":32,"n3":259,"n4":373},{"index":17,"n1":228,"n2":565,"n3":154,"n4":155},{"index":18,"n1":23,"n2":57,"n3":232,"n4":238},{"index":19,"n1":356,"n2":39,"n3":771,"n4":887},{"index":20,"n1":481,"n2":307,"n3":776,"n4":952},{"index":21,"n1":463,"n2":202,"n3":57,"n4":218},{"index":22,"n1":658,"n2":68,"n3":431,"n4":774},{"index":23,"n1":334,"n2":266,"n3":266,"n4":677},{"index":24,"n1":97,"n2":544,"n3":532,"n4":863},{"index":25,"n1":562,"n2":313,"n3":725,"n4":574}]}' && time echo "$json" | target/release/fisher
 
+// cd ~/proteinpaint/rust && cargo build --release && json='{"fdr":true,"input":[{"index":0,"n1":214,"n2":2057,"n3":134,"n4":1954},{"index":1,"n1":134,"n2":1954,"n3":214,"n4":2057},{"index":2,"n1":1863,"n2":225,"n3":1935,"n4":336},{"index":3,"n1":1935,"n2":336,"n3":1863,"n4":225},{"index":4,"n1":106,"n2":2165,"n3":74,"n4":2014},{"index":5,"n1":74,"n2":2014,"n3":106,"n4":2165},{"index":6,"n1":1,"n2":987,"n3":3,"n4":897},{"index":7,"n1":3,"n2":748,"n3":4,"n4":977}]}' && time echo "$json" | target/release/fisher
+
+// cd ~/proteinpaint/rust && cargo build --release && json='{"fdr":true,"input":[{"index":0,"n1":214,"n2":2057,"n3":134,"n4":1954},{"index":1,"n1":134,"n2":1954,"n3":214,"n4":2057},{"index":2,"n1":1863,"n2":225,"n3":1935,"n4":336},{"index":3,"n1":1935,"n2":336,"n3":1863,"n4":225},{"index":4,"n1":106,"n2":2165,"n3":74,"n4":2014},{"index":5,"n1":74,"n2":2014,"n3":106,"n4":2165}]}' && time echo "$json" | target/release/fisher
+
 // Example of json input missing the fdr flag
 
 // cd ~/proteinpaint/rust && cargo build --release && json='{"input":[{"index":0,"n1":514,"n2":626,"n3":45,"n4":106},{"index":1,"n1":11,"n2":948,"n3":364,"n4":292},{"index":2,"n1":129,"n2":951,"n3":531,"n4":268},{"index":3,"n1":677,"n2":40,"n3":11,"n4":837},{"index":4,"n1":947,"n2":937,"n3":245,"n4":817},{"index":5,"n1":589,"n2":889,"n3":934,"n4":400},{"index":6,"n1":5,"n2":119,"n3":278,"n4":641},{"index":7,"n1":873,"n2":113,"n3":771,"n4":109},{"index":8,"n1":495,"n2":69,"n3":759,"n4":884},{"index":9,"n1":266,"n2":192,"n3":686,"n4":761},{"index":10,"n1":484,"n2":814,"n3":754,"n4":521},{"index":11,"n1":50,"n2":615,"n3":357,"n4":470},{"index":12,"n1":416,"n2":109,"n3":472,"n4":462},{"index":13,"n1":535,"n2":935,"n3":969,"n4":35},{"index":14,"n1":605,"n2":667,"n3":553,"n4":359},{"index":15,"n1":483,"n2":719,"n3":879,"n4":254},{"index":16,"n1":940,"n2":32,"n3":259,"n4":373},{"index":17,"n1":228,"n2":565,"n3":154,"n4":155},{"index":18,"n1":23,"n2":57,"n3":232,"n4":238},{"index":19,"n1":356,"n2":39,"n3":771,"n4":887},{"index":20,"n1":481,"n2":307,"n3":776,"n4":952},{"index":21,"n1":463,"n2":202,"n3":57,"n4":218},{"index":22,"n1":658,"n2":68,"n3":431,"n4":774},{"index":23,"n1":334,"n2":266,"n3":266,"n4":677},{"index":24,"n1":97,"n2":544,"n3":532,"n4":863},{"index":25,"n1":562,"n2":313,"n3":725,"n4":574}]}' && time echo "$json" | target/release/fisher
@@ -72,6 +76,21 @@ struct PValueIndexes {
     n4: u32,
     p_value: Option<f64>,
     fisher_chisq: String,
+}
+
+impl PValueIndexes {
+    fn abs_p_value(&self) -> f64 {
+        let final_p_val;
+        match self.p_value {
+            Some(p_val) => {
+                final_p_val = p_val;
+            }
+            None => {
+                final_p_val = 0.0;
+            }
+        }
+        final_p_val
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -222,22 +241,25 @@ fn calculate_fisher_chisq_test(variants: &JsonValue, individual_fisher_limit: u3
 fn benjamini_hochberg_correction(mut p_values_list: Vec<PValueIndexes>, num_of_tests: f64) {
     // Sorting p-values in ascending order
     p_values_list.as_mut_slice().sort_by(|a, b| {
-        (a.p_value)
-            .partial_cmp(&b.p_value)
+        (a.abs_p_value())
+            .partial_cmp(&b.abs_p_value())
             .unwrap_or(Ordering::Equal)
     });
 
     //println!("p_values_list:{:?}", p_values_list);
 
+    //println!("num_of_tests:{}", num_of_tests);
     let mut adjusted_p_values = Vec::<AdjustedPValueIndexes>::new();
     let mut old_p_value: f64 = 0.0;
+    let mut rank: f64 = num_of_tests;
     for j in 0..p_values_list.len() {
         let i = p_values_list.len() - j - 1;
 
         let mut adjusted_p_value: Option<f64> = None;
         match p_values_list[i].p_value {
             Some(p_val) => {
-                let mut adjusted_p_val: f64 = p_val * (num_of_tests / (i as f64 + 1.0)); // adjusted p-value = original_p_value * (N/rank)
+                //println!("p_val:{}", p_val);
+                let mut adjusted_p_val: f64 = p_val * (num_of_tests / rank); // adjusted p-value = original_p_value * (N/rank)
                 if adjusted_p_val > 1.0 {
                     // p_value should NEVER be greater than 1
                     adjusted_p_val = 1.0;
@@ -250,7 +272,9 @@ fn benjamini_hochberg_correction(mut p_values_list: Vec<PValueIndexes>, num_of_t
                     }
                 }
                 old_p_value = adjusted_p_val;
+                //println!("adjusted_p_value:{}", adjusted_p_val);
                 adjusted_p_value = Some(adjusted_p_val);
+                rank -= 1.0;
             }
             None => {}
         }
