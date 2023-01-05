@@ -15,7 +15,9 @@
 // }
 
 /*
-    The association test may have extremely low power if a group (row sum or column sum of 2x2 table) is too small compared to
+    Suggested by Qian: 
+    1. Using <5 in each cell is a conventional rule of thumb for choosing chi-square or Fisher’s exact test.
+    2. The association test may have extremely low power if a group (row sum or column sum of 2x2 table) is too small compared to
     the total participants, regardless of the value in each cell. Including too many non-powerful tests in this portal may affect
     the detection of ‘true’ association in multiple testing. So, the total participant is less than 2000 and if either of the
     4 groups is <3% of all participants, the sample size is too low and the test is skipped (has a pvalue of null)
