@@ -203,7 +203,7 @@ tape('test #5', async function(test) {
 	test.end()
 })
 
-//chi-square test with FDR
+//chi-square test with FDR, no skipped tests
 tape('test #6', async function(test) {
 	const input = [
 		{ index: 0, n1: 605, n2: 2050, n3: 503, n4: 1895 },
@@ -302,6 +302,37 @@ tape('test #6', async function(test) {
 				fisher_chisq: 'chisq'
 			}
 		]) + '\n',
+		'should match expected output'
+	)
+	test.end()
+})
+
+//chi-square test with FDR, have skipped tests
+tape('test #7', async function(test) {
+	const input = [
+		{ index: 0, n1: 214, n2: 2057, n3: 134, n4: 1954 },
+		{ index: 1, n1: 134, n2: 1954, n3: 214, n4: 2057 },
+		{ index: 2, n1: 1863, n2: 225, n3: 1935, n4: 336 },
+		{ index: 3, n1: 1935, n2: 336, n3: 1863, n4: 225 },
+		{ index: 4, n1: 106, n2: 2165, n3: 74, n4: 2014 },
+		{ index: 5, n1: 74, n2: 2014, n3: 106, n4: 2165 },
+		{ index: 6, n1: 1, n2: 987, n3: 3, n4: 897 },
+		{ index: 7, n1: 3, n2: 748, n3: 4, n4: 977 }
+	]
+	console.log(JSON.stringify({ fdr: true, input }))
+	const output = await run_rust('fisher', JSON.stringify({ fdr: true, input }))
+
+	test.deepEqual(
+		output,
+		'[{"index":0,"n1":214,"n2":2057,"n3":134,"n4":1954,"p_value":0.00025477886330427246,"adjusted_p_value":0.0003821682949564087,"fisher_chisq":"chisq"},' +
+			'{"index":1,"n1":134,"n2":1954,"n3":214,"n4":2057,"p_value":0.00025477886330427246,"adjusted_p_value":0.0003821682949564087,"fisher_chisq":"chisq"},' +
+			'{"index":2,"n1":1863,"n2":225,"n3":1935,"n4":336,"p_value":0.00007531551396222635,"adjusted_p_value":0.00022594654188667906,"fisher_chisq":"chisq"},' +
+			'{"index":3,"n1":1935,"n2":336,"n3":1863,"n4":225,"p_value":0.00007531551396222635,"adjusted_p_value":0.00022594654188667906,"fisher_chisq":"chisq"},' +
+			'{"index":4,"n1":106,"n2":2165,"n3":74,"n4":2014,"p_value":0.06255305606889872,"adjusted_p_value":0.06255305606889872,"fisher_chisq":"chisq"},' +
+			'{"index":5,"n1":74,"n2":2014,"n3":106,"n4":2165,"p_value":0.06255305606889872,"adjusted_p_value":0.06255305606889872,"fisher_chisq":"chisq"},' +
+			'{"index":6,"n1":1,"n2":987,"n3":3,"n4":897,"p_value":null,"adjusted_p_value":null,"fisher_chisq":"NA"},' +
+			'{"index":7,"n1":3,"n2":748,"n3":4,"n4":977,"p_value":null,"adjusted_p_value":null,"fisher_chisq":"NA"}]' +
+			'\n',
 		'should match expected output'
 	)
 	test.end()
