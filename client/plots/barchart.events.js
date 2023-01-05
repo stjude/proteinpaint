@@ -199,7 +199,9 @@ export default function getHandlers(self) {
 		yAxis: {
 			text: () => {
 				if (s.orientation == 'vertical') {
-					return s.unit == 'pct' ? '% of patients' : '# of patients'
+					return s.unit == 'pct'
+						? '% of patients'
+						: `# of patients ${self.config.term0 ? '' : '(n=' + self.chartsData.charts[0].total + ')'}`
 				} else {
 					const term = self.config.term
 					return term.q.bar_by_children
@@ -220,16 +222,21 @@ export default function getHandlers(self) {
 			text: () => {
 				if (s.orientation == 'vertical') {
 					const term = self.config.term
-					const q1 = term.q
-					return term.type == 'condition' && q1.bar_by_grade && q1.value_by_max_grade
+					return term.q.bar_by_children
+						? 'Sub-condition'
+						: term.q.value_by_max_grade
 						? 'Maximum grade'
-						: term.type == 'condition' && q1.bar_by_grade && q1.value_by_most_recent
-						? 'Most recent grades'
+						: term.q.value_by_most_recent
+						? 'Most recent grade'
+						: term.q.value_by_computable_grade
+						? 'Any grade'
 						: term.type == 'categorical' || !term.unit
 						? ''
-						: term.unit // term.name[0].toUpperCase() + term.name.slice(1)
+						: term.unit
 				} else {
-					return s.unit == 'pct' ? '% of patients' : '# of patients'
+					return s.unit == 'pct'
+						? '% of patients'
+						: `# of patients ${self.config.term0 ? '' : '(n=' + self.chartsData.charts[0].total + ')'}`
 				}
 			}
 		}
