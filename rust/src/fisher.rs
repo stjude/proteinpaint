@@ -74,12 +74,13 @@ struct PValueIndexes {
     n2: u32,
     n3: u32,
     n4: u32,
-    p_value: Option<f64>,
+    p_value: Option<f64>, // The "option" keyword tells the compiler that this field can possibly be "None"
     fisher_chisq: String,
 }
 
 impl PValueIndexes {
     fn abs_p_value(&self) -> f64 {
+        // This function is specific to this struct PValueIndexes
         let final_p_val;
         match self.p_value {
             Some(p_val) => {
@@ -100,8 +101,8 @@ struct AdjustedPValueIndexes {
     n2: u32,
     n3: u32,
     n4: u32,
-    p_value: Option<f64>,
-    adjusted_p_value: Option<f64>,
+    p_value: Option<f64>, // The "option" keyword tells the compiler that this field can possibly be "None"
+    adjusted_p_value: Option<f64>, // The "option" keyword tells the compiler that this field can possibly be "None"
     fisher_chisq: String,
 }
 
