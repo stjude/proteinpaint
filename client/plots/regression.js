@@ -121,7 +121,7 @@ export async function getPlotConfig(opts, app) {
 		*/
 		const plot = app.opts.state.plots.find(i => i.chartType == 'regression')
 		if (!plot) throw 'regression plot missing in state'
-		await fillTermWrapper(opts.outcome, app.vocabApi, get_defaultQ4fillTW(plot.regressionType))
+		await fillTermWrapper(opts.outcome, app.vocabApi, get_defaultQ4fillTW(plot.regressionType, 'outcome'))
 	}
 
 	const id = 'id' in opts ? opts.id : `_REGRESSION_${_ID_++}`
@@ -144,21 +144,20 @@ export async function getPlotConfig(opts, app) {
 	return copyMerge(config, opts)
 }
 
-export function get_defaultQ4fillTW(regressionType) {
-	// default q{} for numeric term
-	// will apply to both outcome and independent terms
-	const numericQ = { mode: 'continuous' }
+export function get_defaultQ4fillTW(regressionType, useCase = '') {
+	const defaultQ = {}
 
-	// default q{} for condition term
+	// numeric term
+	defaultQ['numeric.toggle'] =
+		regressionType == 'logistic' && useCase == 'outcome' ? { mode: 'binary' } : { mode: 'continuous' }
+
+	// condition term
 	// will only apply to outcome term because condition
 	// term cannot be an independent term
 	// note: for mode='cox', do not preset timeScale to 'time' here because
 	// that can cause copyMerge to overwrite saved setting. fillTW will
 	// auto fill missing value
-	const conditionQ = regressionType == 'cox' ? { mode: 'cox' } : { mode: 'binary' }
+	defaultQ.condition = regressionType == 'cox' ? { mode: 'cox' } : { mode: 'binary' }
 
-	return {
-		'numeric.toggle': numericQ,
-		condition: conditionQ
-	}
+	return defaultQ
 }
