@@ -121,7 +121,7 @@ export async function getPlotConfig(opts, app) {
 		*/
 		const plot = app.opts.state.plots.find(i => i.chartType == 'regression')
 		if (!plot) throw 'regression plot missing in state'
-		await fillTermWrapper(opts.outcome, app.vocabApi, get_defaultQ4fillTW(plot.regressionType, opts.outcome, 'outcome'))
+		await fillTermWrapper(opts.outcome, app.vocabApi, get_defaultQ4fillTW(plot.regressionType, 'outcome'))
 	}
 
 	const id = 'id' in opts ? opts.id : `_REGRESSION_${_ID_++}`
@@ -144,16 +144,14 @@ export async function getPlotConfig(opts, app) {
 	return copyMerge(config, opts)
 }
 
-export function get_defaultQ4fillTW(regressionType, tw = null, useCase = '') {
+export function get_defaultQ4fillTW(regressionType, useCase = '') {
 	const defaultQ = {}
 
-	if (useCase != 'outcome' || regressionType != 'logistic' || tw.q?.mode != 'binary') {
-		// default q{} for numeric term
-		// will apply to both outcome and independent terms
-		defaultQ['numeric.toggle'] = { mode: 'continuous' }
-	}
+	// numeric term
+	defaultQ['numeric.toggle'] =
+		regressionType == 'logistic' && useCase == 'outcome' ? { mode: 'binary' } : { mode: 'continuous' }
 
-	// default q{} for condition term
+	// condition term
 	// will only apply to outcome term because condition
 	// term cannot be an independent term
 	// note: for mode='cox', do not preset timeScale to 'time' here because
