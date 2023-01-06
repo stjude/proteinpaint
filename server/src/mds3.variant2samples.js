@@ -109,6 +109,8 @@ q{}
 	read-only gdc filter
 .filterObj
 	actual pp filter
+.useIntegerSampleId
+	if true, return integer sample id
 
 ****** mutation/genomic filters; one of below must be provided
 
@@ -153,7 +155,9 @@ async function variant2samples_getresult(q, ds) {
 
 	if (q.get == ds.variant2samples.type_samples) {
 		// return list of samples
-		if (ds?.cohort?.termdb?.q?.id2sampleName) {
+		if (!q.useIntegerSampleId && ds?.cohort?.termdb?.q?.id2sampleName) {
+			// dataset can map integer to string sample name, and query does not ask to keep integer id, thus convert to string id
+			// this is default behavior for client display
 			mutatedSamples.forEach(i => (i.sample_id = ds.cohort.termdb.q.id2sampleName(i.sample_id)))
 		}
 		return mutatedSamples
@@ -227,14 +231,17 @@ async function queryMutatedSamples(q, ds) {
 		return out
 	}
 
-	// no genomic parameters. can only do sql query to get all annotated samples
+	///////////////////////////////
+	// no genomic parameters!
+	// this should be from matrix query
+	// do sql query to get all annotated samples
 	if (!ds?.cohort?.termdb) throw 'unable to do sql query: .cohort.termdb missing for ds'
 	const q2 = {
 		ds,
 		filter: q.filterObj
 	}
 	const out = await getSampleData_dictionaryTerms_termdb(q2, q.twLst)
-	// quick fix to reshape result data TODO somehow the samples are not aligning in resulting matrix
+	// quick fix to reshape result data
 	const samples = []
 	for (const k in out.samples) {
 		const s = out.samples[k]

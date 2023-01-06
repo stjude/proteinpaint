@@ -229,7 +229,8 @@ async function getSampleData_dictionaryTerms_v2s(q, termWrappers) {
 	const q2 = {
 		genome: q.genome,
 		get: 'samples',
-		twLst: termWrappers
+		twLst: termWrappers,
+		useIntegerSampleId: true // ask v2s.get() to return integer sample id
 	}
 	if (q.currentGeneNames) {
 		q2.geneTwLst = []
@@ -237,7 +238,9 @@ async function getSampleData_dictionaryTerms_v2s(q, termWrappers) {
 			q2.geneTwLst.push({ term: { name: n, type: 'geneVariant' } })
 		}
 	}
+
 	const sampleLst = await q.ds.variant2samples.get(q2)
+
 	const samples = {}
 	const refs = { byTermId: {} }
 
