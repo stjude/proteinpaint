@@ -144,6 +144,11 @@ for WS in ${WORKSPACES}; do
   cd ..
 done
 
+if [[ "$UPDATED" == "" ]]; then
+  echo "No workspace package updates, exiting script with code 1"
+  exit 1
+fi
+
 ##########################
 # UPDATE THE ROOT PACKAGE
 ##########################
@@ -159,16 +164,11 @@ $handlePkg "$WSPKG"
 TAG="v$(node -p "require('./package.json').version")"
 COMMITMSG="$TAG $UPDATED"
 echo "$COMMITMSG"
-
-if [[ "$UPDATED" == "" ]]; then
-  echo "No workspace package updates, will reuse previously published versions"
-else
-  echo "committing version change ..."
-  git config --global user.email "pp@stjude.org"
-  git config --global user.name "PP CI"
-  git add --all
-  git commit -m "$COMMITMSG"
-	git tag $TAG
-	git push origin bump-npm-version
-	git push origin $TAG
-fi
+echo "committing version change ..."
+git config --global user.email "PPTeam@STJUDE.ORG"
+git config --global user.name "PPTeam CI"
+git add --all
+git commit -m "$COMMITMSG"
+git tag $TAG
+git push origin master
+git push origin $TAG
