@@ -21,7 +21,7 @@ Usage: $ node buildTermdb.js [arg=value] [more arguments] ...
 1. node.js version 16 or above. No NPM packages needed.
 2. sqlite3
 3. SQL scripts found at working directory:
-   anno-by-type.sql  indexing.sql              set-included-types.sql
+   anno-by-type.sql              set-included-types.sql
    create.sql        set-default-subcohort.sql setancestry.sql
    term2genes.msigdb.sql
 
@@ -554,8 +554,6 @@ function buildDb(annotationData, survivalData, scriptArg) {
 	runDBScript('setancestry.sql')
 
 	// index all tables
-	runDBScript('indexing.sql')
-	if (scriptArg.has('term2genes')) runDBScript('term2genes.msigdb.indexing.sql')
 
 	// populate cohort,term_id,count fields from subcohort_terms table
 	// only works for dataset without subcohort, fill blank string to cohort

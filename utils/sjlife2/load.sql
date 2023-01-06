@@ -1,3 +1,5 @@
+BEGIN TRANSACTION;
+
 .mode tab
 
 .import 'samples.idmap' sampleidmap
@@ -43,3 +45,4 @@ insert into subcohort_samples(subcohort, sample) select value, sample from annot
 .import term2subcohort subcohort_terms
 
 
+COMMIT;
