@@ -537,6 +537,8 @@ class TermdbVocab extends Vocab {
 		.datasymbol='bean'
 		.radius=5
 		.strokeWidth=0.2
+		.axisHeight=80
+		.rightMargin=50
 
 	additionalArgs{}
 		optional bag of key:value pairs
@@ -556,6 +558,7 @@ class TermdbVocab extends Vocab {
 				x0: number
 				x1: number
 				binValueCount: int
+		plotThickness: Number
 	*/
 	async getViolinPlotData(arg, _body = {}) {
 		const body = {
@@ -564,11 +567,13 @@ class TermdbVocab extends Vocab {
 			dslabel: this.vocab.dslabel,
 			termid: arg.termid,
 			svgw: arg.svgw, ///window.devicePixelRatio,
-			orientation: arg.orientation,
-			datasymbol: arg.datasymbol,
-			radius: arg.radius,
+			orientation: arg.orientation || 'horizontal',
+			datasymbol: arg.datasymbol || 'bean',
+			radius: arg.radius || 5,
 			devicePixelRatio: window.devicePixelRatio,
-			strokeWidth: arg.strokeWidth,
+			strokeWidth: arg.strokeWidth || 0.2,
+			axisHeight: arg.axisHeight || 80,
+			rightMargin: arg.rightMargin || 50,
 			..._body
 		}
 		if (arg.filter) body.filter = getNormalRoot(arg.filter)

@@ -49,77 +49,7 @@ export default function violinRenderer(self) {
 		// const brushValues = plot.values.filter(i => i > start && i < end)
 	}
 
-	self.getAddFilterCallback = (plot, term = '') => {
-		const tvslst = {
-			type: 'tvslst',
-			in: true,
-			join: 'and',
-			lst: []
-		}
-
-		if (!term || term === 'term1') {
-			tvslst.lst.push({
-				type: 'tvs',
-				tvs: {
-					term: self.config.term.term
-				}
-			})
-
-			tvslst.lst[0].tvs.values = [
-				{
-					key: plot.seriesId
-				}
-			]
-		}
-
-		if ((!term || term == 'term2') && self.config.term2) {
-			const t2 = self.config.term2
-			tvslst.lst.push({
-				type: 'tvs',
-				tvs: {
-					term: t2.term
-				}
-			})
-			const item = tvslst.lst[1] || tvslst.lst[0]
-			if (
-				t2.q?.mode === 'continuous' ||
-				((t2.term?.type === 'float' || t2.term?.type === 'integer') && plot.divideTwBins != null)
-			) {
-				item.tvs.ranges = [
-					{
-						start: structuredClone(plot.divideTwBins?.start) || null,
-						stop: structuredClone(plot.divideTwBins?.stop) || null,
-						startinclusive: structuredClone(plot.divideTwBins?.startinclusive) || null,
-						stopinclusive: structuredClone(plot.divideTwBins?.stopinclusive) || null,
-						startunbounded: structuredClone(plot.divideTwBins?.startunbounded)
-							? structuredClone(plot.divideTwBins?.startunbounded)
-							: null,
-						stopunbounded: structuredClone(plot.divideTwBins?.stopunbounded)
-							? structuredClone(plot.divideTwBins?.stopunbounded)
-							: null
-					}
-				]
-			} else {
-				item.tvs.values = [
-					{
-						key: plot.seriesId
-					}
-				]
-			}
-		}
-
-		return () => {
-			const filterUiRoot = getFilterItemByTag(self.state.termfilter.filter, 'filterUiRoot')
-			const filter = filterJoin([filterUiRoot, tvslst])
-			filter.tag = 'filterUiRoot'
-			self.app.dispatch({
-				type: 'filter_replace',
-				filter
-			})
-		}
-	}
-
-	self.filterBrushValuesCallback = function(plot, rangeStart, rangeStop) {
+	self.getAddFilterCallback = function(plot, rangeStart, rangeStop) {
 		const tvslst = {
 			type: 'tvslst',
 			in: true,
@@ -131,42 +61,16 @@ export default function violinRenderer(self) {
 
 		if (t2) {
 			if (t1.term.type === 'categorical') {
-				tvslst.lst.push({
-					type: 'tvs',
-					tvs: {
-						term: t1.term
-					}
-				})
+				createTvsLstValues(t1, plot, tvslst, 0)
 
-				tvslst.lst[0].tvs.values = [
-					{
-						key: plot.seriesId
-					}
-				]
-
-				tvslst.lst.push({
-					type: 'tvs',
-					tvs: {
-						term: t2.term
-					}
-				})
-
-				tvslst.lst[1].tvs.ranges = [
-					{
-						start: rangeStart,
-						stop: rangeStop
-					}
-				]
+				if (self.displayBrushMenu.called === true) {
+					createTvsLstRanges(t2, tvslst, rangeStart, rangeStop, 1)
+				}
 			} else if (
 				t2.q?.mode === 'continuous' ||
 				((t2.term?.type === 'float' || t2.term?.type === 'integer') && plot.divideTwBins != null)
 			) {
-				tvslst.lst.push({
-					type: 'tvs',
-					tvs: {
-						term: t2.term
-					}
-				})
+				createTvsTerm(t2, tvslst)
 				tvslst.lst[0].tvs.ranges = [
 					{
 						start: structuredClone(plot.divideTwBins?.start) || null,
@@ -181,57 +85,19 @@ export default function violinRenderer(self) {
 							: null
 					}
 				]
-				tvslst.lst.push({
-					type: 'tvs',
-					tvs: {
-						term: t1.term
-					}
-				})
-				tvslst.lst[1].tvs.ranges = [
-					{
-						start: rangeStart,
-						stop: rangeStop
-					}
-				]
+				if (self.displayBrushMenu.called === true) {
+					createTvsLstRanges(t1, tvslst, rangeStart, rangeStop, 1)
+				}
 			} else {
-				tvslst.lst.push({
-					type: 'tvs',
-					tvs: {
-						term: t2.term
-					}
-				})
-				tvslst.lst[0].tvs.values = [
-					{
-						key: plot.seriesId
-					}
-				]
-				tvslst.lst.push({
-					type: 'tvs',
-					tvs: {
-						term: t1.term
-					}
-				})
-				tvslst.lst[1].tvs.ranges = [
-					{
-						start: rangeStart,
-						stop: rangeStop
-					}
-				]
+				createTvsLstValues(t2, plot, tvslst, 0)
+				if (self.displayBrushMenu.called === true) {
+					createTvsLstRanges(t1, tvslst, rangeStart, rangeStop, 1)
+				}
 			}
 		} else {
-			tvslst.lst.push({
-				type: 'tvs',
-				tvs: {
-					term: t1.term
-				}
-			})
-
-			tvslst.lst[0].tvs.ranges = [
-				{
-					start: rangeStart,
-					stop: rangeStop
-				}
-			]
+			if (self.displayBrushMenu.called === true) {
+				createTvsLstRanges(t1, tvslst, rangeStart, rangeStop, 0)
+			}
 		}
 
 		return () => {
@@ -514,8 +380,8 @@ export default function violinRenderer(self) {
 			self.displayLabelClickMenu.called = false
 		} else if (self.displayBrushMenu.called === true) {
 			options.push({
-				label: `Add filter: ${start.toFixed(2)} < x < ${end.toFixed(2)}`,
-				callback: self.filterBrushValuesCallback(plot, start, end)
+				label: `Add filter: ${start.toFixed(1)} < x < ${end.toFixed(1)}`,
+				callback: self.getAddFilterCallback(plot, start, end)
 			})
 			self.displayBrushMenu.called = false
 		}
@@ -536,5 +402,34 @@ export default function violinRenderer(self) {
 			})
 
 		self.app.tip.show(event.clientX, event.clientY)
+	}
+
+	function createTvsLstValues(term, plot, tvslst, lstIdx) {
+		createTvsTerm(term, tvslst)
+		tvslst.lst[lstIdx].tvs.values = [
+			{
+				key: plot.seriesId
+			}
+		]
+	}
+
+	function createTvsLstRanges(term, tvslst, rangeStart, rangeStop, lstIdx) {
+		createTvsTerm(term, tvslst)
+
+		tvslst.lst[lstIdx].tvs.ranges = [
+			{
+				start: rangeStart,
+				stop: rangeStop
+			}
+		]
+	}
+
+	function createTvsTerm(term, tvslst) {
+		tvslst.lst.push({
+			type: 'tvs',
+			tvs: {
+				term: term.term
+			}
+		})
 	}
 }
