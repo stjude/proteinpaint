@@ -550,10 +550,11 @@ function buildDb(annotationData, survivalData, scriptArg) {
 	// load db
 	exec(`${scriptArg.get('sqlite3')} ${scriptArg.get('dbfile')} < ${loadScript}`)
 
+	// index all tables
+	runDBScript('indexing.sql')
+
 	// populate ancestry table
 	runDBScript('setancestry.sql')
-
-	// index all tables
 
 	// populate cohort,term_id,count fields from subcohort_terms table
 	// only works for dataset without subcohort, fill blank string to cohort

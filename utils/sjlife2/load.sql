@@ -1,4 +1,4 @@
-BEGIN TRANSACTION;
+--BEGIN TRANSACTION;
 
 .mode tab
 
@@ -45,4 +45,4 @@ insert into subcohort_samples(subcohort, sample) select value, sample from annot
 .import term2subcohort subcohort_terms
 
 
-COMMIT;
+--COMMIT;

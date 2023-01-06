@@ -8,6 +8,8 @@ select sample, term_id, CAST(value as integer)
 from annotations a 
 join terms t on t.id=a.term_id and t.type='integer';
 
+create index anno_int_sample on anno_integer(sample);
+create index anno_int_value on anno_integer(value);
 
 
 
@@ -23,9 +25,6 @@ join terms t on t.id = s.term_id
 -- !!! TODO: need a guaranteed way to detect combined cohorts !!!
 where t.type = 'integer' and cohort not like '%,%';
 
-
-
-
 ----------------------------------
 
 
@@ -35,6 +34,8 @@ select sample, term_id, CAST(value as real)
 from annotations a 
 join terms t on t.id=a.term_id and t.type='float';
 
+create index anno_float_sample on anno_float(sample);
+create index anno_float_value on anno_float(value);
 
 
 
@@ -60,6 +61,8 @@ select sample, term_id, value
 from annotations a 
 join terms t on t.id=a.term_id and t.type='categorical';
 
+create index anno_cat_sample on anno_categorical(sample);
+create index anno_cat_value on anno_categorical(value);
 
 -- compare the unique sample and term counts to verify
 select '----   #annotated samples, #terms   ------';

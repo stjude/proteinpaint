@@ -16,7 +16,7 @@ set -e
 set -u
 set -o pipefail
 
-
+echo 'Generating import files ...'
 ###############################################
 # temporary step
 # copy "matrix.tree.original" to "matrix.tree" and append new line to describe the adhoc "publication" term annotated to samples from CH paper
@@ -119,6 +119,7 @@ sqlite3 db < ./scripts/load.sql
 sqlite3 db < ./scripts/set-included-types.sql
 echo 'Adding annotation by type tables'
 sqlite3 db < ./scripts/anno-by-type.sql
+sqlite3 db < ./scripts/indexing.sql
 
 
 # scp db $ppr:/opt/data/pp/tp_native_dir/files/hg38/sjlife/clinical/
