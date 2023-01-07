@@ -116,9 +116,11 @@ sqlite3 db < ./scripts/create.sql
 sqlite3 db < ./scripts/init-cohorts.sql
 echo 'Loading data...'
 sqlite3 db < ./scripts/load.sql
+echo 'Setting included types...'
 sqlite3 db < ./scripts/set-included-types.sql
-echo 'Adding annotation by type tables'
+echo 'Loading annotation by type data...'
 sqlite3 db < ./scripts/anno-by-type.sql
+echo 'Indexing...'
 sqlite3 db < ./scripts/indexing.sql
 
 

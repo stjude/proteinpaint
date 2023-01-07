@@ -1,4 +1,4 @@
-BEGIN TRANSACTION;
+--BEGIN TRANSACTION;
 
 drop table if exists term2genes;
 create table term2genes (
@@ -31,4 +31,4 @@ update terms set child_order=2.1 where id like 'C2: curated gene sets%';
 -- C5 also appears out of place
 update terms set child_order=4.1 where id like 'C5: ontology gene sets%';
 
-COMMIT;
+--COMMIT;
