@@ -1,3 +1,5 @@
+update terms set parent_id=null where parent_id=''; --imports set '' instead of null
+
 
 create index terms_name on terms(name);
 
@@ -19,3 +21,5 @@ CREATE INDEX subcohort_terms_cohort ON subcohort_terms(cohort);
 CREATE INDEX subcohort_terms_termid ON subcohort_terms(term_id);
 
 CREATE INDEX survival_sample ON survival(sample);
+
+

@@ -2,6 +2,7 @@
 
 PRAGMA foreign_keys=ON;
 
+update terms set parent_id=null where parent_id=''; --imports set '' instead of nulll 
 
 --------------------------------------
 -- populate the included_types column
@@ -39,7 +40,6 @@ UPDATE subcohort_terms
 SET included_types=included_types || ',' || child_types
 WHERE child_types != '' AND child_types NOT LIKE '%'|| included_types ||'%';
 
-update terms set parent_id=null where parent_id='';
 
 
 --COMMIT;

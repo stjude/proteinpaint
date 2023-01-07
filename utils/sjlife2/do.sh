@@ -16,7 +16,7 @@ set -e
 set -u
 set -o pipefail
 
-echo 'Generating import files ...'
+echo 'Generating import files ...' $(date +%r)
 ###############################################
 # temporary step
 # copy "matrix.tree.original" to "matrix.tree" and append new line to describe the adhoc "publication" term annotated to samples from CH paper
