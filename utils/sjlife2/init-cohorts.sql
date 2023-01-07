@@ -1,6 +1,6 @@
 PRAGMA foreign_keys=ON;
 
-BEGIN TRANSACTION;
+--BEGIN TRANSACTION;
 
 insert into cohorts(cohort, name, abbrev, sample_count) values
 ('SJLIFE', 'St. Jude Lifetime Cohort Study', 'SJLIFE', 5053),
@@ -38,4 +38,4 @@ values
 ('CCSS', 9, 'Chemotherapy, radiation, surgery'),
 ('CCSS', 10, 'Self-report, pathology reports (secondary neoplasm), NDI');
 
-COMMIT;
+--COMMIT;

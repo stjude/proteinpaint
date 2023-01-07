@@ -1,4 +1,4 @@
-BEGIN TRANSACTION;
+--BEGIN TRANSACTION;
 
 PRAGMA foreign_keys=ON;
 
@@ -40,4 +40,4 @@ UPDATE subcohort_terms
 SET included_types=included_types || ',' || child_types
 WHERE child_types != '' AND child_types NOT LIKE '%'|| included_types ||'%';
 
-COMMIT;
+--COMMIT;
