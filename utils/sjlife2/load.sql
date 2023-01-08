@@ -5,8 +5,7 @@
 .import 'samples.idmap' sampleidmap
 
 --PRAGMA foreign_keys=ON;
-
-insert into samples(id) select distinct(id) from sampleidmap;
+--insert into samples(id) select distinct(id) from sampleidmap;
 
 .import termdb terms
 
@@ -36,7 +35,8 @@ INSERT INTO terms VALUES ('YRI', 'YRI', '*', '{"name":"YRI","type":"float"}', 0,
 
 .import annotation.admix annotations
 
-insert into subcohort_samples(subcohort, sample) select value, sample from annotations where term_id='subcohort';
+-- This table should be used to know subcohort samples
+--insert into subcohort_samples(subcohort, sample) select value, sample from annotations where term_id='subcohort';
 
 .import annotation.outcome chronicevents
 

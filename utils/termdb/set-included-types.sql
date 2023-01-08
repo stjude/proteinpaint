@@ -1,8 +1,7 @@
 --BEGIN TRANSACTION;
 
-PRAGMA foreign_keys=ON;
+--PRAGMA foreign_keys=ON;
 
-update terms set parent_id=null where parent_id=''; --imports set '' instead of nulll 
 
 --------------------------------------
 -- populate the included_types column
