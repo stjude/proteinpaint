@@ -378,8 +378,9 @@ opts{} options to tweak the query, see const default_opts = below
 			if (!('key1' in v)) continue
 
 			// chart term (term0)
-			if (q.term0_q) {
+			if (q.term0_q && q.term0_id) {
 				// term0 is defined, discard sample if not annotated for term0
+				// but only if dictionary term, implied by having a term.id
 				if (!('key0' in v)) continue
 			} else {
 				// term0 is not defined, supply empty string default
@@ -387,8 +388,9 @@ opts{} options to tweak the query, see const default_opts = below
 			}
 
 			// overlay term (term2)
-			if (q.term2_q) {
+			if (q.term2_q && q.term2_id) {
 				// term2 is defined, discard sample if not annotated for term2
+				// but only if dictionary term, implied by having a term.id
 				if (!('key2' in v)) continue
 			} else {
 				// term2 is not defined, supply empty string default
