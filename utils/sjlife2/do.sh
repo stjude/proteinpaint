@@ -112,7 +112,6 @@ node --max-old-space-size=10240 ./scripts/term2subcohort.js termdb annotation.ma
 #node ./scripts/phewas.precompute.url.js
 #node ./scripts/category2sample.removegrade9.js category2vcfsample termdb annotation.outcome > category2vcfsample.nograde9
 echo 'Creating db schema...'
-rm db
 sqlite3 db < ./scripts/create.sql
 sqlite3 db < ./scripts/init-cohorts.sql
 echo 'Loading data...' $(date +%r)
