@@ -65,6 +65,8 @@ export async function init(ds, genome, _servconfig, app = null, basepath = null)
 		mayAdd_mayGetGeneVariantData(ds, genome)
 	}
 
+	mayValidateAssayAvailability(ds)
+
 	// the "refresh" attribute on ds.cohort.db should be set in serverconfig.json
 	// for a genome dataset, using "updateAttr: [[...]]
 	if (ds.cohort?.db?.refresh && app) setDbRefreshRoute(ds, app, basepath)
@@ -1145,4 +1147,31 @@ async function getGenecnvByTerm(ds, term, genome, q) {
 		return await ds.queries.geneCnv.bygene.get(arg)
 	}
 	throw 'unknown queries.geneCnv method'
+}
+
+function mayValidateAssayAvailability(ds) {
+	if (!ds.assayAvailability) return
+	// has this setting. cache sample list
+	if (ds.assayAvailability.byDt) {
+		for (const key in ds.assayAvailability.byDt) {
+			const dt = ds.assayAvailability.byDt[key]
+			// validate structure
+			// require .yes{} .no{}
+			if (!dt.yes || !dt.no || !dt.term_id) throw 'ds.assayAvailability.byDt properties require .term_id .yes{} .no{}'
+
+			// cache sample id list for each category, set .yesSamples(), .noSamples()
+			dt.yesSamples = new Set()
+			dt.noSamples = new Set()
+
+			const sql = `SELECT sample, value
+						FROM anno_categorical
+						WHERE term_id = '${dt.term_id}'`
+
+			const rows = ds.cohort.db.connection.prepare(sql).all()
+			for (const r of rows) {
+				if (r.value == `${dt.yes.value}`) dt.yesSamples.add(r.sample)
+				else if (r.value == `${dt.no.value}`) dt.noSamples.add(r.sample)
+			}
+		}
+	}
 }
