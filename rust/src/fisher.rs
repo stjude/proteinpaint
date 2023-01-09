@@ -6,7 +6,7 @@
 // Input JSON specifications:
 // { fdr: Flag to calculate adjusted p-value using Benjamini-Hochberg correction (true/false) (optional)
 //   bon: Flag to calculate adjusted p-value using Bonferroni correction (true/false) (optional)
-//   low_sample_size: Flag to check if entries with low sample size need to be ignored (true/false) (optional)
+//   skipLowSampleSize: Flag to check if entries with low sample size need to be ignored (true/false) (optional). When entry follows this criteria total < 2000.0 && ((n1 + n2) / total < 0.03 || (n1 + n3)  / total < 0.03 || (n2 + n4)  / total < 0.03 || (n3 + n4)  / total < 0.03)
 //   input:[{
 //     index: Index of the entry
 //        n1:
@@ -17,14 +17,15 @@
 // }
 
 /*
-    Suggested by Qian:
+    Suggested by Qian & Yutaka:
     1. Using <5 in each cell is a conventional rule of thumb for choosing chi-square or Fisher’s exact test. Now expected value
     for determining fisher/chisq test is calculated using the formula (ni1 + ni2) * (n1j + n2j) / (n11 + n12 + n21 + n22)
     2. The association test may have extremely low power if a group (row sum or column sum of 2x2 table) is too small compared to
     the total participants, regardless of the value in each cell. Including too many non-powerful tests in this portal may affect
     the detection of ‘true’ association in multiple testing. So, the total participant is less than 2000 and if either of the
     4 groups is <3% of all participants, the sample size is too low and the test is skipped (has a pvalue of null) when
-    low_sample_size flag is set to true in the input json
+    skipLowSampleSize flag is set to true in the input json
+
 */
 
 // Output JSON specifications
@@ -60,13 +61,13 @@
 
 // cd ~/proteinpaint/rust && cargo build --release && json='{"fdr":true,"input":[{"index":0,"n1":214,"n2":2057,"n3":134,"n4":1954},{"index":1,"n1":134,"n2":1954,"n3":214,"n4":2057},{"index":2,"n1":1863,"n2":225,"n3":1935,"n4":336},{"index":3,"n1":1935,"n2":336,"n3":1863,"n4":225},{"index":4,"n1":106,"n2":2165,"n3":74,"n4":2014},{"index":5,"n1":74,"n2":2014,"n3":106,"n4":2165},{"index":6,"n1":1,"n2":987,"n3":3,"n4":897},{"index":7,"n1":3,"n2":748,"n3":4,"n4":977}]}' && time echo "$json" | target/release/fisher
 
-// cd ~/proteinpaint/rust && cargo build --release && json='{"fdr":true, "low_sample_size":true,"input":[{"index":0,"n1":214,"n2":2057,"n3":134,"n4":1954},{"index":1,"n1":134,"n2":1954,"n3":214,"n4":2057},{"index":2,"n1":1863,"n2":225,"n3":1935,"n4":336},{"index":3,"n1":1935,"n2":336,"n3":1863,"n4":225},{"index":4,"n1":106,"n2":2165,"n3":74,"n4":2014},{"index":5,"n1":74,"n2":2014,"n3":106,"n4":2165},{"index":6,"n1":1,"n2":987,"n3":3,"n4":897},{"index":7,"n1":3,"n2":748,"n3":4,"n4":977}]}' && time echo "$json" | target/release/fisher
+// cd ~/proteinpaint/rust && cargo build --release && json='{"fdr":true, "skipLowSampleSize":true,"input":[{"index":0,"n1":214,"n2":2057,"n3":134,"n4":1954},{"index":1,"n1":134,"n2":1954,"n3":214,"n4":2057},{"index":2,"n1":1863,"n2":225,"n3":1935,"n4":336},{"index":3,"n1":1935,"n2":336,"n3":1863,"n4":225},{"index":4,"n1":106,"n2":2165,"n3":74,"n4":2014},{"index":5,"n1":74,"n2":2014,"n3":106,"n4":2165},{"index":6,"n1":1,"n2":987,"n3":3,"n4":897},{"index":7,"n1":3,"n2":748,"n3":4,"n4":977}]}' && time echo "$json" | target/release/fisher
 
-// cd ~/proteinpaint/rust && cargo build --release && json='{"bon":true, "low_sample_size":true,"input":[{"index":0,"n1":214,"n2":2057,"n3":134,"n4":1954},{"index":1,"n1":134,"n2":1954,"n3":214,"n4":2057},{"index":2,"n1":1863,"n2":225,"n3":1935,"n4":336},{"index":3,"n1":1935,"n2":336,"n3":1863,"n4":225},{"index":4,"n1":106,"n2":2165,"n3":74,"n4":2014},{"index":5,"n1":74,"n2":2014,"n3":106,"n4":2165},{"index":6,"n1":1,"n2":987,"n3":3,"n4":897},{"index":7,"n1":3,"n2":748,"n3":4,"n4":977}]}' && time echo "$json" | target/release/fisher
+// cd ~/proteinpaint/rust && cargo build --release && json='{"bon":true, "skipLowSampleSize":true,"input":[{"index":0,"n1":214,"n2":2057,"n3":134,"n4":1954},{"index":1,"n1":134,"n2":1954,"n3":214,"n4":2057},{"index":2,"n1":1863,"n2":225,"n3":1935,"n4":336},{"index":3,"n1":1935,"n2":336,"n3":1863,"n4":225},{"index":4,"n1":106,"n2":2165,"n3":74,"n4":2014},{"index":5,"n1":74,"n2":2014,"n3":106,"n4":2165},{"index":6,"n1":1,"n2":987,"n3":3,"n4":897},{"index":7,"n1":3,"n2":748,"n3":4,"n4":977}]}' && time echo "$json" | target/release/fisher
 
 // cd ~/proteinpaint/rust && cargo build --release && json='{"bon":true,"input":[{"index":0,"n1":214,"n2":2057,"n3":134,"n4":1954},{"index":1,"n1":134,"n2":1954,"n3":214,"n4":2057},{"index":2,"n1":1863,"n2":225,"n3":1935,"n4":336},{"index":3,"n1":1935,"n2":336,"n3":1863,"n4":225},{"index":4,"n1":106,"n2":2165,"n3":74,"n4":2014},{"index":5,"n1":74,"n2":2014,"n3":106,"n4":2165},{"index":6,"n1":1,"n2":987,"n3":3,"n4":897},{"index":7,"n1":3,"n2":748,"n3":4,"n4":977}]}' && time echo "$json" | target/release/fisher
 
-// cd ~/proteinpaint/rust && cargo build --release && json='{"low_sample_size":true, "input":[{"index":0,"n1":214,"n2":2057,"n3":134,"n4":1954},{"index":1,"n1":134,"n2":1954,"n3":214,"n4":2057},{"index":2,"n1":1863,"n2":225,"n3":1935,"n4":336},{"index":3,"n1":1935,"n2":336,"n3":1863,"n4":225},{"index":4,"n1":106,"n2":2165,"n3":74,"n4":2014},{"index":5,"n1":74,"n2":2014,"n3":106,"n4":2165},{"index":6,"n1":1,"n2":987,"n3":3,"n4":897},{"index":7,"n1":3,"n2":748,"n3":4,"n4":977}]}' && time echo "$json" | target/release/fisher
+// cd ~/proteinpaint/rust && cargo build --release && json='{"skipLowSampleSize":true, "input":[{"index":0,"n1":214,"n2":2057,"n3":134,"n4":1954},{"index":1,"n1":134,"n2":1954,"n3":214,"n4":2057},{"index":2,"n1":1863,"n2":225,"n3":1935,"n4":336},{"index":3,"n1":1935,"n2":336,"n3":1863,"n4":225},{"index":4,"n1":106,"n2":2165,"n3":74,"n4":2014},{"index":5,"n1":74,"n2":2014,"n3":106,"n4":2165},{"index":6,"n1":1,"n2":987,"n3":3,"n4":897},{"index":7,"n1":3,"n2":748,"n3":4,"n4":977}]}' && time echo "$json" | target/release/fisher
 
 // cd ~/proteinpaint/rust && cargo build --release && json='{"input":[{"index":0,"n1":214,"n2":2057,"n3":134,"n4":1954},{"index":1,"n1":134,"n2":1954,"n3":214,"n4":2057},{"index":2,"n1":1863,"n2":225,"n3":1935,"n4":336},{"index":3,"n1":1935,"n2":336,"n3":1863,"n4":225},{"index":4,"n1":106,"n2":2165,"n3":74,"n4":2014},{"index":5,"n1":74,"n2":2014,"n3":106,"n4":2165},{"index":6,"n1":1,"n2":987,"n3":3,"n4":897},{"index":7,"n1":3,"n2":748,"n3":4,"n4":977}]}' && time echo "$json" | target/release/fisher
 
@@ -145,7 +146,7 @@ fn main() {
             let individual_fisher_limit: f64 = 5.0;
             let fdr_string = &json_string["fdr"].to_owned();
             let bon_string = &json_string["bon"].to_owned();
-            let low_sample_size_string = &json_string["low_sample_size"].to_owned();
+            let low_sample_size_string = &json_string["skipLowSampleSize"].to_owned();
             //println!("fdr_string:{}", fdr_string);
 
             let mut fdr_bool = false;
@@ -176,8 +177,7 @@ fn main() {
             }
 
             if fdr_bool == false && bon_bool == false && low_sample_size_bool == true {
-                println!("Since both Benjamini_hochberg and Bonferroni flags are set to false, no filtering of low-sample size entries will be carried out. So setting low_sample_size flag = false");
-                low_sample_size_bool = false;
+                panic!("skipLowSampleSize = true but fdr and bon is set to false.");
             }
 
             if fdr_bool == false && bon_bool == false {
@@ -251,10 +251,10 @@ fn calculate_fisher_chisq_test(
                 // Sample size too low for doing association test
                 //p_value_original = None;
                 fisher_chisq_test_string = "NA".to_string();
-            } else if calculate_expected_value(1, n1, n2, n3, n4, total) > individual_fisher_limit
-                && calculate_expected_value(2, n1, n2, n3, n4, total) > individual_fisher_limit
-                && calculate_expected_value(3, n1, n2, n3, n4, total) > individual_fisher_limit
-                && calculate_expected_value(4, n1, n2, n3, n4, total) > individual_fisher_limit
+            } else if calculate_expected_value(1, n1, n2, n3, n4, total) >= individual_fisher_limit
+                && calculate_expected_value(2, n1, n2, n3, n4, total) >= individual_fisher_limit
+                && calculate_expected_value(3, n1, n2, n3, n4, total) >= individual_fisher_limit
+                && calculate_expected_value(4, n1, n2, n3, n4, total) >= individual_fisher_limit
             {
                 fisher_chisq_test = 2; // Setting test = chi-sq
                 let _fisher_chisq_test_final;
@@ -443,8 +443,8 @@ fn calculate_expected_value(
     n4: u32,
     total: f64,
 ) -> f64 {
-    let mut expected_value: f64 = 0.0;
-    //total: f64 = (n1 + n2 + n3 + n4) as f64;
+    let mut expected_value: f64 = 0.0; //  [ 1   2 ]
+                                       //  [ 3   4 ]
     if position == 1 {
         expected_value = ((n1 + n2) as f64) * ((n1 + n3) as f64) / total;
     } else if position == 2 {
