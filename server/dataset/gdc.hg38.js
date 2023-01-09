@@ -8,9 +8,6 @@ variables_range2variants
 ssm2canonicalisoform
 */
 
-const path = require('path')
-const filter2GDCfilter = require(path.join(__dirname, '../src/mds3.gdc.filter')).filter2GDCfilter
-
 const GDC_HOST = process.env.PP_GDC_HOST || 'https://api.gdc.cancer.gov'
 
 /* if filter0 is missing necessary attr, adding it to api query will cause error
