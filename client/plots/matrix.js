@@ -102,6 +102,19 @@ class Matrix {
 				legend: {
 					click: this.legendClick
 				}
+			},
+			settings: {
+				ontop: false,
+				lineh: 25,
+				padx: 5,
+				padleft: 0, //150,
+				padright: 20,
+				padbtm: 30,
+				fontsize: this.settings.rowh,
+				iconh: this.settings.rowh,
+				iconw: this.settings.rowh,
+				hangleft: 1,
+				linesep: false
 			}
 		})
 
@@ -195,7 +208,7 @@ class Matrix {
 						svgh: d.mainh + d.yOffset,
 						dimensions: d
 					},
-					this.settings.legend
+					this.opts.settings
 				)
 			})
 
