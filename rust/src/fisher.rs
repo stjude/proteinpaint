@@ -18,11 +18,13 @@
 
 /*
     Suggested by Qian:
-    1. Using <5 in each cell is a conventional rule of thumb for choosing chi-square or Fisher’s exact test.
+    1. Using <5 in each cell is a conventional rule of thumb for choosing chi-square or Fisher’s exact test. Now expected value
+    for determining fisher/chisq test is calculated using the formula (ni1 + ni2) * (n1j + n2j) / (n11 + n12 + n21 + n22)
     2. The association test may have extremely low power if a group (row sum or column sum of 2x2 table) is too small compared to
     the total participants, regardless of the value in each cell. Including too many non-powerful tests in this portal may affect
     the detection of ‘true’ association in multiple testing. So, the total participant is less than 2000 and if either of the
-    4 groups is <3% of all participants, the sample size is too low and the test is skipped (has a pvalue of null)
+    4 groups is <3% of all participants, the sample size is too low and the test is skipped (has a pvalue of null) when
+    low_sample_size flag is set to true in the input json
 */
 
 // Output JSON specifications
@@ -46,7 +48,7 @@
 //      n3:
 //      n4:
 //      p_value: p-value from fisher/chisq test, "null" for cases with low sample sizes
-//      adjusted_p_value: adjusted p-value using Benjamini-Hochberg correction, "null" for cases with low sample sizes
+//      adjusted_p_value: adjusted p-value using Benjamini-Hochberg/Bonferonni correction, "null" for cases with low sample sizes
 //      fisher_chisq: "NA" for cases with low sample size, "fisher" when fisher test is used, "chisq" when chisq test is used
 //    }]
 //
@@ -61,6 +63,12 @@
 // cd ~/proteinpaint/rust && cargo build --release && json='{"fdr":true, "low_sample_size":true,"input":[{"index":0,"n1":214,"n2":2057,"n3":134,"n4":1954},{"index":1,"n1":134,"n2":1954,"n3":214,"n4":2057},{"index":2,"n1":1863,"n2":225,"n3":1935,"n4":336},{"index":3,"n1":1935,"n2":336,"n3":1863,"n4":225},{"index":4,"n1":106,"n2":2165,"n3":74,"n4":2014},{"index":5,"n1":74,"n2":2014,"n3":106,"n4":2165},{"index":6,"n1":1,"n2":987,"n3":3,"n4":897},{"index":7,"n1":3,"n2":748,"n3":4,"n4":977}]}' && time echo "$json" | target/release/fisher
 
 // cd ~/proteinpaint/rust && cargo build --release && json='{"bon":true, "low_sample_size":true,"input":[{"index":0,"n1":214,"n2":2057,"n3":134,"n4":1954},{"index":1,"n1":134,"n2":1954,"n3":214,"n4":2057},{"index":2,"n1":1863,"n2":225,"n3":1935,"n4":336},{"index":3,"n1":1935,"n2":336,"n3":1863,"n4":225},{"index":4,"n1":106,"n2":2165,"n3":74,"n4":2014},{"index":5,"n1":74,"n2":2014,"n3":106,"n4":2165},{"index":6,"n1":1,"n2":987,"n3":3,"n4":897},{"index":7,"n1":3,"n2":748,"n3":4,"n4":977}]}' && time echo "$json" | target/release/fisher
+
+// cd ~/proteinpaint/rust && cargo build --release && json='{"bon":true,"input":[{"index":0,"n1":214,"n2":2057,"n3":134,"n4":1954},{"index":1,"n1":134,"n2":1954,"n3":214,"n4":2057},{"index":2,"n1":1863,"n2":225,"n3":1935,"n4":336},{"index":3,"n1":1935,"n2":336,"n3":1863,"n4":225},{"index":4,"n1":106,"n2":2165,"n3":74,"n4":2014},{"index":5,"n1":74,"n2":2014,"n3":106,"n4":2165},{"index":6,"n1":1,"n2":987,"n3":3,"n4":897},{"index":7,"n1":3,"n2":748,"n3":4,"n4":977}]}' && time echo "$json" | target/release/fisher
+
+// cd ~/proteinpaint/rust && cargo build --release && json='{"low_sample_size":true, "input":[{"index":0,"n1":214,"n2":2057,"n3":134,"n4":1954},{"index":1,"n1":134,"n2":1954,"n3":214,"n4":2057},{"index":2,"n1":1863,"n2":225,"n3":1935,"n4":336},{"index":3,"n1":1935,"n2":336,"n3":1863,"n4":225},{"index":4,"n1":106,"n2":2165,"n3":74,"n4":2014},{"index":5,"n1":74,"n2":2014,"n3":106,"n4":2165},{"index":6,"n1":1,"n2":987,"n3":3,"n4":897},{"index":7,"n1":3,"n2":748,"n3":4,"n4":977}]}' && time echo "$json" | target/release/fisher
+
+// cd ~/proteinpaint/rust && cargo build --release && json='{"input":[{"index":0,"n1":214,"n2":2057,"n3":134,"n4":1954},{"index":1,"n1":134,"n2":1954,"n3":214,"n4":2057},{"index":2,"n1":1863,"n2":225,"n3":1935,"n4":336},{"index":3,"n1":1935,"n2":336,"n3":1863,"n4":225},{"index":4,"n1":106,"n2":2165,"n3":74,"n4":2014},{"index":5,"n1":74,"n2":2014,"n3":106,"n4":2165},{"index":6,"n1":1,"n2":987,"n3":3,"n4":897},{"index":7,"n1":3,"n2":748,"n3":4,"n4":977}]}' && time echo "$json" | target/release/fisher
 
 // cd ~/proteinpaint/rust && cargo build --release && json='{"fdr":true,"input":[{"index":0,"n1":214,"n2":2057,"n3":134,"n4":1954},{"index":1,"n1":134,"n2":1954,"n3":214,"n4":2057},{"index":2,"n1":1863,"n2":225,"n3":1935,"n4":336},{"index":3,"n1":1935,"n2":336,"n3":1863,"n4":225},{"index":4,"n1":106,"n2":2165,"n3":74,"n4":2014},{"index":5,"n1":74,"n2":2014,"n3":106,"n4":2165}]}' && time echo "$json" | target/release/fisher
 
@@ -148,6 +156,16 @@ fn main() {
                 },
                 None => {}
             }
+
+            let mut bon_bool = false;
+            match bon_string.as_bool() {
+                Some(bon) => match bon {
+                    true => bon_bool = true,
+                    false => {}
+                },
+                None => {}
+            }
+
             let mut low_sample_size_bool = false;
             match low_sample_size_string.as_bool() {
                 Some(low_sample_size) => match low_sample_size {
@@ -156,13 +174,10 @@ fn main() {
                 },
                 None => {}
             }
-            let mut bon_bool = false;
-            match bon_string.as_bool() {
-                Some(bon) => match bon {
-                    true => bon_bool = true,
-                    false => {}
-                },
-                None => {}
+
+            if fdr_bool == false && bon_bool == false && low_sample_size_bool == true {
+                println!("Since both Benjamini_hochberg and Bonferroni flags are set to false, no filtering of low-sample size entries will be carried out. So setting low_sample_size flag = false");
+                low_sample_size_bool = false;
             }
 
             if fdr_bool == false && bon_bool == false {
