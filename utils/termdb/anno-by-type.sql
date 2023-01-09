@@ -1,6 +1,3 @@
---PRAGMA foreign_keys=ON;
-
---BEGIN TRANSACTION;
 
 -- copy entries from the annotations table
 insert into anno_integer (sample, term_id, value) 
@@ -75,5 +72,3 @@ join terms t on t.id = s.term_id
 -- assumes combined cohort names have a comma-separator
 -- !!! TODO: need a guaranteed way to detect combined cohorts !!!
 where t.type = 'categorical' and cohort not like '%,%';
-
---COMMIT;

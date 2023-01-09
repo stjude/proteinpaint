@@ -1,5 +1,4 @@
 delete from ancestry;
-PRAGMA foreign_keys=ON;
 insert into ancestry (term_id, ancestor_id)
 with recursive a(id, ancestor_id) as (
 	select id, parent_id

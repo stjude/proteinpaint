@@ -1,4 +1,3 @@
---BEGIN TRANSACTION;
 
 .mode tab
 
@@ -44,5 +43,3 @@ INSERT INTO terms VALUES ('YRI', 'YRI', '*', '{"name":"YRI","type":"float"}', 0,
 
 .import term2subcohort subcohort_terms
 
-
---COMMIT;
