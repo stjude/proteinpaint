@@ -102,19 +102,6 @@ class Matrix {
 				legend: {
 					click: this.legendClick
 				}
-			},
-			settings: {
-				ontop: false,
-				lineh: 25,
-				padx: 5,
-				padleft: 0, //150,
-				padright: 20,
-				padbtm: 30,
-				fontsize: this.settings.rowh,
-				iconh: this.settings.rowh,
-				iconw: this.settings.rowh,
-				hangleft: 1,
-				linesep: false
 			}
 		})
 
@@ -208,7 +195,7 @@ class Matrix {
 						svgh: d.mainh + d.yOffset,
 						dimensions: d
 					},
-					this.opts.settings
+					this.settings.legend
 				)
 			})
 
@@ -870,21 +857,23 @@ export async function getPlotConfig(opts, app) {
 				termLabelOffset: 80,
 				termGrpLabelOffset: 80,
 				duration: 100
-			},
-			legend: {
-				ontop: false,
-				lineh: 25,
-				padx: 5,
-				padleft: 0, //150,
-				padright: 20,
-				padbtm: 30,
-				fontsize: 12,
-				iconh: 10,
-				iconw: 10,
-				hangleft: 1,
-				linesep: false
 			}
 		}
+	}
+	const rowh = config.settings.matrix.rowh
+	const s = config.settings
+	s.legend = {
+		ontop: false,
+		lineh: 25,
+		padx: 5,
+		padleft: 0, //150,
+		padright: 20,
+		padbtm: 30,
+		fontsize: rowh,
+		iconh: rowh,
+		iconw: rowh,
+		hangleft: 1,
+		linesep: false
 	}
 
 	// may apply term-specific changes to the default object
