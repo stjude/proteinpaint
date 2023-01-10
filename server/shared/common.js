@@ -106,7 +106,9 @@ export const mclass = {
 	Intron: { label: 'INTRON', color: '#656565', dt: dtsnvindel, desc: 'An intronic variant.', key: 'Intron' },
 
 	// quick fix!! for showing genes that are not tested in samples (e.g. gene panels) in the heatmap
-	Blank: { label: 'Not tested', color: '#fff', dt: dtsnvindel, desc: 'This gene is not tested.', key: 'Blank' }
+	Blank: { label: 'Not tested', color: '#fff', dt: dtsnvindel, desc: 'This gene is not tested.', key: 'Blank' },
+
+	WT: { label: 'Wildtype', color: '#00ffd2', dt: dtsnvindel, desc: 'Wildtype', key: 'WT' }
 }
 export const mclassitd = 'ITD'
 mclass[mclassitd] = {

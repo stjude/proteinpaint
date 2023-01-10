@@ -74,20 +74,20 @@ exports.mayGetGeneVariantData = async function(tw, q) {
 					const sampleData = bySampleId.get(sid)
 					if (!(tname in sampleData)) sampleData[tname] = { key: tname, values: [], label: tname }
 					if (!sampleData[tname].values.some(val => val.dt == dtKey))
-						sampleData[tname].values.push({ dt: parseInt(dtKey), isWildtype: true })
+						sampleData[tname].values.push({ dt: parseInt(dtKey), class: 'WT', _SAMPLEID_: sid })
 				}
 				for (const sid of dt.noSamples) {
 					if (!bySampleId.has(sid)) bySampleId.set(sid, { sample: sid })
 					const sampleData = bySampleId.get(sid)
 					if (!(tname in sampleData)) sampleData[tname] = { key: tname, values: [], label: tname }
 					if (!sampleData[tname].values.some(val => val.dt == dtKey))
-						sampleData[tname].values.push({ dt: parseInt(dtKey), isNotAssayed: true })
+						sampleData[tname].values.push({ dt: parseInt(dtKey), class: 'Blank', _SAMPLEID_: sid })
 				}
 			}
 		}
 	}
-	//console.log(JSON.stringify(bySampleId.get(63),null,2))
 	for (const [k, v] of bySampleId.entries()) {
+		console.log(k)
 		console.log(v[tname])
 	}
 	return bySampleId
