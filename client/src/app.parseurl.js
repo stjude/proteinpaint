@@ -287,112 +287,52 @@ upon error, throw err message as a string
 
 		let position = null
 		let rglst = null
-		if (urlp.has('position')) {
-			const subpanels = []
-			let i = 0
-			for (const p of urlp.get('position').split(';')) {
-				if (i == 0) {
-					const ll = p.toString().split(/[:-]/)
-					const chr = ll[0]
-					const start = Number.parseInt(ll[1])
-					const stop = Number.parseInt(ll[2])
-					if (Number.isNaN(start) || Number.isNaN(stop)) throw 'Invalid start/stop value in position'
-					position = { chr: chr, start: start, stop: stop }
-				} else {
-					const ll = p.toString().split(/[:-]/)
-					const chr = ll[0]
-					const start = Number.parseInt(ll[1])
-					const stop = Number.parseInt(ll[2])
-					if (Number.isNaN(start) || Number.isNaN(stop)) throw 'Invalid start/stop value in position'
-					// Check if there are any common region between the two regions
-					if (chr == position.chr && position.start <= start && start <= position.stop) {
-						position.stop = stop
-					} else if (chr == position.chr && start <= position.start && position.start <= stop) {
-						position.start = start
-					} else {
-						// No common regions
 
-						// Sorting both regions first based on chr and then based on position (if in same chromosome)
-						if (position.chr.replace('chr', '') != chr.replace('chr', '')) {
-							// When regions are in two separate chromosomes
-							if (
-								Number.isNaN(Number.parseInt(position.chr.replace('chr', ''))) &&
-								Number.isNaN(Number.parseInt(chr.replace('chr', '')))
-							)
-								// Keep same orientation
-								subpanels.push({
-									chr: chr,
-									start: start,
-									stop: stop,
-									width: 800,
-									leftborder: 'rgba(200,0,0,.1)',
-									leftpad: 5
-								})
-							// In case of multi-region, hardcoding region width to 800, leftpad = 5 for both regions. Later will need better logic to calculate this on the fly
-							else {
-								// Keep chromosome with lower number first
-								if (Number.parseInt(position.chr.replace('chr', '')) > Number.parseInt(chr.replace('chr', ''))) {
-									const temp_chr = chr
-									const temp_start = start
-									const temp_stop = stop
-									subpanels.push({
-										chr: position.chr,
-										start: position.start,
-										stop: position.stop,
-										width: 800,
-										leftborder: 'rgba(200,0,0,.1)',
-										leftpad: 5
-									}) // In case of multi-region, hardcoding region width to 800, leftpad = 5 for both regions. Later will need better logic to calculate this on the fly
-									position.chr = temp_chr
-									position.start = temp_start
-									position.stop = temp_stop
-								} else {
-									subpanels.push({
-										chr: chr,
-										start: start,
-										stop: stop,
-										width: 800,
-										leftborder: 'rgba(200,0,0,.1)',
-										leftpad: 5
-									}) // In case of multi-region, hardcoding region width to 800, leftpad = 5 for both regions. Later will need better logic to calculate this on the fly
-								}
-							}
-						} else {
-							// When both regions are in the same chromosome, the left region should always contain the region with the lower position
-							if (position.stop < start) {
-								subpanels.push({
-									chr: chr,
-									start: start,
-									stop: stop,
-									width: 800,
-									leftborder: 'rgba(200,0,0,.1)',
-									leftpad: 5
-								}) // In case of multi-region, hardcoding region width to 800, leftpad = 5 for both regions. Later will need better logic to calculate this on the fly
-							} else {
-								const temp_chr = chr
-								const temp_start = start
-								const temp_stop = stop
-								subpanels.push({
-									chr: position.chr,
-									start: position.start,
-									stop: position.stop,
-									width: 800,
-									leftborder: 'rgba(200,0,0,.1)',
-									leftpad: 5
-								}) // In case of multi-region, hardcoding region width to 800, leftpad = 5 for both regions. Later will need better logic to calculate this on the fly
-								position.chr = temp_chr
-								position.start = temp_start
-								position.stop = temp_stop
-							}
-						}
-					}
-				}
-				i += 1
+		if (urlp.has('position')) {
+			// can be multiple regions joined by ;
+			// first region is main panel, rest of regions are subpanels
+
+			const lst = urlp.get('position').split(';')
+			if (lst[0]) {
+				// if first region is blank, do not parse; it will be assigned with defaultcoord
+				const tmp = lst[0].split(/[:-]/)
+				const chr = tmp[0]
+				const start = Number.parseInt(tmp[1])
+				const stop = Number.parseInt(tmp[2])
+				if (!chr) throw 'chr missing'
+				if (Number.isNaN(start) || Number.isNaN(stop)) throw 'Invalid start/stop value in position'
+				// valid position
+				position = { chr, start, stop }
 			}
-			par.subpanels = subpanels
+
+			const subpanels = [] // collect rest of regions into this array
+			for (let i = 1; i < lst.length; i++) {
+				if (!lst[i]) continue // skip blank string
+				const tmp = lst[i].split(/[:-]/)
+				const chr = tmp[0]
+				const start = Number.parseInt(tmp[1])
+				const stop = Number.parseInt(tmp[2])
+				if (!chr) throw 'subpanel chr missing'
+				if (Number.isNaN(start) || Number.isNaN(stop)) throw 'Invalid start/stop value in subpanel position'
+				// valid pos
+				subpanels.push({
+					chr,
+					start,
+					stop,
+					width: 600,
+					leftborder: 'rgba(200,0,0,.1)',
+					leftpad: 5
+				})
+			}
+			if (subpanels.length) {
+				// has valid subpanels
+				par.subpanels = subpanels
+			}
 		}
+
 		if (urlp.has('regions')) {
-			// multi
+			// for a different purpose than "position="
+			// all regions here are shown in one view and scroll together, as in gmmode. it does not introduce subpanels
 			rglst = []
 			for (const s of urlp.get('regions').split(',')) {
 				const l = s.split(/[:-]/)
@@ -403,6 +343,7 @@ upon error, throw err message as a string
 				rglst.push({ chr: l[0], start: start, stop: stop })
 			}
 		}
+
 		if (!position && !rglst) {
 			// no position given, use default
 			if (genomeobj.defaultcoord) {
