@@ -437,6 +437,7 @@ async function setTermInput(opts) {
 
 	const pill = await termsettingInit({
 		menuOptions: opts.menuOptions || '*',
+		numericEditMenuVersion: opts.numericEditMenuVersion,
 		vocabApi: opts.vocabApi,
 		vocab: opts.state?.vocab,
 		activeCohort: opts.state?.activeCohort,

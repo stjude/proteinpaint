@@ -170,11 +170,15 @@ async function colorAndShapeSamples(refSamples, cohortSamples, data, q) {
 
 	for (const sample of cohortSamples) {
 		const dbSample = data.samples[sample.sampleId.toString()]
+
 		sample.category_info = {}
 		sample.hidden = {}
+		if (q.colorTW.q?.mode === 'continuous') sample.category = dbSample[q.colorTW.term.id].value
+		else {
+			assignCategory(dbSample, sample, q.colorTW, colorMap, 'category')
+			if (!('category' in sample)) continue
+		}
 
-		assignCategory(dbSample, sample, q.colorTW, colorMap, 'category')
-		if (!('category' in sample)) continue
 		sample.shape = 'Ref'
 		if (q.shapeTW) {
 			assignCategory(dbSample, sample, q.shapeTW, shapeMap, 'shape')
@@ -182,18 +186,22 @@ async function colorAndShapeSamples(refSamples, cohortSamples, data, q) {
 		}
 		samples.push(sample)
 	}
-
-	const k2c = d3scale.scaleOrdinal(schemeCategory20)
-	for (const [category, value] of colorMap) {
-		const tvalue = q.colorTW.term.values?.[category]
-		if (tvalue?.color) value.color = tvalue.color
-		else if (data.refs?.byTermId[q.colorTW.term.id]?.bins) {
-			const bin = data.refs.byTermId[q.colorTW.term.id].bins.find(bin => bin.name === category)
-			value.color = bin.color
-		} else if (q.colorTW.term.type == 'geneVariant') value.color = mclass[value.mclass]?.color || 'black'
-		// should be invalid_mclass_color
-		else value.color = k2c(category)
+	if (q.colorTW.q.mode !== 'continuous') {
+		const k2c = d3scale.scaleOrdinal(schemeCategory20)
+		for (const [category, value] of colorMap) {
+			const tvalue = q.colorTW.term.values?.[category]
+			if (tvalue?.color) value.color = tvalue.color
+			else if (data.refs?.byTermId[q.colorTW.term.id]?.bins) {
+				const bin = data.refs.byTermId[q.colorTW.term.id].bins.find(bin => bin.name === category)
+				value.color = bin.color
+			} else if (q.colorTW.term.type == 'geneVariant') value.color = mclass[value.mclass]?.color || 'black'
+			// should be invalid_mclass_color
+			else value.color = k2c(category)
+		}
 	}
+	//else
+	//sample.value = dbSample.value
+
 	shapeMap.set('Ref', { sampleCount: refSamples.length, shape: 0 })
 	let i = 1
 	for (const [category, value] of shapeMap) {

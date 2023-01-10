@@ -140,6 +140,17 @@ class Scatter {
 			.range([this.axisOffset.y, this.settings.svgh + this.axisOffset.y])
 		this.axisLeft = axisLeft(this.yAxisScale)
 
+		if (this.config.colorTW.q.mode === 'continuous') {
+			const cohortSamples = this.data.samples.filter(sample => sample.category !== 'Ref')
+			const [min, max] = cohortSamples.reduce(
+				(s, d) => [d.value < s[0] ? d.category : s[0], d.category > s[1] ? d.category : s[1]],
+				[cohortSamples[0].category, cohortSamples[0].category]
+			)
+			this.colorGenerator = d3Linear()
+				.domain([min, max])
+				.range(['LightGreen', 'DarkGreen'])
+		}
+
 		this.render()
 		this.setTools()
 		this.lassoReset()
@@ -180,7 +191,8 @@ class Scatter {
 						title: 'Categories to color the samples',
 						label: 'Color',
 						vocabApi: this.app.vocabApi,
-						menuOptions: '!remove'
+						menuOptions: '!remove',
+						numericEditMenuVersion: ['continuous', 'discrete']
 					},
 					{
 						type: 'term',
@@ -242,6 +254,8 @@ class Scatter {
 		let offsetX = 0
 		let offsetY = 60
 		let title = this.config.colorTW.term.name
+		const colorRefCategory = this.colorLegend.get('Ref')
+
 		const colorG = legendG.append('g')
 		colorG
 			.append('text')
@@ -250,38 +264,30 @@ class Scatter {
 			.attr('y', 30)
 			.text(title)
 			.style('font-weight', 'bold')
-
-		const radius = 5
-		let count, name, color
-		for (const [key, category] of this.colorLegend) {
-			if (key == 'Ref') continue
-			color = category.color
-			count = category.sampleCount
-			name = key
-			const hidden = this.config.colorTW.q.hiddenValues ? key in this.config.colorTW.q.hiddenValues : false
-			const circleG = colorG.append('g')
-			circleG
-				.append('circle')
-				.attr('cx', offsetX)
-				.attr('cy', offsetY)
-				.attr('r', radius)
-				.style('fill', color)
-
-			circleG.on('click', e => this.onColorClick(e, key, category))
-			const itemG = colorG.append('g')
-			itemG
-				.append('text')
-				.attr('name', 'sjpp-scatter-legend-label')
-				.attr('x', offsetX + 10)
-				.attr('y', offsetY)
-				.text(`${name}, n=${count}`)
-				.style('font-size', '15px')
-				.style('text-decoration', hidden ? 'line-through' : 'none')
-				.attr('alignment-baseline', 'middle')
+		if (this.config.colorTW.q.mode === 'continuous') {
+			this.addLegendItem(
+				colorG,
+				'green',
+				'All samples',
+				this.data.samples.length - colorRefCategory.sampleCount,
+				offsetX,
+				offsetY
+			)
 			offsetY += step
-			itemG.on('click', () => this.onLegendClick(this.config.colorTW, 'colorTW', key, itemG, hidden))
+		} else {
+			let count, name, color
+			for (const [key, category] of this.colorLegend) {
+				if (key == 'Ref') continue
+				color = category.color
+				count = category.sampleCount
+				name = key
+				const hidden = this.config.colorTW.q.hiddenValues ? key in this.config.colorTW.q.hiddenValues : false
+				const [circleG, itemG] = this.addLegendItem(colorG, color, name, count, offsetX, offsetY, hidden)
+				circleG.on('click', e => this.onColorClick(e, key, category))
+				offsetY += step
+				itemG.on('click', () => this.onLegendClick(this.config.colorTW, 'colorTW', key, itemG, hidden))
+			}
 		}
-		const colorRefCategory = this.colorLegend.get('Ref')
 		if (colorRefCategory.sampleCount > 0) {
 			offsetY = offsetY + step
 			const titleG = legendG.append('g')
@@ -335,14 +341,13 @@ class Scatter {
 				.text(title)
 				.style('font-weight', 'bold')
 
-			let index, symbol
-			color = 'gray'
+			const color = 'gray'
 			for (const [key, shape] of this.shapeLegend) {
 				if (key == 'Ref') continue
-				index = shape.shape % this.symbols.length
-				symbol = this.symbols[index].size(64)()
-				name = key
-				count = shape.sampleCount
+				const index = shape.shape % this.symbols.length
+				const symbol = this.symbols[index].size(64)()
+				const name = key
+				const count = shape.sampleCount
 				const hidden = this.config.shapeTW.q.hiddenValues ? key in this.config.shapeTW.q.hiddenValues : false
 				const itemG = shapeG.append('g')
 
@@ -363,6 +368,31 @@ class Scatter {
 				itemG.on('click', () => this.onLegendClick(this.config.shapeTW, 'shapeTW', key, itemG, hidden))
 			}
 		}
+	}
+
+	addLegendItem(g, color, name, count, x, y, hidden = false) {
+		const radius = 5
+
+		const circleG = g.append('g')
+		circleG
+			.append('circle')
+			.attr('cx', x)
+			.attr('cy', y)
+			.attr('r', radius)
+			.style('fill', color)
+
+		circleG.on('click', e => this.onColorClick(e, key, category))
+		const itemG = g.append('g')
+		itemG
+			.append('text')
+			.attr('name', 'sjpp-scatter-legend-label')
+			.attr('x', x + 10)
+			.attr('y', y)
+			.text(`${name}, n=${count}`)
+			.style('font-size', '15px')
+			.style('text-decoration', hidden ? 'line-through' : 'none')
+			.attr('alignment-baseline', 'middle')
+		return [circleG, itemG]
 	}
 
 	onColorClick(e, key, category) {
@@ -1094,7 +1124,9 @@ function getCategoryInfo(d, category) {
 }
 
 function getColor(self, c) {
+	if (self.config.colorTW.q.mode == 'continuous' && c.category !== 'Ref') return self.colorGenerator(c.category)
 	const color = self.colorLegend.get(c.category).color
+
 	return color
 }
 
