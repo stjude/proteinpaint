@@ -923,8 +923,10 @@ export async function getPlotConfig(opts, app) {
 			}
 		}
 	}
-	const rowh = config.settings.matrix.rowh
+
 	const s = config.settings
+	const fontsize = Math.max(s.matrix.rowh + s.matrix.rowspace - 3 * s.matrix.rowlabelpad, 12)
+
 	s.legend = {
 		ontop: false,
 		lineh: 25,
@@ -932,9 +934,9 @@ export async function getPlotConfig(opts, app) {
 		padleft: 0, //150,
 		padright: 20,
 		padbtm: 30,
-		fontsize: rowh,
-		iconh: rowh,
-		iconw: rowh,
+		fontsize,
+		iconh: fontsize - 2,
+		iconw: fontsize - 2,
 		hangleft: 1,
 		linesep: false
 	}
