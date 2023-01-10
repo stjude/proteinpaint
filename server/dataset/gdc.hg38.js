@@ -188,7 +188,25 @@ module.exports = {
 						},
 						{
 							by: 'class',
-							order: ['CNV_loss', 'CNV_amp', 'M', 'S', 'F', 'N']
+							order: [
+								'CNV_loss',
+								'CNV_amp',
+								// truncating
+								'F',
+								'N',
+								// indel
+								'D',
+								'I',
+								// point
+								'M',
+								'P',
+								'L',
+								// noncoding
+								'Utr3',
+								'Utr5',
+								'S',
+								'Intron'
+							]
 						}
 					]
 				},
