@@ -209,13 +209,16 @@ makeURL([
 		['k-mer','?genome=hg19&block=1&bamfile=test,proteinpaint_demo/hg19/bam/bcorl1.complex.bam&position=chrX:129150009-129150071&variant=chrX.129150027.GGAAAGCGTAGGGGTCTTTGCTTGCAAGAACAA.GT'],
 
 		['exon deletion','?genome=hg19&block=1&bamfile=test,proteinpaint_demo/hg19/bam/crebbp.bam&position=chr16:3800245-3803429'],
-		['ETV6 SV', '?genome=hg19&block=1&bamfile=test,proteinpaint_demo/hg19/bam/etv6runx1.bam&position=chr12:12023245-12023802'],
-		['CBFB inversion','?genome=hg19&block=1&bamfile=test,proteinpaint_demo/hg19/bam/CBFB-MYH11.bam&position=chr16:67115815-67117415'],
 		['long read, no qual','?genome=hg38&block=1&bamfile=test,proteinpaint_demo/hg38/bam/control.BCL11A-218.bam&position=chr2:60450049-60563872'],
 		['FLAG 0/16','?genome=hg19&block=1&position=chr12:25380685-25381606&bamfile=flag,proteinpaint_demo/hg19/bam/flagproblem.bam'],
-	        ['multi-region inversion example','?genome=hg19&block=1&bamfile=inversion_example,proteinpaint_demo/hg19/bam/CBFB-MYH11.bam&position=chr16:67116400-67116600;chr16:15814303-15816118'],
-	        ['multi-region translocation example','?genome=hg19&block=1&bamfile=translocation_example,proteinpaint_demo/hg19/bam/etv6runx1.bam&position=chr12:12023000-12023560;chr21:36315404-36315804'],
-		'ERR:',
+
+		'SV',
+	    ['CBFB inversion wgs','?genome=hg19&block=1&bamfile=inversion_example,proteinpaint_demo/hg19/bam/CBFB-MYH11.bam&position=chr16:67116400-67116600;chr16:15814303-15816118'],
+	    ['ETV6-RUNX1 wgs','?genome=hg19&block=1&bamfile=translocation_example,proteinpaint_demo/hg19/bam/etv6runx1.bam&position=chr12:12023000-12023560;chr21:36315404-36315804'],
+		['BCR-ABL1 wgs','?genome=hg19&block=1&position=chr9:133674971-133675971;chr22:23584937-23585937&bamfile=SJPHALL013_D,proteinpaint_demo/hg19/bam/bcr.abl1.wgs.bam'],
+		['BCR-ABL1 rna','?genome=hg19&block=1&position=chr22:23523926-23524926;chr9:133728952-133729952&bamfile=SJPHALL013_D,proteinpaint_demo/hg19/bam/bcr.abl1.rna.bam'],
+
+		'ERR',
 		['missing','?genome=hg19&block=1&bamfile=flag,path/to/missing.bam'],
 		['text','?genome=hg19&block=1&bamfile=flag,proteinpaint_demo/hg19/junction/rnapeg'],
 		['gz','?genome=hg19&block=1&bamfile=flag,proteinpaint_demo/hg19/junction/file.gz'],
