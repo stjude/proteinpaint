@@ -25,6 +25,7 @@ class Matrix {
 		const opts = this.opts
 		const holder = opts.controls ? opts.holder : opts.holder.append('div')
 		const controls = this.opts.controls ? null : holder.append('div')
+		const loadingDiv = holder.append('div').style('margin-left', '50px')
 		const errdiv = holder
 			.append('div')
 			.attr('class', 'sja_errorbar')
@@ -46,6 +47,7 @@ class Matrix {
 			holder,
 			errdiv,
 			controls,
+			loadingDiv,
 			svg,
 			mainG,
 			sampleGrpLabelG: mainG
@@ -168,8 +170,11 @@ class Matrix {
 			Object.assign(this.settings, this.config.settings)
 
 			// get the data
+			this.dom.loadingDiv.html('').style('display', '')
 			const reqOpts = await this.getDataRequestOpts()
 			this.data = await this.app.vocabApi.getAnnotatedSampleData(reqOpts)
+			this.dom.loadingDiv.html('Processing data ...')
+
 			this.setAutoDimensions()
 			this.setSampleGroups(this.data)
 			this.setTermOrder(this.data)
@@ -177,6 +182,7 @@ class Matrix {
 			this.setSampleCountsByTerm()
 			this.setLayout()
 			this.serieses = this.getSerieses(this.data)
+			this.dom.loadingDiv.html('').style('display', 'none')
 			// render the data
 			this.render()
 
@@ -260,7 +266,8 @@ class Matrix {
 		return {
 			terms,
 			filter: this.state.filter,
-			filter0: this.state.filter0
+			filter0: this.state.filter0,
+			loadingDiv: this.dom.loadingDiv
 		}
 	}
 
@@ -491,6 +498,7 @@ class Matrix {
 		if (!s.maxSample) return
 		// must redo the sample counts by term after sorting and applying maxSamples, if applicable
 		for (const t of this.termOrder) {
+			t.allCounts = t.counts
 			const countedSamples = new Set()
 			t.counts = { samples: 0, hits: 0 }
 			for (const s of this.sampleOrder) {

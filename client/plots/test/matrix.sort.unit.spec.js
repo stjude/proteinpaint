@@ -13,7 +13,7 @@ const terms = {
 
 // return unique copies so that each test does not reuse
 // the same data rows that are already sorted in another test
-function getArgs(settings = {}) {
+function getArgs(_settings = {}) {
 	const samples = {
 		1: {
 			sample: 1,
@@ -81,6 +81,13 @@ function getArgs(settings = {}) {
 		}
 	]
 
+	const settings = {
+		matrix: {
+			sortSamplesTieBreakers: [{ $id: 'sample', sortSamples: { by: 'sample' } }],
+			..._settings
+		}
+	}
+
 	const rows = Object.values(samples)
 	return {
 		self: {
@@ -88,12 +95,7 @@ function getArgs(settings = {}) {
 				vocabApi: {}
 			},
 			config: {
-				settings: {
-					matrix: {
-						sortSamplesTieBreakers: [{ $id: 'sample', sortSamples: { by: 'sample' } }],
-						...settings
-					}
-				}
+				settings
 			},
 			termGroups: tg,
 			sampleGroups: sg,
@@ -153,7 +155,7 @@ function getArgs(settings = {}) {
 				}
 			]
 		},
-		settings,
+		settings: settings.matrix,
 		rows: Object.values(samples)
 	}
 }
@@ -215,4 +217,8 @@ tape('sortSamplesBy = selectedTerms', test => {
 		'should sort sample and rows in the expected order'
 	)
 	test.end()
+})
+
+tape.skip('sortPriority', test => {
+	// !!! TODO !!!
 })

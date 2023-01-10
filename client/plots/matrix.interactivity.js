@@ -17,16 +17,27 @@ export function setInteractivity(self) {
 					`<tr><td>${d.term.name}:</td><td style='color: ${d.fill == '#fff' ? '' : d.fill}'> ${d.label}</td></tr>`
 				)
 			} else if (d.term.type == 'geneVariant' && d.value) {
-				const value = d.value
-				rows.push(`<tr><td>Sample:</td><td>${d._SAMPLENAME_ || value._SAMPLENAME_ || value.sample}</td></tr>`)
-				const label = value.mname ? `${value.mname} ${d.label}` : d.label
 				rows.push(
-					`<tr><td>${d.term.name}:</td><td style='color: ${d.fill == value.color ? '' : d.fill}'>${label}</td></tr>`
+					`<tr><td colspan='2' style='text-align: center'>Sample: ${d._SAMPLENAME_ ||
+						d.value._SAMPLENAME_ ||
+						d.value.sample}</td></tr>`
 				)
+				rows.push(`<tr><td colspan='2' style='text-align: center'>${d.term.name}</td></tr>`)
+				for (const c of event.target.parentNode.__data__.cells) {
+					if (c.$id != d.$id) continue
+					const v = c.value
+					const label = v.mname ? `${v.mname} ${c.label}` : c.label
+					const info = []
+					if (v.label && v.label !== c.label) info.push(v.label)
+					if (v.chr) info.push(`${v.chr}:${v.pos}`)
+					if (v.alt) info.push(`${v.ref}>${v.alt}`)
 
-				if (value.label && value.label !== d.label) rows.push(`<tr><td></td><td>${value.label}</td></tr>`)
-				if (value.alt) rows.push(`<tr><td>ref=${value.ref}</td><td>alt=${value.alt}</td></tr>`)
-				if (value.chr) rows.push(`<tr><td>Position:</td><td>${value.chr}:${value.pos}</td></tr>`)
+					const tds = !info.length
+						? `<td colspan='2' style='text-align: center'>${label}</td>`
+						: `<td style='text-align: right'>${label}</td><td>${info.map(i => `<span>${i}</span>`).join(' ')}</td>`
+
+					rows.push(`<tr style='color: ${c.fill == v.color ? '' : c.fill}'>${tds}</tr>`)
+				}
 			}
 
 			self.dom.menutop.selectAll('*').remove()
@@ -264,6 +275,14 @@ function setTermActions(self) {
 				self.dom.tip.hide()
 			})
 
+		if (self.config.settings.matrix.maxSample) {
+			self.dom.twMenuDiv
+				.append('div')
+				.style('text-align', 'center')
+				.style('margin', '5px')
+				.text(`#samples: ${t.counts.samples} visible, ${t.allCounts.samples - t.counts.samples} hidden`)
+		}
+
 		self.dom.twMenuBar = self.dom.twMenuDiv.append('div').style('text-align', 'center')
 		//menuBtnsDiv.on('click', () => menuBtnsDiv.style('display', 'none'))
 		// must remember event target since it's cleared after async-await
@@ -468,6 +487,8 @@ function setTermActions(self) {
 	self.showTermEditMenu = async () => {
 		self.dom.menubody.selectAll('*').remove()
 		const t = self.activeLabel
+		const s = self.config.settings.matrix
+
 		if (t.tw.term.type == 'geneVariant') {
 			const div = self.dom.menubody.append('div')
 			const label = div.append('label')

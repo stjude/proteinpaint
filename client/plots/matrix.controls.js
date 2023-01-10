@@ -69,6 +69,12 @@ export class MatrixControls {
 					options: [{ label: 'as-listed', value: 'asListed' }, { label: 'selected terms', value: 'selectedTerms' }]
 				},
 				{
+					label: 'Maximum #samples',
+					type: 'number',
+					chartType: 'matrix',
+					settingsKey: 'maxSample'
+				},
+				{
 					label: 'Group samples by',
 					type: 'term',
 					chartType: 'matrix',

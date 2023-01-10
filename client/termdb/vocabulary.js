@@ -825,6 +825,9 @@ class TermdbVocab extends Vocab {
 			.map(tw => tw.term.name)
 			.sort()
 
+		let numResponses = 0
+		if (opts.loadingDiv) opts.loadingDiv.html('Fetching data ...')
+
 		// fetch the annotated sample for each term
 		while (termsToUpdate.length) {
 			const tw = termsToUpdate.pop()
@@ -872,12 +875,18 @@ class TermdbVocab extends Vocab {
 					if (idn in data.refs.byTermId) {
 						refs.byTermId[tw.$id] = data.refs.byTermId[idn]
 					}
+
+					numResponses++
+					if (opts.loadingDiv)
+						opts.loadingDiv.html(`Fetching data (${numResponses}/${promises.length}): ${tw.term.name}`)
 				})
 			)
 		}
 
 		try {
+			if (opts.loadingDiv) opts.loadingDiv.html(`Fetching data (0/${promises.length})`)
 			await Promise.all(promises)
+			if (opts.loadingDiv) opts.loadingDiv.html('')
 		} catch (e) {
 			this.tokenVerificationMessage = e
 			throw e
