@@ -377,6 +377,7 @@ function setTermActions(self) {
 		for (const g of termgroups) {
 			if (g == grp) {
 				for (const [priority, tw] of g.lst.entries()) {
+					// the `by: 'values'` may be overridden by self.config.settings.matrix.sortPriority, if available
 					tw.sortSamples = { priority, by: 'values' }
 				}
 			} else {

@@ -25,12 +25,25 @@ export function getSampleSorter(self, settings, rows) {
 		.sort((a, b) => a.sortSamples.priority - b.sortSamples.priority)
 
 	// always prioritize manually selected terms, if any
-	const sorterTerms = [...selectedTerms]
+	const sorterTerms = []
+	if (!s.sortPriority) {
+		sorterTerms.push(...selectedTerms)
+	} else {
+		for (const p of s.sortPriority) {
+			for (const tw of selectedTerms) {
+				if (!p.types.includes(tw.term.type)) continue
+				for (const tb of p.tiebreakers) {
+					sorterTerms.push(Object.assign({}, tw, { sortSamples: tb }))
+				}
+			}
+		}
+	}
 
 	// now apply sort priority as specified in the dataset's termdbconfig, if applicable
 	if (s.sortPriority) {
 		for (const p of s.sortPriority) {
 			for (const t of self.termOrder) {
+				if (selectedTerms.find(tw => tw.$id === t.tw.$id)) continue
 				if (!p.types.includes(t.tw.term.type)) continue
 				for (const tb of p.tiebreakers) {
 					sorterTerms.push(Object.assign({ sortSamples: { by: tb.by, order: tb.order } }, t.tw))
@@ -45,7 +58,7 @@ export function getSampleSorter(self, settings, rows) {
 				? []
 				: self.termOrder
 						// sort against only dictionary terms in this tie-breaker
-						.filter(t => !t.tw.sortSamples && t.tw.id)
+						.filter(t => !t.tw.sortSamples && t.tw.id && !selectedTerms.find(tw => tw.$id === t.tw.$id))
 						.map(t => Object.assign({ sortSamples: { by: 'values' } }, t.tw))
 
 		const unSelectedNonDictTerms =
@@ -53,7 +66,7 @@ export function getSampleSorter(self, settings, rows) {
 				? []
 				: self.termOrder
 						// sort against only non-dictionary terms in this tie-breaker
-						.filter(t => !t.tw.sortSamples && !t.tw.id)
+						.filter(t => !t.tw.sortSamples && !t.tw.id && !selectedTerms.find(tw => tw.$id === t.tw.$id))
 						.map(t => Object.assign({ sortSamples: { by: 'hits' } }, t.tw))
 
 		sorterTerms.push(...unSelectedNonDictTerms, ...unSelectedDictTerms)
