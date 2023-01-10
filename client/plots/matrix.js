@@ -174,6 +174,7 @@ class Matrix {
 			this.setSampleGroups(this.data)
 			this.setTermOrder(this.data)
 			this.setSampleOrder(this.data)
+			this.setSampleCountsByTerm()
 			this.setLayout()
 			this.serieses = this.getSerieses(this.data)
 			// render the data
@@ -200,6 +201,7 @@ class Matrix {
 			})
 
 			await this.adjustSvgDimensions(prevTranspose)
+			this.controlsRenderer.main()
 		} catch (e) {
 			// a new token message error may have been triggered by the data request here,
 			// even if the initial state did not have a token message at the start of a dispatch
@@ -346,7 +348,12 @@ class Matrix {
 		let total = 0
 		for (const [grpIndex, grp] of this.sampleGroups.entries()) {
 			grp.lst.sort(this.sampleSorter)
-			for (const [index, row] of grp.lst.entries()) {
+			let processedLst = grp.lst
+			if (s.maxSample && total + grp.lst.length > s.maxSample) {
+				processedLst = grp.lst.slice(0, s.maxSample - total)
+			}
+
+			for (const [index, row] of processedLst.entries()) {
 				this.sampleOrder.push({
 					grp,
 					grpIndex,
@@ -356,10 +363,12 @@ class Matrix {
 					totalIndex: total + index,
 					totalHtAdjustments: 0,
 					grpHtAdjustments: 0,
-					_SAMPLENAME_: data.refs.bySampleId[row.sample]
+					_SAMPLENAME_: data.refs.bySampleId[row.sample],
+					processedLst
 				})
 			}
-			total += grp.lst.length
+			total += processedLst.length
+			if (s.maxSample && total >= s.maxSample) break
 		}
 	}
 
@@ -410,6 +419,17 @@ class Matrix {
 					if (!grp.settings) return true
 					return !('minNumSamples' in grp.settings) || t.counts.samples >= grp.settings.minNumSamples
 				})
+				/*
+					NOTE: When sorting terms by sample counts, those counts would have been computed before applying the s.maxSample truncation.
+					The sample counts are then re-computed, if applicable, in setSampleCountByTerm() after sample list truncation.
+					If the left-most sample group does not have much less hits relative to sample groups to its right, then this
+					may look like a term with less sample count got mistakenly sorted to the top.
+
+					TODO: 
+					(a) Option for s.sortSampleGroupBy = hits-by-term-order, and force this option so that the left-most sample group would
+					    make visually sense with s.maxSample is not empty and s.sortTermsBy = 'sampleCount'
+					(b) OR, re-sort the term lst based on sample counts without rearranging sample groups
+				*/
 				.sort(termSorter)
 
 			if (!processedLst.length) continue
@@ -463,6 +483,43 @@ class Matrix {
 				return matched
 			}
 		})
+	}
+
+	setSampleCountsByTerm() {
+		const s = this.settings.matrix
+		// only overwrite the sample counts if one or more sample group.lst has been truncated
+		if (!s.maxSample) return
+		// must redo the sample counts by term after sorting and applying maxSamples, if applicable
+		for (const t of this.termOrder) {
+			const countedSamples = new Set()
+			t.counts = { samples: 0, hits: 0 }
+			for (const s of this.sampleOrder) {
+				if (countedSamples.has(s.row.sample)) continue
+				const anno = s.row[t.tw.$id]
+				if (!anno) continue
+				anno.filteredValues = this.getFilteredValues(anno, t.tw, t.grp)
+				if (anno.filteredValues?.length) {
+					t.counts.samples += 1
+					t.counts.hits += anno.filteredValues.length
+					if (t.tw.q?.mode == 'continuous') {
+						const v = anno.value
+						if (!('minval' in t.counts) || t.counts.minval > v) t.counts.minval = v
+						if (!('maxval' in t.counts) || t.counts.maxval < v) t.counts.maxval = v
+					}
+				}
+			}
+
+			t.label =
+				(t.tw.label || t.tw.term.name) +
+				(s.samplecount4gene && t.tw.term.type.startsWith('gene') ? ` (${t.counts.samples})` : '')
+
+			t.scale =
+				t.tw.q?.mode == 'continuous'
+					? scaleLinear()
+							.domain([t.counts.minval, t.counts.maxval])
+							.range([1, t.tw.settings.barh])
+					: null
+		}
 	}
 
 	setLayout() {
@@ -826,6 +883,12 @@ export async function getPlotConfig(opts, app) {
 					bottom: 20,
 					left: 50
 				},
+
+				// set any dataset-defined sample limits and sort priority, otherwise undefined
+				// put in settings, so that later may be overridden by a user (TODO)
+				maxSample: app.vocabApi.termdbConfig.matrix?.maxSample,
+				sortPriority: app.vocabApi.termdbConfig.matrix?.sortPriority,
+
 				sampleNameFilter: '',
 				sortSamplesBy: 'selectedTerms',
 				sortSamplesTieBreakers: [{ $id: 'sample', sortSamples: {} /*split: {char: '', index: 0}*/ }],

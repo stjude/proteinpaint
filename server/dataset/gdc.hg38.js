@@ -174,6 +174,31 @@ module.exports = {
 			gdcapi: true
 		},
 
+		maxMatrixSample: 1000,
+
+		matrix: {
+			maxSample: 1000,
+			sortPriority: [
+				{
+					types: ['geneVariant'],
+					tiebreakers: [
+						{
+							by: 'dt',
+							order: [1, 4, 2]
+						},
+						{
+							by: 'class',
+							order: ['CNV_loss', 'CNV_amp', 'M', 'S', 'F', 'N']
+						}
+					]
+				},
+				{
+					types: ['categorical', 'integer', 'float', 'survival'],
+					tiebreakers: [{ by: 'values' }]
+				}
+			]
+		},
+
 		// pending
 		allowCaseDetails: {
 			sample_id_key: 'case_uuid',

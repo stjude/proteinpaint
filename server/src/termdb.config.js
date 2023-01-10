@@ -32,7 +32,8 @@ export function make(q, res, ds) {
 		allowedTermTypes: getAllowedTermTypes(ds),
 		termMatch2geneSet: tdb.termMatch2geneSet,
 		massSessionDuration: serverconfig.features.massSessionDuration || 30,
-		dataDownloadCatch: tdb.dataDownloadCatch
+		dataDownloadCatch: tdb.dataDownloadCatch,
+		matrix: tdb.matrix
 	}
 
 	// optional attributes
