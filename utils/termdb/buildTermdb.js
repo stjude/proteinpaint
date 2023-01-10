@@ -119,6 +119,8 @@ const sampleCollect = {
 	id: 1 // sample id enumerator
 }
 const k2c = d3scale.scaleOrdinal(schemeCategory20)
+//When assigning colors to categories, if no color is provided, a colorMap is created in order to use the same colors for the same categories
+const colorMap = new Map()
 
 //////////////////////////////////// main sequence
 
@@ -389,7 +391,10 @@ function loadAnnotationFile(scriptArg, terms, sampleCollect) {
 				// the category is missing from .values{}, auto add
 				term.values[v] = { label: v }
 			}
-			if (!('color' in term.values[v])) term.values[v].color = k2c(v)
+			const color = colorMap.get(v)
+			if (!('color' in term.values[v])) {
+				if (!color) colorMap.set(v, k2c(v))
+			} else colorMap.set(v, term.values[v].color)
 		} else if (term.type == 'float') {
 			const n = Number(v)
 			if (Number.isNaN(n)) throw `value=${v} not number for type=float, term=${term.id}, line=${i + 1}`
@@ -457,6 +462,10 @@ function finalizeTerms(terms) {
 			// to do: add checking
 			if (term.values?.length > 2 && term.groupsetting) {
 				delete term.groupsetting.disabled
+			}
+			for (const v in term.values) {
+				if (!term.values[v]?.color) term.values[v].color = colorMap.get(v)
+				console.log(`${v}, ${term.values[v].color} `)
 			}
 		} else if (term.type == 'integer' || term.type == 'float') {
 			const computableValues = []
