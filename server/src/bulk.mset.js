@@ -54,9 +54,42 @@ exports.mayGetGeneVariantData = async function(tw, q) {
 			if (!(tname in sampleData)) sampleData[tname] = { key: tname, values: [], label: tname }
 			sampleData[tname].values.push(d)
 		}
+		/*
+			process and store each sampleId in bySampleId as:
+				<sampleId> : {
+					<gene>: {
+						values: [
+							{ dt, mname} // a mutation data point
+							{ dt, isWildtype:true } // if this sample is wildtype
+							{ dt, isNotAssayed:true } // if is not assayed for this dt
+						]
+					}
+				}
+		*/
+		if (ds.assayAvailability?.byDt) {
+			for (const dtKey in ds.assayAvailability.byDt) {
+				const dt = ds.assayAvailability.byDt[dtKey]
+				for (const sid of dt.yesSamples) {
+					if (!bySampleId.has(sid)) bySampleId.set(sid, { sample: sid })
+					const sampleData = bySampleId.get(sid)
+					if (!(tname in sampleData)) sampleData[tname] = { key: tname, values: [], label: tname }
+					if (!sampleData[tname].values.some(val => val.dt == dtKey))
+						sampleData[tname].values.push({ dt: parseInt(dtKey), isWildtype: true })
+				}
+				for (const sid of dt.noSamples) {
+					if (!bySampleId.has(sid)) bySampleId.set(sid, { sample: sid })
+					const sampleData = bySampleId.get(sid)
+					if (!(tname in sampleData)) sampleData[tname] = { key: tname, values: [], label: tname }
+					if (!sampleData[tname].values.some(val => val.dt == dtKey))
+						sampleData[tname].values.push({ dt: parseInt(dtKey), isNotAssayed: true })
+				}
+			}
+		}
 	}
 	//console.log(JSON.stringify(bySampleId.get(63),null,2))
-
+	for (const [k, v] of bySampleId.entries()) {
+		console.log(v[tname])
+	}
 	return bySampleId
 }
 
