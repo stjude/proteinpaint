@@ -108,7 +108,7 @@ export const mclass = {
 	// quick fix!! for showing genes that are not tested in samples (e.g. gene panels) in the heatmap
 	Blank: { label: 'Not tested', color: '#fff', dt: dtsnvindel, desc: 'This gene is not tested.', key: 'Blank' },
 
-	WT: { label: 'Wildtype', color: '#00ffd2', dt: dtsnvindel, desc: 'Wildtype', key: 'WT' }
+	WT: { label: 'Wildtype', color: '#D3D3D3', dt: dtsnvindel, desc: 'Wildtype', key: 'WT' }
 }
 export const mclassitd = 'ITD'
 mclass[mclassitd] = {
