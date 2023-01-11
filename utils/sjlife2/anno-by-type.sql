@@ -1,0 +1,1 @@
+/Users/azaldiva/proteinpaint/utils/termdb/anno-by-type.sql
