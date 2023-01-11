@@ -314,6 +314,7 @@ export async function bamsliceui({
 			first argument is "event" which is unused, as gdc_search() is used as event listener
 			*/
 
+			saydiv.selectAll('*').remove()
 			noPermissionDiv.style('display', 'none')
 			submitButton.style('display', 'inline-block')
 
@@ -344,7 +345,16 @@ export async function bamsliceui({
 				gdc_args.bam_files = [] //empty bam_files array after each gdc api call
 				if (data.error) throw 'Error: ' + data.error
 				if (!Array.isArray(data.file_metadata)) throw 'Error: .file_metadata[] missing'
-				if (data.file_metadata.length == 0) throw 'No viewable BAM files found'
+
+				if (data.file_metadata.length == 0) {
+					// no viewable bam files
+					if (data.is_file_uuid && data.numFilesSkippedByWorkflow == 1) {
+						// query is a file uuid which is skipped by workflow
+						throw 'File not viewable due to workflow type'
+					}
+					throw 'No viewable BAM files found'
+				}
+
 				/*
 				in file_metadata[], each element is a bam file:
 				{
@@ -463,7 +473,7 @@ export async function bamsliceui({
 			.append('div')
 			.text('No variant found for this case.')
 			.style('margin-bottom', '10px')
-			.style('opacity', 0.4)
+			.style('font-weight', 'bold')
 			.style('display', 'none')
 
 		const geneSearchRow = geneHolder
@@ -772,7 +782,7 @@ function geneSearchInstruction(d) {
 		<li>Variant:</li>
 		<ul>
 		  <li>Example: chr2.208248388.C.T</li>
-		  <li>Fields are separated by periods. Coordinate is hg38 and 1-based. Reference and alternate aleles are on forward strand.</li>
+		  <li>Fields are separated by periods. Coordinate is hg38 and 1-based. Reference and alternative alleles are on forward strand.</li>
 		</ul>
 		<li>Supported HGVS formats for variants:</li>
 		<ul>
@@ -798,7 +808,7 @@ function validateInputs(args, genome, hideTokenInput = false) {
 		if (!args.gdc_token) throw 'GDC token missing'
 		if (typeof args.gdc_token !== 'string') throw 'GDC token is not string'
 	}
-	if (!args.bam_files.length) throw 'No BAM file supplied'
+	if (!args.bam_files.length) throw 'No BAM file selected'
 	for (const file of args.bam_files) {
 		if (!file.file_id) throw 'file uuid is missing'
 		if (typeof file.file_id !== 'string') throw 'file uuid is not string'
