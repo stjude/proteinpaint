@@ -239,29 +239,6 @@ class Matrix {
 			terms.push(...grp.lst)
 		}
 		if (this.config.divideBy) terms.push(this.config.divideBy)
-		if (this.config.overrides) {
-			const overrideTerms = [],
-				sampleFilters = []
-			for (const key in this.config.overrides) {
-				const r = this.config.overrides[key]
-				if (r.sampleFilter?.type == 'tvs') {
-					overrideTerms.push(r.sampleFilter.tvs.term)
-					sampleFilters.push(r.sampleFilter)
-				}
-			}
-			// may need additional term data to fill-in a filter
-			const readyTerms = await Promise.all(overrideTerms.map(t => (t.type ? t : this.app.vocabApi.getterm(t.id))))
-			terms.push(
-				...readyTerms.map((term, i) => {
-					const tw = { term }
-					fillTermWrapper(tw)
-					// important to get a non-ambiguous tw.$id since the
-					// same term may be used as different rows in the matrix
-					sampleFilters[i].wrapper$id = tw.$id
-					return tw
-				})
-			)
-		}
 		this.numTerms = terms.length
 		return {
 			terms,
@@ -314,14 +291,6 @@ class Matrix {
 		const ref = data.refs.byTermId[$id] || {}
 
 		for (const row of data.lst) {
-			// TODO: may move the override handling downstream,
-			// but before sample group.lst sorting, as needed
-			for (const grp of this.config.termgroups) {
-				for (const tw of grp.lst) {
-					mayApplyOverrides(row, tw, grp, this.config.overrides)
-				}
-			}
-
 			if ($id in row) {
 				if (exclude.includes(row[$id].key)) continue
 				const key = row[$id].key
@@ -401,8 +370,10 @@ class Matrix {
 						countedSamples.add(s.sample)
 						const anno = data.samples[s.sample][tw.$id]
 						if (anno) {
-							anno.filteredValues = this.getFilteredValues(anno, tw, grp)
-							if (anno.filteredValues?.length) {
+							const { filteredValues, countedValues } = this.getFilteredValues(anno, tw, grp)
+							anno.filteredValues = filteredValues
+							anno.countedValues = countedValues
+							if (anno.countedValues?.length) {
 								counts.samples += 1
 								counts.hits += anno.filteredValues.length
 								if (tw.q?.mode == 'continuous') {
@@ -477,10 +448,14 @@ class Matrix {
 
 	getFilteredValues(anno, tw, grp) {
 		const values = 'value' in anno ? [anno.value] : anno.values
+		if (!values) return { filteredValues: null, countedValues: null }
 		const valueFilter = tw.valueFilter || grp.valueFilter
-		if (!valueFilter || !values) return values
-		return values.filter(v => {
-			// TODO: handle non-tvs type value filter
+
+		const filteredValues = values.filter(v => {
+			/*** do not count wildtype and not tested as hits ***/
+			if (tw.term.type == 'geneVariant' && v.class == 'Blank') return false
+			if (!valueFilter) return true
+
 			if (valueFilter.type == 'tvs') {
 				const matched = true
 				for (const vf of valueFilter.tvs.values) {
@@ -488,8 +463,20 @@ class Matrix {
 					else if (v[vf.key] !== vf.value) return valueFilter.isnot
 				}
 				return matched
+			} else {
+				// TODO: handle non-tvs type value filter
+				throw `unknown matrix value filter type='${valueFilter.type}'`
 			}
 		})
+
+		return {
+			filteredValues,
+			countedValues: filteredValues.filter(v => {
+				/*** do not count wildtype and not tested as hits ***/
+				if (tw.term.type == 'geneVariant' && (v.class == 'WT' || v.class == 'Blank')) return false
+				return true
+			})
+		}
 	}
 
 	setSampleCountsByTerm() {
@@ -505,8 +492,10 @@ class Matrix {
 				if (countedSamples.has(s.row.sample)) continue
 				const anno = s.row[t.tw.$id]
 				if (!anno) continue
-				anno.filteredValues = this.getFilteredValues(anno, t.tw, t.grp)
-				if (anno.filteredValues?.length) {
+				const { filteredValues, countedValues } = this.getFilteredValues(anno, t.tw, t.grp)
+				anno.filteredValues = filteredValues
+				anno.countedValues = countedValues
+				if (anno.countedValues?.length) {
 					t.counts.samples += 1
 					t.counts.hits += anno.filteredValues.length
 					if (t.tw.q?.mode == 'continuous') {
@@ -657,8 +646,8 @@ class Matrix {
 
 			for (const t of this.termOrder) {
 				const $id = t.tw.$id
-				if (row[$id]?.filteredValues && !row[$id]?.filteredValues.length && !row[$id].override) continue
-				const anno = row[$id]?.override || row[$id]
+				if (row[$id]?.filteredValues && !row[$id]?.filteredValues.length) continue
+				const anno = row[$id]
 				if (!anno) continue
 				const termid = 'id' in t.tw.term ? t.tw.term.id : t.tw.term.name
 				const key = anno.key
@@ -958,28 +947,4 @@ export async function getPlotConfig(opts, app) {
 	if (config.divideBy) promises.push(fillTermWrapper(config.divideBy, app.vocabApi))
 	await Promise.all(promises)
 	return config
-}
-
-function mayApplyOverrides(row, tw, grp, configOverrides) {
-	const overrides = tw.overrides || grp.overrides
-	if (!grp.overrides) return {}
-	for (const key in configOverrides) {
-		if (!overrides.includes(key)) continue
-		const sf = configOverrides[key].sampleFilter || {}
-		if (sf.type == 'wvs') {
-			for (const v of sf.values) {
-				if (row[sf.wrapper$id]?.key === v.key) {
-					if (!row[tw.$id]) row[tw.$id] = {}
-					row[tw.$id].override = JSON.parse(JSON.stringify(configOverrides[key].value))
-				}
-			}
-		} else if (sf.type == 'tvs') {
-			for (const v of sf.tvs.values) {
-				if (row[sf.wrapper$id]?.key === v.key) {
-					if (!row[tw.$id]) row[tw.$id] = {}
-					row[tw.$id].override = JSON.parse(JSON.stringify(configOverrides[key].value))
-				}
-			}
-		}
-	}
 }

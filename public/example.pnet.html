@@ -183,75 +183,7 @@ document.body.onload = () => runproteinpaint({
               lst: getCytogeneticsData()
             },
 						...getGeneTermGroups(),
-					],
-          // each override may be used by any termwrapper 
-          // that has a tw.overrides[$key] array of any twOverride[$key] below
-          overrides: {
-            SVfill: {
-              value: {
-                key: 'RNAseq', 
-                //value: 'RNAseq', 
-                values: [
-                  {key: 'Not tested', label: 'Not tested', color: '#fff'}
-                ]
-              },
-              sampleFilter: {
-                type: 'tvs',
-                tvs: {
-                  term: {id: 'RNAseq'},
-                  values: [{key: 'No'}]
-                }
-              }
-            },
-            Germfill: {
-              value: {
-                key: 'Germline', 
-                //value: 'Germline', 
-                values: [
-                  {key: 'Not tested', label: 'Not tested', color: '#fff', order: 10000}
-                ]
-              },
-              sampleFilter: {
-                type: 'tvs', // "wrapper-value-setting"
-                tvs: {
-                  term: {id: 'Germline'},
-                  values: [{key: 'No'}]
-                }
-              }
-            },
-            WESfill: {
-              value: {
-                key: 'WES', 
-                //value: 'WES', 
-                values: [
-                  {key: 'Not tested', label: 'Not tested', color: '#fff', order: 10000}
-                ]
-              },
-              sampleFilter: {
-                type: 'tvs', // "wrapper-value-setting"
-                tvs: {
-                  term: {id: 'WES'},
-                  values: [{key: 'No'}]
-                }
-              }
-            },
-            CNVfill: {
-              value: {
-                key: 'Methylation', 
-                value: 'Methylation', 
-                values: [
-                  {key: 'Not tested', label: 'Not tested', color: '#fff', order: 10000}
-                ]
-              },
-              sampleFilter: {
-                type: 'tvs', // "wrapper-value-setting"
-                tvs: {
-                  term: {id: 'Methylation'},
-                  values: [{key: 'No'}]
-                }
-              }
-            }
-          }
+					]
 				},
 
 				{
@@ -295,7 +227,6 @@ function getGeneTermGroups() {
 	for(const g of genegroups) {
     const grp = {
       name: g.name,
-      overrides: g.overrides,
       valueFilter: g.valueFilter,
       lst: g.lst.map(t => {
         const term = {name: t.name, type: 'geneVariant'}
@@ -331,7 +262,6 @@ const genegroups = [
           values: [{key: 'dt', value: 2}]
         },
       },
-      overrides: ['SVfill'],
       "lst": [
           {
               "name": "BCOR_SV",
@@ -361,12 +291,10 @@ const genegroups = [
         values: [{key: 'dt', value: 4}]
       },
     },
-    overrides: ['CNVfill'],
     lst: cnvGenes.map(name=>{return {name}})
   },
   {
       "name": "Germline",
-      overrides: ['Germfill'],
       "lst": [
           {
               "name": "DICER1_G"
@@ -388,7 +316,6 @@ const genegroups = [
           values: [{key: 'dt', value: 4}]
         },
       },
-      overrides: ['WESfill'],
       "lst": [
           {
               "name": "AFDN"
