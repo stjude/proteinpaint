@@ -317,7 +317,7 @@ export class MatrixControls {
 			self.addTermGroupSelector(app, parent, table.append('tr'))
 		}
 		self.addGeneSearch(app, parent, table.append('tr'))
-		if (app.opts.genome.termdbs) {
+		if (app.opts.genome?.termdbs) {
 			for (const key in app.opts.genome.termdbs) {
 				self.addMsigdbMenu(app, parent, table.append('tr'), key)
 			}
