@@ -59,38 +59,95 @@ exports.mayGetGeneVariantData = async function(tw, q) {
 				<sampleId> : {
 					<gene>: {
 						values: [
-							{ dt, mname} // a mutation data point
-							{ dt, isWildtype:true } // if this sample is wildtype
-							{ dt, isNotAssayed:true } // if is not assayed for this dt
+							{ dt, class, mname }          // a mutation data point
+							{ dt, class:'WT' }    // if this sample is wildtype
+							{ dt, class:'Blank'}  // if is not assayed for this dt
 						]
+
+
+						values: [
+							{dt:1, origin:'G', class:'...'},
+							{dt:1, origin:'S', class:'...'},
+							{dt:2, class:'...'},
+							{dt:4, class:'...'}
+						]
+
+						values: [
+							{
+								dt:1,
+								'g':{
+									class:'...'
+								}, 
+								'c':{
+									class:'...'
+								}
+							},
+							{dt:2, class:'...'},
+							{dt:4, class:'...'}
+						]
+
 					}
 				}
 		*/
 		if (ds.assayAvailability?.byDt) {
 			for (const dtKey in ds.assayAvailability.byDt) {
 				const dt = ds.assayAvailability.byDt[dtKey]
-				for (const sid of dt.yesSamples) {
-					if (!bySampleId.has(sid)) bySampleId.set(sid, { sample: sid })
-					const sampleData = bySampleId.get(sid)
-					if (!(tname in sampleData)) sampleData[tname] = { key: tname, values: [], label: tname }
-					if (!sampleData[tname].values.some(val => val.dt == dtKey))
-						sampleData[tname].values.push({ dt: parseInt(dtKey), class: 'WT', _SAMPLEID_: sid })
-				}
-				for (const sid of dt.noSamples) {
-					if (!bySampleId.has(sid)) bySampleId.set(sid, { sample: sid })
-					const sampleData = bySampleId.get(sid)
-					if (!(tname in sampleData)) sampleData[tname] = { key: tname, values: [], label: tname }
-					if (!sampleData[tname].values.some(val => val.dt == dtKey))
-						sampleData[tname].values.push({ dt: parseInt(dtKey), class: 'Blank', _SAMPLEID_: sid })
-				}
+
+				if (dt.byOrigin) {
+					for (const origin in dt.byOrigin) {
+						const sub_dt = dt.byOrigin[origin]
+						addDataAvailability(dtKey, sub_dt, bySampleId, tname, origin)
+					}
+				} else addDataAvailability(dtKey, dt, bySampleId, tname)
+				// for (const sid of dt.yesSamples) {
+				// 	if (!bySampleId.has(sid)) bySampleId.set(sid, { sample: sid })
+				// 	const sampleData = bySampleId.get(sid)
+				// 	if (!(tname in sampleData)) sampleData[tname] = { key: tname, values: [], label: tname }
+				// 	if (!sampleData[tname].values.some(val => val.dt == dtKey))
+				// 		sampleData[tname].values.push({ dt: parseInt(dtKey), class: 'WT', _SAMPLEID_: sid })
+				// }
+				// for (const sid of dt.noSamples) {
+				// 	if (!bySampleId.has(sid)) bySampleId.set(sid, { sample: sid })
+				// 	const sampleData = bySampleId.get(sid)
+				// 	if (!(tname in sampleData)) sampleData[tname] = { key: tname, values: [], label: tname }
+				// 	if (!sampleData[tname].values.some(val => val.dt == dtKey))
+				// 		sampleData[tname].values.push({ dt: parseInt(dtKey), class: 'Blank', _SAMPLEID_: sid })
+				// }
 			}
 		}
 	}
+	console.log('what is bySampleId', bySampleId)
 	for (const [k, v] of bySampleId.entries()) {
-		console.log(k)
-		console.log(v[tname])
+		console.log(k, v[tname])
 	}
 	return bySampleId
+}
+
+function addDataAvailability(dtKey, dt, bySampleId, tname, origin) {
+	for (const sid of dt.yesSamples) {
+		if (!bySampleId.has(sid)) bySampleId.set(sid, { sample: sid })
+		const sampleData = bySampleId.get(sid)
+		if (!(tname in sampleData)) sampleData[tname] = { key: tname, values: [], label: tname }
+		if (origin) {
+			if (!sampleData[tname].values.some(val => val.dt == dtKey && val.origin == origin))
+				sampleData[tname].values.push({ dt: parseInt(dtKey), class: 'WT', _SAMPLEID_: sid, origin: origin })
+		} else {
+			if (!sampleData[tname].values.some(val => val.dt == dtKey))
+				sampleData[tname].values.push({ dt: parseInt(dtKey), class: 'WT', _SAMPLEID_: sid })
+		}
+	}
+	for (const sid of dt.noSamples) {
+		if (!bySampleId.has(sid)) bySampleId.set(sid, { sample: sid })
+		const sampleData = bySampleId.get(sid)
+		if (!(tname in sampleData)) sampleData[tname] = { key: tname, values: [], label: tname }
+		if (origin) {
+			if (!sampleData[tname].values.some(val => val.dt == dtKey && val.origin == origin))
+				sampleData[tname].values.push({ dt: parseInt(dtKey), class: 'Blank', _SAMPLEID_: sid, origin: origin })
+		} else {
+			if (!sampleData[tname].values.some(val => val.dt == dtKey))
+				sampleData[tname].values.push({ dt: parseInt(dtKey), class: 'Blank', _SAMPLEID_: sid })
+		}
+	}
 }
 
 exports.getTermTypes = async function getData(q) {

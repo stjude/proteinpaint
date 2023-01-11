@@ -1151,23 +1151,38 @@ function mayValidateAssayAvailability(ds) {
 	if (ds.assayAvailability.byDt) {
 		for (const key in ds.assayAvailability.byDt) {
 			const dt = ds.assayAvailability.byDt[key]
-			// validate structure
-			// require .yes{} .no{}
-			if (!dt.yes || !dt.no || !dt.term_id) throw 'ds.assayAvailability.byDt properties require .term_id .yes{} .no{}'
 
-			// cache sample id list for each category, set .yesSamples(), .noSamples()
-			dt.yesSamples = new Set()
-			dt.noSamples = new Set()
-
-			const sql = `SELECT sample, value
-						FROM anno_categorical
-						WHERE term_id = '${dt.term_id}'`
-
-			const rows = ds.cohort.db.connection.prepare(sql).all()
-			for (const r of rows) {
-				if (r.value == `${dt.yes.value}`) dt.yesSamples.add(r.sample)
-				else if (r.value == `${dt.no.value}`) dt.noSamples.add(r.sample)
+			if (dt.byOrigin) {
+				for (const key in dt.byOrigin) {
+					const sub_dt = dt.byOrigin[key]
+					// validate structure
+					// require .yes{} .no{}
+					if (!sub_dt.yes || !sub_dt.no || !sub_dt.term_id)
+						throw 'ds.assayAvailability.byDt.*.byOrigin properties require .term_id .yes{} .no{}'
+					getAssayAvailablility(ds, sub_dt)
+				}
+			} else {
+				// validate structure
+				// require .yes{} .no{}
+				if (!dt.yes || !dt.no || !dt.term_id) throw 'ds.assayAvailability.byDt properties require .term_id .yes{} .no{}'
+				getAssayAvailablility(ds, dt)
 			}
 		}
+	}
+}
+
+function getAssayAvailablility(ds, dt) {
+	// cache sample id list for each category, set .yesSamples(), .noSamples()
+	dt.yesSamples = new Set()
+	dt.noSamples = new Set()
+
+	const sql = `SELECT sample, value
+				FROM anno_categorical
+				WHERE term_id = '${dt.term_id}'`
+
+	const rows = ds.cohort.db.connection.prepare(sql).all()
+	for (const r of rows) {
+		if (r.value == `${dt.yes.value}`) dt.yesSamples.add(r.sample)
+		else if (r.value == `${dt.no.value}`) dt.noSamples.add(r.sample)
 	}
 }

@@ -30,13 +30,30 @@ module.exports = {
 
 	assayAvailability: {
 		byDt: {
-			// snvindel
+			// // snvindel
+			// 1: {
+			// 	// mutations are detected from wes
+			// 	term_id: 'WES',
+			// 	yes: { value: 'Yes' },
+			// 	no: { value: 'No' } //, label: 'Not tested', color: '#fff'
+			// },
+
+			// snvindel, differentiating sample origin
 			1: {
-				// mutations are detected from wes
-				term_id: 'WES',
-				yes: { value: 'Yes' },
-				no: { value: 'No' } //, label: 'Not tested', color: '#fff'
+				byOrigin: {
+					G: {
+						term_id: 'Germline',
+						yes: { value: 'Yes' },
+						no: { value: 'No' }
+					},
+					S: {
+						term_id: 'WES',
+						yes: { value: 'Yes' },
+						no: { value: 'No' }
+					}
+				}
 			},
+
 			// fusion
 			2: {
 				//mutations are detected from RNAseq
