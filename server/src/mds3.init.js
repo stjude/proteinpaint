@@ -482,10 +482,6 @@ export async function snvindelByRangeGetter_bcf(ds, genome) {
 		if (!Array.isArray(param.rglst)) throw 'q.rglst[] is not array'
 		if (param.rglst.length == 0) throw 'q.rglst[] blank array'
 
-		if (param.infoFilter) {
-			param.infoFilter = JSON.parse(param.infoFilter)
-		}
-
 		const bcfArgs = [
 			'query',
 			q._tk.file || q._tk.url,
