@@ -1,0 +1,64 @@
+term_id,ancestor_id
+Diagnosis,"Cancer-related Variables"
+diaggrp,"Cancer-related Variables"
+diaggrp,Diagnosis
+yeardx,"Cancer-related Variables"
+yeardx,Diagnosis
+Treatment,"Cancer-related Variables"
+"Alkylating Agents, mg/m2","Cancer-related Variables"
+"Alkylating Agents, mg/m2",Treatment
+"Alkylating Agents, mg/m2","Chemotherapy, Lifetime"
+aaclassic_5,"Cancer-related Variables"
+aaclassic_5,Treatment
+aaclassic_5,"Alkylating Agents, mg/m2"
+"Platinum Agents, mg/m2","Cancer-related Variables"
+"Platinum Agents, mg/m2",Treatment
+"Platinum Agents, mg/m2","Chemotherapy, Lifetime"
+cisplateq_5,"Cancer-related Variables"
+cisplateq_5,Treatment
+cisplateq_5,"Platinum Agents, mg/m2"
+"Chemotherapy, Lifetime","Cancer-related Variables"
+"Chemotherapy, Lifetime",Treatment
+"Age (years)","Demographic Variables"
+agedx,"Demographic Variables"
+agedx,"Age (years)"
+sex,"Demographic Variables"
+ctcae_graded,"Clinically-assessed Variables"
+"Auditory System","Clinically-assessed Variables"
+"Auditory System",ctcae_graded
+"Hearing loss","Clinically-assessed Variables"
+"Hearing loss",ctcae_graded
+"Hearing loss","Auditory System"
+"Cardiovascular System","Clinically-assessed Variables"
+"Cardiovascular System",ctcae_graded
+Arrhythmias,"Clinically-assessed Variables"
+Arrhythmias,ctcae_graded
+Arrhythmias,"Cardiovascular System"
+"Cardiac dysrhythmia","Clinically-assessed Variables"
+"Cardiac dysrhythmia",ctcae_graded
+"Cardiac dysrhythmia","Cardiovascular System"
+"Cardiac dysrhythmia",Arrhythmias
+"Cardiovascular dysfunction","Clinically-assessed Variables"
+"Cardiovascular dysfunction",ctcae_graded
+"Cardiovascular dysfunction","Cardiovascular System"
+Cardiomyopathy,"Clinically-assessed Variables"
+Cardiomyopathy,ctcae_graded
+Cardiomyopathy,"Cardiovascular System"
+Cardiomyopathy,"Cardiovascular dysfunction"
+"Respiratory System","Clinically-assessed Variables"
+"Respiratory System",ctcae_graded
+"Chronic respiratory disorder","Clinically-assessed Variables"
+"Chronic respiratory disorder",ctcae_graded
+"Chronic respiratory disorder","Respiratory System"
+Asthma,"Clinically-assessed Variables"
+Asthma,ctcae_graded
+Asthma,"Respiratory System"
+Asthma,"Chronic respiratory disorder"
+efs,"Survival outcome"
+os,"Survival outcome"
+agelastvisit,"Demographic Variables"
+agelastvisit,"Age (years)"
+a_death,"Demographic Variables"
+a_death,"Age (years)"
+a_ndi,"Demographic Variables"
+a_ndi,"Age (years)"

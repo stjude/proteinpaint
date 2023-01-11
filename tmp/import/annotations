@@ -1,0 +1,1300 @@
+sample,term_id,value
+1,subcohort,CCSS
+1,diaggrp,"Non-Hodgkin lymphoma"
+1,aaclassic_5,-8888
+1,cisplateq_5,0
+1,agedx,19.34360027
+1,sex,1
+2,subcohort,CCSS
+2,diaggrp,"Non-Hodgkin lymphoma"
+2,aaclassic_5,0
+2,cisplateq_5,0
+2,agedx,16.22450376
+2,sex,2
+3,subcohort,CCSS
+3,diaggrp,"Hodgkin lymphoma"
+3,aaclassic_5,6239.242685
+3,cisplateq_5,0
+3,agedx,14.66119097
+3,sex,2
+4,subcohort,CCSS
+4,diaggrp,"Hodgkin lymphoma"
+4,aaclassic_5,6096.638655
+4,cisplateq_5,0
+4,agedx,14.32717317
+4,sex,2
+5,subcohort,CCSS
+5,diaggrp,"Hodgkin lymphoma"
+5,aaclassic_5,0
+5,cisplateq_5,0
+5,agedx,17.20602327
+5,sex,2
+6,subcohort,CCSS
+6,diaggrp,"Central nervous system (CNS)"
+6,aaclassic_5,0
+6,cisplateq_5,0
+6,agedx,11.72963723
+6,sex,2
+7,subcohort,CCSS
+7,diaggrp,"Central nervous system (CNS)"
+7,aaclassic_5,0
+7,cisplateq_5,0
+7,agedx,3.75633128
+7,sex,2
+8,subcohort,CCSS
+8,diaggrp,"Central nervous system (CNS)"
+8,aaclassic_5,0
+8,cisplateq_5,0
+8,agedx,8.391512663
+8,sex,1
+9,subcohort,CCSS
+9,diaggrp,"Central nervous system (CNS)"
+9,aaclassic_5,0
+9,cisplateq_5,0
+9,agedx,8.526351814
+9,sex,1
+10,subcohort,CCSS
+10,diaggrp,"Hodgkin lymphoma"
+10,aaclassic_5,0
+10,cisplateq_5,0
+10,agedx,17.81314168
+10,sex,2
+11,subcohort,CCSS
+11,diaggrp,"Acute myeloid leukemia"
+11,aaclassic_5,0
+11,cisplateq_5,0
+11,agedx,16.17590691
+11,sex,1
+12,subcohort,CCSS
+12,diaggrp,"Wilms tumor"
+12,aaclassic_5,0
+12,cisplateq_5,0
+12,agedx,1.823408624
+12,sex,1
+13,subcohort,CCSS
+13,diaggrp,"Non-Hodgkin lymphoma"
+13,aaclassic_5,8690
+13,cisplateq_5,0
+13,agedx,6.002737851
+13,sex,1
+14,subcohort,CCSS
+14,diaggrp,"Acute lymphoblastic leukemia"
+14,aaclassic_5,8480
+14,cisplateq_5,0
+14,agedx,3.921971253
+14,sex,1
+15,subcohort,CCSS
+15,diaggrp,"Ewing sarcoma family of tumors"
+15,aaclassic_5,16212.06501
+15,cisplateq_5,0
+15,agedx,18.08761123
+15,sex,1
+16,subcohort,CCSS
+16,diaggrp,"Non-Hodgkin lymphoma"
+16,aaclassic_5,20507.69231
+16,cisplateq_5,0
+16,agedx,11.2991102
+16,sex,2
+17,subcohort,CCSS
+17,diaggrp,"Acute lymphoblastic leukemia"
+17,aaclassic_5,6845.588235
+17,cisplateq_5,0
+17,agedx,8.72963723
+17,sex,2
+18,subcohort,CCSS
+18,diaggrp,"Acute lymphoblastic leukemia"
+18,aaclassic_5,0
+18,cisplateq_5,0
+18,agedx,19.89801506
+18,sex,1
+19,subcohort,CCSS
+19,diaggrp,"Non-Hodgkin lymphoma"
+19,aaclassic_5,5387.755102
+19,cisplateq_5,0
+19,agedx,20.00136893
+19,sex,2
+20,subcohort,CCSS
+20,diaggrp,"Acute lymphoblastic leukemia"
+20,aaclassic_5,0
+20,cisplateq_5,0
+20,agedx,2.403832991
+20,sex,1
+21,subcohort,CCSS
+21,diaggrp,"Hodgkin lymphoma"
+21,aaclassic_5,8662.857143
+21,cisplateq_5,0
+21,agedx,16.93429158
+21,sex,2
+22,subcohort,CCSS
+22,diaggrp,"Acute lymphoblastic leukemia"
+22,aaclassic_5,-8888
+22,cisplateq_5,0
+22,agedx,16.50308008
+22,sex,1
+23,subcohort,CCSS
+23,diaggrp,"Acute lymphoblastic leukemia"
+23,aaclassic_5,2894.736842
+23,cisplateq_5,0
+23,agedx,1.632443532
+23,sex,2
+24,subcohort,CCSS
+24,diaggrp,"Central nervous system (CNS)"
+24,aaclassic_5,35725
+24,cisplateq_5,863.8297872
+24,agedx,3.210130048
+24,sex,1
+25,subcohort,CCSS
+25,diaggrp,"Central nervous system (CNS)"
+25,aaclassic_5,0
+25,cisplateq_5,0
+25,agedx,3.203969884
+25,sex,2
+26,subcohort,CCSS
+26,diaggrp,"Central nervous system (CNS)"
+26,aaclassic_5,0
+26,cisplateq_5,0
+26,agedx,13.18959617
+26,sex,1
+27,subcohort,CCSS
+27,diaggrp,Neuroblastoma
+27,aaclassic_5,3754.545455
+27,cisplateq_5,166.3636364
+27,agedx,1.11156742
+27,sex,1
+28,subcohort,CCSS
+28,diaggrp,Rhabdomyosarcoma
+28,aaclassic_5,-8888
+28,cisplateq_5,0
+28,agedx,11.87132101
+28,sex,1
+29,subcohort,CCSS
+29,diaggrp,"Central nervous system (CNS)"
+29,aaclassic_5,0
+29,cisplateq_5,0
+29,agedx,14.4202601
+29,sex,1
+30,subcohort,CCSS
+30,diaggrp,"Wilms tumor"
+30,aaclassic_5,0
+30,cisplateq_5,0
+30,agedx,6.097878166
+30,sex,2
+31,subcohort,CCSS
+31,diaggrp,Neuroblastoma
+31,aaclassic_5,0
+31,cisplateq_5,0
+31,agedx,0.320328542
+31,sex,1
+32,subcohort,CCSS
+32,diaggrp,Osteosarcoma
+32,aaclassic_5,-9999
+32,cisplateq_5,-9999
+32,agedx,15.70020534
+32,sex,2
+33,subcohort,CCSS
+33,diaggrp,"Hodgkin lymphoma"
+33,aaclassic_5,0
+33,cisplateq_5,0
+33,agedx,15.07734428
+33,sex,2
+34,subcohort,CCSS
+34,diaggrp,"Wilms tumor"
+34,aaclassic_5,0
+34,cisplateq_5,0
+34,agedx,0.815195072
+34,sex,1
+35,subcohort,CCSS
+35,diaggrp,"Acute lymphoblastic leukemia"
+35,aaclassic_5,0
+35,cisplateq_5,0
+35,agedx,14.49691992
+35,sex,2
+36,subcohort,CCSS
+36,diaggrp,"Non-Hodgkin lymphoma"
+36,aaclassic_5,7538.216561
+36,cisplateq_5,0
+36,agedx,13.55167693
+36,sex,1
+37,subcohort,CCSS
+37,diaggrp,"Acute lymphoblastic leukemia"
+37,aaclassic_5,1098.901099
+37,cisplateq_5,0
+37,agedx,6.288843258
+37,sex,1
+38,subcohort,CCSS
+38,diaggrp,"Wilms tumor"
+38,aaclassic_5,0
+38,cisplateq_5,0
+38,agedx,2.542778919
+38,sex,2
+39,subcohort,CCSS
+39,diaggrp,"Central nervous system (CNS)"
+39,aaclassic_5,-8888
+39,cisplateq_5,0
+39,agedx,12.79945243
+39,sex,1
+40,subcohort,CCSS
+40,diaggrp,"Central nervous system (CNS)"
+40,aaclassic_5,0
+40,cisplateq_5,0
+40,agedx,11.57563313
+40,sex,2
+2646,subcohort,SJLIFE
+2646,diaggrp,"Acute lymphoblastic leukemia"
+2646,aaclassic_5,1843.1818182
+2646,cisplateq_5,0
+2646,agedx,3.6575342466
+2646,sex,2
+2660,subcohort,SJLIFE
+2660,diaggrp,"Acute lymphoblastic leukemia"
+2660,aaclassic_5,-8888
+2660,cisplateq_5,0
+2660,agedx,1.7267759563
+2660,sex,1
+2674,subcohort,SJLIFE
+2674,diaggrp,"Acute lymphoblastic leukemia"
+2674,aaclassic_5,8459.6491228
+2674,cisplateq_5,0
+2674,agedx,2.5232876712
+2674,sex,1
+2688,subcohort,SJLIFE
+2688,diaggrp,"Acute lymphoblastic leukemia"
+2688,aaclassic_5,0
+2688,cisplateq_5,0
+2688,agedx,5.9232876712
+2688,sex,1
+2702,subcohort,SJLIFE
+2702,diaggrp,"Acute lymphoblastic leukemia"
+2702,aaclassic_5,0
+2702,cisplateq_5,0
+2702,agedx,13.139344262
+2702,sex,2
+2716,subcohort,SJLIFE
+2716,diaggrp,"Acute lymphoblastic leukemia"
+2716,aaclassic_5,13266.948782
+2716,cisplateq_5,0
+2716,agedx,1.0022681338
+2716,sex,2
+2730,subcohort,SJLIFE
+2730,diaggrp,"Acute lymphoblastic leukemia"
+2730,aaclassic_5,4200
+2730,cisplateq_5,0
+2730,agedx,10.6082191781
+2730,sex,1
+2744,subcohort,SJLIFE
+2744,diaggrp,"Wilms tumor"
+2744,aaclassic_5,0
+2744,cisplateq_5,0
+2744,agedx,3.1506849315
+2744,sex,1
+2758,subcohort,SJLIFE
+2758,diaggrp,"Acute lymphoblastic leukemia"
+2758,aaclassic_5,22813.888889
+2758,cisplateq_5,0
+2758,agedx,3.0164383562
+2758,sex,2
+2772,subcohort,SJLIFE
+2772,diaggrp,"Acute lymphoblastic leukemia"
+2772,aaclassic_5,27600
+2772,cisplateq_5,0
+2772,agedx,11.479234973
+2772,sex,2
+2786,subcohort,SJLIFE
+2786,diaggrp,"Acute lymphoblastic leukemia"
+2786,aaclassic_5,0
+2786,cisplateq_5,0
+2786,agedx,6.5356314095
+2786,sex,1
+2800,subcohort,SJLIFE
+2800,diaggrp,"Acute lymphoblastic leukemia"
+2800,aaclassic_5,0
+2800,cisplateq_5,0
+2800,agedx,15.453551913
+2800,sex,1
+2814,subcohort,SJLIFE
+2814,diaggrp,"Acute lymphoblastic leukemia"
+2814,aaclassic_5,10048.076923
+2814,cisplateq_5,0
+2814,agedx,2.5628415301
+2814,sex,1
+2828,subcohort,SJLIFE
+2828,diaggrp,"Acute lymphoblastic leukemia"
+2828,aaclassic_5,4126.4150943
+2828,cisplateq_5,0
+2828,agedx,16.482191781
+2828,sex,2
+2842,subcohort,SJLIFE
+2842,diaggrp,"Acute lymphoblastic leukemia"
+2842,aaclassic_5,9555.4054054
+2842,cisplateq_5,0
+2842,agedx,2.6284153005
+2842,sex,2
+2856,subcohort,SJLIFE
+2856,diaggrp,"Acute lymphoblastic leukemia"
+2856,aaclassic_5,0
+2856,cisplateq_5,0
+2856,agedx,4.0219178082
+2856,sex,1
+2870,subcohort,SJLIFE
+2870,diaggrp,"Acute lymphoblastic leukemia"
+2870,aaclassic_5,8916.4705882
+2870,cisplateq_5,0
+2870,agedx,8.602739726
+2870,sex,1
+2884,subcohort,SJLIFE
+2884,diaggrp,"Acute lymphoblastic leukemia"
+2884,aaclassic_5,0
+2884,cisplateq_5,0
+2884,agedx,8.2684931507
+2884,sex,2
+2898,subcohort,SJLIFE
+2898,diaggrp,"Acute lymphoblastic leukemia"
+2898,aaclassic_5,12310.03276
+2898,cisplateq_5,0
+2898,agedx,1.8561494124
+2898,sex,2
+2912,subcohort,SJLIFE
+2912,diaggrp,"Acute lymphoblastic leukemia"
+2912,aaclassic_5,4306.0606061
+2912,cisplateq_5,0
+2912,agedx,7.9344037727
+2912,sex,1
+2926,subcohort,SJLIFE
+2926,diaggrp,"Acute lymphoblastic leukemia"
+2926,aaclassic_5,10422.077922
+2926,cisplateq_5,0
+2926,agedx,5.0575342466
+2926,sex,1
+2940,subcohort,SJLIFE
+2940,diaggrp,"Acute myeloid leukemia"
+2940,aaclassic_5,3444.8863636
+2940,cisplateq_5,0
+2940,agedx,21.142465753
+2940,sex,1
+2954,subcohort,SJLIFE
+2954,diaggrp,"Acute lymphoblastic leukemia"
+2954,aaclassic_5,12465.822785
+2954,cisplateq_5,0
+2954,agedx,7.8602739726
+2954,sex,1
+2968,subcohort,SJLIFE
+2968,diaggrp,"Acute lymphoblastic leukemia"
+2968,aaclassic_5,0
+2968,cisplateq_5,0
+2968,agedx,6.0765027322
+2968,sex,1
+2982,subcohort,SJLIFE
+2982,diaggrp,"Acute lymphoblastic leukemia"
+2982,aaclassic_5,25155
+2982,cisplateq_5,0
+2982,agedx,17.578082192
+2982,sex,2
+2996,subcohort,SJLIFE
+2996,diaggrp,"Acute lymphoblastic leukemia"
+2996,aaclassic_5,0
+2996,cisplateq_5,0
+2996,agedx,3.1107642788
+2996,sex,1
+3010,subcohort,SJLIFE
+3010,diaggrp,"Acute lymphoblastic leukemia"
+3010,aaclassic_5,900
+3010,cisplateq_5,0
+3010,agedx,3.0164383562
+3010,sex,2
+3024,subcohort,SJLIFE
+3024,diaggrp,"Acute lymphoblastic leukemia"
+3024,aaclassic_5,900
+3024,cisplateq_5,0
+3024,agedx,1.5205479452
+3024,sex,2
+3038,subcohort,SJLIFE
+3038,diaggrp,"Acute lymphoblastic leukemia"
+3038,aaclassic_5,0
+3038,cisplateq_5,0
+3038,agedx,8.0607455648
+3038,sex,2
+3052,subcohort,SJLIFE
+3052,diaggrp,"Acute lymphoblastic leukemia"
+3052,aaclassic_5,11292
+3052,cisplateq_5,0
+3052,agedx,18.167280485
+3052,sex,2
+3066,subcohort,SJLIFE
+3066,diaggrp,"Acute lymphoblastic leukemia"
+3066,aaclassic_5,11320
+3066,cisplateq_5,0
+3066,agedx,-1.7643835616
+3066,sex,2
+3080,subcohort,SJLIFE
+3080,diaggrp,"Acute lymphoblastic leukemia"
+3080,aaclassic_5,0
+3080,cisplateq_5,0
+3080,agedx,3.5671232877
+3080,sex,2
+3094,subcohort,SJLIFE
+3094,diaggrp,"Acute lymphoblastic leukemia"
+3094,aaclassic_5,7820
+3094,cisplateq_5,0
+3094,agedx,6.0130398982
+3094,sex,1
+3108,subcohort,SJLIFE
+3108,diaggrp,"Acute lymphoblastic leukemia"
+3108,aaclassic_5,4285.1351351
+3108,cisplateq_5,0
+3108,agedx,1.8657534247
+3108,sex,1
+3122,subcohort,SJLIFE
+3122,diaggrp,"Acute lymphoblastic leukemia"
+3122,aaclassic_5,9694.7368421
+3122,cisplateq_5,0
+3122,agedx,4.3616438356
+3122,sex,1
+3136,subcohort,SJLIFE
+3136,diaggrp,"Acute lymphoblastic leukemia"
+3136,aaclassic_5,6005
+3136,cisplateq_5,0
+3136,agedx,-0.0415824538
+3136,sex,1
+3150,subcohort,SJLIFE
+3150,diaggrp,"Acute lymphoblastic leukemia"
+3150,aaclassic_5,10419.607843
+3150,cisplateq_5,0
+3150,agedx,8.8891084662
+3150,sex,2
+3164,subcohort,SJLIFE
+3164,diaggrp,"Acute lymphoblastic leukemia"
+3164,aaclassic_5,10923.076923
+3164,cisplateq_5,0
+3164,agedx,3.2459016393
+3164,sex,2
+3178,subcohort,SJLIFE
+3178,diaggrp,Rhabdomyosarcoma
+3178,aaclassic_5,12488.679245
+3178,cisplateq_5,0
+3178,agedx,0.3479452055
+3178,sex,2
+3192,subcohort,SJLIFE
+3192,diaggrp,"Wilms tumor"
+3192,aaclassic_5,0
+3192,cisplateq_5,0
+3192,agedx,-0.9753424658
+3192,sex,2
+3206,subcohort,SJLIFE
+3206,diaggrp,"Hodgkin lymphoma"
+3206,aaclassic_5,18805.764411
+3206,cisplateq_5,0
+3206,agedx,11.194520548
+3206,sex,2
+3220,subcohort,SJLIFE
+3220,diaggrp,"Non-Hodgkin lymphoma"
+3220,aaclassic_5,2178.2178218
+3220,cisplateq_5,0
+3220,agedx,6.1594505577
+3220,sex,1
+3234,subcohort,SJLIFE
+3234,diaggrp,"Hodgkin lymphoma"
+3234,aaclassic_5,11795.328097
+3234,cisplateq_5,0
+3234,agedx,16.169863014
+3234,sex,2
+3248,subcohort,SJLIFE
+3248,diaggrp,"Non-Hodgkin lymphoma"
+3248,aaclassic_5,1817.1428571
+3248,cisplateq_5,0
+3248,agedx,7.5428325473
+3248,sex,2
+3262,subcohort,SJLIFE
+3262,diaggrp,"Non-Hodgkin lymphoma"
+3262,aaclassic_5,2286.8613139
+3262,cisplateq_5,0
+3262,agedx,9.046575342
+3262,sex,2
+3276,subcohort,SJLIFE
+3276,diaggrp,"Non-Hodgkin lymphoma"
+3276,aaclassic_5,3010.4
+3276,cisplateq_5,0
+3276,agedx,9.4348678793
+3276,sex,2
+3290,subcohort,SJLIFE
+3290,diaggrp,"Non-Hodgkin lymphoma"
+3290,aaclassic_5,17470.012005
+3290,cisplateq_5,0
+3290,agedx,18.923287671
+3290,sex,2
+3304,subcohort,SJLIFE
+3304,diaggrp,Neuroblastoma
+3304,aaclassic_5,3963.2352941
+3304,cisplateq_5,0
+3304,agedx,0.1123287671
+3304,sex,2
+3318,subcohort,SJLIFE
+3318,diaggrp,"Non-Hodgkin lymphoma"
+3318,aaclassic_5,3636.3636364
+3318,cisplateq_5,0
+3318,agedx,11.539726027
+3318,sex,1
+3332,subcohort,SJLIFE
+3332,diaggrp,"Non-Hodgkin lymphoma"
+3332,aaclassic_5,3634.7826087
+3332,cisplateq_5,0
+3332,agedx,10.131506849
+3332,sex,1
+3346,subcohort,SJLIFE
+3346,diaggrp,"Acute myeloid leukemia"
+3346,aaclassic_5,6398.540146
+3346,cisplateq_5,0
+3346,agedx,12.479452055
+3346,sex,2
+3360,subcohort,SJLIFE
+3360,diaggrp,"Hodgkin lymphoma"
+3360,aaclassic_5,19905.335628
+3360,cisplateq_5,0
+3360,agedx,14.55681563
+3360,sex,2
+3374,subcohort,SJLIFE
+3374,diaggrp,"Wilms tumor"
+3374,aaclassic_5,0
+3374,cisplateq_5,0
+3374,agedx,1.5287671233
+3374,sex,2
+3388,subcohort,SJLIFE
+3388,diaggrp,"Non-Hodgkin lymphoma"
+3388,aaclassic_5,2375.3333333
+3388,cisplateq_5,0
+3388,agedx,17.295890411
+3388,sex,2
+3402,subcohort,SJLIFE
+3402,diaggrp,Rhabdomyosarcoma
+3402,aaclassic_5,6695.2297728
+3402,cisplateq_5,0
+3402,agedx,15.354135789
+3402,sex,2
+3416,subcohort,SJLIFE
+3416,diaggrp,"Hodgkin lymphoma"
+3416,aaclassic_5,13890.306122
+3416,cisplateq_5,0
+3416,agedx,7.6207500561
+3416,sex,2
+3430,subcohort,SJLIFE
+3430,diaggrp,Neuroblastoma
+3430,aaclassic_5,7511.4754098
+3430,agedx,2.3835616438
+3430,sex,2
+3444,subcohort,SJLIFE
+3444,diaggrp,"Non-Hodgkin lymphoma"
+3444,aaclassic_5,2331.5315315
+3444,cisplateq_5,0
+3444,agedx,13.530054645
+3444,sex,1
+3458,subcohort,SJLIFE
+3458,diaggrp,"Non-Hodgkin lymphoma"
+3458,aaclassic_5,24925.352113
+3458,cisplateq_5,0
+3458,agedx,3.8105995958
+3458,sex,1
+3472,subcohort,SJLIFE
+3472,diaggrp,"Hodgkin lymphoma"
+3472,aaclassic_5,14641.991342
+3472,cisplateq_5,0
+3472,agedx,16.975342466
+3472,sex,2
+1,wgs_curated,1
+2,wgs_curated,1
+3,wgs_curated,1
+4,wgs_curated,1
+5,wgs_curated,1
+6,wgs_curated,1
+7,wgs_curated,1
+8,wgs_curated,1
+9,wgs_curated,1
+10,wgs_curated,1
+11,wgs_curated,1
+12,wgs_curated,1
+13,wgs_curated,1
+14,wgs_curated,1
+15,wgs_curated,1
+16,wgs_curated,1
+17,wgs_curated,1
+18,wgs_curated,1
+19,wgs_curated,1
+20,wgs_curated,1
+21,wgs_curated,1
+22,wgs_curated,1
+23,wgs_curated,1
+24,wgs_curated,1
+25,wgs_curated,1
+26,wgs_curated,1
+27,wgs_curated,1
+28,wgs_curated,1
+29,wgs_curated,1
+30,wgs_curated,1
+31,wgs_curated,1
+32,wgs_curated,1
+33,wgs_curated,1
+34,wgs_curated,1
+35,wgs_curated,1
+36,wgs_curated,1
+37,wgs_curated,1
+38,wgs_curated,1
+39,wgs_curated,1
+40,wgs_curated,1
+2646,wgs_curated,1
+2660,wgs_curated,1
+2674,wgs_curated,1
+2688,wgs_curated,1
+2702,wgs_curated,1
+2716,wgs_curated,1
+2730,wgs_curated,1
+2744,wgs_curated,1
+2758,wgs_curated,1
+2772,wgs_curated,1
+2786,wgs_curated,1
+2800,wgs_curated,1
+2814,wgs_curated,1
+2828,wgs_curated,1
+2842,wgs_curated,1
+2856,wgs_curated,1
+2870,wgs_curated,1
+2884,wgs_curated,1
+2898,wgs_curated,1
+2912,wgs_curated,1
+2926,wgs_curated,1
+2940,wgs_curated,1
+2954,wgs_curated,1
+2968,wgs_curated,1
+2982,wgs_curated,1
+2996,wgs_curated,1
+3010,wgs_curated,1
+3024,wgs_curated,1
+3038,wgs_curated,1
+3052,wgs_curated,1
+3066,wgs_curated,1
+3080,wgs_curated,1
+3094,wgs_curated,1
+3108,wgs_curated,1
+3122,wgs_curated,1
+3136,wgs_curated,1
+3150,wgs_curated,1
+3164,wgs_curated,1
+3178,wgs_curated,1
+3192,wgs_curated,1
+3206,wgs_curated,1
+3220,wgs_curated,1
+3234,wgs_curated,1
+3248,wgs_curated,1
+3262,wgs_curated,1
+3276,wgs_curated,1
+3290,wgs_curated,1
+3304,wgs_curated,1
+3318,wgs_curated,1
+3332,wgs_curated,1
+3346,wgs_curated,1
+3360,wgs_curated,1
+3374,wgs_curated,1
+3388,wgs_curated,1
+3402,wgs_curated,1
+3416,wgs_curated,1
+3430,wgs_curated,1
+3444,wgs_curated,1
+3458,wgs_curated,1
+3472,wgs_curated,1
+1,genetic_race,"Asian Ancestry"
+2,genetic_race,"European Ancestry"
+3,genetic_race,"European Ancestry"
+4,genetic_race,"European Ancestry"
+5,genetic_race,"European Ancestry"
+6,genetic_race,"European Ancestry"
+7,genetic_race,"European Ancestry"
+8,genetic_race,"European Ancestry"
+9,genetic_race,"European Ancestry"
+10,genetic_race,"European Ancestry"
+11,genetic_race,"European Ancestry"
+12,genetic_race,"European Ancestry"
+13,genetic_race,"European Ancestry"
+14,genetic_race,"European Ancestry"
+15,genetic_race,"European Ancestry"
+16,genetic_race,"European Ancestry"
+17,genetic_race,"African Ancestry"
+18,genetic_race,Multi-Ancestry-Admixed
+19,genetic_race,"European Ancestry"
+20,genetic_race,"European Ancestry"
+21,genetic_race,"European Ancestry"
+22,genetic_race,"European Ancestry"
+23,genetic_race,"European Ancestry"
+24,genetic_race,"European Ancestry"
+25,genetic_race,"European Ancestry"
+26,genetic_race,"European Ancestry"
+27,genetic_race,"European Ancestry"
+28,genetic_race,"European Ancestry"
+29,genetic_race,"European Ancestry"
+30,genetic_race,"European Ancestry"
+31,genetic_race,"African Ancestry"
+32,genetic_race,"European Ancestry"
+33,genetic_race,"European Ancestry"
+34,genetic_race,"European Ancestry"
+35,genetic_race,"European Ancestry"
+36,genetic_race,"European Ancestry"
+37,genetic_race,"European Ancestry"
+38,genetic_race,"European Ancestry"
+39,genetic_race,"European Ancestry"
+40,genetic_race,"Asian Ancestry"
+2646,genetic_race,"European Ancestry"
+2660,genetic_race,"Asian Ancestry"
+2674,genetic_race,"European Ancestry"
+2688,genetic_race,"European Ancestry"
+2702,genetic_race,"European Ancestry"
+2716,genetic_race,"European Ancestry"
+2730,genetic_race,"European Ancestry"
+2744,genetic_race,"European Ancestry"
+2758,genetic_race,"European Ancestry"
+2772,genetic_race,"African Ancestry"
+2786,genetic_race,"European Ancestry"
+2800,genetic_race,"European Ancestry"
+2814,genetic_race,"European Ancestry"
+2828,genetic_race,"European Ancestry"
+2842,genetic_race,"European Ancestry"
+2856,genetic_race,"European Ancestry"
+2870,genetic_race,"European Ancestry"
+2884,genetic_race,"European Ancestry"
+2898,genetic_race,"European Ancestry"
+2912,genetic_race,"European Ancestry"
+2926,genetic_race,"African Ancestry"
+2940,genetic_race,"African Ancestry"
+2954,genetic_race,"European Ancestry"
+2968,genetic_race,"European Ancestry"
+2982,genetic_race,"European Ancestry"
+2996,genetic_race,"European Ancestry"
+3010,genetic_race,"European Ancestry"
+3024,genetic_race,"European Ancestry"
+3038,genetic_race,"European Ancestry"
+3052,genetic_race,"European Ancestry"
+3066,genetic_race,"European Ancestry"
+3080,genetic_race,"European Ancestry"
+3094,genetic_race,"European Ancestry"
+3108,genetic_race,"European Ancestry"
+3122,genetic_race,"African Ancestry"
+3136,genetic_race,"African Ancestry"
+3150,genetic_race,"European Ancestry"
+3164,genetic_race,"European Ancestry"
+3178,genetic_race,"European Ancestry"
+3192,genetic_race,"European Ancestry"
+3206,genetic_race,"European Ancestry"
+3220,genetic_race,"European Ancestry"
+3234,genetic_race,"European Ancestry"
+3248,genetic_race,"European Ancestry"
+3262,genetic_race,"European Ancestry"
+3276,genetic_race,"European Ancestry"
+3290,genetic_race,"European Ancestry"
+3304,genetic_race,"European Ancestry"
+3318,genetic_race,"European Ancestry"
+3332,genetic_race,"European Ancestry"
+3346,genetic_race,"European Ancestry"
+3360,genetic_race,"European Ancestry"
+3374,genetic_race,"European Ancestry"
+3388,genetic_race,"European Ancestry"
+3402,genetic_race,"European Ancestry"
+3416,genetic_race,"European Ancestry"
+3430,genetic_race,"European Ancestry"
+3444,genetic_race,"European Ancestry"
+3458,genetic_race,"European Ancestry"
+3472,genetic_race,"European Ancestry"
+2646,CEU,0.919156959021667
+2660,CEU,0.0599999753102969
+2674,CEU,0.25401505229784
+2688,CEU,0.281462199483388
+2702,CEU,0.91428855022738
+2716,CEU,0.529757394368573
+2730,CEU,0.234901650418818
+2744,CEU,0.883669774201215
+2758,CEU,0.312999503866447
+2772,CEU,0.605139577021341
+2786,CEU,0.916366023094384
+2800,CEU,0.821026365572765
+2814,CEU,0.396414873145169
+2828,CEU,0.403713264104555
+2842,CEU,0.516800185747015
+2856,CEU,0.399918370744679
+2870,CEU,0.396519705729051
+2884,CEU,0.0844208266378744
+2898,CEU,0.107275807272793
+2912,CEU,0.596001079243013
+2926,CEU,0.468227441157326
+2940,CEU,0.0857318165736109
+2954,CEU,0.471075832729017
+2968,CEU,0.259617628990824
+2982,CEU,0.0267995310985403
+2996,CEU,0.905921104488863
+3010,CEU,0.878194190164158
+3024,CEU,0.115509874085728
+3038,CEU,0.33849169559968
+3052,CEU,0.615266960531849
+3066,CEU,0.418548863974435
+3080,CEU,0.952936302139911
+3094,CEU,0.456411148406813
+3108,CEU,0.682071011874972
+3122,CEU,0.234449996900629
+3136,CEU,0.960878809193078
+3150,CEU,0.657126338568393
+3164,CEU,0.280566223275733
+3178,CEU,0.104311019953405
+3192,CEU,0.235771734030432
+3206,CEU,0.614454364173699
+3220,CEU,0.185527311715554
+3234,CEU,0.363994450388665
+3248,CEU,0.966569986675333
+3262,CEU,0.496769372419769
+3276,CEU,0.198859280356462
+3290,CEU,0.460460233086099
+3304,CEU,0.0863103647250453
+3318,CEU,0.825207145414582
+3332,CEU,0.0542331454007221
+3346,CEU,0.781593999488449
+3360,CEU,0.373409910577231
+3374,CEU,0.805573763629772
+3388,CEU,0.148385223248939
+3402,CEU,0.741478526260718
+3416,CEU,0.943266905784693
+3430,CEU,0.957712023533656
+3444,CEU,0.270551527247087
+3458,CEU,0.881961484959338
+3472,CEU,0.257486618144988
+1,CEU,0.74971184925122
+2,CEU,0.719811100838511
+3,CEU,0.0689577424711322
+4,CEU,0.190314769377138
+5,CEU,0.457037730931707
+6,CEU,0.52462211823941
+7,CEU,0.115295831273359
+8,CEU,0.259344376293601
+9,CEU,0.152687263867897
+10,CEU,0.0990110646154895
+11,CEU,0.606903458163198
+12,CEU,0.748125745002659
+13,CEU,0.377317942788904
+14,CEU,0.421705712922582
+15,CEU,0.0322489757950689
+16,CEU,0.186016895033637
+17,CEU,0.774469415785842
+18,CEU,0.708463897665092
+19,CEU,0.762920914029548
+20,CEU,0.929738170349112
+21,CEU,0.575589608491251
+22,CEU,0.336270460008369
+23,CEU,0.835134736386902
+24,CEU,0.173903713318043
+25,CEU,0.669262977875455
+26,CEU,0.144107237421138
+27,CEU,0.106432744995786
+28,CEU,0.362674677256023
+29,CEU,0.377625975074151
+30,CEU,0.641448372160514
+31,CEU,0.941885850748025
+32,CEU,0.403201777009892
+33,CEU,0.298836773436415
+34,CEU,0.293004549453573
+35,CEU,0.653623036063882
+36,CEU,0.105979053546323
+37,CEU,0.936487524625741
+38,CEU,0.217308206725659
+39,CEU,0.308043457566511
+40,CEU,0.0931768961470393
+1,hrtavg,-9999
+2,hrtavg,-9999
+3,hrtavg,-9999
+4,hrtavg,-9999
+5,hrtavg,-8888
+6,hrtavg,0
+7,hrtavg,0
+8,hrtavg,6.2
+9,hrtavg,0
+10,hrtavg,1210
+11,hrtavg,0
+12,hrtavg,61
+13,hrtavg,160
+14,hrtavg,0
+15,hrtavg,2280
+16,hrtavg,0
+17,hrtavg,7.7
+18,hrtavg,12
+19,hrtavg,-9999
+20,hrtavg,-9999
+21,hrtavg,0
+22,hrtavg,-9999
+23,hrtavg,-9999
+24,hrtavg,19
+25,hrtavg,0
+26,hrtavg,15
+27,hrtavg,0
+28,hrtavg,1580
+29,hrtavg,5.8
+30,hrtavg,1230
+31,hrtavg,0
+32,hrtavg,-9999
+33,hrtavg,-9999
+34,hrtavg,-9999
+35,hrtavg,0
+36,hrtavg,0
+37,hrtavg,0
+38,hrtavg,0
+39,hrtavg,2290
+40,hrtavg,0
+2646,hrtavg,29
+2660,hrtavg,0
+2674,hrtavg,31
+2688,hrtavg,0
+2702,hrtavg,0
+2716,hrtavg,9.6
+2730,hrtavg,5.4
+2744,hrtavg,270
+2758,hrtavg,1760
+2772,hrtavg,1390
+2786,hrtavg,25
+2800,hrtavg,1330
+2814,hrtavg,11
+2828,hrtavg,3.2
+2842,hrtavg,8.6
+2856,hrtavg,17
+2870,hrtavg,6.1
+2884,hrtavg,17
+2898,hrtavg,19
+2912,hrtavg,17
+2926,hrtavg,8.1
+2940,hrtavg,0
+2954,hrtavg,3390
+2968,hrtavg,32
+2982,hrtavg,14
+2996,hrtavg,45
+3010,hrtavg,-8888
+3024,hrtavg,40
+3038,hrtavg,21
+3052,hrtavg,1240
+3066,hrtavg,20
+3080,hrtavg,0
+3094,hrtavg,880
+3108,hrtavg,25
+3122,hrtavg,6.6
+3136,hrtavg,13
+3150,hrtavg,0
+3164,hrtavg,7.9
+3178,hrtavg,8.2
+3192,hrtavg,0
+3206,hrtavg,2140
+3220,hrtavg,24
+3234,hrtavg,2530
+3248,hrtavg,30
+3262,hrtavg,0
+3276,hrtavg,0
+3290,hrtavg,4710
+3304,hrtavg,0
+3318,hrtavg,140
+3332,hrtavg,150
+3346,hrtavg,0
+3360,hrtavg,3770
+3374,hrtavg,0
+3388,hrtavg,0
+3402,hrtavg,10
+3416,hrtavg,2130
+3430,hrtavg,0
+3444,hrtavg,12
+3458,hrtavg,1630
+3472,hrtavg,2180
+1,agelastvisit,58.34360027
+2,agelastvisit,26.22450376
+3,agelastvisit,21.66119097
+4,agelastvisit,29.32717317
+5,agelastvisit,40.20602327
+6,agelastvisit,46.72963723
+7,agelastvisit,9.75633128
+8,agelastvisit,55.391512663
+9,agelastvisit,26.526351814
+10,agelastvisit,22.81314168
+11,agelastvisit,31.17590691
+12,agelastvisit,10.823408624
+13,agelastvisit,41.002737851
+14,agelastvisit,15.921971253
+15,agelastvisit,61.08761123
+16,agelastvisit,22.2991102
+17,agelastvisit,49.72963723
+18,agelastvisit,55.89801506
+19,agelastvisit,60.00136893
+20,agelastvisit,32.403832991
+21,agelastvisit,58.93429158
+22,agelastvisit,54.50308008
+23,agelastvisit,49.632443532
+24,agelastvisit,33.210130048
+25,agelastvisit,13.203969884
+26,agelastvisit,14.18959617
+27,agelastvisit,15.11156742
+28,agelastvisit,52.87132101
+29,agelastvisit,61.4202601
+30,agelastvisit,30.097878166
+31,agelastvisit,40.320328542
+32,agelastvisit,57.70020534
+33,agelastvisit,53.07734428
+34,agelastvisit,34.815195072
+35,agelastvisit,34.49691992
+36,agelastvisit,40.55167693
+37,agelastvisit,46.288843258
+38,agelastvisit,27.542778919
+39,agelastvisit,40.79945243
+40,agelastvisit,56.57563313
+2646,agelastvisit,19.6575342466
+2660,agelastvisit,48.7267759563
+2674,agelastvisit,34.5232876712
+2688,agelastvisit,22.9232876712
+2702,agelastvisit,55.139344262
+2716,agelastvisit,28.0022681338
+2730,agelastvisit,23.6082191781
+2744,agelastvisit,50.1506849315
+2758,agelastvisit,52.0164383562
+2772,agelastvisit,21.479234973
+2786,agelastvisit,37.5356314095
+2800,agelastvisit,24.453551913
+2814,agelastvisit,5.5628415301
+2828,agelastvisit,52.482191781
+2842,agelastvisit,31.6284153005
+2856,agelastvisit,48.0219178082
+2870,agelastvisit,11.602739726
+2884,agelastvisit,14.2684931507
+2898,agelastvisit,9.8561494124
+2912,agelastvisit,43.9344037727
+2926,agelastvisit,49.0575342466
+2940,agelastvisit,49.142465753
+2954,agelastvisit,24.8602739726
+2968,agelastvisit,23.0765027322
+2982,agelastvisit,33.578082192
+2996,agelastvisit,52.1107642788
+3010,agelastvisit,24.0164383562
+3024,agelastvisit,22.5205479452
+3038,agelastvisit,30.0607455648
+3052,agelastvisit,53.167280485
+3066,agelastvisit,5.2356164384
+3080,agelastvisit,10.5671232877
+3094,agelastvisit,53.0130398982
+3108,agelastvisit,19.8657534247
+3122,agelastvisit,33.3616438356
+3136,agelastvisit,11.9584175462
+3150,agelastvisit,19.8891084662
+3164,agelastvisit,43.2459016393
+3178,agelastvisit,47.3479452055
+3192,agelastvisit,14.0246575342
+3206,agelastvisit,32.194520548
+3220,agelastvisit,47.1594505577
+3234,agelastvisit,45.169863014
+3248,agelastvisit,24.5428325473
+3262,agelastvisit,49.046575342
+3276,agelastvisit,24.4348678793
+3290,agelastvisit,18.923287671
+3304,agelastvisit,36.1123287671
+3318,agelastvisit,50.539726027
+3332,agelastvisit,53.131506849
+3346,agelastvisit,44.479452055
+3360,agelastvisit,22.55681563
+3374,agelastvisit,15.5287671233
+3388,agelastvisit,50.295890411
+3402,agelastvisit,17.354135789
+3416,agelastvisit,43.6207500561
+3430,agelastvisit,22.3835616438
+3444,agelastvisit,61.530054645
+3458,agelastvisit,11.8105995958
+3472,agelastvisit,60.975342466
+1,a_death,84.34360027
+2,a_death,36.22450376
+3,a_death,38.66119097
+4,a_death,38.32717317
+5,a_death,60.20602327
+6,a_death,71.72963723
+7,a_death,24.75633128
+8,a_death,80.391512663
+9,a_death,27.526351814
+10,a_death,38.81314168
+11,a_death,47.17590691
+12,a_death,29.823408624
+13,a_death,61.002737851
+14,a_death,30.921971253
+15,a_death,63.08761123
+16,a_death,39.2991102
+17,a_death,70.72963723
+18,a_death,56.89801506
+19,a_death,66.00136893
+20,a_death,61.403832991
+21,a_death,67.93429158
+22,a_death,74.50308008
+23,a_death,54.632443532
+24,a_death,45.210130048
+25,a_death,36.203969884
+26,a_death,38.18959617
+27,a_death,19.11156742
+28,a_death,70.87132101
+29,a_death,89.4202601
+30,a_death,33.097878166
+31,a_death,68.320328542
+32,a_death,82.70020534
+33,a_death,60.07734428
+34,a_death,50.815195072
+35,a_death,40.49691992
+36,a_death,47.55167693
+37,a_death,67.288843258
+38,a_death,44.542778919
+39,a_death,68.79945243
+40,a_death,85.57563313
+2646,a_death,27.6575342466
+2660,a_death,59.7267759563
+2674,a_death,51.5232876712
+2688,a_death,48.9232876712
+2702,a_death,68.139344262
+2716,a_death,37.0022681338
+2730,a_death,45.6082191781
+2744,a_death,53.1506849315
+2758,a_death,65.0164383562
+2772,a_death,22.479234973
+2786,a_death,56.5356314095
+2800,a_death,36.453551913
+2814,a_death,26.5628415301
+2828,a_death,71.482191781
+2842,a_death,44.6284153005
+2856,a_death,64.0219178082
+2870,a_death,19.602739726
+2884,a_death,36.2684931507
+2898,a_death,21.8561494124
+2912,a_death,72.9344037727
+2926,a_death,52.0575342466
+2940,a_death,72.142465753
+2954,a_death,52.8602739726
+2968,a_death,46.0765027322
+2982,a_death,39.578082192
+2996,a_death,80.1107642788
+3010,a_death,38.0164383562
+3024,a_death,22.5205479452
+3038,a_death,51.0607455648
+3052,a_death,77.167280485
+3066,a_death,20.2356164384
+3080,a_death,25.5671232877
+3094,a_death,70.0130398982
+3108,a_death,42.8657534247
+3122,a_death,33.3616438356
+3136,a_death,18.9584175462
+3150,a_death,45.8891084662
+3164,a_death,49.2459016393
+3178,a_death,52.3479452055
+3192,a_death,37.0246575342
+3206,a_death,34.194520548
+3220,a_death,50.1594505577
+3234,a_death,55.169863014
+3248,a_death,50.5428325473
+3262,a_death,49.046575342
+3276,a_death,46.4348678793
+3290,a_death,31.923287671
+3304,a_death,37.1123287671
+3318,a_death,67.539726027
+3332,a_death,63.131506849
+3346,a_death,67.479452055
+3360,a_death,43.55681563
+3374,a_death,33.5287671233
+3388,a_death,57.295890411
+3402,a_death,36.354135789
+3416,a_death,46.6207500561
+3430,a_death,23.3835616438
+3444,a_death,88.530054645
+3458,a_death,36.8105995958
+3472,a_death,60.975342466
+1,a_ndi,62.34360027
+2,a_ndi,41.22450376
+3,a_ndi,44.66119097
+4,a_ndi,36.32717317
+5,a_ndi,48.20602327
+6,a_ndi,75.72963723
+7,a_ndi,16.75633128
+8,a_ndi,69.391512663
+9,a_ndi,41.526351814
+10,a_ndi,32.81314168
+11,a_ndi,43.17590691
+12,a_ndi,29.823408624
+13,a_ndi,48.002737851
+14,a_ndi,25.921971253
+15,a_ndi,85.08761123
+16,a_ndi,36.2991102
+17,a_ndi,61.72963723
+18,a_ndi,58.89801506
+19,a_ndi,88.00136893
+20,a_ndi,56.403832991
+21,a_ndi,83.93429158
+22,a_ndi,68.50308008
+23,a_ndi,69.632443532
+24,a_ndi,54.210130048
+25,a_ndi,30.203969884
+26,a_ndi,41.18959617
+27,a_ndi,19.11156742
+28,a_ndi,80.87132101
+29,a_ndi,61.4202601
+30,a_ndi,48.097878166
+31,a_ndi,46.320328542
+32,a_ndi,58.70020534
+33,a_ndi,81.07734428
+34,a_ndi,51.815195072
+35,a_ndi,62.49691992
+36,a_ndi,48.55167693
+37,a_ndi,56.288843258
+38,a_ndi,45.542778919
+39,a_ndi,52.79945243
+40,a_ndi,61.57563313
+2646,a_ndi,33.6575342466
+2660,a_ndi,61.7267759563
+2674,a_ndi,40.5232876712
+2688,a_ndi,50.9232876712
+2702,a_ndi,77.139344262
+2716,a_ndi,54.0022681338
+2730,a_ndi,37.6082191781
+2744,a_ndi,51.1506849315
+2758,a_ndi,60.0164383562
+2772,a_ndi,37.479234973
+2786,a_ndi,64.5356314095
+2800,a_ndi,32.453551913
+2814,a_ndi,14.5628415301
+2828,a_ndi,74.482191781
+2842,a_ndi,55.6284153005
+2856,a_ndi,72.0219178082
+2870,a_ndi,35.602739726
+2884,a_ndi,37.2684931507
+2898,a_ndi,9.8561494124
+2912,a_ndi,69.9344037727
+2926,a_ndi,54.0575342466
+2940,a_ndi,70.142465753
+2954,a_ndi,53.8602739726
+2968,a_ndi,35.0765027322
+2982,a_ndi,42.578082192
+2996,a_ndi,70.1107642788
+3010,a_ndi,43.0164383562
+3024,a_ndi,35.5205479452
+3038,a_ndi,34.0607455648
+3052,a_ndi,74.167280485
+3066,a_ndi,11.2356164384
+3080,a_ndi,28.5671232877
+3094,a_ndi,77.0130398982
+3108,a_ndi,47.8657534247
+3122,a_ndi,60.3616438356
+3136,a_ndi,29.9584175462
+3150,a_ndi,23.8891084662
+3164,a_ndi,64.2459016393
+3178,a_ndi,54.3479452055
+3192,a_ndi,20.0246575342
+3206,a_ndi,51.194520548
+3220,a_ndi,71.1594505577
+3234,a_ndi,52.169863014
+3248,a_ndi,29.5428325473
+3262,a_ndi,61.046575342
+3276,a_ndi,50.4348678793
+3290,a_ndi,29.923287671
+3304,a_ndi,65.1123287671
+3318,a_ndi,60.539726027
+3332,a_ndi,80.131506849
+3346,a_ndi,71.479452055
+3360,a_ndi,24.55681563
+3374,a_ndi,16.5287671233
+3388,a_ndi,61.295890411
+3402,a_ndi,24.354135789
+3416,a_ndi,61.6207500561
+3430,a_ndi,42.3835616438
+3444,a_ndi,63.530054645
+3458,a_ndi,13.8105995958
+3472,a_ndi,62.975342466

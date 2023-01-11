@@ -1,0 +1,92 @@
+cohort,term_id,count,included_types,child_types
+CCSS,$ROOT$,2641,,""
+SJLIFE,$ROOT$,4528,,""
+"CCSS,SJLIFE",$ROOT$,7169,,""
+CCSS,diaggrp,2641,categorical,""
+SJLIFE,diaggrp,4528,categorical,""
+"CCSS,SJLIFE",diaggrp,7169,categorical,""
+CCSS,Diagnosis,2641,,"categorical,integer"
+SJLIFE,Diagnosis,4528,,"categorical,integer"
+"CCSS,SJLIFE",Diagnosis,7169,,"categorical,integer"
+CCSS,"Cancer-related Variables",2641,,"float,categorical,integer"
+SJLIFE,"Cancer-related Variables",4528,,"float,categorical,integer"
+"CCSS,SJLIFE","Cancer-related Variables",7169,,"float,categorical,integer"
+CCSS,yeardx,2641,integer,""
+SJLIFE,yeardx,4528,integer,""
+"CCSS,SJLIFE",yeardx,7169,integer,""
+CCSS,"Demographic Variables",2641,,"float,categorical"
+SJLIFE,"Demographic Variables",4528,,"float,categorical"
+"CCSS,SJLIFE","Demographic Variables",7169,,"float,categorical"
+CCSS,"Alkylating Agents, mg/m2",2641,,float
+SJLIFE,"Alkylating Agents, mg/m2",4528,,float
+"CCSS,SJLIFE","Alkylating Agents, mg/m2",7169,,float
+CCSS,"Chemotherapy, Lifetime",2641,,""
+SJLIFE,"Chemotherapy, Lifetime",4528,,""
+"CCSS,SJLIFE","Chemotherapy, Lifetime",7169,,""
+CCSS,Treatment,2641,,float
+SJLIFE,Treatment,4528,,float
+"CCSS,SJLIFE",Treatment,7169,,float
+CCSS,aaclassic_5,2641,float,""
+SJLIFE,aaclassic_5,4528,float,""
+"CCSS,SJLIFE",aaclassic_5,7169,float,""
+CCSS,"Platinum Agents, mg/m2",2641,,float
+SJLIFE,"Platinum Agents, mg/m2",4528,,float
+"CCSS,SJLIFE","Platinum Agents, mg/m2",7169,,float
+CCSS,cisplateq_5,2641,float,""
+SJLIFE,cisplateq_5,3740,float,""
+"CCSS,SJLIFE",cisplateq_5,6381,float,""
+CCSS,agedx,2641,float,""
+SJLIFE,agedx,4528,float,""
+"CCSS,SJLIFE",agedx,7169,float,""
+CCSS,"Age (years)",2641,,float
+SJLIFE,"Age (years)",4528,,float
+"CCSS,SJLIFE","Age (years)",7169,,float
+CCSS,sex,2641,categorical,""
+SJLIFE,sex,4528,categorical,""
+"CCSS,SJLIFE",sex,7169,categorical,""
+SJLIFE,"Clinically-assessed Variables",4528,,"condition,categorical"
+CCSS,"Clinically-assessed Variables",2641,,categorical
+"CCSS,SJLIFE","Clinically-assessed Variables",6716,,categorical
+SJLIFE,ctcae_graded,4528,"categorical,condition",condition
+CCSS,ctcae_graded,2641,categorical,""
+"CCSS,SJLIFE",ctcae_graded,6716,categorical,""
+SJLIFE,"Hearing loss",1618,condition,""
+SJLIFE,"Auditory System",1618,condition,condition
+SJLIFE,Arrhythmias,4107,condition,condition
+SJLIFE,"Cardiovascular System",4140,condition,condition
+SJLIFE,"Cardiac dysrhythmia",2844,condition,""
+SJLIFE,Cardiomyopathy,3820,condition,""
+SJLIFE,"Cardiovascular dysfunction",3821,condition,condition
+SJLIFE,Asthma,367,condition,""
+SJLIFE,"Chronic respiratory disorder",568,condition,condition
+SJLIFE,"Respiratory System",3365,condition,condition
+CCSS,"Genomic Profiling Status",2641,,""
+SJLIFE,"Genomic Profiling Status",4528,,""
+"CCSS,SJLIFE","Genomic Profiling Status",7169,,""
+CCSS,wgs_curated,2641,categorical,""
+SJLIFE,wgs_curated,4528,categorical,""
+"CCSS,SJLIFE",wgs_curated,7169,categorical,""
+CCSS,Race/Ethnicity,2641,,""
+SJLIFE,Race/Ethnicity,4528,,""
+"CCSS,SJLIFE",Race/Ethnicity,7169,,""
+CCSS,genetic_race,2641,categorical,""
+SJLIFE,genetic_race,2986,categorical,""
+"CCSS,SJLIFE",genetic_race,5627,categorical,""
+SJLIFE,efs,3000,survival,""
+CCSS,efs,2000,survival,""
+"CCSS,SJLIFE",efs,5000,survival,""
+SJLIFE,os,3000,survival,""
+"CCSS,SJLIFE",os,3000,survival,""
+CCSS,os,2000,survival,""
+SJLIFE,"Survival outcome",3000,,survival
+CCSS,"Survival outcome",2000,,survival
+"CCSS,SJLIFE","Survival outcome",5000,,survival
+CCSS,agelastvisit,2641,float,""
+SJLIFE,agelastvisit,4528,float,""
+"CCSS,SJLIFE",agelastvisit,7169,float,""
+CCSS,a_death,2641,float,""
+SJLIFE,a_death,4528,float,""
+"CCSS,SJLIFE",a_death,7169,float,""
+CCSS,a_ndi,2641,float,""
+SJLIFE,a_ndi,4528,float,""
+"CCSS,SJLIFE",a_ndi,7169,float,""

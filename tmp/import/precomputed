@@ -1,0 +1,1519 @@
+sample,term_id,value_for,value,computable_grade,max_grade,most_recent
+2646,Arrhythmias,grade,2,1,1,1
+2646,Arrhythmias,grade,1,1,0,1
+2646,Arrhythmias,grade,0,1,0,1
+2646,Arrhythmias,child,"Prolonged QT interval",1,1,1
+2646,Arrhythmias,child,"Conduction abnormalities",1,1,1
+2646,Arrhythmias,child,"Atrioventricular heart block",1,0,1
+2646,Arrhythmias,child,"Sinus bradycardia",1,0,1
+2646,Arrhythmias,child,"Cardiac dysrhythmia",1,0,1
+2646,Arrhythmias,child,"Sinus tachycardia",1,0,1
+2646,"Cardiovascular System",grade,3,1,1,0
+2646,"Cardiovascular System",grade,2,1,0,1
+2646,"Cardiovascular System",grade,1,1,0,1
+2646,"Cardiovascular System",grade,0,1,0,1
+2646,"Cardiovascular System",child,Dyslipidemia,1,0,0
+2646,"Cardiovascular System",child,"Essential hypertension",1,1,1
+2646,"Cardiovascular System",child,Arrhythmias,1,0,1
+2646,"Cardiovascular System",child,"Structural heart defects",1,0,1
+2646,"Cardiovascular System",child,"Myocardial infarction",1,0,1
+2646,"Cardiovascular System",child,"Cardiovascular dysfunction",1,0,1
+2646,"Cardiac dysrhythmia",grade,0,1,1,1
+2646,"Chronic respiratory disorder",grade,3,1,1,1
+2646,"Chronic respiratory disorder",child,"Obstructive sleep apnea",1,1,1
+2646,"Respiratory System",grade,3,1,1,1
+2646,"Respiratory System",child,"Chronic respiratory disorder",1,1,1
+2646,"Cardiovascular dysfunction",grade,0,1,1,1
+2646,"Cardiovascular dysfunction",child,"Right ventricular systolic dysfunction",1,1,1
+2646,"Cardiovascular dysfunction",child,"Cor pulmonale (right heart failure)",1,1,1
+2646,"Cardiovascular dysfunction",child,Cardiomyopathy,1,1,1
+2646,Cardiomyopathy,grade,0,1,1,1
+2660,"Hearing loss",grade,0,1,1,1
+2660,"Auditory System",grade,0,1,1,1
+2660,"Auditory System",child,"Hearing loss",1,1,1
+2660,Cardiomyopathy,grade,0,1,1,1
+2660,"Cardiovascular dysfunction",grade,0,1,1,1
+2660,"Cardiovascular dysfunction",child,Cardiomyopathy,1,1,1
+2660,"Cardiovascular System",grade,1,1,1,1
+2660,"Cardiovascular System",grade,0,1,0,1
+2660,"Cardiovascular System",child,Arrhythmias,1,0,0
+2660,"Cardiovascular System",child,Dyslipidemia,1,0,0
+2660,"Cardiovascular System",child,"Essential hypertension",1,0,0
+2660,"Cardiovascular System",child,"Structural heart defects",1,1,1
+2660,"Cardiovascular System",child,"Cardiovascular dysfunction",1,0,1
+2660,Arrhythmias,grade,0,1,1,1
+2660,Arrhythmias,child,"Sinus tachycardia",1,1,1
+2660,Arrhythmias,child,"Sinus bradycardia",1,1,1
+2660,"Respiratory System",grade,0,1,1,1
+2660,"Respiratory System",child,"Functional pulmonary deficit",1,1,1
+2674,Arrhythmias,grade,0,1,1,1
+2674,Arrhythmias,child,"Prolonged QT interval",1,1,0
+2674,Arrhythmias,child,"Cardiac dysrhythmia",1,1,0
+2674,Arrhythmias,child,"Atrioventricular heart block",1,1,0
+2674,Arrhythmias,child,"Conduction abnormalities",1,1,0
+2674,Arrhythmias,child,"Sinus tachycardia",1,1,1
+2674,Arrhythmias,child,"Sinus bradycardia",1,1,1
+2674,"Cardiovascular System",grade,2,1,1,0
+2674,"Cardiovascular System",grade,0,1,0,1
+2674,"Cardiovascular System",grade,1,1,0,1
+2674,"Cardiovascular System",child,"Cardiovascular dysfunction",1,0,0
+2674,"Cardiovascular System",child,"Structural heart defects",1,0,0
+2674,"Cardiovascular System",child,"Myocardial infarction",1,0,0
+2674,"Cardiovascular System",child,Dyslipidemia,1,1,0
+2674,"Cardiovascular System",child,Arrhythmias,1,0,1
+2674,"Cardiovascular System",child,"Essential hypertension",1,0,1
+2674,"Cardiac dysrhythmia",grade,0,1,1,1
+2674,Cardiomyopathy,grade,0,1,1,1
+2674,"Cardiovascular dysfunction",grade,0,1,1,1
+2674,"Cardiovascular dysfunction",child,Cardiomyopathy,1,1,1
+2674,"Cardiovascular dysfunction",child,"Cor pulmonale (right heart failure)",1,1,1
+2674,"Cardiovascular dysfunction",child,"Right ventricular systolic dysfunction",1,1,1
+2688,"Cardiac dysrhythmia",grade,0,1,1,1
+2688,Arrhythmias,grade,0,1,1,1
+2688,Arrhythmias,child,"Cardiac dysrhythmia",1,1,1
+2688,Arrhythmias,child,"Prolonged QT interval",1,1,1
+2688,Arrhythmias,child,"Atrioventricular heart block",1,1,1
+2688,Arrhythmias,child,"Sinus tachycardia",1,1,1
+2688,Arrhythmias,child,"Sinus bradycardia",1,1,1
+2688,Arrhythmias,child,"Conduction abnormalities",1,1,1
+2688,"Cardiovascular System",grade,1,1,1,1
+2688,"Cardiovascular System",grade,0,1,0,1
+2688,"Cardiovascular System",child,"Cardiovascular dysfunction",1,0,0
+2688,"Cardiovascular System",child,"Structural heart defects",1,0,0
+2688,"Cardiovascular System",child,"Essential hypertension",1,1,1
+2688,"Cardiovascular System",child,Dyslipidemia,1,1,0
+2688,"Cardiovascular System",child,Arrhythmias,1,0,1
+2688,"Cardiovascular System",child,"Myocardial infarction",1,0,1
+2688,Cardiomyopathy,grade,0,1,1,1
+2688,"Cardiovascular dysfunction",grade,0,1,1,1
+2688,"Cardiovascular dysfunction",child,Cardiomyopathy,1,1,1
+2688,"Cardiovascular dysfunction",child,"Cor pulmonale (right heart failure)",1,1,1
+2688,"Cardiovascular dysfunction",child,"Right ventricular systolic dysfunction",1,1,1
+2688,Asthma,grade,2,1,1,0
+2688,Asthma,grade,1,1,0,1
+2688,"Chronic respiratory disorder",grade,2,1,1,0
+2688,"Chronic respiratory disorder",grade,1,1,0,1
+2688,"Chronic respiratory disorder",child,Asthma,1,1,1
+2688,"Respiratory System",grade,2,1,1,0
+2688,"Respiratory System",grade,0,1,0,1
+2688,"Respiratory System",grade,1,1,0,0
+2688,"Respiratory System",child,"Chronic respiratory disorder",1,1,0
+2688,"Respiratory System",child,"Functional pulmonary deficit",1,0,1
+2702,Arrhythmias,grade,0,1,1,1
+2702,Arrhythmias,child,"Prolonged QT interval",1,1,1
+2702,Arrhythmias,child,"Cardiac dysrhythmia",1,1,1
+2702,Arrhythmias,child,"Atrioventricular heart block",1,1,1
+2702,Arrhythmias,child,"Conduction abnormalities",1,1,1
+2702,Arrhythmias,child,"Sinus tachycardia",1,1,1
+2702,Arrhythmias,child,"Sinus bradycardia",1,1,1
+2702,"Cardiovascular System",grade,1,1,1,1
+2702,"Cardiovascular System",grade,0,1,0,1
+2702,"Cardiovascular System",child,"Structural heart defects",1,0,0
+2702,"Cardiovascular System",child,Dyslipidemia,1,1,0
+2702,"Cardiovascular System",child,"Essential hypertension",1,1,1
+2702,"Cardiovascular System",child,Arrhythmias,1,0,1
+2702,"Cardiovascular System",child,"Myocardial infarction",1,0,1
+2702,"Cardiac dysrhythmia",grade,0,1,1,1
+2716,Arrhythmias,grade,1,1,1,0
+2716,Arrhythmias,grade,0,1,0,1
+2716,Arrhythmias,child,"Atrioventricular heart block",1,0,0
+2716,Arrhythmias,child,"Conduction abnormalities",1,0,0
+2716,Arrhythmias,child,"Prolonged QT interval",1,1,0
+2716,Arrhythmias,child,"Cardiac dysrhythmia",1,1,0
+2716,Arrhythmias,child,"Sinus bradycardia",1,0,1
+2716,Arrhythmias,child,"Sinus tachycardia",1,0,1
+2716,"Cardiovascular System",grade,1,1,1,1
+2716,"Cardiovascular System",grade,0,1,0,1
+2716,"Cardiovascular System",child,"Myocardial infarction",1,0,0
+2716,"Cardiovascular System",child,"Cardiovascular dysfunction",1,0,0
+2716,"Cardiovascular System",child,"Structural heart defects",1,0,0
+2716,"Cardiovascular System",child,Arrhythmias,1,1,1
+2716,"Cardiovascular System",child,Dyslipidemia,1,1,1
+2716,"Cardiovascular System",child,"Essential hypertension",1,1,1
+2716,"Cardiac dysrhythmia",grade,1,1,1,1
+2716,"Cardiac dysrhythmia",grade,0,1,0,0
+2716,Cardiomyopathy,grade,0,1,1,1
+2716,"Cardiovascular dysfunction",grade,0,1,1,1
+2716,"Cardiovascular dysfunction",child,Cardiomyopathy,1,1,1
+2716,"Cardiovascular dysfunction",child,"Cor pulmonale (right heart failure)",1,1,0
+2716,"Cardiovascular dysfunction",child,"Right ventricular systolic dysfunction",1,1,0
+2716,"Respiratory System",grade,2,1,1,1
+2716,"Respiratory System",child,"Functional pulmonary deficit",1,1,1
+2730,"Cardiac dysrhythmia",grade,0,1,1,1
+2730,Arrhythmias,grade,1,1,1,1
+2730,Arrhythmias,grade,0,1,0,1
+2730,Arrhythmias,child,"Cardiac dysrhythmia",1,0,0
+2730,Arrhythmias,child,"Prolonged QT interval",1,0,0
+2730,Arrhythmias,child,"Atrioventricular heart block",1,0,0
+2730,Arrhythmias,child,"Conduction abnormalities",1,1,0
+2730,Arrhythmias,child,"Sinus bradycardia",1,1,1
+2730,Arrhythmias,child,"Sinus tachycardia",1,0,1
+2730,"Cardiovascular System",grade,2,1,1,0
+2730,"Cardiovascular System",grade,1,1,0,1
+2730,"Cardiovascular System",grade,0,1,0,1
+2730,"Cardiovascular System",child,"Cardiovascular dysfunction",1,0,0
+2730,"Cardiovascular System",child,"Structural heart defects",1,0,0
+2730,"Cardiovascular System",child,"Myocardial infarction",1,0,0
+2730,"Cardiovascular System",child,"Essential hypertension",1,1,1
+2730,"Cardiovascular System",child,Arrhythmias,1,0,1
+2730,"Cardiovascular System",child,Dyslipidemia,1,0,1
+2730,Cardiomyopathy,grade,0,1,1,1
+2730,"Cardiovascular dysfunction",grade,0,1,1,1
+2730,"Cardiovascular dysfunction",child,Cardiomyopathy,1,1,1
+2730,"Cardiovascular dysfunction",child,"Cor pulmonale (right heart failure)",1,1,0
+2730,"Cardiovascular dysfunction",child,"Right ventricular systolic dysfunction",1,1,0
+2730,"Respiratory System",grade,0,1,1,1
+2730,"Respiratory System",child,"Functional pulmonary deficit",1,1,1
+2744,"Hearing loss",grade,3,1,1,1
+2744,"Auditory System",grade,3,1,1,1
+2744,"Auditory System",child,"Hearing loss",1,1,1
+2744,"Cardiovascular System",grade,3,1,1,0
+2744,"Cardiovascular System",grade,0,1,0,1
+2744,"Cardiovascular System",grade,1,1,0,1
+2744,"Cardiovascular System",grade,2,1,0,0
+2744,"Cardiovascular System",child,"Essential hypertension",1,0,0
+2744,"Cardiovascular System",child,"Myocardial infarction",1,1,0
+2744,"Cardiovascular System",child,Arrhythmias,1,0,1
+2744,"Cardiovascular System",child,"Structural heart defects",1,0,1
+2744,"Cardiovascular System",child,"Cardiovascular dysfunction",1,0,1
+2744,"Cardiovascular System",child,Dyslipidemia,1,0,1
+2744,"Cardiac dysrhythmia",grade,0,1,1,1
+2744,Arrhythmias,grade,1,1,1,0
+2744,Arrhythmias,grade,0,1,0,1
+2744,Arrhythmias,child,"Cardiac dysrhythmia",1,0,0
+2744,Arrhythmias,child,"Prolonged QT interval",1,0,0
+2744,Arrhythmias,child,"Atrioventricular heart block",1,0,0
+2744,Arrhythmias,child,"Conduction abnormalities",1,1,0
+2744,Arrhythmias,child,"Sinus bradycardia",1,0,1
+2744,Arrhythmias,child,"Sinus tachycardia",1,0,1
+2744,Cardiomyopathy,grade,0,1,1,1
+2744,"Cardiovascular dysfunction",grade,0,1,1,1
+2744,"Cardiovascular dysfunction",child,Cardiomyopathy,1,1,1
+2744,"Cardiovascular dysfunction",child,"Cor pulmonale (right heart failure)",1,1,0
+2744,"Cardiovascular dysfunction",child,"Right ventricular systolic dysfunction",1,1,0
+2744,"Respiratory System",grade,2,1,1,0
+2744,"Respiratory System",grade,1,1,0,1
+2744,"Respiratory System",grade,0,1,0,1
+2744,"Respiratory System",child,"Functional pulmonary deficit",1,1,1
+2758,"Hearing loss",grade,3,1,1,1
+2758,"Hearing loss",grade,1,1,0,0
+2758,"Auditory System",grade,3,1,1,1
+2758,"Auditory System",grade,1,1,0,0
+2758,"Auditory System",child,"Hearing loss",1,1,1
+2758,"Cardiac dysrhythmia",grade,0,1,1,1
+2758,Arrhythmias,grade,0,1,1,1
+2758,Arrhythmias,child,"Cardiac dysrhythmia",1,1,0
+2758,Arrhythmias,child,"Conduction abnormalities",1,1,0
+2758,Arrhythmias,child,"Prolonged QT interval",1,1,0
+2758,Arrhythmias,child,"Atrioventricular heart block",1,1,0
+2758,Arrhythmias,child,"Sinus bradycardia",1,1,1
+2758,Arrhythmias,child,"Sinus tachycardia",1,1,1
+2758,"Cardiovascular System",grade,3,1,1,0
+2758,"Cardiovascular System",grade,0,1,0,1
+2758,"Cardiovascular System",grade,1,1,0,1
+2758,"Cardiovascular System",grade,2,1,0,0
+2758,"Cardiovascular System",child,Arrhythmias,1,0,0
+2758,"Cardiovascular System",child,"Myocardial infarction",1,0,0
+2758,"Cardiovascular System",child,Dyslipidemia,1,0,0
+2758,"Cardiovascular System",child,"Essential hypertension",1,1,0
+2758,"Cardiovascular System",child,"Structural heart defects",1,0,1
+2758,"Cardiovascular System",child,"Cardiovascular dysfunction",1,0,1
+2758,Cardiomyopathy,grade,0,1,1,1
+2758,"Cardiovascular dysfunction",grade,0,1,1,1
+2758,"Cardiovascular dysfunction",child,Cardiomyopathy,1,1,1
+2758,"Cardiovascular dysfunction",child,"Cor pulmonale (right heart failure)",1,1,0
+2758,"Cardiovascular dysfunction",child,"Right ventricular systolic dysfunction",1,1,0
+2758,"Respiratory System",grade,3,1,1,1
+2758,"Respiratory System",grade,2,1,0,1
+2758,"Respiratory System",grade,1,1,0,1
+2758,"Respiratory System",grade,0,1,0,0
+2758,"Respiratory System",child,"Functional pulmonary deficit",1,1,1
+2758,"Respiratory System",child,"Chronic respiratory disorder",1,1,1
+2758,Asthma,grade,3,1,1,1
+2758,Asthma,grade,1,1,0,0
+2758,"Chronic respiratory disorder",grade,3,1,1,1
+2758,"Chronic respiratory disorder",grade,1,1,0,0
+2758,"Chronic respiratory disorder",child,Asthma,1,1,1
+2772,"Cardiovascular System",grade,1,1,1,0
+2772,"Cardiovascular System",grade,0,1,0,1
+2772,"Cardiovascular System",child,"Cardiovascular dysfunction",1,0,0
+2772,"Cardiovascular System",child,"Structural heart defects",1,1,0
+2772,"Cardiovascular System",child,Dyslipidemia,1,1,0
+2772,"Cardiovascular System",child,Arrhythmias,1,0,1
+2772,"Cardiovascular System",child,"Myocardial infarction",1,0,1
+2772,"Cardiovascular System",child,"Essential hypertension",1,0,1
+2772,"Cardiac dysrhythmia",grade,0,1,1,1
+2772,Arrhythmias,grade,0,1,1,1
+2772,Arrhythmias,child,"Cardiac dysrhythmia",1,1,1
+2772,Arrhythmias,child,"Conduction abnormalities",1,1,1
+2772,Arrhythmias,child,"Prolonged QT interval",1,1,1
+2772,Arrhythmias,child,"Atrioventricular heart block",1,1,1
+2772,Arrhythmias,child,"Sinus bradycardia",1,1,1
+2772,Arrhythmias,child,"Sinus tachycardia",1,1,1
+2772,Cardiomyopathy,grade,0,1,1,1
+2772,"Cardiovascular dysfunction",grade,0,1,1,1
+2772,"Cardiovascular dysfunction",child,Cardiomyopathy,1,1,1
+2772,"Cardiovascular dysfunction",child,"Right ventricular systolic dysfunction",1,1,1
+2772,"Cardiovascular dysfunction",child,"Cor pulmonale (right heart failure)",1,1,1
+2772,"Respiratory System",grade,2,1,1,1
+2772,"Respiratory System",grade,0,1,0,1
+2772,"Respiratory System",grade,1,1,0,0
+2772,"Respiratory System",child,"Functional pulmonary deficit",1,1,1
+2786,"Hearing loss",grade,1,1,1,1
+2786,"Auditory System",grade,1,1,1,1
+2786,"Auditory System",child,"Hearing loss",1,1,1
+2786,"Cardiovascular System",grade,1,1,1,0
+2786,"Cardiovascular System",grade,0,1,0,1
+2786,"Cardiovascular System",child,"Myocardial infarction",1,0,0
+2786,"Cardiovascular System",child,Arrhythmias,1,0,0
+2786,"Cardiovascular System",child,"Structural heart defects",1,0,0
+2786,"Cardiovascular System",child,Dyslipidemia,1,1,0
+2786,"Cardiovascular System",child,"Essential hypertension",1,1,0
+2786,"Cardiovascular System",child,"Cardiovascular dysfunction",1,0,1
+2786,"Cardiac dysrhythmia",grade,0,1,1,1
+2786,Arrhythmias,grade,0,1,1,1
+2786,Arrhythmias,child,"Cardiac dysrhythmia",1,1,0
+2786,Arrhythmias,child,"Prolonged QT interval",1,1,0
+2786,Arrhythmias,child,"Atrioventricular heart block",1,1,0
+2786,Arrhythmias,child,"Sinus bradycardia",1,1,1
+2786,Arrhythmias,child,"Sinus tachycardia",1,1,1
+2786,Arrhythmias,child,"Conduction abnormalities",1,1,0
+2786,Cardiomyopathy,grade,0,1,1,1
+2786,"Cardiovascular dysfunction",grade,0,1,1,1
+2786,"Cardiovascular dysfunction",child,Cardiomyopathy,1,1,1
+2786,"Cardiovascular dysfunction",child,"Right ventricular systolic dysfunction",1,1,0
+2786,"Cardiovascular dysfunction",child,"Cor pulmonale (right heart failure)",1,1,0
+2786,"Respiratory System",grade,0,1,1,1
+2786,"Respiratory System",child,"Functional pulmonary deficit",1,1,1
+2800,"Cardiovascular System",grade,4,1,1,0
+2800,"Cardiovascular System",grade,0,1,0,1
+2800,"Cardiovascular System",grade,1,1,0,1
+2800,"Cardiovascular System",grade,2,1,0,1
+2800,"Cardiovascular System",grade,3,1,0,0
+2800,"Cardiovascular System",child,"Cardiovascular dysfunction",1,0,0
+2800,"Cardiovascular System",child,Dyslipidemia,1,0,0
+2800,"Cardiovascular System",child,"Structural heart defects",1,1,1
+2800,"Cardiovascular System",child,"Myocardial infarction",1,1,1
+2800,"Cardiovascular System",child,Arrhythmias,1,0,1
+2800,"Cardiovascular System",child,"Essential hypertension",1,0,1
+2800,"Cardiac dysrhythmia",grade,0,1,1,1
+2800,Arrhythmias,grade,1,1,1,1
+2800,Arrhythmias,grade,0,1,0,1
+2800,Arrhythmias,child,"Prolonged QT interval",1,1,1
+2800,Arrhythmias,child,"Conduction abnormalities",1,1,1
+2800,Arrhythmias,child,"Cardiac dysrhythmia",1,0,1
+2800,Arrhythmias,child,"Atrioventricular heart block",1,0,1
+2800,Arrhythmias,child,"Sinus bradycardia",1,0,1
+2800,Arrhythmias,child,"Sinus tachycardia",1,0,1
+2800,Cardiomyopathy,grade,3,1,1,1
+2800,"Cardiovascular dysfunction",grade,3,1,1,1
+2800,"Cardiovascular dysfunction",grade,0,1,0,1
+2800,"Cardiovascular dysfunction",child,Cardiomyopathy,1,1,1
+2800,"Cardiovascular dysfunction",child,"Right ventricular systolic dysfunction",1,0,1
+2800,"Cardiovascular dysfunction",child,"Cor pulmonale (right heart failure)",1,0,1
+2800,"Respiratory System",grade,2,1,1,1
+2800,"Respiratory System",grade,0,1,0,1
+2800,"Respiratory System",child,"Functional pulmonary deficit",1,1,1
+2814,"Cardiac dysrhythmia",grade,0,1,1,1
+2814,Arrhythmias,grade,0,1,1,1
+2814,Arrhythmias,child,"Cardiac dysrhythmia",1,1,0
+2814,Arrhythmias,child,"Prolonged QT interval",1,1,0
+2814,Arrhythmias,child,"Atrioventricular heart block",1,1,0
+2814,Arrhythmias,child,"Conduction abnormalities",1,1,0
+2814,Arrhythmias,child,"Sinus bradycardia",1,1,1
+2814,Arrhythmias,child,"Sinus tachycardia",1,1,1
+2814,"Cardiovascular System",grade,1,1,1,0
+2814,"Cardiovascular System",grade,0,1,0,1
+2814,"Cardiovascular System",child,Arrhythmias,1,0,0
+2814,"Cardiovascular System",child,"Myocardial infarction",1,0,0
+2814,"Cardiovascular System",child,Dyslipidemia,1,0,0
+2814,"Cardiovascular System",child,"Essential hypertension",1,1,0
+2814,"Cardiovascular System",child,"Cardiovascular dysfunction",1,0,1
+2814,"Hearing loss",grade,1,1,1,1
+2814,"Auditory System",grade,1,1,1,1
+2814,"Auditory System",child,"Hearing loss",1,1,1
+2814,Cardiomyopathy,grade,0,1,1,1
+2814,"Cardiovascular dysfunction",grade,0,1,1,1
+2814,"Cardiovascular dysfunction",child,Cardiomyopathy,1,1,1
+2814,"Respiratory System",grade,1,1,1,1
+2814,"Respiratory System",child,"Functional pulmonary deficit",1,1,1
+2828,"Cardiac dysrhythmia",grade,3,1,1,1
+2828,"Cardiac dysrhythmia",grade,2,1,0,0
+2828,"Cardiac dysrhythmia",grade,0,1,0,0
+2828,Arrhythmias,grade,3,1,1,1
+2828,Arrhythmias,grade,0,1,0,1
+2828,Arrhythmias,grade,2,1,0,0
+2828,Arrhythmias,child,"Cardiac dysrhythmia",1,1,1
+2828,Arrhythmias,child,"Prolonged QT interval",1,0,1
+2828,Arrhythmias,child,"Conduction abnormalities",1,0,1
+2828,Arrhythmias,child,"Atrioventricular heart block",1,0,1
+2828,Arrhythmias,child,"Sinus bradycardia",1,0,1
+2828,Arrhythmias,child,"Sinus tachycardia",1,0,1
+2828,"Cardiovascular System",grade,3,1,1,1
+2828,"Cardiovascular System",grade,0,1,0,1
+2828,"Cardiovascular System",grade,2,1,0,0
+2828,"Cardiovascular System",grade,1,1,0,0
+2828,"Cardiovascular System",child,"Cardiovascular dysfunction",1,0,0
+2828,"Cardiovascular System",child,"Structural heart defects",1,0,0
+2828,"Cardiovascular System",child,Dyslipidemia,1,0,0
+2828,"Cardiovascular System",child,Arrhythmias,1,1,1
+2828,"Cardiovascular System",child,"Myocardial infarction",1,0,1
+2828,"Cardiovascular System",child,"Essential hypertension",1,0,1
+2828,Cardiomyopathy,grade,0,1,1,1
+2828,"Cardiovascular dysfunction",grade,0,1,1,1
+2828,"Cardiovascular dysfunction",child,Cardiomyopathy,1,1,1
+2828,"Cardiovascular dysfunction",child,"Right ventricular systolic dysfunction",1,1,1
+2828,"Cardiovascular dysfunction",child,"Cor pulmonale (right heart failure)",1,1,1
+2842,"Cardiac dysrhythmia",grade,0,1,1,1
+2842,Arrhythmias,grade,1,1,1,0
+2842,Arrhythmias,grade,0,1,0,1
+2842,Arrhythmias,child,"Cardiac dysrhythmia",1,0,0
+2842,Arrhythmias,child,"Prolonged QT interval",1,0,0
+2842,Arrhythmias,child,"Atrioventricular heart block",1,0,0
+2842,Arrhythmias,child,"Conduction abnormalities",1,1,0
+2842,Arrhythmias,child,"Sinus bradycardia",1,0,1
+2842,Arrhythmias,child,"Sinus tachycardia",1,0,1
+2842,"Cardiovascular System",grade,1,1,1,0
+2842,"Cardiovascular System",grade,0,1,0,1
+2842,"Cardiovascular System",child,"Myocardial infarction",1,0,0
+2842,"Cardiovascular System",child,"Cardiovascular dysfunction",1,0,0
+2842,"Cardiovascular System",child,Arrhythmias,1,1,1
+2842,"Cardiovascular System",child,"Essential hypertension",1,0,1
+2842,"Cardiovascular System",child,Dyslipidemia,1,0,1
+2842,"Hearing loss",grade,1,1,1,1
+2842,"Auditory System",grade,1,1,1,1
+2842,"Auditory System",child,"Hearing loss",1,1,1
+2842,Cardiomyopathy,grade,0,1,1,1
+2842,"Cardiovascular dysfunction",grade,0,1,1,1
+2842,"Cardiovascular dysfunction",child,Cardiomyopathy,1,1,1
+2842,"Respiratory System",grade,0,1,1,1
+2842,"Respiratory System",child,"Functional pulmonary deficit",1,1,1
+2856,"Cardiac dysrhythmia",grade,0,1,1,1
+2856,Arrhythmias,grade,1,1,1,1
+2856,Arrhythmias,grade,0,1,0,1
+2856,Arrhythmias,child,"Conduction abnormalities",1,1,1
+2856,Arrhythmias,child,"Cardiac dysrhythmia",1,0,1
+2856,Arrhythmias,child,"Prolonged QT interval",1,0,1
+2856,Arrhythmias,child,"Atrioventricular heart block",1,0,1
+2856,Arrhythmias,child,"Sinus bradycardia",1,0,1
+2856,Arrhythmias,child,"Sinus tachycardia",1,0,1
+2856,"Cardiovascular System",grade,2,1,1,1
+2856,"Cardiovascular System",grade,0,1,0,1
+2856,"Cardiovascular System",grade,1,1,0,1
+2856,"Cardiovascular System",child,Dyslipidemia,1,1,1
+2856,"Cardiovascular System",child,Arrhythmias,1,0,1
+2856,"Cardiovascular System",child,"Myocardial infarction",1,0,1
+2870,"Cardiac dysrhythmia",grade,0,1,1,1
+2870,Arrhythmias,grade,0,1,1,1
+2870,Arrhythmias,child,"Cardiac dysrhythmia",1,1,0
+2870,Arrhythmias,child,"Prolonged QT interval",1,1,0
+2870,Arrhythmias,child,"Atrioventricular heart block",1,1,0
+2870,Arrhythmias,child,"Conduction abnormalities",1,1,0
+2870,Arrhythmias,child,"Sinus bradycardia",1,1,1
+2870,Arrhythmias,child,"Sinus tachycardia",1,1,1
+2870,"Cardiovascular System",grade,1,1,1,1
+2870,"Cardiovascular System",grade,0,1,0,1
+2870,"Cardiovascular System",child,"Myocardial infarction",1,0,0
+2870,"Cardiovascular System",child,"Essential hypertension",1,1,1
+2870,"Cardiovascular System",child,Dyslipidemia,1,1,1
+2870,"Cardiovascular System",child,Arrhythmias,1,0,1
+2884,"Cardiac dysrhythmia",grade,0,1,1,1
+2884,Arrhythmias,grade,0,1,1,1
+2884,Arrhythmias,child,"Cardiac dysrhythmia",1,1,0
+2884,Arrhythmias,child,"Prolonged QT interval",1,1,0
+2884,Arrhythmias,child,"Atrioventricular heart block",1,1,0
+2884,Arrhythmias,child,"Conduction abnormalities",1,1,0
+2884,Arrhythmias,child,"Sinus bradycardia",1,1,1
+2884,Arrhythmias,child,"Sinus tachycardia",1,1,1
+2884,"Cardiovascular System",grade,1,1,1,1
+2884,"Cardiovascular System",grade,0,1,0,1
+2884,"Cardiovascular System",child,"Myocardial infarction",1,0,0
+2884,"Cardiovascular System",child,"Cardiovascular dysfunction",1,0,0
+2884,"Cardiovascular System",child,"Structural heart defects",1,1,0
+2884,"Cardiovascular System",child,"Essential hypertension",1,1,1
+2884,"Cardiovascular System",child,Dyslipidemia,1,1,1
+2884,"Cardiovascular System",child,Arrhythmias,1,0,1
+2884,Cardiomyopathy,grade,0,1,1,1
+2884,"Cardiovascular dysfunction",grade,0,1,1,1
+2884,"Cardiovascular dysfunction",child,Cardiomyopathy,1,1,1
+2884,"Cardiovascular dysfunction",child,"Cor pulmonale (right heart failure)",1,1,1
+2884,"Cardiovascular dysfunction",child,"Right ventricular systolic dysfunction",1,1,1
+2884,"Respiratory System",grade,2,1,1,1
+2884,"Respiratory System",grade,0,1,0,1
+2884,"Respiratory System",child,"Functional pulmonary deficit",1,1,1
+2898,"Cardiac dysrhythmia",grade,0,1,1,1
+2898,Arrhythmias,grade,1,1,1,1
+2898,Arrhythmias,grade,0,1,0,1
+2898,Arrhythmias,child,"Conduction abnormalities",1,1,1
+2898,Arrhythmias,child,"Cardiac dysrhythmia",1,0,1
+2898,Arrhythmias,child,"Prolonged QT interval",1,0,1
+2898,Arrhythmias,child,"Atrioventricular heart block",1,0,1
+2898,Arrhythmias,child,"Sinus bradycardia",1,0,1
+2898,Arrhythmias,child,"Sinus tachycardia",1,0,1
+2898,"Cardiovascular System",grade,2,1,1,0
+2898,"Cardiovascular System",grade,0,1,0,1
+2898,"Cardiovascular System",grade,1,1,0,1
+2898,"Cardiovascular System",child,"Essential hypertension",1,1,1
+2898,"Cardiovascular System",child,Arrhythmias,1,0,1
+2898,"Cardiovascular System",child,"Myocardial infarction",1,0,1
+2898,"Cardiovascular System",child,"Cardiovascular dysfunction",1,0,1
+2898,"Cardiovascular System",child,"Structural heart defects",1,0,1
+2898,"Cardiovascular System",child,Dyslipidemia,1,0,1
+2898,Cardiomyopathy,grade,0,1,1,1
+2898,"Cardiovascular dysfunction",grade,0,1,1,1
+2898,"Cardiovascular dysfunction",child,Cardiomyopathy,1,1,1
+2898,"Cardiovascular dysfunction",child,"Cor pulmonale (right heart failure)",1,1,1
+2898,"Cardiovascular dysfunction",child,"Right ventricular systolic dysfunction",1,1,1
+2912,"Cardiovascular System",grade,3,1,1,0
+2912,"Cardiovascular System",grade,2,1,0,1
+2912,"Cardiovascular System",grade,0,1,0,1
+2912,"Cardiovascular System",grade,1,1,0,0
+2912,"Cardiovascular System",child,Arrhythmias,1,0,0
+2912,"Cardiovascular System",child,"Essential hypertension",1,0,0
+2912,"Cardiovascular System",child,Dyslipidemia,1,0,0
+2912,"Cardiovascular System",child,"Myocardial infarction",1,1,0
+2912,"Cardiovascular System",child,"Cardiovascular dysfunction",1,0,1
+2912,"Cardiovascular System",child,"Structural heart defects",1,0,1
+2912,Arrhythmias,grade,1,1,1,1
+2912,Arrhythmias,grade,0,1,0,1
+2912,Arrhythmias,child,"Prolonged QT interval",1,1,1
+2912,Arrhythmias,child,"Conduction abnormalities",1,1,1
+2912,Arrhythmias,child,"Cardiac dysrhythmia",1,0,1
+2912,Arrhythmias,child,"Atrioventricular heart block",1,0,1
+2912,Arrhythmias,child,"Sinus bradycardia",1,0,1
+2912,Arrhythmias,child,"Sinus tachycardia",1,0,1
+2912,"Cardiac dysrhythmia",grade,0,1,1,1
+2912,Cardiomyopathy,grade,2,1,1,1
+2912,"Cardiovascular dysfunction",grade,2,1,1,1
+2912,"Cardiovascular dysfunction",grade,0,1,0,1
+2912,"Cardiovascular dysfunction",child,Cardiomyopathy,1,1,1
+2912,"Cardiovascular dysfunction",child,"Cor pulmonale (right heart failure)",1,0,1
+2912,"Cardiovascular dysfunction",child,"Right ventricular systolic dysfunction",1,0,1
+2926,"Cardiac dysrhythmia",grade,0,1,1,1
+2926,Arrhythmias,grade,0,1,1,1
+2926,Arrhythmias,child,"Cardiac dysrhythmia",1,1,1
+2926,Arrhythmias,child,"Prolonged QT interval",1,1,1
+2926,Arrhythmias,child,"Conduction abnormalities",1,1,1
+2926,Arrhythmias,child,"Atrioventricular heart block",1,1,1
+2926,Arrhythmias,child,"Sinus bradycardia",1,1,1
+2926,Arrhythmias,child,"Sinus tachycardia",1,1,1
+2926,"Cardiovascular System",grade,1,1,1,0
+2926,"Cardiovascular System",grade,0,1,0,1
+2926,"Cardiovascular System",child,"Cardiovascular dysfunction",1,0,0
+2926,"Cardiovascular System",child,"Structural heart defects",1,1,0
+2926,"Cardiovascular System",child,Dyslipidemia,1,1,0
+2926,"Cardiovascular System",child,Arrhythmias,1,0,1
+2926,"Cardiovascular System",child,"Myocardial infarction",1,0,1
+2926,"Cardiovascular System",child,"Essential hypertension",1,0,1
+2926,Cardiomyopathy,grade,0,1,1,1
+2926,"Cardiovascular dysfunction",grade,0,1,1,1
+2926,"Cardiovascular dysfunction",child,Cardiomyopathy,1,1,1
+2926,"Cardiovascular dysfunction",child,"Right ventricular systolic dysfunction",1,1,1
+2926,"Cardiovascular dysfunction",child,"Cor pulmonale (right heart failure)",1,1,1
+2940,"Cardiac dysrhythmia",grade,0,1,1,1
+2940,Arrhythmias,grade,0,1,1,1
+2940,Arrhythmias,child,"Cardiac dysrhythmia",1,1,1
+2940,Arrhythmias,child,"Prolonged QT interval",1,1,1
+2940,Arrhythmias,child,"Conduction abnormalities",1,1,1
+2940,Arrhythmias,child,"Atrioventricular heart block",1,1,1
+2940,Arrhythmias,child,"Sinus bradycardia",1,1,1
+2940,Arrhythmias,child,"Sinus tachycardia",1,1,1
+2940,"Cardiovascular System",grade,3,1,1,0
+2940,"Cardiovascular System",grade,1,1,0,1
+2940,"Cardiovascular System",grade,0,1,0,1
+2940,"Cardiovascular System",child,Arrhythmias,1,0,0
+2940,"Cardiovascular System",child,"Myocardial infarction",1,0,0
+2940,"Cardiovascular System",child,"Cardiovascular dysfunction",1,0,0
+2940,"Cardiovascular System",child,"Structural heart defects",1,0,0
+2940,"Cardiovascular System",child,"Essential hypertension",1,1,1
+2940,"Cardiovascular System",child,Dyslipidemia,1,0,1
+2940,Cardiomyopathy,grade,0,1,1,1
+2940,"Cardiovascular dysfunction",grade,0,1,1,1
+2940,"Cardiovascular dysfunction",child,Cardiomyopathy,1,1,1
+2940,"Cardiovascular dysfunction",child,"Right ventricular systolic dysfunction",1,1,1
+2940,"Cardiovascular dysfunction",child,"Cor pulmonale (right heart failure)",1,1,1
+2940,"Respiratory System",grade,0,1,1,1
+2940,"Respiratory System",child,"Functional pulmonary deficit",1,1,1
+2954,"Hearing loss",grade,4,1,1,1
+2954,"Auditory System",grade,4,1,1,1
+2954,"Auditory System",child,"Hearing loss",1,1,1
+2954,"Cardiovascular System",grade,3,1,1,0
+2954,"Cardiovascular System",grade,2,1,0,1
+2954,"Cardiovascular System",grade,0,1,0,0
+2954,"Cardiovascular System",grade,1,1,0,0
+2954,"Cardiovascular System",child,Arrhythmias,1,0,0
+2954,"Cardiovascular System",child,"Myocardial infarction",1,0,0
+2954,"Cardiovascular System",child,"Cardiovascular dysfunction",1,0,0
+2954,"Cardiovascular System",child,Dyslipidemia,1,0,0
+2954,"Cardiovascular System",child,"Essential hypertension",1,0,0
+2954,"Cardiovascular System",child,"Structural heart defects",1,1,1
+2954,"Cardiac dysrhythmia",grade,0,1,1,1
+2954,Arrhythmias,grade,1,1,1,0
+2954,Arrhythmias,grade,0,1,0,1
+2954,Arrhythmias,child,"Cardiac dysrhythmia",1,0,0
+2954,Arrhythmias,child,"Prolonged QT interval",1,0,0
+2954,Arrhythmias,child,"Atrioventricular heart block",1,0,0
+2954,Arrhythmias,child,"Conduction abnormalities",1,1,0
+2954,Arrhythmias,child,"Sinus tachycardia",1,0,1
+2954,Arrhythmias,child,"Sinus bradycardia",1,0,1
+2954,Cardiomyopathy,grade,0,1,1,1
+2954,"Cardiovascular dysfunction",grade,0,1,1,1
+2954,"Cardiovascular dysfunction",child,Cardiomyopathy,1,1,1
+2954,"Cardiovascular dysfunction",child,"Cor pulmonale (right heart failure)",1,1,0
+2954,"Cardiovascular dysfunction",child,"Right ventricular systolic dysfunction",1,1,0
+2954,"Respiratory System",grade,4,1,1,0
+2954,"Respiratory System",grade,1,1,0,1
+2954,"Respiratory System",grade,2,1,0,1
+2954,"Respiratory System",grade,3,1,0,1
+2954,"Respiratory System",child,"Chronic respiratory disorder",1,0,0
+2954,"Respiratory System",child,"Functional pulmonary deficit",1,1,1
+2954,"Chronic respiratory disorder",grade,3,1,1,1
+2954,"Chronic respiratory disorder",child,"Obstructive sleep apnea",1,1,1
+2968,"Cardiovascular System",grade,2,1,1,0
+2968,"Cardiovascular System",grade,0,1,0,1
+2968,"Cardiovascular System",grade,1,1,0,0
+2968,"Cardiovascular System",child,"Structural heart defects",1,0,0
+2968,"Cardiovascular System",child,Arrhythmias,1,0,0
+2968,"Cardiovascular System",child,"Myocardial infarction",1,0,0
+2968,"Cardiovascular System",child,Dyslipidemia,1,0,0
+2968,"Cardiovascular System",child,"Cardiovascular dysfunction",1,1,1
+2968,"Cardiovascular System",child,"Essential hypertension",1,1,0
+2968,"Cardiac dysrhythmia",grade,0,1,1,1
+2968,Arrhythmias,grade,1,1,1,0
+2968,Arrhythmias,grade,0,1,0,1
+2968,Arrhythmias,child,"Cardiac dysrhythmia",1,0,0
+2968,Arrhythmias,child,"Prolonged QT interval",1,0,0
+2968,Arrhythmias,child,"Atrioventricular heart block",1,0,0
+2968,Arrhythmias,child,"Conduction abnormalities",1,1,0
+2968,Arrhythmias,child,"Sinus bradycardia",1,0,1
+2968,Arrhythmias,child,"Sinus tachycardia",1,0,1
+2968,Cardiomyopathy,grade,2,1,1,0
+2968,Cardiomyopathy,grade,0,1,0,1
+2968,"Cardiovascular dysfunction",grade,2,1,1,0
+2968,"Cardiovascular dysfunction",grade,0,1,0,1
+2968,"Cardiovascular dysfunction",child,"Cor pulmonale (right heart failure)",1,0,0
+2968,"Cardiovascular dysfunction",child,"Right ventricular systolic dysfunction",1,0,0
+2968,"Cardiovascular dysfunction",child,Cardiomyopathy,1,1,1
+2968,"Respiratory System",grade,2,1,1,1
+2968,"Respiratory System",grade,0,1,0,1
+2968,"Respiratory System",child,"Functional pulmonary deficit",1,1,1
+2982,"Cardiovascular System",grade,2,1,1,1
+2982,"Cardiovascular System",grade,0,1,0,1
+2982,"Cardiovascular System",grade,1,1,0,0
+2982,"Cardiovascular System",child,"Structural heart defects",1,0,0
+2982,"Cardiovascular System",child,Dyslipidemia,1,0,0
+2982,"Cardiovascular System",child,"Essential hypertension",1,1,1
+2982,"Cardiovascular System",child,Arrhythmias,1,0,1
+2982,"Cardiovascular System",child,"Myocardial infarction",1,0,1
+2982,"Cardiac dysrhythmia",grade,0,1,1,1
+2982,Arrhythmias,grade,0,1,1,1
+2982,Arrhythmias,child,"Cardiac dysrhythmia",1,1,1
+2982,Arrhythmias,child,"Prolonged QT interval",1,1,1
+2982,Arrhythmias,child,"Atrioventricular heart block",1,1,1
+2982,Arrhythmias,child,"Conduction abnormalities",1,1,1
+2982,Arrhythmias,child,"Sinus bradycardia",1,1,1
+2982,Arrhythmias,child,"Sinus tachycardia",1,1,1
+2996,"Hearing loss",grade,1,1,1,1
+2996,"Auditory System",grade,1,1,1,1
+2996,"Auditory System",child,"Hearing loss",1,1,1
+2996,"Cardiac dysrhythmia",grade,0,1,1,1
+2996,Arrhythmias,grade,0,1,1,1
+2996,Arrhythmias,child,"Cardiac dysrhythmia",1,1,0
+2996,Arrhythmias,child,"Conduction abnormalities",1,1,0
+2996,Arrhythmias,child,"Prolonged QT interval",1,1,0
+2996,Arrhythmias,child,"Atrioventricular heart block",1,1,0
+2996,Arrhythmias,child,"Sinus tachycardia",1,1,1
+2996,Arrhythmias,child,"Sinus bradycardia",1,1,1
+2996,"Cardiovascular System",grade,2,1,1,0
+2996,"Cardiovascular System",grade,0,1,0,1
+2996,"Cardiovascular System",grade,1,1,0,1
+2996,"Cardiovascular System",child,"Myocardial infarction",1,0,0
+2996,"Cardiovascular System",child,Dyslipidemia,1,1,0
+2996,"Cardiovascular System",child,Arrhythmias,1,0,1
+2996,"Cardiovascular System",child,"Cardiovascular dysfunction",1,0,1
+2996,"Cardiovascular System",child,"Essential hypertension",1,0,1
+2996,Cardiomyopathy,grade,0,1,1,1
+2996,"Cardiovascular dysfunction",grade,0,1,1,1
+2996,"Cardiovascular dysfunction",child,Cardiomyopathy,1,1,1
+2996,"Respiratory System",grade,1,1,1,1
+2996,"Respiratory System",grade,0,1,0,1
+2996,"Respiratory System",child,"Functional pulmonary deficit",1,1,1
+3010,"Cardiac dysrhythmia",grade,0,1,1,1
+3010,Arrhythmias,grade,1,1,1,0
+3010,Arrhythmias,grade,0,1,0,1
+3010,Arrhythmias,child,"Cardiac dysrhythmia",1,0,0
+3010,Arrhythmias,child,"Prolonged QT interval",1,0,0
+3010,Arrhythmias,child,"Atrioventricular heart block",1,0,0
+3010,Arrhythmias,child,"Conduction abnormalities",1,1,0
+3010,Arrhythmias,child,"Sinus tachycardia",1,0,1
+3010,Arrhythmias,child,"Sinus bradycardia",1,0,1
+3010,"Cardiovascular System",grade,1,1,1,1
+3010,"Cardiovascular System",grade,0,1,0,1
+3010,"Cardiovascular System",child,"Myocardial infarction",1,0,0
+3010,"Cardiovascular System",child,"Cardiovascular dysfunction",1,0,0
+3010,"Cardiovascular System",child,Arrhythmias,1,1,1
+3010,"Cardiovascular System",child,"Structural heart defects",1,1,0
+3010,"Cardiovascular System",child,Dyslipidemia,1,1,1
+3010,"Cardiovascular System",child,"Essential hypertension",1,1,1
+3010,Cardiomyopathy,grade,0,1,1,1
+3010,"Cardiovascular dysfunction",grade,0,1,1,1
+3010,"Cardiovascular dysfunction",child,Cardiomyopathy,1,1,1
+3010,"Cardiovascular dysfunction",child,"Cor pulmonale (right heart failure)",1,1,0
+3010,"Cardiovascular dysfunction",child,"Right ventricular systolic dysfunction",1,1,0
+3010,"Respiratory System",grade,1,1,1,1
+3010,"Respiratory System",grade,0,1,0,1
+3010,"Respiratory System",child,"Functional pulmonary deficit",1,1,1
+3024,"Cardiac dysrhythmia",grade,0,1,1,1
+3024,Arrhythmias,grade,0,1,1,1
+3024,Arrhythmias,child,"Cardiac dysrhythmia",1,1,0
+3024,Arrhythmias,child,"Prolonged QT interval",1,1,0
+3024,Arrhythmias,child,"Atrioventricular heart block",1,1,0
+3024,Arrhythmias,child,"Conduction abnormalities",1,1,0
+3024,Arrhythmias,child,"Sinus tachycardia",1,1,1
+3024,Arrhythmias,child,"Sinus bradycardia",1,1,1
+3024,"Cardiovascular System",grade,1,1,1,0
+3024,"Cardiovascular System",grade,0,1,0,1
+3024,"Cardiovascular System",child,"Myocardial infarction",1,0,0
+3024,"Cardiovascular System",child,"Cardiovascular dysfunction",1,0,0
+3024,"Cardiovascular System",child,"Structural heart defects",1,0,0
+3024,"Cardiovascular System",child,"Essential hypertension",1,1,1
+3024,"Cardiovascular System",child,Arrhythmias,1,0,1
+3024,"Cardiovascular System",child,Dyslipidemia,1,0,1
+3024,Cardiomyopathy,grade,0,1,1,1
+3024,"Cardiovascular dysfunction",grade,0,1,1,1
+3024,"Cardiovascular dysfunction",child,Cardiomyopathy,1,1,1
+3024,"Cardiovascular dysfunction",child,"Cor pulmonale (right heart failure)",1,1,0
+3024,"Cardiovascular dysfunction",child,"Right ventricular systolic dysfunction",1,1,0
+3024,"Respiratory System",grade,0,1,1,1
+3024,"Respiratory System",child,"Functional pulmonary deficit",1,1,1
+3038,"Cardiovascular System",grade,2,1,1,0
+3038,"Cardiovascular System",grade,0,1,0,1
+3038,"Cardiovascular System",grade,1,1,0,0
+3038,"Cardiovascular System",child,Arrhythmias,1,0,0
+3038,"Cardiovascular System",child,"Myocardial infarction",1,0,0
+3038,"Cardiovascular System",child,Dyslipidemia,1,0,0
+3038,"Cardiovascular System",child,"Essential hypertension",1,0,0
+3038,"Cardiovascular System",child,"Structural heart defects",1,1,1
+3038,"Cardiovascular System",child,"Cardiovascular dysfunction",1,0,1
+3038,"Cardiac dysrhythmia",grade,0,1,1,1
+3038,Arrhythmias,grade,0,1,1,1
+3038,Arrhythmias,child,"Cardiac dysrhythmia",1,1,1
+3038,Arrhythmias,child,"Prolonged QT interval",1,1,1
+3038,Arrhythmias,child,"Atrioventricular heart block",1,1,1
+3038,Arrhythmias,child,"Conduction abnormalities",1,1,1
+3038,Arrhythmias,child,"Sinus bradycardia",1,1,1
+3038,Arrhythmias,child,"Sinus tachycardia",1,1,1
+3038,Cardiomyopathy,grade,0,1,1,1
+3038,"Cardiovascular dysfunction",grade,0,1,1,1
+3038,"Cardiovascular dysfunction",child,Cardiomyopathy,1,1,1
+3038,"Cardiovascular dysfunction",child,"Cor pulmonale (right heart failure)",1,1,1
+3038,"Cardiovascular dysfunction",child,"Right ventricular systolic dysfunction",1,1,1
+3052,"Cardiac dysrhythmia",grade,0,1,1,1
+3052,Arrhythmias,grade,0,1,1,1
+3052,Arrhythmias,child,"Cardiac dysrhythmia",1,1,1
+3052,Arrhythmias,child,"Conduction abnormalities",1,1,1
+3052,Arrhythmias,child,"Prolonged QT interval",1,1,1
+3052,Arrhythmias,child,"Atrioventricular heart block",1,1,1
+3052,Arrhythmias,child,"Sinus tachycardia",1,1,1
+3052,Arrhythmias,child,"Sinus bradycardia",1,1,1
+3052,"Cardiovascular System",grade,4,1,1,0
+3052,"Cardiovascular System",grade,3,1,0,1
+3052,"Cardiovascular System",grade,0,1,0,1
+3052,"Cardiovascular System",grade,2,1,0,0
+3052,"Cardiovascular System",grade,1,1,0,0
+3052,"Cardiovascular System",child,Arrhythmias,1,0,0
+3052,"Cardiovascular System",child,Dyslipidemia,1,0,0
+3052,"Cardiovascular System",child,"Essential hypertension",1,0,0
+3052,"Cardiovascular System",child,"Myocardial infarction",1,1,0
+3052,"Cardiovascular System",child,"Cardiovascular dysfunction",1,0,1
+3052,"Cardiovascular System",child,"Structural heart defects",1,0,1
+3052,Cardiomyopathy,grade,3,1,1,1
+3052,Cardiomyopathy,grade,2,1,0,0
+3052,"Cardiovascular dysfunction",grade,3,1,1,1
+3052,"Cardiovascular dysfunction",grade,0,1,0,1
+3052,"Cardiovascular dysfunction",grade,2,1,0,0
+3052,"Cardiovascular dysfunction",child,Cardiomyopathy,1,1,1
+3052,"Cardiovascular dysfunction",child,"Cor pulmonale (right heart failure)",1,0,1
+3052,"Cardiovascular dysfunction",child,"Right ventricular systolic dysfunction",1,0,1
+3052,"Respiratory System",grade,2,1,1,1
+3052,"Respiratory System",grade,0,1,0,1
+3052,"Respiratory System",child,"Functional pulmonary deficit",1,1,1
+3066,"Hearing loss",grade,1,1,1,1
+3066,"Auditory System",grade,1,1,1,1
+3066,"Auditory System",child,"Hearing loss",1,1,1
+3066,"Cardiac dysrhythmia",grade,0,1,1,1
+3066,Arrhythmias,grade,0,1,1,1
+3066,Arrhythmias,child,"Cardiac dysrhythmia",1,1,0
+3066,Arrhythmias,child,"Prolonged QT interval",1,1,0
+3066,Arrhythmias,child,"Conduction abnormalities",1,1,0
+3066,Arrhythmias,child,"Atrioventricular heart block",1,1,0
+3066,Arrhythmias,child,"Sinus tachycardia",1,1,1
+3066,Arrhythmias,child,"Sinus bradycardia",1,1,1
+3066,"Cardiovascular System",grade,2,1,1,1
+3066,"Cardiovascular System",grade,0,1,0,0
+3066,"Cardiovascular System",grade,1,1,0,0
+3066,"Cardiovascular System",child,Arrhythmias,1,0,0
+3066,"Cardiovascular System",child,"Structural heart defects",1,0,0
+3066,"Cardiovascular System",child,"Myocardial infarction",1,0,0
+3066,"Cardiovascular System",child,"Cardiovascular dysfunction",1,0,0
+3066,"Cardiovascular System",child,"Essential hypertension",1,1,1
+3066,"Cardiovascular System",child,Dyslipidemia,1,1,1
+3066,Cardiomyopathy,grade,0,1,1,1
+3066,"Cardiovascular dysfunction",grade,0,1,1,1
+3066,"Cardiovascular dysfunction",child,Cardiomyopathy,1,1,1
+3066,"Cardiovascular dysfunction",child,"Right ventricular systolic dysfunction",1,1,1
+3066,"Cardiovascular dysfunction",child,"Cor pulmonale (right heart failure)",1,1,1
+3066,"Chronic respiratory disorder",grade,3,1,1,1
+3066,"Chronic respiratory disorder",grade,2,1,0,0
+3066,"Chronic respiratory disorder",child,Asthma,1,0,0
+3066,"Chronic respiratory disorder",child,"Obstructive sleep apnea",1,1,1
+3066,"Respiratory System",grade,3,1,1,1
+3066,"Respiratory System",grade,1,1,0,0
+3066,"Respiratory System",grade,2,1,0,0
+3066,"Respiratory System",grade,0,1,0,0
+3066,"Respiratory System",child,"Functional pulmonary deficit",1,0,0
+3066,"Respiratory System",child,"Chronic respiratory disorder",1,1,1
+3066,Asthma,grade,2,1,1,1
+3080,"Cardiac dysrhythmia",grade,0,1,1,1
+3080,Arrhythmias,grade,0,1,1,1
+3080,Arrhythmias,child,"Cardiac dysrhythmia",1,1,1
+3080,Arrhythmias,child,"Prolonged QT interval",1,1,1
+3080,Arrhythmias,child,"Conduction abnormalities",1,1,1
+3080,Arrhythmias,child,"Atrioventricular heart block",1,1,1
+3080,Arrhythmias,child,"Sinus tachycardia",1,1,1
+3080,Arrhythmias,child,"Sinus bradycardia",1,1,1
+3080,"Cardiovascular System",grade,1,1,1,1
+3080,"Cardiovascular System",grade,0,1,0,1
+3080,"Cardiovascular System",child,Arrhythmias,1,0,0
+3080,"Cardiovascular System",child,"Myocardial infarction",1,0,0
+3080,"Cardiovascular System",child,"Essential hypertension",1,0,0
+3080,"Cardiovascular System",child,Dyslipidemia,1,0,0
+3080,"Cardiovascular System",child,"Structural heart defects",1,1,1
+3080,"Cardiovascular System",child,"Cardiovascular dysfunction",1,0,1
+3080,Cardiomyopathy,grade,0,1,1,1
+3080,"Cardiovascular dysfunction",grade,0,1,1,1
+3080,"Cardiovascular dysfunction",child,Cardiomyopathy,1,1,1
+3080,"Cardiovascular dysfunction",child,"Right ventricular systolic dysfunction",1,1,1
+3080,"Cardiovascular dysfunction",child,"Cor pulmonale (right heart failure)",1,1,1
+3080,"Respiratory System",grade,0,1,1,1
+3080,"Respiratory System",child,"Functional pulmonary deficit",1,1,1
+3094,"Cardiac dysrhythmia",grade,0,1,1,1
+3094,Arrhythmias,grade,0,1,1,1
+3094,Arrhythmias,child,"Cardiac dysrhythmia",1,1,0
+3094,Arrhythmias,child,"Prolonged QT interval",1,1,0
+3094,Arrhythmias,child,"Atrioventricular heart block",1,1,0
+3094,Arrhythmias,child,"Conduction abnormalities",1,1,0
+3094,Arrhythmias,child,"Sinus tachycardia",1,1,1
+3094,Arrhythmias,child,"Sinus bradycardia",1,1,1
+3094,"Cardiovascular System",grade,2,1,1,0
+3094,"Cardiovascular System",grade,0,1,0,1
+3094,"Cardiovascular System",grade,1,1,0,0
+3094,"Cardiovascular System",child,Arrhythmias,1,0,0
+3094,"Cardiovascular System",child,"Myocardial infarction",1,0,0
+3094,"Cardiovascular System",child,"Structural heart defects",1,0,0
+3094,"Cardiovascular System",child,"Essential hypertension",1,0,0
+3094,"Cardiovascular System",child,Dyslipidemia,1,1,0
+3094,"Cardiovascular System",child,"Cardiovascular dysfunction",1,0,1
+3094,Cardiomyopathy,grade,0,1,1,1
+3094,"Cardiovascular dysfunction",grade,0,1,1,1
+3094,"Cardiovascular dysfunction",child,Cardiomyopathy,1,1,1
+3094,"Cardiovascular dysfunction",child,"Cor pulmonale (right heart failure)",1,1,0
+3094,"Cardiovascular dysfunction",child,"Right ventricular systolic dysfunction",1,1,0
+3094,"Respiratory System",grade,1,1,1,0
+3094,"Respiratory System",grade,0,1,0,1
+3094,"Respiratory System",child,"Chronic respiratory disorder",1,1,0
+3094,"Respiratory System",child,"Functional pulmonary deficit",1,0,1
+3094,Asthma,grade,1,1,1,1
+3094,"Chronic respiratory disorder",grade,1,1,1,1
+3094,"Chronic respiratory disorder",child,Asthma,1,1,1
+3108,Arrhythmias,grade,0,1,1,1
+3108,Arrhythmias,child,"Prolonged QT interval",1,1,1
+3108,Arrhythmias,child,"Cardiac dysrhythmia",1,1,1
+3108,Arrhythmias,child,"Atrioventricular heart block",1,1,1
+3108,Arrhythmias,child,"Conduction abnormalities",1,1,1
+3108,Arrhythmias,child,"Sinus tachycardia",1,1,1
+3108,Arrhythmias,child,"Sinus bradycardia",1,1,1
+3108,"Cardiovascular System",grade,1,1,1,0
+3108,"Cardiovascular System",grade,0,1,0,1
+3108,"Cardiovascular System",child,Arrhythmias,1,0,0
+3108,"Cardiovascular System",child,"Myocardial infarction",1,0,0
+3108,"Cardiovascular System",child,"Essential hypertension",1,1,0
+3108,"Cardiovascular System",child,Dyslipidemia,1,1,0
+3108,"Cardiovascular System",child,"Cardiovascular dysfunction",1,0,1
+3108,"Cardiovascular System",child,"Structural heart defects",1,0,1
+3108,"Cardiac dysrhythmia",grade,0,1,1,1
+3108,Cardiomyopathy,grade,0,1,1,1
+3108,"Cardiovascular dysfunction",grade,0,1,1,1
+3108,"Cardiovascular dysfunction",child,Cardiomyopathy,1,1,1
+3108,"Cardiovascular dysfunction",child,"Cor pulmonale (right heart failure)",1,1,1
+3108,"Cardiovascular dysfunction",child,"Right ventricular systolic dysfunction",1,1,1
+3122,"Cardiac dysrhythmia",grade,0,1,1,1
+3122,Arrhythmias,grade,0,1,1,1
+3122,Arrhythmias,child,"Cardiac dysrhythmia",1,1,1
+3122,Arrhythmias,child,"Conduction abnormalities",1,1,1
+3122,Arrhythmias,child,"Prolonged QT interval",1,1,1
+3122,Arrhythmias,child,"Atrioventricular heart block",1,1,1
+3122,Arrhythmias,child,"Sinus tachycardia",1,1,1
+3122,Arrhythmias,child,"Sinus bradycardia",1,1,1
+3122,"Cardiovascular System",grade,1,1,1,0
+3122,"Cardiovascular System",grade,0,1,0,1
+3122,"Cardiovascular System",child,Arrhythmias,1,0,0
+3122,"Cardiovascular System",child,"Myocardial infarction",1,0,0
+3122,"Cardiovascular System",child,Dyslipidemia,1,0,0
+3122,"Cardiovascular System",child,"Essential hypertension",1,1,0
+3122,"Cardiovascular System",child,"Cardiovascular dysfunction",1,0,1
+3122,"Cardiovascular System",child,"Structural heart defects",1,0,1
+3122,Cardiomyopathy,grade,0,1,1,1
+3122,"Cardiovascular dysfunction",grade,0,1,1,1
+3122,"Cardiovascular dysfunction",child,Cardiomyopathy,1,1,1
+3122,"Cardiovascular dysfunction",child,"Right ventricular systolic dysfunction",1,1,1
+3122,"Cardiovascular dysfunction",child,"Cor pulmonale (right heart failure)",1,1,1
+3122,"Respiratory System",grade,2,1,1,1
+3122,"Respiratory System",grade,0,1,0,1
+3122,"Respiratory System",child,"Functional pulmonary deficit",1,1,1
+3136,"Cardiac dysrhythmia",grade,0,1,1,1
+3136,Arrhythmias,grade,0,1,1,1
+3136,Arrhythmias,child,"Cardiac dysrhythmia",1,1,1
+3136,Arrhythmias,child,"Prolonged QT interval",1,1,1
+3136,Arrhythmias,child,"Conduction abnormalities",1,1,1
+3136,Arrhythmias,child,"Atrioventricular heart block",1,1,1
+3136,Arrhythmias,child,"Sinus tachycardia",1,1,1
+3136,Arrhythmias,child,"Sinus bradycardia",1,1,1
+3136,"Cardiovascular System",grade,1,1,1,1
+3136,"Cardiovascular System",grade,0,1,0,1
+3136,"Cardiovascular System",child,"Structural heart defects",1,1,1
+3136,"Cardiovascular System",child,"Essential hypertension",1,1,1
+3136,"Cardiovascular System",child,Dyslipidemia,1,1,0
+3136,"Cardiovascular System",child,Arrhythmias,1,0,1
+3136,"Cardiovascular System",child,"Myocardial infarction",1,0,1
+3136,"Cardiovascular System",child,"Cardiovascular dysfunction",1,0,1
+3136,Cardiomyopathy,grade,0,1,1,1
+3136,"Cardiovascular dysfunction",grade,0,1,1,1
+3136,"Cardiovascular dysfunction",child,Cardiomyopathy,1,1,1
+3136,"Cardiovascular dysfunction",child,"Right ventricular systolic dysfunction",1,1,1
+3136,"Cardiovascular dysfunction",child,"Cor pulmonale (right heart failure)",1,1,1
+3150,"Cardiac dysrhythmia",grade,0,1,1,1
+3150,Arrhythmias,grade,1,1,1,0
+3150,Arrhythmias,grade,0,1,0,1
+3150,Arrhythmias,child,"Cardiac dysrhythmia",1,0,0
+3150,Arrhythmias,child,"Prolonged QT interval",1,0,0
+3150,Arrhythmias,child,"Atrioventricular heart block",1,0,0
+3150,Arrhythmias,child,"Conduction abnormalities",1,1,0
+3150,Arrhythmias,child,"Sinus tachycardia",1,0,1
+3150,Arrhythmias,child,"Sinus bradycardia",1,0,1
+3150,"Cardiovascular System",grade,1,1,1,0
+3150,"Cardiovascular System",grade,0,1,0,1
+3150,"Cardiovascular System",child,"Myocardial infarction",1,0,0
+3150,"Cardiovascular System",child,"Cardiovascular dysfunction",1,0,0
+3150,"Cardiovascular System",child,"Structural heart defects",1,0,0
+3150,"Cardiovascular System",child,Arrhythmias,1,1,1
+3150,"Cardiovascular System",child,Dyslipidemia,1,1,1
+3150,"Cardiovascular System",child,"Essential hypertension",1,0,1
+3150,Cardiomyopathy,grade,0,1,1,1
+3150,"Cardiovascular dysfunction",grade,0,1,1,1
+3150,"Cardiovascular dysfunction",child,Cardiomyopathy,1,1,1
+3150,"Cardiovascular dysfunction",child,"Cor pulmonale (right heart failure)",1,1,0
+3150,"Cardiovascular dysfunction",child,"Right ventricular systolic dysfunction",1,1,0
+3150,"Respiratory System",grade,0,1,1,1
+3150,"Respiratory System",child,"Functional pulmonary deficit",1,1,1
+3164,"Cardiac dysrhythmia",grade,0,1,1,1
+3164,Arrhythmias,grade,0,1,1,1
+3164,Arrhythmias,child,"Cardiac dysrhythmia",1,1,1
+3164,Arrhythmias,child,"Prolonged QT interval",1,1,1
+3164,Arrhythmias,child,"Atrioventricular heart block",1,1,1
+3164,Arrhythmias,child,"Conduction abnormalities",1,1,1
+3164,Arrhythmias,child,"Sinus tachycardia",1,1,1
+3164,Arrhythmias,child,"Sinus bradycardia",1,1,1
+3164,"Cardiovascular System",grade,0,1,1,1
+3164,"Cardiovascular System",child,Arrhythmias,1,1,1
+3164,"Cardiovascular System",child,"Myocardial infarction",1,1,1
+3164,"Cardiovascular System",child,"Essential hypertension",1,1,1
+3164,"Cardiovascular System",child,Dyslipidemia,1,1,0
+3178,"Hearing loss",grade,0,1,1,1
+3178,"Auditory System",grade,0,1,1,1
+3178,"Auditory System",child,"Hearing loss",1,1,1
+3178,"Cardiac dysrhythmia",grade,1,1,1,1
+3178,Arrhythmias,grade,1,1,1,1
+3178,Arrhythmias,grade,0,1,0,1
+3178,Arrhythmias,child,"Prolonged QT interval",1,0,0
+3178,Arrhythmias,child,"Atrioventricular heart block",1,0,0
+3178,Arrhythmias,child,"Conduction abnormalities",1,0,0
+3178,Arrhythmias,child,"Cardiac dysrhythmia",1,1,1
+3178,Arrhythmias,child,"Sinus tachycardia",1,0,1
+3178,Arrhythmias,child,"Sinus bradycardia",1,0,1
+3178,"Cardiovascular System",grade,1,1,1,1
+3178,"Cardiovascular System",grade,0,1,0,1
+3178,"Cardiovascular System",child,"Myocardial infarction",1,0,0
+3178,"Cardiovascular System",child,"Cardiovascular dysfunction",1,0,0
+3178,"Cardiovascular System",child,Arrhythmias,1,1,1
+3178,"Cardiovascular System",child,"Structural heart defects",1,1,0
+3178,"Cardiovascular System",child,"Essential hypertension",1,1,1
+3178,"Cardiovascular System",child,Dyslipidemia,1,0,1
+3178,Cardiomyopathy,grade,0,1,1,1
+3178,"Cardiovascular dysfunction",grade,0,1,1,1
+3178,"Cardiovascular dysfunction",child,Cardiomyopathy,1,1,1
+3178,"Cardiovascular dysfunction",child,"Cor pulmonale (right heart failure)",1,1,0
+3178,"Cardiovascular dysfunction",child,"Right ventricular systolic dysfunction",1,1,0
+3178,"Respiratory System",grade,0,1,1,1
+3178,"Respiratory System",child,"Functional pulmonary deficit",1,1,1
+3192,"Cardiac dysrhythmia",grade,0,1,1,1
+3192,Arrhythmias,grade,1,1,1,0
+3192,Arrhythmias,grade,0,1,0,1
+3192,Arrhythmias,child,"Cardiac dysrhythmia",1,0,0
+3192,Arrhythmias,child,"Prolonged QT interval",1,0,0
+3192,Arrhythmias,child,"Atrioventricular heart block",1,0,0
+3192,Arrhythmias,child,"Conduction abnormalities",1,1,0
+3192,Arrhythmias,child,"Sinus tachycardia",1,0,1
+3192,Arrhythmias,child,"Sinus bradycardia",1,0,1
+3192,"Cardiovascular System",grade,1,1,1,1
+3192,"Cardiovascular System",grade,0,1,0,1
+3192,"Cardiovascular System",child,"Myocardial infarction",1,0,0
+3192,"Cardiovascular System",child,Dyslipidemia,1,0,0
+3192,"Cardiovascular System",child,"Essential hypertension",1,0,0
+3192,"Cardiovascular System",child,Arrhythmias,1,1,0
+3192,"Cardiovascular System",child,"Structural heart defects",1,1,1
+3192,"Cardiovascular System",child,"Cardiovascular dysfunction",1,0,1
+3192,Cardiomyopathy,grade,0,1,1,1
+3192,"Cardiovascular dysfunction",grade,0,1,1,1
+3192,"Cardiovascular dysfunction",child,Cardiomyopathy,1,1,1
+3192,"Respiratory System",grade,0,1,1,1
+3192,"Respiratory System",child,"Functional pulmonary deficit",1,1,1
+3206,"Cardiac dysrhythmia",grade,0,1,1,1
+3206,Arrhythmias,grade,0,1,1,1
+3206,Arrhythmias,child,"Cardiac dysrhythmia",1,1,0
+3206,Arrhythmias,child,"Prolonged QT interval",1,1,0
+3206,Arrhythmias,child,"Atrioventricular heart block",1,1,0
+3206,Arrhythmias,child,"Conduction abnormalities",1,1,0
+3206,Arrhythmias,child,"Sinus tachycardia",1,1,1
+3206,Arrhythmias,child,"Sinus bradycardia",1,1,1
+3206,"Cardiovascular System",grade,1,1,1,0
+3206,"Cardiovascular System",grade,0,1,0,1
+3206,"Cardiovascular System",child,Arrhythmias,1,0,0
+3206,"Cardiovascular System",child,"Myocardial infarction",1,0,0
+3206,"Cardiovascular System",child,"Structural heart defects",1,0,0
+3206,"Cardiovascular System",child,"Essential hypertension",1,1,0
+3206,"Cardiovascular System",child,Dyslipidemia,1,1,0
+3206,"Cardiovascular System",child,"Cardiovascular dysfunction",1,0,1
+3206,Cardiomyopathy,grade,0,1,1,1
+3206,"Cardiovascular dysfunction",grade,0,1,1,1
+3206,"Cardiovascular dysfunction",child,Cardiomyopathy,1,1,1
+3206,"Cardiovascular dysfunction",child,"Cor pulmonale (right heart failure)",1,1,0
+3206,"Cardiovascular dysfunction",child,"Right ventricular systolic dysfunction",1,1,0
+3206,"Respiratory System",grade,2,1,1,0
+3206,"Respiratory System",grade,0,1,0,1
+3206,"Respiratory System",child,"Functional pulmonary deficit",1,1,1
+3220,"Cardiac dysrhythmia",grade,0,1,1,1
+3220,Arrhythmias,grade,1,1,1,0
+3220,Arrhythmias,grade,0,1,0,1
+3220,Arrhythmias,child,"Cardiac dysrhythmia",1,0,0
+3220,Arrhythmias,child,"Prolonged QT interval",1,0,0
+3220,Arrhythmias,child,"Atrioventricular heart block",1,0,0
+3220,Arrhythmias,child,"Conduction abnormalities",1,1,0
+3220,Arrhythmias,child,"Sinus bradycardia",1,0,1
+3220,Arrhythmias,child,"Sinus tachycardia",1,0,1
+3220,"Cardiovascular System",grade,1,1,1,0
+3220,"Cardiovascular System",grade,0,1,0,1
+3220,"Cardiovascular System",child,"Myocardial infarction",1,0,0
+3220,"Cardiovascular System",child,Dyslipidemia,1,0,0
+3220,"Cardiovascular System",child,"Essential hypertension",1,0,0
+3220,"Cardiovascular System",child,Arrhythmias,1,1,0
+3220,"Cardiovascular System",child,"Structural heart defects",1,1,0
+3220,"Cardiovascular System",child,"Cardiovascular dysfunction",1,0,1
+3220,"Hearing loss",grade,0,1,1,1
+3220,"Auditory System",grade,0,1,1,1
+3220,"Auditory System",child,"Hearing loss",1,1,1
+3220,Cardiomyopathy,grade,0,1,1,1
+3220,"Cardiovascular dysfunction",grade,0,1,1,1
+3220,"Cardiovascular dysfunction",child,Cardiomyopathy,1,1,1
+3220,"Cardiovascular dysfunction",child,"Cor pulmonale (right heart failure)",1,1,0
+3220,"Cardiovascular dysfunction",child,"Right ventricular systolic dysfunction",1,1,0
+3220,"Respiratory System",grade,0,1,1,1
+3220,"Respiratory System",child,"Functional pulmonary deficit",1,1,1
+3234,"Cardiac dysrhythmia",grade,0,1,1,1
+3234,Arrhythmias,grade,1,1,1,0
+3234,Arrhythmias,grade,0,1,0,1
+3234,Arrhythmias,child,"Cardiac dysrhythmia",1,0,0
+3234,Arrhythmias,child,"Prolonged QT interval",1,0,0
+3234,Arrhythmias,child,"Atrioventricular heart block",1,0,0
+3234,Arrhythmias,child,"Conduction abnormalities",1,1,0
+3234,Arrhythmias,child,"Sinus tachycardia",1,1,1
+3234,Arrhythmias,child,"Sinus bradycardia",1,0,1
+3234,"Cardiovascular System",grade,3,1,1,0
+3234,"Cardiovascular System",grade,0,1,0,1
+3234,"Cardiovascular System",grade,1,1,0,0
+3234,"Cardiovascular System",child,Arrhythmias,1,0,0
+3234,"Cardiovascular System",child,"Structural heart defects",1,0,0
+3234,"Cardiovascular System",child,"Essential hypertension",1,0,0
+3234,"Cardiovascular System",child,Dyslipidemia,1,0,0
+3234,"Cardiovascular System",child,"Myocardial infarction",1,1,0
+3234,"Cardiovascular System",child,"Cardiovascular dysfunction",1,0,1
+3234,Cardiomyopathy,grade,0,1,1,1
+3234,"Cardiovascular dysfunction",grade,0,1,1,1
+3234,"Cardiovascular dysfunction",child,Cardiomyopathy,1,1,1
+3234,"Cardiovascular dysfunction",child,"Cor pulmonale (right heart failure)",1,1,0
+3234,"Cardiovascular dysfunction",child,"Right ventricular systolic dysfunction",1,1,0
+3234,"Respiratory System",grade,0,1,1,1
+3234,"Respiratory System",child,"Functional pulmonary deficit",1,1,1
+3248,"Hearing loss",grade,1,1,1,1
+3248,"Hearing loss",grade,0,1,0,0
+3248,"Auditory System",grade,1,1,1,1
+3248,"Auditory System",grade,0,1,0,0
+3248,"Auditory System",child,"Hearing loss",1,1,1
+3248,"Cardiovascular System",grade,2,1,1,0
+3248,"Cardiovascular System",grade,0,1,0,1
+3248,"Cardiovascular System",grade,1,1,0,0
+3248,"Cardiovascular System",child,"Myocardial infarction",1,0,0
+3248,"Cardiovascular System",child,"Cardiovascular dysfunction",1,0,0
+3248,"Cardiovascular System",child,"Essential hypertension",1,1,1
+3248,"Cardiovascular System",child,Arrhythmias,1,0,1
+3248,"Cardiovascular System",child,Dyslipidemia,1,0,1
+3248,Arrhythmias,grade,0,1,1,1
+3248,Arrhythmias,child,"Prolonged QT interval",1,1,0
+3248,Arrhythmias,child,"Cardiac dysrhythmia",1,1,0
+3248,Arrhythmias,child,"Atrioventricular heart block",1,1,0
+3248,Arrhythmias,child,"Conduction abnormalities",1,1,0
+3248,Arrhythmias,child,"Sinus tachycardia",1,1,1
+3248,Arrhythmias,child,"Sinus bradycardia",1,1,1
+3248,"Cardiac dysrhythmia",grade,0,1,1,1
+3248,Cardiomyopathy,grade,0,1,1,1
+3248,"Cardiovascular dysfunction",grade,0,1,1,1
+3248,"Cardiovascular dysfunction",child,Cardiomyopathy,1,1,1
+3248,"Respiratory System",grade,0,1,1,1
+3248,"Respiratory System",child,"Functional pulmonary deficit",1,1,1
+3262,"Cardiac dysrhythmia",grade,0,1,1,1
+3262,Arrhythmias,grade,0,1,1,1
+3262,Arrhythmias,child,"Cardiac dysrhythmia",1,1,0
+3262,Arrhythmias,child,"Prolonged QT interval",1,1,0
+3262,Arrhythmias,child,"Atrioventricular heart block",1,1,0
+3262,Arrhythmias,child,"Conduction abnormalities",1,1,0
+3262,Arrhythmias,child,"Sinus tachycardia",1,1,1
+3262,Arrhythmias,child,"Sinus bradycardia",1,1,1
+3262,"Cardiovascular System",grade,3,1,1,0
+3262,"Cardiovascular System",grade,0,1,0,1
+3262,"Cardiovascular System",grade,1,1,0,1
+3262,"Cardiovascular System",grade,2,1,0,0
+3262,"Cardiovascular System",child,"Structural heart defects",1,0,0
+3262,"Cardiovascular System",child,"Myocardial infarction",1,1,0
+3262,"Cardiovascular System",child,"Cardiovascular dysfunction",1,1,0
+3262,"Cardiovascular System",child,Arrhythmias,1,0,1
+3262,"Cardiovascular System",child,"Essential hypertension",1,0,1
+3262,"Cardiovascular System",child,Dyslipidemia,1,0,1
+3262,"Hearing loss",grade,4,1,1,1
+3262,"Auditory System",grade,4,1,1,1
+3262,"Auditory System",child,"Hearing loss",1,1,1
+3262,Cardiomyopathy,grade,3,1,1,1
+3262,Cardiomyopathy,grade,0,1,0,0
+3262,"Cardiovascular dysfunction",grade,3,1,1,1
+3262,"Cardiovascular dysfunction",grade,0,1,0,0
+3262,"Cardiovascular dysfunction",child,"Cor pulmonale (right heart failure)",1,0,0
+3262,"Cardiovascular dysfunction",child,"Right ventricular systolic dysfunction",1,0,0
+3262,"Cardiovascular dysfunction",child,Cardiomyopathy,1,1,1
+3262,"Respiratory System",grade,0,1,1,1
+3262,"Respiratory System",child,"Functional pulmonary deficit",1,1,1
+3276,"Hearing loss",grade,0,1,1,1
+3276,"Auditory System",grade,0,1,1,1
+3276,"Auditory System",child,"Hearing loss",1,1,1
+3276,"Cardiac dysrhythmia",grade,0,1,1,1
+3276,Arrhythmias,grade,0,1,1,1
+3276,Arrhythmias,child,"Cardiac dysrhythmia",1,1,0
+3276,Arrhythmias,child,"Prolonged QT interval",1,1,0
+3276,Arrhythmias,child,"Atrioventricular heart block",1,1,0
+3276,Arrhythmias,child,"Sinus bradycardia",1,1,1
+3276,Arrhythmias,child,"Conduction abnormalities",1,1,0
+3276,Arrhythmias,child,"Sinus tachycardia",1,1,1
+3276,"Cardiovascular System",grade,1,1,1,0
+3276,"Cardiovascular System",grade,0,1,0,1
+3276,"Cardiovascular System",child,"Myocardial infarction",1,0,0
+3276,"Cardiovascular System",child,"Cardiovascular dysfunction",1,0,0
+3276,"Cardiovascular System",child,"Structural heart defects",1,1,0
+3276,"Cardiovascular System",child,Arrhythmias,1,0,1
+3276,"Cardiovascular System",child,"Essential hypertension",1,0,1
+3276,"Cardiovascular System",child,Dyslipidemia,1,0,1
+3276,Cardiomyopathy,grade,0,1,1,1
+3276,"Cardiovascular dysfunction",grade,0,1,1,1
+3276,"Cardiovascular dysfunction",child,Cardiomyopathy,1,1,1
+3276,"Cardiovascular dysfunction",child,"Right ventricular systolic dysfunction",1,1,0
+3276,"Cardiovascular dysfunction",child,"Cor pulmonale (right heart failure)",1,1,0
+3276,"Respiratory System",grade,0,1,1,1
+3276,"Respiratory System",child,"Functional pulmonary deficit",1,1,1
+3290,"Cardiac dysrhythmia",grade,2,1,1,1
+3290,Arrhythmias,grade,3,1,1,1
+3290,Arrhythmias,grade,2,1,0,0
+3290,Arrhythmias,grade,0,1,0,0
+3290,Arrhythmias,child,"Cardiac dysrhythmia",1,0,0
+3290,Arrhythmias,child,"Prolonged QT interval",1,0,0
+3290,Arrhythmias,child,"Conduction abnormalities",1,0,0
+3290,Arrhythmias,child,"Sinus tachycardia",1,0,0
+3290,Arrhythmias,child,"Sinus bradycardia",1,0,0
+3290,Arrhythmias,child,"Atrioventricular heart block",1,1,1
+3290,"Cardiovascular System",grade,4,1,1,1
+3290,"Cardiovascular System",grade,3,1,0,1
+3290,"Cardiovascular System",grade,2,1,0,0
+3290,"Cardiovascular System",grade,0,1,0,0
+3290,"Cardiovascular System",grade,1,1,0,0
+3290,"Cardiovascular System",child,Arrhythmias,1,0,0
+3290,"Cardiovascular System",child,"Myocardial infarction",1,0,0
+3290,"Cardiovascular System",child,Dyslipidemia,1,0,0
+3290,"Cardiovascular System",child,"Essential hypertension",1,0,0
+3290,"Cardiovascular System",child,"Cardiovascular dysfunction",1,1,1
+3290,"Cardiovascular System",child,"Structural heart defects",1,1,1
+3290,"Hearing loss",grade,1,1,1,1
+3290,"Auditory System",grade,1,1,1,1
+3290,"Auditory System",child,"Hearing loss",1,1,1
+3290,Cardiomyopathy,grade,4,1,1,0
+3290,Cardiomyopathy,grade,3,1,0,1
+3290,"Cardiovascular dysfunction",grade,4,1,1,0
+3290,"Cardiovascular dysfunction",grade,3,1,0,1
+3290,"Cardiovascular dysfunction",grade,0,1,0,0
+3290,"Cardiovascular dysfunction",child,"Pulmonary hypertension",1,0,0
+3290,"Cardiovascular dysfunction",child,"Cor pulmonale (right heart failure)",1,0,0
+3290,"Cardiovascular dysfunction",child,"Right ventricular systolic dysfunction",1,0,0
+3290,"Cardiovascular dysfunction",child,Cardiomyopathy,1,1,1
+3290,"Respiratory System",grade,3,1,1,0
+3290,"Respiratory System",grade,2,1,0,1
+3290,"Respiratory System",grade,0,1,0,1
+3290,"Respiratory System",grade,1,1,0,0
+3290,"Respiratory System",child,"Chronic respiratory disorder",1,0,0
+3290,"Respiratory System",child,"Pleural air/fluid disease",1,1,0
+3290,"Respiratory System",child,"Functional pulmonary deficit",1,0,1
+3290,Asthma,grade,1,1,1,1
+3290,"Chronic respiratory disorder",grade,1,1,1,1
+3290,"Chronic respiratory disorder",child,Asthma,1,1,1
+3304,Arrhythmias,grade,0,1,1,1
+3304,Arrhythmias,child,"Prolonged QT interval",1,1,1
+3304,Arrhythmias,child,"Cardiac dysrhythmia",1,1,1
+3304,Arrhythmias,child,"Atrioventricular heart block",1,1,1
+3304,Arrhythmias,child,"Sinus bradycardia",1,1,1
+3304,Arrhythmias,child,"Conduction abnormalities",1,1,1
+3304,Arrhythmias,child,"Sinus tachycardia",1,1,1
+3304,"Cardiovascular System",grade,3,1,1,1
+3304,"Cardiovascular System",grade,0,1,0,0
+3304,"Cardiovascular System",grade,2,1,0,0
+3304,"Cardiovascular System",grade,1,1,0,0
+3304,"Cardiovascular System",child,Arrhythmias,1,0,0
+3304,"Cardiovascular System",child,"Myocardial infarction",1,0,0
+3304,"Cardiovascular System",child,"Structural heart defects",1,0,0
+3304,"Cardiovascular System",child,"Essential hypertension",1,0,0
+3304,"Cardiovascular System",child,Dyslipidemia,1,0,0
+3304,"Cardiovascular System",child,"Cardiovascular dysfunction",1,1,1
+3304,"Cardiac dysrhythmia",grade,0,1,1,1
+3304,Cardiomyopathy,grade,3,1,1,1
+3304,Cardiomyopathy,grade,2,1,0,0
+3304,Cardiomyopathy,grade,0,1,0,0
+3304,"Cardiovascular dysfunction",grade,3,1,1,1
+3304,"Cardiovascular dysfunction",grade,2,1,0,0
+3304,"Cardiovascular dysfunction",grade,0,1,0,0
+3304,"Cardiovascular dysfunction",child,"Cor pulmonale (right heart failure)",1,0,0
+3304,"Cardiovascular dysfunction",child,"Right ventricular systolic dysfunction",1,0,0
+3304,"Cardiovascular dysfunction",child,Cardiomyopathy,1,1,1
+3304,"Respiratory System",grade,0,1,1,1
+3304,"Respiratory System",child,"Functional pulmonary deficit",1,1,1
+3318,"Hearing loss",grade,4,1,1,1
+3318,"Auditory System",grade,4,1,1,1
+3318,"Auditory System",child,"Hearing loss",1,1,1
+3318,"Cardiovascular System",grade,2,1,1,1
+3318,"Cardiovascular System",grade,0,1,0,1
+3318,"Cardiovascular System",grade,1,1,0,0
+3318,"Cardiovascular System",child,"Myocardial infarction",1,0,0
+3318,"Cardiovascular System",child,"Structural heart defects",1,0,0
+3318,"Cardiovascular System",child,"Essential hypertension",1,1,1
+3318,"Cardiovascular System",child,Arrhythmias,1,0,1
+3318,"Cardiovascular System",child,"Cardiovascular dysfunction",1,0,1
+3318,"Cardiovascular System",child,Dyslipidemia,1,0,1
+3318,Arrhythmias,grade,0,1,1,1
+3318,Arrhythmias,child,"Conduction abnormalities",1,1,0
+3318,Arrhythmias,child,"Cardiac dysrhythmia",1,1,0
+3318,Arrhythmias,child,"Prolonged QT interval",1,1,0
+3318,Arrhythmias,child,"Atrioventricular heart block",1,1,0
+3318,Arrhythmias,child,"Sinus tachycardia",1,1,1
+3318,Arrhythmias,child,"Sinus bradycardia",1,1,1
+3318,"Cardiac dysrhythmia",grade,0,1,1,1
+3318,Cardiomyopathy,grade,0,1,1,1
+3318,"Cardiovascular dysfunction",grade,0,1,1,1
+3318,"Cardiovascular dysfunction",child,Cardiomyopathy,1,1,1
+3318,"Cardiovascular dysfunction",child,"Cor pulmonale (right heart failure)",1,1,0
+3318,"Cardiovascular dysfunction",child,"Right ventricular systolic dysfunction",1,1,0
+3318,"Respiratory System",grade,1,1,1,1
+3318,"Respiratory System",grade,0,1,0,1
+3318,"Respiratory System",child,"Functional pulmonary deficit",1,1,1
+3332,"Hearing loss",grade,3,1,1,1
+3332,"Auditory System",grade,3,1,1,1
+3332,"Auditory System",child,"Hearing loss",1,1,1
+3332,"Cardiovascular System",grade,2,1,1,1
+3332,"Cardiovascular System",grade,0,1,0,1
+3332,"Cardiovascular System",grade,1,1,0,1
+3332,"Cardiovascular System",child,Arrhythmias,1,1,1
+3332,"Cardiovascular System",child,Dyslipidemia,1,1,1
+3332,"Cardiovascular System",child,"Essential hypertension",1,1,1
+3332,"Cardiovascular System",child,"Myocardial infarction",1,0,1
+3332,"Cardiac dysrhythmia",grade,0,1,1,1
+3332,Arrhythmias,grade,2,1,1,1
+3332,Arrhythmias,grade,0,1,0,1
+3332,Arrhythmias,grade,1,1,0,0
+3332,Arrhythmias,child,"Prolonged QT interval",1,1,1
+3332,Arrhythmias,child,"Cardiac dysrhythmia",1,0,1
+3332,Arrhythmias,child,"Atrioventricular heart block",1,0,1
+3332,Arrhythmias,child,"Conduction abnormalities",1,0,1
+3332,Arrhythmias,child,"Sinus tachycardia",1,0,1
+3332,Arrhythmias,child,"Sinus bradycardia",1,0,1
+3346,"Cardiovascular System",grade,2,1,1,0
+3346,"Cardiovascular System",grade,0,1,0,1
+3346,"Cardiovascular System",grade,1,1,0,0
+3346,"Cardiovascular System",child,"Myocardial infarction",1,0,0
+3346,"Cardiovascular System",child,Arrhythmias,1,0,0
+3346,"Cardiovascular System",child,Dyslipidemia,1,0,0
+3346,"Cardiovascular System",child,"Essential hypertension",1,1,0
+3346,"Cardiovascular System",child,"Cardiovascular dysfunction",1,0,1
+3346,"Cardiovascular System",child,"Structural heart defects",1,0,1
+3346,"Cardiac dysrhythmia",grade,0,1,1,1
+3346,Arrhythmias,grade,1,1,1,0
+3346,Arrhythmias,grade,0,1,0,1
+3346,Arrhythmias,child,"Conduction abnormalities",1,1,1
+3346,Arrhythmias,child,"Cardiac dysrhythmia",1,0,1
+3346,Arrhythmias,child,"Prolonged QT interval",1,0,1
+3346,Arrhythmias,child,"Atrioventricular heart block",1,0,1
+3346,Arrhythmias,child,"Sinus bradycardia",1,0,1
+3346,Arrhythmias,child,"Sinus tachycardia",1,0,1
+3346,Cardiomyopathy,grade,0,1,1,1
+3346,"Cardiovascular dysfunction",grade,0,1,1,1
+3346,"Cardiovascular dysfunction",child,Cardiomyopathy,1,1,1
+3346,"Cardiovascular dysfunction",child,"Cor pulmonale (right heart failure)",1,1,1
+3346,"Cardiovascular dysfunction",child,"Right ventricular systolic dysfunction",1,1,1
+3346,"Respiratory System",grade,0,1,1,1
+3346,"Respiratory System",child,"Functional pulmonary deficit",1,1,1
+3360,"Cardiovascular System",grade,1,1,1,1
+3360,"Cardiovascular System",grade,0,1,0,1
+3360,"Cardiovascular System",child,"Myocardial infarction",1,0,0
+3360,"Cardiovascular System",child,Dyslipidemia,1,0,0
+3360,"Cardiovascular System",child,"Structural heart defects",1,1,1
+3360,"Cardiovascular System",child,Arrhythmias,1,1,0
+3360,"Cardiovascular System",child,"Essential hypertension",1,1,0
+3360,"Cardiovascular System",child,"Cardiovascular dysfunction",1,0,1
+3360,"Cardiac dysrhythmia",grade,0,1,1,1
+3360,Arrhythmias,grade,1,1,1,0
+3360,Arrhythmias,grade,0,1,0,1
+3360,Arrhythmias,child,"Cardiac dysrhythmia",1,0,0
+3360,Arrhythmias,child,"Atrioventricular heart block",1,0,0
+3360,Arrhythmias,child,"Prolonged QT interval",1,0,0
+3360,Arrhythmias,child,"Conduction abnormalities",1,1,0
+3360,Arrhythmias,child,"Sinus tachycardia",1,0,1
+3360,Arrhythmias,child,"Sinus bradycardia",1,0,1
+3360,Cardiomyopathy,grade,0,1,1,1
+3360,"Cardiovascular dysfunction",grade,0,1,1,1
+3360,"Cardiovascular dysfunction",child,Cardiomyopathy,1,1,1
+3360,"Cardiovascular dysfunction",child,"Cor pulmonale (right heart failure)",1,1,0
+3360,"Cardiovascular dysfunction",child,"Right ventricular systolic dysfunction",1,1,0
+3360,"Respiratory System",grade,2,1,1,1
+3360,"Respiratory System",grade,0,1,0,1
+3360,"Respiratory System",grade,1,1,0,1
+3360,"Respiratory System",child,"Functional pulmonary deficit",1,1,1
+3374,"Cardiac dysrhythmia",grade,0,1,1,1
+3374,Arrhythmias,grade,1,1,1,1
+3374,Arrhythmias,grade,0,1,0,1
+3374,Arrhythmias,child,"Conduction abnormalities",1,1,1
+3374,Arrhythmias,child,"Cardiac dysrhythmia",1,0,1
+3374,Arrhythmias,child,"Prolonged QT interval",1,0,1
+3374,Arrhythmias,child,"Atrioventricular heart block",1,0,1
+3374,Arrhythmias,child,"Sinus tachycardia",1,0,1
+3374,Arrhythmias,child,"Sinus bradycardia",1,0,1
+3374,"Cardiovascular System",grade,1,1,1,1
+3374,"Cardiovascular System",grade,0,1,0,1
+3374,"Cardiovascular System",child,Dyslipidemia,1,0,0
+3374,"Cardiovascular System",child,Arrhythmias,1,1,1
+3374,"Cardiovascular System",child,"Myocardial infarction",1,0,1
+3374,"Cardiovascular System",child,"Essential hypertension",1,0,1
+3374,Asthma,grade,2,1,1,0
+3374,Asthma,grade,1,1,0,1
+3374,"Chronic respiratory disorder",grade,2,1,1,0
+3374,"Chronic respiratory disorder",grade,1,1,0,1
+3374,"Chronic respiratory disorder",child,Asthma,1,1,1
+3374,"Respiratory System",grade,2,1,1,0
+3374,"Respiratory System",grade,1,1,0,1
+3374,"Respiratory System",child,"Chronic respiratory disorder",1,1,1
+3388,"Hearing loss",grade,0,1,1,1
+3388,"Auditory System",grade,0,1,1,1
+3388,"Auditory System",child,"Hearing loss",1,1,1
+3388,"Cardiac dysrhythmia",grade,0,1,1,1
+3388,Arrhythmias,grade,1,1,1,1
+3388,Arrhythmias,grade,0,1,0,1
+3388,Arrhythmias,child,"Cardiac dysrhythmia",1,0,0
+3388,Arrhythmias,child,"Atrioventricular heart block",1,0,0
+3388,Arrhythmias,child,"Prolonged QT interval",1,1,0
+3388,Arrhythmias,child,"Sinus tachycardia",1,1,1
+3388,Arrhythmias,child,"Conduction abnormalities",1,1,0
+3388,Arrhythmias,child,"Sinus bradycardia",1,0,1
+3388,"Cardiovascular System",grade,2,1,1,1
+3388,"Cardiovascular System",grade,0,1,0,0
+3388,"Cardiovascular System",grade,1,1,0,0
+3388,"Cardiovascular System",child,Arrhythmias,1,0,0
+3388,"Cardiovascular System",child,"Myocardial infarction",1,0,0
+3388,"Cardiovascular System",child,"Cardiovascular dysfunction",1,0,0
+3388,"Cardiovascular System",child,"Structural heart defects",1,0,0
+3388,"Cardiovascular System",child,Dyslipidemia,1,0,0
+3388,"Cardiovascular System",child,"Essential hypertension",1,1,1
+3388,Cardiomyopathy,grade,0,1,1,1
+3388,"Cardiovascular dysfunction",grade,0,1,1,1
+3388,"Cardiovascular dysfunction",child,Cardiomyopathy,1,1,1
+3388,"Cardiovascular dysfunction",child,"Cor pulmonale (right heart failure)",1,1,0
+3388,"Cardiovascular dysfunction",child,"Right ventricular systolic dysfunction",1,1,0
+3388,"Respiratory System",grade,0,1,1,1
+3388,"Respiratory System",child,"Functional pulmonary deficit",1,1,1
+3402,"Cardiovascular System",grade,3,1,1,1
+3402,"Cardiovascular System",grade,0,1,0,0
+3402,"Cardiovascular System",grade,2,1,0,0
+3402,"Cardiovascular System",child,"Structural heart defects",1,0,0
+3402,"Cardiovascular System",child,Dyslipidemia,1,0,0
+3402,"Cardiovascular System",child,"Cardiovascular dysfunction",1,0,0
+3402,"Cardiovascular System",child,"Essential hypertension",1,1,1
+3402,Cardiomyopathy,grade,0,1,1,1
+3402,"Cardiovascular dysfunction",grade,0,1,1,1
+3402,"Cardiovascular dysfunction",child,Cardiomyopathy,1,1,1
+3402,"Cardiovascular dysfunction",child,"Cor pulmonale (right heart failure)",1,1,1
+3402,"Cardiovascular dysfunction",child,"Right ventricular systolic dysfunction",1,1,1
+3402,Asthma,grade,1,1,1,1
+3402,"Chronic respiratory disorder",grade,1,1,1,1
+3402,"Chronic respiratory disorder",child,Asthma,1,1,1
+3402,"Respiratory System",grade,1,1,1,1
+3402,"Respiratory System",child,"Chronic respiratory disorder",1,1,1
+3416,"Hearing loss",grade,2,1,1,1
+3416,"Auditory System",grade,2,1,1,1
+3416,"Auditory System",child,"Hearing loss",1,1,1
+3416,"Cardiac dysrhythmia",grade,0,1,1,1
+3416,Arrhythmias,grade,1,1,1,0
+3416,Arrhythmias,grade,0,1,0,1
+3416,Arrhythmias,child,"Cardiac dysrhythmia",1,0,0
+3416,Arrhythmias,child,"Atrioventricular heart block",1,0,0
+3416,Arrhythmias,child,"Prolonged QT interval",1,1,0
+3416,Arrhythmias,child,"Conduction abnormalities",1,1,0
+3416,Arrhythmias,child,"Sinus bradycardia",1,0,1
+3416,Arrhythmias,child,"Sinus tachycardia",1,0,1
+3416,"Cardiovascular System",grade,2,1,1,1
+3416,"Cardiovascular System",grade,0,1,0,0
+3416,"Cardiovascular System",grade,1,1,0,0
+3416,"Cardiovascular System",child,Arrhythmias,1,0,0
+3416,"Cardiovascular System",child,"Myocardial infarction",1,0,0
+3416,"Cardiovascular System",child,"Cardiovascular dysfunction",1,0,0
+3416,"Cardiovascular System",child,Dyslipidemia,1,0,0
+3416,"Cardiovascular System",child,"Essential hypertension",1,1,0
+3416,"Cardiovascular System",child,"Structural heart defects",1,1,1
+3416,Cardiomyopathy,grade,0,1,1,1
+3416,"Cardiovascular dysfunction",grade,0,1,1,1
+3416,"Cardiovascular dysfunction",child,Cardiomyopathy,1,1,1
+3416,"Cardiovascular dysfunction",child,"Cor pulmonale (right heart failure)",1,1,0
+3416,"Cardiovascular dysfunction",child,"Right ventricular systolic dysfunction",1,1,0
+3416,"Respiratory System",grade,1,1,1,1
+3416,"Respiratory System",grade,0,1,0,1
+3416,"Respiratory System",child,"Functional pulmonary deficit",1,1,1
+3430,"Hearing loss",grade,0,1,1,1
+3430,"Auditory System",grade,0,1,1,1
+3430,"Auditory System",child,"Hearing loss",1,1,1
+3430,"Cardiac dysrhythmia",grade,0,1,1,1
+3430,Arrhythmias,grade,0,1,1,1
+3430,Arrhythmias,child,"Cardiac dysrhythmia",1,1,1
+3430,Arrhythmias,child,"Prolonged QT interval",1,1,1
+3430,Arrhythmias,child,"Conduction abnormalities",1,1,1
+3430,Arrhythmias,child,"Atrioventricular heart block",1,1,1
+3430,Arrhythmias,child,"Sinus tachycardia",1,1,1
+3430,Arrhythmias,child,"Sinus bradycardia",1,1,1
+3430,"Cardiovascular System",grade,1,1,1,1
+3430,"Cardiovascular System",grade,0,1,0,1
+3430,"Cardiovascular System",child,Arrhythmias,1,0,0
+3430,"Cardiovascular System",child,"Myocardial infarction",1,0,0
+3430,"Cardiovascular System",child,"Structural heart defects",1,1,1
+3430,"Cardiovascular System",child,"Essential hypertension",1,1,0
+3430,"Cardiovascular System",child,Dyslipidemia,1,1,0
+3430,"Cardiovascular System",child,"Cardiovascular dysfunction",1,0,1
+3430,Cardiomyopathy,grade,0,1,1,1
+3430,"Cardiovascular dysfunction",grade,0,1,1,1
+3430,"Cardiovascular dysfunction",child,Cardiomyopathy,1,1,1
+3430,"Cardiovascular dysfunction",child,"Right ventricular systolic dysfunction",1,1,1
+3430,"Cardiovascular dysfunction",child,"Cor pulmonale (right heart failure)",1,1,1
+3430,"Respiratory System",grade,0,1,1,1
+3430,"Respiratory System",child,"Functional pulmonary deficit",1,1,1
+3444,"Cardiac dysrhythmia",grade,0,1,1,1
+3444,Arrhythmias,grade,1,1,1,0
+3444,Arrhythmias,grade,0,1,0,1
+3444,Arrhythmias,child,"Conduction abnormalities",1,1,1
+3444,Arrhythmias,child,"Cardiac dysrhythmia",1,0,1
+3444,Arrhythmias,child,"Prolonged QT interval",1,0,1
+3444,Arrhythmias,child,"Atrioventricular heart block",1,0,1
+3444,Arrhythmias,child,"Sinus bradycardia",1,0,1
+3444,Arrhythmias,child,"Sinus tachycardia",1,0,1
+3444,"Cardiovascular System",grade,1,1,1,0
+3444,"Cardiovascular System",grade,0,1,0,1
+3444,"Cardiovascular System",child,"Myocardial infarction",1,0,0
+3444,"Cardiovascular System",child,Dyslipidemia,1,0,0
+3444,"Cardiovascular System",child,Arrhythmias,1,1,0
+3444,"Cardiovascular System",child,"Essential hypertension",1,1,0
+3444,"Cardiovascular System",child,"Cardiovascular dysfunction",1,0,1
+3444,"Cardiovascular System",child,"Structural heart defects",1,0,1
+3444,"Hearing loss",grade,3,1,1,1
+3444,"Auditory System",grade,3,1,1,1
+3444,"Auditory System",child,"Hearing loss",1,1,1
+3444,Cardiomyopathy,grade,0,1,1,1
+3444,"Cardiovascular dysfunction",grade,0,1,1,1
+3444,"Cardiovascular dysfunction",child,Cardiomyopathy,1,1,1
+3444,"Cardiovascular dysfunction",child,"Cor pulmonale (right heart failure)",1,1,1
+3444,"Cardiovascular dysfunction",child,"Right ventricular systolic dysfunction",1,1,1
+3458,"Cardiovascular System",grade,2,1,1,1
+3458,"Cardiovascular System",grade,0,1,0,0
+3458,"Cardiovascular System",grade,1,1,0,0
+3458,"Cardiovascular System",child,"Structural heart defects",1,0,0
+3458,"Cardiovascular System",child,Arrhythmias,1,0,0
+3458,"Cardiovascular System",child,"Myocardial infarction",1,0,0
+3458,"Cardiovascular System",child,"Cardiovascular dysfunction",1,0,0
+3458,"Cardiovascular System",child,"Essential hypertension",1,0,0
+3458,"Cardiovascular System",child,Dyslipidemia,1,1,1
+3458,"Cardiac dysrhythmia",grade,0,1,1,1
+3458,Arrhythmias,grade,0,1,1,1
+3458,Arrhythmias,child,"Cardiac dysrhythmia",1,1,1
+3458,Arrhythmias,child,"Conduction abnormalities",1,1,1
+3458,Arrhythmias,child,"Atrioventricular heart block",1,1,1
+3458,Arrhythmias,child,"Prolonged QT interval",1,1,1
+3458,Arrhythmias,child,"Sinus bradycardia",1,1,1
+3458,Arrhythmias,child,"Sinus tachycardia",1,1,1
+3458,Cardiomyopathy,grade,0,1,1,1
+3458,"Cardiovascular dysfunction",grade,0,1,1,1
+3458,"Cardiovascular dysfunction",child,Cardiomyopathy,1,1,1
+3458,"Cardiovascular dysfunction",child,"Cor pulmonale (right heart failure)",1,1,1
+3458,"Cardiovascular dysfunction",child,"Right ventricular systolic dysfunction",1,1,1
+3458,"Respiratory System",grade,3,1,1,1
+3458,"Respiratory System",grade,2,1,0,1
+3458,"Respiratory System",grade,1,1,0,0
+3458,"Respiratory System",child,"Pleural air/fluid disease",1,0,0
+3458,"Respiratory System",child,"Functional pulmonary deficit",1,1,1
+3472,"Cardiovascular System",grade,3,1,1,0
+3472,"Cardiovascular System",grade,2,1,0,1
+3472,"Cardiovascular System",grade,0,1,0,0
+3472,"Cardiovascular System",grade,1,1,0,0
+3472,"Cardiovascular System",child,"Myocardial infarction",1,0,0
+3472,"Cardiovascular System",child,Arrhythmias,1,0,0
+3472,"Cardiovascular System",child,"Cardiovascular dysfunction",1,0,0
+3472,"Cardiovascular System",child,"Structural heart defects",1,0,0
+3472,"Cardiovascular System",child,Dyslipidemia,1,0,0
+3472,"Cardiovascular System",child,"Essential hypertension",1,1,1
+3472,Arrhythmias,grade,0,1,1,1
+3472,Arrhythmias,child,"Prolonged QT interval",1,1,0
+3472,Arrhythmias,child,"Cardiac dysrhythmia",1,1,0
+3472,Arrhythmias,child,"Atrioventricular heart block",1,1,0
+3472,Arrhythmias,child,"Conduction abnormalities",1,1,0
+3472,Arrhythmias,child,"Sinus tachycardia",1,1,1
+3472,Arrhythmias,child,"Sinus bradycardia",1,1,1
+3472,"Cardiac dysrhythmia",grade,0,1,1,1
+3472,Cardiomyopathy,grade,0,1,1,1
+3472,"Cardiovascular dysfunction",grade,0,1,1,1
+3472,"Cardiovascular dysfunction",child,Cardiomyopathy,1,1,1
+3472,"Cardiovascular dysfunction",child,"Cor pulmonale (right heart failure)",1,1,0
+3472,"Cardiovascular dysfunction",child,"Right ventricular systolic dysfunction",1,1,0
+3472,"Chronic respiratory disorder",grade,3,1,1,1
+3472,"Chronic respiratory disorder",grade,1,1,0,0
+3472,"Chronic respiratory disorder",child,"Obstructive sleep apnea",1,1,1
+3472,"Chronic respiratory disorder",child,Asthma,1,1,1
+3472,"Respiratory System",grade,3,1,1,1
+3472,"Respiratory System",grade,2,1,0,0
+3472,"Respiratory System",grade,1,1,0,0
+3472,"Respiratory System",grade,0,1,0,0
+3472,"Respiratory System",child,"Functional pulmonary deficit",1,0,0
+3472,"Respiratory System",child,"Chronic respiratory disorder",1,1,1
+3472,Asthma,grade,3,1,1,1
+3472,Asthma,grade,1,1,0,0

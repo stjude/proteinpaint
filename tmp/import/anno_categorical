@@ -1,0 +1,501 @@
+sample,term_id,value
+1,sex,1
+2,sex,2
+3,sex,2
+4,sex,2
+5,sex,2
+6,sex,2
+7,sex,2
+8,sex,1
+9,sex,1
+10,sex,2
+11,sex,1
+12,sex,1
+13,sex,1
+14,sex,1
+15,sex,1
+16,sex,2
+17,sex,2
+18,sex,1
+19,sex,2
+20,sex,1
+21,sex,2
+22,sex,1
+23,sex,2
+24,sex,1
+25,sex,2
+26,sex,1
+27,sex,1
+28,sex,1
+29,sex,1
+30,sex,2
+31,sex,1
+32,sex,2
+33,sex,2
+34,sex,1
+35,sex,2
+36,sex,1
+37,sex,1
+38,sex,2
+39,sex,1
+40,sex,2
+2646,sex,2
+2660,sex,1
+2674,sex,1
+2688,sex,1
+2702,sex,2
+2716,sex,2
+2730,sex,1
+2744,sex,1
+2758,sex,2
+2772,sex,2
+2786,sex,1
+2800,sex,1
+2814,sex,1
+2828,sex,2
+2842,sex,2
+2856,sex,1
+2870,sex,1
+2884,sex,2
+2898,sex,2
+2912,sex,1
+2926,sex,1
+2940,sex,1
+2954,sex,1
+2968,sex,1
+2982,sex,2
+2996,sex,1
+3010,sex,2
+3024,sex,2
+3038,sex,2
+3052,sex,2
+3066,sex,2
+3080,sex,2
+3094,sex,1
+3108,sex,1
+3122,sex,1
+3136,sex,1
+3150,sex,2
+3164,sex,2
+3178,sex,2
+3192,sex,2
+3206,sex,2
+3220,sex,1
+3234,sex,2
+3248,sex,2
+3262,sex,2
+3276,sex,2
+3290,sex,2
+3304,sex,2
+3318,sex,1
+3332,sex,1
+3346,sex,2
+3360,sex,2
+3374,sex,2
+3388,sex,2
+3402,sex,2
+3416,sex,2
+3430,sex,2
+3444,sex,1
+3458,sex,1
+3472,sex,2
+1,diaggrp,"Non-Hodgkin lymphoma"
+2,diaggrp,"Non-Hodgkin lymphoma"
+3,diaggrp,"Hodgkin lymphoma"
+4,diaggrp,"Hodgkin lymphoma"
+5,diaggrp,"Hodgkin lymphoma"
+6,diaggrp,"Central nervous system (CNS)"
+7,diaggrp,"Central nervous system (CNS)"
+8,diaggrp,"Central nervous system (CNS)"
+9,diaggrp,"Central nervous system (CNS)"
+10,diaggrp,"Hodgkin lymphoma"
+11,diaggrp,"Acute myeloid leukemia"
+12,diaggrp,"Wilms tumor"
+13,diaggrp,"Non-Hodgkin lymphoma"
+14,diaggrp,"Acute lymphoblastic leukemia"
+15,diaggrp,"Ewing sarcoma family of tumors"
+16,diaggrp,"Non-Hodgkin lymphoma"
+17,diaggrp,"Acute lymphoblastic leukemia"
+18,diaggrp,"Acute lymphoblastic leukemia"
+19,diaggrp,"Non-Hodgkin lymphoma"
+20,diaggrp,"Acute lymphoblastic leukemia"
+21,diaggrp,"Hodgkin lymphoma"
+22,diaggrp,"Acute lymphoblastic leukemia"
+23,diaggrp,"Acute lymphoblastic leukemia"
+24,diaggrp,"Central nervous system (CNS)"
+25,diaggrp,"Central nervous system (CNS)"
+26,diaggrp,"Central nervous system (CNS)"
+27,diaggrp,Neuroblastoma
+28,diaggrp,Rhabdomyosarcoma
+29,diaggrp,"Central nervous system (CNS)"
+30,diaggrp,"Wilms tumor"
+31,diaggrp,Neuroblastoma
+32,diaggrp,Osteosarcoma
+33,diaggrp,"Hodgkin lymphoma"
+34,diaggrp,"Wilms tumor"
+35,diaggrp,"Acute lymphoblastic leukemia"
+36,diaggrp,"Non-Hodgkin lymphoma"
+37,diaggrp,"Acute lymphoblastic leukemia"
+38,diaggrp,"Wilms tumor"
+39,diaggrp,"Central nervous system (CNS)"
+40,diaggrp,"Central nervous system (CNS)"
+2646,diaggrp,"Acute lymphoblastic leukemia"
+2660,diaggrp,"Acute lymphoblastic leukemia"
+2674,diaggrp,"Acute lymphoblastic leukemia"
+2688,diaggrp,"Acute lymphoblastic leukemia"
+2702,diaggrp,"Acute lymphoblastic leukemia"
+2716,diaggrp,"Acute lymphoblastic leukemia"
+2730,diaggrp,"Acute lymphoblastic leukemia"
+2744,diaggrp,"Wilms tumor"
+2758,diaggrp,"Acute lymphoblastic leukemia"
+2772,diaggrp,"Acute lymphoblastic leukemia"
+2786,diaggrp,"Acute lymphoblastic leukemia"
+2800,diaggrp,"Acute lymphoblastic leukemia"
+2814,diaggrp,"Acute lymphoblastic leukemia"
+2828,diaggrp,"Acute lymphoblastic leukemia"
+2842,diaggrp,"Acute lymphoblastic leukemia"
+2856,diaggrp,"Acute lymphoblastic leukemia"
+2870,diaggrp,"Acute lymphoblastic leukemia"
+2884,diaggrp,"Acute lymphoblastic leukemia"
+2898,diaggrp,"Acute lymphoblastic leukemia"
+2912,diaggrp,"Acute lymphoblastic leukemia"
+2926,diaggrp,"Acute lymphoblastic leukemia"
+2940,diaggrp,"Acute myeloid leukemia"
+2954,diaggrp,"Acute lymphoblastic leukemia"
+2968,diaggrp,"Acute lymphoblastic leukemia"
+2982,diaggrp,"Acute lymphoblastic leukemia"
+2996,diaggrp,"Acute lymphoblastic leukemia"
+3010,diaggrp,"Acute lymphoblastic leukemia"
+3024,diaggrp,"Acute lymphoblastic leukemia"
+3038,diaggrp,"Acute lymphoblastic leukemia"
+3052,diaggrp,"Acute lymphoblastic leukemia"
+3066,diaggrp,"Acute lymphoblastic leukemia"
+3080,diaggrp,"Acute lymphoblastic leukemia"
+3094,diaggrp,"Acute lymphoblastic leukemia"
+3108,diaggrp,"Acute lymphoblastic leukemia"
+3122,diaggrp,"Acute lymphoblastic leukemia"
+3136,diaggrp,"Acute lymphoblastic leukemia"
+3150,diaggrp,"Acute lymphoblastic leukemia"
+3164,diaggrp,"Acute lymphoblastic leukemia"
+3178,diaggrp,Rhabdomyosarcoma
+3192,diaggrp,"Wilms tumor"
+3206,diaggrp,"Hodgkin lymphoma"
+3220,diaggrp,"Non-Hodgkin lymphoma"
+3234,diaggrp,"Hodgkin lymphoma"
+3248,diaggrp,"Non-Hodgkin lymphoma"
+3262,diaggrp,"Non-Hodgkin lymphoma"
+3276,diaggrp,"Non-Hodgkin lymphoma"
+3290,diaggrp,"Non-Hodgkin lymphoma"
+3304,diaggrp,Neuroblastoma
+3318,diaggrp,"Non-Hodgkin lymphoma"
+3332,diaggrp,"Non-Hodgkin lymphoma"
+3346,diaggrp,"Acute myeloid leukemia"
+3360,diaggrp,"Hodgkin lymphoma"
+3374,diaggrp,"Wilms tumor"
+3388,diaggrp,"Non-Hodgkin lymphoma"
+3402,diaggrp,Rhabdomyosarcoma
+3416,diaggrp,"Hodgkin lymphoma"
+3430,diaggrp,Neuroblastoma
+3444,diaggrp,"Non-Hodgkin lymphoma"
+3458,diaggrp,"Non-Hodgkin lymphoma"
+3472,diaggrp,"Hodgkin lymphoma"
+1,subcohort,CCSS
+2,subcohort,CCSS
+3,subcohort,CCSS
+4,subcohort,CCSS
+5,subcohort,CCSS
+6,subcohort,CCSS
+7,subcohort,CCSS
+8,subcohort,CCSS
+9,subcohort,CCSS
+10,subcohort,CCSS
+11,subcohort,CCSS
+12,subcohort,CCSS
+13,subcohort,CCSS
+14,subcohort,CCSS
+15,subcohort,CCSS
+16,subcohort,CCSS
+17,subcohort,CCSS
+18,subcohort,CCSS
+19,subcohort,CCSS
+20,subcohort,CCSS
+21,subcohort,CCSS
+22,subcohort,CCSS
+23,subcohort,CCSS
+24,subcohort,CCSS
+25,subcohort,CCSS
+26,subcohort,CCSS
+27,subcohort,CCSS
+28,subcohort,CCSS
+29,subcohort,CCSS
+30,subcohort,CCSS
+31,subcohort,CCSS
+32,subcohort,CCSS
+33,subcohort,CCSS
+34,subcohort,CCSS
+35,subcohort,CCSS
+36,subcohort,CCSS
+37,subcohort,CCSS
+38,subcohort,CCSS
+39,subcohort,CCSS
+40,subcohort,CCSS
+2646,subcohort,SJLIFE
+2660,subcohort,SJLIFE
+2674,subcohort,SJLIFE
+2688,subcohort,SJLIFE
+2702,subcohort,SJLIFE
+2716,subcohort,SJLIFE
+2730,subcohort,SJLIFE
+2744,subcohort,SJLIFE
+2758,subcohort,SJLIFE
+2772,subcohort,SJLIFE
+2786,subcohort,SJLIFE
+2800,subcohort,SJLIFE
+2814,subcohort,SJLIFE
+2828,subcohort,SJLIFE
+2842,subcohort,SJLIFE
+2856,subcohort,SJLIFE
+2870,subcohort,SJLIFE
+2884,subcohort,SJLIFE
+2898,subcohort,SJLIFE
+2912,subcohort,SJLIFE
+2926,subcohort,SJLIFE
+2940,subcohort,SJLIFE
+2954,subcohort,SJLIFE
+2968,subcohort,SJLIFE
+2982,subcohort,SJLIFE
+2996,subcohort,SJLIFE
+3010,subcohort,SJLIFE
+3024,subcohort,SJLIFE
+3038,subcohort,SJLIFE
+3052,subcohort,SJLIFE
+3066,subcohort,SJLIFE
+3080,subcohort,SJLIFE
+3094,subcohort,SJLIFE
+3108,subcohort,SJLIFE
+3122,subcohort,SJLIFE
+3136,subcohort,SJLIFE
+3150,subcohort,SJLIFE
+3164,subcohort,SJLIFE
+3178,subcohort,SJLIFE
+3192,subcohort,SJLIFE
+3206,subcohort,SJLIFE
+3220,subcohort,SJLIFE
+3234,subcohort,SJLIFE
+3248,subcohort,SJLIFE
+3262,subcohort,SJLIFE
+3276,subcohort,SJLIFE
+3290,subcohort,SJLIFE
+3304,subcohort,SJLIFE
+3318,subcohort,SJLIFE
+3332,subcohort,SJLIFE
+3346,subcohort,SJLIFE
+3360,subcohort,SJLIFE
+3374,subcohort,SJLIFE
+3388,subcohort,SJLIFE
+3402,subcohort,SJLIFE
+3416,subcohort,SJLIFE
+3430,subcohort,SJLIFE
+3444,subcohort,SJLIFE
+3458,subcohort,SJLIFE
+3472,subcohort,SJLIFE
+1,wgs_curated,1
+2,wgs_curated,1
+3,wgs_curated,1
+4,wgs_curated,1
+5,wgs_curated,1
+6,wgs_curated,1
+7,wgs_curated,1
+8,wgs_curated,1
+9,wgs_curated,1
+10,wgs_curated,1
+11,wgs_curated,1
+12,wgs_curated,1
+13,wgs_curated,1
+14,wgs_curated,1
+15,wgs_curated,1
+16,wgs_curated,1
+17,wgs_curated,1
+18,wgs_curated,1
+19,wgs_curated,1
+20,wgs_curated,1
+21,wgs_curated,1
+22,wgs_curated,1
+23,wgs_curated,1
+24,wgs_curated,1
+25,wgs_curated,1
+26,wgs_curated,1
+27,wgs_curated,1
+28,wgs_curated,1
+29,wgs_curated,1
+30,wgs_curated,1
+31,wgs_curated,1
+32,wgs_curated,1
+33,wgs_curated,1
+34,wgs_curated,1
+35,wgs_curated,1
+36,wgs_curated,1
+37,wgs_curated,1
+38,wgs_curated,1
+39,wgs_curated,1
+40,wgs_curated,1
+2646,wgs_curated,1
+2660,wgs_curated,1
+2674,wgs_curated,1
+2688,wgs_curated,1
+2702,wgs_curated,1
+2716,wgs_curated,1
+2730,wgs_curated,1
+2744,wgs_curated,1
+2758,wgs_curated,1
+2772,wgs_curated,1
+2786,wgs_curated,1
+2800,wgs_curated,1
+2814,wgs_curated,1
+2828,wgs_curated,1
+2842,wgs_curated,1
+2856,wgs_curated,1
+2870,wgs_curated,1
+2884,wgs_curated,1
+2898,wgs_curated,1
+2912,wgs_curated,1
+2926,wgs_curated,1
+2940,wgs_curated,1
+2954,wgs_curated,1
+2968,wgs_curated,1
+2982,wgs_curated,1
+2996,wgs_curated,1
+3010,wgs_curated,1
+3024,wgs_curated,1
+3038,wgs_curated,1
+3052,wgs_curated,1
+3066,wgs_curated,1
+3080,wgs_curated,1
+3094,wgs_curated,1
+3108,wgs_curated,1
+3122,wgs_curated,1
+3136,wgs_curated,1
+3150,wgs_curated,1
+3164,wgs_curated,1
+3178,wgs_curated,1
+3192,wgs_curated,1
+3206,wgs_curated,1
+3220,wgs_curated,1
+3234,wgs_curated,1
+3248,wgs_curated,1
+3262,wgs_curated,1
+3276,wgs_curated,1
+3290,wgs_curated,1
+3304,wgs_curated,1
+3318,wgs_curated,1
+3332,wgs_curated,1
+3346,wgs_curated,1
+3360,wgs_curated,1
+3374,wgs_curated,1
+3388,wgs_curated,1
+3402,wgs_curated,1
+3416,wgs_curated,1
+3430,wgs_curated,1
+3444,wgs_curated,1
+3458,wgs_curated,1
+3472,wgs_curated,1
+1,genetic_race,"Asian Ancestry"
+2,genetic_race,"European Ancestry"
+3,genetic_race,"European Ancestry"
+4,genetic_race,"European Ancestry"
+5,genetic_race,"European Ancestry"
+6,genetic_race,"European Ancestry"
+7,genetic_race,"European Ancestry"
+8,genetic_race,"European Ancestry"
+9,genetic_race,"European Ancestry"
+10,genetic_race,"European Ancestry"
+11,genetic_race,"European Ancestry"
+12,genetic_race,"European Ancestry"
+13,genetic_race,"European Ancestry"
+14,genetic_race,"European Ancestry"
+15,genetic_race,"European Ancestry"
+16,genetic_race,"European Ancestry"
+17,genetic_race,"African Ancestry"
+18,genetic_race,Multi-Ancestry-Admixed
+19,genetic_race,"European Ancestry"
+20,genetic_race,"European Ancestry"
+21,genetic_race,"European Ancestry"
+22,genetic_race,"European Ancestry"
+23,genetic_race,"European Ancestry"
+24,genetic_race,"European Ancestry"
+25,genetic_race,"European Ancestry"
+26,genetic_race,"European Ancestry"
+27,genetic_race,"European Ancestry"
+28,genetic_race,"European Ancestry"
+29,genetic_race,"European Ancestry"
+30,genetic_race,"European Ancestry"
+31,genetic_race,"African Ancestry"
+32,genetic_race,"European Ancestry"
+33,genetic_race,"European Ancestry"
+34,genetic_race,"European Ancestry"
+35,genetic_race,"European Ancestry"
+36,genetic_race,"European Ancestry"
+37,genetic_race,"European Ancestry"
+38,genetic_race,"European Ancestry"
+39,genetic_race,"European Ancestry"
+40,genetic_race,"Asian Ancestry"
+2646,genetic_race,"European Ancestry"
+2660,genetic_race,"Asian Ancestry"
+2674,genetic_race,"European Ancestry"
+2688,genetic_race,"European Ancestry"
+2702,genetic_race,"European Ancestry"
+2716,genetic_race,"European Ancestry"
+2730,genetic_race,"European Ancestry"
+2744,genetic_race,"European Ancestry"
+2758,genetic_race,"European Ancestry"
+2772,genetic_race,"African Ancestry"
+2786,genetic_race,"European Ancestry"
+2800,genetic_race,"European Ancestry"
+2814,genetic_race,"European Ancestry"
+2828,genetic_race,"European Ancestry"
+2842,genetic_race,"European Ancestry"
+2856,genetic_race,"European Ancestry"
+2870,genetic_race,"European Ancestry"
+2884,genetic_race,"European Ancestry"
+2898,genetic_race,"European Ancestry"
+2912,genetic_race,"European Ancestry"
+2926,genetic_race,"African Ancestry"
+2940,genetic_race,"African Ancestry"
+2954,genetic_race,"European Ancestry"
+2968,genetic_race,"European Ancestry"
+2982,genetic_race,"European Ancestry"
+2996,genetic_race,"European Ancestry"
+3010,genetic_race,"European Ancestry"
+3024,genetic_race,"European Ancestry"
+3038,genetic_race,"European Ancestry"
+3052,genetic_race,"European Ancestry"
+3066,genetic_race,"European Ancestry"
+3080,genetic_race,"European Ancestry"
+3094,genetic_race,"European Ancestry"
+3108,genetic_race,"European Ancestry"
+3122,genetic_race,"African Ancestry"
+3136,genetic_race,"African Ancestry"
+3150,genetic_race,"European Ancestry"
+3164,genetic_race,"European Ancestry"
+3178,genetic_race,"European Ancestry"
+3192,genetic_race,"European Ancestry"
+3206,genetic_race,"European Ancestry"
+3220,genetic_race,"European Ancestry"
+3234,genetic_race,"European Ancestry"
+3248,genetic_race,"European Ancestry"
+3262,genetic_race,"European Ancestry"
+3276,genetic_race,"European Ancestry"
+3290,genetic_race,"European Ancestry"
+3304,genetic_race,"European Ancestry"
+3318,genetic_race,"European Ancestry"
+3332,genetic_race,"European Ancestry"
+3346,genetic_race,"European Ancestry"
+3360,genetic_race,"European Ancestry"
+3374,genetic_race,"European Ancestry"
+3388,genetic_race,"European Ancestry"
+3402,genetic_race,"European Ancestry"
+3416,genetic_race,"European Ancestry"
+3430,genetic_race,"European Ancestry"
+3444,genetic_race,"European Ancestry"
+3458,genetic_race,"European Ancestry"
+3472,genetic_race,"European Ancestry"
