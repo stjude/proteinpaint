@@ -36,7 +36,8 @@ export function setInteractivity(self) {
 						? `<td colspan='2' style='text-align: center'>${label}</td>`
 						: `<td style='text-align: right'>${label}</td><td>${info.map(i => `<span>${i}</span>`).join(' ')}</td>`
 
-					rows.push(`<tr style='color: ${c.fill == v.color ? '' : c.fill}'>${tds}</tr>`)
+					const color = c.fill == v.color || v.class == 'Blank' ? '' : c.fill
+					rows.push(`<tr style='color: ${color}'>${tds}</tr>`)
 				}
 			}
 
