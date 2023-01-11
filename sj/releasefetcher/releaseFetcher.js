@@ -6,21 +6,27 @@ const fs = require('fs')
 const exec = require('child_process').exec
 const execSync = require('child_process').execSync
 
-if (!fs.existsSync('./fetcherconfig.json')) {
+let username
+let password
+let repoName
+let repoUrl
+let jFrogArtApiKey
+let artifactoryUrl
+
+const activeFolder = '../active'
+
+if (fs.existsSync('fetcherconfig.json')) {
+	const rawdata = fs.readFileSync('fetcherconfig.json')
+	const config = JSON.parse(rawdata)
+	username = config.username
+	password = config.password
+	repoName = config.repo_name
+	repoUrl = config.repo_url
+	jFrogArtApiKey = config.jfrog_art_api_key
+	artifactoryUrl = config.artifactory_url
+} else {
 	throw Error('Missing fetcherconfig.json')
 }
-
-const json = fs.readFileSync('fetcherconfig.json')
-const config = JSON.parse(json)
-const wait = config.wait || 5
-const activeFolder = config.activeFolder || '../server'
-
-const username = config.username
-const password = config.password
-const repoName = config.repo_name
-const repoUrl = config.repo_url
-const jFrogArtApiKey = config.jfrog_art_api_key
-const artifactoryUrl = config.artifactory_url
 
 const options = {
 	method: 'GET',
@@ -42,6 +48,7 @@ async function pollForNewVersion() {
 			res.on('data', d => {
 				const repo = JSON.parse(d.toString())
 				const date = new Date(repo.lastModified)
+				const repoTimestamp = date.getTime()
 
 				console.log(`Repo version date-time: ${date}`)
 				console.log(`Repo version timestamp: ${date.getTime()}`)
@@ -50,9 +57,9 @@ async function pollForNewVersion() {
 
 				console.log(`Active version timestamp: ${lastRepoPersistedTime}`)
 
-				if (date.getTime() > lastRepoPersistedTime) {
-					downloadAndApplyUpdate(lastRepoPersistedTime, fs)
-					saveLastRepoPersistedTime(date, fs)
+				if (repoTimestamp > lastRepoPersistedTime) {
+					downloadAndApplyUpdate(repoTimestamp)
+					saveLastRepoPersistedTime(repoTimestamp)
 				} else {
 					console.log(`No new versions available`)
 				}
@@ -64,8 +71,8 @@ async function pollForNewVersion() {
 		})
 
 		request.end()
-		// wait before the next fetch
-		await sleep(wait * 1000 * 60)
+		// wait for 5 minutes
+		await sleep(5 * 60 * 1000)
 	}
 }
 
@@ -76,25 +83,40 @@ function sleep(ms) {
 }
 
 function getLastRepoPersistedTime() {
-	if (!fs.existsSync('version.json')) return 0
-	const rawdata = fs.readFileSync('version.json')
-	const version = JSON.parse(rawdata)
-	return version.lastModified
+	let lastRepoPersistedTime = 0
+
+	if (fs.existsSync('version.json')) {
+		const rawdata = fs.readFileSync('version.json')
+		const version = JSON.parse(rawdata)
+		lastRepoPersistedTime = version.lastModified
+	}
+
+	return lastRepoPersistedTime
 }
 
-function downloadAndApplyUpdate(lastRepoPersistedTime) {
+function downloadAndApplyUpdate(repoTimestamp) {
 	console.log(`Downloading new version`)
 	execSync(`curl  -H "X-JFrog-Art-Api:${jFrogArtApiKey}" ` + `-O -L "${artifactoryUrl}/${repoName}"`)
 	console.log(`New archive downloaded`)
 
-	const newActiveFolderName = 'pp-' + lastRepoPersistedTime
+	const newActiveFolderName = 'pp-' + repoTimestamp
 	const newActiveFolder = '../' + newActiveFolderName
+
 	console.log(`Creating archive folder: ${newActiveFolder}`)
 	execSync('mkdir ' + newActiveFolder)
 
-	execSync(`ln -sfn ${newActiveFolderName}  ${activeFolder}`)
+	console.log(`Coping ${repoName} to ${newActiveFolder}`)
+	execSync(`cp ${repoName}  ${newActiveFolder}`)
 
-	execSync('cp serverconfig.json ' + newActiveFolder)
+	if (fs.existsSync(activeFolder)) {
+		console.log('removing active folder...')
+		execSync(`rm -r ${activeFolder}`)
+		console.log('active folder removed ')
+	}
+
+	execSync(`cp -r ${newActiveFolder}  ${activeFolder}`)
+
+	execSync(`cp serverconfig.json ${activeFolder}`)
 
 	console.log(`Copied serverconfig.json to active folder`)
 
@@ -104,7 +126,7 @@ function downloadAndApplyUpdate(lastRepoPersistedTime) {
 		.pipe(zlib.Unzip())
 		.pipe(
 			tar.x({
-				C: newActiveFolder,
+				C: activeFolder,
 				strip: 1
 			})
 		)
@@ -124,7 +146,12 @@ function installAndRunNewVesion() {
 	try {
 		process.chdir(activeFolder)
 		execSync(`npm install`, { stdio: 'inherit' })
+		console.log(`Npm install finished`)
+
+		process.chdir(activeFolder)
 		execSync(`mkdir cache`, { stdio: 'inherit' })
+
+		process.chdir(activeFolder)
 		execSync(`pm2 reload ecosystem.config.js`, { stdio: 'inherit' })
 	} catch (e) {
 		console.log(e)
@@ -132,13 +159,13 @@ function installAndRunNewVesion() {
 	}
 }
 
-function saveLastRepoPersistedTime(date) {
+function saveLastRepoPersistedTime(repoTimestamp) {
 	const versionJson = {
-		lastModified: date.getTime()
+		lastModified: repoTimestamp
 	}
 
 	const data = JSON.stringify(versionJson)
-	console.log(`Saving last persisted time: ${date.getTime()}`)
+	console.log(`Saving last persisted time: ${repoTimestamp}`)
 	fs.writeFileSync('version.json', data)
 	console.log(`Last persisted time saved`)
 }
