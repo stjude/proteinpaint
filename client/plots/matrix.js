@@ -375,7 +375,7 @@ class Matrix {
 							anno.countedValues = countedValues
 							if (anno.countedValues?.length) {
 								counts.samples += 1
-								counts.hits += anno.filteredValues.length
+								counts.hits += anno.countedValues.length
 								if (tw.q?.mode == 'continuous') {
 									const v = anno.value
 									if (!('minval' in counts) || counts.minval > v) counts.minval = v
@@ -453,7 +453,7 @@ class Matrix {
 
 		const filteredValues = values.filter(v => {
 			/*** do not count wildtype and not tested as hits ***/
-			if (tw.term.type == 'geneVariant' && v.class == 'Blank') return false
+			if (tw.term.type == 'geneVariant' && v.class == 'WT') return false
 			if (!valueFilter) return true
 
 			if (valueFilter.type == 'tvs') {
@@ -497,7 +497,7 @@ class Matrix {
 				anno.countedValues = countedValues
 				if (anno.countedValues?.length) {
 					t.counts.samples += 1
-					t.counts.hits += anno.filteredValues.length
+					t.counts.hits += anno.countedValues.length
 					if (t.tw.q?.mode == 'continuous') {
 						const v = anno.value
 						if (!('minval' in t.counts) || t.counts.minval > v) t.counts.minval = v
