@@ -247,6 +247,15 @@ class Scatter {
 						settingsKey: 'refSize',
 						title: 'It represents the area of the reference symbol in square pixels',
 						min: 0
+					},
+					{
+						label: 'Opacity',
+						type: 'number',
+						chartType: 'sampleScatter',
+						settingsKey: 'opacity',
+						title: 'It represents the opacity of the symbols',
+						min: 0,
+						max: 1
 					}
 				]
 			})
@@ -273,9 +282,21 @@ class Scatter {
 			.text(title)
 			.style('font-weight', 'bold')
 		if (this.config.colorTW.q.mode === 'continuous') {
+			const [min, max] = this.colorGenerator.domain()
+			const gradientScale = d3Linear()
+				.domain([min, max])
+				.range([0, 100])
+
+			const axis = axisBottom(gradientScale).ticks(3)
+
+			const axisG = colorG
+				.append('g')
+				.attr('transform', `translate(0, 70)`)
+				.call(axis)
+
 			const rect = colorG
 				.append('rect')
-				.attr('x', offsetX)
+				.attr('x', 0)
 				.attr('y', 50)
 				.attr('width', 100)
 				.attr('height', 20)
@@ -639,7 +660,7 @@ function setRenderers(self) {
 				self.lasso
 					.items()
 					.attr('d', c => getShape(self, c, 1 / 2))
-					.style('fill-opacity', c => (getOpacity(self, c) == 1 ? 0.5 : 0))
+					.style('fill-opacity', c => (getOpacity(self, c) != 0 ? 0.5 : 0))
 					.classed('not_possible', true)
 					.classed('selected', false)
 			}
@@ -660,7 +681,7 @@ function setRenderers(self) {
 				self.lasso
 					.notPossibleItems()
 					.attr('d', c => getShape(self, c, 1 / 2))
-					.style('fill-opacity', c => (getOpacity(self, c) == 1 ? 0.5 : 0))
+					.style('fill-opacity', c => (getOpacity(self, c) != 0 ? 0.5 : 0))
 					.classed('not_possible', true)
 					.classed('possible', false)
 			}
@@ -1155,7 +1176,8 @@ export async function getPlotConfig(opts, app) {
 					svgh: 550,
 					axisTitleFontSize: 16,
 					showAxes: false,
-					showRef: true
+					showRef: true,
+					opacity: 1
 				}
 			}
 		}
@@ -1184,8 +1206,10 @@ function getColor(self, c) {
 }
 
 function getOpacity(self, c) {
-	if ('sampleId' in c) return c.hidden['category'] || c.hidden['shape'] ? 0 : 1
-	return self.settings.showRef ? 1 : 0
+	if ('sampleId' in c) return c.hidden['category'] || c.hidden['shape'] ? 0 : self.settings.opacity
+
+	const refOpacity = self.settings.showRef ? self.settings.opacity : 0
+	return refOpacity
 }
 
 function getShape(self, c, factor = 1) {

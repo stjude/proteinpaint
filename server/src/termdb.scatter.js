@@ -226,6 +226,7 @@ function order(map, tw, refs) {
 	if (!refs?.byTermId[tw.term.id]?.bins) {
 		entries = [...map.entries()]
 		entries.sort((a, b) => {
+			if (a[0] == 'Yes') return -1 //Yes goes first
 			if (a[1].sampleCount > b[1].sampleCount) return -1
 			else return 1
 		})
