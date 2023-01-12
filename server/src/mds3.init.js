@@ -1182,7 +1182,8 @@ function getAssayAvailablility(ds, dt) {
 
 	const rows = ds.cohort.db.connection.prepare(sql).all()
 	for (const r of rows) {
-		if (r.value == `${dt.yes.value}`) dt.yesSamples.add(r.sample)
-		else if (r.value == `${dt.no.value}`) dt.noSamples.add(r.sample)
+		if (dt.yes.value.includes(r.value)) dt.yesSamples.add(r.sample)
+		else if (dt.no.value.includes(r.value)) dt.noSamples.add(r.sample)
+		//else throw `value of term ${dt.term_id} is invalid`
 	}
 }
