@@ -2,7 +2,7 @@ import { axisLeft, axisTop } from 'd3-axis'
 import { scaleLinear, scaleOrdinal } from 'd3-scale'
 import { area, curveBumpX, curveBumpY } from 'd3-shape'
 import { schemeCategory10 } from 'd3-scale-chromatic'
-import { brushX, brushY } from 'd3'
+import { brushX, brushY } from 'd3-brush'
 import { renderTable } from '#dom/table'
 import { filterJoin, getFilterItemByTag } from '../filter/filter'
 // import { drag as d3drag } from 'd3-drag'
@@ -41,7 +41,7 @@ export default function violinRenderer(self) {
 		displayMenu(self, plot, event, null, null)
 	}
 
-	self.displayBrushMenu = function(plot, selection, scale, isH) {
+	self.displayBrushMenu = async function(plot, selection, scale, isH) {
 		const start = isH ? scale.invert(selection[0]) : scale.invert(selection[1])
 		const end = isH ? scale.invert(selection[1]) : scale.invert(selection[0])
 		self.displayBrushMenu.called = true
@@ -208,7 +208,11 @@ export default function violinRenderer(self) {
 
 		// TODO need to add term2 label onto the svg
 		if (self.config.term2?.q?.mode === 'continuous') lab = svg.svgG.append('text').text(self.config.term2.term.name)
-		else lab = svg.svgG.append('text').text(self.config.term.term.name)
+		else
+			lab = svg.svgG
+				.append('text')
+				.text(self.config.term.term.name)
+				.classed('sjpp-numeric-term-label', true)
 
 		if (isH) {
 			lab
@@ -245,6 +249,7 @@ export default function violinRenderer(self) {
 		// create scale label
 		const label = violinG
 			.append('text')
+			.classed('sjpp-axislabel', true)
 			.text(plot.label)
 			.style('cursor', 'pointer')
 			.on('click', function(event) {
@@ -337,7 +342,7 @@ export default function violinRenderer(self) {
 
 								if (!selection) return
 
-								self.displayBrushMenu(plot, selection, svg.axisScale, isH)
+								await self.displayBrushMenu(plot, selection, svg.axisScale, isH)
 							})
 					: brushY()
 							.extent([[-20, 0], [20, s.svgw]])
@@ -346,7 +351,7 @@ export default function violinRenderer(self) {
 
 								if (!selection) return
 
-								self.displayBrushMenu(plot, selection, svg.axisScale, isH)
+								await self.displayBrushMenu(plot, selection, svg.axisScale, isH)
 							})
 			)
 	}

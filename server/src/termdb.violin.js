@@ -57,7 +57,8 @@ export async function trigger_getViolinPlotData(q, res, ds, genome) {
 // // compute bins using d3
 // // need unit test!!!
 export function computeViolinData(scale, values) {
-	const ticksCompute = values.length <= 200 ? 10 : values.length < 800 ? 30 : 15
+	const uniqueValues = new Set(values)
+	const ticksCompute = uniqueValues.size === 1 ? 2 : Math.min(uniqueValues.size, 15)
 
 	const binBuilder = bin()
 		.domain(scale.domain()) /* extent of the data that is lowest to highest*/
