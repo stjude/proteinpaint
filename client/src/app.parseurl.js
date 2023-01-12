@@ -91,6 +91,8 @@ upon error, throw err message as a string
 		}
 		if (state.genome) {
 			opts.genome = arg.genomes[state.genome]
+		} else if (state?.vocab?.genome) {
+			opts.genome = arg.genomes[state.vocab.genome]
 		}
 		const _ = await import('../mass/app')
 		_.appInit(opts)
