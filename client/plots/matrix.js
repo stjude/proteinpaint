@@ -458,9 +458,11 @@ class Matrix {
 
 			if (valueFilter.type == 'tvs') {
 				const matched = true
+				// quick fix: assume tvs values are joined by "and", not "or"
+				// TODO: reuse the filter.js code/data format for a more flexible filter configuration
 				for (const vf of valueFilter.tvs.values) {
-					if (v[vf.key] === vf.value) return !valueFilter.isnot
-					else if (v[vf.key] !== vf.value) return valueFilter.isnot
+					if (v[vf.key] === vf.value && valueFilter.isnot) return false
+					else if (v[vf.key] !== vf.value && !valueFilter.isnot) return false
 				}
 				return matched
 			} else {
