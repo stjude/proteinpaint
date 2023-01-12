@@ -3,6 +3,7 @@ import { fillTermWrapper } from '../termsetting/termsetting'
 import { renderTable } from '../dom/table'
 import { scaleLinear as d3Linear } from 'd3-scale'
 import { filterJoin, getFilterItemByTag } from '../filter/filter'
+import { rgb } from 'd3-color'
 
 import {
 	zoom as d3zoom,
@@ -139,16 +140,23 @@ class Scatter {
 			.domain([yMax, yMin])
 			.range([this.axisOffset.y, this.settings.svgh + this.axisOffset.y])
 		this.axisLeft = axisLeft(this.yAxisScale)
+		this.cohortSamples = this.data.samples.filter(sample => 'sampleId' in sample)
 
+		this.startColor = rgb(this.config.gradientColor)
+			.brighter()
+			.brighter()
+		this.stopColor = rgb(this.config.gradientColor)
+			.darker()
+			.darker()
 		if (this.config.colorTW.q.mode === 'continuous') {
-			const cohortSamples = this.data.samples.filter(sample => sample.category !== 'Ref')
-			const [min, max] = cohortSamples.reduce(
+			const [min, max] = this.cohortSamples.reduce(
 				(s, d) => [d.value < s[0] ? d.category : s[0], d.category > s[1] ? d.category : s[1]],
-				[cohortSamples[0].category, cohortSamples[0].category]
+				[this.cohortSamples[0].category, this.cohortSamples[0].category]
 			)
+
 			this.colorGenerator = d3Linear()
 				.domain([min, max])
-				.range(['LightGreen', 'DarkGreen'])
+				.range([this.startColor, this.stopColor])
 		}
 
 		this.render()
@@ -253,7 +261,7 @@ class Scatter {
 		const step = 30
 		let offsetX = 0
 		let offsetY = 60
-		let title = this.config.colorTW.term.name
+		let title = `${this.config.colorTW.term.name} (${this.cohortSamples.length})`
 		const colorRefCategory = this.colorLegend.get('Ref')
 
 		const colorG = legendG.append('g')
@@ -265,22 +273,48 @@ class Scatter {
 			.text(title)
 			.style('font-weight', 'bold')
 		if (this.config.colorTW.q.mode === 'continuous') {
-			this.addLegendItem(
-				colorG,
-				'green',
-				'All samples',
-				this.data.samples.length - colorRefCategory.sampleCount,
-				offsetX,
-				offsetY
-			)
+			const rect = colorG
+				.append('rect')
+				.attr('x', offsetX)
+				.attr('y', 50)
+				.attr('width', 100)
+				.attr('height', 20)
+				.style('fill', `url(#linear-gradient-${this.id})`)
+				.on('click', e => {
+					const menu = new Menu()
+					const input = menu.d
+						.append('input')
+						.attr('type', 'color')
+						.attr('value', this.config.gradientColor)
+						.on('change', () => {
+							this.config.gradientColor = input.node().value
+							this.startColor = rgb(this.config.gradientColor)
+								.brighter()
+								.brighter()
+							this.stopColor = rgb(this.config.gradientColor)
+								.darker()
+								.darker()
+							this.colorGenerator = d3Linear().range([this.startColor, this.stopColor])
+
+							this.startGradient.attr('stop-color', this.startColor)
+							this.stopGradient.attr('stop-color', this.stopColor)
+							this.app.dispatch({
+								type: 'plot_edit',
+								id: this.id,
+								config: this.config
+							})
+							menu.hide()
+						})
+					menu.show(e.clientX, e.clientY, false)
+				})
+
 			offsetY += step
 		} else {
-			let count, name, color
 			for (const [key, category] of this.colorLegend) {
 				if (key == 'Ref') continue
-				color = category.color
-				count = category.sampleCount
-				name = key
+				const color = category.color
+				const count = category.sampleCount
+				const name = key
 				const hidden = this.config.colorTW.q.hiddenValues ? key in this.config.colorTW.q.hiddenValues : false
 				const [circleG, itemG] = this.addLegendItem(colorG, color, name, count, offsetX, offsetY, hidden)
 				circleG.on('click', e => this.onColorClick(e, key, category))
@@ -508,9 +542,10 @@ function setRenderers(self) {
 				.attr('height', self.settings.svgh)
 				.attr('fill', 'white')
 			//Adding clip path
-			const idclip = `sjpp_clip_${Date.now()}`
-			svg
-				.append('defs')
+			const id = `${Date.now()}`
+			const idclip = `sjpp_clip_${id}`
+			self.defs = svg.append('defs')
+			self.defs
 				.append('clipPath')
 				.attr('id', idclip)
 				.append('rect')
@@ -518,6 +553,22 @@ function setRenderers(self) {
 				.attr('y', self.axisOffset.y - 10)
 				.attr('width', self.settings.svgw + self.axisOffset.x)
 				.attr('height', self.settings.svgh + 30)
+
+			const gradient = self.defs
+				.append('linearGradient')
+				.attr('id', `linear-gradient-${self.id}`)
+				.attr('x1', '0%')
+				.attr('y1', '0%')
+				.attr('x2', '100%')
+				.attr('y2', '0%')
+			self.startGradient = gradient
+				.append('stop')
+				.attr('offset', '0%')
+				.attr('stop-color', self.startColor)
+			self.stopGradient = gradient
+				.append('stop')
+				.attr('offset', '100%')
+				.attr('stop-color', self.stopColor)
 
 			mainG.attr('clip-path', `url(#${idclip})`)
 			xAxis.call(self.axisBottom)
@@ -534,6 +585,7 @@ function setRenderers(self) {
 			yAxis = axisG.select('.sjpcb-scatter-y-axis')
 			legendG = svg.select('.sjpcb-scatter-legend')
 		}
+
 		if (self.settings.showAxes) axisG.style('opacity', 1)
 		else axisG.style('opacity', 0)
 
@@ -1091,6 +1143,7 @@ export async function getPlotConfig(opts, app) {
 		if (opts.shapeTW) await fillTermWrapper(opts.shapeTW, app.vocabApi)
 		const config = {
 			groups: [],
+			gradientColor: '#008000',
 			settings: {
 				controls: {
 					isOpen: false // control panel is hidden by default
@@ -1124,7 +1177,7 @@ function getCategoryInfo(d, category) {
 }
 
 function getColor(self, c) {
-	if (self.config.colorTW.q.mode == 'continuous' && c.category !== 'Ref') return self.colorGenerator(c.category)
+	if (self.config.colorTW.q.mode == 'continuous' && 'sampleId' in c) return self.colorGenerator(c.category)
 	const color = self.colorLegend.get(c.category).color
 
 	return color
