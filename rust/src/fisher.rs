@@ -245,7 +245,6 @@ fn calculate_fisher_chisq_test(
                     || (n1 + n3) as f64 / total < 0.03
                     || (n2 + n4) as f64 / total < 0.03
                     || (n3 + n4) as f64 / total < 0.03)
-                    == true
                 && low_sample_size == true
             {
                 // Sample size too low for doing association test
