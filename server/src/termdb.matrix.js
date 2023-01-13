@@ -194,7 +194,9 @@ export function getSampleData_dictionaryTerms_termdb(q, termWrappers) {
 		if ('id' in tw.term) twByTermId[tw.term.id] = tw
 		return CTE
 	})
-	values.push(...termWrappers.map(tw => tw.term.id))
+
+	// for "samplelst" term, term.id is missing and must use term.name
+	values.push(...termWrappers.map(tw => tw.term.id || tw.term.name))
 
 	const sql = `WITH
 		${filter ? filter.filters + ',' : ''}

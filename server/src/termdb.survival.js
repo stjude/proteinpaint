@@ -180,6 +180,9 @@ function getSeriesKey(ot, d) {
 		// TODO: more helpful message or throw
 		return 'Not sure'
 	}
+	if (ot.type == 'samplelst') {
+		return d[n].key
+	}
 	throw `cannot get series key for term='${n}'`
 }
 
