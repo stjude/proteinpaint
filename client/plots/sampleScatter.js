@@ -1133,7 +1133,7 @@ function distance(x1, y1, x2, y2) {
 
 function setInteractivity(self) {
 	self.mouseover = function(event) {
-		if (event.target.tagName == 'path') {
+		if (event.target.__data__) {
 			const s2 = event.target.__data__
 			const samples = self.data.samples.filter(s => distance(s.x, s.y, s2.x, s2.y) < 0.2)
 			const rows = []
