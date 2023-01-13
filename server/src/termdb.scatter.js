@@ -142,6 +142,7 @@ export async function trigger_getSampleScatter(q, res, ds, genome) {
 		const result = await colorAndShapeSamples(refSamples, cohortSamples, data, q)
 		res.send(result)
 	} catch (e) {
+		if (e.stack) console.log(e.stack)
 		res.send({ error: e.message || e })
 	}
 }
@@ -227,10 +228,10 @@ function order(map, tw, refs) {
 	if (!refs?.byTermId[tw.term.id]?.bins) {
 		entries = [...map.entries()]
 		entries.sort((a, b) => {
-			const v1 = tw.term.values[a[0]]
-			const v2 = tw.term.values[b[0]]
+			if (tw.term.values && 'order' in tw.term.values[a[0]]) {
+				const v1 = tw.term.values[a[0]]
+				const v2 = tw.term.values[b[0]]
 
-			if ('order' in v1) {
 				if (v1.order < v2.order) return -1
 				return 1
 			} else {

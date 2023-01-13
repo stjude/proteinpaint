@@ -285,10 +285,8 @@ class Scatter {
 			const [min, max] = this.colorGenerator.domain()
 			const gradientScale = d3Linear()
 				.domain([min, max])
-				.range([0, 100])
-
+				.range([0, 130])
 			const axis = axisBottom(gradientScale).ticks(3)
-
 			const axisG = colorG
 				.append('g')
 				.attr('transform', `translate(0, 70)`)
@@ -298,7 +296,7 @@ class Scatter {
 				.append('rect')
 				.attr('x', 0)
 				.attr('y', 50)
-				.attr('width', 100)
+				.attr('width', 130)
 				.attr('height', 20)
 				.style('fill', `url(#linear-gradient-${this.id})`)
 				.on('click', e => {
@@ -1126,22 +1124,32 @@ function setRenderers(self) {
 	}
 }
 
+function distance(x1, y1, x2, y2) {
+	const x = x2 - x1
+	const y = y2 - y1
+	const distance = Math.sqrt(Math.pow(x, 2) + Math.pow(y, 2))
+	return distance
+}
+
 function setInteractivity(self) {
 	self.mouseover = function(event) {
 		if (event.target.tagName == 'path') {
-			const d = event.target.__data__
-			if (!d) return
-			if (!('sampleId' in d) && (!self.settings.showRef || self.settings.refSize == 0)) return
+			const s2 = event.target.__data__
+			const samples = self.data.samples.filter(s => distance(s.x, s.y, s2.x, s2.y) < 0.2)
+			const rows = []
 			self.dom.tooltip.clear().hide()
 
-			const rows = [{ k: 'Sample', v: d.sample }]
-			const cat_info = getCategoryInfo(d, 'category')
-			rows.push({ k: self.config.colorTW.term.name, v: cat_info })
-			if (self.config.shapeTW) {
-				const cat_info = getCategoryInfo(d, 'shape')
-				rows.push({ k: self.config.shapeTW.term.name, v: cat_info })
+			for (const d of samples) {
+				if (!('sampleId' in d) && (!self.settings.showRef || self.settings.refSize == 0)) continue
+				rows.push({ k: 'Sample', v: d.sample })
+				const cat_info = getCategoryInfo(d, 'category')
+				rows.push({ k: self.config.colorTW.term.name, v: cat_info })
+				if (self.config.shapeTW) {
+					const cat_info = getCategoryInfo(d, 'shape')
+					rows.push({ k: self.config.shapeTW.term.name, v: cat_info })
+				}
+				if ('info' in d) for (const [k, v] of Object.entries(d.info)) rows.push({ k: k, v: v })
 			}
-			if ('info' in d) for (const [k, v] of Object.entries(d.info)) rows.push({ k: k, v: v })
 			make_table_2col(self.dom.tooltip.d, rows)
 			self.dom.tooltip.show(event.clientX, event.clientY)
 		} else self.dom.tooltip.hide()
