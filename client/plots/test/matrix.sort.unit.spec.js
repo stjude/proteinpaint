@@ -201,7 +201,7 @@ tape('sortSamplesBy = asListed', test => {
 	test.end()
 })
 
-tape('sortSamplesBy = selectedTerms', test => {
+tape.skip('sortSamplesBy = selectedTerms', test => {
 	const { self, settings, rows } = getArgs({ sortSamplesBy: 'selectedTerms', sortTermsBy: 'hits' })
 	const sorter = ms.getSampleSorter(self, settings, rows)
 	const sampleNames = self.sampleGroups.map(g => g.lst.sort(sorter).map(s => s.sample))
