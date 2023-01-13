@@ -7,4 +7,5 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
+    - name: Event dispatch
       run: echo "Event dispatch"
