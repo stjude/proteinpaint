@@ -379,7 +379,8 @@ function setTermActions(self) {
 			if (g == grp) {
 				for (const [priority, tw] of g.lst.entries()) {
 					// the `by: 'values'` may be overridden by self.config.settings.matrix.sortPriority, if available
-					tw.sortSamples = { priority, by: 'values' }
+					if (!tw.sortSamples) tw.sortSamples = { priority, by: 'values' }
+					tw.sortSamples.priority = priority
 				}
 			} else {
 				for (const tw of g.lst) {
@@ -890,11 +891,42 @@ function setTermActions(self) {
 		]
 		const i = sorterTerms.findIndex(st => st.$id === t.tw.$id)
 		const tcopy = JSON.parse(JSON.stringify(t.tw))
+
+		const sortSamples =
+			t.tw.term.type == 'geneVariant'
+				? {
+						by: 'class',
+						// TODO: may use ds-defined default order instead of hardcoding here
+						order: [
+							'CNV_loss',
+							'CNV_amp',
+							// truncating
+							'F',
+							'N',
+							// indel
+							'D',
+							'I',
+							// point
+							'M',
+							'P',
+							'L',
+							// noncoding
+							'Utr3',
+							'Utr5',
+							'S',
+							'Intron',
+							'WT',
+							'Blank'
+						]
+				  }
+				: { by: values }
+
 		if (i == -1) {
-			tcopy.sortSamples = { by: 'values' } // { by: t.tw.term.type == 'geneVariant' ? 'hits' : 'values' }
+			tcopy.sortSamples = sortSamples
 			sorterTerms.unshift(tcopy)
 		} else {
-			tcopy.sortSamples.by = 'values'
+			tcopy.sortSamples.by = sortSamples.by
+			if (sortSamples.order) tcopy.sortSamples.order = sortSamples.order
 		}
 
 		return [tcopy, sorterTerms]

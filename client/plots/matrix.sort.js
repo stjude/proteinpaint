@@ -118,7 +118,11 @@ function getSortSamplesByHits($id, self, rows) {
 	const hits = {}
 	for (const row of rows) {
 		if (!($id in row)) hits[row.sample] = 0
-		else hits[row.sample] = 1 // row[$id].values?.length || 1
+		else {
+			const t = self.termOrder.find(t => t.tw.$id === $id)
+			const { countedValues } = getFilteredValues(row[$id], t.tw, t.grp)
+			hits[row.sample] = countedValues.length
+		}
 	}
 
 	return (a, b) => (hits[a.sample] == hits[b.sample] ? 0 : hits[a.sample] > hits[b.sample] ? -1 : 1)
@@ -199,6 +203,41 @@ function getSortSamplesByClass($id, self, rows, sortSamples) {
 		//if ($id in row && row[$id].values.length > 1) cls[row.sample] += (row[$id].values.length - 1) * 0.05
 	}
 	return (a, b) => cls[a.sample] - cls[b.sample]
+}
+
+function getFilteredValues(anno, tw, grp) {
+	const values = 'value' in anno ? [anno.value] : anno.values
+	if (!values) return { filteredValues: null, countedValues: null }
+	const valueFilter = tw.valueFilter || grp.valueFilter
+
+	const filteredValues = values.filter(v => {
+		/*** do not count wildtype and not tested as hits ***/
+		if (tw.term.type == 'geneVariant' && v.class == 'WT') return false
+		if (!valueFilter) return true
+
+		if (valueFilter.type == 'tvs') {
+			const matched = true
+			// quick fix: assume tvs values are joined by "and", not "or"
+			// TODO: reuse the filter.js code/data format for a more flexible filter configuration
+			for (const vf of valueFilter.tvs.values) {
+				if (v[vf.key] === vf.value && valueFilter.isnot) return false
+				else if (v[vf.key] !== vf.value && !valueFilter.isnot) return false
+			}
+			return matched
+		} else {
+			// TODO: handle non-tvs type value filter
+			throw `unknown matrix value filter type='${valueFilter.type}'`
+		}
+	})
+
+	return {
+		filteredValues,
+		countedValues: filteredValues.filter(v => {
+			/*** do not count wildtype and not tested as hits ***/
+			if (tw.term.type == 'geneVariant' && (v.class == 'WT' || v.class == 'Blank')) return false
+			return true
+		})
+	}
 }
 
 export function getTermSorter(self, s) {
