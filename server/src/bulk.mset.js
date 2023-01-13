@@ -79,6 +79,10 @@ exports.mayGetGeneVariantData = async function(tw, q) {
 			}
 		}
 	}
+	// console.log('what is bySampleId', bySampleId)
+	// for (const [k, v] of bySampleId.entries()) {
+	// 	console.log(k, v[tname])
+	// }
 	return bySampleId
 }
 

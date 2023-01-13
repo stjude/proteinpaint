@@ -1,5 +1,5 @@
 const path = require('path')
-const get_rows = require('./termdb.sql').get_rows
+const { getData } = require('./termdb.matrix')
 const write_file = require('./utils').write_file
 const fs = require('fs')
 const serverconfig = require('./serverconfig')
@@ -9,6 +9,7 @@ export async function get_survival(q, ds) {
 	try {
 		if (!ds.cohort) throw 'cohort missing from ds'
 		q.ds = ds
+		const twLst = []
 		for (const i of [0, 1, 2]) {
 			const termnum = 'term' + i
 			const termnum_id = termnum + '_id'
@@ -23,6 +24,8 @@ export async function get_survival(q, ds) {
 			if (typeof q[termnum_q] == 'string') {
 				q[termnum_q] = JSON.parse(decodeURIComponent(q[termnum_q]))
 			}
+
+			if (q[termnum]) twLst.push({ term: q[termnum], q: q[termnum_q] })
 		}
 
 		if (q.term2) {
@@ -41,40 +44,40 @@ export async function get_survival(q, ds) {
 
 		// only term1 XOR term2 may be a survival term
 		const survTermIndex = q.term1 && q.term1.type == 'survival' ? 1 : 2
-		const tNum = `t${survTermIndex}` // survival CTE table name
-		const kNum = `key${survTermIndex}` // seriesId = censored boolean
-		const vNum = `val${survTermIndex}` // time to event value
-		const sNum = tNum == 't1' ? 'key2' : 'key1'
-		const survq = tNum == 't1' ? q.term1_q : q.term2_q
+		// st: survival term
+		const st = q[`term${survTermIndex}`]
+		// ot: overlay term, the series term
+		const ot = q[`term${survTermIndex == 1 ? 2 : 1}`]
 
-		const results = get_rows(q, { withCTEs: true })
-		results.lst.sort((a, b) => (a[vNum] < b[vNum] ? -1 : 1))
-
-		if (q.term2?.type == 'geneVariant') {
-			await mayAddGeneVariantData(q, results.lst)
-		}
+		const data = await getData({ terms: twLst, filter: q.filter }, ds, q.genome)
+		if (data.error) throw data.error
+		const results = Object.values(data.samples).sort((a, b) => (a[st.id].value < b[st.id].value ? -1 : 1))
 
 		const byChartSeries = {}
 		const keys = { chart: new Set(), series: new Set() }
-		for (const d of results.lst) {
+		for (const d of results) {
+			// survival data
+			const s = d[st.id]
 			// time-to-event
-			const time = d[vNum]
+			const time = s.value
 			if (time < 0) continue // do not include data when years_to_event < 0
 			// status codes
 			// 0=censored; 1=dead
 			// codes match the codes expected by Surv() in R
-			const status = d[kNum]
-			// series
-			const series = d[sNum] === '' ? '*' : d[sNum] // R errors on empty string series value, so replace with '*' (will reconvert later)
+			const status = s.key
+			// series ID for distinct overlays
+			// R errors on empty string series value, so replace with '*' (will reconvert later)
+			const series = !ot ? '*' : 'id' in ot ? d[ot.id].key : getSeriesKey(ot, d)
 			keys.series.add(series)
 			// enter chart data
-			if (!(d.key0 in byChartSeries)) {
-				byChartSeries[d.key0] = []
-				keys.chart.add(d.key0)
+			const d0 = (q.term0 && d[q.term0.id || q.term0.name]) || { key: '' }
+			if (!(d0.key in byChartSeries)) {
+				byChartSeries[d0.key] = []
+				keys.chart.add(d0.key)
 			}
-			byChartSeries[d.key0].push({ time, status, series })
+			byChartSeries[d0.key].push({ time, status, series })
 		}
-		const bins = q.term2_id && results.CTE2.bins ? results.CTE2.bins : []
+		const bins = (q.term2_id && data.refs[q.term2.id]?.bins) || []
 		const final_data = {
 			keys: ['chartId', 'seriesId', 'time', 'survival', 'lower', 'upper', 'nevent', 'ncensor', 'nrisk'],
 			case: [],
@@ -140,6 +143,33 @@ export async function get_survival(q, ds) {
 	}
 }
 
+function getSeriesKey(ot, d) {
+	const n = ot.name
+	if (ot.type == 'geneVariant') {
+		if (!d[n] || !d[n].values) return 'Wildtype' // TODO: should require definitive not-tested vs WT data
+		const tested = d[n].values.filter(v => v.class != 'Blank')
+
+		/*
+			TODO: ot.q may specify to
+			- filter out any value that has a certain dt or class (similar to the matrix)
+			- what classes to group together (groupsetting)
+
+			NOTE: handle this filtering/value processing per the q object within the getData() function?
+
+			!!! Very simplified series grouping below !!!
+		*/
+		// if a sample is mutated for any test, ignore that is may be wildtype and/or not tested for any other assay
+		if (tested.find(v => v.class != 'WT')) return `${n} Variant`
+		// so far, no variant was found. is the sample specifically marked as wildtype for any test?
+		if (tested.find(v => v.class == 'WT')) return `${n} Wildtype`
+		// not mutant or wildtype, was it marked not tested for any assay?
+		if (d[n].values.length > tested.length) return 'Not tested'
+		// TODO: more helpful message or throw
+		return 'Not sure'
+	}
+	throw `cannot get series key for term='${n}'`
+}
+
 function getOrderedLabels(term, bins = []) {
 	if (term) {
 		if (term.type == 'condition' && term.values) {
@@ -157,25 +187,4 @@ function getOrderedLabels(term, bins = []) {
 		}
 	}
 	return bins.map(bin => (bin.name ? bin.name : bin.label))
-}
-
-async function mayAddGeneVariantData(q, rows) {
-	const termq = q.term2_q
-	const bySampleId = await q.ds.mayGetGeneVariantData({ term: q.term2, q: termq }, q)
-	if (!termq.exclude) termq.exclude = []
-	const tname = q.term2.name
-	for (const row of rows) {
-		let matched = false
-		const sampleData = bySampleId.get(row.sample)
-		if (sampleData && tname in sampleData) {
-			for (const d of sampleData[tname].values) {
-				if (!termq.exclude.includes(d.class)) {
-					matched++
-					break
-				}
-			}
-		}
-		row.val2 = matched ? 'Altered' : 'Wildtype'
-		row.key2 = row.val2
-	}
 }
