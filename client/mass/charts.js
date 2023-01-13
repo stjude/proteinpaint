@@ -311,6 +311,7 @@ function setRenderers(self) {
 	}
 
 	self.showTree_selectlst = async chart => {
+		self.dom.tip.clear()
 		if (chart.usecase.label) {
 			self.dom.tip.d
 				.append('div')
@@ -350,6 +351,7 @@ function setRenderers(self) {
 	}
 
 	self.showTextAreaInput = opt => {
+		self.dom.tip.clear()
 		self.dom.submenu = self.dom.tip.d.append('div').style('text-align', 'center')
 
 		self.dom.submenu.append('span').html(opt.label)
@@ -436,6 +438,7 @@ function setRenderers(self) {
 		}
 	}
 	self.showMatrixPlot = function() {
+		self.dom.tip.clear()
 		const menuDiv = self.dom.tip.d.append('div')
 		for (const plot of self.state.termdbConfig.matrixplots) {
 			/* plot: 
