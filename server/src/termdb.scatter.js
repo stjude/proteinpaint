@@ -228,7 +228,8 @@ function order(map, tw, refs) {
 	if (!refs?.byTermId[tw.term.id]?.bins) {
 		entries = [...map.entries()]
 		entries.sort((a, b) => {
-			if (tw.term.values && 'order' in tw.term.values[a[0]]) {
+			const a_values = tw.term.values[a[0]]
+			if (tw.term.values && a_values && 'order' in a_values) {
 				const v1 = tw.term.values[a[0]]
 				const v2 = tw.term.values[b[0]]
 
