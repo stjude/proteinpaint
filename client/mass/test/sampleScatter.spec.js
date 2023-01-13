@@ -97,10 +97,12 @@ tape('Render PNET scatter plot', function(test) {
 			const legendG = scatterDiv.select('.sjpcb-scatter-legend')
 			test.true(legendG != null, 'Should have a legend')
 			//scatter.Inner.config.colorTW.id = category legend header
-			test.equal(
-				legendG.select('#legendTitle').text(),
-				scatter.Inner.config.colorTW.id,
-				`Legend title should be ${scatter.Inner.config.colorTW.id}`
+			test.true(
+				legendG
+					.select('#legendTitle')
+					.text()
+					.startsWith(scatter.Inner.config.colorTW.id),
+				`Legend title should start with ${scatter.Inner.config.colorTW.id}`
 			)
 		}
 

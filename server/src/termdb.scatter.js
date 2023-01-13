@@ -202,40 +202,47 @@ async function colorAndShapeSamples(refSamples, cohortSamples, data, q) {
 	//else
 	//sample.value = dbSample.value
 
-	shapeMap.set('Ref', { sampleCount: refSamples.length, shape: 0 })
 	let i = 1
 	for (const [category, value] of shapeMap) {
 		if (!('shape' in value)) value.shape = i
 		i++
 	}
 
-	//colorMap.set(noCategory, { sampleCount: noColorCount, color: defaultColor })
-	colorMap.set('Ref', { sampleCount: refSamples.length, color: refColor })
+	const colorLegend = order(colorMap, q.colorTW, data.refs)
+	colorLegend.push(['Ref', { sampleCount: refSamples.length, color: refColor }])
+	const shapeLegend = order(shapeMap, q.shapeTW, data.refs)
+	shapeLegend.push(['Ref', { sampleCount: refSamples.length, shape: 0 }])
+	console.log('shapeLegend', shapeLegend)
 
 	return {
 		samples,
-		colorLegend: order(colorMap, q.colorTW, data.refs),
-		shapeLegend: order(shapeMap, q.shapeTW, data.refs)
+		colorLegend: Object.fromEntries(colorLegend),
+		shapeLegend: Object.fromEntries(shapeLegend)
 	}
 }
 
 function order(map, tw, refs) {
-	if (!tw) return Object.fromEntries(map)
 	let entries = []
-
+	if (!tw || map.size == 0) return entries
 	if (!refs?.byTermId[tw.term.id]?.bins) {
 		entries = [...map.entries()]
 		entries.sort((a, b) => {
-			if (a[0] == 'Yes') return -1 //Yes goes first
-			if (a[1].sampleCount > b[1].sampleCount) return -1
-			else return 1
+			const v1 = tw.term.values[a[0]]
+			const v2 = tw.term.values[b[0]]
+
+			if ('order' in v1) {
+				if (v1.order < v2.order) return -1
+				return 1
+			} else {
+				if (a[1].sampleCount > b[1].sampleCount) return -1
+				else return 1
+			}
 		})
 	} else {
 		const bins = refs.byTermId[tw.term.id].bins
 		for (const bin of bins) if (map.get(bin.name)) entries.push([bin.name, map.get(bin.name)])
-		entries.push(['Ref', map.get('Ref')])
 	}
-	return Object.fromEntries(entries)
+	return entries
 }
 
 function assignCategory(dbSample, sample, tw, categoryMap, category) {
