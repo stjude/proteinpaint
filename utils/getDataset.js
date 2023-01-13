@@ -62,6 +62,7 @@ function cosmic() {
 function pnet() {
 	scpHpc('files/hg19/pnet/clinical/db')
 	scpHpc('files/hg19/pnet/classification/pnet_apr13_tnse.txt')
+	scpHpc('files/hg19/pnet/classification/matrixPlot_pnet.json')
 	scpHpc('sdhanda/mb_portal/BT_database/SNVindel_pnet.tsv')
 	scpHpc('sdhanda/mb_portal/BT_database/fusion_pnet.tsv')
 	scpHpc('sdhanda/mb_portal/BT_database/CNV_data_pnet.tsv')
@@ -78,6 +79,7 @@ function ihg() {
 function mbmeta() {
 	scpHpc('files/hg38/mbmeta/clinical/db')
 	scpHpc('files/hg38/mbmeta/classification/meta_analysis_coordinates.txt')
+	scpHpc('files/hg38/mbmeta/classification/matrixPlot_mbmeta.json')
 	scpHpc('sdhanda/mb_portal/BT_database/MB03_meta_analysis/data_jan7_2022/Metadata/Alterations/snv_indel1.tsv')
 	scpHpc('sdhanda/mb_portal/BT_database/MB03_meta_analysis/data_jan7_2022/Metadata/Alterations/cnv_focal1.tsv')
 }

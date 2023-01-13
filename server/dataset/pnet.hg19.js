@@ -25,6 +25,14 @@ module.exports = {
 					colorTW: { id: 'TSNE Category' }
 				}
 			]
+		},
+		matrixplots: {
+			plots: [
+				{
+					name: 'Matrix plot',
+					file: 'files/hg19/pnet/classification/matrixPlot_pnet.json'
+				}
+			]
 		}
 	},
 

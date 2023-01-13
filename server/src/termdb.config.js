@@ -52,6 +52,7 @@ export function make(q, res, ds) {
 	}
 	addRequiredAuth(c, q)
 	addScatterplots(c, ds)
+	addMatrixplots(c, ds)
 
 	res.send({ termdbConfig: c })
 }
@@ -75,6 +76,12 @@ function addScatterplots(c, ds) {
 	c.scatterplots = ds.cohort.scatterplots.plots.map(p => {
 		return { name: p.name, dimensions: p.dimensions, colorTW: p.colorTW, shapeTW: p.shapeTW }
 	})
+}
+
+function addMatrixplots(c, ds) {
+	if (!ds.cohort.matrixplots) return
+	// this dataset has premade matrixplots. reveal to client
+	c.matrixplots = ds.cohort.matrixplots.plots
 }
 
 // allowedTermTypes[] is an unique list of term types from this dataset

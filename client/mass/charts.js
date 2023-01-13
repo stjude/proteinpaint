@@ -2,6 +2,7 @@ import { getCompInit } from '../rx'
 import { Menu } from '../dom/menu'
 import { getNormalRoot } from '../filter/filter'
 import { select } from 'd3-selection'
+const dofetch3 = require('#common/dofetch').dofetch3
 
 class MassCharts {
 	constructor(opts = {}) {
@@ -181,46 +182,7 @@ function getChartTypeList(self) {
 		{
 			label: 'Sample Matrix',
 			chartType: 'matrix',
-			clickTo: self.showMenu,
-			withBackBtn: true,
-			menuOptions: [
-				{
-					label: 'Term tree & search',
-					clickTo: self.showTree_selectlst,
-					chartType: 'matrix',
-					usecase: { target: 'matrix', detail: 'termgroups' },
-					processSelection: lst => {
-						return [
-							{
-								name: '',
-								lst: lst.map(term => {
-									return { term }
-								})
-							}
-						]
-					}
-				},
-				{
-					label: 'Text input',
-					chartType: 'matrix',
-					clickTo: self.showTextAreaInput,
-					usecase: { target: 'matrix', detail: 'termgroups' },
-					placeholder: 'term\tgroup',
-					processInput: async text => {
-						const lines = text.split('\n').map(line => line.split('\t'))
-						const ids = lines.map(cols => cols[0]).filter(t => !!t)
-						const terms = await self.app.vocabApi.getTermTypes(ids)
-						console.log(terms)
-						const groups = {}
-						for (const [id, name] of lines) {
-							if (!(id in terms)) continue
-							if (!(name in groups)) groups[name] = { name, lst: [] }
-							groups[name].lst.push({ term: terms[id] })
-						}
-						return Object.values(groups)
-					}
-				}
-			]
+			clickTo: self.showMatrixPlot
 		},
 		{
 			label: 'Data Download',
@@ -472,6 +434,82 @@ function setRenderers(self) {
 					self.dom.tip.hide()
 				})
 		}
+	}
+	self.showMatrixPlot = function() {
+		const menuDiv = self.dom.tip.d.append('div')
+		for (const plot of self.state.termdbConfig.matrixplots) {
+			/* plot: 
+			{
+				name=str,
+				file=str,
+				publicPath=str
+			}
+			*/
+			menuDiv
+				.append('div')
+				.attr('class', 'sja_menuoption sja_sharp_border')
+				.text(plot.name)
+				.on('click', async () => {
+					try {
+						const data = await dofetch3('/textfile', { method: 'POST', body: { file: plot.file } })
+						const config = JSON.parse(data.text)
+						self.app.dispatch({
+							type: 'plot_create',
+							config
+						})
+						self.dom.tip.hide()
+					} catch (e) {
+						throw e
+					}
+				})
+		}
+		menuDiv
+			.append('div')
+			.datum({
+				label: 'Term tree & search',
+				clickTo: self.showTree_selectlst,
+				chartType: 'matrix',
+				usecase: { target: 'matrix', detail: 'termgroups' },
+				processSelection: lst => {
+					return [
+						{
+							name: '',
+							lst: lst.map(term => {
+								return { term }
+							})
+						}
+					]
+				}
+			})
+			.attr('class', 'sja_menuoption sja_sharp_border')
+			.text(d => d.label)
+			.on('click', (event, chart) => self.showTree_selectlst(chart))
+
+		menuDiv
+			.append('div')
+			.datum({
+				label: 'Text input',
+				chartType: 'matrix',
+				clickTo: self.showTextAreaInput,
+				usecase: { target: 'matrix', detail: 'termgroups' },
+				placeholder: 'term\tgroup',
+				processInput: async text => {
+					const lines = text.split('\n').map(line => line.split('\t'))
+					const ids = lines.map(cols => cols[0]).filter(t => !!t)
+					const terms = await self.app.vocabApi.getTermTypes(ids)
+					console.log(terms)
+					const groups = {}
+					for (const [id, name] of lines) {
+						if (!(id in terms)) continue
+						if (!(name in groups)) groups[name] = { name, lst: [] }
+						groups[name].lst.push({ term: terms[id] })
+					}
+					return Object.values(groups)
+				}
+			})
+			.attr('class', 'sja_menuoption sja_sharp_border')
+			.text(d => d.label)
+			.on('click', (event, chart) => self.showTextAreaInput(chart))
 	}
 }
 

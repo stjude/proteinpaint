@@ -29,6 +29,14 @@ module.exports = function() {
 						// allow additional config for this plot
 					}
 				]
+			},
+			matrixplots: {
+				plots: [
+					{
+						name: 'Matrix plot',
+						file: 'files/hg38/mbmeta/classification/matrixPlot_mbmeta.json'
+					}
+				]
 			}
 		},
 		assayAvailability: {
