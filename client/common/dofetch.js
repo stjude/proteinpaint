@@ -113,7 +113,7 @@ export function dofetch2(path, init = {}, opts = {}) {
 		to the usual request handling unless no credentials
 		are required or a valid session has already been established
 	*/
-	return mayShowAuthUi(init, path).then(() => {
+	return mayShowAuthUi(init, url).then(() => {
 		const dataName = url + ' | ' + init.method + ' | ' + init.body
 
 		if (opts.serverData) {

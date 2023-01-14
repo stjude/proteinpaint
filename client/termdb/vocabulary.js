@@ -60,19 +60,18 @@ class Vocab {
 		// frontend vocab may replace the vocab object reference
 		if (this.state.vocab) this.vocab = this.state.vocab
 		// may or may not need a verified token for a dslabel, based on genome response.dsAuth
-		this.verifiedToken = !this.state.termdbConfig?.requiredAuth || isInSession(this.state.dslabel)
-
+		const dslabel = this.state.dslabel || this.state.vocab.dslabel
+		this.verifiedToken = !this.state.termdbConfig?.requiredAuth || isInSession(dslabel)
 		// secured plots need to confirm that a verified token exists
-		if (this.state.dslabel) await this.maySetVerifiedToken()
+		if (dslabel) await this.maySetVerifiedToken(dslabel)
 	}
 
-	async maySetVerifiedToken() {
+	async maySetVerifiedToken(dslabel) {
 		// strict true boolean value means no auth required
 		if (this.verifiedToken === true) return this.verifiedToken
 		const token = this.opts.getDatasetAccessToken?.()
 		if (this.verifedToken && token === this.verifiedToken) return this.verifiedToken
 		try {
-			const dslabel = this.state.dslabel
 			const auth = this.state.termdbConfig?.requiredAuth
 			if (!auth) {
 				this.verifiedToken = true
