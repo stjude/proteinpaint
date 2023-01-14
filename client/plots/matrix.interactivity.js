@@ -919,7 +919,7 @@ function setTermActions(self) {
 							'Blank'
 						]
 				  }
-				: { by: values }
+				: { by: 'values' }
 
 		if (i == -1) {
 			tcopy.sortSamples = sortSamples

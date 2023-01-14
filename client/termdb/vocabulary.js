@@ -893,9 +893,11 @@ class TermdbVocab extends Vocab {
 
 		try {
 			const dictTerm$ids = opts.terms.filter(tw => !nonDictionaryTermTypes.has(tw.term.type)).map(tw => tw.$id)
-			const lst = Object.values(samples)
-			/*
-			// NOTE: for testingonly, may reactivate this code for legacy published sessions
+			// const lst = Object.values(samples)
+
+			// NOTE: Reactivated so that filtering works as expectd for pnet, mbmeta, etc
+			//       verified to work with two GDC matrix examples
+			// TODO: verify with other GDC examples???
 			const lst = []
 			if (!dictTerm$ids.length) {
 				// If there are no dictionary terms, okay to show any samples with geneVariants
@@ -913,7 +915,7 @@ class TermdbVocab extends Vocab {
 						}
 					}
 				}
-			}*/
+			}
 
 			const sampleFilter = new RegExp(opts.sampleNameFilter || '.*')
 			const data = {
