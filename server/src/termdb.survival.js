@@ -63,7 +63,13 @@ export async function get_survival(q, ds) {
 			const status = s.key
 			// series ID for distinct overlays
 			// R errors on empty string series value, so replace with '*' (will reconvert later)
-			const series = !ot ? '*' : 'id' in ot ? d[ot.id].key : getSeriesKey(ot, d)
+			let series
+
+			if (!ot) series = '*'
+			else if ('id' in ot) series = d[ot.id].key
+			else if (ot.type == 'samplelst') series = d[st.name].key
+			else getSeriesKey(ot, d)
+
 			keys.series.add(series)
 			// enter chart data
 			const d0 = (q.term0 && d[q.term0.id || q.term0.name]) || { key: '' }
@@ -180,9 +186,7 @@ function getSeriesKey(ot, d) {
 		// TODO: more helpful message or throw
 		return 'Not sure'
 	}
-	if (ot.type == 'samplelst') {
-		return d[n].key
-	}
+
 	throw `cannot get series key for term='${n}'`
 }
 

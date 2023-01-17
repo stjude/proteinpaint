@@ -6,7 +6,6 @@ export const sampleLstSql = {
 			samplesString
 		for (const [i, group] of t2q.groups.entries()) {
 			samples = group.values
-			console.log(10, samples)
 			samplesString = samples.map(() => '?').join(',')
 			if (i == 1 && group.name == 'Others') {
 				sql += `
