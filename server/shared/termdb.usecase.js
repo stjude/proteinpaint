@@ -104,7 +104,7 @@ export function isUsableTerm(term, _usecase, ds) {
 			if (usecase.detail === 'term2') {
 				if (term.type != 'survival') {
 					// do not allow overlaying one survival term over another
-					if (term.isleaf || nonDictionaryTermTypes.has(term.type)) uses.add('plot')
+					if (term.type) uses.add('plot')
 					if (hasNonSurvivalTermChild(child_types)) uses.add('branch')
 				}
 				return uses
