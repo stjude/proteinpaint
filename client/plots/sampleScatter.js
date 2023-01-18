@@ -261,7 +261,7 @@ class Scatter {
 			})
 		}
 
-		this.components.controls.on('downloadClick.scatter', () => downloadSVG(this.svg))
+		this.components.controls.on('downloadClick.scatter', () => this.downloadSVG(this.svg))
 		this.dom.toolsDiv = this.dom.controls.insert('div')
 	}
 
@@ -483,6 +483,126 @@ class Scatter {
 			type: 'plot_edit',
 			id: this.id,
 			config
+		})
+	}
+
+	openSurvivalPlot(term, groups) {
+		let config = {
+			chartType: 'survival',
+			term,
+			term2: {
+				term: { name: this.config.name + ' groups', type: 'samplelst' },
+				q: {
+					mode: 'custom-groupsetting',
+					groups: groups
+				}
+			},
+			insertBefore: self.id,
+			settings: {
+				survival: {
+					xTickValues: [0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30]
+				}
+			}
+		}
+		this.app.dispatch({
+			type: 'plot_create',
+			config: config
+		})
+	}
+
+	downloadSVG(svg) {
+		const link = document.createElement('a')
+		// If you don't know the name or want to use
+		// the webserver default set name = ''
+		link.setAttribute('download', 'scatter.svg')
+		document.body.appendChild(link)
+		link.click()
+		link.remove()
+		const serializer = new XMLSerializer()
+		const svg_blob = new Blob([serializer.serializeToString(svg.node())], {
+			type: 'image/svg+xml'
+		})
+		link.href = URL.createObjectURL(svg_blob)
+		link.click()
+		link.remove()
+	}
+
+	openSummaryPlot(term, groups) {
+		let config = {
+			chartType: 'summary',
+			childType: 'barchart',
+			term,
+			term2: {
+				term: { name: this.config.name + ' groups', type: 'samplelst' },
+				q: {
+					mode: 'custom-groupsetting',
+					groups: groups
+				}
+			},
+			insertBefore: self.id
+		}
+		this.app.dispatch({
+			type: 'plot_create',
+			config
+		})
+	}
+
+	getGroupsOverlay(groups) {
+		const overlayGroups = []
+		let values, tgroup, data
+		for (const [i, group] of groups.entries()) {
+			values = []
+			for (const item of group.items) {
+				data = item.__data__
+				values.push(data.sample)
+			}
+			;(tgroup = {
+				name: group.name,
+				key: 'sample',
+				values: values
+			}),
+				overlayGroups.push(tgroup)
+		}
+		return overlayGroups
+	}
+
+	getGroupvsOthersOverlay(group) {
+		const values = []
+		let data
+		for (const item of group.items) {
+			data = item.__data__
+			values.push(data.sample)
+		}
+		return [
+			{
+				name: group.name,
+				key: 'sample',
+				values
+			},
+			{
+				name: 'Others',
+				key: 'sample',
+				in: false,
+				values
+			}
+		]
+	}
+
+	async showTermsTree(div, callback, state = { tree: { usecase: { detail: 'term' } } }) {
+		this.dom.termstip.clear()
+		this.dom.termstip.showunderoffset(div.node())
+		const termdb = await import('../termdb/app')
+		termdb.appInit({
+			holder: this.dom.termstip.d,
+			vocabApi: this.app.vocabApi,
+			state,
+			tree: {
+				click_term: term => {
+					callback(term)
+					this.dom.tip.hide()
+					this.dom.termstip.hide()
+				}
+			}
 		})
 	}
 }
@@ -914,11 +1034,10 @@ function setRenderers(self) {
 					nav: { header_mode: 'hide_search' },
 					tree: { usecase: { target: 'survival', detail: 'term' } }
 				}
-				showTermsTree(
-					self,
+				self.showTermsTree(
 					survivalDiv,
 					term => {
-						openSurvivalPlot(self, term, getGroupsOverlay(self.config.groups))
+						self.openSurvivalPlot(term, self.getGroupsOverlay(self.config.groups))
 					},
 					state
 				)
@@ -934,8 +1053,8 @@ function setRenderers(self) {
 			.style('float', 'right')
 
 		summarizeDiv.on('click', async e => {
-			showTermsTree(self, summarizeDiv, term => {
-				openSummaryPlot(self, term, getGroupsOverlay(self.config.groups))
+			self.showTermsTree(summarizeDiv, term => {
+				self.openSummaryPlot(term, self.getGroupsOverlay(self.config.groups))
 			})
 		})
 		row = menuDiv
@@ -992,11 +1111,10 @@ function setRenderers(self) {
 					nav: { header_mode: 'hide_search' },
 					tree: { usecase: { target: 'survival', detail: 'term' } }
 				}
-				showTermsTree(
-					self,
+				self.showTermsTree(
 					survivalDiv,
 					term => {
-						openSurvivalPlot(self, term, getGroupvsOthersOverlay(group))
+						self.openSurvivalPlot(term, self.getGroupvsOthersOverlay(group))
 					},
 					state
 				)
@@ -1012,7 +1130,7 @@ function setRenderers(self) {
 			.style('float', 'right')
 
 		summarizeDiv.on('click', async e => {
-			showTermsTree(self, summarizeDiv, term => openSummaryPlot(self, term, getGroupvsOthersOverlay(group)))
+			self.showTermsTree(summarizeDiv, term => self.openSummaryPlot(term, self.getGroupvsOthersOverlay(group)))
 		})
 		const deleteDiv = menuDiv
 			.append('div')
@@ -1224,126 +1342,6 @@ function getShape(self, c, factor = 1) {
 	const index = self.shapeLegend.get(c.shape).shape % self.symbols.length
 	const size = 'sampleId' in c ? self.settings.size : self.settings.refSize
 	return self.symbols[index].size((size * factor) / self.k)()
-}
-
-function openSurvivalPlot(self, term, groups) {
-	let config = {
-		chartType: 'survival',
-		term,
-		term2: {
-			term: { name: self.config.name + ' groups', type: 'samplelst' },
-			q: {
-				mode: 'custom-groupsetting',
-				groups: groups
-			}
-		},
-		insertBefore: self.id,
-		settings: {
-			survival: {
-				xTickValues: [0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30]
-			}
-		}
-	}
-	self.app.dispatch({
-		type: 'plot_create',
-		config: config
-	})
-}
-
-function downloadSVG(svg) {
-	const link = document.createElement('a')
-	// If you don't know the name or want to use
-	// the webserver default set name = ''
-	link.setAttribute('download', 'scatter.svg')
-	document.body.appendChild(link)
-	link.click()
-	link.remove()
-	const serializer = new XMLSerializer()
-	const svg_blob = new Blob([serializer.serializeToString(svg.node())], {
-		type: 'image/svg+xml'
-	})
-	link.href = URL.createObjectURL(svg_blob)
-	link.click()
-	link.remove()
-}
-
-function openSummaryPlot(self, term, groups) {
-	let config = {
-		chartType: 'summary',
-		childType: 'barchart',
-		term,
-		term2: {
-			term: { name: self.config.name + ' groups', type: 'samplelst' },
-			q: {
-				mode: 'custom-groupsetting',
-				groups: groups
-			}
-		},
-		insertBefore: self.id
-	}
-	self.app.dispatch({
-		type: 'plot_create',
-		config
-	})
-}
-
-function getGroupsOverlay(groups) {
-	const overlayGroups = []
-	let values, tgroup, data
-	for (const [i, group] of groups.entries()) {
-		values = []
-		for (const item of group.items) {
-			data = item.__data__
-			values.push(data.sample)
-		}
-		;(tgroup = {
-			name: group.name,
-			key: 'sample',
-			values: values
-		}),
-			overlayGroups.push(tgroup)
-	}
-	return overlayGroups
-}
-
-function getGroupvsOthersOverlay(group) {
-	const values = []
-	let data
-	for (const item of group.items) {
-		data = item.__data__
-		values.push(data.sample)
-	}
-	return [
-		{
-			name: group.name,
-			key: 'sample',
-			values
-		},
-		{
-			name: 'Others',
-			key: 'sample',
-			in: false,
-			values
-		}
-	]
-}
-
-async function showTermsTree(self, div, callback, state = { tree: { usecase: { detail: 'term' } } }) {
-	self.dom.termstip.clear()
-	self.dom.termstip.showunderoffset(div.node())
-	const termdb = await import('../termdb/app')
-	termdb.appInit({
-		holder: self.dom.termstip.d,
-		vocabApi: self.app.vocabApi,
-		state,
-		tree: {
-			click_term: term => {
-				callback(term)
-				self.dom.tip.hide()
-				self.dom.termstip.hide()
-			}
-		}
-	})
 }
 
 function add_to_filter(self, group) {
