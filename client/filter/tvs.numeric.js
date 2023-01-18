@@ -121,11 +121,7 @@ async function fillMenu(self, div, tvs) {
 			{
 				termid: tvs.term.id,
 				filter: self.filter,
-				svgw: self.num_obj.plot_size.width,
-				orientation: 'horizontal',
-				datasymbol: 'bean',
-				radius: 5,
-				strokeWidth: 0.2
+				svgw: self.num_obj.plot_size.width
 			},
 			self.opts.getCategoriesArguments
 		)

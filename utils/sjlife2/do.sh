@@ -16,7 +16,7 @@ set -e
 set -u
 set -o pipefail
 
-
+echo 'Generating import files ...' $(date +%r)
 ###############################################
 # temporary step
 # copy "matrix.tree.original" to "matrix.tree" and append new line to describe the adhoc "publication" term annotated to samples from CH paper
@@ -114,11 +114,13 @@ node --max-old-space-size=10240 ./scripts/term2subcohort.js termdb annotation.ma
 echo 'Creating db schema...'
 sqlite3 db < ./scripts/create.sql
 sqlite3 db < ./scripts/init-cohorts.sql
-echo 'Loading data...'
+echo 'Loading data...' $(date +%r)
 sqlite3 db < ./scripts/load.sql
+echo 'Setting included types...' $(date +%r)
 sqlite3 db < ./scripts/set-included-types.sql
-echo 'Adding annotation by type tables'
+echo 'Loading annotation by type data...' $(date +%r)
 sqlite3 db < ./scripts/anno-by-type.sql
+echo 'Indexing...' $(date +%r)
 sqlite3 db < ./scripts/indexing.sql
 
 

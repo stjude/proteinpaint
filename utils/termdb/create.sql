@@ -179,3 +179,38 @@ foreign key(idfeature) references features(idfeature) on delete cascade
 );
 
 
+
+drop table if exists anno_integer;
+create table anno_integer (
+  sample integer not null,
+  term_id character varying(100) not null,
+  value integer not null,
+  primary key(term_id, sample),
+  foreign key(term_id) references terms(id) on delete cascade,
+  foreign key(sample) references samples(id) on delete cascade
+
+);
+
+
+drop table if exists anno_float;
+create table anno_float (
+  sample integer not null,
+  term_id character varying(100) not null,
+  value REAL not null,
+  primary key(term_id, sample),
+  foreign key(term_id) references terms(id),
+  foreign key(sample) references samples(id)
+
+);
+
+drop table if exists anno_categorical;
+create table anno_categorical (
+  sample integer not null,
+  term_id character varying(100) not null,
+  value character varying(255) not null,
+  primary key(term_id, sample),
+  foreign key(term_id) references terms(id),
+  foreign key(sample) references samples(id)
+);
+
+

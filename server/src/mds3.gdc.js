@@ -876,6 +876,11 @@ export async function querySamples_gdcapi(q, twLst, ds, geneTwLst) {
 		if (s.case.case_id) {
 			// for making url link on a sample
 			sample.sample_URLid = s.case.case_id
+			if (s.case?.observation?.[0]?.sample?.tumor_sample_uuid) {
+				// aliquot id available; append to URLid so when opening the page, the sample is auto highlighted from the tree
+				// per uat feedback by bill 1/6/2023
+				sample.sample_URLid = sample.sample_URLid + '?bioId=' + s.case.observation[0].sample.tumor_sample_uuid
+			}
 		}
 
 		for (const tw of dictTwLst) {

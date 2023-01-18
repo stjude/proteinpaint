@@ -5,7 +5,7 @@ const serverconfig = require('./serverconfig')
 const lines2R = require('./lines2R')
 const path = require('path')
 const utils = require('./utils')
-import { median } from '../../server/shared/median'
+const { median } = require('../../server/shared/median')
 const { getData } = require('./termdb.matrix')
 const createCanvas = require('canvas').createCanvas
 
@@ -57,7 +57,8 @@ export async function trigger_getViolinPlotData(q, res, ds, genome) {
 // // compute bins using d3
 // // need unit test!!!
 export function computeViolinData(scale, values) {
-	const ticksCompute = values.length <= 200 ? 10 : values.length < 800 ? 30 : 15
+	const uniqueValues = new Set(values)
+	const ticksCompute = uniqueValues.size === 1 ? 2 : Math.min(uniqueValues.size, 15)
 
 	const binBuilder = bin()
 		.domain(scale.domain()) /* extent of the data that is lowest to highest*/
@@ -198,7 +199,8 @@ function resultObj(valuesObject, data, overlayTerm) {
 		min: valuesObject.minMaxValues.min,
 		max: valuesObject.minMaxValues.max,
 		plots: [], // each element is data for one plot: {label=str, values=[]}
-		pvalues: []
+		pvalues: [],
+		plotThickness: Number
 	}
 
 	for (const [key, values] of sortKey2values(data, valuesObject.key2values, overlayTerm)) {
@@ -221,10 +223,13 @@ function resultObj(valuesObject, data, overlayTerm) {
 			})
 		}
 	}
+	if (result.plots.length >= 1) {
+		result.plotThickness = plotThickness(result)
+	}
 	return result
 }
 
-function violinBins(axisScale, plot) {
+export function violinBins(axisScale, plot) {
 	const bins0 = computeViolinData(axisScale, plot.values)
 	// array; each element is an array of values belonging to this bin
 	// NOTE .x0 .x1 attributes are also assigned to this array (safe to do?)
@@ -312,4 +317,18 @@ function createCanvasImg(q, result) {
 
 		delete plot.values
 	}
+}
+
+function plotThickness(result) {
+	const plotThickness =
+		result.plots.length < 2
+			? 150
+			: result.plots.length >= 2 && result.plots.length < 5
+			? 120
+			: result.plots.length >= 5 && result.plots.length < 8
+			? 90
+			: result.plots.length >= 8 && result.plots.length < 11
+			? 75
+			: 60
+	return plotThickness
 }

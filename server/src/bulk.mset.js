@@ -9,6 +9,7 @@ const bulk = require('#shared/bulk'),
 	path = require('path'),
 	fs = require('fs'),
 	serverconfig = require('./serverconfig')
+const { get_samples } = require('./termdb.sql')
 
 const handlers = {
 	snvindel: bulksnv,
@@ -44,20 +45,83 @@ exports.mayGetGeneVariantData = async function(tw, q) {
 	const bySampleId = new Map()
 	if (!flagset) return bySampleId
 
+	let filterSamples
+	if (q?.filter?.lst.length > 0) {
+		// requires that not only q.filter{} is present, but also filter.lst[] is a non-empty array
+		// as client may send filter with blank array of tvs and will break get_samples()
+		filterSamples = get_samples(q.filter, ds)
+	}
+
 	for (const flagname in flagset) {
 		const flag = flagset[flagname]
 		if (!(tname in flag.data)) continue
 		for (const d of flag.data[tname]) {
 			const sid = d._SAMPLEID_
+			if (filterSamples && !filterSamples.includes(sid)) continue
 			if (!bySampleId.has(sid)) bySampleId.set(sid, { sample: sid })
 			const sampleData = bySampleId.get(sid)
 			if (!(tname in sampleData)) sampleData[tname] = { key: tname, values: [], label: tname }
 			sampleData[tname].values.push(d)
 		}
-	}
-	//console.log(JSON.stringify(bySampleId.get(63),null,2))
+		/*
+			process and store each sampleId in bySampleId as below. May only some entries in values[] has origin
+				<sampleId> : {
+					<gene>: {
+						values: [
+							{ dt, class, mname, origin }          // a mutation data point
+							{ dt, class:'WT', origin }    // if this sample is wildtype
+							{ dt, class:'Blank', origin}  // if is not assayed for this dt
+						]
+					}
+				}
+		*/
+		if (ds.assayAvailability?.byDt) {
+			for (const dtKey in ds.assayAvailability.byDt) {
+				const dt = ds.assayAvailability.byDt[dtKey]
 
+				if (dt.byOrigin) {
+					for (const origin in dt.byOrigin) {
+						const sub_dt = dt.byOrigin[origin]
+						addDataAvailability(dtKey, sub_dt, bySampleId, tname, origin, filterSamples)
+					}
+				} else addDataAvailability(dtKey, dt, bySampleId, tname, false, filterSamples)
+			}
+		}
+	}
+	// console.log('what is bySampleId', bySampleId)
+	// for (const [k, v] of bySampleId.entries()) {
+	// 	console.log(k, v[tname])
+	// }
 	return bySampleId
+}
+
+function addDataAvailability(dtKey, dt, bySampleId, tname, origin, filterSamples) {
+	for (const sid of dt.yesSamples) {
+		if (filterSamples && !filterSamples.includes(sid)) continue
+		if (!bySampleId.has(sid)) bySampleId.set(sid, { sample: sid })
+		const sampleData = bySampleId.get(sid)
+		if (!(tname in sampleData)) sampleData[tname] = { key: tname, values: [], label: tname }
+		if (origin) {
+			if (!sampleData[tname].values.some(val => val.dt == dtKey && val.origin == origin))
+				sampleData[tname].values.push({ dt: parseInt(dtKey), class: 'WT', _SAMPLEID_: sid, origin: origin })
+		} else {
+			if (!sampleData[tname].values.some(val => val.dt == dtKey))
+				sampleData[tname].values.push({ dt: parseInt(dtKey), class: 'WT', _SAMPLEID_: sid })
+		}
+	}
+	for (const sid of dt.noSamples) {
+		if (filterSamples && !filterSamples.includes(sid)) continue
+		if (!bySampleId.has(sid)) bySampleId.set(sid, { sample: sid })
+		const sampleData = bySampleId.get(sid)
+		if (!(tname in sampleData)) sampleData[tname] = { key: tname, values: [], label: tname }
+		if (origin) {
+			if (!sampleData[tname].values.some(val => val.dt == dtKey && val.origin == origin))
+				sampleData[tname].values.push({ dt: parseInt(dtKey), class: 'Blank', _SAMPLEID_: sid, origin: origin })
+		} else {
+			if (!sampleData[tname].values.some(val => val.dt == dtKey))
+				sampleData[tname].values.push({ dt: parseInt(dtKey), class: 'Blank', _SAMPLEID_: sid })
+		}
+	}
 }
 
 exports.getTermTypes = async function getData(q) {

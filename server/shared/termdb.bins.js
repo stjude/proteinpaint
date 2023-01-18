@@ -1,5 +1,5 @@
 import { format } from 'd3-format'
-const schemeCategory10 = require('d3-scale-chromatic').schemeCategory10
+import { schemeCategory20 } from '#shared/common'
 const d3scale = require('d3-scale')
 
 export function validate_bins(binconfig) {
@@ -124,7 +124,7 @@ summaryfxn (percentiles)=> return {min, max, pX, pY, ...}
   }
 */
 	const bc = binconfig
-	const k2c = d3scale.scaleOrdinal(schemeCategory10) //to color bins
+	const k2c = d3scale.scaleOrdinal(schemeCategory20) //to color bins
 	validate_bins(bc)
 	if (bc.lst) for (const bin of bc.lst) bin.color = k2c(bin.label)
 	if (bc.type == 'custom-bin') return JSON.parse(JSON.stringify(bc.lst))

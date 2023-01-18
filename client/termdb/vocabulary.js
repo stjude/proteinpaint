@@ -60,19 +60,18 @@ class Vocab {
 		// frontend vocab may replace the vocab object reference
 		if (this.state.vocab) this.vocab = this.state.vocab
 		// may or may not need a verified token for a dslabel, based on genome response.dsAuth
-		this.verifiedToken = !this.state.termdbConfig?.requiredAuth || isInSession(this.state.dslabel)
-
+		const dslabel = this.state.dslabel || this.state.vocab.dslabel
+		this.verifiedToken = !this.state.termdbConfig?.requiredAuth || isInSession(dslabel)
 		// secured plots need to confirm that a verified token exists
-		if (this.state.dslabel) await this.maySetVerifiedToken()
+		if (dslabel) await this.maySetVerifiedToken(dslabel)
 	}
 
-	async maySetVerifiedToken() {
+	async maySetVerifiedToken(dslabel) {
 		// strict true boolean value means no auth required
 		if (this.verifiedToken === true) return this.verifiedToken
 		const token = this.opts.getDatasetAccessToken?.()
 		if (this.verifedToken && token === this.verifiedToken) return this.verifiedToken
 		try {
-			const dslabel = this.state.dslabel
 			const auth = this.state.termdbConfig?.requiredAuth
 			if (!auth) {
 				this.verifiedToken = true
@@ -537,6 +536,8 @@ class TermdbVocab extends Vocab {
 		.datasymbol='bean'
 		.radius=5
 		.strokeWidth=0.2
+		.axisHeight=80
+		.rightMargin=50
 
 	additionalArgs{}
 		optional bag of key:value pairs
@@ -556,6 +557,7 @@ class TermdbVocab extends Vocab {
 				x0: number
 				x1: number
 				binValueCount: int
+		plotThickness: Number
 	*/
 	async getViolinPlotData(arg, _body = {}) {
 		const body = {
@@ -564,11 +566,13 @@ class TermdbVocab extends Vocab {
 			dslabel: this.vocab.dslabel,
 			termid: arg.termid,
 			svgw: arg.svgw, ///window.devicePixelRatio,
-			orientation: arg.orientation,
-			datasymbol: arg.datasymbol,
-			radius: arg.radius,
+			orientation: arg.orientation || 'horizontal',
+			datasymbol: arg.datasymbol || 'bean',
+			radius: arg.radius || 5,
 			devicePixelRatio: window.devicePixelRatio,
-			strokeWidth: arg.strokeWidth,
+			strokeWidth: arg.strokeWidth || 0.2,
+			axisHeight: arg.axisHeight || 80,
+			rightMargin: arg.rightMargin || 50,
 			..._body
 		}
 		if (arg.filter) body.filter = getNormalRoot(arg.filter)
@@ -820,6 +824,9 @@ class TermdbVocab extends Vocab {
 			.map(tw => tw.term.name)
 			.sort()
 
+		let numResponses = 0
+		if (opts.loadingDiv) opts.loadingDiv.html('Fetching data ...')
+
 		// fetch the annotated sample for each term
 		while (termsToUpdate.length) {
 			const tw = termsToUpdate.pop()
@@ -867,12 +874,18 @@ class TermdbVocab extends Vocab {
 					if (idn in data.refs.byTermId) {
 						refs.byTermId[tw.$id] = data.refs.byTermId[idn]
 					}
+
+					numResponses++
+					if (opts.loadingDiv)
+						opts.loadingDiv.html(`Fetching data (${numResponses}/${promises.length}): ${tw.term.name}`)
 				})
 			)
 		}
 
 		try {
+			if (opts.loadingDiv) opts.loadingDiv.html(`Fetching data (0/${promises.length})`)
 			await Promise.all(promises)
+			if (opts.loadingDiv) opts.loadingDiv.html('')
 		} catch (e) {
 			this.tokenVerificationMessage = e
 			throw e
@@ -880,9 +893,11 @@ class TermdbVocab extends Vocab {
 
 		try {
 			const dictTerm$ids = opts.terms.filter(tw => !nonDictionaryTermTypes.has(tw.term.type)).map(tw => tw.$id)
-			const lst = Object.values(samples)
-			/*
-			// NOTE: for testingonly, may reactivate this code for legacy published sessions
+			// const lst = Object.values(samples)
+
+			// NOTE: Reactivated so that filtering works as expectd for pnet, mbmeta, etc
+			//       verified to work with two GDC matrix examples
+			// TODO: verify with other GDC examples???
 			const lst = []
 			if (!dictTerm$ids.length) {
 				// If there are no dictionary terms, okay to show any samples with geneVariants
@@ -900,7 +915,7 @@ class TermdbVocab extends Vocab {
 						}
 					}
 				}
-			}*/
+			}
 
 			const sampleFilter = new RegExp(opts.sampleNameFilter || '.*')
 			const data = {

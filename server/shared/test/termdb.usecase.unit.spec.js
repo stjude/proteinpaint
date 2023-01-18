@@ -102,7 +102,7 @@ tape('survival term', test => {
 tape('survival overlay', test => {
 	const usecase = { target: 'survival', detail: 'term2' }
 	multiDeepEqual(test, usecase, {
-		plot: [{ isleaf: true }],
+		plot: [{ isleaf: true, type: 'categorical' }],
 		branch: [{ type: '', child_types: ['categorical'] }],
 		'': [{ type: '', child_types: ['survival'] }]
 	})

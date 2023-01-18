@@ -8,8 +8,6 @@ variables_range2variants
 ssm2canonicalisoform
 */
 
-const filter2GDCfilter = require('../src/mds3.gdc.filter').filter2GDCfilter
-
 const GDC_HOST = process.env.PP_GDC_HOST || 'https://api.gdc.cancer.gov'
 
 /* if filter0 is missing necessary attr, adding it to api query will cause error
@@ -174,6 +172,49 @@ module.exports = {
 			// runs termdb.gdc.js to init gdc dictionary
 			// create standard helpers at ds.cohort.termdb.q{}
 			gdcapi: true
+		},
+
+		maxMatrixSample: 1000,
+
+		matrix: {
+			maxSample: 1000,
+			sortPriority: [
+				{
+					types: ['geneVariant'],
+					tiebreakers: [
+						{
+							by: 'dt',
+							order: [1, 4, 2]
+						},
+						{
+							by: 'class',
+							order: [
+								'CNV_loss',
+								'CNV_amp',
+								// truncating
+								'F',
+								'N',
+								// indel
+								'D',
+								'I',
+								// point
+								'M',
+								'P',
+								'L',
+								// noncoding
+								'Utr3',
+								'Utr5',
+								'S',
+								'Intron'
+							]
+						}
+					]
+				},
+				{
+					types: ['categorical', 'integer', 'float', 'survival'],
+					tiebreakers: [{ by: 'values' }]
+				}
+			]
 		},
 
 		// pending

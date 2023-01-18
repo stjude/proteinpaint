@@ -91,7 +91,8 @@ const skip_workflow_type = 'STAR 2-Pass Transcriptome'
 async function get_gdc_data(gdc_id, filter0) {
 	// data to be returned
 	const bamdata = {
-		file_metadata: []
+		file_metadata: [],
+		numFilesSkippedByWorkflow: 0
 	}
 
 	const re = await try_query(gdc_id, bamdata, filter0)
@@ -124,7 +125,11 @@ async function get_gdc_data(gdc_id, filter0) {
 	// 1 or multiple hits/files are available for submitted gdc id
 
 	for (const s of re.data.hits) {
-		if (s.analysis.workflow_type == skip_workflow_type) continue // skip
+		if (s.analysis.workflow_type == skip_workflow_type) {
+			// skipped by workflow
+			bamdata.numFilesSkippedByWorkflow++
+			continue
+		}
 
 		/*
 		if (s.analysis.workflow_type.toLowerCase().includes('chimeric')) continue

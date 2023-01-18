@@ -1,4 +1,4 @@
-PRAGMA foreign_keys=ON;
+
 
 insert into cohorts(cohort, name, abbrev, sample_count) values
 ('SJLIFE', 'St. Jude Lifetime Cohort Study', 'SJLIFE', 5053),

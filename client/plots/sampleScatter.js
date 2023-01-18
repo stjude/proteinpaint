@@ -3,6 +3,7 @@ import { fillTermWrapper } from '../termsetting/termsetting'
 import { renderTable } from '../dom/table'
 import { scaleLinear as d3Linear } from 'd3-scale'
 import { filterJoin, getFilterItemByTag } from '../filter/filter'
+import { rgb } from 'd3-color'
 
 import {
 	zoom as d3zoom,
@@ -139,6 +140,24 @@ class Scatter {
 			.domain([yMax, yMin])
 			.range([this.axisOffset.y, this.settings.svgh + this.axisOffset.y])
 		this.axisLeft = axisLeft(this.yAxisScale)
+		this.cohortSamples = this.data.samples.filter(sample => 'sampleId' in sample)
+
+		this.startColor = rgb(this.config.gradientColor)
+			.brighter()
+			.brighter()
+		this.stopColor = rgb(this.config.gradientColor)
+			.darker()
+			.darker()
+		if (this.config.colorTW.q.mode === 'continuous') {
+			const [min, max] = this.cohortSamples.reduce(
+				(s, d) => [d.value < s[0] ? d.category : s[0], d.category > s[1] ? d.category : s[1]],
+				[this.cohortSamples[0].category, this.cohortSamples[0].category]
+			)
+
+			this.colorGenerator = d3Linear()
+				.domain([min, max])
+				.range([this.startColor, this.stopColor])
+		}
 
 		this.render()
 		this.setTools()
@@ -180,7 +199,8 @@ class Scatter {
 						title: 'Categories to color the samples',
 						label: 'Color',
 						vocabApi: this.app.vocabApi,
-						menuOptions: '!remove'
+						menuOptions: '!remove',
+						numericEditMenuVersion: ['continuous', 'discrete']
 					},
 					{
 						type: 'term',
@@ -227,12 +247,21 @@ class Scatter {
 						settingsKey: 'refSize',
 						title: 'It represents the area of the reference symbol in square pixels',
 						min: 0
+					},
+					{
+						label: 'Opacity',
+						type: 'number',
+						chartType: 'sampleScatter',
+						settingsKey: 'opacity',
+						title: 'It represents the opacity of the symbols',
+						min: 0,
+						max: 1
 					}
 				]
 			})
 		}
 
-		this.components.controls.on('downloadClick.scatter', () => downloadSVG(this.svg))
+		this.components.controls.on('downloadClick.scatter', () => this.downloadSVG(this.svg))
 		this.dom.toolsDiv = this.dom.controls.insert('div')
 	}
 
@@ -241,7 +270,9 @@ class Scatter {
 		const step = 30
 		let offsetX = 0
 		let offsetY = 60
-		let title = this.config.colorTW.term.name
+		let title = `${this.config.colorTW.term.name} (${this.cohortSamples.length})`
+		const colorRefCategory = this.colorLegend.get('Ref')
+
 		const colorG = legendG.append('g')
 		colorG
 			.append('text')
@@ -250,38 +281,66 @@ class Scatter {
 			.attr('y', 30)
 			.text(title)
 			.style('font-weight', 'bold')
+		if (this.config.colorTW.q.mode === 'continuous') {
+			const [min, max] = this.colorGenerator.domain()
+			const gradientScale = d3Linear()
+				.domain([min, max])
+				.range([0, 130])
+			const axis = axisBottom(gradientScale).ticks(3)
+			const axisG = colorG
+				.append('g')
+				.attr('transform', `translate(0, 70)`)
+				.call(axis)
 
-		const radius = 5
-		let count, name, color
-		for (const [key, category] of this.colorLegend) {
-			if (key == 'Ref') continue
-			color = category.color
-			count = category.sampleCount
-			name = key
-			const hidden = this.config.colorTW.q.hiddenValues ? key in this.config.colorTW.q.hiddenValues : false
-			const circleG = colorG.append('g')
-			circleG
-				.append('circle')
-				.attr('cx', offsetX)
-				.attr('cy', offsetY)
-				.attr('r', radius)
-				.style('fill', color)
+			const rect = colorG
+				.append('rect')
+				.attr('x', 0)
+				.attr('y', 50)
+				.attr('width', 130)
+				.attr('height', 20)
+				.style('fill', `url(#linear-gradient-${this.id})`)
+				.on('click', e => {
+					const menu = new Menu()
+					const input = menu.d
+						.append('input')
+						.attr('type', 'color')
+						.attr('value', this.config.gradientColor)
+						.on('change', () => {
+							this.config.gradientColor = input.node().value
+							this.startColor = rgb(this.config.gradientColor)
+								.brighter()
+								.brighter()
+							this.stopColor = rgb(this.config.gradientColor)
+								.darker()
+								.darker()
+							this.colorGenerator = d3Linear().range([this.startColor, this.stopColor])
 
-			circleG.on('click', e => this.onColorClick(e, key, category))
-			const itemG = colorG.append('g')
-			itemG
-				.append('text')
-				.attr('name', 'sjpp-scatter-legend-label')
-				.attr('x', offsetX + 10)
-				.attr('y', offsetY)
-				.text(`${name}, n=${count}`)
-				.style('font-size', '15px')
-				.style('text-decoration', hidden ? 'line-through' : 'none')
-				.attr('alignment-baseline', 'middle')
+							this.startGradient.attr('stop-color', this.startColor)
+							this.stopGradient.attr('stop-color', this.stopColor)
+							this.app.dispatch({
+								type: 'plot_edit',
+								id: this.id,
+								config: this.config
+							})
+							menu.hide()
+						})
+					menu.show(e.clientX, e.clientY, false)
+				})
+
 			offsetY += step
-			itemG.on('click', () => this.onLegendClick(this.config.colorTW, 'colorTW', key, itemG, hidden))
+		} else {
+			for (const [key, category] of this.colorLegend) {
+				if (key == 'Ref') continue
+				const color = category.color
+				const count = category.sampleCount
+				const name = key
+				const hidden = this.config.colorTW.q.hiddenValues ? key in this.config.colorTW.q.hiddenValues : false
+				const [circleG, itemG] = this.addLegendItem(colorG, color, name, count, offsetX, offsetY, hidden)
+				circleG.on('click', e => this.onColorClick(e, key, category))
+				offsetY += step
+				itemG.on('click', () => this.onLegendClick(this.config.colorTW, 'colorTW', key, itemG, hidden))
+			}
 		}
-		const colorRefCategory = this.colorLegend.get('Ref')
 		if (colorRefCategory.sampleCount > 0) {
 			offsetY = offsetY + step
 			const titleG = legendG.append('g')
@@ -335,14 +394,13 @@ class Scatter {
 				.text(title)
 				.style('font-weight', 'bold')
 
-			let index, symbol
-			color = 'gray'
+			const color = 'gray'
 			for (const [key, shape] of this.shapeLegend) {
 				if (key == 'Ref') continue
-				index = shape.shape % this.symbols.length
-				symbol = this.symbols[index].size(64)()
-				name = key
-				count = shape.sampleCount
+				const index = shape.shape % this.symbols.length
+				const symbol = this.symbols[index].size(64)()
+				const name = key
+				const count = shape.sampleCount
 				const hidden = this.config.shapeTW.q.hiddenValues ? key in this.config.shapeTW.q.hiddenValues : false
 				const itemG = shapeG.append('g')
 
@@ -363,6 +421,31 @@ class Scatter {
 				itemG.on('click', () => this.onLegendClick(this.config.shapeTW, 'shapeTW', key, itemG, hidden))
 			}
 		}
+	}
+
+	addLegendItem(g, color, name, count, x, y, hidden = false) {
+		const radius = 5
+
+		const circleG = g.append('g')
+		circleG
+			.append('circle')
+			.attr('cx', x)
+			.attr('cy', y)
+			.attr('r', radius)
+			.style('fill', color)
+
+		circleG.on('click', e => this.onColorClick(e, key, category))
+		const itemG = g.append('g')
+		itemG
+			.append('text')
+			.attr('name', 'sjpp-scatter-legend-label')
+			.attr('x', x + 10)
+			.attr('y', y)
+			.text(`${name}, n=${count}`)
+			.style('font-size', '15px')
+			.style('text-decoration', hidden ? 'line-through' : 'none')
+			.attr('alignment-baseline', 'middle')
+		return [circleG, itemG]
 	}
 
 	onColorClick(e, key, category) {
@@ -400,6 +483,126 @@ class Scatter {
 			type: 'plot_edit',
 			id: this.id,
 			config
+		})
+	}
+
+	openSurvivalPlot(term, groups) {
+		let config = {
+			chartType: 'survival',
+			term,
+			term2: {
+				term: { name: this.config.name + ' groups', type: 'samplelst' },
+				q: {
+					mode: 'custom-groupsetting',
+					groups: groups
+				}
+			},
+			insertBefore: self.id,
+			settings: {
+				survival: {
+					xTickValues: [0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30]
+				}
+			}
+		}
+		this.app.dispatch({
+			type: 'plot_create',
+			config: config
+		})
+	}
+
+	downloadSVG(svg) {
+		const link = document.createElement('a')
+		// If you don't know the name or want to use
+		// the webserver default set name = ''
+		link.setAttribute('download', 'scatter.svg')
+		document.body.appendChild(link)
+		link.click()
+		link.remove()
+		const serializer = new XMLSerializer()
+		const svg_blob = new Blob([serializer.serializeToString(svg.node())], {
+			type: 'image/svg+xml'
+		})
+		link.href = URL.createObjectURL(svg_blob)
+		link.click()
+		link.remove()
+	}
+
+	openSummaryPlot(term, groups) {
+		let config = {
+			chartType: 'summary',
+			childType: 'barchart',
+			term,
+			term2: {
+				term: { name: this.config.name + ' groups', type: 'samplelst' },
+				q: {
+					mode: 'custom-groupsetting',
+					groups: groups
+				}
+			},
+			insertBefore: self.id
+		}
+		this.app.dispatch({
+			type: 'plot_create',
+			config
+		})
+	}
+
+	getGroupsOverlay(groups) {
+		const overlayGroups = []
+		let values, tgroup, data
+		for (const [i, group] of groups.entries()) {
+			values = []
+			for (const item of group.items) {
+				data = item.__data__
+				values.push(data.sample)
+			}
+			;(tgroup = {
+				name: group.name,
+				key: 'sample',
+				values: values
+			}),
+				overlayGroups.push(tgroup)
+		}
+		return overlayGroups
+	}
+
+	getGroupvsOthersOverlay(group) {
+		const values = []
+		let data
+		for (const item of group.items) {
+			data = item.__data__
+			values.push(data.sample)
+		}
+		return [
+			{
+				name: group.name,
+				key: 'sample',
+				values
+			},
+			{
+				name: 'Others',
+				key: 'sample',
+				in: false,
+				values
+			}
+		]
+	}
+
+	async showTermsTree(div, callback, state = { tree: { usecase: { detail: 'term' } } }) {
+		this.dom.termstip.clear()
+		this.dom.termstip.showunderoffset(div.node())
+		const termdb = await import('../termdb/app')
+		termdb.appInit({
+			holder: this.dom.termstip.d,
+			vocabApi: this.app.vocabApi,
+			state,
+			tree: {
+				click_term: term => {
+					callback(term)
+					this.dom.tip.hide()
+					this.dom.termstip.hide()
+				}
+			}
 		})
 	}
 }
@@ -478,9 +681,10 @@ function setRenderers(self) {
 				.attr('height', self.settings.svgh)
 				.attr('fill', 'white')
 			//Adding clip path
-			const idclip = `sjpp_clip_${Date.now()}`
-			svg
-				.append('defs')
+			const id = `${Date.now()}`
+			const idclip = `sjpp_clip_${id}`
+			self.defs = svg.append('defs')
+			self.defs
 				.append('clipPath')
 				.attr('id', idclip)
 				.append('rect')
@@ -488,6 +692,22 @@ function setRenderers(self) {
 				.attr('y', self.axisOffset.y - 10)
 				.attr('width', self.settings.svgw + self.axisOffset.x)
 				.attr('height', self.settings.svgh + 30)
+
+			const gradient = self.defs
+				.append('linearGradient')
+				.attr('id', `linear-gradient-${self.id}`)
+				.attr('x1', '0%')
+				.attr('y1', '0%')
+				.attr('x2', '100%')
+				.attr('y2', '0%')
+			self.startGradient = gradient
+				.append('stop')
+				.attr('offset', '0%')
+				.attr('stop-color', self.startColor)
+			self.stopGradient = gradient
+				.append('stop')
+				.attr('offset', '100%')
+				.attr('stop-color', self.stopColor)
 
 			mainG.attr('clip-path', `url(#${idclip})`)
 			xAxis.call(self.axisBottom)
@@ -504,6 +724,7 @@ function setRenderers(self) {
 			yAxis = axisG.select('.sjpcb-scatter-y-axis')
 			legendG = svg.select('.sjpcb-scatter-legend')
 		}
+
 		if (self.settings.showAxes) axisG.style('opacity', 1)
 		else axisG.style('opacity', 0)
 
@@ -557,7 +778,7 @@ function setRenderers(self) {
 				self.lasso
 					.items()
 					.attr('d', c => getShape(self, c, 1 / 2))
-					.style('fill-opacity', c => (getOpacity(self, c) == 1 ? 0.5 : 0))
+					.style('fill-opacity', c => (getOpacity(self, c) != 0 ? 0.5 : 0))
 					.classed('not_possible', true)
 					.classed('selected', false)
 			}
@@ -578,7 +799,7 @@ function setRenderers(self) {
 				self.lasso
 					.notPossibleItems()
 					.attr('d', c => getShape(self, c, 1 / 2))
-					.style('fill-opacity', c => (getOpacity(self, c) == 1 ? 0.5 : 0))
+					.style('fill-opacity', c => (getOpacity(self, c) != 0 ? 0.5 : 0))
 					.classed('not_possible', true)
 					.classed('possible', false)
 			}
@@ -813,11 +1034,10 @@ function setRenderers(self) {
 					nav: { header_mode: 'hide_search' },
 					tree: { usecase: { target: 'survival', detail: 'term' } }
 				}
-				showTermsTree(
-					self,
+				self.showTermsTree(
 					survivalDiv,
 					term => {
-						openSurvivalPlot(self, term, getGroupsOverlay(self.config.groups))
+						self.openSurvivalPlot(term, self.getGroupsOverlay(self.config.groups))
 					},
 					state
 				)
@@ -833,8 +1053,8 @@ function setRenderers(self) {
 			.style('float', 'right')
 
 		summarizeDiv.on('click', async e => {
-			showTermsTree(self, summarizeDiv, term => {
-				openSummaryPlot(self, term, getGroupsOverlay(self.config.groups))
+			self.showTermsTree(summarizeDiv, term => {
+				self.openSummaryPlot(term, self.getGroupsOverlay(self.config.groups))
 			})
 		})
 		row = menuDiv
@@ -891,11 +1111,10 @@ function setRenderers(self) {
 					nav: { header_mode: 'hide_search' },
 					tree: { usecase: { target: 'survival', detail: 'term' } }
 				}
-				showTermsTree(
-					self,
+				self.showTermsTree(
 					survivalDiv,
 					term => {
-						openSurvivalPlot(self, term, getGroupvsOthersOverlay(group))
+						self.openSurvivalPlot(term, self.getGroupvsOthersOverlay(group))
 					},
 					state
 				)
@@ -911,7 +1130,7 @@ function setRenderers(self) {
 			.style('float', 'right')
 
 		summarizeDiv.on('click', async e => {
-			showTermsTree(self, summarizeDiv, term => openSummaryPlot(self, term, getGroupvsOthersOverlay(group)))
+			self.showTermsTree(summarizeDiv, term => self.openSummaryPlot(term, self.getGroupvsOthersOverlay(group)))
 		})
 		const deleteDiv = menuDiv
 			.append('div')
@@ -1023,22 +1242,32 @@ function setRenderers(self) {
 	}
 }
 
+function distance(x1, y1, x2, y2) {
+	const x = x2 - x1
+	const y = y2 - y1
+	const distance = Math.sqrt(Math.pow(x, 2) + Math.pow(y, 2))
+	return distance
+}
+
 function setInteractivity(self) {
 	self.mouseover = function(event) {
-		if (event.target.tagName == 'path') {
-			const d = event.target.__data__
-			if (!d) return
-			if (!('sampleId' in d) && (!self.settings.showRef || self.settings.refSize == 0)) return
+		if (event.target.__data__) {
+			const s2 = event.target.__data__
+			const samples = self.data.samples.filter(s => distance(s.x, s.y, s2.x, s2.y) < 0.2)
+			const rows = []
 			self.dom.tooltip.clear().hide()
 
-			const rows = [{ k: 'Sample', v: d.sample }]
-			const cat_info = getCategoryInfo(d, 'category')
-			rows.push({ k: self.config.colorTW.term.name, v: cat_info })
-			if (self.config.shapeTW) {
-				const cat_info = getCategoryInfo(d, 'shape')
-				rows.push({ k: self.config.shapeTW.term.name, v: cat_info })
+			for (const d of samples) {
+				if (!('sampleId' in d) && (!self.settings.showRef || self.settings.refSize == 0)) continue
+				rows.push({ k: 'Sample', v: d.sample })
+				const cat_info = getCategoryInfo(d, 'category')
+				rows.push({ k: self.config.colorTW.term.name, v: cat_info })
+				if (self.config.shapeTW) {
+					const cat_info = getCategoryInfo(d, 'shape')
+					rows.push({ k: self.config.shapeTW.term.name, v: cat_info })
+				}
+				if ('info' in d) for (const [k, v] of Object.entries(d.info)) rows.push({ k: k, v: v })
 			}
-			if ('info' in d) for (const [k, v] of Object.entries(d.info)) rows.push({ k: k, v: v })
 			make_table_2col(self.dom.tooltip.d, rows)
 			self.dom.tooltip.show(event.clientX, event.clientY)
 		} else self.dom.tooltip.hide()
@@ -1061,6 +1290,7 @@ export async function getPlotConfig(opts, app) {
 		if (opts.shapeTW) await fillTermWrapper(opts.shapeTW, app.vocabApi)
 		const config = {
 			groups: [],
+			gradientColor: '#008000',
 			settings: {
 				controls: {
 					isOpen: false // control panel is hidden by default
@@ -1072,7 +1302,8 @@ export async function getPlotConfig(opts, app) {
 					svgh: 550,
 					axisTitleFontSize: 16,
 					showAxes: false,
-					showRef: true
+					showRef: true,
+					opacity: 1
 				}
 			}
 		}
@@ -1094,139 +1325,23 @@ function getCategoryInfo(d, category) {
 }
 
 function getColor(self, c) {
+	if (self.config.colorTW.q.mode == 'continuous' && 'sampleId' in c) return self.colorGenerator(c.category)
 	const color = self.colorLegend.get(c.category).color
+
 	return color
 }
 
 function getOpacity(self, c) {
-	if ('sampleId' in c) return c.hidden['category'] || c.hidden['shape'] ? 0 : 1
-	return self.settings.showRef ? 1 : 0
+	if ('sampleId' in c) return c.hidden['category'] || c.hidden['shape'] ? 0 : self.settings.opacity
+
+	const refOpacity = self.settings.showRef ? self.settings.opacity : 0
+	return refOpacity
 }
 
 function getShape(self, c, factor = 1) {
 	const index = self.shapeLegend.get(c.shape).shape % self.symbols.length
 	const size = 'sampleId' in c ? self.settings.size : self.settings.refSize
 	return self.symbols[index].size((size * factor) / self.k)()
-}
-
-function openSurvivalPlot(self, term, groups) {
-	let config = {
-		chartType: 'survival',
-		term,
-		term2: {
-			term: { name: self.config.name + ' groups', type: 'samplelst' },
-			q: {
-				mode: 'custom-groupsetting',
-				groups: groups
-			}
-		},
-		insertBefore: self.id,
-		settings: {
-			survival: {
-				xTickValues: [0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30]
-			}
-		}
-	}
-	self.app.dispatch({
-		type: 'plot_create',
-		config: config
-	})
-}
-
-function downloadSVG(svg) {
-	const link = document.createElement('a')
-	// If you don't know the name or want to use
-	// the webserver default set name = ''
-	link.setAttribute('download', 'scatter.svg')
-	document.body.appendChild(link)
-	link.click()
-	link.remove()
-	const serializer = new XMLSerializer()
-	const svg_blob = new Blob([serializer.serializeToString(svg.node())], {
-		type: 'image/svg+xml'
-	})
-	link.href = URL.createObjectURL(svg_blob)
-	link.click()
-	link.remove()
-}
-
-function openSummaryPlot(self, term, groups) {
-	let config = {
-		chartType: 'summary',
-		childType: 'barchart',
-		term,
-		term2: {
-			term: { name: self.config.name + ' groups', type: 'samplelst' },
-			q: {
-				mode: 'custom-groupsetting',
-				groups: groups
-			}
-		},
-		insertBefore: self.id
-	}
-	self.app.dispatch({
-		type: 'plot_create',
-		config
-	})
-}
-
-function getGroupsOverlay(groups) {
-	const overlayGroups = []
-	let values, tgroup, data
-	for (const [i, group] of groups.entries()) {
-		values = []
-		for (const item of group.items) {
-			data = item.__data__
-			values.push(data.sample)
-		}
-		;(tgroup = {
-			name: group.name,
-			key: 'sample',
-			values: values
-		}),
-			overlayGroups.push(tgroup)
-	}
-	return overlayGroups
-}
-
-function getGroupvsOthersOverlay(group) {
-	const values = []
-	let data
-	for (const item of group.items) {
-		data = item.__data__
-		values.push(data.sample)
-	}
-	return [
-		{
-			name: group.name,
-			key: 'sample',
-			values
-		},
-		{
-			name: 'Others',
-			key: 'sample',
-			in: false,
-			values
-		}
-	]
-}
-
-async function showTermsTree(self, div, callback, state = { tree: { usecase: { detail: 'term' } } }) {
-	self.dom.termstip.clear()
-	self.dom.termstip.showunderoffset(div.node())
-	const termdb = await import('../termdb/app')
-	termdb.appInit({
-		holder: self.dom.termstip.d,
-		vocabApi: self.app.vocabApi,
-		state,
-		tree: {
-			click_term: term => {
-				callback(term)
-				self.dom.tip.hide()
-				self.dom.termstip.hide()
-			}
-		}
-	})
 }
 
 function add_to_filter(self, group) {

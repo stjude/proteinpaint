@@ -364,47 +364,73 @@ opts{} options to tweak the query, see const default_opts = below
 		for (const r of rows) {
 			if (!smap.has(r.sample)) smap.set(r.sample, { sample: r.sample })
 			const s = smap.get(r.sample)
-			s[`key${r.termNum}`] = r.key
-			s[`val${r.termNum}`] = r.value
+			// NOTE: condition terms may have more than one data row per sample,
+			// so must use an array to capture all possible term key-values for each sample
+			const k = `key${r.termNum}`
+			if (!(k in s)) s[k] = []
+			s[k].push(r)
 		}
 		const lst = []
 		const scounts = new Map()
-		for (const s of smap.values()) {
+		for (const v of smap.values()) {
 			// series term (term1)
 			// discard sample if not annotated for term1
-			if (!('key1' in s)) continue
+			if (!('key1' in v)) continue
 
 			// chart term (term0)
-			if (q.term0_q) {
+			if (q.term0_q && q.term0_id) {
 				// term0 is defined, discard sample if not annotated for term0
-				if (!('key0' in s)) continue
+				// but only if dictionary term, implied by having a term.id
+				if (!('key0' in v)) continue
 			} else {
 				// term0 is not defined, supply empty string default
-				s.key0 = ''
-				s.val0 = ''
+				v.key0 = [{ key: '', value: '' }]
 			}
 
 			// overlay term (term2)
-			if (q.term2_q) {
+			if (q.term2_q && q.term2_id) {
 				// term2 is defined, discard sample if not annotated for term2
-				if (!('key2' in s)) continue
+				// but only if dictionary term, implied by having a term.id
+				if (!('key2' in v)) continue
 			} else {
 				// term2 is not defined, supply empty string default
-				s.key2 = ''
-				s.val2 = ''
+				v.key2 = [{ key: '', value: '' }]
 			}
 
-			if (!opts.groupby) {
-				lst.push(s)
-			} else {
-				// assume that the groupby option is used to get samplecounts
-				if (!scounts.has(s[opts.groupby])) {
-					const item = Object.assign({ samplecount: 0 }, s)
-					lst.push(item)
-					scounts.set(s[opts.groupby], item)
+			v.rows = []
+			// create a separate data row for each combination of unique term annotations
+			// NOTE: when there is only 1 unique annotated value by term for each sample,
+			// then only one row will be created. This will not be the case for condition terms
+			// where a sample is annotated by multiple grades or conditions.
+			for (const v0 of v.key0) {
+				for (const v1 of v.key1) {
+					for (const v2 of v.key2) {
+						v.rows.push({
+							sample: v.sample,
+							key0: v0.key,
+							val0: v0.value,
+							key1: v1.key,
+							val1: v1.value,
+							key2: v2.key,
+							val2: v2.value
+						})
+					}
 				}
-				const l = scounts.get(s[opts.groupby])
-				l.samplecount++
+			}
+
+			for (const s of v.rows) {
+				if (!opts.groupby) {
+					lst.push(s)
+				} else {
+					// assume that the groupby option is used to get samplecounts
+					if (!scounts.has(s[opts.groupby])) {
+						const item = Object.assign({ samplecount: 0 }, s)
+						lst.push(item)
+						scounts.set(s[opts.groupby], item)
+					}
+					const l = scounts.get(s[opts.groupby])
+					l.samplecount++
+				}
 			}
 		}
 		return !opts.withCTEs ? lst : { lst, CTE0, CTE1, CTE2, filter }

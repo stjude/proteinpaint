@@ -230,7 +230,8 @@ function setRenderers(self) {
 				// already scrolling. the style has been applied from a previous click. do not reset
 			} else {
 				div
-					.style('height', scrollDivMaxHeight)
+					.style('max-height', scrollDivMaxHeight)
+					.style('padding', '10px 10px 20px 10px')
 					.style('resize', 'vertical')
 					.classed('sjpp_hide_scrollbar', true)
 

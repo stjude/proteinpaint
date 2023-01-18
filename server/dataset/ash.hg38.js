@@ -28,7 +28,7 @@ module.exports = {
 		],
 
 		// small list of terms for sunburst rings
-		sunburst_ids: [{ id: 'Lineage', q: {} }, { id: 'Primary_subtype', q: {} }],
+		sunburst_twLst: [{ id: 'Lineage', q: {} }, { id: 'Primary_subtype', q: {} }],
 
 		// quick fix: flag to indicate availability of these fields, so as to create new columns in sample table
 		sampleHasSsmReadDepth: true, // corresponds to .ssm_read_depth{} of a sample

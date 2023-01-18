@@ -1,8 +1,7 @@
 mkdir -p ~/data/tp/
 cd ~/data/tp
-mkdir -p genomes/ anno/db/ hg19/ hg38/ utils/meme/motif_databases/HUMAN/
+mkdir -p genomes/ anno/db/ anno/msigdb/ hg19/ hg38/ utils/meme/motif_databases/HUMAN/
 
-# save following lines to a shell script and run under ~/data/tp/
 
 cd genomes/
 curl https://proteinpaint.stjude.org/ppGenomes/hg19.gz -O
@@ -38,6 +37,9 @@ tar zxvf hicfiles.tgz
 
 cd db/
 curl https://proteinpaint.stjude.org/ppSupport/db/proteindomain.db -O
+
+cd ../msigdb/
+curl https://proteinpaint.stjude.org/ppSupport/msigdb/db -O
 
 cd ../../hg19/
 curl https://pecan.stjude.cloud/static/hg19/clinvar.hg19.vcf.gz -O

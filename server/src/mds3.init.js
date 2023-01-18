@@ -65,6 +65,8 @@ export async function init(ds, genome, _servconfig, app = null, basepath = null)
 		mayAdd_mayGetGeneVariantData(ds, genome)
 	}
 
+	mayValidateAssayAvailability(ds)
+
 	// the "refresh" attribute on ds.cohort.db should be set in serverconfig.json
 	// for a genome dataset, using "updateAttr: [[...]]
 	if (ds.cohort?.db?.refresh && app) setDbRefreshRoute(ds, app, basepath)
@@ -479,10 +481,6 @@ export async function snvindelByRangeGetter_bcf(ds, genome) {
 	return async param => {
 		if (!Array.isArray(param.rglst)) throw 'q.rglst[] is not array'
 		if (param.rglst.length == 0) throw 'q.rglst[] blank array'
-
-		if (param.infoFilter) {
-			param.infoFilter = JSON.parse(param.infoFilter)
-		}
 
 		const bcfArgs = [
 			'query',
@@ -1145,4 +1143,47 @@ async function getGenecnvByTerm(ds, term, genome, q) {
 		return await ds.queries.geneCnv.bygene.get(arg)
 	}
 	throw 'unknown queries.geneCnv method'
+}
+
+function mayValidateAssayAvailability(ds) {
+	if (!ds.assayAvailability) return
+	// has this setting. cache sample list
+	if (ds.assayAvailability.byDt) {
+		for (const key in ds.assayAvailability.byDt) {
+			const dt = ds.assayAvailability.byDt[key]
+
+			if (dt.byOrigin) {
+				for (const key in dt.byOrigin) {
+					const sub_dt = dt.byOrigin[key]
+					// validate structure
+					// require .yes{} .no{}
+					if (!sub_dt.yes || !sub_dt.no || !sub_dt.term_id)
+						throw 'ds.assayAvailability.byDt.*.byOrigin properties require .term_id .yes{} .no{}'
+					getAssayAvailablility(ds, sub_dt)
+				}
+			} else {
+				// validate structure
+				// require .yes{} .no{}
+				if (!dt.yes || !dt.no || !dt.term_id) throw 'ds.assayAvailability.byDt properties require .term_id .yes{} .no{}'
+				getAssayAvailablility(ds, dt)
+			}
+		}
+	}
+}
+
+function getAssayAvailablility(ds, dt) {
+	// cache sample id list for each category, set .yesSamples(), .noSamples()
+	dt.yesSamples = new Set()
+	dt.noSamples = new Set()
+
+	const sql = `SELECT sample, value
+				FROM anno_categorical
+				WHERE term_id = '${dt.term_id}'`
+
+	const rows = ds.cohort.db.connection.prepare(sql).all()
+	for (const r of rows) {
+		if (dt.yes.value.includes(r.value)) dt.yesSamples.add(r.sample)
+		else if (dt.no.value.includes(r.value)) dt.noSamples.add(r.sample)
+		//else throw `value of term ${dt.term_id} is invalid`
+	}
 }

@@ -47,7 +47,7 @@ export async function openSandbox(element, pageArgs) {
 		? await dofetch3(`/cardsjson?jsonfile=${element.sandboxJson}`)
 		: await dofetch3(`/cardsjson?file=${element.sandboxHtml}`)
 	if (res.error) {
-		sayerror(holder.append('div'), res.error)
+		sayerror(sandboxDiv.body.insert('div', 'div'), res.error)
 		return
 	}
 
@@ -88,7 +88,7 @@ async function openNestedCardSandbox(nestedCard, sandboxDiv, pageArgs) {
 					? await dofetch3(`/cardsjson?jsonfile=${child.sandboxJson}`)
 					: await dofetch3(`/cardsjson?file=${child.sandboxHtml}`)
 				if (res.error) {
-					sayerror(holder.append('div'), res.error)
+					sayerror(sandboxDiv.body.insert('div', 'div'), res.error)
 					return
 				}
 

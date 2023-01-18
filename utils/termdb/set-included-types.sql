@@ -1,4 +1,5 @@
-PRAGMA foreign_keys=ON;
+
+
 
 --------------------------------------
 -- populate the included_types column

@@ -4,7 +4,7 @@ const path = require('path')
 const utils = require('./utils')
 const serverconfig = require('./serverconfig')
 const d3scale = require('d3-scale')
-const schemeCategory10 = require('d3-scale-chromatic').schemeCategory10
+import { schemeCategory20 } from '#shared/common'
 const { mclass } = require('#shared/common')
 const { rgb } = require('d3-color')
 
@@ -142,6 +142,7 @@ export async function trigger_getSampleScatter(q, res, ds, genome) {
 		const result = await colorAndShapeSamples(refSamples, cohortSamples, data, q)
 		res.send(result)
 	} catch (e) {
+		if (e.stack) console.log(e.stack)
 		res.send({ error: e.message || e })
 	}
 }
@@ -170,11 +171,15 @@ async function colorAndShapeSamples(refSamples, cohortSamples, data, q) {
 
 	for (const sample of cohortSamples) {
 		const dbSample = data.samples[sample.sampleId.toString()]
+
 		sample.category_info = {}
 		sample.hidden = {}
+		if (q.colorTW.q?.mode === 'continuous') sample.category = dbSample[q.colorTW.term.id].value
+		else {
+			assignCategory(dbSample, sample, q.colorTW, colorMap, 'category')
+			if (!('category' in sample)) continue
+		}
 
-		assignCategory(dbSample, sample, q.colorTW, colorMap, 'category')
-		if (!('category' in sample)) continue
 		sample.shape = 'Ref'
 		if (q.shapeTW) {
 			assignCategory(dbSample, sample, q.shapeTW, shapeMap, 'shape')
@@ -182,44 +187,63 @@ async function colorAndShapeSamples(refSamples, cohortSamples, data, q) {
 		}
 		samples.push(sample)
 	}
-
-	const k2c = d3scale.scaleOrdinal(schemeCategory10)
-	for (const [category, value] of colorMap) {
-		const tvalue = q.colorTW.term.values?.[category]
-		if (tvalue?.color) value.color = tvalue.color
-		else if (data.refs?.byTermId[q.colorTW.term.id]?.bins) {
-			const bin = data.refs.byTermId[q.colorTW.term.id].bins.find(bin => bin.name === category)
-			value.color = bin.color
-		} else if (q.colorTW.term.type == 'geneVariant') value.color = mclass[value.mclass]?.color || 'black'
-		// should be invalid_mclass_color
-		else value.color = k2c(category)
+	if (q.colorTW.q.mode !== 'continuous') {
+		const k2c = d3scale.scaleOrdinal(schemeCategory20)
+		for (const [category, value] of colorMap) {
+			const tvalue = q.colorTW.term.values?.[category]
+			if (tvalue?.color) value.color = tvalue.color
+			else if (data.refs?.byTermId[q.colorTW.term.id]?.bins) {
+				const bin = data.refs.byTermId[q.colorTW.term.id].bins.find(bin => bin.name === category)
+				value.color = bin.color
+			} else if (q.colorTW.term.type == 'geneVariant') value.color = mclass[value.mclass]?.color || 'black'
+			// should be invalid_mclass_color
+			else value.color = k2c(category)
+		}
 	}
-	shapeMap.set('Ref', { sampleCount: refSamples.length, shape: 0 })
+	//else
+	//sample.value = dbSample.value
+
 	let i = 1
 	for (const [category, value] of shapeMap) {
 		if (!('shape' in value)) value.shape = i
 		i++
 	}
 
-	//colorMap.set(noCategory, { sampleCount: noColorCount, color: defaultColor })
-	colorMap.set('Ref', { sampleCount: refSamples.length, color: refColor })
+	const colorLegend = order(colorMap, q.colorTW, data.refs)
+	colorLegend.push(['Ref', { sampleCount: refSamples.length, color: refColor }])
+	const shapeLegend = order(shapeMap, q.shapeTW, data.refs)
+	shapeLegend.push(['Ref', { sampleCount: refSamples.length, shape: 0 }])
+	console.log('shapeLegend', shapeLegend)
 
 	return {
 		samples,
-		colorLegend: order(colorMap, q.colorTW, data.refs),
-		shapeLegend: order(shapeMap, q.shapeTW, data.refs)
+		colorLegend: Object.fromEntries(colorLegend),
+		shapeLegend: Object.fromEntries(shapeLegend)
 	}
 }
 
 function order(map, tw, refs) {
-	if (!tw) return Object.fromEntries(map)
+	let entries = []
+	if (!tw || map.size == 0) return entries
+	if (!refs?.byTermId[tw.term.id]?.bins) {
+		entries = [...map.entries()]
+		entries.sort((a, b) => {
+			const v1 = tw.term.values?.[a[0]]
+			if (v1 && 'order' in v1) {
+				const v2 = tw.term.values[b[0]]
 
-	if (!refs?.byTermId[tw.term.id]?.bins) return Object.fromEntries(map)
-	const bins = refs.byTermId[tw.term.id].bins
-	const entries = []
-	for (const bin of bins) if (map.get(bin.name)) entries.push([bin.name, map.get(bin.name)])
-	entries.push(['Ref', map.get('Ref')])
-	return Object.fromEntries(entries)
+				if (v1.order < v2.order) return -1
+				return 1
+			} else {
+				if (a[1].sampleCount > b[1].sampleCount) return -1
+				else return 1
+			}
+		})
+	} else {
+		const bins = refs.byTermId[tw.term.id].bins
+		for (const bin of bins) if (map.get(bin.name)) entries.push([bin.name, map.get(bin.name)])
+	}
+	return entries
 }
 
 function assignCategory(dbSample, sample, tw, categoryMap, category) {

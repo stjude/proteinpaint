@@ -79,6 +79,7 @@ tape('Render PNET scatter plot', function(test) {
 		const scatterDiv = scatter.Inner.dom.holder
 		testPlot()
 		testLegendTitle()
+		testCreateGroup()
 		//testAxisDimension(scatter)
 		//test.fail('...')
 		if (test._ok) scatter.Inner.app.destroy()
@@ -97,15 +98,71 @@ tape('Render PNET scatter plot', function(test) {
 			const legendG = scatterDiv.select('.sjpcb-scatter-legend')
 			test.true(legendG != null, 'Should have a legend')
 			//scatter.Inner.config.colorTW.id = category legend header
-			test.equal(
-				legendG.select('#legendTitle').text(),
-				scatter.Inner.config.colorTW.id,
-				`Legend title should be ${scatter.Inner.config.colorTW.id}`
+			test.true(
+				legendG
+					.select('#legendTitle')
+					.text()
+					.startsWith(scatter.Inner.config.colorTW.id),
+				`Legend title should start with ${scatter.Inner.config.colorTW.id}`
 			)
 		}
 
-		function testAxisDimension(scatter) {
-			//TODO
+		function testCreateGroup() {
+			const serieG = scatterDiv.select('.sjpcb-scatter-series')
+			const samples = serieG.selectAll('path').filter(s => s.category === 'ETMR')
+			console.log(samples)
+			test.true(28 == samples.size(), `Group should have 28 symbols.`)
+			const self = scatter.Inner
+			const group = {
+				name: `Group 1`,
+				items: samples,
+				index: 0
+			}
+			self.config.groups.push(group)
+			//Should be replaced by
+			const term = {
+				id: 'Event-free survival'
+			}
+			self.openSurvivalPlot(term, self.getGroupvsOthersOverlay(group))
+		}
+	}
+})
+
+tape('PNET plot + filter + colorTW=gene', function(test) {
+	test.timeoutAfter(3000)
+
+	const s2 = JSON.parse(JSON.stringify(state))
+	s2.termfilter = {
+		filter: {
+			type: 'tvslst',
+			join: '',
+			in: true,
+			lst: [{ type: 'tvs', tvs: { term: { id: 'Gender' }, values: [{ key: 'M', label: 'Male' }] } }]
+		}
+	}
+	s2.plots[0].colorTW = { term: { type: 'geneVariant', name: 'TP53' } }
+
+	runpp({
+		state: s2,
+		sampleScatter: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+
+	function runTests(scatter) {
+		const scatterDiv = scatter.Inner.dom.holder
+		testPlot()
+		if (test._ok) scatter.Inner.app.destroy()
+		test.end()
+		function testPlot() {
+			const serieG = scatterDiv.select('.sjpcb-scatter-series')
+			const numSymbols = serieG.selectAll('path').size()
+			test.true(
+				numSymbols == scatter.Inner.data.samples.length,
+				`Should be ${scatter.Inner.data.samples.length}. Rendered ${numSymbols} symbols.`
+			)
 		}
 	}
 })
@@ -127,11 +184,10 @@ tape('Click behavior of category legend', function(test) {
 		const testColor = d3color.rgb(testCategory.color)
 
 		const scatterDiv = scatter.Inner.dom.holder
-		const categoryLegendG = scatterDiv
-			.selectAll('g')
+		const categoryLegend = scatterDiv
+			.selectAll('text[name="sjpp-scatter-legend-label"]')
 			.nodes()
-			.find(c => c.childNodes[0].style.fill == testColor)
-
+			.find(c => c.innerHTML.startsWith('ETMR'))
 		helpers
 			.rideInit({ arg: scatter, bus: scatter, eventType: 'postRender.test' })
 			.run(testClickedCategory)
@@ -140,7 +196,7 @@ tape('Click behavior of category legend', function(test) {
 			.done(test)
 
 		function testClickedCategory() {
-			categoryLegendG.dispatchEvent(new Event('click'))
+			categoryLegend.dispatchEvent(new Event('click'))
 			const findColorDots = scatterDiv
 				.selectAll('.sjpcb-scatter-series > path')
 				.nodes()
@@ -149,7 +205,7 @@ tape('Click behavior of category legend', function(test) {
 		}
 
 		// function clickCategory(){
-		// 	categoryLegendG.dispatchEvent(new Event('click'))
+		// 	categoryLegend.dispatchEvent(new Event('click'))
 		// }
 
 		// function testUnclickedCategory(){

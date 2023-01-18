@@ -11,6 +11,7 @@ export class MatrixControls {
 	constructor(opts, appState) {
 		this.type = 'matrixControls'
 		this.opts = opts
+		this.parent = opts.parent
 		/* 
 			for now, use the recoverInit at the global,
 			may use subapp state/recovery later
@@ -21,19 +22,19 @@ export class MatrixControls {
 	}
 
 	setButtons() {
-		this.opts.holder
+		this.btns = this.opts.holder
 			.style('margin', '10px 10px 20px 10px')
 			.selectAll('button')
 			.data([
 				{
 					value: 'samples',
-					label: 'Samples',
-					customHeaderRows: (matrix, table) => this.prependInfo(table, 'Samples count', matrix.sampleOrder.length)
+					label: `Samples`,
+					getCount: () => this.parent.sampleOrder.length
 				},
 				{
 					value: 'anno',
-					label: 'Terms',
-					customHeaderRows: (matrix, table) => this.prependInfo(table, 'Terms count', matrix.termOrder.length),
+					label: `Terms`,
+					getCount: () => this.parent.termOrder.length,
 					customInputs: this.appendTermInputs
 				},
 				{ value: 'cols', label: 'Column layout' },
@@ -66,6 +67,12 @@ export class MatrixControls {
 					chartType: 'matrix',
 					settingsKey: 'sortSamplesBy',
 					options: [{ label: 'as-listed', value: 'asListed' }, { label: 'selected terms', value: 'selectedTerms' }]
+				},
+				{
+					label: 'Maximum #samples',
+					type: 'number',
+					chartType: 'matrix',
+					settingsKey: 'maxSample'
 				},
 				{
 					label: 'Group samples by',
@@ -264,6 +271,7 @@ export class MatrixControls {
 
 	main() {
 		//this.recover.track()
+		this.btns.text(d => d.label + (d.getCount ? ` (${d.getCount()})` : ''))
 	}
 
 	async callback(event, d) {
@@ -271,7 +279,7 @@ export class MatrixControls {
 		const app = this.opts.app
 		const parent = this.opts.parent
 		const table = app.tip.clear().d.append('table')
-		if (d.customHeaderRows) d.customHeaderRows(parent, table)
+		//if (d.customHeaderRows) d.customHeaderRows(parent, table)
 
 		for (const inputConfig of this.inputGroups[d.value]) {
 			const input = await initByInput[inputConfig.type](
@@ -309,7 +317,7 @@ export class MatrixControls {
 			self.addTermGroupSelector(app, parent, table.append('tr'))
 		}
 		self.addGeneSearch(app, parent, table.append('tr'))
-		if (app.opts.genome.termdbs) {
+		if (app.opts.genome?.termdbs) {
 			for (const key in app.opts.genome.termdbs) {
 				self.addMsigdbMenu(app, parent, table.append('tr'), key)
 			}
@@ -499,13 +507,11 @@ class Recover {
 	}
 
 	goto(i) {
-		console.log()
 		if (i < 0 && this.currIndex + i > -1) this.currIndex += i
 		else if (i > 0 && this.currIndex + i < this.history.length) this.currIndex += i
 		else return
 		this.isRecovering = true
 		const state = this.history[this.currIndex]
-		console.log(227, i, this.currIndex, state)
 		this.app.dispatch({ type: 'app_refresh', state })
 	}
 }

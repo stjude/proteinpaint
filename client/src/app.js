@@ -1529,8 +1529,14 @@ async function launchmass(arg, app) {
 	// arg is from runpp(arg)
 	const opts = arg.mass
 	if (!opts.holder) opts.holder = app.holder0
-	if (opts.state && opts.state.genome) {
-		opts.genome = app.genomes[opts.state.genome]
+	// if genome is defined, attach client-side genome object to opts to support gene search etc
+	if (opts.state) {
+		if (opts.state.genome) {
+			// TODO verify when is "state.genome" defined. if not can take it out
+			opts.genome = app.genomes[opts.state.genome]
+		} else if (opts.state?.vocab?.genome) {
+			opts.genome = app.genomes[opts.state.vocab.genome]
+		}
 	}
 	opts.getDatasetAccessToken = arg.getDatasetAccessToken
 	opts.addLoginCallback = arg.addLoginCallback

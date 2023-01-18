@@ -109,7 +109,7 @@ export async function renderTable({
 				.attr('type', 'checkbox')
 				.on('change', () => {
 					tbody.selectAll('input').property('checked', checkboxH.node().checked)
-					enableButtons()
+					if (buttons) enableButtons()
 				})
 			checkboxH.node().checked = selectAll
 		}

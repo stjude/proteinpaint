@@ -1,10 +1,20 @@
 # Change Log
 
 All notable changes to this project will be documented in this file.
+## 2.9.0
+
+- Improved matrix sorting
+
+GDC-related
+- OncoMatrix analysis card prototyped
+
+## 2.8.x
+
+- Release testing only for continuous delivery
 
 ## 2.7.3
 
-Fix the duplicate rows in about:filesize in bam track 
+- Fix the duplicate rows in about:filesize in bam track 
 
 ## 2.7.2
 

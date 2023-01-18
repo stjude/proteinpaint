@@ -128,7 +128,7 @@ async function maySetAuthRoutes(app, basepath = '', _serverconfig = null) {
 			const [type, pwd] = req.headers.authorization.split(' ')
 			if (type.toLowerCase() != 'basic') throw `unsupported authorization type='${type}', allowed: 'Basic'`
 			if (Buffer.from(pwd, 'base64').toString() != creds[q.dslabel].password) throw 'invalid password'
-			await setSession(q, res, sessions, sessionsFile, req)
+			await setSession(q, res, sessions, sessionsFile, '', req)
 			res.send({ status: 'ok' })
 		} catch (e) {
 			res.status(code)

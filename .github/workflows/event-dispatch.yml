@@ -1,0 +1,34 @@
+name: "Event dispatch"
+
+on:
+  workflow_dispatch
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: get pp version
+      id: pp-version
+      uses: martinbeentjes/npm-get-version-action@main
+
+    - name: get front version
+      id: front-version
+      uses: martinbeentjes/npm-get-version-action@main
+      with:
+        path: front
+
+    - name: get server version
+      id: server-version
+      uses: martinbeentjes/npm-get-version-action@main
+      with:
+        path: server
+
+    - name: Run deploy action
+      uses: peter-evans/repository-dispatch@v2
+      with:
+        token: ${{ secrets.PAT }}
+        repository: stjude/sj-pp
+        event-type: version-update
+        client-payload: '{"pp_version": "${{ steps.pp-version.outputs.current-version }}", "front_version": "${{ steps.front-version.outputs.current-version }}", "server_version": "${{ steps.server-version.outputs.current-version}}"}'

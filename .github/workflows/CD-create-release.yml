@@ -2,12 +2,68 @@ name: "Create Release"
 
 on:
   workflow_dispatch:
+    inputs:
+      release_type:
+        type: choice
+        description: Release type
+        options:
+          - prerelease
+          - prepatch
+          - preminor
+          - premajor
+          - major
+          - minor
+          - patch
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
     timeout-minutes: 20
     steps:
-    # Runs a single command using the runners shell
-    - name: Send greeting
-      run: echo "Hello world!"
+      - uses: actions/checkout@v3
+        with:
+          token: ${{ secrets.PAT }}
+
+      - name: Fetch All Tags
+        run: git fetch --all --tags
+
+      - name: Run version.sh
+        run: ./build/ci-version-update.sh ${{ github.event.inputs.release_type }}
+
+      # Setup .npmrc file to publish to GitHub Packages
+      - uses: actions/setup-node@v3
+        with:
+          node-version: '16'
+          registry-url: 'https://npm.pkg.github.com'
+          scope: '@stjude'
+      - run: npm ci
+      - run: ./build/ci-npm-publish.sh ${{ github.event.inputs.release_type }}
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: get pp version
+        id: pp-version
+        uses: martinbeentjes/npm-get-version-action@main
+
+      - name: get front version
+        id: front-version
+        uses: martinbeentjes/npm-get-version-action@main
+        with:
+          path: front
+
+      - name: get server version
+        id: server-version
+        uses: martinbeentjes/npm-get-version-action@main
+        with:
+          path: server
+
+      - name: Run deploy action
+        uses: peter-evans/repository-dispatch@v2
+        with:
+          token: ${{ secrets.PAT }}
+          repository: stjude/sj-pp
+          event-type: version-update
+          client-payload: '{"pp_version": "${{ steps.pp-version.outputs.current-version }}", "front_version": "${{ steps.front-version.outputs.current-version }}", "server_version": "${{ steps.server-version.outputs.current-version}}"}'

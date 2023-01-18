@@ -156,15 +156,19 @@ output:
 }
 */
 async function getSampleData_dictionaryTerms(q, termWrappers) {
-	const samples = {}
-	const refs = { byTermId: {} }
-
-	if (!termWrappers.length) return { samples, refs }
+	if (!termWrappers.length) return { samples: {}, refs: { byTermId: {} } }
 
 	if (q.ds?.variant2samples?.get) {
 		// call mds3 dataset method
-		return await call_variant2samples(q, termWrappers)
+		return await getSampleData_dictionaryTerms_v2s(q, termWrappers)
 	}
+
+	return getSampleData_dictionaryTerms_termdb(q, termWrappers)
+}
+
+export function getSampleData_dictionaryTerms_termdb(q, termWrappers) {
+	const samples = {}
+	const refs = { byTermId: {} }
 
 	const twByTermId = {}
 
@@ -190,7 +194,9 @@ async function getSampleData_dictionaryTerms(q, termWrappers) {
 		if ('id' in tw.term) twByTermId[tw.term.id] = tw
 		return CTE
 	})
-	values.push(...termWrappers.map(tw => tw.term.id))
+
+	// for "samplelst" term, term.id is missing and must use term.name
+	values.push(...termWrappers.map(tw => tw.term.id || tw.term.name))
 
 	const sql = `WITH
 		${filter ? filter.filters + ',' : ''}
@@ -221,11 +227,12 @@ async function getSampleData_dictionaryTerms(q, termWrappers) {
 /*
 using mds3 dataset
 */
-async function call_variant2samples(q, termWrappers) {
+async function getSampleData_dictionaryTerms_v2s(q, termWrappers) {
 	const q2 = {
 		genome: q.genome,
 		get: 'samples',
-		twLst: termWrappers
+		twLst: termWrappers,
+		useIntegerSampleId: true // ask v2s.get() to return integer sample id
 	}
 	if (q.currentGeneNames) {
 		q2.geneTwLst = []
@@ -233,7 +240,9 @@ async function call_variant2samples(q, termWrappers) {
 			q2.geneTwLst.push({ term: { name: n, type: 'geneVariant' } })
 		}
 	}
+
 	const sampleLst = await q.ds.variant2samples.get(q2)
+
 	const samples = {}
 	const refs = { byTermId: {} }
 

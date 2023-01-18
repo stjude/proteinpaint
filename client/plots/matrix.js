@@ -25,6 +25,7 @@ class Matrix {
 		const opts = this.opts
 		const holder = opts.controls ? opts.holder : opts.holder.append('div')
 		const controls = this.opts.controls ? null : holder.append('div')
+		const loadingDiv = holder.append('div').style('margin-left', '50px')
 		const errdiv = holder
 			.append('div')
 			.attr('class', 'sja_errorbar')
@@ -46,6 +47,7 @@ class Matrix {
 			holder,
 			errdiv,
 			controls,
+			loadingDiv,
 			svg,
 			mainG,
 			sampleGrpLabelG: mainG
@@ -168,14 +170,19 @@ class Matrix {
 			Object.assign(this.settings, this.config.settings)
 
 			// get the data
+			this.dom.loadingDiv.html('').style('display', '')
 			const reqOpts = await this.getDataRequestOpts()
 			this.data = await this.app.vocabApi.getAnnotatedSampleData(reqOpts)
+			this.dom.loadingDiv.html('Processing data ...')
+
 			this.setAutoDimensions()
 			this.setSampleGroups(this.data)
 			this.setTermOrder(this.data)
 			this.setSampleOrder(this.data)
+			this.setSampleCountsByTerm()
 			this.setLayout()
 			this.serieses = this.getSerieses(this.data)
+			this.dom.loadingDiv.html('').style('display', 'none')
 			// render the data
 			this.render()
 
@@ -200,6 +207,7 @@ class Matrix {
 			})
 
 			await this.adjustSvgDimensions(prevTranspose)
+			this.controlsRenderer.main()
 		} catch (e) {
 			// a new token message error may have been triggered by the data request here,
 			// even if the initial state did not have a token message at the start of a dispatch
@@ -231,34 +239,12 @@ class Matrix {
 			terms.push(...grp.lst)
 		}
 		if (this.config.divideBy) terms.push(this.config.divideBy)
-		if (this.config.overrides) {
-			const overrideTerms = [],
-				sampleFilters = []
-			for (const key in this.config.overrides) {
-				const r = this.config.overrides[key]
-				if (r.sampleFilter?.type == 'tvs') {
-					overrideTerms.push(r.sampleFilter.tvs.term)
-					sampleFilters.push(r.sampleFilter)
-				}
-			}
-			// may need additional term data to fill-in a filter
-			const readyTerms = await Promise.all(overrideTerms.map(t => (t.type ? t : this.app.vocabApi.getterm(t.id))))
-			terms.push(
-				...readyTerms.map((term, i) => {
-					const tw = { term }
-					fillTermWrapper(tw)
-					// important to get a non-ambiguous tw.$id since the
-					// same term may be used as different rows in the matrix
-					sampleFilters[i].wrapper$id = tw.$id
-					return tw
-				})
-			)
-		}
 		this.numTerms = terms.length
 		return {
 			terms,
 			filter: this.state.filter,
-			filter0: this.state.filter0
+			filter0: this.state.filter0,
+			loadingDiv: this.dom.loadingDiv
 		}
 	}
 
@@ -305,14 +291,6 @@ class Matrix {
 		const ref = data.refs.byTermId[$id] || {}
 
 		for (const row of data.lst) {
-			// TODO: may move the override handling downstream,
-			// but before sample group.lst sorting, as needed
-			for (const grp of this.config.termgroups) {
-				for (const tw of grp.lst) {
-					mayApplyOverrides(row, tw, grp, this.config.overrides)
-				}
-			}
-
 			if ($id in row) {
 				if (exclude.includes(row[$id].key)) continue
 				const key = row[$id].key
@@ -346,7 +324,12 @@ class Matrix {
 		let total = 0
 		for (const [grpIndex, grp] of this.sampleGroups.entries()) {
 			grp.lst.sort(this.sampleSorter)
-			for (const [index, row] of grp.lst.entries()) {
+			let processedLst = grp.lst
+			if (s.maxSample && total + grp.lst.length > s.maxSample) {
+				processedLst = grp.lst.slice(0, s.maxSample - total)
+			}
+
+			for (const [index, row] of processedLst.entries()) {
 				this.sampleOrder.push({
 					grp,
 					grpIndex,
@@ -356,10 +339,12 @@ class Matrix {
 					totalIndex: total + index,
 					totalHtAdjustments: 0,
 					grpHtAdjustments: 0,
-					_SAMPLENAME_: data.refs.bySampleId[row.sample]
+					_SAMPLENAME_: data.refs.bySampleId[row.sample],
+					processedLst
 				})
 			}
-			total += grp.lst.length
+			total += processedLst.length
+			if (s.maxSample && total >= s.maxSample) break
 		}
 	}
 
@@ -385,10 +370,12 @@ class Matrix {
 						countedSamples.add(s.sample)
 						const anno = data.samples[s.sample][tw.$id]
 						if (anno) {
-							anno.filteredValues = this.getFilteredValues(anno, tw, grp)
-							if (anno.filteredValues?.length) {
+							const { filteredValues, countedValues } = this.getFilteredValues(anno, tw, grp)
+							anno.filteredValues = filteredValues
+							anno.countedValues = countedValues
+							if (anno.countedValues?.length) {
 								counts.samples += 1
-								counts.hits += anno.filteredValues.length
+								counts.hits += anno.countedValues.length
 								if (tw.q?.mode == 'continuous') {
 									const v = anno.value
 									if (!('minval' in counts) || counts.minval > v) counts.minval = v
@@ -410,6 +397,17 @@ class Matrix {
 					if (!grp.settings) return true
 					return !('minNumSamples' in grp.settings) || t.counts.samples >= grp.settings.minNumSamples
 				})
+				/*
+					NOTE: When sorting terms by sample counts, those counts would have been computed before applying the s.maxSample truncation.
+					The sample counts are then re-computed, if applicable, in setSampleCountByTerm() after sample list truncation.
+					If the left-most sample group does not have much less hits relative to sample groups to its right, then this
+					may look like a term with less sample count got mistakenly sorted to the top.
+
+					TODO: 
+					(a) Option for s.sortSampleGroupBy = hits-by-term-order, and force this option so that the left-most sample group would
+					    make visually sense with s.maxSample is not empty and s.sortTermsBy = 'sampleCount'
+					(b) OR, re-sort the term lst based on sample counts without rearranging sample groups
+				*/
 				.sort(termSorter)
 
 			if (!processedLst.length) continue
@@ -450,19 +448,77 @@ class Matrix {
 
 	getFilteredValues(anno, tw, grp) {
 		const values = 'value' in anno ? [anno.value] : anno.values
+		if (!values) return { filteredValues: null, countedValues: null }
 		const valueFilter = tw.valueFilter || grp.valueFilter
-		if (!valueFilter || !values) return values
-		return values.filter(v => {
-			// TODO: handle non-tvs type value filter
+
+		const filteredValues = values.filter(v => {
+			/*** do not count wildtype and not tested as hits ***/
+			if (tw.term.type == 'geneVariant' && v.class == 'WT') return false
+			if (!valueFilter) return true
+
 			if (valueFilter.type == 'tvs') {
 				const matched = true
+				// quick fix: assume tvs values are joined by "and", not "or"
+				// TODO: reuse the filter.js code/data format for a more flexible filter configuration
 				for (const vf of valueFilter.tvs.values) {
-					if (v[vf.key] === vf.value) return !valueFilter.isnot
-					else if (v[vf.key] !== vf.value) return valueFilter.isnot
+					if (v[vf.key] === vf.value && valueFilter.isnot) return false
+					else if (v[vf.key] !== vf.value && !valueFilter.isnot) return false
 				}
 				return matched
+			} else {
+				// TODO: handle non-tvs type value filter
+				throw `unknown matrix value filter type='${valueFilter.type}'`
 			}
 		})
+
+		return {
+			filteredValues,
+			countedValues: filteredValues.filter(v => {
+				/*** do not count wildtype and not tested as hits ***/
+				if (tw.term.type == 'geneVariant' && (v.class == 'WT' || v.class == 'Blank')) return false
+				return true
+			})
+		}
+	}
+
+	setSampleCountsByTerm() {
+		const s = this.settings.matrix
+		// only overwrite the sample counts if one or more sample group.lst has been truncated
+		if (!s.maxSample) return
+		// must redo the sample counts by term after sorting and applying maxSamples, if applicable
+		for (const t of this.termOrder) {
+			t.allCounts = t.counts
+			const countedSamples = new Set()
+			t.counts = { samples: 0, hits: 0 }
+			for (const s of this.sampleOrder) {
+				if (countedSamples.has(s.row.sample)) continue
+				const anno = s.row[t.tw.$id]
+				if (!anno) continue
+				const { filteredValues, countedValues } = this.getFilteredValues(anno, t.tw, t.grp)
+				anno.filteredValues = filteredValues
+				anno.countedValues = countedValues
+				if (anno.countedValues?.length) {
+					t.counts.samples += 1
+					t.counts.hits += anno.countedValues.length
+					if (t.tw.q?.mode == 'continuous') {
+						const v = anno.value
+						if (!('minval' in t.counts) || t.counts.minval > v) t.counts.minval = v
+						if (!('maxval' in t.counts) || t.counts.maxval < v) t.counts.maxval = v
+					}
+				}
+			}
+
+			t.label =
+				(t.tw.label || t.tw.term.name) +
+				(s.samplecount4gene && t.tw.term.type.startsWith('gene') ? ` (${t.counts.samples})` : '')
+
+			t.scale =
+				t.tw.q?.mode == 'continuous'
+					? scaleLinear()
+							.domain([t.counts.minval, t.counts.maxval])
+							.range([1, t.tw.settings.barh])
+					: null
+		}
 	}
 
 	setLayout() {
@@ -592,8 +648,8 @@ class Matrix {
 
 			for (const t of this.termOrder) {
 				const $id = t.tw.$id
-				if (row[$id]?.filteredValues && !row[$id]?.filteredValues.length && !row[$id].override) continue
-				const anno = row[$id]?.override || row[$id]
+				if (row[$id]?.filteredValues && !row[$id]?.filteredValues.length) continue
+				const anno = row[$id]
 				if (!anno) continue
 				const termid = 'id' in t.tw.term ? t.tw.term.id : t.tw.term.name
 				const key = anno.key
@@ -826,6 +882,12 @@ export async function getPlotConfig(opts, app) {
 					bottom: 20,
 					left: 50
 				},
+
+				// set any dataset-defined sample limits and sort priority, otherwise undefined
+				// put in settings, so that later may be overridden by a user (TODO)
+				maxSample: app.vocabApi.termdbConfig.matrix?.maxSample,
+				sortPriority: app.vocabApi.termdbConfig.matrix?.sortPriority,
+
 				sampleNameFilter: '',
 				sortSamplesBy: 'selectedTerms',
 				sortSamplesTieBreakers: [{ $id: 'sample', sortSamples: {} /*split: {char: '', index: 0}*/ }],
@@ -857,21 +919,25 @@ export async function getPlotConfig(opts, app) {
 				termLabelOffset: 80,
 				termGrpLabelOffset: 80,
 				duration: 100
-			},
-			legend: {
-				ontop: false,
-				lineh: 25,
-				padx: 5,
-				padleft: 0, //150,
-				padright: 20,
-				padbtm: 30,
-				fontsize: 12,
-				iconh: 10,
-				iconw: 10,
-				hangleft: 1,
-				linesep: false
 			}
 		}
+	}
+
+	const s = config.settings
+	const fontsize = Math.max(s.matrix.rowh + s.matrix.rowspace - 3 * s.matrix.rowlabelpad, 12)
+
+	s.legend = {
+		ontop: false,
+		lineh: 25,
+		padx: 5,
+		padleft: 0, //150,
+		padright: 20,
+		padbtm: 30,
+		fontsize,
+		iconh: fontsize - 2,
+		iconw: fontsize - 2,
+		hangleft: 1,
+		linesep: false
 	}
 
 	// may apply term-specific changes to the default object
@@ -883,28 +949,4 @@ export async function getPlotConfig(opts, app) {
 	if (config.divideBy) promises.push(fillTermWrapper(config.divideBy, app.vocabApi))
 	await Promise.all(promises)
 	return config
-}
-
-function mayApplyOverrides(row, tw, grp, configOverrides) {
-	const overrides = tw.overrides || grp.overrides
-	if (!grp.overrides) return {}
-	for (const key in configOverrides) {
-		if (!overrides.includes(key)) continue
-		const sf = configOverrides[key].sampleFilter || {}
-		if (sf.type == 'wvs') {
-			for (const v of sf.values) {
-				if (row[sf.wrapper$id]?.key === v.key) {
-					if (!row[tw.$id]) row[tw.$id] = {}
-					row[tw.$id].override = JSON.parse(JSON.stringify(configOverrides[key].value))
-				}
-			}
-		} else if (sf.type == 'tvs') {
-			for (const v of sf.tvs.values) {
-				if (row[sf.wrapper$id]?.key === v.key) {
-					if (!row[tw.$id]) row[tw.$id] = {}
-					row[tw.$id].override = JSON.parse(JSON.stringify(configOverrides[key].value))
-				}
-			}
-		}
-	}
 }

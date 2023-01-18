@@ -115,7 +115,7 @@ class ViolinPlot {
 		if (this.state.config.childType != this.type) return
 		this.config = this.state.config
 		if (this.dom.header)
-			this.dom.header.html(
+			this.dom.header.text(
 				this.config.term.term.name + ` <span style="opacity:.6;font-size:1em;margin-left:10px;">Violin Plot</span>`
 			)
 
@@ -176,14 +176,14 @@ function setInteractivity(self) {
 		if (!self.state) return
 
 		// has to be able to handle multichart view
-		const mainGs = []
-		const translate = { x: undefined, y: undefined }
-		const titles = []
-		let maxw = 0,
-			maxh = 0,
-			tboxh = 0
-		let prevY = 0,
-			numChartsPerRow = 0
+		// const mainGs = []
+		// const translate = { x: undefined, y: undefined }
+		// const titles = []
+		// let maxw = 0,
+		// 	maxh = 0,
+		// 	tboxh = 0
+		// let prevY = 0,
+		// 	numChartsPerRow = 0
 
 		self.dom.holder.selectAll('.sjpp-violin-plot').each(function() {
 			to_svg(this, 'violin', { apply_dom_styles: true })
@@ -196,10 +196,12 @@ export function getDefaultViolinSettings() {
 		orientation: 'horizontal',
 		rowlabelw: 250,
 		brushRange: null, //object with start and end if there is a brush selection
-		svgw: 500, // / window.devicePixelRatio,
+		svgw: 500, // span length of a plot/svg, not including margin
 		datasymbol: 'bean',
 		radius: 5,
-		strokeWidth: 0.2
+		strokeWidth: 0.2,
+		axisHeight: 80,
+		rightMargin: 50
 	}
 }
 

@@ -1,68 +1,6 @@
-const serverconfig = require('../src/serverconfig.js')
-const fs = require('fs')
 const path = require('path')
-
-const cohorthtmltable = `<table>
-<thead>
-  <tr>
-    <td>Features</td>
-	<td>St. Jude Lifetime Cohort Study (SJLIFE)</td>
-	<td>Childhood Cancer Survivor Study (CCSS)</td>
-  </tr>
-</thead>
-<tbody>
-  <tr>
-    <td>Survivors on Portal</td>
-	<td>4528</td>
-	<td>2641</td>
-  </tr>
-  <tr>
-	<td>Years of cancer diagnosis</td>
-	<td>1962-2012</td>
-	<td>1987-1999 ("Expanded Cohort")</td>
-  </tr>
-  <tr>
-	<td>Inclusion criteria</td>
-	<td>Survived &ge; 5 years from diagnosis</td>
-	<td>Survived &ge; 5 years from diagnosis</td>
-  </tr>
-  <tr>
-	<td>Age at cancer diagnosis</td>
-	<td><25 years</td>
-	<td><21 years</td>
-  </tr>
-  <tr>
-	<td>Cancer diagnosis</td>
-	<td>All diagnoses</td>
-	<td>Leukemia, CNS, HL, NHL, neuroblastoma, soft tissue sarcoma, Wilms, bone tumors</td>
-  </tr>
-  <tr>
-	<td>Study design</td>
-	<td>Retrospective cohort with prospective follow-up, hospital-based</td>
-	<td>Retrospective cohort with prospective follow-up, hospital-based</td>
-  </tr>
-  <tr>
-	<td>Methods of contact</td>
-	<td>Clinic visits and surveys</td>
-	<td>Surveys</td>
-  </tr>
-  <tr>
-	<td>Source of sequenced germline DNA</td>
-	<td>Blood</td>
-	<td>Saliva or blood</td>
-  </tr>
-  <tr>
-	<td>Therapeutic exposures</td>
-	<td>Chemotherapy, radiation, surgery</td>
-	<td>Chemotherapy, radiation, surgery</td>
-  </tr>
-  <tr>
-	<td>Methods for ascertainment of outcomes</td>
-	<td><span style="font-weight:bold;text-decoration:underline">Clinical assessments<span>, medical records, self-report, NDI</td>
-	<td>Self-report, pathology reports (secondary neoplasm), NDI</td>
-  </tr>
-</tbody>
-</table>`
+const serverconfig = require(path.join(__dirname, '../src/serverconfig'))
+const fs = require('fs')
 
 /*
 this will automatically create path under tp/ if missing,
@@ -152,8 +90,7 @@ module.exports = function() {
 								'The combined cohorts are limited to those variables that are comparable between the two populations. For example, selecting this category does not allow browsing of clinically-ascertained variables, which are only available in SJLIFE.'
 						}
 					],
-					highlightCohortBy: 'cssSelector',
-					htmlinfo: cohorthtmltable
+					highlightCohortBy: 'cssSelector'
 				},
 
 				dataDownloadCatch: {

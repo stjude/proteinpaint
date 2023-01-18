@@ -24,35 +24,64 @@ export function getSampleSorter(self, settings, rows) {
 		.map(t => t.tw)
 		.sort((a, b) => a.sortSamples.priority - b.sortSamples.priority)
 
-	// !!! QUICK FIX:
-	// make sure to not affect the publised PNET matrix figure
-	const unSelectedDictTerms =
-		self.app.vocabApi.vocab?.dslabel == 'PNET'
-			? []
-			: self.termOrder
-					// sort against only dictionary terms in this tie-breaker
-					.filter(t => !t.tw.sortSamples && t.tw.id)
-					.map(t => Object.assign({ sortSamples: { by: 'values' } }, t.tw))
+	// always prioritize manually selected terms, if any
+	const sorterTerms = []
+	if (!s.sortPriority) {
+		sorterTerms.push(...selectedTerms)
+	} else {
+		for (const p of s.sortPriority) {
+			for (const tw of selectedTerms) {
+				if (!p.types.includes(tw.term.type)) continue
+				for (const tb of p.tiebreakers) {
+					sorterTerms.push(Object.assign({}, tw, { sortSamples: tb }))
+				}
+			}
+		}
+	}
 
-	const unSelectedNonDictTerms =
-		self.app.vocabApi.vocab?.dslabel == 'PNET'
-			? []
-			: self.termOrder
-					// sort against only non-dictionary terms in this tie-breaker
-					.filter(t => !t.tw.sortSamples && !t.tw.id)
-					.map(t => Object.assign({ sortSamples: { by: 'hits' } }, t.tw))
+	// now apply sort priority as specified in the dataset's termdbconfig, if applicable
+	if (s.sortPriority) {
+		for (const p of s.sortPriority) {
+			for (const t of self.termOrder) {
+				if (selectedTerms.find(tw => tw.$id === t.tw.$id)) continue
+				if (!p.types.includes(t.tw.term.type)) continue
+				for (const tb of p.tiebreakers) {
+					sorterTerms.push(Object.assign({ sortSamples: { by: tb.by, order: tb.order } }, t.tw))
+				}
+			}
+		}
+	} else {
+		// !!! QUICK FIX:
+		// make sure to not affect the publised PNET matrix figure
+		const unSelectedDictTerms =
+			self.app.vocabApi.vocab?.dslabel == 'PNET'
+				? []
+				: self.termOrder
+						// sort against only dictionary terms in this tie-breaker
+						.filter(t => !t.tw.sortSamples && t.tw.id && !selectedTerms.find(tw => tw.$id === t.tw.$id))
+						.map(t => Object.assign({ sortSamples: { by: 'values' } }, t.tw))
 
-	const sorterTerms = [
-		...selectedTerms,
-		...unSelectedDictTerms,
-		...unSelectedNonDictTerms,
-		...self.config.settings.matrix.sortSamplesTieBreakers.map(st => st)
-	]
+		const unSelectedNonDictTerms =
+			self.app.vocabApi.vocab?.dslabel == 'PNET'
+				? []
+				: self.termOrder
+						// sort against only non-dictionary terms in this tie-breaker
+						.filter(t => !t.tw.sortSamples && !t.tw.id && !selectedTerms.find(tw => tw.$id === t.tw.$id))
+						.map(t => Object.assign({ sortSamples: { by: 'hits' } }, t.tw))
+
+		sorterTerms.push(...unSelectedNonDictTerms, ...unSelectedDictTerms)
+	}
+
+	sorterTerms.push(...s.sortSamplesTieBreakers.map(st => st))
+
 	self.sampleSorters = []
 	for (const st of sorterTerms) {
 		if (st.$id == 'sample') self.sampleSorters.push(sortSamplesByName)
 		else if (st.sortSamples.by == 'hits') self.sampleSorters.push(getSortSamplesByHits(st.$id, self, rows))
 		else if (st.sortSamples.by == 'values') self.sampleSorters.push(getSortSamplesByValues(st.$id, self, rows))
+		else if (st.sortSamples.by == 'dt') self.sampleSorters.push(getSortSamplesByDt(st.$id, self, rows, st.sortSamples))
+		else if (st.sortSamples.by == 'class')
+			self.sampleSorters.push(getSortSamplesByClass(st.$id, self, rows, st.sortSamples))
 		else throw `unsupported sortSamplesBy entry by='${st.sortSamples.by}'`
 	}
 
@@ -69,6 +98,14 @@ export function getSampleSorter(self, settings, rows) {
 	}
 }
 
+/*const getSampleSorters = {
+	termType($id, self, rows) {
+		const self.termOrder
+				.filter(t => p.types.includes(t.tw.term.type))
+				.map(t => Object.assign({ sortSamples: { by: p.by } }, t.tw))
+	}
+}*/
+
 function sortSamplesByName(a, b) {
 	const k = a.sample
 	const l = b.sample
@@ -81,7 +118,11 @@ function getSortSamplesByHits($id, self, rows) {
 	const hits = {}
 	for (const row of rows) {
 		if (!($id in row)) hits[row.sample] = 0
-		else hits[row.sample] = 1 // row[$id].values?.length || 1
+		else {
+			const t = self.termOrder.find(t => t.tw.$id === $id)
+			const { countedValues } = getFilteredValues(row[$id], t.tw, t.grp)
+			hits[row.sample] = countedValues.length
+		}
 	}
 
 	return (a, b) => (hits[a.sample] == hits[b.sample] ? 0 : hits[a.sample] > hits[b.sample] ? -1 : 1)
@@ -132,6 +173,70 @@ function getSortSamplesByValues($id, self, rows) {
 		if (!a[$id].override) return -1
 		if (!b[$id].override) return 1
 		return 0
+	}
+}
+
+function getSortSamplesByDt($id, self, rows, sortSamples) {
+	const order = sortSamples.order
+	const dt = {}
+	for (const row of rows) {
+		if (!($id in row)) dt[row.sample] = order.length + 1
+		else dt[row.sample] = Math.min(...row[$id].values.map(v => order.indexOf(v.dt)))
+
+		// if no natching dt found in the sort order
+		if (dt[row.sample] === -1) dt[row.sample] = order.length
+		// if more than one dt
+		//if ($id in row && row[$id].values.length > 1) dt[row.sample] += (row[$id].values.length - 1) * 0.05
+	}
+	return (a, b) => dt[a.sample] - dt[b.sample]
+}
+
+function getSortSamplesByClass($id, self, rows, sortSamples) {
+	const order = sortSamples.order
+	const cls = {}
+	for (const row of rows) {
+		if (!($id in row)) cls[row.sample] = order.length + 1
+		else cls[row.sample] = Math.min(...row[$id].values.map(v => order.indexOf(v.class)))
+
+		// if no natching dt found in the sort order
+		if (cls[row.sample] === -1) cls[row.sample] = order.length // if more than one dt
+		//if ($id in row && row[$id].values.length > 1) cls[row.sample] += (row[$id].values.length - 1) * 0.05
+	}
+	return (a, b) => cls[a.sample] - cls[b.sample]
+}
+
+function getFilteredValues(anno, tw, grp) {
+	const values = 'value' in anno ? [anno.value] : anno.values
+	if (!values) return { filteredValues: null, countedValues: null }
+	const valueFilter = tw.valueFilter || grp.valueFilter
+
+	const filteredValues = values.filter(v => {
+		/*** do not count wildtype and not tested as hits ***/
+		if (tw.term.type == 'geneVariant' && v.class == 'WT') return false
+		if (!valueFilter) return true
+
+		if (valueFilter.type == 'tvs') {
+			const matched = true
+			// quick fix: assume tvs values are joined by "and", not "or"
+			// TODO: reuse the filter.js code/data format for a more flexible filter configuration
+			for (const vf of valueFilter.tvs.values) {
+				if (v[vf.key] === vf.value && valueFilter.isnot) return false
+				else if (v[vf.key] !== vf.value && !valueFilter.isnot) return false
+			}
+			return matched
+		} else {
+			// TODO: handle non-tvs type value filter
+			throw `unknown matrix value filter type='${valueFilter.type}'`
+		}
+	})
+
+	return {
+		filteredValues,
+		countedValues: filteredValues.filter(v => {
+			/*** do not count wildtype and not tested as hits ***/
+			if (tw.term.type == 'geneVariant' && (v.class == 'WT' || v.class == 'Blank')) return false
+			return true
+		})
 	}
 }
 
