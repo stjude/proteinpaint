@@ -400,6 +400,10 @@ fn bonferroni_correction(p_values_list: Vec<PValueIndexes>, num_of_tests: f64) {
             Some(p_val) => {
                 //println!("p_val:{}", p_val);
                 let adjusted_p_val: f64 = p_val * num_of_tests; // In bonferroni correction, multiplying p_value by number of tests (excluding those with low sample sizes)
+                if adjusted_p_val > 1.0 {
+                    // p_value should NEVER be greater than 1
+                    adjusted_p_val = 1.0;
+                }
                 adjusted_p_value = Some(adjusted_p_val);
             }
             None => {}
