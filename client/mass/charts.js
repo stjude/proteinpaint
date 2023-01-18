@@ -22,21 +22,20 @@ class MassCharts {
 
 	getState(appState) {
 		// need vocab, activeCohort and filter
-		const activeCohort =
-			appState.termdbConfig &&
-			appState.termdbConfig.selectCohort &&
-			appState.termdbConfig.selectCohort.values[appState.activeCohort]
-		const cohortStr = (activeCohort && [...activeCohort.keys].sort().join(',')) || ''
-		const chartTypes = JSON.parse(JSON.stringify(appState.termdbConfig?.supportedChartTypes || {}))
+
+		const activeCohortStr = getActiveCohortStr(appState)
+
+		const chartTypesByCohort = JSON.parse(JSON.stringify(appState.termdbConfig?.supportedChartTypes || {}))
+		// {}, key is cohortstr, value is list of supported chart types under this cohort
 
 		const state = {
 			vocab: appState.vocab,
 			activeCohort: appState.activeCohort,
 			termfilter: appState.termfilter,
-			supportedChartTypes: chartTypes[cohortStr] || ['summary'],
+			supportedChartTypes: chartTypesByCohort[activeCohortStr] || ['summary'],
 			termdbConfig: appState.termdbConfig
 		}
-		if (appState.termfilter && appState.termfilter.filter) {
+		if (appState?.termfilter?.filter) {
 			state.filter = getNormalRoot(appState.termfilter.filter)
 		}
 		if (!state.supportedChartTypes.includes('dictionary')) {
@@ -54,6 +53,19 @@ class MassCharts {
 }
 
 export const chartsInit = getCompInit(MassCharts)
+
+function getActiveCohortStr(appState) {
+	if (appState?.termdbConfig?.selectCohort?.values) {
+		// dataset allows subcohort selection
+		if (!Number.isInteger(appState.activeCohort)) throw 'appState.activeCohort is not integer array index'
+		const activeCohortObject = appState.termdbConfig.selectCohort.values[appState.activeCohort]
+		if (!activeCohortObject) throw 'appState.activeCohort array index out of bound'
+		// get a valid cohort obj
+		return [...activeCohortObject.keys].sort().join(',')
+	}
+	// if not, is undefined
+	return ''
+}
 
 function getChartTypeList(self) {
 	/* list all possible chart types in this array
