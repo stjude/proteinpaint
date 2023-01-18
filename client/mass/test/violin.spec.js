@@ -1,6 +1,12 @@
 import tape from 'tape'
 import { getRunPp } from '../../test/front.helpers.js'
-const d3s = require('d3-selection')
+import { fillTermWrapper } from '../../termsetting/termsetting.js'
+// import * as d3s from 'd3-selection'
+// import { displayBrushMenu } from '../../plots/violin.renderer.js'
+// import { createNumericScale } from '../../plots/violin.renderer.js'
+// import { getAddFilterCallback } from '../../plots/violin.renderer.js'
+import { getFilterItemByTag } from '../../filter/filter.js'
+import { filterJoin } from '../../filter/filter.js'
 
 /*************************
  reusable helper functions
@@ -8,6 +14,7 @@ const d3s = require('d3-selection')
 
 const runpp = getRunPp('mass', {
 	state: {
+		nav: { activeTab: 1 },
 		vocab: { dslabel: 'TermdbTest', genome: 'hg38' }
 	},
 	debug: 1
@@ -77,6 +84,7 @@ tape('render violin plot', function(test) {
 
 	async function runTests(violin) {
 		const violinDiv = violin.Inner.dom.holder
+		const violinPvalueDiv = violin.Inner.dom.tableHolder
 		const violinDivControls = violin.Inner.dom.controls
 		const violinDivData = violin.Inner.data.plots
 		testViolinPath(violinDiv) //test if violin path is generated. should be more than 0
@@ -84,6 +92,8 @@ tape('render violin plot', function(test) {
 		testPlotTitle(violinDiv, violinDivControls) //test if label in ts-pill is same as title on svg.
 		await sleep(800)
 		testDataLength(violinDiv, violinDivData) //test if length of samples is same as shown in plot labels
+		await sleep(800)
+		testPvalue(violin, violinPvalueDiv)
 		await sleep(800)
 		if (test._ok) violin.Inner.app.destroy()
 		test.end()
@@ -131,7 +141,13 @@ tape('render violin plot', function(test) {
 		}
 	}
 
-	//function testPvalue(){}
+	function testPvalue(violin, violinPvalueDiv) {
+		test.equal(
+			+violin.Inner.data.pvalues[0][2].html,
+			+violinPvalueDiv.node().querySelectorAll('.sjpp_table_item')[5].innerHTML,
+			`p-value of ${+violinPvalueDiv.node().querySelectorAll('.sjpp_table_item')[5].innerHTML} is correct`
+		)
+	}
 })
 
 tape('test basic controls', function(test) {
@@ -153,19 +169,23 @@ tape('test basic controls', function(test) {
 		const violinSettings = violin.Inner.config.settings.violin
 		const testStrokeWidth = 1
 		const testSymSize = 10
-		await sleep(1000)
+		await sleep(800)
 		changeOrientation(violinDivControls) // test orientation by changing to vertical
-		await sleep(800)
+		await sleep(700)
 		changeDataSymbol(violinDivControls) //test change in Data symbol
-		await sleep(800)
+		await sleep(700)
+		await changeOverlayTerm(violin) //test change in term2/overlay term
+		await sleep(400)
 		changeStrokeWidth(violinDivControls, violinSettings, testStrokeWidth) //test change in stroke width
-		await sleep(400)
+		await sleep(300)
 		testChangeStrokeWidth(violinSettings, testStrokeWidth)
-		await sleep(800)
+		await sleep(700)
 		changeSymbolSize(violinSettings, violinDivControls, testSymSize) //test change in symbol size
-		await sleep(400)
+		await sleep(300)
 		testChangeSymbolSize(violinSettings, testSymSize)
-		await sleep(800)
+		await sleep(700)
+		changeModeToDiscrete(violin) //test change in q: {mode: 'Discrete'} to display barchart
+		await sleep(1000)
 		if (test._ok) violin.Inner.app.destroy()
 		test.end()
 	}
@@ -214,9 +234,27 @@ tape('test basic controls', function(test) {
 		test.ok(violinSettings.radius != testSymSize, `Stroke width changed to ${testSymSize}`)
 	}
 
-	//function changeModeToDiscrete(){}
+	async function changeOverlayTerm(violin) {
+		violin.Inner.app.dispatch({
+			id: violin.Inner.id,
+			type: 'plot_edit',
+			config: {
+				term2: await fillTermWrapper({ id: 'genetic_race' }, violin.Inner.app.vocabApi)
+			}
+		})
+	}
 
-	//function changeOverlayTerm(){}
+	async function changeModeToDiscrete(violin) {
+		// console.log(242, violin.getComponents('controls.config.term1').Inner.pill.Inner.dom.tip.d.selectAll('.sjpp-toggle-button'));
+		violin.Inner.app.dispatch({
+			id: violin.Inner.id,
+			type: 'plot_edit',
+			config: {
+				term: await fillTermWrapper({ id: 'agedx', q: { mode: 'discrete' } }, violin.Inner.app.vocabApi)
+			}
+		})
+		test.ok(true, "q.mode changed to 'Discrete' ")
+	}
 })
 
 tape('test label clicking/brushing and filtering', function(test) {
@@ -241,6 +279,8 @@ tape('test label clicking/brushing and filtering', function(test) {
 		await sleep(800)
 		labelClicking(violin, violinDiv) //test filter on label clicking
 		await sleep(800)
+		testFiltering(violin, violinSettings, violinDivData) //test filtering by providing tvs.lst object
+		await sleep(800)
 		if (test._ok) violin.Inner.app.destroy()
 		test.end()
 	}
@@ -258,8 +298,70 @@ tape('test label clicking/brushing and filtering', function(test) {
 			.click()
 		test.ok(true, 'label Clicking and filtering ok!')
 	}
-
-	//function brushing() {}
+	//TODO test brushing and then filtering. This function tests filtering based on range provided.
+	async function testFiltering(violin) {
+		const tvslst = {
+			type: 'tvslst',
+			in: true,
+			join: 'and',
+			lst: [
+				{
+					tvs: {
+						term: {
+							groupsetting: { disbled: true },
+							id: 'sex',
+							isLeaf: true,
+							name: 'Sex',
+							type: 'categorical',
+							values: {
+								1: { label: 'Male' },
+								2: { label: 'Female' }
+							}
+						},
+						values: [{ key: '2' }]
+					},
+					type: 'tvs'
+				},
+				{
+					type: 'tvs',
+					tvs: {
+						ranges: [
+							{
+								start: 12.289737495475805,
+								stop: 16.794964344698805
+							}
+						],
+						term: {
+							id: 'agedx',
+							isleaf: true,
+							name: 'Age (years) at Cancer Diagnosis',
+							type: 'float',
+							bins: {
+								default: {
+									type: 'regular-bin',
+									bin_size: 5,
+									startinclusive: true,
+									first_bin: {
+										startunbounded: true,
+										stop: 5
+									}
+								},
+								label_offset: 1
+							}
+						}
+					}
+				}
+			]
+		}
+		const filterUiRoot = getFilterItemByTag(violin.Inner.state.termfilter.filter, 'filterUiRoot')
+		const filter = filterJoin([filterUiRoot, tvslst])
+		filter.tag = 'filterUiRoot'
+		violin.Inner.app.dispatch({
+			type: 'filter_replace',
+			filter
+		})
+		test.ok(true, 'Filtering works as expected upon given range(start, stop) of values')
+	}
 })
 
 tape('term1 as numeric and term2 numeric', function(test) {

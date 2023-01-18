@@ -41,76 +41,6 @@ export default function violinRenderer(self) {
 		displayMenu(self, plot, event, null, null)
 	}
 
-	self.displayBrushMenu = async function(plot, selection, scale, isH) {
-		const start = isH ? scale.invert(selection[0]) : scale.invert(selection[1])
-		const end = isH ? scale.invert(selection[1]) : scale.invert(selection[0])
-		self.displayBrushMenu.called = true
-		displayMenu(self, plot, event, start, end)
-		// const brushValues = plot.values.filter(i => i > start && i < end)
-	}
-
-	self.getAddFilterCallback = function(plot, rangeStart, rangeStop) {
-		const tvslst = {
-			type: 'tvslst',
-			in: true,
-			join: 'and',
-			lst: []
-		}
-		const t1 = self.config.term
-		const t2 = self.config.term2
-
-		if (t2) {
-			if (t1.term.type === 'categorical') {
-				createTvsLstValues(t1, plot, tvslst, 0)
-
-				if (self.displayBrushMenu.called === true) {
-					createTvsLstRanges(t2, tvslst, rangeStart, rangeStop, 1)
-				}
-			} else if (
-				t2.q?.mode === 'continuous' ||
-				((t2.term?.type === 'float' || t2.term?.type === 'integer') && plot.divideTwBins != null)
-			) {
-				createTvsTerm(t2, tvslst)
-				tvslst.lst[0].tvs.ranges = [
-					{
-						start: structuredClone(plot.divideTwBins?.start) || null,
-						stop: structuredClone(plot.divideTwBins?.stop) || null,
-						startinclusive: structuredClone(plot.divideTwBins?.startinclusive) || null,
-						stopinclusive: structuredClone(plot.divideTwBins?.stopinclusive) || null,
-						startunbounded: structuredClone(plot.divideTwBins?.startunbounded)
-							? structuredClone(plot.divideTwBins?.startunbounded)
-							: null,
-						stopunbounded: structuredClone(plot.divideTwBins?.stopunbounded)
-							? structuredClone(plot.divideTwBins?.stopunbounded)
-							: null
-					}
-				]
-				if (self.displayBrushMenu.called === true) {
-					createTvsLstRanges(t1, tvslst, rangeStart, rangeStop, 1)
-				}
-			} else {
-				createTvsLstValues(t2, plot, tvslst, 0)
-				if (self.displayBrushMenu.called === true) {
-					createTvsLstRanges(t1, tvslst, rangeStart, rangeStop, 1)
-				}
-			}
-		} else {
-			if (self.displayBrushMenu.called === true) {
-				createTvsLstRanges(t1, tvslst, rangeStart, rangeStop, 0)
-			}
-		}
-
-		return () => {
-			const filterUiRoot = getFilterItemByTag(self.state.termfilter.filter, 'filterUiRoot')
-			const filter = filterJoin([filterUiRoot, tvslst])
-			filter.tag = 'filterUiRoot'
-			self.app.dispatch({
-				type: 'filter_replace',
-				filter
-			})
-		}
-	}
-
 	self.renderPvalueTable = function() {
 		this.dom.tableHolder.selectAll('*').remove()
 
@@ -189,14 +119,6 @@ export default function violinRenderer(self) {
 		const svgG = svg.append('g').attr('transform', 'translate(' + margin.left + ',' + margin.top + ')')
 
 		return { margin: margin, svgG: svgG, axisScale: createNumericScale(self, s, isH) }
-	}
-
-	function createNumericScale(self, s, isH) {
-		// creates numeric axis
-		const axisScale = scaleLinear()
-			.domain([self.data.min, self.data.max + self.data.max / (s.radius * 4)])
-			.range(isH ? [0, s.svgw] : [s.svgw, 0])
-		return axisScale
 	}
 
 	function renderScale(self, s, isH, svg) {
@@ -342,7 +264,7 @@ export default function violinRenderer(self) {
 
 								if (!selection) return
 
-								await self.displayBrushMenu(plot, selection, svg.axisScale, isH)
+								await displayBrushMenu(self, plot, selection, svg.axisScale, isH)
 							})
 					: brushY()
 							.extent([[-20, 0], [20, s.svgw]])
@@ -351,90 +273,167 @@ export default function violinRenderer(self) {
 
 								if (!selection) return
 
-								await self.displayBrushMenu(plot, selection, svg.axisScale, isH)
+								await displayBrushMenu(self, plot, selection, svg.axisScale, isH)
 							})
 			)
 	}
+}
 
-	function displayMenu(self, plot, event, start, end) {
-		self.app.tip.d.selectAll('*').remove()
+export async function displayBrushMenu(self, plot, selection, scale, isH) {
+	const start = isH ? scale.invert(selection[0]) : scale.invert(selection[1])
+	const end = isH ? scale.invert(selection[1]) : scale.invert(selection[0])
+	displayBrushMenu.called = true
+	displayMenu(self, plot, event, start, end)
+	// const brushValues = plot.values.filter(i => i > start && i < end)
+}
 
-		const options = []
+export function displayMenu(self, plot, event, start, end) {
+	self.app.tip.d.selectAll('*').remove()
 
-		if (self.displayLabelClickMenu.called === true) {
-			if (self.config.term2) {
-				if (self.config.term.term.type === 'categorical') {
-					options.push({
-						label: `Add filter: ${plot.label.split(',')[0]}`,
-						callback: self.getAddFilterCallback(plot, 'term1')
-					})
-				} else {
-					options.push({
-						label: `Add filter: ${plot.label.split(',')[0]}`,
-						callback: self.getAddFilterCallback(plot, 'term2')
-					})
-				}
+	const options = []
+
+	if (self.displayLabelClickMenu.called === true) {
+		if (self.config.term2) {
+			if (self.config.term.term.type === 'categorical') {
+				options.push({
+					label: `Add filter: ${plot.label.split(',')[0]}`,
+					callback: getAddFilterCallback(self, plot, 'term1')
+				})
+			} else {
+				options.push({
+					label: `Add filter: ${plot.label.split(',')[0]}`,
+					callback: getAddFilterCallback(self, plot, 'term2')
+				})
 			}
-			//show median values as text above menu options
-			self.app.tip.d
-				.append('div')
-				.text(`Median Value: ${plot.median}`)
-				.style('padding-left', '10px')
-				.style('font-size', '15px')
-
-			self.displayLabelClickMenu.called = false
-		} else if (self.displayBrushMenu.called === true) {
-			options.push({
-				label: `Add filter: ${start.toFixed(1)} < x < ${end.toFixed(1)}`,
-				callback: self.getAddFilterCallback(plot, start, end)
-			})
-			self.displayBrushMenu.called = false
 		}
-
-		//show menu options for label clicking and brush selection
+		//show median values as text above menu options
 		self.app.tip.d
 			.append('div')
-			.selectAll('div')
-			.data(options)
-			.enter()
-			.append('div')
-			.attr('class', 'sja_menuoption')
-			.text(d => d.label)
-			.on('click', (event, d) => {
-				self.app.tip.hide()
-				d.callback()
-				self.dom.tableHolder.style('display', 'none')
-			})
+			.text(`Median Value: ${plot.median}`)
+			.style('padding-left', '10px')
+			.style('font-size', '15px')
 
-		self.app.tip.show(event.clientX, event.clientY)
+		self.displayLabelClickMenu.called = false
+	} else if (displayBrushMenu.called === true) {
+		options.push({
+			label: `Add filter: ${start.toFixed(1)} < x < ${end.toFixed(1)}`,
+			callback: getAddFilterCallback(self, plot, start, end)
+		})
+		displayBrushMenu.called = false
 	}
 
-	function createTvsLstValues(term, plot, tvslst, lstIdx) {
-		createTvsTerm(term, tvslst)
-		tvslst.lst[lstIdx].tvs.values = [
-			{
-				key: plot.seriesId
-			}
-		]
+	//show menu options for label clicking and brush selection
+	self.app.tip.d
+		.append('div')
+		.selectAll('div')
+		.data(options)
+		.enter()
+		.append('div')
+		.attr('class', 'sja_menuoption')
+		.text(d => d.label)
+		.on('click', (event, d) => {
+			self.app.tip.hide()
+			d.callback()
+			self.dom.tableHolder.style('display', 'none')
+		})
+
+	self.app.tip.show(event.clientX, event.clientY)
+}
+
+// creates numeric axis
+export function createNumericScale(self, s, isH) {
+	const axisScale = scaleLinear()
+		.domain([self.data.min, self.data.max + self.data.max / (s.radius * 4)])
+		.range(isH ? [0, s.svgw] : [s.svgw, 0])
+	return axisScale
+}
+
+export function createTvsLstValues(term, plot, tvslst, lstIdx) {
+	createTvsTerm(term, tvslst)
+	tvslst.lst[lstIdx].tvs.values = [
+		{
+			key: plot.seriesId
+		}
+	]
+}
+
+export function createTvsLstRanges(term, tvslst, rangeStart, rangeStop, lstIdx) {
+	createTvsTerm(term, tvslst)
+
+	tvslst.lst[lstIdx].tvs.ranges = [
+		{
+			start: rangeStart,
+			stop: rangeStop
+		}
+	]
+}
+
+export function createTvsTerm(term, tvslst) {
+	tvslst.lst.push({
+		type: 'tvs',
+		tvs: {
+			term: term.term
+		}
+	})
+}
+
+export function getAddFilterCallback(self, plot, rangeStart, rangeStop) {
+	const tvslst = {
+		type: 'tvslst',
+		in: true,
+		join: 'and',
+		lst: []
 	}
+	const t1 = self.config.term
+	const t2 = self.config.term2
 
-	function createTvsLstRanges(term, tvslst, rangeStart, rangeStop, lstIdx) {
-		createTvsTerm(term, tvslst)
+	if (t2) {
+		if (t1.term.type === 'categorical') {
+			createTvsLstValues(t1, plot, tvslst, 0)
 
-		tvslst.lst[lstIdx].tvs.ranges = [
-			{
-				start: rangeStart,
-				stop: rangeStop
+			if (displayBrushMenu.called === true) {
+				createTvsLstRanges(t2, tvslst, rangeStart, rangeStop, 1)
 			}
-		]
+		} else if (
+			t2.q?.mode === 'continuous' ||
+			((t2.term?.type === 'float' || t2.term?.type === 'integer') && plot.divideTwBins != null)
+		) {
+			createTvsTerm(t2, tvslst)
+			tvslst.lst[0].tvs.ranges = [
+				{
+					start: structuredClone(plot.divideTwBins?.start) || null,
+					stop: structuredClone(plot.divideTwBins?.stop) || null,
+					startinclusive: structuredClone(plot.divideTwBins?.startinclusive) || null,
+					stopinclusive: structuredClone(plot.divideTwBins?.stopinclusive) || null,
+					startunbounded: structuredClone(plot.divideTwBins?.startunbounded)
+						? structuredClone(plot.divideTwBins?.startunbounded)
+						: null,
+					stopunbounded: structuredClone(plot.divideTwBins?.stopunbounded)
+						? structuredClone(plot.divideTwBins?.stopunbounded)
+						: null
+				}
+			]
+			if (displayBrushMenu.called === true) {
+				createTvsLstRanges(t1, tvslst, rangeStart, rangeStop, 1)
+			}
+		} else {
+			createTvsLstValues(t2, plot, tvslst, 0)
+			if (displayBrushMenu.called === true) {
+				createTvsLstRanges(t1, tvslst, rangeStart, rangeStop, 1)
+			}
+		}
+	} else {
+		if (displayBrushMenu.called === true) {
+			createTvsLstRanges(t1, tvslst, rangeStart, rangeStop, 0)
+		}
 	}
-
-	function createTvsTerm(term, tvslst) {
-		tvslst.lst.push({
-			type: 'tvs',
-			tvs: {
-				term: term.term
-			}
+	return () => {
+		const filterUiRoot = getFilterItemByTag(self.state.termfilter.filter, 'filterUiRoot')
+		const filter = filterJoin([filterUiRoot, tvslst])
+		filter.tag = 'filterUiRoot'
+		self.app.dispatch({
+			type: 'filter_replace',
+			filter
 		})
 	}
 }
