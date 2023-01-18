@@ -127,92 +127,93 @@ fn main() {
     let mut input = String::new();
     match io::stdin().read_line(&mut input) {
         // Accepting the piped input from nodejs (or command line from testing)
-        #[allow(unused_variables)]
-        Ok(n) => {
+        Ok(_n) => {
             //println!("{} bytes read", n);
             //println!("input:{}", input);
+
+            let input_json = json::parse(&input);
+            match input_json {
+                Ok(json_string) => {
+                    //println!("{} bytes read", n);
+                    //println!("json_string:{}", json_string);
+                    let variants: &JsonValue = &json_string["input"]; // Putting each variant in a separate element of vector
+
+                    //let fisher_limit: u32 = json_string["fisher_limit"].as_u32().unwrap(); // Cutoff for sum of all four numbers to decide whether to use fisher or chisq test
+                    let individual_fisher_limit: f64 = 5.0;
+                    let fdr_string = &json_string["fdr"].to_owned();
+                    let bon_string = &json_string["bon"].to_owned();
+                    let low_sample_size_string = &json_string["skipLowSampleSize"].to_owned();
+                    //println!("fdr_string:{}", fdr_string);
+
+                    let mut fdr_bool = false;
+                    match fdr_string.as_bool() {
+                        Some(fdr) => match fdr {
+                            true => fdr_bool = true,
+                            false => {}
+                        },
+                        None => {}
+                    }
+
+                    let mut bon_bool = false;
+                    match bon_string.as_bool() {
+                        Some(bon) => match bon {
+                            true => bon_bool = true,
+                            false => {}
+                        },
+                        None => {}
+                    }
+
+                    let mut low_sample_size_bool = false;
+                    match low_sample_size_string.as_bool() {
+                        Some(low_sample_size) => match low_sample_size {
+                            true => low_sample_size_bool = true,
+                            false => {}
+                        },
+                        None => {}
+                    }
+
+                    if fdr_bool == false && bon_bool == false && low_sample_size_bool == true {
+                        panic!("skipLowSampleSize = true but fdr and bon is set to false.");
+                    }
+
+                    if fdr_bool == false && bon_bool == false {
+                        // Check if FDR calculation is required or not
+                        calculate_fisher_chisq_test(
+                            variants,
+                            individual_fisher_limit,
+                            false,
+                            false,
+                            low_sample_size_bool,
+                        );
+                    } else if fdr_bool == true && bon_bool == false {
+                        calculate_fisher_chisq_test(
+                            variants,
+                            individual_fisher_limit,
+                            true,
+                            false,
+                            low_sample_size_bool,
+                        );
+                    } else if fdr_bool == false && bon_bool == true {
+                        calculate_fisher_chisq_test(
+                            variants,
+                            individual_fisher_limit,
+                            false,
+                            true,
+                            low_sample_size_bool,
+                        );
+                    } else if fdr_bool == true && bon_bool == true {
+                        println!(
+                            "Choose either Bonferronni correction or Benjamini-Hochberg correction"
+                        );
+                    } else {
+                        // Should not happen
+                        println!("Unidentified case");
+                    }
+                }
+                Err(error) => println!("Incorrect json: {}", error),
+            }
         }
         Err(error) => println!("Piping error: {}", error),
-    }
-    let input_json = json::parse(&input);
-
-    match input_json {
-        Ok(json_string) => {
-            //println!("{} bytes read", n);
-            //println!("json_string:{}", json_string);
-            let variants: &JsonValue = &json_string["input"]; // Putting each variant in a separate element of vector
-
-            //let fisher_limit: u32 = json_string["fisher_limit"].as_u32().unwrap(); // Cutoff for sum of all four numbers to decide whether to use fisher or chisq test
-            let individual_fisher_limit: f64 = 5.0;
-            let fdr_string = &json_string["fdr"].to_owned();
-            let bon_string = &json_string["bon"].to_owned();
-            let low_sample_size_string = &json_string["skipLowSampleSize"].to_owned();
-            //println!("fdr_string:{}", fdr_string);
-
-            let mut fdr_bool = false;
-            match fdr_string.as_bool() {
-                Some(fdr) => match fdr {
-                    true => fdr_bool = true,
-                    false => {}
-                },
-                None => {}
-            }
-
-            let mut bon_bool = false;
-            match bon_string.as_bool() {
-                Some(bon) => match bon {
-                    true => bon_bool = true,
-                    false => {}
-                },
-                None => {}
-            }
-
-            let mut low_sample_size_bool = false;
-            match low_sample_size_string.as_bool() {
-                Some(low_sample_size) => match low_sample_size {
-                    true => low_sample_size_bool = true,
-                    false => {}
-                },
-                None => {}
-            }
-
-            if fdr_bool == false && bon_bool == false && low_sample_size_bool == true {
-                panic!("skipLowSampleSize = true but fdr and bon is set to false.");
-            }
-
-            if fdr_bool == false && bon_bool == false {
-                // Check if FDR calculation is required or not
-                calculate_fisher_chisq_test(
-                    variants,
-                    individual_fisher_limit,
-                    false,
-                    false,
-                    low_sample_size_bool,
-                );
-            } else if fdr_bool == true && bon_bool == false {
-                calculate_fisher_chisq_test(
-                    variants,
-                    individual_fisher_limit,
-                    true,
-                    false,
-                    low_sample_size_bool,
-                );
-            } else if fdr_bool == false && bon_bool == true {
-                calculate_fisher_chisq_test(
-                    variants,
-                    individual_fisher_limit,
-                    false,
-                    true,
-                    low_sample_size_bool,
-                );
-            } else if fdr_bool == true && bon_bool == true {
-                println!("Choose either Bonferronni correction or Benjamini-Hochberg correction");
-            } else {
-                // Should not happen
-                println!("Unidentified case");
-            }
-        }
-        Err(error) => println!("Incorrect json: {}", error),
     }
 }
 
@@ -398,7 +399,7 @@ fn bonferroni_correction(p_values_list: Vec<PValueIndexes>, num_of_tests: f64) {
         match p_values_list[i].p_value {
             Some(p_val) => {
                 //println!("p_val:{}", p_val);
-                let adjusted_p_val: f64 = p_val * num_of_tests; // In bonferroni correction, dividing p_value by number of tests (excluding those with low sample sizes)
+                let adjusted_p_val: f64 = p_val * num_of_tests; // In bonferroni correction, multiplying p_value by number of tests (excluding those with low sample sizes)
                 adjusted_p_value = Some(adjusted_p_val);
             }
             None => {}
@@ -415,11 +416,6 @@ fn bonferroni_correction(p_values_list: Vec<PValueIndexes>, num_of_tests: f64) {
             fisher_chisq: p_values_list[i].fisher_chisq.clone(),
         });
     }
-
-    // Sorting original p-values by their original indexes in ascending order
-    adjusted_p_values
-        .as_mut_slice()
-        .sort_by(|a, b| (a.index).partial_cmp(&b.index).unwrap_or(Ordering::Equal));
 
     // Printing original and adjusted p-values
 
