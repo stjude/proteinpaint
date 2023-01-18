@@ -15,7 +15,11 @@ module.exports = function() {
 				file: 'files/hg38/mbunder6/clinical/db'
 			},
 			termdb: {
-				allowedTermTypes: ['geneVariant']
+				allowedTermTypes: ['geneVariant'],
+				multipleTestingCorrection: {
+					method: 'bon',
+					skipLowSampleSize: true
+				}
 			}
 		}
 	}
