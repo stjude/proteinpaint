@@ -19,6 +19,9 @@ client_copy
 	copy_queries
 ********************** INTERNAL
 validate_termdb
+	mayInitiateScatterplots
+	mayValidateSelectCohort
+	mayValidateRestrictAcestries
 	getBarchartDataFromSqlitedb
 		get_barchart_data_sqlitedb
 validate_query_snvindel
@@ -45,6 +48,7 @@ mayAdd_mayGetGeneVariantData
 
 // in case chr name may contain '.', can change to __
 export const ssmIdFieldsSeparator = '.'
+const pc_termid_prefix = 'Ancestry_PC_' // may define in ds, must avoid conflicting with dictionary term ids
 
 export async function init(ds, genome, _servconfig, app = null, basepath = null) {
 	// must validate termdb first
@@ -191,7 +195,39 @@ export async function validate_termdb(ds) {
 		}
 	}
 
+	mayValidateSelectCohort(tdb)
+	await mayValidateRestrictAcestries(tdb)
 	await mayInitiateScatterplots(ds)
+	if ('minTimeSinceDx' in tdb) {
+		if (!Number.isFinite(tdb.minTimeSinceDx)) throw 'termdb.minTimeSinceDx not number'
+		if (tdb.minTimeSinceDx <= 0) throw 'termdb.minTimeSinceDx<=0'
+	}
+	if ('ageEndOffset' in tdb) {
+		if (!Number.isFinite(tdb.ageEndOffset)) throw 'termdb.ageEndOffset not number'
+		if (tdb.ageEndOffset <= 0) throw 'termdb.ageEndOffset<=0'
+	}
+	if (tdb.termIds) {
+		if (tdb.termIds.ageDxId) {
+			const t = tdb.q.termjsonByOneid(tdb.termIds.ageDxId)
+			if (!t) throw 'unknown term for termIds.ageDxId'
+			if (t.type != 'integer' && t.type != 'float') throw 'termIds.ageDxId not integer/float'
+		}
+		if (tdb.termIds.ageLastVisitId) {
+			const t = tdb.q.termjsonByOneid(tdb.termIds.ageLastVisitId)
+			if (!t) throw 'unknown term for termIds.ageLastVisitId'
+			if (t.type != 'integer' && t.type != 'float') throw 'termIds.ageLastVisitId not integer/float'
+		}
+		if (tdb.termIds.ageNdiId) {
+			const t = tdb.q.termjsonByOneid(tdb.termIds.ageNdiId)
+			if (!t) throw 'unknown term for termIds.ageNdiId'
+			if (t.type != 'integer' && t.type != 'float') throw 'termIds.ageNdiId not integer/float'
+		}
+		if (tdb.termIds.ageDeathId) {
+			const t = tdb.q.termjsonByOneid(tdb.termIds.ageDeathId)
+			if (!t) throw 'unknown term for termIds.ageDeathId'
+			if (t.type != 'integer' && t.type != 'float') throw 'termIds.ageDeathId not integer/float'
+		}
+	}
 
 	//////////////////////////////////////////////////////
 	//
@@ -228,6 +264,70 @@ export async function validate_termdb(ds) {
 		ds.getTermTypes = getTermTypes
 		ds.mayGetMatchingGeneNames = mayGetMatchingGeneNames
 	}
+}
+
+function mayValidateSelectCohort(tdb) {
+	if (!tdb.selectCohort) return
+	if (typeof tdb.selectCohort != 'object') throw 'selectCohort{} not object'
+	// cohort selection supported
+	if (!tdb.selectCohort.term) throw 'term{} missing from termdb.selectCohort'
+	if (!tdb.selectCohort.term.id) throw 'id missing from termdb.selectCohort.term'
+	if (typeof tdb.selectCohort.term.id != 'string') throw 'termdb.selectCohort.term.id is not string'
+	if (tdb.selectCohort.term.type != 'categorical')
+		throw 'type is not hardcoded "categorical" from termdb.selectCohort.term'
+	if (!tdb.selectCohort.values) throw 'values[] missing from termdb.selectCohort'
+	if (!Array.isArray(tdb.selectCohort.values)) throw 'termdb.selectCohort.values is not array'
+	if (tdb.selectCohort.values.length == 0) throw 'termdb.selectCohort.values[] cannot be empty'
+	for (const v of tdb.selectCohort.values) {
+		if (!v.keys) throw 'keys[] missing from one of selectCohort.values[]'
+		if (!Array.isArray(v.keys)) throw 'keys[] is not array from one of selectCohort.values[]'
+		if (v.keys.length == 0) throw 'keys[] is empty from one of selectCohort.values[]'
+	}
+}
+
+async function mayValidateRestrictAcestries(tdb) {
+	if (!tdb.restrictAncestries) return
+	if (!Array.isArray(tdb.restrictAncestries) || tdb.restrictAncestries.length == 0)
+		throw 'termdb.restrictAncestries[] is not non-empty array'
+	for (const a of tdb.restrictAncestries) {
+		if (!a.name) throw 'name missing from one of restrictAncestries'
+		if (typeof a.tvs != 'object') throw '.tvs{} missing from one of restrictAncestries'
+		// file path is from tp/; parse file, store pc values to pcs
+		if (!Number.isInteger(a.PCcount)) throw 'PCcount is not integer'
+		if (a.PCfile) {
+			// a single file for this ancestry, not by cohort
+			a.pcs = await read_PC_file(a.PCfile, a.PCcount)
+		} else if (a.PCfileBySubcohort) {
+			// pc file by subcohort
+			for (const subcohort in a.PCfileBySubcohort) {
+				const b = a.PCfileBySubcohort[subcohort]
+				if (!b.file) throw '.file missing for a subcohort in PCfileBySubcohort'
+				b.pcs = await read_PC_file(b.file, a.PCcount)
+			}
+		}
+	}
+}
+
+async function read_PC_file(file, PCcount) {
+	const pcs = new Map() // k: pc ID, v: Map(sampleId:value)
+	for (let i = 1; i <= PCcount; i++) pcs.set(pc_termid_prefix + i, new Map())
+
+	let samplecount = 0
+	for (const line of (await utils.read_file(path.join(serverconfig.tpmasterdir, file))).trim().split('\n')) {
+		samplecount++
+		// each line: sampleid \t pc1 \t pc2 \t ...
+		const l = line.split('\t')
+		const sampleid = Number(l[0])
+		if (!Number.isInteger(sampleid)) throw 'non-integer sample id from a line of restrictAncestries pc file'
+		for (let i = 1; i <= PCcount; i++) {
+			const pcid = pc_termid_prefix + i
+			const value = Number(l[i])
+			if (Number.isNaN(value)) throw 'non-numeric PC value from restrictAncestries file'
+			pcs.get(pcid).set(sampleid, value)
+		}
+	}
+	console.log(samplecount, 'samples loaded from ' + file)
+	return Object.freeze(pcs)
 }
 
 async function getBarchartDataFromSqlitedb(twLst, q, combination, ds) {
