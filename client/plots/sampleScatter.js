@@ -487,22 +487,20 @@ class Scatter {
 	}
 
 	openSurvivalPlot(term, groups) {
+		const values = {}
+		for (const group of groups) values[group.name] = { key: group.name, label: group.name }
+
 		let config = {
 			chartType: 'survival',
 			term,
 			term2: {
-				term: { name: this.config.name + ' groups', type: 'samplelst' },
+				term: { name: this.config.name + ' groups', type: 'samplelst', values },
 				q: {
 					mode: 'custom-groupsetting',
 					groups: groups
 				}
 			},
-			insertBefore: self.id,
-			settings: {
-				survival: {
-					xTickValues: [0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30]
-				}
-			}
+			insertBefore: self.id
 		}
 		this.app.dispatch({
 			type: 'plot_create',
