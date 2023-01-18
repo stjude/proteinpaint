@@ -196,7 +196,10 @@ export async function validate_termdb(ds) {
 	}
 
 	mayValidateSelectCohort(tdb)
+
+	// must validate selectCohort first, then restrictAncestries, as latter may depend on former
 	await mayValidateRestrictAcestries(tdb)
+
 	await mayInitiateScatterplots(ds)
 	if ('minTimeSinceDx' in tdb) {
 		if (!Number.isFinite(tdb.minTimeSinceDx)) throw 'termdb.minTimeSinceDx not number'
@@ -267,18 +270,23 @@ export async function validate_termdb(ds) {
 }
 
 function mayValidateSelectCohort(tdb) {
-	if (!tdb.selectCohort) return
-	if (typeof tdb.selectCohort != 'object') throw 'selectCohort{} not object'
+	const sc = tdb.selectCohort
+	if (!sc) return
+	if (typeof sc != 'object') throw 'selectCohort{} not object'
 	// cohort selection supported
-	if (!tdb.selectCohort.term) throw 'term{} missing from termdb.selectCohort'
-	if (!tdb.selectCohort.term.id) throw 'id missing from termdb.selectCohort.term'
-	if (typeof tdb.selectCohort.term.id != 'string') throw 'termdb.selectCohort.term.id is not string'
-	if (tdb.selectCohort.term.type != 'categorical')
-		throw 'type is not hardcoded "categorical" from termdb.selectCohort.term'
-	if (!tdb.selectCohort.values) throw 'values[] missing from termdb.selectCohort'
-	if (!Array.isArray(tdb.selectCohort.values)) throw 'termdb.selectCohort.values is not array'
-	if (tdb.selectCohort.values.length == 0) throw 'termdb.selectCohort.values[] cannot be empty'
-	for (const v of tdb.selectCohort.values) {
+	if (!sc.term) throw 'term{} missing from termdb.selectCohort'
+	if (!sc.term.id) throw 'id missing from termdb.selectCohort.term'
+	if (typeof sc.term.id != 'string') throw 'termdb.selectCohort.term.id is not string'
+	if (sc.term.type != 'categorical') throw 'type is not hardcoded "categorical" from termdb.selectCohort.term'
+	{
+		const t = tdb.q.termjsonByOneid(sc.term.id)
+		if (!t) throw 'termdb.selectCohort.term.id is invalid'
+		if (t.type != 'categorical') throw 'termdb.selectCohort.term type is not categorical'
+	}
+	if (!sc.values) throw 'values[] missing from termdb.selectCohort'
+	if (!Array.isArray(sc.values)) throw 'termdb.selectCohort.values is not array'
+	if (sc.values.length == 0) throw 'termdb.selectCohort.values[] cannot be empty'
+	for (const v of sc.values) {
 		if (!v.keys) throw 'keys[] missing from one of selectCohort.values[]'
 		if (!Array.isArray(v.keys)) throw 'keys[] is not array from one of selectCohort.values[]'
 		if (v.keys.length == 0) throw 'keys[] is empty from one of selectCohort.values[]'
@@ -291,15 +299,37 @@ async function mayValidateRestrictAcestries(tdb) {
 		throw 'termdb.restrictAncestries[] is not non-empty array'
 	for (const a of tdb.restrictAncestries) {
 		if (!a.name) throw 'name missing from one of restrictAncestries'
+
 		if (typeof a.tvs != 'object') throw '.tvs{} missing from one of restrictAncestries'
+		// validate tvs
+		if (!a.tvs.term) throw 'tvs.term{} missing from an ancestry'
+		if (!a.tvs.term.id) throw 'tvs.term.id missing from an ancestry'
+		{
+			const t = tdb.q.termjsonByOneid(a.tvs.term.id)
+			if (!t) throw 'tvs.term.id is invalid from an ancestry'
+			if (t.type != 'categorical') throw 'tvs.term.type is not categorical from an ancestry'
+		}
+
 		// file path is from tp/; parse file, store pc values to pcs
 		if (!Number.isInteger(a.PCcount)) throw 'PCcount is not integer'
+
 		if (a.PCfile) {
 			// a single file for this ancestry, not by cohort
 			a.pcs = await read_PC_file(a.PCfile, a.PCcount)
 		} else if (a.PCfileBySubcohort) {
 			// pc file by subcohort
+			if (!tdb.selectCohort) throw 'PCfileBySubcohort is in use but selectCohort is not enabled'
 			for (const subcohort in a.PCfileBySubcohort) {
+				// subcohort is the identifier of a sub-cohort; verify it matches one in selectCohort
+				let missing = true
+				for (const v of tdb.selectCohort.values) {
+					if (subcohort == v.keys.sort().join(',')) {
+						missing = false
+						break
+					}
+				}
+				if (missing) throw 'unknown subcohort from PCfileBySubcohort'
+
 				const b = a.PCfileBySubcohort[subcohort]
 				if (!b.file) throw '.file missing for a subcohort in PCfileBySubcohort'
 				b.pcs = await read_PC_file(b.file, a.PCcount)
