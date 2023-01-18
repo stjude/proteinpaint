@@ -315,7 +315,7 @@ export async function getPlotConfig(opts, app) {
 				barspace: 2 // space between two bars
 			},
 
-			barchart: getDefaultBarSettings(),
+			barchart: getDefaultBarSettings(app),
 
 			violin: getDefaultViolinSettings()
 		},

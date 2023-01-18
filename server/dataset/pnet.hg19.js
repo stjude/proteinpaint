@@ -14,7 +14,11 @@ module.exports = {
 			file: 'files/hg19/pnet/clinical/db'
 		},
 		termdb: {
-			allowedTermTypes: ['geneVariant']
+			allowedTermTypes: ['geneVariant'],
+			multipleTestingCorrection: {
+				method: 'bon',
+				skipLowSampleSize: true
+			}
 		},
 		scatterplots: {
 			plots: [

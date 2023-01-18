@@ -517,21 +517,13 @@ export default function barsRenderer(barsapp, holder) {
 			// if Asterisks visible checkbox is not checked.
 			return
 		}
-
-		// calculate total number of unskipped tests
-		let testNum = 0
-		for (const chartId in barsapp.chartsData.tests) {
-			testNum += barsapp.chartsData.tests[chartId].reduce((a, b) => a + b.term2tests.filter(a => !a.skipped).length, 0)
-		}
-		const cutoff = 0.05 / testNum
 		g.append('text')
-			.text(d =>
-				d.groupPvalues && d.groupPvalues.term2tests.find(x => x.term2id == d.dataId).skipped
-					? ''
-					: d.groupPvalues && d.groupPvalues.term2tests.find(x => x.term2id == d.dataId).pvalue < cutoff
-					? '*'
-					: ''
-			)
+			.text(d => {
+				const test = d.groupPvalues && d.groupPvalues.term2tests.find(x => x.term2id == d.dataId)
+				if (!test || test.skipped || !test.adjusted_p_value) return ''
+				// is conducting multiple testing correction
+				return test.adjusted_p_value < 0.05 ? '*' : ''
+			})
 			.attr('x', d => d.x + d.width / 2)
 			.attr('y', d => d.y + d.height / 2)
 			.attr('dy', '0.6em')

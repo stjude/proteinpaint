@@ -15,7 +15,11 @@ module.exports = function() {
 				file: 'files/hg19/ihg/clinical/db'
 			},
 			termdb: {
-				allowedTermTypes: ['geneVariant']
+				allowedTermTypes: ['geneVariant'],
+				multipleTestingCorrection: {
+					method: 'bon',
+					skipLowSampleSize: true
+				}
 			},
 			scatterplots: {
 				plots: [

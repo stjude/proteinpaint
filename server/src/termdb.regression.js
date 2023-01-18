@@ -939,22 +939,21 @@ async function lowAFsnps_fisher(tw, sampledata, Rinput, result) {
 	}
 
 	//const plines = await lines2R(path.join(serverconfig.binpath, 'utils/fisher.R'), lines)
-	const tests = await run_rust(
-		'fisher',
-		JSON.stringify({ fisher_limit: 40, individual_fisher_limit: 10, input: input })
-	)
+	const tests = await run_rust('fisher', JSON.stringify({ input: input }))
 	for (const test of JSON.parse(tests)) {
 		const snpid = index2snpid.get(test.index)
 		const { effAle } = tw.lowAFsnps.get(snpid)
 		const pvalue = test.p_value
 
 		// make a result object for this snp
+		const isChi = test.fisher_chisq === 'chisq'
 		const analysisResult = {
 			id: snpid,
 			AFstr: tw.snpid2AFstr.get(snpid),
 			data: {
 				headerRow: getLine4OneSnp(snpid, tw),
 				fisher: {
+					isChi: isChi,
 					pvalue: Number(pvalue.toFixed(4)),
 					rows: [
 						['', 'Carry ' + effAle + ' allele', 'No ' + effAle + ' allele'],

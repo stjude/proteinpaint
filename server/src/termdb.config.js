@@ -38,7 +38,7 @@ export function make(q, res, ds) {
 
 	// optional attributes
 	// when missing, the attribute will not be present as "key:undefined"
-
+	if (tdb.multipleTestingCorrection) c.multipleTestingCorrection = tdb.multipleTestingCorrection
 	if (tdb.helpPages) c.helpPages = tdb.helpPages
 	if (tdb.timeScale) c.timeScale = tdb.timeScale
 	if (tdb.minTimeSinceDx) c.minTimeSinceDx = tdb.minTimeSinceDx

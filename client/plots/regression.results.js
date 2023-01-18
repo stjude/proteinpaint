@@ -426,7 +426,10 @@ function setRenderers(self) {
 
 	self.mayshow_fisher = result => {
 		if (!result.fisher) return
-		const div = self.newDiv("Fisher's exact test:", 'p-value = ' + result.fisher.pvalue)
+		const div = self.newDiv(
+			result.fisher.isChi ? 'Chi-square test:' : "Fisher's exact test:",
+			'p-value = ' + result.fisher.pvalue
+		)
 		const table = div
 			.append('table')
 			.style('margin', '20px')
@@ -1168,7 +1171,7 @@ async function createGenomebrowser(self, input, resultLst) {
 				(self.config.regressionType == 'linear'
 					? 'Wilcoxon rank sum test'
 					: self.config.regressionType == 'logistic'
-					? "Fisher's exact test"
+					? "Chi-square test or Fisher's exact test"
 					: 'Cumulative incidence test'),
 			circle: 'monomorphic variants skipped'
 		},
