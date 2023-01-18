@@ -1,5 +1,5 @@
 import { getCompInit } from '../rx'
-import { Menu } from '../dom/menu'
+import { Menu } from '#dom/menu'
 import { getNormalRoot } from '../filter/filter'
 import { select } from 'd3-selection'
 const dofetch3 = require('#common/dofetch').dofetch3
@@ -440,31 +440,33 @@ function setRenderers(self) {
 	self.showMatrixPlot = function() {
 		self.dom.tip.clear()
 		const menuDiv = self.dom.tip.d.append('div')
-		for (const plot of self.state.termdbConfig.matrixplots) {
-			/* plot: 
-			{
-				name=str,
-				file=str,
-				publicPath=str
+		if (self.state.termdbConfig.matrixplots) {
+			for (const plot of self.state.termdbConfig.matrixplots) {
+				/* plot: 
+				{
+					name=str,
+					file=str,
+					publicPath=str
+				}
+				*/
+				menuDiv
+					.append('div')
+					.attr('class', 'sja_menuoption sja_sharp_border')
+					.text(plot.name)
+					.on('click', async () => {
+						try {
+							const data = await dofetch3('/textfile', { method: 'POST', body: { file: plot.file } })
+							const config = JSON.parse(data.text)
+							self.app.dispatch({
+								type: 'plot_create',
+								config
+							})
+							self.dom.tip.hide()
+						} catch (e) {
+							throw e
+						}
+					})
 			}
-			*/
-			menuDiv
-				.append('div')
-				.attr('class', 'sja_menuoption sja_sharp_border')
-				.text(plot.name)
-				.on('click', async () => {
-					try {
-						const data = await dofetch3('/textfile', { method: 'POST', body: { file: plot.file } })
-						const config = JSON.parse(data.text)
-						self.app.dispatch({
-							type: 'plot_create',
-							config
-						})
-						self.dom.tip.hide()
-					} catch (e) {
-						throw e
-					}
-				})
 		}
 		menuDiv
 			.append('div')
