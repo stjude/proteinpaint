@@ -112,6 +112,45 @@ tape('Render PNET scatter plot', function(test) {
 	}
 })
 
+tape('PNET plot + filter + colorTW=gene', function(test) {
+	test.timeoutAfter(3000)
+
+	const s2 = JSON.parse(JSON.stringify(state))
+	s2.termfilter = {
+		filter: {
+			type: 'tvslst',
+			join: '',
+			in: true,
+			lst: [{ type: 'tvs', tvs: { term: { id: 'Gender' }, values: [{ key: 'M', label: 'Male' }] } }]
+		}
+	}
+	s2.plots[0].colorTW = { term: { type: 'geneVariant', name: 'TP53' } }
+
+	runpp({
+		state: s2,
+		sampleScatter: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+
+	function runTests(scatter) {
+		const scatterDiv = scatter.Inner.dom.holder
+		testPlot()
+		if (test._ok) scatter.Inner.app.destroy()
+		test.end()
+		function testPlot() {
+			const serieG = scatterDiv.select('.sjpcb-scatter-series')
+			const numSymbols = serieG.selectAll('path').size()
+			test.true(
+				numSymbols == scatter.Inner.data.samples.length,
+				`Should be ${scatter.Inner.data.samples.length}. Rendered ${numSymbols} symbols.`
+			)
+		}
+	}
+})
+
 tape('Click behavior of category legend', function(test) {
 	test.timeoutAfter(3000)
 

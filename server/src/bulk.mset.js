@@ -9,6 +9,7 @@ const bulk = require('#shared/bulk'),
 	path = require('path'),
 	fs = require('fs'),
 	serverconfig = require('./serverconfig')
+const { get_samples } = require('./termdb.sql')
 
 const handlers = {
 	snvindel: bulksnv,
@@ -44,11 +45,19 @@ exports.mayGetGeneVariantData = async function(tw, q) {
 	const bySampleId = new Map()
 	if (!flagset) return bySampleId
 
+	let filterSamples
+	if (q?.filter?.lst.length > 0) {
+		// requires that not only q.filter{} is present, but also filter.lst[] is a non-empty array
+		// as client may send filter with blank array of tvs and will break get_samples()
+		filterSamples = get_samples(q.filter, ds)
+	}
+
 	for (const flagname in flagset) {
 		const flag = flagset[flagname]
 		if (!(tname in flag.data)) continue
 		for (const d of flag.data[tname]) {
 			const sid = d._SAMPLEID_
+			if (filterSamples && !filterSamples.includes(sid)) continue
 			if (!bySampleId.has(sid)) bySampleId.set(sid, { sample: sid })
 			const sampleData = bySampleId.get(sid)
 			if (!(tname in sampleData)) sampleData[tname] = { key: tname, values: [], label: tname }
@@ -73,9 +82,9 @@ exports.mayGetGeneVariantData = async function(tw, q) {
 				if (dt.byOrigin) {
 					for (const origin in dt.byOrigin) {
 						const sub_dt = dt.byOrigin[origin]
-						addDataAvailability(dtKey, sub_dt, bySampleId, tname, origin)
+						addDataAvailability(dtKey, sub_dt, bySampleId, tname, origin, filterSamples)
 					}
-				} else addDataAvailability(dtKey, dt, bySampleId, tname)
+				} else addDataAvailability(dtKey, dt, bySampleId, tname, false, filterSamples)
 			}
 		}
 	}
@@ -86,8 +95,9 @@ exports.mayGetGeneVariantData = async function(tw, q) {
 	return bySampleId
 }
 
-function addDataAvailability(dtKey, dt, bySampleId, tname, origin) {
+function addDataAvailability(dtKey, dt, bySampleId, tname, origin, filterSamples) {
 	for (const sid of dt.yesSamples) {
+		if (filterSamples && !filterSamples.includes(sid)) continue
 		if (!bySampleId.has(sid)) bySampleId.set(sid, { sample: sid })
 		const sampleData = bySampleId.get(sid)
 		if (!(tname in sampleData)) sampleData[tname] = { key: tname, values: [], label: tname }
@@ -100,6 +110,7 @@ function addDataAvailability(dtKey, dt, bySampleId, tname, origin) {
 		}
 	}
 	for (const sid of dt.noSamples) {
+		if (filterSamples && !filterSamples.includes(sid)) continue
 		if (!bySampleId.has(sid)) bySampleId.set(sid, { sample: sid })
 		const sampleData = bySampleId.get(sid)
 		if (!(tname in sampleData)) sampleData[tname] = { key: tname, values: [], label: tname }
