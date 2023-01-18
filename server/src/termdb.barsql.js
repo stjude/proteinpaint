@@ -43,7 +43,7 @@ export function handle_request_closure(genomes) {
 			if (q.term2_q) {
 				//term2 is present
 				//compute pvalues using Fisher's exact/Chi-squared test
-				await computePvalues(data)
+				await computePvalues(data, ds)
 			}
 			res.send(data)
 		} catch (e) {
@@ -494,6 +494,7 @@ Output: The function has no return but appends the statistical results to the pr
 			term2tests:[
 				term2id: term2,
 				pvalue: ...,
+				adjusted_p_value: ...,
 				tableValues: {R1C1, R2C1, R1C2, R2C2},
 				isChi,
 				skipped
@@ -502,7 +503,7 @@ Output: The function has no return but appends the statistical results to the pr
 	]
 }
 */
-async function computePvalues(data) {
+async function computePvalues(data, ds) {
 	data.tests = {}
 	for (const chart of data.charts) {
 		// calculate sum of each term2 category. Structure: {term2Catergory1: num of samples, term2Catergory2: num of samples, ...}
@@ -539,7 +540,12 @@ async function computePvalues(data) {
 		}
 
 		// run Fisher's exact test/Chi-squared test
-		const resultWithPvalue = await run_rust('fisher', JSON.stringify({ input }))
+		const bon = ds?.cohort?.termdb?.multipleTestingCorrection?.bon //Flag to calculate adjusted p-value using Bonferroni correction (true/false)
+		const skipLowSampleSize = ds?.cohort?.termdb?.multipleTestingCorrection?.skipLowSampleSize //Flag to check if entries with low sample size need to be ignored (true/false) when entry follows this criteria: total < 2000.0 && ((n1 + n2) / total < 0.03 || (n1 + n3)  / total < 0.03 || (n2 + n4)  / total < 0.03 || (n3 + n4)  / total < 0.03)
+		const resultWithPvalue = await run_rust(
+			'fisher',
+			JSON.stringify({ bon: bon, skipLowSampleSize: skipLowSampleSize, input })
+		)
 		/*
 		parse the test result into pvalueTable array:
 		[{
@@ -547,6 +553,7 @@ async function computePvalues(data) {
 			term2tests:[
 				term2id: dataId,
 				pvalue: ...,
+				adjusted_p_value: ...,
 				tableValues: {R1C1, R2C1, R1C2, R2C2},
 				isChi
 				skipped
@@ -561,9 +568,10 @@ async function computePvalues(data) {
 			const R2C1 = test.n2
 			const R1C2 = test.n3
 			const R2C2 = test.n4
-			const pvalue = test.p_value //null for cases with low sample sizes
+			const pvalue = test.p_value //if skipLowSampleSize is true, null for cases with low sample sizes
 			const isChi = test.fisher_chisq === 'chisq'
 			const skipped = pvalue === null
+			const adjusted_p_value = test.adjusted_p_value
 
 			const t1c = pvalueTable.find(t1c => t1c.term1comparison === seriesId)
 			if (!t1c) {
@@ -573,6 +581,7 @@ async function computePvalues(data) {
 						{
 							term2id: dataId,
 							pvalue: pvalue,
+							adjusted_p_value: adjusted_p_value,
 							tableValues: {
 								R1C1,
 								R2C1,
@@ -588,6 +597,7 @@ async function computePvalues(data) {
 				t1c.term2tests.push({
 					term2id: dataId,
 					pvalue: pvalue,
+					adjusted_p_value: adjusted_p_value,
 					tableValues: {
 						R1C1,
 						R2C1,

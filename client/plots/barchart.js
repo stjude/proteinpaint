@@ -83,43 +83,46 @@ class Barchart {
 				.style('min-width', '300px')
 				.style('margin-left', '50px')
 
+			const inputs = [
+				'term1',
+				'overlay',
+				'divideBy',
+				{
+					label: 'Orientation',
+					type: 'radio',
+					chartType: 'barchart',
+					settingsKey: 'orientation',
+					options: [{ label: 'Vertical', value: 'vertical' }, { label: 'Horizontal', value: 'horizontal' }]
+				},
+				{
+					label: 'Scale',
+					type: 'radio',
+					chartType: 'barchart',
+					settingsKey: 'unit',
+					options: [
+						{ label: 'Linear', value: 'abs' },
+						{ label: 'Log', value: 'log', getDisplayStyle: plot => (plot.term2 ? 'none' : 'inline-block') },
+						{ label: 'Proportion', value: 'pct', getDisplayStyle: plot => (plot.term2 ? 'inline-block' : 'none') }
+					]
+				}
+			]
+			if (this.app.getState().termdbConfig.multipleTestingCorrection) {
+				// a checkbox to allow users to show or hide asterisks on bars
+				inputs.push({
+					label: 'Asterisks',
+					boxLabel: 'Visible',
+					type: 'checkbox',
+					chartType: 'barchart',
+					settingsKey: 'asterisksVisible',
+					title: 'Display the asterisks'
+				})
+			}
 			this.components = {
 				controls: await controlsInit({
 					app: this.app,
 					id: this.id,
 					holder: this.dom.controls.attr('class', 'pp-termdb-plot-controls').style('display', 'inline-block'),
-					inputs: [
-						'term1',
-						'overlay',
-						'divideBy',
-						{
-							label: 'Orientation',
-							type: 'radio',
-							chartType: 'barchart',
-							settingsKey: 'orientation',
-							options: [{ label: 'Vertical', value: 'vertical' }, { label: 'Horizontal', value: 'horizontal' }]
-						},
-						{
-							label: 'Scale',
-							type: 'radio',
-							chartType: 'barchart',
-							settingsKey: 'unit',
-							options: [
-								{ label: 'Linear', value: 'abs' },
-								{ label: 'Log', value: 'log', getDisplayStyle: plot => (plot.term2 ? 'none' : 'inline-block') },
-								{ label: 'Proportion', value: 'pct', getDisplayStyle: plot => (plot.term2 ? 'inline-block' : 'none') }
-							]
-						},
-						// a checkbox to allow users to show or hide asterisks on bars
-						{
-							label: 'Asterisks',
-							boxLabel: 'Visible',
-							type: 'checkbox',
-							chartType: 'barchart',
-							settingsKey: 'asterisksVisible',
-							title: 'Display the asterisks'
-						}
-					]
+					inputs
 				})
 			}
 
@@ -151,6 +154,7 @@ class Barchart {
 					common: config.settings.common
 				}
 			}),
+			multipleTestingCorrection: appState.termdbConfig.multipleTestingCorrection,
 			ssid: appState.ssid,
 			bar_click_menu: appState.bar_click_menu || {}
 		}
@@ -548,13 +552,13 @@ class Barchart {
 					.sort(this.overlaySorter)
 			})
 		}
-		if (t2) {
-			//calculate total number of unskipped tests
+		if (t2 && this.state.multipleTestingCorrection) {
+			// the dataset requires multiple testing correction and therefore needs to show this legend of Statistical Significance
+			// calculate total number of unskipped tests
 			let testNum = 0
 			for (const chartId in this.chartsData.tests) {
 				testNum += this.chartsData.tests[chartId].reduce((a, b) => a + b.term2tests.filter(a => !a.skipped).length, 0)
 			}
-
 			legendGrps.push({
 				name: `<span style="${headingStyle}">Statistical Significance</span>`,
 				items: [{ text: `* p-value < (0.05 / ${testNum} tests)` }]
@@ -847,14 +851,14 @@ function setInteractivity(self) {
 	}
 }
 
-export function getDefaultBarSettings() {
+export function getDefaultBarSettings(app) {
 	return {
 		orientation: 'horizontal',
 		unit: 'abs',
 		overlay: 'none',
 		divideBy: 'none',
 		rowlabelw: 250,
-		asterisksVisible: true
+		asterisksVisible: app?.getState()?.termdbConfig?.multipleTestingCorrection ? true : false
 	}
 }
 
@@ -883,7 +887,7 @@ export async function getPlotConfig(opts, app) {
 				barwidth: 20, // bar thickness
 				barspace: 2 // space between two bars
 			},
-			barchart: getDefaultBarSettings()
+			barchart: getDefaultBarSettings(app)
 		}
 	}
 

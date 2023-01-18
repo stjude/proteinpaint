@@ -518,17 +518,13 @@ export default function barsRenderer(barsapp, holder) {
 			return
 		}
 
-		// calculate total number of unskipped tests
-		let testNum = 0
-		for (const chartId in barsapp.chartsData.tests) {
-			testNum += barsapp.chartsData.tests[chartId].reduce((a, b) => a + b.term2tests.filter(a => !a.skipped).length, 0)
-		}
-		const cutoff = 0.05 / testNum
 		g.append('text')
 			.text(d =>
 				d.groupPvalues && d.groupPvalues.term2tests.find(x => x.term2id == d.dataId).skipped
 					? ''
-					: d.groupPvalues && d.groupPvalues.term2tests.find(x => x.term2id == d.dataId).pvalue < cutoff
+					: (d.groupPvalues && d.groupPvalues.term2tests.find(x => x.term2id == d.dataId).adjusted_p_value
+						? d.groupPvalues && d.groupPvalues.term2tests.find(x => x.term2id == d.dataId).adjusted_p_value < 0.05
+						: d.groupPvalues && d.groupPvalues.term2tests.find(x => x.term2id == d.dataId).pvalue < 0.05)
 					? '*'
 					: ''
 			)

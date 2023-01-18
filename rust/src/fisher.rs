@@ -398,7 +398,7 @@ fn bonferroni_correction(p_values_list: Vec<PValueIndexes>, num_of_tests: f64) {
         match p_values_list[i].p_value {
             Some(p_val) => {
                 //println!("p_val:{}", p_val);
-                let adjusted_p_val: f64 = p_val / num_of_tests; // In bonferroni correction, dividing p_value by number of tests (excluding those with low sample sizes)
+                let adjusted_p_val: f64 = p_val * num_of_tests; // In bonferroni correction, dividing p_value by number of tests (excluding those with low sample sizes)
                 adjusted_p_value = Some(adjusted_p_val);
             }
             None => {}

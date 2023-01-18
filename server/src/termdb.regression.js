@@ -947,7 +947,6 @@ async function lowAFsnps_fisher(tw, sampledata, Rinput, result) {
 
 		// make a result object for this snp
 		const isChi = test.fisher_chisq === 'chisq'
-		const skipped = pvalue === null
 		const analysisResult = {
 			id: snpid,
 			AFstr: tw.snpid2AFstr.get(snpid),
@@ -955,7 +954,7 @@ async function lowAFsnps_fisher(tw, sampledata, Rinput, result) {
 				headerRow: getLine4OneSnp(snpid, tw),
 				fisher: {
 					isChi: isChi,
-					pvalue: skipped ? 'NA(insufficient sample size)' : Number(pvalue.toFixed(4)),
+					pvalue: Number(pvalue.toFixed(4)),
 					rows: [
 						['', 'Carry ' + effAle + ' allele', 'No ' + effAle + ' allele'],
 						['Have event', test.n1, test.n3],
