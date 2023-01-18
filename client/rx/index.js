@@ -620,13 +620,11 @@ export function getComponents(components, dotSepNames) {
 	while (names.length) {
 		let name = names.shift()
 		if (Array.isArray(component)) name = Number(name)
-		component = !names.length
-			? component[name]
-			: component[name] && component[name].components
-			? component[name].components
-			: component[name] && component[name].getComponents
-			? component[name].getComponents()
-			: component[name]
+
+		if (!names.length) component = component[name]
+		else if (component[name] && component[name].components) component = component[name].components
+		else if (component[name] && component[name].getComponents) component = component[name].getComponents()
+		else component = component[name]
 		if (!component) break
 	}
 	return component
