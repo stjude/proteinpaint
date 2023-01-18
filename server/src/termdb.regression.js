@@ -939,7 +939,15 @@ async function lowAFsnps_fisher(tw, sampledata, Rinput, result) {
 	}
 
 	//const plines = await lines2R(path.join(serverconfig.binpath, 'utils/fisher.R'), lines)
-	const tests = await run_rust('fisher', JSON.stringify({ input: input }))
+	const rust_input = { input }
+	const mtc = ds.cohort.termdb.multipleTestingCorrection
+	if (mtc) {
+		rust_input.mtc = mtc.method
+		if (mtc.skipLowSampleSize) rust_input.skipLowSampleSize = mtc.skipLowSampleSize
+	}
+	const tests = await run_rust('fisher', JSON.stringify(rust_input))
+
+	//const tests = await run_rust('fisher', JSON.stringify({ input: input }))
 	for (const test of JSON.parse(tests)) {
 		const snpid = index2snpid.get(test.index)
 		const { effAle } = tw.lowAFsnps.get(snpid)

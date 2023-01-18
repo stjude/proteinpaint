@@ -540,12 +540,13 @@ async function computePvalues(data, ds) {
 		}
 
 		// run Fisher's exact test/Chi-squared test
-		const bon = ds?.cohort?.termdb?.multipleTestingCorrection?.bon //Flag to calculate adjusted p-value using Bonferroni correction (true/false)
-		const skipLowSampleSize = ds?.cohort?.termdb?.multipleTestingCorrection?.skipLowSampleSize //Flag to check if entries with low sample size need to be ignored (true/false) when entry follows this criteria: total < 2000.0 && ((n1 + n2) / total < 0.03 || (n1 + n3)  / total < 0.03 || (n2 + n4)  / total < 0.03 || (n3 + n4)  / total < 0.03)
-		const resultWithPvalue = await run_rust(
-			'fisher',
-			JSON.stringify({ bon: bon, skipLowSampleSize: skipLowSampleSize, input })
-		)
+		const rust_input = { input }
+		const mtc = ds.cohort.termdb.multipleTestingCorrection
+		if (mtc) {
+			rust_input.mtc = mtc.method
+			if (mtc.skipLowSampleSize) rust_input.skipLowSampleSize = mtc.skipLowSampleSize
+		}
+		const resultWithPvalue = await run_rust('fisher', JSON.stringify(rust_input))
 		/*
 		parse the test result into pvalueTable array:
 		[{

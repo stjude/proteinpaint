@@ -17,7 +17,7 @@ module.exports = function() {
 			termdb: {
 				allowedTermTypes: ['geneVariant'],
 				multipleTestingCorrection: {
-					bon: true,
+					method: 'bon',
 					skipLowSampleSize: true
 				}
 			},

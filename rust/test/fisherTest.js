@@ -40,33 +40,14 @@ tape('test #2', async function(test) {
 		{ index: 7, n1: 14, n2: 18, n3: 8, n4: 16 }
 	]
 
-	const output = await run_rust('fisher', JSON.stringify({ bon: true, skipLowSampleSize: true, input }))
+	const output = await run_rust('fisher', JSON.stringify({ mtc: 'bon', skipLowSampleSize: true, input }))
 
 	test.deepEqual(
 		output,
-		JSON.stringify([
-			{ index: 0, n1: 1, n2: 23, n3: 0, n4: 32, p_value: null, adjusted_p_value: null, fisher_chisq: 'NA' },
-			{
-				index: 6,
-				n1: 10,
-				n2: 22,
-				n3: 9,
-				n4: 15,
-				p_value: 0.6249468134880591,
-				adjusted_p_value: 1.2498936269761183,
-				fisher_chisq: 'chisq'
-			},
-			{
-				index: 7,
-				n1: 14,
-				n2: 18,
-				n3: 8,
-				n4: 16,
-				p_value: 0.42960690941598956,
-				adjusted_p_value: 0.8592138188319791,
-				fisher_chisq: 'chisq'
-			}
-		]) + '\n',
+		'[{"index":0,"n1":1,"n2":23,"n3":0,"n4":32,"p_value":null,"adjusted_p_value":null,"fisher_chisq":"NA"},' +
+			'{"index":6,"n1":10,"n2":22,"n3":9,"n4":15,"p_value":0.6249468134880591,"adjusted_p_value":1.0,"fisher_chisq":"chisq"},' +
+			'{"index":7,"n1":14,"n2":18,"n3":8,"n4":16,"p_value":0.42960690941598956,"adjusted_p_value":0.8592138188319791,"fisher_chisq":"chisq"}]' +
+			'\n',
 		'should match expected output'
 	)
 	test.end()
@@ -107,7 +88,7 @@ tape('test #4', async function(test) {
 		{ index: 7, n1: 501, n2: 1897, n3: 537, n4: 2118 }
 	]
 
-	const output = await run_rust('fisher', JSON.stringify({ fdr: true, input }))
+	const output = await run_rust('fisher', JSON.stringify({ mtc: 'fdr', input }))
 
 	test.deepEqual(
 		output,
@@ -207,7 +188,7 @@ tape('test #5', async function(test) {
 		{ index: 4, n1: 3, n2: 21, n3: 5, n4: 27 }
 	]
 
-	const output = await run_rust('fisher', JSON.stringify({ fdr: true, input }))
+	const output = await run_rust('fisher', JSON.stringify({ mtc: 'fdr', input }))
 
 	test.deepEqual(
 		output,
@@ -234,7 +215,7 @@ tape('test #6', async function(test) {
 		{ index: 7, n1: 501, n2: 1897, n3: 537, n4: 2118 }
 	]
 
-	const output = await run_rust('fisher', JSON.stringify({ fdr: true, input }))
+	const output = await run_rust('fisher', JSON.stringify({ mtc: 'fdr', input }))
 
 	test.deepEqual(
 		output,
@@ -337,7 +318,7 @@ tape('test #7', async function(test) {
 		{ index: 6, n1: 1, n2: 987, n3: 3, n4: 897 },
 		{ index: 7, n1: 3, n2: 748, n3: 4, n4: 977 }
 	]
-	const output = await run_rust('fisher', JSON.stringify({ fdr: true, skipLowSampleSize: true, input }))
+	const output = await run_rust('fisher', JSON.stringify({ mtc: 'fdr', skipLowSampleSize: true, input }))
 
 	test.deepEqual(
 		output,
@@ -367,7 +348,7 @@ tape('test #8', async function(test) {
 		{ index: 6, n1: 1, n2: 987, n3: 3, n4: 897 },
 		{ index: 7, n1: 3, n2: 748, n3: 4, n4: 977 }
 	]
-	const output = await run_rust('fisher', JSON.stringify({ bon: true, skipLowSampleSize: true, input }))
+	const output = await run_rust('fisher', JSON.stringify({ mtc: 'bon', skipLowSampleSize: true, input }))
 
 	test.deepEqual(
 		output,
