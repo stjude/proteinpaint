@@ -541,7 +541,7 @@ async function computePvalues(data, ds) {
 
 		// run Fisher's exact test/Chi-squared test
 		const rust_input = { input }
-		const mtc = ds?.cohort?.termdb?.multipleTestingCorrection
+		const mtc = ds.cohort.termdb.multipleTestingCorrection
 		if (mtc) {
 			rust_input.mtc = mtc.method
 			if (mtc.skipLowSampleSize) rust_input.skipLowSampleSize = mtc.skipLowSampleSize
