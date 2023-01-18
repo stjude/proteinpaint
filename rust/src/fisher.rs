@@ -4,8 +4,8 @@
 // Results are written in JSON format to stdout.
 
 // Input JSON specifications:
-// { fdr: Flag to calculate adjusted p-value using Benjamini-Hochberg correction (true/false) (optional)
-//   bon: Flag to calculate adjusted p-value using Bonferroni correction (true/false) (optional)
+// {
+//   mtc: fdr/bon (optional). If some other string is used in this field, the script panics.
 //   skipLowSampleSize: Flag to check if entries with low sample size need to be ignored (true/false) (optional). When entry follows this criteria total < 2000.0 && ((n1 + n2) / total < 0.03 || (n1 + n3)  / total < 0.03 || (n2 + n4)  / total < 0.03 || (n3 + n4)  / total < 0.03)
 //   input:[{
 //     index: Index of the entry
@@ -57,23 +57,23 @@
 
 // cd ~/proteinpaint/rust && cargo build --release && json='{"fdr":true,"input":[{ "index": 0, "n1": 2, "n2": 4, "n3": 300, "n4": 400 },{ "index": 1, "n1": 1, "n2": 2, "n3": 3, "n4": 2 },{ "index": 2, "n1": 10, "n2": 22, "n3": 9, "n4": 15 },{ "index": 3, "n1": 14, "n2": 18, "n3": 8, "n4": 16 }]}' && time echo "$json" | target/release/fisher
 
-// cd ~/proteinpaint/rust && cargo build --release && json='{"fdr":true,"input":[{"index":0,"n1":514,"n2":626,"n3":45,"n4":106},{"index":1,"n1":11,"n2":948,"n3":364,"n4":292},{"index":2,"n1":129,"n2":951,"n3":531,"n4":268},{"index":3,"n1":677,"n2":40,"n3":11,"n4":837},{"index":4,"n1":947,"n2":937,"n3":245,"n4":817},{"index":5,"n1":589,"n2":889,"n3":934,"n4":400},{"index":6,"n1":5,"n2":119,"n3":278,"n4":641},{"index":7,"n1":873,"n2":113,"n3":771,"n4":109},{"index":8,"n1":495,"n2":69,"n3":759,"n4":884},{"index":9,"n1":266,"n2":192,"n3":686,"n4":761},{"index":10,"n1":484,"n2":814,"n3":754,"n4":521},{"index":11,"n1":50,"n2":615,"n3":357,"n4":470},{"index":12,"n1":416,"n2":109,"n3":472,"n4":462},{"index":13,"n1":535,"n2":935,"n3":969,"n4":35},{"index":14,"n1":605,"n2":667,"n3":553,"n4":359},{"index":15,"n1":483,"n2":719,"n3":879,"n4":254},{"index":16,"n1":940,"n2":32,"n3":259,"n4":373},{"index":17,"n1":228,"n2":565,"n3":154,"n4":155},{"index":18,"n1":23,"n2":57,"n3":232,"n4":238},{"index":19,"n1":356,"n2":39,"n3":771,"n4":887},{"index":20,"n1":481,"n2":307,"n3":776,"n4":952},{"index":21,"n1":463,"n2":202,"n3":57,"n4":218},{"index":22,"n1":658,"n2":68,"n3":431,"n4":774},{"index":23,"n1":334,"n2":266,"n3":266,"n4":677},{"index":24,"n1":97,"n2":544,"n3":532,"n4":863},{"index":25,"n1":562,"n2":313,"n3":725,"n4":574}]}' && time echo "$json" | target/release/fisher
+// cd ~/proteinpaint/rust && cargo build --release && json='{"mtc":"fdr","input":[{"index":0,"n1":514,"n2":626,"n3":45,"n4":106},{"index":1,"n1":11,"n2":948,"n3":364,"n4":292},{"index":2,"n1":129,"n2":951,"n3":531,"n4":268},{"index":3,"n1":677,"n2":40,"n3":11,"n4":837},{"index":4,"n1":947,"n2":937,"n3":245,"n4":817},{"index":5,"n1":589,"n2":889,"n3":934,"n4":400},{"index":6,"n1":5,"n2":119,"n3":278,"n4":641},{"index":7,"n1":873,"n2":113,"n3":771,"n4":109},{"index":8,"n1":495,"n2":69,"n3":759,"n4":884},{"index":9,"n1":266,"n2":192,"n3":686,"n4":761},{"index":10,"n1":484,"n2":814,"n3":754,"n4":521},{"index":11,"n1":50,"n2":615,"n3":357,"n4":470},{"index":12,"n1":416,"n2":109,"n3":472,"n4":462},{"index":13,"n1":535,"n2":935,"n3":969,"n4":35},{"index":14,"n1":605,"n2":667,"n3":553,"n4":359},{"index":15,"n1":483,"n2":719,"n3":879,"n4":254},{"index":16,"n1":940,"n2":32,"n3":259,"n4":373},{"index":17,"n1":228,"n2":565,"n3":154,"n4":155},{"index":18,"n1":23,"n2":57,"n3":232,"n4":238},{"index":19,"n1":356,"n2":39,"n3":771,"n4":887},{"index":20,"n1":481,"n2":307,"n3":776,"n4":952},{"index":21,"n1":463,"n2":202,"n3":57,"n4":218},{"index":22,"n1":658,"n2":68,"n3":431,"n4":774},{"index":23,"n1":334,"n2":266,"n3":266,"n4":677},{"index":24,"n1":97,"n2":544,"n3":532,"n4":863},{"index":25,"n1":562,"n2":313,"n3":725,"n4":574}]}' && time echo "$json" | target/release/fisher
 
-// cd ~/proteinpaint/rust && cargo build --release && json='{"fdr":true,"input":[{"index":0,"n1":214,"n2":2057,"n3":134,"n4":1954},{"index":1,"n1":134,"n2":1954,"n3":214,"n4":2057},{"index":2,"n1":1863,"n2":225,"n3":1935,"n4":336},{"index":3,"n1":1935,"n2":336,"n3":1863,"n4":225},{"index":4,"n1":106,"n2":2165,"n3":74,"n4":2014},{"index":5,"n1":74,"n2":2014,"n3":106,"n4":2165},{"index":6,"n1":1,"n2":987,"n3":3,"n4":897},{"index":7,"n1":3,"n2":748,"n3":4,"n4":977}]}' && time echo "$json" | target/release/fisher
+// cd ~/proteinpaint/rust && cargo build --release && json='{"mtc":"fdr","input":[{"index":0,"n1":214,"n2":2057,"n3":134,"n4":1954},{"index":1,"n1":134,"n2":1954,"n3":214,"n4":2057},{"index":2,"n1":1863,"n2":225,"n3":1935,"n4":336},{"index":3,"n1":1935,"n2":336,"n3":1863,"n4":225},{"index":4,"n1":106,"n2":2165,"n3":74,"n4":2014},{"index":5,"n1":74,"n2":2014,"n3":106,"n4":2165},{"index":6,"n1":1,"n2":987,"n3":3,"n4":897},{"index":7,"n1":3,"n2":748,"n3":4,"n4":977}]}' && time echo "$json" | target/release/fisher
 
-// cd ~/proteinpaint/rust && cargo build --release && json='{"fdr":true, "skipLowSampleSize":true,"input":[{"index":0,"n1":214,"n2":2057,"n3":134,"n4":1954},{"index":1,"n1":134,"n2":1954,"n3":214,"n4":2057},{"index":2,"n1":1863,"n2":225,"n3":1935,"n4":336},{"index":3,"n1":1935,"n2":336,"n3":1863,"n4":225},{"index":4,"n1":106,"n2":2165,"n3":74,"n4":2014},{"index":5,"n1":74,"n2":2014,"n3":106,"n4":2165},{"index":6,"n1":1,"n2":987,"n3":3,"n4":897},{"index":7,"n1":3,"n2":748,"n3":4,"n4":977}]}' && time echo "$json" | target/release/fisher
+// cd ~/proteinpaint/rust && cargo build --release && json='{"mtc":"fdr", "skipLowSampleSize":true,"input":[{"index":0,"n1":214,"n2":2057,"n3":134,"n4":1954},{"index":1,"n1":134,"n2":1954,"n3":214,"n4":2057},{"index":2,"n1":1863,"n2":225,"n3":1935,"n4":336},{"index":3,"n1":1935,"n2":336,"n3":1863,"n4":225},{"index":4,"n1":106,"n2":2165,"n3":74,"n4":2014},{"index":5,"n1":74,"n2":2014,"n3":106,"n4":2165},{"index":6,"n1":1,"n2":987,"n3":3,"n4":897},{"index":7,"n1":3,"n2":748,"n3":4,"n4":977}]}' && time echo "$json" | target/release/fisher
 
-// cd ~/proteinpaint/rust && cargo build --release && json='{"bon":true, "skipLowSampleSize":true,"input":[{"index":0,"n1":214,"n2":2057,"n3":134,"n4":1954},{"index":1,"n1":134,"n2":1954,"n3":214,"n4":2057},{"index":2,"n1":1863,"n2":225,"n3":1935,"n4":336},{"index":3,"n1":1935,"n2":336,"n3":1863,"n4":225},{"index":4,"n1":106,"n2":2165,"n3":74,"n4":2014},{"index":5,"n1":74,"n2":2014,"n3":106,"n4":2165},{"index":6,"n1":1,"n2":987,"n3":3,"n4":897},{"index":7,"n1":3,"n2":748,"n3":4,"n4":977}]}' && time echo "$json" | target/release/fisher
+// cd ~/proteinpaint/rust && cargo build --release && json='{"mtc":"bon", "skipLowSampleSize":true,"input":[{"index":0,"n1":214,"n2":2057,"n3":134,"n4":1954},{"index":1,"n1":134,"n2":1954,"n3":214,"n4":2057},{"index":2,"n1":1863,"n2":225,"n3":1935,"n4":336},{"index":3,"n1":1935,"n2":336,"n3":1863,"n4":225},{"index":4,"n1":106,"n2":2165,"n3":74,"n4":2014},{"index":5,"n1":74,"n2":2014,"n3":106,"n4":2165},{"index":6,"n1":1,"n2":987,"n3":3,"n4":897},{"index":7,"n1":3,"n2":748,"n3":4,"n4":977}]}' && time echo "$json" | target/release/fisher
 
-// cd ~/proteinpaint/rust && cargo build --release && json='{"bon":true,"input":[{"index":0,"n1":214,"n2":2057,"n3":134,"n4":1954},{"index":1,"n1":134,"n2":1954,"n3":214,"n4":2057},{"index":2,"n1":1863,"n2":225,"n3":1935,"n4":336},{"index":3,"n1":1935,"n2":336,"n3":1863,"n4":225},{"index":4,"n1":106,"n2":2165,"n3":74,"n4":2014},{"index":5,"n1":74,"n2":2014,"n3":106,"n4":2165},{"index":6,"n1":1,"n2":987,"n3":3,"n4":897},{"index":7,"n1":3,"n2":748,"n3":4,"n4":977}]}' && time echo "$json" | target/release/fisher
+// cd ~/proteinpaint/rust && cargo build --release && json='{"mtc":"bon","input":[{"index":0,"n1":214,"n2":2057,"n3":134,"n4":1954},{"index":1,"n1":134,"n2":1954,"n3":214,"n4":2057},{"index":2,"n1":1863,"n2":225,"n3":1935,"n4":336},{"index":3,"n1":1935,"n2":336,"n3":1863,"n4":225},{"index":4,"n1":106,"n2":2165,"n3":74,"n4":2014},{"index":5,"n1":74,"n2":2014,"n3":106,"n4":2165},{"index":6,"n1":1,"n2":987,"n3":3,"n4":897},{"index":7,"n1":3,"n2":748,"n3":4,"n4":977}]}' && time echo "$json" | target/release/fisher
 
 // cd ~/proteinpaint/rust && cargo build --release && json='{"skipLowSampleSize":true, "input":[{"index":0,"n1":214,"n2":2057,"n3":134,"n4":1954},{"index":1,"n1":134,"n2":1954,"n3":214,"n4":2057},{"index":2,"n1":1863,"n2":225,"n3":1935,"n4":336},{"index":3,"n1":1935,"n2":336,"n3":1863,"n4":225},{"index":4,"n1":106,"n2":2165,"n3":74,"n4":2014},{"index":5,"n1":74,"n2":2014,"n3":106,"n4":2165},{"index":6,"n1":1,"n2":987,"n3":3,"n4":897},{"index":7,"n1":3,"n2":748,"n3":4,"n4":977}]}' && time echo "$json" | target/release/fisher // This output will panic because only skipLowSampleSize = true
 
 // cd ~/proteinpaint/rust && cargo build --release && json='{"input":[{"index":0,"n1":214,"n2":2057,"n3":134,"n4":1954},{"index":1,"n1":134,"n2":1954,"n3":214,"n4":2057},{"index":2,"n1":1863,"n2":225,"n3":1935,"n4":336},{"index":3,"n1":1935,"n2":336,"n3":1863,"n4":225},{"index":4,"n1":106,"n2":2165,"n3":74,"n4":2014},{"index":5,"n1":74,"n2":2014,"n3":106,"n4":2165},{"index":6,"n1":1,"n2":987,"n3":3,"n4":897},{"index":7,"n1":3,"n2":748,"n3":4,"n4":977}]}' && time echo "$json" | target/release/fisher
 
-// cd ~/proteinpaint/rust && cargo build --release && json='{"fdr":true,"input":[{"index":0,"n1":214,"n2":2057,"n3":134,"n4":1954},{"index":1,"n1":134,"n2":1954,"n3":214,"n4":2057},{"index":2,"n1":1863,"n2":225,"n3":1935,"n4":336},{"index":3,"n1":1935,"n2":336,"n3":1863,"n4":225},{"index":4,"n1":106,"n2":2165,"n3":74,"n4":2014},{"index":5,"n1":74,"n2":2014,"n3":106,"n4":2165}]}' && time echo "$json" | target/release/fisher
+// cd ~/proteinpaint/rust && cargo build --release && json='{"mtc":"fdr","input":[{"index":0,"n1":214,"n2":2057,"n3":134,"n4":1954},{"index":1,"n1":134,"n2":1954,"n3":214,"n4":2057},{"index":2,"n1":1863,"n2":225,"n3":1935,"n4":336},{"index":3,"n1":1935,"n2":336,"n3":1863,"n4":225},{"index":4,"n1":106,"n2":2165,"n3":74,"n4":2014},{"index":5,"n1":74,"n2":2014,"n3":106,"n4":2165}]}' && time echo "$json" | target/release/fisher
 
-// Example of json input missing the fdr and bon flag
+// Example of json input missing the fdr/bon flag
 
 // cd ~/proteinpaint/rust && cargo build --release && json='{"input":[{"index":0,"n1":514,"n2":626,"n3":45,"n4":106},{"index":1,"n1":11,"n2":948,"n3":364,"n4":292},{"index":2,"n1":129,"n2":951,"n3":531,"n4":268},{"index":3,"n1":677,"n2":40,"n3":11,"n4":837},{"index":4,"n1":947,"n2":937,"n3":245,"n4":817},{"index":5,"n1":589,"n2":889,"n3":934,"n4":400},{"index":6,"n1":5,"n2":119,"n3":278,"n4":641},{"index":7,"n1":873,"n2":113,"n3":771,"n4":109},{"index":8,"n1":495,"n2":69,"n3":759,"n4":884},{"index":9,"n1":266,"n2":192,"n3":686,"n4":761},{"index":10,"n1":484,"n2":814,"n3":754,"n4":521},{"index":11,"n1":50,"n2":615,"n3":357,"n4":470},{"index":12,"n1":416,"n2":109,"n3":472,"n4":462},{"index":13,"n1":535,"n2":935,"n3":969,"n4":35},{"index":14,"n1":605,"n2":667,"n3":553,"n4":359},{"index":15,"n1":483,"n2":719,"n3":879,"n4":254},{"index":16,"n1":940,"n2":32,"n3":259,"n4":373},{"index":17,"n1":228,"n2":565,"n3":154,"n4":155},{"index":18,"n1":23,"n2":57,"n3":232,"n4":238},{"index":19,"n1":356,"n2":39,"n3":771,"n4":887},{"index":20,"n1":481,"n2":307,"n3":776,"n4":952},{"index":21,"n1":463,"n2":202,"n3":57,"n4":218},{"index":22,"n1":658,"n2":68,"n3":431,"n4":774},{"index":23,"n1":334,"n2":266,"n3":266,"n4":677},{"index":24,"n1":97,"n2":544,"n3":532,"n4":863},{"index":25,"n1":562,"n2":313,"n3":725,"n4":574}]}' && time echo "$json" | target/release/fisher
 
@@ -140,28 +140,40 @@ fn main() {
 
                     //let fisher_limit: u32 = json_string["fisher_limit"].as_u32().unwrap(); // Cutoff for sum of all four numbers to decide whether to use fisher or chisq test
                     let individual_fisher_limit: f64 = 5.0;
-                    let fdr_string = &json_string["fdr"].to_owned();
-                    let bon_string = &json_string["bon"].to_owned();
+                    let mtc_string = &json_string["mtc"].to_owned();
                     let low_sample_size_string = &json_string["skipLowSampleSize"].to_owned();
                     //println!("fdr_string:{}", fdr_string);
 
                     let mut fdr_bool = false;
-                    match fdr_string.as_bool() {
-                        Some(fdr) => match fdr {
-                            true => fdr_bool = true,
-                            false => {}
-                        },
-                        None => {}
-                    }
-
                     let mut bon_bool = false;
-                    match bon_string.as_bool() {
-                        Some(bon) => match bon {
-                            true => bon_bool = true,
-                            false => {}
-                        },
+
+                    match mtc_string.as_str() {
+                        Some(mtc) => {
+                            if mtc == "fdr" {
+                                fdr_bool = true;
+                            } else if mtc == "bon" {
+                                bon_bool = true;
+                            } else {
+                                panic!("Unrecognized option, mtc field should be fdr/bon");
+                            }
+                        }
                         None => {}
                     }
+                    //match fdr_string.as_bool() {
+                    //    Some(fdr) => match fdr {
+                    //        true => fdr_bool = true,
+                    //        false => {}
+                    //    },
+                    //    None => {}
+                    //}
+                    //
+                    //match bon_string.as_bool() {
+                    //    Some(bon) => match bon {
+                    //        true => bon_bool = true,
+                    //        false => {}
+                    //    },
+                    //    None => {}
+                    //}
 
                     let mut low_sample_size_bool = false;
                     match low_sample_size_string.as_bool() {
@@ -202,6 +214,7 @@ fn main() {
                             low_sample_size_bool,
                         );
                     } else if fdr_bool == true && bon_bool == true {
+                        // This scenario is probably no longer possible ?
                         println!(
                             "Choose either Bonferronni correction or Benjamini-Hochberg correction"
                         );
@@ -322,6 +335,7 @@ fn calculate_fisher_chisq_test(
 
 fn benjamini_hochberg_correction(mut p_values_list: Vec<PValueIndexes>, num_of_tests: f64) {
     // Sorting p-values in ascending order
+    //println!("MTC using FDR correction");
     p_values_list.as_mut_slice().sort_by(|a, b| {
         (a.abs_p_value())
             .partial_cmp(&b.abs_p_value())
@@ -393,6 +407,7 @@ fn benjamini_hochberg_correction(mut p_values_list: Vec<PValueIndexes>, num_of_t
 
 fn bonferroni_correction(p_values_list: Vec<PValueIndexes>, num_of_tests: f64) {
     //println!("num_of_tests:{}", num_of_tests);
+    //println!("MTC using Bonferroni correction");
     let mut adjusted_p_values = Vec::<AdjustedPValueIndexes>::new();
     for i in 0..p_values_list.len() {
         let mut adjusted_p_value: Option<f64> = None;
