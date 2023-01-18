@@ -158,6 +158,12 @@ npm version $TYPE --no-git-tag-version --no-workspaces-update
 $handlePkg "$WSPKG"
 
 #################
+# Generate change log
+#################
+
+node build/changeLogGenerator.js
+
+#################
 # COMMIT CHANGES
 #################
 

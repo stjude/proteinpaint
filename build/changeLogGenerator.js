@@ -1,9 +1,9 @@
 const fs = require('fs')
 
-const changeLogFile = '../CHANGELOG.md'
+const changeLogFile = './CHANGELOG.md'
 const oldChangeLogText = fs.readFileSync(changeLogFile).toString('utf-8')
 
-const releaseTextFile = '../release.txt'
+const releaseTextFile = './release.txt'
 const releaseLogText = fs.readFileSync(releaseTextFile).toString('utf-8')
 
 if (releaseLogText === '') {
