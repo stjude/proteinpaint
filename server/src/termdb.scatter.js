@@ -32,7 +32,7 @@ trigger_getSampleScatter()
 */
 
 // color of reference samples, they should be shown as a "cloud" of dots at backdrop
-const refColor = '#ccc'
+const refColor = '#E5E4E2'
 
 // called in mds3.init
 export async function mayInitiateScatterplots(ds) {
@@ -189,15 +189,23 @@ async function colorAndShapeSamples(refSamples, cohortSamples, data, q) {
 	}
 	if (q.colorTW.q.mode !== 'continuous') {
 		const k2c = d3scale.scaleOrdinal(schemeCategory20)
+		let i = 19
 		for (const [category, value] of colorMap) {
 			const tvalue = q.colorTW.term.values?.[category]
 			if (tvalue && 'color' in tvalue) value.color = tvalue.color
 			else if (data.refs?.byTermId[q.colorTW.term.id]?.bins) {
 				const bin = data.refs.byTermId[q.colorTW.term.id].bins.find(bin => bin.name === category)
-				value.color = bin ? bin.color : k2c(category)
+				if (bin) value.color = bin.color
+				else {
+					value.color = schemeCategory20[i]
+					i--
+				}
 			} else if (q.colorTW.term.type == 'geneVariant') value.color = mclass[value.mclass]?.color || 'black'
 			// should be invalid_mclass_color
-			else value.color = k2c(category)
+			else {
+				value.color = schemeCategory20[i]
+				i--
+			}
 		}
 	}
 	//else

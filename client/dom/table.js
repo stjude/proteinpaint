@@ -228,7 +228,7 @@ export async function renderTable({
 					}
 				})
 			if (button.class) button.button.attr('class', button.class)
-			else button.button.attr('class', 'sjpp_apply_btn')
+			//else button.button.attr('class', 'sjpp_apply_btn')
 			button.button.node().disabled = selectedRows.length == 0 && !selectAll
 		}
 	}

@@ -603,6 +603,63 @@ class Scatter {
 			}
 		})
 	}
+
+	getCategoryInfo(d, category) {
+		if (!(category in d)) return ''
+		return d.category_info?.[category] ? `${d.category_info[category]} ${d[category]}` : d[category]
+	}
+
+	getColor(c) {
+		if (this.config.colorTW.q.mode == 'continuous' && 'sampleId' in c) return this.colorGenerator(c.category)
+		const color = this.colorLegend.get(c.category).color
+
+		return color
+	}
+
+	getOpacity(c) {
+		if ('sampleId' in c) return c.hidden['category'] || c.hidden['shape'] ? 0 : this.settings.opacity
+
+		const refOpacity = this.settings.showRef ? this.settings.opacity : 0
+		return refOpacity
+	}
+
+	getShape(c, factor = 1) {
+		const index = this.shapeLegend.get(c.shape).shape % this.symbols.length
+		const size = 'sampleId' in c ? this.settings.size : this.settings.refSize
+		return this.symbols[index].size((size * factor) / this.k)()
+	}
+
+	addToFilter(group) {
+		const lst = []
+		let data
+		for (const item of group.items) {
+			data = item.__data__
+			lst.push(data.sample)
+		}
+		const filterUiRoot = getFilterItemByTag(this.state.termfilter.filter, 'filterUiRoot')
+		const filter = filterJoin([
+			filterUiRoot,
+			{
+				type: 'tvslst',
+				in: true,
+				join: '',
+				lst: [
+					{
+						type: 'tvs',
+						tvs: {
+							term: { type: 'samplelst', name: group.name },
+							values: lst
+						}
+					}
+				]
+			}
+		])
+		filter.tag = 'filterUiRoot'
+		this.app.dispatch({
+			type: 'filter_replace',
+			filter
+		})
+	}
 }
 
 function setRenderers(self) {
@@ -739,19 +796,19 @@ function setRenderers(self) {
 			.transition()
 			.duration(duration)
 			.attr('transform', translate)
-			.attr('d', c => getShape(self, c))
-			.attr('fill', c => getColor(self, c))
+			.attr('d', c => self.getShape(c))
+			.attr('fill', c => self.getColor(c))
 
-			.style('fill-opacity', c => getOpacity(self, c))
+			.style('fill-opacity', c => self.getOpacity(c))
 		symbols
 			.enter()
 			.append('path')
 			/*** you'd need to set the symbol position using translate, instead of previously with cx, cy for a circle ***/
 			.attr('transform', translate)
-			.attr('d', c => getShape(self, c))
-			.attr('fill', c => getColor(self, c))
+			.attr('d', c => self.getShape(c))
+			.attr('fill', c => self.getColor(c))
 
-			.style('fill-opacity', c => getOpacity(self, c))
+			.style('fill-opacity', c => self.getOpacity(c))
 			.transition()
 			.duration(duration)
 	}
@@ -775,8 +832,8 @@ function setRenderers(self) {
 			if (self.lassoOn) {
 				self.lasso
 					.items()
-					.attr('d', c => getShape(self, c, 1 / 2))
-					.style('fill-opacity', c => (getOpacity(self, c) != 0 ? 0.5 : 0))
+					.attr('d', c => self.getShape(c, 1 / 2))
+					.style('fill-opacity', c => (self.getOpacity(c) != 0 ? 0.5 : 0))
 					.classed('not_possible', true)
 					.classed('selected', false)
 			}
@@ -788,16 +845,16 @@ function setRenderers(self) {
 
 				self.lasso
 					.possibleItems()
-					.attr('d', c => getShape(self, c, 2))
-					.style('fill-opacity', c => getOpacity(self, c))
+					.attr('d', c => self.getShape(c, 2))
+					.style('fill-opacity', c => self.getOpacity(c))
 					.classed('not_possible', false)
 					.classed('possible', true)
 
 				//Style the not possible dot
 				self.lasso
 					.notPossibleItems()
-					.attr('d', c => getShape(self, c, 1 / 2))
-					.style('fill-opacity', c => (getOpacity(self, c) != 0 ? 0.5 : 0))
+					.attr('d', c => self.getShape(c, 1 / 2))
+					.style('fill-opacity', c => (self.getOpacity(c) != 0 ? 0.5 : 0))
 					.classed('not_possible', true)
 					.classed('possible', false)
 			}
@@ -814,15 +871,15 @@ function setRenderers(self) {
 					.classed('possible', false)
 
 				// Style the selected dots
-				self.lasso.selectedItems().attr('d', c => getShape(self, c, 2))
-				self.lasso.items().style('fill-opacity', c => getOpacity(self, c))
+				self.lasso.selectedItems().attr('d', c => self.getShape(c, 2))
+				self.lasso.items().style('fill-opacity', c => self.getOpacity(c))
 				self.selectedItems = []
 				let data
 				for (const item of self.lasso.selectedItems()._groups[0]) {
 					data = item.__data__
 					if ('sampleId' in data && !(data.hidden['category'] || data.hidden['shape'])) self.selectedItems.push(item)
 				}
-				self.lasso.notSelectedItems().attr('d', c => getShape(self, c))
+				self.lasso.notSelectedItems().attr('d', c => self.getShape(c))
 
 				showLassoMenu(dragEnd.sourceEvent)
 			}
@@ -871,7 +928,7 @@ function setRenderers(self) {
 						index: groups.length
 					}
 					self.config.groups.push(group)
-					add_to_filter(self, group)
+					self.addToFilter(group)
 					self.app.dispatch({ type: 'plot_edit', id: self.id, config: { groups: self.config.groups } })
 				})
 		}
@@ -935,8 +992,8 @@ function setRenderers(self) {
 			seriesG.attr('transform', event.transform)
 			self.k = event.transform.scale(1).k
 			//on zoom in the particle size is kept
-			symbols.attr('d', c => getShape(self, c))
-			if (self.lassoOn) self.lasso.selectedItems().attr('d', c => getShape(self, c, 2))
+			symbols.attr('d', c => self.getShape(c))
+			if (self.lassoOn) self.lasso.selectedItems().attr('d', c => self.getShape(c, 2))
 		}
 
 		function zoomIn() {
@@ -970,7 +1027,7 @@ function setRenderers(self) {
 				self.lasso
 					.items()
 					.attr('r', self.settings.size)
-					.style('fill-opacity', c => getOpacity(self, c))
+					.style('fill-opacity', c => self.getOpacity(c))
 				mainG.call(zoom)
 				self.selectedItems = null
 			}
@@ -1143,7 +1200,7 @@ function setRenderers(self) {
 			.attr('class', 'sja_menuoption sja_sharp_border')
 			.text('Add to filter')
 			.on('click', () => {
-				add_to_filter(self, group)
+				self.addToFilter(group)
 				self.app.dispatch({ type: 'plot_edit', id: self.id, config: { groups: self.config.groups } })
 			})
 	}
@@ -1157,9 +1214,9 @@ function setRenderers(self) {
 		for (const item of group.items) {
 			const data = item.__data__
 			const row = [formatCell(data.sample)]
-			if ('category' in data) row.push(formatCell(getCategoryInfo(data, 'category')))
+			if ('category' in data) row.push(formatCell(self.getCategoryInfo(data, 'category')))
 			else row.push(formatCell(''))
-			if (self.config.shapeTW) row.push(formatCell(getCategoryInfo(data, 'shape')))
+			if (self.config.shapeTW) row.push(formatCell(self.getCategoryInfo(data, 'shape')))
 			if ('info' in data) {
 				info = true
 				const values = []
@@ -1258,10 +1315,10 @@ function setInteractivity(self) {
 			for (const d of samples) {
 				if (!('sampleId' in d) && (!self.settings.showRef || self.settings.refSize == 0)) continue
 				rows.push({ k: 'Sample', v: d.sample })
-				const cat_info = getCategoryInfo(d, 'category')
+				const cat_info = self.getCategoryInfo(d, 'category')
 				rows.push({ k: self.config.colorTW.term.name, v: cat_info })
 				if (self.config.shapeTW) {
-					const cat_info = getCategoryInfo(d, 'shape')
+					const cat_info = self.getCategoryInfo(d, 'shape')
 					rows.push({ k: self.config.shapeTW.term.name, v: cat_info })
 				}
 				if ('info' in d) for (const [k, v] of Object.entries(d.info)) rows.push({ k: k, v: v })
@@ -1294,14 +1351,14 @@ export async function getPlotConfig(opts, app) {
 					isOpen: false // control panel is hidden by default
 				},
 				sampleScatter: {
-					size: 16,
+					size: 25,
 					refSize: 9,
 					svgw: 550,
 					svgh: 550,
 					axisTitleFontSize: 16,
 					showAxes: false,
 					showRef: true,
-					opacity: 1
+					opacity: 0.8
 				}
 			}
 		}
@@ -1316,60 +1373,3 @@ export async function getPlotConfig(opts, app) {
 export const scatterInit = getCompInit(Scatter)
 // this alias will allow abstracted dynamic imports
 export const componentInit = scatterInit
-
-function getCategoryInfo(d, category) {
-	if (!(category in d)) return ''
-	return d.category_info?.[category] ? `${d.category_info[category]} ${d[category]}` : d[category]
-}
-
-function getColor(self, c) {
-	if (self.config.colorTW.q.mode == 'continuous' && 'sampleId' in c) return self.colorGenerator(c.category)
-	const color = self.colorLegend.get(c.category).color
-
-	return color
-}
-
-function getOpacity(self, c) {
-	if ('sampleId' in c) return c.hidden['category'] || c.hidden['shape'] ? 0 : self.settings.opacity
-
-	const refOpacity = self.settings.showRef ? self.settings.opacity : 0
-	return refOpacity
-}
-
-function getShape(self, c, factor = 1) {
-	const index = self.shapeLegend.get(c.shape).shape % self.symbols.length
-	const size = 'sampleId' in c ? self.settings.size : self.settings.refSize
-	return self.symbols[index].size((size * factor) / self.k)()
-}
-
-function add_to_filter(self, group) {
-	const lst = []
-	let data
-	for (const item of group.items) {
-		data = item.__data__
-		lst.push(data.sample)
-	}
-	const filterUiRoot = getFilterItemByTag(self.state.termfilter.filter, 'filterUiRoot')
-	const filter = filterJoin([
-		filterUiRoot,
-		{
-			type: 'tvslst',
-			in: true,
-			join: '',
-			lst: [
-				{
-					type: 'tvs',
-					tvs: {
-						term: { type: 'samplelst', name: group.name },
-						values: lst
-					}
-				}
-			]
-		}
-	])
-	filter.tag = 'filterUiRoot'
-	self.app.dispatch({
-		type: 'filter_replace',
-		filter
-	})
-}
