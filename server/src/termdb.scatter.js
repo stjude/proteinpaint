@@ -191,10 +191,10 @@ async function colorAndShapeSamples(refSamples, cohortSamples, data, q) {
 		const k2c = d3scale.scaleOrdinal(schemeCategory20)
 		for (const [category, value] of colorMap) {
 			const tvalue = q.colorTW.term.values?.[category]
-			if (tvalue?.color) value.color = tvalue.color
+			if (tvalue && 'color' in tvalue) value.color = tvalue.color
 			else if (data.refs?.byTermId[q.colorTW.term.id]?.bins) {
 				const bin = data.refs.byTermId[q.colorTW.term.id].bins.find(bin => bin.name === category)
-				value.color = bin.color
+				value.color = bin ? bin.color : k2c(category)
 			} else if (q.colorTW.term.type == 'geneVariant') value.color = mclass[value.mclass]?.color || 'black'
 			// should be invalid_mclass_color
 			else value.color = k2c(category)
@@ -242,6 +242,8 @@ function order(map, tw, refs) {
 	} else {
 		const bins = refs.byTermId[tw.term.id].bins
 		for (const bin of bins) if (map.get(bin.name)) entries.push([bin.name, map.get(bin.name)])
+		//If some category is not defined in the bins, should be added
+		for (const [category, value] of map) if (!entries.some(e => e[0] === category)) entries.push([category, value])
 	}
 	return entries
 }
