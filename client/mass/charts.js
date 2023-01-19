@@ -68,16 +68,23 @@ function getActiveCohortStr(appState) {
 }
 
 function getChartTypeList(self) {
-	/* list all possible chart types in this array
+	/* returns a list all possible chart types supported in mass
 	each char type will generate a button under the nav bar
+	a dataset can support a subset of these charts
 
 	design goal is that chart specific logic should not leak into mass UI
 
 	design idea is that a button click will trigger a callback to do one of following things
 	in which chart-type specific logic is not included
-	1. show tree
+
+	1. show dictionary tree
+		by calling showTree_select1term() or showTree_selectlst()
 	2. show menu
+		by calling showMenu()
 	3. prep chart
+		by calling prepPlot()
+	4. display chart-specific menu by importing from ../plots/<chartType>.js
+		by calling loadChartSpecificMenu()
 
 	.label:
 		text to show in the button
@@ -134,10 +141,6 @@ function getChartTypeList(self) {
 		/*
 		{
 			label: 'Table',
-			clickTo:'prepPlot',
-		},
-		{
-			label: 'Scatterplot',
 			clickTo:'prepPlot',
 		},
 		*/
@@ -209,6 +212,11 @@ function getChartTypeList(self) {
 			label: 'Scatter Plot',
 			chartType: 'sampleScatter',
 			clickTo: self.showScatterPlot
+		},
+		{
+			label: 'Genome browser',
+			chartType: 'genomeBrowser',
+			clickTo: self.loadChartSpecificMenu
 		}
 	]
 }
@@ -362,6 +370,25 @@ function setRenderers(self) {
 		})
 	}
 
+	self.loadChartSpecificMenu = async chart => {
+		self.dom.tip.clear()
+		const _ = await import(`../plots/${chart.chartType}`)
+		_.makeChartBtnMenu(self.dom.tip.d, self)
+	}
+
+	/*
+		dispatch "plot_prep" action to produce a 'initiating' UI of this plot, for user to fill in additional details to launch the plot
+		example: table, scatterplot which requires user to select two terms
+	*/
+	self.prepPlot = function(chart) {
+		const action = { type: 'plot_prep', config: chart.config, id: getId() }
+		self.app.dispatch(action)
+	}
+
+	/*
+	rest of the callbacks may be moved to plots/sampleScatter.js and plots/matrix.js, and replaced by loadChartSpecificMenu()
+	*/
+
 	self.showTextAreaInput = opt => {
 		self.dom.tip.clear()
 		self.dom.submenu = self.dom.tip.d.append('div').style('text-align', 'center')
@@ -408,15 +435,6 @@ function setRenderers(self) {
 					t.selectionEnd = s + 1
 				}
 			})
-	}
-
-	/*
-		dispatch "plot_prep" action to produce a 'initiating' UI of this plot, for user to fill in additional details to launch the plot
-		example: table, scatterplot which requires user to select two terms
-	*/
-	self.prepPlot = function(chart) {
-		const action = { type: 'plot_prep', config: chart.config, id: getId() }
-		self.app.dispatch(action)
 	}
 
 	self.showScatterPlot = function() {

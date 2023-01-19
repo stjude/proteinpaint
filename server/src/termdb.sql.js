@@ -1284,14 +1284,17 @@ thus less things to worry about...
 				supportedChartTypes[r.cohort].add('cuminc')
 			if (r.type == 'float' || r.type == 'integer') numericTypeCount[r.cohort] += r.samplecount
 		}
+
+		/* this logic allows to add chart types generally applicable to all numeric terms
+but boxplot and scatter are now child types under "summary" plot. 
 		for (const cohort in numericTypeCount) {
 			if (numericTypeCount[cohort] > 0) supportedChartTypes[cohort].add('boxplot')
 			if (numericTypeCount[cohort] > 1) supportedChartTypes[cohort].add('scatterplot')
 		}
+		*/
 
 		// convert to array
 		for (const cohort in supportedChartTypes) {
-			//if (supportedChartTypes[cohort].has('summary')) supportedChartTypes[cohort].delete('barchart')
 			supportedChartTypes[cohort] = [...supportedChartTypes[cohort]]
 		}
 
@@ -1299,6 +1302,16 @@ thus less things to worry about...
 		if (ds.cohort.allowedChartTypes) {
 			for (const cohort in supportedChartTypes) {
 				supportedChartTypes[cohort] = supportedChartTypes[cohort].filter(c => ds.cohort.allowedChartTypes.includes(c))
+			}
+		}
+
+		//////////////////////////////////
+		// quick fix
+		// when snvindel data is present, enable genomeBrowser chart
+		//////////////////////////////////
+		if (ds?.queries?.snvindel) {
+			for (const cohort in supportedChartTypes) {
+				supportedChartTypes[cohort].push('genomeBrowser')
 			}
 		}
 
