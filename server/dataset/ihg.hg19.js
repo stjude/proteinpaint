@@ -27,7 +27,7 @@ module.exports = function() {
 						name: 'Methylome TSNE',
 						dimension: 2, // 2d requires x/y, 3d requires x/y/z
 						file: 'files/hg19/ihg/classification/ihg_oct20_TSNE.txt',
-						colorTW: { id: 'TSNE-Cluster' }
+						colorTW: { id: 'Integrated DiagnosisTier 2 ' }
 
 						// allow additional config for this plot
 						// allow additional config for this plot
