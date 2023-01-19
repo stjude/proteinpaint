@@ -736,7 +736,7 @@ function setRenderers(self) {
 							: (term2.pvalue > 1e-4
 									? Number(term2.pvalue.toFixed(4))
 									: Number(term2.pvalue.toPrecision(4)).toExponential()) +
-							  (allFisher || term2.isChi ? '' : '<sup><b>a</b></sup>')
+							  (allFisher || term2.isChi ? '' : '<span style="vertical-align:top;font-size:0.7em;"><b>a</b></span>')
 					}
 				])
 			}
