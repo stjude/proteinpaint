@@ -696,10 +696,10 @@ function setRenderers(self) {
 			})
 		}
 		const columns = [
-			{ label: 'Category 1' },
-			{ label: 'Category 2' },
-			{ label: 'Category 3' },
-			{ label: 'Category 4' },
+			{ label: 'Row 1' },
+			{ label: 'Row 2' },
+			{ label: 'Column 1' },
+			{ label: 'Column 2' },
 			{ label: 'P-value' }
 		]
 		const allFisher = self.chartsData.tests[chart.chartId].every(term1 =>
@@ -747,7 +747,7 @@ function setRenderers(self) {
 		const title = holder
 			.append('div')
 			.style('font-weight', 'bold')
-			.html(allFisher ? "Group comparisons (Fisher's exact test)" : 'Group comparisons (Chi-square test)')
+			.html("2x2 Association test (Chi-square test, Fisher's exact test<sup><b>a</b></sup>)")
 
 		const table = holder.append('div')
 
@@ -760,10 +760,7 @@ function setRenderers(self) {
 			.style('text-align', 'left')
 			.style('font-size', '10px')
 			.style('font-weight', 'normal')
-			.html(
-				(noSkipped ? '' : 'N/A: association test skipped because of limited sample size <br>') +
-					(allFisher || allChi ? '' : "<sup><b>a</b></sup> computed by Fisher's exact test")
-			)
+			.html(noSkipped ? '' : 'N/A: association test skipped because of limited sample size <br>')
 	}
 }
 
