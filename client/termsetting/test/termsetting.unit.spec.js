@@ -75,15 +75,15 @@ tape('fillTermWrapper - continuous term', async function(test) {
 		lst: [
 			{
 				startunbounded: true,
-				stop: 0.5,
+				stop: 0.45,
 				stopinclusive: false,
-				label: '<0.5'
+				label: '<0.45'
 			},
 			{
-				start: 0.5,
+				start: 0.45,
 				startinclusive: true,
 				stopunbounded: true,
-				label: '≥0.5'
+				label: '≥0.45'
 			}
 		],
 		hiddenValues: {}

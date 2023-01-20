@@ -2,6 +2,7 @@ import { getCompInit } from '../rx'
 import { controlsInit } from './controls'
 import violinRenderer from './violin.renderer'
 import { to_svg } from '#src/client'
+import htmlLegend from '../dom/html.legend'
 
 class ViolinPlot {
 	constructor(opts) {
@@ -10,17 +11,20 @@ class ViolinPlot {
 	}
 
 	async init() {
+		const controls = this.opts.holder
+			.append('div')
+			.attr('class', 'sjpp-plot-controls')
+			.style('display', 'inline-block')
+
+		const holder = this.opts.holder
+			.append('div')
+			.style('display', 'inline-block')
+			.style('padding', '5px')
+
 		this.dom = {
-			controls: this.opts.holder
-				.append('div')
-				.attr('class', 'sjpp-plot-controls')
-				.style('display', 'inline-block'),
-
-			holder: this.opts.holder
-				.append('div')
-				.style('display', 'inline-block')
-				.style('padding', '5px'),
-
+			controls,
+			violinDiv: holder.append('div'),
+			legendDiv: holder.append('div').style('margin', '5px 5px 15px 5px'),
 			tableHolder: this.opts.holder
 				.append('div')
 				.classed('sjpp-tableHolder', true)
@@ -31,7 +35,15 @@ class ViolinPlot {
 				.style('margin-top', '50px')
 				.style('margin-right', '30px')
 		}
+
 		violinRenderer(this)
+
+		this.legendRenderer = htmlLegend(this.dom.legendDiv, {
+			settings: {
+				legendOrientation: 'vertical'
+			},
+			handlers: {}
+		})
 
 		this.components = {
 			controls: await controlsInit({
@@ -113,11 +125,13 @@ class ViolinPlot {
 
 	async main() {
 		if (this.state.config.childType != this.type) return
-		this.config = this.state.config
+		this.config = structuredClone(this.state.config)
 		if (this.dom.header)
 			this.dom.header.text(
 				this.config.term.term.name + ` <span style="opacity:.6;font-size:1em;margin-left:10px;">Violin Plot</span>`
 			)
+
+		await this.getDescrStats()
 
 		const arg = this.validateArg()
 
@@ -138,6 +152,20 @@ class ViolinPlot {
 		*/
 		this.render()
 		this.renderPvalueTable()
+	}
+
+	async getDescrStats() {
+		// get descriptive statistics for numerical terms
+		const terms = [this.config.term]
+		if (this.config.term2) terms.push(this.config.term2)
+		if (this.config.term0) terms.push(this.config.term0)
+		for (const t of terms) {
+			if (t.term.type == 'integer' || t.term.type == 'float') {
+				const data = await this.app.vocabApi.getDescrStats(t.id, this.state.termfilter.filter)
+				if (data.error) throw data.error
+				t.q.descrStats = data.values
+			}
+		}
 	}
 
 	validateArg() {
@@ -166,6 +194,46 @@ class ViolinPlot {
 		}
 		return arg
 	}
+
+	getLegendGrps() {
+		// TODO: add excluded categories to legend (see barchart.js)
+		const legendGrps = []
+		const s = this.settings
+		const t1 = this.config.term
+		const t2 = this.config.term2
+		const headingStyle = 'color: #aaa; font-weight: 400'
+
+		// descriptive statistics
+		if (t1.q.descrStats) {
+			// term1 has descriptive stats
+			const items = t1.q.descrStats.map(stat => {
+				return {
+					text: `${stat.label}: ${stat.value}`,
+					noIcon: true
+				}
+			})
+			// title of descriptive stats should include the term1 name if term2 is present
+			const title = t2 ? `Descriptive statistics: ${t1.term.name}` : 'Descriptive statistics'
+			const name = `<span style="${headingStyle}">${title}</span>`
+			legendGrps.push({ name, items })
+		}
+		if (t2?.q.descrStats) {
+			// term2 has descriptive stats
+			const items = t2.q.descrStats.map(stat => {
+				return {
+					text: `${stat.label}: ${stat.value}`,
+					noIcon: true
+				}
+			})
+			// title of descriptive stats will include the term2 name
+			// because two terms are present
+			const title = `Descriptive statistics: ${t2.term.name}`
+			const name = `<span style="${headingStyle}">${title}</span>`
+			legendGrps.push({ name, items })
+		}
+
+		return legendGrps
+	}
 }
 
 export const violinInit = getCompInit(ViolinPlot)
@@ -185,7 +253,7 @@ function setInteractivity(self) {
 		// let prevY = 0,
 		// 	numChartsPerRow = 0
 
-		self.dom.holder.selectAll('.sjpp-violin-plot').each(function() {
+		self.dom.violinDiv.selectAll('.sjpp-violin-plot').each(function() {
 			to_svg(this, 'violin', { apply_dom_styles: true })
 		})
 	}

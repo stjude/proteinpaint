@@ -14,6 +14,7 @@ const trigger_getSampleScatter = require('./termdb.scatter').trigger_getSampleSc
 const trigger_getViolinPlotData = require('./termdb.violin').trigger_getViolinPlotData
 const getData = require('./termdb.matrix').getData
 const trigger_getCohortsData = require('./termdb.cohort').trigger_getCohortsData
+import roundValue from '#shared/roundValue'
 
 /*
 ********************** EXPORTED
@@ -42,6 +43,7 @@ export function handle_request_closure(genomes) {
 			if (q.gettermbyid) return trigger_gettermbyid(q, res, tdb)
 			if (q.getcategories) return await trigger_getcategories(q, res, tdb, ds, genome)
 			if (q.getpercentile) return trigger_getpercentile(q, res, ds)
+			if (q.getdescrstats) return trigger_getdescrstats(q, res, ds)
 			if (q.getnumericcategories) return trigger_getnumericcategories(q, res, tdb, ds)
 			if (q.getconditioncategories) return trigger_getconditioncategories(q, res, tdb, ds)
 			if (q.default_rootterm) return await trigger_rootterm(q, res, tdb)
@@ -383,8 +385,8 @@ async function trigger_getpercentile(q, res, ds) {
 		filter: q.filter ? (typeof q.filter == 'string' ? JSON.parse(q.filter) : q.filter) : null
 	})
 	for (const { value } of rows) {
-		if (term.values && term.values[value]) {
-			// is a special category
+		if (term.values && term.values[value] && term.values[value].uncomputable) {
+			// skip uncomputable values
 			continue
 		}
 
@@ -396,13 +398,80 @@ async function trigger_getpercentile(q, res, ds) {
 
 		values.push(Number(value))
 	}
-	values.sort((a, b) => a - b)
-	for (const p of percentile_lst) {
-		if (!Number.isInteger(p) || p < 1 || p > 99) throw 'percentile is not 1-99 integer'
-		const value = values[Math.floor((values.length * p) / 100)]
-		perc_values.push(value)
+
+	// compute percentiles
+	for (const percentile of percentile_lst) {
+		const perc_value = computePercentile(values, percentile)
+		perc_values.push(perc_value)
 	}
 	res.send({ values: perc_values })
+}
+
+async function trigger_getdescrstats(q, res, ds) {
+	const term = ds.cohort.termdb.q.termjsonByOneid(q.tid)
+	if (!term) throw 'invalid termid'
+	if (term.type != 'float' && term.type != 'integer') throw 'not numerical term'
+	const rows = termdbsql.get_rows_by_one_key({
+		ds,
+		key: q.tid,
+		filter: q.filter ? (typeof q.filter == 'string' ? JSON.parse(q.filter) : q.filter) : null
+	})
+
+	const values = []
+	for (const { value } of rows) {
+		if (term.values && term.values[value] && term.values[value].uncomputable) {
+			// skip uncomputable values
+			continue
+		}
+		values.push(Number(value))
+	}
+
+	// compute statistics
+	// total
+	const total = values.length
+
+	// mean
+	const sum = values.reduce((a, b) => a + b, 0)
+	const mean = sum / total
+
+	// percentiles
+	const p25 = computePercentile(values, 25)
+	const median = computePercentile(values, 50)
+	const p75 = computePercentile(values, 75)
+
+	// standard deviation
+	// get sum of squared differences from mean
+	const sumSqDiff = values.map(v => (v - mean) ** 2).reduce((a, b) => a + b, 0)
+	// get variance
+	const variance = sumSqDiff / (values.length - 1)
+	// get standard deviation
+	const sd = Math.sqrt(variance)
+
+	// min/max
+	const min = Math.min(...values)
+	const max = Math.max(...values)
+
+	res.send({
+		values: [
+			{ id: 'total', label: 'n', value: total },
+			{ id: 'min', label: 'Minimum', value: roundValue(min, 2) },
+			{ id: 'p25', label: '1st quartile', value: roundValue(p25, 2) },
+			{ id: 'median', label: 'Median', value: roundValue(median, 2) },
+			{ id: 'mean', label: 'Mean', value: roundValue(mean, 2) },
+			{ id: 'p75', label: '3rd quartile', value: roundValue(p75, 2) },
+			{ id: 'max', label: 'Maximum', value: roundValue(max, 2) },
+			{ id: 'sd', label: 'Standard deviation', value: roundValue(sd, 2) }
+		]
+	})
+}
+
+// compute the percentile value from an array of values
+// source: https://www.dummies.com/article/academics-the-arts/math/statistics/how-to-calculate-percentiles-in-statistics-169783/
+function computePercentile(values, percentile) {
+	values.sort((a, b) => a - b)
+	const index = Math.abs((percentile / 100) * values.length - 1)
+	const value = Number.isInteger(index) ? (values[index] + values[index + 1]) / 2 : values[Math.ceil(index)]
+	return value
 }
 
 function trigger_getvariantfilter(res, ds) {

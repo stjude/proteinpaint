@@ -14,16 +14,19 @@ export default function violinRenderer(self) {
 		const isH = s.orientation === 'horizontal'
 		const imageOffset = s.datasymbol === 'bean' ? s.radius * window.devicePixelRatio : s.radius
 
+		self.legendRenderer(self.getLegendGrps())
+
 		if (self.data.plots.length === 0) {
-			self.dom.holder.text(
+			self.dom.violinDiv.text(
 				` <span style="opacity:.6;font-size:1em;margin-left:90px;">No data to render Violin Plot</span>`
 			)
 			self.dom.tableHolder.selectAll('*').remove()
+			self.dom.legendDiv.selectAll('*').remove()
 			return
-		} else self.dom.holder.select('*').remove()
+		} else self.dom.violinDiv.select('*').remove()
 
 		// append the svg object to the body of the page
-		self.dom.holder.select('.sjpp-violin-plot').remove()
+		self.dom.violinDiv.select('.sjpp-violin-plot').remove()
 
 		const svg = renderSvg(self, isH, s)
 		renderScale(self, s, isH, svg)
@@ -87,7 +90,7 @@ export default function violinRenderer(self) {
 	}
 
 	function renderSvg(self, isH, s) {
-		const violinDiv = self.dom.holder
+		const violinDiv = self.dom.violinDiv
 			.append('div')
 			.style('display', 'inline-block')
 			.style('padding', '5px')

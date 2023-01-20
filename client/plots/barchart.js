@@ -175,6 +175,7 @@ class Barchart {
 			this.toggleLoadingDiv()
 
 			const reqOpts = this.getDataRequestOpts()
+			await this.getDescrStats()
 			const data = await this.app.vocabApi.getNestedChartSeriesData(reqOpts)
 			this.toggleLoadingDiv('none')
 			this.app.vocabApi.syncTermData(this.config, data, this.prevConfig)
@@ -203,6 +204,20 @@ class Barchart {
 		if (c.term0) opts.term0 = c.term0
 		if (this.state.ssid) opts.ssid = this.state.ssid
 		return opts
+	}
+
+	async getDescrStats() {
+		// get descriptive statistics for numerical terms
+		const terms = [this.config.term]
+		if (this.config.term2) terms.push(this.config.term2)
+		if (this.config.term0) terms.push(this.config.term0)
+		for (const t of terms) {
+			if (t.term.type == 'integer' || t.term.type == 'float') {
+				const data = await this.app.vocabApi.getDescrStats(t.id, this.state.termfilter.filter)
+				if (data.error) throw data.error
+				t.q.descrStats = data.values
+			}
+		}
 	}
 
 	updateSettings(config) {
@@ -486,6 +501,36 @@ class Barchart {
 		const t1 = this.config.term
 		const t2 = this.config.term2
 		const headingStyle = 'color: #aaa; font-weight: 400'
+
+		// descriptive statistics
+		if (t1.q.descrStats) {
+			// term1 has descriptive stats
+			const items = t1.q.descrStats.map(stat => {
+				return {
+					text: `${stat.label}: ${stat.value}`,
+					noIcon: true
+				}
+			})
+			// title of descriptive stats should include the term1 name if term2 is present
+			const title = t2 ? `Descriptive statistics: ${t1.term.name}` : 'Descriptive statistics'
+			const name = `<span style="${headingStyle}">${title}</span>`
+			legendGrps.push({ name, items })
+		}
+		if (t2?.q.descrStats) {
+			// term2 has descriptive stats
+			const items = t2.q.descrStats.map(stat => {
+				return {
+					text: `${stat.label}: ${stat.value}`,
+					noIcon: true
+				}
+			})
+			// title of descriptive stats will include the term2 name
+			// because two terms are present
+			const title = `Descriptive statistics: ${t2.term.name}`
+			const name = `<span style="${headingStyle}">${title}</span>`
+			legendGrps.push({ name, items })
+		}
+
 		if (s.cols && s.exclude.cols.length) {
 			const reducer = (sum, b) => sum + b.total
 			const items = s.exclude.cols

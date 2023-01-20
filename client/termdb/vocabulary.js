@@ -583,8 +583,25 @@ class TermdbVocab extends Vocab {
 
 	async getPercentile(term_id, percentile_lst, filter) {
 		// for a numeric term, convert a percentile to an actual value, with respect to a given filter
+		if (percentile_lst.find(p => !Number.isInteger(p))) throw 'non-integer percentiles found'
+		if (Math.max(...percentile_lst) > 99 || Math.min(...percentile_lst) < 1) throw 'percentiles must be between 1-99'
 		const body = {
 			getpercentile: percentile_lst,
+			tid: term_id,
+			genome: this.vocab.genome,
+			dslabel: this.vocab.dslabel
+		}
+		if (filter) {
+			body.filter = getNormalRoot(filter)
+		}
+		return await dofetch3('/termdb', { body })
+	}
+
+	async getDescrStats(term_id, filter) {
+		// for a numeric term, get descriptive statistics
+		// mean, median, standard deviation, min, max
+		const body = {
+			getdescrstats: 1,
 			tid: term_id,
 			genome: this.vocab.genome,
 			dslabel: this.vocab.dslabel
@@ -1231,10 +1248,14 @@ class FrontendVocab extends Vocab {
 			if (!Number.isFinite(_v)) throw 'non-numeric value'
 			values.push(_v)
 		}
+
+		// compute percentiles
+		// source: https://www.dummies.com/article/academics-the-arts/math/statistics/how-to-calculate-percentiles-in-statistics-169783/
 		values.sort((a, b) => a - b)
-		for (const p of percentile_lst) {
-			const value = values[Math.floor((values.length * p) / 100)]
-			perc_values.push(value)
+		for (const percentile of percentile_lst) {
+			const index = Math.abs((percentile / 100) * values.length - 1)
+			const perc_value = Number.isInteger(index) ? (values[index] + values[index + 1]) / 2 : values[Math.ceil(index)]
+			perc_values.push(perc_value)
 		}
 		return { values: perc_values }
 	}
