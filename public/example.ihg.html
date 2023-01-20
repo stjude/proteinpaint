@@ -1,247 +1,249 @@
 <!DOCTYPE html>
 <html>
-
 <head>
     <meta charset="utf-8">
 </head>
-
 <body>
 
-    <script src="https://ppr.stjude.org/bin/proteinpaint.js" charset="utf-8"></script>
+<script src="bin/proteinpaint.js" charset="utf-8"></script>
 
-    <noscript>This page requires JavaScript. Please enable it in your browser settings.</noscript>
+<noscript>This page requires JavaScript. Please enable it in your browser settings.</noscript>
 
-    <div id=aaa style="margin:10px"></div>
-    <div id=exp style="margin:10px"></div>
+<div id=aaa style="margin:10px"></div>
+<div id=exp style="margin:10px"></div>
 
-    <script>
-        document.body.onload = () => runproteinpaint({
-            host: 'https://ppr.stjude.org',
-            holder: document.getElementById('aaa'),
-            parseurl: true,
-            nobox: 1,
-            noheader: 1,
-            debug: 1,
-            mass: {
-                state: {
-                    dslabel: 'IHG',
-                    genome: 'hg19',
-                    /*   termfilter: {
-                         filter: {
-                           type: 'tvslst',
-                           lst: [{
-                             type: 'tvs',
-                             tvs: {
-                               term: {id: 'Sample Type'},
-                               values: [{key: 'D1'}]
-                             }
-                           }]
+<script>
+    document.body.onload = () => runproteinpaint({
+        //host: 'https://ppr.stjude.org',
+        holder: document.getElementById('aaa'),
+        parseurl: true,
+        nobox: 1,
+        noheader: 1,
+        debug: 1,
+        mass: {
+            state: {
+                dslabel: 'IHG',
+                genome: 'hg19',
+                /*   termfilter: {
+                     filter: {
+                       type: 'tvslst',
+                       lst: [{
+                         type: 'tvs',
+                         tvs: {
+                           term: {id: 'Sample Type'},
+                           values: [{key: 'D1'}]
                          }
-                       },*/
-                    plots: [
-                        {
-                            chartType: 'matrix',
-                            settings: {
-                                matrix: {
-                                    colw: 8,
-                                    colspace: 0,
-                                    rowspace: 0,
-                                    termLabelOffset: 220,
-                                    sortTermsBy: 'asListed',
-                                    grpLabelFontSize: 13,
-                                    //sampleNameFilter: '_D1$'
-                                }
-                            },
-                            menuOpts: {
-                                sampleGroup: [
-                                    {
-                                        label: 'Survival plot',
-                                        callback: 'launchSurvivalPlot',
-                                        config: {
-                                            //term2: {id: 'Primary Treatment category 2'},
-                                            settings: {
-                                                survival: {
-                                                    xTickValues: [0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30]
-                                                }
+                       }]
+                     }
+                   },*/
+                plots: [
+                    {
+                        chartType: 'matrix',
+                        settings: {
+                            matrix: {
+                                colw: 8,
+                                colspace: 0,
+                                rowspace: 0,
+                                termLabelOffset: 220,
+                                sortTermsBy: 'asListed',
+                                grpLabelFontSize: 13,
+                                //sampleNameFilter: '_D1$'
+                            }
+                        },
+                        menuOpts: {
+                            sampleGroup: [
+                                {
+                                    label: 'Survival plot',
+                                    callback: 'launchSurvivalPlot',
+                                    config: {
+                                        //term2: {id: 'Primary Treatment category 2'},
+                                        settings: {
+                                            survival: {
+                                                xTickValues: [0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30]
                                             }
                                         }
                                     }
+                                }
+                            ]
+                        },
+                        /*divideBy: {
+                            id: 'TSNE Category'
+                        },*/
+                        termgroups: [
+                            {
+                                name: '',
+                                lst: [
+                                    {
+                                        id: 'Age',
+                                        q: {
+                                            mode: 'continuous',
+                                        },
+                                        settings: {
+                                            barh: 40,
+                                            gap: 10
+                                        }
+                                    },
+                                    {
+                                        label: 'Age Group',
+                                        id: 'Age',
+                                        q: {
+                                            mode: 'discrete',
+                                            type: 'custom-bin',
+                                            lst: [{
+                                                label: '<3',
+                                                startunbounded: true,
+                                                startinclusive: true,
+                                                stopinclusive: false,
+                                                stop: 3
+                                            }, {
+                                                label: '3 to <7',
+                                                startinclusive: true,
+                                                stopinclusive: false,
+                                                start: 3,
+                                                stop: 7
+                                            }, {
+                                                label: '7 to 18',
+                                                startinclusive: true,
+                                                stopinclusive: false,
+                                                start: 7,
+                                                stopunbounded: true,
+                                            }]
+                                        }
+                                    },
+                                    {
+                                        id: 'Gender',
+                                        q: { mode: 'values' } // or 'groupsetting'
+                                    },
+                                    { id: 'Anatomical Location of Tumor Tier 2' },
+                                    { id: 'Extent of Resection-1' },
+                                    { id: 'Extent of Resection-2' },
+                                    { id: 'M0/M+' },
+                                    { id: 'Primary Treatment ' },
+                                    { id: 'Risk Category' },
+                                    { id: 'Progresssive Disease' },
+                                    { id: 'Ever Used Radiation During Treatment Course' },
+                                    { id: 'Histology  at Diagnosis' },
+                                    { id: 'MNP - Molecular CLASS ' },
+                                    { id: 'Integrated DiagnosisTier 1 ' },
+                                    { id: 'Integrated DiagnosisTier 2 ' },
+                                    { id: 'Integrated Diagnosis  Tier 3 ' },
+                                    { id: 'Fusion Types Tier 1 ' },
+                                    { id: 'Fusion Types  Tier 2' },
+                                    { id: 'Methylation' },
+                                    { id: 'RNA-Seq' },
+                                    { id: 'WES' },
+                                    { id: 'FISH' },
+                                    { id: 'IHC' },
                                 ]
                             },
-                            /*divideBy: {
-                                id: 'TSNE Category'
-                            },*/
-                            termgroups: [
-                                {
-                                    name: '',
-                                    lst: [
-                                        {
-                                            id: 'Age',
-                                            q: {
-                                                mode: 'continuous',
-                                            },
-                                            settings: {
-                                                barh: 40,
-                                                gap: 10
-                                            }
-                                        },
-                                        {
-                                            label: 'Age Group',
-                                            id: 'Age',
-                                            q: {
-                                                mode: 'discrete',
-                                                type: 'custom-bin',
-                                                lst: [{
-                                                    label: '<3',
-                                                    startunbounded: true,
-                                                    startinclusive: true,
-                                                    stopinclusive: false,
-                                                    stop: 3
-                                                }, {
-                                                    label: '3 to <7',
-                                                    startinclusive: true,
-                                                    stopinclusive: false,
-                                                    start: 3,
-                                                    stop: 7
-                                                }, {
-                                                    label: '7 to 18',
-                                                    startinclusive: true,
-                                                    stopinclusive: false,
-                                                    start: 7,
-                                                    stopunbounded: true,
-                                                }]
-                                            }
-                                        },
-                                        {
-                                            id: 'Gender',
-                                            q: { mode: 'values' } // or 'groupsetting'
-                                        },
-                                        { id: 'Anatomical Location of Tumor Tier 2' },
-                                        { id: 'Extent of Resection-1' },
-                                        { id: 'M0/M+' },
-                                        { id: 'Primary Treatment ' },
-                                        { id: 'Risk Category' },
-                                        { id: 'Progresssive Disease' },
-                                        { id: 'Ever Used Radiation During Treatment Course' },
-                                        { id: 'Fusion Types Tier 1 ' },
-                                        { id: 'Methylation' },
-                                        { id: 'RNA-Seq' },
-                                        { id: 'WES' },
-                                        { id: 'Radiological Diagnosis By Blinded Radiologist-TIER-1' },
-                                        { id: 'Histology Documented at Diagnosis' },
-                                        { id: 'Histology Re-Review' },
-                                        { id: 'FISH' },
-                                        { id: 'IHC' },
-                                        { id: 'TSNE-Cluster' },
-                                        { id: 'MNP - Molecular CLASS' },
-                                        { id: 'Integrated  Tier 4 Diagnosis' },
-                                        { id: 'Integrated Tier 3 Diagnosis' },
-                                    ]
-                                },
-                                {
-                                    name: 'Cytogenetics',
-                                    lst: getCytogeneticsData()
-                                },
-                                ...getGeneTermGroups(),
-                            ],
-                            // each override may be used by any termwrapper 
-                            // that has a tw.overrides[$key] array of any twOverride[$key] below
-                            overrides: {
-                                SVfill: {
-                                    value: {
-                                        key: 'RNA-Seq',
-                                        values: [
-                                            { key: 'Not tested', label: 'Not tested', color: '#fff' }
-                                        ]
-                                    },
-                                    sampleFilter: {
-                                        type: 'tvs',
-                                        tvs: {
-                                            term: { id: 'RNA-Seq' },
-                                            values: [{ key: 'No' }]
-                                        }
-                                    }
-                                },
-                                /*Germfill: {
-                                  value: {
-                                    key: 'Germline', 
+                            {
+                                name: 'Cytogenetics',
+                                lst: getCytogeneticsData()
+                            },
+                            ...getGeneTermGroups(),
+                        ],
+                        // each override may be used by any termwrapper 
+                        // that has a tw.overrides[$key] array of any twOverride[$key] below
+                        overrides: {
+                            SVfill: {
+                                value: {
+                                    key: 'RNA-Seq', 
+                //value: 'RNA-seq', 
+                                values: [
+                                    { key: 'Not tested', label: 'Not tested', color: '#fff' }
+                                ]
+                            },
+                            sampleFilter: {
+                                type: 'tvs',
+                                tvs: {
+                                    term: { id: 'RNA-Seq' },
+                                    values: [{ key: 'No' }]
+                                }
+                            }
+                        },
+            /*Germfill: {
+              value: {
+                key: 'Germline', 
+                //value: 'Germline', 
+                values: [
+                  {key: 'Not tested', label: 'Not tested', color: '#fff', order: 10000}
+                ]
+              },
+              sampleFilter: {
+                type: 'tvs', // "wrapper-value-setting"
+                tvs: {
+                  term: {id: 'Germline'},
+                  values: [{key: 'No'}]
+                }
+              }
+            },*/
+                        WESfill: {
+                            value: {
+                                key: 'WES', 
+                //value: 'WES', 
+                                values: [
+                                    { key: 'Not tested', label: 'Not tested', color: '#fff', order: 10000 }
+                                ]
+                            },
+                            sampleFilter: {
+                                type: 'tvs', // "wrapper-value-setting"
+                                tvs: {
+                                    term: { id: 'WES' },
+                                    values: [{ key: 'No' }]
+                                }
+                            }
+                        },
+                        CNVfill: {
+                            value: {
+                                key: 'Methylation', 
+                                value: 'Methylation', 
                                     values: [
-                                      {key: 'Not tested', label: 'Not tested', color: '#fff', order: 10000}
+                                        { key: 'Not tested', label: 'Not tested', color: '#fff', order: 10000 }
                                     ]
-                                  },
-                                  sampleFilter: {
+                                },
+                                sampleFilter: {
                                     type: 'tvs', // "wrapper-value-setting"
                                     tvs: {
-                                      term: {id: 'Germline'},
-                                      values: [{key: 'No'}]
+                                        term: { id: 'Methylation' },
+                                        values: [{ key: 'No' }]
                                     }
-                                  }
-                                },*/
-                                WESfill: {
-                                    value: {
-                                        key: 'WES',
-                                        values: [
-                                            { key: 'Not tested', label: 'Not tested', color: '#fff', order: 10000 }
-                                        ]
-                                    },
-                                    sampleFilter: {
-                                        type: 'tvs', // "wrapper-value-setting"
-                                        tvs: {
-                                            term: { id: 'WES' },
-                                            values: [{ key: 'No' }]
-                                        }
-                                    }
-                                },
-                                CNVfill: {
-                                    value: {
-                                        key: 'Methylation',
-                                        values: [
-                                            { key: 'Not tested', label: 'Not tested', color: '#fff', order: 10000 }
-                                        ]
-                                    },
-                                    sampleFilter: {
-                                        type: 'tvs', // "wrapper-value-setting"
-                                        tvs: {
-                                            term: { id: 'Methylation' },
-                                            values: [{ key: 'No' }]
-                                        }
-                                    }
-                                }
-                            }
-                        },
-
-                        {
-                            chartType: 'survival',
-                            term: {
-                                id: 'Event-free survival'
-                            },
-                            settings: {
-                                survival: {
-                                    xTickValues: [0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30]
-                                }
-                            }
-                        },
-
-                        {
-                            chartType: 'survival',
-                            term: {
-                                id: 'Overall Survival'
-                            },
-                            // term2: {
-                            // 	id: 'Age'
-                            // },
-                            settings: {
-                                survival: {
-                                    xTickValues: [0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30]
                                 }
                             }
                         }
-                    ]
-                }
-            }
-        })
+                    },
 
-        const cnvGenes = `C19MC, MYCN, PDGFRA, MET, MDM4, CDKN2A/B, PDGFB, MYCL, GFI1B, PTCH1, NF1`.split(',').map(g => g.trim())
+                    {
+                        chartType: 'survival',
+                        term: {
+                            id: 'Event-free survival'
+                        },
+                        settings: {
+                            survival: {
+                                xTickValues: [0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30]
+                            }
+                        }
+                    },
+
+                    {
+                        chartType: 'survival',
+                        term: {
+                            id: 'Overall Survival'
+                        },
+                        // term2: {
+                        // 	id: 'Age'
+                        // },
+                        settings: {
+                            survival: {
+                                xTickValues: [0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30]
+                            }
+                        }
+                    }
+                ]
+            }
+        }
+    })
+
+            const cnvGenes = `C19MC, MYCN, PDGFRA, MET, MDM2, MDM4, CDKN2A/B, PDGFB, MYCL, GFI1B, PTCH1, NF1,EGFR`.split(',').map(g => g.trim())
 
         function getGeneTermGroups() {
             const termgroups = []
@@ -323,6 +325,24 @@
                         "name": "FGFR2_SV"
                     },
                     {
+                        "name": "PDGFRA_SV"
+                    },
+                    {
+                        "name": "NPM1_SV"
+                    },
+                    {
+                        "name": "PLAGL1_SV"
+                    },
+                    {
+                        "name": "FOXR2_SV"
+                    },
+                    {
+                        "name": "GOPC_SV"
+                    },
+                    {
+                        "name": "MYB_SV"
+                    },
+                    {
                         "name": "PATZ1_SV"
                     }
                 ]
@@ -338,18 +358,18 @@
                 overrides: ['CNVfill'],
                 lst: cnvGenes.map(name => { return { name } })
             },
-            /*{
+            {
                 "name": "Germline",
                 overrides: ['Germfill'],
                 "lst": [
                     {
-                        "name": "DICER1_G"
-                    },
-                    {
-                        "name": "ATM_G"
-                    }
-                ]
-            },*/
+                    "name": "BRCA2_G"
+                },
+                {
+                    "name": "NF1_G"
+                }
+            ]
+            },
             {
                 "name": "Somatic",
                 "settings": {
@@ -416,6 +436,9 @@
                         "name": "CTCF"
                     },
                     {
+                    "name": "H3C2"
+                },
+                {
                         "name": "CTNNB1",
                         minNumSamples: 1
                     },
@@ -675,8 +698,7 @@
             }
         ]
 
-    </script>
+</script>
 
 </body>
-
 </html>

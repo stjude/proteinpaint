@@ -71,6 +71,7 @@ function pnet() {
 function ihg() {
 	scpHpc('files/hg19/ihg/clinical/db')
 	scpHpc('files/hg19/ihg/classification/ihg_oct20_TSNE.txt')
+	scpHpc('files/hg19/ihg/classification/matrixPlot_ihg.json')
 	scpHpc('sdhanda/mb_portal/BT_database/CNV_data_IHG.tsv')
 	scpHpc('sdhanda/mb_portal/BT_database/fusion_IHG.tsv')
 	scpHpc('sdhanda/mb_portal/BT_database/SNVindel_IHG.tsv')

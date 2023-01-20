@@ -33,6 +33,14 @@ module.exports = function() {
 						// allow additional config for this plot
 					}
 				]
+			},
+			matrixplots: {
+				plots: [
+					{
+						name: 'Matrix plot',
+						file: 'files/hg19/ihg/classification/matrixPlot_ihg.json'
+					}
+				]
 			}
 		}
 	}
