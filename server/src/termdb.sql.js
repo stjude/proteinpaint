@@ -388,7 +388,7 @@ opts{} options to tweak the query, see const default_opts = below
 			}
 
 			// overlay term (term2)
-			if (q.term2_q && q.term2_id) {
+			if (q.term2_q && (q.term2_id || q.term2.type === 'samplelst')) {
 				// term2 is defined, discard sample if not annotated for term2
 				// but only if dictionary term, implied by having a term.id
 				if (!('key2' in v)) continue
