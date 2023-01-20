@@ -148,7 +148,7 @@ tape('Render PNET scatter plot', function(test) {
 		const scatterDiv = scatter.Inner.dom.holder
 		testPlot()
 		testLegendTitle()
-		testCreateGroup()
+		testCreateGroupPlots()
 
 		/* 
 		Commented out because of "TypeError: Cannot...." error. 
@@ -181,7 +181,7 @@ tape('Render PNET scatter plot', function(test) {
 			)
 		}
 
-		function testCreateGroup() {
+		function testCreateGroupPlots() {
 			const serieG = scatterDiv.select('.sjpcb-scatter-series')
 			const samples = serieG.selectAll('path').filter(s => s.category === 'ETMR')
 			test.true(28 == samples.size(), `Group should have 28 symbols.`)
@@ -202,6 +202,8 @@ tape('Render PNET scatter plot', function(test) {
 				id: 'Event-free survival'
 			}
 			self.openSurvivalPlot(term, self.getGroupvsOthersOverlay(group))
+
+			self.openSummaryPlot({ id: 'Gender' }, self.getGroupvsOthersOverlay(group))
 		}
 	}
 })

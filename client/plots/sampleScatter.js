@@ -270,7 +270,11 @@ class Scatter {
 		const step = 30
 		let offsetX = 0
 		let offsetY = 60
-		let title = `${this.config.colorTW.term.name} (${this.cohortSamples.length})`
+		const name =
+			this.config.colorTW.term.name.length > 25
+				? this.config.colorTW.term.name.slice(0, 25) + '...'
+				: this.config.colorTW.term.name
+		let title = `${name} (${this.cohortSamples.length})`
 		const colorRefCategory = this.colorLegend.get('Ref')
 
 		const colorG = legendG.append('g')
@@ -353,13 +357,15 @@ class Scatter {
 			offsetY = offsetY + step
 
 			let symbol = this.symbols[0].size(64)()
-			const refG = legendG.append('g')
-			refG
+			const refColorG = legendG.append('g')
+			refColorG
 				.append('path')
 				.attr('transform', c => `translate(${offsetX}, ${offsetY})`)
 				.style('fill', colorRefCategory.color)
 				.attr('d', symbol)
-			refG
+			refColorG.on('click', e => this.onColorClick(e, 'Ref', colorRefCategory))
+			const refText = legendG
+				.append('g')
 				.append('text')
 				.attr('x', offsetX + 10)
 				.attr('y', offsetY)
@@ -368,8 +374,8 @@ class Scatter {
 				.style('font-size', '15px')
 				.attr('alignment-baseline', 'middle')
 
-			refG.on('click', () => {
-				refG.style('text-decoration', !this.settings.showRef ? 'none' : 'line-through')
+			refText.on('click', () => {
+				refText.style('text-decoration', !this.settings.showRef ? 'none' : 'line-through')
 				this.settings.showRef = !this.settings.showRef
 
 				this.app.dispatch({
@@ -660,6 +666,248 @@ class Scatter {
 			filter
 		})
 	}
+
+	showTable(group, x, y, addGroup) {
+		let rows = []
+		const sampleColumn = formatCell('Sample', 'label')
+		const columns = [sampleColumn, formatCell(this.config.colorTW.term.name, 'label')]
+		if (this.config.shapeTW) columns.push(formatCell(this.config.shapeTW.term.name, 'label'))
+		let info = false
+		for (const item of group.items) {
+			const data = item.__data__
+			const row = [formatCell(data.sample)]
+			if ('category' in data) row.push(formatCell(this.getCategoryInfo(data, 'category')))
+			else row.push(formatCell(''))
+			if (this.config.shapeTW) row.push(formatCell(this.getCategoryInfo(data, 'shape')))
+			if ('info' in data) {
+				info = true
+				const values = []
+				for (const [k, v] of Object.entries(data.info)) values.push(`${k}: ${v}`)
+				row.push(formatCell(values.join(', ')))
+			}
+			rows.push(row)
+		}
+		if (info) columns.push(formatCell('Info', 'label'))
+
+		this.dom.tip.clear()
+		const headerDiv = this.dom.tip.d.append('div').style('margin-top', '5px')
+
+		const groupDiv = headerDiv
+			.append('div')
+			.html('&nbsp;' + group.name)
+			.style('font-size', '0.9rem')
+			.on('click', () => {
+				const isEdit = groupDiv.select('input').empty()
+				if (!isEdit) return
+				groupDiv.html('')
+				const input = groupDiv
+					.append('input')
+					.attr('value', group.name)
+					.on('change', () => {
+						const value = input.node().value
+						if (value) group.name = value
+						else input.node().value = group.name
+						groupDiv.html('&nbsp;' + group.name)
+					})
+				input.node().focus()
+				input.node().select()
+			})
+		const tableDiv = this.dom.tip.d.append('div')
+		const buttons = []
+		if (addGroup) {
+			const addGroup = {
+				text: 'Add to a group',
+				callback: indexes => {
+					const items = []
+					for (const i of indexes) items.push(this.selectedItems[i])
+					this.config.groups.push({
+						name: group.name,
+						items,
+						index: groups.length
+					})
+					this.app.dispatch({ type: 'plot_edit', id: this.id, config: { groups: this.config.groups } })
+				}
+			}
+			buttons.push(addGroup)
+		} else {
+			const deleteSamples = {
+				text: 'Delete samples',
+				callback: indexes => {
+					group.items = group.items.filter((elem, index, array) => !(index in indexes))
+					this.showTable(group, x, y, addGroup)
+				}
+			}
+			buttons.push(deleteSamples)
+		}
+		renderTable({
+			rows,
+			columns,
+			div: tableDiv,
+			showLines: true,
+			maxWidth: '35vw',
+			maxHeight: '35vh',
+			buttons,
+			selectAll: true
+		})
+
+		this.dom.tip.show(x, y)
+		function formatCell(column, name = 'value') {
+			let dict = {}
+			dict[name] = column
+			return dict
+		}
+	}
+
+	showGroupMenu(event, group) {
+		this.dom.tip.clear()
+		this.dom.tip.show(event.clientX, event.clientY)
+		const menuDiv = this.dom.tip.d.append('div')
+		const groupDiv = menuDiv
+			.append('div')
+			.html('&nbsp;' + group.name)
+			.style('font-size', '0.9rem')
+			.on('click', () => {
+				const isEdit = groupDiv.select('input').empty()
+				if (!isEdit) return
+				groupDiv.html('')
+				const input = groupDiv
+					.append('input')
+					.attr('value', group.name)
+					.on('change', () => {
+						const value = input.node().value
+						if (value) group.name = value
+						else input.node().value = group.name
+						groupDiv.html('&nbsp;' + group.name)
+					})
+				input.node().focus()
+				input.node().select()
+			})
+		const listDiv = menuDiv
+			.append('div')
+			.attr('class', 'sja_menuoption sja_sharp_border')
+			.text(`Edit ${group.items.length} samples`)
+			.on('click', e => {
+				this.dom.tip.hide()
+				this.showTable(group, event.clientX, event.clientY, false)
+			})
+
+		if (this.state.allowedTermTypes.includes('survival')) {
+			const survivalDiv = menuDiv
+				.append('div')
+				.attr('class', 'sja_menuoption sja_sharp_border')
+				.style('position', 'relative')
+				.html('Survival analysis&nbsp;&nbsp;&nbsp;›')
+
+			survivalDiv.on('click', async e => {
+				const state = {
+					nav: { header_mode: 'hide_search' },
+					tree: { usecase: { target: 'survival', detail: 'term' } }
+				}
+				this.showTermsTree(
+					survivalDiv,
+					term => {
+						this.openSurvivalPlot(term, this.getGroupvsOthersOverlay(group))
+					},
+					state
+				)
+			})
+		}
+		const summarizeDiv = menuDiv
+			.append('div')
+			.attr('class', 'sja_menuoption sja_sharp_border')
+			.html('Summarize')
+		summarizeDiv
+			.insert('div')
+			.html('›')
+			.style('float', 'right')
+
+		summarizeDiv.on('click', async e => {
+			this.showTermsTree(summarizeDiv, term => this.openSummaryPlot(term, this.getGroupvsOthersOverlay(group)))
+		})
+		const deleteDiv = menuDiv
+			.append('div')
+			.attr('class', 'sja_menuoption sja_sharp_border')
+			.text(`Delete group`)
+			.on('click', e => {
+				this.config.groups = this.config.groups.splice(group.index, 1)
+				this.app.dispatch({ type: 'plot_edit', id: this.id, config: { groups: this.config.groups } })
+			})
+		menuDiv
+			.append('div')
+			.attr('class', 'sja_menuoption sja_sharp_border')
+			.text('Add to filter')
+			.on('click', () => {
+				this.addToFilter(group)
+				this.app.dispatch({ type: 'plot_edit', id: this.id, config: { groups: this.config.groups } })
+			})
+	}
+
+	showGroupsMenu(event) {
+		this.dom.tip.clear()
+		this.dom.tip.show(event.clientX, event.clientY)
+		const menuDiv = this.dom.tip.d.append('div')
+
+		let row = menuDiv.append('div')
+
+		for (const [i, group] of this.config.groups.entries()) {
+			row = menuDiv.append('div').attr('class', 'sja_menuoption sja_sharp_border')
+			row
+				.insert('div')
+				.style('display', 'inline-block')
+				.text(` ${group.name}: ${group.items.length} `)
+
+			row
+				.append('div')
+				.style('display', 'inline-block')
+				.style('float', 'right')
+				.html('&nbsp;&nbsp;›')
+			row.on('click', e => {
+				this.dom.tip.clear().hide()
+				this.showGroupMenu(event, group)
+			})
+		}
+		if (this.state.allowedTermTypes.includes('survival')) {
+			const survivalDiv = menuDiv
+				.append('div')
+				.attr('class', 'sja_menuoption sja_sharp_border')
+				.html('Compare survival&nbsp;&nbsp;›')
+
+			survivalDiv.on('click', async e => {
+				const state = {
+					nav: { header_mode: 'hide_search' },
+					tree: { usecase: { target: 'survival', detail: 'term' } }
+				}
+				this.showTermsTree(
+					survivalDiv,
+					term => {
+						this.openSurvivalPlot(term, this.getGroupsOverlay(this.config.groups))
+					},
+					state
+				)
+			})
+		}
+		const summarizeDiv = menuDiv
+			.append('div')
+			.attr('class', 'sja_menuoption sja_sharp_border')
+			.html('Summarize')
+		summarizeDiv
+			.insert('div')
+			.html('›')
+			.style('float', 'right')
+
+		summarizeDiv.on('click', async e => {
+			this.showTermsTree(summarizeDiv, term => {
+				this.openSummaryPlot(term, this.getGroupsOverlay(this.config.groups))
+			})
+		})
+		row = menuDiv
+			.append('div')
+			.attr('class', 'sja_menuoption sja_sharp_border')
+			.text('Delete groups')
+			.on('click', event => {
+				this.app.dispatch({ type: 'plot_edit', id: this.id, config: { groups: [] } })
+			})
+	}
 }
 
 function setRenderers(self) {
@@ -897,7 +1145,7 @@ function setRenderers(self) {
 				.text(`List ${self.selectedItems.length} samples`)
 				.on('click', event => {
 					self.dom.tip.hide()
-					showTable(
+					self.showTable(
 						{ name: 'Group ' + (self.config.groups.length + 1), items: self.selectedItems },
 						event.clientX,
 						event.clientY,
@@ -1049,251 +1297,9 @@ function setRenderers(self) {
 			.style('font-size', '1.1em')
 			.html(`&#931${self.config.groups.length + 1};`)
 			.on('click', event => {
-				if (self.config.groups.length == 1) showGroupMenu(event, self.config.groups[0])
-				else showGroupsMenu(event)
+				if (self.config.groups.length == 1) self.showGroupMenu(event, self.config.groups[0])
+				else self.showGroupsMenu(event)
 			})
-	}
-
-	function showGroupsMenu(event) {
-		self.dom.tip.clear()
-		self.dom.tip.show(event.clientX, event.clientY)
-		const menuDiv = self.dom.tip.d.append('div')
-
-		let row = menuDiv.append('div')
-
-		for (const [i, group] of self.config.groups.entries()) {
-			row = menuDiv.append('div').attr('class', 'sja_menuoption sja_sharp_border')
-			row
-				.insert('div')
-				.style('display', 'inline-block')
-				.text(` ${group.name}: ${group.items.length} `)
-
-			row
-				.append('div')
-				.style('display', 'inline-block')
-				.style('float', 'right')
-				.html('&nbsp;&nbsp;›')
-			row.on('click', e => {
-				self.dom.tip.clear().hide()
-				showGroupMenu(event, group)
-			})
-		}
-		if (self.state.allowedTermTypes.includes('survival')) {
-			const survivalDiv = menuDiv
-				.append('div')
-				.attr('class', 'sja_menuoption sja_sharp_border')
-				.html('Compare survival&nbsp;&nbsp;›')
-
-			survivalDiv.on('click', async e => {
-				const state = {
-					nav: { header_mode: 'hide_search' },
-					tree: { usecase: { target: 'survival', detail: 'term' } }
-				}
-				self.showTermsTree(
-					survivalDiv,
-					term => {
-						self.openSurvivalPlot(term, self.getGroupsOverlay(self.config.groups))
-					},
-					state
-				)
-			})
-		}
-		const summarizeDiv = menuDiv
-			.append('div')
-			.attr('class', 'sja_menuoption sja_sharp_border')
-			.html('Summarize')
-		summarizeDiv
-			.insert('div')
-			.html('›')
-			.style('float', 'right')
-
-		summarizeDiv.on('click', async e => {
-			self.showTermsTree(summarizeDiv, term => {
-				self.openSummaryPlot(term, self.getGroupsOverlay(self.config.groups))
-			})
-		})
-		row = menuDiv
-			.append('div')
-			.attr('class', 'sja_menuoption sja_sharp_border')
-			.text('Delete groups')
-			.on('click', event => {
-				self.app.dispatch({ type: 'plot_edit', id: self.id, config: { groups: [] } })
-			})
-	}
-
-	function showGroupMenu(event, group) {
-		self.dom.tip.clear()
-		self.dom.tip.show(event.clientX, event.clientY)
-		const menuDiv = self.dom.tip.d.append('div')
-		const groupDiv = menuDiv
-			.append('div')
-			.html('&nbsp;' + group.name)
-			.style('font-size', '0.9rem')
-			.on('click', () => {
-				const isEdit = groupDiv.select('input').empty()
-				if (!isEdit) return
-				groupDiv.html('')
-				const input = groupDiv
-					.append('input')
-					.attr('value', group.name)
-					.on('change', () => {
-						const value = input.node().value
-						if (value) group.name = value
-						else input.node().value = group.name
-						groupDiv.html('&nbsp;' + group.name)
-					})
-				input.node().focus()
-				input.node().select()
-			})
-		const listDiv = menuDiv
-			.append('div')
-			.attr('class', 'sja_menuoption sja_sharp_border')
-			.text(`Edit ${group.items.length} samples`)
-			.on('click', e => {
-				self.dom.tip.hide()
-				showTable(group, event.clientX, event.clientY, false)
-			})
-
-		if (self.state.allowedTermTypes.includes('survival')) {
-			const survivalDiv = menuDiv
-				.append('div')
-				.attr('class', 'sja_menuoption sja_sharp_border')
-				.style('position', 'relative')
-				.html('Survival analysis&nbsp;&nbsp;&nbsp;›')
-
-			survivalDiv.on('click', async e => {
-				const state = {
-					nav: { header_mode: 'hide_search' },
-					tree: { usecase: { target: 'survival', detail: 'term' } }
-				}
-				self.showTermsTree(
-					survivalDiv,
-					term => {
-						self.openSurvivalPlot(term, self.getGroupvsOthersOverlay(group))
-					},
-					state
-				)
-			})
-		}
-		const summarizeDiv = menuDiv
-			.append('div')
-			.attr('class', 'sja_menuoption sja_sharp_border')
-			.html('Summarize')
-		summarizeDiv
-			.insert('div')
-			.html('›')
-			.style('float', 'right')
-
-		summarizeDiv.on('click', async e => {
-			self.showTermsTree(summarizeDiv, term => self.openSummaryPlot(term, self.getGroupvsOthersOverlay(group)))
-		})
-		const deleteDiv = menuDiv
-			.append('div')
-			.attr('class', 'sja_menuoption sja_sharp_border')
-			.text(`Delete group`)
-			.on('click', e => {
-				self.config.groups = self.config.groups.splice(group.index, 1)
-				self.app.dispatch({ type: 'plot_edit', id: self.id, config: { groups: self.config.groups } })
-			})
-		menuDiv
-			.append('div')
-			.attr('class', 'sja_menuoption sja_sharp_border')
-			.text('Add to filter')
-			.on('click', () => {
-				self.addToFilter(group)
-				self.app.dispatch({ type: 'plot_edit', id: self.id, config: { groups: self.config.groups } })
-			})
-	}
-
-	function showTable(group, x, y, addGroup) {
-		let rows = []
-		const sampleColumn = formatCell('Sample', 'label')
-		const columns = [sampleColumn, formatCell(self.config.colorTW.term.name, 'label')]
-		if (self.config.shapeTW) columns.push(formatCell(self.config.shapeTW.term.name, 'label'))
-		let info = false
-		for (const item of group.items) {
-			const data = item.__data__
-			const row = [formatCell(data.sample)]
-			if ('category' in data) row.push(formatCell(self.getCategoryInfo(data, 'category')))
-			else row.push(formatCell(''))
-			if (self.config.shapeTW) row.push(formatCell(self.getCategoryInfo(data, 'shape')))
-			if ('info' in data) {
-				info = true
-				const values = []
-				for (const [k, v] of Object.entries(data.info)) values.push(`${k}: ${v}`)
-				row.push(formatCell(values.join(', ')))
-			}
-			rows.push(row)
-		}
-		if (info) columns.push(formatCell('Info', 'label'))
-
-		self.dom.tip.clear()
-		const headerDiv = self.dom.tip.d.append('div').style('margin-top', '5px')
-
-		const groupDiv = headerDiv
-			.append('div')
-			.html('&nbsp;' + group.name)
-			.style('font-size', '0.9rem')
-			.on('click', () => {
-				const isEdit = groupDiv.select('input').empty()
-				if (!isEdit) return
-				groupDiv.html('')
-				const input = groupDiv
-					.append('input')
-					.attr('value', group.name)
-					.on('change', () => {
-						const value = input.node().value
-						if (value) group.name = value
-						else input.node().value = group.name
-						groupDiv.html('&nbsp;' + group.name)
-					})
-				input.node().focus()
-				input.node().select()
-			})
-		const tableDiv = self.dom.tip.d.append('div')
-		const buttons = []
-		if (addGroup) {
-			const addGroup = {
-				text: 'Add to a group',
-				callback: indexes => {
-					const items = []
-					for (const i of indexes) items.push(self.selectedItems[i])
-					self.config.groups.push({
-						name: group.name,
-						items,
-						index: groups.length
-					})
-					self.app.dispatch({ type: 'plot_edit', id: self.id, config: { groups: self.config.groups } })
-				}
-			}
-			buttons.push(addGroup)
-		} else {
-			const deleteSamples = {
-				text: 'Delete samples',
-				callback: indexes => {
-					group.items = group.items.filter((elem, index, array) => !(index in indexes))
-					showTable(group, x, y, addGroup)
-				}
-			}
-			buttons.push(deleteSamples)
-		}
-		renderTable({
-			rows,
-			columns,
-			div: tableDiv,
-			showLines: true,
-			maxWidth: '35vw',
-			maxHeight: '35vh',
-			buttons,
-			selectAll: true
-		})
-
-		self.dom.tip.show(x, y)
-		function formatCell(column, name = 'value') {
-			let dict = {}
-			dict[name] = column
-			return dict
-		}
 	}
 }
 

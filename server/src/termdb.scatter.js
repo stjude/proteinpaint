@@ -218,7 +218,13 @@ async function colorAndShapeSamples(refSamples, cohortSamples, data, q) {
 	}
 
 	const colorLegend = order(colorMap, q.colorTW, data.refs)
-	colorLegend.push(['Ref', { sampleCount: refSamples.length, color: refColor }])
+	colorLegend.push([
+		'Ref',
+		{
+			sampleCount: refSamples.length,
+			color: q.colorTW.term.values?.['Ref'] ? q.colorTW.term.values?.['Ref'].color : refColor
+		}
+	])
 	const shapeLegend = order(shapeMap, q.shapeTW, data.refs)
 	shapeLegend.push(['Ref', { sampleCount: refSamples.length, shape: 0 }])
 	console.log('shapeLegend', shapeLegend)
