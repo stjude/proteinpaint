@@ -1,7 +1,7 @@
 /*
 print an html table, using the specified columns and rows
 
-input:
+Accepts following parameters; function has no return
 
 div = d3-wrapped holder
 
@@ -54,10 +54,12 @@ maxHeight = 40vw, string
 
 selectedRows=[]
 	Each element is an index indicating that the corresponding row should be selected
-	
+
 selectAll = false, boolean
 	When active makes all the rows selected by default
-	
+
+resize = false, boolean
+	If true, allow to adjust table height by dragging
 */
 export async function renderTable({
 	columns,
@@ -72,21 +74,28 @@ export async function renderTable({
 	maxWidth = '90vw',
 	maxHeight = '40vh',
 	selectedRows = [],
-	selectAll = false
+	selectAll = false,
+	resize = false
 }) {
 	if (rows?.length == 0) return
 	const parentDiv = div
 		.append('div')
 		.style('background-color', 'white')
 		.style('max-width', maxWidth)
-		.style('max-height', maxHeight)
-		.attr('class', 'sjpp_hide_scrollbar')
+
+	if (resize) {
+		parentDiv.style('height', maxHeight)
+		parentDiv.style('resize', 'vertical')
+	} else parentDiv.style('max-height', maxHeight)
+	parentDiv.attr('class', 'sjpp_hide_scrollbar')
+
+	const table = parentDiv
 		.append('table')
 		.style('width', '100%')
 		.style('table-layout', 'fixed')
 
 	// header div
-	const thead = parentDiv
+	const thead = table
 		.append('thead')
 		.style('position', 'sticky')
 		.style('top', '0')
@@ -128,7 +137,7 @@ export async function renderTable({
 			if (c.width) th.style('width', c.width)
 		}
 
-	const tbody = parentDiv.append('tbody')
+	const tbody = table.append('tbody')
 	for (const [i, row] of rows.entries()) {
 		let checkbox
 		const rowtable = tbody.append('tr').attr('class', 'sjpp_row_wrapper')
