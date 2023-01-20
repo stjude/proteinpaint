@@ -55,7 +55,9 @@ export const componentInit = genomeBrowserInit
 export function makeChartBtnMenu(holder, chartsInstance) {
 	/*
 	holder: the holder in the tooltip
-	tdbcfg: termdbConfig object of the dataset underlying this mass ui instance
+	chartsInstance: MassCharts instance
+		termdbConfig is accessible at chartsInstance.state.termdbConfig{}
+		mass option is accessible at chartsInstance.app.opts{}
 	*/
 	// genome obj is needed for gene search box
 	const genomeObj = chartsInstance.app.opts.genome
