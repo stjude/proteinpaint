@@ -37,6 +37,12 @@ export default function violinRenderer(self) {
 			renderViolinPlot(plot, self, isH, svg, plotIdx, violinG, imageOffset)
 			renderBrushing(violinG, s, plot, isH, svg)
 		}
+
+		// if(addTransitionEffects.called === true){
+		// 	//only needs to fire once
+		// 	} else {
+		// 		addTransitionEffects(svg, s)
+		// 	}
 	}
 
 	self.displayLabelClickMenu = function(plot, event) {
@@ -65,7 +71,7 @@ export default function violinRenderer(self) {
 		const columns = [{ label: 'Group 1' }, { label: 'Group 2' }, { label: 'P-value' }]
 		const rows = this.data.pvalues
 
-		renderTable({ columns, rows, div: this.dom.tableHolder, showLines: false, maxWidth: '25vw', maxHeight: '20vh' })
+		renderTable({ columns, rows, div: this.dom.tableHolder, showLines: false, maxWidth: '27vw', maxHeight: '20vh' })
 	}
 
 	function maxLabelSize(self, svg) {
@@ -97,13 +103,13 @@ export default function violinRenderer(self) {
 			.style('overflow', 'auto')
 			.style('scrollbar-width', 'none')
 
-		const svg = violinDiv.append('svg')
+		const violinSvg = violinDiv.append('svg')
 
-		const labelsize = maxLabelSize(self, svg)
+		const labelsize = maxLabelSize(self, violinSvg)
 
 		const margin = createMargins(labelsize, s, isH)
 
-		svg
+		violinSvg
 			.attr(
 				'width',
 				margin.left +
@@ -119,9 +125,9 @@ export default function violinRenderer(self) {
 			.classed('sjpp-violin-plot', true)
 
 		// a <g> in which everything is rendered into
-		const svgG = svg.append('g').attr('transform', 'translate(' + margin.left + ',' + margin.top + ')')
+		const svgG = violinSvg.append('g').attr('transform', 'translate(' + margin.left + ',' + margin.top + ')')
 
-		return { margin: margin, svgG: svgG, axisScale: createNumericScale(self, s, isH) }
+		return { margin: margin, svgG: svgG, axisScale: createNumericScale(self, s, isH), violinSvg: violinSvg }
 	}
 
 	function renderScale(self, s, isH, svg) {
@@ -132,23 +138,27 @@ export default function violinRenderer(self) {
 		let lab
 
 		// TODO need to add term2 label onto the svg
-		if (self.config.term2?.q?.mode === 'continuous') lab = svg.svgG.append('text').text(self.config.term2.term.name)
+		if (self.config.term2?.q?.mode === 'continuous')
+			lab = svg.svgG
+				.append('text')
+				.text(`${self.config.term2.term.name}`)
+				.classed('sjpp-numeric-term-label', true)
+				.style('font-weight', 600)
+				.attr('text-anchor', 'middle')
 		else
 			lab = svg.svgG
 				.append('text')
 				.text(self.config.term.term.name)
 				.classed('sjpp-numeric-term-label', true)
+				.style('font-weight', 600)
+				.attr('text-anchor', 'middle')
 
 		if (isH) {
-			lab
-				.attr('x', s.svgw / 2)
-				.attr('y', -30)
-				.attr('text-anchor', 'middle')
+			lab.attr('x', s.svgw / 2).attr('y', -30)
 		} else {
 			lab
-				.attr('y', 0 - svg.margin.top - 5)
+				.attr('y', -45)
 				.attr('x', -s.svgw / 2)
-				.attr('text-anchor', 'middle')
 				.attr('transform', 'rotate(-90)')
 		}
 	}
@@ -198,7 +208,7 @@ export default function violinRenderer(self) {
 		}
 	}
 
-	function renderViolinPlot(plot, self, isH, svg, plotIdx, violinG, imageOffset, axisScale) {
+	function renderViolinPlot(plot, self, isH, svg, plotIdx, violinG, imageOffset) {
 		// times 0.45 will leave out 10% as spacing between plots
 		const wScale = scaleLinear()
 			.domain([-plot.biggestBin, plot.biggestBin])
@@ -279,6 +289,36 @@ export default function violinRenderer(self) {
 								await displayBrushMenu(self, plot, selection, svg.axisScale, isH)
 							})
 			)
+	}
+
+	function addTransitionEffects(svg, s) {
+		const currBox = self.dom.violinDiv
+			.selectAll('.sjpp-violin-plot')
+			.node()
+			.getBBox()
+
+		svg.violinSvg
+			.transition()
+			.duration(300)
+			.attr('width', currBox.width + 20)
+			.attr('height', currBox.height + s.axisHeight)
+			.style('overflow', 'visible')
+
+		addTransitionEffects.called = true
+	}
+
+	self.toggleLoadingDiv = function(display = '') {
+		if (display != 'none') {
+			self.dom.loadingDiv
+				.style('opacity', 0)
+				.style('display', display)
+				.transition()
+				.duration('loadingWait' in self ? self.loadingWait : 100000)
+				.style('opacity', 1)
+		} else {
+			self.dom.loadingDiv.style('display', display)
+		}
+		self.loadingWait = 1000
 	}
 }
 

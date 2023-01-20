@@ -20,11 +20,26 @@ class ViolinPlot {
 			.append('div')
 			.style('display', 'inline-block')
 			.style('padding', '5px')
+			.style('padding-left', '45px')
+			.attr('id', 'sjpp-vp-holder')
 
 		this.dom = {
+			loadingDiv: this.opts.holder
+				.append('div')
+				.style('position', 'absolute')
+				.style('display', 'inline-block')
+				.style('padding-left', '10px')
+				.style('padding-top', '20px')
+				.text('Loading ...'),
 			controls,
-			violinDiv: holder.append('div'),
-			legendDiv: holder.append('div').style('margin', '5px 5px 15px 5px'),
+			violinDiv: holder
+				.append('div')
+				.attr('id', 'sjpp-vp-violinDiv')
+				.style('padding-left', '10px'),
+			legendDiv: holder
+				.append('div')
+				.classed('sjpp-vp-legend', true)
+				.style('padding-left', '5px'),
 			tableHolder: this.opts.holder
 				.append('div')
 				.classed('sjpp-tableHolder', true)
@@ -32,7 +47,7 @@ class ViolinPlot {
 				.style('padding', '10px')
 				.style('vertical-align', 'top')
 				.style('margin-left', '0px')
-				.style('margin-top', '50px')
+				.style('margin-top', '30px')
 				.style('margin-right', '30px')
 		}
 
@@ -150,8 +165,12 @@ class ViolinPlot {
 				.x1
 				.binValueCount
 		*/
-		this.render()
-		this.renderPvalueTable()
+		this.toggleLoadingDiv('')
+		setTimeout(() => {
+			this.render()
+			this.renderPvalueTable()
+		}, 800)
+		this.toggleLoadingDiv('none')
 	}
 
 	async getDescrStats() {
@@ -268,7 +287,7 @@ export function getDefaultViolinSettings() {
 		datasymbol: 'bean',
 		radius: 5,
 		strokeWidth: 0.2,
-		axisHeight: 80,
+		axisHeight: 60,
 		rightMargin: 50
 	}
 }
