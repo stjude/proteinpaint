@@ -664,7 +664,7 @@ export async function bamsliceui({
 			.style('padding', '20px 0px')
 			.style('margin-top', '5px')
 			.html(
-				'You are attempting to visualize a Sequence Read file that you are not authorized to access. Please request dbGaP Access to the project (click here for more information).'
+				'You are attempting to visualize a Sequence Read file that you are not authorized to access. Please request dbGaP Access to the project (<a href=https://gdc.cancer.gov/access-data/obtaining-access-controlled-data target=_blank>click here for more information</a>).'
 			)
 		return [submitButton, saydiv, noPermissionDiv]
 	}
