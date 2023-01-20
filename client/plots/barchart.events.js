@@ -197,11 +197,9 @@ export default function getHandlers(self) {
 			}
 		},
 		yAxis: {
-			text: () => {
+			text: visibleTotal => {
 				if (s.orientation == 'vertical') {
-					return s.unit == 'pct'
-						? '% of patients'
-						: `# of patients ${self.config.term0 ? '' : '(n=' + self.chartsData.charts[0].total + ')'}`
+					return s.unit == 'pct' ? '% of patients' : `# of patients (n=${visibleTotal})`
 				} else {
 					const term = self.config.term
 					return term.q.bar_by_children
@@ -219,7 +217,7 @@ export default function getHandlers(self) {
 			}
 		},
 		xAxis: {
-			text: () => {
+			text: visibleTotal => {
 				if (s.orientation == 'vertical') {
 					const term = self.config.term
 					return term.q.bar_by_children
@@ -234,9 +232,7 @@ export default function getHandlers(self) {
 						? ''
 						: term.unit
 				} else {
-					return s.unit == 'pct'
-						? '% of patients'
-						: `# of patients ${self.config.term0 ? '' : '(n=' + self.chartsData.charts[0].total + ')'}`
+					return s.unit == 'pct' ? '% of patients' : `# of patients (n=${visibleTotal})`
 				}
 			}
 		}

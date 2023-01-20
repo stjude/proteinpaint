@@ -181,7 +181,7 @@ export default function barsRenderer(barsapp, holder) {
 		currRects = series.selectAll('rect')
 		currColTexts = collabels.selectAll('text')
 		hm.delay = 0.35 * hm.duration
-		renderAxes(hm, prevOrientation)
+		renderAxes(hm, prevOrientation, chart.visibleTotal)
 		hm.colw = unadjustedColw
 
 		if (prevOrientation != hm.orientation) {
@@ -698,20 +698,20 @@ export default function barsRenderer(barsapp, holder) {
 		return d == currCell.colId ? '#00f' : ''
 	}
 
-	function renderAxes(hm, prevOrientation) {
+	function renderAxes(hm, prevOrientation, visibleTotal) {
 		axisG
 			.style('opacity', prevOrientation != hm.orientation ? 0 : 1)
 			.transition()
 			.duration(1500)
 			.style('opacity', 1)
 		if (hm.orientation == 'vertical') {
-			renderAxesOnVertical(hm)
+			renderAxesOnVertical(hm, visibleTotal)
 		} else {
-			renderAxesOnHorizontal(hm)
+			renderAxesOnHorizontal(hm, visibleTotal)
 		}
 	}
 
-	function renderAxesOnVertical(s) {
+	function renderAxesOnVertical(s, visibleTotal) {
 		xAxis.style('display', 'none')
 		yLine.style('display', 'none')
 		const colLabelBox = collabels.node().getBBox()
@@ -726,7 +726,7 @@ export default function barsRenderer(barsapp, holder) {
     */
 
 		xTitle.selectAll('*').remove()
-		const xLabel = hm.handlers.xAxis.text()
+		const xLabel = hm.handlers.xAxis.text(visibleTotal)
 		xTitle
 			.append('text')
 			.style('text-anchor', 'middle')
@@ -773,15 +773,15 @@ export default function barsRenderer(barsapp, holder) {
 			.append('text')
 			.style('text-anchor', 'middle')
 			.style('font-size', s.axisTitleFontSize + 'px')
-			.text(hm.handlers.yAxis.text())
+			.text(hm.handlers.yAxis.text(visibleTotal))
 	}
 
-	function renderAxesOnHorizontal(s) {
+	function renderAxesOnHorizontal(s, visibleTotal) {
 		yAxis.style('display', 'none')
 		xLine.style('display', 'none')
 		yTitle.selectAll('*').remove()
 
-		const yLabel = hm.handlers.yAxis.text()
+		const yLabel = hm.handlers.yAxis.text(visibleTotal)
 		yTitle
 			.append('text')
 			.style('text-anchor', 'end')
@@ -839,7 +839,7 @@ export default function barsRenderer(barsapp, holder) {
 			.style('text-anchor', 'middle')
 			.style('font-size', s.axisTitleFontSize + 'px')
 			.style('font-weight', 600)
-			.text(hm.handlers.xAxis.text())
+			.text(hm.handlers.xAxis.text(visibleTotal))
 	}
 
 	function seriesMouseOver(event) {
