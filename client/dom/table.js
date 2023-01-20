@@ -78,15 +78,15 @@ export async function renderTable({
 	resize = false
 }) {
 	if (rows?.length == 0) return
-	const parentDiv = div
-		.append('div')
-		.style('background-color', 'white')
-		.style('max-width', maxWidth)
+	const parentDiv = div.append('div').style('background-color', 'white')
 
 	if (resize) {
 		parentDiv.style('height', maxHeight)
-		parentDiv.style('resize', 'vertical')
-	} else parentDiv.style('max-height', maxHeight)
+		parentDiv.style('width', maxWidth)
+		parentDiv.style('resize', 'both')
+	} else {
+		parentDiv.style('max-height', maxHeight).style('max-width', maxWidth)
+	}
 	parentDiv.attr('class', 'sjpp_hide_scrollbar')
 
 	const table = parentDiv
