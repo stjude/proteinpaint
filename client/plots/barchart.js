@@ -747,7 +747,9 @@ function setRenderers(self) {
 		const title = holder
 			.append('div')
 			.style('font-weight', 'bold')
-			.html("2x2 Association test (Chi-square test, Fisher's exact test<sup><b>a</b></sup>)")
+			.style('font-size', '1.2em')
+			.style('padding-bottom', '0.5em')
+			.html("2x2 Association test (Chi-square test / Fisher's exact test<sup><b>a</b></sup>)")
 
 		const table = holder.append('div')
 
