@@ -705,7 +705,7 @@ makeURL([
 
 		['scatter noRef', '?noheader=1&mass={"dslabel":"MB_meta_analysis","genome":"hg38","plots":[{"chartType":"sampleScatter","name":"Methylome TSNE","colorTW":{"id":"Subgroup"}}]}'],
 
-		['survival','?noheader=1&mass='+JSON.stringify( {
+		['survival+cat','?noheader=1&mass='+JSON.stringify( {
 			dslabel:'TermdbTest',
 			nav: { activeTab: 1 },
 			genome:'hg38',
@@ -715,6 +715,7 @@ makeURL([
 				term: { id: 'efs' }
 			} ],
 		})],
+		['survival+gene','?noheader=1&mass={"dslabel":"PNET","genome":"hg19","plots":[{"chartType":"survival","term2":{"term":{"type":"geneVariant","name":"TP53"}},"term":{"id":"Event-free survival"}}]}']
 
 	]
 },

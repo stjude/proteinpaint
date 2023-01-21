@@ -69,7 +69,7 @@ export async function get_survival(q, ds) {
 			else if (ot.type == 'samplelst') {
 				if (!(ot.name in d)) continue //This sample is not in any group
 				series = d[ot.name].key
-			} else getSeriesKey(ot, d)
+			} else series = getSeriesKey(ot, d)
 
 			keys.series.add(series)
 			// enter chart data
