@@ -1,1 +1,0 @@
-/Users/azaldiva/proteinpaint/utils/termdb/indexing.sql
