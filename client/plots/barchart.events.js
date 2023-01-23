@@ -35,7 +35,7 @@ export default function getHandlers(self) {
 			title(chart) {
 				if (!self.config.term0) return chart.chartId
 				return self.config.term0.term.values && chart.chartId in self.config.term0.term.values
-					? self.config.term0.term.values[chart.chartId].label + ' (n=' + chart.total + ')'
+					? self.config.term0.term.values[chart.chartId].label
 					: chart.chartId
 			}
 		},
