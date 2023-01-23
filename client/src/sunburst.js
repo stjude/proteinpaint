@@ -211,7 +211,7 @@ export default function(opts) {
 							let cx0 = sun.cx,
 								cy0 = sun.cy
 							body
-								.on('mousemove', () => {
+								.on('mousemove', event => {
 									sun.busy = true // must set here but not mousedown
 									sun.cx = cx0 + event.clientX - mx
 									sun.cy = cy0 + event.clientY - my
