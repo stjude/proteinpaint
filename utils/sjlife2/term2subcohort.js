@@ -113,7 +113,10 @@ function parse_outcome() {
 	})
 }
 function print_result() {
-	// trace back
+	// populate term2cohort{}
+	// for children terms, copy data from c2cohort{} to term2cohort{}
+	// trace back ancestries to get to parent terms and add up samples from all children
+
 	for (const [cid, cohort2samples] of c2cohort) {
 		/* for the current child term,
 		if it is annotated to sjlife & ccss, insert "sjlife,ccss" to cohort2samples
@@ -130,7 +133,23 @@ function print_result() {
 			cohort2samples.set(newcohortkey, unionsamples)
 		}
 
-		term2cohort.set(cid, cohort2samples)
+		// insert this child term (cid) to term2cohort{}
+		if (term2cohort.has(cid)) {
+			// this child term is already seen!
+			// this is the case of SN > Breast, in that it is both parent term, and also directly used to annotated samples (making it look like child)
+			for (const [cohort, sampleset] of cohort2samples) {
+				if (!term2cohort.get(cid).has(cohort)) term2cohort.get(cid).set(cohort, new Set())
+				for (const s of sampleset)
+					term2cohort
+						.get(cid)
+						.get(cohort)
+						.add(s)
+			}
+		} else {
+			// the child term is not seen yet, add
+			term2cohort.set(cid, cohort2samples)
+		}
+
 		let pid = c2p.get(cid)
 		while (pid) {
 			if (!term2cohort.has(pid)) term2cohort.set(pid, new Map())
