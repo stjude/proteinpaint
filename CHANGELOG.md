@@ -1,6 +1,11 @@
 # Change Log
 
-All notable changes to this project will be documented in this file.
+All notable changes to this project will be documented in this file. 
+## 2.9.2-0
+
+- Add violin plot integration tests
+- Bundle lines2R to server module
+
 ## 2.9.0
 
 - Improved matrix sorting
