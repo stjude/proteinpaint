@@ -33,16 +33,10 @@ export default function violinRenderer(self) {
 
 		for (const [plotIdx, plot] of self.data.plots.entries()) {
 			const violinG = createViolinG(svg, plot, plotIdx, isH)
-			renderAxisLabel(violinG, plot, isH, s)
+			renderLabels(violinG, plot, isH, s)
 			renderViolinPlot(plot, self, isH, svg, plotIdx, violinG, imageOffset)
 			renderBrushing(violinG, s, plot, isH, svg)
 		}
-
-		// if(addTransitionEffects.called === true){
-		// 	//only needs to fire once
-		// 	} else {
-		// 		addTransitionEffects(svg, s)
-		// 	}
 	}
 
 	self.displayLabelClickMenu = function(plot, event) {
@@ -71,7 +65,15 @@ export default function violinRenderer(self) {
 		const columns = [{ label: 'Group 1' }, { label: 'Group 2' }, { label: 'P-value' }]
 		const rows = this.data.pvalues
 
-		renderTable({ columns, rows, div: this.dom.tableHolder, showLines: false, maxWidth: '27vw', maxHeight: '20vh' })
+		renderTable({
+			columns,
+			rows,
+			div: this.dom.tableHolder,
+			showLines: false,
+			maxWidth: '27vw',
+			maxHeight: '20vh',
+			resize: true
+		})
 	}
 
 	function maxLabelSize(self, svg) {
@@ -132,7 +134,11 @@ export default function violinRenderer(self) {
 
 	function renderScale(self, s, isH, svg) {
 		// <g>: holder of numeric axis
-		const g = svg.svgG.append('g')
+		const g = svg.svgG
+			.append('g')
+			.transition()
+			.duration(1000)
+			.delay(200)
 		g.call((isH ? axisTop : axisLeft)().scale(svg.axisScale))
 
 		let lab
@@ -154,12 +160,24 @@ export default function violinRenderer(self) {
 				.attr('text-anchor', 'middle')
 
 		if (isH) {
-			lab.attr('x', s.svgw / 2).attr('y', -30)
+			lab
+				.attr('x', s.svgw / 2)
+				.attr('y', -30)
+				.style('opacity', 0)
+				.transition()
+				.delay(200)
+				.duration(300)
+				.style('opacity', 1)
 		} else {
 			lab
 				.attr('y', -45)
 				.attr('x', -s.svgw / 2)
 				.attr('transform', 'rotate(-90)')
+				.style('opacity', 0)
+				.transition()
+				.delay(200)
+				.duration(300)
+				.style('opacity', 1)
 		}
 	}
 
@@ -177,10 +195,11 @@ export default function violinRenderer(self) {
 					: 'translate(' + self.data.plotThickness * (plotIdx + 0.5) + ',0)'
 			)
 			.attr('class', 'sjpp-violinG')
+
 		return violinG
 	}
 
-	function renderAxisLabel(violinG, plot, isH, s) {
+	function renderLabels(violinG, plot, isH, s) {
 		// create scale label
 		const label = violinG
 			.append('text')
@@ -191,6 +210,11 @@ export default function violinRenderer(self) {
 				if (!event) return
 				self.displayLabelClickMenu(plot, event)
 			})
+			.style('opacity', 0)
+			.transition()
+			.delay(100)
+			.duration(100)
+			.style('opacity', 1)
 
 		if (isH) {
 			label
@@ -233,6 +257,10 @@ export default function violinRenderer(self) {
 			.append('path')
 			.attr('class', 'sjpp-vp-path')
 			.style('fill', plot.color ? plot.color : k2c(plotIdx))
+			.style('opacity', 0)
+			.transition()
+			.delay(400)
+			.duration(800)
 			.style('opacity', '0.8')
 			.attr('d', areaBuilder(plot.plotValueCount > 3 ? plot.bins : 0)) //do not build violin plots for values 3 or less than 3.
 
@@ -243,6 +271,11 @@ export default function violinRenderer(self) {
 	function renderSymbolImage(violinG, plot, isH, imageOffset) {
 		violinG
 			.append('image')
+			.style('opacity', 0)
+			.transition()
+			.delay(800)
+			.duration(100)
+			.style('opacity', 1)
 			.attr('xlink:href', plot.src)
 			.attr('transform', isH ? `translate(0, -${imageOffset})` : `translate(-${imageOffset}, 0)`)
 	}
@@ -252,6 +285,10 @@ export default function violinRenderer(self) {
 		if (plot.plotValueCount >= 2) {
 			violinG
 				.append('line')
+				.transition()
+				.delay(800)
+				.duration(30)
+				.style('opacity', 1)
 				.attr('class', 'sjpp-median-line')
 				.style('stroke-width', '3')
 				.style('stroke', 'red')
@@ -289,22 +326,6 @@ export default function violinRenderer(self) {
 								await displayBrushMenu(self, plot, selection, svg.axisScale, isH)
 							})
 			)
-	}
-
-	function addTransitionEffects(svg, s) {
-		const currBox = self.dom.violinDiv
-			.selectAll('.sjpp-violin-plot')
-			.node()
-			.getBBox()
-
-		svg.violinSvg
-			.transition()
-			.duration(300)
-			.attr('width', currBox.width + 20)
-			.attr('height', currBox.height + s.axisHeight)
-			.style('overflow', 'visible')
-
-		addTransitionEffects.called = true
 	}
 
 	self.toggleLoadingDiv = function(display = '') {
