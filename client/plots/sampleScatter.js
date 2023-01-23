@@ -764,6 +764,7 @@ class Scatter {
 		const menuDiv = this.dom.tip.d.append('div')
 		const groupDiv = menuDiv
 			.append('div')
+			.attr('name', 'sjpp-group-input-div')
 			.html('&nbsp;' + group.name)
 			.style('font-size', '0.9rem')
 			.on('click', () => {

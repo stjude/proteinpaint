@@ -11,6 +11,15 @@ const d3drag = require('d3-drag')
  reusable helper functions
 **************************/
 
+const holder = d3s
+	.select('body')
+	.append('div')
+	.style('position', 'relative')
+	.style('width', 'fit-content')
+	.style('margin', '20px')
+	.style('padding', '5px')
+	.style('border', '1px solid #000')
+
 const runpp = helpers.getRunPp('mass', {
 	state: {
 		vocab: {
@@ -57,8 +66,6 @@ const open_state = {
 	]
 }
 
-// Considering removing for Airen's testCreateGroup() code of perhaps
-// Another function once termdbTest is ready
 const groupState = {
 	nav: {
 		header_mode: 'hide_search'
@@ -72,22 +79,8 @@ const groupState = {
 			name: 'Methylome TSNE',
 			groups: [
 				{
-					name: 'Test group',
+					name: 'Test group 1',
 					items: [
-						{
-							__data__: {
-								sample: 'SJBT032267_D1',
-								x: -99.54217082,
-								y: 72.48937409,
-								sampleId: 21,
-								category_info: {},
-								hidden: {
-									category: false
-								},
-								category: 'HGNET_BCOR',
-								shape: 'Ref'
-							}
-						},
 						{
 							__data__: {
 								sample: 'SJPNET076946_D1',
@@ -118,6 +111,40 @@ const groupState = {
 						}
 					],
 					index: 1
+				},
+				{
+					name: 'Test group 2',
+					items: [
+						{
+							__data__: {
+								sample: 'SJBT032267_D1',
+								x: -99.54217082,
+								y: 72.48937409,
+								sampleId: 21,
+								category_info: {},
+								hidden: {
+									category: false
+								},
+								category: 'HGNET_BCOR',
+								shape: 'Ref'
+							}
+						},
+						{
+							__data__: {
+								sample: 'SJBT030377_R1',
+								x: -103.141543,
+								y: 73.31223702,
+								sampleId: 55,
+								category_info: {},
+								hidden: {
+									category: false
+								},
+								category: 'HGNET_BCOR',
+								shape: 'Ref'
+							}
+						}
+					],
+					index: 2
 				}
 			]
 		}
@@ -136,6 +163,7 @@ tape('Render PNET scatter plot', function(test) {
 	test.timeoutAfter(3000)
 
 	runpp({
+		holder, //Fix for test failing because survival sandbox is not destroyed.
 		state,
 		sampleScatter: {
 			callbacks: {
@@ -144,19 +172,13 @@ tape('Render PNET scatter plot', function(test) {
 		}
 	})
 
-	function runTests(scatter) {
+	async function runTests(scatter) {
 		const scatterDiv = scatter.Inner.dom.holder
 		testPlot()
 		testLegendTitle()
 		testCreateGroupPlots()
 
-		/* 
-		Commented out because of "TypeError: Cannot...." error. 
-		Cannot destory event survival sandbox. 
-		
-		TODO: Will add holder to destory both sandboxes after all tests pass.
-		*/
-		// if (test._ok) scatter.Inner.app.destroy()
+		if (test._ok) holder.remove()
 		test.end()
 
 		function testPlot() {
@@ -185,10 +207,6 @@ tape('Render PNET scatter plot', function(test) {
 			const serieG = scatterDiv.select('.sjpcb-scatter-series')
 			const samples = serieG.selectAll('path').filter(s => s.category === 'ETMR')
 			test.true(28 == samples.size(), `Group should have 28 symbols.`)
-
-			/* TODO: since no holder is defined (separate from the body), the opening the survival plot 
-			creates a "TypeError: Cannot read properties of undefined (reading 'append')" error
-			Error throws at random under different tests. Will move to its own tape test.*/
 
 			const self = scatter.Inner
 			const group = {
@@ -308,7 +326,6 @@ tape('Create color groups from Edit', function(test) {
 
 	runpp({
 		state: open_state,
-
 		sampleScatter: {
 			callbacks: {
 				'postRender.test': runTests
@@ -423,7 +440,7 @@ tape('Replace color from burger menu', function(test) {
 		await sleep(100)
 		triggerReplace(scatter)
 
-		// if (test._ok) scatter.Inner.app.destroy()
+		if (test._ok) scatter.Inner.app.destroy()
 		test.end()
 	}
 
@@ -819,8 +836,8 @@ tape.skip('Zoom in and zoom out on mousedown', function(test) {
 	}
 })
 
-tape.skip('Edit grouped samples', function(test) {
-	test.timeoutAfter(3000)
+tape('Groups and group menus functions', function(test) {
+	test.timeoutAfter(8000)
 
 	runpp({
 		state: groupState,
@@ -834,17 +851,51 @@ tape.skip('Edit grouped samples', function(test) {
 	async function runTests(scatter) {
 		scatter.on('postRender.test', null)
 
-		triggerGroupMenu(scatter)
+		await triggerGroupMenu(scatter)
 
-		// if (test._ok) scatter.Inner.app.destroy()
+		if (test._ok) scatter.Inner.app.destroy()
 		test.end()
 	}
 
-	function triggerGroupMenu(scatter) {
-		const btn = scatter.Inner.dom.controls
-			.selectAll('button > div')
-			.nodes()
-			.find(d => d.innerText == '①')
-		btn.dispatchEvent(new Event('click'))
+	async function triggerGroupMenu(scatter) {
+		/* Menu appears in the upper left corner instead of under groups button.
+		This is expected. No x/y coord is provided to orient the menu 
+		under the groups button. */
+		scatter.Inner.showGroupsMenu(new PointerEvent('click'))
+		const groupsMenu = scatter.Inner.dom.tip.d.selectAll('div.sja_menuoption').nodes()
+		for (const group of scatter.Inner.config.groups) {
+			const foundGroupInMenu = groupsMenu.filter(
+				d => d?.childNodes[0]?.outerText == `${group.name}: ${group.items.length}`
+			)
+			test.ok(foundGroupInMenu.length == 1, `Should include ${group.name} in groups menu`)
+		}
+
+		for (const [i, group] of scatter.Inner.config.groups.entries()) {
+			scatter.Inner.showGroupMenu(new PointerEvent('click'), scatter.Inner.config.groups[i])
+			await sleep(1000)
+			const groupMenuTitleDiv = scatter.Inner.dom.tip.d.selectAll('div[name="sjpp-group-input-div"]').node()
+			test.ok(groupMenuTitleDiv.innerHTML.endsWith(group.name), `Should display ${group.name} menu`)
+
+			scatter.Inner.showTable(group, 0, 0)
+			testSampleTable(scatter, i, group)
+		}
+	}
+
+	function testSampleTable(scatter, i, group) {
+		const samplesRendered = scatter.Inner.dom.tip.d.selectAll('.sjpp_row_wrapper > td:nth-child(3)').nodes()
+		let samples2Check = []
+		for (const item of samplesRendered) {
+			samples2Check.push(item.innerHTML)
+		}
+
+		//Check every sample in group renders in sample table
+		let foundSamples = 0
+		for (const sampleData of scatter.Inner.config.groups[i].items) {
+			if (samples2Check.some(d => d == sampleData.__data__.sample)) ++foundSamples
+			else notFound.push(sampleData.__data__.sample)
+		}
+		test.equal(samples2Check.length, foundSamples, `Should render all samples for ${group.name}`)
+
+		if (test._ok) scatter.Inner.dom.tip.d.remove()
 	}
 })
