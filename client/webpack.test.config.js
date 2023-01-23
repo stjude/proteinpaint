@@ -16,6 +16,10 @@ const commonConfig = {
 		strictExportPresence: true,
 		rules: [
 			{
+				test: /\.css$/,
+				use: ['style-loader', 'css-loader']
+			},
+			{
 				test: /\.js$/,
 				exclude: /\.spec\.js$/,
 				use: [

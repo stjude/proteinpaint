@@ -1,4 +1,6 @@
 export function testrunproteinpaint() {
+	// polyfill only for testing
+	if (!window.structuredClone) window.structuredClone = val => JSON.parse(JSON.stringify(val))
 	importIntegrationTests()
 }
 
