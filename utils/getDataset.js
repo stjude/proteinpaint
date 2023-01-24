@@ -1,5 +1,11 @@
 const help = `
-Connect VPN when pulling dataset (scp from hpc); no need when pulling gene db (curl from prp1).
+Datasets are hosted on hpc as they are mostly sensitive data and should not be publicly shared.
+When pulling datasets, you need to:
+1. connect VPN
+2. make sure your public key is setup on hpc (no need to enter password when doing "ssh hpc")
+
+No need to connect VPN when pulling gene db (curl from prp1).
+
 Run this script anywhere on your computer.
 
 	node ~/dev/proteinpaint/utils/getDataset.js <dataset1> <dataset2> ...

@@ -4,6 +4,25 @@ import { Menu } from '#dom/menu'
 
 /*
 
+brief notes about structures of this.app and this.state
+
+this.app {
+	opts {
+		genome{} // client-side genome obj
+		state {
+			dslabel:str
+			genome:str
+		}
+	}
+}
+
+this.state {
+	config {
+		geneSearchResult{}
+	}
+	termdbConfig{}
+}
+
 */
 
 class genomeBrowser {
@@ -13,28 +32,47 @@ class genomeBrowser {
 
 	async init(opts) {
 		const holder = this.opts.holder.append('div')
-
 		this.dom = {
 			holder
 		}
-
-		this.dom.holder.append('div').text('TODO')
 	}
 
 	getState(appState) {
 		const config = appState.plots.find(p => p.id === this.id)
-		if (!config) {
-			throw `No plot with id='${this.id}' found. Did you set this.id before this.api = getComponentApi(this)?`
-		}
+		if (!config) throw `No plot with id='${this.id}' found`
 		return {
-			config
+			config,
+			termdbConfig: appState.termdbConfig
 		}
 	}
 
-	// called in relevant dispatch when reactsTo==true
-	// or current.state != replcament.state
 	async main() {
-		this.config = JSON.parse(JSON.stringify(this.state.config))
+		await this.launchBlockTrack()
+	}
+
+	async launchBlockTrack() {
+		const arg = this.getBlockArg()
+		const _ = await import('#src/block.init')
+		await _.default(arg)
+	}
+
+	getBlockArg() {
+		const tk = {
+			// mds3 tk obj
+			type: 'mds3',
+			dslabel: this.app.opts.state.dslabel
+		}
+		const c = {
+			holder: this.dom.holder,
+			genome: this.app.opts.genome,
+			tklst: [tk]
+		}
+		if (this.state.config.geneSearchResult.geneSymbol) {
+			c.query = this.state.config.geneSearchResult.geneSymbol
+		} else {
+			throw 'no gene'
+		}
+		return c
 	}
 }
 
@@ -56,12 +94,19 @@ export function makeChartBtnMenu(holder, chartsInstance) {
 	/*
 	holder: the holder in the tooltip
 	chartsInstance: MassCharts instance
-		termdbConfig is accessible at chartsInstance.state.termdbConfig{}
-		mass option is accessible at chartsInstance.app.opts{}
+	{
+		app {
+			opts { // the mass ui options
+				genome{} // client-side genome object
+			}
+		}
+		state {
+			termdbConfig{}
+		}
+	}
 	*/
-	// genome obj is needed for gene search box
 	const genomeObj = chartsInstance.app.opts.genome
-	if (typeof genomeObj != 'object') throw 'chartsInstance.app.opts.genome not an object'
+	if (typeof genomeObj != 'object') throw 'chartsInstance.app.opts.genome not an object and needed for gene search box'
 	const result = addGeneSearchbox({
 		tip: new Menu(),
 		genome: genomeObj,
@@ -71,7 +116,8 @@ export function makeChartBtnMenu(holder, chartsInstance) {
 			// dispatch to create new plot
 			const chart = {
 				config: {
-					chartType: 'genomeBrowser'
+					chartType: 'genomeBrowser',
+					geneSearchResult: result
 				}
 			}
 			chartsInstance.prepPlot(chart)

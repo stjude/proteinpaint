@@ -2,6 +2,13 @@ const serverconfig = require('./serverconfig.js')
 const { mayComputeTermtypeByCohort } = require('./termdb.sql')
 
 /*
+the "termdbConfig" object is returned to client side that uses vocabApi
+it is evolving to encompass all aspects of mds3 dataset, not just termdb
+it informs client code (mostly mass plots) what this dataset is about
+the object should be light-weight with *minimum data* only
+it should not include large amount of purpose-specific data (e.g. premade plots)
+that data should be progressively loaded by plot code
+
 input:
 q{}
 	query object
@@ -17,7 +24,7 @@ ds{}
 	server side dataset object
 
 returns:
-	the "termdbConfig{}" json object, registered at the mass app store
+	a json object
 */
 
 export function make(q, res, ds) {
@@ -53,6 +60,7 @@ export function make(q, res, ds) {
 	addRequiredAuth(c, q)
 	addScatterplots(c, ds)
 	addMatrixplots(c, ds)
+	addMutationQueries(c, ds)
 
 	res.send({ termdbConfig: c })
 }
@@ -84,6 +92,12 @@ function addMatrixplots(c, ds) {
 	c.matrixplots = ds.cohort.matrixplots.plots.map(p => {
 		return { name: p.name }
 	})
+}
+
+function addMutationQueries(c, ds) {
+	if (!ds.queries) return
+	c.queries = {}
+	if (ds.queries.snvindel) c.queries.snvindel = true
 }
 
 // allowedTermTypes[] is an unique list of term types from this dataset
