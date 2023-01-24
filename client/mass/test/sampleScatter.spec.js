@@ -11,14 +11,14 @@ const d3drag = require('d3-drag')
  reusable helper functions
 **************************/
 
-const holder = d3s
-	.select('body')
-	.append('div')
-	.style('position', 'relative')
-	.style('width', 'fit-content')
-	.style('margin', '20px')
-	.style('padding', '5px')
-	.style('border', '1px solid #000')
+function getHolder() {
+	return d3s
+		.select('body')
+		.append('div')
+		.style('border', '1px solid #aaa')
+		.style('padding', '5px')
+		.style('margin', '5px')
+}
 
 const runpp = helpers.getRunPp('mass', {
 	state: {
@@ -161,9 +161,10 @@ tape('\n', function(test) {
 
 tape('Render PNET scatter plot', function(test) {
 	test.timeoutAfter(3000)
+	const holder = getHolder()
 
 	runpp({
-		holder, //Fix for test failing because survival sandbox is not destroyed.
+		holder, //Fix for test failing because survival & summary sandboxs are not destroyed.
 		state,
 		sampleScatter: {
 			callbacks: {
@@ -224,6 +225,182 @@ tape('Render PNET scatter plot', function(test) {
 			self.openSummaryPlot({ id: 'Gender' }, self.getGroupvsOthersOverlay(group))
 		}
 	}
+})
+
+tape('Missing colorTW', async function(test) {
+	test.timeoutAfter(3000)
+	const message = `Should display error for missing colorTW`
+	const holder = getHolder()
+
+	try {
+		runpp({
+			holder,
+			state: {
+				plots: [
+					{
+						chartType: 'sampleScatter',
+						name: 'Methylome TSNE'
+					}
+				]
+			}
+		})
+		await sleep(300)
+		test.equal(holder.selectAll('.sja_errorbar').size(), 1, 'Should display, "Error: sampleScatter getPlotConfig: opts.colorTW{} missing".')
+	} catch (e) {
+		test.fail(message + ': ' + e)
+	}
+
+	if (test._ok) holder.remove()
+	test.end()
+})
+
+tape('Missing colorTW.id', async function(test) {
+	test.timeoutAfter(3000)
+	const message = `Should display error for missing colorTW.id and missing colorTW.term`
+	const holder = getHolder()
+
+	try {
+		runpp({
+			holder,
+			state: {
+				plots: [
+					{
+						chartType: 'sampleScatter',
+						colorTW: {
+							id: ''
+						},
+						name: 'Methylome TSNE'
+					}
+				]
+			}
+		})
+		await sleep(300)
+		test.equal(holder.selectAll('.sja_errorbar').size(), 1, 'Should display, "Error: missing both .id and .term [bsampleScatter getPlotConfig()]".')
+	} catch (e) {
+		test.fail(message + ': ' + e)
+	}
+
+	if (test._ok) holder.remove()
+	test.end()
+})
+
+tape('Invalid colorTW.id', async function(test) {
+	test.timeoutAfter(3000)
+	const message = `Should display error for colorTW.id not found within dataset`
+	const holder = getHolder()
+
+	try {
+		runpp({
+			holder,
+			state: {
+				plots: [
+					{
+						chartType: 'sampleScatter',
+						colorTW: {
+							id: 'Not real data'
+						},
+						name: 'Methylome TSNE'
+					}
+				]
+			}
+		})
+		await sleep(300)
+		test.equal(holder.selectAll('.sja_errorbar').size(), 1, 'Should display, "Error: no term found for Not real data [bsampleScatter getPlotConfig()]".')
+	} catch (e) {
+		test.fail(message + ': ' + e)
+	}
+
+	if (test._ok) holder.remove()
+	test.end()
+})
+
+tape('Invalid colorTW.term', async function(test) {
+	test.timeoutAfter(3000)
+	const message = `Should display error for colorTW.term not found within dataset`
+	const holder = getHolder()
+
+	try {
+		runpp({
+			holder,
+			state: {
+				plots: [
+					{
+						chartType: 'sampleScatter',
+						colorTW: {
+							term: 'Not real data'
+						},
+						name: 'Methylome TSNE'
+					}
+				]
+			}
+		})
+		await sleep(500)
+		test.equal(holder.selectAll('.sja_errorbar').size(), 1, 'Should display, "Error: Error: Cannot find module \'./undefined.js\' [bsampleScatter getPlotConfig()]".')
+	} catch (e) {
+		test.fail(message + ': ' + e)
+	}
+
+	if (test._ok) holder.remove()
+	test.end()
+})
+
+tape('Missing plot name', async function(test) {
+	test.timeoutAfter(3000)
+	const message = `Should display error for missing plotName`
+	const holder = getHolder()
+
+	try {
+		runpp({
+			holder,
+			state: {
+				plots: [
+					{
+						chartType: 'sampleScatter',
+						colorTW: {
+							id: 'TSNE Category'
+						}
+					}
+				]
+			}
+		})
+		await sleep(500)
+		test.equal(holder.selectAll('.sja_errorbar').size(), 1, 'Should display, "Error: plot not found with plotName".')
+	} catch (e) {
+		test.fail(message + ': ' + e)
+	}
+
+	if (test._ok) holder.remove()
+	test.end()
+})
+
+tape('Invalid plot name', async function(test) {
+	test.timeoutAfter(3000)
+	const message = `Should display error for invalid plot name`
+	const holder = getHolder()
+
+	try {
+		runpp({
+			holder,
+			state: {
+				plots: [
+					{
+						chartType: 'sampleScatter',
+						colorTW: {
+							id: 'TSNE Category'
+						},
+						name: 'Not real data'
+					}
+				]
+			}
+		})
+		await sleep(500)
+		test.equal(holder.selectAll('.sja_errorbar').size(), 1, 'Should display, "Error: plot not found with plotName".')
+	} catch (e) {
+		test.fail(message + ': ' + e)
+	}
+
+	if (test._ok) holder.remove()
+	test.end()
 })
 
 tape('PNET plot + filter + colorTW=gene', function(test) {
@@ -741,24 +918,6 @@ tape('Check/uncheck Show axes from menu', function(test) {
 	}
 })
 
-tape.skip('Click download button for SVG', function(test) {
-	test.timeoutAfter(3000)
-
-	runpp({
-		state,
-		sampleScatter: {
-			callbacks: {
-				'postRender.test': runTests
-			}
-		}
-	})
-
-	async function runTests(scatter) {
-		// if (test._ok) scatter.Inner.app.destroy()
-		test.end()
-	}
-})
-
 tape('Click zoom in, zoom out, and reset buttons', function(test) {
 	test.timeoutAfter(10000)
 
@@ -816,24 +975,6 @@ tape('Click zoom in, zoom out, and reset buttons', function(test) {
 	}
 
 	//Add tests for changes in axes
-})
-
-tape.skip('Zoom in and zoom out on mousedown', function(test) {
-	test.timeoutAfter(3000)
-
-	runpp({
-		state,
-		sampleScatter: {
-			callbacks: {
-				'postRender.test': runTests
-			}
-		}
-	})
-
-	async function runTests(scatter) {
-		//TODO
-		//Add tests for changes in axes
-	}
 })
 
 tape('Groups and group menus functions', function(test) {
