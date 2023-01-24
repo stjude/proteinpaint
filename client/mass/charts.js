@@ -211,7 +211,7 @@ function getChartTypeList(self) {
 		{
 			label: 'Scatter Plot',
 			chartType: 'sampleScatter',
-			clickTo: self.showScatterPlot
+			clickTo: self.loadChartSpecificMenu
 		},
 		{
 			label: 'Genome browser',
@@ -437,36 +437,6 @@ function setRenderers(self) {
 			})
 	}
 
-	self.showScatterPlot = function() {
-		const menuDiv = self.dom.tip.d.append('div')
-		for (const plot of self.state.termdbConfig.scatterplots) {
-			/* plot: 
-			{
-				name=str,
-				dimensions=int,
-				term={ id, ... }
-			}
-			*/
-			menuDiv
-				.append('div')
-				.attr('class', 'sja_menuoption sja_sharp_border')
-				.text(plot.name)
-				.on('click', () => {
-					let config = {
-						chartType: 'sampleScatter',
-						colorTW: JSON.parse(JSON.stringify(plot.colorTW)),
-						name: plot.name,
-						term: JSON.parse(JSON.stringify(plot.colorTW))
-					}
-					if ('shapeTW' in plot) config.shapeTW = JSON.parse(JSON.stringify(plot.shapeTW))
-					self.app.dispatch({
-						type: 'plot_create',
-						config: config
-					})
-					self.dom.tip.hide()
-				})
-		}
-	}
 	self.showMatrixPlot = function() {
 		self.dom.tip.clear()
 		const menuDiv = self.dom.tip.d.append('div')

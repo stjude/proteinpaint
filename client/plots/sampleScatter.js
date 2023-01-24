@@ -1380,3 +1380,41 @@ export async function getPlotConfig(opts, app) {
 export const scatterInit = getCompInit(Scatter)
 // this alias will allow abstracted dynamic imports
 export const componentInit = scatterInit
+
+export function makeChartBtnMenu(holder, chartsInstance) {
+	/*
+	holder: the holder in the tooltip
+	chartsInstance: MassCharts instance
+		termdbConfig is accessible at chartsInstance.state.termdbConfig{}
+		mass option is accessible at chartsInstance.app.opts{}
+	*/
+	const menuDiv = holder.append('div')
+
+	for (const plot of chartsInstance.state.termdbConfig.scatterplots) {
+		/* plot: 
+		{
+			name=str,
+			dimensions=int,
+			term={ id, ... }
+		}
+		*/
+		menuDiv
+			.append('div')
+			.attr('class', 'sja_menuoption sja_sharp_border')
+			.text(plot.name)
+			.on('click', () => {
+				let config = {
+					chartType: 'sampleScatter',
+					colorTW: JSON.parse(JSON.stringify(plot.colorTW)),
+					name: plot.name,
+					term: JSON.parse(JSON.stringify(plot.colorTW))
+				}
+				if ('shapeTW' in plot) config.shapeTW = JSON.parse(JSON.stringify(plot.shapeTW))
+				chartsInstance.app.dispatch({
+					type: 'plot_create',
+					config: config
+				})
+				chartsInstance.dom.tip.hide()
+			})
+	}
+}
