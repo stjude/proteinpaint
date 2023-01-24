@@ -371,7 +371,7 @@ function setRenderers(self) {
 
 	self.loadChartSpecificMenu = async chart => {
 		self.dom.tip.clear()
-		const _ = await import(`../plots/${chart.chartType}`)
+		const _ = await import(`../plots/${chart.chartType}.js`)
 		_.makeChartBtnMenu(self.dom.tip.d, self)
 	}
 
