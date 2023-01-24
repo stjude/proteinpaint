@@ -11,6 +11,7 @@ const { get_samples, server_init_db_queries } = require('./termdb.sql')
 const { get_barchart_data_sqlitedb } = require('./termdb.barsql')
 const { setDbRefreshRoute } = require('./dsUpdateAttr.js')
 const mayInitiateScatterplots = require('./termdb.scatter').mayInitiateScatterplots
+const mayInitiateMatrixplots = require('./termdb.matrix').mayInitiateMatrixplots
 
 /*
 ********************** EXPORTED
@@ -201,6 +202,9 @@ export async function validate_termdb(ds) {
 	await mayValidateRestrictAcestries(tdb)
 
 	await mayInitiateScatterplots(ds)
+
+	await mayInitiateMatrixplots(ds)
+
 	if ('minTimeSinceDx' in tdb) {
 		if (!Number.isFinite(tdb.minTimeSinceDx)) throw 'termdb.minTimeSinceDx not number'
 		if (tdb.minTimeSinceDx <= 0) throw 'termdb.minTimeSinceDx<=0'

@@ -80,8 +80,10 @@ function addScatterplots(c, ds) {
 
 function addMatrixplots(c, ds) {
 	if (!ds.cohort.matrixplots) return
-	// this dataset has premade matrixplots. reveal to client
-	c.matrixplots = ds.cohort.matrixplots.plots
+	// this dataset has premade matrixplots. reveal matrix plot names to client
+	c.matrixplots = ds.cohort.matrixplots.plots.map(p => {
+		return { name: p.name }
+	})
 }
 
 // allowedTermTypes[] is an unique list of term types from this dataset

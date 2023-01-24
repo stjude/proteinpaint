@@ -278,3 +278,21 @@ async function getSampleData_dictionaryTerms_v2s(q, termWrappers) {
 	}
 	return { samples, refs }
 }
+
+/*
+works with "canned" matrix plot in a dataset, e.g. data from a text file
+called in mds3.init
+*/
+export async function mayInitiateMatrixplots(ds) {
+	if (!ds.cohort.matrixplots) return
+	if (!Array.isArray(ds.cohort.matrixplots.plots)) throw 'cohort.matrixplots.plots is not array'
+	for (const p of ds.cohort.matrixplots.plots) {
+		if (!p.name) throw '.name missing from one of matrixplots.plots[]'
+		if (p.file) {
+			const matrixConfig = await utils.read_file(path.join(serverconfig.tpmasterdir, p.file))
+			p.matrixConfig = matrixConfig
+		} else {
+			throw 'unknown data source of one of matrixplots.plots[]'
+		}
+	}
+}

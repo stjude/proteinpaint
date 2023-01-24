@@ -77,6 +77,15 @@ export function handle_request_closure(genomes) {
 				res.send(await ds.getTermTypes(q))
 				return
 			} else if (q.for == 'matrix') {
+				if (q.getPlotDataByName) {
+					// send back the config for pre-built matrix plot
+					if (!ds.cohort.matrixplots) throw 'ds.cohort.matrixplots missing for the dataset'
+					if (!ds.cohort.matrixplots.plots) throw 'ds.cohort.matrixplots.plots missing for the dataset'
+					const plot = ds.cohort.matrixplots.plots.find(p => p.name === q.getPlotDataByName)
+					if (!plot) throw `plot name: q.getPlotDataByName=${getPlotDataByName} missing in ds.cohort.matrixplots.plots`
+					res.send(plot.matrixConfig)
+					return
+				}
 				const data = await getData(q, ds, genome)
 				res.send(data)
 				return

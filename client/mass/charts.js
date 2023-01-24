@@ -2,7 +2,7 @@ import { getCompInit } from '../rx'
 import { Menu } from '#dom/menu'
 import { getNormalRoot } from '../filter/filter'
 import { select } from 'd3-selection'
-const dofetch3 = require('#common/dofetch').dofetch3
+import { dofetch3 } from '../common/dofetch'
 
 class MassCharts {
 	constructor(opts = {}) {
@@ -474,9 +474,7 @@ function setRenderers(self) {
 			for (const plot of self.state.termdbConfig.matrixplots) {
 				/* plot: 
 				{
-					name=str,
-					file=str,
-					publicPath=str
+					name=str
 				}
 				*/
 				menuDiv
@@ -484,17 +482,20 @@ function setRenderers(self) {
 					.attr('class', 'sja_menuoption sja_sharp_border')
 					.text(plot.name)
 					.on('click', async () => {
-						try {
-							const data = await dofetch3('/textfile', { method: 'POST', body: { file: plot.file } })
-							const config = JSON.parse(data.text)
-							self.app.dispatch({
-								type: 'plot_create',
-								config
-							})
-							self.dom.tip.hide()
-						} catch (e) {
-							throw e
-						}
+						const matrixConfig = await dofetch3('termdb', {
+							body: {
+								for: 'matrix',
+								getPlotDataByName: plot.name,
+								genome: self.state.vocab.genome,
+								dslabel: self.state.vocab.dslabel
+							}
+						})
+						const text = await new Response(matrixConfig).text()
+						const config = JSON.parse(text)
+						self.app.dispatch({
+							type: 'plot_create',
+							config
+						})
 					})
 			}
 		}
