@@ -15,7 +15,7 @@ import { filterJoin } from '../../filter/filter.js'
 const runpp = getRunPp('mass', {
 	state: {
 		nav: { activeTab: 1 },
-		vocab: { dslabel: 'TermdbTest', genome: 'hg38' }
+		vocab: { dslabel: 'TermdbTest', genome: 'hg38-test' }
 	},
 	debug: 1
 })
