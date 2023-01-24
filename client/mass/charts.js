@@ -2,7 +2,6 @@ import { getCompInit } from '../rx'
 import { Menu } from '#dom/menu'
 import { getNormalRoot } from '../filter/filter'
 import { select } from 'd3-selection'
-import { dofetch3 } from '../common/dofetch'
 
 class MassCharts {
 	constructor(opts = {}) {
@@ -197,7 +196,7 @@ function getChartTypeList(self) {
 		{
 			label: 'Sample Matrix',
 			chartType: 'matrix',
-			clickTo: self.showMatrixPlot
+			clickTo: self.loadChartSpecificMenu
 		},
 		{
 			label: 'Data Download',
@@ -383,139 +382,6 @@ function setRenderers(self) {
 	self.prepPlot = function(chart) {
 		const action = { type: 'plot_prep', config: chart.config, id: getId() }
 		self.app.dispatch(action)
-	}
-
-	/*
-	rest of the callbacks may be moved to plots/sampleScatter.js and plots/matrix.js, and replaced by loadChartSpecificMenu()
-	*/
-
-	self.showTextAreaInput = opt => {
-		self.dom.tip.clear()
-		self.dom.submenu = self.dom.tip.d.append('div').style('text-align', 'center')
-
-		self.dom.submenu.append('span').html(opt.label)
-
-		self.dom.submenu
-			.append('button')
-			.style('margin', '0 5px')
-			.html('Submit')
-			.on('click', async () => {
-				const data = await opt.processInput(ta.property('value'))
-				console.log(data)
-
-				self.dom.tip.hide()
-				const action = {
-					type: 'plot_create',
-					id: getId(),
-					config: {
-						chartType: opt.usecase.target,
-						[opt.usecase.detail]: data
-					}
-				}
-				self.app.dispatch(action)
-			})
-
-		const ta = self.dom.submenu
-			.append('div')
-			.style('text-align', 'left')
-			.append('textarea')
-			.attr('placeholder', opt.placeholder)
-			.style('width', '300px')
-			.style('height', '300px')
-			.style('margin', '5px')
-			.style('padding', '5px')
-			.on('keydown', event => {
-				const keyCode = event.keyCode || event.which
-				// handle tab key press, otherwise it will cause the focus to move to another input
-				if (keyCode == 9) {
-					event.preventDefault()
-					const t = event.target
-					const s = t.selectionStart
-					t.value = t.value.substring(0, t.selectionStart) + '\t' + t.value.substring(t.selectionEnd)
-					t.selectionEnd = s + 1
-				}
-			})
-	}
-
-	self.showMatrixPlot = function() {
-		self.dom.tip.clear()
-		const menuDiv = self.dom.tip.d.append('div')
-		if (self.state.termdbConfig.matrixplots) {
-			for (const plot of self.state.termdbConfig.matrixplots) {
-				/* plot: 
-				{
-					name=str
-				}
-				*/
-				menuDiv
-					.append('div')
-					.attr('class', 'sja_menuoption sja_sharp_border')
-					.text(plot.name)
-					.on('click', async () => {
-						const matrixConfig = await dofetch3('termdb', {
-							body: {
-								for: 'matrix',
-								getPlotDataByName: plot.name,
-								genome: self.state.vocab.genome,
-								dslabel: self.state.vocab.dslabel
-							}
-						})
-						const text = await new Response(matrixConfig).text()
-						const config = JSON.parse(text)
-						self.app.dispatch({
-							type: 'plot_create',
-							config
-						})
-					})
-			}
-		}
-		menuDiv
-			.append('div')
-			.datum({
-				label: 'Term tree & search',
-				clickTo: self.showTree_selectlst,
-				chartType: 'matrix',
-				usecase: { target: 'matrix', detail: 'termgroups' },
-				processSelection: lst => {
-					return [
-						{
-							name: '',
-							lst: lst.map(term => {
-								return { term }
-							})
-						}
-					]
-				}
-			})
-			.attr('class', 'sja_menuoption sja_sharp_border')
-			.text(d => d.label)
-			.on('click', (event, chart) => self.showTree_selectlst(chart))
-
-		menuDiv
-			.append('div')
-			.datum({
-				label: 'Text input',
-				chartType: 'matrix',
-				clickTo: self.showTextAreaInput,
-				usecase: { target: 'matrix', detail: 'termgroups' },
-				placeholder: 'term\tgroup',
-				processInput: async text => {
-					const lines = text.split('\n').map(line => line.split('\t'))
-					const ids = lines.map(cols => cols[0]).filter(t => !!t)
-					const terms = await self.app.vocabApi.getTermTypes(ids)
-					console.log(terms)
-					const groups = {}
-					for (const [id, name] of lines) {
-						if (!(id in terms)) continue
-						if (!(name in groups)) groups[name] = { name, lst: [] }
-						groups[name].lst.push({ term: terms[id] })
-					}
-					return Object.values(groups)
-				}
-			})
-			.attr('class', 'sja_menuoption sja_sharp_border')
-			.text(d => d.label)
-			.on('click', (event, chart) => self.showTextAreaInput(chart))
 	}
 }
 

@@ -290,7 +290,7 @@ export async function mayInitiateMatrixplots(ds) {
 		if (!p.name) throw '.name missing from one of matrixplots.plots[]'
 		if (p.file) {
 			const matrixConfig = await utils.read_file(path.join(serverconfig.tpmasterdir, p.file))
-			p.matrixConfig = matrixConfig
+			p.matrixConfig = JSON.parse(matrixConfig)
 		} else {
 			throw 'unknown data source of one of matrixplots.plots[]'
 		}

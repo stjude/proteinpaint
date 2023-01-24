@@ -13,6 +13,7 @@ import { Menu } from '../dom/menu'
 import { setInteractivity } from './matrix.interactivity'
 import { setRenderers } from './matrix.renderers'
 import { getSampleSorter, getTermSorter } from './matrix.sort'
+import { dofetch3 } from '../common/dofetch'
 
 class Matrix {
 	constructor(opts) {
@@ -949,4 +950,142 @@ export async function getPlotConfig(opts, app) {
 	if (config.divideBy) promises.push(fillTermWrapper(config.divideBy, app.vocabApi))
 	await Promise.all(promises)
 	return config
+}
+
+export function makeChartBtnMenu(holder, chartsInstance) {
+	/*
+	holder: the holder in the tooltip
+	chartsInstance: MassCharts instance
+		termdbConfig is accessible at chartsInstance.state.termdbConfig{}
+		mass option is accessible at chartsInstance.app.opts{}
+	*/
+	chartsInstance.dom.tip.clear()
+	const menuDiv = holder.append('div')
+	if (chartsInstance.state.termdbConfig.matrixplots) {
+		for (const plot of chartsInstance.state.termdbConfig.matrixplots) {
+			/* plot: 
+			{
+				name=str
+			}
+			*/
+			menuDiv
+				.append('div')
+				.attr('class', 'sja_menuoption sja_sharp_border')
+				.text(plot.name)
+				.on('click', async () => {
+					const config = await dofetch3('termdb', {
+						body: {
+							for: 'matrix',
+							getPlotDataByName: plot.name,
+							genome: chartsInstance.state.vocab.genome,
+							dslabel: chartsInstance.state.vocab.dslabel
+						}
+					})
+					chartsInstance.app.dispatch({
+						type: 'plot_create',
+						config
+					})
+				})
+		}
+	}
+	menuDiv
+		.append('div')
+		.datum({
+			label: 'Term tree & search',
+			clickTo: chartsInstance.showTree_selectlst,
+			chartType: 'matrix',
+			usecase: { target: 'matrix', detail: 'termgroups' },
+			processSelection: lst => {
+				return [
+					{
+						name: '',
+						lst: lst.map(term => {
+							return { term }
+						})
+					}
+				]
+			}
+		})
+		.attr('class', 'sja_menuoption sja_sharp_border')
+		.text(d => d.label)
+		.on('click', (event, chart) => chartsInstance.showTree_selectlst(chart))
+
+	menuDiv
+		.append('div')
+		.datum({
+			label: 'Text input',
+			chartType: 'matrix',
+			clickTo: showTextAreaInput,
+			usecase: { target: 'matrix', detail: 'termgroups' },
+			placeholder: 'term\tgroup',
+			processInput: async text => {
+				const lines = text.split('\n').map(line => line.split('\t'))
+				const ids = lines.map(cols => cols[0]).filter(t => !!t)
+				const terms = await chartsInstance.app.vocabApi.getTermTypes(ids)
+				const groups = {}
+				for (const [id, name] of lines) {
+					if (!(id in terms)) continue
+					if (!(name in groups)) groups[name] = { name, lst: [] }
+					groups[name].lst.push({ term: terms[id] })
+				}
+				return Object.values(groups)
+			}
+		})
+		.attr('class', 'sja_menuoption sja_sharp_border')
+		.text(d => d.label)
+		.on('click', (event, chart) => showTextAreaInput(chart, chartsInstance))
+}
+
+function showTextAreaInput(opt, self) {
+	self.dom.tip.clear()
+	self.dom.submenu = self.dom.tip.d.append('div').style('text-align', 'center')
+
+	self.dom.submenu.append('span').html(opt.label)
+
+	self.dom.submenu
+		.append('button')
+		.style('margin', '0 5px')
+		.html('Submit')
+		.on('click', async () => {
+			const data = await opt.processInput(ta.property('value'))
+			self.dom.tip.hide()
+			const action = {
+				type: 'plot_create',
+				id: getId(),
+				config: {
+					chartType: opt.usecase.target,
+					[opt.usecase.detail]: data
+				}
+			}
+			self.app.dispatch(action)
+		})
+
+	const ta = self.dom.submenu
+		.append('div')
+		.style('text-align', 'left')
+		.append('textarea')
+		.attr('placeholder', opt.placeholder)
+		.style('width', '300px')
+		.style('height', '300px')
+		.style('margin', '5px')
+		.style('padding', '5px')
+		.on('keydown', event => {
+			const keyCode = event.keyCode || event.which
+			// handle tab key press, otherwise it will cause the focus to move to another input
+			if (keyCode == 9) {
+				event.preventDefault()
+				const t = event.target
+				const s = t.selectionStart
+				t.value = t.value.substring(0, t.selectionStart) + '\t' + t.value.substring(t.selectionEnd)
+				t.selectionEnd = s + 1
+			}
+		})
+}
+
+// to assign chart ID to distinguish between chart instances
+const idPrefix = '_CHART_AUTOID_' // to distinguish from user-assigned chart IDs
+let id = Date.now()
+
+function getId() {
+	return idPrefix + id++
 }
