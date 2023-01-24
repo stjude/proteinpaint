@@ -47,16 +47,22 @@ class genomeBrowser {
 	}
 
 	async main() {
-		await this.launchBlockTrack()
+		if (this.state.termdbConfig?.queries.defaultBlock2GeneMode) {
+			await this.launchGeneView()
+			return
+		}
+		await this.launchLocusView()
 	}
 
-	async launchBlockTrack() {
-		const arg = this.getBlockArg()
+	async launchGeneView() {
+		const arg = this.getArg_geneView()
 		const _ = await import('#src/block.init')
 		await _.default(arg)
 	}
 
-	getBlockArg() {
+	async launchLocusView() {}
+
+	getArg_geneView() {
 		const tk = {
 			// mds3 tk obj
 			type: 'mds3',

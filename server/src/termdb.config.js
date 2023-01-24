@@ -51,13 +51,8 @@ export function make(q, res, ds) {
 	if (tdb.minTimeSinceDx) c.minTimeSinceDx = tdb.minTimeSinceDx
 	if (tdb.coxTimeMsg) c.coxTimeMsg = tdb.coxTimeMsg
 	if (tdb.coxStartTimeMsg) c.coxStartTimeMsg = tdb.coxStartTimeMsg
-	if (tdb.restrictAncestries) {
-		c.restrictAncestries = []
-		for (const i of tdb.restrictAncestries) {
-			c.restrictAncestries.push({ name: i.name, tvs: i.tvs })
-		}
-	}
 	addRequiredAuth(c, q)
+	addRestrictAncestries(c, tdb)
 	addScatterplots(c, ds)
 	addMatrixplots(c, ds)
 	addMutationQueries(c, ds)
@@ -78,6 +73,13 @@ function addRequiredAuth(c, q) {
 	}
 }
 
+function addRestrictAncestries(c, tdb) {
+	if (!tdb.restrictAncestries) return
+	c.restrictAncestries = tdb.restrictAncestries.map(i => {
+		return { name: i.name, tvs: i.tvs }
+	})
+}
+
 function addScatterplots(c, ds) {
 	if (!ds.cohort.scatterplots) return
 	// this dataset has premade scatterplots. reveal to client
@@ -96,7 +98,9 @@ function addMatrixplots(c, ds) {
 
 function addMutationQueries(c, ds) {
 	if (!ds.queries) return
-	c.queries = {}
+	c.queries = {
+		defaultBlock2GeneMode: ds.queries.defaultBlock2GeneMode
+	}
 	if (ds.queries.snvindel) c.queries.snvindel = true
 }
 
