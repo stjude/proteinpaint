@@ -130,10 +130,7 @@ export const componentInit = genomeBrowserInit
 export async function getPlotConfig(opts, app) {
 	try {
 		// request default queries config from dataset, and allows opts to override
-		const config = await dofetch3('termdb', {
-			body: { getMds3queryDetails: 1, genome: app.opts.state.genome, dslabel: app.opts.state.dslabel }
-		})
-		// goes to this.state.config{}
+		const config = await app.vocabApi.getMds3queryDetails()
 
 		return copyMerge(config, opts)
 	} catch (e) {
@@ -147,6 +144,7 @@ export function makeChartBtnMenu(holder, chartsInstance) {
 	chartsInstance: MassCharts instance
 	{
 		app {
+			vocabApi
 			opts { // the mass ui options
 				genome{} // client-side genome object
 			}
@@ -170,13 +168,7 @@ export function makeChartBtnMenu(holder, chartsInstance) {
 
 			// must do this as 'plot_prep' does not call getPlotConfig()
 			// request default queries config from dataset, and allows opts to override
-			const config = await dofetch3('termdb', {
-				body: {
-					getMds3queryDetails: 1,
-					genome: chartsInstance.app.opts.state.genome,
-					dslabel: chartsInstance.app.opts.state.dslabel
-				}
-			})
+			const config = await chartsInstance.app.vocabApi.getMds3queryDetails()
 
 			config.chartType = 'genomeBrowser'
 			config.geneSearchResult = result

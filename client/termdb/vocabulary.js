@@ -800,7 +800,6 @@ class TermdbVocab extends Vocab {
 		.sampleId{}
 			.sample: the sample ID
 			.$id: {key, value || values[]}	
-		}
 	
 	.refs{}
 		.byTermId{}
@@ -1009,14 +1008,22 @@ class TermdbVocab extends Vocab {
 	}
 
 	async getCohortsData(opts) {
-		// dofetch* mayAdjustRequest() will automatically
-		// convert to GET query params or POST body, as needed
 		const body = {
 			getCohortsData: 1,
 			genome: this.state.vocab.genome,
 			dslabel: this.state.vocab.dslabel
 		}
 		return await dofetch3('termdb', { body })
+	}
+
+	async getMds3queryDetails() {
+		return await dofetch3('termdb', {
+			body: {
+				for: 'mds3queryDetails',
+				genome: this.state.vocab.genome,
+				dslabel: this.state.vocab.dslabel
+			}
+		})
 	}
 }
 

@@ -69,26 +69,11 @@ export function handle_request_closure(genomes) {
 			if (q.getSampleScatter) return await trigger_getSampleScatter(q, res, ds, genome)
 			if (q.getCohortsData) return await trigger_getCohortsData(q, res, ds)
 			if (q.getViolinPlotData) return await trigger_getViolinPlotData(q, res, ds, genome)
-			if (q.getMds3queryDetails) return getMds3queryDetails(res, ds)
 
-			// TODO: use trigger flags like above?
-			if (q.for == 'termTypes') {
-				res.send(await ds.getTermTypes(q))
-				return
-			} else if (q.for == 'matrix') {
-				if (q.getPlotDataByName) {
-					// send back the config for pre-built matrix plot
-					if (!ds.cohort.matrixplots) throw 'ds.cohort.matrixplots missing for the dataset'
-					if (!ds.cohort.matrixplots.plots) throw 'ds.cohort.matrixplots.plots missing for the dataset'
-					const plot = ds.cohort.matrixplots.plots.find(p => p.name === q.getPlotDataByName)
-					if (!plot) throw `plot name: q.getPlotDataByName=${getPlotDataByName} missing in ds.cohort.matrixplots.plots`
-					res.send(plot.matrixConfig)
-					return
-				}
-				const data = await getData(q, ds, genome)
-				res.send(data)
-				return
-			} else if (q.for == 'validateToken') {
+			if (q.for == 'mds3queryDetails') return getMds3queryDetails(res, ds)
+			if (q.for == 'termTypes') return res.send(await ds.getTermTypes(q))
+			if (q.for == 'matrix') return await forMatrix(q, res, ds, genome)
+			if (q.for == 'validateToken') {
 			}
 
 			throw "termdb: don't know what to do"
@@ -507,6 +492,20 @@ function trigger_genesetByTermId(q, res, tdb) {
 	if (typeof q.genesetByTermId != 'string' || q.genesetByTermId.length == 0) throw 'invalid query term id'
 	const geneset = tdb.q.getGenesetByTermId(q.genesetByTermId)
 	res.send(geneset)
+}
+
+async function forMatrix(q, res, ds, genome) {
+	if (q.getPlotDataByName) {
+		// send back the config for pre-built matrix plot
+		if (!ds.cohort.matrixplots) throw 'ds.cohort.matrixplots missing for the dataset'
+		if (!ds.cohort.matrixplots.plots) throw 'ds.cohort.matrixplots.plots missing for the dataset'
+		const plot = ds.cohort.matrixplots.plots.find(p => p.name === q.getPlotDataByName)
+		if (!plot) throw `plot name: q.getPlotDataByName=${getPlotDataByName} missing in ds.cohort.matrixplots.plots`
+		res.send(plot.matrixConfig)
+		return
+	}
+	const data = await getData(q, ds, genome)
+	res.send(data)
 }
 
 function getMds3queryDetails(res, ds) {
