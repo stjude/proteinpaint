@@ -245,6 +245,12 @@ function table_snvindel(mlst, holder, tk, block) {
 	if (!tk.snvindelattr) {
 		runtimeattr_snvindel(tk, mlst)
 	}
+
+	if (block.variantPageCall_snv) {
+		// variant page button moved to panel top, per jinghui 1/25/2023
+		variantpage.butholder = holder.append('div').style('margin', '10px')
+	}
+
 	if (mlst.length == 1) {
 		const m = mlst[0]
 		snpfind.alleleLst = [m.ref, m.alt]
@@ -326,16 +332,12 @@ function table_snvindel(mlst, holder, tk, block) {
 		}
 		// a row of possible buttons
 		// - highlight samples in epaint
-		// - variantpage call
 		// - legend
 		const buttonrow = holder.append('div').style('margin-top', '10px')
 		if (tk.eplst) {
 			for (const ep of tk.eplst) {
 				mayephl_butt(ep, buttonrow, mlst)
 			}
-		}
-		if (block.variantPageCall_snv) {
-			variantpage.butholder = buttonrow
 		}
 		if (tk.ds && tk.ds.snvindel_legend) {
 			buttonrow
@@ -378,9 +380,11 @@ function table_snvindel(mlst, holder, tk, block) {
 		table_sort(mlst, table, tk.snvindelattr, tk)
 		// button rows, bottom
 		const buttrow = holder.append('div').style('margin', '10px 5px')
+		/*
 		if (block.variantPageCall_snv) {
 			variantpage.butholder = buttrow.append('span')
 		}
+		*/
 		let h_col, h_snp, h_exp, h_leg
 		buttrow
 			.append('button')
