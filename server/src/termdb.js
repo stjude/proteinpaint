@@ -71,6 +71,7 @@ export function handle_request_closure(genomes) {
 			if (q.getSampleScatter) return await trigger_getSampleScatter(q, res, ds, genome)
 			if (q.getCohortsData) return await trigger_getCohortsData(q, res, ds)
 			if (q.getViolinPlotData) return await trigger_getViolinPlotData(q, res, ds, genome)
+			if (q.getMds3queryDetails) return getMds3queryDetails(res, ds)
 
 			// TODO: use trigger flags like above?
 			if (q.for == 'termTypes') {
@@ -499,4 +500,12 @@ function trigger_genesetByTermId(q, res, tdb) {
 	if (typeof q.genesetByTermId != 'string' || q.genesetByTermId.length == 0) throw 'invalid query term id'
 	const geneset = tdb.q.getGenesetByTermId(q.genesetByTermId)
 	res.send(geneset)
+}
+
+function getMds3queryDetails(res, ds) {
+	const config = {}
+	if (ds?.queries?.snvindel?.details) {
+		config.snvindel = ds.queries.snvindel.details
+	}
+	res.send(config)
 }
