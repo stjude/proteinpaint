@@ -468,6 +468,20 @@ async function validate_query_snvindel(ds, genome) {
 				delete q.byrange._tk.samples
 			}
 			mayValidateSampleHeader(ds, q.byrange._tk.samples, 'snvindel.byrange.bcffile')
+		} else if (q.byrange.chr2bcffile) {
+			q.byrange._tk = { chr2files: {} } // to hold small tk obj from each chr
+			for (const chr in q.byrange.chr2bcffile) {
+				q.byrange._tk.chr2files[chr] = { file: path.join(serverconfig.tpmasterdir, q.byrange.chr2bcffile[chr]) }
+			}
+			delete q.byrange.chr2bcffile
+
+			// repeat as above
+			q.byrange.get = await snvindelByRangeGetter_bcf(ds, genome)
+			if (!q.byrange._tk.samples.length) {
+				// vcf header parsing returns blank array when file has no sample
+				delete q.byrange._tk.samples
+			}
+			mayValidateSampleHeader(ds, q.byrange._tk.samples, 'snvindel.byrange.bcffile')
 		} else {
 			throw 'unknown query method for queries.snvindel.byrange'
 		}
@@ -548,6 +562,9 @@ export async function snvindelByRangeGetter_bcf(ds, genome) {
 	/* q{}
 	._tk={}
 		.file= absolute path to bcf file
+		.chr2files={}
+			key: chr
+			value: { file, }
 		.url, .indexURL
 		.dir=str
 		.nochr=true
@@ -568,7 +585,24 @@ export async function snvindelByRangeGetter_bcf(ds, genome) {
 	.
 	*/
 
-	await utils.init_one_vcf(q._tk, genome, true) // "true" to indicate file is bcf but not vcf
+	if (q._tk.file) {
+		await utils.init_one_vcf(q._tk, genome, true) // "true" to indicate file is bcf but not vcf
+	} else if (q._tk.chr2files) {
+		for (const chr in q._tk.chr2files) {
+			const tk2 = q._tk.chr2files[chr]
+			// practical issue: we only have a subset of files on local computer so will tolerate missing files for now
+			try {
+				await utils.init_one_vcf(tk2, genome, true) // "true" to indicate file is bcf but not vcf
+				q._tk.samples = tk2.samples
+				q._tk.format = tk2.format
+				q._tk.info = tk2.info
+				q._tk.nochr = tk2.nochr
+			} catch (e) {
+				// ignore
+				console.log('missing file ignored:', tk2.file)
+			}
+		}
+	}
 	// q._tk{} is initiated
 
 	if (q._tk.samples.length > 0 && !q._tk.format) throw 'bcf file has samples but no FORMAT'
@@ -616,9 +650,21 @@ export async function snvindelByRangeGetter_bcf(ds, genome) {
 		if (!Array.isArray(param.rglst)) throw 'q.rglst[] is not array'
 		if (param.rglst.length == 0) throw 'q.rglst[] blank array'
 
+		let bcfpath
+		if (q._tk.chr2files) {
+			/////////////////////////////
+			// FIXME when param.rglst[] has multiple chromosomes, the data are spread in multiple bcf files and must do a loop
+			/////////////////////////////
+			const tk2 = q._tk.chr2files[param.rglst[0].chr]
+			if (!tk2) throw 'unknown chr for chr2files'
+			bcfpath = tk2.file
+		} else {
+			bcfpath = q._tk.file || q._tk.url
+		}
+
 		const bcfArgs = [
 			'query',
-			q._tk.file || q._tk.url,
+			bcfpath,
 			'-r',
 			// plus 1 to stop, as rglst pos is 0-based, and bcf is 1-based
 			param.rglst

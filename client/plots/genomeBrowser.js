@@ -157,6 +157,7 @@ export function makeChartBtnMenu(holder, chartsInstance) {
 		genome: genomeObj,
 		row: holder.append('div').style('margin', '10px'),
 		geneOnly: chartsInstance.state.termdbConfig.queries.defaultBlock2GeneMode,
+		defaultCoord: chartsInstance.state.termdbConfig.queries.defaultCoord,
 		callback: async () => {
 			// found a gene {chr,start,stop,geneSymbol}
 			// dispatch to create new plot

@@ -65,7 +65,7 @@ export function handle_request_closure(genomes) {
 			if (q.getsurvival) return await trigger_getsurvival(q, res, ds)
 			if (q.getregression) return await trigger_getregression(q, res, ds)
 			if (q.validateSnps) return res.send(await termdbsnp.validate(q, tdb, ds, genome))
-			if (q.getvariantfilter) return trigger_getvariantfilter(res, ds)
+			if (q.getvariantfilter) return getvariantfilter(res, ds)
 			if (q.getLDdata) return trigger_getLDdata(q, res, ds)
 			if (q.genesetByTermId) return trigger_genesetByTermId(q, res, tdb)
 			if (q.getSampleScatter) return await trigger_getSampleScatter(q, res, ds, genome)
@@ -484,10 +484,19 @@ function computePercentile(values, percentile) {
 	return value
 }
 
-function trigger_getvariantfilter(res, ds) {
-	if (!ds.track) throw 'unknown dataset version'
-	// variant_filter is always an object, can be empty
-	res.send(ds.track.variant_filter)
+function getvariantfilter(res, ds) {
+	if (ds.track) {
+		/////////////////////////
+		// !! mds2 !!
+		// mds2delete
+		/////////////////////////
+
+		// variant_filter is always an object, can be empty
+		res.send(ds.track.variant_filter)
+		return
+	}
+
+	res.send(ds?.queries?.snvindel?.variant_filter || {})
 }
 
 async function trigger_getLDdata(q, res, ds) {

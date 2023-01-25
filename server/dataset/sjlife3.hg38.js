@@ -42,6 +42,296 @@ const restrictAncestries = [
 	}
 ]
 
+const terms = [
+	{
+		id: 'QC',
+		name: 'classification',
+		parent_id: null,
+		isleaf: true,
+		type: 'categorical',
+		values: {
+			Good: { label: 'Good' },
+			Bad: { label: 'Bad' }
+		},
+		tvs: {
+			isnot: true,
+			values: ['Bad']
+		}
+	},
+	{
+		id: 'AF',
+		name: 'Allele frequency, SJLIFE+CCSS',
+		parent_id: null,
+		isleaf: true,
+		type: 'float',
+		min: 0,
+		max: 1
+	},
+	{
+		id: 'AF_sjlife',
+		name: 'SJLIFE allele frequency',
+		parent_id: null,
+		isleaf: true,
+		type: 'float',
+		min: 0,
+		max: 1
+	},
+	{
+		id: 'AF_ccss',
+		name: 'CCSS allele frequency',
+		parent_id: null,
+		isleaf: true,
+		type: 'float',
+		min: 0,
+		max: 1
+	},
+	{
+		id: 'SJcontrol_AF',
+		name: 'SJLIFE control allele frequency',
+		parent_id: null,
+		isleaf: true,
+		type: 'float',
+		min: 0,
+		max: 1
+	},
+	{
+		id: 'SJcontrol_CEU_AF',
+		name: 'SJLIFE control allele frequency, Caucasian',
+		parent_id: null,
+		isleaf: true,
+		min: 0,
+		max: 1,
+		type: 'float'
+	},
+	{
+		id: 'SJcontrol_YRI_AF',
+		name: 'SJLIFE control allele frequency, African American',
+		parent_id: null,
+		isleaf: true,
+		type: 'float',
+		min: 0,
+		max: 1
+	},
+	{
+		id: 'SJcontrol_CR',
+		name: 'SJLIFE control call rate',
+		parent_id: null,
+		isleaf: true,
+		type: 'float',
+		min: 0,
+		max: 1,
+		tvs: {
+			ranges: [
+				{
+					start: 0.95,
+					startinclusive: true,
+					stopunbounded: true
+				}
+			]
+		}
+	},
+	{
+		id: 'CR',
+		name: 'Call rate, SJLIFE+CCSS',
+		parent_id: null,
+		isleaf: true,
+		type: 'float',
+		min: 0,
+		max: 1,
+		tvs: {
+			ranges: [
+				{
+					start: 0.95,
+					startinclusive: true,
+					stopunbounded: true
+				}
+			]
+		}
+	},
+	{
+		id: 'CR_sjlife',
+		name: 'SJLIFE call rate',
+		parent_id: null,
+		isleaf: true,
+		type: 'float',
+		min: 0,
+		max: 1,
+		tvs: {
+			ranges: [
+				{
+					start: 0.95,
+					startinclusive: true,
+					stopunbounded: true
+				}
+			]
+		}
+	},
+	{
+		id: 'CR_ccss',
+		name: 'CCSS call rate',
+		parent_id: null,
+		isleaf: true,
+		type: 'float',
+		min: 0,
+		max: 1,
+		tvs: {
+			ranges: [
+				{
+					start: 0.95,
+					startinclusive: true,
+					stopunbounded: true
+				}
+			]
+		}
+	},
+	{
+		id: 'gnomAD_CR',
+		name: 'gnomAD call rate',
+		parent_id: null,
+		isleaf: true,
+		type: 'float',
+		min: 0,
+		max: 1,
+		tvs: {
+			ranges: [
+				{
+					start: 0.95,
+					startinclusive: true,
+					stopunbounded: true
+				}
+			]
+		}
+	},
+	{
+		id: 'gnomAD_AF',
+		name: 'gnomAD allele frequency',
+		parent_id: null,
+		isleaf: true,
+		type: 'float',
+		min: 0,
+		max: 1,
+		values: {
+			//0: { label: 'missing value', uncomputable: true }
+		},
+		tvs: {
+			ranges: [
+				{
+					start: 0.1,
+					startinclusive: true,
+					stopunbounded: true
+				}
+			]
+		}
+	},
+	{
+		id: 'gnomAD_AF_afr',
+		name: 'gnomAD allele frequency, African-American',
+		parent_id: null,
+		isleaf: true,
+		type: 'float',
+		min: 0,
+		max: 1,
+		values: {
+			//0: { label: 'missing value', uncomputable: true }
+		}
+	},
+	{
+		id: 'gnomAD_AF_eas',
+		name: 'gnomAD allele frequency, East Asian',
+		parent_id: null,
+		isleaf: true,
+		type: 'float',
+		min: 0,
+		max: 1,
+		values: {
+			//0: { label: 'missing value', uncomputable: true }
+		}
+	},
+	{
+		id: 'gnomAD_AF_nfe',
+		name: 'gnomAD allele frequency, non-Finnish European',
+		parent_id: null,
+		isleaf: true,
+		type: 'float',
+		min: 0,
+		max: 1,
+		values: {
+			//0: { label: 'missing value', uncomputable: true }
+		}
+	},
+	{
+		id: 'PG',
+		name: 'Committee classification',
+		parent_id: null,
+		isleaf: true,
+		type: 'categorical',
+		values: {
+			P: { label: 'Pathogenic' },
+			LP: { label: 'Likely pathogenic' }
+		}
+	},
+	{
+		id: 'Polymer_region',
+		name: 'Polymer region',
+		parent_id: null,
+		isleaf: true,
+		type: 'categorical',
+		values: {
+			1: { label: 'yes' }
+		},
+		tvs: {
+			isnot: true,
+			values: [1]
+		}
+	}
+]
+
+// why is key needed? values:{ 1: {key:1, label:'yes'}}
+terms.forEach(term => {
+	if (!term.values) return
+	for (const key in term.values) {
+		const obj = term.values[key]
+		if (!('key' in obj)) obj.key = key
+	}
+})
+
+const lst = terms
+	.filter(term => term.tvs)
+	.map(_term => {
+		const term = JSON.parse(JSON.stringify(_term))
+		const item = {
+			type: 'tvs',
+			tvs: term.tvs
+		}
+		delete term.tvs
+		item.tvs.term = term
+		if (item.tvs.values) {
+			const values = []
+			for (const v of item.tvs.values) {
+				if (typeof v == 'object') values.push(v)
+				// v === the key reference in term.values
+				else values.push(term.values[v])
+			}
+			item.tvs.values = values
+		}
+		return item
+	})
+
+const variant_filter = {
+	opts: {
+		joinWith: ['and']
+	},
+	// default active filter
+	filter: {
+		type: 'tvslst',
+		join: lst.length > 1 ? 'and' : '',
+		in: true,
+		lst
+	},
+	// all info fields available to add to active filter
+	terms
+}
+
 module.exports = {
 	isMds3: true,
 
@@ -60,8 +350,8 @@ module.exports = {
 
 		termdb: {
 			allowedTermTypes: [
-				'snplst' // as independent variable in mass regression
-				// to add 'snplocus' 'prs' later
+				'snplst',
+				'snplocus' // as independent variable in mass regression
 			],
 
 			minTimeSinceDx: 5, // minimum number of years since cancer diagnosis for enrollment in the SJLIFE study
@@ -156,6 +446,50 @@ module.exports = {
 					url: 'https://groups.google.com/g/proteinpaint'
 				}
 			]
+		}
+	},
+
+	queries: {
+		// defaultBlock2GeneMode is not true, to launch block and show locus
+		defaultCoord: {
+			// default coord for locus view
+			chr: 'chr17',
+			start: 7670419,
+			stop: 7671060
+		},
+
+		snvindel: {
+			variant_filter,
+			details: {},
+			byrange: {
+				chr2bcffile: {
+					// all files MUST share the same header, and the same order of samples
+					chr1: 'files/hg38/sjlife/bcf/INFOGT/chr1_SJLIFE_CCSS.GT.bcf.gz',
+					chr2: 'files/hg38/sjlife/bcf/INFOGT/chr2_SJLIFE_CCSS.GT.bcf.gz',
+					chr3: 'files/hg38/sjlife/bcf/INFOGT/chr3_SJLIFE_CCSS.GT.bcf.gz',
+					chr4: 'files/hg38/sjlife/bcf/INFOGT/chr4_SJLIFE_CCSS.GT.bcf.gz',
+					chr5: 'files/hg38/sjlife/bcf/INFOGT/chr5_SJLIFE_CCSS.GT.bcf.gz',
+					chr6: 'files/hg38/sjlife/bcf/INFOGT/chr6_SJLIFE_CCSS.GT.bcf.gz',
+					chr7: 'files/hg38/sjlife/bcf/INFOGT/chr7_SJLIFE_CCSS.GT.bcf.gz',
+					chr8: 'files/hg38/sjlife/bcf/INFOGT/chr8_SJLIFE_CCSS.GT.bcf.gz',
+					chr9: 'files/hg38/sjlife/bcf/INFOGT/chr9_SJLIFE_CCSS.GT.bcf.gz',
+					chr10: 'files/hg38/sjlife/bcf/INFOGT/chr10_SJLIFE_CCSS.GT.bcf.gz',
+					chr11: 'files/hg38/sjlife/bcf/INFOGT/chr11_SJLIFE_CCSS.GT.bcf.gz',
+					chr12: 'files/hg38/sjlife/bcf/INFOGT/chr12_SJLIFE_CCSS.GT.bcf.gz',
+					chr13: 'files/hg38/sjlife/bcf/INFOGT/chr13_SJLIFE_CCSS.GT.bcf.gz',
+					chr14: 'files/hg38/sjlife/bcf/INFOGT/chr14_SJLIFE_CCSS.GT.bcf.gz',
+					chr15: 'files/hg38/sjlife/bcf/INFOGT/chr15_SJLIFE_CCSS.GT.bcf.gz',
+					chr16: 'files/hg38/sjlife/bcf/INFOGT/chr16_SJLIFE_CCSS.GT.bcf.gz',
+					chr17: 'files/hg38/sjlife/bcf/INFOGT/chr17_SJLIFE_CCSS.GT.bcf.gz',
+					chr18: 'files/hg38/sjlife/bcf/INFOGT/chr18_SJLIFE_CCSS.GT.bcf.gz',
+					chr19: 'files/hg38/sjlife/bcf/INFOGT/chr19_SJLIFE_CCSS.GT.bcf.gz',
+					chr20: 'files/hg38/sjlife/bcf/INFOGT/chr20_SJLIFE_CCSS.GT.bcf.gz',
+					chr21: 'files/hg38/sjlife/bcf/INFOGT/chr21_SJLIFE_CCSS.GT.bcf.gz',
+					chr22: 'files/hg38/sjlife/bcf/INFOGT/chr22_SJLIFE_CCSS.GT.bcf.gz',
+					chrX: 'files/hg38/sjlife/bcf/INFOGT/chrX_SJLIFE_CCSS.GT.bcf.gz',
+					chrY: 'files/hg38/sjlife/bcf/INFOGT/chrY_SJLIFE_CCSS.GT.bcf.gz'
+				}
+			}
 		}
 	}
 }

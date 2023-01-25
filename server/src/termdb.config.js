@@ -99,7 +99,8 @@ function addMatrixplots(c, ds) {
 function addMutationQueries(c, ds) {
 	if (!ds.queries) return
 	c.queries = {
-		defaultBlock2GeneMode: ds.queries.defaultBlock2GeneMode
+		defaultBlock2GeneMode: ds.queries.defaultBlock2GeneMode,
+		defaultCoord: ds.queries.defaultCoord
 	}
 	if (ds.queries.snvindel) c.queries.snvindel = true
 }
