@@ -20,6 +20,9 @@ this.app {
 this.state {
 	config {
 		geneSearchResult{}
+		snvindel {
+			details {}
+		}
 	}
 	termdbConfig{}
 }
@@ -54,13 +57,12 @@ class genomeBrowser {
 	}
 
 	async main() {
-		//console.log(this.state);return
 		if (this.state.config?.snvindel?.details) {
 			// pre-compute variant data in the app here, e.g. fisher test etc, but not in mds3 backend as the official track does
 			// and launch custom mds3 tk to show the variants
 
 			// show controls for precomputing variant data
-			// controls are based on this.state and cannot be done in init()
+			// controls are based on this.state and cannot be done in init() where state is not yet available
 			this.mayShowControls()
 
 			await this.launchCustomMds3tk()
@@ -85,6 +87,7 @@ class genomeBrowser {
 
 	async preComputeData() {
 		// perform analysis e.g. fisher
+		console.log(this.state)
 	}
 
 	async launchOfficialMds3tk() {
