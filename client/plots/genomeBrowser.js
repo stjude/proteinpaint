@@ -54,6 +54,7 @@ class genomeBrowser {
 	}
 
 	async main() {
+		//console.log(this.state);return
 		if (this.state.config?.snvindel?.details) {
 			// pre-compute variant data in the app here, e.g. fisher test etc, but not in mds3 backend as the official track does
 			// and launch custom mds3 tk to show the variants
@@ -74,7 +75,9 @@ class genomeBrowser {
 	//   rest of methods are app-specific    //
 	///////////////////////////////////////////
 
-	mayShowControls() {}
+	mayShowControls() {
+		this.dom.controlHolder.text('todo')
+	}
 
 	async launchCustomMds3tk() {
 		const data = await this.preComputeData()
@@ -161,12 +164,20 @@ export function makeChartBtnMenu(holder, chartsInstance) {
 		callback: async () => {
 			// found a gene {chr,start,stop,geneSymbol}
 			// dispatch to create new plot
-			const chart = {
-				config: {
-					chartType: 'genomeBrowser',
-					geneSearchResult: result
+
+			// must do this as 'plot_prep' does not call getPlotConfig()
+			// request default queries config from dataset, and allows opts to override
+			const config = await dofetch3('termdb', {
+				body: {
+					getMds3queryDetails: 1,
+					genome: chartsInstance.app.opts.state.genome,
+					dslabel: chartsInstance.app.opts.state.dslabel
 				}
-			}
+			})
+
+			config.chartType = 'genomeBrowser'
+			config.geneSearchResult = result
+			const chart = { config }
 			chartsInstance.prepPlot(chart)
 		}
 	})

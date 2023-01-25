@@ -514,7 +514,7 @@ function trigger_genesetByTermId(q, res, tdb) {
 function getMds3queryDetails(res, ds) {
 	const config = {}
 	if (ds?.queries?.snvindel?.details) {
-		config.snvindel = ds.queries.snvindel.details
+		config.snvindel = { details: ds.queries.snvindel.details }
 	}
 	res.send(config)
 }
