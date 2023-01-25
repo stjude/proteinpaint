@@ -32,7 +32,7 @@ trigger_getSampleScatter()
 */
 
 // color of reference samples, they should be shown as a "cloud" of dots at backdrop
-const refColor = '#E5E4E2'
+const refColor = '#F5F5DC'
 
 // called in mds3.init
 export async function mayInitiateScatterplots(ds) {
@@ -137,7 +137,6 @@ export async function trigger_getSampleScatter(q, res, ds, genome) {
 		const terms = [q.colorTW]
 		if (q.shapeTW) terms.push(q.shapeTW)
 		const data = await getData({ filter: q.filter, terms }, ds, genome)
-
 		if (data.error) throw data.error
 		const result = await colorAndShapeSamples(refSamples, cohortSamples, data, q)
 		res.send(result)
@@ -227,7 +226,6 @@ async function colorAndShapeSamples(refSamples, cohortSamples, data, q) {
 	])
 	const shapeLegend = order(shapeMap, q.shapeTW, data.refs)
 	shapeLegend.push(['Ref', { sampleCount: refSamples.length, shape: 0 }])
-	console.log('shapeLegend', shapeLegend)
 
 	return {
 		samples,

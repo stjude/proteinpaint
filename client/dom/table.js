@@ -81,7 +81,7 @@ export async function renderTable({
 	const parentDiv = div.append('div').style('background-color', 'white')
 
 	if (resize) {
-		parentDiv.style('height', maxHeight)
+		if (rows.length > 10) parentDiv.style('height', maxHeight)
 		parentDiv.style('width', maxWidth)
 		parentDiv.style('resize', 'both')
 	} else {

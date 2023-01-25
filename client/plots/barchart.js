@@ -10,8 +10,8 @@ import { rgb } from 'd3-color'
 import getHandlers from './barchart.events'
 import { controlsInit } from './controls'
 import { to_svg } from '../src/client'
-import { fillTermWrapper } from '../termsetting/termsetting'
 import { renderTable } from '../dom/table'
+import { fillTermWrapper } from '../termsetting/termsetting'
 
 class Barchart {
 	constructor(opts) {
@@ -726,7 +726,6 @@ function setRenderers(self) {
 			.style('display', 'inline-block')
 			.style('vertical-align', 'top')
 			.style('text-align', 'center')
-			.style('font-size', '12px')
 			.append('div')
 
 		// sort term1 categories based on self.chartsData.refs.cols
@@ -770,7 +769,7 @@ function setRenderers(self) {
 			)
 			for (const term2 of visibleTerm2Data) {
 				rows.push([
-					{ value: term1.term1Label },
+					{ value: `${term1.term1Label}` },
 					{ value: 'not ' + term1.term1Label },
 					{ value: term2.term2Label },
 					{ value: 'not ' + term2.term2Label },
@@ -786,7 +785,6 @@ function setRenderers(self) {
 				])
 			}
 		}
-
 		//adding a title for the pvalue table
 		//title is "Group comparisons (Fisher's exact test)" if all tests are Fisher's exact test, otherwise title is 'Group comparisons (Chi-square test)'
 		const title = holder
@@ -797,7 +795,7 @@ function setRenderers(self) {
 
 		const table = holder.append('div')
 
-		renderTable({ columns, rows, div: table, showLines: false, maxWidth: '25vw', maxHeight: '20vh', resize: true })
+		renderTable({ columns, rows, div: table, showLines: false, maxWidth: '35vw', maxHeight: '20vh', resize: true })
 
 		//footnote: superscript letter 'a' indicates the pvalue was computed by Fisher's exact test
 		table

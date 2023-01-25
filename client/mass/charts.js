@@ -135,7 +135,7 @@ function getChartTypeList(self) {
 			label: 'Summary Plots',
 			chartType: 'summary',
 			clickTo: self.showTree_select1term,
-			usecase: { target: 'summary', detail: 'term' }
+			usecase: { detail: 'term' }
 		},
 		/*
 		{

@@ -4,8 +4,9 @@ const utils = require('./utils')
 const Partjson = require('partjson')
 const d3format = require('d3-format')
 const binLabelFormatter = d3format.format('.3r')
-const termdbsql = require('./termdb.sql')
 const run_rust = require('@stjude/proteinpaint-rust').run_rust
+const { getData } = require('./termdb.matrix')
+const { mclass } = require('#shared/common')
 
 /*
 ********************** EXPORTED
@@ -139,7 +140,55 @@ export async function get_barchart_data_sqlitedb(q, ds, tdb) {
 	}
 
 	const startTime = +new Date()
-	q.results = termdbsql.get_rows(q, { withCTEs: true })
+	q.results = {}
+	const map = new Map()
+	for (let i = 0; i <= 2; i++) {
+		let term = null
+		if (q[`term${i}_id`]) {
+			const id = q[`term${i}_id`]
+			term = { id, q: q[`term${i}_q`], term: { id } }
+		} else if (q[`term${i}`]) term = { term: q[`term${i}`] }
+		if (term) map.set(i, term)
+	}
+	const data = await getData({ filter: q.filter, terms: [...map.values()] }, q.ds, q.genome)
+
+	const samplesMap = new Map()
+	const bins = []
+	if (data.samples)
+		for (let i = 0; i <= 2; i++) {
+			const term = map.get(i) ? map.get(i).term : null
+			const id = term?.id ? term.id : term?.name
+			if (id && data.refs.byTermId[id]?.bins) bins.push(data.refs.byTermId[id]?.bins)
+			else bins.push([])
+			for (const [sampleId, values] of Object.entries(data.samples)) {
+				let item
+				if (samplesMap.get(sampleId)) item = samplesMap.get(sampleId)
+				else if (!samplesMap.has(sampleId)) {
+					item = { sample: parseInt(sampleId) }
+					samplesMap.set(sampleId, item)
+				}
+				if (!item) continue
+				if (id) {
+					const value = values[id]
+					if (!value) {
+						//console.log(`Sample ${sampleId} has no term ${id} value, filtered out`)
+						samplesMap.set(sampleId, null)
+					} else if (term.type == 'geneVariant') {
+						const mutation = value.values[0].class
+						item[`key${i}`] = mclass[mutation].label
+						item[`val${i}`] = mclass[mutation].label
+					} else {
+						item[`key${i}`] = value.key
+						item[`val${i}`] = value.value
+					}
+				} else {
+					item[`key${i}`] = ''
+					item[`val${i}`] = ''
+				}
+			}
+		}
+	q.results.lst = [...samplesMap.values()].filter(value => value !== null)
+	q.results.bins = bins
 	const sqlDone = +new Date()
 	const pj = getPj(q, q.results.lst, tdb, ds)
 	if (pj.tree.results) {
@@ -232,7 +281,7 @@ function getPj(q, data, tdb, ds) {
 	const terms = [0, 1, 2].map(i => {
 		const d = getTermDetails(q, tdb, i)
 		d.q.index = i
-		const bins = q.results['CTE' + i].bins ? q.results['CTE' + i].bins : []
+		const bins = q.results.bins[i]
 
 		return Object.assign(d, {
 			key: 'key' + i,
