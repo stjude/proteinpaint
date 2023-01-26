@@ -10,11 +10,14 @@ import { filterJoin, getFilterItemByTag } from '../filter/filter'
 export default function violinRenderer(self) {
 	const k2c = scaleOrdinal(schemeCategory10)
 	self.render = function() {
-		const s = self.config.settings.violin
-		const isH = s.orientation === 'horizontal'
-		const imageOffset = s.datasymbol === 'bean' ? s.radius * window.devicePixelRatio : s.radius
+		const settings = self.config.settings.violin
+		const isH = settings.orientation === 'horizontal'
+		const imageOffset = settings.datasymbol === 'bean' ? settings.radius * window.devicePixelRatio : settings.radius
 
-		self.legendRenderer(self.getLegendGrps())
+		//filter out hidden values and only keep plots which are not hidden in term2.q.hiddenvalues
+		self.data.plots = self.data.plots.filter(p => !self.config.term2?.q?.hiddenValues?.[p.label || p.seriesId])
+
+		self.legendRenderer(getLegendGrps(self))
 
 		if (self.data.plots.length === 0) {
 			self.dom.violinDiv.text(
@@ -28,14 +31,15 @@ export default function violinRenderer(self) {
 		// append the svg object to the body of the page
 		self.dom.violinDiv.select('.sjpp-violin-plot').remove()
 
-		const svg = renderSvg(self, isH, s)
-		renderScale(self, s, isH, svg)
+		const svg = renderSvg(self, isH, settings)
+		renderScale(self, settings, isH, svg)
 
 		for (const [plotIdx, plot] of self.data.plots.entries()) {
 			const violinG = createViolinG(svg, plot, plotIdx, isH)
-			renderLabels(violinG, plot, isH, s)
+			renderLabels(violinG, plot, isH, settings)
 			renderViolinPlot(plot, self, isH, svg, plotIdx, violinG, imageOffset)
-			renderBrushing(violinG, s, plot, isH, svg)
+			renderBrushing(violinG, settings, plot, isH, svg)
+			labelHideLegendClicking(plot, self)
 		}
 	}
 
@@ -45,30 +49,30 @@ export default function violinRenderer(self) {
 	}
 
 	self.renderPvalueTable = function() {
-		this.dom.tableHolder.selectAll('*').remove()
+		self.dom.tableHolder.selectAll('*').remove()
 
-		const t2 = this.config.term2
+		const t2 = self.config.term2
 
 		if (t2 === undefined || t2 === null) {
 			// no term2, no table to show
-			this.dom.tableHolder.style('display', 'none')
+			self.dom.tableHolder.style('display', 'none')
 			return
 		}
 
-		this.dom.tableHolder
+		self.dom.tableHolder
 			.style('display', 'inline-block')
 			.style('vertical-align', 'top')
 			.append('div')
 			.style('font-weight', 'bold')
-			.text(self.data.pvalues.length > 0 ? "Group comparisons (Wilcoxon's rank sum test)" : '')
+			.text(self.data.pvalues.length > 0 ? "Group comparisons (Wilcoxon'settings rank sum test)" : '')
 
 		const columns = [{ label: 'Group 1' }, { label: 'Group 2' }, { label: 'P-value' }]
-		const rows = this.data.pvalues
+		const rows = self.data.pvalues
 
 		renderTable({
 			columns,
 			rows,
-			div: this.dom.tableHolder,
+			div: self.dom.tableHolder,
 			showLines: false,
 			maxWidth: '27vw',
 			maxHeight: '20vh',
@@ -87,17 +91,17 @@ export default function violinRenderer(self) {
 		return maxLabelSize
 	}
 
-	function createMargins(labelsize, s, isH) {
+	function createMargins(labelsize, settings, isH) {
 		let margins
 		if (isH) {
-			margins = { left: labelsize + 5, top: s.axisHeight, right: s.rightMargin, bottom: 10 }
+			margins = { left: labelsize + 5, top: settings.axisHeight, right: settings.rightMargin, bottom: 10 }
 		} else {
-			margins = { left: s.axisHeight, top: 50, right: s.rightMargin, bottom: labelsize }
+			margins = { left: settings.axisHeight, top: 50, right: settings.rightMargin, bottom: labelsize }
 		}
 		return margins
 	}
 
-	function renderSvg(self, isH, s) {
+	function renderSvg(self, isH, settings) {
 		const violinDiv = self.dom.violinDiv
 			.append('div')
 			.style('display', 'inline-block')
@@ -109,30 +113,30 @@ export default function violinRenderer(self) {
 
 		const labelsize = maxLabelSize(self, violinSvg)
 
-		const margin = createMargins(labelsize, s, isH)
+		const margin = createMargins(labelsize, settings, isH)
 
 		violinSvg
 			.attr(
 				'width',
 				margin.left +
 					margin.top +
-					(isH ? s.svgw : self.data.plotThickness * self.data.plots.length + self.config.term.term.name.length)
+					(isH ? settings.svgw : self.data.plotThickness * self.data.plots.length + self.config.term.term.name.length)
 			)
 			.attr(
 				'height',
 				margin.bottom +
 					margin.top +
-					(isH ? self.data.plotThickness * self.data.plots.length : s.svgw + self.config.term.term.name.length)
+					(isH ? self.data.plotThickness * self.data.plots.length : settings.svgw + self.config.term.term.name.length)
 			)
 			.classed('sjpp-violin-plot', true)
 
 		// a <g> in which everything is rendered into
 		const svgG = violinSvg.append('g').attr('transform', 'translate(' + margin.left + ',' + margin.top + ')')
 
-		return { margin: margin, svgG: svgG, axisScale: createNumericScale(self, s, isH), violinSvg: violinSvg }
+		return { margin: margin, svgG: svgG, axisScale: createNumericScale(self, settings, isH), violinSvg: violinSvg }
 	}
 
-	function renderScale(self, s, isH, svg) {
+	function renderScale(self, settings, isH, svg) {
 		// <g>: holder of numeric axis
 		const g = svg.svgG
 			.append('g')
@@ -161,7 +165,7 @@ export default function violinRenderer(self) {
 
 		if (isH) {
 			lab
-				.attr('x', s.svgw / 2)
+				.attr('x', settings.svgw / 2)
 				.attr('y', -30)
 				.style('opacity', 0)
 				.transition()
@@ -171,7 +175,7 @@ export default function violinRenderer(self) {
 		} else {
 			lab
 				.attr('y', -45)
-				.attr('x', -s.svgw / 2)
+				.attr('x', -settings.svgw / 2)
 				.attr('transform', 'rotate(-90)')
 				.style('opacity', 0)
 				.transition()
@@ -199,7 +203,7 @@ export default function violinRenderer(self) {
 		return violinG
 	}
 
-	function renderLabels(violinG, plot, isH, s) {
+	function renderLabels(violinG, plot, isH, settings) {
 		// create scale label
 		const label = violinG
 			.append('text')
@@ -224,7 +228,7 @@ export default function violinRenderer(self) {
 				.attr('dominant-baseline', 'central')
 		} else {
 			label
-				.attr('x', 0 - s.svgw - 5)
+				.attr('x', 0 - settings.svgw - 5)
 				.attr('y', 0)
 				.attr('text-anchor', 'end')
 				.attr('dominant-baseline', 'central')
@@ -300,7 +304,7 @@ export default function violinRenderer(self) {
 		} else return
 	}
 
-	function renderBrushing(violinG, s, plot, isH, svg) {
+	function renderBrushing(violinG, settings, plot, isH, svg) {
 		//brushing on data points
 		violinG
 			.append('g')
@@ -308,7 +312,7 @@ export default function violinRenderer(self) {
 			.call(
 				isH
 					? brushX()
-							.extent([[0, -20], [s.svgw, 20]])
+							.extent([[0, -20], [settings.svgw, 20]])
 							.on('end', async event => {
 								const selection = event.selection
 
@@ -317,7 +321,7 @@ export default function violinRenderer(self) {
 								await displayBrushMenu(self, plot, selection, svg.axisScale, isH)
 							})
 					: brushY()
-							.extent([[-20, 0], [20, s.svgw]])
+							.extent([[-20, 0], [20, settings.svgw]])
 							.on('end', async event => {
 								const selection = event.selection
 
@@ -369,6 +373,27 @@ export function displayMenu(self, plot, event, start, end) {
 					callback: getAddFilterCallback(self, plot, 'term2')
 				})
 			}
+			//On label clicking, display 'Hide' option to hide plot.
+			options.push({
+				label: `Hide: ${plot.label}`,
+				callback: () => {
+					const termNum = self.config.term2 ? 'term2' : null
+					const term = self.config[termNum]
+					const isHidden = true
+					self.app.dispatch({
+						type: 'plot_edit',
+						id: self.id,
+						config: {
+							[termNum]: {
+								isAtomic: true,
+								id: term.id,
+								term: term.term,
+								q: getUpdatedQfromClick(plot, self.config.term2, isHidden)
+							}
+						}
+					})
+				}
+			})
 		}
 		//show median values as text above menu options
 		self.app.tip.d
@@ -405,10 +430,10 @@ export function displayMenu(self, plot, event, start, end) {
 }
 
 // creates numeric axis
-export function createNumericScale(self, s, isH) {
+export function createNumericScale(self, settings, isH) {
 	const axisScale = scaleLinear()
-		.domain([self.data.min, self.data.max + self.data.max / (s.radius * 4)])
-		.range(isH ? [0, s.svgw] : [s.svgw, 0])
+		.domain([self.data.min, self.data.max + self.data.max / (settings.radius * 4)])
+		.range(isH ? [0, settings.svgw] : [settings.svgw, 0])
 	return axisScale
 }
 
@@ -500,4 +525,97 @@ export function getAddFilterCallback(self, plot, rangeStart, rangeStop) {
 			filter
 		})
 	}
+}
+
+function getUpdatedQfromClick(plot, term, isHidden = false) {
+	const label = plot.label
+	const valueId = term?.term?.values ? term?.term?.values?.[label]?.label : label
+	const id = !valueId ? label : valueId
+	const q = structuredClone(term.q)
+	if (!q.hiddenValues) q.hiddenValues = {}
+	if (isHidden) q.hiddenValues[id] = 1
+	else delete q.hiddenValues[id]
+	return q
+}
+
+function getLegendGrps(self) {
+	// TODO: add excluded categories to legend (see barchart.js)
+	const legendGrps = []
+	const t1 = self.config.term
+	const t2 = self.config.term2
+	const headingStyle = 'color: #aaa; font-weight: 400'
+
+	// descriptive statistics
+	if (t1.q.descrStats) {
+		// term1 has descriptive stats
+		const items = t1.q.descrStats.map(stat => {
+			return {
+				text: `${stat.label}: ${stat.value}`,
+				noIcon: true
+			}
+		})
+		// title of descriptive stats should include the term1 name if term2 is present
+		const title = t2 ? `Descriptive statistics: ${t1.term.name}` : 'Descriptive statistics'
+		const name = `<span style="${headingStyle}">${title}</span>`
+		legendGrps.push({ name, items })
+	}
+	if (t2?.q.descrStats) {
+		// term2 has descriptive stats
+		const items = t2.q.descrStats.map(stat => {
+			return {
+				text: `${stat.label}: ${stat.value}`,
+				noIcon: true
+			}
+		})
+		// title of descriptive stats will include the term2 name
+		// because two terms are present
+		const title = `Descriptive statistics: ${t2.term.name}`
+		const name = `<span style="${headingStyle}">${title}</span>`
+		legendGrps.push({ name, items })
+	}
+
+	if (t2) {
+		if (Object.entries(t2.q.hiddenValues).length != 0) {
+			const items = []
+			for (const key of Object.keys(t2.q.hiddenValues)) {
+				items.push({
+					text: `${key}`,
+					noIcon: true,
+					isHidden: true
+				})
+			}
+			const title = `${t2.term.name}`
+			const name = `<span style="${headingStyle}">${title}</span>`
+			legendGrps.push({ name, items })
+		}
+	}
+
+	return legendGrps
+}
+
+function labelHideLegendClicking(plot, self) {
+	self.dom.legendDiv.selectAll('.sjpp-htmlLegend').on('click', event => {
+		event.stopPropagation()
+		const d = event.target.__data__
+		for (const key of Object.keys(self.config.term2.q.hiddenValues)) {
+			if (d.text === key) {
+				delete self.config.term2.q.hiddenValues[key]
+			}
+		}
+		const termNum = self.config.term2 ? 'term2' : null
+		const term = self.config[termNum]
+		const isHidden = false
+		self.app.dispatch({
+			type: 'plot_edit',
+			id: self.id,
+			config: {
+				[termNum]: {
+					isAtomic: true,
+					id: term.id,
+					term: term.term,
+					q: getUpdatedQfromClick(plot, self.config.term2, isHidden)
+				}
+			}
+		})
+	})
 }

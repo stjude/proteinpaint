@@ -213,46 +213,6 @@ class ViolinPlot {
 		}
 		return arg
 	}
-
-	getLegendGrps() {
-		// TODO: add excluded categories to legend (see barchart.js)
-		const legendGrps = []
-		const s = this.settings
-		const t1 = this.config.term
-		const t2 = this.config.term2
-		const headingStyle = 'color: #aaa; font-weight: 400'
-
-		// descriptive statistics
-		if (t1.q.descrStats) {
-			// term1 has descriptive stats
-			const items = t1.q.descrStats.map(stat => {
-				return {
-					text: `${stat.label}: ${stat.value}`,
-					noIcon: true
-				}
-			})
-			// title of descriptive stats should include the term1 name if term2 is present
-			const title = t2 ? `Descriptive statistics: ${t1.term.name}` : 'Descriptive statistics'
-			const name = `<span style="${headingStyle}">${title}</span>`
-			legendGrps.push({ name, items })
-		}
-		if (t2?.q.descrStats) {
-			// term2 has descriptive stats
-			const items = t2.q.descrStats.map(stat => {
-				return {
-					text: `${stat.label}: ${stat.value}`,
-					noIcon: true
-				}
-			})
-			// title of descriptive stats will include the term2 name
-			// because two terms are present
-			const title = `Descriptive statistics: ${t2.term.name}`
-			const name = `<span style="${headingStyle}">${title}</span>`
-			legendGrps.push({ name, items })
-		}
-
-		return legendGrps
-	}
 }
 
 export const violinInit = getCompInit(ViolinPlot)
