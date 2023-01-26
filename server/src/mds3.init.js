@@ -32,6 +32,7 @@ validate_query_snvindel
 		mayLimitSamples
 			param2filter
 				tid2value2filter
+		mayDropMbyInfoFilter
 		addSamplesFromBcfLine
 			vcfFormat2sample
 	mayValidateSampleHeader
@@ -463,7 +464,7 @@ async function validate_query_snvindel(ds, genome) {
 			q.byrange.bcffile = path.join(serverconfig.tpmasterdir, q.byrange.bcffile)
 			q.byrange._tk = { file: q.byrange.bcffile }
 			q.byrange.get = await snvindelByRangeGetter_bcf(ds, genome)
-			if (!q.byrange._tk.samples.length) {
+			if (!q.byrange._tk?.samples.length) {
 				// vcf header parsing returns blank array when file has no sample
 				delete q.byrange._tk.samples
 			}
@@ -605,8 +606,12 @@ export async function snvindelByRangeGetter_bcf(ds, genome) {
 	}
 	// q._tk{} is initiated
 
-	if (q._tk.samples.length > 0 && !q._tk.format) throw 'bcf file has samples but no FORMAT'
-	if (q._tk.format && q._tk.samples.length == 0) throw 'bcf file has FORMAT but no samples'
+	if (q._tk?.samples.length) {
+		// has samples
+		if (!q._tk.format) throw 'bcf file has samples but no FORMAT'
+	} else {
+		if (q._tk.format) throw 'bcf file has FORMAT but no samples'
+	}
 	if (q._tk.format) {
 		for (const id in q._tk.format) {
 			if (id == 'GT') {
@@ -646,6 +651,13 @@ export async function snvindelByRangeGetter_bcf(ds, genome) {
 		}
 	}
 
+	/*
+	param{}
+	.rglst[]
+	.filterObj{}
+	.addFormatValues:true
+
+	*/
 	return async param => {
 		if (!Array.isArray(param.rglst)) throw 'q.rglst[] is not array'
 		if (param.rglst.length == 0) throw 'q.rglst[] blank array'
@@ -698,39 +710,12 @@ export async function snvindelByRangeGetter_bcf(ds, genome) {
 				const m0 = {} // temp obj, modified by compute_mclass()
 				compute_mclass(q._tk, refallele, altalleles, m0, infoStr, id, param.isoform)
 				// m0.info{} is set
+				// m0.alt2csq[] is set
 
-				if (param.infoFilter) {
-					// example: {"CLNSIG":["Benign",...], ... }
-
-					let skipVariant = false
-
-					for (const infoKey in param.infoFilter) {
-						// each key corresponds to a value to skip
-						const variantValue = m0.info[infoKey]
-						if (!variantValue) {
-							// no value, don't skip
-							continue
-						}
-						if (Array.isArray(variantValue)) {
-							for (const v of param.infoFilter[infoKey]) {
-								if (variantValue.includes(v)) {
-									skipVariant = true
-									break
-								}
-							}
-						} else {
-							// variantValue is single value, not array
-							skipVariant = param.infoFilter[infoKey].includes(variantValue)
-						}
-						if (skipVariant) break
-					}
-
-					if (skipVariant) return
-				}
+				if (mayDropMbyInfoFilter(m0, param)) return // m0 is dropped due to info filter
 
 				// make a m{} for every alt allele
-				for (const alt in m0.alt2csq) {
-					const m = m0.alt2csq[alt]
+				for (const m of m0.alt2csq) {
 					m.chr = (q._tk.nochr ? 'chr' : '') + chr
 					m.pos = pos - 1 // bcf pos is 1-based, return 0-based
 					m.ssm_id = [m.chr, m.pos, m.ref, m.alt].join(ssmIdFieldsSeparator)
@@ -742,12 +727,9 @@ export async function snvindelByRangeGetter_bcf(ds, genome) {
 					*/
 					m.info = m0.info
 
-					if (q._tk.samples && q._tk.samples.length) {
-						/* vcf file has sample, must find out samples harboring this variant
-						TODO determine when to set addFormatValues=true
-						so to attach format fields to each sample
-						*/
-						addSamplesFromBcfLine(q, m, l, false, ds, limitSamples)
+					if (q._tk?.samples?.length) {
+						// vcf file has sample, must find out samples harboring this variant
+						addSamplesFromBcfLine(q, m, l, param.addFormatValues, ds, limitSamples)
 						if (!m.samples) {
 							// no sample found for this variant, when vcf has samples
 							// can be due to sample filtering, thus must skip this variant
@@ -762,6 +744,39 @@ export async function snvindelByRangeGetter_bcf(ds, genome) {
 		})
 		return variants
 	}
+}
+
+/*
+input:
+m{}
+	.info{}
+param{}
+	.infoFilter{}
+		e.g. {"CLNSIG":["Benign",...], ... }
+
+output:
+true if m has a matching info field and will be dropped
+*/
+function mayDropMbyInfoFilter(m0, param) {
+	if (!param.infoFilter) return false
+
+	for (const infoKey in param.infoFilter) {
+		// each key corresponds to a value to skip
+		const variantValue = m0.info[infoKey]
+		if (!variantValue) {
+			// no value, don't skip
+			continue
+		}
+		if (Array.isArray(variantValue)) {
+			for (const v of param.infoFilter[infoKey]) {
+				if (variantValue.includes(v)) return true // skip
+			}
+		} else {
+			// variantValue is single value, not array
+			if (param.infoFilter[infoKey].includes(variantValue)) return true // skip
+		}
+	}
+	return false
 }
 
 /*

@@ -9,12 +9,12 @@ do not anticipate to share this function with client
 assign mclass/mname to variant, stored at term.snps[] on client
 for displaying in mds3 tk
 since a variant can have multiple alt alleles, compute csq for each alt allele
-and attach variant.alt2csq{ altAllele : {class,mname,dt} }
+and attach variant.alt2csq[ {class,mname,dt,alt,...},  ... ]
 rather than directly attach class/mname/dt to variant{}
 client side will later call getCategories() with allele type (major/ref) criteria for deciding effect allele
 which is not done here
 once effect allele is decided for each variant,
-refer to .alt2csq{} to find the class/mname based on effect allele choice
+refer to .alt2csq[] to find the class/mname based on effect allele choice
 (if eff ale is reference allele?)
 
 parameters:
@@ -77,12 +77,12 @@ export function compute_mclass(tk, refAllele, altAlleles, variant, info_str, ID,
 	parse_CSQ(info.CSQ, tk.info.CSQ.csqheader, m)
 	// .csq{} is added to each of m.alleles[]
 
-	variant.alt2csq = {}
+	variant.alt2csq = []
 
 	const block = {}
 	if (isoform) block.usegm = { isoform } // allow to find aachange matching given isform from csq
 
-	for (const a of m.alleles) {
+	for (const [idx, a] of m.alleles.entries()) {
 		vcfcopymclass(a, block)
 		// gene/isoform/class/dt/mname are assigned on a
 		if (!a.mname) {
@@ -94,6 +94,7 @@ export function compute_mclass(tk, refAllele, altAlleles, variant, info_str, ID,
 			}
 		}
 		delete a.csq
-		variant.alt2csq[a.allele_original] = a
+		a.altAlleleIdx = idx + 1 // for matching with GT
+		variant.alt2csq.push(a)
 	}
 }

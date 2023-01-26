@@ -460,7 +460,9 @@ module.exports = {
 
 		snvindel: {
 			variant_filter,
-			details: {},
+			details: {
+				computeType: 'AF'
+			},
 			byrange: {
 				chr2bcffile: {
 					// all files MUST share the same header, and the same order of samples

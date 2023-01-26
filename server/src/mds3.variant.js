@@ -5,7 +5,8 @@ q{}
 	.filter{}       -- bona fide filter obj
 	.details{}
 
-ds.queries.snvindel.byrange.get()
+not integrated into mds3.load.js due to !!HARDCODED!! use of ds.queries.snvindel.byrange.get()
+performs post-processing of data from byrange.get()
 */
 
 export async function get_mds3variantData(q, res, ds, genome) {
@@ -17,14 +18,25 @@ export async function get_mds3variantData(q, res, ds, genome) {
 
 	const param = {
 		rglst: [{ chr: q.chr, start: q.start, stop: q.stop }],
-		filterObj: q.filter
+		filterObj: q.filter,
+		addFormatValues: true // allows to add FORMAT including GT in each
 	}
-	const data = await ds.queries.snvindel.byrange.get(param)
+	const mlst = await ds.queries.snvindel.byrange.get(param)
+	/*
+	{
+		chr/pos/class/dt/mname
+		alt/ref
+		info{}
+		samples[]
+			sample_id:int
+			GT:'0/1'
+	}
+	*/
 
 	const results = {}
 
 	if (q.details.computeType == 'AF') {
-		compute_AF(data, results)
+		compute_AF(mlst, results)
 	} else {
 		throw 'unknown q.details.computeType'
 	}
@@ -32,4 +44,24 @@ export async function get_mds3variantData(q, res, ds, genome) {
 	res.send(results)
 }
 
-function compute_AF(data, results) {}
+function compute_AF(mlst, results) {
+	for (const m of mlst) {
+		// count all alleles and does not assume diploid, to allow it to work with chrY
+		let altAlleleCount = 0,
+			totalAlleleCount = 0
+		for (const s of m.samples) {
+			if (!s.GT) continue
+			// ds may configure to use '|' if it exists in vcf file
+			const tmp = s.GT.split('/').map(Number)
+			totalAlleleCount += tmp.length
+			for (const i of tmp) {
+				if (i == m.altAlleleIdx) altAlleleCount++
+			}
+		}
+
+		m.AF = altAlleleCount / totalAlleleCount
+		delete m.samples
+	}
+
+	results.mlst = mlst
+}
