@@ -276,6 +276,7 @@ tape('series visibility - numeric', function(test) {
 
 	runpp({
 		state: {
+			nav: { activeTab: 1 },
 			plots: [
 				{
 					chartType: 'barchart',
@@ -308,9 +309,15 @@ tape('series visibility - numeric', function(test) {
 			excluded.length > 1 && excluded.length == Object.keys(bar.config.term.q.hiddenValues).length,
 			'should have the correct number of excluded numeric series by q.hiddenValues'
 		)
+		// console.log(bar.dom.legendDiv.selectAll('.legend-row').nodes())
+		const foundHiddenLabels = bar.dom.legendDiv
+			.selectAll('.legend-row')
+			.filter(d => d?.isHidden == true)
+			.nodes()
+
 		test.equal(
-			bar.dom.legendDiv.selectAll('.legend-row').size(),
-			2,
+			foundHiddenLabels.length + 1,
+			excluded.length,
 			'should display the correct number of hidden legend labels'
 		)
 	}
@@ -319,8 +326,9 @@ tape('series visibility - numeric', function(test) {
 	function triggerHiddenLegendClick(barchart) {
 		numHiddenLegendBeforeClick = barchart.Inner.settings.exclude.cols.length
 		barchart.Inner.dom.legendDiv
+			.selectAll('.legend-row')
+			.filter(d => d?.isHidden == true)
 			.node()
-			.querySelector('.legend-row')
 			.click()
 	}
 
@@ -328,9 +336,14 @@ tape('series visibility - numeric', function(test) {
 		const bar = barchart.Inner
 		const excluded = bar.settings.exclude.cols
 		test.equal(excluded.length, numHiddenLegendBeforeClick - 1, 'should adjust the number of excluded series data')
+
+		const foundHiddenLabels = bar.dom.legendDiv
+			.selectAll('.legend-row')
+			.filter(d => d?.isHidden == true)
+			.nodes()
 		test.equal(
-			bar.dom.legendDiv.selectAll('.legend-row').size(),
-			1,
+			foundHiddenLabels.length + 1,
+			excluded.length,
 			'should adjust the number of hidden legend labels after clicking to reveal one'
 		)
 	}
