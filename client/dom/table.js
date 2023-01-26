@@ -3,9 +3,13 @@ print an html table, using the specified columns and rows
 
 Accepts following parameters; function has no return
 
+******************
+REQUIRED ARGUMENTS
+******************
+
 div = d3-wrapped holder
 
-columns = [ {label} ]
+columns = [ {label} ] 
 	each element is an object describing a column
 	label: str, the text to show as header of a column
 	width: str, column width
@@ -28,6 +32,10 @@ rows = [ [] ]
 			{url/html/value}, {}, ...
 		]
 	}
+
+******************
+OPTIONAL ARGUMENTS
+******************
 
 buttons = [ {button} ]
 	Each element is an object describing a button:
@@ -77,7 +85,17 @@ export async function renderTable({
 	selectAll = false,
 	resize = false
 }) {
-	if (rows?.length == 0) return
+	if (rows?.length == 0) return //Maybe throw? Or is this intentional?
+
+	validateInput()
+
+	function validateInput() {
+		if ((!columns || columns.length == 0) && showHeader == true) throw `Missing columns data`
+		if (!div) throw `Missing div argument`
+		if (singleMode == true && (!buttons || !noButtonCallback))
+			throw `Missing buttons array and noButtonCallback but singleMode = true`
+	}
+
 	const parentDiv = div.append('div').style('background-color', 'white')
 
 	if (resize) {
@@ -183,24 +201,25 @@ export async function renderTable({
 			const td = rowtable.append('td').attr('class', 'sjpp_table_item')
 			const column = columns[colIdx]
 			if (column.width) td.style('width', column.width)
-
 			if (cell.values) {
 				for (const v of cell.values) {
 					// if those values have url in them then tag it to the sample name/id otherwise just append the value of that cell onto the td
 					if (v.url) {
 						td.append('a')
-							.text(v.value)
+							.text(v.value || v.value == 0 ? v.value : v.url) //Fix for if .value missing, url does not display
 							.attr('href', v.url)
 							.attr('target', '_blank')
 					} else if (v.html) {
-						td.html(v.html)
+						//Fix for only the last html or value displaying in the td
+						//instead of all objs in values array
+						td.append('div').html(v.html)
 					} else {
-						td.text(v.value)
+						td.append('div').text(v.value)
 					}
 				}
 			} else if (cell.url) {
 				td.append('a')
-					.text(cell.value)
+					.text(cell.value || cell.value == 0 ? cell.value : cell.url) //Fix for if .value missing, url does not display
 					.attr('href', cell.url)
 					.attr('target', '_blank')
 			} else if (cell.html) {
