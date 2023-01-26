@@ -1,0 +1,7 @@
+Package: emptypackage
+Title: A empty added so r-lib/actions/setup-r@v2 can be executed
+Version: 1.0.0
+Authors@R:
+    c(person(given = "Aleksandar",
+             family = "Acic")
+Description: This is an empty package used to run the workflow files.
