@@ -127,6 +127,8 @@ function setRenderers(self) {
 				break
 			case 'survival':
 				break
+			case 'geneVariant':
+				break
 			default:
 				throw 'unknown term type'
 		}

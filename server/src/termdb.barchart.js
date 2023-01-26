@@ -12,7 +12,7 @@ const { mclass } = require('#shared/common')
 ********************** EXPORTED
 handle_request_closure
 getOrderedLabels
-get_barchart_data_sqlitedb
+barchart_data
 **********************
 */
 
@@ -82,50 +82,7 @@ output an object:
 			.dataId=str // key of term2 category, '' if no term2
 			.total=int // size of this term1-term2 combination
 */
-async function barchart_data(q, ds, tdb) {
-	/*
-	!!quick fix!!
-	tricky logic
-
-	(1) when a barchart is launched from mass, it needs to retrieve total number of samples annotated to a term
-
-	(2) when a barchart is launched from a mds3 track, it needs to retrieve number of *mutated* samples based on a term, in addition to total
-
-	in (1), it launches from a mds2 dataset with termdb
-	in (2), it launches from a mds3 dataset which supports termdb among others (gdc api, bcf/tabix)
-
-	TODO in future:
-	mds3 should serve both (1) and (2), and deprecate mds2
-	add new attribute in q{} to tell if query is (1) or (2)
-	TODO mds3 getter for (1), since it can be served by sqlite db or gdc api
-	*/
-
-	if (typeof q.get == 'string' && ds.isMds3 && ds?.variant2samples?.get) {
-		/*
-		presence of q.get (value should be "summary") indicates this is for mds3 variant2sample.get()
-
-		for now this condition checking is a quick fix to detect (2)
-		later should state this explicitly with new attribute in q{}
-		*/
-		return await ds.variant2samples.get(q, ds)
-	}
-
-	// this query is for (1)
-	if (ds?.termdb?.termid2totalsize2?.get) {
-		// mds3 implementation which wraps sqlitedb support
-		throw 'barsql parameter not fitting termid2totalsize2.get() yet'
-		return await ds.termdb.termid2totalsize2.get(q)
-	}
-
-	if (ds.cohort?.db?.connection) {
-		// using sqlite db
-		return await get_barchart_data_sqlitedb(q, ds, tdb)
-	}
-
-	throw 'unknown method to get barchart data'
-}
-
-export async function get_barchart_data_sqlitedb(q, ds, tdb) {
+export async function barchart_data(q, ds, tdb) {
 	/* existing code to work with mds2 which only supports backend-termdb
 	as later mds2 will be deprecated and migrated to mds3,
 	there should be no need to check for isMds3 flag

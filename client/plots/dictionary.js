@@ -19,7 +19,7 @@ class MassDict {
 					this.app.dispatch({
 						type: 'plot_create',
 						config: {
-							chartType: term.type == 'survival' || term.type == 'geneVariant' ? 'survival' : 'summary',
+							chartType: term.type == 'survival' ? 'survival' : 'summary',
 							term: 'id' in term ? { id: term.id, term } : { term }
 						}
 					})

@@ -321,6 +321,7 @@ function setRenderers(self) {
 				click_term:
 					chart.click_term ||
 					(term => {
+						if (term.type && term.type == 'geneVariant') term = { term } //Other terms come in a wrapping, expected by the plots
 						action.config[chart.usecase.detail] = term
 						self.dom.tip.hide()
 						self.app.dispatch(action)

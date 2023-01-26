@@ -299,7 +299,7 @@ export async function getPlotConfig(opts, app) {
 	const config = {
 		chartType: 'summary',
 		childType: 'barchart',
-		id: opts.term.term.id,
+		//id: opts.term.term.id,
 		term: opts.term,
 		settings: {
 			controls: {
