@@ -1,7 +1,9 @@
 import { getCompInit, copyMerge } from '#rx'
 import { addGeneSearchbox } from '#dom/genesearch'
 import { Menu } from '#dom/menu'
+import { sayerror } from '#dom/error'
 import { dofetch3 } from '#common/dofetch'
+import { getNormalRoot } from '#filter/filter'
 
 /*
 
@@ -40,6 +42,7 @@ class genomeBrowser {
 		const holder = this.opts.holder.append('div')
 		this.dom = {
 			holder,
+			errDiv: holder.append('div'),
 			controlHolder: holder.append('div'),
 			blockHolder: holder.append('div')
 		}
@@ -52,25 +55,27 @@ class genomeBrowser {
 		return {
 			config,
 			termdbConfig: appState.termdbConfig,
-			filter: appState.termfilter.filter
+			filter: getNormalRoot(appState.termfilter.filter)
 		}
 	}
 
 	async main() {
-		if (this.state.config?.snvindel?.details) {
-			// pre-compute variant data in the app here, e.g. fisher test etc, but not in mds3 backend as the official track does
-			// and launch custom mds3 tk to show the variants
-
-			// show controls for precomputing variant data
-			// controls are based on this.state and cannot be done in init() where state is not yet available
-			this.mayShowControls()
-
-			await this.launchCustomMds3tk()
-			return
+		try {
+			if (this.state.config?.snvindel?.details) {
+				// pre-compute variant data in the app here, e.g. fisher test etc, but not in mds3 backend as the official track does
+				// and launch custom mds3 tk to show the variants
+				// show controls for precomputing variant data
+				// controls are based on this.state and cannot be done in init() where state is not yet available
+				this.mayShowControls()
+				await this.launchCustomMds3tk()
+				return
+			}
+			// launch official mds3 tk and let mds3 backend compute the data
+			await this.launchOfficialMds3tk()
+		} catch (e) {
+			sayerror(this.dom.errDiv, e.message || e)
+			if (e.stack) console.log(e.stack)
 		}
-
-		// launch official mds3 tk and let mds3 backend compute the data
-		await this.launchOfficialMds3tk()
 	}
 
 	///////////////////////////////////////////
@@ -83,11 +88,26 @@ class genomeBrowser {
 
 	async launchCustomMds3tk() {
 		const data = await this.preComputeData()
+		console.log(data)
 	}
 
 	async preComputeData() {
-		// perform analysis e.g. fisher
+		// analysis details including cohorts and compute methods are in state.config.snvindel.details{}
+		// send to back to compute and get results back
 		console.log(this.state)
+		const body = {
+			genome: this.app.opts.state.genome,
+			dslabel: this.app.opts.state.dslabel,
+			for: 'mds3variantData',
+			chr: this.state.config.geneSearchResult.chr,
+			start: this.state.config.geneSearchResult.start,
+			stop: this.state.config.geneSearchResult.stop,
+			details: this.state.config.snvindel.details,
+			filter: this.state.filter
+		}
+		const data = await dofetch3('termdb', { body })
+		if (data.error) throw data.error
+		return data
 	}
 
 	async launchOfficialMds3tk() {

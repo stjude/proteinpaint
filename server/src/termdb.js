@@ -13,6 +13,7 @@ const trigger_getSampleScatter = require('./termdb.scatter').trigger_getSampleSc
 const trigger_getViolinPlotData = require('./termdb.violin').trigger_getViolinPlotData
 const getData = require('./termdb.matrix').getData
 const trigger_getCohortsData = require('./termdb.cohort').trigger_getCohortsData
+const get_mds3variantData = require('./mds3.variant').get_mds3variantData
 import roundValue from '#shared/roundValue'
 
 /*
@@ -70,9 +71,10 @@ export function handle_request_closure(genomes) {
 			if (q.getCohortsData) return await trigger_getCohortsData(q, res, ds)
 			if (q.getViolinPlotData) return await trigger_getViolinPlotData(q, res, ds, genome)
 
-			if (q.for == 'mds3queryDetails') return getMds3queryDetails(res, ds)
+			if (q.for == 'mds3queryDetails') return get_mds3queryDetails(res, ds)
 			if (q.for == 'termTypes') return res.send(await ds.getTermTypes(q))
-			if (q.for == 'matrix') return await forMatrix(q, res, ds, genome)
+			if (q.for == 'matrix') return await get_matrix(q, res, ds, genome)
+			if (q.for == 'mds3variantData') return await get_mds3variantData(q, res, ds, genome)
 			if (q.for == 'validateToken') {
 			}
 
@@ -494,7 +496,7 @@ function trigger_genesetByTermId(q, res, tdb) {
 	res.send(geneset)
 }
 
-async function forMatrix(q, res, ds, genome) {
+async function get_matrix(q, res, ds, genome) {
 	if (q.getPlotDataByName) {
 		// send back the config for pre-built matrix plot
 		if (!ds.cohort.matrixplots) throw 'ds.cohort.matrixplots missing for the dataset'
@@ -508,7 +510,7 @@ async function forMatrix(q, res, ds, genome) {
 	res.send(data)
 }
 
-function getMds3queryDetails(res, ds) {
+function get_mds3queryDetails(res, ds) {
 	const config = {}
 	if (ds?.queries?.snvindel?.details) {
 		config.snvindel = { details: ds.queries.snvindel.details }
