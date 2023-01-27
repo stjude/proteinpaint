@@ -52,7 +52,7 @@ export async function openSandbox(element, pageArgs) {
 	}
 
 	if (element.type == 'card') return openCardSandbox(element, res, sandboxDiv)
-	if (element.type == 'dsButton') return openDatasetButtonSandbox(pageArgs, element, res, sandboxDiv) //only for .sandboxJson
+	if (element.type == 'dsButton') return openDatasetButtonSandbox(pageArgs, res, sandboxDiv) //only for .sandboxJson
 }
 
 /********** Nested Card Functions  **********/
@@ -97,7 +97,7 @@ async function openNestedCardSandbox(nestedCard, sandboxDiv, pageArgs) {
 					sandboxDiv.header.trail.updateTrail()
 					return openCardSandbox(child, res, sandboxDiv)
 				}
-				if (child.type == 'dsButton') return openDatasetButtonSandbox(pageArgs, child, res, sandboxDiv) //only for .sandboxJson
+				if (child.type == 'dsButton') return openDatasetButtonSandbox(pageArgs.app.opts, res, sandboxDiv) //only for .sandboxJson
 			})
 		return JSON.stringify(uc)
 	})
@@ -267,7 +267,7 @@ function makeParentTabsMenu(ppcalls, card, tabsDiv, contentDiv, sandboxDiv) {
 			.style('font', 'Arial')
 			.style('font-size', '20px')
 			.style('padding', '6px')
-			.style('color', '#1575ad')
+			.style('color', tab.active ? '#1575ad' : '#757373')
 			.style('background-color', 'transparent')
 			.style('border', 'none')
 			.style('border-radius', 'unset')
@@ -285,6 +285,7 @@ function makeParentTabsMenu(ppcalls, card, tabsDiv, contentDiv, sandboxDiv) {
 			for (const t of tabs) {
 				t.active = t === tab
 				t.tab.style('border-bottom', t.active ? '8px solid #1575ad' : 'none')
+				t.tab.style('color', t.active ? '#1575ad' : '#757373')
 				t.content.style('display', t.active ? 'block' : 'none')
 			}
 			if (tab.callback) {
@@ -696,11 +697,17 @@ async function showViewData(btns, data) {
 
 /********** Dataset Button Functions  **********/
 
-async function openDatasetButtonSandbox(pageArgs, element, res, sandboxDiv) {
+async function openDatasetButtonSandbox(pageArgs, res, sandboxDiv) {
+	const genome = pageArgs?.fromURL
+		? pageArgs.genomes[res.jsonfile.button.availableGenomes[0]]
+		: pageArgs.app.opts.genomes[res.jsonfile.button.availableGenomes[0]]
+
+	const genomes = pageArgs?.fromURL ? pageArgs.genomes : pageArgs.app.opts.genomes
+
 	const par = {
 		// First genome in .availableGenomes is the default
 		availableGenomes: res.jsonfile.button.availableGenomes,
-		genome: pageArgs.app.opts.genomes[res.jsonfile.button.availableGenomes[0]],
+		genome,
 		intro: res.jsonfile.button.intro,
 		name: res.jsonfile.button.name,
 		runargs: res.jsonfile.button.runargs,
@@ -740,7 +747,7 @@ async function openDatasetButtonSandbox(pageArgs, element, res, sandboxDiv) {
 		return
 	}
 
-	addDatasetGenomeBtns(mainDiv, par, pageArgs.app.opts.genomes)
+	addDatasetGenomeBtns(mainDiv, par, genomes)
 	// Create the gene search bar last (text flyout on keyup prevents placing elements to the right)
 	const searchBarDiv = mainDiv
 		.append('div')
@@ -806,7 +813,7 @@ function addDatasetGenomeBtns(div, par, genomes) {
 	div
 		.append('div')
 		.style('display', 'inline-block')
-		.style('padding', '10px 0px 10px 10px')
+		.style('padding', '10px 0px 10px 20px')
 
 	if (par.availableGenomes.length == 1) {
 		// Show default genome as a non-functional button left of the search bar
@@ -839,9 +846,11 @@ function addDatasetGenomeBtns(div, par, genomes) {
 
 			btn.btn
 				.style('margin', '0px')
-				.style('color', btn.active ? 'white' : 'black')
-				.style('background-color', btn.active ? '#0b5394ff' : '#bfbfbf')
-				.style('border-radius', '0px')
+				.style('color', btn.active ? '#1575ad' : '#757373')
+				.style('background-color', 'transparent')
+				.style('border', 'none')
+				.style('border-radius', 'unset')
+				.style('border-bottom', btn.active ? '8px solid #1575ad' : 'none')
 				.style('cursor', 'pointer')
 
 			if (btn.active) {
@@ -851,8 +860,8 @@ function addDatasetGenomeBtns(div, par, genomes) {
 			btn.btn.on('click', () => {
 				for (const b of btns) {
 					b.active = b === btn
-					b.btn.style('color', b.active ? 'white' : 'black')
-					b.btn.style('background-color', b.active ? '#0b5394ff' : '#bfbfbf')
+					b.btn.style('color', b.active ? '#1575ad' : '#757373')
+					b.btn.style('border-bottom', b.active ? '8px solid #1575ad' : 'none')
 				}
 				if (btn.active) {
 					btn.callback(par)

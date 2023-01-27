@@ -446,7 +446,10 @@
                   "isleaf": true
                 }
               ]
-            }
+            },
+            "plots": [{
+              "chartType": "dictionary"
+            }]
           }
         }
       },

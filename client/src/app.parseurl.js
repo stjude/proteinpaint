@@ -33,6 +33,7 @@ upon error, throw err message as a string
 		const cardJsonFile = urlp.get('appcard')
 		const re = await client.dofetch2('/cardsjson')
 		arg.app.drawer.opts.genomes = arg.genomes
+		arg.app.drawer.opts.fromURL = true
 		const element = re.json.elements.findIndex(t => t.sandboxJson == cardJsonFile || t.sandboxHtml == cardJsonFile)
 		if (element <= 0) {
 			const nestedCards = [...re.json.elements.filter(e => e.type == 'nestedCard')]
