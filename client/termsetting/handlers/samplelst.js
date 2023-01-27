@@ -1,6 +1,5 @@
 import { getPillNameDefault } from '#termsetting'
 import { renderTable } from '#dom/table'
-import { Menu } from '#dom/menu'
 
 export function getHandler(self) {
 	return {

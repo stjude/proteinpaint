@@ -87,7 +87,6 @@ export async function barchart_data(q, ds, tdb) {
 	as later mds2 will be deprecated and migrated to mds3,
 	there should be no need to check for isMds3 flag
 	*/
-
 	q.ds = ds
 
 	if (q.ssid) {
@@ -104,10 +103,11 @@ export async function barchart_data(q, ds, tdb) {
 		if (q[`term${i}_id`]) {
 			const id = q[`term${i}_id`]
 			term = { id, q: q[`term${i}_q`], term: { id } }
-		} else if (q[`term${i}`]) term = { term: q[`term${i}`] }
+		} else if (q[`term${i}`]) term = { term: q[`term${i}`], q: q[`term${i}_q`] }
 		if (term) map.set(i, term)
 	}
-	const data = await getData({ filter: q.filter, terms: [...map.values()] }, q.ds, q.genome)
+	const terms = [...map.values()]
+	const data = await getData({ filter: q.filter, terms }, q.ds, q.genome)
 
 	const samplesMap = new Map()
 	const bins = []

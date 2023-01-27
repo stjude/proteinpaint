@@ -534,7 +534,7 @@ export function get_term_cte(q, values, index, filter, termWrapper = null) {
 	} else if (term.type == 'survival') {
 		CTE = makesql_survival(tablename, term, q, values, filter)
 	} else if (term.type == 'samplelst') {
-		CTE = sampleLstSql.getCTE(tablename, term, q, values, filter)
+		CTE = sampleLstSql.getCTE(tablename, termWrapper, values)
 	} else {
 		throw 'unknown term type'
 	}

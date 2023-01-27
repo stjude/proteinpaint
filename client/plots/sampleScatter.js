@@ -532,6 +532,8 @@ class Scatter {
 	}
 
 	openSummaryPlot(term, groups) {
+		if (term.type && term.type == 'geneVariant') term = { term } //Other terms come in a wrapping, expected by the plots
+
 		let config = {
 			chartType: 'summary',
 			childType: 'barchart',
@@ -540,7 +542,7 @@ class Scatter {
 				term: { name: this.config.name + ' groups', type: 'samplelst' },
 				q: {
 					mode: 'custom-groupsetting',
-					groups: groups
+					groups
 				}
 			},
 			insertBefore: self.id
