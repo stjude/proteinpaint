@@ -94,6 +94,15 @@ class genomeBrowser {
 
 	async launchCustomMds3tk() {
 		const data = await this.preComputeData()
+
+		if (this.block) {
+			// block already launched. update data on the tk and rerender
+			const t2 = this.block.tklst.find(i => i.type == 'mds3')
+			t2.custom_variants = data.mlst
+			t2.load()
+			return
+		}
+
 		if (this.state.config.snvindel.details.computeType == 'AF') {
 			const tk = {
 				type: 'mds3',
@@ -108,7 +117,7 @@ class genomeBrowser {
 				],
 				custom_variants: data.mlst
 			}
-			await this.launchMds3tk(tk)
+			this.block = await this.launchMds3tk(tk)
 			return
 		}
 		throw 'unknown snvindel.details.computeType'
@@ -117,6 +126,7 @@ class genomeBrowser {
 	async preComputeData() {
 		// analysis details including cohorts and compute methods are in state.config.snvindel.details{}
 		// send to back to compute and get results back
+
 		const body = {
 			genome: this.app.opts.state.genome,
 			dslabel: this.app.opts.state.dslabel,
@@ -156,8 +166,17 @@ class genomeBrowser {
 		arg.start = this.state.config.geneSearchResult.start
 		arg.stop = this.state.config.geneSearchResult.stop
 		first_genetrack_tolist(this.app.opts.genome, arg.tklst)
+
+		arg.onCoordinateChange = async rglst => {
+			await this.app.dispatch({
+				type: 'plot_edit',
+				id: this.id,
+				config: { geneSearchResult: { chr: rglst[0].chr, start: rglst[0].start, stop: rglst[0].stop } }
+			})
+		}
+
 		const _ = await import('#src/block')
-		new _.Block(arg)
+		return new _.Block(arg)
 	}
 }
 
