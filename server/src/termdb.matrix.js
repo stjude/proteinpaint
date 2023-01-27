@@ -162,7 +162,6 @@ async function getSampleData_dictionaryTerms(q, termWrappers) {
 		// call mds3 dataset method
 		return await getSampleData_dictionaryTerms_v2s(q, termWrappers)
 	}
-
 	return getSampleData_dictionaryTerms_termdb(q, termWrappers)
 }
 
@@ -171,7 +170,6 @@ export function getSampleData_dictionaryTerms_termdb(q, termWrappers) {
 	const refs = { byTermId: {} }
 
 	const twByTermId = {}
-
 	const filter = getFilterCTEs(q.filter, q.ds)
 	// must copy filter.values as its copy may be used in separate SQL statements,
 	// for example get_rows or numeric min-max, and each CTE generator would
@@ -229,6 +227,7 @@ using mds3 dataset
 */
 async function getSampleData_dictionaryTerms_v2s(q, termWrappers) {
 	const q2 = {
+		filter: q.filter,
 		genome: q.genome,
 		get: 'samples',
 		twLst: termWrappers,

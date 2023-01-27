@@ -108,7 +108,9 @@ q{}
 .filter0
 	read-only gdc filter
 .filterObj
-	actual pp filter
+	actual pp filter, from mds3 client side
+.filter
+	actual pp filter, request does not come from mds3 and maybe getData()
 .useIntegerSampleId
 	if true, return integer sample id
 
@@ -238,7 +240,8 @@ async function queryMutatedSamples(q, ds) {
 	if (!ds?.cohort?.termdb) throw 'unable to do sql query: .cohort.termdb missing for ds'
 	const q2 = {
 		ds,
-		filter: q.filterObj
+		// filterObj does not exist if query is from mass. still added it here in case it may come from mds3...
+		filter: q.filter || q.filterObj
 	}
 	const out = await getSampleData_dictionaryTerms_termdb(q2, q.twLst)
 	// quick fix to reshape result data
