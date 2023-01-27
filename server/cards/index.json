@@ -71,7 +71,6 @@
             "description": "Genomic feature annotation",
             "image": "https://pecan.stjude.cloud/static/examples/images/bedj-square.png",
             "sandboxJson": "bedj",
-            "ribbon": {"text": "updated", "expireDate": "2022-10-27"},
             "searchterms": []
         },
         {
@@ -117,7 +116,6 @@
             "description": "Coding mutations and gene fusions",
             "image": "https://pecan.stjude.cloud/static/examples/images/lollipop-square.png",
             "sandboxJson": "lollipop",
-            "ribbon":{ "text": "updated", "expireDate": "2022-11-06"},
             "searchterms": []
         },
         {
@@ -161,7 +159,6 @@
             "type": "card",
             "name": "Gene Fusion",
             "section": "tracks",
-            "ribbon": {"text": "new", "expireDate": "2022-09-25"},
             "description": " ",
             "image": "https://pecan.stjude.cloud/static/examples/images/genefusion-square.png",
             "sandboxJson": "genefusion",
@@ -286,10 +283,11 @@
         },
         {
             "type": "card",
-            "name": "Scatterplot",
+            "name": "Scatter Plot",
             "section": "apps",
-            "description": "2D scatterplot of samples & metadata",
+            "description": "2D scatter plot of samples & metadata",
             "image": "https://pecan.stjude.cloud/static/examples/images/scatterplot-square.png",
+            "ribbon": { "text": "updated", "expireDate": "2023-03-01" },
             "sandboxJson": "scatterplot",
             "searchterms": ["tSNE", "lasso"]
         },
