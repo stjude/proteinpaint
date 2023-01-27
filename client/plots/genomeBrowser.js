@@ -4,6 +4,7 @@ import { Menu } from '#dom/menu'
 import { sayerror } from '#dom/error'
 import { dofetch3 } from '#common/dofetch'
 import { getNormalRoot } from '#filter/filter'
+import { first_genetrack_tolist } from '#common/1stGenetk'
 
 /*
 
@@ -71,7 +72,12 @@ class genomeBrowser {
 				return
 			}
 			// launch official mds3 tk and let mds3 backend compute the data
-			await this.launchOfficialMds3tk()
+			const tk = {
+				type: 'mds3',
+				filterObj: this.state.filter,
+				dslabel: this.app.opts.state.dslabel
+			}
+			await this.launchMds3tk(tk)
 		} catch (e) {
 			sayerror(this.dom.errDiv, e.message || e)
 			if (e.stack) console.log(e.stack)
@@ -83,18 +89,34 @@ class genomeBrowser {
 	///////////////////////////////////////////
 
 	mayShowControls() {
-		this.dom.controlHolder.text('todo')
+		//this.dom.controlHolder.text('todo')
 	}
 
 	async launchCustomMds3tk() {
 		const data = await this.preComputeData()
-		console.log(data)
+		if (this.state.config.snvindel.details.computeType == 'AF') {
+			const tk = {
+				type: 'mds3',
+				name: 'Variants',
+				skewerModes: [
+					{
+						type: 'numeric',
+						byAttribute: 'AF',
+						label: 'Allele frequency',
+						inuse: true
+					}
+				],
+				custom_variants: data.mlst
+			}
+			await this.launchMds3tk(tk)
+			return
+		}
+		throw 'unknown snvindel.details.computeType'
 	}
 
 	async preComputeData() {
 		// analysis details including cohorts and compute methods are in state.config.snvindel.details{}
 		// send to back to compute and get results back
-		console.log(this.state)
 		const body = {
 			genome: this.app.opts.state.genome,
 			dslabel: this.app.opts.state.dslabel,
@@ -110,20 +132,15 @@ class genomeBrowser {
 		return data
 	}
 
-	async launchOfficialMds3tk() {
+	async launchMds3tk(tk) {
 		// when state changes, delete existing block and relaunch new one
 		// since block/tk is not state-controlled
 		this.dom.blockHolder.selectAll('*').remove()
 
-		// mds3 tk obj
-		const tk = {
-			type: 'mds3',
-			filterObj: this.state.filter,
-			dslabel: this.app.opts.state.dslabel
-		}
 		const arg = {
 			holder: this.dom.blockHolder,
 			genome: this.app.opts.genome, // genome obj
+			nobox: true,
 			tklst: [tk]
 		}
 		if (this.state.termdbConfig?.queries.defaultBlock2GeneMode && this.state.config.geneSearchResult.geneSymbol) {
@@ -138,6 +155,7 @@ class genomeBrowser {
 		arg.chr = this.state.config.geneSearchResult.chr
 		arg.start = this.state.config.geneSearchResult.start
 		arg.stop = this.state.config.geneSearchResult.stop
+		first_genetrack_tolist(this.app.opts.genome, arg.tklst)
 		const _ = await import('#src/block')
 		new _.Block(arg)
 	}

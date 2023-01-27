@@ -276,31 +276,18 @@ function table_snvindel({ mlst, tk, block }, grid) {
 			// value can be array or one string
 
 			const infoValue = m.info[key]
-			const infoField = tk.mds.bcf.info[key] // client-side obj about this info field
+			const infoField = tk.mds?.bcf?.info?.[key] // client-side obj about this info field, could be missing for custom track!!
 
 			// TODO improve code
 			if (Array.isArray(infoValue)) {
 				for (const v of infoValue) {
 					renderInfoTd(m, infoField, v, td2, tk)
-					/*
-					const valueSpan = td2.append('span').text(v)
-					if (infoField && infoField.categories) {
-						const category = infoField.categories[v]
-						if (category) {
-							// {color,label,textcolor}
-							valueSpan.style('padding', '1px 4px').style('background', category.color)
-							if (category.textcolor) {
-								valueSpan.style('color', category.textcolor)
-							}
-						}
-					}
-					*/
 				}
 			} else {
 				renderInfoTd(m, infoField, infoValue, td2, tk)
 			}
 
-			if (infoField && infoField.Description) {
+			if (infoField?.Description) {
 				td2
 					.append('span')
 					.style('margin-left', '10px')
@@ -320,6 +307,12 @@ infoValue:str
 td: <td>
 tk{}
 */
+	if (!infoField) {
+		// no "control" object for the info field
+		td.append('span').text(infoValue)
+		return
+	}
+
 	if (infoField.urlBase) {
 		// value of this info field will be rendered as url
 		td.append('a')

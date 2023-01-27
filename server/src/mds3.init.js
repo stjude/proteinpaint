@@ -23,7 +23,7 @@ validate_termdb
 	mayInitiateScatterplots
 	mayValidateSelectCohort
 	mayValidateRestrictAcestries
-	getBarchartDataFromSqlitedb
+	call_barchart_data
 		barchart_data
 validate_query_snvindel
 	gdc.validate_query_snvindel_byisoform
@@ -193,7 +193,7 @@ export async function validate_termdb(ds) {
 			if (tdb.termid2totalsize2.gdcapi) {
 				return await gdc.get_termlst2size(twLst, q, combination, ds)
 			}
-			return await getBarchartDataFromSqlitedb(twLst, q, combination, ds)
+			return await call_barchart_data(twLst, q, combination, ds)
 		}
 	}
 
@@ -365,7 +365,8 @@ async function read_PC_file(file, PCcount) {
 	return Object.freeze(pcs)
 }
 
-async function getBarchartDataFromSqlitedb(twLst, q, combination, ds) {
+async function call_barchart_data(twLst, q, combination, ds) {
+	// makes sense to call barchart function as it adds counting logic over getData output
 	const termid2values = new Map()
 	// k: term id
 	// v: [], element is [category, totalCount]
