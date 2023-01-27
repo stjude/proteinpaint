@@ -1,6 +1,10 @@
 # Change Log
 
 All notable changes to this project will be documented in this file. 
+## 2.9.4-0
+
+- Bundle checkReadingFrame and bedj.parseBed to the server module
+ 
 ## 2.9.3-0
 
 - fixed rollup bundle issue
