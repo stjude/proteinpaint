@@ -3,8 +3,7 @@ const exec = require('child_process').execSync
 const path = require('path')
 const { parseDictionary } = require('../../client/src/databrowser/dictionary.parse')
 const initBinConfig = require('../../server/shared/termdb.initbinconfig')
-import { schemeCategory20 } from '../../server/shared/common'
-const d3scale = require('d3-scale')
+import { getColors } from '../../server/shared/common'
 
 /*
 TODO
@@ -118,7 +117,6 @@ const sampleCollect = {
 	name2id: new Map(), // k: sample name, v: integer id
 	id: 1 // sample id enumerator
 }
-const k2c = d3scale.scaleOrdinal(schemeCategory20)
 //When assigning colors to categories, if no color is provided, a colorMap is created in order to use the same colors for the same categories
 const colorMap = new Map()
 
@@ -391,10 +389,7 @@ function loadAnnotationFile(scriptArg, terms, sampleCollect) {
 				// the category is missing from .values{}, auto add
 				term.values[v] = { label: v }
 			}
-			const color = colorMap.get(v)
-			if (!('color' in term.values[v])) {
-				if (!color) colorMap.set(v, k2c(v))
-			} else colorMap.set(v, term.values[v].color)
+			if ('color' in term.values[v]) colorMap.set(v, term.values[v].color)
 		} else if (term.type == 'float') {
 			const n = Number(v)
 			if (Number.isNaN(n)) throw `value=${v} not number for type=float, term=${term.id}, line=${i + 1}`
@@ -463,9 +458,13 @@ function finalizeTerms(terms) {
 			if (term.values?.length > 2 && term.groupsetting) {
 				delete term.groupsetting.disabled
 			}
+			const k2c = getColors(Object.keys(term.values).length)
 			for (const v in term.values) {
-				if (!term.values[v]?.color) term.values[v].color = colorMap.get(v)
-				console.log(`${v}, ${term.values[v].color} `)
+				if (!term.values[v].color) {
+					const color = colorMap.get(v)
+					if (color) term.values[v].color = color
+					else colorMap.set(v, k2c(v))
+				}
 			}
 		} else if (term.type == 'integer' || term.type == 'float') {
 			const computableValues = []

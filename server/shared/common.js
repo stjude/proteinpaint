@@ -9,6 +9,9 @@ exported functions
 
 */
 import { rgb } from 'd3-color'
+const d3scale = require('d3-scale')
+import { schemeCategory10 } from 'd3-scale-chromatic'
+const d3 = require('d3')
 
 export const defaultcolor = rgb('#8AB1D4').darker()
 export const default_text_color = rgb('#aaa')
@@ -1049,3 +1052,14 @@ export const schemeCategory20 = [
 	'#17becf',
 	'#9edae5'
 ]
+export const schemeCategory2 = ['red', 'blue']
+
+export function getColorScheme(number) {
+	if (number > 12) return schemeCategory20
+	else if (number > 8) return d3.schemePaired
+	else if (number > 2) return d3.schemeDark2
+	else return schemeCategory2
+}
+export function getColors(number) {
+	return d3scale.scaleOrdinal(getColorScheme(number))
+}

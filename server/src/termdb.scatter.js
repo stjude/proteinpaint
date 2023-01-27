@@ -3,10 +3,8 @@ const fs = require('fs')
 const path = require('path')
 const utils = require('./utils')
 const serverconfig = require('./serverconfig')
-const d3scale = require('d3-scale')
-import { schemeCategory20 } from '#shared/common'
+import { schemeCategory20, getColors } from '#shared/common'
 const { mclass } = require('#shared/common')
-const { rgb } = require('d3-color')
 
 /*
 works with "canned" scatterplots in a dataset, e.g. data from a text file of tSNE coordinates from a pre-analyzed cohort (contrary to on-the-fly analysis)
@@ -187,8 +185,9 @@ async function colorAndShapeSamples(refSamples, cohortSamples, data, q) {
 		samples.push(sample)
 	}
 	if (q.colorTW.q.mode !== 'continuous') {
-		const k2c = d3scale.scaleOrdinal(schemeCategory20)
-		let i = 19
+		let i = 20
+		const scheme = schemeCategory20
+		const k2c = getColors(colorMap.size)
 		for (const [category, value] of colorMap) {
 			const tvalue = q.colorTW.term.values?.[category]
 			if (tvalue && 'color' in tvalue) value.color = tvalue.color
@@ -196,14 +195,13 @@ async function colorAndShapeSamples(refSamples, cohortSamples, data, q) {
 				const bin = data.refs.byTermId[q.colorTW.term.id].bins.find(bin => bin.name === category)
 				if (bin) value.color = bin.color
 				else {
-					value.color = schemeCategory20[i]
+					value.color = scheme[i]
 					i--
 				}
 			} else if (q.colorTW.term.type == 'geneVariant') value.color = mclass[value.mclass]?.color || 'black'
 			// should be invalid_mclass_color
 			else {
-				value.color = schemeCategory20[i]
-				i--
+				value.color = k2c(category)
 			}
 		}
 	}

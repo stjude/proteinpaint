@@ -1,6 +1,5 @@
 import { format } from 'd3-format'
-import { schemeCategory20 } from '#shared/common'
-const d3scale = require('d3-scale')
+import { getColors } from '#shared/common'
 
 export function validate_bins(binconfig) {
 	// Number.isFinite('1') returns false, which is desired
@@ -124,9 +123,12 @@ summaryfxn (percentiles)=> return {min, max, pX, pY, ...}
   }
 */
 	const bc = binconfig
-	const k2c = d3scale.scaleOrdinal(schemeCategory20) //to color bins
 	validate_bins(bc)
-	if (bc.lst) for (const bin of bc.lst) bin.color = k2c(bin.label)
+	if (bc.lst) {
+		console.log('lst', bc.lst)
+		const k2c = getColors(bc.lst.length) //to color bins
+		for (const bin of bc.lst) bin.color = k2c(bin.label)
+	}
 	if (bc.type == 'custom-bin') return JSON.parse(JSON.stringify(bc.lst))
 	if (typeof summaryfxn != 'function') throw 'summaryfxn required for modules/termdb.bins.js compute_bins()'
 	const percentiles = target_percentiles(bc)
@@ -195,8 +197,7 @@ summaryfxn (percentiles)=> return {min, max, pX, pY, ...}
 			? +bc.first_bin.stop
 			: min + bc.bin_size,
 		startinclusive: bc.startinclusive,
-		stopinclusive: bc.stopinclusive,
-		color: k2c(min)
+		stopinclusive: bc.stopinclusive
 	}
 
 	if (!isNumeric(currBin.stop)) throw 'the computed first_bin.stop is non-numeric' + currBin.stop
@@ -225,8 +226,7 @@ summaryfxn (percentiles)=> return {min, max, pX, pY, ...}
 					? last_stop
 					: numericLastStart && upper > last_start && previousStop != last_start
 					? last_start
-					: upper,
-			color: k2c(previousStop)
+					: upper
 		}
 
 		if (currBin.stop >= max) {
@@ -251,6 +251,8 @@ summaryfxn (percentiles)=> return {min, max, pX, pY, ...}
 	if (bins.length > 1) {
 		delete bins[bins.length - 1].stop
 	}
+	const k2c = getColors(bins.length) //to color bins
+	for (const bin of bins) bin.color = k2c(bin.label)
 	return bins
 }
 
