@@ -26,7 +26,7 @@ export class InputTerm {
 
 		const termRow = holder.append('div')
 		// the row contains two cells: left to show ts pill, right to show interaction
-		const pillDiv = termRow.append('span')
+		const pillDiv = termRow.append('span').style('display', 'inline-block')
 		const interactionDiv = termRow.append('span').style('margin-left', '20px')
 
 		this.dom = {
@@ -55,7 +55,7 @@ export class InputTerm {
 				noTermPromptOptions: this.opts.noTermPromptOptions,
 				activeCohort: state.activeCohort,
 				debug: app.opts.debug,
-				buttons: this.section.configKey == 'outcome' ? ['replace'] : ['delete'],
+				menuOptions: this.section.configKey == 'outcome' ? '{edit,reuse,replace}' : '{edit,reuse,remove}',
 				usecase: { target: 'regression', detail: this.section.configKey, regressionType: config.regressionType },
 				disable_terms,
 				abbrCutoff: 50,
