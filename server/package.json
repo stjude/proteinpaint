@@ -70,6 +70,8 @@
     "src/serverconfig.js",
     "src/lines2R.js",
     "src/mds3.gdc.filter.js",
+    "src/checkReadingFrame.js",
+    "src/bedj.parseBed.js",
     "cards/index.json",
     "server.js*",
     "start.js",
