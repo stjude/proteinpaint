@@ -85,13 +85,24 @@ export async function renderTable({
 	selectAll = false,
 	resize = false
 }) {
-	if (rows?.length == 0) return //Maybe throw? Or is this intentional?
-
 	validateInput()
 
 	function validateInput() {
-		if ((!columns || columns.length == 0) && showHeader == true) throw `Missing columns data`
+		if (!columns || columns?.length == 0) throw `Missing columns data`
+		if (!rows || rows?.length == 0) throw `Missing rows data`
 		if (!div) throw `Missing div argument`
+		let lineNumsWithDataProbs = []
+		for (const [i, row] of rows.entries()) {
+			if (row.length != columns.length) lineNumsWithDataProbs.push(i + 1)
+		}
+		if (lineNumsWithDataProbs.length > 0)
+			throw `Num of row objects != num of cols. Line num(s) = ${lineNumsWithDataProbs}`
+		if (buttons) {
+			for (const [i, btn] of buttons.entries()) {
+				if (!btn.text) throw `Missing button.text in buttons, line #${i + 1}`
+				if (!btn.callback) throw `Missing button.callback in buttons, line #${i + 1}`
+			}
+		}
 		if (singleMode == true && (!buttons || !noButtonCallback))
 			throw `Missing buttons array and noButtonCallback but singleMode = true`
 	}
@@ -239,14 +250,13 @@ export async function renderTable({
 			.style('float', 'right')
 
 		for (const button of buttons) {
-			const values = []
-
 			button.button = footerDiv
 				.append('button')
 				.text(button.text)
 				.style('margin', '10px 10px 0 0')
 				.on('click', e => {
 					const checkboxs = tbody.selectAll('input:checked')
+					const values = []
 					if (!checkboxs.empty()) {
 						checkboxs.each((d, i, nodes) => {
 							const node = nodes[i]
