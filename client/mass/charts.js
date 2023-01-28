@@ -318,14 +318,15 @@ function setRenderers(self) {
 				tree: { usecase: chart.usecase }
 			},
 			tree: {
-				click_term:
-					chart.click_term ||
-					(term => {
-						if (term.type && term.type == 'geneVariant') term = { term } //Other terms come in a wrapping, expected by the plots
-						action.config[chart.usecase.detail] = term
-						self.dom.tip.hide()
-						self.app.dispatch(action)
-					})
+				click_term: term => {
+					// summary/survival/cuminc all expect config.term{} to be a termsetting object, but not term (which is confusing)
+					// thus convert term into a termwrapper (termsetting obj)
+					// tw.q{} is missing and will be fill in with default settings
+					const tw = { id: term.id, term }
+					action.config[chart.usecase.detail] = tw
+					self.dom.tip.hide()
+					self.app.dispatch(action)
+				}
 			}
 		})
 	}

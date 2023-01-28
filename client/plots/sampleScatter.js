@@ -506,7 +506,7 @@ class Scatter {
 					groups: groups
 				}
 			},
-			insertBefore: self.id
+			insertBefore: this.id
 		}
 		this.app.dispatch({
 			type: 'plot_create',
@@ -532,12 +532,15 @@ class Scatter {
 	}
 
 	openSummaryPlot(term, groups) {
-		if (term.type && term.type == 'geneVariant') term = { term } //Other terms come in a wrapping, expected by the plots
+		// barchart config.term{} name is confusing, as it is actually a termsetting object, not term
+		// thus convert the given term into a termwrapper
+		// tw.q can be missing and will be filled in with default setting
+		const tw = { id: term.id, term }
 
-		let config = {
+		const config = {
 			chartType: 'summary',
 			childType: 'barchart',
-			term,
+			term: tw, // this is a termsetting, not a term
 			term2: {
 				term: { name: this.config.name + ' groups', type: 'samplelst' },
 				q: {
@@ -545,7 +548,7 @@ class Scatter {
 					groups
 				}
 			},
-			insertBefore: self.id
+			insertBefore: this.id
 		}
 		this.app.dispatch({
 			type: 'plot_create',
