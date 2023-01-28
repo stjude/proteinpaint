@@ -118,27 +118,33 @@
                                     { id: 'Extent of Resection-1' },
                                     { id: 'Extent of Resection-2' },
                                     { id: 'M0/M+' },
-                                    { id: 'Primary Treatment ' },
+                                    { id: 'Primary Treatment' },
                                     { id: 'Risk Category' },
                                     { id: 'Progresssive Disease' },
                                     { id: 'Ever Used Radiation During Treatment Course' },
                                     { id: 'Histology  at Diagnosis' },
-                                    { id: 'MNP - Molecular CLASS ' },
-                                    { id: 'Integrated DiagnosisTier 1 ' },
-                                    { id: 'Integrated DiagnosisTier 2 ' },
-                                    { id: 'Integrated Diagnosis  Tier 3 ' },
-                                    { id: 'Fusion Types Tier 1 ' },
-                                    { id: 'Fusion Types  Tier 2' },
+                                    { id: 'MNP - Molecular CLASS' },
+                                    { id: 'Integrated Diagnosis Tier 1' },
+                                    { id: 'Integrated Diagnosis Tier 2' },
+                                    { id: 'Integrated Diagnosis Tier 3' },
+                                    { id: 'Fusion Types Tier 1' },
+                                    { id: 'Fusion Types Tier 2' },
                                     { id: 'Methylation' },
                                     { id: 'RNA-Seq' },
                                     { id: 'WES' },
-                                    { id: 'FISH' },
-                                    { id: 'IHC' },
                                 ]
                             },
                             {
                                 name: 'Cytogenetics',
                                 lst: getCytogeneticsData()
+                            },
+                            {
+                                name: 'FISH/IHC',
+                                lst: [{ id: 'ALK_FISH', legend: { group: 'FISH/IHC' } },
+                                { id: 'BRAF_FISH', legend: { group: 'FISH/IHC' } },
+                                { id: 'EGFR_FISH', legend: { group: 'FISH/IHC' } },
+                                { id: 'TP53_IHC', legend: { group: 'FISH/IHC' } }
+                                ]
                             },
                             ...getGeneTermGroups(),
                         ],
@@ -243,8 +249,7 @@
         }
     })
 
-            const cnvGenes = `C19MC, MYCN, PDGFRA, MET, MDM2, MDM4, CDKN2A/B, PDGFB, MYCL, GFI1B, PTCH1, NF1,EGFR`.split(',').map(g => g.trim())
-
+                                                const cnvGenes = `MYCN, PDGFRA, MET, MDM2, MDM4, CDKN2A/B, PDGFB, MYCL, GFI1B, PTCH1, NF1,EGFR`.split(',').map(g => g.trim())
         function getGeneTermGroups() {
             const termgroups = []
             for (const g of genegroups) {
@@ -301,9 +306,6 @@
                         "name": "NTRK1_SV"
                     },
                     {
-                        "name": "NTRK2_SV"
-                    },
-                    {
                         "name": "NTRK3_SV"
                     },
                     {
@@ -314,9 +316,6 @@
                     },
                     {
                         "name": "MET_SV"
-                    },
-                    {
-                        "name": "ZFTA_SV"
                     },
                     {
                         "name": "MYBL1_SV"

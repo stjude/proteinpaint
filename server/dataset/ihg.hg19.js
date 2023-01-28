@@ -27,7 +27,7 @@ module.exports = function() {
 						name: 'Methylome TSNE',
 						dimension: 2, // 2d requires x/y, 3d requires x/y/z
 						file: 'files/hg19/ihg/classification/ihg_oct20_TSNE.txt',
-						colorTW: { id: 'Integrated DiagnosisTier 2 ' }
+						colorTW: { id: 'Integrated Diagnosis Tier 2' }
 
 						// allow additional config for this plot
 						// allow additional config for this plot
@@ -41,6 +41,32 @@ module.exports = function() {
 						file: 'files/hg19/ihg/classification/matrixPlot_ihg.json'
 					}
 				]
+			}
+		},
+		assayAvailability: {
+			byDt: {
+				// snvindel
+				1: {
+					// mutations are detected from wes
+					term_id: 'WES',
+					yes: { value: ['Yes ', 'Targeted Sequencing'] },
+					no: { value: 'No' }
+				},
+
+				// fusion
+				2: {
+					//mutations are detected from RNAseq
+					term_id: 'RNA-Seq',
+					yes: { value: ['Yes '] },
+					no: { value: ['No'] }
+				},
+				// cnv
+				4: {
+					// mutations are detected from Methylation
+					term_id: 'Methylation',
+					yes: { value: ['Yes '] },
+					no: { value: ['No'] }
+				}
 			}
 		}
 	}
