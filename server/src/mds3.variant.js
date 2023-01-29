@@ -45,6 +45,10 @@ export async function get_mds3variantData(q, res, ds, genome) {
 }
 
 function compute_AF(mlst, results) {
+	// only keep variants with at least 1 alt allele
+	results.mlst = []
+	results.skipMcountWithoutAlt = 0 // number of excluded variants for not having a single alt alelle in the current cohort
+
 	for (const m of mlst) {
 		// count all alleles and does not assume diploid, to allow it to work with chrY
 		let altAlleleCount = 0,
@@ -59,9 +63,13 @@ function compute_AF(mlst, results) {
 			}
 		}
 
-		m.AF = altAlleleCount / totalAlleleCount
+		if (altAlleleCount == 0) {
+			results.skipMcountWithoutAlt++
+			continue
+		}
+
+		results.mlst.push(m)
+		m.AF = Number((altAlleleCount / totalAlleleCount).toPrecision(2))
 		delete m.samples
 	}
-
-	results.mlst = mlst
 }

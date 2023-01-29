@@ -43,6 +43,14 @@ class genomeBrowser {
 		const holder = this.opts.holder.append('div')
 		this.dom = {
 			holder,
+			loadingDiv: holder
+				.append('div')
+				.text('Loading...')
+				.style('margin-left', '25px'),
+			skipMcountWithoutAltDiv: holder
+				.append('div')
+				.style('margin-left', '25px')
+				.style('opacity', 0.5),
 			errDiv: holder.append('div'),
 			controlHolder: holder.append('div'),
 			blockHolder: holder.append('div')
@@ -61,6 +69,7 @@ class genomeBrowser {
 	}
 
 	async main() {
+		this.dom.loadingDiv.style('display', 'block')
 		try {
 			if (this.state.config?.snvindel?.details) {
 				// pre-compute variant data in the app here, e.g. fisher test etc, but not in mds3 backend as the official track does
@@ -69,19 +78,20 @@ class genomeBrowser {
 				// controls are based on this.state and cannot be done in init() where state is not yet available
 				this.mayShowControls()
 				await this.launchCustomMds3tk()
-				return
+			} else {
+				// launch official mds3 tk and let mds3 backend compute the data
+				const tk = {
+					type: 'mds3',
+					filterObj: this.state.filter,
+					dslabel: this.app.opts.state.dslabel
+				}
+				await this.launchMds3tk(tk)
 			}
-			// launch official mds3 tk and let mds3 backend compute the data
-			const tk = {
-				type: 'mds3',
-				filterObj: this.state.filter,
-				dslabel: this.app.opts.state.dslabel
-			}
-			await this.launchMds3tk(tk)
 		} catch (e) {
 			sayerror(this.dom.errDiv, e.message || e)
 			if (e.stack) console.log(e.stack)
 		}
+		this.dom.loadingDiv.style('display', 'none')
 	}
 
 	///////////////////////////////////////////
@@ -139,6 +149,13 @@ class genomeBrowser {
 		}
 		const data = await dofetch3('termdb', { body })
 		if (data.error) throw data.error
+		if (data.skipMcountWithoutAlt) {
+			this.dom.skipMcountWithoutAltDiv
+				.style('display', 'block')
+				.text(data.skipMcountWithoutAlt + ' variants skipped for not carrying ALT allele.')
+		} else {
+			this.dom.skipMcountWithoutAltDiv.style('display', 'none')
+		}
 		return data
 	}
 
