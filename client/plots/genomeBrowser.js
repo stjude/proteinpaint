@@ -43,6 +43,7 @@ class genomeBrowser {
 		const holder = this.opts.holder.append('div')
 		this.dom = {
 			holder,
+			errDiv: holder.append('div'),
 			loadingDiv: holder
 				.append('div')
 				.text('Loading...')
@@ -51,7 +52,6 @@ class genomeBrowser {
 				.append('div')
 				.style('margin-left', '25px')
 				.style('opacity', 0.5),
-			errDiv: holder.append('div'),
 			controlHolder: holder.append('div'),
 			blockHolder: holder.append('div')
 		}
@@ -113,24 +113,29 @@ class genomeBrowser {
 			return
 		}
 
-		if (this.state.config.snvindel.details.computeType == 'AF') {
-			const tk = {
-				type: 'mds3',
-				name: 'Variants',
-				skewerModes: [
-					{
-						type: 'numeric',
-						byAttribute: 'AF',
-						label: 'Allele frequency',
-						inuse: true
-					}
-				],
-				custom_variants: data.mlst
-			}
-			this.block = await this.launchMds3tk(tk)
-			return
+		const nm = {
+			// numeric mode object; to fill in based on snvindel.details{}
+			type: 'numeric',
+			inuse: true
 		}
-		throw 'unknown snvindel.details.computeType'
+		const tk = {
+			type: 'mds3',
+			name: 'Variants',
+			custom_variants: data.mlst,
+			skewerModes: [nm]
+		}
+		if (this.state.config.snvindel.details.computeType == 'AF') {
+			nm.byAttribute = 'AF'
+			nm.label = 'Allele frequency'
+		} else if (this.state.config.snvindel.details.computeType == 'groups') {
+			nm.byAttribute = 'nm_axis_value'
+			nm.label = this.state.config.snvindel.details.groupTestMethod.methods[
+				this.state.config.snvindel.details.groupTestMethod.methodIdx
+			]
+		} else {
+			throw 'unknown snvindel.details.computeType'
+		}
+		this.block = await this.launchMds3tk(tk)
 	}
 
 	async preComputeData() {
@@ -152,7 +157,7 @@ class genomeBrowser {
 		if (data.skipMcountWithoutAlt) {
 			this.dom.skipMcountWithoutAltDiv
 				.style('display', 'block')
-				.text(data.skipMcountWithoutAlt + ' variants skipped for not carrying ALT allele.')
+				.text(data.skipMcountWithoutAlt + ' variants skipped for absence of ALT allele from the cohort.')
 		} else {
 			this.dom.skipMcountWithoutAltDiv.style('display', 'none')
 		}

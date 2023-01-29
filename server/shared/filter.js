@@ -142,3 +142,45 @@ function getPrecomputedKey(q) {
 	if (!precomputedKey) throw `unknown condition term bar_by_* and/or value_by_*`
 	return precomputedKey
 }
+
+/* join a list of filters into the first filter with "and", return joined filter
+to be used by caller app to join hidden filters into a visible filter
+
+lst:[]
+  a list of filters
+  the function returns a (modified) copy of the first filter, and will not modify it
+  rest of the array will be joined to the first one under "and"
+*/
+export function filterJoin(lst) {
+	if (!lst || lst.length == 0) return
+	let f = JSON.parse(JSON.stringify(lst[0]))
+	if (lst.length == 1) return f
+	// more than 1 item, will join
+	if (f.lst.length < 2) {
+		if (f.join !== '') throw 'filter.join must be an empty string "" when filter.lst.length < 2'
+		f.join = 'and'
+	} else if (f.join == 'or') {
+		// f is "or", wrap it with another root layer of "and"
+		f = {
+			type: 'tvslst',
+			join: 'and',
+			in: true,
+			lst: [f]
+		}
+	} else if (f.join != 'and') {
+		throw 'filter.join must be either "and" or "or" when .lst length > 1'
+	}
+	// now, f.join should be "and"
+	// if the argument lst[0].join == "and",
+	// then the f.in boolean value is reused
+	for (let i = 1; i < lst.length; i++) {
+		const f2 = JSON.parse(JSON.stringify(lst[i]))
+		if (f2.join == 'or') f.lst.push(f2)
+		else f.lst.push(...f2.lst)
+	}
+	// if f ends up single-tvs item (from joining single tvs to empty filter), need to set join to '' per filter spec
+	if (f.lst.length == 1 && f.lst[0].type == 'tvs') {
+		f.join = ''
+	}
+	return f
+}
