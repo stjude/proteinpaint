@@ -13,9 +13,11 @@ export default function violinRenderer(self) {
 		const settings = self.config.settings.violin
 		const isH = settings.orientation === 'horizontal'
 		const imageOffset = settings.datasymbol === 'bean' ? settings.radius * window.devicePixelRatio : settings.radius
+		const t1 = self.config.term
+		const t2 = self.config.term2
 
 		//filter out hidden values and only keep plots which are not hidden in term2.q.hiddenvalues
-		self.data.plots = self.data.plots.filter(p => !self.config.term2?.q?.hiddenValues?.[p.label || p.seriesId])
+		self.data.plots = self.data.plots.filter(p => !t2?.q?.hiddenValues?.[p.label || p.seriesId])
 
 		self.legendRenderer(getLegendGrps(self))
 
@@ -31,21 +33,21 @@ export default function violinRenderer(self) {
 		// append the svg object to the body of the page
 		self.dom.violinDiv.select('.sjpp-violin-plot').remove()
 
-		const svg = renderSvg(self, isH, settings)
-		renderScale(self, settings, isH, svg)
+		const svg = renderSvg(t1, self, isH, settings)
+		renderScale(t1, t2, settings, isH, svg)
 
 		for (const [plotIdx, plot] of self.data.plots.entries()) {
 			const violinG = createViolinG(svg, plot, plotIdx, isH)
-			renderLabels(violinG, plot, isH, settings)
+			renderLabels(t1, t2, violinG, plot, isH, settings)
 			renderViolinPlot(plot, self, isH, svg, plotIdx, violinG, imageOffset)
-			renderBrushing(violinG, settings, plot, isH, svg)
-			labelHideLegendClicking(plot, self)
+			renderBrushing(t1, t2, violinG, settings, plot, isH, svg)
+			labelHideLegendClicking(t2, plot, self)
 		}
 	}
 
-	self.displayLabelClickMenu = function(plot, event) {
+	self.displayLabelClickMenu = function(t1, t2, plot, event) {
 		self.displayLabelClickMenu.called = true
-		displayMenu(self, plot, event, null, null)
+		displayMenu(t1, t2, self, plot, event, null, null)
 	}
 
 	self.renderPvalueTable = function() {
@@ -101,7 +103,7 @@ export default function violinRenderer(self) {
 		return margins
 	}
 
-	function renderSvg(self, isH, settings) {
+	function renderSvg(t1, self, isH, settings) {
 		const violinDiv = self.dom.violinDiv
 			.append('div')
 			.style('display', 'inline-block')
@@ -120,13 +122,13 @@ export default function violinRenderer(self) {
 				'width',
 				margin.left +
 					margin.top +
-					(isH ? settings.svgw : self.data.plotThickness * self.data.plots.length + self.config.term.term.name.length)
+					(isH ? settings.svgw : self.data.plotThickness * self.data.plots.length + t1.term.name.length)
 			)
 			.attr(
 				'height',
 				margin.bottom +
 					margin.top +
-					(isH ? self.data.plotThickness * self.data.plots.length : settings.svgw + self.config.term.term.name.length)
+					(isH ? self.data.plotThickness * self.data.plots.length : settings.svgw + t1.term.name.length)
 			)
 			.classed('sjpp-violin-plot', true)
 
@@ -136,7 +138,7 @@ export default function violinRenderer(self) {
 		return { margin: margin, svgG: svgG, axisScale: createNumericScale(self, settings, isH), violinSvg: violinSvg }
 	}
 
-	function renderScale(self, settings, isH, svg) {
+	function renderScale(t1, t2, settings, isH, svg) {
 		// <g>: holder of numeric axis
 		const g = svg.svgG
 			.append('g')
@@ -148,17 +150,17 @@ export default function violinRenderer(self) {
 		let lab
 
 		// TODO need to add term2 label onto the svg
-		if (self.config.term2?.q?.mode === 'continuous')
+		if (t2?.q?.mode === 'continuous')
 			lab = svg.svgG
 				.append('text')
-				.text(`${self.config.term2.term.name}`)
+				.text(`${t2.term.name}`)
 				.classed('sjpp-numeric-term-label', true)
 				.style('font-weight', 600)
 				.attr('text-anchor', 'middle')
 		else
 			lab = svg.svgG
 				.append('text')
-				.text(self.config.term.term.name)
+				.text(t1.term.name)
 				.classed('sjpp-numeric-term-label', true)
 				.style('font-weight', 600)
 				.attr('text-anchor', 'middle')
@@ -203,7 +205,7 @@ export default function violinRenderer(self) {
 		return violinG
 	}
 
-	function renderLabels(violinG, plot, isH, settings) {
+	function renderLabels(t1, t2, violinG, plot, isH, settings) {
 		// create scale label
 		const label = violinG
 			.append('text')
@@ -212,7 +214,7 @@ export default function violinRenderer(self) {
 			.style('cursor', 'pointer')
 			.on('click', function(event) {
 				if (!event) return
-				self.displayLabelClickMenu(plot, event)
+				self.displayLabelClickMenu(t1, t2, plot, event)
 			})
 			.style('opacity', 0)
 			.transition()
@@ -304,7 +306,7 @@ export default function violinRenderer(self) {
 		} else return
 	}
 
-	function renderBrushing(violinG, settings, plot, isH, svg) {
+	function renderBrushing(t1, t2, violinG, settings, plot, isH, svg) {
 		//brushing on data points
 		violinG
 			.append('g')
@@ -318,7 +320,7 @@ export default function violinRenderer(self) {
 
 								if (!selection) return
 
-								await displayBrushMenu(self, plot, selection, svg.axisScale, isH)
+								await displayBrushMenu(t1, t2, self, plot, selection, svg.axisScale, isH)
 							})
 					: brushY()
 							.extent([[-20, 0], [20, settings.svgw]])
@@ -327,7 +329,7 @@ export default function violinRenderer(self) {
 
 								if (!selection) return
 
-								await displayBrushMenu(self, plot, selection, svg.axisScale, isH)
+								await displayBrushMenu(t1, t2, self, plot, selection, svg.axisScale, isH)
 							})
 			)
 	}
@@ -347,37 +349,37 @@ export default function violinRenderer(self) {
 	}
 }
 
-export async function displayBrushMenu(self, plot, selection, scale, isH) {
+export async function displayBrushMenu(t1, t2, self, plot, selection, scale, isH) {
 	const start = isH ? scale.invert(selection[0]) : scale.invert(selection[1])
 	const end = isH ? scale.invert(selection[1]) : scale.invert(selection[0])
 	displayBrushMenu.called = true
-	displayMenu(self, plot, event, start, end)
+	displayMenu(t1, t2, self, plot, event, start, end)
 	// const brushValues = plot.values.filter(i => i > start && i < end)
 }
 
-export function displayMenu(self, plot, event, start, end) {
+export function displayMenu(t1, t2, self, plot, event, start, end) {
 	self.app.tip.d.selectAll('*').remove()
 
 	const options = []
 
 	if (self.displayLabelClickMenu.called === true) {
-		if (self.config.term2) {
-			if (self.config.term.term.type === 'categorical') {
+		if (t2) {
+			if (t1.term.type === 'categorical') {
 				options.push({
 					label: `Add filter: ${plot.label.split(',')[0]}`,
-					callback: getAddFilterCallback(self, plot, 'term1')
+					callback: getAddFilterCallback(t1, t2, self, plot, 'term1')
 				})
 			} else {
 				options.push({
 					label: `Add filter: ${plot.label.split(',')[0]}`,
-					callback: getAddFilterCallback(self, plot, 'term2')
+					callback: getAddFilterCallback(t1, t2, self, plot, 'term2')
 				})
 			}
 			//On label clicking, display 'Hide' option to hide plot.
 			options.push({
 				label: `Hide: ${plot.label}`,
 				callback: () => {
-					const termNum = self.config.term2 ? 'term2' : null
+					const termNum = t2 ? 'term2' : null
 					const term = self.config[termNum]
 					const isHidden = true
 					self.app.dispatch({
@@ -388,7 +390,7 @@ export function displayMenu(self, plot, event, start, end) {
 								isAtomic: true,
 								id: term.id,
 								term: term.term,
-								q: getUpdatedQfromClick(plot, self.config.term2, isHidden)
+								q: getUpdatedQfromClick(plot, t2, isHidden)
 							}
 						}
 					})
@@ -406,7 +408,7 @@ export function displayMenu(self, plot, event, start, end) {
 	} else if (displayBrushMenu.called === true) {
 		options.push({
 			label: `Add filter: ${start.toFixed(1)} < x < ${end.toFixed(1)}`,
-			callback: getAddFilterCallback(self, plot, start, end)
+			callback: getAddFilterCallback(t1, t2, self, plot, start, end)
 		})
 		displayBrushMenu.called = false
 	}
@@ -466,15 +468,13 @@ export function createTvsTerm(term, tvslst) {
 	})
 }
 
-export function getAddFilterCallback(self, plot, rangeStart, rangeStop) {
+export function getAddFilterCallback(t1, t2, self, plot, rangeStart, rangeStop) {
 	const tvslst = {
 		type: 'tvslst',
 		in: true,
 		join: 'and',
 		lst: []
 	}
-	const t1 = self.config.term
-	const t2 = self.config.term2
 
 	if (t2) {
 		if (t1.term.type === 'categorical') {
@@ -575,13 +575,14 @@ function getLegendGrps(self) {
 	}
 
 	if (t2) {
-		if (Object.entries(t2.q.hiddenValues).length != 0) {
+		if (t2.q.hiddenValues && Object.entries(t2.q.hiddenValues).length != 0) {
 			const items = []
 			for (const key of Object.keys(t2.q.hiddenValues)) {
 				items.push({
 					text: `${key}`,
 					noIcon: true,
-					isHidden: true
+					isHidden: true,
+					hiddenOpacity: 1
 				})
 			}
 			const title = `${t2.term.name}`
@@ -593,11 +594,11 @@ function getLegendGrps(self) {
 	return legendGrps
 }
 
-function labelHideLegendClicking(plot, self) {
+function labelHideLegendClicking(t2, plot, self) {
 	self.dom.legendDiv.selectAll('.sjpp-htmlLegend').on('click', event => {
 		event.stopPropagation()
 		const d = event.target.__data__
-		for (const key of Object.keys(self.config.term2.q.hiddenValues)) {
+		for (const key of Object.keys(t2.q.hiddenValues)) {
 			if (d.text === key) {
 				delete self.config.term2.q.hiddenValues[key]
 			}
@@ -613,7 +614,7 @@ function labelHideLegendClicking(plot, self) {
 					isAtomic: true,
 					id: term.id,
 					term: term.term,
-					q: getUpdatedQfromClick(plot, self.config.term2, isHidden)
+					q: getUpdatedQfromClick(plot, t2, isHidden)
 				}
 			}
 		})

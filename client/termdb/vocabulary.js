@@ -566,13 +566,13 @@ class TermdbVocab extends Vocab {
 			dslabel: this.vocab.dslabel,
 			termid: arg.termid,
 			svgw: arg.svgw, ///window.devicePixelRatio,
-			orientation: arg.orientation || 'horizontal',
-			datasymbol: arg.datasymbol || 'bean',
-			radius: arg.radius || 5,
+			orientation: arg.orientation,
+			datasymbol: arg.datasymbol,
+			radius: arg.radius,
 			devicePixelRatio: window.devicePixelRatio,
-			strokeWidth: arg.strokeWidth || 0.2,
-			axisHeight: arg.axisHeight || 80,
-			rightMargin: arg.rightMargin || 50,
+			strokeWidth: arg.strokeWidth,
+			axisHeight: arg.axisHeight,
+			rightMargin: arg.rightMargin,
 			..._body
 		}
 		if (arg.filter) body.filter = getNormalRoot(arg.filter)
