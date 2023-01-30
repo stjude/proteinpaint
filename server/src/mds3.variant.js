@@ -1,6 +1,7 @@
 const { filterJoin } = require('../shared/filter')
 const { get_rows_by_one_key } = require('./termdb.sql')
 const lines2R = require('./lines2R') // TODO rust
+const run_rust = require('@stjude/proteinpaint-rust').run_rust
 const path = require('path')
 const serverconfig = require('./serverconfig')
 
@@ -13,6 +14,18 @@ q{}
 
 not integrated into mds3.load.js due to !!HARDCODED!! use of ds.queries.snvindel.byrange.get()
 performs post-processing of data from byrange.get()
+
+get_mds3variantData
+	getFilterObj
+	byrange.get()
+	getMlstWithAlt
+		getAllelicCount
+	compute_AF
+	compute_groups
+		mayGet_pop2average
+		getGroupsData
+			AFtest_adjust_race
+		may_apply_fishertest
 */
 
 export async function get_mds3variantData(q, res, ds, genome) {
@@ -39,17 +52,44 @@ export async function get_mds3variantData(q, res, ds, genome) {
 	}
 	*/
 
-	const results = {}
+	const results = getMlstWithAlt(mlst)
+	// results = {mlst[], skipMcountWithoutAlt}, and drop out m without any ALT
 
 	if (q.details.computeType == 'AF') {
-		compute_AF(mlst, results)
+		compute_AF(results.mlst)
 	} else if (q.details.computeType == 'groups') {
-		await compute_groups(ds, q.details, mlst, results)
+		await compute_groups(ds, q.details, results.mlst)
 	} else {
 		throw 'unknown q.details.computeType'
 	}
 
+	// result.mlst[].nm_axis_value is computed
+
+	for (const m of results.mlst) {
+		delete m.samples
+		delete m._altCount
+		delete m._refCount
+	}
+
 	res.send(results)
+}
+
+function getMlstWithAlt(mlst) {
+	const result = {
+		mlst: [],
+		skipMcountWithoutAlt: 0
+	}
+	for (const m of mlst) {
+		const [a, b] = getAllelicCount(m)
+		if (a == 0) {
+			result.skipMcountWithoutAlt++
+			continue
+		}
+		m._altCount = a
+		m._refCount = b - a
+		result.mlst.push(m)
+	}
+	return result
 }
 
 /*
@@ -69,20 +109,9 @@ function getFilterObj(q) {
 	return filterJoin(lst)
 }
 
-function compute_AF(mlst, results) {
-	// only keep variants with at least 1 alt allele
-	results.mlst = []
-	results.skipMcountWithoutAlt = 0 // number of excluded variants for not having a single alt alelle in the current cohort
-
+function compute_AF(mlst) {
 	for (const m of mlst) {
-		const [A, T] = getAllelicCount(m)
-		if (A == 0) {
-			results.skipMcountWithoutAlt++
-			continue
-		}
-		results.mlst.push(m)
-		m.AF = Number((A / T).toPrecision(2))
-		delete m.samples
+		m.nm_axis_value = Number((m._altCount / (m._altCount + m._refCount)).toPrecision(2))
 	}
 }
 
@@ -102,7 +131,7 @@ function getAllelicCount(m) {
 	return [A, T]
 }
 
-async function compute_groups(ds, details, mlst, result) {
+async function compute_groups(ds, details, mlst) {
 	const pop2average = mayGet_pop2average(ds, details, mlst) // undefined if not used
 
 	for (const m of mlst) {
@@ -113,13 +142,12 @@ async function compute_groups(ds, details, mlst, result) {
 	const method = details.groupTestMethod.methods[details.groupTestMethod.methodIdx]
 	if (!method) throw 'details.groupTestMethod.methodIdx out of bound'
 	if (method == 'Allele frequency difference') {
-		throw 11
-		return
-	}
-	if (method == "Fisher's exact test") {
+		throw 'AF diff not implemented'
+	} else if (method == "Fisher's exact test") {
 		await may_apply_fishertest(mlst)
+	} else {
+		throw 'unknown value from groupTestMethod[]'
 	}
-	throw 'unknown value from groupTestMethod[]'
 }
 
 function getGroupsData(ds, details, m, pop2average) {
@@ -133,8 +161,7 @@ function getGroupsData(ds, details, m, pop2average) {
 		}
 		if (g.type == 'filter') {
 			// this group's filter is already combined by getFilterObj(), meaning all samples from m.samples[] are from this group
-			const [A, T] = getAllelicCount(m)
-			groupData.push({ altCount: A, refCount: T - A })
+			groupData.push({ altCount: m._altCount, refCount: m._refCount })
 			continue
 		}
 		if (g.type == 'population') {
@@ -198,13 +225,6 @@ function mayGet_pop2average(ds, details, mlst) {
 using adjust race, when combining a population and a termdb group
 for the set of samples defined by termdb,
 get population admix average, initiate 0 for each population
-
-popsets:
-	.sets[] from the population
-
-ds:
-vcftk
-FIXME should be list of samples from current query, not the complete set of samples from vcftk
 */
 
 	const populationGroup = details.groups.find(g => g.type == 'population')
@@ -249,27 +269,48 @@ FIXME should be list of samples from current query, not the complete set of samp
 }
 
 async function may_apply_fishertest(mlst) {
-	const lines = []
-	const str2m = new Map()
-	for (const m of mlst) {
-		const kstr = m.chr + '.' + m.pos + '.' + m.ref + '.' + m.alt
-		lines.push(
-			`${kstr}\t${m.groupData[0].altCount}\t${m.groupData[0].refCount}\t${m.groupData[1].altCount}\t${m.groupData[1].refCount}`
-		)
-		str2m.set(kstr, m)
-	}
-	if (lines.length == 0) {
-		// no data
-		return
-	}
-	const plines = await lines2R(path.join(serverconfig.binpath, '/utils/fisher.R'), lines)
-	for (const line of plines) {
-		const l = line.split('\t')
-		const m = str2m.get(l[0])
-		if (m) {
-			const v = Number.parseFloat(l[5])
-			m.AFtest_pvalue = v
-			m.nm_axis_value = Number.isNaN(v) ? 0 : -Math.log10(v) // for axis
+	// as fisher data is from stdin, limit the number of variants tested each time
+	const step = 200
+	for (let i = 0; i < Math.ceil(mlst.length / step); i++) {
+		const input = []
+		for (let j = i * step; j < (i + 1) * step; j++) {
+			const m = mlst[j]
+			if (!m) break
+
+			const d = m.groupData
+
+			if (
+				!d ||
+				!d[0] ||
+				!d[1] ||
+				!Number.isFinite(d[0].altCount) ||
+				!Number.isFinite(d[0].refCount) ||
+				!Number.isFinite(d[1].altCount) ||
+				!Number.isFinite(d[1].refCount)
+			) {
+				// FIXME find out the cause
+				console.log(`${m.chr}.${m.pos}.${m.ref}.${m.alt}\t${JSON.stringify(d)}`)
+				continue
+			}
+
+			input.push({
+				index: j,
+				n1: d[0].altCount,
+				n2: d[0].refCount,
+				n3: Math.floor(d[1].altCount),
+				n4: Math.floor(d[1].refCount)
+			})
+		}
+		try {
+			const out = await run_rust('fisher', JSON.stringify({ input }))
+			for (const test of JSON.parse(out)) {
+				const m = mlst[test.index]
+				if (!m) continue
+				m.p_value = test.p_value
+				m.nm_axis_value = -Math.log10(test.p_value)
+			}
+		} catch (e) {
+			console.log(JSON.stringify(input))
 		}
 	}
 }

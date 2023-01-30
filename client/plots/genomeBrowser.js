@@ -116,7 +116,8 @@ class genomeBrowser {
 		const nm = {
 			// numeric mode object; to fill in based on snvindel.details{}
 			type: 'numeric',
-			inuse: true
+			inuse: true,
+			byAttribute: 'nm_axis_value'
 		}
 		const tk = {
 			type: 'mds3',
@@ -125,10 +126,8 @@ class genomeBrowser {
 			skewerModes: [nm]
 		}
 		if (this.state.config.snvindel.details.computeType == 'AF') {
-			nm.byAttribute = 'AF'
 			nm.label = 'Allele frequency'
 		} else if (this.state.config.snvindel.details.computeType == 'groups') {
-			nm.byAttribute = 'nm_axis_value'
 			nm.label = this.state.config.snvindel.details.groupTestMethod.methods[
 				this.state.config.snvindel.details.groupTestMethod.methodIdx
 			]
