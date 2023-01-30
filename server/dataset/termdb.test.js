@@ -1,5 +1,5 @@
 const path = require('path')
-const serverconfig = require(path.join(__dirname, '../src/serverconfig'))
+const serverconfig = require('../src/serverconfig')
 const fs = require('fs')
 
 /*
