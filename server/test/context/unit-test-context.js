@@ -1,2 +1,2 @@
-const context = require.context('../../', true, /auth\.unit.spec.js$/)
+const context = require.context('../../', true, /\.unit.spec.js$/)
 require('../../utils/webpack/exportContext.js').exportContext(context)
