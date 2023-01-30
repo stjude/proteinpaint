@@ -76,6 +76,7 @@
     "server.js*",
     "start.js",
     "shared/common.js",
+    "shared/termdb.initbinconfig.js",
     "utils/*.R",
     "utils/rust/*.*",
     "utils/rust/src"
