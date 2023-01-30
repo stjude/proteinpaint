@@ -13,7 +13,7 @@ const runpp = helpers.getRunPp('mass', {
 	state: {
 		vocab: {
 			dslabel: 'TermdbTest',
-			genome: 'hg38'
+			genome: 'hg38-test'
 		}
 	},
 	debug: 1
