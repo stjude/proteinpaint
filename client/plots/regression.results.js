@@ -78,7 +78,7 @@ export class RegressionResults {
 			holder,
 			err_div: holder.append('div'),
 			headerDiv: holder.append('div'),
-			snplocusBlockDiv: holder.append('div').style('margin-left', '20px'),
+			snplocusBlockDiv: holder.append('div'),
 			// is where newDiv() and displayResult_oneset() writes to
 			oneSetResultDiv: holder.append('div').style('margin', '10px')
 		}
@@ -115,9 +115,7 @@ export class RegressionResults {
 			await this.displayResult(data)
 
 			// scroll to results
-			const resultsTitleYcoord =
-				document.getElementById('pp-regression-results-title').getBoundingClientRect().top + window.scrollY
-			window.scrollTo({ top: resultsTitleYcoord, behavior: 'smooth' })
+			document.getElementById('pp-regression-results-title').scrollIntoView({ behavior: 'smooth' })
 		} catch (e) {
 			this.hasError = true
 			this.dom.holder.style('display', 'block')
@@ -239,6 +237,12 @@ function setRenderers(self) {
 			show a genome browser and a mds3 tk to show dots for the variants from snplocus term
 			clicking on a dot in browser tk will call displayResult_oneset() to display its results
 			*/
+			self.dom.snplocusBlockDiv
+				.append('div')
+				.style('margin-top', '30px')
+				.style('opacity', 0.3)
+				.text('Click on a variant within the browser to view its regression results')
+
 			if (!self.snplocusBlock) {
 				self.snplocusBlock = await createGenomebrowser(self, snplocusInput, result.resultLst)
 			} else {
@@ -1171,13 +1175,14 @@ async function createGenomebrowser(self, input, resultLst) {
 				(self.config.regressionType == 'linear'
 					? 'Wilcoxon rank sum test'
 					: self.config.regressionType == 'logistic'
-					? "Chi-square test or Fisher's exact test"
+					? "Chi-square test/Fisher's exact test"
 					: 'Cumulative incidence test'),
 			circle: 'monomorphic variants skipped'
 		},
 		click_snvindel: async m => {
 			self.displayResult_oneset(m.regressionResult.data)
 			await mayCheckLD(m, input, self)
+			self.dom.oneSetResultDiv.node().scrollIntoView({ behavior: 'smooth' })
 		}
 	})
 

@@ -405,7 +405,7 @@ export class InputTerm {
 		const n = this.term.interactions.length
 		this.dom.interactionDiv
 			.style('display', 'inline')
-			.html(n == 0 ? '+ Interaction' : `${n} Interaction${n > 1 ? 's' : ''}`)
+			.html(n == 0 ? 'Add interactions' : `${n} interaction${n > 1 ? 's' : ''}`)
 			.style('padding', '5px')
 			.style('background-color', n == 0 ? null : '#ececec')
 			.style('border-radius', n == 0 ? null : '6px')
