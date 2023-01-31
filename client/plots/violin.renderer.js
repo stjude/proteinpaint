@@ -22,7 +22,7 @@ export default function violinRenderer(self) {
 		self.legendRenderer(getLegendGrps(self))
 
 		if (self.data.plots.length === 0) {
-			self.dom.violinDiv.text(
+			self.dom.violinDiv.html(
 				` <span style="opacity:.6;font-size:1em;margin-left:90px;">No data to render Violin Plot</span>`
 			)
 			self.dom.tableHolder.selectAll('*').remove()
