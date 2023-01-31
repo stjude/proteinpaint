@@ -103,8 +103,9 @@ export async function renderTable({
 				if (!btn.callback) throw `Missing button.callback in buttons, line #${i + 1}`
 			}
 		}
-		if (singleMode == true && (!buttons || !noButtonCallback))
-			throw `Missing buttons array and noButtonCallback but singleMode = true`
+
+		// this check is disabled for now as it breaks gdc bam slicing ui
+		//if (singleMode == true && (!buttons || !noButtonCallback)) throw `Missing buttons array and noButtonCallback but singleMode = true`
 	}
 
 	const parentDiv = div.append('div').style('background-color', 'white')

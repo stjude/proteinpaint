@@ -21,6 +21,9 @@ opts: {
 			TODO do not hardcode width, use auto width e.g. grid-template-columns='auto auto'
 		.tab, .holder
 			d3 DOM elements created by this script
+	borderPosition, 
+		optional; if not provided, default = 'bottom'
+		values:  top, bottom, right, left
 }
 
 Note: 
@@ -38,23 +41,36 @@ export async function init_tabs(opts) {
 	if (!Array.isArray(opts.tabs)) throw `invalid opts.tabs for toggleButtons()`
 
 	const tabs = opts.tabs
-	opts.tabHolder = opts.holder.append('div') //.style('padding', '10px')
+	opts.tabHolder = opts.holder
+		.append('div')
+		//add light grey border underneath the buttons
+		.style('border-bottom', '0.5px solid lightgrey')
+		.style('width', 'fit-content')
 
 	if (!opts.contentHolder) {
-		opts.contentHolder = opts.holder.append('div')
+		if (!opts.noContent) opts.contentHolder = opts.holder.append('div')
 	}
 
 	const has_active_tab = tabs.some(i => i.active)
 	if (!has_active_tab) tabs[0].active = true
 
 	for (const [i, tab] of tabs.entries()) {
-		const toggle_btn_class = i == 0 ? ' sj-left-toggle' : i < tabs.length - 1 ? ' sj-center-toggle' : ' sj-right-toggle'
+		// const toggle_btn_class = i == 0 ? ' sj-left-toggle' : i < tabs.length - 1 ? ' sj-center-toggle' : ' sj-right-toggle'
+		const borderPosition = opts.borderPosition || 'bottom'
+		const textAlign = borderPosition == 'bottom' || borderPosition == 'top' ? 'center' : borderPosition
 		tab.tab = opts.tabHolder
 			.append('div')
-			.attr('class', 'sj-toggle-button' + toggle_btn_class)
+			.attr('class', 'sj-toggle-button')
+			// .attr('class', 'sj-toggle-button' + toggle_btn_class)
 			.classed('sjpp-active', tab.active ? true : false)
+			.style('color', tab.active ? '#1575ad' : '#757373')
 			.style('padding', '5px')
+			.style('text-align', textAlign)
 			.style('display', 'inline-block')
+			.style('background-color', 'transparent')
+			.style('border', 'none')
+			.style('border-radius', 'unset')
+			.style(`border-${borderPosition}`, tab.active ? '8px solid #1575ad' : 'none')
 			.html(tab.label)
 
 		if (tab.width) {
@@ -74,15 +90,19 @@ export async function init_tabs(opts) {
 				tab_.active = tab_ === tab
 				tab_.tab.classed('sjpp-active', tab_.active ? true : false)
 				tab_.holder.style('display', tab_.active ? 'block' : 'none')
+				tab_.tab.style(`border-${borderPosition}`, tab_.active ? '8px solid #1575ad' : 'none')
+				tab_.tab.style('color', tab_.active ? '#1575ad' : '#757373')
 			}
 			if (tab.callback) await tab.callback(tab.holder)
 		})
 
-		tab.holder = opts.contentHolder
-			.append('div')
-			.style('padding-top', '10px')
-			.style('margin-top', '10px')
-			.style('display', tab.active ? 'block' : 'none')
+		if (opts.contentHolder) {
+			tab.holder = opts.contentHolder
+				.append('div')
+				.style('padding-top', '10px')
+				.style('margin-top', '10px')
+				.style('display', tab.active ? 'block' : 'none')
+		}
 
 		if (tab.active) {
 			if (tab.callback) await tab.callback(tab.holder)
