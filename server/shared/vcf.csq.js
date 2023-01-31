@@ -71,7 +71,15 @@ export function parse_CSQ(str, header, m) {
 			continue
 		}
 		let allele = null
-		for (const a of m.mlst) {
+
+		//////////////////////////////////////
+		// NOTE
+		// mds2delete
+		// m.alleles[] is based on old vcf parsing and may delete?
+		// latest spec is m.mlst[]
+		//////////////////////////////////////
+
+		for (const a of m.mlst || m.alleles) {
 			if (a.allele_original == o.Allele) {
 				allele = a
 				break
@@ -80,11 +88,17 @@ export function parse_CSQ(str, header, m) {
 		if (!allele) {
 			if (o.Allele == '-') {
 				// deletion
-				if (m.mlst.length == 1) {
-					allele = m.mlst[0]
+				if (m.mlst) {
+					if (m.mlst.length == 1) {
+						allele = m.mlst[0]
+					}
+				} else if (m.alleles) {
+					if (m.alleles.length == 1) {
+						allele = m.alleles[0]
+					}
 				}
 			} else {
-				for (const a of m.mlst) {
+				for (const a of m.mlst || m.alleles) {
 					if (a.allele_original.substr(1) == o.Allele) {
 						// insertion, without first padding base
 						allele = a

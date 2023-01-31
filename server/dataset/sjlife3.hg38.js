@@ -556,7 +556,6 @@ module.exports = {
 				// accessible to client via termdb.js?for=mds3queryDetails
 
 				//computeType: 'AF', // for AF of current cohort
-
 				computeType: 'groups',
 
 				groupTestMethod: {

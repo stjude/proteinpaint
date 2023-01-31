@@ -1,6 +1,5 @@
 const { filterJoin } = require('../shared/filter')
 const { get_rows_by_one_key } = require('./termdb.sql')
-const lines2R = require('./lines2R') // TODO rust
 const run_rust = require('@stjude/proteinpaint-rust').run_rust
 const path = require('path')
 const serverconfig = require('./serverconfig')
@@ -100,13 +99,14 @@ merge filterObj from multiple sources to one (and use in byrange.get())
 function getFilterObj(q) {
 	const lst = [q.filter]
 	if (q.details.computeType == 'groups') {
-		for (const g of q.details.groups) {
-			if (g.type == 'filter') {
-				lst.push(q.filter)
+		for (const grp of q.details.groups) {
+			if (grp.type == 'filter') {
+				lst.push(grp.filter)
 			}
 		}
 	}
-	return filterJoin(lst)
+	const f = filterJoin(lst)
+	return f
 }
 
 function compute_AF(mlst) {
