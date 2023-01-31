@@ -76,7 +76,8 @@
     "directory": "client"
   },
   "files": [
-    "dist/*"
+    "dist/*",
+    "src/databrowser/dictionary.parse.js"
   ],
   "bugs": {
     "url": "https://github.com/stjude/pp-dist"
