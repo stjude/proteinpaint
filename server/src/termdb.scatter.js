@@ -4,7 +4,7 @@ const path = require('path')
 const utils = require('./utils')
 const serverconfig = require('./serverconfig')
 import { schemeCategory20, getColors } from '#shared/common'
-const { mclass } = require('#shared/common')
+const { mclass, dt2label, morigin } = require('#shared/common')
 
 /*
 works with "canned" scatterplots in a dataset, e.g. data from a text file of tSNE coordinates from a pre-analyzed cohort (contrary to on-the-fly analysis)
@@ -171,18 +171,20 @@ async function colorAndShapeSamples(refSamples, cohortSamples, data, q) {
 
 		sample.category_info = {}
 		sample.hidden = {}
-		if (q.colorTW.q?.mode === 'continuous') sample.category = dbSample[q.colorTW.term.id].value
-		else {
-			assignCategory(dbSample, sample, q.colorTW, colorMap, 'category')
-			if (!('category' in sample)) continue
-		}
-
+		let result = []
 		sample.shape = 'Ref'
+
+		if (q.colorTW.q?.mode === 'continuous') {
+			sample.category = dbSample[q.colorTW.term.id].value
+			result.push(sample)
+		} else result = processSample(dbSample, sample, q.colorTW, colorMap, 'category')
+
 		if (q.shapeTW) {
-			assignCategory(dbSample, sample, q.shapeTW, shapeMap, 'shape')
-			if (!('shape' in sample)) continue
-		}
-		samples.push(sample)
+			for (const _sample of result) {
+				const sresult = processSample(dbSample, _sample, q.shapeTW, shapeMap, 'shape')
+				samples.push(...sresult)
+			}
+		} else samples.push(...result)
 	}
 	if (q.colorTW.q.mode !== 'continuous') {
 		let i = 20
@@ -198,11 +200,7 @@ async function colorAndShapeSamples(refSamples, cohortSamples, data, q) {
 					value.color = scheme[i]
 					i--
 				}
-			} else if (q.colorTW.term.type == 'geneVariant') value.color = mclass[value.mclass]?.color || 'black'
-			// should be invalid_mclass_color
-			else {
-				value.color = k2c(category)
-			}
+			} else if (q.colorTW.term.type != 'geneVariant') value.color = k2c(category)
 		}
 	}
 	//else
@@ -232,10 +230,59 @@ async function colorAndShapeSamples(refSamples, cohortSamples, data, q) {
 	}
 }
 
+function processSample(dbSample, sample, tw, categoryMap, category) {
+	let color = null,
+		value = null
+	if (!dbSample) {
+		console.log(JSON.stringify(sample) + ' not in the database or filtered')
+		return []
+	}
+	const result = []
+	if (tw.term.type == 'geneVariant') {
+		const mutations = dbSample?.[tw.term.name]?.values
+		for (const [i, mutation] of Object.entries(mutations)) {
+			const dt = parseInt(i) + 1 //Mutation index starts in 0, should start in 1
+			const origin = morigin[mutation.origin]?.label
+			const _sample = JSON.parse(JSON.stringify(sample))
+			const class_info = mclass[mutation.class]
+			if (class_info) {
+				value = class_info.label
+				if (origin) value += ' ' + origin
+				if ('mname' in mutation)
+					_sample.category_info[category] = `origin: ${dt2label[dt]} ${origin}<br>mutation: ${mutation.mname}`
+				_sample.hidden[category] = tw.q.hiddenValues ? value in tw.q.hiddenValues : false
+				if (!categoryMap.has(value)) categoryMap.set(value, { sampleCount: 1 })
+				else categoryMap.get(value).sampleCount++
+				categoryMap.get(value).color = class_info?.color || 'Black'
+				_sample[category] = value.toString()
+				result.unshift(_sample)
+			}
+			// TODO mutation.mname is amino acid change. pass mname to sample to be shown in tooltip
+		}
+	} else {
+		value = dbSample?.[tw.id]?.key
+		sample.hidden[category] = tw.q.hiddenValues ? dbSample?.[tw.id]?.key in tw.q.hiddenValues : false
+		if (value) {
+			sample[category] = value.toString()
+			if (!categoryMap.has(value)) categoryMap.set(value, { sampleCount: 1 })
+			else categoryMap.get(value).sampleCount++
+			result.push(sample)
+		}
+	}
+	return result
+}
+
 function order(map, tw, refs) {
 	let entries = []
 	if (!tw || map.size == 0) return entries
-	if (!refs?.byTermId[tw.term.id]?.bins) {
+	if (tw.term.type == 'geneVariant') {
+		entries = [...map.entries()]
+		entries.sort((a, b) => {
+			if (a[0] < b[0]) return -1
+			if (a[0] > b[0]) return 1
+			return 0
+		})
+	} else if (!refs?.byTermId[tw.term.id]?.bins) {
 		entries = [...map.entries()]
 		entries.sort((a, b) => {
 			const v1 = tw.term.values?.[a[0]]
@@ -256,32 +303,4 @@ function order(map, tw, refs) {
 		for (const [category, value] of map) if (!entries.some(e => e[0] === category)) entries.push([category, value])
 	}
 	return entries
-}
-
-function assignCategory(dbSample, sample, tw, categoryMap, category) {
-	let color = null,
-		value = null
-	if (!dbSample) {
-		console.log(JSON.stringify(sample) + ' not in the database or filtered')
-		return
-	}
-	let mutation = null
-	if (tw.term.type == 'geneVariant') {
-		mutation = dbSample?.[tw.term.name]?.values?.[0]
-		if (mutation) {
-			value = mclass[mutation.class]?.label
-			sample.category_info[category] = mutation.mname
-			sample.hidden[category] = tw.q.hiddenValues ? value in tw.q.hiddenValues : false
-			// TODO mutation.mname is amino acid change. pass mname to sample to be shown in tooltip
-		}
-	} else {
-		value = dbSample?.[tw.id]?.key
-		sample.hidden[category] = tw.q.hiddenValues ? dbSample?.[tw.id]?.key in tw.q.hiddenValues : false
-	}
-	if (value) {
-		sample[category] = value.toString()
-		if (!categoryMap.has(value)) categoryMap.set(value, { sampleCount: 1 })
-		else categoryMap.get(value).sampleCount++
-		if (tw.term.type == 'geneVariant') categoryMap.get(value).mclass = mutation?.class
-	}
 }

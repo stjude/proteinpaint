@@ -628,8 +628,10 @@ class Scatter {
 	}
 
 	getOpacity(c) {
-		if ('sampleId' in c) return c.hidden['category'] || c.hidden['shape'] ? 0 : this.settings.opacity
-
+		if ('sampleId' in c) {
+			const opacity = c.hidden['category'] || c.hidden['shape'] ? 0 : this.settings.opacity
+			return opacity
+		}
 		const refOpacity = this.settings.showRef ? this.settings.opacity : 0
 		return refOpacity
 	}
@@ -1320,7 +1322,7 @@ function setInteractivity(self) {
 	self.mouseover = function(event) {
 		if (event.target.__data__) {
 			const s2 = event.target.__data__
-			const samples = self.data.samples.filter(s => distance(s.x, s.y, s2.x, s2.y) < 0.2)
+			const samples = self.data.samples.filter(s => self.getOpacity(s) > 0 && distance(s.x, s.y, s2.x, s2.y) < 0.2)
 			const rows = []
 			self.dom.tooltip.clear().hide()
 
@@ -1365,7 +1367,7 @@ export async function getPlotConfig(opts, app) {
 				sampleScatter: {
 					size: 25,
 					refSize: 9,
-					svgw: 550,
+					svgw: 500,
 					svgh: 550,
 					axisTitleFontSize: 16,
 					showAxes: false,
