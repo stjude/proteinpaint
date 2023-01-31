@@ -1,6 +1,10 @@
 # Change Log
 
 All notable changes to this project will be documented in this file. 
+## 2.9.7-0
+
+- Bundle shared/vcf.js.
+ 
 ## 2.9.6-0
 
 - Budle dictionary.parse.js.

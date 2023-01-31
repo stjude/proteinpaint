@@ -1,6 +1,6 @@
 {
 	"name": "@stjude/proteinpaint-front",
-	"version": "2.9.6-0",
+	"version": "2.9.7-0",
 	"main": "src/index.js",
 	"bin": "init.js",
 	"scripts": {
@@ -11,7 +11,7 @@
 		"test:integration": "echo 'TODO: front integration tests'"
 	},
 	"devDependencies": {
-		"@stjude/proteinpaint-client": "2.9.6-0",
+		"@stjude/proteinpaint-client": "2.9.7-0",
 		"webpack": "^5.7.3",
 		"webpack-cli": "^4.9.2",
 		"webpack-node-externals": "^3.0.0",
