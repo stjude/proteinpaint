@@ -1,6 +1,10 @@
 # Change Log
 
 All notable changes to this project will be documented in this file. 
+## 2.9.6-0
+
+- Budle dictionary.parse.js.
+ 
 ## 2.9.5-0
 
 - Bundle termdb initbinconfig.
