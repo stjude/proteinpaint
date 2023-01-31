@@ -6,6 +6,7 @@ import { addGeneSearchbox } from '#dom/genesearch'
 ***************** EXPORT
 getHandler()
 fillTW()
+mayDisplayVariantFilter()
 
 ***************** instance attributes
 
@@ -87,7 +88,7 @@ async function makeEditMenu(self, div) {
 			'“Gene”: Gene name (e.g. AKT1)</br>“Position”: chr:start-stop (e.g. chr1:5000-6000)</br>"dbSNP": dbSNP accession (e.g. rs1042522)'
 		)
 
-	await mayDisplayVariantFilter(self, div)
+	await mayDisplayVariantFilter(self, self?.q?.variant_filter, div)
 
 	const [input_AFcutoff, select_alleleType, select_geneticModel, select_missingGenotype] = makeSnpSelect(
 		div.append('div').style('margin', '15px'),
@@ -204,7 +205,15 @@ function makeId() {
 	return 'snplocus' + Math.random()
 }
 
-async function mayDisplayVariantFilter(self, holder) {
+/*
+self { vocabApi }
+	.variantFilter{} is attached to it
+filterInState{}
+	optional filter obj, tracked in state
+callback2
+	optional callback to run upon filter update, no parameter
+*/
+export async function mayDisplayVariantFilter(self, filterInState, holder, callback2) {
 	if (!self.variantFilter) {
 		self.variantFilter = await self.vocabApi.get_variantFilter()
 		// variantFilter should be {opts{}, filter{}, terms[]}
@@ -219,9 +228,9 @@ async function mayDisplayVariantFilter(self, holder) {
 	if (!Array.isArray(self.variantFilter.terms) || self.variantFilter.terms.length == 0)
 		throw 'variantFilter.terms[] is not non-empty array'
 
-	if (self.q && self.q.variant_filter) {
+	if (filterInState) {
 		// use existing filter
-		self.variantFilter.active = JSON.parse(JSON.stringify(self.q.variant_filter))
+		self.variantFilter.active = JSON.parse(JSON.stringify(filterInState))
 	} else {
 		// use default filter from dataset
 		self.variantFilter.active = JSON.parse(JSON.stringify(self.variantFilter.filter))
@@ -238,10 +247,11 @@ async function mayDisplayVariantFilter(self, holder) {
 		emptyLabel: '+Variant Filter',
 		holder: div.append('div'),
 		vocab: { terms: self.variantFilter.terms },
-		callback: filter => {
+		callback: async filter => {
 			// once the filter is updated from UI, it's only updated here
 			// user must press submit button to attach current filter to self.q{}
 			self.variantFilter.active = filter
+			if (callback2) await callback2()
 		}
 	}).main(self.variantFilter.active)
 }

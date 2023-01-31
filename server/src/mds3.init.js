@@ -12,6 +12,7 @@ const { barchart_data } = require('./termdb.barchart')
 const { setDbRefreshRoute } = require('./dsUpdateAttr.js')
 const mayInitiateScatterplots = require('./termdb.scatter').mayInitiateScatterplots
 const mayInitiateMatrixplots = require('./termdb.matrix').mayInitiateMatrixplots
+const { add_bcf_variant_filter } = require('./termdb.snp')
 
 /*
 ********************** EXPORTED
@@ -654,10 +655,11 @@ export async function snvindelByRangeGetter_bcf(ds, genome) {
 
 	/*
 	param{}
-	.rglst[]
-	.filterObj{}
-	.addFormatValues:true
-
+		.rglst[]
+		.filterObj{}
+		.addFormatValues:true
+		.infoFilter{}
+		.variantFilter{}
 	*/
 	return async param => {
 		if (!Array.isArray(param.rglst)) throw 'q.rglst[] is not array'
@@ -690,6 +692,9 @@ export async function snvindelByRangeGetter_bcf(ds, genome) {
 		const limitSamples = mayLimitSamples(param, q._tk.samples, ds)
 		if (limitSamples) {
 			bcfArgs.push('-s', limitSamples.map(i => i.name).join(','))
+		}
+		if (param.variantFilter) {
+			add_bcf_variant_filter(param.variantFilter, bcfArgs)
 		}
 
 		const variants = []
@@ -750,6 +755,8 @@ param{}
 
 output:
 true if m has a matching info field and will be dropped
+
+FIXME replace this with variantFilter
 */
 function mayDropMbyInfoFilter(m0, param) {
 	if (!param.infoFilter) return false

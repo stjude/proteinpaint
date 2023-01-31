@@ -10,6 +10,7 @@ q{}
 	.chr/start/stop
 	.filter{}       -- bona fide filter obj
 	.details{}
+	.variantFilter{}
 
 not integrated into mds3.load.js due to !!HARDCODED!! use of ds.queries.snvindel.byrange.get()
 performs post-processing of data from byrange.get()
@@ -37,7 +38,8 @@ export async function get_mds3variantData(q, res, ds, genome) {
 	const param = {
 		rglst: [{ chr: q.chr, start: q.start, stop: q.stop }],
 		filterObj: getFilterObj(q),
-		addFormatValues: true // allows to add FORMAT including GT in each
+		addFormatValues: true, // allows to add FORMAT including GT in each
+		variantFilter: q.variantFilter
 	}
 	const mlst = await ds.queries.snvindel.byrange.get(param)
 	/*

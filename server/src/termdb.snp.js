@@ -488,7 +488,7 @@ async function validateInputCreateCache_by_coord(q, ds, genome) {
 	return result
 }
 
-function add_bcf_variant_filter(variant_filter, bcfargs) {
+export function add_bcf_variant_filter(variant_filter, bcfargs) {
 	// on bcf expression https://samtools.github.io/bcftools/bcftools.html#expressions
 	const lst = []
 	// assumes variant_filter.type == 'tvslst'

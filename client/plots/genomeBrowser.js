@@ -5,6 +5,7 @@ import { sayerror } from '#dom/error'
 import { dofetch3 } from '#common/dofetch'
 import { getNormalRoot } from '#filter/filter'
 import { first_genetrack_tolist } from '#common/1stGenetk'
+import { mayDisplayVariantFilter } from '#termsetting/handlers/snplocus'
 
 /*
 
@@ -18,10 +19,14 @@ this.app {
 			genome:str
 		}
 	}
+	dispatch()
+	save()
+	vocabApi{}
 }
 
 this.state {
 	config {
+		filter
 		geneSearchResult{}
 		snvindel {
 			details {}
@@ -53,8 +58,13 @@ class genomeBrowser {
 				.style('margin-left', '25px')
 				.style('opacity', 0.5),
 			controlHolder: holder.append('div'),
+			variantFilterHolder: holder.append('div'),
 			blockHolder: holder.append('div')
 		}
+		this.variantFilterNotInitiated = true
+
+		// to make sure api is accessible by mayDisplayVariantFilter
+		this.vocabApi = this.app.vocabApi
 	}
 
 	getState(appState) {
@@ -76,7 +86,7 @@ class genomeBrowser {
 				// and launch custom mds3 tk to show the variants
 				// show controls for precomputing variant data
 				// controls are based on this.state and cannot be done in init() where state is not yet available
-				this.mayShowControls()
+				await this.mayShowControls()
 				await this.launchCustomMds3tk()
 			} else {
 				// launch official mds3 tk and let mds3 backend compute the data
@@ -98,8 +108,21 @@ class genomeBrowser {
 	//   rest of methods are app-specific    //
 	///////////////////////////////////////////
 
-	mayShowControls() {
-		//this.dom.controlHolder.text('todo')
+	async mayShowControls() {
+		if (this.variantFilterNotInitiated) {
+			// quick fix to create the filter UI at the first time this.main() is run
+			// this requires both this.vocabApi and this.state.config{} to be ready
+			// and cannot do it in this.init()
+			delete this.variantFilterNotInitiated
+			await mayDisplayVariantFilter(this, this.state.config.variantFilter, this.dom.variantFilterHolder, async () => {
+				await this.app.dispatch({
+					type: 'plot_edit',
+					id: this.id,
+					config: { variantFilter: this.variantFilter.active }
+				})
+			})
+			// this.variantFilter{active} is added
+		}
 	}
 
 	async launchCustomMds3tk() {
@@ -149,7 +172,8 @@ class genomeBrowser {
 			start: this.state.config.geneSearchResult.start,
 			stop: this.state.config.geneSearchResult.stop,
 			details: this.state.config.snvindel.details,
-			filter: this.state.filter
+			filter: this.state.filter,
+			variantFilter: this?.variantFilter?.active
 		}
 		const data = await dofetch3('termdb', { body })
 		if (data.error) throw data.error
@@ -247,6 +271,11 @@ export function makeChartBtnMenu(holder, chartsInstance) {
 			// must do this as 'plot_prep' does not call getPlotConfig()
 			// request default queries config from dataset, and allows opts to override
 			const config = await chartsInstance.app.vocabApi.getMds3queryDetails()
+			// request default variant filter (against vcf INFO)
+			const vf = await chartsInstance.app.vocabApi.get_variantFilter()
+			if (vf?.filter) {
+				config.variantFilter = vf.filter
+			}
 
 			config.chartType = 'genomeBrowser'
 			config.geneSearchResult = result

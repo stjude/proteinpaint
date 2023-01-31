@@ -16,6 +16,8 @@
 //   }]
 // }
 
+// NOTE: For now harcoded fisher.rs to ALWAYS use fisher's test
+
 /*
     Suggested by Qian & Yutaka:
     1. Using <5 in each cell is a conventional rule of thumb for choosing chi-square or Fisher’s exact test. Now expected value
@@ -232,7 +234,7 @@ fn main() {
 
 fn calculate_fisher_chisq_test(
     variants: &JsonValue,
-    individual_fisher_limit: f64,
+    _individual_fisher_limit: f64,
     fdr: bool,
     bon: bool,
     low_sample_size: bool,
@@ -244,7 +246,7 @@ fn calculate_fisher_chisq_test(
         //println!("variant:{:?}", variant);
         if variant.len() > 1 {
             // Check if total greater than fisher limit, if yes then use chisq test
-            let mut fisher_chisq_test: u64 = 1; // Initializing to fisher-test
+            let fisher_chisq_test: u64 = 1; // Initializing to fisher-test
             let n1 = variant["n1"].as_u32().unwrap();
             let n2 = variant["n2"].as_u32().unwrap();
             let n3 = variant["n3"].as_u32().unwrap();
@@ -264,25 +266,27 @@ fn calculate_fisher_chisq_test(
                 // Sample size too low for doing association test
                 //p_value_original = None;
                 fisher_chisq_test_string = "NA".to_string();
-            } else if calculate_expected_value(1, n1, n2, n3, n4, total) >= individual_fisher_limit
-                && calculate_expected_value(2, n1, n2, n3, n4, total) >= individual_fisher_limit
-                && calculate_expected_value(3, n1, n2, n3, n4, total) >= individual_fisher_limit
-                && calculate_expected_value(4, n1, n2, n3, n4, total) >= individual_fisher_limit
-            {
-                fisher_chisq_test = 2; // Setting test = chi-sq
-                let _fisher_chisq_test_final;
-                (p_value_final, _fisher_chisq_test_final) =
-                    stats_functions::strand_analysis_one_iteration(
-                        n1,
-                        n2,
-                        n3,
-                        n4,
-                        fisher_chisq_test,
-                    );
-                fisher_chisq_test_string = "chisq".to_string();
-                p_value_original = Some(p_value_final);
-                num_of_tests += 1.0;
-            } else {
+            }
+            //else if calculate_expected_value(1, n1, n2, n3, n4, total) >= individual_fisher_limit
+            //    && calculate_expected_value(2, n1, n2, n3, n4, total) >= individual_fisher_limit
+            //    && calculate_expected_value(3, n1, n2, n3, n4, total) >= individual_fisher_limit
+            //    && calculate_expected_value(4, n1, n2, n3, n4, total) >= individual_fisher_limit
+            //{
+            //    fisher_chisq_test = 2; // Setting test = chi-sq
+            //    let _fisher_chisq_test_final;
+            //    (p_value_final, _fisher_chisq_test_final) =
+            //        stats_functions::strand_analysis_one_iteration(
+            //            n1,
+            //            n2,
+            //            n3,
+            //            n4,
+            //            fisher_chisq_test,
+            //        );
+            //    fisher_chisq_test_string = "chisq".to_string();
+            //    p_value_original = Some(p_value_final);
+            //    num_of_tests += 1.0;
+            //}
+            else {
                 let _fisher_chisq_test_final;
                 (p_value_final, _fisher_chisq_test_final) =
                     stats_functions::strand_analysis_one_iteration(
@@ -449,6 +453,7 @@ fn bonferroni_correction(p_values_list: Vec<PValueIndexes>, num_of_tests: f64) {
     println!("{}", output_string);
 }
 
+#[allow(dead_code)]
 fn calculate_expected_value(
     position: u32, // position must be between 1 and 4
     n1: u32,
