@@ -710,10 +710,10 @@ export async function snvindelByRangeGetter_bcf(ds, genome) {
 
 				const m0 = {} // temp obj, modified by compute_mclass()
 				compute_mclass(q._tk, refallele, altalleles, m0, infoStr, id, param.isoform)
-				// m0.alleles[] is set; each ele is an m{} per ALT
+				// m0.mlst[] is set; each ele is an m{} per ALT
 
 				// make a m{} for every alt allele
-				for (const m of m0.alleles) {
+				for (const m of m0.mlst) {
 					// m should have .info{}
 					if (mayDropMbyInfoFilter(m, param)) continue // m is dropped due to info filter
 

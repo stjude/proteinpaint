@@ -40,7 +40,7 @@ header: [ // something like this
 ]
 
 m: {
-	alleles[ {} ]
+	mlst[ {} ]
 		.allele_original
 		.csq[ {} ] // parse_CSQ will add this array to this allele
 			._class
@@ -71,7 +71,7 @@ export function parse_CSQ(str, header, m) {
 			continue
 		}
 		let allele = null
-		for (const a of m.alleles) {
+		for (const a of m.mlst) {
 			if (a.allele_original == o.Allele) {
 				allele = a
 				break
@@ -80,11 +80,11 @@ export function parse_CSQ(str, header, m) {
 		if (!allele) {
 			if (o.Allele == '-') {
 				// deletion
-				if (m.alleles.length == 1) {
-					allele = m.alleles[0]
+				if (m.mlst.length == 1) {
+					allele = m.mlst[0]
 				}
 			} else {
-				for (const a of m.alleles) {
+				for (const a of m.mlst) {
 					if (a.allele_original.substr(1) == o.Allele) {
 						// insertion, without first padding base
 						allele = a

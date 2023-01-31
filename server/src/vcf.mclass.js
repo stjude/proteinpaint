@@ -9,12 +9,12 @@ do not anticipate to share this function with client
 assign mclass/mname to variant, stored at term.snps[] on client
 for displaying in mds3 tk
 since a variant can have multiple alt alleles, compute csq for each alt allele
-and attach variant.alleles[ {class,mname,dt,alt,...},  ... ]
+and attach variant.mlst[ {class,mname,dt,alt,...},  ... ]
 rather than directly attach class/mname/dt to variant{}
 client side will later call getCategories() with allele type (major/ref) criteria for deciding effect allele
 which is not done here
 once effect allele is decided for each variant,
-refer to .alleles[] to find the class/mname based on effect allele choice
+refer to .mlst[] to find the class/mname based on effect allele choice
 (if eff ale is reference allele?)
 
 parameters:
@@ -40,7 +40,7 @@ altAlleles=[]
 variant={}
 	following are attached by this function
 	.info{}
-	.alleles[]
+	.mlst[]
 		each element is one m with one ALT allele
 
 info_str=str
@@ -75,7 +75,7 @@ export function compute_mclass(tk, refAllele, altAlleles, variant, info_str, ID,
 		}
 	}
 
-	variant.alleles = altAlleles.map(i => {
+	variant.mlst = altAlleles.map(i => {
 		return {
 			allele_original: i,
 			ref: refAllele,
@@ -88,13 +88,13 @@ export function compute_mclass(tk, refAllele, altAlleles, variant, info_str, ID,
 	if (tk.info?.CSQ && info.CSQ) {
 		// tk has CSQ control info, and this variant has CSQ annotation, parse to per-alt
 		parse_CSQ(info.CSQ, tk.info.CSQ.csqheader, variant)
-		// .csq{} is added to each of variant.alleles[]
+		// .csq{} is added to each of variant.mlst[]
 	}
 
 	const block = {}
 	if (isoform) block.usegm = { isoform } // allow to find aachange matching given isform from csq
 
-	for (const [idx, a] of variant.alleles.entries()) {
+	for (const [idx, a] of variant.mlst.entries()) {
 		vcfcopymclass(a, block)
 		delete a.csq
 

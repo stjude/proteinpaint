@@ -182,12 +182,13 @@ export class RegressionResults {
 						if (i.term.q.snp2refGrp) {
 							tw.refGrp = i.term.q.snp2refGrp[tid]
 						}
-						if (snp.alt2csq) {
+						if (snp.mlst) {
 							// try to update tw.term.name
-							if (snp.alt2csq[i.term.q.snp2effAle[tid]]) {
-								tw.term.name = snp.alt2csq[i.term.q.snp2effAle[tid]].mname
+							const m = snp.mlst.find(j => j.alt == i.term.q.snp2effAle[tid])
+							if (m) {
+								tw.term.name = m.mname
 							} else {
-								tw.term.name = snp.alt2csq[Object.keys(snp.alt2csq)[0]].mname
+								tw.term.name = snp.mlst[0].mname
 							}
 						}
 						return { term: tw }
@@ -990,9 +991,8 @@ function make_mds3_variants(tw, resultLst) {
 		term:
 			snps[ {} ]
 				snpid
-				alt2csq{}
-					k: allele
-					v: {class/dt/mname}
+				mlst[]
+					element: {alt/class/dt/mname}
 		q{}
 			snp2effAle:{}
 
@@ -1008,13 +1008,14 @@ function make_mds3_variants(tw, resultLst) {
 		mlst.push(m)
 		// decide class/mname for this based on effect allele
 		const effAle = tw.q.snp2effAle[snp.snpid]
-		if (snp.alt2csq[effAle]) {
+		const m2 = snp.mlst.find(i => i.alt == effAle)
+		if (m2) {
 			// eff ale is an alt allele, transfer its class to m
-			Object.assign(m, snp.alt2csq[effAle])
+			Object.assign(m, m2)
 		} else {
 			// eff allele is not an alterative allele!
 			// just use the class of the first alt allele
-			Object.assign(m, snp.alt2csq[Object.keys(snp.alt2csq)[0]])
+			Object.assign(m, snp.mlst[0])
 		}
 
 		// set default values as missing, to be able to show all variants in track
