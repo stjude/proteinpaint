@@ -272,13 +272,13 @@ async function may_apply_fishertest(mlst) {
 	// as fisher data is from stdin, limit the number of variants tested each time
 	const step = 200
 	for (let i = 0; i < Math.ceil(mlst.length / step); i++) {
+		// for all m in this step, generate rust input
 		const input = []
 		for (let j = i * step; j < (i + 1) * step; j++) {
 			const m = mlst[j]
-			if (!m) break
+			if (!m) break // reached the end
 
 			const d = m.groupData
-
 			if (
 				!d ||
 				!d[0] ||
@@ -300,17 +300,33 @@ async function may_apply_fishertest(mlst) {
 				n3: Math.floor(d[1].altCount),
 				n4: Math.floor(d[1].refCount)
 			})
+
+			// sneak table into m.info{} to get it displayed in click menu
+			m.info['Contigency table'] =
+				d[0].altCount + ' ' + d[0].refCount + ' ' + Math.floor(d[1].altCount) + ' ' + Math.floor(d[1].refCount)
 		}
-		try {
-			const out = await run_rust('fisher', JSON.stringify({ input }))
-			for (const test of JSON.parse(out)) {
-				const m = mlst[test.index]
-				if (!m) continue
-				m.p_value = test.p_value
+
+		// run rust
+		const out = await run_rust('fisher', JSON.stringify({ input }))
+		for (const test of JSON.parse(out)) {
+			const m = mlst[test.index]
+			if (!m) continue
+			m.info.p_value = test.p_value // add to m.info{} to be able to display in click menu
+			// numericmode axis value is -log10(p), cannot compute for p=0
+			if (test.p_value > 0) {
 				m.nm_axis_value = -Math.log10(test.p_value)
 			}
-		} catch (e) {
-			console.log(JSON.stringify(input))
 		}
+	}
+
+	// fill in nm value for 0 pvalue dots
+	// get max nm_axis_value from those with non-0 pvalue
+	let maxV = 0
+	for (const m of mlst) {
+		if (m.info.p_value > 0) maxV = Math.max(maxV, m.nm_axis_value)
+	}
+	for (const m of mlst) {
+		// missing value due to 0 pvalue, assign numeric mode value as max
+		if (m.info.p_value == 0) m.nm_axis_value = Math.max(50, maxV)
 	}
 }

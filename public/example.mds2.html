@@ -21,6 +21,7 @@ runproteinpaint({
 
 	genome:'hg38',
 	block:true,
+	position:'chr10:61959725-61960280',
 
 	tracks:[
 
@@ -37,7 +38,7 @@ runproteinpaint({
 								is_termdb:true,
 								filter:{
 									type:'tvslst',
-									join:'',
+									join:'and',
 									in:true,
 									lst:[
 										{
@@ -48,16 +49,16 @@ runproteinpaint({
 											tvs:{
 												term:{id:"subcohort",type:"categorical"},
 												values:[
-													//{key:"SJLIFE",label:"SJLIFE"},
-													{key:"CCSS",label:"CCSS"}
+													{key:"SJLIFE",label:"SJLIFE"},
+													//{key:"CCSS",label:"CCSS"}
 												]
 											}
 										},
-									/*
 										{type:'tvs',tvs: {
 											term:{id:'diaggrp',name:'Diagnosis group',type:'categorical'},
 											values:[{key:'Acute lymphoblastic leukemia',label:'Acute lymphoblastic leukemia'}],
 										}},
+									/*
 										{type:'tvs',tvs:{
 											term:{id:'agedx',type:'float',name:'Age at cancer diagnosis'},
 											ranges:[{startunbounded:true,stop:8,stopinclusive:true,label:'<=8'}]
