@@ -68,8 +68,7 @@ h2 {
 
 .sja_root_holder button,
 .sja_menu_div button,
-.sja_pane button, 
-#url-btn {
+.sja_pane button {
     padding: 2px 3px;
     border-width: 1px;
     border-style: solid;
@@ -79,8 +78,7 @@ h2 {
 
 .sja_root_holder button:hover,
 .sja_menu_div button:hover,
-.sja_pane button:hover,
-#url-btn:hover {
+.sja_pane button:hover {
     box-shadow: none;
 }
 

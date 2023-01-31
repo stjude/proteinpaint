@@ -1,4 +1,4 @@
-import { select } from 'd3-selection'
+import { select, selectAll } from 'd3-selection'
 
 /*
 ********************** EXPORTED
@@ -21,8 +21,8 @@ opts: {
 			TODO do not hardcode width, use auto width e.g. grid-template-columns='auto auto'
 		.tab, .holder
 			d3 DOM elements created by this script
-	borderPosition, 
-		optional; if not provided, default = 'bottom'
+	linePosition, 
+		optional: if not provided, default = 'bottom'
 		values:  top, bottom, right, left
 }
 
@@ -56,42 +56,71 @@ export async function init_tabs(opts) {
 
 	for (const [i, tab] of tabs.entries()) {
 		// const toggle_btn_class = i == 0 ? ' sj-left-toggle' : i < tabs.length - 1 ? ' sj-center-toggle' : ' sj-right-toggle'
-		const borderPosition = opts.borderPosition || 'bottom'
-		const textAlign = borderPosition == 'bottom' || borderPosition == 'top' ? 'center' : borderPosition
-		tab.tab = opts.tabHolder
-			.append('div')
+
+		const linePosition = opts.linePosition || 'bottom'
+		const textAlign = linePosition == 'bottom' || linePosition == 'top' ? 'center' : linePosition
+
+		tab.wrapper = opts.tabHolder
+			.append('button')
+			.attr('type', 'button')
 			.attr('class', 'sj-toggle-button')
+			//Padding here overrides automatic styling for all pp buttons
+			.style('padding', '0px')
 			// .attr('class', 'sj-toggle-button' + toggle_btn_class)
 			.classed('sjpp-active', tab.active ? true : false)
-			.style('color', tab.active ? '#1575ad' : '#757373')
-			.style('padding', '5px')
-			.style('text-align', textAlign)
-			.style('display', 'inline-block')
-			.style('background-color', 'transparent')
 			.style('border', 'none')
-			.style('border-radius', 'unset')
-			.style(`border-${borderPosition}`, tab.active ? '8px solid #1575ad' : 'none')
+			.style('background-color', 'transparent')
+
+		if (linePosition == 'top' || linePosition == 'left') {
+			//create the line div before the tab text
+			tab.line = tab.wrapper.append('div').style('display', linePosition == 'left' ? 'inline-flex' : 'block')
+			tab.tab = tab.wrapper.append('div').style('display', linePosition == 'left' ? 'inline-flex' : 'block')
+		} else {
+			//create the line div after the tab text
+			tab.tab = tab.wrapper.append('div').style('display', linePosition == 'right' ? 'inline-flex' : 'block')
+			tab.line = tab.wrapper.append('div').style('display', linePosition == 'right' ? 'inline-flex' : 'block')
+		}
+
+		tab.tab
+			.style('color', tab.active ? '#1575ad' : '#757373')
+			.style('text-align', textAlign)
+			.style('padding', '5px')
 			.html(tab.label)
+
+		tab.line
+			.style('color', '#1575ad')
+			.style('background-color', '#1575ad')
+			.style('visibility', tab.active ? 'visible' : 'hidden')
+
+		if (linePosition == 'top' || linePosition == 'bottom') {
+			tab.line.style('height', '8px')
+		} else {
+			tab.line
+				.style('width', '8px')
+				//Trick div into appearing the full height of the parent
+				.style('padding', '5px 0px')
+				.html('l')
+		}
 
 		if (tab.width) {
 			// fixed
-			tab.tab.style('width', tab.width + 'px')
+			tab.wrapper.style('width', tab.width + 'px')
 		} else {
 			// automatically decide based on default width
 			let width = defaultTabWidth
-			tab.tab.each(function() {
+			tab.wrapper.each(function() {
 				width = Math.max(width, this.getBoundingClientRect().width)
 			})
-			tab.tab.style('width', width + 'px')
+			tab.wrapper.style('width', width + 'px')
 		}
 
-		tab.tab.on('click', async () => {
+		tab.wrapper.on('click', async () => {
 			for (const tab_ of tabs) {
 				tab_.active = tab_ === tab
-				tab_.tab.classed('sjpp-active', tab_.active ? true : false)
+				tab_.wrapper.classed('sjpp-active', tab_.active ? true : false)
 				tab_.holder.style('display', tab_.active ? 'block' : 'none')
-				tab_.tab.style(`border-${borderPosition}`, tab_.active ? '8px solid #1575ad' : 'none')
 				tab_.tab.style('color', tab_.active ? '#1575ad' : '#757373')
+				tab_.line.style('visibility', tab_.active ? 'visible' : 'hidden')
 			}
 			if (tab.callback) await tab.callback(tab.holder)
 		})
