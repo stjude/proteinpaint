@@ -746,12 +746,6 @@ function setRenderers(self) {
 			{ label: 'Column 2' },
 			{ label: 'P-value' }
 		]
-		const allFisher = self.chartsData.tests[chart.chartId].every(term1 =>
-			term1.term2tests.every(term2 => !term2.isChi || term2.skipped)
-		)
-		const allChi = self.chartsData.tests[chart.chartId].every(term1 =>
-			term1.term2tests.every(term2 => term2.isChi || term2.skipped)
-		)
 		const noSkipped = self.chartsData.tests[chart.chartId].every(term1 =>
 			term1.term2tests.every(term2 => !term2.skipped)
 		)
@@ -777,10 +771,9 @@ function setRenderers(self) {
 					{
 						html: term2.skipped
 							? 'N/A'
-							: (term2.pvalue > 1e-4
-									? Number(term2.pvalue.toFixed(4))
-									: Number(term2.pvalue.toPrecision(4)).toExponential()) +
-							  (allFisher || term2.isChi ? '' : '<span style="vertical-align:top;font-size:0.7em;"><b>a</b></span>')
+							: term2.pvalue > 1e-4
+							? Number(term2.pvalue.toFixed(4))
+							: Number(term2.pvalue.toPrecision(4)).toExponential()
 					}
 				])
 			}
@@ -791,7 +784,7 @@ function setRenderers(self) {
 			.append('div')
 			.style('font-weight', 'bold')
 			.style('padding-bottom', '0.5em')
-			.html("2x2 Association test (Chi-square test / Fisher's exact test<sup><b>a</b></sup>)")
+			.html("2x2 Association test (Fisher's exact test)")
 
 		const table = holder.append('div')
 

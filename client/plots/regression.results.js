@@ -1176,7 +1176,7 @@ async function createGenomebrowser(self, input, resultLst) {
 				(self.config.regressionType == 'linear'
 					? 'Wilcoxon rank sum test'
 					: self.config.regressionType == 'logistic'
-					? "Chi-square test/Fisher's exact test"
+					? "Fisher's exact test"
 					: 'Cumulative incidence test'),
 			circle: 'monomorphic variants skipped'
 		},
