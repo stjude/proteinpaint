@@ -143,6 +143,7 @@ function setRenderers(self) {
 
 			self.dom.paneTitleDiv
 				.append('div')
+				.classed('sjpp-term-header', true)
 				.style('display', 'inline-block')
 				.style('vertical-align', 'sub')
 				.html(config.term.term.name)

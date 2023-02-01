@@ -33,7 +33,154 @@ tape('\n', function(test) {
 	test.end()
 })
 
-tape('Render summary plot', test => {
+tape('Render summary plot, term: "agedx"', test => {
+	test.timeoutAfter(6000)
+
+	runpp({
+		state: {
+			plots: [
+				{
+					chartType: 'summary',
+					childType: 'barchart',
+					term: {
+						id: 'agedx'
+					}
+				}
+			]
+		},
+		summary: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+
+	async function runTests(summary) {
+		summary.on('postRender.test', null)
+		const sandboxDom = summary.Inner.dom
+
+		testHeader(summary, sandboxDom)
+		await testToggleButtons(summary, sandboxDom)
+		await testOrientation(summary)
+		// await testCollapseExpandBtns(sandboxDom)
+		// await testCloseBtn(summary, sandboxDom)
+
+		if (test._ok) summary.Inner.app.destroy()
+		test.end()
+	}
+
+	function testHeader(summary, sandboxDom) {
+		const headerText = sandboxDom.paneTitleDiv.select('div.sjpp-term-header').node()
+		const configTerm = summary.Inner.config.term.term.name
+		test.equal(
+			headerText.innerHTML,
+			configTerm,
+			`Header text = ${headerText.innerHTML} should match term name = ${configTerm}`
+		)
+	}
+
+	async function testToggleButtons(summary, sandboxDom) {
+		const toggles = sandboxDom.chartToggles.nodes().filter(d => d.__data__.isVisible() == true)
+		//test correct tabs exist
+		const tabLabels2Find = ['Barchart', 'Violin'] //hardcoded data in summary.js.
+		let foundLabels = 0
+		const notFoundLabels = []
+		for (const toggle of toggles) {
+			if (tabLabels2Find.some(d => d == toggle.__data__.label)) ++foundLabels
+			else notFoundLabels.push(toggle.__data__.label)
+		}
+		if (notFoundLabels.length) test.fail(`Should not render tab(s) = ${notFoundLabels}`)
+		test.equal(tabLabels2Find.length, foundLabels, `Should render tabs: ${tabLabels2Find}`)
+
+		//Toggle to violin
+		toggles.find(d => d.__data__.childType == 'violin').click()
+		await sleep(500)
+		test.equal(summary.Inner.state.config.childType, 'violin', `Should toggle to childType = violin`)
+
+		const foundTestPlot = sandboxDom.plotDivs.violin.selectAll('#sjpp-vp-violinDiv').node()
+		test.ok(foundTestPlot, `Should render violin after toggle`)
+
+		//Toggle back to barchart
+		toggles.find(d => d.__data__.childType == 'barchart').click()
+		await sleep(500)
+		test.equal(summary.Inner.state.config.childType, 'barchart', `Should toggle back to childType = 'barchart'`)
+
+		const foundOrigPlot = sandboxDom.plotDivs.barchart.selectAll('.pp-sbar-div').node()
+		test.ok(foundOrigPlot, `Should render barchart after toggle`)
+	}
+
+	async function testOrientation(summary) {
+		summary.Inner.app.dispatch({
+			type: 'plot_edit',
+			id: summary.Inner.id,
+			config: {
+				settings: { barchart: { orientation: 'vertical' } }
+			}
+		})
+		await sleep(500)
+		test.ok(
+			summary.Inner.config.settings.barchart.orientation != summary.Inner.config.settings.violin.orientation,
+			`Orientation change for barchart should not affect violin`
+		)
+	}
+
+	//TODO: move to sandbox unit test.
+
+	// async function testCollapseExpandBtns(sandboxDom) {
+	// 	//collapse button
+	// 	sandboxDom.holder.header_row.select('.sjpp-output-sandbox-collapse-btn').node().click()
+	// 	const contentDisplay = sandboxDom.body.node().style.display
+	// 	const headerStillShows = sandboxDom.paneTitleDiv.node().style.display
+	// 	test.equal(contentDisplay == 'none', headerStillShows != 'none', `Should collapse sandbox but header still visible`)
+
+	// 	//expand button
+	// 	sandboxDom.holder.header_row.select('.sjpp-output-sandbox-expand-btn').node().click()
+	// 	test.ok(contentDisplay == 'none', `Should expand summary sandbox content div`)
+	// }
+
+	// async function testCloseBtn(summary, sandboxDom){
+	// 	sandboxDom.holder.header_row.select('.sjpp-output-sandbox-close-bt').node().click()
+	// 	await sleep(500)
+	// 	test.ok(Object.values(summary.Inner.dom).length < 1, `Sandbox should disappear`)
+
+	// }
+})
+
+tape('Barchart tab only, term: "diaggrp"', test => {
+	test.timeoutAfter(3000)
+	const message = `Should only show barchart tab in header`
+
+	runpp({
+		state: {
+			plots: [
+				{
+					chartType: 'summary',
+					childType: 'barchart',
+					term: {
+						id: 'diaggrp'
+					}
+				}
+			]
+		},
+		summary: {
+			callbacks: {
+				'postRender.test': runTest
+			}
+		}
+	})
+
+	async function runTest(summary) {
+		const toggles = summary.Inner.dom.chartToggles.nodes().filter(d => d.__data__.isVisible() == true)
+		test.ok(toggles.length == 1, `Should only render one tab`)
+		if (toggles[0].__data__.childType == 'barchart') test.pass(message)
+		else test.fail(message)
+
+		if (test._ok) summary.Inner.app.destroy()
+		test.end()
+	}
+})
+
+tape('Barchart & violin toggles, term: "diaggrp", term2: "agedx"', test => {
 	test.timeoutAfter(3000)
 
 	runpp({
@@ -43,7 +190,179 @@ tape('Render summary plot', test => {
 					chartType: 'summary',
 					childType: 'barchart',
 					term: {
+						id: 'diaggrp'
+					},
+					term2: {
+						id: 'agedx'
+					}
+				}
+			]
+		},
+		summary: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+
+	async function runTests(summary) {
+		summary.on('postRender.test', null)
+		const sandboxDom = summary.Inner.dom
+
+		await testToggleButtons(summary, sandboxDom)
+
+		if (test._ok) summary.Inner.app.destroy()
+		test.end()
+	}
+
+	async function testToggleButtons(summary, sandboxDom) {
+		const toggles = sandboxDom.chartToggles.nodes().filter(d => d.__data__.isVisible() == true)
+
+		//Toggle to violin
+		toggles.find(d => d.__data__.childType == 'violin').click()
+		await sleep(500)
+		test.equal(summary.Inner.state.config.childType, 'violin', `Should toggle to childType = violin`)
+
+		const foundTestPlot = sandboxDom.plotDivs.violin.selectAll('#sjpp-vp-violinDiv').node()
+		test.ok(foundTestPlot, `Should render violin after toggle`)
+
+		//Toggle back to barchart
+		toggles.find(d => d.__data__.childType == 'barchart').click()
+		await sleep(500)
+		test.equal(summary.Inner.state.config.childType, 'barchart', `Should toggle back to childType = 'barchart'`)
+
+		const foundOrigPlot = sandboxDom.plotDivs.barchart.selectAll('.pp-sbar-div').node()
+		test.ok(foundOrigPlot, `Should render barchart after toggle`)
+	}
+})
+
+tape('Barchart & violin toggles, term: "agedx", term2: "diaggrp"', test => {
+	test.timeoutAfter(3000)
+
+	runpp({
+		state: {
+			plots: [
+				{
+					chartType: 'summary',
+					childType: 'barchart',
+					term: {
+						id: 'agedx'
+					},
+					term2: {
+						id: 'diaggrp'
+					}
+				}
+			]
+		},
+		summary: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+
+	async function runTests(summary) {
+		summary.on('postRender.test', null)
+		const sandboxDom = summary.Inner.dom
+
+		await testToggleButtons(summary, sandboxDom)
+
+		if (test._ok) summary.Inner.app.destroy()
+		test.end()
+	}
+
+	async function testToggleButtons(summary, sandboxDom) {
+		const toggles = sandboxDom.chartToggles.nodes().filter(d => d.__data__.isVisible() == true)
+
+		//Toggle to violin
+		toggles.find(d => d.__data__.childType == 'violin').click()
+		await sleep(500)
+		test.equal(summary.Inner.state.config.childType, 'violin', `Should toggle to childType = violin`)
+
+		const foundTestPlot = sandboxDom.plotDivs.violin.selectAll('#sjpp-vp-violinDiv').node()
+		test.ok(foundTestPlot, `Should render violin after toggle`)
+
+		//Toggle back to barchart
+		toggles.find(d => d.__data__.childType == 'barchart').click()
+		await sleep(500)
+		test.equal(summary.Inner.state.config.childType, 'barchart', `Should toggle back to childType = 'barchart'`)
+
+		const foundOrigPlot = sandboxDom.plotDivs.barchart.selectAll('.pp-sbar-div').node()
+		test.ok(foundOrigPlot, `Should render barchart after toggle`)
+	}
+})
+
+tape('Barchart & violin toggles, term: "agedx", term2: "hrtavg"', test => {
+	test.timeoutAfter(3000)
+
+	runpp({
+		state: {
+			plots: [
+				{
+					chartType: 'summary',
+					childType: 'barchart',
+					term: {
+						id: 'agedx'
+					},
+					term2: {
+						id: 'hrtavg'
+					}
+				}
+			]
+		},
+		summary: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+
+	async function runTests(summary) {
+		summary.on('postRender.test', null)
+		const sandboxDom = summary.Inner.dom
+
+		await testToggleButtons(summary, sandboxDom)
+
+		if (test._ok) summary.Inner.app.destroy()
+		test.end()
+	}
+
+	async function testToggleButtons(summary, sandboxDom) {
+		const toggles = sandboxDom.chartToggles.nodes().filter(d => d.__data__.isVisible() == true)
+
+		//Toggle to violin
+		toggles.find(d => d.__data__.childType == 'violin').click()
+		await sleep(500)
+		test.equal(summary.Inner.state.config.childType, 'violin', `Should toggle to childType = violin`)
+
+		const foundTestPlot = sandboxDom.plotDivs.violin.selectAll('#sjpp-vp-violinDiv').node()
+		test.ok(foundTestPlot, `Should render violin after toggle`)
+
+		//Toggle back to barchart
+		toggles.find(d => d.__data__.childType == 'barchart').click()
+		await sleep(500)
+		test.equal(summary.Inner.state.config.childType, 'barchart', `Should toggle back to childType = 'barchart'`)
+
+		const foundOrigPlot = sandboxDom.plotDivs.barchart.selectAll('.pp-sbar-div').node()
+		test.ok(foundOrigPlot, `Should render barchart after toggle`)
+	}
+})
+
+tape('Overlay continuity, term: "aaclassic_5", term2: "sex"', test => {
+	test.timeoutAfter(3000)
+	const testTerm = 'sex'
+
+	runpp({
+		state: {
+			plots: [
+				{
+					chartType: 'summary',
+					childType: 'barchart',
+					term: {
 						id: 'aaclassic_5'
+					},
+					term2: {
+						id: testTerm
 					}
 				}
 			]
@@ -58,44 +377,23 @@ tape('Render summary plot', test => {
 	async function runTests(summary) {
 		summary.on('postRender.test', null)
 
-		await testToggleButtons(summary)
-		await testRendering(summary)
+		await testOverlay(summary)
 
-		// if (test._ok) summary.Inner.app.destroy()
+		if (test._ok) summary.Inner.app.destroy()
 		test.end()
 	}
 
-	async function testToggleButtons(summary) {
-		const toggles = summary.Inner.dom.chartToggles.nodes().filter(d => d.__data__.isVisible() == true)
-		//Toggle to violin
-		toggles.find(d => d.__data__.childType == 'violin').click()
-		await sleep(500)
-		test.equal(summary.Inner.state.config.childType, 'violin', `Should toggle to childType = violin`)
-
-		const foundTestPlot = summary.Inner.dom.plotDivs.violin.selectAll('#sjpp-vp-violinDiv').node()
-		test.ok(foundTestPlot, `Should render violin after toggle`)
-
-		//Toggle back to barchart
-		toggles.find(d => d.__data__.childType == 'barchart').click()
-		await sleep(500)
-		test.equal(summary.Inner.state.config.childType, 'barchart', `Should toggle back to childType = 'barchart'`)
-
-		const foundOrigPlot = summary.Inner.dom.plotDivs.barchart.selectAll('.pp-sbar-div').node()
-		test.ok(foundOrigPlot, `Should render barchart after toggle`)
-	}
-
-	async function testRendering(summary) {
-		summary.Inner.app.dispatch({
-			type: 'plot_edit',
-			id: summary.Inner.id,
-			config: {
-				settings: { barchart: { orientation: 'vertical' } }
-			}
-		})
-		await sleep(500)
-		test.ok(
-			summary.Inner.config.settings.barchart.orientation != summary.Inner.config.settings.violin.orientation,
-			`Orientation change for barchart should not affect violin`
+	async function testOverlay(summary) {
+		const plotsConfig = summary.Inner.components.plots
+		summary.Inner.dom.chartToggles
+			.nodes()
+			.find(d => d.__data__.childType == 'violin')
+			.click()
+		await sleep(1000)
+		test.equal(
+			plotsConfig.violin.Inner.config.term2.id,
+			testTerm,
+			`Overlay term = ${testTerm} carried over to violin plot`
 		)
 	}
 })
