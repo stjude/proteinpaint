@@ -183,11 +183,12 @@ if (!serverconfig.features) {
 }
 
 if (!serverconfig.cardsjson) {
-	serverconfig.cardsjson = path.join(serverconfig.binpath, 'cards/index.json')
-}
-
-if (!serverconfig.cardsjsondir) {
-	serverconfig.cardsjsondir = path.join(serverconfig.binpath, 'cards')
+	// set a default cards directory ONLY if it exists
+	const cardsjsondir = path.join(serverconfig.binpath, 'cards')
+	if (fs.existsSync(cardsjsondir)) {
+		serverconfig.cardsjsondir = cardsjsondir
+		serverconfig.cardsjson = path.join(serverconfig.binpath, 'cards/index.json')
+	}
 }
 
 if (fs.existsSync('./public/rev.txt')) {
