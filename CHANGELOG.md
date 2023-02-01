@@ -1,6 +1,10 @@
 # Change Log
 
 All notable changes to this project will be documented in this file. 
+## 2.9.8-0
+
+- Set a default cards directory ONLY if it exists.
+ 
 ## 2.9.7-0
 
 - Bundle shared/vcf.js.
