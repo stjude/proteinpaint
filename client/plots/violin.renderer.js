@@ -27,6 +27,7 @@ export default function violinRenderer(self) {
 			)
 			self.dom.tableHolder.selectAll('*').remove()
 			self.dom.legendDiv.selectAll('*').remove()
+			self.dom.selectAll('.sjpp-tableHolder').remove()
 			return
 		} else self.dom.violinDiv.select('*').remove()
 
@@ -66,7 +67,7 @@ export default function violinRenderer(self) {
 			.style('vertical-align', 'top')
 			.append('div')
 			.style('font-weight', 'bold')
-			.text(self.data.pvalues.length > 0 ? "Group comparisons (Wilcoxon'settings rank sum test)" : '')
+			.text(self.data.pvalues.length > 0 ? "Group comparisons (Wilcoxon's rank sum test)" : '')
 
 		const columns = [{ label: 'Group 1' }, { label: 'Group 2' }, { label: 'P-value' }]
 		const rows = self.data.pvalues

@@ -1,5 +1,5 @@
 const scaleLinear = require('d3-scale').scaleLinear
-const violinBins = require('./termdb.violin').violinBins
+const { violinBinsObj } = require('../../server/shared/violin.bins')
 
 /*
 ********************** EXPORTED
@@ -37,7 +37,7 @@ export async function get_densityplot(term, samples) {
 		.domain([minvalue, maxvalue])
 		.range([xpad, xpad + width])
 
-	const bins = violinBins(xscale, { values })
+	const bins = violinBinsObj(xscale, { values })
 	if (!Array.isArray(bins.bins)) throw 'violinBins does not return {bins[]}'
 	if (bins.bins.length == 0) throw 'violinBins {bins[]} empty array'
 

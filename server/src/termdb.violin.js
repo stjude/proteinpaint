@@ -1,6 +1,5 @@
 const fs = require('fs')
 const { scaleLinear } = require('d3-scale')
-const { bin } = require('d3-array')
 const serverconfig = require('./serverconfig')
 const lines2R = require('./lines2R')
 const path = require('path')
@@ -8,6 +7,7 @@ const utils = require('./utils')
 const { median } = require('../../server/shared/median')
 const { getData } = require('./termdb.matrix')
 const createCanvas = require('canvas').createCanvas
+const { violinBinsObj } = require('../../server/shared/violin.bins')
 
 /*
 q={}
@@ -52,20 +52,6 @@ export async function trigger_getViolinPlotData(q, res, ds, genome) {
 	createCanvasImg(q, result)
 
 	res.send(result)
-}
-
-// // compute bins using d3
-// // need unit test!!!
-export function computeViolinData(scale, values) {
-	const uniqueValues = new Set(values)
-	const ticksCompute = uniqueValues.size === 1 ? 2 : Math.min(uniqueValues.size, 15)
-
-	const binBuilder = bin()
-		.domain(scale.domain()) /* extent of the data that is lowest to highest*/
-		.thresholds(scale.ticks(ticksCompute)) /* buckets are created which are separated by the threshold*/
-		.value(d => d) /* bin the data points into this bucket*/
-
-	return binBuilder(values)
 }
 
 // compute pvalues using wilcoxon rank sum test
@@ -229,26 +215,6 @@ function resultObj(valuesObject, data, overlayTerm) {
 	return result
 }
 
-export function violinBins(axisScale, plot) {
-	const bins0 = computeViolinData(axisScale, plot.values)
-	// array; each element is an array of values belonging to this bin
-	// NOTE .x0 .x1 attributes are also assigned to this array (safe to do?)
-
-	// map messy bins0 to tidy set of bins and return to client
-	const bins = []
-	for (const b of bins0) {
-		const b2 = {
-			x0: b.x0,
-			x1: b.x1
-		}
-		delete b.x0
-		delete b.x1
-		b2.binValueCount = b.length
-		bins.push(b2)
-	}
-	return { bins0, bins }
-}
-
 function createCanvasImg(q, result) {
 	//size on x-y for creating circle and ticks
 	q.radius = +q.radius
@@ -306,7 +272,7 @@ function createCanvasImg(q, result) {
 		plot.src = canvas.toDataURL()
 
 		// create bins for violins
-		const finalVpBins = violinBins(axisScale, plot)
+		const finalVpBins = violinBinsObj(axisScale, plot)
 
 		plot.bins = finalVpBins.bins
 
