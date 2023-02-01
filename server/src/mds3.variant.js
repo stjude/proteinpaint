@@ -139,16 +139,17 @@ async function compute_groups(ds, details, mlst) {
 	for (const m of mlst) {
 		m.groupData = getGroupsData(ds, details, m, pop2average)
 	}
-
 	// data from mlst is ready for testing
-	const method = details.groupTestMethod.methods[details.groupTestMethod.methodIdx]
-	if (!method) throw 'details.groupTestMethod.methodIdx out of bound'
-	if (method == 'Allele frequency difference') {
+
+	const method = details.groupTestMethods[details.groupTestMethodsIdx]
+	if (!method) throw 'details.groupTestMethodsIdx out of bound'
+	// method={name,axisLabel}
+	if (method.name == 'Allele frequency difference') {
 		throw 'AF diff not implemented'
-	} else if (method == "Fisher's exact test") {
+	} else if (method.name == "Fisher's exact test") {
 		await may_apply_fishertest(mlst)
 	} else {
-		throw 'unknown value from groupTestMethod[]'
+		throw 'unknown value from groupTestMethods[]'
 	}
 }
 

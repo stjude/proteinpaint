@@ -23,11 +23,14 @@ res
 ds{}
 	server side dataset object
 
+genome{}
+	server side genome obj
+
 returns:
 	a json object
 */
 
-export function make(q, res, ds) {
+export function make(q, res, ds, genome) {
 	const tdb = ds.cohort.termdb
 
 	// add attributes to this object to reveal to client
@@ -55,7 +58,7 @@ export function make(q, res, ds) {
 	addRestrictAncestries(c, tdb)
 	addScatterplots(c, ds)
 	addMatrixplots(c, ds)
-	addMutationQueries(c, ds)
+	addMutationQueries(c, ds, genome)
 
 	res.send({ termdbConfig: c })
 }
@@ -96,11 +99,11 @@ function addMatrixplots(c, ds) {
 	})
 }
 
-function addMutationQueries(c, ds) {
+function addMutationQueries(c, ds, genome) {
 	if (!ds.queries) return
 	c.queries = {
 		defaultBlock2GeneMode: ds.queries.defaultBlock2GeneMode,
-		defaultCoord: ds.queries.defaultCoord
+		defaultCoord: ds.queries.defaultCoord || genome.defaultcoord
 	}
 	if (ds.queries.snvindel) c.queries.snvindel = true
 }

@@ -56,7 +56,7 @@ export function handle_request_closure(genomes) {
 				if (q.getgroup) return await phewas.getgroup(q, res)
 				return await phewas.trigger(q, res, ds)
 			}
-			if (q.gettermdbconfig) return termdbConfig.make(q, res, ds)
+			if (q.gettermdbconfig) return termdbConfig.make(q, res, ds, genome)
 			if (q.getcohortsamplecount) return trigger_getcohortsamplecount(q, res, ds)
 			if (q.getsamplecount) return trigger_getsamplecount(q, res, ds)
 			if (q.getsamples) return trigger_getsamples(q, res, ds)

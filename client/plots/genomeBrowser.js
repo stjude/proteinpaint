@@ -9,7 +9,7 @@ import { mayDisplayVariantFilter } from '#termsetting/handlers/snplocus'
 
 /*
 
-brief notes about structures of this.app and this.state
+brief notes about structures:
 
 this.app {
 	opts {
@@ -26,15 +26,20 @@ this.app {
 
 this.state {
 	config {
-		filter
+		filter // mass filter
 		geneSearchResult{}
 		snvindel {
-			details {}
+			details {
+				computeType:str
+				groups:[]
+					// a group may have its own filter
+				groupTestMethod{}
+			}
 		}
 	}
 	termdbConfig{}
 }
-
+this.blockInstance // exists when block has been launched; one block in each plot
 */
 
 const geneTip = new Menu({ padding: '0px' })
@@ -61,7 +66,6 @@ class genomeBrowser {
 			variantFilterHolder: holder.append('div'),
 			blockHolder: holder.append('div')
 		}
-		this.variantFilterNotInitiated = true
 
 		// to make sure api is accessible by mayDisplayVariantFilter
 		this.vocabApi = this.app.vocabApi
@@ -86,10 +90,10 @@ class genomeBrowser {
 				// and launch custom mds3 tk to show the variants
 				// show controls for precomputing variant data
 				// controls are based on this.state and cannot be done in init() where state is not yet available
-				await this.mayShowControls()
+				await this.makeControls()
 				await this.launchCustomMds3tk()
 			} else {
-				// launch official mds3 tk and let mds3 backend compute the data
+				// launch official mds3 tk, same way as mds3/tk.js
 				const tk = {
 					type: 'mds3',
 					filterObj: this.state.filter,
@@ -108,29 +112,32 @@ class genomeBrowser {
 	//   rest of methods are app-specific    //
 	///////////////////////////////////////////
 
-	async mayShowControls() {
-		if (this.variantFilterNotInitiated) {
-			// quick fix to create the filter UI at the first time this.main() is run
-			// this requires both this.vocabApi and this.state.config{} to be ready
-			// and cannot do it in this.init()
-			delete this.variantFilterNotInitiated
-			await mayDisplayVariantFilter(this, this.state.config.variantFilter, this.dom.variantFilterHolder, async () => {
-				await this.app.dispatch({
-					type: 'plot_edit',
-					id: this.id,
-					config: { variantFilter: this.variantFilter.active }
-				})
+	async makeControls() {
+		// if true, the ui is already made, and do not redo it
+		// quick fix to create the control UI at the first time this.main() is run
+		// this requires both this.vocabApi and this.state.config{} to be ready
+		// and cannot do it in this.init()
+		if (this.controlsAreMade) return
+		this.controlsAreMade = true
+
+		// variant filter
+		await mayDisplayVariantFilter(this, this.state.config.variantFilter, this.dom.variantFilterHolder, async () => {
+			// run upon filter change to trigger state change
+			await this.app.dispatch({
+				type: 'plot_edit',
+				id: this.id,
+				config: { variantFilter: this.variantFilter.active }
 			})
-			// this.variantFilter{active} is added
-		}
+		})
+		// this.variantFilter{active} is added
 	}
 
 	async launchCustomMds3tk() {
 		const data = await this.preComputeData()
 
-		if (this.block) {
+		if (this.blockInstance) {
 			// block already launched. update data on the tk and rerender
-			const t2 = this.block.tklst.find(i => i.type == 'mds3')
+			const t2 = this.blockInstance.tklst.find(i => i.type == 'mds3')
 			t2.custom_variants = data.mlst
 			t2.load()
 			return
@@ -148,16 +155,20 @@ class genomeBrowser {
 			custom_variants: data.mlst,
 			skewerModes: [nm]
 		}
-		if (this.state.config.snvindel.details.computeType == 'AF') {
-			nm.label = 'Allele frequency'
-		} else if (this.state.config.snvindel.details.computeType == 'groups') {
-			nm.label = this.state.config.snvindel.details.groupTestMethod.methods[
-				this.state.config.snvindel.details.groupTestMethod.methodIdx
-			]
-		} else {
-			throw 'unknown snvindel.details.computeType'
+		switch (this.state.config.snvindel.details.computeType) {
+			case 'AF':
+				nm.label = 'Allele frequency'
+				break
+			case 'groups':
+				const m = this.state.config.snvindel.details.groupTestMethods[
+					this.state.config.snvindel.details.groupTestMethodsIdx
+				]
+				nm.label = m.axisLabel || m.name
+				break
+			default:
+				throw 'unknown snvindel.details.computeType'
 		}
-		this.block = await this.launchMds3tk(tk)
+		this.blockInstance = await this.launchMds3tk(tk)
 	}
 
 	async preComputeData() {

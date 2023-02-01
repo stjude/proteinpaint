@@ -537,13 +537,7 @@ module.exports = {
 	},
 
 	queries: {
-		// defaultBlock2GeneMode is not true, to launch block and show locus
-		defaultCoord: {
-			// default coord for locus view
-			chr: 'chr17',
-			start: 7670419,
-			stop: 7671060
-		},
+		defaultBlock2GeneMode: false, // set to false to launch block and show locus
 
 		snvindel: {
 			variant_filter,
@@ -558,10 +552,12 @@ module.exports = {
 				//computeType: 'AF', // for AF of current cohort
 				computeType: 'groups',
 
-				groupTestMethod: {
-					methods: ['Allele frequency difference', "Fisher's exact test"], // list of available methods to show in <select>
-					methodIdx: 1 // methods[] array index for the one in use
-				},
+				groupTestMethods: [
+					// list of available methods to show in <select>
+					{ name: 'Allele frequency difference' },
+					{ name: "Fisher's exact test", axisLabel: '-log10(pvalue)' }
+				],
+				groupTestMethodsIdx: 1,
 				groups: defaultGroups
 			},
 			byrange: {
