@@ -317,7 +317,7 @@ async function may_apply_fishertest(mlst) {
 			m.info.p_value = test.p_value // add to m.info{} to be able to display in click menu
 			// numericmode axis value is -log10(p), cannot compute for p=0
 			if (test.p_value > 0) {
-				m.nm_axis_value = -Math.log10(test.p_value)
+				m.nm_axis_value = Number((-Math.log10(test.p_value)).toPrecision(2))
 			}
 		}
 	}
