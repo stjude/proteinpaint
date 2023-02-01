@@ -33,6 +33,15 @@ runproteinpaint({
 			dslabel:'GDC',
 			// gdc customizations
 			//set_id: 'set_id:DDw3QnUB_tcD1Zw3Af72'
+
+			allow2selectSamples: {
+				buttonText:'Select samples',
+				attributes:['sample_id'],
+				callback: samples=>{
+					console.log('selected',samples)
+				}
+			},
+
 			filter0:{"op":"and","content":[{"op":"in","content":{"field":"cases.project.project_id","value":["TCGA-BRCA"]}}]},
 
 			afilterObj:{

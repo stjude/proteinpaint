@@ -72,8 +72,45 @@ export async function displaySampleTable(samples, args) {
 	const params = { rows, columns, div: args.div, resize: rows.length > 10 }
 	if (args.maxWidth) params.maxWidth = args.maxWidth
 	if (args.maxHeight) params.maxHeight = args.maxHeight
+	mayAddSampleSelectionButton_multi(params, samples, args)
 
 	return renderTable(params)
+}
+
+/*
+params{}
+	the parameter to submit to table.js
+	if enabled, the .buttons[] is added to it to do sample selection
+samples[]
+	array of samples rendered in this table
+args{}
+	tk.allow2selectSamples{}
+*/
+function mayAddSampleSelectionButton_multi(params, samples, args) {
+	if (!args.tk.allow2selectSamples) return // not selecting samples
+	// display selection button
+	const button = {
+		text: args.tk.allow2selectSamples.buttonText,
+		callback: sampleIdxLst => {
+			// argument is list of array index of selected samples
+			feedSample2selectCallback(args.tk, samples, sampleIdxLst)
+		}
+	}
+	params.buttons = [button]
+}
+
+function feedSample2selectCallback(tk, samples, sampleIdxLst) {
+	// map sampleIdxLst to sample attributes that caller wants to pick
+	const pickValues = []
+	for (const i of sampleIdxLst) {
+		const s0 = samples[i]
+		const s1 = {}
+		for (const attr of tk.allow2selectSamples.attributes) {
+			s1[attr] = s0[attr]
+		}
+		pickValues.push(s1)
+	}
+	tk.allow2selectSamples.callback(pickValues)
 }
 
 async function make_singleSampleTable(sampledata, arg) {
@@ -209,6 +246,18 @@ function printSampleName(sample, tk, div) {
 		a.style('word-break', 'break-word')
 	} else {
 		div.text(sample.sample_id)
+	}
+
+	if (tk.allow2selectSamples) {
+		// display button for selecting this sample alone
+		const t = tk.allow2selectSamples.buttonText
+		div
+			.append('button')
+			.style('display', 'block')
+			.text(t.endsWith('s') ? t.substring(0, t.length - 1) : t) // may remove plural
+			.on('click', () => {
+				feedSample2selectCallback(tk, [sample], [0])
+			})
 	}
 }
 

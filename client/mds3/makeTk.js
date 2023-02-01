@@ -164,6 +164,8 @@ export async function makeTk(tk, block) {
 		tk.skewer.hlssmid = new Set(tk.hlssmid.split(','))
 		delete tk.hlssmid
 	}
+
+	validateSelectSamples(tk)
 }
 
 function loadTk_finish_closure(tk, block) {
@@ -775,4 +777,18 @@ async function getbcfheader_customtk(tk, genome) {
 		format,
 		samples
 	}
+}
+
+function validateSelectSamples(tk) {
+	const a = tk.allow2selectSamples
+	if (!a) return
+	if (!a.buttonText) a.buttonText = 'Select samples'
+	if (typeof a.buttonText != 'string') throw 'allow2selectSamples.buttonText value is not string'
+	if (!a.attributes) a.attributes = ['sample_id']
+	if (!Array.isArray(a.attributes)) throw 'allow2selectSamples.attributes[] is not array'
+	if (a.attributes.length == 0) throw 'allow2selectSamples.attributes[] blank array'
+	for (const i of a.attributes) {
+		if (!i || typeof i != 'string') throw 'allow2selectSamples.attributes[] element is not non-empty string'
+	}
+	if (typeof a.callback != 'function') throw 'allow2selectSamples.callback() is not function'
 }
