@@ -276,6 +276,8 @@ class Scatter {
 				? this.config.colorTW.term.name.slice(0, 25) + '...'
 				: this.config.colorTW.term.name
 		let title = `${name} (${this.cohortSamples.length})`
+		if (this.config.colorTW.term.type == 'geneVariant')
+			title += ` x Assays (${this.cohortSamples[0]['cat_info']['category'].length})`
 		const colorRefCategory = this.colorLegend.get('Ref')
 
 		const colorG = legendG.append('g')
@@ -959,7 +961,7 @@ function setRenderers(self) {
 		svg
 			.transition()
 			.duration(duration)
-			.attr('width', s.svgw + 700)
+			.attr('width', s.svgw + 800)
 			.attr('height', Math.max(s.svgh + 100, legendHeight)) //leaving some space for top/bottom padding and y axis
 
 		/* eslint-disable */
@@ -1358,6 +1360,7 @@ function setInteractivity(self) {
 		} else self.dom.tooltip.hide()
 
 		function addCategoryInfo(term, category, d, table) {
+			if (d[category] == 'Ref') return
 			let row = table.append('tr')
 			const ctd = row.append('td').text(term.name)
 
@@ -1372,6 +1375,7 @@ function setInteractivity(self) {
 					const clabel = 'mname' in mutation ? `${mutation.mname} ${class_info.label}` : class_info.label
 					const tdclass = row.append('td').text(clabel)
 					if (mutation.class != 'Blank') tdclass.style('color', class_info.color)
+					else tdclass.style('color', mclass['WT'].color)
 					const origin = morigin[mutation.origin]?.label
 					const dtlabel = origin ? `${origin} ${dt2label[dt]}` : dt2label[dt]
 					row.append('td').text(dtlabel)

@@ -4,7 +4,7 @@ const path = require('path')
 const utils = require('./utils')
 const serverconfig = require('./serverconfig')
 import { schemeCategory20, getColors } from '#shared/common'
-const { mclass, dt2label } = require('#shared/common')
+const { mclass, dt2label, morigin } = require('#shared/common')
 
 /*
 works with "canned" scatterplots in a dataset, e.g. data from a text file of tSNE coordinates from a pre-analyzed cohort (contrary to on-the-fly analysis)
@@ -244,19 +244,23 @@ function processSample(dbSample, sample, tw, categoryMap, category) {
 		for (const [i, mutation] of Object.entries(mutations)) {
 			const dt = mutation.dt
 			const class_info = mclass[mutation.class]
-			value = class_info.label
+			const origin = morigin[mutation.origin]?.label
+			const dtlabel = origin ? `${origin} ${dt2label[dt]}` : dt2label[dt]
+			value = `${class_info.label} ${dtlabel}`
 			sample.cat_info[category].push(mutation)
 			if (!categoryMap.has(value)) categoryMap.set(value, { color: class_info.color, sampleCount: 1 })
 			else categoryMap.get(value).sampleCount++
 
 			// TODO mutation.mname is amino acid change. pass mname to sample to be shown in tooltip
 		}
-		for (const [dt, value] of Object.entries(dt2label)) {
+		for (const [dt, label] of Object.entries(dt2label)) {
 			const mutation = mutations.find(mutation => mutation.dt == dt)
 			if (mutation && !(tw.q.hiddenValues && mclass[mutation.class].label in tw.q.hiddenValues)) {
 				const class_info = mclass[mutation.class]
-				const value = class_info.label
-				sample[category] = value.toString()
+				const origin = morigin[mutation.origin]?.label
+				const dtlabel = origin ? `${origin} ${dt2label[dt]}` : dt2label[dt]
+				const value = `${class_info.label} ${dtlabel}`
+				sample[category] = value
 				break //Found a color
 			}
 		}
