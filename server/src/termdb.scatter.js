@@ -4,7 +4,7 @@ const path = require('path')
 const utils = require('./utils')
 const serverconfig = require('./serverconfig')
 import { schemeCategory20, getColors } from '#shared/common'
-const { mclass, dt2label, morigin } = require('#shared/common')
+const { mclass, dt2label } = require('#shared/common')
 
 /*
 works with "canned" scatterplots in a dataset, e.g. data from a text file of tSNE coordinates from a pre-analyzed cohort (contrary to on-the-fly analysis)
@@ -169,7 +169,7 @@ async function colorAndShapeSamples(refSamples, cohortSamples, data, q) {
 	for (const sample of cohortSamples) {
 		const dbSample = data.samples[sample.sampleId.toString()]
 
-		sample.category_info = {}
+		sample.cat_info = {}
 		sample.hidden = {}
 		let result = []
 		sample.shape = 'Ref'
@@ -240,25 +240,31 @@ function processSample(dbSample, sample, tw, categoryMap, category) {
 	const result = []
 	if (tw.term.type == 'geneVariant') {
 		const mutations = dbSample?.[tw.term.name]?.values
+		sample.cat_info[category] = []
 		for (const [i, mutation] of Object.entries(mutations)) {
-			const dt = parseInt(i) + 1 //Mutation index starts in 0, should start in 1
-			const origin = morigin[mutation.origin]?.label
-			const _sample = JSON.parse(JSON.stringify(sample))
+			const dt = mutation.dt
 			const class_info = mclass[mutation.class]
-			if (class_info) {
-				value = class_info.label
-				if (origin) value += ' ' + origin
-				if ('mname' in mutation)
-					_sample.category_info[category] = `origin: ${dt2label[dt]} ${origin}<br>mutation: ${mutation.mname}`
-				_sample.hidden[category] = tw.q.hiddenValues ? value in tw.q.hiddenValues : false
-				if (!categoryMap.has(value)) categoryMap.set(value, { sampleCount: 1 })
-				else categoryMap.get(value).sampleCount++
-				categoryMap.get(value).color = class_info?.color || 'Black'
-				_sample[category] = value.toString()
-				result.unshift(_sample)
-			}
+			value = class_info.label
+			sample.cat_info[category].push(mutation)
+			if (!categoryMap.has(value)) categoryMap.set(value, { color: class_info.color, sampleCount: 1 })
+			else categoryMap.get(value).sampleCount++
+
 			// TODO mutation.mname is amino acid change. pass mname to sample to be shown in tooltip
 		}
+		for (const [dt, value] of Object.entries(dt2label)) {
+			const mutation = mutations.find(mutation => mutation.dt == dt)
+			if (mutation && !(tw.q.hiddenValues && mclass[mutation.class].label in tw.q.hiddenValues)) {
+				const class_info = mclass[mutation.class]
+				const value = class_info.label
+				sample[category] = value.toString()
+				break //Found a color
+			}
+		}
+		if (!sample[category])
+			//all hidden, will take any
+			sample[category] = mclass[mutations[0].class].label
+		sample.hidden[category] = tw.q.hiddenValues ? sample[category] in tw.q.hiddenValues : false
+		result.push(sample)
 	} else {
 		value = dbSample?.[tw.id]?.key
 		sample.hidden[category] = tw.q.hiddenValues ? dbSample?.[tw.id]?.key in tw.q.hiddenValues : false

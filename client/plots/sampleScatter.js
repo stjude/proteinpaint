@@ -27,6 +27,7 @@ import { axisLeft, axisBottom } from 'd3-axis'
 import { make_table_2col } from '#dom/table2col'
 import { icons as icon_functions } from '../dom/control.icons'
 import { symbol } from 'd3-shape'
+const { mclass, dt2label, morigin } = require('#shared/common')
 
 /*
 sample object returned by server:
@@ -617,7 +618,7 @@ class Scatter {
 
 	getCategoryInfo(d, category) {
 		if (!(category in d)) return ''
-		return d.category_info?.[category] ? `${d.category_info[category]} ${d[category]}` : d[category]
+		return d[category]
 	}
 
 	getColor(c) {
@@ -678,6 +679,7 @@ class Scatter {
 		let rows = []
 		const sampleColumn = formatCell('Sample', 'label')
 		const columns = [sampleColumn, formatCell(this.config.colorTW.term.name, 'label')]
+
 		if (this.config.shapeTW) columns.push(formatCell(this.config.shapeTW.term.name, 'label'))
 		let info = false
 		for (const item of group.items) {
@@ -751,7 +753,7 @@ class Scatter {
 			columns,
 			div: tableDiv,
 			showLines: true,
-			maxWidth: '35vw',
+			maxWidth: '45vw',
 			maxHeight: '35vh',
 			buttons,
 			selectAll: true
@@ -1323,23 +1325,59 @@ function setInteractivity(self) {
 		if (event.target.__data__) {
 			const s2 = event.target.__data__
 			const samples = self.data.samples.filter(s => self.getOpacity(s) > 0 && distance(s.x, s.y, s2.x, s2.y) < 0.2)
-			const rows = []
+			if (samples.length == 0) return
+			samples.sort((a, b) => {
+				if (a.category < b.category) return -1
+				if (a.category > b.category) return 1
+				return 0
+			})
+
 			self.dom.tooltip.clear().hide()
 
 			for (const d of samples) {
 				if (!('sampleId' in d) && (!self.settings.showRef || self.settings.refSize == 0)) continue
-				rows.push({ k: 'Sample', v: d.sample })
-				const cat_info = self.getCategoryInfo(d, 'category')
-				rows.push({ k: self.config.colorTW.term.name, v: cat_info })
-				if (self.config.shapeTW) {
-					const cat_info = self.getCategoryInfo(d, 'shape')
-					rows.push({ k: self.config.shapeTW.term.name, v: cat_info })
-				}
-				if ('info' in d) for (const [k, v] of Object.entries(d.info)) rows.push({ k: k, v: v })
+				const div = self.dom.tooltip.d.append('div').style('padding-top', '2px')
+				div.append('div')
+				const table = div.append('table').style('width', '100%')
+				const row = table.append('tr')
+				row
+					.append('td')
+					.attr('colspan', 2)
+					.html(`<b>Sample ${d.sample}</b>`)
+
+				addCategoryInfo(self.config.colorTW.term, 'category', d, table)
+				if (self.config.shapeTW) addCategoryInfo(self.config.shapeTW.term, 'shape', d, table)
+				if ('info' in d)
+					for (const [k, v] of Object.entries(d.info)) {
+						const row = table.append('tr')
+						row.append('td').text(k)
+						row.append('td').text(v)
+					}
 			}
-			make_table_2col(self.dom.tooltip.d, rows)
 			self.dom.tooltip.show(event.clientX, event.clientY)
 		} else self.dom.tooltip.hide()
+
+		function addCategoryInfo(term, category, d, table) {
+			let row = table.append('tr')
+			const ctd = row.append('td').text(term.name)
+
+			if ('cat_info' in d && d.cat_info[category]) {
+				const mutations = d.cat_info[category]
+				ctd.attr('rowspan', mutations.length + 1)
+				// row.append('td').text('Mutation')
+				for (const mutation of mutations) {
+					const dt = mutation.dt
+					row = table.append('tr')
+					const class_info = mclass[mutation.class]
+					const clabel = 'mname' in mutation ? `${mutation.mname} ${class_info.label}` : class_info.label
+					const tdclass = row.append('td').text(clabel)
+					if (mutation.class != 'Blank') tdclass.style('color', class_info.color)
+					const origin = morigin[mutation.origin]?.label
+					const dtlabel = origin ? `${origin} ${dt2label[dt]}` : dt2label[dt]
+					row.append('td').text(dtlabel)
+				}
+			} else row.append('td').text(d[category])
+		}
 	}
 
 	self.mouseout = function() {

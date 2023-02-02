@@ -44,7 +44,8 @@ export const dt2label = {
 	[dtdel]: 'Deletion',
 	[dtnloss]: 'N-loss',
 	[dtcloss]: 'C-loss',
-	[dtloh]: 'LOH'
+	[dtloh]: 'LOH',
+	[dtgeneexpression]: 'Gene Expression'
 }
 
 export const mclass = {
