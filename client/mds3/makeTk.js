@@ -165,7 +165,11 @@ export async function makeTk(tk, block) {
 		delete tk.hlssmid
 	}
 
-	validateSelectSamples(tk)
+	try {
+		validateSelectSamples(tk)
+	} catch (e) {
+		console.error(e)
+	}
 }
 
 function loadTk_finish_closure(tk, block) {
