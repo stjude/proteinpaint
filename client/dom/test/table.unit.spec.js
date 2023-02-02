@@ -74,12 +74,12 @@ tape('Render table', function(test) {
 
 	function testHeaderData(test) {
 		const tableHeaders = holder.selectAll('th').nodes()
-		let headers2Check = []
+		const headers2Check = []
 		for (const header of tableHeaders) {
 			headers2Check.push(header.innerHTML)
 		}
 		let foundHeaders = 0
-		let headersNotFound = []
+		const headersNotFound = []
 		for (const testHeader of testColData) {
 			if (headers2Check.some(d => d === testHeader.label)) ++foundHeaders
 			else headersNotFound.push(testHeader.label)
@@ -118,7 +118,7 @@ tape('Render table', function(test) {
 			}
 
 			// Catch row highlight rendering issues
-			let badBackgrdColorRowNum = []
+			let badBackgrdColorRowNum = 0
 			if (i % 2 == 1) {
 				if (renderedRow.style.backgroundColor != 'rgb(245,245,245)') badBackgrdColorRowNum++
 				break
@@ -129,7 +129,7 @@ tape('Render table', function(test) {
 		}
 
 		// Catch cell data rendering issues
-		let badLineNum = []
+		const badLineNum = []
 		for (const [i, row] of testRowData.entries()) {
 			//Match rendered row data to supplied test data
 			const testData = row.map(d => {
@@ -137,7 +137,7 @@ tape('Render table', function(test) {
 				else if (d.value) return d.value
 				else if (d.html) return d.html
 				else if (d.values) {
-					let arrTestData2Str = []
+					const arrTestData2Str = []
 					for (const obj of d.values) {
 						if (obj.url) arrTestData2Str.push(`${obj.url}:${obj.value || obj.value == 0 ? obj.value : obj.url}`)
 						else if (obj.value) arrTestData2Str.push(obj.value)
@@ -251,12 +251,12 @@ tape('Return correct rows on button click', async test => {
 				class: 'test-btn',
 				callback: indexes => {
 					const checkboxes = holder.selectAll('input[name="select"]').nodes()
-					let checkedBoxes = []
+					const checkedBoxes = []
 					for (const [i, checkbox] of checkboxes.entries()) {
 						if (checkbox.checked == true) checkedBoxes.push(i)
 					}
 					let correctSelect = 0
-					let wrongSelect = []
+					const wrongSelect = []
 					for (const i of indexes) {
 						// Check if the index array sent to button callback
 						// matches user selected rows
