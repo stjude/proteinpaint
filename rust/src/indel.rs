@@ -1,9 +1,7 @@
 // Syntax: cd .. && cargo build --release
 
 // Test case below:
-// echo AATAGCCTTTACATTATGTAATAGTGTAATACAAATAATAATTTATTATAATAATGTGAAATTATTTACAGTACCCTAACCCTAACCCTAACCCCTAATCCTAACCCTAACCCTAACCCCTAACCCTAATCCTAACCCTAACCCTAACCCTAACCCTAACCCCTAACCCTAACCCGAAAACCCTAACCCTAAAACCCTAACATAACCCTTACCCTTACCCTAATCCTAACCCTAATCCTTACCCTTACCCTTACCCTGACCCTAACCCTAATCCTTACCCTTATCCTACCCCTAACCCTTAACCC-AATAGCCTTTACATTATGTAATAGTGTAATACAAATAATAATTTATTATAATAATGTGAAATTATTTACAGTACCCTAACCCTAACCCTAACCCCTAATCCTAACCCTAACCCTAACCCCTAACCCTAATCCTAACCCTAACCCTAACCCTAACCCCTAACCCCTAACCCTAACCCGAAAACCCTAACCCTAAAACCCTAACATAACCCTTACCCTTACCCTAATCCTAACCCTAATCCTTACCCTTACCCTTACCCTGACCCTAACCCTAATCCTTACCCTTATCCTACCCCTAACCCTTAACCC-TAGTAATAATGTGAAATTATTTACAGTACCCTAACCCTAACCCTAACCCCTAATCCTAACCCTAACCCTAACCCCTAACCCTAATCCTAACCCTAACCCTAACCCTAACCCCTAACCCCTAACCCTAACCCTAAAACCCTAACCCTAAAAC-AGTAATAATGTGAAATTATTTACAGTACCCTAACCCTAACCCTAACCCCTAATCCTAACCCTAACCCTAACCCCTAACCCTAATCCTAACCCTAACCCTAACCCAAACCCTAACCCCTAACCCTAACCCAAAAACCCTAACCCTAAAACCC-TAATGTGAAATTATTTACAGTACCCTAACCCTAACCCTAACCCCTAATCCTAACCCTAACCCTAACCCCTAACCCTAATCCTAACCCTAACCCTAACCCTAACCCCTAACCCCTAACCCTAACCCTAAAACCCTAACCCTAAAACCCTAAC-TAATGTGAAATTATTTACAGTACCCTAACCCTAACCCTAACCCCTAATCCTAACCCTAACCCTAACCCCTAACCCTAATCCTAACCCTAACCCTAACCCTAACCCTAACCCCTAACCCTAACCCTAAAACCCTAACCCTAAAACCCTAACC-TAAAGTGAAATTATTGACAGTACCCTAACCCTAACCCTAACCCCTAATCCTAACCCTAACCCTATCCCCTAACCCTAATCCTAACCCTAACCCTAACCCTATCCCCTAACCCCTAACCCTAACCCTAAAACCCTAACCCTAAAACCCTAAC-TAATGTGAAATTATTTACAGTACCCTAACCCTAACCCTAACCCCTAATCCTAACCCTAACCCTAACCCCTAACCCTAATCCTAACCCTAACCCTAACCCTAACCCTAACCCCTAACCCTAACCCTAAAACCCTAACCCTAAAACCCTAACC-CAGTACCCTAACCCTAACCCTAACCCCTAATCCTAACCCTAACCCTAACCCCTAACCCTAATCCTAACCCTAACCCTAACCCTAACCCTAACCCCTAACCCTAACCCTAAAACCCTAACCCTAAAACCCTAACCATAACCCTTACCCTTAC-CTGACCCTTAACCCTAACCCTAACCCCTAACCCTAACCCTTAACCCTTAAACCTTAACCCTCATCCTCACCCTCACCCTCACCCCTAACCCTAACCCCTAACCCAAACCCTCACCCTAAACCCTAACCCTAAACCCAACCCAAACCCTAAC-ACCCCTAATCCTAACCCTAACCCTAACCCCTAACCCTAATCCTAACCCTAGCCCTAACCCTAACCCTAACCCCTAACCCTAACCCTAAAACCCTAACCCTAAAACCCTAACCATAACCCTTACCCTTACCCTAATCCTAACCCTAATCCTT-CTAACCCTAACCCCTAACCCTAATCCTAACCCTAACCCTAACCCTAACCCTAACCCCTAACCCTAACCCTAAAACCCTAACCCTAAAACCCTAACCATAACCCTTACCCTTACCCTAATCCTAACCCTAATCCTTACCCTTACCCTTACCC:16357-16358-16363-16363-16363-16363-16380-16388-16402-16418:108M1I42M-151M-102M1I48M-151M-101M1I49M-151M-132M1I18M-8S31M1I6M1I32M1I30M41S-110M1I40M-94M1I56M:147-99-65-81-83-83-177-163-147-113:16463:151:A:AC:6:0.1:10:1:AATAGCCTTTACATTATGTAATAGTGTAATACAAATAATAATTTATTATAATAATGTGAAATTATTTACAGTACCCTAACCCTAACCCTAACCCCTAATCCTAACCCTAACCCTAACCCCTAACCCTAATCCTAACCCTAACCCTAACCCTA:CCCTAACCCCTAACCCTAACCCGAAAACCCTAACCCTAAAACCCTAACATAACCCTTACCCTTACCCTAATCCTAACCCTAATCCTTACCCTTACCCTTACCCTGACCCTAACCCTAATCCTTACCCTTATCCTACCCCTAACCCTTAACCC | ../target/release/indel
-
-//Debug syntax: cat ~/proteinpaint/test.txt | ~/proteinpaint/server/utils/rust/target/release/indel
+//Debug syntax: cd .. && cargo build --release && time cat ~/proteinpaint/test.txt | ~/proteinpaint/rust/target/release/indel
 
 // Strictness:
 //   0: No postprocessing, pure indel typing results
@@ -42,557 +40,1184 @@
 //              chi_square_test
 //              fishers_exact_test
 
+use json::object;
+use json::JsonValue;
+use serde::{Deserialize, Serialize};
+//use serde_json::json as other_json;
+//use serde_json::Value;
 use std::cmp;
+use std::cmp::Ordering;
+//use std::env;
 use std::sync::{Arc, Mutex}; // Multithreading library
 use std::thread;
-//use std::env;
 //use std::time::{SystemTime};
 use std::io;
 
 mod realign; // Imports functions from realign.rs
 mod stats_functions; // Imports functions from stats_functions.rs
 
-#[allow(non_camel_case_types)]
-#[allow(non_snake_case)]
-#[derive(Debug)]
-pub struct read_diff_scores {
-    // struct for storing read details, used throughout the code
-    groupID: usize,          // Original read ID
-    value: f64,              // Diff score value
-    abs_value: f64,          // Absolute diff score value
-    alt_comparison: i64,     // alt comparison (0 if true, 1 if false)
-    ref_comparison: i64,     // ref comparison (0 if true, 1 if false)
-    polyclonal: i64, // flag to check if the read harbors polyclonal variant (neither ref nor alt)
-    ref_insertion: i64, // flag to check if there is any insertion/deletion nucleotides in reads that may get clasified as supporting ref allele
-    ambiguous: i64,     // flag to indicate whether read is ambiguous or not (1 = true, 0 = false)
-    sequence_strand: String, // "F" or "R" depending on the strand of the read
+struct ReadComparison {
+    comparison: f64,
+    index: usize,
 }
 
-#[allow(non_camel_case_types)]
-#[allow(non_snake_case)]
-#[derive(Debug)]
-struct read_category {
-    // struct for storing in which category a read has been classified
-    category: String,        // Category: Ref/Alt/None/Ambiguous
-    groupID: usize,          // Original read ID
-    ref_comparison: i64,     // ref comparison (0 if true, 1 if false)
-    alt_comparison: i64,     // alt comparison (0 if true, 1 if false)
-    diff_score: f64,         // Diff score value
-    ref_insertion: i64, // flag to check if there is any insertion/deletion nucleotides in reads that may get clasified as supporting ref allele
-    sequence_strand: String, // "F" or "R" depending on the strand of the read
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct ReadClassification {
+    read_number: usize,
+    categories: Vec<String>,
 }
 
-fn read_diff_scores_owned(item: &mut read_diff_scores) -> read_diff_scores {
-    // Function to convert struct read_diff_scores from borrowed to owned
-    let val = item.value.to_owned();
-    let abs_val = item.abs_value.to_owned();
-    #[allow(non_snake_case)]
-    let gID = item.groupID.to_owned();
-    let ref_comparison = item.ref_comparison.to_owned();
-    let alt_comparison = item.alt_comparison.to_owned();
-    let poly = item.polyclonal.to_owned();
-    let ref_ins = item.ref_insertion.to_owned();
-    let seq_strand = item.sequence_strand.to_owned();
-    let ambiguous = item.ambiguous.to_owned();
-
-    let read_val = read_diff_scores {
-        value: f64::from(val),
-        abs_value: f64::from(abs_val),
-        groupID: usize::from(gID),
-        alt_comparison: i64::from(alt_comparison),
-        ref_comparison: i64::from(ref_comparison),
-        polyclonal: i64::from(poly),
-        ambiguous: i64::from(ambiguous),
-        ref_insertion: i64::from(ref_ins),
-        sequence_strand: String::from(seq_strand),
-    };
-    read_val
-}
+//impl ReadClassification {
+//    fn to_owned(item: &ReadClassification) -> ReadClassification {
+//        let read_number = item.read_number.to_owned();
+//        let categories = item.categories.to_vec();
+//
+//        ReadClassification {
+//            read_number: read_number,
+//            categories: categories,
+//        }
+//    }
+//}
 
 fn main() {
     let mut input = String::new();
+    //env::set_var("RUST_BACKTRACE", "1");
     match io::stdin().read_line(&mut input) {
         // Accepting the piped input from nodejs (or command line from testing)
-        #[allow(unused_variables)]
-        Ok(n) => {
-            //println!("{} bytes read", n);
+        Ok(_bytes_read) => {
+            //println!("{} bytes read", bytes_read);
             //println!("{}", input);
+            let input_json = json::parse(&input);
+            match input_json {
+                Ok(json_string) => {
+                    //println!("json_string:{:?}", json_string);
+                    let alleles_list: &JsonValue = &json_string["alleles"];
+                    let reads_list: &JsonValue = &json_string["reads"];
+                    let strictness: usize = json_string["strictness"].as_usize().unwrap();
+
+                    let mut sequences: String = "".to_string();
+                    let mut cigar_sequences: String = "".to_string();
+                    let mut start_positions: String = "".to_string();
+                    let mut sequence_flags: String = "".to_string();
+                    for i in 0..reads_list.len() {
+                        let item = &reads_list[i];
+                        sequences.push_str(
+                            &(item["read_sequence"].as_str().unwrap().to_string()
+                                + &"-".to_string())
+                                .to_string(),
+                        );
+                        start_positions.push_str(
+                            &(item["start_position"].as_usize().unwrap().to_string()
+                                + &"-".to_string())
+                                .to_string(),
+                        );
+                        cigar_sequences.push_str(
+                            &(item["cigar"].as_str().unwrap().to_string() + &"-".to_string())
+                                .to_string(),
+                        );
+                        sequence_flags.push_str(
+                            &(item["flag"].as_usize().unwrap().to_string() + &"-".to_string())
+                                .to_string(),
+                        );
+                    }
+                    sequences.pop();
+                    start_positions.pop();
+                    cigar_sequences.pop();
+                    sequence_flags.pop();
+                    let sequences_list: Vec<&str> = sequences.split("-").collect(); // Vector containing list of sequences, the first two containing ref and alt.
+                    let start_positions_list: Vec<&str> = start_positions.split("-").collect(); // Vector containing start positions
+                    let cigar_sequences_list: Vec<&str> = cigar_sequences.split("-").collect(); // Vector containing cigar sequences
+                    let sequence_flags_list: Vec<&str> = sequence_flags.split("-").collect(); // Vector containing sam flag of read sequences
+
+                    //println!("sequences_list:{:?}", sequences_list);
+
+                    let mut refalleles: String = "".to_string();
+                    let mut altalleles: String = "".to_string();
+                    let mut refseqs: String = "".to_string();
+                    let mut altseqs: String = "".to_string();
+                    let mut leftflankseqs: String = "".to_string();
+                    let mut rightflankseqs: String = "".to_string();
+                    let mut variant_positions: String = "".to_string();
+                    for i in 0..alleles_list.len() {
+                        let item = &alleles_list[i];
+                        //println!("item:{:?}", item);
+                        refalleles.push_str(
+                            &(item["refallele"].as_str().unwrap().to_string() + &"-".to_string())
+                                .to_string(),
+                        );
+                        altalleles.push_str(
+                            &(item["altallele"].as_str().unwrap().to_string() + &"-".to_string())
+                                .to_string(),
+                        );
+                        refseqs.push_str(
+                            &(item["refseq"].as_str().unwrap().to_string() + &"-".to_string())
+                                .to_string(),
+                        );
+                        altseqs.push_str(
+                            &(item["altseq"].as_str().unwrap().to_string() + &"-".to_string())
+                                .to_string(),
+                        );
+                        leftflankseqs.push_str(
+                            &(item["leftflankseq"].as_str().unwrap().to_string()
+                                + &"-".to_string())
+                                .to_string(),
+                        );
+                        rightflankseqs.push_str(
+                            &(item["rightflankseq"].as_str().unwrap().to_string()
+                                + &"-".to_string())
+                                .to_string(),
+                        );
+                        variant_positions.push_str(
+                            &(item["ref_position"].as_usize().unwrap().to_string()
+                                + &"-".to_string())
+                                .to_string(),
+                        );
+                    }
+                    refalleles.pop();
+                    altalleles.pop();
+                    refseqs.pop();
+                    altseqs.pop();
+                    leftflankseqs.pop();
+                    rightflankseqs.pop();
+                    variant_positions.pop();
+
+                    let mut variant_positions_list = Vec::<i64>::new();
+                    let variant_positions_str: Vec<&str> = variant_positions.split("-").collect();
+                    for item in variant_positions_str {
+                        variant_positions_list.push(item.parse::<i64>().unwrap());
+                    }
+
+                    let refalleles_list: Vec<&str> = refalleles.split("-").collect(); // Vector of ref alleles for each SNV/indel
+                    let altalleles_list: Vec<&str> = altalleles.split("-").collect();
+                    // Vector of alt alleles for each SNV/indel
+                    let refseqs_list: Vec<&str> = refseqs.split("-").collect(); // Vector of refseqs for each SNV/indel
+                    let altseqs_list: Vec<&str> = altseqs.split("-").collect(); // Vector of altseqs for each SNV/indel
+
+                    let leftflankseqs_list: Vec<&str> = leftflankseqs.split("-").collect(); // Vector of leftflankseqs for each SNV/indel
+                    let rightflankseqs_list: Vec<&str> = rightflankseqs.split("-").collect(); // Vector of rightflankseqs for each SNV/indel
+                    let surrounding_region_length: i64 = 80; // Flanking region on both sides upto which it will search for duplicate kmers
+
+                    let mut indel_lengths_list = Vec::<usize>::new();
+                    let mut indel_lengths = "".to_string();
+                    let mut left_most_pos_of_all_indels: i64 = variant_positions_list[0]; // The left most position among all indels being considered, initializing to start position of first variant
+                    let mut right_most_pos_of_all_indels: i64 = variant_positions_list[0]
+                        + cmp::max(refalleles_list[0].len(), altalleles_list[0].len()) as i64; // The right most position among all indels being considered, initializing to start position of first variant
+                    let mut alt_allele_names_list = Vec::<String>::new();
+                    let mut alt_allele_names = "".to_string();
+                    for indel_idx in 0..variant_positions_list.len() {
+                        alt_allele_names_list.push("alt".to_string() + &indel_idx.to_string());
+                        alt_allele_names
+                            .push_str(&("alt".to_string() + &indel_idx.to_string()).to_string());
+                        alt_allele_names.push_str(&"-".to_string());
+                        let variant_pos: i64 = variant_positions_list[indel_idx]; // Variant position
+                        let refallele: String =
+                            refalleles_list[indel_idx].parse::<String>().unwrap(); // Reference allele
+                        let altallele: String =
+                            altalleles_list[indel_idx].parse::<String>().unwrap(); // Alternate allele
+
+                        // Checking the left-most and right-most position among all indels
+                        if left_most_pos_of_all_indels > variant_pos {
+                            left_most_pos_of_all_indels = variant_pos;
+                        }
+
+                        if right_most_pos_of_all_indels
+                            < variant_pos
+                                + cmp::max(
+                                    refalleles_list[indel_idx].len(),
+                                    altalleles_list[indel_idx].len(),
+                                ) as i64
+                        {
+                            right_most_pos_of_all_indels = variant_pos
+                                + cmp::max(
+                                    refalleles_list[indel_idx].len(),
+                                    altalleles_list[indel_idx].len(),
+                                ) as i64;
+                        }
+
+                        let leftflankseq: String =
+                            leftflankseqs_list[indel_idx].parse::<String>().unwrap(); //Left flanking sequence
+                        let rightflankseq: String =
+                            rightflankseqs_list[indel_idx].parse::<String>().unwrap(); //Right flanking sequence.
+
+                        //let fisher_test_threshold: f64 = (10.0).powf((args[14].parse::<f64>().unwrap()) / (-10.0)); // Significance value for strand_analysis (NOT in phred scale)
+                        //let rightflank_nucleotides: Vec<char> = rightflankseq.chars().collect(); // Vector containing right flanking nucleotides
+                        let ref_nucleotides: Vec<char> = refallele.chars().collect(); // Vector containing ref nucleotides
+                        let alt_nucleotides: Vec<char> = altallele.chars().collect(); // Vector containing alt nucleotides
+                        let ref_length: i64 = refallele.len() as i64; // Determining length of ref allele
+                        let alt_length: i64 = altallele.len() as i64; // Determining length of alt allele
+                        let mut indel_length: i64 = alt_length; // Determining indel length, in case of an insertion it will be alt_length. In case of a deletion, it will be ref_length
+                        if ref_length > alt_length {
+                            indel_length = ref_length;
+                        }
+
+                        // Preprocessing of input
+                        let (optimized_variant_pos, optimized_indel_length) = preprocess_input(
+                            &ref_nucleotides,
+                            &alt_nucleotides,
+                            variant_pos,
+                            indel_length,
+                            leftflankseq,
+                            rightflankseq,
+                            surrounding_region_length,
+                        );
+
+                        if indel_length != optimized_indel_length {
+                            indel_length = optimized_indel_length;
+                        }
+
+                        println!("optimized_variant_pos:{}", optimized_variant_pos);
+                        println!("optimized_indel_length:{}", optimized_indel_length);
+                        //println!("ref_allele:{}", &refallele);
+                        //println!("alt_allele:{}", &altallele);
+                        indel_lengths_list.push(indel_length as usize);
+                        indel_lengths.push_str(&indel_length.to_string());
+                        indel_lengths.push_str(&"-".to_string());
+                        //drop(rightflank_nucleotides);
+                    }
+                    indel_lengths.pop(); // Removing the last "-" from string
+                    alt_allele_names.pop(); // Removing the last "-" from string
+
+                    //println!("rightflank_nucleotides:{:?}", rightflank_nucleotides);
+                    let single_thread_limit: usize = 1000; // If total number of reads is lower than this value the reads will be parsed sequentially in a single thread, if greaterreads will be parsed in parallel
+                    let max_threads: usize = 7; // Max number of threads in case the parallel processing of reads is invoked
+
+                    //println!("indel_length:{}", indel_length);
+
+                    //if args.len() > 14 {
+                    //    // This is true when realigning reads to determine correct indel sequence. Currently in development (not functional)
+                    //    let clustalo_path: String = args[14].parse::<String>().unwrap(); // Removing "\n" from the end of the string
+                    //    let quality_scores: String = args[15].parse::<String>().unwrap(); // Variable contains quality scores of reads separated by "-" character
+                    //    realign::realign_reads(
+                    //        &sequences,
+                    //        &start_positions,
+                    //        &cigar_sequences,
+                    //        &quality_scores,
+                    //        &clustalo_path,
+                    //        &lines[0].to_string(),
+                    //        &lines[1].to_string(),
+                    //        variant_pos,
+                    //        indel_length,
+                    //    );
+                    //}
+
+                    //let mut all_alleles = Vec::<ReadClassification>::new();
+                    let mut alternate_forward_count: u32 = 0; // Alternate forward read counter
+                    let mut alternate_reverse_count: u32 = 0; // Alternate reverse read counter
+                    let mut reference_forward_count: u32 = 0; // Reference forward read counter
+                    let mut reference_reverse_count: u32 = 0; // Reference reverse read counter
+                    let mut output_string = "[".to_string();
+                    if sequences_list.len() <= single_thread_limit {
+                        // Start of sequential single-thread implementation for classifying reads
+                        let mut i: i64 = 0;
+                        //let num_of_reads: f64 = sequences_list.len() as f64;
+                        for read in sequences_list {
+                            // The first two sequences are reference and alternate allele and therefore skipped. Also checking there are no blank lines in the input file
+                            let (
+                                within_indel,
+                                correct_start_positions,
+                                correct_end_positions,
+                                alignment_sides,
+                                spliced_sequences,
+                            ) = realign::check_read_within_indel_region(
+                                // Checks if the read contains the indel region (or a part of it)
+                                start_positions_list[i as usize].parse::<i64>().unwrap() - 1,
+                                cigar_sequences_list[i as usize].to_string(),
+                                &variant_positions_list,
+                                &indel_lengths_list,
+                                &refalleles_list,
+                                &altalleles_list,
+                                strictness,
+                                read.to_string(),
+                            );
+                            //println!("correct_start_positions:{:?}", correct_start_positions);
+                            //println!("correct_end_positions:{:?}", correct_end_positions);
+                            //println!(
+                            //    "cigar_sequence:{}",
+                            //    &cigar_sequences_list[i as usize].to_string()
+                            //);
+                            if within_indel == 1 {
+                                // Checking if the read is in forward or reverse strand
+                                let mut sequence_strand: String = "F".to_string(); // Initializing sequence strand to forward
+                                if sequence_flags_list[i as usize].parse::<i64>().unwrap() & 16
+                                    == 16
+                                {
+                                    sequence_strand = "R".to_string();
+                                }
+                                //let mut read_ambiguous = check_if_read_ambiguous(
+                                //    // Function that checks if the start/end of a read is in a region such that it cannot be distinguished as supporting ref or alt allele
+                                //    correct_start_position,
+                                //    correct_end_position,
+                                //    left_offset,
+                                //    right_offset,
+                                //    variant_pos,
+                                //    refallele.len(),
+                                //    &ref_nucleotides,
+                                //    &alt_nucleotides,
+                                //    optimized_allele,
+                                //);
+
+                                //println!("ref_polyclonal_read_status:{}", ref_polyclonal_read_status);
+                                //println!("alt_polyclonal_read_status:{}", alt_polyclonal_read_status);
+                                //println!("read_ambiguous:{}", read_ambiguous);
+                                //println!("ref_insertion:{}", ref_insertion);
+
+                                let mut alt_comparisons = Vec::<ReadComparison>::new();
+                                let mut ref_comparisons = Vec::<ReadComparison>::new();
+                                let mut ref_polyclonal_read_status_global: i64 = 1;
+                                let mut alt_polyclonal_read_status_global: i64 = 1;
+                                for indel_idx in 0..variant_positions_list.len() {
+                                    let spliced_sequence = &spliced_sequences[indel_idx];
+                                    let reference_sequence = refseqs_list[indel_idx];
+                                    let alternate_sequence = altseqs_list[indel_idx];
+                                    let (q_seq_ref, align_ref, r_seq_ref, ref_comparison) =
+                                        realign::align_single_reads(
+                                            &spliced_sequence,
+                                            reference_sequence.to_string(),
+                                        );
+
+                                    let (q_seq_alt, align_alt, r_seq_alt, alt_comparison) =
+                                        realign::align_single_reads(
+                                            &spliced_sequence,
+                                            alternate_sequence.to_string(),
+                                        );
+                                    alt_comparisons.push(ReadComparison {
+                                        comparison: alt_comparison,
+                                        index: indel_idx,
+                                    });
+                                    ref_comparisons.push(ReadComparison {
+                                        comparison: ref_comparison,
+                                        index: indel_idx,
+                                    });
+
+                                    //println!("ref_comparison:{}", ref_comparison);
+                                    //println!("alt_comparison:{}", alt_comparison);
+
+                                    let (ref_polyclonal_read_status, alt_polyclonal_read_status);
+                                    if strictness == 0 {
+                                        ref_polyclonal_read_status = 0;
+                                        alt_polyclonal_read_status = 0;
+                                    } else {
+                                        let (
+                                            ref_polyclonal_read_status_temp,
+                                            alt_polyclonal_read_status_temp,
+                                        ) = check_polyclonal_with_read_alignment(
+                                            &alignment_sides[indel_idx],
+                                            &q_seq_alt,
+                                            &q_seq_ref,
+                                            &r_seq_alt,
+                                            &r_seq_ref,
+                                            &align_alt,
+                                            &align_ref,
+                                            correct_start_positions[indel_idx],
+                                            correct_end_positions[indel_idx],
+                                            variant_positions_list[indel_idx],
+                                            refalleles_list[indel_idx].len(),
+                                            altalleles_list[indel_idx].len(),
+                                            indel_lengths_list[indel_idx],
+                                        );
+                                        ref_polyclonal_read_status =
+                                            ref_polyclonal_read_status_temp;
+                                        alt_polyclonal_read_status =
+                                            alt_polyclonal_read_status_temp;
+                                    }
+                                    if ref_polyclonal_read_status == 0 {
+                                        ref_polyclonal_read_status_global = 0;
+                                    }
+                                    if alt_polyclonal_read_status == 0 {
+                                        alt_polyclonal_read_status_global = 0;
+                                    }
+                                }
+
+                                // Sorting in ascending order so as to check if the read is ambiguous or not
+                                alt_comparisons.as_mut_slice().sort_by(|a, b| {
+                                    (a.comparison)
+                                        .partial_cmp(&b.comparison)
+                                        .unwrap_or(Ordering::Equal)
+                                });
+                                ref_comparisons.as_mut_slice().sort_by(|a, b| {
+                                    (a.comparison)
+                                        .partial_cmp(&b.comparison)
+                                        .unwrap_or(Ordering::Equal)
+                                });
+
+                                let max_alignment = 0.0;
+                                let mut max_index = 0;
+                                let mut refalt = "ref".to_string();
+                                let mut max_alignment_ref: f64 = 0.0;
+                                let mut max_index_ref: usize = 0;
+                                for alignment_idx in 0..ref_comparisons.len() {
+                                    if ref_comparisons[alignment_idx].comparison > max_alignment {
+                                        max_alignment_ref =
+                                            ref_comparisons[alignment_idx].comparison;
+                                        max_index_ref = ref_comparisons[alignment_idx].index;
+                                    }
+                                }
+
+                                let mut read_ambiguous = 0;
+                                let mut equal_alignment_indices = Vec::<usize>::new();
+                                let mut max_alignment_alt: f64 = 0.0;
+                                let mut max_index_alt: usize = 0;
+                                for alignment_idx in 0..alt_comparisons.len() {
+                                    if alt_comparisons[alignment_idx].comparison > max_alignment {
+                                        max_alignment_alt =
+                                            alt_comparisons[alignment_idx].comparison;
+                                        max_index_alt = alt_comparisons[alignment_idx].index;
+                                    }
+
+                                    if ref_polyclonal_read_status_global != 1
+                                        && alt_polyclonal_read_status_global != 1
+                                    // If the read is going to be classified as none, no need to check if it is ambiguous
+                                    {
+                                        if alignment_idx == 0 {
+                                        } else if alt_comparisons[alignment_idx].comparison // Checking if the read is ambiguous or not
+                                == alt_comparisons[alignment_idx - 1].comparison
+                                        {
+                                            if equal_alignment_indices
+                                                .iter()
+                                                .any(|&i| i == alignment_idx)
+                                            {
+                                            } else {
+                                                equal_alignment_indices.push(alignment_idx);
+                                            }
+                                            if equal_alignment_indices
+                                                .iter()
+                                                .any(|&i| i == alignment_idx - 1)
+                                            {
+                                            } else {
+                                                equal_alignment_indices.push(alignment_idx - 1);
+                                            }
+                                            read_ambiguous = 1;
+                                        }
+                                    }
+                                }
+
+                                let mut ref_is_ambiguous = false; // Flag which is true/false when ref allele is one of the reads that is ambiguous for a particular read
+                                if max_alignment_alt > max_alignment_ref {
+                                    //max_alignment = max_alignment_alt;
+                                    max_index = max_index_alt;
+                                    refalt = "alt".to_string();
+                                } else if max_alignment_alt < max_alignment_ref {
+                                    //max_alignment = max_alignment_ref;
+                                    max_index = max_index_ref;
+                                    refalt = "ref".to_string();
+                                } else if max_alignment_alt == max_alignment_ref {
+                                    //max_alignment = max_alignment_ref;
+                                    //println!(
+                                    //    "Ambiguous case between one of the alt alleles and the ref"
+                                    //);
+                                    read_ambiguous = 1;
+                                    if equal_alignment_indices.iter().any(|&i| i == max_index_alt) {
+                                    } else {
+                                        equal_alignment_indices.push(max_index_alt);
+                                        ref_is_ambiguous = true;
+                                    }
+                                }
+                                // Check if the read does not support any of the reference or alternate alleles
+                                if ref_polyclonal_read_status_global == 1
+                                    && alt_polyclonal_read_status_global == 1
+                                {
+                                    // Setting read to none
+                                    //if !all_alleles.contains_key(&"none".to_string()) {
+                                    //    all_alleles.insert("none".to_string(), Vec::new());
+                                    //}
+                                    //all_alleles
+                                    //    .get_mut(&"none".to_string())
+                                    //    .unwrap()
+                                    //    .push(i as usize);
+                                    //if all_alleles["none"] == other_json!(null) {
+                                    //    all_alleles["none"] = other_json!(vec![i]);
+                                    //} else {
+                                    //    all_alleles["none"]
+                                    //        .as_array_mut()
+                                    //        .unwrap()
+                                    //        .push(other_json!(i));
+                                    //}
+
+                                    let mut none_groups_for_each_read = Vec::<String>::new(); // When a read is assigned to none group, the first entry in the vector is "none", followed by the group with which it has maximum sequence similarity
+                                    none_groups_for_each_read.push("none".to_string());
+
+                                    if refalt == "ref".to_string() {
+                                        none_groups_for_each_read.push("ref".to_string())
+                                    } else if refalt == "alt".to_string() {
+                                        let alt_allele_name =
+                                            alt_allele_names_list[max_index].to_string();
+                                        none_groups_for_each_read.push(alt_allele_name);
+                                    }
+                                    //all_alleles[i.to_string()] =
+                                    //    other_json!(none_groups_for_each_read);
+                                    //all_alleles.push(ReadClassification {
+                                    //    read_number: i as usize,
+                                    //    categories: none_groups_for_each_read,
+                                    //});
+                                    //output_string += &json::stringify(object! {
+                                    //    read_number: i as usize,
+                                    //    categories: none_groups_for_each_read,
+                                    //});
+                                    output_string += &serde_json::to_string(&ReadClassification {
+                                        read_number: i as usize,
+                                        categories: none_groups_for_each_read,
+                                    })
+                                    .unwrap();
+                                    output_string += &",".to_string();
+                                } else if read_ambiguous == 1 {
+                                    // Setting read to ambiguous
+
+                                    //if !all_alleles.contains_key(&"amb".to_string()) {
+                                    //    all_alleles.insert("amb".to_string(), Vec::new());
+                                    //}
+                                    //all_alleles
+                                    //    .get_mut(&"amb".to_string())
+                                    //    .unwrap()
+                                    //    .push(i as usize);
+
+                                    //if all_alleles["amb"] == other_json!(null) {
+                                    //    all_alleles["amb"] = other_json!(vec![i]);
+                                    //} else {
+                                    //    all_alleles["amb"]
+                                    //        .as_array_mut()
+                                    //        .unwrap()
+                                    //        .push(other_json!(i));
+                                    //}
+                                    let mut ambiguous_groups_for_each_read = Vec::<String>::new(); // When a read is asigned to ambiguous group, the first entry in the vector is "amb". Subsequent entries are for each group with which the read has equal sequence similarity with
+                                    ambiguous_groups_for_each_read.push("amb".to_string());
+                                    for eq_alignment_idx in 0..equal_alignment_indices.len() {
+                                        ambiguous_groups_for_each_read.push(
+                                            alt_allele_names_list[eq_alignment_idx].to_string(),
+                                        );
+                                    }
+                                    if ref_is_ambiguous == true {
+                                        ambiguous_groups_for_each_read.push("ref".to_string());
+                                    }
+                                    //all_alleles.push(ReadClassification {
+                                    //    read_number: i as usize,
+                                    //    categories: ambiguous_groups_for_each_read,
+                                    //});
+                                    //output_string += &json::stringify(object! {
+                                    //    read_number: i as usize,
+                                    //    categories: ambiguous_groups_for_each_read,
+                                    //});
+                                    output_string += &serde_json::to_string(&ReadClassification {
+                                        read_number: i as usize,
+                                        categories: ambiguous_groups_for_each_read,
+                                    })
+                                    .unwrap();
+                                    output_string += &",".to_string();
+                                } else if refalt == "ref".to_string() {
+                                    //all_alleles.push(ReadClassification {
+                                    //    read_number: i as usize,
+                                    //    categories: vec!["ref".to_string()],
+                                    //});
+                                    //output_string += &json::stringify(object! {
+                                    //    read_number: i as usize,
+                                    //    categories: vec!["ref".to_string()],
+                                    //});
+                                    output_string += &serde_json::to_string(&ReadClassification {
+                                        read_number: i as usize,
+                                        categories: vec!["ref".to_string()],
+                                    })
+                                    .unwrap();
+                                    output_string += &",".to_string();
+                                    if variant_positions_list.len() == 1 // Forward/reverse for reference/alternate allele is only counted for single allele variants
+                                && sequence_strand == "R".to_string()
+                                    {
+                                        reference_reverse_count += 1;
+                                    } else if variant_positions_list.len() == 1 // Forward/reverse for reference/alternate allele is only counted for single allele variants
+                                && sequence_strand == "F".to_string()
+                                    {
+                                        reference_forward_count += 1;
+                                    }
+                                } else if refalt == "alt".to_string() {
+                                    // Setting read to alt
+                                    // Determine which alt allele read needs to be classified into
+                                    let alt_allele_name =
+                                        alt_allele_names_list[max_index].to_string();
+                                    //if !all_alleles.contains_key(alt_allele_name) {
+                                    //    all_alleles.insert(alt_allele_name.to_string(), Vec::new());
+                                    //}
+                                    //all_alleles
+                                    //    .get_mut(alt_allele_name)
+                                    //    .unwrap()
+                                    //    .push(i as usize);
+
+                                    //if all_alleles[alt_allele_name] == other_json!(null) {
+                                    //    all_alleles[alt_allele_name] = other_json!(vec![i]);
+                                    //} else {
+                                    //    all_alleles[alt_allele_name]
+                                    //        .as_array_mut()
+                                    //        .unwrap()
+                                    //        .push(other_json!(i));
+                                    //}
+
+                                    //all_alleles[i.to_string()] =
+                                    //    other_json!(vec![alt_allele_name.to_string()]);
+                                    //all_alleles.push(ReadClassification {
+                                    //    read_number: i as usize,
+                                    //    categories: vec![alt_allele_name],
+                                    //});
+                                    output_string += &serde_json::to_string(&ReadClassification {
+                                        read_number: i as usize,
+                                        categories: vec![alt_allele_name],
+                                    })
+                                    .unwrap();
+                                    //output_string += &json::stringify(object! {
+                                    //    read_number: i as usize,
+                                    //    categories: vec![alt_allele_name],
+                                    //});
+                                    output_string += &",".to_string();
+                                    if variant_positions_list.len() == 1 // Forward/reverse for reference/alternate allele is only counted for single allele variants
+                                && sequence_strand == "R".to_string()
+                                    {
+                                        alternate_reverse_count += 1;
+                                    } else if variant_positions_list.len() == 1 // Forward/reverse for reference/alternate allele is only counted for single allele variants
+                                && sequence_strand == "F".to_string()
+                                    {
+                                        alternate_forward_count += 1;
+                                    }
+                                } else {
+                                    // Should not happen
+                                    println!("Unaccounted scenario, please check!");
+                                }
+                            }
+                            i += 1;
+                        }
+                    } else {
+                        // Multithreaded implementation for parsing reads in parallel starts from here
+                        // Generally in rust one variable only own a data at a time, but `Arc` keyword is special and allows for multiple threads to access the same data.
+
+                        let sequences = Arc::new(sequences);
+                        let start_positions = Arc::new(start_positions);
+                        let cigar_sequences = Arc::new(cigar_sequences);
+                        let variant_positions = Arc::new(variant_positions);
+                        let indel_lengths = Arc::new(indel_lengths);
+                        let refalleles = Arc::new(refalleles);
+                        let altalleles = Arc::new(altalleles);
+                        let refseqs = Arc::new(refseqs);
+                        let altseqs = Arc::new(altseqs);
+                        let indel_lengths = Arc::new(indel_lengths);
+                        let alt_allele_names = Arc::new(alt_allele_names);
+                        let sequence_flags = Arc::new(sequence_flags);
+                        //let all_alleles_temp =
+                        //    Arc::new(Mutex::new(Vec::<ReadClassification>::new()));
+                        let output_string_temp = Arc::new(Mutex::new(String::new()));
+                        let alternate_forward_count_temp = Arc::new(Mutex::<u32>::new(0));
+                        let alternate_reverse_count_temp = Arc::new(Mutex::<u32>::new(0));
+                        let reference_forward_count_temp = Arc::new(Mutex::<u32>::new(0));
+                        let reference_reverse_count_temp = Arc::new(Mutex::<u32>::new(0));
+
+                        let mut handles = vec![]; // Vector to store handle which is used to prevent one thread going ahead of another
+
+                        for thread_num in 0..max_threads {
+                            // Assigning thread number thread_num to each thread
+                            // In the next few lines each variable gets cloned, so that each thread has its own copy of the variable
+                            let sequences = Arc::clone(&sequences);
+                            let start_positions = Arc::clone(&start_positions);
+                            let cigar_sequences = Arc::clone(&cigar_sequences);
+                            let sequence_flags = Arc::clone(&sequence_flags);
+                            //let all_alleles_temp = Arc::clone(&all_alleles_temp);
+                            let alt_allele_names = Arc::clone(&alt_allele_names);
+                            let output_string_temp = Arc::clone(&output_string_temp);
+                            let alternate_forward_count_temp =
+                                Arc::clone(&alternate_forward_count_temp);
+                            let alternate_reverse_count_temp =
+                                Arc::clone(&alternate_reverse_count_temp);
+                            let reference_forward_count_temp =
+                                Arc::clone(&reference_forward_count_temp);
+                            let reference_reverse_count_temp =
+                                Arc::clone(&reference_reverse_count_temp);
+                            let indel_lengths = Arc::clone(&indel_lengths);
+                            let alt_allele_names = Arc::clone(&alt_allele_names);
+                            let refalleles = Arc::clone(&refalleles);
+                            let altalleles = Arc::clone(&altalleles);
+                            let refseqs = Arc::clone(&refseqs);
+                            let altseqs = Arc::clone(&altseqs);
+                            let variant_positions = Arc::clone(&variant_positions);
+                            let indel_lengths = Arc::clone(&indel_lengths);
+
+                            let handle = thread::spawn(move || {
+                                // Thread is initiallized here
+                                //println!("thread:{}", thread_num);
+                                let sequences_list: Vec<&str> = sequences.split("-").collect();
+                                let start_positions_list: Vec<&str> =
+                                    start_positions.split("-").collect();
+                                let cigar_sequences_list: Vec<&str> =
+                                    cigar_sequences.split("-").collect();
+                                let sequence_flags_list: Vec<&str> =
+                                    sequence_flags.split("-").collect();
+                                //let mut all_alleles_thread = Vec::<ReadClassification>::new();
+                                let mut alt_allele_names_list: Vec<String> = Vec::<String>::new();
+                                let alt_allele_names_str: Vec<&str> =
+                                    alt_allele_names.split("-").collect();
+                                for item in alt_allele_names_str {
+                                    alt_allele_names_list.push(item.to_string());
+                                }
+                                let mut output_string_thread = "".to_string();
+                                let mut alternate_forward_count_thread: u32 = 0; // Alternate forward read counter (for each thread)
+                                let mut alternate_reverse_count_thread: u32 = 0; // Alternate reverse read counter (for each thread)
+                                let mut reference_forward_count_thread: u32 = 0; // Reference forward read counter (for each thread)
+                                let mut reference_reverse_count_thread: u32 = 0; // Reference reverse read counter (for each thread)
+                                for iter in 0..sequences_list.len() {
+                                    let remainder: usize = iter % max_threads; // Calculate remainder of read number divided by max_threads to decide which thread parses this read
+                                                                               //println!("iter:{}", iter);
+                                    if remainder == thread_num {
+                                        // Thread analyzing a particular read must have the same remainder as the thread_num, this avoids multiple reads from parsing the same read. Also checking if the read length > 0
+
+                                        //println!(
+                                        //    "start_positions_list:{}",
+                                        //    start_positions_list[iter].parse::<i64>().unwrap() - 1
+                                        //);
+                                        //println!("cigar_sequences_list[iter]:{}", cigar_sequences_list[iter]);
+                                        let refalleles_list: Vec<&str> =
+                                            refalleles.split("-").collect();
+                                        let altalleles_list: Vec<&str> =
+                                            altalleles.split("-").collect();
+                                        let refseqs_list: Vec<&str> = refseqs.split("-").collect();
+                                        let altseqs_list: Vec<&str> = altseqs.split("-").collect();
+
+                                        let mut variant_positions_list = Vec::<i64>::new();
+                                        let variant_positions_str: Vec<&str> =
+                                            variant_positions.split("-").collect();
+                                        for item in variant_positions_str {
+                                            variant_positions_list
+                                                .push(item.parse::<i64>().unwrap());
+                                        }
+                                        let mut indel_lengths_list = Vec::<usize>::new();
+                                        let indel_lengths_str: Vec<&str> =
+                                            indel_lengths.split("-").collect();
+                                        for item in indel_lengths_str {
+                                            indel_lengths_list.push(item.parse::<usize>().unwrap());
+                                        }
+                                        let (
+                                            within_indel,
+                                            correct_start_positions,
+                                            correct_end_positions,
+                                            alignment_sides,
+                                            spliced_sequences,
+                                        ) = realign::check_read_within_indel_region(
+                                            // Checks if the read contains the indel region (or a part of it)
+                                            start_positions_list[iter].parse::<i64>().unwrap() - 1,
+                                            cigar_sequences_list[iter].to_string(),
+                                            &variant_positions_list,
+                                            &indel_lengths_list,
+                                            &refalleles_list,
+                                            &altalleles_list,
+                                            strictness,
+                                            sequences_list[iter].to_string(),
+                                        );
+                                        if within_indel == 1 {
+                                            // Checking if the read is in forward or reverse strand
+                                            let mut sequence_strand: String = "F".to_string(); // Initializing sequence strand to forward
+                                            if sequence_flags_list[iter].parse::<i64>().unwrap()
+                                                & 16
+                                                == 16
+                                            {
+                                                sequence_strand = "R".to_string();
+                                            }
+
+                                            let mut alt_comparisons = Vec::<ReadComparison>::new();
+                                            let mut ref_comparisons = Vec::<ReadComparison>::new();
+                                            let mut ref_polyclonal_read_status_global: i64 = 1;
+                                            let mut alt_polyclonal_read_status_global: i64 = 1;
+                                            for indel_idx in 0..variant_positions_list.len() {
+                                                let spliced_sequence =
+                                                    &spliced_sequences[indel_idx];
+                                                let reference_sequence = refseqs_list[indel_idx];
+                                                let alternate_sequence = altseqs_list[indel_idx];
+                                                let (
+                                                    q_seq_ref,
+                                                    align_ref,
+                                                    r_seq_ref,
+                                                    ref_comparison,
+                                                ) = realign::align_single_reads(
+                                                    &spliced_sequence,
+                                                    reference_sequence.to_string(),
+                                                );
+                                                let (
+                                                    q_seq_alt,
+                                                    align_alt,
+                                                    r_seq_alt,
+                                                    alt_comparison,
+                                                ) = realign::align_single_reads(
+                                                    &spliced_sequence,
+                                                    alternate_sequence.to_string(),
+                                                );
+                                                alt_comparisons.push(ReadComparison {
+                                                    comparison: alt_comparison,
+                                                    index: indel_idx,
+                                                });
+                                                ref_comparisons.push(ReadComparison {
+                                                    comparison: ref_comparison,
+                                                    index: indel_idx,
+                                                });
+
+                                                let (
+                                                    ref_polyclonal_read_status,
+                                                    alt_polyclonal_read_status,
+                                                );
+                                                if strictness == 0 {
+                                                    ref_polyclonal_read_status = 0;
+                                                    alt_polyclonal_read_status = 0;
+                                                } else {
+                                                    let (
+                                                        ref_polyclonal_read_status_temp,
+                                                        alt_polyclonal_read_status_temp,
+                                                    ) = check_polyclonal_with_read_alignment(
+                                                        &alignment_sides[indel_idx],
+                                                        &q_seq_alt,
+                                                        &q_seq_ref,
+                                                        &r_seq_alt,
+                                                        &r_seq_ref,
+                                                        &align_alt,
+                                                        &align_ref,
+                                                        correct_start_positions[indel_idx],
+                                                        correct_end_positions[indel_idx],
+                                                        variant_positions_list[indel_idx],
+                                                        refalleles_list[indel_idx].len(),
+                                                        altalleles_list[indel_idx].len(),
+                                                        indel_lengths_list[indel_idx],
+                                                    );
+                                                    ref_polyclonal_read_status =
+                                                        ref_polyclonal_read_status_temp;
+                                                    alt_polyclonal_read_status =
+                                                        alt_polyclonal_read_status_temp;
+                                                }
+                                                if ref_polyclonal_read_status == 0 {
+                                                    ref_polyclonal_read_status_global = 0;
+                                                }
+                                                if alt_polyclonal_read_status == 0 {
+                                                    alt_polyclonal_read_status_global = 0;
+                                                }
+                                            }
+                                            // Sorting in ascending order so as to check if the read is ambiguous or not
+                                            alt_comparisons.as_mut_slice().sort_by(|a, b| {
+                                                (a.comparison)
+                                                    .partial_cmp(&b.comparison)
+                                                    .unwrap_or(Ordering::Equal)
+                                            });
+                                            ref_comparisons.as_mut_slice().sort_by(|a, b| {
+                                                (a.comparison)
+                                                    .partial_cmp(&b.comparison)
+                                                    .unwrap_or(Ordering::Equal)
+                                            });
+
+                                            let max_alignment = 0.0;
+                                            let mut max_index = 0;
+                                            let mut refalt = "ref".to_string();
+                                            let mut max_alignment_ref: f64 = 0.0;
+                                            let mut max_index_ref: usize = 0;
+                                            for alignment_idx in 0..ref_comparisons.len() {
+                                                if ref_comparisons[alignment_idx].comparison
+                                                    > max_alignment
+                                                {
+                                                    max_alignment_ref =
+                                                        ref_comparisons[alignment_idx].comparison;
+                                                    max_index_ref =
+                                                        ref_comparisons[alignment_idx].index;
+                                                }
+                                            }
+
+                                            let mut read_ambiguous = 0;
+                                            let mut equal_alignment_indices = Vec::<usize>::new();
+                                            let mut max_alignment_alt: f64 = 0.0;
+                                            let mut max_index_alt: usize = 0;
+                                            for alignment_idx in 0..alt_comparisons.len() {
+                                                if alt_comparisons[alignment_idx].comparison
+                                                    > max_alignment
+                                                {
+                                                    max_alignment_alt =
+                                                        alt_comparisons[alignment_idx].comparison;
+                                                    max_index_alt =
+                                                        alt_comparisons[alignment_idx].index;
+                                                }
+
+                                                if ref_polyclonal_read_status_global != 1
+                                                    && alt_polyclonal_read_status_global != 1
+                                                // If the read is going to be classified as none, no need to check if it is ambiguous
+                                                {
+                                                    if alignment_idx == 0 {
+                                                    } else if alt_comparisons[alignment_idx].comparison // Checking if the read is ambiguous or not
+                                == alt_comparisons[alignment_idx - 1].comparison
+                                                    {
+                                                        if equal_alignment_indices
+                                                            .iter()
+                                                            .any(|&i| i == alignment_idx)
+                                                        {
+                                                        } else {
+                                                            equal_alignment_indices
+                                                                .push(alignment_idx);
+                                                        }
+                                                        if equal_alignment_indices
+                                                            .iter()
+                                                            .any(|&i| i == alignment_idx - 1)
+                                                        {
+                                                        } else {
+                                                            equal_alignment_indices
+                                                                .push(alignment_idx - 1);
+                                                        }
+                                                        read_ambiguous = 1;
+                                                    }
+                                                }
+                                            }
+
+                                            let mut ref_is_ambiguous = false; // Flag which is true/false when ref allele is one of the reads that is ambiguous for a particular read
+                                            if max_alignment_alt > max_alignment_ref {
+                                                //max_alignment = max_alignment_alt;
+                                                max_index = max_index_alt;
+                                                refalt = "alt".to_string();
+                                            } else if max_alignment_alt < max_alignment_ref {
+                                                //max_alignment = max_alignment_ref;
+                                                max_index = max_index_ref;
+                                                refalt = "ref".to_string();
+                                            } else if max_alignment_alt == max_alignment_ref {
+                                                //max_alignment = max_alignment_ref;
+                                                //println!("Ambiguous case between one of the alt alleles and the ref");
+                                                read_ambiguous = 1;
+                                                if equal_alignment_indices
+                                                    .iter()
+                                                    .any(|&i| i == max_index_alt)
+                                                {
+                                                } else {
+                                                    equal_alignment_indices.push(max_index_alt);
+                                                    ref_is_ambiguous = true;
+                                                }
+                                            }
+
+                                            // Check if the read does not support any of the reference or alternate alleles
+                                            if ref_polyclonal_read_status_global == 1
+                                                && alt_polyclonal_read_status_global == 1
+                                            {
+                                                // Setting read to none
+                                                //if !all_alleles_thread
+                                                //    .contains_key(&"none".to_string())
+                                                //{
+                                                //    all_alleles_thread
+                                                //        .insert("none".to_string(), Vec::new());
+                                                //}
+                                                //all_alleles_thread
+                                                //    .get_mut(&"none".to_string())
+                                                //    .unwrap()
+                                                //    .push(iter);
+
+                                                let mut none_groups_for_each_read =
+                                                    Vec::<String>::new(); // When a read is assigned to none group, the first entry in the vector is "none", followed by the group with which it has maximum sequence similarity
+                                                none_groups_for_each_read.push("none".to_string());
+
+                                                if refalt == "ref".to_string() {
+                                                    none_groups_for_each_read
+                                                        .push("ref".to_string())
+                                                } else if refalt == "alt".to_string() {
+                                                    let alt_allele_name = alt_allele_names_list
+                                                        [max_index]
+                                                        .to_string();
+                                                    none_groups_for_each_read.push(alt_allele_name);
+                                                }
+                                                //all_alleles_thread.push(ReadClassification {
+                                                //    read_number: iter,
+                                                //    categories: none_groups_for_each_read,
+                                                //});
+                                                //all_alleles_thread[&iter.to_string()] =
+                                                //    other_json!(none_groups_for_each_read);
+                                                output_string_thread +=
+                                                    &serde_json::to_string(&ReadClassification {
+                                                        read_number: iter as usize,
+                                                        categories: none_groups_for_each_read,
+                                                    })
+                                                    .unwrap();
+                                                output_string_thread += &",".to_string();
+                                            } else if read_ambiguous == 1 {
+                                                // Setting read to ambiguous
+                                                //if !all_alleles_thread
+                                                //    .contains_key(&"amb".to_string())
+                                                //{
+                                                //    all_alleles_thread
+                                                //        .insert("amb".to_string(), Vec::new());
+                                                //} else {
+                                                //    all_alleles_thread
+                                                //        .get_mut(&"amb".to_string())
+                                                //        .unwrap()
+                                                //        .push(iter);
+                                                //}
+
+                                                let mut ambiguous_groups_for_each_read =
+                                                    Vec::<String>::new(); // When a read is asigned to ambiguous group, the first entry in the vector is "amb". Subsequent entries are for each group with which the read has equal sequence similarity with
+                                                ambiguous_groups_for_each_read
+                                                    .push("amb".to_string());
+                                                for eq_alignment_idx in
+                                                    0..equal_alignment_indices.len()
+                                                {
+                                                    let item2 = alt_allele_names_list
+                                                        [eq_alignment_idx]
+                                                        .clone()
+                                                        .to_string();
+                                                    ambiguous_groups_for_each_read.push(item2);
+                                                }
+                                                if ref_is_ambiguous == true {
+                                                    ambiguous_groups_for_each_read
+                                                        .push("ref".to_string());
+                                                }
+                                                //all_alleles_thread[&iter.to_string()] =
+                                                //    other_json!(ambiguous_groups_for_each_read);
+                                                //all_alleles_thread.push(ReadClassification {
+                                                //    read_number: iter,
+                                                //    categories: ambiguous_groups_for_each_read,
+                                                //});
+                                                output_string_thread +=
+                                                    &serde_json::to_string(&ReadClassification {
+                                                        read_number: iter as usize,
+                                                        categories: ambiguous_groups_for_each_read,
+                                                    })
+                                                    .unwrap();
+                                                output_string_thread += &",".to_string();
+                                                //ambiguous_list_thread
+                                                //    .insert(iter, ambiguous_groups_for_each_read);
+                                            } else if refalt == "ref".to_string() {
+                                                // Setting read to ref
+                                                //if !all_alleles_thread
+                                                //    .contains_key(&"ref".to_string())
+                                                //{
+                                                //    all_alleles_thread
+                                                //        .insert("ref".to_string(), Vec::new());
+                                                //}
+                                                //all_alleles_thread
+                                                //    .get_mut(&"ref".to_string())
+                                                //    .unwrap()
+                                                //    .push(iter);
+                                                //all_alleles_thread[iter.to_string()] =
+                                                //    other_json!(vec!["ref".to_string()]);
+                                                //all_alleles_thread.push(ReadClassification {
+                                                //    read_number: iter,
+                                                //    categories: vec!["ref".to_string()],
+                                                //});
+                                                output_string_thread +=
+                                                    &serde_json::to_string(&ReadClassification {
+                                                        read_number: iter as usize,
+                                                        categories: vec!["ref".to_string()],
+                                                    })
+                                                    .unwrap();
+                                                output_string_thread += &",".to_string();
+                                                if variant_positions_list.len() == 1 // Forward/reverse for reference/alternate allele is only counted for single allele variants
+                                && sequence_strand == "R".to_string()
+                                                {
+                                                    reference_reverse_count_thread += 1;
+                                                } else if variant_positions_list.len() == 1 // Forward/reverse for reference/alternate allele is only counted for single allele variants
+                                && sequence_strand == "F".to_string()
+                                                {
+                                                    reference_forward_count_thread += 1;
+                                                }
+                                            } else if refalt == "alt".to_string() {
+                                                // Setting read to alt
+                                                // Determine which alt allele read needs to be classified into
+                                                let alt_allele_name =
+                                                    alt_allele_names_list[max_index].to_string();
+                                                //if !all_alleles_thread
+                                                //    .contains_key(&alt_allele_name.clone())
+                                                //{
+                                                //    all_alleles_thread.insert(
+                                                //        alt_allele_name.clone(),
+                                                //        Vec::new(),
+                                                //    );
+                                                //}
+                                                //all_alleles_thread
+                                                //    .get_mut(&alt_allele_name)
+                                                //    .unwrap()
+                                                //    .push(iter);
+
+                                                //all_alleles_thread[iter.to_string()] =
+                                                //    other_json!(vec![alt_allele_name.to_string()]);
+                                                //all_alleles_thread.push(ReadClassification {
+                                                //    read_number: iter,
+                                                //    categories: vec![alt_allele_name],
+                                                //});
+                                                output_string_thread +=
+                                                    &serde_json::to_string(&ReadClassification {
+                                                        read_number: iter as usize,
+                                                        categories: vec![alt_allele_name],
+                                                    })
+                                                    .unwrap();
+                                                output_string_thread += &",".to_string();
+                                                if variant_positions_list.len() == 1 // Forward/reverse for reference/alternate allele is only counted for single allele variants
+                                && sequence_strand == "R".to_string()
+                                                {
+                                                    alternate_reverse_count_thread += 1;
+                                                } else if variant_positions_list.len() == 1 // Forward/reverse for reference/alternate allele is only counted for single allele variants
+                                && sequence_strand == "F".to_string()
+                                                {
+                                                    alternate_forward_count_thread += 1;
+                                                }
+                                            } else {
+                                                // Should not happen
+                                                println!("Unaccounted scenario, please check!");
+                                            }
+                                        }
+                                    }
+                                }
+                                // Once all reads are analyzed by a thread it transfers all the read_diff_scores thread. I tried out an alternative implementation where all read_diff_scores struct was directly stored in alt_scores_thread and ref_scores_thread but that was slower because it was keeping other threads idle while one was writing into those variables
+                                //for item in all_alleles_thread {
+                                //    all_alleles_temp.lock().unwrap().push(item);
+                                //}
+                                //drop(all_alleles_temp); // This drops the vector so that other threads can now write into this variable while the current thread can do some other computation. This helps in better concurrency.
+
+                                *output_string_temp.lock().unwrap() += &output_string_thread;
+
+                                *alternate_forward_count_temp.lock().unwrap() +=
+                                    alternate_forward_count_thread;
+                                drop(alternate_forward_count_temp);
+                                *alternate_reverse_count_temp.lock().unwrap() +=
+                                    alternate_reverse_count_thread;
+                                drop(alternate_reverse_count_temp);
+                                *reference_forward_count_temp.lock().unwrap() +=
+                                    reference_forward_count_thread;
+                                drop(reference_forward_count_temp);
+                                *reference_reverse_count_temp.lock().unwrap() +=
+                                    reference_reverse_count_thread;
+                                drop(reference_reverse_count_temp);
+                            });
+                            handles.push(handle); // The handle (which contains the thread) is stored in the handles vector
+                        }
+                        for handle in handles {
+                            // Wait for all threads to finish before proceeding further
+                            handle.join().unwrap();
+                        }
+                        // Combining data from all different threads
+                        //for item in &mut *all_alleles_temp.lock().unwrap() {
+                        //    all_alleles.push(ReadClassification::to_owned(item));
+                        //}
+                        output_string += &*output_string_temp.lock().unwrap();
+                        alternate_forward_count += *alternate_forward_count_temp.lock().unwrap();
+                        alternate_reverse_count += *alternate_reverse_count_temp.lock().unwrap();
+                        reference_forward_count += *reference_forward_count_temp.lock().unwrap();
+                        reference_reverse_count += *reference_reverse_count_temp.lock().unwrap();
+                    }
+
+                    if variant_positions_list.len() == 1 {
+                        // Forward/reverse for reference/alternate allele is only counted for single allele variants
+                        let p_value = strand_analysis(
+                            alternate_forward_count,
+                            alternate_reverse_count,
+                            reference_forward_count,
+                            reference_reverse_count,
+                        );
+
+                        let fisher_strand = json::stringify(object! {
+                                    alternate_forward_count: alternate_forward_count,
+                                    alternate_reverse_count: alternate_reverse_count,
+                                    reference_forward_count: reference_forward_count,
+                                    reference_reverse_count: reference_reverse_count,
+                        p_value: format!("{:.2}", p_value),
+                        });
+                        //println!("strand_probability:{:.2}", p_value);
+                        println!("fisher_strand:{}", fisher_strand);
+                    }
+                    //let mut output_string = "[".to_string();
+                    //output_string += &all_alleles.to_string();
+                    output_string.pop();
+                    output_string += &"]".to_string();
+                    println!("Final_output:{:?}", output_string);
+                }
+                Err(error) => println!("Incorrect json: {}", error),
+            }
         }
         Err(error) => println!("Piping error: {}", error),
     }
-    let args: Vec<&str> = input.split("_").collect(); // Various input from nodejs is separated by "_" character
-    let sequences: String = args[0].parse::<String>().unwrap(); // Variable contains sequences separated by "-" character, the first two sequences contains the ref and alt sequences
-    let start_positions: String = args[1].parse::<String>().unwrap(); // Variable contains start position of reads separated by "-" character
-    let cigar_sequences: String = args[2].parse::<String>().unwrap(); // Variable contains cigar sequences separated by "-" character
-    let sequence_flags: String = args[3].parse::<String>().unwrap(); // Variable contains sam flags of reads separated by "-" character
-    let variant_pos: i64 = args[4].parse::<i64>().unwrap(); // Variant position
-    let refallele: String = args[5].parse::<String>().unwrap(); // Reference allele
-    let altallele: String = args[6].parse::<String>().unwrap(); // Alternate allele
-    let strictness: usize = args[7].parse::<usize>().unwrap(); // strictness of the pipeline
-    let leftflankseq: String = args[8].parse::<String>().unwrap(); //Left flanking sequence
-    let rightflankseq: String = args[9].parse::<String>().unwrap(); //Right flanking sequence.
-
-    //let fisher_test_threshold: f64 = (10.0).powf((args[14].parse::<f64>().unwrap()) / (-10.0)); // Significance value for strand_analysis (NOT in phred scale)
-    let rightflank_nucleotides: Vec<char> = rightflankseq.chars().collect(); // Vector containing right flanking nucleotides
-    let ref_nucleotides: Vec<char> = refallele.chars().collect(); // Vector containing ref nucleotides
-    let alt_nucleotides: Vec<char> = altallele.chars().collect(); // Vector containing alt nucleotides
-
-    //println!("rightflank_nucleotides:{:?}", rightflank_nucleotides);
-    let lines: Vec<&str> = sequences.split("-").collect(); // Vector containing list of sequences, the first two containing ref and alt.
-    let start_positions_list: Vec<&str> = start_positions.split("-").collect(); // Vector containing start positions
-    let cigar_sequences_list: Vec<&str> = cigar_sequences.split("-").collect(); // Vector containing cigar sequences
-    let sequence_flags_list: Vec<&str> = sequence_flags.split("-").collect(); // Vector containing sam flag of read sequences
-    let single_thread_limit: usize = 1000; // If total number of reads is lower than this value the reads will be parsed sequentially in a single thread, if greaterreads will be parsed in parallel
-    let max_threads: usize = 5; // Max number of threads in case the parallel processing of reads is invoked
-    let ref_length: i64 = refallele.len() as i64; // Determining length of ref allele
-    let alt_length: i64 = altallele.len() as i64; // Determining length of alt allele
-    let mut indel_length: i64 = alt_length; // Determining indel length, in case of an insertion it will be alt_length. In case of a deletion, it will be ref_length
-    if ref_length > alt_length {
-        indel_length = ref_length;
-    }
-    //println!("indel_length:{}", indel_length);
-    let surrounding_region_length: i64 = 80; // Flanking region on both sides upto which it will search for duplicate kmers
-
-    if args.len() > 14 {
-        // This is true when realigning reads to determine correct indel sequence. Currently in development (not functional)
-        let clustalo_path: String = args[14].parse::<String>().unwrap(); // Removing "\n" from the end of the string
-        let quality_scores: String = args[15].parse::<String>().unwrap(); // Variable contains quality scores of reads separated by "-" character
-        realign::realign_reads(
-            &sequences,
-            &start_positions,
-            &cigar_sequences,
-            &quality_scores,
-            &clustalo_path,
-            &lines[0].to_string(),
-            &lines[1].to_string(),
-            variant_pos,
-            indel_length,
-        );
-    }
-
-    // Preprocessing of input
-    let (optimized_variant_pos, optimized_indel_length) = preprocess_input(
-        &ref_nucleotides,
-        &alt_nucleotides,
-        variant_pos,
-        indel_length,
-        leftflankseq,
-        rightflankseq,
-        surrounding_region_length,
-    );
-
-    if indel_length != optimized_indel_length {
-        indel_length = optimized_indel_length;
-    }
-
-    println!("optimized_variant_pos:{}", optimized_variant_pos);
-    println!("optimized_indel_length:{}", optimized_indel_length);
-    //println!("ref_allele:{}", &refallele);
-    //println!("alt_allele:{}", &altallele);
-
-    drop(rightflank_nucleotides);
-    let reference_sequence = lines[0].to_string();
-    let alternate_sequence = lines[1].to_string();
-    let mut ref_scores = Vec::<read_diff_scores>::new(); // Vector for storing structs of type read_diff_scores which contain diff_scores, ref_insertion status, polyclonal status, original group ID of reads classified as supporting ref allele
-    let mut alt_scores = Vec::<read_diff_scores>::new(); // Vector for storing structs of type read_diff_scores which contain diff_scores, ref_insertion status, polyclonal status, original group ID of reads classified as supporting alt allele
-    if lines.len() - 2 <= single_thread_limit {
-        // Start of sequential single-thread implementation for classifying reads
-        let mut i: i64 = 0;
-        //let num_of_reads: f64 = (lines.len() - 2) as f64;
-        for read in lines {
-            if i >= 2 {
-                // The first two sequences are reference and alternate allele and therefore skipped. Also checking there are no blank lines in the input file
-                let (
-                    within_indel,
-                    correct_start_position,
-                    correct_end_position,
-                    alignment_side,
-                    spliced_sequence,
-                ) = realign::check_read_within_indel_region(
-                    // Checks if the read contains the indel region (or a part of it)
-                    start_positions_list[i as usize - 2].parse::<i64>().unwrap() - 1,
-                    cigar_sequences_list[i as usize - 2].to_string(),
-                    variant_pos,
-                    indel_length as usize,
-                    ref_length as usize,
-                    alt_length as usize,
-                    strictness,
-                    read.to_string(),
-                );
-                //println!("correct_start_position:{}", correct_start_position);
-                //println!("correct_end_position:{}", correct_end_position);
-                //println!(
-                //    "cigar_sequence:{}",
-                //    &cigar_sequences_list[i as usize - 2].to_string()
-                //);
-                if within_indel == 1 {
-                    // Checking if the read is in forward or reverse strand
-                    let mut sequence_strand: String = "F".to_string(); // Initializing sequence strand to forward
-                    if sequence_flags_list[i as usize - 2].parse::<i64>().unwrap() & 16 == 16 {
-                        sequence_strand = "R".to_string();
-                    }
-                    //let mut read_ambiguous = check_if_read_ambiguous(
-                    //    // Function that checks if the start/end of a read is in a region such that it cannot be distinguished as supporting ref or alt allele
-                    //    correct_start_position,
-                    //    correct_end_position,
-                    //    left_offset,
-                    //    right_offset,
-                    //    variant_pos,
-                    //    refallele.len(),
-                    //    &ref_nucleotides,
-                    //    &alt_nucleotides,
-                    //    optimized_allele,
-                    //);
-
-                    //println!("ref_polyclonal_read_status:{}", ref_polyclonal_read_status);
-                    //println!("alt_polyclonal_read_status:{}", alt_polyclonal_read_status);
-                    //println!("read_ambiguous:{}", read_ambiguous);
-                    //println!("ref_insertion:{}", ref_insertion);
-
-                    let (q_seq_ref, align_ref, r_seq_ref, ref_comparison) =
-                        realign::align_single_reads(&spliced_sequence, reference_sequence.clone());
-                    let (q_seq_alt, align_alt, r_seq_alt, alt_comparison) =
-                        realign::align_single_reads(&spliced_sequence, alternate_sequence.clone());
-                    //println!("ref_comparison:{}", ref_comparison);
-                    //println!("alt_comparison:{}", alt_comparison);
-
-                    let (ref_polyclonal_read_status, alt_polyclonal_read_status);
-                    if strictness == 0 {
-                        ref_polyclonal_read_status = 0;
-                        alt_polyclonal_read_status = 0;
-                    } else {
-                        let (ref_polyclonal_read_status_temp, alt_polyclonal_read_status_temp) =
-                            check_polyclonal_with_read_alignment(
-                                &alignment_side,
-                                &q_seq_alt,
-                                &q_seq_ref,
-                                &r_seq_alt,
-                                &r_seq_ref,
-                                &align_alt,
-                                &align_ref,
-                                correct_start_position,
-                                correct_end_position,
-                                variant_pos,
-                                ref_length as usize,
-                                alt_length as usize,
-                                indel_length as usize,
-                            );
-                        ref_polyclonal_read_status = ref_polyclonal_read_status_temp;
-                        alt_polyclonal_read_status = alt_polyclonal_read_status_temp;
-                    }
-                    let ref_insertion = 0;
-
-                    let diff_score: f64 = alt_comparison - ref_comparison; // Is the read more similar to reference sequence or alternate sequence
-                    let mut read_ambiguous = 0;
-                    if (diff_score.abs() * 100000000.0).round() == 0.0 / 100000000.0 {
-                        // Rounding off to 4 places of decimal
-                        read_ambiguous = 2;
-                    }
-                    let item = read_diff_scores {
-                        value: f64::from(diff_score),
-                        abs_value: f64::from(diff_score.abs()), // Absolute value of diff_score
-                        groupID: usize::from(i as usize - 2), // The -2 has been added since the first two sequences in the file are reference and alternate
-                        alt_comparison: i64::from(alt_polyclonal_read_status),
-                        ref_comparison: i64::from(ref_polyclonal_read_status),
-                        polyclonal: i64::from(
-                            ref_polyclonal_read_status + alt_polyclonal_read_status,
-                        ),
-                        ambiguous: read_ambiguous,
-                        ref_insertion: i64::from(ref_insertion),
-                        sequence_strand: String::from(sequence_strand),
-                    };
-                    if diff_score > 0.0 {
-                        // If diff_score > 0 put in alt_scores vector otherwise in ref_scores
-                        alt_scores.push(item);
-                    } else if diff_score <= 0.0 {
-                        ref_scores.push(item);
-                    } else {
-                        // Should not happen
-                        println!("Problematic diff score:{}", diff_score);
-                        println!("correct_start_position:{}", correct_start_position);
-                        println!("correct_end_position:{}", correct_end_position);
-                        println!(
-                            "cigar_sequence:{}",
-                            &cigar_sequences_list[i as usize - 2].to_string()
-                        );
-                    }
-                }
-            }
-            i += 1;
-        }
-    } else {
-        // Multithreaded implementation for parsing reads in parallel starts from here
-        // Generally in rust one variable only own a data at a time, but `Arc` keyword is special and allows for multiple threads to access the same data.
-
-        let sequences = Arc::new(sequences);
-        let start_positions = Arc::new(start_positions);
-        let cigar_sequences = Arc::new(cigar_sequences);
-        let sequence_flags = Arc::new(sequence_flags);
-        let reference_sequence = Arc::new(reference_sequence);
-        let alternate_sequence = Arc::new(alternate_sequence);
-        let ref_scores_temp = Arc::new(Mutex::new(Vec::<read_diff_scores>::new())); // This variable will store read_diff_scores struct of reads classifed as ref, but can be written into by all threads. When Mutex is not define (as in the variables above) they are read-only.
-        let alt_scores_temp = Arc::new(Mutex::new(Vec::<read_diff_scores>::new())); // This variable will store read_diff_scores struct of reads classifed as alt, but can be written into by all threads. When Mutex is not define (as in the variables above) they are read-only.
-        let mut handles = vec![]; // Vector to store handle which is used to prevent one thread going ahead of another
-
-        for thread_num in 0..max_threads {
-            // Assigning thread number thread_num to each thread
-            // In the next few lines each variable gets cloned, so that each thread has its own copy of the variable
-            let sequences = Arc::clone(&sequences);
-            let start_positions = Arc::clone(&start_positions);
-            let cigar_sequences = Arc::clone(&cigar_sequences);
-            let reference_sequence = Arc::clone(&reference_sequence);
-            let alternate_sequence = Arc::clone(&alternate_sequence);
-            let sequence_flags = Arc::clone(&sequence_flags);
-            let ref_scores_temp = Arc::clone(&ref_scores_temp);
-            let alt_scores_temp = Arc::clone(&alt_scores_temp);
-
-            let handle = thread::spawn(move || {
-                // Thread is initiallized here
-                //println!("thread:{}", thread_num);
-                let lines: Vec<&str> = sequences.split("-").collect();
-                let start_positions_list: Vec<&str> = start_positions.split("-").collect();
-                let cigar_sequences_list: Vec<&str> = cigar_sequences.split("-").collect();
-                let sequence_flags_list: Vec<&str> = sequence_flags.split("-").collect();
-                let mut ref_scores_thread = Vec::<read_diff_scores>::new(); // This local variable stores all read_diff_scores (for ref classified reads) parsed by each thread. This variable is then concatenated from other threads later.
-                let mut alt_scores_thread = Vec::<read_diff_scores>::new(); // This local variable stores all read_diff_scores (for alt classified reads) parsed by each thread. This variable is then concatenated from other threads later.
-                for iter in 0..lines.len() - 2 {
-                    let remainder: usize = iter % max_threads; // Calculate remainder of read number divided by max_threads to decide which thread parses this read
-                    if remainder == thread_num {
-                        // Thread analyzing a particular read must have the same remainder as the thread_num, this avoids multiple reads from parsing the same read. Also checking if the read length > 0
-
-                        //println!(
-                        //    "start_positions_list:{}",
-                        //    start_positions_list[iter].parse::<i64>().unwrap() - 1
-                        //);
-                        //println!("cigar_sequences_list[iter]:{}", cigar_sequences_list[iter]);
-                        let (
-                            within_indel,
-                            correct_start_position,
-                            correct_end_position,
-                            alignment_side,
-                            spliced_sequence,
-                        ) = realign::check_read_within_indel_region(
-                            // Checks if the read contains the indel region (or a part of it)
-                            start_positions_list[iter].parse::<i64>().unwrap() - 1,
-                            cigar_sequences_list[iter].to_string(),
-                            variant_pos,
-                            indel_length as usize,
-                            ref_length as usize,
-                            alt_length as usize,
-                            strictness,
-                            lines[iter + 2].to_string(),
-                        );
-                        if within_indel == 1 {
-                            // Checking if the read is in forward or reverse strand
-                            let mut sequence_strand: String = "F".to_string(); // Initializing sequence strand to forward
-                            if sequence_flags_list[iter].parse::<i64>().unwrap() & 16 == 16 {
-                                sequence_strand = "R".to_string();
-                            }
-                            //let mut read_ambiguous = check_if_read_ambiguous(
-                            //    // Function that checks if the start/end of a read is in a region such that it cannot be distinguished as supporting ref or alt allele
-                            //    correct_start_position,
-                            //    correct_end_position,
-                            //    left_offset,
-                            //    right_offset,
-                            //    variant_pos,
-                            //    refallele.len(),
-                            //    &ref_nucleotides,
-                            //    &alt_nucleotides,
-                            //    optimized_allele,
-                            //);
-
-                            let (q_seq_ref, align_ref, r_seq_ref, ref_comparison) =
-                                realign::align_single_reads(
-                                    &spliced_sequence,
-                                    reference_sequence.to_string(),
-                                );
-                            let (q_seq_alt, align_alt, r_seq_alt, alt_comparison) =
-                                realign::align_single_reads(
-                                    &spliced_sequence,
-                                    alternate_sequence.to_string(),
-                                );
-
-                            let (ref_polyclonal_read_status, alt_polyclonal_read_status);
-                            if strictness == 0 {
-                                ref_polyclonal_read_status = 0;
-                                alt_polyclonal_read_status = 0;
-                            } else {
-                                let (
-                                    ref_polyclonal_read_status_temp,
-                                    alt_polyclonal_read_status_temp,
-                                ) = check_polyclonal_with_read_alignment(
-                                    &alignment_side,
-                                    &q_seq_alt,
-                                    &q_seq_ref,
-                                    &r_seq_alt,
-                                    &r_seq_ref,
-                                    &align_alt,
-                                    &align_ref,
-                                    correct_start_position,
-                                    correct_end_position,
-                                    variant_pos,
-                                    ref_length as usize,
-                                    alt_length as usize,
-                                    indel_length as usize,
-                                );
-                                ref_polyclonal_read_status = ref_polyclonal_read_status_temp;
-                                alt_polyclonal_read_status = alt_polyclonal_read_status_temp;
-                            }
-                            let ref_insertion = 0;
-
-                            let diff_score: f64 = alt_comparison - ref_comparison; // Is the read more similar to reference sequence or alternate sequence
-
-                            let mut read_ambiguous = 0;
-                            if (diff_score.abs() * 100000000.0).round() == 0.0 / 100000000.0 {
-                                // Rounding off to 4 places of decimal
-                                read_ambiguous = 2;
-                            }
-
-                            let item = read_diff_scores {
-                                value: f64::from(diff_score),
-                                abs_value: f64::from(diff_score.abs()),
-                                groupID: usize::from(iter),
-                                alt_comparison: i64::from(alt_polyclonal_read_status),
-                                ref_comparison: i64::from(ref_polyclonal_read_status),
-                                polyclonal: i64::from(
-                                    ref_polyclonal_read_status + alt_polyclonal_read_status,
-                                ),
-                                ambiguous: read_ambiguous,
-                                ref_insertion: i64::from(ref_insertion),
-                                sequence_strand: String::from(sequence_strand),
-                            };
-                            if diff_score > 0.0 {
-                                // If diff_score > 0 put in alt_scores vector otherwise in ref_scores
-                                alt_scores_thread.push(item);
-                            } else if diff_score <= 0.0 {
-                                ref_scores_thread.push(item);
-                            } else {
-                                // Should not happen
-                                println!("Problematic diff score:{}", diff_score);
-                                println!("correct_start_position:{}", correct_start_position);
-                                println!("correct_end_position:{}", correct_end_position);
-                                println!(
-                                    "cigar_sequence:{}",
-                                    &cigar_sequences_list[iter].to_string()
-                                );
-                            }
-                        }
-                    }
-                }
-                // Once all reads are analyzed by a thread it transfers all the read_diff_scores thread. I tried out an alternative implementation where all read_diff_scores struct was directly stored in alt_scores_thread and ref_scores_thread but that was slower because it was keeping other threads idle while one was writing into those variables
-                for item in alt_scores_thread {
-                    alt_scores_temp.lock().unwrap().push(item);
-                }
-                drop(alt_scores_temp); // This drops the vector so that other threads can now write into this variable while the current thread can do some other computation. This helps in better concurrency.
-                for item in ref_scores_thread {
-                    ref_scores_temp.lock().unwrap().push(item);
-                }
-                drop(ref_scores_temp); // This drops the vector so that other threads can now write into this variable while the current thread can do some other computation. This helps in better concurrency.
-            });
-            handles.push(handle); // The handle (which contains the thread) is stored in the handles vector
-        }
-        for handle in handles {
-            // Wait for all threads to finish before proceeding further
-            handle.join().unwrap();
-        }
-        // Combining data from all different threads
-        for item in &mut *ref_scores_temp.lock().unwrap() {
-            let item2 = read_diff_scores_owned(item); // Converting from borrowed variable to owned (Read memory-safe nature of Rust in official documentation to better understand this)
-            ref_scores.push(item2);
-        }
-        for item in &mut *alt_scores_temp.lock().unwrap() {
-            let item2 = read_diff_scores_owned(item); // Converting from borrowed variable to owned (Read memory-safe nature of Rust in official documentation to better understand this)
-            alt_scores.push(item2);
-        }
-    }
-
-    let reads_analyzed_num: usize = ref_scores.len() + alt_scores.len();
-    println!("Number of reads analyzed: {}", reads_analyzed_num);
-    let mut ref_indices = Vec::<read_category>::new(); // Initializing a vector to store struct of type read_category for ref-classified reads. This importantly contains the read category ref or none as categorized by classify_to_four_categories function
-    if ref_scores.len() > 0 {
-        ref_indices = classify_to_four_categories(&mut ref_scores, strictness);
-        // Function to classify reads as either ref or as none
-    }
-
-    let mut alt_indices = Vec::<read_category>::new(); // Initializing a vector to store struct of type read_category for alt-classified reads. This importantly contains the read category alt or none as categorized by classify_to_four_categories function
-    if alt_scores.len() > 0 {
-        alt_indices = classify_to_four_categories(&mut alt_scores, strictness);
-        // Function to classify reads as either alt or as none
-    }
-
-    let mut output_cat: String = "".to_string(); // Initializing string variable which will store the read categories and will be printed for being passed onto nodejs
-    #[allow(non_snake_case)]
-    let mut output_gID: String = "".to_string(); // Initializing string variable which will store the original read ID and will be printed for being passed onto nodejs
-    let mut output_diff_scores: String = "".to_string(); // Initializing string variable which will store the read diff_scores and will be printed for being passed onto nodejs
-    let mut alternate_forward_count: u32 = 0; // Alternate forward read counter
-    let mut alternate_reverse_count: u32 = 0; // Alternate reverse read counter
-    let mut reference_forward_count: u32 = 0; // Reference forward read counter
-    let mut reference_reverse_count: u32 = 0; // Reference reverse read counter
-    for item in &ref_indices {
-        if item.category == "amb" {
-            output_cat.push_str("amb:"); // Appending amb (i.e ambiguous) to output_cat string
-        } else if item.ref_insertion == 1 {
-            // In case of ref-classified reads, if there is any insertion/deletion in the indel region it will get classified into the none category.
-            output_cat.push_str("none:"); // Appending none to output_cat string
-        } else if strictness >= 1 && item.ref_comparison == 1 {
-            output_cat.push_str("none:"); // Appending none to output_cat string
-        } else if item.category == "refalt".to_string() {
-            output_cat.push_str("ref:"); // Appending ref to output_cat string
-            if item.sequence_strand == "F".to_string() {
-                reference_forward_count += 1;
-            } else if item.sequence_strand == "R".to_string() {
-                reference_reverse_count += 1;
-            }
-        } else {
-            output_cat.push_str("none:"); // Appending none to output_cat string
-        }
-        output_gID.push_str(&item.groupID.to_string()); // Appending group ID to output_gID string
-        output_gID.push_str(&":".to_string()); // Appending ":" to string
-        output_diff_scores.push_str(&item.diff_score.to_string()); // Appending diff_score to output_diff_scores string
-        output_diff_scores.push_str(&":".to_string()); // Appending ":" to string
-    }
-
-    for item in &alt_indices {
-        if item.category == "amb" {
-            output_cat.push_str("amb:"); // Appending amb (i.e ambiguous) to output_cat string
-        } else if strictness >= 1 && item.alt_comparison == 1 {
-            output_cat.push_str("none:"); // Appending none to output_cat string
-        } else if item.category == "refalt".to_string() {
-            output_cat.push_str("alt:"); // Appending alt to output_cat string
-            if item.sequence_strand == "F".to_string() {
-                alternate_forward_count += 1;
-            } else if item.sequence_strand == "R".to_string() {
-                alternate_reverse_count += 1;
-            }
-        } else {
-            output_cat.push_str("none:"); // Appending none to output_cat string
-        }
-
-        output_gID.push_str(&item.groupID.to_string()); // Appending group ID to output_gID string
-        output_gID.push_str(&":".to_string()); // Appending ":" to string
-        output_diff_scores.push_str(&item.diff_score.to_string()); // Appending diff_score to output_diff_scores string
-        output_diff_scores.push_str(&":".to_string()); // Appending ":" to string
-    }
-    println!("alternate_forward_count:{}", alternate_forward_count);
-    println!("alternate_reverse_count:{}", alternate_reverse_count);
-    println!("reference_forward_count:{}", reference_forward_count);
-    println!("reference_reverse_count:{}", reference_reverse_count);
-
-    let p_value = strand_analysis(
-        alternate_forward_count,
-        alternate_reverse_count,
-        reference_forward_count,
-        reference_reverse_count,
-    );
-
-    println!("strand_probability:{:.2}", p_value);
-
-    output_cat.pop(); // Removing the last ":" character from string
-    output_gID.pop(); // Removing the last ":" character from string
-    output_diff_scores.pop(); // Removing the last ":" character from string
-    println!("output_cat:{:?}", output_cat); // Final read categories assigned
-    println!("output_gID:{:?}", output_gID); // Initial read group ID corresponding to read category in output_cat
-    println!("output_diff_scores:{:?}", output_diff_scores); // Final diff_scores corresponding to reads in group ID
 }
 
 fn strand_analysis(
@@ -668,75 +1293,6 @@ fn strand_analysis(
         p_sum = 0.000000000000000001;
     }
     -10.0 * p_sum.log(10.0) // Reporting phred-scale p-values (-10*log(p-value))
-}
-
-fn classify_to_four_categories(
-    read_alignment_diff_scores: &mut Vec<read_diff_scores>, // Vector containing read diff_scores for all reads classified as ref/alt
-    strictness: usize,                                      // Strictness of the pipeline
-) -> Vec<read_category> {
-    let mut indices = Vec::<read_category>::new(); // Vector of type struct read_category containing category classified, original group ID, diff_score and ref_insertion flag. This vecor will be finally returned to the main function
-    let absolute_threshold_cutoff: f64 = 0.0; // Absolute threshold cutoff. If the absolute diff_score is less than this value, the read will automatically be classified as "none"
-    for i in 0..read_alignment_diff_scores.len() {
-        if read_alignment_diff_scores[i].polyclonal >= 2 as i64 {
-            // If polyclonal is 2, it is automatically classified as 'none' since the allele neither matches ref allele or alt allele of interest
-            let read_cat = read_category {
-                category: String::from("none"),
-                groupID: usize::from(read_alignment_diff_scores[i].groupID),
-                alt_comparison: i64::from(read_alignment_diff_scores[i].alt_comparison),
-                ref_comparison: i64::from(read_alignment_diff_scores[i].ref_comparison),
-                diff_score: f64::from(read_alignment_diff_scores[i].value),
-                ref_insertion: i64::from(read_alignment_diff_scores[i].ref_insertion),
-                sequence_strand: String::from(
-                    &read_alignment_diff_scores[i].sequence_strand.to_owned(),
-                ),
-            };
-            indices.push(read_cat);
-        } else if read_alignment_diff_scores[i].ambiguous == 2 as i64 {
-            // If ambiguous is 1, it is automatically classified as 'amb' since the read start/ends in a region which has the same sequence as that in the flanking region
-            let read_cat = read_category {
-                category: String::from("amb"),
-                groupID: usize::from(read_alignment_diff_scores[i].groupID),
-                alt_comparison: i64::from(read_alignment_diff_scores[i].alt_comparison),
-                ref_comparison: i64::from(read_alignment_diff_scores[i].ref_comparison),
-                diff_score: f64::from(read_alignment_diff_scores[i].value),
-                ref_insertion: i64::from(read_alignment_diff_scores[i].ref_insertion),
-                sequence_strand: String::from(
-                    &read_alignment_diff_scores[i].sequence_strand.to_owned(),
-                ),
-            };
-            indices.push(read_cat);
-        } else if read_alignment_diff_scores[i].abs_value <= absolute_threshold_cutoff
-            && strictness >= 1
-        {
-            // If diff_score absolute value is less than absolute threshold cutoff, it is automatically classified as 'none'
-            let read_cat = read_category {
-                category: String::from("none"),
-                groupID: usize::from(read_alignment_diff_scores[i].groupID),
-                alt_comparison: i64::from(read_alignment_diff_scores[i].alt_comparison),
-                ref_comparison: i64::from(read_alignment_diff_scores[i].ref_comparison),
-                diff_score: f64::from(read_alignment_diff_scores[i].value),
-                ref_insertion: i64::from(read_alignment_diff_scores[i].ref_insertion),
-                sequence_strand: String::from(
-                    &read_alignment_diff_scores[i].sequence_strand.to_owned(),
-                ),
-            };
-            indices.push(read_cat);
-        } else {
-            let read_cat = read_category {
-                category: String::from("refalt"),
-                groupID: usize::from(read_alignment_diff_scores[i].groupID),
-                alt_comparison: i64::from(read_alignment_diff_scores[i].alt_comparison),
-                ref_comparison: i64::from(read_alignment_diff_scores[i].ref_comparison),
-                diff_score: f64::from(read_alignment_diff_scores[i].value),
-                ref_insertion: i64::from(read_alignment_diff_scores[i].ref_insertion),
-                sequence_strand: String::from(
-                    &read_alignment_diff_scores[i].sequence_strand.to_owned(),
-                ),
-            };
-            indices.push(read_cat);
-        }
-    }
-    indices // Indices vector being returned to main function
 }
 
 fn check_polyclonal_with_read_alignment(

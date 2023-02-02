@@ -5,7 +5,6 @@ const spawn = require('child_process').spawn
 const Readable = require('stream').Readable
 const additionalExamples = require('./indel.examples')
 //const utils = require('../../src/utils')
-console.log(9, 'test')
 
 /*
 to compile rust, see server/utils/rust/README.md
@@ -66,7 +65,6 @@ output_diff_scores:"-0.1537931034482759:-0.01869158878504673:0.02717086834733884
 ***************/
 
 const pphost = 'http://pp-int-test.stjude.org/' // show links using this host
-const groupkeys = ['ref', 'alt', 'none', 'amb'] // corresponds to the same values returned by rust
 
 /**************
  Test sections
@@ -106,67 +104,52 @@ async function runTest(e, test, strictness) {
 	if (!e.variant.alt) throw '.variant.alt missing'
 	if (!Array.isArray(e.reads)) throw '.reads[] missing'
 	if (e.reads.length == 0) throw '.reads[] empty array'
+
+	const alleles = [
+		// For now hardcoding for single allele
+		{
+			ref_position: e.variant.pos,
+			refallele: e.variant.ref,
+			altallele: e.variant.alt,
+			refseq: e.seqRef,
+			altseq: e.seqMut,
+			leftflankseq: e.leftFlank,
+			rightflankseq: e.rightFlank
+		}
+	]
+
+	let groupkeys = ['ref', 'none', 'amb'] // corresponds to the same values returned by rust
+	for (let var_idx = 0; var_idx < alleles.length; var_idx++) {
+		groupkeys.push('alt' + var_idx.toString())
+	}
+
+	const reads = []
 	for (const r of e.reads) {
 		if (!r.s) throw '.s (sequence) missing from a read'
 		if (!Number.isInteger(r.p)) throw '.p (position) not integer from a read'
 		if (!r.c) throw '.c (cigar) missing from a read'
 		if (!groupkeys.includes(r.g)) throw '.g (group) is invalid for a read'
 		if (!Number.isInteger(r.f)) throw '.f (flag) not integer for a read'
+		reads.push({ read_sequence: r.s, start_position: Number(r.p), cigar: r.c, flag: r.f })
 	}
 
-	// compose input string
-	const input =
-		e.seqRef +
-		'-' +
-		e.seqMut +
-		'-' +
-		e.reads.map(i => i.s).join('-') + // reads
-		'_' +
-		e.reads.map(i => i.p).join('-') + // position
-		'_' +
-		e.reads.map(i => i.c).join('-') + // cigar
-		'_' +
-		e.reads.map(i => i.f).join('-') + // flag
-		'_' +
-		e.variant.pos + // Variant position
-		'_' +
-		e.variant.ref + // Reference allele
-		'_' +
-		e.variant.alt + // Alternate allele
-		'_' +
-		strictness + // Strictness value
-		'_' +
-		e.leftFlank + // Left flank sequence
-		'_' +
-		e.rightFlank // Right flank sequence
+	const input_data = { reads: reads, alleles: alleles, strictness: Number(strictness) }
 
 	try {
-		const stdout = await run_rust('indel', input)
-		let groups, indices
-		for (const line of stdout.split('\n')) {
-			if (line.includes('output_cat')) {
-				groups = line
-					.replace(/"/g, '')
-					.replace(/,/g, '')
-					.replace('output_cat:', '')
-					.split(':')
-			} else if (line.includes('output_gID')) {
-				indices = line
-					.replace(/"/g, '')
-					.replace(/,/g, '')
-					.replace('output_gID:', '')
-					.split(':')
-					.map(Number)
+		const rust_output = await run_rust('indel', JSON.stringify(input_data))
+		const rust_output_list = rust_output.split('\n')
+
+		for (let item of rust_output_list) {
+			if (item.includes('Final_output:')) {
+				final_output = JSON.parse(JSON.parse(item.replace('Final_output:', '')))
 			}
 		}
-		if (!groups) throw 'output_cat: line missing'
-		if (!indices) throw 'output_gID: line missing'
-		test.equal(groups.length, indices.length, 'output_cat and output_gID should be same length')
-		test.equal(indices.length, e.reads.length, 'indices.length should equal e.reads.length')
+		test.equal(final_output.length, e.reads.length, 'indices.length should equal final_output.length')
 
 		const results = [] // in the same order as e.reads[]
-		for (let i = 0; i < indices.length; i++) results[indices[i]] = groups[i]
-
+		for (let i = 0; i < final_output.length; i++) {
+			results[final_output[i].read_number] = final_output[i].categories[0] // The first element of categories contains the read classification
+		}
 		// find reads with wrong classification
 		let wrongcount = 0
 		for (let i = 0; i < results.length; i++) {
@@ -239,7 +222,7 @@ const examples = [
 				p: 119155685,
 				c: '75M',
 				f: 163,
-				g: 'alt'
+				g: 'alt0'
 			},
 			{
 				n: 'softclip on right',
@@ -247,7 +230,7 @@ const examples = [
 				p: 119155692,
 				c: '61M14S',
 				f: 163,
-				g: 'alt'
+				g: 'alt0'
 			},
 			{
 				n: 'insertion at right',
@@ -255,7 +238,7 @@ const examples = [
 				p: 119155696,
 				c: '51M8I16M',
 				f: 83,
-				g: 'alt'
+				g: 'alt0'
 			},
 			{
 				n: 'insertion at left',
@@ -263,7 +246,7 @@ const examples = [
 				p: 119155716,
 				c: '37M8I30M',
 				f: 163,
-				g: 'alt'
+				g: 'alt0'
 			},
 			{
 				n: 'softclip on left',
@@ -271,7 +254,7 @@ const examples = [
 				p: 119155731,
 				c: '16S59M',
 				f: 163,
-				g: 'alt'
+				g: 'alt0'
 			},
 			{
 				n: 'softclip on left',
@@ -279,7 +262,7 @@ const examples = [
 				p: 119155737,
 				c: '10S65M',
 				f: 163,
-				g: 'alt'
+				g: 'alt0'
 			},
 			{
 				n: 'only one read is ref',
@@ -296,7 +279,7 @@ const examples = [
 				c: '18M8I49M',
 				f: 163,
 				g: 'none',
-				g_0: 'alt'
+				g_0: 'alt0'
 			},
 			{
 				s: 'ACCTTCTGCCGCAGCGAGTATGTGTTCCCTCAAGTGCTTCTGCTCTTGGAACTGCTTCTAAGGCTGCTTCTGGCT',
@@ -330,7 +313,7 @@ const examples = [
 				p: 55589708,
 				c: '61M39S',
 				f: 99,
-				g: 'alt'
+				g: 'alt0'
 			},
 			{
 				n: 'with softclip',
@@ -338,7 +321,7 @@ const examples = [
 				p: 55589729,
 				c: '44M56S',
 				f: 99,
-				g: 'alt'
+				g: 'alt0'
 			},
 			{
 				n: 'with del',
@@ -346,7 +329,7 @@ const examples = [
 				p: 55589757,
 				c: '14M3D40M46S',
 				f: 99,
-				g: 'alt'
+				g: 'alt0'
 			},
 			{
 				n: 'distal SNV',
@@ -400,7 +383,7 @@ const examples = [
 				p: 7578246,
 				c: '144M1I6M',
 				f: 99,
-				g: 'alt'
+				g: 'alt0'
 			},
 			{
 				n: 'mismatch on right',
@@ -409,7 +392,7 @@ const examples = [
 				p: 7578243,
 				c: '151M',
 				f: 163,
-				g: 'alt'
+				g: 'alt0'
 			},
 			{
 				n: 'Softclip on right',
@@ -418,7 +401,7 @@ const examples = [
 				p: 7578255,
 				c: '136M15S',
 				f: 99,
-				g: 'alt'
+				g: 'alt0'
 			},
 			{
 				n: 'Insertion only on right',
@@ -427,7 +410,7 @@ const examples = [
 				p: 7578244,
 				c: '146M1I14M',
 				f: 83,
-				g: 'alt'
+				g: 'alt0'
 			},
 			{
 				n: 'Deletion in middle of read',
@@ -436,7 +419,7 @@ const examples = [
 				p: 7578266,
 				c: '118M18D33M',
 				f: 99,
-				g: 'alt'
+				g: 'alt0'
 			},
 			{
 				n: 'Softclip on left',
@@ -445,7 +428,7 @@ const examples = [
 				p: 7578382,
 				c: '20S131M',
 				f: 147,
-				g: 'alt'
+				g: 'alt0'
 			},
 			{
 				n: 'Mismatch on left',
@@ -454,7 +437,7 @@ const examples = [
 				p: 7578394,
 				c: '151M',
 				f: 147,
-				g: 'alt'
+				g: 'alt0'
 			},
 			{
 				n: 'Deletion (supporting alt) with mismatch, different strictness values gives different results',
@@ -464,7 +447,7 @@ const examples = [
 				c: '74M18D77M',
 				f: 163,
 				g: 'none',
-				g_0: 'alt' // Value for strictness = 0
+				g_0: 'alt0' // Value for strictness = 0
 			},
 			{
 				n:
@@ -514,7 +497,7 @@ const examples = [
 				p: 8100570,
 				c: '117M25S',
 				f: 147,
-				g: 'alt'
+				g: 'alt0'
 			},
 			{
 				n: 'read supporting alt but wrong bp in alternate allele',
@@ -524,7 +507,7 @@ const examples = [
 				c: '74M68S',
 				f: 147,
 				g: 'none',
-				g_0: 'alt'
+				g_0: 'alt0'
 			},
 			{
 				n: 'read supporting ref allele',
@@ -571,7 +554,7 @@ const examples = [
 				p: 62907262,
 				c: '18M586N67M3D16M',
 				f: 163,
-				g: 'alt'
+				g: 'alt0'
 			},
 			{
 				n: 'read not spliced but should be spliced on the left side but is instead softclipped',
@@ -579,7 +562,7 @@ const examples = [
 				p: 62907864, // In the bam track read info panel the start position is misleading as the number of softclipped nucleotides is subtracted from the original position reported in the bam file
 				c: '21S72M3D8M',
 				f: 83,
-				g: 'alt'
+				g: 'alt0'
 			},
 			{
 				n: 'normal read with alt allele and no splicing',
@@ -587,7 +570,7 @@ const examples = [
 				p: 62907867,
 				c: '66M3D35M',
 				f: 83,
-				g: 'alt'
+				g: 'alt0'
 			},
 			{
 				n: 'splicing on right side of the read, variant on left fragment',
@@ -595,7 +578,7 @@ const examples = [
 				p: 62907901,
 				c: '32M3D35M859N34M',
 				f: 163,
-				g: 'alt'
+				g: 'alt0'
 			},
 			{
 				n: 'read is softclipped on the left',
@@ -603,7 +586,7 @@ const examples = [
 				p: 62907936,
 				c: '8S35M859N57M1S',
 				f: 83,
-				g: 'alt'
+				g: 'alt0'
 			},
 			{
 				n: 'read softclipped on left but supports reference allele',
@@ -638,7 +621,7 @@ const examples = [
 				p: 171410448,
 				c: '96M4S',
 				f: 163,
-				g: 'alt'
+				g: 'alt0'
 			},
 			{
 				n: 'Insertion in middle of read but wrong bp nucleotide away from variant region',
@@ -646,7 +629,7 @@ const examples = [
 				p: 171410490,
 				c: '50M4I46M',
 				f: 147,
-				g: 'alt'
+				g: 'alt0'
 			},
 			{
 				n: 'Read supports alt allele and softclipped to the left',
@@ -654,7 +637,7 @@ const examples = [
 				p: 171410540,
 				c: '5S95M',
 				f: 83,
-				g: 'alt'
+				g: 'alt0'
 			},
 			{
 				n: 'Read supporting reference allele',
@@ -671,7 +654,7 @@ const examples = [
 				c: '69M4I27M',
 				f: 97,
 				g: 'none',
-				g_0: 'alt'
+				g_0: 'alt0'
 			},
 			{
 				n: 'Read supporting alternate allele but contains a mismatch in the flanking region similar to insertion',
@@ -680,7 +663,7 @@ const examples = [
 				c: '55M4I41M',
 				f: 147,
 				g: 'none',
-				g_0: 'alt'
+				g_0: 'alt0'
 			},
 			{
 				n:
@@ -719,7 +702,7 @@ const examples = [
 				p: 16357,
 				c: '108M1I42M',
 				f: 147,
-				g: 'alt'
+				g: 'alt0'
 			},
 			{
 				n: 'Read supports ref allele with no insertion but has a distal SNV',
@@ -738,7 +721,7 @@ const examples = [
 				c: '101M1I49M',
 				f: 83,
 				g: 'none',
-				g_0: 'alt'
+				g_0: 'alt0'
 			}
 		]
 	},
@@ -767,7 +750,7 @@ const examples = [
 				c: '16S82M2S',
 				f: 163,
 				g: 'none',
-				g_0: 'alt'
+				g_0: 'alt0'
 			},
 			{
 				n: 'Read supports none as it contains AGGG sequence (the correct indel sequence).',
@@ -776,7 +759,7 @@ const examples = [
 				c: '98M3D2M',
 				f: 99,
 				g: 'none',
-				g_0: 'alt'
+				g_0: 'alt0'
 			},
 			{
 				n: 'Read supports ref as it contains CTT sequence (first three nucleotides of ref allele).',
@@ -795,7 +778,7 @@ const examples = [
 				c: '2M3D98M',
 				f: 147,
 				g: 'none',
-				g_0: 'alt'
+				g_0: 'alt0'
 			},
 			{
 				n: 'Read supports alt as it only contains "GG" portion of AGGG',
@@ -803,8 +786,8 @@ const examples = [
 				p: 55589773,
 				c: '100M',
 				f: 99,
-				g: 'alt',
-				g_0: 'alt'
+				g: 'alt0',
+				g_0: 'alt0'
 			},
 			{
 				n: 'Read supports ref allele. Indel closer to end-position so should be left aligned',
@@ -830,7 +813,7 @@ const examples = [
 				c: '90M3D10M',
 				f: 99,
 				g: 'none',
-				g_0: 'alt'
+				g_0: 'alt0'
 			}
 		]
 	},
@@ -859,7 +842,7 @@ const examples = [
 				p: 55589775,
 				c: '16S82M2S',
 				f: 163,
-				g: 'alt'
+				g: 'alt0'
 			},
 			{
 				n:
@@ -868,8 +851,8 @@ const examples = [
 				p: 55589670,
 				c: '98M3D2M',
 				f: 99,
-				g: 'alt',
-				g_0: 'alt'
+				g: 'alt0',
+				g_0: 'alt0'
 			},
 			{
 				n: 'Read supports ref as it contains CTT sequence (first three nucleotides of ref allele).',
@@ -887,7 +870,7 @@ const examples = [
 				p: 55589766,
 				c: '2M3D98M',
 				f: 147,
-				g: 'alt'
+				g: 'alt0'
 			},
 			{
 				n: 'Read supports alt as it only contains "GG" portion of AGGG',
@@ -895,7 +878,7 @@ const examples = [
 				p: 55589773,
 				c: '100M',
 				f: 99,
-				g: 'alt'
+				g: 'alt0'
 			},
 			{
 				n: 'Read supports ref allele. Indel closer to end-position so should be left aligned',
@@ -920,7 +903,7 @@ const examples = [
 				p: 55589678,
 				c: '90M3D10M',
 				f: 99,
-				g: 'alt'
+				g: 'alt0'
 			}
 		]
 	},
@@ -947,7 +930,7 @@ const examples = [
 				p: 48263840,
 				c: '29M132N60M11S',
 				f: 147,
-				g: 'alt'
+				g: 'alt0'
 			},
 			{
 				n: 'Read supports alt allele, deletion at the center and distal SNV to the left',
@@ -955,7 +938,7 @@ const examples = [
 				p: 48263851,
 				c: '19M132N59M16D22M',
 				f: 163,
-				g: 'alt'
+				g: 'alt0'
 			},
 			{
 				n: 'Read supports ref allele',
@@ -1000,7 +983,7 @@ const examples = [
 				p: 55575644,
 				c: '62M14044N23M2I7M7S',
 				f: 163,
-				g: 'alt'
+				g: 'alt0'
 			},
 			{
 				n: 'Read is spliced and alt allele in the middle of the fragment',
@@ -1008,7 +991,7 @@ const examples = [
 				p: 55575680,
 				c: '26M14044N27M3I45M',
 				f: 83,
-				g: 'alt'
+				g: 'alt0'
 			},
 			{
 				n: 'Read not spliced but read supporting alt allele',
@@ -1016,7 +999,7 @@ const examples = [
 				p: 55589728,
 				c: '45M2I7M1I46M',
 				f: 163,
-				g: 'alt'
+				g: 'alt0'
 			},
 			{
 				n: 'Read containing alt allele not spliced but should be',
@@ -1024,7 +1007,7 @@ const examples = [
 				p: 55589750,
 				c: '9S27M3I62M',
 				f: 163,
-				g: 'alt'
+				g: 'alt0'
 			},
 			{
 				n: 'Read containing ref allele and is spliced',
@@ -1138,7 +1121,7 @@ const examples = [
 				p: 55575673,
 				c: '33M14044N17M2I2M8D47M',
 				f: 163,
-				g: 'alt'
+				g: 'alt0'
 			},
 			{
 				n: 'Read (not spliced) containing the current alt allele',
@@ -1146,7 +1129,7 @@ const examples = [
 				p: 55589711,
 				c: '59M6D42M',
 				f: 163,
-				g: 'alt'
+				g: 'alt0'
 			},
 			{
 				n: 'Read is spliced on one side and softclipped on the other and contain ght current alt allele',
@@ -1154,7 +1137,7 @@ const examples = [
 				p: 55575638,
 				c: '68M14044N17M2D2M14S',
 				f: 83,
-				g: 'alt'
+				g: 'alt0'
 			}
 		]
 	},
@@ -1182,7 +1165,7 @@ const examples = [
 				p: 47147598,
 				c: '13M7755N1M5I82M',
 				f: 147,
-				g: 'alt'
+				g: 'alt0'
 			},
 			{
 				n: 'Read is spliced and insertion is on another fragment instead of in the predicted indel region',
@@ -1190,7 +1173,7 @@ const examples = [
 				p: 47147547,
 				c: '64M4I2M7754N31M',
 				f: 147,
-				g: 'alt'
+				g: 'alt0'
 			},
 			{
 				n: 'Read not spliced but contains alt allele',
@@ -1198,7 +1181,7 @@ const examples = [
 				p: 47155320,
 				c: '47M5I49M',
 				f: 147,
-				g: 'alt'
+				g: 'alt0'
 			},
 			{
 				n: 'Read supporting ref allele but is spliced',
@@ -1249,7 +1232,7 @@ const examples = [
 				p: 102839159,
 				c: '76M',
 				f: 99,
-				g: 'alt'
+				g: 'alt0'
 			},
 			{
 				n: 'Read containing alt allele with splicing',
@@ -1257,7 +1240,7 @@ const examples = [
 				p: 102839199,
 				c: '45M864N31M',
 				f: 147,
-				g: 'alt'
+				g: 'alt0'
 			},
 
 			{
@@ -1304,7 +1287,7 @@ const examples = [
 				p: 19934266,
 				c: '117M3I31M',
 				f: 99,
-				g: 'alt'
+				g: 'alt0'
 			},
 			{
 				n: 'Read containing alt allele with 3A insertion that is softclipped to the right',
@@ -1313,7 +1296,7 @@ const examples = [
 				p: 19934274,
 				c: '128M23S',
 				f: 163,
-				g: 'alt'
+				g: 'alt0'
 			},
 			{
 				n: 'Read containing ref allele with no 3A insertion',
@@ -1332,7 +1315,7 @@ const examples = [
 				c: '41S69M2I39M',
 				f: 83,
 				g: 'none',
-				g_0: 'alt'
+				g_0: 'alt0'
 			},
 			{
 				n: 'Read containing 1A deletion instead of insertion',
@@ -1372,7 +1355,7 @@ const examples = [
 				p: 19934451,
 				c: '116M3I32M',
 				f: 83,
-				g: 'alt'
+				g: 'alt0'
 			},
 			{
 				n: 'Read contains 3T insertion but the cigar sequence shows only 2T insertion',
@@ -1381,7 +1364,7 @@ const examples = [
 				p: 19934549,
 				c: '18M2I131M',
 				f: 163,
-				g: 'alt'
+				g: 'alt0'
 			},
 			{
 				n: 'Read contains no T insertion and supports ref allele',
@@ -1400,7 +1383,7 @@ const examples = [
 				c: '116M2I28M',
 				f: 81,
 				g: 'none',
-				g_0: 'alt'
+				g_0: 'alt0'
 			},
 			{
 				n: 'Read contains 1T insertion and therefore suppports neither ref nor alt allele',
@@ -1437,7 +1420,7 @@ const examples = [
 				p: 129149948,
 				c: '80M20S',
 				f: 163,
-				g: 'alt'
+				g: 'alt0'
 			},
 			{
 				n: 'Read contains alt allele to the right but shown as mismatched nucleotides with respect to ref sequence',
@@ -1445,7 +1428,7 @@ const examples = [
 				p: 129149935,
 				c: '100M',
 				f: 99,
-				g: 'alt'
+				g: 'alt0'
 			},
 			{
 				n: 'Read containing alt allele in the middle of the read and shown as a deletion',
@@ -1453,7 +1436,7 @@ const examples = [
 				p: 129149959,
 				c: '68M7D2M24D30M',
 				f: 147,
-				g: 'alt'
+				g: 'alt0'
 			},
 			{
 				n: 'Read containing alt allele but softclipped to the left',
@@ -1461,7 +1444,7 @@ const examples = [
 				p: 129150060,
 				c: '38S62M',
 				f: 83,
-				g: 'alt'
+				g: 'alt0'
 			},
 			{
 				n: 'Read supporting alt allele but close to start position of read resulting in mismatches',
@@ -1469,7 +1452,7 @@ const examples = [
 				p: 129150053,
 				c: '6M1I93M',
 				f: 83,
-				g: 'alt'
+				g: 'alt0'
 			},
 			{
 				n: 'Read supporting ref allele',
@@ -1516,7 +1499,7 @@ const examples = [
 				p: 148846462,
 				c: '151M',
 				f: 163,
-				g: 'alt'
+				g: 'alt0'
 			},
 			{
 				n: 'Read supports 1A deletion which is in the middle of the read',
@@ -1525,7 +1508,7 @@ const examples = [
 				p: 148846527,
 				c: '75M1D76M',
 				f: 99,
-				g: 'alt'
+				g: 'alt0'
 			},
 			{
 				n: 'Read supports 1A deletion but deletion shown as a mismatch towards the beginning of read',
@@ -1534,7 +1517,7 @@ const examples = [
 				p: 148846601,
 				c: '151M',
 				f: 147,
-				g: 'alt'
+				g: 'alt0'
 			},
 			{
 				n: 'Read supports ref allele but variant region towards end of read',
@@ -1617,7 +1600,7 @@ const examples = [
 				p: 127740335,
 				c: '96M4S',
 				f: 147,
-				g: 'alt'
+				g: 'alt0'
 			},
 			{
 				n: 'Read contains deletion in the middle of the read',
@@ -1625,7 +1608,7 @@ const examples = [
 				p: 127740335,
 				c: '62M3D38M',
 				f: 99,
-				g: 'alt'
+				g: 'alt0'
 			},
 			{
 				n: 'Read contains deletion towards the beginning of read',
@@ -1633,7 +1616,7 @@ const examples = [
 				p: 127740421,
 				c: '6M3D94M',
 				f: 99,
-				g: 'alt'
+				g: 'alt0'
 			},
 			{
 				n: 'Read contains variant region towards the end of read but no deletion',
@@ -1705,7 +1688,7 @@ const examples = [
 				p: 241661094,
 				c: '139M3S',
 				f: 163,
-				g: 'alt'
+				g: 'alt0'
 			},
 			{
 				n: 'Read contains insertion in the middle of read',
@@ -1714,7 +1697,7 @@ const examples = [
 				p: 241661137,
 				c: '91M3I47M',
 				f: 99,
-				g: 'alt'
+				g: 'alt0'
 			},
 			{
 				n: 'Read contains insertion towards the beginning of read',
@@ -1723,7 +1706,7 @@ const examples = [
 				p: 241661228,
 				c: '4S138M',
 				f: 83,
-				g: 'alt'
+				g: 'alt0'
 			},
 			{
 				n: 'Read supports ref allele and contains variant region towards the end of read',
@@ -1761,7 +1744,7 @@ const examples = [
 				c: '122M3I17M',
 				f: 163,
 				g: 'none',
-				g_0: 'alt'
+				g_0: 'alt0'
 			},
 			{
 				n: 'Read contains 4T insertions instead of 3T',
@@ -1771,7 +1754,7 @@ const examples = [
 				c: '99M4I38M',
 				f: 1633,
 				g: 'none',
-				g_0: 'alt'
+				g_0: 'alt0'
 			},
 			{
 				n: 'Read contains 2T insertions instead of 3T',
@@ -1781,7 +1764,7 @@ const examples = [
 				c: '11M2I129M',
 				f: 147,
 				g: 'none',
-				g_0: 'alt'
+				g_0: 'alt0'
 			},
 			{
 				n:
@@ -1828,7 +1811,7 @@ const examples = [
 				p: 25965336,
 				c: '89M1I10M',
 				f: 83,
-				g: 'alt'
+				g: 'alt0'
 			},
 			{
 				n: 'Read contains alt allele in the middle of the read',
@@ -1836,7 +1819,7 @@ const examples = [
 				p: 25965375,
 				c: '50M1I49M',
 				f: 99,
-				g: 'alt'
+				g: 'alt0'
 			},
 			{
 				n: 'Read contains alt allele in the beginning of the read',
@@ -1844,7 +1827,7 @@ const examples = [
 				p: 25965422,
 				c: '100M',
 				f: 147,
-				g: 'alt'
+				g: 'alt0'
 			},
 			{
 				n: 'Read contains one nucleotide of alt at the beginning of the read',
@@ -1852,7 +1835,7 @@ const examples = [
 				p: 25965429,
 				c: '100M',
 				f: 163,
-				g: 'alt'
+				g: 'alt0'
 			},
 			{
 				n: 'Read contains ref allele in the end of the read',
@@ -1915,7 +1898,7 @@ const examples = [
 				p: 35341,
 				c: '149M2S',
 				f: 83,
-				g: 'alt'
+				g: 'alt0'
 			},
 			{
 				n:
@@ -1925,7 +1908,7 @@ const examples = [
 				p: 35351,
 				c: '92M9I50M',
 				f: 83,
-				g: 'alt'
+				g: 'alt0'
 			},
 			{
 				n: 'Read containing alt allele consiting of 2 monomeric GCT insertions (instead of 3) shown as mismatches of T',
@@ -1935,7 +1918,7 @@ const examples = [
 				c: '142M9S',
 				f: 147,
 				g: 'none',
-				g_0: 'alt'
+				g_0: 'alt0'
 			},
 			{
 				n:

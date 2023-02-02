@@ -15,10 +15,13 @@ export function make_type2group(q) {
 			type2group[q.grouptype] = { partstack: q.partstack }
 		} else {
 			// resulting groups array will follow the order: 1) alt; 2) ref; 3) no
-			type2group[type_supportalt] = {}
+			//type2group[type_supportalt] = {}
 			type2group[type_supportref] = {}
 			type2group[type_supportno] = {}
 			type2group[type_supportamb] = {}
+			for (let i = 0; i < q.variant.length; i++) {
+				type2group[type_supportalt + i.toString()] = {}
+			}
 		}
 	} else if (q.sv) {
 		if (q.grouptype) {

@@ -189,32 +189,35 @@ makeURL([
 	card: 'bam',
 	links: [
 		[ 'TP53 18bp del', '?genome=hg19&block=1&position=chr17:7578191-7578591&bamfile=Test,proteinpaint_demo/hg19/bam/TP53_del.bam' ],
-		[ 'k-mer', '?genome=hg19&block=1&position=chr17:7578191-7578591&bamfile=Test,proteinpaint_demo/hg19/bam/TP53_del.bam&variant=chr17.7578383.AGCAGCGCTCATGGTGGGG.A' ],
+		[ 'variant', '?genome=hg19&block=1&position=chr17:7578191-7578591&bamfile=Test,proteinpaint_demo/hg19/bam/TP53_del.bam&variant=chr17.7578383.AGCAGCGCTCATGGTGGGG.A' ],
 
 		['GATA3 complex mutation','?genome=hg19&block=1&bamfile=Test,proteinpaint_demo/hg19/bam/gata3.complex.bam&position=chr10:8100668-8100707'],
-		['k-mer','?genome=hg19&block=1&bamfile=Test,proteinpaint_demo/hg19/bam/gata3.complex.bam&position=chr10:8100668-8100707&variant=chr10.8100686.CAC.CCCTGCCTGTTGTGAGCTGCTCTACGTGCCCTACGTGCT'],
+		['variant','?genome=hg19&block=1&bamfile=Test,proteinpaint_demo/hg19/bam/gata3.complex.bam&position=chr10:8100668-8100707&variant=chr10.8100686.CAC.CCCTGCCTGTTGTGAGCTGCTCTACGTGCCCTACGTGCT'],
 
 		['chr7 3mer expansion','?genome=hg19&block=1&bamfile=Test,proteinpaint_demo/hg19/bam/chr7.3mer.insert.bam&position=chr7:35473-35473&hlregion=chr7:35472-35472'],
-		['k-mer','?genome=hg19&block=1&bamfile=Test,proteinpaint_demo/hg19/bam/chr7.3mer.insert.bam&position=chr7:35473-35473&hlregion=chr7:35472-35472&variant=chr7.35473.T.TGCTGCTGCTGCC'],
+		['variant','?genome=hg19&block=1&bamfile=Test,proteinpaint_demo/hg19/bam/chr7.3mer.insert.bam&position=chr7:35473-35473&hlregion=chr7:35472-35472&variant=chr7.35473.T.TGCTGCTGCTGCC'],
 
 		['EXOC4 2mer deletion','?genome=hg38&block=1&bamfile=Test,proteinpaint_demo/hg19/bam/intron.2mer.del.bam&position=chr7:133787365-133787395&hlregion=chr7:133787361-133787361'],
-		['k-mer','?genome=hg38&block=1&bamfile=Test,proteinpaint_demo/hg19/bam/intron.2mer.del.bam&position=chr7:133787365-133787395&hlregion=chr7:133787361-133787361&variant=chr7.133787370.TGTGTGTGTGTGTGTGTGTGAGAT.TGAT'],
+		['variant','?genome=hg38&block=1&bamfile=Test,proteinpaint_demo/hg19/bam/intron.2mer.del.bam&position=chr7:133787365-133787395&hlregion=chr7:133787361-133787361&variant=chr7.133787370.TGTGTGTGTGTGTGTGTGTGAGAT.TGAT'],
 
 		['SETD2 splice site insertion','?genome=hg19&block=1&bamfile=Test,proteinpaint_demo/hg19/bam/splice_junction_variant.bam&position=chr3:47155334-47155420'],
 		['kmer','?genome=hg19&block=1&bamfile=Test,proteinpaint_demo/hg19/bam/splice_junction_variant.bam&position=chr3:47155334-47155420&variant=chr3.47155366.G.GGGGCT'],
 
 		[ 'KIT 3bp del', '?genome=hg19&block=1&position=chr4:55589607-55590007&bamfile=Test,proteinpaint_demo/hg19/bam/kit.exon8.del.bam' ],
-		[ 'k-mer','?genome=hg19&block=1&position=chr4:55589607-55590007&bamfile=Test,proteinpaint_demo/hg19/bam/kit.exon8.del.bam&variant=chr4.55589771.ACGA.A'],
+		[ 'variant','?genome=hg19&block=1&position=chr4:55589607-55590007&bamfile=Test,proteinpaint_demo/hg19/bam/kit.exon8.del.bam&variant=chr4.55589771.ACGA.A'],
 
 		[ 'RNA 8bp insert','?genome=hg19&block=1&bamfile=test,proteinpaint_demo/hg19/bam/rna.8bp.insertion.bam&position=chr11:119155611-119155851'],
-		['k-mer','?genome=hg19&block=1&bamfile=test,proteinpaint_demo/hg19/bam/rna.8bp.insertion.bam&position=chr11:119155611-119155851&variant=chr11.119155746.T.TTGACCTGG'],
+		['variant','?genome=hg19&block=1&bamfile=test,proteinpaint_demo/hg19/bam/rna.8bp.insertion.bam&position=chr11:119155611-119155851&variant=chr11.119155746.T.TTGACCTGG'],
 
 		['KIT complex mutation','?genome=hg19&block=1&bamfile=test,proteinpaint_demo/hg19/bam/kit.complex.bam&position=chr4:55589768-55589770'],
-		['k-mer','?genome=hg19&block=1&bamfile=test,proteinpaint_demo/hg19/bam/kit.complex.bam&position=chr4:55589768-55589770&variant=chr4.55589768.CTTACGA.AGGG'],
+		['variant','?genome=hg19&block=1&bamfile=test,proteinpaint_demo/hg19/bam/kit.complex.bam&position=chr4:55589768-55589770&variant=chr4.55589768.CTTACGA.AGGG'],
 
 		['BCORL1 complex mutation', '?genome=hg19&block=1&bamfile=test,proteinpaint_demo/hg19/bam/bcorl1.complex.bam&position=chrX:129150009-129150071'],
-		['k-mer','?genome=hg19&block=1&bamfile=test,proteinpaint_demo/hg19/bam/bcorl1.complex.bam&position=chrX:129150009-129150071&variant=chrX.129150027.GGAAAGCGTAGGGGTCTTTGCTTGCAAGAACAA.GT'],
-
+	        ['variant','?genome=hg19&block=1&bamfile=test,proteinpaint_demo/hg19/bam/bcorl1.complex.bam&position=chrX:129150009-129150071&variant=chrX.129150027.GGAAAGCGTAGGGGTCTTTGCTTGCAAGAACAA.GT'],
+	    	['multiple RNA isoforms','?genome=hg19&block=1&position=chr4:55589660-55589870&hlregion=chr4:55589768-55589768&bamfile=multi_allele_variant,proteinpaint_demo/hg19/bam/multi_allele.bam&bedjfilterbyname=NM_001385285'],
+	        ['alternate allele1','?genome=hg19&block=1&position=chr4:55589660-55589870&hlregion=chr4:55589768-55589768&bamfile=Alternate_allele1,proteinpaint_demo/hg19/bam/multi_allele.bam&variant=chr4.55589773.GACAGGC.CTGACAGGCT&bedjfilterbyname=NM_001385285'],
+                ['alternate allele2','?genome=hg19&block=1&position=chr4:55589660-55589870&hlregion=chr4:55589768-55589768&bamfile=Alternate_allele2,proteinpaint_demo/hg19/bam/multi_allele.bam&variant=chr4.55589766.GACTTACGACA.GTTTC&bedjfilterbyname=NM_001385285'],
+	        ['multi allele variant','?genome=hg19&block=1&position=chr4:55589660-55589870&hlregion=chr4:55589768-55589768&bamfile=multi_allele_variant,proteinpaint_demo/hg19/bam/multi_allele.bam&variant={"chr":"chr4", "variants":[{"pos":55589773, "ref": "GACAGGC", "alt": "CTGACAGGCT"},{"pos": 55589766, "ref": "GACTTACGACA","alt":"GTTTC"}]}&bedjfilterbyname=NM_001385285&strictness=1'],
 		['exon deletion','?genome=hg19&block=1&bamfile=test,proteinpaint_demo/hg19/bam/crebbp.bam&position=chr16:3800245-3803429'],
 		['long read, no qual','?genome=hg38&block=1&bamfile=test,proteinpaint_demo/hg38/bam/control.BCL11A-218.bam&position=chr2:60450049-60563872'],
 		['FLAG 0/16','?genome=hg19&block=1&position=chr12:25380685-25381606&bamfile=flag,proteinpaint_demo/hg19/bam/flagproblem.bam'],

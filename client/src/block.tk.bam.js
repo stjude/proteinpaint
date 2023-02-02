@@ -200,10 +200,14 @@ export async function loadTk(tk, block) {
 		}
 
 		// When original ref or alt allele given by user is missing or "-"
-		if (tk.variants && tk.variants[0].pos != data.allele_pos) {
-			tk.variants[0].pos = data.allele_pos
-			tk.variants[0].ref = data.ref_allele
-			tk.variants[0].alt = data.alt_allele
+		if (tk.variants) {
+			for (let var_idx = 0; var_idx < tk.variants.length; var_idx++) {
+				if (tk.variants[var_idx].pos != data.allele_positions[var_idx]) {
+					tk.variants[var_idx].pos = data.allele_positions[var_idx]
+					tk.variants[var_idx].ref = data.ref_alleles[var_idx]
+					tk.variants[var_idx].alt = data.alt_alleles[var_idx]
+				}
+			}
 		}
 
 		renderTk(data, tk, block)
@@ -252,7 +256,8 @@ async function getData(tk, block, additional = {}) {
 	}
 
 	if (tk.variants) {
-		body.variant = tk.variants.map(m => m.chr + '.' + m.pos + '.' + m.ref + '.' + m.alt + '.' + m.strictness).join('.')
+		body.variant = tk.variants.map(m => m.chr + '.' + m.pos + '.' + m.ref + '.' + m.alt).join('.')
+		body.strictness = tk.strictness
 		body.diff_score_plotwidth = tk.dom.diff_score_plotwidth
 		if (Number.isFinite(tk.max_diff_score)) {
 			body.max_diff_score = tk.max_diff_score
@@ -278,10 +283,13 @@ async function getData(tk, block, additional = {}) {
 	if (tk.variants && tk.alleleAlreadyUpdated) {
 		// Prevent passing of refseq and altseq from server to client side in subsequent request
 		body.alleleAlreadyUpdated = 1
-		body.refseq = tk.variants[0].refseq
-		body.altseq = tk.variants[0].altseq
-		body.leftflankseq = tk.variants[0].leftflankseq
-		body.rightflankseq = tk.variants[0].rightflankseq
+		body.refseqs = tk.variants.refseqs
+		body.altseqs = tk.variants.altseqs
+		body.leftflankseqs = tk.variants.leftflankseqs
+		body.rightflankseqs = tk.variants.rightflankseqs
+		body.ref_positions = tk.variants.ref_positions
+		body.refalleles = tk.variants.refalleles
+		body.altalleles = tk.variants.altalleles
 	}
 	if (tk.uninitialized) {
 		body.getcolorscale = 1
@@ -300,10 +308,13 @@ async function getData(tk, block, additional = {}) {
 	const data = await dofetch3('tkbam', { headers: getHeaders(tk), body })
 
 	if (tk.variants && !tk.alleleAlreadyUpdated) {
-		tk.variants[0].refseq = data.refseq
-		tk.variants[0].altseq = data.altseq
-		tk.variants[0].leftflankseq = data.leftflankseq
-		tk.variants[0].rightflankseq = data.rightflankseq
+		tk.variants.refseqs = data.refseqs
+		tk.variants.altseqs = data.altseqs
+		tk.variants.refalleles = data.refalleles
+		tk.variants.altalleles = data.altalleles
+		tk.variants.leftflankseqs = data.leftflankseqs
+		tk.variants.rightflankseqs = data.rightflankseqs
+		tk.variants.ref_positions = data.ref_positions
 		tk.alleleAlreadyUpdated = true
 	}
 	if (data.error) throw data.error
@@ -491,7 +502,13 @@ function may_render_variant(data, tk, block) {
 		.attr('fill', 'grey')
 
 	const variant_string =
-		tk.variants[0].chr + '.' + (data.allele_pos + 1).toString() + '.' + data.ref_allele + '.' + data.alt_allele
+		tk.variants[0].chr +
+		'.' +
+		(data.allele_positions[0] + 1).toString() +
+		'.' +
+		data.ref_alleles[0] +
+		'.' +
+		data.alt_alleles[0] // This is only showing the first allele, need to think of a way to show the other alleles (if present). Maybe show for each alternate allele?
 	// Determining where to place the text. Before, inside or after the box
 	let variant_start_text_pos = 0
 	const space_param = 10
@@ -1022,73 +1039,142 @@ function makeTk(tk, block) {
 // may add additional parameters from url that specifically apply to the bam track
 function may_add_urlparameter(tk, block) {
 	const u2p = urlmap()
-
 	if (u2p.has('variant')) {
-		/* XXX only a quick fix!
-		to supply one or multiple variant from url parameter
-		if there are multiple bam tracks, no way to specifiy which bam track to add the variant to
-		will overwrite the existing tk.variants{}
+		// Check if the variant is simple string "chr.pos.ref.alt" or a complex json object
 
-		Do no use in production!
-
-		the variant may be added on the fly from e.g. a vcf track in the same browser session
-		*/
+		tk.variants = []
 		const tmp = u2p.get('variant').split('.')
-		if (tmp.length < 4) {
-			console.log('urlparam variant should be at least 4 fields joined by .')
-		} else if (tmp.length <= 5) {
-			// SNVs and indels
-			tk.variants = []
-			//for (let i = 0; i < tmp.length; i += 4) {
-			//	const pos = Number(tmp[i + 1])
-			//	if (!Number.isInteger(pos)) return console.log('urlparam variant pos is not integer')
-			//	if (!tmp[i + 2]) return console.log('ref allele missing')
-			//	if (!tmp[i + 3]) return console.log('alt allele missing')
-			//	tk.variants.push({ chr: tmp[i], pos: pos - 1, ref: tmp[i + 2], alt: tmp[i + 3] })
-			//}
-
-			// The 5th value is the strictness. If multiple variants are given, strictness may have to be compulsory to avoid confusion
-			for (let i = 0; i < tmp.length; i += 5) {
-				const pos = Number(tmp[i + 1])
-				let strictness
-				if (!Number.isInteger(pos)) return console.log('urlparam variant pos is not integer')
-				//if (!tmp[i + 2]) return console.log('ref allele missing')
-				//if (!tmp[i + 3]) return console.log('alt allele missing')
-				if (!tmp[i + 4]) {
-					strictness = 1 // Default strictness
-				} else if (!Number.isFinite(Number(tmp[i + 4]))) {
-					return 'Strictness must be a positive number'
-				} else if (Number(tmp[i + 4]) > 2) return 'Invalid strictness'
-				// For now, there are only three levels of strictness. More will be added in the future
-				else {
-					strictness = Number(tmp[i + 4])
-				}
-				tk.variants.push({ chr: tmp[i], pos: pos - 1, ref: tmp[i + 2], alt: tmp[i + 3], strictness: strictness })
+		if (tmp.length == 4) {
+			// Simple variant i.e chr.pos.ref.alt
+			const pos = Number(tmp[1])
+			if (!Number.isInteger(pos)) throw 'urlparam variant pos is not integer'
+			if (!tmp[2]) throw 'ref allele missing'
+			if (!tmp[3]) throw 'alt allele missing'
+			tk.variants.push({ chr: tmp[0], pos: pos - 1, ref: tmp[2], alt: tmp[3], strictness: 1 })
+		} else {
+			// json object like variant={chr:"chr1", variants:[ { pos:123, ref:A, alt:T }, {pos, ref, alt} ... ] }
+			const variant_json = JSON.parse(u2p.get('variant'))
+			for (const item of variant_json.variants) {
+				if (!Number.isInteger(item.pos)) throw 'urlparam variant pos is not integer'
+				if (!item.ref) throw 'ref allele missing'
+				if (!item.alt) throw 'alt allele missing'
+				tk.variants.push({ chr: variant_json.chr, pos: Number(item.pos) - 1, ref: item.ref, alt: item.alt })
+			}
+		}
+		if (u2p.has('strictness')) {
+			const tmp = u2p.get('strictness')
+			if (!Number.isInteger(Number(tmp))) throw 'strictness must be an integer'
+			tk.strictness = Number(tmp)
+			if (tk.strictness != 1 && tk.strictness != 0) {
+				throw 'strictness must be 0 or 1'
 			}
 		} else {
-			// tmp.length >= 6
-			// SVs
-			tk.sv = []
-			if (tmp.length == 7) {
-				tk.sv.push({
-					chrA: tmp[0],
-					startA: tmp[1],
-					strandA: tmp[2],
-					chrB: tmp[3],
-					startB: tmp[4],
-					strandB: tmp[5],
-					contig: tmp[6]
-				})
-			} else if (tmp.length == 6) {
-				tk.sv.push({
-					chrA: tmp[0],
-					startA: tmp[1],
-					strandA: tmp[2],
-					chrB: tmp[3],
-					startB: tmp[4],
-					strandB: tmp[5]
-				})
-			}
+			tk.strictness = 1
+		}
+
+		// SNVs and indels
+		//for (let i = 0; i < tmp.length; i += 4) {
+		//	const pos = Number(tmp[i + 1])
+		//	if (!Number.isInteger(pos)) return console.log('urlparam variant pos is not integer')
+		//	if (!tmp[i + 2]) return console.log('ref allele missing')
+		//	if (!tmp[i + 3]) return console.log('alt allele missing')
+		//	tk.variants.push({ chr: tmp[i], pos: pos - 1, ref: tmp[i + 2], alt: tmp[i + 3] })
+		//}
+
+		// The 5th value is the strictness. If multiple variants are given, strictness may have to be compulsory to avoid confusion
+		//for (let i = 0; i < tmp.length; i += 5) {
+		//	const pos = Number(tmp[i + 1])
+		//	let strictness
+		//	if (!Number.isInteger(pos)) return console.log('urlparam variant pos is not integer')
+		//	//if (!tmp[i + 2]) return console.log('ref allele missing')
+		//	//if (!tmp[i + 3]) return console.log('alt allele missing')
+		//	if (!tmp[i + 4]) {
+		//		strictness = 1 // Default strictness
+		//	} else if (!Number.isFinite(Number(tmp[i + 4]))) { //
+		//		return 'Strictness must be a positive number'
+		//	} else if (Number(tmp[i + 4]) > 2) return 'Invalid strictness'
+		//	// For now, there are only three levels of strictness. More will be added in the future
+		//	else {
+		//		strictness = Number(tmp[i + 4])
+		//	}
+		//	tk.variants.push({ chr: tmp[i], pos: pos - 1, ref: tmp[i + 2], alt: tmp[i + 3], strictness: strictness })
+		//}
+
+		//const pos = Number(tmp[1])
+		//if (!Number.isInteger(pos)) return console.log('urlparam variant pos is not integer')
+		//if (!tmp[2]) return console.log('ref allele missing')
+		//if (!tmp[3]) return console.log('alt allele missing')
+		//let strictness = 1
+		////if (tmp.length > 4) {
+		//// Multiple alternate alleles
+		//const alt = []
+		//for (let i = 3; i < tmp.length; i++) {
+		//	if (i == tmp.length - 1) {
+		//		// Parsing out strictness
+		//		if (!Number.isInteger(pos)) return console.log('urlparam variant pos is not integer')
+		//		//if (!tmp[i + 2]) return console.log('ref allele missing')
+		//		//if (!tmp[i + 3]) return console.log('alt allele missing')
+		//		//if (!tmp[tmp.length - 1]) {
+		//		//	strictness = 1 // Default strictness
+		//		//} else
+		//		if (!Number.isFinite(Number(tmp[tmp.length - 1]))) {
+		//			// Multiple alternate allele
+		//			//return 'Strictness must be a positive number'
+		//			alt.push(tmp[i])
+		//		} else if (Number(tmp[tmp.length - 1]) > 2) return 'Invalid strictness'
+		//		// For now, there are only three levels of strictness. More may be added in the future
+		//		else {
+		//			strictness = Number(tmp[tmp.length - 1])
+		//		}
+		//	} else {
+		//		// Multiple alternate alleles
+		//		alt.push(tmp[i])
+		//	}
+		//}
+		////console.log('alt:', alt)
+		//tk.variants.push({ chr: tmp[0], pos: pos - 1, ref: tmp[2], alt: alt, strictness: strictness })
+
+		//}
+		//else {
+		//	let strictness
+		//	if (!Number.isInteger(pos)) return console.log('urlparam variant pos is not integer')
+		//	//if (!tmp[i + 2]) return console.log('ref allele missing')
+		//	//if (!tmp[i + 3]) return console.log('alt allele missing')
+		//	if (!tmp[4]) {
+		//		strictness = 1 // Default strictness
+		//	} else if (!Number.isFinite(Number(tmp[4]))) {
+		//		return 'Strictness must be a positive number'
+		//	} else if (Number(tmp[4]) > 2) return 'Invalid strictness'
+		//	// For now, there are only three levels of strictness. More may be added in the future
+		//	else {
+		//		strictness = Number(tmp[i + 4])
+		//	}
+		//
+		//}
+	} else if (u2p.has('sv')) {
+		// tmp.length >= 6
+		// SVs
+		const tmp = u2p.get('sv').split('.')
+		tk.sv = []
+		if (tmp.length == 7) {
+			tk.sv.push({
+				chrA: tmp[0],
+				startA: tmp[1],
+				strandA: tmp[2],
+				chrB: tmp[3],
+				startB: tmp[4],
+				strandB: tmp[5],
+				contig: tmp[6]
+			})
+		} else if (tmp.length == 6) {
+			tk.sv.push({
+				chrA: tmp[0],
+				startA: tmp[1],
+				strandA: tmp[2],
+				chrB: tmp[3],
+				startB: tmp[4],
+				strandB: tmp[5]
+			})
 		}
 	}
 }
@@ -1516,7 +1602,7 @@ async function align_reads_to_allele(tk, group, block) {
 		alignOneGroup: group.data.type,
 		genome: block.genome.name,
 		regions: tk.regions,
-		variant: tk.variants.map(m => m.chr + '.' + m.pos + '.' + m.ref + '.' + m.alt + '.' + m.strictness).join('.')
+		variant: tk.variants.map(m => m.chr + '.' + m.pos + '.' + m.ref + '.' + m.alt).join('.')
 	}
 	if (tk.file) body.file = tk.file
 	if (tk.url) body.url = tk.url
@@ -1528,10 +1614,14 @@ async function align_reads_to_allele(tk, group, block) {
 	if (tk.alleleAlreadyUpdated) {
 		// This should always be true when this function is invoked, but adding this if condition for safety sake
 		body.alleleAlreadyUpdated = 1
-		body.refseq = tk.variants[0].refseq
-		body.altseq = tk.variants[0].altseq
-		body.leftflankseq = tk.variants[0].leftflankseq
-		body.rightflankseq = tk.variants[0].rightflankseq
+		body.refseqs = tk.variants.refseqs
+		body.altseqs = tk.variants.altseqs
+		body.refalleles = tk.variants.refalleles
+		body.altalleles = tk.variants.altalleles
+		body.leftflankseqs = tk.variants.leftflankseqs
+		body.rightflankseqs = tk.variants.rightflankseqs
+		body.ref_positions = tk.variants.ref_positions
+		body.strictness = tk.strictness
 	}
 	if (tk.asPaired) body.asPaired = 1
 	if ('nochr' in tk) body.nochr = tk.nochr
@@ -1724,18 +1814,14 @@ function updateExistingMultiReadAligInfo(tk, read_number) {
 	})
 }
 
-async function create_read_alignment_table(tk, multi_read_alig_data, group) {
+async function create_read_alignment_table(tk, multi_read_alig_data, group, alt_var_idx) {
 	let num_read_div
 	if (!multi_read_alig_data.alignmentData.read_count) {
 		// This condition is true when there are no reads mapped against reference/alternate sequence. This happens when user pans too far away from the variant region
 		multi_read_alig_data.alignmentData.read_count = 0
 	}
-	if (group.data.type == 'support_alt') {
-		num_read_div = tk.alignpane.body // Printing number of reads aligned in alignment panel
-			.append('div')
-			.text('Number of reads aligned to alternative allele = ' + multi_read_alig_data.alignmentData.read_count)
-			.style('text-align', 'center')
-	} else if (group.data.type == 'support_ref') {
+
+	if (group.data.type == 'support_ref') {
 		num_read_div = tk.alignpane.body // Printing number of reads aligned in alignment panel
 			.append('div')
 			.text('Number of reads aligned to reference allele = ' + multi_read_alig_data.alignmentData.read_count)
@@ -1745,6 +1831,29 @@ async function create_read_alignment_table(tk, multi_read_alig_data, group) {
 			.append('div')
 			.text('Number of reads aligned = ' + multi_read_alig_data.alignmentData.read_count)
 			.style('text-align', 'center')
+	} else if (group.data.type.includes('support_alt')) {
+		// Some alternate allele
+		let hit = 0
+		for (let var_idx = 0; var_idx < tk.variants.length; var_idx++) {
+			if (group.data.type == 'support_alt' + var_idx.toString()) {
+				hit = 1
+				alt_var_idx = var_idx
+				num_read_div = tk.alignpane.body // Printing number of reads aligned in alignment panel
+					.append('div')
+					.text(
+						'Number of reads aligned to alternative allele ' +
+							tk.variants[var_idx].alt +
+							' = ' +
+							multi_read_alig_data.alignmentData.read_count
+					)
+					.style('text-align', 'center')
+			}
+		}
+		if (hit == 0) {
+			// Should not happen
+			console.log('group.data.type:', group.data.type)
+			console.log('Alternate allele not found')
+		}
 	}
 	if (multi_read_alig_data.alignmentData.partstack_start) {
 		// In partstack mode
@@ -1788,14 +1897,27 @@ async function create_read_alignment_table(tk, multi_read_alig_data, group) {
 
 	// Determine if alt/ref allele string needs to be placed inside variant box
 	let inside_variant_box = 1 // Flag for determining if variant string needs to be placed inside variant box or to the right of it. 0 for inside and 1 for being placed on the right
-	if (group.data.type == 'support_alt') {
-		variant_string = 'Alternative allele'
-		if (variant_string.length < tk.variants[0].alt.length) {
-			inside_variant_box = 0
+	if (group.data.type == 'support_alt' + alt_var_idx.toString()) {
+		if (tk.variants.length == 1) {
+			// If only a single allele is specified then which alternate allele being referred is obvious
+			variant_string = 'Alternative allele'
+			if (variant_string.length < tk.variants[alt_var_idx].alt.length) {
+				inside_variant_box = 0
+			} else {
+				variant_string = ' Alternative allele'
+			}
 		} else {
-			variant_string = ' Alternative allele'
+			if (group.data.type == 'support_alt' + alt_var_idx.toString()) {
+				variant_string = 'Alternative allele = ' + tk.variants[alt_var_idx].alt
+				if (variant_string.length < tk.variants[alt_var_idx].alt.length) {
+					inside_variant_box = 0
+				} else {
+					variant_string = ' Alternative allele = ' + tk.variants[alt_var_idx].alt
+				}
+			}
 		}
 	} else if (group.data.type == 'support_ref') {
+		// For reference allele the reference allele from first allele will be shown (May need to work later on this based on input from user)
 		variant_string = 'Reference allele'
 		if (variant_string.length < tk.variants[0].ref.length) {
 			inside_variant_box = 0
@@ -1803,6 +1925,7 @@ async function create_read_alignment_table(tk, multi_read_alig_data, group) {
 			variant_string = ' Reference allele'
 		}
 	}
+
 	tk.readAlignmentTableGroup = group.data.type
 	if (multi_read_alig_data.alignmentData.final_read_align.length > 0) {
 		for (const nclt of multi_read_alig_data.alignmentData.final_read_align[0]) {
@@ -1811,11 +1934,12 @@ async function create_read_alignment_table(tk, multi_read_alig_data, group) {
 
 			// Drawing ref/alt allele bar
 			if (
-				group.data.type == 'support_alt' &&
-				nclt_count > tk.variants[0].leftflankseq.length + multi_read_alig_data.alignmentData.gaps_before_variant &&
+				group.data.type == 'support_alt' + alt_var_idx.toString() &&
+				nclt_count >
+					tk.variants.leftflankseqs[alt_var_idx].length + multi_read_alig_data.alignmentData.gaps_before_variant &&
 				nclt_count <=
-					tk.variants[0].leftflankseq.length +
-						tk.variants[0].alt.length +
+					tk.variants.leftflankseqs[alt_var_idx].length +
+						tk.variants[alt_var_idx].alt.length +
 						multi_read_alig_data.alignmentData.gaps_before_variant
 			) {
 				if (inside_variant_box == 1) {
@@ -1849,9 +1973,9 @@ async function create_read_alignment_table(tk, multi_read_alig_data, group) {
 				}
 			} else if (
 				group.data.type == 'support_ref' &&
-				nclt_count > tk.variants[0].leftflankseq.length + multi_read_alig_data.alignmentData.gaps_before_variant &&
+				nclt_count > tk.variants.leftflankseqs[0].length + multi_read_alig_data.alignmentData.gaps_before_variant &&
 				nclt_count <=
-					tk.variants[0].leftflankseq.length +
+					tk.variants.leftflankseqs[0].length +
 						tk.variants[0].ref.length +
 						multi_read_alig_data.alignmentData.gaps_before_variant
 			) {
@@ -1927,7 +2051,7 @@ async function create_read_alignment_table(tk, multi_read_alig_data, group) {
 			for (const nclt of read) {
 				nclt_count += 1
 				let nclt_td
-				if (read_count == 0 && (group.data.type == 'support_ref' || group.data.type == 'support_alt')) {
+				if (read_count == 0 && (group.data.type == 'support_ref' || group.data.type.includes('support_alt'))) {
 					nclt_td = read_tr
 						.append('td')
 						.text(nclt)
@@ -1951,19 +2075,20 @@ async function create_read_alignment_table(tk, multi_read_alig_data, group) {
 
 				// Highlighting nucleotides that are within the ref/alt allele
 				if (
-					group.data.type == 'support_alt' &&
-					nclt_count > tk.variants[0].leftflankseq.length + multi_read_alig_data.alignmentData.gaps_before_variant &&
+					group.data.type == 'support_alt' + alt_var_idx.toString() &&
+					nclt_count >
+						tk.variants.leftflankseqs[alt_var_idx].length + multi_read_alig_data.alignmentData.gaps_before_variant &&
 					nclt_count <=
-						tk.variants[0].leftflankseq.length +
-							tk.variants[0].alt.length +
+						tk.variants.leftflankseqs[alt_var_idx].length +
+							tk.variants[alt_var_idx].alt.length +
 							multi_read_alig_data.alignmentData.gaps_before_variant
 				) {
 					nclt_td.style('color', 'black')
 				} else if (
 					group.data.type == 'support_ref' &&
-					nclt_count > tk.variants[0].leftflankseq.length + multi_read_alig_data.alignmentData.gaps_before_variant &&
+					nclt_count > tk.variants.leftflankseqs[0].length + multi_read_alig_data.alignmentData.gaps_before_variant &&
 					nclt_count <=
-						tk.variants[0].leftflankseq.length +
+						tk.variants.leftflankseqs[0].length +
 							tk.variants[0].ref.length +
 							multi_read_alig_data.alignmentData.gaps_before_variant
 				) {
@@ -1975,7 +2100,7 @@ async function create_read_alignment_table(tk, multi_read_alig_data, group) {
 	}
 }
 
-async function create_gene_models_refalt(tk, block, multi_read_alig_data, group) {
+async function create_gene_models_refalt(tk, block, multi_read_alig_data, group, alt_var_idx) {
 	// Function to display gene models in the multi read alignment info panel
 	// This function parses through the alternate/reference sequence and looks for gaps. At each of these gaps it ends existing gene model, renders it puts a gap and then starts the next gene model. At the end of the sequence, it finishes current model and renders it
 
@@ -1984,8 +2109,14 @@ async function create_gene_models_refalt(tk, block, multi_read_alig_data, group)
 	const gene_model_order = [] // This array stores the order of gene models and breaks as needed from the left
 	// Determine breaks in reference/alternate sequence (if gene model button is clicked)
 	let refalt_seq = multi_read_alig_data.alignmentData.final_read_align[0]
-	let left_most_pos = tk.variants[0].pos - tk.variants[0].leftflankseq.length
-	let right_most_pos = tk.variants[0].pos + tk.variants[0].rightflankseq.length
+	let left_most_pos = tk.variants[0].pos - tk.variants.leftflankseqs[0].length
+	let right_most_pos = tk.variants[0].pos + tk.variants.rightflankseqs[0].length
+
+	if (group.data.type == 'support_alt' + alt_var_idx.toString()) {
+		left_most_pos = tk.variants[alt_var_idx].pos - tk.variants.leftflankseqs[alt_var_idx].length
+		right_most_pos = tk.variants[alt_var_idx].pos + tk.variants.rightflankseqs[alt_var_idx].length
+	}
+
 	let segstart = left_most_pos // This variable stores the left most position of a segment (spliced unit) of reference/alternate sequence, the first segment is initialized to the left most position of the reference/alternate sequence
 	let segstop = left_most_pos // This variable stores the right most position of a segment (spliced unit) of reference/alternate sequence
 	let local_alignment_width = 0 // This variable stores the width of each gene model that needs to be rendered using bedj track
@@ -2025,24 +2156,23 @@ async function create_gene_models_refalt(tk, block, multi_read_alig_data, group)
 			gm_nuc_count += 1
 			local_alignment_width += first_row.children[nclt_count].getBoundingClientRect().width
 		} else if (
-			group.data.type == 'support_alt' &&
-			tk.variants[0].alt.length > tk.variants[0].ref.length && // Insertion case
-			tk.variants[0].pos < left_most_pos + nclt_count &&
-			tk.variants[0].pos + tk.variants[0].alt.length - 1 >= left_most_pos + nclt_count // Subtracting 1 here because by convention the first nucleotide in alternate allele is the last nucleotide in reference sequence after which the indel starts
+			group.data.type == 'support_alt' + alt_var_idx.toString() &&
+			tk.variants[alt_var_idx].alt.length > tk.variants[alt_var_idx].ref.length && // Insertion case
+			tk.variants[alt_var_idx].pos < left_most_pos + nclt_count &&
+			tk.variants[alt_var_idx].pos + tk.variants[alt_var_idx].alt.length - 1 >= left_most_pos + nclt_count // Subtracting 1 here because by convention the first nucleotide in alternate allele is the last nucleotide in reference sequence after which the indel starts
 		) {
 			// Ignores inserted nucleotides (if an insertion) as no gene model can be rendered for it
-		} else if (tk.variants[0].pos == left_most_pos + nclt_count && group.data.type == 'support_alt') {
+		} else if (
+			tk.variants[0].pos == left_most_pos + nclt_count &&
+			group.data.type == 'support_alt' + alt_var_idx.toString()
+		) {
 			// Variant causes break in gene model but only if the alternate allele is being displayed
-			if (tk.variants[0].ref.length == 1 && tk.variants[0].alt.length == 1) {
+			if (tk.variants[alt_var_idx].ref.length == 1 && tk.variants[alt_var_idx].alt.length == 1) {
 				// In case of SNP no break in gene model is necessary
 				continue
 			}
-			//console.log('nclt_count2:', nclt_count)
-			//console.log('segstart2:', segstart)
-			//console.log('segstop2:', segstop)
-			//console.log('gm_nuc_count2:', gm_nuc_count)
-			//console.log('local_alignment_width2:', local_alignment_width)
-			if (tk.variants[0].ref.length >= tk.variants[0].alt.length) {
+
+			if (tk.variants[alt_var_idx].ref.length >= tk.variants[alt_var_idx].alt.length) {
 				segstop += 1
 				gm_nuc_count += 1
 				local_alignment_width += first_row.children[nclt_count + 1].getBoundingClientRect().width
@@ -2057,9 +2187,9 @@ async function create_gene_models_refalt(tk, block, multi_read_alig_data, group)
 			gene_model_images.push(gm)
 			gene_model_order.push('gene_model')
 			gm_nuc_count = 0
-			segstart = left_most_pos + nclt_count + tk.variants[0].ref.length
-			segstop = left_most_pos + nclt_count + tk.variants[0].ref.length
-			if (tk.variants[0].ref.length < tk.variants[0].alt.length) {
+			segstart = left_most_pos + nclt_count + tk.variants[alt_var_idx].ref.length
+			segstop = left_most_pos + nclt_count + tk.variants[alt_var_idx].ref.length
+			if (tk.variants[alt_var_idx].ref.length < tk.variants[alt_var_idx].alt.length) {
 				// Break point in variant region only in case of an insertion
 				break_points.push(tk.variants[0].alt.length)
 				gene_model_order.push('break')
@@ -2143,9 +2273,19 @@ async function getMultiReadAligInfo(tk, group, block) {
 	//console.log('multi_read_alig_data.alignmentData:', multi_read_alig_data.alignmentData)
 	wait.remove()
 
+	let alt_var_idx = 0 // Contains the index of the alternate allele (if queried) of the selected alternate allele
+	// If one of the alternate alles are clicked, determine which alternate allele
+	if (group.data.type.includes('support_alt')) {
+		for (let var_idx = 0; var_idx < tk.variants.length; var_idx++) {
+			if (group.data.type == 'support_alt' + var_idx.toString()) {
+				alt_var_idx = var_idx
+			}
+		}
+	}
+
 	if (
 		multi_read_alig_data.alignmentData.final_read_align.length > 0 &&
-		(group.data.type == 'support_alt' || group.data.type == 'support_ref')
+		(group.data.type.includes('support_alt') || group.data.type == 'support_ref')
 	) {
 		// Gene models are displayed only if there is a reference/alternate sequence being displayed
 		let gene_button_div = tk.alignpane.body
@@ -2156,10 +2296,10 @@ async function getMultiReadAligInfo(tk, group, block) {
 			.on('click', async () => {
 				tk.is_align_gene = true // This flag is set to true so that when the read is hovered, the same read is highlighted in the realignment panel
 				gene_button.property('disabled', true) // disable this button
-				await create_gene_models_refalt(tk, block, multi_read_alig_data, group)
+				await create_gene_models_refalt(tk, block, multi_read_alig_data, group, alt_var_idx)
 			})
 	}
-	create_read_alignment_table(tk, multi_read_alig_data, group)
+	create_read_alignment_table(tk, multi_read_alig_data, group, alt_var_idx)
 }
 
 async function getReadInfo(tk, block, box, ridx) {
@@ -2170,12 +2310,12 @@ async function getReadInfo(tk, block, box, ridx) {
 	const param = getparam(
 		tk.variants
 			? {
-					refseq: tk.variants[0].refseq,
-					altseq: tk.variants[0].altseq,
+					refseqs: tk.variants.refseqs,
+					altseqs: tk.variants.altseqs,
 					chrom: tk.variants[0].chr,
-					pos: tk.variants[0].pos,
-					ref: tk.variants[0].ref,
-					alt: tk.variants[0].alt
+					ref_positions: tk.variants.ref_positions,
+					refalleles: tk.variants.refalleles,
+					altalleles: tk.variants.altalleles
 			  }
 			: {}
 	)
@@ -2192,7 +2332,6 @@ async function getReadInfo(tk, block, box, ridx) {
 	for (const r of data.lst) {
 		// {seq, alignment (html), info (html) }
 		const div = tk.readpane.body.append('div').style('margin', '20px')
-
 		const read_reference_div = div.append('div').html(r.alignment) // This stores the HTML table displaying the read against the reference
 
 		/*** 
@@ -2223,25 +2362,48 @@ async function getReadInfo(tk, block, box, ridx) {
 			'Ref' - reference
 			'Alt' - alternate */
 		//TODO: make pane scrollable if the read is too long. Detect if pane is 1000px for example
-		function makeReadAlignmentTable(div, type, tk, read_start_pos) {
+		function makeReadAlignmentTable(div, type, tk, read_start_pos, var_idx) {
 			let q_align, align_wrt, r_align
 			if (type == 'Ref') {
-				q_align = data.lst[0].q_align_ref
-				align_wrt = data.lst[0].align_wrt_ref
-				r_align = data.lst[0].r_align_ref
+				q_align = data.lst[0].alignments[var_idx].q_seq_ref
+				align_wrt = data.lst[0].alignments[var_idx].align_ref
+				r_align = data.lst[0].alignments[var_idx].r_seq_ref
 			}
 			if (type == 'Alt') {
-				q_align = data.lst[0].q_align_alt
-				align_wrt = data.lst[0].align_wrt_alt
-				r_align = data.lst[0].r_align_alt
+				q_align = data.lst[0].alignments[var_idx].q_seq_alt
+				align_wrt = data.lst[0].alignments[var_idx].align_alt
+				r_align = data.lst[0].alignments[var_idx].r_seq_alt
 			}
-			div
-				.append('span')
-				.text(type + ' alignment')
-				.style('font-family', 'Courier')
-				.style('font-size', '15px')
-				.style('color', '#303030')
-				.style('margin', '5px 5px 10px 5px')
+			if (data.lst[0].alignments.length == 1) {
+				div
+					.append('span')
+					.text(type + ' alignment')
+					.style('font-family', 'Courier')
+					.style('font-size', '15px')
+					.style('color', '#303030')
+					.style('margin', '5px 5px 10px 5px')
+			} else {
+				if (type == 'Alt') {
+					div
+						.append('span')
+						.text('Alignment with Alt allele: ' + tk.variants[var_idx].alt)
+						.style('font-family', 'Courier')
+						.style('font-size', '15px')
+						.style('color', '#303030')
+						.style('margin', '5px 5px 10px 5px')
+				} else if (type == 'Ref') {
+					div
+						.append('span')
+						.text('Alignment with Ref allele: ' + tk.variants[var_idx].ref)
+						.style('font-family', 'Courier')
+						.style('font-size', '15px')
+						.style('color', '#303030')
+						.style('margin', '5px 5px 10px 5px')
+				} else {
+					// Should not happen
+					console.log('Unknown allele, please check')
+				}
+			}
 			const readAlignmentTable = div
 				.append('table')
 				.style('font-family', 'Courier')
@@ -2260,8 +2422,8 @@ async function getReadInfo(tk, block, box, ridx) {
 				nclt_count += 1
 				if (
 					type == 'Ref' &&
-					nclt_count > data.lst[0].red_region_start_ref &&
-					nclt_count <= data.lst[0].red_region_stop_ref
+					nclt_count > data.lst[0].alignments[var_idx].red_region_start_ref &&
+					nclt_count <= data.lst[0].alignments[var_idx].red_region_stop_ref
 				) {
 					refAlt_tr
 						.append('td')
@@ -2269,8 +2431,8 @@ async function getReadInfo(tk, block, box, ridx) {
 						.style('color', 'red')
 				} else if (
 					type == 'Alt' &&
-					nclt_count > data.lst[0].red_region_start_alt &&
-					nclt_count <= data.lst[0].red_region_stop_alt
+					nclt_count > data.lst[0].alignments[var_idx].red_region_start_alt &&
+					nclt_count <= data.lst[0].alignments[var_idx].red_region_stop_alt
 				) {
 					refAlt_tr
 						.append('td')
@@ -2287,8 +2449,8 @@ async function getReadInfo(tk, block, box, ridx) {
 				nclt_count += 1
 				if (
 					type == 'Ref' &&
-					nclt_count > data.lst[0].red_region_start_ref &&
-					nclt_count <= data.lst[0].red_region_stop_ref
+					nclt_count > data.lst[0].alignments[var_idx].red_region_start_ref &&
+					nclt_count <= data.lst[0].alignments[var_idx].red_region_stop_ref
 				) {
 					alignment_tr
 						.append('td')
@@ -2296,8 +2458,8 @@ async function getReadInfo(tk, block, box, ridx) {
 						.style('color', 'red')
 				} else if (
 					type == 'Alt' &&
-					nclt_count > data.lst[0].red_region_start_alt &&
-					nclt_count <= data.lst[0].red_region_stop_alt
+					nclt_count > data.lst[0].alignments[var_idx].red_region_start_alt &&
+					nclt_count <= data.lst[0].alignments[var_idx].red_region_stop_alt
 				) {
 					alignment_tr
 						.append('td')
@@ -2319,8 +2481,8 @@ async function getReadInfo(tk, block, box, ridx) {
 				nclt_count += 1
 				if (
 					type == 'Ref' &&
-					nclt_count > data.lst[0].red_region_start_ref &&
-					nclt_count <= data.lst[0].red_region_stop_ref
+					nclt_count > data.lst[0].alignments[var_idx].red_region_start_ref &&
+					nclt_count <= data.lst[0].alignments[var_idx].red_region_stop_ref
 				) {
 					query_tr
 						.append('td')
@@ -2328,8 +2490,8 @@ async function getReadInfo(tk, block, box, ridx) {
 						.style('color', 'red')
 				} else if (
 					type == 'Alt' &&
-					nclt_count > data.lst[0].red_region_start_alt &&
-					nclt_count <= data.lst[0].red_region_stop_alt
+					nclt_count > data.lst[0].alignments[var_idx].red_region_start_alt &&
+					nclt_count <= data.lst[0].alignments[var_idx].red_region_stop_alt
 				) {
 					query_tr
 						.append('td')
@@ -2341,7 +2503,8 @@ async function getReadInfo(tk, block, box, ridx) {
 			}
 		}
 
-		if (data.lst[0].q_align_alt) {
+		//console.log('data.lst:', data.lst)
+		if (data.lst[0].alignments) {
 			// Invoked only if variant is specified
 			d3select(this)
 				.append('span')
@@ -2355,8 +2518,10 @@ async function getReadInfo(tk, block, box, ridx) {
 			alignment_button.on('click', async () => {
 				if (first) {
 					first = false
-					makeReadAlignmentTable(variantAlignmentTable, 'Ref', tk, data.lst[0].start_readpos - 1)
-					makeReadAlignmentTable(variantAlignmentTable, 'Alt', tk, data.lst[0].start_readpos - 1)
+					for (let var_idx = 0; var_idx < tk.variants.length; var_idx++) {
+						makeReadAlignmentTable(variantAlignmentTable, 'Ref', tk, data.lst[0].start_readpos - 1, var_idx)
+						makeReadAlignmentTable(variantAlignmentTable, 'Alt', tk, data.lst[0].start_readpos - 1, var_idx)
+					}
 				}
 				if (variantAlignmentTable.style('display') == 'none') {
 					variantAlignmentTable.style('display', 'block')
@@ -2854,6 +3019,7 @@ async function enter_partstack(group, tk, block, y, data) {
 			tk.is_align_gene = false
 		}
 	}
+	console.log('_d:', _d)
 	group.data = _d.groups[0]
 	renderGroup(group, tk, block)
 	setTkHeight(tk)

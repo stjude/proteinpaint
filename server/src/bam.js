@@ -677,21 +677,25 @@ async function get_q(genome, req) {
 			q.min_diff_score = Number(req.query.min_diff_score)
 		}
 		const t = req.query.variant.split('.')
-		if (t.length != 5) throw 'invalid variant, not chr.pos.ref.alt.strictness'
+		q.strictness = req.query.strictness
+		if (!Number.isInteger(t.length % 4)) throw 'invalid variant, not chr.pos.ref.alt'
 		q.alleleAlreadyUpdated = req.query.alleleAlreadyUpdated
 		if (q.alleleAlreadyUpdated) {
-			q.altseq = req.query.altseq
-			q.refseq = req.query.refseq
-			q.leftflankseq = req.query.leftflankseq
-			q.rightflankseq = req.query.rightflankseq
+			q.altseqs = req.query.altseqs
+			q.refseqs = req.query.refseqs
+			q.altalleles = req.query.altalleles
+			q.refalleles = req.query.refalleles
+			q.leftflankseqs = req.query.leftflankseqs
+			q.rightflankseqs = req.query.rightflankseqs
+			q.ref_positions = req.query.ref_positions
 		}
-		q.variant = {
-			chr: t[0],
-			pos: Number(t[1]),
-			ref: t[2].toUpperCase(),
-			alt: t[3].toUpperCase(),
-			strictness: t[4]
+
+		const num_variants = t.length / 4
+		const variants = []
+		for (let i = 0; i < num_variants; i++) {
+			variants.push({ chr: t[i * 4], pos: Number(t[i * 4 + 1]), ref: t[i * 4 + 2], alt: t[i * 4 + 3] })
 		}
+		q.variant = variants
 		if (req.query.alignOneGroup) {
 			// value is group name to be realigned
 			q.alignOneGroup = req.query.alignOneGroup
@@ -808,10 +812,10 @@ async function do_query(q) {
 		const out = await divide_reads_togroups(q) // templates
 		q.groups = out.groups
 		if (q.variant) {
-			result.ref_allele = out.final_ref // Its possible the input ref allele is "-" or ""(blank). In that case it needs to be queried from the reference genome
-			result.alt_allele = out.final_alt // Its possible the input alt allele is "-" or ""(blank). In that case it needs to be deduced from the reference allele
+			result.ref_alleles = out.refalleles // Its possible the input ref allele is "-" or ""(blank). In that case it needs to be queried from the reference genome
+			result.alt_alleles = out.altalleles // Its possible the input alt allele is "-" or ""(blank). In that case it needs to be deduced from the reference allele
 
-			result.allele_pos = out.final_pos // Start position needs to be changed if any of the alleles is blank or missing
+			result.allele_positions = out.ref_positions // Start position needs to be changed if any of the alleles is blank or missing
 			result.strand_probability = out.strand_probability // Contains FS score of strand bias i.e forward/reverse vs alternate/reference
 			result.alternate_forward_count = out.alternate_forward_count // Number of reads classified as alternate forward
 			result.reference_forward_count = out.reference_forward_count // Number of reads classified as reference forward
@@ -824,10 +828,13 @@ async function do_query(q) {
 			}
 			if (!q.alleleAlreadyUpdated) {
 				// Prevent passing ref and alt sequences to client side in subsequent requests
-				result.refseq = out.refseq // Passing complete reference sequence back to client side for alignment
-				result.altseq = out.altseq // Passing complete alternate sequence back to client side for alignment
-				result.leftflankseq = out.leftflankseq // Passing leftflankseq to client side
-				result.rightflankseq = out.rightflankseq // Passing rightflankseq to client side
+				result.refseqs = out.refseqs // Passing complete reference sequence back to client side for alignment
+				result.altseqs = out.altseqs // Passing complete alternate sequence back to client side for alignment
+				result.leftflankseqs = out.leftflankseqs // Passing leftflankseq to client side
+				result.rightflankseqs = out.rightflankseqs // Passing rightflankseq to client side
+				result.ref_positions = out.ref_positions
+				result.refalleles = out.refalleles
+				result.altalleles = out.altalleles
 			}
 		}
 
@@ -929,7 +936,6 @@ async function do_query(q) {
 			result.pileup_data = await plot_pileup(q, templates_total)
 		}
 	}
-
 	return result
 }
 
@@ -939,41 +945,22 @@ async function do_alignOneGroup(group, q, templates) {
 	// get alignment data (text)
 	let alignmentData
 	if (q.variant) {
-		let leftflankseq_length
-		if (q.leftflankseq) {
-			leftflankseq_length = q.leftflankseq.length
-		} else if (result.leftflankseq) {
-			leftflankseq_length = result.leftflankseq.length
-		} else {
-			// Should not happen
-			console.log('Cannot find leftflankseq length')
-		}
-		if (group.type == 'support_alt') {
+		if (group.type == 'support_ref') {
+			let leftflankseq_length = q.leftflankseqs[0].length
 			if (group.partstack) {
 				alignmentData = await align_multiple_reads(
 					templates,
 					leftflankseq_length,
 					group.partstack.start,
 					group.partstack.stop,
-					q.altseq
-				) // Aligning alt-classified reads to alternate allele
-			} else {
-				alignmentData = await align_multiple_reads(templates, leftflankseq_length, 0, 0, q.altseq) // Aligning alt-classified reads to alternate allele
-			}
-		} else if (group.type == 'support_ref') {
-			if (group.partstack) {
-				alignmentData = await align_multiple_reads(
-					templates,
-					leftflankseq_length,
-					group.partstack.start,
-					group.partstack.stop,
-					q.refseq
+					q.refseqs[0]
 				) // Aligning ref-classified reads to reference allele
 			} else {
-				alignmentData = await align_multiple_reads(templates, leftflankseq_length, 0, 0, q.refseq) // Aligning ref-classified reads to reference allele
+				alignmentData = await align_multiple_reads(templates, leftflankseq_length, 0, 0, q.refseqs[0]) // Aligning ref-classified reads to reference allele
 			}
-		} else {
+		} else if (group.type == 'support_no') {
 			// when category type is none category
+			let leftflankseq_length = q.leftflankseqs[0].length
 			if (group.partstack) {
 				alignmentData = await align_multiple_reads(
 					templates,
@@ -984,6 +971,30 @@ async function do_alignOneGroup(group, q, templates) {
 			} else {
 				alignmentData = await align_multiple_reads(templates, leftflankseq_length) // Aligning ref-classified reads to reference allele
 			}
+		} else if (group.type == 'support_amb') {
+			// Currently ambiguous group does not have read alignment? Will work on this later if needed
+			console.log('Realignment of reads in ambiguous group is not currently implemented')
+		} else if (group.type.includes('support_alt')) {
+			// Determining which alternate allele the reads must be realigned to
+			for (let var_idx = 0; var_idx < q.variant.length; var_idx++) {
+				if (group.type == 'support_alt' + var_idx.toString()) {
+					let leftflankseq_length = q.leftflankseqs[var_idx].length
+					if (group.partstack) {
+						alignmentData = await align_multiple_reads(
+							templates,
+							leftflankseq_length,
+							group.partstack.start,
+							group.partstack.stop,
+							q.altseqs[var_idx]
+						) // Aligning alt-classified reads to alternate allele
+					} else {
+						alignmentData = await align_multiple_reads(templates, leftflankseq_length, 0, 0, q.altseqs[var_idx]) // Aligning alt-classified reads to alternate allele
+					}
+				}
+			}
+		} else {
+			// Should not happen
+			console.log('Unaccounted group, please check')
 		}
 	}
 	return { alignmentData }
@@ -1182,11 +1193,36 @@ async function query_reads(q) {
 		will only query reads from the variant region
 		query region is centered on the variant position to be able to include softclip reads resulting from the mutation
 		*/
-		const varlen = Math.floor(1.5 * Math.max(q.variant.ref.length, q.variant.alt.length))
+		let varlen = 0
+		let longest_variant_index = 0
+		// Determine the variant which covers all other variants
+		let i = 0
+		let left_edge = q.variant[0].pos // Find pos of variant which extends the left most
+		let right_edge = q.variant[0].pos + Math.max(q.variant[0].ref.length, q.variant[0].alt.length) // Find pos of variant which extends the right most
+		for (const variant of q.variant) {
+			const variant_length = Math.abs(variant.pos - Math.max(variant.ref.length, variant.alt.length))
+			if (variant_length > varlen) {
+				varlen = variant_length
+				longest_variant_index = i
+			}
+			if (left_edge > variant.pos) {
+				left_edge = variant.pos
+			}
+			if (right_edge < variant.pos + Math.max(variant.ref.length, variant.alt.length)) {
+				right_edge = variant.pos + Math.max(variant.ref.length, variant.alt.length)
+			}
+			//console.log(variant.ref, variant.alt)
+			i += 1
+		}
+		varlen = Math.floor(
+			1.5 * Math.max(q.variant[longest_variant_index].ref.length, q.variant[longest_variant_index].alt.length)
+		)
+
+		//const varlen = Math.floor(1.5 * Math.max(q.variant.ref.length, q.variant.alt.length))
 		const r = {
-			chr: q.variant.chr,
-			start: q.variant.pos - varlen,
-			stop: q.variant.pos + varlen
+			chr: q.variant[0].chr,
+			start: left_edge - varlen,
+			stop: right_edge + varlen
 		}
 		await determine_downsampling(q, [r])
 		await query_region(r, q)
@@ -2914,17 +2950,8 @@ async function route_getread(genome, req) {
 			lst.push(await convertread2html(s, genome, req.query))
 		}
 	}
-	if (seglst.q_align_ref) {
-		lst[0].q_align_ref = seglst.q_align_ref
-		lst[0].align_wrt_ref = seglst.align_wrt_ref
-		lst[0].r_align_ref = seglst.r_align_ref
-		lst[0].q_align_alt = seglst.q_align_alt
-		lst[0].align_wrt_alt = seglst.align_wrt_alt
-		lst[0].r_align_alt = seglst.r_align_alt
-		lst[0].red_region_start_alt = Number.parseInt(seglst.red_region_start_alt)
-		lst[0].red_region_start_ref = Number.parseInt(seglst.red_region_start_ref)
-		lst[0].red_region_stop_alt = Number.parseInt(seglst.red_region_stop_alt)
-		lst[0].red_region_stop_ref = Number.parseInt(seglst.red_region_stop_ref)
+	if (seglst.alignments) {
+		lst[0].alignments = seglst.alignments
 	}
 	return { lst }
 }
@@ -3009,105 +3036,20 @@ async function query_oneread(req, r) {
 
 	if (lst) {
 		// Aligning sequence against alternate sequence when altseq is present (when q.variant is true)
-		if (req.query.altseq) {
-			// Uncomment this line to test the single-read alignment in command line
-			//console.log(
-			//	'single:' +
-			//		lst[0].seq +
-			//		':' +
-			//		req.query.refseq +
-			//		':' +
-			//		req.query.altseq +
-			//		':' +
-			//		lst[0].cigarstr +
-			//		':' +
-			//		lst[0].boxes[0].segstart +
-			//		':' +
-			//		req.query.pos +
-			//		':' +
-			//		req.query.ref +
-			//		':' +
-			//		req.query.alt
-			//)
-			//console.log('lst[0].segstart:', lst[0].segstart)
-			//console.log('lst[0]:', lst[0])
-			const alignment_output = await run_rust(
-				'align',
-				'single:' +
-					lst[0].seq +
-					':' +
-					req.query.refseq +
-					':' +
-					req.query.altseq +
-					':' +
-					lst[0].cigarstr +
-					':' +
-					lst[0].segstart +
-					':' +
-					req.query.pos +
-					':' +
-					req.query.ref +
-					':' +
-					req.query.alt
-			)
-			const alignment_output_list = alignment_output.split('\n')
-			for (let item of alignment_output_list) {
-				if (item.includes('q_seq_ref')) {
-					lst.q_align_ref = item
-						.replace(/"/g, '')
-						.replace(/,/g, '')
-						.replace('q_seq_ref:', '')
-				} else if (item.includes('align_ref')) {
-					lst.align_wrt_ref = item
-						.replace(/"/g, '')
-						.replace(/,/g, '')
-						.replace('align_ref:', '')
-				} else if (item.includes('r_seq_ref')) {
-					lst.r_align_ref = item
-						.replace(/"/g, '')
-						.replace(/,/g, '')
-						.replace('r_seq_ref:', '')
-				} else if (item.includes('q_seq_alt')) {
-					lst.q_align_alt = item
-						.replace(/"/g, '')
-						.replace(/,/g, '')
-						.replace('q_seq_alt:', '')
-				} else if (item.includes('align_alt')) {
-					lst.align_wrt_alt = item
-						.replace(/"/g, '')
-						.replace(/,/g, '')
-						.replace('align_alt:', '')
-				} else if (item.includes('r_seq_alt')) {
-					lst.r_align_alt = item
-						.replace(/"/g, '')
-						.replace(/,/g, '')
-						.replace('r_seq_alt:', '')
-				} else if (item.includes('red_region_start_alt')) {
-					lst.red_region_start_alt = item
-						.replace(/"/g, '')
-						.replace(/,/g, '')
-						.replace('red_region_start_alt:', '')
-				} else if (item.includes('red_region_start_ref')) {
-					lst.red_region_start_ref = item
-						.replace(/"/g, '')
-						.replace(/,/g, '')
-						.replace('red_region_start_ref:', '')
-				} else if (item.includes('red_region_stop_alt')) {
-					lst.red_region_stop_alt = item
-						.replace(/"/g, '')
-						.replace(/,/g, '')
-						.replace('red_region_stop_alt:', '')
-				} else if (item.includes('red_region_stop_ref')) {
-					lst.red_region_stop_ref = item
-						.replace(/"/g, '')
-						.replace(/,/g, '')
-						.replace('red_region_stop_ref:', '')
-				} else {
-					console.log(item)
-				}
+		if (req.query.altseqs) {
+			const input_data = {
+				query_seq: lst[0].seq,
+				refseqs: req.query.refseqs,
+				altseqs: req.query.altseqs,
+				cigar_seq: lst[0].cigarstr,
+				start_position: lst[0].segstart,
+				ref_positions: req.query.ref_positions,
+				refalleles: req.query.refalleles,
+				altalleles: req.query.altalleles
 			}
+			const alignment_output = JSON.parse(JSON.parse(await run_rust('align', JSON.stringify(input_data))))
+			lst.alignments = alignment_output
 		}
-		// result is ready
 		return lst
 	}
 	lst = []

@@ -30,7 +30,7 @@ const examples = [
 				p: 19687259,
 				c: '110M1D32M9S',
 				f: 163,
-				g: 'alt'
+				g: 'alt0'
 			},
 			{
 				n: 'read supports alt allele with mismatch on left',
@@ -39,7 +39,7 @@ const examples = [
 				p: 19687270,
 				c: '99M1D52M',
 				f: 83,
-				g: 'alt'
+				g: 'alt0'
 			},
 			{
 				n: 'read supports ref allele',
@@ -58,7 +58,7 @@ const examples = [
 				c: '119M2D32M',
 				f: 83,
 				g: 'none',
-				g_0: 'alt'
+				g_0: 'alt0'
 			},
 			{
 				n: 'ambiguous reads',
@@ -97,7 +97,7 @@ const examples = [
 				p: 19661499,
 				c: '59M92S',
 				f: 163,
-				g: 'alt'
+				g: 'alt0'
 			},
 			{
 				n: 'read supports alt allele',
@@ -106,7 +106,7 @@ const examples = [
 				p: 19661444,
 				c: '69M8D82M',
 				f: 147,
-				g: 'alt'
+				g: 'alt0'
 			},
 			{
 				n: 'read supports neither ref nor alt(alt)',
@@ -116,7 +116,7 @@ const examples = [
 				c: '67M8D84M',
 				f: 147,
 				g: 'none',
-				g_0: 'alt'
+				g_0: 'alt0'
 			},
 			{
 				n: 'read support neither ref nor alt(alt under g_0)',
@@ -126,7 +126,7 @@ const examples = [
 				c: '30S25M12D96M',
 				f: 83,
 				g: 'none',
-				g_0: 'alt'
+				g_0: 'alt0'
 			}
 		]
 	},
@@ -156,7 +156,7 @@ const examples = [
 				p: 23191325,
 				c: '137M2I12M',
 				f: 163,
-				g: 'alt'
+				g: 'alt0'
 			},
 			{
 				n: 'read supports alt allele',
@@ -165,7 +165,7 @@ const examples = [
 				p: 23191356,
 				c: '96M6I49M',
 				f: 83,
-				g: 'alt'
+				g: 'alt0'
 			},
 			{
 				n: 'read supports neither ref nor alt(ref)',
