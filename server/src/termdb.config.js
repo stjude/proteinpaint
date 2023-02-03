@@ -54,6 +54,7 @@ export function make(q, res, ds, genome) {
 	if (tdb.minTimeSinceDx) c.minTimeSinceDx = tdb.minTimeSinceDx
 	if (tdb.coxTimeMsg) c.coxTimeMsg = tdb.coxTimeMsg
 	if (tdb.coxStartTimeMsg) c.coxStartTimeMsg = tdb.coxStartTimeMsg
+	if (tdb.displaySampleIds) c.displaySampleIds = tdb.displaySampleIds
 	addRequiredAuth(c, q)
 	addRestrictAncestries(c, tdb)
 	addScatterplots(c, ds)

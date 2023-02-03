@@ -573,10 +573,12 @@ class TermdbVocab extends Vocab {
 			strokeWidth: arg.strokeWidth,
 			axisHeight: arg.axisHeight,
 			rightMargin: arg.rightMargin,
+			brushRange: arg.brushRange,
 			..._body
 		}
 		if (arg.filter) body.filter = getNormalRoot(arg.filter)
 		if (arg.divideTw) body.divideTw = arg.divideTw
+		if (arg.displaySampleIds) body.displaySampleIds = arg.displaySampleIds
 		const d = await dofetch3('termdb', { body })
 		return d
 	}

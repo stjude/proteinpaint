@@ -52,7 +52,7 @@ export function violinBinsObj(scale, plot) {
 
 function computeViolinBins(scale, values) {
 	const uniqueValues = new Set(values)
-	const ticksCompute = uniqueValues.size === 1 ? 2 : Math.min(uniqueValues.size, 15)
+	const ticksCompute = uniqueValues.size === 1 ? 10 : Math.min(uniqueValues.size, 15)
 
 	const binBuilder = bin()
 		.domain(scale.domain()) /* extent of the data that is lowest to highest*/

@@ -42,7 +42,7 @@ export async function trigger_getViolinPlotData(q, res, ds, genome) {
 	const data = await getData({ terms: twLst, filter: q.filter, currentGeneNames: q.currentGeneNames }, ds, genome)
 	if (data.error) throw data.error
 
-	const valuesObject = key2values(data, term, q.divideTw)
+	const valuesObject = key2values(q, data, term, q.divideTw)
 
 	const result = resultObj(valuesObject, data, q.divideTw)
 
@@ -106,34 +106,37 @@ function minMax(v, term, minMaxObject) {
 	}
 }
 
-function key2values(data, term, overlayTerm) {
+function key2values(q, data, term, overlayTerm) {
 	let key2values = new Map()
 	let min = Number.MAX_VALUE,
 		max = -Number.MAX_VALUE
 
 	let minMaxObject = { min: min, max: max }
 
-	// send sample Id's with their values to client to display table on brushing.
+	// create Map object for sample Id's and values. Disabled for now until required later.
 	// let sampleIdObj = {}
 
 	for (const [c, v] of Object.entries(data.samples)) {
 		// v = {<termId> : {key, value}, ...}
-		// if (v[term.id]?.value !== undefined) {
-		// 	let termValueObj = {}
+		// if (q.displaySampleIds) {
+		// 	if (v[term.id]?.value !== undefined) {
+		// 		let termValueObj = {}
 
-		// 	if (data.refs.bySampleId[c]) {
-		// 		termValueObj[data.refs.bySampleId[c]] = v[term.id]?.value
-		// 	}
-		// 	if (q.divideTw) {
-		// 		if (!(v[(q.divideTw.term?.id)]?.value in sampleIdObj)) {
-		// 			let arr = []
-		// 			arr.push(termValueObj)
-		// 			sampleIdObj[(v[(q.divideTw.term?.id)]?.value)] = arr
-		// 		} else {
-		// 			sampleIdObj[(v[(q.divideTw.term?.id)]?.value)].push(termValueObj)
+		// 		if (data.refs.bySampleId[c]) {
+		// 			termValueObj[data.refs.bySampleId[c]] = v[term.id]?.value
 		// 		}
-		// 	} else {
-		// 		sampleIdObj[data.refs.bySampleId[c]] = v[term.id]?.value
+
+		// 		if (q.divideTw) {
+		// 			if (!(v[(q.divideTw.term?.id)]?.value in sampleIdObj)) {
+		// 				let arr = []
+		// 				arr.push(termValueObj)
+		// 				sampleIdObj[(v[(q.divideTw.term?.id)]?.value)] = arr
+		// 			} else {
+		// 				sampleIdObj[(v[(q.divideTw.term?.id)]?.value)].push(termValueObj)
+		// 			}
+		// 		} else {
+		// 			sampleIdObj[data.refs.bySampleId[c]] = v[term.id]?.value
+		// 		}
 		// 	}
 		// }
 

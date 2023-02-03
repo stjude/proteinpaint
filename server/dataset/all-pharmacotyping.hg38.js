@@ -7,7 +7,9 @@ module.exports = {
 		allowedChartTypes: ['matrix', 'sampleScatter', 'summary'],
 
 		db: { file: 'files/hg38/ALL-pharmacotyping/clinical/db' },
-		termdb: {},
+		termdb: {
+			displaySampleIds: true
+		},
 
 		scatterplots: {
 			plots: [

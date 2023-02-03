@@ -318,7 +318,7 @@ export async function getPlotConfig(opts, app) {
 
 			barchart: getDefaultBarSettings(app),
 
-			violin: getDefaultViolinSettings()
+			violin: getDefaultViolinSettings(app)
 		},
 		mayAdjustConfig(config, edits = {}) {
 			if (!edits.childType) {
