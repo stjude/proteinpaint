@@ -204,7 +204,7 @@ function mayAdjustRequest(url, init) {
 			if (typeof value == 'string') {
 				// no need to json-encode a string before percent encoding
 				params.push(`${key}=${encodeURIComponent(value)}`)
-			} else {
+			} else if (value !== undefined) {
 				params.push(`${key}=${encodeURIComponent(JSON.stringify(value))}`)
 			}
 		}
