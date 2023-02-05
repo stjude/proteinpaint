@@ -125,7 +125,6 @@ summaryfxn (percentiles)=> return {min, max, pX, pY, ...}
 	const bc = binconfig
 	validate_bins(bc)
 	if (bc.lst) {
-		console.log('lst', bc.lst)
 		const k2c = getColors(bc.lst.length) //to color bins
 		for (const bin of bc.lst) bin.color = k2c(bin.label)
 	}

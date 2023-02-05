@@ -1164,7 +1164,6 @@ thus less things to worry about...
 					j.name = i.name || j.name
 					j.included_types = i.included_types ? i.included_types.split(',') : []
 					if (!usecase || isUsableTerm(j, usecase).has('plot')) {
-						if (n === 'se') console.log(name, n)
 						if (name === n) r.equals.push(j)
 						else if (name.startsWith(n)) r.startsWith.push(j)
 						else if (name.includes(' ' + n)) r.startsWord.push(j)
