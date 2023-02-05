@@ -565,16 +565,19 @@ class TermdbVocab extends Vocab {
 			genome: this.vocab.genome,
 			dslabel: this.vocab.dslabel,
 			termid: arg.termid,
-			svgw: arg.svgw, ///window.devicePixelRatio,
+			svgw: arg.svgw,
 			orientation: arg.orientation,
 			datasymbol: arg.datasymbol,
-			radius: arg.radius,
 			devicePixelRatio: window.devicePixelRatio,
-			strokeWidth: arg.strokeWidth,
 			axisHeight: arg.axisHeight,
 			rightMargin: arg.rightMargin,
 			..._body
 		}
+
+		// when arg.radius is missing, "radius: arg.radius" will result in radius:"undefined"
+		if (arg.radius) body.radius = arg.radius
+		if (arg.strokeWidth) body.strokeWidth = arg.strokeWidth
+
 		if (arg.filter) body.filter = getNormalRoot(arg.filter)
 		if (arg.divideTw) body.divideTw = arg.divideTw
 		const d = await dofetch3('termdb', { body })

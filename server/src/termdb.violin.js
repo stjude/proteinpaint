@@ -220,7 +220,10 @@ function resultObj(valuesObject, data, overlayTerm) {
 
 function createCanvasImg(q, result) {
 	//size on x-y for creating circle and ticks
-	q.radius = +q.radius
+
+	// assign defaults
+	if (!q.radius) q.radius = 5
+	if (!q.strokeWidth) q.strokeWidth = 0.2
 
 	const refSize = q.radius * 4
 	//create scale object
