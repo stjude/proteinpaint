@@ -5,7 +5,6 @@ import { schemeCategory10 } from 'd3-scale-chromatic'
 import { brushX, brushY } from 'd3-brush'
 import { renderTable } from '#dom/table'
 import { filterJoin, getFilterItemByTag } from '../filter/filter'
-// import { drag as d3drag } from 'd3-drag'
 
 export default function violinRenderer(self) {
 	const k2c = scaleOrdinal(schemeCategory10)
@@ -73,8 +72,8 @@ export default function violinRenderer(self) {
 		const rows = self.data.pvalues
 
 		renderTable({
-			columns,
 			rows,
+			columns,
 			div: self.dom.tableHolder,
 			showLines: false,
 			maxWidth: '27vw',
@@ -144,8 +143,8 @@ export default function violinRenderer(self) {
 		const g = svg.svgG
 			.append('g')
 			.transition()
-			.duration(1000)
-			.delay(200)
+			.duration(800)
+			.delay(100)
 		g.call((isH ? axisTop : axisLeft)().scale(svg.axisScale))
 
 		let lab
@@ -172,8 +171,8 @@ export default function violinRenderer(self) {
 				.attr('y', -30)
 				.style('opacity', 0)
 				.transition()
-				.delay(200)
-				.duration(300)
+				.delay(100)
+				.duration(200)
 				.style('opacity', 1)
 		} else {
 			lab
@@ -182,8 +181,8 @@ export default function violinRenderer(self) {
 				.attr('transform', 'rotate(-90)')
 				.style('opacity', 0)
 				.transition()
-				.delay(200)
-				.duration(300)
+				.delay(100)
+				.duration(200)
 				.style('opacity', 1)
 		}
 	}
@@ -266,8 +265,8 @@ export default function violinRenderer(self) {
 			.style('fill', plot.color ? plot.color : k2c(plotIdx))
 			.style('opacity', 0)
 			.transition()
-			.delay(400)
-			.duration(800)
+			.delay(300)
+			.duration(600)
 			.style('opacity', '0.8')
 			.attr('d', areaBuilder(plot.plotValueCount > 3 ? plot.bins : 0)) //do not build violin plots for values 3 or less than 3.
 
@@ -280,7 +279,7 @@ export default function violinRenderer(self) {
 			.append('image')
 			.style('opacity', 0)
 			.transition()
-			.delay(800)
+			.delay(400)
 			.duration(100)
 			.style('opacity', 1)
 			.attr('xlink:href', plot.src)
@@ -293,7 +292,7 @@ export default function violinRenderer(self) {
 			violinG
 				.append('line')
 				.transition()
-				.delay(800)
+				.delay(600)
 				.duration(30)
 				.style('opacity', 1)
 				.attr('class', 'sjpp-median-line')
@@ -411,6 +410,29 @@ export function displayMenu(t1, t2, self, plot, event, start, end) {
 			label: `Add filter: ${start.toFixed(1)} < x < ${end.toFixed(1)}`,
 			callback: getAddFilterCallback(t1, t2, self, plot, start, end)
 		})
+
+		if (self.config.settings.violin.displaySampleIds) {
+			options.push({
+				label: `List samples`,
+				callback: async () => {
+					const tvslst = getTvsLst(t1, t2, plot, start, end)
+					const term = t1.q?.mode === 'continuous' ? t1 : t2
+					const filter = {
+						type: 'tvslst',
+						join: 'and',
+						lst: [self.state.termfilter.filter, tvslst],
+						in: true
+					}
+					const opts = {
+						terms: [term],
+						filter
+					}
+					//getAnnotatedSampleData is used to retrieve sample id's and values (see matrix.js).
+					const data = await self.app.vocabApi.getAnnotatedSampleData(opts)
+					displaySampleIds(event, self, term, data)
+				}
+			})
+		}
 		displayBrushMenu.called = false
 	}
 
@@ -517,6 +539,7 @@ export function getAddFilterCallback(t1, t2, self, plot, rangeStart, rangeStop) 
 			createTvsLstRanges(t1, tvslst, rangeStart, rangeStop, 0)
 		}
 	}
+
 	return () => {
 		const filterUiRoot = getFilterItemByTag(self.state.termfilter.filter, 'filterUiRoot')
 		const filter = filterJoin([filterUiRoot, tvslst])
@@ -620,4 +643,71 @@ function labelHideLegendClicking(t2, plot, self) {
 			}
 		})
 	})
+}
+
+export function getTvsLst(t1, t2, plot, rangeStart, rangeStop) {
+	const tvslst = {
+		type: 'tvslst',
+		in: true,
+		join: 'and',
+		lst: []
+	}
+
+	if (t2) {
+		if (t1.term.type === 'categorical') {
+			createTvsLstValues(t1, plot, tvslst, 0)
+			createTvsLstRanges(t2, tvslst, rangeStart, rangeStop, 1)
+		} else if (
+			t2.q?.mode === 'continuous' ||
+			((t2.term?.type === 'float' || t2.term?.type === 'integer') && plot.divideTwBins != null)
+		) {
+			createTvsTerm(t2, tvslst)
+			tvslst.lst[0].tvs.ranges = [
+				{
+					start: structuredClone(plot.divideTwBins?.start) || null,
+					stop: structuredClone(plot.divideTwBins?.stop) || null,
+					startinclusive: structuredClone(plot.divideTwBins?.startinclusive) || null,
+					stopinclusive: structuredClone(plot.divideTwBins?.stopinclusive) || null,
+					startunbounded: structuredClone(plot.divideTwBins?.startunbounded)
+						? structuredClone(plot.divideTwBins?.startunbounded)
+						: null,
+					stopunbounded: structuredClone(plot.divideTwBins?.stopunbounded)
+						? structuredClone(plot.divideTwBins?.stopunbounded)
+						: null
+				}
+			]
+		} else {
+			createTvsLstValues(t2, plot, tvslst, 0)
+			createTvsLstRanges(t1, tvslst, rangeStart, rangeStop, 1)
+		}
+	} else createTvsLstRanges(t1, tvslst, rangeStart, rangeStop, 0)
+	return tvslst
+}
+
+function displaySampleIds(event, self, term, data) {
+	self.app.tip.clear()
+	const sampleIdArr = []
+
+	for (const [c, k] of Object.entries(data.samples)) {
+		const sampleIdObj = {}
+		if (data.refs.bySampleId[c]) {
+			sampleIdObj[data.refs.bySampleId[c]] = k[term.$id].value
+		}
+		sampleIdArr.push([{ value: Object.keys(sampleIdObj) }, { value: Object.values(sampleIdObj) }])
+	}
+	const tableDiv = self.app.tip.d.append('div')
+	const columns = [{ label: 'Sample Id' }, { label: 'Value' }]
+	const rows = sampleIdArr
+
+	renderTable({
+		rows,
+		columns,
+		div: tableDiv,
+		showLines: false,
+		maxWidth: '27vw',
+		maxHeight: '25vh',
+		resize: true
+	})
+
+	self.app.tip.show(event.clientX, event.clientY)
 }

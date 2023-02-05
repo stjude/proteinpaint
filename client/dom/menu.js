@@ -1,5 +1,4 @@
 import { select as d3select } from 'd3-selection'
-import { transition } from 'd3-transition'
 import { base_zindex } from '../src/client'
 
 /* TODO explain arg

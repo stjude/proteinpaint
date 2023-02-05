@@ -7,7 +7,6 @@ import htmlLegend from '../dom/html.legend'
 class ViolinPlot {
 	constructor(opts) {
 		this.type = 'violin'
-		setInteractivity(this)
 	}
 
 	async init() {
@@ -52,6 +51,7 @@ class ViolinPlot {
 		}
 
 		violinRenderer(this)
+		setInteractivity(this)
 
 		this.legendRenderer = htmlLegend(this.dom.legendDiv, {
 			settings: {
@@ -59,7 +59,6 @@ class ViolinPlot {
 			},
 			handlers: {}
 		})
-
 		this.components = {
 			controls: await controlsInit({
 				app: this.app,
@@ -134,7 +133,8 @@ class ViolinPlot {
 				settings: {
 					violin: config.settings.violin
 				}
-			})
+			}),
+			displaySampleIds: appState.termdbConfig.displaySampleIds
 		}
 	}
 
@@ -197,7 +197,9 @@ class ViolinPlot {
 			devicePixelRatio: window.devicePixelRatio,
 			datasymbol: s.datasymbol,
 			radius: s.radius,
-			strokeWidth: s.strokeWidth
+			strokeWidth: s.strokeWidth,
+			axisHeight: s.axisHeight,
+			rightMargin: s.rightMargin
 		}
 
 		if (term?.q?.mode === 'continuous' && term2?.q?.mode === 'continuous') {
@@ -238,7 +240,7 @@ function setInteractivity(self) {
 	}
 }
 
-export function getDefaultViolinSettings() {
+export function getDefaultViolinSettings(app) {
 	return {
 		orientation: 'horizontal',
 		rowlabelw: 250,
@@ -248,7 +250,8 @@ export function getDefaultViolinSettings() {
 		radius: 5,
 		strokeWidth: 0.2,
 		axisHeight: 60,
-		rightMargin: 50
+		rightMargin: 50,
+		displaySampleIds: app?.getState()?.termdbConfig?.displaySampleIds ? true : false
 	}
 }
 
@@ -277,7 +280,7 @@ export async function getPlotConfig(opts, app) {
 			// 	barwidth: 20, // bar thickness
 			// 	barspace: 2 // space between two bars
 			// },
-			violin: getDefaultViolinSettings()
+			violin: getDefaultViolinSettings(app)
 		}
 	}
 

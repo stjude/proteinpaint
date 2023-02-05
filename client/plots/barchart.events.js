@@ -350,7 +350,8 @@ function handle_click(event, self) {
 	// list samples for a category
 	// this option is always added
 	/*
-	after discussing with yutaka this is disabled for now
+	// after discussing with yutaka this is disabled for now
+
 
 	options.push({
 		label: 'List samples',
@@ -431,7 +432,7 @@ function wrapTvs(tvs) {
 
 /* 			TODO: add to cart and gp          */
 
-function menuoption_listsamples(self, tvslst) {
+export function menuoption_listsamples(self, tvslst) {
 	const filterRoot = getNormalRoot({
 		type: 'tvslst',
 		join: 'and',
@@ -449,10 +450,11 @@ function menuoption_listsamples(self, tvslst) {
 	})
 	const arg = [
 		'getsamples=1',
-		'genome=' + self.state.genome,
-		'dslabel=' + self.state.dslabel,
+		'genome=' + self.app.vocabApi.vocab.genome,
+		'dslabel=' + self.app.vocabApi.vocab.dslabel,
 		'filter=' + encodeURIComponent(JSON.stringify(filterRoot))
 	]
+
 	dofetch3('termdb?' + arg.join('&')).then(data => {
 		export_data(data.samples.length + ' samples', [{ text: data.samples.join('\n') }])
 	})
