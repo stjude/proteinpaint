@@ -10,7 +10,7 @@ const runpp = helpers.getRunPp('termdb', {
 		vocab: {
 			route: 'termdb',
 			dslabel: 'TermdbTest',
-			genome: 'hg38'
+			genome: 'hg38-test'
 		}
 	},
 	debug: 1
@@ -18,7 +18,16 @@ const runpp = helpers.getRunPp('termdb', {
 
 /**************
  test sections
-***************/
+**************
+
+default behavior
+click_term
+click_term2select_tvs
+rehydrated from saved state
+error handling
+usecase
+
+*/
 
 tape('\n', function(test) {
 	test.pass('-***- termdb/tree -***-')
@@ -272,7 +281,7 @@ tape('error handling', function(test) {
 			termdbConfig: {}
 		},
 		callbacks: {
-			'postRender.test': testWrongGenome
+			'postInit.test': testWrongGenome
 		}
 	})
 	function testWrongGenome(app) {
@@ -286,12 +295,16 @@ tape('error handling', function(test) {
 			termdbConfig: {}
 		},
 		callbacks: {
-			'postRender.test': testWrongDslabel
+			'postInit.test': testWrongDslabel
 		}
 	})
 	function testWrongDslabel(app) {
 		const d = app.Inner.dom.errdiv.select('.sja_errorbar').select('div')
-		test.equal(d.text(), 'Error: invalid dslabel', 'should show for invalid dslabel')
+		test.equal(
+			d.text(),
+			'Error: genome-level termdb not available',
+			'should show for genome-level termdb not available'
+		)
 	}
 })
 

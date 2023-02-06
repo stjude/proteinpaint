@@ -18,7 +18,15 @@ function sleep(ms) {
 
 /**************
  test sections
-***************/
+**************
+
+init errors
+state: no cohort.termdb.selectCohort
+state rehydrate: default cohort
+state rehydrate: activeCohort=1
+state rehydrate: by cohortFilter
+
+*/
 
 tape('\n', function(test) {
 	test.pass('-***- termdb/store -***-')
@@ -83,10 +91,13 @@ tape('init errors', function(test) {
 
 tape('state: no cohort.termdb.selectCohort', function(test) {
 	test.timeoutAfter(3000)
+
 	runpp({
 		state: {
-			genome: 'hg38',
-			dslabel: 'NoCohortSJLife'
+			genome: 'hg38-test',
+			// dslabel: 'NoCohortSJLife' - This dslabel isn't available
+			dslabel: 'TermdbTest',
+			activeCohort: -1
 		},
 		callbacks: {
 			'postRender.test': runTests
@@ -104,7 +115,7 @@ tape('state rehydrate: default cohort', function(test) {
 	test.timeoutAfter(3000)
 	runpp({
 		state: {
-			genome: 'hg38',
+			genome: 'hg38-test',
 			dslabel: 'TermdbTest'
 		},
 		callbacks: {
@@ -152,7 +163,7 @@ tape('state rehydrate: activeCohort=1', function(test) {
 	test.timeoutAfter(3000)
 	runpp({
 		state: {
-			genome: 'hg38',
+			genome: 'hg38-test',
 			dslabel: 'TermdbTest',
 			activeCohort: 1
 		},
@@ -202,7 +213,7 @@ tape('state rehydrate: by cohortFilter', function(test) {
 	const selectCohort = ds.cohort.termdb.selectCohort || { values: [] }
 	runpp({
 		state: {
-			genome: 'hg38',
+			genome: 'hg38-test',
 			dslabel: 'TermdbTest',
 			header_mode: 'with_cohortHtmlSelect',
 			termfilter: {
