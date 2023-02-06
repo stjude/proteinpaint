@@ -17,7 +17,7 @@ $ npx watchify termsetting.spec.js -o ../../../public/bin/spec.bundle.js -v
  reusable helper functions
 **************************/
 
-async function getOpts(_opts = {}, genome = 'hg38', dslabel = 'TermdbTest') {
+async function getOpts(_opts = {}, genome = 'hg38-test', dslabel = 'TermdbTest') {
 	const holder = d3s
 		.select('body')
 		.append('div')
@@ -85,7 +85,22 @@ function sleep(ms) {
 
 /**************
  test sections
- ***************/
+ **************
+ 
+menuOptions
+Reuse option
+use_bins_less
+Categorical term
+Numerical term: range boundaries
+Numerical term: fixed bins
+Numerical term: float custom bins
+Numerical term: toggle menu - 4 options
+Numerical term: toggle menu - 2 options
+Numerical term: toggle menu - 1 options
+Numerical term: integer custom bins
+Conditional term
+Custom vocabulary
+ */
 
 tape('\n', test => {
 	test.pass('-***- common/termsetting -***-')
@@ -249,9 +264,12 @@ tape('Reuse option', async test => {
 		opts.tsData.q.reuseId,
 		`should display an active reuseId as pill status`
 	)
+
 	await opts.pillMenuClick('Edit')
+	/*Fix. First div within the button should be text since 
+	the border is on the bottom.*/
 	test.equal(
-		tipn.querySelector('.sjpp-active').innerHTML,
+		tipn.querySelector('.sjpp-active > div').innerHTML,
 		`Varying bin sizes`,
 		`should open the numeric edit menu to the correct tab of the reused q.mode`
 	)
@@ -526,7 +544,10 @@ tape('Numerical term: fixed bins', async test => {
 	)
 
 	// test 'apply' button
-	const apply_btn = tip.d.selectAll('button')._groups[0][0]
+	const apply_btn = tip.d
+		.selectAll('button')
+		.nodes()
+		.find(b => b.innerHTML == 'Apply')
 	apply_btn.click()
 	await opts.pillMenuClick('Edit')
 
@@ -540,7 +561,10 @@ tape('Numerical term: fixed bins', async test => {
 	)
 
 	// test 'reset' button
-	const reset_btn = tip.d.selectAll('button')._groups[0][1]
+	const reset_btn = tip.d
+		.selectAll('button')
+		.nodes()
+		.find(b => b.innerHTML == 'Reset')
 	reset_btn.click()
 	await sleep(100)
 	apply_btn.click()
