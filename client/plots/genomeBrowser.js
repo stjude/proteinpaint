@@ -15,8 +15,10 @@ this.app {
 	opts {
 		genome{} // client-side genome obj
 		state {
-			dslabel:str
-			genome:str
+			vocab: {
+				dslabel:str
+				genome:str
+			}
 		}
 	}
 	dispatch()
@@ -98,7 +100,7 @@ class genomeBrowser {
 				const tk = {
 					type: 'mds3',
 					filterObj: this.state.filter,
-					dslabel: this.app.opts.state.dslabel
+					dslabel: this.app.opts.state.vocab.dslabel
 				}
 				await this.launchMds3tk(tk)
 			}
@@ -165,8 +167,8 @@ class genomeBrowser {
 		// send to back to compute and get results back
 
 		const body = {
-			genome: this.app.opts.state.genome,
-			dslabel: this.app.opts.state.dslabel,
+			genome: this.app.opts.state.vocab.genome,
+			dslabel: this.app.opts.state.vocab.dslabel,
 			for: 'mds3variantData',
 			chr: this.state.config.geneSearchResult.chr,
 			start: this.state.config.geneSearchResult.start,
