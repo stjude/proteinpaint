@@ -246,18 +246,31 @@ function getNumericIdVal(d, term, q, rows) {
 		const ids = []
 		for (const b of q.computed_bins) {
 			if (b.startunbounded) {
-				if (v < b.stop) ids.push(b.label)
-				if (b.stopinclusive && v == b.stop) ids.push(b.label)
+				if (v < b.stop) {
+					ids.push(b.label)
+					break
+				}
+				if (b.stopinclusive && v == b.stop) {
+					ids.push(b.label)
+					break
+				}
 			}
 			if (b.stopunbounded) {
-				if (v > b.start) ids.push(b.label)
-				if (b.stopinclusive && v == b.start) ids.push(b.label)
+				if (v > b.start) {
+					ids.push(b.label)
+					break
+				}
+				if (b.stopinclusive && v == b.start) {
+					ids.push(b.label)
+					break
+				}
 			}
 			if (b.startinclusive && v < b.start) continue
 			if (!b.startinclusive && v <= b.start) continue
 			if (b.stopinclusive && v > b.stop) continue
 			if (!b.stopinclusive && v >= b.stop) continue
 			ids.push(b.label)
+			break
 		}
 		return [ids, v]
 	}
