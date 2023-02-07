@@ -15,6 +15,17 @@ export default function violinRenderer(self) {
 		const t1 = self.config.term
 		const t2 = self.config.term2
 
+		//termsetting.js 'set_hiddenvalues()' adds uncomputable values from term.values to q.hiddenValues object. Since it will show up on the legend, delete that key-value pair from t2.q.hiddenValues object.
+		//hiddenValues are only subject to term2 when there are more than 1 categories in violin plot so safe to only delete uncomputable values from t2.q.hiddenValues and leave t1.q.hiddenValues as is.
+		const termNum = t2 ? t2 : t1
+		if (termNum && termNum.term?.values) {
+			for (const [k, v] of Object.entries(termNum.term.values)) {
+				if (v.uncomputable) {
+					if (termNum.q.hiddenValues[k]) delete termNum.q.hiddenValues[k]
+				}
+			}
+		}
+
 		//filter out hidden values and only keep plots which are not hidden in term2.q.hiddenvalues
 		self.data.plots = self.data.plots.filter(p => !t2?.q?.hiddenValues?.[p.label || p.seriesId])
 
@@ -598,6 +609,19 @@ function getLegendGrps(self) {
 		legendGrps.push({ name, items })
 	}
 
+	if (self.data.uncomputableValueObj != null) {
+		const items = []
+		for (const [k, v] of Object.entries(self.data.uncomputableValueObj)) {
+			items.push({
+				text: `${k}, n = ${v}`,
+				noIcon: true
+			})
+		}
+		const title = t1.q.mode && t1.q.mode === 'continuous' ? `${t1.term.name}` : `${t2.term.name}`
+		const name = `<span style="${headingStyle}">${title}</span>`
+		legendGrps.push({ name, items })
+	}
+
 	if (t2) {
 		if (t2.q.hiddenValues && Object.entries(t2.q.hiddenValues).length != 0) {
 			const items = []
@@ -622,26 +646,28 @@ function labelHideLegendClicking(t2, plot, self) {
 	self.dom.legendDiv.selectAll('.sjpp-htmlLegend').on('click', event => {
 		event.stopPropagation()
 		const d = event.target.__data__
-		for (const key of Object.keys(t2.q.hiddenValues)) {
-			if (d.text === key) {
-				delete self.config.term2.q.hiddenValues[key]
-			}
-		}
-		const termNum = self.config.term2 ? 'term2' : null
-		const term = self.config[termNum]
-		const isHidden = false
-		self.app.dispatch({
-			type: 'plot_edit',
-			id: self.id,
-			config: {
-				[termNum]: {
-					isAtomic: true,
-					id: term.id,
-					term: term.term,
-					q: getUpdatedQfromClick(plot, t2, isHidden)
+		if (t2) {
+			for (const key of Object.keys(t2?.q?.hiddenValues)) {
+				if (d.text === key) {
+					delete self.config.term2.q.hiddenValues[key]
 				}
 			}
-		})
+			const termNum = self.config.term2 ? 'term2' : null
+			const term = self.config[termNum]
+			const isHidden = false
+			self.app.dispatch({
+				type: 'plot_edit',
+				id: self.id,
+				config: {
+					[termNum]: {
+						isAtomic: true,
+						id: term.id,
+						term: term.term,
+						q: getUpdatedQfromClick(plot, t2, isHidden)
+					}
+				}
+			})
+		}
 	})
 }
 

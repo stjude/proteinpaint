@@ -145,38 +145,19 @@ function key2values(q, data, term, overlayTerm) {
 
 	let minMaxObject = { min: min, max: max }
 
-	// create Map object for sample Id's and values. Disabled for now until required later.
-	// let sampleIdObj = {}
+	//create object to store uncomputable values and label
+	const uncomputableValueObj = {}
 
 	for (const [c, v] of Object.entries(data.samples)) {
-		// v = {<termId> : {key, value}, ...}
-		// if (q.displaySampleIds) {
-		// 	if (v[term.id]?.value !== undefined) {
-		// 		let termValueObj = {}
-
-		// 		if (data.refs.bySampleId[c]) {
-		// 			termValueObj[data.refs.bySampleId[c]] = v[term.id]?.value
-		// 		}
-
-		// 		if (q.divideTw) {
-		// 			if (!(v[(q.divideTw.term?.id)]?.value in sampleIdObj)) {
-		// 				let arr = []
-		// 				arr.push(termValueObj)
-		// 				sampleIdObj[(v[(q.divideTw.term?.id)]?.value)] = arr
-		// 			} else {
-		// 				sampleIdObj[(v[(q.divideTw.term?.id)]?.value)].push(termValueObj)
-		// 			}
-		// 		} else {
-		// 			sampleIdObj[data.refs.bySampleId[c]] = v[term.id]?.value
-		// 		}
-		// 	}
-		// }
-
 		//if there is no value for term then skip that.
 		if (!v[term.id]) continue
 
 		if (term.values?.[v[term.id]?.value]?.uncomputable) {
-			//skip these values
+			//skip these values from rendering in plot but show in legend as uncomputable categories
+			if (!uncomputableValueObj[(term.values?.[v[term.id]?.value].label)])
+				uncomputableValueObj[(term.values?.[v[term.id]?.value].label)] = 1
+			else uncomputableValueObj[(term.values?.[v[term.id]?.value].label)] += 1
+
 			continue
 		}
 		minMax(v, term, minMaxObject)
@@ -194,7 +175,11 @@ function key2values(q, data, term, overlayTerm) {
 			key2values.get('All samples').push(v[term.id]?.value)
 		}
 	}
-	return { key2values: key2values, minMaxValues: minMaxObject }
+	return { key2values: key2values, minMaxValues: minMaxObject, uncomputableValueObj: sortObj(uncomputableValueObj) }
+}
+
+function sortObj(object) {
+	return Object.fromEntries(Object.entries(object).sort(([, a], [, b]) => a - b))
 }
 
 function sortKey2values(data, key2values, overlayTerm) {
@@ -221,7 +206,9 @@ function resultObj(valuesObject, data, overlayTerm) {
 		max: valuesObject.minMaxValues.max,
 		plots: [], // each element is data for one plot: {label=str, values=[]}
 		pvalues: [],
-		plotThickness: Number
+		plotThickness: Number,
+		uncomputableValueObj:
+			Object.keys(valuesObject.uncomputableValueObj).length > 0 ? valuesObject.uncomputableValueObj : null
 	}
 
 	for (const [key, values] of sortKey2values(data, valuesObject.key2values, overlayTerm)) {
@@ -232,15 +219,15 @@ function resultObj(valuesObject, data, overlayTerm) {
 				seriesId: key,
 				plotValueCount: values?.length,
 				color: overlayTerm?.term?.values?.[key]?.color || null,
-				divideTwBins: numericBins(overlayTerm, data).has(key) ? numericBins(overlayTerm, data).get(key) : null
-				// sampleIdObj: sampleIdObj[key] ? sampleIdObj[key] : null
+				divideTwBins: numericBins(overlayTerm, data).has(key) ? numericBins(overlayTerm, data).get(key) : null,
+				uncomputableValueObj:
+					Object.keys(valuesObject.uncomputableValueObj).length > 0 ? valuesObject.uncomputableValueObj : null
 			})
 		} else {
 			result.plots.push({
 				label: 'All samples, n=' + values.length,
 				values,
 				plotValueCount: values.length
-				// sampleIdObj: sampleIdObj
 			})
 		}
 	}
