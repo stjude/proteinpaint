@@ -4,7 +4,9 @@ const path = require('path')
 const utils = require('./utils')
 const serverconfig = require('./serverconfig')
 import { schemeCategory20, getColors } from '#shared/common'
+import { interpolateSqlValues } from './termdb.sql'
 const { mclass, dt2label, morigin } = require('#shared/common')
+const { getFilterCTEs } = require('./termdb.filter')
 
 /*
 works with "canned" scatterplots in a dataset, e.g. data from a text file of tSNE coordinates from a pre-analyzed cohort (contrary to on-the-fly analysis)
@@ -126,16 +128,30 @@ output:
 */
 export async function trigger_getSampleScatter(q, res, ds, genome) {
 	try {
-		if (!ds.cohort.scatterplots || !ds.cohort.scatterplots.plots) throw 'not supported'
+		let refSamples, cohortSamples
+		if (q.coordTWs.length == 2) {
+			refSamples = []
+			cohortSamples = getScatterCoordinates(q, ds)
+		} else {
+			if (!ds.cohort.scatterplots || !ds.cohort.scatterplots.plots) throw 'not supported'
+			const plot = ds.cohort.scatterplots.plots.find(p => p.name == q.plotName)
+			if (!plot)
+				return {
+					samples: [],
+					colorLegend: [],
+					shapeLegend: []
+				}
 
-		const plot = ds.cohort.scatterplots.plots.find(p => p.name == q.plotName)
-		if (!plot) throw 'plot not found with plotName'
-
-		const [refSamples, cohortSamples] = await getSamples(plot)
-		const terms = [q.colorTW]
+			const result = await getSamples(plot)
+			refSamples = result[0]
+			cohortSamples = result[1]
+		}
+		const terms = []
+		if (q.colorTW) terms.push(q.colorTW)
 		if (q.shapeTW) terms.push(q.shapeTW)
 		const data = await getData({ filter: q.filter, terms }, ds, genome)
 		if (data.error) throw data.error
+
 		const result = await colorAndShapeSamples(refSamples, cohortSamples, data, q)
 		res.send(result)
 	} catch (e) {
@@ -173,12 +189,17 @@ async function colorAndShapeSamples(refSamples, cohortSamples, data, q) {
 		sample.hidden = {}
 		let result = []
 		sample.shape = 'Ref'
-
-		if (q.colorTW.q?.mode === 'continuous') {
-			sample.category = dbSample[q.colorTW.term.id].value
+		if (!q.colorTW) {
+			sample.category = 'Default'
 			result.push(sample)
-		} else result = processSample(dbSample, sample, q.colorTW, colorMap, 'category')
-
+		} else {
+			if (q.colorTW?.q?.mode === 'continuous') {
+				if (dbSample) {
+					sample.category = dbSample[q.colorTW.term.id].value
+					result.push(sample)
+				}
+			} else result = processSample(dbSample, sample, q.colorTW, colorMap, 'category')
+		}
 		if (q.shapeTW) {
 			for (const _sample of result) {
 				const sresult = processSample(dbSample, _sample, q.shapeTW, shapeMap, 'shape')
@@ -186,7 +207,7 @@ async function colorAndShapeSamples(refSamples, cohortSamples, data, q) {
 			}
 		} else samples.push(...result)
 	}
-	if (q.colorTW.q.mode !== 'continuous') {
+	if (q.colorTW && q.colorTW.q.mode !== 'continuous') {
 		let i = 20
 		const scheme = schemeCategory20
 		const k2c = getColors(colorMap.size)
@@ -212,12 +233,14 @@ async function colorAndShapeSamples(refSamples, cohortSamples, data, q) {
 		i++
 	}
 
-	const colorLegend = order(colorMap, q.colorTW, data.refs)
+	const colorLegend = q.colorTW
+		? order(colorMap, q.colorTW, data.refs)
+		: [['Default', { sampleCount: cohortSamples.length, color: 'green' }]]
 	colorLegend.push([
 		'Ref',
 		{
 			sampleCount: refSamples.length,
-			color: q.colorTW.term.values?.['Ref'] ? q.colorTW.term.values?.['Ref'].color : refColor
+			color: q.colorTW?.term.values?.['Ref'] ? q.colorTW.term.values?.['Ref'].color : refColor
 		}
 	])
 	const shapeLegend = order(shapeMap, q.shapeTW, data.refs)
@@ -313,4 +336,26 @@ function order(map, tw, refs) {
 		for (const [category, value] of map) if (!entries.some(e => e[0] === category)) entries.push([category, value])
 	}
 	return entries
+}
+
+export function getScatterCoordinates(q, ds) {
+	q.ds = ds
+	const samples = []
+	if (q.coordTWs.length != 2) return samples
+
+	const filter = getFilterCTEs(q.filter, q.ds)
+	let sql = ''
+	if (filter) sql += interpolateSqlValues(`WITH ${filter.filters}`, filter.values.slice())
+	const xterm = q.coordTWs[0].term
+	const yterm = q.coordTWs[1].term
+	sql += `SELECT annox.sample AS sampleId, annox.value as x, annoy.value AS y FROM anno_${xterm.type} annox
+				 JOIN anno_${yterm.type} annoy  WHERE annox.term_id = '${xterm.id}' AND annoy.sample = annox.sample AND annoy.term_id='${yterm.id}'`
+	if (filter) sql += ` AND annox.sample IN ${filter.CTEname}`
+	const rows = q.ds.cohort.db.connection.prepare(sql).all()
+
+	for (const { sampleId, x, y } of rows) {
+		const sample = ds.sampleId2Name.get(sampleId)
+		if (sample) samples.push({ sample, sampleId, x, y })
+	}
+	return samples
 }

@@ -833,9 +833,10 @@ export class TermdbVocab extends Vocab {
 			genome: this.state.vocab.genome,
 			dslabel: this.state.vocab.dslabel,
 			plotName: opts.name,
-			colorTW: opts.colorTW,
+			coordTWs: opts.coordTWs,
 			filter: getNormalRoot(opts.filter)
 		}
+		if (opts.colorTW) body.colorTW = opts.colorTW
 		if (opts.shapeTW) body.shapeTW = opts.shapeTW
 		return await dofetch3('termdb', { body })
 	}

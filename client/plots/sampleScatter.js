@@ -120,6 +120,7 @@ class Scatter {
 		copyMerge(this.settings, this.config.settings.sampleScatter)
 		const reqOpts = this.getDataRequestOpts()
 		this.data = await this.app.vocabApi.getScatterData(reqOpts)
+
 		if (this.data.error) throw this.data.error
 		if (!Array.isArray(this.data.samples)) throw 'data.samples[] not array'
 
@@ -142,14 +143,14 @@ class Scatter {
 			.range([this.axisOffset.y, this.settings.svgh + this.axisOffset.y])
 		this.axisLeft = axisLeft(this.yAxisScale)
 		this.cohortSamples = this.data.samples.filter(sample => 'sampleId' in sample)
-
+		if (!this.config.gradientColor) this.config.gradientColor = '#008000'
 		this.startColor = rgb(this.config.gradientColor)
 			.brighter()
 			.brighter()
 		this.stopColor = rgb(this.config.gradientColor)
 			.darker()
 			.darker()
-		if (this.config.colorTW.q.mode === 'continuous') {
+		if (this.config.colorTW?.q.mode === 'continuous') {
 			const [min, max] = this.cohortSamples.reduce(
 				(s, d) => [d.value < s[0] ? d.category : s[0], d.category > s[1] ? d.category : s[1]],
 				[this.cohortSamples[0].category, this.cohortSamples[0].category]
@@ -174,10 +175,14 @@ class Scatter {
 	// later on, add methods with same name to FrontendVocab
 	getDataRequestOpts() {
 		const c = this.config
+		const coordTWs = []
+		if (c.xTW) coordTWs.push(c.xTW)
+		if (c.yTW) coordTWs.push(c.yTW)
 		const opts = {
 			name: c.name, // the actual identifier of the plot, for retrieving data from server
 			colorTW: c.colorTW,
-			filter: this.state.termfilter.filter
+			filter: this.state.termfilter.filter,
+			coordTWs
 		}
 		if (c.shapeTW) opts.shapeTW = c.shapeTW
 		return opts
@@ -194,13 +199,34 @@ class Scatter {
 				inputs: [
 					{
 						type: 'term',
+						configKey: 'xTW',
+						chartType: 'sampleScatter',
+						usecase: { target: 'sampleScatter', detail: 'xTW' },
+						title: 'X coordinate to plot the samples',
+						label: 'X',
+						vocabApi: this.app.vocabApi,
+						menuOptions: '!remove',
+						numericEditMenuVersion: ['continuous']
+					},
+					{
+						type: 'term',
+						configKey: 'yTW',
+						chartType: 'sampleScatter',
+						usecase: { target: 'sampleScatter', detail: 'yTW' },
+						title: 'Y coordinate to plot the samples',
+						label: 'Y',
+						vocabApi: this.app.vocabApi,
+						menuOptions: '!remove',
+						numericEditMenuVersion: ['continuous']
+					},
+					{
+						type: 'term',
 						configKey: 'colorTW',
 						chartType: 'sampleScatter',
 						usecase: { target: 'sampleScatter', detail: 'colorTW' },
 						title: 'Categories to color the samples',
 						label: 'Color',
 						vocabApi: this.app.vocabApi,
-						menuOptions: '!remove',
 						numericEditMenuVersion: ['continuous', 'discrete']
 					},
 					{
@@ -212,6 +238,7 @@ class Scatter {
 						label: 'Shape',
 						vocabApi: this.app.vocabApi
 					},
+
 					{
 						label: 'Symbol size',
 						type: 'number',
@@ -268,6 +295,8 @@ class Scatter {
 
 	renderLegend(legendG) {
 		legendG.selectAll('*').remove()
+		if (!this.config.colorTW) return
+
 		const step = 30
 		let offsetX = 0
 		let offsetY = 60
@@ -624,7 +653,7 @@ class Scatter {
 	}
 
 	getColor(c) {
-		if (this.config.colorTW.q.mode == 'continuous' && 'sampleId' in c) return this.colorGenerator(c.category)
+		if (this.config.colorTW?.q.mode == 'continuous' && 'sampleId' in c) return this.colorGenerator(c.category)
 		const color = this.colorLegend.get(c.category).color
 
 		return color
@@ -1347,7 +1376,7 @@ function setInteractivity(self) {
 					.attr('colspan', 2)
 					.html(`<b>Sample ${d.sample}</b>`)
 
-				addCategoryInfo(self.config.colorTW.term, 'category', d, table)
+				addCategoryInfo(self.config.colorTW?.term, 'category', d, table)
 				if (self.config.shapeTW) addCategoryInfo(self.config.shapeTW.term, 'shape', d, table)
 				if ('info' in d)
 					for (const [k, v] of Object.entries(d.info)) {
@@ -1360,6 +1389,7 @@ function setInteractivity(self) {
 		} else self.dom.tooltip.hide()
 
 		function addCategoryInfo(term, category, d, table) {
+			if (!term) return
 			if (d[category] == 'Ref') return
 			let row = table.append('tr')
 			const ctd = row.append('td').text(term.name)
@@ -1395,10 +1425,16 @@ function setInteractivity(self) {
 }
 
 export async function getPlotConfig(opts, app) {
-	if (!opts.colorTW) throw 'sampleScatter getPlotConfig: opts.colorTW{} missing'
+	//if (!opts.colorTW) throw 'sampleScatter getPlotConfig: opts.colorTW{} missing'
+	//if (!opts.name && !(opts.xTW && opts.yTW)) throw 'sampleScatter getPlotConfig: missing coordinates input'
 	try {
-		await fillTermWrapper(opts.colorTW, app.vocabApi)
+		if (opts.colorTW) await fillTermWrapper(opts.colorTW, app.vocabApi)
 		if (opts.shapeTW) await fillTermWrapper(opts.shapeTW, app.vocabApi)
+		if (opts.xTW) await fillTermWrapper(opts.xTW, app.vocabApi)
+		if (opts.yTW) await fillTermWrapper(opts.yTW, app.vocabApi)
+
+		const settings = getDefaultScatterSettings()
+		if (!opts.xTW && !opts.yTW) settings.showAxes = false
 		const config = {
 			groups: [],
 			gradientColor: '#008000',
@@ -1406,23 +1442,15 @@ export async function getPlotConfig(opts, app) {
 				controls: {
 					isOpen: false // control panel is hidden by default
 				},
-				sampleScatter: {
-					size: 25,
-					refSize: 9,
-					svgw: 500,
-					svgh: 550,
-					axisTitleFontSize: 16,
-					showAxes: false,
-					showRef: true,
-					opacity: 0.8
-				}
+				sampleScatter: settings
 			}
 		}
-
 		// may apply term-specific changes to the default object
-		return copyMerge(config, opts)
+		const result = copyMerge(config, opts)
+		return result
 	} catch (e) {
-		throw `${e} [bsampleScatter getPlotConfig()]`
+		console.log(e)
+		throw `${e} [sampleScatter getPlotConfig()]`
 	}
 }
 
@@ -1455,8 +1483,7 @@ export function makeChartBtnMenu(holder, chartsInstance) {
 				let config = {
 					chartType: 'sampleScatter',
 					colorTW: JSON.parse(JSON.stringify(plot.colorTW)),
-					name: plot.name,
-					term: JSON.parse(JSON.stringify(plot.colorTW))
+					name: plot.name
 				}
 				if ('shapeTW' in plot) config.shapeTW = JSON.parse(JSON.stringify(plot.shapeTW))
 				chartsInstance.app.dispatch({
@@ -1465,5 +1492,18 @@ export function makeChartBtnMenu(holder, chartsInstance) {
 				})
 				chartsInstance.dom.tip.hide()
 			})
+	}
+}
+
+export function getDefaultScatterSettings() {
+	return {
+		size: 25,
+		refSize: 9,
+		svgw: 500,
+		svgh: 550,
+		axisTitleFontSize: 16,
+		showAxes: true,
+		showRef: true,
+		opacity: 0.8
 	}
 }

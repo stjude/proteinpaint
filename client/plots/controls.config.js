@@ -443,6 +443,7 @@ async function setTermInput(opts) {
 		activeCohort: opts.state?.activeCohort,
 		holder: self.dom.inputTd.append('div'),
 		debug: opts.debug,
+		usecase: opts.usecase,
 		callback: tw => {
 			// data is object with only one needed attribute: q, never is null
 			if (tw && !tw.q) throw 'data.q{} missing from pill callback'

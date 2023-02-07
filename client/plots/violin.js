@@ -203,7 +203,11 @@ class ViolinPlot {
 		}
 
 		if (term?.q?.mode === 'continuous' && term2?.q?.mode === 'continuous') {
-			throw 'both term1 and term2 are numeric/continuous, please use Scatter plot'
+			this.app.dispatch({
+				type: 'plot_edit',
+				id: this.id,
+				config: { childType: 'sampleScatter', xTW: term, yTW: term2, groups: [] }
+			})
 		} else if ((term.term.type == 'float' || term.term.type == 'integer') && term.q.mode == 'continuous') {
 			arg.termid = term.id
 			arg.divideTw = term2

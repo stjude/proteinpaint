@@ -5,6 +5,7 @@ import { recoverInit } from '../rx/src/recover'
 import { select } from 'd3-selection'
 import { getDefaultViolinSettings } from './violin.js'
 import { getDefaultBarSettings } from './barchart.js'
+import { getDefaultScatterSettings } from './sampleScatter.js'
 
 //import {  } from ''
 
@@ -80,6 +81,7 @@ class SummaryPlot {
 		else if (config.childType == 'violin') _ = await import(`./violin.js`)
 		else if (config.childType == 'table') _ = await import(`./table.js`)
 		else if (config.childType == 'boxplot') _ = await import(`./boxplot.js`)
+		else if (config.childType == 'sampleScatter') _ = await import(`./sampleScatter.js`)
 		else throw `unsupported childType='${config.childType}'`
 
 		this.dom.plotDivs[config.childType] = this.dom.viz.append('div')
@@ -159,14 +161,23 @@ function setRenderers(self) {
 						label: 'Barchart',
 						isVisible: () => true,
 						disabled: d => false,
-						getTw: async tw => {
-							if (!tw.qCacheByMode) tw.qCacheByMode = {}
-							tw.qCacheByMode[tw.q.mode] = tw.q
-							// If tw.q is empty/undefined, the default q
-							// will be assigned by fillTw by term type
-							tw.q = tw.qCacheByMode.discrete
-							await fillTermWrapper(tw, self.app.vocabApi)
-							return tw
+						getConfig: async () => {
+							const mode =
+								self.config.term.term.type == 'float' || self.config.term.term.type == 'integer'
+									? 'discrete'
+									: self.config.term.q.mode || 'discrete'
+							const _term = await self.getWrappedTermCopy(self.config.term, mode)
+
+							let _term2
+							if (self.config.term2) {
+								const mode =
+									self.config.term2.term.type == 'float' || self.config.term2.term.type == 'integer'
+										? 'discrete'
+										: self.config.term2.q.mode || 'discrete'
+								_term2 = await self.getWrappedTermCopy(self.config.term2, mode)
+							}
+							const config = { childType: 'barchart', term: _term, term2: _term2 }
+							return config
 						},
 						active: true
 					},
@@ -179,12 +190,18 @@ function setRenderers(self) {
 							self.config.term.term.type === 'float' ||
 							self.config.term2?.term.type === 'integer' ||
 							self.config.term2?.term.type === 'float',
-						getTw: async tw => {
-							if (!tw.qCacheByMode) tw.qCacheByMode = {}
-							tw.qCacheByMode[tw.q.mode] = tw.q
-							tw.q = tw.qCacheByMode.continuous || { mode: 'continuous' }
-							await fillTermWrapper(tw, self.app.vocabApi)
-							return tw
+						getConfig: async () => {
+							const termKey =
+								self.config.term?.term.type == 'float' ||
+								self.config.term?.term.type == 'integer' ||
+								this.config.term.q?.mode == 'continuous'
+									? 'term'
+									: 'term2'
+
+							const termT = self.config[termKey]
+							const tw = await self.getWrappedTermCopy(termT, 'continuous')
+							const config = { childType: 'violin', [termKey]: tw }
+							return config
 						},
 						active: false
 					},
@@ -204,12 +221,21 @@ function setRenderers(self) {
 						active: false
 					},
 					{
-						childType: 'scatter',
-						label: 'Scatter - TODO',
-						disabled: d => true,
-						isVisible: () =>
-							(self.config.term.type === 'integer' || self.config.term.type === 'float') &&
-							(self.config.term2?.type === 'integer' || self.config.term2?.type === 'float'),
+						childType: 'sampleScatter',
+						label: 'Scatter',
+						disabled: d => false,
+						isVisible: () => {
+							return (
+								(self.config.term.term.type === 'integer' || self.config.term.term.type === 'float') &&
+								(self.config.term2?.term.type === 'integer' || self.config.term2?.term.type === 'float')
+							)
+						},
+						getConfig: async () => {
+							const _term = await self.getWrappedTermCopy(self.config.term, 'continuous')
+							const _term2 = await self.getWrappedTermCopy(self.config.term2, 'continuous')
+							const config = { childType: 'sampleScatter', xTW: _term, yTW: _term2, groups: [] }
+							return config
+						},
 						active: false
 					}
 				])
@@ -234,25 +260,16 @@ function setRenderers(self) {
 				.property('disabled', d => d.disabled())
 				.html(d => d.label)
 				.on('click', async (event, d) => {
-					if (!d.getTw) {
+					const config = await d.getConfig()
+					if (!config) {
 						alert(`TODO: ${d.label}`)
 						return
 					}
 
-					const termKey =
-						self.config.term?.term.type == 'float' ||
-						self.config.term?.term.type == 'integer' ||
-						this.config.term.q?.mode == 'continuous'
-							? 'term'
-							: 'term2'
-
-					const termT = self.config[termKey]
-
-					const tw = structuredClone(termT)
 					self.app.dispatch({
 						type: 'plot_edit',
 						id: self.id,
-						config: { childType: d.childType, [termKey]: await d.getTw(tw) }
+						config
 					})
 				})
 
@@ -262,6 +279,18 @@ function setRenderers(self) {
 			throw e
 			//self.dom.errdiv.text(e)
 		}
+	}
+
+	self.getWrappedTermCopy = async function(term, mode) {
+		if (!term) return
+		const tw = structuredClone(term)
+		if (!tw.qCacheByMode) tw.qCacheByMode = {}
+		tw.q.mode = tw.qCacheByMode[mode]?.mode || mode
+		tw.qCacheByMode[mode] = tw.q
+		// If tw.q is empty/undefined, the default q
+		// will be assigned by fillTw by term type
+		await fillTermWrapper(tw, self.app.vocabApi)
+		return tw
 	}
 
 	self.render = function() {
@@ -302,6 +331,7 @@ export async function getPlotConfig(opts, app) {
 		childType: 'barchart',
 		//id: opts.term.term.id,
 		term: opts.term,
+		groups: [],
 		settings: {
 			controls: {
 				isOpen: false, // control panel is hidden by default
@@ -318,11 +348,16 @@ export async function getPlotConfig(opts, app) {
 
 			barchart: getDefaultBarSettings(app),
 
-			violin: getDefaultViolinSettings(app)
+			violin: getDefaultViolinSettings(app),
+
+			sampleScatter: getDefaultScatterSettings(app)
 		},
 		mayAdjustConfig(config, edits = {}) {
 			if (!edits.childType) {
-				if (config.term?.q?.mode == 'continuous' || config.term2?.q?.mode == 'continuous') config.childType = 'violin'
+				if (config.term?.q?.mode == 'continuous' && config.term2?.q?.mode == 'continuous')
+					config.childType = 'sampleScatter'
+				else if (config.term?.q?.mode == 'continuous' || config.term2?.q?.mode == 'continuous')
+					config.childType = 'violin'
 				else config.childType = 'barchart'
 			}
 		}

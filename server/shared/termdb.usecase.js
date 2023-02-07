@@ -66,12 +66,22 @@ export function isUsableTerm(term, _usecase, ds) {
 			if (usecase.detail == 'term') uses.add('plot')
 			if (child_types.length > 1) uses.add('branch')
 			return uses
-
+		//This case might not be used anymore, to be checked!!!
 		case 'scatterplot':
 			if (term.type == 'float' || term.type == 'integer') uses.add('plot')
 			if (hasNumericChild(child_types)) uses.add('branch')
 			return uses
 
+		case 'sampleScatter':
+			if (usecase.detail == 'xTW' || usecase.detail == 'yTW') {
+				if (term.type == 'float' || term.type == 'integer') uses.add('plot')
+				if (hasNumericChild(child_types)) uses.add('branch')
+			} else {
+				if (graphableTypes.has(term.type)) uses.add('plot')
+				if (!term.isleaf) uses.add('branch')
+			}
+
+			return uses
 		case 'boxplot':
 			if (term.type == 'float' || term.type == 'integer') uses.add('plot')
 			if (usecase.detail === 'term2' && hasNumericChild(child_types)) uses.add('branch')
