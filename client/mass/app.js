@@ -47,11 +47,15 @@ class MassApp {
 	validateOpts(o = {}) {
 		if (!o.holder) throw `missing opts.holder in the MassApp constructor argument`
 		if (!o.callbacks) o.callbacks = {}
-		if (o.state && !o.state.vocab) {
-			o.state.vocab = {
-				genome: o.state.genome,
-				dslabel: o.state.dslabel
-			}
+		if (!o.state.vocab) o.state.vocab = {}
+		if (typeof o.state.vocab != 'object') throw 'opts.state.vocab{} is not an object'
+		if (o.state.genome) {
+			o.state.vocab.genome = o.state.genome
+			delete o.state.genome
+		}
+		if (o.state.dslabel) {
+			o.state.vocab.dslabel = o.state.dslabel
+			delete o.state.dslabel
 		}
 		return o
 	}
