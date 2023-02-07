@@ -660,23 +660,9 @@ export function getTvsLst(t1, t2, plot, rangeStart, rangeStop) {
 		} else if (
 			t2.q?.mode === 'continuous' ||
 			((t2.term?.type === 'float' || t2.term?.type === 'integer') && plot.divideTwBins != null)
-		) {
-			createTvsTerm(t2, tvslst)
-			tvslst.lst[0].tvs.ranges = [
-				{
-					start: structuredClone(plot.divideTwBins?.start) || null,
-					stop: structuredClone(plot.divideTwBins?.stop) || null,
-					startinclusive: structuredClone(plot.divideTwBins?.startinclusive) || null,
-					stopinclusive: structuredClone(plot.divideTwBins?.stopinclusive) || null,
-					startunbounded: structuredClone(plot.divideTwBins?.startunbounded)
-						? structuredClone(plot.divideTwBins?.startunbounded)
-						: null,
-					stopunbounded: structuredClone(plot.divideTwBins?.stopunbounded)
-						? structuredClone(plot.divideTwBins?.stopunbounded)
-						: null
-				}
-			]
-		} else {
+		)
+			createTvsLstRanges(t1, tvslst, rangeStart, rangeStop, 0)
+		else {
 			createTvsLstValues(t2, plot, tvslst, 0)
 			createTvsLstRanges(t1, tvslst, rangeStart, rangeStop, 1)
 		}
