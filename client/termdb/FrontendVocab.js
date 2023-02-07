@@ -3,6 +3,7 @@ import { scaleLinear } from 'd3-scale'
 import { sample_match_termvaluesetting } from '../common/termutils'
 import { isUsableTerm, graphableTypes } from '#shared/termdb.usecase'
 import { Vocab } from './Vocab'
+import roundValue from '#shared/roundValue'
 
 export class FrontendVocab extends Vocab {
 	constructor(opts) {
@@ -232,6 +233,74 @@ export class FrontendVocab extends Vocab {
 			perc_values.push(perc_value)
 		}
 		return { values: perc_values }
+	}
+
+	async getDescrStats(term_id, filter) {
+		// for a numeric term, get descriptive statistics
+		// mean, median, standard deviation, min, max
+
+		const values = []
+		const samples = {}
+
+		for (const anno of this.datarows) {
+			if (samples[anno.sample]) continue
+			const data = anno.s || anno.data
+			if (data && sample_match_termvaluesetting(data, filter)) {
+				samples[anno.sample] = this.vocab.sampleannotation[anno.sample]
+			}
+		}
+
+		for (const sample in samples) {
+			if (!(term_id in this.vocab.sampleannotation[sample])) continue
+			const _v = Number(this.vocab.sampleannotation[sample][term_id])
+			if (!Number.isFinite(_v)) throw 'non-numeric value'
+			values.push(_v)
+		}
+
+		values.sort((a, b) => a - b)
+
+		// compute statistics
+		// total
+		const total = values.length
+
+		// mean
+		const sum = values.reduce((a, b) => a + b, 0)
+		const mean = sum / total
+
+		// percentiles
+		function computePercentile(values, percentile) {
+			const index = Math.abs((percentile / 100) * values.length - 1)
+			const value = Number.isInteger(index) ? (values[index] + values[index + 1]) / 2 : values[Math.ceil(index)]
+			return value
+		}
+		const p25 = computePercentile(values, 25)
+		const median = computePercentile(values, 50)
+		const p75 = computePercentile(values, 75)
+
+		// standard deviation
+		// get sum of squared differences from mean
+		const sumSqDiff = values.map(v => (v - mean) ** 2).reduce((a, b) => a + b, 0)
+		// get variance
+		const variance = sumSqDiff / (values.length - 1)
+		// get standard deviation
+		const sd = Math.sqrt(variance)
+
+		// min/max
+		const min = Math.min(...values)
+		const max = Math.max(...values)
+
+		return {
+			values: [
+				{ id: 'total', label: 'n', value: total },
+				{ id: 'min', label: 'Minimum', value: roundValue(min, 2) },
+				{ id: 'p25', label: '1st quartile', value: roundValue(p25, 2) },
+				{ id: 'median', label: 'Median', value: roundValue(median, 2) },
+				{ id: 'mean', label: 'Mean', value: roundValue(mean, 2) },
+				{ id: 'p75', label: '3rd quartile', value: roundValue(p75, 2) },
+				{ id: 'max', label: 'Maximum', value: roundValue(max, 2) },
+				{ id: 'sd', label: 'Standard deviation', value: roundValue(sd, 2) }
+			]
+		}
 	}
 
 	async getterm(termid) {

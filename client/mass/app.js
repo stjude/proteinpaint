@@ -47,6 +47,12 @@ class MassApp {
 	validateOpts(o = {}) {
 		if (!o.holder) throw `missing opts.holder in the MassApp constructor argument`
 		if (!o.callbacks) o.callbacks = {}
+		if (o.state && !o.state.vocab) {
+			o.state.vocab = {
+				genome: o.state.genome,
+				dslabel: o.state.dslabel
+			}
+		}
 		return o
 	}
 
@@ -59,14 +65,7 @@ class MassApp {
 			// TODO: only pass state.genome, dslabel to vocabInit
 			api.vocabApi = await vocabInit({
 				app: api,
-				state: {
-					vocab: {
-						// either (genome + dslabel) XOR (terms) can be undefined
-						genome: vocab?.genome || this.opts.state.genome,
-						dslabel: vocab?.dslabel || this.opts.state.dslabel,
-						terms: vocab?.terms
-					}
-				},
+				state: { vocab: this.opts.state.vocab },
 				fetchOpts: this.opts.fetchOpts,
 				getDatasetAccessToken: this.opts.getDatasetAccessToken
 			})

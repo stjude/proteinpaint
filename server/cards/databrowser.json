@@ -21,431 +21,195 @@
             "vocab": {
               "terms": [
                 {
-                  "id": "gps",
-                  "name": "Genomic Profiling Status",
-                  "parent_id": null,
-                  "type": null,
-                  "isleaf": false
+                  "id": "Demographic",
+                  "isleaf": false,
+                  "name": "Demographic",
+                  "parent_id": null
                 },
                 {
-                  "id": "wgs_sequenced",
-                  "name": "Whole Genome Sequencing",
-                  "parent_id": "gps",
-                  "type": "categorical",
-                  "values": {
-                    "1": {
-                      "label": "Yes"
-                    }
-                  },
+                  "id": "Prognosis",
+                  "isleaf": false,
+                  "name": "Prognosis",
+                  "parent_id": null
+                },
+                {
                   "groupsetting": {
-                    "inuse": false
+                    "disabled": true
                   },
-                  "isleaf": true
-                },
-                {
-                  "id": "snp6_genotyped",
-                  "name": "Affymetrix Genome-Wide Human SNP Array 6.0",
-                  "parent_id": "gps",
-                  "type": "categorical",
-                  "values": {
-                    "0": {
-                      "label": "No"
-                    },
-                    "1": {
-                      "label": "Yes"
-                    },
-                    "-994": {
-                      "label": "N/A: CCSS"
-                    }
-                  },
-                  "groupsetting": {
-                    "inuse": false
-                  },
-                  "isleaf": true
-                },
-                {
-                  "id": "crv",
-                  "name": "Cancer-related Variables",
-                  "parent_id": null,
-                  "type": null,
-                  "isleaf": false
-                },
-                {
-                  "id": "dx",
-                  "name": "Diagnosis",
-                  "parent_id": "crv",
-                  "type": null,
-                  "isleaf": false
-                },
-                {
-                  "id": "diaggrp",
-                  "name": "Diagnosis Group",
-                  "parent_id": "dx",
-                  "type": "categorical",
-                  "values": {},
-                  "groupsetting": {
-                    "inuse": false
-                  },
-                  "isleaf": true
-                },
-                {
-                  "id": "dxcode",
-                  "name": "Diagnosis Code",
-                  "parent_id": "dx",
-                  "type": "integer",
-                  "values": {
-                    "-9999": {
-                      "label": "Pending",
-                      "uncomputable": true
-                    }
-                  },
-                  "isleaf": true
-                },
-                {
-                  "id": "tx",
-                  "name": "Treatment",
-                  "parent_id": "crv",
-                  "type": null,
-                  "isleaf": false
-                },
-                {
-                  "id": "chemo_life",
-                  "name": "Chemotherapy, Lifetime",
-                  "parent_id": "tx",
-                  "type": null,
-                  "isleaf": false
-                },
-                {
-                  "id": "alk_ag_any",
-                  "name": "Alkylating Agents, mg/m2",
-                  "parent_id": "chemo_life",
-                  "type": null,
-                  "isleaf": false
-                },
-                {
-                  "id": "cyclophosphamide_any",
-                  "name": "Cyclophosphamide",
-                  "parent_id": "alk_ag_any",
-                  "type": "float",
-                  "values": {
-                    "0": {
-                      "label": "not exposed",
-                      "uncomputable": true
-                    },
-                    "-8888": {
-                      "label": "exposed, dose unknown",
-                      "uncomputable": true
-                    },
-                    "-9999": {
-                      "label": "unknown exposure",
-                      "uncomputable": true
-                    }
-                  },
-                  "isleaf": true
-                },
-                {
-                  "id": "aaclassic_any",
-                  "name": "Cumulative Alkylating Agents (Cyclophosphamide Equivalent Dose)",
-                  "parent_id": "alk_ag_any",
-                  "type": "float",
-                  "values": {
-                    "0": {
-                      "label": "not exposed",
-                      "uncomputable": true
-                    },
-                    "-8888": {
-                      "label": "exposed, dose unknown",
-                      "uncomputable": true
-                    },
-                    "-9999": {
-                      "label": "unknown exposure",
-                      "uncomputable": true
-                    }
-                  },
-                  "isleaf": true
-                },
-                {
-                  "id": "anthra_any",
-                  "name": "Anthracyclines, mg/m2",
-                  "parent_id": "chemo_life",
-                  "type": null,
-                  "isleaf": false
-                },
-                {
-                  "id": "doxorubicin_any",
-                  "name": "Doxorubicin (IV)",
-                  "parent_id": "anthra_any",
-                  "type": "float",
-                  "values": {
-                    "-8888": {
-                      "label": "exposed, dose unknown",
-                      "uncomputable": true
-                    },
-                    "-9999": {
-                      "label": "unknown exposure",
-                      "uncomputable": true
-                    }
-                  },
-                  "isleaf": true
-                },
-                {
-                  "id": "idarubicin_any",
-                  "name": "Idarubicin (IV)",
-                  "parent_id": "anthra_any",
-                  "type": "float",
-                  "values": {
-                    "-8888": {
-                      "label": "exposed, dose unknown",
-                      "uncomputable": true
-                    },
-                    "-9999": {
-                      "label": "unknown exposure",
-                      "uncomputable": true
-                    }
-                  },
-                  "isleaf": true
-                },
-                {
-                  "id": "surgery_trt",
-                  "name": "Any Treatment-Directed Surgery (3mo pre -> 5yrs post primary cancer diagnosis)",
-                  "parent_id": "tx",
-                  "type": "categorical",
-                  "values": {
-                    "0": {
-                      "label": "No"
-                    },
-                    "1": {
-                      "label": "Yes"
-                    },
-                    "-9999": {
-                      "label": "Unknown"
-                    }
-                  },
-                  "groupsetting": {
-                    "inuse": false
-                  },
-                  "isleaf": true
-                },
-                {
-                  "id": "invasive_trt",
-                  "name": "Treatment-Directed Invasive Surgery (3mo pre -> 5yrs post primary cancer diagnosis)",
-                  "parent_id": "tx",
-                  "type": "categorical",
-                  "values": {
-                    "0": {
-                      "label": "No"
-                    },
-                    "1": {
-                      "label": "Yes"
-                    },
-                    "-9999": {
-                      "label": "Unknown"
-                    }
-                  },
-                  "groupsetting": {
-                    "inuse": false
-                  },
-                  "isleaf": true
-                },
-                {
-                  "id": "demo",
-                  "name": "Demographic Variables",
-                  "parent_id": null,
-                  "type": null,
-                  "isleaf": false
-                },
-                {
-                  "id": "demo_survive",
-                  "name": "Survival",
-                  "parent_id": "demo",
-                  "type": null,
-                  "isleaf": false
-                },
-                {
-                  "id": "survival",
-                  "name": "Survival Status",
-                  "parent_id": "demo_survive",
-                  "type": "categorical",
-                  "values": {
-                    "1": {
-                      "label": "Alive"
-                    },
-                    "2": {
-                      "label": "Deceased"
-                    },
-                    "-9999": {
-                      "label": "Unknown"
-                    }
-                  },
-                  "groupsetting": {
-                    "inuse": false
-                  },
-                  "isleaf": true
-                },
-                {
-                  "id": "sex",
-                  "name": "Sex",
-                  "parent_id": "demo",
-                  "type": "categorical",
-                  "values": {
-                    "1": {
-                      "label": "Male"
-                    },
-                    "2": {
+                "id": "Gender",
+                "isleaf": true,
+                "name": "Gender",
+                "parent_id": "Demographic",
+                "type": "categorical",
+                "values": {
+                    "Female": {
+                      "color": "pink",
+                      "key": "Female",
                       "label": "Female"
+                    },
+                    "Male": {
+                      "color": "lightblue",
+                      "key": "Male",
+                      "label": "Male"
                     }
-                  },
-                  "groupsetting": {
-                    "inuse": false
-                  },
-                  "isleaf": true
-                },
-                {
-                  "id": "self_behave_outcome",
-                  "name": "Self-reported Behavior and Outcome Variables",
-                  "parent_id": null,
-                  "type": null,
-                  "isleaf": false
-                },
-                {
-                  "id": "alt_tx",
-                  "name": "Alternative/Complimentary Therapy",
-                  "parent_id": "self_behave_outcome",
-                  "type": null,
-                  "isleaf": false
-                },
-                {
-                  "id": "amaccp",
-                  "name": "Alternative therapy: acupuncture",
-                  "parent_id": "alt_tx",
-                  "type": "categorical",
-                  "values": {
-                    "1": {
-                      "label": "Yes"
-                    },
-                    "2": {
-                      "label": "No"
-                    },
-                    "3": {
-                      "label": "Not sure"
-                    },
-                    "-997": {
-                      "label": "No response"
-                    },
-                    "-994": {
-                      "label": "N/A: no campus visit"
-                    },
-                    "-999": {
-                      "label": "N/A: campus visit, no survey"
-                    }
-                  },
-                  "groupsetting": {
-                    "inuse": false
-                  },
-                  "isleaf": true
-                },
-                {
-                  "id": "ambio",
-                  "name": "Alternative therapy: biofeedback",
-                  "parent_id": "alt_tx",
-                  "type": "categorical",
-                  "values": {
-                    "1": {
-                      "label": "Yes"
-                    },
-                    "2": {
-                      "label": "No"
-                    },
-                    "3": {
-                      "label": "Not sure"
-                    },
-                    "-997": {
-                      "label": "No response"
-                    },
-                    "-994": {
-                      "label": "N/A: no campus visit"
-                    },
-                    "-999": {
-                      "label": "N/A: campus visit, no survey"
-                    }
-                  },
-                  "groupsetting": {
-                    "inuse": false
-                  },
-                  "isleaf": true
-                },
-                {
-                  "id": "ffq",
-                  "name": "Food Frequency Questionnaire",
-                  "parent_id": "self_behave_outcome",
-                  "type": "categorical",
-                  "values": {
-                    "0": {
-                      "label": "No"
-                    },
-                    "1": {
-                      "label": "Yes"
-                    },
-                    "-994": {
-                      "label": "N/A: no campus visit"
-                    }
-                  },
-                  "groupsetting": {
-                    "inuse": false
-                  },
-                  "isleaf": false
-                },
-                {
-                  "id": "AHEI_ALCDRKS",
-                  "name": "AHEI-2010 Alcoholic drinks score",
-                  "parent_id": "ffq",
-                  "type": "float",
-                  "values": {
-                    "-997": {
-                      "label": "Not calculable",
-                      "uncomputable": true
-                    },
-                    "-994": {
-                      "label": "N/A: no campus visit",
-                      "uncomputable": true
-                    },
-                    "-995": {
-                      "label": "N/A: pediatric patient",
-                      "uncomputable": true
-                    },
-                    "-999": {
-                      "label": "N/A: campus visit, no survey",
-                      "uncomputable": true
-                    }
-                  },
-                  "isleaf": true
-                },
-                {
-                  "id": "DT_CYSTI",
-                  "name": "Cystine (S-containing), mg",
-                  "parent_id": "ffq",
-                  "type": "float",
-                  "values": {
-                    "-997": {
-                      "label": "Not calculable",
-                      "uncomputable": true
-                    },
-                    "-994": {
-                      "label": "N/A: no campus visit",
-                      "uncomputable": true
-                    },
-                    "-995": {
-                      "label": "N/A: pediatric patient",
-                      "uncomputable": true
-                    },
-                    "-999": {
-                      "label": "N/A: campus visit, no survey",
-                      "uncomputable": true
-                    }
-                  },
-                  "isleaf": true
                 }
-              ]
+              },
+              {
+              "bins": {
+                "default": {
+                  "bin_size": 0.5,
+                  "first_bin": {
+                    "stop": 0.5
+                  },
+                      "rounding": ".1f",
+                      "startinclusive": true,
+                      "type": "regular-bin"
+                    }
+                  },
+              "id": "Age",
+              "isleaf": true,
+              "parent_id": "Demographic",
+              "name": "Age at Diagnosis",
+              "type": "float",
+              "values": {}
+            },
+            {
+              "type": "categorical",
+              "values": {
+                "3-6 yrs": {
+                  "key": "3-6 yrs",
+                  "label": "3-6 yrs",
+                  "color": "green"
+                },
+                "<3 yrs": {
+                  "key": "<3 yrs",
+                  "label": "<3 yrs",
+                  "color": "orange"
+                }
+              },
+              "isleaf": true,
+              "id": "Age Group",
+              "name": "Age Group",
+              "parent_id": "Demographic",
+              "groupsetting": {
+                "disabled": true
+              }
+            },
+            {
+              "type": "categorical",
+              "values": {
+                "Dead ": {
+                  "key": "Dead ",
+                  "label": "Dead "
+                },
+                "Alive": {
+                  "key": "Alive",
+                  "label": "Alive"
+                }
+              },
+              "isleaf": true,
+              "id": "Alive/Dead",
+              "name": "Alive/Dead",
+              "parent_id": "Prognosis",
+              "groupsetting": {
+                "disabled": true
+              }
+            },
+            {
+              "groupsetting": {
+                  "disabled": true
+                },
+              "id": "Progresssive Disease",
+              "isleaf": true,
+              "name": "Progresssive Disease",
+              "parent_id": "Prognosis",
+              "type": "categorical",
+              "values": {
+                  "No": {
+                    "color": "red",
+                    "key": "No",
+                      "label": "No"
+                  },
+                  "Yes": {
+                    "color": "green",
+                    "key": "Yes",
+                    "label": "Yes"
+                  }
+                }
+              }
+          ],
+          "sampleannotation": {
+            "0": {
+              "Age": 5,
+              "Gender": "Male",
+              "Alive/Dead": "Dead",
+              "Age Group": "3-6 yrs",
+              "Progresssive Disease": "No"
+            },
+            "1": {
+                  "Age": 2,
+                  "Gender": "Female",
+                  "Alive/Dead": "Alive",
+                  "Age Group": "<3 yrs",
+                  "Progresssive Disease": "Yes"
+                },
+                "2": {
+                  "Age": 4,
+                  "Gender": "Male",
+                  "Alive/Dead": "Alive",
+                  "Age Group": "3-6 yrs",
+                  "Progresssive Disease": "No"
+                },
+                "3": {
+                  "Age": 6,
+                  "Gender": "Male",
+                  "Alive/Dead": "Alive",
+                  "Age Group": "3-6 yrs",
+                  "Progresssive Disease": "Yes"
+                },
+                "4": {
+                  "Age": 5,
+                  "Gender": "Male",
+                  "Alive/Dead": "Alive",
+                  "Age Group": "3-6 yrs",
+                  "Progresssive Disease": "No"
+                },
+                "5": {
+                  "Age": 4,
+                  "Gender": "Male",
+                  "Alive/Dead": "Alive",
+                  "Age Group": "3-6 yrs",
+                  "Progresssive Disease": "No"
+                },
+                    "6": {
+                      "Age": 2,
+                      "Gender": "Male",
+                      "Alive/Dead": "Alive",
+                      "Age Group": "<3 yrs",
+                      "Progresssive Disease": "No"
+                    },
+                    "7": {
+                      "Age": 4,
+                      "Gender": "Male",
+                      "Alive/Dead": "Dead",
+                      "Age Group": "3-6 yrs",
+                      "Progresssive Disease": "Yes"
+                    },
+                    "8": {
+                      "Age": 5,
+                      "Gender": "Female",
+                      "Alive/Dead": "Alive",
+                      "Age Group": "3-6 yrs",
+                      "Progresssive Disease": "Yes"
+                    },
+                    "9": {
+                      "Age": 5,
+                      "Gender": "Male",
+                      "Alive/Dead": "Alive",
+                      "Age Group": "3-6 yrs",
+                      "Progresssive Disease": "No"
+                    }
+              }
             },
             "plots": [{
               "chartType": "dictionary"
