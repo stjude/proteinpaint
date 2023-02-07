@@ -260,31 +260,42 @@ export function makeChartBtnMenu(holder, chartsInstance) {
 	*/
 	const genomeObj = chartsInstance.app.opts.genome
 	if (typeof genomeObj != 'object') throw 'chartsInstance.app.opts.genome not an object and needed for gene search box'
-	const result = addGeneSearchbox({
+	const arg = {
 		tip: geneTip,
 		genome: genomeObj,
 		row: holder.append('div').style('margin', '10px'),
 		geneOnly: chartsInstance.state.termdbConfig.queries.defaultBlock2GeneMode,
-		defaultCoord: chartsInstance.state.termdbConfig.queries.defaultCoord,
 		callback: async () => {
 			// found a gene {chr,start,stop,geneSymbol}
 			// dispatch to create new plot
 
-			// must do this as 'plot_prep' does not call getPlotConfig()
-			// request default queries config from dataset, and allows opts to override
-			const config = await chartsInstance.app.vocabApi.getMds3queryDetails()
-			// request default variant filter (against vcf INFO)
-			const vf = await chartsInstance.app.vocabApi.get_variantFilter()
-			if (vf?.filter) {
-				config.variantFilter = vf.filter
-			}
+			try {
+				// must do this as 'plot_prep' does not call getPlotConfig()
+				// request default queries config from dataset, and allows opts to override
+				// this config{} will become this.state.config{}
+				const config = await chartsInstance.app.vocabApi.getMds3queryDetails()
+				// request default variant filter (against vcf INFO)
+				const vf = await chartsInstance.app.vocabApi.get_variantFilter()
+				if (vf?.filter) {
+					config.variantFilter = vf.filter
+				}
 
-			config.chartType = 'genomeBrowser'
-			config.geneSearchResult = result
-			const chart = { config }
-			chartsInstance.prepPlot(chart)
+				config.chartType = 'genomeBrowser'
+				config.geneSearchResult = result
+				const chart = { config }
+				chartsInstance.prepPlot(chart)
+			} catch (e) {
+				// upon err, create div in chart button menu to display err
+				holder.append('div').text('Error: ' + (e.message || e))
+				console.log(e)
+			}
 		}
-	})
+	}
+	if (!chartsInstance.state.termdbConfig.queries.defaultBlock2GeneMode) {
+		// block is not shown in gene mode, add default coord to arg
+		arg.defaultCoord = chartsInstance.state.termdbConfig.queries.defaultCoord
+	}
+	const result = addGeneSearchbox(arg)
 }
 
 // given group configuration, determine numeric track axis label
