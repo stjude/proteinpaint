@@ -8,15 +8,25 @@ const helpers = require('../../test/front.helpers.js')
 
 const runpp = helpers.getRunPp('mass', {
 	state: {
+		nav: {
+			header_mode: 'hide_search',
+			activeTab: 1
+		},
 		dslabel: 'TermdbTest',
-		genome: 'hg38'
+		genome: 'hg38-test'
 	},
 	debug: 1
 })
 
 /**************
  test sections
-***************/
+**************
+
+basic cuminc
+hidden uncomputable
+skipped series
+
+*/
 tape('\n', function(test) {
 	test.pass('-***- termdb/cuminc -***-')
 	test.end()
@@ -53,6 +63,8 @@ tape('basic cuminc', function(test) {
 			2,
 			'should render 2 cuminc series paths for estimate line and 95% CI area'
 		)
+
+		if (test._ok) cuminc.Inner.app.destroy()
 		test.end()
 	}
 })
@@ -68,7 +80,7 @@ tape('hidden uncomputable', function(test) {
 						id: 'Cardiac dysrhythmia'
 					},
 					term2: {
-						id: 'hrtavg' // FIXME this term is not in dictionary
+						id: 'cisplateq_5'
 					},
 					settings: {
 						cuminc: {
@@ -87,11 +99,9 @@ tape('hidden uncomputable', function(test) {
 
 	async function runTests(cuminc) {
 		const hiddenDiv = cuminc.Inner.dom.hiddenDiv
-		test.equal(
-			hiddenDiv && hiddenDiv.selectAll('.legend-row').size(),
-			1,
-			'should hide 1 series (exposed, dose unknown)'
-		)
+		test.equal(hiddenDiv && hiddenDiv.selectAll('.legend-row').size(), 1, 'should hide 1 series (not exposed)')
+
+		if (test._ok) cuminc.Inner.app.destroy()
 		test.end()
 	}
 })
@@ -133,6 +143,8 @@ tape('skipped series', function(test) {
 			.select('.pp-cuminc-chartLegends')
 			.selectAll('.pp-cuminc-chartLegends-skipped')
 		test.equal(skippedDivs && skippedDivs.size(), 2, 'should render 2 skipped series')
+
+		if (test._ok) cuminc.Inner.app.destroy()
 		test.end()
 	}
 })
