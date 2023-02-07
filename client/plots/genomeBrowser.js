@@ -55,6 +55,7 @@ class genomeBrowser {
 	async init(opts) {
 		const holder = this.opts.holder.append('div')
 		this.dom = {
+			tip: new Menu(),
 			holder,
 			errDiv: holder.append('div'),
 			loadingDiv: holder
@@ -65,7 +66,11 @@ class genomeBrowser {
 				.append('div')
 				.style('margin-left', '25px')
 				.style('opacity', 0.5),
-			controlHolder: holder.append('div'),
+
+			// hardcode to 2 groups used by state.config.snvindel.details.groups[]
+			group1div: holder.append('div'),
+			group2div: holder.append('div'),
+
 			variantFilterHolder: holder.append('div'),
 			blockHolder: holder.append('div')
 		}
@@ -122,6 +127,8 @@ class genomeBrowser {
 		// and cannot do it in this.init()
 		if (this.controlsAreMade) return
 		this.controlsAreMade = true
+
+		makeVariantValueComputingControls(this)
 
 		// variant filter
 		await mayDisplayVariantFilter(this, this.state.config.variantFilter, this.dom.variantFilterHolder, async () => {
@@ -297,6 +304,46 @@ export function makeChartBtnMenu(holder, chartsInstance) {
 	}
 	const result = addGeneSearchbox(arg)
 }
+
+///////////////////////////////// helper functions
+
+function makeVariantValueComputingControls(self) {
+	renderGroupUI(self, 0)
+	renderGroupUI(self, 1)
+}
+
+function renderGroupUI(self, groupIdx) {
+	const div = groupIdx == 0 ? self.dom.group1div : self.dom.group2div
+	const group = self.state.config.snvindel.details.groups[groupIdx]
+	if (!group) {
+		// group does not exist in groups[] based on array index, e.g. when there's just 1 group and groups[1] is undefined
+		// prompt to add new group
+		div
+			.append('span')
+			.text('Add new group')
+			.attr('class', 'sja_clbtext')
+			.on('click', () => {
+				launchMenu_createGroup(self, groupIdx)
+			})
+		return
+	}
+
+	// the group exists
+	// first show a button allowing to replace/delete this group
+
+	if (group.type == 'info') {
+		return
+	}
+	if (group.type == 'population') {
+		return
+	}
+	if (group.type == 'filter') {
+		return
+	}
+	throw 'renderGroupUI: unknown group type'
+}
+
+function launchMenu_createGroup(self, groupIdx) {}
 
 // given group configuration, determine numeric track axis label
 // a lot of room for further refinement
