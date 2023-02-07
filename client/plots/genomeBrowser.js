@@ -30,10 +30,11 @@ this.state {
 		geneSearchResult{}
 		snvindel {
 			details {
-				computeType:str
+				groupTypes[]
 				groups:[]
 					// a group may have its own filter
 				groupTestMethod{}
+				groupTestMethodsIdx
 			}
 		}
 	}
@@ -153,20 +154,8 @@ class genomeBrowser {
 			type: 'mds3',
 			name: 'Variants',
 			custom_variants: data.mlst,
-			skewerModes: [nm]
-		}
-		switch (this.state.config.snvindel.details.computeType) {
-			case 'AF':
-				nm.label = 'Allele frequency'
-				break
-			case 'groups':
-				const m = this.state.config.snvindel.details.groupTestMethods[
-					this.state.config.snvindel.details.groupTestMethodsIdx
-				]
-				nm.label = m.axisLabel || m.name
-				break
-			default:
-				throw 'unknown snvindel.details.computeType'
+			skewerModes: [nm],
+			label: axisLabelFromSnvindelComputeDetails(this)
 		}
 		this.blockInstance = await this.launchMds3tk(tk)
 	}
@@ -294,4 +283,37 @@ export function makeChartBtnMenu(holder, chartsInstance) {
 			chartsInstance.prepPlot(chart)
 		}
 	})
+}
+
+// given group configuration, determine numeric track axis label
+// a lot of room for further refinement
+function axisLabelFromSnvindelComputeDetails(self) {
+	const details = self.state.config.snvindel.details
+	if (details.groups.length == 1) {
+		const g = details.groups[0]
+		if (g.type == 'info') {
+			return 'TODO info name'
+		}
+		if (g.type == 'filter') {
+			return 'Allele frequency'
+		}
+		if (g.type == 'population') {
+			return 'Allele frequency'
+		}
+		throw 'unknown type of the only group'
+	}
+
+	if (details.groups.length == 2) {
+		const [g1, g2] = details.groups
+		if (g1.type == 'info' || g2.type == 'info') {
+			// either group is info field. value type can only be value difference
+			return 'Value difference'
+		}
+		// none of the group is info field. each group should derive AF and there can be different ways of comparing it from two groups
+		const m =
+			self.state.config.snvindel.details.groupTestMethods[self.state.config.snvindel.details.groupTestMethodsIdx]
+		return m.axisLabel || m.name
+	}
+
+	throw 'snvindel.details.groups.length not 1 or 2'
 }

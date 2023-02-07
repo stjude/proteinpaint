@@ -383,34 +383,70 @@ const variant_filter = {
 	terms
 }
 
-const defaultGroups = [
-	{
-		// type=filter: user can modify via filterUI
-		type: 'filter',
-		filter: {
-			type: 'tvslst',
-			in: true,
-			join: '',
-			lst: [
-				{
-					type: 'tvs',
-					tvs: {
-						term: { id: 'diaggrp', name: 'Diagnosis Group', type: 'categorical' },
-						values: [{ key: 'Acute lymphoblastic leukemia', label: 'Acute lymphoblastic leukemia' }]
+/*
+accessible to client via termdb.js?for=mds3queryDetails
+part of state of genomeBrowser plot
+allowing for user modification
+*/
+const snvindelComputeDetails = {
+	groupTypes: [
+		// "type" of each element corresponds to same key in groups[]
+		// used for rendering choices in group data types; but content is read-only and should not be part of state
+		{ type: 'info', name: 'Per-variant numerical values' },
+		{ type: 'filter', name: 'Sub-cohort by filtering' },
+		{ type: 'population', name: 'Population allele frequencies' }
+	],
+
+	/*
+	a type of computing decides numeric values for each variant displayed in tk
+	computing type is also determined by number of groups
+
+	if only 1 group:
+		type=info: use numeric info field
+		type=filter: use AF
+		type=population: use AF
+
+	if there're two groups:
+		both types are "filter": allow AF diff or fisher
+		"filter" and "population": allow AF diff or fisher
+		else: value difference
+	*/
+	groups: [
+		{
+			// type=filter: user can modify via filterUI
+			type: 'filter',
+			filter: {
+				type: 'tvslst',
+				in: true,
+				join: '',
+				lst: [
+					{
+						type: 'tvs',
+						tvs: {
+							term: { id: 'diaggrp', name: 'Diagnosis Group', type: 'categorical' },
+							values: [{ key: 'Acute lymphoblastic leukemia', label: 'Acute lymphoblastic leukemia' }]
+						}
 					}
-				}
-			]
+				]
+			}
+		},
+		{
+			// type=population: a choice from queries.snvindel.populations
+			type: 'population',
+			key: 'gnomAD',
+			// these flags must be duplicated from .populations[]
+			allowto_adjust_race: true,
+			adjust_race: true
 		}
-	},
-	{
-		// type=population: a choice from queries.snvindel.populations
-		type: 'population',
-		key: 'gnomAD',
-		// these flags must be duplicated from .populations[]
-		allowto_adjust_race: true,
-		adjust_race: true
-	}
-]
+	],
+	groupTestMethods: [
+		// list of available methods to show in <select>
+		{ name: 'Allele frequency difference' },
+		{ name: "Fisher's exact test", axisLabel: '-log10(pvalue)' }
+	],
+
+	groupTestMethodsIdx: 1
+}
 
 const populations = [
 	{
@@ -540,26 +576,14 @@ module.exports = {
 		defaultBlock2GeneMode: false, // set to false to launch block and show locus
 
 		snvindel: {
+			// to filter variants using bcf info fields. displayed via filter UI
 			variant_filter,
 
 			// this is placed under snvindel as the data is per-variant allele counts coded as VCF INFO fields
 			// the list of population names should be made available to client, no need for details
 			populations,
 
-			details: {
-				// accessible to client via termdb.js?for=mds3queryDetails
-
-				//computeType: 'AF', // for AF of current cohort
-				computeType: 'groups',
-
-				groupTestMethods: [
-					// list of available methods to show in <select>
-					{ name: 'Allele frequency difference' },
-					{ name: "Fisher's exact test", axisLabel: '-log10(pvalue)' }
-				],
-				groupTestMethodsIdx: 1,
-				groups: defaultGroups
-			},
+			details: snvindelComputeDetails,
 			byrange: {
 				chr2bcffile: {
 					// all files MUST share the same header, and the same order of samples

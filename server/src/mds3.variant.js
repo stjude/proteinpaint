@@ -20,8 +20,9 @@ get_mds3variantData
 	byrange.get()
 	getMlstWithAlt
 		getAllelicCount
-	compute_AF
-	compute_groups
+	compute_1group
+	compute_2groups
+		compute_2groups_valueDiff
 		mayGet_pop2average
 		getGroupsData
 			AFtest_adjust_race
@@ -56,12 +57,13 @@ export async function get_mds3variantData(q, res, ds, genome) {
 	const results = getMlstWithAlt(mlst)
 	// results = {mlst[], skipMcountWithoutAlt}, and drop out m without any ALT
 
-	if (q.details.computeType == 'AF') {
-		compute_AF(results.mlst)
-	} else if (q.details.computeType == 'groups') {
-		await compute_groups(ds, q.details, results.mlst)
+	if (q.details.groups.length == 1) {
+		// single group
+		compute_1group(results.mlst, q.details.groups[0])
+	} else if (q.details.groups.length == 2) {
+		await compute_2groups(ds, q.details, results.mlst)
 	} else {
-		throw 'unknown q.details.computeType'
+		throw 'q.details.groups.length not 1 or 2'
 	}
 
 	// result.mlst[].nm_axis_value is computed
@@ -96,25 +98,49 @@ function getMlstWithAlt(mlst) {
 /*
 merge filterObj from multiple sources to one (and use in byrange.get())
 1. q.filter, mass global filter
-2. q.details.groups[].type=='filter', when computeType=groups and one group is of type=filter
+2. q.details.groups[].type=='filter'
 */
 function getFilterObj(q) {
 	const lst = [q.filter]
-	if (q.details.computeType == 'groups') {
-		for (const grp of q.details.groups) {
-			if (grp.type == 'filter') {
-				lst.push(grp.filter)
-			}
+	for (const grp of q.details.groups) {
+		if (grp.type == 'filter') {
+			if (!grp.filter) throw '.filter{} missing on group type="filter"'
+			lst.push(grp.filter)
 		}
 	}
 	const f = filterJoin(lst)
 	return f
 }
 
-function compute_AF(mlst) {
-	for (const m of mlst) {
-		m.nm_axis_value = Number((m._altCount / (m._altCount + m._refCount)).toPrecision(2))
+/*
+based on g.type, assign nm_axis_value for each variant
+
+mlst[]
+	.info{}
+	.samples[]
+g{}
+	.type=str
+*/
+function compute_1group(mlst, g) {
+	if (g.type == 'filter') {
+		// the only group is "filter", since mlst samples are already reflecting the filter, simply compute AF from all samples of each mlst[]
+		for (const m of mlst) {
+			m.nm_axis_value = Number((m._altCount / (m._altCount + m._refCount)).toPrecision(2))
+		}
+		return
 	}
+	if (g.type == 'info') {
+		if (g.infoKey) throw 'infoKey missing on single group.type=info'
+		for (const m of mlst) {
+			m.nm_axis_value = m.info[g.infoKey]
+			// default value if missing?
+		}
+		return
+	}
+	if (g.type == 'population') {
+		throw 'todo: single group type=population'
+	}
+	throw 'unknown type of single group'
 }
 
 function getAllelicCount(m) {
@@ -133,7 +159,13 @@ function getAllelicCount(m) {
 	return [A, T]
 }
 
-async function compute_groups(ds, details, mlst) {
+async function compute_2groups(ds, details, mlst) {
+	if (details.groups.find(i => i.type == 'info')) {
+		// at least one of the group is an info field, may ony do value diff?
+		compute_2groups_valueDiff(ds, details, mlst)
+		return
+	}
+
 	const pop2average = mayGet_pop2average(ds, details, mlst) // undefined if not used
 
 	for (const m of mlst) {
@@ -144,13 +176,20 @@ async function compute_groups(ds, details, mlst) {
 	const method = details.groupTestMethods[details.groupTestMethodsIdx]
 	if (!method) throw 'details.groupTestMethodsIdx out of bound'
 	// method={name,axisLabel}
-	if (method.name == 'Allele frequency difference') {
-		throw 'AF diff not implemented'
-	} else if (method.name == "Fisher's exact test") {
-		await may_apply_fishertest(mlst)
-	} else {
-		throw 'unknown value from groupTestMethods[]'
+	switch (method.name) {
+		case 'Allele frequency difference':
+			compute_2groups_valueDiff(ds, details, mlst)
+			return
+		case "Fisher's exact test":
+			await may_apply_fishertest(mlst)
+			return
+		default:
+			throw 'unknown value from groupTestMethods[]'
 	}
+}
+
+function compute_2groups_valueDiff(ds, details, mlst) {
+	throw 'compute_2groups_valueDiff() not done'
 }
 
 function getGroupsData(ds, details, m, pop2average) {
