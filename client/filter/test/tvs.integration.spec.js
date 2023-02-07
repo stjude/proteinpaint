@@ -23,7 +23,7 @@ function getOpts(_opts = {}) {
 		.style('border', '1px solid #000')
 
 	const opts = Object.assign({ holder }, _opts)
-	const vocab = _opts.vocab ? _opts.vocab : { route: 'termdb', genome: 'hg38', dslabel: 'TermdbTest' }
+	const vocab = _opts.vocab ? _opts.vocab : { route: 'termdb', genome: 'hg38-test', dslabel: 'TermdbTest' }
 
 	opts.filter = filterInit({
 		vocab,
@@ -76,7 +76,16 @@ function sleep(ms) {
 
 /**************
  test sections
-***************/
+**************
+
+tvs (common): buttons
+tvs: Categorical
+tvs: Numeric
+tvs: Condition
+tvs: Cohort + Numerical
+tvs: unbounded range
+
+*/
 
 tape('\n', test => {
 	test.pass('-***- common/tvs -***-')

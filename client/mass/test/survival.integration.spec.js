@@ -9,14 +9,20 @@ const helpers = require('../../test/front.helpers.js')
 const runpp = helpers.getRunPp('mass', {
 	state: {
 		dslabel: 'TermdbTest',
-		genome: 'hg38'
+		genome: 'hg38-test'
 	},
 	debug: 1
 })
 
 /**************
  test sections
-***************/
+**************
+
+survival term as term1
+survival term as term1, with overlay
+survival term as overlay
+
+*/
 tape('\n', function(test) {
 	test.pass('-***- termdb/surv -***-')
 	test.end()
