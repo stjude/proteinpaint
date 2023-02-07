@@ -49,23 +49,23 @@ module.exports = function() {
 				1: {
 					// mutations are detected from wes
 					term_id: 'WES',
-					yes: { value: ['Yes ', 'Targeted Sequencing'] },
-					no: { value: 'No' }
+					yes: { value: ['Yes', 'Targeted Sequencing'] },
+					no: { value: 'ND' }
 				},
 
 				// fusion
 				2: {
 					//mutations are detected from RNAseq
 					term_id: 'RNA-Seq',
-					yes: { value: ['Yes '] },
-					no: { value: ['No'] }
+					yes: { value: ['Yes'] },
+					no: { value: ['ND'] }
 				},
 				// cnv
 				4: {
 					// mutations are detected from Methylation
 					term_id: 'Methylation',
-					yes: { value: ['Yes '] },
-					no: { value: ['No'] }
+					yes: { value: ['Yes'] },
+					no: { value: ['ND'] }
 				}
 			}
 		}
