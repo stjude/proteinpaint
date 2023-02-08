@@ -257,21 +257,21 @@ tape('Render Tabs, vertical stack, right border', async test => {
 		const tabsButtonsDisplay = tabsHolder
 			.selectAll('button')
 			.nodes()
-			.filter(b => b.style.display == 'block')
+			.filter(b => b.style.display == 'flex')
 		test.equal(tabsButtonsDisplay.length, initTabs.tabs.length, `Should display all tabs vertically in holder`)
 
 		//Test border line placement
 		const tabsLinePosition = tabsHolder
 			.selectAll('div')
 			.nodes()
-			.filter(b => b.style.display == 'inline-flex' && b.style.backgroundColor == 'rgb(21, 117, 173)')
+			.filter(b => b.style.display == 'inline-block' && b.style.backgroundColor == 'rgb(21, 117, 173)')
 		test.equal(tabsLinePosition.length, initTabs.tabs.length, `Should display all tabs lines to the right`)
 	}
 
 	async function testContentHolderPosition() {
 		const contentHolder = initTabs.dom.contentHolder
 		test.ok(
-			contentHolder.node().style.display == 'inline-block',
+			contentHolder.node().style.display == 'inline-grid',
 			`Should show content for each tab to the right, inline of tabs`
 		)
 	}
