@@ -1,5 +1,5 @@
 import tape from 'tape'
-import { init_tabs, init_tabs_1 } from '#dom/toggleButtons'
+import { init_tabs, Tabs } from '#dom/toggleButtons'
 import * as d3s from 'd3-selection'
 
 /*************************
@@ -52,8 +52,8 @@ init_tabs()
  - Missing holder
  - Missing tabs array
 
-init_tabs_1()
- - Render toggles
+Tabs
+ - Render Tabs
  - Missing holder
  - Missing tabs array
 
@@ -132,15 +132,16 @@ tape('Missing tabs array', async test => {
 })
 
 tape('\n', test => {
-	test.pass('-***- init_tabs_1() -***-')
+	test.pass('-***- Tabs -***-')
 	test.end()
 })
 
-tape('Render toggles', async test => {
+tape('Render Tabs', async test => {
 	test.timeoutAfter(1000)
 	const holder = getHolder()
 
-	init_tabs_1({ holder, tabs })
+	const initTabs = new Tabs({ holder, tabs })
+	initTabs.main()
 
 	await testTabActivity()
 
@@ -168,7 +169,8 @@ tape('Missing holder', async test => {
 
 	try {
 		async function testToggles() {
-			return init_tabs_1({ tabs })
+			const initTabs = new Tabs({ tabs })
+			initTabs.main()
 		}
 		await testToggles()
 		test.fail(message)
@@ -182,11 +184,12 @@ tape('Missing holder', async test => {
 tape('Missing tabs array', async test => {
 	test.timeoutAfter(100)
 	const holder = getHolder()
-	const message = `Should throw for missing tabs`
+	const message = `Should throw for missing tabs array`
 
 	try {
 		async function testToggles() {
-			return init_tabs_1({ holder })
+			const initTabs = new Tabs({ holder })
+			initTabs.main()
 		}
 		await testToggles()
 		test.fail(message)

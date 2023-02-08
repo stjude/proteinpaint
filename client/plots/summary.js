@@ -6,6 +6,7 @@ import { select } from 'd3-selection'
 import { getDefaultViolinSettings } from './violin.js'
 import { getDefaultBarSettings } from './barchart.js'
 import { getDefaultScatterSettings } from './sampleScatter.js'
+import { Tabs } from '#dom/toggleButtons'
 
 //import {  } from ''
 
@@ -71,6 +72,25 @@ class SummaryPlot {
 		}
 
 		this.render()
+
+		this.dom.chartToggles.selectAll('button').each(tab => {
+			tab.active = tab.childType == this.config.childType
+			tab.wrapper.style('display', tab => (this.config && tab.isVisible() ? '' : 'none'))
+			tab.callback = async event => {
+				const config = await tab.getConfig()
+				if (!config) {
+					alert(`TODO: ${tab.label}`)
+					return
+				}
+
+				this.app.dispatch({
+					type: 'plot_edit',
+					id: this.id,
+					config
+				})
+			}
+		})
+		this.chartToggles.updateTabs()
 	}
 
 	async setComponent(config) {
@@ -150,128 +170,93 @@ function setRenderers(self) {
 				.style('vertical-align', 'sub')
 				.html(config.term.term.name)
 
+			const tabsData = [
+				{
+					childType: 'barchart',
+					label: 'Barchart',
+					isVisible: () => true,
+					disabled: d => false,
+					getConfig: async () => {
+						const mode =
+							self.config.term.term.type == 'float' || self.config.term.term.type == 'integer'
+								? 'discrete'
+								: self.config.term.q.mode || 'discrete'
+						const _term = await self.getWrappedTermCopy(self.config.term, mode)
+
+						let _term2
+						if (self.config.term2) {
+							const mode =
+								self.config.term2.term.type == 'float' || self.config.term2.term.type == 'integer'
+									? 'discrete'
+									: self.config.term2.q.mode || 'discrete'
+							_term2 = await self.getWrappedTermCopy(self.config.term2, mode)
+						}
+						const config = { childType: 'barchart', term: _term, term2: _term2 }
+						return config
+					}
+				},
+				{
+					childType: 'violin',
+					label: 'Violin',
+					disabled: d => false,
+					isVisible: () =>
+						self.config.term.term.type === 'integer' ||
+						self.config.term.term.type === 'float' ||
+						self.config.term2?.term.type === 'integer' ||
+						self.config.term2?.term.type === 'float',
+					getConfig: async () => {
+						const termKey =
+							self.config.term?.term.type == 'float' ||
+							self.config.term?.term.type == 'integer' ||
+							this.config.term.q?.mode == 'continuous'
+								? 'term'
+								: 'term2'
+
+						const termT = self.config[termKey]
+						const tw = await self.getWrappedTermCopy(termT, 'continuous')
+						const config = { childType: 'violin', [termKey]: tw }
+						return config
+					}
+				},
+				{
+					childType: 'table',
+					label: 'Crosstab - in development',
+					disabled: d => true,
+					isVisible: () => false
+				},
+				{
+					childType: 'boxplot',
+					label: 'Boxplot - TODO',
+					disabled: d => true,
+					isVisible: () => false // remove during development
+					// isVisible: () => self.config.term.type === 'integer' || self.config.term.type === 'float'
+				},
+				{
+					childType: 'sampleScatter',
+					label: 'Scatter',
+					disabled: d => false,
+					isVisible: () => {
+						return (
+							(self.config.term.term.type === 'integer' || self.config.term.term.type === 'float') &&
+							(self.config.term2?.term.type === 'integer' || self.config.term2?.term.type === 'float')
+						)
+					},
+					getConfig: async () => {
+						const _term = await self.getWrappedTermCopy(self.config.term, 'continuous')
+						const _term2 = await self.getWrappedTermCopy(self.config.term2, 'continuous')
+						const config = { childType: 'sampleScatter', xTW: _term, yTW: _term2, groups: [] }
+						return config
+					}
+				}
+			]
+
 			self.dom.chartToggles = self.dom.paneTitleDiv
 				.append('div')
 				.style('display', 'inline-block')
 				.style('margin-left', '10px')
-				.selectAll('button')
-				.data([
-					{
-						childType: 'barchart',
-						label: 'Barchart',
-						isVisible: () => true,
-						disabled: d => false,
-						getConfig: async () => {
-							const mode =
-								self.config.term.term.type == 'float' || self.config.term.term.type == 'integer'
-									? 'discrete'
-									: self.config.term.q.mode || 'discrete'
-							const _term = await self.getWrappedTermCopy(self.config.term, mode)
 
-							let _term2
-							if (self.config.term2) {
-								const mode =
-									self.config.term2.term.type == 'float' || self.config.term2.term.type == 'integer'
-										? 'discrete'
-										: self.config.term2.q.mode || 'discrete'
-								_term2 = await self.getWrappedTermCopy(self.config.term2, mode)
-							}
-							const config = { childType: 'barchart', term: _term, term2: _term2 }
-							return config
-						},
-						active: true
-					},
-					{
-						childType: 'violin',
-						label: 'Violin',
-						disabled: d => false,
-						isVisible: () =>
-							self.config.term.term.type === 'integer' ||
-							self.config.term.term.type === 'float' ||
-							self.config.term2?.term.type === 'integer' ||
-							self.config.term2?.term.type === 'float',
-						getConfig: async () => {
-							const termKey =
-								self.config.term?.term.type == 'float' ||
-								self.config.term?.term.type == 'integer' ||
-								this.config.term.q?.mode == 'continuous'
-									? 'term'
-									: 'term2'
-
-							const termT = self.config[termKey]
-							const tw = await self.getWrappedTermCopy(termT, 'continuous')
-							const config = { childType: 'violin', [termKey]: tw }
-							return config
-						},
-						active: false
-					},
-					{
-						childType: 'table',
-						label: 'Crosstab - in development',
-						disabled: d => true,
-						isVisible: () => false,
-						active: false
-					},
-					{
-						childType: 'boxplot',
-						label: 'Boxplot - TODO',
-						disabled: d => true,
-						isVisible: () => false, // remove during development
-						// isVisible: () => self.config.term.type === 'integer' || self.config.term.type === 'float',
-						active: false
-					},
-					{
-						childType: 'sampleScatter',
-						label: 'Scatter',
-						disabled: d => false,
-						isVisible: () => {
-							return (
-								(self.config.term.term.type === 'integer' || self.config.term.term.type === 'float') &&
-								(self.config.term2?.term.type === 'integer' || self.config.term2?.term.type === 'float')
-							)
-						},
-						getConfig: async () => {
-							const _term = await self.getWrappedTermCopy(self.config.term, 'continuous')
-							const _term2 = await self.getWrappedTermCopy(self.config.term2, 'continuous')
-							const config = { childType: 'sampleScatter', xTW: _term, yTW: _term2, groups: [] }
-							return config
-						},
-						active: false
-					}
-				])
-				.enter()
-				.append('button')
-				.style('display', d => (self.config && d.isVisible() ? '' : 'none'))
-				.style('padding', '5px 10px')
-				.style('font-size', '16px')
-				.style('font-weight', 400)
-				//Styles for tab-like design
-				.style('cursor', d => (self.config && d.disabled() ? 'not-allowed' : 'pointer'))
-				.style('background-color', d => (d.active ? '#cfe2f3' : 'white'))
-				.style('border-style', d => (d.active ? 'solid solid none' : 'solid'))
-				.style('border-color', d => (d.active ? 'white' : '#ccc8c8')) //fix to keep tabs the same size
-				.style('border-width', '1px')
-				.style('border-radius', '5px 5px 0px 0px')
-				//Aligns tabs to bottom of header div
-				.style('vertical-align', 'sub')
-				.style('line-height', '26px')
-
-				// TODO: may use other logic for disabling a chart type, insteead of hiding/showing
-				.property('disabled', d => d.disabled())
-				.html(d => d.label)
-				.on('click', async (event, d) => {
-					const config = await d.getConfig()
-					if (!config) {
-						alert(`TODO: ${d.label}`)
-						return
-					}
-
-					self.app.dispatch({
-						type: 'plot_edit',
-						id: self.id,
-						config
-					})
-				})
+			self.chartToggles = new Tabs({ holder: self.dom.chartToggles, tabs: tabsData, noContent: true })
+			self.chartToggles.main()
 
 			// Placeholder for recover component
 			self.dom.localRecoverDiv = self.dom.paneTitleDiv.append('div').style('display', 'inline-block')
@@ -301,16 +286,6 @@ function setRenderers(self) {
 				self.dom.plotDivs[chart.type].style('display', 'none')
 			}
 		}
-
-		self.dom.chartToggles.each(function(d) {
-			if (!d) return
-			d.active = d.childType == self.config.childType
-			// this === DOM element
-			select(this)
-				.style('display', d => (d.isVisible() ? '' : 'none'))
-				.style('background-color', d => (d.active ? 'white' : '#cfe2f3'))
-				.style('border-style', d => (d.active ? 'none' : 'solid solid none'))
-		})
 
 		self.dom.plotDivs[self.config.childType].style('display', '')
 	}

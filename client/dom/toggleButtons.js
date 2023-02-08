@@ -24,6 +24,7 @@ opts: {
 	noContent,
 		optional: voids creating a content div
 	linePosition, 
+		determines the location of the blue border line
 		optional: if not provided, default = 'bottom'
 		values:  top, bottom, right, left
 }
@@ -160,98 +161,146 @@ export function update_tabs(tabs) {
 	opts{}
 	- same argument as for init_tabs
 */
-export async function init_tabs_1(opts) {
-	if (!opts.holder) throw `missing opts.holder for toggleButtons()`
-	if (!Array.isArray(opts.tabs)) throw `invalid opts.tabs for toggleButtons()`
 
-	let tabs = opts.tabs
-	opts.tabHolder = opts.holder.append('div')
-
-	if (!opts.contentHolder) {
-		opts.contentHolder = opts.holder.append('div')
+export class Tabs {
+	constructor(opts) {
+		this.opts = this.validateOpts(opts)
+		this.tabs = opts.tabs
+		this.dom = {
+			holder: opts.holder
+		}
+		setRenderers(this)
 	}
 
-	const has_active_tab = tabs.find(tab => tab.active)
-	tabs.forEach((tab, i) => {
-		tab.btnPosition = i == 0 ? 'left' : i < tabs.length - 1 ? 'center' : 'right'
-		if (!has_active_tab && i === 0) tab.active = true
-	})
+	validateOpts(opts) {
+		if (!opts.holder) throw `missing opts.holder for Tabs()`
+		if (!Array.isArray(opts.tabs)) throw `invalid opts.tabs array for Tabs()`
+		if (!opts.linePosition) opts.linePosition = 'bottom'
+		if (
+			opts.linePosition != 'bottom' &&
+			opts.linePosition != 'top' &&
+			opts.linePosition != 'right' &&
+			opts.linePosition != 'left'
+		)
+			throw `Invalid .linePosition arg. Must be either bottom, top, right, left`
+		return opts
+	}
 
-	const linePosition = opts.linePosition || 'bottom'
-	const textAlign = linePosition == 'bottom' || linePosition == 'top' ? 'center' : linePosition
+	async main() {
+		try {
+			await this.render()
+		} catch (e) {
+			if (e.stack) console.log(e.stack)
+			else throw e
+		}
+	}
+}
 
-	await opts.tabHolder
-		.selectAll('button')
-		// will bind each tab data to the correpsonding rendered element
-		.data(tabs)
-		.enter()
-		.append('button')
-		.attr('class', 'sj-toggle-button')
-		//Padding here overrides automatic styling for all pp buttons
-		.style('padding', '0px')
-		.style('width', tab => (tab.width ? `${tab.width}px` : 'fit-content'))
-		.style('min-width', tab => (tab.width ? null : Math.max(defaultTabWidth)))
-		.style('border', 'none')
-		.style('background-color', 'transparent')
-		.on('click', async (event, tab) => {
-			for (const t of tabs) {
-				t.active = t === tab
-			}
-			updateTabs()
-			if (tab.callback) await tab.callback(tab.holder)
-		})
-		.each(async function(tab) {
-			tab.wrapper = select(this)
+function setRenderers(self) {
+	self.render = async () => {
+		const has_active_tab = self.tabs.find(tab => tab.active)
+		if (!has_active_tab) self.tabs[0].active = true
+		const textAlign =
+			self.opts.linePosition == 'bottom' || self.opts.linePosition == 'top' ? 'center' : self.opts.linePosition
 
-			if (linePosition == 'top' || linePosition == 'left') {
-				//create the line div before the tab text
-				tab.line = tab.wrapper.append('div').style('display', linePosition == 'left' ? 'inline-flex' : 'block')
-				tab.tab = tab.wrapper.append('div').style('display', linePosition == 'left' ? 'inline-flex' : 'block')
-			} else {
-				//create the line div after the tab text
-				tab.tab = tab.wrapper.append('div').style('display', linePosition == 'right' ? 'inline-flex' : 'block')
-				tab.line = tab.wrapper.append('div').style('display', linePosition == 'right' ? 'inline-flex' : 'block')
-			}
+		self.dom.tabHolder = self.dom.holder
+			.append('div')
+			//add light grey border underneath the buttons
+			.style('border-bottom', '0.5px solid lightgrey')
+			.style('width', 'fit-content')
 
-			tab.tab
-				.style('color', tab.active ? '#1575ad' : '#757373')
-				.style('text-align', textAlign)
-				.style('padding', '5px')
-				.html(tab.label)
+		if (!self.opts.contentHolder) {
+			if (!self.opts.noContent) self.dom.contentHolder = self.dom.holder.append('div')
+		}
 
-			tab.line
-				.style('color', '#1575ad')
-				.style('background-color', '#1575ad')
-				.style('visibility', tab.active ? 'visible' : 'hidden')
-
-			if (linePosition == 'top' || linePosition == 'bottom') {
-				tab.line.style('height', '8px')
-			} else {
-				tab.line
-					.style('width', '8px')
-					//Trick div into appearing the full height of the parent
-					.style('padding', '5px 0px')
-					.html('l')
-			}
-
-			tab.holder = opts.contentHolder
-				.append('div')
-				.style('padding-top', '10px')
-				.style('margin-top', '10px')
-				.style('display', tab.active ? 'block' : 'none')
-
-			if (tab.active && tab.callback) await tab.callback(tab.holder)
-		})
-
-	updateTabs()
-
-	function updateTabs() {
-		opts.tabHolder
+		await self.dom.tabHolder
 			.selectAll('button')
-			.data(tabs)
+			.data(self.tabs)
+			.enter()
+			.append('button')
+			.attr('class', 'sj-toggle-button')
+			.classed('sjpp-active', tab => (tab.active ? true : false))
+			//Padding here overrides automatic styling for all pp buttons
+			.style('padding', '0px')
+			.style('width', tab => (tab.width ? `${tab.width}px` : 'fit-content'))
+			.style('min-width', tab => (tab.width ? null : Math.max(defaultTabWidth)))
+			.style('border', 'none')
+			.style('background-color', 'transparent')
+			//false is default if arg missing
+			.property('disabled', tab => (tab.disabled ? tab.disabled() : 'false'))
+			.each(async function(tab) {
+				/* The whole button is clickable (i.e. the white space whent the blue line is
+				not visible). The event is on the button (i.e. tab.wrapper). The style changes 
+				when the button is active/inactive are on the text (i.e. tab.tab) and line 
+				(i.e. tab.line) */
+				tab.wrapper = select(this)
+
+				//Line position determines the order of appending divs
+				if (self.opts.linePosition == 'top' || self.opts.linePosition == 'left') {
+					//create the line div before the tab text
+					tab.line = tab.wrapper
+						.append('div')
+						.style('display', self.opts.linePosition == 'left' ? 'inline-flex' : 'block')
+					tab.tab = tab.wrapper
+						.append('div')
+						.style('display', self.opts.linePosition == 'left' ? 'inline-flex' : 'block')
+				} else {
+					//create the line div after the tab text
+					tab.tab = tab.wrapper
+						.append('div')
+						.style('display', self.opts.linePosition == 'right' ? 'inline-flex' : 'block')
+					tab.line = tab.wrapper
+						.append('div')
+						.style('display', self.opts.linePosition == 'right' ? 'inline-flex' : 'block')
+				}
+
+				tab.tab //Button text
+					.style('color', tab.active ? '#1575ad' : '#757373')
+					.style('text-align', textAlign)
+					.style('padding', '5px')
+					.html(tab.label)
+				tab.line //Blue line indicate the active button
+					.style('color', '#1575ad')
+					.style('background-color', '#1575ad')
+					.style('visibility', tab.active ? 'visible' : 'hidden')
+
+				if (self.opts.linePosition == 'top' || self.opts.linePosition == 'bottom') {
+					tab.line.style('height', '8px')
+				} else {
+					tab.line
+						.style('width', '8px')
+						//Trick div into appearing the full height of the parent
+						.style('padding', '5px 0px')
+						.html('l')
+				}
+
+				if (self.dom.contentHolder) {
+					tab.contentHolder = self.dom.contentHolder
+						.append('div')
+						.style('padding-top', '10px')
+						.style('margin-top', '10px')
+						.style('display', tab.active ? 'block' : 'none')
+				}
+
+				if (tab.active && tab.callback) await tab.callback()
+			})
+			.on('click', async (event, tab) => {
+				for (const t of self.tabs) {
+					t.active = t === tab
+				}
+				self.updateTabs()
+				if (tab.callback) await tab.callback()
+			})
+		self.updateTabs()
+	}
+	self.updateTabs = () => {
+		self.dom.tabHolder
+			.selectAll('button')
+			.data(self.tabs)
 			.classed('sjpp-active', tab => tab.active)
 			.each(tab => {
-				tab.holder.style('display', tab.active ? 'block' : 'none')
+				tab.wrapper.classed('sjpp-active', tab.active ? true : false)
+				if (tab.contentHolder) tab.contentHolder.style('display', tab.active ? 'block' : 'none')
 				tab.tab.style('color', tab.active ? '#1575ad' : '#757373')
 				tab.line.style('visibility', tab.active ? 'visible' : 'hidden')
 			})
