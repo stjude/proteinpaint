@@ -281,8 +281,9 @@ function getNumericIdVal(d, term, q, rows) {
 				} else if (b.stopinclusive && v === b.stop) {
 					ids.push(b.label)
 				}
-			}
-			if (b.stopunbounded) {
+			} else if (b.stopunbounded) {
+				// a bin should not be true for both b.startunbounded and b.stopunbounded,
+				// since that is not a finite bin
 				if (v > b.start) {
 					ids.push(b.label)
 				} else if (b.stopinclusive && v === b.start) {
