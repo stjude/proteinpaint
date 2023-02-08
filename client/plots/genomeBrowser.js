@@ -3,46 +3,63 @@ import { addGeneSearchbox } from '#dom/genesearch'
 import { Menu } from '#dom/menu'
 import { sayerror } from '#dom/error'
 import { dofetch3 } from '#common/dofetch'
-import { filterInit, getNormalRoot } from '#filter/filter'
+import { filterInit, getNormalRoot, getFilterItemByTag } from '#filter/filter'
 import { first_genetrack_tolist } from '#common/1stGenetk'
 import { mayDisplayVariantFilter } from '#termsetting/handlers/snplocus'
+import { tab2box } from '#src/client'
+import { appInit } from '#termdb/app'
 
 /*
 
-brief notes about structures:
+this {
 
-this.app {
-	opts {
-		genome{} // client-side genome obj
-		state {
-			vocab: {
-				dslabel:str
-				genome:str
-			}
-		}
-	}
-	dispatch()
-	save()
 	vocabApi{}
-}
 
-this.state {
-	config {
-		filter // mass filter
-		geneSearchResult{}
-		snvindel {
-			details {
-				groupTypes[]
-				groups:[]
-					// a group may have its own filter
-				groupTestMethod{}
-				groupTestMethodsIdx
+	app {
+		opts {
+			genome{} // client-side genome obj
+			state {
+				vocab: {
+					dslabel:str
+					genome:str
+				}
 			}
 		}
+		dispatch()
+		save()
 	}
-	termdbConfig{}
+
+	state {
+		config {
+			filter // mass filter
+			geneSearchResult{}
+			snvindel {
+				details {
+					groupTypes[]
+					groups:[]
+						// each element is a group object
+						{type=info, infoKey=str}
+						{type=filter, filter={}}
+						{type=population, key, label, ..}
+					groupTestMethod{}
+					groupTestMethodsIdx
+				}
+				populations [{key,label}] // might not be part of state
+			}
+		}
+		termdbConfig{}
+	}
+
+	variantFilter {
+		terms []
+	}
+
+	blockInstance // exists when block has been launched; one block in each plot
 }
-this.blockInstance // exists when block has been launched; one block in each plot
+
+the control ui is generated based on various bits under this.state.config{}
+it is made ad-hoc and not reactive in main()
+
 */
 
 const geneTip = new Menu({ padding: '0px' })
@@ -55,23 +72,20 @@ class genomeBrowser {
 
 	async init(opts) {
 		const holder = this.opts.holder.append('div')
+		// layout rows from top to bottom
+		const errDiv = holder.append('div')
+		const messageRow = holder.append('div').style('margin-left', '25px')
+		messageRow.append('span').html('&nbsp;') // to not to collapse row when empty
+
 		this.dom = {
 			tip: new Menu(),
 			holder,
-			errDiv: holder.append('div'),
-			loadingDiv: holder
-				.append('div')
-				.text('Loading...')
-				.style('margin-left', '25px'),
-			skipMcountWithoutAltDiv: holder
-				.append('div')
-				.style('margin-left', '25px')
-				.style('opacity', 0.5),
-
+			errDiv,
+			skipMcountWithoutAltDiv: messageRow.append('span').style('margin-right', '10px'),
+			loadingDiv: messageRow.append('span').text('Loading...'),
 			// hardcode to 2 groups used by state.config.snvindel.details.groups[]
-			group1div: holder.append('div'),
-			group2div: holder.append('div'),
-
+			group1div: holder.append('div').style('margin-left', '25px'),
+			group2div: holder.append('div').style('margin-left', '25px'),
 			variantFilterHolder: holder.append('div'),
 			blockHolder: holder.append('div')
 		}
@@ -92,7 +106,7 @@ class genomeBrowser {
 	}
 
 	async main() {
-		this.dom.loadingDiv.style('display', 'block')
+		this.dom.loadingDiv.style('display', 'inline')
 		try {
 			if (this.state.config?.snvindel?.details) {
 				// pre-compute variant data in the app here, e.g. fisher test etc, but not in mds3 backend as the official track does
@@ -150,6 +164,13 @@ class genomeBrowser {
 			// block already launched. update data on the tk and rerender
 			const t2 = this.blockInstance.tklst.find(i => i.type == 'mds3')
 			t2.custom_variants = data.mlst
+
+			// details.groups[] may have changed. update label of tk numeric axis
+			{
+				const n = t2.skewer.viewModes.find(i => i.type == 'numeric')
+				if (n) n.label = axisLabelFromSnvindelComputeDetails(this)
+			}
+
 			t2.load()
 			return
 		}
@@ -158,14 +179,14 @@ class genomeBrowser {
 			// numeric mode object; to fill in based on snvindel.details{}
 			type: 'numeric',
 			inuse: true,
-			byAttribute: 'nm_axis_value'
+			byAttribute: 'nm_axis_value',
+			label: axisLabelFromSnvindelComputeDetails(this)
 		}
 		const tk = {
 			type: 'mds3',
 			name: 'Variants',
 			custom_variants: data.mlst,
-			skewerModes: [nm],
-			label: axisLabelFromSnvindelComputeDetails(this)
+			skewerModes: [nm]
 		}
 		this.blockInstance = await this.launchMds3tk(tk)
 	}
@@ -185,11 +206,14 @@ class genomeBrowser {
 			filter: this.state.filter,
 			variantFilter: this?.variantFilter?.active
 		}
+
+		// using dofetch prevents the app from working with custom dataset; may change to vocab method later
+
 		const data = await dofetch3('termdb', { body })
 		if (data.error) throw data.error
 		if (data.skipMcountWithoutAlt) {
 			this.dom.skipMcountWithoutAltDiv
-				.style('display', 'block')
+				.style('display', 'inline')
 				.text(data.skipMcountWithoutAlt + ' variants skipped for absence of ALT allele from the cohort.')
 		} else {
 			this.dom.skipMcountWithoutAltDiv.style('display', 'none')
@@ -311,16 +335,21 @@ export function makeChartBtnMenu(holder, chartsInstance) {
 //////////////////////////////////////////////////
 
 function makeVariantValueComputingControls(self) {
-	renderGroupUI(self, 0)
-	renderGroupUI(self, 1)
+	renderGroupUI(self, 0, self.state.config.snvindel.details.groups[0])
+	renderGroupUI(self, 1, self.state.config.snvindel.details.groups[1])
 }
 
-function renderGroupUI(self, groupIdx) {
+/*
+groupIdx: array index of self.state.config.snvindel.details.groups[]
+group{}: element of same array
+
+both are provided to be convenient for ad-hoc update of the non-reactive ui
+*/
+function renderGroupUI(self, groupIdx, group) {
 	const div = groupIdx == 0 ? self.dom.group1div : self.dom.group2div
 
 	div.selectAll('*').remove()
 
-	const group = self.state.config.snvindel.details.groups[groupIdx]
 	if (!group) {
 		// group does not exist in groups[] based on array index, e.g. when there's just 1 group and groups[1] is undefined
 		makePrompt2addNewGroup(self, groupIdx, div)
@@ -336,19 +365,19 @@ function renderGroupUI(self, groupIdx) {
 		.attr('class', 'sja_menuoption')
 		.style('margin-right', '10px')
 		.on('click', event => {
+			groupTip.showunder(event.target).clear()
 			if (groupIdx == 0) {
 				// this is 1st group, directly launch menu to change group, but do not allow to delete
-				launchMenu_createGroup(self, 0)
+				launchMenu_createGroup(self, 0, groupTip.d)
 				return
 			}
-			groupTip.showunder(event.target).clear()
 			groupTip.d
 				.append('div')
 				.text('Change')
 				.attr('class', 'sja_menuoption')
 				.style('border-radius', '0px')
 				.on('click', () => {
-					launchMenu_createGroup(self, 1)
+					launchMenu_createGroup(self, 1, groupTip.clear().d)
 				})
 			groupTip.d
 				.append('div')
@@ -356,6 +385,7 @@ function renderGroupUI(self, groupIdx) {
 				.attr('class', 'sja_menuoption')
 				.style('border-radius', '0px')
 				.on('click', () => {
+					groupTip.hide()
 					// ui is not reactive
 					div.selectAll('*').remove()
 					makePrompt2addNewGroup(self, 1, div)
@@ -382,7 +412,7 @@ function renderGroupUI(self, groupIdx) {
 		div.append('span').text(group.label)
 		div
 			.append('span')
-			.text('POPULATION')
+			.text(`POPULATION${group.adjust_race ? ', RACE ADJUSTED' : ''}`)
 			.style('font-size', '.5em')
 			.style('margin-left', '10px')
 		return
@@ -414,17 +444,146 @@ function renderGroupUI(self, groupIdx) {
 }
 
 function makePrompt2addNewGroup(self, groupIdx, div) {
+	// the prompt <div> is created in group2div
 	div
 		.append('div')
-		.text('Create group 2')
-		.attr('class', 'sja_menuoption')
 		.style('display', 'inline-block')
-		.on('click', () => {
-			launchMenu_createGroup(self, groupIdx)
+		.text('Create Group 2')
+		.attr('class', 'sja_clbtext')
+		.style('margin', '10px')
+		.on('click', event => {
+			groupTip.showunder(event.target).clear()
+			launchMenu_createGroup(self, groupIdx, groupTip.d)
 		})
 }
 
-function launchMenu_createGroup(self, groupIdx) {}
+// launch menu to show options: filter/population/info
+// when any is selected, create a new group object and set to snvindel.details.groups[groupIdx]
+function launchMenu_createGroup(self, groupIdx, div) {
+	const tabs = []
+	for (const groupType of self.state.config.snvindel.details.groupTypes) {
+		// { type:str, name:str }
+		tabs.push({
+			label: groupType.name,
+			callback: async div => {
+				if (groupType.type == 'info') {
+					if (!self.variantFilter || !self.variantFilter.terms)
+						throw 'looking for snvindel info fields but self.variantFilter.terms[] missing'
+					for (const f of self.variantFilter.terms) {
+						if (f.type != 'integer' && f.type != 'float') continue // only allow numeric fields
+						div
+							.append('div')
+							.text(f.name)
+							.attr('class', 'sja_menuoption')
+							.on('click', () => {
+								/////////////////////////////////
+								// create a new group using this info field
+								groupTip.hide()
+								const newGroup = {
+									type: 'info',
+									infoKey: f.id
+								}
+								renderGroupUI(self, groupIdx, newGroup)
+								const groups = JSON.parse(JSON.stringify(self.state.config.snvindel.details.groups))
+								groups[groupIdx] = newGroup
+								self.app.dispatch({
+									type: 'plot_edit',
+									id: self.id,
+									config: { snvindel: { details: { groups } } }
+								})
+							})
+					}
+					return
+				}
+				if (groupType.type == 'population') {
+					if (!self.state.config.snvindel.populations) throw 'state.config.snvindel.populations missing'
+					for (const p of self.state.config.snvindel.populations) {
+						// {key,label, allowto_adjust_race, adjust_race}
+						div
+							.append('div')
+							.text(p.label)
+							.attr('class', 'sja_menuoption')
+							.on('click', () => {
+								/////////////////////////////////
+								// create a new group using this population
+								groupTip.hide()
+								const newGroup = {
+									type: 'population',
+									key: p.key,
+									label: p.label,
+									allowto_adjust_race: p.allowto_adjust_race,
+									adjust_race: p.adjust_race
+								}
+								renderGroupUI(self, groupIdx, newGroup)
+								const groups = JSON.parse(JSON.stringify(self.state.config.snvindel.details.groups))
+								groups[groupIdx] = newGroup
+								self.app.dispatch({
+									type: 'plot_edit',
+									id: self.id,
+									config: { snvindel: { details: { groups } } }
+								})
+							})
+					}
+					return
+				}
+				if (groupType.type == 'filter') {
+					const arg = {
+						holder: div,
+						vocabApi: self.vocabApi,
+						state: {},
+						tree: {
+							click_term2select_tvs: tvs => {
+								/////////////////////////////////
+								// create a new group using this tvs
+								groupTip.hide()
+								const newGroup = {
+									type: 'filter',
+									filter: {
+										in: true,
+										join: '',
+										type: 'tvslst',
+										lst: [{ type: 'tvs', tvs }]
+									}
+								}
+								renderGroupUI(self, groupIdx, newGroup)
+								const groups = JSON.parse(JSON.stringify(self.state.config.snvindel.details.groups))
+								groups[groupIdx] = newGroup
+								self.app.dispatch({
+									type: 'plot_edit',
+									id: self.id,
+									config: { snvindel: { details: { groups } } }
+								})
+							}
+						}
+					}
+					const activeCohortIdx = mayGetActiveCohortIdx(self)
+					if (Number.isInteger(activeCohortIdx)) arg.state.activeCohort = activeCohortIdx
+					appInit(arg)
+					return
+				}
+				throw 'unknown group type'
+			}
+		})
+	}
+	tab2box(div, tabs)
+}
+
+// from mass filter, find a tvs as cohortFilter, to know its array index in selectCohort.values[]
+// return undefined for anything that's not valid
+function mayGetActiveCohortIdx(self) {
+	if (!self.state.config.filter) return // no mass filter
+	const cohortFilter = getFilterItemByTag(self.config.filter, 'cohortFilter') // the tvs object
+	if (cohortFilter && self.state.termdbConfig.selectCohort) {
+		// the tvs is found
+		const cohortName = cohortFilter.tvs.values
+			.map(d => d.key)
+			.sort()
+			.join(',')
+		const idx = self.state.termdbConfig.selectCohort.values.findIndex(v => v.keys.sort().join(',') == cohortName)
+		if (idx == -1) throw 'subcohort key is not in selectCohort.values[]'
+		return idx
+	}
+}
 
 // given group configuration, determine numeric track axis label
 // a lot of room for further refinement

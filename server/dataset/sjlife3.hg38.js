@@ -93,7 +93,9 @@ const restrictAncestries = [
 	}
 ]
 
-const terms = [
+// about variants in bcf file
+// expressed as "term" objects, those with tvs object can be used in filter UI for filtering variants (all of them should)
+const infoFields = [
 	{
 		id: 'QC',
 		name: 'classification',
@@ -338,35 +340,13 @@ const terms = [
 ]
 
 // why is key needed? values:{ 1: {key:1, label:'yes'}}
-terms.forEach(term => {
+infoFields.forEach(term => {
 	if (!term.values) return
 	for (const key in term.values) {
 		const obj = term.values[key]
 		if (!('key' in obj)) obj.key = key
 	}
 })
-
-const lst = terms
-	.filter(term => term.tvs)
-	.map(_term => {
-		const term = JSON.parse(JSON.stringify(_term))
-		const item = {
-			type: 'tvs',
-			tvs: term.tvs
-		}
-		delete term.tvs
-		item.tvs.term = term
-		if (item.tvs.values) {
-			const values = []
-			for (const v of item.tvs.values) {
-				if (typeof v == 'object') values.push(v)
-				// v === the key reference in term.values
-				else values.push(term.values[v])
-			}
-			item.tvs.values = values
-		}
-		return item
-	})
 
 const variant_filter = {
 	opts: {
@@ -375,12 +355,32 @@ const variant_filter = {
 	// default active filter
 	filter: {
 		type: 'tvslst',
-		join: lst.length > 1 ? 'and' : '',
+		join: 'and', // if just 1 tvs, use blank string
 		in: true,
-		lst
+		lst: infoFields
+			.filter(term => term.tvs)
+			.map(_term => {
+				const term = JSON.parse(JSON.stringify(_term))
+				const item = {
+					type: 'tvs',
+					tvs: term.tvs
+				}
+				delete term.tvs
+				item.tvs.term = term
+				if (item.tvs.values) {
+					const values = []
+					for (const v of item.tvs.values) {
+						if (typeof v == 'object') values.push(v)
+						// v === the key reference in term.values
+						else values.push(term.values[v])
+					}
+					item.tvs.values = values
+				}
+				return item
+			})
 	},
 	// all info fields available to add to active filter
-	terms
+	terms: infoFields
 }
 
 /*
@@ -392,9 +392,9 @@ const snvindelComputeDetails = {
 	groupTypes: [
 		// "type" of each element corresponds to same key in groups[]
 		// used for rendering choices in group data types; but content is read-only and should not be part of state
-		{ type: 'info', name: 'Per-variant numerical values' },
 		{ type: 'filter', name: 'Sub-cohort by filtering' },
-		{ type: 'population', name: 'Population allele frequencies' }
+		{ type: 'population', name: 'Population allele frequencies' },
+		{ type: 'info', name: 'Per-variant numerical values' }
 	],
 
 	/*

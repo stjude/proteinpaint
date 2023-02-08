@@ -513,8 +513,13 @@ async function get_matrix(q, res, ds, genome) {
 
 function get_mds3queryDetails(res, ds) {
 	const config = {}
-	if (ds?.queries?.snvindel?.details) {
-		config.snvindel = { details: ds.queries.snvindel.details }
+	if (ds?.queries?.snvindel) {
+		config.snvindel = {}
+		// details{} lists default method for computing variants, can be modified and is part of state
+		// some of the stuff here are to provide user-selectable choices
+		// e.g. computing methods, info fields, populations. TODO move them out of state, as they are read-only
+		if (ds.queries.snvindel.details) config.snvindel.details = ds.queries.snvindel.details
+		if (ds.queries.snvindel.populations) config.snvindel.populations = ds.queries.snvindel.populations
 	}
 	res.send(config)
 }
