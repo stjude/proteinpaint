@@ -108,11 +108,17 @@ function getCharts(q, data) {
   data: rows of annotation data
   */
 
+	/*
+		A map of functions to get a term's id and value, by its term.type
+		The function will be used in idVal() below to get the chart/series/data ID and value
+		for a given data row
+  */
 	const idValFxns = {
 		categorical: getCategoricalIdVal,
 		integer: getNumericIdVal,
 		float: getNumericIdVal,
 		undefined: getUndefinedIdVal
+		// NOTE: condition terms are not currently supported for frontend vocab
 	}
 
 	return new Partjson({
@@ -217,12 +223,36 @@ function setDatasetAnnotations(item) {
 	}
 }
 
+/* 
+	Arguments: 
+	d: data row, an object with sample ID and the annotation values for one or more terms,
+		 but this function is used specifically for annotation terms that are categorical
+	term
+
+	Returns:
+	[	
+		[id]: a list of matching chartId, seriesId, or dataId for this data row,
+		value: the annotation value for this term
+	]
+*/
 function getCategoricalIdVal(d, term) {
 	const id = 'id' in term ? d[term.id] : '-'
 	const value = 'id' in term && isNumeric(d[term.id]) ? +d[term.id] : 0
 	return [[id], value]
 }
 
+/* 
+	Arguments: 
+	d: data row, an object with sample ID and the annotation values for one or more terms,
+		 but this function is used specifically for annotation terms that are categorical
+	term
+
+	Returns:
+	[
+		[id]: a list of matching chartId, seriesId, or dataId for this data row,
+		value: the annotation value for this term
+	]
+*/
 function getNumericIdVal(d, term, q, rows) {
 	if (!('id' in term) || !(term.id in d)) return [[], undefined]
 	if (!q.computed_bins) {
@@ -248,23 +278,20 @@ function getNumericIdVal(d, term, q, rows) {
 			if (b.startunbounded) {
 				if (v < b.stop) {
 					ids.push(b.label)
-					break
-				}
-				if (b.stopinclusive && v == b.stop) {
+				} else if (b.stopinclusive && v === b.stop) {
 					ids.push(b.label)
-					break
 				}
 			}
 			if (b.stopunbounded) {
 				if (v > b.start) {
 					ids.push(b.label)
-					break
-				}
-				if (b.stopinclusive && v == b.start) {
+				} else if (b.stopinclusive && v === b.start) {
 					ids.push(b.label)
-					break
 				}
 			}
+			// for numeric terms, may match the sample annotation to at most one chartId, seriesId, or dataId,
+			// so break the loop as soon as a matching id is found for a data row
+			if (ids.length) break
 			if (b.startinclusive && v < b.start) continue
 			if (!b.startinclusive && v <= b.start) continue
 			if (b.stopinclusive && v > b.stop) continue
