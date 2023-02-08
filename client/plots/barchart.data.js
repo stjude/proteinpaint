@@ -289,16 +289,16 @@ function getNumericIdVal(d, term, q, rows) {
 				} else if (b.stopinclusive && v === b.start) {
 					ids.push(b.label)
 				}
+			} else if (
+				(v > b.start || (v === b.start && b.startinclusive)) &&
+				(v < b.stop || (v === b.stop && b.stopinclusive))
+			) {
+				ids.push(b.label)
 			}
 			// for numeric terms, may match the sample annotation to at most one chartId, seriesId, or dataId,
 			// so break the loop as soon as a matching id is found for a data row
+			// TODO: may allow exceptions later to have more than 1 matching id???
 			if (ids.length) break
-			if (b.startinclusive && v < b.start) continue
-			if (!b.startinclusive && v <= b.start) continue
-			if (b.stopinclusive && v > b.stop) continue
-			if (!b.stopinclusive && v >= b.stop) continue
-			ids.push(b.label)
-			break
 		}
 		return [ids, v]
 	}
