@@ -36,6 +36,13 @@ h2 {
 
 /* use default browser styles within pp-controlled divs */
 
+/* using the !important flag:
+- this flag is used to override conflicting styles
+- this flag will override both embedder styling and inline styling
+- it is not necessary to use this flag to prevent embedder styles from overriding pp styles, because specifying styles within pp-specific classes will usually prevent this issue
+- the only time when it is necessary to use this flag is when (1) the conflicting styling also has an !important flag or (2) the conflicting styling is also specified in this same file
+*/
+
 
 .sja_root_holder {
     /*background-color: #fff;*/
@@ -56,7 +63,7 @@ h2 {
 }
 
 .sja_root_holder svg {
-    display: inline-block !important
+    display: inline-block
 }
 /*
     override the thicker button border
@@ -96,19 +103,27 @@ h2 {
     text-decoration: underline;
 }
 
-.sja_root_holder input {
-    padding: 2px !important;
+.sja_root_holder input,
+.sja_menu_div input,
+.sja_pane input {
+    padding: 1px 3px;
     margin:  2px 5px;
+    border:  1px solid #ccc;
 }
 
-.sja_root_holder input[type="text"],
-.sja_root_holder input[type="search"] {
-    border:  1px solid #ccc !important;
+.sja_root_holder select,
+.sja_menu_div select,
+.sja_pane select {
+    padding: 1px 3px;
+    padding-right: 30px; /* padding between text and arrow */
+    background-size: auto;
+    background-position: right;
 }
 
-.sja_root_holder [type="text"],
-.sja_root_holder [type="search"] {
-    border:  1px solid #ccc !important;
+.sja_root_holder textarea,
+.sja_menu_div textarea,
+.sja_pane textarea {
+    padding: 2px;
 }
 
 .sja_root_holder input[type="search"].tree_search {
@@ -185,7 +200,7 @@ h2 {
 }
 
 .sja_sharp_border {
-    border-radius: 0px !important;
+    border-radius: 0px;
 }
 .sja_menuoption:hover {
     background-color: #e6e6e6

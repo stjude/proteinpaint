@@ -71,23 +71,12 @@ export function getHandler(self) {
 
 			self.dom.bins_table = self.dom.bins_div
 				.append('div')
-				.append('table')
+				.style('display', 'flex')
 				.style('color', 'rgb(136, 136, 136)')
+				.style('margin', '10px')
 				.style('width', '100%')
-			const thead = self.dom.bins_table
-				.append('thead')
-				.append('tr')
-				.style('text-align', 'left')
 
-			thead
-				.append('th')
-				.style('font-weight', 'normal')
-				.html('Range')
-			thead
-				.append('th')
-				.style('font-weight', 'normal')
-				.html('Bin Label')
-			self.dom.customBintbody = self.dom.bins_table.append('tbody').style('vertical-align', 'top')
+			self.dom.rangeAndLabelDiv = self.dom.bins_table.append('div')
 
 			renderBoundaryInputDivs(self, self.q.lst)
 
@@ -253,7 +242,7 @@ async function renderCuttoffInput(self) {
 function processCustomBinInputs(self) {
 	const startinclusive = self.dom.boundaryInput.property('value') == 'startinclusive'
 	const stopinclusive = self.dom.boundaryInput.property('value') == 'stopinclusive'
-	const inputDivs = self.dom.customBintbody.node().querySelectorAll('input')
+	const inputDivs = self.dom.bins_table.node().querySelectorAll('input')
 	let prevBin
 	const val = self.q.lst[0].stop // should not get value from dom.customBinBoundaryInput as value can be percentile
 

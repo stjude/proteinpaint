@@ -56,10 +56,23 @@ function getPillStatus(self) {
 }
 
 function showMenu_discrete(self, div) {
-	const value_type_select = div
+	// div for selecting type of grade
+	const value_type_div = div
+		.append('div')
+		.style('margin', '10px 0px 10px 5px')
+		.style('border-left', 'solid 1px #ededed')
+
+	value_type_div
+		.append('div')
+		.style('display', 'inline-block')
+		.style('margin', '0px 0px 5px 5px')
+		.style('color', 'rgb(136, 136, 136)')
+		.text('Grade type:')
+
+	const value_type_select = value_type_div
 		.append('select')
-		.style('margin', '10px')
-		.style('display', 'block')
+		.style('display', 'inline')
+		.style('margin', '0px 10px')
 		.on('change', () => {
 			const i = value_type_select.property('selectedIndex')
 			self.q.bar_by_grade = i != 3
@@ -91,87 +104,110 @@ function showMenu_discrete(self, div) {
 		return
 	}
 
-	addBreaksSelector(
-		self,
-		div
-			.append('div')
-			.style('margin', '15px 10px 10px 15px')
-			.style('padding-left', '10px')
-			.style('border-left', 'solid 1px #ededed')
-	)
-}
-
-function addBreaksSelector(self, div) {
-	div
+	// div for entering cutoff grades
+	const breaksSelectorDiv = div
 		.append('div')
-		.text('Optionally, select cutoff grades to divide grades to groups:')
-		.style('width', '300px')
-		.style('opacity', 0.5)
+		.style('margin', '20px 0px 10px 5px')
+		.style('border-left', 'solid 1px #ededed')
 
-	const holder = div
+	breaksSelectorDiv
 		.append('div')
-		.style('margin-top', '10px')
+		.text('Divide grades into groups (optional):')
+		.style('margin', '0px 0px 10px 5px')
+		.style('color', 'rgb(136, 136, 136)')
+
+	const holder = breaksSelectorDiv
+		.append('div')
+		.style('display', 'flex')
+		.style('align-items', 'start')
+		.style('margin-left', '10px')
+		.style('width', '100%')
+
+	// gradeValuesDiv for entering grade values
+	// rangeNameDiv for rendering ranges and labels
+	const gradeValuesDiv = holder.append('div').style('margin-right', '20px')
+	const rangeNameDiv = holder
+		.append('div')
 		.style('display', 'grid')
 		.style('grid-template-columns', 'auto auto')
-		.style('gap', '10px')
+		.style('column-gap', '20px')
+		.style('align-items', 'center')
+		.style('margin-right', '5px')
 
 	// TODO replace <textarea> with progressive cutoff selector, may keep using ui components for rangeNameDiv
-	const textarea = holder
+	gradeValuesDiv
 		.append('div')
+		.style('margin-bottom', '5px')
+		.style('color', 'rgb(136, 136, 136)')
+		.text('Cutoff grades')
+
+	const textarea = gradeValuesDiv
 		.append('textarea')
-		.style('width', '80px')
-		.style('height', '80px')
-		.property('placeholder', 'Enter grade values')
+		.style('width', '100px')
+		.style('height', '70px')
 		.on('keyup', event => {
 			if (!keyupEnter(event)) return
 			textarea2gradeUI()
 		})
 
-	const rangeNameDiv = holder
+	// help note
+	gradeValuesDiv
 		.append('div')
-		.style('display', 'grid')
-		.style('grid-template-columns', 'auto auto')
-		.style('gap', '10px')
-	const rangeDiv = rangeNameDiv.append('div')
-	const nameDiv = rangeNameDiv.append('div')
+		.style('font-size', '.6em')
+		.style('margin-left', '1px')
+		.style('color', '#858585')
+		.html('Enter numeric values </br>seperated by ENTER')
+
 	if (self.q.breaks.length) {
 		textarea.property('value', self.q.breaks.join('\n'))
 	}
+
 	textarea2gradeUI()
 	function textarea2gradeUI() {
-		rangeDiv.selectAll('*').remove()
-		nameDiv.selectAll('*').remove()
+		rangeNameDiv.selectAll('*').remove()
 		const breaks = textarea2breaks()
 		if (breaks.length == 0) return
+		rangeNameDiv
+			.append('div')
+			.style('margin-bottom', '3px')
+			.style('color', 'rgb(136, 136, 136)')
+			.text('Range')
+		rangeNameDiv
+			.append('div')
+			.style('margin-bottom', '3px')
+			.style('color', 'rgb(136, 136, 136)')
+			.text('Label')
 		for (const [i, b1] of breaks.entries()) {
 			// each break creates a group
-			const rangeCell = rangeDiv
+			const b0 = breaks[i - 1]
+			const range = i === 0 ? '<' + b1 : b1 - b0 === 1 ? b0 : b0 + '-' + (b1 - 1)
+
+			// range
+			rangeNameDiv.append('div').text(range)
+
+			// name
+			rangeNameDiv
 				.append('div')
-				.style('opacity', 0.4)
-				.style('margin', '5px')
-			const nameCell = nameDiv.append('input').style('display', 'block')
-			if (i == 0) {
-				rangeCell.text('<' + b1)
-				nameCell.property('value', 'Grade <' + b1)
-			} else {
-				const b0 = breaks[i - 1]
-				const str = b1 - b0 == 1 ? b0 : b0 + '-' + (b1 - 1)
-				rangeCell.text(str)
-				nameCell.property('value', 'Grade ' + str)
-			}
+				.append('input')
+				.attr('type', 'text')
+				.property('value', 'Grade ' + range)
+				.style('margin', '2px 0px')
 		}
 		// last group
 		const b1 = breaks[breaks.length - 1]
-		const rangeCell = rangeDiv.append('div').style('opacity', 0.4)
-		const nameCell = nameDiv.append('input').style('display', 'block')
-		const str = b1 == 5 ? b1 : b1 + '-5'
-		rangeCell.text(str)
-		nameCell.property('value', 'Grade ' + str)
+		const range = b1 == 5 ? b1 : b1 + '-5'
+		rangeNameDiv.append('div').text(range)
+		rangeNameDiv
+			.append('div')
+			.append('input')
+			.attr('type', 'text')
+			.property('value', 'Grade ' + range)
+			.style('margin', '2px 0px')
 
-		// name <input> for all groups are created under nameDiv
+		// name <input> for all groups are created under rangeNameDiv
 		// if q.groupNames are there, override
 		if (self.q.groupNames) {
-			const lst = nameDiv.selectAll('input').nodes()
+			const lst = rangeNameDiv.selectAll('input').nodes()
 			for (const [i, name] of self.q.groupNames.entries()) {
 				if (lst[i]) lst[i].value = name
 			}
@@ -193,6 +229,7 @@ function addBreaksSelector(self, div) {
 		return lst.sort((i, j) => i - j)
 	}
 
+	// Apply button
 	div
 		.append('button')
 		.text('Apply')
@@ -200,7 +237,7 @@ function addBreaksSelector(self, div) {
 		.on('click', event => {
 			self.q.breaks = textarea2breaks()
 			self.q.groupNames = []
-			for (const i of nameDiv.selectAll('input').nodes()) {
+			for (const i of rangeNameDiv.selectAll('input').nodes()) {
 				self.q.groupNames.push(i.value)
 			}
 			event.target.disabled = true

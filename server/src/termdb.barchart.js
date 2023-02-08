@@ -247,7 +247,7 @@ function getPj(q, data, tdb, ds) {
 			isGenotype: q['term' + i + '_is_genotype'],
 			bins,
 			q: d.q,
-			orderedLabels: getOrderedLabels(d.term, bins)
+			orderedLabels: getOrderedLabels(d.term, bins, d.q)
 		})
 	})
 
@@ -373,12 +373,15 @@ function getPj(q, data, tdb, ds) {
 	})
 }
 
-export function getOrderedLabels(term, bins) {
-	if (term.type == 'condition' && term.values) {
-		return Object.keys(term.values)
-			.map(Number)
-			.sort((a, b) => a - b)
-			.map(i => term.values[i].label)
+export function getOrderedLabels(term, bins, q) {
+	if (term.type == 'condition') {
+		if (q?.groupNames?.length) return q.groupNames
+		if (term.values) {
+			return Object.keys(term.values)
+				.map(Number)
+				.sort((a, b) => a - b)
+				.map(i => term.values[i].label)
+		}
 	}
 	const firstVal = Object.values(term.values || {})[0]
 	if (firstVal && 'order' in firstVal) {
