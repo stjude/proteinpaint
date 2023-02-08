@@ -80,7 +80,11 @@ tape('Render summary plot, term: "agedx"', test => {
 	}
 
 	async function testToggleButtons(summary, sandboxDom) {
-		const toggles = sandboxDom.chartToggles.nodes().filter(d => d.__data__.isVisible() == true)
+		const toggles = sandboxDom.chartToggles
+			.selectAll('div > div> button')
+			.nodes()
+			.filter(d => d.__data__.isVisible() == true)
+		console.log(toggles)
 		//test correct tabs exist
 		const tabLabels2Find = ['Barchart', 'Violin'] //hardcoded data in summary.js.
 		let foundLabels = 0
@@ -170,7 +174,10 @@ tape('Barchart tab only, term: "diaggrp"', test => {
 	})
 
 	async function runTest(summary) {
-		const toggles = summary.Inner.dom.chartToggles.nodes().filter(d => d.__data__.isVisible() == true)
+		const toggles = summary.Inner.dom.chartToggles
+			.selectAll('div > div> button')
+			.nodes()
+			.filter(d => d.__data__.isVisible() == true)
 		test.ok(toggles.length == 1, `Should only render one tab`)
 		if (toggles[0].__data__.childType == 'barchart') test.pass(message)
 		else test.fail(message)
@@ -216,7 +223,10 @@ tape('Barchart & violin toggles, term: "diaggrp", term2: "agedx"', test => {
 	}
 
 	async function testToggleButtons(summary, sandboxDom) {
-		const toggles = sandboxDom.chartToggles.nodes().filter(d => d.__data__.isVisible() == true)
+		const toggles = sandboxDom.chartToggles
+			.selectAll('div > div> button')
+			.nodes()
+			.filter(d => d.__data__.isVisible() == true)
 
 		//Toggle to violin
 		toggles.find(d => d.__data__.childType == 'violin').click()
@@ -272,7 +282,10 @@ tape('Barchart & violin toggles, term: "agedx", term2: "diaggrp"', test => {
 	}
 
 	async function testToggleButtons(summary, sandboxDom) {
-		const toggles = sandboxDom.chartToggles.nodes().filter(d => d.__data__.isVisible() == true)
+		const toggles = sandboxDom.chartToggles
+			.selectAll('div > div> button')
+			.nodes()
+			.filter(d => d.__data__.isVisible() == true)
 
 		//Toggle to violin
 		toggles.find(d => d.__data__.childType == 'violin').click()
@@ -328,7 +341,10 @@ tape('Barchart & violin toggles, term: "agedx", term2: "hrtavg"', test => {
 	}
 
 	async function testToggleButtons(summary, sandboxDom) {
-		const toggles = sandboxDom.chartToggles.nodes().filter(d => d.__data__.isVisible() == true)
+		const toggles = sandboxDom.chartToggles
+			.selectAll('div > div> button')
+			.nodes()
+			.filter(d => d.__data__.isVisible() == true)
 
 		//Toggle to violin
 		toggles.find(d => d.__data__.childType == 'violin').click()
@@ -386,6 +402,7 @@ tape('Overlay continuity, term: "aaclassic_5", term2: "sex"', test => {
 	async function testOverlay(summary) {
 		const plotsConfig = summary.Inner.components.plots
 		summary.Inner.dom.chartToggles
+			.selectAll('div > div> button')
 			.nodes()
 			.find(d => d.__data__.childType == 'violin')
 			.click()

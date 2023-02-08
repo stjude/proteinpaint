@@ -80,9 +80,9 @@ export function handle_request_closure(genomes) {
 
 			throw "termdb: don't know what to do"
 		} catch (e) {
-			console.log(e)
 			res.send({ error: e.message || e })
 			if (e.stack) console.log(e.stack)
+			else console.log(e)
 		}
 	}
 }

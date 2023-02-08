@@ -202,13 +202,7 @@ class ViolinPlot {
 			rightMargin: s.rightMargin
 		}
 
-		if (term?.q?.mode === 'continuous' && term2?.q?.mode === 'continuous') {
-			this.app.dispatch({
-				type: 'plot_edit',
-				id: this.id,
-				config: { childType: 'sampleScatter', xTW: term, yTW: term2, groups: [] }
-			})
-		} else if ((term.term.type == 'float' || term.term.type == 'integer') && term.q.mode == 'continuous') {
+		if ((term.term.type == 'float' || term.term.type == 'integer') && term.q.mode == 'continuous') {
 			arg.termid = term.id
 			arg.divideTw = term2
 		} else if ((term2?.term?.type == 'float' || term2?.term?.type == 'integer') && term2.q.mode == 'continuous') {

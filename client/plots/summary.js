@@ -193,7 +193,8 @@ function setRenderers(self) {
 						}
 						const config = { childType: 'barchart', term: _term, term2: _term2 }
 						return config
-					}
+					},
+					active: true
 				},
 				{
 					childType: 'violin',
@@ -205,31 +206,53 @@ function setRenderers(self) {
 						self.config.term2?.term.type === 'integer' ||
 						self.config.term2?.term.type === 'float',
 					getConfig: async () => {
-						const termKey =
-							self.config.term?.term.type == 'float' ||
-							self.config.term?.term.type == 'integer' ||
-							this.config.term.q?.mode == 'continuous'
-								? 'term'
-								: 'term2'
-
-						const termT = self.config[termKey]
-						const tw = await self.getWrappedTermCopy(termT, 'continuous')
-						const config = { childType: 'violin', [termKey]: tw }
+						let _term, _term2
+						//If the first term was continuous or is coming as continuous
+						if (self.violinContTerm === 'term' || this.config.term.q?.mode == 'continuous') {
+							// must mean coming from scatter
+							_term = await self.getWrappedTermCopy(self.config.term, 'continuous')
+							_term2 = await self.getWrappedTermCopy(self.config.term2, 'discrete')
+							self.violinContTerm = 'term'
+						}
+						//If the second term was continuous or is coming as continuous
+						else if (self.violinContTerm === 'term2' || this.config.term2?.q?.mode == 'continuous') {
+							// must mean coming from barchart
+							_term = await self.getWrappedTermCopy(self.config.term, 'discrete')
+							_term2 = await self.getWrappedTermCopy(self.config.term2, 'continuous')
+							self.violinContTerm = 'term2'
+						}
+						//If the second term is coming as discrete from the scatter
+						else if (this.config.term2?.q?.mode == 'discrete') {
+							// must mean coming from barchart
+							_term = await self.getWrappedTermCopy(self.config.term, 'discrete')
+							_term2 = await self.getWrappedTermCopy(self.config.term2, 'continuous')
+							self.violinContTerm = 'term2'
+						}
+						//by default
+						else {
+							_term = await self.getWrappedTermCopy(self.config.term, 'continuous')
+							_term2 = await self.getWrappedTermCopy(self.config.term2, 'discrete')
+							self.violinContTerm = 'term'
+						}
+						const config = { childType: 'violin', term: _term, term2: _term2 }
 						return config
-					}
+					},
+					active: false
 				},
 				{
 					childType: 'table',
 					label: 'Crosstab - in development',
 					disabled: d => true,
-					isVisible: () => false
+					isVisible: () => false,
+					active: false
 				},
 				{
 					childType: 'boxplot',
 					label: 'Boxplot - TODO',
 					disabled: d => true,
-					isVisible: () => false // remove during development
-					// isVisible: () => self.config.term.type === 'integer' || self.config.term.type === 'float'
+					isVisible: () => false, // remove during development
+					// isVisible: () => self.config.term.type === 'integer' || self.config.term.type === 'float',
+					active: false
 				},
 				{
 					childType: 'sampleScatter',
@@ -244,12 +267,12 @@ function setRenderers(self) {
 					getConfig: async () => {
 						const _term = await self.getWrappedTermCopy(self.config.term, 'continuous')
 						const _term2 = await self.getWrappedTermCopy(self.config.term2, 'continuous')
-						const config = { childType: 'sampleScatter', xTW: _term, yTW: _term2, groups: [] }
+						const config = { childType: 'sampleScatter', term: _term, term2: _term2, groups: [] }
 						return config
-					}
+					},
+					active: false
 				}
 			]
-
 			self.dom.chartToggles = self.dom.paneTitleDiv
 				.append('div')
 				.style('display', 'inline-block')
@@ -269,9 +292,7 @@ function setRenderers(self) {
 	self.getWrappedTermCopy = async function(term, mode) {
 		if (!term) return
 		const tw = structuredClone(term)
-		if (!tw.qCacheByMode) tw.qCacheByMode = {}
-		tw.q.mode = tw.qCacheByMode[mode]?.mode || mode
-		tw.qCacheByMode[mode] = tw.q
+		tw.q.mode = mode
 		// If tw.q is empty/undefined, the default q
 		// will be assigned by fillTw by term type
 		await fillTermWrapper(tw, self.app.vocabApi)
@@ -328,12 +349,16 @@ export async function getPlotConfig(opts, app) {
 			sampleScatter: getDefaultScatterSettings(app)
 		},
 		mayAdjustConfig(config, edits = {}) {
+			/*
+				when recovering from state:
+				  - mayAdjustConfig should not even run: how to know initial
+			*/
 			if (!edits.childType) {
-				if (config.term?.q?.mode == 'continuous' && config.term2?.q?.mode == 'continuous')
+				if (config.term?.q?.mode == 'continuous' && config.term2?.q?.mode == 'continuous') {
 					config.childType = 'sampleScatter'
-				else if (config.term?.q?.mode == 'continuous' || config.term2?.q?.mode == 'continuous')
+				} else if (config.term?.q?.mode == 'continuous' || config.term2?.q?.mode == 'continuous') {
 					config.childType = 'violin'
-				else config.childType = 'barchart'
+				} else config.childType = 'barchart'
 			}
 		}
 	}

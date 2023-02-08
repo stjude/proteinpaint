@@ -227,63 +227,6 @@ tape('Render PNET scatter plot', function(test) {
 	}
 })
 
-tape('Missing colorTW', async function(test) {
-	test.timeoutAfter(3000)
-	const message = `Should display error for missing colorTW`
-	const holder = getHolder()
-
-	try {
-		runpp({
-			holder,
-			state: {
-				plots: [
-					{
-						chartType: 'sampleScatter',
-						name: 'Methylome TSNE'
-					}
-				]
-			}
-		})
-		await sleep(300)
-		test.equal(holder.selectAll('.sja_errorbar').size(), 1, 'Should display, "Error: sampleScatter getPlotConfig: opts.colorTW{} missing".')
-	} catch (e) {
-		test.fail(message + ': ' + e)
-	}
-
-	if (test._ok) holder.remove()
-	test.end()
-})
-
-tape('Missing colorTW.id', async function(test) {
-	test.timeoutAfter(3000)
-	const message = `Should display error for missing colorTW.id and missing colorTW.term`
-	const holder = getHolder()
-
-	try {
-		runpp({
-			holder,
-			state: {
-				plots: [
-					{
-						chartType: 'sampleScatter',
-						colorTW: {
-							id: ''
-						},
-						name: 'Methylome TSNE'
-					}
-				]
-			}
-		})
-		await sleep(300)
-		test.equal(holder.selectAll('.sja_errorbar').size(), 1, 'Should display, "Error: missing both .id and .term [bsampleScatter getPlotConfig()]".')
-	} catch (e) {
-		test.fail(message + ': ' + e)
-	}
-
-	if (test._ok) holder.remove()
-	test.end()
-})
-
 tape('Invalid colorTW.id', async function(test) {
 	test.timeoutAfter(3000)
 	const message = `Should display error for colorTW.id not found within dataset`
@@ -305,7 +248,11 @@ tape('Invalid colorTW.id', async function(test) {
 			}
 		})
 		await sleep(300)
-		test.equal(holder.selectAll('.sja_errorbar').size(), 1, 'Should display, "Error: no term found for Not real data [bsampleScatter getPlotConfig()]".')
+		test.equal(
+			holder.selectAll('.sja_errorbar').size(),
+			1,
+			'Should display, "Error: no term found for Not real data [bsampleScatter getPlotConfig()]".'
+		)
 	} catch (e) {
 		test.fail(message + ': ' + e)
 	}
@@ -335,36 +282,11 @@ tape('Invalid colorTW.term', async function(test) {
 			}
 		})
 		await sleep(500)
-		test.equal(holder.selectAll('.sja_errorbar').size(), 1, 'Should display, "Error: Error: Cannot find module \'./undefined.js\' [bsampleScatter getPlotConfig()]".')
-	} catch (e) {
-		test.fail(message + ': ' + e)
-	}
-
-	if (test._ok) holder.remove()
-	test.end()
-})
-
-tape('Missing plot name', async function(test) {
-	test.timeoutAfter(3000)
-	const message = `Should display error for missing plotName`
-	const holder = getHolder()
-
-	try {
-		runpp({
-			holder,
-			state: {
-				plots: [
-					{
-						chartType: 'sampleScatter',
-						colorTW: {
-							id: 'TSNE Category'
-						}
-					}
-				]
-			}
-		})
-		await sleep(500)
-		test.equal(holder.selectAll('.sja_errorbar').size(), 1, 'Should display, "Error: plot not found with plotName".')
+		test.equal(
+			holder.selectAll('.sja_errorbar').size(),
+			1,
+			'Should display, "Error: Error: Cannot find module \'./undefined.js\' [bsampleScatter getPlotConfig()]".'
+		)
 	} catch (e) {
 		test.fail(message + ': ' + e)
 	}
@@ -394,7 +316,11 @@ tape('Invalid plot name', async function(test) {
 			}
 		})
 		await sleep(500)
-		test.equal(holder.selectAll('.sja_errorbar').size(), 1, 'Should display, "Error: plot not found with plotName".')
+		test.equal(
+			holder.selectAll('.sja_errorbar').size(),
+			1,
+			'Should display, "Error: plot not found with plotName: Not real data".'
+		)
 	} catch (e) {
 		test.fail(message + ': ' + e)
 	}

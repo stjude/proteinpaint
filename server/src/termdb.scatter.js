@@ -133,14 +133,10 @@ export async function trigger_getSampleScatter(q, res, ds, genome) {
 			refSamples = []
 			cohortSamples = getScatterCoordinates(q, ds)
 		} else {
+			if (!q.plotName) throw `Neither plot name or coordinates where provided`
 			if (!ds.cohort.scatterplots || !ds.cohort.scatterplots.plots) throw 'not supported'
 			const plot = ds.cohort.scatterplots.plots.find(p => p.name == q.plotName)
-			if (!plot)
-				return {
-					samples: [],
-					colorLegend: [],
-					shapeLegend: []
-				}
+			if (!plot) throw `plot not found with plotName ${q.plotName}`
 
 			const result = await getSamples(plot)
 			refSamples = result[0]

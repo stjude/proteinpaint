@@ -176,8 +176,8 @@ class Scatter {
 	getDataRequestOpts() {
 		const c = this.config
 		const coordTWs = []
-		if (c.xTW) coordTWs.push(c.xTW)
-		if (c.yTW) coordTWs.push(c.yTW)
+		if (c.term) coordTWs.push(c.term)
+		if (c.term2) coordTWs.push(c.term2)
 		const opts = {
 			name: c.name, // the actual identifier of the plot, for retrieving data from server
 			colorTW: c.colorTW,
@@ -191,101 +191,108 @@ class Scatter {
 	async setControls() {
 		const controlsHolder = this.dom.controls.attr('class', 'pp-termdb-plot-controls').style('display', 'inline-block')
 
+		const inputs = [
+			{
+				type: 'term',
+				configKey: 'colorTW',
+				chartType: 'sampleScatter',
+				usecase: { target: 'sampleScatter', detail: 'colorTW' },
+				title: 'Categories to color the samples',
+				label: 'Color',
+				vocabApi: this.app.vocabApi,
+				numericEditMenuVersion: ['continuous', 'discrete']
+			},
+			{
+				type: 'term',
+				configKey: 'shapeTW',
+				chartType: 'sampleScatter',
+				usecase: { target: 'sampleScatter', detail: 'shapeTW' },
+				title: 'Categories to assign a shape',
+				label: 'Shape',
+				vocabApi: this.app.vocabApi
+			},
+
+			{
+				label: 'Symbol size',
+				type: 'number',
+				chartType: 'sampleScatter',
+				settingsKey: 'size',
+				title: 'It represents the area of a symbol in square pixels',
+				min: 0
+			},
+
+			{
+				label: 'Chart width',
+				type: 'number',
+				chartType: 'sampleScatter',
+				settingsKey: 'svgw'
+			},
+			{
+				label: 'Chart height',
+				type: 'number',
+				chartType: 'sampleScatter',
+				settingsKey: 'svgh'
+			},
+			{
+				boxLabel: 'Visible',
+				label: 'Show axes',
+				type: 'checkbox',
+				chartType: 'sampleScatter',
+				settingsKey: 'showAxes',
+				title: `Option to show/hide plot axes`
+			},
+			{
+				label: 'Reference size',
+				type: 'number',
+				chartType: 'sampleScatter',
+				settingsKey: 'refSize',
+				title: 'It represents the area of the reference symbol in square pixels',
+				min: 0
+			},
+			{
+				label: 'Opacity',
+				type: 'number',
+				chartType: 'sampleScatter',
+				settingsKey: 'opacity',
+				title: 'It represents the opacity of the symbols',
+				min: 0,
+				max: 1
+			}
+		]
+		if (this.opts.parent?.type == 'summary')
+			inputs.unshift(
+				...[
+					{
+						type: 'term',
+						configKey: 'term',
+						chartType: 'sampleScatter',
+						usecase: { target: 'sampleScatter', detail: 'term' },
+						title: 'X coordinate to plot the samples',
+						label: 'X',
+						vocabApi: this.app.vocabApi,
+						menuOptions: '!remove',
+						numericEditMenuVersion: ['continuous', 'discrete']
+					},
+					{
+						type: 'term',
+						configKey: 'term2',
+						chartType: 'sampleScatter',
+						usecase: { target: 'sampleScatter', detail: 'term2' },
+						title: 'Y coordinate to plot the samples',
+						label: 'Y',
+						vocabApi: this.app.vocabApi,
+						menuOptions: '!remove',
+						numericEditMenuVersion: ['continuous', 'discrete']
+					}
+				]
+			)
+
 		this.components = {
 			controls: await controlsInit({
 				app: this.app,
 				id: this.id,
 				holder: controlsHolder,
-				inputs: [
-					{
-						type: 'term',
-						configKey: 'xTW',
-						chartType: 'sampleScatter',
-						usecase: { target: 'sampleScatter', detail: 'xTW' },
-						title: 'X coordinate to plot the samples',
-						label: 'X',
-						vocabApi: this.app.vocabApi,
-						menuOptions: '!remove',
-						numericEditMenuVersion: ['continuous']
-					},
-					{
-						type: 'term',
-						configKey: 'yTW',
-						chartType: 'sampleScatter',
-						usecase: { target: 'sampleScatter', detail: 'yTW' },
-						title: 'Y coordinate to plot the samples',
-						label: 'Y',
-						vocabApi: this.app.vocabApi,
-						menuOptions: '!remove',
-						numericEditMenuVersion: ['continuous']
-					},
-					{
-						type: 'term',
-						configKey: 'colorTW',
-						chartType: 'sampleScatter',
-						usecase: { target: 'sampleScatter', detail: 'colorTW' },
-						title: 'Categories to color the samples',
-						label: 'Color',
-						vocabApi: this.app.vocabApi,
-						numericEditMenuVersion: ['continuous', 'discrete']
-					},
-					{
-						type: 'term',
-						configKey: 'shapeTW',
-						chartType: 'sampleScatter',
-						usecase: { target: 'sampleScatter', detail: 'shapeTW' },
-						title: 'Categories to assign a shape',
-						label: 'Shape',
-						vocabApi: this.app.vocabApi
-					},
-
-					{
-						label: 'Symbol size',
-						type: 'number',
-						chartType: 'sampleScatter',
-						settingsKey: 'size',
-						title: 'It represents the area of a symbol in square pixels',
-						min: 0
-					},
-
-					{
-						label: 'Chart width',
-						type: 'number',
-						chartType: 'sampleScatter',
-						settingsKey: 'svgw'
-					},
-					{
-						label: 'Chart height',
-						type: 'number',
-						chartType: 'sampleScatter',
-						settingsKey: 'svgh'
-					},
-					{
-						boxLabel: 'Visible',
-						label: 'Show axes',
-						type: 'checkbox',
-						chartType: 'sampleScatter',
-						settingsKey: 'showAxes',
-						title: `Option to show/hide plot axes`
-					},
-					{
-						label: 'Reference size',
-						type: 'number',
-						chartType: 'sampleScatter',
-						settingsKey: 'refSize',
-						title: 'It represents the area of the reference symbol in square pixels',
-						min: 0
-					},
-					{
-						label: 'Opacity',
-						type: 'number',
-						chartType: 'sampleScatter',
-						settingsKey: 'opacity',
-						title: 'It represents the opacity of the symbols',
-						min: 0,
-						max: 1
-					}
-				]
+				inputs
 			})
 		}
 
@@ -1426,15 +1433,15 @@ function setInteractivity(self) {
 
 export async function getPlotConfig(opts, app) {
 	//if (!opts.colorTW) throw 'sampleScatter getPlotConfig: opts.colorTW{} missing'
-	//if (!opts.name && !(opts.xTW && opts.yTW)) throw 'sampleScatter getPlotConfig: missing coordinates input'
+	//if (!opts.name && !(opts.term && opts.term2)) throw 'sampleScatter getPlotConfig: missing coordinates input'
 	try {
 		if (opts.colorTW) await fillTermWrapper(opts.colorTW, app.vocabApi)
 		if (opts.shapeTW) await fillTermWrapper(opts.shapeTW, app.vocabApi)
-		if (opts.xTW) await fillTermWrapper(opts.xTW, app.vocabApi)
-		if (opts.yTW) await fillTermWrapper(opts.yTW, app.vocabApi)
+		if (opts.term) await fillTermWrapper(opts.term, app.vocabApi)
+		if (opts.term2) await fillTermWrapper(opts.term2, app.vocabApi)
 
 		const settings = getDefaultScatterSettings()
-		if (!opts.xTW && !opts.yTW) settings.showAxes = false
+		if (!opts.term && !opts.term2) settings.showAxes = false
 		const config = {
 			groups: [],
 			gradientColor: '#008000',
