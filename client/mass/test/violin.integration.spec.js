@@ -1,10 +1,6 @@
 import tape from 'tape'
 import { getRunPp } from '../../test/front.helpers.js'
 import { fillTermWrapper } from '../../termsetting/termsetting.js'
-// import * as d3s from 'd3-selection'
-// import { displayBrushMenu } from '../../plots/violin.renderer.js'
-// import { createNumericScale } from '../../plots/violin.renderer.js'
-// import { getAddFilterCallback } from '../../plots/violin.renderer.js'
 import { getFilterItemByTag } from '../../filter/filter.js'
 import { filterJoin } from '../../filter/filter.js'
 
@@ -345,7 +341,6 @@ tape('test label clicking/brushing and filtering', function(test) {
 	async function runTests(violin) {
 		violin.on('postRender.test', null)
 		const violinDiv = violin.Inner.dom.violinDiv
-		const violinDivControls = violin.Inner.dom.controls
 		const violinDivData = violin.Inner.data.plots
 		const violinSettings = violin.Inner.config.settings.violin
 		await sleep(800)
@@ -370,7 +365,8 @@ tape('test label clicking/brushing and filtering', function(test) {
 			.click()
 		test.ok(true, 'label Clicking and filtering ok!')
 	}
-	//TODO test brushing and then filtering. This function tests filtering based on range provided.
+
+	//This function tests filtering based on range provided.
 	async function testFiltering(violin) {
 		const tvslst = {
 			type: 'tvslst',
@@ -433,6 +429,61 @@ tape('test label clicking/brushing and filtering', function(test) {
 			filter
 		})
 		test.ok(true, 'Filtering works as expected upon given range(start, stop) of values')
+	}
+})
+
+tape('test Hide option on label clicking', function(test) {
+	test.timeoutAfter(5000)
+	runpp({
+		state: {
+			plots: [open_state]
+		},
+		violin: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+	async function runTests(violin) {
+		violin.on('postRender.test', null)
+		const legendDiv = violin.Inner.dom.legendDiv
+		await sleep(800)
+		testHideOption(violin, legendDiv) //test filter on label clicking
+		await sleep(800)
+		testHiddenValues(violin, legendDiv)
+		await sleep(500)
+		if (test._ok) violin.Inner.app.destroy()
+		test.end()
+	}
+
+	function testHideOption(violin) {
+		const q = {
+			groupsetting: { disabled: true },
+			hiddenValues: { 'Female, n=35': 1 },
+			isAtomic: true,
+			type: 'values'
+		}
+		violin.Inner.app.dispatch({
+			type: 'plot_edit',
+			id: violin.Inner.id,
+			config: {
+				term2: {
+					isAtomic: true,
+					id: violin.Inner.config.term2.id,
+					term: violin.Inner.config.term2.term,
+					q: q
+				}
+			}
+		})
+		test.ok(true, 'label Clicking and Hide option ok!')
+	}
+
+	async function testHiddenValues(violin, legendDiv) {
+		await sleep(300)
+		test.true(
+			violin.Inner.config.term2.q.hiddenValues[legendDiv.node().querySelectorAll('.sjpp-htmlLegend')[8].innerHTML],
+			'q.hiddenValues match legend'
+		)
 	}
 })
 
@@ -514,5 +565,79 @@ tape('term1 as categorical and term2 numeric', function(test) {
 		await sleep(800)
 		if (test._ok) violin.Inner.app.destroy()
 		test.end()
+	}
+})
+
+tape('test custom groupsetting from Methylome tSNE', function(test) {
+	test.timeoutAfter(3000)
+	runpp({
+		state: {
+			nav: {
+				header_mode: 'hide_search'
+			},
+			plots: [
+				{
+					chartType: 'summary',
+					childType: 'violin',
+					term: {
+						id: 'agedx',
+						included_types: ['float'],
+						isAtomic: true,
+						isLeaf: true,
+						name: 'Age (years) at Cancer Diagnosis',
+						q: {
+							mode: 'continuous'
+						}
+					}
+				}
+			]
+		},
+		violin: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+
+	async function runTests(violin) {
+		violin.on('postRender.test', null)
+		testSamplelst(violin)
+		await sleep(400)
+		if (test._ok) violin.Inner.app.destroy()
+		test.end()
+	}
+
+	function testSamplelst(violin) {
+		violin.Inner.app.dispatch({
+			id: violin.Inner.id,
+			type: 'plot_edit',
+			config: {
+				term2: {
+					term: {
+						name: 'Methylome TSNE groups',
+						type: 'samplelst'
+					},
+					q: {
+						mode: 'custom-groupsetting',
+						groups: [
+							{
+								name: 'Group 1',
+								key: 'sample',
+								values: ['2646', '2800', '2856', '2884', '2954', '3150']
+							},
+							{
+								name: 'Others',
+								key: 'sample',
+								in: false,
+								values: ['2646', '2800', '2856', '2884', '2954', '3150']
+							}
+						],
+						isAtomic: true
+					},
+					isAtomic: true
+				}
+			}
+		})
+		test.ok(true, 'Custom groups rendered')
 	}
 })

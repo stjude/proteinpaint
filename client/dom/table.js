@@ -89,7 +89,7 @@ export async function renderTable({
 
 	function validateInput() {
 		if (!columns || columns?.length == 0) throw `Missing columns data`
-		if (!rows || rows?.length == 0) throw `Missing rows data`
+		if (!rows) throw `Missing rows data`
 		if (!div) throw `Missing div argument`
 		let lineNumsWithDataProbs = []
 		for (const [i, row] of rows.entries()) {
