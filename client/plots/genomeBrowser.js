@@ -3,7 +3,7 @@ import { addGeneSearchbox } from '#dom/genesearch'
 import { Menu } from '#dom/menu'
 import { sayerror } from '#dom/error'
 import { dofetch3 } from '#common/dofetch'
-import { getNormalRoot } from '#filter/filter'
+import { filterInit, getNormalRoot } from '#filter/filter'
 import { first_genetrack_tolist } from '#common/1stGenetk'
 import { mayDisplayVariantFilter } from '#termsetting/handlers/snplocus'
 
@@ -46,6 +46,7 @@ this.blockInstance // exists when block has been launched; one block in each plo
 */
 
 const geneTip = new Menu({ padding: '0px' })
+const groupTip = new Menu({ padding: '0px' })
 
 class genomeBrowser {
 	constructor() {
@@ -116,9 +117,9 @@ class genomeBrowser {
 		this.dom.loadingDiv.style('display', 'none')
 	}
 
-	///////////////////////////////////////////
-	//   rest of methods are app-specific    //
-	///////////////////////////////////////////
+	//////////////////////////////////////////////////
+	//       rest of methods are app-specific       //
+	//////////////////////////////////////////////////
 
 	async makeControls() {
 		// if true, the ui is already made, and do not redo it
@@ -305,7 +306,9 @@ export function makeChartBtnMenu(holder, chartsInstance) {
 	const result = addGeneSearchbox(arg)
 }
 
-///////////////////////////////// helper functions
+//////////////////////////////////////////////////
+//                  helpers                     //
+//////////////////////////////////////////////////
 
 function makeVariantValueComputingControls(self) {
 	renderGroupUI(self, 0)
@@ -314,33 +317,111 @@ function makeVariantValueComputingControls(self) {
 
 function renderGroupUI(self, groupIdx) {
 	const div = groupIdx == 0 ? self.dom.group1div : self.dom.group2div
+
+	div.selectAll('*').remove()
+
 	const group = self.state.config.snvindel.details.groups[groupIdx]
 	if (!group) {
 		// group does not exist in groups[] based on array index, e.g. when there's just 1 group and groups[1] is undefined
-		// prompt to add new group
-		div
-			.append('span')
-			.text('Add new group')
-			.attr('class', 'sja_clbtext')
-			.on('click', () => {
-				launchMenu_createGroup(self, groupIdx)
-			})
+		makePrompt2addNewGroup(self, groupIdx, div)
 		return
 	}
 
 	// the group exists
 	// first show a button allowing to replace/delete this group
+	div
+		.append('div')
+		.style('display', 'inline-block')
+		.text('Group ' + (groupIdx + 1))
+		.attr('class', 'sja_menuoption')
+		.style('margin-right', '10px')
+		.on('click', event => {
+			if (groupIdx == 0) {
+				// this is 1st group, directly launch menu to change group, but do not allow to delete
+				launchMenu_createGroup(self, 0)
+				return
+			}
+			groupTip.showunder(event.target).clear()
+			groupTip.d
+				.append('div')
+				.text('Change')
+				.attr('class', 'sja_menuoption')
+				.style('border-radius', '0px')
+				.on('click', () => {
+					launchMenu_createGroup(self, 1)
+				})
+			groupTip.d
+				.append('div')
+				.text('Delete')
+				.attr('class', 'sja_menuoption')
+				.style('border-radius', '0px')
+				.on('click', () => {
+					// ui is not reactive
+					div.selectAll('*').remove()
+					makePrompt2addNewGroup(self, 1, div)
+
+					const groups = [self.state.config.snvindel.details.groups[0]] // only keep first group
+					self.app.dispatch({
+						type: 'plot_edit',
+						id: self.id,
+						config: { snvindel: { details: { groups } } }
+					})
+				})
+		})
 
 	if (group.type == 'info') {
+		div.append('span').text(group.infoKey)
+		div
+			.append('span')
+			.text('INFO FIELD')
+			.style('font-size', '.5em')
+			.style('margin-left', '10px')
 		return
 	}
 	if (group.type == 'population') {
+		div.append('span').text(group.label)
+		div
+			.append('span')
+			.text('POPULATION')
+			.style('font-size', '.5em')
+			.style('margin-left', '10px')
 		return
 	}
 	if (group.type == 'filter') {
+		/*
+		this group is based on a termdb-filter
+		TODO sample counts in tvs menu should reflect global mass filter; on every app update (e.g. cohort change) the cohort choice should be combined into group.filter (but remain invisible)
+		TODO subcohort from global mass filter should be combined into group.filter, but no need to render cohort choice in this filter ui. 
+		*/
+		filterInit({
+			holder: div,
+			vocab: self.app.opts.state.vocab,
+			emptyLabel: 'Entire cohort',
+			termdbConfig: self.state.termdbConfig,
+			callback: async f => {
+				const groups = JSON.parse(JSON.stringify(self.state.config.snvindel.details.groups))
+				groups[groupIdx].filter = f
+				self.app.dispatch({
+					type: 'plot_edit',
+					id: self.id,
+					config: { snvindel: { details: { groups } } }
+				})
+			}
+		}).main(group.filter)
 		return
 	}
 	throw 'renderGroupUI: unknown group type'
+}
+
+function makePrompt2addNewGroup(self, groupIdx, div) {
+	div
+		.append('div')
+		.text('Create group 2')
+		.attr('class', 'sja_menuoption')
+		.style('display', 'inline-block')
+		.on('click', () => {
+			launchMenu_createGroup(self, groupIdx)
+		})
 }
 
 function launchMenu_createGroup(self, groupIdx) {}

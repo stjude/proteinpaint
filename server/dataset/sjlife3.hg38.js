@@ -434,6 +434,7 @@ const snvindelComputeDetails = {
 			// type=population: a choice from queries.snvindel.populations
 			type: 'population',
 			key: 'gnomAD',
+			label: 'gnomAD',
 			// these flags must be duplicated from .populations[]
 			allowto_adjust_race: true,
 			adjust_race: true
