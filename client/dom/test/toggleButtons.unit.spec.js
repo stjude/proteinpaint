@@ -23,24 +23,15 @@ function sleep(ms) {
  test data
 ***************/
 
-const tabs = [
+const tabsData = [
 	{
-		label: 'Test tab 1',
-		callback: () => {
-			//empty for now
-		}
+		label: 'Test tab 1'
 	},
 	{
-		label: 'Test tab 2',
-		callback: () => {
-			//empty for now
-		}
+		label: 'Tab 2, long label'
 	},
 	{
-		label: 'Test tab 3',
-		callback: () => {
-			//empty for now
-		}
+		label: 'Test tab 3'
 	}
 ]
 
@@ -48,14 +39,17 @@ const tabs = [
  test sections
 
 init_tabs()
- - Render toggles
+ - Render init_tabs()
  - Missing holder
  - Missing tabs array
 
 Tabs
- - Render Tabs
+ - Render Tabs, default settings
  - Missing holder
  - Missing tabs array
+ - Invalid linePosition
+ - Invalid tabsPosition
+ - Render Tabs, vertical stack, right border
 
 ***************/
 
@@ -69,11 +63,11 @@ tape('\n', test => {
 	test.end()
 })
 
-tape('Render toggles', async test => {
+tape('Render init_tabs()', async test => {
 	test.timeoutAfter(1000)
 	const holder = getHolder()
 
-	init_tabs({ holder, tabs })
+	init_tabs({ holder, tabs: tabsData })
 
 	await testTabActivity()
 
@@ -82,7 +76,7 @@ tape('Render toggles', async test => {
 		const activeBtn = holder.selectAll('.sjpp-active').nodes()
 		test.equal(activeBtn.length, 1, `Should only display one active button`)
 		const tabBtns = holder.selectAll('.sj-toggle-button').nodes()
-		test.equal(tabBtns.length, tabs.length, `Should display all tabs in tabs array`)
+		test.equal(tabBtns.length, tabsData.length, `Should display all tabs in tabs array`)
 
 		await sleep(300)
 		tabBtns[1].click()
@@ -101,7 +95,7 @@ tape('Missing holder', async test => {
 
 	try {
 		async function testToggles() {
-			return init_tabs({ tabs })
+			return init_tabs({ tabs: tabsData })
 		}
 		await testToggles()
 		test.fail(message)
@@ -136,11 +130,11 @@ tape('\n', test => {
 	test.end()
 })
 
-tape('Render Tabs', async test => {
+tape('Render Tabs, default settings', async test => {
 	test.timeoutAfter(1000)
 	const holder = getHolder()
 
-	const initTabs = new Tabs({ holder, tabs })
+	const initTabs = new Tabs({ holder, tabs: tabsData })
 	initTabs.main()
 
 	await testTabActivity()
@@ -150,7 +144,7 @@ tape('Render Tabs', async test => {
 		const activeBtn = holder.selectAll('.sjpp-active').nodes()
 		test.equal(activeBtn.length, 1, `Should only display one active button`)
 		const tabBtns = holder.selectAll('.sj-toggle-button').nodes()
-		test.equal(tabBtns.length, tabs.length, `Should display all tabs in tabs array`)
+		test.equal(tabBtns.length, tabsData.length, `Should display all tabs in tabs array`)
 
 		await sleep(300)
 		tabBtns[1].click()
@@ -165,11 +159,11 @@ tape('Render Tabs', async test => {
 
 tape('Missing holder', async test => {
 	test.timeoutAfter(100)
-	const message = `Should throw for missing holder`
+	const message = `Should throw for missing .holder`
 
 	try {
 		async function testToggles() {
-			const initTabs = new Tabs({ tabs })
+			const initTabs = new Tabs({ tabs: tabsData })
 			initTabs.main()
 		}
 		await testToggles()
@@ -184,7 +178,7 @@ tape('Missing holder', async test => {
 tape('Missing tabs array', async test => {
 	test.timeoutAfter(100)
 	const holder = getHolder()
-	const message = `Should throw for missing tabs array`
+	const message = `Should throw for missing .tabs:[]`
 
 	try {
 		async function testToggles() {
@@ -195,6 +189,91 @@ tape('Missing tabs array', async test => {
 		test.fail(message)
 	} catch (e) {
 		test.pass(`${message}: ${e}`)
+	}
+
+	if (test._ok) holder.remove()
+	test.end()
+})
+
+tape('Invalid linePosition', async test => {
+	test.timeoutAfter(100)
+	const holder = getHolder()
+	const message = `Should throw for invalid .linePosition`
+
+	try {
+		async function testToggles() {
+			const initTabs = new Tabs({ holder, tabs: tabsData, linePosition: 'aa' })
+			initTabs.main()
+		}
+		await testToggles()
+		test.fail(message)
+	} catch (e) {
+		test.pass(`${message}: ${e}`)
+	}
+
+	if (test._ok) holder.remove()
+	test.end()
+})
+
+tape('Invalid tabsPosition', async test => {
+	test.timeoutAfter(100)
+	const holder = getHolder()
+	const message = `Should throw for invalid .tabsPosition`
+
+	try {
+		async function testToggles() {
+			const initTabs = new Tabs({ holder, tabs: tabsData, tabsPosition: 'aa' })
+			initTabs.main()
+		}
+		await testToggles()
+		test.fail(message)
+	} catch (e) {
+		test.pass(`${message}: ${e}`)
+	}
+
+	if (test._ok) holder.remove()
+	test.end()
+})
+
+tape('Render Tabs, vertical stack, right border', async test => {
+	test.timeoutAfter(1000)
+	const holder = getHolder()
+
+	const initTabs = new Tabs({ holder, tabs: tabsData, linePosition: 'right', tabsPosition: 'vertical' })
+	initTabs.tabs.forEach(tab => {
+		tab.callback = async event => {
+			tab.contentHolder.text(`${tab.label} active`)
+		}
+	})
+	initTabs.main()
+
+	await testTabsPosition()
+	await testContentHolderPosition()
+
+	async function testTabsPosition() {
+		const tabsHolder = initTabs.dom.tabHolder
+
+		//Test vertical orientation
+		const tabsButtonsDisplay = tabsHolder
+			.selectAll('button')
+			.nodes()
+			.filter(b => b.style.display == 'block')
+		test.equal(tabsButtonsDisplay.length, initTabs.tabs.length, `Should display all tabs vertically in holder`)
+
+		//Test border line placement
+		const tabsLinePosition = tabsHolder
+			.selectAll('div')
+			.nodes()
+			.filter(b => b.style.display == 'inline-flex' && b.style.backgroundColor == 'rgb(21, 117, 173)')
+		test.equal(tabsLinePosition.length, initTabs.tabs.length, `Should display all tabs lines to the right`)
+	}
+
+	async function testContentHolderPosition() {
+		const contentHolder = initTabs.dom.contentHolder
+		test.ok(
+			contentHolder.node().style.display == 'inline-block',
+			`Should show content for each tab to the right, inline of tabs`
+		)
 	}
 
 	if (test._ok) holder.remove()

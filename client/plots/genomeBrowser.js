@@ -6,7 +6,7 @@ import { dofetch3 } from '#common/dofetch'
 import { filterInit, getNormalRoot, getFilterItemByTag } from '#filter/filter'
 import { first_genetrack_tolist } from '#common/1stGenetk'
 import { mayDisplayVariantFilter } from '#termsetting/handlers/snplocus'
-import { tab2box } from '#src/client'
+import { Tabs } from '#dom/toggleButtons'
 import { appInit } from '#termdb/app'
 
 /*
@@ -51,14 +51,14 @@ this {
 	}
 
 	variantFilter {
-		terms []
+		terms [] // list of INFO fields expressed as terms
 	}
 
 	blockInstance // exists when block has been launched; one block in each plot
 }
 
 the control ui is generated based on various bits under this.state.config{}
-it is made ad-hoc and not reactive in main()
+it is made ad-hoc upon launching app, and not reactive to state change
 
 */
 
@@ -143,9 +143,10 @@ class genomeBrowser {
 		if (this.controlsAreMade) return
 		this.controlsAreMade = true
 
-		makeVariantValueComputingControls(this)
-
-		// variant filter
+		// to init and render variant filter; must do it first then render group controls,
+		// as group controls require this.variantFilter.terms[]
+		// this.variantFilter={} is always set
+		// if dataset does not use info filter, variantFilter.terms[] is missing
 		await mayDisplayVariantFilter(this, this.state.config.variantFilter, this.dom.variantFilterHolder, async () => {
 			// run upon filter change to trigger state change
 			await this.app.dispatch({
@@ -155,6 +156,8 @@ class genomeBrowser {
 			})
 		})
 		// this.variantFilter{active} is added
+
+		makeVariantValueComputingGroupControls(this)
 	}
 
 	async launchCustomMds3tk() {
@@ -212,11 +215,13 @@ class genomeBrowser {
 		const data = await dofetch3('termdb', { body })
 		if (data.error) throw data.error
 		if (data.skipMcountWithoutAlt) {
-			this.dom.skipMcountWithoutAltDiv
-				.style('display', 'inline')
-				.text(data.skipMcountWithoutAlt + ' variants skipped for absence of ALT allele from the cohort.')
+			this.dom.skipMcountWithoutAltDiv.text(
+				`${data.skipMcountWithoutAlt} variant${
+					data.skipMcountWithoutAlt > 1 ? 's' : ''
+				} skipped for absence of ALT allele from the cohort.`
+			)
 		} else {
-			this.dom.skipMcountWithoutAltDiv.style('display', 'none')
+			this.dom.skipMcountWithoutAltDiv.text('')
 		}
 		return data
 	}
@@ -274,22 +279,24 @@ export async function getPlotConfig(opts, app) {
 	}
 }
 
-export function makeChartBtnMenu(holder, chartsInstance) {
-	/*
-	holder: the holder in the tooltip
-	chartsInstance: MassCharts instance
-	{
-		app {
-			vocabApi
-			opts { // the mass ui options
-				genome{} // client-side genome object
-			}
-		}
-		state {
-			termdbConfig{}
+/*
+called in mass/charts.js, to render the menu upon clicking the chart button in the charts tray
+
+holder: the holder in the tooltip
+chartsInstance: MassCharts instance
+{
+	app {
+		vocabApi
+		opts { // the mass ui options
+			genome{} // client-side genome object
 		}
 	}
-	*/
+	state {
+		termdbConfig{}
+	}
+}
+*/
+export function makeChartBtnMenu(holder, chartsInstance) {
 	const genomeObj = chartsInstance.app.opts.genome
 	if (typeof genomeObj != 'object') throw 'chartsInstance.app.opts.genome not an object and needed for gene search box'
 	const arg = {
@@ -334,30 +341,100 @@ export function makeChartBtnMenu(holder, chartsInstance) {
 //                  helpers                     //
 //////////////////////////////////////////////////
 
-function makeVariantValueComputingControls(self) {
-	renderGroupUI(self, 0, self.state.config.snvindel.details.groups[0])
-	renderGroupUI(self, 1, self.state.config.snvindel.details.groups[1])
+function makeVariantValueComputingGroupControls(self) {
+	render1group(self, 0, self.state.config.snvindel.details.groups[0])
+	render1group(self, 1, self.state.config.snvindel.details.groups[1])
 }
 
 /*
-groupIdx: array index of self.state.config.snvindel.details.groups[]
-group{}: element of same array
+render ui contents of one group, both arguments are provided to be convenient for ad-hoc update
 
-both are provided to be convenient for ad-hoc update of the non-reactive ui
+groupIdx: array index of self.state.config.snvindel.details.groups[]
+	determines which <div> to render to at self.dom.group1/2div
+group{}: element of same array
 */
-function renderGroupUI(self, groupIdx, group) {
+function render1group(self, groupIdx, group) {
 	const div = groupIdx == 0 ? self.dom.group1div : self.dom.group2div
 
 	div.selectAll('*').remove()
 
 	if (!group) {
 		// group does not exist in groups[] based on array index, e.g. when there's just 1 group and groups[1] is undefined
+		// add a prompt in place of header button
 		makePrompt2addNewGroup(self, groupIdx, div)
 		return
 	}
 
-	// the group exists
-	// first show a button allowing to replace/delete this group
+	// the group exists; first show the group header button
+	makeGroupHeaderButton(self, groupIdx, div)
+
+	if (group.type == 'info') return render1group_info(self, groupIdx, group, div)
+	if (group.type == 'population') return render1group_population(self, groupIdx, group, div)
+	if (group.type == 'filter') return render1group_filter(self, groupIdx, group, div)
+	throw 'render1group: unknown group type'
+}
+
+function render1group_info(self, groupIdx, group, div) {
+	let name = group.infoKey
+	if (self?.variantFilter?.terms) {
+		const f = self.variantFilter.terms.find(i => i.id == group.infoKey)
+		if (f && f.name) name = f.name
+	}
+	div.append('span').text(name)
+	div
+		.append('span')
+		.text('INFO FIELD')
+		.style('font-size', '.5em')
+		.style('margin-left', '10px')
+}
+
+function render1group_population(self, groupIdx, group, div) {
+	div.append('span').text(group.label)
+	div
+		.append('span')
+		.text(`POPULATION${group.adjust_race ? ', RACE ADJUSTED' : ''}`)
+		.style('font-size', '.5em')
+		.style('margin-left', '10px')
+}
+
+function render1group_filter(self, groupIdx, group, div) {
+	/*
+	this group is based on a termdb-filter
+	TODO sample counts in tvs menu should reflect global mass filter; on every app update (e.g. cohort change) the cohort choice should be combined into group.filter (but remain invisible)
+	TODO subcohort from global mass filter should be combined into group.filter, but no need to render cohort choice in this filter ui. 
+	*/
+	filterInit({
+		holder: div,
+		vocab: self.app.opts.state.vocab,
+		emptyLabel: 'Entire cohort',
+		termdbConfig: self.state.termdbConfig,
+		callback: async f => {
+			const groups = JSON.parse(JSON.stringify(self.state.config.snvindel.details.groups))
+			groups[groupIdx].filter = f
+			self.app.dispatch({
+				type: 'plot_edit',
+				id: self.id,
+				config: { snvindel: { details: { groups } } }
+			})
+		}
+	}).main(group.filter)
+}
+
+function makePrompt2addNewGroup(self, groupIdx, div) {
+	// the prompt <div> is created in group2div
+	div
+		.append('div')
+		.style('display', 'inline-block')
+		.text('Create Group 2')
+		.attr('class', 'sja_clbtext')
+		.style('margin', '10px')
+		.on('click', event => {
+			groupTip.showunder(event.target).clear()
+			launchMenu_createGroup(self, groupIdx, groupTip.d)
+		})
+}
+
+function makeGroupHeaderButton(self, groupIdx, div) {
 	div
 		.append('div')
 		.style('display', 'inline-block')
@@ -398,174 +475,121 @@ function renderGroupUI(self, groupIdx, group) {
 					})
 				})
 		})
-
-	if (group.type == 'info') {
-		div.append('span').text(group.infoKey)
-		div
-			.append('span')
-			.text('INFO FIELD')
-			.style('font-size', '.5em')
-			.style('margin-left', '10px')
-		return
-	}
-	if (group.type == 'population') {
-		div.append('span').text(group.label)
-		div
-			.append('span')
-			.text(`POPULATION${group.adjust_race ? ', RACE ADJUSTED' : ''}`)
-			.style('font-size', '.5em')
-			.style('margin-left', '10px')
-		return
-	}
-	if (group.type == 'filter') {
-		/*
-		this group is based on a termdb-filter
-		TODO sample counts in tvs menu should reflect global mass filter; on every app update (e.g. cohort change) the cohort choice should be combined into group.filter (but remain invisible)
-		TODO subcohort from global mass filter should be combined into group.filter, but no need to render cohort choice in this filter ui. 
-		*/
-		filterInit({
-			holder: div,
-			vocab: self.app.opts.state.vocab,
-			emptyLabel: 'Entire cohort',
-			termdbConfig: self.state.termdbConfig,
-			callback: async f => {
-				const groups = JSON.parse(JSON.stringify(self.state.config.snvindel.details.groups))
-				groups[groupIdx].filter = f
-				self.app.dispatch({
-					type: 'plot_edit',
-					id: self.id,
-					config: { snvindel: { details: { groups } } }
-				})
-			}
-		}).main(group.filter)
-		return
-	}
-	throw 'renderGroupUI: unknown group type'
-}
-
-function makePrompt2addNewGroup(self, groupIdx, div) {
-	// the prompt <div> is created in group2div
-	div
-		.append('div')
-		.style('display', 'inline-block')
-		.text('Create Group 2')
-		.attr('class', 'sja_clbtext')
-		.style('margin', '10px')
-		.on('click', event => {
-			groupTip.showunder(event.target).clear()
-			launchMenu_createGroup(self, groupIdx, groupTip.d)
-		})
 }
 
 // launch menu to show options: filter/population/info
 // when any is selected, create a new group object and set to snvindel.details.groups[groupIdx]
 function launchMenu_createGroup(self, groupIdx, div) {
-	const tabs = []
-	for (const groupType of self.state.config.snvindel.details.groupTypes) {
+	const opt = {
+		holder: div,
+		tabs: self.state.config.snvindel.details.groupTypes.map(i => {
+			return { label: i.name }
+		}),
+		tabsPosition: 'vertical',
+		linePosition: 'right'
+	}
+	const a = new Tabs(opt)
+	a.main()
+	for (const [idx, groupType] of self.state.config.snvindel.details.groupTypes.entries()) {
 		// { type:str, name:str }
-		tabs.push({
-			label: groupType.name,
-			callback: async div => {
-				if (groupType.type == 'info') {
-					if (!self.variantFilter || !self.variantFilter.terms)
-						throw 'looking for snvindel info fields but self.variantFilter.terms[] missing'
-					for (const f of self.variantFilter.terms) {
-						if (f.type != 'integer' && f.type != 'float') continue // only allow numeric fields
-						div
-							.append('div')
-							.text(f.name)
-							.attr('class', 'sja_menuoption')
-							.on('click', () => {
-								/////////////////////////////////
-								// create a new group using this info field
-								groupTip.hide()
-								const newGroup = {
-									type: 'info',
-									infoKey: f.id
-								}
-								renderGroupUI(self, groupIdx, newGroup)
-								const groups = JSON.parse(JSON.stringify(self.state.config.snvindel.details.groups))
-								groups[groupIdx] = newGroup
-								self.app.dispatch({
-									type: 'plot_edit',
-									id: self.id,
-									config: { snvindel: { details: { groups } } }
-								})
-							})
-					}
-					return
-				}
-				if (groupType.type == 'population') {
-					if (!self.state.config.snvindel.populations) throw 'state.config.snvindel.populations missing'
-					for (const p of self.state.config.snvindel.populations) {
-						// {key,label, allowto_adjust_race, adjust_race}
-						div
-							.append('div')
-							.text(p.label)
-							.attr('class', 'sja_menuoption')
-							.on('click', () => {
-								/////////////////////////////////
-								// create a new group using this population
-								groupTip.hide()
-								const newGroup = {
-									type: 'population',
-									key: p.key,
-									label: p.label,
-									allowto_adjust_race: p.allowto_adjust_race,
-									adjust_race: p.adjust_race
-								}
-								renderGroupUI(self, groupIdx, newGroup)
-								const groups = JSON.parse(JSON.stringify(self.state.config.snvindel.details.groups))
-								groups[groupIdx] = newGroup
-								self.app.dispatch({
-									type: 'plot_edit',
-									id: self.id,
-									config: { snvindel: { details: { groups } } }
-								})
-							})
-					}
-					return
-				}
-				if (groupType.type == 'filter') {
-					const arg = {
-						holder: div,
-						vocabApi: self.vocabApi,
-						state: {},
-						tree: {
-							click_term2select_tvs: tvs => {
-								/////////////////////////////////
-								// create a new group using this tvs
-								groupTip.hide()
-								const newGroup = {
-									type: 'filter',
-									filter: {
-										in: true,
-										join: '',
-										type: 'tvslst',
-										lst: [{ type: 'tvs', tvs }]
-									}
-								}
-								renderGroupUI(self, groupIdx, newGroup)
-								const groups = JSON.parse(JSON.stringify(self.state.config.snvindel.details.groups))
-								groups[groupIdx] = newGroup
-								self.app.dispatch({
-									type: 'plot_edit',
-									id: self.id,
-									config: { snvindel: { details: { groups } } }
-								})
+		const tab = opt.tabs[idx]
+		if (groupType.type == 'info') {
+			if (!self.variantFilter || !self.variantFilter.terms)
+				throw 'looking for snvindel info fields but self.variantFilter.terms[] missing'
+			for (const f of self.variantFilter.terms) {
+				if (f.type != 'integer' && f.type != 'float') continue // only allow numeric fields
+				tab.contentHolder
+					.append('div')
+					.text(f.name)
+					.attr('class', 'sja_menuoption')
+					.on('click', () => {
+						/////////////////////////////////
+						// create a new group using this info field
+						groupTip.hide()
+						const newGroup = {
+							type: 'info',
+							infoKey: f.id
+						}
+						render1group(self, groupIdx, newGroup)
+						const groups = JSON.parse(JSON.stringify(self.state.config.snvindel.details.groups))
+						groups[groupIdx] = newGroup
+						self.app.dispatch({
+							type: 'plot_edit',
+							id: self.id,
+							config: { snvindel: { details: { groups } } }
+						})
+					})
+			}
+			continue
+		}
+		if (groupType.type == 'population') {
+			if (!self.state.config.snvindel.populations) throw 'state.config.snvindel.populations missing'
+			for (const p of self.state.config.snvindel.populations) {
+				// {key,label, allowto_adjust_race, adjust_race}
+				tab.contentHolder
+					.append('div')
+					.text(p.label)
+					.attr('class', 'sja_menuoption')
+					.on('click', () => {
+						/////////////////////////////////
+						// create a new group using this population
+						groupTip.hide()
+						const newGroup = {
+							type: 'population',
+							key: p.key,
+							label: p.label,
+							allowto_adjust_race: p.allowto_adjust_race,
+							adjust_race: p.adjust_race
+						}
+						render1group(self, groupIdx, newGroup)
+						const groups = JSON.parse(JSON.stringify(self.state.config.snvindel.details.groups))
+						groups[groupIdx] = newGroup
+						self.app.dispatch({
+							type: 'plot_edit',
+							id: self.id,
+							config: { snvindel: { details: { groups } } }
+						})
+					})
+			}
+			continue
+		}
+		if (groupType.type == 'filter') {
+			const arg = {
+				holder: tab.contentHolder,
+				vocabApi: self.vocabApi,
+				state: {},
+				tree: {
+					click_term2select_tvs: tvs => {
+						/////////////////////////////////
+						// create a new group using this tvs
+						groupTip.hide()
+						const newGroup = {
+							type: 'filter',
+							filter: {
+								in: true,
+								join: '',
+								type: 'tvslst',
+								lst: [{ type: 'tvs', tvs }]
 							}
 						}
+						render1group(self, groupIdx, newGroup)
+						const groups = JSON.parse(JSON.stringify(self.state.config.snvindel.details.groups))
+						groups[groupIdx] = newGroup
+						self.app.dispatch({
+							type: 'plot_edit',
+							id: self.id,
+							config: { snvindel: { details: { groups } } }
+						})
 					}
-					const activeCohortIdx = mayGetActiveCohortIdx(self)
-					if (Number.isInteger(activeCohortIdx)) arg.state.activeCohort = activeCohortIdx
-					appInit(arg)
-					return
 				}
-				throw 'unknown group type'
 			}
-		})
+			const activeCohortIdx = mayGetActiveCohortIdx(self)
+			if (Number.isInteger(activeCohortIdx)) arg.state.activeCohort = activeCohortIdx
+			appInit(arg)
+			continue
+		}
+		throw 'unknown group type'
 	}
-	tab2box(div, tabs)
 }
 
 // from mass filter, find a tvs as cohortFilter, to know its array index in selectCohort.values[]
@@ -592,7 +616,9 @@ function axisLabelFromSnvindelComputeDetails(self) {
 	if (details.groups.length == 1) {
 		const g = details.groups[0]
 		if (g.type == 'info') {
-			return 'TODO info name'
+			const f = self.variantFilter.terms.find(i => i.id == g.infoKey)
+			if (f && f.name) return f.name
+			return g.infoKey
 		}
 		if (g.type == 'filter') {
 			return 'Allele frequency'

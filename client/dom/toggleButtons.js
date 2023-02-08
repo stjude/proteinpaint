@@ -3,7 +3,8 @@ import { select, selectAll } from 'd3-selection'
 /*
 ********************** EXPORTED
 init_tabs(opts)
-update_tabs(tabs)
+	- update_tabs(tabs)
+Tabs(opts)
 
 opts: {
 	holder,
@@ -21,12 +22,24 @@ opts: {
 			TODO do not hardcode width, use auto width e.g. grid-template-columns='auto auto'
 		.tab, .holder
 			d3 DOM elements created by this script
+		.disabled()
+			optional: disables a tab
+			default = 'false'
+		.active
+			optional: define which tab renders first
+			default: tabs[0].active = true
 	noContent,
 		optional: voids creating a content div
 	linePosition, 
-		determines the location of the blue border line
-		optional: if not provided, default = 'bottom'
+		optional: determines the blue border line position 
+		default = 'bottom'
 		values:  top, bottom, right, left
+	
+	** Tabs class only! **
+	tabsPosition, 
+		optional: show tabs inline horizonally or vertical stack 
+		default = 'horizonal'
+		values:  vertical, horizontal
 }
 
 Note: 
@@ -159,7 +172,7 @@ export function update_tabs(tabs) {
 	inspect element > styles > properties > __data__
 
 	opts{}
-	- same argument as for init_tabs
+	- same argument as for init_tabs()
 */
 
 export class Tabs {
@@ -182,7 +195,10 @@ export class Tabs {
 			opts.linePosition != 'right' &&
 			opts.linePosition != 'left'
 		)
-			throw `Invalid .linePosition arg. Must be either bottom, top, right, left`
+			throw `Invalid .linePosition arg. Must be either bottom, top, right, or left`
+		if (!opts.tabsPosition) opts.tabsPosition = 'horizontal'
+		if (opts.tabsPosition != 'horizontal' && opts.tabsPosition != 'vertical')
+			throw `Invalid .tabsPosition arg. Must be either vertical or horizontal`
 		return opts
 	}
 
@@ -200,17 +216,22 @@ function setRenderers(self) {
 	self.render = async () => {
 		const has_active_tab = self.tabs.find(tab => tab.active)
 		if (!has_active_tab) self.tabs[0].active = true
+
 		const textAlign =
 			self.opts.linePosition == 'bottom' || self.opts.linePosition == 'top' ? 'center' : self.opts.linePosition
 
 		self.dom.tabHolder = self.dom.holder
 			.append('div')
 			//add light grey border underneath the buttons
-			.style('border-bottom', '0.5px solid lightgrey')
+			.style(`border-${textAlign}`, '0.5px solid lightgrey')
 			.style('width', 'fit-content')
 
-		if (!self.opts.contentHolder) {
-			if (!self.opts.noContent) self.dom.contentHolder = self.dom.holder.append('div')
+		if (!self.opts.contentHolder && !self.opts.noContent) {
+			self.dom.contentHolder = self.dom.holder.append('div')
+			if (self.opts.tabsPosition == 'vertical') {
+				self.dom.tabHolder.style('display', 'inline-grid').style('align-items', 'start')
+				self.dom.contentHolder.style('display', 'inline-grid').style('align-items', 'start')
+			}
 		}
 
 		await self.dom.tabHolder
@@ -226,32 +247,37 @@ function setRenderers(self) {
 			.style('min-width', tab => (tab.width ? null : Math.max(defaultTabWidth)))
 			.style('border', 'none')
 			.style('background-color', 'transparent')
+			.style('display', self.opts.tabsPosition == 'vertical' ? 'flex' : 'inline-grid')
 			//false is default if arg missing
-			.property('disabled', tab => (tab.disabled ? tab.disabled() : 'false'))
+			.property('disabled', tab => {
+				tab.disabled ? tab.disabled() : false
+			})
 			.each(async function(tab) {
 				/* The whole button is clickable (i.e. the white space whent the blue line is
 				not visible). The event is on the button (i.e. tab.wrapper). The style changes 
 				when the button is active/inactive are on the text (i.e. tab.tab) and line 
 				(i.e. tab.line) */
 				tab.wrapper = select(this)
+				if (self.opts.linePosition == 'right') tab.wrapper.style('justify-self', 'end')
+				if (self.opts.linePosition == 'left') tab.wrapper.style('justify-self', 'start')
 
 				//Line position determines the order of appending divs
 				if (self.opts.linePosition == 'top' || self.opts.linePosition == 'left') {
 					//create the line div before the tab text
 					tab.line = tab.wrapper
 						.append('div')
-						.style('display', self.opts.linePosition == 'left' ? 'inline-flex' : 'block')
+						.style('display', self.opts.linePosition == 'left' ? 'inline-block' : 'block')
 					tab.tab = tab.wrapper
 						.append('div')
-						.style('display', self.opts.linePosition == 'left' ? 'inline-flex' : 'block')
+						.style('display', self.opts.linePosition == 'left' ? 'inline-block' : 'block')
 				} else {
 					//create the line div after the tab text
 					tab.tab = tab.wrapper
 						.append('div')
-						.style('display', self.opts.linePosition == 'right' ? 'inline-flex' : 'block')
+						.style('display', self.opts.linePosition == 'right' ? 'inline-block' : 'block')
 					tab.line = tab.wrapper
 						.append('div')
-						.style('display', self.opts.linePosition == 'right' ? 'inline-flex' : 'block')
+						.style('display', self.opts.linePosition == 'right' ? 'inline-block' : 'block')
 				}
 
 				tab.tab //Button text
@@ -281,7 +307,6 @@ function setRenderers(self) {
 						.style('margin-top', '10px')
 						.style('display', tab.active ? 'block' : 'none')
 				}
-
 				if (tab.active && tab.callback) await tab.callback()
 			})
 			.on('click', async (event, tab) => {

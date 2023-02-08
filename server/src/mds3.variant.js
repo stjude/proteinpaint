@@ -130,8 +130,9 @@ function compute_1group(mlst, g) {
 		return
 	}
 	if (g.type == 'info') {
-		if (g.infoKey) throw 'infoKey missing on single group.type=info'
+		if (!g.infoKey) throw 'infoKey missing on single group.type=info'
 		for (const m of mlst) {
+			console.log(m.info)
 			m.nm_axis_value = m.info[g.infoKey]
 			// default value if missing?
 		}

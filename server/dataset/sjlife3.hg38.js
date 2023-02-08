@@ -411,6 +411,7 @@ const snvindelComputeDetails = {
 		"filter" and "population": allow AF diff or fisher
 		else: value difference
 	*/
+	//groups: [{type:'info',infoKey:'AF'}],
 	groups: [
 		{
 			// type=filter: user can modify via filterUI
