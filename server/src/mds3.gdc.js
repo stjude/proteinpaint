@@ -26,8 +26,6 @@ get_termlst2size
 validate_m2csq
 validate_ssm2canonicalisoform
 getheaders
-validate_sampleSummaries2_number
-validate_sampleSummaries2_mclassdetail
 
 
 **************** route handlers
@@ -355,14 +353,14 @@ export function validate_query_geneCnv(ds) {
 	*/
 	ds.queries.geneCnv.bygene.get = async opts => {
 		const headers = getheaders(opts)
-		const tmp = await got(
-			path.join(apihost, 'cnvs?size=100000') +
-				'&fields=' +
-				getFields(opts) +
-				'&filters=' +
-				encodeURIComponent(JSON.stringify(getFilter(opts))),
-			{ method: 'GET', headers }
-		)
+		const tmp = await got.post(path.join(apihost, 'cnvs'), {
+			headers,
+			body: JSON.stringify({
+				size: 100000,
+				fields: getFields(opts),
+				filters: getFilter(opts)
+			})
+		})
 		const re = JSON.parse(tmp.body)
 		if (!Array.isArray(re?.data?.hits)) throw 'geneCnv response body is not {data:hits[]}'
 
@@ -467,7 +465,7 @@ async function snvindel_byisoform(opts, ds) {
 	const headers = getheaders(opts)
 
 	// must use POST as filter can be too long for GET
-	const p1 = got.post(apihost + query1.endpoint, {
+	const p1 = got.post(path.join(apihost, query1.endpoint), {
 		headers,
 		body: JSON.stringify({
 			size: query1.size,
@@ -475,7 +473,7 @@ async function snvindel_byisoform(opts, ds) {
 			filters: query1.filters(opts)
 		})
 	})
-	const p2 = got.post(apihost + query2.endpoint, {
+	const p2 = got.post(path.join(apihost, query2.endpoint), {
 		headers,
 		body: JSON.stringify({
 			size: query2.size,
@@ -827,18 +825,18 @@ export async function querySamples_gdcapi(q, twLst, ds, geneTwLst) {
 		if (t) dictTwLst.push({ term: t })
 	}
 
-	const param = ['size=10000', 'fields=' + twLst.map(tw => tw.term.id).join(',')]
+	const param = { size: 10000, fields: twLst.map(tw => tw.term.id).join(',') }
 
 	// it may query with isoform
 	mayMapRefseq2ensembl(q, ds)
 
-	param.push('filters=' + encodeURIComponent(JSON.stringify(isoform2ssm_query2_getcase.filters(q, ds))))
+	param.filters = isoform2ssm_query2_getcase.filters(q, ds)
 
 	const headers = getheaders(q) // will be reused below
 
-	const response = await got(apihost + isoform2ssm_query2_getcase.endpoint + '?' + param.join('&'), {
-		method: 'GET',
-		headers
+	const response = await got.post(path.join(apihost, isoform2ssm_query2_getcase.endpoint), {
+		headers,
+		body: JSON.stringify(param)
 	})
 
 	delete q.isoforms
@@ -1065,220 +1063,6 @@ export function validate_m2csq(ds) {
 	}
 }
 
-export function validate_sampleSummaries2_number(api) {
-	if (!api.gdcapi.endpoint) throw '.endpoint missing from sampleSummaries2.get_number.gdcapi'
-	if (!api.gdcapi.fields) throw '.fields[] missing from sampleSummaries2.get_number.gdcapi'
-	api.get = async q => {
-		// q is client request object
-		const response = await got(
-			api.gdcapi.endpoint +
-				'?size=100000' +
-				'&fields=' +
-				api.gdcapi.fields.join(',') +
-				'&filters=' +
-				encodeURIComponent(JSON.stringify(api.gdcapi.filters(q))),
-			{ method: 'GET', headers: getheaders(q) }
-		)
-		let re
-		try {
-			re = JSON.parse(response.body)
-		} catch (e) {
-			throw 'invalid json in response'
-		}
-		////////////////// XXX //////////////////
-		// hardcoding to project and primary site, rather than programmatically driven by api.gdcapi.fields[]
-		// FIXME should fire this query for each of sampleSummaries2.lst[{label1}]
-		// see comment in lines 251 of gdc.hg38.js
-		// will not fix this and wait for the "xx cases" implementation and menu UI design
-		const project_set = new Set()
-		const site_set = new Set()
-		for (const h of re.data.hits) {
-			project_set.add(h.case.project.project_id)
-			site_set.add(h.case.primary_site)
-		}
-		// hardcoded and are from sampleSummaries2.lst[{label1}]
-		return [{ label1: 'project_id', count: project_set.size }, { label1: 'primary_site', count: site_set.size }]
-	}
-}
-
-// not in use
-export function validate_sampleSummaries2_mclassdetail(api, ds) {
-	api.get = async q => {
-		// q.isoform is refseq when queried from that; must convert to ensembl, no need to keep refseq
-		mayMapRefseq2ensembl(q, ds)
-
-		const headers = getheaders(q)
-		const p1 = got(
-			api.gdcapi[0].endpoint +
-				'?size=100000' +
-				'&fields=' +
-				api.gdcapi[0].fields.join(',') +
-				'&filters=' +
-				encodeURIComponent(JSON.stringify(api.gdcapi[0].filters(q))),
-			{ method: 'GET', headers }
-		)
-		const p2 = got(
-			api.gdcapi[1].endpoint +
-				'?size=100000' +
-				'&fields=' +
-				api.gdcapi[1].fields.join(',') +
-				'&filters=' +
-				encodeURIComponent(JSON.stringify(api.gdcapi[1].filters(q))),
-			{ method: 'GET', headers }
-		)
-		const [tmp1, tmp2] = await Promise.all([p1, p2])
-		let re_ssms, re_cases
-		try {
-			re_ssms = JSON.parse(tmp1.body)
-			re_cases = JSON.parse(tmp2.body)
-		} catch (e) {
-			throw 'invalid JSON returned by GDC'
-		}
-		if (!re_ssms.data || !re_ssms.data.hits) throw 'returned data from ssms query not .data.hits'
-		if (!re_cases.data || !re_cases.data.hits) throw 'returned data from cases query not .data.hits[]'
-		if (!Array.isArray(re_ssms.data.hits) || !Array.isArray(re_cases.data.hits)) throw 're.data.hits[] is not array'
-
-		const id2ssm = new Map()
-		// key: ssm_id, value: ssm {}
-
-		for (const h of re_ssms.data.hits) {
-			if (!h.ssm_id) throw 'ssm_id missing from a ssms hit'
-			if (!h.consequence) throw '.consequence[] missing from a ssm'
-			const consequence = h.consequence.find(i => i.transcript.transcript_id == q.isoform)
-			snvindel_addclass(h, consequence)
-			h.samples = []
-			id2ssm.set(h.ssm_id, h)
-		}
-		const { label1, label2 } = JSON.parse(decodeURIComponent(q.samplesummary2_mclassdetail))
-		const term1 = ds.cohort.termdb.q.termjsonByOneid(label1)
-		const term2 = label2 ? ds.cohort.termdb.q.termjsonByOneid(label2) : null
-		for (const h of re_cases.data.hits) {
-			if (!h.ssm) throw '.ssm{} missing from a case'
-			if (!h.ssm.ssm_id) throw '.ssm.ssm_id missing from a case'
-			const ssm = id2ssm.get(h.ssm.ssm_id)
-			if (!ssm) throw 'ssm_id not found in ssms query'
-			if (!h.case) throw '.case{} missing from a case'
-			const sample = { sample_id: h.case.case_id }
-			sample[label1] = h.case[term1.fields[0]]
-			for (let j = 1; j < term1.fields.length; j++) {
-				if (sample[label1]) sample[label1] = sample[label1][term1.fields[j]]
-			}
-			if (term2) {
-				sample[label2] = h.case[term2.fields[0]]
-				for (let j = 1; j < term2.fields.length; j++) {
-					if (sample[label2]) sample[label2] = sample[label2][term2.fields[j]]
-				}
-			}
-			ssm.samples.push(sample)
-		}
-
-		/////////////////////////////////////
-		//////// following are code modified from md3.init.js
-		const L1 = new Map()
-		/*
-		k: label1 value
-		v: {}
-			  .sampleset: Set of sample_id
-		      .mclasses: Map
-		         k: mclass
-			     v: Set of sample id
-		      .label2: Map
-		         k: label2 value
-			     v: {}
-				    .sampleset: Set of sample id
-					.mclasses: Map
-			           k: mclass
-				       v: Set of sample_id
-		*/
-		for (const m of id2ssm.values()) {
-			for (const sample of m.samples) {
-				if (sample.sample_id == undefined) continue
-				const v1 = sample[label1]
-				if (v1 == undefined) continue
-				if (!L1.has(v1)) {
-					const o = {
-						mclasses: new Map(),
-						sampleset: new Set()
-					}
-					if (label2) {
-						o.label2 = new Map()
-					}
-					L1.set(v1, o)
-				}
-				L1.get(v1).sampleset.add(sample.sample_id)
-				if (!L1.get(v1).mclasses.has(m.class)) L1.get(v1).mclasses.set(m.class, new Set())
-				L1.get(v1)
-					.mclasses.get(m.class)
-					.add(sample.sample_id)
-
-				if (label2) {
-					const v2 = sample[label2]
-					if (v2 == undefined) continue
-					if (!L1.get(v1).label2.has(v2)) L1.get(v1).label2.set(v2, { mclasses: new Map(), sampleset: new Set() })
-					const L2 = L1.get(v1).label2.get(v2)
-					L2.sampleset.add(sample.sample_id)
-					if (!L2.mclasses.has(m.class)) L2.mclasses.set(m.class, new Set())
-					L2.mclasses.get(m.class).add(sample.sample_id)
-				}
-			}
-		}
-		let combinations
-		if (ds.cohort.termdb.termid2totalsize) {
-			const terms = [label1]
-			if (label2) terms.push(label2)
-			combinations = await get_crosstabCombinations(terms, ds, q)
-		}
-		const strat = {
-			label: label1,
-			items: []
-		}
-		for (const [v1, o] of L1) {
-			const L1o = {
-				label: v1,
-				samplecount: o.sampleset.size,
-				mclasses: sort_mclass(o.mclasses)
-			}
-			// add cohort size, fix it so it can be applied to sub levels
-			if (combinations) {
-				const k = v1.toLowerCase()
-				const n = combinations.find(i => i.id1 == undefined && i.v0 == k)
-				if (n) L1o.cohortsize = n.count
-			}
-
-			strat.items.push(L1o)
-			if (o.label2) {
-				L1o.label2 = []
-				for (const [v2, oo] of o.label2) {
-					const L2o = {
-						label: v2,
-						samplecount: oo.sampleset.size,
-						mclasses: sort_mclass(oo.mclasses)
-					}
-					if (combinations) {
-						const j = v1.toLowerCase()
-						const k = v2.toLowerCase()
-						const n = combinations.find(i => i.v0 == j && i.v1 == k)
-						if (n) L2o.cohortsize = n.count
-					}
-					L1o.label2.push(L2o)
-				}
-				L1o.label2.sort((i, j) => j.samplecount - i.samplecount)
-			}
-		}
-		strat.items.sort((i, j) => j.samplecount - i.samplecount)
-		return strat
-	}
-}
-
-function sort_mclass(set) {
-	const lst = []
-	for (const [c, s] of set) {
-		lst.push([c, s.size])
-	}
-	lst.sort((i, j) => j[1] - i[1])
-	return lst
-}
-
 /*
 argument is array, each element: {type, id}
 
@@ -1366,18 +1150,14 @@ export function handle_gdc_ssms(genomes) {
 			if (!genome) throw 'invalid genome'
 			if (!req.query.case_id) throw '.case_id missing'
 
-			const filters = isoform2ssm_query1_getvariant.filters(req.query)
-
-			const headers = { 'Content-Type': 'application/json', Accept: 'application/json' }
-			const response = await got(
-				apihost +
-					isoform2ssm_query1_getvariant.endpoint +
-					'?size=1000&fields=' +
-					isoform2ssm_query1_getvariant.fields.join(',') +
-					'&filters=' +
-					encodeURIComponent(JSON.stringify(filters)),
-				{ method: 'GET', headers }
-			)
+			const response = await got.post(path.join(apihost, isoform2ssm_query1_getvariant.endpoint), {
+				headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+				body: JSON.stringify({
+					size: 1000,
+					fields: isoform2ssm_query1_getvariant.fields.join(','),
+					filters: isoform2ssm_query1_getvariant.filters(req.query)
+				})
+			})
 			const re = JSON.parse(response.body)
 			const mlst = []
 			for (const hit of re.data.hits) {
@@ -1453,15 +1233,14 @@ and hosted on https://proteinpaint.stjude.org/GDC/
 async function get_filter2topGenes({ filter, CGConly }) {
 	if (!filter) throw 'filter missing'
 	if (typeof filter != 'object') throw 'filter not object'
-	const response = await got(
-		apihost +
-			'/analysis/top_mutated_genes_by_project' +
-			'?size=50' +
-			'&fields=symbol' +
-			'&filters=' +
-			mayAddCGC2filter(filter, CGConly),
-		{ method: 'GET', headers: { 'Content-Type': 'application/json', Accept: 'application/json' } }
-	)
+	const response = await got.post(path.join(apihost, '/analysis/top_mutated_genes_by_project'), {
+		headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+		body: JSON.stringify({
+			size: 50,
+			fields: 'symbol',
+			filters: mayAddCGC2filter(filter, CGConly)
+		})
+	})
 	const re = JSON.parse(response.body)
 	const genes = []
 	for (const hit of re.data.hits) {
@@ -1523,7 +1302,7 @@ function mayAddCGC2filter(f, CGConly) {
 		f2.content.push({ op: 'in', content: { field: 'genes.is_cancer_gene_census', value: ['true'] } })
 	}
 
-	return encodeURIComponent(JSON.stringify(f2))
+	return f2
 }
 
 /*

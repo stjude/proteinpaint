@@ -19,6 +19,7 @@ mayAddCGC2filter()
 */
 
 const got = require('got')
+const path = require('path')
 const apihost = 'https://api.gdc.cancer.gov'
 
 ;(async () => {
@@ -26,25 +27,26 @@ const apihost = 'https://api.gdc.cancer.gov'
 		const CGConly = !process.argv[2] || process.argv[2] == '0'
 		const filter = process.argv[3] || '{"op":"in","content":{"field":"cases.disease_type","value":["Gliomas"]}}'
 
-		const genes = await get_filter2topGenes({ filter, CGConly })
+		const genes = await get_filter2topGenes({ filter: JSON.parse(filter), CGConly })
 		console.log(genes)
 	} catch (e) {
 		console.log(e)
 	}
 })()
 
+//////////////////////// following are copied over from mds3.gdc.js
+
 async function get_filter2topGenes({ filter, CGConly }) {
 	if (!filter) throw 'filter missing'
-	if (typeof filter != 'string') throw 'filter not string'
-	const response = await got(
-		apihost +
-			'/analysis/top_mutated_genes_by_project' +
-			'?size=50' +
-			'&fields=symbol' +
-			'&filters=' +
-			mayAddCGC2filter(filter, CGConly),
-		{ method: 'GET', headers: { 'Content-Type': 'application/json', Accept: 'application/json' } }
-	)
+	if (typeof filter != 'object') throw 'filter not object'
+	const response = await got.post(path.join(apihost, '/analysis/top_mutated_genes_by_project'), {
+		headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+		body: JSON.stringify({
+			size: 50,
+			fields: 'symbol',
+			filters: mayAddCGC2filter(filter, CGConly)
+		})
+	})
 	const re = JSON.parse(response.body)
 	const genes = []
 	for (const hit of re.data.hits) {
@@ -70,27 +72,41 @@ CGConly: boolean
 		]
 	}
 */
-function mayAddCGC2filter(str, CGConly) {
-	if (!CGConly) {
-		// not using CGC genes. no need to modify filter
-		return str
-	}
-	const f = JSON.parse(decodeURIComponent(str))
+function mayAddCGC2filter(f, CGConly) {
+	// reformulate f into f2
+	// f may be "in" or "and". f2 is always "and", in order to join in additional filters
+	let f2
 
 	if (f.op == 'in') {
-		// create new filter obj with AND join of CGC element and existing filter
-		const f2 = {
-			op: 'and',
-			content: [f, { op: 'in', content: { field: 'genes.is_cancer_gene_census', value: ['true'] } }]
+		// wrap f into f2
+		f2 = { op: 'and', content: [f] }
+	} else if (f.op == 'and') {
+		// no need to wrap
+		f2 = f
+	} else {
+		throw 'f.op not "in" or "and"'
+	}
+
+	// per Phil on 12/16/2022, following filters ensure to return IDH1 as 1st gene for gliomas
+	f2.content.push({
+		op: 'NOT',
+		content: {
+			field: 'ssms.consequence.transcript.annotation.vep_impact',
+			value: 'missing'
 		}
-		return encodeURIComponent(JSON.stringify(f2))
+	})
+	f2.content.push({
+		op: 'in',
+		content: {
+			field: 'ssms.consequence.transcript.consequence_type',
+			value: ['missense_variant', 'frameshift_variant', 'start_lost', 'stop_lost', 'stop_gained']
+		}
+	})
+
+	if (CGConly) {
+		// using CGC genes, add in filter
+		f2.content.push({ op: 'in', content: { field: 'genes.is_cancer_gene_census', value: ['true'] } })
 	}
 
-	if (f.op == 'and') {
-		// filter is already "and"; insert CGC element into list
-		f.content.push({ op: 'in', content: { field: 'genes.is_cancer_gene_census', value: ['true'] } })
-		return encodeURIComponent(JSON.stringify(f))
-	}
-
-	throw 'mayAddCGC2filter: f.op is not "in" or "and"'
+	return f2
 }
