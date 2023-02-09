@@ -125,6 +125,8 @@ class Matrix {
 		})
 
 		this.setPill(appState)
+		//TODO: may conflict with serverconfig.commonOverrides
+		this.mclass = copyMerge({}, mclass, appState.termdbConfig.mclass || {})
 	}
 
 	setControls(appState) {
@@ -375,6 +377,8 @@ class Matrix {
 							anno.filteredValues = filteredValues
 							anno.countedValues = countedValues
 							if (anno.countedValues?.length) {
+								const v = tw.term.values?.[anno.value]
+								if (v?.uncountable) continue
 								counts.samples += 1
 								counts.hits += anno.countedValues.length
 								if (tw.q?.mode == 'continuous') {
@@ -676,7 +680,7 @@ class Matrix {
 					}
 
 					// will assign fill, label, order, etc
-					const legend = setCellProps[t.tw.term.type](cell, t.tw, anno, value, s, t)
+					const legend = setCellProps[t.tw.term.type](cell, t.tw, anno, value, s, t, this)
 					if (legend) {
 						if (!legendGroups[legend.group]) legendGroups[legend.group] = { ref: legend.ref, values: {} }
 						if (!legendGroups[legend.group].values[legend.value])
@@ -846,12 +850,13 @@ const setCellProps = {
 	/* !!! TODO: later, may allow survival terms as a matrix row in server/shared/termdb.usecase.js, 
 	   but how - quantitative, categorical, etc? */
 	//survival: setNumericCellProps,
-	geneVariant: (cell, tw, anno, value, s, t) => {
+	geneVariant: (cell, tw, anno, value, s, t, self) => {
 		const values = anno.filteredValues || anno.values || [anno.value]
 		cell.height = !s.transpose ? s.rowh / values.length : s.colw
 		cell.width = !s.transpose ? s.colw : s.colw / values.length
-		cell.label = value.label || mclass[value.class].label
-		cell.fill = value.color || mclass[value.class].color
+		cell.label = value.label || self.mclass[value.class].label
+		const colorFromq = tw.q?.values && tw.q?.values[value.class]?.color
+		cell.fill = colorFromq || value.color || self.mclass[value.class]?.color
 		cell.class = value.class
 		cell.value = value
 
@@ -945,7 +950,11 @@ export async function getPlotConfig(opts, app) {
 	copyMerge(config, opts)
 	const promises = []
 	for (const grp of config.termgroups) {
-		for (const tw of grp.lst) promises.push(fillTermWrapper(tw, app.vocabApi))
+		for (const tw of grp.lst) {
+			// force the saved session to request the most up-to-data dictionary term data from server
+			if (tw.id) delete tw.term
+			promises.push(fillTermWrapper(tw, app.vocabApi))
+		}
 	}
 	if (config.divideBy) promises.push(fillTermWrapper(config.divideBy, app.vocabApi))
 	await Promise.all(promises)

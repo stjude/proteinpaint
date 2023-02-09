@@ -43,7 +43,8 @@ export function make(q, res, ds, genome) {
 		termMatch2geneSet: tdb.termMatch2geneSet,
 		massSessionDuration: serverconfig.features.massSessionDuration || 30,
 		dataDownloadCatch: tdb.dataDownloadCatch,
-		matrix: tdb.matrix
+		matrix: tdb.matrix,
+		mclass: tdb.mclass
 	}
 
 	// optional attributes

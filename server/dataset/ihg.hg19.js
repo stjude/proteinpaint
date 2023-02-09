@@ -19,6 +19,14 @@ module.exports = function() {
 				multipleTestingCorrection: {
 					method: 'bon',
 					skipLowSampleSize: true
+				},
+				mclass: {
+					CNV_amp: {
+						color: '#CC0033'
+					},
+					CNV_loss: {
+						color: '#00008b'
+					}
 				}
 			},
 			scatterplots: {

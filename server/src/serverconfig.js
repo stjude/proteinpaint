@@ -224,6 +224,7 @@ function getGDCconfig() {
 		],
 		backend_only: true,
 		ignoreTermdbTest: true,
+		//TODO: may conflict with this.mclass in matrix.js
 		commonOverrides: {
 			mclass: {
 				I: {
