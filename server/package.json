@@ -72,7 +72,7 @@
     "src/mds3.gdc.filter.js",
     "src/checkReadingFrame.js",
     "src/bedj.parseBed.js",
-    "cards/index.json",
+    "cards/*",
     "server.js*",
     "start.js",
     "shared/common.js",
