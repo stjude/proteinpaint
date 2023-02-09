@@ -10,31 +10,31 @@ import { Tabs } from '#dom/toggleButtons'
 import { appInit } from '#termdb/app'
 
 /*
+the control ui is generated based on various bits from this.state.config{}, and server data
+it is made ad-hoc upon launching app, and not reactive to state change and data update
 
-this {
+//////////////// instance structure
+
+this{}
 
 	vocabApi{}
 
-	app {
-		opts {
+	app {}
+		opts {}
 			genome{} // client-side genome obj
-			state {
-				vocab: {
+			state {}
+				vocab {}
 					dslabel:str
 					genome:str
-				}
-			}
-		}
 		dispatch()
 		save()
-	}
 
-	state {
-		config {
-			filter // mass filter
+	state {}
+		config {}
+			filter{} // mass filter
 			geneSearchResult{}
-			snvindel {
-				details {
+			snvindel {}
+				details {}
 					groupTypes[]
 					groups:[]
 						// each element is a group object
@@ -43,22 +43,32 @@ this {
 						{type=population, key, label, ..}
 					groupTestMethod{}
 					groupTestMethodsIdx
-				}
 				populations [{key,label}] // might not be part of state
-			}
-		}
 		termdbConfig{}
-	}
 
-	variantFilter {
+	variantFilter {}
 		terms [] // list of INFO fields expressed as terms
-	}
 
 	blockInstance // exists when block has been launched; one block in each plot
-}
 
-the control ui is generated based on various bits under this.state.config{}
-it is made ad-hoc upon launching app, and not reactive to state change
+
+////////////////// functions
+
+main
+	makeControls
+		mayDisplayVariantFilter
+		makeVariantValueComputingGroupControls
+			render1group
+				makePrompt2addNewGroup
+					launchMenu_createGroup
+				render1group_info
+				render1group_population
+				render1group_filter
+	launchCustomMds3tk
+		preComputeData
+			dofetch3
+		axisLabelFromSnvindelComputeDetails
+		launchMds3tk
 
 */
 
@@ -70,7 +80,7 @@ class genomeBrowser {
 		this.type = 'genomeBrowser'
 	}
 
-	async init(opts) {
+	async init(appState) {
 		const holder = this.opts.holder.append('div')
 		// layout rows from top to bottom
 		const errDiv = holder.append('div')
@@ -92,6 +102,8 @@ class genomeBrowser {
 
 		// to make sure api is accessible by mayDisplayVariantFilter
 		this.vocabApi = this.app.vocabApi
+
+		this.components = {}
 	}
 
 	getState(appState) {
@@ -158,6 +170,11 @@ class genomeBrowser {
 		// this.variantFilter{active} is added
 
 		makeVariantValueComputingGroupControls(this)
+		this.components.controls = {
+			update: () => {
+				console.log('test')
+			}
+		}
 	}
 
 	async launchCustomMds3tk() {
