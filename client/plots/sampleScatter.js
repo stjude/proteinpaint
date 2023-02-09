@@ -1383,8 +1383,11 @@ function setInteractivity(self) {
 					.attr('colspan', 2)
 					.html(`<b>Sample ${d.sample}</b>`)
 
-				addCategoryInfo(self.config.colorTW?.term, 'category', d, table)
+				if (self.config.colorTW) addCategoryInfo(self.config.colorTW?.term, 'category', d, table)
 				if (self.config.shapeTW) addCategoryInfo(self.config.shapeTW.term, 'shape', d, table)
+				if (self.config.term) addCategoryInfo(self.config.term.term, 'x', d, table)
+				if (self.config.term2) addCategoryInfo(self.config.term2?.term, 'y', d, table)
+
 				if ('info' in d)
 					for (const [k, v] of Object.entries(d.info)) {
 						const row = table.append('tr')

@@ -344,14 +344,23 @@ export function getScatterCoordinates(q, ds) {
 	if (filter) sql += interpolateSqlValues(`WITH ${filter.filters}`, filter.values.slice())
 	const xterm = q.coordTWs[0].term
 	const yterm = q.coordTWs[1].term
-	sql += `SELECT annox.sample AS sampleId, annox.value as x, annoy.value AS y FROM anno_${xterm.type} annox
-				 JOIN anno_${yterm.type} annoy  WHERE annox.term_id = '${xterm.id}' AND annoy.sample = annox.sample AND annoy.term_id='${yterm.id}'`
-	if (filter) sql += ` AND annox.sample IN ${filter.CTEname}`
+	sql += `SELECT ax.sample AS sampleId, ax.value as x, ay.value AS y 
+			FROM anno_${xterm.type} ax 
+			JOIN anno_${yterm.type} ay on ax.sample = ay.sample and ay.term_id = '${yterm.id}'  
+			WHERE ax.term_id = '${xterm.id}'`
+	if (filter) sql += ` AND ax.sample IN ${filter.CTEname}`
 	const rows = q.ds.cohort.db.connection.prepare(sql).all()
 
 	for (const { sampleId, x, y } of rows) {
-		const sample = ds.sampleId2Name.get(sampleId)
-		if (sample) samples.push({ sample, sampleId, x, y })
+		const id2Name = ds.sampleId2Name.get(sampleId)
+		const sample = { sample: id2Name, sampleId, x, y }
+		const computable = isComputable(q.coordTWs[0].term, x) && isComputable(q.coordTWs[1].term, y)
+
+		if (sample && computable) samples.push(sample)
 	}
 	return samples
+}
+
+function isComputable(term, value) {
+	return !term.values?.[value]?.uncomputable
 }
