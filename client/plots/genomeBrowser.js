@@ -80,7 +80,7 @@ class genomeBrowser {
 		this.type = 'genomeBrowser'
 	}
 
-	async init(appState) {
+	async init() {
 		const holder = this.opts.holder.append('div')
 		// layout rows from top to bottom
 		const errDiv = holder.append('div')
@@ -103,7 +103,7 @@ class genomeBrowser {
 		// to make sure api is accessible by mayDisplayVariantFilter
 		this.vocabApi = this.app.vocabApi
 
-		this.components = {}
+		this.components = {} // TODO a subcomponent for controls
 	}
 
 	getState(appState) {
@@ -172,7 +172,7 @@ class genomeBrowser {
 		makeVariantValueComputingGroupControls(this)
 		this.components.controls = {
 			update: () => {
-				console.log('test')
+				//console.log('test')
 			}
 		}
 	}

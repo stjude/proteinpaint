@@ -42,6 +42,7 @@ const fields = [
 	try {
 		const headers = { 'Content-Type': 'application/json', Accept: 'application/json' }
 		if (p.token) headers['X-Auth-Token'] = p.token
+		/*
 		const response = await got(
 			'https://api.gdc.cancer.gov/ssms?size=10000000&fields=' +
 				fields.join(',') +
@@ -49,6 +50,12 @@ const fields = [
 				encodeURIComponent(JSON.stringify(filters)),
 			{ method: 'GET', headers }
 		)
+		*/
+		const response = await got.post('https://api.gdc.cancer.gov/ssms', {
+			method: 'POST',
+			headers,
+			body: JSON.stringify({ size: 10000, fields: fields.join(','), filters })
+		})
 
 		const re = JSON.parse(response.body)
 		for (const hit of re.data.hits) {

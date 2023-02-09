@@ -59,7 +59,7 @@ export async function get_mds3variantData(q, res, ds, genome) {
 
 	if (q.details.groups.length == 1) {
 		// single group
-		compute_1group(results.mlst, q.details.groups[0])
+		compute_1group(ds, results.mlst, q.details.groups[0])
 	} else if (q.details.groups.length == 2) {
 		await compute_2groups(ds, q.details, results.mlst)
 	} else {
@@ -121,7 +121,7 @@ mlst[]
 g{}
 	.type=str
 */
-function compute_1group(mlst, g) {
+function compute_1group(ds, mlst, g) {
 	if (g.type == 'filter') {
 		// the only group is "filter", since mlst samples are already reflecting the filter, simply compute AF from all samples of each mlst[]
 		for (const m of mlst) {
@@ -132,14 +132,35 @@ function compute_1group(mlst, g) {
 	if (g.type == 'info') {
 		if (!g.infoKey) throw 'infoKey missing on single group.type=info'
 		for (const m of mlst) {
-			console.log(m.info)
-			m.nm_axis_value = m.info[g.infoKey]
-			// default value if missing?
+			const v = m.info[g.infoKey]
+			if (v == undefined) {
+				// missing value
+			} else {
+				// since it is assumed to be numeric value
+				const n = Number(v)
+				if (Number.isNaN(n)) {
+					// not a number
+				} else {
+					m.nm_axis_value = n
+				}
+			}
 		}
 		return
 	}
 	if (g.type == 'population') {
-		throw 'todo: single group type=population'
+		// simple fix: return AF from the first set of ancestry
+		const g2 = ds.queries.snvindel.populations.find(i => i.key == g.key)
+		if (!g2) throw 'unknown population'
+		for (const m of mlst) {
+			let ac = 0,
+				an = 0
+			for (const s of g2.sets) {
+				ac += Number(m.info[s.infokey_AC] || 0)
+				an += Number(m.info[s.infokey_AN] || 0)
+			}
+			m.nm_axis_value = ac / an
+		}
+		return
 	}
 	throw 'unknown type of single group'
 }
@@ -161,12 +182,18 @@ function getAllelicCount(m) {
 }
 
 async function compute_2groups(ds, details, mlst) {
-	if (details.groups.find(i => i.type == 'info')) {
-		// at least one of the group is an info field, may ony do value diff?
-		compute_2groups_valueDiff(ds, details, mlst)
+	const [g1, g2] = details.groups // two groups from query parameter created on frontend
+
+	if ((g1.type == 'population' && g2.type == 'filter') || (g2.type == 'population' && g1.type == 'filter')) {
+		// filter vs population
+		await fisher_filter_population(ds, details, mlst)
 		return
 	}
+	// for the rest, always value diff
+	compute_2groups_valueDiff(ds, details, mlst)
+}
 
+async function fisher_filter_population(ds, details, mlst) {
 	const pop2average = mayGet_pop2average(ds, details, mlst) // undefined if not used
 
 	for (const m of mlst) {
@@ -190,7 +217,13 @@ async function compute_2groups(ds, details, mlst) {
 }
 
 function compute_2groups_valueDiff(ds, details, mlst) {
-	throw 'compute_2groups_valueDiff() not done'
+	const [g1, g2] = details.groups
+	compute_1group(ds, mlst, g1)
+	const g1values = mlst.map(m => m.nm_axis_value)
+	compute_1group(ds, mlst, g2)
+	for (const [i, m] of mlst.entries()) {
+		m.nm_axis_value = g1values[i] - m.nm_axis_value
+	}
 }
 
 function getGroupsData(ds, details, m, pop2average) {

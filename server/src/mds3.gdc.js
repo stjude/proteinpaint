@@ -466,28 +466,24 @@ async function snvindel_byisoform(opts, ds) {
 		query2 = isoform2ssm_query2_getcase
 
 	const headers = getheaders(opts)
-	const p1 = got(
-		apihost +
-			query1.endpoint +
-			'?size=' +
-			query1.size +
-			'&fields=' +
-			query1.fields.join(',') +
-			'&filters=' +
-			encodeURIComponent(JSON.stringify(query1.filters(opts))),
-		{ method: 'GET', headers }
-	)
-	const p2 = got(
-		apihost +
-			query2.endpoint +
-			'?size=' +
-			query2.size +
-			'&fields=' +
-			query2.fields.join(',') +
-			'&filters=' +
-			encodeURIComponent(JSON.stringify(query2.filters(opts, ds))),
-		{ method: 'GET', headers }
-	)
+
+	// must use POST as filter can be too long for GET
+	const p1 = got.post(apihost + query1.endpoint, {
+		headers,
+		body: JSON.stringify({
+			size: query1.size,
+			fields: query1.fields.join(','),
+			filters: query1.filters(opts)
+		})
+	})
+	const p2 = got.post(apihost + query2.endpoint, {
+		headers,
+		body: JSON.stringify({
+			size: query2.size,
+			fields: query2.fields.join(','),
+			filters: query2.filters(opts, ds)
+		})
+	})
 	const [tmp1, tmp2] = await Promise.all([p1, p2])
 	let re_ssms, re_cases
 	try {
