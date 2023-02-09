@@ -53,12 +53,11 @@ const apihost = process.env.PP_GDC_HOST || 'https://api.gdc.cancer.gov' // rest 
 const apihostGraphql = apihost + (apihost.includes('/v0') ? '' : '/v0') + '/graphql'
 
 export async function validate_ssm2canonicalisoform(api) {
-	if (!api.endpoint) throw '.endpoint missing from ssm2canonicalisoform'
-	if (!api.fields) throw '.fields[] missing from ssm2canonicalisoform'
+	const fields = ['consequence.transcript.is_canonical', 'consequence.transcript.transcript_id']
 	api.get = async q => {
 		// q is client request object
 		if (!q.ssm_id) throw '.ssm_id missing'
-		const response = await got(api.endpoint + q.ssm_id + '?fields=' + api.fields.join(','), {
+		const response = await got(apihost + '/ssms/' + q.ssm_id + '?fields=' + fields.join(','), {
 			method: 'GET',
 			headers: getheaders(q)
 		})
@@ -1043,12 +1042,14 @@ export async function get_termlst2size(twLst, q, combination, ds) {
 }
 
 export function validate_m2csq(ds) {
-	const api = ds.queries.snvindel.m2csq.gdcapi
-	if (!api.endpoint) throw '.endpoint missing for queries.snvindel.m2csq.gdcapi'
-	if (!api.fields) throw '.fields[] missing for queries.snvindel.m2csq.gdcapi'
+	const fields = [
+		'consequence.transcript.transcript_id',
+		'consequence.transcript.consequence_type',
+		'consequence.transcript.aa_change'
+	]
 	ds.queries.snvindel.m2csq.get = async q => {
 		// q is client request object
-		const response = await got(api.endpoint + q.ssm_id + '?fields=' + api.fields.join(','), {
+		const response = await got(apihost + '/ssms/' + q.ssm_id + '?fields=' + fields.join(','), {
 			method: 'GET',
 			headers: getheaders(q)
 		})

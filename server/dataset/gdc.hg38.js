@@ -5,10 +5,7 @@ isoform2ssm_query1_getvariant
 		mayChangeCase2Cases
 query_range2variants
 variables_range2variants
-ssm2canonicalisoform
 */
-
-const GDC_HOST = process.env.PP_GDC_HOST || 'https://api.gdc.cancer.gov'
 
 /* if filter0 is missing necessary attr, adding it to api query will cause error
 if valid, returns object
@@ -126,26 +123,6 @@ function variables_range2variants(p) {
 	return f
 }
 
-/*
-using one ssmid, get the full list of consequences
-*/
-const ssmid2csq = {
-	endpoint: GDC_HOST + '/ssms/',
-	fields: [
-		'consequence.transcript.transcript_id',
-		'consequence.transcript.consequence_type',
-		'consequence.transcript.aa_change'
-	]
-}
-
-/* not part of generic mds3 dataset
-to map a SSM id to a canonical ENST name
-*/
-const ssm2canonicalisoform = {
-	endpoint: GDC_HOST + '/ssms/',
-	fields: ['consequence.transcript.is_canonical', 'consequence.transcript.transcript_id']
-}
-
 ///////////////////////////////// end of query strings ///////////////
 
 // mds3 hardcodes to use .sample_id to dedup samples
@@ -224,7 +201,8 @@ module.exports = {
 		}
 	},
 
-	ssm2canonicalisoform,
+	// not part of generic mds3 dataset, to map a SSM id to a canonical ENST name
+	ssm2canonicalisoform: { gdcapi: true },
 
 	/* hope this can be applied to all types of variants
 	but if it can only be applied to ssm, then it may be moved to queries.snvindel{}
@@ -285,7 +263,7 @@ module.exports = {
 			m2csq: {
 				// may also support querying a vcf by chr.pos.ref.alt
 				by: 'ssm_id',
-				gdcapi: ssmid2csq
+				gdcapi: true
 			}
 		},
 		geneCnv: {
