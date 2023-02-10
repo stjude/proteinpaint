@@ -411,15 +411,19 @@ function copy_queries(ds, dscopy) {
 			copy.snvindel.m2csq = { by: ds.queries.snvindel.m2csq.by }
 		}
 
-		if (ds.queries.snvindel?.byrange?.bcffile) {
-			// the query is using a bcf file
+		if (ds.queries.snvindel?.byrange?.bcffile || ds.queries.snvindel?.byrange?.chr2bcffile) {
+			// the query is using bcf file(s)
 			// create the bcf{} object on dscopy
 			dscopy.bcf = {}
 
-			if (ds.queries.snvindel.byrange?._tk?.info) {
+			if (ds.queries.snvindel.byrange._tk.info) {
 				// this bcf file has info fields, attach to copy.bcf{}
 				// dataset may specify if to withhold
 				dscopy.bcf.info = ds.queries.snvindel.byrange._tk.info
+			}
+			if (ds.queries.snvindel.byrange._tk.format) {
+				// like above
+				dscopy.bcf.format = ds.queries.snvindel.byrange._tk.format
 			}
 		}
 	}

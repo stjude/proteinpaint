@@ -287,7 +287,11 @@ async function queryServerFileBySsmid(q, twLst, ds) {
 			if (Number.isNaN(pos)) throw 'no integer position for snvindel from ssm id'
 
 			// new param with rglst as the variant position, also inherit q.tid2value if provided
-			const param = Object.assign({}, q, { rglst: [{ chr, start: pos, stop: pos }] })
+			const param = Object.assign({}, q, {
+				rglst: [{ chr, start: pos, stop: pos }],
+				// add flag to always add format for table display
+				addFormatValues: true
+			})
 
 			const mlst = await ds.queries.snvindel.byrange.get(param)
 			for (const m of mlst) {
