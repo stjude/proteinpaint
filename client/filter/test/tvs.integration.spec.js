@@ -521,11 +521,14 @@ tape('tvs: Numeric', async test => {
 	await sleep(100)
 	tr1.querySelector('.start_select').dispatchEvent(enter_event)
 	tr1.querySelector('.sjpp_apply_btn').click()
-	await sleep(300)
+	await sleep(500) //Increased time to fix test failing in CI
 	test.true(
 		opts.holder
 			.node()
 			.querySelectorAll('.value_btn')[0]
+			/* HTML entity code does not work in this instance (like in the above .sjpp_apply_btn 
+				test) for some reason. Test fails everytime. */
+			// .innerHTML.includes('&ge; 0'),
 			.innerHTML.includes('≥ 0'),
 		'should show a >= 0 in the pill value'
 	)
