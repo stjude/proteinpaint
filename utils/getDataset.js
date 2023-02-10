@@ -28,7 +28,8 @@ const datasets = {
 	ash,
 	mbmeta,
 	sjlife2,
-	mbunder6
+	mbunder6,
+	clingen
 	// add more datasets
 }
 
@@ -140,6 +141,12 @@ function hg38gene() {
 			path.join(tp, 'anno/gencode.v41.hg38.gz.tbi')
 	)
 	exec('curl https://proteinpaint.stjude.org/ppSupport/genes.hg38.db -o ' + path.join(tp, 'anno/genes.hg38.db'))
+}
+
+function clingen() {
+	scpHpc('hg19/clingen/db')
+	scpHpc('hg19/clingen/clinGen.hg19.bcf.gz*')
+	scpHpc('hg19/clingen/clinGen.svfusion.hg19.gz*')
 }
 
 ////////////////////////////////////////////
