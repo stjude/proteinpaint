@@ -63,7 +63,7 @@ h2 {
 }
 
 .sja_root_holder svg {
-    display: inline-block
+    display: inline-block;
 }
 /*
     override the thicker button border
@@ -81,6 +81,18 @@ h2 {
     border-style: solid;
     border-radius: 3px;
     box-shadow: inset 0 0 0 99999px rgba(255, 255, 255, 0.3);
+    font-family: Arial;
+    color: black;
+    background-color: buttonface;
+    border-color: buttonborder;
+}
+
+.sja_root_holder button:disabled,
+.sja_menu_div button:disabled,
+.sja_pane button:disabled {
+    background-color: rgba(239, 239, 239, 0.3);
+    color: rgba(16, 16, 16, 0.3);
+    border-color: rgba(118, 118, 118, 0.3);
 }
 
 .sja_root_holder button:hover,
@@ -458,15 +470,6 @@ h2 {
 .sja_pane>:nth-child(2) {
     padding: 0px 10px 10px 10px;
     font-family: Arial;
-}
-
-.sja_pane button {
-    font-family: Arial;
-    color: black;
-}
-
-.sja_pane button:disabled {
-    color: #858585;
 }
 
 .sja_cursor_hmove {
