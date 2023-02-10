@@ -1011,10 +1011,11 @@ function setRenderers(self) {
 	}
 
 	function getSvgSubElems(svg, chart) {
-		let mainG, axisG, xAxis, yAxis, legendG
+		let mainG, axisG, xAxis, yAxis, legendG, labelsG
 		if (svg.select('.sjpcb-scatter-mainG').size() == 0) {
+			axisG = svg.append('g').attr('class', 'sjpcb-scatter-axis')
 			mainG = svg.append('g').attr('class', 'sjpcb-scatter-mainG')
-			axisG = mainG.append('g').attr('class', 'sjpcb-scatter-axis')
+			labelsG = svg.append('g').attr('class', 'sjpcb-scatter-labelsG')
 			xAxis = axisG
 				.append('g')
 				.attr('class', 'sjpcb-scatter-x-axis')
@@ -1039,10 +1040,10 @@ function setRenderers(self) {
 				.append('clipPath')
 				.attr('id', idclip)
 				.append('rect')
-				.attr('x', self.axisOffset.x - 40)
-				.attr('y', self.axisOffset.y - 10)
-				.attr('width', self.settings.svgw + self.axisOffset.x)
-				.attr('height', self.settings.svgh + 30)
+				.attr('x', self.axisOffset.x)
+				.attr('y', self.axisOffset.y)
+				.attr('width', self.settings.svgw + self.settings.size)
+				.attr('height', self.settings.svgh + self.settings.size)
 
 			const gradient = self.defs
 				.append('linearGradient')
@@ -1066,18 +1067,37 @@ function setRenderers(self) {
 			legendG = svg
 				.append('g')
 				.attr('class', 'sjpcb-scatter-legend')
-				.attr('transform', `translate(${self.settings.svgw + 180}, 0)`)
+				.attr('transform', `translate(${self.settings.svgw + self.axisOffset.x + 50}, 0)`)
 		} else {
 			mainG = svg.select('.sjpcb-scatter-mainG')
 			axisG = svg.select('.sjpcb-scatter-axis')
-
+			labelsG = svg.select('.sjpcb-scatter-labelsG')
 			xAxis = axisG.select('.sjpcb-scatter-x-axis')
 			yAxis = axisG.select('.sjpcb-scatter-y-axis')
 			legendG = svg.select('.sjpcb-scatter-legend')
 		}
 
-		if (self.settings.showAxes) axisG.style('opacity', 1)
-		else axisG.style('opacity', 0)
+		if (self.settings.showAxes) {
+			axisG.style('opacity', 1)
+			if (self.config.term) {
+				labelsG
+					.append('text')
+					.attr(
+						'transform',
+						`translate(${self.axisOffset.x + self.settings.svgw / 2}, ${self.settings.svgh + self.axisOffset.y + 40})`
+					)
+					.attr('text-anchor', 'middle')
+					.text(self.config.term.term.name)
+				labelsG
+					.append('text')
+					.attr(
+						'transform',
+						`translate(${self.axisOffset.x - 50}, ${self.settings.svgh / 2 + self.axisOffset.y}) rotate(-90)`
+					)
+					.attr('text-anchor', 'middle')
+					.text(self.config.term2.term.name)
+			}
+		} else axisG.style('opacity', 0)
 
 		return [mainG, legendG]
 	}
@@ -1510,7 +1530,7 @@ export function getDefaultScatterSettings() {
 	return {
 		size: 25,
 		refSize: 9,
-		svgw: 500,
+		svgw: 550,
 		svgh: 550,
 		axisTitleFontSize: 16,
 		showAxes: true,
