@@ -785,6 +785,7 @@ export async function fillTermWrapper(tw, vocabApi, defaultQ) {
 }
 
 async function call_fillTW(tw, vocabApi, defaultQ) {
+	console.log(tw)
 	if (!tw.$id) tw.$id = `${$id++}${idSuffix}`
 
 	const t = tw.term.type
@@ -793,7 +794,11 @@ async function call_fillTW(tw, vocabApi, defaultQ) {
 	if (type == 'numeric.toggle') {
 		_ = await import(`./numeric.toggle.js`)
 	} else {
-		_ = await import(`./handlers/${type}.js`)
+		try {
+			_ = await import(`./handlers/${type}.js`)
+		} catch (error) {
+			throw `Type ${type} does not exist`
+		}
 	}
 	await _.fillTW(tw, vocabApi, defaultQ ? defaultQ[type] : null)
 }
