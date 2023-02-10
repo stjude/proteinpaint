@@ -533,8 +533,6 @@ tape('tvs: Numeric', async test => {
 		'should show a >= 0 in the pill value'
 	)
 
-	console.log(opts.holder.node().querySelectorAll('.value_btn')[0])
-
 	test.end()
 })
 
