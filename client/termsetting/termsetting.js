@@ -785,7 +785,6 @@ export async function fillTermWrapper(tw, vocabApi, defaultQ) {
 }
 
 async function call_fillTW(tw, vocabApi, defaultQ) {
-	console.log(tw)
 	if (!tw.$id) tw.$id = `${$id++}${idSuffix}`
 
 	const t = tw.term.type
