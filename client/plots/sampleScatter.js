@@ -1039,7 +1039,7 @@ function setRenderers(self) {
 				.append('clipPath')
 				.attr('id', idclip)
 				.append('rect')
-				.attr('x', self.axisOffset.x - 30)
+				.attr('x', self.axisOffset.x - 40)
 				.attr('y', self.axisOffset.y - 10)
 				.attr('width', self.settings.svgw + self.axisOffset.x)
 				.attr('height', self.settings.svgh + 30)
@@ -1378,10 +1378,11 @@ function setInteractivity(self) {
 				div.append('div')
 				const table = div.append('table').style('width', '100%')
 				const row = table.append('tr')
-				row
-					.append('td')
-					.attr('colspan', 2)
-					.html(`<b>Sample ${d.sample}</b>`)
+				if ('sample' in d)
+					row
+						.append('td')
+						.attr('colspan', 2)
+						.html(`<b>Sample ${d.sample}</b>`)
 
 				if (self.config.colorTW) addCategoryInfo(self.config.colorTW?.term, 'category', d, table)
 				if (self.config.shapeTW) addCategoryInfo(self.config.shapeTW.term, 'shape', d, table)

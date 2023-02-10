@@ -290,5 +290,10 @@ function checkIPaddress(req, ip) {
 }
 
 /* NOTE: maySetAuthRoutes could replace api.getDsAuth() and .hasActiveSession() */
-const authApi = { maySetAuthRoutes, checkDsSecret, getDsAuth: () => [], hasActiveSession: () => true }
+const authApi = {
+	maySetAuthRoutes,
+	checkDsSecret,
+	getDsAuth: () => [],
+	requiresLogin: (req, dslabel) => !authApi.getDsAuth(req).find(d => d.dslabel == dslabel)?.insession
+}
 module.exports = authApi

@@ -10,7 +10,6 @@ exported functions
 */
 import { rgb } from 'd3-color'
 const d3scale = require('d3-scale')
-import { schemeCategory10 } from 'd3-scale-chromatic'
 const d3 = require('d3')
 
 export const defaultcolor = rgb('#8AB1D4').darker()

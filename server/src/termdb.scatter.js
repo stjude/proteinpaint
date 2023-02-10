@@ -1,12 +1,13 @@
-const { getData } = require('./termdb.matrix')
-const fs = require('fs')
-const path = require('path')
-const utils = require('./utils')
-const serverconfig = require('./serverconfig')
-import { schemeCategory20, getColors } from '#shared/common'
+import { getData } from './termdb.matrix'
+import fs from 'fs'
+import path from 'path'
+import utils from './utils'
+import serverconfig from './serverconfig'
+import { schemeCategory20, getColors, requiresLogin } from '#shared/common'
 import { interpolateSqlValues } from './termdb.sql'
-const { mclass, dt2label, morigin } = require('#shared/common')
-const { getFilterCTEs } = require('./termdb.filter')
+import { mclass, dt2label, morigin } from '#shared/common'
+import { getFilterCTEs } from './termdb.filter'
+import authApi from './auth'
 
 /*
 works with "canned" scatterplots in a dataset, e.g. data from a text file of tSNE coordinates from a pre-analyzed cohort (contrary to on-the-fly analysis)
@@ -126,12 +127,12 @@ output:
 		each element {category, {shape=int, sampleCount=int} }
 }
 */
-export async function trigger_getSampleScatter(q, res, ds, genome) {
+export async function trigger_getSampleScatter(req, q, res, ds, genome) {
 	try {
 		let refSamples, cohortSamples
 		if (q.coordTWs.length == 2) {
 			refSamples = []
-			cohortSamples = getScatterCoordinates(q, ds)
+			cohortSamples = getScatterCoordinates(req, q, ds)
 		} else {
 			if (!q.plotName) throw `Neither plot name or coordinates where provided`
 			if (!ds.cohort.scatterplots || !ds.cohort.scatterplots.plots) throw 'not supported'
@@ -334,7 +335,7 @@ function order(map, tw, refs) {
 	return entries
 }
 
-export function getScatterCoordinates(q, ds) {
+export function getScatterCoordinates(req, q, ds) {
 	q.ds = ds
 	const samples = []
 	if (q.coordTWs.length != 2) return samples
@@ -352,10 +353,10 @@ export function getScatterCoordinates(q, ds) {
 	const rows = q.ds.cohort.db.connection.prepare(sql).all()
 
 	for (const { sampleId, x, y } of rows) {
-		const id2Name = ds.sampleId2Name.get(sampleId)
-		const sample = { sample: id2Name, sampleId, x, y }
+		const sample = { sampleId, x, y }
+		if (ds.cohort.termdb.displaySampleIds && !authApi.requiresLogin(req, q.dslabel))
+			sample.sample = ds.sampleId2Name.get(sampleId)
 		const computable = isComputable(q.coordTWs[0].term, x) && isComputable(q.coordTWs[1].term, y)
-
 		if (sample && computable) samples.push(sample)
 	}
 	return samples

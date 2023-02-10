@@ -67,7 +67,7 @@ export function handle_request_closure(genomes) {
 			if (q.getvariantfilter) return getvariantfilter(res, ds)
 			if (q.getLDdata) return trigger_getLDdata(q, res, ds)
 			if (q.genesetByTermId) return trigger_genesetByTermId(q, res, tdb)
-			if (q.getSampleScatter) return await trigger_getSampleScatter(q, res, ds, genome)
+			if (q.getSampleScatter) return await trigger_getSampleScatter(req, q, res, ds, genome)
 			if (q.getCohortsData) return await trigger_getCohortsData(q, res, ds)
 			if (q.getViolinPlotData) return await trigger_getViolinPlotData(q, res, ds, genome)
 
