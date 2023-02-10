@@ -261,7 +261,7 @@ function processSample(dbSample, sample, tw, categoryMap, category) {
 	if (tw.term.type == 'geneVariant') {
 		const mutations = dbSample?.[tw.term.name]?.values
 		sample.cat_info[category] = []
-		for (const [i, mutation] of Object.entries(mutations)) {
+		for (const mutation of mutations) {
 			const dt = mutation.dt
 			const class_info = mclass[mutation.class]
 			const origin = morigin[mutation.origin]?.label
@@ -275,18 +275,16 @@ function processSample(dbSample, sample, tw, categoryMap, category) {
 		}
 		for (const [dt, label] of Object.entries(dt2label)) {
 			const mutation = mutations.find(mutation => mutation.dt == dt)
-			if (mutation && !(tw.q.hiddenValues && mclass[mutation.class].label in tw.q.hiddenValues)) {
-				const class_info = mclass[mutation.class]
-				const origin = morigin[mutation.origin]?.label
-				const dtlabel = origin ? `${origin} ${dt2label[dt]}` : dt2label[dt]
-				const value = `${class_info.label} ${dtlabel}`
+			if (!mutation || mutation.class === 'Blank' || mutation.class === 'WT') continue
+			const category = getCategory(mutation)
+			if (!(tw.q.hiddenValues && category in tw.q.hiddenValues)) {
 				sample[category] = value
 				break //Found a color
 			}
 		}
 		if (!sample[category])
 			//all hidden, will take any
-			sample[category] = mclass[mutations[0].class].label
+			sample[category] = getCategory(mutations[0])
 		sample.hidden[category] = tw.q.hiddenValues ? sample[category] in tw.q.hiddenValues : false
 		result.push(sample)
 	} else {
@@ -300,6 +298,14 @@ function processSample(dbSample, sample, tw, categoryMap, category) {
 		}
 	}
 	return result
+}
+
+function getCategory(mutation) {
+	const dt = mutation.dt
+	const class_info = mclass[mutation.class]
+	const origin = morigin[mutation.origin]?.label
+	const dtlabel = origin ? `${origin} ${dt2label[dt]}` : dt2label[dt]
+	return `${class_info.label} ${dtlabel}`
 }
 
 function order(map, tw, refs) {
