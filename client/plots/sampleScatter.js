@@ -1041,9 +1041,9 @@ function setRenderers(self) {
 				.attr('id', idclip)
 				.append('rect')
 				.attr('x', self.axisOffset.x)
-				.attr('y', self.axisOffset.y)
+				.attr('y', 0)
 				.attr('width', self.settings.svgw + self.settings.size)
-				.attr('height', self.settings.svgh + self.settings.size)
+				.attr('height', self.settings.svgh + self.axisOffset.y)
 
 			const gradient = self.defs
 				.append('linearGradient')
