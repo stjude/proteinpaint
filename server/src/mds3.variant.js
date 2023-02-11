@@ -50,7 +50,9 @@ export async function get_mds3variantData(q, res, ds, genome) {
 		info{}
 		samples[]
 			sample_id:int
-			GT:'0/1'
+			formatK2v: {
+				GT:'0/1'
+			}
 	}
 	*/
 
@@ -170,9 +172,9 @@ function getAllelicCount(m) {
 	let A = 0,
 		T = 0
 	for (const s of m.samples) {
-		if (!s.GT) continue
+		if (!s?.formatK2v?.GT) continue
 		// ds may configure to use '|' if it exists in vcf file
-		const tmp = s.GT.split('/').map(Number)
+		const tmp = s.formatK2v.GT.split('/').map(Number)
 		T += tmp.length
 		for (const i of tmp) {
 			if (i == m.altAlleleIdx) A++

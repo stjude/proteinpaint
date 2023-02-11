@@ -425,6 +425,14 @@ function copy_queries(ds, dscopy) {
 				// like above
 				dscopy.bcf.format = ds.queries.snvindel.byrange._tk.format
 			}
+		} else {
+			if (ds.queries.snvindel.info) {
+				dscopy.bcf = { info: ds.queries.snvindel.info }
+			}
+			if (ds.queries.snvindel.format) {
+				if (!dscopy.bcf) dscopy.bcf = {}
+				dscopy.bcf.format = ds.queries.snvindel.format
+			}
 		}
 	}
 	// new query
@@ -660,6 +668,11 @@ export async function snvindelByRangeGetter_bcf(ds, genome) {
 			delete ds.queries.snvindel.infoUrl
 		}
 	}
+
+	// NOTE ds.queries.snvindel{} as a common place to attach info/format
+	// as a dataset not using bcf file may also require info/format
+	ds.queries.snvindel.info = q._tk.info
+	ds.queries.snvindel.format = q._tk.format
 
 	/*
 	param{}
@@ -928,9 +941,7 @@ if so, return sample obj
 otherwise, return null
 */
 function vcfFormat2sample(vlst, formatlst, sampleHeaderObj, addFormatValues) {
-	const sampleObj = {
-		sample_id: sampleHeaderObj.name
-	}
+	const formatK2v = {} // key: FORMAT ID, value: value in this sample
 	for (const [j, format] of formatlst.entries()) {
 		const fv = vlst[j] // value for this format field
 		if (!fv || fv == '.') {
@@ -943,28 +954,29 @@ function vcfFormat2sample(vlst, formatlst, sampleHeaderObj, addFormatValues) {
 				continue
 			}
 			// has gt value
-			if (addFormatValues) {
-				sampleObj.GT = fv
-			} else {
-				// no need to add any format fields, only need to return sample id for counting
-				return sampleObj
-			}
+			formatK2v.GT = fv
 		} else {
 			/* has value for a non-GT field
 			indicating the variant is annotated to this sample
-			irrespective of what this field is
-			later may check by meanings of each format field
+			do not parse values here based on Number="R"
+			as we don't need to compute on the format values on backend
+			client will parse the values for display
 			*/
-			if (addFormatValues) {
-				sampleObj[format.ID] = fv
-			} else {
-				// no need to add field, just return
-				return sampleObj
-			}
+			formatK2v[format.ID] = fv
 		}
 	}
-	if (Object.keys(sampleObj).length == 1) {
+	if (Object.keys(formatK2v).length == 0) {
+		// this sample has no format values for this variant
+		// meaning this sample does not harbor this variant. return null as sample object
 		return null
+	}
+	// the sample harbor this variant; return valid sample obj
+	const sampleObj = {
+		sample_id: sampleHeaderObj.name
+	}
+	if (addFormatValues) {
+		// query asks to return format values (e.g. for sample table display)
+		sampleObj.formatK2v = formatK2v
 	}
 	return sampleObj
 }

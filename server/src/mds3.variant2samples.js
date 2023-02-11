@@ -153,6 +153,8 @@ q{}
 	hardcoded to be a geneVariant term, carries isoform/rglst/etc for querying variant
 */
 async function variant2samples_getresult(q, ds) {
+	mayAllow2returnFormatValues(q, ds)
+
 	const mutatedSamples = await queryMutatedSamples(q, ds)
 
 	if (q.get == ds.variant2samples.type_samples) {
@@ -177,6 +179,19 @@ async function variant2samples_getresult(q, ds) {
 	}
 
 	throw 'unknown get type'
+}
+
+function mayAllow2returnFormatValues(q, ds) {
+	if (q.get == 'samples') {
+		const byrange = ds.queries?.snvindel?.byrange
+		if (byrange) {
+			if ((byrange.bcffile || byrange.chr2bcffile) && byrange._tk.format) {
+				// byrange query uses bcf file and the files have FORMAT fields,
+				// q.get=samples will make sample table display with the variant, return FORMAT for sample-level info on variants
+				q.addFormatValues = true
+			}
+		}
+	}
 }
 
 /*
@@ -288,18 +303,13 @@ async function queryServerFileBySsmid(q, twLst, ds) {
 
 			// new param with rglst as the variant position, also inherit q.tid2value if provided
 			const param = Object.assign({}, q, {
-				rglst: [{ chr, start: pos, stop: pos }],
-				// add flag to always add format for table display
-				addFormatValues: true
+				rglst: [{ chr, start: pos, stop: pos }]
 			})
 
 			const mlst = await ds.queries.snvindel.byrange.get(param)
 			for (const m of mlst) {
 				if (m.pos != pos || m.ref != ref || m.alt != alt) continue
-				for (const s of m.samples) {
-					if (!samples.has(s.sample_id)) samples.set(s.sample_id, { sample_id: s.sample_id, ssm_id_lst: [] })
-					samples.get(s.sample_id).ssm_id_lst.push(ssmid)
-				}
+				combineSamplesById(m.samples, samples, m.ssm_id)
 			}
 			continue
 		}
@@ -324,10 +334,7 @@ async function queryServerFileBySsmid(q, twLst, ds) {
 					// not this fusion event
 					continue
 				}
-				for (const s of m.samples) {
-					if (!samples.has(s.sample_id)) samples.set(s.sample_id, { sample_id: s.sample_id, ssm_id_lst: [] })
-					samples.get(s.sample_id).ssm_id_lst.push(ssmid)
-				}
+				combineSamplesById(m.samples, samples, m.ssmid)
 			}
 			continue
 		}
@@ -337,6 +344,36 @@ async function queryServerFileBySsmid(q, twLst, ds) {
 	mayAddSampleAnnotationByTwLst(samples, twLst, ds)
 
 	return [...samples.values()]
+}
+
+/*
+inlst[]
+	array of sample objects. each element is a sample with a mutation (all having the same mutation)
+	a sample with multiple mutations will be duplicated in inlst
+samples{}
+	a map, k: sample_id, v: {ssm_id_lst:[], ...}
+ssmid: str
+	mutation id shared by samples from inlst
+*/
+export function combineSamplesById(inlst, samples, ssmid) {
+	for (const s of inlst) {
+		// s = { sample_id, formatK2v:{} }
+		if (!samples.has(s.sample_id)) {
+			// new sample
+			s.ssm_id_lst = []
+			if (s.formatK2v) {
+				// format values are also returned, they are per-ssm so must introduce a new map
+				s.ssmid2format = {}
+			}
+			samples.set(s.sample_id, s)
+		}
+		// slot this sample into samples{}
+		const s2 = samples.get(s.sample_id)
+		s2.ssm_id_lst.push(ssmid)
+		if (s2.ssmid2format) {
+			s2.ssmid2format[ssmid] = s.formatK2v
+		}
+	}
 }
 
 function mayAddSampleAnnotationByTwLst(samples, twLst, ds) {
@@ -362,20 +399,13 @@ async function queryServerFileByRglst(q, twLst, ds) {
 	if (ds.queries.snvindel) {
 		const mlst = await ds.queries.snvindel.byrange.get(q)
 		for (const m of mlst) {
-			for (const s of m.samples) {
-				if (!samples.has(s.sample_id)) samples.set(s.sample_id, { sample_id: s.sample_id, ssm_id_lst: [] })
-				samples.get(s.sample_id).ssm_id_lst.push(m.ssm_id)
-			}
+			combineSamplesById(m.samples, samples, m.ssm_id)
 		}
 	}
 	if (ds.queries.svfusion) {
 		const mlst = await ds.queries.svfusion.byrange.get(q)
-
 		for (const m of mlst) {
-			for (const s of m.samples) {
-				if (!samples.has(s.sample_id)) samples.set(s.sample_id, { sample_id: s.sample_id, ssm_id_lst: [] })
-				samples.get(s.sample_id).ssm_id_lst.push(m.ssm_id)
-			}
+			combineSamplesById(m.samples, samples, m.ssm_id)
 		}
 	}
 

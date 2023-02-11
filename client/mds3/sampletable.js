@@ -113,7 +113,7 @@ function feedSample2selectCallback(tk, samples, sampleIdxLst) {
 	tk.allow2selectSamples.callback(pickValues)
 }
 
-async function make_singleSampleTable(sampledata, arg) {
+async function make_singleSampleTable(s, arg) {
 	const grid_div =
 		arg.singleSampleDiv ||
 		arg.div
@@ -126,19 +126,19 @@ async function make_singleSampleTable(sampledata, arg) {
 			.style('padding', '10px')
 			.style('width', '100%')
 
-	if (sampledata.sample_id) {
+	if (s.sample_id) {
 		// sample_id is hardcoded
 		const [cell1, cell2] = get_list_cells(grid_div)
 		cell1.text('Sample')
-		printSampleName(sampledata, arg.tk, cell2)
+		printSampleName(s, arg.tk, cell2)
 	}
 
 	/////////////
 	// hardcoded logic to represent if this case is open or controlled-access
-	if ('caseIsOpenAccess' in sampledata) {
+	if ('caseIsOpenAccess' in s) {
 		const [cell1, cell2] = get_list_cells(grid_div)
 		cell1.text('Access')
-		cell2.text(sampledata.caseIsOpenAccess ? 'Open' : 'Controlled')
+		cell2.text(s.caseIsOpenAccess ? 'Open' : 'Controlled')
 	}
 
 	if (arg.tk.mds.variant2samples.twLst) {
@@ -146,82 +146,30 @@ async function make_singleSampleTable(sampledata, arg) {
 			const [cell1, cell2] = get_list_cells(grid_div)
 			cell1.text(tw.term.name).style('text-overflow', 'ellipsis')
 			cell2.style('text-overflow', 'ellipsis')
-			if (tw.id in sampledata) {
-				if (Array.isArray(sampledata[tw.id])) {
-					cell2.html(sampledata[tw.id].join('<br>'))
+			if (tw.id in s) {
+				if (Array.isArray(s[tw.id])) {
+					cell2.html(s[tw.id].join('<br>'))
 				} else {
-					cell2.text(sampledata[tw.id])
+					cell2.text(s[tw.id])
 				}
 			}
 		}
 	}
 
-	/////////////
-	// hardcoded logic to represent read depth using gdc data
-	// allelic read depth only applies to ssm, not to other types of mutations
-
-	if (sampledata.ssm_id_lst) {
-		/* ssm_id_lst is array of ssm ids
-		it's attached to this sample when samples are queried from the #cases leftlabel
-		create a new row in the table and list all ssm items
-		in such case there can still be sampledata.ssm_read_depth,
-		but since there can be multiple items from ssm_id_lst[] so do not display read depth
-		*/
-		const [cell1, cell2] = get_list_cells(grid_div)
-		cell1.text('Mutations')
-		for (const ssm_id of sampledata.ssm_id_lst) {
-			const d = cell2.append('div')
-			const m = (arg.tk.skewer.rawmlst || arg.tk.custom_variants).find(i => i.ssm_id == ssm_id)
-			if (m) {
-				// found
-				if (arg.tk.mds.queries && arg.tk.mds.queries.snvindel && arg.tk.mds.queries.snvindel.url) {
-					d.append('a')
-						.text(m.mname)
-						.attr('target', '_blank')
-						.attr('href', arg.tk.mds.queries.snvindel.url.base + ssm_id)
-				} else {
-					d.append('span').text(m.mname)
-				}
-				// class
-				d.append('span')
-					.style('margin-left', '10px')
-					.style('color', mclass[m.class].color)
-					.style('font-size', '.7em')
-					.text(mclass[m.class].label)
-			} else {
-				// not found by ssm id
-				d.text(ssm_id)
+	if (s.ssmid2format) {
+		if (s.ssm_id_lst.length > 1) {
+			console.log('format values are not displayed in association with each of multiple ssm!')
+		}
+		// assuming 1 ssm from this sample obj
+		for (const ssmid in s.ssmid2format) {
+			for (const formatkey in s.ssmid2format[ssmid]) {
+				const value = s.ssmid2format[ssmid][formatkey]
+				const [cell1, cell2] = get_list_cells(grid_div)
+				const fobj = arg.tk.mds?.bcf?.format?.[formatkey]
+				cell1.text((fobj && fobj.Description) || formatkey)
+				cell2.html(printFormat(fobj, value))
 			}
 		}
-	} else if (sampledata.ssm_read_depth) {
-		// to support other configurations of ssm read depth
-		const sm = sampledata.ssm_read_depth
-		const [cell1, cell2] = get_list_cells(grid_div)
-		cell1
-			.style('height', '35px')
-			.text('Tumor DNA MAF')
-			.style('text-overflow', 'ellipsis')
-		cell2.style('height', '35px')
-		fillbar(cell2, { f: sm.altTumor / sm.totalTumor })
-		cell2
-			.append('span')
-			.text(sm.altTumor + ' / ' + sm.totalTumor)
-			.style('margin', '0px 10px')
-		cell2
-			.append('span')
-			.text('ALT / TOTAL IN TUMOR')
-			.style('font-size', '.7em')
-			.style('opacity', 0.5)
-		const d = cell2.append('div') // next row to show normal total
-		d.append('span')
-			.text(sm.totalNormal || 'N/A')
-			.style('margin-right', '10px')
-			.style('text-overflow', 'ellipsis')
-		d.append('span')
-			.text('TOTAL DEPTH IN NORMAL')
-			.style('font-size', '.7em')
-			.style('opacity', 0.5)
-			.style('text-overflow', 'ellipsis')
 	}
 
 	/* quick fix for accessing details of a single case
@@ -270,12 +218,12 @@ samples with multiple variants must have been grouped to the same sample obj
 export async function samples2columnsRows(samples, tk) {
 	// detect if these columns appear in the samples
 	const has_caseAccess = samples.some(i => 'caseIsOpenAccess' in i),
-		has_ssm = samples.some(i => i.ssm_id) || samples.some(i => i.ssm_id_lst)
-	const [has_ssm_read_depth, has_totalNormal] = checkMafAvailability(samples)
+		has_ssm = samples.some(i => i.ssm_id) || samples.some(i => i.ssm_id_lst),
+		has_format = samples.some(i => i.ssmid2format) && tk.mds?.bcf?.format
 
-	// variables to be returned by this function
+	// to be returned by this function, as inputs for renderTable
 	const columns = [{ label: 'Sample' }],
-		rows = [] // has same number
+		rows = [] // each row is an array of same length as columns
 
 	///////////////// fill in columns[]
 	if (has_caseAccess) {
@@ -291,17 +239,6 @@ export async function samples2columnsRows(samples, tk) {
 		}
 	}
 
-	if (has_ssm_read_depth) {
-		columns.push({
-			label: 'Tumor DNA MAF',
-			width: '6vw',
-			isMaf: true // flag for text file downloader to do detect and do special treatment on this field
-		})
-	}
-	if (has_totalNormal) {
-		columns.push({ label: 'Normal depth', width: '4vw' })
-	}
-
 	if (has_ssm) {
 		columns.push({
 			label: 'Mutations',
@@ -309,13 +246,28 @@ export async function samples2columnsRows(samples, tk) {
 		})
 	}
 
+	if (has_format) {
+		for (const f in tk.mds.bcf.format) {
+			const fobj = tk.mds.bcf.format[f]
+			columns.push({
+				label: fobj.Description || f
+			})
+		}
+	}
+
 	// done making columns[]
+
 	///////////////// fill in rows[]
 
 	for (const sample of samples) {
 		// create one row[] for each sample
 		// elements are by the same order as columns[]
 		const row = [{ value: sample.sample_id }]
+
+		// generate list of ssm
+		// so as to show per-ssm data in consistent order
+		let ssm_id_lst = sample.ssm_id_lst
+		if (!ssm_id_lst && sample.ssm_id) ssm_id_lst = [sample.ssm_id]
 
 		if (tk.mds.variant2samples.url) {
 			row[0].url = tk.mds.variant2samples.url.base + sample[tk.mds.variant2samples.url.namekey]
@@ -331,56 +283,7 @@ export async function samples2columnsRows(samples, tk) {
 			}
 		}
 
-		if (has_ssm_read_depth) {
-			const cell = {}
-			if (sample.ssm_read_depth) {
-				// sample has just one ssm
-				const sm = sample.ssm_read_depth
-				cell.html =
-					fillbar(null, { f: sm.altTumor / sm.totalTumor }) + ' ' + sm.altTumor + '/' + sm.totalTumor + '</span>'
-				cell.altTumor = sm.altTumor
-				cell.totalTumor = sm.totalTumor
-			} else if (sample.ssm_read_depth_bySsmid) {
-				const htmls = []
-				cell.bySsmid = {}
-				for (const ssmid in sample.ssm_read_depth_bySsmid) {
-					const sm = sample.ssm_read_depth_bySsmid[ssmid]
-					htmls.push(
-						fillbar(null, { f: sm.altTumor / sm.totalTumor }) + ' ' + sm.altTumor + '/' + sm.totalTumor + '</span>'
-					)
-					cell.bySsmid[ssmid] = {
-						altTumor: sm.altTumor,
-						totalTumor: sm.totalTumor
-					}
-				}
-				cell.html = htmls.join('<br>')
-			}
-			row.push(cell)
-		}
-
-		if (has_totalNormal) {
-			if (sample.ssm_read_depth) {
-				row.push({ value: sample.ssm_read_depth.totalNormal || '' })
-			} else if (sample.ssm_read_depth_bySsmid) {
-				const bySsmid = {}
-				const htmls = []
-				for (const ssmid in sample.ssm_read_depth_bySsmid) {
-					const total = sample.ssm_read_depth_bySsmid[ssmid].totalNormal
-					if (total) {
-						bySsmid[ssmid] = total
-						htmls.push(total)
-					}
-				}
-				row.push({ bySsmid, html: htmls.join('<br>') })
-			} else {
-				row.push({ value: '' })
-			}
-		}
-
 		if (has_ssm) {
-			let ssm_id_lst = sample.ssm_id_lst
-			if (sample.ssm_id) ssm_id_lst = [sample.ssm_id]
-
 			if (ssm_id_lst) {
 				const htmls = []
 				for (const ssm_id of ssm_id_lst) {
@@ -422,29 +325,36 @@ export async function samples2columnsRows(samples, tk) {
 			}
 		}
 
+		if (has_format) {
+			if (!ssm_id_lst) throw 'ssm_id_lst missing, cannot show format'
+			for (const fkey in tk.mds.bcf.format) {
+				if (!sample.ssmid2format) {
+					// sample does not have format values, return blank cell for each format field
+					row.push({ value: '' })
+					continue
+				}
+				const fobj = tk.mds.bcf.format[fkey]
+				const htmls = []
+				for (const ssmid of ssm_id_lst) {
+					const value = sample.ssmid2format?.[ssmid]?.[fkey]
+					htmls.push(printFormat(fobj, value))
+				}
+				row.push({ html: htmls.join('<br>') })
+			}
+		}
+
 		rows.push(row)
 	}
 	return [columns, rows]
 }
 
-function checkMafAvailability(samples) {
-	// slightly complex logic to determine availability of these two flags:
-	// maf can be indexed by ssm_id in ssm_read_depth_bySsmid{}
-	let has_ssm_read_depth = false,
-		has_totalNormal = false
-	if (samples.some(i => i.ssm_read_depth)) {
-		has_ssm_read_depth = true
-		has_totalNormal = samples.some(i => i?.ssm_read_depth?.totalNormal)
-	}
-	if (samples.some(i => i.ssm_read_depth_bySsmid)) {
-		has_ssm_read_depth = true
-		for (const s of samples) {
-			if (s.ssm_read_depth_bySsmid) {
-				for (const ssmid in s.ssm_read_depth_bySsmid) {
-					if (s.ssm_read_depth_bySsmid[ssmid].totalNormal) has_totalNormal = true
-				}
-			}
+function printFormat(fobj, value) {
+	if (fobj && value && fobj.Number == 'R' && fobj.Type == 'Integer') {
+		const lst = value.split(',').map(Number)
+		if (lst.length == 2) {
+			const [ref, alt] = lst // [0] is ref read count, [1] is alt
+			return fillbar(null, { f: alt / (alt + ref) }) + ' ' + alt + '/' + (alt + ref)
 		}
 	}
-	return [has_ssm_read_depth, has_totalNormal]
+	return value
 }

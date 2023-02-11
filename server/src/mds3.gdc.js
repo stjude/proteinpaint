@@ -1,7 +1,7 @@
 const common = require('#shared/common')
 const got = require('got')
 const path = require('path')
-const { get_crosstabCombinations } = require('./mds3.variant2samples')
+const { get_crosstabCombinations, combineSamplesById } = require('./mds3.variant2samples')
 const filter2GDCfilter = require('./mds3.gdc.filter').filter2GDCfilter
 
 /*
@@ -904,7 +904,12 @@ export async function querySamples_gdcapi(q, twLst, ds, geneTwLst) {
 		}
 	}
 
-	return samples
+	const id2samples = new Map()
+	for (const s of samples) {
+		combineSamplesById([s], id2samples, s.ssm_id)
+	}
+
+	return [...id2samples.values()]
 }
 
 /*
@@ -931,10 +936,9 @@ function may_add_readdepth(acase, sample) {
 	const dat = acase.observation[0]
 	if (!dat) return
 	if (!dat.read_depth) return
-	sample.ssm_read_depth = {
-		altTumor: dat.read_depth.t_alt_count,
-		totalTumor: dat.read_depth.t_depth,
-		totalNormal: dat.read_depth.n_depth
+	sample.formatK2v = {
+		TumorAC: dat.read_depth.t_depth - dat.read_depth.t_alt_count + ',' + dat.read_depth.t_alt_count,
+		NormalDepth: dat.read_depth.n_depth
 	}
 }
 

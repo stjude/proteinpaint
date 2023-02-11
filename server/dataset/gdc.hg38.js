@@ -264,6 +264,21 @@ module.exports = {
 				// may also support querying a vcf by chr.pos.ref.alt
 				by: 'ssm_id',
 				gdcapi: true
+			},
+
+			format: {
+				TumorAC: {
+					ID: 'TumorAC',
+					Description: 'Tumor MAF',
+					Number: 'R',
+					Type: 'Integer'
+				},
+				NormalDepth: {
+					ID: 'NormalDepth',
+					Description: 'Normal depth',
+					Number: 1,
+					Type: 'Integer'
+				}
 			}
 		},
 		geneCnv: {
