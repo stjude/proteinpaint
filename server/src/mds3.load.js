@@ -91,6 +91,9 @@ function finalize_result(q, ds, result) {
 		for (const m of result.skewer) {
 			if (m.samples) {
 				m.occurrence = m.samples.length
+
+				mayAddSkewerRimCount(m, q, ds)
+
 				for (const s of m.samples) {
 					sampleSet.add(s.sample_id)
 				}
@@ -103,6 +106,20 @@ function finalize_result(q, ds, result) {
 		// has samples, report total number of unique samples across all data types
 		result.sampleTotalNumber = sampleSet.size
 	}
+}
+
+function mayAddSkewerRimCount(m, q, ds) {
+	if (!q.skewerRim) return // not using rim
+	if (q.skewerRim.type == 'format') {
+		m.rim1count = 0
+		for (const s of m.samples) {
+			if (s.formatK2v?.[q.skewerRim.formatKey] == q.skewerRim.rim1value) {
+				m.rim1count++
+			}
+		}
+		return
+	}
+	throw 'unknown skewerRim.type'
 }
 
 async function get_ds(q, genome) {
@@ -229,6 +246,13 @@ async function query_snvindel(q, ds) {
 	if (q.rglst) {
 		// provided range parameter
 		if (!ds.queries.snvindel.byrange) throw 'q.rglst[] provided but .byrange{} is missing'
+
+		if (q.skewerRim?.type == 'format') {
+			// using a format field to get sample count as rim size
+			// add this flag to return formatK2v with sample to allow to get rim count from samples of a variant
+			q.addFormatValues = true
+		}
+
 		return await ds.queries.snvindel.byrange.get(q)
 	}
 	// may allow other query method (e.g. by gene name from a db table)

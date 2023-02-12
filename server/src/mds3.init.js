@@ -401,37 +401,37 @@ async function call_barchart_data(twLst, q, combination, ds) {
 
 function copy_queries(ds, dscopy) {
 	const copy = {}
-	if (ds.queries.snvindel) {
+	const qs = ds.queries.snvindel
+	if (qs) {
 		copy.snvindel = {
-			forTrack: ds.queries.snvindel.forTrack,
-			variantUrl: ds.queries.snvindel.variantUrl
+			forTrack: qs.forTrack,
+			variantUrl: qs.variantUrl,
+			skewerRim: qs.skewerRim
 		}
 
-		if (ds.queries.snvindel.m2csq) {
-			copy.snvindel.m2csq = { by: ds.queries.snvindel.m2csq.by }
+		if (qs.m2csq) {
+			copy.snvindel.m2csq = { by: qs.m2csq.by }
 		}
 
-		if (ds.queries.snvindel?.byrange?.bcffile || ds.queries.snvindel?.byrange?.chr2bcffile) {
+		if (qs.byrange?.bcffile || qs.byrange?.chr2bcffile) {
 			// the query is using bcf file(s)
 			// create the bcf{} object on dscopy
 			dscopy.bcf = {}
 
-			if (ds.queries.snvindel.byrange._tk.info) {
+			if (qs.byrange._tk.info) {
 				// this bcf file has info fields, attach to copy.bcf{}
 				// dataset may specify if to withhold
-				dscopy.bcf.info = ds.queries.snvindel.byrange._tk.info
+				dscopy.bcf.info = qs.byrange._tk.info
 			}
-			if (ds.queries.snvindel.byrange._tk.format) {
+			if (qs.byrange._tk.format) {
 				// like above
-				dscopy.bcf.format = ds.queries.snvindel.byrange._tk.format
+				dscopy.bcf.format = qs.byrange._tk.format
 			}
 		} else {
-			if (ds.queries.snvindel.info) {
-				dscopy.bcf = { info: ds.queries.snvindel.info }
-			}
-			if (ds.queries.snvindel.format) {
+			if (qs.info) dscopy.bcf = { info: qs.info }
+			if (qs.format) {
 				if (!dscopy.bcf) dscopy.bcf = {}
-				dscopy.bcf.format = ds.queries.snvindel.format
+				dscopy.bcf.format = qs.format
 			}
 		}
 	}
@@ -678,7 +678,8 @@ export async function snvindelByRangeGetter_bcf(ds, genome) {
 	param{}
 		.rglst[]
 		.filterObj{}
-		.addFormatValues:true
+		.addFormatValues: boolean
+			if true, formatK2v{} will be added to sample objects
 		.infoFilter{}
 		.variantFilter{}
 	*/

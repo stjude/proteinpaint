@@ -353,8 +353,12 @@ function printFormat(fobj, value) {
 		const lst = value.split(',').map(Number)
 		if (lst.length == 2) {
 			const [ref, alt] = lst // [0] is ref read count, [1] is alt
-			return fillbar(null, { f: alt / (alt + ref) }) + ' ' + alt + '/' + (alt + ref)
+			if (ref >= 0 && alt >= 0 && ref + alt > 0) {
+				// the two numbers are valid allelic read count
+				return `${fillbar(null, { f: alt / (alt + ref) })} ${alt}/${alt + ref}`
+			}
 		}
 	}
+	// any other case, simply return raw value without parsing
 	return value
 }

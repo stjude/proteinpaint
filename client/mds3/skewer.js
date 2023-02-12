@@ -395,8 +395,9 @@ function mlst2disc(mlst, tk) {
 		let rim1count = 0,
 			rim2count = 0
 		for (const m of g.mlst) {
-			if (m.isrim1) rim1count++
-			else if (m.isrim2) rim2count++
+			// m rim counts are computed on server
+			rim1count += m.rim1count || 0
+			rim2count += m.rim2count || 0
 		}
 		g.rim1count = rim1count
 		g.rim2count = rim2count

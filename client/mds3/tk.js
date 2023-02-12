@@ -59,7 +59,8 @@ function getParameter(tk, block) {
 		genome: block.genome.name,
 		// instructs server to return data types associated with tracks
 		// including skewer or non-skewer
-		forTrack: 1
+		forTrack: 1,
+		skewerRim: tk.mds.queries.snvindel?.skewerRim // instructions for counting rim counts per variant
 	}
 	const headers = { 'Content-Type': 'application/json', Accept: 'application/json' }
 
@@ -143,6 +144,7 @@ function getParameter(tk, block) {
 			par.infoFilter = infoFilter
 		}
 	}
+
 	return [par, headers]
 }
 
