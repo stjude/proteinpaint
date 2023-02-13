@@ -3,7 +3,6 @@ const path = require('path')
 const zlib = require('zlib')
 const tar = require('tar')
 const fs = require('fs')
-const exec = require('child_process').exec
 const execSync = require('child_process').execSync
 
 let username
@@ -12,6 +11,11 @@ let repoName
 let repoUrl
 let jFrogArtApiKey
 let artifactoryUrl
+// TODO Remove modulesToCopy logic when servers get updated to Red Hat 8 and canvas and better-sqlite3 are resolved
+let modulesToCopy
+let foldersToCopy
+let filesToCopy
+let symlinksToCreate
 
 const activeFolder = '../active'
 
@@ -24,6 +28,10 @@ if (fs.existsSync('fetcherconfig.json')) {
 	repoUrl = config.repo_url
 	jFrogArtApiKey = config.jfrog_art_api_key
 	artifactoryUrl = config.artifactory_url
+	modulesToCopy = config.modules_to_copy
+	foldersToCopy = config.folders_to_copy
+	filesToCopy = config.files_to_copy
+	symlinksToCreate = config.symlinks_to_create
 } else {
 	throw Error('Missing fetcherconfig.json')
 }
@@ -95,53 +103,14 @@ function getLastRepoPersistedTime() {
 }
 
 function downloadAndApplyUpdate(repoTimestamp) {
-	console.log(`Downloading new version`)
-	execSync(`curl  -H "X-JFrog-Art-Api:${jFrogArtApiKey}" ` + `-O -L "${artifactoryUrl}/${repoName}"`)
-	console.log(`New archive downloaded`)
-
 	const newActiveFolderName = 'pp-' + repoTimestamp
 	const newActiveFolder = '../' + newActiveFolderName
 
-	console.log(`Creating archive folder: ${newActiveFolder}`)
-	execSync('mkdir ' + newActiveFolder)
-
-	console.log(`Coping ${repoName} to ${newActiveFolder}`)
-	execSync(`cp ${repoName}  ${newActiveFolder}`)
-
-	if (fs.existsSync(activeFolder)) {
-		console.log('removing active folder...')
-		execSync(`rm -r ${activeFolder}`)
-		console.log('active folder removed ')
-	}
-
-	execSync(`cp -r ${newActiveFolder}  ${activeFolder}`)
-
-	execSync(`cp serverconfig.json ${activeFolder}`)
-
-	console.log(`Copied serverconfig.json to active folder`)
-
-	const unzip = fs
-		.createReadStream(path.resolve('./' + repoName))
-		.on('error', console.log)
-		.pipe(zlib.Unzip())
-		.pipe(
-			tar.x({
-				C: activeFolder,
-				strip: 1
-			})
-		)
-
-	unzip.on('end', () => {
-		console.log(`Unpacked repo to new active folder`)
-		installAndRunNewVesion()
-	})
-
-	unzip.on('error', () => {
-		console.log(`Error unpacking repo`)
-	})
+	downloadAndSaveNewPackage(newActiveFolder)
+	applyNewPackage(newActiveFolder)
 }
 
-function installAndRunNewVesion() {
+function installAndRunNewVersion() {
 	console.log('running npm install && pm2 reload')
 	try {
 		process.chdir(activeFolder)
@@ -150,6 +119,16 @@ function installAndRunNewVesion() {
 
 		process.chdir(activeFolder)
 		execSync(`mkdir cache`, { stdio: 'inherit' })
+
+		modulesToCopy.forEach(module => {
+			process.chdir(activeFolder)
+			execSync(`rm -rf node_modules/${module}`, { stdio: 'inherit' })
+			console.log(`deleted module ${module} in active node_modules folder`)
+
+			process.chdir(activeFolder)
+			execSync(`cp -r ../src/modules_to_copy/${module} node_modules`, { stdio: 'inherit' })
+			console.log(`copied module ${module} to active node_modules folder`)
+		})
 
 		process.chdir(activeFolder)
 		execSync(`pm2 reload ecosystem.config.js`, { stdio: 'inherit' })
@@ -168,4 +147,62 @@ function saveLastRepoPersistedTime(repoTimestamp) {
 	console.log(`Saving last persisted time: ${repoTimestamp}`)
 	fs.writeFileSync('version.json', data)
 	console.log(`Last persisted time saved`)
+}
+
+function downloadAndSaveNewPackage(newActiveFolder) {
+	console.log(`Downloading new version`)
+	execSync(`curl  -H "X-JFrog-Art-Api:${jFrogArtApiKey}" ` + `-O -L "${artifactoryUrl}/${repoName}"`)
+	console.log(`New archive downloaded`)
+
+	console.log(`Creating archive folder: ${newActiveFolder}`)
+	execSync('mkdir ' + newActiveFolder)
+
+	console.log(`Coping ${repoName} to ${newActiveFolder}`)
+	execSync(`cp ${repoName}  ${newActiveFolder}`)
+}
+
+function applyNewPackage(newActiveFolder) {
+	if (fs.existsSync(activeFolder)) {
+		console.log('removing active folder...')
+		execSync(`rm -r ${activeFolder}`)
+		console.log('active folder removed ')
+	}
+
+	execSync('mkdir ' + activeFolder)
+	console.log(`Created active folder: ${activeFolder}`)
+
+	filesToCopy.forEach(file => {
+		execSync(`cp ${file.src} ${file.dest}`)
+		console.log(`Copied ${file.src} ${file.dest}`)
+	})
+
+	foldersToCopy.forEach(folder => {
+		execSync(`cp -r ${folder.src} ${folder.dest}`)
+		console.log(`Copied ${folder.src} ${folder.dest}`)
+	})
+
+	symlinksToCreate.forEach(symlink => {
+		execSync(`cp -r ${symlink.src} ${symlink.dest}`)
+		console.log(`Copied ${symlink.src} ${symlink.dest}`)
+	})
+
+	const unzip = fs
+		.createReadStream(path.resolve('./' + repoName))
+		.on('error', console.log)
+		.pipe(zlib.Unzip())
+		.pipe(
+			tar.x({
+				C: activeFolder,
+				strip: 1
+			})
+		)
+
+	unzip.on('end', () => {
+		console.log(`Unpacked repo to new active folder`)
+		installAndRunNewVersion()
+	})
+
+	unzip.on('error', () => {
+		console.log(`Error unpacking repo`)
+	})
 }
