@@ -1,6 +1,7 @@
 // Syntax: cd .. && cargo build --release
 use bio::alignment::pairwise::*;
 use bio::alignment::AlignmentOperation;
+use std::cmp;
 use std::process::Command;
 use std::str;
 
@@ -307,7 +308,18 @@ pub fn check_read_within_indel_region(
 
             let mut splice_start_frag = correct_start_position; // Start of spliced part of read which contains indel region in ref genome coordinates
             let mut splice_stop_frag = correct_start_position; // Stop of spliced part of read which contains indel region in ref genome coordinates
-            if splice_freq > 0 && within_indel == 1 {
+
+            //println!("correct_start_position:{}", correct_start_position);
+            //println!("correct_end_position:{}", correct_end_position);
+            //println!("indel_start:{}", indel_start);
+            //println!(
+            //    "indel_start + indel_length:{}",
+            //    indel_start + indel_length as i64
+            //);
+            //println!("within_indel:{}", within_indel);
+            if splice_freq > 0
+                && ((within_indel == 1 && refalleles.len() == 1) || refalleles.len() > 1)
+            {
                 let mut nucleotide_position_without_splicing = 0; // This contains the position of nucleotide being analyzed w.r.t to read without splicing
                 let mut nucleotide_position_wrt_genome = correct_start_position; // This contains the position of nucleotide being analyzed w.r.t to genome
                 let mut new_frag = 1; // Flag indicating start of a new fragment after splicing
@@ -416,6 +428,9 @@ pub fn check_read_within_indel_region(
                     splice_stop_pos = splice_stop_pos + indel_length as i64;
                 }
             }
+
+            //println!("correct_start_position:{}", correct_start_position);
+            //println!("correct_end_position:{}", correct_end_position);
 
             let mut alignment_side: String = "left".to_string(); // Flag to check whether read should be compared from the left or right-side in jaccard_similarity_weights() function
             if &cigar_sequence == &"*" || &cigar_sequence == &"=" {
@@ -1407,13 +1422,111 @@ pub fn align_single_reads(query_seq: &String, ref_seq: String) -> (String, Strin
         }
     }
     // Need to check if the first and last nucleotide has been incorrectly aligned or not
-    //println!("q_seq:{}", q_seq);
-    //println!("align:{}", align);
-    //println!("r_seq:{}", r_seq);
     let (q_seq_final, align_final, r_seq_final) =
         check_first_last_nucleotide_correctly_aligned(&q_seq, &align, &r_seq);
+    //let (q_seq_trim, align_trim, r_seq_trim) = trim_misaligned_parts(q_seq_final, align_final, r_seq_final);
     let num_matches = align_final.matches("|").count() as f64 / align_final.len() as f64;
+    //println!("q_seq_final:{}", q_seq_final);
+    //println!("align_final:{}", align_final);
+    //println!("r_seq_final:{}", r_seq_final);
+    //println!("num_matches:{}", num_matches);
     (q_seq_final, align_final, r_seq_final, num_matches)
+}
+
+// Experimental function which aims to trim reads that contain spliced sequence in flanking sequence which creates alignment artifacts
+#[allow(dead_code)]
+fn trim_misaligned_parts(
+    // Used for trimming parts of sequence alignments which do not align for a signficant part of the entire alignment
+    q_seq_final: String,
+    align_final: String,
+    r_seq_final: String,
+) -> (String, String, String) {
+    let minimum_percentage_identity: f64 = 0.7; // If either side of alignment has a percentage identity less than minimum_percentage_identity it will be trimmed.
+    let alignment_length_check: usize = 12; // The number of continuous nucleotides on either side of alignment which must have a percentage identity less than minimum_percentage_identity
+    let max_continuous_unaligned_nucleotides: usize = 5; // Maximum number of contnuous unaligned nucleotides after which trimming will be turned on (when either start_misaligned or stop_misaligned is true)
+    let mut start_misaligned: bool = false; // Flag to store if the start of alignment is significantly misaligned
+    let q_seq_chars: Vec<_> = q_seq_final.chars().collect();
+    let align_chars: Vec<_> = align_final.chars().collect();
+    let r_seq_chars: Vec<_> = r_seq_final.chars().collect();
+    let mut q_seq_trimmed = String::new();
+    let mut r_seq_trimmed = String::new();
+    let mut align_trimmed = String::new();
+    let mut num_matches: f64 = 0.0;
+    for i in 0..cmp::min(alignment_length_check, align_chars.len()) {
+        if align_chars[i] == '|' {
+            num_matches += 1.0;
+        }
+    }
+    if num_matches / alignment_length_check as f64 <= minimum_percentage_identity {
+        start_misaligned = true;
+    }
+    //println!("frac:{}", num_matches / alignment_length_check as f64);
+
+    let mut stop_misaligned: bool = false; // Flag to store if the end of alignment is significantly misaligned
+    num_matches = 0.0;
+    for i in
+        align_chars.len() - cmp::min(alignment_length_check, align_chars.len())..align_chars.len()
+    {
+        if align_chars[i] == '|' {
+            num_matches += 1.0;
+        }
+    }
+    if num_matches / alignment_length_check as f64 <= minimum_percentage_identity {
+        stop_misaligned = true;
+    }
+
+    if start_misaligned == true {
+        // Determining the number of nucleotides to be trimmed from the start
+        let mut unaligned_nucleotide_counter = 0;
+        let mut nucleotides_to_be_trimmed = 0;
+        for i in 0..align_final.len() {
+            if align_chars[i] == '|' {
+                unaligned_nucleotide_counter = 0;
+            } else {
+                unaligned_nucleotide_counter += 1;
+            }
+            if unaligned_nucleotide_counter > max_continuous_unaligned_nucleotides {
+                nucleotides_to_be_trimmed = i;
+            }
+        }
+        // Trimming nucleotides from the start
+        for i in 0..align_chars.len() {
+            if i >= nucleotides_to_be_trimmed {
+                q_seq_trimmed.push(q_seq_chars[i]);
+                r_seq_trimmed.push(r_seq_chars[i]);
+                align_trimmed.push(align_chars[i]);
+            }
+        }
+    } else if stop_misaligned == true {
+        // Determining the number of nucleotides to be trimmed from the end
+        let mut unaligned_nucleotide_counter = 0;
+        let mut nucleotides_to_be_trimmed = 0;
+        for i in 0..align_chars.len() {
+            let j = align_chars.len() - 1 - i;
+            if align_chars[j] == '|' {
+                unaligned_nucleotide_counter = 0;
+            } else {
+                unaligned_nucleotide_counter += 1;
+            }
+            if unaligned_nucleotide_counter > max_continuous_unaligned_nucleotides {
+                nucleotides_to_be_trimmed = j;
+            }
+        }
+        // Trimming nucleotides from the start
+        for i in 0..align_chars.len() {
+            let j = align_chars.len() - 1 - i;
+            if i >= nucleotides_to_be_trimmed {
+                q_seq_trimmed.push(q_seq_chars[j]);
+                r_seq_trimmed.push(r_seq_chars[j]);
+                align_trimmed.push(align_chars[j]);
+            }
+        }
+    } else {
+        q_seq_trimmed = q_seq_final;
+        r_seq_trimmed = r_seq_final;
+        align_trimmed = align_final;
+    }
+    (q_seq_trimmed, align_trimmed, r_seq_trimmed)
 }
 
 pub fn determine_start_stop_indel_region_in_read(
@@ -1436,6 +1549,7 @@ pub fn determine_start_stop_indel_region_in_read(
     let mut red_region_stop_alt = 0;
     let trust_match_cutoff = 10; // When there are gaps in alignment near the variant region, it can be due to reason. Either due to poor alignment near the end of the read or due to a genuine deletion near the variant region. If beyond this cutoff, start/stop position will not be incremented
 
+    //println!("alignment_side:{}", alignment_side);
     //println!("ref_length:{}", ref_length);
     //println!("alt_length:{}", alt_length);
     //println!("variant_pos:{}", variant_pos);

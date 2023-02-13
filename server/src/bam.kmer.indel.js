@@ -26,6 +26,9 @@ export async function match_complexvariant_rust(q, templates_info, region_widths
 	let refseqs = []
 	let altseqs = []
 	if (!q.alleleAlreadyUpdated) {
+		let variant_start_global // Its possible that the two different alleles start/end at different genomic positions, then their left/rightflankseq will be different for each allele. In such cases, select the left/rightflankseq which is longer. This involves selectng the start position of the left most variant.
+		let variant_stop_global // Its possible that the two different alleles start/end at different genomic positions, then their left/rightflankseq will be different for each allele. In such cases, select the left/rightflankseq which is longer. This involves selectng the stop position of the right most variant.
+		let variant_idx = 0
 		for (const variant of q.variant) {
 			let final_ref = ''
 			let final_alt = ''
@@ -59,56 +62,83 @@ export async function match_complexvariant_rust(q, templates_info, region_widths
 			const final_pos = variant.pos
 			//console.log(q.variant.chr + '.' + final_pos + '.' + final_ref + '.' + final_alt)
 			/*
-	console.log(
-		'final_pos:',
-		final_pos,
-		',segbplen:',
-		segbplen,
-		',variant:',
-		q.variant.chr + '.' + final_pos + '.' + final_ref + '.' + final_alt
-	)
-	*/
+	                console.log(
+	                	'final_pos:',
+	                	final_pos,
+	                	',segbplen:',
+	                	segbplen,
+	                	',variant:',
+	                	q.variant.chr + '.' + final_pos + '.' + final_ref + '.' + final_alt
+	                )
+	                */
 
 			const refallele = final_ref.toUpperCase()
 			const altallele = final_alt.toUpperCase()
-			let leftflankseq, rightflankseq, refseq, altseq
-
-			leftflankseq = (await utils.get_fasta(q.genome, variant.chr + ':' + (final_pos - segbplen) + '-' + final_pos))
+			if (variant_idx == 0) {
+				variant_start_global = final_pos - segbplen
+				variant_stop_global = final_pos + final_ref.length + 1 + segbplen
+			} else {
+				if (final_pos - segbplen < variant_start_global) {
+					variant_start_global = final_pos - segbplen
+				}
+				if (final_pos + final_ref.length + 1 + segbplen > variant_stop_global) {
+					variant_stop_global = final_pos + final_ref.length + 1 + segbplen
+				}
+			}
+			refalleles.push(refallele)
+			altalleles.push(altallele)
+			ref_positions.push(final_pos)
+			variant_idx += 1
+		}
+		variant_idx = 0
+		for (const variant of q.variant) {
+			const leftflankseq = (await utils.get_fasta(
+				q.genome,
+				variant.chr + ':' + variant_start_global + '-' + ref_positions[variant_idx]
+			))
 
 				.split('\n')
 				.slice(1)
 				.join('')
 				.toUpperCase()
-			rightflankseq = (await utils.get_fasta(
+			const rightflankseq = (await utils.get_fasta(
 				q.genome,
-				variant.chr + ':' + (final_pos + final_ref.length + 1) + '-' + (final_pos + segbplen + final_ref.length + 1)
+				variant.chr +
+					':' +
+					(ref_positions[variant_idx] + refalleles[variant_idx].length + 1) +
+					'-' +
+					variant_stop_global
 			))
 				.split('\n')
 				.slice(1)
 				.join('')
 				.toUpperCase()
-			refseq = (await utils.get_fasta(
-				q.genome,
-				variant.chr + ':' + (final_pos - segbplen) + '-' + (final_pos + segbplen + final_ref.length + 1)
-			))
-				.split('\n')
-				.slice(1)
-				.join('')
-				.toUpperCase()
-			altseq = leftflankseq + altallele + rightflankseq
 
-			console.log(variant.chr + '.' + final_pos + '.' + final_ref + '.' + final_alt)
-			//console.log('refSeq', refseq)
-			//console.log('mutSeq', leftflankseq + final_alt + rightflankseq)
+			//refseq = (
+			//	await utils.get_fasta(
+			//		q.genome,
+			//		variant.chr + ':' + (final_pos - segbplen) + '-' + (final_pos + segbplen + final_ref.length + 1)
+			//	)
+			//)
+			//	.split('\n')
+			//	.slice(1)
+			//	.join('')
+			//	.toUpperCase()
+
+			const refseq = leftflankseq + refalleles[variant_idx] + rightflankseq
+			const altseq = leftflankseq + altalleles[variant_idx] + rightflankseq
+
+			console.log(
+				variant.chr + '.' + ref_positions[variant_idx] + '.' + refalleles[variant_idx] + '.' + altalleles[variant_idx]
+			)
+			console.log('refseq', refseq)
+			console.log('altseq', altseq)
 			//console.log('leftflankseq:', leftflankseq)
 			//console.log('rightflankseq:', rightflankseq)
 			// console.log(refallele,altallele,refseq,altseq)
 			variant_idx += 1
 			leftflankseqs.push(leftflankseq)
 			rightflankseqs.push(rightflankseq)
-			refalleles.push(refallele)
-			altalleles.push(altallele)
-			ref_positions.push(final_pos)
 			refseqs.push(refseq)
 			altseqs.push(altseq)
 		}
@@ -176,6 +206,7 @@ export async function match_complexvariant_rust(q, templates_info, region_widths
 	if (!Number.isFinite(Number(q.strictness))) {
 		q.strictness = 1
 	}
+
 	const input_data = { reads: reads, alleles: alleles, strictness: Number(q.strictness) }
 
 	//if (is_realignment_reads == 1) {
@@ -239,6 +270,7 @@ export async function match_complexvariant_rust(q, templates_info, region_widths
 	const type2group = bamcommon.make_type2group(q)
 	const possible_num_of_groups = q.variant.length + 3 // Number of alternate groups + ref group + none group + amb group
 
+	let max_diff_score = 1
 	for (let i = 0; i < final_output.length; i++) {
 		const item = final_output[i]
 		const index = item.read_number
@@ -250,30 +282,33 @@ export async function match_complexvariant_rust(q, templates_info, region_widths
 				// Starting from 1 because the first element contains the actual classification
 				additional_fields.push(categories[i])
 			}
+			if (categories.length - 1 > max_diff_score) {
+				max_diff_score = categories.length - 1
+			}
 		}
-		templates_info[i].tempscore = '0'
 		if (category.includes('alt')) {
 			// Checking with various alternate allele(s)
 			for (let var_idx = 0; var_idx < q.variant.length; var_idx++) {
 				if (category == 'alt' + var_idx.toString()) {
 					if (type2group[bamcommon.type_supportalt + var_idx.toString()]) {
-						templates_info[index].additional_fields = additional_fields
+						templates_info[index].tempscore = ['alt' + var_idx.toString()]
 						type2group[bamcommon.type_supportalt + var_idx.toString()].templates.push(templates_info[index])
 					}
 				}
 			}
 		} else if (category == 'ref') {
 			if (type2group[bamcommon.type_supportref]) {
+				templates_info[index].tempscore = ['ref']
 				type2group[bamcommon.type_supportref].templates.push(templates_info[index])
 			}
 		} else if (category == 'none') {
 			if (type2group[bamcommon.type_supportno]) {
-				templates_info[index].additional_fields = additional_fields
+				templates_info[index].tempscore = additional_fields
 				type2group[bamcommon.type_supportno].templates.push(templates_info[index])
 			}
 		} else if (category == 'amb') {
 			if (type2group[bamcommon.type_supportamb]) {
-				templates_info[index].additional_fields = additional_fields
+				templates_info[index].tempscore = additional_fields
 				type2group[bamcommon.type_supportamb].templates.push(templates_info[index])
 			}
 		} else {
@@ -281,80 +316,6 @@ export async function match_complexvariant_rust(q, templates_info, region_widths
 			console.log('Unaccounted group, please check')
 		}
 	}
-
-	//const read_alignment_diff_scores_input = []
-	//for (let i = 0; i < categories.length; i++) {
-	//	if (categories[i] == 'ref') {
-	//		if (type2group[bamcommon.type_supportref]) {
-	//			index = group_ids[i]
-	//			//console.log("index:",index)
-	//			//console.log("diff_scores[i]:",diff_scores[i])
-	//
-	//			templates_info[index].tempscore = diff_scores[i].toFixed(4).toString()
-	//			type2group[bamcommon.type_supportref].templates.push(templates_info[index])
-	//			const input_items = {
-	//				value: diff_scores[i],
-	//				groupID: 'ref',
-	//			}
-	//			read_alignment_diff_scores_input.push(input_items)
-	//		}
-	//	} else if (categories[i] == 'alt') {
-	//		if (type2group[bamcommon.type_supportalt]) {
-	//			index = group_ids[i]
-	//			//console.log("index:",index)
-	//			//console.log("diff_scores[i]:",diff_scores[i])
-	//			templates_info[index].tempscore = diff_scores[i].toFixed(4).toString()
-	//			type2group[bamcommon.type_supportalt].templates.push(templates_info[index])
-	//			const input_items = {
-	//				value: diff_scores[i],
-	//				groupID: 'alt',
-	//			}
-	//			read_alignment_diff_scores_input.push(input_items)
-	//		}
-	//	} else if (categories[i] == 'amb') {
-	//		if (type2group[bamcommon.type_supportamb]) {
-	//			index = group_ids[i]
-	//			//console.log("index:",index)
-	//			//console.log("diff_scores[i]:",diff_scores[i])
-	//			templates_info[index].tempscore = diff_scores[i].toFixed(4).toString()
-	//			type2group[bamcommon.type_supportamb].templates.push(templates_info[index])
-	//			const input_items = {
-	//				value: diff_scores[i],
-	//				groupID: 'amb',
-	//			}
-	//			read_alignment_diff_scores_input.push(input_items)
-	//		}
-	//	} else if (categories[i] == 'none') {
-	//		if (type2group[bamcommon.type_supportno]) {
-	//			index = group_ids[i]
-	//			//console.log("index:",index)
-	//			//console.log("diff_scores[i]:",diff_scores[i])
-	//			templates_info[index].tempscore = diff_scores[i].toFixed(4).toString()
-	//			type2group[bamcommon.type_supportno].templates.push(templates_info[index])
-	//			const input_items = {
-	//				value: diff_scores[i],
-	//				groupID: 'none',
-	//			}
-	//			read_alignment_diff_scores_input.push(input_items)
-	//		}
-	//	} else {
-	//		console.log('Unknown category:', categories[i])
-	//	}
-	//}
-	//read_alignment_diff_scores_input.sort((a, b) => a.value - b.value)
-	//// console.log('Final array for plotting:', read_alignment_diff_scores_input)
-	//// Please use this array for plotting the scatter plot .values contain the numeric value, .groupID contains ref/alt/none status. You can use red for alt, green for ref and blue for none.
-	//const diff_list = read_alignment_diff_scores_input.map((i) => i.value)
-	//let max_diff_score = Math.max(...diff_list)
-	//let min_diff_score = Math.min(...diff_list)
-	//if (min_diff_score > 0) {
-	//	// This scenario arises when only alt group is displayed, in that case the min_diff_score will be the lowest number within the alt group. In that case, set min_diff_score = 0
-	//	min_diff_score = 0
-	//}
-	//if (max_diff_score < 0) {
-	//	// This scenario arises when only ref group is displayed, in that case the max_diff_score will be the highest number within the ref group, but that number will always be less than zero. In that case, set max_diff_score = 0
-	//	max_diff_score = 0
-	//}
 
 	const groups_unsorted = []
 	for (const k in type2group) {
@@ -435,8 +396,7 @@ export async function match_complexvariant_rust(q, templates_info, region_widths
 		groups_unsorted.push(g)
 	}
 	// Sorting groups in the order alternate allele(s), reference allele, none and ambiguous
-	const max_diff_score = 0 // Setting them to zero for now, will need to reimplement
-	const min_diff_score = 0 // Setting them to zero for now, will need to reimplement
+	const min_diff_score = 0
 	const groups = []
 	for (let idx = 0; idx < groups_unsorted.length; idx++) {
 		if (groups_unsorted[idx].type.includes('support_alt')) {

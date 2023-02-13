@@ -56,6 +56,7 @@ use std::io;
 mod realign; // Imports functions from realign.rs
 mod stats_functions; // Imports functions from stats_functions.rs
 
+#[derive(Debug, Clone)]
 struct ReadComparison {
     comparison: f64,
     index: usize,
@@ -363,8 +364,11 @@ fn main() {
 
                                 let mut alt_comparisons = Vec::<ReadComparison>::new();
                                 let mut ref_comparisons = Vec::<ReadComparison>::new();
+                                let mut indel_nones = Vec::<bool>::new();
                                 let mut ref_polyclonal_read_status_global: i64 = 1;
                                 let mut alt_polyclonal_read_status_global: i64 = 1;
+                                let mut ref_polyclonal_read_statuses = Vec::<i64>::new();
+                                let mut alt_polyclonal_read_statuses = Vec::<i64>::new();
                                 for indel_idx in 0..variant_positions_list.len() {
                                     let spliced_sequence = &spliced_sequences[indel_idx];
                                     let reference_sequence = refseqs_list[indel_idx];
@@ -389,6 +393,8 @@ fn main() {
                                         index: indel_idx,
                                     });
 
+                                    //println!("indel_idx:{}", indel_idx);
+                                    //println!("alt allele:{}", altalleles_list[indel_idx]);
                                     //println!("ref_comparison:{}", ref_comparison);
                                     //println!("alt_comparison:{}", alt_comparison);
 
@@ -426,6 +432,16 @@ fn main() {
                                     if alt_polyclonal_read_status == 0 {
                                         alt_polyclonal_read_status_global = 0;
                                     }
+                                    let mut indel_none: bool = false;
+                                    if ref_polyclonal_read_status == 1
+                                        && alt_polyclonal_read_status == 1
+                                    {
+                                        indel_none = true;
+                                    }
+                                    //println!("indel_none:{}", indel_none);
+                                    indel_nones.push(indel_none);
+                                    ref_polyclonal_read_statuses.push(ref_polyclonal_read_status);
+                                    alt_polyclonal_read_statuses.push(alt_polyclonal_read_status);
                                 }
 
                                 // Sorting in ascending order so as to check if the read is ambiguous or not
@@ -458,39 +474,85 @@ fn main() {
                                 let mut max_alignment_alt: f64 = 0.0;
                                 let mut max_index_alt: usize = 0;
                                 for alignment_idx in 0..alt_comparisons.len() {
-                                    if alt_comparisons[alignment_idx].comparison > max_alignment {
+                                    //println!("max_index_alt:{}", max_index_alt);
+                                    //println!(
+                                    //    "indel_nones[alignment_idx]:{}",
+                                    //    indel_nones[alignment_idx]
+                                    //);
+                                    //println!("alignment_idx:{}", alignment_idx);
+                                    //println!(
+                                    //    "ref_polyclonal_read_status_global:{}",
+                                    //    ref_polyclonal_read_status_global
+                                    //);
+                                    //println!(
+                                    //    "alt_polyclonal_read_status_global:{}",
+                                    //    alt_polyclonal_read_status_global
+                                    //);
+                                    if alt_comparisons[alignment_idx].comparison > max_alignment
+                                        && indel_nones[alt_comparisons[alignment_idx].index]
+                                            == false
+                                        && alt_polyclonal_read_statuses
+                                            [alt_comparisons[alignment_idx].index]
+                                            != 1
+                                    {
+                                        max_alignment_alt =
+                                            alt_comparisons[alignment_idx].comparison;
+                                        max_index_alt = alt_comparisons[alignment_idx].index;
+                                    } else if ref_polyclonal_read_status_global != 1
+                                        || alt_polyclonal_read_status_global != 1
+                                    // If the read is going to be classified as none, no need to check if it is ambiguous
+                                    {
+                                        if alignment_idx == 0 {
+                                        } else {
+                                            //println!("alt_comparisons:{:?}", alt_comparisons);
+                                            for sub_alignment_idx in 0..alignment_idx {
+                                                let alt_comparison1 = alt_comparisons
+                                                    .iter()
+                                                    .find(|x| x.index == sub_alignment_idx);
+                                                let alt_comparison2 = alt_comparisons
+                                                    .iter()
+                                                    .find(|x| x.index == alignment_idx);
+                                                if alt_comparison1.unwrap().comparison
+                                                    == alt_comparison2.unwrap().comparison
+                                                {
+                                                    equal_alignment_indices.push(sub_alignment_idx);
+                                                    equal_alignment_indices.push(alignment_idx);
+                                                    //println!(
+                                                    //    "sub_alignment_idx:{}",
+                                                    //    sub_alignment_idx
+                                                    //);
+                                                    //println!("alignment_idx:{}", alignment_idx);
+                                                    read_ambiguous = 1;
+                                                    max_alignment_alt =
+                                                        alt_comparison1.unwrap().comparison;
+                                                    max_index_alt =
+                                                        alt_comparisons[alignment_idx].index;
+                                                }
+                                            }
+                                        }
+                                    } else if alt_polyclonal_read_statuses
+                                        [alt_comparisons[alignment_idx].index]
+                                        == 1
+                                        && ref_polyclonal_read_statuses
+                                            [ref_comparisons[alignment_idx].index]
+                                            == 0
+                                    // This logic is kind of side stepping the smith-watermann alignment and classifying on the basis of nucleotide-by-nucleotide comparison (not sure if this will work in all cases or any other possible side effects)
+                                    {
+                                        max_alignment_ref =
+                                            ref_comparisons[alignment_idx].comparison;
+                                        max_index_ref = ref_comparisons[alignment_idx].index;
+                                    } else if alt_comparisons[alignment_idx].comparison
+                                        > max_alignment_alt
+                                    // Should this logic be placed at the top ?
+                                    {
                                         max_alignment_alt =
                                             alt_comparisons[alignment_idx].comparison;
                                         max_index_alt = alt_comparisons[alignment_idx].index;
                                     }
-
-                                    if ref_polyclonal_read_status_global != 1
-                                        && alt_polyclonal_read_status_global != 1
-                                    // If the read is going to be classified as none, no need to check if it is ambiguous
-                                    {
-                                        if alignment_idx == 0 {
-                                        } else if alt_comparisons[alignment_idx].comparison // Checking if the read is ambiguous or not
-                                == alt_comparisons[alignment_idx - 1].comparison
-                                        {
-                                            if equal_alignment_indices
-                                                .iter()
-                                                .any(|&i| i == alignment_idx)
-                                            {
-                                            } else {
-                                                equal_alignment_indices.push(alignment_idx);
-                                            }
-                                            if equal_alignment_indices
-                                                .iter()
-                                                .any(|&i| i == alignment_idx - 1)
-                                            {
-                                            } else {
-                                                equal_alignment_indices.push(alignment_idx - 1);
-                                            }
-                                            read_ambiguous = 1;
-                                        }
-                                    }
                                 }
 
+                                //println!("max_alignment_alt:{}", max_alignment_alt);
+                                //println!("max_alignment_ref:{}", max_alignment_ref);
                                 let mut ref_is_ambiguous = false; // Flag which is true/false when ref allele is one of the reads that is ambiguous for a particular read
                                 if max_alignment_alt > max_alignment_ref {
                                     //max_alignment = max_alignment_alt;
@@ -506,15 +568,21 @@ fn main() {
                                     //    "Ambiguous case between one of the alt alleles and the ref"
                                     //);
                                     read_ambiguous = 1;
-                                    if equal_alignment_indices.iter().any(|&i| i == max_index_alt) {
-                                    } else {
-                                        equal_alignment_indices.push(max_index_alt);
-                                        ref_is_ambiguous = true;
-                                    }
+                                    //if equal_alignment_indices.iter().any(|&i| i == max_index_alt) {
+                                    //} else {
+                                    //    equal_alignment_indices.push(max_index_alt);
+                                    //    ref_is_ambiguous = true;
+                                    //}
+                                    equal_alignment_indices.push(max_index_alt);
+                                    ref_is_ambiguous = true;
                                 }
+                                equal_alignment_indices.sort();
+                                equal_alignment_indices.dedup();
+                                //println!("equal_alignment_indices:{:?}", equal_alignment_indices);
                                 // Check if the read does not support any of the reference or alternate alleles
                                 if ref_polyclonal_read_status_global == 1
                                     && alt_polyclonal_read_status_global == 1
+                                    && strictness == 1
                                 {
                                     // Setting read to none
                                     //if !all_alleles.contains_key(&"none".to_string()) {
@@ -581,8 +649,14 @@ fn main() {
                                     let mut ambiguous_groups_for_each_read = Vec::<String>::new(); // When a read is asigned to ambiguous group, the first entry in the vector is "amb". Subsequent entries are for each group with which the read has equal sequence similarity with
                                     ambiguous_groups_for_each_read.push("amb".to_string());
                                     for eq_alignment_idx in 0..equal_alignment_indices.len() {
+                                        //println!(
+                                        //    "eq_alignment_idx:{}",
+                                        //    equal_alignment_indices[eq_alignment_idx]
+                                        //);
                                         ambiguous_groups_for_each_read.push(
-                                            alt_allele_names_list[eq_alignment_idx].to_string(),
+                                            alt_allele_names_list
+                                                [equal_alignment_indices[eq_alignment_idx]]
+                                                .to_string(),
                                         );
                                     }
                                     if ref_is_ambiguous == true {
@@ -596,6 +670,10 @@ fn main() {
                                     //    read_number: i as usize,
                                     //    categories: ambiguous_groups_for_each_read,
                                     //});
+                                    //println!(
+                                    //    "ambiguous_groups_for_each_read:{:?}",
+                                    //    ambiguous_groups_for_each_read
+                                    //);
                                     output_string += &serde_json::to_string(&ReadClassification {
                                         read_number: i as usize,
                                         categories: ambiguous_groups_for_each_read,
@@ -815,8 +893,13 @@ fn main() {
 
                                             let mut alt_comparisons = Vec::<ReadComparison>::new();
                                             let mut ref_comparisons = Vec::<ReadComparison>::new();
+                                            let mut indel_nones = Vec::<bool>::new();
                                             let mut ref_polyclonal_read_status_global: i64 = 1;
                                             let mut alt_polyclonal_read_status_global: i64 = 1;
+                                            let mut ref_polyclonal_read_statuses =
+                                                Vec::<i64>::new();
+                                            let mut alt_polyclonal_read_statuses =
+                                                Vec::<i64>::new();
                                             for indel_idx in 0..variant_positions_list.len() {
                                                 let spliced_sequence =
                                                     &spliced_sequences[indel_idx];
@@ -886,6 +969,17 @@ fn main() {
                                                 if alt_polyclonal_read_status == 0 {
                                                     alt_polyclonal_read_status_global = 0;
                                                 }
+                                                let mut indel_none: bool = false;
+                                                if ref_polyclonal_read_status == 1
+                                                    && alt_polyclonal_read_status == 1
+                                                {
+                                                    indel_none = true;
+                                                }
+                                                indel_nones.push(indel_none);
+                                                ref_polyclonal_read_statuses
+                                                    .push(ref_polyclonal_read_status);
+                                                alt_polyclonal_read_statuses
+                                                    .push(alt_polyclonal_read_status);
                                             }
                                             // Sorting in ascending order so as to check if the read is ambiguous or not
                                             alt_comparisons.as_mut_slice().sort_by(|a, b| {
@@ -922,39 +1016,73 @@ fn main() {
                                             for alignment_idx in 0..alt_comparisons.len() {
                                                 if alt_comparisons[alignment_idx].comparison
                                                     > max_alignment
+                                                    && indel_nones
+                                                        [alt_comparisons[alignment_idx].index]
+                                                        == false
+                                                    && alt_polyclonal_read_statuses
+                                                        [alt_comparisons[alignment_idx].index]
+                                                        != 1
                                                 {
                                                     max_alignment_alt =
                                                         alt_comparisons[alignment_idx].comparison;
                                                     max_index_alt =
                                                         alt_comparisons[alignment_idx].index;
-                                                }
-
-                                                if ref_polyclonal_read_status_global != 1
-                                                    && alt_polyclonal_read_status_global != 1
+                                                } else if ref_polyclonal_read_status_global != 1
+                                                    || alt_polyclonal_read_status_global != 1
                                                 // If the read is going to be classified as none, no need to check if it is ambiguous
                                                 {
                                                     if alignment_idx == 0 {
-                                                    } else if alt_comparisons[alignment_idx].comparison // Checking if the read is ambiguous or not
-                                == alt_comparisons[alignment_idx - 1].comparison
-                                                    {
-                                                        if equal_alignment_indices
-                                                            .iter()
-                                                            .any(|&i| i == alignment_idx)
-                                                        {
-                                                        } else {
-                                                            equal_alignment_indices
-                                                                .push(alignment_idx);
+                                                    } else {
+                                                        //println!("alt_comparisons:{:?}", alt_comparisons);
+                                                        for sub_alignment_idx in 0..alignment_idx {
+                                                            let alt_comparison1 =
+                                                                alt_comparisons.iter().find(|x| {
+                                                                    x.index == sub_alignment_idx
+                                                                });
+                                                            let alt_comparison2 = alt_comparisons
+                                                                .iter()
+                                                                .find(|x| x.index == alignment_idx);
+                                                            if alt_comparison1.unwrap().comparison
+                                                                == alt_comparison2
+                                                                    .unwrap()
+                                                                    .comparison
+                                                            {
+                                                                equal_alignment_indices
+                                                                    .push(sub_alignment_idx);
+                                                                equal_alignment_indices
+                                                                    .push(alignment_idx);
+                                                                //println!(
+                                                                //    "sub_alignment_idx:{}",
+                                                                //    sub_alignment_idx
+                                                                //);
+                                                                //println!("alignment_idx:{}", alignment_idx);
+                                                                read_ambiguous = 1;
+                                                                max_alignment_alt = alt_comparison1
+                                                                    .unwrap()
+                                                                    .comparison;
+                                                            }
                                                         }
-                                                        if equal_alignment_indices
-                                                            .iter()
-                                                            .any(|&i| i == alignment_idx - 1)
-                                                        {
-                                                        } else {
-                                                            equal_alignment_indices
-                                                                .push(alignment_idx - 1);
-                                                        }
-                                                        read_ambiguous = 1;
                                                     }
+                                                } else if alt_polyclonal_read_statuses
+                                                    [alt_comparisons[alignment_idx].index]
+                                                    == 1
+                                                    && ref_polyclonal_read_statuses
+                                                        [ref_comparisons[alignment_idx].index]
+                                                        == 0
+                                                // This logic is kind of side stepping the smith-watermann alignment and classifying on the basis of nucleotide-by-nucleotide comparison (not sure if this will work in all cases or any other possible side effects)
+                                                {
+                                                    max_alignment_ref =
+                                                        ref_comparisons[alignment_idx].comparison;
+                                                    max_index_ref =
+                                                        ref_comparisons[alignment_idx].index;
+                                                } else if alt_comparisons[alignment_idx].comparison
+                                                    > max_alignment_alt
+                                                // Should this logic be placed at the top ?
+                                                {
+                                                    max_alignment_alt =
+                                                        alt_comparisons[alignment_idx].comparison;
+                                                    max_index_alt =
+                                                        alt_comparisons[alignment_idx].index;
                                                 }
                                             }
 
@@ -971,19 +1099,23 @@ fn main() {
                                                 //max_alignment = max_alignment_ref;
                                                 //println!("Ambiguous case between one of the alt alleles and the ref");
                                                 read_ambiguous = 1;
-                                                if equal_alignment_indices
-                                                    .iter()
-                                                    .any(|&i| i == max_index_alt)
-                                                {
-                                                } else {
-                                                    equal_alignment_indices.push(max_index_alt);
-                                                    ref_is_ambiguous = true;
-                                                }
+                                                //if equal_alignment_indices
+                                                //    .iter()
+                                                //    .any(|&i| i == max_index_alt)
+                                                //{
+                                                //} else {
+                                                //    equal_alignment_indices.push(max_index_alt);
+                                                //    ref_is_ambiguous = true;
+                                                //}
+                                                equal_alignment_indices.push(max_index_alt);
+                                                ref_is_ambiguous = true;
                                             }
-
+                                            equal_alignment_indices.sort();
+                                            equal_alignment_indices.dedup();
                                             // Check if the read does not support any of the reference or alternate alleles
                                             if ref_polyclonal_read_status_global == 1
                                                 && alt_polyclonal_read_status_global == 1
+                                                && strictness == 1
                                             {
                                                 // Setting read to none
                                                 //if !all_alleles_thread
@@ -1045,7 +1177,7 @@ fn main() {
                                                     0..equal_alignment_indices.len()
                                                 {
                                                     let item2 = alt_allele_names_list
-                                                        [eq_alignment_idx]
+                                                        [equal_alignment_indices[eq_alignment_idx]]
                                                         .clone()
                                                         .to_string();
                                                     ambiguous_groups_for_each_read.push(item2);

@@ -209,7 +209,12 @@ const overlapreadhlcolor = 'blue'
 const insertion_vlinecolor = 'black'
 const pileup_totalcolor = '#e0e0e0'
 
-const alt_diff_score_color = '#FF0000'
+const alt0_diff_score_color = '#FF0000'
+const alt1_diff_score_color = '#6cc24a'
+const alt2_diff_score_color = '#ffff00'
+const alt3_diff_score_color = '#DEB887'
+const alt4_diff_score_color = '#CD853F'
+const alt5_diff_score_color = '#9a92ec'
 const ref_diff_score_color = '#47C8FF'
 
 const insertion_minpx = 1 // minimum px width to display an insertion
@@ -317,24 +322,38 @@ async function plot_diff_scores(q, group, templates, max_diff_score, min_diff_sc
 	if (q.devicePixelRatio > 1) {
 		ctx.scale(q.devicePixelRatio, q.devicePixelRatio)
 	}
-	const diff_scores_list = templates.map(i => parseFloat(i.__tempscore))
+	const diff_scores_list = templates.map(i => i.__tempscore)
 	const read_height = group.canvasheight / diff_scores_list.length
 	let i = 0
 	const dist_bw_reads = group.stackspace / group.canvasheight
-	for (const diff_score of diff_scores_list) {
-		if (diff_score > 0) {
-			ctx.fillStyle = alt_diff_score_color
-		} else {
-			ctx.fillStyle = ref_diff_score_color
+	for (const diff_scores of diff_scores_list) {
+		//console.log('diff_scores:', diff_scores)
+		let iter = 0
+		for (const diff_score of diff_scores) {
+			if (diff_score == 'alt0') {
+				// Hardcoding alt groups for max of five groups only. How to handle more than 5 groups?
+				ctx.fillStyle = alt0_diff_score_color
+			} else if (diff_score == 'ref') {
+				ctx.fillStyle = ref_diff_score_color
+			} else if (diff_score == 'alt1') {
+				ctx.fillStyle = alt1_diff_score_color
+			} else if (diff_score == 'alt2') {
+				ctx.fillStyle = alt2_diff_score_color
+			} else if (diff_score == 'alt3') {
+				ctx.fillStyle = alt3_diff_score_color
+			} else if (diff_score == 'alt4') {
+				ctx.fillStyle = alt4_diff_score_color
+			} else if (diff_score == 'alt5') {
+				ctx.fillStyle = alt5_diff_score_color
+			}
+			ctx.fillRect(
+				multiplication_factor * iter,
+				i * read_height,
+				multiplication_factor,
+				read_height - dist_bw_reads * read_height
+			)
+			iter += 1
 		}
-		ctx.fillRect(
-			min_diff_score * -1 * multiplication_factor,
-			i * read_height,
-			//(diff_score * 50 * -1) / min_diff_score,
-			diff_score * multiplication_factor,
-			read_height - dist_bw_reads * read_height
-		)
-
 		i += 1
 	}
 	return {
@@ -3047,7 +3066,21 @@ async function query_oneread(req, r) {
 				refalleles: req.query.refalleles,
 				altalleles: req.query.altalleles
 			}
-			const alignment_output = JSON.parse(JSON.parse(await run_rust('align', JSON.stringify(input_data))))
+			//fs.writeFile('test.txt', JSON.stringify(input_data), function (err) {
+			//	// For catching input to rust pipeline, in case of an error
+			//	if (err) return console.log(err)
+			//})
+			const rust_output = await run_rust('align', JSON.stringify(input_data))
+			const rust_output_list = rust_output.split('\n')
+			let alignment_output
+			for (let item of rust_output_list) {
+				if (item.includes('Final_output:')) {
+					//console.log('test:', item.replace('Final_output:', ''))
+					alignment_output = JSON.parse(item.replace('Final_output:', ''))
+				} else {
+					console.log(item)
+				}
+			}
 			lst.alignments = alignment_output
 		}
 		return lst

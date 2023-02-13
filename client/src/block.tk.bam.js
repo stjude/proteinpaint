@@ -594,150 +594,151 @@ function may_render_variant(data, tk, block) {
 		incorrect_string.attr('x', text_start_pos)
 	}
 
-	// Rendering FS score
-	tk.fs_string.text('FS = ' + data.strand_probability)
+	if (tk.variants.length == 1) {
+		// Rendering FS score
+		tk.fs_string.text('FS = ' + data.strand_probability)
 
-	if (data.strand_significance) {
-		// Change color to red if FS score is significant
-		tk.fs_string.style('fill', 'red')
-	} else {
-		// Change color back to black when its no longer significant
-		tk.fs_string.style('fill', 'black')
+		if (data.strand_significance) {
+			// Change color to red if FS score is significant
+			tk.fs_string.style('fill', 'red')
+		} else {
+			// Change color back to black when its no longer significant
+			tk.fs_string.style('fill', 'black')
+		}
+
+		//Show information about FS in tooltip on click
+		tk.fs_string.on('click', event => {
+			tk.tktip.clear().showunder(event.target)
+			tk.tktip.d
+				.append('div')
+				.style('width', '300px')
+				.html(
+					"<span>Fisher strand (FS) analysis score containing p-values in phred scale (-10*log(p-value)). If FS > <a href='https://gatk.broadinstitute.org/hc/en-us/articles/360035890471' target='_blank'>60</a>, the variant maybe a sequencing artifact and highlighted in red.</br></br>To compute the p-value, Fisher's exact test is used for variants with a sequencing depth <= 300. If depth > 300 and each individual category > 150, chi-squared test is used.</span>"
+				)
+				.style('font-size', '12px')
+
+			const contigent_table = tk.tktip.d
+				.append('div')
+				.style('margin', '20px')
+				.append('table')
+				.style('font-family', 'Courier')
+				.style('font-size', '0.8em')
+				.style('color', '#303030')
+				.style('margin', '5px 5px 20px 5px')
+				.style('border-spacing', 5)
+				.style('border', '1px solid black')
+				.style('border-collapse', 'collapse')
+				.style('text-align', 'center')
+				.style('empty-cells', 'show')
+			const label_tr = contigent_table
+				.append('tr')
+				.style('color', 'white')
+				.style('background-color', 'white')
+			label_tr.attr('id', 'LabelRow')
+			const blank_cell = label_tr
+				.append('td')
+				.style('border-spacing', 5)
+				.style('border', '1px solid black')
+				.style('border-collapse', 'collapse')
+			const alternate_td = label_tr
+				.append('td')
+				.text('Alternative')
+				.style('text-align', 'right')
+				.style('font-weight', '550')
+				.style('margin', '5px 5px 10px 5px')
+				.style('color', 'black')
+				.style('background-color', 'white')
+				.style('border-spacing', 5)
+				.style('border', '1px solid black')
+				.style('border-collapse', 'collapse')
+				.style('border-spacing', 5)
+				.style('border', '1px solid black')
+				.style('border-collapse', 'collapse')
+			const reference_td = label_tr
+				.append('td')
+				.text('Reference')
+				.style('text-align', 'right')
+				.style('font-weight', '550')
+				.style('margin', '5px 5px 10px 5px')
+				.style('color', 'black')
+				.style('background-color', 'white')
+				.style('border-spacing', 5)
+				.style('border', '1px solid black')
+				.style('border-collapse', 'collapse')
+				.style('border-spacing', 5)
+				.style('border', '1px solid black')
+				.style('border-collapse', 'collapse')
+			const forward_tr = contigent_table
+				.append('tr')
+				.style('color', 'white')
+				.style('background-color', 'white')
+			forward_tr.attr('id', 'ForwardRow')
+			const forward_label_cell = forward_tr
+				.append('td')
+				.text('Forward')
+				.style('text-align', 'right')
+				.style('font-weight', '550')
+				.style('margin', '5px 5px 10px 5px')
+				.style('color', 'black')
+				.style('background-color', 'white')
+				.style('border-spacing', 5)
+				.style('border', '1px solid black')
+				.style('border-collapse', 'collapse')
+			const alternate_forward_td = forward_tr
+				.append('td')
+				.text(data.alternate_forward_count)
+				.style('text-align', 'right')
+				.style('margin', '5px 5px 10px 5px')
+				.style('color', 'black')
+				.style('background-color', 'white')
+			const reference_forward_td = forward_tr
+				.append('td')
+				.text(data.reference_forward_count)
+				.style('text-align', 'right')
+				.style('margin', '5px 5px 10px 5px')
+				.style('color', 'black')
+				.style('background-color', 'white')
+				.style('border-spacing', 5)
+				.style('border', '1px solid black')
+				.style('border-collapse', 'collapse')
+			const reverse_tr = contigent_table
+				.append('tr')
+				.style('color', 'white')
+				.style('background-color', 'white')
+			reverse_tr.attr('id', 'ReverseRow')
+			const reverse_label_cell = reverse_tr
+				.append('td')
+				.text('Reverse')
+				.style('text-align', 'right')
+				.style('font-weight', '550')
+				.style('margin', '5px 5px 10px 5px')
+				.style('color', 'black')
+				.style('background-color', 'white')
+				.style('border-spacing', 5)
+				.style('border', '1px solid black')
+				.style('border-collapse', 'collapse')
+			const alternate_reverse_td = reverse_tr
+				.append('td')
+				.text(data.alternate_reverse_count)
+				.style('text-align', 'right')
+				.style('margin', '5px 5px 10px 5px')
+				.style('color', 'black')
+				.style('background-color', 'white')
+				.style('border-spacing', 5)
+				.style('border', '1px solid black')
+				.style('border-collapse', 'collapse')
+			const reference_reverse_td = reverse_tr
+				.append('td')
+				.text(data.reference_reverse_count)
+				.style('text-align', 'right')
+				.style('margin', '5px 5px 10px 5px')
+				.style('color', 'black')
+				.style('background-color', 'white')
+				.style('border-spacing', 5)
+				.style('border', '1px solid black')
+				.style('border-collapse', 'collapse')
+		})
 	}
-
-	//Show information about FS in tooltip on click
-	tk.fs_string.on('click', event => {
-		tk.tktip.clear().showunder(event.target)
-		tk.tktip.d
-			.append('div')
-			.style('width', '300px')
-			.html(
-				"<span>Fisher strand (FS) analysis score containing p-values in phred scale (-10*log(p-value)). If FS > <a href='https://gatk.broadinstitute.org/hc/en-us/articles/360035890471' target='_blank'>60</a>, the variant maybe a sequencing artifact and highlighted in red.</br></br>To compute the p-value, Fisher's exact test is used for variants with a sequencing depth <= 300. If depth > 300 and each individual category > 150, chi-squared test is used.</span>"
-			)
-			.style('font-size', '12px')
-
-		const contigent_table = tk.tktip.d
-			.append('div')
-			.style('margin', '20px')
-			.append('table')
-			.style('font-family', 'Courier')
-			.style('font-size', '0.8em')
-			.style('color', '#303030')
-			.style('margin', '5px 5px 20px 5px')
-			.style('border-spacing', 5)
-			.style('border', '1px solid black')
-			.style('border-collapse', 'collapse')
-			.style('text-align', 'center')
-			.style('empty-cells', 'show')
-		const label_tr = contigent_table
-			.append('tr')
-			.style('color', 'white')
-			.style('background-color', 'white')
-		label_tr.attr('id', 'LabelRow')
-		const blank_cell = label_tr
-			.append('td')
-			.style('border-spacing', 5)
-			.style('border', '1px solid black')
-			.style('border-collapse', 'collapse')
-		const alternate_td = label_tr
-			.append('td')
-			.text('Alternative')
-			.style('text-align', 'right')
-			.style('font-weight', '550')
-			.style('margin', '5px 5px 10px 5px')
-			.style('color', 'black')
-			.style('background-color', 'white')
-			.style('border-spacing', 5)
-			.style('border', '1px solid black')
-			.style('border-collapse', 'collapse')
-			.style('border-spacing', 5)
-			.style('border', '1px solid black')
-			.style('border-collapse', 'collapse')
-		const reference_td = label_tr
-			.append('td')
-			.text('Reference')
-			.style('text-align', 'right')
-			.style('font-weight', '550')
-			.style('margin', '5px 5px 10px 5px')
-			.style('color', 'black')
-			.style('background-color', 'white')
-			.style('border-spacing', 5)
-			.style('border', '1px solid black')
-			.style('border-collapse', 'collapse')
-			.style('border-spacing', 5)
-			.style('border', '1px solid black')
-			.style('border-collapse', 'collapse')
-		const forward_tr = contigent_table
-			.append('tr')
-			.style('color', 'white')
-			.style('background-color', 'white')
-		forward_tr.attr('id', 'ForwardRow')
-		const forward_label_cell = forward_tr
-			.append('td')
-			.text('Forward')
-			.style('text-align', 'right')
-			.style('font-weight', '550')
-			.style('margin', '5px 5px 10px 5px')
-			.style('color', 'black')
-			.style('background-color', 'white')
-			.style('border-spacing', 5)
-			.style('border', '1px solid black')
-			.style('border-collapse', 'collapse')
-		const alternate_forward_td = forward_tr
-			.append('td')
-			.text(data.alternate_forward_count)
-			.style('text-align', 'right')
-			.style('margin', '5px 5px 10px 5px')
-			.style('color', 'black')
-			.style('background-color', 'white')
-		const reference_forward_td = forward_tr
-			.append('td')
-			.text(data.reference_forward_count)
-			.style('text-align', 'right')
-			.style('margin', '5px 5px 10px 5px')
-			.style('color', 'black')
-			.style('background-color', 'white')
-			.style('border-spacing', 5)
-			.style('border', '1px solid black')
-			.style('border-collapse', 'collapse')
-		const reverse_tr = contigent_table
-			.append('tr')
-			.style('color', 'white')
-			.style('background-color', 'white')
-		reverse_tr.attr('id', 'ReverseRow')
-		const reverse_label_cell = reverse_tr
-			.append('td')
-			.text('Reverse')
-			.style('text-align', 'right')
-			.style('font-weight', '550')
-			.style('margin', '5px 5px 10px 5px')
-			.style('color', 'black')
-			.style('background-color', 'white')
-			.style('border-spacing', 5)
-			.style('border', '1px solid black')
-			.style('border-collapse', 'collapse')
-		const alternate_reverse_td = reverse_tr
-			.append('td')
-			.text(data.alternate_reverse_count)
-			.style('text-align', 'right')
-			.style('margin', '5px 5px 10px 5px')
-			.style('color', 'black')
-			.style('background-color', 'white')
-			.style('border-spacing', 5)
-			.style('border', '1px solid black')
-			.style('border-collapse', 'collapse')
-		const reference_reverse_td = reverse_tr
-			.append('td')
-			.text(data.reference_reverse_count)
-			.style('text-align', 'right')
-			.style('margin', '5px 5px 10px 5px')
-			.style('color', 'black')
-			.style('background-color', 'white')
-			.style('border-spacing', 5)
-			.style('border', '1px solid black')
-			.style('border-collapse', 'collapse')
-	})
-
 	if (Number.isFinite(data.max_diff_score)) {
 		// Should always be true if variant field was given by user, but may change in the future
 		const diff_score_string = tk.dom.variantg
@@ -746,7 +747,7 @@ function may_render_variant(data, tk, block) {
 			.attr('y', -20 + tk.dom.variantrowheight)
 			.attr('font-size', tk.dom.variantrowheight)
 			.attr('class', 'sja_clbtext2')
-			.text('Diff Score')
+			.text('Allele similarity')
 
 		//Show information about diff score in tooltip on click
 		diff_score_string.on('click', event => {
@@ -756,7 +757,7 @@ function may_render_variant(data, tk, block) {
 				.style('width', '300px')
 				.style('font-size', '12px')
 				.html(
-					'Diff score = (Number of nucleotide matches of read vs alternative allele)/(Total length of alignment of read vs alternative allele) - (Number of nucleotide matches of read vs reference allele)/(Total length of alignment of read vs reference allele). In case of the none group, the diff_score reveals to which allele the read has greater sequence similarity.' +
+					'Allele similarity: This chart shows the allele to which the read has maximum sequence similarity. In case of alternative and reference alleles, all reads in the same group have same color. In case of none category, color representing allele with maximum sequence color is displayed. In case of ambiguous category, for each read colors representing each alleles having equal similarity to each other are displayed.' +
 						"<br><a href='https://proteinpaint.stjude.org/bam' target='_blank'>Click here to view details of this method</a>."
 				)
 		})
@@ -1714,18 +1715,18 @@ function configPanel(tk, block) {
 				{
 					label: 'Lenient: "None group" is not generated.',
 					value: 0,
-					checked: tk.variants[0].strictness == 0
+					checked: tk.strictness == 0
 				},
 				{
 					label:
 						'Strict: "None group" is generated for reads with imperfect match to both reference and alternative alleles.',
 					value: 1,
-					checked: tk.variants[0].strictness == 1
+					checked: tk.strictness == 1
 				}
 			],
 			styles: { display: 'block', margin: '10px 5px', height: '10px', 'margin-left': '30px' },
 			callback: v => {
-				tk.variants[0].strictness = v
+				tk.strictness = v
 				loadTk(tk, block)
 			},
 			inputName: 'strictness-radios' /* Fix for show reads and strictness radio 

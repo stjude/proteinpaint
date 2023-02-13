@@ -1,9 +1,4 @@
-// Syntax: cd .. && cargo build --release && json='{"query_seq": "TCTGACGTCAATGCTGCCATAGCATTTAATGTTTATGTGAATACAAAACCAGAAATCCTGACTTACCTGACAGGCTTCGTGAATGGCATGCTCCAATGTGT", "refseqs": ["GGGATTAGAGAGGGAGTGAAGTGAATGTTGCTGAGGTTTTCCAGCACTCTGACATATGGCCATTTCTGTTTTCCTGTAGCAAAACCAGAAATCCTGACTTACGACAGGCTCGTGAATGGCATGCTCCAATGTGTGGCAGCAGGATTCCCAGAGCCCACAATAGATTGGTATTTTTGTCCAGGAACTGAGCAGAGGTGAGATGATTATTTTT", "GGTTGTAGGGATTAGAGAGGGAGTGAAGTGAATGTTGCTGAGGTTTTCCAGCACTCTGACATATGGCCATTTCTGTTTTCCTGTAGCAAAACCAGAAATCCTGACTTACGACAGGCTCGTGAATGGCATGCTCCAATGTGTGGCAGCAGGATTCCCAGAGCCCACAATAGATTGGTATTTTTGTCCAGGAACTGAGCAGAGGTGAGATGATTATT"], "altseqs": ["GGGATTAGAGAGGGAGTGAAGTGAATGTTGCTGAGGTTTTCCAGCACTCTGACATATGGCCATTTCTGTTTTCCTGTAGCAAAACCAGAAATCCTGACTTACCTGACAGGCTTCGTGAATGGCATGCTCCAATGTGTGGCAGCAGGATTCCCAGAGCCCACAATAGATTGGTATTTTTGTCCAGGAACTGAGCAGAGGTGAGATGATTATTTTT","GGTTGTAGGGATTAGAGAGGGAGTGAAGTGAATGTTGCTGAGGTTTTCCAGCACTCTGACATATGGCCATTTCTGTTTTCCTGTAGCAAAACCAGAAATCCTGTTTCGGCTCGTGAATGGCATGCTCCAATGTGTGGCAGCAGGATTCCCAGAGCCCACAATAGATTGGTATTTTTGTCCAGGAACTGAGCAGAGGTGAGATGATTATT"], "cigar_seq": "43M14044N27M3I28M", "start_position": 55575662, "ref_positions": [ 55589772, 55589765 ], "refalleles": [ "GACAGGC", "GACTTACGACA" ], "altalleles": [ "CTGACAGGCT", "GTTTC" ]}' && time echo "$json" | target/release/align
-
-// Function Cascade:
-// Single-read alignment mode: When first word in input is "single", it triggers the single-read alignment mode. The first sequence is the query sequence, second is reference sequence and third is alternate sequence. Each read/ref/alt sequence is separated by ":" character.
-//       align_single_reads(query_sequence, reference_sequence)
-//       align_single_reads(query_sequence, alternate_sequence)
+// Debug syntax: cd .. && cargo build --release && time cat ~/proteinpaint/test.txt | ~/proteinpaint/rust/target/release/align
 use json;
 use json::JsonValue;
 use serde::{Deserialize, Serialize};
@@ -147,7 +142,7 @@ fn main() {
                     }
                     output_string.pop();
                     output_string += &"]".to_string();
-                    println!("{:?}", output_string);
+                    println!("Final_output:{}", output_string);
                 }
                 Err(error) => println!("Incorrect json: {}", error),
             }
