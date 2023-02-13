@@ -1,6 +1,7 @@
 const tape = require('tape')
 const d3s = require('d3-selection')
-const { filterInit, getNormalRoot, filterJoin, getFilterItemByTag } = require('../filter')
+const { filterInit, filterRxCompInit, getNormalRoot, filterJoin, getFilterItemByTag } = require('../filter')
+const helpers = require('../../test/front.helpers.js')
 
 /*********
 the direct functional testing of the component, without the use of runpp()
@@ -14,13 +15,17 @@ $ npx watchify filterControls.spec.js -o ../../../public/bin/spec.bundle.js -v
  reusable helper functions
 **************************/
 
-function getOpts(_opts = {}) {
-	const holder = d3s
+function getHolder() {
+	return d3s
 		.select('body')
 		.append('div')
 		.style('position', 'relative')
 		.style('margin', '20px')
 		.style('border', '1px solid #000')
+}
+
+function getOpts(_opts = {}) {
+	const holder = getHolder()
 
 	const opts = Object.assign(
 		{
@@ -158,10 +163,41 @@ function gettvs(id, val = '', overrides = {}) {
 
 /**************
  test sections
-***************/
+**************
+
+*** filterInit ***
+empty filter: visible controls
+1-entry root filter: visible controls
+2-entry root filter: visible controls
++NEW button interaction
+add-transformer button interaction, 1-pill
+add-transformer button interaction, 2-pill
+pill Edit interaction
+pill Replace interaction
+pill menu-append interaction
+pill Negate interaction
+pill Remove interaction
+group menu-append interaction
+group Negate interaction
+group Remove interaction
+nested filters
+hidden filters
+renderAs: htmlSelect
+getNormalRoot()
+filterJoin()
+
+*** filterRxCompInit ***
+Rx filter state
+
+*/
 
 tape('\n', test => {
 	test.pass('-***- common/filter -***-')
+	test.end()
+})
+
+tape('\n', test => {
+	test.pass('-***- filterInit() tests-***-')
 	test.end()
 })
 
@@ -568,7 +604,7 @@ tape('pill Edit interaction', async test => {
 		'should display an apply button in the edit menu'
 	)
 
-	//document.body.dispatchEvent(new Event('mousedown', { bubbles: true }))
+	document.body.dispatchEvent(new Event('mousedown', { bubbles: true }))
 	test.end()
 })
 
@@ -662,7 +698,7 @@ tape('pill menu-append interaction', async test => {
 		const tipd = opts.filter.Inner.dom.controlsTip.d
 		const menuRows = tipd.selectAll('tr')
 		const joinOpt = menuRows.filter(d => d.action == 'join')
-		const origLstLength = opts.filterData.lst.length
+		//const origLstLength = opts.filterData.lst.length
 		await addDemographicSexFilter(opts, joinOpt.node())
 		await sleep(200)
 		const lst = opts.filter.Inner.filter.lst
@@ -874,7 +910,7 @@ tape('group Remove interaction', async test => {
 	test.equal(opts.filter.Inner.filter.lst.length, 0, `should remove the tvslst corresponding to the clicked group`)
 	test.equal(opts.holder.selectAll('.sja_pill_wrapper').size(), 0, `should remove a group's pills when clicked`)
 
-	document.body.dispatchEvent(new Event('mousedown', { bubbles: true }))
+	//document.body.dispatchEvent(new Event('mousedown', { bubbles: true }))
 	test.end()
 })
 
@@ -1575,6 +1611,86 @@ tape('filterJoin()', test => {
 			singleTvs,
 			'joining single tvs into empty filter should yield join=""'
 		)
+	}
+
+	test.end()
+})
+
+tape('\n', test => {
+	test.pass('-***- filterRxCompInit() tests-***-')
+	test.end()
+})
+
+tape('Rx filter state inputs', async test => {
+	test.timeoutAfter(3000)
+	const holder = getHolder()
+
+	/* Manually created app for this test
+	
+	TODO: Write a helper function to test rx components 
+	independent of apps */
+
+	const filterData = {
+		type: 'tvslst',
+		in: true,
+		join: '',
+		lst: [],
+		$id: 'fake'
+	}
+	const opts = {
+		holder
+	}
+
+	const app = {
+		opts,
+		state: {
+			activeCohort: 0,
+			vocab: {
+				genome: 'hg38-test',
+				dslabel: 'TermdbTest'
+			},
+			termfilter: {
+				filter: filterData
+			}
+		},
+		callback(filter) {
+			filterData = filter
+		},
+		dispatch(action) {
+			console.log(action)
+		}
+	}
+
+	const filterApi = await filterRxCompInit({
+		app,
+		holder,
+		state: app.state,
+		vocab: app.state.vocab,
+		debug: true,
+		hideLabel: true,
+		callback: filter => {
+			app.dispatch({
+				type: 'filter_replace',
+				filter
+			})
+		}
+	})
+
+	const filter = filterApi.Inner
+	filter.state = filter.getState(app.state)
+	filter.main(filterData)
+
+	test.equal(typeof filter.state.activeCohort, 'number', 'Should include .activeCohort int in filter.state')
+	test.equal(typeof filter.state.termfilter, 'object', 'Should include .termfilter object in filter.state')
+
+	const message = `Should throw for null state`
+
+	try {
+		filter.state = filter.getState(null)
+		filter.main(filterData)
+		test.fail(message)
+	} catch (e) {
+		test.pass(`${message}: ${e}`)
 	}
 
 	test.end()
