@@ -118,7 +118,7 @@ module.exports = {
 		scatterplots: {
 			plots: [
 				{
-					name: 'Methylome TSNE',
+					name: 'TermdbTest TSNE',
 					dimension: 2,
 					file: 'files/hg38/TermdbTest/tnse.txt',
 					colorTW: { id: 'diaggrp' }

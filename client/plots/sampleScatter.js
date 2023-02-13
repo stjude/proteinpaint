@@ -517,6 +517,7 @@ class Scatter {
 	}
 
 	onLegendClick(tw, name, key, itemG, hidden) {
+		console.log(key)
 		if (!tw.q.hiddenValues) tw.q.hiddenValues = {}
 		const value = tw.term.type != 'geneVariant' && tw.term.values[key] ? tw.term.values[key] : { key: key, label: key }
 		itemG.style('text-decoration', hidden ? 'none' : 'line-through')
@@ -597,30 +598,23 @@ class Scatter {
 
 	getGroupsOverlay(groups) {
 		const overlayGroups = []
-		let values, tgroup, data
-		for (const [i, group] of groups.entries()) {
+		let values, tgroup
+		for (const group of groups) {
 			values = []
-			for (const item of group.items) {
-				data = item.__data__
-				values.push(data.sample)
-			}
-			;(tgroup = {
+			for (const item of group.items) values.push(item.sample)
+			tgroup = {
 				name: group.name,
 				key: 'sample',
 				values: values
-			}),
-				overlayGroups.push(tgroup)
+			}
+			overlayGroups.push(tgroup)
 		}
 		return overlayGroups
 	}
 
 	getGroupvsOthersOverlay(group) {
 		const values = []
-		let data
-		for (const item of group.items) {
-			data = item.__data__
-			values.push(data.sample)
-		}
+		for (const item of group.items) values.push(item.sample)
 		return [
 			{
 				name: group.name,
@@ -683,11 +677,7 @@ class Scatter {
 
 	addToFilter(group) {
 		const lst = []
-		let data
-		for (const item of group.items) {
-			data = item.__data__
-			lst.push(data.sample)
-		}
+		for (const item of group.items) lst.push(item.sample)
 		const filterUiRoot = getFilterItemByTag(this.state.termfilter.filter, 'filterUiRoot')
 		const filter = filterJoin([
 			filterUiRoot,
@@ -721,15 +711,14 @@ class Scatter {
 		if (this.config.shapeTW) columns.push(formatCell(this.config.shapeTW.term.name, 'label'))
 		let info = false
 		for (const item of group.items) {
-			const data = item.__data__
-			const row = [formatCell(data.sample)]
-			if ('category' in data) row.push(formatCell(this.getCategoryInfo(data, 'category')))
+			const row = [formatCell(item.sample)]
+			if ('category' in item) row.push(formatCell(this.getCategoryInfo(item, 'category')))
 			else row.push(formatCell(''))
-			if (this.config.shapeTW) row.push(formatCell(this.getCategoryInfo(data, 'shape')))
-			if ('info' in data) {
+			if (this.config.shapeTW) row.push(formatCell(this.getCategoryInfo(item, 'shape')))
+			if ('info' in item) {
 				info = true
 				const values = []
-				for (const [k, v] of Object.entries(data.info)) values.push(`${k}: ${v}`)
+				for (const [k, v] of Object.entries(item.info)) values.push(`${k}: ${v}`)
 				row.push(formatCell(values.join(', ')))
 			}
 			rows.push(row)
@@ -766,7 +755,7 @@ class Scatter {
 				text: 'Add to a group',
 				callback: indexes => {
 					const items = []
-					for (const i of indexes) items.push(this.selectedItems[i])
+					for (const i of indexes) items.push(this.selectedItems[i].__data__)
 					this.config.groups.push({
 						name: group.name,
 						items,
@@ -1011,7 +1000,7 @@ function setRenderers(self) {
 	}
 
 	function getSvgSubElems(svg, chart) {
-		let mainG, axisG, xAxis, yAxis, legendG, labelsG
+		let mainG, axisG, xAxis, yAxis, legendG, labelsG, clipRect
 		if (svg.select('.sjpcb-scatter-mainG').size() == 0) {
 			axisG = svg.append('g').attr('class', 'sjpcb-scatter-axis')
 			mainG = svg.append('g').attr('class', 'sjpcb-scatter-mainG')
@@ -1028,7 +1017,7 @@ function setRenderers(self) {
 				.append('rect')
 				.attr('class', 'zoom')
 				.attr('x', self.axisOffset.x)
-				.attr('y', self.axisOffset.y)
+				.attr('y', self.axisOffset.y - self.settings.size)
 				.attr('width', self.settings.svgw)
 				.attr('height', self.settings.svgh)
 				.attr('fill', 'white')
@@ -1036,14 +1025,10 @@ function setRenderers(self) {
 			const id = `${Date.now()}`
 			const idclip = `sjpp_clip_${id}`
 			self.defs = svg.append('defs')
-			self.defs
+			clipRect = self.defs
 				.append('clipPath')
 				.attr('id', idclip)
 				.append('rect')
-				.attr('x', self.axisOffset.x)
-				.attr('y', 0)
-				.attr('width', self.settings.svgw + self.settings.size)
-				.attr('height', self.settings.svgh + self.axisOffset.y)
 
 			const gradient = self.defs
 				.append('linearGradient')
@@ -1075,9 +1060,16 @@ function setRenderers(self) {
 			xAxis = axisG.select('.sjpcb-scatter-x-axis')
 			yAxis = axisG.select('.sjpcb-scatter-y-axis')
 			legendG = svg.select('.sjpcb-scatter-legend')
+			clipRect = svg.select(`defs > clipPath > rect`)
 		}
 
 		if (self.settings.showAxes) {
+			clipRect
+				.attr('x', self.axisOffset.x)
+				.attr('y', 0)
+				.attr('width', self.settings.svgw)
+				.attr('height', self.settings.svgh + self.axisOffset.y)
+
 			axisG.style('opacity', 1)
 			if (self.config.term) {
 				labelsG
@@ -1097,7 +1089,15 @@ function setRenderers(self) {
 					.attr('text-anchor', 'middle')
 					.text(self.config.term2.term.name)
 			}
-		} else axisG.style('opacity', 0)
+		} else {
+			axisG.style('opacity', 0)
+			const particleWidth = Math.sqrt(self.settings.size)
+			clipRect
+				.attr('x', self.axisOffset.x - particleWidth)
+				.attr('y', 0)
+				.attr('width', self.settings.svgw + particleWidth)
+				.attr('height', self.settings.svgh + self.axisOffset.y + particleWidth)
+		}
 
 		return [mainG, legendG]
 	}
@@ -1190,9 +1190,8 @@ function setRenderers(self) {
 				self.lasso.selectedItems().attr('d', c => self.getShape(c, 2))
 				self.lasso.items().style('fill-opacity', c => self.getOpacity(c))
 				self.selectedItems = []
-				let data
-				for (const item of self.lasso.selectedItems()._groups[0]) {
-					data = item.__data__
+				for (const item of self.lasso.selectedItems()) {
+					const data = item.__data__
 					if ('sampleId' in data && !(data.hidden['category'] || data.hidden['shape'])) self.selectedItems.push(item)
 				}
 				self.lasso.notSelectedItems().attr('d', c => self.getShape(c))
@@ -1214,7 +1213,7 @@ function setRenderers(self) {
 				.on('click', event => {
 					self.dom.tip.hide()
 					self.showTable(
-						{ name: 'Group ' + (self.config.groups.length + 1), items: self.selectedItems },
+						{ name: 'Group ' + (self.config.groups.length + 1), items: self.selectedItems.map(item => item.__data__) },
 						event.clientX,
 						event.clientY,
 						true
@@ -1228,7 +1227,7 @@ function setRenderers(self) {
 				.on('click', () => {
 					self.config.groups.push({
 						name: `Group ${self.config.groups.length + 1}`,
-						items: self.selectedItems,
+						items: self.selectedItems.map(item => item.__data__),
 						index: groups.length
 					})
 					self.app.dispatch({ type: 'plot_edit', id: self.id, config: { groups: self.config.groups } })
@@ -1240,7 +1239,7 @@ function setRenderers(self) {
 				.on('click', () => {
 					const group = {
 						name: `Group ${self.config.groups.length + 1}`,
-						items: self.selectedItems,
+						items: self.selectedItems.map(item => item.__data__),
 						index: groups.length
 					}
 					self.config.groups.push(group)
@@ -1289,7 +1288,7 @@ function setRenderers(self) {
 		const mainG = svg.select('.sjpcb-scatter-mainG')
 		const seriesG = mainG.select('.sjpcb-scatter-series')
 		const symbols = seriesG.selectAll('path')
-		const axisG = mainG.select('.sjpcb-scatter-axis')
+		const axisG = svg.select('.sjpcb-scatter-axis')
 		const xAxisG = axisG.select('.sjpcb-scatter-x-axis')
 		const yAxisG = axisG.select('.sjpcb-scatter-y-axis')
 		const zoom = d3zoom()
