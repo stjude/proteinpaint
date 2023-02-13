@@ -84,7 +84,7 @@ tape('Render summary plot, term: "agedx"', test => {
 			.selectAll('div > div> button')
 			.nodes()
 			.filter(d => d.__data__.isVisible() == true)
-		console.log(toggles)
+
 		//test correct tabs exist
 		const tabLabels2Find = ['Barchart', 'Violin'] //hardcoded data in summary.js.
 		let foundLabels = 0

@@ -495,7 +495,7 @@ tape('tvs: Numeric', async test => {
 	await sleep(100)
 	tr.querySelector('.stop_select').dispatchEvent(enter_event)
 	tr.querySelector('.sjpp_apply_btn').click()
-	await sleep(300)
+	await sleep(500) //Fix for test failing in CI
 	test.true(
 		opts.holder
 			.node()

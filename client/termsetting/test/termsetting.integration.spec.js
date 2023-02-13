@@ -1084,7 +1084,7 @@ tape('Custom vocabulary', async test => {
 		.filter(d => d.id === 'd')
 		.node()
 		.click()
-	await sleep(800)
+	await sleep(1000) //Fix for test failing on CI
 	const pilldiv1 = opts.holder.node().querySelector('.term_name_btn ')
 	test.equal(
 		pilldiv1.innerText,
