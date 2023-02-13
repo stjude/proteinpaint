@@ -51,10 +51,10 @@ run only once, called by makeTk
 	create_mclass(tk, block)
 	may_create_variantShapeName(tk)
 	may_create_infoFields(tk)
+	may_create_skewerRim(tk)
 }
 
-function create_mclass(tk, block) {
-	/*
+/*
 list all mutation classes
 attribute may have already been created with customization
 legend.mclass{}
@@ -62,6 +62,7 @@ legend.mclass{}
 	.row
 	.holder
 */
+function create_mclass(tk, block) {
 	if (!tk.legend.mclass) tk.legend.mclass = {}
 	if (!tk.legend.mclass.hiddenvalues) tk.legend.mclass.hiddenvalues = new Set()
 
@@ -163,14 +164,10 @@ makes no return
 */
 export function updateLegend(data, tk, block) {
 	if (!tk.legend) {
-		/* if using invalid dslabel, upon initiating initLegend() will not be called
-		and tk.legend may not be created
-		*/
+		// if using invalid dslabel, upon initiating initLegend() will not be called
+		//and tk.legend may not be created
 		return
 	}
-
-	// should clear here
-	//tk.legend.mclass.holder.selectAll('*').remove()
 
 	/* data.mclass2variantcount is optional; if present, will render in mclass section of track legend
 	also keep data so it can be accessible by block.svg.js
@@ -188,6 +185,7 @@ export function updateLegend(data, tk, block) {
 
 	may_update_variantShapeName(data, tk)
 	may_update_infoFields(data, tk)
+	may_update_skewerRim(data, tk)
 }
 
 function may_update_variantShapeName(data, tk) {
@@ -368,9 +366,6 @@ function update_mclass(tk) {
 	if (!tk.legend.mclass.currentData || tk.legend.mclass.currentData.length == 0) return
 	// console.log(tk.legend.mclass.currentData)
 
-	/* only clear here
-	todo: upon zooming into protein, should generate updated mclass2variantcount using client cached data, visible in view range
-	*/
 	tk.legend.mclass.holder.selectAll('*').remove()
 
 	const showlst = [],
@@ -547,3 +542,94 @@ function update_info_fields(data, tk) {
 	}
 }
 */
+
+function may_create_skewerRim(tk, block) {
+	if (!tk.mds.queries?.snvindel?.skewerRim) return // not enabled
+	if (!tk.legend.skewerRim) tk.legend.skewerRim = {}
+	const R = tk.legend.skewerRim
+	if (!R.hiddenvalues) R.hiddenvalues = new Set()
+
+	R.row = tk.legend.table.append('tr')
+
+	R.headerTd = R.row // name of rim legend row is set on the fly
+		.append('td')
+		.style('text-align', 'right')
+		.style('opacity', 0.3)
+
+	R.holder = R.row.append('td')
+}
+
+function getSkewerRimLegendHeaderName(tk) {
+	if (tk.mds.queries.snvindel.skewerRim.type == 'format') {
+		if (!tk.mds.queries.snvindel.skewerRim.formatKey) throw 'skewerRim.formatKey missing'
+		return (
+			tk.mds.bcf?.format?.[tk.mds.queries.snvindel.skewerRim.formatKey]?.Description ||
+			tk.mds.queries.snvindel.skewerRim.formatKey
+		)
+	}
+	return 'unknown skewerRim.type'
+}
+
+function may_update_skewerRim(data, tk) {
+	if (!tk.mds.queries?.snvindel?.skewerRim) return // not enabled
+	let rim1total = 0, // count number of cases, not unique
+		noRimTotal = 0
+	for (const m of data.skewer) {
+		const r1 = m.rim1count || 0
+		rim1total += r1
+		noRimTotal += m.occurrence - r1
+	}
+	const R = tk.legend.skewerRim
+	R.headerTd.text(getSkewerRimLegendHeaderName(tk))
+	R.holder.selectAll('*').remove()
+
+	// rim1
+	R.holder
+		.append('div')
+		.attr('class', 'sja_clb')
+		.style('display', 'inline-block')
+		.html(`${getRimSvg(1)} ${tk.mds.queries.snvindel.skewerRim.rim1value}, n=${rim1total}`)
+	/*
+		.on('click', event => {
+			tk.legend.tip
+				.clear()
+				.showunder(event.target)
+				.d.append('div')
+				.attr('class', 'sja_menuoption')
+				.text('Hide')
+				.on('click', () => {
+				})
+		})
+				*/
+	// no rim
+	R.holder
+		.append('div')
+		.attr('class', 'sja_clb')
+		.style('display', 'inline-block')
+		.html(`${getRimSvg()} ${tk.mds.queries.snvindel.skewerRim.noRimName}, n=${noRimTotal}`)
+	/*
+		.on('click', event => {
+			tk.legend.tip
+				.clear()
+				.showunder(event.target)
+				.d.append('div')
+				.attr('class', 'sja_menuoption')
+				.text('Hide')
+				.on('click', () => {
+				})
+		})
+		*/
+}
+
+function getRimSvg(rim) {
+	return (
+		'<svg width="19" height="19" style="margin-right: 5px;">' +
+		'<circle cx="7" cy="12" r="7" fill="#b1b1b1"></circle>' +
+		(rim == 1
+			? '<path d="M6.735557395310443e-16,-11A11,11 0 0,1 11,0L9,0A9,9 0 0,0 5.51091059616309e-16,-9Z" transform="translate(7,12)" fill="#858585" stroke="none"></path>'
+			: rim == 2
+			? '' // hollow rim2, not done yet
+			: '') + // blank for no rim
+		'</svg>'
+	)
+}

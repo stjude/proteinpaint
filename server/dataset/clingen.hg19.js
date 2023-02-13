@@ -46,7 +46,8 @@ module.exports = {
 			skewerRim: {
 				type: 'format',
 				formatKey: 'vorigin',
-				rim1value: 'germline'
+				rim1value: 'germline',
+				noRimName: 'somatic'
 			}
 		},
 		svfusion: {
