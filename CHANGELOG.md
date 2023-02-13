@@ -1,6 +1,10 @@
 # Change Log
 
 All notable changes to this project will be documented in this file. 
+## 2.9.8-2
+
+- Bundle all cards.
+ 
 ## 2.9.8-1
 
 - Bundle spliceevent.prep.js, spliceevent.a53ss.js and spliceevent.exonskip.js
