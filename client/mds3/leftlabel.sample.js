@@ -18,6 +18,13 @@ export function makeSampleLabel(data, tk, block, laby) {
 		// "Samples" label is missing. create
 		tk.leftlabels.doms.samples = makelabel(tk, block, laby)
 	}
+	if (tk.allow2selectSamples && !tk.leftlabels.doms.sampleCartLabel) {
+		// as this tk allows to select samples, create a cart label at the same y position as samples label
+		// cart is tk.allow2selectSamples._cart[]; if empty, cart label is invisible; otherwise will show and push the sample label to left
+		tk.leftlabels.doms.sampleCartLabel = makelabel(tk, block, laby).on('click', event => {
+			feedSample2selectCallback(tk)
+		})
+	}
 
 	if (data.sampleTotalNumber) {
 		// current data has samples, activate label
@@ -377,4 +384,17 @@ async function unusedCode() {
 	} catch (e) {
 		throw e
 	}
+}
+
+function feedSample2selectCallback(tk) {
+	// map sampleIdxLst to sample attributes that caller wants to pick
+	const pickValues = []
+	for (const s of tk.allow2selectSamples._cart) {
+		const s1 = {}
+		for (const attr of tk.allow2selectSamples.attributes) {
+			s1[attr] = s[attr]
+		}
+		pickValues.push(s1)
+	}
+	tk.allow2selectSamples.callback(pickValues)
 }

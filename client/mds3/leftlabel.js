@@ -22,8 +22,6 @@ must reset tk.leftlabels.maxwidth
 */
 
 export async function make_leftlabels(data, tk, block) {
-	tk.leftlabels.maxwidth = tk.tklabel.node().getBBox().width
-
 	let laby = 0 // cumulative y offset for various labels created here
 
 	makeVariantLabel(data, tk, block, laby)
@@ -72,10 +70,26 @@ export async function make_leftlabels(data, tk, block) {
 	tk.leftlabels.laby = laby
 	positionLeftlabelg(tk, block)
 
+	setLeftlabelsMaxWidth(tk)
+	tk.subtk2height.leftlabels = laby + 20 // account for tk.tklabel
+}
+
+export function setLeftlabelsMaxWidth(tk) {
+	// set tk.leftlabels.maxwidth anew, from all labels
+	tk.leftlabels.maxwidth = tk.tklabel.node().getBBox().width
 	for (const k in tk.leftlabels.doms) {
 		tk.leftlabels.maxwidth = Math.max(tk.leftlabels.maxwidth, tk.leftlabels.doms[k].node().getBBox().width)
 	}
-	tk.subtk2height.leftlabels = laby + 20 // account for tk.tklabel
+	{
+		// if sample cart label is present, it's showing in same row as sample label and the width has to be added up
+		const scl = tk.leftlabels.doms.sampleCartLabel
+		if (scl) {
+			tk.leftlabels.maxwidth = Math.max(
+				tk.leftlabels.maxwidth,
+				tk.leftlabels.doms.samples.node().getBBox().width + scl.node().getBBox().width + 15
+			)
+		}
+	}
 }
 
 export function positionLeftlabelg(tk, block) {

@@ -795,4 +795,5 @@ function validateSelectSamples(tk) {
 		if (!i || typeof i != 'string') throw 'allow2selectSamples.attributes[] element is not non-empty string'
 	}
 	if (typeof a.callback != 'function') throw 'allow2selectSamples.callback() is not function'
+	a._cart = [] // array to hold samples selected so far (e.g. separately from multiple mutations), for submitting to a.callback()
 }
