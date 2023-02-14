@@ -318,6 +318,10 @@ async function queryServerFileBySsmid(q, twLst, ds) {
 			if (!ds.queries.svfusion || !ds.queries.svfusion.byrange)
 				throw 'queries.svfusion.byrange missing when id has 6 fields'
 			const [_dt, chr, _pos, strand, _pi, mname] = l
+
+			// mname is encoded in case it contains comma (and is same as ssmIdFieldsSeparator)
+			const mnameDecoded = decodeURIComponent(mname)
+
 			const dt = Number(_dt)
 			if (dt != dtsv && dt != dtfusionrna) throw 'dt not sv/fusion'
 			const pos = Number(_pos)
@@ -330,7 +334,7 @@ async function queryServerFileBySsmid(q, twLst, ds) {
 			const mlst = await ds.queries.svfusion.byrange.get(param)
 
 			for (const m of mlst) {
-				if (m.dt != dt || m.pos != pos || m.strand != strand || m.pairlstIdx != pairlstIdx || m.mname != mname) {
+				if (m.dt != dt || m.pos != pos || m.strand != strand || m.pairlstIdx != pairlstIdx || m.mname != mnameDecoded) {
 					// not this fusion event
 					continue
 				}

@@ -1127,7 +1127,8 @@ export async function svfusionByRangeGetter_file(ds, genome) {
 						throw 'missing chrA and chrB'
 					}
 
-					const ssm_id = [j.dt, r.chr, pos, strand, pairlstIdx, mname].join(ssmIdFieldsSeparator)
+					// encode mname in case it has comma and will break v2s code when splitting by comma
+					const ssm_id = [j.dt, r.chr, pos, strand, pairlstIdx, encodeURIComponent(mname)].join(ssmIdFieldsSeparator)
 
 					if (!key2variants.has(ssm_id)) {
 						key2variants.set(ssm_id, {
