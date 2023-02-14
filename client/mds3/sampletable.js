@@ -3,7 +3,6 @@ import { get_list_cells } from '#dom/gridutils'
 import { mclass, dtsnvindel, dtsv, dtfusionrna } from '#shared/common'
 import { renderTable } from '#dom/table'
 import { rgb } from 'd3-color'
-import { setLeftlabelsMaxWidth } from './leftlabel'
 
 /*
 ********************** EXPORTED
@@ -20,7 +19,7 @@ samples2columnsRows()
 
 ********************** INTERNAL
 make_singleSampleTable
-addSample2cart
+feedSample2selectCallback
 
 
 ********************** arg{}
@@ -78,10 +77,10 @@ export async function displaySampleTable(samples, args) {
 		// this tk allows to select samples; create new opt to display button
 		params.buttons = [
 			{
-				text: 'Select samples',
+				text: args.tk.allow2selectSamples.buttonText,
 				callback: sampleIdxLst => {
 					// argument is list of array index of selected samples
-					addSample2cart(args.tk, samples, sampleIdxLst, args.block)
+					feedSample2selectCallback(args.tk, samples, sampleIdxLst)
 					args.tk.itemtip.hide()
 				}
 			}
@@ -91,26 +90,18 @@ export async function displaySampleTable(samples, args) {
 	return renderTable(params)
 }
 
-function addSample2cart(tk, samples, sampleIdxLst, block) {
-	// add this group of selected samples to allow2selectSamples._cart[]
-	// deduplicate samples by .sample_id (assuming this is always set!)
-	// may allow configuration on which attribute to use and deduplicate
+function feedSample2selectCallback(tk, samples, sampleIdxLst) {
+	// map sampleIdxLst to sample attributes that caller wants to pick
+	const pickLst = []
 	for (const i of sampleIdxLst) {
-		const s = samples[i]
-		if (tk.allow2selectSamples._cart.findIndex(j => j.sample_id == s.sample_id) == -1) {
-			tk.allow2selectSamples._cart.push(s)
+		const s0 = samples[i]
+		const s1 = {}
+		for (const attr of tk.allow2selectSamples.attributes) {
+			s1[attr] = s0[attr]
 		}
+		pickLst.push(s1)
 	}
-	// to show the new label "(xx selected)"
-	const w = tk.leftlabels.doms.sampleCartLabel
-		.text(`(${tk.allow2selectSamples._cart.length} selected)`)
-		.node()
-		.getBBox().width
-	// get the updated width of this label; push sample label to left
-	tk.leftlabels.doms.samples.transition().attr('x', -(w + 15))
-	setLeftlabelsMaxWidth(tk)
-	tk.leftLabelMaxwidth = Math.max(tk.leftlabels.maxwidth + tk.leftlabels.xoff, tk.skewer?.maxwidth || 0)
-	block.setllabel()
+	tk.allow2selectSamples.callback(pickLst)
 }
 
 async function make_singleSampleTable(s, arg) {
@@ -198,15 +189,15 @@ function printSampleName(sample, tk, div, block) {
 
 	if (tk.allow2selectSamples) {
 		// display button for selecting this sample alone
-		const button = div.append('button').style('display', 'block')
-		if (tk.allow2selectSamples._cart.find(i => i.sample_id == sample.sample_id)) {
-			button.text('Sample is in cart').property('disabled', true)
-		} else {
-			button.text('Select sample').on('click', () => {
-				addSample2cart(tk, [sample], [0], block)
+		const t = tk.allow2selectSamples.buttonText
+		div
+			.append('button')
+			.style('display', 'block')
+			.text(t.endsWith('s') ? t.substring(0, t.length - 1) : t)
+			.on('click', () => {
+				feedSample2selectCallback(tk, [sample], [0])
 				tk.itemtip.hide()
 			})
-		}
 	}
 }
 
