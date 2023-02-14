@@ -14,6 +14,10 @@ designed to work for ssm lollipop app in GDC Analysis Tools Framework
 
 arg = {}
 	runpp() argument object
+	geneSearch4GDCmds3:true
+		a flag
+	.allow2selectSamples:{}
+		pass to mds3 tk object to enable sample selection
 holder
 genomes = { hg38 : {} }
 
@@ -30,6 +34,7 @@ the hardcoded "GDC mutations" phrase should be configurable as well...
 */
 
 const gdcGenome = 'hg38'
+const gdcDslabel = 'GDC' // label of this dataset on this pp instance
 const tip = new Menu({ padding: '' })
 
 export async function init(arg, holder, genomes) {
@@ -75,7 +80,9 @@ export async function init(arg, holder, genomes) {
 			holder: graphDiv,
 			gmmode: gmlst.some(i => i.coding) ? 'protein' : 'exon only',
 			hide_dsHandles: arg.hide_dsHandles,
-			tklst: arg.tracks ? arg.tracks : [{ type: 'mds3', dslabel: 'GDC' }]
+			tklst: arg.tracks
+				? arg.tracks
+				: [{ type: 'mds3', dslabel: gdcDslabel, allow2selectSamples: arg.allow2selectSamples }]
 		}
 		return await blockinit(pa)
 	}

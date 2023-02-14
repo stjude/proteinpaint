@@ -73,7 +73,14 @@ runproteinpaint({
 	holder:document.getElementById('bb'),
 	noheader:1,
 	geneSearch4GDCmds3:true,
-	hide_dsHandles:true
+	hide_dsHandles:true,
+			allow2selectSamples: {
+				buttonText:'Add to gdc',
+				attributes:['case.case_id'],
+				callback: samples=>{
+					console.log('selected',samples)
+				}
+			},
 })
 
 </script>
