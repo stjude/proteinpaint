@@ -735,7 +735,7 @@ function showgeneplot(tk, block, gene) {
 				}
 			} else {
 				// single value
-				if (obj.value == undefined) {
+				if (!Number.isFinite(obj.value) || obj.value == 0) {
 					obj.bar.transition().attr('width', 0)
 				} else {
 					obj.bar
