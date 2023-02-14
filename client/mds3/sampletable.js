@@ -20,6 +20,7 @@ samples2columnsRows()
 
 ********************** INTERNAL
 make_singleSampleTable
+addSample2cart
 
 
 ********************** arg{}
@@ -73,32 +74,21 @@ export async function displaySampleTable(samples, args) {
 	const params = { rows, columns, div: args.div, resize: rows.length > 10 }
 	if (args.maxWidth) params.maxWidth = args.maxWidth
 	if (args.maxHeight) params.maxHeight = args.maxHeight
-	mayAddSampleSelectionButton_multi(params, samples, args)
+	if (args.tk.allow2selectSamples) {
+		// this tk allows to select samples; create new opt to display button
+		params.buttons = [
+			{
+				text: 'Select samples',
+				callback: sampleIdxLst => {
+					// argument is list of array index of selected samples
+					addSample2cart(args.tk, samples, sampleIdxLst, args.block)
+					args.tk.itemtip.hide()
+				}
+			}
+		]
+	}
 
 	return renderTable(params)
-}
-
-/*
-params{}
-	the parameter to submit to table.js
-	if enabled, the .buttons[] is added to it to do sample selection
-samples[]
-	array of samples rendered in this table
-args{}
-	tk.allow2selectSamples{}
-*/
-function mayAddSampleSelectionButton_multi(params, samples, args) {
-	if (!args.tk.allow2selectSamples) return // not selecting samples
-	// display selection button
-	const button = {
-		text: 'Select samples',
-		callback: sampleIdxLst => {
-			// argument is list of array index of selected samples
-			addSample2cart(args.tk, samples, sampleIdxLst, args.block)
-			args.tk.itemtip.hide()
-		}
-	}
-	params.buttons = [button]
 }
 
 function addSample2cart(tk, samples, sampleIdxLst, block) {

@@ -1,5 +1,6 @@
 import { makelabel } from './leftlabel'
-import { tab2box } from '../src/client'
+import { Tabs } from '#dom/toggleButtons'
+import { renderTable } from '#dom/table'
 import { displaySampleTable } from './sampletable'
 import { fillbar } from '#dom/fillbar'
 import { make_densityplot } from '#dom/densityplot'
@@ -22,7 +23,8 @@ export function makeSampleLabel(data, tk, block, laby) {
 		// as this tk allows to select samples, create a cart label at the same y position as samples label
 		// cart is tk.allow2selectSamples._cart[]; if empty, cart label is invisible; otherwise will show and push the sample label to left
 		tk.leftlabels.doms.sampleCartLabel = makelabel(tk, block, laby).on('click', event => {
-			feedSample2selectCallback(tk)
+			tk.menutip.clear().showunder(event.target)
+			makeSampleCartMenu(tk)
 		})
 	}
 
@@ -171,7 +173,7 @@ data is array, each ele: {termid, termname, numbycategory}
 */
 async function showSummary4terms(data, div, tk, block) {
 	const tabs = []
-	for (const { termid, termname, numbycategory, density_data } of data) {
+	for (const { termname, numbycategory } of data) {
 		tabs.push({
 			label:
 				termname +
@@ -179,15 +181,26 @@ async function showSummary4terms(data, div, tk, block) {
 					? '<span style="color:#999;font-size:.8em;float:right;margin-left: 5px;">n=' +
 					  numbycategory.length +
 					  '</span>'
-					: ''),
-			callback: async function(div) {
-				if (numbycategory) return showSummary4oneTerm(termid, div, numbycategory, tk, block)
-				if (density_data) return showDensity4oneTerm(termid, div, density_data, tk, block)
-				throw 'unknown summary data'
-			}
+					: '')
 		})
 	}
-	tab2box(div, tabs)
+	const a = new Tabs({
+		holder: div,
+		tabsPosition: 'vertical',
+		linePosition: 'right',
+		tabs
+	})
+	a.main()
+	for (const [i, d] of data.entries()) {
+		const holder = tabs[i].contentHolder.style('padding-left', '20px')
+		if (d.numbycategory) {
+			showSummary4oneTerm(d.termid, holder, d.numbycategory, tk, block)
+		} else if (d.density_data) {
+			showDensity4oneTerm(d.termid, holder, d.density_data, tk, block)
+		} else {
+			throw 'unknown summary data'
+		}
+	}
 }
 
 /*
@@ -385,6 +398,8 @@ async function unusedCode() {
 		throw e
 	}
 }
+
+function makeSampleCartMenu(tk) {}
 
 function feedSample2selectCallback(tk) {
 	// map sampleIdxLst to sample attributes that caller wants to pick
