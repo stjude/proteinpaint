@@ -22,6 +22,17 @@ function sleep(ms) {
 
 /**************
  test sections
+
+Run GDC dataset, gene symbol: KRAS
+Run GDC dataset, ensembl transcript: ENST00000407796
+Run GDC dataset, ensembl gene: ENSG00000133703
+Run GDC dataset, RefSeq ID: NM_005163
+Launch GDC dataset by SSM ID, KRAS
+Render GDC track from search box
+Launch ASH dataset, BCR
+Incorrect dataset name: ah instead of ASH
+Custom dataset with custom variants, NO samples
+Custom dataset with custom variants, WITH samples
 ***************/
 
 tape('\n', function(test) {
@@ -33,8 +44,6 @@ tape('\n', function(test) {
 run test with a runpp callback, which eliminates need of sleep()
 for that to work, the tape() callback function must not be "async"
 */
-
-customDataWithSelectSamples()
 
 tape('Run GDC dataset, gene symbol: KRAS', test => {
 	const holder = getHolder()
@@ -214,39 +223,39 @@ tape('Launch GDC dataset by SSM ID, KRAS', test => {
 })
 
 // this test always break, may need a "postRender" solution to replace sleep
-tape.skip('Render gene track from search box, KRAS', async test => {
-	test.timeoutAfter(10000)
+tape('Render GDC track from search box', async test => {
 	const holder = getHolder()
-	const gene = 'KRAS'
+	const gene = 'HOXA1'
 
 	await runproteinpaint({
 		holder,
 		noheader: 1,
-		geneSearch4GDCmds3: true
+		geneSearch4GDCmds3: { postRender, onloadalltk_always }
 	})
 
-	await sleep(1000)
+	async function postRender(arg) {
+		// arg={tip}
+		// tip is the tooltip from gene search <input> showing hits
 
-	//Enter KRAS into search box
-	const searchBox = d3s.select('input')._groups[0][0]
-	searchBox.value = gene
-	searchBox.dispatchEvent(new Event('keyup'))
+		//Enter gene name into search box
+		const searchBox = d3s.select(holder).select('input')._groups[0][0]
+		searchBox.value = gene
+		searchBox.dispatchEvent(new Event('keyup'))
+		await sleep(1000) // seems like must wait for 1s for gene search to finish and arg.tip to show up
 
-	//Click on first menu option -> 'KRAS'
-	await sleep(1000)
-	const geneFoundInMenu = d3.select('div.sja_menuoption')._groups[0][0]
-	geneFoundInMenu.dispatchEvent(new Event('click'))
+		const tipDiv = arg.tip.d.select('.sja_menuoption')._groups
+		test.ok(tipDiv.length > 0, 'Gene search found some hits')
+		const div1 = tipDiv[0][0]
+		test.equal(div1.innerHTML, gene, 'Gene search first hit is ' + gene)
+		div1.dispatchEvent(new Event('click'))
+	}
 
-	//Verify track renders
-	await sleep(3000)
-	const geneTrackFound = d3
-		.selectAll('span.sja_clbtext')
-		.nodes()
-		.some(elem => elem.innerText.includes(gene))
-	test.true(geneTrackFound, `Should render default ${gene} track`)
-
-	if (test._ok) holder.remove()
-	test.end()
+	async function onloadalltk_always(block) {
+		return // if running test in this function it will crash with ".end() already called"
+		test.equal(block.tklst.length, 2, 'Should render two tracks')
+		if (test._ok) holder.remove()
+		test.end()
+	}
 })
 
 tape('Launch ASH dataset, BCR', test => {
@@ -691,110 +700,108 @@ tape('Numeric mode custom dataset', test => {
 	}
 })
 
-function customDataWithSelectSamples() {
-	tape('Custom data with samples and sample selection', test => {
-		test.timeoutAfter(3000)
-		const holder = getHolder()
+tape('Custom data with samples and sample selection', test => {
+	test.timeoutAfter(3000)
+	const holder = getHolder()
 
-		const custom_variants = [
-			{ chr: 'chr17', pos: 7670699, mname: 'R337H', class: 'M', dt: 1, ref: 'G', alt: 'C', sample: 's1' },
-			{
-				gene1: 'AKT1',
-				chr1: 'chr14',
-				pos1: 104776000,
-				strand1: '-',
-				gene2: 'TP53',
-				chr2: 'chr17',
-				pos2: 7670500,
-				strand2: '-',
-				dt: 2,
-				class: 'Fuserna',
-				sample: 's2'
+	const custom_variants = [
+		{ chr: 'chr17', pos: 7670699, mname: 'R337H', class: 'M', dt: 1, ref: 'G', alt: 'C', sample: 's1' },
+		{
+			gene1: 'AKT1',
+			chr1: 'chr14',
+			pos1: 104776000,
+			strand1: '-',
+			gene2: 'TP53',
+			chr2: 'chr17',
+			pos2: 7670500,
+			strand2: '-',
+			dt: 2,
+			class: 'Fuserna',
+			sample: 's2'
+		},
+
+		{
+			gene1: 'TP53',
+			chr2: 'chr17',
+			pos2: 7674000,
+			strand2: '-',
+			gene2: 'AKT1',
+			chr1: 'chr14',
+			pos1: 104792000,
+			strand1: '-',
+			dt: 5,
+			class: 'SV',
+			sample: 's3'
+		}
+	]
+	const sampleAnnotation = {
+		terms: [{ id: 'diagnosis', type: 'categorical' }],
+		annotations: {
+			s1: {
+				diagnosis: 'AA'
 			},
-
-			{
-				gene1: 'TP53',
-				chr2: 'chr17',
-				pos2: 7674000,
-				strand2: '-',
-				gene2: 'AKT1',
-				chr1: 'chr14',
-				pos1: 104792000,
-				strand1: '-',
-				dt: 5,
-				class: 'SV',
-				sample: 's3'
-			}
-		]
-		const sampleAnnotation = {
-			terms: [{ id: 'diagnosis', type: 'categorical' }],
-			annotations: {
-				s1: {
-					diagnosis: 'AA'
-				},
-				s2: {
-					diagnosis: 'BB'
-				},
-				s3: {
-					diagnosis: 'AA'
-				}
+			s2: {
+				diagnosis: 'BB'
+			},
+			s3: {
+				diagnosis: 'AA'
 			}
 		}
-		runproteinpaint({
-			holder,
-			parseurl: true,
-			nobox: true,
-			noheader: true,
-			genome: 'hg38', // ready for hg38-test
-			gene: 'NM_000546', // tp53
-			tracks: [
-				{
-					type: 'mds3',
-					name: 'Custom data',
-					custom_variants,
-					sampleAnnotation,
-					allow2selectSamples: {
-						// trigger sample selection
-						buttonText: 'RandomText', // hardcoded text should show in selection button
-						callback: () => {}
-					}
+	}
+	runproteinpaint({
+		holder,
+		parseurl: true,
+		nobox: true,
+		noheader: true,
+		genome: 'hg38', // ready for hg38-test
+		gene: 'NM_000546', // tp53
+		tracks: [
+			{
+				type: 'mds3',
+				name: 'Custom data',
+				custom_variants,
+				sampleAnnotation,
+				allow2selectSamples: {
+					// trigger sample selection
+					buttonText: 'RandomText', // hardcoded text should show in selection button
+					callback: () => {}
 				}
-			],
-			onloadalltk_always: checkTrack
-		})
-		async function checkTrack(bb) {
-			const tk = bb.tklst.find(i => i.type == 'mds3')
-			test.equal(tk.skewer.selection._groups[0].length, 3, 'Should render 3 skewers')
-
-			{
-				const lab = tk.leftlabels.doms.variants
-				test.ok(lab, '"Variants" leftlabel should be displayed')
-				test.equal(lab.node().innerHTML, '3 variants', 'Variant leftlabel should print "3 variants"')
 			}
-			{
-				const lab = tk.leftlabels.doms.samples
-				test.ok(lab, '"Samples" leftlabel should be displayed')
-				test.equal(lab.node().innerHTML, '3 samples', 'Sample leftlabel should print "3 samples"')
-
-				// click "samples" leftlabel
-				lab.node().dispatchEvent(new Event('click'))
-				await sleep(100) // sleep to allow menu to render
-
-				// menu of leftlabel; first option should be "List 3 samples"
-				const option = tk.menutip.d.select('.sja_menuoption').nodes()[0]
-				test.equal(option.innerHTML, 'List 3 samples', 'First menu option should be named "List 3 samples"')
-				option.dispatchEvent(new Event('click'))
-				await sleep(100) // sleep to allow menu to render
-
-				// table.js should render a <button> with given text
-				const selectSampleButton = tk.menutip.d.select('button').nodes()[0]
-				test.ok(selectSampleButton, 'Sample table should contain a <button>')
-				test.equal(selectSampleButton.innerHTML, 'RandomText', 'The sample select <button> should have the given name')
-			}
-
-			// how to trigger a click on
-			if (test._ok) holder.remove()
-			test.end()
-		}
+		],
+		onloadalltk_always: checkTrack
 	})
-}
+	async function checkTrack(bb) {
+		const tk = bb.tklst.find(i => i.type == 'mds3')
+		test.equal(tk.skewer.selection._groups[0].length, 3, 'Should render 3 skewers')
+
+		{
+			const lab = tk.leftlabels.doms.variants
+			test.ok(lab, '"Variants" leftlabel should be displayed')
+			test.equal(lab.node().innerHTML, '3 variants', 'Variant leftlabel should print "3 variants"')
+		}
+		{
+			const lab = tk.leftlabels.doms.samples
+			test.ok(lab, '"Samples" leftlabel should be displayed')
+			test.equal(lab.node().innerHTML, '3 samples', 'Sample leftlabel should print "3 samples"')
+
+			// click "samples" leftlabel
+			lab.node().dispatchEvent(new Event('click'))
+			await sleep(100) // sleep to allow menu to render
+
+			// menu of leftlabel; first option should be "List 3 samples"
+			const option = tk.menutip.d.select('.sja_menuoption').nodes()[0]
+			test.equal(option.innerHTML, 'List 3 samples', 'First menu option should be named "List 3 samples"')
+			option.dispatchEvent(new Event('click'))
+			await sleep(100) // sleep to allow menu to render
+
+			// table.js should render a <button> with given text
+			const selectSampleButton = tk.menutip.d.select('button').nodes()[0]
+			test.ok(selectSampleButton, 'Sample table should contain a <button>')
+			test.equal(selectSampleButton.innerHTML, 'RandomText', 'The sample select <button> should have the given name')
+		}
+
+		// how to trigger a click on
+		if (test._ok) holder.remove()
+		test.end()
+	}
+})

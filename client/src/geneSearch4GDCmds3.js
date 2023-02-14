@@ -14,8 +14,8 @@ designed to work for ssm lollipop app in GDC Analysis Tools Framework
 
 arg = {}
 	runpp() argument object
-	geneSearch4GDCmds3:true
-		a flag
+	geneSearch4GDCmds3:{ postRender(), onloadalltk_always() }
+		optional callbacks for testing
 	.allow2selectSamples:{}
 		pass to mds3 tk object to enable sample selection
 holder
@@ -61,6 +61,11 @@ export async function init(arg, holder, genomes) {
 	}
 	const coordInput = addGeneSearchbox(searchOpt)
 
+	if (typeof arg.geneSearch4GDCmds3.postRender == 'function') {
+		// supports testing
+		await arg.geneSearch4GDCmds3.postRender({ tip })
+	}
+
 	let selectedIsoform
 
 	async function launchView() {
@@ -84,6 +89,12 @@ export async function init(arg, holder, genomes) {
 				? arg.tracks
 				: [{ type: 'mds3', dslabel: gdcDslabel, allow2selectSamples: arg.allow2selectSamples }]
 		}
+
+		if (typeof arg.geneSearch4GDCmds3.onloadalltk_always == 'function') {
+			// supports testing
+			pa.onloadalltk_always = arg.geneSearch4GDCmds3.onloadalltk_always
+		}
+
 		return await blockinit(pa)
 	}
 
