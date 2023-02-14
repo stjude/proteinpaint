@@ -3,6 +3,7 @@ const tape = require('tape')
 const helpers = require('../../test/front.helpers.js')
 const d3color = require('d3-color')
 const d3s = require('d3-selection')
+const d3drag = require('d3-drag')
 
 /* Launch from http://localhost:3000/testrun.html?name=sampleScatter */
 

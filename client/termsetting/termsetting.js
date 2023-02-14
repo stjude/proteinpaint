@@ -797,7 +797,6 @@ async function call_fillTW(tw, vocabApi, defaultQ) {
 			throw `Type ${type} does not exist`
 		}
 	} else throw `Type not defined for ${JSON.stringify(tw)}`
-
 	await _.fillTW(tw, vocabApi, defaultQ ? defaultQ[type] : null)
 }
 

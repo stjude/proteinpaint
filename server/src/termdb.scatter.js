@@ -185,7 +185,6 @@ async function colorAndShapeSamples(refSamples, cohortSamples, data, q) {
 		sample.cat_info = {}
 		sample.hidden = {}
 		let result = []
-		sample.shape = 'Ref'
 		if (!q.colorTW) {
 			sample.category = 'Default'
 			result.push(sample)
@@ -202,7 +201,10 @@ async function colorAndShapeSamples(refSamples, cohortSamples, data, q) {
 				const sresult = processSample(dbSample, _sample, q.shapeTW, shapeMap, 'shape')
 				samples.push(...sresult)
 			}
-		} else samples.push(...result)
+		} else {
+			sample.shape = 'Ref'
+			samples.push(...result)
+		}
 	}
 	if (q.colorTW && q.colorTW.q.mode !== 'continuous') {
 		let i = 20
@@ -262,11 +264,8 @@ function processSample(dbSample, sample, tw, categoryMap, category) {
 		const mutations = dbSample?.[tw.term.name]?.values
 		sample.cat_info[category] = []
 		for (const mutation of mutations) {
-			const dt = mutation.dt
 			const class_info = mclass[mutation.class]
-			const origin = morigin[mutation.origin]?.label
-			const dtlabel = origin ? `${origin} ${dt2label[dt]}` : dt2label[dt]
-			value = `${class_info.label} ${dtlabel}`
+			value = getCategory(mutation)
 			sample.cat_info[category].push(mutation)
 			if (!categoryMap.has(value)) categoryMap.set(value, { color: class_info.color, sampleCount: 1 })
 			else categoryMap.get(value).sampleCount++
@@ -274,13 +273,16 @@ function processSample(dbSample, sample, tw, categoryMap, category) {
 			// TODO mutation.mname is amino acid change. pass mname to sample to be shown in tooltip
 		}
 		for (const [dt, label] of Object.entries(dt2label)) {
-			const mutation = mutations.find(mutation => mutation.dt == dt)
-			if (!mutation || mutation.class === 'Blank' || mutation.class === 'WT') continue
-			const category = getCategory(mutation)
-			if (!(tw.q.hiddenValues && category in tw.q.hiddenValues)) {
-				sample[category] = value
-				break //Found a color
-			}
+			const mutation = mutations.find(mutation => {
+				const value = getCategory(mutation)
+				const visible = !(tw.q.hiddenValues && value in tw.q.hiddenValues)
+				return mutation.dt == dt && visible
+			})
+			if (!mutation) continue
+
+			const value = getCategory(mutation)
+			sample[category] = value
+			break //Found a color
 		}
 		if (!sample[category])
 			//all hidden, will take any

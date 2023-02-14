@@ -17,8 +17,7 @@ import {
 	symbolDiamond,
 	symbolDiamond2,
 	symbolStar,
-	symbolSquare2,
-	groups
+	symbolSquare2
 } from 'd3'
 import { d3lasso } from '../common/lasso'
 import { Menu } from '#dom/menu'
@@ -378,10 +377,10 @@ class Scatter {
 				const count = category.sampleCount
 				const name = key
 				const hidden = this.config.colorTW.q.hiddenValues ? key in this.config.colorTW.q.hiddenValues : false
-				const [circleG, itemG] = this.addLegendItem(colorG, color, name, count, offsetX, offsetY, hidden)
-				circleG.on('click', e => this.onColorClick(e, key, category))
+				const [circleG, itemG] = addLegendItem(colorG, color, name, count, offsetX, offsetY, hidden)
+				circleG.on('click', e => onColorClick(e, key, category))
 				offsetY += step
-				itemG.on('click', () => this.onLegendClick(this.config.colorTW, 'colorTW', key, itemG, hidden))
+				itemG.on('click', event => onLegendClick(this.config.colorTW, 'colorTW', key, event, this))
 			}
 		}
 		if (colorRefCategory.sampleCount > 0) {
@@ -429,8 +428,9 @@ class Scatter {
 		if (this.config.shapeTW) {
 			offsetX = 300
 			offsetY = 60
-			title = this.config.shapeTW.term.name
-
+			title = `${this.config.shapeTW.term.name} (${this.cohortSamples.length})`
+			if (this.config.shapeTW.term.type == 'geneVariant')
+				title += ` x Assays (${this.cohortSamples[0]['cat_info']['shape'].length})`
 			const shapeG = legendG.append('g')
 			shapeG
 				.append('text')
@@ -463,73 +463,137 @@ class Scatter {
 					.style('text-decoration', hidden ? 'line-through' : 'none')
 					.attr('alignment-baseline', 'middle')
 				offsetY += step
-				itemG.on('click', () => this.onLegendClick(this.config.shapeTW, 'shapeTW', key, itemG, hidden))
+				itemG.on('click', event => onLegendClick(this.config.shapeTW, 'shapeTW', key, event, this))
 			}
 		}
-	}
 
-	addLegendItem(g, color, name, count, x, y, hidden = false) {
-		const radius = 5
+		function addLegendItem(g, color, name, count, x, y, hidden = false) {
+			const radius = 5
 
-		const circleG = g.append('g')
-		circleG
-			.append('circle')
-			.attr('cx', x)
-			.attr('cy', y)
-			.attr('r', radius)
-			.style('fill', color)
+			const circleG = g.append('g')
+			circleG
+				.append('circle')
+				.attr('cx', x)
+				.attr('cy', y)
+				.attr('r', radius)
+				.style('fill', color)
 
-		circleG.on('click', e => this.onColorClick(e, key, category))
-		const itemG = g.append('g')
-		itemG
-			.append('text')
-			.attr('name', 'sjpp-scatter-legend-label')
-			.attr('x', x + 10)
-			.attr('y', y)
-			.text(`${name}, n=${count}`)
-			.style('font-size', '15px')
-			.style('text-decoration', hidden ? 'line-through' : 'none')
-			.attr('alignment-baseline', 'middle')
-		return [circleG, itemG]
-	}
+			circleG.on('click', e => onColorClick(e, key, category))
+			const itemG = g.append('g')
+			itemG
+				.append('text')
+				.attr('name', 'sjpp-scatter-legend-label')
+				.attr('x', x + 10)
+				.attr('y', y)
+				.text(`${name}, n=${count}`)
+				.style('font-size', '15px')
+				.style('text-decoration', hidden ? 'line-through' : 'none')
+				.attr('alignment-baseline', 'middle')
+			return [circleG, itemG]
+		}
 
-	onColorClick(e, key, category) {
-		const menu = new Menu()
-		const input = menu.d
-			.append('input')
-			.attr('type', 'color')
-			.attr('value', category.color)
-			.on('change', () => {
-				const tw = this.config.colorTW
-				if (tw.term.type != 'geneVariant' && tw.term.values[key]) tw.term.values[key].color = input.node().value
-				else {
-					if (!tw.term.values) tw.term.values = {}
-					tw.term.values[key] = { key: key, label: key, color: input.node().value }
-				}
-				this.app.dispatch({
-					type: 'plot_edit',
-					id: this.id,
-					config: { colorTW: tw }
+		function onColorClick(e, key, category) {
+			const menu = new Menu()
+			const input = menu.d
+				.append('input')
+				.attr('type', 'color')
+				.attr('value', category.color)
+				.on('change', () => {
+					const tw = this.config.colorTW
+					if (tw.term.type != 'geneVariant' && tw.term.values[key]) tw.term.values[key].color = input.node().value
+					else {
+						if (!tw.term.values) tw.term.values = {}
+						tw.term.values[key] = { key: key, label: key, color: input.node().value }
+					}
+					this.app.dispatch({
+						type: 'plot_edit',
+						id: this.id,
+						config: { colorTW: tw }
+					})
+					menu.hide()
 				})
-				menu.hide()
-			})
-		menu.show(e.clientX, e.clientY, false)
-	}
+			menu.show(e.clientX, e.clientY, false)
+		}
 
-	onLegendClick(tw, name, key, itemG, hidden) {
-		console.log(key)
-		if (!tw.q.hiddenValues) tw.q.hiddenValues = {}
-		const value = tw.term.type != 'geneVariant' && tw.term.values[key] ? tw.term.values[key] : { key: key, label: key }
-		itemG.style('text-decoration', hidden ? 'none' : 'line-through')
-		if (hidden) delete tw.q.hiddenValues[key]
-		else tw.q.hiddenValues[key] = value
-		const config = {}
-		config[name] = tw
-		this.app.dispatch({
-			type: 'plot_edit',
-			id: this.id,
-			config
-		})
+		function onLegendClick(tw, name, key, e, parent) {
+			const menu = new Menu({ padding: '5px' })
+			const div = menu.d.append('div')
+
+			div
+				.append('div')
+				.attr('class', 'sja_menuoption sja_sharp_border')
+				.text('Hide')
+				.on('click', () => {
+					hideCategory(tw, key, true)
+					menu.hide()
+					const config = {}
+					config[name] = tw
+					parent.app.dispatch({
+						type: 'plot_edit',
+						id: parent.id,
+						config
+					})
+				})
+			div
+				.append('div')
+				.attr('class', 'sja_menuoption sja_sharp_border')
+				.text('Show')
+				.on('click', () => {
+					hideCategory(tw, key, false)
+					menu.hide()
+					const config = {}
+					config[name] = tw
+					parent.app.dispatch({
+						type: 'plot_edit',
+						id: parent.id,
+						config
+					})
+				})
+			div
+				.append('div')
+				.attr('class', 'sja_menuoption sja_sharp_border')
+				.text('Show only')
+				.on('click', () => {
+					const map = name == 'colorTW' ? parent.colorLegend : parent.shapeLegend
+					for (const mapKey of map.keys()) hideCategory(tw, mapKey, mapKey !== key)
+
+					menu.hide()
+					const config = {}
+					config[name] = tw
+					parent.app.dispatch({
+						type: 'plot_edit',
+						id: parent.id,
+						config
+					})
+				})
+			div
+				.append('div')
+				.attr('class', 'sja_menuoption sja_sharp_border')
+				.text('Show all')
+				.on('click', () => {
+					const map = name == 'colorTW' ? parent.colorLegend : parent.shapeLegend
+					for (const mapKey of map.keys()) hideCategory(tw, mapKey, false)
+					const config = {}
+					config[name] = tw
+					parent.app.dispatch({
+						type: 'plot_edit',
+						id: parent.id,
+						config
+					})
+				})
+			menu.show(e.clientX, e.clientY, false)
+		}
+
+		function hideCategory(tw, key, hide) {
+			if (!tw.q.hiddenValues) tw.q.hiddenValues = {}
+			const value =
+				tw.term.type != 'geneVariant' && tw.term.values[key] ? tw.term.values[key] : { key: key, label: key }
+			const items = legendG.selectAll(`text[name="sjpp-scatter-legend-label"]`).nodes()
+			const itemG = items.find(item => item.innerHTML.startsWith(key))?.parentElement
+			if (itemG) itemG.style['text-decoration'] = hide ? 'line-through' : 'none'
+			if (!hide) delete tw.q.hiddenValues[key]
+			else tw.q.hiddenValues[key] = value
+		}
 	}
 
 	openSurvivalPlot(term, groups) {
