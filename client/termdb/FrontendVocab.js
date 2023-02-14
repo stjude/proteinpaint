@@ -4,6 +4,7 @@ import { sample_match_termvaluesetting } from '../common/termutils'
 import { isUsableTerm, graphableTypes } from '#shared/termdb.usecase'
 import { Vocab } from './Vocab'
 import roundValue from '#shared/roundValue'
+import computePercentile from '../../server/shared/compute.percentile'
 
 export class FrontendVocab extends Vocab {
 	constructor(opts) {
@@ -268,11 +269,6 @@ export class FrontendVocab extends Vocab {
 		const mean = sum / total
 
 		// percentiles
-		function computePercentile(values, percentile) {
-			const index = Math.abs((percentile / 100) * values.length - 1)
-			const value = Number.isInteger(index) ? (values[index] + values[index + 1]) / 2 : values[Math.ceil(index)]
-			return value
-		}
 		const p25 = computePercentile(values, 25)
 		const median = computePercentile(values, 50)
 		const p75 = computePercentile(values, 75)

@@ -1,4 +1,3 @@
-const serverconfig = require('./serverconfig.js')
 const termdbConfig = require('./termdb.config')
 const termdbsql = require('./termdb.sql')
 const phewas = require('./termdb.phewas')
@@ -15,6 +14,7 @@ const getData = require('./termdb.matrix').getData
 const trigger_getCohortsData = require('./termdb.cohort').trigger_getCohortsData
 const get_mds3variantData = require('./mds3.variant').get_mds3variantData
 import roundValue from '#shared/roundValue'
+import computePercentile from '../shared/compute.percentile.js'
 
 /*
 ********************** EXPORTED
@@ -459,15 +459,6 @@ async function trigger_getdescrstats(q, res, ds) {
 			{ id: 'sd', label: 'Standard deviation', value: roundValue(sd, 2) }
 		]
 	})
-}
-
-// compute the percentile value from an array of values
-// source: https://www.dummies.com/article/academics-the-arts/math/statistics/how-to-calculate-percentiles-in-statistics-169783/
-function computePercentile(values, percentile) {
-	values.sort((a, b) => a - b)
-	const index = Math.abs((percentile / 100) * values.length - 1)
-	const value = Number.isInteger(index) ? (values[index] + values[index + 1]) / 2 : values[Math.ceil(index)]
-	return value
 }
 
 function getvariantfilter(res, ds) {

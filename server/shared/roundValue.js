@@ -7,7 +7,7 @@ round a value to specified digits
 value: given value
 digits: number of digits to round to
 */
-module.exports = function roundValue(value, digits) {
+export default function roundValue(value, digits) {
 	const v = Number(value)
 	if (Number.isInteger(v)) return v
 	if (Math.abs(v) < 1) return Number(v.toPrecision(digits))

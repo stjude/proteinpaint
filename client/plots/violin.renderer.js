@@ -5,6 +5,7 @@ import { schemeCategory10 } from 'd3-scale-chromatic'
 import { brushX, brushY } from 'd3-brush'
 import { renderTable } from '#dom/table'
 import { filterJoin, getFilterItemByTag } from '../filter/filter'
+import { Menu } from '../dom/menu'
 
 export default function violinRenderer(self) {
 	const k2c = scaleOrdinal(schemeCategory10)
@@ -14,6 +15,8 @@ export default function violinRenderer(self) {
 		const imageOffset = settings.datasymbol === 'bean' ? settings.radius * window.devicePixelRatio : settings.radius
 		const t1 = self.config.term
 		const t2 = self.config.term2
+		const tip = new Menu({ padding: '5px' })
+		self.dom.tip = tip
 
 		//termsetting.js 'set_hiddenvalues()' adds uncomputable values from term.values to q.hiddenValues object. Since it will show up on the legend, delete that key-value pair from t2.q.hiddenValues object.
 		//hiddenValues are only subject to term2 when there are more than 1 categories in violin plot so safe to only delete uncomputable values from t2.q.hiddenValues and leave t1.q.hiddenValues as is.
@@ -49,7 +52,7 @@ export default function violinRenderer(self) {
 
 		for (const [plotIdx, plot] of self.data.plots.entries()) {
 			const violinG = createViolinG(svg, plot, plotIdx, isH)
-			renderLabels(t1, t2, violinG, plot, isH, settings)
+			renderLabels(t1, t2, violinG, plot, isH, settings, tip)
 			renderViolinPlot(plot, self, isH, svg, plotIdx, violinG, imageOffset)
 			renderBrushing(t1, t2, violinG, settings, plot, isH, svg)
 			labelHideLegendClicking(t2, plot, self)
@@ -59,6 +62,41 @@ export default function violinRenderer(self) {
 	self.displayLabelClickMenu = function(t1, t2, plot, event) {
 		self.displayLabelClickMenu.called = true
 		displayMenu(t1, t2, self, plot, event, null, null)
+	}
+
+	self.displaySummaryStats = function(d, event, tip) {
+		const rows = [`<tr><td colspan=2 style='padding:3px; text-align:center'>${d.label.split(',')[0]}</td></tr>`]
+		if (d.summaryStats) {
+			rows.push(`<tr>
+							<td style='padding:3px; color:#aaa'>${d.summaryStats.values.find(x => x.id === 'total').label}</td>
+							<td style='padding:3px; text-align:center'>n=${d.summaryStats.values.find(x => x.id === 'total').value}
+							<tr>
+							<td style='padding:3px; color:#aaa'>${d.summaryStats.values.find(x => x.id === 'min').label}</td>
+							<td style='padding:3px; text-align:center'>${d.summaryStats.values.find(x => x.id === 'min').value}
+							<tr>
+							<td style='padding:3px; color:#aaa'>${d.summaryStats.values.find(x => x.id === 'p25').label}</td>
+							<td style='padding:3px; text-align:center'>${d.summaryStats.values.find(x => x.id === 'p25').value}
+							<tr>
+							<td style='padding:3px; color:#aaa'>${d.summaryStats.values.find(x => x.id === 'mean').label}</td>
+							<td style='padding:3px; text-align:center'>${d.summaryStats.values.find(x => x.id === 'mean').value}
+							<tr>
+							<td style='padding:3px; color:#aaa'>${d.summaryStats.values.find(x => x.id === 'median').label}</td>
+							<td style='padding:3px; text-align:center'>${d.summaryStats.values.find(x => x.id === 'median').value}
+							<tr>
+							<td style='padding:3px; color:#aaa'>${d.summaryStats.values.find(x => x.id === 'p75').label}</td>
+							<td style='padding:3px; text-align:center'>${d.summaryStats.values.find(x => x.id === 'p75').value}
+							<tr>
+							<td style='padding:3px; color:#aaa'>${d.summaryStats.values.find(x => x.id === 'max').label}</td>
+							<td style='padding:3px; text-align:center'>${d.summaryStats.values.find(x => x.id === 'max').value}
+							<tr>
+							<td style='padding:3px; color:#aaa'>${d.summaryStats.values.find(x => x.id === 'variance').label}</td>
+							<td style='padding:3px; text-align:center'>${d.summaryStats.values.find(x => x.id === 'variance').value}
+							<tr>
+							<td style='padding:3px; color:#aaa'>${d.summaryStats.values.find(x => x.id === 'SD').label}</td>
+							<td style='padding:3px; text-align:center'>${d.summaryStats.values.find(x => x.id === 'SD').value}
+							`)
+		}
+		tip.show(event.clientX, event.clientY).d.html(`<table class='sja_simpletable'>${rows.join('\n')}</table>`)
 	}
 
 	self.renderPvalueTable = function() {
@@ -216,7 +254,7 @@ export default function violinRenderer(self) {
 		return violinG
 	}
 
-	function renderLabels(t1, t2, violinG, plot, isH, settings) {
+	function renderLabels(t1, t2, violinG, plot, isH, settings, tip) {
 		// create scale label
 		const label = violinG
 			.append('text')
@@ -226,6 +264,14 @@ export default function violinRenderer(self) {
 			.on('click', function(event) {
 				if (!event) return
 				self.displayLabelClickMenu(t1, t2, plot, event)
+			})
+			.on('mouseover', function(event, d) {
+				event.stopPropagation()
+				if (!event) return
+				self.displaySummaryStats(d, event, tip)
+			})
+			.on('mouseout', function() {
+				tip.hide()
 			})
 			.style('opacity', 0)
 			.transition()
@@ -310,10 +356,10 @@ export default function violinRenderer(self) {
 				.style('stroke-width', '3')
 				.style('stroke', 'red')
 				.style('opacity', '1')
-				.attr('y1', isH ? -7 : svg.axisScale(plot.median))
-				.attr('y2', isH ? 7 : svg.axisScale(plot.median))
-				.attr('x1', isH ? svg.axisScale(plot.median) : -7)
-				.attr('x2', isH ? svg.axisScale(plot.median) : 7)
+				.attr('y1', isH ? -7 : svg.axisScale(plot.summaryStats.values.find(x => x.id === 'median').value))
+				.attr('y2', isH ? 7 : svg.axisScale(plot.summaryStats.values.find(x => x.id === 'median').value))
+				.attr('x1', isH ? svg.axisScale(plot.summaryStats.values.find(x => x.id === 'median').value) : -7)
+				.attr('x2', isH ? svg.axisScale(plot.summaryStats.values.find(x => x.id === 'median').value) : 7)
 		} else return
 	}
 
@@ -408,13 +454,6 @@ export function displayMenu(t1, t2, self, plot, event, start, end) {
 				}
 			})
 		}
-		//show median values as text above menu options
-		self.app.tip.d
-			.append('div')
-			.text(`Median Value: ${plot.median}`)
-			.style('padding-left', '10px')
-			.style('font-size', '15px')
-
 		self.displayLabelClickMenu.called = false
 	} else if (displayBrushMenu.called === true) {
 		options.push({

@@ -4,10 +4,10 @@ const serverconfig = require('./serverconfig')
 const lines2R = require('./lines2R')
 const path = require('path')
 const utils = require('./utils')
-const { median } = require('../../server/shared/median')
 const { getData } = require('./termdb.matrix')
 const createCanvas = require('canvas').createCanvas
 const { violinBinsObj } = require('../../server/shared/violin.bins')
+const { summaryStats } = require('../../server/shared/descriptive.stats')
 
 /*
 q = {
@@ -305,8 +305,9 @@ function createCanvasImg(q, result) {
 
 		plot.biggestBin = Math.max(...finalVpBins.bins0.map(b => b.length))
 
-		//generate median values
-		plot.median = median(plot.values)
+		//generate summary stat values
+		// console.log(309, plot.values)
+		plot.summaryStats = summaryStats(plot.values)
 
 		delete plot.values
 	}
