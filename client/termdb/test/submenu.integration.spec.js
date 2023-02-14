@@ -12,7 +12,7 @@ if data updates, these tests may also needs to be updated
 const runpp = helpers.getRunPp('termdb', {
 	state: {
 		dslabel: 'TermdbTest',
-		genome: 'hg38'
+		genome: 'hg38-test'
 	},
 	debug: 1
 })

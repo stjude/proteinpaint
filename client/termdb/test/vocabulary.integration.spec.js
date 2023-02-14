@@ -12,6 +12,10 @@ const d3s = require('d3-selection')
 **************************/
 
 const runpp = helpers.getRunPp('termdb', {
+	state: {
+		dslabel: 'TermdbTest',
+		genome: 'hg38-test'
+	},
 	debug: 1
 })
 

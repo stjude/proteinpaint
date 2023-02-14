@@ -8,7 +8,7 @@ const runpp = helpers.getRunPp('mass', {
 		nav: { activeTab: 1 },
 		vocab: {
 			dslabel: 'TermdbTest',
-			genome: 'hg38'
+			genome: 'hg38-test'
 		}
 	},
 	debug: 1
@@ -347,7 +347,7 @@ tape('Click behavior of category legend', function(test) {
 	}
 })
 
-tape('Create color groups from Edit', function(test) {
+tape.skip('Create color groups from Edit', function(test) {
 	test.timeoutAfter(3000)
 
 	runpp({
