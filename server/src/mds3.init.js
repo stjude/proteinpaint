@@ -1145,7 +1145,12 @@ export async function svfusionByRangeGetter_file(ds, genome) {
 						})
 					}
 					if (j.sample) {
-						key2variants.get(ssm_id).samples.push({ sample_id: j.sample })
+						const sampleObj = { sample_id: j.sample }
+						if (j.mattr) {
+							// mattr{} has sample-level attributes on this sv event, equivalent to FORMAT
+							sampleObj.formatK2v = j.mattr
+						}
+						key2variants.get(ssm_id).samples.push(sampleObj)
 					}
 				}
 			})

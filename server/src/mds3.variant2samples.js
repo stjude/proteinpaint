@@ -13,6 +13,7 @@ variant2samples_getresult()
 	queryMutatedSamples
 		querySamples_gdcapi
 		queryServerFileBySsmid
+			combineSamplesById
 		queryServerFileByRglst
 			mayAddSampleAnnotationByTwLst
 	make_sunburst
@@ -338,7 +339,7 @@ async function queryServerFileBySsmid(q, twLst, ds) {
 					// not this fusion event
 					continue
 				}
-				combineSamplesById(m.samples, samples, m.ssmid)
+				combineSamplesById(m.samples, samples, m.ssm_id)
 			}
 			continue
 		}

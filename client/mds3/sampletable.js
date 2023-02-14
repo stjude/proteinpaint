@@ -3,6 +3,7 @@ import { get_list_cells } from '#dom/gridutils'
 import { mclass, dtsnvindel, dtsv, dtfusionrna } from '#shared/common'
 import { renderTable } from '#dom/table'
 import { rgb } from 'd3-color'
+import { print_snv, printSvPair } from './itemtable'
 
 /*
 ********************** EXPORTED
@@ -148,11 +149,31 @@ async function make_singleSampleTable(s, arg) {
 	}
 
 	if (s.ssmid2format) {
-		if (s.ssm_id_lst.length > 1) {
-			console.log('format values are not displayed in association with each of multiple ssm!')
-		}
-		// assuming 1 ssm from this sample obj
-		for (const ssmid in s.ssmid2format) {
+		// format data is displayed per ssmid (if there are multiple variants)
+		for (const ssmid of s.ssm_id_lst) {
+			if (s.ssm_id_lst.length > 1) {
+				// there are multiple, need to mark it out
+				const div = grid_div
+					.append('div')
+					.style('grid-column', 'span 2')
+					.style('margin-top', '20px')
+				const m = arg.mlst.find(i => i.ssm_id == ssmid)
+				if (m) {
+					// found m object by id, can make a better display
+					if (m.dt == 1) {
+						print_snv(div, m, arg.tk)
+					} else if (m.dt == 2 || m.dt == 5) {
+						printSvPair(m.pairlst[0], div)
+					} else {
+						div.text(ssmid)
+					}
+				} else {
+					div.text(ssmid)
+				}
+			} else {
+				// only 1 ssm from this sample obj, no need to mark it out
+			}
+
 			for (const formatkey in s.ssmid2format[ssmid]) {
 				const value = s.ssmid2format[ssmid][formatkey]
 				const [cell1, cell2] = get_list_cells(grid_div)
@@ -212,6 +233,7 @@ export async function samples2columnsRows(samples, tk) {
 	const has_caseAccess = samples.some(i => 'caseIsOpenAccess' in i),
 		has_ssm = samples.some(i => i.ssm_id) || samples.some(i => i.ssm_id_lst),
 		has_format = samples.some(i => i.ssmid2format) && tk.mds?.bcf?.format
+	const displayedFormatKeySet = new Set() // set of format keys for display, to skip keys not in display
 
 	// to be returned by this function, as inputs for renderTable
 	const columns = [{ label: 'Sample' }],
@@ -239,7 +261,15 @@ export async function samples2columnsRows(samples, tk) {
 	}
 
 	if (has_format) {
+		for (const s of samples) {
+			if (!s.ssmid2format) continue
+			for (const sm in s.ssmid2format) {
+				for (const k in s.ssmid2format[sm]) displayedFormatKeySet.add(k)
+			}
+		}
+
 		for (const f in tk.mds.bcf.format) {
+			if (!displayedFormatKeySet.has(f)) continue
 			const fobj = tk.mds.bcf.format[f]
 			columns.push({
 				label: fobj.Description || f
@@ -320,6 +350,7 @@ export async function samples2columnsRows(samples, tk) {
 		if (has_format) {
 			if (!ssm_id_lst) throw 'ssm_id_lst missing, cannot show format'
 			for (const fkey in tk.mds.bcf.format) {
+				if (!displayedFormatKeySet.has(fkey)) continue
 				if (!sample.ssmid2format) {
 					// sample does not have format values, return blank cell for each format field
 					row.push({ value: '' })

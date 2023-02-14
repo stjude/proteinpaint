@@ -24,6 +24,7 @@ itemtable_oneItem
 itemtable_multiItems
 add_csqButton
 print_snv
+printSvPair
 
 
 .occurrence must be set for each variant
@@ -345,7 +346,7 @@ function print_mname(div, m) {
 		.text(mclass[m.class].label.toUpperCase())
 }
 
-function print_snv(holder, m, tk) {
+export function print_snv(holder, m, tk) {
 	let printto = holder
 	if (tk.mds.queries && tk.mds.queries.snvindel.variantUrl && tk.mds.queries.snvindel.variantUrl.key in m) {
 		const a = holder.append('a')
@@ -443,7 +444,7 @@ async function table_svfusion(arg, grid) {
 	}
 }
 
-function printSvPair(pair, div) {
+export function printSvPair(pair, div) {
 	if (pair.a.name)
 		div
 			.append('span')
