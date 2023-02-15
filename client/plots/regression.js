@@ -25,7 +25,7 @@ class Regression {
 		this.dom = {
 			header: this.opts.header, // header is optional
 			errordiv: this.opts.holder.append('div'),
-			inputs: this.opts.holder.append('div'),
+			inputs: this.opts.holder.append('div').style('margin', '20px 10px'),
 			results: this.opts.holder.append('div').style('margin-left', '40px')
 		}
 
@@ -77,6 +77,7 @@ class Regression {
 		try {
 			this.config = JSON.parse(JSON.stringify(this.state.config))
 			this.mayUpdateSandboxHeader()
+			this.getFilter()
 			await this.inputs.main()
 			await this.results.main()
 			this.inputs.resetSubmitButton()
@@ -100,6 +101,38 @@ class Regression {
 				this.config.regressionType.toUpperCase() +
 				' REGRESSION</span>'
 		)
+	}
+
+	getFilter() {
+		// regression analysis may have multiple
+		// filters (e.g. term filter + restrict ancestry filter)
+		// so track all filters here
+		const filters = []
+
+		// term filter
+		if (this.state.termfilter?.filter) filters.push(this.state.termfilter.filter)
+
+		// restrict ancestry filter
+		const tws = [this.config.outcome, ...this.config.independent]
+		const tws_restrictAncestry = tws.filter(tw => tw?.q.restrictAncestry)
+		if (tws_restrictAncestry.length) {
+			if (tws_restrictAncestry.length > 1) {
+				const ancestries = new Set(tws_restrictAncestry.map(tw => tw.q.restrictAncestry.name))
+				if (ancestries.size > 1) throw 'samples cannot be restricted to more than 1 ancestry'
+			}
+			const tw = tws_restrictAncestry[0]
+			filters.push({ type: 'tvs', tvs: tw.q.restrictAncestry.tvs })
+			// notify user that samples will be restricted by ancestry
+			this.inputs.dom.submitMsg
+				.style('display', 'block')
+				.text(`restricting analysis to samples of ${tw.q.restrictAncestry.name}`)
+		} else {
+			this.inputs.dom.submitMsg.style('display', 'none')
+		}
+
+		// store filters
+		// vocabApi will use getNormalFilter() to remove any empty filters and convert a single entry tvslst into a tvs
+		this.filter = { type: 'tvslst', join: 'and', lst: filters }
 	}
 }
 

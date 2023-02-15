@@ -77,7 +77,9 @@ export async function getHandler(self) {
 			if (self.q.mode == 'spline') {
 				text = 'cubic spline'
 			} else if (self.q.mode == 'discrete') {
-				if (self.q.type == 'custom-bin') {
+				if (self.usecase?.target == 'regression') {
+					text = 'categorical'
+				} else if (self.q.type == 'custom-bin') {
 					text = self.q.lst.length + ' bins'
 				} else {
 					text = 'bin size=' + self.q.bin_size

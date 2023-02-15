@@ -1,8 +1,13 @@
-import { getCompInit } from '../rx'
+import { getCompInit, copyMerge } from '../rx'
 import { controlsInit } from './controls'
 import violinRenderer from './violin.renderer'
 import { to_svg } from '#src/client'
 import htmlLegend from '../dom/html.legend'
+import { fillTermWrapper } from '#termsetting'
+
+/*
+when opts.mode = 'minimal', a minimal violin plot will be rendered without controls, legend, labels, brushing, transitions, etc.
+*/
 
 class ViolinPlot {
 	constructor(opts) {
@@ -18,8 +23,8 @@ class ViolinPlot {
 		const holder = this.opts.holder
 			.append('div')
 			.style('display', 'inline-block')
-			.style('padding', '5px')
-			.style('padding-left', '45px')
+			.style('padding', this.opts.mode != 'minimal' ? '5px' : '0px')
+			.style('padding-left', this.opts.mode != 'minimal' ? '45px' : '0px')
 			.attr('id', 'sjpp-vp-holder')
 
 		this.dom = {
@@ -34,7 +39,7 @@ class ViolinPlot {
 			violinDiv: holder
 				.append('div')
 				.attr('id', 'sjpp-vp-violinDiv')
-				.style('padding-left', '10px'),
+				.style('padding-left', this.opts.mode != 'minimal' ? '10px' : '0px'),
 			legendDiv: holder
 				.append('div')
 				.classed('sjpp-vp-legend', true)
@@ -53,65 +58,71 @@ class ViolinPlot {
 		violinRenderer(this)
 		setInteractivity(this)
 
-		this.legendRenderer = htmlLegend(this.dom.legendDiv, {
-			settings: {
-				legendOrientation: 'vertical'
-			},
-			handlers: {}
-		})
-		this.components = {
-			controls: await controlsInit({
-				app: this.app,
-				id: this.id,
-				holder: this.dom.controls,
-				inputs: [
-					{
-						type: 'term1',
-						// TODO: when used under the summary chart, this.opts.usecase may replace the usecase here
-						usecase: { target: 'violin', detail: 'term' }
-					},
-					{
-						type: 'overlay',
-						//TODO: when term is numeric use 'overlay' otherwise for categories use 'Divide by'
-						// TODO: when used under the summary chart, this.opts.usecase may replace the usecase here
-						usecase: { target: 'violin', detail: 'term2' }
-					},
-					{
-						label: 'Orientation',
-						type: 'radio',
-						chartType: 'violin',
-						settingsKey: 'orientation',
-						options: [{ label: 'Vertical', value: 'vertical' }, { label: 'Horizontal', value: 'horizontal' }]
-					},
-					{
-						label: 'Data symbol',
-						type: 'radio',
-						chartType: 'violin',
-						settingsKey: 'datasymbol',
-						options: [{ label: 'Ticks', value: 'rug' }, { label: 'Circles', value: 'bean' }]
-					},
-					{
-						label: 'Symbol size',
-						type: 'number',
-						chartType: 'violin',
-						settingsKey: 'radius',
-						step: 1,
-						max: 15,
-						min: 3
-					},
-					{
-						label: 'Stroke width',
-						type: 'number',
-						chartType: 'violin',
-						settingsKey: 'strokeWidth',
-						step: 0.1,
-						max: 2,
-						min: 0.1
-					}
-				]
+		if (this.opts.mode != 'minimal') {
+			this.legendRenderer = htmlLegend(this.dom.legendDiv, {
+				settings: {
+					legendOrientation: 'vertical'
+				},
+				handlers: {}
 			})
 		}
-		this.components.controls.on('downloadClick.violin', this.download)
+
+		if (this.opts.mode != 'minimal') {
+			this.components = {
+				controls: await controlsInit({
+					app: this.app,
+					id: this.id,
+					holder: this.dom.controls,
+					inputs: [
+						{
+							type: 'term1',
+							// TODO: when used under the summary chart, this.opts.usecase may replace the usecase here
+							usecase: { target: 'violin', detail: 'term' }
+						},
+						{
+							type: 'overlay',
+							//TODO: when term is numeric use 'overlay' otherwise for categories use 'Divide by'
+							// TODO: when used under the summary chart, this.opts.usecase may replace the usecase here
+							usecase: { target: 'violin', detail: 'term2' }
+						},
+						{
+							label: 'Orientation',
+							type: 'radio',
+							chartType: 'violin',
+							settingsKey: 'orientation',
+							options: [{ label: 'Vertical', value: 'vertical' }, { label: 'Horizontal', value: 'horizontal' }]
+						},
+						{
+							label: 'Data symbol',
+							type: 'radio',
+							chartType: 'violin',
+							settingsKey: 'datasymbol',
+							options: [{ label: 'Ticks', value: 'rug' }, { label: 'Circles', value: 'bean' }]
+						},
+						{
+							label: 'Symbol size',
+							type: 'number',
+							chartType: 'violin',
+							settingsKey: 'radius',
+							step: 1,
+							max: 15,
+							min: 3
+						},
+						{
+							label: 'Stroke width',
+							type: 'number',
+							chartType: 'violin',
+							settingsKey: 'strokeWidth',
+							step: 0.1,
+							max: 2,
+							min: 0.1
+						}
+					]
+				})
+			}
+
+			this.components.controls.on('downloadClick.violin', this.download)
+		}
 	}
 
 	reactsTo(action) {
@@ -139,7 +150,8 @@ class ViolinPlot {
 	}
 
 	async main() {
-		if (this.state.config.childType != this.type) return
+		const c = this.state.config
+		if (c.chartType != this.type && c.childType != this.type) return
 		this.config = structuredClone(this.state.config)
 		if (this.dom.header)
 			this.dom.header.text(
@@ -238,8 +250,8 @@ function setInteractivity(self) {
 	}
 }
 
-export function getDefaultViolinSettings(app) {
-	return {
+export function getDefaultViolinSettings(app, overrides = {}) {
+	const defaults = {
 		orientation: 'horizontal',
 		rowlabelw: 250,
 		brushRange: null, //object with start and end if there is a brush selection
@@ -251,6 +263,7 @@ export function getDefaultViolinSettings(app) {
 		rightMargin: 50,
 		displaySampleIds: app?.getState()?.termdbConfig?.displaySampleIds ? true : false
 	}
+	return Object.assign(defaults, overrides)
 }
 
 export async function getPlotConfig(opts, app) {

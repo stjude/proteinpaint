@@ -1,14 +1,16 @@
 import { select } from 'd3-selection'
+import { getDefaultViolinSettings } from './violin.js'
+import { appInit } from './plot.app'
 
 /*
 	dom elements for values table
 	holder // main holder
 		loading_div // loading message while updating term info
-		topInfoStatus_holder // top info about term type and term mode + knots + promopt to select ref group
-		values_div // values, bottomSummary and excluded values
-			included_values_table // values with samplecount, selectable as ref group
-			bottomSummaryStatus_holder // total included and excluded samples
-			excluded_values_table // excluded values with samplecount
+		top_info_div // top info about scale + knots + promopt to select ref group
+		violin_div // violin plot of values (used when .mode=continuous)
+		table_div // tabular bar chart of values (used when .mode != continuous)
+		bottom_info_div // total included and excluded samples
+		excluded_div // excluded values with samplecount
 */
 
 const row_hover_bgcolor = '#fff6dc'
@@ -66,106 +68,146 @@ export class InputValuesTable {
 
 function setRenderers(self) {
 	self.setDOM = holder => {
-		holder
-			.style('margin', '10px')
-			.style('font-size', '.8em')
-			.style('text-align', 'left')
-			.style('color', '#999')
-
-		const topInfoStatus_holder = holder.append('div').style('display', 'none')
-		const values_div = holder.append('div')
-
 		self.dom = {
-			holder,
+			holder: holder
+				.style('margin', '10px')
+				.style('font-size', '.8em')
+				.style('text-align', 'left')
+				.style('color', '#999'),
+
 			loading_div: holder
 				.append('div')
 				.text('Loading..')
 				.style('display', 'none'),
 
-			topInfoStatus_holder,
+			top_info_div: holder.append('div'),
 
-			values_div,
-			selectRefgrpPrompt: values_div
-				.append('div')
-				.text('CLICK A ROW TO SET AS REFERENCE')
-				.style('margin', '10px 0px 0px 10px')
-				.style('font-size', '.7em')
-				.style('display', 'none'),
-			included_values_table: values_div.append('table'),
-			bottomSummaryStatus_holder: values_div.append('div'),
-			excluded_values_table: values_div.append('table')
+			violin_div: holder.append('div').style('color', 'black'),
+
+			table_div: holder
+				.append('table')
+				.style('margin', '15px 0px 15px 0px')
+				.style('border-collapse', 'collapse')
+				.style('color', 'black'),
+
+			bottom_info_div: holder.append('div'),
+
+			excluded_div: holder
+				.append('table')
+				.style('margin', '5px 10px')
+				.style('border-collapse', 'collapse')
 		}
 	}
 
-	self.render = () => {
+	self.render = async () => {
 		const input = self.input
-		self.dom.selectRefgrpPrompt.style('display', input.termStatus.allowToSelectRefGrp ? 'block' : 'none')
-		// render term status
-		renderTermStatus(input.termStatus)
-		// make included and excluded tables respectively
 
-		self.dom.included_values_table.selectAll('*').remove()
+		// render top info
+		if (input.termStatus.topInfoStatus?.length) self.dom.top_info_div.html(input.termStatus.topInfoStatus.join('<br>'))
 
-		renderValuesTable(input.termStatus.sampleCounts, 'included_values_table', input.termStatus.allowToSelectRefGrp)
-		renderValuesTable(input.termStatus.excludeCounts, 'excluded_values_table')
+		// render included values
+		await renderValuesTable(input)
+
+		// render bottom info
+		if (input.termStatus.bottomSummaryStatus) self.dom.bottom_info_div.html(input.termStatus.bottomSummaryStatus)
+
+		// render excluded values
+		renderExcludedValues(input)
 	}
 
-	function renderTermStatus(termStatus) {
-		// hide holder first
-		self.dom.topInfoStatus_holder.style('display', 'none')
-		self.dom.bottomSummaryStatus_holder.style('display', 'none')
-		if (!termStatus || (termStatus.topInfoStatus.length == 0 && termStatus.bottomSummaryStatus == undefined)) return
-		else {
-			if (termStatus.topInfoStatus.length) {
-				self.dom.topInfoStatus_holder.style('display', 'block').html(termStatus.topInfoStatus.join('<br>'))
+	async function renderValuesTable(input) {
+		if (input.term.q.mode == 'continuous') {
+			// continuous mode
+			// render values as violin plot
+			self.dom.violin_div.style('display', 'block')
+			self.dom.table_div.style('display', 'none')
+			if (self.plotAppApi) {
+				self.plotAppApi.dispatch({
+					type: 'app_refresh',
+					state: {
+						termfilter: {
+							filter: self.input.parent.parent.filter
+						}
+					}
+				})
+			} else {
+				const opts = {
+					holder: self.dom.violin_div,
+					vocabApi: self.input.parent.app.vocabApi,
+					state: {
+						vocab: {
+							genome: self.input.parent.app.vocabApi.genome,
+							dslabel: self.input.parent.app.vocabApi.dslabel
+						},
+						termfilter: {
+							filter: self.input.parent.parent.filter
+						},
+						plots: [
+							{
+								chartType: 'violin',
+								term: input.term,
+								settings: {
+									violin: getDefaultViolinSettings(null, {
+										svgw: 400,
+										axisHeight: 25,
+										rightMargin: 10,
+										datasymbol: 'rug',
+										radius: 4
+										//strokeWidth: 0.01
+									})
+								}
+							}
+						]
+					},
+					// rx will pass options by component type, which are not tracked in state
+					// examples are callbacks, event listeners, etc
+					violin: {
+						mode: 'minimal'
+					}
+				}
+				self.plotAppApi = await appInit(opts)
 			}
-			if (termStatus.bottomSummaryStatus) {
-				self.dom.bottomSummaryStatus_holder.style('display', 'block').html(termStatus.bottomSummaryStatus)
-			}
-		}
-	}
+		} else {
+			// discrete/condition mode
+			// render values as a tabular bar chart
+			self.dom.table_div.style('display', 'block')
+			self.dom.violin_div.style('display', 'none')
+			const data = input.termStatus.sampleCounts
+			if (!data || !data.length) return
+			const l = self.input.orderedLabels
+			const sortFxn =
+				l && l.length ? (a, b) => l.indexOf(a.label) - l.indexOf(b.label) : (a, b) => b.samplecount - a.samplecount
+			const tr_data = data.sort(sortFxn)
 
-	function renderValuesTable(data, tableName = 'included_values_table', allowToSelectRefGrp) {
-		if (!data || !data.length) {
-			if (tableName == 'excluded_values_table') {
-				self.dom.excluded_values_table.selectAll('*').remove()
-			}
-			return
-		}
-		const l = self.input.orderedLabels
-		const sortFxn =
-			l && l.length ? (a, b) => l.indexOf(a.label) - l.indexOf(b.label) : (a, b) => b.samplecount - a.samplecount
-		const tr_data = data.sort(sortFxn)
-
-		const t = self.input.term
-		if (tableName == 'included_values_table') {
 			const maxCount = Math.max(...tr_data.map(v => v.samplecount), 0)
 			tr_data.forEach(v => (v.bar_width_frac = Number((1 - (maxCount - v.samplecount) / maxCount).toFixed(4))))
+
+			self.dom.table_div.selectAll('tr').remove()
+			const trs = self.dom.table_div.selectAll('tr').data(tr_data, b => b.key)
+
+			//trs.exit().remove()
+			//trs.each(trUpdate)
+			trs
+				.enter()
+				.append('tr')
+				.each(trEnter)
 		}
+	}
 
-		const trs = self.dom[tableName]
-			.style('margin', '10px 5px')
-			.style('border-spacing', '3px')
-			.style('border-collapse', 'collapse')
-			.selectAll('tr')
-			.data(tr_data, b => b.key + b.label + b.bar_width_frac + (allowToSelectRefGrp ? '1' : '0'))
-		/* FIXME upon changing binned numeric term to continuous
-		this table won't rerender to disable row selection
-		adding allowToSelectRefGrp at the end of data name won't help
-		thus having to remove all rows at line 106
-		*/
+	function renderExcludedValues(input) {
+		const data = input.termStatus.excludeCounts
+		if (!data || !data.length) return
+		self.dom.excluded_div.selectAll('tr').remove()
+		const trs = self.dom.excluded_div.selectAll('tr').data(data, b => b.key)
 
-		trs.exit().remove()
-		trs.each(trUpdate)
+		//trs.exit().remove()
+		//trs.each(trUpdate)
 		trs
 			.enter()
 			.append('tr')
 			.each(trEnter)
 
-		// change color of excluded_values_table text
-		if (tableName == 'excluded_values_table') {
-			self.dom.excluded_values_table.selectAll('td').style('color', '#999')
-		}
+		self.dom.excluded_div.selectAll('td').style('color', '#999')
 	}
 
 	function trEnter(item) {
@@ -174,32 +216,31 @@ function setRenderers(self) {
 		const t = input.term
 		const maxBarWidth = 150
 
-		tr.style('padding', '0 5px')
-			.style('text-align', 'left')
-			.style('cursor', input.termStatus.allowToSelectRefGrp ? 'pointer' : 'default')
+		tr.style('text-align', 'left').style('cursor', input.termStatus.allowToSelectRefGrp ? 'pointer' : 'default')
 
+		const tdSpacing = '1px 10px 1px 0px'
 		// sample count td
 		tr.append('td')
-			.style('padding', '1px 5px')
+			.style('padding', tdSpacing)
 			.style('text-align', 'left')
 			.style('color', 'black')
 			.text(item.samplecount !== undefined ? 'n=' + item.samplecount : '')
 
 		// label td
 		tr.append('td')
-			.style('padding', '1px 5px')
+			.style('padding', tdSpacing)
 			.style('text-align', 'left')
 			.style('color', 'black')
 			.text(item.label)
 
 		// sample count bar td
-		const bar_td = tr.append('td').style('padding', '1px 5px')
+		const bar_td = tr.append('td').style('padding', tdSpacing)
 
 		// bar_width
 		const barWidth = maxBarWidth * item.bar_width_frac
 		bar_td
 			.append('div')
-			.style('margin', '1px 10px')
+			.style('margin', tdSpacing)
 			.style('width', barWidth + 'px')
 			.style('height', '15px')
 			.style('background-color', '#ddd')
@@ -207,6 +248,8 @@ function setRenderers(self) {
 		addTrBehavior({ input, item, tr, rendered: false })
 	}
 
+	/*
+	// TODO: to use this function, need to add code that will take into account the order of the rows
 	function trUpdate(item) {
 		select(this.firstChild).text(item.samplecount !== undefined ? 'n=' + item.samplecount : '')
 		select(this.firstChild.nextSibling).text(item.label)
@@ -217,6 +260,7 @@ function setRenderers(self) {
 		if ((t.q.mode == 'discrete' || t.q.mode == 'binary') && this.childNodes.length < 4) rendered = false
 		addTrBehavior({ input, item, tr: select(this), rendered })
 	}
+	*/
 
 	function addTrBehavior({ input, item, tr, rendered }) {
 		// don't add tr effects for excluded values

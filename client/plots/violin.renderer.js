@@ -6,6 +6,7 @@ import { brushX, brushY } from 'd3-brush'
 import { renderTable } from '#dom/table'
 import { filterJoin, getFilterItemByTag } from '../filter/filter'
 import { Menu } from '../dom/menu'
+import { rgb } from 'd3'
 
 export default function violinRenderer(self) {
 	const k2c = scaleOrdinal(schemeCategory10)
@@ -32,7 +33,7 @@ export default function violinRenderer(self) {
 		//filter out hidden values and only keep plots which are not hidden in term2.q.hiddenvalues
 		self.data.plots = self.data.plots.filter(p => !t2?.q?.hiddenValues?.[p.label || p.seriesId])
 
-		self.legendRenderer(getLegendGrps(self))
+		if (self.legendRenderer) self.legendRenderer(getLegendGrps(self))
 
 		if (self.data.plots.length === 0) {
 			self.dom.violinDiv.html(
@@ -52,9 +53,9 @@ export default function violinRenderer(self) {
 
 		for (const [plotIdx, plot] of self.data.plots.entries()) {
 			const violinG = createViolinG(svg, plot, plotIdx, isH)
-			renderLabels(t1, t2, violinG, plot, isH, settings, tip)
+			if (self.opts.mode != 'minimal') renderLabels(t1, t2, violinG, plot, isH, settings, tip)
 			renderViolinPlot(plot, self, isH, svg, plotIdx, violinG, imageOffset)
-			renderBrushing(t1, t2, violinG, settings, plot, isH, svg)
+			if (self.opts.mode != 'minimal') renderBrushing(t1, t2, violinG, settings, plot, isH, svg)
 			labelHideLegendClicking(t2, plot, self)
 		}
 	}
@@ -142,13 +143,23 @@ export default function violinRenderer(self) {
 		return maxLabelSize
 	}
 
-	function createMargins(labelsize, settings, isH) {
+	function createMargins(labelsize, settings, isH, isMinimal) {
 		let margins
-		if (isH) {
-			margins = { left: labelsize + 5, top: settings.axisHeight, right: settings.rightMargin, bottom: 10 }
+
+		if (isMinimal) {
+			if (isH) {
+				margins = { left: 5, top: settings.axisHeight, right: settings.rightMargin, bottom: 10 }
+			} else {
+				margins = { left: settings.axisHeight, top: 30, right: settings.rightMargin, bottom: 10 }
+			}
 		} else {
-			margins = { left: settings.axisHeight, top: 50, right: settings.rightMargin, bottom: labelsize }
+			if (isH) {
+				margins = { left: labelsize + 5, top: settings.axisHeight, right: settings.rightMargin, bottom: 10 }
+			} else {
+				margins = { left: settings.axisHeight, top: 50, right: settings.rightMargin, bottom: labelsize }
+			}
 		}
+
 		return margins
 	}
 
@@ -156,7 +167,7 @@ export default function violinRenderer(self) {
 		const violinDiv = self.dom.violinDiv
 			.append('div')
 			.style('display', 'inline-block')
-			.style('padding', '5px')
+			.style('padding', self.opts.mode != 'minimal' ? '5px' : '0px')
 			.style('overflow', 'auto')
 			.style('scrollbar-width', 'none')
 
@@ -164,7 +175,7 @@ export default function violinRenderer(self) {
 
 		const labelsize = maxLabelSize(self, violinSvg)
 
-		const margin = createMargins(labelsize, settings, isH)
+		const margin = createMargins(labelsize, settings, isH, self.opts.mode == 'minimal')
 
 		violinSvg
 			.attr(
@@ -192,47 +203,49 @@ export default function violinRenderer(self) {
 		const g = svg.svgG
 			.append('g')
 			.transition()
-			.duration(800)
-			.delay(100)
+			.duration(self.opts.mode == 'minimal' ? 0 : 800)
+			.delay(self.opts.mode == 'minimal' ? 0 : 100)
 		g.call((isH ? axisTop : axisLeft)().scale(svg.axisScale))
 
-		let lab
+		if (self.opts.mode != 'minimal') {
+			let lab
 
-		// TODO need to add term2 label onto the svg
-		if (t2?.q?.mode === 'continuous')
-			lab = svg.svgG
-				.append('text')
-				.text(`${t2.term.name}`)
-				.classed('sjpp-numeric-term-label', true)
-				.style('font-weight', 600)
-				.attr('text-anchor', 'middle')
-		else
-			lab = svg.svgG
-				.append('text')
-				.text(t1.term.name)
-				.classed('sjpp-numeric-term-label', true)
-				.style('font-weight', 600)
-				.attr('text-anchor', 'middle')
+			// TODO need to add term2 label onto the svg
+			if (t2?.q?.mode === 'continuous')
+				lab = svg.svgG
+					.append('text')
+					.text(`${t2.term.name}`)
+					.classed('sjpp-numeric-term-label', true)
+					.style('font-weight', 600)
+					.attr('text-anchor', 'middle')
+			else
+				lab = svg.svgG
+					.append('text')
+					.text(t1.term.name)
+					.classed('sjpp-numeric-term-label', true)
+					.style('font-weight', 600)
+					.attr('text-anchor', 'middle')
 
-		if (isH) {
-			lab
-				.attr('x', settings.svgw / 2)
-				.attr('y', -30)
-				.style('opacity', 0)
-				.transition()
-				.delay(100)
-				.duration(200)
-				.style('opacity', 1)
-		} else {
-			lab
-				.attr('y', -45)
-				.attr('x', -settings.svgw / 2)
-				.attr('transform', 'rotate(-90)')
-				.style('opacity', 0)
-				.transition()
-				.delay(100)
-				.duration(200)
-				.style('opacity', 1)
+			if (isH) {
+				lab
+					.attr('x', settings.svgw / 2)
+					.attr('y', -30)
+					.style('opacity', 0)
+					.transition()
+					.delay(self.opts.mode == 'minimal' ? 0 : 100)
+					.duration(self.opts.mode == 'minimal' ? 0 : 200)
+					.style('opacity', 1)
+			} else {
+				lab
+					.attr('y', -45)
+					.attr('x', -settings.svgw / 2)
+					.attr('transform', 'rotate(-90)')
+					.style('opacity', 0)
+					.transition()
+					.delay(self.opts.mode == 'minimal' ? 0 : 100)
+					.duration(self.opts.mode == 'minimal' ? 0 : 200)
+					.style('opacity', 1)
+			}
 		}
 	}
 
@@ -275,8 +288,8 @@ export default function violinRenderer(self) {
 			})
 			.style('opacity', 0)
 			.transition()
-			.delay(100)
-			.duration(100)
+			.delay(self.opts.mode == 'minimal' ? 0 : 100)
+			.duration(self.opts.mode == 'minimal' ? 0 : 100)
 			.style('opacity', 1)
 
 		if (isH) {
@@ -319,16 +332,16 @@ export default function violinRenderer(self) {
 		violinG
 			.append('path')
 			.attr('class', 'sjpp-vp-path')
-			.style('fill', plot.color ? plot.color : k2c(plotIdx))
+			.style('fill', self.opts.mode === 'minimal' ? rgb(221, 221, 221) : plot.color ? plot.color : k2c(plotIdx))
 			.style('opacity', 0)
 			.transition()
-			.delay(300)
-			.duration(600)
+			.delay(self.opts.mode == 'minimal' ? 0 : 300)
+			.duration(self.opts.mode == 'minimal' ? 0 : 600)
 			.style('opacity', '0.8')
 			.attr('d', areaBuilder(plot.plotValueCount > 3 ? plot.bins : 0)) //do not build violin plots for values 3 or less than 3.
 
 		renderSymbolImage(violinG, plot, isH, imageOffset)
-		renderMedian(violinG, isH, plot, svg)
+		if (self.opts.mode != 'minimal') renderMedian(violinG, isH, plot, svg)
 	}
 
 	function renderSymbolImage(violinG, plot, isH, imageOffset) {
@@ -336,8 +349,8 @@ export default function violinRenderer(self) {
 			.append('image')
 			.style('opacity', 0)
 			.transition()
-			.delay(400)
-			.duration(100)
+			.delay(self.opts.mode == 'minimal' ? 0 : 400)
+			.duration(self.opts.mode == 'minimal' ? 0 : 100)
 			.style('opacity', 1)
 			.attr('xlink:href', plot.src)
 			.attr('transform', isH ? `translate(0, -${imageOffset})` : `translate(-${imageOffset}, 0)`)
@@ -613,7 +626,6 @@ function getUpdatedQfromClick(plot, term, isHidden = false) {
 }
 
 function getLegendGrps(self) {
-	// TODO: add excluded categories to legend (see barchart.js)
 	const legendGrps = []
 	const t1 = self.config.term
 	const t2 = self.config.term2

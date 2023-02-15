@@ -134,17 +134,7 @@ export class RegressionResults {
 			outcome: c.outcome,
 			independent: c.independent
 		}
-		// look for input term with restrictAncestry
-		const extraFilters = []
-		for (const input of this.parent.inputs.independent.inputLst) {
-			if (input.term && input.term.q.restrictAncestry) {
-				// this input term has restrictAncestry
-				const tvs = input.term.q.restrictAncestry.tvs
-				extraFilters.push({ type: 'tvs', tvs })
-			}
-		}
-		// vocabApi will use getNormalFilter() to remove any empty filters and convert a single entry tvslst into a tvs
-		opts.filter = { type: 'tvslst', join: 'and', lst: [...extraFilters, this.state.termfilter.filter] }
+		opts.filter = this.parent.filter
 		return opts
 	}
 

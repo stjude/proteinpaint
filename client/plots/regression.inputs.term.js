@@ -21,7 +21,7 @@ export class InputTerm {
 		this.parent = opts.parent // the inputs instance
 	}
 
-	init(holder) {
+	async init(holder) {
 		// only run once when a new input variable is added to the user interface via data/enter() in inputs.js
 
 		const termRow = holder.append('div')
@@ -66,7 +66,10 @@ export class InputTerm {
 				}
 			}
 			this.furbishTsConstructorArg(arg)
-			this.pill = termsettingInit(arg)
+			// use 'await' here because it is safer to assume that
+			// termsettingInit() returns a promise, in case the Termsetting
+			// class ever has an init() method as detected in rx/index.js
+			this.pill = await termsettingInit(arg)
 
 			if (this.section.configKey == 'outcome') {
 				// special treatment for terms selected for outcome
@@ -147,7 +150,7 @@ export class InputTerm {
 		try {
 			if (tw && this.setQ) {
 				const { app, state } = this.parent
-				await this.setQ[tw.term.type](tw, app.vocabApi, state.termfilter.filter, state)
+				await this.setQ[tw.term.type](tw, app.vocabApi, this.parent.parent.filter, state)
 			}
 
 			try {
@@ -157,7 +160,6 @@ export class InputTerm {
 				// so that the rendered pill and values table match the error message
 				errors.push(e)
 			}
-
 			await this.pill.main(this.getPillArgs())
 			this.renderInteractionPrompt()
 			await this.valuesTable.main()
@@ -200,18 +202,10 @@ export class InputTerm {
 		// the 3rd argument to getCategories() is different for snplst and dictionary term types
 		const body = tw.term.type == 'snplst' || tw.term.type == 'snplocus' ? { cacheid: tw.q.cacheid } : { term1_q: q }
 
-		// tw.q.restrictAncestry is not included in state filter
-		// must account for it to get accurate sample count
-		// ** duplicated_and_flawed ** logic of handling tw.q.restrictAncestry
-		const extraFilters = []
-		if (tw.q.restrictAncestry) extraFilters.push({ type: 'tvs', tvs: tw.q.restrictAncestry.tvs })
-		const filter = { type: 'tvslst', join: 'and', lst: [...extraFilters] }
-		if (this.parent.state.termfilter.filter) filter.lst.push(this.parent.state.termfilter.filter)
-
 		const data =
 			tw.term.type == 'condition'
-				? await this.parent.app.vocabApi.getConditionCategories(tw.term, filter, body)
-				: await this.parent.app.vocabApi.getCategories(tw.term, filter, body)
+				? await this.parent.app.vocabApi.getConditionCategories(tw.term, this.parent.parent.filter, body)
+				: await this.parent.app.vocabApi.getCategories(tw.term, this.parent.parent.filter, body)
 		if (!data) throw `no data for term.id='${tw.id}'`
 		if (data.error) throw data.error
 		mayRunSnplstTask(tw, data)
@@ -266,23 +260,13 @@ export class InputTerm {
 				if (tw.q.mode != 'continuous' && tw.q.mode != 'spline') {
 					this.termStatus.allowToSelectRefGrp = true
 				}
-
-				this.termStatus.topInfoStatus.push(
-					`Use as ${tw.q.mode || 'continuous'} ` +
-						(tw.q.mode !== 'spline' ? 'variable.' : '') +
-						(tw.q.mode == 'continuous' && tw.q.scale && tw.q.scale != 1 ? ` Scale: Per ${tw.q.scale}` : '') +
-						(tw.q.mode == 'spline'
-							? ` with ${tw.q.knots.length} knots: ${tw.q.knots.map(v => v.value).join(', ')}`
-							: '')
-				)
+				if (tw.q.scale && tw.q.scale != 1) this.termStatus.topInfoStatus.push(`Scale: Per ${tw.q.scale}`)
+				if (tw.q.mode == 'spline')
+					this.termStatus.topInfoStatus.push(
+						`Use as cubic spline variable with ${tw.q.knots.length} knots: ${tw.q.knots.map(v => v.value).join(', ')}`
+					)
 			} else if (tw.term.type == 'categorical') {
 				this.termStatus.allowToSelectRefGrp = true
-
-				const gs = tw.q.groupsetting || {}
-				// self.values is already set by parent.setActiveValues() above
-				this.termStatus.topInfoStatus.push(
-					'Use as ' + this.termStatus.sampleCounts.length + (gs.inuse ? ' groups.' : ' categories.')
-				)
 			} else if (tw.term.type == 'condition') {
 				if (this.section.configKey == 'outcome' && this.parent.opts.regressionType == 'logistic') {
 					// allow selecting refgrp
@@ -325,8 +309,8 @@ export class InputTerm {
 		}
 		// update bottomSummaryStatus
 		this.termStatus.bottomSummaryStatus =
-			`${totalCount.included} sample included.` +
-			(totalCount.excluded ? ` ${totalCount.excluded} samples excluded:` : '')
+			`${totalCount.included} samples included` +
+			(totalCount.excluded ? `. ${totalCount.excluded} samples excluded:` : '')
 		if (tw && tw.q.mode !== 'continuous' && sampleCounts.length < 2)
 			throw `there should be two or more discrete values with samples for variable='${tw.term.name}'`
 	}
@@ -366,7 +350,7 @@ export class InputTerm {
 			},
 			this.term
 		)
-		args.filter = state.termfilter.filter
+		args.filter = this.parent.parent.filter
 		return args
 	}
 

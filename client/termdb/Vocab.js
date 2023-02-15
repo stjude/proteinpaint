@@ -19,7 +19,7 @@ export class Vocab {
 
 	async main(stateOverride = null) {
 		if (stateOverride) Object.assign(this.state, stateOverride)
-		else this.state = this.app.getState ? this.app.getState() : this.opts.state
+		else this.state = structuredClone(this.app?.getState?.() || this.opts.state)
 
 		// frontend vocab may replace the vocab object reference
 		if (this.state.vocab) this.vocab = this.state.vocab

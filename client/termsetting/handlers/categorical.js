@@ -35,7 +35,7 @@ export function getHandler(self) {
 			return getPillNameDefault(self, d)
 		},
 
-		getPillStatus: self.validateGroupsetting,
+		getPillStatus: self.usecase?.target == 'regression' ? () => ({ text: 'categorical' }) : self.validateGroupsetting,
 
 		validateQ(data) {
 			const t = data.term

@@ -190,19 +190,30 @@ function setRenderers(self) {
 			div: self.opts.holder, //.style('margin', '10px 0px'),
 			controls,
 			body: controls.append('div'),
-			foot: controls.append('div')
+			foot: controls
+				.append('div')
+				.style('margin', '0px 20px')
+				.style('display', 'flex')
+				.style('align-items', 'center')
+				.style('gap', '20px')
 		}
 
 		self.dom.submitBtn = self.dom.foot
-			.style('margin', '3px 15px')
-			.style('padding', '3px 5px')
+			.append('div')
 			.append('button')
 			.style('display', 'none')
 			.style('padding', '5px 15px')
 			.style('border-radius', '15px')
+			.style('cursor', 'pointer')
 			.text('Run analysis')
 			.on('click', self.submit)
 
+		self.dom.submitMsg = self.dom.foot
+			.append('div')
+			.style('display', 'none')
+			.style('color', '#cc0000')
+			.style('font-style', 'italic')
+			.style('font-size', '0.8em')
 		/*
 			not using d3.data() here since each section may only
 			be added and re-rendered, but not removed
@@ -223,8 +234,7 @@ function setRenderers(self) {
 			holder: div,
 			headingDiv: div
 				.append('div')
-				.style('margin', '3px 5px')
-				.style('padding', '3px 5px')
+				.style('margin', '3px 5px 20px 5px')
 				.style('font-size', '17px')
 				.style('color', '#bbb')
 				.text(section.heading),
@@ -302,10 +312,10 @@ function setRenderers(self) {
 	}
 
 	async function addInput(input) {
-		input.init(
+		await input.init(
 			select(this)
 				.style('width', 'fit-content')
-				.style('margin', '15px 15px 5px 45px')
+				.style('margin', '0px 15px 35px 25px')
 				.style('padding', '0px 5px')
 		)
 	}
