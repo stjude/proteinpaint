@@ -62,6 +62,26 @@ async function getPillFilterItem(termType) {
 	return { pill, filter, item, term }
 }
 
+function testHandlerMethodsExists(test, handler) {
+	test.equal(typeof handler?.term_name_gen, 'function', 'should have a term_name_gen() method')
+	test.equal(typeof handler?.get_pill_label, 'function', 'should have a get_pill_label() method')
+	test.equal(typeof handler?.getSelectRemovePos, 'function', 'should have a getSelectRemovePos() method')
+	test.equal(typeof handler?.fillMenu, 'function', 'should have a fillMenu() method')
+	test.equal(typeof handler?.setTvsDefaults, 'function', 'should have a setTvsDefaults() method')
+}
+
+function testTermNameGen(test, handler) {
+	const t1 = { term: { name: 'short name' } }
+	test.equal(handler?.term_name_gen(t1), t1.term.name, 'should not truncate a short term name')
+	const t2 = { term: { name: 'abcdefghijklmnopqrstuvwxyz 012345678999999999' } }
+	const truncatedName =
+		handler
+			?.term_name_gen(t2)
+			.split('>')[1]
+			?.split('.')[0] || '>'
+	test.true(t2.term.name.startsWith(truncatedName), 'should truncate a long term name')
+}
+
 /**************
  test sections
 **************
@@ -82,25 +102,11 @@ tape('categorical tvs', async test => {
 		//test.equal(pill.Inner.dom.holder.node().querySelectorAll('.tvs_pill').length, 1, 'should render 1 pill for a single-tvs filter')
 		const handler = pill.Inner.handler
 		test.equal(handler.type, 'categorical', 'should use the categorical handler for a categorical term')
-
-		/*** tests for the expected handler API methods ***/
-		// group tests by handler method
-		test.equal(typeof handler?.term_name_gen, 'function', 'should have a term_name_gen() method')
-		const t1 = { term: { name: 'short name' } }
-		test.equal(handler?.term_name_gen(t1), t1.term.name, 'should not truncate a short term name')
-		const t2 = { term: { name: 'abcdefghijklmnopqrstuvwxyz 012345678999999999' } }
-		const truncatedName =
-			handler
-				?.term_name_gen(t2)
-				.split('>')[1]
-				?.split('.')[0] || '>'
-		test.true(t2.term.name.startsWith(truncatedName), 'should truncate a long term name')
-
-		// TODO: create >1 tests for each of these methods, similar to the above tests for term_name_gen()
-		test.equal(typeof handler?.get_pill_label, 'function', 'should have a get_pill_label() method')
-		test.equal(typeof handler?.getSelectRemovePos, 'function', 'should have a getSelectRemovePos() method')
-		test.equal(typeof handler?.fillMenu, 'function', 'should have a fillMenu() method')
-		test.equal(typeof handler?.setTvsDefaults, 'function', 'should have a setTvsDefaults() method')
+		testHandlerMethodsExists(test, handler)
+		testTermNameGen(test, handler)
+		// TODO: other handler methods may require different tests by term type
+		// and may not be abstracted into a separate function, so put here
+		// ...
 		pill.Inner.dom.holder.remove()
 	} catch (e) {
 		test.fail('test error: ' + e)
@@ -117,27 +123,12 @@ tape('condition tvs', async test => {
 		//test.equal(pill.Inner.dom.holder.node().querySelectorAll('.tvs_pill').length, 1, 'should render 1 pill for a single-tvs filter')
 		const handler = pill.Inner.handler
 		test.equal(handler.type, 'condition', 'should use the condition handler for a condition term')
-
-		/*** tests for the expected handler API methods ***/
-		// group tests by handler method
-		test.equal(typeof handler?.term_name_gen, 'function', 'should have a term_name_gen() method')
-		const t1 = { term: { name: 'short name' } }
-		test.equal(handler?.term_name_gen(t1), t1.term.name, 'should not truncate a short term name')
-		const t2 = { term: { name: 'abcdefghijklmnopqrstuvwxyz 012345678999999999' } }
-		const truncatedName =
-			handler
-				?.term_name_gen(t2)
-				.split('>')[1]
-				?.split('.')[0] || '>'
-		test.true(t2.term.name.startsWith(truncatedName), 'should truncate a long term name')
-
-		// TODO: create >1 tests for each of these methods, similar to the above tests for term_name_gen()
-		test.equal(typeof handler?.get_pill_label, 'function', 'should have a get_pill_label() method')
-		test.equal(typeof handler?.getSelectRemovePos, 'function', 'should have a getSelectRemovePos() method')
-		test.equal(typeof handler?.fillMenu, 'function', 'should have a fillMenu() method')
-		test.equal(typeof handler?.setTvsDefaults, 'function', 'should have a setTvsDefaults() method')
+		testHandlerMethodsExists(test, handler)
+		testTermNameGen(test, handler)
+		// TODO: other handler methods may require different tests by term type
+		// and may not be abstracted into a separate function, so put here
+		// ...
 		pill.Inner.dom.holder.remove()
-		// TODO: test condition tvs that uses a groupsetting
 	} catch (e) {
 		test.fail('test error: ' + e)
 	}
@@ -153,27 +144,12 @@ tape('numeric tvs', async test => {
 		//test.equal(pill.Inner.dom.holder.node().querySelectorAll('.tvs_pill').length, 1, 'should render 1 pill for a single-tvs filter')
 		const handler = pill.Inner.handler
 		test.equal(handler.type, 'numeric', 'should use the numeric handler for a float term')
-
-		/*** tests for the expected handler API methods ***/
-		// group tests by handler method
-		test.equal(typeof handler?.term_name_gen, 'function', 'should have a term_name_gen() method')
-		const t1 = { term: { name: 'short name' } }
-		test.equal(handler?.term_name_gen(t1), t1.term.name, 'should not truncate a short term name')
-		const t2 = { term: { name: 'abcdefghijklmnopqrstuvwxyz 012345678999999999' } }
-		const truncatedName =
-			handler
-				?.term_name_gen(t2)
-				.split('>')[1]
-				?.split('.')[0] || '>'
-		test.true(t2.term.name.startsWith(truncatedName), 'should truncate a long term name')
-
-		// TODO: create >1 tests for each of these methods, similar to the above tests for term_name_gen()
-		test.equal(typeof handler?.get_pill_label, 'function', 'should have a get_pill_label() method')
-		test.equal(typeof handler?.getSelectRemovePos, 'function', 'should have a getSelectRemovePos() method')
-		test.equal(typeof handler?.fillMenu, 'function', 'should have a fillMenu() method')
-		test.equal(typeof handler?.setTvsDefaults, 'function', 'should have a setTvsDefaults() method')
+		testHandlerMethodsExists(test, handler)
+		testTermNameGen(test, handler)
+		// TODO: other handler methods may require different tests by term type
+		// and may not be abstracted into a separate function, so put here
+		// ...
 		pill.Inner.dom.holder.remove()
-		// TODO: test condition tvs that uses a groupsetting
 	} catch (e) {
 		test.fail('test error: ' + e)
 	}

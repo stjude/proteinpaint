@@ -117,7 +117,11 @@ tape('tvs (common): buttons', async test => {
 
 	let pendingTest, pendingResolve
 	try {
-		/*** OPTION A: return a promise from .main() or an event callback function ***/
+		/* 
+			OPTION A: return a promise from .main() or an event callback function
+				- will require more work in the component code, to track the rendering 
+					status and when to trigger resolve() of the returned promise
+		*/
 		const prom = await opts.filter.main(opts.filterData)
 		// test common bluepill components
 		test.equal(opts.holder.node().querySelectorAll('.tvs_pill').length, 1, 'should have one filter button')

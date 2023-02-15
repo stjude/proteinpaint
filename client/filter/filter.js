@@ -617,7 +617,6 @@ function setRenderers(self) {
 	}
 
 	self.removeGrp = function(item) {
-		console.log(619)
 		self.numExpectedItems += 1
 		if (item.type == 'tvslst') {
 			for (const subitem of item.lst) {
