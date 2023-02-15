@@ -750,7 +750,7 @@ export async function snvindelByRangeGetter_bcf(ds, genome) {
 
 					if (q._tk?.samples?.length) {
 						// vcf file has sample, must find out samples harboring this variant
-						addSamplesFromBcfLine(q, m, l, param.addFormatValues, ds, limitSamples)
+						addSamplesFromBcfLine(q, m, l, param.addFormatValues, ds, limitSamples, param.skewerRim)
 						if (!m.samples) {
 							// no sample found for this variant, when vcf has samples
 							// can be due to sample filtering, thus must skip this variant
@@ -884,7 +884,7 @@ call at variant2samples.get() to get list of samples
 
 parameters:
 q={}
-	q._tk{}
+	._tk{}
 		.samples=[ {name=str}, ... ] // list of samples corresponding to vcf header
 		.format={}
 m={}
@@ -897,10 +897,13 @@ addFormatValues=true
 ds={}
 	the server-side dataset obj
 limitSamples=[ {name} ]
-	if bcf query is limiting on this sample set. if so the output is only based on these samples
-	otherwise output will have all samples from the bcf file
+	if bcf query is limiting on this sample set. if so l[] only contain these samples
+	otherwise l[] has all samples from q._tk.samples[]
+skewerRim{}
+	optional filter to drop samples by format key-value pair
+	{formatKey='vorigin', hiddenvalues=Set}
 */
-function addSamplesFromBcfLine(q, m, l, addFormatValues, ds, limitSamples) {
+function addSamplesFromBcfLine(q, m, l, addFormatValues, ds, limitSamples, skewerRim) {
 	// l[6] is FORMAT, l[7] is first sample
 	const format_idx = 6
 	const firstSample_idx = 7
@@ -930,6 +933,12 @@ function addSamplesFromBcfLine(q, m, l, addFormatValues, ds, limitSamples) {
 		const sampleObj = vcfFormat2sample(vlst, formatlst, sampleHeaderObj, addFormatValues)
 		if (sampleObj) {
 			// this sample is annotated with this variant
+			if (skewerRim) {
+				if (skewerRim.hiddenvalues.has(sampleObj.formatK2v[skewerRim.formatKey])) {
+					// sample is dropped by format filter
+					continue
+				}
+			}
 			samples.push(sampleObj)
 		}
 	}
@@ -1148,6 +1157,13 @@ export async function svfusionByRangeGetter_file(ds, genome) {
 						const sampleObj = { sample_id: j.sample }
 						if (j.mattr) {
 							// mattr{} has sample-level attributes on this sv event, equivalent to FORMAT
+							if (param.skewerRim) {
+								// will do the same filtering as snvindel
+								if (param.skewerRim.hiddenvalues.has(j.mattr[param.skewerRim.formatKey])) {
+									// sample is dropped by format filter
+									return
+								}
+							}
 							sampleObj.formatK2v = j.mattr
 						}
 						key2variants.get(ssm_id).samples.push(sampleObj)

@@ -79,8 +79,6 @@ function init_q(req, genome) {
 		query.hiddenmclass = new Set(query.hiddenmclasslst.split(','))
 		delete query.hiddenmclasslst
 	}
-	if (query.rglst && typeof query.rglst == 'string') query.rglst = JSON.parse(query.rglst)
-	if (query.tid2value && typeof query.tid2value == 'string') query.tid2value = JSON.parse(query.tid2value)
 	return query
 }
 
@@ -349,5 +347,20 @@ function may_validate_filters(q, ds) {
 		q.filterObj = JSON.parse(
 			typeof q.filterObj == 'string' && q.filterObj.startsWith('%') ? decodeURIComponent(q.filterObj) : q.filterObj
 		)
+	}
+	if (q.skewerRim) {
+		if (q.skewerRim.type == 'format') {
+			if (!q.skewerRim.formatKey) throw 'skewerRim.formatKey missing when type=format'
+			if (!ds.queries?.snvindel?.byrange?._tk?.format) throw 'snvindel.byrange._tk.format{} not found when type=format'
+			if (!ds.queries.snvindel.byrange._tk.format[q.skewerRim.formatKey]) throw 'invalid skewerRim.formatKey'
+		} else {
+			throw 'unknown skewerRim.type'
+		}
+		q.skewerRim.hiddenvalues = new Set()
+		if (q.skewerRim.hiddenvaluelst) {
+			if (!Array.isArray(q.skewerRim.hiddenvaluelst)) throw 'query.skewerRim.hiddenvaluelst is not array'
+			for (const n of q.skewerRim.hiddenvaluelst) q.skewerRim.hiddenvalues.add(n)
+			delete q.skewerRim.hiddenvaluelst
+		}
 	}
 }

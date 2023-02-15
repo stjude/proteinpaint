@@ -1,4 +1,4 @@
-import { legend_newrow } from '../src/block.legend'
+import { legend_newrow } from '#src/block.legend'
 import { Menu } from '#dom/menu'
 import { mclass, dt2label, dtcnv, dtloh, dtitd, dtsv, dtfusionrna, mclassitd } from '#shared/common'
 
@@ -421,9 +421,10 @@ function update_mclass(tk) {
 			.append('div')
 			.attr('class', 'sja_clb')
 			.style('display', 'inline-block')
-			.on('click', () => {
+			.on('click', event => {
 				tk.legend.tip
 					.clear()
+					.showunder(event.target)
 					.d.append('div')
 					.attr('class', 'sja_menuoption')
 					.text('Hide')
@@ -467,8 +468,6 @@ function update_mclass(tk) {
 					.style('font-size', '.8em')
 					.style('width', '150px')
 					.html(desc)
-
-				tk.legend.tip.showunder(cell.node())
 			})
 
 		cell
@@ -545,13 +544,12 @@ function update_info_fields(data, tk) {
 
 function may_create_skewerRim(tk, block) {
 	if (!tk.mds.queries?.snvindel?.skewerRim) return // not enabled
-	if (!tk.legend.skewerRim) tk.legend.skewerRim = {}
-	const R = tk.legend.skewerRim
-	if (!R.hiddenvalues) R.hiddenvalues = new Set()
+	const R = (tk.legend.skewerRim = {})
+	if (!tk.mds.queries.snvindel.skewerRim.hiddenvaluelst) tk.mds.queries.snvindel.skewerRim.hiddenvaluelst = []
 
 	R.row = tk.legend.table.append('tr')
 
-	R.headerTd = R.row // name of rim legend row is set on the fly
+	R.headerTd = R.row // name of rim legend row is set on the fly, allows to change data type for rim
 		.append('td')
 		.style('text-align', 'right')
 		.style('opacity', 0.3)
@@ -560,18 +558,17 @@ function may_create_skewerRim(tk, block) {
 }
 
 function getSkewerRimLegendHeaderName(tk) {
-	if (tk.mds.queries.snvindel.skewerRim.type == 'format') {
-		if (!tk.mds.queries.snvindel.skewerRim.formatKey) throw 'skewerRim.formatKey missing'
-		return (
-			tk.mds.bcf?.format?.[tk.mds.queries.snvindel.skewerRim.formatKey]?.Description ||
-			tk.mds.queries.snvindel.skewerRim.formatKey
-		)
+	const sk = tk.mds.queries.snvindel.skewerRim
+	if (sk.type == 'format') {
+		if (!sk.formatKey) throw 'skewerRim.formatKey missing'
+		return tk.mds.bcf?.format?.[sk.formatKey]?.Description || sk.formatKey
 	}
 	return 'unknown skewerRim.type'
 }
 
 function may_update_skewerRim(data, tk) {
-	if (!tk.mds.queries?.snvindel?.skewerRim) return // not enabled
+	const sk = tk.mds.queries?.snvindel?.skewerRim
+	if (!sk) return // not enabled
 	let rim1total = 0, // count number of cases, not unique
 		noRimTotal = 0
 	for (const m of data.skewer) {
@@ -584,41 +581,69 @@ function may_update_skewerRim(data, tk) {
 	R.holder.selectAll('*').remove()
 
 	// rim1
-	R.holder
-		.append('div')
-		.attr('class', 'sja_clb')
-		.style('display', 'inline-block')
-		.html(`${getRimSvg(1)} ${tk.mds.queries.snvindel.skewerRim.rim1value}, n=${rim1total}`)
-	/*
-		.on('click', event => {
-			tk.legend.tip
-				.clear()
-				.showunder(event.target)
-				.d.append('div')
-				.attr('class', 'sja_menuoption')
-				.text('Hide')
-				.on('click', () => {
-				})
-		})
-				*/
+	if (rim1total > 0) {
+		R.holder
+			.append('div')
+			.attr('class', 'sja_clb')
+			.style('display', 'inline-block')
+			.html(`${getRimSvg(1)} ${sk.rim1value}, n=${rim1total}`)
+			.on('click', event => {
+				tk.legend.tip
+					.clear()
+					.showunder(event.target)
+					.d.append('div')
+					.attr('class', 'sja_menuoption')
+					.text('Hide')
+					.on('click', () => {
+						sk.hiddenvaluelst.push(sk.rim1value)
+						tk.legend.tip.hide()
+						tk.uninitialized = true
+						tk.load()
+					})
+			})
+	}
 	// no rim
-	R.holder
-		.append('div')
-		.attr('class', 'sja_clb')
-		.style('display', 'inline-block')
-		.html(`${getRimSvg()} ${tk.mds.queries.snvindel.skewerRim.noRimName}, n=${noRimTotal}`)
-	/*
-		.on('click', event => {
-			tk.legend.tip
-				.clear()
-				.showunder(event.target)
-				.d.append('div')
-				.attr('class', 'sja_menuoption')
-				.text('Hide')
-				.on('click', () => {
-				})
-		})
-		*/
+	if (noRimTotal > 0) {
+		R.holder
+			.append('div')
+			.attr('class', 'sja_clb')
+			.style('display', 'inline-block')
+			.html(`${getRimSvg()} ${sk.noRimValue}, n=${noRimTotal}`)
+			.on('click', event => {
+				tk.legend.tip
+					.clear()
+					.showunder(event.target)
+					.d.append('div')
+					.attr('class', 'sja_menuoption')
+					.text('Hide')
+					.on('click', () => {
+						sk.hiddenvaluelst.push(sk.noRimValue)
+						tk.legend.tip.hide()
+						tk.uninitialized = true
+						tk.load()
+					})
+			})
+	}
+
+	// hidden ones
+	for (const c of sk.hiddenvaluelst) {
+		let loading = false
+		R.holder
+			.append('div')
+			.style('display', 'inline-block')
+			.attr('class', 'sja_clb')
+			.style('text-decoration', 'line-through')
+			.style('opacity', 0.3)
+			.text(c)
+			.on('click', async event => {
+				if (loading) return
+				loading = true
+				sk.hiddenvaluelst.splice(sk.hiddenvaluelst.indexOf(c), 1)
+				event.target.innerHTML = 'Updating...'
+				tk.uninitialized = true
+				await tk.load()
+			})
+	}
 }
 
 function getRimSvg(rim) {

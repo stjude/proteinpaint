@@ -47,7 +47,7 @@ module.exports = {
 				type: 'format',
 				formatKey: 'vorigin',
 				rim1value: 'germline',
-				noRimName: 'somatic'
+				noRimValue: 'somatic'
 			}
 		},
 		svfusion: {
