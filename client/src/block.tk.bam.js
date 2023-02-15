@@ -376,7 +376,6 @@ or update existing groups, in which groupidx will be provided
 		tk.dom.read_limit_text.attr('transform', 'scale(0)')
 	}
 
-	may_render_variant(data, tk, block)
 	if (!tk.groups) {
 		tk.groups = []
 		for (const g of data.groups) {
@@ -400,6 +399,7 @@ or update existing groups, in which groupidx will be provided
 	} else {
 		updateExistingGroups(data, tk, block)
 	}
+	may_render_variant(data, tk, block)
 
 	// show messages
 	for (const g of tk.groups) {
@@ -466,134 +466,156 @@ function may_render_variant(data, tk, block) {
 	// call everytime track is updated, so that variant box can be positioned based on view range; even when there's no variant
 	// in tk.dom.variantg, indicate location and status of the variant
 	// TODO show variant info alongside box, when box is wide enough, show
+
 	if (!tk.dom.variantg || tk.sv) return
-	tk.dom.variantg.selectAll('*').remove()
-	let x1, x2 // on screen pixel start/stop of the variant box
-	{
-		const hits = block.seekcoord(tk.variants[0].chr, tk.variants[0].pos)
-		if (hits) {
-			x1 = hits[0].x - block.exonsf / 2
+	let var_idx = 0
+	for (const g of tk.groups) {
+		if (g.data.type.includes('support_alt')) {
+			if (g.variantg) {
+				g.variantg.selectAll('*').remove()
+			} else {
+				g.variantg = tk.glider.append('g')
+			}
+			let x1, x2 // on screen pixel start/stop of the variant box
+			{
+				const hits = block.seekcoord(tk.variants[0].chr, tk.variants[var_idx].pos)
+				if (hits) {
+					x1 = hits[0].x - block.exonsf / 2
+				}
+			}
+			{
+				const hits = block.seekcoord(tk.variants[0].chr, tk.variants[var_idx].pos + tk.variants[var_idx].ref.length)
+				if (hits) {
+					x2 = hits[0].x - block.exonsf / 2
+				}
+			}
+			if (x1 >= block.width || x2 <= 0) {
+				// variant is out of range, do not show
+				return
+			}
+
+			// will render variant in a row
+			let variant_box_width = x2 - x1
+			if (x2 > data.pileup_data.width) {
+				variant_box_width = data.pileup_data.width - x1
+			} else if (x1 < 0) {
+				variant_box_width = x2
+			}
+
+			if (tk.variants.length == 1) {
+				g.variantg
+					.append('rect')
+					.attr('x', Math.max(0, x1))
+					.attr('width', variant_box_width)
+					.attr('height', tk.dom.variantrowheight)
+					.attr('fill', 'grey')
+			} else {
+				g.variantg
+					.append('rect')
+					.attr('x', Math.max(0, x1))
+					.attr('width', variant_box_width)
+					.attr('height', tk.dom.variantrowheight)
+					.attr('fill', g.data.group_color)
+			}
+
+			const variant_string =
+				tk.variants[0].chr +
+				'.' +
+				(data.allele_positions[var_idx] + 1).toString() +
+				'.' +
+				data.ref_alleles[var_idx] +
+				'.' +
+				data.alt_alleles[var_idx] // This is only showing the first allele, need to think of a way to show the other alleles (if present). Maybe show for each alternate allele?
+			// Determining where to place the text. Before, inside or after the box
+			let variant_start_text_pos = 0
+			const space_param = 10
+			const pad_param = 15
+
+			const var_str = g.variantg
+				.append('text')
+				.attr('y', tk.dom.variantrowheight - 2) // -2 is a quick fix to put text at vertical center (need better method)
+				.attr('font-size', tk.dom.variantrowheight)
+				.text(variant_string)
+
+			const var_str_bbox = var_str.node().getBBox() // .node() will get the DOM/SVG
+
+			if (var_str_bbox.width + space_param < x1) {
+				// Before variant box
+				variant_start_text_pos = x1 - var_str_bbox.width - space_param
+			} else if (var_str_bbox.width < variant_box_width) {
+				// Inside variant box, center align
+				variant_start_text_pos = Math.max(0, x1) + (variant_box_width - var_str_bbox.width) / 2
+			} else if (x2 + var_str_bbox.width < data.pileup_data.width) {
+				// After variant box but when variant_string length is lower than pileup plot width
+				variant_start_text_pos = x2 + space_param
+			}
+			var_str.attr('x', variant_start_text_pos)
+
+			if (data.refalleleerror == true) {
+				// When ref allele is not correct
+				let text_start_pos = 0
+				const incorrect_string = g.variantg
+					.append('text')
+					.attr('x', text_start_pos)
+					.attr('y', tk.dom.variantrowheight)
+					.style('fill', 'red')
+					.attr('font-size', tk.dom.variantrowheight)
+					.text('Incorrect reference allele')
+
+				const incorrect_ref_bbox = incorrect_string.node().getBBox() // .node() will get the DOM/SVG
+
+				// Determining position to place the string and avoid overwriting variant string
+				if (
+					variant_start_text_pos == 0 &&
+					incorrect_ref_bbox.width + space_param < x1 - var_str_bbox.width - space_param
+				) {
+					// When variant string starts from zero (when string is too big)
+					text_start_pos = var_str_bbox.width + space_param
+				} else if (
+					variant_start_text_pos == 0 &&
+					incorrect_ref_bbox.width + space_param > x1 - var_str_bbox.width - space_param // When variant string starts from zero (when string is too big)
+				) {
+					text_start_pos = x2 + space_param
+				} else if (
+					var_str_bbox.width + space_param < x1 &&
+					x2 + incorrect_ref_bbox.width + space_param < data.pileup_data.width
+				) {
+					// When variant string is rendered before variant box and incorrect string can fit after variant box
+					text_start_pos = x2 + space_param
+				} else if (
+					var_str_bbox.width + space_param < x1 &&
+					x2 + incorrect_ref_bbox.width + space_param >= data.pileup_data.width &&
+					incorrect_ref_bbox.width + space_param < variant_box_width
+				) {
+					// When variant string is rendered before variant box and incorrect string cannot fit after variant box, then rendered within variant box
+					text_start_pos = Math.max(0, x1)
+				} else if (
+					var_str_bbox.width + space_param < x1 &&
+					x2 + incorrect_ref_bbox.width + space_param >= data.pileup_data.width
+				) {
+					text_start_pos = x1 - var_str_bbox.width - space_param * 2 - incorrect_ref_bbox.width
+				} else if (var_str_bbox.width < variant_box_width && incorrect_ref_bbox.width + space_param < x1) {
+					// When variant string inside variant box and incorrect string as sufficient space on left hand side
+					text_start_pos = x1 - incorrect_ref_bbox.width - space_param
+				} else if (var_str_bbox.width < variant_box_width && incorrect_ref_bbox.width + space_param >= x1) {
+					// When variant string inside variant box and incorrect string as sufficient space on right hand side
+					text_start_pos = x2 + space_param
+				} else if (x2 + var_str_bbox.width < data.pileup_data.width && incorrect_ref_bbox.width + space_param < x1) {
+					// When variant string after variant box and incorrect space has sufficient space on left hand side
+					text_start_pos = x1 - incorrect_ref_bbox.width - space_param
+				} else if (x2 + var_str_bbox.width < data.pileup_data.width && incorrect_ref_bbox.width + space_param >= x1) {
+					// When variant string after variant box and incorrect space has sufficient space on right hand side
+					text_start_pos = x2 + var_str_bbox.width + 2 * space_param
+				} else if (x2 + var_str_bbox.width < data.pileup_data.width && incorrect_ref_bbox.width < variant_box_width) {
+					// When variant string after variant box and incorrect space has sufficient space inside variant box
+					text_start_pos = Math.max(0, x1)
+				}
+
+				incorrect_string.attr('x', text_start_pos)
+			}
+			var_idx += 1
 		}
 	}
-	{
-		const hits = block.seekcoord(tk.variants[0].chr, tk.variants[0].pos + tk.variants[0].ref.length)
-		if (hits) {
-			x2 = hits[0].x - block.exonsf / 2
-		}
-	}
-	if (x1 >= block.width || x2 <= 0) {
-		// variant is out of range, do not show
-		return
-	}
-
-	// will render variant in a row
-	let variant_box_width = x2 - x1
-	if (x2 > data.pileup_data.width) {
-		variant_box_width = data.pileup_data.width - x1
-	} else if (x1 < 0) {
-		variant_box_width = x2
-	}
-
-	tk.dom.variantg
-		.append('rect')
-		.attr('x', Math.max(0, x1))
-		.attr('width', variant_box_width)
-		.attr('height', tk.dom.variantrowheight)
-		.attr('fill', 'grey')
-
-	const variant_string =
-		tk.variants[0].chr +
-		'.' +
-		(data.allele_positions[0] + 1).toString() +
-		'.' +
-		data.ref_alleles[0] +
-		'.' +
-		data.alt_alleles[0] // This is only showing the first allele, need to think of a way to show the other alleles (if present). Maybe show for each alternate allele?
-	// Determining where to place the text. Before, inside or after the box
-	let variant_start_text_pos = 0
-	const space_param = 10
-	const pad_param = 15
-
-	const var_str = tk.dom.variantg
-		.append('text')
-		.attr('y', tk.dom.variantrowheight - 2) // -2 is a quick fix to put text at vertical center (need better method)
-		.attr('font-size', tk.dom.variantrowheight)
-		.text(variant_string)
-
-	const var_str_bbox = var_str.node().getBBox() // .node() will get the DOM/SVG
-
-	if (var_str_bbox.width + space_param < x1) {
-		// Before variant box
-		variant_start_text_pos = x1 - var_str_bbox.width - space_param
-	} else if (var_str_bbox.width < variant_box_width) {
-		// Inside variant box, center align
-		variant_start_text_pos = Math.max(0, x1) + (variant_box_width - var_str_bbox.width) / 2
-	} else if (x2 + var_str_bbox.width < data.pileup_data.width) {
-		// After variant box but when variant_string length is lower than pileup plot width
-		variant_start_text_pos = x2 + space_param
-	}
-	var_str.attr('x', variant_start_text_pos)
-
-	if (data.refalleleerror == true) {
-		// When ref allele is not correct
-		let text_start_pos = 0
-		const incorrect_string = tk.dom.variantg
-			.append('text')
-			.attr('x', text_start_pos)
-			.attr('y', tk.dom.variantrowheight)
-			.style('fill', 'red')
-			.attr('font-size', tk.dom.variantrowheight)
-			.text('Incorrect reference allele')
-
-		const incorrect_ref_bbox = incorrect_string.node().getBBox() // .node() will get the DOM/SVG
-
-		// Determining position to place the string and avoid overwriting variant string
-		if (variant_start_text_pos == 0 && incorrect_ref_bbox.width + space_param < x1 - var_str_bbox.width - space_param) {
-			// When variant string starts from zero (when string is too big)
-			text_start_pos = var_str_bbox.width + space_param
-		} else if (
-			variant_start_text_pos == 0 &&
-			incorrect_ref_bbox.width + space_param > x1 - var_str_bbox.width - space_param // When variant string starts from zero (when string is too big)
-		) {
-			text_start_pos = x2 + space_param
-		} else if (
-			var_str_bbox.width + space_param < x1 &&
-			x2 + incorrect_ref_bbox.width + space_param < data.pileup_data.width
-		) {
-			// When variant string is rendered before variant box and incorrect string can fit after variant box
-			text_start_pos = x2 + space_param
-		} else if (
-			var_str_bbox.width + space_param < x1 &&
-			x2 + incorrect_ref_bbox.width + space_param >= data.pileup_data.width &&
-			incorrect_ref_bbox.width + space_param < variant_box_width
-		) {
-			// When variant string is rendered before variant box and incorrect string cannot fit after variant box, then rendered within variant box
-			text_start_pos = Math.max(0, x1)
-		} else if (
-			var_str_bbox.width + space_param < x1 &&
-			x2 + incorrect_ref_bbox.width + space_param >= data.pileup_data.width
-		) {
-			text_start_pos = x1 - var_str_bbox.width - space_param * 2 - incorrect_ref_bbox.width
-		} else if (var_str_bbox.width < variant_box_width && incorrect_ref_bbox.width + space_param < x1) {
-			// When variant string inside variant box and incorrect string as sufficient space on left hand side
-			text_start_pos = x1 - incorrect_ref_bbox.width - space_param
-		} else if (var_str_bbox.width < variant_box_width && incorrect_ref_bbox.width + space_param >= x1) {
-			// When variant string inside variant box and incorrect string as sufficient space on right hand side
-			text_start_pos = x2 + space_param
-		} else if (x2 + var_str_bbox.width < data.pileup_data.width && incorrect_ref_bbox.width + space_param < x1) {
-			// When variant string after variant box and incorrect space has sufficient space on left hand side
-			text_start_pos = x1 - incorrect_ref_bbox.width - space_param
-		} else if (x2 + var_str_bbox.width < data.pileup_data.width && incorrect_ref_bbox.width + space_param >= x1) {
-			// When variant string after variant box and incorrect space has sufficient space on right hand side
-			text_start_pos = x2 + var_str_bbox.width + 2 * space_param
-		} else if (x2 + var_str_bbox.width < data.pileup_data.width && incorrect_ref_bbox.width < variant_box_width) {
-			// When variant string after variant box and incorrect space has sufficient space inside variant box
-			text_start_pos = Math.max(0, x1)
-		}
-
-		incorrect_string.attr('x', text_start_pos)
-	}
-
 	if (tk.variants.length == 1) {
 		// Rendering FS score
 		tk.fs_string.text('FS = ' + data.strand_probability)
@@ -750,16 +772,35 @@ function may_render_variant(data, tk, block) {
 			.text('Allele similarity')
 
 		//Show information about diff score in tooltip on click
+		let html_text =
+			'<span style="white-space: pre-wrap">Allele similarity: This chart shows the allele to which the read has maximum sequence similarity. In case of alternative and reference alleles, all reads in the same group have same color. In case of none category, color representing allele with maximum sequence color is displayed. In case of ambiguous category, for each read colors representing each alleles having equal similarity to each other are displayed.</span>'
+
+		if (tk.variants.length > 1) {
+			let var_idx = 0
+			html_text += '<ul style="list-style: none;"><h3>Color codes for alternative alleles</h3>'
+			for (const g of tk.groups) {
+				if (g.data.type.includes('support_alt')) {
+					let test_text =
+						'<li><svg width="10" height="10" style = "display:inline-block;"><rect width="10" height="10" style="fill:' +
+						g.data.group_color +
+						';" /> </svg> ' +
+						tk.variants[var_idx].alt +
+						'</li>'
+					html_text += test_text
+					var_idx += 1
+				}
+			}
+			html_text += '</ul>'
+		}
+		html_text +=
+			"<br><a href='https://proteinpaint.stjude.org/bam' target='_blank'>Click here to view details of this method</a>."
 		diff_score_string.on('click', event => {
 			tk.tktip.clear().showunder(event.target)
 			tk.tktip.d
 				.append('div')
 				.style('width', '300px')
 				.style('font-size', '12px')
-				.html(
-					'Allele similarity: This chart shows the allele to which the read has maximum sequence similarity. In case of alternative and reference alleles, all reads in the same group have same color. In case of none category, color representing allele with maximum sequence color is displayed. In case of ambiguous category, for each read colors representing each alleles having equal similarity to each other are displayed.' +
-						"<br><a href='https://proteinpaint.stjude.org/bam' target='_blank'>Click here to view details of this method</a>."
-				)
+				.html(html_text)
 		})
 	}
 }
@@ -780,9 +821,15 @@ function setTkHeight(tk) {
 	//}
 	if (tk.dom.variantg) {
 		tk.dom.variantg.attr('transform', 'translate(0,' + h + ')')
-		h += tk.dom.variantrowheight + tk.dom.variantrowbottompad
 	}
+	let var_idx = 0
 	for (const g of tk.groups) {
+		//console.log('tk.dom.variantg:', tk.dom.variantg)
+		if (g.data.type.includes('support_alt')) {
+			g.variantg.attr('transform', 'translate(0,' + h + ')')
+			h += tk.dom.variantrowheight + tk.dom.variantrowbottompad
+			var_idx += 1
+		}
 		g.dom.groupg.transition().attr('transform', 'translate(0,' + h + ')')
 		g.dom.rightg.transition().attr('transform', 'translate(0,' + h + ')') // Both diff_score plot and vslider are inside this
 
@@ -806,6 +853,10 @@ function setTkHeight(tk) {
 			}
 		}
 		h += g.data.height + g.msgheight
+		if (g.data.type.includes('support_alt') && var_idx < tk.variants.length) {
+			// Add space between adjacent alt allele groups, but no need to add space after the last alt allele group
+			h += tk.dom.variantrowheight
+		}
 	}
 	tk.height_main = tk.height = h
 	tk.height_main += tk.toppad + tk.bottompad

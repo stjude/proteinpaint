@@ -935,6 +935,21 @@ async function do_query(q) {
 		if (q.variant) {
 			// diff scores plotted only if a variant is specified by user
 			gr.diff_scores_img = await plot_diff_scores(q, group, templates, result.max_diff_score, result.min_diff_score)
+			if (gr.type == 'support_alt0') {
+				gr.group_color = alt0_diff_score_color
+			} else if (gr.type == 'support_alt1') {
+				gr.group_color = alt1_diff_score_color
+			} else if (gr.type == 'support_alt2') {
+				gr.group_color = alt2_diff_score_color
+			} else if (gr.type == 'support_alt3') {
+				gr.group_color = alt3_diff_score_color
+			} else if (gr.type == 'support_alt4') {
+				gr.group_color = alt4_diff_score_color
+			} else if (gr.type == 'support_alt5') {
+				gr.group_color = alt5_diff_score_color
+			} else if (gr.type == 'support_ref') {
+				gr.group_color = ref_diff_score_color
+			}
 		}
 
 		gr.src = canvas.toDataURL()

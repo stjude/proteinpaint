@@ -131,8 +131,8 @@ export async function match_complexvariant_rust(q, templates_info, region_widths
 			console.log(
 				variant.chr + '.' + ref_positions[variant_idx] + '.' + refalleles[variant_idx] + '.' + altalleles[variant_idx]
 			)
-			console.log('refseq', refseq)
-			console.log('altseq', altseq)
+			//console.log('refseq', refseq)
+			//console.log('altseq', altseq)
 			//console.log('leftflankseq:', leftflankseq)
 			//console.log('rightflankseq:', rightflankseq)
 			// console.log(refallele,altallele,refseq,altseq)
