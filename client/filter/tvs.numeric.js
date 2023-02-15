@@ -27,6 +27,7 @@ validateNumericTvs() // validate tvs before sending it to callback
 */
 
 export const handler = {
+	type: 'numeric',
 	term_name_gen,
 	get_pill_label,
 	getSelectRemovePos,

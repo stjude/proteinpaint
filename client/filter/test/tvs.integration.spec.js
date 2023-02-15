@@ -1,6 +1,7 @@
 const tape = require('tape')
 const d3s = require('d3')
 const filterInit = require('../filter').filterInit
+const { sleep, detectElement } = require('../../test/test.helpers')
 
 /*********
 the direct functional testing of the component, without the use of runpp()
@@ -64,14 +65,11 @@ function getOpts(_opts = {}) {
 		callback: function(filter) {
 			opts.filterData = filter
 			opts.filter.main(opts.filterData)
-		}
+		},
+		callbacks: opts.callbacks
 	})
 
 	return opts
-}
-
-function sleep(ms) {
-	return new Promise(resolve => setTimeout(resolve, ms))
 }
 
 /**************
@@ -82,17 +80,19 @@ tvs (common): buttons
 tvs: Categorical
 tvs: Numeric
 tvs: Condition
-tvs: Cohort + Numerical
+tvs: Cohort + Numeric
 tvs: unbounded range
 
 */
 
 tape('\n', test => {
-	test.pass('-***- common/tvs -***-')
+	test.pass('-***- filter/tvs -***-')
 	test.end()
 })
 
 tape('tvs (common): buttons', async test => {
+	test.timeoutAfter(10000)
+	test.plan(5)
 	const opts = getOpts({
 		filterData: {
 			type: 'tvslst',
@@ -107,60 +107,113 @@ tape('tvs (common): buttons', async test => {
 					}
 				}
 			]
+		},
+		callbacks: {
+			postRender() {
+				if (pendingTest) pendingTest()
+			}
 		}
 	})
 
-	await opts.filter.main(opts.filterData)
-	await sleep(100)
-	// test common bluepill components
-	test.equal(opts.holder.node().querySelectorAll('.tvs_pill').length, 1, 'should have one filter button')
+	let pendingTest, pendingResolve
+	try {
+		/*** OPTION A: return a promise from .main() or an event callback function ***/
+		const prom = await opts.filter.main(opts.filterData)
+		// test common bluepill components
+		test.equal(opts.holder.node().querySelectorAll('.tvs_pill').length, 1, 'should have one filter button')
 
-	test.equal(
-		opts.holder.node().querySelectorAll('.term_name_btn')[0].innerHTML,
-		opts.filterData.lst[0].tvs.term.name,
-		'should label the pill with the correct term name'
-	)
+		test.equal(
+			opts.holder.node().querySelectorAll('.term_name_btn')[0].innerHTML,
+			opts.filterData.lst[0].tvs.term.name,
+			'should label the pill with the correct term name'
+		)
 
-	test.equal(
-		opts.holder.node().querySelectorAll('.negate_btn')[0].innerHTML,
-		'IS',
-		'should label the pill with the correct negate value'
-	)
+		test.equal(
+			opts.holder.node().querySelectorAll('.negate_btn')[0].innerHTML,
+			'IS',
+			'should label the pill with the correct negate value'
+		)
 
-	test.equal(
-		opts.holder
-			.node()
-			.querySelectorAll('.value_btn')[0]
-			.innerHTML.split('<')[0],
-		opts.filterData.lst[0].tvs.values[0].label,
-		'should label the pill with the correct value label'
-	)
+		test.equal(
+			opts.holder
+				.node()
+				.querySelectorAll('.value_btn')[0]
+				.innerHTML.split('<')[0],
+			opts.filterData.lst[0].tvs.values[0].label,
+			'should label the pill with the correct value label'
+		)
+	} catch (e) {
+		test.fail('failed to render a pill: ' + e)
+		test.end()
+		return
+	}
 
-	//trigger and check negate value change
-	const pill = opts.holder.select('.tvs_pill').node()
-	pill.click()
-	await sleep(150)
-	const controlTipd = opts.filter.Inner.dom.controlsTip.d
-	const menuRows = controlTipd.selectAll('tr')
-	const editOpt = menuRows.filter(d => d.action == 'edit')
-	editOpt.node().click()
-	await sleep(700)
-	const tipd = opts.filter.Inner.dom.termSrcDiv
-	tipd
-		.node()
-		.querySelector('input[name=sja_filter_isnot_input]')
-		.click()
-	opts.filter.Inner.dom.termSrcDiv
-		.select('.sjpp_apply_btn')
-		.node()
-		.click()
-	await sleep(50)
-	test.equal(
-		opts.holder.node().querySelectorAll('.negate_btn')[0].innerHTML,
-		'NOT',
-		'should change the negate value of the pill'
-	)
-	test.end()
+	try {
+		// trigger and check negate value change
+		const pill = opts.holder.select('.tvs_pill').node()
+		pill.click()
+		const controlTipd = opts.filter.Inner.dom.controlsTip.d
+		const menuRows = controlTipd.selectAll('tr')
+		const editOpt = menuRows.filter(d => d.action == 'edit') //; console.log(149, editOpt.on('click'))
+		editOpt.node().click()
+		const tipd = opts.filter.Inner.dom.termSrcDiv
+		const isNotInput = await detectElement({ elem: tipd.node(), selector: 'input[name=sja_filter_isnot_input]' })
+		isNotInput.click()
+
+		/*
+			For DOM events, where the event listener/callback cannot be 
+			directly awaited on due to hard-to-sequence serial input processing,
+			OPTION A may be either impossible or very complicated to implement.
+			In this case, options B, C, and D can be used.
+			OPTION D recommended since it is more reliable than B and simpler than C.
+		*/
+		const option = 'D'
+		if (option == 'B') {
+			// change to false to use the callback approach
+			/*** OPTION B: await on rerendered element - assumes the applyBtn will be gone temporarily during update ***/
+			const applyBtn = await detectElement({ elem: tipd.node(), selector: '.sjpp_apply_btn' })
+			applyBtn.click()
+			const negateBtn = await detectElement({ elem: tipd.node(), selector: '.negate_btn' })
+			test.equal(negateBtn.innerHTML, 'NOT', 'should change the negate value of the pill')
+			test.end()
+		} else if (option == 'C') {
+			/*** OPTION B: use a post-render callback, see opts.callbacks.postRender above (uses the rx.Bus) ***/
+			pendingTest = () => {
+				test.equal(
+					opts.holder.node().querySelector('.negate_btn').innerHTML,
+					'NOT',
+					'should change the negate value of the pill'
+				)
+				pendingResolve()
+				test.end()
+			}
+			const applyBtn = await detectElement({ elem: tipd.node(), selector: '.sjpp_apply_btn' })
+			await new Promise((resolve, reject) => {
+				pendingResolve = resolve
+				try {
+					applyBtn.click()
+				} catch (e) {
+					reject(e)
+				}
+			})
+		} else if (option == 'D') {
+			/*** OPTION D: obtain the postRender promise directly without using rx.Bus ***/
+			const applyBtn = await detectElement({ elem: tipd.node(), selector: '.sjpp_apply_btn' })
+			applyBtn.click()
+			await opts.filter.getPromise('postRender')
+			test.equal(
+				opts.holder.node().querySelector('.negate_btn').innerHTML,
+				'NOT',
+				'should change the negate value of the pill'
+			)
+			test.end()
+		} else {
+			throw `unknown await option='${option}'`
+		}
+	} catch (e) {
+		test.fail('test error: ' + e)
+		test.end()
+	}
 })
 
 tape('tvs: Categorical', async test => {
@@ -259,7 +312,7 @@ tape('tvs: Numeric', async test => {
 	})
 
 	await opts.filter.main(opts.filterData)
-	await sleep(100)
+	//await sleep(100)
 	// test common bluepill components
 	test.equal(
 		opts.holder
@@ -675,7 +728,7 @@ tape('tvs: Condition', async test => {
 	test.end()
 })
 
-tape('tvs: Cohort + Numerical', async test => {
+tape('tvs: Cohort + Numeric', async test => {
 	const filterData = {
 		type: 'tvslst',
 		in: true,
@@ -715,37 +768,43 @@ tape('tvs: Cohort + Numerical', async test => {
 		]
 	}
 	const opts = getOpts({ filterData })
-	await opts.filter.main(opts.filterData, { activeCohort: 0 })
-	await sleep(200)
 
-	// trigger fill-in of pill.num_obj.density_data
-	const pill = opts.holder.select('.tvs_pill').node()
-	pill.click()
-	await sleep(150)
-	const controlTipd = opts.filter.Inner.dom.controlsTip.d
-	const menuRows = controlTipd.selectAll('tr')
-	const editOpt = menuRows.filter(d => d.action == 'edit')
-	editOpt.node().click()
-	await sleep(400)
-	// remember the density data for comparison later
-	const sjlifeDensityData = opts.filter.Inner.pills[2].Inner.num_obj.density_data
+	try {
+		await opts.filter.main(opts.filterData, { activeCohort: 0 })
+		await sleep(200)
 
-	opts.filter.Inner.opts.activeCohort = 1
-	const selectElem = opts.filter.Inner.dom.holder.select('select')
-	selectElem
-		.property('value', 1)
-		.on('change')
-		.call(selectElem.node())
-	await sleep(400)
-	// trigger fill-in of pill.num_obj.density_data
-	pill.click()
-	editOpt.node().click()
-	await sleep(400)
+		// trigger fill-in of pill.num_obj.density_data
+		const pill = opts.holder.select('.tvs_pill').node()
+		pill.click()
+		await sleep(150)
+		const controlTipd = opts.filter.Inner.dom.controlsTip.d
+		const menuRows = controlTipd.selectAll('tr')
+		const editOpt = menuRows.filter(d => d.action == 'edit')
+		editOpt.node().click()
+		await sleep(400)
+		// remember the density data for comparison later
+		const sjlifeDensityData = opts.filter.Inner.pills[2].Inner.num_obj.density_data
 
-	const sjcsDensityData = opts.filter.Inner.pills['2'].Inner.num_obj.density_data
-	test.notDeepEqual(sjlifeDensityData, sjcsDensityData, 'should have different density data when changing the cohort')
-	opts.filter.Inner.dom.controlsTip.hide()
-	test.end()
+		opts.filter.Inner.opts.activeCohort = 1
+		const selectElem = opts.filter.Inner.dom.holder.select('select')
+		selectElem
+			.property('value', 1)
+			.on('change')
+			.call(selectElem.node())
+		await sleep(400)
+		// trigger fill-in of pill.num_obj.density_data
+		pill.click()
+		editOpt.node().click()
+		await sleep(400)
+
+		const sjcsDensityData = opts.filter.Inner.pills['2'].Inner.num_obj.density_data
+		test.notDeepEqual(sjlifeDensityData, sjcsDensityData, 'should have different density data when changing the cohort')
+		opts.filter.Inner.dom.controlsTip.hide()
+		test.end()
+	} catch (e) {
+		test.fail('test error: ' + e)
+		test.end()
+	}
 })
 
 tape('tvs: unbounded range', async test => {

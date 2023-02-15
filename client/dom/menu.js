@@ -1,9 +1,7 @@
 import { select as d3select } from 'd3-selection'
-import { base_zindex } from '../src/client'
+import { get_base_zindex } from '#common/globals'
 
-/* TODO explain arg
- */
-
+// TODO explain arg
 export class Menu {
 	constructor(arg = {}) {
 		this.typename = Math.random().toString()
@@ -72,6 +70,7 @@ export class Menu {
 			this.hide()
 		})
 
+		const base_zindex = get_base_zindex()
 		if (base_zindex) {
 			this.d.style('z-index', base_zindex + 1)
 		}

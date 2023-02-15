@@ -14,6 +14,7 @@ validateConditionTvs()
 */
 
 export const handler = {
+	type: 'condition',
 	term_name_gen,
 	get_pill_label,
 	getSelectRemovePos,

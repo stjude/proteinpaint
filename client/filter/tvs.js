@@ -47,8 +47,7 @@ class TVS {
 		this.tvs = data.tvs
 		this.filter = data.filter
 		await this.setHandler()
-		this.updateUI()
-
+		await this.updateUI()
 		// when there are filters to be removed, must account for the delayed
 		// removal after opacity transition, as btn count will decrease only
 		// after the transition and remove() is done
@@ -85,7 +84,7 @@ function setRenderers(self) {
 			and more clearly indicates whether the whole pill is replaced
 			or if only its values are updated.
 		*/
-		const filters = terms_div.selectAll('.tvs_pill').data([self.tvs], d => d.term.id)
+		const filters = terms_div.selectAll('.tvs_pill').data([self.tvs], tvs => tvs?.term.id)
 		filters.exit().each(self.exitPill)
 		filters.each(self.updatePill)
 		filters

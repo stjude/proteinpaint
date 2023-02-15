@@ -1,4 +1,4 @@
-import { getInitFxn, getCompInit } from '../rx'
+import { getInitFxn, getCompInit, Bus } from '../rx'
 import { select } from 'd3-selection'
 import { Menu } from '../src/client'
 import { TVSInit } from './tvs'
@@ -66,6 +66,7 @@ class Filter {
 			in: true,
 			lst: []
 		}
+		this.promises = {}
 	}
 
 	validateOpts(opts) {
@@ -92,6 +93,16 @@ class Filter {
 		.activeCohort
 	*/
 	async main(rawCopy, opts = {}) {
+		// replace the postRender promise ASAP to ensure that listeners
+		// will not get a stale promise from a previous render
+		// TODO: can move setting a postRender promise to rx?
+		this.promises.postRender = new Promise((resolve, reject) => {
+			this.mainResolve = resolve
+			this.mainReject = reject
+		})
+		this.numProcessedItems = 0
+		this.numExpectedItems = 0
+
 		this.opts = Object.assign({}, this.opts, opts)
 		this.activeCohort = this.opts.activeCohort
 		this.rawCopy = rawCopy
@@ -102,7 +113,7 @@ class Filter {
 			this.filter = this.rawFilter
 			this.filter.tag = 'filterUiRoot'
 		}
-		this.resetActiveData(this.filter)
+		await this.resetActiveData(this.filter)
 
 		// reset interaction-related styling
 		this.removeBlankPill()
@@ -111,6 +122,7 @@ class Filter {
 		//this.dom.filterContainer.selectAll('.sja_filter_grp').style('background-color', 'transparent')
 		this.setVocabApi()
 		this.updateUI(this.dom.filterContainer, this.filter)
+		return this.promises.postRender
 	}
 
 	validateFilter(item) {
@@ -243,6 +255,15 @@ class Filter {
 
 		this.vocabApi.main()
 	}
+	updatePromise = function(incr = 1) {
+		if (!this.mainResolve) return
+		this.numProcessedItems += incr
+		if (this.numExpectedItems == this.numProcessedItems) {
+			this.mainResolve()
+			if (this.bus) this.bus.emit('postRender')
+			delete this.mainResolve
+		}
+	}
 }
 
 class FilterStateless extends Filter {
@@ -262,7 +283,13 @@ class FilterStateless extends Filter {
 				from the common/filter.js component and supply the 
 				caller's known raw filter state
 			*/
-			getNormalRoot: () => getNormalRoot(this.rawFilter)
+			getNormalRoot: () => getNormalRoot(this.rawFilter),
+			getPromise: name => this.promises[name]
+		}
+
+		if (opts.callbacks) {
+			this.events = ['postInit', 'postRender']
+			this.bus = new Bus(this.api, this.events, opts.callbacks)
 		}
 	}
 
@@ -273,7 +300,7 @@ class FilterStateless extends Filter {
 		const rawCopy = JSON.stringify(rawFilter)
 		// if the filter data and active cohort has not changed, do not trigger a re-render
 		if (this.rawCopy == rawCopy && JSON.stringify(this.activeCohort) == JSON.stringify(activeCohort)) return
-		super.main(rawCopy, opts)
+		await super.main(rawCopy, opts)
 	}
 }
 
@@ -443,9 +470,8 @@ function setRenderers(self) {
 		})
 	}
 
-	self.updateUI = function(container, filter) {
+	self.updateUI = async function(container, filter) {
 		container.datum(filter).style('display', !filter.lst || !filter.lst.length ? 'none' : 'inline-block')
-
 		const pills = container
 			.selectAll(':scope > .sja_filter_grp')
 			.style('background-color', 'transparent')
@@ -459,6 +485,8 @@ function setRenderers(self) {
 			.attr('class', 'sja_filter_grp')
 			.style('margin', '5px')
 			.each(self.addGrp)
+
+		self.updatePromise(0)
 	}
 
 	self.addGrp = function(item, i) {
@@ -491,7 +519,6 @@ function setRenderers(self) {
 		const pills = select(this)
 			.selectAll(':scope > .sja_filter_item')
 			.data(data, self.getId)
-
 		pills
 			.enter()
 			.append('div')
@@ -518,7 +545,6 @@ function setRenderers(self) {
 				self.dom.last_join_label.style('display', 'inline')
 			})
 		}
-
 		select(this)
 			.append('div')
 			.attr('class', 'sja_filter_paren_close')
@@ -591,6 +617,8 @@ function setRenderers(self) {
 	}
 
 	self.removeGrp = function(item) {
+		console.log(619)
+		self.numExpectedItems += 1
 		if (item.type == 'tvslst') {
 			for (const subitem of item.lst) {
 				if (subitem.lst) self.removeGrp(subitem)
@@ -609,9 +637,10 @@ function setRenderers(self) {
 				.on('click', null)
 				.remove()
 		}
+		self.updatePromise()
 	}
 
-	self.addItem = function(item, i) {
+	self.addItem = async function(item, i) {
 		const filter = this.parentNode.__data__
 
 		if (item.type == 'tvslst') {
@@ -619,6 +648,8 @@ function setRenderers(self) {
 			self.addJoinLabel(this, filter, item)
 			return
 		}
+
+		self.numExpectedItems += 1
 
 		// holder for blue pill
 		const holder = select(this)
@@ -659,7 +690,7 @@ function setRenderers(self) {
 				.property('selected', (d, i) => i == defaultVal)
 				.html(d => (d.shortLabel ? d.shortLabel : d.label ? d.label : d.key))
 		} else {
-			const pill = TVSInit({
+			const pill = await TVSInit({
 				vocabApi: self.vocabApi,
 				holder,
 				debug: self.opts.debug,
@@ -677,11 +708,12 @@ function setRenderers(self) {
 				}
 			})
 			self.pills[item.$id] = pill
-			pill.main({ tvs: item.tvs, filter: self.getFilterExcludingPill(item.$id) })
+			await pill.main({ tvs: item.tvs, filter: self.getFilterExcludingPill(item.$id) })
 		}
+		self.updatePromise()
 	}
 
-	self.updateItem = function(item, i) {
+	self.updateItem = async function(item, i) {
 		const filter = this.parentNode.__data__
 		select(this)
 			.select(':scope > .sja_filter_join_label')
@@ -695,13 +727,16 @@ function setRenderers(self) {
 		if (item.type == 'tvslst') {
 			self.updateUI(select(this), item)
 		} else if (item.renderAs === 'htmlSelect') {
+			self.numExpectedItems += 1
 			select(this)
 				.select('select')
 				.property('value', '' + getDefaultValueForHtmlSelect(self, item))
 		} else {
 			if (!self.pills[item.$id]) return
-			self.pills[item.$id].main({ tvs: item.tvs, filter: self.getFilterExcludingPill(item.$id) })
+			self.numExpectedItems += 1
+			await self.pills[item.$id].main({ tvs: item.tvs, filter: self.getFilterExcludingPill(item.$id) })
 		}
+		self.updatePromise()
 	}
 
 	self.removeItem = function(item) {
@@ -796,7 +831,7 @@ function setInteractivity(self) {
 		}
 	}
 
-	self.handleMenuOptionClick = function(event, d) {
+	self.handleMenuOptionClick = async function(event, d) {
 		event.stopPropagation()
 		if (d == self.activeData.menuOpt) return
 		self.activeData.menuOpt = d
@@ -806,7 +841,7 @@ function setInteractivity(self) {
 		}
 		self.resetBlankPill(d.action)
 		self.dom.controlsTip.d.selectAll('tr').style('background-color', '')
-		d.handler(this, d)
+		await d.handler(this, d)
 	}
 
 	self.resetBlankPill = function(action) {

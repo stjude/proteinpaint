@@ -14,6 +14,7 @@ validateCategoricalTvs()
 */
 
 export const handler = {
+	type: 'categorical',
 	term_name_gen,
 	get_pill_label,
 	getSelectRemovePos,
