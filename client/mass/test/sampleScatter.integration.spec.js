@@ -31,9 +31,7 @@ const open_state = {
 			chartType: 'sampleScatter',
 			colorTW: { id: 'diaggrp' },
 			name: 'TermdbTest TSNE',
-			settings: {
-				controls: { isOpen: true }
-			}
+			settings: { controls: { isOpen: true } }
 		}
 	]
 }
@@ -244,7 +242,6 @@ tape('Invalid colorTW.id', async function(test) {
 
 tape('Invalid colorTW.term', async function(test) {
 	test.timeoutAfter(3000)
-	const message = `Should display error for colorTW.term not found within dataset`
 	const holder = getHolder()
 	const id = 'Not real data'
 	try {
@@ -254,20 +251,18 @@ tape('Invalid colorTW.term', async function(test) {
 				plots: [
 					{
 						chartType: 'sampleScatter',
-						colorTW: { term: { id, type: 'categorical' } },
+						colorTW: { term: { id } },
 						name: 'TermdbTest TSNE'
 					}
 				]
 			}
 		})
+		const error = 'Error: Type not defined for {"term":{"id":"Not real data"},"isAtomic":true'
 		await sleep(500)
-		test.equal(
-			holder.selectAll('.sja_errorbar').size(),
-			1,
-			'Should display, "Error: Error: Cannot find module \'./undefined.js\' [bsampleScatter getPlotConfig()]".'
-		)
+		const errorDiv = holder.selectAll('.sja_errorbar > div').nodes()[0]
+		test.true(errorDiv.innerHTML.startsWith(error), `Should display, "${error}...".`)
 	} catch (e) {
-		test.fail(message + ': ' + e)
+		test.fail(e)
 	}
 
 	if (test._ok) holder.remove()
