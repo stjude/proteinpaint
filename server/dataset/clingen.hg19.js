@@ -27,11 +27,7 @@ module.exports = {
 		],
 
 		// small list of terms for sunburst rings
-		sunburst_twLst: [{ id: 'Lineage', q: {} }],
-
-		// quick fix: flag to indicate availability of these fields, so as to create new columns in sample table
-		sampleHasSsmReadDepth: true, // corresponds to .ssm_read_depth{} of a sample
-		sampleHasSsmTotalNormal: true // corresponds to .totalNormal:int of a sample
+		sunburst_twLst: [{ id: 'Lineage', q: {} }]
 	},
 
 	queries: {
@@ -48,7 +44,8 @@ module.exports = {
 				formatKey: 'vorigin',
 				rim1value: 'germline',
 				noRimValue: 'somatic'
-			}
+			},
+			formatFilters: ['committee_classification']
 		},
 		svfusion: {
 			byrange: {

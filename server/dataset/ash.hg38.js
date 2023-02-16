@@ -28,16 +28,7 @@ module.exports = {
 		],
 
 		// small list of terms for sunburst rings
-		sunburst_twLst: [{ id: 'Lineage', q: {} }, { id: 'Primary_subtype', q: {} }],
-
-		// quick fix: flag to indicate availability of these fields, so as to create new columns in sample table
-		sampleHasSsmReadDepth: true, // corresponds to .ssm_read_depth{} of a sample
-		sampleHasSsmTotalNormal: true // corresponds to .totalNormal:int of a sample
-
-		// either of sample_id_key or sample_id_getter will be required for making url link for a sample
-		//sample_id_key: 'case_id',
-
-		//url: {}
+		sunburst_twLst: [{ id: 'Lineage', q: {} }, { id: 'Primary_subtype', q: {} }]
 	},
 
 	queries: {

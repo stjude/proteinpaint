@@ -60,8 +60,10 @@ function getParameter(tk, block) {
 		// instructs server to return data types associated with tracks
 		// including skewer or non-skewer
 		forTrack: 1,
+		// FIXME should not pass skewerRim if it is not in use (turn off)
 		skewerRim: tk.mds.queries.snvindel?.skewerRim // instructions for counting rim counts per variant
 	}
+
 	const headers = { 'Content-Type': 'application/json', Accept: 'application/json' }
 
 	/*
@@ -134,6 +136,7 @@ function getParameter(tk, block) {
 	}
 
 	if (tk.legend.bcfInfo) {
+		// add info fields to filter variants
 		const infoFilter = {}
 		for (const k in tk.legend.bcfInfo) {
 			if (tk.legend.bcfInfo[k].hiddenvalues.size) {
@@ -142,6 +145,19 @@ function getParameter(tk, block) {
 		}
 		if (Object.keys(infoFilter).length) {
 			par.infoFilter = infoFilter
+		}
+	}
+
+	if (tk.legend.formatFilter) {
+		// add format fields to filter samples
+		const filter = {}
+		for (const k in tk.legend.formatFilter) {
+			if (tk.legend.formatFilter[k].hiddenvalues.size) {
+				filter[k] = [...tk.legend.formatFilter[k].hiddenvalues]
+			}
+		}
+		if (Object.keys(filter).length) {
+			par.formatFilter = filter
 		}
 	}
 

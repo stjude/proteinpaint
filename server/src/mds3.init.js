@@ -413,26 +413,12 @@ function copy_queries(ds, dscopy) {
 			copy.snvindel.m2csq = { by: qs.m2csq.by }
 		}
 
-		if (qs.byrange?.bcffile || qs.byrange?.chr2bcffile) {
-			// the query is using bcf file(s)
-			// create the bcf{} object on dscopy
-			dscopy.bcf = {}
-
-			if (qs.byrange._tk.info) {
-				// this bcf file has info fields, attach to copy.bcf{}
-				// dataset may specify if to withhold
-				dscopy.bcf.info = qs.byrange._tk.info
-			}
-			if (qs.byrange._tk.format) {
-				// like above
-				dscopy.bcf.format = qs.byrange._tk.format
-			}
-		} else {
-			if (qs.info) dscopy.bcf = { info: qs.info }
-			if (qs.format) {
-				if (!dscopy.bcf) dscopy.bcf = {}
-				dscopy.bcf.format = qs.format
-			}
+		// copy over info and format fields
+		// TODO may move to dscopy.info{} and dscopy.format{}
+		if (qs.info) dscopy.bcf = { info: qs.info }
+		if (qs.format) {
+			if (!dscopy.bcf) dscopy.bcf = {}
+			dscopy.bcf.format = qs.format
 		}
 	}
 	// new query
@@ -634,8 +620,17 @@ export async function snvindelByRangeGetter_bcf(ds, genome) {
 		for (const id in q._tk.format) {
 			if (id == 'GT') {
 				// may not need with bcftools
-				q._tk.format.isGT = true
+				q._tk.format[id].isGT = true
 			}
+		}
+		if (ds.queries.snvindel.formatFilters) {
+			// array of format keys; allow to be used as filters on client
+			// TODO filtering based on numeric format?
+			if (!Array.isArray(ds.queries.snvindel.formatFilters)) throw 'snvindel.formatFilters[] is not array'
+			for (const k of ds.queries.snvindel.formatFilters) {
+				if (q._tk.format[k]) q._tk.format[k].isFilter = true // allow it to work as filter on client
+			}
+			delete ds.queries.snvindel.formatFilters
 		}
 	}
 

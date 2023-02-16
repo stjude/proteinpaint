@@ -91,6 +91,7 @@ function finalize_result(q, ds, result) {
 				m.occurrence = m.samples.length
 
 				mayAddSkewerRimCount(m, q, ds)
+				mayAddFormatSampleCount(m, ds)
 
 				for (const s of m.samples) {
 					sampleSet.add(s.sample_id)
@@ -108,6 +109,7 @@ function finalize_result(q, ds, result) {
 
 function mayAddSkewerRimCount(m, q, ds) {
 	if (!q.skewerRim) return // not using rim
+	// using rim; rim reflects number of samples, out of all harboring this variant, with a common attribute
 	if (q.skewerRim.type == 'format') {
 		m.rim1count = 0
 		for (const s of m.samples) {
@@ -118,6 +120,21 @@ function mayAddSkewerRimCount(m, q, ds) {
 		return
 	}
 	throw 'unknown skewerRim.type'
+}
+
+function mayAddFormatSampleCount(m, ds) {
+	if (!ds.queries.snvindel?.format) return
+	for (const formatKey in ds.queries.snvindel.format) {
+		if (!ds.queries.snvindel.format[formatKey].isFilter) continue // this field is not filterable
+		// has a filterable field
+		if (!m.formatK2count) m.formatK2count = {} // key is formatKey
+		if (!m.formatK2count[formatKey]) m.formatK2count[formatKey] = {} // k: format value, v: sample count
+		for (const s of m.samples) {
+			const v = s.formatK2v?.[formatKey]
+			if (v == undefined) continue
+			m.formatK2count[formatKey][v] = 1 + (m.formatK2count[formatKey][v] || 0)
+		}
+	}
 }
 
 async function get_ds(q, genome) {
@@ -362,5 +379,8 @@ function may_validate_filters(q, ds) {
 			for (const n of q.skewerRim.hiddenvaluelst) q.skewerRim.hiddenvalues.add(n)
 			delete q.skewerRim.hiddenvaluelst
 		}
+	}
+	if (q.formatFilter) {
+		throw 'validate formatFilter'
 	}
 }

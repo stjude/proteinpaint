@@ -9,7 +9,6 @@ updateLegend
 ********************** INTERNAL
 create_mclass
 update_mclass
-update_info_fields
 may_create_variantShapeName
 may_update_variantShapeName
 may_create_infoFields
@@ -51,6 +50,7 @@ run only once, called by makeTk
 	create_mclass(tk, block)
 	may_create_variantShapeName(tk)
 	may_create_infoFields(tk)
+	may_create_formatFilters(tk)
 	may_create_skewerRim(tk)
 }
 
@@ -117,22 +117,17 @@ function may_create_variantShapeName(tk) {
 }
 
 function may_create_infoFields(tk) {
-	if (!tk.mds.bcf || !tk.mds.bcf.info) {
-		// not using bcf with info fields
-		return
-	}
+	if (!tk.mds.bcf?.info) return // not using bcf with info fields
 	// collect info field keys eligible for displaying in legend
 	const infoFields4legend = []
 	// find eligible info field keys to show in legend and create global object with infofield categories as field_category
-	for (let key in tk.mds.bcf.info) {
-		let field = tk.mds.bcf.info[key]
+	for (const key in tk.mds.bcf.info) {
+		const field = tk.mds.bcf.info[key]
 		if (field.categories) {
 			infoFields4legend.push(key)
 		}
 	}
-	if (!infoFields4legend.length) {
-		return
-	}
+	if (!infoFields4legend.length) return // no filterable fields
 
 	// has info fields to show in legend
 
@@ -157,6 +152,161 @@ function may_create_infoFields(tk) {
 	}
 }
 
+function may_create_formatFilters(tk) {
+	if (!tk.mds.bcf?.format) return // not using bcf with format fields
+	// collect format fields used for filtering
+	const formatFields4legend = []
+	for (const k in tk.mds.bcf.format) {
+		if (tk.mds.bcf.format[k].isFilter) formatFields4legend.push(k)
+	}
+	if (!formatFields4legend.length) return // nothing filterable
+
+	if (!tk.legend.formatFilter) tk.legend.formatFilter = {} // key: format key
+	for (const key of formatFields4legend) {
+		const row = tk.legend.table.append('tr') // html <tr> created for this info field in the legend table
+		// this row will have two columns, just like mclass
+
+		// column 1 <td>: format field name
+		row
+			.append('td')
+			.style('text-align', 'right')
+			.style('opacity', 0.3)
+			.text(tk.mds.bcf.format[key].Description)
+
+		tk.legend.formatFilter[key] = {
+			hiddenvalues: new Set(),
+			row,
+			// column 2 <td>: content holder
+			holder: row.append('td')
+		}
+	}
+}
+
+function may_update_formatFilter(data, tk) {
+	if (!tk.legend.formatFilter) return
+	if (!data.skewer) {
+		console.log('data.skewer[] is not present and cannot show INFO legend')
+		return
+	}
+
+	for (const formatKey in tk.legend.formatFilter) {
+		// key of a FORMAT field and will create a legend section
+
+		// clear holder
+		tk.legend.formatFilter[formatKey].holder.selectAll('*').remove()
+
+		// data for the INFO field is categorical, in the legend show unique list of categories and variant count
+		// TODO later use "termType=categorical/integer/float"
+
+		const category2variantCount = new Map() // key: category of this INFO field, v: number of variants
+		for (const m of data.skewer) {
+			if (m.formatK2count?.[formatKey]) {
+				for (const category in m.formatK2count[formatKey]) {
+					category2variantCount.set(category, 1 + (category2variantCount.get(category) || 0))
+				}
+			}
+		}
+
+		// sort tally in descending order, each element is a two-ele array [category, variantCount]
+		const all_lst = [...category2variantCount].sort((i, j) => j[1] - i[1])
+
+		const show_lst = [],
+			hidden_lst = []
+
+		for (const [category, count] of all_lst) {
+			const dict = { category, count }
+			if (tk.legend.formatFilter[formatKey].hiddenvalues.has(category)) {
+				hidden_lst.push(dict)
+			} else {
+				show_lst.push(dict)
+			}
+		}
+
+		show_lst.sort((i, j) => j.count - i.count)
+		hidden_lst.sort((i, j) => j.count - i.count)
+
+		for (const k of tk.legend.formatFilter[formatKey].hiddenvalues) {
+			if (!hidden_lst.find(i => i.k == k)) {
+				hidden_lst.push({ k })
+			}
+		}
+
+		for (const c of show_lst) {
+			// c={category:str, count:int}
+
+			const cell = tk.legend.formatFilter[formatKey].holder
+				.append('div')
+				.attr('class', 'sja_clb')
+				.style('display', 'inline-block')
+				.on('click', event => {
+					tk.legend.tip
+						.clear()
+						.showunder(event.target)
+						.d.append('div')
+						.attr('class', 'sja_menuoption')
+						.text('Hide')
+						.on('click', () => {
+							tk.legend.formatFilter[formatKey].hiddenvalues.add(c.category)
+							tk.legend.tip.hide()
+							tk.uninitialized = true
+							tk.load()
+						})
+
+					tk.legend.tip.d
+						.append('div')
+						.attr('class', 'sja_menuoption')
+						.text('Show only')
+						.on('click', () => {
+							for (const c2 of show_lst) {
+								tk.legend.formatFilter[formatKey].hiddenvalues.add(c2.category)
+							}
+							tk.legend.formatFilter[formatKey].hiddenvalues.delete(c.category)
+							tk.legend.tip.hide()
+							tk.uninitialized = true
+							tk.load()
+						})
+
+					if (hidden_lst.length) {
+						tk.legend.tip.d
+							.append('div')
+							.attr('class', 'sja_menuoption')
+							.text('Show all')
+							.on('click', () => {
+								tk.legend.formatFilter[formatKey].hiddenvalues.clear()
+								tk.legend.tip.hide()
+								tk.uninitialized = true
+								tk.load()
+							})
+					}
+				})
+
+			cell
+				.append('div')
+				.style('display', 'inline-block')
+				.text(c.category + ', n=' + c.count)
+		}
+
+		// hidden ones
+		for (const c of hidden_lst) {
+			let loading = false
+			tk.legend.formatFilter[formatKey].holder
+				.append('div')
+				.style('display', 'inline-block')
+				.attr('class', 'sja_clb')
+				.style('text-decoration', 'line-through')
+				.style('opacity', 0.3)
+				.text(c.k)
+				.on('click', async () => {
+					if (loading) return
+					loading = true
+					tk.legend.formatFilter[formatKey].hiddenvalues.delete(c.k)
+					tk.uninitialized = true
+					await tk.load()
+				})
+		}
+	}
+}
+
 /*
 data is returned by xhr
 update legend dom
@@ -177,14 +327,9 @@ export function updateLegend(data, tk, block) {
 	tk.legend.mclass.currentData = data.mclass2variantcount
 	update_mclass(tk)
 
-	/*
-	if (data.info_fields) {
-		update_info_fields(data.info_fields, tk)
-	}
-	*/
-
 	may_update_variantShapeName(data, tk)
 	may_update_infoFields(data, tk)
+	may_update_formatFilter(data, tk)
 	may_update_skewerRim(data, tk)
 }
 
@@ -209,7 +354,6 @@ function may_update_variantShapeName(data, tk) {
 
 /*
 update legend for all info fields of this track
-TODO allow filtering
 */
 function may_update_infoFields(data, tk) {
 	if (!tk.legend.bcfInfo) return
@@ -504,43 +648,6 @@ function update_mclass(tk) {
 			})
 	}
 }
-
-/*
-function update_info_fields(data, tk) {
-// data is data.info_fields{}
-
-	for (const key in data) {
-		const i = tk.info_fields.find(i => i.key == key)
-		if (!i) {
-			console.log('info field not found by key: ' + key)
-			continue
-		}
-		i._data = data[key]
-		if (i.isactivefilter) {
-			// an active filter; update stats
-			if (i.iscategorical) {
-				// update counts from htmlspan
-				if (i.unannotated_htmlspan)
-					i.unannotated_htmlspan.text('(' + (i._data.unannotated_count || 0) + ') Unannotated')
-				for (const v of i.values) {
-					if (v.htmlspan) {
-						v.htmlspan.text('(' + (i._data.value2count[v.key] || 0) + ') ' + v.label)
-					}
-				}
-			} else if (i.isinteger || i.isfloat) {
-				if (i.htmlspan) i.htmlspan.text('(' + i._data.filteredcount + ' filtered)')
-			} else if (i.isflag) {
-				if (i.htmlspan)
-					i.htmlspan.text(
-						'(' + (i.remove_yes ? i._data.count_yes : i._data.count_no) + ') ' + (i.remove_no ? 'No' : 'Yes')
-					)
-			} else {
-				throw 'unknown info type'
-			}
-		}
-	}
-}
-*/
 
 function may_create_skewerRim(tk, block) {
 	if (!tk.mds.queries?.snvindel?.skewerRim) return // not enabled
