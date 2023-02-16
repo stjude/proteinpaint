@@ -19,7 +19,7 @@
                 "mavolcanoplot": {
                     "genome": "hg19",
                     "noheader": 1,
-                    "url": "https://proteinpaint.stjude.org/ppdemo/hg19/mavb/mavbDemoData.txt",
+                    "file": "proteinpaint_demo/hg19/mavb/mavbDemoData.txt",
                     "tracks": [{
                         "name": "Demo RNA-seq coverage",
                         "strand1": { 
