@@ -301,7 +301,9 @@ async function mayShowAuthUi(init, path) {
 async function defaultAuthUi(dslabel) {
 	const mask = authUiHolder
 		.append('div')
-		.style('position', 'position')
+		.style('position', 'fixed')
+		.style('top', 0)
+		.style('left', 0)
 		.style('height', '100%')
 		.style('width', '100%')
 		.style('margin', 0)
