@@ -211,12 +211,7 @@ export function getSampleData_dictionaryTerms_termdb(q, termWrappers) {
 	for (const { sample, term_id, key, value } of rows) {
 		if (!samples[sample]) samples[sample] = { sample }
 		const tw = twByTermId[term_id]
-		if (tw && tw.term.type == 'condition' && tw.q.mode == 'cox' && tw.q.timeScale == 'age') {
-			const v = JSON.parse(value)
-			samples[sample][term_id] = { key, value: v.age_end - q.ds.cohort.termdb.ageEndOffset }
-		} else {
-			samples[sample][term_id] = { key, value }
-		}
+		samples[sample][term_id] = { key, value }
 	}
 
 	return { samples, refs }

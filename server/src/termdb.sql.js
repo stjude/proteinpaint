@@ -553,52 +553,10 @@ q{}
 	const key0 = 'term0_id' in q ? `key0,` : ''
 	const key2 = 'term2_id' in q ? `,key2` : ''
 
-	let result
-	if (q.term1_q && q.term1_q.mode == 'cox') {
-		// cox regression
-		// do not use 'groupby'
-		// need to filter sql results before
-		// summarizing sample counts
-		result = get_rows(q, {
-			withCTEs: true
-		})
-
-		const minTimeSinceDx = q.ds.cohort.termdb.minTimeSinceDx
-		if (!minTimeSinceDx) throw 'missing min time since dx'
-
-		const keyTosamplecount = new Map()
-		for (const row of result.lst) {
-			let key1
-			// convert event=2 to event=0 because competing
-			// risks events should not be treated as a separate
-			// event category in cox regression
-			// these events should be treated as censored at
-			// time of death
-			key1 = row.key1 === 2 ? 0 : row.key1
-
-			// flag samples that had events before follow-up
-			// these samples are excluded during the analysis
-			// so they should be labeled as excluded in the summary
-			const { age_dx, age_event } = JSON.parse(row.val1)
-			const age_start = age_dx + minTimeSinceDx
-			if (age_event - age_start < 0) key1 = -1
-
-			// compute sample counts for each event status
-			const samplecount = keyTosamplecount.get(key1)
-			samplecount ? keyTosamplecount.set(key1, samplecount + 1) : keyTosamplecount.set(key1, 1)
-		}
-
-		const lst = []
-		for (const [key1, samplecount] of keyTosamplecount) {
-			lst.push({ key1, samplecount })
-		}
-		result.lst = lst
-	} else {
-		result = get_rows(q, {
-			withCTEs: true,
-			groupby: `key1`
-		})
-	}
+	const result = get_rows(q, {
+		withCTEs: true,
+		groupby: `key1`
+	})
 
 	const nums = [0, 1, 2]
 	const labeler = {}
