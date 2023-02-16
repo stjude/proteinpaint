@@ -301,12 +301,12 @@ async function mayShowAuthUi(init, path) {
 async function defaultAuthUi(dslabel) {
 	const mask = authUiHolder
 		.append('div')
-		.style('position', 'fixed')
+		.style('position', 'position')
 		.style('height', '100%')
 		.style('width', '100%')
 		.style('margin', 0)
 		.style('padding', '20px')
-		.style('background-color', 'rgba(0,0,0,0.2)')
+		.style('background-color', 'rgb(150,150,150)')
 
 	const form = mask.append('div').style('opacity', 1)
 	form.append('div').html(`Restricted dataset '${dslabel}'`)
