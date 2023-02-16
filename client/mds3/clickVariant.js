@@ -156,7 +156,21 @@ arg{}
 .tid2value{}
 */
 async function variant_details(arg) {
-	arg.tk.itemtip.clear().show(arg.tippos.left - 10, arg.tippos.top - 10)
+	let x = arg.tippos.left - 10,
+		y = arg.tippos.top - 10
+
+	/* poor quick fix!!
+	to address the issue when clicking a variant to the right of window, the sample table can appear too squished
+	try to detect condition when to move the tip to left to allow plenty width to the table
+	*/
+	if (arg.mlst[0].occurrence) {
+		if (arg.mlst.reduce((i, j) => i + j.occurrence, 0) > 1) {
+			// there might be more than 1 sample from mlst[], the sample table is likely to be very wide
+			if (x > window.innerWidth * 0.4) x = 100
+		}
+	}
+
+	arg.tk.itemtip.clear().show(x, y)
 	arg.div = arg.tk.itemtip.d
 	await itemtable(arg)
 }
