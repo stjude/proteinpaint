@@ -52,6 +52,7 @@ mayAdd_mayGetGeneVariantData
 // in case chr name may contain '.', can change to __
 export const ssmIdFieldsSeparator = '.'
 const pc_termid_prefix = 'Ancestry_PC_' // may define in ds, must avoid conflicting with dictionary term ids
+const unannotatedKey = 'Unannotated' // this duplicates the same string in mds3/legend.js
 
 export async function init(ds, genome, _servconfig, app = null, basepath = null) {
 	// must validate termdb first
@@ -954,7 +955,8 @@ function addSamplesFromBcfLine(q, m, l, addFormatValues, ds, limitSamples, forma
 		if (formatFilter) {
 			let drop = false
 			for (const formatKey in formatFilter) {
-				if (formatFilter[formatKey].has(sampleObj.formatK2v[formatKey])) {
+				const formatValue = formatKey in sampleObj.formatK2v ? sampleObj.formatK2v[formatKey] : unannotatedKey
+				if (formatFilter[formatKey].has(formatValue)) {
 					// sample is dropped by format filter
 					drop = true
 					break
@@ -1164,6 +1166,29 @@ export async function svfusionByRangeGetter_file(ds, genome) {
 					// encode mname in case it has comma and will break v2s code when splitting by comma
 					const ssm_id = [j.dt, r.chr, pos, strand, pairlstIdx, encodeURIComponent(mname)].join(ssmIdFieldsSeparator)
 
+					let sampleObj // optional sample of this event; if valid, will be inserted into m.samples[]
+					if (j.sample) {
+						// has sample, prepare the sample obj
+						// if the sample is skipped by format, then the event will be skipped
+						sampleObj = { sample_id: j.sample }
+						if (j.mattr) {
+							// mattr{} has sample-level attributes on this sv event, equivalent to FORMAT
+							if (formatFilter) {
+								// will do the same filtering as snvindel
+								for (const formatKey in formatFilter) {
+									const formatValue = formatKey in j.mattr ? j.mattr[formatKey] : unannotatedKey
+									if (formatFilter[formatKey].has(formatValue)) {
+										// sample is dropped by format filter
+										return
+									}
+								}
+							}
+							if (param.addFormatValues) {
+								// only attach format values when required
+								sampleObj.formatK2v = j.mattr
+							}
+						}
+					}
 					if (!key2variants.has(ssm_id)) {
 						key2variants.set(ssm_id, {
 							ssm_id,
@@ -1178,26 +1203,7 @@ export async function svfusionByRangeGetter_file(ds, genome) {
 							samples: []
 						})
 					}
-					if (j.sample) {
-						const sampleObj = { sample_id: j.sample }
-						if (j.mattr) {
-							// mattr{} has sample-level attributes on this sv event, equivalent to FORMAT
-							if (formatFilter) {
-								// will do the same filtering as snvindel
-								for (const formatKey in formatFilter) {
-									if (formatFilter[formatKey].has(j.mattr[formatKey])) {
-										// sample is dropped by format filter
-										return
-									}
-								}
-							}
-							if (param.addFormatValues) {
-								// only attach format values when required
-								sampleObj.formatK2v = j.mattr
-							}
-						}
-						key2variants.get(ssm_id).samples.push(sampleObj)
-					}
+					if (sampleObj) key2variants.get(ssm_id).samples.push(sampleObj)
 				}
 			})
 		}

@@ -127,12 +127,17 @@ function mayAddFormatSampleCount(m, ds) {
 	for (const formatKey in ds.queries.snvindel.format) {
 		if (!ds.queries.snvindel.format[formatKey].isFilter) continue // this field is not filterable
 		// has a filterable field
-		if (!m.formatK2count) m.formatK2count = {} // key is formatKey
-		if (!m.formatK2count[formatKey]) m.formatK2count[formatKey] = {} // k: format value, v: sample count
+
+		// generates formatK2count{} at m-level, to gather sample counts and return to client for legend display
+		if (!m.formatK2count) m.formatK2count = {}
+		if (!m.formatK2count[formatKey]) m.formatK2count[formatKey] = { v2c: {}, unannotatedCount: 0 }
 		for (const s of m.samples) {
 			const v = s.formatK2v?.[formatKey]
-			if (v == undefined) continue
-			m.formatK2count[formatKey][v] = 1 + (m.formatK2count[formatKey][v] || 0)
+			if (v == undefined) {
+				m.formatK2count[formatKey].unannotatedCount++
+			} else {
+				m.formatK2count[formatKey].v2c[v] = 1 + (m.formatK2count[formatKey].v2c[v] || 0)
+			}
 		}
 	}
 }

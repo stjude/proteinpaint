@@ -13,6 +13,10 @@ may_create_variantShapeName
 may_update_variantShapeName
 may_create_infoFields
 may_update_infoFields
+may_create_formatFilter
+may_update_formatFilter
+may_create_skewerRim
+may_update_skewerRim
 
 ********************** tk.legend{} structure
 .tip
@@ -28,6 +32,8 @@ may_update_infoFields
 
 const unknown_infoCategory_bgcolor = 'white',
 	unknown_infoCategory_textcolor = 'black'
+
+const unannotatedKey = 'Unannotated'
 
 export function initLegend(tk, block) {
 	/*
@@ -50,7 +56,7 @@ run only once, called by makeTk
 	create_mclass(tk, block)
 	may_create_variantShapeName(tk)
 	may_create_infoFields(tk)
-	may_create_formatFilters(tk)
+	may_create_formatFilter(tk)
 	may_create_skewerRim(tk)
 }
 
@@ -152,7 +158,7 @@ function may_create_infoFields(tk) {
 	}
 }
 
-function may_create_formatFilters(tk) {
+function may_create_formatFilter(tk) {
 	if (!tk.mds.bcf?.format) return // not using bcf with format fields
 	// collect format fields used for filtering
 	const formatFields4legend = []
@@ -199,57 +205,41 @@ function may_update_formatFilter(data, tk) {
 		// TODO later use "termType=categorical/integer/float"
 
 		const category2variantCount = new Map() // key: category of this INFO field, v: number of variants
+		let unannotatedCount = 0
 		for (const m of data.skewer) {
-			if (m.formatK2count?.[formatKey]) {
-				for (const category in m.formatK2count[formatKey]) {
-					category2variantCount.set(category, 1 + (category2variantCount.get(category) || 0))
-				}
+			if (!m.formatK2count?.[formatKey]) continue // no data
+			for (const category in m.formatK2count[formatKey].v2c) {
+				category2variantCount.set(
+					category,
+					m.formatK2count[formatKey].v2c[category] + (category2variantCount.get(category) || 0)
+				)
 			}
+			unannotatedCount += m.formatK2count[formatKey].unannotatedCount || 0
 		}
 
 		// sort tally in descending order, each element is a two-ele array [category, variantCount]
-		const all_lst = [...category2variantCount].sort((i, j) => j[1] - i[1])
-
-		const show_lst = [],
-			hidden_lst = []
-
-		for (const [category, count] of all_lst) {
-			const dict = { category, count }
-			if (tk.legend.formatFilter[formatKey].hiddenvalues.has(category)) {
-				hidden_lst.push(dict)
-			} else {
-				show_lst.push(dict)
-			}
+		const show_lst = [...category2variantCount]
+		show_lst.sort((i, j) => j[1] - i[1])
+		if (unannotatedCount) {
+			// show unannotated at the end
+			show_lst.push([unannotatedKey, unannotatedCount])
 		}
 
-		show_lst.sort((i, j) => j.count - i.count)
-		hidden_lst.sort((i, j) => j.count - i.count)
-
-		for (const k of tk.legend.formatFilter[formatKey].hiddenvalues) {
-			if (!hidden_lst.find(i => i.k == k)) {
-				hidden_lst.push({ k })
-			}
-		}
-
-		for (const c of show_lst) {
-			// c={category:str, count:int}
-
+		for (const [category, count] of show_lst) {
 			const cell = tk.legend.formatFilter[formatKey].holder
 				.append('div')
 				.attr('class', 'sja_clb')
 				.style('display', 'inline-block')
-				.on('click', event => {
+				.on('click', () => {
 					tk.legend.tip
 						.clear()
-						.showunder(event.target)
+						.showunder(cell.node())
 						.d.append('div')
 						.attr('class', 'sja_menuoption')
 						.text('Hide')
 						.on('click', () => {
-							tk.legend.formatFilter[formatKey].hiddenvalues.add(c.category)
-							tk.legend.tip.hide()
-							tk.uninitialized = true
-							tk.load()
+							tk.legend.formatFilter[formatKey].hiddenvalues.add(category)
+							reload(tk)
 						})
 
 					tk.legend.tip.d
@@ -258,36 +248,38 @@ function may_update_formatFilter(data, tk) {
 						.text('Show only')
 						.on('click', () => {
 							for (const c2 of show_lst) {
-								tk.legend.formatFilter[formatKey].hiddenvalues.add(c2.category)
+								tk.legend.formatFilter[formatKey].hiddenvalues.add(c2[0])
 							}
-							tk.legend.formatFilter[formatKey].hiddenvalues.delete(c.category)
-							tk.legend.tip.hide()
-							tk.uninitialized = true
-							tk.load()
+							tk.legend.formatFilter[formatKey].hiddenvalues.delete(category)
+							reload(tk)
 						})
 
-					if (hidden_lst.length) {
+					if (tk.legend.formatFilter[formatKey].hiddenvalues.size) {
 						tk.legend.tip.d
 							.append('div')
 							.attr('class', 'sja_menuoption')
 							.text('Show all')
 							.on('click', () => {
 								tk.legend.formatFilter[formatKey].hiddenvalues.clear()
-								tk.legend.tip.hide()
-								tk.uninitialized = true
-								tk.load()
+								reload(tk)
 							})
 					}
 				})
-
 			cell
 				.append('div')
 				.style('display', 'inline-block')
-				.text(c.category + ', n=' + c.count)
+				.attr('class', 'sja_mcdot')
+				.style('background', '#aaa')
+				.style('margin-right', '5px')
+				.html(count > 1 ? count : '&nbsp;')
+			cell
+				.append('div')
+				.style('display', 'inline-block')
+				.text(category)
 		}
 
 		// hidden ones
-		for (const c of hidden_lst) {
+		for (const c of tk.legend.formatFilter[formatKey].hiddenvalues) {
 			let loading = false
 			tk.legend.formatFilter[formatKey].holder
 				.append('div')
@@ -295,16 +287,21 @@ function may_update_formatFilter(data, tk) {
 				.attr('class', 'sja_clb')
 				.style('text-decoration', 'line-through')
 				.style('opacity', 0.3)
-				.text(c.k)
+				.text(c)
 				.on('click', async () => {
 					if (loading) return
 					loading = true
-					tk.legend.formatFilter[formatKey].hiddenvalues.delete(c.k)
-					tk.uninitialized = true
-					await tk.load()
+					tk.legend.formatFilter[formatKey].hiddenvalues.delete(c)
+					reload(tk)
 				})
 		}
 	}
+}
+
+function reload(tk) {
+	tk.legend.tip.hide()
+	tk.uninitialized = true
+	tk.load()
 }
 
 /*
@@ -374,9 +371,7 @@ function may_update_infoFields(data, tk) {
 
 			const category2variantCount = new Map() // key: category of this INFO field, v: number of variants
 			for (const m of data.skewer) {
-				const category = m?.info?.[infoKey]
-				if (category == undefined) continue // this variant is not annotated by this field
-
+				const category = infoKey in m.info ? m.info[infoKey] : unannotatedKey
 				if (Array.isArray(category)) {
 					for (const c of category) {
 						category2variantCount.set(c, 1 + (category2variantCount.get(c) || 0))
@@ -387,32 +382,9 @@ function may_update_infoFields(data, tk) {
 			}
 
 			// sort tally in descending order, each element is a two-ele array [category, variantCount]
-			const all_lst = [...category2variantCount].sort((i, j) => j[1] - i[1])
+			const show_lst = [...category2variantCount].sort((i, j) => j[1] - i[1])
 
-			const show_lst = [],
-				hidden_lst = []
-
-			for (const [category, count] of all_lst) {
-				const clnsig_dict = { category, count }
-				if (tk.legend.bcfInfo[infoKey].hiddenvalues.has(category)) {
-					hidden_lst.push(clnsig_dict)
-				} else {
-					show_lst.push(clnsig_dict)
-				}
-			}
-
-			show_lst.sort((i, j) => j.count - i.count)
-			hidden_lst.sort((i, j) => j.count - i.count)
-
-			for (const k of tk.legend.bcfInfo[infoKey].hiddenvalues) {
-				if (!hidden_lst.find(i => i.k == k)) {
-					hidden_lst.push({ k })
-				}
-			}
-
-			for (const c of show_lst) {
-				// c={category:str, count:int}
-
+			for (const [category, count] of show_lst) {
 				const cell = tk.legend.bcfInfo[infoKey].holder
 					.append('div')
 					.attr('class', 'sja_clb')
@@ -420,14 +392,13 @@ function may_update_infoFields(data, tk) {
 					.on('click', () => {
 						tk.legend.tip
 							.clear()
+							.showunder(cell.node())
 							.d.append('div')
 							.attr('class', 'sja_menuoption')
 							.text('Hide')
 							.on('click', () => {
-								tk.legend.bcfInfo[infoKey].hiddenvalues.add(c.category)
-								tk.legend.tip.hide()
-								tk.uninitialized = true
-								tk.load()
+								tk.legend.bcfInfo[infoKey].hiddenvalues.add(category)
+								reload(tk)
 							})
 
 						tk.legend.tip.d
@@ -436,29 +407,25 @@ function may_update_infoFields(data, tk) {
 							.text('Show only')
 							.on('click', () => {
 								for (const c2 of show_lst) {
-									tk.legend.bcfInfo[infoKey].hiddenvalues.add(c2.category)
+									tk.legend.bcfInfo[infoKey].hiddenvalues.add(c2[0])
 								}
-								tk.legend.bcfInfo[infoKey].hiddenvalues.delete(c.category)
-								tk.legend.tip.hide()
-								tk.uninitialized = true
-								tk.load()
+								tk.legend.bcfInfo[infoKey].hiddenvalues.delete(category)
+								reload(tk)
 							})
 
-						if (hidden_lst.length) {
+						if (tk.legend.bcfInfo[infoKey].hiddenvalues.size) {
 							tk.legend.tip.d
 								.append('div')
 								.attr('class', 'sja_menuoption')
 								.text('Show all')
 								.on('click', () => {
 									tk.legend.bcfInfo[infoKey].hiddenvalues.clear()
-									tk.legend.tip.hide()
-									tk.uninitialized = true
-									tk.load()
+									reload(tk)
 								})
 						}
 
 						// optional description of this category
-						const desc = tk.mds.bcf.info[infoKey].categories?.[c.category]?.desc
+						const desc = tk.mds.bcf.info[infoKey].categories?.[category]?.desc
 						if (desc) {
 							tk.legend.tip.d
 								.append('div')
@@ -467,25 +434,23 @@ function may_update_infoFields(data, tk) {
 								.style('width', '150px')
 								.html(desc)
 						}
-
-						tk.legend.tip.showunder(cell.node())
 					})
 
 				cell
 					.append('div')
 					.style('display', 'inline-block')
 					.attr('class', 'sja_mcdot')
-					.style('background', tk.mds.bcf.info[infoKey].categories?.[c.category]?.color || unknown_infoCategory_bgcolor)
-					.html(c.count > 1 ? c.count : '&nbsp;')
+					.style('background', tk.mds.bcf.info[infoKey].categories?.[category]?.color || unknown_infoCategory_bgcolor)
+					.html(count > 1 ? count : '&nbsp;')
 				cell
 					.append('div')
 					.style('display', 'inline-block')
-					.style('color', tk.mds.bcf.info[infoKey].categories?.[c.category]?.color || unknown_infoCategory_textcolor)
-					.html('&nbsp;' + tk.mds.bcf.info[infoKey].categories?.[c.category]?.label || c.category)
+					.style('color', tk.mds.bcf.info[infoKey].categories?.[category]?.color || unknown_infoCategory_textcolor)
+					.html('&nbsp;' + tk.mds.bcf.info[infoKey].categories?.[category]?.label || category)
 			}
 
 			// hidden ones
-			for (const c of hidden_lst) {
+			for (const c of tk.legend.bcfInfo[infoKey].hiddenvalues) {
 				let loading = false
 				tk.legend.bcfInfo[infoKey].holder
 					.append('div')
@@ -493,13 +458,12 @@ function may_update_infoFields(data, tk) {
 					.attr('class', 'sja_clb')
 					.style('text-decoration', 'line-through')
 					.style('opacity', 0.3)
-					.text(c.k)
+					.text(c)
 					.on('click', async () => {
 						if (loading) return
 						loading = true
-						tk.legend.bcfInfo[infoKey].hiddenvalues.delete(c.k)
-						tk.uninitialized = true
-						await tk.load()
+						tk.legend.bcfInfo[infoKey].hiddenvalues.delete(c)
+						reload(tk)
 					})
 			}
 		}
@@ -693,7 +657,7 @@ function may_update_skewerRim(data, tk) {
 			.append('div')
 			.attr('class', 'sja_clb')
 			.style('display', 'inline-block')
-			.html(`${getRimSvg(1)} ${sk.rim1value}, n=${rim1total}`)
+			.html(`${getRimSvg(1)}${sk.rim1value}, n=${rim1total}`)
 			.on('click', event => {
 				tk.legend.tip
 					.clear()
@@ -703,9 +667,7 @@ function may_update_skewerRim(data, tk) {
 					.text('Hide')
 					.on('click', () => {
 						sk.hiddenvaluelst.push(sk.rim1value)
-						tk.legend.tip.hide()
-						tk.uninitialized = true
-						tk.load()
+						reload(tk)
 					})
 			})
 	}
@@ -715,7 +677,7 @@ function may_update_skewerRim(data, tk) {
 			.append('div')
 			.attr('class', 'sja_clb')
 			.style('display', 'inline-block')
-			.html(`${getRimSvg()} ${sk.noRimValue}, n=${noRimTotal}`)
+			.html(`${getRimSvg()}${sk.noRimValue}, n=${noRimTotal}`)
 			.on('click', event => {
 				tk.legend.tip
 					.clear()
@@ -725,9 +687,7 @@ function may_update_skewerRim(data, tk) {
 					.text('Hide')
 					.on('click', () => {
 						sk.hiddenvaluelst.push(sk.noRimValue)
-						tk.legend.tip.hide()
-						tk.uninitialized = true
-						tk.load()
+						reload(tk)
 					})
 			})
 	}

@@ -495,6 +495,21 @@ function mayaddGetter_variant2samples(tk, block) {
 			throw 'unknown querytype'
 		}
 
+		// add in parameters that will filter samples
+		par.skewerRim = arg.tk.mds.queries.snvindel?.skewerRim
+		if (arg.tk.legend.formatFilter) {
+			// add format fields to filter samples
+			const filter = {}
+			for (const k in arg.tk.legend.formatFilter) {
+				if (tk.legend.formatFilter[k].hiddenvalues.size) {
+					filter[k] = [...arg.tk.legend.formatFilter[k].hiddenvalues]
+				}
+			}
+			if (Object.keys(filter).length) {
+				par.formatFilter = filter
+			}
+		}
+
 		const data = await dofetch3('mds3', { body: par, headers }, { serverData: tk.cache })
 		if (data.error) throw data.error
 		if (!data.variant2samples) throw 'result error'
