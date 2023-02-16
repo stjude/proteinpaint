@@ -238,43 +238,41 @@ tape.skip('tvs: Categorical', async test => {
 		}
 	})
 
-	await opts.filter.main(opts.filterData)
-	await sleep(100)
-	//trigeer and check tip menu
-	const pill = opts.holder.select('.tvs_pill').node()
-	pill.click()
-	await sleep(150)
-	const controlTipd = opts.filter.Inner.dom.controlsTip.d
-	const menuRows = controlTipd.selectAll('tr')
-	const editOpt = menuRows.filter(d => d.action == 'edit')
-	editOpt.node().click()
-	await sleep(1000)
-	const tipd = opts.filter.Inner.dom.termSrcDiv
+	try {
+		await opts.filter.main(opts.filterData)
+		//trigger and check tip menu
+		const pill = await detectElement({ elem: opts.holder.node(), selector: '.tvs_pill' })
+		pill.click()
+		const controlTipd = opts.filter.Inner.dom.controlsTip.d
+		const menuRows = controlTipd.selectAll('tr')
+		const editOpt = menuRows.filter(d => d.action == 'edit')
+		editOpt.node().click()
+		const tipd = opts.filter.Inner.dom.termSrcDiv
+		const applyBtn = await detectElement({ elem: tipd.node(), selector: '.sjpp_apply_btn' })
 
-	test.equal(tipd.selectAll('.sjpp_apply_btn').size(), 1, 'Should have 1 button to apply value change')
-	test.equal(tipd.selectAll("input[name^='select']").size(), 10, 'Should have a checkbox for each value')
-	test.equal(tipd.selectAll("input[name^='select']:checked").size(), 1, 'Should have 1 box checked for Wilms tumor')
+		test.ok(applyBtn, 'Should have 1 button to apply value change')
+		test.equal(tipd.selectAll("input[name^='select']").size(), 10, 'Should have a checkbox for each value')
+		test.equal(tipd.selectAll("input[name^='select']:checked").size(), 1, 'Should have 1 box checked for Wilms tumor')
 
-	//trigger and test addition of new value
-	tipd
-		.node()
-		.querySelectorAll("input[name^='select']")[0]
-		.click()
-	tipd
-		.selectAll('.sjpp_apply_btn')
-		.node()
-		.click()
-
-	await sleep(800)
-	test.equal(
-		opts.holder
+		//trigger and test addition of new value
+		tipd
 			.node()
-			.querySelectorAll('.value_btn')[0]
-			.innerHTML.split('<')[0],
-		opts.filterData.lst[0].tvs.values.length + ' groups',
-		'should change the pill value btn after adding value from menu'
-	)
+			.querySelectorAll("input[name^='select']")[0]
+			.click()
+		applyBtn.click()
+		await sleep(300)
 
+		test.equal(
+			opts.holder
+				.node()
+				.querySelectorAll('.value_btn')[0]
+				.innerHTML.split('<')[0],
+			opts.filterData.lst[0].tvs.values.length + ' groups',
+			'should change the pill value btn after adding value from menu'
+		)
+	} catch (e) {
+		test.fail('test error: ' + e)
+	}
 	test.end()
 })
 
