@@ -496,13 +496,13 @@ function mayaddGetter_variant2samples(tk, block) {
 		}
 
 		// add in parameters that will filter samples
-		par.skewerRim = arg.tk.mds.queries.snvindel?.skewerRim
-		if (arg.tk.legend.formatFilter) {
+		par.skewerRim = tk.mds.queries.snvindel?.skewerRim
+		if (tk.legend.formatFilter) {
 			// add format fields to filter samples
 			const filter = {}
-			for (const k in arg.tk.legend.formatFilter) {
+			for (const k in tk.legend.formatFilter) {
 				if (tk.legend.formatFilter[k].hiddenvalues.size) {
-					filter[k] = [...arg.tk.legend.formatFilter[k].hiddenvalues]
+					filter[k] = [...tk.legend.formatFilter[k].hiddenvalues]
 				}
 			}
 			if (Object.keys(filter).length) {

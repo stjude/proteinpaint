@@ -538,7 +538,7 @@ tape('Collapse and expand mutations from variant link', test => {
 		tracks: [
 			{
 				type: 'mds3',
-				dslabel: 'GDC',
+				dslabel: 'ASH',
 				callbackOnRender: async (tk, bb) => {
 					const mtk = bb.tklst.find(i => i.type == 'mds3')
 
