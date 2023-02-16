@@ -99,7 +99,7 @@ export class TermdbVocab extends Vocab {
 
 	mayFillInMissingCatValues(term, key, total) {
 		if (!key) return
-		if (!(term.id in this.missingCatValsByTermId)) return
+		if (!(term?.id in this.missingCatValsByTermId)) return
 		const t = this.missingCatValsByTermId[term.id]
 		if (!(key in t.values)) {
 			// TODO: assign color here so that the same color is used for a value even as the chart gets updated or reused

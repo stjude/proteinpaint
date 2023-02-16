@@ -112,6 +112,12 @@ function setRenderers(self) {
 	self.updateUI = function() {
 		const plot = this.state.config
 		self.dom.tr.style('display', '')
+
+		if (plot?.term?.term?.type == 'geneVariant') {
+			//when term1 is a gene, hide the divide by option
+			self.dom.tr.style('display', 'none')
+		}
+
 		// only show pill for (2), not at the other cases
 		if (!plot.term0) {
 			// (1)

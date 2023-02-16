@@ -6,7 +6,7 @@ const d3format = require('d3-format')
 const binLabelFormatter = d3format.format('.3r')
 const run_rust = require('@stjude/proteinpaint-rust').run_rust
 const { getData } = require('./termdb.matrix')
-const { mclass } = require('#shared/common')
+const { mclass, dt2label } = require('#shared/common')
 
 /*
 ********************** EXPORTED
@@ -111,39 +111,41 @@ export async function barchart_data(q, ds, tdb) {
 
 	const samplesMap = new Map()
 	const bins = []
-	if (data.samples)
-		for (let i = 0; i <= 2; i++) {
-			const term = map.get(i) ? map.get(i).term : null
-			const id = term?.id ? term.id : term?.name
-			if (id && data.refs.byTermId[id]?.bins) bins.push(data.refs.byTermId[id]?.bins)
-			else bins.push([])
-			for (const [sampleId, values] of Object.entries(data.samples)) {
-				let item
-				if (samplesMap.get(sampleId)) item = samplesMap.get(sampleId)
-				else if (!samplesMap.has(sampleId)) {
-					item = { sample: parseInt(sampleId) }
-					samplesMap.set(sampleId, item)
-				}
-				if (!item) continue
-				if (id) {
-					const value = values[id]
-					if (!value) {
-						//console.log(`Sample ${sampleId} has no term ${id} value, filtered out`)
-						samplesMap.set(sampleId, null)
-					} else if (term.type == 'geneVariant') {
-						const mutation = value.values[0].class
-						item[`key${i}`] = mclass[mutation].label
-						item[`val${i}`] = mclass[mutation].label
-					} else {
-						item[`key${i}`] = value.key
-						item[`val${i}`] = value.value
+	if (data.samples) {
+		if (map.get(1)?.term?.type == 'geneVariant') {
+			//when term1 is a gene
+			processGeneVariantSamples(map, bins, data, samplesMap, ds.assayAvailability)
+		} else {
+			for (let i = 0; i <= 2; i++) {
+				const term = map.get(i) ? map.get(i).term : null
+				const id = term?.id ? term.id : term?.name
+				if (id && data.refs.byTermId[id]?.bins) bins.push(data.refs.byTermId[id]?.bins)
+				else bins.push([])
+				for (const [sampleId, values] of Object.entries(data.samples)) {
+					let item
+					if (samplesMap.get(sampleId)) item = samplesMap.get(sampleId)
+					else if (!samplesMap.has(sampleId)) {
+						item = { sample: parseInt(sampleId) }
+						samplesMap.set(sampleId, item)
 					}
-				} else {
-					item[`key${i}`] = ''
-					item[`val${i}`] = ''
+					if (!item) continue
+					if (id) {
+						const value = values[id]
+						if (!value) {
+							//console.log(`Sample ${sampleId} has no term ${id} value, filtered out`)
+							samplesMap.set(sampleId, null)
+						} else {
+							item[`key${i}`] = value.key
+							item[`val${i}`] = value.value
+						}
+					} else {
+						item[`key${i}`] = ''
+						item[`val${i}`] = ''
+					}
 				}
 			}
 		}
+	}
 	q.results.lst = [...samplesMap.values()].filter(value => value !== null)
 	q.results.bins = bins
 	const sqlDone = +new Date()
@@ -154,8 +156,39 @@ export async function barchart_data(q, ds, tdb) {
 			pj: pj.times
 		}
 	}
-	//console.log(JSON.stringify(pj.tree.results))
 	return pj.tree.results
+}
+
+//used by barchart_data
+//process gene variant data into samplesMap
+function processGeneVariantSamples(map, bins, data, samplesMap, assayAvailability) {
+	bins.push([])
+	let customSampleID = 1
+	const term1 = map.get(1) ? map.get(1).term : null
+	const id1 = term1?.id ? term1.id : term1?.name
+	if (id1 && data.refs.byTermId[id1]?.bins) bins.push(data.refs.byTermId[id1]?.bins)
+	else bins.push([])
+
+	const term2 = map.get(2) ? map.get(2).term : null
+	const id2 = term2?.id ? term2.id : term2?.name
+	if (id2 && data.refs.byTermId[id2]?.bins) bins.push(data.refs.byTermId[id2]?.bins)
+	else bins.push([])
+
+	for (const [sampleId, values] of Object.entries(data.samples)) {
+		const value1 = values[id1]
+		for (const v1 of value1.values) {
+			const item = { sample: customSampleID }
+			item[`key1`] = mclass[v1.class].label
+			item[`val1`] = mclass[v1.class].label
+			const wesByOrigin = assayAvailability?.byDt?.['1']?.byOrigin && v1.dt == 1 //whether distinguising germline and somatic WES
+			item[`key0`] = `${wesByOrigin ? (v1.origin == 'G' ? 'Germline ' : 'Somatic ') : ''}${dt2label[v1.dt]}`
+			item[`val0`] = `${wesByOrigin ? (v1.origin == 'G' ? 'Germline ' : 'Somatic ') : ''}${dt2label[v1.dt]}`
+			item[`key2`] = values[id2] ? values[id2].key : ''
+			item[`val2`] = values[id2] ? values[id2].value : ''
+			samplesMap.set(customSampleID.toString(), item)
+			customSampleID++
+		}
+	}
 }
 
 // template for partjson, already stringified so that it does not
