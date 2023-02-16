@@ -262,12 +262,6 @@ async function query_snvindel(q, ds) {
 		// provided range parameter
 		if (!ds.queries.snvindel.byrange) throw 'q.rglst[] provided but .byrange{} is missing'
 
-		if (q.skewerRim?.type == 'format') {
-			// using a format field to get sample count as rim size
-			// add this flag to return formatK2v with sample to allow to get rim count from samples of a variant
-			q.addFormatValues = true
-		}
-
 		return await ds.queries.snvindel.byrange.get(q)
 	}
 	// may allow other query method (e.g. by gene name from a db table)
@@ -368,8 +362,8 @@ function may_validate_filters(q, ds) {
 	if (q.skewerRim) {
 		if (q.skewerRim.type == 'format') {
 			if (!q.skewerRim.formatKey) throw 'skewerRim.formatKey missing when type=format'
-			if (!ds.queries?.snvindel?.byrange?._tk?.format) throw 'snvindel.byrange._tk.format{} not found when type=format'
-			if (!ds.queries.snvindel.byrange._tk.format[q.skewerRim.formatKey]) throw 'invalid skewerRim.formatKey'
+			if (!ds.queries?.snvindel?.format) throw 'snvindel.format{} not found when type=format'
+			if (!ds.queries.snvindel.format[q.skewerRim.formatKey]) throw 'invalid skewerRim.formatKey'
 		} else {
 			throw 'unknown skewerRim.type'
 		}
@@ -381,6 +375,20 @@ function may_validate_filters(q, ds) {
 		}
 	}
 	if (q.formatFilter) {
-		throw 'validate formatFilter'
+		if (typeof q.formatFilter != 'object') throw 'formatFilter{} not object'
+		if (!ds.queries?.snvindel?.format) throw 'snvindel.format{} not found when formatFilter is used'
+		const f2 = {} // change list of format values to set
+		for (const k in q.formatFilter) {
+			if (!ds.queries.snvindel.format[k]) throw 'invalid format key from formatFilter'
+			if (!Array.isArray(q.formatFilter[k])) throw 'formatFilter[k] value is not array'
+			f2[k] = new Set(q.formatFilter[k])
+		}
+		q.formatFilter = f2
+	}
+
+	// if format field is used for any purpose, set flag addFormatValues=true to retrieve format values on samples
+	// by default format values are not returned to increase efficiency
+	if (q.skewerRim?.type == 'format' || q.formatFilter) {
+		q.addFormatValues = true
 	}
 }

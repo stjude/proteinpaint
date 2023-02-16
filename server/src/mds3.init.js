@@ -623,14 +623,14 @@ export async function snvindelByRangeGetter_bcf(ds, genome) {
 				q._tk.format[id].isGT = true
 			}
 		}
-		if (ds.queries.snvindel.formatFilters) {
+		if (ds.queries.snvindel.format4filters) {
 			// array of format keys; allow to be used as filters on client
 			// TODO filtering based on numeric format?
-			if (!Array.isArray(ds.queries.snvindel.formatFilters)) throw 'snvindel.formatFilters[] is not array'
-			for (const k of ds.queries.snvindel.formatFilters) {
+			if (!Array.isArray(ds.queries.snvindel.format4filters)) throw 'snvindel.format4filters[] is not array'
+			for (const k of ds.queries.snvindel.format4filters) {
 				if (q._tk.format[k]) q._tk.format[k].isFilter = true // allow it to work as filter on client
 			}
-			delete ds.queries.snvindel.formatFilters
+			delete ds.queries.snvindel.format4filters
 		}
 	}
 
@@ -677,10 +677,16 @@ export async function snvindelByRangeGetter_bcf(ds, genome) {
 			if true, formatK2v{} will be added to sample objects
 		.infoFilter{}
 		.variantFilter{}
+		.skewerRim{}
+			{formatKey, hiddenvalues: set}
+		.formatFilter{}
+			{ <formatKey> : set of hidden values }
 	*/
 	return async param => {
 		if (!Array.isArray(param.rglst)) throw 'q.rglst[] is not array'
 		if (param.rglst.length == 0) throw 'q.rglst[] blank array'
+
+		const formatFilter = getFormatFilter(param)
 
 		let bcfpath
 		if (q._tk.chr2files) {
@@ -745,7 +751,8 @@ export async function snvindelByRangeGetter_bcf(ds, genome) {
 
 					if (q._tk?.samples?.length) {
 						// vcf file has sample, must find out samples harboring this variant
-						addSamplesFromBcfLine(q, m, l, param.addFormatValues, ds, limitSamples, param.skewerRim)
+						// exclude samples using optional format filters
+						addSamplesFromBcfLine(q, m, l, param.addFormatValues, ds, limitSamples, formatFilter)
 						if (!m.samples) {
 							// no sample found for this variant, when vcf has samples
 							// can be due to sample filtering, thus must skip this variant
@@ -760,6 +767,23 @@ export async function snvindelByRangeGetter_bcf(ds, genome) {
 		})
 		return variants
 	}
+}
+
+/*
+combine these two optional format-based filter (into the same structure as q.formatFilter), and return
+the two filters work the same way, to declare format values to exclude samples
+
+.skewerRim{}
+	{type,formatKey, hiddenvalues}
+.formatFilter{}
+	{ <formatKey> : set of hidden values }
+*/
+function getFormatFilter(q) {
+	const f = q.formatFilter || {}
+	if (q.skewerRim?.type == 'format' && q.skewerRim.hiddenvalues?.size) {
+		f[q.skewerRim.formatKey] = q.skewerRim.hiddenvalues
+	}
+	return Object.keys(f).length ? f : undefined
 }
 
 /*
@@ -894,11 +918,11 @@ ds={}
 limitSamples=[ {name} ]
 	if bcf query is limiting on this sample set. if so l[] only contain these samples
 	otherwise l[] has all samples from q._tk.samples[]
-skewerRim{}
+formatFilter{}
 	optional filter to drop samples by format key-value pair
-	{formatKey='vorigin', hiddenvalues=Set}
+	key: format keys, value: set of values to exclude
 */
-function addSamplesFromBcfLine(q, m, l, addFormatValues, ds, limitSamples, skewerRim) {
+function addSamplesFromBcfLine(q, m, l, addFormatValues, ds, limitSamples, formatFilter) {
 	// l[6] is FORMAT, l[7] is first sample
 	const format_idx = 6
 	const firstSample_idx = 7
@@ -926,16 +950,19 @@ function addSamplesFromBcfLine(q, m, l, addFormatValues, ds, limitSamples, skewe
 		}
 		const vlst = v.split(':')
 		const sampleObj = vcfFormat2sample(vlst, formatlst, sampleHeaderObj, addFormatValues)
-		if (sampleObj) {
-			// this sample is annotated with this variant
-			if (skewerRim) {
-				if (skewerRim.hiddenvalues.has(sampleObj.formatK2v[skewerRim.formatKey])) {
+		if (!sampleObj) continue // no valid sample obj returned, this sample does not carry this variant
+		if (formatFilter) {
+			let drop = false
+			for (const formatKey in formatFilter) {
+				if (formatFilter[formatKey].has(sampleObj.formatK2v[formatKey])) {
 					// sample is dropped by format filter
-					continue
+					drop = true
+					break
 				}
 			}
-			samples.push(sampleObj)
+			if (drop) continue // drop this sample
 		}
+		samples.push(sampleObj)
 	}
 	if (samples.length) m.samples = samples
 }
@@ -1033,9 +1060,12 @@ export async function svfusionByRangeGetter_file(ds, genome) {
 		})
 	}
 
+	// same parameter as snvindel.byrange.get()
 	return async param => {
 		if (!Array.isArray(param.rglst)) throw 'q.rglst[] is not array'
 		if (param.rglst.length == 0) throw 'q.rglst[] blank array'
+
+		const formatFilter = getFormatFilter(param)
 
 		let limitSamples
 		{
@@ -1152,14 +1182,19 @@ export async function svfusionByRangeGetter_file(ds, genome) {
 						const sampleObj = { sample_id: j.sample }
 						if (j.mattr) {
 							// mattr{} has sample-level attributes on this sv event, equivalent to FORMAT
-							if (param.skewerRim) {
+							if (formatFilter) {
 								// will do the same filtering as snvindel
-								if (param.skewerRim.hiddenvalues.has(j.mattr[param.skewerRim.formatKey])) {
-									// sample is dropped by format filter
-									return
+								for (const formatKey in formatFilter) {
+									if (formatFilter[formatKey].has(j.mattr[formatKey])) {
+										// sample is dropped by format filter
+										return
+									}
 								}
 							}
-							sampleObj.formatK2v = j.mattr
+							if (param.addFormatValues) {
+								// only attach format values when required
+								sampleObj.formatK2v = j.mattr
+							}
 						}
 						key2variants.get(ssm_id).samples.push(sampleObj)
 					}

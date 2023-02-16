@@ -45,7 +45,7 @@ module.exports = {
 				rim1value: 'germline',
 				noRimValue: 'somatic'
 			},
-			formatFilters: ['committee_classification']
+			format4filters: ['committee_classification'] // allow this to work as sample filter
 		},
 		svfusion: {
 			byrange: {
