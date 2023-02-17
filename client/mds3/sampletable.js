@@ -378,7 +378,7 @@ function printFormat(fobj, value) {
 			const [ref, alt] = lst // [0] is ref read count, [1] is alt
 			if (ref >= 0 && alt >= 0 && ref + alt > 0) {
 				// the two numbers are valid allelic read count
-				return `${fillbar(null, { f: alt / (alt + ref) })} ${alt}/${alt + ref}`
+				return `${fillbar(null, { f: alt / (alt + ref) })} <span style="font-size:.8em">${alt}/${alt + ref}</span>`
 			}
 		}
 	}
