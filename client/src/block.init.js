@@ -70,7 +70,6 @@ async function step1_findgm(arg) {
 					start: Math.max(0, r.start - 300),
 					stop: r.start + 300,
 					nobox: true,
-					allowpopup: arg.nopopup ? false : true,
 					tklst: arg.tklst,
 					debugmode: arg.debugmode
 				}
@@ -300,7 +299,6 @@ async function step3(arg) {
 		hlvariants: arg.hlvariants,
 		hlregions: arg.hlregions,
 		gmmode: mode,
-		allowpopup: arg.nopopup ? false : true,
 		hidedatasetexpression: arg.hidedatasetexpression,
 		hidegenecontrol: arg.hidegenecontrol,
 		hidegenelegend: arg.hidegenelegend,

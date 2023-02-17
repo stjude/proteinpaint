@@ -534,10 +534,6 @@ export class Block {
 			})
 		}
 
-		if (arg.allowpopup) {
-			this.allowpopuponce = true
-		}
-
 		{
 			const tip = new Menu()
 			butrow
@@ -4032,7 +4028,6 @@ seekrange(chr,start,stop) {
 						allgm: this.allgm,
 						tklst,
 						gmmode: gm1.cdslen ? client.gmmode.protein : client.gmmode.exononly,
-						allowpopup: this.allowpopup,
 						hidedatasetexpression: this.hidedatasetexpression,
 						hidegenecontrol: this.hidegenecontrol,
 						hidegenelegend: this.hidegenelegend,
@@ -4627,19 +4622,6 @@ seekrange(chr,start,stop) {
 					.on('click', () => {
 						this.toggleIdeogram()
 						tip.hide()
-					})
-			}
-
-			if (this.allowpopuponce) {
-				row
-					.append('button')
-					.text('Popup')
-					.style('margin-left', '10px')
-					.on('click', () => {
-						const p = this.holder.node().getBoundingClientRect()
-						const pane = client.newpane({ x: p.left, y: p.top })
-						pane.body.append(() => this.holder.node())
-						delete this.allowpopuponce
 					})
 			}
 		}

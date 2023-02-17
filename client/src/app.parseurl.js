@@ -284,7 +284,6 @@ upon error, throw err message as a string
 			holder: arg.holder,
 			genome: genomeobj,
 			dogtag: genomename,
-			allowpopup: true,
 			debugmode: arg.debugmode
 		}
 

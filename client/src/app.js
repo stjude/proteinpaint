@@ -568,7 +568,6 @@ async function findgene2paint(app, str, genomename, jwt) {
 			start: pos.start,
 			stop: pos.stop,
 			dogtag: genomename,
-			allowpopup: true,
 			tklst,
 			debugmode: app.debugmode
 		}
