@@ -8,14 +8,6 @@ import { dofetch3 } from '#common/dofetch'
 ********************** EXPORTED
 itemtable
 
-for a list of variants, print details of both variant and samples
-
-arg{}
-.div
-.mlst[]
-	can be of different dt
-.tk
-.block
 
 ********************** INTERNAL
 itemtable_oneItem
@@ -38,6 +30,16 @@ print vcf info about variant attributes
 
 const cutoff_tableview = 10
 
+/*
+for a list of variants, print details of both variant and samples
+arg{}
+.div
+.mlst[]
+	can be of different dt
+.tk
+.block
+.tippos
+*/
 export async function itemtable(arg) {
 	for (const m of arg.mlst) {
 		if (m.dt != dtsnvindel && m.dt != dtfusionrna && m.dt != dtsv) throw 'mlst[] contains unknown dt'
@@ -488,7 +490,7 @@ async function makeSvgraph(m, div, block) {
 
 		wait.remove()
 
-		const _ = await import('../src/svgraph')
+		const _ = await import('#src/svgraph')
 		_.default({
 			pairlst: [svpair],
 			genome: block.genome,

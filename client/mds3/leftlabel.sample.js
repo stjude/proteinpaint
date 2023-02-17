@@ -188,13 +188,14 @@ async function showSummary4terms(data, div, tk, block) {
 					: '')
 		})
 	}
-	const a = new Tabs({
+
+	new Tabs({
 		holder: div,
 		tabsPosition: 'vertical',
 		linePosition: 'right',
 		tabs
-	})
-	a.main()
+	}).main()
+
 	for (const [i, d] of data.entries()) {
 		const holder = tabs[i].contentHolder.style('padding-left', '20px')
 		if (d.numbycategory) {

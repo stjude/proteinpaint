@@ -67,7 +67,6 @@ export async function init_sampletable(arg) {
 }
 
 export async function displaySampleTable(samples, args) {
-	console.log(args)
 	if (samples.length == 1) {
 		return await make_singleSampleTable(samples[0], args)
 	}

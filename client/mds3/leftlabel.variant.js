@@ -2,7 +2,8 @@ import { fold_glyph, settle_glyph } from './skewer.render'
 import { may_render_skewer } from './skewer'
 import { itemtable } from './itemtable'
 import { makelabel, positionLeftlabelg } from './leftlabel'
-import { tab2box, to_textfile } from '../src/client'
+import { to_textfile } from '#dom/downloadTextfile'
+import { Tabs } from '#dom/toggleButtons'
 import { dt2label } from '#shared/common'
 import { rangequery_rglst } from './tk'
 import { samples2columnsRows } from './sampletable'
@@ -204,20 +205,24 @@ async function listSkewerData(tk, block) {
 	// multiple dt
 	const tabs = []
 	for (const [dt, mlst] of dt2mlst) {
-		tabs.push({
-			label: mlst.length + ' ' + dt2label[dt],
-			callback: div => {
-				itemtable({
-					div,
-					mlst,
-					tk,
-					block,
-					doNotListSample4multim: true
-				})
-			}
+		tabs.push({ label: mlst.length + ' ' + dt2label[dt] })
+	}
+	new Tabs({
+		holder: tk.menutip.d.append('div').style('margin', '10px'),
+		tabsPosition: 'vertical',
+		linePosition: 'right',
+		tabs
+	}).main()
+	let i = 0
+	for (const [dt, mlst] of dt2mlst) {
+		itemtable({
+			div: tabs[i++].contentHolder.append('div').style('margin-left', '10px'),
+			mlst,
+			tk,
+			block,
+			doNotListSample4multim: true
 		})
 	}
-	tab2box(tk.menutip.d.append('div').style('margin', '10px'), tabs)
 }
 
 function mayAddSkewerModeOption(tk, block) {
