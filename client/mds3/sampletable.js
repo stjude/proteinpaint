@@ -103,16 +103,7 @@ function feedSample2selectCallback(tk, block, samples, sampleIdxLst) {
 		}
 		pickLst.push(s1)
 	}
-	let source
-	if (block.gmmode == 'genomic') {
-		const r = block.rglst[0]
-		source = 'Samples with mutations from ' + r.chr + ':' + r.start + '-' + r.stop
-	} else if (block.usegm) {
-		source = 'Samples with mutations in ' + block.usegm.name
-	} else {
-		source = 'Samples with mutations'
-	}
-	tk.allow2selectSamples.callback({ samples: pickLst, source })
+	tk.allow2selectSamples.callback({ samples: pickLst, source: 'Samples with ' + block2source(block) })
 }
 
 async function make_singleSampleTable(s, arg) {
@@ -395,4 +386,13 @@ function printFormat(fobj, value) {
 	}
 	// any other case, simply return raw value without parsing
 	return value
+}
+
+export function block2source(b) {
+	if (b.gmmode == 'genomic') {
+		const r = b.rglst[0]
+		return 'mutations from ' + r.chr + ':' + r.start + '-' + r.stop
+	}
+	if (b.usegm) return 'mutations in ' + b.usegm.name
+	return 'mutations'
 }

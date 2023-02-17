@@ -4,10 +4,9 @@ import { itemtable } from './itemtable'
 import { makelabel, positionLeftlabelg } from './leftlabel'
 import { to_textfile } from '#dom/downloadTextfile'
 import { Tabs } from '#dom/toggleButtons'
-import { dt2label } from '#shared/common'
 import { rangequery_rglst } from './tk'
-import { samples2columnsRows } from './sampletable'
-import { mclass, dtsnvindel, dtsv, dtfusionrna } from '#shared/common'
+import { samples2columnsRows, block2source } from './sampletable'
+import { dt2label, mclass, dtsnvindel, dtsv, dtfusionrna } from '#shared/common'
 
 /*
 the "#variants" label should always be made as it is about any content displayed in mds3 track
@@ -385,5 +384,5 @@ async function downloadVariants(tk, block) {
 			lines.push(line.join('\t'))
 		}
 	}
-	to_textfile('Mutations.txt', headerline.join('\t') + '\n' + lines.join('\n'))
+	to_textfile(block2source(block) + '.txt', headerline.join('\t') + '\n' + lines.join('\n'))
 }
