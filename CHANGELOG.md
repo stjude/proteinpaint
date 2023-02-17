@@ -1,6 +1,12 @@
 # Change Log
 
 All notable changes to this project will be documented in this file. 
+## 2.10.0
+
+- option to select samples from mds3 track
+- activated more integration and unit tests on CI
+
+ 
 ## 2.9.8-2
 
 - Bundle all cards.
