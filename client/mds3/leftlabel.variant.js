@@ -384,5 +384,8 @@ async function downloadVariants(tk, block) {
 			lines.push(line.join('\t'))
 		}
 	}
-	to_textfile(block2source(block) + '.txt', headerline.join('\t') + '\n' + lines.join('\n'))
+	to_textfile(
+		block2source(block) + ' ' + new Date().toLocaleDateString() + '.txt',
+		headerline.join('\t') + '\n' + lines.join('\n')
+	)
 }
