@@ -1,7 +1,7 @@
 const tape = require('tape')
 const d3s = require('d3')
 const filterInit = require('../filter').filterInit
-const { sleep, detectElement } = require('../../test/test.helpers')
+const { sleep, detectLst, detectOne, detectZero } = require('../../test/test.helpers')
 
 /*********
 the direct functional testing of the component, without the use of runpp()
@@ -154,14 +154,14 @@ tape('tvs (common): buttons', async test => {
 
 	try {
 		// trigger and check negate value change
-		const pill = opts.holder.select('.tvs_pill').node()
+		const pill = await detectOne({ elem: opts.holder.node(), selector: '.tvs_pill' })
 		pill.click()
 		const controlTipd = opts.filter.Inner.dom.controlsTip.d
 		const menuRows = controlTipd.selectAll('tr')
 		const editOpt = menuRows.filter(d => d.action == 'edit') //; console.log(149, editOpt.on('click'))
 		editOpt.node().click()
 		const tipd = opts.filter.Inner.dom.termSrcDiv
-		const isNotInput = await detectElement({ elem: tipd.node(), selector: 'input[name=sja_filter_isnot_input]' })
+		const isNotInput = await detectOne({ elem: tipd.node(), selector: 'input[name=sja_filter_isnot_input]' })
 		isNotInput.click()
 
 		/*
@@ -175,9 +175,9 @@ tape('tvs (common): buttons', async test => {
 		if (option == 'B') {
 			// change to false to use the callback approach
 			/*** OPTION B: await on rerendered element - assumes the applyBtn will be gone temporarily during update ***/
-			const applyBtn = await detectElement({ elem: tipd.node(), selector: '.sjpp_apply_btn' })
+			const applyBtn = await detectOne({ elem: tipd.node(), selector: '.sjpp_apply_btn' })
 			applyBtn.click()
-			const negateBtn = await detectElement({ elem: tipd.node(), selector: '.negate_btn' })
+			const negateBtn = await detectOne({ elem: tipd.node(), selector: '.negate_btn' })
 			test.equal(negateBtn.innerHTML, 'NOT', 'should change the negate value of the pill')
 			test.end()
 		} else if (option == 'C') {
@@ -191,7 +191,7 @@ tape('tvs (common): buttons', async test => {
 				pendingResolve()
 				test.end()
 			}
-			const applyBtn = await detectElement({ elem: tipd.node(), selector: '.sjpp_apply_btn' })
+			const applyBtn = await detectOne({ elem: tipd.node(), selector: '.sjpp_apply_btn' })
 			await new Promise((resolve, reject) => {
 				pendingResolve = resolve
 				try {
@@ -202,7 +202,7 @@ tape('tvs (common): buttons', async test => {
 			})
 		} else if (option == 'D') {
 			/*** OPTION D: obtain the postRender promise directly without using rx.Bus ***/
-			const applyBtn = await detectElement({ elem: tipd.node(), selector: '.sjpp_apply_btn' })
+			const applyBtn = await detectOne({ elem: tipd.node(), selector: '.sjpp_apply_btn' })
 			applyBtn.click()
 			await opts.filter.getPromise('postRender')
 			test.equal(
@@ -241,14 +241,14 @@ tape.skip('tvs: Categorical', async test => {
 	try {
 		await opts.filter.main(opts.filterData)
 		//trigger and check tip menu
-		const pill = await detectElement({ elem: opts.holder.node(), selector: '.tvs_pill' })
+		const pill = await detectOne({ elem: opts.holder.node(), selector: '.tvs_pill' })
 		pill.click()
 		const controlTipd = opts.filter.Inner.dom.controlsTip.d
 		const menuRows = controlTipd.selectAll('tr')
 		const editOpt = menuRows.filter(d => d.action == 'edit')
 		editOpt.node().click()
 		const tipd = opts.filter.Inner.dom.termSrcDiv
-		const applyBtn = await detectElement({ elem: tipd.node(), selector: '.sjpp_apply_btn' })
+		const applyBtn = await detectOne({ elem: tipd.node(), selector: '.sjpp_apply_btn' })
 
 		test.ok(applyBtn, 'Should have 1 button to apply value change')
 		test.equal(tipd.selectAll("input[name^='select']").size(), 10, 'Should have a checkbox for each value')
@@ -260,13 +260,10 @@ tape.skip('tvs: Categorical', async test => {
 			.querySelectorAll("input[name^='select']")[0]
 			.click()
 		applyBtn.click()
-		await sleep(300)
-
+		// defer the execution of the next step to the next process loop "tick"
+		const valueBtn = await detectOne({ elem: opts.holder.node(), selector: '.value_btn:nth-child(1n)' })
 		test.equal(
-			opts.holder
-				.node()
-				.querySelectorAll('.value_btn')[0]
-				.innerHTML.split('<')[0],
+			valueBtn.innerHTML.split('<')[0],
 			opts.filterData.lst[0].tvs.values.length + ' groups',
 			'should change the pill value btn after adding value from menu'
 		)
@@ -335,27 +332,26 @@ tape('tvs: Numeric', async test => {
 		'should label the pill with the correct range label'
 	)
 
-	//trigeer and check tip menu
-	const pill = opts.holder.select('.tvs_pill').node()
+	//trigger and check tip menu
+	const pill = await detectOne({ elem: opts.holder.node(), selector: '.tvs_pill' })
 	pill.click()
 
-	await sleep(350)
-	const controlTipd = opts.filter.Inner.dom.controlsTip.d
-	const menuRows = controlTipd.selectAll('tr')
+	const controlsTipd = opts.filter.Inner.dom.controlsTip.d
+	const menuRows = controlsTipd.selectAll('tr')
 	const editOpt = menuRows.filter(d => d.action == 'edit')
 	editOpt.node().click()
 
-	await sleep(700)
 	const tipd = opts.filter.Inner.dom.termSrcDiv
-
-	test.equal(tipd.selectAll('.sjpp_apply_btn').size(), 2, 'Should have 2 button to apply value change')
+	const applyBtn = await detectLst({ elem: tipd.node(), selector: '.sjpp_apply_btn', count: 2 })
+	test.equal(applyBtn.length, 2, 'Should have 2 button to apply value change')
 	test.equal(tipd.selectAll('.sjpp_delete_btn').size(), 1, 'Should have 1 button to remove the range')
 	test.equal(tipd.node().querySelectorAll('.start_text')[0].innerHTML, '1000', 'Should match start value with data')
 	test.equal(tipd.node().querySelectorAll('.stop_text')[0].innerHTML, '2000', 'Should match stop value with data')
 
-	//trigeer and check range edit
+	//trigger and check range edit
 	const brush = opts.filter.Inner.pills['1'].Inner.num_obj.brushes[0].d3brush
 	d3s.select(tipd.node().querySelectorAll('.range_brush')[0]).call(brush.move, [15.9511, 30.9465])
+
 	test.equal(
 		tipd
 			.selectAll('table')
@@ -379,58 +375,41 @@ tape('tvs: Numeric', async test => {
 		.node()
 		.click()
 
-	await sleep(800)
+	const valueBtn = await detectOne({ elem: opts.holder.node(), selector: '.value_btn:nth-child(1n)' })
 	test.equal(
-		opts.holder
-			.node()
-			.querySelectorAll('.value_btn')[0]
-			.innerText.split(' ')
-			.pop(),
+		valueBtn.innerText.split(' ').pop(),
 		String(opts.filterData.lst[0].tvs.ranges[0].stop),
 		'should change range from the menu'
 	)
 
 	// //trigger and check adding unannotated categories
 	pill.click()
-	await sleep(150)
+	await detectLst({ elem: controlsTipd.node(), selector: 'tr', count: 5 })
 	editOpt.node().click()
-	await sleep(700)
 
-	tipd
-		.node()
-		.querySelectorAll("input[name^='select']")[0]
-		.click()
+	const selectInputs = await detectLst({ elem: tipd.node(), selector: `input[name^='select']`, count: 3 })
+	selectInputs[0].click()
 
 	tipd.selectAll('.sjpp_apply_btn')._groups[0][1].click()
-	await sleep(800)
 
+	const valueBtn1 = await detectOne({ elem: opts.holder.node(), selector: '.value_btn:nth-child(1n)' })
 	test.equal(
-		opts.holder
-			.node()
-			.querySelectorAll('.value_btn')[0]
-			.innerHTML.split('<')[0],
+		valueBtn1.innerHTML.split('<')[0],
 		'1331.8 &lt; ',
 		'should change value btn text after selecting unannotated value'
 	)
 
 	// //trigger and check adding new range
 	pill.click()
-	await sleep(150)
+	await detectLst({ elem: controlsTipd.node(), selector: 'tr', count: 5 })
 	editOpt.node().click()
-	await sleep(700)
 
-	tipd
-		.node()
-		.querySelectorAll('.add_range_btn')[0]
-		.click()
-
-	await sleep(1000)
-
-	test.equal(
-		tipd.node().querySelectorAll('.add_range_btn')[0].style.display,
-		'none',
-		'Should hide button to add new range'
-	)
+	const addRangeBtn = await detectOne({ elem: tipd.node(), selector: `.add_range_btn:nth-child(1n)` })
+	addRangeBtn.click()
+	// it doesn't seem like this DOM rerender requires the helper function, can be commented out???
+	// but CI may be different
+	await detectOne({ elem: tipd.node(), selector: `.add_range_btn:nth-child(1n)` })
+	test.equal(addRangeBtn.style.display, 'none', 'Should hide button to add new range')
 
 	test.equal(
 		tipd
@@ -465,8 +444,7 @@ tape('tvs: Numeric', async test => {
 		.querySelectorAll('.sjpp_delete_btn')[1]
 		.click()
 
-	await sleep(800)
-
+	await detectZero({ elem: tipd.node(), selector: `.table.note_tr` })
 	test.equal(
 		tipd
 			.selectAll('table')
@@ -638,7 +616,7 @@ tape('tvs: Condition', async test => {
 	)
 
 	//trigeer and check tip menu
-	const pill = opts.holder.select('.tvs_pill').node()
+	const pill = await detectOne({ elem: opts.holder.node(), selector: '.tvs_pill' })
 	pill.click()
 
 	await sleep(150)
@@ -776,7 +754,7 @@ tape('tvs: Cohort + Numeric', async test => {
 		await sleep(200)
 
 		// trigger fill-in of pill.num_obj.density_data
-		const pill = opts.holder.select('.tvs_pill').node()
+		const pill = await detectOne({ elem: opts.holder.node(), selector: '.tvs_pill' })
 		pill.click()
 		await sleep(150)
 		const controlTipd = opts.filter.Inner.dom.controlsTip.d

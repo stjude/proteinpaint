@@ -1,25 +1,35 @@
-exports.sleep = function sleep(ms) {
+export function sleep(ms) {
 	return new Promise(resolve => setTimeout(resolve, ms))
 }
 
+//exports.sleep = sleep
+
 /*
 	Detect an asynchronously rendered element
-	_opts{}      see the defaults inside the detectElement function
+	NOTE: you can use MutationObserver directly, this is meant for convenience for common use cases
+
+	Argument
+	_opts{}      see the defaults inside the detectLst function
 	.elem        the DOM element where the selector will be queried
 	.selector    (required) a valid CSS-selector of the element to be returned
-	
+	.count       the expected number of detected matching elements to stop the observer
+
 	// options related to the native MutationObserver
 	.callback()  optional, the argument to the MutationObserver constructor
 	.observeOpts{}  the argument to a MutationObserver instance's observe() method
 	  .target       the first observe() argument, the DOM element to be observed for changes, may be the same as opts.elem
 	  .opts         the second observer() argument, see https://developer.mozilla.org/en-US/docs/Web/API/MutationObserver/observe
+
+	Returns
+	Array of zero or more matched DOM nodes
 */
 
-exports.detectElement = function detectElement(_opts = {}) {
+export async function detectLst(_opts = {}) {
 	const defaults = {
 		elem: document.body,
 		// selector: required
 		maxTime: 5000,
+		count: 1,
 		observeOpts: {
 			target: document.body,
 			opts: {
@@ -30,24 +40,28 @@ exports.detectElement = function detectElement(_opts = {}) {
 	}
 
 	const opts = Object.assign(defaults, _opts)
-
+	window.opts = opts
 	if (!opts.selector) throw `missing opts.selector`
+	// always defer execution to the next step, to give time for an element to change
+	await sleep(0)
 
 	const start = Date.now()
 	return new Promise((resolve, reject) => {
-		const elem = opts.elem.querySelector(opts.selector)
-		if (elem) {
-			resolve(elem)
+		const elems = opts.elem.querySelectorAll(opts.selector)
+		const matched = elems.length === opts.count
+		if (matched) {
+			resolve([...elems])
 			return
 		}
 
 		const defaultCallback = mutations => {
-			const elem = opts.elem.querySelector(opts.selector)
+			const elems = opts.elem.querySelectorAll(opts.selector)
+			const matched = elems.length === opts.count //; console.log(58, elems.length, opts.count)
 			const expired = Date.now() - start > opts.maxTime
-			if (elem || expired) {
+			if (matched || expired) {
 				observer.disconnect()
 				if (t) clearTimeout(t)
-				if (elem) resolve(elem)
+				if (matched) resolve([...elems])
 				else reject(`test exceeded maxTime=${opts.maxTime}`)
 			}
 		}
@@ -62,4 +76,24 @@ exports.detectElement = function detectElement(_opts = {}) {
 			}, opts.maxTime)
 		}
 	})
+}
+
+/*
+	same arguments as detectLst, except count is forced to 1
+	return the expected element
+*/
+export async function detectOne(opts) {
+	opts.count = 1
+	const lst = await detectLst(opts)
+	return lst[0]
+}
+
+/*
+	same arguments as detectLst, except count is forced to 0
+	return the expected element
+*/
+export async function detectZero(opts) {
+	opts.count = 0
+	const lst = await detectLst(opts)
+	return lst[0] // should be undefined
 }

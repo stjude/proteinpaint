@@ -2,7 +2,6 @@ import tape from 'tape'
 import { select } from 'd3-selection'
 import { TVSInit, showTvsMenu } from '../tvs'
 import { vocabInit } from '#termdb/vocabulary'
-import { detectElement } from '../../test/test.helpers'
 import { getExample } from '#termdb/test/vocabData'
 
 const vocab = getExample()
