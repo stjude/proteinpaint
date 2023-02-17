@@ -149,7 +149,7 @@ async function itemtable_multiItems(arg, grid) {
 		.style('display', 'none')
 	goBackButton
 		.append('span')
-		.text('<< Back to list')
+		.html('&#8810; Back to list')
 		.attr('class', 'sja_clbtext')
 		.on('click', () => {
 			grid.style('display', 'inline-grid')
@@ -245,7 +245,7 @@ function table_snvindel({ mlst, tk, block }, grid) {
 		td1.text(m.ref && m.alt ? 'Mutation' : 'Position')
 		print_snv(td2, m, tk)
 	}
-	if ('occurrence' in m) {
+	if (m.occurrence > 1) {
 		const [td1, td2] = get_list_cells(grid)
 		td1.text('Occurrence')
 		td2.text(m.occurrence)
