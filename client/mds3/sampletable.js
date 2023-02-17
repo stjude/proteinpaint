@@ -67,6 +67,7 @@ export async function init_sampletable(arg) {
 }
 
 export async function displaySampleTable(samples, args) {
+	console.log(args)
 	if (samples.length == 1) {
 		return await make_singleSampleTable(samples[0], args)
 	}
@@ -81,8 +82,9 @@ export async function displaySampleTable(samples, args) {
 				text: args.tk.allow2selectSamples.buttonText,
 				callback: sampleIdxLst => {
 					// argument is list of array index of selected samples
-					feedSample2selectCallback(args.tk, samples, sampleIdxLst)
+					feedSample2selectCallback(args.tk, args.block, samples, sampleIdxLst)
 					args.tk.itemtip.hide()
+					args.tk.menutip.hide()
 				}
 			}
 		]
@@ -91,7 +93,7 @@ export async function displaySampleTable(samples, args) {
 	return renderTable(params)
 }
 
-function feedSample2selectCallback(tk, samples, sampleIdxLst) {
+function feedSample2selectCallback(tk, block, samples, sampleIdxLst) {
 	// map sampleIdxLst to sample attributes that caller wants to pick
 	const pickLst = []
 	for (const i of sampleIdxLst) {
@@ -102,7 +104,16 @@ function feedSample2selectCallback(tk, samples, sampleIdxLst) {
 		}
 		pickLst.push(s1)
 	}
-	tk.allow2selectSamples.callback(pickLst)
+	let source
+	if (block.gmmode == 'genomic') {
+		const r = block.rglst[0]
+		source = 'Samples with mutations from ' + r.chr + ':' + r.start + '-' + r.stop
+	} else if (block.usegm) {
+		source = 'Samples with mutations in ' + block.usegm.name
+	} else {
+		source = 'Samples with mutations'
+	}
+	tk.allow2selectSamples.callback({ samples: pickLst, source })
 }
 
 async function make_singleSampleTable(s, arg) {
@@ -216,8 +227,9 @@ function printSampleName(sample, tk, div, block) {
 			.style('display', 'block')
 			.text(t.endsWith('s') ? t.substring(0, t.length - 1) : t)
 			.on('click', () => {
-				feedSample2selectCallback(tk, [sample], [0])
+				feedSample2selectCallback(tk, block, [sample], [0])
 				tk.itemtip.hide()
+				tk.menutip.hide()
 			})
 	}
 }

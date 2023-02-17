@@ -37,8 +37,8 @@ runproteinpaint({
 			allow2selectSamples: {
 				buttonText:'Add to gdc',
 				attributes:['case.case_id'],
-				callback: samples=>{
-					console.log('selected',samples)
+				callback: ({samples,source})=>{
+					console.log(source,samples)
 				}
 			},
 
