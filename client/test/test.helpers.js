@@ -40,7 +40,7 @@ export async function detectLst(_opts = {}) {
 	}
 
 	const opts = Object.assign(defaults, _opts)
-	window.opts = opts
+
 	if (!opts.selector) throw `missing opts.selector`
 	// always defer execution to the next step, to give time for an element to change
 	await sleep(0)
