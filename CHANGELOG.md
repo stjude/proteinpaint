@@ -1,6 +1,10 @@
 # Change Log
 
 All notable changes to this project will be documented in this file. 
+## 2.10.1
+
+- fix the rollup bundling of client code that breaks GDC bundling
+ 
 ## 2.10.0
 
 - option to select samples from mds3 track

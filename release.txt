@@ -1,1 +1,0 @@
-- fix the rollup bundling of client code that breaks GDC bundling
