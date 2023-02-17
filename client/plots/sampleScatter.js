@@ -1,13 +1,19 @@
 import { getCompInit, copyMerge } from '../rx'
-import { fillTermWrapper } from '../termsetting/termsetting'
-import { renderTable } from '../dom/table'
+import { fillTermWrapper } from '#termsetting'
+import { filterJoin, getFilterItemByTag } from '#filter'
+import { renderTable } from '#dom/table'
+import { make_table_2col } from '#dom/table2col'
+import { icons as icon_functions } from '#dom/control.icons'
+import { Menu } from '#dom/menu'
+import { d3lasso } from '#common/lasso'
+import { mclass, dt2label, morigin } from '#shared/common'
 import { scaleLinear as d3Linear } from 'd3-scale'
-import { filterJoin, getFilterItemByTag } from '../filter/filter'
 import { rgb } from 'd3-color'
-
+import { zoom as d3zoom, zoomIdentity } from 'd3-zoom'
+import { controlsInit } from './controls'
+import { axisLeft, axisBottom } from 'd3-axis'
 import {
-	zoom as d3zoom,
-	zoomIdentity,
+	symbol,
 	symbolCircle,
 	symbolTriangle,
 	symbolCross,
@@ -18,15 +24,7 @@ import {
 	symbolDiamond2,
 	symbolStar,
 	symbolSquare2
-} from 'd3'
-import { d3lasso } from '../common/lasso'
-import { Menu } from '#dom/menu'
-import { controlsInit } from './controls'
-import { axisLeft, axisBottom } from 'd3-axis'
-import { make_table_2col } from '#dom/table2col'
-import { icons as icon_functions } from '../dom/control.icons'
-import { symbol } from 'd3-shape'
-const { mclass, dt2label, morigin } = require('#shared/common')
+} from 'd3-shape'
 
 /*
 sample object returned by server:
