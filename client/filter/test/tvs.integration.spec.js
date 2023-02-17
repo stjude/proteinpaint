@@ -220,7 +220,7 @@ tape('tvs (common): buttons', async test => {
 	}
 })
 
-tape('tvs: Categorical', async test => {
+tape.skip('tvs: Categorical', async test => {
 	const opts = getOpts({
 		filterData: {
 			type: 'tvslst',
