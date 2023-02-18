@@ -21,6 +21,7 @@ class Recover {
 				.style('text-align', 'right')
 		}
 		this.menu = new Menu({ padding: '5px' })
+		this.hasStatePreMain = true
 		this.state = opts.getState || (appState => appState)
 		this.reactsTo = opts.reactsTo || (() => true) // could be undefined
 		this.getState = opts.getState || (appState => appState)

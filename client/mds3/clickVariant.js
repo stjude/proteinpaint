@@ -139,8 +139,13 @@ async function click2sunburst(d, tk, block, tippos) {
 	if (d.mlst.length == 1) {
 		arg.chartlabel = d.mlst[0].mname
 	} else {
-		// multiple m, use mname of most recurrent variant
-		arg.chartlabel = d.mlst.reduce((i, j) => (j.occurrence > i.occurrence ? j : i)).mname + ' etc'
+		const mnameSet = new Set(d.mlst.map(i => i.mname))
+		if (mnameSet.size == 1) {
+			arg.chartlabel = [...mnameSet][0]
+		} else {
+			// multiple m of different mname. use mname of most recurrent variant
+			arg.chartlabel = d.mlst.reduce((i, j) => (j.occurrence > i.occurrence ? j : i)).mname + ' etc'
+		}
 	}
 	const _ = await import('#src/sunburst')
 	_.default(arg)

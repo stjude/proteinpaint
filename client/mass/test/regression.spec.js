@@ -667,6 +667,9 @@ for (const item of activeTests.length ? activeTests : testList) {
 function runpp(plot, runtest, test) {
 	plot.chartType = 'regression'
 	helpers.getRunPp('mass', {
+		nav: {
+			activeTab: 1
+		},
 		state: {
 			genome: 'hg38',
 			dslabel: 'SJLife'

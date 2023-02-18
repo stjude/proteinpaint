@@ -191,7 +191,7 @@ async function fillMenu(self, div, tvs) {
 
 // convert violin data (vd) to old density data (dd)
 export function convertViolinData(vd) {
-	const p = vd.plots[0] // assuming only one plot
+	const p = vd.plots[0] || { plotValueCount: 0, biggestBin: 0, bins: [] } // assuming only one plot
 	const dd = {
 		minvalue: vd.min,
 		maxvalue: vd.max,
@@ -376,7 +376,6 @@ function addRangeTableNoDensity(self, tvs) {
 			self.dom.tip.hide()
 			const start = brush.start_input.property('value')
 			const stop = brush.stop_input.property('value')
-			console.log([stop])
 			const range = {
 				start: start === '' ? minval : start,
 				startinclusive: brush.start_select.property('value') === 'startinclusive',

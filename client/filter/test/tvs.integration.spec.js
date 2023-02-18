@@ -1,7 +1,7 @@
 const tape = require('tape')
 const d3s = require('d3')
 const filterInit = require('../filter').filterInit
-const { sleep, detectLst, detectOne, detectZero } = require('../../test/test.helpers')
+const { sleep, detectLst, detectOne, detectZero, whenHidden, whenVisible } = require('../../test/test.helpers')
 
 /*********
 the direct functional testing of the component, without the use of runpp()
@@ -220,7 +220,7 @@ tape('tvs (common): buttons', async test => {
 	}
 })
 
-tape.skip('tvs: Categorical', async test => {
+tape('tvs: Categorical', async test => {
 	const opts = getOpts({
 		filterData: {
 			type: 'tvslst',
@@ -468,23 +468,14 @@ tape('tvs: Numeric', async test => {
 
 	// test merging ranges by adding new range
 	tipd.selectAll('.sjpp_apply_btn')._groups[0][1].click()
-	await sleep(800)
-
+	await whenHidden(tipd.node().parentNode)
 	pill.click()
-	await sleep(150)
+	await detectLst({ elem: controlsTipd.node(), selector: 'tr', count: 5 })
 	editOpt.node().click()
-	await sleep(700)
-
-	tipd
-		.node()
-		.querySelectorAll('.add_range_btn')[0]
-		.click()
-	await sleep(1000)
-
-	tipd
-		.node()
-		.querySelectorAll('.start_select')[1]
-		.dispatchEvent(new Event('click'))
+	const addRangeBtn0 = await detectOne({ elem: tipd.node(), selector: '.add_range_btn' })
+	addRangeBtn0.click()
+	//const startSelects = await detectLst({ elem: tipd.node(), selector: '.start_select', count: 3}); console.log(477, startSelects)
+	//startSelects[1].dispatchEvent(new Event('click')); return;
 	const start_value_premerge = +tipd.node().querySelectorAll('.start_input')[0].value
 	const stop_input = tipd.node().querySelectorAll('.stop_input')[0]
 	tipd.node().querySelectorAll('.start_input')[1].value = +stop_input.value - 400
@@ -492,57 +483,40 @@ tape('tvs: Numeric', async test => {
 	//press 'Enter' to update bins
 	stop_input.addEventListener('keyup', () => {})
 	stop_input.dispatchEvent(enter_event)
-
 	tipd.selectAll('.sjpp_apply_btn')._groups[0][1].click()
-	await sleep(800)
-
-	test.true(
-		opts.holder
-			.node()
-			.querySelectorAll('.value_btn')[0]
-			.innerHTML.includes(start_value_premerge + ' '),
-		'should merge ranges into 1 range'
-	)
+	const valueBtn0 = await detectOne({ elem: opts.holder.node(), selector: '.value_btn' })
+	test.true(valueBtn0.innerHTML.includes(start_value_premerge + ' '), 'should merge ranges into 1 range')
 
 	// test changing the <= option for start boundary
 	pill.click()
-	await sleep(150)
+	await detectLst({ elem: controlsTipd.node(), selector: 'tr', count: 5 })
 	editOpt.node().click()
-	await sleep(300)
-	const tr = tipd
-		.node()
-		.querySelector('table')
-		.querySelector('.range_div')
+	const tr = await detectOne({ elem: tipd.node(), selector: '.range_div' })
 	tr.querySelector('.edit_btn').click()
 	tr.querySelector('.start_input').value = 0
-	tr.querySelector('.start_input').dispatchEvent(
+	/*tr.querySelector('.start_input').dispatchEvent(
 		new KeyboardEvent('keyup', {
 			code: '0',
 			key: '0',
 			keyCode: 0
 		})
 	)
-	await sleep(100)
+	await sleep(100)*/
 	tr.querySelector('.stop_select').value = 'stopunbounded'
 	d3s.select(tr.querySelector('.stop_select')).on('change')()
 	await sleep(100)
 	tr.querySelector('.stop_select').dispatchEvent(enter_event)
 	tr.querySelector('.sjpp_apply_btn').click()
-	await sleep(500) //Fix for test failing in CI
-	test.true(
-		opts.holder
-			.node()
-			.querySelectorAll('.value_btn')[0]
-			.innerHTML.includes('&gt; 0'),
-		'should show a greater than pill value'
-	)
+	const valueBtn0gt = await detectOne({ elem: opts.holder.node(), selector: '.value_btn' })
+	//await sleep(500) //Fix for test failing in CI
+	test.true(valueBtn0gt.innerHTML.includes('&gt; 0'), 'should show a greater than pill value')
 
-	//const menuRows1 = controlTipd.selectAll('tr')
+	//const menuRows1 = controlsTipd.selectAll('tr')
 	//const editOpt1 = menuRows.filter(d => d.action == 'edit')
 	pill.click()
-	await sleep(30)
+	await whenVisible(controlsTipd.node())
 	editOpt.node().click()
-	await sleep(500)
+	await whenVisible(tipd.node())
 	const tr1 = tipd
 		.node()
 		.querySelector('table')
@@ -554,15 +528,12 @@ tape('tvs: Numeric', async test => {
 	await sleep(100)
 	tr1.querySelector('.start_select').dispatchEvent(enter_event)
 	tr1.querySelector('.sjpp_apply_btn').click()
-	await sleep(500) //Increased time to fix test failing in CI
+	const gtValueBtn = await detectOne({ elem: opts.holder.node(), selector: '.value_btn' })
 	test.true(
-		opts.holder
-			.node()
-			.querySelectorAll('.value_btn')[0]
-			/* HTML entity code does not work in this instance (like in the above .sjpp_apply_btn 
-				test) for some reason. Test fails everytime. */
-			// .innerHTML.includes('&ge; 0'),
-			.innerHTML.includes('≥ 0'),
+		/* HTML entity code does not work in this instance (like in the above .sjpp_apply_btn 
+			test) for some reason. Test fails everytime. */
+		// .innerHTML.includes('&ge; 0'),
+		gtValueBtn.innerHTML.includes('≥ 0'),
 		'should show a >= 0 in the pill value'
 	)
 

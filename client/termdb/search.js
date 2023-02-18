@@ -36,9 +36,8 @@ class TermSearch {
 		this.isVisible = 'isVisible' in opts ? opts.isVisible : true
 	}
 
-	async init() {
-		this.state = this.getState(this.app.getState())
-		this.initUI()
+	async init(appState) {
+		this.initUI(this.getState(appState))
 	}
 
 	reactsTo(action) {
@@ -91,9 +90,9 @@ class TermSearch {
 export const searchInit = getCompInit(TermSearch)
 
 function setRenderers(self) {
-	self.initUI = () => {
+	self.initUI = state => {
 		self.dom.holder.style('display', self.search && self.search.isVisible == false ? 'none' : 'block')
-		const placeholderDetail = self.state.allowedTermTypes.includes('geneVariant') ? ' terms or genes' : '...'
+		const placeholderDetail = state.allowedTermTypes.includes('geneVariant') ? ' terms or genes' : '...'
 		self.dom.input = self.dom.holder
 			.style('text-align', 'left')
 			.append('input')

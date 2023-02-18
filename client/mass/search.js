@@ -30,7 +30,6 @@ class MassSearch {
 	}
 
 	async init(appState) {
-		this.state = this.getState(appState)
 		this.dom = {
 			holder: this.opts.holder,
 			holderNode: this.opts.holder.node(),

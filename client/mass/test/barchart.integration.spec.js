@@ -11,6 +11,9 @@ const vocabData = require('../../termdb/test/vocabData')
 
 const runpp = helpers.getRunPp('mass', {
 	state: {
+		nav: {
+			activeTab: 1
+		},
 		vocab: {
 			dslabel: 'TermdbTest',
 			genome: 'hg38-test'
