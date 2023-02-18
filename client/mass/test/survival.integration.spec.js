@@ -8,6 +8,9 @@ const helpers = require('../../test/front.helpers.js')
 
 const runpp = helpers.getRunPp('mass', {
 	state: {
+		nav: {
+			activeTab: 1
+		},
 		dslabel: 'TermdbTest',
 		genome: 'hg38-test'
 	},

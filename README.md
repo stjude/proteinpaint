@@ -24,7 +24,6 @@ npm run sethooks
 nvm use 16
 npm install
 # follow the instructions at https://docs.google.com/document/d/1tkEHG_vYtT-OifPV-tlPeWQUMsEd3aWAKf5ExOT8G34/edit
-# to install system and application dependencies, then run of the scripts below
 ```
 
 ## Develop
