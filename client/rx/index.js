@@ -63,7 +63,7 @@ export function getInitFxn(_Class_) {
 		// freeze the api's properties and methods before exposing
 		Object.freeze(api)
 
-		// instance.init() is expected to be an async function
+		// the optional instance.init() is expected to be an async function,
 		// which is not compatible within a constructor() function,
 		// so call it here if it is available as an instance method
 		if (self.init) {
@@ -133,6 +133,18 @@ function getInitPrepFxn(_Class_, prepFxn) {
 			if (self.init) {
 				if (self.app && self.app != self) await self.init(self.app.getState())
 				else await self.init()
+
+				// lessen confusing behavior
+				if (self.type != 'app' && self.type != 'store' && self.state && !self.hasStatePreMain) {
+					delete self.state
+					console.warn(
+						`${self.type}: rx deleted this.state after init()` +
+							`to avoid confusing behavior, such as the component not rendering initially ` +
+							`because this.state would not have changed between init() and the first time ` +
+							`main() is called. To skip this warning and retain this.state after init(), ` +
+							`set this.hasStatePreMain = true in the ${self.type} constructor.`
+					)
+				}
 			}
 			if (self.bus) self.bus.emit('postInit')
 			return api
