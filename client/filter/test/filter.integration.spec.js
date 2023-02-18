@@ -192,7 +192,7 @@ Rx filter state
 */
 
 tape('\n', test => {
-	test.pass('-***- common/filter -***-')
+	test.pass('-***- filter/filter -***-')
 	test.end()
 })
 

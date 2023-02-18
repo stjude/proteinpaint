@@ -376,7 +376,6 @@ function addRangeTableNoDensity(self, tvs) {
 			self.dom.tip.hide()
 			const start = brush.start_input.property('value')
 			const stop = brush.stop_input.property('value')
-			console.log([stop])
 			const range = {
 				start: start === '' ? minval : start,
 				startinclusive: brush.start_select.property('value') === 'startinclusive',

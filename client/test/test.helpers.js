@@ -97,3 +97,39 @@ export async function detectZero(opts) {
 	const lst = await detectLst(opts)
 	return lst[0] // should be undefined
 }
+
+export async function whenHidden(elem) {
+	return new Promise((resolve, reject) => {
+		let j = 0
+		const i = setInterval(() => {
+			if (elem.style.display == 'none') {
+				clearInterval(i)
+				resolve(elem)
+			} else {
+				j++
+				if (j > 10) {
+					reject(`elem did not hide within 200ms`)
+					clearInterval(i)
+				}
+			}
+		}, 20)
+	})
+}
+
+export async function whenVisible(elem) {
+	return new Promise((resolve, reject) => {
+		let j = 0
+		const i = setInterval(() => {
+			if (elem.style.display != 'none') {
+				clearInterval(i)
+				resolve(elem)
+			} else {
+				j++
+				if (j > 10) {
+					reject(`elem did not become visible within 200ms`)
+					clearInterval(i)
+				}
+			}
+		}, 20)
+	})
+}
