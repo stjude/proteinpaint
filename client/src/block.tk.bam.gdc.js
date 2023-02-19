@@ -6,8 +6,7 @@ import { contigNameNoChr2 } from '#shared/common'
 import urlmap from '#common/urlmap'
 import { addGeneSearchbox, string2variant } from '#dom/genesearch'
 import { Menu } from '#dom/menu'
-import { init_tabs } from '#dom/toggleButtons'
-import { default_text_color } from '#shared/common'
+import { Tabs } from '#dom/toggleButtons'
 import { renderTable } from '#dom/table'
 import { make_table_2col } from '#dom/table2col'
 
@@ -42,10 +41,11 @@ and is validated in validateInputs{}
 makeTokenInput
 makeGdcIDinput
 	gdc_search
-		searchSSM
+		makeSsmGeneSearch
+			temp_renderGeneSearch
+			temp_renderSsmList
 	update_singlefile_table
 	update_multifile_table
-makeSsmGeneSearch
 	makeArg_geneSearchbox
 	geneSearchInstruction
 makeSubmitAndNoPermissionDiv
@@ -68,6 +68,8 @@ const baminfo_rows = [
 	{ title: 'Sample Type', key: 'sample_type' },
 	{ title: 'Size', key: 'file_size', width: '10vw' }
 ]
+const noPermissionMessage =
+	'You are attempting to visualize a Sequence Read file that you are not authorized to access. Please request dbGaP Access to the project (<a href=https://gdc.cancer.gov/access-data/obtaining-access-controlled-data target=_blank>click here for more information</a>).'
 
 /*
 arguments:
@@ -77,6 +79,7 @@ holder
 debugmode=boolean
 
 disableSSM=true
+	NOT IN USE; always enable gene search
 	temporary fix; to disable ssm query and selection for gdc phase9
 	to reenable, simply delete all uses of this flag
 
@@ -154,35 +157,12 @@ export async function bamsliceui({
 	// <input> to enter gdc id, and doms for display case/file info
 	makeGdcIDinput()
 
-	// make ssm/gene tab
-	// returned div are used by searchSSM()
-
-	const ssmGeneArg = {
-		holder: formdiv
-			.append('div')
-			.style('padding', '3px 10px')
-			.style('display', 'none'),
-		tabs: [
-			{
-				width: 140,
-				label: 'Select SSM',
-				callback: event => {
-					gdc_args.useSsmOrGene = 'ssm'
-				}
-				// .tab and .holder are automatically added
-			},
-			{
-				width: 140,
-				label: 'Gene or position',
-				callback: event => {
-					gdc_args.useSsmOrGene = 'gene'
-				}
-				// .tab and .holder are automatically added
-			}
-		]
-		// .tabHolder is automatically added
-	}
-	await makeSsmGeneSearch()
+	// hold toggle ui for ssm list and gene search
+	// contents are only rendered here after a case/file is found via gdc_search()
+	const ssmGeneDiv = formdiv
+		.append('div')
+		.style('padding', '3px 10px')
+		.style('display', 'none')
 
 	// submit button, "no permission" alert
 	const [submitButton, saydiv, noPermissionDiv] = makeSubmitAndNoPermissionDiv()
@@ -273,6 +253,11 @@ export async function bamsliceui({
 			// clicking X in <input> fires "search" event. must listen to it and call callback without delay in order to clear the UI
 			.on('search', gdc_search)
 
+		const userHasNoAccessDiv = td
+			.append('div')
+			.style('display', 'none')
+			.html(noPermissionMessage)
+
 		if (urlp.has('gdc_id')) {
 			gdcid_input
 				.property('value', urlp.get('gdc_id'))
@@ -305,21 +290,21 @@ export async function bamsliceui({
 		const baminfo_table = baminfo_div.append('div')
 		const bamselection_table = baminfo_div.append('div')
 
+		// the update() will be called in pp react wrapper, when user changes cohort from gdc ATF
 		publicApi.update = _arg => {
 			gdc_search(null, _arg?.filter0 || filter0)
 		}
 
-		async function gdc_search(eventNotUsed, filter) {
-			/*
-			first argument is "event" which is unused, as gdc_search() is used as event listener
-			*/
-
+		/* arguments
+		eventNotUsed: d3v7 passes "event" as first argument which is unused, as gdc_search() is used as event listener
+		filter0override: new updated gdc filter object, to replace existing filter0
+		*/
+		async function gdc_search(eventNotUsed, filter0override) {
 			saydiv.selectAll('*').remove()
 			noPermissionDiv.style('display', 'none')
 			submitButton.style('display', 'inline-block')
 
-			// TODO explain usage of _filter0
-			const _filter0 = Object.keys(filter || {}).length ? filter : filter0 || null
+			const _filter0 = Object.keys(filter0override || {}).length ? filter0override : filter0 || null
 
 			try {
 				const gdc_id = gdcid_input.property('value').trim()
@@ -327,7 +312,7 @@ export async function bamsliceui({
 					baminfo_div.style('display', 'none')
 					saydiv.selectAll('*').remove()
 					gdcid_error_div.style('display', 'none')
-					ssmGeneArg.holder.style('display', 'none')
+					ssmGeneDiv.style('display', 'none')
 					return
 				}
 
@@ -338,14 +323,25 @@ export async function bamsliceui({
 				const body = { gdc_id }
 				if (_filter0) body.filter0 = _filter0
 				const data = await dofetch3('gdcbam', { body })
+				/* data = {
+					file_metadata:[]
+					is_case_id:true
+					is_case_uuid:true
+					is_file_uuid:true
+					is_file_id:true
+					numFilesSkippedByWorkflow:int
+				}
+				*/
 
-				// enable input field and hide 'Loading...'
-				gdcid_input.attr('disabled', null)
-				gdc_loading.style('display', 'none')
+				gdcid_input.attr('disabled', null) // enable input field
+				gdc_loading.style('display', 'none') // hide loading
 				gdc_args.bam_files = [] //empty bam_files array after each gdc api call
+
+				/////////////////////////////////
+				// possible exists before rendering ssm and gene ui
+
 				if (data.error) throw 'Error: ' + data.error
 				if (!Array.isArray(data.file_metadata)) throw 'Error: .file_metadata[] missing'
-
 				if (data.file_metadata.length == 0) {
 					// no viewable bam files
 					if (data.is_file_uuid && data.numFilesSkippedByWorkflow == 1) {
@@ -354,6 +350,11 @@ export async function bamsliceui({
 					}
 					throw 'No viewable BAM files found'
 				}
+
+				// in react wrapper of gdc, session id is available from cookie, if so backend checks user's access to this bam
+				// and if no access sets this flag
+				// will show the prompt here but will still allow rest of ui to show, just to showcase app's capability
+				userHasNoAccessDiv.style('display', data.userHasNoAccess ? 'block' : 'none')
 
 				/*
 				in file_metadata[], each element is a bam file:
@@ -371,7 +372,6 @@ export async function bamsliceui({
 				so the case_id should be the same for all files
 				*/
 				gdc_args.case_id = data.file_metadata[0].case_id
-				await searchSSM(gdc_args.case_id)
 
 				if (data.is_file_uuid || data.is_file_id) {
 					// matches with one bam file
@@ -383,10 +383,12 @@ export async function bamsliceui({
 					update_multifile_table(data.file_metadata)
 					show_input_check(gdcid_error_div)
 				}
+
+				await makeSsmGeneSearch()
 			} catch (e) {
 				show_input_check(gdcid_error_div, e.message || e)
 				baminfo_div.style('display', 'none')
-				ssmGeneArg.holder.style('display', 'none')
+				ssmGeneDiv.style('display', 'none')
 			}
 		}
 		function update_singlefile_table(data, gdc_id) {
@@ -463,96 +465,57 @@ export async function bamsliceui({
 		}
 	}
 
+	// this is called after a file/case is found
+	// case id is at gdc_args.case_id
+	// query ssm associated with the case, show ssm/gene toggle ui
 	async function makeSsmGeneSearch() {
-		await init_tabs(ssmGeneArg)
+		delete gdc_args.ssmInput // delete previous search result
+		ssmGeneDiv
+			.style('display', 'block') // turn holder visible
+			.selectAll('*')
+			.remove() // clear holder, including ssm from previous case
 
-		// argument for making search box
-		// gene searchbox is created in 2nd tab holder
-		const geneHolder = ssmGeneArg.tabs[1].holder
-		ssmGeneArg.noSsmMessageInGeneHolder = geneHolder
-			.append('div')
-			.text('No variant found for this case.')
-			.style('margin-bottom', '10px')
-			.style('font-weight', 'bold')
-			.style('display', 'none')
+		const mutationMsgDiv = ssmGeneDiv.append('div').text('Searching for mutations...')
 
-		const geneSearchRow = geneHolder
-			.append('div')
-			.style('display', 'grid')
-			.style('grid-template-columns', '300px auto')
-		geneSearchRow.append('div').text('Enter gene, position, SNP, or variant')
+		// TODO to return all types of alterations for this case (ssm, cnv, fusion)
+		const data = await dofetch3('gdc_ssms', { body: { case_id: gdc_args.case_id, genome: gdc_genome } })
+		if (data.error) throw data.error
 
-		// create gene search box
-		gdc_args.coordInput = addGeneSearchbox(await makeArg_geneSearchbox(geneSearchRow))
+		////////////////////////////////////////////////////////
+		// remaining of this function will be rewritten using block instance
+		// and no longer uses toggle and gene search
 
-		geneSearchInstruction(geneHolder)
-
-		ssmGeneArg.tabs[0].holder
-			.append('div')
-			.style('display', 'grid')
-			.style('grid-template-columns', 'repeat(auto-fit, 1fr)')
-			.style('overflow-y', 'auto')
-			.style('max-height', '30vw')
-	}
-
-	async function makeArg_geneSearchbox(div) {
-		const opt = {
-			genome,
-			tip,
-			row: div.append('div'),
-			allowVariant: true
+		if (data.mlst.length == 0) {
+			mutationMsgDiv.text('No mutations from this case.')
+			await temp_renderGeneSearch(ssmGeneDiv.append('div'))
+			return
 		}
-		if (urlp.has('gdc_pos')) {
-			const t = urlp.get('gdc_pos').split(/[:\-]/)
-			if (t.length == 3) {
-				opt.defaultCoord = {
-					chr: t[0],
-					start: Number(t[1]),
-					stop: Number(t[2])
+
+		// found ssms
+		mutationMsgDiv.remove()
+		// display toggle between ssm list and gene search
+		const tabs = [
+			{
+				label: data.mlst.length + ' variants',
+				callback: event => {
+					gdc_args.useSsmOrGene = 'ssm'
+				}
+			},
+			{
+				label: 'Gene or position',
+				callback: event => {
+					gdc_args.useSsmOrGene = 'gene'
 				}
 			}
-		} else if (urlp.has('gdc_var')) {
-			const variant = await string2variant(urlp.get('gdc_var'), genome)
-			if (variant) {
-				opt.defaultCoord = variant
-			}
-		}
-		return opt
+		]
+		new Tabs({ holder: ssmGeneDiv, tabs }).main()
+
+		temp_renderSsmList(tabs[0].contentHolder, data.mlst)
+		await temp_renderGeneSearch(tabs[1].contentHolder)
 	}
 
-	async function searchSSM(case_id) {
-		// got case, turn on div and search for ssm
-
-		// delete previous search result
-		delete gdc_args.ssmInput
-		// turn holder visible
-		ssmGeneArg.holder.style('display', 'block')
-
-		if (disableSSM) {
-			ssmGeneArg.tabs[1].tab.node().click()
-			ssmGeneArg.tabHolder.style('display', 'none')
-			return
-		}
-
-		ssmGeneArg.tabs[0].holder.selectAll('*').remove()
-		ssmGeneArg.tabs[0].tab.text('Loading')
-		const data = await dofetch3('gdc_ssms', { body: { case_id, genome: gdc_genome } })
-		if (data.error) throw data.error
-		if (data.mlst.length == 0) {
-			// clear holder
-			ssmGeneArg.tabs[1].tab.node().click()
-			ssmGeneArg.tabHolder.style('display', 'none')
-			ssmGeneArg.noSsmMessageInGeneHolder.style('display', 'block')
-			return
-		}
-		// found ssms, display
-		ssmGeneArg.tabHolder.style('display', 'block')
-		ssmGeneArg.noSsmMessageInGeneHolder.style('display', 'none')
-		ssmGeneArg.tabs[0].tab.text(`${data.mlst.length} variant${data.mlst.length > 1 ? 's' : ''}`)
-
-		const variantsResults_div = ssmGeneArg.tabs[0].holder.append('div')
-		//.style('margin-left','30px') // may not need to left-align with bam table
-
+	// to be replaced by block ui
+	function temp_renderSsmList(div, mlst) {
 		const columns = [
 			{ label: 'Gene', width: '10vw' },
 			{ label: 'Mutation' },
@@ -560,9 +523,8 @@ export async function bamsliceui({
 			{ label: 'Position' }
 		]
 
-		// group by gene
-		const gene2mlst = new Map()
-		for (const m of data.mlst) {
+		const gene2mlst = new Map() // group by gene
+		for (const m of mlst) {
 			if (!gene2mlst.has(m.gene)) gene2mlst.set(m.gene, [])
 			gene2mlst.get(m.gene).push(m)
 		}
@@ -581,7 +543,7 @@ export async function bamsliceui({
 		renderTable({
 			rows,
 			columns,
-			div: variantsResults_div,
+			div,
 			noButtonCallback: (i, node) => {
 				const m = rows[i][0].data
 				gdc_args.ssmInput = {
@@ -611,6 +573,44 @@ export async function bamsliceui({
 			}
 		}
 	}
+	async function temp_renderGeneSearch(div) {
+		const geneSearchRow = div
+			.append('div')
+			.style('display', 'grid')
+			.style('grid-template-columns', '300px auto')
+		geneSearchRow.append('div').text('Enter gene, position, SNP, or variant')
+
+		// create gene search box
+		gdc_args.coordInput = addGeneSearchbox(await makeArg_geneSearchbox(geneSearchRow))
+
+		geneSearchInstruction(div)
+	}
+
+	async function makeArg_geneSearchbox(div) {
+		const opt = {
+			genome,
+			tip,
+			row: div.append('div'),
+			allowVariant: true
+		}
+		if (urlp.has('gdc_pos')) {
+			const t = urlp.get('gdc_pos').split(/[:\-]/)
+			if (t.length == 3) {
+				opt.defaultCoord = {
+					chr: t[0],
+					start: Number(t[1]),
+					stop: Number(t[2])
+				}
+			}
+		} else if (urlp.has('gdc_var')) {
+			const variant = await string2variant(urlp.get('gdc_var'), genome)
+			if (variant) {
+				opt.defaultCoord = variant
+			}
+		}
+		return opt
+	}
+
 	function makeSubmitAndNoPermissionDiv() {
 		const div = formdiv.append('div')
 
@@ -663,9 +663,7 @@ export async function bamsliceui({
 			.style('border-bottom', 'solid 1px #eee')
 			.style('padding', '20px 0px')
 			.style('margin-top', '5px')
-			.html(
-				'You are attempting to visualize a Sequence Read file that you are not authorized to access. Please request dbGaP Access to the project (<a href=https://gdc.cancer.gov/access-data/obtaining-access-controlled-data target=_blank>click here for more information</a>).'
-			)
+			.html(noPermissionMessage)
 		return [submitButton, saydiv, noPermissionDiv]
 	}
 
@@ -778,7 +776,7 @@ function geneSearchInstruction(d) {
 		<ul><li>Example: chr17:7676339-7676767</li>
 		    <li>Coordinates are hg38 and 1-based.</li>
 		</ul>
-		<li>SNP example: rs1641548</li>
+		<li>SNP example: rs28934574</li>
 		<li>Variant:</li>
 		<ul>
 		  <li>Example: chr2.208248388.C.T</li>
