@@ -1,5 +1,6 @@
 const got = require('got')
 const path = require('path')
+//const {gdcCheckPermission} = require('./bam')
 
 /*
 exports one function
@@ -50,6 +51,8 @@ export async function gdc_bam_request(req, res) {
 			req.query.gdc_id,
 			req.query.filter0 // optional gdc cohort filter
 		)
+
+		await mayCheckPermission(bamdata, req)
 
 		res.send(bamdata)
 	} catch (e) {
@@ -295,4 +298,61 @@ async function queryApi(filters, api) {
 	}
 	if (!re.data || !re.data.hits) throw 'data structure not data.hits[]'
 	return re
+}
+
+async function mayCheckPermission(bamdata, req) {
+	if (!bamdata.file_metadata?.length) return
+	// has found files
+	const sessionid = req.cookies.sessionid
+	if (!sessionid) return // no session
+	// session is given (from react pp wrapper where user has logged into gdc ATF)
+	// check user's permission, if no, set a flag
+	// assumption is that when user has access to a case, the user can access all bam files from the case (thus no need to check every file in file_metadata[]
+	try {
+		await gdcCheckPermission(bamdata.file_metadata[0].file_uuid, null, sessionid)
+	} catch (e) {
+		if (e == 'Permission denied') bamdata.userHasNoAccess = true
+	}
+}
+
+async function gdcCheckPermission(gdcFileUUID, token, sessionid) {
+	// suggested by Phil on 4/19/2022
+	// use the download endpoint and specify a zero byte range
+	const headers = {
+		// since the expected response is binary data, should not set Accept: application/json as a request header
+		// also no body is submitted with a GET request, should not set a Content-type request header
+		Range: 'bytes=0-0'
+	}
+	if (sessionid) headers['Cookie'] = `sessionid=${sessionid}`
+	else headers['X-Auth-Token'] = token
+
+	const url = apihost + '/data/' + gdcFileUUID
+	try {
+		// decompress: false prevents got from setting an 'Accept-encoding: gz' request header,
+		// which may not be handled properly by the GDC API in qa-uat
+		// per Phil, should only be used as a temporary workaround
+		const response = await got(url, { headers, decompress: false })
+		if (response.statusCode >= 200 && response.statusCode < 400) {
+			// permission okay
+		} else {
+			console.log(`gdcCheckPermission() error for got(${url})`, response)
+			throw 'Invalid status code: ' + response.statusCode
+		}
+		/* 
+		// 
+		// TODO: may use node-fetch if it provides more informative error status and/or messages
+		// for example, got sometimes emits non_2XX_3XX_status status instead of the more informative Status 400
+		//
+		const fetch = require('node-fetch')
+		const response = await fetch(url, { headers, compress: false }); 
+		const body = await response.text(); console.log(3267, body, response, Object.fromEntries(response.headers), response.disturbed, response.error)
+		if (response.status > 399) { console.log(3268, Object.fromEntries(response.headers))
+			throw 'Invalid status code: ' + response.status
+		}
+		*/
+	} catch (e) {
+		console.log('gdcCheckPermission error: ', e?.code || e)
+		// TODO refer to e.code
+		throw 'Permission denied'
+	}
 }
