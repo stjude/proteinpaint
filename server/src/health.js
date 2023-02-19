@@ -48,7 +48,9 @@ async function getStat(genomes, rev) {
 				.split('\n').length - 1
 	}
 
-	if (serverconfig.commitHash) health.version = serverconfig.commitHash
+	if (!health.rev) health.rev = serverconfig.rev
+	if (serverconfig.commitHash) health.commitHash = serverconfig.commitHash
+	if (serverconfig.version) health.version = serverconfig.version
 
 	// report status of every genome
 	for (const gn in genomes) {

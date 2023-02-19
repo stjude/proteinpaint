@@ -196,6 +196,10 @@ if (fs.existsSync('./public/rev.txt')) {
 	const commitHash = revtxt.trim().split(' ')[1]
 	if (commitHash) serverconfig.commitHash = commitHash
 }
+if (fs.existsSync('./package.json')) {
+	const pkg = fs.readFileSync('./package.json', { encoding: 'utf8' })
+	serverconfig.version = JSON.parse(pkg).version
+}
 
 //Object.freeze(serverconfig)
 module.exports = serverconfig
