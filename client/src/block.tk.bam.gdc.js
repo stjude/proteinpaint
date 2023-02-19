@@ -253,11 +253,6 @@ export async function bamsliceui({
 			// clicking X in <input> fires "search" event. must listen to it and call callback without delay in order to clear the UI
 			.on('search', gdc_search)
 
-		const userHasNoAccessDiv = td
-			.append('div')
-			.style('display', 'none')
-			.html(noPermissionMessage)
-
 		if (urlp.has('gdc_id')) {
 			gdcid_input
 				.property('value', urlp.get('gdc_id'))
@@ -276,6 +271,12 @@ export async function bamsliceui({
 			.append('span')
 			.style('display', 'none')
 			.style('padding', '2px 5px')
+
+		const userHasNoAccessDiv = td
+			.append('div')
+			.style('display', 'none')
+			.style('width', '500px')
+			.html(noPermissionMessage)
 
 		//////////////////////////
 		// row 2, to display details of case/file
