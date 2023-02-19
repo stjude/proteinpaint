@@ -27,7 +27,11 @@ const commonConfig = {
 	externals: [
 		nodeExternals({
 			allowlist: [/\/src\//, /d3-*/, 'internmap', 'delaunator', 'robust-predicates'],
-			additionalModuleDirs: [path.resolve(__dirname, '../node_modules'), path.resolve(__dirname, '../../node_modules')]
+			additionalModuleDirs: [
+				path.resolve(__dirname, '../node_modules'),
+				path.resolve(__dirname, '../../node_modules'),
+				path.resolve(__dirname, '../../../node_modules')
+			]
 		})
 	],
 	externalsPresets: {
