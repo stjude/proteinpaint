@@ -1,6 +1,5 @@
 const got = require('got')
 const path = require('path')
-//const {gdcCheckPermission} = require('./bam')
 
 /*
 exports one function
@@ -332,7 +331,7 @@ async function mayCheckPermission(bamdata, req) {
 	}
 }
 
-async function gdcCheckPermission(gdcFileUUID, token, sessionid) {
+export async function gdcCheckPermission(gdcFileUUID, token, sessionid) {
 	// suggested by Phil on 4/19/2022
 	// use the download endpoint and specify a zero byte range
 	const headers = {
