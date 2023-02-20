@@ -294,6 +294,9 @@ class Scatter {
 		}
 
 		this.components.controls.on('downloadClick.scatter', () => this.downloadSVG(this.svg))
+		this.components.controls.on('helpClick.scatter', () =>
+			window.open('https://github.com/stjude/proteinpaint/wiki/Scatter-plot', '_blank')
+		)
 		this.dom.toolsDiv = this.dom.controls.insert('div')
 	}
 
@@ -821,7 +824,7 @@ class Scatter {
 					this.config.groups.push({
 						name: group.name,
 						items,
-						index: groups.length
+						index: this.config.groups.length
 					})
 					this.app.dispatch({ type: 'plot_edit', id: this.id, config: { groups: this.config.groups } })
 				}
@@ -1157,7 +1160,7 @@ function setRenderers(self) {
 			clipRect
 				.attr('x', self.axisOffset.x - particleWidth)
 				.attr('y', 0)
-				.attr('width', self.settings.svgw + particleWidth)
+				.attr('width', self.settings.svgw + 2 * particleWidth)
 				.attr('height', self.settings.svgh + self.axisOffset.y + particleWidth)
 		}
 
@@ -1290,7 +1293,7 @@ function setRenderers(self) {
 					self.config.groups.push({
 						name: `Group ${self.config.groups.length + 1}`,
 						items: self.selectedItems.map(item => item.__data__),
-						index: groups.length
+						index: self.config.groups.length
 					})
 					self.app.dispatch({ type: 'plot_edit', id: self.id, config: { groups: self.config.groups } })
 				})
@@ -1302,7 +1305,7 @@ function setRenderers(self) {
 					const group = {
 						name: `Group ${self.config.groups.length + 1}`,
 						items: self.selectedItems.map(item => item.__data__),
-						index: groups.length
+						index: self.config.groups.length
 					}
 					self.config.groups.push(group)
 					self.addToFilter(group)
