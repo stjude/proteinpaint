@@ -113,8 +113,8 @@ function setRenderers(self) {
 		const plot = this.state.config
 		self.dom.tr.style('display', '')
 
-		if (plot?.term?.term?.type == 'geneVariant') {
-			//when term1 is a gene, hide the divide by option
+		if (plot?.term?.term?.type == 'geneVariant' || plot?.term2?.term?.type == 'geneVariant') {
+			//when term1 or term2 is a geneVariant term, hide the divide by option
 			self.dom.tr.style('display', 'none')
 		}
 

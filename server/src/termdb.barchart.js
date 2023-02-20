@@ -112,8 +112,8 @@ export async function barchart_data(q, ds, tdb) {
 	const samplesMap = new Map()
 	const bins = []
 	if (data.samples) {
-		if (map.get(1)?.term?.type == 'geneVariant') {
-			//when term1 is a gene
+		if (map.get(1)?.term?.type == 'geneVariant' || map.get(2)?.term?.type == 'geneVariant') {
+			//when term1 or term2 is a geneVariant term
 			processGeneVariantSamples(map, bins, data, samplesMap, ds.assayAvailability)
 		} else {
 			for (let i = 0; i <= 2; i++) {
@@ -175,18 +175,35 @@ function processGeneVariantSamples(map, bins, data, samplesMap, assayAvailabilit
 	else bins.push([])
 
 	for (const [sampleId, values] of Object.entries(data.samples)) {
-		const value1 = values[id1]
-		for (const v1 of value1.values) {
-			const item = { sample: customSampleID }
-			item[`key1`] = mclass[v1.class].label
-			item[`val1`] = mclass[v1.class].label
-			const wesByOrigin = assayAvailability?.byDt?.['1']?.byOrigin && v1.dt == 1 //whether distinguising germline and somatic WES
-			item[`key0`] = `${wesByOrigin ? (v1.origin == 'G' ? 'Germline ' : 'Somatic ') : ''}${dt2label[v1.dt]}`
-			item[`val0`] = `${wesByOrigin ? (v1.origin == 'G' ? 'Germline ' : 'Somatic ') : ''}${dt2label[v1.dt]}`
-			item[`key2`] = values[id2] ? values[id2].key : ''
-			item[`val2`] = values[id2] ? values[id2].value : ''
-			samplesMap.set(customSampleID.toString(), item)
-			customSampleID++
+		if (map.get(1)?.term?.type == 'geneVariant') {
+			const value1 = values[id1]
+			for (const v1 of value1.values) {
+				const item = { sample: customSampleID }
+				item[`key1`] = mclass[v1.class].label
+				item[`val1`] = mclass[v1.class].label
+				const wesByOrigin = assayAvailability?.byDt?.['1']?.byOrigin && v1.dt == 1 //whether distinguising germline and somatic WES
+				item[`key0`] = `${wesByOrigin ? (v1.origin == 'G' ? 'Germline ' : 'Somatic ') : ''}${dt2label[v1.dt]}`
+				item[`val0`] = `${wesByOrigin ? (v1.origin == 'G' ? 'Germline ' : 'Somatic ') : ''}${dt2label[v1.dt]}`
+				item[`key2`] = values[id2] ? values[id2].key : ''
+				item[`val2`] = values[id2] ? values[id2].value : ''
+				samplesMap.set(customSampleID.toString(), item)
+				customSampleID++
+			}
+		} else if (map.get(2)?.term?.type == 'geneVariant') {
+			const value2 = values[id2]
+			const value1 = values[id1]
+			for (const v2 of value2.values) {
+				const item = { sample: customSampleID }
+				item[`key1`] = value1.key
+				item[`val1`] = value1.value
+				const wesByOrigin = assayAvailability?.byDt?.['1']?.byOrigin && v2.dt == 1 //whether distinguising germline and somatic WES
+				item[`key0`] = `${wesByOrigin ? (v2.origin == 'G' ? 'Germline ' : 'Somatic ') : ''}${dt2label[v2.dt]}`
+				item[`val0`] = `${wesByOrigin ? (v2.origin == 'G' ? 'Germline ' : 'Somatic ') : ''}${dt2label[v2.dt]}`
+				item[`key2`] = mclass[v2.class].label
+				item[`val2`] = mclass[v2.class].label
+				samplesMap.set(customSampleID.toString(), item)
+				customSampleID++
+			}
 		}
 	}
 }

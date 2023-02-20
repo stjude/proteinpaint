@@ -23,7 +23,7 @@ class Barchart {
 		api.download = this.download
 	}
 
-	async init() {
+	async init(appState) {
 		const opts = this.opts
 		const controls = this.opts.controls ? null : opts.holder.append('div')
 		const holder = opts.controls ? opts.holder : opts.holder.append('div')
@@ -62,7 +62,7 @@ class Barchart {
 		})
 		this.controls = {}
 		this.term2toColor = {}
-		await this.setControls()
+		await this.setControls(this.getState(appState))
 
 		if (this.opts.bar_click_override) {
 			// will use this as callback to bar click
@@ -73,7 +73,7 @@ class Barchart {
 		}
 	}
 
-	async setControls() {
+	async setControls(state) {
 		if (this.opts.controls) {
 			this.opts.controls.on('downloadClick.barchart', this.download)
 		} else {
@@ -85,8 +85,26 @@ class Barchart {
 
 			const inputs = [
 				'term1',
-				'overlay',
-				'divideBy',
+				{
+					type: 'overlay',
+					configKey: 'term2',
+					chartType: 'barchart',
+					usecase: { target: 'barchart', detail: 'term2', term1type: state.config.term.term.type },
+					title: 'Overlay data',
+					label: 'Overlay',
+					vocabApi: this.app.vocabApi,
+					numericEditMenuVersion: this.opts.numericEditMenuVersion || ['continuous', 'discrete']
+				},
+				{
+					type: 'divideBy',
+					configKey: 'term0',
+					chartType: 'barchart',
+					usecase: { target: 'barchart', detail: 'term0', term1type: state.config.term0?.term?.type },
+					title: 'Divide by data',
+					label: 'Divide by',
+					vocabApi: this.app.vocabApi,
+					numericEditMenuVersion: this.opts.numericEditMenuVersion || ['continuous', 'discrete']
+				},
 				{
 					label: 'Orientation',
 					type: 'radio',

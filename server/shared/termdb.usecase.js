@@ -57,7 +57,14 @@ export function isUsableTerm(term, _usecase, ds) {
 		case 'barchart':
 		case 'summary':
 		case 'matrix':
-			if (term.type == 'geneVariant') return uses
+			if (usecase.detail == 'term0' && term.type == 'geneVariant') {
+				// hide geneVariant terms for Divide by
+				return uses
+			}
+			if (usecase.detail == 'term2' && term.type == 'geneVariant' && usecase.term1type == 'geneVariant') {
+				// hide geneVariant terms for Overlay when term1 is a geneVariant term
+				return uses
+			}
 			if (term.type && term.type !== 'survival') uses.add('plot')
 			if (hasNonSurvivalTermChild(child_types)) uses.add('branch')
 			return uses
