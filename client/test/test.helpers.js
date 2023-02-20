@@ -43,7 +43,7 @@ export async function detectLst(_opts = {}) {
 
 	if (!opts.selector) throw `missing opts.selector`
 	// always defer execution to the next step, to give time for an element to change
-	await sleep(0)
+	if (opts.count > 0) await sleep(0)
 
 	const start = Date.now()
 	return new Promise((resolve, reject) => {
@@ -72,7 +72,8 @@ export async function detectLst(_opts = {}) {
 		let t
 		if (opts.maxTime) {
 			t = setTimeout(() => {
-				reject(`the elem '${opts.selector}' did not render within ${opts.maxTime} milliseconds`)
+				if (opts.count === 0) {
+				} else reject(`the elem '${opts.selector}' did not render within ${opts.maxTime} milliseconds`)
 			}, opts.maxTime)
 		}
 	})
@@ -91,11 +92,32 @@ export async function detectOne(opts) {
 /*
 	same arguments as detectLst, except count is forced to 0
 	return the expected element
+
+	--  you have to know the element hasn't been removed when this is called
 */
 export async function detectZero(opts) {
 	opts.count = 0
 	const lst = await detectLst(opts)
 	return lst[0] // should be undefined
+}
+
+// --  you do NOT need to know the element hasn't been removed when this is called
+export async function whenGone(opts) {
+	return new Promise((resolve, reject) => {
+		let j = 0
+		const i = setInterval(() => {
+			if (opts.elem.querySelectorAll(opts.selector).length === 0) {
+				clearInterval(i)
+				resolve(elem)
+			} else {
+				j++
+				if (j > 10) {
+					reject(`elem did not hide within 200ms`)
+					clearInterval(i)
+				}
+			}
+		}, 20)
+	})
 }
 
 export async function whenHidden(elem) {

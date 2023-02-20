@@ -8,7 +8,7 @@ Tabs(opts)
 
 opts: {
 	holder,
-	tabHolder,
+	tabsHolder,
 		d3 DOM created by this script
 	contentHolder,
 		optional; if not provided, create new under opts.holder
@@ -57,7 +57,7 @@ export async function init_tabs(opts) {
 	if (!Array.isArray(opts.tabs)) throw `invalid opts.tabs for toggleButtons()`
 
 	const tabs = opts.tabs
-	opts.tabHolder = opts.holder
+	opts.tabsHolder = opts.holder
 		.append('div')
 		//add light grey border underneath the buttons
 		.style('border-bottom', '0.5px solid lightgrey')
@@ -76,7 +76,7 @@ export async function init_tabs(opts) {
 		const linePosition = opts.linePosition || 'bottom'
 		const textAlign = linePosition == 'bottom' || linePosition == 'top' ? 'center' : linePosition
 
-		tab.wrapper = opts.tabHolder
+		tab.wrapper = opts.tabsHolder
 			.append('button')
 			.attr('type', 'button')
 			.attr('class', 'sj-toggle-button')
@@ -220,21 +220,32 @@ function setRenderers(self) {
 		const textAlign =
 			self.opts.linePosition == 'bottom' || self.opts.linePosition == 'top' ? 'center' : self.opts.linePosition
 
-		self.dom.tabHolder = self.dom.holder
+		self.dom.wrapper = self.dom.holder
 			.append('div')
-			//add light grey border underneath the buttons
-			.style(`border-${textAlign}`, '0.5px solid lightgrey')
-			.style('width', 'fit-content')
+			// Fix for content wrapping when viewport resizes
+			.style('display', 'block')
+			.style('min-width', 'max-content')
 
+		self.dom.tabsHolder = self.dom.wrapper
+			.append('div') //add light blue border underneath the buttons
+			.style(`border-${self.opts.linePosition}`, '0.5px solid #1575ad')
+			.style('width', 'fit-content')
 		if (!self.opts.contentHolder && !self.opts.noContent) {
-			self.dom.contentHolder = self.dom.holder.append('div')
+			self.dom.contentHolder = self.dom.wrapper.append('div')
 			if (self.opts.tabsPosition == 'vertical') {
-				self.dom.tabHolder.style('display', 'inline-grid').style('align-items', 'start')
-				self.dom.contentHolder.style('display', 'inline-grid').style('align-items', 'start')
+				self.dom.tabsHolder.style('display', 'inline-grid').style('align-items', 'start')
+				self.dom.contentHolder
+					.style('display', 'inline-grid')
+					.style('align-items', 'start')
+					.style('overflow', 'auto')
+					.style('grid-auto-flow', 'column')
+					//Extra div prevents svgs from displaying above contentHolder
+					//Acts as a viewBox
+					.append('div')
 			}
 		}
 
-		await self.dom.tabHolder
+		await self.dom.tabsHolder
 			.selectAll('button')
 			.data(self.tabs)
 			.enter()
@@ -253,7 +264,7 @@ function setRenderers(self) {
 				tab.disabled ? tab.disabled() : false
 			})
 			.each(async function(tab) {
-				/* The whole button is clickable (i.e. the white space whent the blue line is
+				/* The whole button is clickable (i.e. the white space where the blue line is
 				not visible). The event is on the button (i.e. tab.wrapper). The style changes 
 				when the button is active/inactive are on the text (i.e. tab.tab) and line 
 				(i.e. tab.line) */
@@ -301,30 +312,41 @@ function setRenderers(self) {
 				}
 
 				if (self.dom.contentHolder) {
-					tab.contentHolder = self.dom.contentHolder
-						.append('div')
-						.style('padding-top', '10px')
-						.style('margin-top', '10px')
-						.style('display', tab.active ? 'block' : 'none')
+					tab.contentHolder = self.dom.contentHolder.append('div').style('display', tab.active ? 'block' : 'none')
+					if (self.opts.tabsPosition == 'horizontal') {
+						tab.contentHolder.style('padding-top', '10px').style('margin-top', '10px')
+					}
 				}
 				if (tab.active && tab.callback) await tab.callback()
+				tab.wrapper
+					.on('mouseenter', () => {
+						tab.tab.style('color', tab.active ? '#757373' : '#1575ad')
+					})
+					.on('mouseleave', () => {
+						tab.tab.style('color', tab.active ? '#1575ad' : '#757373')
+					})
 			})
 			.on('click', async (event, tab) => {
 				for (const t of self.tabs) {
 					t.active = t === tab
 				}
-				self.updateTabs()
-				if (tab.callback) await tab.callback()
+				const activeTabIndex = self.tabs.findIndex(t => t.active) //Fix for non-Rx implementations
+				self.update(activeTabIndex)
+				if (tab.callback) await tab.callback(event, tab)
 			})
-		self.updateTabs()
+		self.update()
 	}
-	self.updateTabs = () => {
-		self.dom.tabHolder
+	self.update = (activeTabIndex = 0, config = {}) => {
+		self.tabs.forEach((tab, i) => {
+			tab.active = activeTabIndex === i
+		})
+		self.dom.tabsHolder
 			.selectAll('button')
 			.data(self.tabs)
 			.classed('sjpp-active', tab => tab.active)
 			.each(tab => {
 				tab.wrapper.classed('sjpp-active', tab.active ? true : false)
+				if (tab.isVisible) tab.wrapper.style('display', tab => (config && tab.isVisible() ? '' : 'none'))
 				if (tab.contentHolder) tab.contentHolder.style('display', tab.active ? 'block' : 'none')
 				tab.tab.style('color', tab.active ? '#1575ad' : '#757373')
 				tab.line.style('visibility', tab.active ? 'visible' : 'hidden')

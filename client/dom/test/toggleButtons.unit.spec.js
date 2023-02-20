@@ -251,7 +251,7 @@ tape('Render Tabs, vertical stack, right border', async test => {
 	await testContentHolderPosition()
 
 	async function testTabsPosition() {
-		const tabsHolder = initTabs.dom.tabHolder
+		const tabsHolder = initTabs.dom.tabsHolder
 
 		//Test vertical orientation
 		const tabsButtonsDisplay = tabsHolder

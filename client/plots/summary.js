@@ -73,24 +73,8 @@ class SummaryPlot {
 
 		this.render()
 
-		this.dom.chartToggles.selectAll('button').each(tab => {
-			tab.active = tab.childType == this.config.childType
-			tab.wrapper.style('display', tab => (this.config && tab.isVisible() ? '' : 'none'))
-			tab.callback = async event => {
-				const config = await tab.getConfig()
-				if (!config) {
-					alert(`TODO: ${tab.label}`)
-					return
-				}
-
-				this.app.dispatch({
-					type: 'plot_edit',
-					id: this.id,
-					config
-				})
-			}
-		})
-		this.chartToggles.updateTabs()
+		const activeTabIndex = this.tabsData.findIndex(tab => tab.childType == this.config.childType)
+		this.chartToggles.update(activeTabIndex, this.config)
 	}
 
 	async setComponent(config) {
@@ -170,7 +154,7 @@ function setRenderers(self) {
 				.style('vertical-align', 'sub')
 				.html(config.term.term.name)
 
-			const tabsData = [
+			self.tabsData = [
 				{
 					childType: 'barchart',
 					label: 'Barchart',
@@ -178,9 +162,9 @@ function setRenderers(self) {
 					disabled: d => false,
 					getConfig: async () => {
 						const mode =
-							self.config.term.term.type == 'float' || self.config.term.term.type == 'integer'
+							self.config?.term.term.type == 'float' || self.config?.term.term.type == 'integer'
 								? 'discrete'
-								: self.config.term.q.mode || 'discrete'
+								: self.config?.term.q.mode || 'discrete'
 						const _term = await self.getWrappedTermCopy(self.config.term, mode)
 
 						let _term2
@@ -194,24 +178,25 @@ function setRenderers(self) {
 						const config = { childType: 'barchart', term: _term, term2: _term2 }
 						return config
 					},
-					active: true
+					active: true,
+					callback: self.tabClickCallback
 				},
 				{
 					childType: 'violin',
 					label: 'Violin',
 					disabled: d => false,
 					isVisible: () =>
-						self.config.term.term.type === 'integer' ||
-						self.config.term.term.type === 'float' ||
-						self.config.term2?.term.type === 'integer' ||
-						self.config.term2?.term.type === 'float',
+						self.config?.term.term.type === 'integer' ||
+						self.config?.term.term.type === 'float' ||
+						self.config?.term2?.term.type === 'integer' ||
+						self.config?.term2?.term.type === 'float',
 					getConfig: async () => {
 						let _term, _term2
 						//If the first term was continuous or is coming as continuous
 						if (self.violinContTerm === 'term' || this.config.term.q?.mode == 'continuous') {
 							// must mean coming from scatter
-							_term = await self.getWrappedTermCopy(self.config.term, 'continuous')
-							_term2 = await self.getWrappedTermCopy(self.config.term2, 'discrete')
+							_term = await self.getWrappedTermCopy(self.config?.term, 'continuous')
+							_term2 = await self.getWrappedTermCopy(self.config?.term2, 'discrete')
 							self.violinContTerm = 'term'
 						}
 						//If the second term was continuous or is coming as continuous
@@ -237,14 +222,16 @@ function setRenderers(self) {
 						const config = { childType: 'violin', term: _term, term2: _term2 }
 						return config
 					},
-					active: false
+					active: false,
+					callback: self.tabClickCallback
 				},
 				{
 					childType: 'table',
 					label: 'Crosstab - in development',
 					disabled: d => true,
 					isVisible: () => false,
-					active: false
+					active: false,
+					callback: self.tabClickCallback
 				},
 				{
 					childType: 'boxplot',
@@ -252,7 +239,8 @@ function setRenderers(self) {
 					disabled: d => true,
 					isVisible: () => false, // remove during development
 					// isVisible: () => self.config.term.type === 'integer' || self.config.term.type === 'float',
-					active: false
+					active: false,
+					callback: self.tabClickCallback
 				},
 				{
 					childType: 'sampleScatter',
@@ -260,17 +248,18 @@ function setRenderers(self) {
 					disabled: d => false,
 					isVisible: () => {
 						return (
-							(self.config.term.term.type === 'integer' || self.config.term.term.type === 'float') &&
-							(self.config.term2?.term.type === 'integer' || self.config.term2?.term.type === 'float')
+							(self.config?.term.term.type === 'integer' || self.config?.term.term.type === 'float') &&
+							(self.config?.term2?.term.type === 'integer' || self.config?.term2?.term.type === 'float')
 						)
 					},
 					getConfig: async () => {
-						const _term = await self.getWrappedTermCopy(self.config.term, 'continuous')
-						const _term2 = await self.getWrappedTermCopy(self.config.term2, 'continuous')
+						const _term = await self.getWrappedTermCopy(self.config?.term, 'continuous')
+						const _term2 = await self.getWrappedTermCopy(self.config?.term2, 'continuous')
 						const config = { childType: 'sampleScatter', term: _term, term2: _term2, groups: [] }
 						return config
 					},
-					active: false
+					active: false,
+					callback: self.tabClickCallback
 				}
 			]
 			self.dom.chartToggles = self.dom.paneTitleDiv
@@ -278,7 +267,7 @@ function setRenderers(self) {
 				.style('display', 'inline-block')
 				.style('margin-left', '10px')
 
-			self.chartToggles = new Tabs({ holder: self.dom.chartToggles, tabs: tabsData, noContent: true })
+			self.chartToggles = new Tabs({ holder: self.dom.chartToggles, tabs: self.tabsData, noContent: true })
 			self.chartToggles.main()
 
 			// Placeholder for recover component
@@ -287,6 +276,21 @@ function setRenderers(self) {
 			throw e
 			//self.dom.errdiv.text(e)
 		}
+	}
+
+	self.tabClickCallback = async (event, tab) => {
+		if (!tab) return
+		const config = await tab.getConfig()
+		if (!config) {
+			alert(`TODO: ${tab.label}`)
+			return
+		}
+		console.log(config)
+		self.app.dispatch({
+			type: 'plot_edit',
+			id: self.id,
+			config: config
+		})
 	}
 
 	self.getWrappedTermCopy = async function(term, mode) {
