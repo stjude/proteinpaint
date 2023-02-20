@@ -1049,7 +1049,7 @@ function makeTk(tk, block) {
 		tk.dom.variantrowheight = 15
 		tk.dom.variantrowbottompad = 5
 		tk.dom.diff_score_axis = tk.gright.append('g') // For storing axis of bar plot of diff_score
-		tk.dom.diff_score_plotwidth = 50
+		tk.dom.diff_score_plotwidth = 20
 		tk.fs_string = block.maketklefthandle(tk, tk.pileupheight + tk.dom.variantrowheight / 2) // Will contain Fisher strand value which will be added in may_render_variant function
 	} else if (tk.sv) {
 		// assuming that variant will only be added upon track initiation
@@ -1280,21 +1280,17 @@ function makeGroup(gd, tk, block, data) {
 			diff_score_height = tk.pileupheight + tk.dom.variantrowheight * 3
 		}
 
-		const axis = axisTop()
-			.tickValues([tk.min_diff_score, tk.max_diff_score])
-			.scale(
-				scaleLinear()
-					.domain([tk.min_diff_score, tk.max_diff_score])
-					.range([0, gd.diff_scores_img.width])
-			)
-		axisstyle({
-			axis: tk.dom.diff_score_axis
-				.transition()
-				.attr('transform', 'translate(' + 0 + ',' + diff_score_height + ')')
-				.call(axis),
-			color: 'black',
-			showline: true
-		})
+		//const axis = axisTop()
+		//	.tickValues([tk.min_diff_score, tk.max_diff_score])
+		//	.scale(scaleLinear().domain([tk.min_diff_score, tk.max_diff_score]).range([0, gd.diff_scores_img.width]))
+		//axisstyle({
+		//	axis: tk.dom.diff_score_axis
+		//		.transition()
+		//		.attr('transform', 'translate(' + 0 + ',' + diff_score_height + ')')
+		//		.call(axis),
+		//	color: 'black',
+		//	showline: true,
+		//})
 	}
 
 	group.dom.img_fullstack = group.dom.imgg
