@@ -18,6 +18,7 @@
     "start": "./build/dev/resetBundles.sh && nodemon server/server.js --watch serverconfig.json --watch ./server/server*.js* --watch server/genome --watch server/dataset --watch server/src/test/routes",
     "dev1": "trap 'kill %1' INT; webpack --config=./webpack.config.js --env NODE_ENV=development --watch --color & npm start",
     "dev2": "trap 'kill %1' INT; webpack --config=./webpack.config.js --env NODE_ENV=development --watch --color",
+    "gdc": "PP_GDC_HOST=https://portal.gdc.cancer.gov/auth/api/v0 npm run dev1",
     "server": "trap 'kill %1' INT; npm run dev -w @stjude/proteinpaint-server & npm start",
     "client": "npm run dev -w @stjude/proteinpaint-client",
     "ci-pp-server": "./build/dev/resetBundles.sh && node server/server.js &",

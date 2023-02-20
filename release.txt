@@ -1,0 +1,1 @@
+- check the user permission using session id when generating GDC BAM search results
