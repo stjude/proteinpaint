@@ -115,20 +115,17 @@
                                         q: { mode: 'values' } // or 'groupsetting'
                                     },
                                     { id: 'Anatomical Location of Tumor Tier 2' },
-                                    { id: 'Extent of Resection-1' },
                                     { id: 'Extent of Resection-2' },
                                     { id: 'M0/M+' },
                                     { id: 'Primary Treatment' },
                                     { id: 'Risk Category' },
                                     { id: 'Progresssive Disease' },
-                                    { id: 'Ever Used Radiation During Treatment Course' },
-                                    { id: 'Histology  at Diagnosis' },
-                                    { id: 'MNP - Molecular CLASS' },
+                                    { id: 'Radiation Used' },
+                                    { id: 'Histology at Diagnosis' },
+                                    { id: 'MNP Classifier' },
                                     { id: 'Integrated Diagnosis Tier 1' },
                                     { id: 'Integrated Diagnosis Tier 2' },
                                     { id: 'Integrated Diagnosis Tier 3' },
-                                    { id: 'Fusion Types Tier 1' },
-                                    { id: 'Fusion Types Tier 2' },
                                     { id: 'Methylation' },
                                     { id: 'RNA-Seq' },
                                     { id: 'WES' },
@@ -249,7 +246,7 @@
         }
     })
 
-                                                const cnvGenes = `MYCN, PDGFRA, MET, MDM2, MDM4, CDKN2A/B, PDGFB, MYCL, GFI1B, PTCH1, NF1,EGFR`.split(',').map(g => g.trim())
+        const cnvGenes = `MYCN, PDGFRA,CDKN2A/B, PDGFB, NF1`.split(',').map(g => g.trim())
         function getGeneTermGroups() {
             const termgroups = []
             for (const g of genegroups) {
@@ -300,9 +297,6 @@
                         "name": "CIC_SV"
                     },
                     {
-                        "name": "MN1_SV"
-                    },
-                    {
                         "name": "NTRK1_SV"
                     },
                     {
@@ -327,16 +321,10 @@
                         "name": "PDGFRA_SV"
                     },
                     {
-                        "name": "NPM1_SV"
-                    },
-                    {
                         "name": "PLAGL1_SV"
                     },
                     {
                         "name": "FOXR2_SV"
-                    },
-                    {
-                        "name": "GOPC_SV"
                     },
                     {
                         "name": "MYB_SV"
@@ -384,314 +372,16 @@
                 overrides: ['WESfill'],
                 "lst": [
                     {
-                        "name": "AFDN"
-                    },
-                    {
-                        "name": "ALK"
-                    },
-                    {
-                        "name": "APC"
-                    },
-                    {
-                        "name": "ARID1A"
-                    },
-                    {
-                        "name": "ARID2"
-                    },
-                    {
-                        "name": "ASXL2"
-                    },
-                    {
-                        "name": "ATF7IP"
-                    },
-                    {
-                        "name": "ATRX"
-                    },
-                    {
-                        "name": "BAZ1A"
-                    },
-                    {
-                        "name": "BCL6"
-                    },
-                    {
-                        "name": "BCL9"
-                    },
-                    {
-                        "name": "BCOR"
-                    },
-                    {
-                        "name": "BRAF"
-                    },
-                    {
-                        "name": "CD22"
-                    },
-                    {
-                        "name": "CHD7"
-                    },
-                    {
-                        "name": "CREB3L1"
-                    },
-                    {
-                        "name": "CTCF"
-                    },
-                    {
-                    "name": "H3C2"
-                },
-                {
-                        "name": "CTNNB1",
-                        minNumSamples: 1
-                    },
-                    {
-                        "name": "CUX1"
-                    },
-                    {
-                        "name": "EZHIP"
-                    },
-                    {
-                        "name": "DGCR8"
-                    },
-                    {
-                        "name": "DICER1"
-                    },
-                    {
-                        "name": "DMBT1"
-                    },
-                    {
-                        "name": "EBF1"
-                    },
-                    {
-                        "name": "EGFR"
-                    },
-                    {
-                        "name": "ELL"
-                    },
-                    {
-                        "name": "EP300"
-                    },
-                    {
-                        "name": "ERBB4"
-                    },
-                    {
-                        "name": "EZH2"
-                    },
-                    {
-                        "name": "FAT1"
-                    },
-                    {
-                        "name": "FGFR1"
-                    },
-                    {
-                        "name": "FLI1"
-                    },
-                    {
-                        "name": "GNA13"
-                    },
-                    {
-                        "name": "GNAS"
-                    },
-                    {
-                        "name": "NCOA2"
-                    },
-                    {
-                        "name": "GSE1"
-                    },
-                    {
-                        "name": "H3-3A"
-                    },
-                    {
-                        "name": "H3C1"
-                    },
-                    {
-                        "name": "HUWE1"
-                    },
-                    {
-                        "name": "IDH2"
-                    },
-                    {
-                        "name": "IKZF2"
-                    },
-                    {
-                        "name": "JAK1"
-                    },
-                    {
-                        "name": "JAK3"
-                    },
-                    {
-                        "name": "KDR"
-                    },
-                    {
-                        "name": "KIAA1549"
-                    },
-                    {
-                        "name": "KMT2A"
-                    },
-                    {
-                        "name": "KMT2D"
-                    },
-                    {
-                        "name": "KRAS"
-                    },
-                    {
-                        "name": "LATS1"
-                    },
-                    {
-                        "name": "MAML2"
-                    },
-                    {
-                        "name": "MGA"
-                    },
-                    {
-                        "name": "MUTYH"
-                    },
-                    {
-                        "name": "MYH11"
-                    },
-                    {
-                        "name": "NAV1"
-                    },
-                    {
-                        "name": "NDRG2"
-                    },
-                    {
-                        "name": "NIPBL"
-                    },
-                    {
-                        "name": "NOTCH1"
-                    },
-                    {
-                        "name": "NR3C1"
-                    },
-                    {
-                        "name": "NR4A3"
-                    },
-                    {
-                        "name": "NSD1"
-                    },
-                    {
-                        "name": "NTRK1"
-                    },
-                    {
-                        "name": "NUP98"
-                    },
-                    {
-                        "name": "MED12"
-                    },
-                    {
-                        "name": "PALB2"
-                    },
-                    {
-                        "name": "PDGFRA"
-                    },
-                    {
-                        "name": "PDGFRB"
-                    },
-                    {
-                        "name": "PIK3C2G"
-                    },
-                    {
-                        "name": "PIK3CG"
-                    },
-                    {
-                        "name": "PIK3R1"
-                    },
-                    {
-                        "name": "POLD1"
-                    },
-                    {
-                        "name": "PTEN"
-                    },
-                    {
-                        "name": "PTPN2"
-                    },
-                    {
-                        "name": "ROS1"
-                    },
-                    {
-                        "name": "RPL11"
-                    },
-                    {
-                        "name": "RUNX1T1"
-                    },
-                    {
-                        "name": "SAMD9"
-                    },
-                    {
-                        "name": "SEPTIN2"
-                    },
-                    {
-                        "name": "SETBP1"
-                    },
-                    {
-                        "name": "SETD2"
-                    },
-                    {
-                        "name": "SHANK2"
-                    },
-                    {
-                        "name": "SMARCC1"
-                    },
-                    {
-                        "name": "SMO"
-                    },
-                    {
-                        "name": "SRF"
-                    },
-                    {
-                        "name": "STAG2"
-                    },
-                    {
-                        "name": "TNFAIP3"
-                    },
-                    {
                         "name": "TP53"
-                    },
-                    {
-                        "name": "TRAF7"
-                    },
-                    {
-                        "name": "TSPYL2"
-                    },
-                    {
-                        "name": "U2AF2"
-                    },
-                    {
-                        "name": "USP6"
-                    },
-                    {
-                        "name": "ZNF384"
-                    },
-                    {
-                        "name": "C19MC"
-                    },
-                    {
-                        "name": "MYC"
-                    },
-                    {
-                        "name": "MET"
-                    },
-                    {
-                        "name": "MDM4"
-                    },
-                    {
-                        "name": "CDK4"
-                    },
-                    {
-                        "name": "OTX2"
-                    },
-                    {
-                        "name": "PPM1D"
-                    },
-                    {
-                        "name": "PTCH1"
-                    },
-                    {
-                        "name": "SUFU"
                     },
                     {
                         "name": "NF1"
                     },
                     {
-                        "name": "MYCN"
+                        "name": "H3-3A"
+                    },
+                    {
+                        "name": "H3C2"
                     }
                 ]
             }
