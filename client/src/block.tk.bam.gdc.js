@@ -40,6 +40,7 @@ and is validated in validateInputs{}
 ************ functions
 makeTokenInput
 makeGdcIDinput
+	queryCaseFileList
 	gdc_search
 		makeSsmGeneSearch
 			temp_renderGeneSearch
@@ -155,7 +156,7 @@ export async function bamsliceui({
 	if (!hideTokenInput) makeTokenInput()
 
 	// <input> to enter gdc id, and doms for display case/file info
-	makeGdcIDinput()
+	const gdcid_input = await makeGdcIDinput()
 
 	// hold toggle ui for ssm list and gene search
 	// contents are only rendered here after a case/file is found via gdc_search()
@@ -166,6 +167,13 @@ export async function bamsliceui({
 
 	// submit button, "no permission" alert
 	const [submitButton, saydiv, noPermissionDiv] = makeSubmitAndNoPermissionDiv()
+
+	if (urlp.has('gdc_id')) {
+		gdcid_input
+			.property('value', urlp.get('gdc_id'))
+			.node()
+			.dispatchEvent(new Event('keyup'))
+	}
 
 	//////////////////////// helper functions
 
@@ -228,18 +236,20 @@ export async function bamsliceui({
 		setTimeout(() => input.node().focus(), 1100)
 	}
 
-	function makeGdcIDinput() {
+	async function makeGdcIDinput() {
 		// make one <tr> with two cells
 		const tr = formDiv.insert('div')
 
 		// cell 1
-		tr.insert('div')
+		tr.append('div')
 			.style('display', 'inline-block')
 			.style('width', '15vw')
+			.style('padding-top', '5px')
 			.text('Enter search string')
+			.style('vertical-align', 'top')
 
 		// cell 2
-		const td = tr.insert('div').style('display', 'inline-block')
+		const td = tr.append('div').style('display', 'inline-block')
 
 		const gdcid_input = td
 			.append('input')
@@ -253,13 +263,6 @@ export async function bamsliceui({
 			// clicking X in <input> fires "search" event. must listen to it and call callback without delay in order to clear the UI
 			.on('search', gdc_search)
 
-		if (urlp.has('gdc_id')) {
-			gdcid_input
-				.property('value', urlp.get('gdc_id'))
-				.node()
-				.dispatchEvent(new Event('keyup'))
-		}
-
 		const gdc_loading = td
 			.append('span')
 			.style('padding-left', '10px')
@@ -271,6 +274,13 @@ export async function bamsliceui({
 			.append('span')
 			.style('display', 'none')
 			.style('padding', '2px 5px')
+
+		td.append('br') // add line break from input box
+		const listCaseFileHandle = td
+			.append('div')
+			.style('margin', '5px')
+			.style('display', 'inline-block')
+		queryCaseFileList(listCaseFileHandle)
 
 		const userHasNoAccessDiv = td
 			.append('div')
@@ -294,6 +304,7 @@ export async function bamsliceui({
 		// the update() will be called in pp react wrapper, when user changes cohort from gdc ATF
 		publicApi.update = _arg => {
 			gdc_search(null, _arg?.filter0 || filter0)
+			queryCaseFileList(listCaseFileHandle, _arg?.filter0 || filter0)
 		}
 
 		/* arguments
@@ -464,6 +475,51 @@ export async function bamsliceui({
 				}
 			})
 		}
+		return gdcid_input
+	}
+
+	async function queryCaseFileList(handle, filter0override) {
+		const _filter0 = Object.keys(filter0override || {}).length ? filter0override : filter0 || null
+		const body = {}
+		if (_filter0) body.filter0 = _filter0
+		const data = await dofetch3('gdcbam', { body }) // query same route without case_id
+		if (data.error) {
+			handle.text(data.error)
+			return
+		}
+		if (data.total < data.loaded) handle.text(`Or, browse ${data.total} BAM files`)
+		else handle.text(`Or, browse first ${data.loaded} BAM files out of ${data.total} total`)
+		handle.attr('class', 'sja_clbtext').on('click', event => {
+			const div = tip
+				.clear()
+				.showunder(event.target)
+				.d.append('div')
+				.style('margin', '10px')
+				.style('overflow-y', 'scroll')
+				.style('height', '300px')
+				.style('resize', 'vertical')
+			const table = div.append('table')
+			for (const c in data.case2files) {
+				const tr = table.append('tr')
+				tr.append('td')
+					.text(c)
+					.style('vertical-align', 'top')
+				const td2 = tr.append('td')
+				for (const f of data.case2files[c]) {
+					td2
+						.append('div')
+						.attr('class', 'sja_clbtext')
+						.html(`${f.sample_type}, ${f.experimental_strategy} <span style="font-size:.8em">${f.file_size}</span>`)
+						.on('click', () => {
+							tip.hide()
+							gdcid_input
+								.property('value', f.file_uuid)
+								.node()
+								.dispatchEvent(new Event('keyup'))
+						})
+				}
+			}
+		})
 	}
 
 	// this is called after a file/case is found

@@ -45,16 +45,19 @@ gdc_bam_request
 
 export async function gdc_bam_request(req, res) {
 	try {
-		if (!req.query.gdc_id) throw 'query.gdc_id missing'
+		if (req.query.gdc_id) {
+			const bamdata = await get_gdc_data(
+				req.query.gdc_id,
+				req.query.filter0 // optional gdc cohort filter
+			)
 
-		const bamdata = await get_gdc_data(
-			req.query.gdc_id,
-			req.query.filter0 // optional gdc cohort filter
-		)
+			await mayCheckPermission(bamdata, req)
 
-		await mayCheckPermission(bamdata, req)
-
-		res.send(bamdata)
+			res.send(bamdata)
+		} else {
+			const re = await getCaseFiles(req.query.filter0)
+			res.send(re)
+		}
 	} catch (e) {
 		res.send({ error: e.message || e })
 		if (e.stack) console.log(e.stack)
@@ -75,6 +78,7 @@ const filesApi = {
 		'id',
 		'file_size',
 		'experimental_strategy',
+		'cases.submitter_id', // used when listing all cases & files
 		'associated_entities.entity_submitter_id', // semi human readable
 		'associated_entities.case_id', // case uuid
 		'cases.samples.sample_type',
@@ -217,17 +221,23 @@ async function ifIdIsCase(id, field, filter0) {
 }
 
 /*
-id is case id or case uuid; corresponding field is caseField
+inputs:
+- id
+	case id or case uuid
+	when missing, will query all cases and file
+- caseField
+	corresponding filter field of first argument
+- filter0
+	gdc cohort filter
+- returnSize
+	max number of items api will return, default 10
+
 query /files/ to retrieve all indexed bam files using this id
 */
-async function getFileByCaseId(id, caseField, filter0) {
+async function getFileByCaseId(id, caseField, filter0, returnSize) {
 	const filter = {
 		op: 'and',
 		content: [
-			{
-				op: 'in',
-				content: { field: caseField, value: id }
-			},
 			{
 				op: '=',
 				content: { field: 'data_category', value: 'Sequencing Reads' }
@@ -248,11 +258,18 @@ async function getFileByCaseId(id, caseField, filter0) {
 		]
 	}
 
+	if (id && caseField) {
+		filter.content.push({
+			op: 'in',
+			content: { field: caseField, value: id }
+		})
+	}
+
 	if (filter0) {
 		filter.content.push(filter0)
 	}
 
-	return await queryApi(filter, filesApi)
+	return await queryApi(filter, filesApi, returnSize)
 }
 
 /*
@@ -279,12 +296,12 @@ async function getFileByFileId(id, field, filter0) {
 }
 
 // helper to query api
-async function queryApi(filters, api) {
+async function queryApi(filters, api, returnSize) {
 	const headers = { 'Content-Type': 'application/json', Accept: 'application/json' }
 
 	const data = {
 		filters,
-		size: api.size || 10,
+		size: returnSize || 10,
 		fields: api.fields.join(',')
 	}
 
@@ -354,5 +371,30 @@ async function gdcCheckPermission(gdcFileUUID, token, sessionid) {
 		console.log('gdcCheckPermission error: ', e?.code || e)
 		// TODO refer to e.code
 		throw 'Permission denied'
+	}
+}
+
+const listCaseFileSize = 1000
+
+async function getCaseFiles(filter0) {
+	const re = await getFileByCaseId(null, null, filter0, listCaseFileSize)
+	const case2files = {}
+	if (!Array.isArray(re.data?.hits)) throw 're.data.hits[] not array'
+	for (const h of re.data.hits) {
+		if (h.analysis.workflow_type == skip_workflow_type) continue
+		const c = h.cases?.[0]?.submitter_id // case submitter id, for display
+		if (!c) continue
+		if (!case2files[c]) case2files[c] = []
+		case2files[c].push({
+			file_uuid: h.id,
+			sample_type: h.cases?.[0].samples?.[0].sample_type,
+			experimental_strategy: h.experimental_strategy,
+			file_size: (Number.parseFloat(h.file_size) / 10e8).toFixed(2) + ' GB'
+		})
+	}
+	return {
+		case2files,
+		total: re.data?.pagination?.total,
+		loaded: listCaseFileSize
 	}
 }
