@@ -333,8 +333,10 @@ async function defaultAuthUi(dslabel) {
 					resolve(dslabel)
 				})
 				.catch(e => {
-					mask.remove()
-					reject(e)
+					alert('login error: ' + e)
+					// allow to reuse the login UI, do not hide or reject
+					// mask.remove()
+					// reject(e)
 				})
 		}
 		btn.on('click', login)
