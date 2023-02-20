@@ -1715,7 +1715,7 @@ function handle_textfile(req, res) {
 
 async function handle_urltextfile(req, res) {
 	// const url = req.query.url
-	const url = req.query.url.replace(serverconfig.URL, `http://127.0.0.1:3000`)
+	const url = req.query.url.replace(serverconfig.URL, `http://127.0.0.1:${serverconfig.port}`)
 	/* 
 	Fix for loopback request issue on prp1. https links were not properly
 	downgrading to http. 

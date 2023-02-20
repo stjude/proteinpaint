@@ -19,7 +19,13 @@ const runpp = helpers.getRunPp('termdb', {
 
 /**************
  test sections
-***************/
+**************
+
+no tree.click_term2select_tvs callback
+with callback, but no submenu.term
+with callback and submenu.term
+
+*/
 
 tape('\n', function(test) {
 	test.pass('-***- termdb/submenu -***-')
