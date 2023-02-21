@@ -3,6 +3,21 @@ import { getRunPp } from '../../test/front.helpers.js'
 import { fillTermWrapper } from '../../termsetting/termsetting.js'
 import { getFilterItemByTag } from '../../filter/filter.js'
 import { filterJoin } from '../../filter/filter.js'
+import { whenHidden, whenVisible } from '../../test/test.helpers.js'
+
+/***************** Test Layout *****************:
+
+1. 'term1 as numeric and term2 categorical'
+2. 'render violin plot'
+3. 'test basic controls'
+4. 'test label clicking, filtering and hovering'
+5. 'test hide option on label clicking'
+6. 'term1 as numeric and term2 numeric'
+7. 'term1 as categorical and term2 numeric'
+8. 'test custom groupsetting from Methylome tSNE'
+9. 'test uncomputable categories legend'
+
+***********************************************/
 
 /*************************
  reusable helper functions
@@ -22,6 +37,7 @@ function sleep(ms) {
 /**************
  test sections
 ***************/
+
 tape('\n', function(test) {
 	test.pass('-***- termdb/violin -***-')
 	test.end()
@@ -59,14 +75,13 @@ tape('term1 as numeric and term2 categorical', function(test) {
 		}
 	})
 	async function runTests(violin) {
-		await sleep(800)
 		if (test._ok) violin.Inner.app.destroy()
 		test.end()
 	}
 })
 
 tape('render violin plot', function(test) {
-	test.timeoutAfter(10000)
+	test.timeoutAfter(5000)
 	runpp({
 		state: {
 			plots: [open_state]
@@ -87,15 +102,10 @@ tape('render violin plot', function(test) {
 		const violinDivData = violin.Inner.data.plots
 		await sleep(800)
 		testViolinPath(violinDiv) //test if violin path is generated. should be more than 0
-		await sleep(800)
 		testPlotTitle(violinDiv, violinDivControls) //test if label in ts-pill is same as title on svg.
-		await sleep(800)
 		testDataLength(violinDiv, violinDivData) //test if length of samples is same as shown in plot labels
-		await sleep(800)
 		testPvalue(violin, violinPvalueDiv)
-		await sleep(800)
 		testDescrStats(violin, legendDiv)
-		await sleep(800)
 		if (test._ok) violin.Inner.app.destroy()
 		test.end()
 	}
@@ -118,7 +128,7 @@ tape('render violin plot', function(test) {
 		)
 	}
 
-	async function testDataLength(violinDiv, violinDivData) {
+	function testDataLength(violinDiv, violinDivData) {
 		const axisLabelNodes = violinDiv.selectAll('.sjpp-axislabel').nodes()
 		const plotValueCount1 = violinDivData[0]?.plotValueCount
 
@@ -131,7 +141,6 @@ tape('render violin plot', function(test) {
 				`There are ${plotValueCount1} values for Female`
 			)
 		}
-		await sleep(300)
 
 		if (plotValueCount2) {
 			test.equal(
@@ -219,7 +228,7 @@ tape('render violin plot', function(test) {
 })
 
 tape('test basic controls', function(test) {
-	test.timeoutAfter(10000)
+	test.timeoutAfter(5000)
 	runpp({
 		state: {
 			plots: [open_state]
@@ -237,23 +246,16 @@ tape('test basic controls', function(test) {
 		const violinSettings = violin.Inner.config.settings.violin
 		const testStrokeWidth = 1
 		const testSymSize = 10
-		await sleep(800)
+
 		changeOrientation(violinDivControls) // test orientation by changing to vertical
-		await sleep(700)
 		changeDataSymbol(violinDivControls) //test change in Data symbol
-		await sleep(700)
 		await changeOverlayTerm(violin) //test change in term2/overlay term
-		await sleep(400)
 		changeStrokeWidth(violinDivControls, violinSettings, testStrokeWidth) //test change in stroke width
-		await sleep(300)
 		testChangeStrokeWidth(violinSettings, testStrokeWidth)
-		await sleep(700)
 		changeSymbolSize(violinSettings, violinDivControls, testSymSize) //test change in symbol size
-		await sleep(300)
 		testChangeSymbolSize(violinSettings, testSymSize)
-		await sleep(700)
 		changeModeToDiscrete(violin) //test change in q: {mode: 'Discrete'} to display barchart
-		await sleep(1000)
+		await sleep(200)
 		if (test._ok) violin.Inner.app.destroy()
 		test.end()
 	}
@@ -325,7 +327,7 @@ tape('test basic controls', function(test) {
 	}
 })
 
-tape('test label clicking/brushing and filtering', function(test) {
+tape('test label clicking, filtering and hovering', function(test) {
 	test.timeoutAfter(8000)
 	runpp({
 		state: {
@@ -345,9 +347,9 @@ tape('test label clicking/brushing and filtering', function(test) {
 		const violinSettings = violin.Inner.config.settings.violin
 		await sleep(800)
 		labelClicking(violin, violinDiv) //test filter on label clicking
-		await sleep(800)
 		testFiltering(violin, violinSettings, violinDivData) //test filtering by providing tvs.lst object
-		await sleep(800)
+		testLabelHovering(violinDiv)
+		await sleep(500)
 		if (test._ok) violin.Inner.app.destroy()
 		test.end()
 	}
@@ -430,9 +432,17 @@ tape('test label clicking/brushing and filtering', function(test) {
 		})
 		test.ok(true, 'Filtering works as expected upon given range(start, stop) of values')
 	}
+
+	async function testLabelHovering(violinDiv) {
+		const elem = violinDiv.node().querySelectorAll('.sjpp-axislabel')[0]
+		elem.dispatchEvent(new Event('mouseover'), { bubbles: true })
+		await sleep(500)
+		elem.dispatchEvent(new Event('mouseout'), { bubbles: true })
+		test.ok(true, 'Hovering over axis label displays summary statistics')
+	}
 })
 
-tape('test Hide option on label clicking', function(test) {
+tape('test hide option on label clicking', function(test) {
 	test.timeoutAfter(5000)
 	runpp({
 		state: {
@@ -447,11 +457,10 @@ tape('test Hide option on label clicking', function(test) {
 	async function runTests(violin) {
 		violin.on('postRender.test', null)
 		const legendDiv = violin.Inner.dom.legendDiv
-		await sleep(800)
 		testHideOption(violin, legendDiv) //test filter on label clicking
 		await sleep(800)
 		testHiddenValues(violin, legendDiv)
-		await sleep(500)
+		await sleep(300)
 		if (test._ok) violin.Inner.app.destroy()
 		test.end()
 	}
@@ -488,7 +497,7 @@ tape('test Hide option on label clicking', function(test) {
 })
 
 tape('term1 as numeric and term2 numeric', function(test) {
-	test.timeoutAfter(3000)
+	test.timeoutAfter(1000)
 	runpp({
 		state: {
 			plots: [
@@ -520,14 +529,13 @@ tape('term1 as numeric and term2 numeric', function(test) {
 		}
 	})
 	async function runTests(violin) {
-		await sleep(800)
 		if (test._ok) violin.Inner.app.destroy()
 		test.end()
 	}
 })
 
 tape('term1 as categorical and term2 numeric', function(test) {
-	test.timeoutAfter(3000)
+	test.timeoutAfter(1000)
 	runpp({
 		state: {
 			nav: {
@@ -562,14 +570,13 @@ tape('term1 as categorical and term2 numeric', function(test) {
 		}
 	})
 	async function runTests(violin) {
-		await sleep(800)
 		if (test._ok) violin.Inner.app.destroy()
 		test.end()
 	}
 })
 
 tape('test custom groupsetting from Methylome tSNE', function(test) {
-	test.timeoutAfter(3000)
+	test.timeoutAfter(1000)
 	runpp({
 		state: {
 			nav: {
@@ -602,7 +609,7 @@ tape('test custom groupsetting from Methylome tSNE', function(test) {
 	async function runTests(violin) {
 		violin.on('postRender.test', null)
 		testSamplelst(violin)
-		await sleep(400)
+		await sleep(100)
 		if (test._ok) violin.Inner.app.destroy()
 		test.end()
 	}
@@ -639,5 +646,75 @@ tape('test custom groupsetting from Methylome tSNE', function(test) {
 			}
 		})
 		test.ok(true, 'Custom groups rendered')
+	}
+})
+
+tape('test uncomputable categories legend', function(test) {
+	test.timeoutAfter(1000)
+	runpp({
+		state: {
+			nav: {
+				header_mode: 'hide_search'
+			},
+			plots: [
+				{
+					chartType: 'summary',
+					childType: 'violin',
+					term: {
+						id: 'aaclassic_5',
+						included_types: ['float'],
+						isAtomic: true,
+						isLeaf: true,
+						name: 'Cumulative Alkylating Agents (Cyclophosphamide Equivalent Dose)',
+						q: {
+							mode: 'continuous'
+						}
+					}
+				}
+			]
+		},
+		violin: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+
+	async function runTests(violin) {
+		const legendDiv = violin.Inner.dom.legendDiv
+		const violinDiv = violin.Inner.dom.violinDiv
+		violin.on('postRender.test', null)
+		await sleep(800)
+		testUncomputableCategories(violin, legendDiv)
+		if (test._ok) violin.Inner.app.destroy()
+		test.end()
+	}
+
+	function testUncomputableCategories(violin, legendDiv) {
+		const keys = Object.keys(violin.Inner.data.uncomputableValueObj)
+		const category1 =
+			legendDiv
+				.node()
+				.querySelectorAll('.legend-row')[8]
+				.innerText.split(',')[0] +
+			',' +
+			legendDiv
+				.node()
+				.querySelectorAll('.legend-row')[8]
+				.innerText.split(',')[1]
+		const category2 = legendDiv
+			.node()
+			.querySelectorAll('.legend-row')[9]
+			.innerText.split(',')[0]
+		test.equal(
+			keys[0],
+			category1,
+			`Uncomputable category '${category1}' rendered with n = ${violin.Inner.data.uncomputableValueObj[category1]}`
+		)
+		test.equal(
+			keys[1],
+			category2,
+			`Uncomputable category '${category2}' rendered with n = ${violin.Inner.data.uncomputableValueObj[category2]}`
+		)
 	}
 })

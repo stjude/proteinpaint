@@ -1,11 +1,13 @@
 import computePercentile from './compute.percentile'
 import roundValue from './roundValue'
 
+/* This file generates summary statistics on any given array of numbers*/
+
 export function summaryStats(array) {
 	let arr = array
 	if (typeof array[0] == 'string') {
 		// somehow the values can be string but not numbers
-		// must cast to numbers to properly compute median
+		// must cast to numbers to properly compute values
 		arr = array.map(Number)
 	}
 	const n = arr.length
@@ -16,10 +18,7 @@ export function summaryStats(array) {
 	}
 
 	//compute median
-	const mid = Math.floor(arr.length / 2),
-		nums = [...arr].sort((a, b) => a - b)
-	let median = arr.length % 2 !== 0 ? nums[mid] : (nums[mid - 1] + nums[mid]) / 2
-	median = Math.abs(median) < 1 ? median.toPrecision(1) : median.toFixed(1)
+	const median = computePercentile(arr, 50)
 
 	const squareDiffs = arr.map(x => (x - mean(arr)) ** 2).reduce((a, b) => a + b, 0)
 	// compute variance
