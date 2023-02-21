@@ -208,8 +208,6 @@ async function listSkewerData(tk, block) {
 	}
 	new Tabs({
 		holder: tk.menutip.d.append('div').style('margin', '10px'),
-		tabsPosition: 'vertical',
-		linePosition: 'right',
 		tabs
 	}).main()
 	let i = 0
