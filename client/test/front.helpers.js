@@ -1,13 +1,11 @@
 const runproteinpaint = require('#src/app').runproteinpaint
-const serverconfig = require('../../serverconfig')
-const host = 'http://localhost:' + (serverconfig.port || 3000)
 const serverData = Object.create(null)
 
 function sleep(ms) {
 	return new Promise(resolve => setTimeout(resolve, ms))
 }
 
-exports.getRunPp = function getRunPp(appname = '', defaultArgs = {}) {
+exports.getRunPp = function getRunPp(appname = '', defaultArgs = {}, host = 'http://localhost:3000') {
 	/*
 		Wrap runproteinpaint() to make repeated calls to it more
 		convenient and easier to read
