@@ -295,7 +295,7 @@ class Scatter {
 
 		this.components.controls.on('downloadClick.scatter', () => this.downloadSVG(this.svg))
 		this.components.controls.on('helpClick.scatter', () =>
-			window.open('https://github.com/stjude/sjpp/wiki/Scatter-plot', '_blank')
+			window.open('https://github.com/proteinpaint/sjpp/wiki/Scatter-plot', '_blank')
 		)
 		this.dom.toolsDiv = this.dom.controls.insert('div')
 	}
@@ -1112,8 +1112,7 @@ function setRenderers(self) {
 				.attr('stop-color', self.stopColor)
 
 			mainG.attr('clip-path', `url(#${idclip})`)
-			xAxis.call(self.axisBottom)
-			yAxis.call(self.axisLeft)
+
 			legendG = svg
 				.append('g')
 				.attr('class', 'sjpcb-scatter-legend')
@@ -1127,6 +1126,8 @@ function setRenderers(self) {
 			legendG = svg.select('.sjpcb-scatter-legend')
 			clipRect = svg.select(`defs > clipPath > rect`)
 		}
+		xAxis.call(self.axisBottom)
+		yAxis.call(self.axisLeft)
 		const particleWidth = Math.sqrt(self.settings.size)
 		if (self.settings.showAxes) {
 			clipRect

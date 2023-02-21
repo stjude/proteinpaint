@@ -285,7 +285,6 @@ function setRenderers(self) {
 			alert(`TODO: ${tab.label}`)
 			return
 		}
-		console.log(config)
 		self.app.dispatch({
 			type: 'plot_edit',
 			id: self.id,
@@ -361,7 +360,11 @@ export async function getPlotConfig(opts, app) {
 				if (config.term?.q?.mode == 'continuous' && config.term2?.q?.mode == 'continuous') {
 					config.childType = 'sampleScatter'
 				} else if (config.term?.q?.mode == 'continuous' || config.term2?.q?.mode == 'continuous') {
-					config.childType = 'violin'
+					if (config.childType !== 'sampleScatter') config.childType = 'violin'
+					else
+						config.term?.q?.mode == 'continuous'
+							? (config.term2.q.mode = 'continuous')
+							: (config.term.q.mode = 'continuous')
 				} else config.childType = 'barchart'
 			}
 		}
