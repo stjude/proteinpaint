@@ -220,14 +220,16 @@ function setRenderers(self) {
 		const textAlign =
 			self.opts.linePosition == 'bottom' || self.opts.linePosition == 'top' ? 'center' : self.opts.linePosition
 
+		/* Code assumes the tabs and content divs are contiguous for now.*/
 		self.dom.wrapper = self.dom.holder
 			.append('div')
-			// Fix for content wrapping when viewport resizes
-			.style('display', 'block')
+			/* Fix to prevent content wrapping (specifically the content 
+			holder appearing below the tabs in a menu) when the viewport resizes */
 			.style('min-width', 'max-content')
 
 		self.dom.tabsHolder = self.dom.wrapper
-			.append('div') //add light blue border underneath the buttons
+			.append('div')
+			//add light blue border underneath the buttons
 			.style(`border-${self.opts.linePosition}`, '0.5px solid #1575ad')
 			.style('width', 'fit-content')
 		if (!self.opts.contentHolder && !self.opts.noContent) {
@@ -239,9 +241,6 @@ function setRenderers(self) {
 					.style('align-items', 'start')
 					.style('overflow', 'auto')
 					.style('grid-auto-flow', 'column')
-					//Extra div prevents svgs from displaying above contentHolder
-					//Acts as a viewBox
-					.append('div')
 			}
 		}
 
@@ -296,7 +295,7 @@ function setRenderers(self) {
 					.style('text-align', textAlign)
 					.style('padding', '5px')
 					.html(tab.label)
-				tab.line //Blue line indicate the active button
+				tab.line //Bolded, blue line indicating the active button
 					.style('color', '#1575ad')
 					.style('background-color', '#1575ad')
 					.style('visibility', tab.active ? 'visible' : 'hidden')
@@ -306,13 +305,19 @@ function setRenderers(self) {
 				} else {
 					tab.line
 						.style('width', '8px')
-						//Trick div into appearing the full height of the parent
+						//TODO: Trick div into appearing the full height of the parent
+						// come up with a better solution.
 						.style('padding', '5px 0px')
 						.html('l')
 				}
 
 				if (self.dom.contentHolder) {
-					tab.contentHolder = self.dom.contentHolder.append('div').style('display', tab.active ? 'block' : 'none')
+					tab.contentHolder = self.dom.contentHolder
+						.append('div')
+						/* Extra div prevents svgs from displaying above contentHolder
+						(i.e. inline at the beginning of the holder). Div acts as a `viewBox`.*/
+						.append('div')
+						.style('display', tab.active ? 'block' : 'none')
 					if (self.opts.tabsPosition == 'horizontal') {
 						tab.contentHolder.style('padding-top', '10px').style('margin-top', '10px')
 					}
@@ -331,6 +336,14 @@ function setRenderers(self) {
 					t.active = t === tab
 				}
 				const activeTabIndex = self.tabs.findIndex(t => t.active) //Fix for non-Rx implementations
+				/*
+				TODO: self.update() not required for non-RX components
+				Idea is to create super class, then state and stateless components
+				for rx and non-rx components, respectively.
+				rx -> include app.dispatch() here. Maybe other intuitive methods to 
+					allievate callback code in tabs array
+				non-rx -> include self.update() here without activeTabIndex arg
+				*/
 				self.update(activeTabIndex)
 				if (tab.callback) await tab.callback(event, tab)
 			})
