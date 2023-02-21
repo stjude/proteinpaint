@@ -1,11 +1,12 @@
 # called from the proteinpaint directory
 
-mv -f .git/hooks/pre-commit .git/hooks/pre-commit-bkup
-cd .git/hooks
-ln -s ../../utils/hooks/pre-commit pre-commit
-ln -s ../../utils/hooks/pre-push pre-push
-chmod 755 post-checkout
-cd ../..
+PPDIR=$(pwd)
+HOOKS=$(git rev-parse --git-path hooks)
+mv -f $HOOKS/pre-commit $HOOKS/pre-commit-bkup
+cd $HOOKS
+ln -s $PPDIR/utils/hooks/pre-commit pre-commit
+ln -s $PPDIR/utils/hooks/pre-push pre-push
+cd $PPDIR
 
 STATUS=which pre-commit
 if [[ "$STATUS" == "" || "$STATUS" == "pre-commit not found" ]]; then 
