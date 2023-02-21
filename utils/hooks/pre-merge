@@ -1,9 +1,0 @@
-#!/bin/sh
-
-current_branch=$(git rev-parse --abbrev-ref HEAD)
-
-if [[ "$current_branch" == "common" ]]; then
-	git restore --staged sj/*
-	git restore --staged *jenkins*
-	git restore --stage *Jenkins*
-fi

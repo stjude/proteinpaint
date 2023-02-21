@@ -1,1 +1,0 @@
-../../../../utils/gdc/rest.openproject.js
