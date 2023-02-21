@@ -80,13 +80,13 @@ function setRenderers(self) {
 				.text('Loading..')
 				.style('display', 'none'),
 
-			top_info_div: holder.append('div'),
+			top_info_div: holder.append('div').style('padding-bottom', '5px'),
 
 			violin_div: holder.append('div').style('color', 'black'),
 
 			table_div: holder
 				.append('table')
-				.style('margin', '15px 0px 15px 0px')
+				.style('margin', '5px 0px 15px 0px')
 				.style('border-collapse', 'collapse')
 				.style('color', 'black'),
 
@@ -94,6 +94,7 @@ function setRenderers(self) {
 
 			excluded_div: holder
 				.append('table')
+				.style('display', 'none')
 				.style('margin', '5px 10px')
 				.style('border-collapse', 'collapse')
 		}
@@ -103,34 +104,75 @@ function setRenderers(self) {
 		const input = self.input
 
 		// render top info
-		if (input.termStatus.topInfoStatus?.length) self.dom.top_info_div.html(input.termStatus.topInfoStatus.join('<br>'))
+		renderTopInfo(input)
 
 		// render included values
 		await renderValuesTable(input)
 
 		// render bottom info
-		if (input.termStatus.bottomSummaryStatus) self.dom.bottom_info_div.html(input.termStatus.bottomSummaryStatus)
+		renderBottomInfo(input)
 
 		// render excluded values
 		renderExcludedValues(input)
 	}
 
+	function renderTopInfo(input) {
+		if (input.termStatus.topInfoStatus?.length) {
+			self.dom.top_info_div.style('display', 'block').html(input.termStatus.topInfoStatus.join('<br>'))
+		} else {
+			self.dom.top_info_div.style('display', 'none')
+		}
+	}
+
 	async function renderValuesTable(input) {
-		if (input.term.q.mode == 'continuous') {
-			// continuous mode
+		if (input.term.q.mode == 'continuous' || input.term.q.mode == 'spline') {
+			// continuous or spline mode
 			// render values as violin plot
 			self.dom.violin_div.style('display', 'block')
 			self.dom.table_div.style('display', 'none')
 			if (self.plotAppApi) {
-				self.plotAppApi.dispatch({
+				// violin plot already created
+				// refresh the plot
+				const action = {
 					type: 'app_refresh',
 					state: {
 						termfilter: {
 							filter: self.input.parent.parent.filter
-						}
+						},
+						plots: [
+							{
+								//TODO: should not need to specify .chartType and .settings. Why doesn't copyMerge() in app_refresh copy recursively chartType and settings?
+								chartType: 'violin',
+								id: self.violinApi.id,
+								term: input.term,
+								settings: {
+									violin: getDefaultViolinSettings(null, {
+										svgw: 400,
+										axisHeight: 25,
+										rightMargin: 10,
+										datasymbol: 'rug',
+										radius: 4,
+										plotThickness: 100
+										//strokeWidth: 0.01
+									})
+								}
+							}
+						]
 					}
-				})
+				}
+				/*
+				// if spline term, render knots as lines on violin plot
+				if (input.term.q.mode == 'spline') {
+					opts.violin = {
+						lines: input.term.q.knots.map(x => Number(x.value))
+					}
+				}
+				*/
+				//console.log('opts:', opts)
+				self.plotAppApi.dispatch(action)
 			} else {
+				// violin plot does not exist
+				// create the plot
 				const opts = {
 					holder: self.dom.violin_div,
 					vocabApi: self.input.parent.app.vocabApi,
@@ -152,13 +194,16 @@ function setRenderers(self) {
 										axisHeight: 25,
 										rightMargin: 10,
 										datasymbol: 'rug',
-										radius: 4
+										radius: 4,
+										plotThickness: 100
 										//strokeWidth: 0.01
 									})
 								}
 							}
 						]
 					},
+					// global options for plotAppApi
+					// opts.violin will apply to all violin plots within the plotApp
 					// rx will pass options by component type, which are not tracked in state
 					// examples are callbacks, event listeners, etc
 					violin: {
@@ -166,9 +211,10 @@ function setRenderers(self) {
 					}
 				}
 				self.plotAppApi = await appInit(opts)
+				self.violinApi = self.plotAppApi.getComponents('plots.0')
 			}
 		} else {
-			// discrete/condition mode
+			// mode is neither continuous nor spline
 			// render values as a tabular bar chart
 			self.dom.table_div.style('display', 'block')
 			self.dom.violin_div.style('display', 'none')
@@ -194,10 +240,21 @@ function setRenderers(self) {
 		}
 	}
 
+	function renderBottomInfo(input) {
+		if (input.termStatus.bottomSummaryStatus) {
+			self.dom.bottom_info_div.style('display', 'block').html(input.termStatus.bottomSummaryStatus)
+		} else {
+			self.dom.bottom_info_div.style('display', 'none')
+		}
+	}
+
 	function renderExcludedValues(input) {
 		const data = input.termStatus.excludeCounts
 		if (!data || !data.length) return
-		self.dom.excluded_div.selectAll('tr').remove()
+		self.dom.excluded_div
+			.style('display', 'block')
+			.selectAll('tr')
+			.remove()
 		const trs = self.dom.excluded_div.selectAll('tr').data(data, b => b.key)
 
 		//trs.exit().remove()

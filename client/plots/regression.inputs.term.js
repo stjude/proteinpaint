@@ -192,22 +192,18 @@ export class InputTerm {
 			else tw.q.mode = 'continuous'
 		}
 
-		const q = JSON.parse(JSON.stringify(tw.q))
-		/*
-			for continuous term, assume it is numeric and that we'd want counts by bins,
-			so remove the 'mode: continuous' value as it will prevent bin construction in the backend
-		*/
-		if (q.mode == 'continuous' || q.mode == 'spline') delete q.mode
+		// need to supply tw.q in body, otherwise getCategories() will
+		// generate a default .q for the term
+		const body = tw.term.type == 'snplst' || tw.term.type == 'snplocus' ? { cacheid: tw.q.cacheid } : { term1_q: tw.q }
 
-		// the 3rd argument to getCategories() is different for snplst and dictionary term types
-		const body = tw.term.type == 'snplst' || tw.term.type == 'snplocus' ? { cacheid: tw.q.cacheid } : { term1_q: q }
-
+		// get term categories
 		const data =
 			tw.term.type == 'condition'
 				? await this.parent.app.vocabApi.getConditionCategories(tw.term, this.parent.parent.filter, body)
 				: await this.parent.app.vocabApi.getCategories(tw.term, this.parent.parent.filter, body)
 		if (!data) throw `no data for term.id='${tw.id}'`
 		if (data.error) throw data.error
+
 		mayRunSnplstTask(tw, data)
 
 		this.termStatus = {
@@ -261,10 +257,17 @@ export class InputTerm {
 					this.termStatus.allowToSelectRefGrp = true
 				}
 				if (tw.q.scale && tw.q.scale != 1) this.termStatus.topInfoStatus.push(`Scale: Per ${tw.q.scale}`)
-				if (tw.q.mode == 'spline')
+				if (tw.q.mode == 'discrete') {
+					this.termStatus.topInfoStatus.push(`Discrete variable with ${this.termStatus.sampleCounts.length} bins`)
+				}
+				if (tw.q.mode == 'spline') {
 					this.termStatus.topInfoStatus.push(
-						`Use as cubic spline variable with ${tw.q.knots.length} knots: ${tw.q.knots.map(v => v.value).join(', ')}`
+						`Cubic spline variable with ${tw.q.knots.length} knots: ${tw.q.knots
+							.map(x => Number(x.value))
+							.sort((a, b) => a - b)
+							.join(', ')}`
 					)
+				}
 			} else if (tw.term.type == 'categorical') {
 				this.termStatus.allowToSelectRefGrp = true
 			} else if (tw.term.type == 'condition') {

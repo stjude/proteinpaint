@@ -410,6 +410,7 @@ export class TermdbVocab extends Vocab {
 
 		if (arg.filter) body.filter = getNormalRoot(arg.filter)
 		if (arg.divideTw) body.divideTw = arg.divideTw
+		if (arg.plotThickness) body.plotThickness = arg.plotThickness
 		const d = await dofetch3('termdb', { body })
 		return d
 	}

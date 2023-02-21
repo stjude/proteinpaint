@@ -31,7 +31,7 @@ class ViolinPlot {
 			loadingDiv: this.opts.holder
 				.append('div')
 				.style('position', 'absolute')
-				.style('display', 'inline-block')
+				.style('display', this.opts.mode != 'minimal' ? 'inline-block' : 'none')
 				.style('padding-left', '10px')
 				.style('padding-top', '20px')
 				.text('Loading ...'),
@@ -177,11 +177,14 @@ class ViolinPlot {
 				.x1
 				.binValueCount
 		*/
-		this.toggleLoadingDiv('')
-		setTimeout(() => {
-			this.render()
-			this.renderPvalueTable()
-		}, 800)
+		this.toggleLoadingDiv(this.opts.mode == 'minimal' ? 'none' : '')
+		setTimeout(
+			() => {
+				this.render()
+				this.renderPvalueTable()
+			},
+			this.opts.mode == 'minimal' ? 0 : 800
+		)
 		this.toggleLoadingDiv('none')
 	}
 
@@ -213,8 +216,16 @@ class ViolinPlot {
 			axisHeight: s.axisHeight,
 			rightMargin: s.rightMargin
 		}
+		if (s.plotThickness) arg.plotThickness = s.plotThickness
 
-		if ((term.term.type == 'float' || term.term.type == 'integer') && term.q.mode == 'continuous') {
+		if (this.opts.mode == 'minimal') {
+			arg.termid = term.id
+			if (term.q.mode == 'spline') {
+				s.lines = term.q.knots.map(x => Number(x.value))
+			} else {
+				s.lines = []
+			}
+		} else if ((term.term.type == 'float' || term.term.type == 'integer') && term.q.mode == 'continuous') {
 			arg.termid = term.id
 			arg.divideTw = term2
 		} else if ((term2?.term?.type == 'float' || term2?.term?.type == 'integer') && term2.q.mode == 'continuous') {
@@ -261,7 +272,8 @@ export function getDefaultViolinSettings(app, overrides = {}) {
 		strokeWidth: 0.2,
 		axisHeight: 60,
 		rightMargin: 50,
-		displaySampleIds: app?.getState()?.termdbConfig?.displaySampleIds ? true : false
+		displaySampleIds: app?.getState()?.termdbConfig?.displaySampleIds ? true : false,
+		lines: []
 	}
 	return Object.assign(defaults, overrides)
 }

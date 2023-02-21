@@ -182,7 +182,7 @@ export function get_defaultQ4fillTW(regressionType, useCase = '') {
 
 	// numeric term
 	defaultQ['numeric.toggle'] =
-		regressionType == 'logistic' && useCase == 'outcome' ? { mode: 'binary' } : { mode: 'continuous' }
+		regressionType == 'logistic' && useCase == 'outcome' ? { mode: 'binary' } : { mode: 'discrete' }
 
 	// condition term
 	// will only apply to outcome term because condition

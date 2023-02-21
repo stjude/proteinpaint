@@ -76,7 +76,7 @@ export async function trigger_getViolinPlotData(q, res, ds, genome) {
 
 	const valuesObject = key2values(q, data, term, q.divideTw)
 
-	const result = resultObj(valuesObject, data, q.divideTw)
+	const result = resultObj(valuesObject, data, q)
 
 	// wilcoxon test data to return to client
 	await wilcoxon(q.divideTw, result)
@@ -200,7 +200,8 @@ function sortKey2values(data, key2values, overlayTerm) {
 	return key2values
 }
 
-function resultObj(valuesObject, data, overlayTerm) {
+function resultObj(valuesObject, data, q) {
+	const overlayTerm = q.divideTw
 	const result = {
 		min: valuesObject.minMaxValues.min,
 		max: valuesObject.minMaxValues.max,
@@ -232,7 +233,7 @@ function resultObj(valuesObject, data, overlayTerm) {
 		}
 	}
 	if (result.plots.length >= 1) {
-		result.plotThickness = plotThickness(result)
+		result.plotThickness = q.plotThickness ? Number(q.plotThickness) : plotThickness(result)
 	}
 	return result
 }

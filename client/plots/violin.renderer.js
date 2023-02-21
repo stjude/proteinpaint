@@ -342,6 +342,7 @@ export default function violinRenderer(self) {
 
 		renderSymbolImage(violinG, plot, isH, imageOffset)
 		if (self.opts.mode != 'minimal') renderMedian(violinG, isH, plot, svg)
+		renderLines(violinG, isH, self.config.settings.violin.lines, svg)
 	}
 
 	function renderSymbolImage(violinG, plot, isH, imageOffset) {
@@ -374,6 +375,25 @@ export default function violinRenderer(self) {
 				.attr('x1', isH ? svg.axisScale(plot.summaryStats.values.find(x => x.id === 'median').value) : -7)
 				.attr('x2', isH ? svg.axisScale(plot.summaryStats.values.find(x => x.id === 'median').value) : 7)
 		} else return
+	}
+
+	function renderLines(violinG, isH, lines, svg) {
+		// render straight lines on plot
+		violinG.selectAll('.sjpp-vp-line').remove()
+		if (!lines?.length) return
+		for (const line of lines) {
+			violinG
+				.append('line')
+				.transition()
+				.delay(self.opts.mode == 'minimal' ? 0 : 600)
+				.duration(self.opts.mode == 'minimal' ? 0 : 30)
+				.attr('class', 'sjpp-vp-line')
+				.style('stroke', self.opts.mode == 'minimal' ? 'red' : 'black') // if not minimal, then red median line will also appear
+				.attr('y1', isH ? -(self.data.plotThickness / 2) : svg.axisScale(line))
+				.attr('y2', isH ? self.data.plotThickness / 2 : svg.axisScale(line))
+				.attr('x1', isH ? svg.axisScale(line) : -(self.data.plotThickness / 2))
+				.attr('x2', isH ? svg.axisScale(line) : self.data.plotThickness / 2)
+		}
 	}
 
 	function renderBrushing(t1, t2, violinG, settings, plot, isH, svg) {
