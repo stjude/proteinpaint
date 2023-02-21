@@ -392,12 +392,12 @@ function loadAnnotationFile(scriptArg, terms, sampleCollect) {
 			if ('color' in term.values[v]) colorMap.set(v, term.values[v].color)
 		} else if (term.type == 'float') {
 			const n = Number(v)
-			if (Number.isNaN(n)) throw `value=${v} not number for type=float, term=${term.id}, line=${i + 1}`
+			if (Number.isNaN(n)) throw `value=${v} not number for type=float, term=${term.id}`
 			annotations.get(sampleId).set(term.id, n)
 			term.__all_values.push(n)
 		} else if (term.type == 'integer') {
 			const n = Number(v)
-			if (Number.isInteger(n)) throw `value=${v} not integer for type=integer, term=${term.id}, line=${i + 1}`
+			if (!Number.isInteger(n)) throw `value=${v} not integer for type=integer, term=${term.id}`
 			annotations.get(sampleId).set(term.id, n)
 			term.__all_values.push(n)
 		} else {
