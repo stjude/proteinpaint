@@ -132,13 +132,15 @@ async function itemtable_multiItems(arg, grid) {
 		.append('div')
 		.text('Click a variant to see details')
 		.style('font-size', '.8em')
-		.style('opacity', 0.3)
+		.style('color', '#ccc')
+		.style('position','sticky').style('top','0px').style('background','white')
 	if (hasOccurrence) {
 		grid
 			.append('div')
 			.text('Occurrence')
 			.style('font-size', '.8em')
-			.style('opacity', 0.3)
+		.style('color', '#ccc')
+			.style('position','sticky').style('top','0px').style('background','white')
 	}
 
 	// upon clicking an option for a variant
