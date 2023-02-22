@@ -55,14 +55,9 @@ npm test # tests both frontend and backend code
 
 See the [documentation](https://docs.google.com/document/d/13efooFofEk5a6cwVXD_Cyh1m6ekqk8zIQqNScYfAVNs/edit#heading=h.5ttjllhwzzy4) for more information.
 
-## Build + Deploy
+## Build
 
-```bash
-./build/deploy.sh [env] # builds and deploys the bundled code to internal SJ hosts
-# or to deploy to internal/external production servers
-npm run ppr
-npm run prp1
-```
+The build and release steps can be triggered via Github Actions using the Create Release workflow.
 
 ## Package Release
 
