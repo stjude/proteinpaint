@@ -96,7 +96,9 @@ class genomeBrowser {
 			// hardcode to 2 groups used by state.config.snvindel.details.groups[]
 			group1div: holder.append('div').style('margin-left', '25px'),
 			group2div: holder.append('div').style('margin-left', '25px'),
-			variantFilterHolder: holder.append('div'),
+			// the whole holder has white-space=nowrap (likely from sjpp-output-sandbox-content)
+			// must set white-space=normal to let INFO filter wrap and not to extend beyond holder
+			variantFilterHolder: holder.append('div').style('white-space','normal'),
 			blockHolder: holder.append('div')
 		}
 
