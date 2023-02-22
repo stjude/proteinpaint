@@ -292,7 +292,7 @@ function checkIPaddress(req, ip) {
 function userCanAccess(req, ds) {
 	const authds = authApi.getDsAuth(req).find(d => d.dslabel == ds.label)
 	if (!authds) return true
-	return ds.insession
+	return authds.insession
 }
 
 /* NOTE: maySetAuthRoutes could replace api.getDsAuth() and .hasActiveSession() */
