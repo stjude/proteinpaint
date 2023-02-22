@@ -24,11 +24,11 @@ function sleep(ms) {
  test sections
 
 Run GDC dataset, gene symbol: KRAS
-Run GDC dataset, ensembl transcript: ENST00000407796
-Run GDC dataset, ensembl gene: ENSG00000133703
-Run GDC dataset, RefSeq ID: NM_005163
+Run GDC dataset, GENCODE transcript: ENST00000407796
+Run GDC dataset, GENCODE gene: ENSG00000133703
+Run GDC dataset, RefSeq: NM_005163
 Launch GDC dataset by SSM ID, KRAS
-Render GDC track from search box
+geneSearch4GDCmds3
 Launch ASH dataset, BCR
 Incorrect dataset name: ah instead of ASH
 Custom dataset with custom variants, NO samples
@@ -53,30 +53,21 @@ tape('Run GDC dataset, gene symbol: KRAS', test => {
 		nobox: true,
 		genome: 'hg38',
 		gene: 'kras',
-		tracks: [{ type: 'mds3', dslabel: 'GDC' }],
-		onloadalltk_always: checkTrack
+		tracks: [{ type: 'mds3', dslabel: 'GDC', callbackOnRender }],
 	})
-	function checkTrack(bb) {
-		// bb is the block instance
-
+	function callbackOnRender(tk,bb) {
+		// tk is gdc mds3 track object; bb is block object
+		test.equal(bb.usegm.name,'KRAS','block.usegm.name="KRAS"')
 		test.equal(bb.tklst.length, 2, 'should have two tracks')
 
-		//Confirm track type
-		const mtk = bb.tklst.find(i => i.type == 'mds3')
-		test.ok(mtk, 'type=mds3 track should be found')
-
-		//Confirm correct dataset
-		test.ok(mtk.dslabel == 'GDC', 'Should render GDC dataset')
-
-		//Confirm gene symbol used to call track
-		test.ok(bb.usegm.name == 'KRAS', 'Should render KRAS track in GDC dataset')
+		test.ok(tk.skewer.rawmlst.length>0,'mds3 tk should have loaded many data points')
 
 		if (test._ok) holder.remove()
 		test.end()
 	}
 })
 
-tape('Run GDC dataset, ensembl transcript: ENST00000407796', test => {
+tape('Run GDC dataset, GENCODE transcript: ENST00000407796', test => {
 	test.timeoutAfter(8000)
 	const holder = getHolder()
 
@@ -86,33 +77,19 @@ tape('Run GDC dataset, ensembl transcript: ENST00000407796', test => {
 		nobox: true,
 		genome: 'hg38',
 		gene: 'ENST00000407796',
-		tracks: [
-			{
-				type: 'mds3',
-				dslabel: 'GDC'
-			}
-		],
-		onloadalltk_always: checkTrack
+		tracks: [ { type: 'mds3', dslabel: 'GDC', callbackOnRender } ]
 	})
-
-	function checkTrack() {
-		//Confirm track type
-		const mds3Track = bb.tklst.find(i => i.type == 'mds3')
-		test.ok(mds3Track, 'type=mds3 track should be found')
-
-		//Confirm correct dataset
-		test.ok(mds3Track.dslabel == 'GDC', 'Should render GDC dataset')
-
-		//Confirm gene symbol used to call track
-		test.ok(bb.usegm.isoform == 'ENST00000407796', 'Should render ENST00000407796 track in GDC dataset')
-
+	function callbackOnRender(tk,bb) {
+		test.equal(bb.usegm.isoform,'ENST00000407796', 'block.usegm.isoform="ENST00000407796"')
+		test.equal(bb.tklst.length, 2, 'should have two tracks')
+		test.ok(tk.skewer.rawmlst.length>0,'mds3 tk should have loaded many data points')
 		if (test._ok) holder.remove()
 		test.end()
 	}
 })
 
-tape('Run GDC dataset, ensembl gene: ENSG00000133703', test => {
-	// kras, should map to canonical isoform ENST00000311936
+tape('Run GDC dataset, GENCODE gene: ENSG00000133703', test => {
+	// this GENCODE gene is kras
 	// due to change of genedb in which ENSG are treated as aliases, they now map to refseq instead
 	// can change back when this behavior is restored
 	test.timeoutAfter(8000)
@@ -124,33 +101,17 @@ tape('Run GDC dataset, ensembl gene: ENSG00000133703', test => {
 		nobox: true,
 		genome: 'hg38',
 		gene: 'ENSG00000133703',
-		tracks: [
-			{
-				type: 'mds3',
-				dslabel: 'GDC'
-			}
-		],
-		onloadalltk_always: checkTrack
+		tracks: [ { type: 'mds3', dslabel: 'GDC', callbackOnRender } ]
 	})
-
-	function checkTrack() {
-		//Confirm track type
-		const mds3Track = bb.tklst.find(i => i.type == 'mds3')
-		test.ok(mds3Track, 'type=mds3 track should be found')
-
-		//Confirm correct dataset
-		test.ok(mds3Track.dslabel == 'GDC', 'Should render GDC dataset')
-
-		//Confirm gene symbol used to call track
-		// used to be ENST00000311936
-		test.ok(bb.usegm.isoform == 'NM_004985', 'Should render NM_004985 track in GDC dataset')
-
+	function callbackOnRender(tk,bb) {
+		test.equal(bb.usegm.name,'KRAS', 'ENSG00000133703 is mapped to block.usegm.name="KRAS"')
+		test.ok(tk.skewer.rawmlst.length>0,'mds3 tk should have loaded many data points')
 		if (test._ok) holder.remove()
 		test.end()
 	}
 })
 
-tape('Run GDC dataset, RefSeq ID: NM_005163', test => {
+tape('Run GDC dataset, RefSeq: NM_005163', test => {
 	test.timeoutAfter(8000)
 	const holder = getHolder()
 
@@ -160,26 +121,11 @@ tape('Run GDC dataset, RefSeq ID: NM_005163', test => {
 		nobox: true,
 		genome: 'hg38',
 		gene: 'NM_005163',
-		tracks: [
-			{
-				type: 'mds3',
-				dslabel: 'GDC'
-			}
-		],
-		onloadalltk_always: checkGeneTrack
+		tracks: [ { type: 'mds3', dslabel: 'GDC', callbackOnRender } ]
 	})
-
-	function checkGeneTrack() {
-		//Confirm track type
-		const mds3Track = bb.tklst.find(i => i.type == 'mds3')
-		test.ok(mds3Track, 'type=mds3 track should be found')
-
-		//Confirm correct dataset
-		test.ok(mds3Track.dslabel == 'GDC', 'Should render GDC dataset')
-
-		//Confirm gene symbol used to call track
-		test.ok(bb.usegm.isoform == 'NM_005163', 'Should render NM_005163 track in GDC dataset')
-
+	function callbackOnRender(tk,block) {
+		test.equal(bb.usegm.isoform,'NM_005163', 'block.usegm.isoform="NM_005163"')
+		test.ok(tk.skewer.rawmlst.length>0,'mds3 tk should have loaded many data points')
 		if (test._ok) holder.remove()
 		test.end()
 	}
@@ -188,42 +134,29 @@ tape('Run GDC dataset, RefSeq ID: NM_005163', test => {
 tape('Launch GDC dataset by SSM ID, KRAS', test => {
 	test.timeoutAfter(10000)
 	const holder = getHolder()
-
 	const ssm_id = '4fb37566-16d1-5697-9732-27c359828bc7' // kras G12V
-
 	runproteinpaint({
 		holder,
 		noheader: true,
 		nobox: true,
 		genome: 'hg38',
-		mds3_ssm2canonicalisoform: {
-			dslabel: 'GDC',
-			ssm_id
-		},
-		tracks: [
-			{
-				type: 'mds3',
-				dslabel: 'GDC'
-			}
-		],
-		onloadalltk_always: checkTrack
+		mds3_ssm2canonicalisoform: { dslabel: 'GDC', ssm_id },
+		tracks: [ { type: 'mds3', dslabel: 'GDC', callbackOnRender } ],
 	})
 
-	function checkTrack(bb) {
-		//Confirm ssm_id passed to block
-		const mds3Track = bb.tklst.find(i => i.type == 'mds3')
-		test.ok(mds3Track.skewer.hlssmid.has(ssm_id), `Should render mds3 KRAS track from ssm_id: ${ssm_id}`)
-
-		//TODO check G12V mutation is focused
-		// test.ok(mds3Track, 'Should render mds3 KRAS track with focused G12V mutation')
-
+	function callbackOnRender(tk,bb) {
+		test.equal(bb.usegm.name,'KRAS','ssm is converted to block.usegm.name="KRAS"')
+		test.ok(tk.skewer.rawmlst.length>0,'mds3 tk should have loaded many data points')
+		test.ok(tk.skewer.hlssmid.has(ssm_id), 'highlighted ssm id is in tk.skewer.hlssmid{}')
+		const hlbox = tk.skewer.g.select('.sja_mds3_skewer_ssmhlbox')?._groups?.[0]?.[0]?.tagName
+		test.equal(hlbox,'rect','<rect> is rendered for ssm highlight box')
 		if (test._ok) holder.remove()
 		test.end()
 	}
 })
 
 // this test always break, may need a "postRender" solution to replace sleep
-tape('Render GDC track from search box', async test => {
+tape('geneSearch4GDCmds3', async test => {
 	const holder = getHolder()
 	const gene = 'HOXA1'
 

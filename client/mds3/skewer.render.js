@@ -895,4 +895,5 @@ export function mayHighlightDiskBySsmid(tk) {
 		.attr('stroke', tk.skewer.hlBoxColor)
 		.attr('stroke-width', g => (g.radius > 10 ? 1.5 : 1))
 		.attr('fill', 'none')
+		.attr('class','sja_mds3_skewer_ssmhlbox') // for testing
 }
