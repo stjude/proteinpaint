@@ -280,12 +280,14 @@ export async function bamsliceui({
 			.append('div')
 			.style('margin', '5px')
 			.style('display', 'inline-block')
+			.text('Loading...')
 		queryCaseFileList(listCaseFileHandle)
 
 		const userHasNoAccessDiv = td
 			.append('div')
 			.style('display', 'none')
 			.style('width', '500px')
+			.style('margin','20px 3px')
 			.html(noPermissionMessage)
 
 		//////////////////////////
@@ -483,10 +485,9 @@ export async function bamsliceui({
 		const body = {}
 		if (_filter0) body.filter0 = _filter0
 		const data = await dofetch3('gdcbam', { body }) // query same route without case_id
-		if (data.error) {
-			handle.text(data.error)
-			return
-		}
+		if (data.error) return handle.text(data.error)
+		if(typeof data.case2files != 'object') return handle.text('wrong return')
+		// data = { case2files={}, total=int, loaded=int }
 		if (data.total < data.loaded) handle.text(`Or, browse ${data.total} BAM files`)
 		else handle.text(`Or, browse first ${data.loaded} BAM files out of ${data.total} total`)
 		handle.attr('class', 'sja_clbtext').on('click', event => {
@@ -499,13 +500,25 @@ export async function bamsliceui({
 				.style('height', '300px')
 				.style('resize', 'vertical')
 			const table = div.append('table')
-			for (const c in data.case2files) {
-				const tr = table.append('tr')
+				.style('border-spacing','0px')
+			// header row that stays
+			const tr = table.append('tr')
+				.style('position','sticky')
+				.style('top','0px')
+				.style('background-color','white')
+				.style('color','#aaa')
+				.style('font-size','.7em')
+			tr.append('td').text('CASE')
+			tr.append('td').text('BAM FILES, SELECT ONE TO VIEW')
+			for (const caseName in data.case2files) {
+				const tr = table.append('tr').attr('class','sja_clb_gray')
 				tr.append('td')
-					.text(c)
 					.style('vertical-align', 'top')
+					.style('color','#888')
+					.text(caseName)
 				const td2 = tr.append('td')
-				for (const f of data.case2files[c]) {
+				for (const f of data.case2files[caseName]) {
+					// f { sample_type, experimental_strategy, file_size, file_uuid }
 					td2
 						.append('div')
 						.attr('class', 'sja_clbtext')
@@ -532,7 +545,9 @@ export async function bamsliceui({
 			.selectAll('*')
 			.remove() // clear holder, including ssm from previous case
 
-		const mutationMsgDiv = ssmGeneDiv.append('div').text('Searching for mutations...')
+		const mutationMsgDiv = ssmGeneDiv
+			.append('p')
+			.text('Searching for mutations...')
 
 		// TODO to return all types of alterations for this case (ssm, cnv, fusion)
 		const data = await dofetch3('gdc_ssms', { body: { case_id: gdc_args.case_id, genome: gdc_genome } })
