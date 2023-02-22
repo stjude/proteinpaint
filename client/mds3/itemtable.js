@@ -14,6 +14,7 @@ itemtable_oneItem
 	table_snvindel
 	table_svfusion
 itemtable_multiItems
+mayMoveTipDiv2left
 add_csqButton
 print_snv
 printSvPair
@@ -32,13 +33,21 @@ const cutoff_tableview = 10
 
 /*
 for a list of variants, print details of both variant and samples
+
 arg{}
 .div
+	contents are rendered here
+.tipDiv
+	optional. the menu.d DOM element of the menu; if provided, may try to move it left if table may be too wide and tipDiv is too much to right
 .mlst[]
 	can be of different dt
 .tk
+	.menutip
+	.itemtip
 .block
-.tippos
+.tippos{left,top}
+	if provided, is the x/y position of the tk.itemtip in which the table is displayed, and will allow moving tk.itemtip to left when it decides the table has too many columns
+	if not provided, the function does not know which menu tip it is printing into and will not try to move it
 */
 export async function itemtable(arg) {
 	for (const m of arg.mlst) {
@@ -56,25 +65,36 @@ export async function itemtable(arg) {
 		await itemtable_multiItems(arg, grid)
 	}
 
-	if (!isElementInViewport(arg.div)) {
-		// If div renders outside of viewport, shift left
-		const leftpos = determineLeftCoordinate(arg.div)
-		appear(arg.div)
-		arg.div.style('left', leftpos + 'vw').style('max-width', '90vw')
+	mayMoveTipDiv2left(arg)
+}
+
+function mayMoveTipDiv2left(arg) {
+	if(!arg.tipDiv) {
+		// tipDiv not provided, this is called from leftlabel.variants, the tip is already on window left and no need to move
+		return
+	}
+	// arg.div should have children: <div><table></div>
+	// where table may show sample-by-attr info. if there are many columns, then try to move tipDiv to window left
+	const tableDoms = []
+	for(const d of arg.div.selectAll('div').selectAll('table')) {
+		if(d) tableDoms.push(d)
+	}
+	if(!tableDoms.length) return // no table found
+	let maxColumnCount = 0
+	for(const table of tableDoms) {
+		// table's first element should be <thead><tr>...</tr></thead>
+		const thead = table.firstChild
+		if(thead.tagName!='THEAD') continue
+		const tr = thead.firstChild
+		if(tr.tagName!='TR') continue
+		maxColumnCount = Math.max(maxColumnCount, tr.childNodes?.length)
+	}
+	if(maxColumnCount>5) {
+		// dataset has lots of columns
+		arg.tipDiv.style('left','50px')
 	}
 }
 
-function determineLeftCoordinate(div) {
-	const coords = div.node().getBoundingClientRect()
-	// Reset left position to 100% - (arg.div.width % + 3%)
-	let leftpos
-	if (coords.width / (document.documentElement.clientWidth || window.innerWidth) > 0.4) {
-		leftpos = 3
-	} else {
-		leftpos = 100 - ((coords.width / (document.documentElement.clientWidth || window.innerWidth)) * 100 + 3)
-	}
-	return leftpos
-}
 
 /*
 display full details (and samples) for one item
@@ -225,9 +245,10 @@ async function itemtable_multiItems(arg, grid) {
 				.append('span')
 				.attr('class', 'sja_clbtext')
 				.text('List all samples')
-				.on('click', () => {
+				.on('click', async () => {
 					grid.remove()
-					init_sampletable(arg)
+					await init_sampletable(arg)
+					mayMoveTipDiv2left(arg)
 				})
 		}
 	}
@@ -413,17 +434,6 @@ function add_csqButton(m, tk, td, table) {
 	}
 }
 
-function isElementInViewport(el) {
-	const rect = el.node().getBoundingClientRect()
-	return (
-		// Fix for div appearing still appearing within viewport but without a border,
-		// causing content to render bunched.
-		rect.top >= 5 &&
-		rect.left >= 5 &&
-		rect.bottom < (document.documentElement.clientHeight || window.innerHeight) - 5 &&
-		rect.right < (document.documentElement.clientWidth || window.innerWidth) - 5
-	)
-}
 
 async function table_svfusion(arg, grid) {
 	// display one svfusion event
@@ -511,4 +521,29 @@ async function getGm(p, block) {
 		p.name = u.name
 		p.gm = { isoform: u.isoform }
 	}
+}
+
+// not in use
+function determineLeftCoordinate(div) {
+	const coords = div.node().getBoundingClientRect()
+	// Reset left position to 100% - (arg.div.width % + 3%)
+	let leftpos
+	if (coords.width / (document.documentElement.clientWidth || window.innerWidth) > 0.4) {
+		leftpos = 3
+	} else {
+		leftpos = 100 - ((coords.width / (document.documentElement.clientWidth || window.innerWidth)) * 100 + 3)
+	}
+	return leftpos
+}
+// not in use
+function isElementInViewport(el) {
+	const rect = el.node().getBoundingClientRect()
+	return (
+		// Fix for div appearing still appearing within viewport but without a border,
+		// causing content to render bunched.
+		rect.top >= 5 &&
+		rect.left >= 5 &&
+		rect.bottom < (document.documentElement.clientHeight || window.innerHeight) - 5 &&
+		rect.right < (document.documentElement.clientWidth || window.innerWidth) - 5
+	)
 }
