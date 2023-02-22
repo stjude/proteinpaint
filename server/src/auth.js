@@ -289,11 +289,21 @@ function checkIPaddress(req, ip) {
 		throw `Your connection has changed, please refresh your page or sign in again.`
 }
 
+function userCanAccess(req, ds) {
+	const authds = authApi.getDsAuth(req).find(d => d.dslabel == ds.label)
+	if (!authds) return true
+	return ds.insession
+}
+
 /* NOTE: maySetAuthRoutes could replace api.getDsAuth() and .hasActiveSession() */
 const authApi = {
 	maySetAuthRoutes,
 	checkDsSecret,
 	getDsAuth: () => [],
-	requiresLogin: (req, dslabel) => !authApi.getDsAuth(req).find(d => d.dslabel == dslabel)?.insession
+	canDisplaySampleIds: (req, ds) => {
+		if (!ds.cohort.termdb.displaySampleIds) return false
+		return userCanAccess(req, ds)
+	},
+	userCanAccess
 }
 module.exports = authApi

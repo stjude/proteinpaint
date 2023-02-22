@@ -3,7 +3,7 @@ import fs from 'fs'
 import path from 'path'
 import utils from './utils'
 import serverconfig from './serverconfig'
-import { schemeCategory20, getColors, requiresLogin } from '#shared/common'
+import { schemeCategory20, getColors } from '#shared/common'
 import { interpolateSqlValues } from './termdb.sql'
 import { mclass, dt2label, morigin } from '#shared/common'
 import { getFilterCTEs } from './termdb.filter'
@@ -139,7 +139,7 @@ export async function trigger_getSampleScatter(req, q, res, ds, genome) {
 			const plot = ds.cohort.scatterplots.plots.find(p => p.name == q.plotName)
 			if (!plot) throw `plot not found with plotName ${q.plotName}`
 
-			const result = await getSamples(plot)
+			const result = await getSamples(req, ds, plot)
 			refSamples = result[0]
 			cohortSamples = result[1]
 		}
@@ -157,20 +157,26 @@ export async function trigger_getSampleScatter(req, q, res, ds, genome) {
 	}
 }
 
-async function getSamples(plot) {
+async function getSamples(req, ds, plot) {
 	if (plot.filterableSamples) {
 		// must make in-memory duplication of the objects as they will be modified by assigning .color/shape
-		const samples = [],
+		let samples = [],
 			refSamples = []
-		if (plot.referenceSamples) {
-			// put reference samples in front of the returned array, so they are rendered as "background"
-			for (const i of JSON.parse(JSON.stringify(plot.referenceSamples))) refSamples.push(i)
-		}
-		for (const i of JSON.parse(JSON.stringify(plot.filterableSamples))) samples.push(i)
+		if (plot.referenceSamples) refSamples = readSamples(plot.referenceSamples)
+		if (plot.filterableSamples) samples = readSamples(plot.filterableSamples)
 		return [refSamples, samples]
 	}
 	if (plot.gdcapi) throw 'gdcapi not implemented yet'
 	throw 'do not know how to load data from this plot'
+
+	function readSamples(samples) {
+		const result = []
+		for (const i of JSON.parse(JSON.stringify(samples))) {
+			if (!authApi.canDisplaySampleIds(req, ds)) delete i.sample
+			result.push(i)
+		}
+		return result
+	}
 }
 
 async function colorAndShapeSamples(refSamples, cohortSamples, data, q) {
@@ -362,8 +368,7 @@ export function getScatterCoordinates(req, q, ds) {
 
 	for (const { sampleId, x, y } of rows) {
 		const sample = { sampleId, x, y }
-		if (ds.cohort.termdb.displaySampleIds && !authApi.requiresLogin(req, q.dslabel))
-			sample.sample = ds.sampleId2Name.get(sampleId)
+		if (authApi.canDisplaySampleIds(req, ds)) sample.sample = ds.sampleId2Name.get(sampleId)
 		const computable = isComputable(q.coordTWs[0].term, x) && isComputable(q.coordTWs[1].term, y)
 		if (sample && computable) samples.push(sample)
 	}
