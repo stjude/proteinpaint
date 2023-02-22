@@ -117,19 +117,29 @@ async function fillMenu(self, div, tvs) {
 		ypad: 20
 	}
 
-	try {
-		const data = await self.opts.vocabApi.getViolinPlotData(
-			{
-				termid: tvs.term.id,
-				filter: self.filter,
-				svgw: self.num_obj.plot_size.width
-			},
-			self.opts.getCategoriesArguments
-		)
-		self.num_obj.density_data = convertViolinData(data)
-	} catch (err) {
-		console.log(err)
+
+	if(typeof self.opts.vocabApi.getViolinPlotData == 'function') {
+		try {
+			const data = await self.opts.vocabApi.getViolinPlotData(
+				{
+					termid: tvs.term.id,
+					filter: self.filter,
+					svgw: self.num_obj.plot_size.width
+				},
+				self.opts.getCategoriesArguments
+			)
+			self.num_obj.density_data = convertViolinData(data)
+		} catch (err) {
+			console.log(err)
+		}
+	} else {
+		// frontend vocab lacks this method, return no density data so ui will not show the plot
+		// if the method is added to front vocab, the method must check if sample data is available for the front vocab;
+		// if no sample data then return no density.
+		// such is the case for INFO terms used for variant filtering
+		self.num_obj.density_data = {}
 	}
+
 
 	if (self.num_obj.density_data.error) throw self.num_obj.density_data.error
 
