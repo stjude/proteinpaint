@@ -28,19 +28,11 @@ prepareDataTable <- function(dat, independent) {
   for (r in 1:nrow(independent)) {
     variable <- independent[r,]
     id <- variable$id
-    if (variable$rtype == "numeric") {
-      # numeric variable
-      if ("scale" %in% colnames(variable)) {
-        # scale variable values
-        if (!is.na(variable$scale)) dat[,id] <- dat[,id]/variable$scale
-      }
-    } else if (variable$rtype == "factor") {
+    if (variable$rtype == "factor") {
       # factor variable
       # assign reference group
       dat[,id] <- factor(dat[,id])
       dat[,id] <- relevel(dat[,id], ref = variable$refGrp)
-    } else {
-      stop(paste0("rtype='",variable$rtype,"' is not recognized"))
     }
   }
   return(dat)

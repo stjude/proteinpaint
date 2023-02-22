@@ -131,48 +131,27 @@ function setRenderers(self) {
 			self.dom.violin_div.style('display', 'block')
 			self.dom.table_div.style('display', 'none')
 			if (self.plotAppApi) {
-				// violin plot already created
-				// refresh the plot
+				// violin plot already created, refresh the plot
 				const action = {
 					type: 'app_refresh',
 					state: {
 						termfilter: {
 							filter: self.input.parent.parent.filter
-						},
-						plots: [
-							{
-								//TODO: should not need to specify .chartType and .settings. Why doesn't copyMerge() in app_refresh copy recursively chartType and settings?
-								chartType: 'violin',
-								id: self.violinApi.id,
-								term: input.term,
-								settings: {
-									violin: getDefaultViolinSettings(null, {
-										svgw: 400,
-										axisHeight: 25,
-										rightMargin: 10,
-										datasymbol: 'rug',
-										radius: 4,
-										plotThickness: 100
-										//strokeWidth: 0.01
-									})
-								}
+						}
+					},
+					subactions: [
+						{
+							type: 'plot_edit',
+							id: self.violinApi.id,
+							config: {
+								term: input.term
 							}
-						]
-					}
+						}
+					]
 				}
-				/*
-				// if spline term, render knots as lines on violin plot
-				if (input.term.q.mode == 'spline') {
-					opts.violin = {
-						lines: input.term.q.knots.map(x => Number(x.value))
-					}
-				}
-				*/
-				//console.log('opts:', opts)
 				self.plotAppApi.dispatch(action)
 			} else {
-				// violin plot does not exist
-				// create the plot
+				// violin plot does not exist, create the plot
 				const opts = {
 					holder: self.dom.violin_div,
 					vocabApi: self.input.parent.app.vocabApi,
@@ -190,11 +169,11 @@ function setRenderers(self) {
 								term: input.term,
 								settings: {
 									violin: getDefaultViolinSettings(null, {
-										svgw: 400,
+										svgw: 350,
 										axisHeight: 25,
 										rightMargin: 10,
 										datasymbol: 'rug',
-										radius: 4,
+										radius: 3,
 										plotThickness: 100
 										//strokeWidth: 0.01
 									})

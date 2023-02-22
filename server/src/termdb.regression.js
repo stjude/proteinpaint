@@ -25,6 +25,7 @@ q {}
 	.type // type will be required later to support molecular datatypes
 	.term{} // rehydrated
 	.q{}
+		.scale
 		.computableValuesOnly:true // always added
 	.refGrp
 .independent[{}]
@@ -420,7 +421,6 @@ function makeRvariable_dictionaryTerm(tw, independent, q) {
 			thisTerm.spline.plotfile = path.join(serverconfig.cachedir, Math.random().toString() + '.png')
 		}
 	}
-	if (tw.q.scale) thisTerm.scale = tw.q.scale
 	independent.push(thisTerm)
 }
 
@@ -1247,6 +1247,8 @@ function getSampleData_dictionaryTerms(q, terms) {
 
 	// parse the processed rows
 	for (const { sample, term_id, key, value } of prows) {
+		const term = terms.find(term => term.id == term_id)
+
 		if (!samples.has(sample)) {
 			samples.set(sample, { sample, id2value: new Map() })
 		}
@@ -1255,7 +1257,12 @@ function getSampleData_dictionaryTerms(q, terms) {
 			// can duplication happen?
 			throw `duplicate '${term_id}' entry for sample='${sample}'`
 		}
-		samples.get(sample).id2value.set(term_id, { key, value })
+
+		// if applicable, scale the data
+		samples.get(sample).id2value.set(term_id, {
+			key: term.q.scale ? key/term.q.scale : key,
+			value: term.q.scale ? value/term.q.scale : value
+		})
 	}
 
 	/* drop samples that are missing value for any term

@@ -41,7 +41,6 @@
 #       "spline": {} cubic spline settings (only for spline variable)
 #         "knots": [] knot values
 #         "plotfile": output png file of spline plot
-#       "scale": scaling factor. Data values of variable will be divided by this number (optional)
 #     }
 #   ]
 # }

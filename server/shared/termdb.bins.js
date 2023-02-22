@@ -271,8 +271,8 @@ export function get_bin_label(bin, binconfig) {
 		else if (bc.stopinclusive) bin.stopinclusive = true
 	}
 
-	const start = bc.use_as == 'bins' || !('scale' in bc) ? bin.start : bin.start / bc.scale
-	const stop = bc.use_as == 'bins' || !('scale' in bc) ? bin.stop : bin.stop / bc.scale
+	const start = bc.use_as == 'bins' || bin.start
+	const stop = bc.use_as == 'bins' || bin.stop
 
 	let label_offset = 0
 	if ('label_offset' in bc) {

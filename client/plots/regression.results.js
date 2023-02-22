@@ -228,13 +228,12 @@ function setRenderers(self) {
 			show a genome browser and a mds3 tk to show dots for the variants from snplocus term
 			clicking on a dot in browser tk will call displayResult_oneset() to display its results
 			*/
-			self.dom.snplocusBlockDiv
-				.append('div')
-				.style('margin-top', '30px')
-				.style('opacity', 0.3)
-				.text('Click on a variant within the browser to view its regression results')
-
 			if (!self.snplocusBlock) {
+				self.dom.snplocusBlockDiv
+					.append('div')
+					.style('margin-top', '30px')
+					.style('opacity', 0.3)
+					.text('Click on a variant within the browser to view its regression results')
 				self.snplocusBlock = await createGenomebrowser(self, snplocusInput, result.resultLst)
 			} else {
 				await updateMds3Tk(self, snplocusInput, result.resultLst)

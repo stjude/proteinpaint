@@ -191,9 +191,20 @@ TdbStore.prototype.actions = {
 		// without action.state as the current state at the
 		// initial render is not meant to be modified yet
 		//
-		this.state = this.copyMerge(this.toJson(this.state), action.state ? action.state : {}, this.replaceKeyVals)
+		this.state = this.copyMerge(this.toJson(this.state), action.state || {})
+
+		// custom array-merge logic is hard to code as a declarative argument to copyMerge(),
+		// it's easier to reuse action methods for arrays in state, like plots
+		const subactionPlotIds = new Set()
+		if (action.subactions) {
+			for (const a of action.subactions) {
+				this.actions[a.type].call(this, a)
+				if (a.type.startsWith('plot_')) subactionPlotIds.add(a.id)
+			}
+		}
+
 		for (const plot in this.state.plots) {
-			if (plot.mayAdjustConfig) {
+			if (plot.mayAdjustConfig && !subactionPlotIds.has(plot.id)) {
 				// console.log('mayAdjustConfig() used by mass store in dispatched action=app_refresh')
 				plot.mayAdjustConfig(plot, action.config)
 			}

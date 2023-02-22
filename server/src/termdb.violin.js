@@ -25,6 +25,7 @@ q = {
   radius: number,
   strokeWidth: number,
   filter: { type: 'tvslst', in: true, join: '', lst: [] },
+  scale: number, // if defined, then data will be divided by this number
   divideTw: {
 	  //a termwrapper object to divide samples to groups, basically term2
 	  //if provided, generate multiple violin plots else generate only one plot
@@ -74,6 +75,8 @@ export async function trigger_getViolinPlotData(q, res, ds, genome) {
 	const data = await getData({ terms: twLst, filter: q.filter, currentGeneNames: q.currentGeneNames }, ds, genome)
 	if (data.error) throw data.error
 
+	if (q.scale) scaleData(q, data, term)
+	
 	const valuesObject = key2values(q, data, term, q.divideTw)
 
 	const result = resultObj(valuesObject, data, q)
@@ -135,6 +138,19 @@ function minMax(v, term, minMaxObject) {
 	if (term.type == 'float' || (term.type == 'integer' && v[term.id])) {
 		minMaxObject.min = Math.min(minMaxObject.min, v[term.id]?.value)
 		minMaxObject.max = Math.max(minMaxObject.max, v[term.id]?.value)
+	}
+}
+
+// scale sample data
+// divide keys and values by scaling factor
+function scaleData(q, data, term) {
+	if (!q.scale) return
+	const scale = Number(q.scale)
+	for (const [k, v] of Object.entries(data.samples)) {
+		if (!v[term.id]) continue
+		if (term.values?.[v[term.id]?.value]?.uncomputable) continue
+		v[term.id].key = v[term.id].key / scale
+		v[term.id].value = v[term.id].value / scale
 	}
 }
 

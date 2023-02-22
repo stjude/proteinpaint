@@ -6,7 +6,7 @@ import htmlLegend from '../dom/html.legend'
 import { fillTermWrapper } from '#termsetting'
 
 /*
-when opts.mode = 'minimal', a minimal violin plot will be rendered without controls, legend, labels, brushing, transitions, etc.
+when opts.mode = 'minimal', a minimal violin plot will be rendered that will have a single term and minimal features (i.e. no controls, legend, labels, brushing, transitions, etc.)
 */
 
 class ViolinPlot {
@@ -219,11 +219,20 @@ class ViolinPlot {
 		if (s.plotThickness) arg.plotThickness = s.plotThickness
 
 		if (this.opts.mode == 'minimal') {
+			// assume a single term for minimal plot
+			if (term2) throw 'only a single term allowed for minimal plot'
 			arg.termid = term.id
 			if (term.q.mode == 'spline') {
+				// term may be cubic spline from regression analysis
+				// render knot values as vertical lines on the plot
 				s.lines = term.q.knots.map(x => Number(x.value))
 			} else {
 				s.lines = []
+			}
+			if (term.q.scale) {
+				// term may be scaled from regression analysis
+				// scale the data on the server-side
+				arg.scale = term.q.scale
 			}
 		} else if ((term.term.type == 'float' || term.term.type == 'integer') && term.q.mode == 'continuous') {
 			arg.termid = term.id
