@@ -54,12 +54,16 @@ class Barchart {
 		setInteractivity(this)
 
 		this.renderers = {}
-		this.legendRenderer = htmlLegend(this.dom.legendDiv, {
-			settings: {
-				legendOrientation: 'vertical'
+		this.legendRenderer = htmlLegend(
+			this.dom.legendDiv,
+			{
+				settings: {
+					legendOrientation: 'vertical'
+				},
+				handlers: this.handlers
 			},
-			handlers: this.handlers
-		})
+			this.dom.barDiv
+		)
 		this.controls = {}
 		this.term2toColor = {}
 		await this.setControls(this.getState(appState))
@@ -427,10 +431,21 @@ class Barchart {
 					addlSeriesIds[series.seriesId] += series.visibleTotal
 				}
 				for (const data of series.data) {
-					if (!(data.dataId in this.totalsByDataId)) {
-						this.totalsByDataId[data.dataId] = 0
+					if (t1.term.type == 'geneVariant' || t2?.term.type == 'geneVariant') {
+						//when term1 or term2 is a geneVariant term, totalsByDataId: {dataId: {chartId:total, ...}, ...}
+						if (!(data.dataId in this.totalsByDataId)) {
+							this.totalsByDataId[data.dataId] = {}
+						}
+						this.totalsByDataId[data.dataId][chart.chartId] = this.totalsByDataId[data.dataId][chart.chartId]
+							? this.totalsByDataId[data.dataId][chart.chartId] + data.total
+							: 0 + data.total
+					} else {
+						//when term1 or term2 isn't a geneVariant term, totalsByDataId: {dataId: total, ...}
+						if (!(data.dataId in this.totalsByDataId)) {
+							this.totalsByDataId[data.dataId] = 0
+						}
+						this.totalsByDataId[data.dataId] += data.total
 					}
-					this.totalsByDataId[data.dataId] += data.total
 				}
 				return true
 			})
@@ -513,7 +528,43 @@ class Barchart {
 			: rgb(this.colorScale(result.dataId)).toString() //.replace('rgb(','rgba(').replace(')', ',0.7)')
 	}
 
+	/*
+	when term1 or term2 is a geneVariant term, return legendGrps: 
+		[ 
+			[
+				{
+					name: "...", 
+					items: [...]
+				},
+				...
+			],
+			... 
+		]
+
+	when term1 or term2 is a geneVariant term, legendGrps:
+		[
+			{
+				name: "...", 
+				items: [...]
+			},
+			...
+		]
+	*/
 	getLegendGrps() {
+		const t1 = this.config.term
+		const t2 = this.config.term2
+		if (t1.term.type == 'geneVariant' || t2?.term.type == 'geneVariant') {
+			const legendGrps = []
+			for (const chart of this.chartsData.charts) {
+				legendGrps.push(this.getOneLegendGrps(chart))
+			}
+			return legendGrps
+		}
+		return this.getOneLegendGrps()
+	}
+
+	//Used by getLegendGrps to get one legendGrps
+	getOneLegendGrps(chart) {
 		const legendGrps = []
 		const s = this.settings
 		const t1 = this.config.term
@@ -553,29 +604,33 @@ class Barchart {
 			const reducer = (sum, b) => sum + b.total
 			const items = s.exclude.cols
 				.filter(collabel => s.cols.includes(collabel)) // && (!t1.term.values || collabel in t1.term.values))
-				.map(collabel => {
+				.flatMap(collabel => {
 					const filter = c => c.seriesId == collabel
 					const total =
 						t2 && t2.term.type == 'condition'
 							? 0
+							: t1.term.type == 'geneVariant' || t2.term.type == 'geneVariant'
+							? chart.serieses.filter(filter).reduce(reducer, 0)
 							: this.currServerData.charts.reduce((sum, chart) => {
 									return sum + chart.serieses.filter(filter).reduce(reducer, 0)
 							  }, 0)
+					if (!total && !(t2 && t2.term.type)) return []
 					const label = t1.term.values && collabel in t1.term.values ? t1.term.values[collabel].label : collabel
 					const ntotal = total ? ', n=' + total : ''
-
-					return {
-						id: collabel,
-						text: label + ntotal,
-						color: '#fff',
-						textColor: '#000',
-						border: '1px solid #333',
-						//inset: total ? "n="+total : '',
-						noIcon: true,
-						type: 'col',
-						isHidden: true,
-						hiddenOpacity: 1
-					}
+					return [
+						{
+							id: collabel,
+							text: label + ntotal,
+							color: '#fff',
+							textColor: '#000',
+							border: '1px solid #333',
+							//inset: total ? "n="+total : '',
+							noIcon: true,
+							type: 'col',
+							isHidden: true,
+							hiddenOpacity: 1
+						}
+					]
 				})
 				.sort(this.barSorter)
 
@@ -600,17 +655,20 @@ class Barchart {
 				name:
 					`<span style="${headingStyle}">` + t2.term.name + (value_by_label ? ', ' + value_by_label : '') + '</span>',
 				items: s.rows
-					.map(d => {
-						const total = this.totalsByDataId[d]
+					.flatMap(d => {
+						const total = chart ? this.totalsByDataId[d]?.[chart.chartId] : this.totalsByDataId[d]
+						if (!total) return []
 						const ntotal = total ? ', n=' + total : ''
 						const label = t2.term.values && d in t2.term.values ? t2.term.values[d].label : d
-						return {
-							dataId: d,
-							text: label + ntotal,
-							color: this.term2toColor[d],
-							type: 'row',
-							isHidden: s.exclude.rows.includes(d)
-						}
+						return [
+							{
+								dataId: d,
+								text: label + ntotal,
+								color: this.term2toColor[d],
+								type: 'row',
+								isHidden: s.exclude.rows.includes(d)
+							}
+						]
 					})
 					.sort(this.overlaySorter)
 			})

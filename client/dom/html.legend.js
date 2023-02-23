@@ -1,40 +1,58 @@
 import { select } from 'd3-selection'
 
-export default function htmlLegend(legendDiv, viz = { settings: {}, handlers: {} }) {
+export default function htmlLegend(legendDiv, viz = { settings: {}, handlers: {} }, barDiv) {
 	const isHidden = {}
 
 	function render(data) {
 		const s = viz.settings
 		legendDiv.selectAll('*').remove()
-		legendDiv
-			.style(
-				'text-align',
-				data.legendTextAlign || s.legendTextAlign || (s.legendOrientation == 'vertical' ? 'left' : 'center')
-			)
-			.style('display', s.legendOrientation == 'grid' ? 'grid' : '')
-			//.style('grid-template-cols', s.legendOrientation == 'grid' ? 'auto auto' : '')
-			.style('grid-template-rows', s.legendOrientation == 'grid' ? 'auto auto' : '')
-			.style('gap', s.legendOrientation == 'grid' ? '10px' : '')
-			.selectAll('div')
-			.data(data)
-			.enter()
-			.append('div')
-			.each(addLegendRow)
+		if (data.every(d => Array.isArray(d))) {
+			for (let i = 0; i < data.length; i++) {
+				const barDivChild = barDiv.select(`.pp-sbar-div:nth-child(${i + 1})`)
+				generateLegend(data[i], barDivChild)
+			}
+		} else if (data.every(d => typeof d == 'object')) {
+			generateLegend(data)
+		} else {
+			throw 'render() only takes an array of objects or an array of arrays'
+		}
 
-		if (s.legendChartSide == 'right') {
-			setTimeout(() => {
-				const pbox = viz.dom.container.node().parentNode.getBoundingClientRect()
-				const mbox = viz.dom.container.node().getBoundingClientRect()
-				const lbox = viz.dom.legendDiv.node().getBoundingClientRect()
-				const currPadTop = parseFloat(viz.dom.legendDiv.style('padding-top'))
-				const padTop = pbox.height - mbox.height + (mbox.height - lbox.height + currPadTop) / 2
-				if (Math.abs(currPadTop - padTop) < 20) return
-				//console.log(padTop, pbox.height, mbox.height, lbox.height)
-				viz.dom.legendDiv
-					.transition()
-					.duration(100)
-					.style('padding-top', padTop < 0 ? 0 : padTop + 'px')
-			}, 1200)
+		function generateLegend(data, barDivChild) {
+			const oneLegendDiv = barDivChild || legendDiv
+			oneLegendDiv.selectAll('.pp-sbar-div-oneLegend').remove()
+
+			oneLegendDiv
+				.append('div')
+				.attr('class', 'pp-sbar-div-oneLegend')
+				.style(
+					'text-align',
+					data.legendTextAlign || s.legendTextAlign || (s.legendOrientation == 'vertical' ? 'left' : 'center')
+				)
+				.style('display', s.legendOrientation == 'grid' ? 'grid' : '')
+				//.style('grid-template-cols', s.legendOrientation == 'grid' ? 'auto auto' : '')
+				.style('grid-template-rows', s.legendOrientation == 'grid' ? 'auto auto' : '')
+				.style('gap', s.legendOrientation == 'grid' ? '10px' : '')
+				.selectAll('div')
+				.data(data)
+				.enter()
+				.append('div')
+				.each(addLegendRow)
+
+			if (s.legendChartSide == 'right') {
+				setTimeout(() => {
+					const pbox = viz.dom.container.node().parentNode.getBoundingClientRect()
+					const mbox = viz.dom.container.node().getBoundingClientRect()
+					const lbox = viz.dom.legendDiv.node().getBoundingClientRect()
+					const currPadTop = parseFloat(viz.dom.legendDiv.style('padding-top'))
+					const padTop = pbox.height - mbox.height + (mbox.height - lbox.height + currPadTop) / 2
+					if (Math.abs(currPadTop - padTop) < 20) return
+					//console.log(padTop, pbox.height, mbox.height, lbox.height)
+					viz.dom.legendDiv
+						.transition()
+						.duration(100)
+						.style('padding-top', padTop < 0 ? 0 : padTop + 'px')
+				}, 1200)
+			}
 		}
 	}
 
