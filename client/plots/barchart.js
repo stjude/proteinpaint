@@ -607,14 +607,14 @@ class Barchart {
 				.flatMap(collabel => {
 					const filter = c => c.seriesId == collabel
 					const total =
-						t2 && t2.term.type == 'condition'
+						t2?.term?.type == 'condition'
 							? 0
-							: t1.term.type == 'geneVariant' || t2.term.type == 'geneVariant'
+							: t1.term.type == 'geneVariant' || t2?.term?.type == 'geneVariant'
 							? chart.serieses.filter(filter).reduce(reducer, 0)
 							: this.currServerData.charts.reduce((sum, chart) => {
 									return sum + chart.serieses.filter(filter).reduce(reducer, 0)
 							  }, 0)
-					if (!total && !(t2 && t2.term.type)) return []
+					if (!total && !(t2?.term?.type)) return []
 					const label = t1.term.values && collabel in t1.term.values ? t1.term.values[collabel].label : collabel
 					const ntotal = total ? ', n=' + total : ''
 					return [
