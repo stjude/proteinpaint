@@ -178,7 +178,7 @@ tape.only('geneSearch4GDCmds3', async test => {
 		searchBox.dispatchEvent(new Event('keyup'))
 
 		await whenVisible(arg.tip.d.node())
-		const geneHitDivs = await detectLst({ elem: arg.tip.d.node(), selector: '.sja_menuoption', countOp: '>=' })
+		const geneHitDivs = await detectLst({ elem: arg.tip.d.node(), selector: '.sja_menuoption', matchAs: '>=' })
 		test.equal(geneHitDivs[0].innerHTML, gene, 'Gene search found ' + gene)
 		geneHitDivs[0].dispatchEvent(new Event('click'))
 	}

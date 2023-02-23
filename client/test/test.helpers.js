@@ -13,7 +13,7 @@ export function sleep(ms) {
 	.elem        the DOM element where the selector will be queried
 	.selector    (required) a valid CSS-selector of the element to be returned
 	.count       the expected number of detected matching elements to stop the observer
-	.countOp     how to match the current versus expected counts, '=','>','<','>=','<=' default is '='
+	.matchAs     how to match the current versus expected counts, '=','>','<','>=','<=' default is '='
 
 	// options related to the native MutationObserver
 	.callback()  optional, the argument to the MutationObserver constructor
@@ -31,7 +31,7 @@ export async function detectLst(_opts = {}) {
 		// selector: required
 		maxTime: 5000,
 		count: 1,
-		countOp: '=',
+		matchAs: '=',
 		observeOpts: {
 			target: document.body,
 			opts: {
@@ -81,21 +81,22 @@ export async function detectLst(_opts = {}) {
 	})
 }
 
-function matchedCount(num, opts) {
+// compare the actual vs expected element counts
+function matchedCount(actual, opts) {
 	const expected = opts.count
-	switch (opts.countOp) {
+	switch (opts.matchAs) {
 		case '=':
-			return num === expected
+			return actual === expected
 		case '<':
-			return num < expected
+			return actual < expected
 		case '<=':
-			return num <= expected
+			return actual <= expected
 		case '>':
-			return num > expected
+			return actual > expected
 		case '>=':
-			return num >= expected
+			return actual >= expected
 		default:
-			throw `unknown countOp='${op}'`
+			throw `unknown matchAs='${op}'`
 	}
 }
 
@@ -140,6 +141,8 @@ export async function whenGone(opts) {
 	})
 }
 
+// must know that the element already exists when calling this,
+// otherwise use one of the detect* helpers
 export async function whenHidden(elem) {
 	return new Promise((resolve, reject) => {
 		let j = 0
@@ -158,6 +161,8 @@ export async function whenHidden(elem) {
 	})
 }
 
+// must know that the element already exists when calling this,
+// otherwise use one of the detect* helpers
 export async function whenVisible(elem) {
 	return new Promise((resolve, reject) => {
 		let j = 0
