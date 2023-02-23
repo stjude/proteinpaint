@@ -13,6 +13,7 @@ export function sleep(ms) {
 	.elem        the DOM element where the selector will be queried
 	.selector    (required) a valid CSS-selector of the element to be returned
 	.count       the expected number of detected matching elements to stop the observer
+	.countOperator "=,>,<,>=,<=" default is "="
 
 	// options related to the native MutationObserver
 	.callback()  optional, the argument to the MutationObserver constructor
@@ -30,6 +31,7 @@ export async function detectLst(_opts = {}) {
 		// selector: required
 		maxTime: 5000,
 		count: 1,
+		countOperator: '=',
 		observeOpts: {
 			target: document.body,
 			opts: {
@@ -53,6 +55,15 @@ export async function detectLst(_opts = {}) {
 			resolve([...elems])
 			return
 		}
+		/*
+		switch(opts.countOperator) {
+			case '=':
+			case '>':
+			case '<':
+			case '>=':
+			case '<=':
+		}
+		*/
 
 		const defaultCallback = mutations => {
 			const elems = opts.elem.querySelectorAll(opts.selector)
@@ -129,12 +140,12 @@ export async function whenHidden(elem) {
 				resolve(elem)
 			} else {
 				j++
-				if (j > 10) {
-					reject(`elem did not hide within 200ms`)
+				if (j > 200) {
+					reject(`elem did not hide within 5 seconds`)
 					clearInterval(i)
 				}
 			}
-		}, 20)
+		}, 25)
 	})
 }
 
@@ -147,11 +158,11 @@ export async function whenVisible(elem) {
 				resolve(elem)
 			} else {
 				j++
-				if (j > 10) {
-					reject(`elem did not become visible within 200ms`)
+				if (j > 200) {
+					reject(`elem did not become visible within 5 seconds`)
 					clearInterval(i)
 				}
 			}
-		}, 20)
+		}, 25)
 	})
 }

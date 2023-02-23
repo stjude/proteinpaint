@@ -147,6 +147,7 @@ export function addGeneSearchbox(arg) {
 		.attr('type', 'text')
 		.attr('placeholder', placeholder)
 		.attr('aria-label', 'Gene symbol, position, or alias')
+		.attr('class','sja_genesearchinput')
 		.style('width', width + 'px')
 		.on('focus', event => {
 			event.target.select()

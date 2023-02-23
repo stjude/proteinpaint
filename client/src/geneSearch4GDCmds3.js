@@ -50,7 +50,7 @@ export async function init(arg, holder, genomes) {
 		)
 
 	// second row, display graph
-	const graphDiv = holder.append('div')
+	const graphDiv = holder.append('div').attr('class','sja_geneSearch4GDCmds3_blockdiv')
 
 	const searchOpt = {
 		genome,

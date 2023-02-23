@@ -1,6 +1,6 @@
 const tape = require('tape')
 const d3s = require('d3-selection')
-const host = window.location.origin
+const { sleep, detectLst, detectOne, detectZero, whenHidden, whenVisible } = require('../../test/test.helpers')
 
 /*************************
  reusable helper functions
@@ -16,9 +16,6 @@ function getHolder() {
 		.node()
 }
 
-function sleep(ms) {
-	return new Promise(resolve => setTimeout(resolve, ms))
-}
 
 /**************
  test sections
@@ -64,6 +61,7 @@ tape('Run GDC dataset, gene symbol: KRAS', test => {
 		test.equal(bb.usegm.name,'KRAS','block.usegm.name="KRAS"')
 		test.equal(bb.tklst.length, 2, 'should have two tracks')
 		test.ok(tk.skewer.rawmlst.length>0,'mds3 tk should have loaded many data points')
+		// TODO in this first test, verify all ui parts are rendered
 		if (test._ok) holder.remove()
 		test.end()
 	}
@@ -154,31 +152,33 @@ tape('Launch GDC dataset by SSM ID, KRAS', test => {
 })
 
 // this test always break, may need a "postRender" solution to replace sleep
-tape('geneSearch4GDCmds3', async test => {
+tape.only('geneSearch4GDCmds3', async test => {
 	const holder = getHolder()
 	const gene = 'HOXA1'
 
 	await runproteinpaint({
 		holder,
 		noheader: 1,
-		geneSearch4GDCmds3: { postRender, onloadalltk_always }
+		geneSearch4GDCmds3: { postRender }
 	})
 
 	async function postRender(arg) {
 		// arg={tip}
 		// tip is the tooltip from gene search <input> showing hits
+		const searchBox = await detectOne({elem: holder, selector:'.sja_genesearchinput'})
+		test.ok(searchBox, 'Gene search box is made')
 
-		//Enter gene name into search box
-		const searchBox = d3s.select(holder).select('input')._groups[0][0]
+		const blockHolder = await detectOne({elem: holder, selector:'.sja_geneSearch4GDCmds3_blockdiv'})
+		test.ok(blockHolder, 'Block holder is made')
+
+		// enter gene name and trigger search
 		searchBox.value = gene
 		searchBox.dispatchEvent(new Event('keyup'))
-		await sleep(1000) // seems like must wait for 1s for gene search to finish and arg.tip to show up
 
-		const tipDiv = arg.tip.d.select('.sja_menuoption')._groups
-		test.ok(tipDiv.length > 0, 'Gene search found some hits')
-		const div1 = tipDiv[0][0]
-		test.equal(div1.innerHTML, gene, 'Gene search first hit is ' + gene)
-		div1.dispatchEvent(new Event('click'))
+		await whenVisible(arg.tip.d.node())
+		const geneHitDivs = await detectLst({elem:arg.tip.d.node(), selector:'.sja_menuoption', countOperator:'>'})
+		test.equal(geneHitDivs[0].innerHTML, gene, 'Gene search found '+gene)
+		geneHitDivs[0].dispatchEvent(new Event('click'))
 	}
 
 	// XXX test does not work
@@ -235,7 +235,7 @@ tape('Incorrect dataset name: ah instead of ASH', test => {
 })
 
 
-tape.only('Launch variant table from track variant label', test => {
+tape('Launch variant table from track variant label', test => {
 	test.timeoutAfter(10000)
 	const holder = getHolder()
 
