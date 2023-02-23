@@ -43,6 +43,9 @@ function argument object {}
 	cannot map isoform to gene name!
 	(later may need geneOrIsoform flag to query both)
 
+.geneSymbol: str
+	default gene name to fill into search box
+
 .allowVariant: true
 	if true, allow to enter chr.pos.ref.alt or hgvs (see next section)
 	otherwise, only allow chr:start-stop
@@ -433,7 +436,7 @@ export function addGeneSearchbox(arg) {
 	}
 
 	if (arg.geneSymbol) {
-		searchbox.property('value', arg.geneSymbol) //.node().dispatchEvent(new KeyboardEvent('keyup'))
+		searchbox.property('value', arg.geneSymbol)
 		setTimeout(() => getResult({ geneSymbol: arg.geneSymbol }, arg.geneSymbol), 10)
 	}
 

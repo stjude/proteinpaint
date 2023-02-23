@@ -18,6 +18,8 @@ arg = {}
 		optional callbacks for testing
 	.allow2selectSamples:{}
 		pass to mds3 tk object to enable sample selection
+	.geneSymbol:str
+		default gene to fill into search box
 holder
 genomes = { hg38 : {} }
 
@@ -62,12 +64,14 @@ export async function init(arg, holder, genomes) {
 	}
 	const coordInput = addGeneSearchbox(searchOpt)
 
+	// must declare this variable first then call postRender(), other wise it can crash for accessing variable before initialization...
+	let selectedIsoform
+
 	if (typeof arg.geneSearch4GDCmds3.postRender == 'function') {
 		// supports testing
 		await arg.geneSearch4GDCmds3.postRender({ tip })
 	}
 
-	let selectedIsoform
 
 	async function launchView() {
 		if (!coordInput.geneSymbol) throw 'geneSymbol missing'

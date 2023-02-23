@@ -178,7 +178,7 @@ tape('geneSearch4GDCmds3', async test => {
 
 		const blockDiv = await detectOne({elem: blockHolder, selector:'.sja_Block_div'})
 		test.ok(blockDiv, 'A block is rendered')
-		//if (test._ok) holder.remove()
+		if (test._ok) holder.remove()
 		test.end()
 	}
 })
@@ -306,7 +306,7 @@ tape('Launch cases from track cases label', test => {
 					// Close orphaned popup window
 					tk.menutip.d.remove()
 
-					// if (test._ok) holder.remove()
+					if (test._ok) holder.remove()
 					test.end()
 				}
 			}
