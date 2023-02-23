@@ -1,0 +1,35 @@
+ARG IMGVER=latest
+
+FROM pppkg:$IMGVER AS pk
+FROM ppfull:$IMGVER AS ppimg
+
+############################
+# Proteinpaint server image 
+############################
+
+# use the ppbase image which does NOT have 
+# the Xvfb-related libs and NPM devDependencies installed 
+FROM ppbase:$IMGVER as ppserver
+
+LABEL org.opencontainers.image.title="ncigdc/proteinpaint" \
+      org.opencontainers.image.description="GDCs copy of a genomics visualization tool for exploring a cohort's genotype and phenotype data" \
+      org.opencontainers.image.source="https://github.com/NCI-GDC/proteinpaint"
+
+RUN mkdir /home/root/pp/tmppack
+COPY --from=pk /home/root/pp/tmppack/stjude-proteinpaint.tgz /home/root/pp/tmppack/
+
+COPY --from=ppimg /home/root/pp/app /home/root/pp/app
+WORKDIR /home/root/pp/app
+
+# delete the public folder as the build user, instead of assuming that the 
+# container user is always root and can delete the public folder
+RUN npm prune \
+      && rm -rf node_modules/@stjude/proteinpaint/public \
+      && chown www-data /home/root/pp/cache \
+      && rm /home/root/pp/tmppack/stjude-proteinpaint.tgz
+RUN rm -rf node_modules/@stjude/proteinpaint/public && chown www-data /home/root/pp/cache
+COPY ./LICENSE ./
+ENV PP_MODE container-prod
+ENV PP_CUSTOMER gdc
+# CMD [ "sleep", "3600"]
+CMD [ "sh", "-c", "PP_MODE=container-prod npx proteinpaint"]
