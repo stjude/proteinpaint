@@ -125,7 +125,6 @@ export async function renderTable({
 	const table = parentDiv
 		.append('table')
 		.style('width', '100%')
-		.style('table-layout', 'fixed')
 	// should not use "fixed", it does not make sense to force equal width of all columns. also sample name column is a bit longer than most fields but we do want it to be entirely visible
 	//.style('table-layout', 'fixed')
 
