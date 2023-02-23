@@ -1,6 +1,11 @@
 # Change Log
 
 All notable changes to this project will be documented in this file. 
+## 2.11.0
+
+- check the user permission using session id when generating GDC BAM search results
+- option to set a default geneSymbol for mds3 gene search
+ 
 ## 2.10.1
 
 - fix the rollup bundling of client code that breaks GDC bundling
