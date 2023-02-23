@@ -19,6 +19,10 @@ export async function get_densityplot(term, samples) {
 	let minvalue = null,
 		maxvalue = null
 	for (const value of samples.map(s => s[term.id])) {
+
+		// skip uncomputable values, as declared in term.values{ "-999":{uncomputable:true} }
+		if(term.values?.[value]?.uncomputable) continue
+
 		const v = Number(value)
 		if (!Number.isFinite(v)) {
 			// the sample either unannotated or the annotation is invalid (not a number)
