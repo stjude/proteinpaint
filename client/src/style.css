@@ -1179,14 +1179,11 @@ sandbox header
     padding: 3px 5px;
     font-size: 1em;
     text-align: left;
-    overflow: hidden;
-    text-overflow: ellipsis;
-
 }
 
 .sjpp_hide_scrollbar{
     overflow-y: scroll;
-    overflow-x: hidden;
+    overflow-x: scroll;
 
 }
 

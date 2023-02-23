@@ -122,9 +122,9 @@ export async function renderTable({
 	}
 	parentDiv.attr('class', 'sjpp_hide_scrollbar')
 
-	const table = parentDiv
-		.append('table')
-		.style('width', '100%')
+
+	const table = parentDiv.append('table').style('width', '100%')
+
 	// should not use "fixed", it does not make sense to force equal width of all columns. also sample name column is a bit longer than most fields but we do want it to be entirely visible
 	//.style('table-layout', 'fixed')
 
