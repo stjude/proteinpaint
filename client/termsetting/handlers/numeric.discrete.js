@@ -3,7 +3,7 @@ import { select } from 'd3-selection'
 import { format } from 'd3-format'
 import { setDensityPlot } from './density'
 import { get_bin_label, get_bin_range_equation } from '#shared/termdb.bins'
-import { init_tabs } from '#dom/toggleButtons'
+import { Tabs } from '#dom/toggleButtons'
 import { make_radios } from '#dom/radiobutton'
 import { getPillNameDefault } from '#termsetting'
 import { convertViolinData } from '#filter/tvs.numeric'
@@ -315,13 +315,13 @@ function renderTypeInputs(self) {
 		{
 			active: self.q.type == 'regular-bin',
 			label: 'Same bin size',
-			callback: async div => {
+			callback: async (event, tab) => {
 				self.q.type = 'regular-bin'
 				self.dom.bins_div = bins_div
 				setqDefaults(self)
 				setDensityPlot(self)
 				if (!tabs[0].isInitialized) {
-					renderFixedBinsInputs(self, div)
+					renderFixedBinsInputs(self, tab.contentHolder)
 					tabs[0].isInitialized = true
 				}
 			}
@@ -329,20 +329,19 @@ function renderTypeInputs(self) {
 		{
 			active: self.q.type == 'custom-bin',
 			label: 'Varying bin sizes',
-			callback: async div => {
+			callback: async (event, tab) => {
 				self.q.type = 'custom-bin'
 				self.dom.bins_div = bins_div
 				setqDefaults(self)
 				setDensityPlot(self)
 				if (!tabs[1].isInitialized) {
-					renderCustomBinInputs(self, div)
+					renderCustomBinInputs(self, tab.contentHolder)
 					tabs[1].isInitialized = true
 				}
 			}
 		}
 	]
-
-	init_tabs({ holder: div, tabs })
+	new Tabs({ holder: div, tabs }).main()
 }
 
 /******************* Functions for Numerical Fixed size bins *******************/

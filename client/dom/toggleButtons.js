@@ -219,28 +219,23 @@ function setRenderers(self) {
 		const textAlign =
 			self.opts.linePosition == 'bottom' || self.opts.linePosition == 'top' ? 'center' : self.opts.linePosition
 
-		/* Code assumes the tabs and content divs are contiguous for now.*/
-		self.dom.wrapper = self.dom.holder
-			.append('div')
-			/* Fix to prevent content wrapping (specifically the content 
-			holder appearing below the tabs in a menu) when the viewport resizes */
-			.style('min-width', 'max-content')
-
-		self.dom.tabsHolder = self.dom.wrapper
+		self.dom.tabsHolder = self.dom.holder
 			.append('div')
 			.style('width', 'max-content')
 			//add light blue border underneath the buttons
+			.style('display', 'inline-block')
 			.style(`border-${self.opts.linePosition}`, '0.5px solid #1575ad')
 		if (!self.opts.contentHolder && !self.opts.noContent) {
-			self.dom.contentHolder = self.dom.wrapper.append('div')
-			if (self.opts.tabsPosition == 'vertical') {
-				self.dom.tabsHolder.style('display', 'inline-grid').style('align-items', 'start')
-				self.dom.contentHolder
-					//First part of fix for svgs rendering inline, outside of the contentHolder
-					.style('display', 'inline-block')
-					.style('vertical-align', 'top')
-					.style('position', 'relative')
-			}
+			self.dom.contentHolder = self.dom.holder.append('div')
+		} else self.dom.contentHolder = self.opts.contentHolder
+
+		if (self.opts.tabsPosition == 'vertical') {
+			self.dom.tabsHolder.style('display', 'inline-grid').style('align-items', 'start')
+			self.dom.contentHolder
+				//First part of fix for svgs rendering inline, outside of the contentHolder
+				.style('display', 'inline-block')
+				.style('vertical-align', 'top')
+				.style('position', 'relative')
 		}
 
 		await self.dom.tabsHolder
@@ -257,7 +252,6 @@ function setRenderers(self) {
 			.style('border', 'none')
 			.style('background-color', 'transparent')
 			.style('display', self.opts.tabsPosition == 'vertical' ? 'flex' : 'inline-grid')
-			//false is default if arg missing
 			.property('disabled', tab => {
 				tab.disabled ? tab.disabled() : false
 			})
@@ -347,8 +341,8 @@ function setRenderers(self) {
 				self.update(activeTabIndex)
 				if (tab.callback) await tab.callback(event, tab)
 			})
-
-		self.update()
+		const activeTabIndex = self.tabs.findIndex(t => t.active) //Fix for non-Rx implementations
+		self.update(activeTabIndex)
 	}
 	self.update = (activeTabIndex = 0, config = {}) => {
 		self.tabs.forEach((tab, i) => {

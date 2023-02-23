@@ -1010,18 +1010,19 @@ h2 {
 
   .sjpp-vertical-tab-menu {
     display: grid;
-    grid-template-columns: minmax(min-content, 10vw) minmax(60vw, 1fr);
+    /* grid-template-columns: minmax(min-content, 1vw) minmax(60vw, 1fr); */
     grid-template-areas: 'tabs content';
     flex-wrap: wrap;
     gap: 5px;
     text-align: left;
   }
   
-  .sjpp-tabs-div{
+.sjpp-tabs-div{
     grid-area: tabs;
-    align-items: flex-start;
+    /* align-items: flex-start;
     justify-items: end;
-    text-align: right;
+    text-align: right;*/
+    flex-wrap: wrap;
     border-right: 1px solid lightgray;
  }
 

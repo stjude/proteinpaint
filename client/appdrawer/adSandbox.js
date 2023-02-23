@@ -1,9 +1,9 @@
-import { getCompInit } from '#rx'
 import { dofetch, dofetch3, sayerror, tab_wait, appear } from '#src/client'
 import { newSandboxDiv } from '#dom/sandbox'
 import * as utils from './utils'
 import { addGeneSearchbox } from '#dom/genesearch'
 import { Menu } from '#dom/menu'
+import { Tabs } from '#dom/toggleButtons'
 import { BreadcrumbTrail } from '#dom/breadcrumbs'
 import hljs from 'highlight.js/lib/core'
 import javascript from 'highlight.js/lib/languages/javascript'
@@ -152,6 +152,7 @@ function openCardSandbox(card, res, sandboxDiv) {
 			.style('border', 'none')
 			.style('border-bottom', '1px solid lightgray')
 			.style('width', '100%')
+			.style('font-size', '20px')
 		const tabsContentDiv = sandboxDiv.body.append('div')
 
 		makeParentTabsMenu(sandboxArgs.ppcalls, card, topTabsDiv, tabsContentDiv, sandboxDiv)
@@ -200,52 +201,58 @@ function makeTopTabs(ppcalls, card, sandboxDiv) {
 	const uiPresent = ui != -1 ? true : false
 	if (uiPresent == true) {
 		tabs.push({
-			name: 'Add Your Data',
+			label: 'Add Your Data',
 			active: false,
-			callback: async div => {
+			callback: async (event, tab) => {
 				try {
 					const runpp_arg = {
-						holder: div
+						holder: tab.contentHolder
 							.append('div')
 							.style('margin', '20px')
 							.node(),
-						sandbox_header: div,
+						sandbox_header: tab.contentHolder,
 						host: window.location.origin
 					}
 
 					const callpp = JSON.parse(JSON.stringify(ppcalls[ui].runargs))
 
 					runproteinpaint(Object.assign(runpp_arg, callpp))
+					delete tab.callback
 				} catch (e) {
-					alert('Error: ' + (e.message || e))
+					if (e.stack) console.log(e.stack)
+					else throw e
 				}
 			}
 		})
 	}
 	if ((ppcalls.length == 1 && uiPresent != true) || (ppcalls.length == 2 && uiPresent == true)) {
 		tabs.push({
-			name: 'Example',
+			label: 'Example',
 			active: false,
-			callback: async div => {
+			callback: async (event, tab) => {
 				try {
-					renderContent(ppcalls[notui], div, card)
+					renderContent(ppcalls[notui], tab.contentHolder, card)
+					delete tab.callback
 				} catch (e) {
-					alert('Error: ' + (e.message || e))
+					if (e.stack) console.log(e.stack)
+					else throw e
 				}
 			}
 		})
 	}
 	if ((ppcalls.length > 1 && uiPresent == false) || (ppcalls.length > 2 && uiPresent == true)) {
 		tabs.push({
-			name: 'Examples',
+			label: 'Examples',
 			active: false,
-			callback: async div => {
+			callback: async (event, tab) => {
 				try {
 					const examplesOnly = ppcalls.filter(p => p.isUi != true) //Fix to rm UIs from Examples tab
 					sandboxDiv.header.trail.crumbs = examplesOnly
-					makeLeftsideTabMenu(card, div, examplesOnly, sandboxDiv)
+					makeLeftsideTabMenu(card, tab.contentHolder, examplesOnly, sandboxDiv)
+					delete tab.callback
 				} catch (e) {
-					alert('Error: ' + (e.message || e))
+					if (e.stack) console.log(e.stack)
+					else throw e
 				}
 			}
 		})
@@ -253,111 +260,43 @@ function makeTopTabs(ppcalls, card, sandboxDiv) {
 	return tabs
 }
 //Creates the main tab menu over the examples and/or app uis
-function makeParentTabsMenu(ppcalls, card, tabsDiv, contentDiv, sandboxDiv) {
+function makeParentTabsMenu(ppcalls, card, topTabsDiv, tabsContentDiv, sandboxDiv) {
 	const tabs = makeTopTabs(ppcalls, card, sandboxDiv)
-
-	for (const tab of tabs) {
-		tabs[0].active = true
-
-		tab.tab = tabsDiv
-			.append('button')
-			.attr('type', 'submit')
-			.text(tab.name)
-			.style('display', 'inline-block')
-			.style('font', 'Arial')
-			.style('font-size', '20px')
-			.style('padding', '6px')
-			.style('color', tab.active ? '#1575ad' : '#757373')
-			.style('background-color', 'transparent')
-			.style('border', 'none')
-			.style('border-radius', 'unset')
-			.style('border-bottom', tab.active ? '8px solid #1575ad' : 'none')
-			.style('margin', '5px 10px 0px 10px')
-
-		tab.content = contentDiv.append('div').style('display', tab.active ? 'block' : 'none')
-
-		if (tab.active) {
-			tab.callback(tab.content)
-			delete tab.callback
-		}
-
-		tab.tab.on('click', () => {
-			for (const t of tabs) {
-				t.active = t === tab
-				t.tab.style('border-bottom', t.active ? '8px solid #1575ad' : 'none')
-				t.tab.style('color', t.active ? '#1575ad' : '#757373')
-				t.content.style('display', t.active ? 'block' : 'none')
-			}
-			if (tab.callback) {
-				tab.callback(tab.content)
-				delete tab.callback
-			}
-		})
-	}
+	new Tabs({ holder: topTabsDiv, contentHolder: tabsContentDiv, tabs }).main()
 }
 
 async function makeLeftsideTabMenu(card, div, examplesOnly, sandboxDiv) {
-	const tabs = examplesOnly.map((p, index) => getTabData(p, index, card.section))
+	// div = top tab contentHolder
+	const tabs = examplesOnly.map((p, index) => getTabData(p, index, card.section, div, sandboxDiv))
 
-	const menuWrapper = div.append('div').classed('sjpp-vertical-tab-menu', true)
-	const tabsDiv = menuWrapper
+	const wrapper = div.append('div').classed('sjpp-vertical-tab-menu', true)
+	const tabsDiv = wrapper
 		.append('div')
 		.classed('sjpp-tabs-div', true)
 		.style('min-width', '150px') //Fixes the unsightly problem of tabs dramatically changing size on click.
-	const tabsContentDiv = menuWrapper.append('div').classed('sjpp-content-div', true)
+	const tabsContentDiv = wrapper.append('div').classed('sjpp-content-div', true)
 
-	for (const tab of tabs) {
-		tab.tab = tabsDiv
-			.append('button')
-			.attr('type', 'submit')
-			.text(tab.label)
-			.style('font', 'Arial')
-			.style('font-size', '16px')
-			.style('padding', '6px')
-			.style('color', tab.active ? '#1575ad' : '#757373') //#1575ad: blue color, same as the top tab. #757373: default darker gray color
-			.style('background-color', 'transparent')
-			.style('border', 'none')
-			.style('border-right', tab.active ? '8px solid #1575ad' : 'none')
-			.style('border-radius', 'unset')
-			.style('width', '100%')
-			.style('text-align', 'right')
-			.style('margin', '10px 0px 10px 0px')
-
-		tab.content = tabsContentDiv.append('div').style('display', tab.active ? 'block' : 'none')
-
-		if (tab.active) {
-			sandboxDiv.header.trail.addCrumb(tab)
-			sandboxDiv.header.trail.updateTrail()
-			tab.callback(tab.content)
-			delete tab.callback
-		}
-
-		tab.tab.on('click', () => {
-			for (const t of tabs) {
-				t.active = t === tab
-				t.tab.style('border-right', t.active ? '8px solid #1575ad' : 'none')
-				t.tab.style('color', t.active ? '#1575ad' : '#757373')
-				t.content.style('display', t.active ? 'block' : 'none')
-				if (t.active) sandboxDiv.header.trail.addCrumb(t)
-				else sandboxDiv.header.trail.removeCrumb(t)
-			}
-			if (tab.callback) {
-				tab.callback(tab.content)
-				delete tab.callback
-			}
-			sandboxDiv.header.trail.updateTrail()
-		})
-	}
+	new Tabs({
+		holder: tabsDiv,
+		contentHolder: tabsContentDiv,
+		tabs,
+		linePosition: 'right',
+		tabsPosition: 'vertical'
+	}).main()
+	/** TODO fix breadcrumb code and reimplement it in tab callback */
+	// sandboxDiv.header.trail.updateTrail()
 }
 
-function getTabData(ppcalls, i, app) {
+function getTabData(ppcalls, i, section, sandboxDiv) {
 	return {
 		label: ppcalls.label,
 		active: i === 0,
-		callback: async div => {
-			const wait = tab_wait(div)
+		callback: async (event, tab) => {
+			const wait = tab_wait(tab.contentHolder)
 			try {
-				renderContent(ppcalls, div, app)
+				appear(tab.contentHolder)
+				renderContent(ppcalls, tab.contentHolder, section)
+				// sandboxTrail.updateTrail()
 				wait.remove()
 			} catch (e) {
 				wait.text('Error: ' + (e.message || e))
@@ -747,7 +686,7 @@ async function openDatasetButtonSandbox(pageArgs, res, sandboxDiv) {
 		return
 	}
 
-	addDatasetGenomeBtns(mainDiv, par, genomes)
+	addDatasetGenomeBtns(mainDiv, genomes)
 	// Create the gene search bar last (text flyout on keyup prevents placing elements to the right)
 	const searchBarDiv = mainDiv
 		.append('div')
@@ -759,11 +698,7 @@ async function openDatasetButtonSandbox(pageArgs, res, sandboxDiv) {
 	const coords = addGeneSearchbox({
 		genome: par.genome,
 		tip: new Menu({ padding: '' }),
-		row: searchBarDiv.append('div'),
-		row: mainDiv
-			.append('div')
-			.style('display', 'inline-block')
-			.style('padding', '0.5em'),
+		row: searchBarDiv,
 		geneOnly: par.searchBar == 'gene' ? true : false,
 		focusOff: true,
 		callback: async div => {
@@ -806,68 +741,30 @@ async function openDatasetButtonSandbox(pageArgs, res, sandboxDiv) {
 			runproteinpaint(Object.assign(runppArg, callpp))
 		}
 	})
-}
 
-function addDatasetGenomeBtns(div, par, genomes) {
-	// Dynamically creates genome marker or buttons
-	div
-		.append('div')
-		.style('display', 'inline-block')
-		.style('padding', '10px 0px 10px 20px')
-
-	if (par.availableGenomes.length == 1) {
-		// Show default genome as a non-functional button left of the search bar
+	function addDatasetGenomeBtns(div, genomes) {
 		div
 			.append('div')
-			.style('padding', '8px')
-			.style('color', '#a6a6a6')
-			.style('border', '1px solid #a6a6a6')
 			.style('display', 'inline-block')
-			.style('width', 'auto')
-			.style('height', 'auto')
-			.style('cursor', 'not-allowed')
-			.text(par.availableGenomes[0])
-	} else {
+			.style('padding', '10px 10px 0px 20px')
+
 		const btns = []
-
-		par.availableGenomes.forEach(genome => {
+		if (par.availableGenomes.length == 1) {
+			// Show default genome as a non-functional button left of the search bar
 			btns.push({
-				name: genome,
-				active: false,
-				btn: utils.makeButton({ div, text: genome }),
-				callback: par => {
-					par.genome = genomes[genome]
-				}
+				label: par.availableGenomes[0]
 			})
-		})
-
-		for (const btn of btns) {
-			btns[0].active = true
-
-			btn.btn
-				.style('margin', '0px')
-				.style('color', btn.active ? '#1575ad' : '#757373')
-				.style('background-color', 'transparent')
-				.style('border', 'none')
-				.style('border-radius', 'unset')
-				.style('border-bottom', btn.active ? '8px solid #1575ad' : 'none')
-				.style('cursor', 'pointer')
-
-			if (btn.active) {
-				btn.callback(par)
-			}
-
-			btn.btn.on('click', () => {
-				for (const b of btns) {
-					b.active = b === btn
-					b.btn.style('color', b.active ? '#1575ad' : '#757373')
-					b.btn.style('border-bottom', b.active ? '8px solid #1575ad' : 'none')
-				}
-				if (btn.active) {
-					btn.callback(par)
-				}
+		} else {
+			par.availableGenomes.forEach(genome => {
+				btns.push({
+					label: genome,
+					callback: (event, tab) => {
+						par.genome = genomes[genome]
+					}
+				})
 			})
 		}
+		new Tabs({ holder: div, tabs: btns, noContent: true }).main()
 	}
 }
 

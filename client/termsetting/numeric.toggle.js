@@ -1,4 +1,4 @@
-import { init_tabs } from '#dom/toggleButtons'
+import { Tabs } from '#dom/toggleButtons'
 import { getPillNameDefault, set_hiddenvalues } from '#termsetting'
 import { copyMerge } from '#rx'
 
@@ -17,8 +17,8 @@ fillTW()
 
 // self is the termsetting instance
 export async function getHandler(self) {
-	async function callback(div) {
-		const tab = this // since this function gets attached to a tab{} entry in tabs[]
+	self.tabCallback = async (event, tab) => {
+		if (!tab) return
 		self.q.mode = tab.subType
 		const typeSubtype = `numeric.${tab.subType}`
 		if (!self.handlerByType[typeSubtype]) {
@@ -26,9 +26,8 @@ export async function getHandler(self) {
 			self.handlerByType[typeSubtype] = await _.getHandler(self)
 		}
 		tab.isRendered = true
-		await self.handlerByType[typeSubtype].showEditMenu(div)
+		await self.handlerByType[typeSubtype].showEditMenu(tab.contentHolder)
 	}
-
 	// set numeric toggle tabs data here as a closure,
 	// so that the data is not recreated each time that showEditMenu() is called;
 	// also, do not trigger `await import(handler_code)` until needed
@@ -39,7 +38,7 @@ export async function getHandler(self) {
 		tabs.push({
 			subType: 'continuous',
 			label: 'Continuous',
-			callback
+			callback: self.tabCallback
 		})
 	}
 
@@ -47,7 +46,7 @@ export async function getHandler(self) {
 		tabs.push({
 			subType: 'discrete',
 			label: 'Discrete',
-			callback
+			callback: self.tabCallback
 		})
 	}
 
@@ -55,7 +54,7 @@ export async function getHandler(self) {
 		tabs.push({
 			subType: 'spline',
 			label: 'Cubic spline',
-			callback
+			callback: self.tabCallback
 		})
 	}
 
@@ -63,7 +62,7 @@ export async function getHandler(self) {
 		tabs.push({
 			subType: 'binary',
 			label: 'Binary',
-			callback
+			callback: self.tabCallback
 		})
 	}
 
@@ -100,11 +99,11 @@ export async function getHandler(self) {
 			const topBar = div.append('div').style('padding', '10px')
 			topBar.append('span').html('Use as&nbsp;')
 
-			init_tabs({
+			new Tabs({
 				holder: topBar.append('div').style('display', 'inline-block'),
 				contentHolder: div.append('div'),
 				tabs
-			})
+			}).main()
 		}
 	}
 }

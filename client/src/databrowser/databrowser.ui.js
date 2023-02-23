@@ -107,15 +107,15 @@ function makeDataDictionaryTabs(tabs_div, obj) {
 			active: true,
 			width: 95,
 			callback: async (event, tab) => {
-				if (!tabs[1].rendered) {
-					tab.contentHolder.style('border', 'none').style('display', 'block')
-					appear(tab.contentHolder)
-					tab.contentHolder
-						.append('div')
-						.html(`<p style="margin-left: 10px; opacity: 0.65;">Select a file from your computer.</p>`)
-					makeFileUpload(tab.contentHolder, obj)
-					tabs[1].rendered = true
-				}
+				tab.contentHolder.style('border', 'none').style('display', 'block')
+				appear(tab.contentHolder)
+
+				tab.contentHolder
+					.append('div')
+					.html(`<p style="margin-left: 10px; opacity: 0.65;">Select a file from your computer.</p>`)
+				makeFileUpload(tab.contentHolder, obj)
+
+				delete tab.callback
 			}
 		},
 		{
@@ -123,17 +123,16 @@ function makeDataDictionaryTabs(tabs_div, obj) {
 			active: false,
 			width: 95,
 			callback: async (event, tab) => {
-				if (!tabs[2].rendered) {
-					tab.contentHolder.style('border', 'none').style('display', 'block')
-					appear(tab.contentHolder)
-					tab.contentHolder
-						.append('div')
-						.html(
-							`<p style="margin-left: 10px; opacity: 0.65;">Paste data dictionary or phenotree in a tab delimited format.</p>`
-						)
-					makeCopyPasteInput(tab.contentHolder, obj)
-					tabs[2].rendered = true
-				}
+				tab.contentHolder.style('border', 'none').style('display', 'block')
+				appear(tab.contentHolder)
+
+				tab.contentHolder
+					.append('div')
+					.html(
+						`<p style="margin-left: 10px; opacity: 0.65;">Paste data dictionary or phenotree in a tab delimited format.</p>`
+					)
+				makeCopyPasteInput(tab.contentHolder, obj)
+				delete tab.callback
 			}
 		},
 		{
@@ -141,16 +140,16 @@ function makeDataDictionaryTabs(tabs_div, obj) {
 			active: false,
 			width: 95,
 			callback: async (event, tab) => {
-				if (!tabs[0].rendered) {
-					tab.contentHolder.style('border', 'none').style('display', 'block')
-					appear(tab.contentHolder)
-					tab.contentHolder
-						.append('div')
-						.html(`<p style="margin-left: 10px; opacity: 0.65;">Provide a URL file path.</p>`)
-					uiutils.makePrompt(tab.contentHolder, 'URL')
-					makeTextEntryFilePathInput(tab.contentHolder, obj)
-					tabs[0].rendered = true
-				}
+				tab.contentHolder.style('border', 'none').style('display', 'block')
+				appear(tab.contentHolder)
+
+				tab.contentHolder
+					.append('div')
+					.html(`<p style="margin-left: 10px; opacity: 0.65;">Provide a URL file path.</p>`)
+				uiutils.makePrompt(tab.contentHolder, 'URL')
+				makeTextEntryFilePathInput(tab.contentHolder, obj)
+
+				delete tab.callback
 			}
 		}
 	]

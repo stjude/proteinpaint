@@ -227,79 +227,71 @@ function makeFusionTabs(div, runpp_arg, gene1, gene2) {
 		{
 			label: gene1[0],
 			callback: async (event, tab) => {
-				// if(!tabs[1].rendered) {
-				if (!tabs[0].rendered) {
-					appear(tab.contentHolder)
-					const fusion_arg = {
-						holder: tab.contentHolder
-							.append('div')
-							.style('margin', '20px')
-							.node(),
-						gene: gene1[0],
-						tracks: [
-							{
-								type: 'mds3',
-								name: gene1[0],
-								custom_variants: [
-									{
-										gene1: gene1[0],
-										chr1: gene1[1],
-										pos1: parseInt(gene1[2]),
-										strand1: gene1[3],
-										gene2: gene2[0],
-										chr2: gene2[1],
-										pos2: parseInt(gene2[2]),
-										strand2: gene2[3],
-										dt: 2,
-										class: 'Fuserna'
-									}
-								]
-							}
-						]
-					}
-					runproteinpaint(Object.assign(runpp_arg, fusion_arg))
-					// tabs[1].rendered = true
-					tabs[0].rendered = true
+				appear(tab.contentHolder)
+				const fusion_arg = {
+					holder: tab.contentHolder
+						.append('div')
+						.style('margin', '20px')
+						.node(),
+					gene: gene1[0],
+					tracks: [
+						{
+							type: 'mds3',
+							name: gene1[0],
+							custom_variants: [
+								{
+									gene1: gene1[0],
+									chr1: gene1[1],
+									pos1: parseInt(gene1[2]),
+									strand1: gene1[3],
+									gene2: gene2[0],
+									chr2: gene2[1],
+									pos2: parseInt(gene2[2]),
+									strand2: gene2[3],
+									dt: 2,
+									class: 'Fuserna'
+								}
+							]
+						}
+					]
 				}
+				runproteinpaint(Object.assign(runpp_arg, fusion_arg))
+				delete tab.callback
 			}
 		},
 		{
 			label: gene2[0],
 			callback: async (event, tab) => {
 				appear(tab.contentHolder)
-				// if(!tabs[2].rendered ) {
-				if (!tabs[1].rendered) {
-					const fusion_arg = {
-						holder: tab.contentHolder
-							.append('div')
-							.style('margin', '20px')
-							.node(),
-						gene: gene2[0],
-						tracks: [
-							{
-								type: 'mds3',
-								name: gene2[0],
-								custom_variants: [
-									{
-										gene1: gene1[0],
-										chr1: gene1[1],
-										pos1: parseInt(gene1[2]),
-										strand1: gene1[3],
-										gene2: gene2[0],
-										chr2: gene2[1],
-										pos2: parseInt(gene2[2]),
-										strand2: gene2[3],
-										dt: 2,
-										class: 'Fuserna'
-									}
-								]
-							}
-						]
-					}
-					runproteinpaint(Object.assign(runpp_arg, fusion_arg))
-					// tabs[2].rendered = true
-					tabs[1].rendered = true
+				const fusion_arg = {
+					holder: tab.contentHolder
+						.append('div')
+						.style('margin', '20px')
+						.node(),
+					gene: gene2[0],
+					tracks: [
+						{
+							type: 'mds3',
+							name: gene2[0],
+							custom_variants: [
+								{
+									gene1: gene1[0],
+									chr1: gene1[1],
+									pos1: parseInt(gene1[2]),
+									strand1: gene1[3],
+									gene2: gene2[0],
+									chr2: gene2[1],
+									pos2: parseInt(gene2[2]),
+									strand2: gene2[3],
+									dt: 2,
+									class: 'Fuserna'
+								}
+							]
+						}
+					]
 				}
+				runproteinpaint(Object.assign(runpp_arg, fusion_arg))
+				delete tab.callback
 			}
 		}
 	]
