@@ -50,12 +50,10 @@ Note:
 
 */
 
-const defaultTabWidth = 90
-
 export async function init_tabs(opts) {
 	if (!opts.holder) throw `missing opts.holder for toggleButtons()`
 	if (!Array.isArray(opts.tabs)) throw `invalid opts.tabs for toggleButtons()`
-
+	const defaultTabWidth = 90
 	const tabs = opts.tabs
 	opts.tabsHolder = opts.holder
 		.append('div')
@@ -182,6 +180,7 @@ export class Tabs {
 		this.dom = {
 			holder: opts.holder
 		}
+		this.defaultTabWidth = 90
 		setRenderers(this)
 	}
 
@@ -229,18 +228,18 @@ function setRenderers(self) {
 
 		self.dom.tabsHolder = self.dom.wrapper
 			.append('div')
+			.style('width', 'max-content')
 			//add light blue border underneath the buttons
 			.style(`border-${self.opts.linePosition}`, '0.5px solid #1575ad')
-			.style('width', 'fit-content')
 		if (!self.opts.contentHolder && !self.opts.noContent) {
 			self.dom.contentHolder = self.dom.wrapper.append('div')
 			if (self.opts.tabsPosition == 'vertical') {
 				self.dom.tabsHolder.style('display', 'inline-grid').style('align-items', 'start')
 				self.dom.contentHolder
-					.style('display', 'inline-grid')
-					.style('align-items', 'start')
-					.style('overflow', 'auto')
-					.style('grid-auto-flow', 'column')
+					//First part of fix for svgs rendering inline, outside of the contentHolder
+					.style('display', 'inline-block')
+					.style('vertical-align', 'top')
+					.style('position', 'relative')
 			}
 		}
 
@@ -254,7 +253,7 @@ function setRenderers(self) {
 			//Padding here overrides automatic styling for all pp buttons
 			.style('padding', '0px')
 			.style('width', tab => (tab.width ? `${tab.width}px` : 'fit-content'))
-			.style('min-width', tab => (tab.width ? null : Math.max(defaultTabWidth)))
+			.style('min-width', tab => (tab.width ? null : Math.max(self.defaultTabWidth)))
 			.style('border', 'none')
 			.style('background-color', 'transparent')
 			.style('display', self.opts.tabsPosition == 'vertical' ? 'flex' : 'inline-grid')
@@ -296,7 +295,6 @@ function setRenderers(self) {
 					.style('padding', '5px')
 					.html(tab.label)
 				tab.line //Bolded, blue line indicating the active button
-					.style('color', '#1575ad')
 					.style('background-color', '#1575ad')
 					.style('visibility', tab.active ? 'visible' : 'hidden')
 
@@ -308,21 +306,23 @@ function setRenderers(self) {
 						//TODO: Trick div into appearing the full height of the parent
 						// come up with a better solution.
 						.style('padding', '5px 0px')
-						.html('l')
+						.html('&nbsp')
 				}
 
 				if (self.dom.contentHolder) {
 					tab.contentHolder = self.dom.contentHolder
-						.append('div')
-						/* Extra div prevents svgs from displaying above contentHolder
-						(i.e. inline at the beginning of the holder). Div acts as a `viewBox`.*/
+						/* Second part of svg rendering fix: Extra div prevents svgs from displaying 
+					above contentHolder (i.e. inline at the beginning of the holder). 
+					Div acts as a `viewBox`.*/
 						.append('div')
 						.style('display', tab.active ? 'block' : 'none')
 					if (self.opts.tabsPosition == 'horizontal') {
 						tab.contentHolder.style('padding-top', '10px').style('margin-top', '10px')
 					}
 				}
-				if (tab.active && tab.callback) await tab.callback()
+
+				if (tab.active && tab.callback) await tab.callback(event, tab)
+
 				tab.wrapper
 					.on('mouseenter', () => {
 						tab.tab.style('color', tab.active ? '#757373' : '#1575ad')
@@ -347,6 +347,7 @@ function setRenderers(self) {
 				self.update(activeTabIndex)
 				if (tab.callback) await tab.callback(event, tab)
 			})
+
 		self.update()
 	}
 	self.update = (activeTabIndex = 0, config = {}) => {

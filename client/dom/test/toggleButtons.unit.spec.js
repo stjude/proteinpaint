@@ -271,7 +271,7 @@ tape('Render Tabs, vertical stack, right border', async test => {
 	async function testContentHolderPosition() {
 		const contentHolder = initTabs.dom.contentHolder
 		test.ok(
-			contentHolder.node().style.display == 'inline-grid',
+			contentHolder.node().style.display == 'inline-block',
 			`Should show content for each tab to the right, inline of tabs`
 		)
 	}

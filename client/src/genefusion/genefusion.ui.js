@@ -1,7 +1,7 @@
 import * as uiutils from '#dom/uiUtils'
 import { select as d3select, selectAll as d3selectAll } from 'd3-selection'
 import { sayerror } from '../client'
-import { init_tabs } from '#dom/toggleButtons'
+import { Tabs } from '#dom/toggleButtons'
 import { appear } from '#dom/animation'
 
 /*
@@ -11,6 +11,13 @@ init_geneFusionUI()
 	genomes
 
 ------ Internal ------ 
+makeFusionInput
+genomeSelection
+makePositionDropDown
+makeSubmit
+makeInfoSection
+makeSubmitResult
+makeFusionTabs
 
 */
 
@@ -219,12 +226,12 @@ function makeFusionTabs(div, runpp_arg, gene1, gene2) {
 		// },
 		{
 			label: gene1[0],
-			callback: async div => {
+			callback: async (event, tab) => {
 				// if(!tabs[1].rendered) {
 				if (!tabs[0].rendered) {
-					appear(div)
+					appear(tab.contentHolder)
 					const fusion_arg = {
-						holder: div
+						holder: tab.contentHolder
 							.append('div')
 							.style('margin', '20px')
 							.node(),
@@ -258,12 +265,12 @@ function makeFusionTabs(div, runpp_arg, gene1, gene2) {
 		},
 		{
 			label: gene2[0],
-			callback: async div => {
-				appear(div)
+			callback: async (event, tab) => {
+				appear(tab.contentHolder)
 				// if(!tabs[2].rendered ) {
 				if (!tabs[1].rendered) {
 					const fusion_arg = {
-						holder: div
+						holder: tab.contentHolder
 							.append('div')
 							.style('margin', '20px')
 							.node(),
@@ -297,5 +304,5 @@ function makeFusionTabs(div, runpp_arg, gene1, gene2) {
 		}
 	]
 
-	init_tabs({ holder: div, tabs })
+	new Tabs({ holder: div, tabs }).main()
 }

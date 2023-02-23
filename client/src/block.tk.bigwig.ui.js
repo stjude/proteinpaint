@@ -1,5 +1,5 @@
 import * as uiutils from '#dom/uiUtils'
-import { init_tabs } from '#dom/toggleButtons'
+import { Tabs } from '#dom/toggleButtons'
 import { appear } from '#dom/animation'
 import { first_genetrack_tolist } from './client'
 import { select as d3select, selectAll as d3selectAll } from 'd3-selection'
@@ -87,17 +87,17 @@ function makeTrackEntryTabs(tabs_div, obj) {
 	const tabs = [
 		{
 			label: 'Single Track',
-			callback: async div => {
+			callback: async (event, tab) => {
 				obj.tabInUse = 'single'
 				if (!tabs[0].rendered) {
-					div.style('border', 'none').style('display', 'block')
-					const singlediv = div.append('div').style('border', 'none')
+					tab.contentHolder.style('border', 'none').style('display', 'block')
+					const singlediv = tab.contentHolder.append('div').style('border', 'none')
 					// .style('display', 'grid')
 					// .style('grid-template-columns', '100px auto')
 					// .style('grid-template-rows', 'repeat(1, auto)')
 					// .style('gap', '5px')
 					// .style('place-items', 'center left')
-					appear(div)
+					appear(tab.contentHolder)
 					uiutils.makePrompt(singlediv, 'Name')
 					trackNameInput(singlediv, obj)
 					uiutils.makePrompt(singlediv, 'File Path')
@@ -108,24 +108,24 @@ function makeTrackEntryTabs(tabs_div, obj) {
 		},
 		{
 			label: 'Multiple Tracks',
-			callback: async div => {
+			callback: async (event, tab) => {
 				obj.tabInUse = 'multi'
 				if (!tabs[1].rendered) {
-					div.style('border', 'none').style('display', 'block')
-					appear(div)
-					div
+					tab.contentHolder.style('border', 'none').style('display', 'block')
+					appear(tab.contentHolder)
+					tab.contentHolder
 						.append('div')
 						.html(
 							'<p style="margin-left: 10px;">Enter one track per line in the following format: [track name],[path/to/file.bw or URL]</p><p style="margin-left: 20px; color: #7d7c7c;">e.g. BigWig Track, proteinpaint_demo/hg19/bigwig/file.bw</p>'
 						)
-					multiTrackInput(div, obj)
+					multiTrackInput(tab.contentHolder, obj)
 					tabs[1].rendered = true
 				}
 			}
 		}
 	]
 
-	init_tabs({ holder: tabs_div, tabs })
+	new Tabs({ holder: tabs_div, tabs }).main()
 }
 
 async function genomeSelection(div, genomes, obj) {
