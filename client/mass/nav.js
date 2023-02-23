@@ -319,6 +319,7 @@ function setRenderers(self) {
 	}
 
 	self.updateUI = (toggleSubheaderdiv = false) => {
+		if (!self.dom.subheaderDiv) return
 		if (self.activeTab && self.state.termdbConfig.selectCohort && self.activeCohort == -1) {
 			// showing charts or filter tab; cohort selection is enabled but no cohort is selected
 			self.dom.subheaderDiv.style('display', 'none')
@@ -329,8 +330,8 @@ function setRenderers(self) {
 			if (toggleSubheaderdiv) {
 				display = self.dom.subheaderDiv.style('display') == 'none' ? 'block' : 'none'
 			}
-			self.dom.subheaderDiv.style('display', display)
-			self.dom.messageDiv.style('display', 'none')
+			if (self.dom.subheaderDiv) self.dom.subheaderDiv.style('display', display)
+			if (self.dom.messageDiv) self.dom.messageDiv.style('display', 'none')
 		}
 		const selectCohort = self.state.termdbConfig.selectCohort
 		self.dom.searchDiv.style('display', selectCohort && self.activeCohort == -1 ? 'none' : 'inline-block')

@@ -161,21 +161,22 @@ function setRenderers(self) {
 					isVisible: () => true,
 					disabled: d => false,
 					getConfig: async () => {
-						const mode =
-							self.config?.term.term.type == 'float' || self.config?.term.term.type == 'integer'
-								? 'discrete'
-								: self.config?.term.q.mode || 'discrete'
-						const _term = await self.getWrappedTermCopy(self.config.term, mode)
+						if (!self.config) return
+						const config = { id: self.id, childType: 'barchart' }
 
-						let _term2
-						if (self.config.term2) {
+						const term = self.config.term
+						if (term) {
 							const mode =
-								self.config.term2.term.type == 'float' || self.config.term2.term.type == 'integer'
-									? 'discrete'
-									: self.config.term2.q.mode || 'discrete'
-							_term2 = await self.getWrappedTermCopy(self.config.term2, mode)
+								term?.term.type == 'float' || term?.term.type == 'integer' ? 'discrete' : term?.q.mode || 'discrete'
+							config.term = await self.getWrappedTermCopy(term, mode)
 						}
-						const config = { childType: 'barchart', term: _term, term2: _term2 }
+
+						const term2 = self.config.term2
+						if (term2) {
+							const mode =
+								term2.term.type == 'float' || term2.term.type == 'integer' ? 'discrete' : term2.q.mode || 'discrete'
+							config.term2 = await self.getWrappedTermCopy(term2, mode)
+						}
 						return config
 					},
 					active: true,
@@ -279,17 +280,14 @@ function setRenderers(self) {
 	}
 
 	self.tabClickCallback = async (event, tab) => {
-		if (!tab) return
+		if (!tab || !tab.getConfig) return
 		const config = await tab.getConfig()
-		if (!config) {
-			alert(`TODO: ${tab.label}`)
-			return
-		}
-		self.app.dispatch({
-			type: 'plot_edit',
-			id: self.id,
-			config: config
-		})
+		if (config)
+			self.app.dispatch({
+				type: 'plot_edit',
+				id: self.id,
+				config: config
+			})
 	}
 
 	self.getWrappedTermCopy = async function(term, mode) {

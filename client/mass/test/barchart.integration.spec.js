@@ -2,6 +2,7 @@
 const tape = require('tape')
 const termjson = require('../../test/testdata/termjson').termjson
 const helpers = require('../../test/front.helpers.js')
+const { detectLst } = require('../../test/test.helpers.js')
 const getFilterItemByTag = require('../../filter/filter').getFilterItemByTag
 const vocabData = require('../../termdb/test/vocabData')
 
@@ -477,6 +478,7 @@ tape('single barchart, filtered', function(test) {
 
 tape('click non-group bar to add filter', function(test) {
 	test.timeoutAfter(8000)
+	test.plan(3)
 
 	const termfilter = { filter: [] }
 	runpp({
@@ -509,16 +511,21 @@ tape('click non-group bar to add filter', function(test) {
 	})
 
 	let barDiv
-	function runTests(barchart) {
+	async function runTests(barchart) {
 		if (barDiv) return
 		barchart.Inner.bus.on('postRender.test', null)
 		barDiv = barchart.Inner.dom.barDiv
-		helpers
-			.rideInit({ arg: barchart, bus: barchart, eventType: 'postRender.test' })
-			.run(triggerBarClick, { wait: 500 })
-			.use(triggerMenuClick, { wait: 300 })
-			.to(testTermValues, { wait: 1000 })
-			.done(test)
+		triggerBarClick(barchart)
+		await detectLst({ elem: barchart.Inner.app.tip.d.node(), selector: '.sja_menuoption', count: 1, matchAs: '>=' })
+		triggerMenuClick(barchart)
+		await detectLst({
+			elem: barchart.Inner.app.Inner.dom.holder.node(),
+			selector: '.sja_filter_item',
+			count: 1,
+			matchAs: '>='
+		})
+		testTermValues(barchart)
+		//test.end()
 	}
 
 	let clickedData, currData
