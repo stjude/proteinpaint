@@ -57,7 +57,8 @@ export async function init(arg, holder, genomes) {
 		tip,
 		row: geneInputDiv,
 		geneOnly: true,
-		callback: launchView
+		callback: launchView,
+		geneSymbol: arg.geneSymbol
 	}
 	const coordInput = addGeneSearchbox(searchOpt)
 

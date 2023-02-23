@@ -432,6 +432,11 @@ export function addGeneSearchbox(arg) {
 		}
 	}
 
+	if (arg.geneSymbol) {
+		searchbox.property('value', arg.geneSymbol) //.node().dispatchEvent(new KeyboardEvent('keyup'))
+		setTimeout(() => getResult({ geneSymbol: arg.geneSymbol }, arg.geneSymbol), 10)
+	}
+
 	return result //searchbox
 }
 
