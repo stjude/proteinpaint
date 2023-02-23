@@ -295,7 +295,7 @@ class Scatter {
 
 		this.components.controls.on('downloadClick.scatter', () => this.downloadSVG(this.svg))
 		this.components.controls.on('helpClick.scatter', () =>
-			window.open('https://github.com/proteinpaint/sjpp/wiki/Scatter-plot', '_blank')
+			window.open('https://github.com/stjude/proteinpaint/wiki/Scatter-plot', '_blank')
 		)
 		this.dom.toolsDiv = this.dom.controls.insert('div')
 	}
@@ -770,15 +770,17 @@ class Scatter {
 
 	showTable(group, x, y, addGroup) {
 		let rows = []
-		const sampleColumn = formatCell('Sample', 'label')
-		const columns = [sampleColumn, formatCell(this.config.colorTW.term.name, 'label')]
+		const columns = []
+		const first = group.items[0]
+		if ('sample' in first) columns.push(formatCell('Sample', 'label'))
+		if (this.config.colorTW) columns.push(formatCell(this.config.colorTW.term.name, 'label'))
 
 		if (this.config.shapeTW) columns.push(formatCell(this.config.shapeTW.term.name, 'label'))
 		let info = false
 		for (const item of group.items) {
-			const row = [formatCell(item.sample)]
-			if ('category' in item) row.push(formatCell(this.getCategoryInfo(item, 'category')))
-			else row.push(formatCell(''))
+			const row = []
+			if ('sample' in item) row.push(formatCell(item.sample))
+			if (this.config.colorTW) row.push(formatCell(this.getCategoryInfo(item, 'category')))
 			if (this.config.shapeTW) row.push(formatCell(this.getCategoryInfo(item, 'shape')))
 			if ('info' in item) {
 				info = true
@@ -845,7 +847,7 @@ class Scatter {
 			columns,
 			div: tableDiv,
 			showLines: true,
-			maxWidth: '45vw',
+			maxWidth: columns.length * '15' + 'vw',
 			maxHeight: '35vh',
 			buttons,
 			selectAll: true
