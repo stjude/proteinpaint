@@ -13,7 +13,7 @@ export function sleep(ms) {
 	.elem        the DOM element where the selector will be queried
 	.selector    (required) a valid CSS-selector of the element to be returned
 	.count       the expected number of detected matching elements to stop the observer
-	.countOperator "=,>,<,>=,<=" default is "="
+	.countOp     how to match the current versus expected counts, '=','>','<','>=','<=' default is '='
 
 	// options related to the native MutationObserver
 	.callback()  optional, the argument to the MutationObserver constructor
@@ -31,7 +31,7 @@ export async function detectLst(_opts = {}) {
 		// selector: required
 		maxTime: 5000,
 		count: 1,
-		countOperator: '=',
+		countOp: '=',
 		observeOpts: {
 			target: document.body,
 			opts: {
@@ -50,24 +50,15 @@ export async function detectLst(_opts = {}) {
 	const start = Date.now()
 	return new Promise((resolve, reject) => {
 		const elems = opts.elem.querySelectorAll(opts.selector)
-		const matched = elems.length === opts.count
+		const matched = matchedCount(elems.length, opts)
 		if (matched) {
 			resolve([...elems])
 			return
 		}
-		/*
-		switch(opts.countOperator) {
-			case '=':
-			case '>':
-			case '<':
-			case '>=':
-			case '<=':
-		}
-		*/
 
 		const defaultCallback = mutations => {
 			const elems = opts.elem.querySelectorAll(opts.selector)
-			const matched = elems.length === opts.count //; console.log(58, elems.length, opts.count)
+			const matched = matchedCount(elems.length, opts) //; console.log(58, elems.length, opts.count)
 			const expired = Date.now() - start > opts.maxTime
 			if (matched || expired) {
 				observer.disconnect()
@@ -88,6 +79,24 @@ export async function detectLst(_opts = {}) {
 			}, opts.maxTime)
 		}
 	})
+}
+
+function matchedCount(num, opts) {
+	const expected = opts.count
+	switch (opts.countOp) {
+		case '=':
+			return num === expected
+		case '<':
+			return num < expected
+		case '<=':
+			return num <= expected
+		case '>':
+			return num > expected
+		case '>=':
+			return num >= expected
+		default:
+			throw `unknown countOp='${op}'`
+	}
 }
 
 /*

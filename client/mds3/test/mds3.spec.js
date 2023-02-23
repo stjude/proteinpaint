@@ -16,7 +16,6 @@ function getHolder() {
 		.node()
 }
 
-
 /**************
  test sections
 
@@ -54,13 +53,13 @@ tape('Run GDC dataset, gene symbol: KRAS', test => {
 		holder,
 		genome: 'hg38',
 		gene: 'kras',
-		tracks: [{ type: 'mds3', dslabel: 'GDC', callbackOnRender }],
+		tracks: [{ type: 'mds3', dslabel: 'GDC', callbackOnRender }]
 	})
-	function callbackOnRender(tk,bb) {
+	function callbackOnRender(tk, bb) {
 		// tk is gdc mds3 track object; bb is block object
-		test.equal(bb.usegm.name,'KRAS','block.usegm.name="KRAS"')
+		test.equal(bb.usegm.name, 'KRAS', 'block.usegm.name="KRAS"')
 		test.equal(bb.tklst.length, 2, 'should have two tracks')
-		test.ok(tk.skewer.rawmlst.length>0,'mds3 tk should have loaded many data points')
+		test.ok(tk.skewer.rawmlst.length > 0, 'mds3 tk should have loaded many data points')
 		// TODO in this first test, verify all ui parts are rendered
 		if (test._ok) holder.remove()
 		test.end()
@@ -76,12 +75,12 @@ tape('Run GDC dataset, GENCODE transcript: ENST00000407796', test => {
 		noheader: true,
 		genome: 'hg38',
 		gene: 'ENST00000407796',
-		tracks: [ { type: 'mds3', dslabel: 'GDC', callbackOnRender } ]
+		tracks: [{ type: 'mds3', dslabel: 'GDC', callbackOnRender }]
 	})
-	function callbackOnRender(tk,bb) {
-		test.equal(bb.usegm.isoform,'ENST00000407796', 'block.usegm.isoform="ENST00000407796"')
+	function callbackOnRender(tk, bb) {
+		test.equal(bb.usegm.isoform, 'ENST00000407796', 'block.usegm.isoform="ENST00000407796"')
 		test.equal(bb.tklst.length, 2, 'should have two tracks')
-		test.ok(tk.skewer.rawmlst.length>0,'mds3 tk should have loaded many data points')
+		test.ok(tk.skewer.rawmlst.length > 0, 'mds3 tk should have loaded many data points')
 		if (test._ok) holder.remove()
 		test.end()
 	}
@@ -99,11 +98,11 @@ tape('Run GDC dataset, GENCODE gene: ENSG00000133703', test => {
 		noheader: true,
 		genome: 'hg38',
 		gene: 'ENSG00000133703',
-		tracks: [ { type: 'mds3', dslabel: 'GDC', callbackOnRender } ]
+		tracks: [{ type: 'mds3', dslabel: 'GDC', callbackOnRender }]
 	})
-	function callbackOnRender(tk,bb) {
-		test.equal(bb.usegm.name,'KRAS', 'ENSG00000133703 is mapped to block.usegm.name="KRAS"')
-		test.ok(tk.skewer.rawmlst.length>0,'mds3 tk should have loaded many data points')
+	function callbackOnRender(tk, bb) {
+		test.equal(bb.usegm.name, 'KRAS', 'ENSG00000133703 is mapped to block.usegm.name="KRAS"')
+		test.ok(tk.skewer.rawmlst.length > 0, 'mds3 tk should have loaded many data points')
 		if (test._ok) holder.remove()
 		test.end()
 	}
@@ -118,11 +117,11 @@ tape('Run GDC dataset, RefSeq: NM_005163', test => {
 		noheader: true,
 		genome: 'hg38',
 		gene: 'NM_005163',
-		tracks: [ { type: 'mds3', dslabel: 'GDC', callbackOnRender } ]
+		tracks: [{ type: 'mds3', dslabel: 'GDC', callbackOnRender }]
 	})
-	function callbackOnRender(tk,block) {
-		test.equal(bb.usegm.isoform,'NM_005163', 'block.usegm.isoform="NM_005163"')
-		test.ok(tk.skewer.rawmlst.length>0,'mds3 tk should have loaded many data points')
+	function callbackOnRender(tk, block) {
+		test.equal(bb.usegm.isoform, 'NM_005163', 'block.usegm.isoform="NM_005163"')
+		test.ok(tk.skewer.rawmlst.length > 0, 'mds3 tk should have loaded many data points')
 		if (test._ok) holder.remove()
 		test.end()
 	}
@@ -137,15 +136,15 @@ tape('Launch GDC dataset by SSM ID, KRAS', test => {
 		noheader: true,
 		genome: 'hg38',
 		mds3_ssm2canonicalisoform: { dslabel: 'GDC', ssm_id },
-		tracks: [ { type: 'mds3', dslabel: 'GDC', callbackOnRender } ],
+		tracks: [{ type: 'mds3', dslabel: 'GDC', callbackOnRender }]
 	})
 
-	function callbackOnRender(tk,bb) {
-		test.equal(bb.usegm.name,'KRAS','ssm is converted to block.usegm.name="KRAS"')
-		test.ok(tk.skewer.rawmlst.length>0,'mds3 tk should have loaded many data points')
+	function callbackOnRender(tk, bb) {
+		test.equal(bb.usegm.name, 'KRAS', 'ssm is converted to block.usegm.name="KRAS"')
+		test.ok(tk.skewer.rawmlst.length > 0, 'mds3 tk should have loaded many data points')
 		test.ok(tk.skewer.hlssmid.has(ssm_id), 'highlighted ssm id is in tk.skewer.hlssmid{}')
 		const hlbox = tk.skewer.g.select('.sja_mds3_skewer_ssmhlbox')?._groups?.[0]?.[0]?.tagName
-		test.equal(hlbox,'rect','<rect> is rendered for ssm highlight box')
+		test.equal(hlbox, 'rect', '<rect> is rendered for ssm highlight box')
 		if (test._ok) holder.remove()
 		test.end()
 	}
@@ -153,6 +152,9 @@ tape('Launch GDC dataset by SSM ID, KRAS', test => {
 
 // this test always break, may need a "postRender" solution to replace sleep
 tape.only('geneSearch4GDCmds3', async test => {
+	test.timeoutAfter(5000)
+	test.plan(3)
+
 	const holder = getHolder()
 	const gene = 'HOXA1'
 
@@ -165,10 +167,10 @@ tape.only('geneSearch4GDCmds3', async test => {
 	async function postRender(arg) {
 		// arg={tip}
 		// tip is the tooltip from gene search <input> showing hits
-		const searchBox = await detectOne({elem: holder, selector:'.sja_genesearchinput'})
+		const searchBox = await detectOne({ elem: holder, selector: '.sja_genesearchinput' })
 		test.ok(searchBox, 'Gene search box is made')
 
-		const blockHolder = await detectOne({elem: holder, selector:'.sja_geneSearch4GDCmds3_blockdiv'})
+		const blockHolder = await detectOne({ elem: holder, selector: '.sja_geneSearch4GDCmds3_blockdiv' })
 		test.ok(blockHolder, 'Block holder is made')
 
 		// enter gene name and trigger search
@@ -176,8 +178,8 @@ tape.only('geneSearch4GDCmds3', async test => {
 		searchBox.dispatchEvent(new Event('keyup'))
 
 		await whenVisible(arg.tip.d.node())
-		const geneHitDivs = await detectLst({elem:arg.tip.d.node(), selector:'.sja_menuoption', countOperator:'>'})
-		test.equal(geneHitDivs[0].innerHTML, gene, 'Gene search found '+gene)
+		const geneHitDivs = await detectLst({ elem: arg.tip.d.node(), selector: '.sja_menuoption', countOp: '>=' })
+		test.equal(geneHitDivs[0].innerHTML, gene, 'Gene search found ' + gene)
 		geneHitDivs[0].dispatchEvent(new Event('click'))
 	}
 
@@ -199,12 +201,12 @@ tape('Launch ASH dataset, BCR', test => {
 		noheader: true,
 		genome: 'hg38',
 		gene: 'BCR',
-		tracks: [{ type: 'mds3', dslabel: 'ASH', callbackOnRender }],
+		tracks: [{ type: 'mds3', dslabel: 'ASH', callbackOnRender }]
 	})
-	function callbackOnRender(tk,bb) {
-		test.equal(bb.usegm.name,'BCR','block.usegm.name="BCR"')
+	function callbackOnRender(tk, bb) {
+		test.equal(bb.usegm.name, 'BCR', 'block.usegm.name="BCR"')
 		test.equal(bb.tklst.length, 2, 'should have two tracks')
-		test.ok(tk.skewer.rawmlst.length>0,'mds3 tk should have loaded many data points')
+		test.ok(tk.skewer.rawmlst.length > 0, 'mds3 tk should have loaded many data points')
 		if (test._ok) holder.remove()
 		test.end()
 	}
@@ -218,9 +220,9 @@ tape('Incorrect dataset name: ah instead of ASH', test => {
 		noheader: true,
 		genome: 'hg38',
 		gene: 'BCR',
-		tracks: [ { type: 'mds3', dslabel: 'ah',callbackOnRender } ]
+		tracks: [{ type: 'mds3', dslabel: 'ah', callbackOnRender }]
 	})
-	function callbackOnRender (tk, bb) {
+	function callbackOnRender(tk, bb) {
 		// Confirm mds3 track sent to block instance but not rendering
 		test.ok(tk.uninitialized == true, 'Should not render mds3 track and not throw')
 		// Confirm error message appears
@@ -234,7 +236,6 @@ tape('Incorrect dataset name: ah instead of ASH', test => {
 	}
 })
 
-
 tape('Launch variant table from track variant label', test => {
 	test.timeoutAfter(10000)
 	const holder = getHolder()
@@ -244,9 +245,9 @@ tape('Launch variant table from track variant label', test => {
 		noheader: true,
 		genome: 'hg38',
 		gene: 'kras',
-		tracks: [ { type: 'mds3', dslabel: 'GDC', callbackOnRender }]
+		tracks: [{ type: 'mds3', dslabel: 'GDC', callbackOnRender }]
 	})
-	function callbackOnRender (tk, bb) {
+	function callbackOnRender(tk, bb) {
 		//Click on track variant link to open menu
 		tk.leftlabels.doms.variants.node().dispatchEvent(new Event('click'))
 
@@ -489,7 +490,6 @@ tape('Numeric mode custom dataset', test => {
 		test.end()
 	}
 })
-
 
 tape('Custom dataset with custom variants, NO samples', test => {
 	test.timeoutAfter(3000)
