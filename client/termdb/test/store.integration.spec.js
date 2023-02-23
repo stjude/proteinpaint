@@ -1,7 +1,7 @@
 const tape = require('tape')
 const helpers = require('../../test/front.helpers.js')
 const store = require('../store')
-const ds = require('../../../server/dataset/sjlife2.hg38.js')
+//const ds = require('@stjude/proteinpaint-server/dataset/termdb.test.js')
 const rx = require('../../rx')
 
 /*************************
@@ -210,7 +210,41 @@ tape('state rehydrate: activeCohort=1', function(test) {
 
 tape('state rehydrate: by cohortFilter', function(test) {
 	test.timeoutAfter(3000)
-	const selectCohort = ds.cohort.termdb.selectCohort || { values: [] }
+	// copied from server/dataset/termdb.test.js
+	const selectCohort = {
+		term: {
+			id: 'subcohort',
+			type: 'categorical'
+		},
+		prompt: 'To get started with the Clinical Browser, select the survivor population you wish to browse.',
+		values: [
+			// <ul><li> for items, with a radio button for each.
+			{
+				keys: ['SJLIFE'],
+				label: 'St. Jude Lifetime Cohort (SJLIFE)',
+				shortLabel: 'SJLIFE',
+				isdefault: true,
+				cssSelector: 'tbody > tr > td:nth-child(2)'
+			},
+			{
+				keys: ['CCSS'],
+				label: 'Childhood Cancer Survivor Study (CCSS)',
+				shortLabel: 'CCSS',
+				cssSelector: 'tbody > tr > td:nth-child(3)'
+			},
+			{
+				keys: ['SJLIFE', 'CCSS'],
+				label: 'Combined SJLIFE+CCSS',
+				shortLabel: 'SJLIFE+CCSS',
+				cssSelector: 'tbody > tr > td:nth-child(2), tbody > tr > td:nth-child(3)',
+				// show note under label in smaller text size
+				note:
+					'The combined cohorts are limited to those variables that are comparable between the two populations. For example, selecting this category does not allow browsing of clinically-ascertained variables, which are only available in SJLIFE.'
+			}
+		],
+		highlightCohortBy: 'cssSelector'
+	}
+
 	runpp({
 		state: {
 			genome: 'hg38-test',
