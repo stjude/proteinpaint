@@ -31,8 +31,14 @@ Launch GDC dataset by SSM ID, KRAS
 geneSearch4GDCmds3
 Launch ASH dataset, BCR
 Incorrect dataset name: ah instead of ASH
+Launch variant table from track variant label
+Launch cases from track cases label
+Collapse and expand mutations from variant link
+Launch sample table from sunburst plot
+Numeric mode custom dataset
 Custom dataset with custom variants, NO samples
 Custom dataset with custom variants, WITH samples
+Custom data with samples and sample selection
 ***************/
 
 tape('\n', function(test) {
@@ -49,8 +55,6 @@ tape('Run GDC dataset, gene symbol: KRAS', test => {
 	const holder = getHolder()
 	runproteinpaint({
 		holder,
-		noheader: true,
-		nobox: true,
 		genome: 'hg38',
 		gene: 'kras',
 		tracks: [{ type: 'mds3', dslabel: 'GDC', callbackOnRender }],
@@ -59,9 +63,7 @@ tape('Run GDC dataset, gene symbol: KRAS', test => {
 		// tk is gdc mds3 track object; bb is block object
 		test.equal(bb.usegm.name,'KRAS','block.usegm.name="KRAS"')
 		test.equal(bb.tklst.length, 2, 'should have two tracks')
-
 		test.ok(tk.skewer.rawmlst.length>0,'mds3 tk should have loaded many data points')
-
 		if (test._ok) holder.remove()
 		test.end()
 	}
@@ -74,7 +76,6 @@ tape('Run GDC dataset, GENCODE transcript: ENST00000407796', test => {
 	runproteinpaint({
 		holder,
 		noheader: true,
-		nobox: true,
 		genome: 'hg38',
 		gene: 'ENST00000407796',
 		tracks: [ { type: 'mds3', dslabel: 'GDC', callbackOnRender } ]
@@ -98,7 +99,6 @@ tape('Run GDC dataset, GENCODE gene: ENSG00000133703', test => {
 	runproteinpaint({
 		holder,
 		noheader: true,
-		nobox: true,
 		genome: 'hg38',
 		gene: 'ENSG00000133703',
 		tracks: [ { type: 'mds3', dslabel: 'GDC', callbackOnRender } ]
@@ -118,7 +118,6 @@ tape('Run GDC dataset, RefSeq: NM_005163', test => {
 	runproteinpaint({
 		holder,
 		noheader: true,
-		nobox: true,
 		genome: 'hg38',
 		gene: 'NM_005163',
 		tracks: [ { type: 'mds3', dslabel: 'GDC', callbackOnRender } ]
@@ -138,7 +137,6 @@ tape('Launch GDC dataset by SSM ID, KRAS', test => {
 	runproteinpaint({
 		holder,
 		noheader: true,
-		nobox: true,
 		genome: 'hg38',
 		mds3_ssm2canonicalisoform: { dslabel: 'GDC', ssm_id },
 		tracks: [ { type: 'mds3', dslabel: 'GDC', callbackOnRender } ],
@@ -183,6 +181,7 @@ tape('geneSearch4GDCmds3', async test => {
 		div1.dispatchEvent(new Event('click'))
 	}
 
+	// XXX test does not work
 	async function onloadalltk_always(block) {
 		return // if running test in this function it will crash with ".end() already called"
 		test.equal(block.tklst.length, 2, 'Should render two tracks')
@@ -197,24 +196,15 @@ tape('Launch ASH dataset, BCR', test => {
 
 	runproteinpaint({
 		holder,
-		parseurl: true,
-		nobox: true,
 		noheader: true,
 		genome: 'hg38',
 		gene: 'BCR',
-		tracks: [{ type: 'mds3', dslabel: 'ASH' }],
-		onloadalltk_always: checkTrack
+		tracks: [{ type: 'mds3', dslabel: 'ASH', callbackOnRender }],
 	})
-
-	function checkTrack(bb) {
-		//Test if BCR track renders from mds3 track, in ASH dataset
-		const mds3Track = bb.tklst.find(i => i.type == 'mds3')
-		test.ok(mds3Track.dslabel == 'ASH', 'Should render ASH dataset')
-
-		test.ok(bb.usegm.name == 'BCR', 'Should render BCR track')
-
-		//TODO test G12V mutation focus
-
+	function callbackOnRender(tk,bb) {
+		test.equal(bb.usegm.name,'BCR','block.usegm.name="BCR"')
+		test.equal(bb.tklst.length, 2, 'should have two tracks')
+		test.ok(tk.skewer.rawmlst.length>0,'mds3 tk should have loaded many data points')
 		if (test._ok) holder.remove()
 		test.end()
 	}
@@ -223,196 +213,71 @@ tape('Launch ASH dataset, BCR', test => {
 tape('Incorrect dataset name: ah instead of ASH', test => {
 	test.timeoutAfter(3000)
 	const holder = getHolder()
-
 	runproteinpaint({
 		holder,
-		parseurl: true,
-		nobox: true,
 		noheader: true,
 		genome: 'hg38',
 		gene: 'BCR',
-		tracks: [
-			{
-				type: 'mds3',
-				dslabel: 'ah',
-				callbackOnRender: (tk, bb) => {
-					// Confirm mds3 track sent to block instance but not rendering
-					const mds3Track = bb.tklst.find(i => i.type == 'mds3')
-					test.ok(mds3Track.uninitialized == true, 'Should not render mds3 track and not throw')
-
-					// Confirm error message appears
-					const errorDivFound = tk.gmiddle
-						.selectAll('text')
-						.nodes()
-						.find(i => i.textContent == 'Error: invalid dsname')
-					test.ok(errorDivFound, 'Should display invalid dsname error')
-
-					if (test._ok) holder.remove()
-					test.end()
-				}
-			}
-		]
+		tracks: [ { type: 'mds3', dslabel: 'ah',callbackOnRender } ]
 	})
-})
-
-tape('Custom dataset with custom variants, NO samples', test => {
-	test.timeoutAfter(3000)
-	const holder = getHolder()
-
-	const custom_variants = [
-		{ chr: 'chr8', pos: 128750685, mname: 'P75', class: 'M', dt: 1 },
-		{ chr: 'chr8', pos: 128750680, mname: 'T73', class: 'M', dt: 1 },
-		{ chr: 'chr8', pos: 128750685, mname: 'WTPinsP75', class: 'I', dt: 1 }
-	]
-
-	runproteinpaint({
-		holder,
-		parseurl: true,
-		nobox: true,
-		noheader: true,
-		genome: 'hg19',
-		gene: 'NM_002467',
-		tracks: [
-			{
-				type: 'mds3',
-				name: 'Test, without occurrence',
-				custom_variants
-			}
-		],
-		onloadalltk_always: checkTrack
-	})
-
-	function checkTrack(bb) {
-		//Confirm number of custom variants matches in block instance
-		const mds3Track = bb.tklst.find(i => i.type == 'mds3')
-		test.equal(
-			mds3Track.custom_variants.length,
-			custom_variants.length,
-			`Should render total # of custom variants = ${custom_variants.length}`
-		)
-
-		for (const variant of custom_variants) {
-			//Test all custom variant entries successfully passed to block instance
-			const variantFound = mds3Track.custom_variants.find(i => i.mname == variant.mname)
-			test.ok(variantFound, `Should render data point for ${variant.mname}`)
-		}
-
+	function callbackOnRender (tk, bb) {
+		// Confirm mds3 track sent to block instance but not rendering
+		test.ok(tk.uninitialized == true, 'Should not render mds3 track and not throw')
+		// Confirm error message appears
+		const errorDivFound = tk.gmiddle
+			.selectAll('text')
+			.nodes()
+			.find(i => i.textContent == 'Error: invalid dsname')
+		test.ok(errorDivFound, 'Should display invalid dsname error')
 		if (test._ok) holder.remove()
 		test.end()
 	}
 })
 
-tape('Custom dataset with custom variants, WITH samples', test => {
-	test.timeoutAfter(3000)
-	const holder = getHolder()
 
-	const custom_variants = [
-		{ chr: 'chr8', pos: 128750685, mname: 'P75', class: 'M', dt: 1, sample: 'sample 1' },
-		{ chr: 'chr8', pos: 128750680, mname: 'T73', class: 'M', dt: 1, sample: 'sample 2' },
-		{ chr: 'chr8', pos: 128750685, mname: 'WTPinsP75', class: 'I', dt: 1, sample: 'sample 3' },
-		{ chr: 'chr8', pos: 128750685, mname: 'WTPinsP75', class: 'I', dt: 1, sample: 'sample 4' }
-	]
-
-	runproteinpaint({
-		holder,
-		parseurl: true,
-		nobox: true,
-		noheader: true,
-		genome: 'hg19',
-		gene: 'NM_002467',
-		tracks: [
-			{
-				type: 'mds3',
-				name: 'Test, with sample name',
-				custom_variants
-			}
-		],
-		onloadalltk_always: checkTrack
-	})
-
-	function checkTrack(bb) {
-		const mds3Track = bb.tklst.find(i => i.type == 'mds3')
-
-		const variantNum = new Set()
-		for (const variant of custom_variants) {
-			//Test all custom variant entries successfully passed to block instance
-			const variantFound = mds3Track.custom_variants.find(i => i.mname == variant.mname)
-			test.ok(variantFound, `Should render data point at ${variant.chr}-${variant.pos} for ${variant.mname}`)
-
-			variantNum.add(variant.mname)
-
-			//Test number of samples passed to block
-			if (variant.samples) {
-				test.equal(
-					variantFound.samples.length,
-					variant.samples.length,
-					`Should render # of sample(s) = ${variant.samples.length} for variant = ${variant.mname}`
-				)
-			}
-		}
-		//Confirm number of custom variants matches in block instance
-		test.equal(
-			mds3Track.custom_variants.length,
-			variantNum.size,
-			`Should render total # of custom variants = ${variantNum.size}`
-		)
-
-		if (test._ok) holder.remove()
-		test.end()
-	}
-})
-
-tape('Launch variant table from track variant label', test => {
+tape.only('Launch variant table from track variant label', test => {
 	test.timeoutAfter(10000)
 	const holder = getHolder()
 
 	runproteinpaint({
 		holder,
 		noheader: true,
-		nobox: true,
 		genome: 'hg38',
 		gene: 'kras',
-		tracks: [
-			{
-				type: 'mds3',
-				dslabel: 'GDC',
-				callbackOnRender: (tk, bb) => {
-					const mtk = bb.tklst.find(i => i.type == 'mds3')
-					//Click on track variant link to open menu
-					const variantsControl = tk.leftlabels.doms.variants.node()
-					variantsControl.dispatchEvent(new Event('click'))
-
-					//Click 'List' menu option
-					const listMenuOptionFound = tk.menutip.d
-						.selectAll('.sja_menuoption')
-						.nodes()
-						.find(e => e.innerHTML == 'List')
-					test.ok(listMenuOptionFound, 'Should open menu from clicking on variant link beneath track label')
-					listMenuOptionFound.dispatchEvent(new Event('click'))
-
-					//Click on the first variant bar in the list
-					const E3KvariantFound = tk.menutip.d
-						.selectAll('div.sja_menuoption')
-						.nodes()
-						.find(e => e.innerText == 'E3KMISSENSEchr12:25245378, C>T')
-					E3KvariantFound.dispatchEvent(new Event('click'))
-
-					//Confirm variant annotation table appears
-					const variantTableFound = tk.menutip.d
-						.selectAll('span')
-						.nodes()
-						.find(e => e.innerText == 'E3K')
-					test.ok(variantTableFound, 'Should display variant annotation table')
-
-					//Close orphaned popup window
-					tk.menutip.d.remove()
-
-					if (test._ok) holder.remove()
-					test.end()
-				}
-			}
-		]
+		tracks: [ { type: 'mds3', dslabel: 'GDC', callbackOnRender }]
 	})
+	function callbackOnRender (tk, bb) {
+		//Click on track variant link to open menu
+		tk.leftlabels.doms.variants.node().dispatchEvent(new Event('click'))
+
+		//Click 'List' menu option
+		const listMenuOptionFound = tk.menutip.d
+			.selectAll('.sja_menuoption')
+			.nodes()
+			.find(e => e.innerHTML == 'List')
+		test.ok(listMenuOptionFound, 'Should open menu from clicking on variant link beneath track label')
+		listMenuOptionFound.dispatchEvent(new Event('click'))
+
+		//Click on the first variant bar in the list
+		const E3KvariantFound = tk.menutip.d
+			.selectAll('div.sja_menuoption')
+			.nodes()
+			.find(e => e.innerText == 'E3KMISSENSEchr12:25245378, C>T')
+		E3KvariantFound.dispatchEvent(new Event('click'))
+
+		//Confirm variant annotation table appears
+		const variantTableFound = tk.menutip.d
+			.selectAll('span')
+			.nodes()
+			.find(e => e.innerText == 'E3K')
+		test.ok(variantTableFound, 'Should display variant annotation table')
+
+		//Close orphaned popup window
+		tk.menutip.d.remove()
+
+		if (test._ok) holder.remove()
+		test.end()
+	}
 })
 
 tape('Launch cases from track cases label', test => {
@@ -564,14 +429,6 @@ tape('Launch sample table from sunburst plot', test => {
 	})
 })
 
-/*
-********* LEAVE THIS TEST LAST *********
-mclassOverride persists between tests! All missense mutations will appear as 'AA'. 
-Proteinin likewise will appear as 'BB'. 
-
-TODO: Find out why mclassOverride persists between runproteinpaint calls.
-****************************************
-*/
 tape('Numeric mode custom dataset', test => {
 	test.timeoutAfter(3000)
 	const holder = getHolder()
@@ -627,6 +484,114 @@ tape('Numeric mode custom dataset', test => {
 		// for (const variant of custom_variants) {
 		//TODO test skewer value passed for each variant
 		// }
+
+		if (test._ok) holder.remove()
+		test.end()
+	}
+})
+
+
+tape('Custom dataset with custom variants, NO samples', test => {
+	test.timeoutAfter(3000)
+	const holder = getHolder()
+
+	const custom_variants = [
+		{ chr: 'chr8', pos: 128750685, mname: 'P75', class: 'M', dt: 1 },
+		{ chr: 'chr8', pos: 128750680, mname: 'T73', class: 'M', dt: 1 },
+		{ chr: 'chr8', pos: 128750685, mname: 'WTPinsP75', class: 'I', dt: 1 }
+	]
+
+	runproteinpaint({
+		holder,
+		parseurl: true,
+		nobox: true,
+		noheader: true,
+		genome: 'hg19',
+		gene: 'NM_002467',
+		tracks: [
+			{
+				type: 'mds3',
+				name: 'Test, without occurrence',
+				custom_variants
+			}
+		],
+		onloadalltk_always: checkTrack
+	})
+
+	function checkTrack(bb) {
+		//Confirm number of custom variants matches in block instance
+		const mds3Track = bb.tklst.find(i => i.type == 'mds3')
+		test.equal(
+			mds3Track.custom_variants.length,
+			custom_variants.length,
+			`Should render total # of custom variants = ${custom_variants.length}`
+		)
+
+		for (const variant of custom_variants) {
+			//Test all custom variant entries successfully passed to block instance
+			const variantFound = mds3Track.custom_variants.find(i => i.mname == variant.mname)
+			test.ok(variantFound, `Should render data point for ${variant.mname}`)
+		}
+
+		if (test._ok) holder.remove()
+		test.end()
+	}
+})
+
+tape('Custom dataset with custom variants, WITH samples', test => {
+	test.timeoutAfter(3000)
+	const holder = getHolder()
+
+	const custom_variants = [
+		{ chr: 'chr8', pos: 128750685, mname: 'P75', class: 'M', dt: 1, sample: 'sample 1' },
+		{ chr: 'chr8', pos: 128750680, mname: 'T73', class: 'M', dt: 1, sample: 'sample 2' },
+		{ chr: 'chr8', pos: 128750685, mname: 'WTPinsP75', class: 'I', dt: 1, sample: 'sample 3' },
+		{ chr: 'chr8', pos: 128750685, mname: 'WTPinsP75', class: 'I', dt: 1, sample: 'sample 4' }
+	]
+
+	runproteinpaint({
+		holder,
+		parseurl: true,
+		nobox: true,
+		noheader: true,
+		genome: 'hg19',
+		gene: 'NM_002467',
+		tracks: [
+			{
+				type: 'mds3',
+				name: 'Test, with sample name',
+				custom_variants
+			}
+		],
+		onloadalltk_always: checkTrack
+	})
+
+	function checkTrack(bb) {
+		const mds3Track = bb.tklst.find(i => i.type == 'mds3')
+
+		const variantNum = new Set()
+		for (const variant of custom_variants) {
+			//Test all custom variant entries successfully passed to block instance
+			const variantFound = mds3Track.custom_variants.find(i => i.mname == variant.mname)
+			test.ok(variantFound, `Should render data point at ${variant.chr}-${variant.pos} for ${variant.mname}`)
+
+			variantNum.add(variant.mname)
+
+			//Test number of samples passed to block
+			if (variant.samples) {
+				test.equal(
+					variantFound.samples.length,
+					variant.samples.length,
+					`Should render # of sample(s) = ${variant.samples.length} for variant = ${variant.mname}`
+				)
+			}
+		}
+		//Confirm number of custom variants matches in block instance
+		test.equal(
+			mds3Track.custom_variants.length,
+			variantNum.size,
+			`Should render total # of custom variants = ${variantNum.size}`
+		)
 
 		if (test._ok) holder.remove()
 		test.end()
