@@ -257,6 +257,7 @@ export class Block {
 			.append('div')
 			.style('margin', arg.style.margin)
 			.style('display', 'inline-block')
+			.attr('class','sja_Block_div')
 		if (!arg.nobox) {
 			this.holder.style('border', 'solid 1px #ccc')
 		}

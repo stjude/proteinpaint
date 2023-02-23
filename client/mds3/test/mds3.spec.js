@@ -150,24 +150,18 @@ tape('Launch GDC dataset by SSM ID, KRAS', test => {
 	}
 })
 
-// this test always break, may need a "postRender" solution to replace sleep
-tape.only('geneSearch4GDCmds3', async test => {
-	test.timeoutAfter(5000)
-	test.plan(3)
-
+tape('geneSearch4GDCmds3', async test => {
+// enter a gene name into search box, find the gene match in tooltip, select matched gene to launch block with gdc track
 	const holder = getHolder()
 	const gene = 'HOXA1'
-
 	await runproteinpaint({
 		holder,
 		noheader: 1,
 		geneSearch4GDCmds3: { postRender }
 	})
-
 	async function postRender(arg) {
-		// arg={tip}
-		// tip is the tooltip from gene search <input> showing hits
-		const searchBox = await detectOne({ elem: holder, selector: '.sja_genesearchinput' })
+		// arg={tip}; convenient method to provide the tooltip used by gene search <input> (remove some hassle of finding this tooltip)_
+		const searchBox = await detectOne({elem: holder, selector:'.sja_genesearchinput'})
 		test.ok(searchBox, 'Gene search box is made')
 
 		const blockHolder = await detectOne({ elem: holder, selector: '.sja_geneSearch4GDCmds3_blockdiv' })
@@ -181,13 +175,10 @@ tape.only('geneSearch4GDCmds3', async test => {
 		const geneHitDivs = await detectLst({ elem: arg.tip.d.node(), selector: '.sja_menuoption', matchAs: '>=' })
 		test.equal(geneHitDivs[0].innerHTML, gene, 'Gene search found ' + gene)
 		geneHitDivs[0].dispatchEvent(new Event('click'))
-	}
 
-	// XXX test does not work
-	async function onloadalltk_always(block) {
-		return // if running test in this function it will crash with ".end() already called"
-		test.equal(block.tklst.length, 2, 'Should render two tracks')
-		if (test._ok) holder.remove()
+		const blockDiv = await detectOne({elem: blockHolder, selector:'.sja_Block_div'})
+		test.ok(blockDiv, 'A block is rendered')
+		//if (test._ok) holder.remove()
 		test.end()
 	}
 })
