@@ -61,6 +61,7 @@ gdc_pos=chr7:55153818-55156225
 
 */
 
+const tip = new Menu({ padding: '' })
 const gdc_genome = 'hg38'
 const variantFlankingSize = 60 // bp
 const baminfo_rows = [
@@ -78,19 +79,14 @@ arguments:
 genomes{}
 holder
 debugmode=boolean
-
-disableSSM=true
-	NOT IN USE; always enable gene search
-	temporary fix; to disable ssm query and selection for gdc phase9
-	to reenable, simply delete all uses of this flag
-
 hideTokenInput=true/false
 	set to true in pp react wrapper that's integrated into gdc portal
 	will be using cookie session id instead of token
-
 filter0=str
 	optional, stringified json obj as the cohort filter from gdc ATF
 	simply pass to backend to include in api queries
+callbackOnRender()
+	optional callback for ui testing
 
 Returns:
 
@@ -100,8 +96,8 @@ export async function bamsliceui({
 	genomes,
 	holder,
 	filter0,
-	disableSSM = false,
 	hideTokenInput = false,
+	callbackOnRender,
 	debugmode = false
 }) {
 	// public api obj to be returned
@@ -112,7 +108,6 @@ export async function bamsliceui({
 
 	// central obj, see comments on top
 	const gdc_args = { bam_files: [] }
-	const tip = new Menu({ padding: '' })
 
 	// fill from url for quick testing: ?gdc_id=TCGA-44-6147&gdc_pos=chr9:5064699-5065299
 	// unable to autoload toke file this way
@@ -167,6 +162,10 @@ export async function bamsliceui({
 
 	// submit button, "no permission" alert
 	const [submitButton, saydiv, noPermissionDiv] = makeSubmitAndNoPermissionDiv()
+
+	if(typeof callbackOnRender == 'function') {
+		callbackOnRender(publicApi)
+	}
 
 	if (urlp.has('gdc_id')) {
 		gdcid_input
@@ -258,6 +257,7 @@ export async function bamsliceui({
 			.attr('aria-label', 'Specify File name / File UUID / Case ID / Case UUID')
 			.style('padding', '3px 10px')
 			.property('placeholder', 'File name / File UUID / Case ID / Case UUID')
+			.attr('class','sja-gdcbam-input') // for testing
 			// debounce event listener on keyup
 			.on('keyup', debounce(gdc_search, 500))
 			// clicking X in <input> fires "search" event. must listen to it and call callback without delay in order to clear the UI
@@ -296,12 +296,11 @@ export async function bamsliceui({
 			.append('div')
 			.style('display', 'none')
 			.style('margin', '20px 20px 20px 40px')
-		//.style('overflow', 'hidden')
 		// either baminfo_table or bamselection_table is displayed
 		// baminfo_table is a static table showing details about one bam file
 		// bamselection_table lists multiple bam files available from a sample, allowing user to select some forslicing
-		const baminfo_table = baminfo_div.append('div')
-		const bamselection_table = baminfo_div.append('div')
+		const baminfo_table = baminfo_div.append('div').attr('class','sja-gdcbam-onefiletable').style('display','none')
+		const bamselection_table = baminfo_div.append('div').attr('class','sja-gdcbam-multifiletable').style('display','none')
 
 		// the update() will be called in pp react wrapper, when user changes cohort from gdc ATF
 		publicApi.update = _arg => {
@@ -399,6 +398,7 @@ export async function bamsliceui({
 				}
 
 				await makeSsmGeneSearch()
+
 			} catch (e) {
 				show_input_check(gdcid_error_div, e.message || e)
 				baminfo_div.style('display', 'none')
