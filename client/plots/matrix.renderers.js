@@ -29,6 +29,7 @@ export function setRenderers(self) {
 
 	self.renderSeries = function(series) {
 		const s = self.settings.matrix
+		const useCanvas = window.location.hash?.slice(1) == 'canvas' //Add to a parameter in self.settings.matrix
 		const g = select(this)
 		const duration = g.attr('transform') ? s.duration : 0
 
@@ -36,14 +37,43 @@ export function setRenderers(self) {
 			.duration(duration)
 			.attr('transform', `translate(${series.x},${series.y})`)
 			.style('opacity', 1)
+		const last = series.cells[series.cells.length - 1]
+		const height = series.y + last.y + s.rowh
+		if (useCanvas) {
+			g.selectAll('*').remove()
+			const canvas = self.dom.holder
+				.append('canvas')
+				.attr('width', s.colw)
+				.attr('height', height)
+				.style('opacity', 0)
+				.node()
+			const ctx = canvas.getContext('2d')
+			for (const cell of series.cells) self.renderCellWithCanvas(ctx, cell, series)
+			const img = canvas.toDataURL()
+			g.append('image').attr('xlink:href', img)
+			canvas.remove()
+		} else {
+			const rects = g.selectAll('rect').data(series.cells, (cell, i) => cell.sample + ';;' + cell.tw.$id + ';;' + i)
+			rects.exit().remove()
+			rects.each(self.renderCell)
+			rects
+				.enter()
+				.append('rect')
+				.each(self.renderCell)
+		}
+	}
 
-		const rects = g.selectAll('rect').data(series.cells, (cell, i) => cell.sample + ';;' + cell.tw.$id + ';;' + i)
-		rects.exit().remove()
-		rects.each(self.renderCell)
-		rects
-			.enter()
-			.append('rect')
-			.each(self.renderCell)
+	self.renderCellWithCanvas = function(ctx, cell, series) {
+		if (!cell.fill)
+			cell.fill = cell.$id in self.colorScaleByTermId ? self.colorScaleByTermId[cell.$id](cell.key) : getRectFill(cell)
+		const s = self.settings.matrix
+		const x = 'x' in cell ? cell.x : 0
+		let y = 'y' in cell ? cell.y : 0
+		y += series.y
+		const width = 'width' in cell ? cell.width : s.colw
+		const height = 'height' in cell ? cell.height : s.rowh
+		ctx.fillStyle = cell.fill
+		ctx.fillRect(x, y, width, height)
 	}
 
 	self.renderCell = function(cell) {
