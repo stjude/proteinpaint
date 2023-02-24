@@ -7,43 +7,54 @@ let inputIndex = 0
 export function setInteractivity(self) {
 	self.showCellInfo = function(event) {
 		if (self.activeLabel) return
-		const d = event.target.__data__
+		if (!(event.target.tagName == 'rect' || event.target.tagName == 'image')) return
+		const d = event.target.tagName == 'rect' ? event.target.__data__ : getCell(event.target, event.clientY)
 		if (!d || !d.term || !d.sample) return
-		if (event.target.tagName == 'rect') {
-			const rows = []
-			if (d.term.type != 'geneVariant') {
-				rows.push(`<tr><td>Sample:</td><td>${d._SAMPLENAME_ || d.sample}</td></tr>`)
-				rows.push(
-					`<tr><td>${d.term.name}:</td><td style='color: ${d.fill == '#fff' ? '' : d.fill}'> ${d.label}</td></tr>`
-				)
-			} else if (d.term.type == 'geneVariant' && d.value) {
-				rows.push(
-					`<tr><td colspan='2' style='text-align: center'>Sample: ${d._SAMPLENAME_ ||
-						d.value._SAMPLENAME_ ||
-						d.value.sample}</td></tr>`
-				)
-				rows.push(`<tr><td colspan='2' style='text-align: center'>${d.term.name}</td></tr>`)
-				for (const c of event.target.parentNode.__data__.cells) {
-					if (c.$id != d.$id) continue
-					const v = c.value
-					const label = v.mname ? `${v.mname} ${c.label}` : c.label
-					const info = []
-					if (v.label && v.label !== c.label) info.push(v.label)
-					if (v.chr) info.push(`${v.chr}:${v.pos}`)
-					if (v.alt) info.push(`${v.ref}>${v.alt}`)
+		const rows = []
+		if (d.term.type != 'geneVariant') {
+			rows.push(`<tr><td>Sample:</td><td>${d._SAMPLENAME_ || d.sample}</td></tr>`)
+			rows.push(
+				`<tr><td>${d.term.name}:</td><td style='color: ${d.fill == '#fff' ? '' : d.fill}'> ${d.label}</td></tr>`
+			)
+		} else if (d.term.type == 'geneVariant' && d.value) {
+			rows.push(
+				`<tr><td colspan='2' style='text-align: center'>Sample: ${d._SAMPLENAME_ ||
+					d.value._SAMPLENAME_ ||
+					d.value.sample}</td></tr>`
+			)
+			rows.push(`<tr><td colspan='2' style='text-align: center'>${d.term.name}</td></tr>`)
+			for (const c of event.target.parentNode.__data__.cells) {
+				if (c.$id != d.$id) continue
+				const v = c.value
+				const label = v.mname ? `${v.mname} ${c.label}` : c.label
+				const info = []
+				if (v.label && v.label !== c.label) info.push(v.label)
+				if (v.chr) info.push(`${v.chr}:${v.pos}`)
+				if (v.alt) info.push(`${v.ref}>${v.alt}`)
 
-					const tds = !info.length
-						? `<td colspan='2' style='text-align: center'>${label}</td>`
-						: `<td style='text-align: right'>${label}</td><td>${info.map(i => `<span>${i}</span>`).join(' ')}</td>`
+				const tds = !info.length
+					? `<td colspan='2' style='text-align: center'>${label}</td>`
+					: `<td style='text-align: right'>${label}</td><td>${info.map(i => `<span>${i}</span>`).join(' ')}</td>`
 
-					const color = c.fill == v.color || v.class == 'Blank' ? '' : c.fill
-					rows.push(`<tr style='color: ${color}'>${tds}</tr>`)
-				}
+				const color = c.fill == v.color || v.class == 'Blank' ? '' : c.fill
+				rows.push(`<tr style='color: ${color}'>${tds}</tr>`)
 			}
+		}
 
-			self.dom.menutop.selectAll('*').remove()
-			self.dom.menubody.html(`<table class='sja_simpletable'>${rows.join('\n')}</table>`)
-			self.dom.tip.show(event.clientX, event.clientY)
+		self.dom.menutop.selectAll('*').remove()
+		self.dom.menubody.html(`<table class='sja_simpletable'>${rows.join('\n')}</table>`)
+		self.dom.tip.show(event.clientX, event.clientY)
+
+		function getCell(img, y) {
+			const d = img.__data__
+			const rect = img.getBoundingClientRect()
+			const y2 = y - rect.y
+			for (const cell of d.cells) {
+				const min = cell.x
+				const max = cell.y + self.settings.matrix.rowh
+				if (min < y2 && y2 <= max) return cell
+			}
+			return null
 		}
 	}
 
