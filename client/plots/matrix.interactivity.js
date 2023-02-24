@@ -9,7 +9,10 @@ export function setInteractivity(self) {
 		if (self.activeLabel) return
 		if (!(event.target.tagName == 'rect' || event.target.tagName == 'image')) return
 		const d = event.target.tagName == 'rect' ? event.target.__data__ : getCell(event.target, event.clientY)
-		if (!d || !d.term || !d.sample) return
+		if (!d || !d.term || !d.sample) {
+			self.dom.tip.hide()
+			return
+		}
 		const rows = []
 		if (d.term.type != 'geneVariant') {
 			rows.push(`<tr><td>Sample:</td><td>${d._SAMPLENAME_ || d.sample}</td></tr>`)
@@ -50,7 +53,7 @@ export function setInteractivity(self) {
 			const rect = img.getBoundingClientRect()
 			const y2 = y - rect.y
 			for (const cell of d.cells) {
-				const min = cell.x
+				const min = cell.y
 				const max = cell.y + self.settings.matrix.rowh
 				if (min < y2 && y2 <= max) return cell
 			}
