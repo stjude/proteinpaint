@@ -40,6 +40,7 @@ class Matrix {
 		const mainG = svg
 			.append('g')
 			.on('mouseover', this.showCellInfo)
+			.on('mousemove', this.showCellInfo)
 			.on('mouseout', this.mouseout)
 
 		const tip = new Menu({ padding: '5px' })
