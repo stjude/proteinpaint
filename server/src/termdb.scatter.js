@@ -171,10 +171,7 @@ async function getSamples(req, ds, plot) {
 
 	function readSamples(samples) {
 		const result = []
-		for (const i of JSON.parse(JSON.stringify(samples))) {
-			if (!authApi.canDisplaySampleIds(req, ds)) delete i.sample
-			result.push(i)
-		}
+		for (const i of JSON.parse(JSON.stringify(samples))) result.push(i)
 		return result
 	}
 }

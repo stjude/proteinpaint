@@ -379,7 +379,7 @@ class Scatter {
 				const name = key
 				const hidden = this.config.colorTW.q.hiddenValues ? key in this.config.colorTW.q.hiddenValues : false
 				const [circleG, itemG] = addLegendItem(colorG, color, name, count, offsetX, offsetY, hidden)
-				circleG.on('click', e => onColorClick(e, key, category))
+				circleG.on('click', e => this.onColorClick(e, key, category))
 				offsetY += step
 				itemG.on('click', event => onLegendClick(this.config.colorTW, 'colorTW', key, event, this))
 			}
@@ -479,7 +479,7 @@ class Scatter {
 				.attr('r', radius)
 				.style('fill', color)
 
-			circleG.on('click', e => onColorClick(e, key, category))
+			circleG.on('click', e => this.onColorClick(e, key, category))
 			const itemG = g.append('g')
 			itemG
 				.append('text')
@@ -491,29 +491,6 @@ class Scatter {
 				.style('text-decoration', hidden ? 'line-through' : 'none')
 				.attr('alignment-baseline', 'middle')
 			return [circleG, itemG]
-		}
-
-		function onColorClick(e, key, category) {
-			const menu = new Menu()
-			const input = menu.d
-				.append('input')
-				.attr('type', 'color')
-				.attr('value', category.color)
-				.on('change', () => {
-					const tw = this.config.colorTW
-					if (tw.term.type != 'geneVariant' && tw.term.values[key]) tw.term.values[key].color = input.node().value
-					else {
-						if (!tw.term.values) tw.term.values = {}
-						tw.term.values[key] = { key: key, label: key, color: input.node().value }
-					}
-					this.app.dispatch({
-						type: 'plot_edit',
-						id: this.id,
-						config: { colorTW: tw }
-					})
-					menu.hide()
-				})
-			menu.show(e.clientX, e.clientY, false)
 		}
 
 		function onLegendClick(tw, name, key, e, parent) {
@@ -595,6 +572,28 @@ class Scatter {
 			if (!hide) delete tw.q.hiddenValues[key]
 			else tw.q.hiddenValues[key] = value
 		}
+	}
+	onColorClick(e, key, category) {
+		const menu = new Menu()
+		const input = menu.d
+			.append('input')
+			.attr('type', 'color')
+			.attr('value', category.color)
+			.on('change', () => {
+				const tw = this.config.colorTW
+				if (tw.term.type != 'geneVariant' && tw.term.values[key]) tw.term.values[key].color = input.node().value
+				else {
+					if (!tw.term.values) tw.term.values = {}
+					tw.term.values[key] = { key: key, label: key, color: input.node().value }
+				}
+				this.app.dispatch({
+					type: 'plot_edit',
+					id: this.id,
+					config: { colorTW: tw }
+				})
+				menu.hide()
+			})
+		menu.show(e.clientX, e.clientY, false)
 	}
 
 	openSurvivalPlot(term, groups) {
@@ -853,7 +852,7 @@ class Scatter {
 			selectAll: true
 		})
 
-		this.dom.tip.show(x, y)
+		this.dom.tip.show(x, y, false, false)
 		function formatCell(column, name = 'value') {
 			let dict = {}
 			dict[name] = column
@@ -863,7 +862,7 @@ class Scatter {
 
 	showGroupMenu(event, group) {
 		this.dom.tip.clear()
-		this.dom.tip.show(event.clientX, event.clientY)
+		this.dom.tip.show(event.clientX, event.clientY, false, false)
 		const menuDiv = this.dom.tip.d.append('div')
 		const groupDiv = menuDiv
 			.append('div')
