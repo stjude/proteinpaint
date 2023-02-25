@@ -258,8 +258,8 @@ export function getTermSorter(self, s) {
 			if (!a.tw?.term?.id && b.tw?.term?.id) return 1
 		} // !!! end quick fix
 
-		if (a.counts.samples === b.counts.samples) return b.counts.hits - a.counts.hits
-		if (a.counts.samples === b.counts.samples) return a.index - b.index
-		return b.counts.samples - a.counts.samples
+		if (b.counts.samples !== a.counts.samples) return b.counts.samples - a.counts.samples
+		if (b.counts.hits !== a.counts.hits) return b.counts.hits - a.counts.hits
+		return a.index - b.index
 	}
 }

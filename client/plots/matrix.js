@@ -161,7 +161,8 @@ class Matrix {
 			filter: appState.termfilter.filter,
 			filter0: appState.termfilter.filter0, // read-only, invisible filter currently only used for gdc dataset
 			hasVerifiedToken: this.app.vocabApi.hasVerifiedToken(),
-			tokenVerificationMessage: this.app.vocabApi.tokenVerificationMessage
+			tokenVerificationMessage: this.app.vocabApi.tokenVerificationMessage,
+			geneVariantCountSamplesSkipMclass: this.app.vocabApi.termdbConfig.matrix?.geneVariantCountSamplesSkipMclass || []
 		}
 	}
 
@@ -456,7 +457,6 @@ class Matrix {
 		const values = 'value' in anno ? [anno.value] : anno.values
 		if (!values) return { filteredValues: null, countedValues: null }
 		const valueFilter = tw.valueFilter || grp.valueFilter
-
 		const filteredValues = values.filter(v => {
 			/*** do not count wildtype and not tested as hits ***/
 			if (tw.term.type == 'geneVariant' && v.class == 'WT') return false
@@ -481,7 +481,10 @@ class Matrix {
 			filteredValues,
 			countedValues: filteredValues.filter(v => {
 				/*** do not count wildtype and not tested as hits ***/
-				if (tw.term.type == 'geneVariant' && (v.class == 'WT' || v.class == 'Blank')) return false
+				if (tw.term.type == 'geneVariant') {
+					if (v.class == 'WT' || v.class == 'Blank') return false
+					if (this.state.geneVariantCountSamplesSkipMclass.includes(v.class)) return false
+				}
 				return true
 			})
 		}
