@@ -326,12 +326,21 @@ class Matrix {
 		const s = this.settings.matrix
 		this.sampleOrder = []
 		this.sampleSorter = getSampleSorter(this, s, data.lst)
+		this.truncateSorter = s.truncatePriority && getSampleSorter(this, s, data.lst, 'truncatePriority')
 		let total = 0
 		for (const [grpIndex, grp] of this.sampleGroups.entries()) {
-			grp.lst.sort(this.sampleSorter)
 			let processedLst = grp.lst
-			if (s.maxSample && total + grp.lst.length > s.maxSample) {
-				processedLst = grp.lst.slice(0, s.maxSample - total)
+
+			if (this.truncateSorter) {
+				processedLst.sort(this.truncateSorter)
+				if (s.maxSample && total + processedLst.length > s.maxSample) {
+					processedLst = processedLst.slice(0, s.maxSample - total)
+				}
+			}
+
+			processedLst.sort(this.sampleSorter)
+			if (!this.truncateSorter && s.maxSample && total + processedLst.length > s.maxSample) {
+				processedLst = processedLst.slice(0, s.maxSample - total)
 			}
 
 			for (const [index, row] of processedLst.entries()) {
@@ -897,6 +906,7 @@ export async function getPlotConfig(opts, app) {
 				// put in settings, so that later may be overridden by a user (TODO)
 				maxSample: app.vocabApi.termdbConfig.matrix?.maxSample,
 				sortPriority: app.vocabApi.termdbConfig.matrix?.sortPriority,
+				truncatePriority: app.vocabApi.termdbConfig.matrix?.truncatePriority,
 
 				sampleNameFilter: '',
 				sortSamplesBy: 'selectedTerms',
