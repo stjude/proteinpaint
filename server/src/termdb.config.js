@@ -60,7 +60,7 @@ export function make(q, res, ds, genome) {
 	addRestrictAncestries(c, tdb)
 	addScatterplots(c, ds)
 	addMatrixplots(c, ds)
-	addMutationQueries(c, ds, genome)
+	addGenomicQueries(c, ds, genome)
 
 	res.send({ termdbConfig: c })
 }
@@ -101,13 +101,16 @@ function addMatrixplots(c, ds) {
 	})
 }
 
-function addMutationQueries(c, ds, genome) {
-	if (!ds.queries) return
+function addGenomicQueries(c, ds, genome) {
+	const q = ds.queries
+	if (!q) return
+	// supports genomic query methods
 	c.queries = {
-		defaultBlock2GeneMode: ds.queries.defaultBlock2GeneMode,
-		defaultCoord: ds.queries.defaultCoord || genome.defaultcoord
+		defaultBlock2GeneMode: q.defaultBlock2GeneMode,
+		defaultCoord: q.defaultCoord || genome.defaultcoord,
+		trackLst: q.trackLst
 	}
-	if (ds.queries.snvindel) c.queries.snvindel = true
+	if (q.snvindel) c.queries.snvindel = true
 }
 
 // allowedTermTypes[] is an unique list of term types from this dataset

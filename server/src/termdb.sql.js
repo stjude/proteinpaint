@@ -1262,13 +1262,13 @@ but boxplot and scatter are now child types under "summary" plot.
 			}
 		}
 
-		//////////////////////////////////
-		// quick fix
-		// when snvindel data is present, enable genomeBrowser chart
-		//////////////////////////////////
-		if (ds?.queries?.snvindel) {
-			for (const cohort in supportedChartTypes) {
-				supportedChartTypes[cohort].push('genomeBrowser')
+		if (ds.queries) {
+			// has genomic data queries
+			if(ds.queries.snvindel || ds.queries.trackLst) {
+				// suitable datatypes are present, enable genomeBrowser chart
+				for (const cohort in supportedChartTypes) {
+					supportedChartTypes[cohort].push('genomeBrowser')
+				}
 			}
 		}
 
