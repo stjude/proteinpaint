@@ -285,6 +285,7 @@ export async function mayInitiateMatrixplots(ds) {
 		if (p.file) {
 			const matrixConfig = await utils.read_file(path.join(serverconfig.tpmasterdir, p.file))
 			p.matrixConfig = JSON.parse(matrixConfig)
+			if (p.getConfig) p.matrixConfig = p.getConfig(p.matrixConfig)
 		} else {
 			throw 'unknown data source of one of matrixplots.plots[]'
 		}
