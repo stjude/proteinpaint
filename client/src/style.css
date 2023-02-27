@@ -973,63 +973,6 @@ h2 {
     color: #403f3f;
 }
 
-/* .sj-toggle-button {
-    margin: 0;
-    display: inline-block;
-    border: 1px solid #aaa;
-    color: rgb(83, 83, 83);
-    background-color: #fff;
-    cursor: pointer;
-    font-weight: 300;
-    text-align: center;
-  }
-
-  .sj-toggle-button.sjpp-active {
-    pointer-events: none;
-    border: 2px solid #999;
-    color: #000;
-    background-color: #f2f2f2;
-    font-weight: normal;
-    box-sizing: content-box;
-  } */
-
-  /* .sj-left-toggle {
-    border-radius: 5px 0px 0px 5px;
-  }
-
-  .sj-center-toggle {
-    margin-left: -2px;
-    border-left: 2px solid #999;
-  }
-
-  .sj-right-toggle {
-    margin-left: -2px;
-    border-left: 2px solid #999;
-    border-radius: 0px 5px 5px 0px;
-  } */
-
-  .sjpp-vertical-tab-menu {
-    display: grid;
-    /* grid-template-columns: minmax(min-content, 1vw) minmax(60vw, 1fr); */
-    grid-template-areas: 'tabs content';
-    flex-wrap: wrap;
-    gap: 5px;
-    text-align: left;
-  }
-  
-.sjpp-tabs-div{
-    grid-area: tabs;
-    /* align-items: flex-start;
-    justify-items: end;
-    text-align: right;*/
-    flex-wrap: wrap;
-    border-right: 1px solid lightgray;
- }
-
- .sjpp-content-div{
-    grid-area: content;
-}
-
 /* client/src/block.js start */
 .sjpp-active-tiny-button {
 	display: inline-block;

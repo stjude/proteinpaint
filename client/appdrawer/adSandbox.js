@@ -24,7 +24,6 @@ openDatasetButtonSandbox()
 TODOs: 
 - ***Removed the nested card back button for now
 - add icon link to copy appcard= link for each sandbox and views (i.e. examples, UIs, etc.) in sandbox headers
-- combine vertical and horizontal tab functions into one
 - fix nestcard background not in margins when sandbox called from ?appcard=
 
 */
@@ -33,12 +32,6 @@ export async function openSandbox(element, pageArgs) {
 	const sandboxDiv = newSandboxDiv(pageArgs.sandboxDiv)
 	sandboxDiv.header_row
 	sandboxDiv.header.append('span').text(element.name)
-	sandboxDiv.header.trail = new BreadcrumbTrail({
-		holder: sandboxDiv.header,
-		crumbs: []
-	})
-	sandboxDiv.header.trail.main()
-
 	sandboxDiv.body.style('overflow', 'hidden').style('background-color', 'white')
 
 	if (element.type == 'nestedCard') return openNestedCardSandbox(element, sandboxDiv, pageArgs)
@@ -69,7 +62,10 @@ async function openNestedCardSandbox(nestedCard, sandboxDiv, pageArgs) {
 		.style('gap', '5px')
 
 	const filteredChildren = nestedCard.children.filter(e => !e.hidden)
-	sandboxDiv.header.trail.crumbs = filteredChildren
+	sandboxDiv.header.trail = new BreadcrumbTrail({
+		holder: sandboxDiv.header,
+		crumbs: filteredChildren
+	})
 	//joins together all the use cases objects from index.json and displays them as cards in a newly created sandbox.
 	filteredChildren.forEach(child => {
 		const uc = ucList.append('li')
@@ -93,9 +89,10 @@ async function openNestedCardSandbox(nestedCard, sandboxDiv, pageArgs) {
 				}
 
 				if (child.type == 'card') {
-					sandboxDiv.header.trail.addCrumb(child)
-					sandboxDiv.header.trail.updateTrail()
-					return openCardSandbox(child, res, sandboxDiv)
+					sandboxDiv.header.trail.main()
+					const crumbIndex = filteredChildren.findIndex(c => c == child)
+					sandboxDiv.header.trail.update(crumbIndex)
+					openCardSandbox(child, res, sandboxDiv)
 				}
 				if (child.type == 'dsButton') return openDatasetButtonSandbox(pageArgs.app.opts, res, sandboxDiv) //only for .sandboxJson
 			})
@@ -247,7 +244,6 @@ function makeTopTabs(ppcalls, card, sandboxDiv) {
 			callback: async (event, tab) => {
 				try {
 					const examplesOnly = ppcalls.filter(p => p.isUi != true) //Fix to rm UIs from Examples tab
-					sandboxDiv.header.trail.crumbs = examplesOnly
 					makeLeftsideTabMenu(card, tab.contentHolder, examplesOnly, sandboxDiv)
 					delete tab.callback
 				} catch (e) {
@@ -265,15 +261,50 @@ function makeParentTabsMenu(ppcalls, card, topTabsDiv, tabsContentDiv, sandboxDi
 	new Tabs({ holder: topTabsDiv, contentHolder: tabsContentDiv, tabs }).main()
 }
 
-async function makeLeftsideTabMenu(card, div, examplesOnly, sandboxDiv) {
-	// div = top tab contentHolder
-	const tabs = examplesOnly.map((p, index) => getTabData(p, index, card.section, div, sandboxDiv))
+//Creates left side tabs when >1 example available
+async function makeLeftsideTabMenu(card, contentHolder, examplesOnly, sandboxDiv) {
+	const tabs = examplesOnly.map((p, index) => getTabData(p, index, card.section))
 
-	const wrapper = div.append('div').classed('sjpp-vertical-tab-menu', true)
+	sandboxDiv.header.trail = await new BreadcrumbTrail({
+		holder: sandboxDiv.header,
+		crumbs: tabs
+	})
+
+	function getTabData(ppcalls, i, section) {
+		return {
+			active: i === 0,
+			label: ppcalls.label,
+			callback: async (event, tab) => {
+				const wait = tab_wait(tab.contentHolder)
+				try {
+					if (!tab.rendered) {
+						appear(tab.contentHolder)
+						renderContent(ppcalls, tab.contentHolder, section)
+						wait.remove()
+					}
+					tab.rendered = true
+					const crumbIndex = tabs.findIndex(t => t == tab)
+					sandboxDiv.header.trail.update(crumbIndex)
+				} catch (e) {
+					wait.text('Error: ' + (e.message || e))
+				}
+			}
+		}
+	}
+
+	sandboxDiv.header.trail.main()
+
+	const wrapper = contentHolder
+		.append('div')
+		.style('display', 'grid')
+		.style('grid-template-columns', 'minmax(min-content, 10vw) minmax(60vw, 1fr)')
+		.classed('sjpp-vertical-tab-menu', true)
+		.style('word-break', 'break-word')
 	const tabsDiv = wrapper
 		.append('div')
 		.classed('sjpp-tabs-div', true)
-		.style('min-width', '150px') //Fixes the unsightly problem of tabs dramatically changing size on click.
+		.style('border-right', '1px solid lightgray')
+	// .style('min-width', '150px') //Fixes the unsightly problem of tabs dramatically changing size on click.
 	const tabsContentDiv = wrapper.append('div').classed('sjpp-content-div', true)
 
 	new Tabs({
@@ -281,28 +312,9 @@ async function makeLeftsideTabMenu(card, div, examplesOnly, sandboxDiv) {
 		contentHolder: tabsContentDiv,
 		tabs,
 		linePosition: 'right',
-		tabsPosition: 'vertical'
+		tabsPosition: 'vertical',
+		gap: '10px'
 	}).main()
-	/** TODO fix breadcrumb code and reimplement it in tab callback */
-	// sandboxDiv.header.trail.updateTrail()
-}
-
-function getTabData(ppcalls, i, section, sandboxDiv) {
-	return {
-		label: ppcalls.label,
-		active: i === 0,
-		callback: async (event, tab) => {
-			const wait = tab_wait(tab.contentHolder)
-			try {
-				appear(tab.contentHolder)
-				renderContent(ppcalls, tab.contentHolder, section)
-				// sandboxTrail.updateTrail()
-				wait.remove()
-			} catch (e) {
-				wait.text('Error: ' + (e.message || e))
-			}
-		}
-	}
 }
 
 // ******* Helper Functions *********
@@ -752,7 +764,9 @@ async function openDatasetButtonSandbox(pageArgs, res, sandboxDiv) {
 		if (par.availableGenomes.length == 1) {
 			// Show default genome as a non-functional button left of the search bar
 			btns.push({
-				label: par.availableGenomes[0]
+				label: par.availableGenomes[0],
+				disabled: () => true,
+				isVisible: () => true
 			})
 		} else {
 			par.availableGenomes.forEach(genome => {

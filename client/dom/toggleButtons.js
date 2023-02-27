@@ -2,8 +2,6 @@ import { select, selectAll } from 'd3-selection'
 
 /*
 ********************** EXPORTED
-init_tabs(opts)
-	- update_tabs(tabs)
 Tabs(opts)
 
 opts: {
@@ -23,8 +21,11 @@ opts: {
 		.tab, .holder
 			d3 DOM elements created by this script
 		.disabled()
-			optional: disables a tab
+			optional: disables tab
 			default = 'false'
+		.isVisible()
+			optional: displays tab
+			default = false
 		.active
 			optional: define which tab renders first
 			default: tabs[0].active = true
@@ -34,12 +35,14 @@ opts: {
 		optional: determines the blue border line position 
 		default = 'bottom'
 		values:  top, bottom, right, left
-	
-	** Tabs class only! **
 	tabsPosition, 
 		optional: show tabs inline horizonally or vertical stack 
 		default = 'horizonal'
 		values:  vertical, horizontal
+	gap,
+		optional: only applies to vertical position
+		default = ''
+	
 }
 
 Note: 
@@ -47,130 +50,9 @@ Note:
 - if everthing should be rendered in single holder, supply just `holder`
 - if top tabs and div containing tab specific ui should be in different tabs, 
 	define them sepeartely as holder and contentholder
-
-*/
-
-export async function init_tabs(opts) {
-	if (!opts.holder) throw `missing opts.holder for toggleButtons()`
-	if (!Array.isArray(opts.tabs)) throw `invalid opts.tabs for toggleButtons()`
-	const defaultTabWidth = 90
-	const tabs = opts.tabs
-	opts.tabsHolder = opts.holder
-		.append('div')
-		//add light grey border underneath the buttons
-		.style('border-bottom', '0.5px solid lightgrey')
-		.style('width', 'fit-content')
-
-	if (!opts.contentHolder) {
-		if (!opts.noContent) opts.contentHolder = opts.holder.append('div')
-	}
-
-	const has_active_tab = tabs.some(i => i.active)
-	if (!has_active_tab) tabs[0].active = true
-
-	for (const [i, tab] of tabs.entries()) {
-		// const toggle_btn_class = i == 0 ? ' sj-left-toggle' : i < tabs.length - 1 ? ' sj-center-toggle' : ' sj-right-toggle'
-
-		const linePosition = opts.linePosition || 'bottom'
-		const textAlign = linePosition == 'bottom' || linePosition == 'top' ? 'center' : linePosition
-
-		tab.wrapper = opts.tabsHolder
-			.append('button')
-			.attr('type', 'button')
-			.attr('class', 'sj-toggle-button')
-			//Padding here overrides automatic styling for all pp buttons
-			.style('padding', '0px')
-			// .attr('class', 'sj-toggle-button' + toggle_btn_class)
-			.classed('sjpp-active', tab.active ? true : false)
-			.style('border', 'none')
-			.style('background-color', 'transparent')
-
-		if (linePosition == 'top' || linePosition == 'left') {
-			//create the line div before the tab text
-			tab.line = tab.wrapper.append('div').style('display', linePosition == 'left' ? 'inline-flex' : 'block')
-			tab.tab = tab.wrapper.append('div').style('display', linePosition == 'left' ? 'inline-flex' : 'block')
-		} else {
-			//create the line div after the tab text
-			tab.tab = tab.wrapper.append('div').style('display', linePosition == 'right' ? 'inline-flex' : 'block')
-			tab.line = tab.wrapper.append('div').style('display', linePosition == 'right' ? 'inline-flex' : 'block')
-		}
-
-		tab.tab
-			.style('color', tab.active ? '#1575ad' : '#757373')
-			.style('text-align', textAlign)
-			.style('padding', '5px')
-			.html(tab.label)
-
-		tab.line
-			.style('color', '#1575ad')
-			.style('background-color', '#1575ad')
-			.style('visibility', tab.active ? 'visible' : 'hidden')
-
-		if (linePosition == 'top' || linePosition == 'bottom') {
-			tab.line.style('height', '8px')
-		} else {
-			tab.line
-				.style('width', '8px')
-				//Trick div into appearing the full height of the parent
-				.style('padding', '5px 0px')
-				.html('l')
-		}
-
-		if (tab.width) {
-			// fixed
-			tab.wrapper.style('width', tab.width + 'px')
-		} else {
-			// automatically decide based on default width
-			let width = defaultTabWidth
-			tab.wrapper.each(function() {
-				width = Math.max(width, this.getBoundingClientRect().width)
-			})
-			tab.wrapper.style('width', width + 'px')
-		}
-
-		tab.wrapper.on('click', async () => {
-			for (const tab_ of tabs) {
-				tab_.active = tab_ === tab
-				tab_.wrapper.classed('sjpp-active', tab_.active ? true : false)
-				tab_.holder.style('display', tab_.active ? 'block' : 'none')
-				tab_.tab.style('color', tab_.active ? '#1575ad' : '#757373')
-				tab_.line.style('visibility', tab_.active ? 'visible' : 'hidden')
-			}
-			if (tab.callback) await tab.callback(tab.holder)
-		})
-
-		if (opts.contentHolder) {
-			tab.holder = opts.contentHolder
-				.append('div')
-				.style('padding-top', '10px')
-				.style('margin-top', '10px')
-				.style('display', tab.active ? 'block' : 'none')
-		}
-
-		if (tab.active) {
-			if (tab.callback) await tab.callback(tab.holder)
-		}
-	}
-}
-
-export function update_tabs(tabs) {
-	const has_active_tab = tabs.some(i => i.active)
-	if (!has_active_tab) tabs[0].active = true
-
-	for (const tab of tabs) {
-		tab.tab.classed('sjpp-active', tab.active ? true : false)
-		tab.holder.style('display', tab.active ? 'block' : 'none')
-	}
-}
-
-/*
-	alternative tabbed component,
-	where the tab data is bound to the rendered tab elements/content holder
+- tab data is bound to the rendered tab elements/content holder
 	and vice-versa, for easier debugging in the console using 
-	inspect element > styles > properties > __data__
-
-	opts{}
-	- same argument as for init_tabs()
+	inspect element > styles > properties > __data__	
 */
 
 export class Tabs {
@@ -219,24 +101,30 @@ function setRenderers(self) {
 		const textAlign =
 			self.opts.linePosition == 'bottom' || self.opts.linePosition == 'top' ? 'center' : self.opts.linePosition
 
+		/* Implementation assumes the position of the tabs and content are not contiguous
+		to accommodate all situations. If having troubles with rendering, try creating  
+		a wrapper for the tabsHolder and contentHolder. */
+
 		self.dom.tabsHolder = self.dom.holder
 			.append('div')
-			.style('width', 'max-content')
 			//add light blue border underneath the buttons
-			.style('display', 'inline-block')
 			.style(`border-${self.opts.linePosition}`, '0.5px solid #1575ad')
+
 		if (!self.opts.contentHolder && !self.opts.noContent) {
 			self.dom.contentHolder = self.dom.holder.append('div')
 		} else self.dom.contentHolder = self.opts.contentHolder
 
 		if (self.opts.tabsPosition == 'vertical') {
-			self.dom.tabsHolder.style('display', 'inline-grid').style('align-items', 'start')
+			self.dom.tabsHolder
+				.style('display', 'inline-grid')
+				.style('align-items', 'start')
+				.style('gap', self.opts.gap || '')
 			self.dom.contentHolder
 				//First part of fix for svgs rendering inline, outside of the contentHolder
 				.style('display', 'inline-block')
 				.style('vertical-align', 'top')
 				.style('position', 'relative')
-		}
+		} else self.dom.tabsHolder.style('display', 'inline-block')
 
 		await self.dom.tabsHolder
 			.selectAll('button')
@@ -252,12 +140,10 @@ function setRenderers(self) {
 			.style('border', 'none')
 			.style('background-color', 'transparent')
 			.style('display', self.opts.tabsPosition == 'vertical' ? 'flex' : 'inline-grid')
-			.property('disabled', tab => {
-				tab.disabled ? tab.disabled() : false
-			})
+			.property('disabled', tab => (tab.disabled ? tab.disabled() : false))
 			.each(async function(tab) {
-				/* The whole button is clickable (i.e. the white space where the blue line is
-				not visible). The event is on the button (i.e. tab.wrapper). The style changes 
+				/* The whole button is clickable (i.e. the white space where the blue, 'active' line
+				is not visible). The event is on the button (i.e. tab.wrapper). The style changes 
 				when the button is active/inactive are on the text (i.e. tab.tab) and line 
 				(i.e. tab.line) */
 				tab.wrapper = select(this)
@@ -269,7 +155,7 @@ function setRenderers(self) {
 					//create the line div before the tab text
 					tab.line = tab.wrapper
 						.append('div')
-						.style('display', self.opts.linePosition == 'left' ? 'inline-block' : 'block')
+						.style('display', self.opts.linePosition == 'left' ? 'inline-flex' : 'flex')
 					tab.tab = tab.wrapper
 						.append('div')
 						.style('display', self.opts.linePosition == 'left' ? 'inline-block' : 'block')
@@ -280,7 +166,11 @@ function setRenderers(self) {
 						.style('display', self.opts.linePosition == 'right' ? 'inline-block' : 'block')
 					tab.line = tab.wrapper
 						.append('div')
-						.style('display', self.opts.linePosition == 'right' ? 'inline-block' : 'block')
+						.style('display', self.opts.linePosition == 'right' ? 'inline-flex' : 'flex')
+				}
+
+				if (tab.disabled && tab.isVisible) {
+					tab.wrapper.style('cursor', tab.disabled() == true && tab.isVisible() == true ? 'not-allowed' : 'pointer')
 				}
 
 				tab.tab //Button text
@@ -293,14 +183,14 @@ function setRenderers(self) {
 					.style('visibility', tab.active ? 'visible' : 'hidden')
 
 				if (self.opts.linePosition == 'top' || self.opts.linePosition == 'bottom') {
-					tab.line.style('height', '8px')
+					tab.line.style('height', '8px').style('padding', '0px 5px')
 				} else {
 					tab.line
-						.style('width', '8px')
-						//TODO: Trick div into appearing the full height of the parent
-						// come up with a better solution.
+						//stretch tricks div to expand to full height
+						.style('align-self', 'stretch')
 						.style('padding', '5px 0px')
-						.html('&nbsp')
+						//inline width prevents width changing for long labels
+						.html('<span style="width: 8px";>&nbsp</span>')
 				}
 
 				if (self.dom.contentHolder) {
@@ -318,10 +208,10 @@ function setRenderers(self) {
 				if (tab.active && tab.callback) await tab.callback(event, tab)
 
 				tab.wrapper
-					.on('mouseenter', () => {
+					.on('mouseenter', event => {
 						tab.tab.style('color', tab.active ? '#757373' : '#1575ad')
 					})
-					.on('mouseleave', () => {
+					.on('mouseleave', event => {
 						tab.tab.style('color', tab.active ? '#1575ad' : '#757373')
 					})
 			})
@@ -361,3 +251,118 @@ function setRenderers(self) {
 			})
 	}
 }
+
+/* Old implementation */
+
+// export async function init_tabs(opts) {
+// 	if (!opts.holder) throw `missing opts.holder for toggleButtons()`
+// 	if (!Array.isArray(opts.tabs)) throw `invalid opts.tabs for toggleButtons()`
+// 	const defaultTabWidth = 90
+// 	const tabs = opts.tabs
+// 	opts.tabsHolder = opts.holder
+// 		.append('div')
+// 		//add light grey border underneath the buttons
+// 		.style('border-bottom', '0.5px solid lightgrey')
+// 		.style('width', 'fit-content')
+
+// 	if (!opts.contentHolder) {
+// 		if (!opts.noContent) opts.contentHolder = opts.holder.append('div')
+// 	}
+
+// 	const has_active_tab = tabs.some(i => i.active)
+// 	if (!has_active_tab) tabs[0].active = true
+
+// 	for (const [i, tab] of tabs.entries()) {
+// 		// const toggle_btn_class = i == 0 ? ' sj-left-toggle' : i < tabs.length - 1 ? ' sj-center-toggle' : ' sj-right-toggle'
+
+// 		const linePosition = opts.linePosition || 'bottom'
+// 		const textAlign = linePosition == 'bottom' || linePosition == 'top' ? 'center' : linePosition
+
+// 		tab.wrapper = opts.tabsHolder
+// 			.append('button')
+// 			.attr('type', 'button')
+// 			.attr('class', 'sj-toggle-button')
+// 			//Padding here overrides automatic styling for all pp buttons
+// 			.style('padding', '0px')
+// 			// .attr('class', 'sj-toggle-button' + toggle_btn_class)
+// 			.classed('sjpp-active', tab.active ? true : false)
+// 			.style('border', 'none')
+// 			.style('background-color', 'transparent')
+
+// 		if (linePosition == 'top' || linePosition == 'left') {
+// 			//create the line div before the tab text
+// 			tab.line = tab.wrapper.append('div').style('display', linePosition == 'left' ? 'inline-flex' : 'block')
+// 			tab.tab = tab.wrapper.append('div').style('display', linePosition == 'left' ? 'inline-flex' : 'block')
+// 		} else {
+// 			//create the line div after the tab text
+// 			tab.tab = tab.wrapper.append('div').style('display', linePosition == 'right' ? 'inline-flex' : 'block')
+// 			tab.line = tab.wrapper.append('div').style('display', linePosition == 'right' ? 'inline-flex' : 'block')
+// 		}
+
+// 		tab.tab
+// 			.style('color', tab.active ? '#1575ad' : '#757373')
+// 			.style('text-align', textAlign)
+// 			.style('padding', '5px')
+// 			.html(tab.label)
+
+// 		tab.line
+// 			.style('color', '#1575ad')
+// 			.style('background-color', '#1575ad')
+// 			.style('visibility', tab.active ? 'visible' : 'hidden')
+
+// 		if (linePosition == 'top' || linePosition == 'bottom') {
+// 			tab.line.style('height', '8px')
+// 		} else {
+// 			tab.line
+// 				.style('width', '8px')
+// 				//Trick div into appearing the full height of the parent
+// 				.style('padding', '5px 0px')
+// 				.html('l')
+// 		}
+
+// 		if (tab.width) {
+// 			// fixed
+// 			tab.wrapper.style('width', tab.width + 'px')
+// 		} else {
+// 			// automatically decide based on default width
+// 			let width = defaultTabWidth
+// 			tab.wrapper.each(function() {
+// 				width = Math.max(width, this.getBoundingClientRect().width)
+// 			})
+// 			tab.wrapper.style('width', width + 'px')
+// 		}
+
+// 		tab.wrapper.on('click', async () => {
+// 			for (const tab_ of tabs) {
+// 				tab_.active = tab_ === tab
+// 				tab_.wrapper.classed('sjpp-active', tab_.active ? true : false)
+// 				tab_.holder.style('display', tab_.active ? 'block' : 'none')
+// 				tab_.tab.style('color', tab_.active ? '#1575ad' : '#757373')
+// 				tab_.line.style('visibility', tab_.active ? 'visible' : 'hidden')
+// 			}
+// 			if (tab.callback) await tab.callback(tab.holder)
+// 		})
+
+// 		if (opts.contentHolder) {
+// 			tab.holder = opts.contentHolder
+// 				.append('div')
+// 				.style('padding-top', '10px')
+// 				.style('margin-top', '10px')
+// 				.style('display', tab.active ? 'block' : 'none')
+// 		}
+
+// 		if (tab.active) {
+// 			if (tab.callback) await tab.callback(tab.holder)
+// 		}
+// 	}
+// }
+
+// export function update_tabs(tabs) {
+// 	const has_active_tab = tabs.some(i => i.active)
+// 	if (!has_active_tab) tabs[0].active = true
+
+// 	for (const tab of tabs) {
+// 		tab.tab.classed('sjpp-active', tab.active ? true : false)
+// 		tab.holder.style('display', tab.active ? 'block' : 'none')
+// 	}
+// }
