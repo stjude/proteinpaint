@@ -101,6 +101,34 @@ function matchedCount(actual, opts) {
 }
 
 /*
+	convenience helpers for detectLst with preconfigured matchAs
+	same arguments as detectLst
+*/
+export async function detectGt(opts) {
+	opts.matchAs = '>'
+	const lst = await detectLst(opts)
+	return lst
+}
+
+export async function detectGte(opts) {
+	opts.matchAs = '>='
+	const lst = await detectLst(opts)
+	return lst
+}
+
+export async function detectLt(opts) {
+	opts.matchAs = '<'
+	const lst = await detectLst(opts)
+	return lst
+}
+
+export async function detectLte(opts) {
+	opts.matchAs = '<='
+	const lst = await detectLst(opts)
+	return lst
+}
+
+/*
 	same arguments as detectLst, except count is forced to 1
 	return the expected element
 */

@@ -1,6 +1,14 @@
 const tape = require('tape')
 const d3s = require('d3-selection')
-const { sleep, detectLst, detectOne, detectZero, whenHidden, whenVisible } = require('../../test/test.helpers')
+const {
+	sleep,
+	detectLst,
+	detectOne,
+	detectZero,
+	whenHidden,
+	whenVisible,
+	detectGte
+} = require('../../test/test.helpers')
 
 /*************************
  reusable helper functions
@@ -151,7 +159,7 @@ tape('Launch GDC dataset by SSM ID, KRAS', test => {
 })
 
 tape('geneSearch4GDCmds3', async test => {
-// enter a gene name into search box, find the gene match in tooltip, select matched gene to launch block with gdc track
+	// enter a gene name into search box, find the gene match in tooltip, select matched gene to launch block with gdc track
 	const holder = getHolder()
 	const gene = 'HOXA1'
 	await runproteinpaint({
@@ -161,7 +169,7 @@ tape('geneSearch4GDCmds3', async test => {
 	})
 	async function postRender(arg) {
 		// arg={tip}; convenient method to provide the tooltip used by gene search <input> (remove some hassle of finding this tooltip)_
-		const searchBox = await detectOne({elem: holder, selector:'.sja_genesearchinput'})
+		const searchBox = await detectOne({ elem: holder, selector: '.sja_genesearchinput' })
 		test.ok(searchBox, 'Gene search box is made')
 
 		const blockHolder = await detectOne({ elem: holder, selector: '.sja_geneSearch4GDCmds3_blockdiv' })
@@ -172,11 +180,11 @@ tape('geneSearch4GDCmds3', async test => {
 		searchBox.dispatchEvent(new Event('keyup'))
 
 		await whenVisible(arg.tip.d.node())
-		const geneHitDivs = await detectLst({ elem: arg.tip.d.node(), selector: '.sja_menuoption', matchAs: '>=' })
+		const geneHitDivs = await detectGte({ elem: arg.tip.d.node(), selector: '.sja_menuoption', count: 1 })
 		test.equal(geneHitDivs[0].innerHTML, gene, 'Gene search found ' + gene)
 		geneHitDivs[0].dispatchEvent(new Event('click'))
 
-		const blockDiv = await detectOne({elem: blockHolder, selector:'.sja_Block_div'})
+		const blockDiv = await detectOne({ elem: blockHolder, selector: '.sja_Block_div' })
 		test.ok(blockDiv, 'A block is rendered')
 		if (test._ok) holder.remove()
 		test.end()
