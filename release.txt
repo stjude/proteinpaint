@@ -1,2 +1,0 @@
-- copy the gdc.hg38.js file from sjpp/dataset for the gdc Docker build
-- configure the gdc.hg38.js dataset to de-prioritize cnv data for matrix sorting

@@ -1,6 +1,12 @@
 # Change Log
 
 All notable changes to this project will be documented in this file. 
+## 2.11.1
+
+- copy the gdc.hg38.js file from sjpp/dataset for the gdc Docker build
+- configure the gdc.hg38.js dataset to de-prioritize cnv data for matrix sorting
+
+ 
 ## 2.11.0
 
 - check the user permission using session id when generating GDC BAM search results
