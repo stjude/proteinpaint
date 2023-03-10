@@ -1143,7 +1143,13 @@ function setInteractivity(self) {
 		const filterUiRoot = JSON.parse(JSON.stringify(self.filter))
 		const item = findItem(filterUiRoot, self.activeData.item.$id)
 		if (item.type == 'tvslst') item.in = !item.in
-		else item.tvs.isnot = !item.tvs.isnot
+		else if (item.type == 'tvs' && item.tvs?.term?.type == 'geneVariant') {
+			for (const value of item.tvs.values) {
+				let tmp = value.mclassLst
+				value.mclassLst = value.mclassExcludeLst
+				value.mclassExcludeLst = tmp
+			}
+		} else item.tvs.isnot = !item.tvs.isnot
 		self.refresh(filterUiRoot)
 	}
 

@@ -152,18 +152,18 @@ async function get_geneVariant(tvs, CTEname, ds) {
 		*/
 		let includeSample = true
 		for (const tvsValue of tvs.values) {
-			/* tvs.values is an array that stores classes (for each available dt) that have not been crossed out by the user at this round of edit-and-apply, e.g.
+			/* tvs.values is an array that stores classes (for each available dt) that have/haven't been crossed out by the user at this round of edit-and-apply, e.g.
             [
-                {dt: 1, mclass: ['WT'], origin: 'G'}
-                {dt: 1, mclass: ['Blank', 'WT', 'M'], origin:'S'},
-                {dt: 2, mclass: ['Blank', 'WT']}
-                {dt: 4, mclass: ['WT', 'CNV_loss']}
+                {dt: 1, mclassLst: ['WT'], mclassExcludeLst: ['Blank'], origin: 'G'}
+                {dt: 1, mclassLst: ['Blank', 'WT', 'M'], mclassExcludeLst:[], origin:'S'},
+                {dt: 2, mclassLst: ['Blank', 'WT'], mclassExcludeLst:[]}
+                {dt: 4, mclassLst: ['WT', 'CNV_loss'], mclassExcludeLst:[]}
             ]
             */
 			const sampleValue = sampleValues.filter(
 				v => v.dt == tvsValue.dt && (tvsValue.origin ? tvsValue.origin == v.origin : true)
 			)[0]
-			if (!tvsValue.mclass.includes(sampleValue.class)) {
+			if (tvsValue.mclassExcludeLst.includes(sampleValue?.class)) {
 				includeSample = false
 				break
 			}

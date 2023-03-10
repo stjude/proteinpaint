@@ -176,8 +176,11 @@ function processGeneVariantSamples(map, bins, data, samplesMap, assayAvailabilit
 
 	for (const [sampleId, values] of Object.entries(data.samples)) {
 		if (map.get(1)?.term?.type == 'geneVariant') {
+			const processedValues = []
 			const value1 = values[id1]
 			for (const v1 of value1.values) {
+				if (processedValues.some(p => p.dt == v1.dt && (v1.origin ? v1.origin == p.origin : true))) continue
+				processedValues.push(v1)
 				const item = { sample: customSampleID }
 				item[`key1`] = mclass[v1.class].label
 				item[`val1`] = mclass[v1.class].label
@@ -190,9 +193,12 @@ function processGeneVariantSamples(map, bins, data, samplesMap, assayAvailabilit
 				customSampleID++
 			}
 		} else if (map.get(2)?.term?.type == 'geneVariant') {
+			const processedValues = []
 			const value2 = values[id2]
 			const value1 = values[id1]
 			for (const v2 of value2.values) {
+				if (processedValues.some(p => p.dt == v2.dt && (v2.origin ? v2.origin == p.origin : true))) continue
+				processedValues.push(v2)
 				const item = { sample: customSampleID }
 				item[`key1`] = value1.key
 				item[`val1`] = value1.value

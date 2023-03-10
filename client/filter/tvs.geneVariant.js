@@ -46,42 +46,33 @@ async function fillMenu(self, _div, tvs) {
 				const items = group.items
 				for (const item of items) {
 					if (!values.some(v => v.dt == item.dt && (item.origin ? item.origin == v.origin : true))) {
-						const value = { dt: item.dt, mclass: [] }
+						const value = { dt: item.dt, mclassLst: [], mclassExcludeLst: [] }
 						if (item.origin) value.origin = item.origin
 						values.push(value)
 					}
-					const mclass = values.filter(v => v.dt == item.dt && (item.origin ? item.origin == v.origin : true))[0].mclass
-
+					const itemValue = values.filter(v => v.dt == item.dt && (item.origin ? item.origin == v.origin : true))[0]
+					const mclassLst = itemValue.mclassLst
+					const mclassExcludeLst = itemValue.mclassExcludeLst
 					if (
-						!exclude.some(e => e.dt == item.dt && e.key == item.key && (item.origin ? item.origin == e.origin : true))
-					)
-						mclass.push(item.key)
+						exclude.some(e => e.dt == item.dt && e.key == item.key && (item.origin ? item.origin == e.origin : true))
+					) {
+						mclassExcludeLst.push(item.key)
+					} else {
+						mclassLst.push(item.key)
+					}
 				}
 			}
-			/* values is an array that stores classes (for each available dt) that have not been crossed out by the user at this round of edit-and-apply, e.g.
+			/* values is an array that stores classes (for each available dt) that have/haven't been crossed out by the user at this round of edit-and-apply, e.g.
             [
-                {dt: 1, mclass: ['WT'], origin: 'G'}
-                {dt: 1, mclass: ['Blank', 'WT', 'M'], origin:'S'},
-                {dt: 2, mclass: ['Blank', 'WT']}
-                {dt: 4, mclass: ['WT', 'CNV_loss']}
+                {dt: 1, mclassLst: ['WT'], mclassExcludeLst: ['Blank'], origin: 'G'}
+                {dt: 1, mclassLst: ['Blank', 'WT', 'M'], mclassExcludeLst:[], origin:'S'},
+                {dt: 2, mclassLst: ['Blank', 'WT'], mclassExcludeLst:[]}
+                {dt: 4, mclassLst: ['WT', 'CNV_loss'], mclassExcludeLst:[]}
             ]
             */
 			const newTvs = {
 				term: self.tvs.term,
 				values
-				// values: [
-				//     {
-				//         dt: 1,
-				//         mclass: ['F'],
-				//         origin: ...,
-				//         isoform: ...,
-				//         position:...,
-				//     },
-				//     {
-				//         dt: 2,
-				//         mclass: ['Blank', 'WT']
-				//     }
-				// ]
 			}
 			self.opts.callback(newTvs)
 		})
@@ -141,19 +132,20 @@ async function fillMenu(self, _div, tvs) {
     */
 	const exclude = []
 	if (tvs.values.length) {
-		/* tvs.values is an array that stores classes (for each available dt) that have not been crossed out by the user at the last round of edit-and-apply, e.g.
+		/* tvs.values is an array that stores classes (for each available dt) that have/haven't been crossed out by the user at the last round of edit-and-apply, e.g.
             [
-                {dt: 1, mclass: ['WT'], origin: 'G'}
-                {dt: 1, mclass: ['Blank', 'WT', 'M'], origin:'S'},
-                {dt: 2, mclass: ['Blank', 'WT']}
-                {dt: 4, mclass: ['WT', 'CNV_loss']}
+                {dt: 1, mclassLst: ['WT'], mclassExcludeLst: ['Blank'], origin: 'G'}
+                {dt: 1, mclassLst: ['Blank', 'WT', 'M'], mclassExcludeLst:[], origin:'S'},
+                {dt: 2, mclassLst: ['Blank', 'WT'], mclassExcludeLst:[]}
+                {dt: 4, mclassLst: ['WT', 'CNV_loss'], mclassExcludeLst:[]}
             ]
             */
 		for (const group of groups) {
 			for (const item of group.items) {
-				const tvsMclass = tvs.values.filter(v => v.dt == item.dt && (item.origin ? item.origin == v.origin : true))[0]
-					.mclass
-				if (!tvsMclass.includes(item.key)) exclude.push(item)
+				const mclassExcludeLst = tvs.values.filter(
+					v => v.dt == item.dt && (item.origin ? item.origin == v.origin : true)
+				)[0].mclassExcludeLst
+				if (mclassExcludeLst.includes(item.key)) exclude.push(item)
 			}
 		}
 	}
@@ -238,7 +230,7 @@ function term_name_gen(d) {
 
 function get_pill_label(tvs) {
 	return {
-		txt: tvs.values?.reduce((accumulator, currentValue) => accumulator + currentValue.mclass.length, 0) + ' groups'
+		txt: tvs.values?.reduce((accumulator, currentValue) => accumulator + currentValue.mclassLst.length, 0) + ' groups'
 	}
 }
 
