@@ -3,11 +3,10 @@ import { addGeneSearchbox } from '#dom/genesearch'
 import { Menu } from '#dom/menu'
 import { sayerror } from '#dom/error'
 import { dofetch3 } from '#common/dofetch'
-import { filterInit, getNormalRoot, getFilterItemByTag } from '#filter/filter'
+import { getNormalRoot } from '#filter/filter'
 import { first_genetrack_tolist } from '#common/1stGenetk'
 import { mayDisplayVariantFilter } from '#termsetting/handlers/snplocus'
-import { Tabs } from '#dom/toggleButtons'
-import { appInit } from '#termdb/app'
+import { gbControlsInit, mayUpdateGroupTestMethodsIdx } from './genomeBrowser.controls'
 
 /*
 the control ui is generated based on various bits from this.state.config{}, and server data
@@ -49,16 +48,9 @@ this{}
 
 ////////////////// functions
 
+init
+	mayDisplayVariantFilter
 main
-	makeControls
-		mayDisplayVariantFilter
-		makeVariantValueComputingGroupControls
-			render1group
-				makePrompt2addNewGroup
-					launchMenu_createGroup
-				render1group_info
-				render1group_population
-				render1group_filter
 	launchCustomMds3tk
 		preComputeData
 			dofetch3
@@ -70,7 +62,6 @@ makeChartBtnMenu
 */
 
 const geneTip = new Menu({ padding: '0px' })
-const groupTip = new Menu({ padding: '0px' })
 
 class genomeBrowser {
 	constructor() {
@@ -93,20 +84,50 @@ class genomeBrowser {
 				.style('opacity', 0.5)
 				.style('margin-right', '10px'),
 			loadingDiv: messageRow.append('span').text('Loading...'),
-			// hardcode to 2 groups used by state.config.snvindel.details.groups[]
-			group1div: holder.append('div').style('margin-left', '25px'),
-			group2div: holder.append('div').style('margin-left', '25px'),
+			controlsDiv: holder.append('div').style('margin-left', '25px'),
+
 			// the whole holder has white-space=nowrap (likely from sjpp-output-sandbox-content)
 			// must set white-space=normal to let INFO filter wrap and not to extend beyond holder
-			variantFilterHolder: holder.append('div').style('white-space', 'normal'),
-			blockHolder: holder.append('div'),
-			groupShowCountDiv: [] // elements are <span> of that "filter" group, by the order of details.groups[]
+			variantFilterHolder: holder
+				.append('div')
+				.style('margin-left', '12px')
+				.style('white-space', 'normal'),
+
+			blockHolder: holder.append('div')
 		}
 
 		// to make sure api is accessible by mayDisplayVariantFilter
 		this.vocabApi = this.app.vocabApi
 
-		this.components = {} // TODO a subcomponent for controls
+		// cannot move variantFilter to component because the attribute has to be set on this instance
+		// to init and render variant filter; must do it first then render group controls,
+		// as group controls require this.variantFilter.terms[]
+		// this.variantFilter={} is always set
+		// if dataset does not use info filter, variantFilter.terms[] is missing
+		await mayDisplayVariantFilter(
+			this,
+			undefined, // indicate that filter is "not in state"
+			this.dom.variantFilterHolder,
+			async () => {
+				// run upon filter change to trigger state change
+				await this.app.dispatch({
+					type: 'plot_edit',
+					id: this.id,
+					config: { variantFilter: this.variantFilter.active }
+				})
+			},
+			true // hide filter body by default
+		)
+		// this.variantFilter{active} is added
+
+		this.components = {
+			gbControls: await gbControlsInit({
+				app: this.app,
+				id: this.id,
+				holder: this.dom.controlsDiv,
+				variantFilter: this.variantFilter
+			})
+		}
 	}
 
 	getState(appState) {
@@ -126,9 +147,6 @@ class genomeBrowser {
 			if (this.state.config?.snvindel?.details) {
 				// pre-compute variant data in the app here, e.g. fisher test etc, but not in mds3 backend as the official track does
 				// and launch custom mds3 tk to show the variants
-				// show controls for precomputing variant data
-				// controls are based on this.state and cannot be done in init() where state is not yet available
-				await this.makeControls()
 				await this.launchCustomMds3tk()
 			} else if (this.state.config?.trackLst) {
 				await this.launchBlockWithTracks(this.state.config.trackLst)
@@ -152,48 +170,14 @@ class genomeBrowser {
 	//       rest of methods are app-specific       //
 	//////////////////////////////////////////////////
 
-	async makeControls() {
-		// if true, the ui is already made, and do not redo it
-		// quick fix to create the control UI at the first time this.main() is run
-		// this requires both this.vocabApi and this.state.config{} to be ready
-		// and cannot do it in this.init()
-		if (this.controlsAreMade) return
-		this.controlsAreMade = true
-
-		// to init and render variant filter; must do it first then render group controls,
-		// as group controls require this.variantFilter.terms[]
-		// this.variantFilter={} is always set
-		// if dataset does not use info filter, variantFilter.terms[] is missing
-		await mayDisplayVariantFilter(
-			this,
-			this.state.config.variantFilter,
-			this.dom.variantFilterHolder,
-			async () => {
-				// run upon filter change to trigger state change
-				await this.app.dispatch({
-					type: 'plot_edit',
-					id: this.id,
-					config: { variantFilter: this.variantFilter.active }
-				})
-			},
-			true // hide filter body by default
-		)
-		// this.variantFilter{active} is added
-
-		makeVariantValueComputingGroupControls(this)
-		this.components.controls = {
-			update: () => {
-				//console.log('test')
-			}
-		}
-	}
-
 	async launchCustomMds3tk() {
 		const data = await this.preComputeData()
+		/*
 		if (data.totalSampleCount_group1 && this.dom.groupShowCountDiv[0])
 			this.dom.groupShowCountDiv[0].text('n=' + data.totalSampleCount_group1)
 		if (data.totalSampleCount_group2 && this.dom.groupShowCountDiv[1])
 			this.dom.groupShowCountDiv[1].text('n=' + data.totalSampleCount_group2)
+			*/
 
 		if (this.blockInstance) {
 			// block already launched. update data on the tk and rerender
@@ -412,304 +396,6 @@ export function makeChartBtnMenu(holder, chartsInstance) {
 //////////////////////////////////////////////////
 //                  helpers                     //
 //////////////////////////////////////////////////
-
-function makeVariantValueComputingGroupControls(self) {
-	render1group(self, 0, self.state.config.snvindel.details.groups[0])
-	render1group(self, 1, self.state.config.snvindel.details.groups[1])
-}
-
-/*
-render ui contents of one group, both arguments are provided to be convenient for ad-hoc update
-
-groupIdx: array index of self.state.config.snvindel.details.groups[]
-	determines which <div> to render to at self.dom.group1/2div
-group{}: element of same array
-*/
-function render1group(self, groupIdx, group) {
-	const div = groupIdx == 0 ? self.dom.group1div : self.dom.group2div
-
-	div.selectAll('*').remove()
-
-	if (!group) {
-		// group does not exist in groups[] based on array index, e.g. when there's just 1 group and groups[1] is undefined
-		// add a prompt in place of header button
-		makePrompt2addNewGroup(self, groupIdx, div)
-		return
-	}
-
-	// the group exists; first show the group header button
-	makeGroupHeaderButton(self, groupIdx, div)
-
-	if (group.type == 'info') return render1group_info(self, groupIdx, group, div)
-	if (group.type == 'population') return render1group_population(self, groupIdx, group, div)
-	if (group.type == 'filter') return render1group_filter(self, groupIdx, group, div)
-	throw 'render1group: unknown group type'
-}
-
-function render1group_info(self, groupIdx, group, div) {
-	let name = group.infoKey
-	if (self?.variantFilter?.terms) {
-		const f = self.variantFilter.terms.find(i => i.id == group.infoKey)
-		if (f && f.name) name = f.name
-	}
-	div.append('span').text(name)
-	div
-		.append('span')
-		.text('INFO FIELD')
-		.style('font-size', '.5em')
-		.style('margin-left', '10px')
-}
-
-function render1group_population(self, groupIdx, group, div) {
-	div.append('span').text(group.label)
-	div
-		.append('span')
-		.text(`POPULATION${group.adjust_race ? ', RACE ADJUSTED' : ''}`)
-		.style('font-size', '.5em')
-		.style('margin-left', '10px')
-}
-
-function render1group_filter(self, groupIdx, group, div) {
-	/*
-	this group is based on a termdb-filter
-	TODO sample counts in tvs menu should reflect global mass filter; on every app update (e.g. cohort change) the cohort choice should be combined into group.filter (but remain invisible)
-	TODO subcohort from global mass filter should be combined into group.filter, but no need to render cohort choice in this filter ui. 
-	*/
-	filterInit({
-		holder: div,
-		vocab: self.app.opts.state.vocab,
-		emptyLabel: 'Entire cohort',
-		termdbConfig: self.state.termdbConfig,
-		callback: async f => {
-			const groups = JSON.parse(JSON.stringify(self.state.config.snvindel.details.groups))
-			groups[groupIdx].filter = f
-			self.app.dispatch({
-				type: 'plot_edit',
-				id: self.id,
-				config: { snvindel: { details: { groups } } }
-			})
-		}
-	}).main(group.filter)
-
-	self.dom.groupShowCountDiv[groupIdx] = div
-		.append('span')
-		.style('margin-left', '10px')
-		.style('opacity', 0.5)
-		.style('font-size', '.9em')
-}
-
-function makePrompt2addNewGroup(self, groupIdx, div) {
-	// the prompt <div> is created in group2div
-	div
-		.append('div')
-		.style('display', 'inline-block')
-		.text('Create Group 2')
-		.attr('class', 'sja_clbtext')
-		.style('margin', '10px')
-		.on('click', event => {
-			groupTip.showunder(event.target).clear()
-			launchMenu_createGroup(self, groupIdx, groupTip.d)
-		})
-}
-
-function makeGroupHeaderButton(self, groupIdx, div) {
-	div
-		.append('div')
-		.style('display', 'inline-block')
-		.text('Group ' + (groupIdx + 1))
-		.attr('class', 'sja_menuoption')
-		.style('margin-right', '10px')
-		.on('click', event => {
-			groupTip.showunder(event.target).clear()
-			if (groupIdx == 0) {
-				// this is 1st group, directly launch menu to change group, but do not allow to delete
-				launchMenu_createGroup(self, 0, groupTip.d)
-				return
-			}
-			groupTip.d
-				.append('div')
-				.text('Change')
-				.attr('class', 'sja_menuoption')
-				.style('border-radius', '0px')
-				.on('click', () => {
-					launchMenu_createGroup(self, 1, groupTip.clear().d)
-				})
-			groupTip.d
-				.append('div')
-				.text('Delete')
-				.attr('class', 'sja_menuoption')
-				.style('border-radius', '0px')
-				.on('click', () => {
-					groupTip.hide()
-					// ui is not reactive
-					div.selectAll('*').remove()
-					makePrompt2addNewGroup(self, 1, div)
-
-					const groups = [self.state.config.snvindel.details.groups[0]] // only keep first group
-					self.app.dispatch({
-						type: 'plot_edit',
-						id: self.id,
-						config: { snvindel: { details: { groups } } }
-					})
-				})
-		})
-}
-
-// show vertical toggle options: filter/population/info
-// when any is selected, create a new group object and set to snvindel.details.groups[groupIdx]
-function launchMenu_createGroup(self, groupIdx, div) {
-	const opt = {
-		holder: div.append('div').style('margin', '5px'),
-		tabs: self.state.config.snvindel.details.groupTypes.map(i => {
-			return { label: i.name }
-		}),
-		tabsPosition: 'vertical',
-		linePosition: 'right'
-	}
-	new Tabs(opt).main()
-	for (const [idx, groupType] of self.state.config.snvindel.details.groupTypes.entries()) {
-		// { type:str, name:str }
-		const tab = opt.tabs[idx]
-		tab.contentHolder.style('margin', '10px')
-		if (groupType.type == 'info') {
-			if (!self.variantFilter || !self.variantFilter.terms)
-				throw 'looking for snvindel info fields but self.variantFilter.terms[] missing'
-			for (const f of self.variantFilter.terms) {
-				if (f.type != 'integer' && f.type != 'float') continue // only allow numeric fields
-				tab.contentHolder
-					.append('div')
-					.text(f.name)
-					.attr('class', 'sja_menuoption')
-					.on('click', () => {
-						/////////////////////////////////
-						// create a new group using this info field
-						groupTip.hide()
-						const newGroup = {
-							type: 'info',
-							infoKey: f.id
-						}
-						render1group(self, groupIdx, newGroup)
-						const details = makeNewDetail(self, newGroup, groupIdx)
-						mayUpdateGroupTestMethodsIdx(self, details)
-						self.app.dispatch({
-							type: 'plot_edit',
-							id: self.id,
-							config: { snvindel: { details } }
-						})
-					})
-			}
-			continue
-		}
-		if (groupType.type == 'population') {
-			if (!self.state.config.snvindel.populations) throw 'state.config.snvindel.populations missing'
-			for (const p of self.state.config.snvindel.populations) {
-				// {key,label, allowto_adjust_race, adjust_race}
-				tab.contentHolder
-					.append('div')
-					.text(p.label)
-					.attr('class', 'sja_menuoption')
-					.on('click', () => {
-						/////////////////////////////////
-						// create a new group using this population
-						groupTip.hide()
-						const newGroup = {
-							type: 'population',
-							key: p.key,
-							label: p.label,
-							allowto_adjust_race: p.allowto_adjust_race,
-							adjust_race: p.adjust_race
-						}
-						render1group(self, groupIdx, newGroup)
-						const details = makeNewDetail(self, newGroup, groupIdx)
-						mayUpdateGroupTestMethodsIdx(self, details)
-						self.app.dispatch({
-							type: 'plot_edit',
-							id: self.id,
-							config: { snvindel: { details } }
-						})
-					})
-			}
-			continue
-		}
-		if (groupType.type == 'filter') {
-			const arg = {
-				holder: tab.contentHolder,
-				vocabApi: self.vocabApi,
-				state: {},
-				tree: {
-					click_term2select_tvs: tvs => {
-						/////////////////////////////////
-						// create a new group using this tvs
-						groupTip.hide()
-						const newGroup = {
-							type: 'filter',
-							filter: {
-								in: true,
-								join: '',
-								type: 'tvslst',
-								lst: [{ type: 'tvs', tvs }]
-							}
-						}
-						render1group(self, groupIdx, newGroup)
-						const details = makeNewDetail(self, newGroup, groupIdx)
-						mayUpdateGroupTestMethodsIdx(self, details)
-						self.app.dispatch({
-							type: 'plot_edit',
-							id: self.id,
-							config: { snvindel: { details } }
-						})
-					}
-				}
-			}
-			const activeCohortIdx = mayGetActiveCohortIdx(self)
-			if (Number.isInteger(activeCohortIdx)) arg.state.activeCohort = activeCohortIdx
-			appInit(arg)
-			continue
-		}
-		throw 'unknown group type'
-	}
-}
-
-function makeNewDetail(self, newGroup, groupIdx) {
-	const newDetail = {
-		groups: JSON.parse(JSON.stringify(self.state.config.snvindel.details.groups))
-	}
-	newDetail.groups[groupIdx] = newGroup
-	return newDetail
-}
-
-function mayUpdateGroupTestMethodsIdx(self, d) {
-	if (d.groups.length != 2) return // not two groups, no need to update test method
-	// depending on types of two groups, may need to update test method
-	const [g1, g2] = d.groups
-	if (g1.type == 'info' || g2.type == 'info' || (g1.type == 'population' && g2.type == 'population')) {
-		// if any group is INFO, or both are population, can only allow value difference and not fisher test
-		const i = self.state.config.snvindel.details.groupTestMethods.findIndex(
-			i => i.name == 'Allele frequency difference'
-		)
-		if (i == -1) throw 'Allele frequency difference not found'
-		d.groupTestMethodsIdx = i
-	} else {
-		// otherwise, do not change existing method idx
-	}
-}
-
-// from mass filter, find a tvs as cohortFilter, to know its array index in selectCohort.values[]
-// return undefined for anything that's not valid
-function mayGetActiveCohortIdx(self) {
-	if (!self.state.config.filter) return // no mass filter
-	const cohortFilter = getFilterItemByTag(self.config.filter, 'cohortFilter') // the tvs object
-	if (cohortFilter && self.state.termdbConfig.selectCohort) {
-		// the tvs is found
-		const cohortName = cohortFilter.tvs.values
-			.map(d => d.key)
-			.sort()
-			.join(',')
-		const idx = self.state.termdbConfig.selectCohort.values.findIndex(v => v.keys.sort().join(',') == cohortName)
-		if (idx == -1) throw 'subcohort key is not in selectCohort.values[]'
-		return idx
-	}
-}
 
 /* given group configuration, determine: numeric track axis label
 - viewmode.label as axis label of numeric mode

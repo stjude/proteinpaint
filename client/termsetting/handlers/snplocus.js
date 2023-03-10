@@ -243,7 +243,6 @@ export async function mayDisplayVariantFilter(self, filterInState, holder, callb
 		.append('span')
 		.text('VARIANT FILTERS')
 		.style('font-size', '.8em')
-		.style('opacity', 0.6)
 
 	const filterBody = div.append('div')
 
@@ -262,6 +261,8 @@ export async function mayDisplayVariantFilter(self, filterInState, holder, callb
 					label.text('VARIANT FILTERS [+]')
 				}
 			})
+	} else {
+		label.style('opacity', 0.6)
 	}
 
 	filterInit({
