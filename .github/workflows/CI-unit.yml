@@ -1,0 +1,48 @@
+name: Unit tests
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    types: [ opened, synchronize, reopened, ready_for_review ]
+
+jobs:
+  build:
+    if: github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: pre-commit/action@v3.0.0
+        with:
+          extra_args:
+            detect-secrets --all-files
+
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 16
+          cache: 'npm'
+
+      - name: Install packages
+        run: npm ci
+
+      - name: Copy serverconfig.json to root
+        run: mv server/test/serverconfig.json .
+
+      - name: Create cache folder
+        run: mkdir server/cache
+
+      - name: install xvfb
+        run: sudo apt-get install xvfb
+
+      - name: Run client tests
+        run: xvfb-run --auto-servernum npm run test:unit --workspace="client"
+
+      - name: Server unit tests
+        run: npm run test:unit --workspace="server"
+
+      - name: Rust unit tests
+        run: npm run test:unit --workspace="rust"

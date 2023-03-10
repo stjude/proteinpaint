@@ -1,0 +1,101 @@
+name: Integration tests
+
+on:
+  schedule:
+    - cron:  '0 6 * * *'
+  workflow_dispatch:
+    inputs:
+      build_secret:
+        type: string
+        description: Build secret
+
+jobs:
+  build:
+    if: github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check secret
+        run: |
+          if [ "${{ github.event.inputs.build_secret }}" != "${{ secrets.BUILD_SECRET }}" ]; then
+            echo "Wrong build secret."
+            exit 1
+          fi 
+
+      - name: Check user permission
+        id: check
+        uses: scherermichael-oss/action-has-permission@master
+        with:
+          required-permission: write
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Exit if user doesn't have write permission
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ steps.check.outputs.has-permission }}" = "false" ]
+            then
+            echo "Only users with write permission are allowed to execute this workflow."
+            exit 1
+          fi
+
+      - uses: actions/checkout@v3
+
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          use-public-rspm: true
+
+      - uses: r-lib/actions/setup-r-dependencies@v2
+        with:
+          cache-version: 2
+          extra-packages: |
+            any::jsonlite
+            any::cmprsk
+            any::hwde
+            any::lmtest  
+
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 16
+          cache: 'npm'
+
+      - name: Install packages
+        run: npm ci
+
+      - name: Copy serverconfig.json to root
+        run: mv server/test/serverconfig.json .
+
+      - name: Create cache folder
+        run: mkdir cache
+
+      - name: install xvfb
+        run: sudo apt-get install xvfb
+
+      - name: Run local server and integration tests
+        run: xvfb-run --auto-servernum npm run test:integration
+
+      - name: Get current time
+        uses: josStorer/get-current-time@v2.0.2
+        id: current-time
+        if: always()
+        with:
+          format: MMM DD, yyyy HH:mm:ss
+          utcOffset: "-06:00"
+
+      - name: Set short git commit SHA
+        id: vars
+        if: always()
+        run: echo "SHORT_SHA=$(git rev-parse --short ${{ github.sha }})" >> $GITHUB_ENV
+
+      - name: Post build results on slack
+        id: slack
+        if: always()
+        uses: slackapi/slack-github-action@v1.23.0
+        with:
+          payload: |
+            {
+              "status": "${{ job.status }}",
+              "commit": "${{ env.SHORT_SHA }}",
+              "date-time": "${{ steps.current-time.outputs.formattedTime }}"
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}

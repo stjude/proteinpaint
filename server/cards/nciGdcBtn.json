@@ -1,0 +1,21 @@
+{
+    "button": {
+        "name": "NCI GDC",
+        "intro": "The NCI's Genomic Data Commmons <a href='https://gdc.cancer.gov/about-gdc' target='GDC homepage'>(GDC)</a> coagulates data from NCI-supported programs, such as TCGA and TARGET.",
+        "searchBar": "gene",
+        "availableGenomes": ["hg38"],
+        "dsURLparam": "mds3=GDC",
+        "runargs": {
+            "nobox": true,
+            "parselurl": true,
+            "noheader": true,
+            "genome": "hg38",
+            "tracks": [
+                {
+                    "type": "mds3",
+                    "dslabel": "GDC"
+                }
+            ]
+        }
+    }
+}

@@ -1,0 +1,31 @@
+{
+    "ribbonMessage": "See the improved scatter plot! The new scatter plot contains features like grouping samples, exporting the image, plot configuration options, and more!",
+    "ppcalls": [
+        {
+            "message": "<ul style='line-height:1.5;'><li><strong>Change the plot configuration</strong>: click on the burger button (three stacked lines) in the top left of the plot. The menu provides options to change the term, dot sizes, etc.</li><li><strong>Create groups</strong>: click on the paint brush, lasso the samples of interest, and use the pop-up menu for next steps.</li><li>Open other plots and analysis tools by clicking on the grey buttons above the scatter plot.</li></ul> ",
+            "runargs": {
+                "noheader": true,
+                "mass":{
+                    "state": {
+                        "vocab": {
+                            "dslabel": "PNET",
+                            "genome": "hg19"
+                        },
+                        "plots": [
+                            {
+                                "chartType": "sampleScatter",
+                                "colorTW": {
+                                    "id": "TSNE Category"
+                                },
+                                "name": "Methylome TSNE"
+                            }
+                        ]
+                    }
+                }
+            },
+            "testSpec": {
+                "expected": { "rect": 1, "svg": 1 }
+            }
+        }
+    ]
+}

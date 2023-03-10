@@ -1,0 +1,30 @@
+{
+    "publications": [
+        {
+            "id": 1001,
+            "title": "Exploring genomic alteration in pediatric cancer using ProteinPaint",
+            "year": "2016",
+            "journal": "Nature Genetics",
+            "pmid": "26711108",
+            "pmidURL": "https://pubmed.ncbi.nlm.nih.gov/26711108/",
+            "doi": "https://doi.org/10.1038/ng.3466"        },
+        {
+            "id": 1002,
+            "title": "Exploration of Coding and Non-coding Variants in Cancer Using GenomePaint",
+            "year": "2021",
+            "journal": "Cancer Cell",
+            "pmid": "33434514",
+            "pmidURL": "https://pubmed.ncbi.nlm.nih.gov/33434514/",
+            "doi": "https://doi.org/10.1016/j.ccell.2020.12.011"
+        },
+        {
+            "id": 1003,
+            "title": "CICERO: a versatile method for detecting complex and diverse driver fusions using cancer RNA sequencing data",
+            "year": "2020",
+            "journal": "Genome Biology",
+            "pmid": "32466770",
+            "pmidURL": "https://pubmed.ncbi.nlm.nih.gov/32466770/",
+            "doi": "https://doi.org/10.1186/s13059-020-02043-x"
+        }
+    ]
+}

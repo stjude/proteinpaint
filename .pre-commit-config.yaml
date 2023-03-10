@@ -1,0 +1,22 @@
+repos:
+  - repo: https://github.com/Yelp/detect-secrets.git
+    rev: v1.2.0
+    hooks:
+      - id: detect-secrets
+        args: [--baseline, .secrets.baseline]
+        exclude: package-lock.json
+
+  # for Proteinpaint, the team preference is for the prettier formatting
+  # to be applied as part of the commit, not as a separate commit
+  # prior to the code change commit. The bash entry below does this, but
+  # seems to trigger CI errors if included in this config, so we will 
+  # trigger prettier separately from this yaml
+  # 
+  # - repo: https://github.com/pre-commit/mirrors-prettier
+    # rev: v2.7.1 # Use the sha or tag you want to point at
+    # hooks:
+      # - id: prettier
+        # non-recommended entry by pre-commit maintener, https://stackoverflow.com/a/64309843/1146018
+        # ideally, a separate commit for code formatting, but much simpler 
+        # to trigger formatting and re-staging as part of commit
+        # entry: bash -c 'npx prettier --write .; git add -u' --

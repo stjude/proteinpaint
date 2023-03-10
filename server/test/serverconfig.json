@@ -1,0 +1,20 @@
+{
+  "debugmode": true,
+  "defaultgenome": "hg38-test",
+  "features": {
+    "skip_checkDependenciesAndVersions": 1
+  },
+  "genomes": [
+    {
+      "name": "hg38-test",
+      "species": "human",
+      "file": "./genome/hg38.test.js",
+      "datasets": [{
+        "name": "TermdbTest",
+        "jsfile": "./dataset/termdb.test.js"
+      }]
+    }
+  ],
+  "tpmasterdir": "/home/runner/work/proteinpaint/proteinpaint/server/test/tp",
+  "cachedir": "cache"
+}

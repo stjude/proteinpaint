@@ -1,0 +1,10 @@
+#!/bin/sh
+
+set -e
+
+FILES=$(git diff-tree --no-commit-id --name-only -r HEAD..origin/master)
+echo "number of files to be checked=$(echo "$FILES" | wc -w)"
+# doing this per GDC requirements
+pre-commit run --files $FILES
+
+exit 0

@@ -1,0 +1,44 @@
+{
+  "version": "2.11.1",
+  "name": "@stjude/proteinpaint",
+  "description": "a genomics visualization tool for exploring a cohort's genotype and phenotype data",
+  "main": "server/main.js",
+  "bin": "server/start.js",
+  "private": true,
+  "workspaces": [
+    "rust",
+    "server",
+    "client",
+    "front"
+  ],
+  "scripts": {
+    "reset": "npm install",
+    "predev": "if [[ -d ./client ]]; then node ./client/test/import-specs.js name=? && rm -f ../public/bin/*proteinpaint.js; fi",
+    "dev": "webpack --config=./webpack.config.js --env NODE_ENV=development --watch --progress --color",
+    "start": "./build/dev/resetBundles.sh && nodemon server/server.js --watch serverconfig.json --watch ./server/server*.js* --watch server/genome --watch server/dataset --watch server/src/test/routes",
+    "dev1": "trap 'kill %1' INT; webpack --config=./webpack.config.js --env NODE_ENV=development --watch --color & npm start",
+    "dev2": "webpack --config=./webpack.config.js --env NODE_ENV=development --watch --color",
+    "gdc": "PP_GDC_HOST=https://portal.gdc.cancer.gov/auth/api/v0 npm run dev1",
+    "server": "trap 'kill %1' INT; npm run dev -w @stjude/proteinpaint-server & npm start",
+    "client": "npm run dev -w @stjude/proteinpaint-client",
+    "ci-pp-server": "./build/dev/resetBundles.sh && node server/server.js &",
+    "test:integration": "webpack --config=./webpack.config.js && npm run ci-pp-server && sleep 10 && npm run test:integration --workspace=client",
+    "posttest:integration": "./build/integration/exitZeroOnPKillNode.sh",
+    "docker": "./build/dev/run.sh",
+    "ppr": "./build/deploy.sh ppr",
+    "prp1": "./build/deploy.sh prp1",
+    "testws": "npm test --workspaces",
+    "sethooks": "./utils/hooks/init.sh",
+    "getconf": "node -p 'JSON.stringify(require(\"./server/src/serverconfig.js\"),null,\"  \")'",
+    "clean": "git add -A; git stash --staged"
+  },
+  "author": "",
+  "license": "UNLICENSED",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/stjude/proteinpaint"
+  },
+  "bugs": {
+    "url": "https://github.com/stjude/proteinpaint"
+  }
+}

@@ -1,0 +1,101 @@
+<style></style>
+<div style="line-height: 1.5;">
+    <h1>Review Structural Variations with Sequencing Coverage</h1>
+    <p style="font-style:oblique; font-weight: 300; margin: 0vw 5vw; text-align:center; color: #403f3f;">
+        Starting with a SV file from a set of samples and a file declaring the BigWig files for the same set of samples, a Python script generates a JSON file, zip file, and a results table in the csv file for ProteinPaint. The JSON file and zip files support the SV views for the left and right breakpoints, viewable from two URLs in the results table.
+    </p>
+    <br>
+    <div style="margin:0vw 2vw; display: flex; justify-content: center; padding: 10px;">
+        <button type="button" onclick="window.open('https://pecan.stjude.cloud/static/proteinpaint_demo/usecases/svview/svViewPyScript.tar.gz','_self', 'download')" style="background-color: #d0e3ff; padding: 8px; border-radius: 3px; border: none; display: inline-block;margin: 0px 10px; font-size: 1.1em;">Download Script</button>
+        
+        <button type="button" onclick="window.open('https://pecan.stjude.cloud/static/proteinpaint_demo/usecases/svview/svViewDemoFiles.tar.gz','_self', 'download')" style="background-color: #d0e3ff; padding: 8px; border-radius: 3px; border: none; display: inline-block;margin: 0px 10px; font-size: 1.1em;">Download Example Files</button>
+    </div>
+    <div margin: 2vw;">
+        <h2 style="font-size: 1.2em;">ProteinPaint</h2>
+        <p style="margin-left: 2vw;">
+            A local ProteinPaint instance or access to St. Jude internal servers is required. For external users, please contact the <a href="https://www.stjude.org/research/why-st-jude/shared-resources/technology-licensing.html?vgo_ee=hLWJYBlzZntKof%2BseczFn7cjnEkk7LmxyEtgY0F64l8%3D" target="_blank">Office of Technology Licensing</a> for assistance. St. Jude internal users, please use this <a href="https://wiki.stjude.org/display/compbio/Displaying+custom+tracks+on+internal+ProteinPaint+server" target="_blank">wiki page</a> for instructions.
+        </p>
+        
+        <h2 style="font-size: 1.2em";">Input Files</h2>
+        <p style="margin-left: 2vw; font-size: 1em;">
+            To recreate this use case, download the example files from the blue <span style="font-family:monospace; font-size:1.25em; opacity: 0.6;"> Download Example Files</span> button above. <br><br>The script requires two <em>tab delimited</em> files. 
+        </p>
+        <div style="margin: 0vw 2vw;"> 
+            <ul style="list-style-type: none;">
+                <li>
+                    <strong>SV varient table:</strong> with the following columns: <span style="font-family:monospace; font-size:1.25em; opacity: 0.6;">sample, chr_a, position_a, strand_a, chr_b, position_b, strand_b</span>. Here is an example of a SV varient table:<br><br>
+    <pre style="margin: 0vw 1vw; font-size: 0.9em; opacity: 0.6; white-space:pre-wrap;">
+    sample  chr_a   position_a  strand_a    chr_b   position_b  strand_b
+    SJALL011121_D1  chr10   81841249    +   chr10   81845838    +
+    </pre>
+                </li>
+                <li>
+                    <strong>BigWig track table (<em>no header</em>):</strong> with the following columns: sample, assay (e.g. WGS, WES, or RNA), and relative file path under the tp directory. Here is an example of a BigWig table:<br><br>
+    <pre style="margin: 0vw 1vw; font-size: 0.9em; opacity: 0.6; white-space:pre-wrap;">
+    SJALL011121_D1 WGS proteinpaint_demo/usecase/svview/SJALL011121_D1.bw
+    SJALL011121_G1 WGS proteinpaint_demo/usecase/svview/SJALL011121_G1.bw
+    SJALL011121_R1 WGS proteinpaint_demo/usecase/svview/SJALL011121_R1.bw
+    SJALL011121_D1 RNA proteinpaint_demo/usecase/svview/SJALL011121_D1_RNA.bw
+    </pre>
+                </li>
+            </ul>
+        </div>
+
+        <h2 style="font-size: 1.2em;">Run Script</h2>
+        <p style="margin-left: 2vw;font-size: 1em;">
+            Download the <a href="https://pecan.stjude.cloud/static/proteinpaint_demo/usecases/svview/svViewPyScript.tar.gz" target="_self" download>SV view script</a>. Run the script from the command line with the following arguments:
+        </p>
+            <ul style="margin-left: 2vw;">
+                <li> 
+                    SV table (<span style="font-family:monospace; font-size:1.25em; opacity: 0.6;"> --sv</span> or <span style="font-family:monospace; font-size:1.25em; opacity: 0.6;"> -v</span>)
+                </li> 
+                <li> 
+                    BigWig table (<span style="font-family:monospace; font-size:1.25em; opacity: 0.6;"> --tracks</span> or <span style="font-family:monospace; font-size:1.25em; opacity: 0.6;"> -t</span>)
+                </li> 
+                <li>
+                    Directory for the output files (<span style="font-family:monospace; font-size:1.25em; opacity: 0.6;"> --outDir</span> or <span style="font-family:monospace; font-size:1.25em; opacity: 0.6;"> -d</span>) - <em>Must be a relative file path under the tp directory</em>
+                </li>
+                <li>
+                    File name for results (<span style="font-family:monospace; font-size:1.25em; opacity: 0.6;"> --out</span> or <span style="font-family:monospace; font-size:1.25em; opacity: 0.6;"> -o</span>) - <em>Will appear in the working directory unless a full file path is provided</em>
+                </li>  
+                <li>
+                    Genome (<span style="font-family:monospace; font-size:1.25em; opacity: 0.6;"> --genome</span> or <span style="font-family:monospace; font-size:1.25em; opacity: 0.6;"> -g</span>)
+                </li> 
+            </ul>
+        <p style="margin-left: 2vw;font-size: 1em;">
+            Below are usage examples.
+        </p>
+        
+        <pre style="margin: 0vw 3vw; font-size: 0.9em; opacity: 0.6; white-space:pre-wrap;">
+        python3 sv_review.py --sv sv.example --track bx.example --outDir ~/tp/proteinpaint_demo/usecases/svview --out myResults --genome hg19
+        </pre>
+        <p style="margin-left: 3vw;font-size: 1em;">
+            A file path for the results is provided in this example:
+        </p>
+        <pre style="margin: 0vw 3vw; font-size: 0.9em; opacity: 0.6; white-space:pre-wrap;">
+        python3 sv_review.py -v sv.example -t bx.example -d ~/tp/proteinpaint_demo/usecases/svview -o ~/tp/proteinpaint_demo/usecases/svview/myResults -g hg19
+        </pre>
+        
+        <h2 style="font-size: 1.2em;">Output and Results</h2>
+        <p style="margin-left: 2vw;font-size: 1em;">
+            Support files for the SV view, <span style="font-family:monospace; font-size:1.25em; opacity: 0.6;"> SV.gz</span> file and <span style="font-family:monospace; font-size:1.25em; opacity: 0.6;"> SV.gz.tbi</span> with the SV data as well as a <span style="font-family:monospace; font-size:1.25em; opacity: 0.6;"> mds.json</span> (see code example below) will appear in the output directory (i.e. from the <span style="font-family:monospace; font-size:1.25em; opacity: 0.6;"> --outDir</span> or <span style="font-family:monospace; font-size:1.25em; opacity: 0.6;"> -d</span> argument).
+        </p>
+        <pre style="margin: 0vw 3vw; font-size: 0.9em; opacity: 0.6; white-space:pre-wrap;">
+        {
+            "name": "SV review",
+            "svcnvfile": "proteinpaint_demo/usecases/svview/SV.gz",
+            "type": "mdssvcnv"
+        }
+        </pre>
+        <p style="margin-left: 2vw;font-size: 1em;">
+            The results table is found in the csv file, named from the <span style="font-family:monospace; font-size:1.25em; opacity: 0.6;"> --out</span> or <span style="font-family:monospace; font-size:1.25em; opacity: 0.6;"> -o</span> argument.
+        </p>
+        <img style="width: 63vw; margin: 0vw 2vw;" src="https://pecan.stjude.cloud/static/proteinpaint_demo/usecases/svview/svview_images/output.png">
+        
+        <h2 style="font-size: 1.2em;">SV View Example</h2>
+        <p style="margin-left: 2vw;font-size: 1em;">
+            Open the results from the csv file. Click on the links to review the SV views for both the left and right breakpoints. Shown below is the URL for the left position from the example data.
+        </p>
+        <img style="width: 60vw; margin: 0vw 2vw;" src="https://pecan.stjude.cloud/static/proteinpaint_demo/usecases/svview/svview_images/leftURL.png">
+    </div>
+</div>
