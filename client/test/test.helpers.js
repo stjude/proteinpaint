@@ -1,3 +1,23 @@
+/********* EXPORTED ********
+sleep
+detectLst
+detectAttr
+detectChildAttr
+detectStyle
+detectChildStyle
+detectText
+detectChildText
+detectGt
+detectGte
+detectLt
+detectLte
+detectOne
+detectZero
+whenGone
+whenHidden
+whenVisible
+*/
+
 export function sleep(ms) {
 	return new Promise(resolve => setTimeout(resolve, ms))
 }

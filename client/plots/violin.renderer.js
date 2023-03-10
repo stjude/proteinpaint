@@ -211,21 +211,12 @@ export default function violinRenderer(self) {
 			let lab
 
 			// TODO need to add term2 label onto the svg
-			if (t2?.q?.mode === 'continuous')
-				lab = svg.svgG
-					.append('text')
-					.text(`${t2.term.name}`)
-					.classed('sjpp-numeric-term-label', true)
-					.style('font-weight', 600)
-					.attr('text-anchor', 'middle')
-			else
-				lab = svg.svgG
-					.append('text')
-					.text(t1.term.name)
-					.classed('sjpp-numeric-term-label', true)
-					.style('font-weight', 600)
-					.attr('text-anchor', 'middle')
-
+			lab = svg.svgG
+				.append('text')
+				.text(t2?.q?.mode === 'continuous' ? t2.term.name : t1.term.name)
+				.classed('sjpp-numeric-term-label', true)
+				.style('font-weight', 600)
+				.attr('text-anchor', 'middle')
 			if (isH) {
 				lab
 					.attr('x', settings.svgw / 2)
