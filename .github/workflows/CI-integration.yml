@@ -17,7 +17,7 @@ jobs:
     steps:
       - name: Check secret
         run: |
-          if [ "${{ github.event.inputs.build_secret }}" != "${{ secrets.BUILD_SECRET }}" ]; then
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ github.event.inputs.build_secret }}" != "${{ secrets.BUILD_SECRET }}" ]; then
             echo "Wrong build secret."
             exit 1
           fi 
