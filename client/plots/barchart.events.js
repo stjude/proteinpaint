@@ -404,7 +404,6 @@ function handle_click(event, self) {
 }
 
 function listSamples(event, self, seriesLabel, dataLabel) {
-	console.log(event)
 	const rows = []
 	for (const sample of self.samples) {
 		if (sample.key1 == seriesLabel && (sample.key2 == dataLabel || !self.config.term2)) {
@@ -412,7 +411,6 @@ function listSamples(event, self, seriesLabel, dataLabel) {
 			rows.push(row)
 		}
 	}
-	console.log(rows)
 	const columns = [{ label: 'Sample' }]
 	const menu = new Menu({ padding: '5px' })
 	const div = menu.d.append('div')
