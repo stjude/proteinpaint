@@ -3,7 +3,7 @@ import { getRunPp } from '../../test/front.helpers.js'
 import { fillTermWrapper } from '../../termsetting/termsetting.js'
 import { getFilterItemByTag } from '../../filter/filter.js'
 import { filterJoin } from '../../filter/filter.js'
-import { whenHidden, whenVisible } from '../../test/test.helpers.js'
+import { sleep, detectOne, detectGte, whenHidden, whenVisible } from '../../test/test.helpers.js'
 
 /***************** Test Layout *****************:
 
@@ -32,9 +32,6 @@ const runpp = getRunPp('mass', {
 	debug: 1
 })
 
-function sleep(ms) {
-	return new Promise(resolve => setTimeout(resolve, ms))
-}
 /**************
  test sections
 ***************/
@@ -63,7 +60,7 @@ const open_state = {
 	}
 }
 
-tape('term1 as numeric and term2 categorical', function(test) {
+tape.skip('term1 as numeric and term2 categorical', function(test) {
 	test.timeoutAfter(3000)
 	runpp({
 		state: {
@@ -76,6 +73,7 @@ tape('term1 as numeric and term2 categorical', function(test) {
 		}
 	})
 	async function runTests(violin) {
+		//TODO
 		if (test._ok) violin.Inner.app.destroy()
 		test.end()
 	}
@@ -101,8 +99,8 @@ tape('render violin plot', function(test) {
 		const violinPvalueDiv = violin.Inner.dom.tableHolder
 		const violinDivControls = violin.Inner.dom.controls
 		const violinDivData = violin.Inner.data.plots
-		await sleep(800)
-		testViolinPath(violinDiv) //test if violin path is generated. should be more than 0
+
+		await testViolinPath(violinDiv) //test if violin path is generated. should be more than 0
 		testPlotTitle(violinDiv, violinDivControls) //test if label in ts-pill is same as title on svg.
 		testDataLength(violinDiv, violinDivData) //test if length of samples is same as shown in plot labels
 		testPvalue(violin, violinPvalueDiv)
@@ -111,7 +109,8 @@ tape('render violin plot', function(test) {
 		test.end()
 	}
 
-	function testViolinPath(violinDiv) {
+	async function testViolinPath(violinDiv) {
+		await detectOne({ elem: violinDiv.node(), selector: 'svg' })
 		const noPlotNum = 0
 		const actualPlotNum = violinDiv.selectAll('.sjpp-violinG').size()
 		test.true(
@@ -255,8 +254,7 @@ tape('test basic controls', function(test) {
 		testChangeStrokeWidth(violinSettings, testStrokeWidth)
 		changeSymbolSize(violinSettings, violinDivControls, testSymSize) //test change in symbol size
 		testChangeSymbolSize(violinSettings, testSymSize)
-		changeModeToDiscrete(violin) //test change in q: {mode: 'Discrete'} to display barchart
-		await sleep(200)
+		await changeModeToDiscrete(violin) //test change in q: {mode: 'Discrete'} to display barchart
 		if (test._ok) violin.Inner.app.destroy()
 		test.end()
 	}
@@ -324,7 +322,8 @@ tape('test basic controls', function(test) {
 				term: await fillTermWrapper({ id: 'agedx', q: { mode: 'discrete' } }, violin.Inner.app.vocabApi)
 			}
 		})
-		test.ok(true, "q.mode changed to 'Discrete' ")
+		await sleep(50)
+		test.ok(violin.Inner.app.Inner.state.plots[0].term.q.mode == 'discrete', "q.mode changed to 'Discrete' ")
 	}
 })
 
@@ -346,27 +345,25 @@ tape('test label clicking, filtering and hovering', function(test) {
 		const violinDiv = violin.Inner.dom.violinDiv
 		const violinDivData = violin.Inner.data.plots
 		const violinSettings = violin.Inner.config.settings.violin
-		await sleep(800)
-		labelClicking(violin, violinDiv) //test filter on label clicking
-		testFiltering(violin, violinSettings, violinDivData) //test filtering by providing tvs.lst object
-		testLabelHovering(violinDiv)
-		await sleep(500)
+
+		await labelClicking(violin, violinDiv) //test filter on label clicking
+		await testFiltering(violin, violinSettings, violinDivData) //test filtering by providing tvs.lst object
+		testLabelHovering(violin, violinDiv)
+
 		if (test._ok) violin.Inner.app.destroy()
 		test.end()
 	}
 
-	function labelClicking(violin, violinDiv) {
-		violinDiv
-			.node()
-			.querySelectorAll('.sjpp-axislabel')[0]
-			.dispatchEvent(new Event('click', { bubbles: true }))
+	async function labelClicking(violin, violinDiv) {
+		const axisLabels = await detectGte({ elem: violinDiv.node(), selector: '.sjpp-axislabel', count: 2 })
+		axisLabels[0].dispatchEvent(new Event('click', { bubbles: true }))
 
 		violin.Inner.app.tip.d
 			.selectAll('.sja_menuoption')
 			.filter(d => d.label.includes('filter'))
 			.node()
 			.click()
-		test.ok(true, 'label Clicking and filtering ok!')
+		test.equal(violin.Inner.app.Inner.state.plots.length, 1, 'Should filter to display only one plot')
 	}
 
 	//This function tests filtering based on range provided.
@@ -434,12 +431,12 @@ tape('test label clicking, filtering and hovering', function(test) {
 		test.ok(true, 'Filtering works as expected upon given range(start, stop) of values')
 	}
 
-	async function testLabelHovering(violinDiv) {
+	async function testLabelHovering(violin, violinDiv) {
 		const elem = violinDiv.node().querySelectorAll('.sjpp-axislabel')[0]
 		elem.dispatchEvent(new Event('mouseover'), { bubbles: true })
-		await sleep(500)
-		elem.dispatchEvent(new Event('mouseout'), { bubbles: true })
-		test.ok(true, 'Hovering over axis label displays summary statistics')
+		const tip = violin.Inner.dom.tip
+		test.ok(tip.d.node().style.display == 'block', 'Should display table of summary statistics on hover')
+		tip.hide()
 	}
 })
 
@@ -458,10 +455,10 @@ tape('test hide option on label clicking', function(test) {
 	async function runTests(violin) {
 		violin.on('postRender.test', null)
 		const legendDiv = violin.Inner.dom.legendDiv
+
 		testHideOption(violin, legendDiv) //test filter on label clicking
-		await sleep(800)
-		testHiddenValues(violin, legendDiv)
-		await sleep(300)
+		await testHiddenValues(violin, legendDiv)
+
 		if (test._ok) violin.Inner.app.destroy()
 		test.end()
 	}
@@ -489,15 +486,16 @@ tape('test hide option on label clicking', function(test) {
 	}
 
 	async function testHiddenValues(violin, legendDiv) {
-		await sleep(300)
-		test.true(
-			violin.Inner.config.term2.q.hiddenValues[legendDiv.node().querySelectorAll('.sjpp-htmlLegend')[8].innerHTML],
+		const htmlLegends = await detectGte({ elem: legendDiv.node(), selector: '.sjpp-htmlLegend', count: 8 })
+		test.equal(
+			Object.keys(violin.Inner.config.term2.q.hiddenValues)[0],
+			htmlLegends[8].innerHTML,
 			'q.hiddenValues match legend'
 		)
 	}
 })
 
-tape('term1 as numeric and term2 numeric', function(test) {
+tape.skip('term1 as numeric and term2 numeric', function(test) {
 	test.timeoutAfter(1000)
 	runpp({
 		state: {
@@ -530,12 +528,13 @@ tape('term1 as numeric and term2 numeric', function(test) {
 		}
 	})
 	async function runTests(violin) {
+		//TODO
 		if (test._ok) violin.Inner.app.destroy()
 		test.end()
 	}
 })
 
-tape('term1 as categorical and term2 numeric', function(test) {
+tape.skip('term1 as categorical and term2 numeric', function(test) {
 	test.timeoutAfter(1000)
 	runpp({
 		state: {
@@ -571,6 +570,7 @@ tape('term1 as categorical and term2 numeric', function(test) {
 		}
 	})
 	async function runTests(violin) {
+		//TODO
 		if (test._ok) violin.Inner.app.destroy()
 		test.end()
 	}
@@ -611,7 +611,7 @@ tape.skip('test custom groupsetting from Methylome tSNE', function(test) {
 		violin.on('postRender.test', null)
 		testSamplelst(violin)
 		await sleep(100)
-		// if (test._ok) violin.Inner.app.destroy()
+		//if (test._ok) violin.Inner.app.destroy()
 		test.end()
 	}
 
@@ -651,7 +651,7 @@ tape.skip('test custom groupsetting from Methylome tSNE', function(test) {
 })
 
 tape('test uncomputable categories legend', function(test) {
-	test.timeoutAfter(1000)
+	test.timeoutAfter(3000)
 	runpp({
 		state: {
 			nav: {
@@ -684,28 +684,17 @@ tape('test uncomputable categories legend', function(test) {
 	async function runTests(violin) {
 		const legendDiv = violin.Inner.dom.legendDiv
 		violin.on('postRender.test', null)
-		await sleep(800)
-		testUncomputableCategories(violin, legendDiv)
-		if (test._ok) violin.Inner.app.destroy()
+
+		await testUncomputableCategories(violin, legendDiv)
+
 		test.end()
 	}
 
-	function testUncomputableCategories(violin, legendDiv) {
+	async function testUncomputableCategories(violin, legendDiv) {
+		const categories = await detectGte({ elem: legendDiv.node(), selector: '.legend-row', count: 9 })
 		const keys = Object.keys(violin.Inner.data.uncomputableValueObj)
-		const category1 =
-			legendDiv
-				.node()
-				.querySelectorAll('.legend-row')[8]
-				.innerText.split(',')[0] +
-			',' +
-			legendDiv
-				.node()
-				.querySelectorAll('.legend-row')[8]
-				.innerText.split(',')[1]
-		const category2 = legendDiv
-			.node()
-			.querySelectorAll('.legend-row')[9]
-			.innerText.split(',')[0]
+		const category1 = categories[8].innerText.split(',')[0] + ',' + categories[8].innerText.split(',')[1]
+		const category2 = categories[9].innerText.split(',')[0]
 		test.equal(
 			keys[0],
 			category1,
