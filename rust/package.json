@@ -15,7 +15,7 @@
     "test:integration": "echo 'TODO: rust integration tests'"
   },
   "author": "Robin Paul",
-  "license": "UNLICENSED",
+  "license": "GPL-3.0-only OR SEE LICENSE IN LICENSE/License_Custom.txt",
   "repository": {
     "type": "git",
     "url": "https://github.com/stjude/proteinpaint.git",

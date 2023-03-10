@@ -20,7 +20,7 @@
     "getconf": "../build/getConfigProp.js"
   },
   "author": "",
-  "license": "UNLICENSED",
+  "license": "GPL-3.0-only OR SEE LICENSE IN LICENSE/License_Custom.txt",
   "devDependencies": {
     "@babel/core": "^7.9.6",
     "@babel/plugin-proposal-optional-chaining": "^7.9.0",

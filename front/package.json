@@ -27,5 +27,6 @@
 		"type": "git",
 		"url": "https://github.com/stjude/proteinpaint",
 		"directory": "front"
-	}
+	},
+	"license": "GPL-3.0-only OR SEE LICENSE IN LICENSE/License_Custom.txt",
 }
