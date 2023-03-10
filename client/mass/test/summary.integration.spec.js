@@ -1,6 +1,7 @@
 import tape from 'tape'
 import * as helpers from '../../test/front.helpers.js'
 import { select, selectAll } from 'd3-selection'
+import { detectOne, detectGte } from '../../test/test.helpers.js'
 
 /*************************
  reusable helper functions
@@ -19,10 +20,6 @@ const runpp = helpers.getRunPp('mass', {
 	},
 	debug: 1
 })
-
-function sleep(ms) {
-	return new Promise(resolve => setTimeout(resolve, ms))
-}
 
 /**************
  test sections
@@ -62,8 +59,6 @@ tape('Render summary plot, term: "agedx"', test => {
 		testHeader(summary, sandboxDom)
 		await testToggleButtons(summary, sandboxDom)
 		await testOrientation(summary)
-		// await testCollapseExpandBtns(sandboxDom)
-		// await testCloseBtn(summary, sandboxDom)
 
 		if (test._ok) summary.Inner.app.destroy()
 		test.end()
@@ -98,19 +93,18 @@ tape('Render summary plot, term: "agedx"', test => {
 
 		//Toggle to violin
 		toggles.find(d => d.__data__.childType == 'violin').click()
-		await sleep(500)
-		test.equal(summary.Inner.state.config.childType, 'violin', `Should toggle to childType = violin`)
-
-		const foundTestPlot = sandboxDom.plotDivs.violin.selectAll('#sjpp-vp-violinDiv').node()
+		const foundTestPlot = await detectOne({
+			elem: summary.Inner.dom.holder.body.node(),
+			selector: '#sjpp-vp-violinDiv'
+		})
 		test.ok(foundTestPlot, `Should render violin after toggle`)
+		test.equal(summary.Inner.state.config.childType, 'violin', `Should toggle to childType = violin`)
 
 		//Toggle back to barchart
 		toggles.find(d => d.__data__.childType == 'barchart').click()
-		await sleep(500)
-		test.equal(summary.Inner.state.config.childType, 'barchart', `Should toggle back to childType = 'barchart'`)
-
-		const foundOrigPlot = sandboxDom.plotDivs.barchart.selectAll('.pp-sbar-div').node()
+		const foundOrigPlot = await detectOne({ elem: summary.Inner.dom.holder.body.node(), selector: '.pp-sbar-div' })
 		test.ok(foundOrigPlot, `Should render barchart after toggle`)
+		test.equal(summary.Inner.state.config.childType, 'barchart', `Should toggle back to childType = 'barchart'`)
 	}
 
 	async function testOrientation(summary) {
@@ -121,33 +115,15 @@ tape('Render summary plot, term: "agedx"', test => {
 				settings: { barchart: { orientation: 'vertical' } }
 			}
 		})
-		await sleep(500)
-		test.ok(
+		await detectGte({ elem: summary.Inner.dom.plotDivs.barchart.node(), selector: '.bars-collabels' })
+		test.notEqual(
+			summary.Inner.config.settings.barchart.orientation,
+			summary.Inner.config.settings.violin.orientation,
+
 			summary.Inner.config.settings.barchart.orientation != summary.Inner.config.settings.violin.orientation,
 			`Orientation change for barchart should not affect violin`
 		)
 	}
-
-	//TODO: move to sandbox unit test.
-
-	// async function testCollapseExpandBtns(sandboxDom) {
-	// 	//collapse button
-	// 	sandboxDom.holder.header_row.select('.sjpp-output-sandbox-collapse-btn').node().click()
-	// 	const contentDisplay = sandboxDom.body.node().style.display
-	// 	const headerStillShows = sandboxDom.paneTitleDiv.node().style.display
-	// 	test.equal(contentDisplay == 'none', headerStillShows != 'none', `Should collapse sandbox but header still visible`)
-
-	// 	//expand button
-	// 	sandboxDom.holder.header_row.select('.sjpp-output-sandbox-expand-btn').node().click()
-	// 	test.ok(contentDisplay == 'none', `Should expand summary sandbox content div`)
-	// }
-
-	// async function testCloseBtn(summary, sandboxDom){
-	// 	sandboxDom.holder.header_row.select('.sjpp-output-sandbox-close-bt').node().click()
-	// 	await sleep(500)
-	// 	test.ok(Object.values(summary.Inner.dom).length < 1, `Sandbox should disappear`)
-
-	// }
 })
 
 tape('Barchart tab only, term: "diaggrp"', test => {
@@ -230,19 +206,18 @@ tape('Barchart & violin toggles, term: "diaggrp", term2: "agedx"', test => {
 
 		//Toggle to violin
 		toggles.find(d => d.__data__.childType == 'violin').click()
-		await sleep(500)
-		test.equal(summary.Inner.state.config.childType, 'violin', `Should toggle to childType = violin`)
-
-		const foundTestPlot = sandboxDom.plotDivs.violin.selectAll('#sjpp-vp-violinDiv').node()
+		const foundTestPlot = await detectOne({
+			elem: summary.Inner.dom.holder.body.node(),
+			selector: '#sjpp-vp-violinDiv'
+		})
 		test.ok(foundTestPlot, `Should render violin after toggle`)
+		test.equal(summary.Inner.state.config.childType, 'violin', `Should toggle to childType = violin`)
 
 		//Toggle back to barchart
 		toggles.find(d => d.__data__.childType == 'barchart').click()
-		await sleep(500)
-		test.equal(summary.Inner.state.config.childType, 'barchart', `Should toggle back to childType = 'barchart'`)
-
-		const foundOrigPlot = sandboxDom.plotDivs.barchart.selectAll('.pp-sbar-div').node()
+		const foundOrigPlot = await detectOne({ elem: summary.Inner.dom.holder.body.node(), selector: '.pp-sbar-div' })
 		test.ok(foundOrigPlot, `Should render barchart after toggle`)
+		test.equal(summary.Inner.state.config.childType, 'barchart', `Should toggle back to childType = 'barchart'`)
 	}
 })
 
@@ -289,19 +264,18 @@ tape('Barchart & violin toggles, term: "agedx", term2: "diaggrp"', test => {
 
 		//Toggle to violin
 		toggles.find(d => d.__data__.childType == 'violin').click()
-		await sleep(500)
-		test.equal(summary.Inner.state.config.childType, 'violin', `Should toggle to childType = violin`)
-
-		const foundTestPlot = sandboxDom.plotDivs.violin.selectAll('#sjpp-vp-violinDiv').node()
+		const foundTestPlot = await detectOne({
+			elem: summary.Inner.dom.holder.body.node(),
+			selector: '#sjpp-vp-violinDiv'
+		})
 		test.ok(foundTestPlot, `Should render violin after toggle`)
+		test.equal(summary.Inner.state.config.childType, 'violin', `Should toggle to childType = violin`)
 
 		//Toggle back to barchart
 		toggles.find(d => d.__data__.childType == 'barchart').click()
-		await sleep(500)
-		test.equal(summary.Inner.state.config.childType, 'barchart', `Should toggle back to childType = 'barchart'`)
-
-		const foundOrigPlot = sandboxDom.plotDivs.barchart.selectAll('.pp-sbar-div').node()
+		const foundOrigPlot = await detectOne({ elem: summary.Inner.dom.holder.body.node(), selector: '.pp-sbar-div' })
 		test.ok(foundOrigPlot, `Should render barchart after toggle`)
+		test.equal(summary.Inner.state.config.childType, 'barchart', `Should toggle back to childType = 'barchart'`)
 	}
 })
 
@@ -348,19 +322,18 @@ tape('Barchart & violin toggles, term: "agedx", term2: "hrtavg"', test => {
 
 		//Toggle to violin
 		toggles.find(d => d.__data__.childType == 'violin').click()
-		await sleep(500)
-		test.equal(summary.Inner.state.config.childType, 'violin', `Should toggle to childType = violin`)
-
-		const foundTestPlot = sandboxDom.plotDivs.violin.selectAll('#sjpp-vp-violinDiv').node()
+		const foundTestPlot = await detectOne({
+			elem: summary.Inner.dom.holder.body.node(),
+			selector: '#sjpp-vp-violinDiv'
+		})
 		test.ok(foundTestPlot, `Should render violin after toggle`)
+		test.equal(summary.Inner.state.config.childType, 'violin', `Should toggle to childType = violin`)
 
 		//Toggle back to barchart
 		toggles.find(d => d.__data__.childType == 'barchart').click()
-		await sleep(500)
-		test.equal(summary.Inner.state.config.childType, 'barchart', `Should toggle back to childType = 'barchart'`)
-
-		const foundOrigPlot = sandboxDom.plotDivs.barchart.selectAll('.pp-sbar-div').node()
+		const foundOrigPlot = await detectOne({ elem: summary.Inner.dom.holder.body.node(), selector: '.pp-sbar-div' })
 		test.ok(foundOrigPlot, `Should render barchart after toggle`)
+		test.equal(summary.Inner.state.config.childType, 'barchart', `Should toggle back to childType = 'barchart'`)
 	}
 })
 
@@ -406,7 +379,7 @@ tape('Overlay continuity, term: "aaclassic_5", term2: "sex"', test => {
 			.nodes()
 			.find(d => d.__data__.childType == 'violin')
 			.click()
-		await sleep(1000)
+		await detectOne({ elem: summary.Inner.dom.holder.body.node(), selector: '#sjpp-vp-violinDiv' })
 		test.equal(
 			plotsConfig.violin.Inner.config.term2.id,
 			testTerm,
