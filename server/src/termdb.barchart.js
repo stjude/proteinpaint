@@ -40,13 +40,13 @@ export function handle_request_closure(genomes) {
 			if (!ds.cohort) throw 'ds.cohort missing'
 			const tdb = ds.cohort.termdb
 			if (!tdb) throw 'no termdb for this dataset'
-			const data = await barchart_data(q, ds, tdb)
+			const results = await barchart_data(q, ds, tdb)
 			if (q.term2_q) {
 				//term2 is present
 				//compute pvalues using Fisher's exact/Chi-squared test
-				await computePvalues(data, ds)
+				await computePvalues(results.data, ds)
 			}
-			res.send(data)
+			res.send(results)
 		} catch (e) {
 			res.send({ error: e.message || e })
 			if (e.stack) console.log(e.stack)
@@ -125,7 +125,8 @@ export async function barchart_data(q, ds, tdb) {
 					let item
 					if (samplesMap.get(sampleId)) item = samplesMap.get(sampleId)
 					else if (!samplesMap.has(sampleId)) {
-						item = { sample: parseInt(sampleId) }
+						const intSampleId = parseInt(sampleId)
+						item = { sample: intSampleId, name: ds.sampleId2Name.get(intSampleId) }
 						samplesMap.set(sampleId, item)
 					}
 					if (!item) continue
@@ -156,7 +157,7 @@ export async function barchart_data(q, ds, tdb) {
 			pj: pj.times
 		}
 	}
-	return pj.tree.results
+	return { data: pj.tree.results, samples: q.results.lst }
 }
 
 //used by barchart_data

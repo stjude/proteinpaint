@@ -2,6 +2,7 @@ import { Menu } from '../dom/menu'
 import { dofetch3 } from '../common/dofetch'
 import { newpane, export_data } from '../src/client'
 import { filterJoin, getFilterItemByTag, getNormalRoot, findItemByTermId, normalizeProps } from '../filter/filter'
+import { renderTable } from '#dom/table'
 
 export default function getHandlers(self) {
 	const tip = new Menu({ padding: '5px' })
@@ -346,6 +347,12 @@ function handle_click(event, self) {
 			})
 		}
 	}
+	if (self.config.displaySampleIds) {
+		options.push({
+			label: 'List samples',
+			callback: () => listSamples(event, self, seriesLabel, dataLabel)
+		})
+	}
 
 	// list samples for a category
 	// this option is always added
@@ -394,6 +401,32 @@ function handle_click(event, self) {
 			d.callback(self, tvslst)
 		})
 	self.app.tip.show(event.clientX, event.clientY)
+}
+
+function listSamples(event, self, seriesLabel, dataLabel) {
+	console.log(event)
+	const rows = []
+	for (const sample of self.samples) {
+		if (sample.key1 == seriesLabel && (sample.key2 == dataLabel || !self.config.term2)) {
+			const row = [{ value: sample.name }]
+			rows.push(row)
+		}
+	}
+	console.log(rows)
+	const columns = [{ label: 'Sample' }]
+	const menu = new Menu({ padding: '5px' })
+	const div = menu.d.append('div')
+	renderTable({
+		rows,
+		columns,
+		div,
+		showLines: false,
+		maxWidth: '27vw',
+		maxHeight: '40vh',
+		resize: true
+	})
+
+	menu.show(event.clientX, event.clientY)
 }
 
 function menuoption_add_filter(self, tvslst) {

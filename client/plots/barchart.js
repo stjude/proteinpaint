@@ -174,7 +174,8 @@ class Barchart {
 				settings: {
 					barchart: config.settings.barchart,
 					common: config.settings.common
-				}
+				},
+				displaySampleIds: appState.termdbConfig.displaySampleIds && this.app.vocabApi.hasVerifiedToken()
 			}),
 			multipleTestingCorrection: appState.termdbConfig.multipleTestingCorrection,
 			ssid: appState.ssid,
@@ -198,7 +199,9 @@ class Barchart {
 
 			const reqOpts = this.getDataRequestOpts()
 			await this.getDescrStats()
-			const data = await this.app.vocabApi.getNestedChartSeriesData(reqOpts)
+			const results = await this.app.vocabApi.getNestedChartSeriesData(reqOpts)
+			const data = results.data
+			this.samples = results.samples
 			this.toggleLoadingDiv('none')
 			this.app.vocabApi.syncTermData(this.config, data, this.prevConfig)
 			this.currServerData = data
