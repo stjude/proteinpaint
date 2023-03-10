@@ -1,4 +1,4 @@
-# Proteinpaint
+# ProteinPaint
 
 a genomics visualization tool for exploring a cohort's genotype and phenotype data
 
@@ -34,7 +34,7 @@ Bundles were also tested to run in Node v12.21+ in a SJ host machine.
 ```bash
 # develop BOTH server and client code using 2 terminal windows/tabs
 npm run dev # rebundles backend and frontend code
-npm start # in separate terminal runs the proteinpaint server, requires a serverconfig.json at the project root
+npm start # in separate terminal runs the ProteinPaint server, requires a serverconfig.json at the project root
 
 # --- OR --- 
 # to display both server/client bundling logs, 
@@ -63,7 +63,7 @@ The build and release steps can be triggered via Github Actions using the Create
 
 Follow the [build instructions](https://docs.google.com/document/d/13gUdU9UrHFkdspcQgc6ToRZJsrdFM4LCwCg7g1SQc4Q/edit?usp=sharing).
 
-### Use Proteinpaint as a module
+### Use ProteinPaint as a module
 
 Follow the [example project setup](https://github.com/stjude/pp-dist).
 
