@@ -81,7 +81,8 @@
     "shared/vcf.js",
     "utils/*.R",
     "utils/rust/*.*",
-    "utils/rust/src"
+    "utils/rust/src",
+    "LICENSE/*"
   ],
   "bugs": {
     "url": "https://github.com/stjude/pp-dist"

@@ -24,7 +24,8 @@
   "files": [
     "index.js",
     "Cargo.toml",
-    "src"
+    "src",
+    "LICENSE/*"
   ],
   "bugs": {
     "url": "https://github.com/stjude/proteinpaint"

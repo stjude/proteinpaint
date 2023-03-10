@@ -20,7 +20,8 @@
 	"files": [
 		"public/index.html",
 		"init.js",
-		"bundles.tgz"
+		"bundles.tgz",
+    "LICENSE/*"
 	],
 	"repository": {
 		"type": "git",

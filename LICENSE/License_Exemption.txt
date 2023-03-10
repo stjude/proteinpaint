@@ -1,0 +1,4 @@
+Individuals and organizations may be exempted from the GPLv3 license requirements 
+by obtaining a contract with St. Jude Children's Research Hospital.
+
+Please contact the maintainers of this software project for more information. 

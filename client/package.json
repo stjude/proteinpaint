@@ -81,7 +81,8 @@
     "src/databrowser/dictionary.parse.js",
     "src/spliceevent.prep.js",
     "src/spliceevent.a53ss.js",
-    "src/spliceevent.exonskip.js"
+    "src/spliceevent.exonskip.js",
+    "LICENSE/*"
   ],
   "bugs": {
     "url": "https://github.com/stjude/pp-dist"
