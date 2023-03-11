@@ -1,33 +1,16 @@
 {
-  "private": false,
-  "name": "@stjude/proteinpaint",
-  "bin": "server/start.js",
-  "main": "client/dist/app.js",
-  "browser": "public/bin/proteinpaint.js",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/stjude/pp-dist"
+  "name": "@stjude/proteinpaint-full",
+  "version": "2.11.0",
+  "private": true,
+  "scripts": {
+    "start": "node app.js"
   },
-  "//": "dependencies will be copied from proteinpaint/[server, client]/package.json",
+  "dependencies": {
+    "@stjude/proteinpaint-front": "^2.11.0",
+    "@stjude/proteinpaint-server": "^2.11.0"
+  },
   "files": [
-    "build/compile-rust.sh",
-    "client/dist",
-    "public/index.html",
-    "public/bin",
-    "server/bin.js",
-    "server/dataset",
-    "server/genome",
-    "server/src/serverconfig.js",
-    "server/src/mds3.gdc.filter.js",
-    "server/server.js*",
-    "server/start.js",
-    "server/utils/*.R",
-    "server/cards",
-    "rev.txt",
-    "rust/stjude-proteinpaint-rust-*.tgz",
-    "utils/install.pp.js"
+    "app.js"
   ],
-  "bugs": {
-    "url": "https://github.com/stjude/pp-dist"
-  }
+  "license": "GPL-3.0-only OR SEE LICENSE IN LICENSE/License_Custom.txt"
 }

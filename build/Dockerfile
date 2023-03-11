@@ -93,14 +93,3 @@ RUN set -eux; \
     && rm -rf /var/lib/apt/lists/
 
 WORKDIR /home/root/pp/app
-
-FROM ppbase AS ppminpkg
-
-WORKDIR /home/root/pp
-ADD . ./tmppack
-WORKDIR /home/root/pp/tmppack
-
-RUN mkdir -p minpkgjsons/server && mkdir minpkgjsons/client && \
-     ./build/minpkgjson.js package.json > minpkgjsons/package.json && \
-     ./build/minpkgjson.js server/package.json > minpkgjsons/server/package.json && \
-     ./build/minpkgjson.js client/package.json > minpkgjsons/client/package.json
