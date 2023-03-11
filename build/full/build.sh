@@ -66,4 +66,4 @@ echo "building pprust:$REV image, package version=$TAG"
 docker build . --file ./build/Dockerfile --target pprust --tag pprust:$REV --build-arg ARCH="$ARCH" $BUILDARGS
 
 echo "building ppfull:$REV image, package version=$TAG"
-docker build . --file ./build/full/Dockerfile --target ppapp --tag ppfull:$REV --build-arg IMGVER=$REV --build-arg PKGVER=$TAG --build-arg CROSSENV="$CROSSENV" $BUILDARGS
+docker build . --file ./build/Dockerfile --target ppapp --tag ppfull:$REV --build-arg IMGVER=$REV --build-arg PKGVER=$TAG --build-arg CROSSENV="$CROSSENV" $BUILDARGS
