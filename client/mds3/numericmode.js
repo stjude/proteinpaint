@@ -661,7 +661,7 @@ function m_mouseover(m, nm, tk) {
 	}
 
 	if (!m.labattop && !m.labatbottom) {
-		words.push(m.mname)
+		words.push(mnamegetter(m, tk))
 	}
 
 	let textw = 0

@@ -212,10 +212,8 @@ filterInState{}
 	optional filter obj, tracked in state
 callback2
 	optional callback to run upon filter update, no parameter
-allowToHide
-	if true, filter body is hidden by default, click top label to show/hide
 */
-export async function mayDisplayVariantFilter(self, filterInState, holder, callback2, allowToHide) {
+async function mayDisplayVariantFilter(self, filterInState, holder, callback2) {
 	if (!self.variantFilter) {
 		self.variantFilter = await self.vocabApi.get_variantFilter()
 		// variantFilter should be {opts{}, filter{}, terms[]}
@@ -243,27 +241,9 @@ export async function mayDisplayVariantFilter(self, filterInState, holder, callb
 		.append('span')
 		.text('VARIANT FILTERS')
 		.style('font-size', '.8em')
+		.style('opacity', 0.6)
 
 	const filterBody = div.append('div')
-
-	if (allowToHide) {
-		// filterBody is hidden by default
-		filterBody.style('display', 'none')
-		label
-			.attr('class', 'sja_clbtext')
-			.text('VARIANT FILTERS [+]')
-			.on('click', () => {
-				if (filterBody.style('display') == 'none') {
-					filterBody.style('display', 'block')
-					label.text('VARIANT FILTERS [-]')
-				} else {
-					filterBody.style('display', 'none')
-					label.text('VARIANT FILTERS [+]')
-				}
-			})
-	} else {
-		label.style('opacity', 0.6)
-	}
 
 	filterInit({
 		joinWith: self.variantFilter.opts.joinWith,

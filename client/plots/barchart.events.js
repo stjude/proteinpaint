@@ -2,6 +2,7 @@ import { Menu } from '../dom/menu'
 import { dofetch3 } from '../common/dofetch'
 import { newpane, export_data } from '../src/client'
 import { filterJoin, getFilterItemByTag, getNormalRoot, findItemByTermId, normalizeProps } from '../filter/filter'
+import { renderTable } from '#dom/table'
 
 export default function getHandlers(self) {
 	const tip = new Menu({ padding: '5px' })
@@ -126,7 +127,7 @@ export default function getHandlers(self) {
 			},
 			click: self.opts.bar_click_override
 				? (event, d) => self.opts.bar_click_override(getTermValues(d, self))
-				: (event, d) => handle_click(event, self)
+				: (event, d) => handle_click(event, self, d)
 		},
 		colLabel: {
 			text: d => {
@@ -266,7 +267,7 @@ function getUpdatedQfromClick(d, term, isHidden = false) {
 	return q
 }
 
-function handle_click(event, self) {
+function handle_click(event, self, chart) {
 	const d = event.target.__data__ || event.target.parentNode.__data__
 	// bar label data only has {id,label},
 	// while bar data has all required data including seriesId
@@ -346,6 +347,12 @@ function handle_click(event, self) {
 			})
 		}
 	}
+	if (self.config.displaySampleIds) {
+		options.push({
+			label: 'List samples',
+			callback: () => listSamples(event, self, seriesLabel, dataLabel, chart)
+		})
+	}
 
 	// list samples for a category
 	// this option is always added
@@ -394,6 +401,33 @@ function handle_click(event, self) {
 			d.callback(self, tvslst)
 		})
 	self.app.tip.show(event.clientX, event.clientY)
+}
+
+function listSamples(event, self, seriesLabel, dataLabel, chart) {
+	const rows = []
+	for (const sample of self.samples) {
+		if (self.config.term.term.type == 'geneVariant' && sample.key0 !== chart.chartId) continue
+		if (sample.key1 == seriesLabel) {
+			const row = [{ value: sample.name }]
+			if (self.config.term2) {
+				if (sample.key2 == dataLabel) rows.push(row)
+			} else rows.push(row)
+		}
+	}
+	const columns = [{ label: 'Sample' }]
+	const menu = new Menu({ padding: '5px' })
+	const div = menu.d.append('div')
+	renderTable({
+		rows,
+		columns,
+		div,
+		showLines: false,
+		maxWidth: '27vw',
+		maxHeight: '40vh',
+		resize: true
+	})
+
+	menu.show(event.clientX, event.clientY)
 }
 
 function menuoption_add_filter(self, tvslst) {

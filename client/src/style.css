@@ -1134,7 +1134,7 @@ sandbox header
 .sjpp_hide_scrollbar::-webkit-scrollbar{
     background-color: white;
     border-radius: 10px;
-    width: 20px;
+    width: 18px;
 }
 
 /* This will handle the thumb (scrolling part) */
@@ -1146,8 +1146,8 @@ sandbox header
 }
 
 .sjpp_hide_scrollbar::-webkit-scrollbar-thumb:vertical{
-    height: 20px!important;
-    width: 20px;
+    height: 18px!important;
+    width: 18px;
 }
 
 
