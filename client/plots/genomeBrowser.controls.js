@@ -13,6 +13,7 @@ main
 			render1group_info
 			render1group_population
 			render1group_filter
+	makeVariantFilter
 */
 const groupTip = new Menu({ padding: '0px' })
 
@@ -22,7 +23,6 @@ class GbControls {
 		.app
 		.id
 		.holder
-		.variantFilter
 		*/
 		this.type = 'gbControls'
 	}
@@ -32,7 +32,10 @@ class GbControls {
 			// hardcode to 2 groups used by state.config.snvindel.details.groups[]
 			group1div: this.opts.holder.append('div'),
 			group2div: this.opts.holder.append('div'),
-			testMethodDiv: this.opts.holder.append('div')
+			testMethodDiv: this.opts.holder.append('div'),
+			// the whole holder has white-space=nowrap (likely from sjpp-output-sandbox-content)
+			// must set white-space=normal to let INFO filter wrap and not to extend beyond holder
+			variantFilterHolder: this.opts.holder.append('div').style('white-space', 'normal')
 		}
 	}
 
@@ -56,6 +59,46 @@ class GbControls {
 				this.renderTestMethod()
 			}
 		}
+
+		if (this.state.config.variantFilter) {
+			// quick fix -- only render this filter ui once
+			if (!this.variantFilterRendered) {
+				this.variantFilterRendered = true
+				this.makeVariantFilter()
+			}
+		}
+	}
+
+	makeVariantFilter() {
+		const handle = this.dom.variantFilterHolder
+			.append('div')
+			.text('VARIANT FILTER [+]')
+			.attr('class', 'sja_clbtext2')
+			.style('margin-top', '5px')
+			.style('font-size', '.9em')
+			.on('click', () => {
+				if (div.style('display') == 'none') {
+					handle.text('VARIANT FILTER [-]')
+					div.style('display', 'block')
+				} else {
+					handle.text('VARIANT FILTER [+]')
+					div.style('display', 'none')
+				}
+			})
+		const div = this.dom.variantFilterHolder.append('div').style('display', 'none')
+		filterInit({
+			joinWith: this.state.config.variantFilter.opts.joinWith,
+			emptyLabel: '+Add Filter',
+			holder: div,
+			vocab: { terms: this.state.config.variantFilter.terms },
+			callback: async filter => {
+				await this.app.dispatch({
+					type: 'plot_edit',
+					id: this.id,
+					config: { variantFilter: { filter } }
+				})
+			}
+		}).main(this.state.config.variantFilter.filter)
 	}
 
 	/*
@@ -134,8 +177,8 @@ export const gbControlsInit = getCompInit(GbControls)
 
 function render1group_info(self, groupIdx, group, div) {
 	let name = group.infoKey
-	if (self.opts.variantFilter?.terms) {
-		const f = self.opts.variantFilter.terms.find(i => i.id == group.infoKey)
+	if (self.state.config.variantFilter?.terms) {
+		const f = self.state.config.variantFilter.terms.find(i => i.id == group.infoKey)
 		if (f && f.name) name = f.name
 	}
 	div.append('span').text(name)
@@ -260,9 +303,9 @@ function launchMenu_createGroup(self, groupIdx, div) {
 		const tab = opt.tabs[idx]
 		tab.contentHolder.style('margin', '10px')
 		if (groupType.type == 'info') {
-			if (!self.opts.variantFilter || !self.opts.variantFilter.terms)
-				throw 'looking for snvindel info fields but self.opts.variantFilter.terms[] missing'
-			for (const f of self.opts.variantFilter.terms) {
+			if (!self.state.config.variantFilter?.terms)
+				throw 'looking for snvindel info fields but self.state.config.variantFilter.terms[] missing'
+			for (const f of self.state.config.variantFilter.terms) {
 				if (f.type != 'integer' && f.type != 'float') continue // only allow numeric fields
 				tab.contentHolder
 					.append('div')

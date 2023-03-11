@@ -5,7 +5,6 @@ import { sayerror } from '#dom/error'
 import { dofetch3 } from '#common/dofetch'
 import { getNormalRoot } from '#filter/filter'
 import { first_genetrack_tolist } from '#common/1stGenetk'
-import { mayDisplayVariantFilter } from '#termsetting/handlers/snplocus'
 import { gbControlsInit, mayUpdateGroupTestMethodsIdx } from './genomeBrowser.controls'
 
 /*
@@ -28,6 +27,10 @@ this{}
 	state {}
 		config {}
 			filter{} // mass filter
+			variantFilter{}
+				filter{}
+				opts{ joinWith }
+				terms[]
 			geneSearchResult{}
 			snvindel {}
 				details {}
@@ -41,15 +44,12 @@ this{}
 					groupTestMethodsIdx
 				populations [{key,label}] // might not be part of state
 		termdbConfig{}
-	variantFilter {}
-		terms [] // list of INFO fields expressed as terms
 	blockInstance // exists when block has been launched; one block in each plot
 
 
 ////////////////// functions
 
 init
-	mayDisplayVariantFilter
 main
 	launchCustomMds3tk
 		preComputeData
@@ -85,47 +85,14 @@ class genomeBrowser {
 				.style('margin-right', '10px'),
 			loadingDiv: messageRow.append('span').text('Loading...'),
 			controlsDiv: holder.append('div').style('margin-left', '25px'),
-
-			// the whole holder has white-space=nowrap (likely from sjpp-output-sandbox-content)
-			// must set white-space=normal to let INFO filter wrap and not to extend beyond holder
-			variantFilterHolder: holder
-				.append('div')
-				.style('margin-left', '12px')
-				.style('white-space', 'normal'),
-
 			blockHolder: holder.append('div')
 		}
-
-		// to make sure api is accessible by mayDisplayVariantFilter
-		this.vocabApi = this.app.vocabApi
-
-		// cannot move variantFilter to component because the attribute has to be set on this instance
-		// to init and render variant filter; must do it first then render group controls,
-		// as group controls require this.variantFilter.terms[]
-		// this.variantFilter={} is always set
-		// if dataset does not use info filter, variantFilter.terms[] is missing
-		await mayDisplayVariantFilter(
-			this,
-			undefined, // indicate that filter is "not in state"
-			this.dom.variantFilterHolder,
-			async () => {
-				// run upon filter change to trigger state change
-				await this.app.dispatch({
-					type: 'plot_edit',
-					id: this.id,
-					config: { variantFilter: this.variantFilter.active }
-				})
-			},
-			true // hide filter body by default
-		)
-		// this.variantFilter{active} is added
 
 		this.components = {
 			gbControls: await gbControlsInit({
 				app: this.app,
 				id: this.id,
-				holder: this.dom.controlsDiv,
-				variantFilter: this.variantFilter
+				holder: this.dom.controlsDiv
 			})
 		}
 	}
@@ -222,7 +189,7 @@ class genomeBrowser {
 			stop: this.state.config.geneSearchResult.stop,
 			details: this.state.config.snvindel.details,
 			filter: this.state.filter,
-			variantFilter: this.variantFilter?.active
+			variantFilter: this.state.config.variantFilter?.filter
 		}
 
 		// using dofetch prevents the app from working with custom dataset; may change to vocab method later
@@ -319,13 +286,7 @@ export const componentInit = genomeBrowserInit
 export async function getPlotConfig(opts, app) {
 	try {
 		// request default queries config from dataset, and allows opts to override
-		const config = await app.vocabApi.getMds3queryDetails()
-		const c2 = copyMerge(config, opts)
-		if (c2.snvindel?.details) {
-			// 1st arg is a fake "self"
-			mayUpdateGroupTestMethodsIdx({ state: { config: c2 } }, c2.snvindel.details)
-		}
-		return c2
+		return await getDefaultConfig(app.vocabApi, opts)
 	} catch (e) {
 		throw `${e} [genomeBrowser getPlotConfig()]`
 	}
@@ -364,16 +325,7 @@ export function makeChartBtnMenu(holder, chartsInstance) {
 				// must do this as 'plot_prep' does not call getPlotConfig()
 				// request default queries config from dataset, and allows opts to override
 				// this config{} will become this.state.config{}
-				const config = await chartsInstance.app.vocabApi.getMds3queryDetails()
-				if (config.snvindel?.details) {
-					// 1st arg is a fake "self"
-					mayUpdateGroupTestMethodsIdx({ state: { config } }, config.snvindel.details)
-				}
-				// request default variant filter (against vcf INFO)
-				const vf = await chartsInstance.app.vocabApi.get_variantFilter()
-				if (vf?.filter) {
-					config.variantFilter = vf.filter
-				}
+				const config = await getDefaultConfig(chartsInstance.app.vocabApi)
 
 				config.chartType = 'genomeBrowser'
 				config.geneSearchResult = result
@@ -391,6 +343,23 @@ export function makeChartBtnMenu(holder, chartsInstance) {
 		arg.defaultCoord = chartsInstance.state.termdbConfig.queries.defaultCoord
 	}
 	const result = addGeneSearchbox(arg)
+}
+
+// get default config of the app from vocabApi
+async function getDefaultConfig(vocabApi, override) {
+	const config = await vocabApi.getMds3queryDetails()
+	// request default variant filter (against vcf INFO)
+	const vf = await vocabApi.get_variantFilter()
+	if (vf?.filter) {
+		config.variantFilter = vf
+	}
+	const c2 = override ? copyMerge(config, override) : config
+	if (c2.snvindel?.details) {
+		// test method may be inconsistent with group configuration (e.g. no fisher for INFO fields), update test method here
+		// 1st arg is a fake "self"
+		mayUpdateGroupTestMethodsIdx({ state: { config: c2 } }, c2.snvindel.details)
+	}
+	return c2
 }
 
 //////////////////////////////////////////////////
@@ -427,7 +396,7 @@ function furbishViewModeWithSnvindelComputeDetails(self, viewmode) {
 
 	// only 1 group
 	if (g1.type == 'info') {
-		const f = self.variantFilter.terms.find(i => i.id == g1.infoKey)
+		const f = self.state.config.variantFilter?.terms?.find(i => i.id == g1.infoKey)
 		viewmode.label = f?.name || g1.infoKey
 		viewmode.tooltipPrintValue = m => viewmode.label + ' = ' + m.info[g1.infoKey]
 		return
