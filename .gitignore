@@ -13,6 +13,7 @@ dist/*
 
 **/public/bin/*
 public/tmp/*
+**/public/cards
 public/data/*
 public/stage/*
 public/prod/*

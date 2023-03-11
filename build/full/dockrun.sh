@@ -3,7 +3,7 @@
 set -e
 
 
-if (($# < 4)); then
+if (($# < 3)); then
 	echo "Usage: $ ./dockrun.sh SRCDIR HOSTPORT IMAGE_NAME APPDIR [ CONTAINER_ID \"pp\" ]
 
 	- SRCDIR: the serverconfig.tpmasterdir as specified in your serverconfig.json
@@ -13,6 +13,13 @@ if (($# < 4)); then
 	- CONTAINER_ID: the container ID to assign to the running image instance
 	"
 	exit 1
+
+elif (($# == 3)); then
+	SRCDIR=$1
+	HOSTPORT=$2
+	IMAGE_NAME=$3
+	APPDIR=$(pwd)
+	CONTAINER_ID=pp
 
 elif (($# == 4)); then
 	SRCDIR=$1
@@ -35,12 +42,14 @@ set +e
 docker stop $CONTAINER_ID && docker rm $CONTAINER_ID
 set -e
 
+CONTAPP=/home/root/pp/app/active
 EXPOSED_PORT=3000
 echo "[$SRCDIR] [$HOSTPORT] [$IMAGE_NAME] [$APPDIR] [$CONTAINER_ID]"
 docker run -d \
 	--name $CONTAINER_ID \
 	--mount type=bind,source=$SRCDIR,target=/home/root/pp/tp,readonly \
-	--mount type=bind,source=$APPDIR,target=/home/root/pp/active,readonly \
+	--mount type=bind,source=$APPDIR/public,target=$CONTAPP/public \
+	--mount type=bind,source=$APPDIR/serverconfig.json,target=$CONTAPP/serverconfig.json \
 	--publish $HOSTPORT:$EXPOSED_PORT \
 	-e PP_MODE=container-prod \
 	-e PP_PORT=$EXPOSED_PORT \

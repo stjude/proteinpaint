@@ -49,21 +49,21 @@ if [[ ${ARCH} == "arm64" ]]; then ARCH="aarch64"; fi
 # Pack with Docker build
 #########################
 
-cd tmppack
+cd tmppack/build/full
+npm pack
+TAG="$(grep version package.json | sed 's/.*"version": "\(.*\)".*/\1/')"
+# !!! FOR TESTING ONLY --- REMOVE !!!
+cp ~/.npmrc .
+cd ../..
 
 # get the current tag
 #TAG="$(node -p "require('./package.json').version")"
-TAG="$(grep version package.json | sed 's/.*"version": "\(.*\)".*/\1/')"
-echo "building ppbase:$REV image, package version=$TAG"
 
+echo "building ppbase:$REV image, package version=$TAG"
 docker build . --file ./build/Dockerfile --target ppbase --tag ppbase:$REV --build-arg ARCH="$ARCH" $BUILDARGS
+
 echo "building pprust:$REV image, package version=$TAG"
 docker build . --file ./build/Dockerfile --target pprust --tag pprust:$REV --build-arg ARCH="$ARCH" $BUILDARGS
-echo "generating a build with minimal package jsons"
-docker build . --file ./build/Dockerfile --target ppminpkg --tag ppminpkg:$REV --build-arg ARCH="$ARCH" $BUILDARGS
-
-echo "building pppkg:$REV image, package version=$TAG, can copy /home/root/pp/tmppack/stjude-proteinpaint.tgz as a publishable package"
-docker build . --file ./build/full/Dockerfile --target pppkg --tag pppkg:$REV --build-arg IMGVER=$REV --build-arg PKGVER=$TAG --build-arg CROSSENV="$CROSSENV" $BUILDARGS
 
 echo "building ppfull:$REV image, package version=$TAG"
 docker build . --file ./build/full/Dockerfile --target ppapp --tag ppfull:$REV --build-arg IMGVER=$REV --build-arg PKGVER=$TAG --build-arg CROSSENV="$CROSSENV" $BUILDARGS
