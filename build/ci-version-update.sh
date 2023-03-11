@@ -181,5 +181,5 @@ git config --global user.name "PPTeam CI"
 git add --all
 git commit -m "$COMMITMSG"
 git tag $TAG
-git push origin release-test
+git push -u origin release-test
 git push origin $TAG
