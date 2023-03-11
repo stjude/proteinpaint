@@ -263,6 +263,12 @@ export function renderTable({
 			}
 		}
 	}
+	if (rows.length > 5)
+		div
+			.append('div')
+			.style('font-size', '0.5em')
+			.style('text-align', 'center')
+			.text(`${rows.length} rows`)
 	if (buttons) {
 		const footerDiv = div
 			.append('div')
