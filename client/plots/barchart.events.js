@@ -127,7 +127,7 @@ export default function getHandlers(self) {
 			},
 			click: self.opts.bar_click_override
 				? (event, d) => self.opts.bar_click_override(getTermValues(d, self))
-				: (event, d) => handle_click(event, self)
+				: (event, d) => handle_click(event, self, d)
 		},
 		colLabel: {
 			text: d => {
@@ -267,7 +267,7 @@ function getUpdatedQfromClick(d, term, isHidden = false) {
 	return q
 }
 
-function handle_click(event, self) {
+function handle_click(event, self, chart) {
 	const d = event.target.__data__ || event.target.parentNode.__data__
 	// bar label data only has {id,label},
 	// while bar data has all required data including seriesId
@@ -350,7 +350,7 @@ function handle_click(event, self) {
 	if (self.config.displaySampleIds) {
 		options.push({
 			label: 'List samples',
-			callback: () => listSamples(event, self, seriesLabel, dataLabel)
+			callback: () => listSamples(event, self, seriesLabel, dataLabel, chart)
 		})
 	}
 
@@ -403,9 +403,10 @@ function handle_click(event, self) {
 	self.app.tip.show(event.clientX, event.clientY)
 }
 
-function listSamples(event, self, seriesLabel, dataLabel) {
+function listSamples(event, self, seriesLabel, dataLabel, chart) {
 	const rows = []
 	for (const sample of self.samples) {
+		if (self.config.term.term.type == 'geneVariant' && sample.key0 !== chart.chartId) continue
 		if (sample.key1 == seriesLabel) {
 			const row = [{ value: sample.name }]
 			if (self.config.term2) {
