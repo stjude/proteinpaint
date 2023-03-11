@@ -409,9 +409,9 @@ function listSamples(event, self, seriesLabel, dataLabel) {
 	for (const sample of self.samples) {
 		if (sample.key1 == seriesLabel) {
 			const row = [{ value: sample.name }]
-			if (self.config.term2)
+			if (self.config.term2) {
 				if (sample.key2 == dataLabel) rows.push(row)
-				else rows.push(row)
+			} else rows.push(row)
 		}
 	}
 	const columns = [{ label: 'Sample' }]
