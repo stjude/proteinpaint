@@ -405,7 +405,6 @@ function handle_click(event, self) {
 
 function listSamples(event, self, seriesLabel, dataLabel) {
 	const rows = []
-	console.log(self.config)
 	for (const sample of self.samples) {
 		if (sample.key1 == seriesLabel) {
 			const row = [{ value: sample.name }]

@@ -114,7 +114,7 @@ export async function barchart_data(q, ds, tdb) {
 	if (data.samples) {
 		if (map.get(1)?.term?.type == 'geneVariant' || map.get(2)?.term?.type == 'geneVariant') {
 			//when term1 or term2 is a geneVariant term
-			processGeneVariantSamples(map, bins, data, samplesMap, ds.assayAvailability)
+			processGeneVariantSamples(map, bins, data, samplesMap, ds)
 		} else {
 			for (let i = 0; i <= 2; i++) {
 				const term = map.get(i) ? map.get(i).term : null
@@ -162,7 +162,7 @@ export async function barchart_data(q, ds, tdb) {
 
 //used by barchart_data
 //process gene variant data into samplesMap
-function processGeneVariantSamples(map, bins, data, samplesMap, assayAvailability) {
+function processGeneVariantSamples(map, bins, data, samplesMap, ds) {
 	bins.push([])
 	let customSampleID = 1
 	const term1 = map.get(1) ? map.get(1).term : null
@@ -176,16 +176,17 @@ function processGeneVariantSamples(map, bins, data, samplesMap, assayAvailabilit
 	else bins.push([])
 
 	for (const [sampleId, values] of Object.entries(data.samples)) {
+		const intSampleId = parseInt(sampleId)
 		if (map.get(1)?.term?.type == 'geneVariant') {
 			const processedValues = []
 			const value1 = values[id1]
 			for (const v1 of value1.values) {
 				if (processedValues.some(p => p.dt == v1.dt && (v1.origin ? v1.origin == p.origin : true))) continue
 				processedValues.push(v1)
-				const item = { sample: customSampleID }
+				const item = { sample: customSampleID, name: ds.sampleId2Name.get(intSampleId) }
 				item[`key1`] = mclass[v1.class].label
 				item[`val1`] = mclass[v1.class].label
-				const wesByOrigin = assayAvailability?.byDt?.['1']?.byOrigin && v1.dt == 1 //whether distinguising germline and somatic WES
+				const wesByOrigin = ds.Availability?.byDt?.['1']?.byOrigin && v1.dt == 1 //whether distinguising germline and somatic WES
 				item[`key0`] = `${wesByOrigin ? (v1.origin == 'G' ? 'Germline ' : 'Somatic ') : ''}${dt2label[v1.dt]}`
 				item[`val0`] = `${wesByOrigin ? (v1.origin == 'G' ? 'Germline ' : 'Somatic ') : ''}${dt2label[v1.dt]}`
 				item[`key2`] = values[id2] ? values[id2].key : ''
@@ -200,10 +201,10 @@ function processGeneVariantSamples(map, bins, data, samplesMap, assayAvailabilit
 			for (const v2 of value2.values) {
 				if (processedValues.some(p => p.dt == v2.dt && (v2.origin ? v2.origin == p.origin : true))) continue
 				processedValues.push(v2)
-				const item = { sample: customSampleID }
+				const item = { sample: customSampleID, name: ds.sampleId2Name.get(intSampleId) }
 				item[`key1`] = value1.key
 				item[`val1`] = value1.value
-				const wesByOrigin = assayAvailability?.byDt?.['1']?.byOrigin && v2.dt == 1 //whether distinguising germline and somatic WES
+				const wesByOrigin = ds.Availability?.byDt?.['1']?.byOrigin && v2.dt == 1 //whether distinguising germline and somatic WES
 				item[`key0`] = `${wesByOrigin ? (v2.origin == 'G' ? 'Germline ' : 'Somatic ') : ''}${dt2label[v2.dt]}`
 				item[`val0`] = `${wesByOrigin ? (v2.origin == 'G' ? 'Germline ' : 'Somatic ') : ''}${dt2label[v2.dt]}`
 				item[`key2`] = mclass[v2.class].label

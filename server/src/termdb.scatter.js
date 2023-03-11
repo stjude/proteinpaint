@@ -241,7 +241,7 @@ async function colorAndShapeSamples(refSamples, cohortSamples, data, q) {
 
 	const colorLegend = q.colorTW
 		? order(colorMap, q.colorTW, data.refs)
-		: [['Default', { sampleCount: cohortSamples.length, color: 'green' }]]
+		: [['Default', { sampleCount: cohortSamples.length, color: 'blue' }]]
 	colorLegend.push([
 		'Ref',
 		{
