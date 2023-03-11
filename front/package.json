@@ -1,6 +1,6 @@
 {
 	"name": "@stjude/proteinpaint-front",
-	"version": "2.11.1",
+	"version": "2.11.2-0",
 	"main": "src/index.js",
 	"bin": "init.js",
 	"scripts": {
@@ -11,7 +11,7 @@
 		"test:integration": "echo 'TODO: front integration tests'"
 	},
 	"devDependencies": {
-		"@stjude/proteinpaint-client": "2.11.1",
+		"@stjude/proteinpaint-client": "2.11.2-0",
 		"webpack": "^5.7.3",
 		"webpack-cli": "^4.9.2",
 		"webpack-node-externals": "^3.0.0",
@@ -21,7 +21,7 @@
 		"public/index.html",
 		"init.js",
 		"bundles.tgz",
-    "LICENSE/*"
+		"LICENSE/*"
 	],
 	"license": "GPL-3.0-only OR SEE LICENSE IN LICENSE/License_Custom.txt",
 	"repository": {

@@ -1,6 +1,11 @@
 # Change Log
 
 All notable changes to this project will be documented in this file. 
+## 2.11.2-0
+
+- added license
+- simplified file requests
+ 
 ## 2.11.1
 
 - copy the gdc.hg38.js file from sjpp/dataset for the gdc Docker build

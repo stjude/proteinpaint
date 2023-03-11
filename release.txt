@@ -1,2 +1,0 @@
-- added license
-- simplified file requests
