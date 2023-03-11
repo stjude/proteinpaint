@@ -93,3 +93,39 @@ RUN set -eux; \
     && rm -rf /var/lib/apt/lists/
 
 WORKDIR /home/root/pp/app
+
+
+#################
+# Package Install
+#################
+
+# target for the full (backend + frontend) SJ package with compiled rust binaries
+FROM pprust AS pppkg
+ARG PKGVER=2.11.0
+
+WORKDIR /home/root/pp
+COPY ./build/full/stjude-proteinpaint-full-${PKGVER}.tgz .
+# RUN npm pack @stjude/proteinpaint-full # TODO: pull the tarball from a registry, instead of COPY
+RUN tar -xzf stjude-proteinpaint-full-${PKGVER}.tgz -C app && mv app/package app/active 
+
+WORKDIR /home/root/pp/app/active
+# !!! NOTE: after open-sourcing, will only need the @stjude registry URL, no token required !!!
+COPY ./build/full/.npmrc .
+RUN npm install && rm .npmrc
+
+
+#################
+# App build
+#################
+
+# target for the full (backend + frontend) SJ package with compiled rust binaries
+FROM ppbase AS ppapp
+
+WORKDIR /home/root/pp/app
+# the copied layer does not have the .npmrc ???
+COPY --from=pppkg /home/root/pp/app/active /home/root/pp/app/active
+
+WORKDIR /home/root/pp/app/active
+EXPOSE 3000
+CMD ["sh", "-c", "node app.js"]
+# CMD ["sleep", "3600"]
