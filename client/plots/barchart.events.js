@@ -405,10 +405,13 @@ function handle_click(event, self) {
 
 function listSamples(event, self, seriesLabel, dataLabel) {
 	const rows = []
+	console.log(self.config)
 	for (const sample of self.samples) {
-		if (sample.key1 == seriesLabel && (sample.key2 == dataLabel || !self.config.term2)) {
+		if (sample.key1 == seriesLabel) {
 			const row = [{ value: sample.name }]
-			rows.push(row)
+			if (self.config.term2)
+				if (sample.key2 == dataLabel) rows.push(row)
+				else rows.push(row)
 		}
 	}
 	const columns = [{ label: 'Sample' }]
