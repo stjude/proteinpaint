@@ -12,6 +12,10 @@ try {
 		console.log(`making a public directory at ${CWD}`)
 		fs.mkdirSync(`${CWD}/public`)
 	}
+	if (!fs.existsSync(`${CWD}/public/index.html`)) {
+		console.log(`creating a public/index.html file`)
+		fs.copyFileSync(path.join(__dirname, './public/index.html'), `${CWD}/public/index.html`)
+	}
 	if (fs.existsSync(`${CWD}/public/bin`)) {
 		console.log(`removing the old public/bin at ${CWD}`)
 		// TODO: node 12 in pp-prt does not support rmSync,

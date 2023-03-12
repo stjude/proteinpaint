@@ -78,12 +78,11 @@ tar -C tmppack/ -xf $FILE client
 tar -C tmppack/ -xf $FILE front
 tar -C tmppack/ -xf $FILE rust
 tar -C tmppack/ -xvf $FILE $TARGETDIR
-if [[ "$TARGETDIR" == "full" ]]; then
+if [[ "$TARGETDIR" == "build/full" ]]; then
 	# the full build requires the server build
-	tar -C tmppack/ -xvf $FILE server
+	tar -C tmppack/ -xvf $FILE build/server
 fi
 tar -C tmppack/ -xvf $FILE build/Dockerfile
-tar -C tmppack/ -xvf $FILE build/compile-rust.sh
 tar -C tmppack/ -xvf $FILE build/minpkgjson.js
 tar -C tmppack/ -xvf $FILE public/index.html
 tar -C tmppack/ -xvf $FILE utils/install.pp.js
