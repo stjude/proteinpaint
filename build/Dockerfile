@@ -2,7 +2,7 @@
 # different registry by setting the registry arg at build time.
 ARG registry=docker.io/library
 
-FROM ${registry}/node:16.17.1-buster-slim AS ppbase
+FROM ${registry}/node:16-buster-slim AS ppbase
 ARG ARCH='x86_64'
 ENV ARCH=$ARCH
 
@@ -98,23 +98,23 @@ WORKDIR /home/root/pp/app
 # Server-only install
 ######################
 
-# target for the full (backend + frontend) SJ package with compiled rust binaries
+# target for the backend-only SJ package with compiled rust binaries
 FROM pprust AS ppserverdeps
-ARG PKGVER=2.11.0
 
 WORKDIR /home/root/pp/app 
 RUN mkdir active
 # !!! NOTE: after open-sourcing, will only need the @stjude registry URL, no token required !!!
 WORKDIR /home/root/pp/app/active
-COPY ./build/full/.npmrc .
-RUN npm install @stjude/proteinpaint-server@${PKGVER} && rm .npmrc
+COPY ./build/server/.npmrc ./
+ARG SERVERPKGVER
+RUN npm install @stjude/proteinpaint-server@${SERVERPKGVER} && rm .npmrc
 
 
 #####################
 # Server-only app
 ######################
 
-# target for the full (backend + frontend) SJ package with compiled rust binaries
+# target for the backend-only SJ server app
 FROM ppbase AS ppserver
 
 WORKDIR /home/root/pp/app 
@@ -122,9 +122,9 @@ WORKDIR /home/root/pp/app
 COPY --from=ppserverdeps /home/root/pp/app/active /home/root/pp/app/active
 
 WORKDIR /home/root/pp/app/active
-COPY ./build/full/server.js .
+COPY ./build/server/app.js .
 EXPOSE 3000
-CMD ["sh", "-c", "node server.js"]
+CMD ["sh", "-c", "node app.js"]
 
 
 #################
@@ -133,25 +133,22 @@ CMD ["sh", "-c", "node server.js"]
 
 # target for the full (backend + frontend) SJ package with compiled rust binaries
 FROM pprust AS ppfulldeps
-ARG PKGVER=2.11.0
 
-WORKDIR /home/root/pp
-COPY ./build/full/stjude-proteinpaint-full-${PKGVER}.tgz .
-# RUN npm pack @stjude/proteinpaint-full # TODO: pull the tarball from a registry, instead of COPY
-RUN tar -xzf stjude-proteinpaint-full-${PKGVER}.tgz -C app && mv app/package app/active 
+WORKDIR /home/root/pp/app
+COPY --from=ppserver /home/root/pp/app/active /home/root/pp/app/active
 
 WORKDIR /home/root/pp/app/active
-COPY --from=ppserver /home/root/pp/app/active/node_modules /home/root/pp/app/active/node_modules
 # !!! NOTE: after open-sourcing, will only need the @stjude registry URL, no token required !!!
 COPY ./build/full/.npmrc .
-RUN npm install && rm .npmrc
+ARG FRONTPKGVER
+RUN npm install @stjude/proteinpaint-front@${FRONTPKGVER} && rm .npmrc
 
 
 ############
 # Full app
 ############
 
-# target for the full (backend + frontend) SJ package with compiled rust binaries
+# target for the full (backend + frontend) SJ app
 FROM ppbase AS ppapp
 
 WORKDIR /home/root/pp/app
@@ -159,6 +156,7 @@ WORKDIR /home/root/pp/app
 COPY --from=ppfulldeps /home/root/pp/app/active /home/root/pp/app/active
 
 WORKDIR /home/root/pp/app/active
+COPY ./build/full/app.js .
 EXPOSE 3000
 CMD ["sh", "-c", "node app.js"]
 # CMD ["sleep", "3600"]

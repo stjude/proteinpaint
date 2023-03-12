@@ -650,7 +650,7 @@ async function handle_genomes(req, res) {
 		dsAuth: authApi.getDsAuth(req),
 		commonOverrides: serverconfig.commonOverrides,
 		targetPortal: serverconfig.targetPortal, //sending target portal to the client
-		cardsPath: serverconfig.cards.path
+		cardsPath: serverconfig.cards?.path
 	})
 }
 

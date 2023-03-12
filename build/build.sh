@@ -7,11 +7,11 @@ set -euxo pipefail
 ###############
 
 USAGE="Usage:
-	./build/full/build.sh [-r] [-b] [-c]
+	./build/build.sh [-r] [-b] [-c]
 
 	-r REV: git revision to checkout, if empty will use the current code state
 	-b BUILDARGS: build variables to pass to the Dockerfile that are not persisted to the built image
-	-c CROSSENV: cross-env options that used prior to npm install
+	-c CROSSENV: cross-env options that are used prior to npm install
 "
 REV=latest
 BUILDARGS=""
@@ -37,27 +37,32 @@ while getopts "r:b:c:h:x:" opt; do
   	;;
 	esac
 done
+
 #########################
 # EXTRACT REQUIRED FILES
 #########################
 
-./build/extract.sh -r "$REV" -t full
+./build/extract.sh -r "$REV"
 REV=$(cat tmppack/rev.txt)
 ARCH=$( uname -m )
 if [[ ${ARCH} == "arm64" ]]; then ARCH="aarch64"; fi
+
 #########################
-# Pack with Docker build
+# Docker build
 #########################
 
 cd tmppack/build/full
-npm pack
-TAG="$(grep version package.json | sed 's/.*"version": "\(.*\)".*/\1/')"
-# !!! FOR TESTING ONLY --- REMOVE !!!
+# !!! FOR TESTING ONLY --- REMOVE .npmrc BEFORE PUSHING !!!
+# !!! once PP is open-sourced, the .npmrc should only have the registry URL for the @stjude namespace !!!
+cp ~/.npmrc .
+cd ../server
 cp ~/.npmrc .
 cd ../..
 
 # get the current tag
-#TAG="$(node -p "require('./package.json').version")"
+TAG="$(node -p "require('./package.json').version")"
+SERVERPKGVER="$(node -p "require('./server/package.json').version")"
+FRONTPKGVER="$(node -p "require('./front/package.json').version")"
 
 echo "building ppbase:$REV image, package version=$TAG"
 docker build . --file ./build/Dockerfile --target ppbase --tag ppbase:$REV --build-arg ARCH="$ARCH" $BUILDARGS
@@ -66,7 +71,7 @@ echo "building pprust:$REV image, package version=$TAG"
 docker build . --file ./build/Dockerfile --target pprust --tag pprust:$REV --build-arg ARCH="$ARCH" $BUILDARGS
 
 echo "building ppserver:$REV image, package version=$TAG"
-docker build . --file ./build/Dockerfile --target ppserver --tag ppserver:$REV --build-arg IMGVER=$REV --build-arg PKGVER=$TAG --build-arg CROSSENV="$CROSSENV" $BUILDARGS
+docker build . --file ./build/Dockerfile --target ppserver --tag ppserver:$REV --build-arg IMGVER=$REV --build-arg SERVERPKGVER=$SERVERPKGVER --build-arg CROSSENV="$CROSSENV" $BUILDARGS
 
 echo "building ppfull:$REV image, package version=$TAG"
-docker build . --file ./build/Dockerfile --target ppapp --tag ppfull:$REV --build-arg IMGVER=$REV --build-arg PKGVER=$TAG --build-arg CROSSENV="$CROSSENV" $BUILDARGS
+docker build . --file ./build/Dockerfile --target ppapp --tag ppfull:$REV --build-arg IMGVER=$REV --build-arg SERVERPKGVER=$SERVERPKGVER --build-arg FRONTPKGVER=$FRONTPKGVER --build-arg CROSSENV="$CROSSENV" $BUILDARGS
