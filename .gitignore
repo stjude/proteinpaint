@@ -54,7 +54,6 @@ pixman-*/*
 !/server/test/serverconfig.json
 **/server.js*
 !client/rx/server.js
-!build/full/server.js
 setup/*gz*
 setup/*
 **/tmpbuild*/*

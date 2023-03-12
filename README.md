@@ -57,13 +57,11 @@ See the [documentation](https://docs.google.com/document/d/13efooFofEk5a6cwVXD_C
 
 ## Build
 
+
+### Package Release
+
 The build and release steps can be triggered via Github Actions using the Create Release workflow.
 
-## Package Release
+### Docker Build
 
-Follow the [build instructions](https://docs.google.com/document/d/13gUdU9UrHFkdspcQgc6ToRZJsrdFM4LCwCg7g1SQc4Q/edit?usp=sharing).
-
-### Use ProteinPaint as a module
-
-Follow the [example project setup](https://github.com/stjude/pp-dist).
-
+See [build/full/README.md](https://github.com/stjude/proteinpaint/tree/master/build/full).
