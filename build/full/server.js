@@ -1,11 +1,11 @@
 const fs = require('fs')
-const spawnSync = require('child_process').spawnSync
 
 /*if (!fs.existsSync('./serverconfig.json')) {
 	throw `missing serverconfig.json`
 }*/
 
 const serverconfig = require('./serverconfig.json')
+
 if (!serverconfig.genomes) {
 	serverconfig.genomes =  [
     {
@@ -33,10 +33,7 @@ if (!serverconfig.genomes) {
   ]
 }
 
-serverconfig.backend_only = false
+serverconfig.backend_only = true
 fs.writeFileSync('./serverconfig.json', JSON.stringify(serverconfig, null, '   '), {charset: 'utf8'})
-
-console.log(`generating public/bin for ${serverconfig.url}`)
-spawnSync('npx', ['proteinpaint-front', serverconfig.url],  { encoding: 'utf-8' })
 
 require('@stjude/proteinpaint-server')
