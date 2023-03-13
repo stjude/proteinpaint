@@ -127,7 +127,10 @@ function setRenderers(self) {
 	// optional _holder, for example when called by filter.js
 	self.showMenu = _holder => {
 		const holder = _holder ? _holder : self.dom.tip
-		addExcludeCheckbox(holder, self.tvs, self)
+		if (self.tvs.term.type !== 'geneVariant') {
+			// do not show the Exclude checkbox for geneVaraint term
+			addExcludeCheckbox(holder, self.tvs, self)
+		}
 		self.handler.fillMenu(self, holder, self.tvs)
 	}
 

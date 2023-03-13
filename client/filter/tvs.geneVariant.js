@@ -72,7 +72,8 @@ async function fillMenu(self, _div, tvs) {
             */
 			const newTvs = {
 				term: self.tvs.term,
-				values
+				values,
+				isnot: tvs.isnot
 			}
 			self.opts.callback(newTvs)
 		})

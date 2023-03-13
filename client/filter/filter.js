@@ -1149,6 +1149,7 @@ function setInteractivity(self) {
 				value.mclassLst = value.mclassExcludeLst
 				value.mclassExcludeLst = tmp
 			}
+			item.tvs.isnot = !item.tvs.isnot
 		} else item.tvs.isnot = !item.tvs.isnot
 		self.refresh(filterUiRoot)
 	}

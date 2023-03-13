@@ -186,7 +186,7 @@ function processGeneVariantSamples(map, bins, data, samplesMap, ds) {
 				const item = { sample: customSampleID, name: ds.sampleId2Name.get(intSampleId) }
 				item[`key1`] = mclass[v1.class].label
 				item[`val1`] = mclass[v1.class].label
-				const wesByOrigin = ds.Availability?.byDt?.['1']?.byOrigin && v1.dt == 1 //whether distinguising germline and somatic WES
+				const wesByOrigin = ds.assayAvailability?.byDt?.['1']?.byOrigin && v1.dt == 1 //whether distinguising germline and somatic WES
 				item[`key0`] = `${wesByOrigin ? (v1.origin == 'G' ? 'Germline ' : 'Somatic ') : ''}${dt2label[v1.dt]}`
 				item[`val0`] = `${wesByOrigin ? (v1.origin == 'G' ? 'Germline ' : 'Somatic ') : ''}${dt2label[v1.dt]}`
 				item[`key2`] = values[id2] ? values[id2].key : ''
@@ -204,7 +204,7 @@ function processGeneVariantSamples(map, bins, data, samplesMap, ds) {
 				const item = { sample: customSampleID, name: ds.sampleId2Name.get(intSampleId) }
 				item[`key1`] = value1.key
 				item[`val1`] = value1.value
-				const wesByOrigin = ds.Availability?.byDt?.['1']?.byOrigin && v2.dt == 1 //whether distinguising germline and somatic WES
+				const wesByOrigin = ds.assayAvailability?.byDt?.['1']?.byOrigin && v2.dt == 1 //whether distinguising germline and somatic WES
 				item[`key0`] = `${wesByOrigin ? (v2.origin == 'G' ? 'Germline ' : 'Somatic ') : ''}${dt2label[v2.dt]}`
 				item[`val0`] = `${wesByOrigin ? (v2.origin == 'G' ? 'Germline ' : 'Somatic ') : ''}${dt2label[v2.dt]}`
 				item[`key2`] = mclass[v2.class].label
