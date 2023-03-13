@@ -1,2 +1,0 @@
-- allow listing samples from rendered charts for authorized users
-- improved gene variant filters
