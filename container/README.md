@@ -1,14 +1,21 @@
 # Proteinpaint Container
 
 This distribution creates a Docker image with all of the system requirements
-for running the Proteinpaint application.
+for running the Proteinpaint application. 
 
-## System Requirements
+NOTE: The reference data files will still need to be downloaded.
 
-- [npm](https://docs.npmjs.com/downloading-and-installing-node-js-and-npm)
-- [Docker Engine or Desktop](https://www.docker.com/)
+**TODO**:
+- automate or simplify reference data download
+- ideal???: make a GDC-like API for PP reference data, so that there will not be a need 
+to download really large reference data files. Only when there are performance and
+reliability concerns will local copies of reference data be desirable.
 
 ## Installation
+
+Requirements:
+- [npm](https://docs.npmjs.com/downloading-and-installing-node-js-and-npm)
+- [Docker Engine or Desktop](https://www.docker.com/)
 
 ```bash
 echo "@stjude:registry=https://npm.pkg.github.com/" > .npmrc
@@ -20,6 +27,9 @@ npm install @stjude/proteinpaint-container
 # for global installation from any folder
 npm install -g @stjude/proteinpaint-container
 ```
+
+NOTE: The installation will trigger a Docker image build, which may take
+approximately 10 minutes.
 
 To pull updates:
 ```bash
@@ -50,3 +60,6 @@ To run only the Proteinpaint server data api, without a static file server:
 ```bash
 npm proteinpaint-container server
 ```
+
+To run a fully customized server, follow the docker run commands in `run.sh`.
+
