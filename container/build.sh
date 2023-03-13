@@ -47,7 +47,7 @@ if [[ ${ARCH} == "arm64" ]]; then ARCH="aarch64"; fi
 cp ~/.npmrc .
 
 # assumes that the branch head is currently checked out
-REV=$(git rev-parse --short HEAD)
+REV=latest # $(git rev-parse --short HEAD)
 TAG="$(node -p "require('./package.json').version")"
 SERVERPKGVER="$(node -p "require('./package.json').containerDeps.server")"
 FRONTPKGVER="$(node -p "require('./package.json').containerDeps.front")"
