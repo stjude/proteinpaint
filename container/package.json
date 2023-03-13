@@ -1,9 +1,10 @@
 {
 	"name": "@stjude/proteinpaint-container",
 	"version": "2.11.2-0",
-	"bin": "app.sh",
+	"bin": "app.js",
 	"scripts": {
-		"build": "./build.sh",
+		"dev": "./pack.sh && ./build.sh",
+		"build": "rm -rf tmppack && ./build.sh",
 		"postinstall": "./build.sh"
 	},
 	"containerDeps": {

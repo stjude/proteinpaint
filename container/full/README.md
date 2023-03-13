@@ -6,7 +6,7 @@ NOTE: You must have a [Docker Engine or Desktop](https://www.docker.com/) to bui
 from a Dockerfile source code. 
 
 ```bash
-cd proteinpaint
+cd proteinpaint/container
 
 ./build.sh
 

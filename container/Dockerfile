@@ -57,7 +57,7 @@ RUN apt-get update && apt-get install -y r-base -y libargtable2-dev \
 
 RUN mkdir -p /home/root/pp && cd /home/root/pp && mkdir app && mkdir tp && mkdir cache && mkdir tools
 
-RUN if [ "$ARCH" = "x86_64" ]; then \ 
+RUN if [ "$ARCH" = "x86_64" ]; then \
         wget https://pecan.stjude.cloud/static/pp-support/linux/straw -P /home/root/pp/tools/ && \
         wget -O /usr/local/bin/clustalo http://www.clustal.org/omega/clustalo-1.2.4-Ubuntu-x86_64 && chmod 755 /usr/local/bin/clustalo && \
         wget http://hgdownload.soe.ucsc.edu/admin/exe/linux.$ARCH/bigWigSummary -P /home/root/pp/tools/ && \
@@ -101,14 +101,21 @@ WORKDIR /home/root/pp/app
 # target for the backend-only SJ package with compiled rust binaries
 FROM pprust AS ppserverdeps
 
+WORKDIR /home/root/pp
+COPY tmppack ./tmppack
+
 WORKDIR /home/root/pp/app 
 RUN mkdir active
 # !!! NOTE: after open-sourcing, will only need the @stjude registry URL, no token required !!!
 WORKDIR /home/root/pp/app/active
-COPY ./.npmrc ./
+COPY .npmrc ./
 ARG SERVERPKGVER
-RUN npm install @stjude/proteinpaint-server@${SERVERPKGVER} && rm .npmrc
-
+RUN if [ -f /home/root/pp/tmppack/stjude-proteinpaint-server-${SERVERPKGVER}.tgz ]; then \
+      npm install /home/root/pp/tmppack/stjude-proteinpaint-server-${SERVERPKGVER}.tgz; \
+    else \
+      npm install @stjude/proteinpaint-server@${SERVERPKGVER}; \
+    fi; \
+    rm .npmrc
 
 #####################
 # Server-only app
@@ -134,6 +141,8 @@ CMD ["sh", "-c", "node app.js"]
 # target for the full (backend + frontend) SJ package with compiled rust binaries
 FROM pprust AS ppfulldeps
 
+WORKDIR /home/root/pp
+COPY tmppack ./tmppack
 WORKDIR /home/root/pp/app
 COPY --from=ppserver /home/root/pp/app/active /home/root/pp/app/active
 
@@ -141,8 +150,12 @@ WORKDIR /home/root/pp/app/active
 # !!! NOTE: after open-sourcing, will only need the @stjude registry URL, no token required !!!
 COPY ./.npmrc .
 ARG FRONTPKGVER
-RUN npm install @stjude/proteinpaint-front@${FRONTPKGVER} && rm .npmrc
-
+RUN if [ -f /home/root/pp/tmppack/stjude-proteinpaint-front-${FRONTPKGVER}.tgz ]; then \
+      npm install /home/root/pp/tmppack/stjude-proteinpaint-front-${FRONTPKGVER}.tgz; \
+    else \
+      npm install @stjude/proteinpaint-front@${FRONTPKGVER}; \
+    fi; \
+    rm .npmrc
 
 ############
 # Full app

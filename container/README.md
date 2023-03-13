@@ -63,3 +63,15 @@ npm proteinpaint-container server
 
 To run a fully customized server, follow the docker run commands in `run.sh`.
 
+## Development
+
+The Dockerfile may optionally use the various proteinpaint-* as packed from source code.
+
+```bash
+# will pack workspaces and replace each package.json's dependency versions
+# with the tarball location as copied into the Docker build
+./pack.sh
+
+# will run docker build
+./build.sh
+```
