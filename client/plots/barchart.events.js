@@ -427,7 +427,7 @@ function listSamples(event, self, seriesLabel, dataLabel, chart) {
 		resize: true
 	})
 
-	menu.show(event.clientX, event.clientY)
+	menu.show(event.clientX, event.clientY, false)
 
 	function isLabel(key, term, label) {
 		const value = term.type == 'categorical' ? term.values[key].label : key
