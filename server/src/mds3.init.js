@@ -384,13 +384,13 @@ async function call_barchart_data(twLst, q, combination, ds) {
 			}
 			const out = await barchart_data(_q, ds, ds.cohort.termdb)
 
-			if (!out.charts[0]) {
+			if (!out?.data?.charts?.[0]) {
 				// no data
 				continue
 			}
 
 			const lst = []
-			for (const s of out.charts[0].serieses) {
+			for (const s of out.data.charts[0].serieses) {
 				lst.push([s.seriesId, s.total])
 			}
 			termid2values.set(tw.id, lst)
