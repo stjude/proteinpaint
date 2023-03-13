@@ -105,7 +105,7 @@ WORKDIR /home/root/pp/app
 RUN mkdir active
 # !!! NOTE: after open-sourcing, will only need the @stjude registry URL, no token required !!!
 WORKDIR /home/root/pp/app/active
-COPY ./build/server/.npmrc ./
+COPY ./.npmrc ./
 ARG SERVERPKGVER
 RUN npm install @stjude/proteinpaint-server@${SERVERPKGVER} && rm .npmrc
 
@@ -122,7 +122,7 @@ WORKDIR /home/root/pp/app
 COPY --from=ppserverdeps /home/root/pp/app/active /home/root/pp/app/active
 
 WORKDIR /home/root/pp/app/active
-COPY ./build/server/app.js .
+COPY ./server/app.js .
 EXPOSE 3000
 CMD ["sh", "-c", "node app.js"]
 
@@ -139,7 +139,7 @@ COPY --from=ppserver /home/root/pp/app/active /home/root/pp/app/active
 
 WORKDIR /home/root/pp/app/active
 # !!! NOTE: after open-sourcing, will only need the @stjude registry URL, no token required !!!
-COPY ./build/full/.npmrc .
+COPY ./.npmrc .
 ARG FRONTPKGVER
 RUN npm install @stjude/proteinpaint-front@${FRONTPKGVER} && rm .npmrc
 
@@ -156,7 +156,7 @@ WORKDIR /home/root/pp/app
 COPY --from=ppfulldeps /home/root/pp/app/active /home/root/pp/app/active
 
 WORKDIR /home/root/pp/app/active
-COPY ./build/full/app.js .
+COPY ./full/app.js .
 EXPOSE 3000
 CMD ["sh", "-c", "node app.js"]
 # CMD ["sleep", "3600"]
