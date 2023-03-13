@@ -7,23 +7,23 @@ NOTE: You must have a [Docker Engine or Desktop](https://www.docker.com/) to bui
 from a Dockerfile source code. 
 
 ```bash
-cd proteinpaint
+cd proteinpaint/container
 
-./build/build.sh
+./build.sh
 
-# example usage, where build/server has
+# to test, make sure that proteinpaint/container/server has
 #
-# - a serverconfig.json, which has a "url": "http://localhost:3456" entry 
-#   and where the port 3456 can be set to any valid, non-conflicting port value
+# - a serverconfig.json, which has a "url": "http://localhost:[PORT]" entry 
+#   (default PORT=3456, can be set to any valid, non-conflicting numeric port value)
 #
 # - a dataset folder, containing js files of any serverconfig.genomes.datasets[] entry
 #   that is not already included in proteinpaint/server/dataset 
 
-cd build/server
+cd server
 ./run.sh
 
-# open the browser to `http://localhost:3456` or whatever port value you used in the serverconfig.url entry
-# example routes to check
+# open the browser to your serverconfig.url entry
+# example routes to check, assuming serverconfig.url=http://localhost:3456
 # http://localhost:3456/healthcheck
 # http://localhost:3456/genomes
 ```

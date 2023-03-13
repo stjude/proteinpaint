@@ -9,7 +9,8 @@
     "rust",
     "server",
     "client",
-    "front"
+    "front",
+    "container"
   ],
   "scripts": {
     "reset": "npm install",

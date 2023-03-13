@@ -1,0 +1,26 @@
+{
+	"name": "@stjude/proteinpaint-container",
+	"version": "2.11.2-0",
+	"bin": "app.sh",
+	"scripts": {
+		"build": "./build.sh",
+		"postinstall": "./build.sh"
+	},
+	"containerDeps": {
+		"server": "2.11.2-0",
+		"front": "2.11.2-0"
+	},
+	"files": [
+		"build.sh",
+		"Dockerfile",
+		"full",
+		"server",
+		"run.sh",
+		"LICENSE/*"
+	],
+	"license": "GPL-3.0-only OR SEE LICENSE IN LICENSE/License_Custom.txt",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/stjude/proteinpaint"
+  }
+}
