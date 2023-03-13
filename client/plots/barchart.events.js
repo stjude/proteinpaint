@@ -404,16 +404,19 @@ function handle_click(event, self, chart) {
 }
 
 function listSamples(event, self, seriesLabel, dataLabel, chart) {
-	const rows = []
+	const names = new Set()
 	for (const sample of self.samples) {
-		if (self.config.term0 && isLabel(sample.key0, self.config.term0.term, chart.chartId)) continue
+		if (self.config.term0 && !isLabel(sample.key0, self.config.term0.term, chart.chartId)) continue
+		if (self.config.term2?.term.type == 'geneVariant' && sample.key0 !== chart.chartId) continue
 		if (isLabel(sample.key1, self.config.term.term, seriesLabel)) {
-			const row = [{ value: sample.name }]
+			const name = sample.name
 			if (self.config.term2) {
-				if (isLabel(sample.key2, self.config.term2.term, dataLabel)) rows.push(row)
-			} else rows.push(row)
+				if (isLabel(sample.key2, self.config.term2.term, dataLabel)) names.add(name)
+			} else names.add(name)
 		}
 	}
+	const rows = []
+	for (const name of names) rows.push([{ value: name }])
 	const columns = [{ label: 'Sample' }]
 	const menu = new Menu({ padding: '5px' })
 	const div = menu.d.append('div')
