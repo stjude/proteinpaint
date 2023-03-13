@@ -406,11 +406,11 @@ function handle_click(event, self, chart) {
 function listSamples(event, self, seriesLabel, dataLabel, chart) {
 	const rows = []
 	for (const sample of self.samples) {
-		if (self.config.term.term.type == 'geneVariant' && sample.key0 !== chart.chartId) continue
-		if (sample.key1 == seriesLabel) {
+		if (self.config.term0 && isLabel(sample.key0, self.config.term0.term, chart.chartId)) continue
+		if (isLabel(sample.key1, self.config.term.term, seriesLabel)) {
 			const row = [{ value: sample.name }]
 			if (self.config.term2) {
-				if (sample.key2 == dataLabel) rows.push(row)
+				if (isLabel(sample.key2, self.config.term2.term, dataLabel)) rows.push(row)
 			} else rows.push(row)
 		}
 	}
@@ -428,6 +428,11 @@ function listSamples(event, self, seriesLabel, dataLabel, chart) {
 	})
 
 	menu.show(event.clientX, event.clientY)
+
+	function isLabel(key, term, label) {
+		const value = term.type == 'categorical' ? term.values[key].label : key
+		return label == value
+	}
 }
 
 function menuoption_add_filter(self, tvslst) {
