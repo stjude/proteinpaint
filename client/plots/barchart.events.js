@@ -407,7 +407,11 @@ function listSamples(event, self, seriesLabel, dataLabel, chart) {
 	const names = new Set()
 	for (const sample of self.samples) {
 		if (self.config.term0 && !isLabel(sample.key0, self.config.term0.term, chart.chartId)) continue
-		if (self.config.term2?.term.type == 'geneVariant' && sample.key0 !== chart.chartId) continue
+		if (
+			self.config.term2?.term.type == 'geneVariant' ||
+			(self.config.term.term.type == 'geneVariant' && sample.key0 !== chart.chartId)
+		)
+			continue
 		if (isLabel(sample.key1, self.config.term.term, seriesLabel)) {
 			const name = sample.name
 			if (self.config.term2) {
