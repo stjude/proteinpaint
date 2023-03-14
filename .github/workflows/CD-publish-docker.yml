@@ -6,15 +6,6 @@ on:
       build_secret:
         type: string
         description: Build secret
-      pp_version:
-        type: choice
-        description: Latest or specific PP version
-        options:
-          - latest
-          - specific
-      specific_pp_version:
-        type: string
-        description: Specific PP version to deploy
 
 jobs:
   build:
@@ -35,3 +26,29 @@ jobs:
           required-permission: write
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: actions/checkout@v3
+
+      - name: Login to GitHub Container Registry
+        run: |
+          echo $CR_PAT | docker login ghcr.io -u stjude --password-stdin
+        env:
+          CR_PAT: ${{ secrets.PAT }}
+
+      # Setup .npmrc file to publish to GitHub Packages
+      - uses: actions/setup-node@v3
+        with:
+          node-version: '16'
+          registry-url: 'https://npm.pkg.github.com'
+          scope: '@stjude'
+      - run: |
+          npm ci
+          cd container
+          ./build.sh -m "ghcr.io/stjude/" -t ${{ secrets.GITHUB_TOKEN }}
+          TAG="$(node -p "require('./package.json').version")"
+          docker push ghcr.io/stjude/ppserver:$TAG
+          docker push ghcr.io/stjude/ppfull:$TAG
+          docker push ghcr.io/stjude/ppserver:latest
+          docker push ghcr.io/stjude/ppfull:latest
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

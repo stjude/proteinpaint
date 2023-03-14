@@ -124,6 +124,8 @@ RUN if [ -f /home/root/pp/tmppack/stjude-proteinpaint-server-${SERVERPKGVER}.tgz
 # target for the backend-only SJ server app
 FROM ppbase AS ppserver
 
+LABEL org.opencontainers.image.source="https://github.com/stjude/proteinpaint"
+
 WORKDIR /home/root/pp/app 
 # the copied layer does not have the .npmrc ???
 COPY --from=ppserverdeps /home/root/pp/app/active /home/root/pp/app/active
@@ -163,6 +165,8 @@ RUN if [ -f /home/root/pp/tmppack/stjude-proteinpaint-front-${FRONTPKGVER}.tgz ]
 
 # target for the full (backend + frontend) SJ app
 FROM ppbase AS ppapp
+
+LABEL org.opencontainers.image.source="https://github.com/stjude/proteinpaint"
 
 WORKDIR /home/root/pp/app
 # the copied layer does not have the .npmrc ???
