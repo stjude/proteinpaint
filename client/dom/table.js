@@ -159,8 +159,10 @@ export function renderTable({
 				.attr('id', 'checkboxHeader')
 				.attr('type', 'checkbox')
 				.on('change', () => {
+					const nodes = tbody.selectAll('input').nodes()
 					tbody.selectAll('input').property('checked', checkboxH.node().checked)
 					if (buttons) enableButtons()
+					if (noButtonCallback) for (const [i, node] of nodes.entries()) noButtonCallback(i, node)
 				})
 			checkboxH.node().checked = selectAll
 		}

@@ -11,13 +11,26 @@ export function getHandler(self) {
 				const groupDiv = div
 					.append('div')
 					.style('display', 'inline-block')
-					.style('vertical-align', 'bottom')
-				const callback = indexes => {
-					group.values = group.values.filter((elem, index, array) => indexes.includes(index))
-					self.runCallback()
+					.style('vertical-align', 'top')
+				const noButtonCallback = (i, node) => {
+					group.values[i].checked = node.checked
 				}
-				addTable(groupDiv, group, callback)
+				addTable(groupDiv, group, noButtonCallback)
 			}
+			div
+				.append('div')
+				.append('div')
+				.style('display', 'inline-block')
+				.style('float', 'right')
+				.style('padding', '6px 20px')
+				.append('button')
+				.attr('class', 'sjpp_apply_btn sja_filter_tag_btn')
+				.text('Apply')
+				.on('click', () => {
+					for (const group of groups)
+						group.values = group.values.filter(value => !('checked' in value) || value.checked)
+					self.runCallback()
+				})
 		},
 		getPillStatus() {},
 		getPillName(d) {
@@ -26,7 +39,7 @@ export function getHandler(self) {
 	}
 }
 
-function addTable(div, group, callback) {
+function addTable(div, group, noButtonCallback) {
 	const name = group.name == 'Others' ? 'Others will exclude these samples' : group.name
 	div
 		.style('padding', '6px')
@@ -37,15 +50,6 @@ function addTable(div, group, callback) {
 	const rows = []
 	for (const value of group.values) rows.push([{ value: value.sample }])
 	const columns = [{ label: 'Sample' }]
-	const buttons = callback
-		? [
-				{
-					text: 'APPLY',
-					callback,
-					class: 'sjpp_apply_btn sja_filter_tag_btn'
-				}
-		  ]
-		: []
 
 	renderTable({
 		rows,
@@ -53,7 +57,7 @@ function addTable(div, group, callback) {
 		div,
 		maxWidth: '25vw',
 		maxHeight: '40vh',
-		buttons,
+		noButtonCallback,
 		striped: false,
 		showHeader: false,
 		selectAll: true
