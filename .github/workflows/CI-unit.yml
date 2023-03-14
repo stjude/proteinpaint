@@ -21,6 +21,9 @@ jobs:
           extra_args:
             detect-secrets --all-files
 
+      - name: print current dir
+
+
       - uses: actions/setup-node@v3
         with:
           node-version: '16'
@@ -29,7 +32,7 @@ jobs:
           scope: '@stjude'
       - run: npm ci
         env:
-          NPM_CONFIG_USERCONFIG: '~/.npmrc'
+          NPM_CONFIG_USERCONFIG: '/home/runner/.npmrc'
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Copy serverconfig.json to root
