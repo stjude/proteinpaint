@@ -35,7 +35,7 @@
     "prepack": "rm -rf dist && rollup -c ./rollup.config.js"
   },
   "author": "",
-  "license": "GPL-3.0-only OR SEE LICENSE IN LICENSE/License_Custom.txt",
+  "license": "SEE LICENSE IN ./LICENSE",
   "devDependencies": {
     "@babel/core": "^7.9.6",
     "@babel/plugin-syntax-dynamic-import": "^7.8.3",
