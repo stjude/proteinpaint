@@ -36,6 +36,11 @@ while getopts "r:b:c:h:x:" opt; do
 	esac
 done
 
+if [[ ! -d $PWD/tmppack ]]; then
+    mkdir -p $PWD/tmppack
+fi
+
+
 ARCH=$( uname -m )
 if [[ ${ARCH} == "arm64" ]]; then ARCH="aarch64"; fi
 
@@ -63,3 +68,5 @@ docker build . --file ./Dockerfile --target ppserver --tag ppserver:$REV --build
 
 echo "building ppfull:$REV image, package version=$TAG"
 docker build . --file ./Dockerfile --target ppapp --tag ppfull:$REV --build-arg IMGVER=$REV --build-arg SERVERPKGVER=$SERVERPKGVER --build-arg FRONTPKGVER=$FRONTPKGVER --build-arg CROSSENV="$CROSSENV" $BUILDARGS
+
+[ "$(ls -A $(pwd)/tmppack )" ] || rm -r $PWD/tmppack   
