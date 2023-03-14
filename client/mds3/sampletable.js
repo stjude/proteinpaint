@@ -141,9 +141,18 @@ async function make_singleSampleTable(s, arg) {
 			cell2.style('text-overflow', 'ellipsis')
 			if (tw.id in s) {
 				if (Array.isArray(s[tw.id])) {
-					cell2.html(s[tw.id].join('<br>'))
+					if (tw.baseURL) {
+						cell2.html(s[tw.id].map(i => `<a href=${tw.baseURL + i} target=_blank>${i}</a>`).join('<br>'))
+					} else {
+						cell2.html(s[tw.id].join('<br>'))
+					}
 				} else {
-					cell2.text(s[tw.id])
+					// single value
+					if (tw.baseURL) {
+						cell2.html(`<a href=${tw.baseURL + s[tw.id]} target=_blank>${s[tw.id]}</a>`)
+					} else {
+						cell2.text(s[tw.id])
+					}
 				}
 			}
 		}
@@ -301,7 +310,11 @@ export async function samples2columnsRows(samples, tk) {
 
 		if (tk.mds.variant2samples.twLst) {
 			for (const tw of tk.mds.variant2samples.twLst) {
-				row.push({ value: sample[tw.id] })
+				if (tw.baseURL) {
+					row.push({ html: `<a href=${tw.baseURL + sample[tw.id]} target=_blank>${sample[tw.id]}</a>` })
+				} else {
+					row.push({ value: sample[tw.id] })
+				}
 			}
 		}
 

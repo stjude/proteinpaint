@@ -58,6 +58,7 @@ main
 		launchBlockWithTracks
 			getTracks2show
 getPlotConfig
+	getDefaultConfig
 makeChartBtnMenu
 */
 
@@ -348,6 +349,7 @@ export function makeChartBtnMenu(holder, chartsInstance) {
 // get default config of the app from vocabApi
 async function getDefaultConfig(vocabApi, override) {
 	const config = await vocabApi.getMds3queryDetails()
+	console.log(config)
 	// request default variant filter (against vcf INFO)
 	const vf = await vocabApi.get_variantFilter()
 	if (vf?.filter) {
