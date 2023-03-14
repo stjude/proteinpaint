@@ -24,6 +24,7 @@ import {
 	symbolStar,
 	symbolSquare2
 } from 'd3-shape'
+import { dofetch3 } from '../common/dofetch'
 
 /*
 sample object returned by server:
@@ -100,7 +101,9 @@ class Scatter {
 		return {
 			config,
 			termfilter: appState.termfilter,
-			allowedTermTypes: appState.termdbConfig.allowedTermTypes
+			allowedTermTypes: appState.termdbConfig.allowedTermTypes,
+			matrixplots: appState.termdbConfig.matrixplots,
+			vocab: appState.vocab
 		}
 	}
 
@@ -909,7 +912,33 @@ class Scatter {
 				this.dom.tip.hide()
 				this.showTable(group, event.clientX, event.clientY, false)
 			})
-
+		if (this.state.matrixplots) {
+			for (const plot of this.state.matrixplots) {
+				/* plot: 
+				{
+					name=str
+				}
+				*/
+				menuDiv
+					.append('div')
+					.attr('class', 'sja_menuoption sja_sharp_border')
+					.text(plot.name)
+					.on('click', async () => {
+						const config = await dofetch3('termdb', {
+							body: {
+								for: 'matrix',
+								getPlotDataByName: plot.name,
+								genome: this.state.vocab.genome,
+								dslabel: this.state.vocab.dslabel
+							}
+						})
+						this.app.dispatch({
+							type: 'plot_create',
+							config
+						})
+					})
+			}
+		}
 		if (this.state.allowedTermTypes.includes('survival')) {
 			const survivalDiv = menuDiv
 				.append('div')
