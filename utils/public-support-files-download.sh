@@ -5,7 +5,12 @@ else
     TP_FOLDER=$1
 fi 
 
-mkdir -p $TP_FOLDER
+if [[ ! -d $TP_FOLDER ]]
+then
+    echo "$TP_FOLDER does not exists on your filesystem, creating one."
+    mkdir -p $TP_FOLDER
+fi
+
 cd $TP_FOLDER
 mkdir -p genomes/ anno/db/ anno/msigdb/ hg19/ hg38/ utils/meme/motif_databases/HUMAN/
 
@@ -65,6 +70,6 @@ cd ../utils/meme/motif_databases/HUMAN/
 curl https://proteinpaint.stjude.org/ppSupport/HOCOMOCOv11_full_HUMAN_mono_meme_format.meme -O
 curl https://proteinpaint.stjude.org/ppSupport/HOCOMOCOv11_full_annotation_HUMAN_mono.tsv -O
 
-cd ~/data/tp/
+cd $TP_FOLDER
 curl https://proteinpaint.stjude.org/ppSupport/pp.demo.tgz -O
-tar zxvf pp.demo.tgz # Releases the "proteinpaint_demo/" folder under data/tp/
+tar zxvf pp.demo.tgz # Releases the "proteinpaint_demo/" folder under $TP_FOLDER
