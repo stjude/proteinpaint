@@ -41,6 +41,8 @@ module.exports = {
 			file: 'files/hg38/TermdbTest/db2'
 		},
 		termdb: {
+			displaySampleIds: true, // allow to display sample-level data
+
 			minTimeSinceDx: 5, // enrollment in sjlife requires 5 years since cancer diagnosis
 
 			ageEndOffset: 0.00274, // number of years to offset ending age of patients
