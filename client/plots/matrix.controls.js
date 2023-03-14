@@ -37,6 +37,7 @@ export class MatrixControls {
 					getCount: () => this.parent.termOrder.length,
 					customInputs: this.appendTermInputs
 				},
+				{ value: 'styles', label: 'Styles' },
 				{ value: 'cols', label: 'Column layout' },
 				{ value: 'rows', label: 'Row layout' },
 				{ value: 'legend', label: 'Legend layout' },
@@ -126,6 +127,22 @@ export class MatrixControls {
 					settingsKey: 'sortTermsBy',
 					options: [{ label: 'as-listed', value: 'asListed' }, { label: 'by sample count', value: 'sampleCount' }]
 				}
+			],
+
+			styles: [
+				{
+					label: 'Cell encoding',
+					type: 'radio',
+					chartType: 'matrix',
+					settingsKey: 'cellEncoding',
+					options: [{ label: 'Default', value: '' }, { label: 'Oncoprint', value: 'oncoprint' }]
+				},
+				{
+					label: 'Background color',
+					type: 'text',
+					chartType: 'matrix',
+					settingsKey: 'cellbg'
+				},
 			],
 
 			cols: [

@@ -82,7 +82,9 @@ export async function init(arg, holder, genomes) {
 					termgroups: [{ lst: genes }],
 					settings: {
 						matrix: {
-							colspace: 0
+							cellEncoding: 'oncoprint',
+							colspace: 0,
+							cellbg: 'white'
 						}
 					}
 				}
