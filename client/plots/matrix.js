@@ -1,17 +1,18 @@
 import { getCompInit, copyMerge } from '../rx'
+import { setInteractivity } from './matrix.interactivity'
+import { setRenderers } from './matrix.renderers'
+import { MatrixCluster } from './matrix.cluster'
+import { MatrixControls } from './matrix.controls'
+import { setCellProps } from './matrix.cells'
 import { select } from 'd3-selection'
 import { scaleLinear, scaleOrdinal } from 'd3-scale'
 import { schemeCategory10 } from 'd3-scale-chromatic'
 import { schemeCategory20 } from '#common/legacy-d3-polyfill'
 import { axisLeft, axisTop, axisRight, axisBottom } from 'd3-axis'
 import { fillTermWrapper } from '../termsetting/termsetting'
-import { MatrixCluster } from './matrix.cluster'
-import { MatrixControls } from './matrix.controls'
 import svgLegend from '../dom/svg.legend'
 import { mclass } from '#shared/common'
 import { Menu } from '../dom/menu'
-import { setInteractivity } from './matrix.interactivity'
-import { setRenderers } from './matrix.renderers'
 import { getSampleSorter, getTermSorter } from './matrix.sort'
 import { dofetch3 } from '../common/dofetch'
 
@@ -25,8 +26,9 @@ class Matrix {
 	async init(appState) {
 		const opts = this.opts
 		const holder = opts.controls ? opts.holder : opts.holder.append('div')
+		holder.style('position', 'relative')
 		const controls = this.opts.controls ? null : holder.append('div')
-		const loadingDiv = holder.append('div').style('margin-left', '50px')
+		const loadingDiv = holder.append('div').style('position', 'absolute').style('top', '50px').style('left', '50px')
 		const errdiv = holder
 			.append('div')
 			.attr('class', 'sja_errorbar')
@@ -384,9 +386,10 @@ class Matrix {
 						countedSamples.add(s.sample)
 						const anno = data.samples[s.sample][tw.$id]
 						if (anno) {
-							const { filteredValues, countedValues } = this.getFilteredValues(anno, tw, grp)
+							const { filteredValues, countedValues, renderedValues } = this.classifyValues(anno, tw, grp, this.settings.matrix)
 							anno.filteredValues = filteredValues
 							anno.countedValues = countedValues
+							anno.renderedValues = renderedValues
 							if (anno.countedValues?.length) {
 								const v = tw.term.values?.[anno.value]
 								if (v?.uncountable) continue
@@ -462,9 +465,9 @@ class Matrix {
 		}
 	}
 
-	getFilteredValues(anno, tw, grp) {
+	classifyValues(anno, tw, grp, s) {
 		const values = 'value' in anno ? [anno.value] : anno.values
-		if (!values) return { filteredValues: null, countedValues: null }
+		if (!values) return { filteredValues: null, countedValues: null, renderedValues: null }
 		const valueFilter = tw.valueFilter || grp.valueFilter
 		const filteredValues = values.filter(v => {
 			/*** do not count wildtype and not tested as hits ***/
@@ -486,6 +489,17 @@ class Matrix {
 			}
 		})
 
+		const renderedValues = []
+		if (tw.term.type != 'geneVariant' || s.cellEncoding != 'oncoprint') renderedValues.push(...filteredValues)
+		else {
+			// dt=1 are SNVindels, dt=4 CNV
+			// will render only one matching value per dt
+			for(const dt of [4, 1]) {
+				const v = filteredValues.find(v => v.dt === dt)
+				if (v) renderedValues.push(v)
+			}
+		}
+
 		return {
 			filteredValues,
 			countedValues: filteredValues.filter(v => {
@@ -495,7 +509,8 @@ class Matrix {
 					if (this.state.geneVariantCountSamplesSkipMclass.includes(v.class)) return false
 				}
 				return true
-			})
+			}),
+			renderedValues
 		}
 	}
 
@@ -503,7 +518,7 @@ class Matrix {
 		const s = this.settings.matrix
 		// only overwrite the sample counts if one or more sample group.lst has been truncated
 		if (!s.maxSample) return
-		// must redo the sample counts by term after sorting and applying maxSamples, if applicable
+		// !!! must REDO the sample counts by term after sorting and applying maxSamples, if applicable
 		for (const t of this.termOrder) {
 			t.allCounts = t.counts
 			const countedSamples = new Set()
@@ -512,9 +527,10 @@ class Matrix {
 				if (countedSamples.has(s.row.sample)) continue
 				const anno = s.row[t.tw.$id]
 				if (!anno) continue
-				const { filteredValues, countedValues } = this.getFilteredValues(anno, t.tw, t.grp)
+				const { filteredValues, countedValues, renderedValues } = this.classifyValues(anno, t.tw, t.grp, this.settings.matrix)
 				anno.filteredValues = filteredValues
 				anno.countedValues = countedValues
+				anno.renderedValues = renderedValues
 				if (anno.countedValues?.length) {
 					t.counts.samples += 1
 					t.counts.hits += anno.countedValues.length
@@ -671,8 +687,9 @@ class Matrix {
 				if (!anno) continue
 				const termid = 'id' in t.tw.term ? t.tw.term.id : t.tw.term.name
 				const key = anno.key
-				const values = anno.filteredValues || anno.values || [anno.value]
-				const height = !s.transpose ? s.rowh / values.length : s.colw
+				const values = anno.renderedValues || anno.values || [anno.value]
+				const numRects = s.cellEncoding == 'oncoprint' ? 1 : values.length
+				const height = !s.transpose ? s.rowh / numRects : s.colw
 				const width = !s.transpose ? s.colw : s.colw / values.length
 
 				for (const [i, value] of values.entries()) {
@@ -683,17 +700,11 @@ class Matrix {
 						term: t.tw.term,
 						termid,
 						$id,
-						key,
-						x: !s.transpose
-							? 0
-							: t.totalIndex * dx + t.visibleGrpIndex * s.colgspace + width * i + t.totalHtAdjustments,
-						y: !s.transpose
-							? t.totalIndex * dy + t.visibleGrpIndex * s.rowgspace + height * i + t.totalHtAdjustments
-							: 0
+						key
 					}
 
-					// will assign fill, label, order, etc
-					const legend = setCellProps[t.tw.term.type](cell, t.tw, anno, value, s, t, this)
+					// will assign x, y, width, height, fill, label, order, etc
+					const legend = setCellProps[t.tw.term.type](cell, t.tw, anno, value, s, t, this, width, height, dx, dy, i)
 					if (legend) {
 						if (!legendGroups[legend.group]) legendGroups[legend.group] = { ref: legend.ref, values: {} }
 						if (!legendGroups[legend.group].values[legend.value])
@@ -802,82 +813,6 @@ class Matrix {
 	}
 }
 
-/*
-	cell: a matrix cell data
-	tw: termwrapper
-	anno: the current annotation
-	values: the available annotation values for a term
-	t: an entry in this.termOrder
-	s: plotConfig.settings.matrix
-*/
-function setNumericCellProps(cell, tw, anno, value, s, t) {
-	const key = anno.key
-	const values = tw.term.values || {}
-	cell.label = 'label' in anno ? anno.label : values[key]?.label ? values[key].label : key
-	cell.fill = anno.color || values[anno.key]?.color
-
-	cell.order = t.ref.bins ? t.ref.bins.findIndex(bin => bin.name == key) : 0
-	if (tw.q?.mode == 'continuous') {
-		if (!tw.settings) tw.settings = {}
-		if (!tw.settings.barh) tw.settings.barh = 30
-		if (!('gap' in tw.settings)) tw.settings.gap = 0
-		// TODO: may use color scale instead of bars
-		if (s.transpose) {
-			cell.width = t.scale(cell.key)
-			cell.x += tw.settings.gap // - cell.width
-		} else {
-			cell.height = t.scale(cell.key)
-			cell.y += tw.settings.barh + t.tw.settings.gap - cell.height
-		}
-	} else {
-		const group = tw.legend?.group || tw.$id
-		return { ref: t.ref, group, value: key, entry: { key, label: cell.label, fill: cell.fill } }
-	}
-}
-
-function setCategoricalCellProps(cell, tw, anno, value, s, t) {
-	const values = tw.term.values || {}
-	const key = anno.key
-	cell.label = 'label' in anno ? anno.label : values[key]?.label ? values[key].label : key
-	cell.fill = anno.color || values[key]?.color
-	const group = tw.legend?.group || tw.$id
-	return { ref: t.ref, group, value, entry: { key, label: cell.label, fill: cell.fill } }
-}
-
-// NOTE: may move these code by term.type to matrix.[categorical|*].js
-// if more term.type specific logic becomes harder to maintain here
-
-/*
-  Arguments
-	cell: a matrix cell data
-	tw: termwrapper
-	anno: the current annotation
-	value
-	t: an entry in this.termOrder
-	s: plotConfig.settings.matrix
-*/
-const setCellProps = {
-	categorical: setCategoricalCellProps,
-	integer: setNumericCellProps,
-	float: setNumericCellProps,
-	/* !!! TODO: later, may allow survival terms as a matrix row in server/shared/termdb.usecase.js, 
-	   but how - quantitative, categorical, etc? */
-	//survival: setNumericCellProps,
-	geneVariant: (cell, tw, anno, value, s, t, self) => {
-		const values = anno.filteredValues || anno.values || [anno.value]
-		cell.height = !s.transpose ? s.rowh / values.length : s.colw
-		cell.width = !s.transpose ? s.colw : s.colw / values.length
-		cell.label = value.label || self.mclass[value.class].label
-		const colorFromq = tw.q?.values && tw.q?.values[value.class]?.color
-		cell.fill = colorFromq || value.color || self.mclass[value.class]?.color
-		cell.class = value.class
-		cell.value = value
-
-		const group = tw.legend?.group || 'Mutation Types'
-		return { ref: t.ref, group, value: value.class, entry: { key: value.class, label: cell.label, fill: cell.fill } }
-	}
-}
-
 export const matrixInit = getCompInit(Matrix)
 // this alias will allow abstracted dynamic imports
 export const componentInit = matrixInit
@@ -895,13 +830,13 @@ export async function getPlotConfig(opts, app) {
 				isOpen: false // control panel is hidden by default
 			},
 			matrix: {
+				cellEncoding: '', // can be oncoprint
 				margin: {
 					top: 10,
 					right: 5,
 					bottom: 20,
 					left: 50
 				},
-
 				// set any dataset-defined sample limits and sort priority, otherwise undefined
 				// put in settings, so that later may be overridden by a user (TODO)
 				maxSample: app.vocabApi.termdbConfig.matrix?.maxSample,
