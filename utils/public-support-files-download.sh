@@ -71,5 +71,6 @@ curl https://proteinpaint.stjude.org/ppSupport/HOCOMOCOv11_full_HUMAN_mono_meme_
 curl https://proteinpaint.stjude.org/ppSupport/HOCOMOCOv11_full_annotation_HUMAN_mono.tsv -O
 
 cd $TP_FOLDER
-curl https://proteinpaint.stjude.org/ppSupport/pp.demo.tgz -O
-tar zxvf pp.demo.tgz # Releases the "proteinpaint_demo/" folder under $TP_FOLDER
+curl https://proteinpaint.stjude.org/ppSupport/ppdemo_bam.tar.gz -O # This tarball only contains the BAM slices which are shown in http://proteinpaint.stjude.org/bam 
+#curl https://proteinpaint.stjude.org/ppSupport/pp.demo.tgz -O
+tar zxvf ppdemo_bam.tar.gz # Releases the "proteinpaint_demo/" folder under $TP_FOLDER
