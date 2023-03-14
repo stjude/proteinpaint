@@ -4,8 +4,7 @@
 	"bin": "app.js",
 	"scripts": {
 		"dev": "./pack.sh && ./build.sh",
-		"build": "rm -rf tmppack && ./build.sh",
-		"postinstall": "./build.sh"
+		"build": "rm -rf tmppack && ./build.sh"
 	},
 	"containerDeps": {
 		"server": "2.11.2-0",
