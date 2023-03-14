@@ -492,13 +492,10 @@ function setRenderers(self) {
 			columns,
 			div: self.dom.cohortTable,
 			showLines: false,
-			maxHeight: '60vw'
+			maxHeight: '60vh'
 		})
 
-		self.dom.cohortTable
-			.select('table')
-			.style('border-collapse', 'collapse')
-			.style('margin', '10px')
+		self.dom.cohortTable.select('table').style('border-collapse', 'collapse')
 
 		self.highlightCohortBy = selectCohort.highlightCohortBy
 
