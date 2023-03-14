@@ -39,13 +39,6 @@ done
 ARCH=$( uname -m )
 if [[ ${ARCH} == "arm64" ]]; then ARCH="aarch64"; fi
 
-#########################
-# Docker build
-#########################
-# !!! FOR TESTING ONLY --- REMOVE .npmrc BEFORE PUSHING !!!
-# !!! once PP is open-sourced, the .npmrc should only have the registry URL for the @stjude namespace !!!
-cp ~/.npmrc .
-
 # assumes that the branch head is currently checked out
 REV=latest # $(git rev-parse --short HEAD)
 TAG="$(node -p "require('./package.json').version")"
