@@ -29,7 +29,7 @@ jobs:
           scope: '@stjude'
       - run: npm ci
         env:
-          NPM_CONFIG_USERCONFIG: '/.npmrc'
+          NPM_CONFIG_USERCONFIG: '~/.npmrc'
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Copy serverconfig.json to root
