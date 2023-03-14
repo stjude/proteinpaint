@@ -4,47 +4,19 @@ import { renderTable } from '#dom/table'
 export function getHandler(self) {
 	return {
 		showEditMenu(div) {
-			const group1 = self.q.groups[0]
-			const group2 = self.q.groups[1]
-			let values = group1.values.map(value => value.sample)
-			if (group2.name !== 'Others') return
+			div.selectAll('*').remove()
+			const groups = self.q.groups
 
-			div
-				.style('padding', '6px')
-				.append('div')
-				.style('margin', '10px')
-				.style('font-size', '0.8rem')
-				.html(`<b>Select ${group1.name}</b> samples. <br><b>Others</b> excludes these samples`)
-			const tableDiv = div.append('div').style('font-size', '0.8rem')
-
-			showSamples()
-
-			function showSamples() {
-				tableDiv.selectAll('*').remove()
-				const rows = []
-				for (const value of values) rows.push([{ value: value }])
-				const columns = [{ label: 'Sample' }]
-				renderTable({
-					rows,
-					columns,
-					div: tableDiv,
-					maxWidth: '210px',
-					buttons: [
-						{
-							text: 'APPLY',
-							callback: indexes => {
-								values = values.filter((elem, index, array) => indexes.includes(index))
-								group2.values = values
-								group1.values = values
-								self.runCallback()
-							},
-							class: 'sjpp_apply_btn sja_filter_tag_btn'
-						}
-					],
-					striped: false,
-					showHeader: false,
-					selectAll: true
-				})
+			for (const group of groups) {
+				const groupDiv = div
+					.append('div')
+					.style('display', 'inline-block')
+					.style('vertical-align', 'bottom')
+				const callback = indexes => {
+					group.values = group.values.filter((elem, index, array) => indexes.includes(index))
+					self.runCallback()
+				}
+				addTable(groupDiv, group, callback)
 			}
 		},
 		getPillStatus() {},
@@ -52,6 +24,40 @@ export function getHandler(self) {
 			return getPillNameDefault(self, d)
 		}
 	}
+}
+
+function addTable(div, group, callback) {
+	const name = group.name == 'Others' ? 'Others will exclude these samples' : group.name
+	div
+		.style('padding', '6px')
+		.append('div')
+		.style('margin', '10px')
+		.style('font-size', '0.8rem')
+		.html(`<b> ${name}</b>.`)
+	const rows = []
+	for (const value of group.values) rows.push([{ value: value.sample }])
+	const columns = [{ label: 'Sample' }]
+	const buttons = callback
+		? [
+				{
+					text: 'APPLY',
+					callback,
+					class: 'sjpp_apply_btn sja_filter_tag_btn'
+				}
+		  ]
+		: []
+
+	renderTable({
+		rows,
+		columns,
+		div,
+		maxWidth: '25vw',
+		maxHeight: '40vh',
+		buttons,
+		striped: false,
+		showHeader: false,
+		selectAll: true
+	})
 }
 
 export function fillTW(tw, vocabApi) {}
