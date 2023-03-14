@@ -1,9 +1,0 @@
-Individuals and organizations may be exempted from the GPLv3 license 
-requirements by obtaining a contract with St. Jude Children's Research Hospital.
-
-Please contact the maintainers of the ProteinPaint software project for more information.
-
-License holders may be required to include additional notice(s) in their copy of the
-ProteinPaint source code. If applicable, notice(s) named For_Licensee_* or For_Contract_* 
-in this directory may be used to satisfy such requirements, and will not apply to other 
-users of this source code.
