@@ -196,7 +196,6 @@ export async function getSampleData_dictionaryTerms_termdb(q, termWrappers) {
 
 	// for "samplelst" term, term.id is missing and must use term.name
 	values.push(...termWrappers.map(tw => tw.term.id || tw.term.name))
-
 	const sql = `WITH
 		${filter ? filter.filters + ',' : ''}
 		${CTEs.map(t => t.sql).join(',\n')}
@@ -205,9 +204,10 @@ export async function getSampleData_dictionaryTerms_termdb(q, termWrappers) {
 			SELECT sample, key, value, ? as term_id
 			FROM ${t.tablename}
 			${filter ? `WHERE sample IN ${filter.CTEname}` : ''}
+			${q.samples ? ` ${filter ? 'AND' : 'WHERE'} sample IN (${q.samples.join(',')})` : ''}
 			`
 		).join(`UNION ALL`)}`
-	//console.log(interpolateSqlValues(sql, values))
+	console.log(q.samples)
 	const rows = q.ds.cohort.db.connection.prepare(sql).all(values)
 	for (const { sample, term_id, key, value } of rows) {
 		if (!samples[sample]) samples[sample] = { sample }

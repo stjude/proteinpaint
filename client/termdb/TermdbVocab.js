@@ -696,7 +696,8 @@ export class TermdbVocab extends Vocab {
 					// one request per term
 					terms: [copy],
 					filter,
-					embedder: window.location.hostname
+					embedder: window.location.hostname,
+					samples: opts.samples
 				}
 			}
 			if (opts.filter0) init.body.filter0 = opts.filter0 // avoid adding "undefined" value

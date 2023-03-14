@@ -914,16 +914,12 @@ class Scatter {
 			})
 		if (this.state.matrixplots) {
 			for (const plot of this.state.matrixplots) {
-				/* plot: 
-				{
-					name=str
-				}
-				*/
 				menuDiv
 					.append('div')
 					.attr('class', 'sja_menuoption sja_sharp_border')
 					.text(plot.name)
 					.on('click', async () => {
+						const samples = group.items.map(sample => sample.sampleId)
 						const config = await dofetch3('termdb', {
 							body: {
 								for: 'matrix',
@@ -932,10 +928,12 @@ class Scatter {
 								dslabel: this.state.vocab.dslabel
 							}
 						})
+						config.samples = samples
 						this.app.dispatch({
 							type: 'plot_create',
 							config
 						})
+						this.dom.tip.hide()
 					})
 			}
 		}

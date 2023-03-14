@@ -61,6 +61,7 @@ exports.mayGetGeneVariantData = async function(tw, q) {
 		if (!(tname in flag.data)) continue
 		for (const d of flag.data[tname]) {
 			const sid = d._SAMPLEID_
+			if (q.samples && !q.samples.includes(sid)) continue
 			if (filterSamples && !filterSamples.includes(sid)) continue
 			if (!bySampleId.has(sid)) bySampleId.set(sid, { sample: sid })
 			const sampleData = bySampleId.get(sid)

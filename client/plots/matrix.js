@@ -245,12 +245,14 @@ class Matrix {
 		}
 		if (this.config.divideBy) terms.push(this.config.divideBy)
 		this.numTerms = terms.length
-		return {
+		const opts = {
 			terms,
 			filter: this.state.filter,
 			filter0: this.state.filter0,
 			loadingDiv: this.dom.loadingDiv
 		}
+		if (this.config.samples) opts.samples = this.config.samples
+		return opts
 	}
 
 	setAutoDimensions() {
