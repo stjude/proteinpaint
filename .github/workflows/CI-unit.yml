@@ -23,11 +23,13 @@ jobs:
 
       - uses: actions/setup-node@v3
         with:
-          node-version: 16
+          node-version: '16'
           cache: 'npm'
-
-      - name: Install packages
-        run: npm ci
+          registry-url: 'https://npm.pkg.github.com'
+          scope: '@stjude'
+      - run: npm ci
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Copy serverconfig.json to root
         run: mv server/test/serverconfig.json .
