@@ -55,7 +55,7 @@ function addTable(div, group, noButtonCallback) {
 		rows,
 		columns,
 		div,
-		maxWidth: '25vw',
+		maxWidth: '20vw',
 		maxHeight: '40vh',
 		noButtonCallback,
 		striped: false,
