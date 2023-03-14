@@ -2,6 +2,11 @@
 
 set -euxo pipefail
 
+if [[ "$1" == "notdev" && -d $PWD/../client ]]; then
+	echo "post-install build skipped within repo"
+	exit 0
+fi
+
 ###############
 # ARGUMENTS
 ###############
