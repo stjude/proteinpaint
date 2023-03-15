@@ -106,14 +106,16 @@ COPY tmppack ./tmppack
 
 WORKDIR /home/root/pp/app 
 RUN mkdir active
-# !!! NOTE: after open-sourcing, will only need the @stjude registry URL, no token required !!!
+
 WORKDIR /home/root/pp/app/active
+# !!! NOTE: after open-sourcing, will only need the @stjude registry URL, no token required !!!
+COPY .npmrc ./
 ARG SERVERPKGVER
-RUN echo "@stjude:registry=https://npm.pkg.github.com/" > .npmrc && \
-    if [ -f /home/root/pp/tmppack/stjude-proteinpaint-server-${SERVERPKGVER}.tgz ]; then \
+RUN if [ -f /home/root/pp/tmppack/stjude-proteinpaint-server-${SERVERPKGVER}.tgz ]; then \
+      echo "installing proteinpaint-server from tarball" && \
       npm install /home/root/pp/tmppack/stjude-proteinpaint-server-${SERVERPKGVER}.tgz; \
     else \
-      echo "@stjude:registry=https://npm.pkg.github.com/" > .npmrc \
+      echo "installing proteinpaint-server from registry" && \
       npm install @stjude/proteinpaint-server@${SERVERPKGVER}; \
     fi
 
@@ -135,8 +137,8 @@ COPY --from=ppserverdeps /home/root/pp/app/active /home/root/pp/app/active
 WORKDIR /home/root/pp/app/active
 COPY ./server/app.js .
 EXPOSE 3000
-# CMD ["sh", "-c", "node app.js"]
-CMD ["sleep", "3600"]
+CMD ["sh", "-c", "node app.js"]
+# CMD ["sleep", "3600"]
 
 #################
 # Full install
@@ -152,14 +154,15 @@ COPY --from=ppserver /home/root/pp/app/active /home/root/pp/app/active
 
 WORKDIR /home/root/pp/app/active
 # !!! NOTE: after open-sourcing, will only need the @stjude registry URL, no token required !!!
+COPY .npmrc ./ 
 ARG FRONTPKGVER
-RUN echo "@stjude:registry=https://npm.pkg.github.com/" > .npmrc
- # && \
- #    if [ -f /home/root/pp/tmppack/stjude-proteinpaint-front-${FRONTPKGVER}.tgz ]; then \
- #      npm install /home/root/pp/tmppack/stjude-proteinpaint-front-${FRONTPKGVER}.tgz; \
- #    else \
- #      npm install @stjude/proteinpaint-front@${FRONTPKGVER}; \
- #    fi;
+RUN if [ -f /home/root/pp/tmppack/stjude-proteinpaint-front-${FRONTPKGVER}.tgz ]; then \
+      echo "installing proteinpaint-front from tarball" && \
+      npm install /home/root/pp/tmppack/stjude-proteinpaint-front-${FRONTPKGVER}.tgz; \
+    else \
+      echo "installing proteinpaint-front from tarball" && \
+      npm install @stjude/proteinpaint-front@${FRONTPKGVER}; \
+    fi;
 
 # to help with troubleshooting this stage
 # enables container to be active for ssh debugging

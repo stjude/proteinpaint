@@ -83,5 +83,5 @@ docker build . --file ./Dockerfile --target ppserverdeps --tag ppserverdeps:$REV
 # docker build . --file ./Dockerfile --target ppapp --tag ppfull:$REV --build-arg IMGVER=$REV --build-arg SERVERPKGVER=$SERVERPKGVER --build-arg FRONTPKGVER=$FRONTPKGVER --build-arg CROSSENV="$CROSSENV" $BUILDARGS
 
 if [[ "$(ls -A $(pwd)/tmppack )" == "" ]]; then 
-	rm -r $PWD/tmppack   
+	rm -rf $PWD/tmppack   
 fi
