@@ -570,11 +570,43 @@ async function getGm(p, block) {
 }
 
 function table_snvindel_mayInsertLD(m, tk, grid) {
-	if (!tk.mds.queries?.ld) return
+	if (!tk.mds.queries?.ld) return // not available
 	const [td1, td2] = get_list_cells(grid)
 	td1.text('LD overlay')
 
-	const m0 = tk.mds.queries.ld.mOverlay?.m // if doing overlay now, returns the "index" m
+	const m0 = tk.mds.queries.ld.mOverlay?.m
+
+	if (m0) {
+		// doing overlay now. indicate some informational info; m0 is the selected variant
+		const row = td2.append('div').style('margin-bottom', '5px')
+		if (m.ssm_id == m0.ssm_id) {
+			// the clicked variant is same as m0
+			row.html(
+				tk.mds.queries.ld.mOverlay.ldtkname +
+					' r<sup>2</sup> values against this variant are displayed on all the other variants.'
+			)
+		} else {
+			// not the same as m0
+			let r2 = null
+			for (const v of tk.mds.queries.ld.mOverlay.data || []) {
+				if (v.pos == m.pos && v.alleles == m.ref + '.' + m.alt) {
+					r2 = v.r2
+					break
+				}
+			}
+			if (r2 == null) {
+				row.html('No r<sup>2</sup> value is found.')
+			} else {
+				row.html(tk.mds.queries.ld.mOverlay.ldtkname + ' r<sup>2</sup> = ' + r2)
+			}
+		}
+	}
+
+	td2
+		.append('div')
+		.html('Click a button to overlay LD r<sup>2</sup> values against this variant:')
+		.style('font-size', '.8em')
+		.style('opacity', 0.5)
 
 	for (const o of tk.mds.queries.ld.tracks) {
 		// o = {name}

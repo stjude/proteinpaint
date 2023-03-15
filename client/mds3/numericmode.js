@@ -663,6 +663,23 @@ function m_mouseover(m, nm, tk) {
 		words.push(nm.label + ' = ' + (m.__value_missing ? 'NA' : m.__value_use))
 	}
 
+	if (tk.mds.queries?.ld?.mOverlay?.data) {
+		// doing ld overlay now
+		if (m.ssm_id == tk.mds.queries.ld.mOverlay.m.ssm_id) {
+			// the same variant, do not indicate r2 value
+		} else {
+			// indicate r2 value
+			let r2 = '?'
+			for (const v of tk.mds.queries.ld.mOverlay.data) {
+				if (v.pos == m.pos && v.alleles == m.ref + '.' + m.alt) {
+					r2 = v.r2
+					break
+				}
+			}
+			words.push('r2 = ' + r2)
+		}
+	}
+
 	if (!m.labattop && !m.labatbottom) {
 		words.push(mnamegetter(m, tk))
 	}
