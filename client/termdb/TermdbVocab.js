@@ -681,7 +681,6 @@ export class TermdbVocab extends Vocab {
 
 		let numResponses = 0
 		if (opts.loadingDiv) opts.loadingDiv.html('Fetching data ...')
-
 		// fetch the annotated sample for each term
 		while (termsToUpdate.length) {
 			const tw = termsToUpdate.pop()
@@ -696,8 +695,7 @@ export class TermdbVocab extends Vocab {
 					// one request per term
 					terms: [copy],
 					filter,
-					embedder: window.location.hostname,
-					samples: opts.samples
+					embedder: window.location.hostname
 				}
 			}
 			if (opts.filter0) init.body.filter0 = opts.filter0 // avoid adding "undefined" value
@@ -705,7 +703,6 @@ export class TermdbVocab extends Vocab {
 			// quick fix TODO do this via some settings via this.termdbConfig, replace hardcoded logic
 			if (this.vocab.dslabel == 'GDC' && tw.term.id && currentGeneNames.length)
 				init.body.currentGeneNames = currentGeneNames
-
 			promises.push(
 				dofetch3('termdb', init).then(data => {
 					if (data.error) throw data.error
@@ -737,7 +734,6 @@ export class TermdbVocab extends Vocab {
 				})
 			)
 		}
-
 		try {
 			if (opts.loadingDiv) opts.loadingDiv.html(`Fetching data (0/${promises.length})`)
 			await Promise.all(promises)
@@ -746,7 +742,6 @@ export class TermdbVocab extends Vocab {
 			this.tokenVerificationMessage = e
 			throw e
 		}
-
 		try {
 			const dictTerm$ids = opts.terms.filter(tw => !nonDictionaryTermTypes.has(tw.term.type)).map(tw => tw.$id)
 			// const lst = Object.values(samples)

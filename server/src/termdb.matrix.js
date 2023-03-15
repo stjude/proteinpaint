@@ -204,7 +204,6 @@ export async function getSampleData_dictionaryTerms_termdb(q, termWrappers) {
 			SELECT sample, key, value, ? as term_id
 			FROM ${t.tablename}
 			${filter ? `WHERE sample IN ${filter.CTEname}` : ''}
-			${q.samples ? ` ${filter ? 'AND' : 'WHERE'} sample IN (${q.samples.join(',')})` : ''}
 			`
 		).join(`UNION ALL`)}`
 	//console.log(interpolateSqlValues(sql, values))
