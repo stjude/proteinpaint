@@ -788,7 +788,8 @@ function displaySampleIds(event, self, term, data) {
 		showLines: false,
 		maxWidth: '27vw',
 		maxHeight: '25vh',
-		resize: true
+		resize: true,
+		showLines: true
 	})
 
 	self.app.tip.show(event.clientX, event.clientY)
