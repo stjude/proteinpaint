@@ -2,11 +2,6 @@
 
 set -euxo pipefail
 
-if [[ "$1" == "notdev" && -d $PWD/../client ]]; then
-	echo "post-install build skipped within repo"
-	exit 0
-fi
-
 ###############
 # ARGUMENTS
 ###############
@@ -19,8 +14,12 @@ USAGE="Usage:
 "
 BUILDARGS=""
 CROSSENV=""
-while getopts "r:b:c:h:x:" opt; do
+MODE=""
+while getopts "m:r:b:c:h:x:" opt; do
 	case "${opt}" in
+	m)
+		MODE=${OPTARG}
+		;;
 	r)
 		REV=${OPTARG}
 		;;
@@ -40,6 +39,12 @@ while getopts "r:b:c:h:x:" opt; do
   	;;
 	esac
 done
+
+if [[ "$MODE" == "notdev" ]]; then
+	echo "post-install build skipped within repo"
+	exit 0
+fi
+
 
 if [[ ! -d $PWD/tmppack ]]; then
     mkdir -p $PWD/tmppack

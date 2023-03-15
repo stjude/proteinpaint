@@ -58,7 +58,7 @@ npx proteinpaint-container
 
 To run only the Proteinpaint server data api, without a static file server:
 ```bash
-npm proteinpaint-container server
+npx proteinpaint-container server
 ```
 
 To run a fully customized server, follow the docker run commands in `run.sh`.
