@@ -194,7 +194,7 @@ function setRenderers(self) {
 
 			self.dom.cohortStandaloneDiv.append('label').html('Cohort: ')
 			self.dom.cohortSelect = self.dom.cohortStandaloneDiv.append('select').on('change', function() {
-				self.app.dispatch({ type: 'cohort_set', activeCohort: this.activeCohort })
+				self.app.dispatch({ type: 'cohort_set', activeCohort: this.value })
 			})
 
 			self.dom.cohortSelect
