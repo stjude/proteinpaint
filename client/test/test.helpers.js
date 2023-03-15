@@ -1,3 +1,5 @@
+import { getAppInit, getStoreInit } from '../rx'
+
 /********* EXPORTED ********
 sleep
 detectLst
@@ -347,3 +349,34 @@ export async function whenVisible(elem) {
 		}, 25)
 	})
 }
+
+class TestAppStore {
+	constructor(opts) {
+		this.type = 'store'
+	}
+
+	init() {}
+}
+
+const storeInit = getStoreInit(TestAppStore)
+
+class TestApp {
+	constructor(opts) {
+		this.type = 'app'
+	}
+
+	async init() {
+		try {
+			this.store = await storeInit({ app: this.api, state: this.opts.state })
+			this.state = await this.store.copyState()
+			await this.api.dispatch()
+		} catch (e) {
+			if (e.stack) console.log(e.stack)
+			else throw `TestApp Error: ${e}`
+		}
+	}
+
+	main() {}
+}
+
+export const testAppInit = getAppInit(TestApp)
