@@ -429,7 +429,7 @@ function listSamples(event, self, seriesLabel, dataLabel, chart) {
 		rows,
 		columns,
 		div,
-		showLines: false,
+		showLines: true,
 		maxWidth: '27vw',
 		maxHeight: '40vh',
 		resize: true
