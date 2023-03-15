@@ -675,12 +675,7 @@ class Scatter {
 		const overlayGroups = []
 		let values, tgroup
 		for (const group of groups) {
-			values = []
-			for (const item of group.items) {
-				const value = { sampleId: item.sampleId }
-				if ('sample' in item) value.sample = item.sample
-				values.push(value)
-			}
+			values = this.getGroupValues(group)
 			tgroup = {
 				name: group.name,
 				key: 'sample',
@@ -692,12 +687,7 @@ class Scatter {
 	}
 
 	getGroupvsOthersOverlay(group) {
-		const values = []
-		for (const item of group.items) {
-			const value = { sampleId: item.sampleId }
-			if ('sample' in item) value.sample = item.sample
-			values.push(value)
-		}
+		const values = this.getGroupValues(group)
 		return [
 			{
 				name: group.name,
@@ -711,6 +701,16 @@ class Scatter {
 				values
 			}
 		]
+	}
+
+	getGroupValues(group) {
+		const values = []
+		for (const item of group.items) {
+			const value = { sampleId: item.sampleId }
+			if ('sample' in item) value.sample = item.sample
+			values.push(value)
+		}
+		return values
 	}
 
 	async showTermsTree(div, callback, state = { tree: { usecase: { detail: 'term' } } }) {
@@ -919,7 +919,8 @@ class Scatter {
 					.attr('class', 'sja_menuoption sja_sharp_border')
 					.text(plot.name)
 					.on('click', async () => {
-						const samples = group.items.map(sample => sample.sampleId)
+						const values = {}
+						values[group.name] = { key: group.name, label: group.name }
 						const config = await dofetch3('termdb', {
 							body: {
 								for: 'matrix',
@@ -928,7 +929,20 @@ class Scatter {
 								dslabel: this.state.vocab.dslabel
 							}
 						})
-						config.samples = samples
+						config.divideBy = {
+							term: { name: group.name, type: 'samplelst', values },
+							q: {
+								mode: 'custom-groupsetting',
+								groups: [
+									{
+										name: group.name,
+										key: 'sample',
+										values: this.getGroupValues(group)
+									}
+								]
+							}
+						}
+
 						this.app.dispatch({
 							type: 'plot_create',
 							config

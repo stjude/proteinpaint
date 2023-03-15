@@ -253,7 +253,6 @@ class Matrix {
 			filter0: this.state.filter0,
 			loadingDiv: this.dom.loadingDiv
 		}
-		if (this.config.samples) opts.samples = this.config.samples
 		return opts
 	}
 
