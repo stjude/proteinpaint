@@ -194,7 +194,7 @@ function setRenderers(self) {
 
 			self.dom.cohortStandaloneDiv.append('label').html('Cohort: ')
 			self.dom.cohortSelect = self.dom.cohortStandaloneDiv.append('select').on('change', function() {
-				return self.app.dispatch({ type: 'cohort_set', activeCohort: +this.value })
+				self.app.dispatch({ type: 'cohort_set', activeCohort: this.activeCohort })
 			})
 
 			self.dom.cohortSelect
@@ -453,7 +453,10 @@ function setRenderers(self) {
 					.property('checked', i === self.activeCohort)
 					.style('margin-right', '5px')
 					.style('margin-left', '0px')
-					.on('click', () => self.app.dispatch({ type: 'cohort_set', activeCohort: i }))
+					.on('click', () => {
+						console.log(i)
+						self.app.dispatch({ type: 'cohort_set', activeCohort: i })
+					})
 
 				td0
 					.append('label')
@@ -508,6 +511,7 @@ function setRenderers(self) {
 				.style('font-size', 'small')
 				.text(selectCohort.asterisk)
 		}
+		window.onload = () => self.app.dispatch({ type: 'cohort_set', activeCohort: 0 })
 	}
 }
 
