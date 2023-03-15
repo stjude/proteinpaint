@@ -478,6 +478,12 @@ export function displayMenu(t1, t2, self, plot, event, start, end) {
 				}
 			})
 		}
+		if (self.config.settings.violin.displaySampleIds && self.state.hasVerifiedToken) {
+			options.push({
+				label: `List samples`,
+				callback: async () => listSamples(self, event, t1, t2, plot, self.data.min, self.data.max)
+			})
+		}
 		self.displayLabelClickMenu.called = false
 	} else if (displayBrushMenu.called === true) {
 		options.push({
@@ -488,23 +494,7 @@ export function displayMenu(t1, t2, self, plot, event, start, end) {
 		if (self.config.settings.violin.displaySampleIds && self.state.hasVerifiedToken) {
 			options.push({
 				label: `List samples`,
-				callback: async () => {
-					const tvslst = getTvsLst(t1, t2, plot, start, end)
-					const term = t1.q?.mode === 'continuous' ? t1 : t2
-					const filter = {
-						type: 'tvslst',
-						join: 'and',
-						lst: [self.state.termfilter.filter, tvslst],
-						in: true
-					}
-					const opts = {
-						terms: [term],
-						filter
-					}
-					//getAnnotatedSampleData is used to retrieve sample id's and values (see matrix.js).
-					const data = await self.app.vocabApi.getAnnotatedSampleData(opts)
-					displaySampleIds(event, self, term, data)
-				}
+				callback: async () => listSamples(self, event, t1, t2, plot, start, end)
 			})
 		}
 		displayBrushMenu.called = false
@@ -526,6 +516,24 @@ export function displayMenu(t1, t2, self, plot, event, start, end) {
 		})
 
 	self.app.tip.show(event.clientX, event.clientY)
+}
+
+async function listSamples(self, event, t1, t2, plot, start, end) {
+	const tvslst = getTvsLst(t1, t2, plot, start, end)
+	const term = t1.q?.mode === 'continuous' ? t1 : t2
+	const filter = {
+		type: 'tvslst',
+		join: 'and',
+		lst: [self.state.termfilter.filter, tvslst],
+		in: true
+	}
+	const opts = {
+		terms: [term],
+		filter
+	}
+	//getAnnotatedSampleData is used to retrieve sample id's and values (see matrix.js).
+	const data = await self.app.vocabApi.getAnnotatedSampleData(opts)
+	displaySampleIds(event, self, term, data)
 }
 
 // creates numeric axis
