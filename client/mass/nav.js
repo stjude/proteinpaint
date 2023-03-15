@@ -454,7 +454,6 @@ function setRenderers(self) {
 					.style('margin-right', '5px')
 					.style('margin-left', '0px')
 					.on('click', () => {
-						console.log(i)
 						self.app.dispatch({ type: 'cohort_set', activeCohort: i })
 					})
 
@@ -511,7 +510,7 @@ function setRenderers(self) {
 				.style('font-size', 'small')
 				.text(selectCohort.asterisk)
 		}
-		window.onload = () => self.app.dispatch({ type: 'cohort_set', activeCohort: 0 })
+		window.onload = () => self.app.dispatch({ type: 'cohort_set', activeCohort: self.activeCohort })
 	}
 }
 
