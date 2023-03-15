@@ -181,14 +181,12 @@ tape('FrontendVocab()', test => {
 							keys: ['ABC'],
 							label: 'ABC Lifetime Cohort (ABC)',
 							shortLabel: 'ABC',
-							isdefault: true,
-							cssSelector: 'tbody > tr > td:nth-child(2)'
+							isdefault: true
 						},
 						{
 							keys: ['XYZ'],
 							label: 'XYZ Cancer Survivor Study (XYZ)',
-							shortLabel: 'XYZ',
-							cssSelector: 'tbody > tr > td:nth-child(3)'
+							shortLabel: 'XYZ'
 						}
 					]
 				}

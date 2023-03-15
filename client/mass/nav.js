@@ -32,7 +32,6 @@ function getId() {
 
 class TdbNav {
 	constructor(opts) {
-		this.highlightCohortBy = 'cssSelector'
 		this.type = 'nav'
 		this.instanceNum = instanceNum++
 		this.activeTab = 0 // 0 = cohort tab if present, otherwise charts tab
@@ -376,7 +375,6 @@ function setRenderers(self) {
 		for (const key in self.dom.subheader) {
 			self.dom.subheader[key].style('display', self.tabs[self.activeTab].subheader === key ? 'block' : 'none')
 		}
-		console.log(self.activeCohort)
 		await self.renderCohortsTable()
 		self.dom.cohortTable.selectAll(`tbody > tr > td`).style('background-color', 'transparent')
 		const activeColumn = self.dom.cohortTable.selectAll(`tbody > tr > td:nth-child(${self.activeCohort + 2})`)
@@ -496,8 +494,6 @@ function setRenderers(self) {
 		self.dom.cohortInputs = self.dom.cohortOpts.selectAll('input')
 		self.dom.cohortTable = self.dom.subheader.cohort.append('div')
 
-		self.highlightCohortBy = selectCohort.highlightCohortBy
-
 		if (selectCohort.asterisk) {
 			self.dom.cohortAsterisk = self.dom.subheader.cohort
 				.append('div')
@@ -522,7 +518,7 @@ function setInteractivity(self) {
 		}
 		self.activeTab = d.colNum
 		self.searching = false
-		await self.app.dispatch({ type: 'tab_set', activeTab: self.activeTab })
+		self.app.dispatch({ type: 'tab_set', activeTab: self.activeTab })
 		if (self.activeTab == 1 && self.activeCohort != -1 && !self.state.plots.length) {
 			// show dictionary in charts tab if no other
 			// plots have been created

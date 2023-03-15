@@ -46,25 +46,19 @@ function getOpts(_opts = {}) {
 						keys: ['ABC'],
 						label: 'ABC Lifetime Cohort (ABC)',
 						shortLabel: 'ABC',
-						isdefault: true,
-						cssSelector: 'tbody > tr > td:nth-child(2)'
+						isdefault: true
 					},
 					{
 						keys: ['XYZ'],
 						label: 'XYZ Cancer Survivor Study (XYZ)',
-						shortLabel: 'XYZ',
-						cssSelector: 'tbody > tr > td:nth-child(3)'
+						shortLabel: 'XYZ'
 					},
 					{
 						keys: ['ABC', 'XYZ'],
 						label: 'Combined ABC+XYZ',
-						shortLabel: 'ABC+XYZ',
-						cssSelector: 'tbody > tr > td:nth-child(2), tbody > tr > td:nth-child(3)'
+						shortLabel: 'ABC+XYZ'
 					}
-				],
-				highlightCohortBy: 'cssSelector',
-				htmlinfo:
-					'<table>\n<thead>\n  <tr>\n    <td>Features</td>\n\t<td>St. Jude Lifetime Cohort Study (ABC)</td>\n\t<td>Childhood Cancer Survivor Study (XYZ)</td>\n  </tr>\n</thead>\n<tbody>\n  <tr>\n    <td>Survivors on Portal</td>\n\t<td>4528</td>\n\t<td>2641</td>\n  </tr>\n  <tr>\n\t<td>Years of cancer diagnosis</td>\n\t<td>1962-2012</td>\n\t<td>1987-1999 ("Expanded Cohort")</td>\n  </tr>\n  <tr>\n\t<td>Inclusion criteria</td>\n\t<td>Survived &ge; 5 years from diagnosis</td>\n\t<td>Survived &ge; 5 years from diagnosis</td>\n  </tr>\n  <tr>\n\t<td>Age at cancer diagnosis</td>\n\t<td><25 years</td>\n\t<td><21 years</td>\n  </tr>\n  <tr>\n\t<td>Cancer diagnosis</td>\n\t<td>All diagnoses</td>\n\t<td>Leukemia, CNS, HL, NHL, neuroblastoma, soft tissue sarcoma, Wilms, bone tumors</td>\n  </tr>\n  <tr>\n\t<td>Study design</td>\n\t<td>Retrospective cohort with prospective follow-up, hospital-based</td>\n\t<td>Retrospective cohort with prospective follow-up, hospital-based</td>\n  </tr>\n  <tr>\n\t<td>Methods of contact</td>\n\t<td>Clinic visits and surveys</td>\n\t<td>Surveys</td>\n  </tr>\n  <tr>\n\t<td>Source of sequenced germline DNA</td>\n\t<td>Blood</td>\n\t<td>Saliva or blood</td>\n  </tr>\n  <tr>\n\t<td>Therapeutic exposures</td>\n\t<td>Chemotherapy, radiation, surgery</td>\n\t<td>Chemotherapy, radiation, surgery</td>\n  </tr>\n  <tr>\n\t<td>Methods for ascertainment of outcomes</td>\n\t<td><span style="font-weight:bold;text-decoration:underline">Clinical assessments<span>, medical records, self-report, NDI</td>\n\t<td>Self-report, pathology reports (secondary neoplasm), NDI</td>\n  </tr>\n</tbody>\n</table>'
+				]
 			}
 		},
 		btn: holder.append('div'),
