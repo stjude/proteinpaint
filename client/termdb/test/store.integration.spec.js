@@ -219,26 +219,22 @@ tape('state rehydrate: by cohortFilter', function(test) {
 				keys: ['ABC'],
 				label: 'St. Jude Lifetime Cohort (ABC)',
 				shortLabel: 'ABC',
-				isdefault: true,
-				cssSelector: 'tbody > tr > td:nth-child(2)'
+				isdefault: true
 			},
 			{
 				keys: ['XYZ'],
 				label: 'Childhood Cancer Survivor Study (XYZ)',
-				shortLabel: 'XYZ',
-				cssSelector: 'tbody > tr > td:nth-child(3)'
+				shortLabel: 'XYZ'
 			},
 			{
 				keys: ['ABC', 'XYZ'],
 				label: 'Combined ABC+XYZ',
 				shortLabel: 'ABC+XYZ',
-				cssSelector: 'tbody > tr > td:nth-child(2), tbody > tr > td:nth-child(3)',
 				// show note under label in smaller text size
 				note:
 					'The combined cohorts are limited to those variables that are comparable between the two populations. For example, selecting this category does not allow browsing of clinically-ascertained variables, which are only available in ABC.'
 			}
-		],
-		highlightCohortBy: 'cssSelector'
+		]
 	}
 
 	runpp({
