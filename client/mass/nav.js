@@ -32,6 +32,7 @@ function getId() {
 
 class TdbNav {
 	constructor(opts) {
+		this.highlightCohortBy = 'cssSelector'
 		this.type = 'nav'
 		this.instanceNum = instanceNum++
 		this.activeTab = 0 // 0 = cohort tab if present, otherwise charts tab
@@ -194,7 +195,7 @@ function setRenderers(self) {
 
 			self.dom.cohortStandaloneDiv.append('label').html('Cohort: ')
 			self.dom.cohortSelect = self.dom.cohortStandaloneDiv.append('select').on('change', function() {
-				self.app.dispatch({ type: 'cohort_set', activeCohort: this.value })
+				self.app.dispatch({ type: 'cohort_set', activeCohort: +this.value })
 			})
 
 			self.dom.cohortSelect
@@ -318,7 +319,7 @@ function setRenderers(self) {
 			)
 	}
 
-	self.updateUI = (toggleSubheaderdiv = false) => {
+	self.updateUI = async (toggleSubheaderdiv = false) => {
 		if (!self.dom.subheaderDiv) return
 		if (self.activeTab && self.state.termdbConfig.selectCohort && self.activeCohort == -1) {
 			// showing charts or filter tab; cohort selection is enabled but no cohort is selected
@@ -375,22 +376,43 @@ function setRenderers(self) {
 		for (const key in self.dom.subheader) {
 			self.dom.subheader[key].style('display', self.tabs[self.activeTab].subheader === key ? 'block' : 'none')
 		}
-
-		if (self.highlightCohortBy && self.activeCohort != -1) {
-			const activeCohort = selectCohort.values[self.activeCohort]
-			const activeSelector = activeCohort[self.highlightCohortBy]
-			for (const cohort of selectCohort.values) {
-				if (cohort[self.highlightCohortBy] !== activeSelector) {
-					self.dom.cohortTable.selectAll(cohort[self.highlightCohortBy]).style('background-color', 'transparent')
-				}
-			}
-			self.dom.cohortTable.selectAll(activeSelector).style('background-color', 'yellow')
-			self.dom.cohortInputs.property('checked', (d, i) => i === self.activeCohort)
-		}
+		console.log(self.activeCohort)
+		await self.renderCohortsTable()
+		self.dom.cohortTable.selectAll(`tbody > tr > td`).style('background-color', 'transparent')
+		const activeColumn = self.dom.cohortTable.selectAll(`tbody > tr > td:nth-child(${self.activeCohort + 2})`)
+		activeColumn.style('background-color', 'yellow')
+		self.dom.cohortInputs.property('checked', (d, i) => i === self.activeCohort)
 
 		if (self.opts.header_mode === 'with_cohort_select') {
 			self.dom.cohortSelect.selectAll('option').property('value', appState.activeCohort)
 		}
+	}
+
+	self.renderCohortsTable = async () => {
+		self.dom.cohortTable.selectAll('*').remove()
+		const columns = [{ label: 'Feature' }]
+		const rows = []
+		const result = await self.app.vocabApi.getCohortsData()
+
+		if ('error' in result) throw result.error
+		for (const feature of result.features) rows.push([{ value: feature.name }])
+		for (const cohort of result.cohorts) {
+			columns.push({ label: `${cohort.name} (${cohort.abbrev})` })
+			for (const [i, feature] of result.features.entries()) {
+				const cf = result.cfeatures.find(cf => cf.idfeature === feature.idfeature && cf.cohort === cohort.cohort)
+				if (cf) rows[i].push({ value: cf.value })
+			}
+		}
+
+		renderTable({
+			rows,
+			columns,
+			div: self.dom.cohortTable,
+			showLines: false,
+			maxHeight: '60vh'
+		})
+
+		self.dom.cohortTable.select('table').style('border-collapse', 'collapse')
 	}
 
 	self.initCohort = async appState => {
@@ -474,31 +496,6 @@ function setRenderers(self) {
 		self.dom.cohortInputs = self.dom.cohortOpts.selectAll('input')
 		self.dom.cohortTable = self.dom.subheader.cohort.append('div')
 
-		const columns = [{ label: 'Feature' }]
-		const rows = []
-		const result = await self.app.vocabApi.getCohortsData()
-
-		if ('error' in result) throw result.error
-		for (const feature of result.features) rows.push([{ value: feature.name }])
-		for (const cohort of result.cohorts) {
-			columns.push({ label: `${cohort.name} (${cohort.abbrev})` })
-			for (const [i, feature] of result.features.entries()) {
-				const cf = result.cfeatures.find(cf => cf.idfeature === feature.idfeature && cf.cohort === cohort.cohort)
-				if (cf) rows[i].push({ value: cf.value })
-			}
-		}
-
-		self.dom.cohortTable = self.dom.subheader.cohort.append('div')
-		renderTable({
-			rows,
-			columns,
-			div: self.dom.cohortTable,
-			showLines: false,
-			maxHeight: '60vh'
-		})
-
-		self.dom.cohortTable.select('table').style('border-collapse', 'collapse')
-
 		self.highlightCohortBy = selectCohort.highlightCohortBy
 
 		if (selectCohort.asterisk) {
@@ -510,15 +507,14 @@ function setRenderers(self) {
 				.style('font-size', 'small')
 				.text(selectCohort.asterisk)
 		}
-		window.onload = () => self.app.dispatch({ type: 'cohort_set', activeCohort: self.activeCohort })
 	}
 }
 
 function setInteractivity(self) {
-	self.setTab = (event, d) => {
+	self.setTab = async (event, d) => {
 		if (d.colNum === self.activeTab && !self.searching) {
 			self.prevCohort = self.activeCohort
-			self.updateUI(true)
+			await self.updateUI(true)
 			// since the app.dispatch() is not called directly,
 			// must trigger the event bus here
 			if (self.bus) self.bus.emit('postRender')
@@ -526,7 +522,7 @@ function setInteractivity(self) {
 		}
 		self.activeTab = d.colNum
 		self.searching = false
-		self.app.dispatch({ type: 'tab_set', activeTab: self.activeTab })
+		await self.app.dispatch({ type: 'tab_set', activeTab: self.activeTab })
 		if (self.activeTab == 1 && self.activeCohort != -1 && !self.state.plots.length) {
 			// show dictionary in charts tab if no other
 			// plots have been created
