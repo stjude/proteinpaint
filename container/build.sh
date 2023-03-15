@@ -76,11 +76,11 @@ docker build . --file ./Dockerfile --target pprust --tag pprust:$REV --build-arg
 echo "building ppserverdeps:$REV image, package version=$TAG"
 docker build . --file ./Dockerfile --target ppserverdeps --tag ppserverdeps:$REV --build-arg IMGVER=$REV --build-arg SERVERPKGVER=$SERVERPKGVER --build-arg CROSSENV="$CROSSENV" $BUILDARGS
 
-# echo "building ppserver:$REV image, package version=$TAG"
-# docker build . --file ./Dockerfile --target ppserver --tag ppserver:$REV --build-arg IMGVER=$REV --build-arg SERVERPKGVER=$SERVERPKGVER --build-arg CROSSENV="$CROSSENV" $BUILDARGS
+echo "building ppserver:$REV image, package version=$TAG"
+docker build . --file ./Dockerfile --target ppserver --tag ppserver:$REV --build-arg IMGVER=$REV --build-arg SERVERPKGVER=$SERVERPKGVER --build-arg CROSSENV="$CROSSENV" $BUILDARGS
 
-# echo "building ppfull:$REV image, package version=$TAG"
-# docker build . --file ./Dockerfile --target ppapp --tag ppfull:$REV --build-arg IMGVER=$REV --build-arg SERVERPKGVER=$SERVERPKGVER --build-arg FRONTPKGVER=$FRONTPKGVER --build-arg CROSSENV="$CROSSENV" $BUILDARGS
+echo "building ppfull:$REV image, package version=$TAG"
+docker build . --file ./Dockerfile --target ppapp --tag ppfull:$REV --build-arg IMGVER=$REV --build-arg SERVERPKGVER=$SERVERPKGVER --build-arg FRONTPKGVER=$FRONTPKGVER --build-arg CROSSENV="$CROSSENV" $BUILDARGS
 
 if [[ "$(ls -A $(pwd)/tmppack )" == "" ]]; then 
 	rm -rf $PWD/tmppack   
