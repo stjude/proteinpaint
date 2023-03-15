@@ -108,14 +108,18 @@ WORKDIR /home/root/pp/app
 RUN mkdir active
 # !!! NOTE: after open-sourcing, will only need the @stjude registry URL, no token required !!!
 WORKDIR /home/root/pp/app/active
-COPY .npmrc ./
 ARG SERVERPKGVER
-RUN if [ -f /home/root/pp/tmppack/stjude-proteinpaint-server-${SERVERPKGVER}.tgz ]; then \
+RUN echo "@stjude:registry=https://npm.pkg.github.com/" > .npmrc && \
+    if [ -f /home/root/pp/tmppack/stjude-proteinpaint-server-${SERVERPKGVER}.tgz ]; then \
       npm install /home/root/pp/tmppack/stjude-proteinpaint-server-${SERVERPKGVER}.tgz; \
     else \
+      echo "@stjude:registry=https://npm.pkg.github.com/" > .npmrc \
       npm install @stjude/proteinpaint-server@${SERVERPKGVER}; \
-    fi; \
-    rm .npmrc
+    fi
+
+# to help with troubleshooting this stage
+# enables container to be active for ssh debugging
+CMD ["sleep", "3600"]
 
 #####################
 # Server-only app
@@ -131,8 +135,8 @@ COPY --from=ppserverdeps /home/root/pp/app/active /home/root/pp/app/active
 WORKDIR /home/root/pp/app/active
 COPY ./server/app.js .
 EXPOSE 3000
-CMD ["sh", "-c", "node app.js"]
-
+# CMD ["sh", "-c", "node app.js"]
+CMD ["sleep", "3600"]
 
 #################
 # Full install
@@ -148,14 +152,18 @@ COPY --from=ppserver /home/root/pp/app/active /home/root/pp/app/active
 
 WORKDIR /home/root/pp/app/active
 # !!! NOTE: after open-sourcing, will only need the @stjude registry URL, no token required !!!
-COPY ./.npmrc .
 ARG FRONTPKGVER
-RUN if [ -f /home/root/pp/tmppack/stjude-proteinpaint-front-${FRONTPKGVER}.tgz ]; then \
-      npm install /home/root/pp/tmppack/stjude-proteinpaint-front-${FRONTPKGVER}.tgz; \
-    else \
-      npm install @stjude/proteinpaint-front@${FRONTPKGVER}; \
-    fi; \
-    rm .npmrc
+RUN echo "@stjude:registry=https://npm.pkg.github.com/" > .npmrc
+ # && \
+ #    if [ -f /home/root/pp/tmppack/stjude-proteinpaint-front-${FRONTPKGVER}.tgz ]; then \
+ #      npm install /home/root/pp/tmppack/stjude-proteinpaint-front-${FRONTPKGVER}.tgz; \
+ #    else \
+ #      npm install @stjude/proteinpaint-front@${FRONTPKGVER}; \
+ #    fi;
+
+# to help with troubleshooting this stage
+# enables container to be active for ssh debugging
+CMD ["sleep", "3600"]
 
 ############
 # Full app
