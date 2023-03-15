@@ -5,7 +5,6 @@ const cuminc = require('./termdb.cuminc')
 const survival = require('./termdb.survival')
 const regression = require('./termdb.regression')
 const termdbsnp = require('./termdb.snp')
-const LDoverlay = require('./mds2.load.ld').overlay
 const getOrderedLabels = require('./termdb.barchart').getOrderedLabels
 const isUsableTerm = require('#shared/termdb.usecase').isUsableTerm
 const trigger_getSampleScatter = require('./termdb.scatter').trigger_getSampleScatter
@@ -15,6 +14,7 @@ const trigger_getCohortsData = require('./termdb.cohort').trigger_getCohortsData
 const get_mds3variantData = require('./mds3.variant').get_mds3variantData
 import roundValue from '#shared/roundValue'
 import computePercentile from '../shared/compute.percentile.js'
+import { get_lines_bigfile } from './utils'
 
 /*
 ********************** EXPORTED
@@ -65,7 +65,7 @@ export function handle_request_closure(genomes) {
 			if (q.getregression) return await trigger_getregression(q, res, ds)
 			if (q.validateSnps) return res.send(await termdbsnp.validate(q, tdb, ds, genome))
 			if (q.getvariantfilter) return getvariantfilter(res, ds)
-			if (q.getLDdata) return trigger_getLDdata(q, res, ds)
+			if (q.getLDdata) return await LDoverlay(q, ds, res)
 			if (q.genesetByTermId) return trigger_genesetByTermId(q, res, tdb)
 			if (q.getSampleScatter) return await trigger_getSampleScatter(req, q, res, ds, genome)
 			if (q.getCohortsData) return await trigger_getCohortsData(q, res, ds)
@@ -509,11 +509,6 @@ function getvariantfilter(res, ds) {
 	res.send(ds?.queries?.snvindel?.variant_filter || {})
 }
 
-async function trigger_getLDdata(q, res, ds) {
-	if (ds.track && ds.track.ld && ds.track.ld.tracks.find(i => i.name == q.ldtkname)) return await LDoverlay(q, ds, res)
-	res.send({ nodata: 1 })
-}
-
 function trigger_genesetByTermId(q, res, tdb) {
 	if (!tdb.termMatch2geneSet) throw 'this feature is not enabled'
 	if (typeof q.genesetByTermId != 'string' || q.genesetByTermId.length == 0) throw 'invalid query term id'
@@ -556,4 +551,44 @@ function get_mds3queryDetails(res, ds) {
 		}
 	}
 	res.send(config)
+}
+
+async function LDoverlay(q, ds, res) {
+	if (!q.ldtkname) throw '.ldtkname missing'
+	if (!ds.queries?.ld?.tracks) throw 'no ld tk'
+	const tk = ds.queries.ld.tracks.find(i => i.name == q.ldtkname)
+	if (!tk) throw 'unknown ld tk'
+	if (typeof q.m != 'object') throw 'q.m{} not object'
+	if (!q.m.chr) throw 'q.m.chr missing'
+	if (!Number.isInteger(q.m.pos)) throw 'q.m.pos not integer'
+	if (!q.m.ref || !q.m.alt) throw 'q.m{} invalid alleles'
+	const thisalleles = q.m.ref + '.' + q.m.alt
+	const coord = (tk.nochr ? q.m.chr.replace('chr', '') : q.m.chr) + ':' + q.m.pos + '-' + (q.m.pos + 1)
+	const lst = []
+	await get_lines_bigfile({
+		args: [tk.file, coord],
+		dir: tk.dir,
+		callback: line => {
+			const l = line.split('\t')
+			const start = Number.parseInt(l[1])
+			const stop = Number.parseInt(l[2])
+			const alleles1 = l[3]
+			const alleles2 = l[4]
+			const r2 = Number.parseFloat(l[5])
+			if (start == q.m.pos && alleles1 == thisalleles) {
+				lst.push({
+					pos: stop,
+					alleles: alleles2,
+					r2
+				})
+			} else if (stop == q.m.pos && alleles2 == thisalleles) {
+				lst.push({
+					pos: start,
+					alleles: alleles1,
+					r2
+				})
+			}
+		}
+	})
+	res.send({ lst })
 }

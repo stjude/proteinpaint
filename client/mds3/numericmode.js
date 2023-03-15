@@ -7,6 +7,7 @@ import { make_datagroup } from './datagroup'
 import { click_variant } from './clickVariant'
 import { positionLeftlabelg } from './leftlabel'
 import { may_render_skewer } from './skewer'
+import { mayHighlightDiskBySsmid } from './skewer.render'
 
 /*
 ********************** EXPORTED
@@ -74,6 +75,8 @@ export function renderNumericMode(nm, data, tk, block) {
 	if (tk.skewer.nmg) tk.skewer.nmg.selectAll('*').remove()
 
 	numeric_make(nm, tk, block)
+
+	mayHighlightByLDoverlay(tk)
 
 	return (
 		nm.toplabelheight +
@@ -889,4 +892,13 @@ function render_axis(tk, nm, block) {
 
 function trianglePath(p) {
 	return `M 0 -${p} L ${p} ${p * 0.7} h -${p * 2} Z`
+}
+
+function mayHighlightByLDoverlay(tk) {
+	// quick fix:
+	// after rendering numeric tk, allow to highlight the "index" variant from ld overlay
+	const m = tk.mds.queries?.ld?.mOverlay?.m
+	if (!m) return
+	tk.skewer.hlssmid = new Set([m.ssm_id])
+	mayHighlightDiskBySsmid(tk)
 }

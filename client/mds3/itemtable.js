@@ -12,6 +12,9 @@ itemtable
 ********************** INTERNAL
 itemtable_oneItem
 	table_snvindel
+		table_snvindel_mayInsertNumericValueRow
+		table_snvindel_mayInsertHtmlSections
+		table_snvindel_mayInsertLD
 	table_svfusion
 itemtable_multiItems
 mayMoveTipDiv2left
@@ -119,6 +122,7 @@ async function itemtable_oneItem(arg, grid) {
 	// a new table will be created under arg.div to show sample table
 
 	if (arg.tk.mds.variant2samples && arg.mlst[0].occurrence) {
+		// display samples carrying this variant when conditions are met
 		await init_sampletable(arg)
 	}
 }
@@ -278,6 +282,7 @@ function table_snvindel({ mlst, tk, block }, grid) {
 	}
 	table_snvindel_mayInsertNumericValueRow(m, tk, grid)
 	table_snvindel_mayInsertHtmlSections(m, tk, grid)
+	table_snvindel_mayInsertLD(m, tk, grid)
 
 	if (m.info) {
 		/* info fields are available for this variant
@@ -561,6 +566,45 @@ async function getGm(p, block) {
 	if (u) {
 		p.name = u.name
 		p.gm = { isoform: u.isoform }
+	}
+}
+
+function table_snvindel_mayInsertLD(m, tk, grid) {
+	if (!tk.mds.queries?.ld) return
+	const [td1, td2] = get_list_cells(grid)
+	td1.text('LD overlay')
+
+	const m0 = tk.mds.queries.ld.mOverlay?.m // if doing overlay now, returns the "index" m
+
+	for (const o of tk.mds.queries.ld.tracks) {
+		// o = {name}
+		const btn = td2.append('button').text(o.name)
+
+		if (m0 && m0.ssm_id == m.ssm_id) {
+			// the same index variant everybody else's overlaying against
+			if (o.name == tk.mds.queries.ld.mOverlay.ldtkname) {
+				// the same ld tk
+				btn.property('disabled', true)
+				continue
+			}
+		}
+
+		// enable clicking this button to overlay on this ld tk
+		btn.on('click', () => {
+			tk.itemtip.hide()
+			// create the object to indicate overlaying is active
+			tk.mds.queries.ld.mOverlay = {
+				ldtkname: o.name,
+				m: {
+					chr: m.chr,
+					pos: m.pos,
+					ref: m.ref,
+					alt: m.alt,
+					ssm_id: m.ssm_id // required for highlighting
+				}
+			}
+			tk.load()
+		})
 	}
 }
 

@@ -1253,17 +1253,17 @@ async function mayCheckLD(m, input, self) {
 		})
 
 		wait.html(input.term.q.restrictAncestry.name + ' LD r<sup>2</sup>')
-		showLDlegend(self.dom.LDresultDiv)
+		showLDlegend(self.dom.LDresultDiv, LDcolorScale)
 	} catch (e) {
 		wait.text('Error: ' + (e.message || e))
 	}
 }
 
-function showLDlegend(div) {
+export function showLDlegend(div, colorScale) {
 	const colorbardiv = div.append('span').style('margin-left', '10px')
 	const colorlst = []
 	for (let i = 0; i <= 1; i += 0.1) {
-		colorlst.push(LDcolorScale(i))
+		colorlst.push(colorScale(i))
 	}
 	const svg = colorbardiv.append('svg')
 	const axisheight = 20

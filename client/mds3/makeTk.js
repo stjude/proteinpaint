@@ -132,9 +132,27 @@ export async function makeTk(tk, block) {
 			if (tk.mutationColorBy == 'hardcode') {
 				if (m.color) return m.color
 			}
-			// support other choices, including vcfinfofilter
 		}
+
+		if (tk.mds.queries?.ld?.mOverlay?.data) {
+			const m0 = tk.mds.queries.ld.mOverlay.m
+			if (m.chr == m0.chr && m.pos == m0.pos && m.ref == m0.ref && m.alt == m0.alt) {
+				// the same variant as has been clicked for overlaying
+				return tk.mds.queries.ld.overlay.color_1
+			}
+			// this variant is not the "index" one, find a matching variant from returned data
+			for (const m1 of tk.mds.queries.ld.mOverlay.data) {
+				if (m1.pos == m.pos && m1.alleles == m.ref + '.' + m.alt) {
+					// found match
+					return tk.mds.queries.ld.colorScale(m1.r2)
+				}
+			}
+			// no match
+			return tk.mds.queries.ld.overlay.color_0
+		}
+
 		if (tk.vcfinfofilter && tk.vcfinfofilter.setidx4mclass != undefined) {
+			// TODO
 			const mcset = tk.vcfinfofilter.lst[tk.vcfinfofilter.setidx4mclass]
 
 			const [err, vlst] = getter_mcset_key(mcset, m)

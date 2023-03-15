@@ -60,7 +60,7 @@ function getParameter(tk, block) {
 		// instructs server to return data types associated with tracks
 		// including skewer or non-skewer
 		forTrack: 1,
-		// FIXME should not pass skewerRim if it is not in use (turn off)
+		// may not pass skewerRim if it is not in use (turn off)
 		skewerRim: tk.mds.queries?.snvindel?.skewerRim // instructions for counting rim counts per variant
 	}
 
@@ -178,7 +178,7 @@ async function getData(tk, block) {
 	let data
 	if (tk.custom_variants) {
 		// has custom data on client side, no need to request from server
-		data = dataFromCustomVariants(tk, block)
+		data = await dataFromCustomVariants(tk, block)
 	} else {
 		// request data from server, either official or custom sources
 		const [body, headers] = getParameter(tk, block)
@@ -296,7 +296,7 @@ by info_fields[] and variantcase_fields[]
 	}
 }
 
-function dataFromCustomVariants(tk, block) {
+async function dataFromCustomVariants(tk, block) {
 	// return the same data{} object as server queries
 	const data = {
 		skewer: []
@@ -345,5 +345,18 @@ function dataFromCustomVariants(tk, block) {
 	}
 
 	data.mclass2variantcount = [...m2c]
+
+	// a special arrangment to do ld overlay on the custom variants via the official dataset
+	await mayDoLDoverlay(tk, data.skewer)
+
 	return data
+}
+
+async function mayDoLDoverlay(tk) {
+	if (!tk.mds.queries?.ld?.mOverlay) return
+	if (!tk.mds.termdb?.vocabApi) return
+	delete tk.mds.queries.ld.mOverlay.data // delete previous data
+	const data = await tk.mds.termdb.vocabApi.getLDdata(tk.mds.queries.ld.mOverlay.ldtkname, tk.mds.queries.ld.mOverlay.m)
+	if (data.error || !Array.isArray(data.lst)) return
+	tk.mds.queries.ld.mOverlay.data = data.lst // register returned data to be used
 }

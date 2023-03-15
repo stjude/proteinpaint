@@ -1,6 +1,8 @@
 import { legend_newrow } from '#src/block.legend'
 import { Menu } from '#dom/menu'
 import { mclass, dt2label, dtcnv, dtloh, dtitd, dtsv, dtfusionrna, mclassitd } from '#shared/common'
+import { interpolateRgb } from 'd3-interpolate'
+import { showLDlegend } from '../plots/regression.results'
 
 /*
 ********************** EXPORTED
@@ -17,6 +19,8 @@ may_create_formatFilter
 may_update_formatFilter
 may_create_skewerRim
 may_update_skewerRim
+may_create_ld
+may_update_ld
 
 ********************** tk.legend{} structure
 .tip
@@ -58,6 +62,7 @@ run only once, called by makeTk
 	may_create_infoFields(tk)
 	may_create_formatFilter(tk)
 	may_create_skewerRim(tk)
+	may_create_ld(tk)
 }
 
 /*
@@ -328,6 +333,7 @@ export function updateLegend(data, tk, block) {
 	may_update_infoFields(data, tk)
 	may_update_formatFilter(data, tk)
 	may_update_skewerRim(data, tk)
+	may_update_ld(tk)
 }
 
 function may_update_variantShapeName(data, tk) {
@@ -724,4 +730,43 @@ function getRimSvg(rim) {
 			: '') + // blank for no rim
 		'</svg>'
 	)
+}
+
+function may_create_ld(tk, block) {
+	if (!tk.mds.queries?.ld) return
+	tk.mds.queries.ld.colorScale = interpolateRgb(tk.mds.queries.ld.overlay.color_0, tk.mds.queries.ld.overlay.color_1)
+	const R = (tk.legend.ld = {})
+	R.row = tk.legend.table.append('tr')
+	// contents are filled in dynamically
+	R.headerTd = R.row
+		.append('td')
+		.style('text-align', 'right')
+		.style('opacity', 0.3)
+	R.holder = R.row.append('td')
+	R.showHolder = R.holder.append('div').style('display', 'none')
+	showLDlegend(R.showHolder, tk.mds.queries.ld.colorScale)
+	R.showHolder
+		.append('span')
+		.text('Cancel overlay')
+		.style('font-size', '.7em')
+		.attr('class', 'sja_clbtext')
+		.on('click', () => {
+			delete tk.mds.queries.ld.mOverlay
+			if (tk.skewer?.hlssmid) delete tk.skewer.hlssmid
+			tk.load()
+		})
+}
+
+function may_update_ld(tk) {
+	if (!tk.mds.queries?.ld?.mOverlay) {
+		// not in use
+		if (tk.legend.ld) {
+			tk.legend.ld.headerTd.html('')
+			tk.legend.ld.showHolder.style('display', 'none')
+		}
+		return
+	}
+	// doing overlay
+	tk.legend.ld.headerTd.html(tk.mds.queries.ld.mOverlay.ldtkname + ' LD r<sup>2</sup>')
+	tk.legend.ld.showHolder.style('display', 'block')
 }

@@ -39,6 +39,7 @@ validate_query_snvindel
 	mayValidateSampleHeader
 validate_query_svfusion
 	svfusionByRangeGetter_file
+validate_query_ld
 validate_variant2samples
 validate_ssm2canonicalisoform
 mayAdd_refseq2ensembl
@@ -64,6 +65,7 @@ export async function init(ds, genome, _servconfig, app = null, basepath = null)
 		await validate_query_snvindel(ds, genome)
 		await validate_query_svfusion(ds, genome)
 		await validate_query_geneCnv(ds, genome)
+		await validate_query_ld(ds, genome)
 
 		validate_variant2samples(ds)
 		validate_ssm2canonicalisoform(ds)
@@ -89,9 +91,10 @@ export function client_copy(ds) {
 		label: ds.label
 	}
 
-	ds2_client.queries = copy_queries(ds, ds2_client)
+	copy_queries(ds, ds2_client)
+	// .queries{} may be set
 
-	if (ds?.cohort?.termdb) {
+	if (ds.cohort?.termdb) {
 		ds2_client.termdb = {}
 		// if using flat list of terms, do not send terms[] to client
 		// as this is official ds, and client will create vocabApi
@@ -101,9 +104,6 @@ export function client_copy(ds) {
 				sample_id_key: ds.cohort.termdb.allowCaseDetails.sample_id_key // optional key
 			}
 		}
-	}
-	if (ds.queries.snvindel) {
-		ds2_client.has_skewer = true
 	}
 	if (ds.variant2samples) {
 		const v = ds.variant2samples
@@ -401,9 +401,11 @@ async function call_barchart_data(twLst, q, combination, ds) {
 }
 
 function copy_queries(ds, dscopy) {
+	if (!ds.queries) return
 	const copy = {}
 	const qs = ds.queries.snvindel
 	if (qs) {
+		dscopy.has_skewer = true
 		copy.snvindel = {
 			forTrack: qs.forTrack,
 			vcfid4skewerName: qs.vcfid4skewerName,
@@ -423,8 +425,13 @@ function copy_queries(ds, dscopy) {
 			dscopy.bcf.format = qs.format
 		}
 	}
-	// new query
-	return copy
+	if (ds.queries.ld) {
+		copy.ld = JSON.parse(JSON.stringify(ds.queries.ld))
+		for (const i of copy.ld.tracks) {
+			delete i.file
+		}
+	}
+	dscopy.queries = copy
 }
 
 function sort_mclass(set) {
@@ -1032,6 +1039,21 @@ async function validate_query_svfusion(ds, genome) {
 			throw 'unknown query method for svfusion.byrange'
 		}
 	}
+}
+async function validate_query_ld(ds, genome) {
+	const q = ds.queries.ld
+	if (!q) return
+	if (!Array.isArray(q.tracks) || !q.tracks.length) throw 'ld.tracks[] not nonempty array'
+	for (const k of q.tracks) {
+		if (!k.name) throw 'name missing from one of ld.tracks[]'
+		if (!k.file) throw '.file missing from one of ld.tracks[]'
+		k.file = path.join(serverconfig.tpmasterdir, k.file)
+		await utils.validate_tabixfile(k.file)
+		k.nochr = await utils.tabix_is_nochr(k.file, null, genome)
+	}
+	if (!q.overlay) throw 'ld.overlay{} missing'
+	if (!q.overlay.color_0) throw 'ld.overlay.color_0 missing'
+	if (!q.overlay.color_1) throw 'ld.overlay.color_1 missing'
 }
 
 /*

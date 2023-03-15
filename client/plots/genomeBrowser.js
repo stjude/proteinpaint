@@ -8,9 +8,6 @@ import { first_genetrack_tolist } from '#common/1stGenetk'
 import { gbControlsInit, mayUpdateGroupTestMethodsIdx } from './genomeBrowser.controls'
 
 /*
-the control ui is generated based on various bits from this.state.config{}, and server data
-it is made ad-hoc upon launching app, and not reactive to state change and data update
-
 //////////////// instance structure
 
 this{}
@@ -349,7 +346,6 @@ export function makeChartBtnMenu(holder, chartsInstance) {
 // get default config of the app from vocabApi
 async function getDefaultConfig(vocabApi, override) {
 	const config = await vocabApi.getMds3queryDetails()
-	console.log(config)
 	// request default variant filter (against vcf INFO)
 	const vf = await vocabApi.get_variantFilter()
 	if (vf?.filter) {
