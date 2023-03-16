@@ -22,12 +22,6 @@ class TdbControlsTopBar {
 				callback: opts.callback,
 				debug
 			}),
-			helpbtn: helpBtnInit({
-				id: opts.id,
-				holder: this.dom.holder.insert('div'),
-				callback: opts.helpHandler,
-				debug
-			}),
 			downloadbtn: downloadBtnInit({
 				id: opts.id,
 				holder: this.dom.holder.insert('div'),
@@ -97,28 +91,6 @@ function downloadBtnInit(opts) {
 		plotTypes: ['summary', 'boxplot', 'scatter'],
 		dom: {
 			btn: downloadDiv
-		}
-	}
-
-	const api = {
-		main(isOpen, plot) {
-			self.dom.btn.style('display', isOpen ? 'inline-block' : 'block')
-		}
-	}
-
-	if (opts.debug) api.Inner = self
-	return Object.freeze(api)
-}
-
-function helpBtnInit(opts) {
-	const helpDiv = opts.holder.style('margin-left', '20px').style('margin-bottom', '15px')
-
-	icon_functions['help'](helpDiv, { handler: opts.callback })
-
-	const self = {
-		plotTypes: ['scatter'],
-		dom: {
-			btn: helpDiv
 		}
 	}
 
