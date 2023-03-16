@@ -125,6 +125,8 @@ class TdbNav {
 		}
 		this.filterJSON = JSON.stringify(this.state.filter)
 
+		this.cohortsData = await this.app.vocabApi.getCohortsData()
+
 		if (this.state.nav.header_mode === 'with_tabs') {
 			if (!(this.activeCohortName in this.samplecounts)) {
 				this.samplecounts[this.activeCohortName] = await this.app.vocabApi.getCohortSampleCount(this.activeCohortName)
@@ -375,7 +377,7 @@ function setRenderers(self) {
 		for (const key in self.dom.subheader) {
 			self.dom.subheader[key].style('display', self.tabs[self.activeTab].subheader === key ? 'block' : 'none')
 		}
-		await self.renderCohortsTable()
+		self.renderCohortsTable()
 		self.dom.cohortTable.selectAll(`tbody > tr > td`).style('background-color', 'transparent')
 		const activeColumn = self.dom.cohortTable.selectAll(`tbody > tr > td:nth-child(${self.activeCohort + 2})`)
 		activeColumn.style('background-color', 'yellow')
@@ -386,12 +388,11 @@ function setRenderers(self) {
 		}
 	}
 
-	self.renderCohortsTable = async () => {
+	self.renderCohortsTable = () => {
 		self.dom.cohortTable.selectAll('*').remove()
 		const columns = [{ label: 'Feature' }]
 		const rows = []
-		const result = await self.app.vocabApi.getCohortsData()
-
+		const result = self.cohortsData
 		if ('error' in result) throw result.error
 		for (const feature of result.features) rows.push([{ value: feature.name }])
 		for (const cohort of result.cohorts) {
