@@ -5,6 +5,8 @@ import { Tabs } from '#dom/toggleButtons'
 import { appInit } from '#termdb/app'
 
 /*
+getState
+	_partialData
 main
 	makeVariantValueComputingGroupControls
 		render1group
@@ -43,6 +45,13 @@ class GbControls {
 	getState(appState) {
 		const config = appState.plots.find(p => p.id === this.id)
 		if (!config) throw `No plot with id='${this.id}' found`
+		if (config._partialData) {
+			// receives partial data but not full app state
+			// quick fix: cannot update dom here as the doms are not rendered yet
+			// thus will use this data later when rendering doms
+			this._partialData = config._partialData
+			return
+		}
 		return {
 			config,
 			termdbConfig: appState.termdbConfig,
@@ -202,8 +211,7 @@ function render1group_population(self, groupIdx, group, div) {
 function render1group_filter(self, groupIdx, group, div) {
 	/*
 	this group is based on a termdb-filter
-	TODO sample counts in tvs menu should reflect global mass filter; on every app update (e.g. cohort change) the cohort choice should be combined into group.filter (but remain invisible)
-	TODO subcohort from global mass filter should be combined into group.filter, but no need to render cohort choice in this filter ui. 
+	FIXME the filter instance is not reflecting global mass filter and subcohort change
 	*/
 	filterInit({
 		holder: div,
@@ -221,11 +229,16 @@ function render1group_filter(self, groupIdx, group, div) {
 		}
 	}).main(group.filter)
 
-	self.opts.holder.g0 = div
-		.append('span')
-		.style('margin-left', '10px')
-		.style('opacity', 0.5)
-		.style('font-size', '.9em')
+	const count = self._partialData?.groupSampleCounts?.[groupIdx]
+	if (Number.isInteger(count)) {
+		// quick fix! sample count for this group is already present from partial data, create field to display
+		div
+			.append('span')
+			.style('margin-left', '10px')
+			.style('opacity', 0.5)
+			.style('font-size', '.9em')
+			.text('n=' + count)
+	}
 }
 
 function makePrompt2addNewGroup(self, groupIdx, div) {

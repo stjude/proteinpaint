@@ -2,11 +2,13 @@ import { dofetch3 } from '#common/dofetch'
 import { makeTk } from './makeTk'
 import { may_render_skewer } from './skewer'
 import { make_leftlabels } from './leftlabel'
+import { mclass } from '#shared/common'
 
 /*
 loadTk
 	getData
 		dataFromCustomVariants
+			mayDoLDoverlay
 		getParameter
 			rangequery_rglst
 rangequery_add_variantfilters
@@ -321,10 +323,11 @@ async function dataFromCustomVariants(tk, block) {
 	for (const m of tk.custom_variants) {
 		if (m.chr != block.rglst[0].chr) continue // may not work for subpanel
 		if (m.pos <= bbstart || m.pos >= bbstop) continue
-		if (!m.class) {
-			// should this be done?
-			m.class = 'X'
-		}
+
+		// guard against missing or invalid class from custom data
+		// wrong values are silently converted to "X" for "nonstandard", which can alert user without needing a separate alert
+		if (!m.class) m.class = 'X' // missing class
+		if (!mclass[m.class]) m.class = 'X' // invalid class
 
 		// for hidden mclass, must count it so the legend will be able to show the hidden item
 		m2c.set(m.class, 1 + (m2c.get(m.class) || 0))

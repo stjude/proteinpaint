@@ -137,12 +137,7 @@ class genomeBrowser {
 
 	async launchCustomMds3tk() {
 		const data = await this.preComputeData()
-		/*
-		if (data.totalSampleCount_group1 && this.dom.groupShowCountDiv[0])
-			this.dom.groupShowCountDiv[0].text('n=' + data.totalSampleCount_group1)
-		if (data.totalSampleCount_group2 && this.dom.groupShowCountDiv[1])
-			this.dom.groupShowCountDiv[1].text('n=' + data.totalSampleCount_group2)
-			*/
+		this.mayDisplaySampleCountInControls(data)
 
 		if (this.blockInstance) {
 			// block already launched. update data on the tk and rerender
@@ -172,6 +167,29 @@ class genomeBrowser {
 			skewerModes: [nm]
 		}
 		this.blockInstance = await this.launchBlockWithTracks([tk])
+	}
+
+	mayDisplaySampleCountInControls(data) {
+		/* quick fix
+		group sample count returned by server is not part of state and is not accessible to controls component
+		has to synthesize a "current" object with the _partialData special attribute
+		and pass it to api.update() for component instance to receive it via getState()
+		*/
+		if (Number.isInteger(data.totalSampleCount_group1) || Number.isInteger(data.totalSampleCount_group2)) {
+			const current = {
+				appState: {
+					plots: [
+						{
+							id: this.components.gbControls.id,
+							_partialData: {
+								groupSampleCounts: [data.totalSampleCount_group1, data.totalSampleCount_group2]
+							}
+						}
+					]
+				}
+			}
+			this.components.gbControls.update(current)
+		}
 	}
 
 	async preComputeData() {
