@@ -211,7 +211,6 @@ function render1group_population(self, groupIdx, group, div) {
 function render1group_filter(self, groupIdx, group, div) {
 	/*
 	this group is based on a termdb-filter
-	FIXME the filter instance is not reflecting global mass filter and subcohort change
 	*/
 	filterInit({
 		holder: div,
@@ -227,7 +226,7 @@ function render1group_filter(self, groupIdx, group, div) {
 				config: { snvindel: { details: { groups } } }
 			})
 		}
-	}).main(group.filter)
+	}).main(group.filter, { additionalFilter: self.state.filter })
 
 	const count = self._partialData?.groupSampleCounts?.[groupIdx]
 	if (Number.isInteger(count)) {

@@ -105,6 +105,15 @@ class Filter {
 
 		this.opts = Object.assign({}, this.opts, opts)
 		this.activeCohort = this.opts.activeCohort
+
+		// additional filter obj, e.g. the global mass filter
+		// the additional filter is invisible and does not affect tvs pill rendering of rawCopy
+		// but will serve to reduce the number of samples shown in the tvs edit menu
+		// as this additional filter will be combined with this.filter when passed to TVSInit
+		if (this.opts.additionalFilter) {
+			this.validateFilter(this.opts.additionalFilter)
+		}
+
 		this.rawCopy = rawCopy
 		this.rawFilter = JSON.parse(this.rawCopy)
 		this.validateFilter(this.rawFilter)
@@ -149,6 +158,7 @@ class Filter {
 			this.validateFilter(subitem)
 		}
 	}
+
 	resetActiveData(filter) {
 		// clear menu click
 		if (this.dom.controlsTip.d.style('display') == 'none') {
@@ -181,23 +191,35 @@ class Filter {
 	getId(item) {
 		return item.$id
 	}
+
 	getFilterExcludingPill($id) {
+		// return the filter object to pass to TVSInit(), for precisely calculating number of samples shown in tvs edit menu
+		// if additionalFilter is defined, must join both filters
 		const rootCopy = JSON.parse(JSON.stringify(this.rawFilter))
 		const parentCopy = findParent(rootCopy, $id)
 		const i = parentCopy.lst.findIndex(f => f.$id === $id)
-		if (i == -1) return null
+		if (i == -1) {
+			// the additional filter can be null
+			return this.opts.additionalFilter
+		}
 		parentCopy.lst.splice(i, 1)
 		const cohortFilter = getFilterItemByTag(rootCopy, 'cohortFilter')
+
+		let f
+
 		if (cohortFilter && !parentCopy.lst.find(d => d === cohortFilter)) {
-			return getNormalRoot({
+			f = getNormalRoot({
 				type: 'tvslst',
 				join: 'and',
 				lst: [cohortFilter, parentCopy]
 			})
 		} else {
-			return getNormalRoot(parentCopy)
+			f = getNormalRoot(parentCopy)
 		}
+
+		return this.opts.additionalFilter ? filterJoin([f, this.opts.additionalFilter]) : f
 	}
+
 	getAdjustedRoot($id, join) {
 		const rootCopy = JSON.parse(JSON.stringify(this.rawFilter))
 		if (join == 'and') {
