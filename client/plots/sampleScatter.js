@@ -295,9 +295,6 @@ class Scatter {
 		}
 
 		this.components.controls.on('downloadClick.scatter', () => this.downloadSVG(this.svg))
-		this.components.controls.on('helpClick.scatter', () =>
-			window.open('https://github.com/stjude/proteinpaint/wiki/Scatter-plot', '_blank')
-		)
 		this.dom.toolsDiv = this.dom.controls.insert('div')
 	}
 
@@ -1385,6 +1382,14 @@ function setRenderers(self) {
 		toolsDiv.selectAll('*').remove()
 		let display = 'block'
 		if (inline) display = 'inline-block'
+		const helpDiv = toolsDiv
+			.insert('div')
+			.style('display', display)
+			.style('margin', '20px')
+			.attr('name', 'sjpp-reset-btn') //For unit tests
+		icon_functions['help'](helpDiv, {
+			handler: () => window.open('https://github.com/stjude/proteinpaint/wiki/Scatter-plot', '_blank')
+		})
 
 		const homeDiv = toolsDiv
 			.insert('div')

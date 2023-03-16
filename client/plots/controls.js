@@ -17,7 +17,7 @@ let i = 0 // track controls "instances" for assigning unambiguous unique input n
 class TdbPlotControls {
 	constructor(opts) {
 		this.type = 'plotControls'
-		this.customEvents = ['downloadClick', 'infoClick', 'helpClick']
+		this.customEvents = ['downloadClick', 'infoClick']
 		setInteractivity(this)
 		setRenderers(this)
 	}
@@ -32,7 +32,6 @@ class TdbPlotControls {
 					holder: this.dom.topbar,
 					callback: this.toggleVisibility,
 					downloadHandler: () => this.bus.emit('downloadClick'),
-					helpHandler: () => this.bus.emit('helpClick'),
 					infoHandler: isOpen =>
 						this.app.dispatch({
 							type: 'plot_edit',
