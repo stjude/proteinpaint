@@ -7,8 +7,6 @@ import { renderTable } from '#dom/table'
 import { Menu } from '../dom/menu'
 import { rgb } from 'd3'
 
-const violinInteractivity = require('./violin.interactivity')
-
 export default function violinRenderer(self) {
 	const k2c = scaleOrdinal(schemeCategory10)
 	self.render = function() {
@@ -57,7 +55,7 @@ export default function violinRenderer(self) {
 			if (self.opts.mode != 'minimal') renderLabels(t1, t2, violinG, plot, isH, settings, tip)
 			renderViolinPlot(plot, self, isH, svg, plotIdx, violinG, imageOffset)
 			if (self.opts.mode != 'minimal') renderBrushing(t1, t2, violinG, settings, plot, isH, svg)
-			violinInteractivity.labelHideLegendClicking(t2, plot, self)
+			self.labelHideLegendClicking(t2, plot, self)
 		}
 	}
 
@@ -246,7 +244,7 @@ export default function violinRenderer(self) {
 			.style('cursor', 'pointer')
 			.on('click', function(event) {
 				if (!event) return
-				violinInteractivity.displayLabelClickMenu(t1, t2, plot, event, self)
+				self.displayLabelClickMenu(t1, t2, plot, event, self)
 			})
 			.on('mouseover', function(event, d) {
 				event.stopPropagation()
@@ -370,7 +368,7 @@ export default function violinRenderer(self) {
 
 								if (!selection) return
 
-								await violinInteractivity.displayBrushMenu(t1, t2, self, plot, selection, svg.axisScale, isH)
+								self.displayBrushMenu(t1, t2, self, plot, selection, svg.axisScale, isH)
 							})
 					: brushY()
 							.extent([[-20, 0], [20, settings.svgw]])
@@ -379,7 +377,7 @@ export default function violinRenderer(self) {
 
 								if (!selection) return
 
-								await violinInteractivity.displayBrushMenu(t1, t2, self, plot, selection, svg.axisScale, isH)
+								self.displayBrushMenu(t1, t2, self, plot, selection, svg.axisScale, isH)
 							})
 			)
 	}

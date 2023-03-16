@@ -1,9 +1,9 @@
 import { getCompInit, copyMerge } from '../rx'
 import { controlsInit } from './controls'
 import violinRenderer from './violin.renderer'
-import { to_svg } from '#src/client'
 import htmlLegend from '../dom/html.legend'
 import { fillTermWrapper } from '#termsetting'
+import { setInteractivity } from './violin.interactivity'
 
 /*
 when opts.mode = 'minimal', a minimal violin plot will be rendered that will have a single term and minimal features (i.e. no controls, legend, labels, brushing, transitions, etc.)
@@ -251,25 +251,25 @@ class ViolinPlot {
 export const violinInit = getCompInit(ViolinPlot)
 export const componentInit = violinInit
 
-function setInteractivity(self) {
-	self.download = function() {
-		if (!self.state) return
+// function setInteractivity(self) {
+// 	self.download = function() {
+// 		if (!self.state) return
 
-		// has to be able to handle multichart view
-		// const mainGs = []
-		// const translate = { x: undefined, y: undefined }
-		// const titles = []
-		// let maxw = 0,
-		// 	maxh = 0,
-		// 	tboxh = 0
-		// let prevY = 0,
-		// 	numChartsPerRow = 0
+// 		// has to be able to handle multichart view
+// 		// const mainGs = []
+// 		// const translate = { x: undefined, y: undefined }
+// 		// const titles = []
+// 		// let maxw = 0,
+// 		// 	maxh = 0,
+// 		// 	tboxh = 0
+// 		// let prevY = 0,
+// 		// 	numChartsPerRow = 0
 
-		self.dom.violinDiv.selectAll('.sjpp-violin-plot').each(function() {
-			to_svg(this, 'violin', { apply_dom_styles: true })
-		})
-	}
-}
+// 		self.dom.violinDiv.selectAll('.sjpp-violin-plot').each(function() {
+// 			to_svg(this, 'violin', { apply_dom_styles: true })
+// 		})
+// 	}
+// }
 
 export function getDefaultViolinSettings(app, overrides = {}) {
 	const defaults = {
