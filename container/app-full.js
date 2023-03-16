@@ -36,6 +36,11 @@ if (!serverconfig.genomes) {
 serverconfig.backend_only = false
 fs.writeFileSync('./serverconfig.json', JSON.stringify(serverconfig, null, '   '), {charset: 'utf8'})
 
+if (serverconfig.container?.alwaysRunUpdate) {
+  console.log('Updating proteinpaint packages ...')
+  spawnSync('npm', ['update'],  { encoding: 'utf-8' })
+}
+
 console.log(`generating public/bin for ${serverconfig.url}`)
 spawnSync('npx', ['proteinpaint-front', serverconfig.url],  { encoding: 'utf-8' })
 

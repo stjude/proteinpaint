@@ -54,31 +54,18 @@ echo "[$TPDIR] [$HOSTPORT] [$IMAGE_NAME] [$CONTAINER_ID]"
 #################
 
 set +e
-docker stop $CONTAINER_ID && docker rm $CONTAINER_ID
+#docker stop $CONTAINER_ID && docker rm $CONTAINER_ID
+docker stop $CONTAINER_ID || true && docker rm $CONTAINER_ID || true
 set -e
 
 APPDIR=$(pwd)
 CONTAPP=/home/root/pp/app/active
 
-if [[ "$IMAGE_NAME" == ppserver* ]]; then
-	docker run -d \
-		--name $CONTAINER_ID \
-		--mount type=bind,source=$TPDIR,target=/home/root/pp/tp,readonly \
-		--mount type=bind,source=$APPDIR/serverconfig.json,target=$CONTAPP/serverconfig.json \
-		--publish $HOSTPORT:$EXPOSED_PORT \
-		-e PP_MODE=container-prod \
-		-e PP_PORT=$EXPOSED_PORT \
-		$IMAGE_NAME
-
-else 
-	docker run -d \
-		--name $CONTAINER_ID \
-		--mount type=bind,source=$TPDIR,target=/home/root/pp/tp,readonly \
-		--mount type=bind,source=$APPDIR/public,target=$CONTAPP/public \
-		--mount type=bind,source=$APPDIR/serverconfig.json,target=$CONTAPP/serverconfig.json \
-		--publish $HOSTPORT:$EXPOSED_PORT \
-		-e PP_MODE=container-prod \
-		-e PP_PORT=$EXPOSED_PORT \
-		$IMAGE_NAME
-
-fi
+docker run -d \
+	--name $CONTAINER_ID \
+	--mount type=bind,source=$TPDIR,target=/home/root/pp/tp,readonly \
+	--mount type=bind,source=$APPDIR/serverconfig.json,target=$CONTAPP/serverconfig.json \
+	--publish $HOSTPORT:$EXPOSED_PORT \
+	-e PP_MODE=container-prod \
+	-e PP_PORT=$EXPOSED_PORT \
+	$IMAGE_NAME
