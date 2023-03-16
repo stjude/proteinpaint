@@ -378,10 +378,12 @@ function setRenderers(self) {
 			self.dom.subheader[key].style('display', self.tabs[self.activeTab].subheader === key ? 'block' : 'none')
 		}
 		self.renderCohortsTable()
-		self.dom.cohortTable.selectAll(`tbody > tr > td`).style('background-color', 'transparent')
-		const activeColumn = self.dom.cohortTable.selectAll(`tbody > tr > td:nth-child(${self.activeCohort + 2})`)
-		activeColumn.style('background-color', 'yellow')
-		self.dom.cohortInputs.property('checked', (d, i) => i === self.activeCohort)
+		if (self.dom.cohortTable) {
+			self.dom.cohortTable.selectAll(`tbody > tr > td`).style('background-color', 'transparent')
+			const activeColumn = self.dom.cohortTable.selectAll(`tbody > tr > td:nth-child(${self.activeCohort + 2})`)
+			activeColumn.style('background-color', 'yellow')
+			self.dom.cohortInputs.property('checked', (d, i) => i === self.activeCohort)
+		}
 
 		if (self.opts.header_mode === 'with_cohort_select') {
 			self.dom.cohortSelect.selectAll('option').property('value', appState.activeCohort)
@@ -389,6 +391,7 @@ function setRenderers(self) {
 	}
 
 	self.renderCohortsTable = () => {
+		if (!self.dom.cohortTable) return
 		self.dom.cohortTable.selectAll('*').remove()
 		const columns = [{ label: 'Feature' }]
 		const rows = []
