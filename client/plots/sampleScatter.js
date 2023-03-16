@@ -912,45 +912,7 @@ class Scatter {
 				this.dom.tip.hide()
 				this.showTable(group, event.clientX, event.clientY, false)
 			})
-		if (this.state.matrixplots) {
-			for (const plot of this.state.matrixplots) {
-				menuDiv
-					.append('div')
-					.attr('class', 'sja_menuoption sja_sharp_border')
-					.text(plot.name)
-					.on('click', async () => {
-						const values = {}
-						values[group.name] = { key: group.name, label: group.name }
-						const config = await dofetch3('termdb', {
-							body: {
-								for: 'matrix',
-								getPlotDataByName: plot.name,
-								genome: this.state.vocab.genome,
-								dslabel: this.state.vocab.dslabel
-							}
-						})
-						config.divideBy = {
-							term: { name: group.name, type: 'samplelst', values },
-							q: {
-								mode: 'custom-groupsetting',
-								groups: [
-									{
-										name: group.name,
-										key: 'sample',
-										values: this.getGroupValues(group)
-									}
-								]
-							}
-						}
-
-						this.app.dispatch({
-							type: 'plot_create',
-							config
-						})
-						this.dom.tip.hide()
-					})
-			}
-		}
+		this.addMatrixMenuItems(menuDiv, [group])
 		if (this.state.allowedTermTypes.includes('survival')) {
 			const survivalDiv = menuDiv
 				.append('div')
@@ -1002,6 +964,51 @@ class Scatter {
 			})
 	}
 
+	addMatrixMenuItems(menuDiv, groups) {
+		if (this.state.matrixplots) {
+			for (const plot of this.state.matrixplots) {
+				menuDiv
+					.append('div')
+					.attr('class', 'sja_menuoption sja_sharp_border')
+					.text(plot.name)
+					.on('click', async () => {
+						const config = await dofetch3('termdb', {
+							body: {
+								for: 'matrix',
+								getPlotDataByName: plot.name,
+								genome: this.state.vocab.genome,
+								dslabel: this.state.vocab.dslabel
+							}
+						})
+						const values = {}
+						const qgroups = []
+						for (const group of groups) {
+							values[group.name] = { key: group.name, label: group.name }
+							const qgroup = {
+								name: group.name,
+								key: 'sample',
+								values: this.getGroupValues(group)
+							}
+							qgroups.push(qgroup)
+						}
+
+						config.divideBy = {
+							term: { name: 'groups', type: 'samplelst', values },
+							q: {
+								mode: 'custom-groupsetting',
+								groups: qgroups
+							}
+						}
+						this.app.dispatch({
+							type: 'plot_create',
+							config
+						})
+						this.dom.tip.hide()
+					})
+			}
+		}
+	}
+
 	showGroupsMenu(event) {
 		this.dom.tip.clear()
 		this.dom.tip.show(event.clientX, event.clientY)
@@ -1026,6 +1033,7 @@ class Scatter {
 				this.showGroupMenu(event, group)
 			})
 		}
+		this.addMatrixMenuItems(menuDiv, this.config.groups)
 		if (this.state.allowedTermTypes.includes('survival')) {
 			const survivalDiv = menuDiv
 				.append('div')
