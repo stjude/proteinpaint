@@ -186,6 +186,7 @@ class GbControls {
 export const gbControlsInit = getCompInit(GbControls)
 
 function render1group_info(self, groupIdx, group, div) {
+	// this group is an INFO field
 	let name = group.infoKey
 	if (self.state.config.variantFilter?.terms) {
 		const f = self.state.config.variantFilter.terms.find(i => i.id == group.infoKey)
@@ -200,6 +201,7 @@ function render1group_info(self, groupIdx, group, div) {
 }
 
 function render1group_population(self, groupIdx, group, div) {
+	// this group is a predefined population
 	div.append('span').text(group.label)
 	div
 		.append('span')
@@ -211,8 +213,19 @@ function render1group_population(self, groupIdx, group, div) {
 function render1group_filter(self, groupIdx, group, div) {
 	/*
 	this group is based on a termdb-filter
-	FIXME the filter instance is not reflecting global mass filter and subcohort change
+	when initiating the filter ui, must join group's filter with mass global filter and submit the joined filter to main()
+	this allows tvs edit to show correct number of samples
 	*/
+
+	// clone the global filter; group filter will be joined into it
+	const joinedFilter = structuredClone(self.state.filter || { type: 'tvslst', in: true, join: '', lst: [] })
+	const gf = structuredClone(group.filter)
+	// tag group filter for it to be rendered in filter ui
+	// rest of state.filter will remain invisible
+	gf.tag = 'filterUiRoot'
+	joinedFilter.lst.push(gf)
+	joinedFilter.join = 'and'
+
 	filterInit({
 		holder: div,
 		vocab: self.app.opts.state.vocab,
@@ -227,7 +240,7 @@ function render1group_filter(self, groupIdx, group, div) {
 				config: { snvindel: { details: { groups } } }
 			})
 		}
-	}).main(group.filter)
+	}).main(joinedFilter)
 
 	const count = self._partialData?.groupSampleCounts?.[groupIdx]
 	if (Number.isInteger(count)) {
