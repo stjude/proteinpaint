@@ -4,9 +4,10 @@ import { area, curveBumpX, curveBumpY } from 'd3-shape'
 import { schemeCategory10 } from 'd3-scale-chromatic'
 import { brushX, brushY } from 'd3-brush'
 import { renderTable } from '#dom/table'
-import { filterJoin, getFilterItemByTag } from '../filter/filter'
 import { Menu } from '../dom/menu'
 import { rgb } from 'd3'
+
+const violinInteractivity = require('./violin.interactivity')
 
 export default function violinRenderer(self) {
 	const k2c = scaleOrdinal(schemeCategory10)
@@ -41,7 +42,7 @@ export default function violinRenderer(self) {
 			)
 			self.dom.tableHolder.selectAll('*').remove()
 			self.dom.legendDiv.selectAll('*').remove()
-			self.dom.selectAll('.sjpp-tableHolder').remove()
+			// self.dom.selectAll('.sjpp-tableHolder').remove()
 			return
 		} else self.dom.violinDiv.select('*').remove()
 
@@ -56,13 +57,8 @@ export default function violinRenderer(self) {
 			if (self.opts.mode != 'minimal') renderLabels(t1, t2, violinG, plot, isH, settings, tip)
 			renderViolinPlot(plot, self, isH, svg, plotIdx, violinG, imageOffset)
 			if (self.opts.mode != 'minimal') renderBrushing(t1, t2, violinG, settings, plot, isH, svg)
-			labelHideLegendClicking(t2, plot, self)
+			violinInteractivity.labelHideLegendClicking(t2, plot, self)
 		}
-	}
-
-	self.displayLabelClickMenu = function(t1, t2, plot, event) {
-		self.displayLabelClickMenu.called = true
-		displayMenu(t1, t2, self, plot, event, null, null)
 	}
 
 	self.displaySummaryStats = function(d, event, tip) {
@@ -250,7 +246,7 @@ export default function violinRenderer(self) {
 			.style('cursor', 'pointer')
 			.on('click', function(event) {
 				if (!event) return
-				self.displayLabelClickMenu(t1, t2, plot, event)
+				violinInteractivity.displayLabelClickMenu(t1, t2, plot, event, self)
 			})
 			.on('mouseover', function(event, d) {
 				event.stopPropagation()
@@ -278,11 +274,20 @@ export default function violinRenderer(self) {
 			.domain([-plot.biggestBin, plot.biggestBin])
 			.range([-self.data.plotThickness * 0.45, self.data.plotThickness * 0.45])
 
-		const areaBuilder = area()
-			.y0(d => wScale(-d.binValueCount))
-			.y1(d => wScale(d.binValueCount))
-			.x(d => svg.axisScale(d.x0))
-			.curve(isH ? curveBumpX : curveBumpY)
+		let areaBuilder
+		if (isH) {
+			areaBuilder = area()
+				.y0(d => wScale(-d.binValueCount))
+				.y1(d => wScale(d.binValueCount))
+				.x(d => svg.axisScale(d.x0))
+				.curve(curveBumpX)
+		} else {
+			areaBuilder = area()
+				.x0(d => wScale(-d.binValueCount))
+				.x1(d => wScale(d.binValueCount))
+				.y(d => svg.axisScale(d.x0))
+				.curve(curveBumpY)
+		}
 
 		violinG
 			.append('path')
@@ -365,7 +370,7 @@ export default function violinRenderer(self) {
 
 								if (!selection) return
 
-								await displayBrushMenu(t1, t2, self, plot, selection, svg.axisScale, isH)
+								await violinInteractivity.displayBrushMenu(t1, t2, self, plot, selection, svg.axisScale, isH)
 							})
 					: brushY()
 							.extent([[-20, 0], [20, settings.svgw]])
@@ -374,7 +379,7 @@ export default function violinRenderer(self) {
 
 								if (!selection) return
 
-								await displayBrushMenu(t1, t2, self, plot, selection, svg.axisScale, isH)
+								await violinInteractivity.displayBrushMenu(t1, t2, self, plot, selection, svg.axisScale, isH)
 							})
 			)
 	}
@@ -394,218 +399,12 @@ export default function violinRenderer(self) {
 	}
 }
 
-export async function displayBrushMenu(t1, t2, self, plot, selection, scale, isH) {
-	const start = isH ? scale.invert(selection[0]) : scale.invert(selection[1])
-	const end = isH ? scale.invert(selection[1]) : scale.invert(selection[0])
-	displayBrushMenu.called = true
-	displayMenu(t1, t2, self, plot, event, start, end)
-	// const brushValues = plot.values.filter(i => i > start && i < end)
-}
-
-export function displayMenu(t1, t2, self, plot, event, start, end) {
-	self.app.tip.d.selectAll('*').remove()
-
-	const options = []
-
-	if (self.displayLabelClickMenu.called === true) {
-		if (t2) {
-			if (t1.term.type === 'categorical') {
-				options.push({
-					label: `Add filter: ${plot.label.split(',')[0]}`,
-					callback: getAddFilterCallback(t1, t2, self, plot, 'term1')
-				})
-			} else {
-				options.push({
-					label: `Add filter: ${plot.label.split(',')[0]}`,
-					callback: getAddFilterCallback(t1, t2, self, plot, 'term2')
-				})
-			}
-			//On label clicking, display 'Hide' option to hide plot.
-			options.push({
-				label: `Hide: ${plot.label}`,
-				callback: () => {
-					const termNum = t2 ? 'term2' : null
-					const term = self.config[termNum]
-					const isHidden = true
-					self.app.dispatch({
-						type: 'plot_edit',
-						id: self.id,
-						config: {
-							[termNum]: {
-								isAtomic: true,
-								id: term.id,
-								term: term.term,
-								q: getUpdatedQfromClick(plot, t2, isHidden)
-							}
-						}
-					})
-				}
-			})
-		}
-		if (self.config.settings.violin.displaySampleIds && self.state.hasVerifiedToken) {
-			options.push({
-				label: `List samples`,
-				callback: async () => listSamples(self, event, t1, t2, plot, self.data.min, self.data.max * 2)
-			})
-		}
-		self.displayLabelClickMenu.called = false
-	} else if (displayBrushMenu.called === true) {
-		options.push({
-			label: `Add filter: ${start.toFixed(1)} < x < ${end.toFixed(1)}`,
-			callback: getAddFilterCallback(t1, t2, self, plot, start, end)
-		})
-
-		if (self.config.settings.violin.displaySampleIds && self.state.hasVerifiedToken) {
-			options.push({
-				label: `List samples`,
-				callback: async () => listSamples(self, event, t1, t2, plot, start, end)
-			})
-		}
-		displayBrushMenu.called = false
-	}
-
-	//show menu options for label clicking and brush selection
-	self.app.tip.d
-		.append('div')
-		.selectAll('div')
-		.data(options)
-		.enter()
-		.append('div')
-		.attr('class', 'sja_menuoption')
-		.text(d => d.label)
-		.on('click', (event, d) => {
-			self.app.tip.hide()
-			d.callback()
-			self.dom.tableHolder.style('display', 'none')
-		})
-
-	self.app.tip.show(event.clientX, event.clientY)
-}
-
-async function listSamples(self, event, t1, t2, plot, start, end) {
-	const tvslst = getTvsLst(t1, t2, plot, start, end)
-	const term = t1.q?.mode === 'continuous' ? t1 : t2
-	const filter = {
-		type: 'tvslst',
-		join: 'and',
-		lst: [self.state.termfilter.filter, tvslst],
-		in: true
-	}
-	const opts = {
-		terms: [term],
-		filter
-	}
-	//getAnnotatedSampleData is used to retrieve sample id's and values (see matrix.js).
-	const data = await self.app.vocabApi.getAnnotatedSampleData(opts)
-	displaySampleIds(event, self, term, data)
-}
-
 // creates numeric axis
 export function createNumericScale(self, settings, isH) {
 	const axisScale = scaleLinear()
 		.domain([self.data.min, self.data.max + self.data.max / (settings.radius * 4)])
 		.range(isH ? [0, settings.svgw] : [settings.svgw, 0])
 	return axisScale
-}
-
-export function createTvsLstValues(term, plot, tvslst, lstIdx) {
-	createTvsTerm(term, tvslst)
-	tvslst.lst[lstIdx].tvs.values = [
-		{
-			key: plot.seriesId
-		}
-	]
-}
-
-export function createTvsLstRanges(term, tvslst, rangeStart, rangeStop, lstIdx) {
-	createTvsTerm(term, tvslst)
-
-	tvslst.lst[lstIdx].tvs.ranges = [
-		{
-			start: rangeStart,
-			stop: rangeStop
-		}
-	]
-}
-
-export function createTvsTerm(term, tvslst) {
-	tvslst.lst.push({
-		type: 'tvs',
-		tvs: {
-			term: term.term
-		}
-	})
-}
-
-export function getAddFilterCallback(t1, t2, self, plot, rangeStart, rangeStop) {
-	const tvslst = {
-		type: 'tvslst',
-		in: true,
-		join: 'and',
-		lst: []
-	}
-
-	if (t2) {
-		if (t1.term.type === 'categorical') {
-			createTvsLstValues(t1, plot, tvslst, 0)
-
-			if (displayBrushMenu.called === true) {
-				createTvsLstRanges(t2, tvslst, rangeStart, rangeStop, 1)
-			}
-		} else if (
-			t2.q?.mode === 'continuous' ||
-			((t2.term?.type === 'float' || t2.term?.type === 'integer') && plot.divideTwBins != null)
-		) {
-			createTvsTerm(t2, tvslst)
-			tvslst.lst[0].tvs.ranges = [
-				{
-					start: structuredClone(plot.divideTwBins?.start) || null,
-					stop: structuredClone(plot.divideTwBins?.stop) || null,
-					startinclusive: structuredClone(plot.divideTwBins?.startinclusive) || null,
-					stopinclusive: structuredClone(plot.divideTwBins?.stopinclusive) || null,
-					startunbounded: structuredClone(plot.divideTwBins?.startunbounded)
-						? structuredClone(plot.divideTwBins?.startunbounded)
-						: null,
-					stopunbounded: structuredClone(plot.divideTwBins?.stopunbounded)
-						? structuredClone(plot.divideTwBins?.stopunbounded)
-						: null
-				}
-			]
-			if (displayBrushMenu.called === true) {
-				createTvsLstRanges(t1, tvslst, rangeStart, rangeStop, 1)
-			}
-		} else {
-			createTvsLstValues(t2, plot, tvslst, 0)
-			if (displayBrushMenu.called === true) {
-				createTvsLstRanges(t1, tvslst, rangeStart, rangeStop, 1)
-			}
-		}
-	} else {
-		if (displayBrushMenu.called === true) {
-			createTvsLstRanges(t1, tvslst, rangeStart, rangeStop, 0)
-		}
-	}
-
-	return () => {
-		const filterUiRoot = getFilterItemByTag(self.state.termfilter.filter, 'filterUiRoot')
-		const filter = filterJoin([filterUiRoot, tvslst])
-		filter.tag = 'filterUiRoot'
-		self.app.dispatch({
-			type: 'filter_replace',
-			filter
-		})
-	}
-}
-
-function getUpdatedQfromClick(plot, term, isHidden = false) {
-	const label = plot.label
-	const valueId = term?.term?.values ? term?.term?.values?.[label]?.label : label
-	const id = !valueId ? label : valueId
-	const q = structuredClone(term.q)
-	if (!q.hiddenValues) q.hiddenValues = {}
-	if (isHidden) q.hiddenValues[id] = 1
-	else delete q.hiddenValues[id]
-	return q
 }
 
 function getLegendGrps(self) {
@@ -672,104 +471,5 @@ function getLegendGrps(self) {
 			legendGrps.push({ name, items })
 		}
 	}
-
 	return legendGrps
-}
-
-function labelHideLegendClicking(t2, plot, self) {
-	self.dom.legendDiv.selectAll('.sjpp-htmlLegend').on('click', event => {
-		event.stopPropagation()
-		const d = event.target.__data__
-		if (t2) {
-			for (const key of Object.keys(t2?.q?.hiddenValues)) {
-				if (d.text === key) {
-					delete self.config.term2.q.hiddenValues[key]
-				}
-			}
-			const termNum = self.config.term2 ? 'term2' : null
-			const term = self.config[termNum]
-			const isHidden = false
-			self.app.dispatch({
-				type: 'plot_edit',
-				id: self.id,
-				config: {
-					[termNum]: {
-						isAtomic: true,
-						id: term.id,
-						term: term.term,
-						q: getUpdatedQfromClick(plot, t2, isHidden)
-					}
-				}
-			})
-		}
-	})
-}
-
-export function getTvsLst(t1, t2, plot, rangeStart, rangeStop) {
-	const tvslst = {
-		type: 'tvslst',
-		in: true,
-		join: 'and',
-		lst: []
-	}
-
-	if (t2) {
-		if (t1.term.type === 'categorical') {
-			createTvsLstValues(t1, plot, tvslst, 0)
-			createTvsLstRanges(t2, tvslst, rangeStart, rangeStop, 1)
-		} else if (
-			t2.q?.mode === 'continuous' ||
-			((t2.term?.type === 'float' || t2.term?.type === 'integer') && plot.divideTwBins != null)
-		) {
-			createTvsTerm(t2, tvslst)
-			tvslst.lst[0].tvs.ranges = [
-				{
-					start: structuredClone(plot.divideTwBins?.start) || null,
-					stop: structuredClone(plot.divideTwBins?.stop) || null,
-					startinclusive: structuredClone(plot.divideTwBins?.startinclusive) || null,
-					stopinclusive: structuredClone(plot.divideTwBins?.stopinclusive) || null,
-					startunbounded: structuredClone(plot.divideTwBins?.startunbounded)
-						? structuredClone(plot.divideTwBins?.startunbounded)
-						: null,
-					stopunbounded: structuredClone(plot.divideTwBins?.stopunbounded)
-						? structuredClone(plot.divideTwBins?.stopunbounded)
-						: null
-				}
-			]
-			createTvsLstRanges(t1, tvslst, rangeStart, rangeStop, 1)
-		} else {
-			createTvsLstValues(t2, plot, tvslst, 0)
-			createTvsLstRanges(t1, tvslst, rangeStart, rangeStop, 1)
-		}
-	} else createTvsLstRanges(t1, tvslst, rangeStart, rangeStop, 0)
-	return tvslst
-}
-
-function displaySampleIds(event, self, term, data) {
-	self.app.tip.clear()
-	if (!data?.samples) return
-	const sampleIdArr = []
-	for (const [c, k] of Object.entries(data.samples)) {
-		const sampleIdObj = {}
-		if (data.refs.bySampleId[c]) {
-			sampleIdObj[data.refs.bySampleId[c]] = k[term.$id].value
-		}
-		sampleIdArr.push([{ value: Object.keys(sampleIdObj) }, { value: Object.values(sampleIdObj) }])
-	}
-	const tableDiv = self.app.tip.d.append('div')
-	const columns = [{ label: 'Sample Id' }, { label: 'Value' }]
-	const rows = sampleIdArr
-
-	renderTable({
-		rows,
-		columns,
-		div: tableDiv,
-		showLines: false,
-		maxWidth: '30vw',
-		maxHeight: '25vh',
-		resize: true,
-		showLines: true
-	})
-
-	self.app.tip.show(event.clientX, event.clientY)
 }
