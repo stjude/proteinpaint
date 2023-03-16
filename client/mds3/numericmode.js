@@ -7,11 +7,11 @@ import { make_datagroup } from './datagroup'
 import { click_variant } from './clickVariant'
 import { positionLeftlabelg } from './leftlabel'
 import { may_render_skewer } from './skewer'
+import { mayHighlightDiskBySsmid } from './skewer.render'
 
 /*
 ********************** EXPORTED
 renderNumericMode
-mnamegetter
 ********************** INTERNAL
 numeric_make
 render_axis
@@ -74,6 +74,8 @@ export function renderNumericMode(nm, data, tk, block) {
 	if (tk.skewer.nmg) tk.skewer.nmg.selectAll('*').remove()
 
 	numeric_make(nm, tk, block)
+
+	mayHighlightByLDoverlay(tk)
 
 	return (
 		nm.toplabelheight +
@@ -165,7 +167,7 @@ function numeric_make(nm, tk, block) {
 		for (const m of d.mlst) {
 			tk.glider
 				.append('text')
-				.text(mnamegetter(m, tk))
+				.text(tk.mnamegetter(m))
 				.attr('font-family', font)
 				.attr('font-size', m.radius * 2 - 2)
 				.each(function() {
@@ -384,7 +386,7 @@ function numeric_make(nm, tk, block) {
 		.each(function(m) {
 			m.__svg_textlabel = this
 		})
-		.text(m => mnamegetter(m, tk))
+		.text(m => tk.mnamegetter(m))
 		.attr('font-family', font)
 		.attr('font-size', m => {
 			m._labfontsize = Math.max(12, m.radius * 1.2)
@@ -541,17 +543,6 @@ function horiplace1(items, allwidth) {
 	}
 }
 
-export const mnamegetter = (m, tk) => {
-	if (tk.mds.queries?.snvindel?.vcfid4skewerName && m.vcf_id) return m.vcf_id
-	const s = m.mname
-	if (!s) return ''
-	// trim too long names
-	if (s.length > 25) {
-		return s.substr(0, 20) + '...'
-	}
-	return s
-}
-
 function verticallabplace(data) {
 	const mlst = []
 	for (const d of data) {
@@ -660,8 +651,25 @@ function m_mouseover(m, nm, tk) {
 		words.push(nm.label + ' = ' + (m.__value_missing ? 'NA' : m.__value_use))
 	}
 
+	if (tk.mds.queries?.ld?.mOverlay?.data) {
+		// doing ld overlay now
+		if (m.ssm_id == tk.mds.queries.ld.mOverlay.m.ssm_id) {
+			// the same variant, do not indicate r2 value
+		} else {
+			// indicate r2 value
+			let r2 = '?'
+			for (const v of tk.mds.queries.ld.mOverlay.data) {
+				if (v.pos == m.pos && v.alleles == m.ref + '.' + m.alt) {
+					r2 = v.r2
+					break
+				}
+			}
+			words.push('r2 = ' + r2)
+		}
+	}
+
 	if (!m.labattop && !m.labatbottom) {
-		words.push(mnamegetter(m, tk))
+		words.push(tk.mnamegetter(m))
 	}
 
 	let textw = 0
@@ -889,4 +897,13 @@ function render_axis(tk, nm, block) {
 
 function trianglePath(p) {
 	return `M 0 -${p} L ${p} ${p * 0.7} h -${p * 2} Z`
+}
+
+function mayHighlightByLDoverlay(tk) {
+	// quick fix:
+	// after rendering numeric tk, allow to highlight the "index" variant from ld overlay
+	const m = tk.mds.queries?.ld?.mOverlay?.m
+	if (!m) return
+	tk.skewer.hlssmid = new Set([m.ssm_id])
+	mayHighlightDiskBySsmid(tk)
 }

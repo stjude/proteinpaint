@@ -12,6 +12,9 @@ itemtable
 ********************** INTERNAL
 itemtable_oneItem
 	table_snvindel
+		table_snvindel_mayInsertNumericValueRow
+		table_snvindel_mayInsertHtmlSections
+		table_snvindel_mayInsertLD
 	table_svfusion
 itemtable_multiItems
 mayMoveTipDiv2left
@@ -119,6 +122,7 @@ async function itemtable_oneItem(arg, grid) {
 	// a new table will be created under arg.div to show sample table
 
 	if (arg.tk.mds.variant2samples && arg.mlst[0].occurrence) {
+		// display samples carrying this variant when conditions are met
 		await init_sampletable(arg)
 	}
 }
@@ -205,7 +209,7 @@ async function itemtable_multiItems(arg, grid) {
 		// print variant name
 
 		if (m.dt == dtsnvindel) {
-			div.append('span').text(m.mname)
+			div.append('span').text(arg.tk.mnamegetter(m))
 			div
 				.append('span')
 				.text(mclass[m.class].label)
@@ -278,6 +282,7 @@ function table_snvindel({ mlst, tk, block }, grid) {
 	}
 	table_snvindel_mayInsertNumericValueRow(m, tk, grid)
 	table_snvindel_mayInsertHtmlSections(m, tk, grid)
+	table_snvindel_mayInsertLD(m, tk, grid)
 
 	if (m.info) {
 		/* info fields are available for this variant
@@ -561,6 +566,77 @@ async function getGm(p, block) {
 	if (u) {
 		p.name = u.name
 		p.gm = { isoform: u.isoform }
+	}
+}
+
+function table_snvindel_mayInsertLD(m, tk, grid) {
+	if (!tk.mds.queries?.ld) return // not available
+	const [td1, td2] = get_list_cells(grid)
+	td1.text('LD overlay')
+
+	const m0 = tk.mds.queries.ld.mOverlay?.m
+
+	if (m0) {
+		// doing overlay now. indicate some informational info; m0 is the selected variant
+		const row = td2.append('div').style('margin-bottom', '5px')
+		if (m.ssm_id == m0.ssm_id) {
+			// the clicked variant is same as m0
+			row.html(
+				tk.mds.queries.ld.mOverlay.ldtkname +
+					' r<sup>2</sup> values against this variant are displayed on all the other variants.'
+			)
+		} else {
+			// not the same as m0
+			let r2 = null
+			for (const v of tk.mds.queries.ld.mOverlay.data || []) {
+				if (v.pos == m.pos && v.alleles == m.ref + '.' + m.alt) {
+					r2 = v.r2
+					break
+				}
+			}
+			if (r2 == null) {
+				row.html('No r<sup>2</sup> value is found.')
+			} else {
+				row.html(tk.mds.queries.ld.mOverlay.ldtkname + ' r<sup>2</sup> = ' + r2)
+			}
+		}
+	}
+
+	td2
+		.append('div')
+		.html('Click a button to overlay LD r<sup>2</sup> values against this variant:')
+		.style('font-size', '.8em')
+		.style('opacity', 0.5)
+
+	for (const o of tk.mds.queries.ld.tracks) {
+		// o = {name}
+		const btn = td2.append('button').text(o.name)
+
+		if (m0 && m0.ssm_id == m.ssm_id) {
+			// the same index variant everybody else's overlaying against
+			if (o.name == tk.mds.queries.ld.mOverlay.ldtkname) {
+				// the same ld tk
+				btn.property('disabled', true)
+				continue
+			}
+		}
+
+		// enable clicking this button to overlay on this ld tk
+		btn.on('click', () => {
+			tk.itemtip.hide()
+			// create the object to indicate overlaying is active
+			tk.mds.queries.ld.mOverlay = {
+				ldtkname: o.name,
+				m: {
+					chr: m.chr,
+					pos: m.pos,
+					ref: m.ref,
+					alt: m.alt,
+					ssm_id: m.ssm_id // required for highlighting
+				}
+			}
+			tk.load()
+		})
 	}
 }
 

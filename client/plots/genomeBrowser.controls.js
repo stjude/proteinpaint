@@ -10,6 +10,7 @@ main
 		render1group
 			makePrompt2addNewGroup
 				launchMenu_createGroup
+					mayGetActiveCohortIdx
 			render1group_info
 			render1group_population
 			render1group_filter

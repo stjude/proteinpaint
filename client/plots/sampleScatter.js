@@ -24,6 +24,7 @@ import {
 	symbolStar,
 	symbolSquare2
 } from 'd3-shape'
+import { dofetch3 } from '../common/dofetch'
 
 /*
 sample object returned by server:
@@ -100,7 +101,9 @@ class Scatter {
 		return {
 			config,
 			termfilter: appState.termfilter,
-			allowedTermTypes: appState.termdbConfig.allowedTermTypes
+			allowedTermTypes: appState.termdbConfig.allowedTermTypes,
+			matrixplots: appState.termdbConfig.matrixplots,
+			vocab: appState.vocab
 		}
 	}
 
@@ -672,12 +675,7 @@ class Scatter {
 		const overlayGroups = []
 		let values, tgroup
 		for (const group of groups) {
-			values = []
-			for (const item of group.items) {
-				const value = { sampleId: item.sampleId }
-				if ('sample' in item) value.sample = item.sample
-				values.push(value)
-			}
+			values = this.getGroupValues(group)
 			tgroup = {
 				name: group.name,
 				key: 'sample',
@@ -689,12 +687,7 @@ class Scatter {
 	}
 
 	getGroupvsOthersOverlay(group) {
-		const values = []
-		for (const item of group.items) {
-			const value = { sampleId: item.sampleId }
-			if ('sample' in item) value.sample = item.sample
-			values.push(value)
-		}
+		const values = this.getGroupValues(group)
 		return [
 			{
 				name: group.name,
@@ -708,6 +701,16 @@ class Scatter {
 				values
 			}
 		]
+	}
+
+	getGroupValues(group) {
+		const values = []
+		for (const item of group.items) {
+			const value = { sampleId: item.sampleId }
+			if ('sample' in item) value.sample = item.sample
+			values.push(value)
+		}
+		return values
 	}
 
 	async showTermsTree(div, callback, state = { tree: { usecase: { detail: 'term' } } }) {
@@ -909,7 +912,45 @@ class Scatter {
 				this.dom.tip.hide()
 				this.showTable(group, event.clientX, event.clientY, false)
 			})
+		if (this.state.matrixplots) {
+			for (const plot of this.state.matrixplots) {
+				menuDiv
+					.append('div')
+					.attr('class', 'sja_menuoption sja_sharp_border')
+					.text(plot.name)
+					.on('click', async () => {
+						const values = {}
+						values[group.name] = { key: group.name, label: group.name }
+						const config = await dofetch3('termdb', {
+							body: {
+								for: 'matrix',
+								getPlotDataByName: plot.name,
+								genome: this.state.vocab.genome,
+								dslabel: this.state.vocab.dslabel
+							}
+						})
+						config.divideBy = {
+							term: { name: group.name, type: 'samplelst', values },
+							q: {
+								mode: 'custom-groupsetting',
+								groups: [
+									{
+										name: group.name,
+										key: 'sample',
+										values: this.getGroupValues(group)
+									}
+								]
+							}
+						}
 
+						this.app.dispatch({
+							type: 'plot_create',
+							config
+						})
+						this.dom.tip.hide()
+					})
+			}
+		}
 		if (this.state.allowedTermTypes.includes('survival')) {
 			const survivalDiv = menuDiv
 				.append('div')

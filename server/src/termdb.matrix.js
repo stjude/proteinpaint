@@ -196,7 +196,6 @@ export async function getSampleData_dictionaryTerms_termdb(q, termWrappers) {
 
 	// for "samplelst" term, term.id is missing and must use term.name
 	values.push(...termWrappers.map(tw => tw.term.id || tw.term.name))
-
 	const sql = `WITH
 		${filter ? filter.filters + ',' : ''}
 		${CTEs.map(t => t.sql).join(',\n')}

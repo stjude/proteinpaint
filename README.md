@@ -64,4 +64,4 @@ The build and release steps can be triggered via Github Actions using the Create
 
 ### Docker Build
 
-See [build/full/README.md](https://github.com/stjude/proteinpaint/tree/master/build/full).
+See [build/README.md](https://github.com/stjude/proteinpaint/tree/master/build/full).

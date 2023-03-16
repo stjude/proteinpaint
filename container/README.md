@@ -58,14 +58,16 @@ npx proteinpaint-container
 
 To run only the Proteinpaint server data api, without a static file server:
 ```bash
-npm proteinpaint-container server
+npx proteinpaint-container server
 ```
 
 To run a fully customized server, follow the docker run commands in `run.sh`.
 
 ## Development
 
-The Dockerfile may optionally use the various proteinpaint-* as packed from source code.
+### Installing from tarballs
+
+The Dockerfile may optionally use the various proteinpaint-* packages as packed from source code.
 
 ```bash
 # will pack workspaces and replace each package.json's dependency versions
@@ -75,3 +77,39 @@ The Dockerfile may optionally use the various proteinpaint-* as packed from sour
 # will run docker build
 ./build.sh
 ```
+
+### Testing and Debugging
+
+Note that publishing to the registry should **not** be part of iterative testing/debugging.
+Instead, test packing and Docker builds locally as much as possible before creating a
+versioned release. The only time that it is acceptable to publish for testing purposes is
+as related to verifying and debugging CI actions/workflows, but that should be done rarely
+as it may disrupt the published version chain if a published test branch/version is not merged to master.
+
+```bash
+cd container
+npm pack
+cd sowmehere/outside/of/sjpp
+npm install ~/dev/sjpp/proteinpaint/container/stjude-proteinpaint-....tgz
+# make sure you have serverconfig.json in this dir
+npx proteinpaint-container
+docker logs pp
+# ssh to an active container to inspect
+docker exec -it pp bash
+```
+
+If the container does not start, replace
+```bash
+CMD ["sh", "-c", "node app.js"]
+```
+in the Dockerfile with
+```bash
+CMD ["sleep", "3600"]
+```
+
+and then ssh to the container using `docker exec -it pp bash` to inspect
+node_modules, run commands that are giving the error, etc.
+
+You may also place the `CMD ["sleep", "3600"]` earlier in the Dockerfile
+prior to a build step that emits an error, and then run the command from
+that step within the container to debug.
