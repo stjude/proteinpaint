@@ -27,7 +27,7 @@ function getHolder() {
 /**************
  test sections
 
-# gdc dataset is based on GDC API
+### gdc dataset is based on GDC API
 GDC - gene symbol KRAS
 GDC - GENCODE transcript ENST00000407796
 GDC - GENCODE gene ENSG00000133703
@@ -35,29 +35,34 @@ GDC - RefSeq NM_005163
 GDC - KRAS SSM ID
 geneSearch4GDCmds3
 
-# ash dataset is based on bcf file with samples
+### ash dataset is based on bcf file with samples
 ASH - gene BCR
 
-# clinvar dataset is based on sample-less bcf file
+### clinvar dataset is based on sample-less bcf file
 Clinvar - gene kras
 
 Incorrect dataset name: ah instead of ASH
 
 Launch variant table from track variant label
 
-# via gdc api
+### via gdc api
 GDC - sample summaries table, create subtrack
-# via bcf and termdb
+
+### via bcf and termdb
 ASH - sample summaries table, create subtrack
 
+###
 GDC - mclass filtering
 ASH - mclass filtering
 Clinvar - mclass filtering
 
 Collapse and expand mutations from variant link
 Launch sample table from sunburst plot
+
+### custom data
 Numeric mode custom dataset
 Custom dataset with custom variants, NO samples
+Custom variants, missing or wrong mclass
 Custom dataset with custom variants, WITH samples
 Custom data with samples and sample selection
 ***************/
@@ -709,8 +714,6 @@ tape('Custom dataset with custom variants, NO samples', test => {
 
 	runproteinpaint({
 		holder,
-		parseurl: true,
-		nobox: true,
 		noheader: true,
 		genome: 'hg19',
 		gene: 'NM_002467',
@@ -718,28 +721,67 @@ tape('Custom dataset with custom variants, NO samples', test => {
 			{
 				type: 'mds3',
 				name: 'Test, without occurrence',
-				custom_variants
+				custom_variants,
+				callbackOnRender
 			}
-		],
-		onloadalltk_always: checkTrack
+		]
 	})
-
-	function checkTrack(bb) {
+	function callbackOnRender(tk, bb) {
 		//Confirm number of custom variants matches in block instance
-		const mds3Track = bb.tklst.find(i => i.type == 'mds3')
 		test.equal(
-			mds3Track.custom_variants.length,
+			tk.custom_variants.length,
 			custom_variants.length,
 			`Should render total # of custom variants = ${custom_variants.length}`
 		)
 
 		for (const variant of custom_variants) {
 			//Test all custom variant entries successfully passed to block instance
-			const variantFound = mds3Track.custom_variants.find(i => i.mname == variant.mname)
+			const variantFound = tk.custom_variants.find(i => i.mname == variant.mname)
 			test.ok(variantFound, `Should render data point for ${variant.mname}`)
 		}
 
 		if (test._ok) holder.remove()
+		test.end()
+	}
+})
+
+tape('Custom variants, missing or wrong mclass', test => {
+	test.timeoutAfter(3000)
+	const holder = getHolder()
+
+	const custom_variants = [
+		{ chr: 'chr8', pos: 128750685, mname: 'P75', dt: 1 }, // missing class
+		{ chr: 'chr8', pos: 128750680, mname: 'T73', class: 'xxyy', dt: 1 } // wrong mclass
+	]
+
+	runproteinpaint({
+		holder,
+		noheader: true,
+		genome: 'hg19',
+		gene: 'NM_002467',
+		tracks: [
+			{
+				type: 'mds3',
+				name: 'Test, without occurrence',
+				custom_variants,
+				callbackOnRender
+			}
+		]
+	})
+	function callbackOnRender(tk, bb) {
+		//Confirm number of custom variants matches in block instance
+		test.equal(
+			tk.custom_variants.length,
+			custom_variants.length,
+			`Should render total # of custom variants = ${custom_variants.length}`
+		)
+		for (const variant of custom_variants) {
+			const variantFound = tk.custom_variants.find(i => i.mname == variant.mname)
+			test.ok(variantFound, `Should render data point for ${variant.mname}`)
+			test.equal(variantFound.class, 'X', 'class="X" is assigned for missing or wrong class')
+		}
+
+		//if (test._ok) holder.remove()
 		test.end()
 	}
 })
