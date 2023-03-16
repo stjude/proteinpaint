@@ -12,7 +12,6 @@ import { mayHighlightDiskBySsmid } from './skewer.render'
 /*
 ********************** EXPORTED
 renderNumericMode
-mnamegetter
 ********************** INTERNAL
 numeric_make
 render_axis
@@ -168,7 +167,7 @@ function numeric_make(nm, tk, block) {
 		for (const m of d.mlst) {
 			tk.glider
 				.append('text')
-				.text(mnamegetter(m, tk))
+				.text(tk.mnamegetter(m))
 				.attr('font-family', font)
 				.attr('font-size', m.radius * 2 - 2)
 				.each(function() {
@@ -387,7 +386,7 @@ function numeric_make(nm, tk, block) {
 		.each(function(m) {
 			m.__svg_textlabel = this
 		})
-		.text(m => mnamegetter(m, tk))
+		.text(m => tk.mnamegetter(m))
 		.attr('font-family', font)
 		.attr('font-size', m => {
 			m._labfontsize = Math.max(12, m.radius * 1.2)
@@ -544,17 +543,6 @@ function horiplace1(items, allwidth) {
 	}
 }
 
-export const mnamegetter = (m, tk) => {
-	if (tk.mds.queries?.snvindel?.vcfid4skewerName && m.vcf_id) return m.vcf_id
-	const s = m.mname
-	if (!s) return ''
-	// trim too long names
-	if (s.length > 25) {
-		return s.substr(0, 20) + '...'
-	}
-	return s
-}
-
 function verticallabplace(data) {
 	const mlst = []
 	for (const d of data) {
@@ -681,7 +669,7 @@ function m_mouseover(m, nm, tk) {
 	}
 
 	if (!m.labattop && !m.labatbottom) {
-		words.push(mnamegetter(m, tk))
+		words.push(tk.mnamegetter(m))
 	}
 
 	let textw = 0

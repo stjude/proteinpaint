@@ -3,7 +3,6 @@ import { arc as d3arc } from 'd3-shape'
 import { scaleLinear } from 'd3-scale'
 import { click_variant } from './clickVariant'
 import { dtsnvindel, dtsv, dtfusionrna } from '#shared/common'
-import { mnamegetter } from './numericmode'
 
 /*
 ********************** EXPORTED
@@ -171,7 +170,7 @@ export function skewer_make(tk, block) {
 	// right-side label
 	const textlab = discg
 		.append('text')
-		.text(d => mnamegetter(d.mlst[0], tk))
+		.text(d => tk.mnamegetter(d.mlst[0]))
 		.attr('font-size', d => {
 			d._labfontsize = Math.max(12, d.radius * 1.2)
 			return d._labfontsize

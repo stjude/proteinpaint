@@ -95,6 +95,18 @@ export async function makeTk(tk, block) {
 
 	tk.load = _load(tk, block) // shorthand
 
+	tk.mnamegetter = m => {
+		// may require m.dt=1
+		if (tk.mds.queries?.snvindel?.vcfid4skewerName && m.vcf_id) return m.vcf_id
+		const s = m.mname
+		if (!s) return ''
+		// trim too long names
+		if (s.length > 25) {
+			return s.substr(0, 20) + '...'
+		}
+		return s
+	}
+
 	await get_ds(tk, block)
 	// tk.mds{} is created for both official and custom track
 	// following procedures are only based on tk.mds

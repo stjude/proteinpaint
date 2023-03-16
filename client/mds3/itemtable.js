@@ -209,7 +209,7 @@ async function itemtable_multiItems(arg, grid) {
 		// print variant name
 
 		if (m.dt == dtsnvindel) {
-			div.append('span').text(m.mname)
+			div.append('span').text(arg.tk.mnamegetter(m))
 			div
 				.append('span')
 				.text(mclass[m.class].label)
