@@ -115,7 +115,7 @@ tape('getPercentile', async function(test) {
 	test.equal(result.values[0], 0.35, 'should get correct 50th percentile with numeric filter')
 })
 
-/* Frontend Vocab tests */
+/* FrontendVocab tests */
 tape('\n', function(test) {
 	test.pass('-***- FrontendVocab Tests -***-')
 	test.end()
