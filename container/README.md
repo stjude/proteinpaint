@@ -17,7 +17,7 @@ All installation options require a [Docker Engine or Desktop](https://www.docker
 
 There are 3 options to obtain a Docker image:
 
-### Pull a Prebuilt Image
+### Option A: Pull a Prebuilt Image
 
 This may be the easiest option to get started. However, it may require more Docker know-how
 for customization.
@@ -35,6 +35,9 @@ docker pull ghcr.io/stjude/proteinpaint/$IMAGE_NAME
 # - an optional dataset folder, containing js files of any serverconfig.genomes.datasets[] entry
 #   that is not already included in proteinpaint/server/dataset 
 #   
+
+# download the run script
+wget https://raw.githubusercontent.com/stjude/proteinpaint/container-fixes/container/run.sh
 
 ./run.sh $IMAGE_NAME
 
@@ -63,7 +66,7 @@ and namespace entries:
 @stjude:registry=https://npm.pkg.github.com/
 ```
 
-#### Install with npm
+#### Option B: Install with npm
 
 ```bash
 # for non-global installation in a folder
@@ -104,11 +107,15 @@ npx proteinpaint-container server
 
 To run a fully customized server, follow the docker run commands in `run.sh`.
 
-### Build from Source
+### Option C: Build from Source
 
 The Dockerfile may optionally use the various proteinpaint-* packages as packed from source code.
 
 ```bash
+# clone this repo
+git clone https://github.com/stjude/proteinpaint.git
+cd proteinpaint/container
+
 # OPTIONAL: pack workspaces and replace each package.json's 
 # dependency versions with the tarball location as copied into the Docker build
 # if this script is not used, then published packages will be used in the Docker build
@@ -119,7 +126,6 @@ The Dockerfile may optionally use the various proteinpaint-* packages as packed 
 
 TAG=latest # can change to a version number like 2.11.2
 IMAGE_NAME=full:$TAG # may use server:$TAG for server-only image
-docker pull ghcr.io/stjude/proteinpaint/$IMAGE_NAME
 
 # to test, make sure that your current working directory has
 #
