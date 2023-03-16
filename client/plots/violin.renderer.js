@@ -147,19 +147,14 @@ export default function violinRenderer(self) {
 		let margins
 
 		if (isMinimal) {
-			if (isH) {
-				margins = { left: 5, top: settings.axisHeight, right: settings.rightMargin, bottom: 10 }
-			} else {
-				margins = { left: settings.axisHeight, top: 30, right: settings.rightMargin, bottom: 10 }
-			}
+			margins = isH
+				? { left: 5, top: settings.axisHeight, right: settings.rightMargin, bottom: 10 }
+				: { left: settings.axisHeight, top: 30, right: settings.rightMargin, bottom: 10 }
 		} else {
-			if (isH) {
-				margins = { left: labelsize + 5, top: settings.axisHeight, right: settings.rightMargin, bottom: 10 }
-			} else {
-				margins = { left: settings.axisHeight, top: 50, right: settings.rightMargin, bottom: labelsize }
-			}
+			margins = isH
+				? { left: labelsize + 5, top: settings.axisHeight, right: settings.rightMargin, bottom: 10 }
+				: { left: settings.axisHeight, top: 50, right: settings.rightMargin, bottom: labelsize }
 		}
-
 		return margins
 	}
 
@@ -217,26 +212,14 @@ export default function violinRenderer(self) {
 				.classed('sjpp-numeric-term-label', true)
 				.style('font-weight', 600)
 				.attr('text-anchor', 'middle')
-			if (isH) {
-				lab
-					.attr('x', settings.svgw / 2)
-					.attr('y', -30)
-					.style('opacity', 0)
-					.transition()
-					.delay(self.opts.mode == 'minimal' ? 0 : 100)
-					.duration(self.opts.mode == 'minimal' ? 0 : 200)
-					.style('opacity', 1)
-			} else {
-				lab
-					.attr('y', -45)
-					.attr('x', -settings.svgw / 2)
-					.attr('transform', 'rotate(-90)')
-					.style('opacity', 0)
-					.transition()
-					.delay(self.opts.mode == 'minimal' ? 0 : 100)
-					.duration(self.opts.mode == 'minimal' ? 0 : 200)
-					.style('opacity', 1)
-			}
+				.attr('x', isH ? settings.svgw / 2 : -settings.svgw / 2)
+				.attr('y', isH ? -30 : -45)
+				.style('opacity', 0)
+				.attr('transform', isH ? null : 'rotate(-90)')
+				.transition()
+				.delay(self.opts.mode == 'minimal' ? 0 : 100)
+				.duration(self.opts.mode == 'minimal' ? 0 : 200)
+				.style('opacity', 1)
 		}
 	}
 
@@ -282,21 +265,11 @@ export default function violinRenderer(self) {
 			.delay(self.opts.mode == 'minimal' ? 0 : 100)
 			.duration(self.opts.mode == 'minimal' ? 0 : 100)
 			.style('opacity', 1)
-
-		if (isH) {
-			label
-				.attr('x', -5)
-				.attr('y', 0)
-				.attr('text-anchor', 'end')
-				.attr('dominant-baseline', 'central')
-		} else {
-			label
-				.attr('x', 0 - settings.svgw - 5)
-				.attr('y', 0)
-				.attr('text-anchor', 'end')
-				.attr('dominant-baseline', 'central')
-				.attr('transform', 'rotate(-90)')
-		}
+			.attr('x', isH ? -5 : 0 - settings.svgw - 5)
+			.attr('y', 0)
+			.attr('text-anchor', 'end')
+			.attr('dominant-baseline', 'central')
+			.attr('transform', isH ? null : 'rotate(-90)')
 	}
 
 	function renderViolinPlot(plot, self, isH, svg, plotIdx, violinG, imageOffset) {
@@ -305,20 +278,11 @@ export default function violinRenderer(self) {
 			.domain([-plot.biggestBin, plot.biggestBin])
 			.range([-self.data.plotThickness * 0.45, self.data.plotThickness * 0.45])
 
-		let areaBuilder
-		if (isH) {
-			areaBuilder = area()
-				.y0(d => wScale(-d.binValueCount))
-				.y1(d => wScale(d.binValueCount))
-				.x(d => svg.axisScale(d.x0))
-				.curve(curveBumpX)
-		} else {
-			areaBuilder = area()
-				.x0(d => wScale(-d.binValueCount))
-				.x1(d => wScale(d.binValueCount))
-				.y(d => svg.axisScale(d.x0))
-				.curve(curveBumpY)
-		}
+		const areaBuilder = area()
+			.y0(d => wScale(-d.binValueCount))
+			.y1(d => wScale(d.binValueCount))
+			.x(d => svg.axisScale(d.x0))
+			.curve(isH ? curveBumpX : curveBumpY)
 
 		violinG
 			.append('path')
