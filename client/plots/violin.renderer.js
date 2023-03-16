@@ -481,7 +481,7 @@ export function displayMenu(t1, t2, self, plot, event, start, end) {
 		if (self.config.settings.violin.displaySampleIds && self.state.hasVerifiedToken) {
 			options.push({
 				label: `List samples`,
-				callback: async () => listSamples(self, event, t1, t2, plot, self.data.min, self.data.max)
+				callback: async () => listSamples(self, event, t1, t2, plot, self.data.min, self.data.max * 2)
 			})
 		}
 		self.displayLabelClickMenu.called = false
@@ -756,9 +756,24 @@ export function getTvsLst(t1, t2, plot, rangeStart, rangeStop) {
 		} else if (
 			t2.q?.mode === 'continuous' ||
 			((t2.term?.type === 'float' || t2.term?.type === 'integer') && plot.divideTwBins != null)
-		)
-			createTvsLstRanges(t1, tvslst, rangeStart, rangeStop, 0)
-		else {
+		) {
+			createTvsTerm(t2, tvslst)
+			tvslst.lst[0].tvs.ranges = [
+				{
+					start: structuredClone(plot.divideTwBins?.start) || null,
+					stop: structuredClone(plot.divideTwBins?.stop) || null,
+					startinclusive: structuredClone(plot.divideTwBins?.startinclusive) || null,
+					stopinclusive: structuredClone(plot.divideTwBins?.stopinclusive) || null,
+					startunbounded: structuredClone(plot.divideTwBins?.startunbounded)
+						? structuredClone(plot.divideTwBins?.startunbounded)
+						: null,
+					stopunbounded: structuredClone(plot.divideTwBins?.stopunbounded)
+						? structuredClone(plot.divideTwBins?.stopunbounded)
+						: null
+				}
+			]
+			createTvsLstRanges(t1, tvslst, rangeStart, rangeStop, 1)
+		} else {
 			createTvsLstValues(t2, plot, tvslst, 0)
 			createTvsLstRanges(t1, tvslst, rangeStart, rangeStop, 1)
 		}
@@ -786,7 +801,7 @@ function displaySampleIds(event, self, term, data) {
 		columns,
 		div: tableDiv,
 		showLines: false,
-		maxWidth: '27vw',
+		maxWidth: '30vw',
 		maxHeight: '25vh',
 		resize: true,
 		showLines: true
