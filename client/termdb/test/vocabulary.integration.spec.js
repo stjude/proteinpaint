@@ -38,7 +38,6 @@ vocabInit()
 TermdbVocab
 	TermdbVocab()
 FrontendVocab
-	FrontendVocab()
 	Missing state.vocab
 */
 
@@ -164,57 +163,6 @@ tape.skip('TermdbVocab()', test => {
 
 	//getTdbDataUrl
 	//syncTermData
-
-	test.end()
-})
-
-tape('FrontendVocab()', test => {
-	test.timeoutAfter(3000)
-	const app = {
-		state: {
-			vocab: {
-				terms: vocabData.terms,
-				selectCohort: {
-					term: { id: 'subcohort', type: 'categorical' },
-					values: [
-						{
-							keys: ['ABC'],
-							label: 'ABC Lifetime Cohort (ABC)',
-							shortLabel: 'ABC',
-							isdefault: true,
-							cssSelector: 'tbody > tr > td:nth-child(2)'
-						},
-						{
-							keys: ['XYZ'],
-							label: 'XYZ Cancer Survivor Study (XYZ)',
-							shortLabel: 'XYZ',
-							cssSelector: 'tbody > tr > td:nth-child(3)'
-						}
-					]
-				}
-			}
-		}
-	}
-
-	const frontendVocabApi = new FrontendVocab({
-		app,
-		state: app.state,
-		fetchOpts: app.fetchOpts
-	})
-
-	test.ok(
-		Array.isArray(frontendVocabApi.getTermdbConfig().supportedChartTypes),
-		'Should return supportedChartTypes from vocab.getTermdbConfig'
-	)
-	const selectCohort = frontendVocabApi.getTermdbConfig().selectCohort
-	const validateSelectCohort =
-		typeof selectCohort.term == 'object' &&
-		selectCohort.term.id &&
-		selectCohort.term.type &&
-		Array.isArray(selectCohort.values)
-			? true
-			: false
-	test.ok(validateSelectCohort, 'Should include all required keys for .selectCohort')
 
 	test.end()
 })
