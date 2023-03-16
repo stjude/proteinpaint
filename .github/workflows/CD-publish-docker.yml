@@ -1,0 +1,37 @@
+name: Publish Docker Image
+
+on:
+  workflow_dispatch:
+    inputs:
+      build_secret:
+        type: string
+        description: Build secret
+      pp_version:
+        type: choice
+        description: Latest or specific PP version
+        options:
+          - latest
+          - specific
+      specific_pp_version:
+        type: string
+        description: Specific PP version to deploy
+
+jobs:
+  build:
+    if: github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check secret
+        run: |
+          if [ "${{ github.event.inputs.build_secret }}" != "${{ secrets.BUILD_SECRET }}" ]; then
+            echo "Wrong build secret."
+            exit 1
+          fi
+
+      - name: Check user permission
+        id: check
+        uses: scherermichael-oss/action-has-permission@master
+        with:
+          required-permission: write
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
