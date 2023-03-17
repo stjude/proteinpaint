@@ -129,7 +129,7 @@ class Matrix {
 
 		this.setPill(appState)
 		//TODO: may conflict with serverconfig.commonOverrides
-		this.mclass = copyMerge({}, mclass, appState.termdbConfig.mclass || {})
+		this.mclass = copyMerge({}, mclass, appState.termdbConfig.mclass || {}, appState.termdbConfig.matrix?.mclass || {})	
 	}
 
 	setControls(appState) {
