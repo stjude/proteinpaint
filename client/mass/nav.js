@@ -410,8 +410,23 @@ function setRenderers(self) {
 
 		self.dom.cohortTable.select('table').style('border-collapse', 'collapse')
 		self.dom.cohortTable.selectAll(`tbody > tr > td`).style('background-color', 'transparent')
-		const activeColumn = self.dom.cohortTable.selectAll(`tbody > tr > td:nth-child(${self.activeCohort + 2})`)
-		activeColumn.style('background-color', 'yellow')
+		const selectCohort = self.state.termdbConfig.selectCohort
+		const keys = selectCohort.values[self.activeCohort].keys
+		let selector = `tbody > tr > td:nth-child(${self.activeCohort + 2})`
+		const combined = keys.length > 1
+		if(combined)
+		{
+			selector = ''
+			for(const key of keys )
+			{
+				const i = result.cohorts.map(c => c.cohort).indexOf(key)
+				if(selector !== '') selector += ','
+				selector +=  `tbody > tr > td:nth-child(${i + 2})`
+
+			}
+		}
+		const activeColumns = self.dom.cohortTable.selectAll(selector)
+		activeColumns.style('background-color', 'yellow')
 		self.dom.cohortInputs.property('checked', (d, i) => i === self.activeCohort)
 	}
 
