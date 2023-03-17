@@ -215,8 +215,8 @@ function getAddFilterCallback(t1, t2, self, plot, rangeStart, rangeStop) {
 				{
 					start: structuredClone(plot.divideTwBins?.start) || null,
 					stop: structuredClone(plot.divideTwBins?.stop) || null,
-					startinclusive: structuredClone(plot.divideTwBins?.startinclusive) || null,
-					stopinclusive: structuredClone(plot.divideTwBins?.stopinclusive) || null,
+					startinclusive: structuredClone(plot.divideTwBins?.startinclusive) || true,
+					stopinclusive: structuredClone(plot.divideTwBins?.stopinclusive) || true,
 					startunbounded: structuredClone(plot.divideTwBins?.startunbounded)
 						? structuredClone(plot.divideTwBins?.startunbounded)
 						: null,
@@ -277,7 +277,9 @@ function createTvsLstRanges(term, tvslst, rangeStart, rangeStop, lstIdx) {
 	tvslst.lst[lstIdx].tvs.ranges = [
 		{
 			start: rangeStart,
-			stop: rangeStop
+			stop: rangeStop,
+			startinclusive: true,
+			stopinclusive: true
 		}
 	]
 }
@@ -312,8 +314,8 @@ function getTvsLst(t1, t2, plot, rangeStart, rangeStop) {
 				{
 					start: structuredClone(plot.divideTwBins?.start) || null,
 					stop: structuredClone(plot.divideTwBins?.stop) || null,
-					startinclusive: structuredClone(plot.divideTwBins?.startinclusive) || null,
-					stopinclusive: structuredClone(plot.divideTwBins?.stopinclusive) || null,
+					startinclusive: structuredClone(plot.divideTwBins?.startinclusive) || true,
+					stopinclusive: structuredClone(plot.divideTwBins?.stopinclusive) || true,
 					startunbounded: structuredClone(plot.divideTwBins?.startunbounded)
 						? structuredClone(plot.divideTwBins?.startunbounded)
 						: null,
