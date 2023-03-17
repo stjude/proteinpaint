@@ -28,6 +28,7 @@ class GbControls {
 		.holder
 		*/
 		this.type = 'gbControls'
+		this.filterUI = {}
 	}
 
 	async init(appState) {
@@ -60,7 +61,8 @@ class GbControls {
 	}
 
 	async main() {
-		if (this.state.config.snvindel?.details?.groups) {
+		const groups = this.state.config.snvindel?.details?.groups
+		if (groups) {
 			// is equipped with comparison groups, render group ui
 			this.render1group(0)
 			this.render1group(1)
@@ -79,7 +81,7 @@ class GbControls {
 		}
 	}
 
-	makeVariantFilter() {
+	async makeVariantFilter() {
 		const handle = this.dom.variantFilterHolder
 			.append('div')
 			.text('VARIANT FILTER [+]')
@@ -96,7 +98,7 @@ class GbControls {
 				}
 			})
 		const div = this.dom.variantFilterHolder.append('div').style('display', 'none')
-		filterInit({
+		this.filterUI.variant = await filterInit({
 			joinWith: this.state.config.variantFilter.opts.joinWith,
 			emptyLabel: '+Add Filter',
 			holder: div,
@@ -108,7 +110,9 @@ class GbControls {
 					config: { variantFilter: { filter } }
 				})
 			}
-		}).main(this.state.config.variantFilter.filter)
+		})
+
+		this.filterUI.variant.main(this.state.config.variantFilter.filter)
 	}
 
 	/*
@@ -122,7 +126,12 @@ class GbControls {
 		const group = this.state.config.snvindel.details.groups[groupIdx]
 		const div = groupIdx == 0 ? this.dom.group1div : this.dom.group2div
 
-		div.selectAll('*').remove()
+		if (group.type == 'filter' && this.filterUI[groupIdx]) {
+			// will reuse an existing filterUI[${groupIdx}] and div
+		} else {
+			delete this.filterUI[groupIdx] // ok to delete even if not existing
+			div.selectAll('*').remove()
+		}
 
 		if (!group) {
 			// group does not exist in groups[] based on array index, e.g. when there's just 1 group and groups[1] is undefined
@@ -210,13 +219,48 @@ function render1group_population(self, groupIdx, group, div) {
 		.style('margin-left', '10px')
 }
 
-function render1group_filter(self, groupIdx, group, div) {
+async function render1group_filter(self, groupIdx, group, div) {
 	/*
 	this group is based on a termdb-filter
 	when initiating the filter ui, must join group's filter with mass global filter and submit the joined filter to main()
 	this allows tvs edit to show correct number of samples
 	*/
 
+	let span
+	if (!self.filterUI[groupIdx]) {
+		self.filterUI[groupIdx] = await filterInit({
+			holder: div,
+			vocab: self.app.opts.state.vocab,
+			emptyLabel: 'Entire cohort',
+			termdbConfig: self.state.termdbConfig,
+			callback: async f => {
+				const groups = JSON.parse(JSON.stringify(self.state.config.snvindel.details.groups))
+				groups[groupIdx].filter = f
+				self.app.dispatch({
+					type: 'plot_edit',
+					id: self.id,
+					config: { snvindel: { details: { groups } } }
+				})
+			}
+		})
+	}
+
+	self.filterUI[groupIdx].main(getJoinedFilter(self, group))
+	div.select('.sjpp-gb-filter-count').remove()
+	const count = self._partialData?.groupSampleCounts?.[groupIdx]
+
+	if (Number.isInteger(count)) {
+		// quick fix! sample count for this group is already present from partial data, create field to display
+		div.append('span')
+			.attr('class', 'sjpp-gb-filter-count')
+			.style('margin-left', '10px')
+			.style('opacity', 0.5)
+			.style('font-size', '.9em')
+			.text('n=' + count)
+	}
+}
+
+function getJoinedFilter(self, group) {
 	// clone the global filter; group filter will be joined into it
 	const joinedFilter = structuredClone(self.state.filter || { type: 'tvslst', in: true, join: '', lst: [] })
 	const gf = structuredClone(group.filter)
@@ -225,33 +269,7 @@ function render1group_filter(self, groupIdx, group, div) {
 	gf.tag = 'filterUiRoot'
 	joinedFilter.lst.push(gf)
 	joinedFilter.join = 'and'
-
-	filterInit({
-		holder: div,
-		vocab: self.app.opts.state.vocab,
-		emptyLabel: 'Entire cohort',
-		termdbConfig: self.state.termdbConfig,
-		callback: async f => {
-			const groups = JSON.parse(JSON.stringify(self.state.config.snvindel.details.groups))
-			groups[groupIdx].filter = f
-			self.app.dispatch({
-				type: 'plot_edit',
-				id: self.id,
-				config: { snvindel: { details: { groups } } }
-			})
-		}
-	}).main(joinedFilter)
-
-	const count = self._partialData?.groupSampleCounts?.[groupIdx]
-	if (Number.isInteger(count)) {
-		// quick fix! sample count for this group is already present from partial data, create field to display
-		div
-			.append('span')
-			.style('margin-left', '10px')
-			.style('opacity', 0.5)
-			.style('font-size', '.9em')
-			.text('n=' + count)
-	}
+	return joinedFilter
 }
 
 function makePrompt2addNewGroup(self, groupIdx, div) {

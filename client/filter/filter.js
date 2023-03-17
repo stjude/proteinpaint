@@ -187,6 +187,15 @@ class Filter {
 		const i = parentCopy.lst.findIndex(f => f.$id === $id)
 		if (i == -1) return null
 		parentCopy.lst.splice(i, 1)
+		return getNormalRoot(rootCopy)
+		/*
+		!!! 
+			The logic below incorectly assumes that there are at most 2 root tvslst.lst entries,
+			a cohortFilter, ONE OTHER, or both
+			- this is mostly true for a global filter
+			- however, a local chart filter may have 3+ entries in its root tvslst: 
+			  a cohortFilter tvs,  aterm filter tvslst, AND the local filter tvslst
+		!!!
 		const cohortFilter = getFilterItemByTag(rootCopy, 'cohortFilter')
 		if (cohortFilter && !parentCopy.lst.find(d => d === cohortFilter)) {
 			return getNormalRoot({
@@ -197,6 +206,7 @@ class Filter {
 		} else {
 			return getNormalRoot(parentCopy)
 		}
+		*/
 	}
 	getAdjustedRoot($id, join) {
 		const rootCopy = JSON.parse(JSON.stringify(this.rawFilter))
