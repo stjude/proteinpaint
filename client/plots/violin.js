@@ -251,26 +251,6 @@ class ViolinPlot {
 export const violinInit = getCompInit(ViolinPlot)
 export const componentInit = violinInit
 
-// function setInteractivity(self) {
-// 	self.download = function() {
-// 		if (!self.state) return
-
-// 		// has to be able to handle multichart view
-// 		// const mainGs = []
-// 		// const translate = { x: undefined, y: undefined }
-// 		// const titles = []
-// 		// let maxw = 0,
-// 		// 	maxh = 0,
-// 		// 	tboxh = 0
-// 		// let prevY = 0,
-// 		// 	numChartsPerRow = 0
-
-// 		self.dom.violinDiv.selectAll('.sjpp-violin-plot').each(function() {
-// 			to_svg(this, 'violin', { apply_dom_styles: true })
-// 		})
-// 	}
-// }
-
 export function getDefaultViolinSettings(app, overrides = {}) {
 	const defaults = {
 		orientation: 'horizontal',
