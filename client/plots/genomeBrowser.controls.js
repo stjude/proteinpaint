@@ -126,8 +126,10 @@ class GbControls {
 		const group = this.state.config.snvindel.details.groups[groupIdx]
 		const div = groupIdx == 0 ? this.dom.group1div : this.dom.group2div
 
-		if (group.type == 'filter' && this.filterUI[groupIdx]) {
+		let canReuse = false
+		if (group?.type == 'filter' && this.filterUI[groupIdx]) {
 			// will reuse an existing filterUI[${groupIdx}] and div
+			canReuse = true
 		} else {
 			delete this.filterUI[groupIdx] // ok to delete even if not existing
 			div.selectAll('*').remove()
@@ -141,7 +143,7 @@ class GbControls {
 		}
 
 		// the group exists; first show the group header button
-		makeGroupHeaderButton(this, groupIdx, div)
+		if (!canReuse) makeGroupHeaderButton(this, groupIdx, div)
 
 		if (group.type == 'info') return render1group_info(this, groupIdx, group, div)
 		if (group.type == 'population') return render1group_population(this, groupIdx, group, div)
