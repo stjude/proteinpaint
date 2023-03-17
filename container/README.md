@@ -7,7 +7,7 @@ NOTE: The reference data files will still need to be downloaded.
 
 **TODO**:
 - automate or simplify reference data download
-- ideal???: make a GDC-like API for PP reference data, so that there will not be a need 
+- make PP reference data available as an online API, so that there will not be a need 
 to download really large reference data files. Only when there are performance and
 reliability concerns will local copies of reference data be desirable.
 
@@ -48,7 +48,7 @@ wget https://raw.githubusercontent.com/stjude/proteinpaint/container-fixes/conta
 # http://localhost:3456 should open the Proteinpaint landing page
 ```
 
-### Use NPM
+### Option B: Use NPM
 
 This installation option will require [npm](https://docs.npmjs.com/downloading-and-installing-node-js-and-npm).
 It will hide the details of pulling a prebuilt Docker image or building an image from a Dockerfile. It will also
@@ -66,7 +66,7 @@ and namespace entries:
 @stjude:registry=https://npm.pkg.github.com/
 ```
 
-#### Option B: Install with npm
+#### Install with npm
 
 ```bash
 # for non-global installation in a folder
