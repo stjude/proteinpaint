@@ -21,20 +21,20 @@ export function setInteractivity(self) {
 		})
 	}
 
-	self.displayLabelClickMenu = function(t1, t2, plot, event, self) {
+	self.displayLabelClickMenu = function(t1, t2, plot, event) {
 		self.displayLabelClickMenu.called = true
-		self.displayMenu(t1, t2, self, plot, event, null, null)
+		self.displayMenu(t1, t2, plot, event, null, null)
 	}
 
 	self.displayBrushMenu = function(t1, t2, self, plot, selection, scale, isH) {
 		const start = isH ? scale.invert(selection[0]) : scale.invert(selection[1])
 		const end = isH ? scale.invert(selection[1]) : scale.invert(selection[0])
 		self.displayBrushMenu.called = true
-		self.displayMenu(t1, t2, self, plot, event, start, end)
+		self.displayMenu(t1, t2, plot, event, start, end)
 		// const brushValues = plot.values.filter(i => i > start && i < end)
 	}
 
-	self.displayMenu = function(t1, t2, self, plot, event, start, end) {
+	self.displayMenu = function(t1, t2, plot, event, start, end) {
 		self.app.tip.d.selectAll('*').remove()
 
 		const options = []
@@ -77,7 +77,7 @@ export function setInteractivity(self) {
 			if (self.config.settings.violin.displaySampleIds && self.state.hasVerifiedToken) {
 				options.push({
 					label: `List samples`,
-					callback: async () => self.listSamples(self, event, t1, t2, plot, self.data.min, self.data.max * 2)
+					callback: async () => self.listSamples(event, t1, t2, plot, self.data.min, self.data.max * 2)
 				})
 			}
 			self.displayLabelClickMenu.called = false
@@ -90,7 +90,7 @@ export function setInteractivity(self) {
 			if (self.config.settings.violin.displaySampleIds && self.state.hasVerifiedToken) {
 				options.push({
 					label: `List samples`,
-					callback: async () => self.listSamples(self, event, t1, t2, plot, start, end)
+					callback: async () => self.listSamples(event, t1, t2, plot, start, end)
 				})
 			}
 			self.displayBrushMenu.called = false
@@ -114,7 +114,7 @@ export function setInteractivity(self) {
 		self.app.tip.show(event.clientX, event.clientY)
 	}
 
-	self.listSamples = async function(self, event, t1, t2, plot, start, end) {
+	self.listSamples = async function(event, t1, t2, plot, start, end) {
 		const tvslst = getTvsLst(t1, t2, plot, start, end)
 		const term = t1.q?.mode === 'continuous' ? t1 : t2
 		const filter = {
@@ -129,10 +129,10 @@ export function setInteractivity(self) {
 		}
 		//getAnnotatedSampleData is used to retrieve sample id's and values (see matrix.js).
 		const data = await self.app.vocabApi.getAnnotatedSampleData(opts)
-		self.displaySampleIds(event, self, term, data)
+		self.displaySampleIds(event, term, data)
 	}
 
-	self.displaySampleIds = function(event, self, term, data) {
+	self.displaySampleIds = function(event, term, data) {
 		self.app.tip.clear()
 		if (!data?.samples) return
 		const sampleIdArr = []
@@ -161,7 +161,7 @@ export function setInteractivity(self) {
 		self.app.tip.show(event.clientX, event.clientY)
 	}
 
-	self.labelHideLegendClicking = function(t2, plot, self) {
+	self.labelHideLegendClicking = function(t2, plot) {
 		self.dom.legendDiv.selectAll('.sjpp-htmlLegend').on('click', event => {
 			event.stopPropagation()
 			const d = event.target.__data__
@@ -216,7 +216,7 @@ function getAddFilterCallback(t1, t2, self, plot, rangeStart, rangeStop) {
 					start: structuredClone(plot.divideTwBins?.start) || null,
 					stop: structuredClone(plot.divideTwBins?.stop) || null,
 					startinclusive: structuredClone(plot.divideTwBins?.startinclusive) || true,
-					stopinclusive: structuredClone(plot.divideTwBins?.stopinclusive) || true,
+					stopinclusive: structuredClone(plot.divideTwBins?.stopinclusive) || false,
 					startunbounded: structuredClone(plot.divideTwBins?.startunbounded)
 						? structuredClone(plot.divideTwBins?.startunbounded)
 						: null,
@@ -315,7 +315,7 @@ function getTvsLst(t1, t2, plot, rangeStart, rangeStop) {
 					start: structuredClone(plot.divideTwBins?.start) || null,
 					stop: structuredClone(plot.divideTwBins?.stop) || null,
 					startinclusive: structuredClone(plot.divideTwBins?.startinclusive) || true,
-					stopinclusive: structuredClone(plot.divideTwBins?.stopinclusive) || true,
+					stopinclusive: structuredClone(plot.divideTwBins?.stopinclusive) || false,
 					startunbounded: structuredClone(plot.divideTwBins?.startunbounded)
 						? structuredClone(plot.divideTwBins?.startunbounded)
 						: null,
