@@ -2,7 +2,15 @@ const tape = require('tape')
 const helpers = require('../../test/front.helpers.js')
 const d3color = require('d3-color')
 const d3s = require('d3-selection')
-const { detectLst, detectOne, detectChildAttr, detectChildStyle, detectGte, sleep } = require('../../test/test.helpers')
+const {
+	detectLst,
+	detectOne,
+	detectAttr,
+	detectChildAttr,
+	detectChildStyle,
+	detectGte,
+	sleep
+} = require('../../test/test.helpers')
 
 const runpp = helpers.getRunPp('mass', {
 	state: {
@@ -192,13 +200,13 @@ tape('Render TermdbTest scatter plot and open survival and summary', function(te
 		async function testOpenSurvivalPlot() {
 			const survivalTerm = await scatter.Inner.app.vocabApi.getterm('efs')
 			await scatter.Inner.openSurvivalPlot(survivalTerm, scatter.Inner.getGroupvsOthersOverlay(group))
-			test.true(d3s.selectAll('.sja_errorbar').size() == 0, 'Should render survival plot without erros".')
+			test.true(d3s.selectAll('.sja_errorbar').size() == 0, 'Should render survival plot without errors".')
 		}
 
 		async function testOpenSummaryPlot() {
 			const genderTerm = await scatter.Inner.app.vocabApi.getterm('sex')
 			await scatter.Inner.openSummaryPlot(genderTerm, scatter.Inner.getGroupvsOthersOverlay(group))
-			test.true(d3s.selectAll('.sja_errorbar').size() == 0, 'Should render summary plot without erros".')
+			test.true(d3s.selectAll('.sja_errorbar').size() == 0, 'Should render summary plot without errors".')
 		}
 	}
 })
@@ -343,10 +351,10 @@ tape('Test legend', function(test) {
 				})
 			}
 			/* example of a custom matcher, instead of opts.style
-			matcher(mutations, observer) {
-				const hidden = mutations.filter(m => m.target.__data__.category == key && m.target.style.fillOpacity == '0')
-				if (hidden.length >= expectedNum) return hidden.map(d => d.target)
-			}*/
+            matcher(mutations, observer) {
+                const hidden = mutations.filter(m => m.target.__data__.category == key && m.target.style.fillOpacity == '0')
+                if (hidden.length >= expectedNum) return hidden.map(d => d.target)
+            }*/
 		})
 		test.equal(
 			matched.filter(t => t.__data__.category == key).length,
@@ -367,12 +375,12 @@ tape('Test legend', function(test) {
 				attributeFilter: ['fill']
 			},
 			/* example of opts.attr, instead of opts.matcher()
-			attr: {
-				// key is name of attribute, value can be a string, number, or function
-				fill: value => {
-					return d3color.rgb(value).toString() === expectedColor
-				}
-			},*/
+            attr: {
+                // key is name of attribute, value can be a string, number, or function
+                fill: value => {
+                    return d3color.rgb(value).toString() === expectedColor
+                }
+            },*/
 			count: expectedNum,
 			trigger: async () => {
 				scatter.Inner.changeColor(key, color)
@@ -430,52 +438,52 @@ tape.skip('Create color groups', function(test) {
 		}
 
 		// await scatter.Inner.app.dispatch({
-		// 	type: 'plot_edit',
-		// 	id: scatter.Inner.id,
-		// 	config: { groups }
+		//  type: 'plot_edit',
+		//  id: scatter.Inner.id,
+		//  config: { groups }
 		// })
 		await sleep(1000)
 		// scatter.Inner.dom.controls
-		// 	.node()
-		// 	.querySelector('.ts_pill')
-		// 	.click()
+		//  .node()
+		//  .querySelector('.ts_pill')
+		//  .click()
 		// /*
 		// Problematic! menu tooltip renders outside of scatter.Inner.dom/app and current setup
 		// does not allow for targeting only the rendered test div. If any test fails, leaving
 		// an rendered mass UI, these tests will fail as well
 		// */
 		// d3s
-		// 	.selectAll('.sja_sharp_border')
-		// 	.filter(d => d.label == 'Edit')
-		// 	.node()
-		// 	.click()
+		//  .selectAll('.sja_sharp_border')
+		//  .filter(d => d.label == 'Edit')
+		//  .node()
+		//  .click()
 	}
 
 	// function makeGroupsViaUI(scatter) {
-	// 	const firstGrpInput = d3s
-	// 		.selectAll('.group_edit_div > input')
-	// 		.nodes()
-	// 		.filter(e => e.value == '1')
-	// 	firstGrpInput[0].value = 'Group 1'
-	// 	firstGrpInput[0].dispatchEvent(new KeyboardEvent('keyup'))
+	//  const firstGrpInput = d3s
+	//      .selectAll('.group_edit_div > input')
+	//      .nodes()
+	//      .filter(e => e.value == '1')
+	//  firstGrpInput[0].value = 'Group 1'
+	//  firstGrpInput[0].dispatchEvent(new KeyboardEvent('keyup'))
 
-	// 	const secondGrpInput = d3s
-	// 		.selectAll('.group_edit_div > input')
-	// 		.nodes()
-	// 		.filter(e => e.value == '2')
-	// 	secondGrpInput[0].value = 'Group 2'
-	// 	secondGrpInput[0].dispatchEvent(new KeyboardEvent('keyup'))
+	//  const secondGrpInput = d3s
+	//      .selectAll('.group_edit_div > input')
+	//      .nodes()
+	//      .filter(e => e.value == '2')
+	//  secondGrpInput[0].value = 'Group 2'
+	//  secondGrpInput[0].dispatchEvent(new KeyboardEvent('keyup'))
 
-	// 	const dragDivs = d3s.selectAll('.sjpp-drag-drop-div').nodes()
-	// 	const dragItems = d3.selectAll('.sj-drag-item').nodes()
-	// 	//First item in list
-	// 	dragItems[0].dispatchEvent(new Event('dragstart'))
-	// 	//Second drag div
-	// 	dragDivs[1].dispatchEvent(new Event('drop'))
-	// 	dragItems[0].dispatchEvent(new Event('dragend'))
+	//  const dragDivs = d3s.selectAll('.sjpp-drag-drop-div').nodes()
+	//  const dragItems = d3.selectAll('.sj-drag-item').nodes()
+	//  //First item in list
+	//  dragItems[0].dispatchEvent(new Event('dragstart'))
+	//  //Second drag div
+	//  dragDivs[1].dispatchEvent(new Event('drop'))
+	//  dragItems[0].dispatchEvent(new Event('dragend'))
 
-	// 	const applyBtn = d3.selectAll('.sjpp_apply_btn').node()
-	// 	applyBtn.dispatchEvent(new Event('click'))
+	//  const applyBtn = d3.selectAll('.sjpp_apply_btn').node()
+	//  applyBtn.dispatchEvent(new Event('click'))
 	// }
 
 	async function testGroups(scatter) {
@@ -535,10 +543,10 @@ tape('Replace color from burger menu', function(test) {
 			.querySelector('.ts_pill')
 			.click()
 		/*
-		Problematic! menu tooltip renders outside of scatter.Inner.dom/app and current setup
-		does not allow for targeting only the rendered test div. If any test fails, leaving 
-		an rendered mass UI, these tests will fail as well
-		*/
+        Problematic! menu tooltip renders outside of scatter.Inner.dom/app and current setup
+        does not allow for targeting only the rendered test div. If any test fails, leaving 
+        an rendered mass UI, these tests will fail as well
+        */
 		d3s
 			.selectAll('.sja_sharp_border')
 			.filter(d => d.label == 'Replace')
@@ -613,11 +621,11 @@ tape('Change chart width and height from menu', function(test) {
 	async function runTests(scatter) {
 		scatter.on('postRender.test', null)
 		// helpers
-		// 	.rideInit({ arg: scatter, bus: scatter, eventType: 'postRender.test' })
-		// 	.run(changeWidth)
-		// 	.use(changeHeight)
-		// 	.to(testChartSizeChange)
-		// 	.done(test)
+		//  .rideInit({ arg: scatter, bus: scatter, eventType: 'postRender.test' })
+		//  .run(changeWidth)
+		//  .use(changeHeight)
+		//  .to(testChartSizeChange)
+		//  .done(test)
 
 		changeWidth(scatter)
 		changeHeight(scatter)
@@ -669,10 +677,10 @@ tape('Check/uncheck Show axes from menu', function(test) {
 
 	async function runTests(scatter) {
 		// helpers
-		// 	.rideInit({ arg: scatter, bus: scatter, eventType: 'postRender.test' })
-		// 	.run(checkAxesBox)
-		// 	.run(testAxes)
-		// 	.done(test)
+		//  .rideInit({ arg: scatter, bus: scatter, eventType: 'postRender.test' })
+		//  .run(checkAxesBox)
+		//  .run(testAxes)
+		//  .done(test)
 
 		scatter.on('postRender.test', null)
 
@@ -715,48 +723,66 @@ tape('Click zoom in, zoom out, and reset buttons', function(test) {
 		}
 	})
 
-	function runTests(scatter) {
-		helpers
-			.rideInit({ arg: scatter, bus: scatter, eventType: 'postRender.test' })
-			.run(clickZoomIn)
-			.run(testZoomIn, 2000)
-			.run(triggerReset)
-			.run(testReset, 2000)
-			.run(clickZoomOut)
-			.run(testZoomOut, 2000)
-			.done(test)
+	async function runTests(scatter) {
+		scatter.on('postRender.test', null)
+		// helpers
+		//  .rideInit({ arg: scatter, bus: scatter, eventType: 'postRender.test' })
+		//  .run(clickZoomIn)
+		//  .run(testZoomIn, 2000)
+		//  .run(triggerReset)
+		//  .run(testReset, 2000)
+		//  .run(clickZoomOut)
+		//  .run(testZoomOut, 2000)
+		//  .done(test)
+
+		await testZoomIn(scatter)
+		// await testReset(scatter)
+		await testZoomOut(scatter)
+		test.end()
 	}
 
-	function clickZoomIn(scatter) {
+	async function testZoomIn(scatter) {
 		const zoomin_bt = scatter.Inner.dom.toolsDiv.node().querySelector('div[name="sjpp-zoom-in-btn"]')
-		zoomin_bt.click()
-	}
-
-	function testZoomIn(scatter) {
+		await detectTransform(scatter, zoomin_bt, 1.5)
 		const scale = scatter.Inner.k
 		test.ok(scale > 1, `Plot should zoom in`)
 	}
 
-	function triggerReset(scatter) {
-		const reset_bt = scatter.Inner.dom.toolsDiv.node().querySelector('div[name="sjpp-reset-btn"]')
-		reset_bt.click()
-	}
+	//A popup prevents clicking on button
+	// async function testReset(scatter) {
+	//     const reset_bt = scatter.Inner.dom.toolsDiv.node().querySelector('div[name="sjpp-reset-btn"]')
+	//     await detectTransform(scatter, reset_bt, 1)
+	//     const scale = scatter.Inner.k
+	//     test.ok(scale == 1, `Plot should reset`)
+	// }
 
-	function testReset(scatter) {
-		const scale = scatter.Inner.k
-		test.ok(scale == 1, `Plot should reset`)
-	}
-
-	function clickZoomOut(scatter) {
-		scatter.Inner.dom.toolsDiv
-			.node()
-			.querySelector('div[name="sjpp-zoom-out-btn"]')
-			.click()
-	}
-
-	function testZoomOut(scatter) {
+	async function testZoomOut(scatter) {
+		const zoomout_bt = scatter.Inner.dom.toolsDiv.node().querySelector('div[name="sjpp-zoom-out-btn"]')
+		// await detectTransform(scatter, zoomout_bt, 0.5)
+		await detectTransform(scatter, zoomout_bt, 0.75)
 		const scale = scatter.Inner.k
 		test.ok(scale < 1, `Plot should zoom out`)
+	}
+
+	async function detectTransform(scatter, btn, scale) {
+		const target = await detectAttr({
+			target: scatter.Inner.dom.holder.node().querySelector('.sjpcb-scatter-series'),
+			observe: {
+				subtree: true,
+				characterData: true,
+				attributeFilter: ['transform']
+			},
+			count: 1,
+			trigger() {
+				btn.click()
+			},
+			matcher(mutations) {
+				for (const m of mutations) {
+					if (m.attributeName == 'transform' && m.target.attributes[1].value.includes(`scale(${scale})`)) return m
+				}
+			}
+		})
+		return target
 	}
 
 	//Add tests for changes in axes
@@ -785,8 +811,8 @@ tape('Groups and group menus functions', function(test) {
 
 	async function triggerGroupMenu(scatter) {
 		/* Menu appears in the upper left corner instead of under groups button.
-		This is expected. No x/y coord is provided to orient the menu 
-		under the groups button. */
+        This is expected. No x/y coord is provided to orient the menu 
+        under the groups button. */
 		scatter.Inner.showGroupsMenu(new PointerEvent('click'))
 		const groupsMenu = scatter.Inner.dom.tip.d.selectAll('div.sja_menuoption').nodes()
 		for (const group of scatter.Inner.config.groups) {

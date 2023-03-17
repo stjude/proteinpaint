@@ -1,3 +1,5 @@
+import { getAppInit, getStoreInit } from '../rx'
+
 /********* EXPORTED ********
 sleep
 detectLst
@@ -25,31 +27,31 @@ export function sleep(ms) {
 //exports.sleep = sleep
 
 /*
-	Detect an asynchronously rendered element
-	NOTE: you can use MutationObserver directly, this is meant for convenience for common use cases
+    Detect an asynchronously rendered element
+    NOTE: you can use MutationObserver directly, this is meant for convenience for common use cases
 
-	Argument
-	_opts{}      see the defaults inside the detectLst function
+    Argument
+    _opts{}      see the defaults inside the detectLst function
 
-	// options related to the native MutationObserver
-	// see https://developer.mozilla.org/en-US/docs/Web/API/MutationObserver/observe
-	.target      required, the first argument to a MutationObserver instance's observe() method
-							 the DOM element to be observed and where the optional selector will be queried; alias for opts.elem
-	.observe{}   the second argument to a MutationObserver instance's observe() method
+    // options related to the native MutationObserver
+    // see https://developer.mozilla.org/en-US/docs/Web/API/MutationObserver/observe
+    .target      required, the first argument to a MutationObserver instance's observe() method
+                             the DOM element to be observed and where the optional selector will be queried; alias for opts.elem
+    .observe{}   the second argument to a MutationObserver instance's observe() method
 
-	.selector    optional, a valid CSS-selector of the element to be returned under opts.target. 
-							 If empty, then opts.target will be returned
-	
-	.matcher()   optional, a function that signals the end of the observer 
-							 passed (mutationsList, observer) as arguments
-							 must return an array of zero or more elements to trigger observer.disconnect() 
+    .selector    optional, a valid CSS-selector of the element to be returned under opts.target. 
+                             If empty, then opts.target will be returned
+    
+    .matcher()   optional, a function that signals the end of the observer 
+                             passed (mutationsList, observer) as arguments
+                             must return an array of zero or more elements to trigger observer.disconnect() 
 
-	// only used when opts.matcher is not supplied
-	.count       optional, the expected number of detected matching elements to stop the observer
-	.matchAs     optional, how to match the current versus expected counts, '=','>','<','>=','<=' default is '='
+    // only used when opts.matcher is not supplied
+    .count       optional, the expected number of detected matching elements to stop the observer
+    .matchAs     optional, how to match the current versus expected counts, '=','>','<','>=','<=' default is '='
 
-	Returns
-	Array of zero or more matched DOM nodes
+    Returns
+    Array of zero or more matched DOM nodes
 */
 
 export async function detectLst(_opts = {}) {
@@ -58,11 +60,10 @@ export async function detectLst(_opts = {}) {
 		selector: _opts.selector,
 		maxTime: 5000,
 		observe: {
-			childList: true, // !opts.observe || _opts.observe.childList,
-			subtree: true, //!opts.observe || _opts.observe?.subtree,
-			attributes: true, //!opts.observe || _opts.observe?.attributes,
-			characterData: true //!opts.observe || _opts.observe?.characterData,
-			//attributeFilter: !opts.observe || _opts.observe?.attributeFilter
+			childList: true,
+			subtree: true,
+			attributes: true,
+			characterData: true
 		}
 	}
 
@@ -77,7 +78,6 @@ export async function detectLst(_opts = {}) {
 	//if (!opts.selector) throw `missing opts.selector`
 	// may defer execution to the next step, to give time for an element to change
 	if (!opts.trigger && opts.count > 0) await sleep(0)
-
 	const start = Date.now()
 	return new Promise((resolve, reject) => {
 		if (!opts.matcher && opts.selector) {
@@ -110,7 +110,7 @@ export async function detectLst(_opts = {}) {
 		if (opts.maxTime) {
 			t = setTimeout(() => {
 				if (opts.count === 0) {
-				} else reject(`the elem '${opts.selector}' did not render within ${opts.maxTime} milliseconds`)
+				} else reject(`the elem '${opts.target}' did not render within ${opts.maxTime} milliseconds`)
 			}, opts.maxTime)
 		}
 
@@ -138,11 +138,12 @@ function matchedCount(actual, opts) {
 }
 
 /*
-	convenience helpers for detectLst with preconfigured MutationRecord.type, attributeName
+    convenience helpers for detectLst with preconfigured MutationRecord.type, attributeName
 */
 
 export async function detectAttr(opts) {
-	opts.observer.attributes = true
+	if (!opts.observe) opts.observe = {}
+	opts.observe.attributes = true
 	const lst = await detectLst(opts)
 	return lst
 }
@@ -233,8 +234,8 @@ export async function detectChildText(opts) {
 }
 
 /*
-	convenience helpers for detectLst with preconfigured matchAs
-	same arguments as detectLst
+    convenience helpers for detectLst with preconfigured matchAs
+    same arguments as detectLst
 */
 export async function detectGt(opts) {
 	opts.matchAs = '>'
@@ -261,8 +262,8 @@ export async function detectLte(opts) {
 }
 
 /*
-	same arguments as detectLst, except count is forced to 1
-	return the expected element
+    same arguments as detectLst, except count is forced to 1
+    return the expected element
 */
 export async function detectOne(opts) {
 	opts.count = 1
@@ -271,10 +272,10 @@ export async function detectOne(opts) {
 }
 
 /*
-	same arguments as detectLst, except count is forced to 0
-	return the expected element
+    same arguments as detectLst, except count is forced to 0
+    return the expected element
 
-	--  you have to know the element hasn't been removed when this is called
+    --  you have to know the element hasn't been removed when this is called
 */
 export async function detectZero(opts) {
 	opts.count = 0
@@ -347,3 +348,36 @@ export async function whenVisible(elem) {
 		}, 25)
 	})
 }
+
+class TestAppStore {
+	constructor(opts) {
+		this.type = 'store'
+	}
+
+	init() {}
+}
+
+const storeInit = getStoreInit(TestAppStore)
+
+class TestApp {
+	constructor(opts) {
+		this.type = 'app'
+		this.opts = opts
+		this.fetchOpts = opts.fetchOpts
+	}
+
+	async init() {
+		try {
+			this.store = await storeInit({ app: this.api, state: this.opts.state })
+			this.state = await this.store.copyState()
+			await this.api.dispatch()
+		} catch (e) {
+			if (e.stack) console.log(e.stack)
+			else throw `TestApp Error: ${e}`
+		}
+	}
+
+	main() {}
+}
+
+export const testAppInit = getAppInit(TestApp)
