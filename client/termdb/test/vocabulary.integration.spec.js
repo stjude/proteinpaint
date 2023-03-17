@@ -141,14 +141,9 @@ tape('getVocab(), custom', test => {
 			'should have a vocab.getCohortSampleCount function'
 		)
 		// Frontend.getFilteredSampleCount() returns { samplecount: 'TBD' }??
-		test.equal(
-			typeof app.vocabApi.getFilteredSampleCount,
-			'function',
-			'should have a vocab.getFilteredSampleCount function'
-		)
-
 		test.equal(typeof app.vocabApi.getDensityPlotData, 'function', 'should have a vocab.getDensityPlotData function')
 		test.equal(typeof app.vocabApi.getPercentile, 'function', 'should have a vocab.getPercentile function')
+		test.equal(typeof app.vocabApi.getDescrStats, 'function', 'should have a vocab.getDescrStats function')
 		test.equal(typeof app.vocabApi.getterm, 'function', 'should have a vocab.getterm function')
 		test.equal(typeof app.vocabApi.getCategories, 'function', 'should have a vocab.getCategories function')
 		test.equal(
@@ -162,6 +157,7 @@ tape('getVocab(), custom', test => {
 			'should have a vocab.getConditionCategories function'
 		)
 		test.equal(typeof app.vocabApi.graphable, 'function', 'should have a vocab.graphable function')
+		test.equal(typeof app.vocabApi.q_to_param, 'function', 'should have a vocab.q_to_param function')
 
 		test.end()
 	}
@@ -231,6 +227,11 @@ tape.skip('TermdbVocab()', test => {
 tape('\n', function(test) {
 	test.pass('-***- FrontendVocab Tests -***-')
 	test.end()
+})
+
+/* FrontendVocab tests */
+tape('\n', function(test) {
+	test.pass('-***- FrontendVocab Tests -***-')
 })
 
 tape('Missing state.vocab', test => {
