@@ -251,7 +251,8 @@ async function render1group_filter(self, groupIdx, group, div) {
 
 	if (Number.isInteger(count)) {
 		// quick fix! sample count for this group is already present from partial data, create field to display
-		div.append('span')
+		div
+			.append('span')
 			.attr('class', 'sjpp-gb-filter-count')
 			.style('margin-left', '10px')
 			.style('opacity', 0.5)
@@ -409,7 +410,7 @@ function launchMenu_createGroup(self, groupIdx, div) {
 			const arg = {
 				holder: tab.contentHolder,
 				vocabApi: self.app.vocabApi,
-				state: {},
+				state: { termfilter: { filter: self.state.filter } },
 				tree: {
 					click_term2select_tvs: tvs => {
 						/////////////////////////////////
