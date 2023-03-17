@@ -380,6 +380,7 @@ class MassCumInc {
 			this.app.vocabApi.syncTermData(this.config, data)
 			this.processData(data)
 			this.pj.refresh({ data: this.currData })
+			this.sortSerieses(this.pj.tree.charts)
 			this.setTerm2Color(this.pj.tree.charts)
 			this.render()
 			this.renderSkippedCharts(this.dom.skippedChartsDiv, this.skippedCharts)
@@ -486,6 +487,24 @@ class MassCumInc {
 				}
 			}
 			return skipped
+		}
+	}
+
+	sortSerieses(charts) {
+		for (const chart of charts) {
+			// sort series of chart by sorting series that are not hidden by
+			// default ahead of series that are hidden by default
+			// this will ensure that the default visible series are
+			// assigned the first colors of the color scheme, which
+			// tend to be colors with the best contrasts
+			// NOTE: do not sort by this.settings.hidden because the color
+			// assignments will change when a series changes to hidden/visible
+			const seriesIDs = chart.serieses.map(series => series.seriesId)
+			const seriesOrder = [
+				...seriesIDs.filter(seriesId => !this.settings.defaultHidden.includes(seriesId)),
+				...seriesIDs.filter(seriesId => this.settings.defaultHidden.includes(seriesId))
+			]
+			chart.serieses.sort((a, b) => seriesOrder.indexOf(a.seriesId) - seriesOrder.indexOf(b.seriesId))
 		}
 	}
 
