@@ -129,9 +129,9 @@ WORKDIR /home/root/pp/app
 COPY --from=ppserverdeps /home/root/pp/app/active /home/root/pp/app/active
 
 WORKDIR /home/root/pp/app/active
-COPY ./server/app.js .
+COPY ./app-server.js ./
 EXPOSE 3000
-CMD ["sh", "-c", "node app.js"]
+CMD ["sh", "-c", "node app-server.js"]
 
 
 #################
@@ -151,7 +151,7 @@ WORKDIR /home/root/pp/app/active
 COPY ./.npmrc .
 ARG FRONTPKGVER
 RUN if [ -f /home/root/pp/tmppack/stjude-proteinpaint-front-${FRONTPKGVER}.tgz ]; then \
-      npm install /home/root/pp/tmppack/stjude-proteinpaint-front-${FRONTPKGVER}.tgz; \
+      npm install /home/root/pp/tmppack/stjude-proteinpaint-front-${FRONTPKGVER}.tgz ; \
     else \
       npm install @stjude/proteinpaint-front@${FRONTPKGVER}; \
     fi; \
@@ -169,7 +169,8 @@ WORKDIR /home/root/pp/app
 COPY --from=ppfulldeps /home/root/pp/app/active /home/root/pp/app/active
 
 WORKDIR /home/root/pp/app/active
-COPY ./full/app.js .
+COPY ./app-full.js ./
+COPY public ./public
 EXPOSE 3000
-CMD ["sh", "-c", "node app.js"]
+CMD ["sh", "-c", "node app-full.js"]
 # CMD ["sleep", "3600"]

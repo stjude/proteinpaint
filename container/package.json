@@ -1,23 +1,24 @@
 {
 	"name": "@stjude/proteinpaint-container",
-	"version": "2.11.2-0",
-	"bin": "app.js",
+	"version": "2.11.2-1",
+	"bin": "launch.js",
 	"scripts": {
 		"dev": "./pack.sh && ./build.sh",
 		"build": "rm -rf tmppack && ./build.sh",
 		"postinstall": "./build.sh -m notdev"
 	},
 	"containerDeps": {
-		"server": "2.11.2-0",
-		"front": "2.11.2-0"
+		"server": "^2.11.2-1",
+		"front": "^2.11.2-1"
 	},
 	"files": [
 		"build.sh",
 		"Dockerfile",
-		"full",
-		"server",
-		"run.sh",
-		"LICENSE"
+		"app-full.js",
+		"app-server.js",
+		"launch.js",
+		"public",
+		"run.sh"
 	],
 	"license": "SEE LICENSE IN ./LICENSE",
   "repository": {
