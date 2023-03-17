@@ -82,7 +82,6 @@ export async function detectLst(_opts = {}) {
 	const start = Date.now()
 	return new Promise((resolve, reject) => {
 		if (!opts.matcher && opts.selector) {
-			console.log(85)
 			const elems = opts.target.querySelectorAll(opts.selector)
 			const matched = matchedCount(elems.length, opts)
 			if (matched) {
