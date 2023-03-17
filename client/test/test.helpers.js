@@ -60,11 +60,10 @@ export async function detectLst(_opts = {}) {
 		selector: _opts.selector,
 		maxTime: 5000,
 		observe: {
-			childList: true, // !opts.observe || _opts.observe.childList,
-			subtree: true, //!opts.observe || _opts.observe?.subtree,
-			attributes: true, //!opts.observe || _opts.observe?.attributes,
-			characterData: true //!opts.observe || _opts.observe?.characterData,
-			//attributeFilter: !opts.observe || _opts.observe?.attributeFilter
+			childList: true,
+			subtree: true,
+			attributes: true,
+			characterData: true
 		}
 	}
 
@@ -83,6 +82,7 @@ export async function detectLst(_opts = {}) {
 	const start = Date.now()
 	return new Promise((resolve, reject) => {
 		if (!opts.matcher && opts.selector) {
+			console.log(85)
 			const elems = opts.target.querySelectorAll(opts.selector)
 			const matched = matchedCount(elems.length, opts)
 			if (matched) {
@@ -144,7 +144,8 @@ function matchedCount(actual, opts) {
 */
 
 export async function detectAttr(opts) {
-	opts.observer.attributes = true
+	if (!opts.observe) opts.observe = {}
+	opts.observe.attributes = true
 	const lst = await detectLst(opts)
 	return lst
 }
@@ -363,6 +364,8 @@ const storeInit = getStoreInit(TestAppStore)
 class TestApp {
 	constructor(opts) {
 		this.type = 'app'
+		this.opts = opts
+		this.fetchOpts = opts.fetchOpts
 	}
 
 	async init() {

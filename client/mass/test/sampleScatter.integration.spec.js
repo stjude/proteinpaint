@@ -2,7 +2,15 @@ const tape = require('tape')
 const helpers = require('../../test/front.helpers.js')
 const d3color = require('d3-color')
 const d3s = require('d3-selection')
-const { detectLst, detectOne, detectChildAttr, detectChildStyle, detectGte, sleep } = require('../../test/test.helpers')
+const {
+	detectLst,
+	detectOne,
+	detectAttr,
+	detectChildAttr,
+	detectChildStyle,
+	detectGte,
+	sleep
+} = require('../../test/test.helpers')
 
 const runpp = helpers.getRunPp('mass', {
 	state: {
@@ -192,13 +200,13 @@ tape('Render TermdbTest scatter plot and open survival and summary', function(te
 		async function testOpenSurvivalPlot() {
 			const survivalTerm = await scatter.Inner.app.vocabApi.getterm('efs')
 			await scatter.Inner.openSurvivalPlot(survivalTerm, scatter.Inner.getGroupvsOthersOverlay(group))
-			test.true(d3s.selectAll('.sja_errorbar').size() == 0, 'Should render survival plot without erros".')
+			test.true(d3s.selectAll('.sja_errorbar').size() == 0, 'Should render survival plot without errors".')
 		}
 
 		async function testOpenSummaryPlot() {
 			const genderTerm = await scatter.Inner.app.vocabApi.getterm('sex')
 			await scatter.Inner.openSummaryPlot(genderTerm, scatter.Inner.getGroupvsOthersOverlay(group))
-			test.true(d3s.selectAll('.sja_errorbar').size() == 0, 'Should render summary plot without erros".')
+			test.true(d3s.selectAll('.sja_errorbar').size() == 0, 'Should render summary plot without errors".')
 		}
 	}
 })
@@ -704,7 +712,7 @@ tape('Check/uncheck Show axes from menu', function(test) {
 })
 
 tape('Click zoom in, zoom out, and reset buttons', function(test) {
-	test.timeoutAfter(10000)
+	test.timeoutAfter(5000)
 
 	runpp({
 		state,
@@ -715,48 +723,64 @@ tape('Click zoom in, zoom out, and reset buttons', function(test) {
 		}
 	})
 
-	function runTests(scatter) {
-		helpers
-			.rideInit({ arg: scatter, bus: scatter, eventType: 'postRender.test' })
-			.run(clickZoomIn)
-			.run(testZoomIn, 2000)
-			.run(triggerReset)
-			.run(testReset, 2000)
-			.run(clickZoomOut)
-			.run(testZoomOut, 2000)
-			.done(test)
+	async function runTests(scatter) {
+		scatter.on('postRender.test', null)
+		// helpers
+		// 	.rideInit({ arg: scatter, bus: scatter, eventType: 'postRender.test' })
+		// 	.run(clickZoomIn)
+		// 	.run(testZoomIn, 2000)
+		// 	.run(triggerReset)
+		// 	.run(testReset, 2000)
+		// 	.run(clickZoomOut)
+		// 	.run(testZoomOut, 2000)
+		// 	.done(test)
+
+		await testZoomIn(scatter)
+		await testReset(scatter)
+		await testZoomOut(scatter)
+		test.end()
 	}
 
-	function clickZoomIn(scatter) {
+	async function testZoomIn(scatter) {
 		const zoomin_bt = scatter.Inner.dom.toolsDiv.node().querySelector('div[name="sjpp-zoom-in-btn"]')
-		zoomin_bt.click()
-	}
-
-	function testZoomIn(scatter) {
+		await detectTransform(scatter, zoomin_bt, 1.5)
 		const scale = scatter.Inner.k
 		test.ok(scale > 1, `Plot should zoom in`)
 	}
 
-	function triggerReset(scatter) {
+	async function testReset(scatter) {
 		const reset_bt = scatter.Inner.dom.toolsDiv.node().querySelector('div[name="sjpp-reset-btn"]')
-		reset_bt.click()
-	}
-
-	function testReset(scatter) {
+		await detectTransform(scatter, reset_bt, 1)
 		const scale = scatter.Inner.k
 		test.ok(scale == 1, `Plot should reset`)
 	}
 
-	function clickZoomOut(scatter) {
-		scatter.Inner.dom.toolsDiv
-			.node()
-			.querySelector('div[name="sjpp-zoom-out-btn"]')
-			.click()
-	}
-
-	function testZoomOut(scatter) {
+	async function testZoomOut(scatter) {
+		const zoomout_bt = scatter.Inner.dom.toolsDiv.node().querySelector('div[name="sjpp-zoom-out-btn"]')
+		await detectTransform(scatter, zoomout_bt, 0.5)
 		const scale = scatter.Inner.k
 		test.ok(scale < 1, `Plot should zoom out`)
+	}
+
+	async function detectTransform(scatter, btn, scale) {
+		const target = await detectAttr({
+			target: scatter.Inner.dom.holder.node().querySelector('.sjpcb-scatter-series'),
+			observe: {
+				subtree: true,
+				characterData: true,
+				attributeFilter: ['transform']
+			},
+			count: 1,
+			trigger() {
+				btn.click()
+			},
+			matcher(mutations) {
+				for (const m of mutations) {
+					if (m.attributeName == 'transform' && m.target.attributes[1].value.includes(`scale(${scale})`)) return m
+				}
+			}
+		})
+		return target
 	}
 
 	//Add tests for changes in axes
