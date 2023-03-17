@@ -987,18 +987,18 @@ function setRenderers(self) {
 		// x-axis ticks
 		if (s.xTickValues?.length) {
 			// custom x-tick values
-			chart.xTickValues = s.xTickValues.filter(v => v === 0 || (v >= chart.xMin && v <= chart.xMax))
+			chart.xTickValues = s.xTickValues.filter(v => v === 0 || (v >= self.pj.tree.xMin && v <= self.pj.tree.xMax))
 		} else {
 			// compute x-tick values
 			// compute width between ticks for a maximum of 5 ticks
-			const tickWidth = (chart.xMax - chart.xMin) / 5
+			const tickWidth = (self.pj.tree.xMax - self.pj.tree.xMin) / 5
 			// round tick width to the nearest 5
 			const log = Math.floor(Math.log10(tickWidth))
 			const tickWidth_rnd = Math.round(tickWidth / (5 * 10 ** log)) * (5 * 10 ** log) || 1 * 10 ** log
 			// compute tick values using tick width
 			chart.xTickValues = [0]
-			let tick = chart.xMin
-			while (tick < chart.xMax) {
+			let tick = self.pj.tree.xMin
+			while (tick < self.pj.tree.xMax) {
 				chart.xTickValues.push(tick)
 				tick = tick + tickWidth_rnd
 			}
@@ -1169,6 +1169,8 @@ export async function getPlotConfig(opts, app) {
 function getPj(self) {
 	const pj = new Partjson({
 		template: {
+			xMin: '>$time',
+			xMax: '<$time',
 			yMin: '>=yMin()',
 			yMax: '<=yMax()',
 			charts: [
@@ -1246,12 +1248,13 @@ function getPj(self) {
 			},
 			xScale(row, context) {
 				const s = self.settings
+				const xMax = s.scale == 'byChart' ? context.self.xMax : context.root.xMax
 				return (
 					scaleLinear()
 						// force min x=0, instead of using min time in server data
 						// add 2 years to x max value to ensure a horizontally flat ending
 						// and avoid the potential for a vertical line ending
-						.domain([0, context.self.xMax + 2])
+						.domain([0, xMax + 2])
 						.range([0, s.svgw - s.svgPadding.left - s.svgPadding.right])
 				)
 			},
