@@ -187,7 +187,16 @@ tape('Missing .state', test => {
 	test.end()
 })
 
-/* TermdbVocab tests */
+/* TermdbVocab tests 
+
+//getTdbDataUrl
+//syncTermData
+
+//getPercentile
+//syncTermData
+//getAnnotatedSampleData
+	
+*/
 tape('\n', function(test) {
 	test.pass('-***- TermdbVocab Tests -***-')
 	test.end()
@@ -211,16 +220,14 @@ tape.skip('TermdbVocab()', test => {
 		fetchOpts: app.opts.fetchOpts
 	})
 
-	//getTdbDataUrl
-	//syncTermData
-
-	//getPercentile
-	//syncTermData
-	//getAnnotatedSampleData
 	test.end()
 })
 
-/* FrontendVocab tests */
+/* FrontendVocab tests 
+
+//syncTermData
+//getDensityPlotData
+*/
 tape('\n', function(test) {
 	test.pass('-***- FrontendVocab Tests -***-')
 	test.end()

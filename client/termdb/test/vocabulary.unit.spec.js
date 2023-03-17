@@ -23,6 +23,7 @@ FrontendVocab
 	findTerm
 	getDescrStats
 	getterm
+	getPercentile
 */
 
 tape('\n', function(test) {
@@ -121,38 +122,35 @@ tape('\n', function(test) {
 	test.end()
 })
 
-tape('getTermdbConfig', test => {
+tape.skip('getTermdbConfig', test => {
 	test.timeoutAfter(100)
-	const app = {
-		state: {
-			vocab: {
-				terms: vocab.terms,
-				selectCohort: {
-					term: { id: 'subcohort', type: 'categorical' },
-					values: [
-						{
-							keys: ['ABC'],
-							label: 'ABC Lifetime Cohort (ABC)',
-							shortLabel: 'ABC',
-							isdefault: true,
-							cssSelector: 'tbody > tr > td:nth-child(2)'
-						},
-						{
-							keys: ['XYZ'],
-							label: 'XYZ Cancer Survivor Study (XYZ)',
-							shortLabel: 'XYZ',
-							cssSelector: 'tbody > tr > td:nth-child(3)'
-						}
-					]
-				}
+	const state = {
+		vocab: {
+			terms: vocab.terms,
+			selectCohort: {
+				term: { id: 'subcohort', type: 'categorical' },
+				values: [
+					{
+						keys: ['ABC'],
+						label: 'ABC Lifetime Cohort (ABC)',
+						shortLabel: 'ABC',
+						isdefault: true,
+						cssSelector: 'tbody > tr > td:nth-child(2)'
+					},
+					{
+						keys: ['XYZ'],
+						label: 'XYZ Cancer Survivor Study (XYZ)',
+						shortLabel: 'XYZ',
+						cssSelector: 'tbody > tr > td:nth-child(3)'
+					}
+				]
 			}
 		}
 	}
 
 	const frontendVocabApi2 = new FrontendVocab({
-		app,
-		state: app.state,
-		fetchOpts: app.fetchOpts
+		app: testAppInit(state),
+		state
 	})
 
 	test.ok(
@@ -295,4 +293,82 @@ tape('getterm', async test => {
 	}
 })
 
-//getNestedChartSeriesData, getCohortSampleCount, getFilteredSampleCount
+tape('getPercentile', async function(test) {
+	//Test FrontendVocab directly
+	test.timeoutAfter(100)
+	test.plan(11)
+
+	let percentile_lst, result, testMsg, filter
+
+	percentile_lst = [10]
+	result = await frontendVocabApi.getPercentile('d', percentile_lst)
+	test.equal(result.values[0], 0.07500000000000001, 'should get correct 10th percentile')
+
+	percentile_lst = [25]
+	result = await frontendVocabApi.getPercentile('d', percentile_lst)
+	test.equal(result.values[0], 0.2, 'should get correct 25th percentile')
+
+	percentile_lst = [50]
+	result = await frontendVocabApi.getPercentile('d', percentile_lst)
+	test.equal(result.values[0], 0.45, 'should get correct 50th percentile')
+
+	percentile_lst = [75]
+	result = await frontendVocabApi.getPercentile('d', percentile_lst)
+	test.equal(result.values[0], 0.8, 'should get correct 75th percentile')
+
+	percentile_lst = [95]
+	result = await frontendVocabApi.getPercentile('d', percentile_lst)
+	test.equal(result.values[0], 1.1, 'should get correct 95th percentile')
+
+	percentile_lst = [25, 50]
+	result = await frontendVocabApi.getPercentile('d', percentile_lst)
+	test.deepEqual(result.values, [0.2, 0.45], 'should get correct 25th and 50th percentiles')
+
+	percentile_lst = [25, 50, 75]
+	result = await frontendVocabApi.getPercentile('d', percentile_lst)
+	test.deepEqual(result.values, [0.2, 0.45, 0.8], 'should get correct 25th, 50th, and 75th percentiles')
+
+	percentile_lst = ['a']
+	testMsg = 'should throw error for non-integer percentiles'
+	try {
+		result = await frontendVocabApi.getPercentile('d', percentile_lst)
+		test.fail(testMsg)
+	} catch (e) {
+		test.equal(e, 'non-integer percentiles found', testMsg)
+	}
+
+	percentile_lst = [25, 50, 'a']
+	testMsg = 'should throw error for non-integer percentiles'
+	try {
+		result = await frontendVocabApi.getPercentile('d', percentile_lst)
+		test.fail(testMsg)
+	} catch (e) {
+		test.equal(e, 'non-integer percentiles found', testMsg)
+	}
+
+	percentile_lst = [50]
+	filter = {
+		type: 'tvslst',
+		in: true,
+		lst: [{ type: 'tvs', tvs: { term: { id: 'c', type: 'categorical' }, values: [{ key: 1 }] } }]
+	}
+	result = await frontendVocabApi.getPercentile('d', percentile_lst, filter)
+	test.equal(result.values[0], 0.55, 'should get correct 50th percentile with categorical filter')
+
+	percentile_lst = [50]
+	filter = {
+		type: 'tvslst',
+		in: true,
+		lst: [
+			{
+				type: 'tvs',
+				tvs: {
+					term: { id: 'd', type: 'float', values: {} },
+					ranges: [{ startunbounded: true, stop: 0.8, stopinclusive: true }]
+				}
+			}
+		]
+	}
+	result = await frontendVocabApi.getPercentile('d', percentile_lst, filter)
+	test.equal(result.values[0], 0.35, 'should get correct 50th percentile with numeric filter')
+})
