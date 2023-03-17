@@ -1,0 +1,59 @@
+name: "Create Container Release"
+
+on:
+  workflow_dispatch:
+    inputs:
+      build_secret:
+        type: string
+        description: Build secret
+      release_type:
+        type: choice
+        description: Release type
+        options:
+          - prerelease
+          - prepatch
+          - preminor
+          - premajor
+          - major
+          - minor
+          - patch
+        pp_version:
+          type: choice
+          description: Latest or specific PP version
+          options:
+            - latest
+            - specific
+        specific_pp_version:
+          type: string
+          description: Specific PP version to use for container
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    timeout-minutes: 20
+    steps:
+      - name: Check secret
+        run: |
+          if [ "${{ github.event.inputs.build_secret }}" != "${{ secrets.BUILD_SECRET }}" ]; then
+            echo "Wrong build secret."
+            exit 1
+          fi
+
+      - name: Check user permission
+        id: check
+        uses: scherermichael-oss/action-has-permission@master
+        with:
+          required-permission: write
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Exit if user doesn't have write permission
+        run: |
+          if [ "${{ steps.check.outputs.has-permission }}" = "false" ]
+            then
+            echo "Only users with write permission are allowed to execute this workflow manually."
+            exit 1
+          fi
