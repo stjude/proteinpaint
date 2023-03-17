@@ -208,28 +208,38 @@ class Filter {
 		}
 		*/
 	}
+
 	getAdjustedRoot($id, join) {
 		const rootCopy = JSON.parse(JSON.stringify(this.rawFilter))
-		if (join == 'and') {
-			return rootCopy
-		} else {
-			const parentCopy = findParent(rootCopy, $id)
-			if (!parentCopy) return { type: 'tvslst', in: true, join: 'and', lst: [] }
-			const i = parentCopy.lst.findIndex(f => f.$id === parentCopy.$id)
-			if (i == -1) return { type: 'tvslst', in: true, join: 'and', lst: [] }
-			parentCopy.lst.splice(i, 1)
-			const cohortFilter = getFilterItemByTag(rootCopy, 'cohortFilter')
-			if (cohortFilter && !parentCopy.lst.find(d => d === cohortFilter)) {
-				return getNormalRoot({
-					type: 'tvslst',
-					join: 'and',
-					lst: [cohortFilter, parentCopy]
-				})
-			} else {
-				return getNormalRoot(parentCopy)
-			}
+
+		if (join == 'and') return rootCopy
+
+		// join should be "or"
+
+		// first find the optional cohortFilter, as it's used at multiple placed below
+		const cohortFilter = getFilterItemByTag(rootCopy, 'cohortFilter')
+
+		const parentCopy = findParent(rootCopy, $id)
+		if (!parentCopy) {
+			// if cohortFilter is present, must return it; otherwise return blank filter
+			return { type: 'tvslst', in: true, join: 'and', lst: cohortFilter ? [cohortFilter] : [] }
 		}
+
+		const i = parentCopy.lst.findIndex(f => f.$id === parentCopy.$id)
+		if (i == -1) return { type: 'tvslst', in: true, join: 'and', lst: cohortFilter ? [cohortFilter] : [] }
+
+		parentCopy.lst.splice(i, 1)
+		if (cohortFilter && !parentCopy.lst.find(d => d === cohortFilter)) {
+			return getNormalRoot({
+				type: 'tvslst',
+				join: 'and',
+				lst: [cohortFilter, parentCopy]
+			})
+		}
+
+		return getNormalRoot(parentCopy)
 	}
+
 	setVocabApi() {
 		if (!this.vocabApi) {
 			const app = {
