@@ -1,6 +1,11 @@
 # Change Log
 
 All notable changes to this project will be documented in this file. 
+## 2.11.2
+
+- improved docker build and release
+- sample lists when allowed for violin and sample scatter plots
+ 
 ## 2.11.2-1
 
 - allow listing samples from rendered charts for authorized users

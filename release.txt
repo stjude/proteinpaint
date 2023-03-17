@@ -1,2 +1,0 @@
-- improved docker build and release
-- sample lists when allowed for violin and sample scatter plots
