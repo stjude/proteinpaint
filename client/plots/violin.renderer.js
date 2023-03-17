@@ -55,7 +55,7 @@ export default function violinRenderer(self) {
 			if (self.opts.mode != 'minimal') renderLabels(t1, t2, violinG, plot, isH, settings, tip)
 			renderViolinPlot(plot, self, isH, svg, plotIdx, violinG, imageOffset)
 			if (self.opts.mode != 'minimal') renderBrushing(t1, t2, violinG, settings, plot, isH, svg)
-			self.labelHideLegendClicking(t2, plot, self)
+			self.labelHideLegendClicking(t2, plot)
 		}
 	}
 
@@ -244,7 +244,7 @@ export default function violinRenderer(self) {
 			.style('cursor', 'pointer')
 			.on('click', function(event) {
 				if (!event) return
-				self.displayLabelClickMenu(t1, t2, plot, event, self)
+				self.displayLabelClickMenu(t1, t2, plot, event)
 			})
 			.on('mouseover', function(event, d) {
 				event.stopPropagation()
