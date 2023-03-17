@@ -380,6 +380,7 @@ class MassCumInc {
 			this.app.vocabApi.syncTermData(this.config, data)
 			this.processData(data)
 			this.pj.refresh({ data: this.currData })
+			this.sortSerieses(this.pj.tree.charts)
 			this.setTerm2Color(this.pj.tree.charts)
 			this.render()
 			this.renderSkippedCharts(this.dom.skippedChartsDiv, this.skippedCharts)
@@ -486,6 +487,24 @@ class MassCumInc {
 				}
 			}
 			return skipped
+		}
+	}
+
+	sortSerieses(charts) {
+		for (const chart of charts) {
+			// sort series of chart by sorting series that are not hidden by
+			// default ahead of series that are hidden by default
+			// this will ensure that the default visible series are
+			// assigned the first colors of the color scheme, which
+			// tend to be colors with the best contrasts
+			// NOTE: do not sort by this.settings.hidden because the color
+			// assignments will change when a series changes to hidden/visible
+			const seriesIDs = chart.serieses.map(series => series.seriesId)
+			const seriesOrder = [
+				...seriesIDs.filter(seriesId => !this.settings.defaultHidden.includes(seriesId)),
+				...seriesIDs.filter(seriesId => this.settings.defaultHidden.includes(seriesId))
+			]
+			chart.serieses.sort((a, b) => seriesOrder.indexOf(a.seriesId) - seriesOrder.indexOf(b.seriesId))
 		}
 	}
 
@@ -968,18 +987,18 @@ function setRenderers(self) {
 		// x-axis ticks
 		if (s.xTickValues?.length) {
 			// custom x-tick values
-			chart.xTickValues = s.xTickValues.filter(v => v === 0 || (v >= chart.xMin && v <= chart.xMax))
+			chart.xTickValues = s.xTickValues.filter(v => v === 0 || (v >= self.pj.tree.xMin && v <= self.pj.tree.xMax))
 		} else {
 			// compute x-tick values
 			// compute width between ticks for a maximum of 5 ticks
-			const tickWidth = (chart.xMax - chart.xMin) / 5
+			const tickWidth = (self.pj.tree.xMax - self.pj.tree.xMin) / 5
 			// round tick width to the nearest 5
 			const log = Math.floor(Math.log10(tickWidth))
 			const tickWidth_rnd = Math.round(tickWidth / (5 * 10 ** log)) * (5 * 10 ** log) || 1 * 10 ** log
 			// compute tick values using tick width
 			chart.xTickValues = [0]
-			let tick = chart.xMin
-			while (tick < chart.xMax) {
+			let tick = self.pj.tree.xMin
+			while (tick < self.pj.tree.xMax) {
 				chart.xTickValues.push(tick)
 				tick = tick + tickWidth_rnd
 			}
@@ -1150,6 +1169,8 @@ export async function getPlotConfig(opts, app) {
 function getPj(self) {
 	const pj = new Partjson({
 		template: {
+			xMin: '>$time',
+			xMax: '<$time',
 			yMin: '>=yMin()',
 			yMax: '<=yMax()',
 			charts: [
@@ -1227,12 +1248,13 @@ function getPj(self) {
 			},
 			xScale(row, context) {
 				const s = self.settings
+				const xMax = s.scale == 'byChart' ? context.self.xMax : context.root.xMax
 				return (
 					scaleLinear()
 						// force min x=0, instead of using min time in server data
 						// add 2 years to x max value to ensure a horizontally flat ending
 						// and avoid the potential for a vertical line ending
-						.domain([0, context.self.xMax + 2])
+						.domain([0, xMax + 2])
 						.range([0, s.svgw - s.svgPadding.left - s.svgPadding.right])
 				)
 			},
