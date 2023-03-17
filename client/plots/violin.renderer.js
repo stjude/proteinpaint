@@ -40,7 +40,7 @@ export default function violinRenderer(self) {
 			)
 			self.dom.tableHolder.selectAll('*').remove()
 			self.dom.legendDiv.selectAll('*').remove()
-			// self.dom.selectAll('.sjpp-tableHolder').remove()
+			self.dom.tableHolder.selectAll('.sjpp-tableHolder')._parents[0].remove()
 			return
 		} else self.dom.violinDiv.select('*').remove()
 
