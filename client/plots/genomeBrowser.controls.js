@@ -98,7 +98,7 @@ class GbControls {
 				}
 			})
 		const div = this.dom.variantFilterHolder.append('div').style('display', 'none')
-		this.filterUI.variant = await filterInit({
+		filterInit({
 			joinWith: this.state.config.variantFilter.opts.joinWith,
 			emptyLabel: '+Add Filter',
 			holder: div,
@@ -110,9 +110,7 @@ class GbControls {
 					config: { variantFilter: { filter } }
 				})
 			}
-		})
-
-		this.filterUI.variant.main(this.state.config.variantFilter.filter)
+		}).main(this.state.config.variantFilter.filter)
 	}
 
 	/*
