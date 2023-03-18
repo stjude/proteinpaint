@@ -37,7 +37,7 @@ docker pull ghcr.io/stjude/$IMAGE_NAME
 #   
 
 # download the run script
-wget https://raw.githubusercontent.com/stjude/proteinpaint/container-fixes/container/run.sh
+wget https://raw.githubusercontent.com/stjude/proteinpaint/master/container/run.sh
 
 ./run.sh $IMAGE_NAME
 
