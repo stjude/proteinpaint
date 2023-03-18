@@ -31,41 +31,48 @@ if [[ "$EXPOSED_PORT" == "" ]]; then EXPOSED_PORT=3000; fi
 ############
 
 # defaults
-CONTAINER_ID=pp
+CONTAINER_NAME=pp
 
 # overrides
 if [[ "$1" != "" ]]; then IMAGE_NAME=$1; fi
-if [[ "$2" != "" ]]; then CONTAINER_ID=$2; fi
+if [[ "$2" != "" ]]; then CONTAINER_NAME=$2; fi
 
 if (($# < 1)); then
-	echo "Usage: $ ./dockrun.sh IMAGE_NAME [ CONTAINER_ID \"pp\" ]
+	echo "Usage: $ ./dockrun.sh IMAGE_NAME [ CONTAINER_NAME \"pp\" ]
 
 	- IMAGE_NAME: the name of the docker image that you want to run, default=$IMAGE_NAME
 
-	- CONTAINER_ID: the container ID to assign to the running image instance, default=$CONTAINER_ID
+	- CONTAINER_NAME: the container ID to assign to the running image instance, default=$CONTAINER_NAME
 	"
 	exit 1
 fi
 
-echo "[$TPDIR] [$HOSTPORT] [$IMAGE_NAME] [$CONTAINER_ID]"
+echo "[$TPDIR] [$HOSTPORT] [$IMAGE_NAME] [$CONTAINER_NAME]"
 
 #################
 # Docker process
 #################
 
+# temporarily ignore bash error
 set +e
-#docker stop $CONTAINER_ID && docker rm $CONTAINER_ID
-docker stop $CONTAINER_ID || true && docker rm $CONTAINER_ID || true
+# find any docker process (docker ps), either running or stopped (-a)
+# with a matching name (-q, name only instead of verbose);
+# if any is found (xargs -r), remove it (docker rm) even if running (-f)
+echo "finding any matching container process to stop and remove ..."
+docker ps -aq --filter "name=$CONTAINER_NAME" | xargs -r docker rm -f
+# re-enable exit on errors
 set -e
 
+echo "Starting container process='$CONTAINER_NAME' ..."
 APPDIR=$(pwd)
 CONTAPP=/home/root/pp/app/active
-
 docker run -d \
-	--name $CONTAINER_ID \
+	--name $CONTAINER_NAME \
 	--mount type=bind,source=$TPDIR,target=/home/root/pp/tp,readonly \
 	--mount type=bind,source=$APPDIR/serverconfig.json,target=$CONTAPP/serverconfig.json \
 	--publish $HOSTPORT:$EXPOSED_PORT \
 	-e PP_MODE=container-prod \
 	-e PP_PORT=$EXPOSED_PORT \
 	$IMAGE_NAME
+
+echo "^ assigned container ID ^"
