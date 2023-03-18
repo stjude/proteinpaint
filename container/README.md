@@ -40,6 +40,7 @@ docker pull ghcr.io/stjude/$IMAGE_NAME
 wget https://raw.githubusercontent.com/stjude/proteinpaint/master/container/run.sh
 
 ./run.sh $IMAGE_NAME
+chmod a+x run.sh
 
 # open the browser to your serverconfig.url entry
 # example routes to check, assuming serverconfig.url=http://localhost:3456
