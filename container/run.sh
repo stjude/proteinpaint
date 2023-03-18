@@ -76,3 +76,24 @@ docker run -d \
 	$IMAGE_NAME
 
 echo "^ assigned container ID ^"
+
+container_id=$(docker ps -q -f name=pp)
+end_time=$((SECONDS+30))
+
+echo "Waiting for 'STANDBY AT PORT $HOSTPORT' in container logs..."
+while true; do
+    if docker logs $container_id 2>&1 | grep -q "STANDBY AT PORT $HOSTPORT"; then
+        echo "Server is listening on port $HOSTPORT"
+        sleep 2 # wait for server and APIs cache to warm up
+        break
+    fi
+    sleep 1
+    if (( SECONDS >= end_time )); then
+        echo "Server failed to start."
+        exit 0
+    fi
+done
+
+docker logs pp > pp.log
+echo "Container logs:"
+cat pp.log
