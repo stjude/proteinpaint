@@ -1,6 +1,6 @@
 {
 	"name": "@stjude/proteinpaint-container",
-	"version": "2.11.2-1",
+	"version": "2.11.2",
 	"bin": "launch.js",
 	"scripts": {
 		"dev": "./pack.sh && ./build.sh",
@@ -8,8 +8,8 @@
 		"postinstall": "./build.sh -m notdev"
 	},
 	"containerDeps": {
-		"server": "^2.11.2-1",
-		"front": "^2.11.2-1"
+		"server": "2.11.2",
+		"front": "2.11.2"
 	},
 	"files": [
 		"build.sh",
