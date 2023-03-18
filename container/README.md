@@ -24,8 +24,8 @@ for customization.
 
 ```bash
 TAG=latest # can change to a version number like 2.11.2
-IMAGE_NAME=ppfull:$TAG # may use ppserver:$TAG for server-only image
-docker pull ghcr.io/stjude/$IMAGE_NAME
+IMAGE_NAME=ghcr.io/stjude/ppfull:$TAG # may use ppserver:$TAG for server-only image
+docker pull $IMAGE_NAME
 
 # to test, make sure that your current working directory has
 #
