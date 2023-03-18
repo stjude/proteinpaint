@@ -84,7 +84,7 @@ echo "Waiting for 'STANDBY AT PORT $HOSTPORT' in container logs..."
 while true; do
     if docker logs $container_id 2>&1 | grep -q "STANDBY AT PORT $HOSTPORT"; then
         echo "Server is listening on port $HOSTPORT"
-        sleep 2 # wait for server and APIs cache to warm up
+        sleep 2 # wait for server cache and APIs  to warm up
         break
     fi
     sleep 1
