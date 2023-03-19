@@ -85,6 +85,7 @@ deploys/
 ssl-proxy.json
 .RData
 log.txt
+**/*.log
 *-debug.*
 build/sj/env.sh
 rust/Dockerfile

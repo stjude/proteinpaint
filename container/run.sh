@@ -17,9 +17,9 @@ if [[ "$TPDIR" == "" ]]; then
 	exit 1
 fi
 
-HOSTPORT=$(node -p "require('./serverconfig.json').url?.split(':')[2]")
+HOSTPORT=$(node -p "require('./serverconfig.json').URL?.split(':')[2]")
 if [[ "$HOSTPORT" == "" || "$HOSTPORT" == "undefined" ]]; then
-	echo "There must be a serverconfig.url entry with a :port number."
+	echo "There must be a serverconfig.URL entry with a :port number."
 	exit 1
 fi
 
@@ -80,10 +80,10 @@ echo "^ assigned container ID ^"
 container_id=$(docker ps -q -f name=pp)
 end_time=$((SECONDS+30))
 
-echo "Waiting for 'STANDBY AT PORT $HOSTPORT' in container logs..."
+ENDSTR="STANDBY AT PORT $EXPOSED_PORT"
+echo "Waiting for server validation ..."
 while true; do
-    if docker logs $container_id 2>&1 | grep -q "STANDBY AT PORT $HOSTPORT"; then
-        echo "Server is listening on port $HOSTPORT"
+    if docker logs $container_id 2>&1 | grep -q "$ENDSTR"; then
         sleep 2 # wait for server cache and APIs  to warm up
         break
     fi
@@ -94,6 +94,15 @@ while true; do
     fi
 done
 
-docker logs pp > pp.log
-echo "Container logs:"
-cat pp.log
+docker logs pp
+echo -e "\n************************************************************************"
+echo "*"
+echo "* Open the ProteinPaint app at https://localhost:$HOSTPORT in you web browser"
+echo "*"
+echo -e "*************************************************************************"
+
+echo -e "\nHints:"
+echo "- inspect logs with 'docker logs $CONTAINER_NAME'"
+echo "- ssh into the container with 'docker exec -it $CONTAINER_NAME bash'"
+echo "- stop the container with 'docker stop $CONTAINER_NAME'"
+echo -e "\n"
