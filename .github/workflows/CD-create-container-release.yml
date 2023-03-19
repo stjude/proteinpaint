@@ -17,15 +17,15 @@ on:
           - major
           - minor
           - patch
-        pp_version:
-          type: choice
-          description: Latest or specific PP version
-          options:
-            - latest
-            - specific
-        specific_pp_version:
-          type: string
-          description: Specific PP version to use for container
+      pp_version:
+        type: choice
+        description: Latest or specific PP version
+        options:
+          - latest
+          - specific
+      specific_pp_version:
+        type: string
+        description: Specific PP version to use for container
 
 jobs:
   build:
