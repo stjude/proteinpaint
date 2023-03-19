@@ -42,7 +42,8 @@ if (serverconfig.releaseTag) {
 	spawnSync('npm', ['update', `@stjude/proteinpaint-front@${releaseTag}`], { encoding: 'utf-8' })
 }
 
-console.log(`generating public/bin for ${serverconfig.url}`)
-spawnSync('npx', ['proteinpaint-front', serverconfig.url], { encoding: 'utf-8' })
+if (!serverconfig.URL) serverconfig.URL = serverconfig.url || '.'
+console.log(`generating public/bin for ${serverconfig.URL}`)
+spawnSync('npx', ['proteinpaint-front', serverconfig.URL], { encoding: 'utf-8' })
 
 require('@stjude/proteinpaint-server')

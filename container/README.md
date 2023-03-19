@@ -29,7 +29,7 @@ docker pull ghcr.io/stjude/$IMAGE_NAME
 
 # to test, make sure that your current working directory has
 #
-# - a serverconfig.json, which has a "url": "http://localhost:[PORT]" entry 
+# - a serverconfig.json, which has a "URL": "http://localhost:[PORT]" entry 
 #   (default PORT=3456, can be set to any valid, non-conflicting numeric port value)
 #
 # - an optional dataset folder, containing js files of any serverconfig.genomes.datasets[] entry
@@ -42,11 +42,16 @@ wget https://raw.githubusercontent.com/stjude/proteinpaint/master/container/run.
 chmod a+x run.sh
 ./run.sh $IMAGE_NAME
 
-# open the browser to your serverconfig.url entry
-# example routes to check, assuming serverconfig.url=http://localhost:3456
+# open the browser to your serverconfig.URL entry
+# example routes to check, assuming serverconfig.URL=http://localhost:3456
 # http://localhost:3456/healthcheck
 # http://localhost:3456/genomes
 # http://localhost:3456 should open the Proteinpaint landing page
+
+# Hints:
+# - inspect logs with 'docker logs $CONTAINER_NAME'
+# - ssh into the container with 'docker exec -it $CONTAINER_NAME bash'
+# - stop the container with 'docker stop pp'
 ```
 
 ### Option B: Use NPM
@@ -84,7 +89,7 @@ approximately 10 minutes.
 #### Usage
 
 Example usage, where the current working directory has:
-- a serverconfig.json, which has a `"url": "http://localhost:[PORT]"` entry
+- a serverconfig.json, which has a `"URL": "http://localhost:[PORT]"` entry
 (default PORT=3456, can be set to any valid, non-conflicting numeric port value)
 - an optional dataset folder, containing js files of any serverconfig.genomes.datasets[]
 entry that is not already included in proteinpaint/server/dataset 
@@ -94,11 +99,16 @@ entry that is not already included in proteinpaint/server/dataset
 # for a full portal with html pages
 npx proteinpaint-container
 
-# open the browser to your serverconfig.url entry
-# example routes to check, assuming serverconfig.url=http://localhost:3456
+# open the browser to your serverconfig.URL entry
+# example routes to check, assuming serverconfig.URL=http://localhost:3456
 # http://localhost:3456/healthcheck
 # http://localhost:3456/genomes
 # http://localhost:3456 should open the Proteinpaint landing page
+
+# Hints:
+# - inspect logs with 'docker logs $CONTAINER_NAME'
+# - ssh into the container with 'docker exec -it $CONTAINER_NAME bash'
+# - stop the container with 'docker stop pp'
 ```
 
 To run only the Proteinpaint server data api, without a static file server:
@@ -130,20 +140,25 @@ IMAGE_NAME=full:$TAG # may use server:$TAG for server-only image
 
 # to test, make sure that your current working directory has
 #
-# - a serverconfig.json, which has a "url": "http://localhost:[PORT]" entry 
+# - a serverconfig.json, which has a "URL": "http://localhost:[PORT]" entry 
 #   (default PORT=3456, can be set to any valid, non-conflicting numeric port value)
 #
 # - an optional dataset folder, containing js files of any serverconfig.genomes.datasets[] entry
 #   that is not already included in proteinpaint/server/dataset 
 #   
 
-./run.sh $IMAGE_NAME # start a container process
+./run.sh $IMAGE_NAME [CONTAINER_NAME='pp'] # start a container process
 
-# open the browser to your serverconfig.url entry
-# example routes to check, assuming serverconfig.url=http://localhost:3456
+# open the browser to your serverconfig.URL entry
+# example routes to check, assuming serverconfig.URL=http://localhost:3456
 # http://localhost:3456/healthcheck
 # http://localhost:3456/genomes
 # http://localhost:3456 should open the Proteinpaint landing page
+
+# Hints:
+# - inspect logs with 'docker logs pp'
+# - ssh into the container with 'docker exec -it pp'
+# - stop the container with 'docker stop pp'
 ```
 
 ## Development
