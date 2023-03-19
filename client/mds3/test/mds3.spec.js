@@ -60,7 +60,7 @@ Collapse and expand mutations from variant link
 Launch sample table from sunburst plot
 
 ### custom data
-Numeric mode custom dataset
+Numeric mode custom dataset, with mode change
 Custom dataset with custom variants, NO samples
 Custom variants, missing or wrong mclass
 Custom dataset with custom variants, WITH samples
@@ -641,7 +641,7 @@ tape('Launch sample table from sunburst plot', test => {
 	})
 })
 
-tape('Numeric mode custom dataset', test => {
+tape('Numeric mode custom dataset, with mode change', test => {
 	test.timeoutAfter(3000)
 	const holder = getHolder()
 
@@ -659,8 +659,6 @@ tape('Numeric mode custom dataset', test => {
 
 	runproteinpaint({
 		holder,
-		parseurl: true,
-		nobox: true,
 		noheader: true,
 		genome: 'hg19',
 		gene: 'NM_002467',
@@ -669,34 +667,50 @@ tape('Numeric mode custom dataset', test => {
 				type: 'mds3',
 				skewerModes,
 				name: 'AA sites with numbers',
-				custom_variants
+				custom_variants,
+				callbackOnRender
 			}
-		],
-		mclassOverride: {
-			className: 'Phospho',
-			classes: {
-				M: { label: 'AA', desc: 'AA desc' },
-				I: { label: 'BB', desc: 'BB desc' }
-			}
-		},
-		onloadalltk_always: checkTrack
+		]
 	})
 
-	function checkTrack(bb) {
-		const mds3Track = bb.tklst.find(i => i.type == 'mds3')
+	// TODO all data points should be rendered in svg
 
-		for (const skewer of skewerModes) {
-			//Test numeric skewers successfully passed to block instance
-			if (skewer.type == 'numeric') {
-				const skewerFound = mds3Track.skewer.viewModes.find(i => i.byAttribute == skewer.byAttribute)
-				test.ok(skewerFound, `Should provide numeric option for ${skewer.label}`)
-			}
+	function callbackOnRender(tk, bb) {
+		// verify that all custom data points are present in tk
+		for (const m of custom_variants) {
+			const m2 = tk.skewer.rawmlst.find(i => i.mname == m.mname)
+			test.ok(m2, `custom variant "${m.mname}" exists in tk`)
 		}
 
-		// for (const variant of custom_variants) {
-		//TODO test skewer value passed for each variant
-		// }
+		// tricky: tk.skewer.viewModes[] is the same array as skewerModes[] (by pointer)
+		// thus no need to test that all elements in skewerModes are present in tk.skewer.viewModes
+		// also a new element has been auto added to the array
+		// [0] pvalue, [1] other number, [2] skewer (not numeric)
 
+		// get the numericmode axis label
+		const n = tk.g.select('.sjpp-mds3-nm-axislabel')
+		test.equal(
+			tk.skewer.viewModes.find(i => i.inuse).label,
+			n.text(),
+			`numericmode axis label "${n.text()}" matches with view mode obj`
+		)
+
+		// switch to a new numeric mode
+		// quick fix: assume the 2nd mode is not in use yet
+		tk.skewer.viewModes[0].inuse = false
+		tk.skewer.viewModes[1].inuse = true
+
+		tk.callbackOnRender = viewModeChange
+		tk.load()
+	}
+
+	function viewModeChange(tk, bb) {
+		const n = tk.g.select('.sjpp-mds3-nm-axislabel')
+		test.equal(
+			tk.skewer.viewModes.find(i => i.inuse).label,
+			n.text(),
+			`numericmode axis label "${n.text()}" matches with view mode obj after switching mode`
+		)
 		if (test._ok) holder.remove()
 		test.end()
 	}
@@ -781,7 +795,7 @@ tape('Custom variants, missing or wrong mclass', test => {
 			test.equal(variantFound.class, 'X', 'class="X" is assigned for missing or wrong class')
 		}
 
-		//if (test._ok) holder.remove()
+		if (test._ok) holder.remove()
 		test.end()
 	}
 })

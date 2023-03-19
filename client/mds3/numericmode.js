@@ -869,6 +869,7 @@ function render_axis(tk, nm, block) {
 		.attr('font-size', nm.dotwidth)
 		.attr('dominant-baseline', 'central')
 		.attr('text-anchor', 'end')
+		.attr('class', 'sjpp-mds3-nm-axislabel') // for testing
 		.attr('y', nm.axisheight / 2)
 		.attr('x', -nm.axisWidth)
 		.text(nm.label || defaultLabel) // if too long can use ellipsis, hover to show full
