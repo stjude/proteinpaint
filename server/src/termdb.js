@@ -178,6 +178,10 @@ async function trigger_findterm(q, res, termdb, ds) {
 	const str = decodeURIComponent(q.findterm).toUpperCase()
 
 	if (ds.mayGetMatchingGeneNames) {
+		// presence of this getter indicates dataset uses text file to supply mutation data
+		// only allow searching for gene names present in the text files
+		// check this first before dict terms is convenient as to showing matching genes for a text-file based dataset that's usually small
+
 		// harcoded gene name length limit to exclude fusion/comma-separated gene names
 		/* TODO: improve the logic for excluding concatenated gene names */
 		if (isUsableTerm({ type: 'geneVariant' }, q.usecase).has('plot')) {

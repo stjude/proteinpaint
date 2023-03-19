@@ -249,7 +249,7 @@ function setInteractivity(self) {
 				nav: {
 					header_mode: 'search_only'
 				},
-				tree: { usecase: self.type }
+				tree: { usecase: { target: self.type } }
 			},
 			tree: {
 				submit_lst: async termlst => {
