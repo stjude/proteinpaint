@@ -17,149 +17,45 @@ All installation options require a [Docker Engine or Desktop](https://www.docker
 
 There are 3 options to obtain a Docker image:
 
-### Option A: Pull a Prebuilt Image
+- [Option A: Pull a Prebuilt Image (Recommended)](https://github.com/stjude/proteinpaint/wiki/Installation-Option-A:-Pull-a-Prebuilt-Image-(Recommended))
+- [Option B: Use NPM](https://github.com/stjude/proteinpaint/wiki/Installation-Option-B:-Use-NPM)
+- [Option C: Build from Source](https://github.com/stjude/proteinpaint/wiki/Installation-Option-C:-Build-from-Source)
 
-This may be the easiest option to get started. However, it may require more Docker know-how
-for customization.
+## Usage
 
-```bash
-TAG=latest # can change to a version number like 2.11.2
-IMAGE_NAME=ghcr.io/stjude/ppfull:$TAG # may use ppserver:$TAG for server-only image
-docker pull $IMAGE_NAME
+To test, make sure that your current working directory has
 
-# to test, make sure that your current working directory has
-#
-# - a serverconfig.json, which has a "URL": "http://localhost:[PORT]" entry 
-#   (default PORT=3456, can be set to any valid, non-conflicting numeric port value)
-#
-# - an optional dataset folder, containing js files of any serverconfig.genomes.datasets[] entry
-#   that is not already included in proteinpaint/server/dataset 
-#   
+- a serverconfig.json, which has a "URL": "http://localhost:[PORT]" entry 
+ (default PORT=3456, can be set to any valid, non-conflicting numeric port value)
 
-# download the run script
-wget https://raw.githubusercontent.com/stjude/proteinpaint/master/container/run.sh
+- an optional dataset folder, containing js files of any serverconfig.genomes.datasets[] entry
+ that is not already included in proteinpaint/server/dataset    
 
-chmod a+x run.sh
-./run.sh $IMAGE_NAME
+### Running the image
 
-# open the browser to your serverconfig.URL entry
-# example routes to check, assuming serverconfig.URL=http://localhost:3456
-# http://localhost:3456/healthcheck
-# http://localhost:3456/genomes
-# http://localhost:3456 should open the Proteinpaint landing page
+Based on the installation option that you chose, you can either use: 
+- `./run.sh [IMAGE_NAME]` for the non-NPM installation
+- `npx proteinpaint-container [server | full]` if you used the NPM-installation option
 
-# Hints:
-# - inspect logs with 'docker logs $CONTAINER_NAME'
-# - ssh into the container with 'docker exec -it $CONTAINER_NAME bash'
-# - stop the container with 'docker stop pp'
-```
+### Web App
 
-### Option B: Use NPM
+Open your web browser to your serverconfig.URL entry. The following examples assume that serverconfig.URL=http://localhost:3456.
 
-This installation option will require [npm](https://docs.npmjs.com/downloading-and-installing-node-js-and-npm).
-It will hide the details of pulling a prebuilt Docker image or building an image from a Dockerfile. It will also
-hide which scripts are called to run a Docker image.
+When running either a server-only or full app image, you can check:
+- http://localhost:3456/healthcheck
+- http://localhost:3456/genomes
 
-#### Custom Registry and Token 
 
-There is a plan to use the default npmjs.com registry to host the ProteinPaint packages. Until then, 
-the Github Packages registry will require an `.npmrc` file, in your home or current working directory,
-with [personal access token](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/creating-a-personal-access-token)
-and namespace entries:
+When running a full app image, you can check:
+- http://localhost:3456 should open the Proteinpaint landing page
 
-```text
-//npm.pkg.github.com/:_authToken=...                   # ignore this comment # pragma: allowlist secret
-@stjude:registry=https://npm.pkg.github.com/
-```
+### Hints
 
-#### Install with npm
+- inspect logs with `docker logs pp`
+- ssh into the container with `docker exec -it pp`
+- stop the container with `docker stop pp`
 
-```bash
-# for non-global installation in a folder
-npm install @stjude/proteinpaint-container
 
-# --- OR ---
-# for global installation from any folder
-npm install -g @stjude/proteinpaint-container
-```
-
-NOTE: The installation will trigger a Docker image build, which may take
-approximately 10 minutes.
-
-#### Usage
-
-Example usage, where the current working directory has:
-- a serverconfig.json, which has a `"URL": "http://localhost:[PORT]"` entry
-(default PORT=3456, can be set to any valid, non-conflicting numeric port value)
-- an optional dataset folder, containing js files of any serverconfig.genomes.datasets[]
-entry that is not already included in proteinpaint/server/dataset 
-- an optional public folder, containing any html page that embed proteinpaint views
-
-```bash
-# for a full portal with html pages
-npx proteinpaint-container
-
-# open the browser to your serverconfig.URL entry
-# example routes to check, assuming serverconfig.URL=http://localhost:3456
-# http://localhost:3456/healthcheck
-# http://localhost:3456/genomes
-# http://localhost:3456 should open the Proteinpaint landing page
-
-# Hints:
-# - inspect logs with 'docker logs $CONTAINER_NAME'
-# - ssh into the container with 'docker exec -it $CONTAINER_NAME bash'
-# - stop the container with 'docker stop pp'
-```
-
-To run only the Proteinpaint server data api, without a static file server:
-```bash
-npx proteinpaint-container server
-```
-
-To run a fully customized server, follow the docker run commands in `run.sh`.
-
-### Option C: Build from Source
-
-The Dockerfile may optionally use the various proteinpaint-* packages as packed from source code.
-
-```bash
-# clone this repo
-git clone https://github.com/stjude/proteinpaint.git
-cd proteinpaint/container
-
-# OPTIONAL: pack workspaces and replace each package.json's 
-# dependency versions with the tarball location as copied into the Docker build
-# if this script is not used, then published packages will be used in the Docker build
-./pack.sh
-
-# will run docker build
-./build.sh
-
-TAG=latest # can change to a version number like 2.11.2
-IMAGE_NAME=full:$TAG # may use server:$TAG for server-only image
-
-# to test, make sure that your current working directory has
-#
-# - a serverconfig.json, which has a "URL": "http://localhost:[PORT]" entry 
-#   (default PORT=3456, can be set to any valid, non-conflicting numeric port value)
-#
-# - an optional dataset folder, containing js files of any serverconfig.genomes.datasets[] entry
-#   that is not already included in proteinpaint/server/dataset 
-#   
-
-./run.sh $IMAGE_NAME [CONTAINER_NAME='pp'] # start a container process
-
-# open the browser to your serverconfig.URL entry
-# example routes to check, assuming serverconfig.URL=http://localhost:3456
-# http://localhost:3456/healthcheck
-# http://localhost:3456/genomes
-# http://localhost:3456 should open the Proteinpaint landing page
-
-# Hints:
-# - inspect logs with 'docker logs pp'
-# - ssh into the container with 'docker exec -it pp'
-# - stop the container with 'docker stop pp'
-```
 
 ## Development
 
@@ -203,8 +99,8 @@ published version sequence.
 ```bash
 cd container
 npm pack
-cd sowmehere/outside/of/sjpp
-npm install ~/dev/sjpp/proteinpaint/container/stjude-proteinpaint-....tgz
+cd dir/not/under/a/git/repo
+npm install path/to/proteinpaint/container/stjude-proteinpaint-....tgz
 # make sure you have serverconfig.json in this dir
 npx proteinpaint-container
 docker logs pp
