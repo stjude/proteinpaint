@@ -26,6 +26,7 @@ import {
 } from 'd3-shape'
 import { dofetch3 } from '../common/dofetch'
 
+
 /*
 sample object returned by server:
 {
@@ -310,76 +311,80 @@ class Scatter {
 				? this.config.colorTW.term.name.slice(0, 25) + '...'
 				: this.config.colorTW.term.name
 		let title = `${name} (${this.cohortSamples.length})`
-		if (this.config.colorTW.term.type == 'geneVariant')
-			title += ` x Assays (${this.cohortSamples[0]['cat_info']['category'].length})`
 		const colorRefCategory = this.colorLegend.get('Ref')
 
-		const colorG = legendG.append('g')
-		colorG
-			.append('text')
-			.attr('id', 'legendTitle')
-			.attr('x', offsetX)
-			.attr('y', 30)
-			.text(title)
-			.style('font-weight', 'bold')
-		if (this.config.colorTW.q.mode === 'continuous') {
-			const [min, max] = this.colorGenerator.domain()
-			const gradientScale = d3Linear()
-				.domain([min, max])
-				.range([0, 130])
-			const axis = axisBottom(gradientScale).ticks(3)
-			const axisG = colorG
-				.append('g')
-				.attr('transform', `translate(0, 70)`)
-				.call(axis)
+		const isGeneVariant = this.config.colorTW.term.type == 'geneVariant'
+		if (isGeneVariant)
+			offsetY = this.renderGeneVariantLegend(legendG, this.config.colorTW.term, 'category', this.colorLegend)
+		else
+		{
+			const colorG = legendG.append('g')
+			colorG
+				.append('text')
+				.attr('id', 'legendTitle')
+				.attr('x', offsetX)
+				.attr('y', 30)
+				.text(title)
+				.style('font-weight', 'bold')
+			if (this.config.colorTW.q.mode === 'continuous') {
+				const [min, max] = this.colorGenerator.domain()
+				const gradientScale = d3Linear()
+					.domain([min, max])
+					.range([0, 130])
+				const axis = axisBottom(gradientScale).ticks(3)
+				const axisG = colorG
+					.append('g')
+					.attr('transform', `translate(0, 70)`)
+					.call(axis)
 
-			const rect = colorG
-				.append('rect')
-				.attr('x', 0)
-				.attr('y', 50)
-				.attr('width', 130)
-				.attr('height', 20)
-				.style('fill', `url(#linear-gradient-${this.id})`)
-				.on('click', e => {
-					const menu = new Menu()
-					const input = menu.d
-						.append('input')
-						.attr('type', 'color')
-						.attr('value', this.config.gradientColor)
-						.on('change', () => {
-							this.config.gradientColor = input.node().value
-							this.startColor = rgb(this.config.gradientColor)
-								.brighter()
-								.brighter()
-							this.stopColor = rgb(this.config.gradientColor)
-								.darker()
-								.darker()
-							this.colorGenerator = d3Linear().range([this.startColor, this.stopColor])
+				const rect = colorG
+					.append('rect')
+					.attr('x', 0)
+					.attr('y', 50)
+					.attr('width', 130)
+					.attr('height', 20)
+					.style('fill', `url(#linear-gradient-${this.id})`)
+					.on('click', e => {
+						const menu = new Menu()
+						const input = menu.d
+							.append('input')
+							.attr('type', 'color')
+							.attr('value', this.config.gradientColor)
+							.on('change', () => {
+								this.config.gradientColor = input.node().value
+								this.startColor = rgb(this.config.gradientColor)
+									.brighter()
+									.brighter()
+								this.stopColor = rgb(this.config.gradientColor)
+									.darker()
+									.darker()
+								this.colorGenerator = d3Linear().range([this.startColor, this.stopColor])
 
-							this.startGradient.attr('stop-color', this.startColor)
-							this.stopGradient.attr('stop-color', this.stopColor)
-							this.app.dispatch({
-								type: 'plot_edit',
-								id: this.id,
-								config: this.config
+								this.startGradient.attr('stop-color', this.startColor)
+								this.stopGradient.attr('stop-color', this.stopColor)
+								this.app.dispatch({
+									type: 'plot_edit',
+									id: this.id,
+									config: this.config
+								})
+								menu.hide()
 							})
-							menu.hide()
-						})
-					menu.show(e.clientX, e.clientY, false)
-				})
+						menu.show(e.clientX, e.clientY, false)
+					})
 
-			offsetY += step
-		} else {
-			for (const [key, category] of this.colorLegend) {
-				if (key == 'Ref') continue
-				const color = category.color
-				const count = category.sampleCount
-				const name = key
-				const hidden = this.config.colorTW.q.hiddenValues ? key in this.config.colorTW.q.hiddenValues : false
-				const [circleG, itemG] = addLegendItem(colorG, color, name, count, offsetX, offsetY, hidden)
-				circleG.on('click', e => this.onColorClick(e, key, category))
 				offsetY += step
-				itemG.on('click', event => onLegendClick(this.config.colorTW, 'colorTW', key, event, this))
+			} else {
+				for (const [key, category] of this.colorLegend) {
+					if (key == 'Ref') continue
+					const color = category.color
+					const count = category.sampleCount
+					const name = key
+					const hidden = this.config.colorTW.q.hiddenValues ? key in this.config.colorTW.q.hiddenValues : false
+					const [circleG, itemG] = addLegendItem(colorG, color, name, count, offsetX, offsetY, hidden)
+					circleG.on('click', e => this.onColorClick(e, key, category))
+					offsetY += step
+					itemG.on('click', event => onLegendClick(this.config.colorTW, 'colorTW', key, event, this))
+				}
 			}
 		}
 		if (colorRefCategory.sampleCount > 0) {
@@ -426,6 +431,8 @@ class Scatter {
 		}
 		if (this.config.shapeTW) {
 			offsetX = 300
+			if(isGeneVariant)
+				offsetX = 600
 			offsetY = 60
 			title = `${this.config.shapeTW.term.name} (${this.cohortSamples.length})`
 			if (this.config.shapeTW.term.type == 'geneVariant')
@@ -559,6 +566,88 @@ class Scatter {
 				})
 			menu.show(e.clientX, e.clientY, false)
 		}
+	}
+
+	renderGeneVariantLegend(legendG, term, category, map)
+	{
+		const step = 130
+		let offsetX = 0
+		let offsetY = 30
+		const name = term.name.length > 25
+			? term.name.slice(0, 25) + '...'
+			: term.name
+		let title = `${name} (${this.cohortSamples.length})`
+		const colorG = legendG.append('g')
+		colorG
+			.append('text')
+			.attr('id', 'legendTitle')
+			.attr('x', offsetX)
+			.attr('y', 30)
+			.text(title)
+			.style('font-weight', 'bold')
+		offsetX += step
+		offsetY = 60
+		for (const [key, category] of map) {
+			if(key == 'Ref')
+				continue
+			const circleG = colorG.append('g')
+			circleG
+				.append('circle')
+				.attr('cx', -10)
+				.attr('cy', offsetY - 5)
+				.attr('r', 5)
+				.style('fill', category.color)
+				.style('stroke', rgb(category.color).darker())
+
+
+			circleG.on('click', e => this.onColorClick(e, key, category))
+			colorG
+			.append('text')
+			.attr('id', 'legendTitle')
+			.attr('x', 0)
+			.attr('y', offsetY)
+			.text(key.split(',')[0])
+			.style('font-size', '0.8em')
+			offsetY += 30
+
+		}
+		offsetY = 0
+		const mutations = this.cohortSamples[0]['cat_info'][category]
+		for (const mutation of mutations) {
+			const dt = mutation.dt
+			const origin = morigin[mutation.origin]?.label
+			const dtlabel = origin ? `${origin} ${dt2label[dt]}` : dt2label[dt]
+
+			colorG
+			.append('text')
+			.attr('id', 'legendTitle')
+			.attr('x', offsetX)
+			.attr('y', 30)
+			.text(dtlabel)
+			.style('font-weight', 'bold')
+			.style('font-size', '0.8em')
+
+			offsetY = 60
+			
+			for (const [key, category] of map) {
+				const assay = key.split(',')[1]
+				if(key.includes(dtlabel))
+				colorG
+				.append('text')
+				.attr('id', 'legendTitle')
+				.attr('x', offsetX + 20)
+				.attr('y', offsetY)
+				.text(`${category.sampleCount}${category.hasOrigin?assay[0]: ''}`)
+				.style('font-size', '0.8em')
+
+				offsetY += 30
+
+			}
+			offsetX += step
+
+		}
+		return offsetY
+		
 	}
 
 	hideCategory(legendG, tw, key, hide) {
@@ -1111,7 +1200,7 @@ function setRenderers(self) {
 		svg
 			.transition()
 			.duration(duration)
-			.attr('width', s.svgw + 800)
+			.attr('width', s.svgw + 1000)
 			.attr('height', Math.max(s.svgh + 100, legendHeight)) //leaving some space for top/bottom padding and y axis
 
 		/* eslint-disable */
