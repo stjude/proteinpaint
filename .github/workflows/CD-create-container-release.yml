@@ -84,8 +84,8 @@ jobs:
           SERVER_VERSION=$(node -p "require('./server/package.json').version")
           git checkout master
           cd container
-          npm pkg set containerDeps.@stjude/front=$FRONT_VERSION
-          npm pkg set containerDeps.@stjude/server=$SERVER_VERSION
+          npm pkg set containerDeps.front=$FRONT_VERSION
+          npm pkg set containerDeps.server=$SERVER_VERSION
           npm version ${{ github.event.inputs.release_type }}
           cd ..
           COMMITMSG="Update container version to $(node -p "require('./package.json').version")"

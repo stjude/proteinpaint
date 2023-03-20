@@ -9,9 +9,7 @@
 	},
 	"containerDeps": {
 		"server": "2.11.2",
-		"front": "2.11.2",
-		"@stjude/front": "2.11.2",
-		"@stjude/server": "2.11.2"
+		"front": "2.11.2"
 	},
 	"files": [
 		"build.sh",
