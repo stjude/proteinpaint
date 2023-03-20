@@ -317,7 +317,7 @@ function getCategory(mutation) {
 	const dt = mutation.dt
 	const class_info = mclass[mutation.class]
 	const origin = morigin[mutation.origin]?.label
-	const dtlabel = origin ? `${origin} ${dt2label[dt]}` : dt2label[dt]
+	const dtlabel = origin ? `${origin[0]} ${dt2label[dt]}` : dt2label[dt]
 	return `${class_info.label},${dtlabel}`
 }
 

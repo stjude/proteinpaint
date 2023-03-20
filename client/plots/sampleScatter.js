@@ -313,9 +313,8 @@ class Scatter {
 		let title = `${name} (${this.cohortSamples.length})`
 		const colorRefCategory = this.colorLegend.get('Ref')
 
-		const isGeneVariant = this.config.colorTW.term.type == 'geneVariant'
-		if (isGeneVariant)
-			offsetY = this.renderGeneVariantLegend(legendG, this.config.colorTW.term, 'category', this.colorLegend)
+		if ( this.config.colorTW.term.type == 'geneVariant')
+			offsetY = this.renderGeneVariantLegend(0, legendG, this.config.colorTW.term, 'category', this.colorLegend)
 		else
 		{
 			const colorG = legendG.append('g')
@@ -431,45 +430,47 @@ class Scatter {
 		}
 		if (this.config.shapeTW) {
 			offsetX = 300
-			if(isGeneVariant)
-				offsetX = 600
+			if(this.config.colorTW.term.type == 'geneVariant')
+				offsetX = 500
 			offsetY = 60
 			title = `${this.config.shapeTW.term.name} (${this.cohortSamples.length})`
 			if (this.config.shapeTW.term.type == 'geneVariant')
-				title += ` x Assays (${this.cohortSamples[0]['cat_info']['shape'].length})`
-			const shapeG = legendG.append('g')
-			shapeG
-				.append('text')
-				.attr('x', offsetX)
-				.attr('y', 30)
-				.text(title)
-				.style('font-weight', 'bold')
-
-			const color = 'gray'
-			for (const [key, shape] of this.shapeLegend) {
-				if (key == 'Ref') continue
-				const index = shape.shape % this.symbols.length
-				const symbol = this.symbols[index].size(64)()
-				const name = key
-				const count = shape.sampleCount
-				const hidden = this.config.shapeTW.q.hiddenValues ? key in this.config.shapeTW.q.hiddenValues : false
-				const itemG = shapeG.append('g')
-
-				itemG
-					.append('path')
-					.attr('transform', c => `translate(${offsetX}, ${offsetY})`)
-					.style('fill', color)
-					.attr('d', symbol)
-				itemG
+				this.renderGeneVariantLegend(offsetX, legendG, this.config.shapeTW.term, 'shape', this.shapeLegend)
+			else{
+				const shapeG = legendG.append('g')
+				shapeG
 					.append('text')
-					.attr('x', offsetX + 10)
-					.attr('y', offsetY)
-					.text(`${name}, n=${count}`)
-					.style('font-size', '15px')
-					.style('text-decoration', hidden ? 'line-through' : 'none')
-					.attr('alignment-baseline', 'middle')
-				offsetY += step
-				itemG.on('click', event => onLegendClick(this.config.shapeTW, 'shapeTW', key, event, this))
+					.attr('x', offsetX)
+					.attr('y', 30)
+					.text(title)
+					.style('font-weight', 'bold')
+
+				const color = 'gray'
+				for (const [key, shape] of this.shapeLegend) {
+					if (key == 'Ref') continue
+					const index = shape.shape % this.symbols.length
+					const symbol = this.symbols[index].size(64)()
+					const name = key
+					const count = shape.sampleCount
+					const hidden = this.config.shapeTW.q.hiddenValues ? key in this.config.shapeTW.q.hiddenValues : false
+					const itemG = shapeG.append('g')
+
+					itemG
+						.append('path')
+						.attr('transform', c => `translate(${offsetX}, ${offsetY})`)
+						.style('fill', color)
+						.attr('d', symbol)
+					itemG
+						.append('text')
+						.attr('x', offsetX + 10)
+						.attr('y', offsetY)
+						.text(`${name}, n=${count}`)
+						.style('font-size', '15px')
+						.style('text-decoration', hidden ? 'line-through' : 'none')
+						.attr('alignment-baseline', 'middle')
+					offsetY += step
+					itemG.on('click', event => onLegendClick(this.config.shapeTW, 'shapeTW', key, event, this))
+				}
 			}
 		}
 
@@ -568,10 +569,9 @@ class Scatter {
 		}
 	}
 
-	renderGeneVariantLegend(legendG, term, category, map)
+	renderGeneVariantLegend(offsetX, legendG, term, category, map)
 	{
-		const step = 130
-		let offsetX = 0
+		const step = 100
 		let offsetY = 30
 		const name = term.name.length > 25
 			? term.name.slice(0, 25) + '...'
@@ -585,6 +585,8 @@ class Scatter {
 			.attr('y', 30)
 			.text(title)
 			.style('font-weight', 'bold')
+			.style('font-size', '0.8em')
+
 		offsetX += step
 		offsetY = 60
 		for (const [key, category] of map) {
@@ -593,7 +595,7 @@ class Scatter {
 			const circleG = colorG.append('g')
 			circleG
 				.append('circle')
-				.attr('cx', -10)
+				.attr('cx', offsetX - step - 10)
 				.attr('cy', offsetY - 5)
 				.attr('r', 5)
 				.style('fill', category.color)
@@ -604,7 +606,7 @@ class Scatter {
 			colorG
 			.append('text')
 			.attr('id', 'legendTitle')
-			.attr('x', 0)
+			.attr('x', offsetX - step)
 			.attr('y', offsetY)
 			.text(key.split(',')[0])
 			.style('font-size', '0.8em')
@@ -616,7 +618,7 @@ class Scatter {
 		for (const mutation of mutations) {
 			const dt = mutation.dt
 			const origin = morigin[mutation.origin]?.label
-			const dtlabel = origin ? `${origin} ${dt2label[dt]}` : dt2label[dt]
+			const dtlabel = origin ? `${origin[0]} ${dt2label[dt]}` : dt2label[dt]
 
 			colorG
 			.append('text')
@@ -635,7 +637,7 @@ class Scatter {
 				colorG
 				.append('text')
 				.attr('id', 'legendTitle')
-				.attr('x', offsetX + 20)
+				.attr('x', offsetX)
 				.attr('y', offsetY)
 				.text(`${category.sampleCount}${category.hasOrigin?assay[0]: ''}`)
 				.style('font-size', '0.8em')
@@ -1200,7 +1202,7 @@ function setRenderers(self) {
 		svg
 			.transition()
 			.duration(duration)
-			.attr('width', s.svgw + 1000)
+			.attr('width', s.svgw + 1200)
 			.attr('height', Math.max(s.svgh + 100, legendHeight)) //leaving some space for top/bottom padding and y axis
 
 		/* eslint-disable */
