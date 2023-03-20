@@ -160,12 +160,14 @@ async function get_geneVariant(tvs, CTEname, ds) {
                 {dt: 4, mclassLst: ['WT', 'CNV_loss'], mclassExcludeLst:[]}
             ]
             */
-			const sampleValue = sampleValues.filter(
+			const sampleValueLst = sampleValues.filter(
 				v => v.dt == tvsValue.dt && (tvsValue.origin ? tvsValue.origin == v.origin : true)
-			)[0]
-			if (tvsValue.mclassExcludeLst.includes(sampleValue?.class)) {
-				includeSample = false
-				break
+			)
+			for (const sampleValue of sampleValueLst) {
+				if (tvsValue.mclassExcludeLst.includes(sampleValue?.class)) {
+					includeSample = false
+					break
+				}
 			}
 		}
 		if (includeSample) samplenames.push(key)

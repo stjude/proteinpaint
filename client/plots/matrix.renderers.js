@@ -38,7 +38,7 @@ export function setRenderers(self) {
 			.attr('transform', `translate(${series.x},${series.y})`)
 			.style('opacity', 1)
 		const last = series.cells[series.cells.length - 1]
-		const height = series.y + last.y + s.rowh
+		const height = series.y + last?.y + s.rowh
 		if (useCanvas) {
 			g.selectAll('*').remove()
 			const canvas = self.dom.holder

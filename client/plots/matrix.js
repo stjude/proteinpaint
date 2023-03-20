@@ -28,7 +28,11 @@ class Matrix {
 		const holder = opts.controls ? opts.holder : opts.holder.append('div')
 		holder.style('position', 'relative')
 		const controls = this.opts.controls ? null : holder.append('div')
-		const loadingDiv = holder.append('div').style('position', 'absolute').style('top', '50px').style('left', '50px')
+		const loadingDiv = holder
+			.append('div')
+			.style('position', 'absolute')
+			.style('top', '50px')
+			.style('left', '50px')
 		const errdiv = holder
 			.append('div')
 			.attr('class', 'sja_errorbar')
@@ -129,7 +133,7 @@ class Matrix {
 
 		this.setPill(appState)
 		//TODO: may conflict with serverconfig.commonOverrides
-		this.mclass = copyMerge({}, mclass, appState.termdbConfig.mclass || {}, appState.termdbConfig.matrix?.mclass || {})	
+		this.mclass = copyMerge({}, mclass, appState.termdbConfig.mclass || {}, appState.termdbConfig.matrix?.mclass || {})
 	}
 
 	setControls(appState) {
@@ -387,7 +391,12 @@ class Matrix {
 						countedSamples.add(s.sample)
 						const anno = data.samples[s.sample][tw.$id]
 						if (anno) {
-							const { filteredValues, countedValues, renderedValues } = this.classifyValues(anno, tw, grp, this.settings.matrix)
+							const { filteredValues, countedValues, renderedValues } = this.classifyValues(
+								anno,
+								tw,
+								grp,
+								this.settings.matrix
+							)
 							anno.filteredValues = filteredValues
 							anno.countedValues = countedValues
 							anno.renderedValues = renderedValues
@@ -495,7 +504,7 @@ class Matrix {
 		else {
 			// dt=1 are SNVindels, dt=4 CNV
 			// will render only one matching value per dt
-			for(const dt of [4, 1]) {
+			for (const dt of [4, 1]) {
 				const v = filteredValues.find(v => v.dt === dt)
 				if (v) renderedValues.push(v)
 			}
@@ -528,7 +537,12 @@ class Matrix {
 				if (countedSamples.has(s.row.sample)) continue
 				const anno = s.row[t.tw.$id]
 				if (!anno) continue
-				const { filteredValues, countedValues, renderedValues } = this.classifyValues(anno, t.tw, t.grp, this.settings.matrix)
+				const { filteredValues, countedValues, renderedValues } = this.classifyValues(
+					anno,
+					t.tw,
+					t.grp,
+					this.settings.matrix
+				)
 				anno.filteredValues = filteredValues
 				anno.countedValues = countedValues
 				anno.renderedValues = renderedValues
@@ -728,7 +742,7 @@ class Matrix {
 	}
 
 	sampleLabel(series) {
-		return series._SAMPLENAME_ || series.row.sample
+		return series.row.sampleName || ''
 	}
 
 	sampleGrpKey(s) {
