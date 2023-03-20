@@ -63,6 +63,11 @@ docker ps -aq --filter "name=$CONTAINER_NAME" | xargs -r docker rm -f
 # re-enable exit on errors
 set -e
 
+# may need to create an empty dataset/ dir for mounting
+if [[ ! -d ./dataset ]]; then 
+	mkdir dataset
+fi
+
 echo "Starting container process='$CONTAINER_NAME' ..."
 APPDIR=$(pwd)
 CONTAPP=/home/root/pp/app/active
@@ -70,6 +75,7 @@ docker run -d \
 	--name $CONTAINER_NAME \
 	--mount type=bind,source=$TPDIR,target=/home/root/pp/tp,readonly \
 	--mount type=bind,source=$APPDIR/serverconfig.json,target=$CONTAPP/serverconfig.json \
+	--mount type=bind,source=$APPDIR/dataset,target=$CONTAPP/dataset \
 	--publish $HOSTPORT:$EXPOSED_PORT \
 	-e PP_MODE=container-prod \
 	-e PP_PORT=$EXPOSED_PORT \
