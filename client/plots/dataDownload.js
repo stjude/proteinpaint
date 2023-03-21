@@ -1,11 +1,21 @@
-import { getCompInit, copyMerge } from '../rx'
+import { getCompInit, copyMerge } from '#rx'
 import { select } from 'd3-selection'
-import { sayerror } from '../dom/error'
+import { sayerror } from '#dom/error'
 import { termsettingInit, fillTermWrapper } from '#termsetting'
-import { appInit } from '#termdb/app'
 
 /*
 
+this {}
+	config {}
+		terms []
+			// each element { $id, id, isAtomic, tw, pill }
+			// list of TW tracked in state
+	activeSamples[]
+		{ sample:'1', sampleName:str, <$tid>:Value, ...}
+	genomeObj
+	pillBy$id
+	state{}
+	termdbConfig{}
 */
 
 class DataDownload {
@@ -23,13 +33,8 @@ class DataDownload {
 			header: this.opts.header, // header is optional
 			errordiv: this.opts.holder.append('div'),
 			titleDiv: this.opts.holder.append('div').style('margin', '10px'),
-			terms: this.opts.holder.append('div'),
-			addBtn: this.opts.holder
-				.append('div')
-				.style('margin', '10px 10px 20px 10px')
-				.style('cursor', 'pointer')
-				.html('+Add Term(s)')
-				.on('click', this.showTreeMenu),
+			// the whole holder has white-space=nowrap (likely from sjpp-output-sandbox-content)
+			terms: this.opts.holder.append('div').style('white-space', 'normal'),
 			submitDiv: this.opts.holder.append('div').style('margin', '10px')
 		}
 
@@ -42,9 +47,6 @@ class DataDownload {
 			.append('span')
 			.style('margin-left', '5px')
 			.style('font-style', 'italic')
-
-		// this.id is from opts.id and assigned by rx
-		const config = appState.plots.find(p => p.id === this.id)
 	}
 
 	getState(appState, sub) {
@@ -70,8 +72,9 @@ class DataDownload {
 	including filter/cohort change
 	*/
 	async main() {
+		console.log(this)
 		try {
-			this.config = JSON.parse(JSON.stringify(this.state.config))
+			this.config = structuredClone(this.state.config)
 			this.mayUpdateSandboxHeader()
 			if (this.mayRequireToken()) return
 			const reqOpts = await this.getDataRequestOpts()
@@ -98,7 +101,6 @@ class DataDownload {
 		if (this.state.hasVerifiedToken) {
 			this.dom.titleDiv.style('color', '').html('Selected terms')
 			this.dom.terms.style('display', '')
-			this.dom.addBtn.style('display', '')
 			this.dom.submitDiv.style('display', '')
 			return false
 		} else {
@@ -115,7 +117,6 @@ class DataDownload {
 							(helpLink ? ` <a href='${helpLink}' target=_blank>Tutorial</a>` : '')
 				)
 			this.dom.terms.style('display', 'none')
-			this.dom.addBtn.style('display', 'none')
 			this.dom.submitDiv.style('display', 'none')
 			return true
 		}
@@ -142,7 +143,7 @@ class DataDownload {
 
 	async getNewPill(holder, d) {
 		const pill = await termsettingInit({
-			placeholder: '+Add term',
+			placeholder: '+Add variable',
 			holder,
 			menuOptions: 'all',
 			vocabApi: this.app.vocabApi,
@@ -150,6 +151,8 @@ class DataDownload {
 			debug: this.app.opts.debug,
 			usecase: { target: 'dataDownload' },
 			numericEditMenuVersion: ['continuous', 'discrete'],
+			noTermPromptOptions: this.getNoTermPromptOptions(),
+			genomeObj: this.genomeObj,
 			abbrCutoff: 50,
 			callback: tw => {
 				const termsCopy = this.config.terms.slice(0)
@@ -177,6 +180,16 @@ class DataDownload {
 		this.pillBy$id[d.tw.$id] = pill
 		return pill
 	}
+
+	getNoTermPromptOptions() {
+		const lst = []
+		if (this.termdbConfig.allowedTermTypes.includes('snplst'))
+			lst.push({ termtype: 'snplst', text: 'A list of variants' })
+		if (this.termdbConfig.allowedTermTypes.includes('snplocus'))
+			lst.push({ termtype: 'snplocus', text: 'Variants in a locus' })
+		if (lst.length) lst.unshift({ isDictionary: true, text: 'Dictionary variable' })
+		return lst
+	}
 }
 
 export const dataDownloadInit = getCompInit(DataDownload)
@@ -193,12 +206,16 @@ function getTw$id() {
 
 function setRenderers(self) {
 	self.render = function() {
+		// duplicate the array, so as to insert blank term into array
 		const data = self.config.terms.map(tw => {
 			return { tw, pill: self.pillBy$id[tw.$id] }
 		})
-		//if (!data.find(d => !d.tw.term)) {
-		//data.push({ tw: { $id: getTw$id() } })
-		//}
+
+		// terms[] from state will not contain blank tw
+		// insert an element without a tw, to show the blank prompt for selecting new terms
+		// tw.$id is needed for ...
+		data.push({ tw: { $id: getTw$id() } })
+
 		const terms = self.dom.terms.selectAll(':scope>div').data(data, d => d.tw.$id)
 		terms.exit().remove()
 		terms.each(self.renderTerm)
@@ -209,9 +226,9 @@ function setRenderers(self) {
 	}
 
 	self.addTerm = async function(d) {
-		// console.log(136, 'addTerm()', d)
 		const div = select(this)
-			.style('display', 'inline-block')
+			// allow to show blank prompt in a new line, where all selected terms are in one row
+			.style('display', d.tw.term ? 'inline-block' : 'block')
 			.style('width', 'fit-content')
 			.style('margin', '10px')
 			.style('padding', '5px')
@@ -228,6 +245,9 @@ function setRenderers(self) {
 	self.renderTerm = async function(d) {
 		// this should not happen, even empty terms have a pill
 		if (!d.pill) throw `no pill on update renderTerm()`
+
+		select(this).style('display', d.tw.term ? 'inline-block' : 'block')
+
 		await d.pill.main({
 			term: d.tw?.term,
 			q: d.tw.q,
@@ -238,48 +258,6 @@ function setRenderers(self) {
 }
 
 function setInteractivity(self) {
-	self.showTreeMenu = () => {
-		self.app.tip.clear().showunder(self.dom.addBtn.node())
-		appInit({
-			holder: self.app.tip.d,
-			vocabApi: self.app.vocabApi,
-			state: {
-				//vocab: self.state.vocab,
-				activeCohort: self.state.activeCohort,
-				nav: {
-					header_mode: 'search_only'
-				},
-				tree: { usecase: { target: self.type } }
-			},
-			tree: {
-				submit_lst: async termlst => {
-					self.app.tip.hide()
-					const tws = await Promise.all(
-						termlst.map(async term => {
-							const q = {}
-							if (term.type == 'condition') {
-								q.mode = 'cuminc'
-							} else if (term.type == 'float' || term.type == 'integer') {
-								/*** ADD THIS ***/
-								q.mode = 'continuous'
-							}
-							const tw = { id: term.id, term, q }
-							await fillTermWrapper(tw)
-							return tw
-						})
-					)
-					self.app.dispatch({
-						type: 'plot_edit',
-						id: self.id,
-						config: {
-							terms: [...self.config.terms, ...tws]
-						}
-					})
-				}
-			}
-		})
-	}
-
 	self.download = async () => {
 		const header = ['sample']
 		for (const tw of self.config.terms) {
@@ -288,14 +266,22 @@ function setInteractivity(self) {
 					tw.term.name + `_event code(0="censored", 1="grade ${tw.q.breaks[0]}-5", 2="non-${tw.term.name} death")`
 				)
 				header.push(tw.term.name + '_age at event')
+			} else if (tw.term.snps) {
+				for (const s of tw.term.snps) {
+					// {snpid, rsid, }
+					header.push(s.snpid)
+				}
 			} else {
 				header.push(tw.term.name)
 			}
 		}
 		const rows = [header]
 		for (const s of self.activeSamples) {
-			const samplename = self.data.refs.bySampleId[s.sample]
-			const row = [samplename]
+			// {sample:'integer', sampleName:str, <termId>:{} }
+
+			// sample name as 1st col
+			const row = [s.sampleName || self.data.refs.bySampleId[s.sample]]
+
 			for (const tw of self.config.terms) {
 				if (!s[tw.$id]) row.push('')
 				else {
@@ -303,6 +289,10 @@ function setInteractivity(self) {
 						row.push(s[tw.$id].key)
 						const v = JSON.parse(s[tw.$id].value)
 						row.push(v.age_event)
+					} else if (tw.term.snps) {
+						for (const snp of tw.term.snps) {
+							row.push(s[tw.$id]?.[snp.snpid] || '.')
+						}
 					} else {
 						const v = tw.term.values?.[s[tw.$id].key] || s[tw.$id]
 						row.push(v.label || v.key)
@@ -337,12 +327,13 @@ function setInteractivity(self) {
 
 let _ID_ = 1
 export async function getPlotConfig(opts, app) {
+	// app = {vocabApi}
 	const id = 'id' in opts ? opts.id : `_DATADOWNLOAD_${_ID_++}`
 	const config = { id, terms: [] }
 
 	copyMerge(config, opts)
 	for (const tw of config.terms) {
-		fillTermWrapper(tw)
+		await fillTermWrapper(tw, app.vocabApi)
 	}
 
 	return config
