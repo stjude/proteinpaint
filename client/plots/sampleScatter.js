@@ -381,7 +381,7 @@ class Scatter {
 					const count = category.sampleCount
 					const name = key
 					const hidden = this.config.colorTW.q.hiddenValues ? key in this.config.colorTW.q.hiddenValues : false
-					const [circleG, itemG] = addLegendItem(colorG, color, name, count, offsetX, offsetY, hidden)
+					const [circleG, itemG] = addLegendItem(colorG, category, name, offsetX, offsetY, hidden)
 					circleG.on('click', e => this.onColorClick(e, key, category))
 					offsetY += step
 					itemG.on('click', event => this.onLegendClick(legendG, 'colorTW', key, event))
@@ -486,7 +486,7 @@ class Scatter {
 			}
 		}
 
-		function addLegendItem(g, color, name, count, x, y, hidden = false) {
+		function addLegendItem(g, category, name, x, y, hidden = false) {
 			const radius = 5
 
 			const circleG = g.append('g')
@@ -495,8 +495,8 @@ class Scatter {
 				.attr('cx', x)
 				.attr('cy', y)
 				.attr('r', radius)
-				.style('fill', color)
-				.style('stroke', rgb(color).darker())
+				.style('fill', category.color)
+				.style('stroke', rgb(category.color).darker())
 
 			circleG.on('click', e => this.onColorClick(e, key, category))
 			const itemG = g.append('g')
@@ -505,7 +505,7 @@ class Scatter {
 				.attr('name', 'sjpp-scatter-legend-label')
 				.attr('x', x + 10)
 				.attr('y', y)
-				.text(`${name}, n=${count}`)
+				.text(`${name}, n=${category.sampleCount}`)
 				.style('font-size', '15px')
 				.style('text-decoration', hidden ? 'line-through' : 'none')
 				.attr('alignment-baseline', 'middle')
@@ -634,7 +634,7 @@ class Scatter {
 				.attr('r', 5)
 				.style('fill', category.color)
 				.style('stroke', rgb(category.color).darker())
-				itemG.on('click', e => this.onColorClick(e, key, cname))
+				itemG.on('click', e => this.onColorClick(e, key, category))
 			}
 			const hidden = tw.q.hiddenValues ? key in tw.q.hiddenValues : false
 			G.append('g')
@@ -694,6 +694,7 @@ class Scatter {
 	}
 
 	onColorClick(e, key, category) {
+		console.log(key, category)
 		const menu = new Menu()
 		const input = menu.d
 			.append('input')
