@@ -1507,7 +1507,7 @@ function setRenderers(self) {
 			.insert('div')
 			.style('display', display)
 			.style('margin', '20px')
-			.attr('name', 'sjpp-reset-btn') //For unit tests
+			.attr('name', 'sjpp-help-btn') //For unit tests
 		icon_functions['help'](helpDiv, {
 			handler: () => window.open('https://github.com/stjude/proteinpaint/wiki/Scatter-plot', '_blank')
 		})

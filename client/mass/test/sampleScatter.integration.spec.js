@@ -736,7 +736,7 @@ tape('Click zoom in, zoom out, and reset buttons', function(test) {
 		//  .done(test)
 
 		await testZoomIn(scatter)
-		// await testReset(scatter)
+		await testReset(scatter)
 		await testZoomOut(scatter)
 		test.end()
 	}
@@ -748,18 +748,16 @@ tape('Click zoom in, zoom out, and reset buttons', function(test) {
 		test.ok(scale > 1, `Plot should zoom in`)
 	}
 
-	//A popup prevents clicking on button
-	// async function testReset(scatter) {
-	//     const reset_bt = scatter.Inner.dom.toolsDiv.node().querySelector('div[name="sjpp-reset-btn"]')
-	//     await detectTransform(scatter, reset_bt, 1)
-	//     const scale = scatter.Inner.k
-	//     test.ok(scale == 1, `Plot should reset`)
-	// }
+	async function testReset(scatter) {
+		const reset_bt = scatter.Inner.dom.toolsDiv.node().querySelector('div[name="sjpp-reset-btn"]')
+		await detectTransform(scatter, reset_bt, 1)
+		const scale = scatter.Inner.k
+		test.ok(scale == 1, `Plot should reset`)
+	}
 
 	async function testZoomOut(scatter) {
 		const zoomout_bt = scatter.Inner.dom.toolsDiv.node().querySelector('div[name="sjpp-zoom-out-btn"]')
-		// await detectTransform(scatter, zoomout_bt, 0.5)
-		await detectTransform(scatter, zoomout_bt, 0.75)
+		await detectTransform(scatter, zoomout_bt, 0.5)
 		const scale = scatter.Inner.k
 		test.ok(scale < 1, `Plot should zoom out`)
 	}
