@@ -1098,7 +1098,6 @@ class Scatter {
 							}
 							qgroups.push(qgroup)
 						}
-
 						config.divideBy = {
 							term: { name: 'groups', type: 'samplelst', values },
 							q: {
@@ -1106,6 +1105,7 @@ class Scatter {
 								groups: qgroups
 							}
 						}
+						config.settings.matrix.colw = 10
 						this.app.dispatch({
 							type: 'plot_create',
 							config
