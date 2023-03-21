@@ -1302,8 +1302,11 @@ samples {Map}
 	only get genotype data for these samples,
 	but do not introduce new samples to this map
 	as those will miss value for dict terms and ineligible for analysis
+
+useAllSamples true/false
+	if true, populate "samples" with all of those from cache file
 */
-async function getSampleData_snplstOrLocus(tw, samples) {
+export async function getSampleData_snplstOrLocus(tw, samples, useAllSamples) {
 	const lines = (await utils.read_file(path.join(serverconfig.cache_snpgt.dir, tw.q.cacheid))).split('\n')
 	// cols: snpid, chr, pos, ref, alt, eff, <s1>, <s2>,...
 
@@ -1312,6 +1315,10 @@ async function getSampleData_snplstOrLocus(tw, samples) {
 		.split('\t')
 		.slice(serverconfig.cache_snpgt.sampleColumn) // from 7th column
 		.map(Number) // sample ids are integer
+
+	if (useAllSamples) {
+		for (const i of cachesampleheader) samples.set(i, { id2value: new Map() })
+	}
 
 	// make a list of true/false, same length of cachesampleheader
 	// to tell if a cache file column (a sample) is in use
@@ -1330,14 +1337,24 @@ async function getSampleData_snplstOrLocus(tw, samples) {
 
 		const snpid = l[0] // snpid is used as "term id"
 
-		snp2sample.set(snpid, {
+		const snpObj = {
 			// get effect allele from q, but not from cache file
 			// column [5] is for user-assigned effect allele
-			effAle: tw.q.snp2effAle[snpid],
 			refAle: l[3],
 			altAles: l[4].split(','),
 			samples: new Map()
-		})
+		}
+
+		if (tw.q.snp2effAle) {
+			snpObj.effAle = tw.q.snp2effAle[snpid]
+		} else {
+			// this is missing when generated from data download ui (called from getData)
+			// fill in effAle using first ALT so it can return data
+			snpObj.effAle = snpObj.altAles[0]
+		}
+
+		snp2sample.set(snpid, snpObj)
+
 		for (const [j, sampleid] of cachesampleheader.entries()) {
 			if (!sampleinfilter[j]) {
 				// this sample is filtered out

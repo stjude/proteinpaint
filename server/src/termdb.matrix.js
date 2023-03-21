@@ -7,6 +7,7 @@ const imagesize = require('image-size')
 const serverconfig = require('./serverconfig')
 const utils = require('./utils')
 const termdbsql = require('./termdb.sql')
+const { getSampleData_snplstOrLocus } = require('./termdb.regression')
 
 /*
 
@@ -105,14 +106,31 @@ async function getSampleData(q) {
 				if (!(tw.term.name in value)) continue
 				if (!dictTerms.length) {
 					// only create a sample entry/row when it is not already filtered out by not having any dictionary term values
+					// FIXME invalid assumption for data downloading
 					if (!(sampleId in samples)) samples[sampleId] = { sample: sampleId }
 				}
 				if (samples[sampleId]) {
 					samples[sampleId][tw.term.name] = value[tw.term.name]
 				}
 			}
+		} else if (tw.term.type == 'snplst' || tw.term.type == 'snplocus') {
+			tw.type = tw.term.type // required by regression code
+
+			// TODO limit to samples from current cohort
+			const _samples = new Map()
+
+			await getSampleData_snplstOrLocus(tw, _samples, true)
+			for (const [sampleId, value] of _samples) {
+				if (!(sampleId in samples)) samples[sampleId] = { sample: sampleId }
+
+				// convert value.id2value Map to an object
+				const snp2value = {}
+				for (const [snp, o] of value.id2value) snp2value[snp] = o.value
+
+				samples[sampleId][tw.term.id] = snp2value
+			}
 		} else {
-			throw 'unknown type of independent non-dictionary term'
+			throw 'unknown type of non-dictionary term'
 		}
 	}
 
