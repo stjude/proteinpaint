@@ -1,6 +1,8 @@
 import { mayRunSnplstTask } from './snplst.sampleSum'
 
 /* 
+TODO clean up ui logic, may use table.js?
+
 ********************* EXPORT
 getHandler()
 fillTW()
@@ -63,7 +65,6 @@ export function getHandler(self) {
 	}
 }
 
-let snplst_table, textarea, tmp_snps, select_alleleType
 async function makeEditMenu(self, div) {
 	const select_ancestry = await mayRestrictAncestry(self, div)
 
@@ -86,7 +87,7 @@ async function makeEditMenu(self, div) {
 		.style('vertical-align', 'top')
 		.style('padding-right', '20px')
 
-	textarea = tdleft
+	const textarea = tdleft
 		.append('textarea')
 		.attr('rows', 5)
 		.attr('cols', 20)
@@ -106,7 +107,7 @@ async function makeEditMenu(self, div) {
 	const tdright = tr.append('td').style('vertical-align', 'top')
 	const snpSelect = makeSnpSelect(tdright, self, 'snplst')
 	const input_AFcutoff = snpSelect[0]
-	select_alleleType = snpSelect[1]
+	const select_alleleType = snpSelect[1]
 	const select_geneticModel = snpSelect[2]
 	const select_missingGenotype = snpSelect[3]
 
@@ -121,11 +122,11 @@ async function makeEditMenu(self, div) {
 		// snps not given
 		// hide setting options
 		tdright.style('display', 'none')
-		// empty the snplst_table
+		// discard reference to the snplst_table
 		// this is necessary if user deletes the snplst variable and
 		// adds a new snplst variable
 		// when snplst_table is empty then initSnpEditTable will be called (instead of renderSnpEditTable) to build new edit table
-		snplst_table = undefined
+		delete self.dom.snplst_table
 	}
 
 	// submit button
@@ -136,7 +137,7 @@ async function makeEditMenu(self, div) {
 		.on('click', async () => {
 			snplst_td.style('display', '')
 			// parse input text
-			const snps = parseSnpFromText(self)
+			const snps = parseSnpFromText(textarea, self)
 			if (snps.length && snps.find(snp => snp.effectAllele)) {
 				// if user provides custom effect allele in input text
 				// then set the select_alleleType option to be 'custom'
@@ -148,16 +149,19 @@ async function makeEditMenu(self, div) {
 				if (!self.term.snps) self.term.snps = [] // possible if term of a different type was there before?
 				// already have term;
 				// any valid input in textarea are added to existing term
-				for (const s of snps) tmp_snps.push(s)
+				for (const s of snps) self._tmp_snps.push(s)
 				// update self.term.snps with edit menu snps if changed
-				self.term.snps = updateSnps(self.term.snps)
+				self.term.snps = updateSnps(self.term.snps, self._tmp_snps)
 			} else {
 				// no term; require valid submission in textarea
 				if (!snps.length) return window.alert('No valid variants')
 				// have valid input; create new term
 				self.term = { id: makeId(), snps } // term does not have id
-				self.q = {} // q does not have mode
 			}
+
+			// if self.q already exists, do not overwrite to keep settings e.g. doNotRestrictAncestry
+			if (!self.q) self.q = {}
+
 			if (snps.length) {
 				// don't hide tip only when textarea have values
 				self.doNotHideTipInMain = true
@@ -204,8 +208,12 @@ async function makeEditMenu(self, div) {
 
 			await makeSampleSummary(self)
 
-			if (snplst_table !== undefined) renderSnpEditTable(self, select_alleleType)
-			else initSnpEditTable(snplst_td, self, select_alleleType)
+			if (self.dom.snplst_table) {
+				renderSnpEditTable(self, select_alleleType)
+			} else {
+				initSnpEditTable(snplst_td, self, select_alleleType)
+			}
+
 			textarea.property('value', '')
 			submit_btn.property('disabled', false)
 			submit_btn.text('Submit')
@@ -229,7 +237,7 @@ async function makeEditMenu(self, div) {
 
 function initSnpEditTable(snplst_td, self, select_alleleType) {
 	snplst_td.style('padding-bottom', '25px')
-	snplst_table = snplst_td.append('table')
+	self.dom.snplst_table = snplst_td.append('table')
 	renderSnpEditTable(self, select_alleleType)
 
 	snplst_td
@@ -243,10 +251,11 @@ function initSnpEditTable(snplst_td, self, select_alleleType) {
 }
 
 function renderSnpEditTable(self, select_alleleType) {
-	tmp_snps = JSON.parse(JSON.stringify(self.term.snps))
+	self._tmp_snps = structuredClone(self.term.snps) // TODO purpose?
+
 	// allow to delete or add to this list
-	snplst_table.selectAll('*').remove()
-	const title_tr = snplst_table.append('tr').style('opacity', 0.4)
+	self.dom.snplst_table.selectAll('*').remove()
+	const title_tr = self.dom.snplst_table.append('tr').style('opacity', 0.4)
 	const col_titles = [
 		{ title: 'Variants' },
 		{ title: 'No. samples<sup><b>*</b></sup>' },
@@ -265,7 +274,7 @@ function renderSnpEditTable(self, select_alleleType) {
 	})
 
 	// SNPs
-	for (const [i, snp] of tmp_snps.entries()) {
+	for (const [i, snp] of self.term.snps.entries()) {
 		//const invalid_snp = snp.invalid || (!snp.alleles && !snp.gt2count) ? true : false
 		let invalid_snp = false
 		if (snp.invalid) {
@@ -275,7 +284,7 @@ function renderSnpEditTable(self, select_alleleType) {
 		}
 
 		const rowcolor = (i + 2) % 2 ? '#eee' : '#fff'
-		const tr = snplst_table.append('tr').style('background', rowcolor)
+		const tr = self.dom.snplst_table.append('tr').style('background', rowcolor)
 
 		// col 1: rsid
 		tr.append('td')
@@ -390,10 +399,10 @@ function renderSnpEditTable(self, select_alleleType) {
 	}
 }
 
-function updateSnps(snps) {
+function updateSnps(snps, _tmp_snps) {
 	// snp 'deleted' from edit menu or effectAllele changed
 	for (const [i, s] of snps.entries()) {
-		const s1 = tmp_snps.find(snp => snp.rsid == s.rsid)
+		const s1 = _tmp_snps.find(snp => snp.rsid == s.rsid)
 		if (s1 === undefined) {
 			throw 'snp not found in edit list'
 		} else if (s1.tobe_deleted) {
@@ -416,10 +425,9 @@ function getTermName(snps) {
 	return snps.length + ' variant' + (snps.length > 1 ? 's' : '')
 }
 
-function parseSnpFromText(self) {
+function parseSnpFromText(textarea, self) {
 	// may support chr:pos
-	const ta = textarea
-	const text = ta.property('value')
+	const text = textarea.property('value')
 	const snps = []
 	for (const tmp of text.trim().split('\n')) {
 		const [rsid, ale] = tmp.trim().split(/[\s\t]/)
@@ -537,7 +545,7 @@ create following dom elements and return in an array
 
 */
 export function makeSnpSelect(div, self, termtype) {
-	let input_AFcutoff_label, input_AFcutoff, select_geneticModel, select_missingGenotype
+	let input_AFcutoff_label, input_AFcutoff, select_geneticModel, select_missingGenotype, select_alleleType
 
 	// input - af cutoff
 	{
@@ -602,10 +610,10 @@ export function makeSnpSelect(div, self, termtype) {
 		.style('margin-left', '15px')
 		.style('opacity', 0.4)
 		.style('font-size', '.7em')
-		.text(getSetEffectAlleleAsHint())
+		.text(getSetEffectAlleleAsHint(select_alleleType))
 	self.dom.setEffectAlleleAsHint = setEffectAlleleAsHint
 	select_alleleType.on('change', async () => {
-		setEffectAlleleAsHint.text(getSetEffectAlleleAsHint())
+		setEffectAlleleAsHint.text(getSetEffectAlleleAsHint(select_alleleType))
 		self.q.alleleType = select_alleleType.property('selectedIndex')
 		if (termtype !== 'snplocus') {
 			for (const snp of self.term.snps) {
@@ -659,7 +667,7 @@ export function makeSnpSelect(div, self, termtype) {
 	// populate UI with values if term/q is available
 	if (self.term) {
 		//set the correct hint message base on which option is chosen for "SET EFFECT ALLELE AS"
-		setEffectAlleleAsHint.text(getSetEffectAlleleAsHint())
+		setEffectAlleleAsHint.text(getSetEffectAlleleAsHint(select_alleleType))
 	}
 
 	if (Number.isInteger(self.q?.alleleType)) select_alleleType.property('selectedIndex', self.q.alleleType)
@@ -698,7 +706,7 @@ export async function mayRestrictAncestry(self, holder) {
 }
 
 // return corresponding hint messages based on the option users select for "SET EFFECT ALLELE AS"
-function getSetEffectAlleleAsHint() {
+function getSetEffectAlleleAsHint(select_alleleType) {
 	let hint
 	const i = select_alleleType.property('selectedIndex')
 	if (i == 0) {

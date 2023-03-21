@@ -109,8 +109,11 @@ async function makeEditMenu(self, div) {
 			if (self.term) {
 			} else {
 				self.term = { id: makeId() }
-				self.q = {}
 			}
+
+			// if self.q already exists, do not overwrite to keep settings e.g. doNotRestrictAncestry
+			if (!self.q) self.q = {}
+
 			self.term.type = 'snplocus' // in case self.term was something else..
 			self.q.chr = coordResult.chr
 			self.q.start = coordResult.start
