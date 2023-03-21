@@ -257,7 +257,7 @@ export class Block {
 			.append('div')
 			.style('margin', arg.style.margin)
 			.style('display', 'inline-block')
-			.attr('class','sja_Block_div')
+			.attr('class', 'sja_Block_div')
 		if (!arg.nobox) {
 			this.holder.style('border', 'solid 1px #ccc')
 		}
@@ -874,6 +874,7 @@ export class Block {
 				if (arg.hlvariants) {
 					tk.hlvariants = arg.hlvariants
 				}
+				tk.legacyDsFilter = arg.legacyDsFilter // quick fix
 				blockds.dstkload(tk, this)
 			}
 		}

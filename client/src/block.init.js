@@ -294,6 +294,7 @@ async function step3(arg) {
 		gmstackheight: 37,
 		allgm: arg.allmodels,
 		datasetlst: arg.dataset,
+		legacyDsFilter: arg.legacyDsFilter,
 		mset: arg.mset,
 		hlaachange: arg.hlaachange,
 		hlvariants: arg.hlvariants,

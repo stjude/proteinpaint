@@ -1085,6 +1085,7 @@ async function launchgeneview(arg, app) {
 	let ds = null
 	if (arg.dataset) {
 		pa.dataset = arg.dataset.split(',')
+		pa.legacyDsFilter = arg.legacyDsFilter
 		if (arg.hidedatasetexpression) {
 			pa.hidedatasetexpression = true
 		}

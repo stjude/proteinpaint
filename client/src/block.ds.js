@@ -102,6 +102,9 @@ export async function dstkload(tk, block) {
 
 		// will query the server-side ds.queries[]
 		await dstkload_fromdsquery(tk, block)
+
+		mayAddSubtk_legacyDsFilter(tk, block)
+
 		tk.ds.busy = false
 		block.tkcloakoff(tk, {})
 	} catch (e) {
@@ -111,6 +114,25 @@ export async function dstkload(tk, block) {
 		block.setllabel(tk)
 		block.block_setheight()
 	}
+}
+
+function mayAddSubtk_legacyDsFilter(tk, block) {
+	if (!tk.legacyDsFilter) return
+
+	if (!tk.legacyDsFilter.key || !tk.legacyDsFilter.value) throw 'legacyDsFilter is not {key,value}'
+
+	const mlst = tk.mlst.filter(m => m[tk.legacyDsFilter.key] == tk.legacyDsFilter.value)
+	const _ds = {
+		label: tk.ds.label + ' - ' + tk.legacyDsFilter.value,
+		bulkdata: {},
+		parentname: tk.ds.label,
+		iscustom: true,
+		sampleselectable: tk.ds.sampleselectable
+	}
+	_ds.bulkdata[block.usegm.name.toUpperCase()] = mlst
+	block.addchilddsnoload(_ds)
+	const childtk = block.block_addtk_template({ type: client.tkt.ds, ds: _ds })
+	dstkload(childtk, block)
 }
 
 async function dstkload_fromclientdata(tk, block) {
