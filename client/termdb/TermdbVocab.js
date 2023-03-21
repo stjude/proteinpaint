@@ -717,6 +717,7 @@ export class TermdbVocab extends Vocab {
 						const row = samples[sampleId]
 						if (idn in sample) {
 							row[tw.$id] = sample[idn]
+							if ('sampleName' in sample) row.sampleName = sample.sampleName
 						}
 					}
 

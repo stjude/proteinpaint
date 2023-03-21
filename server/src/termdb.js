@@ -15,6 +15,7 @@ const get_mds3variantData = require('./mds3.variant').get_mds3variantData
 import roundValue from '#shared/roundValue'
 import computePercentile from '../shared/compute.percentile.js'
 import { get_lines_bigfile } from './utils'
+import authApi from './auth'
 
 /*
 ********************** EXPORTED
@@ -73,7 +74,7 @@ export function handle_request_closure(genomes) {
 
 			if (q.for == 'mds3queryDetails') return get_mds3queryDetails(res, ds)
 			if (q.for == 'termTypes') return res.send(await ds.getTermTypes(q))
-			if (q.for == 'matrix') return await get_matrix(q, res, ds, genome)
+			if (q.for == 'matrix') return await get_matrix(q, req, res, ds, genome)
 			if (q.for == 'mds3variantData') return await get_mds3variantData(q, res, ds, genome)
 			if (q.for == 'validateToken') {
 			}
@@ -520,7 +521,7 @@ function trigger_genesetByTermId(q, res, tdb) {
 	res.send(geneset)
 }
 
-async function get_matrix(q, res, ds, genome) {
+async function get_matrix(q, req, res, ds, genome) {
 	if (q.getPlotDataByName) {
 		// send back the config for pre-built matrix plot
 		if (!ds.cohort.matrixplots) throw 'ds.cohort.matrixplots missing for the dataset'
@@ -531,6 +532,11 @@ async function get_matrix(q, res, ds, genome) {
 		return
 	}
 	const data = await getData(q, ds, genome)
+	if (authApi.canDisplaySampleIds(req, ds)) {
+		for (const sample of Object.values(data.samples)) {
+			sample.sampleName = ds.sampleId2Name.get(sample.sample)
+		}
+	}
 	res.send(data)
 }
 
