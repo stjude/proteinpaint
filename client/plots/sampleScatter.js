@@ -303,9 +303,9 @@ class Scatter {
 		legendG.selectAll('*').remove()
 		if (!this.config.colorTW) return
 
-		const step = 30
+		const step = 25
 		let offsetX = 0
-		let offsetY = 60
+		let offsetY = 50
 		const name =
 			this.config.colorTW.term.name.length > 25
 				? this.config.colorTW.term.name.slice(0, 25) + '...'
@@ -314,7 +314,7 @@ class Scatter {
 		const colorRefCategory = this.colorLegend.get('Ref')
 
 		if ( this.config.colorTW.term.type == 'geneVariant')
-			offsetY = this.renderGeneVariantLegend(0, legendG, this.config.colorTW.term, 'category', this.colorLegend)
+			offsetY = this.renderGeneVariantLegend(0, legendG, this.config.colorTW, 'category', this.colorLegend)
 		else
 		{
 			const colorG = legendG.append('g')
@@ -322,9 +322,11 @@ class Scatter {
 				.append('text')
 				.attr('id', 'legendTitle')
 				.attr('x', offsetX)
-				.attr('y', 30)
+				.attr('y', step)
 				.text(title)
 				.style('font-weight', 'bold')
+				.style('font-size', '0.8em')
+
 			if (this.config.colorTW.q.mode === 'continuous') {
 				const [min, max] = this.colorGenerator.domain()
 				const gradientScale = d3Linear()
@@ -382,7 +384,7 @@ class Scatter {
 					const [circleG, itemG] = addLegendItem(colorG, color, name, count, offsetX, offsetY, hidden)
 					circleG.on('click', e => this.onColorClick(e, key, category))
 					offsetY += step
-					itemG.on('click', event => onLegendClick(this.config.colorTW, 'colorTW', key, event, this))
+					itemG.on('click', event => this.onLegendClick(legendG, 'colorTW', key, event))
 				}
 			}
 		}
@@ -395,6 +397,8 @@ class Scatter {
 				.attr('y', offsetY)
 				.text('Reference')
 				.style('font-weight', 'bold')
+				.style('font-size', '0.8em')
+
 			offsetY = offsetY + step
 
 			let symbol = this.symbols[0].size(64)()
@@ -404,6 +408,8 @@ class Scatter {
 				.attr('transform', c => `translate(${offsetX}, ${offsetY})`)
 				.style('fill', colorRefCategory.color)
 				.attr('d', symbol)
+				.style('stroke', rgb(colorRefCategory.color).darker())
+
 			refColorG.on('click', e => this.onColorClick(e, 'Ref', colorRefCategory))
 			const refText = legendG
 				.append('g')
@@ -414,6 +420,8 @@ class Scatter {
 				.style('text-decoration', !this.settings.showRef ? 'line-through' : 'none')
 				.style('font-size', '15px')
 				.attr('alignment-baseline', 'middle')
+				.style('font-size', '0.8em')
+
 
 			refText.on('click', () => {
 				refText.style('text-decoration', !this.settings.showRef ? 'none' : 'line-through')
@@ -432,18 +440,19 @@ class Scatter {
 			offsetX = 300
 			if(this.config.colorTW.term.type == 'geneVariant')
 				offsetX = 500
-			offsetY = 60
+			offsetY = 50
 			title = `${this.config.shapeTW.term.name} (${this.cohortSamples.length})`
 			if (this.config.shapeTW.term.type == 'geneVariant')
-				this.renderGeneVariantLegend(offsetX, legendG, this.config.shapeTW.term, 'shape', this.shapeLegend)
+				this.renderGeneVariantLegend(offsetX, legendG, this.config.shapeTW, 'shape', this.shapeLegend)
 			else{
 				const shapeG = legendG.append('g')
 				shapeG
 					.append('text')
 					.attr('x', offsetX)
-					.attr('y', 30)
+					.attr('y', step)
 					.text(title)
 					.style('font-weight', 'bold')
+					.style('font-size', '0.8em')
 
 				const color = 'gray'
 				for (const [key, shape] of this.shapeLegend) {
@@ -460,6 +469,8 @@ class Scatter {
 						.attr('transform', c => `translate(${offsetX}, ${offsetY})`)
 						.style('fill', color)
 						.attr('d', symbol)
+						.style('stroke', rgb(color).darker())
+
 					itemG
 						.append('text')
 						.attr('x', offsetX + 10)
@@ -468,8 +479,9 @@ class Scatter {
 						.style('font-size', '15px')
 						.style('text-decoration', hidden ? 'line-through' : 'none')
 						.attr('alignment-baseline', 'middle')
+						.style('font-size', '0.8em')
 					offsetY += step
-					itemG.on('click', event => onLegendClick(this.config.shapeTW, 'shapeTW', key, event, this))
+					itemG.on('click', event => this.onLegendClick(legendG, 'shapeTW', key, event))
 				}
 			}
 		}
@@ -484,6 +496,7 @@ class Scatter {
 				.attr('cy', y)
 				.attr('r', radius)
 				.style('fill', color)
+				.style('stroke', rgb(color).darker())
 
 			circleG.on('click', e => this.onColorClick(e, key, category))
 			const itemG = g.append('g')
@@ -496,154 +509,168 @@ class Scatter {
 				.style('font-size', '15px')
 				.style('text-decoration', hidden ? 'line-through' : 'none')
 				.attr('alignment-baseline', 'middle')
+				.style('font-size', '0.8em')
+
 			return [circleG, itemG]
 		}
 
-		function onLegendClick(tw, name, key, e, parent) {
-			const menu = new Menu({ padding: '5px' })
-			const div = menu.d.append('div')
-
-			div
-				.append('div')
-				.attr('class', 'sja_menuoption sja_sharp_border')
-				.text('Hide')
-				.on('click', () => {
-					parent.hideCategory(legendG, tw, key, true)
-					menu.hide()
-					const config = {}
-					config[name] = tw
-					parent.app.dispatch({
-						type: 'plot_edit',
-						id: parent.id,
-						config
-					})
-				})
-			div
-				.append('div')
-				.attr('class', 'sja_menuoption sja_sharp_border')
-				.text('Show')
-				.on('click', () => {
-					parent.hideCategory(legendG, tw, key, false)
-					menu.hide()
-					const config = {}
-					config[name] = tw
-					parent.app.dispatch({
-						type: 'plot_edit',
-						id: parent.id,
-						config
-					})
-				})
-			div
-				.append('div')
-				.attr('class', 'sja_menuoption sja_sharp_border')
-				.text('Show only')
-				.on('click', () => {
-					const map = name == 'colorTW' ? parent.colorLegend : parent.shapeLegend
-					for (const mapKey of map.keys()) parent.hideCategory(legendG, tw, mapKey, mapKey !== key)
-
-					menu.hide()
-					const config = {}
-					config[name] = tw
-					parent.app.dispatch({
-						type: 'plot_edit',
-						id: parent.id,
-						config
-					})
-				})
-			div
-				.append('div')
-				.attr('class', 'sja_menuoption sja_sharp_border')
-				.text('Show all')
-				.on('click', () => {
-					const map = name == 'colorTW' ? parent.colorLegend : parent.shapeLegend
-					for (const mapKey of map.keys()) parent.hideCategory(legendG, tw, mapKey, false)
-					const config = {}
-					config[name] = tw
-					parent.app.dispatch({
-						type: 'plot_edit',
-						id: parent.id,
-						config
-					})
-				})
-			menu.show(e.clientX, e.clientY, false)
-		}
+		
 	}
 
-	renderGeneVariantLegend(offsetX, legendG, term, category, map)
+	onLegendClick(legendG, name, key, e) {
+		const tw = this.config[name]
+		const menu = new Menu({ padding: '5px' })
+		const div = menu.d.append('div')
+
+		div
+			.append('div')
+			.attr('class', 'sja_menuoption sja_sharp_border')
+			.text('Hide')
+			.on('click', () => {
+				this.hideCategory(legendG, tw, key, true)
+				menu.hide()
+				const config = {}
+				config[name] = tw
+				this.app.dispatch({
+					type: 'plot_edit',
+					id: this.id,
+					config
+				})
+			})
+		div
+			.append('div')
+			.attr('class', 'sja_menuoption sja_sharp_border')
+			.text('Show')
+			.on('click', () => {
+				this.hideCategory(legendG, tw, key, false)
+				menu.hide()
+				const config = {}
+				config[name] = tw
+				this.app.dispatch({
+					type: 'plot_edit',
+					id: this.id,
+					config
+				})
+			})
+		div
+			.append('div')
+			.attr('class', 'sja_menuoption sja_sharp_border')
+			.text('Show only')
+			.on('click', () => {
+				const map = name == 'colorTW' ? this.colorLegend : this.shapeLegend
+				for (const mapKey of map.keys()) this.hideCategory(legendG, tw, mapKey, mapKey !== key)
+
+				menu.hide()
+				const config = {}
+				config[name] = tw
+				this.app.dispatch({
+					type: 'plot_edit',
+					id: this.id,
+					config
+				})
+			})
+		div
+			.append('div')
+			.attr('class', 'sja_menuoption sja_sharp_border')
+			.text('Show all')
+			.on('click', () => {
+				const map = name == 'colorTW' ? this.colorLegend : this.shapeLegend
+				for (const mapKey of map.keys()) this.hideCategory(legendG, tw, mapKey, false)
+				const config = {}
+				config[name] = tw
+				this.app.dispatch({
+					type: 'plot_edit',
+					id: this.id,
+					config
+				})
+			})
+		menu.show(e.clientX, e.clientY, false)
+	}
+
+	renderGeneVariantLegend(offsetX, legendG, tw, cname, map)
 	{
 		const step = 100
-		let offsetY = 30
-		const name = term.name.length > 25
-			? term.name.slice(0, 25) + '...'
-			: term.name
+		let offsetY = 25
+		const name = tw.term.name.length > 25
+			? tw.term.name.slice(0, 25) + '...'
+			: tw.term.name
 		let title = `${name} (${this.cohortSamples.length})`
-		const colorG = legendG.append('g')
-		colorG
+		const G = legendG.append('g')
+		G
 			.append('text')
 			.attr('id', 'legendTitle')
 			.attr('x', offsetX)
-			.attr('y', 30)
+			.attr('y', 25)
 			.text(title)
 			.style('font-weight', 'bold')
 			.style('font-size', '0.8em')
 
 		offsetX += step
-		offsetY = 60
+		offsetY = 50
 		for (const [key, category] of map) {
 			if(key == 'Ref')
 				continue
-			const circleG = colorG.append('g')
-			circleG
+			const mkey = key.split(',')[0]
+			const itemG = G.append('g')
+			if(cname == 'shape')
+			{
+				const index = category.shape % this.symbols.length
+				itemG				
+				.append('path')
+				.attr('transform', c => `translate(${offsetX - step}, ${offsetY - 5})`)
+				.style('fill', category.color)
+				.attr('d',this.symbols[index].size(64)())
+				.style('stroke', rgb(category.color).darker())
+
+			}
+			else
+			{
+				itemG
 				.append('circle')
-				.attr('cx', offsetX - step - 10)
+				.attr('cx', offsetX - step)
 				.attr('cy', offsetY - 5)
 				.attr('r', 5)
 				.style('fill', category.color)
 				.style('stroke', rgb(category.color).darker())
+				itemG.on('click', e => this.onColorClick(e, key, cname))
+			}
 
-
-			circleG.on('click', e => this.onColorClick(e, key, category))
-			colorG
+			G
 			.append('text')
-			.attr('id', 'legendTitle')
-			.attr('x', offsetX - step)
+			.attr('x', offsetX - step + 10)
 			.attr('y', offsetY)
-			.text(key.split(',')[0])
+			.attr('name', 'sjpp-scatter-legend-label')
+			.text(mkey)
 			.style('font-size', '0.8em')
-			offsetY += 30
-
+			.on('click', event => this.onLegendClick(G, cname == 'shape'? 'shapeTW': 'colorTW', mkey, event))
+			offsetY += 25
 		}
 		offsetY = 0
-		const mutations = this.cohortSamples[0]['cat_info'][category]
+		const mutations = this.cohortSamples[0]['cat_info'][cname]
 		for (const mutation of mutations) {
 			const dt = mutation.dt
 			const origin = morigin[mutation.origin]?.label
 			const dtlabel = origin ? `${origin[0]} ${dt2label[dt]}` : dt2label[dt]
 
-			colorG
+			G
 			.append('text')
-			.attr('id', 'legendTitle')
 			.attr('x', offsetX)
-			.attr('y', 30)
+			.attr('y', 25)
 			.text(dtlabel)
 			.style('font-weight', 'bold')
 			.style('font-size', '0.8em')
 
-			offsetY = 60
-			
+			offsetY = 50
 			for (const [key, category] of map) {
 				const assay = key.split(',')[1]
 				if(key.includes(dtlabel))
-				colorG
+				G
 				.append('text')
-				.attr('id', 'legendTitle')
 				.attr('x', offsetX)
 				.attr('y', offsetY)
 				.text(`${category.sampleCount}${category.hasOrigin?assay[0]: ''}`)
 				.style('font-size', '0.8em')
-
-				offsetY += 30
-
+				offsetY += 25
 			}
 			offsetX += step
 
@@ -657,6 +684,8 @@ class Scatter {
 		const value = tw.term.type != 'geneVariant' && tw.term.values[key] ? tw.term.values[key] : { key: key, label: key }
 		const items = legendG.selectAll(`text[name="sjpp-scatter-legend-label"]`).nodes()
 		const itemG = items.find(item => item.innerHTML.startsWith(key))?.parentElement
+		console.log(key, itemG)
+
 		if (itemG) itemG.style['text-decoration'] = hide ? 'line-through' : 'none'
 		if (!hide) delete tw.q.hiddenValues[key]
 		else tw.q.hiddenValues[key] = value
