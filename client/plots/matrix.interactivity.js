@@ -1,4 +1,4 @@
-import { select } from 'd3-selection'
+import { select, pointer } from 'd3-selection'
 import { fillTermWrapper, termsettingInit } from '../termsetting/termsetting'
 import { icons } from '../dom/control.icons'
 
@@ -6,7 +6,7 @@ let inputIndex = 0
 
 export function setInteractivity(self) {
 	self.showCellInfo = function(event) {
-		if (self.activeLabel) return
+		if (self.activeLabel || self.zoomArea) return
 		if (!(event.target.tagName == 'rect' || event.target.tagName == 'image')) return
 		const d = event.target.tagName == 'rect' ? event.target.__data__ : getCell(event.target, event.clientY)
 		if (!d || !d.term || !d.sample) {
@@ -87,6 +87,7 @@ export function setInteractivity(self) {
 	setTermActions(self)
 	setTermGroupActions(self)
 	setSampleGroupActions(self)
+	setZoomPanActions(self)
 }
 /*
 // TODO: may add drag events for sample labels
@@ -1391,5 +1392,128 @@ function setLabelDragEvents(self, prefix) {
 		} else {
 			self.showTermGroupMenu(event)
 		}
+	}
+}
+
+function setZoomPanActions(self) {
+	self.seriesesGMousedown = function(event) {
+		event.stopPropagation()
+		self.clickedSeriesCell = { event, startCell: event.target.__data__ }
+		if (self.settings.matrix.mouseMode == 'pan') {
+			self.dom.seriesesG.on('mousemove', self.seriesesGdrag)
+			self.dom.seriesesG.on('mouseup', self.seriesesGcancelDrag)
+		} else {
+			self.zoomPointer = pointer(event, self.dom.seriesesG.node())
+			self.dom.seriesesG.on('mousemove', self.seriesesGoutlineZoom)
+			self.dom.seriesesG.on('mouseup', self.seriesesGtriggerZoom)
+		}
+		self.dom.mainG
+			.selectAll('text')
+			.style('-webkit-user-select', 'none')
+			.style('-moz-user-select', 'none')
+			.style('-ms-user-select', 'none')
+			.style('user-select', 'none')
+	}
+
+	self.seriesesGdrag = function(event) {
+		const e = self.clickedSeriesCell.event
+		const dx = event.clientX - e.clientX
+		const d = self.dimensions
+		self.dom.seriesesG.attr('transform', `translate(${d.xOffset + dx},${d.yOffset})`)
+	}
+
+	self.seriesesGcancelDrag = function() {
+		self.dom.seriesesG.on('mousemove', null)
+		//self.app.dispatch()
+	}
+
+	self.seriesesGoutlineZoom = function(event) {
+		if (!self.clickedSeriesCell) return
+		const s = self.config.settings.matrix
+		const e = self.clickedSeriesCell.event
+
+		if (self.clickedSeriesCell && !self.zoomArea) {
+			self.zoomArea = self.dom.seriesesG //select('body')
+				.append('rect')
+				.attr('fill', 'rgba(50, 50, 50, 0.3)')
+			//.attr('transform', `translate(${x},0)`)
+
+			select('body').on('mouseup.matrixZoom', self.mouseup)
+
+			self.dom.mainG
+				.selectAll('text')
+				.style('-webkit-user-select', 'none')
+				.style('-moz-user-select', 'none')
+				.style('-ms-user-select', 'none')
+				.style('user-select', 'none')
+		}
+
+		const dx = event.clientX - e.clientX
+		const dy = event.clientY - e.clientY
+		const x = dx > 0 ? self.zoomPointer[0] : self.zoomPointer[0] + dx + 3
+		self.zoomWidth = Math.abs(dx)
+		self.zoomArea
+			.attr('transform', `translate(${x},0)`)
+			.style('width', self.zoomWidth)
+			.style('height', self.dimensions.mainh)
+
+		//event.stopPropagation()
+		//const d = event.target.__data__
+		//console.log('mousedown', d)
+
+		self.clickedSeriesCell.endCell = event.target.__data__
+	}
+
+	self.seriesesGtriggerZoom = function(event) {
+		event.stopPropagation()
+		const d = event.target.__data__
+		if (self.zoomArea) {
+			self.zoomArea.remove()
+			delete self.zoomArea
+			//self.dom.seriesesG.on('mouseup.zoom', null)
+			select('body').on('mouseup.matrixZoom', null)
+		}
+
+		self.dom.mainG
+			.selectAll('text')
+			.style('-webkit-user-select', '')
+			.style('-moz-user-select', '')
+			.style('-ms-user-select', '')
+			.style('user-select', '')
+
+		const c = self.clickedSeriesCell
+		if (!c.startCell || !c.endCell) {
+			delete self.clickedSeriesCell
+			return
+		}
+
+		const s = self.settings.matrix
+		const start = c.startCell.totalIndex < c.endCell.totalIndex ? c.startCell : c.endCell
+		//const end = c.startCell.totalIndex < c.endCell.totalIndex ? c.endCell : c.startCell
+		const zoomIndex = Math.floor(start.totalIndex + Math.abs(c.endCell.totalIndex - c.startCell.totalIndex) / 2)
+		//console.log(zoomIndex, 'startIndex=', c.startCell.totalIndex, 'endIndex=', c.endCell.totalIndex)
+		const centerCell = self.sampleOrder[zoomIndex]
+		//console.log(1494, 'centerIndex', centerCell.totalIndex)
+		//console.log(1495, 'zoomCenter', centerCell.totalIndex * self.dimensions.dx + (centerCell.grpIndex - 1) * s.colgspace + self.dimensions.seriesXoffset)
+		self.app.dispatch({
+			type: 'plot_edit',
+			id: self.id,
+			config: {
+				settings: {
+					matrix: {
+						zoomLevel: self.dimensions.mainw / self.zoomWidth,
+						//zoomCenter: self.zoomPointer[0] - self.dimensions.seriesXoffset - self.dimensions.xOffset + self.zoomWidth / 2,
+						zoomCenter:
+							centerCell.totalIndex * self.dimensions.dx +
+							(centerCell.grpIndex - 1) * s.colgspace +
+							self.dimensions.seriesXoffset,
+						zoomIndex,
+						zoomGrpIndex: centerCell.grpIndex
+					}
+				}
+			}
+		})
+
+		delete self.clickedSeriesCell
 	}
 }

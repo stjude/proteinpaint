@@ -27,12 +27,11 @@ class Matrix {
 		const opts = this.opts
 		const holder = opts.controls ? opts.holder : opts.holder.append('div')
 		holder.style('position', 'relative')
-		const controls = this.opts.controls ? null : holder.append('div')
+		const controls = this.opts.controls || holder.append('div')
 		const loadingDiv = holder
 			.append('div')
 			.style('position', 'absolute')
-			.style('top', '50px')
-			.style('left', '50px')
+			.style('top', '0px')
 		const errdiv = holder
 			.append('div')
 			.attr('class', 'sja_errorbar')
@@ -40,11 +39,15 @@ class Matrix {
 		const svg = holder
 			.append('svg')
 			.style('margin', '20px 10px')
-			.style('overflow', 'visible')
+			.style('overflow', 'hidden')
 			.on('mousemove.label', this.svgMousemove)
 			.on('mouseup.label', this.svgMouseup)
+
+		const idclip = `sjpp_clip_${this.id}`
+
 		const mainG = svg
 			.append('g')
+			//.style('overflow', 'hidden')
 			.on('mouseover', this.showCellInfo)
 			.on('mousemove', this.showCellInfo)
 			.on('mouseout', this.mouseout)
@@ -70,15 +73,30 @@ class Matrix {
 				.on('mousedown', this.termGrpLabelMousedown)
 				.on('mousemove', this.termGrpLabelMousemove)
 				.on('mouseup', this.termGrpLabelMouseup),
-			cluster: mainG.append('g').attr('class', 'sjpp-matrix-cluster-g'),
-			seriesesG: mainG.append('g').attr('class', 'sjpp-matrix-serieses-g'),
-			sampleLabelG: mainG.append('g').attr('class', 'sjpp-matrix-series-label-g'),
+			cluster: mainG
+				.append('g')
+				.attr('class', 'sjpp-matrix-cluster-g')
+				.on('mousedown', this.seriesesGMousedown)
+				.on('mousemove', this.seriesesGMousemove),
+			//.on('mouseup', this.seriesesGMouseup),
+			seriesesG: mainG
+				.append('g')
+				.attr('class', 'sjpp-matrix-serieses-g')
+				.attr('clip-path', `url(#${idclip})`)
+				.on('mousedown', this.seriesesGMousedown),
+			//.on('mousemove', this.seriesesGMousemove)
+			//.on('mouseup', this.seriesesGMouseup),
+			sampleLabelG: mainG
+				.append('g')
+				.attr('class', 'sjpp-matrix-series-label-g')
+				.attr('clip-path', `url(#${idclip})`),
 			/* // TODO: sample label drag to move
 				.on('mouseover', this.sampleLabelMouseover)
 				.on('mouseout', this.sampleLabelMouseout)
 				.on('mousedown', this.sampleLabelMousedown)
 				.on('mousemove', this.sampleLabelMousemove)
-				.on('mouseup', this.sampleLabelMouseup)*/ termLabelG: mainG
+				.on('mouseup', this.sampleLabelMouseup)*/
+			termLabelG: mainG
 				.append('g')
 				.attr('class', 'sjpp-matrix-term-label-g')
 				.on('mouseover', this.termLabelMouseover)
@@ -92,6 +110,15 @@ class Matrix {
 			menutop: tip.d.append('div'),
 			menubody: tip.d.append('div')
 		}
+
+		//this.dom.clipHolder = svg.append('defs')
+		this.dom.clipRect = svg
+			.append('clipPath')
+			.attr('id', idclip)
+			.attr('clipPathUnits', 'objectBoundingBox')
+			//.attr('clipPathUnits', 'userSpaceOnUse')
+			.append('rect')
+			.attr('display', 'block')
 
 		this.dom.tip.onHide = () => {
 			this.lastActiveLabel = this.activeLabel
@@ -137,7 +164,7 @@ class Matrix {
 	}
 
 	setControls(appState) {
-		if (this.opts.controls) return
+		//if (this.opts.controls) return
 		this.controlsRenderer = new MatrixControls(
 			{
 				app: this.app,
@@ -232,7 +259,7 @@ class Matrix {
 		const message = tokenMessage || this.state.tokenVerificationMessage
 		if (!message && this.state.hasVerifiedToken) {
 			this.dom.errdiv.style('display', 'none').html()
-			this.dom.controls.style('display', '')
+			this.dom.controls.style('display', this.opts.controls ? 'inline-block' : '')
 			this.dom.svg.style('display', '')
 			return false
 		} else {
@@ -251,13 +278,12 @@ class Matrix {
 		}
 		if (this.config.divideBy) terms.push(this.config.divideBy)
 		this.numTerms = terms.length
-		const opts = {
+		return {
 			terms,
 			filter: this.state.filter,
 			filter0: this.state.filter0,
 			loadingDiv: this.dom.loadingDiv
 		}
-		return opts
 	}
 
 	setAutoDimensions() {
@@ -275,7 +301,7 @@ class Matrix {
 				? s.termLabelOffset + s.termGrpLabelOffset
 				: s.sampleLabelOffset + s.sampleGrpLabelOffset
 			s.colw = Math.min(
-				16,
+				s.maxColw,
 				Math.max(1, Math.round((screen.availWidth - offset - 300) / this.sampleOrder.length - s.colspace))
 			)
 			if (s.colw == 1) s.colspace = 0
@@ -607,17 +633,23 @@ class Matrix {
 
 		const yOffset = layout.top.offset + s.margin.top
 		const xOffset = layout.left.offset + s.margin.left
-		const dx = s.colw + s.colspace
+		const colw = Math.min(34, s.colw * s.zoomLevel)
+		const dx = colw + s.colspace
 		const nx = this[`${col}s`].length
 		const dy = s.rowh + s.rowspace
 		const ny = this[`${row}s`].length
 		const mainw =
-			nx * dx + (this[`${col}Grps`].length - 1) * s.colgspace + (this[`${col}s`].slice(-1)[0]?.totalHtAdjustments || 0)
+			nx * (s.colw + s.colspace) +
+			(this[`${col}Grps`].length - 1) * s.colgspace +
+			(this[`${col}s`].slice(-1)[0]?.totalHtAdjustments || 0)
 		const mainh =
 			ny * dy + (this[`${row}Grps`].length - 1) * s.rowgspace + (this[`${row}s`].slice(-1)[0]?.totalHtAdjustments || 0)
 
-		const topFontSize =
-			_t_ == 'Grp' ? s.grpLabelFontSize : Math.max(s.colw + s.colspace - 2 * s.collabelpad, s.minLabelFontSize)
+		const colLabelFontSize = Math.min(
+			Math.max(colw + s.colspace - 2 * s.collabelpad, s.minLabelFontSize),
+			s.maxLabelFontSize
+		)
+		const topFontSize = _t_ == 'Grp' ? s.grpLabelFontSize : colLabelFontSize
 		layout.top.attr = {
 			boxTransform: `translate(${xOffset}, ${yOffset - s.collabelgap})`,
 			labelTransform: 'rotate(-90)',
@@ -629,8 +661,7 @@ class Matrix {
 			axisFxn: axisTop
 		}
 
-		const btmFontSize =
-			_b_ == 'Grp' ? s.grpLabelFontSize : Math.max(s.colw + s.colspace - 2 * s.collabelpad, s.minLabelFontSize)
+		const btmFontSize = _b_ == 'Grp' ? s.grpLabelFontSize : colLabelFontSize
 		layout.btm.attr = {
 			boxTransform: `translate(${xOffset}, ${yOffset + mainh + s.collabelgap})`,
 			labelTransform: 'rotate(-90)',
@@ -675,15 +706,19 @@ class Matrix {
 			xOffset,
 			yOffset,
 			mainw,
-			mainh
+			mainh,
+			colw,
+			seriesXoffset: s.zoomLevel == 1 ? 0 : s.zoomCenter - s.zoomIndex * dx - (s.zoomGrpIndex - 1) * s.colgspace, // + 2*xOffset,
+			zoomedMainW: nx * dx + (this[`${col}Grps`].length - 1) * s.colgspace //+ (this[`${col}s`].slice(-1)[0]?.totalHtAdjustments || 0)
 		}
 	}
 
 	getSerieses(data) {
 		const s = this.settings.matrix
 		const serieses = []
-		const dx = s.colw + s.colspace
-		const dy = s.rowh + s.rowspace
+		const colw = this.dimensions.colw
+		const dx = this.dimensions.dx // s.colw + s.colspace
+		const dy = this.dimensions.dy // s.rowh + s.rowspace
 		const legendGroups = {}
 
 		for (const { totalIndex, grpIndex, row } of this.sampleOrder) {
@@ -703,8 +738,8 @@ class Matrix {
 				const key = anno.key
 				const values = anno.renderedValues || anno.values || [anno.value]
 				const numRects = s.cellEncoding == 'oncoprint' ? 1 : values.length
-				const height = !s.transpose ? s.rowh / numRects : s.colw
-				const width = !s.transpose ? s.colw : s.colw / values.length
+				const height = !s.transpose ? s.rowh / numRects : colw
+				const width = !s.transpose ? colw : colw / values.length
 
 				for (const [i, value] of values.entries()) {
 					const cell = {
@@ -714,7 +749,10 @@ class Matrix {
 						term: t.tw.term,
 						termid,
 						$id,
-						key
+						key,
+						totalIndex,
+						grpIndex,
+						row
 					}
 
 					// will assign x, y, width, height, fill, label, order, etc
@@ -864,6 +902,7 @@ export async function getPlotConfig(opts, app) {
 				samplecount4gene: true,
 				cellbg: '#ececec',
 				colw: 0,
+				maxColw: 16,
 				colspace: 1,
 				colgspace: 8,
 				collabelpos: 'bottom',
@@ -882,12 +921,16 @@ export async function getPlotConfig(opts, app) {
 				rowlabelpad: 1,
 				grpLabelFontSize: 12,
 				minLabelFontSize: 6,
+				maxLabelFontSize: 16,
 				transpose: false,
 				sampleLabelOffset: 120,
 				sampleGrpLabelOffset: 120,
 				termLabelOffset: 80,
 				termGrpLabelOffset: 80,
-				duration: 100
+				duration: 0,
+				mouseMode: 'zoom',
+				zoomLevel: 1,
+				zoomIndex: 0
 			}
 		}
 	}

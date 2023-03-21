@@ -2,6 +2,7 @@ import { getAppInit } from '../rx'
 import { select } from 'd3-selection'
 import { storeInit } from '#mass/store'
 import { vocabInit } from '#termdb/vocabulary'
+import { recoverInit } from '../rx/src/recover'
 import { sayerror } from '#dom/error'
 import { Menu } from '#dom/menu'
 
@@ -45,7 +46,10 @@ class PlotApp {
 	constructor(opts) {
 		this.type = 'app'
 		// this will create divs in the correct order
+		const controls = opts.holder.append('div')
 		this.dom = {
+			plotControls: controls.append('div').style('display', 'inline-block'),
+			recoverControls: controls.append('div').style('display', 'inline-block'),
 			errdiv: opts.holder.append('div'),
 			plotDiv: opts.holder.append('div')
 		}
@@ -92,6 +96,14 @@ class PlotApp {
 			this.store = await storeInit({ app: this.api, state: this.opts.state })
 			this.state = await this.store.copyState()
 			this.components = {
+				recover: await recoverInit({
+					app: this.api,
+					holder: this.dom.recoverControls,
+					// TODO: ???? may limit the tracked state to only the filter, activeCohort ???
+					getState: appState => appState,
+					//reactsTo: action => true, //action.type != 'plot_edit' || action.type == 'app_refresh',
+					maxHistoryLen: 5
+				}),
 				plots: []
 			}
 			await this.api.dispatch()
@@ -111,7 +123,8 @@ class PlotApp {
 				const plotInstance = await _.componentInit({
 					id: plot.id,
 					app: this.api,
-					holder: this.dom.plotDiv
+					holder: this.dom.plotDiv,
+					controls: this.dom.plotControls
 				})
 
 				this.components.plots.push(plotInstance)
