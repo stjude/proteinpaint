@@ -72,7 +72,6 @@ class DataDownload {
 	including filter/cohort change
 	*/
 	async main() {
-		console.log(this)
 		try {
 			this.config = structuredClone(this.state.config)
 			this.mayUpdateSandboxHeader()
@@ -183,10 +182,28 @@ class DataDownload {
 
 	getNoTermPromptOptions() {
 		const lst = []
-		if (this.termdbConfig.allowedTermTypes.includes('snplst'))
-			lst.push({ termtype: 'snplst', text: 'A list of variants' })
-		if (this.termdbConfig.allowedTermTypes.includes('snplocus'))
-			lst.push({ termtype: 'snplocus', text: 'Variants in a locus' })
+		if (this.termdbConfig.allowedTermTypes.includes('snplst')) {
+			lst.push({
+				termtype: 'snplst',
+				text: 'A list of variants',
+				q: {
+					doNotRestrictAncestry: 1,
+					geneticModel: 3, // by genotype
+					AFcutoff: 0 // do not drop any
+				}
+			})
+		}
+		if (this.termdbConfig.allowedTermTypes.includes('snplocus')) {
+			lst.push({
+				termtype: 'snplocus',
+				text: 'Variants from a locus',
+				q: {
+					doNotRestrictAncestry: 1,
+					geneticModel: 3, // by genotype
+					AFcutoff: 0 // do not drop any
+				}
+			})
+		}
 		if (lst.length) lst.unshift({ isDictionary: true, text: 'Dictionary variable' })
 		return lst
 	}
@@ -237,7 +254,7 @@ function setRenderers(self) {
 		await d.pill.main({
 			term: d.tw.term,
 			q: d.tw.q,
-			filter: self.state.filter,
+			filter: self.state.termfilter.filter,
 			activeCohort: self.state.activeCohort
 		})
 	}
@@ -251,7 +268,7 @@ function setRenderers(self) {
 		await d.pill.main({
 			term: d.tw?.term,
 			q: d.tw.q,
-			filter: self.state.filter,
+			filter: self.state.termfilter.filter,
 			activeCohort: self.state.activeCohort
 		})
 	}
