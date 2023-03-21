@@ -517,7 +517,7 @@ class Scatter {
 		
 	}
 
-	onLegendClick(legendG, name, key, e) {
+	onLegendClick(G, name, key, e) {
 		const tw = this.config[name]
 		const menu = new Menu({ padding: '5px' })
 		const div = menu.d.append('div')
@@ -527,7 +527,7 @@ class Scatter {
 			.attr('class', 'sja_menuoption sja_sharp_border')
 			.text('Hide')
 			.on('click', () => {
-				this.hideCategory(legendG, tw, key, true)
+				this.hideCategory(G, tw, key, true)
 				menu.hide()
 				const config = {}
 				config[name] = tw
@@ -542,7 +542,7 @@ class Scatter {
 			.attr('class', 'sja_menuoption sja_sharp_border')
 			.text('Show')
 			.on('click', () => {
-				this.hideCategory(legendG, tw, key, false)
+				this.hideCategory(G, tw, key, false)
 				menu.hide()
 				const config = {}
 				config[name] = tw
@@ -558,7 +558,8 @@ class Scatter {
 			.text('Show only')
 			.on('click', () => {
 				const map = name == 'colorTW' ? this.colorLegend : this.shapeLegend
-				for (const mapKey of map.keys()) this.hideCategory(legendG, tw, mapKey, mapKey !== key)
+				for (const mapKey of map.keys()) 
+					this.hideCategory(G, tw, mapKey, !mapKey.startsWith(key))
 
 				menu.hide()
 				const config = {}
@@ -574,8 +575,9 @@ class Scatter {
 			.attr('class', 'sja_menuoption sja_sharp_border')
 			.text('Show all')
 			.on('click', () => {
+				menu.hide()
 				const map = name == 'colorTW' ? this.colorLegend : this.shapeLegend
-				for (const mapKey of map.keys()) this.hideCategory(legendG, tw, mapKey, false)
+				for (const mapKey of map.keys()) this.hideCategory(G, tw, mapKey, false)
 				const config = {}
 				config[name] = tw
 				this.app.dispatch({
@@ -618,9 +620,9 @@ class Scatter {
 				itemG				
 				.append('path')
 				.attr('transform', c => `translate(${offsetX - step}, ${offsetY - 5})`)
-				.style('fill', category.color)
+				.style('fill', 'gray')
 				.attr('d',this.symbols[index].size(64)())
-				.style('stroke', rgb(category.color).darker())
+				.style('stroke', rgb('gray').darker())
 
 			}
 			else
@@ -634,15 +636,16 @@ class Scatter {
 				.style('stroke', rgb(category.color).darker())
 				itemG.on('click', e => this.onColorClick(e, key, cname))
 			}
-
-			G
+			const hidden = tw.q.hiddenValues ? key in tw.q.hiddenValues : false
+			G.append('g')
 			.append('text')
 			.attr('x', offsetX - step + 10)
 			.attr('y', offsetY)
 			.attr('name', 'sjpp-scatter-legend-label')
+			.style('text-decoration', hidden ? 'line-through' : 'none')
 			.text(mkey)
 			.style('font-size', '0.8em')
-			.on('click', event => this.onLegendClick(G, cname == 'shape'? 'shapeTW': 'colorTW', mkey, event))
+			.on('click', event => this.onLegendClick(G, cname == 'shape'? 'shapeTW': 'colorTW', key, event))
 			offsetY += 25
 		}
 		offsetY = 0
@@ -679,12 +682,11 @@ class Scatter {
 		
 	}
 
-	hideCategory(legendG, tw, key, hide) {
+	hideCategory(G, tw, key, hide) {
 		if (!tw.q.hiddenValues) tw.q.hiddenValues = {}
 		const value = tw.term.type != 'geneVariant' && tw.term.values[key] ? tw.term.values[key] : { key: key, label: key }
-		const items = legendG.selectAll(`text[name="sjpp-scatter-legend-label"]`).nodes()
-		const itemG = items.find(item => item.innerHTML.startsWith(key))?.parentElement
-		console.log(key, itemG)
+		const items = G.selectAll(`text[name="sjpp-scatter-legend-label"]`).nodes()
+		const itemG = items.find(item => key.startsWith(item.innerHTML))?.parentElement
 
 		if (itemG) itemG.style['text-decoration'] = hide ? 'line-through' : 'none'
 		if (!hide) delete tw.q.hiddenValues[key]
@@ -1068,7 +1070,7 @@ class Scatter {
 			.attr('class', 'sja_menuoption sja_sharp_border')
 			.text(`Delete group`)
 			.on('click', e => {
-				this.config.groups = this.config.groups.splice(group.index, 1)
+				this.config.groups.splice(group.index, 1)
 				this.app.dispatch({ type: 'plot_edit', id: this.id, config: { groups: this.config.groups } })
 			})
 		menuDiv
