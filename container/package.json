@@ -1,6 +1,6 @@
 {
 	"name": "@stjude/proteinpaint-container",
-	"version": "2.11.3",
+	"version": "2.11.4",
 	"bin": "launch.js",
 	"scripts": {
 		"dev": "./pack.sh && ./build.sh",
