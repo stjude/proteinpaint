@@ -274,8 +274,12 @@ function processSample(dbSample, sample, tw, categoryMap, category) {
 			const class_info = mclass[mutation.class]
 			value = getCategory(mutation)
 			sample.cat_info[category].push(mutation)
-			if (!categoryMap.has(value)) categoryMap.set(value, { color: class_info.color, sampleCount: 1 })
-			else categoryMap.get(value).sampleCount++
+			if (!categoryMap.has(value)) categoryMap.set(value, { color: class_info.color, sampleCount: 1, hasOrigin: 'origin' in mutation})
+			else {
+				const mapValue = categoryMap.get(value)
+				mapValue.sampleCount++
+				mapValue.hasOrigin = mapValue.hasOrigin || 'origin' in mutation
+			}
 
 			// TODO mutation.mname is amino acid change. pass mname to sample to be shown in tooltip
 		}
@@ -313,8 +317,8 @@ function getCategory(mutation) {
 	const dt = mutation.dt
 	const class_info = mclass[mutation.class]
 	const origin = morigin[mutation.origin]?.label
-	const dtlabel = origin ? `${origin} ${dt2label[dt]}` : dt2label[dt]
-	return `${class_info.label} ${dtlabel}`
+	const dtlabel = origin ? `${origin[0]} ${dt2label[dt]}` : dt2label[dt]
+	return `${class_info.label},${dtlabel}`
 }
 
 function order(map, tw, refs) {
