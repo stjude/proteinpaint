@@ -213,6 +213,74 @@ if (fs.existsSync('./package.json')) {
 	serverconfig.version = JSON.parse(pkg).version
 }
 
+serverconfig.commonOverrides = {
+	mclass: {
+		I: {
+			color: 'rgb(98, 60, 53)'
+		},
+		S: {
+			color: 'rgb(31, 112, 31)'
+		},
+		M: {
+			color: '#2379BC' //Best update for the default blue, that is compliant with section508
+		},
+		N: {
+			color: 'rgb(179, 89, 10)'
+		},
+		L: {
+			color: 'rgb(71, 36, 179)'
+		},
+		P: {
+			color: 'rgb(104, 72, 132)'
+		},
+		Utr3: {
+			color: 'rgb(107, 90, 107)'
+		},
+		F: {
+			color: '#a71c25'
+		},
+		D: {
+			color: '#595959'
+		},
+		Utr5: {
+			color: '#566c58'
+		},
+		E: {
+			color: '#595b00'
+		},
+		ITD: {
+			color: 'rgb(179, 78, 179)'
+		},
+		DEL: {
+			color: 'rgb(93, 93, 93)'
+		},
+		SV: {
+			color: 'rgb(93, 93, 93)'
+		},
+		CNV_amp: {
+			color: '#7a425f'
+		},
+		CNV_loss: {
+			color: '#42741a'
+		},
+		CNV_loh: {
+			color: 'rgb(13, 166, 176)'
+		},
+		snv: {
+			color: 'rgb(102, 113, 148)'
+		},
+		mnv: {
+			color: 'rgb(102, 113, 148)'
+		},
+		insertion: {
+			color: 'rgb(132, 99, 102)'
+		},
+		deletion: {
+			color: 'rgb(127, 113, 81)'
+		}
+	}
+}
+
 //Object.freeze(serverconfig)
 module.exports = serverconfig
 

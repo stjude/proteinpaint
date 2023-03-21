@@ -6,6 +6,14 @@ export function setRenderers(self) {
 		const l = self.layout
 		const d = self.dimensions
 		const duration = self.dom.svg.attr('width') ? s.duration : 0
+
+		self.dom.clipRect
+			.attr('x', s.zoomLevel == 1 ? 0 : Math.abs(d.seriesXoffset) / d.zoomedMainW) //Math.abs(d.seriesXoffset/d.mainw)) // s.zoomLevel == 1 ? 0 : 300)
+			.attr('y', 0)
+			//.attr('transform', `translate(0,0)`)
+			.attr('width', (s.zoomLevel * d.mainw) / d.zoomedMainW)
+			.attr('height', 1)
+
 		self.renderSerieses(s, l, d, duration)
 		self.renderLabels(s, l, d, duration)
 	}
@@ -14,7 +22,7 @@ export function setRenderers(self) {
 		self.dom.seriesesG
 			.transition()
 			.duration(duration)
-			.attr('transform', `translate(${d.xOffset},${d.yOffset})`)
+			.attr('transform', `translate(${d.xOffset + d.seriesXoffset},${d.yOffset})`)
 
 		const sg = self.dom.seriesesG.selectAll('.sjpp-mass-series-g').data(this.serieses, series => series.row.sample)
 
@@ -88,7 +96,7 @@ export function setRenderers(self) {
 			.duration(0) //'x' in cell ? s.duration : 0)
 			.attr('x', 'x' in cell ? cell.x : 0)
 			.attr('y', 'y' in cell ? cell.y : 0)
-			.attr('width', 'width' in cell ? cell.width : s.colw)
+			.attr('width', 'width' in cell ? cell.width : self.dimensions.colw)
 			.attr('height', 'height' in cell ? cell.height : s.rowh)
 			.attr('shape-rendering', 'crispEdges')
 			//.attr('stroke', cell.fill)
@@ -166,10 +174,10 @@ export function setRenderers(self) {
 	self.colLabelGTransform = (lab, grpIndex) => {
 		const s = self.settings.matrix
 		const d = self.dimensions
-		lab.labelOffset = 0.8 * s.colw
+		lab.labelOffset = 0.8 * d.colw
 		const x = lab.grpIndex * s.colgspace + lab.totalIndex * d.dx + lab.labelOffset + lab.totalHtAdjustments
 		const y = 0 //lab.tw?.q?.mode == 'continuous' ? -30 : 0
-		return `translate(${x},${y})`
+		return `translate(${x + d.seriesXoffset},${y})`
 	}
 
 	self.colGrpLabelGTransform = (lab, grpIndex) => {
@@ -182,7 +190,7 @@ export function setRenderers(self) {
 			(len * d.dx) / 2 +
 			s.grpLabelFontSize / 2 +
 			lab.totalHtAdjustments
-		return `translate(${x},0)`
+		return `translate(${x + d.seriesXoffset},0)`
 	}
 
 	self.rowLabelGTransform = (lab, grpIndex) => {

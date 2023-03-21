@@ -11,12 +11,8 @@ function setNumericCellProps(cell, tw, anno, value, s, t, self, width, height, d
 	const values = tw.term.values || {}
 	cell.label = 'label' in anno ? anno.label : values[key]?.label ? values[key].label : key
 	cell.fill = anno.color || values[anno.key]?.color
-	cell.x = !s.transpose
-		? 0
-		: t.totalIndex * dx + t.visibleGrpIndex * s.colgspace + width * i + t.totalHtAdjustments
-	cell.y = !s.transpose
-		? t.totalIndex * dy + t.visibleGrpIndex * s.rowgspace + height * i + t.totalHtAdjustments
-		: 0
+	cell.x = !s.transpose ? 0 : t.totalIndex * dx + t.visibleGrpIndex * s.colgspace + width * i + t.totalHtAdjustments
+	cell.y = !s.transpose ? t.totalIndex * dy + t.visibleGrpIndex * s.rowgspace + height * i + t.totalHtAdjustments : 0
 
 	cell.order = t.ref.bins ? t.ref.bins.findIndex(bin => bin.name == key) : 0
 	if (tw.q?.mode == 'continuous') {
@@ -42,12 +38,8 @@ function setCategoricalCellProps(cell, tw, anno, value, s, t, self, width, heigh
 	const key = anno.key
 	cell.label = 'label' in anno ? anno.label : values[key]?.label ? values[key].label : key
 	cell.fill = anno.color || values[key]?.color
-	cell.x = !s.transpose
-		? 0
-		: t.totalIndex * dx + t.visibleGrpIndex * s.colgspace + width * i + t.totalHtAdjustments
-	cell.y = !s.transpose
-		? t.totalIndex * dy + t.visibleGrpIndex * s.rowgspace + height * i + t.totalHtAdjustments
-		: 0
+	cell.x = !s.transpose ? 0 : t.totalIndex * dx + t.visibleGrpIndex * s.colgspace + width * i + t.totalHtAdjustments
+	cell.y = !s.transpose ? t.totalIndex * dy + t.visibleGrpIndex * s.rowgspace + height * i + t.totalHtAdjustments : 0
 	const group = tw.legend?.group || tw.$id
 	return { ref: t.ref, group, value, entry: { key, label: cell.label, fill: cell.fill } }
 }
@@ -60,34 +52,25 @@ function setGeneVariantCellProps(cell, tw, anno, value, s, t, self, width, heigh
 	cell.class = value.class
 	cell.value = value
 
+	const colw = self.dimensions.colw
 	if (s.cellEncoding != 'oncoprint') {
-		cell.height = !s.transpose ? s.rowh / values.length : s.colw
-		cell.width = !s.transpose ? s.colw : s.colw / values.length
-		cell.x = !s.transpose
-			? 0
-			: t.totalIndex * dx + t.visibleGrpIndex * s.colgspace + width * i + t.totalHtAdjustments
-		cell.y = !s.transpose
-			? t.totalIndex * dy + t.visibleGrpIndex * s.rowgspace + height * i + t.totalHtAdjustments
-			: 0
+		cell.height = !s.transpose ? s.rowh / values.length : colw
+		cell.width = !s.transpose ? colw : colw / values.length
+		cell.x = !s.transpose ? 0 : t.totalIndex * dx + t.visibleGrpIndex * s.colgspace + width * i + t.totalHtAdjustments
+		cell.y = !s.transpose ? t.totalIndex * dy + t.visibleGrpIndex * s.rowgspace + height * i + t.totalHtAdjustments : 0
 	} else if (value.dt == 1) {
 		const divisor = s.cellEncoding == 'oncoprint' ? 3 : values.length
-		cell.height = !s.transpose ? s.rowh / divisor : s.colw
-		cell.width = !s.transpose ? s.colw : s.colw / values.length
-		cell.x = !s.transpose
-			? 0
-			: t.totalIndex * dx + t.visibleGrpIndex * s.colgspace + width * i + t.totalHtAdjustments
+		cell.height = !s.transpose ? s.rowh / divisor : colw
+		cell.width = !s.transpose ? colw : colw / values.length
+		cell.x = !s.transpose ? 0 : t.totalIndex * dx + t.visibleGrpIndex * s.colgspace + width * i + t.totalHtAdjustments
 		cell.y = !s.transpose
 			? t.totalIndex * dy + t.visibleGrpIndex * s.rowgspace + height * 0.33333 + t.totalHtAdjustments
 			: 0
 	} else if (value.dt == 4) {
-		cell.height = !s.transpose ? s.rowh : s.colw
-		cell.width = !s.transpose ? s.colw : s.colw / values.length
-		cell.x = !s.transpose
-			? 0
-			: t.totalIndex * dx + t.visibleGrpIndex * s.colgspace + width * i + t.totalHtAdjustments
-		cell.y = !s.transpose
-			? t.totalIndex * dy + t.visibleGrpIndex * s.rowgspace + t.totalHtAdjustments
-			: 0
+		cell.height = !s.transpose ? s.rowh : colw
+		cell.width = !s.transpose ? colw : colw / values.length
+		cell.x = !s.transpose ? 0 : t.totalIndex * dx + t.visibleGrpIndex * s.colgspace + width * i + t.totalHtAdjustments
+		cell.y = !s.transpose ? t.totalIndex * dy + t.visibleGrpIndex * s.rowgspace + t.totalHtAdjustments : 0
 	} else {
 		throw `cannot set cell props for dt='${value.dt}'`
 	}

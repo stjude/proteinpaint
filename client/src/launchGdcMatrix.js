@@ -83,6 +83,7 @@ export async function init(arg, holder, genomes) {
 					settings: {
 						matrix: {
 							cellEncoding: 'oncoprint',
+							colw: 2,
 							colspace: 0,
 							cellbg: 'white'
 						}
