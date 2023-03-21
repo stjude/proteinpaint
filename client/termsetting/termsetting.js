@@ -202,6 +202,7 @@ class TermSetting {
 				if (!t.termtype) throw 'element of noTermPromptOptions[] missing both isDictionary=true and .termtype'
 			}
 			if (!t.text && !t.html) throw 'element of noTermPromptOptions[] missing both .text and .html'
+			if (t.q && typeof t.q != 'object') throw 'type.q{} is not object'
 		}
 		this.noTermPromptOptions = o.noTermPromptOptions
 	}
@@ -452,7 +453,7 @@ function setInteractivity(self) {
 		self.dom.tip.clear().showunder(self.dom.nopilldiv.node())
 		// create small menu, one option for each ele in noTermPromptOptions[]
 		for (const option of self.noTermPromptOptions) {
-			// {isDictionary, termtype, text, html}
+			// {isDictionary, termtype, text, html, q{}}
 			const item = self.dom.tip.d
 				.append('div')
 				.attr('class', 'sja_menuoption sja_sharp_border')
@@ -461,6 +462,8 @@ function setInteractivity(self) {
 					if (option.isDictionary) {
 						await self.showTree(self.dom.tip.d.node())
 					} else if (option.termtype) {
+						// pass in default q{}
+						if (option.q) self.q = option.q
 						await self.setHandler(option.termtype)
 						self.handler.showEditMenu(self.dom.tip.d)
 					} else {

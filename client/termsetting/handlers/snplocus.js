@@ -85,7 +85,7 @@ async function makeEditMenu(self, div) {
 		.style('opacity', 0.4)
 		.style('font-size', '.7em')
 		.html(
-			'“Gene”: Gene name (e.g. AKT1)</br>“Position”: chr:start-stop (e.g. chr1:5000-6000)</br>"dbSNP": dbSNP accession (e.g. rs1042522)'
+			'"Gene": Gene name (e.g. AKT1)</br>“Position”: chr:start-stop (e.g. chr1:5000-6000)</br>"dbSNP": dbSNP accession (e.g. rs1042522)'
 		)
 
 	await mayDisplayVariantFilter(self, self?.q?.variant_filter, div)
@@ -130,7 +130,7 @@ async function makeEditMenu(self, div) {
 
 			{
 				const v = Number(input_AFcutoff.property('value'))
-				self.q.AFcutoff = v <= 0 || v >= 100 ? 5 : v // set to default if invalid
+				self.q.AFcutoff = v < 0 || v >= 100 ? 5 : v // set to default if invalid
 			}
 			self.q.alleleType = select_alleleType.property('selectedIndex')
 			self.q.geneticModel = select_geneticModel.property('selectedIndex')

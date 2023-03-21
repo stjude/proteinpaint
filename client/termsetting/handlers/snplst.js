@@ -110,12 +110,12 @@ async function makeEditMenu(self, div) {
 	const select_geneticModel = snpSelect[2]
 	const select_missingGenotype = snpSelect[3]
 
-	if (self.term && self.term.snps && self.term.snps.length) {
+	if (self.term?.snps?.length) {
 		// snps given, generate snplst table
 		// hide submission text box and restrictAncestries menu
 		snplst_td.style('display', '')
 		tdleft.style('display', 'none')
-		self.dom.restrictAncestriesRow.remove()
+		self.dom.restrictAncestriesRow?.remove()
 		initSnpEditTable(snplst_td, self, select_alleleType)
 	} else {
 		// snps not given
@@ -186,12 +186,12 @@ async function makeEditMenu(self, div) {
 			if (self.term && self.term.snps && self.term.snps.length) {
 				tdleft.style('display', 'none')
 				tdright.style('display', 'inline-block')
-				self.dom.restrictAncestriesRow.remove()
+				self.dom.restrictAncestriesRow?.remove()
 			}
 
 			{
 				const v = Number(input_AFcutoff.property('value'))
-				self.q.AFcutoff = v <= 0 || v >= 100 ? 5 : v // set to default if invalid
+				self.q.AFcutoff = v < 0 || v >= 100 ? 5 : v // set to default if invalid
 			}
 			self.q.alleleType = select_alleleType.property('selectedIndex')
 			self.q.geneticModel = select_geneticModel.property('selectedIndex')
@@ -656,21 +656,24 @@ export function makeSnpSelect(div, self, termtype) {
 		select_missingGenotype.append('option').text('Drop sample')
 	}
 
+	// populate UI with values if term/q is available
 	if (self.term) {
-		// .term and .q is available on the instance; populate UI with values
-		input_AFcutoff.property('value', self.q.AFcutoff)
-		select_alleleType.property('selectedIndex', self.q.alleleType)
-		setEffectAlleleAsHint.text(getSetEffectAlleleAsHint()) //set the correct hint message base on which option is chosen for "SET EFFECT ALLELE AS"
-		select_geneticModel.property('selectedIndex', self.q.geneticModel)
-		if (select_missingGenotype) {
-			select_missingGenotype.property('selectedIndex', self.q.missingGenotype)
-		}
+		//set the correct hint message base on which option is chosen for "SET EFFECT ALLELE AS"
+		setEffectAlleleAsHint.text(getSetEffectAlleleAsHint())
 	}
+
+	if (Number.isInteger(self.q?.alleleType)) select_alleleType.property('selectedIndex', self.q.alleleType)
+	if (Number.isFinite(self.q?.AFcutoff)) input_AFcutoff.property('value', self.q.AFcutoff)
+	if (Number.isInteger(self.q?.geneticModel)) select_geneticModel.property('selectedIndex', self.q.geneticModel)
+	if (select_missingGenotype && Number.isInteger(self.q?.missingGenotype))
+		select_missingGenotype.property('selectedIndex', self.q.missingGenotype)
 
 	return [input_AFcutoff, select_alleleType, select_geneticModel, select_missingGenotype]
 }
 
 export async function mayRestrictAncestry(self, holder) {
+	if (self.q?.doNotRestrictAncestry) return
+
 	const tdbcfg = await self.vocabApi.getTermdbConfig()
 	if (!tdbcfg.restrictAncestries) return
 	const row = holder.append('div').style('margin', '15px')
