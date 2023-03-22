@@ -637,6 +637,7 @@ class Scatter {
 			offsetY += 25
 		}
 		offsetY = 0
+		offsetX += 30
 		const mutations = this.cohortSamples[0]['cat_info'][cname]
 		for (const mutation of mutations) {
 			const dt = mutation.dt
