@@ -22,6 +22,26 @@ export class MatrixControls {
 	}
 
 	setButtons() {
+		const zoomBtn = {
+			label: 'Zoom',
+			active: true,
+			callback: () => {
+				this.parent.settings.matrix.mouseMode = 'zoom'
+				zoomBtn.active = true
+				panBtn.active = false
+				this.main()
+			}
+		}
+		const panBtn = {
+			label: 'Pan',
+			callback: () => {
+				this.parent.settings.matrix.mouseMode = 'pan'
+				panBtn.active = true
+				zoomBtn.active = false
+				this.main()
+			}
+		}
+
 		this.btns = this.opts.holder
 			.style('margin', '10px 10px 20px 10px')
 			.selectAll('button')
@@ -33,7 +53,7 @@ export class MatrixControls {
 				},
 				{
 					value: 'anno',
-					label: `Terms`,
+					label: `Dictionary Terms`,
 					getCount: () => this.parent.termOrder.length,
 					customInputs: this.appendTermInputs
 				},
@@ -43,11 +63,17 @@ export class MatrixControls {
 				{ value: 'legend', label: 'Legend layout' },
 				//{ label: 'Undo', callback: ()=>this.recover.goto(-1) },
 				//{ label: 'Redo', callback: ()=>this.recover.goto(1) },
-				{ label: 'Download SVG', callback: () => to_svg(this.opts.getSvg(), 'matrix', { apply_dom_styles: true }) }
+				{
+					label: 'Download SVG',
+					callback: () => to_svg(this.opts.getSvg(), 'matrix', { apply_dom_styles: true })
+				},
+				zoomBtn,
+				panBtn
 			])
 			.enter()
 			.append('button')
 			.style('margin', '2px 0')
+			.property('disabled', d => d.disabled)
 			.text(d => d.label)
 			.on('click', (event, d) => (d.callback ? d.callback(event) : this.callback(event, d)))
 	}
@@ -142,7 +168,7 @@ export class MatrixControls {
 					type: 'text',
 					chartType: 'matrix',
 					settingsKey: 'cellbg'
-				},
+				}
 			],
 
 			cols: [
@@ -288,7 +314,10 @@ export class MatrixControls {
 
 	main() {
 		//this.recover.track()
-		this.btns.text(d => d.label + (d.getCount ? ` (${d.getCount()})` : ''))
+		this.btns
+			.text(d => d.label + (d.getCount ? ` (${d.getCount()})` : ''))
+			.style('text-decoration', d => (d.active ? 'underline' : ''))
+			.style('color', d => (d.active ? '#3a3' : ''))
 	}
 
 	async callback(event, d) {

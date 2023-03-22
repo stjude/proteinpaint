@@ -31,7 +31,8 @@ class Matrix {
 		const loadingDiv = holder
 			.append('div')
 			.style('position', 'absolute')
-			.style('top', '0px')
+			.style('top', '50px')
+			.style('left', '50px')
 		const errdiv = holder
 			.append('div')
 			.attr('class', 'sja_errorbar')
@@ -652,6 +653,8 @@ class Matrix {
 		const topFontSize = _t_ == 'Grp' ? s.grpLabelFontSize : colLabelFontSize
 		layout.top.attr = {
 			boxTransform: `translate(${xOffset}, ${yOffset - s.collabelgap})`,
+			adjustBoxTransform: dx =>
+				layout.top.box.attr('transform', `translate(${xOffset + dx}, ${yOffset - s.collabelgap})`),
 			labelTransform: 'rotate(-90)',
 			labelAnchor: 'start',
 			labelGY: 0,
@@ -664,6 +667,8 @@ class Matrix {
 		const btmFontSize = _b_ == 'Grp' ? s.grpLabelFontSize : colLabelFontSize
 		layout.btm.attr = {
 			boxTransform: `translate(${xOffset}, ${yOffset + mainh + s.collabelgap})`,
+			adjustBoxTransform: dx =>
+				layout.btm.box.attr('transform', `translate(${xOffset + dx}, ${yOffset + mainh + s.collabelgap})`),
 			labelTransform: 'rotate(-90)',
 			labelAnchor: 'end',
 			labelGY: 0,

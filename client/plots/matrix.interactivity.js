@@ -1400,12 +1400,10 @@ function setZoomPanActions(self) {
 		event.stopPropagation()
 		self.clickedSeriesCell = { event, startCell: event.target.__data__ }
 		if (self.settings.matrix.mouseMode == 'pan') {
-			self.dom.seriesesG.on('mousemove', self.seriesesGdrag)
-			self.dom.seriesesG.on('mouseup', self.seriesesGcancelDrag)
+			self.dom.seriesesG.on('mousemove', self.seriesesGdrag).on('mouseup', self.seriesesGcancelDrag)
 		} else {
 			self.zoomPointer = pointer(event, self.dom.seriesesG.node())
-			self.dom.seriesesG.on('mousemove', self.seriesesGoutlineZoom)
-			self.dom.seriesesG.on('mouseup', self.seriesesGtriggerZoom)
+			self.dom.seriesesG.on('mousemove', self.seriesesGoutlineZoom).on('mouseup', self.seriesesGtriggerZoom)
 		}
 		self.dom.mainG
 			.selectAll('text')
@@ -1416,15 +1414,40 @@ function setZoomPanActions(self) {
 	}
 
 	self.seriesesGdrag = function(event) {
+		const s = self.settings.matrix
 		const e = self.clickedSeriesCell.event
 		const dx = event.clientX - e.clientX
+		self.clickedSeriesCell.dx = dx
 		const d = self.dimensions
-		self.dom.seriesesG.attr('transform', `translate(${d.xOffset + dx},${d.yOffset})`)
+		// should use a function for layout.top.boxTransform(....)
+		self.dom.seriesesG.attr('transform', `translate(${d.xOffset + d.seriesXoffset + dx},${d.yOffset})`)
+		self.layout.top.attr.adjustBoxTransform(dx)
+		self.layout.btm.attr.adjustBoxTransform(dx)
+		self.dom.clipRect.attr('x', s.zoomLevel == 1 ? 0 : Math.abs(d.seriesXoffset + dx) / d.zoomedMainW)
 	}
 
 	self.seriesesGcancelDrag = function() {
-		self.dom.seriesesG.on('mousemove', null)
-		//self.app.dispatch()
+		self.dom.seriesesG.on('mousemove', null).on('mouseup', null)
+		const s = self.settings.matrix
+		const c = self.clickedSeriesCell.startCell
+		self.app.dispatch({
+			type: 'plot_edit',
+			id: self.id,
+			config: {
+				settings: {
+					matrix: {
+						zoomCenter:
+							c.totalIndex * self.dimensions.dx +
+							(c.grpIndex - 1) * s.colgspace +
+							self.dimensions.seriesXoffset +
+							self.clickedSeriesCell.dx,
+						zoomIndex: c.totalIndex,
+						zoomGrpIndex: c.grpIndex,
+						mouseMode: 'pan'
+					}
+				}
+			}
+		})
 	}
 
 	self.seriesesGoutlineZoom = function(event) {
@@ -1433,10 +1456,7 @@ function setZoomPanActions(self) {
 		const e = self.clickedSeriesCell.event
 
 		if (self.clickedSeriesCell && !self.zoomArea) {
-			self.zoomArea = self.dom.seriesesG //select('body')
-				.append('rect')
-				.attr('fill', 'rgba(50, 50, 50, 0.3)')
-			//.attr('transform', `translate(${x},0)`)
+			self.zoomArea = self.dom.seriesesG.append('rect').attr('fill', 'rgba(50, 50, 50, 0.3)')
 
 			select('body').on('mouseup.matrixZoom', self.mouseup)
 
@@ -1457,15 +1477,12 @@ function setZoomPanActions(self) {
 			.style('width', self.zoomWidth)
 			.style('height', self.dimensions.mainh)
 
-		//event.stopPropagation()
-		//const d = event.target.__data__
-		//console.log('mousedown', d)
-
 		self.clickedSeriesCell.endCell = event.target.__data__
 	}
 
 	self.seriesesGtriggerZoom = function(event) {
 		event.stopPropagation()
+		self.dom.seriesesG.on('mousemove', null).on('mouseup', null)
 		const d = event.target.__data__
 		if (self.zoomArea) {
 			self.zoomArea.remove()
@@ -1489,12 +1506,8 @@ function setZoomPanActions(self) {
 
 		const s = self.settings.matrix
 		const start = c.startCell.totalIndex < c.endCell.totalIndex ? c.startCell : c.endCell
-		//const end = c.startCell.totalIndex < c.endCell.totalIndex ? c.endCell : c.startCell
 		const zoomIndex = Math.floor(start.totalIndex + Math.abs(c.endCell.totalIndex - c.startCell.totalIndex) / 2)
-		//console.log(zoomIndex, 'startIndex=', c.startCell.totalIndex, 'endIndex=', c.endCell.totalIndex)
 		const centerCell = self.sampleOrder[zoomIndex]
-		//console.log(1494, 'centerIndex', centerCell.totalIndex)
-		//console.log(1495, 'zoomCenter', centerCell.totalIndex * self.dimensions.dx + (centerCell.grpIndex - 1) * s.colgspace + self.dimensions.seriesXoffset)
 		self.app.dispatch({
 			type: 'plot_edit',
 			id: self.id,
@@ -1508,7 +1521,8 @@ function setZoomPanActions(self) {
 							(centerCell.grpIndex - 1) * s.colgspace +
 							self.dimensions.seriesXoffset,
 						zoomIndex,
-						zoomGrpIndex: centerCell.grpIndex
+						zoomGrpIndex: centerCell.grpIndex,
+						mouseMode: 'zoom'
 					}
 				}
 			}
