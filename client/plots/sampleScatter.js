@@ -1296,8 +1296,11 @@ function setRenderers(self) {
 			legendG = svg.select('.sjpcb-scatter-legend')
 			clipRect = svg.select(`defs > clipPath > rect`)
 		}
-		xAxis.call(self.axisBottom)
-		yAxis.call(self.axisLeft)
+		if(self.axisBottom)
+		{
+			xAxis.call(self.axisBottom)
+			yAxis.call(self.axisLeft)
+		}
 		const particleWidth = Math.sqrt(self.settings.size)
 		if (self.settings.showAxes) {
 			clipRect
