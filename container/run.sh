@@ -11,20 +11,11 @@ if [[ ! -f serverconfig.json ]]; then
 	exit 1
 fi
 
+# may fill-in serverconfig defaults
+node validateConfig
 TPDIR=$(node -p "require('./serverconfig.json').tpmasterdir")
-if [[ "$TPDIR" == "" ]]; then
-	echo "There must be a serverconfig.tpmasterdir entry."
-	exit 1
-fi
-
 HOSTPORT=$(node -p "require('./serverconfig.json').URL?.split(':')[2]")
-if [[ "$HOSTPORT" == "" || "$HOSTPORT" == "undefined" ]]; then
-	echo "There must be a serverconfig.URL entry with a :port number."
-	exit 1
-fi
-
 EXPOSED_PORT=$(node -p "require('./serverconfig.json').port || 3000")
-if [[ "$EXPOSED_PORT" == "" ]]; then EXPOSED_PORT=3000; fi
 
 ############
 # Arguments
@@ -103,7 +94,7 @@ done
 docker logs pp
 echo -e "\n************************************************************************"
 echo "*"
-echo "* Open the ProteinPaint app at https://localhost:$HOSTPORT in you web browser"
+echo "* Open the ProteinPaint app at http://localhost:$HOSTPORT in you web browser"
 echo "*"
 echo -e "*************************************************************************"
 

@@ -18,7 +18,8 @@
 		"app-server.js",
 		"launch.js",
 		"public",
-		"run.sh"
+		"run.sh",
+		"validateConfig.js"
 	],
 	"license": "SEE LICENSE IN ./LICENSE",
 	"repository": {

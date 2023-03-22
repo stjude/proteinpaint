@@ -25,8 +25,9 @@ There are 3 options to obtain a Docker image:
 
 To test, make sure that your current working directory has
 
-- a serverconfig.json, which has a "URL": "http://localhost:[PORT]" entry 
- (default PORT=3456, can be set to any valid, non-conflicting numeric port value)
+- a serverconfig.json which has
+  - a `tpmasterdir` entry, for the absolute path to the data directory
+  - an optional `"URL": "http://localhost:[PORT]"` entry,  defaults to `"http://localhost:3456"`
 
 - an optional dataset folder, containing js files of any serverconfig.genomes.datasets[] entry
  that is not already included in proteinpaint/server/dataset    
