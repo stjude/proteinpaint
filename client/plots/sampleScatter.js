@@ -26,7 +26,6 @@ import {
 } from 'd3-shape'
 import { dofetch3 } from '../common/dofetch'
 
-
 /*
 sample object returned by server:
 {
@@ -130,7 +129,7 @@ class Scatter {
 		const s0 = this.data.samples[0]
 		const [xMin, xMax, yMin, yMax] = this.data.samples.reduce(
 			(s, d) => [d.x < s[0] ? d.x : s[0], d.x > s[1] ? d.x : s[1], d.y < s[2] ? d.y : s[2], d.y > s[3] ? d.y : s[3]],
-			[s0.x, s0.x, s0.y, s0.y]
+			[s0?.x, s0?.x, s0?.y, s0?.y]
 		)
 		this.xAxisScale = d3Linear()
 			.domain([xMin, xMax])
@@ -313,10 +312,9 @@ class Scatter {
 		let title = `${name} (${this.cohortSamples.length})`
 		const colorRefCategory = this.colorLegend.get('Ref')
 
-		if ( this.config.colorTW.term.type == 'geneVariant')
+		if (this.config.colorTW.term.type == 'geneVariant')
 			offsetY = this.renderGeneVariantLegend(0, legendG, this.config.colorTW, 'category', this.colorLegend)
-		else
-		{
+		else {
 			const colorG = legendG.append('g')
 			colorG
 				.append('text')
@@ -422,7 +420,6 @@ class Scatter {
 				.attr('alignment-baseline', 'middle')
 				.style('font-size', '0.8em')
 
-
 			refText.on('click', () => {
 				refText.style('text-decoration', !this.settings.showRef ? 'none' : 'line-through')
 				this.settings.showRef = !this.settings.showRef
@@ -438,13 +435,12 @@ class Scatter {
 		}
 		if (this.config.shapeTW) {
 			offsetX = 300
-			if(this.config.colorTW.term.type == 'geneVariant')
-				offsetX = 500
+			if (this.config.colorTW.term.type == 'geneVariant') offsetX = 500
 			offsetY = 50
 			title = `${this.config.shapeTW.term.name} (${this.cohortSamples.length})`
 			if (this.config.shapeTW.term.type == 'geneVariant')
 				this.renderGeneVariantLegend(offsetX, legendG, this.config.shapeTW, 'shape', this.shapeLegend)
-			else{
+			else {
 				const shapeG = legendG.append('g')
 				shapeG
 					.append('text')
@@ -513,8 +509,6 @@ class Scatter {
 
 			return [circleG, itemG]
 		}
-
-		
 	}
 
 	onLegendClick(G, name, key, e) {
@@ -558,8 +552,7 @@ class Scatter {
 			.text('Show only')
 			.on('click', () => {
 				const map = name == 'colorTW' ? this.colorLegend : this.shapeLegend
-				for (const mapKey of map.keys()) 
-					this.hideCategory(G, tw, mapKey, !mapKey.startsWith(key))
+				for (const mapKey of map.keys()) this.hideCategory(G, tw, mapKey, !mapKey.startsWith(key))
 
 				menu.hide()
 				const config = {}
@@ -589,17 +582,13 @@ class Scatter {
 		menu.show(e.clientX, e.clientY, false)
 	}
 
-	renderGeneVariantLegend(offsetX, legendG, tw, cname, map)
-	{
+	renderGeneVariantLegend(offsetX, legendG, tw, cname, map) {
 		const step = 100
 		let offsetY = 25
-		const name = tw.term.name.length > 25
-			? tw.term.name.slice(0, 25) + '...'
-			: tw.term.name
+		const name = tw.term.name.length > 25 ? tw.term.name.slice(0, 25) + '...' : tw.term.name
 		let title = `${name} (${this.cohortSamples.length})`
 		const G = legendG.append('g')
-		G
-			.append('text')
+		G.append('text')
 			.attr('id', 'legendTitle')
 			.attr('x', offsetX)
 			.attr('y', 25)
@@ -610,42 +599,37 @@ class Scatter {
 		offsetX += step
 		offsetY = 50
 		for (const [key, category] of map) {
-			if(key == 'Ref')
-				continue
+			if (key == 'Ref') continue
 			const mkey = key.split(',')[0]
 			const itemG = G.append('g')
-			if(cname == 'shape')
-			{
+			if (cname == 'shape') {
 				const index = category.shape % this.symbols.length
-				itemG				
-				.append('path')
-				.attr('transform', c => `translate(${offsetX - step}, ${offsetY - 5})`)
-				.style('fill', 'gray')
-				.attr('d',this.symbols[index].size(64)())
-				.style('stroke', rgb('gray').darker())
-
-			}
-			else
-			{
 				itemG
-				.append('circle')
-				.attr('cx', offsetX - step)
-				.attr('cy', offsetY - 5)
-				.attr('r', 5)
-				.style('fill', category.color)
-				.style('stroke', rgb(category.color).darker())
+					.append('path')
+					.attr('transform', c => `translate(${offsetX - step}, ${offsetY - 5})`)
+					.style('fill', 'gray')
+					.attr('d', this.symbols[index].size(64)())
+					.style('stroke', rgb('gray').darker())
+			} else {
+				itemG
+					.append('circle')
+					.attr('cx', offsetX - step)
+					.attr('cy', offsetY - 5)
+					.attr('r', 5)
+					.style('fill', category.color)
+					.style('stroke', rgb(category.color).darker())
 				itemG.on('click', e => this.onColorClick(e, key, category))
 			}
 			const hidden = tw.q.hiddenValues ? key in tw.q.hiddenValues : false
 			G.append('g')
-			.append('text')
-			.attr('x', offsetX - step + 10)
-			.attr('y', offsetY)
-			.attr('name', 'sjpp-scatter-legend-label')
-			.style('text-decoration', hidden ? 'line-through' : 'none')
-			.text(mkey)
-			.style('font-size', '0.8em')
-			.on('click', event => this.onLegendClick(G, cname == 'shape'? 'shapeTW': 'colorTW', key, event))
+				.append('text')
+				.attr('x', offsetX - step + 10)
+				.attr('y', offsetY)
+				.attr('name', 'sjpp-scatter-legend-label')
+				.style('text-decoration', hidden ? 'line-through' : 'none')
+				.text(mkey)
+				.style('font-size', '0.8em')
+				.on('click', event => this.onLegendClick(G, cname == 'shape' ? 'shapeTW' : 'colorTW', key, event))
 			offsetY += 25
 		}
 		offsetY = 0
@@ -655,31 +639,27 @@ class Scatter {
 			const origin = morigin[mutation.origin]?.label
 			const dtlabel = origin ? `${origin[0]} ${dt2label[dt]}` : dt2label[dt]
 
-			G
-			.append('text')
-			.attr('x', offsetX)
-			.attr('y', 25)
-			.text(dtlabel)
-			.style('font-weight', 'bold')
-			.style('font-size', '0.8em')
+			G.append('text')
+				.attr('x', offsetX)
+				.attr('y', 25)
+				.text(dtlabel)
+				.style('font-weight', 'bold')
+				.style('font-size', '0.8em')
 
 			offsetY = 50
 			for (const [key, category] of map) {
 				const assay = key.split(',')[1]
-				if(key.includes(dtlabel))
-				G
-				.append('text')
-				.attr('x', offsetX)
-				.attr('y', offsetY)
-				.text(`${category.sampleCount}${category.hasOrigin?assay[0]: ''}`)
-				.style('font-size', '0.8em')
+				if (key.includes(dtlabel))
+					G.append('text')
+						.attr('x', offsetX)
+						.attr('y', offsetY)
+						.text(`${category.sampleCount}${category.hasOrigin ? assay[0] : ''}`)
+						.style('font-size', '0.8em')
 				offsetY += 25
 			}
 			offsetX += step
-
 		}
 		return offsetY
-		
 	}
 
 	hideCategory(G, tw, key, hide) {
