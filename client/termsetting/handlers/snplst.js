@@ -49,7 +49,7 @@ export function getHandler(self) {
 		},
 
 		getPillStatus() {
-			if (!self.term || !self.term.snps) return
+			if (!self.term?.snps) return
 			// return number of invalid entries
 			const invalid = self.term.snps.reduce((i, j) => i + (j.invalid || !j.alleles ? 1 : 0), 0)
 			if (invalid) return { text: invalid + ' invalid' }
@@ -65,168 +65,224 @@ export function getHandler(self) {
 	}
 }
 
+/*
+ui switches between two modes
+1. input ui - show textarea for user to enter snp list and validate
+              has "validate" button, click to launch edit ui and do not run callback
+2. edit ui  - after validation, table display list of snps and show options
+              has "submit" button, click to run callback
+			  can click "Back to input" to go back to input ui
+
+if the instance carries snps (self.term.snps), directly enter edit ui
+else, enter input ui; after validating raw input, show edit ui
+*/
 async function makeEditMenu(self, div0) {
 	const div = div0.append('div').style('margin', '15px')
 
-	/*
-	ui has two modes
-	1. input mode - show textarea for user to enter snp list and validate
-	2. edit mode - after validation, table display list of snps and show options
-	*/
-
 	const select_ancestry = await mayRestrictAncestry(self, div)
 
-	// 1: holder for input mode
-	const inputDiv = div.append('div')
-	const textarea = inputDiv
+	// input ui holder
+	const inputUIholder = div.append('div')
+	const textarea = inputUIholder
 		.append('textarea')
 		.attr('rows', 5)
 		.attr('cols', 20)
 		.attr('placeholder', 'Enter variants')
-
-	inputDiv
+	inputUIholder
 		.append('div')
 		.style('opacity', 0.8)
 		.style('font-size', '.8em')
 		.html(
-			'One variant per line. Variant rsID in first column and optional effect allele in second column.' +
+			'One variant per line. Max 500 allowed. Variant rsID in first column and optional effect allele in second column.' +
 				'<br>Effect allele is allele that will be used for testing in regression analysis.<br><br>Example:' +
 				'<br><br>rs1641548<br>rs1642793 C<br>rs1042522<br>rs1642782 G'
 		)
 
-	// 2: holder for edit mode
-	const snplstTableDiv = div.append('div').style('margin-bottom', '20px')
+	const validateBtn = inputUIholder
+		.append('div')
+		.style('margin-top', '15px')
+		.append('button')
+		.text('Validate variants')
+		.on('click', async () => {
+			// parse input text
+			const snps = parseSnpFromText(textarea)
+			/*
+			if (snps.length && snps.find(snp => snp.effectAllele)) {
+				// if user provides custom effect allele in input text
+				// then set the select_alleleType option to be 'custom'
+				select_alleleType.selectAll('option').nodes()[2].selected = 'selected'
+				//no hint message shown for "SET EFFECT ALLELE AS" when users provide custome effect allele in input text.
+				self.dom.setEffectAlleleAsHint.text('')
+			}
+			*/
 
-	// holder of options
-	const optionsDiv = div.append('div')
+			if (!snps.length) return window.alert('No valid variants')
+
+			// have valid input, if no term yet, create new
+			if (!self.term) {
+				self.term = { id: makeId(), type: 'snplst' }
+			}
+			if (self.term.snps) {
+				// append new ones to existing array
+				for (const n of snps) {
+					if (self.term.snps.find(i => i.rsid == n.rsid)) continue
+					self.term.snps.push(n)
+				}
+			} else {
+				self.term.snps = snps
+			}
+			self.term.name = getTermName(self.term.snps)
+
+			// if self.q already exists, do not overwrite to keep settings e.g. doNotRestrictAncestry
+			if (!self.q) self.q = {}
+
+			// don't hide tip only when textarea have values
+			self.doNotHideTipInMain = true
+
+			if (self.dom.pill_termname) {
+				/* pill ui has already been created
+				this is updating snps for an existing term
+				as termsetting.js will not call self.enterPill() for pills already there,
+				must do this for pill name to update to reflect current number of snps
+				*/
+				self.dom.pill_termname.text(self.term.name)
+			}
+
+			validateBtn.text('Validating...').property('disabled', true)
+
+			try {
+				await validateInput(self)
+			} catch (e) {
+				alert('Error: ' + (e.message || e))
+				validateBtn.text('Validate variants').property('disabled', false)
+				return
+			}
+
+			// successfully validated, q.cacheid is set
+
+			// fill default q{} parameters to run summary
+			if (!Number.isFinite(self.q.AFcutoff)) self.q.AFcutoff = 5
+			if (!Number.isInteger(self.q.alleleType)) self.q.alleleType = 0
+			if (!Number.isInteger(self.q.geneticModel)) self.q.geneticModel = 0
+			if (!Number.isInteger(self.q.missingGenotype)) self.q.missingGenotype = 0
+			if (select_ancestry) {
+				self.q.restrictAncestry = select_ancestry.node().options[
+					select_ancestry.property('selectedIndex')
+				].__ancestry_obj
+			}
+
+			await makeSampleSummary(self)
+
+			inputUIholder.style('display', 'none')
+			editUIholder.style('display', '')
+
+			if (self.dom.snplst_table) {
+				renderSnpEditTable(self, select_alleleType)
+			} else {
+				initSnpEditTable(snplstTableDiv, self, select_alleleType)
+			}
+		})
+
+	// edit ui: either directly populate with existing snps, or remain hiden for now and allow input ui to switch to this
+	const editUIholder = div.append('div')
+
+	// switch back to input
+	editUIholder
+		.append('p')
+		.append('span')
+		.html('&laquo; Back to input')
+		.attr('class', 'sja_clbtext')
+		.on('click', () => {
+			inputUIholder.style('display', '')
+			editUIholder.style('display', 'none')
+			validateBtn.text('Validate variants').property('disabled', false)
+		})
+
+	const snplstTableDiv = editUIholder.append('div').style('margin-bottom', '20px')
 	const [input_AFcutoff, select_alleleType, select_geneticModel, select_missingGenotype] = makeSnpSelect(
-		optionsDiv,
+		editUIholder.append('div'),
 		self,
 		'snplst'
 	)
 
-	if (self.term?.snps?.length) {
-		// snps given, show "edit mode" ui
-		// hide "input mode" ui and restrictAncestries menu
-		inputDiv.style('display', 'none')
-		self.dom.restrictAncestriesRow?.remove()
-		initSnpEditTable(snplstTableDiv, self, select_alleleType)
-	} else {
-		// snps not given, show "input mode" ui, hide "edit" ui
-		snplstTableDiv.style('display', 'none')
-		optionsDiv.style('display', 'none')
-		// discard reference to the snplst_table
-		// this is necessary if user deletes the snplst variable and
-		// adds a new snplst variable
-		// when snplst_table is empty then initSnpEditTable will be called (instead of renderSnpEditTable) to build new edit table
-		delete self.dom.snplst_table
-	}
-
-	// bottom row for button and message; always visible
-	const btnRow = div.append('div')
-	// submit button
-	const submit_btn = btnRow
+	// bottom row for submit button and message
+	const btnRow = editUIholder.append('div').style('margin-top', '15px')
+	btnRow
 		.append('button')
-		.style('margin-top', '15px')
-		.text(self.term?.snps?.length ? 'Submit' : 'Validate variants')
+		.text('Submit')
+		.on('click', async () => {
+			self.term.snps = self.term.snps.filter(i => !i.tobe_deleted)
 
-	//add a submit button hint when button is "Submit" not when button is "Validate Variants"
-	const buttonHint = btnRow
+			self.term.name = getTermName(self.term.snps)
+
+			if (self.dom.pill_termname) {
+				/* pill ui has already been created
+				this is updating snps for an existing term
+				as termsetting.js will not call self.enterPill() for pills already there,
+				must do this for pill name to update to reflect current number of snps
+				*/
+				self.dom.pill_termname.text(self.term.name)
+			}
+
+			try {
+				await validateInput(self)
+			} catch (e) {
+				alert('Error: ' + (e.message || e))
+			}
+			//q.cacheid is set
+
+			{
+				const v = Number(input_AFcutoff.property('value'))
+				self.q.AFcutoff = v < 0 || v >= 100 ? 5 : v // set to default if invalid
+			}
+			self.q.alleleType = select_alleleType.property('selectedIndex')
+			self.q.geneticModel = select_geneticModel.property('selectedIndex')
+			self.q.missingGenotype = select_missingGenotype.property('selectedIndex')
+			if (select_ancestry) {
+				self.q.restrictAncestry = select_ancestry.node().options[
+					select_ancestry.property('selectedIndex')
+				].__ancestry_obj
+			}
+
+			await makeSampleSummary(self)
+
+			if (self.dom.snplst_table) {
+				renderSnpEditTable(self, select_alleleType)
+			} else {
+				initSnpEditTable(snplstTableDiv, self, select_alleleType)
+			}
+
+			delete self.doNotHideTipInMain
+
+			self.runCallback()
+			self.updateUI()
+		})
+
+	//add a hint
+	btnRow
 		.append('span')
 		.style('padding-left', '15px')
 		.style('opacity', 0.8)
 		.style('font-size', '.8em')
-		.style('display', self.term?.snps?.length ? '' : 'none')
 		.text('Must press Submit button to apply changes.')
 
-	submit_btn.on('click', async () => {
-		snplstTableDiv.style('display', '')
+	// both input and edit UIs are rendered
+	// decide visibility of edit and input UIs
 
-		// parse input text
-		const snps = parseSnpFromText(textarea, self)
-		if (snps.length && snps.find(snp => snp.effectAllele)) {
-			// if user provides custom effect allele in input text
-			// then set the select_alleleType option to be 'custom'
-			select_alleleType.selectAll('option').nodes()[2].selected = 'selected'
-			//no hint message shown for "SET EFFECT ALLELE AS" when users provide custome effect allele in input text.
-			self.dom.setEffectAlleleAsHint.text('')
-		}
-		if (self.term) {
-			if (!self.term.snps) self.term.snps = [] // possible if term of a different type was there before?
-
-			// already have term;
-			// any valid input in textarea are added to existing term
-			for (const s of snps) self._tmp_snps.push(s)
-
-			// update self.term.snps with edit menu snps if changed
-			self.term.snps = updateSnps(self.term.snps, self._tmp_snps)
-		} else {
-			// no term; require valid submission in textarea
-			if (!snps.length) return window.alert('No valid variants')
-			// have valid input; create new term
-			self.term = { id: makeId(), snps } // term does not have id
-		}
-
-		// if self.q already exists, do not overwrite to keep settings e.g. doNotRestrictAncestry
-		if (!self.q) self.q = {}
-
-		if (snps.length) {
-			// don't hide tip only when textarea have values
-			self.doNotHideTipInMain = true
-		}
-		// set term type in case the instance had a different term before
-		self.term.type = 'snplst'
-		self.term.name = getTermName(self.term.snps)
-		if (self.dom.pill_termname) {
-			/* pill ui has already been created
-			this is updating snps for an existing term
-			as termsetting.js will not call self.enterPill() for pills already there,
-			must do this for pill name to update to reflect current number of snps
-			*/
-			self.dom.pill_termname.text(self.term.name)
-		}
-		submit_btn.property('disabled', true).text('Validating variants...')
-		try {
-			await validateInput(self)
-		} catch (e) {
-			alert('Error: ' + (e.message || e))
-		}
-		//q.cacheid is set
-
-		//after user gives valid input, hide the rsIDs input textbox and show the setting options
-		if (self.term?.snps?.length) {
-			inputDiv.style('display', 'none')
-			optionsDiv.style('display', '')
-			self.dom.restrictAncestriesRow?.remove()
-		}
-
-		{
-			const v = Number(input_AFcutoff.property('value'))
-			self.q.AFcutoff = v < 0 || v >= 100 ? 5 : v // set to default if invalid
-		}
-		self.q.alleleType = select_alleleType.property('selectedIndex')
-		self.q.geneticModel = select_geneticModel.property('selectedIndex')
-		self.q.missingGenotype = select_missingGenotype.property('selectedIndex')
-		if (select_ancestry) {
-			self.q.restrictAncestry = select_ancestry.node().options[select_ancestry.property('selectedIndex')].__ancestry_obj
-		}
-
-		await makeSampleSummary(self)
-
-		if (self.dom.snplst_table) {
-			renderSnpEditTable(self, select_alleleType)
-		} else {
-			initSnpEditTable(snplstTableDiv, self, select_alleleType)
-		}
-
-		textarea.property('value', '')
-
-		submit_btn.property('disabled', false).text('Submit')
-
-		self.runCallback()
-		self.updateUI()
-		buttonHint.style('display', '') //shown the submit button hint for the submit button on second window
-	})
+	if (self.term?.snps?.length) {
+		// snps given, show "edit mode" ui
+		// hide "input mode" ui and restrictAncestries menu
+		initSnpEditTable(snplstTableDiv, self, select_alleleType)
+		inputUIholder.style('display', 'none')
+	} else {
+		// snps not given, show "input mode" ui, hide "edit" ui
+		editUIholder.style('display', 'none')
+		// discard reference to the snplst_table
+		// this is necessary if user deletes the snplst variable and
+		// adds a new snplst variable
+		// when snplst_table is empty then initSnpEditTable will be called (instead of renderSnpEditTable) to build new edit table
+		//delete self.dom.snplst_table
+	}
 }
 
 function initSnpEditTable(div, self, select_alleleType) {
@@ -242,8 +298,6 @@ function initSnpEditTable(div, self, select_alleleType) {
 }
 
 function renderSnpEditTable(self, select_alleleType) {
-	self._tmp_snps = structuredClone(self.term.snps) // TODO purpose?
-
 	// allow to delete or add to this list
 	self.dom.snplst_table.selectAll('*').remove()
 	const title_tr = self.dom.snplst_table.append('tr').style('opacity', 0.4)
@@ -390,6 +444,7 @@ function renderSnpEditTable(self, select_alleleType) {
 	}
 }
 
+// not in use
 function updateSnps(snps, _tmp_snps) {
 	// snp 'deleted' from edit menu or effectAllele changed
 	for (const [i, s] of snps.entries()) {
@@ -416,21 +471,19 @@ function getTermName(snps) {
 	return snps.length + ' variant' + (snps.length > 1 ? 's' : '')
 }
 
-function parseSnpFromText(textarea, self) {
+function parseSnpFromText(textarea) {
 	// may support chr:pos
 	const text = textarea.property('value')
 	const snps = []
 	for (const tmp of text.trim().split('\n')) {
 		const [rsid, ale] = tmp.trim().split(/[\s\t]/)
-		if (rsid) {
-			// snp already in list, don't add again
-			if (self.term && self.term.snps && self.term.snps.find(i => i.rsid == rsid)) continue
-			if (snps.find(i => i.rsid == rsid)) continue // duplicate
-			const s = { rsid }
-			if (ale) s.effectAllele = ale
-			snps.push(s)
-		}
+		if (!rsid) continue
+		if (snps.find(i => i.rsid == rsid)) continue // duplicate
+		const s = { rsid }
+		if (ale) s.effectAllele = ale
+		snps.push(s)
 	}
+	if (snps.length > 500) return snps.slice(0, 500)
 	return snps
 }
 
@@ -675,7 +728,7 @@ export async function mayRestrictAncestry(self, holder) {
 
 	const tdbcfg = await self.vocabApi.getTermdbConfig()
 	if (!tdbcfg.restrictAncestries) return
-	const row = holder.append('div').style('margin', '15px')
+	const row = holder.append('div').style('margin-bottom', '15px')
 	self.dom.restrictAncestriesRow = row
 	row
 		.append('span')
