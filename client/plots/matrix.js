@@ -186,11 +186,11 @@ class Matrix {
 			this.data = await this.app.vocabApi.getAnnotatedSampleData(reqOpts)
 			this.dom.loadingDiv.html('Processing data ...')
 
-			this.setAutoDimensions()
 			this.setSampleGroups(this.data)
 			this.setTermOrder(this.data)
 			this.setSampleOrder(this.data)
 			this.setSampleCountsByTerm()
+			this.setAutoDimensions()
 			this.setLayout()
 			this.serieses = this.getSerieses(this.data)
 			this.dom.loadingDiv.html('').style('display', 'none')
@@ -266,7 +266,6 @@ class Matrix {
 
 		if (!m.colw) this.autoDimensions.add('colw')
 		else this.autoDimensions.delete('colw')
-
 		if (!m.rowh) this.autoDimensions.add('rowh')
 		else this.autoDimensions.delete('rowh')
 
@@ -277,7 +276,7 @@ class Matrix {
 				: s.sampleLabelOffset + s.sampleGrpLabelOffset
 			s.colw = Math.min(
 				16,
-				Math.max(1, Math.round((screen.availWidth - offset - 300) / this.data.lst.length - s.colspace))
+				Math.max(1, Math.round((screen.availWidth - offset - 300) / this.sampleOrder.length - s.colspace))
 			)
 			if (s.colw == 1) s.colspace = 0
 		}

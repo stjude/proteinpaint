@@ -136,10 +136,8 @@ class Scatter {
 		this.dom.termstip.hide()
 	}
 
-	initAxes()
-	{
-		if(this.data.samples.length == 0)
-			return
+	initAxes() {
+		if (this.data.samples.length == 0) return
 		const s0 = this.data.samples[0] //First sample to start reduce comparisons
 		const [xMin, xMax, yMin, yMax] = this.data.samples.reduce(
 			(s, d) => [d.x < s[0] ? d.x : s[0], d.x > s[1] ? d.x : s[1], d.y < s[2] ? d.y : s[2], d.y > s[3] ? d.y : s[3]],
@@ -164,14 +162,13 @@ class Scatter {
 		if (this.config.colorTW?.q.mode === 'continuous') {
 			const [min, max] = this.cohortSamples.reduce(
 				(s, d) => [d.value < s[0] ? d.category : s[0], d.category > s[1] ? d.category : s[1]],
-				[this.cohortSamples[0].category, this.cohortSamples[0].category])
-				
+				[this.cohortSamples[0].category, this.cohortSamples[0].category]
+			)
+
 			this.colorGenerator = d3Linear()
 				.domain([min, max])
 				.range([this.startColor, this.stopColor])
 		}
-
-		
 	}
 
 	// creates an opts object for the vocabApi.someMethod(),
@@ -1105,7 +1102,7 @@ class Scatter {
 								groups: qgroups
 							}
 						}
-						config.settings.matrix.colw = 10
+						config.settings.matrix.colw = 0
 						this.app.dispatch({
 							type: 'plot_create',
 							config
@@ -1296,8 +1293,7 @@ function setRenderers(self) {
 			legendG = svg.select('.sjpcb-scatter-legend')
 			clipRect = svg.select(`defs > clipPath > rect`)
 		}
-		if(self.axisBottom)
-		{
+		if (self.axisBottom) {
 			xAxis.call(self.axisBottom)
 			yAxis.call(self.axisLeft)
 		}
