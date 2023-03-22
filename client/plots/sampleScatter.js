@@ -166,16 +166,6 @@ class Scatter {
 				(s, d) => [d.value < s[0] ? d.category : s[0], d.category > s[1] ? d.category : s[1]],
 				[this.cohortSamples[0].category, this.cohortSamples[0].category])
 				
-			this.xAxisScale = d3Linear()
-				.domain([xMin, xMax])
-				.range([this.axisOffset.x, this.settings.svgw + this.axisOffset.x])
-
-			this.axisBottom = axisBottom(this.xAxisScale)
-			this.yAxisScale = d3Linear()
-				.domain([yMax, yMin])
-				.range([this.axisOffset.y, this.settings.svgh + this.axisOffset.y])
-			this.axisLeft = axisLeft(this.yAxisScale)
-			
 			this.colorGenerator = d3Linear()
 				.domain([min, max])
 				.range([this.startColor, this.stopColor])
