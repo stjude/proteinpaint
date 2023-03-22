@@ -130,7 +130,6 @@ class Scatter {
 		this.initAxes()
 		this.render()
 		this.setTools()
-		this.lassoReset()
 		this.updateGroupsButton()
 		this.dom.tip.hide()
 		this.dom.termstip.hide()
@@ -1205,6 +1204,7 @@ function setRenderers(self) {
 		}
 
 		function updateCharts() {
+			self.lassoReset()
 			const s = self.settings
 			chartDiv.transition().duration(s.duration)
 			renderSVG(chartDiv.select('svg'), chartDiv, s, s.duration, data)
@@ -1372,10 +1372,10 @@ function setRenderers(self) {
 
 	self.lassoReset = () => {
 		const mainG = self.dom.holder.select('.sjpcb-scatter-mainG')
-
+		const items = mainG.select('.sjpcb-scatter-series').selectAll('path')
 		if (self.lasso)
 			self.lasso
-				.items(mainG.select('.sjpcb-scatter-series').selectAll('path'))
+				.items(items)
 				.targetArea(mainG)
 				.on('start', lasso_start)
 				.on('draw', lasso_draw)
