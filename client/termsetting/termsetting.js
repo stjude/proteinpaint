@@ -462,8 +462,8 @@ function setInteractivity(self) {
 					if (option.isDictionary) {
 						await self.showTree(self.dom.tip.d.node())
 					} else if (option.termtype) {
-						// pass in default q{}
-						if (option.q) self.q = option.q
+						// pass in default q{} to customize settings in edit menu
+						if (option.q) self.q = structuredClone(option.q)
 						await self.setHandler(option.termtype)
 						self.handler.showEditMenu(self.dom.tip.d)
 					} else {

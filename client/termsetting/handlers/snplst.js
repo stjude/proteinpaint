@@ -65,63 +65,56 @@ export function getHandler(self) {
 	}
 }
 
-async function makeEditMenu(self, div) {
+async function makeEditMenu(self, div0) {
+	const div = div0.append('div').style('margin', '15px')
+
+	/*
+	ui has two modes
+	1. input mode - show textarea for user to enter snp list and validate
+	2. edit mode - after validation, table display list of snps and show options
+	*/
+
 	const select_ancestry = await mayRestrictAncestry(self, div)
 
-	// table has two rows
-	const table = div.append('table').style('margin', '5px 10px 30px 10px')
-
-	// first row has 1 <td>, shows snp list
-	const snplst_td = table
-		.append('tr')
-		.append('td')
-		.attr('colspan', 2)
-		.style('display', 'none')
-
-	// second row has 2 <td>
-	const tr = table.append('tr')
-
-	// left column
-	const tdleft = tr
-		.append('td')
-		.style('vertical-align', 'top')
-		.style('padding-right', '20px')
-
-	const textarea = tdleft
+	// 1: holder for input mode
+	const inputDiv = div.append('div')
+	const textarea = inputDiv
 		.append('textarea')
 		.attr('rows', 5)
 		.attr('cols', 20)
 		.attr('placeholder', 'Enter variants')
-	tdleft
-		.append('div')
-		.style('opacity', 0.4)
-		.style('font-size', '.7em')
-		.html(
-			'One variant per line. Variant rsID in first column and optional effect allele in second column.<br><br>Effect allele is allele that will be used for testing in regression analysis.<br><br>Example:'
-		)
-		.append('div')
-		.style('padding-top', '5px')
-		.html('rs1641548<br>rs1642793 C<br>rs1042522<br>rs1642782 G')
 
-	// right column
-	const tdright = tr.append('td').style('vertical-align', 'top')
-	const snpSelect = makeSnpSelect(tdright, self, 'snplst')
-	const input_AFcutoff = snpSelect[0]
-	const select_alleleType = snpSelect[1]
-	const select_geneticModel = snpSelect[2]
-	const select_missingGenotype = snpSelect[3]
+	inputDiv
+		.append('div')
+		.style('opacity', 0.8)
+		.style('font-size', '.8em')
+		.html(
+			'One variant per line. Variant rsID in first column and optional effect allele in second column.' +
+				'<br>Effect allele is allele that will be used for testing in regression analysis.<br><br>Example:' +
+				'<br><br>rs1641548<br>rs1642793 C<br>rs1042522<br>rs1642782 G'
+		)
+
+	// 2: holder for edit mode
+	const snplstTableDiv = div.append('div').style('margin-bottom', '20px')
+
+	// holder of options
+	const optionsDiv = div.append('div')
+	const [input_AFcutoff, select_alleleType, select_geneticModel, select_missingGenotype] = makeSnpSelect(
+		optionsDiv,
+		self,
+		'snplst'
+	)
 
 	if (self.term?.snps?.length) {
-		// snps given, generate snplst table
-		// hide submission text box and restrictAncestries menu
-		snplst_td.style('display', '')
-		tdleft.style('display', 'none')
+		// snps given, show "edit mode" ui
+		// hide "input mode" ui and restrictAncestries menu
+		inputDiv.style('display', 'none')
 		self.dom.restrictAncestriesRow?.remove()
-		initSnpEditTable(snplst_td, self, select_alleleType)
+		initSnpEditTable(snplstTableDiv, self, select_alleleType)
 	} else {
-		// snps not given
-		// hide setting options
-		tdright.style('display', 'none')
+		// snps not given, show "input mode" ui, hide "edit" ui
+		snplstTableDiv.style('display', 'none')
+		optionsDiv.style('display', 'none')
 		// discard reference to the snplst_table
 		// this is necessary if user deletes the snplst variable and
 		// adds a new snplst variable
@@ -129,122 +122,120 @@ async function makeEditMenu(self, div) {
 		delete self.dom.snplst_table
 	}
 
+	// bottom row for button and message; always visible
+	const btnRow = div.append('div')
 	// submit button
-	const submit_btn = div
+	const submit_btn = btnRow
 		.append('button')
-		.style('margin', '0px 15px 15px 15px')
-		.text(self.term && self.term.snps && self.term.snps.length ? 'Submit' : 'Validate variants')
-		.on('click', async () => {
-			snplst_td.style('display', '')
-			// parse input text
-			const snps = parseSnpFromText(textarea, self)
-			if (snps.length && snps.find(snp => snp.effectAllele)) {
-				// if user provides custom effect allele in input text
-				// then set the select_alleleType option to be 'custom'
-				select_alleleType.selectAll('option').nodes()[2].selected = 'selected'
-				//no hint message shown for "SET EFFECT ALLELE AS" when users provide custome effect allele in input text.
-				self.dom.setEffectAlleleAsHint.text('')
-			}
-			if (self.term) {
-				if (!self.term.snps) self.term.snps = [] // possible if term of a different type was there before?
-				// already have term;
-				// any valid input in textarea are added to existing term
-				for (const s of snps) self._tmp_snps.push(s)
-				// update self.term.snps with edit menu snps if changed
-				self.term.snps = updateSnps(self.term.snps, self._tmp_snps)
-			} else {
-				// no term; require valid submission in textarea
-				if (!snps.length) return window.alert('No valid variants')
-				// have valid input; create new term
-				self.term = { id: makeId(), snps } // term does not have id
-			}
-
-			// if self.q already exists, do not overwrite to keep settings e.g. doNotRestrictAncestry
-			if (!self.q) self.q = {}
-
-			if (snps.length) {
-				// don't hide tip only when textarea have values
-				self.doNotHideTipInMain = true
-			}
-			// set term type in case the instance had a different term before
-			self.term.type = 'snplst'
-			self.term.name = getTermName(self.term.snps)
-			if (self.dom.pill_termname) {
-				/* pill ui has already been created
-				this is updating snps for an existing term
-				as termsetting.js will not call self.enterPill() for pills already there,
-				must do this for pill name to update to reflect current number of snps
-				*/
-				self.dom.pill_termname.text(self.term.name)
-			}
-			submit_btn.property('disabled', true)
-			submit_btn.text('Validating variants...')
-			try {
-				await validateInput(self)
-			} catch (e) {
-				alert('Error: ' + (e.message || e))
-			}
-			//q.cacheid is set
-
-			//after user gives valid input, hide the rsIDs input textbox and show the setting options
-			if (self.term && self.term.snps && self.term.snps.length) {
-				tdleft.style('display', 'none')
-				tdright.style('display', 'inline-block')
-				self.dom.restrictAncestriesRow?.remove()
-			}
-
-			{
-				const v = Number(input_AFcutoff.property('value'))
-				self.q.AFcutoff = v < 0 || v >= 100 ? 5 : v // set to default if invalid
-			}
-			self.q.alleleType = select_alleleType.property('selectedIndex')
-			self.q.geneticModel = select_geneticModel.property('selectedIndex')
-			self.q.missingGenotype = select_missingGenotype.property('selectedIndex')
-			if (select_ancestry) {
-				self.q.restrictAncestry = select_ancestry.node().options[
-					select_ancestry.property('selectedIndex')
-				].__ancestry_obj
-			}
-
-			await makeSampleSummary(self)
-
-			if (self.dom.snplst_table) {
-				renderSnpEditTable(self, select_alleleType)
-			} else {
-				initSnpEditTable(snplst_td, self, select_alleleType)
-			}
-
-			textarea.property('value', '')
-			submit_btn.property('disabled', false)
-			submit_btn.text('Submit')
-			self.runCallback()
-			self.updateUI()
-			buttonHint.style('display', 'inline-block') //shown the submit button hint for the submit button on second window
-		})
+		.style('margin-top', '15px')
+		.text(self.term?.snps?.length ? 'Submit' : 'Validate variants')
 
 	//add a submit button hint when button is "Submit" not when button is "Validate Variants"
-	const buttonHint = div
-		.append('div')
-		.style('display', 'inline-block')
-		.style('margin', '5px')
-		.style('opacity', 0.4)
-		.style('font-size', '.7em')
+	const buttonHint = btnRow
+		.append('span')
+		.style('padding-left', '15px')
+		.style('opacity', 0.8)
+		.style('font-size', '.8em')
+		.style('display', self.term?.snps?.length ? '' : 'none')
 		.text('Must press Submit button to apply changes.')
-	if (!(self.term && self.term.snps && self.term.snps.length)) {
-		buttonHint.style('display', 'none')
-	}
+
+	submit_btn.on('click', async () => {
+		snplstTableDiv.style('display', '')
+
+		// parse input text
+		const snps = parseSnpFromText(textarea, self)
+		if (snps.length && snps.find(snp => snp.effectAllele)) {
+			// if user provides custom effect allele in input text
+			// then set the select_alleleType option to be 'custom'
+			select_alleleType.selectAll('option').nodes()[2].selected = 'selected'
+			//no hint message shown for "SET EFFECT ALLELE AS" when users provide custome effect allele in input text.
+			self.dom.setEffectAlleleAsHint.text('')
+		}
+		if (self.term) {
+			if (!self.term.snps) self.term.snps = [] // possible if term of a different type was there before?
+
+			// already have term;
+			// any valid input in textarea are added to existing term
+			for (const s of snps) self._tmp_snps.push(s)
+
+			// update self.term.snps with edit menu snps if changed
+			self.term.snps = updateSnps(self.term.snps, self._tmp_snps)
+		} else {
+			// no term; require valid submission in textarea
+			if (!snps.length) return window.alert('No valid variants')
+			// have valid input; create new term
+			self.term = { id: makeId(), snps } // term does not have id
+		}
+
+		// if self.q already exists, do not overwrite to keep settings e.g. doNotRestrictAncestry
+		if (!self.q) self.q = {}
+
+		if (snps.length) {
+			// don't hide tip only when textarea have values
+			self.doNotHideTipInMain = true
+		}
+		// set term type in case the instance had a different term before
+		self.term.type = 'snplst'
+		self.term.name = getTermName(self.term.snps)
+		if (self.dom.pill_termname) {
+			/* pill ui has already been created
+			this is updating snps for an existing term
+			as termsetting.js will not call self.enterPill() for pills already there,
+			must do this for pill name to update to reflect current number of snps
+			*/
+			self.dom.pill_termname.text(self.term.name)
+		}
+		submit_btn.property('disabled', true).text('Validating variants...')
+		try {
+			await validateInput(self)
+		} catch (e) {
+			alert('Error: ' + (e.message || e))
+		}
+		//q.cacheid is set
+
+		//after user gives valid input, hide the rsIDs input textbox and show the setting options
+		if (self.term?.snps?.length) {
+			inputDiv.style('display', 'none')
+			optionsDiv.style('display', '')
+			self.dom.restrictAncestriesRow?.remove()
+		}
+
+		{
+			const v = Number(input_AFcutoff.property('value'))
+			self.q.AFcutoff = v < 0 || v >= 100 ? 5 : v // set to default if invalid
+		}
+		self.q.alleleType = select_alleleType.property('selectedIndex')
+		self.q.geneticModel = select_geneticModel.property('selectedIndex')
+		self.q.missingGenotype = select_missingGenotype.property('selectedIndex')
+		if (select_ancestry) {
+			self.q.restrictAncestry = select_ancestry.node().options[select_ancestry.property('selectedIndex')].__ancestry_obj
+		}
+
+		await makeSampleSummary(self)
+
+		if (self.dom.snplst_table) {
+			renderSnpEditTable(self, select_alleleType)
+		} else {
+			initSnpEditTable(snplstTableDiv, self, select_alleleType)
+		}
+
+		textarea.property('value', '')
+
+		submit_btn.property('disabled', false).text('Submit')
+
+		self.runCallback()
+		self.updateUI()
+		buttonHint.style('display', '') //shown the submit button hint for the submit button on second window
+	})
 }
 
-function initSnpEditTable(snplst_td, self, select_alleleType) {
-	snplst_td.style('padding-bottom', '25px')
-	self.dom.snplst_table = snplst_td.append('table')
+function initSnpEditTable(div, self, select_alleleType) {
+	self.dom.snplst_table = div.append('table')
 	renderSnpEditTable(self, select_alleleType)
-
-	snplst_td
-		.append('div')
-		.style('opacity', 0.4)
-		.style('font-size', '.7em')
-		.style('padding-top', '5px')
+	div
+		.append('p')
+		.style('opacity', 0.8)
+		.style('font-size', '.8em')
 		.html(
 			'<sup><b>*</b></sup> Number of samples with at least one valid genotype.<br><sup><b>**</b></sup>Effect alleles are highlighted in red. Click on an allele to set as the effect allele.'
 		)
