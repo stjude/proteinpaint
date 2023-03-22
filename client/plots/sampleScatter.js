@@ -143,7 +143,7 @@ class Scatter {
 		const s0 = this.data.samples[0] //First sample to start reduce comparisons
 		const [xMin, xMax, yMin, yMax] = this.data.samples.reduce(
 			(s, d) => [d.x < s[0] ? d.x : s[0], d.x > s[1] ? d.x : s[1], d.y < s[2] ? d.y : s[2], d.y > s[3] ? d.y : s[3]],
-			[s0?.x, s0?.x, s0?.y, s0?.y]
+			[s0.x, s0.x, s0.y, s0.y]
 		)
 		this.xAxisScale = d3Linear()
 			.domain([xMin, xMax])
