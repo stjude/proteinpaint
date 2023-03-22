@@ -40,6 +40,7 @@ validate_query_snvindel
 validate_query_svfusion
 	svfusionByRangeGetter_file
 validate_query_ld
+validate_query_singleSampleMutation
 validate_variant2samples
 validate_ssm2canonicalisoform
 mayAdd_refseq2ensembl
@@ -66,6 +67,7 @@ export async function init(ds, genome, _servconfig, app = null, basepath = null)
 		await validate_query_svfusion(ds, genome)
 		await validate_query_geneCnv(ds, genome)
 		await validate_query_ld(ds, genome)
+		await validate_query_singleSampleMutation(ds, genome)
 
 		validate_variant2samples(ds)
 		validate_ssm2canonicalisoform(ds)
@@ -403,6 +405,11 @@ async function call_barchart_data(twLst, q, combination, ds) {
 function copy_queries(ds, dscopy) {
 	if (!ds.queries) return
 	const copy = {}
+
+	if (ds.queries.singleSampleMutation) {
+		copy.singleSampleMutation = 1
+	}
+
 	const qs = ds.queries.snvindel
 	if (qs) {
 		dscopy.has_skewer = true
@@ -1040,6 +1047,7 @@ async function validate_query_svfusion(ds, genome) {
 		}
 	}
 }
+
 async function validate_query_ld(ds, genome) {
 	const q = ds.queries.ld
 	if (!q) return
@@ -1054,6 +1062,17 @@ async function validate_query_ld(ds, genome) {
 	if (!q.overlay) throw 'ld.overlay{} missing'
 	if (!q.overlay.color_0) throw 'ld.overlay.color_0 missing'
 	if (!q.overlay.color_1) throw 'ld.overlay.color_1 missing'
+}
+
+async function validate_query_singleSampleMutation(ds, genome) {
+	const q = ds.queries.singleSampleMutation
+	if (!q) return
+	if (q.gdcapi) {
+		gdc.validate_query_singleSampleMutation(ds)
+		// q.get() added
+	} else {
+		throw 'unknown query method for singleSampleMutation'
+	}
 }
 
 /*

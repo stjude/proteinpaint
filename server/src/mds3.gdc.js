@@ -1194,6 +1194,10 @@ function termid2size_filters(p, ds) {
 	return f
 }
 
+export function validate_query_singleSampleMutation(ds, genome) {
+	// add getter and call
+}
+
 /************************************************
 for gdc bam slicing UI
 */
@@ -1210,61 +1214,66 @@ export function handle_gdc_ssms(genomes) {
 			const genome = genomes[req.query.genome]
 			if (!genome) throw 'invalid genome'
 			if (!req.query.case_id) throw '.case_id missing'
-
-			const response = await got.post(path.join(apihost, isoform2ssm_query1_getvariant.endpoint), {
-				headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-				body: JSON.stringify({
-					size: 1000,
-					fields: isoform2ssm_query1_getvariant.fields.join(','),
-					filters: isoform2ssm_query1_getvariant.filters(req.query)
-				})
-			})
-			const re = JSON.parse(response.body)
-			const mlst = []
-			for (const hit of re.data.hits) {
-				// for each hit, create an element
-				// from list of consequences, find one from canonical isoform
-
-				// quick code to get canonical isoform of this gene
-				let gene
-				for (const c of hit.consequence) {
-					if (c.transcript && c.transcript.gene && c.transcript.gene.symbol) {
-						gene = c.transcript.gene.symbol
-						break
-					}
-				}
-				if (!gene) {
-					// no gene?
-					continue
-				}
-				const data = genome.genedb.get_gene2canonicalisoform.get(gene)
-				if (!data || !data.isoform) {
-					// no canonical isoform
-					continue
-				}
-				let c = hit.consequence.find(i => i.transcript.transcript_id == data.isoform)
-				if (!c) {
-					// no consequence match with given isoform, just use the first one
-					c = hit.consequence[0]
-				}
-				// no aa change for utr variants
-				const aa = c.transcript.aa_change || c.transcript.consequence_type
-				mlst.push({
-					mname: aa,
-					consequence: c.transcript.consequence_type,
-					gene: c.transcript.gene.symbol,
-					chr: hit.chromosome,
-					pos: hit.start_position,
-					ref: hit.reference_allele,
-					alt: hit.tumor_allele
-				})
-			}
-			res.send({ mlst })
+			res.send({ mlst: await getSingleSampleMutations(req.query, genome) })
 		} catch (e) {
 			if (e.stack) console.log(e.stack)
 			res.send({ error: e.message || e })
 		}
 	}
+}
+
+async function getSingleSampleMutations(query, genome) {
+	const response = await got.post(path.join(apihost, isoform2ssm_query1_getvariant.endpoint), {
+		headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+		body: JSON.stringify({
+			size: 1000,
+			fields: isoform2ssm_query1_getvariant.fields.join(','),
+			filters: isoform2ssm_query1_getvariant.filters(query)
+		})
+	})
+	const re = JSON.parse(response.body)
+	const mlst = []
+	for (const hit of re.data.hits) {
+		// for each hit, create an element
+		// from list of consequences, find one from canonical isoform
+
+		// quick code to get canonical isoform of this gene
+		let gene
+		for (const c of hit.consequence) {
+			if (c.transcript && c.transcript.gene && c.transcript.gene.symbol) {
+				gene = c.transcript.gene.symbol
+				break
+			}
+		}
+		if (!gene) {
+			// no gene?
+			continue
+		}
+		const data = genome.genedb.get_gene2canonicalisoform.get(gene)
+		if (!data || !data.isoform) {
+			// no canonical isoform
+			continue
+		}
+		let c = hit.consequence.find(i => i.transcript.transcript_id == data.isoform)
+		if (!c) {
+			// no consequence match with given isoform, just use the first one
+			c = hit.consequence[0]
+		}
+		// no aa change for utr variants
+		const aa = c.transcript.aa_change || c.transcript.consequence_type
+		mlst.push({
+			dt: common.dtsnvindel,
+			mname: aa,
+			consequence: c.transcript.consequence_type,
+			// TODO convert to class
+			gene: c.transcript.gene.symbol,
+			chr: hit.chromosome,
+			pos: hit.start_position,
+			ref: hit.reference_allele,
+			alt: hit.tumor_allele
+		})
+	}
+	return mlst
 }
 
 export function handle_filter2topGenes(genomes) {
