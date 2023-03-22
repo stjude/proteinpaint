@@ -76,13 +76,14 @@ export function compute_mclass(tk, refAllele, altAlleles, variant, info_str, ID,
 	}
 
 	variant.mlst = altAlleles.map(i => {
-		return {
+		const m = {
 			allele_original: i,
 			ref: refAllele,
 			alt: i,
-			vcf_id: ID,
 			type: getVariantType(refAllele, i)
 		}
+		if (ID && ID != '.') m.vcf_id = ID
+		return m
 	})
 
 	if (tk.info?.CSQ && info.CSQ) {
