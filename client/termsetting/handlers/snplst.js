@@ -529,10 +529,29 @@ async function makeSampleSummary(self) {
 	const body = { cacheid: self.q.cacheid }
 
 	// ** duplicated_and_flawed ** logic of handling tw.q.restrictAncestry
+
 	const extraFilters = []
-	if (self.q.restrictAncestry) extraFilters.push({ type: 'tvs', tvs: self.q.restrictAncestry.tvs })
+	let f // copy of self.filter and to be combined with extraFilters
+
+	if (self.q.restrictAncestry) {
+		if (self.filter) {
+			// tricky: detect if self.filter contains the same ancestry term
+			f = structuredClone(self.filter)
+			const idx = f.lst.findIndex(i => i.tvs?.term?.id == self.q.restrictAncestry.tvs.term.id)
+			if (idx != -1) {
+				// has the same term! must overwrite to avoid two tvs of the same ancestry term, each with a different ancestry which will result in 0 samples
+				f.lst[idx] = { type: 'tvs', tvs: self.q.restrictAncestry.tvs }
+			} else {
+				extraFilters.push({ type: 'tvs', tvs: self.q.restrictAncestry.tvs })
+			}
+		} else {
+			extraFilters.push({ type: 'tvs', tvs: self.q.restrictAncestry.tvs })
+		}
+	}
+
 	const filter = { type: 'tvslst', join: 'and', lst: [...extraFilters] }
-	if (self.filter) filter.lst.push(self.filter)
+	if (f) filter.lst.push(f)
+
 	const data = await self.vocabApi.getCategories(self.term, filter, body)
 	mayRunSnplstTask({ term: self.term, q: self.q }, data)
 }

@@ -51,7 +51,8 @@ this function will alter tw,
 the changes must be kept in sync between termsetting instance and app state
 */
 export function mayRunSnplstTask(tw, data) {
-	if (tw.term.type != 'snplst' && tw.term.type != 'snplocus') return
+	if (tw.term.type != 'snplst' && tw.term.type != 'snplocus') return // this func may be called on different terms, skip in that case
+	if (data.error) throw data.error
 	if (!Array.isArray(data.snps)) throw 'data.snps[] not array'
 	// note!! tw is modified here and is not written to state, but should be fine
 
