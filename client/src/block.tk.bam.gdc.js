@@ -63,6 +63,7 @@ gdc_pos=chr7:55153818-55156225
 
 const tip = new Menu({ padding: '' })
 const gdc_genome = 'hg38'
+const gdcDslabel = 'GDC' // hardcoded in multiple places
 const variantFlankingSize = 60 // bp
 const baminfo_rows = [
 	{ title: 'Entity ID', key: 'entity_id' },
@@ -553,7 +554,9 @@ export async function bamsliceui({
 		const mutationMsgDiv = ssmGeneDiv.append('p').text('Searching for mutations...')
 
 		// TODO to return all types of alterations for this case (ssm, cnv, fusion)
-		const data = await dofetch3('gdc_ssms', { body: { case_id: gdc_args.case_id, genome: gdc_genome } })
+		const data = await dofetch3('gdc_ssms', {
+			body: { case_id: gdc_args.case_id, genome: gdc_genome, dslabel: gdcDslabel }
+		})
 		if (data.error) throw data.error
 
 		////////////////////////////////////////////////////////
