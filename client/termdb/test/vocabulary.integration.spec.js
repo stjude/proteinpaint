@@ -1,11 +1,12 @@
 const tape = require('tape')
 const helpers = require('../../test/front.helpers.js')
 const vocabInit = require('../vocabulary').vocabInit
-const appInit = require('../app').appInit
 const vocabData = require('./vocabData')
 const TermdbVocab = require('../TermdbVocab').TermdbVocab
 const FrontendVocab = require('../FrontendVocab').FrontendVocab
 const d3s = require('d3-selection')
+const testAppInit = require('../../test/test.helpers').testAppInit
+const termjson = require('../../test/testdata/termjson').termjson
 
 /*************************
  reusable helper functions
@@ -28,6 +29,21 @@ function getHolder() {
 		.style('border', '1px solid #000')
 }
 
+const state = {
+	vocab: {
+		genome: 'hg38-test',
+		dslabel: 'TermdbTest'
+	},
+	debug: 1
+}
+
+async function getTermdbVocabApi(opts = {}) {
+	return new TermdbVocab({
+		app: await testAppInit(state),
+		state: opts.state || state
+	})
+}
+
 /**************
  test sections
 **************
@@ -36,7 +52,10 @@ vocabInit()
     getVocab(), custom
     Missing .state
 TermdbVocab
-    TermdbVocab()
+    getTermdbConfig()
+	getTermChildren()
+	findTerm()
+	getPercentile()
 FrontendVocab
     Missing state.vocab
 */
@@ -189,7 +208,6 @@ tape('Missing .state', test => {
 //syncTermData
 
 //getPercentile
-//syncTermData
 //getAnnotatedSampleData
     
 */
@@ -198,23 +216,186 @@ tape('\n', function(test) {
 	test.end()
 })
 
-tape.skip('TermdbVocab()', test => {
+tape('getTermdbConfig()', async test => {
 	test.timeoutAfter(100)
+	test.plan(3)
 
-	const app = {
-		opts: {
-			state: {
-				genome: 'hg38-test',
-				dslabel: 'TermdbTest'
-			}
+	/* Example of using TestApp for testing */
+	const termdbVocabApi = await getTermdbVocabApi()
+	const termdbConfig = await termdbVocabApi.getTermdbConfig()
+
+	//.allowedTermTypes
+	test.ok(Array.isArray(termdbConfig.allowedTermTypes), `Should return .allowedTermTypes array`)
+
+	//.supportedChartTypes)
+	let badArrayFound = 0
+	for (const chartsArray of Object.values(termdbConfig.supportedChartTypes)) {
+		if (!Array.isArray(chartsArray)) {
+			++badArrayFound
+			test.fail(`.supportedChartTypes value not an array: ${chartsArray}`)
+			return
 		}
 	}
+	test.ok(badArrayFound == 0, `Should only return .supportedChartTypes arrays`)
 
-	const termdbVocabApi = new TermdbVocab({
-		app,
-		state: app.opts.state,
-		fetchOpts: app.opts.fetchOpts
-	})
+	//.selectCohort
+	const selectCohort = termdbConfig.selectCohort
+	const validateSelectCohort =
+		typeof selectCohort.term == 'object' &&
+		selectCohort.term.id &&
+		selectCohort.term.type &&
+		Array.isArray(selectCohort.values)
+			? true
+			: false
+	test.ok(validateSelectCohort, 'Should include all required keys for .selectCohort')
+})
+
+tape('getTermChildren()', async test => {
+	test.timeoutAfter(100)
+	// test.plan(2)
+
+	const termdbVocabApi = await getTermdbVocabApi()
+
+	let result, testTerm
+	const cohortStr = ['ABC']
+
+	// =1 result
+	testTerm = termjson['Arrhythmias']
+	result = await termdbVocabApi.getTermChildren(testTerm, cohortStr)
+	test.equal(
+		result.lst.length,
+		1,
+		`Should return the correct number (n = 1) of child terms for test term object = ${testTerm}`
+	)
+
+	// =0 result
+	testTerm = termjson['sex']
+	result = await termdbVocabApi.getTermChildren(testTerm, cohortStr)
+	test.equal(
+		result.lst.length,
+		0,
+		`Should return the correct number (n = 0) of child terms for test term object = ${testTerm}`
+	)
+
+	const message = `Should throw for missing term and cohortValuelst args`
+	try {
+		await termdbVocabApi.getTermChildren()
+		test.fail(message)
+	} catch (e) {
+		test.pass(`${message}: ${e}`)
+	}
+
+	test.end()
+})
+
+tape('findTerm()', async test => {
+	test.timeoutAfter(500)
+	test.plan(3)
+
+	const termdbVocabApi = await getTermdbVocabApi()
+
+	let result, testTerm
+
+	// =1 result
+	testTerm = 'Arrhythmias'
+	result = await termdbVocabApi.findTerm(testTerm, 'ABC')
+	test.equal(result.lst.length, 1, `Should return the correct number (n = 1) of terms`)
+
+	// >1 result
+	testTerm = 's'
+	result = await termdbVocabApi.findTerm(testTerm, 'ABC')
+	test.equal(result.lst.length, 10, `Should return the correct number (n = 10) of terms`)
+
+	// =0 result
+	testTerm = 'ZZZ'
+	result = await termdbVocabApi.findTerm(testTerm)
+	test.equal(result.lst.length, 0, `Should return the correct number (n = 0) of terms`)
+})
+
+tape.only('getPercentile()', async test => {
+	test.timeoutAfter(500)
+	// test.plan(2)
+
+	const termdbVocabApi = await getTermdbVocabApi()
+
+	let percentile_lst, result, testMsg, filter
+	const testId = 'agedx'
+
+	percentile_lst = [10]
+	result = await termdbVocabApi.getPercentile(testId, percentile_lst)
+	test.equal(result.values[0], 1.52465753425, 'should get correct 10th percentile')
+
+	percentile_lst = [25]
+	result = await termdbVocabApi.getPercentile(testId, percentile_lst)
+	test.equal(result.values[0], 3.13072460515, 'should get correct 25th percentile')
+
+	percentile_lst = [50]
+	result = await termdbVocabApi.getPercentile(testId, percentile_lst)
+	test.equal(result.values[0], 8.164619357749999, 'should get correct 50th percentile')
+
+	percentile_lst = [75]
+	result = await termdbVocabApi.getPercentile(testId, percentile_lst)
+	test.equal(result.values[0], 14.45859001, 'should get correct 75th percentile')
+
+	percentile_lst = [95]
+	result = await termdbVocabApi.getPercentile(testId, percentile_lst)
+	test.equal(result.values[0], 18.545284078, 'should get correct 95th percentile')
+
+	percentile_lst = [25, 50]
+	result = await termdbVocabApi.getPercentile(testId, percentile_lst)
+	test.deepEqual(result.values, [3.13072460515, 8.164619357749999], 'should get correct 25th and 50th percentiles')
+
+	percentile_lst = [25, 50, 75]
+	result = await termdbVocabApi.getPercentile(testId, percentile_lst)
+	test.deepEqual(
+		result.values,
+		[3.13072460515, 8.164619357749999, 14.45859001],
+		'should get correct 25th, 50th, and 75th percentiles'
+	)
+
+	percentile_lst = ['a']
+	testMsg = 'should throw error for non-integer percentiles'
+	try {
+		result = await termdbVocabApi.getPercentile(testId, percentile_lst)
+		test.fail(testMsg)
+	} catch (e) {
+		test.equal(e, 'non-integer percentiles found', testMsg)
+	}
+
+	percentile_lst = [25, 50, 'a']
+	testMsg = 'should throw error for non-integer percentiles'
+	try {
+		result = await termdbVocabApi.getPercentile(testId, percentile_lst)
+		test.fail(testMsg)
+	} catch (e) {
+		test.equal(e, 'non-integer percentiles found', testMsg)
+	}
+
+	// percentile_lst = [50]
+	// filter = {
+	// 	type: 'tvslst',
+	// 	in: true,
+	// 	lst: [{ type: 'tvs', tvs: { term: { id: 'sex', type: 'categorical' }} }]
+	// }
+	// result = await termdbVocabApi.getPercentile(testId, percentile_lst, filter)
+	// test.equal(result.values[0], 0.55, 'should get correct 50th percentile with categorical filter')
+
+	percentile_lst = [50]
+	filter = {
+		type: 'tvslst',
+		in: true,
+		lst: [
+			{
+				type: 'tvs',
+				tvs: {
+					term: { id: testId, type: 'float', values: {} },
+					ranges: [{ startunbounded: true, stop: 0.8, stopinclusive: true }]
+				}
+			}
+		]
+	}
+	result = await termdbVocabApi.getPercentile(testId, percentile_lst, filter)
+	test.equal(result.values[0], 0.03537315665, 'should get correct 50th percentile with numeric filter')
 
 	test.end()
 })

@@ -4,11 +4,23 @@ import { getExample } from '#termdb/test/vocabData'
 import { TermdbVocab } from '#termdb/TermdbVocab'
 import { FrontendVocab } from '#termdb/FrontendVocab'
 import { testAppInit } from '../../test/test.helpers'
+import { termjson } from '../../test/testdata/termjson'
 
 const vocab = getExample()
 const vocabApi = vocabInit({ state: { vocab } })
 const frontendVocabApi = new FrontendVocab({ state: { vocab } })
-const termdbVocabApi = new TermdbVocab({ state: { vocab } })
+const state = {
+	vocab: {
+		genome: 'a',
+		delabel: 'b'
+	}
+}
+async function getTermdbVocabApi(opts = {}) {
+	return new TermdbVocab({
+		app: await testAppInit(state),
+		state: opts.state || state
+	})
+}
 
 /**************
  test sections
@@ -37,7 +49,7 @@ tape('\n', function(test) {
 	test.end()
 })
 
-tape('getPercentile', async function(test) {
+tape('getPercentile()', async function(test) {
 	test.timeoutAfter(100)
 	test.plan(11)
 
@@ -122,7 +134,7 @@ tape('\n', function(test) {
 	test.end()
 })
 
-tape.skip('getTermdbConfig', test => {
+tape('getTermdbConfig()', async test => {
 	test.timeoutAfter(100)
 	const state = {
 		vocab: {
@@ -147,7 +159,7 @@ tape.skip('getTermdbConfig', test => {
 	}
 
 	const frontendVocabApi2 = new FrontendVocab({
-		app: testAppInit(state),
+		app: await testAppInit(state),
 		state
 	})
 
@@ -168,7 +180,7 @@ tape.skip('getTermdbConfig', test => {
 	test.end()
 })
 
-tape('getTermChildren', async test => {
+tape('getTermChildren()', async test => {
 	test.timeoutAfter(100)
 	test.plan(3)
 
@@ -202,7 +214,7 @@ tape('getTermChildren', async test => {
 	)
 })
 
-tape('findTerm', async test => {
+tape('findTerm()', async test => {
 	test.timeoutAfter(100)
 	test.plan(3)
 
@@ -242,7 +254,7 @@ tape('findTerm', async test => {
 	// result = await vocabFrontend.findTerm()
 })
 
-tape('getDescrStats', async test => {
+tape('getDescrStats()', async test => {
 	test.timeoutAfter(100)
 	test.plan(9)
 
@@ -272,7 +284,7 @@ tape('getDescrStats', async test => {
 	}
 })
 
-tape('getterm', async test => {
+tape('getterm()', async test => {
 	test.timeoutAfter(100)
 	test.plan(2)
 
@@ -291,7 +303,7 @@ tape('getterm', async test => {
 	}
 })
 
-tape('getPercentile', async function(test) {
+tape('getPercentile()', async function(test) {
 	//Test FrontendVocab directly
 	test.timeoutAfter(100)
 	test.plan(11)
@@ -369,4 +381,10 @@ tape('getPercentile', async function(test) {
 	}
 	result = await frontendVocabApi.getPercentile('d', percentile_lst, filter)
 	test.equal(result.values[0], 0.35, 'should get correct 50th percentile with numeric filter')
+})
+
+/* TermdbVocab tests */
+tape.skip('\n', function(test) {
+	test.pass('-***- TermdbVocab Tests -***-')
+	test.end()
 })
