@@ -547,6 +547,8 @@ async function makeSampleSummary(self) {
 		} else {
 			extraFilters.push({ type: 'tvs', tvs: self.q.restrictAncestry.tvs })
 		}
+	} else {
+		if (self.filter) extraFilters.push(self.filter)
 	}
 
 	const filter = { type: 'tvslst', join: 'and', lst: [...extraFilters] }
