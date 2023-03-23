@@ -20,6 +20,7 @@ export class MatrixControls {
 		//this.recover = new Recover({app: opts.app})
 		this.setButtons()
 		this.setInputGroups()
+		if (!this.parent.optionalFeatures.includes('zoom')) return
 		this.setZoomInput()
 		this.setPanInput()
 		this.setResetInput()
@@ -302,9 +303,10 @@ export class MatrixControls {
 			.style('color', d => (d.active ? '#3a3' : ''))
 
 		const s = this.parent.config.settings.matrix //; console.log(302, s.colw, s.maxColw, Math.round(100* s.colw / s.maxColw))
-		this.zoomApi.update({
-			value: Math.round((100 * Math.min(s.colw * s.zoomLevel, s.maxColwZoomed)) / s.maxColwZoomed)
-		})
+		if (this.zoomApi)
+			this.zoomApi.update({
+				value: Math.round((100 * Math.min(s.colw * s.zoomLevel, s.maxColwZoomed)) / s.maxColwZoomed)
+			})
 	}
 
 	async callback(event, d) {
@@ -522,6 +524,7 @@ export class MatrixControls {
 				const d = this.parent.dimensions
 				const s = this.parent.settings.matrix
 				const zoomLevel = (0.01 * percentValue * s.maxColwZoomed) / s.colw
+				const zoomCenterPct = 0.5
 				const zoomCenter = s.zoomLevel < 1 && zoomLevel > 1 ? Math.round(d.maxMainW / 2) : Math.round(d.mainw / 2)
 				const centerCell =
 					s.zoomLevel < 1 && zoomLevel > 1
@@ -536,7 +539,7 @@ export class MatrixControls {
 						settings: {
 							matrix: {
 								zoomLevel,
-								zoomCenter,
+								zoomCenterPct,
 								zoomIndex: centerCell.totalIndex,
 								zoomGrpIndex: centerCell.grpIndex,
 								mouseMode: 'zoom'

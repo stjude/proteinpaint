@@ -19,6 +19,7 @@ import { dofetch3 } from '../common/dofetch'
 class Matrix {
 	constructor(opts) {
 		this.type = 'matrix'
+		this.optionalFeatures = JSON.parse(sessionStorage.getItem('optionalFeatures')).matrix || []
 		setInteractivity(this)
 		setRenderers(this)
 	}
@@ -44,7 +45,8 @@ class Matrix {
 			.on('mousemove.label', this.svgMousemove)
 			.on('mouseup.label', this.svgMouseup)
 
-		const idclip = `sjpp_clip_${this.id}`
+		this.seriesClipId = `sjpp_clip_${this.id}`
+		this.clusterClipId = `sjpp_clip_cluster_${this.id}`
 
 		const mainG = svg
 			.append('g')
@@ -83,14 +85,11 @@ class Matrix {
 			seriesesG: mainG
 				.append('g')
 				.attr('class', 'sjpp-matrix-serieses-g')
-				.attr('clip-path', `url(#${idclip})`)
+				.attr('clip-path', `url(#${this.seriesClipId})`)
 				.on('mousedown', this.seriesesGMousedown),
 			//.on('mousemove', this.seriesesGMousemove)
 			//.on('mouseup', this.seriesesGMouseup),
-			sampleLabelG: mainG
-				.append('g')
-				.attr('class', 'sjpp-matrix-series-label-g')
-				.attr('clip-path', `url(#${idclip})`),
+			sampleLabelG: mainG.append('g').attr('class', 'sjpp-matrix-series-label-g'),
 			/* // TODO: sample label drag to move
 				.on('mouseover', this.sampleLabelMouseover)
 				.on('mouseout', this.sampleLabelMouseout)
@@ -112,10 +111,9 @@ class Matrix {
 			menubody: tip.d.append('div')
 		}
 
-		//this.dom.clipHolder = svg.append('defs')
 		this.dom.clipRect = svg
 			.append('clipPath')
-			.attr('id', idclip)
+			.attr('id', this.seriesClipId)
 			.attr('clipPathUnits', 'objectBoundingBox')
 			//.attr('clipPathUnits', 'userSpaceOnUse')
 			.append('rect')
@@ -663,6 +661,7 @@ class Matrix {
 			textpos: { coord: 'y', factor: -1 },
 			axisFxn: axisTop
 		}
+		layout.top.box.attr('clip-path', layout.top.isGroup ? `url(#${this.clusterClipId})` : `url(#${this.seriesClipId})`)
 
 		const btmFontSize = _b_ == 'Grp' ? s.grpLabelFontSize : colLabelFontSize
 		layout.btm.attr = {
@@ -677,6 +676,7 @@ class Matrix {
 			textpos: { coord: 'y', factor: 1 },
 			axisFxn: axisBottom
 		}
+		layout.btm.box.attr('clip-path', layout.btm.isGroup ? `url(#${this.clusterClipId})` : `url(#${this.seriesClipId})`)
 
 		const leftFontSize =
 			_l_ == 'Grp' ? s.grpLabelFontSize : Math.max(s.rowh + s.rowspace - 2 * s.rowlabelpad, s.minLabelFontSize)
@@ -690,6 +690,7 @@ class Matrix {
 			textpos: { coord: 'x', factor: -1 },
 			axisFxn: axisLeft
 		}
+		layout.left.box.attr('clip-path', '')
 
 		const rtFontSize =
 			_r_ == 'Grp' ? s.grpLabelFontSize : Math.max(s.rowh + s.rowspace - 2 * s.rowlabelpad, s.minLabelFontSize)
@@ -703,6 +704,7 @@ class Matrix {
 			textpos: { coord: 'x', factor: 1 },
 			axisFxn: axisRight
 		}
+		layout.right.box.attr('clip-path', '')
 
 		this.layout = layout
 		this.dimensions = {
@@ -713,7 +715,8 @@ class Matrix {
 			mainw,
 			mainh,
 			colw,
-			seriesXoffset: s.zoomLevel <= 1 ? 0 : s.zoomCenter - s.zoomIndex * dx - (s.zoomGrpIndex - 1) * s.colgspace, // + 2*xOffset,
+			seriesXoffset:
+				s.zoomLevel <= 1 ? 0 : s.zoomCenterPct * mainw - s.zoomIndex * dx - (s.zoomGrpIndex - 1) * s.colgspace, // + 2*xOffset,
 			zoomedMainW: nx * dx + (this[`${col}Grps`].length - 1) * s.colgspace, //+ (this[`${col}s`].slice(-1)[0]?.totalHtAdjustments || 0)
 			maxMainW:
 				nx * (s.maxColw + s.colspace) +
@@ -964,6 +967,7 @@ export async function getPlotConfig(opts, app) {
 
 	// may apply term-specific changes to the default object
 	copyMerge(config, opts)
+	config.settings.matrix.duration = 0
 	const promises = []
 	for (const grp of config.termgroups) {
 		for (const tw of grp.lst) {
