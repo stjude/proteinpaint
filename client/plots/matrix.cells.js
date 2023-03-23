@@ -11,8 +11,8 @@ function setNumericCellProps(cell, tw, anno, value, s, t, self, width, height, d
 	const values = tw.term.values || {}
 	cell.label = 'label' in anno ? anno.label : values[key]?.label ? values[key].label : key
 	cell.fill = anno.color || values[anno.key]?.color
-	cell.x = !s.transpose ? 0 : t.totalIndex * dx + t.visibleGrpIndex * s.colgspace + width * i + t.totalHtAdjustments
-	cell.y = !s.transpose ? t.totalIndex * dy + t.visibleGrpIndex * s.rowgspace + height * i + t.totalHtAdjustments : 0
+
+	//cell.y = height * i //t.totalIndex * dy + t.visibleGrpIndex * s.rowgspace + height * i + t.totalHtAdjustments
 
 	cell.order = t.ref.bins ? t.ref.bins.findIndex(bin => bin.name == key) : 0
 	if (tw.q?.mode == 'continuous') {
@@ -21,13 +21,16 @@ function setNumericCellProps(cell, tw, anno, value, s, t, self, width, height, d
 		if (!('gap' in tw.settings)) tw.settings.gap = 0
 		// TODO: may use color scale instead of bars
 		if (s.transpose) {
-			cell.width = t.scale(cell.key)
-			cell.x += tw.settings.gap // - cell.width
+			cell.height = t.scale(cell.key)
+			cell.x = tw.settings.gap // - cell.width
 		} else {
 			cell.height = t.scale(cell.key)
-			cell.y += tw.settings.barh + t.tw.settings.gap - cell.height
+			cell.x = cell.totalIndex * dx + cell.grpIndex * s.colgspace
+			cell.y = tw.settings.barh + t.tw.settings.gap - cell.height
 		}
 	} else {
+		cell.x = cell.totalIndex * dx + cell.grpIndex * s.colgspace
+		cell.y = height * i
 		const group = tw.legend?.group || tw.$id
 		return { ref: t.ref, group, value: key, entry: { key, label: cell.label, fill: cell.fill } }
 	}
@@ -38,14 +41,14 @@ function setCategoricalCellProps(cell, tw, anno, value, s, t, self, width, heigh
 	const key = anno.key
 	cell.label = 'label' in anno ? anno.label : values[key]?.label ? values[key].label : key
 	cell.fill = anno.color || values[key]?.color
-	cell.x = !s.transpose ? 0 : t.totalIndex * dx + t.visibleGrpIndex * s.colgspace + width * i + t.totalHtAdjustments
-	cell.y = !s.transpose ? t.totalIndex * dy + t.visibleGrpIndex * s.rowgspace + height * i + t.totalHtAdjustments : 0
+	cell.x = cell.totalIndex * dx + cell.grpIndex * s.colgspace
+	cell.y = height * i
 	const group = tw.legend?.group || tw.$id
 	return { ref: t.ref, group, value, entry: { key, label: cell.label, fill: cell.fill } }
 }
 
 function setGeneVariantCellProps(cell, tw, anno, value, s, t, self, width, height, dx, dy, i) {
-	const values = anno.filteredValues || anno.values || [anno.value]
+	const values = anno.renderedValues || anno.filteredValues || anno.values || [anno.value]
 	cell.label = value.label || self.mclass[value.class].label
 	const colorFromq = tw.q?.values && tw.q?.values[value.class]?.color
 	cell.fill = colorFromq || value.color || self.mclass[value.class]?.color
@@ -54,23 +57,21 @@ function setGeneVariantCellProps(cell, tw, anno, value, s, t, self, width, heigh
 
 	const colw = self.dimensions.colw
 	if (s.cellEncoding != 'oncoprint') {
-		cell.height = !s.transpose ? s.rowh / values.length : colw
-		cell.width = !s.transpose ? colw : colw / values.length
-		cell.x = !s.transpose ? 0 : t.totalIndex * dx + t.visibleGrpIndex * s.colgspace + width * i + t.totalHtAdjustments
-		cell.y = !s.transpose ? t.totalIndex * dy + t.visibleGrpIndex * s.rowgspace + height * i + t.totalHtAdjustments : 0
+		cell.height = s.rowh / values.length
+		cell.width = colw
+		cell.x = cell.totalIndex * dx + cell.grpIndex * s.colgspace
+		cell.y = height * i
 	} else if (value.dt == 1) {
-		const divisor = s.cellEncoding == 'oncoprint' ? 3 : values.length
-		cell.height = !s.transpose ? s.rowh / divisor : colw
-		cell.width = !s.transpose ? colw : colw / values.length
-		cell.x = !s.transpose ? 0 : t.totalIndex * dx + t.visibleGrpIndex * s.colgspace + width * i + t.totalHtAdjustments
-		cell.y = !s.transpose
-			? t.totalIndex * dy + t.visibleGrpIndex * s.rowgspace + height * 0.33333 + t.totalHtAdjustments
-			: 0
+		const divisor = 3
+		cell.height = s.rowh / divisor
+		cell.width = colw
+		cell.x = cell.totalIndex * dx + cell.grpIndex * s.colgspace
+		cell.y = height * 0.33333
 	} else if (value.dt == 4) {
-		cell.height = !s.transpose ? s.rowh : colw
-		cell.width = !s.transpose ? colw : colw / values.length
-		cell.x = !s.transpose ? 0 : t.totalIndex * dx + t.visibleGrpIndex * s.colgspace + width * i + t.totalHtAdjustments
-		cell.y = !s.transpose ? t.totalIndex * dy + t.visibleGrpIndex * s.rowgspace + t.totalHtAdjustments : 0
+		cell.height = s.rowh
+		cell.width = colw
+		cell.x = cell.totalIndex * dx + cell.grpIndex * s.colgspace
+		cell.y = 0
 	} else {
 		throw `cannot set cell props for dt='${value.dt}'`
 	}

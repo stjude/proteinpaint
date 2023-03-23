@@ -551,7 +551,7 @@ class Matrix {
 	setSampleCountsByTerm() {
 		const s = this.settings.matrix
 		// only overwrite the sample counts if one or more sample group.lst has been truncated
-		if (!s.maxSample) return
+		if (!s.maxSample || this.sampleOrder.length < s.maxSample) return
 		// !!! must REDO the sample counts by term after sorting and applying maxSamples, if applicable
 		for (const t of this.termOrder) {
 			t.allCounts = t.counts
@@ -729,20 +729,23 @@ class Matrix {
 		const s = this.settings.matrix
 		const serieses = []
 		const colw = this.dimensions.colw
-		const dx = this.dimensions.dx // s.colw + s.colspace
-		const dy = this.dimensions.dy // s.rowh + s.rowspace
+		const dx = this.dimensions.dx
+		const dy = this.dimensions.dy
 		const legendGroups = {}
 
-		for (const { totalIndex, grpIndex, row } of this.sampleOrder) {
+		for (const t of this.termOrder) {
+			const $id = t.tw.$id
 			const series = {
-				row,
+				t,
+				tw: t.tw,
 				cells: [],
-				x: !s.transpose ? totalIndex * dx + grpIndex * s.colgspace : 0,
-				y: !s.transpose ? 0 : totalIndex * dy + grpIndex * s.rowgspace
+				y: !s.transpose ? t.totalIndex * dy + t.visibleGrpIndex * s.rowgspace + t.totalHtAdjustments : 0
 			}
 
-			for (const t of this.termOrder) {
-				const $id = t.tw.$id
+			for (const so of this.sampleOrder) {
+				const { totalIndex, grpIndex, row } = so
+				series.x = !s.transpose ? 0 : t.totalIndex * dx + t.visibleGrpIndex * s.colgspace
+
 				if (row[$id]?.filteredValues && !row[$id]?.filteredValues.length) continue
 				const anno = row[$id]
 				if (!anno) continue
@@ -752,9 +755,10 @@ class Matrix {
 				const numRects = s.cellEncoding == 'oncoprint' ? 1 : values.length
 				const height = !s.transpose ? s.rowh / numRects : colw
 				const width = !s.transpose ? colw : colw / values.length
-
+				const siblingCells = []
 				for (const [i, value] of values.entries()) {
 					const cell = {
+						s: so,
 						sample: row.sample,
 						_SAMPLENAME_: data.refs.bySampleId[row.sample],
 						tw: t.tw,
@@ -764,7 +768,8 @@ class Matrix {
 						key,
 						totalIndex,
 						grpIndex,
-						row
+						row,
+						siblingCells
 					}
 
 					// will assign x, y, width, height, fill, label, order, etc
@@ -776,6 +781,7 @@ class Matrix {
 					}
 
 					series.cells.push(cell)
+					siblingCells.push(cell)
 				}
 			}
 			serieses.push(series)
