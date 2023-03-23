@@ -4,6 +4,7 @@ import { mclass, dtsnvindel, dtsv, dtfusionrna } from '#shared/common'
 import { renderTable } from '#dom/table'
 import { rgb } from 'd3-color'
 import { print_snv, printSvPair } from './itemtable'
+import { getsjcharts } from '../src/getsjcharts'
 
 /*
 ********************** EXPORTED
@@ -215,20 +216,63 @@ function printSampleName(sample, tk, div, block) {
 		a.text(sample.sample_id)
 		a.style('word-break', 'break-word')
 	} else {
-		div.text(sample.sample_id)
+		div.append('span').text(sample.sample_id)
 	}
+
+	const extraRow = div.append('div') // row under sample name to show optional info about the sample
 
 	if (tk.allow2selectSamples) {
 		// display button for selecting this sample alone
 		const t = tk.allow2selectSamples.buttonText
-		div
+		extraRow
 			.append('button')
-			.style('display', 'block')
+			.style('margin-right', '10px')
 			.text(t.endsWith('s') ? t.substring(0, t.length - 1) : t)
 			.on('click', () => {
 				feedSample2selectCallback(tk, block, [sample], [0])
 				tk.itemtip.hide()
 				tk.menutip.hide()
+			})
+	}
+
+	if (tk.mds.queries?.singleSampleMutation) {
+		extraRow
+			.append('button')
+			.style('margin-right', '10px')
+			.text('Disco plot')
+			.on('click', async event => {
+				event.target.innerHTML = 'Loading...'
+				event.target.disabled = true
+				try {
+					const mlst = await tk.mds.queries.singleSampleMutation.get(
+						sample[tk.mds.queries.singleSampleMutation.sample_id_key || 'sample_id']
+					)
+					event.target.innerHTML = mlst.length + ' variants loaded'
+
+					for (const i of mlst) i.position = i.pos
+
+					const sjcharts = await getsjcharts()
+					const disco_arg = {
+						sampleName: sample.sample_id,
+						data: mlst
+					}
+
+					tk.menutip.clear().show(event.clientX, event.clientY)
+
+					const renderer = await sjcharts.dtDisco({
+						chromosomeType: block.genome.name,
+						majorchr: block.genome.majorchr,
+						holderSelector: tk.menutip.d.append('div'),
+						settings: {
+							showControls: false,
+							selectedSamples: []
+						}
+					})
+					renderer.main(disco_arg)
+				} catch (e) {
+					event.target.innerHTML = 'Error: ' + (e.message || e)
+					if (e.stack) console.log(e.stack)
+				}
 			})
 	}
 }

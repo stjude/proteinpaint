@@ -407,7 +407,9 @@ function copy_queries(ds, dscopy) {
 	const copy = {}
 
 	if (ds.queries.singleSampleMutation) {
-		copy.singleSampleMutation = 1
+		copy.singleSampleMutation = {
+			sample_id_key: ds.queries.singleSampleMutation.sample_id_key
+		}
 	}
 
 	const qs = ds.queries.snvindel
@@ -1068,7 +1070,7 @@ async function validate_query_singleSampleMutation(ds, genome) {
 	const q = ds.queries.singleSampleMutation
 	if (!q) return
 	if (q.gdcapi) {
-		gdc.validate_query_singleSampleMutation(ds)
+		gdc.validate_query_singleSampleMutation(ds, genome)
 		// q.get() added
 	} else {
 		throw 'unknown query method for singleSampleMutation'

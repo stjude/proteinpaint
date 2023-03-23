@@ -176,6 +176,11 @@ async function load_driver(q, ds) {
 	// various bits of data to be appended as keys to result{}
 	// what other loaders can be if not in ds.queries?
 
+	if (q.singleSampleMutation) {
+		if (!ds.queries.singleSampleMutation?.get) throw 'not supported on this dataset'
+		return { mlst: await ds.queries.singleSampleMutation.get(q.singleSampleMutation) }
+	}
+
 	if (q.ssm2canonicalisoform) {
 		// gdc-specific logic
 		if (!ds.ssm2canonicalisoform) throw 'ssm2canonicalisoform not supported on this dataset'

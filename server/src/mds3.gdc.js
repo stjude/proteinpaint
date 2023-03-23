@@ -15,6 +15,7 @@ validate_query_snvindel_byisoform
 	snvindel_byisoform
 	snvindel_addclass
 	decideSampleId
+validate_query_singleSampleMutation
 validate_query_snvindel_byisoform_2 // "protein_mutations" graphql, not in use
 validate_query_geneCnv
 	filter2GDCfilter
@@ -1195,7 +1196,10 @@ function termid2size_filters(p, ds) {
 }
 
 export function validate_query_singleSampleMutation(ds, genome) {
-	// add getter and call
+	ds.queries.singleSampleMutation.get = async case_id => {
+		if (!case_id) throw 'case_id missing'
+		return await getSingleSampleMutations({ case_id }, genome)
+	}
 }
 
 /************************************************
@@ -1207,8 +1211,6 @@ export function handle_gdc_ssms(genomes) {
 		/* query{}
 		.genome: required
 		.case_id: required
-		.isoform: optional
-		.gene: can add later
 		*/
 		try {
 			const genome = genomes[req.query.genome]
@@ -1261,11 +1263,11 @@ async function getSingleSampleMutations(query, genome) {
 		}
 		// no aa change for utr variants
 		const aa = c.transcript.aa_change || c.transcript.consequence_type
+		const [dt, mclass, rank] = common.vepinfo(c.transcript.consequence_type)
 		mlst.push({
 			dt: common.dtsnvindel,
 			mname: aa,
-			consequence: c.transcript.consequence_type,
-			// TODO convert to class
+			class: mclass,
 			gene: c.transcript.gene.symbol,
 			chr: hit.chromosome,
 			pos: hit.start_position,
