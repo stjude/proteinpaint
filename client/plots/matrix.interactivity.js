@@ -1397,6 +1397,7 @@ function setLabelDragEvents(self, prefix) {
 
 function setZoomPanActions(self) {
 	self.seriesesGMousedown = function(event) {
+		if (!self.optionalFeatures.includes('zoom')) return
 		event.stopPropagation()
 		self.clickedSeriesCell = { event, startCell: event.target.__data__ }
 		if (self.settings.matrix.mouseMode == 'pan') {
@@ -1429,6 +1430,7 @@ function setZoomPanActions(self) {
 	self.seriesesGcancelDrag = function() {
 		self.dom.seriesesG.on('mousemove', null).on('mouseup', null)
 		const s = self.settings.matrix
+		const d = self.dimensions
 		const c = self.clickedSeriesCell.startCell
 		self.app.dispatch({
 			type: 'plot_edit',
@@ -1437,10 +1439,10 @@ function setZoomPanActions(self) {
 				settings: {
 					matrix: {
 						zoomCenter:
-							c.totalIndex * self.dimensions.dx +
-							(c.grpIndex - 1) * s.colgspace +
-							self.dimensions.seriesXoffset +
-							self.clickedSeriesCell.dx,
+							c.totalIndex * d.dx +
+							(c.grpIndex - 1) * s.colgspace -
+							d.seriesXoffset +
+							self.clickedSeriesCell.dx / d.mainw,
 						zoomIndex: c.totalIndex,
 						zoomGrpIndex: c.grpIndex,
 						mouseMode: 'pan'
@@ -1483,7 +1485,7 @@ function setZoomPanActions(self) {
 	self.seriesesGtriggerZoom = function(event) {
 		event.stopPropagation()
 		self.dom.seriesesG.on('mousemove', null).on('mouseup', null)
-		const d = event.target.__data__
+		//const d = event.target.__data__
 		if (self.zoomArea) {
 			self.zoomArea.remove()
 			delete self.zoomArea
@@ -1505,10 +1507,12 @@ function setZoomPanActions(self) {
 		}
 
 		const s = self.settings.matrix
+		const d = self.dimensions
 		const start = c.startCell.totalIndex < c.endCell.totalIndex ? c.startCell : c.endCell
 		const zoomIndex = Math.floor(start.totalIndex + Math.abs(c.endCell.totalIndex - c.startCell.totalIndex) / 2)
 		const centerCell = self.sampleOrder[zoomIndex]
-		const zoomLevel = self.dimensions.mainw / self.zoomWidth
+		const zoomLevel = d.mainw / self.zoomWidth
+		const zoomCenter = centerCell.totalIndex * d.colw + (centerCell.grpIndex - 1) * s.colgspace + d.seriesXoffset
 		self.app.dispatch({
 			type: 'plot_edit',
 			id: self.id,
@@ -1516,13 +1520,7 @@ function setZoomPanActions(self) {
 				settings: {
 					matrix: {
 						zoomLevel,
-						//zoomCenter: self.zoomPointer[0] - self.dimensions.seriesXoffset - self.dimensions.xOffset + self.zoomWidth / 2,
-						zoomCenter:
-							s.zoomLevel < 1 && zoomLevel > 1
-								? self.dimensions.maxMainW / 2
-								: centerCell.totalIndex * self.dimensions.colw +
-								  (centerCell.grpIndex - 1) * s.colgspace +
-								  self.dimensions.seriesXoffset,
+						zoomCenterPct: zoomLevel < 1 ? 0.5 : zoomCenter / d.mainw,
 						zoomIndex,
 						zoomGrpIndex: centerCell.grpIndex,
 						mouseMode: 'zoom'
