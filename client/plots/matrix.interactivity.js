@@ -26,7 +26,7 @@ export function setInteractivity(self) {
 					d.value.sample}</td></tr>`
 			)
 			rows.push(`<tr><td colspan='2' style='text-align: center'>${d.term.name}</td></tr>`)
-			for (const c of event.target.parentNode.__data__.cells) {
+			for (const c of event.target.__data__.siblingCells) {
 				if (c.$id != d.$id) continue
 				const v = c.value
 				const label = v.mname ? `${v.mname} ${c.label}` : c.label

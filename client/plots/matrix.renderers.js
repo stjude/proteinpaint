@@ -22,7 +22,7 @@ export function setRenderers(self) {
 			.duration(duration)
 			.attr('transform', `translate(${d.xOffset + d.seriesXoffset},${d.yOffset})`)
 
-		const sg = self.dom.seriesesG.selectAll('.sjpp-mass-series-g').data(this.serieses, series => series.row.sample)
+		const sg = self.dom.seriesesG.selectAll('.sjpp-mass-series-g').data(this.serieses, series => series.tw.$id)
 
 		sg.exit().remove()
 		sg.each(self.renderSeries)
@@ -35,6 +35,7 @@ export function setRenderers(self) {
 
 	self.renderSeries = function(series) {
 		const s = self.settings.matrix
+		const d = self.dimensions
 		const useCanvas = window.location.hash?.slice(1) == 'canvas' //Add to a parameter in self.settings.matrix
 		const g = select(this)
 		const duration = g.attr('transform') ? s.duration : 0
@@ -45,16 +46,19 @@ export function setRenderers(self) {
 			.style('opacity', 1)
 		const last = series.cells[series.cells.length - 1]
 		const height = series.y + last?.y + s.rowh
+
 		if (useCanvas) {
+			const pxr = 1 //window.devicePixelRatio; console.log(51, 'pixelRatio', pxr)
 			g.selectAll('*').remove()
 			const canvas = self.dom.holder
 				.append('canvas')
-				.attr('width', s.colw)
-				.attr('height', height)
+				.attr('width', Math.floor(d.zoomedMainW * pxr) + 'px')
+				.attr('height', Math.floor(self.dimensions.mainh * pxr) + 'px')
 				.style('opacity', 0)
 				.node()
 			const ctx = canvas.getContext('2d')
-			for (const cell of series.cells) self.renderCellWithCanvas(ctx, cell, series)
+			ctx.scale(pxr, pxr)
+			for (const cell of series.cells) self.renderCellWithCanvas(ctx, cell, series, s, d)
 			const img = canvas.toDataURL()
 			g.append('image').attr('xlink:href', img)
 			canvas.remove()
@@ -69,15 +73,13 @@ export function setRenderers(self) {
 		}
 	}
 
-	self.renderCellWithCanvas = function(ctx, cell, series) {
+	self.renderCellWithCanvas = function(ctx, cell, series, s, d, pxr) {
 		if (!cell.fill)
 			cell.fill = cell.$id in self.colorScaleByTermId ? self.colorScaleByTermId[cell.$id](cell.key) : getRectFill(cell)
-		const s = self.settings.matrix
-		const x = 'x' in cell ? cell.x : 0
-		let y = 'y' in cell ? cell.y : 0
-		y += series.y
-		const width = 'width' in cell ? cell.width : s.colw
-		const height = 'height' in cell ? cell.height : s.rowh
+		const x = cell.x || 0
+		const y = cell.y || 0
+		const width = cell.width || d.colw
+		const height = cell.height || s.rowh
 		ctx.fillStyle = cell.fill
 		ctx.fillRect(x, y, width, height)
 	}
@@ -92,10 +94,10 @@ export function setRenderers(self) {
 			// using the cell index in the .data() bind function seems to fix glitches in split cells,
 			// but cells with overriden values flashes during a transition
 			.duration(0) //'x' in cell ? s.duration : 0)
-			.attr('x', 'x' in cell ? cell.x : 0)
-			.attr('y', 'y' in cell ? cell.y : 0)
-			.attr('width', 'width' in cell ? cell.width : self.dimensions.colw)
-			.attr('height', 'height' in cell ? cell.height : s.rowh)
+			.attr('x', cell.x || 0)
+			.attr('y', cell.y || 0)
+			.attr('width', cell.width || self.dimensions.colw)
+			.attr('height', cell.height || s.rowh)
 			.attr('shape-rendering', 'crispEdges')
 			//.attr('stroke', cell.fill)
 			.attr('stroke-width', 0)
