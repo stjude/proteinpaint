@@ -2,8 +2,7 @@
   "debugmode": true,
   "defaultgenome": "hg38-test",
   "features": {
-    "skip_checkDependenciesAndVersions": 1,
-    "matrix": ["zoom"]
+    "skip_checkDependenciesAndVersions": 1
   },
   "genomes": [
     {
