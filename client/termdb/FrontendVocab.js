@@ -133,7 +133,13 @@ export class FrontendVocab extends Vocab {
 	}
 
 	/*** To-Do ***/
-	async getFilteredSampleCount(cohortName, filterJSON) {
+
+	async getCohortsData(opts) {
+		return null
+	}
+
+	async getFilteredSampleCount(filterJSON) {
+		/*
 		if (!cohortName) return
 		const term = this.vocab.find(t => t.id === id)
 		if (!term || !term.cohortValues.includes(cohortName)) return
@@ -141,7 +147,8 @@ export class FrontendVocab extends Vocab {
 		if (!(cohortName in term.samplecount)) {
 			term.samplecount[cohortName] = Object.keys(this.vocab.sampleannotation).length
 		}
-		return { samplecount: 'TBD' }
+		*/
+		return 'TBD'
 	}
 
 	async getDensityPlotData(term_id, num_obj, filter) {

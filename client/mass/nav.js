@@ -135,10 +135,8 @@ class TdbNav {
 				if (!this.filterUiRoot || !this.filterUiRoot.lst.length) {
 					this.samplecounts[this.filterJSON] = this.samplecounts[this.activeCohortName]
 				} else {
-					this.samplecounts[this.filterJSON] = await this.app.vocabApi.getFilteredSampleCount(
-						this.activeCohortName,
-						this.filterJSON
-					)
+					const n = await this.app.vocabApi.getFilteredSampleCount(this.filterJSON)
+					this.samplecounts[this.filterJSON] = n
 				}
 			}
 		}
@@ -414,15 +412,12 @@ function setRenderers(self) {
 		const keys = selectCohort.values[self.activeCohort].keys
 		let selector = `tbody > tr > td:nth-child(${self.activeCohort + 2})`
 		const combined = keys.length > 1
-		if(combined)
-		{
+		if (combined) {
 			selector = ''
-			for(const key of keys )
-			{
+			for (const key of keys) {
 				const i = result.cohorts.map(c => c.cohort).indexOf(key)
-				if(selector !== '') selector += ','
-				selector +=  `tbody > tr > td:nth-child(${i + 2})`
-
+				if (selector !== '') selector += ','
+				selector += `tbody > tr > td:nth-child(${i + 2})`
 			}
 		}
 		const activeColumns = self.dom.cohortTable.selectAll(selector)
