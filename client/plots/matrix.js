@@ -31,7 +31,7 @@ class Matrix {
 		const loadingDiv = holder
 			.append('div')
 			.style('position', 'absolute')
-			.style('top', '50px')
+			.style('top', this.opts.controls ? 0 : '50px')
 			.style('left', '50px')
 		const errdiv = holder
 			.append('div')
@@ -634,13 +634,13 @@ class Matrix {
 
 		const yOffset = layout.top.offset + s.margin.top
 		const xOffset = layout.left.offset + s.margin.left
-		const colw = Math.min(34, s.colw * s.zoomLevel)
+		const colw = Math.min(s.maxColwZoomed, s.colw * s.zoomLevel)
 		const dx = colw + s.colspace
 		const nx = this[`${col}s`].length
 		const dy = s.rowh + s.rowspace
 		const ny = this[`${row}s`].length
 		const mainw =
-			nx * (s.colw + s.colspace) +
+			nx * (Math.min(colw, s.colw) + s.colspace) +
 			(this[`${col}Grps`].length - 1) * s.colgspace +
 			(this[`${col}s`].slice(-1)[0]?.totalHtAdjustments || 0)
 		const mainh =
@@ -713,8 +713,12 @@ class Matrix {
 			mainw,
 			mainh,
 			colw,
-			seriesXoffset: s.zoomLevel == 1 ? 0 : s.zoomCenter - s.zoomIndex * dx - (s.zoomGrpIndex - 1) * s.colgspace, // + 2*xOffset,
-			zoomedMainW: nx * dx + (this[`${col}Grps`].length - 1) * s.colgspace //+ (this[`${col}s`].slice(-1)[0]?.totalHtAdjustments || 0)
+			seriesXoffset: s.zoomLevel <= 1 ? 0 : s.zoomCenter - s.zoomIndex * dx - (s.zoomGrpIndex - 1) * s.colgspace, // + 2*xOffset,
+			zoomedMainW: nx * dx + (this[`${col}Grps`].length - 1) * s.colgspace, //+ (this[`${col}s`].slice(-1)[0]?.totalHtAdjustments || 0)
+			maxMainW:
+				nx * (s.maxColw + s.colspace) +
+				(this[`${col}Grps`].length - 1) * s.colgspace +
+				(this[`${col}s`].slice(-1)[0]?.totalHtAdjustments || 0)
 		}
 	}
 
@@ -908,6 +912,7 @@ export async function getPlotConfig(opts, app) {
 				cellbg: '#ececec',
 				colw: 0,
 				maxColw: 16,
+				maxColwZoomed: 34,
 				colspace: 1,
 				colgspace: 8,
 				collabelpos: 'bottom',

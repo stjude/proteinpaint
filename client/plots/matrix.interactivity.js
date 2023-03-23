@@ -1508,18 +1508,21 @@ function setZoomPanActions(self) {
 		const start = c.startCell.totalIndex < c.endCell.totalIndex ? c.startCell : c.endCell
 		const zoomIndex = Math.floor(start.totalIndex + Math.abs(c.endCell.totalIndex - c.startCell.totalIndex) / 2)
 		const centerCell = self.sampleOrder[zoomIndex]
+		const zoomLevel = self.dimensions.mainw / self.zoomWidth
 		self.app.dispatch({
 			type: 'plot_edit',
 			id: self.id,
 			config: {
 				settings: {
 					matrix: {
-						zoomLevel: self.dimensions.mainw / self.zoomWidth,
+						zoomLevel,
 						//zoomCenter: self.zoomPointer[0] - self.dimensions.seriesXoffset - self.dimensions.xOffset + self.zoomWidth / 2,
 						zoomCenter:
-							centerCell.totalIndex * self.dimensions.dx +
-							(centerCell.grpIndex - 1) * s.colgspace +
-							self.dimensions.seriesXoffset,
+							s.zoomLevel < 1 && zoomLevel > 1
+								? self.dimensions.maxMainW / 2
+								: centerCell.totalIndex * self.dimensions.colw +
+								  (centerCell.grpIndex - 1) * s.colgspace +
+								  self.dimensions.seriesXoffset,
 						zoomIndex,
 						zoomGrpIndex: centerCell.grpIndex,
 						mouseMode: 'zoom'

@@ -6,12 +6,10 @@ export function setRenderers(self) {
 		const l = self.layout
 		const d = self.dimensions
 		const duration = self.dom.svg.attr('width') ? s.duration : 0
-
 		self.dom.clipRect
-			.attr('x', s.zoomLevel == 1 ? 0 : Math.abs(d.seriesXoffset) / d.zoomedMainW) //Math.abs(d.seriesXoffset/d.mainw)) // s.zoomLevel == 1 ? 0 : 300)
+			.attr('x', s.zoomLevel <= 1 ? 0 : Math.abs(d.seriesXoffset) / d.zoomedMainW)
 			.attr('y', 0)
-			//.attr('transform', `translate(0,0)`)
-			.attr('width', (s.zoomLevel * d.mainw) / d.zoomedMainW)
+			.attr('width', Math.min(d.mainw, d.maxMainW) / d.zoomedMainW)
 			.attr('height', 1)
 
 		self.renderSerieses(s, l, d, duration)

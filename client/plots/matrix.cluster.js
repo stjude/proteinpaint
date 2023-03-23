@@ -31,8 +31,9 @@ export class MatrixCluster {
 		const clusters = []
 
 		for (const xg of this.xGrps) {
-			const x = xg.prevGrpTotalIndex * d.dx + s.colgspace * xg.grpIndex + xg.totalHtAdjustments
-			const width = d.dx * (xg.processedLst || xg.grp.lst).length + xg.grpHtAdjustments
+			const dx = Math.min(d.dx, s.maxColw + s.colspace)
+			const x = xg.prevGrpTotalIndex * dx + s.colgspace * xg.grpIndex + xg.totalHtAdjustments
+			const width = dx * (xg.processedLst || xg.grp.lst).length + xg.grpHtAdjustments
 
 			for (const yg of this.yGrps) {
 				const y = yg.prevGrpTotalIndex * d.dy + yg.grpIndex * s.rowgspace + yg.totalHtAdjustments
