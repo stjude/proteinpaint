@@ -1091,12 +1091,16 @@ function legend_attr_levels(obj) {
 				}
 				if (!L2.v2c.has(v)) {
 					const o = L2values[v]
-					o.dots = []
-					L2.v2c.set(v, o)
+					if (o) {
+						o.dots = []
+						L2.v2c.set(v, o)
+					}
 				}
-				L2.v2c.get(v).dots.push(d)
-				if (L2.label) {
-					L2.v2c.get(v).label = d.s[L2.label]
+				if (L2.v2c.has(v)) {
+					L2.v2c.get(v).dots.push(d)
+					if (L2.label) {
+						L2.v2c.get(v).label = d.s[L2.label]
+					}
 				}
 			}
 			if (!obj.hide_subtype_legend) {
