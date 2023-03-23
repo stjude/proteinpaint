@@ -41,38 +41,42 @@ export function setInteractivity(self) {
 
 		if (self.displayLabelClickMenu.called === true) {
 			if (t2) {
-				if (t1.term.type === 'categorical') {
-					options.push({
-						label: `Add filter: ${plot.label.split(',')[0]}`,
-						callback: getAddFilterCallback(t1, t2, self, plot, 'term1')
-					})
-				} else {
-					options.push({
-						label: `Add filter: ${plot.label.split(',')[0]}`,
-						callback: getAddFilterCallback(t1, t2, self, plot, 'term2')
-					})
-				}
-				//On label clicking, display 'Hide' option to hide plot.
-				options.push({
-					label: `Hide: ${plot.label}`,
-					callback: () => {
-						const termNum = t2 ? 'term2' : null
-						const term = self.config[termNum]
-						const isHidden = true
-						self.app.dispatch({
-							type: 'plot_edit',
-							id: self.id,
-							config: {
-								[termNum]: {
-									isAtomic: true,
-									id: term.id,
-									term: term.term,
-									q: getUpdatedQfromClick(plot, t2, isHidden)
-								}
-							}
+				//disable filtering if only 1 data is present.
+				if (self.data.plots.length > 1) {
+					if (t1.term.type === 'categorical') {
+						options.push({
+							label: `Add filter: ${plot.label.split(',')[0]}`,
+							callback: getAddFilterCallback(t1, t2, self, plot, 'term1')
+						})
+					} else {
+						options.push({
+							label: `Add filter: ${plot.label.split(',')[0]}`,
+							callback: getAddFilterCallback(t1, t2, self, plot, 'term2')
 						})
 					}
-				})
+					//On label clicking, display 'Hide' option to hide plot.
+
+					options.push({
+						label: `Hide: ${plot.label}`,
+						callback: () => {
+							const termNum = t2 ? 'term2' : null
+							const term = self.config[termNum]
+							const isHidden = true
+							self.app.dispatch({
+								type: 'plot_edit',
+								id: self.id,
+								config: {
+									[termNum]: {
+										isAtomic: true,
+										id: term.id,
+										term: term.term,
+										q: getUpdatedQfromClick(plot, t2, isHidden)
+									}
+								}
+							})
+						}
+					})
+				}
 			}
 			if (self.config.settings.violin.displaySampleIds && self.state.hasVerifiedToken) {
 				options.push({

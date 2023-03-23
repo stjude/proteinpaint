@@ -38,11 +38,13 @@ export default function violinRenderer(self) {
 			self.dom.violinDiv.html(
 				` <span style="opacity:.6;font-size:1em;margin-left:90px;">No data to render Violin Plot</span>`
 			)
-			self.dom.tableHolder.selectAll('*').remove()
 			self.dom.legendDiv.selectAll('*').remove()
 			self.dom.tableHolder.selectAll('.sjpp-tableHolder')._parents[0].remove()
 			return
 		} else self.dom.violinDiv.select('*').remove()
+
+		//if only one plot is rendered then remove p-value table.
+		if (self.data.plots.length === 1) self.dom.tableHolder.selectAll('.sjpp-tableHolder')._parents[0].remove()
 
 		// append the svg object to the body of the page
 		self.dom.violinDiv.select('.sjpp-violin-plot').remove()
