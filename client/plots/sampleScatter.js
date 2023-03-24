@@ -1380,6 +1380,7 @@ function setRenderers(self) {
 				.on('start', lasso_start)
 				.on('draw', lasso_draw)
 				.on('end', lasso_end)
+
 		function lasso_start(event) {
 			if (self.lassoOn) {
 				self.lasso
@@ -1482,6 +1483,16 @@ function setRenderers(self) {
 					self.addToFilter(group)
 					self.app.dispatch({ type: 'plot_edit', id: self.id, config: { groups: self.config.groups } })
 				})
+		}
+
+		if (self.lassoOn) {
+			// this seems to clear stale lasso data as sometimes seen
+			// when the global filter is changed between lassoing
+			// uncertain explanation: the svg and mainG is potentially different between rerenders,
+			// so the previous mainG.call(self.lasso) inside toggle_lasso is on a removed mainG????
+			mainG.on('.zoom', null)
+			mainG.on('mousedown.drag', null)
+			mainG.call(self.lasso)
 		}
 	}
 
