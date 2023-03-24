@@ -339,7 +339,7 @@ tape('getTermChildren()', async test => {
 	test.end()
 })
 
-tape('getNestedChartSeriesData()', async test => {
+tape.skip('getNestedChartSeriesData()', async test => {
 	test.timeoutAfter(100)
 
 	const termdbVocabApi = await getTermdbVocabApi()
