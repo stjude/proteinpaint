@@ -13,6 +13,7 @@ ENV RUSTUP_HOME=/usr/local/rustup \
 RUN apt-get update && apt-get install -y \
     curl \
     wget \
+    git \
     build-essential \
     librsvg2-dev \
 	libbz2-dev \
@@ -87,6 +88,7 @@ RUN set -eux; \
     rustup --version; \
     cargo --version; \
     rustc --version; \
+    cd ${CARGO_HOME} && echo "net.git-fetch-with-cli = true" > config.toml; \
     cargo install sccache \
     ## clean up
     && apt-get clean \
