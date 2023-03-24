@@ -42,14 +42,14 @@ if (serverconfig.releaseTag) {
 	}
 
 	console.log('Updating proteinpaint server package ...')
-	spawnSync('npm', ['update', `@stjude/proteinpaint-server@${serverconfig.releaseTag.server}`], { encoding: 'utf-8' })
+	spawnSync('npm', ['update', `@sjcrh/proteinpaint-server@${serverconfig.releaseTag.server}`], { encoding: 'utf-8' })
 
 	console.log('Updating proteinpaint front package ...')
-	spawnSync('npm', ['update', `@stjude/proteinpaint-front@${serverconfig.releaseTag.front}`], { encoding: 'utf-8' })
+	spawnSync('npm', ['update', `@sjcrh/proteinpaint-front@${serverconfig.releaseTag.front}`], { encoding: 'utf-8' })
 }
 
 if (!serverconfig.URL) serverconfig.URL = serverconfig.url || '.'
 console.log(`generating public/bin for ${serverconfig.URL}`)
 spawnSync('npx', ['proteinpaint-front', serverconfig.URL], { encoding: 'utf-8' })
 
-require('@stjude/proteinpaint-server')
+require('@sjcrh/proteinpaint-server')

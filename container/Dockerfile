@@ -115,7 +115,7 @@ ARG SERVERPKGVER
 RUN if [ -f /home/root/pp/tmppack/stjude-proteinpaint-server-${SERVERPKGVER}.tgz ]; then \
       npm install /home/root/pp/tmppack/stjude-proteinpaint-server-${SERVERPKGVER}.tgz; \
     else \
-      npm install @stjude/proteinpaint-server@${SERVERPKGVER}; \
+      npm install @sjcrh/proteinpaint-server@${SERVERPKGVER}; \
     fi; \
     rm .npmrc
 
@@ -159,7 +159,7 @@ ARG FRONTPKGVER
 RUN if [ -f /home/root/pp/tmppack/stjude-proteinpaint-front-${FRONTPKGVER}.tgz ]; then \
       npm install /home/root/pp/tmppack/stjude-proteinpaint-front-${FRONTPKGVER}.tgz ; \
     else \
-      npm install @stjude/proteinpaint-front@${FRONTPKGVER}; \
+      npm install @sjcrh/proteinpaint-front@${FRONTPKGVER}; \
     fi; \
     rm .npmrc
 

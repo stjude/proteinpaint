@@ -1,7 +1,7 @@
 const tape = require('tape')
 const helpers = require('../../test/front.helpers.js')
 const store = require('../store')
-//const ds = require('@stjude/proteinpaint-server/dataset/termdb.test.js')
+//const ds = require('@sjcrh/proteinpaint-server/dataset/termdb.test.js')
 const rx = require('../../rx')
 
 /*************************

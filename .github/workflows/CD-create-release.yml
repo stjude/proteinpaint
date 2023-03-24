@@ -63,12 +63,12 @@ jobs:
       - uses: actions/setup-node@v3
         with:
           node-version: '16'
-          registry-url: 'https://npm.pkg.github.com'
-          scope: '@stjude'
+          registry-url: 'https://registry.npmjs.org'
+          scope: '@sjcrh'
       - run: npm ci
       - run: ./build/ci-npm-publish.sh ${{ github.event.inputs.release_type }}
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ secrets.NPMJS_TOKEN }}
 
       - name: get pp version
         id: pp-version

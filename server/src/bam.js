@@ -8,7 +8,7 @@ const path = require('path')
 const fs = require('fs')
 const Readable = require('stream').Readable
 const utils = require('./utils')
-const run_rust = require('@stjude/proteinpaint-rust').run_rust
+const run_rust = require('@sjcrh/proteinpaint-rust').run_rust
 const createCanvas = require('canvas').createCanvas
 const spawn = require('child_process').spawn
 const readline = require('readline')
@@ -251,7 +251,7 @@ const bases = new Set(['A', 'T', 'C', 'G'])
 const apihost = process.env.PP_GDC_HOST || 'https://api.gdc.cancer.gov'
 const gdcHashSecret = Math.random.toString()
 
-module.exports = (genomes) => {
+module.exports = genomes => {
 	return async (req, res) => {
 		try {
 			// isFileSlice:true can only be set after verifying access on a gdc file
@@ -286,7 +286,7 @@ module.exports = (genomes) => {
 				res.writeHead(200, {
 					'Content-Type': 'application/octet-stream',
 					'Content-Disposition': 'attachment; filename=gdc.bam',
-					'Content-Length': data.length,
+					'Content-Length': data.length
 				})
 				res.end(Buffer.from(data, 'binary'))
 				return
@@ -323,7 +323,7 @@ async function plot_diff_scores(q, group, templates, max_diff_score, min_diff_sc
 	if (q.devicePixelRatio > 1) {
 		ctx.scale(q.devicePixelRatio, q.devicePixelRatio)
 	}
-	const diff_scores_list = templates.map((i) => i.__tempscore)
+	const diff_scores_list = templates.map(i => i.__tempscore)
 	const read_height = group.canvasheight / diff_scores_list.length
 	let i = 0
 	const dist_bw_reads = group.stackspace / group.canvasheight
@@ -361,7 +361,7 @@ async function plot_diff_scores(q, group, templates, max_diff_score, min_diff_sc
 		height: group.canvasheight,
 		width: diff_score_bar_width,
 		src: canvas.toDataURL(),
-		read_height: read_height,
+		read_height: read_height
 	}
 }
 
@@ -437,7 +437,7 @@ async function plot_pileup(q, templates) {
 	return {
 		width: q.canvaswidth,
 		maxValue,
-		src: canvas.toDataURL(),
+		src: canvas.toDataURL()
 	}
 }
 
@@ -456,7 +456,7 @@ function collect_softclipmismatch2pileup(ridx, r, templates, bplst) {
 					if ((box.opr == 'S' || box.opr == 'X') && box.s) {
 						for (let boxsi = 0; boxsi < box.s.length; boxsi++) {
 							const bpposition = box.start + boxsi
-							const bpitem = bplst.find((i) => i.position == bpposition)
+							const bpitem = bplst.find(i => i.position == bpposition)
 							// each item of bplst is one basepair
 							// must directly match box bp position with bplst[].position
 							// as bplst[] may be discontinuous, cannot use bpposition-bplst[0].position to get its array index
@@ -662,7 +662,7 @@ async function get_q(genome, req) {
 			asPaired: req.query.asPaired,
 			getcolorscale: req.query.getcolorscale,
 			//_numofreads: 0, // temp, to count num of reads while loading and detect above limit
-			devicePixelRatio: req.query.devicePixelRatio ? Number(req.query.devicePixelRatio) : 1,
+			devicePixelRatio: req.query.devicePixelRatio ? Number(req.query.devicePixelRatio) : 1
 		}
 
 		await mayReSliceFile(req, q.file)
@@ -677,7 +677,7 @@ async function get_q(genome, req) {
 			asPaired: req.query.asPaired,
 			getcolorscale: req.query.getcolorscale,
 			//_numofreads: 0, // temp, to count num of reads while loading and detect above limit
-			devicePixelRatio: req.query.devicePixelRatio ? Number(req.query.devicePixelRatio) : 1,
+			devicePixelRatio: req.query.devicePixelRatio ? Number(req.query.devicePixelRatio) : 1
 		}
 		if (isurl) {
 			q.dir = await utils.cache_index(_file, req.query.indexURL || _file + '.bai')
@@ -730,7 +730,7 @@ async function get_q(genome, req) {
 			strandA: Number(t[2]),
 			chrB: t[3],
 			startB: Number(t[4]),
-			strandB: Number(t[5]),
+			strandB: Number(t[5])
 		}
 		if (Number.isNaN(q.sv.startA)) throw 'sv.startA not integer'
 		if (Number.isNaN(q.sv.startB)) throw 'sv.startB not integer'
@@ -741,7 +741,7 @@ async function get_q(genome, req) {
 		if (!req.query.stackstop) throw '.stackstop missing'
 		q.partstack = {
 			start: Number(req.query.stackstart),
-			stop: Number(req.query.stackstop),
+			stop: Number(req.query.stackstop)
 		}
 
 		if (Number.isNaN(q.partstack.start)) throw '.stackstart not integer'
@@ -765,7 +765,7 @@ async function get_q(genome, req) {
 		if (!r.chr) throw '.chr missing from a region'
 		if (!Number.isInteger(r.start)) throw '.start not integer of a region'
 		if (!Number.isInteger(r.stop)) throw '.stop not integer of a region'
-		r.scale = (p) => Math.ceil((r.width * (p - r.start)) / (r.stop - r.start))
+		r.scale = p => Math.ceil((r.width * (p - r.start)) / (r.stop - r.start))
 		r.ntwidth = r.width / (r.stop - r.start)
 		maxntwidth = Math.max(maxntwidth, r.ntwidth)
 	}
@@ -819,9 +819,9 @@ async function do_query(q) {
 	const result = {
 		nochr: q.nochr,
 		count: {
-			r: q.totalnumreads,
+			r: q.totalnumreads
 		},
-		groups: [],
+		groups: []
 	}
 	if (q.read_limit_reached) {
 		// When maximum read limit is reached
@@ -879,7 +879,7 @@ async function do_query(q) {
 
 	if (q.alignOneGroup) {
 		// find the group to be realigned
-		const group = q.groups.find((i) => i.type == q.alignOneGroup)
+		const group = q.groups.find(i => i.type == q.alignOneGroup)
 		if (!group) throw 'cannot find group for realignment'
 		let templates = get_templates(q, group)
 		templates = stack_templates(group, q, templates) // add .stacks[], .returntemplatebox[]
@@ -911,7 +911,7 @@ async function do_query(q) {
 			stackcount: group.stacks.length,
 			allowpartstack: group.allowpartstack,
 			templatebox: group.returntemplatebox,
-			count: { r: templates.reduce((i, j) => i + j.segments.length, 0) },
+			count: { r: templates.reduce((i, j) => i + j.segments.length, 0) }
 		}
 
 		const canvas = createCanvas(q.canvaswidth * q.devicePixelRatio, group.canvasheight * q.devicePixelRatio)
@@ -1042,8 +1042,8 @@ async function align_multiple_reads(
 	partstack_stop,
 	reference_sequence
 ) {
-	const sequence_reads = templates.map((i) => i.segments[0].seq)
-	const qual_reads = templates.map((i) => i.segments[0].qual)
+	const sequence_reads = templates.map(i => i.segments[0].seq)
+	const qual_reads = templates.map(i => i.segments[0].qual)
 	let fasta_sequence = ''
 
 	let qual_sequence = ''
@@ -1093,18 +1093,18 @@ function run_clustalo(
 			'--outfmt=clu', // Output format ClustalW
 			'--wrap=5000', // Allows upto 5000 nucleotides to be shown in a single row
 			'--maxnumseq=' + (max_read_alignment + 1), // Maximum number of sequences to analyze set to max_read_alignment
-			'--maxseqlen=1000', // Maximum length of each sequence = 1000
+			'--maxseqlen=1000' // Maximum length of each sequence = 1000
 		])
 		const stdout = []
 		const stderr = []
 		Readable.from(fasta_sequence).pipe(ps.stdin)
-		ps.stdout.on('data', (data) => stdout.push(data))
-		ps.stderr.on('data', (data) => stderr.push(data))
-		ps.on('error', (err) => {
+		ps.stdout.on('data', data => stdout.push(data))
+		ps.stderr.on('data', data => stderr.push(data))
+		ps.on('error', err => {
 			console.log('stderr (clustalo):', stderr)
 			reject(err)
 		})
-		ps.on('close', (code) => {
+		ps.on('close', code => {
 			//console.log('RawAlignment:', stdout.toString())
 			let read_count = 0
 			const ref_nucleotides = []
@@ -1112,7 +1112,7 @@ function run_clustalo(
 				final_read_align: [],
 				qual_r: [],
 				qual_g: [],
-				qual_b: [],
+				qual_b: []
 			}
 			let gaps_before_variant = 0 // This variable stores the number of gaps that have occured before the variant region. This helps in placing the variant bar in the correct position when there are gaps in ref sequence before variant region
 			for (const read of stdout.toString().split('\n')) {
@@ -1165,7 +1165,11 @@ function run_clustalo(
 						} else {
 							if (
 								nuc_count > 0 &&
-								nuc_count < read.replace(/-/g, '').replace(/,/g, '').replace('seq      ', '').length
+								nuc_count <
+									read
+										.replace(/-/g, '')
+										.replace(/,/g, '')
+										.replace('seq      ', '').length
 							) {
 								// Only allows "-" inside reads to be displayed, removing those before/after the start/end of read
 								aligned_read += nucl
@@ -1253,7 +1257,7 @@ async function query_reads(q) {
 		const r = {
 			chr: q.variant[0].chr,
 			start: left_edge - varlen,
-			stop: right_edge + varlen,
+			stop: right_edge + varlen
 		}
 		await determine_downsampling(q, [r])
 		await query_region(r, q)
@@ -1294,11 +1298,11 @@ async function determine_downsampling(q, regions) {
 			isbam: true,
 			args,
 			dir: q.dir,
-			callback: (line) => {
+			callback: line => {
 				const c = Number(line)
 				if (!Number.isInteger(c)) throw 'total number of reads from a region not integer'
 				totalreads += c
-			},
+			}
 		})
 	}
 	if (totalreads < maxreadcount * 1.1) {
@@ -1313,7 +1317,7 @@ async function determine_downsampling(q, regions) {
 	q.downsample = {
 		keep: 10,
 		skip: Math.floor(unitcount),
-		pointer: 0,
+		pointer: 0
 	}
 	q.read_limit_reached = totalreads // notify client
 }
@@ -1350,7 +1354,7 @@ async function query_region(r, q) {
 			}
 
 			r.lines.push(line)
-		},
+		}
 	})
 }
 
@@ -1382,7 +1386,7 @@ async function run_samtools_depth(q, r) {
 		(q.nochr ? r.chr.replace('chr', '') : r.chr) + ':' + (r.start + 1) + '-' + r.stop,
 		'-g',
 		'DUP',
-		q.file || q.url,
+		q.file || q.url
 	]
 	// Show/Hide PCR optical duplicates
 	if (q.drop_pcrduplicates) {
@@ -1393,7 +1397,7 @@ async function run_samtools_depth(q, r) {
 		isbam: true,
 		args: args,
 		dir: q.dir,
-		callback: (line) => {
+		callback: line => {
 			const l = line.split('\t')
 			const position = Number.parseInt(l[1]) - 1 // change to 0-based
 			const depth = Number.parseInt(l[2])
@@ -1408,12 +1412,12 @@ async function run_samtools_depth(q, r) {
 				bplst[bpidx] = {
 					position,
 					sum: 0, // temp
-					count: 0, // temp
+					count: 0 // temp
 				}
 			}
 			bplst[bpidx].sum += depth
 			bplst[bpidx].count++
-		},
+		}
 	})
 	if (r.ntwidth < 1) {
 		// get average for each bin
@@ -1496,9 +1500,9 @@ async function divide_reads_togroups(q) {
 					templates: templates_info,
 					messages: [],
 					partstack: q.partstack,
-					widths: widths,
-				},
-			],
+					widths: widths
+				}
+			]
 		}
 	}
 
@@ -1524,9 +1528,9 @@ async function divide_reads_togroups(q) {
 				templates: templates_info,
 				messages: [],
 				partstack: q.partstack,
-				widths: widths,
-			},
-		],
+				widths: widths
+			}
+		]
 	}
 }
 
@@ -1601,18 +1605,18 @@ async function match_sv(templates, q, region_widths) {
 			if (g.templates.length == 1) {
 				g.messages.push({
 					isheader: true,
-					t: g.templates.length + ' read supporting SV/fusion',
+					t: g.templates.length + ' read supporting SV/fusion'
 				})
 			} else {
 				g.messages.push({
 					isheader: true,
-					t: g.templates.length + ' reads supporting SV/fusion',
+					t: g.templates.length + ' reads supporting SV/fusion'
 				})
 			}
 		} else if (k == bamcommon.type_supportref) {
 			g.messages.push({
 				isheader: true,
-				t: g.templates.length + ' reads supporting reference allele',
+				t: g.templates.length + ' reads supporting reference allele'
 			})
 		}
 		g.widths = region_widths
@@ -1643,7 +1647,7 @@ function get_templates(q, group) {
 					x1: segment.x1,
 					x2: segment.x2,
 					__tempscore: segment.tempscore,
-					segments: [segment],
+					segments: [segment]
 				})
 			}
 		}
@@ -1670,7 +1674,7 @@ function get_templates(q, group) {
 					x1: Math.max(segment.x1, r.x),
 					x2: Math.min(segment.x2, r.x + r.width),
 					__tempscore: segment.tempscore,
-					segments: [segment],
+					segments: [segment]
 				})
 			}
 		}
@@ -1703,7 +1707,7 @@ function parse_one_segment(arg, r, q) {
 		// set following to true when getting details for a read
 		keepallboxes, // even if only part of the read is shown in view range
 		keepmatepos, // for displaying mate position (on same chr) in details panel
-		keepunmappedread, // return object if the read is unmapped
+		keepunmappedread // return object if the read is unmapped
 	} = arg
 
 	// q is the query object to count number of skipped reads, and is missing for querying single read
@@ -1744,7 +1748,7 @@ function parse_one_segment(arg, r, q) {
 		cigarstr,
 		tlen,
 		flag,
-		tempscore,
+		tempscore
 	}
 
 	parse_flag_detect_readtype(segment, rnext, pnext, r, keepmatepos, segstart_1based)
@@ -1756,7 +1760,7 @@ function parse_one_segment(arg, r, q) {
 				start: segstart,
 				len: seq.length,
 				cidx: 0,
-				qual,
+				qual
 			})
 			segment.discord_unmapped1 = true
 			return segment
@@ -1784,7 +1788,7 @@ function parse_one_segment(arg, r, q) {
 					opr: cigar,
 					start: pos,
 					len,
-					cidx: cum - len,
+					cidx: cum - len
 				})
 				prev = i + 1
 				continue
@@ -1805,7 +1809,7 @@ function parse_one_segment(arg, r, q) {
 						opr: cigar,
 						start: pos,
 						len,
-						cidx: cum - len,
+						cidx: cum - len
 					})
 					// need cidx for = / M, for quality and sequence mismatch
 				}
@@ -1819,7 +1823,7 @@ function parse_one_segment(arg, r, q) {
 							opr: 'I',
 							start: pos,
 							len,
-							cidx: cum - len,
+							cidx: cum - len
 						})
 					}
 				}
@@ -1837,7 +1841,7 @@ function parse_one_segment(arg, r, q) {
 					segment.boxes.push({
 						opr: cigar,
 						start: pos,
-						len,
+						len
 					})
 					// no box seq, don't add cidx
 				}
@@ -1850,7 +1854,7 @@ function parse_one_segment(arg, r, q) {
 						opr: cigar,
 						start: pos,
 						len,
-						cidx: cum - len,
+						cidx: cum - len
 					}
 					segment.boxes.push(b)
 				}
@@ -1862,7 +1866,7 @@ function parse_one_segment(arg, r, q) {
 					opr: cigar,
 					start: pos,
 					len,
-					cidx: cum - len,
+					cidx: cum - len
 				}
 				if (segment.boxes.length == 0) {
 					// this is the first box, will not consume ref
@@ -1884,7 +1888,7 @@ function parse_one_segment(arg, r, q) {
 						opr: 'P',
 						start: pos,
 						len,
-						cidx: cum - len,
+						cidx: cum - len
 					}
 					segment.boxes.push(b)
 				}
@@ -2189,8 +2193,8 @@ function stack_templates(group, q, templates) {
 function may_trimstacks(group, templates, q) {
 	if (!group.partstack) return templates
 	// should be a positive integer
-	const lst = templates.filter((i) => i.y >= group.partstack.start && i.y <= group.partstack.stop) //group.
-	lst.forEach((i) => (i.y -= group.partstack.start))
+	const lst = templates.filter(i => i.y >= group.partstack.start && i.y <= group.partstack.stop) //group.
+	lst.forEach(i => (i.y -= group.partstack.start))
 	//group.templates = lst
 	templates = lst
 	group.stacks = []
@@ -2325,7 +2329,7 @@ function getrowheight_template_overlapread(template, stackheight) {
 }
 
 function segmentstop(boxes) {
-	return Math.max(...boxes.map((i) => i.start + i.len))
+	return Math.max(...boxes.map(i => i.start + i.len))
 }
 
 function check_mismatch(lst, r, box, boxseq) {
@@ -2343,7 +2347,7 @@ function check_mismatch(lst, r, box, boxseq) {
 				start: box.start + i,
 				len: 1,
 				s: readnt,
-				cidx: box.cidx + i,
+				cidx: box.cidx + i
 			}
 			lst.push(b)
 		}
@@ -2364,8 +2368,8 @@ function plot_template(ctx, template, group, q) {
 				x2: Math.min(template.x2, r.x + r.width),
 				y1: template.y,
 				y2: template.y + (template.height || group.stackheight),
-				start: Math.min(...template.segments.map((i) => i.segstart)),
-				stop: Math.max(...template.segments.map((i) => i.segstop)),
+				start: Math.min(...template.segments.map(i => i.segstart)),
+				stop: Math.max(...template.segments.map(i => i.segstop))
 			}
 
 			if (template.segments[0].isfirst) box.isfirst = true
@@ -2381,9 +2385,9 @@ function plot_template(ctx, template, group, q) {
 						x2: template.x2,
 						y1: template.y,
 						y2: template.y + (template.height || group.stackheight),
-						start: Math.min(...template.segments.map((i) => i.segstart)),
-						stop: Math.max(...template.segments.map((i) => i.segstop)),
-						multi_region: true,
+						start: Math.min(...template.segments.map(i => i.segstart)),
+						stop: Math.max(...template.segments.map(i => i.segstop)),
+						multi_region: true
 					}
 				} else {
 					box = {
@@ -2392,8 +2396,8 @@ function plot_template(ctx, template, group, q) {
 						x2: Math.min(template.x2, r.width),
 						y1: template.y,
 						y2: template.y + (template.height || group.stackheight),
-						start: Math.min(...template.segments.map((i) => i.segstart)),
-						stop: Math.max(...template.segments.map((i) => i.segstop)),
+						start: Math.min(...template.segments.map(i => i.segstart)),
+						stop: Math.max(...template.segments.map(i => i.segstop))
 					}
 				}
 			} else {
@@ -2407,8 +2411,8 @@ function plot_template(ctx, template, group, q) {
 					x2: Math.min(template.x2, r.width),
 					y1: template.y,
 					y2: template.y + (template.height || group.stackheight),
-					start: Math.min(...template.segments.map((i) => i.segstart)),
-					stop: Math.max(...template.segments.map((i) => i.segstop)),
+					start: Math.min(...template.segments.map(i => i.segstart)),
+					stop: Math.max(...template.segments.map(i => i.segstop))
 				}
 			}
 		}
@@ -2549,7 +2553,7 @@ function plot_segment(ctx, segment, y, group, q) {
 			// Possibly unmapped reads
 			if (r.to_qual && b.qual) {
 				let xoff = x
-				b.qual.forEach((v) => {
+				b.qual.forEach(v => {
 					if (segment.discord_unmapped2) {
 						ctx.fillStyle = qual2discord_unmapped(v / maxqual)
 					}
@@ -2641,7 +2645,7 @@ function plot_segment(ctx, segment, y, group, q) {
 			// box
 			if (r.to_qual && b.qual) {
 				let xoff = x
-				b.qual.forEach((v) => {
+				b.qual.forEach(v => {
 					if (segment.rnext) {
 						ctx.fillStyle = qual2ctxpair(v / maxqual)
 					} else if (segment.discord_orientation) {
@@ -2813,7 +2817,7 @@ if b.qual is available, set text color based on it
 			// group.templates
 			for (const segment of template.segments) {
 				if (segment.ridx != ridx) continue
-				const insertions = segment.boxes.filter((i) => i.opr == 'I')
+				const insertions = segment.boxes.filter(i => i.opr == 'I')
 				if (!insertions.length) continue
 				for (const b of insertions) {
 					xpos.add(r.x + r.scale(b.start))
@@ -2836,7 +2840,7 @@ if b.qual is available, set text color based on it
 		//group.templates
 		for (const segment of template.segments) {
 			const r = group.regions[segment.ridx]
-			const insertions = segment.boxes.filter((i) => i.opr == 'I')
+			const insertions = segment.boxes.filter(i => i.opr == 'I')
 			if (!insertions.length) continue
 			ctx.font = Math.max(insertion_maxfontsize, group.stackheight - 2) + 'pt Arial'
 			for (const b of insertions) {
@@ -2959,7 +2963,7 @@ async function route_getread(genome, req) {
 		start: Number(req.query.start),
 		stop: Number(req.query.stop),
 		scale: () => {}, // dummy
-		ntwidth: 10, // good to show all insertions
+		ntwidth: 10 // good to show all insertions
 	}
 	if (!Number.isInteger(r.start)) throw '.start not integer'
 	if (!Number.isInteger(r.stop)) throw '.stop not integer'
@@ -3012,7 +3016,7 @@ async function query_oneread(req, r) {
 		args: [
 			'view',
 			_file,
-			(req.query.nochr ? req.query.chr.replace('chr', '') : req.query.chr) + ':' + r.start + '-' + r.stop,
+			(req.query.nochr ? req.query.chr.replace('chr', '') : req.query.chr) + ':' + r.start + '-' + r.stop
 		],
 		dir,
 		callback: (line, ps) => {
@@ -3062,7 +3066,7 @@ async function query_oneread(req, r) {
 					return
 				}
 			}
-		},
+		}
 	})
 
 	if (lst) {
@@ -3076,7 +3080,7 @@ async function query_oneread(req, r) {
 				start_position: lst[0].segstart,
 				ref_positions: req.query.ref_positions,
 				refalleles: req.query.refalleles,
-				altalleles: req.query.altalleles,
+				altalleles: req.query.altalleles
 			}
 			//fs.writeFile('test.txt', JSON.stringify(input_data), function (err) {
 			//	// For catching input to rust pipeline, in case of an error
@@ -3147,7 +3151,7 @@ async function convertunmappedread2html(seg, genome, query) {
 			<span style="opacity:.5;font-size:.7em">FLAG</span>: ${seg.flag}
 			<span style="opacity:.5;font-size:.7em">NAME: ${seg.qname}</span>
 		  </div>
-		  <ul style='padding-left:15px'>${lst.join('')}</ul>`,
+		  <ul style='padding-left:15px'>${lst.join('')}</ul>`
 	}
 	if (seg.discord_unmapped2) {
 		seq_data.unmapped_mate = true
@@ -3350,7 +3354,7 @@ async function convertread2html(seg, genome, query) {
 		  <ul style='padding-left:15px'>${lst.join('')}</ul>`,
 		start_readpos: refstart + 1, // Start position of read
 		boxes: seg.boxes,
-		readpanel_DN_maxlength: readpanel_DN_maxlength,
+		readpanel_DN_maxlength: readpanel_DN_maxlength
 	}
 	if (soft_present == 1) {
 		seq_data.soft_starts = soft_starts
@@ -3369,7 +3373,7 @@ function getGDCcacheFileName(req) {
 	const lst = [
 		req.get('X-Auth-Token') || req.cookies.sessionid, // use token or session, whichever is given
 		req.query.gdcFileUUID,
-		req.query.gdcFilePosition,
+		req.query.gdcFilePosition
 	]
 	return md5Hasher.update(lst.join('')).digest('hex') + '.bam'
 }
@@ -3454,6 +3458,6 @@ async function index_bam(file) {
 	await utils.get_lines_bigfile({
 		isbam: true,
 		args: ['index', file],
-		callback: () => {},
+		callback: () => {}
 	})
 }

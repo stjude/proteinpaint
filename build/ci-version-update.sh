@@ -44,7 +44,7 @@ fi
 ###############
 
 UPDATED=""
-SP='@stjude/proteinpaint'
+SP='@sjcrh/proteinpaint'
 WSPKG=$(npm pkg get version dependencies devDependencies --workspaces)
 # reduce the pacakge deps to only this project's workspaces
 WSPKG=$($handlePkg "$WSPKG")
@@ -181,5 +181,5 @@ git config --global user.name "PPTeam CI"
 git add --all
 git commit -m "$COMMITMSG"
 git tag $TAG
-git push origin master
-git push origin $TAG
+#git push origin master
+#git push origin $TAG

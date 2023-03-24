@@ -8,7 +8,7 @@ Run test script as follows (from 'proteinpaint/'):
 *********************************************/
 
 const tape = require('tape')
-const run_rust = require('@stjude/proteinpaint-rust').run_rust
+const run_rust = require('@sjcrh/proteinpaint-rust').run_rust
 
 // Fisher's exact test
 tape('test #1', async function(test) {

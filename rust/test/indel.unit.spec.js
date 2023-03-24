@@ -1,4 +1,4 @@
-const run_rust = require('@stjude/proteinpaint-rust').run_rust
+const run_rust = require('@sjcrh/proteinpaint-rust').run_rust
 const tape = require('tape')
 const path = require('path')
 const spawn = require('child_process').spawn

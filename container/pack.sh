@@ -17,7 +17,7 @@ CLIENTTGZ=stjude-proteinpaint-client-$CLIENTPKGVER.tgz
 mv $CLIENTTGZ ../container/tmppack/
 
 cd ../front
-CLIENTDEPNAME="@stjude/proteinpaint-client"
+CLIENTDEPNAME="@sjcrh/proteinpaint-client"
 # may reset the dep new version temporarily, for package testing 
 npm pkg set "devDependencies.$CLIENTDEPNAME"=/home/root/pp/tmppack/$CLIENTTGZ
 echo "packing front ..."
@@ -35,7 +35,7 @@ RUSTTGZ=stjude-proteinpaint-rust-$RUSTPKGVER.tgz
 mv $RUSTTGZ ../container/tmppack/
 
 cd ../server
-RUSTDEPNAME="@stjude/proteinpaint-rust"
+RUSTDEPNAME="@sjcrh/proteinpaint-rust"
 # may reset the dep new version temporarily, for package testing 
 npm pkg set "dependencies.$RUSTDEPNAME"=/home/root/pp/tmppack/$RUSTTGZ
 echo "packing server ..."
