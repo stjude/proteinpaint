@@ -15,6 +15,7 @@ columns = [ {label} ]
 	each element is an object describing a column
 	label: str, the text to show as header of a column
 	width: str, column width
+	callback: Indicates that this column will display a button instead, that will call this function when clicked
 
 rows = [ [] ]
 	each element is an array of cells for a row, with array length must matching columns.length
@@ -39,11 +40,6 @@ rows = [ [] ]
 OPTIONAL ARGUMENTS
 ******************
 
-columnButtons = [ {button} ]
-	Each element is an object describing a button:
-	text: str, the text to show in the button
-	callback: function, the function to be called when the button is clicked
-	class: class to customize the button style
 
 buttons = [ {button} ]
 	Each element is an object describing a button:
@@ -179,6 +175,12 @@ export function renderTable({
 				.text('Check/Uncheck All')
 				.attr('class', 'sjpp_table_header sjpp_table_item')
 	}
+	if (columnButtons) {
+		theadRow
+			.append('th')
+			.text('Actions')
+			.attr('class', 'sjpp_table_item sjpp_table_header')
+	}
 	if (showHeader)
 		for (const c of columns) {
 			const th = theadRow
@@ -187,12 +189,6 @@ export function renderTable({
 				.attr('class', 'sjpp_table_item sjpp_table_header')
 			if (c.width) th.style('width', c.width)
 		}
-	if (columnButtons) {
-		theadRow
-			.append('th')
-			.text('Actions')
-			.attr('class', 'sjpp_table_item sjpp_table_header')
-	}
 
 	const tbody = table.append('tbody')
 	for (const [i, row] of rows.entries()) {
@@ -245,7 +241,16 @@ export function renderTable({
 				rowtable.style(key, checked ? selectedRowStyle[key] : '')
 			}
 		}
-
+		if (columnButtons) {
+			const td = rowtable.append('td').attr('class', 'sjpp_table_item')
+			for (const button of columnButtons) {
+				button.button = td
+					.append('button')
+					.style('white-space', 'normal')
+					.text(button.text)
+					.on('click', event => button.callback(event, i))
+			}
+		}
 		for (const [colIdx, cell] of row.entries()) {
 			const td = rowtable.append('td').attr('class', 'sjpp_table_item')
 			const column = columns[colIdx]
@@ -275,15 +280,6 @@ export function renderTable({
 				td.html(cell.html)
 			} else if (cell.value) {
 				td.text(cell.value)
-			}
-		}
-		if (columnButtons) {
-			const td = rowtable.append('td').attr('class', 'sjpp_table_item')
-			for (const button of columnButtons) {
-				button.button = td
-					.append('button')
-					.text(button.text)
-					.on('click', () => button.callback(i))
 			}
 		}
 	}
