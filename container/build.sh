@@ -67,7 +67,6 @@ ARCH="x86_64"
 # !!! FOR TESTING ONLY --- REMOVE .npmrc BEFORE PUSHING !!!
 # !!! once PP uses a public npm registry that does not require a token,
 # then at most the .npmrc should only have the registry URL for the @stjude namespace !!!
-cp ~/.npmrc .
 echo "@stjude:registry=https://npm.pkg.github.com/" > .npmrc
 if [[ $GIT_PAT != "" ]]; then
   # pragma: allowlist nextline secret
