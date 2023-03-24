@@ -15,7 +15,6 @@ columns = [ {label} ]
 	each element is an object describing a column
 	label: str, the text to show as header of a column
 	width: str, column width
-	callback: Indicates that this column will display a button instead, that will call this function when clicked
 
 rows = [ [] ]
 	each element is an array of cells for a row, with array length must matching columns.length
@@ -44,6 +43,7 @@ columnButtons = [ {button} ]
 	Each element is an object describing a column button. Button columns will be inserted in the beginning:
 	text: str, the text to show in the button
 	callback: button callback
+	disabled: function, Optional. receives the row index and returns true if the button should be disabled for this row
 
 buttons = [ {button} ]
 	Each element is an object describing a button:
@@ -253,6 +253,7 @@ export function renderTable({
 					.style('white-space', 'normal')
 					.text(button.text)
 					.on('click', event => button.callback(event, i))
+				if ('disabled' in button) button.button.node().disabled = button.disabled(i)
 			}
 		}
 		for (const [colIdx, cell] of row.entries()) {
