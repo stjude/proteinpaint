@@ -46,9 +46,5 @@ jobs:
           cd container
           ./build.sh -m "ghcr.io/stjude/" -t ${{ secrets.GITHUB_TOKEN }}
           TAG="$(node -p "require('./package.json').version")"
-          docker push ghcr.io/stjude/ppserver:$TAG
-          docker push ghcr.io/stjude/ppfull:$TAG
-          docker push ghcr.io/stjude/ppserver:latest
-          docker push ghcr.io/stjude/ppfull:latest
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
