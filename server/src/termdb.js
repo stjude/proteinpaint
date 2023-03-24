@@ -40,6 +40,8 @@ export function handle_request_closure(genomes) {
 
 			const [ds, tdb] = get_ds_tdb(genome, q)
 
+			await termdbFilterMinimumSampleCheck(req, ds)
+
 			// process triggers
 			if (q.gettermbyid) return trigger_gettermbyid(q, res, tdb)
 			if (q.getcategories) return await trigger_getcategories(q, res, tdb, ds, genome)
@@ -84,6 +86,29 @@ export function handle_request_closure(genomes) {
 			res.send({ error: e.message || e })
 			if (e.stack) console.log(e.stack)
 			else console.log(e)
+		}
+	}
+}
+
+export async function termdbFilterMinimumSampleCheck(req, ds) {
+	// throw exception if the request tries to filter down to small number of samples in an unauthorized way
+
+	// detect if request has a filter; the filter may be defined in different ways, capture all
+	const filter = req.query.filter
+
+	if (!filter) return // this request does not involve a filter, allow
+
+	if (!ds.cohort.termdb.minimumSampleAllowed4filter) return // not restricted, allow
+	// the dataset does not allow filtering down to small number of samples
+
+	// if dataset is secured and request has access
+	if (authApi.userCanAccess(req, ds)) return // no need to check, allow
+
+	const number = await termdbsql.get_samplecount({ filter }, ds)
+	if (number[0].samplecount < ds.cohort.termdb.minimumSampleAllowed4filter) {
+		// reject request
+		throw {
+			filterBelowMinSample: { count: number[0].samplecount, cutoff: ds.cohort.termdb.minimumSampleAllowed4filter }
 		}
 	}
 }

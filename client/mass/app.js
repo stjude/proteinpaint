@@ -37,6 +37,7 @@ class MassApp {
 			holder: opts.holder, // do not modify holder style
 			topbar: opts.holder.append('div'),
 			errdiv: opts.holder.append('div'),
+			filterBelowMinSampleWarning: makeFilterBelowMinSampleWarning(opts.holder),
 			plotDiv: opts.holder.append('div')
 		}
 
@@ -150,6 +151,15 @@ class MassApp {
 	}
 
 	printError(e) {
+		if (e.filterBelowMinSample) {
+			// display special message for this issue
+			const w = this.dom.filterBelowMinSampleWarning
+			w.holder.style('display', '')
+			w.count.text(e.filterBelowMinSample.count)
+			w.cutoff.text(e.filterBelowMinSample.cutoff)
+			return
+		}
+
 		sayerror(this.dom.errdiv || this.opts.holder, 'Error: ' + (e.message || e))
 		if (e.stack) console.log(e.stack)
 	}
@@ -171,4 +181,34 @@ function setInteractivity(self) {
 	}
 
 	self.showTermSrc = showTermSrc
+}
+
+function makeFilterBelowMinSampleWarning(div) {
+	const holder = div
+		.append('div')
+		.style('display', 'none')
+		.style('padding', '20px')
+		.style('margin', '20px')
+		.style('background', '#fae3e1')
+
+	// line 1
+	const p = holder.append('p')
+	p.append('span').html('You have filtered down to&nbsp;')
+	const count = p.append('span')
+	p.append('span').html('&nbsp;samples, below the allowed minimum of&nbsp;')
+	const cutoff = p.append('span')
+	p.append('span').html(
+		'.<br>The portal is now disabled for protection of individual-level data. Please widen your filter to increase the number of samples above the cutoff and reenable the portal.'
+	)
+
+	// line 2
+	holder
+		.append('p')
+		.append('span')
+		.text('Dismiss')
+		.style('font-weight', 'bold')
+		.attr('class', 'sja_clbtext2')
+		.on('click', () => holder.style('display', 'none'))
+
+	return { holder, count, cutoff }
 }
