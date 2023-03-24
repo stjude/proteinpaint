@@ -179,7 +179,7 @@ export function renderTable({
 				.text('Check/Uncheck All')
 				.attr('class', 'sjpp_table_header sjpp_table_item')
 	}
-	if (columnButtons) {
+	if (columnButtons && columnButtons.length > 0) {
 		theadRow
 			.append('th')
 			.text('Actions')
@@ -245,7 +245,7 @@ export function renderTable({
 				rowtable.style(key, checked ? selectedRowStyle[key] : '')
 			}
 		}
-		if (columnButtons) {
+		if (columnButtons && columnButtons.length > 0) {
 			const td = rowtable.append('td').attr('class', 'sjpp_table_item')
 			for (const button of columnButtons) {
 				button.button = td
