@@ -84,7 +84,7 @@ export async function displaySampleTable(samples, args) {
 		const height = screen.height
 		const colButton = {
 			text: 'Disco',
-
+			//disabled: (i) => false,
 			callback: async (event, i) => {
 				const sample = samples[i]
 				showDtDisco(event, sample, args, true)
@@ -283,7 +283,7 @@ async function showDtDisco(event, sample, arg, fromTable = false) {
 		sampleName: sample.sample_id,
 		data: mlst
 	}
-	arg.tk.menutip.clear().show(event.clientX, event.clientY, false)
+	arg.tk.menutip.clear().show(event.clientX, event.clientY)
 	if (!fromTable) event.target.innerHTML = mlst.length + ' variants loaded'
 	else
 		arg.tk.menutip.d
