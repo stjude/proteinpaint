@@ -191,11 +191,10 @@ export default function violinRenderer(self) {
 
 	function renderScale(t1, t2, settings, isH, svg) {
 		// <g>: holder of numeric axis
-		const g = svg.svgG
-			.append('g')
-			.transition()
-			.duration(self.opts.mode == 'minimal' ? 0 : 800)
-			.delay(self.opts.mode == 'minimal' ? 0 : 100)
+		const g = svg.svgG.append('g')
+		// .transition()
+		// .duration(self.opts.mode == 'minimal' ? 0 : 800)
+		// .delay(self.opts.mode == 'minimal' ? 0 : 100)
 		g.call((isH ? axisTop : axisLeft)().scale(svg.axisScale))
 
 		if (self.opts.mode != 'minimal') {
@@ -212,9 +211,9 @@ export default function violinRenderer(self) {
 				.attr('y', isH ? -30 : -45)
 				.style('opacity', 0)
 				.attr('transform', isH ? null : 'rotate(-90)')
-				.transition()
-				.delay(self.opts.mode == 'minimal' ? 0 : 100)
-				.duration(self.opts.mode == 'minimal' ? 0 : 200)
+				// .transition()
+				// .delay(self.opts.mode == 'minimal' ? 0 : 100)
+				// .duration(self.opts.mode == 'minimal' ? 0 : 200)
 				.style('opacity', 1)
 		}
 	}
@@ -257,9 +256,9 @@ export default function violinRenderer(self) {
 				tip.hide()
 			})
 			.style('opacity', 0)
-			.transition()
-			.delay(self.opts.mode == 'minimal' ? 0 : 100)
-			.duration(self.opts.mode == 'minimal' ? 0 : 100)
+			// .transition()
+			// .delay(self.opts.mode == 'minimal' ? 0 : 100)
+			// .duration(self.opts.mode == 'minimal' ? 0 : 100)
 			.style('opacity', 1)
 			.attr('x', isH ? -5 : 0 - settings.svgw - 5)
 			.attr('y', 0)
@@ -294,9 +293,9 @@ export default function violinRenderer(self) {
 			.attr('class', 'sjpp-vp-path')
 			.style('fill', self.opts.mode === 'minimal' ? rgb(221, 221, 221) : plot.color ? plot.color : k2c(plotIdx))
 			.style('opacity', 0)
-			.transition()
-			.delay(self.opts.mode == 'minimal' ? 0 : 300)
-			.duration(self.opts.mode == 'minimal' ? 0 : 600)
+			// .transition()
+			// .delay(self.opts.mode == 'minimal' ? 0 : 300)
+			// .duration(self.opts.mode == 'minimal' ? 0 : 600)
 			.style('opacity', '0.8')
 			.attr('d', areaBuilder(plot.plotValueCount > 3 ? plot.bins : 0)) //do not build violin plots for values 3 or less than 3.
 
@@ -309,9 +308,9 @@ export default function violinRenderer(self) {
 		violinG
 			.append('image')
 			.style('opacity', 0)
-			.transition()
-			.delay(self.opts.mode == 'minimal' ? 0 : 400)
-			.duration(self.opts.mode == 'minimal' ? 0 : 100)
+			// .transition()
+			// .delay(self.opts.mode == 'minimal' ? 0 : 400)
+			// .duration(self.opts.mode == 'minimal' ? 0 : 100)
 			.style('opacity', 1)
 			.attr('xlink:href', plot.src)
 			.attr('transform', isH ? `translate(0, -${imageOffset})` : `translate(-${imageOffset}, 0)`)
@@ -322,9 +321,9 @@ export default function violinRenderer(self) {
 		if (plot.plotValueCount >= 2) {
 			violinG
 				.append('line')
-				.transition()
-				.delay(600)
-				.duration(30)
+				// .transition()
+				// .delay(600)
+				// .duration(30)
 				.style('opacity', 1)
 				.attr('class', 'sjpp-median-line')
 				.style('stroke-width', '3')
@@ -344,9 +343,9 @@ export default function violinRenderer(self) {
 		for (const line of lines) {
 			violinG
 				.append('line')
-				.transition()
-				.delay(self.opts.mode == 'minimal' ? 0 : 600)
-				.duration(self.opts.mode == 'minimal' ? 0 : 30)
+				// .transition()
+				// .delay(self.opts.mode == 'minimal' ? 0 : 600)
+				// .duration(self.opts.mode == 'minimal' ? 0 : 30)
 				.attr('class', 'sjpp-vp-line')
 				.style('stroke', self.opts.mode == 'minimal' ? 'red' : 'black') // if not minimal, then red median line will also appear
 				.attr('y1', isH ? -(self.data.plotThickness / 2) : svg.axisScale(line))
