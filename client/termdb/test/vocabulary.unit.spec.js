@@ -27,15 +27,16 @@ async function getTermdbVocabApi(opts = {}) {
 **************
 
 vocabInit
-    getPercentile
+	getPercentile()
 
 FrontendVocab
-    getTermdbConfig
-    getTermChildren
-    findTerm
-    getDescrStats
-    getterm
-    getPercentile
+	getTermdbConfig()
+	getTermChildren()
+	findTerm()
+	getPercentile()
+	getDescrStats()
+	getterm()
+	graphable()
 */
 
 tape('\n', function(test) {
@@ -272,55 +273,6 @@ tape('findTerm()', async test => {
 	// result = await vocabFrontend.findTerm()
 })
 
-tape('getDescrStats()', async test => {
-	test.timeoutAfter(100)
-	test.plan(9)
-
-	let testId, result, msg
-
-	testId = 'd'
-	result = await frontendVocabApi.getDescrStats(testId)
-	test.equal(result.values[0].value, 10, `Should get the correct value for ${result.values[0].id}`)
-	test.equal(result.values[1].value, 0.05, `Should get the correct value for ${result.values[1].id}`)
-	test.equal(result.values[2].value, 0.2, `Should get the correct value for ${result.values[2].id}`)
-	test.equal(result.values[3].value, 0.45, `Should get the correct value for ${result.values[3].id}`)
-	test.equal(result.values[4].value, 0.48, `Should get the correct value for ${result.values[4].id}`)
-	test.equal(result.values[5].value, 0.8, `Should get the correct value for ${result.values[5].id}`)
-	test.equal(result.values[6].value, 1.1, `Should get the correct value for ${result.values[6].id}`)
-	test.equal(result.values[7].value, 0.35, `Should get the correct value for ${result.values[7].id}`)
-
-	testId = 'c'
-	msg = `Should throw for non-numeric data`
-	try {
-		const modifiedTestVocab = getExample()
-		modifiedTestVocab.sampleannotation[11] = { c: Infinity, d: 0 }
-		const testFrontend = new FrontendVocab({ state: { vocab: modifiedTestVocab } })
-		result = await testFrontend.getDescrStats(testId)
-		test.fail(msg)
-	} catch (e) {
-		test.pass(`${msg}: ${e}`)
-	}
-})
-
-tape('getterm()', async test => {
-	test.timeoutAfter(100)
-	test.plan(2)
-
-	let result, testId, msg
-
-	testId = 'a'
-	result = await frontendVocabApi.getterm(testId)
-	test.ok(result.id == testId, `Should return term object for test id = ${testId} `)
-
-	msg = `Should throw for missing term id`
-	try {
-		result = await frontendVocabApi.getterm()
-		test.fail(msg)
-	} catch (e) {
-		test.pass(`${msg}: ${e}`)
-	}
-})
-
 tape('getPercentile() - FrontendVocab directly', async function(test) {
 	//Test FrontendVocab getPercentile() method directly
 	test.timeoutAfter(100)
@@ -419,8 +371,69 @@ tape('getPercentile() - FrontendVocab directly', async function(test) {
 	test.equal(result.values[0], 0.35, 'should get correct 50th percentile with numeric filter')
 })
 
-/* TermdbVocab tests */
-tape.skip('\n', function(test) {
-	test.pass('-***- TermdbVocab Tests -***-')
-	test.end()
+tape('getDescrStats()', async test => {
+	test.timeoutAfter(100)
+	test.plan(9)
+
+	let testId, result, msg
+
+	testId = 'd'
+	result = await frontendVocabApi.getDescrStats(testId)
+	test.equal(result.values[0].value, 10, `Should get the correct value for ${result.values[0].id}`)
+	test.equal(result.values[1].value, 0.05, `Should get the correct value for ${result.values[1].id}`)
+	test.equal(result.values[2].value, 0.2, `Should get the correct value for ${result.values[2].id}`)
+	test.equal(result.values[3].value, 0.45, `Should get the correct value for ${result.values[3].id}`)
+	test.equal(result.values[4].value, 0.48, `Should get the correct value for ${result.values[4].id}`)
+	test.equal(result.values[5].value, 0.8, `Should get the correct value for ${result.values[5].id}`)
+	test.equal(result.values[6].value, 1.1, `Should get the correct value for ${result.values[6].id}`)
+	test.equal(result.values[7].value, 0.35, `Should get the correct value for ${result.values[7].id}`)
+
+	testId = 'c'
+	msg = `Should throw for non-numeric data`
+	try {
+		const modifiedTestVocab = getExample()
+		modifiedTestVocab.sampleannotation[11] = { c: Infinity, d: 0 }
+		const testFrontend = new FrontendVocab({ state: { vocab: modifiedTestVocab } })
+		result = await testFrontend.getDescrStats(testId)
+		test.fail(msg)
+	} catch (e) {
+		test.pass(`${msg}: ${e}`)
+	}
+})
+
+tape('getterm()', async test => {
+	test.timeoutAfter(100)
+	test.plan(2)
+
+	let result, testId, msg
+
+	testId = 'a'
+	result = await frontendVocabApi.getterm(testId)
+	test.ok(result.id == testId, `Should return term object for test id = ${testId} `)
+
+	msg = `Should throw for missing term id`
+	try {
+		result = await frontendVocabApi.getterm()
+		test.fail(msg)
+	} catch (e) {
+		test.pass(`${msg}: ${e}`)
+	}
+})
+
+tape('graphable()', async test => {
+	test.timeoutAfter(100)
+	test.plan(2)
+
+	let result, message
+
+	message = `Should throw for missing term`
+	try {
+		await frontendVocabApi.graphable()
+		test.fail(message)
+	} catch (e) {
+		test.equal(e, 'graphable: term is missing', `${message}: ${e}`)
+	}
+
+	result = await frontendVocabApi.graphable(termjson['diaggrp'])
+	test.ok(true, 'Should return true for graphable term')
 })

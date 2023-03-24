@@ -29,6 +29,8 @@ function getHolder() {
 		.style('border', '1px solid #000')
 }
 
+// const frontendVocabApi = new FrontendVocab({ state: { vocabData }})
+
 const state = {
 	vocab: {
 		genome: 'hg38-test',
@@ -39,25 +41,60 @@ const state = {
 
 async function getTermdbVocabApi(opts = {}) {
 	return new TermdbVocab({
-		app: await testAppInit(state),
-		state: opts.state || state
+		app: await testAppInit(opts.state || state),
+		state: state,
+		opts
 	})
 }
 
 /**************
  test sections
 **************
+
 vocabInit()
     vocabInit(), default
     getVocab(), custom
     Missing .state
+
 TermdbVocab
     getTermdbConfig()
 	getTermChildren()
+	getTdbDataUrl()
 	findTerm()
+	getTermInfo()
 	getPercentile()
+	** Comments
+		Tested in FrontendVocab
+			getDescrStats()
+			getterm()
+			graphable()
+
 FrontendVocab
     Missing state.vocab
+	** Comments
+		Tested in vocab.unit
+			getTermdbConfig()
+			getTermChildren()
+			findTerm()
+			getDescrStats()
+			getterm()
+			getPercentile()
+			graphable()
+
+		Not testing
+			syncTermData() - similar enough to termdbvocab not testing
+			q_to_param() - exported elsewhere from ./vocabulary. Safe to remove?
+			Should be in barchart test
+				getNestedChartSeriesData()
+				getCategories()
+
+		Not used
+			getTermInfo() - perpherial scan, only termdb getTermInfo used
+			getCohortSampleCount() - only termdb getCohortSampleCount() used
+			getFilteredSampleCount()
+			getDensityPlotData()
+			getNumericUncomputableCategories()
+			getConditionCategories()
 */
 
 tape('\n', function(test) {
@@ -204,11 +241,26 @@ tape('Missing .state', test => {
 
 /* TermdbVocab tests 
 
-//getTdbDataUrl
-//syncTermData
+To test: 
+	mayFillInMissingCatValues
+	getRegressionData
+	syncTermData - only testing here
+	getCohortSampleCount
+	getFilteredSampleCount
+	getViolinPlotData
+	getCategories
+	getNumericUncomputableCategories
+	getConditionCategories
+	validateSnps
+	get_variantFilter
+	getAnnotatedSampleData
+	getTwMinCopy
+	getTermTypes
+	getLDdata
+	getScatterData
+	getCohortsData
+	getMds3queryDetails
 
-//getAnnotatedSampleData
-    
 */
 tape('\n', function(test) {
 	test.pass('-***- TermdbVocab Tests -***-')
@@ -287,6 +339,173 @@ tape('getTermChildren()', async test => {
 	test.end()
 })
 
+tape.only('getNestedChartSeriesData()', async test => {
+	test.timeoutAfter(100)
+
+	const termdbVocabApi = await getTermdbVocabApi()
+
+	let opts, result, message
+
+	message = 'Should return the correct URL for only one term'
+	opts = {
+		chartType: 'barchart',
+		term: { id: 'agedx', term: termjson['agedx'], q: termjson['agedx'] }
+	}
+	result = await termdbVocabApi.getNestedChartSeriesData(opts)
+	console.log(result)
+
+	test.end()
+})
+
+tape('getTdbDataUrl()', async test => {
+	test.timeoutAfter(100)
+	test.plan(12)
+
+	const termdbVocabApi = await getTermdbVocabApi()
+
+	let opts, result, message, term_1, term_2, term_3
+
+	message = 'Should return the correct URL for only one term'
+	opts = {
+		chartType: 'barchart',
+		term: { id: 'agedx', term: termjson['agedx'], q: termjson['agedx'] }
+	}
+	result = termdbVocabApi.getTdbDataUrl(opts)
+	test.equal(
+		result,
+		`/termdb?embedder=${window.location.hostname}&term1_id=agedx&term1_q=%7B%22id%22%3A%22agedx%22%2C%22name%22%3A%22Age%20at%20Cancer%20Diagnosis%22%2C%22unit%22%3A%22Years%22%2C%22type%22%3A%22float%22%2C%22bins%22%3A%7B%22label_offset%22%3A1%2C%22default%22%3A%7B%22type%22%3A%22regular-bin%22%2C%22label_offset%22%3A1%2C%22bin_size%22%3A3%2C%22startinclusive%22%3Atrue%2C%22first_bin%22%3A%7B%22startunbounded%22%3Atrue%2C%22stop%22%3A2%7D%7D%2C%22less%22%3A%7B%22type%22%3A%22regular-bin%22%2C%22label_offset%22%3A1%2C%22bin_size%22%3A5%2C%22startinclusive%22%3Atrue%2C%22first_bin%22%3A%7B%22startunbounded%22%3Atrue%2C%22stop%22%3A5%7D%2C%22last_bin%22%3A%7B%22stopunbounded%22%3Atrue%2C%22start%22%3A15%7D%7D%7D%2C%22isleaf%22%3Atrue%7D&genome=hg38-test&dslabel=TermdbTest`,
+		message
+	)
+
+	message = 'Should return URL with all expected paramters'
+	const paramsNotFound = []
+	if (!result.includes(`termdb`)) paramsNotFound.push(`termdb`)
+	if (!result.includes(`embedder=${window.location.hostname}`))
+		paramsNotFound.push(`embedder=${window.location.hostname}`)
+	if (!result.includes(`term1_id=${opts.term.id}`)) paramsNotFound.push(`term1_id=${opts.term.id}`)
+	if (!result.includes(`genome=${state.vocab.genome}`)) paramsNotFound.push(`genome=${state.vocab.genome}`)
+	if (!result.includes(`&dslabel=${state.vocab.dslabel}`)) paramsNotFound.push(`&dslabel=${state.vocab.dslabel}`)
+	paramsNotFound.length == 0 ? test.pass(message) : test.fail(`${message}, not found: ${paramsNotFound}`)
+
+	message = 'Should return the correct URL for two terms'
+	opts = {
+		chartType: 'barchart',
+		term: { id: 'agedx', term: termjson['agedx'], q: termjson['agedx'] },
+		term2: { id: 'sex', term: termjson['sex'], q: termjson['sex'] }
+	}
+	result = termdbVocabApi.getTdbDataUrl(opts)
+	term_1 = result.includes(`term1_id=${opts.term.id}`)
+	term_2 = result.includes(`term2_id=${opts.term2.id}`)
+	test.ok(term_1 == true && term_2 == true, message)
+
+	message = 'Should return the correct URL for all three terms'
+	opts = {
+		chartType: 'barchart',
+		term: { id: 'agedx', term: termjson['agedx'], q: termjson['agedx'] },
+		term2: { id: 'sex', term: termjson['sex'], q: termjson['sex'] },
+		term0: { id: 'diaggrp', term: termjson['diaggrp'], q: termjson['diaggrp'] }
+	}
+	result = termdbVocabApi.getTdbDataUrl(opts)
+	term_1 = result.includes(`term1_id=${opts.term.id}`)
+	term_2 = result.includes(`term2_id=${opts.term2.id}`)
+	term_3 = result.includes(`term3_id=${opts.term2.id}`)
+	test.ok(term_1 == true && term_2 == true, message)
+
+	message = 'Should return the correct URL for filter'
+	opts = {
+		chartType: 'barchart',
+		term: { id: 'agedx', term: termjson['agedx'], q: termjson['agedx'] },
+		filter: {
+			type: 'tvslst',
+			in: 1,
+			join: 'and',
+			lst: [
+				{
+					type: 'tvs',
+					tvs: {
+						term: { id: 'diaggrp', name: 'Diagnosis Group', type: 'categorical' },
+						values: [{ key: 'Wilms tumor', label: 'Wilms tumor' }]
+					}
+				},
+				{
+					type: 'tvs',
+					tvs: {
+						term: { id: 'sex', name: 'Sex', type: 'categorical' },
+						values: [{ key: '1', label: 'Male' }]
+					}
+				}
+			]
+		}
+	}
+	result = termdbVocabApi.getTdbDataUrl(opts)
+	test.ok(result.includes(`filter=`), 'Should return filter= in URL')
+
+	message = 'Should return scatter plot parameter'
+	opts = {
+		chartType: 'scatter',
+		term: { id: 'agedx', term: termjson['agedx'], q: termjson['agedx'] }
+	}
+	result = termdbVocabApi.getTdbDataUrl(opts)
+	test.ok(result.includes(`scatter=1`), message)
+
+	message = 'Should return cuminc parameter'
+	opts = {
+		chartType: 'cuminc',
+		term: { id: 'agedx', term: termjson['agedx'], q: termjson['agedx'] }
+	}
+	result = termdbVocabApi.getTdbDataUrl(opts)
+	test.ok(result.includes(`getcuminc=1`), message)
+
+	message = 'Should return survival plot parameter'
+	opts = {
+		chartType: 'survival',
+		term: { id: 'agedx', term: termjson['agedx'], q: termjson['agedx'] }
+	}
+	result = termdbVocabApi.getTdbDataUrl(opts)
+	test.ok(result.includes(`getsurvival=1`), message)
+
+	opts = {
+		chartType: 'barchart'
+	}
+	result = termdbVocabApi.getTdbDataUrl(opts)
+	test.equal(
+		result,
+		`/termdb?embedder=${window.location.hostname}&genome=hg38-test&dslabel=TermdbTest`,
+		'Should return dataset only URL'
+	)
+
+	message = 'Should throw for missing opts'
+	try {
+		termdbVocabApi.getTdbDataUrl()
+		test.fail(message)
+	} catch (e) {
+		test.pass(`${message}: ${e}`)
+	}
+
+	message = 'Should throw for missing opts.chartType'
+	try {
+		opts = {
+			term: { id: 'agedx', term: termjson['agedx'], q: termjson['agedx'] }
+		}
+		termdbVocabApi.getTdbDataUrl()
+		test.fail(message)
+	} catch (e) {
+		test.pass(`${message}: ${e}`)
+	}
+
+	message = 'Should throw for missing term.q'
+	try {
+		opts = {
+			chartType: 'barchart',
+			term: { id: 'agedx', term: termjson['agedx'] }
+		}
+		termdbVocabApi.getTdbDataUrl(opts)
+		test.fail(message)
+	} catch (e) {
+		test.pass(`${message}: ${e}`)
+	}
+})
+
 tape('findTerm()', async test => {
 	test.timeoutAfter(500)
 	test.plan(3)
@@ -309,6 +528,34 @@ tape('findTerm()', async test => {
 	testTerm = 'ZZZ'
 	result = await termdbVocabApi.findTerm(testTerm)
 	test.equal(result.lst.length, 0, `Should return the correct number (n = 0) of terms`)
+})
+
+tape('getTermInfo()', async test => {
+	test.timeoutAfter(100)
+
+	const termdbVocabApi = await getTermdbVocabApi()
+
+	let testId, result
+
+	//Returns result from conditional term with grades
+	testId = 'Cardiac dysrhythmia'
+	result = await termdbVocabApi.getTermInfo(testId)
+	test.ok(result.terminfo, `Should return a terminfo object`)
+
+	//Returns empty object for non-conditional term
+	testId = 'diaggrp'
+	result = await termdbVocabApi.getTermInfo(testId)
+	test.ok(!result.terminfo, `Should return an empty object`)
+
+	const message = 'Should throw for missing term id'
+	try {
+		result = await termdbVocabApi.getTermInfo()
+		test.fail(message)
+	} catch (e) {
+		test.equal(e, '.getTermInfo: Missing term id', `${message}: ${e}`)
+	}
+
+	test.end()
 })
 
 tape('getPercentile() - TermdbVocab directly', async test => {
@@ -407,11 +654,7 @@ tape('getPercentile() - TermdbVocab directly', async test => {
 	test.equal(result.values[0], 0.03537315665, 'should get correct 50th percentile with numeric filter')
 })
 
-/* FrontendVocab tests 
-
-//syncTermData
-//getDensityPlotData
-*/
+/* FrontendVocab tests */
 tape('\n', function(test) {
 	test.pass('-***- FrontendVocab Tests -***-')
 	test.end()
