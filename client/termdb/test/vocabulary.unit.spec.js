@@ -51,7 +51,7 @@ tape('\n', function(test) {
 
 tape('getPercentile()', async function(test) {
 	test.timeoutAfter(100)
-	test.plan(11)
+	test.plan(13)
 
 	let percentile_lst, result, testMsg, filter
 
@@ -84,7 +84,7 @@ tape('getPercentile()', async function(test) {
 	test.deepEqual(result.values, [0.2, 0.45, 0.8], 'should get correct 25th, 50th, and 75th percentiles')
 
 	percentile_lst = ['a']
-	testMsg = 'should throw error for non-integer percentiles'
+	testMsg = `should throw error for non-integer percentiles (only non-integer value = (${percentile_lst}) in array)`
 	try {
 		result = await vocabApi.getPercentile('d', percentile_lst)
 		test.fail(testMsg)
@@ -93,12 +93,30 @@ tape('getPercentile()', async function(test) {
 	}
 
 	percentile_lst = [25, 50, 'a']
-	testMsg = 'should throw error for non-integer percentiles'
+	testMsg = `should throw error for non-integer percentiles (non-integer value = (${percentile_lst}) within array)`
 	try {
 		result = await vocabApi.getPercentile('d', percentile_lst)
 		test.fail(testMsg)
 	} catch (e) {
 		test.equal(e, 'non-integer percentiles found', testMsg)
+	}
+
+	percentile_lst = [120]
+	testMsg = `should throw error for percentiles must be between 1-99 (only incorrect value = (${percentile_lst}) in array)`
+	try {
+		result = await vocabApi.getPercentile('d', percentile_lst)
+		test.fail(testMsg)
+	} catch (e) {
+		test.equal(e, 'percentiles must be between 1-99', testMsg)
+	}
+
+	percentile_lst = [25, 50, 120]
+	testMsg = `should throw error for percentiles must be between 1-99 (one incorrect value = (${percentile_lst}) within array)`
+	try {
+		result = await vocabApi.getPercentile('d', percentile_lst)
+		test.fail(testMsg)
+	} catch (e) {
+		test.equal(e, 'percentiles must be between 1-99', testMsg)
 	}
 
 	percentile_lst = [50]
@@ -303,10 +321,10 @@ tape('getterm()', async test => {
 	}
 })
 
-tape('getPercentile()', async function(test) {
-	//Test FrontendVocab directly
+tape('getPercentile() - FrontendVocab directly', async function(test) {
+	//Test FrontendVocab getPercentile() method directly
 	test.timeoutAfter(100)
-	test.plan(11)
+	test.plan(13)
 
 	let percentile_lst, result, testMsg, filter
 
@@ -339,7 +357,7 @@ tape('getPercentile()', async function(test) {
 	test.deepEqual(result.values, [0.2, 0.45, 0.8], 'should get correct 25th, 50th, and 75th percentiles')
 
 	percentile_lst = ['a']
-	testMsg = 'should throw error for non-integer percentiles'
+	testMsg = `should throw error for non-integer percentiles (only non-integer value = (${percentile_lst}) in array)`
 	try {
 		result = await frontendVocabApi.getPercentile('d', percentile_lst)
 		test.fail(testMsg)
@@ -348,7 +366,7 @@ tape('getPercentile()', async function(test) {
 	}
 
 	percentile_lst = [25, 50, 'a']
-	testMsg = 'should throw error for non-integer percentiles'
+	testMsg = `should throw error for non-integer percentiles (non-integer value = (${percentile_lst}) within array)`
 	try {
 		result = await frontendVocabApi.getPercentile('d', percentile_lst)
 		test.fail(testMsg)
@@ -364,6 +382,24 @@ tape('getPercentile()', async function(test) {
 	}
 	result = await frontendVocabApi.getPercentile('d', percentile_lst, filter)
 	test.equal(result.values[0], 0.55, 'should get correct 50th percentile with categorical filter')
+
+	percentile_lst = [120]
+	testMsg = `should throw error for percentiles must be between 1-99 (only incorrect value = (${percentile_lst}) in array)`
+	try {
+		result = await frontendVocabApi.getPercentile('d', percentile_lst)
+		test.fail(testMsg)
+	} catch (e) {
+		test.equal(e, 'percentiles must be between 1-99', testMsg)
+	}
+
+	percentile_lst = [25, 50, 120]
+	testMsg = `should throw error for percentiles must be between 1-99 (one incorrect value = (${percentile_lst}) within array)`
+	try {
+		result = await frontendVocabApi.getPercentile('d', percentile_lst)
+		test.fail(testMsg)
+	} catch (e) {
+		test.equal(e, 'percentiles must be between 1-99', testMsg)
+	}
 
 	percentile_lst = [50]
 	filter = {
