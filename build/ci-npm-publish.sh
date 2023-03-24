@@ -9,13 +9,13 @@ set -e
 WORKSPACES="rust server client front"
 
 for WS in ${WORKSPACES}; do
-  PUBLISHEDVER=$(npm view @stjude/proteinpaint-$WS version | tail -n1)
+  PUBLISHEDVER=$(npm view @sjcrh/proteinpaint-$WS version | tail -n1)
   CURRENTVER=$(node -p "require('./$WS/package.json').version")
   echo "$WS [$PUBLISHEDVER] [$CURRENTVER]"
   if [[ "$PUBLISHEDVER" != "$CURRENTVER" ]]; then
     cd $WS
     echo "publishing $WS-$CURRENTVER"
-    npm publish
+    npm publish --access public
     cd ..
   fi
 done

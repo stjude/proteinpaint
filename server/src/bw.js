@@ -1,7 +1,7 @@
 const app = require('./app')
 const createCanvas = require('canvas').createCanvas
 const utils = require('./utils')
-const run_rust = require('@stjude/proteinpaint-rust').run_rust
+const run_rust = require('@sjcrh/proteinpaint-rust').run_rust
 const serverconfig = require('./serverconfig')
 const spawn = require('child_process').spawn
 const { rgb } = require('d3-color')

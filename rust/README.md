@@ -36,7 +36,7 @@ The compiled dependencies and target binaries will be generated under `./target/
 
 ```js
 // assuming a js file from server/src 
-const run_rust = require('@stjude/proteinpaint-rust').run_rust
+const run_rust = require('@sjcrh/proteinpaint-rust').run_rust
 // or 
 // import * as utils from './utils'
 

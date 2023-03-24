@@ -2,7 +2,7 @@ const jStat = require('jstat').jStat
 const path = require('path')
 const features = require('./app').features
 const utils = require('./utils')
-const run_rust = require('@stjude/proteinpaint-rust').run_rust
+const run_rust = require('@sjcrh/proteinpaint-rust').run_rust
 const spawn = require('child_process').spawn
 const Readable = require('stream').Readable
 const readline = require('readline')
@@ -92,24 +92,23 @@ export async function match_complexvariant_rust(q, templates_info, region_widths
 		}
 		variant_idx = 0
 		for (const variant of q.variant) {
-			const leftflankseq = (
-				await utils.get_fasta(q.genome, variant.chr + ':' + variant_start_global + '-' + ref_positions[variant_idx])
-			)
+			const leftflankseq = (await utils.get_fasta(
+				q.genome,
+				variant.chr + ':' + variant_start_global + '-' + ref_positions[variant_idx]
+			))
 
 				.split('\n')
 				.slice(1)
 				.join('')
 				.toUpperCase()
-			const rightflankseq = (
-				await utils.get_fasta(
-					q.genome,
-					variant.chr +
-						':' +
-						(ref_positions[variant_idx] + refalleles[variant_idx].length + 1) +
-						'-' +
-						variant_stop_global
-				)
-			)
+			const rightflankseq = (await utils.get_fasta(
+				q.genome,
+				variant.chr +
+					':' +
+					(ref_positions[variant_idx] + refalleles[variant_idx].length + 1) +
+					'-' +
+					variant_stop_global
+			))
 				.split('\n')
 				.slice(1)
 				.join('')
@@ -199,7 +198,7 @@ export async function match_complexvariant_rust(q, templates_info, region_widths
 			refseq: refseqs[i],
 			altseq: altseqs[i],
 			leftflankseq: leftflankseqs[i],
-			rightflankseq: rightflankseqs[i],
+			rightflankseq: rightflankseqs[i]
 		})
 	}
 
@@ -330,29 +329,25 @@ export async function match_complexvariant_rust(q, templates_info, region_widths
 						if (g.templates.length == 1) {
 							g.messages.push({
 								isheader: true,
-								t: g.templates.length + ' read supporting the alternative allele',
+								t: g.templates.length + ' read supporting the alternative allele'
 							})
 						} else {
 							g.messages.push({
 								isheader: true,
-								t: g.templates.length + ' reads supporting the alternative allele',
+								t: g.templates.length + ' reads supporting the alternative allele'
 							})
 						}
 					} else {
 						if (g.templates.length == 1) {
 							g.messages.push({
 								isheader: true,
-								t:
-									g.templates.length + ' read support the alternative allele with ' + altalleles[var_idx] + ' sequence',
+								t: g.templates.length + ' read support the alternative allele with ' + altalleles[var_idx] + ' sequence'
 							})
 						} else {
 							g.messages.push({
 								isheader: true,
 								t:
-									g.templates.length +
-									' reads support the alternative allele with ' +
-									altalleles[var_idx] +
-									' sequence',
+									g.templates.length + ' reads support the alternative allele with ' + altalleles[var_idx] + ' sequence'
 							})
 						}
 					}
@@ -362,36 +357,36 @@ export async function match_complexvariant_rust(q, templates_info, region_widths
 			if (g.templates.length == 1) {
 				g.messages.push({
 					isheader: true,
-					t: g.templates.length + ' ambiguous read',
+					t: g.templates.length + ' ambiguous read'
 				})
 			} else {
 				g.messages.push({
 					isheader: true,
-					t: g.templates.length + ' ambiguous reads',
+					t: g.templates.length + ' ambiguous reads'
 				})
 			}
 		} else if (k == bamcommon.type_supportref) {
 			if (g.templates.length == 1) {
 				g.messages.push({
 					isheader: true,
-					t: g.templates.length + ' read supporting the reference allele',
+					t: g.templates.length + ' read supporting the reference allele'
 				})
 			} else {
 				g.messages.push({
 					isheader: true,
-					t: g.templates.length + ' reads supporting the reference allele',
+					t: g.templates.length + ' reads supporting the reference allele'
 				})
 			}
 		} else if (k == bamcommon.type_supportno) {
 			if (g.templates.length == 1) {
 				g.messages.push({
 					isheader: true,
-					t: g.templates.length + ' read supporting neither reference nor alternative alleles',
+					t: g.templates.length + ' read supporting neither reference nor alternative alleles'
 				})
 			} else {
 				g.messages.push({
 					isheader: true,
-					t: g.templates.length + ' reads supporting neither reference nor alternative alleles',
+					t: g.templates.length + ' reads supporting neither reference nor alternative alleles'
 				})
 			}
 		} else {
@@ -442,6 +437,6 @@ export async function match_complexvariant_rust(q, templates_info, region_widths
 		alternate_forward_count,
 		alternate_reverse_count,
 		reference_forward_count,
-		reference_reverse_count,
+		reference_reverse_count
 	}
 }

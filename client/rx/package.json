@@ -1,5 +1,5 @@
 {
-  "name": "@stjude/rx",
+  "name": "@sjcrh/rx",
   "type": "module",
   "version": "0.0.0",
   "description": "a minimal reactive framework for managing application state, inspired by React/Redux and Vue",

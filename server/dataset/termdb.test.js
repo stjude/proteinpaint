@@ -1,10 +1,10 @@
 const path = require('path')
-// TODO require serverconfig from @stjude/proteinpaint-server when transition to npm packages is finished
+// TODO require serverconfig from @sjcrh/proteinpaint-server when transition to npm packages is finished
 let serverconfig
 try {
 	serverconfig = require('../src/serverconfig')
 } catch (e) {
-	serverconfig = require('@stjude/proteinpaint-server/src/serverconfig')
+	serverconfig = require('@sjcrh/proteinpaint-server/src/serverconfig')
 }
 
 const fs = require('fs')

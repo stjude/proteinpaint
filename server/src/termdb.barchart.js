@@ -4,7 +4,7 @@ const utils = require('./utils')
 const Partjson = require('partjson')
 const d3format = require('d3-format')
 const binLabelFormatter = d3format.format('.3r')
-const run_rust = require('@stjude/proteinpaint-rust').run_rust
+const run_rust = require('@sjcrh/proteinpaint-rust').run_rust
 const { getData } = require('./termdb.matrix')
 const { mclass, dt2label } = require('#shared/common')
 

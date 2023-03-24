@@ -67,7 +67,7 @@ fi
 ###############
 
 UPDATED=""
-SP='@stjude/proteinpaint'
+SP='@sjcrh/proteinpaint'
 WSPKG=$(npm pkg get version dependencies devDependencies --workspaces)
 # reduce the pacakge deps to only this project's workspaces
 WSPKG=$($handlePkg "$WSPKG")
@@ -268,7 +268,7 @@ fi
 
 for WS in ${WORKSPACES};
 do
-	PUBLISHEDVER=$(npm view @stjude/proteinpaint-$WS version | tail -n1)
+	PUBLISHEDVER=$(npm view @sjcrh/proteinpaint-$WS version | tail -n1)
 	CURRENTVER=$(node -p "require('./$WS/package.json').version")
 	echo "$WS [$PUBLISHEDVER] [$CURRENTVER]"
 	if [[ "$PUBLISHEDVER" != "$CURRENTVER" || "$MODE" == *"force"* ]]; then

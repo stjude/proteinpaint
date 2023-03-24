@@ -1,6 +1,6 @@
 const { filterJoin } = require('../shared/filter')
 const { get_rows_by_one_key } = require('./termdb.sql')
-const run_rust = require('@stjude/proteinpaint-rust').run_rust
+const run_rust = require('@sjcrh/proteinpaint-rust').run_rust
 const path = require('path')
 const serverconfig = require('./serverconfig')
 

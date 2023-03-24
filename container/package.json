@@ -1,5 +1,5 @@
 {
-	"name": "@stjude/proteinpaint-container",
+	"name": "@sjcrh/proteinpaint-container",
 	"version": "2.11.4",
 	"bin": "launch.js",
 	"scripts": {

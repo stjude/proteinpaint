@@ -1,1 +1,1 @@
-export { runproteinpaint } from '@stjude/proteinpaint-client'
+export { runproteinpaint } from '@sjcrh/proteinpaint-client'
