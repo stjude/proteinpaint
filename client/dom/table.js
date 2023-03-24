@@ -40,12 +40,16 @@ rows = [ [] ]
 OPTIONAL ARGUMENTS
 ******************
 
+columnButtons = [ {button} ]
+	Each element is an object describing a column button. Button columns will be inserted in the beginning:
+	text: str, the text to show in the button
+	callback: button callback
 
 buttons = [ {button} ]
 	Each element is an object describing a button:
 	text: str, the text to show in the button
-	callback: function, the function to be called when the button is clicked
 	class: class to customize the button style
+	callback: button callback
 
 noButtonCallback = (index, node) => {}
 	Function that will be called when a row is selected	
