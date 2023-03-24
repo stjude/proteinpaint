@@ -207,7 +207,6 @@ tape('Missing .state', test => {
 //getTdbDataUrl
 //syncTermData
 
-//getPercentile
 //getAnnotatedSampleData
     
 */
@@ -312,9 +311,10 @@ tape('findTerm()', async test => {
 	test.equal(result.lst.length, 0, `Should return the correct number (n = 0) of terms`)
 })
 
-tape.only('getPercentile()', async test => {
+tape('getPercentile() - TermdbVocab directly', async test => {
+	//Test TermdbVocab getPercentile() method directly
 	test.timeoutAfter(500)
-	// test.plan(2)
+	test.plan(12)
 
 	const termdbVocabApi = await getTermdbVocabApi()
 
@@ -354,7 +354,7 @@ tape.only('getPercentile()', async test => {
 	)
 
 	percentile_lst = ['a']
-	testMsg = 'should throw error for non-integer percentiles'
+	testMsg = `should throw error for non-integer percentiles (only non-integer value = (${percentile_lst}) in array)`
 	try {
 		result = await termdbVocabApi.getPercentile(testId, percentile_lst)
 		test.fail(testMsg)
@@ -363,7 +363,7 @@ tape.only('getPercentile()', async test => {
 	}
 
 	percentile_lst = [25, 50, 'a']
-	testMsg = 'should throw error for non-integer percentiles'
+	testMsg = `should throw error for non-integer percentiles (non-integer value = (${percentile_lst}) within array)`
 	try {
 		result = await termdbVocabApi.getPercentile(testId, percentile_lst)
 		test.fail(testMsg)
@@ -371,14 +371,23 @@ tape.only('getPercentile()', async test => {
 		test.equal(e, 'non-integer percentiles found', testMsg)
 	}
 
-	// percentile_lst = [50]
-	// filter = {
-	// 	type: 'tvslst',
-	// 	in: true,
-	// 	lst: [{ type: 'tvs', tvs: { term: { id: 'sex', type: 'categorical' }} }]
-	// }
-	// result = await termdbVocabApi.getPercentile(testId, percentile_lst, filter)
-	// test.equal(result.values[0], 0.55, 'should get correct 50th percentile with categorical filter')
+	percentile_lst = [120]
+	testMsg = `should throw error for percentiles must be between 1-99 (only incorrect value = (${percentile_lst}) in array)`
+	try {
+		result = await termdbVocabApi.getPercentile(testId, percentile_lst)
+		test.fail(testMsg)
+	} catch (e) {
+		test.equal(e, 'percentiles must be between 1-99', testMsg)
+	}
+
+	percentile_lst = [25, 50, 120]
+	testMsg = `should throw error for percentiles must be between 1-99 (one incorrect value = (${percentile_lst}) within array)`
+	try {
+		result = await termdbVocabApi.getPercentile(testId, percentile_lst)
+		test.fail(testMsg)
+	} catch (e) {
+		test.equal(e, 'percentiles must be between 1-99', testMsg)
+	}
 
 	percentile_lst = [50]
 	filter = {
@@ -396,8 +405,6 @@ tape.only('getPercentile()', async test => {
 	}
 	result = await termdbVocabApi.getPercentile(testId, percentile_lst, filter)
 	test.equal(result.values[0], 0.03537315665, 'should get correct 50th percentile with numeric filter')
-
-	test.end()
 })
 
 /* FrontendVocab tests 
