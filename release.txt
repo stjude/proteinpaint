@@ -1,1 +1,1 @@
-- Publish test.
+- Switch to npmjs registry for npm publishing.
