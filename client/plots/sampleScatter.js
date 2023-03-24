@@ -965,6 +965,13 @@ class Scatter {
 			}
 			buttons.push(deleteSamples)
 		}
+		const colButton = {
+			text: 'clickMe',
+			callback: i => {
+				console.log(`row ${i} button callback`)
+			}
+		}
+		const columnButtons = [colButton]
 		renderTable({
 			rows,
 			columns,
@@ -972,6 +979,7 @@ class Scatter {
 			showLines: true,
 			maxWidth: columns.length * '15' + 'vw',
 			maxHeight: '35vh',
+			columnButtons,
 			buttons,
 			selectAll: true
 		})

@@ -39,6 +39,12 @@ rows = [ [] ]
 OPTIONAL ARGUMENTS
 ******************
 
+columnButtons = [ {button} ]
+	Each element is an object describing a button:
+	text: str, the text to show in the button
+	callback: function, the function to be called when the button is clicked
+	class: class to customize the button style
+
 buttons = [ {button} ]
 	Each element is an object describing a button:
 	text: str, the text to show in the button
@@ -80,6 +86,7 @@ export function renderTable({
 	columns,
 	rows,
 	div,
+	columnButtons,
 	buttons,
 	noButtonCallback,
 	singleMode = false,
@@ -180,6 +187,12 @@ export function renderTable({
 				.attr('class', 'sjpp_table_item sjpp_table_header')
 			if (c.width) th.style('width', c.width)
 		}
+	if (columnButtons) {
+		theadRow
+			.append('th')
+			.text('Actions')
+			.attr('class', 'sjpp_table_item sjpp_table_header')
+	}
 
 	const tbody = table.append('tbody')
 	for (const [i, row] of rows.entries()) {
@@ -262,6 +275,15 @@ export function renderTable({
 				td.html(cell.html)
 			} else if (cell.value) {
 				td.text(cell.value)
+			}
+		}
+		if (columnButtons) {
+			const td = rowtable.append('td').attr('class', 'sjpp_table_item')
+			for (const button of columnButtons) {
+				button.button = td
+					.append('button')
+					.text(button.text)
+					.on('click', button.callback)
 			}
 		}
 	}
