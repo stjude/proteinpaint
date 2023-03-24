@@ -37,14 +37,15 @@ serverconfig.backend_only = false
 fs.writeFileSync('./serverconfig.json', JSON.stringify(serverconfig, null, '   '), { charset: 'utf8' })
 
 if (serverconfig.releaseTag) {
-	if (serverconfig.releaseTag.server) {
-		console.log('Updating proteinpaint server package ...')
-		spawnSync('npm', ['update', `@stjude/proteinpaint-server@${serverconfig.releaseTag.server}`], { encoding: 'utf-8' })
+	if (!serverconfig.releaseTag.server || !serverconfig.releaseTag.front) {
+		throw 'If the serverconfig.releaseTag option is used, then both {server, front} must be specified when running the full app.'
 	}
-	if (serverconfig.releaseTag.front) {
-		console.log('Updating proteinpaint front package ...')
-		spawnSync('npm', ['update', `@stjude/proteinpaint-front@${serverconfig.releaseTag.front}`], { encoding: 'utf-8' })
-	}
+
+	console.log('Updating proteinpaint server package ...')
+	spawnSync('npm', ['update', `@stjude/proteinpaint-server@${serverconfig.releaseTag.server}`], { encoding: 'utf-8' })
+
+	console.log('Updating proteinpaint front package ...')
+	spawnSync('npm', ['update', `@stjude/proteinpaint-front@${serverconfig.releaseTag.front}`], { encoding: 'utf-8' })
 }
 
 if (!serverconfig.URL) serverconfig.URL = serverconfig.url || '.'
