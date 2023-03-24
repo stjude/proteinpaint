@@ -28,6 +28,7 @@ mayInitSkewer
 	setSkewerMode
 mayaddGetter_m2csq
 mayaddGetter_variant2samples
+mayaddGetter_singleSampleMutation
 configPanel
 _load
 
@@ -115,6 +116,7 @@ export async function makeTk(tk, block) {
 
 	mayaddGetter_variant2samples(tk, block)
 	mayaddGetter_m2csq(tk, block)
+	mayaddGetter_singleSampleMutation(tk, block)
 
 	mayInitSkewer(tk) // tk.skewer{} may be added
 
@@ -384,17 +386,30 @@ async function mayInitTermdb(tk, block) {
 }
 
 function mayaddGetter_m2csq(tk, block) {
-	if (!tk.mds.queries || !tk.mds.queries.snvindel || !tk.mds.queries.snvindel.m2csq) return
+	if (!tk.mds.queries?.snvindel?.m2csq) return
 	tk.mds.queries.snvindel.m2csq.get = async m => {
-		const lst = { genome: block.genome.name, dslabel: tk.mds.label, m2csq: 1 }
+		const body = { genome: block.genome.name, dslabel: tk.mds.label, m2csq: 1 }
 		if (tk.mds.queries.snvindel.m2csq.by == 'ssm_id') {
-			lst.ssm_id = m.ssm_id
+			body.ssm_id = m.ssm_id
 		} else {
 			return { error: 'unknown query method' }
 		}
 		const headers = { 'Content-Type': 'application/json', Accept: 'application/json' }
 		if (tk.token) headers['X-Auth-Token'] = tk.token
-		return await dofetch3('mds3', { body: lst, headers }, { serverData: tk.cache })
+		return await dofetch3('mds3', { body, headers }, { serverData: tk.cache })
+	}
+}
+
+function mayaddGetter_singleSampleMutation(tk, block) {
+	if (!tk.mds.queries?.singleSampleMutation) return
+	tk.mds.queries.singleSampleMutation.get = async sample_id => {
+		const body = { genome: block.genome.name, dslabel: tk.mds.label, singleSampleMutation: sample_id }
+		const headers = { 'Content-Type': 'application/json', Accept: 'application/json' }
+		if (tk.token) headers['X-Auth-Token'] = tk.token
+		const data = await dofetch3('mds3', { body, headers })
+		if (data.error) throw data.error
+		if (!Array.isArray(data.mlst)) throw 'data.mlst is not array'
+		return data.mlst
 	}
 }
 

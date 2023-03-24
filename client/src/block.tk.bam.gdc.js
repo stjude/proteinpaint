@@ -2,7 +2,7 @@ import { debounce } from 'debounce'
 import { dofetch3 } from '#common/dofetch'
 import { sayerror } from '#dom/error'
 import { first_genetrack_tolist } from '#common/1stGenetk'
-import { contigNameNoChr2 } from '#shared/common'
+import { contigNameNoChr2, mclass } from '#shared/common'
 import urlmap from '#common/urlmap'
 import { addGeneSearchbox, string2variant } from '#dom/genesearch'
 import { Menu } from '#dom/menu'
@@ -63,6 +63,7 @@ gdc_pos=chr7:55153818-55156225
 
 const tip = new Menu({ padding: '' })
 const gdc_genome = 'hg38'
+const gdcDslabel = 'GDC' // hardcoded in multiple places
 const variantFlankingSize = 60 // bp
 const baminfo_rows = [
 	{ title: 'Entity ID', key: 'entity_id' },
@@ -163,7 +164,7 @@ export async function bamsliceui({
 	// submit button, "no permission" alert
 	const [submitButton, saydiv, noPermissionDiv] = makeSubmitAndNoPermissionDiv()
 
-	if(typeof callbackOnRender == 'function') {
+	if (typeof callbackOnRender == 'function') {
 		callbackOnRender(publicApi)
 	}
 
@@ -257,7 +258,7 @@ export async function bamsliceui({
 			.attr('aria-label', 'Specify File name / File UUID / Case ID / Case UUID')
 			.style('padding', '3px 10px')
 			.property('placeholder', 'File name / File UUID / Case ID / Case UUID')
-			.attr('class','sja-gdcbam-input') // for testing
+			.attr('class', 'sja-gdcbam-input') // for testing
 			// debounce event listener on keyup
 			.on('keyup', debounce(gdc_search, 500))
 			// clicking X in <input> fires "search" event. must listen to it and call callback without delay in order to clear the UI
@@ -287,7 +288,7 @@ export async function bamsliceui({
 			.append('div')
 			.style('display', 'none')
 			.style('width', '500px')
-			.style('margin','20px 3px')
+			.style('margin', '20px 3px')
 			.html(noPermissionMessage)
 
 		//////////////////////////
@@ -299,8 +300,14 @@ export async function bamsliceui({
 		// either baminfo_table or bamselection_table is displayed
 		// baminfo_table is a static table showing details about one bam file
 		// bamselection_table lists multiple bam files available from a sample, allowing user to select some forslicing
-		const baminfo_table = baminfo_div.append('div').attr('class','sja-gdcbam-onefiletable').style('display','none')
-		const bamselection_table = baminfo_div.append('div').attr('class','sja-gdcbam-multifiletable').style('display','none')
+		const baminfo_table = baminfo_div
+			.append('div')
+			.attr('class', 'sja-gdcbam-onefiletable')
+			.style('display', 'none')
+		const bamselection_table = baminfo_div
+			.append('div')
+			.attr('class', 'sja-gdcbam-multifiletable')
+			.style('display', 'none')
 
 		// the update() will be called in pp react wrapper, when user changes cohort from gdc ATF
 		publicApi.update = _arg => {
@@ -398,7 +405,6 @@ export async function bamsliceui({
 				}
 
 				await makeSsmGeneSearch()
-
 			} catch (e) {
 				show_input_check(gdcid_error_div, e.message || e)
 				baminfo_div.style('display', 'none')
@@ -486,7 +492,7 @@ export async function bamsliceui({
 		if (_filter0) body.filter0 = _filter0
 		const data = await dofetch3('gdcbam', { body }) // query same route without case_id
 		if (data.error) return handle.text(data.error)
-		if(typeof data.case2files != 'object') return handle.text('wrong return')
+		if (typeof data.case2files != 'object') return handle.text('wrong return')
 		// data = { case2files={}, total=int, loaded=int }
 		if (data.total < data.loaded) handle.text(`Or, browse ${data.total} BAM files`)
 		else handle.text(`Or, browse first ${data.loaded} BAM files out of ${data.total} total`)
@@ -499,22 +505,22 @@ export async function bamsliceui({
 				.style('overflow-y', 'scroll')
 				.style('height', '300px')
 				.style('resize', 'vertical')
-			const table = div.append('table')
-				.style('border-spacing','0px')
+			const table = div.append('table').style('border-spacing', '0px')
 			// header row that stays
-			const tr = table.append('tr')
-				.style('position','sticky')
-				.style('top','0px')
-				.style('background-color','white')
-				.style('color','#aaa')
-				.style('font-size','.7em')
+			const tr = table
+				.append('tr')
+				.style('position', 'sticky')
+				.style('top', '0px')
+				.style('background-color', 'white')
+				.style('color', '#aaa')
+				.style('font-size', '.7em')
 			tr.append('td').text('CASE')
 			tr.append('td').text('BAM FILES, SELECT ONE TO VIEW')
 			for (const caseName in data.case2files) {
-				const tr = table.append('tr').attr('class','sja_clb_gray')
+				const tr = table.append('tr').attr('class', 'sja_clb_gray')
 				tr.append('td')
 					.style('vertical-align', 'top')
-					.style('color','#888')
+					.style('color', '#888')
 					.text(caseName)
 				const td2 = tr.append('td')
 				for (const f of data.case2files[caseName]) {
@@ -545,12 +551,12 @@ export async function bamsliceui({
 			.selectAll('*')
 			.remove() // clear holder, including ssm from previous case
 
-		const mutationMsgDiv = ssmGeneDiv
-			.append('p')
-			.text('Searching for mutations...')
+		const mutationMsgDiv = ssmGeneDiv.append('p').text('Searching for mutations...')
 
 		// TODO to return all types of alterations for this case (ssm, cnv, fusion)
-		const data = await dofetch3('gdc_ssms', { body: { case_id: gdc_args.case_id, genome: gdc_genome } })
+		const data = await dofetch3('gdc_ssms', {
+			body: { case_id: gdc_args.case_id, genome: gdc_genome, dslabel: gdcDslabel }
+		})
 		if (data.error) throw data.error
 
 		////////////////////////////////////////////////////////
@@ -606,7 +612,7 @@ export async function bamsliceui({
 				const row = []
 				row.push({ value: gene, data: m })
 				row.push({ value: m.mname })
-				row.push({ value: m.consequence })
+				row.push({ value: mclass[m.class]?.label || 'Unknown' })
 				row.push({ value: m.chr + ':' + m.pos + ' ' + m.ref + '>' + m.alt })
 				rows.push(row)
 			}

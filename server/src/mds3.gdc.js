@@ -15,6 +15,8 @@ validate_query_snvindel_byisoform
 	snvindel_byisoform
 	snvindel_addclass
 	decideSampleId
+validate_query_singleSampleMutation
+	getSingleSampleMutations
 validate_query_snvindel_byisoform_2 // "protein_mutations" graphql, not in use
 validate_query_geneCnv
 	filter2GDCfilter
@@ -350,7 +352,13 @@ function snvindel_addclass(m, consequence) {
 }
 
 export function validate_query_geneCnv(ds) {
-	const defaultFields = ['cnv_id', 'cnv_change', 'gene_level_cn', 'occurrence.case.submitter_id']
+	const defaultFields = [
+		'cnv_id',
+		'cnv_change',
+		'gene_level_cn',
+		'occurrence.case.submitter_id',
+		'consequence.gene.symbol'
+	]
 
 	/*
 	opts{}
@@ -425,20 +433,29 @@ export function validate_query_geneCnv(ds) {
 
 	function getFilter(p) {
 		/* p={}
-		.gene=str, required
+		.gene=str
+			needed for lollipop view, to limit data on one gene
+			gene-level cnv query doesn't work for single sample query, as the amount of data is too big, should be segments
 		.case_id=str
+			optional
+			to get 
 		.filter0, read-only gdc filter
 		.filterObj, pp filter
 		*/
-		if (!p.gene && typeof p.gene != 'string') throw 'p.gene does not provide non-empty string'
-		const filters = {
-			op: 'and',
-			content: [{ op: '=', content: { field: 'consequence.gene.symbol', value: p.gene.split(',') } }]
+
+		if (!p.gene && typeof p.gene != 'string') throw 'p.gene does not provide non-empty string' // gene is required for now
+
+		const filters = { op: 'and', content: [] }
+
+		if (p.gene) {
+			filters.content.push({ op: '=', content: { field: 'consequence.gene.symbol', value: p.gene.split(',') } })
 		}
 
+		/* single sample query doesn't work
 		if (p.case_id) {
-			filters.content.push({ op: 'in', content: { field: 'cases.case_id', value: [p.case_id] } })
+			filters.content.push({ op: 'in', content: { field: 'occurrence.case.case_id', value: [p.case_id] } })
 		}
+		*/
 
 		if (p.filter0) {
 			filters.content.push(typeof p.filter0 == 'string' ? JSON.parse(p.filter0) : p.filter0)
@@ -1195,7 +1212,10 @@ function termid2size_filters(p, ds) {
 }
 
 export function validate_query_singleSampleMutation(ds, genome) {
-	// add getter and call
+	ds.queries.singleSampleMutation.get = async case_id => {
+		if (!case_id) throw 'case_id missing'
+		return await getSingleSampleMutations({ case_id }, ds, genome)
+	}
 }
 
 /************************************************
@@ -1206,15 +1226,16 @@ export function handle_gdc_ssms(genomes) {
 	return async (req, res) => {
 		/* query{}
 		.genome: required
+		.dslabel: required
 		.case_id: required
-		.isoform: optional
-		.gene: can add later
 		*/
 		try {
 			const genome = genomes[req.query.genome]
 			if (!genome) throw 'invalid genome'
+			const ds = genome.datasets[req.query.dslabel]
+			if (!ds) throw 'invalid dslabel'
 			if (!req.query.case_id) throw '.case_id missing'
-			res.send({ mlst: await getSingleSampleMutations(req.query, genome) })
+			res.send({ mlst: await getSingleSampleMutations(req.query, ds, genome) })
 		} catch (e) {
 			if (e.stack) console.log(e.stack)
 			res.send({ error: e.message || e })
@@ -1222,57 +1243,70 @@ export function handle_gdc_ssms(genomes) {
 	}
 }
 
-async function getSingleSampleMutations(query, genome) {
-	const response = await got.post(path.join(apihost, isoform2ssm_query1_getvariant.endpoint), {
-		headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-		body: JSON.stringify({
-			size: 1000,
-			fields: isoform2ssm_query1_getvariant.fields.join(','),
-			filters: isoform2ssm_query1_getvariant.filters(query)
-		})
-	})
-	const re = JSON.parse(response.body)
-	const mlst = []
-	for (const hit of re.data.hits) {
-		// for each hit, create an element
-		// from list of consequences, find one from canonical isoform
+async function getSingleSampleMutations(query, ds, genome) {
+	// query = {case_id}
 
-		// quick code to get canonical isoform of this gene
-		let gene
-		for (const c of hit.consequence) {
-			if (c.transcript && c.transcript.gene && c.transcript.gene.symbol) {
-				gene = c.transcript.gene.symbol
-				break
-			}
-		}
-		if (!gene) {
-			// no gene?
-			continue
-		}
-		const data = genome.genedb.get_gene2canonicalisoform.get(gene)
-		if (!data || !data.isoform) {
-			// no canonical isoform
-			continue
-		}
-		let c = hit.consequence.find(i => i.transcript.transcript_id == data.isoform)
-		if (!c) {
-			// no consequence match with given isoform, just use the first one
-			c = hit.consequence[0]
-		}
-		// no aa change for utr variants
-		const aa = c.transcript.aa_change || c.transcript.consequence_type
-		mlst.push({
-			dt: common.dtsnvindel,
-			mname: aa,
-			consequence: c.transcript.consequence_type,
-			// TODO convert to class
-			gene: c.transcript.gene.symbol,
-			chr: hit.chromosome,
-			pos: hit.start_position,
-			ref: hit.reference_allele,
-			alt: hit.tumor_allele
+	// collect all data types
+	const mlst = []
+
+	// ssm
+	{
+		const response = await got.post(path.join(apihost, isoform2ssm_query1_getvariant.endpoint), {
+			headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+			body: JSON.stringify({
+				size: 1000,
+				fields: isoform2ssm_query1_getvariant.fields.join(','),
+				filters: isoform2ssm_query1_getvariant.filters(query)
+			})
 		})
+		const re = JSON.parse(response.body)
+		for (const hit of re.data.hits) {
+			// for each hit, create an element
+			// from list of consequences, find one from canonical isoform
+
+			// quick code to get canonical isoform of this gene
+			let gene
+			for (const c of hit.consequence) {
+				if (c.transcript && c.transcript.gene && c.transcript.gene.symbol) {
+					gene = c.transcript.gene.symbol
+					break
+				}
+			}
+			if (!gene) {
+				// no gene?
+				continue
+			}
+			const data = genome.genedb.get_gene2canonicalisoform.get(gene)
+			if (!data || !data.isoform) {
+				// no canonical isoform
+				continue
+			}
+			let c = hit.consequence.find(i => i.transcript.transcript_id == data.isoform)
+			if (!c) {
+				// no consequence match with given isoform, just use the first one
+				c = hit.consequence[0]
+			}
+			// no aa change for utr variants
+			const aa = c.transcript.aa_change || c.transcript.consequence_type
+			const [dt, mclass, rank] = common.vepinfo(c.transcript.consequence_type)
+			mlst.push({
+				dt: common.dtsnvindel,
+				mname: aa,
+				class: mclass,
+				gene: c.transcript.gene.symbol,
+				chr: hit.chromosome,
+				pos: hit.start_position,
+				ref: hit.reference_allele,
+				alt: hit.tumor_allele
+			})
+		}
 	}
+
+	{
+		// to use cnv segments later
+		//const tmp = await ds.queries.geneCnv.bygene.get(query)
+	}
+
 	return mlst
 }
 

@@ -280,6 +280,47 @@ function setTextInput(opts) {
 	return Object.freeze(api)
 }
 
+function setColorInput(opts) {
+	const self = {
+		dom: {
+			row: opts.holder.style('display', 'table-row'),
+			labelTd: opts.holder
+				.append('td')
+				.html(opts.label)
+				.attr('class', 'sja-termdb-config-row-label')
+				.attr('title', opts.title),
+			inputTd: opts.holder.append('td')
+		}
+	}
+
+	self.dom.input = self.dom.inputTd
+		.append('input')
+		.attr('type', 'color')
+		.on('change', () => {
+			const value = self.dom.input.property('value')
+			opts.dispatch({
+				type: 'plot_edit',
+				id: opts.id,
+				config: {
+					settings: {
+						[opts.chartType]: {
+							[opts.settingsKey]: opts.processInput ? opts.processInput(value) : value
+						}
+					}
+				}
+			})
+		})
+
+	const api = {
+		main(plot) {
+			self.dom.input.property('value', plot.settings[opts.chartType][opts.settingsKey])
+		}
+	}
+
+	if (opts.debug) api.Inner = self
+	return Object.freeze(api)
+}
+
 function setRadioInput(opts) {
 	const self = {
 		dom: {
@@ -483,6 +524,7 @@ export const initByInput = {
 	number: setNumberInput,
 	math: setMathExprInput,
 	text: setTextInput,
+	color: setColorInput,
 	radio: setRadioInput,
 	dropdown: setDropdownInput,
 	checkbox: setCheckboxInput,

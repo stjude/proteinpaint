@@ -5,11 +5,18 @@ export class MatrixCluster {
 		this.parent = opts.parent
 		const svg = opts.svg
 		this.dom = {
-			holder: opts.holder,
+			holder: opts.holder.attr('clip-path', `url(#${this.parent.clusterClipId})`),
 			outlines: opts.holder.append('g').attr('class', 'sjpp-matrix-clusteroutlines'),
 			//clusterrowline: opts.holder.insert('g', 'g').attr('class', 'sjpp-matrix-clusterrowline'),
 			//clustercolline: opts.holder.insert('g', 'g').attr('class', 'sjpp-matrix-clustercolline'),
-			clusterbg: opts.holder.insert('g', 'g').attr('class', 'sjpp-matrix-clusterbg')
+			clusterbg: opts.holder.insert('g', 'g').attr('class', 'sjpp-matrix-clusterbg'),
+			clipRect: opts.holder
+				.append('clipPath')
+				.attr('id', this.parent.clusterClipId)
+				.attr('clipPathUnits', 'objectBoundingBox')
+				//.attr('clipPathUnits', 'userSpaceOnUse')
+				.append('rect')
+				.attr('display', 'block')
 		}
 		setRenderers(this)
 	}
@@ -29,10 +36,14 @@ export class MatrixCluster {
 		const s = this.settings
 		const d = this.currData.dimensions
 		const clusters = []
+		// track total width for zooming, including pads
+		this.totalWidth = s.zoomLevel == 1 ? -4 : 0 //4 * Math.max(1, s.colspace)
 
 		for (const xg of this.xGrps) {
-			const x = xg.prevGrpTotalIndex * d.dx + s.colgspace * xg.grpIndex + xg.totalHtAdjustments
-			const width = d.dx * (xg.processedLst || xg.grp.lst).length + xg.grpHtAdjustments
+			const dx = d.dx //Math.min(d.dx, s.maxColw + s.colspace)
+			const x = xg.prevGrpTotalIndex * dx + s.colgspace * xg.grpIndex + xg.totalHtAdjustments
+			const width = dx * (xg.processedLst || xg.grp.lst).length + xg.grpHtAdjustments
+			this.totalWidth += width + 2 * Math.max(1, s.colspace)
 
 			for (const yg of this.yGrps) {
 				const y = yg.prevGrpTotalIndex * d.dy + yg.grpIndex * s.rowgspace + yg.totalHtAdjustments
@@ -59,6 +70,12 @@ function setRenderers(self) {
 	self.render = function(clusters) {
 		const s = self.settings
 		const d = self.currData.dimensions
+		self.dom.clipRect
+			.attr('x', s.zoomLevel <= 1 ? 0 : Math.abs(d.seriesXoffset) / d.zoomedMainW)
+			.attr('y', 0)
+			.attr('width', d.mainw / this.totalWidth) // d.zoomedMainW)
+			.attr('height', 1)
+
 		renderOutlines(clusters, s, d)
 	}
 
@@ -66,7 +83,7 @@ function setRenderers(self) {
 		self.dom.outlines
 			.transition()
 			.duration(self.dom.outlines.attr('transform') ? s.duration : 0)
-			.attr('transform', `translate(${d.xOffset},${d.yOffset})`)
+			.attr('transform', `translate(${d.xOffset + d.seriesXoffset},${d.yOffset})`)
 
 		const outlines = self.dom.outlines.selectAll('rect').data(clusters, c => c.xg.grp.name + ';;' + c.yg.grp.name)
 		outlines.exit().remove()

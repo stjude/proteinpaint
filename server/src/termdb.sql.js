@@ -13,6 +13,7 @@ const serverconfig = require('./serverconfig')
 
 ********************** EXPORTED
 get_samples
+get_samplecount
 get_summary
 get_summary_numericcategories
 get_summary_conditioncategories
@@ -53,14 +54,19 @@ must have qfilter[]
 as the actual query is embedded in qfilter
 return an array of sample names passing through the filter
 */
-	const filter = await getFilterCTEs(qfilter, ds)
-	const string = `WITH ${filter.filters}
-		SELECT sample FROM ${filter.CTEname}`
+	const filter = await getFilterCTEs(qfilter, ds) // if qfilter is blank, it returns null
 
-	// may cache statement
-	const re = ds.cohort.db.connection.prepare(string).all(filter.values)
+	const sql = ds.cohort.db.connection.prepare(
+		filter ? `WITH ${filter.filters} SELECT sample FROM ${filter.CTEname}` : 'SELECT name AS sample FROM sampleidmap'
+	)
+
+	let re
+	if (filter) re = sql.all(filter.values)
+	else re = sql.all()
+
 	return re.map(i => i.sample)
 }
+
 export function get_cohortsamplecount(q, ds) {
 	/*
 must have q.cohortValues string
@@ -76,19 +82,26 @@ return an array of sample names for the given cohort
 }
 export async function get_samplecount(q, ds) {
 	/*
-must have q.filter[]
+must have q.filter (somehow it can either be str or {})
+as this is for showing number of samples pass a filter in header
 return a sample count of sample names passing through the filter
  */
-	if (!q.filter || !q.filter.lst.length) {
-		throw `missing q.filter`
+	if (!q.filter) throw 'filter missing'
+
+	let j
+	if (typeof q.filter == 'object') {
+		j = q.filter
+	} else if (typeof q.filter == 'string') {
+		j = JSON.parse(q.filter)
 	} else {
-		const filter = await getFilterCTEs(q.filter, ds)
-		const statement = `WITH ${filter.filters}
-			SELECT 'FILTERED_COHORT' as subcohort, count(*) as samplecount 
-			FROM ${filter.CTEname}`
-		// may cache statement
-		return ds.cohort.db.connection.prepare(statement).all(filter.values)
+		throw 'q.filter not obj or str'
 	}
+
+	const filter = await getFilterCTEs(j, ds)
+	const statement = `WITH ${filter.filters}
+		SELECT 'FILTERED_COHORT' as subcohort, count(*) as samplecount 
+		FROM ${filter.CTEname}`
+	return ds.cohort.db.connection.prepare(statement).all(filter.values)
 }
 export async function get_summary_numericcategories(q) {
 	/*

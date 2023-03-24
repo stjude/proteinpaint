@@ -4,6 +4,7 @@ import { to_svg } from '../src/client'
 import { fillTermWrapper, termsettingInit } from '../termsetting/termsetting'
 import { addGeneSearchbox } from '#dom/genesearch'
 import { Menu } from '#dom/menu'
+import { zoom } from '#dom/zoom'
 
 const tip = new Menu({ padding: '' })
 
@@ -19,6 +20,10 @@ export class MatrixControls {
 		//this.recover = new Recover({app: opts.app})
 		this.setButtons()
 		this.setInputGroups()
+		if (!this.parent.optionalFeatures.includes('zoom')) return
+		this.setZoomInput()
+		this.setPanInput()
+		this.setResetInput()
 	}
 
 	setButtons() {
@@ -33,7 +38,7 @@ export class MatrixControls {
 				},
 				{
 					value: 'anno',
-					label: `Terms`,
+					label: `Variables`,
 					getCount: () => this.parent.termOrder.length,
 					customInputs: this.appendTermInputs
 				},
@@ -43,11 +48,15 @@ export class MatrixControls {
 				{ value: 'legend', label: 'Legend layout' },
 				//{ label: 'Undo', callback: ()=>this.recover.goto(-1) },
 				//{ label: 'Redo', callback: ()=>this.recover.goto(1) },
-				{ label: 'Download SVG', callback: () => to_svg(this.opts.getSvg(), 'matrix', { apply_dom_styles: true }) }
+				{
+					label: 'Download SVG',
+					callback: () => to_svg(this.opts.getSvg(), 'matrix', { apply_dom_styles: true })
+				}
 			])
 			.enter()
 			.append('button')
 			.style('margin', '2px 0')
+			.property('disabled', d => d.disabled)
 			.text(d => d.label)
 			.on('click', (event, d) => (d.callback ? d.callback(event) : this.callback(event, d)))
 	}
@@ -139,10 +148,10 @@ export class MatrixControls {
 				},
 				{
 					label: 'Background color',
-					type: 'text',
+					type: 'color',
 					chartType: 'matrix',
 					settingsKey: 'cellbg'
-				},
+				}
 			],
 
 			cols: [
@@ -288,7 +297,16 @@ export class MatrixControls {
 
 	main() {
 		//this.recover.track()
-		this.btns.text(d => d.label + (d.getCount ? ` (${d.getCount()})` : ''))
+		this.btns
+			.text(d => d.label + (d.getCount ? ` (${d.getCount()})` : ''))
+			.style('text-decoration', d => (d.active ? 'underline' : ''))
+			.style('color', d => (d.active ? '#3a3' : ''))
+
+		const s = this.parent.config.settings.matrix //; console.log(302, s.colw, s.maxColw, Math.round(100* s.colw / s.maxColw))
+		if (this.zoomApi)
+			this.zoomApi.update({
+				value: Math.round((100 * Math.min(s.colw * s.zoomLevel, s.maxColwZoomed)) / s.maxColwZoomed)
+			})
 	}
 
 	async callback(event, d) {
@@ -487,55 +505,83 @@ export class MatrixControls {
 			}
 		})
 	}
-}
 
-const defaultRecoverOpts = {
-	maxHistoryLen: 5
-}
-
-class Recover {
-	constructor(opts = {}) {
-		this.type = 'recover'
-		this.app = opts.app
-		this.opts = Object.assign({}, defaultRecoverOpts, opts)
-		this.currIndex = -1
-		this.history = []
-		// turn off during testing of other components for lighter memory usage
-		this.isActive = !isNaN(this.opts.maxHistoryLen) && +this.opts.maxHistoryLen > 0
+	setZoomInput() {
+		const holder = this.opts.holder
+			.append('div')
+			.style('display', 'inline-block')
+			.style('margin-left', '50px')
+		const s = this.parent.config.settings.matrix
+		this.zoomApi = zoom({
+			holder,
+			settings: {
+				min: Math.max(1, Math.floor((100 * 1) / s.maxColw))
+				//max: 5,
+				//step: 1,
+				//value: s.colw/s.maxColw * 100,
+			},
+			callback: percentValue => {
+				const d = this.parent.dimensions
+				const s = this.parent.settings.matrix
+				const zoomLevel = (0.01 * percentValue * s.maxColwZoomed) / s.colw
+				const zoomCenterPct = 0.5
+				const zoomCenter = s.zoomLevel < 1 && zoomLevel > 1 ? Math.round(d.maxMainW / 2) : Math.round(d.mainw / 2)
+				const centerCell =
+					s.zoomLevel < 1 && zoomLevel > 1
+						? this.parent.sampleOrder[Math.floor(this.parent.sampleOrder.length / 2)]
+						: this.parent.sampleOrder.find(
+								r => r.totalIndex * d.dx + r.grpIndex * s.colgspace >= zoomCenter - d.seriesXoffset
+						  )
+				this.parent.app.dispatch({
+					type: 'plot_edit',
+					id: this.parent.id,
+					config: {
+						settings: {
+							matrix: {
+								zoomLevel,
+								zoomCenterPct,
+								zoomIndex: centerCell.totalIndex,
+								zoomGrpIndex: centerCell.grpIndex,
+								mouseMode: 'zoom'
+							}
+						}
+					}
+				})
+			}
+		})
 	}
 
-	async track() {
-		this.state = this.app.getState()
-		if (this.isRecovering) {
-			this.isRecovering = false
-			return
-		}
-		this.isRecovering = false
-		if (this.currIndex < this.history.length - 1) {
-			this.history.splice(this.currIndex, this.history.length - (this.currIndex + 1))
-		}
-		this.history.push(this.state)
-		this.currIndex += 1
-
-		if (this.history.length > this.opts.maxHistoryLen) {
-			this.history.shift()
-			this.currIndex += -1
-		}
+	setPanInput() {
+		const holder = this.opts.holder.append('div').style('display', 'inline-block') //.style('margin-left', '50px')
+		holder
+			.append('button')
+			.html('Pan')
+			.on('click', () => {
+				this.parent.settings.matrix.mouseMode = 'pan'
+				//panBtn.active = true
+				//zoomBtn.active = false
+				//this.main()
+			})
 	}
 
-	goto(i) {
-		if (i < 0 && this.currIndex + i > -1) this.currIndex += i
-		else if (i > 0 && this.currIndex + i < this.history.length) this.currIndex += i
-		else return
-		this.isRecovering = true
-		const state = this.history[this.currIndex]
-		this.app.dispatch({ type: 'app_refresh', state })
+	setResetInput() {
+		const holder = this.opts.holder.append('div').style('display', 'inline-block') //.style('margin-left', '50px')
+		holder
+			.append('button')
+			.html('Reset')
+			.on('click', () => {
+				this.parent.settings.matrix.mouseMode = 'zoom'
+				this.parent.app.dispatch({
+					type: 'plot_edit',
+					id: this.parent.id,
+					config: {
+						settings: {
+							matrix: {
+								zoomLevel: 1
+							}
+						}
+					}
+				})
+			})
 	}
-}
-
-let i = 0
-function get$id() {
-	return `_${i}_${Date.now()
-		.toString()
-		.slice(5)}_${Math.random()}`
 }
