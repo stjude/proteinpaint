@@ -283,7 +283,7 @@ export function renderTable({
 				button.button = td
 					.append('button')
 					.text(button.text)
-					.on('click', button.callback)
+					.on('click', () => button.callback(i))
 			}
 		}
 	}

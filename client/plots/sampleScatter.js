@@ -968,7 +968,8 @@ class Scatter {
 		const colButton = {
 			text: 'clickMe',
 			callback: i => {
-				console.log(`row ${i} button callback`)
+				const row = rows[i]
+				console.log(`row ${group.items[i].sample} clicked`)
 			}
 		}
 		const columnButtons = [colButton]
