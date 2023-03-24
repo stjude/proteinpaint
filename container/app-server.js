@@ -36,9 +36,9 @@ if (!serverconfig.genomes) {
 serverconfig.backend_only = true
 fs.writeFileSync('./serverconfig.json', JSON.stringify(serverconfig, null, '   '), { charset: 'utf8' })
 
-if (serverconfig.releaseTag) {
-	console.log('Updating proteinpaint packages ...')
-	spawnSync('npm', ['update', `@stjude/proteinpaint-server@${releaseTag}`], { encoding: 'utf-8' })
+if (serverconfig.releaseTag && serverconfig.releaseTag.server) {
+	console.log('Updating proteinpaint server package ...')
+	spawnSync('npm', ['update', `@stjude/proteinpaint-server@${serverconfig.releaseTag.server}`], { encoding: 'utf-8' })
 }
 
 require('@stjude/proteinpaint-server')

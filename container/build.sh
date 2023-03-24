@@ -55,26 +55,31 @@ if [[ ! -d $PWD/tmppack ]]; then
     mkdir -p $PWD/tmppack
 fi
 
+######################
+# COMPUTED VARIABLES
+######################
 
+PLATFORM=""
 ARCH=$( uname -m )
-if [[ ${ARCH} == "arm64" ]]; then ARCH="aarch64"; fi
+if [[ ${ARCH} == "arm64" ]]; then 
+	# ARCH="aarch64";
+	# Hardcoded until build is fixed for arm64
+	ARCH="x86_64"
+	# will emulate x86 arch in arm64 machines
+	PLATFORM="--platform=linux/amd64"
+fi
+
 
 #########################
 # Docker build
 #########################
 # !!! FOR TESTING ONLY --- REMOVE .npmrc BEFORE PUSHING !!!
-# !!! once PP uses a public npm registry that does not require a token, 
+# !!! once PP uses a public npm registry that does not require a token,
 # then at most the .npmrc should only have the registry URL for the @stjude namespace !!!
-if [[ "$GIT_PAT" != "" ]]; then
-	echo "@stjude:registry=https://npm.pkg.github.com/" > .npmrc
-	# pragma: allowlist nextline secret
-	echo "//npm.pkg.github.com/:_authToken=$GIT_PAT" >> .npmrc
-elif [[ ! -f .npmrc ]]; then
-	if [[ ! -f ~/.npmrc ]]; then
-		echo "either an .npmrc in the home or working directory, or a [-t Github personal access token] argument, is required"
-		exit 1
-	fi
-	cp ~/.npmrc .
+echo "@stjude:registry=https://npm.pkg.github.com/" > .npmrc
+if [[ $GIT_PAT != "" ]]; then
+  # pragma: allowlist nextline secret
+	echo "//npm.pkg.github.com/:_authToken="$GIT_PAT | cat - .npmrc > temp && mv temp .npmrc
 fi
 
 IMGVER="$(node -p "require('./package.json').version")"
@@ -90,16 +95,16 @@ SERVERPKGVER="$(node -p "require('./package.json').containerDeps.server")"
 FRONTPKGVER="$(node -p "require('./package.json').containerDeps.front")"
 
 echo "building ${MODE}ppbase image"
-docker build . --file ./Dockerfile --target ppbase --tag "${MODE}ppbase:latest" --build-arg ARCH="$ARCH" $BUILDARGS
+docker buildx build . --file ./Dockerfile --target ppbase --tag "${MODE}ppbase:latest" $PLATFORM --build-arg ARCH="$ARCH" $BUILDARGS --output type=docker
 
 echo "building ${MODE}pprust image"
-docker build . --file ./Dockerfile --target pprust --tag "${MODE}pprust:latest" --build-arg ARCH="$ARCH" $BUILDARGS
+docker buildx build . --file ./Dockerfile --target pprust --tag "${MODE}pprust:latest" $PLATFORM --build-arg ARCH="$ARCH" $BUILDARGS --output type=docker
 
 echo "building ${MODE}ppserver image"
-docker build . --file ./Dockerfile --target ppserver --tag "${MODE}ppserver:latest" --build-arg IMGVER=$IMGVER --build-arg IMGREV=$IMGREV --build-arg SERVERPKGVER=$SERVERPKGVER --build-arg CROSSENV="$CROSSENV" $BUILDARGS
+docker buildx build . --file ./Dockerfile --target ppserver --tag "${MODE}ppserver:latest" $PLATFORM --build-arg IMGVER=$IMGVER --build-arg IMGREV=$IMGREV --build-arg SERVERPKGVER=$SERVERPKGVER --build-arg CROSSENV="$CROSSENV" $BUILDARGS --output type=docker
 
 echo "building ${MODE}ppfull image"
-docker build . --file ./Dockerfile --target ppfull --tag "${MODE}ppfull:latest" --build-arg IMGVER=$IMGVER --build-arg IMGREV=$IMGREV --build-arg SERVERPKGVER=$SERVERPKGVER --build-arg FRONTPKGVER=$FRONTPKGVER --build-arg CROSSENV="$CROSSENV" $BUILDARGS
+docker buildx build . --file ./Dockerfile --target ppfull --tag "${MODE}ppfull:latest" $PLATFORM --build-arg IMGVER=$IMGVER --build-arg IMGREV=$IMGREV --build-arg SERVERPKGVER=$SERVERPKGVER --build-arg FRONTPKGVER=$FRONTPKGVER --build-arg CROSSENV="$CROSSENV" $BUILDARGS --output type=docker
 
 # in non-dev/repo environment, may automatically add extra tags
 if [[ "$MODE" != "" ]]; then
