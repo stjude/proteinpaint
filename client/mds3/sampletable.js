@@ -5,6 +5,7 @@ import { renderTable } from '#dom/table'
 import { rgb } from 'd3-color'
 import { print_snv, printSvPair } from './itemtable'
 import { getsjcharts } from '../src/getsjcharts'
+import { Menu } from '#dom/menu'
 
 /*
 ********************** EXPORTED
@@ -75,8 +76,25 @@ export async function displaySampleTable(samples, args) {
 	const params = { rows, columns, div: args.div, resize: rows.length > 10 }
 	//if (args.maxWidth) params.maxWidth = args.maxWidth
 	//if (args.maxHeight) params.maxHeight = args.maxHeight
+
+	params.columnButtons = []
+
+	if (args.tk.mds.queries?.singleSampleMutation) {
+		const width = window.innerWidth
+		const height = screen.height
+		const colButton = {
+			text: 'Disco',
+
+			callback: async (event, i) => {
+				const sample = samples[i]
+				showDtDisco(event, sample, args, true)
+			}
+		}
+		params.columnButtons.push(colButton)
+	}
 	if (args.tk.allow2selectSamples) {
 		// this tk allows to select samples; create new opt to display button
+
 		params.buttons = [
 			{
 				text: args.tk.allow2selectSamples.buttonText,
@@ -244,37 +262,47 @@ function printSampleName(sample, tk, div, block) {
 				event.target.innerHTML = 'Loading...'
 				event.target.disabled = true
 				try {
-					const mlst = await tk.mds.queries.singleSampleMutation.get(
-						sample[tk.mds.queries.singleSampleMutation.sample_id_key || 'sample_id']
-					)
-					event.target.innerHTML = mlst.length + ' variants loaded'
-
-					for (const i of mlst) i.position = i.pos
-
-					const sjcharts = await getsjcharts()
-					const disco_arg = {
-						sampleName: sample.sample_id,
-						data: mlst
-					}
-
-					tk.menutip.clear().show(event.clientX, event.clientY)
-
-					const renderer = await sjcharts.dtDisco({
-						chromosomeType: block.genome.name,
-						majorchr: block.genome.majorchr,
-						holderSelector: tk.menutip.d.append('div'),
-						settings: {
-							showControls: false,
-							selectedSamples: []
-						}
-					})
-					renderer.main(disco_arg)
+					showDtDisco(event, sample, { tk, block })
 				} catch (e) {
 					event.target.innerHTML = 'Error: ' + (e.message || e)
 					if (e.stack) console.log(e.stack)
 				}
 			})
 	}
+}
+
+async function showDtDisco(event, sample, arg, fromTable = false) {
+	const mlst = await arg.tk.mds.queries.singleSampleMutation.get(
+		sample[arg.tk.mds.queries.singleSampleMutation.sample_id_key || 'sample_id']
+	)
+
+	for (const i of mlst) i.position = i.pos
+
+	const sjcharts = await getsjcharts()
+	const disco_arg = {
+		sampleName: sample.sample_id,
+		data: mlst
+	}
+	arg.tk.menutip.clear().show(event.clientX, event.clientY, false)
+	if (!fromTable) event.target.innerHTML = mlst.length + ' variants loaded'
+	else
+		arg.tk.menutip.d
+			.append('div')
+			.text(`Sample ${sample.sample_id}`)
+			.style('text-align', 'center')
+			.style('font-weight', 'bold')
+			.style('margin', '5px')
+
+	const renderer = await sjcharts.dtDisco({
+		chromosomeType: arg.block.genome.name,
+		majorchr: arg.block.genome.majorchr,
+		holderSelector: arg.tk.menutip.d.append('div'),
+		settings: {
+			showControls: false,
+			selectedSamples: []
+		}
+	})
+	renderer.main(disco_arg)
 }
 
 /***********************************************
