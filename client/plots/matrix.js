@@ -900,6 +900,7 @@ export async function getPlotConfig(opts, app) {
 				isOpen: false // control panel is hidden by default
 			},
 			matrix: {
+				useCanvas: window.location.hash?.slice(1) == 'canvas',
 				cellEncoding: '', // can be oncoprint
 				margin: {
 					top: 10,

@@ -36,7 +36,6 @@ export function setRenderers(self) {
 	self.renderSeries = function(series) {
 		const s = self.settings.matrix
 		const d = self.dimensions
-		const useCanvas = window.location.hash?.slice(1) == 'canvas' //Add to a parameter in self.settings.matrix
 		const g = select(this)
 		const duration = g.attr('transform') ? s.duration : 0
 
@@ -47,7 +46,7 @@ export function setRenderers(self) {
 		const last = series.cells[series.cells.length - 1]
 		const height = series.y + last?.y + s.rowh
 
-		if (useCanvas) {
+		if (s.useCanvas) {
 			const pxr = 1 //window.devicePixelRatio; console.log(51, 'pixelRatio', pxr)
 			g.selectAll('*').remove()
 			const canvas = self.dom.holder
