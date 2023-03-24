@@ -8,7 +8,7 @@ export function setInteractivity(self) {
 	self.showCellInfo = function(event) {
 		if (self.activeLabel || self.zoomArea) return
 		if (!(event.target.tagName == 'rect' || event.target.tagName == 'image')) return
-		const d = event.target.tagName == 'rect' ? event.target.__data__ : getCell(event.target, event.clientY)
+		const d = event.target.tagName == 'rect' ? event.target.__data__ : self.getImgCell(event)
 		if (!d || !d.term || !d.sample) {
 			self.dom.tip.hide()
 			return
@@ -26,7 +26,7 @@ export function setInteractivity(self) {
 					d.value.sample}</td></tr>`
 			)
 			rows.push(`<tr><td colspan='2' style='text-align: center'>${d.term.name}</td></tr>`)
-			for (const c of event.target.__data__.siblingCells) {
+			for (const c of d.siblingCells) {
 				if (c.$id != d.$id) continue
 				const v = c.value
 				const label = v.mname ? `${v.mname} ${c.label}` : c.label
@@ -47,18 +47,18 @@ export function setInteractivity(self) {
 		self.dom.menutop.selectAll('*').remove()
 		self.dom.menubody.html(`<table class='sja_simpletable'>${rows.join('\n')}</table>`)
 		self.dom.tip.show(event.clientX, event.clientY)
+	}
 
-		function getCell(img, y) {
-			const d = img.__data__
-			const rect = img.getBoundingClientRect()
-			const y2 = y - rect.y
-			for (const cell of d.cells) {
-				const min = cell.y
-				const max = cell.y + self.settings.matrix.rowh
-				if (min < y2 && y2 <= max) return cell
-			}
-			return null
+	self.getImgCell = function(event) {
+		const d = event.target.__data__
+		const rect = event.target.getBoundingClientRect()
+		const x2 = event.clientX - rect.x
+		for (const cell of d.cells) {
+			const min = cell.x
+			const max = cell.x + self.dimensions.colw
+			if (min < x2 && x2 <= max) return cell
 		}
+		return null
 	}
 
 	self.mouseout = function() {
@@ -1399,7 +1399,9 @@ function setZoomPanActions(self) {
 	self.seriesesGMousedown = function(event) {
 		if (!self.optionalFeatures.includes('zoom')) return
 		event.stopPropagation()
-		self.clickedSeriesCell = { event, startCell: event.target.__data__ }
+		const startCell = self.getCellByPos(event) //event.target.__data__
+		if (!startCell) return
+		self.clickedSeriesCell = { event, startCell }
 		if (self.settings.matrix.mouseMode == 'pan') {
 			self.dom.seriesesG.on('mousemove', self.seriesesGdrag).on('mouseup', self.seriesesGcancelDrag)
 		} else {
@@ -1412,6 +1414,17 @@ function setZoomPanActions(self) {
 			.style('-moz-user-select', 'none')
 			.style('-ms-user-select', 'none')
 			.style('user-select', 'none')
+	}
+
+	self.getCellByPos = function(event) {
+		const s = self.settings.matrix
+		const d = self.dimensions
+		if (event.target.tagName == 'rect' && event.target.__data__?.sample) return event.target.__data__
+		if (event.target.tagName == 'image' && s.useCanvas) {
+			const visibleWidth = event.clientX - event.target.getBoundingClientRect().x - d.seriesXoffset
+			const i = Math.floor(visibleWidth / d.colw)
+			return self.sampleOrder[i]
+		}
 	}
 
 	self.seriesesGdrag = function(event) {
@@ -1427,22 +1440,21 @@ function setZoomPanActions(self) {
 		self.dom.clipRect.attr('x', s.zoomLevel == 1 ? 0 : Math.abs(d.seriesXoffset + dx) / d.zoomedMainW)
 	}
 
-	self.seriesesGcancelDrag = function() {
+	self.seriesesGcancelDrag = function(event) {
 		self.dom.seriesesG.on('mousemove', null).on('mouseup', null)
 		const s = self.settings.matrix
 		const d = self.dimensions
+		const e = self.clickedSeriesCell.event
 		const c = self.clickedSeriesCell.startCell
+		const zoomCenter =
+			c.totalIndex * d.colw + c.grpIndex * s.colgspace + event.clientX - e.clientX + d.colw + d.seriesXoffset
 		self.app.dispatch({
 			type: 'plot_edit',
 			id: self.id,
 			config: {
 				settings: {
 					matrix: {
-						zoomCenter:
-							c.totalIndex * d.dx +
-							(c.grpIndex - 1) * s.colgspace -
-							d.seriesXoffset +
-							self.clickedSeriesCell.dx / d.mainw,
+						zoomCenterPct: zoomCenter / d.mainw,
 						zoomIndex: c.totalIndex,
 						zoomGrpIndex: c.grpIndex,
 						mouseMode: 'pan'
@@ -1479,7 +1491,7 @@ function setZoomPanActions(self) {
 			.style('width', self.zoomWidth)
 			.style('height', self.dimensions.mainh)
 
-		self.clickedSeriesCell.endCell = event.target.__data__
+		self.clickedSeriesCell.endCell = self.getCellByPos(event) // s.useCanvas ? self.getImgCell(event) : event.target.__data__
 	}
 
 	self.seriesesGtriggerZoom = function(event) {
@@ -1510,9 +1522,10 @@ function setZoomPanActions(self) {
 		const d = self.dimensions
 		const start = c.startCell.totalIndex < c.endCell.totalIndex ? c.startCell : c.endCell
 		const zoomIndex = Math.floor(start.totalIndex + Math.abs(c.endCell.totalIndex - c.startCell.totalIndex) / 2)
-		const centerCell = self.sampleOrder[zoomIndex]
+		const centerCell = self.sampleOrder[zoomIndex] || self.getImgCell(event)
 		const zoomLevel = d.mainw / self.zoomWidth
 		const zoomCenter = centerCell.totalIndex * d.colw + (centerCell.grpIndex - 1) * s.colgspace + d.seriesXoffset
+
 		self.app.dispatch({
 			type: 'plot_edit',
 			id: self.id,
