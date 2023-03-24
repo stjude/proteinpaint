@@ -314,6 +314,7 @@ export class TermdbVocab extends Vocab {
 
 	// from termdb/terminfo
 	async getTermInfo(id) {
+		if (!id) throw '.getTermInfo: Missing term id' //If missing doesn't throw as expected in later calls
 		const args = ['genome=' + this.vocab.genome + '&dslabel=' + this.vocab.dslabel + '&getterminfo=1&tid=' + id]
 		const data = await dofetch3('/termdb?' + args.join('&'), {}, this.opts.fetchOpts)
 		if (data.error) throw data.error
