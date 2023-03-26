@@ -21,11 +21,20 @@ From the proteinpaint/server/ directory:
 `npm start` runs the proteinpaint server
 
 
+## Test
+
+```bash
+npm test
+```
+
 ## Build
 
 ```bash
-npm version [major | minor | patch] # TODO: coordinate version changes across dependent workspaces
 npm pack
-npm publish
-# !!! TODO: When deploying, use `npm update` from within the target host machine. !!!
 ```
+
+## Release
+
+Use Github Actions to coordinate the release of related package updates.
+The package versioning, build, and deployment uses the standard npm tooling under the hood
+(`version`, `pack`, and `publish`, respectively).

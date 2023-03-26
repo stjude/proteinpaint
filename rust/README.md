@@ -24,14 +24,6 @@ the src/bin subdirectory to hold uncompiled source code files. The convention in
 the Proteinpaint project is to put bundled or compiled code under a `bin/` folder,
 which goes against rust cargo's assumptions of having source code under `src/bin`.
 
-## Build
-
-```bash
-npm run build # cargo build --release
-```
-
-The compiled dependencies and target binaries will be generated under `./target/release`.
-
 ## Using from nodejs
 
 ```js
@@ -50,3 +42,17 @@ From the `proteinpaint/server` directory,
 ```bash
 npx test
 ```
+
+## Build
+
+```bash
+npm run build # cargo build --release
+```
+
+The compiled dependencies and target binaries will be generated under `./target/release`.
+
+## Release
+
+Use Github Actions to coordinate the release of related package updates.
+The package versioning, build, and deployment uses the standard npm tooling under the hood
+(`version`, `pack`, and `publish`, respectively).

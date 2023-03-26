@@ -20,43 +20,20 @@ npm run gdc # runs the gdc tests
 
 NOTE: Running `npm test` at the project root will run both client and server tests.
 
-`npm test` to run all available frontend tests.
+`npm test` to run all available client-side tests.
 
 To run a specific file with a $namepattern (such as filter): `node ./test/import-specs.js name=$namepattern && npm run tape`.
 For example, `node ./test/import-specs.js name=**/termsetting* && npm run tape`
 
+
 ## Build
 
-Use the helper scripts to coordinate the version changes across related workspaces.
-
-### Dry-Run 
-
-You can dry-run a version change by supplying 3 arguments to the version helper script,
-for example:  
-
 ```bash
-cd ~/proteinpaint
-./build/version.sh prerelease pp-prt dry dry
-
-# should show the expected version changes at the end of the output
-> ...
-> SKIPPED commit, tag, and publish in dry-run mode: 
-> v2.4.2-0  server-2.4.1-30 client-2.4.1-30 front-2.4.1-30 pp-prt:^server pp-prt:^front
-```
-
-It is NOT RECOMMENDED to trigger `npm version` separately on each workspace, as it is
-easy to miss required dependency version changes downstream of a changed workspace.
-
-### Deploy
-
-It is RECOMMENDED to use the deploy helper script to trigger the version change, so
-that only deployed changes are versioned. Otherwise, the commit history can get noisy
-with too many version commits and tags.
-
-```bash
-cd ~/proteinpaint
-./sj/deploy.sh 
-npm version [TYPE]
 npm pack
-npm publish
 ```
+
+## Release
+
+Use Github Actions to coordinate the release of related package updates.
+The package versioning, build, and deployment uses the standard npm tooling under the hood
+(`version`, `pack`, and `publish`, respectively).

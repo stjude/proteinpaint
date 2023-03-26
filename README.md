@@ -57,7 +57,6 @@ See the [documentation](https://docs.google.com/document/d/13efooFofEk5a6cwVXD_C
 
 ## Build
 
-
 ### Package Release
 
 The build and release steps can be triggered via Github Actions using the Create Release workflow.
@@ -65,3 +64,28 @@ The build and release steps can be triggered via Github Actions using the Create
 ### Docker Build
 
 See [container/README.md](https://github.com/stjude/proteinpaint/blob/master/container/README.md).
+
+### Version 
+
+Use Github Actions to coordinate the release of related package updates.
+The package versioning, build, and deployment uses the standard npm tooling under the hood
+(`version`, `pack`, and `publish`, respectively).
+
+You may dry-run a version change by supplying 3 arguments to the version helper script,
+for example:  
+
+```bash
+cd ~/proteinpaint
+./build/version.sh prerelease dry
+
+# should show the expected version changes at the end of the output
+> ...
+> SKIPPED commit, tag, and publish in dry-run mode: 
+> v2.4.2-0  server-2.4.1-30 client-2.4.1-30 front-2.4.1-30 pp-prt:^server pp-prt:^front
+```
+
+To undo the dry-run changes, 
+```bash
+git restore .
+```
+

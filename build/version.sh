@@ -18,16 +18,13 @@ if [[ "$1" != "" ]]; then
 	TYPE=$1
 fi
 
-ENV=$2
-if [[ "$ENV" != "" && ! -d ./sj/$ENV ]]; then
-	echo "unknown ENV='$ENV'"
-	exit 1
-fi
-
 # dry: dry-run
 # tgz: deploy tarballs instead of publishing to registry
 # tgz-force: deploy tarballs even if a package version exists in a registry
-MODE=$3
+MODE="dry"
+if [[ "$2" != "" ]]; then
+	MODE=$2
+fi
 
 ##########
 # CONTEXT
@@ -170,57 +167,11 @@ do
 	cd ..
 done
 
-########################
-# UPDATE THE PORTAL ENV
-########################
-
-# update only the current target environment for deployment,
-# let other enviroments' package.jsons each remain in its 
-# last applicable deployed version
-
-if [[ "$ENV" != "" ]]; then
-	cd sj/$ENV
-	PORTALPKG="$(npm pkg get version dependencies devDependencies)"
-	# echo "[$SP-$ENV] $PORTALPKG"
-	updatePkg "[\"$SP-$ENV\", $PORTALPKG]"
-
-	for WS in ${WORKSPACES};
-	do
-		if [[ "$UPDATED" == *" $WS-"* ]]; then
-			maySetDepVer $WS $ENV devDependencies
-			maySetDepVer $WS $ENV dependencies
-		fi
-	done
-	mayBumpImporterVersion $ENV $ROOTVERSION
-
-	if [[ "$UPDATED" != *" $ENV-"* ]]; then
-		mayBumpVersionOnDiff $WS $ROOTVERSION
-	fi
-
-	cd ../..
-fi
-
 ##########################
 # UPDATE THE ROOT PACKAGE
 ##########################
 
-if [[ "$ENV" == "" ]]; then
-	npm version $TYPE --no-git-tag-version --no-workspaces-update 
-else
-	PORTALVER=$(node -p "($WSPKG)['$SP-$ENV'].version")
-	if [[ "$UPDATED" == *" $ENV-"* ]]; then
-		npm pkg set version=$PORTALVER
-		updatePkg "[\"version\", \"$PORTALVER\"]"
-	elif [[ "$PORTALVER" != "$ROOTVERSION" ]]; then
-		cd sj/$ENV
-		npm pkg set version=$ROOTVERSION
-		cd ../..
-	else	
-		echo "TODO: may bump the root version for non-workpsace, non-portal related changes"
-	 	# so as long as something gets deployed, via registry or traball, increment the root version?
-	 	# mayBumpVersionOnDiff $WS $ROOTVERSION
-	fi
-fi
+npm version $TYPE --no-git-tag-version --no-workspaces-update 
 
 # display the current versions as JSON
 $handlePkg "$WSPKG"
@@ -256,16 +207,6 @@ fi
 #
 #################################
 
-if [[ "$ENV" == "" ]]; then
-	echo "Unspecified sj environment"
-	exit 0
-fi
-
-if [[ "$MODE" == *"tgz"* ]]; then
-	REMOTEDIR=/opt/data/pp/packages
-	DEPLOYEDTGZ=$(ssh $ENV "ls $REMOTEDIR")
-fi
-
 for WS in ${WORKSPACES};
 do
 	PUBLISHEDVER=$(npm view @sjcrh/proteinpaint-$WS version | tail -n1)
@@ -273,39 +214,9 @@ do
 	echo "$WS [$PUBLISHEDVER] [$CURRENTVER]"
 	if [[ "$PUBLISHEDVER" != "$CURRENTVER" || "$MODE" == *"force"* ]]; then
 		cd $WS
-		if [[ "$MODE" != *"tgz"* ]]; then
-			echo "publishing $WS-$CURRENTVER"
-			npm publish
-			cd ..
-		else
-			VER=$(node -p "($WSPKG)['$SP-$WS'].version")
-			HASH=$(node -p "($WSPKG)['$SP-$WS'].hash")
-			TGZ=$WS-$VER-$HASH.tgz
-			if [[ "$DEPLOYEDTGZ" == *"$TGZ"* ]]; then
-				echo "will reuse a previously deployed $TGZ"
-			else
-				npm pack
-				mv stjude-proteinpaint-$WS-$VER.tgz $TGZ
-				echo "scp'ing $TGZ to $ENV ..."
-				scp $TGZ $ENV:$REMOTEDIR
-			fi
-			cd ..
-			
-			for IMPORTER in ${WORKSPACES};
-			do
-				if [[ "$IMPORTER" != "$WS" ]]; then
-					cd $IMPORTER
-					maySetDepVer $WS $IMPORTER devDependencies $REMOTEDIR/$TGZ
-					maySetDepVer $WS $IMPORTER dependencies $REMOTEDIR/$TGZ
-					cd ..
-				fi 
-			done
-
-			cd ./sj/$ENV
-			maySetDepVer $WS $ENV devDependencies $REMOTEDIR/$TGZ
-			maySetDepVer $WS $ENV dependencies $REMOTEDIR/$TGZ
-			cd ../..
-		fi
+		echo "publishing $WS-$CURRENTVER"
+		npm publish
+		cd ..
 	fi
 done
 

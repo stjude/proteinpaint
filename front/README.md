@@ -50,9 +50,14 @@ cd public # the subdirectory under proteinpaint/front/
 python3 -m http.server
 ```
 
-## Build and Publish
+## Build
 
 ```bash
-cd path/to/proteinpaint
-../deploy.sh 
+npm pack
 ```
+
+## Release
+
+Use Github Actions to coordinate the release of related package updates.
+The package versioning, build, and deployment uses the standard npm tooling under the hood
+(`version`, `pack`, and `publish`, respectively).
