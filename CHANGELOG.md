@@ -1,6 +1,10 @@
 # Change Log
 
 All notable changes to this project will be documented in this file. 
+## 2.12.1
+
+- Switch to npmjs registry for npm publishing.
+ 
 ## 2.11.2
 
 - improved docker build and release

@@ -1,6 +1,6 @@
 {
 	"name": "@sjcrh/proteinpaint-front",
-	"version": "2.12.0",
+	"version": "2.12.1",
 	"main": "src/index.js",
 	"bin": "init.js",
 	"scripts": {
