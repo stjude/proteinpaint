@@ -41,4 +41,4 @@ if (serverconfig.releaseTag && serverconfig.releaseTag.server) {
 	spawnSync('npm', ['update', `@sjcrh/proteinpaint-server@${serverconfig.releaseTag.server}`], { encoding: 'utf-8' })
 }
 
-require('@stjude/proteinpaint-server')
+require('@sjcrh/proteinpaint-server')

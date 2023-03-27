@@ -96,6 +96,9 @@ RUN set -eux; \
 
 WORKDIR /home/root/pp/app
 
+# enable ssh into this stage, for troubleshooting
+CMD ["sleep", "3600"]
+
 #####################
 # Server-only install
 ######################
@@ -108,16 +111,17 @@ COPY tmppack ./tmppack
 
 WORKDIR /home/root/pp/app 
 RUN mkdir active
-# !!! NOTE: after open-sourcing, will only need the @stjude registry URL, no token required !!!
+# !!! NOTE: after open-sourcing, will only need the @sjcrh registry URL, no token required !!!
 WORKDIR /home/root/pp/app/active
-COPY .npmrc ./
 ARG SERVERPKGVER
-RUN if [ -f /home/root/pp/tmppack/stjude-proteinpaint-server-${SERVERPKGVER}.tgz ]; then \
-      npm install /home/root/pp/tmppack/stjude-proteinpaint-server-${SERVERPKGVER}.tgz; \
+RUN if [ -f /home/root/pp/tmppack/sjcrh-proteinpaint-server-${SERVERPKGVER}.tgz ]; then \
+      npm install /home/root/pp/tmppack/sjcrh-proteinpaint-server-${SERVERPKGVER}.tgz; \
     else \
       npm install @sjcrh/proteinpaint-server@${SERVERPKGVER}; \
-    fi; \
-    rm .npmrc
+    fi
+
+# enable ssh into this stage, for troubleshooting
+CMD ["sleep", "3600"]
 
 #####################
 # Server-only app
@@ -130,15 +134,14 @@ LABEL org.opencontainers.image.source="https://github.com/stjude/proteinpaint" \
     org.opencontainers.image.revision="$IMGREV" \
     org.opencontainers.image.version="$IMGVER"
 
-WORKDIR /home/root/pp/app 
-# the copied layer does not have the .npmrc
+WORKDIR /home/root/pp/app
 COPY --from=ppserverdeps /home/root/pp/app/active /home/root/pp/app/active
 
 WORKDIR /home/root/pp/app/active
 COPY ./app-server.js ./
 EXPOSE 3000
 CMD ["sh", "-c", "node app-server.js"]
-
+# CMD ["sleep", "3600"]
 
 #################
 # Full install
@@ -153,15 +156,15 @@ WORKDIR /home/root/pp/app
 COPY --from=ppserver /home/root/pp/app/active /home/root/pp/app/active
 
 WORKDIR /home/root/pp/app/active
-# !!! NOTE: after open-sourcing, will only need the @stjude registry URL, no token required !!!
-COPY ./.npmrc .
 ARG FRONTPKGVER
-RUN if [ -f /home/root/pp/tmppack/stjude-proteinpaint-front-${FRONTPKGVER}.tgz ]; then \
-      npm install /home/root/pp/tmppack/stjude-proteinpaint-front-${FRONTPKGVER}.tgz ; \
+RUN if [ -f /home/root/pp/tmppack/sjcrh-proteinpaint-front-${FRONTPKGVER}.tgz ]; then \
+      npm install /home/root/pp/tmppack/sjcrh-proteinpaint-front-${FRONTPKGVER}.tgz ; \
     else \
       npm install @sjcrh/proteinpaint-front@${FRONTPKGVER}; \
-    fi; \
-    rm .npmrc
+    fi
+
+# enable ssh into this stage, for troubleshooting
+CMD ["sleep", "3600"]
 
 ############
 # Full app
@@ -175,7 +178,6 @@ LABEL org.opencontainers.image.source="https://github.com/stjude/proteinpaint" \
     org.opencontainers.image.version="$IMGVER"
 
 WORKDIR /home/root/pp/app
-# the copied layer does not have the .npmrc
 COPY --from=ppfulldeps /home/root/pp/app/active /home/root/pp/app/active
 
 WORKDIR /home/root/pp/app/active

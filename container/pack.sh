@@ -13,7 +13,7 @@ cd ../client
 echo "packing client ..."
 npm pack
 CLIENTPKGVER=$(node -p "require('./package.json').version")
-CLIENTTGZ=stjude-proteinpaint-client-$CLIENTPKGVER.tgz
+CLIENTTGZ=sjcrh-proteinpaint-client-$CLIENTPKGVER.tgz
 mv $CLIENTTGZ ../container/tmppack/
 
 cd ../front
@@ -22,7 +22,7 @@ CLIENTDEPNAME="@sjcrh/proteinpaint-client"
 npm pkg set "devDependencies.$CLIENTDEPNAME"=/home/root/pp/tmppack/$CLIENTTGZ
 echo "packing front ..."
 npm pack
-FRONTTGZ=stjude-proteinpaint-front-*.tgz
+FRONTTGZ=sjcrh-proteinpaint-front-*.tgz
 mv $FRONTTGZ ../container/tmppack/
 git restore package.json
 
@@ -31,7 +31,7 @@ cd ../rust
 echo "packing rust ..."
 npm pack
 RUSTPKGVER=$(node -p "require('./package.json').version")
-RUSTTGZ=stjude-proteinpaint-rust-$RUSTPKGVER.tgz
+RUSTTGZ=sjcrh-proteinpaint-rust-$RUSTPKGVER.tgz
 mv $RUSTTGZ ../container/tmppack/
 
 cd ../server
@@ -40,7 +40,7 @@ RUSTDEPNAME="@sjcrh/proteinpaint-rust"
 npm pkg set "dependencies.$RUSTDEPNAME"=/home/root/pp/tmppack/$RUSTTGZ
 echo "packing server ..."
 npm pack
-SERVERTGZ=stjude-proteinpaint-server-*.tgz
+SERVERTGZ=sjcrh-proteinpaint-server-*.tgz
 mv $SERVERTGZ ../container/tmppack/
 git restore package.json
 

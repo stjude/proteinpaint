@@ -8,8 +8,8 @@
 		"postinstall": "docker pull ghcr.io/stjude/ppfull:latest"
 	},
 	"containerDeps": {
-		"server": "2.11.2",
-		"front": "2.11.2"
+		"server": "2.12.1",
+		"front": "2.12.1"
 	},
 	"files": [
 		"build.sh",
