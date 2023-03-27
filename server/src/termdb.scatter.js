@@ -1,5 +1,4 @@
 import { getData } from './termdb.matrix'
-import fs from 'fs'
 import path from 'path'
 import utils from './utils'
 import serverconfig from './serverconfig'
@@ -274,7 +273,8 @@ function processSample(dbSample, sample, tw, categoryMap, category) {
 			const class_info = mclass[mutation.class]
 			value = getCategory(mutation)
 			sample.cat_info[category].push(mutation)
-			if (!categoryMap.has(value)) categoryMap.set(value, { color: class_info.color, sampleCount: 1, hasOrigin: 'origin' in mutation})
+			if (!categoryMap.has(value))
+				categoryMap.set(value, { color: class_info.color, sampleCount: 1, hasOrigin: 'origin' in mutation })
 			else {
 				const mapValue = categoryMap.get(value)
 				mapValue.sampleCount++

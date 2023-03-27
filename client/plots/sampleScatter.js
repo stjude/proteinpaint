@@ -7,7 +7,7 @@ import { Menu } from '#dom/menu'
 import { d3lasso } from '#common/lasso'
 import { mclass, dt2label, morigin } from '#shared/common'
 import { scaleLinear as d3Linear } from 'd3-scale'
-import { rgb } from 'd3-color'
+import { rgb, color as d3color } from 'd3-color'
 import { zoom as d3zoom, zoomIdentity } from 'd3-zoom'
 import { controlsInit } from './controls'
 import { axisLeft, axisBottom } from 'd3-axis'
@@ -679,12 +679,12 @@ class Scatter {
 	}
 
 	onColorClick(e, key, category) {
-		console.log(key, category)
+		const color = rgb(category.color)
 		const menu = new Menu()
 		const input = menu.d
 			.append('input')
 			.attr('type', 'color')
-			.attr('value', category.color)
+			.attr('value', color.formatHex())
 			.on('change', () => {
 				// ok to not await here, since no returned value is required
 				// and menu.hide() does not need to wait for the dispatch to finish
