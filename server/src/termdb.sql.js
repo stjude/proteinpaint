@@ -73,7 +73,8 @@ must have q.cohortValues string
 return an array of sample names for the given cohort
 */
 	if (!q.cohortValues) throw `missing q.cohortValues`
-	const cohortKey = ds.cohort.termdb.selectCohort.term.id
+	if (q.cohortValues == 'undefined') q.cohortValues = ''
+	const cohortKey = ds.cohort.termdb.selectCohort?.term.id || 'subcohort'
 	const statement = `SELECT cohort as ${cohortKey}, count as samplecount
 		FROM subcohort_terms
 		WHERE cohort=? and term_id='$ROOT$'`

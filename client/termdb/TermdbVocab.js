@@ -323,7 +323,7 @@ export class TermdbVocab extends Vocab {
 
 	// from termdb/nav
 	async getCohortSampleCount(cohortName) {
-		if (!cohortName) return
+		//if (!cohortName) return
 		const lst = [
 			'genome=' + this.vocab.genome,
 			'dslabel=' + this.vocab.dslabel,

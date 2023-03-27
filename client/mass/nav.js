@@ -359,9 +359,14 @@ function setRenderers(self) {
 						return d.key == 'mid' ? 'NONE' : this.innerHTML // d.key == 'mid' ? '<span style="font-size: 16px; color: red">SELECT<br/>BELOW</span>' : ''
 					}
 				} else if (d.subheader === 'filter') {
+					console.log(self.samplecounts['undefined'])
 					const filter = self.filterUiRoot ? self.filterUiRoot : { lst: [] }
 					if (filter.lst.length === 0) {
-						return d.key === 'mid' ? 'NONE' : '&nbsp;'
+						return d.key === 'mid'
+							? 'NONE'
+							: self.samplecounts['undefined']
+							? `n=${self.samplecounts['undefined']}`
+							: ''
 					} else {
 						const n = self.samplecounts[self.filterJSON] != undefined ? 'n=' + self.samplecounts[self.filterJSON] : ''
 						return d.key === 'mid' ? filter.lst.length : n
