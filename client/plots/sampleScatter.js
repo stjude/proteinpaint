@@ -934,6 +934,7 @@ class Scatter {
 						if (value) group.name = value
 						else input.node().value = group.name
 						groupDiv.html('&nbsp;' + group.name)
+						this.app.dispatch({ type: 'plot_edit', id: this.id, config: { groups: this.config.groups } })
 					})
 				input.node().focus()
 				input.node().select()
@@ -1005,6 +1006,7 @@ class Scatter {
 						if (value) group.name = value
 						else input.node().value = group.name
 						groupDiv.html('&nbsp;' + group.name)
+						this.app.dispatch({ type: 'plot_edit', id: this.id, config: { groups: this.config.groups } })
 					})
 				input.node().focus()
 				input.node().select()
