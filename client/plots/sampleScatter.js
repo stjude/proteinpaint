@@ -2,10 +2,7 @@ import { getCompInit, copyMerge } from '../rx'
 import { fillTermWrapper } from '#termsetting'
 
 import { Menu } from '#dom/menu'
-import { scaleLinear as d3Linear } from 'd3-scale'
-import { rgb } from 'd3-color'
 import { controlsInit } from './controls'
-import { axisLeft, axisBottom } from 'd3-axis'
 import {
 	symbol,
 	symbolCircle,
@@ -130,41 +127,6 @@ class Scatter {
 		this.updateGroupsButton()
 		this.dom.tip.hide()
 		this.dom.termstip.hide()
-	}
-
-	initAxes() {
-		if (this.data.samples.length == 0) return
-		const s0 = this.data.samples[0] //First sample to start reduce comparisons
-		const [xMin, xMax, yMin, yMax] = this.data.samples.reduce(
-			(s, d) => [d.x < s[0] ? d.x : s[0], d.x > s[1] ? d.x : s[1], d.y < s[2] ? d.y : s[2], d.y > s[3] ? d.y : s[3]],
-			[s0.x, s0.x, s0.y, s0.y]
-		)
-		this.xAxisScale = d3Linear()
-			.domain([xMin, xMax])
-			.range([this.axisOffset.x, this.settings.svgw + this.axisOffset.x])
-
-		this.axisBottom = axisBottom(this.xAxisScale)
-		this.yAxisScale = d3Linear()
-			.domain([yMax, yMin])
-			.range([this.axisOffset.y, this.settings.svgh + this.axisOffset.y])
-		this.axisLeft = axisLeft(this.yAxisScale)
-		if (!this.config.gradientColor) this.config.gradientColor = '#008000'
-		this.startColor = rgb(this.config.gradientColor)
-			.brighter()
-			.brighter()
-		this.stopColor = rgb(this.config.gradientColor)
-			.darker()
-			.darker()
-		if (this.config.colorTW?.q.mode === 'continuous') {
-			const [min, max] = this.cohortSamples.reduce(
-				(s, d) => [d.value < s[0] ? d.category : s[0], d.category > s[1] ? d.category : s[1]],
-				[this.cohortSamples[0].category, this.cohortSamples[0].category]
-			)
-
-			this.colorGenerator = d3Linear()
-				.domain([min, max])
-				.range([this.startColor, this.stopColor])
-		}
 	}
 
 	// creates an opts object for the vocabApi.someMethod(),
