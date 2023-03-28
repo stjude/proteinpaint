@@ -7,7 +7,7 @@ set -euxo pipefail
 ###############
 
 USAGE="Usage:
-	./build.sh [-m] [-r] [-b] [-c] [-t]
+	./build.sh [-m] [-r] [-b] [-c]
 
 	-m MODE: string to loosely indicate the build environment.
 			 - defaults to an empty string
@@ -15,13 +15,11 @@ USAGE="Usage:
 			 - will be used as a prefix for the image name
 	-b BUILDARGS: build variables to pass to the Dockerfile that are not persisted to the built image
 	-c CROSSENV: cross-env options that are used prior to npm install
-	-t GIT_PAT: github personal access token to use in .npmrc
 "
 BUILDARGS=""
 CROSSENV=""
 MODE=""
-GIT_PAT=""
-while getopts "m:r:b:c:h:x:t:" opt; do
+while getopts "m:r:b:c:h:x:" opt; do
 	case "${opt}" in
 	m)
 		MODE=${OPTARG}
@@ -31,9 +29,6 @@ while getopts "m:r:b:c:h:x:t:" opt; do
 		;;
 	c)
 		CROSSENV=${OPTARG}
-		;;
-	t)
-		GIT_PAT=${OPTARG}
 		;;
 	h)
 		echo "$USAGE"
@@ -73,14 +68,6 @@ fi
 #########################
 # Docker build
 #########################
-# !!! FOR TESTING ONLY --- REMOVE .npmrc BEFORE PUSHING !!!
-# !!! once PP uses a public npm registry that does not require a token,
-# then at most the .npmrc should only have the registry URL for the @stjude namespace !!!
-echo "@stjude:registry=https://npm.pkg.github.com/" > .npmrc
-if [[ $GIT_PAT != "" ]]; then
-  # pragma: allowlist nextline secret
-	echo "//npm.pkg.github.com/:_authToken="$GIT_PAT | cat - .npmrc > temp && mv temp .npmrc
-fi
 
 IMGVER="$(node -p "require('./package.json').version")"
 # assumes that the branch head is currently checked out
