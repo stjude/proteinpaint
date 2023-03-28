@@ -1,7 +1,6 @@
 const clinvar = require('./clinvar')
 module.exports = {
 	isMds3: true,
-	color: '#545454',
 	dsinfo: [
 		{ k: 'Source', v: '<a href=http://www.ncbi.nlm.nih.gov/clinvar/ target=_blank>NCBI ClinVar</a>' },
 		{ k: 'Data type', v: 'SNV/Indel' },
@@ -25,7 +24,9 @@ module.exports = {
 			},
 			variantUrl: {
 				base: 'https://www.ncbi.nlm.nih.gov/clinvar/variation/',
-				key: 'id'
+				key: 'vcf_id',
+				linkText: 'ClinVar',
+				shownSeparately: true
 			},
 			infoUrl: [{ base: 'https://www.ncbi.nlm.nih.gov/snp/rs', key: 'RS' }]
 		}
@@ -47,14 +48,5 @@ module.exports = {
 			clinvar.AF.AF_TGP
 		]
 	},
-
-	url4variant: [
-		{
-			makelabel: m => 'ClinVar Variation ' + m.vcf_ID,
-			makeurl: m => {
-				return 'https://www.ncbi.nlm.nih.gov/clinvar/variation/' + m.vcf_ID
-			}
-		}
-	]
 */
 }
