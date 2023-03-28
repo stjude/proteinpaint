@@ -3,21 +3,27 @@ set -e
 # generate minimal package.json's so that only relevant changes
 # will trigger `npm install`, otherwise safe to reuse that 
 # that build step's cache for irrelevant changes like to scripts, etc
-./build/minpkgjson.js package.json > min-package.json
-./build/minpkgjson.js server/package.json > server/min-package.json
-./build/minpkgjson.js client/package.json > client/min-package.json
+# ./build/minpkgjson.js package.json > min-package.json
+# ./build/minpkgjson.js server/package.json > server/min-package.json
+# ./build/minpkgjson.js client/package.json > client/min-package.json
 
 docker build --file ./build/dev/Dockerfile --target ppdev --tag ppdev:latest .
-rm min-package.json server/min-package.json client/min-package.json
+# rm min-package.json server/min-package.json client/min-package.json
 
+# temporarily ignore bash error
 set +e
-docker stop ppdev && docker rm ppdev
+# find any docker process (docker ps), either running or stopped (-a)
+# with a matching name (-q, name only instead of verbose);
+# if any is found (xargs -r), remove it (docker rm) even if running (-f)
+echo "finding any matching container process to stop and remove ..."
+docker ps -aq --filter "name=pp" | xargs -r docker rm -f
+# re-enable exit on errors
 set -e
 
 TPDIR=$(node ./build/getConfigProp.js tpmasterdir)
 echo "serverconfig.tpmasterdir='$TPDIR'"
 PPDIR=$(pwd)
-CONTAPP=/home/root/pp/app/
+CONTAPP=/home/root/pp/app/active
 SCRIPT=$2
 if [[ "$SCRIPT" == "" ]]; then
 	SCRIPT=dev1
@@ -29,8 +35,12 @@ if [[ ! -d ./public/bin ]]; then
 	mkdir public/bin
 fi
 
+# remove symlink to server/cards
+rm -rf public/cards
+
+
 docker run \
-	--name ppdev \
+	--name pp \
 	`# mounting specific subdirs and files avoids mounting the node_modules at the root or any workspace` \
 	--mount type=bind,source=$TPDIR,target=/home/root/pp/tp,readonly \
 	--mount type=bind,source=$PPDIR/public,target=$CONTAPP/public \

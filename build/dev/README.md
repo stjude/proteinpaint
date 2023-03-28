@@ -2,40 +2,85 @@
 
 ## Background
 
-The scripts in this directory sets up a developer enviroment
-using a Docker container. Although it may take minutes to build
-the initial Docker image, it is still easier than having to 
-manually install the Proteinpaint system dependencies natively
-in the developer machine.
+The scripts in this directory sets up a developer enviroment using a Docker container.
+Currently, only x86/amd64 machines may build the Docker image from source.
+ARM/M1/M2 machines would have to download the image from Github Packages. Until the
+cross-archictecture support is fixed, `run.sh` will pull a pre-built server image
+that should allow frontend development in any CPU architecture. 
+
+TODO: fix the M1/M2 support in the Dockerfile to allow server-side development.
 
 ## Setup
 
-Run once to set up the base node-debian image:
+**NOTE: STOP ANY OTHER ACTIVE BUNDLING PROCESS SUCH AS `npm run dev`**
+
+### Client bundle
+
+From the proteinpaint directory,
+
 ```bash
-./build/full/build.sh
+cd client
+npm run dev
 ```
 
-To start the developer container:
-```bash
-# this will reuse the full build artifacts to lessen the total build time
-# client bundling logs wil be displayed with server bundling + process logs,
-# all in one window
-npm run docker
-# use CTRL+Z to stop the logging and `docker stop ppdev` to stop the container
+### serverconfig.json
 
-# --- OR ---
-# to have more readable logs, run these in separate terminals
-# run the server ONLY (bundling + process) in the container
-./build/dev/run.sh server
-# run the client bundling natively outside of the container
-npm run client
-# use CTRL+Z to stop the logging and `docker stop ppdev` to stop the container
+In the proteinpaint directory, you should have a serverconfig.json that looks like:
+
+```json
+{
+   "genomes": [
+      {
+         "name": "hg19",
+         "species": "human",
+         "file": "./genome/hg19.js",
+         "datasets": [
+            {
+               "name": "Clinvar",
+               "jsfile": "./dataset/clinvar.hg19.js"
+            }
+         ]
+      },
+      {
+         "name": "hg38",
+         "species": "human",
+         "file": "./genome/hg38.js",
+         "datasets": [
+            {
+               "name": "Clinvar",
+               "jsfile": "./dataset/clinvar.hg38.js"
+            }
+         ]
+      }
+   ],
+   "tpmasterdir": "/abs/path/to/data/dir",
+   "backend_only": false
+} 
 ```
 
-To inspect troubleshoot logs:
+### Server container
+
+The following uses a pre-bundled server code inside a Docker container. (See the
+TODO above to support local server development.)
+
+From the proteinpaint directory, run
+
+```bash
+./build/dev/run.sh
+
+# Control+Z to detach from the logs
+# docker stop pp # to stop the container process
+# or rerun `./build/dev/run.sh` to stop and remove a process with a matching name
+```
+
+### Web browser
+
+Visit http://localhost:3000 to see your local ProteinPaint app instance. Note that
+since a pre-built server image is used, this local instance is currently more limited
+and may not be able to open all developer pages and features.
+
+### Troubleshooting
+
+To inspect the server logs:
 - the running logs for server bundling and process are displayed in the terminal window where you triggered `./build/dev/run.sh`
 - the client bundling logs will be displayed where you triggered `npm run dev` from the client dir 
-
-## TODO 
-- minimize the need for a full `npm install`, even for just the server workspace
-- maybe used a squashed or flattened pprust image
