@@ -338,16 +338,20 @@ export class TermdbVocab extends Vocab {
 		}
 	}
 
-	async getFilteredSampleCount(filterJSON) {
+	async getFilteredSampleCount(filterJSON, getSampleLst) {
 		const body = {
 			genome: this.vocab.genome,
 			dslabel: this.vocab.dslabel,
-			getsamplecount: 1,
+			getsamplecount: getSampleLst || 'count',
 			filter: filterJSON
 		}
 		const data = await dofetch3('termdb', { body }, this.opts.fetchOpts)
 		if (!data) throw `missing data`
 		if (data.error) throw data.error
+		if (getSampleLst) {
+			if (!Array.isArray(data)) throw 'data is not array'
+			return data
+		}
 		return data[0].samplecount
 	}
 

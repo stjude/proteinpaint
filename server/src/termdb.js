@@ -59,7 +59,7 @@ export function handle_request_closure(genomes) {
 			}
 			if (q.gettermdbconfig) return termdbConfig.make(q, res, ds, genome)
 			if (q.getcohortsamplecount) return trigger_getcohortsamplecount(q, res, ds)
-			if (q.getsamplecount) return res.send(await termdbsql.get_samplecount(q, ds))
+			if (q.getsamplecount) return res.send(await getSampleCount(q, ds))
 			if (q.getsamples) return await trigger_getsamples(q, res, ds)
 			if (q.getcuminc) return await trigger_getincidence(q, res, ds)
 			if (q.getsurvival) return await trigger_getsurvival(q, res, ds)
@@ -127,6 +127,11 @@ async function trigger_getsamples(q, res, ds) {
 	const lst = await termdbsql.get_samples(q.filter, ds)
 	const samples = lst.map(i => ds.cohort.termdb.q.id2sampleName(i))
 	res.send({ samples })
+}
+
+async function getSampleCount(q, ds) {
+	if (q.getsamplecount == 'list') return await termdbsql.get_samples(q.filter, ds)
+	return await termdbsql.get_samplecount(q, ds)
 }
 
 function trigger_gettermbyid(q, res, tdb) {
