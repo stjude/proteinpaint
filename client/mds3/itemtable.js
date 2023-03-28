@@ -405,28 +405,28 @@ function print_mname(div, m) {
 }
 
 export function print_snv(holder, m, tk) {
-	let printto = holder
+	let snvDiv = holder
 
 	const url = tk.mds.queries?.snvindel?.variantUrl
 	if (url && url.key in m) {
 		if (url.shownSeparately) {
+			// create new <span> to print snv into it
+			snvDiv = holder.append('span')
 			// create a separate <a> element for the url, not directly on the Mutation field
-			printto = holder.append('span')
 			holder
 				.append('a')
 				.style('padding-left', '10px')
 				.attr('href', url.base + m[url.key])
 				.attr('target', '_blank')
-				.text(m[url.key])
+				.text(url.linkText || m[url.key])
 		} else {
-			// url is created directly on mutation value
-			const a = holder.append('a')
-			a.attr('href', tk.mds.queries.snvindel.variantUrl.base + m[tk.mds.queries.snvindel.variantUrl.key])
-			a.attr('target', '_blank')
-			printto = a
+			// url is created directly on mutation string
+			snvDiv = holder.append('a')
+			snvDiv.attr('href', tk.mds.queries.snvindel.variantUrl.base + m[tk.mds.queries.snvindel.variantUrl.key])
+			snvDiv.attr('target', '_blank')
 		}
 	}
-	printto.html(`${m.chr}:${m.pos + 1} ${m.ref && m.alt ? m.ref + '>' + m.alt : ''}`)
+	snvDiv.html(`${m.chr}:${m.pos + 1} ${m.ref && m.alt ? m.ref + '>' + m.alt : ''}`)
 }
 
 // function is not used
