@@ -74,24 +74,75 @@ docker run -d \
 
 echo "^ assigned container ID ^"
 
-container_id=$(docker ps -q -f name=pp)
+##########################
+# Monitor server startup
+##########################
+
 end_time=$((SECONDS+30))
 
-ENDSTR="STANDBY AT PORT $EXPOSED_PORT"
+ENDSTR="Validation succeeded"
 echo "Waiting for server validation ..."
 while true; do
-    if docker logs $container_id 2>&1 | grep -q "$ENDSTR"; then
-        sleep 2 # wait for server cache and APIs  to warm up
+	logs="$(docker logs $CONTAINER_NAME 2>&1)"
+    if echo "$logs" | grep -q "$ENDSTR"; then
+    	echo "$ENDSTR"
         break
+    fi
+    if echo "$logs" | grep -q "Error"; then
+    	docker logs pp
+        exit 1
     fi
     sleep 1
     if (( SECONDS >= end_time )); then
         echo "Server failed to start."
-        exit 0
+        exit 1
     fi
 done
 
-docker logs pp
+ENDSTR="STANDBY AT PORT $EXPOSED_PORT"
+echo "Waiting for server startup ..."
+while true; do
+    if echo "$logs" | grep -q "$ENDSTR"; then
+    	echo "Server started"
+        break
+    fi
+    if echo "$logs" | grep -q "Error"; then
+    	docker logs pp
+        exit 1
+    fi
+    sleep 1
+    if (( SECONDS >= end_time )); then
+        echo "Server failed to start."
+        exit 1
+    fi
+done
+
+#######
+# Test
+#######
+
+healthcheck=$(curl -sS http://localhost:$HOSTPORT/healthcheck)
+numlines=$(echo "$healthcheck" | grep -c '"status":"ok"')
+if [[ "$numlines" == "1" ]]; then
+	echo "healthcheck ok"
+else 
+	echo "healthcheck not ok: $healthcheck"
+	exit 1
+fi
+
+genomes=$(curl -sS http://localhost:$HOSTPORT/genomes)
+numlines=$(echo "$genomes" | grep -c '"genomes":')
+if [[ "$numlines" == "1" ]]; then
+	echo "genomes ok"
+else 
+	echo "genomes not ok: $genomes"
+	exit 1
+fi
+
+########
+# Hints
+########
+
 echo -e "\n************************************************************************"
 echo "*"
 echo "* Open the ProteinPaint app at http://localhost:$HOSTPORT in you web browser"
