@@ -121,8 +121,7 @@ tape('single chart, with overlay', function(test) {
 			.done(test)*/
 
 		testBarCount()
-		await sleep(100)
-		testOverlayOrder()
+		await testOverlayOrder()
 		await triggerUncomputableOverlay(barchart)
 		clickLegendToHideOverlay(barchart)
 		await testHiddenOverlayData(barchart)
@@ -137,7 +136,8 @@ tape('single chart, with overlay', function(test) {
 		test.true(numOverlays > numBars, 'number of overlays should be greater than bars')
 	}
 
-	function testOverlayOrder() {
+	async function testOverlayOrder() {
+		await detectOne({ elem: barDiv.node(), selector: '.pp-bars-svg' }) //Fix to remove sleep()
 		const bars_grp = barDiv.selectAll('.bars-cell-grp')
 		const legend_rows = barDiv.selectAll('.legend-row')
 		//flag to indicate unordered bars
