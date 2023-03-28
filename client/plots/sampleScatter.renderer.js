@@ -3,6 +3,8 @@ import { icons as icon_functions } from '#dom/control.icons'
 import { d3lasso } from '#common/lasso'
 import { mclass, dt2label, morigin } from '#shared/common'
 import { rgb } from 'd3-color'
+import { scaleLinear as d3Linear } from 'd3-scale'
+import { axisLeft, axisBottom } from 'd3-axis'
 
 export function setRenderers(self) {
 	self.render = function() {
@@ -29,6 +31,41 @@ export function setRenderers(self) {
 			const s = self.settings
 			chartDiv.transition().duration(s.duration)
 			renderSVG(chartDiv.select('svg'), chartDiv, s, s.duration, data)
+		}
+	}
+
+	self.initAxes = function() {
+		if (self.data.samples.length == 0) return
+		const s0 = self.data.samples[0] //First sample to start reduce comparisons
+		const [xMin, xMax, yMin, yMax] = self.data.samples.reduce(
+			(s, d) => [d.x < s[0] ? d.x : s[0], d.x > s[1] ? d.x : s[1], d.y < s[2] ? d.y : s[2], d.y > s[3] ? d.y : s[3]],
+			[s0.x, s0.x, s0.y, s0.y]
+		)
+		self.xAxisScale = d3Linear()
+			.domain([xMin, xMax])
+			.range([self.axisOffset.x, self.settings.svgw + self.axisOffset.x])
+
+		self.axisBottom = axisBottom(self.xAxisScale)
+		self.yAxisScale = d3Linear()
+			.domain([yMax, yMin])
+			.range([self.axisOffset.y, self.settings.svgh + self.axisOffset.y])
+		self.axisLeft = axisLeft(self.yAxisScale)
+		if (!self.config.gradientColor) self.config.gradientColor = '#008000'
+		self.startColor = rgb(self.config.gradientColor)
+			.brighter()
+			.brighter()
+		self.stopColor = rgb(self.config.gradientColor)
+			.darker()
+			.darker()
+		if (self.config.colorTW?.q.mode === 'continuous') {
+			const [min, max] = self.cohortSamples.reduce(
+				(s, d) => [d.value < s[0] ? d.category : s[0], d.category > s[1] ? d.category : s[1]],
+				[self.cohortSamples[0].category, self.cohortSamples[0].category]
+			)
+
+			self.colorGenerator = d3Linear()
+				.domain([min, max])
+				.range([self.startColor, self.stopColor])
 		}
 	}
 
