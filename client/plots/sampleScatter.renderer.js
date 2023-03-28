@@ -186,6 +186,28 @@ export function setRenderers(self) {
 			.duration(duration)
 	}
 
+	self.getColor = function(c) {
+		if (self.config.colorTW?.q.mode == 'continuous' && 'sampleId' in c) return self.colorGenerator(c.category)
+		const color = self.colorLegend.get(c.category).color
+
+		return color
+	}
+
+	self.getOpacity = function(c) {
+		if ('sampleId' in c) {
+			const opacity = c.hidden['category'] || c.hidden['shape'] ? 0 : self.settings.opacity
+			return opacity
+		}
+		const refOpacity = self.settings.showRef ? self.settings.opacity : 0
+		return refOpacity
+	}
+
+	self.getShape = function(c, factor = 1) {
+		const index = self.shapeLegend.get(c.shape).shape % self.symbols.length
+		const size = 'sampleId' in c ? self.settings.size : self.settings.refSize
+		return self.symbols[index].size((size * factor) / self.k)()
+	}
+
 	function translate(c) {
 		const transform = `translate(${self.xAxisScale(c.x)},${self.yAxisScale(c.y)})`
 		return transform
