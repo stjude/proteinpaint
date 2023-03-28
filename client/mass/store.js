@@ -43,6 +43,7 @@ const defaultState = {
 			byName: {}
 		}
 	},
+	groups: [], // element: {name=str, filter={}}, to show in Groups tab
 	autoSave: true
 }
 

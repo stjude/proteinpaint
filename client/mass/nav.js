@@ -3,6 +3,7 @@ import { recoverInit } from '../rx/src/recover'
 import { searchInit } from './search'
 import { filterRxCompInit } from '../filter/filter'
 import { chartsInit } from './charts'
+import { groupsInit } from './groups'
 import { select } from 'd3-selection'
 import { dofetch3 } from '../common/dofetch'
 import { Menu } from '../dom/menu'
@@ -25,6 +26,13 @@ let id = (+new Date()).toString().slice(-8)
 const headtip = new Menu({ padding: '0px', offsetX: 0, offsetY: 0 })
 headtip.d.style('z-index', 5555)
 // headtip must get a crazy high z-index so it can stay on top of all, no matter if server config has base_zindex or not
+
+// data elements for navigation header tabs
+const cohortTab = { top: 'COHORT', mid: 'NONE', btm: '', subheader: 'cohort' }
+const groupsTab = { top: 'GROUPS', mid: 'NONE', btm: '', subheader: 'groups' }
+const chartTab = { top: 'CHARTS', mid: 'NONE', btm: '', subheader: 'charts' }
+const filterTab = { top: 'FILTER', mid: 'NONE', btm: '', subheader: 'filter' }
+const cartTab = { top: 'CART', mid: 'NONE', btm: '', subheader: 'cart' }
 
 function getId() {
 	return idPrefix + '_' + id++
@@ -72,6 +80,11 @@ class TdbNav {
 				charts: chartsInit({
 					app: this.app,
 					holder: this.dom.subheader.charts,
+					vocab: this.opts.vocab
+				}),
+				groups: groupsInit({
+					app: this.app,
+					holder: this.dom.subheader.groups,
 					vocab: this.opts.vocab
 				}),
 				recover: recoverInit({
@@ -209,6 +222,7 @@ function setRenderers(self) {
 
 		self.dom.subheader = Object.freeze({
 			search: self.dom.subheaderDiv.append('div').style('display', 'none'),
+			groups: self.dom.subheaderDiv.append('div').style('display', 'none'),
 			charts: self.dom.subheaderDiv.append('div').style('display', 'none'),
 			cohort: self.dom.subheaderDiv.append('div').style('display', 'none'),
 			filter: self.dom.subheaderDiv.append('div').style('display', 'none'),
@@ -218,14 +232,10 @@ function setRenderers(self) {
 				.html('<br/>Cart feature under construction - work in progress<br/>&nbsp;<br/>')
 		})
 
+		self.tabs = [groupsTab, chartTab, filterTab /*, cartTab*/]
+		if (appState.termdbConfig.selectCohort) self.tabs.unshift(cohortTab) // dataset has "sub-cohorts", show the Cohort tab at the beginning
+
 		const table = self.dom.tabDiv.append('table').style('border-collapse', 'collapse')
-		const chartTab = { top: 'CHARTS', mid: 'NONE', btm: '', subheader: 'charts' }
-		const cohortTab = { top: 'COHORT', mid: 'NONE', btm: '', subheader: 'cohort' }
-		const filterTab = { top: 'FILTER', mid: 'NONE', btm: '', subheader: 'filter' }
-		const cartTab = { top: 'CART', mid: 'NONE', btm: '', subheader: 'cart' }
-		self.tabs = appState.termdbConfig.selectCohort
-			? [cohortTab, chartTab, filterTab /*, cartTab*/]
-			: [chartTab, filterTab /*, cartTab*/]
 
 		// using a table layout for tabs, iterate through each tab
 		// once for each of [top, mid, btm] row
