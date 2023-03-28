@@ -434,7 +434,7 @@ export function setRenderers(self) {
 				mainG.on('.zoom', null)
 				mainG.call(self.lasso)
 			} else {
-				mainG.on('mousedown.drag', self.lassoReset())
+				mainG.on('mousedown.drag', null)
 				self.lasso.items().classed('not_possible', false)
 				self.lasso.items().classed('possible', false)
 				self.lasso
