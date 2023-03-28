@@ -707,6 +707,9 @@ class Matrix {
 		layout.right.box.attr('clip-path', '')
 
 		this.layout = layout
+		const zoomedMainW = nx * dx + (this[`${col}Grps`].length - 1) * s.colgspace
+		const seriesXoffset =
+			s.zoomLevel <= 1 ? 0 : s.zoomCenterPct * mainw - s.zoomIndex * dx - (s.zoomGrpIndex - 1) * s.colgspace
 		this.dimensions = {
 			dx,
 			dy,
@@ -715,9 +718,8 @@ class Matrix {
 			mainw,
 			mainh,
 			colw,
-			seriesXoffset:
-				s.zoomLevel <= 1 ? 0 : s.zoomCenterPct * mainw - s.zoomIndex * dx - (s.zoomGrpIndex - 1) * s.colgspace, // + 2*xOffset,
-			zoomedMainW: nx * dx + (this[`${col}Grps`].length - 1) * s.colgspace, //+ (this[`${col}s`].slice(-1)[0]?.totalHtAdjustments || 0)
+			zoomedMainW,
+			seriesXoffset: seriesXoffset > 0 ? 0 : Math.max(seriesXoffset, -zoomedMainW + mainw),
 			maxMainW:
 				nx * (s.maxColw + s.colspace) +
 				(this[`${col}Grps`].length - 1) * s.colgspace +

@@ -1399,7 +1399,7 @@ function setZoomPanActions(self) {
 	self.seriesesGMousedown = function(event) {
 		if (!self.optionalFeatures.includes('zoom')) return
 		event.stopPropagation()
-		const startCell = self.getCellByPos(event) //event.target.__data__
+		const startCell = self.getCellByPos(event)
 		if (!startCell) return
 		self.clickedSeriesCell = { event, startCell }
 		if (self.settings.matrix.mouseMode == 'pan') {
@@ -1421,7 +1421,7 @@ function setZoomPanActions(self) {
 		const d = self.dimensions
 		if (event.target.tagName == 'rect' && event.target.__data__?.sample) return event.target.__data__
 		if (event.target.tagName == 'image' && s.useCanvas) {
-			const visibleWidth = event.clientX - event.target.getBoundingClientRect().x - d.seriesXoffset
+			const visibleWidth = event.clientX - event.target.getBoundingClientRect().x + d.seriesXoffset
 			const i = Math.floor(visibleWidth / d.colw)
 			return self.sampleOrder[i]
 		}
