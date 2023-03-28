@@ -23,10 +23,9 @@ jobs:
 
       - uses: actions/setup-node@v3
         with:
-          node-version: '16'
           cache: 'npm'
-          registry-url: 'https://npm.pkg.github.com'
-          scope: '@stjude'
+          node-version: '16'
+
       - run: npm ci
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

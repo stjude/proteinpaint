@@ -38,13 +38,14 @@ jobs:
       # Setup .npmrc file to publish to GitHub Packages
       - uses: actions/setup-node@v3
         with:
+          cache: 'npm'
           node-version: '16'
           registry-url: 'https://npm.pkg.github.com'
           scope: '@stjude'
       - run: |
           npm ci
           cd container
-          ./build.sh -m "ghcr.io/stjude/" -t ${{ secrets.GITHUB_TOKEN }}
+          ./build.sh -m "ghcr.io/stjude/"
           TAG="$(node -p "require('./package.json').version")"
           docker push ghcr.io/stjude/ppserver:$TAG
           docker push ghcr.io/stjude/ppfull:$TAG
