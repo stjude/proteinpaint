@@ -324,7 +324,7 @@ export async function samples2columnsRows(samples, tk) {
 
 	///////////////// fill in columns[]
 	if (has_caseAccess) {
-		columns.push({ label: 'Access' })
+		columns.push({ label: 'Access', editCallback: (i, cell) => console.log(i, cell) })
 	}
 
 	if (tk.mds.variant2samples.twLst) {
