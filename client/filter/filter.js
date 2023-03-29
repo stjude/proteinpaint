@@ -423,6 +423,7 @@ class FilterPrompt extends Filter {
 			join: '',
 			lst: []
 		})
+		rawFilter.join = rawFilter.lst.length > 1 ? 'and' : ''
 		const rawCopy = JSON.stringify(rawFilter)
 		// if the filter data and active cohort has not changed, do not trigger a re-render
 		if (this.rawCopy == rawCopy && JSON.stringify(this.activeCohort) == JSON.stringify(activeCohort)) return
