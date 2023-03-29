@@ -516,8 +516,6 @@ export function setInteractivity(self) {
 						})
 
 						config.divideBy = getSamplelstTW(groups)
-						console.log(config)
-
 						config.settings.matrix.colw = 0
 						self.app.dispatch({
 							type: 'plot_create',
