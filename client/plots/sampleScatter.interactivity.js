@@ -531,8 +531,8 @@ export function setInteractivity(self) {
 		for (const group of groups) {
 			values[group.name] = { key: group.name, label: group.name }
 			const qgroup = {
-				name: group.name,
 				key: 'sample',
+				in: true,
 				values: getGroupValues(group)
 			}
 			qgroups.push(qgroup)
@@ -540,7 +540,6 @@ export function setInteractivity(self) {
 		if (groups.length == 1) {
 			values['Others'] = { key: 'Others', label: 'Others' }
 			qgroups.push({
-				name: 'Others',
 				key: 'sample',
 				in: false,
 				values: getGroupValues(groups[0])

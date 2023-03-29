@@ -6,8 +6,8 @@ export function getHandler(self) {
 		showEditMenu(div) {
 			div.selectAll('*').remove()
 			const groups = self.q.groups
-
-			for (const group of groups) {
+			const keys = Object.keys(self.term.values)
+			for (const [i, group] of groups.entries()) {
 				const groupDiv = div
 					.append('div')
 					.style('display', 'inline-block')
@@ -15,7 +15,8 @@ export function getHandler(self) {
 				const noButtonCallback = (i, node) => {
 					group.values[i].checked = node.checked
 				}
-				addTable(groupDiv, group, noButtonCallback)
+				const name = group.in ? keys[i] : 'Others will exclude these samples'
+				addTable(groupDiv, name, group, noButtonCallback)
 			}
 			div
 				.append('div')
@@ -39,8 +40,7 @@ export function getHandler(self) {
 	}
 }
 
-function addTable(div, group, noButtonCallback) {
-	const name = group.name == 'Others' ? 'Others will exclude these samples' : group.name
+function addTable(div, name, group, noButtonCallback) {
 	div
 		.style('padding', '6px')
 		.append('div')
