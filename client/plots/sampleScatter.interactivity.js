@@ -218,22 +218,13 @@ export function setInteractivity(self) {
 		})
 	}
 
-	self.openSurvivalPlot = async function(term, tgroups) {
-		const values = {}
-		for (const group of tgroups) values[group.name] = { key: group.name, label: group.name }
+	self.openSurvivalPlot = async function(term, groups) {
 		const plot_name = self.config.name ? self.config.name : 'Summary scatter'
-		const disabled = !('sample' in tgroups[0].values[0])
+		const disabled = !('sample' in groups[0].items[0])
 		let config = {
 			chartType: 'survival',
 			term,
-			term2: {
-				term: { name: plot_name + ' groups', type: 'samplelst', values },
-				q: {
-					mode: 'custom-groupsetting',
-					groups: tgroups,
-					groupsetting: { disabled }
-				}
-			},
+			term2: self.getSamplelstTW(groups, plot_name, { disabled }),
 			insertBefore: self.id
 		}
 		await self.app.dispatch({
@@ -265,67 +256,18 @@ export function setInteractivity(self) {
 		// tw.q can be missing and will be filled in with default setting
 		const tw = { id: term.id, term }
 		const plot_name = self.config.name ? self.config.name : 'Summary scatter'
-		const disabled = !('sample' in groups[0].values[0])
+		const disabled = !('sample' in groups[0].items[0])
 		const config = {
 			chartType: 'summary',
 			childType: 'barchart',
 			term: tw, // self is a termsetting, not a term
-			term2: {
-				term: { name: plot_name + ' groups', type: 'samplelst' },
-				q: {
-					mode: 'custom-groupsetting',
-					groups: groups,
-					groupsetting: { disabled }
-				}
-			},
+			term2: self.getSamplelstTW(groups, plot_name + ' groups', { disabled }),
 			insertBefore: self.id
 		}
 		await self.app.dispatch({
 			type: 'plot_create',
 			config
 		})
-	}
-
-	self.getGroupsOverlay = function(groups) {
-		const overlayGroups = []
-		let values, tgroup
-		for (const group of groups) {
-			values = self.getGroupValues(group)
-			tgroup = {
-				name: group.name,
-				key: 'sample',
-				values: values
-			}
-			overlayGroups.push(tgroup)
-		}
-		return overlayGroups
-	}
-
-	self.getGroupvsOthersOverlay = function(group) {
-		const values = self.getGroupValues(group)
-		return [
-			{
-				name: group.name,
-				key: 'sample',
-				values
-			},
-			{
-				name: 'Others',
-				key: 'sample',
-				in: false,
-				values
-			}
-		]
-	}
-
-	self.getGroupValues = function(group) {
-		const values = []
-		for (const item of group.items) {
-			const value = { sampleId: item.sampleId }
-			if ('sample' in item) value.sample = item.sample
-			values.push(value)
-		}
-		return values
 	}
 
 	self.showTermsTree = async function(div, callback, state = { tree: { usecase: { detail: 'term' } } }) {
@@ -352,8 +294,6 @@ export function setInteractivity(self) {
 	}
 
 	self.addToFilter = function(group) {
-		const lst = []
-		for (const item of group.items) lst.push(item.sample)
 		const filterUiRoot = getFilterItemByTag(self.state.termfilter.filter, 'filterUiRoot')
 		const filter = filterJoin([
 			filterUiRoot,
@@ -364,10 +304,7 @@ export function setInteractivity(self) {
 				lst: [
 					{
 						type: 'tvs',
-						tvs: {
-							term: { type: 'samplelst', name: group.name },
-							values: lst
-						}
+						tvs: self.getSamplelstTW([group])
 					}
 				]
 			}
@@ -523,7 +460,7 @@ export function setInteractivity(self) {
 				self.showTermsTree(
 					survivalDiv,
 					term => {
-						self.openSurvivalPlot(term, self.getGroupvsOthersOverlay(group))
+						self.openSurvivalPlot(term, [group])
 					},
 					state
 				)
@@ -539,7 +476,7 @@ export function setInteractivity(self) {
 			.style('float', 'right')
 
 		summarizeDiv.on('click', async e => {
-			self.showTermsTree(summarizeDiv, term => self.openSummaryPlot(term, self.getGroupvsOthersOverlay(group)))
+			self.showTermsTree(summarizeDiv, term => self.openSummaryPlot(term, [group]))
 		})
 		const deleteDiv = menuDiv
 			.append('div')
@@ -575,24 +512,8 @@ export function setInteractivity(self) {
 								dslabel: self.state.vocab.dslabel
 							}
 						})
-						const values = {}
-						const qgroups = []
-						for (const group of groups) {
-							values[group.name] = { key: group.name, label: group.name }
-							const qgroup = {
-								name: group.name,
-								key: 'sample',
-								values: self.getGroupValues(group)
-							}
-							qgroups.push(qgroup)
-						}
-						config.divideBy = {
-							term: { name: 'groups', type: 'samplelst', values },
-							q: {
-								mode: 'custom-groupsetting',
-								groups: qgroups
-							}
-						}
+
+						config.divideBy = self.getSamplelstTW(groups)
 						config.settings.matrix.colw = 0
 						self.app.dispatch({
 							type: 'plot_create',
@@ -601,6 +522,48 @@ export function setInteractivity(self) {
 						self.dom.tip.hide()
 					})
 			}
+		}
+	}
+
+	self.getSamplelstTW = function(groups, name = 'groups', groupsetting = {}) {
+		const values = {}
+		const qgroups = []
+		for (const group of groups) {
+			values[group.name] = { key: group.name, label: group.name }
+			const qgroup = {
+				name: group.name,
+				key: 'sample',
+				values: getGroupValues(group)
+			}
+			qgroups.push(qgroup)
+		}
+		if (groups.length == 1) {
+			values['Others'] = { key: 'Others', label: 'Others' }
+			qgroups.push({
+				name: 'Others',
+				key: 'sample',
+				in: false,
+				values: getGroupValues(groups[0])
+			})
+		}
+		const tw = {
+			term: { name, type: 'samplelst', values },
+			q: {
+				mode: 'custom-groupsetting',
+				groups: qgroups,
+				groupsetting
+			}
+		}
+		return tw
+
+		function getGroupValues(group) {
+			const values = []
+			for (const item of group.items) {
+				const value = { sampleId: item.sampleId }
+				if ('sample' in item) value.sample = item.sample
+				values.push(value)
+			}
+			return values
 		}
 	}
 
@@ -643,7 +606,7 @@ export function setInteractivity(self) {
 				self.showTermsTree(
 					survivalDiv,
 					term => {
-						self.openSurvivalPlot(term, self.getGroupsOverlay(self.config.groups))
+						self.openSurvivalPlot(term, self.config.groups)
 					},
 					state
 				)
@@ -660,7 +623,7 @@ export function setInteractivity(self) {
 
 		summarizeDiv.on('click', async e => {
 			self.showTermsTree(summarizeDiv, term => {
-				self.openSummaryPlot(term, self.getGroupsOverlay(self.config.groups))
+				self.openSummaryPlot(term, self.config.groups)
 			})
 		})
 		row = menuDiv
