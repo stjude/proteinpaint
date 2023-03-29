@@ -224,7 +224,7 @@ export function setInteractivity(self) {
 		let config = {
 			chartType: 'survival',
 			term,
-			term2: self.getSamplelstTW(groups, plot_name, { disabled }),
+			term2: getSamplelstTW(groups, plot_name, { disabled }),
 			insertBefore: self.id
 		}
 		await self.app.dispatch({
@@ -261,7 +261,7 @@ export function setInteractivity(self) {
 			chartType: 'summary',
 			childType: 'barchart',
 			term: tw, // self is a termsetting, not a term
-			term2: self.getSamplelstTW(groups, plot_name + ' groups', { disabled }),
+			term2: getSamplelstTW(groups, plot_name + ' groups', { disabled }),
 			insertBefore: self.id
 		}
 		await self.app.dispatch({
@@ -304,7 +304,7 @@ export function setInteractivity(self) {
 				lst: [
 					{
 						type: 'tvs',
-						tvs: self.getSamplelstTW([group])
+						tvs: getSamplelstTW([group])
 					}
 				]
 			}
@@ -513,7 +513,7 @@ export function setInteractivity(self) {
 							}
 						})
 
-						config.divideBy = self.getSamplelstTW(groups)
+						config.divideBy = getSamplelstTW(groups)
 						config.settings.matrix.colw = 0
 						self.app.dispatch({
 							type: 'plot_create',
@@ -522,47 +522,6 @@ export function setInteractivity(self) {
 						self.dom.tip.hide()
 					})
 			}
-		}
-	}
-
-	self.getSamplelstTW = function(groups, name = 'groups', groupsetting = {}) {
-		const values = {}
-		const qgroups = []
-		for (const group of groups) {
-			values[group.name] = { key: group.name, label: group.name }
-			const qgroup = {
-				key: 'sample',
-				in: true,
-				values: getGroupValues(group)
-			}
-			qgroups.push(qgroup)
-		}
-		if (groups.length == 1) {
-			values['Others'] = { key: 'Others', label: 'Others' }
-			qgroups.push({
-				key: 'sample',
-				in: false,
-				values: getGroupValues(groups[0])
-			})
-		}
-		const tw = {
-			term: { name, type: 'samplelst', values },
-			q: {
-				mode: 'custom-groupsetting',
-				groups: qgroups,
-				groupsetting
-			}
-		}
-		return tw
-
-		function getGroupValues(group) {
-			const values = []
-			for (const item of group.items) {
-				const value = { sampleId: item.sampleId }
-				if ('sample' in item) value.sample = item.sample
-				values.push(value)
-			}
-			return values
 		}
 	}
 
@@ -640,4 +599,45 @@ function distance(x1, y1, x2, y2) {
 	const y = y2 - y1
 	const distance = Math.sqrt(Math.pow(x, 2) + Math.pow(y, 2))
 	return distance
+}
+
+export function getSamplelstTW(groups, name = 'groups', groupsetting = {}) {
+	const values = {}
+	const qgroups = []
+	for (const group of groups) {
+		values[group.name] = { key: group.name, label: group.name }
+		const qgroup = {
+			key: 'sample',
+			in: true,
+			values: getGroupValues(group)
+		}
+		qgroups.push(qgroup)
+	}
+	if (groups.length == 1) {
+		values['Others'] = { key: 'Others', label: 'Others' }
+		qgroups.push({
+			key: 'sample',
+			in: false,
+			values: getGroupValues(groups[0])
+		})
+	}
+	const tw = {
+		term: { name, type: 'samplelst', values },
+		q: {
+			mode: 'custom-groupsetting',
+			groups: qgroups,
+			groupsetting
+		}
+	}
+	return tw
+
+	function getGroupValues(group) {
+		const values = []
+		for (const item of group.items) {
+			const value = { sampleId: item.sampleId }
+			if ('sample' in item) value.sample = item.sample
+			values.push(value)
+		}
+		return values
+	}
 }
