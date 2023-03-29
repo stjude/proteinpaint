@@ -10,6 +10,11 @@ import { Menu } from '../dom/menu'
 import { getNormalRoot, getFilterItemByTag } from '../filter/filter'
 import { renderTable } from '../dom/table'
 
+/*
+nav {}
+	.tabs[]
+*/
+
 // to be used for assigning unique
 // radio button names by object instance
 // otherwise termdp app popups
@@ -29,8 +34,8 @@ headtip.d.style('z-index', 5555)
 
 // data elements for navigation header tabs
 const cohortTab = { top: 'COHORT', mid: 'NONE', btm: '', subheader: 'cohort' }
-const groupsTab = { top: 'GROUPS', mid: 'NONE', btm: '', subheader: 'groups' }
 const chartTab = { top: 'CHARTS', mid: 'NONE', btm: '', subheader: 'charts' }
+const groupsTab = { top: 'GROUPS', mid: 'NONE', btm: '', subheader: 'groups' }
 const filterTab = { top: 'FILTER', mid: 'NONE', btm: '', subheader: 'filter' }
 const cartTab = { top: 'CART', mid: 'NONE', btm: '', subheader: 'cart' }
 
@@ -119,7 +124,8 @@ class TdbNav {
 			activeCohort: appState.activeCohort,
 			termdbConfig: appState.termdbConfig,
 			filter: appState.termfilter.filter,
-			plots: appState.plots
+			plots: appState.plots,
+			groups: appState.groups
 		}
 	}
 
@@ -232,7 +238,7 @@ function setRenderers(self) {
 				.html('<br/>Cart feature under construction - work in progress<br/>&nbsp;<br/>')
 		})
 
-		self.tabs = [groupsTab, chartTab, filterTab /*, cartTab*/]
+		self.tabs = [chartTab, groupsTab, filterTab /*, cartTab*/]
 		if (appState.termdbConfig.selectCohort) self.tabs.unshift(cohortTab) // dataset has "sub-cohorts", show the Cohort tab at the beginning
 
 		const table = self.dom.tabDiv.append('table').style('border-collapse', 'collapse')
@@ -353,6 +359,11 @@ function setRenderers(self) {
 			.style('background-color', d => (d.colNum == self.activeTab ? '#ececec' : 'transparent'))
 			.html(function(d, i) {
 				if (d.key == 'top') return this.innerHTML
+
+				if (d.subheader == 'groups') {
+					if (d.key == 'mid') return self.state.groups.length || 'NONE'
+					return ''
+				}
 
 				if (d.subheader === 'charts') {
 					const n = self.state.plots.length

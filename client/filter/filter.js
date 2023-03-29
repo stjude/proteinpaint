@@ -400,14 +400,9 @@ function setRenderers(self) {
 		} else {
 			self.dom.newBtn = self.dom.holder
 				.append('div')
-				.attr('class', 'sja_new_filter_btn')
+				.attr('class', 'sja_new_filter_btn sja_menuoption')
 				.html(self.opts.emptyLabel)
 				.style('display', 'inline-block')
-				.style('margin', '2px 10px 2px 2px')
-				.style('padding', '5px')
-				.style('border-radius', '5px')
-				.style('background-color', '#ececec')
-				.style('cursor', 'pointer')
 				.on('click', self.displayTreeNew)
 		}
 
