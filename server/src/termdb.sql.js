@@ -57,7 +57,7 @@ return an array of sample names passing through the filter
 	const filter = await getFilterCTEs(qfilter, ds) // if qfilter is blank, it returns null
 
 	const sql = ds.cohort.db.connection.prepare(
-		filter ? `WITH ${filter.filters} SELECT sample FROM ${filter.CTEname}` : 'SELECT name AS sample FROM sampleidmap'
+		filter ? `WITH ${filter.filters} SELECT sample FROM ${filter.CTEname}` : 'SELECT id AS sample FROM sampleidmap' // both statements must return sample id as a uniform behavior
 	)
 
 	let re

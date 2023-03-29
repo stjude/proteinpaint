@@ -32,7 +32,7 @@ class MassGroups {
 
 	async init() {
 		this.dom = {
-			holder: this.opts.holder.append('div').style('margin', '20px')
+			holder: this.opts.holder.append('div').style('margin', '10px')
 		}
 		initUI(this)
 	}
@@ -51,6 +51,16 @@ class MassGroups {
 		await updateUI(this)
 	}
 
+	//////////////// rest are app-specific logic
+
+	getMassFilter() {
+		if (!this.state.termfilter.filter) return { type: 'tvslst', in: true, join: '', lst: [] }
+		const f = structuredClone(this.state.termfilter.filter)
+		delete f.tag // delete the "filterUiRoot" tag so it won't be visible in filter ui showing in this app
+		// the mass filter should be "hidden" in the filter uis
+		return f
+	}
+
 	async showTree(div, callback, state = { tree: { usecase: { detail: 'term' } } }) {
 		tip2.clear().showunderoffset(div.node())
 		appInit({
@@ -67,45 +77,91 @@ class MassGroups {
 			}
 		})
 	}
+
 	async openSummaryPlot(term, groups) {
 		const tw = { id: term.id, term }
-		const plot_name = 'Summary scatter'
-		//const disabled = !('sample' in groups[0].values[0])
 		const config = {
 			chartType: 'summary',
 			childType: 'barchart',
-			term: tw, // self is a termsetting, not a term
+			term: tw,
 			term2: {
-				term: { name: plot_name + ' groups', type: 'samplelst' },
+				term: { name: 'Groups', type: 'samplelst' },
 				q: {
 					mode: 'custom-groupsetting',
-					groups: groups,
+					groups,
 					groupsetting: { disabled: true }
 				}
 			}
-			//insertBefore: self.id
 		}
 		await this.app.dispatch({
 			type: 'plot_create',
 			config
 		})
 	}
+
+	async openSurvivalPlot(term, groups) {
+		const tw = { id: term.id, term }
+		const config = {
+			chartType: 'survival',
+			term: tw,
+			term2: {
+				term: { name: 'Groups', type: 'samplelst' },
+				q: {
+					mode: 'custom-groupsetting',
+					groups,
+					groupsetting: { disabled: true }
+				}
+			}
+		}
+		await this.app.dispatch({
+			type: 'plot_create',
+			config
+		})
+	}
+
+	async getGroupVsRest(group) {
+		// group = {filter}
+		const samplesInGroup = await this.app.vocabApi.getFilteredSampleCount(group.filter, 'list')
+		const samplesAll = await this.app.vocabApi.getFilteredSampleCount(this.state.termfilter.filter, 'list')
+		// each is array of sample ids
+		const samplesNotInGroup = []
+		for (const s of samplesAll) {
+			if (!samplesInGroup.includes(s)) samplesNotInGroup.push(s)
+		}
+		return [
+			{
+				name: 'Samples in group',
+				key: 'sample', // ?
+				values: samplesInGroup.map(i => {
+					return { sampleId: i }
+				})
+			},
+			{
+				name: 'Samples not in group',
+				key: 'sample', // ?
+				values: samplesNotInGroup.map(i => {
+					return { sampleId: i }
+				})
+			}
+		]
+	}
 }
 
 export const groupsInit = getCompInit(MassGroups)
 
 function initUI(self) {
-	self.dom.filterTable = self.dom.holder.append('table')
+	self.dom.filterTable = self.dom.holder.append('table').style('margin-bottom', '10px')
 
 	// bottom row of buttons
-	const btnRow = self.dom.holder.append('div').style('margin-top', '10px')
+	const btnRow = self.dom.holder.append('div')
 
 	// btn 1: prompt to add new group
 	self.dom.addNewGroupBtnHolder = btnRow.append('span')
 
 	// btn 2: launch plot
 	self.dom.launchBtn = btnRow
-		.append('button')
+		.append('span')
+		.attr('class', 'sja_menuoption')
 		.style('margin-left', '20px')
 		.on('click', () => clickLaunchBtn(self))
 }
@@ -132,7 +188,7 @@ async function updateUI(self) {
 			}
 			const newGroup = {
 				name: name + (i == 0 ? '' : ' ' + i),
-				filter: f
+				filter: getJoinedFilter(self, { filter: f })
 			}
 			groups.push(newGroup)
 			self.app.dispatch({
@@ -141,14 +197,15 @@ async function updateUI(self) {
 				state: { groups }
 			})
 		}
-	}).main(self.state.termfilter.filter)
+	}).main(self.getMassFilter())
 
 	// duplicate groups[] array to be mutable, and add to action.state for dispatching
 	const groups = structuredClone(self.state.groups)
 
 	if (!groups.length) {
-		// no groups, do not show launch button
+		// no groups, do not show launch button, hide table
 		self.dom.launchBtn.style('display', 'none')
+		self.dom.filterTable.style('display', 'none')
 		return
 	}
 
@@ -157,12 +214,15 @@ async function updateUI(self) {
 		.style('display', '')
 		.selectAll('*')
 		.remove()
-	const tr = self.dom.filterTable.append('tr').style('opacity', 0.5)
-	tr.append('td').text('Name')
+	const tr = self.dom.filterTable
+		.append('tr')
+		.style('opacity', 0.5)
+		.style('font-size', '.8em')
+	tr.append('td').text('NAME')
 	tr.append('td')
-		.text('Filtering criteria')
+		.text('FILTERING CRITERIA')
 		.style('padding-left', '10px') // equal to filter ui padding
-	tr.append('td').text('#sample')
+	tr.append('td').text('#SAMPLE')
 
 	// render each group
 	for (const group of groups) {
@@ -215,7 +275,7 @@ async function updateUI(self) {
 
 function getJoinedFilter(self, group) {
 	// clone the global filter; group filter will be joined into it
-	const joinedFilter = structuredClone(self.state.termfilter.filter || { type: 'tvslst', in: true, join: '', lst: [] })
+	const joinedFilter = self.getMassFilter()
 	const gf = structuredClone(group.filter)
 	// tag group filter for it to be rendered in filter ui
 	// rest of state.filter will remain invisible
@@ -231,6 +291,7 @@ function clickLaunchBtn(self) {
 	if (self.state.groups.length == 0) return tip.d.append('p').text('No groups')
 
 	if (self.state.groups.length == 1) {
+		// option = summary
 		{
 			const opt = tip.d
 				.append('div')
@@ -243,10 +304,33 @@ function clickLaunchBtn(self) {
 				.style('float', 'right')
 			opt.on('click', () => {
 				self.showTree(opt, async term => {
-					const lst = await self.app.vocabApi.getFilteredSampleCount(self.state.groups[0].filter, 'list')
-					console.log(lst)
-					//const _group =
+					self.openSummaryPlot(term, await self.getGroupVsRest(self.state.groups[0]))
 				})
+			})
+		}
+
+		if (self.state.termdbConfig.allowedTermTypes.includes('survival')) {
+			const opt = tip.d
+				.append('div')
+				.attr('class', 'sja_menuoption')
+				.style('border-radius', '0px')
+				.html('Survival analysis&nbsp;&nbsp;')
+			opt
+				.insert('div')
+				.html('›')
+				.style('float', 'right')
+			opt.on('click', () => {
+				const state = {
+					nav: { header_mode: 'hide_search' },
+					tree: { usecase: { target: 'survival', detail: 'term' } }
+				}
+				self.showTree(
+					opt,
+					async term => {
+						self.openSurvivalPlot(term, await self.getGroupVsRest(self.state.groups[0]))
+					},
+					state
+				)
 			})
 		}
 		return
