@@ -1,6 +1,6 @@
 import { getCompInit } from '#rx'
 import { Menu } from '#dom/menu'
-import { filterInit, getNormalRoot } from '#filter/filter'
+import { filterInit, getNormalRoot, filterPromptInit } from '#filter/filter'
 import { select } from 'd3-selection'
 import { appInit } from '#termdb/app'
 import { renderTable } from '#dom/table'
@@ -49,7 +49,7 @@ class MassGroups {
 	}
 
 	async main() {
-		console.log(this)
+		//console.log(this)
 		await updateUI(this)
 	}
 
@@ -199,15 +199,11 @@ async function updateUI(self) {
 	// but not in init()
 	self.dom.addNewGroupBtnHolder.selectAll('*').remove()
 
-	filterInit({
+	filterPromptInit({
 		holder: self.dom.addNewGroupBtnHolder,
 		vocab: self.app.opts.state.vocab,
 		emptyLabel: 'Add new group',
 		termdbConfig: self.state.termdbConfig,
-
-		// can add later
-		doNotShowWholeFilterWhenNoUiRootTag: true,
-
 		callback: f => {
 			// create new group
 			const name = 'New group'
@@ -219,7 +215,7 @@ async function updateUI(self) {
 			}
 			const newGroup = {
 				name: name + (i == 0 ? '' : ' ' + i),
-				filter: getJoinedFilter(self, { filter: f })
+				filter: f
 			}
 			groups.push(newGroup)
 			self.app.dispatch({
@@ -309,25 +305,6 @@ async function updateUI(self) {
 	}
 
 	self.updateLaunchBtn()
-}
-
-function getJoinedFilter(self, group) {
-	// group = { filter{} }
-	// if there's global filter, clone it and join with group.filter to return; tag group filter as visible part
-	// otherwise, only return group filter
-	const joinedFilter = self.getMassFilter()
-	const gf = structuredClone(group.filter)
-
-	if (!joinedFilter || joinedFilter.lst.length == 0) {
-		// there's no global filter
-		return gf
-	}
-
-	// has global filter, join with gf (label as visible), and return
-	gf.tag = 'filterUiRoot'
-	joinedFilter.lst.push(gf)
-	if (joinedFilter.lst.length > 1) joinedFilter.join = 'and'
-	return joinedFilter
 }
 
 function clickLaunchBtn(self) {
