@@ -15,6 +15,7 @@ columns = [ {label} ]
 	each element is an object describing a column
 	label: str, the text to show as header of a column
 	width: str, column width
+	editCallback: function, optional. Makes this column editable  and provides the callback to notify the change to the parent. It is only allowed for cells with a value field
 
 rows = [ [] ]
 	each element is an array of cells for a row, with array length must matching columns.length
@@ -259,6 +260,24 @@ export function renderTable({
 		for (const [colIdx, cell] of row.entries()) {
 			const td = rowtable.append('td').attr('class', 'sjpp_table_item')
 			const column = columns[colIdx]
+			if (column.editCallback && cell.value) {
+				td.on('click', () => {
+					const isEdit = td.select('input').empty()
+					if (!isEdit) return
+					td.html('')
+					const input = td
+						.append('input')
+						.attr('value', cell.value)
+						.on('change', () => {
+							const value = input.node().value
+							cell.value = value
+							td.text(cell.value)
+							column.editCallback(i, cell)
+						})
+					input.node().focus()
+					input.node().select()
+				})
+			}
 			if (column.width) td.style('width', column.width)
 			if (cell.values) {
 				for (const v of cell.values) {
