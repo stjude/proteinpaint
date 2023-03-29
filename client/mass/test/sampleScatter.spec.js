@@ -206,9 +206,9 @@ tape('Render PNET scatter plot', function(test) {
 			self.config.groups.push(group)
 			//Should be replaced by
 			const survivalTerm = await scatter.Inner.app.vocabApi.getterm('Event-free survival')
-			self.openSurvivalPlot(survivalTerm, self.getGroupvsOthersOverlay(group))
+			self.openSurvivalPlot(survivalTerm, [group])
 			const genderTerm = await scatter.Inner.app.vocabApi.getterm('Gender')
-			self.openSummaryPlot(genderTerm, self.getGroupvsOthersOverlay(group))
+			self.openSummaryPlot(genderTerm, [group])
 			await sleep(500)
 			test.true(d3s.selectAll('.sja_errorbar').size() == 0, 'Should render plots without erros".')
 		}
