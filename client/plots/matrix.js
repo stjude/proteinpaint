@@ -10,9 +10,10 @@ import { schemeCategory10 } from 'd3-scale-chromatic'
 import { schemeCategory20 } from '#common/legacy-d3-polyfill'
 import { axisLeft, axisTop, axisRight, axisBottom } from 'd3-axis'
 import { fillTermWrapper } from '../termsetting/termsetting'
-import svgLegend from '../dom/svg.legend'
+import svgLegend from '#dom/svg.legend'
+import { svgScroll } from '#dom/svg.scroll'
 import { mclass } from '#shared/common'
-import { Menu } from '../dom/menu'
+import { Menu } from '#dom/menu'
 import { getSampleSorter, getTermSorter } from './matrix.sort'
 import { dofetch3 } from '../common/dofetch'
 
@@ -104,6 +105,7 @@ class Matrix {
 				.on('mousedown', this.termLabelMousedown)
 				.on('mousemove', this.termLabelMousemove)
 				.on('mouseup', this.termLabelMouseup),
+			scroll: mainG.append('g'),
 			//legendDiv: holder.append('div').style('margin', '5px 5px 15px 50px'),
 			legendG: mainG.append('g'),
 			tip,
@@ -118,6 +120,38 @@ class Matrix {
 			//.attr('clipPathUnits', 'userSpaceOnUse')
 			.append('rect')
 			.attr('display', 'block')
+
+		this.svgScrollApi = svgScroll({
+			holder: this.dom.scroll,
+			callback: (dx, eventType) => {
+				const s = this.settings.matrix
+				const d = this.dimensions
+				if (eventType == 'move') {
+					this.dom.seriesesG.attr('transform', `translate(${d.xOffset + d.seriesXoffset + dx},${d.yOffset})`)
+					this.dom.clipRect.attr('x', Math.abs(d.seriesXoffset + dx) / d.zoomedMainW)
+					this.layout.top.attr.adjustBoxTransform(dx)
+					this.layout.btm.attr.adjustBoxTransform(dx)
+				} else if (eventType == 'up') {
+					const i = Math.floor((s.zoomCenterPct * d.mainw - dx - d.seriesXoffset) / d.dx)
+					const c = this.sampleOrder[i]
+					//console.log(1333, i, c, d.seriesXoffset)
+					const zoomCenter = c.totalIndex * d.colw + c.grpIndex * s.colgspace + d.colw + dx + d.seriesXoffset
+					this.app.dispatch({
+						type: 'plot_edit',
+						id: this.id,
+						config: {
+							settings: {
+								matrix: {
+									zoomCenterPct: zoomCenter / d.mainw,
+									zoomIndex: c.totalIndex,
+									zoomGrpIndex: c.grpIndex
+								}
+							}
+						}
+					})
+				}
+			}
+		})
 
 		this.dom.tip.onHide = () => {
 			this.lastActiveLabel = this.activeLabel

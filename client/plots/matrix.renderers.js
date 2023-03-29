@@ -6,14 +6,25 @@ export function setRenderers(self) {
 		const l = self.layout
 		const d = self.dimensions
 		const duration = self.dom.svg.attr('width') ? s.duration : 0
+		const x = s.zoomLevel <= 1 ? 0 : Math.abs(d.seriesXoffset) / d.zoomedMainW
 		self.dom.clipRect
-			.attr('x', s.zoomLevel <= 1 ? 0 : Math.abs(d.seriesXoffset) / d.zoomedMainW)
+			.attr('x', x)
 			.attr('y', 0)
 			.attr('width', Math.min(d.mainw, d.maxMainW) / d.zoomedMainW)
 			.attr('height', 1)
 
 		self.renderSerieses(s, l, d, duration)
 		self.renderLabels(s, l, d, duration)
+		//console.log(17, d.xOffset, s.zoomCenterPct, s.zoomCenterPct * d.mainw, s.zoomCenterPct * d.mainw - d.seriesXoffset)
+		self.svgScrollApi.update({
+			x: d.xOffset,
+			y: d.yOffset - 13, // + d.mainh,
+			totalWidth: d.zoomedMainW,
+			visibleWidth: d.mainw,
+			zoomCenter: s.zoomCenterPct * d.mainw - d.seriesXoffset,
+			zoomLevel: s.zoomLevel,
+			noTextHighlight: self.dom.mainG.selectAll('text')
+		})
 	}
 
 	self.renderSerieses = function(s, l, d, duration) {

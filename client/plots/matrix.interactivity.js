@@ -1430,14 +1430,19 @@ function setZoomPanActions(self) {
 	self.seriesesGdrag = function(event) {
 		const s = self.settings.matrix
 		const e = self.clickedSeriesCell.event
-		const dx = event.clientX - e.clientX
-		self.clickedSeriesCell.dx = dx
 		const d = self.dimensions
-		// should use a function for layout.top.boxTransform(....)
+		const _dx = event.clientX - e.clientX
+		console.log(1433, 'dx=', _dx, d.xOffset + d.seriesXoffset + _dx, d.xOffset, d.seriesXoffset)
+		const dx = d.xOffset + d.seriesXoffset + _dx >= d.xOffset ? 0 : _dx
+		self.clickedSeriesCell.dx = dx
 		self.dom.seriesesG.attr('transform', `translate(${d.xOffset + d.seriesXoffset + dx},${d.yOffset})`)
+		self.dom.clipRect.attr('x', s.zoomLevel == 1 ? 0 : dx === 0 ? 0 : Math.abs(d.seriesXoffset + dx) / d.zoomedMainW)
 		self.layout.top.attr.adjustBoxTransform(dx)
 		self.layout.btm.attr.adjustBoxTransform(dx)
-		self.dom.clipRect.attr('x', s.zoomLevel == 1 ? 0 : Math.abs(d.seriesXoffset + dx) / d.zoomedMainW)
+
+		self.svgScrollApi.update({
+			x: d.xOffset + dx
+		})
 	}
 
 	self.seriesesGcancelDrag = function(event) {
