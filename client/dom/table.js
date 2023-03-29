@@ -259,6 +259,10 @@ export function renderTable({
 		}
 		for (const [colIdx, cell] of row.entries()) {
 			const td = rowtable.append('td').attr('class', 'sjpp_table_item')
+
+			// attach <td> for external code to modify
+			cell.__td = td
+
 			const column = columns[colIdx]
 			if (column.editCallback && cell.value) {
 				td.on('click', () => {
