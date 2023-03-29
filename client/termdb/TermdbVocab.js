@@ -802,6 +802,7 @@ export class TermdbVocab extends Vocab {
 		} else {
 			copy.term.name = tw.term.name
 			copy.term.type = tw.term.type
+			copy.term.values = tw.term.values
 		}
 		return copy
 	}
