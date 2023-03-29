@@ -122,7 +122,9 @@ function get_samplelst(tvs, CTEname) {
 		  ${CTEname} AS (
 				SELECT id as sample
 				FROM sampleidmap
-				WHERE name IN (${tvs.values.map(i => '?').join(', ')})
+				WHERE id IN (${Array(tvs.values.length)
+					.fill('?')
+					.join(', ')})
 			)`
 		],
 		values: [...tvs.values],
