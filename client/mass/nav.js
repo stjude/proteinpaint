@@ -1,18 +1,19 @@
-import { getCompInit, multiInit } from '../rx'
+import { getCompInit, multiInit } from '#rx'
 import { recoverInit } from '../rx/src/recover'
 import { searchInit } from './search'
-import { filterRxCompInit } from '../filter/filter'
 import { chartsInit } from './charts'
 import { groupsInit } from './groups'
 import { select } from 'd3-selection'
-import { dofetch3 } from '../common/dofetch'
-import { Menu } from '../dom/menu'
-import { getNormalRoot, getFilterItemByTag } from '../filter/filter'
-import { renderTable } from '../dom/table'
+import { dofetch3 } from '#common/dofetch'
+import { Menu } from '#dom/menu'
+import { getNormalRoot, getFilterItemByTag, filterRxCompInit } from '#filter/filter'
+import { renderTable } from '#dom/table'
 
 /*
 nav {}
 	.tabs[]
+
+todo: steps to add a new tab
 */
 
 // to be used for assigning unique
