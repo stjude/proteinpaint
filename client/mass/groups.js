@@ -1,6 +1,6 @@
 import { getCompInit } from '#rx'
 import { Menu } from '#dom/menu'
-import { filterInit, getNormalRoot, filterPromptInit } from '#filter/filter'
+import { filterInit, getNormalRoot, filterPromptInit, getFilterItemByTag } from '#filter/filter'
 import { select } from 'd3-selection'
 import { appInit } from '#termdb/app'
 import { renderTable } from '#dom/table'
@@ -42,24 +42,23 @@ class MassGroups {
 	getState(appState) {
 		const state = {
 			termfilter: appState.termfilter,
-			groups: appState.groups,
+			groups: rebaseGroupFilter(appState),
 			termdbConfig: appState.termdbConfig
 		}
 		return state
 	}
 
 	async main() {
-		//console.log(this)
 		await updateUI(this)
 	}
 
 	//////////////// rest are app-specific logic
 
 	getMassFilter() {
-		if (!this.state.termfilter.filter) return { type: 'tvslst', in: true, join: '', lst: [] }
-		const f = structuredClone(this.state.termfilter.filter)
-		if (f.tag == 'filterUiRoot') delete f.tag // delete tag so it won't be visible in filter ui showing in this app
-		// the mass filter should be "hidden" in the filter uis
+		if (!this.state.termfilter.filter || this.state.termfilter.filter.lst.length == 0) {
+			return { type: 'tvslst', in: true, join: '', lst: [] }
+		}
+		const f = getNormalRoot(structuredClone(this.state.termfilter.filter)) // strip tag
 		return f
 	}
 
@@ -80,20 +79,13 @@ class MassGroups {
 		})
 	}
 
-	async openSummaryPlot(term, groups) {
+	async openSummaryPlot(term, sltw) {
 		const tw = { id: term.id, term }
 		const config = {
 			chartType: 'summary',
 			childType: 'barchart',
 			term: tw,
-			term2: {
-				term: { name: 'Groups', type: 'samplelst' },
-				q: {
-					mode: 'custom-groupsetting',
-					groups,
-					groupsetting: { disabled: true }
-				}
-			}
+			term2: sltw
 		}
 		await this.app.dispatch({
 			type: 'plot_create',
@@ -101,19 +93,12 @@ class MassGroups {
 		})
 	}
 
-	async openSurvivalPlot(term, groups) {
+	async openSurvivalPlot(term, sltw) {
 		const tw = { id: term.id, term }
 		const config = {
 			chartType: 'survival',
 			term: tw,
-			term2: {
-				term: { name: 'Groups', type: 'samplelst' },
-				q: {
-					mode: 'custom-groupsetting',
-					groups,
-					groupsetting: { disabled: true }
-				}
-			}
+			term2: sltw
 		}
 		await this.app.dispatch({
 			type: 'plot_create',
@@ -132,44 +117,79 @@ class MassGroups {
 			for (const s of samplesAll) {
 				if (!samplesInGroup.includes(s)) samplesNotInGroup.push(s)
 			}
-			return [
-				{
-					name: 'Samples in group',
-					key: 'sample', // ?
-					values: samplesInGroup.map(i => {
-						return { sampleId: i }
-					})
+
+			const gname = groups[0].name // name of 1st group
+			const gname2 = 'Not in ' + gname // name of 2nd group
+
+			const tw = {
+				term: {
+					name: gname,
+					type: 'samplelst',
+					values: {}
 				},
-				{
-					name: 'Samples not in group',
-					key: 'sample', // ?
-					values: samplesNotInGroup.map(i => {
-						return { sampleId: i }
-					})
+				q: {
+					mode: 'custom-groupsetting',
+					groupsetting: { disabled: true },
+					groups: [
+						{
+							name: gname,
+							key: 'sample', // ?
+							in: true,
+							values: samplesInGroup.map(i => {
+								return { sampleId: i }
+							})
+						},
+						{
+							name: gname2,
+							key: 'sample', // ?
+							in: true,
+							values: samplesNotInGroup.map(i => {
+								return { sampleId: i }
+							})
+						}
+					]
 				}
-			]
+			}
+			tw.term.values[gname] = { key: gname, label: gname }
+			tw.term.values[gname2] = { key: gname2, label: gname2 }
+			return tw
 		}
+
 		// multiple groups
-		const lst = []
+
+		const tw = {
+			term: {
+				name: 'Sample groups',
+				type: 'samplelst',
+				values: {}
+			},
+			q: {
+				mode: 'custom-groupsetting',
+				groupsetting: { disabled: true },
+				groups: []
+			}
+		}
 		for (const g of groups) {
+			tw.term.values[g.name] = { key: g.name, label: g.name }
 			const samples = await this.app.vocabApi.getFilteredSampleCount(g.filter, 'list')
-			lst.push({
+			tw.q.groups.push({
 				name: g.name,
 				key: 'sample',
+				in: true,
 				values: samples.map(i => {
 					return { sampleId: i }
 				})
 			})
 		}
-		return lst
+		return tw
 	}
 
-	updateLaunchBtn() {
+	updateLaunchButton() {
 		const lst = [...this.selectedGroupsIdx]
-		if (lst.length == 0) return this.dom.launchBtn.style('display', 'none') // no selected groups
-		this.dom.launchBtn.style('display', '')
-		if (lst.length == 1) return this.dom.launchBtn.text(`Launch plot with "${this.state.groups[lst[0]].name}"`)
-		this.dom.launchBtn.text(`Launch plot with ${lst.length} groups`)
+		if (lst.length == 0) return this.dom.launchButton.style('display', 'none') // no selected groups
+		this.dom.launchButton.style('display', '')
+		if (lst.length == 1) return this.dom.launchButton.text(`Launch plot with "${this.state.groups[lst[0]].name}"`)
+		this.dom.launchButton.text(`Launch plot with ${lst.length} groups`)
 	}
 }
 
@@ -186,7 +206,7 @@ function initUI(self) {
 	self.dom.addNewGroupBtnHolder = btnRow.append('span')
 
 	// btn 2: launch plot
-	self.dom.launchBtn = btnRow
+	self.dom.launchButton = btnRow
 		.append('span')
 		.attr('class', 'sja_menuoption')
 		.style('margin-left', '20px')
@@ -199,6 +219,7 @@ async function updateUI(self) {
 	// but not in init()
 	self.dom.addNewGroupBtnHolder.selectAll('*').remove()
 
+	// create "Add new group" button
 	filterPromptInit({
 		holder: self.dom.addNewGroupBtnHolder,
 		vocab: self.app.opts.state.vocab,
@@ -219,24 +240,23 @@ async function updateUI(self) {
 			}
 			groups.push(newGroup)
 			self.app.dispatch({
-				//type:'groups_edit',
 				type: 'app_refresh',
 				state: { groups }
 			})
 		}
-	}).main(self.getMassFilter())
+	}).main(self.getMassFilter()) // provide mass filter to limit the term tree
 
-	// duplicate groups[] array to be mutable, and add to action.state for dispatching
+	// duplicate groups[] array to mutate and add to action.state for dispatching
 	const groups = structuredClone(self.state.groups)
 
 	if (!groups.length) {
 		// no groups, do not show launch button, hide table
-		self.dom.launchBtn.style('display', 'none')
+		self.dom.launchButton.style('display', 'none')
 		self.dom.filterTableDiv.style('display', 'none')
 		return
 	}
 
-	// display table and create header
+	// display table and populate rows
 	self.dom.filterTableDiv
 		.style('display', '')
 		.selectAll('*')
@@ -244,38 +264,49 @@ async function updateUI(self) {
 	const tableArg = {
 		div: self.dom.filterTableDiv,
 		columns: [
-			{ label: 'NAME' },
+			{
+				label: 'NAME',
+				editCallback: (i, cell) => {
+					// group name is changed
+					groups[i].name = cell.value
+					self.app.dispatch({
+						type: 'app_refresh',
+						state: { groups }
+					})
+				}
+			},
 			{ label: '#SAMPLE' },
 			{ label: 'FILTER' }
 			// todo delete
 		],
 		rows: []
 	}
-
-	for (const group of groups) {
-		const row = [
-			{ value: group.name }, // to allow click to show <input>
-			{ value: 'n=' + (await self.app.vocabApi.getFilteredSampleCount(group.filter)) },
+	for (const g of groups) {
+		tableArg.rows.push([
+			{ value: g.name }, // to allow click to show <input>
+			{ value: 'n=' + (await self.app.vocabApi.getFilteredSampleCount(g.filter)) },
 			{} // blank cell to show filter ui
-		]
-		tableArg.rows.push(row)
+		])
 	}
 
+	// clear existing selected groups
 	self.selectedGroupsIdx.clear()
 
 	if (groups.length == 1) {
+		// only one group, add index 0
 		self.selectedGroupsIdx.add(0)
 	} else {
 		// more than 1 group, show checkboxes for each row
+		tableArg.noButtonCallback = (i, node) => {
+			if (node.checked) self.selectedGroupsIdx.add(i)
+			else self.selectedGroupsIdx.delete(i)
+			self.updateLaunchButton() // update button text, based on how many groups are selected
+		}
+		//
 		tableArg.selectedRows = []
 		for (let i = 0; i < groups.length; i++) {
 			tableArg.selectedRows.push(i) // check all rows by default
 			self.selectedGroupsIdx.add(i)
-		}
-		tableArg.noButtonCallback = (i, node) => {
-			if (node.checked) self.selectedGroupsIdx.add(i)
-			else self.selectedGroupsIdx.delete(i)
-			self.updateLaunchBtn() // update button text, based on how many groups are selected
 		}
 	}
 
@@ -289,7 +320,7 @@ async function updateUI(self) {
 			termdbConfig: self.state.termdbConfig,
 			callback: f => {
 				if (!f || f.lst.length == 0) {
-					// blank filter (user removed last tvs from this filter), delete group
+					// blank filter (user removed last tvs from this filter), delete this element from groups[]
 					const i = groups.findIndex(g => g.name == group.name)
 					groups.splice(i, 1)
 				} else {
@@ -304,11 +335,11 @@ async function updateUI(self) {
 		}).main(group.filter)
 	}
 
-	self.updateLaunchBtn()
+	self.updateLaunchButton()
 }
 
 function clickLaunchBtn(self) {
-	tip.clear().showunder(self.dom.launchBtn.node())
+	tip.clear().showunder(self.dom.launchButton.node())
 
 	// collect groups in use
 	const groups = []
@@ -362,4 +393,35 @@ function clickLaunchBtn(self) {
 			)
 		})
 	}
+}
+
+/*
+s = {groups[ {filter} ], termfilter{filter} }
+termfilter is mass global filter
+if provided, need to "rebase" group's visible filter to it
+a group filter contains the shadowy global filter from previous state. when new state is provided, need to replace it
+*/
+function rebaseGroupFilter(s) {
+	if (!s.termfilter?.filter || s.termfilter.filter.lst.length == 0) {
+		// blank filter
+		return s.groups
+	}
+	const groups = [] // new groups
+	for (const g of s.groups) {
+		const f = getNormalRoot(structuredClone(s.termfilter.filter))
+		const f2 = getFilterItemByTag(g.filter, 'filterUiRoot')
+		if (!f2) {
+			console.log('filterUiRoot not found')
+			groups.push(g)
+			continue
+		}
+		f.lst.push(f2)
+		f.join = f.lst.length > 1 ? 'and' : ''
+		const g2 = {
+			name: g.name,
+			filter: f
+		}
+		groups.push(g2)
+	}
+	return groups
 }
