@@ -295,6 +295,8 @@ export function setInteractivity(self) {
 
 	self.addToFilter = function(group) {
 		const filterUiRoot = getFilterItemByTag(self.state.termfilter.filter, 'filterUiRoot')
+		const samplelstTW = getSamplelstTW([group])
+		const values = samplelstTW.q.groups[0].values.map(value => value.sampleId)
 		const filter = filterJoin([
 			filterUiRoot,
 			{
@@ -304,7 +306,7 @@ export function setInteractivity(self) {
 				lst: [
 					{
 						type: 'tvs',
-						tvs: getSamplelstTW([group])
+						tvs: { term: samplelstTW.term, values }
 					}
 				]
 			}
@@ -514,6 +516,8 @@ export function setInteractivity(self) {
 						})
 
 						config.divideBy = getSamplelstTW(groups)
+						console.log(config)
+
 						config.settings.matrix.colw = 0
 						self.app.dispatch({
 							type: 'plot_create',
@@ -607,7 +611,6 @@ export function getSamplelstTW(groups, name = 'groups', groupsetting = {}) {
 	for (const group of groups) {
 		values[group.name] = { key: group.name, label: group.name }
 		const qgroup = {
-			key: 'sample',
 			in: true,
 			values: getGroupValues(group)
 		}
@@ -616,7 +619,6 @@ export function getSamplelstTW(groups, name = 'groups', groupsetting = {}) {
 	if (groups.length == 1) {
 		values['Others'] = { key: 'Others', label: 'Others' }
 		qgroups.push({
-			key: 'sample',
 			in: false,
 			values: getGroupValues(groups[0])
 		})
