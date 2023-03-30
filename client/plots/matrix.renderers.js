@@ -55,6 +55,8 @@ export function setRenderers(self) {
 		const height = series.y + last?.y + s.rowh
 
 		if (s.useCanvas) {
+			const df = self.stateDiff
+			if (g.selectAll('image').size() && !df.nonsettings && !df.sorting && !df.cellDimensions) return
 			const pxr = 1 //window.devicePixelRatio; console.log(51, 'pixelRatio', pxr)
 			g.selectAll('*').remove()
 			const canvas = self.dom.holder

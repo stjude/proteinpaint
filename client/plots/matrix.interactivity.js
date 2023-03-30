@@ -1272,7 +1272,6 @@ function setTermGroupActions(self) {
 		.map(d => `.sjpp-matrix-${d}-label-g`)
 		.join(',')
 	self.enableTextHighlight = event => {
-		console.log('1272', event.target, select(event.target.closest(labelParentSelectors)).node())
 		select(event.target.closest(labelParentSelectors))
 			.selectAll('.sjpp-matrix-label text')
 			//.selectAll('text')
@@ -1285,7 +1284,7 @@ function setTermGroupActions(self) {
 	}
 
 	self.disableTextHighlight = event => {
-		select(event.target)
+		select(event.target.closest(labelParentSelectors))
 			.selectAll('.sjpp-matrix-label text')
 			.style('-webkit-user-select', 'none')
 			.style('-moz-user-select', 'none')
