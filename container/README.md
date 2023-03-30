@@ -58,7 +58,12 @@ When running a full app image, you can check:
 
 
 
-## Development
+## Container Development
+
+The following instructions are for developing a Docker image that is intended for public release.
+This section is **NOT** for using a container to develop ProteinPaint, see `build/dev/README.md`
+for those instructions.
+
 
 ### Code structure
 
@@ -67,7 +72,10 @@ When running a full app image, you can check:
 to fill-in missing serverconfig.json settings and optional public files, and to start the `proteinpaint-server`.
 
 
-### Dev build
+### Build
+
+NOTE: This section is **NOT** for using a container to develop ProteinPaint, see `build/dev/README.md`
+for those instructions.
 
 Follow the `Build from Source` section above to pack tarballs, build the Docker image, and start a container process.
 

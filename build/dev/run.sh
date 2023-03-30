@@ -39,7 +39,7 @@ fi
 rm -rf public/cards
 
 
-docker run \
+docker run -d \
 	--name pp \
 	`# mounting specific subdirs and files avoids mounting the node_modules at the root or any workspace` \
 	--mount type=bind,source=$TPDIR,target=/home/root/pp/tp,readonly \
