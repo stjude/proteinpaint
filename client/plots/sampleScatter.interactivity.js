@@ -307,7 +307,7 @@ export function setInteractivity(self) {
 					{
 						type: 'tvs',
 						tvs: { term: samplelstTW.term, values },
-						noEdit: true
+						noEdit: !('sample' in values[0])
 					}
 				]
 			}
