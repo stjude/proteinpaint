@@ -1,4 +1,4 @@
-import { getCompInit, copyMerge } from '../rx'
+import { getCompInit, copyMerge, deepEqual } from '../rx'
 import { setInteractivity } from './matrix.interactivity'
 import { setRenderers } from './matrix.renderers'
 import { MatrixCluster } from './matrix.cluster'
@@ -21,6 +21,7 @@ class Matrix {
 	constructor(opts) {
 		this.type = 'matrix'
 		this.optionalFeatures = JSON.parse(sessionStorage.getItem('optionalFeatures')).matrix || []
+		this.prevState = { config: { settings: {} } }
 		setInteractivity(this)
 		setRenderers(this)
 	}
@@ -251,22 +252,31 @@ class Matrix {
 			const prevTranspose = this.settings.transpose
 			Object.assign(this.settings, this.config.settings)
 
-			// get the data
-			this.dom.loadingDiv.html('').style('display', '')
-			const reqOpts = await this.getDataRequestOpts()
-			this.data = await this.app.vocabApi.getAnnotatedSampleData(reqOpts)
-			this.dom.loadingDiv.html('Processing data ...')
+			this.computeStateDiff()
 
-			this.setSampleGroups(this.data)
-			this.setTermOrder(this.data)
-			this.setSampleOrder(this.data)
-			this.setSampleCountsByTerm()
+			this.dom.loadingDiv.html('').style('display', '')
+			if (this.stateDiff.nonsettings) {
+				// get the data
+				const reqOpts = await this.getDataRequestOpts()
+				this.data = await this.app.vocabApi.getAnnotatedSampleData(reqOpts)
+				this.dom.loadingDiv.html('Processing data ...')
+			}
+
+			if (this.stateDiff.nonsettings || this.stateDiff.sorting) {
+				this.setSampleGroups(this.data)
+				this.setTermOrder(this.data)
+				this.setSampleOrder(this.data)
+				this.setSampleCountsByTerm()
+			}
+
 			this.setAutoDimensions()
 			this.setLayout()
 			this.serieses = this.getSerieses(this.data)
-			this.dom.loadingDiv.html('').style('display', 'none')
+
 			// render the data
+			this.dom.loadingDiv.html('Rendering ...')
 			this.render()
+			this.dom.loadingDiv.style('display', 'none')
 
 			const [xGrps, yGrps] = !this.settings.matrix.transpose ? ['sampleGrps', 'termGrps'] : ['termGrps', 'sampleGrps']
 			const d = this.dimensions
@@ -296,6 +306,73 @@ class Matrix {
 			const message = this.app.vocabApi.tokenVerificationMessage
 			this.mayRequireToken(message)
 			if (!message) throw e
+		}
+
+		this.prevState = this.state
+	}
+
+	// track state diff to be able to skip server data request
+	// and term/sample order recomputation, as needed
+	computeStateDiff() {
+		const s = this.settings.matrix
+		const prevState = structuredClone(this.prevState)
+		const currState = structuredClone(this.state)
+		delete prevState.config?.settings
+		delete prevState.isVisible
+		delete currState.config.settings
+		delete currState.isVisible
+		const p = this.prevState.config.settings?.matrix || {}
+		const c = this.state.config.settings.matrix
+		this.stateDiff = {
+			nonsettings: !deepEqual(prevState, currState),
+			sorting: !deepEqual(
+				{
+					maxSample: p.maxSample,
+					sortPriority: p.sortPriority,
+					truncatePriority: p.truncatePriority,
+					sampleNameFilter: p.sampleNameFilter,
+					sortSamplesBy: p.sortSamplesBy,
+					sortSamplesTieBreakers: p.sortSamplesTieBreakers,
+					sortTermsBy: p.sortTermsBy,
+					// TODO: take out dimension related computations in setTermOrder,
+					// so that sorting is not affected by rowh
+					rowh: p.rowh
+				},
+				{
+					maxSample: c.maxSample,
+					sortPriority: c.sortPriority,
+					truncatePriority: c.truncatePriority,
+					sampleNameFilter: c.sampleNameFilter,
+					sortSamplesBy: c.sortSamplesBy,
+					sortSamplesTieBreakers: c.sortSamplesTieBreakers,
+					sortTermsBy: c.sortTermsBy,
+					// TODO: take out dimension related computations in setTermOrder,
+					// so that sorting is not affected by rowh
+					rowh: c.rowh
+				}
+			),
+			cellDimensions: !deepEqual(
+				{
+					transpose: p.transpose,
+					zoomLevel: p.zoomLevel,
+					rowh: p.rowh,
+					rowspace: p.rowspace,
+					rowgspace: p.rowgspace,
+					colw: p.colw,
+					colspace: p.colspace,
+					colgspace: p.colgspace
+				},
+				{
+					transpose: c.transpose,
+					zoomLevel: c.zoomLevel,
+					rowh: c.rowh,
+					rowspace: c.rowspace,
+					rowgspace: c.rowgspace,
+					colw: c.colw,
+					colspace: c.colspace,
+					colgspace: c.colgspace
+				}
+			)
 		}
 	}
 
