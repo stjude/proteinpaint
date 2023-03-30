@@ -77,8 +77,8 @@ async function getFilterCTEs(filter, ds, CTEname = 'f') {
 	} else {
 		CTEs.push(`
 				${CTEname} AS (
-					SELECT sample
-					FROM annotations
+					SELECT name as sample
+					FROM sampleidmap
 					WHERE sample NOT IN (
 						${superCTE}
 					)

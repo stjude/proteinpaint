@@ -100,7 +100,7 @@ return a sample count of sample names passing through the filter
 
 	const filter = await getFilterCTEs(j, ds)
 	const statement = `WITH ${filter.filters}
-		SELECT 'FILTERED_COHORT' as subcohort, count(*) as samplecount 
+		SELECT 'FILTERED_COHORT' as subcohort, count(distinct sample) as samplecount 
 		FROM ${filter.CTEname}`
 	return ds.cohort.db.connection.prepare(statement).all(filter.values)
 }
