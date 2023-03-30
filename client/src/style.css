@@ -1150,6 +1150,16 @@ sandbox header
     width: 18px;
 }
 
+.sjpp-matrix-series-group-label-g text,
+.sjpp-matrix-series-label-g text,
+.sjpp-matrix-term-group-label-g text,
+.sjpp-matrix-term-label-g text,
+.sjpp-matrix-label text {
+    -webkit-user-select:  none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    -user-select: none;
+}
 
 
 

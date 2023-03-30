@@ -1268,6 +1268,32 @@ function setTermGroupActions(self) {
 		})
 		self.dom.tip.hide()
 	}
+	const labelParentSelectors = ['series', 'series-group', 'term', 'term-group']
+		.map(d => `.sjpp-matrix-${d}-label-g`)
+		.join(',')
+	self.enableTextHighlight = event => {
+		console.log('1272', event.target, select(event.target.closest(labelParentSelectors)).node())
+		select(event.target.closest(labelParentSelectors))
+			.selectAll('.sjpp-matrix-label text')
+			//.selectAll('text')
+			.style('-webkit-user-select', 'auto')
+			.style('-moz-user-select', 'auto')
+			.style('-ms-user-select', 'auto')
+			.style('user-select', 'auto')
+
+		select('body').on('mouseup.sjppMatrixLabelText', self.disableTextHighlight)
+	}
+
+	self.disableTextHighlight = event => {
+		select(event.target)
+			.selectAll('.sjpp-matrix-label text')
+			.style('-webkit-user-select', 'none')
+			.style('-moz-user-select', 'none')
+			.style('-ms-user-select', 'none')
+			.style('user-select', 'none')
+
+		select('body').on('mouseup.sjppMatrixLabelText', null)
+	}
 }
 
 // prefix = "term" | "termGrp"
@@ -1404,6 +1430,12 @@ function setZoomPanActions(self) {
 		self.clickedSeriesCell = { event, startCell }
 		if (self.settings.matrix.mouseMode == 'pan') {
 			self.dom.seriesesG.on('mousemove', self.seriesesGdrag).on('mouseup', self.seriesesGcancelDrag)
+			const d = self.dimensions
+			const halfw = d.mainw / 2
+			self.clickedSeriesCell.center = {
+				max: halfw + (d.zoomedMainW - d.mainw),
+				min: halfw
+			}
 		} else {
 			self.zoomPointer = pointer(event, self.dom.seriesesG.node())
 			self.dom.seriesesG.on('mousemove', self.seriesesGoutlineZoom).on('mouseup', self.seriesesGtriggerZoom)
@@ -1429,19 +1461,18 @@ function setZoomPanActions(self) {
 
 	self.seriesesGdrag = function(event) {
 		const s = self.settings.matrix
-		const e = self.clickedSeriesCell.event
+		const c = self.clickedSeriesCell
 		const d = self.dimensions
-		const _dx = event.clientX - e.clientX
-		console.log(1433, 'dx=', _dx, d.xOffset + d.seriesXoffset + _dx, d.xOffset, d.seriesXoffset)
-		const dx = d.xOffset + d.seriesXoffset + _dx >= d.xOffset ? 0 : _dx
+		const dx = event.clientX - c.event.clientX
+		if (Math.abs(dx) < 1) return
 		self.clickedSeriesCell.dx = dx
 		self.dom.seriesesG.attr('transform', `translate(${d.xOffset + d.seriesXoffset + dx},${d.yOffset})`)
 		self.dom.clipRect.attr('x', s.zoomLevel == 1 ? 0 : dx === 0 ? 0 : Math.abs(d.seriesXoffset + dx) / d.zoomedMainW)
 		self.layout.top.attr.adjustBoxTransform(dx)
 		self.layout.btm.attr.adjustBoxTransform(dx)
-
+		const computedCenter = s.zoomCenterPct * d.mainw - d.seriesXoffset - dx
 		self.svgScrollApi.update({
-			x: d.xOffset + dx
+			zoomCenter: Math.max(c.center.min, Math.min(c.center.max, computedCenter))
 		})
 	}
 
@@ -1450,16 +1481,21 @@ function setZoomPanActions(self) {
 		const s = self.settings.matrix
 		const d = self.dimensions
 		const e = self.clickedSeriesCell.event
-		const c = self.clickedSeriesCell.startCell
-		const zoomCenter =
-			c.totalIndex * d.colw + c.grpIndex * s.colgspace + event.clientX - e.clientX + d.colw + d.seriesXoffset
+		const dx = event.clientX - e.clientX
+		//const i = self.clickedSeriesCell.startCell.totalIndex - Math.floor(dx/(d.dx))
+		const computedCenterCellIndex = Math.floor((d.mainw / 2 - d.seriesXoffset - dx) / d.dx)
+		const i = Math.min(self.sampleOrder.length - 1, Math.max(0, computedCenterCellIndex))
+		const c = self.sampleOrder[i]
+		//const c = self.clickedSeriesCell.startCell
+		//const zoomCenter = c.totalIndex * d.colw + c.grpIndex * s.colgspace + dx + d.colw + d.seriesXoffset
+
 		self.app.dispatch({
 			type: 'plot_edit',
 			id: self.id,
 			config: {
 				settings: {
 					matrix: {
-						zoomCenterPct: zoomCenter / d.mainw,
+						zoomCenterPct: 0.5, //zoomCenter / d.mainw,
 						zoomIndex: c.totalIndex,
 						zoomGrpIndex: c.grpIndex,
 						mouseMode: 'pan'

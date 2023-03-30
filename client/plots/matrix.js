@@ -68,7 +68,9 @@ class Matrix {
 			sampleGrpLabelG: mainG
 				.append('g')
 				.attr('class', 'sjpp-matrix-series-group-label-g')
-				.on('click', this.showSampleGroupMenu),
+				.on('click', this.showSampleGroupMenu)
+				.on('mousedown.sjppMatrixLabelText', this.enableTextHighlight)
+				.on('mouseup.sjppMatrixLabelText', this.disableTextHighlight),
 			termGrpLabelG: mainG
 				.append('g')
 				.attr('class', 'sjpp-matrix-term-group-label-g')
@@ -76,7 +78,9 @@ class Matrix {
 				.on('mouseout', this.termGrpLabelMouseout)
 				.on('mousedown', this.termGrpLabelMousedown)
 				.on('mousemove', this.termGrpLabelMousemove)
-				.on('mouseup', this.termGrpLabelMouseup),
+				.on('mouseup', this.termGrpLabelMouseup)
+				.on('mousedown.sjppMatrixLabelText', this.enableTextHighlight)
+				.on('mouseup.sjppMatrixLabelText', this.disableTextHighlight),
 			cluster: mainG
 				.append('g')
 				.attr('class', 'sjpp-matrix-cluster-g')
@@ -90,7 +94,11 @@ class Matrix {
 				.on('mousedown', this.seriesesGMousedown),
 			//.on('mousemove', this.seriesesGMousemove)
 			//.on('mouseup', this.seriesesGMouseup),
-			sampleLabelG: mainG.append('g').attr('class', 'sjpp-matrix-series-label-g'),
+			sampleLabelG: mainG
+				.append('g')
+				.attr('class', 'sjpp-matrix-series-label-g')
+				.on('mousedown.sjppMatrixLabelText', this.enableTextHighlight)
+				.on('mouseup.sjppMatrixLabelText', this.disableTextHighlight),
 			/* // TODO: sample label drag to move
 				.on('mouseover', this.sampleLabelMouseover)
 				.on('mouseout', this.sampleLabelMouseout)
@@ -104,7 +112,9 @@ class Matrix {
 				.on('mouseout', this.termLabelMouseout)
 				.on('mousedown', this.termLabelMousedown)
 				.on('mousemove', this.termLabelMousemove)
-				.on('mouseup', this.termLabelMouseup),
+				.on('mouseup', this.termLabelMouseup)
+				.on('mousedown.sjppMatrixLabelText', this.enableTextHighlight)
+				.on('mouseup.sjppMatrixLabelText', this.disableTextHighlight),
 			scroll: mainG.append('g'),
 			//legendDiv: holder.append('div').style('margin', '5px 5px 15px 50px'),
 			legendG: mainG.append('g'),
@@ -127,22 +137,23 @@ class Matrix {
 				const s = this.settings.matrix
 				const d = this.dimensions
 				if (eventType == 'move') {
-					this.dom.seriesesG.attr('transform', `translate(${d.xOffset + d.seriesXoffset + dx},${d.yOffset})`)
-					this.dom.clipRect.attr('x', Math.abs(d.seriesXoffset + dx) / d.zoomedMainW)
-					this.layout.top.attr.adjustBoxTransform(dx)
-					this.layout.btm.attr.adjustBoxTransform(dx)
+					this.dom.seriesesG.attr('transform', `translate(${d.xOffset + d.seriesXoffset - dx},${d.yOffset})`)
+					this.dom.clipRect.attr('x', Math.abs(d.seriesXoffset - dx) / d.zoomedMainW)
+					this.layout.top.attr.adjustBoxTransform(-dx)
+					this.layout.btm.attr.adjustBoxTransform(-dx)
 				} else if (eventType == 'up') {
-					const i = Math.floor((s.zoomCenterPct * d.mainw - dx - d.seriesXoffset) / d.dx)
+					const i = s.zoomIndex + Math.floor(dx / d.dx)
 					const c = this.sampleOrder[i]
 					//console.log(1333, i, c, d.seriesXoffset)
-					const zoomCenter = c.totalIndex * d.colw + c.grpIndex * s.colgspace + d.colw + dx + d.seriesXoffset
+					//const zoomCenter = //s.zoomCenterPct * d.mainw - dx //
+					//c.totalIndex * d.colw + c.grpIndex * s.colgspace + d.colw + dx + d.seriesXoffset
 					this.app.dispatch({
 						type: 'plot_edit',
 						id: this.id,
 						config: {
 							settings: {
 								matrix: {
-									zoomCenterPct: zoomCenter / d.mainw,
+									//zoomCenterPct: zoomCenter / d.mainw,
 									zoomIndex: c.totalIndex,
 									zoomGrpIndex: c.grpIndex
 								}
