@@ -12,8 +12,6 @@ TODO: fix the M1/M2 support in the Dockerfile to allow server-side development.
 
 ## Setup
 
-**NOTE: STOP ANY OTHER ACTIVE BUNDLING PROCESS SUCH AS `npm run dev`**
-
 ### Install
 
 ```bash
@@ -71,13 +69,19 @@ In the proteinpaint directory, you should have a serverconfig.json that looks li
 The following uses a pre-bundled server code inside a Docker container. (See the
 TODO above to support local server development.)
 
+NOTE: Make sure that you do not have any other server process that is listening on
+the port value as specified in your serverconfig.json.
+
 From the proteinpaint directory, run
 
 ```bash
 ./build/dev/run.sh
 
-# Control+Z to detach from the logs
-# docker stop pp # to stop the container process
+# to inspect the server logs
+docker logs pp
+
+# to stop the container process
+docker stop pp
 # or rerun `./build/dev/run.sh` to stop and remove a process with a matching name
 ```
 

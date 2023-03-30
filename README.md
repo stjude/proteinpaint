@@ -43,7 +43,6 @@ npm run dev1
 
 # --- OR ---
 # see build/dev/README.md to use a Docker container for development
-npm run docker
 ```
 
 When running your dev server, you can see [marked up README's in the browser](http://localhost:3000/readme.html).
