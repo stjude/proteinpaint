@@ -6,7 +6,7 @@ import { groupsInit } from './groups'
 import { select } from 'd3-selection'
 import { dofetch3 } from '#common/dofetch'
 import { Menu } from '#dom/menu'
-import { getNormalRoot, getFilterItemByTag, filterRxCompInit } from '#filter/filter'
+import { getFilterItemByTag, filterRxCompInit } from '#filter/filter'
 import { renderTable } from '#dom/table'
 
 /*

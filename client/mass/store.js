@@ -1,6 +1,6 @@
-import { getStoreInit } from '../rx'
-import { dofetch3 } from '../common/dofetch'
-import { filterJoin, getFilterItemByTag, findItem, findParent } from '../filter/filter'
+import { getStoreInit } from '#rx'
+import { dofetch3 } from '#common/dofetch'
+import { getFilterItemByTag, findParent } from '#filter/filter'
 
 // to distinguish from IDs assigned by other code or users
 const idPrefix =
@@ -13,8 +13,6 @@ let id = (+new Date()).toString().slice(-8)
 function getId() {
 	return idPrefix + '_' + id++
 }
-
-// state definition: https://docs.google.com/document/d/1gTPKS9aDoYi4h_KlMBXgrMxZeA_P4GXhWcQdNQs3Yp8/edit#
 
 const defaultState = {
 	nav: {
@@ -76,6 +74,8 @@ class TdbStore {
 		try {
 			this.state.termdbConfig = await this.app.vocabApi.getTermdbConfig()
 			await this.setTermfilter()
+			await this.rehydrateGroups()
+
 			// vocab.state.termfilter may be used in getPlotConfig() when rehydrating terms,
 			// so manually set it here
 			await this.app.vocabApi.main({
@@ -159,6 +159,15 @@ class TdbStore {
 				this.state.activeCohort = i
 			}
 		}
+	}
+
+	async rehydrateGroups() {
+		// rehydrate filter terms of each group
+		const lst = []
+		for (const g of this.state.groups) {
+			lst.push(...rehydrateFilter(g.filter, this.app.vocabApi))
+		}
+		await Promise.all(lst)
 	}
 }
 
