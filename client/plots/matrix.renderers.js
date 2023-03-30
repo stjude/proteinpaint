@@ -15,15 +15,12 @@ export function setRenderers(self) {
 
 		self.renderSerieses(s, l, d, duration)
 		self.renderLabels(s, l, d, duration)
-		//console.log(17, d.xOffset, s.zoomCenterPct, s.zoomCenterPct * d.mainw, s.zoomCenterPct * d.mainw - d.seriesXoffset)
 		self.svgScrollApi.update({
 			x: d.xOffset,
 			y: d.yOffset - 13, // + d.mainh,
 			totalWidth: d.zoomedMainW,
 			visibleWidth: d.mainw,
-			zoomCenter: s.zoomCenterPct * d.mainw - d.seriesXoffset,
-			zoomLevel: s.zoomLevel,
-			noTextHighlight: self.dom.mainG.selectAll('text')
+			zoomCenter: s.zoomCenterPct * d.mainw - d.seriesXoffset
 		})
 	}
 
