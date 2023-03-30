@@ -15,7 +15,7 @@ export function getHandler(self) {
 				const noButtonCallback = (i, node) => {
 					group.values[i].checked = node.checked
 				}
-				const name = group.in ? keys[i] : 'Others will exclude these samples'
+				const name = group.in ? keys[i] : `${keys[i]} will exclude these samples`
 				addTable(groupDiv, name, group, noButtonCallback)
 			}
 			div
@@ -55,7 +55,7 @@ function addTable(div, name, group, noButtonCallback) {
 		rows,
 		columns,
 		div,
-		maxWidth: '20vw',
+		maxWidth: '30vw',
 		maxHeight: '40vh',
 		noButtonCallback,
 		striped: false,

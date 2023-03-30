@@ -4,6 +4,7 @@ import { filterInit, getNormalRoot, filterPromptInit, getFilterItemByTag } from 
 import { select } from 'd3-selection'
 import { appInit } from '#termdb/app'
 import { renderTable } from '#dom/table'
+import { getSamplelstTW } from '../plots/sampleScatter.interactivity'
 
 /*
 this
@@ -107,80 +108,15 @@ class MassGroups {
 	}
 
 	async groups2samplelst(groups) {
-		// groups is array of one or more ele from this.state.groups[]
-		if (groups.length == 1) {
-			// only 1 group, in samplelst generate two sets, one for samples in this group, the other for samples out of this group
-			const samplesInGroup = await this.app.vocabApi.getFilteredSampleCount(groups[0].filter, 'list')
-			const samplesAll = await this.app.vocabApi.getFilteredSampleCount(this.state.termfilter.filter, 'list')
-			// each is array of sample ids
-			const samplesNotInGroup = []
-			for (const s of samplesAll) {
-				if (!samplesInGroup.includes(s)) samplesNotInGroup.push(s)
-			}
-
-			const gname = groups[0].name // name of 1st group
-			const gname2 = 'Not in ' + gname // name of 2nd group
-
-			const tw = {
-				term: {
-					name: gname,
-					type: 'samplelst',
-					values: {}
-				},
-				q: {
-					mode: 'custom-groupsetting',
-					groupsetting: { disabled: true },
-					groups: [
-						{
-							name: gname,
-							key: 'sample', // ?
-							in: true,
-							values: samplesInGroup.map(i => {
-								return { sampleId: i }
-							})
-						},
-						{
-							name: gname2,
-							key: 'sample', // ?
-							in: true,
-							values: samplesNotInGroup.map(i => {
-								return { sampleId: i }
-							})
-						}
-					]
-				}
-			}
-			tw.term.values[gname] = { key: gname, label: gname }
-			tw.term.values[gname2] = { key: gname2, label: gname2 }
-			return tw
-		}
-
-		// multiple groups
-
-		const tw = {
-			term: {
-				name: 'Sample groups',
-				type: 'samplelst',
-				values: {}
-			},
-			q: {
-				mode: 'custom-groupsetting',
-				groupsetting: { disabled: true },
-				groups: []
-			}
-		}
+		const samplelstGroups = []
 		for (const g of groups) {
-			tw.term.values[g.name] = { key: g.name, label: g.name }
 			const samples = await this.app.vocabApi.getFilteredSampleCount(g.filter, 'list')
-			tw.q.groups.push({
-				name: g.name,
-				key: 'sample',
-				in: true,
-				values: samples.map(i => {
-					return { sampleId: i }
-				})
-			})
+			const items = []
+			for (const sample of samples) items.push({ sampleId: sample })
+			samplelstGroups.push({ name: g.name, items })
 		}
+		const name = samplelstGroups.length == 1 ? samplelstGroups[0].name : 'Sample groups'
+		const tw = getSamplelstTW(samplelstGroups, name, { disabled: true })
 		return tw
 	}
 

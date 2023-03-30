@@ -607,19 +607,22 @@ function distance(x1, y1, x2, y2) {
 export function getSamplelstTW(groups, name = 'groups', groupsetting = {}) {
 	const values = {}
 	const qgroups = []
+	let samples
 	for (const group of groups) {
 		values[group.name] = { key: group.name, label: group.name }
+		samples = getGroupSamples(group)
 		const qgroup = {
 			in: true,
-			values: getGroupValues(group)
+			values: samples
 		}
 		qgroups.push(qgroup)
 	}
 	if (groups.length == 1) {
-		values['Others'] = { key: 'Others', label: 'Others' }
+		const name2 = 'Not in ' + groups[0].name
+		values[name2] = { key: name2, label: name2 }
 		qgroups.push({
 			in: false,
-			values: getGroupValues(groups[0])
+			values: samples
 		})
 	}
 	const tw = {
@@ -632,7 +635,7 @@ export function getSamplelstTW(groups, name = 'groups', groupsetting = {}) {
 	}
 	return tw
 
-	function getGroupValues(group) {
+	function getGroupSamples(group) {
 		const values = []
 		for (const item of group.items) {
 			const value = { sampleId: item.sampleId }
