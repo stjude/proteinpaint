@@ -14,6 +14,14 @@ TODO: fix the M1/M2 support in the Dockerfile to allow server-side development.
 
 **NOTE: STOP ANY OTHER ACTIVE BUNDLING PROCESS SUCH AS `npm run dev`**
 
+### Install
+
+```bash
+git clone git@github.com:stjude/proteinpaint.git
+cd proteinpaint
+npm install
+```
+
 ### Client bundle
 
 From the proteinpaint directory,

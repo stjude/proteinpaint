@@ -5,7 +5,7 @@
 	"scripts": {
 		"dev": "./pack.sh && ./build.sh",
 		"build": "rm -rf tmppack && ./build.sh",
-		"postinstall": "docker pull ghcr.io/stjude/ppfull:latest"
+		"postinstall": "if [ ! -d client ]; then docker pull ghcr.io/stjude/ppfull:latest; fi"
 	},
 	"containerDeps": {
 		"server": "2.12.1",
