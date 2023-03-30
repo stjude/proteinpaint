@@ -14,7 +14,7 @@ async function fillMenu(self, div, tvs) {
 		.style('margin', '10px')
 		.html(`<b>Select <i>${tvs.term.name}</i> samples:</b>`)
 	const rows = []
-	for (const value of tvs.values) rows.push([{ value: value }])
+	for (const value of tvs.values) rows.push([{ value: value.sample }])
 	const columns = [{ label: 'Sample' }]
 	renderTable({
 		rows,

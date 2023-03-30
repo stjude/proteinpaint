@@ -296,7 +296,7 @@ export function setInteractivity(self) {
 	self.addToFilter = function(group) {
 		const filterUiRoot = getFilterItemByTag(self.state.termfilter.filter, 'filterUiRoot')
 		const samplelstTW = getSamplelstTW([group])
-		const values = samplelstTW.q.groups[0].values.map(value => value.sampleId)
+		const values = samplelstTW.q.groups[0].values
 		const filter = filterJoin([
 			filterUiRoot,
 			{
@@ -306,7 +306,8 @@ export function setInteractivity(self) {
 				lst: [
 					{
 						type: 'tvs',
-						tvs: { term: samplelstTW.term, values }
+						tvs: { term: samplelstTW.term, values },
+						disabled: 'sample' in values[0]
 					}
 				]
 			}

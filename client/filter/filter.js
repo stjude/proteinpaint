@@ -1203,6 +1203,11 @@ function setInteractivity(self) {
 			.style('background-color', self.highlightEditRow)
 		const holder = self.dom.termSrcDiv
 		const item = self.activeData.item
+		if (item.disabled) {
+			alert(`This filter can't be edited. It may contain sensitive information`)
+			self.dom.controlsTip.hide()
+			return
+		}
 		self.dom.treeTip.clear()
 		self.pills[item.$id].showMenu(holder)
 		self.dom.treeTip.showunderoffset(elem.lastChild)

@@ -127,7 +127,7 @@ function get_samplelst(tvs, CTEname) {
 					.join(', ')})
 			)`
 		],
-		values: [...tvs.values],
+		values: [...tvs.values.map(value => value.sampleId)],
 		CTEname
 	}
 }
