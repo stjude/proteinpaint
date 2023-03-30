@@ -871,14 +871,19 @@ function setRenderers(self) {
 }
 
 function setInteractivity(self) {
-	self.displayControlsMenu = function() {
+	self.displayControlsMenu = function(event) {
+		event.stopPropagation() // in mass/group ui, to prevent pill-clicking to check/uncheck table rows
+
 		if (!self.activeData) return
 		const item = this.parentNode.__data__
 		const filter = findParent(self.filter, item.$id)
 		self.activeData = { item, filter, elem: this }
 		self.removeBlankPill()
 		self.resetGrpHighlights(this, filter)
-		self.dom.table.selectAll('tr').style('display', d => (d.action == 'edit' && item.noEdit ? 'none' : 'table-row'))
+
+		// disabled for now as it breaks CI
+		//self.dom.table.selectAll('tr').style('display', d => (d.action == 'edit' && item.noEdit ? 'none' : 'table-row'))
+
 		self.dom.controlsTip.showunder(this)
 	}
 
@@ -1040,6 +1045,8 @@ function setInteractivity(self) {
 
 	// menu to add a new term
 	self.displayTreeNew = async function(event, d) {
+		event.stopPropagation() // in mass/group ui, to prevent pill-clicking to check/uncheck table rows
+
 		if (self.opts.newBtn && this.className !== 'sja_filter_add_transformer' && self.filter.lst.length) return
 		self.dom.filterContainer.selectAll('.sja_filter_grp').style('background-color', 'transparent')
 		if (self.filter.lst.length > 0) {
