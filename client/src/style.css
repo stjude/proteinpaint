@@ -1116,7 +1116,7 @@ sandbox header
     position: sticky;
     top: 0;
     opacity: 0.5;
-
+    font-weight: normal;
 }
 
 .sjpp_table_item {
