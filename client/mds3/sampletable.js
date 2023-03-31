@@ -4,6 +4,7 @@ import { mclass, dtsnvindel, dtsv, dtfusionrna } from '#shared/common'
 import { renderTable } from '#dom/table'
 import { rgb } from 'd3-color'
 import { print_snv, printSvPair } from './itemtable'
+const d3s = require('d3-selection')
 
 /*
 ********************** EXPORTED
@@ -266,6 +267,20 @@ function printSampleName(sample, tk, div, block) {
 					if (e.stack) console.log(e.stack)
 				}
 			})
+		extraRow
+			.append('button')
+			.style('margin-right', '10px')
+			.text('Disco plot new')
+			.on('click', async event => {
+				event.target.innerHTML = 'Loading...'
+				event.target.disabled = true
+				try {
+					showDtDiscoNew(event, sample, { tk, block })
+				} catch (e) {
+					event.target.innerHTML = 'Error: ' + (e.message || e)
+					if (e.stack) console.log(e.stack)
+				}
+			})
 	}
 
 	if (tk.mds.queries?.singleSampleGenomeQuantification) {
@@ -322,6 +337,55 @@ async function showDtDisco(event, sample, arg, fromTable = false) {
 	)
 
 	dtDisco.main(disco_arg)
+}
+
+async function showDtDiscoNew(event, sample, arg, fromTable = false) {
+	const mlst = await arg.tk.mds.queries.singleSampleMutation.get(
+		sample[arg.tk.mds.queries.singleSampleMutation.sample_id_key || 'sample_id']
+	)
+
+	for (const i of mlst) i.position = i.pos
+
+	const disco_arg = {
+		sampleName: sample.sample_id,
+		data: mlst
+	}
+	arg.tk.menutip.clear().show(event.clientX, event.clientY)
+	if (!fromTable) {
+		event.target.innerHTML = mlst.length + ' variants loaded'
+	} else {
+		arg.tk.menutip.d
+			.append('div')
+			.text(`Sample ${sample.sample_id}`)
+			.style('text-align', 'center')
+			.style('font-weight', 'bold')
+			.style('margin', '5px')
+	}
+
+	try {
+		const gdcGenome = 'hg38'
+		const gdcDslabel = 'GDC'
+
+		const opts = {
+			holder: arg.tk.menutip.d.append('div'),
+			genome: arg.block.genome,
+			state: {
+				genome: gdcGenome,
+				dslabel: gdcDslabel,
+				plots: [
+					{
+						chartType: 'Disco',
+						subfolder: 'disco_new',
+						extension: 'ts'
+					}
+				]
+			}
+		}
+		const plot = await import('#plots/plot.app')
+		const plotAppApi = await plot.appInit(opts)
+	} catch (e) {
+		throw e
+	}
 }
 
 /***********************************************
