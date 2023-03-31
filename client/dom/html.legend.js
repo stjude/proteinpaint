@@ -1,9 +1,12 @@
 import { select } from 'd3-selection'
+import { Menu } from '#dom/menu'
+import { rgb } from 'd3-color'
 
 export default function htmlLegend(legendDiv, viz = { settings: {}, handlers: {} }, barDiv) {
 	const isHidden = {}
 
 	function render(data) {
+		console.log(data)
 		const s = viz.settings
 		legendDiv.selectAll('*').remove()
 		if (data.every(d => Array.isArray(d))) {
@@ -165,6 +168,7 @@ export default function htmlLegend(legendDiv, viz = { settings: {}, handlers: {}
 				.style('vertical-align', d.inset ? 'top' : '')
 				.style('padding', d.inset ? '0 3px' : '')
 				.text(d.inset)
+				.on('click', e => onColorClick(e, color))
 		}
 
 		div
@@ -177,14 +181,26 @@ export default function htmlLegend(legendDiv, viz = { settings: {}, handlers: {}
 			.style('line-height', s.legendFontSize)
 			.style('vertical-align', d.svg ? 'top' : null)
 			.html(d.text)
+			.on('click', viz.handlers.legend.click)
 
 		if (Object.keys(viz.handlers).length) {
-			div
-				.on('click', viz.handlers.legend.click)
-				.on('mouseover', viz.handlers.legend.mouseover)
-				.on('mouseout', viz.handlers.legend.mouseout)
+			div.on('mouseover', viz.handlers.legend.mouseover).on('mouseout', viz.handlers.legend.mouseout)
 		}
 	}
 
 	return render
+}
+
+function onColorClick(e, color) {
+	const rgbColor = rgb(color)
+	const menu = new Menu()
+	const input = menu.d
+		.append('input')
+		.attr('type', 'color')
+		.attr('value', rgbColor.formatHex())
+		.on('change', () => {
+			const newColor = input.node().value
+			menu.hide()
+		})
+	menu.show(e.clientX, e.clientY, false)
 }
