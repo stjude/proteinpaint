@@ -1,7 +1,7 @@
 import { zoom as d3zoom, zoomIdentity } from 'd3-zoom'
 import { icons as icon_functions } from '#dom/control.icons'
 import { d3lasso } from '#common/lasso'
-import { mclass, dt2label, morigin } from '#shared/common'
+import { dt2label, morigin } from '#shared/common'
 import { rgb } from 'd3-color'
 import { scaleLinear as d3Linear } from 'd3-scale'
 import { axisLeft, axisBottom } from 'd3-axis'
@@ -515,7 +515,7 @@ export function setRenderers(self) {
 			self.config.colorTW.term.name.length > 25
 				? self.config.colorTW.term.name.slice(0, 25) + '...'
 				: self.config.colorTW.term.name
-		let title = `${name} (${self.cohortSamples.length})`
+		let title = `${name}, n=${self.cohortSamples.length}`
 		const colorRefCategory = self.colorLegend.get('Ref')
 
 		if (self.config.colorTW.term.type == 'geneVariant')
@@ -643,7 +643,7 @@ export function setRenderers(self) {
 			offsetX = 300
 			if (self.config.colorTW.term.type == 'geneVariant') offsetX = 500
 			offsetY = 50
-			title = `${self.config.shapeTW.term.name} (${self.cohortSamples.length})`
+			title = `${self.config.shapeTW.term.name}, n=${self.cohortSamples.length}`
 			if (self.config.shapeTW.term.type == 'geneVariant')
 				self.renderGeneVariantLegend(offsetX, legendG, self.config.shapeTW, 'shape', self.shapeLegend)
 			else {
@@ -721,7 +721,7 @@ export function setRenderers(self) {
 		const step = 100
 		let offsetY = 25
 		const name = tw.term.name.length > 25 ? tw.term.name.slice(0, 25) + '...' : tw.term.name
-		let title = `${name} (${self.cohortSamples.length})`
+		let title = `${name}, n=${self.cohortSamples.length}`
 		const G = legendG.append('g')
 		G.append('text')
 			.attr('id', 'legendTitle')
