@@ -42,5 +42,8 @@
   },
   "bugs": {
     "url": "https://github.com/stjude/proteinpaint"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.3"
   }
 }
