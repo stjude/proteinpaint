@@ -7177,6 +7177,9 @@ async function pp_init() {
 			if (g.no_gene2canonicalisoform) delete g2.genedb.gene2canonicalisoform
 			if (g.genedb_fullpath) g2.genedb.dbfile = g.genedb_fullpath
 		}
+		if (g2.proteindomain) {
+			if (g.proteindomaindb_fullpath) g2.proteindomain.dbfile = g.proteindomaindb_fullpath
+		}
 	}
 
 	if (serverconfig.defaultgenome) {
