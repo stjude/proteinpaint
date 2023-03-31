@@ -903,8 +903,14 @@ thus less things to worry about...
 
 	const dbfile = ds.cohort.db.file_fullpath || ds.cohort.db.file
 	if (!dbfile) throw 'both file and file_fullpath missing'
-	const cn = connect_db(dbfile)
-	console.log(`DB connected for ${ds.label}: ${dbfile}`)
+
+	let cn
+	try {
+		cn = connect_db(dbfile)
+		console.log(`DB connected for ${ds.label}: ${dbfile}`)
+	} catch (e) {
+		throw `Cannot connect db ${dbfile}: ${e.message || e}`
+	}
 
 	ds.cohort.db.connection = cn
 
