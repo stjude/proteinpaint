@@ -7173,8 +7173,9 @@ async function pp_init() {
 		if (g.nohicdomain) {
 			delete g2.hicdomain
 		}
-		if (g.no_gene2canonicalisoform) {
-			if (g2.genedb) delete g2.genedb.gene2canonicalisoform
+		if (g2.genedb) {
+			if (g.no_gene2canonicalisoform) delete g2.genedb.gene2canonicalisoform
+			if (g.genedb_fullpath) g2.genedb.dbfile = g.genedb_fullpath
 		}
 	}
 
