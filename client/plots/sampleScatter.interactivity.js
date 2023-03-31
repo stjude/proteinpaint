@@ -4,6 +4,7 @@ import { dofetch3 } from '#common/dofetch'
 import { mclass, morigin, dt2label } from '#shared/common'
 import { Menu } from '#dom/menu'
 import { rgb } from 'd3-color'
+import { mclass, dt2label, morigin } from '#shared/common'
 
 export function setInteractivity(self) {
 	self.mouseover = function(event) {

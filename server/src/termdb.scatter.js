@@ -290,7 +290,7 @@ function processSample(dbSample, sample, tw, categoryMap, category) {
 				return mutation.dt == dt && visible
 			})
 			if (!mutation) continue
-
+			if (mutation.class == 'WT' || mutation.class == 'Blank') continue
 			const value = getCategory(mutation)
 			sample[category] = value
 			break //Found a color
