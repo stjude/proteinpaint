@@ -906,6 +906,7 @@ thus less things to worry about...
 
 	let cn
 	try {
+		console.log('Connecting', dbfile)
 		cn = connect_db(dbfile)
 		console.log(`DB connected for ${ds.label}: ${dbfile}`)
 	} catch (e) {

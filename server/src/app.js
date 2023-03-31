@@ -7239,6 +7239,7 @@ async function pp_init() {
 			if (!g.genedb.dbfile) throw genomename + ': .genedb.dbfile missing'
 			// keep reference of the connection (.db) so as to add dataset-specific query statements later
 			try {
+				console.log('Connecting', g.genedb.dbfile)
 				g.genedb.db = utils.connect_db(g.genedb.dbfile)
 			} catch (e) {
 				throw `Cannot connect genedb: ${g.genedb.dbfile}: ${e}`
@@ -7318,6 +7319,7 @@ async function pp_init() {
 			if (!g.proteindomain.statement) throw genomename + '.proteindomain: missing statement for sqlite db'
 			let db
 			try {
+				console.log('Connecting', g.proteindomain.dbfile)
 				db = utils.connect_db(g.proteindomain.dbfile)
 			} catch (e) {
 				throw 'Error with ' + g.proteindomain.dbfile + ': ' + e
@@ -7555,6 +7557,7 @@ function initLegacyDataset(ds, genome) {
 	if (ds.dbfile) {
 		/* this dataset has a db */
 		try {
+			console.log('Connecting', ds.dbfile)
 			ds.newconn = utils.connect_db(ds.dbfile)
 		} catch (e) {
 			throw 'Error with ' + ds.dbfile + ': ' + e
@@ -7776,6 +7779,7 @@ async function mds_init(ds, genome, _servconfig) {
 	if (ds.gene2mutcount) {
 		if (!ds.gene2mutcount.dbfile) throw '.gene2mutcount.dbfile missing'
 		try {
+			console.log('Connecting', ds.gene2mutcount.dbfile)
 			ds.gene2mutcount.db = utils.connect_db(ds.gene2mutcount.dbfile)
 			console.log('DB connected for ' + ds.label + ': ' + ds.gene2mutcount.dbfile)
 		} catch (e) {
