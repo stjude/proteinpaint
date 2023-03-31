@@ -7175,10 +7175,34 @@ async function pp_init() {
 		}
 		if (g2.genedb) {
 			if (g.no_gene2canonicalisoform) delete g2.genedb.gene2canonicalisoform
-			if (g.genedb_fullpath) g2.genedb.dbfile = g.genedb_fullpath
 		}
-		if (g2.proteindomain) {
-			if (g.proteindomaindb_fullpath) g2.proteindomain.dbfile = g.proteindomaindb_fullpath
+
+		if (g.updateAttr) {
+			for (const row of g.updateAttr) {
+				let pointer = g2
+				for (const [i, field] of row.entries()) {
+					// to guard against invalid keys, could be manual errors or updated dataset spec
+					if (!pointer) continue
+
+					if (typeof field == 'object') {
+						// apply the key-value overrides to the object that is pointed to
+						for (const k in field) {
+							pointer[k] = field[k]
+						}
+					} else {
+						if (typeof pointer[field] == 'string') {
+							//terminal
+							if (row[i + 1]) {
+								pointer[field] = row[i + 1]
+							}
+							break
+						}
+
+						// reset the reference to a subnested object
+						pointer = pointer[field]
+					}
+				}
+			}
 		}
 	}
 
