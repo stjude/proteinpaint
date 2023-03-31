@@ -1,54 +1,47 @@
 {
-    "compilerOptions": {
-        "target": "es2016", /* Set the JavaScript language version for emitted JavaScript and include compatible library declarations. */
-        "module": "esnext", /* Specify the latest module code is generated. */
-        "allowJs": true, /* Allow JavaScript files to be a part of your program. Use the 'checkJS' option to get errors from these files. */
-        "esModuleInterop": true, /* Emit additional JavaScript to ease support for importing CommonJS modules. This enables 'allowSyntheticDefaultImports' for type compatibility. */
-        "types": ["node", "d3"], /* Ensures that TypeScript has access to the Node.js type definitions*/
-        "moduleResolution": "node",/* Enables Node.js module resolution.*/
-        "forceConsistentCasingInFileNames": true, /* Ensure that casing is correct in imports. */
-        "strict": true, /* Enable all strict type-checking options. */
-        "baseUrl": "./",
-        "paths": {
-            "#src/*": [
-                "./src/*"
-            ],
-            "#common/*": [
-                "./common/*"
-            ],
-            "#dom/*": [
-                "./dom/*"
-            ],
-            "#filter": [
-                "./filter/filter.js"
-            ],
-            "#filter/*": [
-                "./filter/*"
-            ],
-            "#mass/*": [
-                "./mass/*"
-            ],
-            "#plots/*": [
-                "./plots/*"
-            ],
-            "#rx": [
-                "./rx/index.js"
-            ],
-            "#shared/*": [
-                "./shared/*"
-            ],
-            "#termdb/*": [
-                "./termdb/*"
-            ],
-            "#termsetting": [
-                "./termsetting/termsetting.ts"
-            ],
-            "#termsetting/handlers/*": [
-                "./termsetting/handlers/*"
-            ]
-        }
-    },
-    "exclude": [
-        "node_modules"
-    ]
+  "compilerOptions": {
+    "extends": "../tsconfig.json",
+    "baseUrl": "./",
+    "paths": {
+      "#src/*": [
+        "./src/*"
+      ],
+      "#common/*": [
+        "./common/*"
+      ],
+      "#dom/*": [
+        "./dom/*"
+      ],
+      "#filter": [
+        "./filter/filter.js"
+      ],
+      "#filter/*": [
+        "./filter/*"
+      ],
+      "#mass/*": [
+        "./mass/*"
+      ],
+      "#plots/*": [
+        "./plots/*"
+      ],
+      "#rx": [
+        "./rx/index.js"
+      ],
+      "#shared/*": [
+        "./shared/*"
+      ],
+      "#termdb/*": [
+        "./termdb/*"
+      ],
+      "#termsetting": [
+        "./termsetting/termsetting.js"
+      ],
+      "#termsetting/handlers/*": [
+        "./termsetting/handlers/*"
+      ]
+    }
+  },
+  "exclude": [
+    "node_modules"
+  ]
 }
