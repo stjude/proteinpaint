@@ -7,6 +7,7 @@ import { getDefaultViolinSettings } from './violin.js'
 import { getDefaultBarSettings } from './barchart.js'
 import { getDefaultScatterSettings } from './sampleScatter.js'
 import { Tabs } from '#dom/toggleButtons'
+import { getDefaultBoxplotSettings } from './boxplot.js'
 
 //import {  } from ''
 
@@ -186,11 +187,8 @@ function setRenderers(self) {
 					childType: 'violin',
 					label: 'Violin',
 					disabled: d => false,
-					isVisible: () =>
-						self.config?.term.term.type === 'integer' ||
-						self.config?.term.term.type === 'float' ||
-						self.config?.term2?.term.type === 'integer' ||
-						self.config?.term2?.term.type === 'float',
+					isVisible: () => self.plotHasNumericTerm(),
+
 					getConfig: async () => {
 						let _term, _term2
 						//If the first term was continuous or is coming as continuous
@@ -236,10 +234,10 @@ function setRenderers(self) {
 				},
 				{
 					childType: 'boxplot',
-					label: 'Boxplot - TODO',
-					disabled: d => true,
-					isVisible: () => false, // remove during development
-					// isVisible: () => self.config.term.type === 'integer' || self.config.term.type === 'float',
+					label: 'Boxplot',
+					disabled: d => false,
+					isVisible: () => self.plotHasNumericTerm(),
+					getConfig: async () => self.getBoxPlotConfig(),
 					active: false,
 					callback: self.tabClickCallback
 				},
@@ -277,6 +275,45 @@ function setRenderers(self) {
 			throw e
 			//self.dom.errdiv.text(e)
 		}
+	}
+
+	self.plotHasNumericTerm = function() {
+		return (
+			self.config?.term.term.type === 'integer' ||
+			self.config?.term.term.type === 'float' ||
+			self.config?.term2?.term.type === 'integer' ||
+			self.config?.term2?.term.type === 'float'
+		)
+	}
+
+	self.getBoxPlotConfig = async function() {
+		console.log(self.config)
+		let _term, _term2
+		if (self.config.term && self.config.term.q?.mode == 'continuous') {
+			// must mean coming from scatter
+			_term = await self.getWrappedTermCopy(self.config?.term, 'continuous')
+			_term2 = await self.getWrappedTermCopy(self.config?.term2, 'discrete')
+		}
+		//If the second term was continuous or is coming as continuous
+		else if (self.config.term2 && self.config.term2?.q?.mode == 'continuous') {
+			// must mean coming from barchart
+			_term = await self.getWrappedTermCopy(self.config.term, 'discrete')
+			_term2 = await self.getWrappedTermCopy(self.config.term2, 'continuous')
+		}
+		//If the second term is coming as discrete from the scatter
+		else if (self.config.term2?.q?.mode == 'discrete') {
+			// must mean coming from barchart
+			_term = await self.getWrappedTermCopy(self.config.term, 'discrete')
+			_term2 = await self.getWrappedTermCopy(self.config.term2, 'continuous')
+		}
+		//by default
+		else {
+			_term = await self.getWrappedTermCopy(self.config.term, 'continuous')
+			_term2 = await self.getWrappedTermCopy(self.config.term2, 'discrete')
+		}
+		console.log(_term.q.mode, _term2.q.mode)
+		const config = { childType: 'boxplot', term: _term, term2: _term2 }
+		return config
 	}
 
 	self.tabClickCallback = async (event, tab) => {
@@ -346,6 +383,7 @@ export async function getPlotConfig(opts, app) {
 			barchart: getDefaultBarSettings(app),
 
 			violin: getDefaultViolinSettings(app),
+			boxplot: getDefaultBoxplotSettings(app),
 
 			sampleScatter: getDefaultScatterSettings(app)
 		},

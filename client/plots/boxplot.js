@@ -44,7 +44,32 @@ class TdbBoxplot {
 					app: this.app,
 					id: this.id,
 					holder: this.dom.controls.attr('class', 'pp-termdb-plot-controls'),
-					inputs: ['term1', 'overlay', 'divideBy']
+					inputs: [
+						{
+							type: 'term',
+							configKey: 'term',
+							chartType: 'boxplot',
+							label: 'Term',
+							vocabApi: this.app.vocabApi,
+							menuOptions: '!remove'
+						},
+						{
+							type: 'term',
+							configKey: 'term2',
+							chartType: 'boxplot',
+							label: 'Overlay',
+							vocabApi: this.app.vocabApi,
+							menuOptions: '!remove'
+						},
+						{
+							type: 'term',
+							configKey: 'term0',
+							chartType: 'boxplot',
+							label: 'Divide by',
+							vocabApi: this.app.vocabApi,
+							menuOptions: '!remove'
+						}
+					]
 				})
 			}
 
@@ -81,7 +106,8 @@ class TdbBoxplot {
 			}
 			if (this.dom.header) this.dom.header.html(this.config.term.term.name + ' vs ' + t2.term.name)
 			const reqOpts = this.getDataRequestOpts()
-			this.data = await this.app.vocabApi.getNestedChartSeriesData(reqOpts)
+			const result = await this.app.vocabApi.getNestedChartSeriesData(reqOpts)
+			this.data = result.data
 			this.app.vocabApi.syncTermData(this.state.config, this.data)
 			const [lst, binmax] = this.processData(this.data)
 			this.dom.div.style('display', 'block')
@@ -363,4 +389,8 @@ function setRenderers(self) {
 	}
 }
 
-export const boxplotInit = getCompInit(TdbBoxplot)
+export const componentInit = getCompInit(TdbBoxplot)
+
+export function getDefaultBoxplotSettings(app) {
+	return {}
+}
