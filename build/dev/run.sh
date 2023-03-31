@@ -20,7 +20,7 @@ docker ps -aq --filter "name=pp" | xargs -r docker rm -f
 # re-enable exit on errors
 set -e
 
-TPDIR=$(node ./build/getConfigProp.js tpmasterdir)
+TPDIR=$(node -p "require('./serverconfig.json').tpmasterdir")
 echo "serverconfig.tpmasterdir='$TPDIR'"
 PPDIR=$(pwd)
 CONTAPP=/home/root/pp/app/active
@@ -38,9 +38,12 @@ fi
 # remove symlink to server/cards
 rm -rf public/cards
 
+CONTAINER_NAME=pp
+HOSTPORT=3000
+EXPOSED_PORT=3000
 
 docker run -d \
-	--name pp \
+	--name $CONTAINER_NAME \
 	`# mounting specific subdirs and files avoids mounting the node_modules at the root or any workspace` \
 	--mount type=bind,source=$TPDIR,target=/home/root/pp/tp,readonly \
 	--mount type=bind,source=$PPDIR/public,target=$CONTAPP/public \
@@ -69,8 +72,12 @@ docker run -d \
 	--mount type=bind,source=$PPDIR/server/package.json,target=$CONTAPP/server/package.json,readonly \
 	--mount type=bind,source=$PPDIR/client/package.json,target=$CONTAPP/client/package.json,readonly \
 	--mount type=bind,source=$PPDIR/build/dev,target=$CONTAPP/build/dev,readonly \
-	--publish 3000:3000 \
+	--publish $HOSTPORT:$EXPOSED_PORT \
 	-e script=$SCRIPT \
 	-e PP_MODE=container-prod \
 	ppdev:latest
 
+
+echo "^ assigned container ID ^"
+
+./container/verify.sh $CONTAINER_NAME $HOSTPORT $EXPOSED_PORT

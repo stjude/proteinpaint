@@ -19,7 +19,8 @@
 		"launch.js",
 		"public",
 		"run.sh",
-		"validateConfig.js"
+		"validateConfig.js",
+		"verify.sh"
 	],
 	"license": "SEE LICENSE IN ./LICENSE",
 	"repository": {
