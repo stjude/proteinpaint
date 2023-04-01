@@ -1423,18 +1423,13 @@ function setLabelDragEvents(self, prefix) {
 function setZoomPanActions(self) {
 	self.seriesesGMousedown = function(event) {
 		if (!self.optionalFeatures.includes('zoom')) return
+		//console.log(1425, 'mousedown')
 		event.stopPropagation()
 		const startCell = self.getCellByPos(event)
 		if (!startCell) return
 		self.clickedSeriesCell = { event, startCell }
 		if (self.settings.matrix.mouseMode == 'pan') {
-			self.dom.seriesesG.on('mousemove', self.seriesesGdrag).on('mouseup', self.seriesesGcancelDrag)
-			const d = self.dimensions
-			const halfw = d.mainw / 2
-			self.clickedSeriesCell.center = {
-				max: halfw + (d.zoomedMainW - d.mainw),
-				min: halfw
-			}
+			self.seriesesGdragInit()
 		} else {
 			self.zoomPointer = pointer(event, self.dom.seriesesG.node())
 			self.dom.seriesesG.on('mousemove', self.seriesesGoutlineZoom).on('mouseup', self.seriesesGtriggerZoom)
@@ -1450,11 +1445,40 @@ function setZoomPanActions(self) {
 	self.getCellByPos = function(event) {
 		const s = self.settings.matrix
 		const d = self.dimensions
-		if (event.target.tagName == 'rect' && event.target.__data__?.sample) return event.target.__data__
+		if (event.target.tagName == 'rect') {
+			if (event.target.__data__?.sample) return event.target.__data__
+			if (event.target.__data__?.xg) {
+				const visibleWidth = event.clientX - event.target.getBoundingClientRect().x + d.seriesXoffset
+				const i = Math.floor(visibleWidth / d.colw)
+				return self.sampleOrder[i]
+			}
+		}
 		if (event.target.tagName == 'image' && s.useCanvas) {
 			const visibleWidth = event.clientX - event.target.getBoundingClientRect().x + d.seriesXoffset
 			const i = Math.floor(visibleWidth / d.colw)
 			return self.sampleOrder[i]
+		}
+	}
+
+	self.seriesesGdragInit = function() {
+		//self.dom.seriesesG.on('mousemove', self.seriesesGdrag).on('mouseup', self.seriesesGcancelDrag)
+		select('body')
+			.on('mousemove.sjppMatrixDrag', self.seriesesGdrag)
+			.on('mouseup.sjppMatrixDrag', self.seriesesGcancelDrag)
+		const s = self.settings.matrix
+		const d = self.dimensions
+		const c = self.clickedSeriesCell
+		c.dxPad = 20 // to show edge that limits draf, and to "bounce back" on mouseup
+		//const pos = d.seriesXoffset s.zoomCenterPct * d.mainw /// d.mainw
+		c.dxMax = -d.seriesXoffset
+		c.dxMaxPad = c.dxMax + c.dxPad
+		c.dxMin = d.mainw - d.zoomedMainW - d.seriesXoffset
+		c.dxMinPad = c.dxMin - c.dxPad
+		console.log('dxMin=', c.dxMin, 'dxMax=', c.dxMax, d.seriesXoffset)
+		const halfw = 0.5 * d.mainw
+		c.center = {
+			max: halfw + (d.zoomedMainW - d.mainw),
+			min: halfw
 		}
 	}
 
@@ -1464,37 +1488,56 @@ function setZoomPanActions(self) {
 		const d = self.dimensions
 		const dx = event.clientX - c.event.clientX
 		if (Math.abs(dx) < 1) return
+		if (dx < c.dxMinPad || dx > c.dxMaxPad) return //; console.log(1489, dx, c.dxMin, c.dxMax)
 		self.clickedSeriesCell.dx = dx
+		self.translateElems(dx, d, s, c)
+	}
+
+	self.translateElems = function(dx, d, s, c) {
+		//console.log(d.xOffset, d.seriesXoffset, dx)
 		self.dom.seriesesG.attr('transform', `translate(${d.xOffset + d.seriesXoffset + dx},${d.yOffset})`)
-		self.dom.clipRect.attr('x', s.zoomLevel == 1 ? 0 : dx === 0 ? 0 : Math.abs(d.seriesXoffset + dx) / d.zoomedMainW)
+		self.dom.clipRect.attr(
+			'x',
+			s.zoomLevel == 1 && d.mainw >= d.zoomedMainW ? 0 : Math.abs(d.seriesXoffset + dx) / d.zoomedMainW
+		)
 		self.layout.top.attr.adjustBoxTransform(dx)
 		self.layout.btm.attr.adjustBoxTransform(dx)
 		const computedCenter = s.zoomCenterPct * d.mainw - d.seriesXoffset - dx
+		//console.log(1502, 'dx=', dx, 'computedCenter', computedCenter, Math.max(c.center.min, Math.min(c.center.max, computedCenter)))
+		//s.zoomCenterPct * d.mainw - d.seriesXoffset
 		self.svgScrollApi.update({
-			zoomCenter: Math.max(c.center.min, Math.min(c.center.max, computedCenter))
+			zoomCenter: computedCenter //Math.max(c.center.min, Math.min(c.center.max, computedCenter))
 		})
 	}
 
 	self.seriesesGcancelDrag = function(event) {
-		self.dom.seriesesG.on('mousemove', null).on('mouseup', null)
+		console.log(1498, 'mouseup')
+		select('body')
+			.on('mousemove.sjppMatrixDrag', null)
+			.on('mouseup.sjppMatrixDrag', null)
 		const s = self.settings.matrix
 		const d = self.dimensions
-		const e = self.clickedSeriesCell.event
-		const dx = event.clientX - e.clientX
-		//const i = self.clickedSeriesCell.startCell.totalIndex - Math.floor(dx/(d.dx))
-		const computedCenterCellIndex = Math.floor((d.mainw / 2 - d.seriesXoffset - dx) / d.dx)
-		const i = Math.min(self.sampleOrder.length - 1, Math.max(0, computedCenterCellIndex))
+		const cc = self.clickedSeriesCell
+		const _dx = event.clientX - cc.event.clientX
+		if (Math.abs(_dx) < 1 || _dx < cc.dxMinPad || _dx > cc.dxMaxPad) {
+			console.log(1518, 'no dispatch')
+			self.translateElems(0, d, s, cc)
+			return
+		}
+		const dx = Math.min(cc.dxMax, Math.max(_dx, cc.dxMin))
+		console.log('dispatch()!!! dx=', dx, '_dx=', _dx, 'dxMax=', cc.dxMax, 'dxMin=', cc.dxMin, 'diff', _dx)
+		// zoomIndex change is in the opposite direction of dragging
+		const i = s.zoomIndex - Math.round(dx / d.dx)
+		console.log('i=', i, 'zoomIndex=', s.zoomIndex, 'zoomCenterPct=', s.zoomCenterPct)
 		const c = self.sampleOrder[i]
-		//const c = self.clickedSeriesCell.startCell
-		//const zoomCenter = c.totalIndex * d.colw + c.grpIndex * s.colgspace + dx + d.colw + d.seriesXoffset
-
+		console.log('dx=', dx, 's.zoomIndex=', s.zoomIndex, [cc.dxMin, cc.dxMax])
 		self.app.dispatch({
 			type: 'plot_edit',
 			id: self.id,
 			config: {
 				settings: {
 					matrix: {
-						zoomCenterPct: 0.5, //zoomCenter / d.mainw,
+						zoomCenterPct: s.zoomCenterPct,
 						zoomIndex: c.totalIndex,
 						zoomGrpIndex: c.grpIndex,
 						mouseMode: 'pan'
@@ -1531,7 +1574,7 @@ function setZoomPanActions(self) {
 			.style('width', self.zoomWidth)
 			.style('height', self.dimensions.mainh)
 
-		self.clickedSeriesCell.endCell = self.getCellByPos(event) // s.useCanvas ? self.getImgCell(event) : event.target.__data__
+		self.clickedSeriesCell.endCell = self.getCellByPos(event)
 	}
 
 	self.seriesesGtriggerZoom = function(event) {
@@ -1573,7 +1616,7 @@ function setZoomPanActions(self) {
 				settings: {
 					matrix: {
 						zoomLevel,
-						zoomCenterPct: zoomLevel < 1 ? 0.5 : zoomCenter / d.mainw,
+						zoomCenterPct: zoomLevel < 1 && d.mainw >= d.zoomedMainW ? 0.5 : zoomCenter / d.mainw,
 						zoomIndex,
 						zoomGrpIndex: centerCell.grpIndex,
 						mouseMode: 'zoom'

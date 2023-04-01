@@ -6,7 +6,7 @@ export function setRenderers(self) {
 		const l = self.layout
 		const d = self.dimensions
 		const duration = self.dom.svg.attr('width') ? s.duration : 0
-		const x = s.zoomLevel <= 1 ? 0 : Math.abs(d.seriesXoffset) / d.zoomedMainW
+		const x = s.zoomLevel <= 1 && d.mainw >= d.zoomedMainW ? 0 : Math.abs(d.seriesXoffset) / d.zoomedMainW
 		self.dom.clipRect
 			.attr('x', x)
 			.attr('y', 0)
@@ -14,10 +14,10 @@ export function setRenderers(self) {
 			.attr('height', 1)
 
 		self.renderSerieses(s, l, d, duration)
-		self.renderLabels(s, l, d, duration)
+		self.renderLabels(s, l, d, duration) //console.log(18, 'matrix.renderer() s.zoomCenterPct', s.zoomCenterPct, [d.mainw, d.seriesXoffset], 'clipRect.x=', x, 'clipRect.width=', Math.min(d.mainw, d.maxMainW) / d.zoomedMainW)
 		self.svgScrollApi.update({
 			x: d.xOffset,
-			y: d.yOffset - 13, // + d.mainh,
+			y: d.yOffset - s.scrollHeight,
 			totalWidth: d.zoomedMainW,
 			visibleWidth: d.mainw,
 			zoomCenter: s.zoomCenterPct * d.mainw - d.seriesXoffset
@@ -266,7 +266,7 @@ export function setRenderers(self) {
 		d.extraWidth = leftBox.width + rtBox.width + s.margin.left + s.margin.right + s.rowlabelgap * 2
 		d.extraHeight = topBox.height + btmBox.height + s.margin.top + s.margin.bottom + s.collabelgap * 2
 		d.svgw = d.mainw + d.extraWidth
-		d.svgh = d.mainh + d.extraHeight + legendBox.height + 20
+		d.svgh = d.mainh + d.extraHeight + legendBox.height + 20 + s.scrollHeight
 		self.dom.svg
 			.transition()
 			.duration(duration)

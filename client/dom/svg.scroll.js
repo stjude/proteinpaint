@@ -39,7 +39,8 @@ export function svgScroll(_opts) {
 
 	function scrollStop(e) {
 		if (!('x' in ref)) return
-		opts.callback(ref.dxFactor * (e.clientX - ref.x), 'up')
+		const dx = e.clientX - ref.x
+		opts.callback(ref.dxFactor * Math.min(ref.maxDx, Math.max(dx, ref.minDx)), 'up')
 		delete ref.x
 		select('body')
 			.on('mousemove.sjppSvgScroll', null)
@@ -53,6 +54,7 @@ export function svgScroll(_opts) {
 		.attr('stroke', '#aaa')
 		.attr('stroke-width', 1)
 		.attr('fill', '#ccc')
+		.attr('rx', opts.height / 2)
 		.on('mousedown', scrollInit)
 		.on('mousemove', scrollMove)
 		.on('mouseup', scrollStop)
@@ -83,9 +85,12 @@ export function svgScroll(_opts) {
 				ref.dxFactor = (t - v) / (v - ref.sliderWidth)
 			}
 
-			const center = v * (opts.zoomCenter / t)
+			const center = v * (opts.zoomCenter / t) //; console.log(87, 'svg.scroll', center, opts.zoomCenter)
 			ref.sliderX = center - ref.sliderWidth / 2
 			slider.attr('width', ref.sliderWidth).attr('x', ref.sliderX)
+
+			ref.maxDx = opts.visibleWidth - ref.sliderX - ref.sliderWidth
+			ref.minDx = -ref.sliderX
 			delete ref.x
 		}
 	}

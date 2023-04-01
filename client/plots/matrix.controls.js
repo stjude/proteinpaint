@@ -570,14 +570,17 @@ export class MatrixControls {
 			.append('button')
 			.html('Reset')
 			.on('click', () => {
-				this.parent.settings.matrix.mouseMode = 'zoom'
+				const s = this.parent.settings.matrix
+				const d = this.parent.dimensions
+				s.mouseMode = 'zoom'
 				this.parent.app.dispatch({
 					type: 'plot_edit',
 					id: this.parent.id,
 					config: {
 						settings: {
 							matrix: {
-								zoomLevel: 1
+								zoomLevel: 1,
+								zoomCenterPct: 0
 							}
 						}
 					}
