@@ -41,7 +41,7 @@ export function setRenderers(self) {
 			.each(self.renderSeries)
 	}
 
-	self.renderSeries = function(series) {
+	self.renderSeries = async function(series) {
 		const s = self.settings.matrix
 		const d = self.dimensions
 		const g = select(this)
@@ -59,18 +59,33 @@ export function setRenderers(self) {
 			if (g.selectAll('image').size() && !df.nonsettings && !df.sorting && !df.cellDimensions) return
 			const pxr = 1 //window.devicePixelRatio; console.log(51, 'pixelRatio', pxr)
 			g.selectAll('*').remove()
-			const canvas = self.dom.holder
-				.append('canvas')
-				.attr('width', Math.floor(d.zoomedMainW * pxr) + 'px')
-				.attr('height', Math.floor(self.dimensions.mainh * pxr) + 'px')
-				.style('opacity', 0)
-				.node()
+			const width = Math.floor(d.zoomedMainW * pxr)
+			const height = Math.floor(self.dimensions.mainh * pxr)
+			const canvas = window.OffscreenCanvas
+				? new OffscreenCanvas(width, height)
+				: // TODO: no need to support older browser versions???
+				  self.dom.holder
+						.append('canvas')
+						.attr('width', width + 'px')
+						.attr('height', height + 'px')
+						.style('opacity', 0)
+						.node()
 			const ctx = canvas.getContext('2d')
 			ctx.scale(pxr, pxr)
 			for (const cell of series.cells) self.renderCellWithCanvas(ctx, cell, series, s, d)
-			const img = canvas.toDataURL()
-			g.append('image').attr('xlink:href', img)
-			canvas.remove()
+
+			if (window.OffscreenCanvas) {
+				//const bitmap = canvas.transferToImageBitmap()
+				//g.append('image').node().getContext('bitmaprenderer').transferFromImageBitmap(bitmap)
+				const blob = await canvas.convertToBlob()
+				const reader = new FileReader()
+				reader.addEventListener('load', () => g.append('image').attr('xlink:href', reader.result), false)
+				const dataURL = reader.readAsDataURL(blob)
+			} else {
+				const dataURL = canvas.toDataURL()
+				g.append('image').attr('xlink:href', dataURL)
+				if (!window.OffscreenCanvas) canvas.remove()
+			}
 		} else {
 			const rects = g.selectAll('rect').data(series.cells, (cell, i) => cell.sample + ';;' + cell.tw.$id + ';;' + i)
 			rects.exit().remove()
