@@ -29,7 +29,6 @@ const tip2 = new Menu({ padding: '0px' }) // to show tree ui
 class MassGroups {
 	constructor(opts = {}) {
 		this.type = 'groups'
-		this.filterUI = {} // key: group name, value: filter instance for this group
 		this.selectedGroupsIdx = new Set() // set of array index for this.state.groups[], for those selected in table ui
 	}
 
@@ -121,8 +120,26 @@ class MassGroups {
 	}
 
 	updateLaunchButton() {
+		// turn both off by default; selectively turn on
+		this.dom.launchButton.style('display', 'none')
+		this.dom.noGroupSelected.style('display', 'none')
+
+		if (this.state.groups.length == 0) return // no groups
+
+		if (this.state.groups.length == 1) {
+			// only one group present, launch button is always on to work on this group
+			this.dom.launchButton.style('display', '').text(`Launch plot with "${this.state.groups[0].name}"`)
+			return
+		}
+
+		// 2 or more groups, button is based on the number of selected groups
 		const lst = [...this.selectedGroupsIdx]
-		if (lst.length == 0) return this.dom.launchButton.style('display', 'none') // no selected groups
+		if (lst.length == 0) {
+			// none selected
+			this.dom.noGroupSelected.style('display', '')
+			return
+		}
+		// at least 1 selected, display button
 		this.dom.launchButton.style('display', '')
 		if (lst.length == 1) return this.dom.launchButton.text(`Launch plot with "${this.state.groups[lst[0]].name}"`)
 		this.dom.launchButton.text(`Launch plot with ${lst.length} groups`)
@@ -139,14 +156,19 @@ function initUI(self) {
 	const btnRow = self.dom.holder.append('div')
 
 	// btn 1: prompt to add new group
-	self.dom.addNewGroupBtnHolder = btnRow.append('span')
+	self.dom.addNewGroupBtnHolder = btnRow.append('span').style('margin-right', '20px')
 
 	// btn 2: launch plot
 	self.dom.launchButton = btnRow
 		.append('span')
 		.attr('class', 'sja_menuoption')
-		.style('margin-left', '20px')
 		.on('click', () => clickLaunchBtn(self))
+	// msg: none selected
+	self.dom.noGroupSelected = btnRow
+		.append('span')
+		.text('No groups selected')
+		.style('font-size', '.8em')
+		.style('opacity', 0.5)
 }
 
 async function updateUI(self) {
@@ -187,16 +209,17 @@ async function updateUI(self) {
 
 	if (!groups.length) {
 		// no groups, do not show launch button, hide table
-		self.dom.launchButton.style('display', 'none')
+		self.updateLaunchButton()
 		self.dom.filterTableDiv.style('display', 'none')
 		return
 	}
 
-	// display table and populate rows
+	// clear table and populate rows
 	self.dom.filterTableDiv
 		.style('display', '')
 		.selectAll('*')
 		.remove()
+
 	const tableArg = {
 		div: self.dom.filterTableDiv,
 		columns: [
@@ -213,7 +236,18 @@ async function updateUI(self) {
 			},
 			{ label: '#SAMPLE' },
 			{ label: 'FILTER' }
-			// todo delete
+		],
+		columnButtons: [
+			{
+				text: 'Delete',
+				callback: (e, i) => {
+					groups.splice(i, 1)
+					self.app.dispatch({
+						type: 'app_refresh',
+						state: { groups }
+					})
+				}
+			}
 		],
 		rows: []
 	}
