@@ -132,8 +132,11 @@ class Matrix {
 			.append('rect')
 			.attr('display', 'block')
 
+		const state = this.getState(appState)
+
 		this.svgScrollApi = svgScroll({
 			holder: this.dom.scroll,
+			height: state.config.settings.matrix.scrollHeight,
 			callback: (dx, eventType) => {
 				const s = this.settings.matrix
 				const d = this.dimensions
@@ -143,10 +146,10 @@ class Matrix {
 					this.layout.top.attr.adjustBoxTransform(-dx)
 					this.layout.btm.attr.adjustBoxTransform(-dx)
 				} else if (eventType == 'up') {
-					const i = s.zoomIndex + Math.floor(dx / d.dx)
+					const i = s.zoomIndex + Math.round(dx / d.dx)
 					const c = this.sampleOrder[i]
 					//console.log(1333, i, c, d.seriesXoffset)
-					//const zoomCenter = //s.zoomCenterPct * d.mainw - dx //
+					//const zoomCenter = s.zoomCenterPct * d.mainw + dx //; console.log(152, "scroll i=", i, 'zoomCenter=', zoomCenter, "dx=", dx)
 					//c.totalIndex * d.colw + c.grpIndex * s.colgspace + d.colw + dx + d.seriesXoffset
 					this.app.dispatch({
 						type: 'plot_edit',
@@ -154,7 +157,7 @@ class Matrix {
 						config: {
 							settings: {
 								matrix: {
-									//zoomCenterPct: zoomCenter / d.mainw,
+									zoomCenterPct: s.zoomCenterPct,
 									zoomIndex: c.totalIndex,
 									zoomGrpIndex: c.grpIndex
 								}
@@ -290,7 +293,7 @@ class Matrix {
 			this.legendRenderer(this.legendData, {
 				settings: Object.assign(
 					{
-						svgw: Math.max(400, d.mainw),
+						svgw: Math.max(400, d.visibleW),
 						svgh: d.mainh + d.yOffset,
 						dimensions: d
 					},
@@ -717,6 +720,7 @@ class Matrix {
 	}
 
 	setLayout() {
+		console.log('setLayout')
 		const s = this.settings.matrix
 		const [col, row] = !s.transpose ? ['sample', 'term'] : ['term', 'sample']
 		const [_t_, _b_] = s.collabelpos == 'top' ? ['', 'Grp'] : ['Grp', '']
@@ -752,17 +756,20 @@ class Matrix {
 			}
 		}
 
-		const yOffset = layout.top.offset + s.margin.top
+		const yOffset = layout.top.offset + s.margin.top + s.scrollHeight
 		const xOffset = layout.left.offset + s.margin.left
 		const colw = Math.min(s.maxColwZoomed, s.colw * s.zoomLevel)
 		const dx = colw + s.colspace
 		const nx = this[`${col}s`].length
 		const dy = s.rowh + s.rowspace
 		const ny = this[`${row}s`].length
-		const mainw =
+		const mainwByColDimensions =
 			nx * (Math.min(colw, s.colw) + s.colspace) +
 			(this[`${col}Grps`].length - 1) * s.colgspace +
 			(this[`${col}s`].slice(-1)[0]?.totalHtAdjustments || 0)
+		const mainwByScreen = document.body.clientWidth - 300
+		const mainw = Math.min(mainwByColDimensions, mainwByScreen)
+
 		const mainh =
 			ny * dy + (this[`${row}Grps`].length - 1) * s.rowgspace + (this[`${row}s`].slice(-1)[0]?.totalHtAdjustments || 0)
 
@@ -829,9 +836,22 @@ class Matrix {
 		layout.right.box.attr('clip-path', '')
 
 		this.layout = layout
+		if (!s.zoomCenterPct) {
+			console.log(837, 'setting s.zoomCenterPct', s.zoomCenterPct)
+			s.zoomCenterPct = 0.5 //* mainw //console.log(837, s.zoomCenterPct, mainw)
+			s.zoomIndex = Math.round((s.zoomCenterPct * mainw) / dx) //; console.log(842, mainw, s.zoo)
+			s.zoomGrpIndex = this.sampleOrder[s.zoomIndex].grpIndex
+		}
+		// zoomCenter relative to mainw
+		const zoomCenter = s.zoomCenterPct * mainw
+		const centerCellX = s.zoomIndex * dx + s.zoomGrpIndex * s.colgspace
 		const zoomedMainW = nx * dx + (this[`${col}Grps`].length - 1) * s.colgspace
-		const seriesXoffset =
-			s.zoomLevel <= 1 ? 0 : s.zoomCenterPct * mainw - s.zoomIndex * dx - (s.zoomGrpIndex - 1) * s.colgspace
+		const seriesXoffset = s.zoomLevel <= 1 && mainw >= zoomedMainW ? 0 : zoomCenter - centerCellX
+		console.log('centerCellX=', centerCellX, 'mainw=', mainw)
+
+		//console.log(841, 'zoomCenter', zoomCenter, centerCellX)
+		console.log(842, 'seriesXoffset=', seriesXoffset, seriesXoffset > 0 ? 0 : seriesXoffset)
+
 		this.dimensions = {
 			dx,
 			dy,
@@ -841,7 +861,7 @@ class Matrix {
 			mainh,
 			colw,
 			zoomedMainW,
-			seriesXoffset: seriesXoffset > 0 ? 0 : Math.max(seriesXoffset, -zoomedMainW + mainw),
+			seriesXoffset: seriesXoffset > 0 ? 0 : seriesXoffset, // Math.max(seriesXoffset, -zoomedMainW + mainw),
 			maxMainW:
 				nx * (s.maxColw + s.colspace) +
 				(this[`${col}Grps`].length - 1) * s.colgspace +
@@ -1074,7 +1094,10 @@ export async function getPlotConfig(opts, app) {
 				duration: 0,
 				mouseMode: 'zoom',
 				zoomLevel: 1,
-				zoomIndex: 0
+				zoomCenterPct: 0,
+				zoomIndex: 0,
+				zoomGrpIndex: 0,
+				scrollHeight: 12
 			}
 		}
 	}
