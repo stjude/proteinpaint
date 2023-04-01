@@ -148,6 +148,7 @@ class Matrix {
 				} else if (eventType == 'up') {
 					const i = s.zoomIndex + Math.round(dx / d.dx)
 					const c = this.sampleOrder[i]
+					console.log(149, 'i=', i, s.zoomCenterPct)
 					//console.log(1333, i, c, d.seriesXoffset)
 					//const zoomCenter = s.zoomCenterPct * d.mainw + dx //; console.log(152, "scroll i=", i, 'zoomCenter=', zoomCenter, "dx=", dx)
 					//c.totalIndex * d.colw + c.grpIndex * s.colgspace + d.colw + dx + d.seriesXoffset
@@ -837,9 +838,9 @@ class Matrix {
 
 		this.layout = layout
 		if (!s.zoomCenterPct) {
-			console.log(837, 'setting s.zoomCenterPct', s.zoomCenterPct)
-			s.zoomCenterPct = 0.5 //* mainw //console.log(837, s.zoomCenterPct, mainw)
-			s.zoomIndex = Math.round((s.zoomCenterPct * mainw) / dx) //; console.log(842, mainw, s.zoo)
+			//console.log(837, 'setting s.zoomCenterPct', s.zoomCenterPct)
+			s.zoomCenterPct = 0.5
+			s.zoomIndex = Math.round((s.zoomCenterPct * mainw) / dx)
 			s.zoomGrpIndex = this.sampleOrder[s.zoomIndex].grpIndex
 		}
 		// zoomCenter relative to mainw
@@ -847,7 +848,7 @@ class Matrix {
 		const centerCellX = s.zoomIndex * dx + s.zoomGrpIndex * s.colgspace
 		const zoomedMainW = nx * dx + (this[`${col}Grps`].length - 1) * s.colgspace
 		const seriesXoffset = s.zoomLevel <= 1 && mainw >= zoomedMainW ? 0 : zoomCenter - centerCellX
-		console.log('centerCellX=', centerCellX, 'mainw=', mainw)
+		console.log('centerCellX=', centerCellX, 'mainw=', mainw, zoomCenter)
 
 		//console.log(841, 'zoomCenter', zoomCenter, centerCellX)
 		console.log(842, 'seriesXoffset=', seriesXoffset, seriesXoffset > 0 ? 0 : seriesXoffset)
@@ -1092,11 +1093,14 @@ export async function getPlotConfig(opts, app) {
 				termLabelOffset: 80,
 				termGrpLabelOffset: 80,
 				duration: 0,
-				mouseMode: 'zoom',
+				mouseMode: 'select',
 				zoomLevel: 1,
 				zoomCenterPct: 0,
 				zoomIndex: 0,
 				zoomGrpIndex: 0,
+				zoomMin: 0.5,
+				zoomIncrement: 0.5,
+				zoomStep: 10,
 				scrollHeight: 12
 			}
 		}
@@ -1121,7 +1125,10 @@ export async function getPlotConfig(opts, app) {
 
 	// may apply term-specific changes to the default object
 	copyMerge(config, opts)
+	// harcode these overrides for now
 	config.settings.matrix.duration = 0
+	config.settings.matrix.mouseMode = 'select'
+
 	const promises = []
 	for (const grp of config.termgroups) {
 		for (const tw of grp.lst) {

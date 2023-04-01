@@ -5,6 +5,7 @@ import { fillTermWrapper, termsettingInit } from '../termsetting/termsetting'
 import { addGeneSearchbox } from '#dom/genesearch'
 import { Menu } from '#dom/menu'
 import { zoom } from '#dom/zoom'
+import { icons } from '#dom/control.icons'
 
 const tip = new Menu({ padding: '' })
 
@@ -22,7 +23,10 @@ export class MatrixControls {
 		this.setInputGroups()
 		if (!this.parent.optionalFeatures.includes('zoom')) return
 		this.setZoomInput()
-		this.setPanInput()
+		this.setDragToggle({
+			holder: this.opts.holder.append('div').style('display', 'inline-block'),
+			target: this.parent.dom.seriesesG
+		})
 		this.setResetInput()
 	}
 
@@ -305,7 +309,7 @@ export class MatrixControls {
 		const s = this.parent.config.settings.matrix //; console.log(302, s.colw, s.maxColw, Math.round(100* s.colw / s.maxColw))
 		if (this.zoomApi)
 			this.zoomApi.update({
-				value: Math.round((100 * Math.min(s.colw * s.zoomLevel, s.maxColwZoomed)) / s.maxColwZoomed)
+				value: Number(((100 * Math.min(s.colw * s.zoomLevel, s.maxColwZoomed)) / s.maxColwZoomed).toFixed(1))
 			})
 	}
 
@@ -515,9 +519,10 @@ export class MatrixControls {
 		this.zoomApi = zoom({
 			holder,
 			settings: {
-				min: Math.max(1, Math.floor((100 * 1) / s.maxColw))
+				min: s.zoomMin, //Math.max(1, Math.floor((100 * 1) / s.maxColw)),
+				increment: s.zoomIncrement,
 				//max: 5,
-				//step: 1,
+				step: s.zoomStep || 5
 				//value: s.colw/s.maxColw * 100,
 			},
 			callback: percentValue => {
@@ -551,17 +556,51 @@ export class MatrixControls {
 		})
 	}
 
-	setPanInput() {
-		const holder = this.opts.holder.append('div').style('display', 'inline-block') //.style('margin-left', '50px')
-		holder
-			.append('button')
-			.html('Pan')
-			.on('click', () => {
-				this.parent.settings.matrix.mouseMode = 'pan'
-				//panBtn.active = true
-				//zoomBtn.active = false
-				//this.main()
-			})
+	setDragToggle(opts = {}) {
+		const defaults = {
+			mode: 'select',
+			activeBgColor: 'rgb(240, 236, 123)'
+		}
+
+		// hardcode to always be in select mode on first render
+		opts.target.style('cursor', 'crosshair')
+
+		const instance = {
+			opts: Object.assign({}, defaults, opts),
+			//holder: opts.holder.append('div').style('display', 'inline-block')
+			dom: {
+				selectBtn: opts.holder
+					.append('button')
+					.attr('title', 'Click the matrix to select data')
+					.style('display', 'inline-block')
+					.style('width', '25px')
+					.style('height', '24px')
+					.style('background-color', defaults.activeBgColor)
+					.on('click', () => {
+						opts.target.style('cursor', 'crosshair')
+						this.parent.settings.matrix.mouseMode = 'select'
+						instance.dom.selectBtn.style('background-color', instance.opts.activeBgColor)
+						instance.dom.grabBtn.style('background-color', '')
+					}),
+
+				grabBtn: opts.holder
+					.append('button')
+					.attr('title', 'Click the matrix to drag and move')
+					.style('display', 'inline-block')
+					.style('width', '25px')
+					.style('height', '24px')
+					.on('click', () => {
+						opts.target.style('cursor', 'grab')
+						this.parent.settings.matrix.mouseMode = 'pan'
+						instance.dom.selectBtn.style('background-color', '')
+						instance.dom.grabBtn.style('background-color', instance.opts.activeBgColor)
+					})
+			}
+		}
+
+		//icons.crosshair(instance.dom.selectBtn, { width: 18, height: 18, transform: 'translate(50,50)' })
+		icons.arrowPointer(instance.dom.selectBtn, { width: 14, height: 14, transform: 'translate(50,50)' })
+		icons.grab(instance.dom.grabBtn, { width: 14, height: 14, transform: 'translate(30,50)' })
 	}
 
 	setResetInput() {
