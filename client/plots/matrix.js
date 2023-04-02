@@ -146,12 +146,7 @@ class Matrix {
 					this.layout.top.attr.adjustBoxTransform(-dx)
 					this.layout.btm.attr.adjustBoxTransform(-dx)
 				} else if (eventType == 'up') {
-					const i = s.zoomIndex + Math.round(dx / d.dx)
-					const c = this.sampleOrder[i]
-					console.log(149, 'i=', i, s.zoomCenterPct)
-					//console.log(1333, i, c, d.seriesXoffset)
-					//const zoomCenter = s.zoomCenterPct * d.mainw + dx //; console.log(152, "scroll i=", i, 'zoomCenter=', zoomCenter, "dx=", dx)
-					//c.totalIndex * d.colw + c.grpIndex * s.colgspace + d.colw + dx + d.seriesXoffset
+					const c = this.getVisibleCenterCell(-dx)
 					this.app.dispatch({
 						type: 'plot_edit',
 						id: this.id,
@@ -744,7 +739,6 @@ class Matrix {
 	}
 
 	setLayout() {
-		console.log('setLayout')
 		const s = this.settings.matrix
 		const [col, row] = !s.transpose ? ['sample', 'term'] : ['term', 'sample']
 		const [_t_, _b_] = s.collabelpos == 'top' ? ['', 'Grp'] : ['Grp', '']
@@ -871,11 +865,6 @@ class Matrix {
 		const centerCellX = s.zoomIndex * dx + s.zoomGrpIndex * s.colgspace
 		const zoomedMainW = nx * dx + (this[`${col}Grps`].length - 1) * s.colgspace
 		const seriesXoffset = s.zoomLevel <= 1 && mainw >= zoomedMainW ? 0 : zoomCenter - centerCellX
-		console.log('centerCellX=', centerCellX, 'mainw=', mainw, zoomCenter)
-
-		//console.log(841, 'zoomCenter', zoomCenter, centerCellX)
-		console.log(842, 'seriesXoffset=', seriesXoffset, seriesXoffset > 0 ? 0 : seriesXoffset)
-
 		this.dimensions = {
 			dx,
 			dy,
@@ -885,7 +874,7 @@ class Matrix {
 			mainh,
 			colw,
 			zoomedMainW,
-			seriesXoffset: seriesXoffset > 0 ? 0 : seriesXoffset, // Math.max(seriesXoffset, -zoomedMainW + mainw),
+			seriesXoffset: seriesXoffset > 0 ? 0 : seriesXoffset,
 			maxMainW: Math.max(mainwByColDimensions, mainwByScreen)
 		}
 	}

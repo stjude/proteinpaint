@@ -55,7 +55,7 @@ export function setInteractivity(self) {
 		const x2 = event.clientX - rect.x
 		for (const cell of d.cells) {
 			const min = cell.x
-			const max = cell.x + self.dimensions.colw
+			const max = cell.x + self.dimensions.dx
 			if (min < x2 && x2 <= max) return cell
 		}
 		return null
@@ -81,6 +81,13 @@ export function setInteractivity(self) {
 		self.dragged.clone.remove()
 		delete self.dragged
 		delete self.clicked
+	}
+
+	self.getVisibleCenterCell = function(dx) {
+		const s = self.settings.matrix
+		const d = self.dimensions
+		const i = Math.round((0.5 * d.mainw - d.seriesXoffset - dx) / d.dx)
+		return self.sampleOrder[i]
 	}
 
 	//setSampleActions(self)
@@ -131,7 +138,7 @@ function setSampleActions(self) {
 				.style('-ms-user-select', 'none')
 				.style('user-select', 'none')
 
-			const label = self.clicked.event.target.closest('.sjpp-matrix-label') //console.log(68, label)
+			const label = self.clicked.event.target.closest('.sjpp-matrix-label')
 			// TODO: use a native or D3 transform accessor
 			const [x, y] = select(label)
 				.attr('transform')
@@ -151,7 +158,7 @@ function setSampleActions(self) {
 				y,
 				clientX: event.clientX,
 				clientY: event.clientY
-			} //; console.log(this.dragged)
+			}
 			self.dragged.clone.selectAll('text').style('fill', 'red')
 		}
 		if (!self.dragged) return
@@ -169,10 +176,8 @@ function setSampleActions(self) {
 			if (self.hovered) {
 				// reposition the dragged row/column
 				const d = self.dragged
-				const t = d.orig.__data__; console.log(t.grpIndex, self.sampleGroups)
+				const t = d.orig.__data__
 				const h = self.hovered
-				// console.log(t, self.config.termgroups)
-				// console.log([99, numRows, t.index, toIndex], self.config.termgroups[t.grpIndex].lst.slice())
 				// NOTE: currently, the rendered order does not have to match the termgroup.lst order
 				// ??? actually resort termgroup.lst to reflect the current term order ???
 				for (const grp of self.sampleGroups) {
@@ -186,7 +191,7 @@ function setSampleActions(self) {
 					})
 				}
 
-				const sample = self.sampleGroups[t.grpIndex].lst.splice(t.index, 1)[0] //if (tw != t.tw) {console.log(tw, t.tw); throw `t????`}
+				const sample = self.sampleGroups[t.grpIndex].lst.splice(t.index, 1)[0]
 				self.config.termgroups[h.grpIndex].lst.splice(h.index, 0, sample)
 
 				self.app.dispatch({
@@ -720,7 +725,6 @@ function setTermActions(self) {
 	}
 
 	self.showSortMenu = () => {
-		//console.log(self.termOrder)
 		/* 
 			sort rows and samples by:
 			- #hits 
@@ -1336,7 +1340,7 @@ function setLabelDragEvents(self, prefix) {
 				.style('-ms-user-select', 'none')
 				.style('user-select', 'none')
 
-			const label = self.clicked.event.target.closest('.sjpp-matrix-label') //console.log(68, label)
+			const label = self.clicked.event.target.closest('.sjpp-matrix-label')
 			// TODO: use a native or D3 transform accessor
 			const [x, y] = select(label)
 				.attr('transform')
@@ -1356,7 +1360,7 @@ function setLabelDragEvents(self, prefix) {
 				y,
 				clientX: event.clientX,
 				clientY: event.clientY
-			} //; console.log(this.dragged)
+			}
 			self.dragged.clone.selectAll('text').style('fill', 'red')
 		}
 		if (!self.dragged) return
@@ -1379,11 +1383,9 @@ function setLabelDragEvents(self, prefix) {
 				const h = self.hovered
 
 				if (prefix == 'termGrp') {
-					const grp = self.config.termgroups.splice(t.grpIndex, 1)[0] //if (tw != t.tw) {console.log(tw, t.tw); throw `t????`}
+					const grp = self.config.termgroups.splice(t.grpIndex, 1)[0]
 					self.config.termgroups.splice(h.grpIndex, 0, grp)
 				} else {
-					// console.log(t, self.config.termgroups)
-					// console.log([99, numRows, t.index, toIndex], self.config.termgroups[t.grpIndex].lst.slice())
 					// NOTE: currently, the rendered order does not have to match the termgroup.lst order
 					// ??? actually resort termgroup.lst to reflect the current term order ???
 					for (const grp of self.config.termgroups) {
@@ -1397,7 +1399,7 @@ function setLabelDragEvents(self, prefix) {
 						})
 					}
 
-					const tw = self.config.termgroups[t.grpIndex].lst.splice(t.index, 1)[0] //if (tw != t.tw) {console.log(tw, t.tw); throw `t????`}
+					const tw = self.config.termgroups[t.grpIndex].lst.splice(t.index, 1)[0]
 					self.config.termgroups[h.grpIndex].lst.splice(h.index, 0, t.tw)
 				}
 
@@ -1436,7 +1438,6 @@ function setLabelDragEvents(self, prefix) {
 function setZoomPanActions(self) {
 	self.seriesesGMousedown = function(event) {
 		if (!self.optionalFeatures.includes('zoom')) return
-		//console.log(1425, 'mousedown')
 		event.stopPropagation()
 		const startCell = self.getCellByPos(event)
 		if (!startCell) return
@@ -1462,13 +1463,13 @@ function setZoomPanActions(self) {
 			if (event.target.__data__?.sample) return event.target.__data__
 			if (event.target.__data__?.xg) {
 				const visibleWidth = event.clientX - event.target.getBoundingClientRect().x + d.seriesXoffset
-				const i = Math.floor(visibleWidth / d.colw)
+				const i = Math.floor(visibleWidth / d.dx)
 				return self.sampleOrder[i]
 			}
 		}
 		if (event.target.tagName == 'image' && s.useCanvas) {
 			const visibleWidth = event.clientX - event.target.getBoundingClientRect().x + d.seriesXoffset
-			const i = Math.floor(visibleWidth / d.colw)
+			const i = Math.floor(visibleWidth / d.dx)
 			return self.sampleOrder[i]
 		}
 	}
@@ -1487,7 +1488,6 @@ function setZoomPanActions(self) {
 		c.dxMaxPad = c.dxMax + c.dxPad
 		c.dxMin = d.mainw - d.zoomedMainW - d.seriesXoffset
 		c.dxMinPad = c.dxMin - c.dxPad
-		console.log('dxMin=', c.dxMin, 'dxMax=', c.dxMax, d.seriesXoffset)
 		const halfw = 0.5 * d.mainw
 		c.center = {
 			max: halfw + (d.zoomedMainW - d.mainw),
@@ -1501,13 +1501,12 @@ function setZoomPanActions(self) {
 		const d = self.dimensions
 		const dx = event.clientX - c.event.clientX
 		if (Math.abs(dx) < 1) return
-		if (dx < c.dxMinPad || dx > c.dxMaxPad) return //; console.log(1489, dx, c.dxMin, c.dxMax)
+		if (dx < c.dxMinPad || dx > c.dxMaxPad) return
 		self.clickedSeriesCell.dx = dx
 		self.translateElems(dx, d, s, c)
 	}
 
 	self.translateElems = function(dx, d, s, c) {
-		//console.log(d.xOffset, d.seriesXoffset, dx)
 		self.dom.seriesesG.attr('transform', `translate(${d.xOffset + d.seriesXoffset + dx},${d.yOffset})`)
 		self.dom.clipRect.attr(
 			'x',
@@ -1516,15 +1515,10 @@ function setZoomPanActions(self) {
 		self.layout.top.attr.adjustBoxTransform(dx)
 		self.layout.btm.attr.adjustBoxTransform(dx)
 		const computedCenter = s.zoomCenterPct * d.mainw - d.seriesXoffset - dx
-		//console.log(1502, 'dx=', dx, 'computedCenter', computedCenter, Math.max(c.center.min, Math.min(c.center.max, computedCenter)))
-		//s.zoomCenterPct * d.mainw - d.seriesXoffset
-		self.svgScrollApi.update({
-			zoomCenter: computedCenter //Math.max(c.center.min, Math.min(c.center.max, computedCenter))
-		})
+		self.svgScrollApi.update({ zoomCenter: computedCenter })
 	}
 
 	self.seriesesGcancelDrag = function(event) {
-		console.log(1498, 'mouseup')
 		select('body')
 			.on('mousemove.sjppMatrixDrag', null)
 			.on('mouseup.sjppMatrixDrag', null)
@@ -1534,25 +1528,18 @@ function setZoomPanActions(self) {
 		const _dx = event.clientX - cc.event.clientX
 		const dx = Math.min(cc.dxMax, Math.max(_dx, cc.dxMin))
 		if (Math.abs(_dx) < 1 || Math.abs(dx) < 1) {
-			//} || _dx < cc.dxMinPad || _dx > cc.dxMaxPad) {
-			console.log(1518, 'no dispatch')
 			self.translateElems(0, d, s, cc)
 			return
 		}
 		self.translateElems(dx, d, s, cc)
-		console.log('dispatch()!!! dx=', dx, '_dx=', _dx, 'dxMax=', cc.dxMax, 'dxMin=', cc.dxMin, 'diff', _dx)
-		// zoomIndex change is in the opposite direction of dragging
-		const i = s.zoomIndex - Math.round(dx / d.dx)
-		console.log('i=', i, 'zoomIndex=', s.zoomIndex, 'zoomCenterPct=', s.zoomCenterPct)
-		const c = self.sampleOrder[i]
-		console.log('dx=', dx, 's.zoomIndex=', s.zoomIndex, [cc.dxMin, cc.dxMax])
+		const c = self.getVisibleCenterCell(dx)
 		self.app.dispatch({
 			type: 'plot_edit',
 			id: self.id,
 			config: {
 				settings: {
 					matrix: {
-						zoomCenterPct: s.zoomCenterPct,
+						zoomCenterPct: 0.5,
 						zoomIndex: c.totalIndex,
 						zoomGrpIndex: c.grpIndex,
 						mouseMode: 'pan'
@@ -1622,7 +1609,7 @@ function setZoomPanActions(self) {
 		const zoomIndex = Math.floor(start.totalIndex + Math.abs(c.endCell.totalIndex - c.startCell.totalIndex) / 2)
 		const centerCell = self.sampleOrder[zoomIndex] || self.getImgCell(event)
 		const zoomLevel = d.mainw / self.zoomWidth
-		const zoomCenter = centerCell.totalIndex * d.colw + (centerCell.grpIndex - 1) * s.colgspace + d.seriesXoffset
+		const zoomCenter = centerCell.totalIndex * d.dx + (centerCell.grpIndex - 1) * s.colgspace + d.seriesXoffset
 
 		self.app.dispatch({
 			type: 'plot_edit',

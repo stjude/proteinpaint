@@ -306,7 +306,7 @@ export class MatrixControls {
 			.style('text-decoration', d => (d.active ? 'underline' : ''))
 			.style('color', d => (d.active ? '#3a3' : ''))
 
-		const s = this.parent.config.settings.matrix //; console.log(302, s.colw, s.maxColw, Math.round(100* s.colw / s.maxColw))
+		const s = this.parent.config.settings.matrix
 		if (this.zoomApi)
 			this.zoomApi.update({
 				value: Number(((100 * Math.min(s.colw * s.zoomLevel, s.maxColwZoomed)) / s.maxColwZoomed).toFixed(1))
