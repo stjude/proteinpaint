@@ -88,7 +88,20 @@ export function setInteractivity(self) {
 	setTermGroupActions(self)
 	setSampleGroupActions(self)
 	setZoomPanActions(self)
+	setResizeHandler(self)
 }
+
+function setResizeHandler(self) {
+	let resizeId
+	select(window).on(`resize.sjpp-${self.id}`, () => {
+		clearTimeout(resizeId)
+		resizeId = setTimeout(resize, 200)
+	})
+	function resize() {
+		self.main()
+	}
+}
+
 /*
 // TODO: may add drag events for sample labels
 function setSampleActions(self) {

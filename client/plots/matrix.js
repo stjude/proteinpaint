@@ -208,7 +208,33 @@ class Matrix {
 		})
 
 		this.setPill(appState)
-		//TODO: may conflict with serverconfig.commonOverrides
+
+		/*
+		Levels of mclass overrides, from more general to more specific.
+
+		1. server-level:
+		  - specified as serverconfig.commonOverrides
+		  - applied to the mclass from #shared/common on server startup
+		  - applies to all datasets and charts
+		  - overrides are applied to the static common.mclass object
+		
+		2. dataset-level: 
+		  - specified as termdb.mclass in the dataset's js file
+		  - applied to the termdbConfig.mclass payload as returned from the /termdb?getTermdbConfig=1 route
+		  - applies to all charts rendered for only the dataset/dslabel
+		  - overrides are applied to a copy of common.mclass, not the original "static" object
+
+		3. chart-level: 
+		  - specified as termdb[chartType].mclass in the dataset's js file
+		  - applied to the termdbConfig[chartType].mclass payload as returned from the /termdb?getTermdbConfig=1 route
+		  - applies to only the specific chart type as rendered for the dataset/dslabel
+		  - overrides are applied to a copy of common.mclass + termdb.mclass
+
+		!!! NOTE: 
+			Boolean configuration flags for mutually exclusive values may cause conflicting configurations
+			in the resulting merged overrides, as outputted by rx.copyMerge()
+		!!!
+		*/
 		this.mclass = copyMerge({}, mclass, appState.termdbConfig.mclass || {}, appState.termdbConfig.matrix?.mclass || {})
 	}
 
