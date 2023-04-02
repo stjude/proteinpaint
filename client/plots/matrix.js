@@ -1027,6 +1027,7 @@ export const matrixInit = getCompInit(Matrix)
 export const componentInit = matrixInit
 
 export async function getPlotConfig(opts, app) {
+	const overrides = app.vocabApi.termdbConfig.matrix || {}
 	const config = {
 		// data configuration
 		termgroups: [],
@@ -1040,7 +1041,7 @@ export async function getPlotConfig(opts, app) {
 			},
 			matrix: {
 				useCanvas: window.location.hash?.slice(1) == 'canvas',
-				cellEncoding: '', // can be oncoprint
+				cellEncoding: overrides.cellEncoding || '', // can be oncoprint
 				margin: {
 					top: 10,
 					right: 5,
@@ -1049,9 +1050,9 @@ export async function getPlotConfig(opts, app) {
 				},
 				// set any dataset-defined sample limits and sort priority, otherwise undefined
 				// put in settings, so that later may be overridden by a user (TODO)
-				maxSample: app.vocabApi.termdbConfig.matrix?.maxSample,
-				sortPriority: app.vocabApi.termdbConfig.matrix?.sortPriority,
-				truncatePriority: app.vocabApi.termdbConfig.matrix?.truncatePriority,
+				maxSample: overrides.maxSample,
+				sortPriority: overrides.sortPriority,
+				truncatePriority: overrides.truncatePriority,
 
 				sampleNameFilter: '',
 				sortSamplesBy: 'selectedTerms',
