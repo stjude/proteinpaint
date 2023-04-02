@@ -425,11 +425,8 @@ class Matrix {
 			const offset = !s.transpose
 				? s.termLabelOffset + s.termGrpLabelOffset
 				: s.sampleLabelOffset + s.sampleGrpLabelOffset
-			s.colw = Math.min(
-				s.maxColw,
-				Math.max(1, Math.round((screen.availWidth - offset - 300) / this.sampleOrder.length - s.colspace))
-			)
-			if (s.colw == 1) s.colspace = 0
+			s.colw = Math.min(s.maxColw, Math.round((screen.availWidth - offset - 30) / this.sampleOrder.length))
+			s.colspace = s.zoomLevel * s.colw <= 2 ? 0 : 1
 		}
 
 		if (this.autoDimensions.has('rowh')) {
@@ -863,10 +860,7 @@ class Matrix {
 			colw,
 			zoomedMainW,
 			seriesXoffset: seriesXoffset > 0 ? 0 : seriesXoffset, // Math.max(seriesXoffset, -zoomedMainW + mainw),
-			maxMainW:
-				nx * (s.maxColw + s.colspace) +
-				(this[`${col}Grps`].length - 1) * s.colgspace +
-				(this[`${col}s`].slice(-1)[0]?.totalHtAdjustments || 0)
+			maxMainW: Math.max(mainwByColDimensions, mainwByScreen)
 		}
 	}
 

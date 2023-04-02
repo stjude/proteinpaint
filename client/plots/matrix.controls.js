@@ -574,7 +574,7 @@ export class MatrixControls {
 					.attr('title', 'Click the matrix to select data')
 					.style('display', 'inline-block')
 					.style('width', '25px')
-					.style('height', '24px')
+					.style('height', '24.5px')
 					.style('background-color', defaults.activeBgColor)
 					.on('click', () => {
 						opts.target.style('cursor', 'crosshair')
@@ -588,7 +588,7 @@ export class MatrixControls {
 					.attr('title', 'Click the matrix to drag and move')
 					.style('display', 'inline-block')
 					.style('width', '25px')
-					.style('height', '24px')
+					.style('height', '24.5px')
 					.on('click', () => {
 						opts.target.style('cursor', 'grab')
 						this.parent.settings.matrix.mouseMode = 'pan'

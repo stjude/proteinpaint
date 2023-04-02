@@ -1519,12 +1519,14 @@ function setZoomPanActions(self) {
 		const d = self.dimensions
 		const cc = self.clickedSeriesCell
 		const _dx = event.clientX - cc.event.clientX
-		if (Math.abs(_dx) < 1 || _dx < cc.dxMinPad || _dx > cc.dxMaxPad) {
+		const dx = Math.min(cc.dxMax, Math.max(_dx, cc.dxMin))
+		if (Math.abs(_dx) < 1 || Math.abs(dx) < 1) {
+			//} || _dx < cc.dxMinPad || _dx > cc.dxMaxPad) {
 			console.log(1518, 'no dispatch')
 			self.translateElems(0, d, s, cc)
 			return
 		}
-		const dx = Math.min(cc.dxMax, Math.max(_dx, cc.dxMin))
+		self.translateElems(dx, d, s, cc)
 		console.log('dispatch()!!! dx=', dx, '_dx=', _dx, 'dxMax=', cc.dxMax, 'dxMin=', cc.dxMin, 'diff', _dx)
 		// zoomIndex change is in the opposite direction of dragging
 		const i = s.zoomIndex - Math.round(dx / d.dx)
@@ -1619,7 +1621,7 @@ function setZoomPanActions(self) {
 						zoomCenterPct: zoomLevel < 1 && d.mainw >= d.zoomedMainW ? 0.5 : zoomCenter / d.mainw,
 						zoomIndex,
 						zoomGrpIndex: centerCell.grpIndex,
-						mouseMode: 'zoom'
+						mouseMode: 'select'
 					}
 				}
 			}
