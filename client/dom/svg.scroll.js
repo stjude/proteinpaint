@@ -39,7 +39,7 @@ export function svgScroll(_opts) {
 	function scrollByClick(e) {
 		ref.x = e.clientX
 		const i = e.clientX < slideElem.getBoundingClientRect().x ? -1 : 1
-		scrollStop({ clientX: Math.round(ref.x + i * ref.arrowDx) })
+		scrollStop({ clientX: Math.floor(ref.x + i * ref.arrowDx) })
 	}
 
 	opts.holder
@@ -143,8 +143,8 @@ export function svgScroll(_opts) {
 				ref.dxFactor = (t - v) / (v - ref.sliderWidth)
 			}
 
-			const center = v * (opts.zoomCenter / t) //; console.log(87, 'svg.scroll', center, opts.zoomCenter)
-			ref.sliderX = center - ref.sliderWidth / 2
+			const center = v * (opts.zoomCenter / t)
+			ref.sliderX = Math.max(0, Math.min(center - ref.sliderWidth / 2, v - ref.sliderWidth - 1))
 			slider.attr('width', ref.sliderWidth).attr('x', ref.sliderX)
 
 			ref.maxDx = opts.visibleWidth - ref.sliderX - ref.sliderWidth

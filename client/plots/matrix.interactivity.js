@@ -1515,7 +1515,7 @@ function setZoomPanActions(self) {
 		self.layout.top.attr.adjustBoxTransform(dx)
 		self.layout.btm.attr.adjustBoxTransform(dx)
 		const computedCenter = s.zoomCenterPct * d.mainw - d.seriesXoffset - dx
-		self.svgScrollApi.update({ zoomCenter: computedCenter })
+		self.controlsRenderer.svgScrollApi.update({ zoomCenter: computedCenter })
 	}
 
 	self.seriesesGcancelDrag = function(event) {
