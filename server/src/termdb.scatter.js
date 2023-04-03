@@ -283,23 +283,27 @@ function processSample(dbSample, sample, tw, categoryMap, category) {
 
 			// TODO mutation.mname is amino acid change. pass mname to sample to be shown in tooltip
 		}
-		for (const [dt, label] of Object.entries(dt2label)) {
-			const mutation = mutations.find(mutation => {
-				const value = getCategory(mutation)
-				const visible = !(tw.q.hiddenValues && value in tw.q.hiddenValues)
-				return mutation.dt == dt && visible
-			})
-			if (!mutation) continue
-			if (mutation.class == 'WT' || mutation.class == 'Blank') continue
-			const value = getCategory(mutation)
-			sample[category] = value
-			break //Found a color
-		}
-		if (!sample[category])
-			//all hidden, will take any
-			sample[category] = getCategory(mutations[0])
+		assignMutation(mutations, true)
+		if (!sample[category]) assignMutation(false)
+		//all hidden, will take any
+		if (!sample[category]) sample[category] = getCategory(mutations[0])
 		sample.hidden[category] = tw.q.hiddenValues ? sample[category] in tw.q.hiddenValues : false
 		result.push(sample)
+
+		function assignMutation(strict) {
+			for (const [dt, label] of Object.entries(dt2label)) {
+				const mutation = mutations.find(mutation => {
+					const value = getCategory(mutation)
+					const visible = !(tw.q.hiddenValues && value in tw.q.hiddenValues)
+					return mutation.dt == dt && visible
+				})
+				if (!mutation) continue
+				if (strict) if (mutation.class == 'WT' || mutation.class == 'Blank') continue
+				const value = getCategory(mutation)
+				sample[category] = value
+				break //Found a color
+			}
+		}
 	} else {
 		value = dbSample?.[tw.id]?.key
 		sample.hidden[category] = tw.q.hiddenValues ? dbSample?.[tw.id]?.key in tw.q.hiddenValues : false
