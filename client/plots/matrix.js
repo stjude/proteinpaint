@@ -11,7 +11,6 @@ import { schemeCategory20 } from '#common/legacy-d3-polyfill'
 import { axisLeft, axisTop, axisRight, axisBottom } from 'd3-axis'
 import { fillTermWrapper } from '../termsetting/termsetting'
 import svgLegend from '#dom/svg.legend'
-import { svgScroll } from '#dom/svg.scroll'
 import { mclass } from '#shared/common'
 import { Menu } from '#dom/menu'
 import { getSampleSorter, getTermSorter } from './matrix.sort'
@@ -131,38 +130,6 @@ class Matrix {
 			//.attr('clipPathUnits', 'userSpaceOnUse')
 			.append('rect')
 			.attr('display', 'block')
-
-		const state = this.getState(appState)
-
-		this.svgScrollApi = svgScroll({
-			holder: this.dom.scroll,
-			height: state.config.settings.matrix.scrollHeight,
-			callback: (dx, eventType) => {
-				const s = this.settings.matrix
-				const d = this.dimensions
-				if (eventType == 'move') {
-					this.dom.seriesesG.attr('transform', `translate(${d.xOffset + d.seriesXoffset - dx},${d.yOffset})`)
-					this.dom.clipRect.attr('x', Math.abs(d.seriesXoffset - dx) / d.zoomedMainW)
-					this.layout.top.attr.adjustBoxTransform(-dx)
-					this.layout.btm.attr.adjustBoxTransform(-dx)
-				} else if (eventType == 'up') {
-					const c = this.getVisibleCenterCell(-dx)
-					this.app.dispatch({
-						type: 'plot_edit',
-						id: this.id,
-						config: {
-							settings: {
-								matrix: {
-									zoomCenterPct: s.zoomCenterPct,
-									zoomIndex: c.totalIndex,
-									zoomGrpIndex: c.grpIndex
-								}
-							}
-						}
-					})
-				}
-			}
-		})
 
 		this.dom.tip.onHide = () => {
 			this.lastActiveLabel = this.activeLabel
@@ -861,10 +828,11 @@ class Matrix {
 			s.zoomGrpIndex = this.sampleOrder[s.zoomIndex].grpIndex
 		}
 		// zoomCenter relative to mainw
-		const zoomCenter = s.zoomCenterPct * mainw
-		const centerCellX = s.zoomIndex * dx + s.zoomGrpIndex * s.colgspace
+		const zoomCenter = s.zoomCenterPct * mainw //console.log(831, 's.zoomIndex=', s.zoomIndex)
+		const centerCellX = s.zoomIndex * dx + s.zoomGrpIndex * s.colgspace //console.log(832, centerCellX)
 		const zoomedMainW = nx * dx + (this[`${col}Grps`].length - 1) * s.colgspace
-		const seriesXoffset = s.zoomLevel <= 1 && mainw >= zoomedMainW ? 0 : zoomCenter - centerCellX
+		const seriesXoffset =
+			s.zoomLevel <= 1 && mainw >= zoomedMainW ? 0 : Math.max(zoomCenter - centerCellX, mainw - zoomedMainW)
 		this.dimensions = {
 			dx,
 			dy,

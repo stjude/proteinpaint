@@ -14,14 +14,7 @@ export function setRenderers(self) {
 			.attr('height', 1)
 
 		self.renderSerieses(s, l, d, duration)
-		self.renderLabels(s, l, d, duration) //console.log(18, 'matrix.renderer() s.zoomCenterPct', s.zoomCenterPct, [d.mainw, d.seriesXoffset], 'clipRect.x=', x, 'clipRect.width=', Math.min(d.mainw, d.maxMainW) / d.zoomedMainW)
-		self.svgScrollApi.update({
-			x: d.xOffset,
-			y: d.yOffset - s.scrollHeight,
-			totalWidth: d.zoomedMainW,
-			visibleWidth: d.mainw,
-			zoomCenter: s.zoomCenterPct * d.mainw - d.seriesXoffset
-		})
+		self.renderLabels(s, l, d, duration)
 	}
 
 	self.renderSerieses = function(s, l, d, duration) {

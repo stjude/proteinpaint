@@ -6,6 +6,7 @@ import { addGeneSearchbox } from '#dom/genesearch'
 import { Menu } from '#dom/menu'
 import { zoom } from '#dom/zoom'
 import { icons } from '#dom/control.icons'
+import { svgScroll } from '#dom/svg.scroll'
 
 const tip = new Menu({ padding: '' })
 
@@ -28,6 +29,8 @@ export class MatrixControls {
 			target: this.parent.dom.seriesesG
 		})
 		this.setResetInput()
+		const state = this.parent.getState(appState)
+		this.setSvgScroll(state)
 	}
 
 	setButtons() {
@@ -311,6 +314,15 @@ export class MatrixControls {
 			this.zoomApi.update({
 				value: Number(((100 * Math.min(s.colw * s.zoomLevel, s.maxColwZoomed)) / s.maxColwZoomed).toFixed(1))
 			})
+
+		const d = this.parent.dimensions
+		this.svgScrollApi.update({
+			x: d.xOffset,
+			y: d.yOffset - s.scrollHeight,
+			totalWidth: d.zoomedMainW,
+			visibleWidth: d.mainw,
+			zoomCenter: s.zoomCenterPct * d.mainw - d.seriesXoffset
+		})
 	}
 
 	async callback(event, d) {
@@ -526,27 +538,21 @@ export class MatrixControls {
 				//value: s.colw/s.maxColw * 100,
 			},
 			callback: percentValue => {
-				const d = this.parent.dimensions
-				const s = this.parent.settings.matrix
+				const p = this.parent
+				const d = p.dimensions
+				const s = p.settings.matrix
 				const zoomLevel = (0.01 * percentValue * s.maxColwZoomed) / s.colw
-				const zoomCenterPct = 0.5
-				const zoomCenter = s.zoomLevel < 1 && zoomLevel > 1 ? Math.round(d.maxMainW / 2) : Math.round(d.mainw / 2)
-				const centerCell =
-					s.zoomLevel < 1 && zoomLevel > 1
-						? this.parent.sampleOrder[Math.floor(this.parent.sampleOrder.length / 2)]
-						: this.parent.sampleOrder.find(
-								r => r.totalIndex * d.dx + r.grpIndex * s.colgspace >= zoomCenter - d.seriesXoffset
-						  )
-				this.parent.app.dispatch({
+				const c = p.getVisibleCenterCell(0)
+				p.app.dispatch({
 					type: 'plot_edit',
-					id: this.parent.id,
+					id: p.id,
 					config: {
 						settings: {
 							matrix: {
 								zoomLevel,
-								zoomCenterPct,
-								zoomIndex: centerCell.totalIndex,
-								zoomGrpIndex: centerCell.grpIndex,
+								zoomCenterPct: 0.5,
+								zoomIndex: c.totalIndex,
+								zoomGrpIndex: c.grpIndex,
 								mouseMode: 'zoom'
 							}
 						}
@@ -625,5 +631,38 @@ export class MatrixControls {
 					}
 				})
 			})
+	}
+
+	setSvgScroll(state) {
+		this.svgScrollApi = svgScroll({
+			holder: this.parent.dom.scroll,
+			height: state.config.settings.matrix.scrollHeight,
+			callback: (dx, eventType) => {
+				const p = this.parent
+				const s = p.settings.matrix
+				const d = p.dimensions
+				if (eventType == 'move') {
+					p.dom.seriesesG.attr('transform', `translate(${d.xOffset + d.seriesXoffset - dx},${d.yOffset})`)
+					p.dom.clipRect.attr('x', Math.abs(d.seriesXoffset - dx) / d.zoomedMainW)
+					p.layout.top.attr.adjustBoxTransform(-dx)
+					p.layout.btm.attr.adjustBoxTransform(-dx)
+				} else if (eventType == 'up') {
+					const c = p.getVisibleCenterCell(-dx)
+					p.app.dispatch({
+						type: 'plot_edit',
+						id: p.id,
+						config: {
+							settings: {
+								matrix: {
+									zoomCenterPct: s.zoomCenterPct,
+									zoomIndex: c.totalIndex,
+									zoomGrpIndex: c.grpIndex
+								}
+							}
+						}
+					})
+				}
+			}
+		})
 	}
 }
