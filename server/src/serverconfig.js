@@ -27,12 +27,7 @@ const serverconfigfile =
 ********************/
 let serverconfig
 if (!serverconfigfile) {
-	// automatically generate serverconfig, hardcoded by customer
-	if (process.env.PP_CUSTOMER == 'gdc') {
-		serverconfig = getGDCconfig()
-	} else {
-		throw 'missing serverconfig.json'
-	}
+	throw 'missing serverconfig.json'
 } else {
 	try {
 		// manually parse instead of require() to minimize
@@ -215,104 +210,3 @@ if (fs.existsSync('./package.json')) {
 
 //Object.freeze(serverconfig)
 module.exports = serverconfig
-
-/*****************
-  HELPERS
-******************/
-
-function getGDCconfig() {
-	return {
-		allow_env_overrides: true,
-		URL: process.env.PP_URL || '', // will be used for the publicPath of dynamically loaded js chunks
-		port: process.env.PP_PORT || 3000, // will be used to publish the express node server
-		genomes: [
-			{
-				name: 'hg38',
-				species: 'human',
-				file: './genome/hg38.gdc.js',
-				datasets: [
-					{
-						name: 'GDC',
-						jsfile: './dataset/gdc.hg38.js' // to-do: toggle between dev, prod versions
-					}
-				]
-			}
-		],
-		backend_only: true,
-		ignoreTermdbTest: true,
-		//TODO: may conflict with this.mclass in matrix.js
-		commonOverrides: {
-			mclass: {
-				I: {
-					color: 'rgb(98, 60, 53)'
-				},
-				S: {
-					color: 'rgb(31, 112, 31)'
-				},
-				M: {
-					color: '#2379BC' //Best update for the default blue, that is compliant with section508
-				},
-				N: {
-					color: 'rgb(179, 89, 10)'
-				},
-				L: {
-					color: 'rgb(71, 36, 179)'
-				},
-				P: {
-					color: 'rgb(104, 72, 132)'
-				},
-				Utr3: {
-					color: 'rgb(107, 90, 107)'
-				},
-				F: {
-					color: '#a71c25'
-				},
-				D: {
-					color: '#595959'
-				},
-				Utr5: {
-					color: '#566c58'
-				},
-				E: {
-					color: '#595b00'
-				},
-				ITD: {
-					color: 'rgb(179, 78, 179)'
-				},
-				DEL: {
-					color: 'rgb(93, 93, 93)'
-				},
-				SV: {
-					color: 'rgb(93, 93, 93)'
-				},
-				CNV_amp: {
-					color: '#7a425f'
-				},
-				CNV_loss: {
-					color: '#42741a'
-				},
-				CNV_loh: {
-					color: 'rgb(13, 166, 176)'
-				},
-				snv: {
-					color: 'rgb(102, 113, 148)'
-				},
-				mnv: {
-					color: 'rgb(102, 113, 148)'
-				},
-				insertion: {
-					color: 'rgb(132, 99, 102)'
-				},
-				deletion: {
-					color: 'rgb(127, 113, 81)'
-				}
-			}
-		},
-		targetPortal: 'gdc'
-		/**** 
-			ASSUMES THAT THE GDC-PP WILL RUN INSIDE A DOCKER CONTAINER,
-			see above where the serverconfig.port, tpmasterdir, etc 
-			are assigned or overriden
-		****/
-	}
-}
