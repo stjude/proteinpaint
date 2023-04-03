@@ -1010,7 +1010,6 @@ export const matrixInit = getCompInit(Matrix)
 export const componentInit = matrixInit
 
 export async function getPlotConfig(opts, app) {
-	const overrides = app.vocabApi.termdbConfig.matrix || {}
 	const config = {
 		// data configuration
 		termgroups: [],
@@ -1024,7 +1023,7 @@ export async function getPlotConfig(opts, app) {
 			},
 			matrix: {
 				useCanvas: window.location.hash?.slice(1) == 'canvas',
-				cellEncoding: overrides.cellEncoding || '', // can be oncoprint
+				cellEncoding: '', // can be oncoprint
 				margin: {
 					top: 10,
 					right: 5,
@@ -1032,10 +1031,10 @@ export async function getPlotConfig(opts, app) {
 					left: 50
 				},
 				// set any dataset-defined sample limits and sort priority, otherwise undefined
-				// put in settings, so that later may be overridden by a user (TODO)
-				maxSample: overrides.maxSample,
-				sortPriority: overrides.sortPriority,
-				truncatePriority: overrides.truncatePriority,
+				// put in settings, so that later may be overridden by a user
+				maxSample: 0,
+				sortPriority: undefined,
+				truncatePriority: undefined,
 
 				sampleNameFilter: '',
 				sortSamplesBy: 'selectedTerms',
@@ -1079,7 +1078,11 @@ export async function getPlotConfig(opts, app) {
 				zoomMin: 0.5,
 				zoomIncrement: 0.5,
 				zoomStep: 10,
-				scrollHeight: 12
+				scrollHeight: 12,
+				controlLabels: {
+					samples: 'Samples',
+					terms: 'Variables'
+				}
 			}
 		}
 	}
@@ -1101,8 +1104,12 @@ export async function getPlotConfig(opts, app) {
 		linesep: false
 	}
 
+	const overrides = app.vocabApi.termdbConfig.matrix || {}
+	copyMerge(config.settings.matrix, overrides.settings)
+
 	// may apply term-specific changes to the default object
 	copyMerge(config, opts)
+
 	// harcode these overrides for now
 	config.settings.matrix.duration = 0
 	config.settings.matrix.mouseMode = 'select'
