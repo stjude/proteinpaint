@@ -3,9 +3,10 @@
 	"version": "2.11.4",
 	"bin": "launch.js",
 	"scripts": {
+		"//": "this dev script is for developing and testing the container itself, not for using the container as a dev environment",
 		"dev": "./pack.sh && ./build.sh",
 		"build": "rm -rf tmppack && ./build.sh",
-		"postinstall": "if [ ! -d client ]; then docker pull ghcr.io/stjude/ppfull:latest; fi"
+		"postinstall": "if [ ! -d ./pack.sh ]; then docker pull ghcr.io/stjude/ppfull:latest; fi"
 	},
 	"containerDeps": {
 		"server": "2.12.1",
