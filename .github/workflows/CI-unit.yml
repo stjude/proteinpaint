@@ -50,4 +50,6 @@ jobs:
         run: npm run test:unit --workspace="server"
 
       - name: Rust unit tests
-        run: npm run test:unit --workspace="rust"
+        run: |
+          npm run build --workspace="rust"
+          npm run test:unit --workspace="rust"
