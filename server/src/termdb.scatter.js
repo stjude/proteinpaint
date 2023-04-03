@@ -184,33 +184,19 @@ async function colorAndShapeSamples(refSamples, cohortSamples, data, q) {
 
 	const shapeMap = new Map()
 	const colorMap = new Map()
-
 	for (const sample of cohortSamples) {
 		const dbSample = data.samples[sample.sampleId.toString()]
-
+		if (!dbSample) continue
 		sample.cat_info = {}
 		sample.hidden = {}
-		let result = []
-		if (!q.colorTW) {
-			sample.category = 'Default'
-			result.push(sample)
-		} else {
-			if (q.colorTW?.q?.mode === 'continuous') {
-				if (dbSample) {
-					sample.category = dbSample[q.colorTW.term.id].value
-					result.push(sample)
-				}
-			} else result = processSample(dbSample, sample, q.colorTW, colorMap, 'category')
+		if (!q.colorTW) sample.category = 'Default'
+		else {
+			if (q.colorTW?.q?.mode === 'continuous') sample.category = dbSample[q.colorTW.term.id].value
+			else processSample(dbSample, sample, q.colorTW, colorMap, 'category')
 		}
-		if (q.shapeTW) {
-			for (const _sample of result) {
-				const sresult = processSample(dbSample, _sample, q.shapeTW, shapeMap, 'shape')
-				samples.push(...sresult)
-			}
-		} else {
-			sample.shape = 'Ref'
-			samples.push(...result)
-		}
+		if (q.shapeTW) processSample(dbSample, sample, q.shapeTW, shapeMap, 'shape')
+		else sample.shape = 'Ref'
+		samples.push(sample)
 	}
 	if (q.colorTW && q.colorTW.q.mode !== 'continuous') {
 		let i = 20
@@ -229,8 +215,6 @@ async function colorAndShapeSamples(refSamples, cohortSamples, data, q) {
 			} else if (q.colorTW.term.type != 'geneVariant') value.color = k2c(category)
 		}
 	}
-	//else
-	//sample.value = dbSample.value
 
 	let i = 1
 	for (const [category, value] of shapeMap) {
@@ -273,22 +257,23 @@ function processSample(dbSample, sample, tw, categoryMap, category) {
 			const class_info = mclass[mutation.class]
 			value = getCategory(mutation)
 			sample.cat_info[category].push(mutation)
-			if (!categoryMap.has(value))
-				categoryMap.set(value, { color: class_info.color, sampleCount: 1, hasOrigin: 'origin' in mutation })
-			else {
-				const mapValue = categoryMap.get(value)
+			let mapValue
+			if (!categoryMap.has(value)) {
+				mapValue = { color: class_info.color, sampleCount: 1, hasOrigin: 'origin' in mutation }
+				categoryMap.set(value, mapValue)
+			} else {
+				mapValue = categoryMap.get(value)
 				mapValue.sampleCount++
 				mapValue.hasOrigin = mapValue.hasOrigin || 'origin' in mutation
 			}
-
 			// TODO mutation.mname is amino acid change. pass mname to sample to be shown in tooltip
 		}
 		assignMutation(mutations, true)
 		if (!sample[category]) assignMutation(false)
 		//all hidden, will take any
 		if (!sample[category]) sample[category] = getCategory(mutations[0])
+
 		sample.hidden[category] = tw.q.hiddenValues ? sample[category] in tw.q.hiddenValues : false
-		result.push(sample)
 
 		function assignMutation(strict) {
 			for (const [dt, label] of Object.entries(dt2label)) {
@@ -311,10 +296,8 @@ function processSample(dbSample, sample, tw, categoryMap, category) {
 			sample[category] = value.toString()
 			if (!categoryMap.has(value)) categoryMap.set(value, { sampleCount: 1 })
 			else categoryMap.get(value).sampleCount++
-			result.push(sample)
 		}
 	}
-	return result
 }
 
 function getCategory(mutation) {
