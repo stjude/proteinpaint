@@ -1072,6 +1072,25 @@ async function validate_query_singleSampleMutation(ds, genome) {
 	if (q.gdcapi) {
 		gdc.validate_query_singleSampleMutation(ds, genome)
 		// q.get() added
+	} else if (q.folder) {
+		// using a folder to store text files for individual samples
+		// file names are integer sample id
+		q.get = async sampleName => {
+			/* as mds3 client may not be using integer sample id for now,
+			the argument is string id and has to be mapped to integer id
+			*/
+			let fileName = sampleName
+			if (ds.cohort?.termdb?.q?.sampleName2id) {
+				// has name-to-id converter
+				fileName = ds.cohort.termdb.q.sampleName2id(sampleName)
+				if (fileName == undefined) {
+					// unable to convert string id to integer
+					return []
+				}
+			}
+			const data = await utils.read_file(path.join(serverconfig.tpmasterdir, q.folder, fileName.toString()))
+			return JSON.parse(data)
+		}
 	} else {
 		throw 'unknown query method for singleSampleMutation'
 	}
