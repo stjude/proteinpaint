@@ -77,7 +77,7 @@ export function setRenderers(self) {
 		svg
 			.transition()
 			.duration(duration)
-			.attr('width', s.svgw + 1200)
+			.attr('width', s.svgw + 800)
 			.attr('height', Math.max(s.svgh + 100, legendHeight)) //leaving some space for top/bottom padding and y axis
 
 		/* eslint-disable */
@@ -785,7 +785,7 @@ export function setRenderers(self) {
 					G.append('text')
 						.attr('x', offsetX)
 						.attr('y', offsetY)
-						.text(category.sampleCount)
+						.text(`${category.sampleCount}${category.hasOrigin ? assay[0] : ''}`)
 						.style('font-size', '0.8em')
 				offsetY += 25
 			}
