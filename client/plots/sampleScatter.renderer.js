@@ -72,7 +72,7 @@ export function setRenderers(self) {
 	function renderSVG(svg, chart, s, duration, data) {
 		let colorLegends = self.colorLegend.size * 30
 		if (self.colorLegend.get('Ref').sampleCount > 0) colorLegends += 60
-		const legendHeight = Math.max(colorLegends, self.shapeLegend.size * 30) + 60 //legend step and header
+		const legendHeight = Math.max(colorLegends, self.shapeLegend.size * 30) + 100 //legend step and header
 
 		svg
 			.transition()
@@ -641,7 +641,6 @@ export function setRenderers(self) {
 		}
 		if (self.config.shapeTW) {
 			offsetX = 300
-			if (self.config.colorTW.term.type == 'geneVariant') offsetX = 500
 			offsetY = 50
 			title = `${self.config.shapeTW.term.name}, n=${self.cohortSamples.length}`
 			if (self.config.shapeTW.term.type == 'geneVariant')
@@ -718,7 +717,7 @@ export function setRenderers(self) {
 	}
 
 	self.renderGeneVariantLegend = function(offsetX, legendG, tw, cname, map) {
-		const step = 100
+		const step = 125
 		let offsetY = 25
 		const name = tw.term.name.length > 25 ? tw.term.name.slice(0, 25) + '...' : tw.term.name
 		let title = `${name}, n=${self.cohortSamples.length}`
@@ -732,69 +731,66 @@ export function setRenderers(self) {
 			.style('font-size', '0.8em')
 
 		offsetX += step
-		offsetY = 50
-		for (const [key, category] of map) {
-			if (key == 'Ref') continue
-			const mkey = key.split(',')[0]
-			const itemG = G.append('g')
-			if (cname == 'shape') {
-				const index = category.shape % self.symbols.length
-				itemG
-					.append('path')
-					.attr('transform', c => `translate(${offsetX - step}, ${offsetY - 5})`)
-					.style('fill', 'gray')
-					.attr('d', self.symbols[index].size(64)())
-					.style('stroke', rgb('gray').darker())
-			} else {
-				itemG
-					.append('circle')
-					.attr('cx', offsetX - step)
-					.attr('cy', offsetY - 5)
-					.attr('r', 5)
-					.style('fill', category.color)
-					.style('stroke', rgb(category.color).darker())
-				itemG.on('click', e => self.onColorClick(e, key, category))
-			}
-			const hidden = tw.q.hiddenValues ? key in tw.q.hiddenValues : false
-			G.append('g')
-				.append('text')
-				.attr('x', offsetX - step + 10)
-				.attr('y', offsetY)
-				.attr('name', 'sjpp-scatter-legend-label')
-				.style('text-decoration', hidden ? 'line-through' : 'none')
-				.text(mkey)
-				.style('font-size', '0.8em')
-				.on('click', event => self.onLegendClick(G, cname == 'shape' ? 'shapeTW' : 'colorTW', key, event))
-			offsetY += 25
-		}
-		offsetY = 0
-		offsetX += 30
 		const mutations = self.cohortSamples[0]['cat_info'][cname]
-		for (const mutation of mutations) {
+
+		for (const [i, mutation] of mutations.entries()) {
+			offsetY += 25
 			const dt = mutation.dt
 			const origin = morigin[mutation.origin]?.label
 			const dtlabel = origin ? `${origin[0]} ${dt2label[dt]}` : dt2label[dt]
 
 			G.append('text')
 				.attr('x', offsetX)
-				.attr('y', 25)
+				.attr('y', offsetY - 25)
 				.text(dtlabel)
 				.style('font-weight', 'bold')
 				.style('font-size', '0.8em')
 
-			offsetY = 50
 			for (const [key, category] of map) {
+				if (key == 'Ref') continue
+				if (!key.includes(dtlabel)) continue
+				const mkey = key.split(',')[0]
+				const itemG = G.append('g')
+				if (cname == 'shape') {
+					const index = category.shape % self.symbols.length
+					itemG
+						.append('path')
+						.attr('transform', c => `translate(${offsetX - step}, ${offsetY - 5})`)
+						.style('fill', 'gray')
+						.attr('d', self.symbols[index].size(64)())
+						.style('stroke', rgb('gray').darker())
+				} else {
+					itemG
+						.append('circle')
+						.attr('cx', offsetX - step)
+						.attr('cy', offsetY - 5)
+						.attr('r', 5)
+						.style('fill', category.color)
+						.style('stroke', rgb(category.color).darker())
+					itemG.on('click', e => self.onColorClick(e, key, category))
+				}
+				const hidden = tw.q.hiddenValues ? key in tw.q.hiddenValues : false
+				G.append('g')
+					.append('text')
+					.attr('x', offsetX - step + 10)
+					.attr('y', offsetY)
+					.attr('name', 'sjpp-scatter-legend-label')
+					.style('text-decoration', hidden ? 'line-through' : 'none')
+					.text(mkey)
+					.style('font-size', '0.8em')
+					.on('click', event => self.onLegendClick(G, cname == 'shape' ? 'shapeTW' : 'colorTW', key, event))
+
 				const assay = key.split(',')[1]
 				if (key.includes(dtlabel))
 					G.append('text')
 						.attr('x', offsetX)
 						.attr('y', offsetY)
-						.text(`${category.sampleCount}${category.hasOrigin ? assay[0] : ''}`)
+						.text(category.sampleCount)
 						.style('font-size', '0.8em')
 				offsetY += 25
 			}
-			offsetX += step
 		}
+
 		return offsetY
 	}
 }
