@@ -20,7 +20,8 @@ export class MatrixControls {
 			may use subapp state/recovery later
 		 */
 		//this.recover = new Recover({app: opts.app})
-		this.setButtons()
+		const state = this.parent.getState(appState)
+		this.setButtons(state.config.settings.matrix)
 		this.setInputGroups()
 		if (!this.parent.optionalFeatures.includes('zoom')) return
 		this.setZoomInput()
@@ -29,23 +30,22 @@ export class MatrixControls {
 			target: this.parent.dom.seriesesG
 		})
 		this.setResetInput()
-		const state = this.parent.getState(appState)
 		this.setSvgScroll(state)
 	}
 
-	setButtons() {
+	setButtons(s) {
 		this.btns = this.opts.holder
 			.style('margin', '10px 10px 20px 10px')
 			.selectAll('button')
 			.data([
 				{
 					value: 'samples',
-					label: `Samples`,
+					label: s.controlLabels.samples || `Samples`,
 					getCount: () => this.parent.sampleOrder.length
 				},
 				{
 					value: 'anno',
-					label: `Variables`,
+					label: s.controlLabels.samples || `Variables`,
 					getCount: () => this.parent.termOrder.length,
 					customInputs: this.appendTermInputs
 				},
@@ -71,13 +71,13 @@ export class MatrixControls {
 	setInputGroups() {
 		this.inputGroups = {
 			samples: [
-				{
+				/*{
 					label: 'Sample as rows',
 					boxLabel: '',
 					type: 'checkbox',
 					chartType: 'matrix',
 					settingsKey: 'transpose'
-				},
+				},*/
 				{
 					label: 'Sort samples',
 					type: 'radio',
@@ -114,13 +114,13 @@ export class MatrixControls {
 			],
 
 			anno: [
-				{
+				/*{
 					label: 'Terms as columns',
 					boxLabel: '',
 					type: 'checkbox',
 					chartType: 'matrix',
 					settingsKey: 'transpose'
-				},
+				},*/
 				{
 					label: 'Display sample counts for gene',
 					boxLabel: '',
@@ -310,19 +310,21 @@ export class MatrixControls {
 			.style('color', d => (d.active ? '#3a3' : ''))
 
 		const s = this.parent.config.settings.matrix
+		const d = this.parent.dimensions
 		if (this.zoomApi)
 			this.zoomApi.update({
 				value: Number(((100 * Math.min(s.colw * s.zoomLevel, s.maxColwZoomed)) / s.maxColwZoomed).toFixed(1))
 			})
 
-		const d = this.parent.dimensions
-		this.svgScrollApi.update({
-			x: d.xOffset,
-			y: d.yOffset - s.scrollHeight,
-			totalWidth: d.zoomedMainW,
-			visibleWidth: d.mainw,
-			zoomCenter: s.zoomCenterPct * d.mainw - d.seriesXoffset
-		})
+		if (this.svgScrollApi) {
+			this.svgScrollApi.update({
+				x: d.xOffset,
+				y: d.yOffset - s.scrollHeight,
+				totalWidth: d.zoomedMainW,
+				visibleWidth: d.mainw,
+				zoomCenter: s.zoomCenterPct * d.mainw - d.seriesXoffset
+			})
+		}
 	}
 
 	async callback(event, d) {
