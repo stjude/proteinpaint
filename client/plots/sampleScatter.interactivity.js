@@ -109,39 +109,42 @@ export function setInteractivity(self) {
 
 	self.onLegendClick = function(G, name, key, e) {
 		const tw = self.config[name]
+		const hidden = tw.q.hiddenValues ? key in tw.q.hiddenValues : false
 		const menu = new Menu({ padding: '5px' })
 		const div = menu.d.append('div')
 
-		div
-			.append('div')
-			.attr('class', 'sja_menuoption sja_sharp_border')
-			.text('Hide')
-			.on('click', () => {
-				self.hideCategory(G, tw, key, true)
-				menu.hide()
-				const config = {}
-				config[name] = tw
-				self.app.dispatch({
-					type: 'plot_edit',
-					id: self.id,
-					config
+		if (!hidden) {
+			div
+				.append('div')
+				.attr('class', 'sja_menuoption sja_sharp_border')
+				.text('Hide')
+				.on('click', () => {
+					self.hideCategory(G, tw, key, true)
+					menu.hide()
+					const config = {}
+					config[name] = tw
+					self.app.dispatch({
+						type: 'plot_edit',
+						id: self.id,
+						config
+					})
 				})
-			})
-		div
-			.append('div')
-			.attr('class', 'sja_menuoption sja_sharp_border')
-			.text('Show')
-			.on('click', () => {
-				self.hideCategory(G, tw, key, false)
-				menu.hide()
-				const config = {}
-				config[name] = tw
-				self.app.dispatch({
-					type: 'plot_edit',
-					id: self.id,
-					config
+		} else
+			div
+				.append('div')
+				.attr('class', 'sja_menuoption sja_sharp_border')
+				.text('Show')
+				.on('click', () => {
+					self.hideCategory(G, tw, key, false)
+					menu.hide()
+					const config = {}
+					config[name] = tw
+					self.app.dispatch({
+						type: 'plot_edit',
+						id: self.id,
+						config
+					})
 				})
-			})
 		div
 			.append('div')
 			.attr('class', 'sja_menuoption sja_sharp_border')

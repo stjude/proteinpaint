@@ -742,7 +742,7 @@ export function setRenderers(self) {
 			G.append('text')
 				.attr('x', offsetX)
 				.attr('y', offsetY - 25)
-				.text(dtlabel)
+				.text(origin ? `${origin} ${dt2label[dt]}` : dt2label[dt])
 				.style('font-weight', 'bold')
 				.style('font-size', '0.8em')
 
