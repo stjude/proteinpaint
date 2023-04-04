@@ -54,14 +54,12 @@ fi
 # COMPUTED VARIABLES
 ######################
 
-PLATFORM=""
+
 ARCH=$( uname -m )
 if [[ ${ARCH} == "arm64" ]]; then 
-	# ARCH="aarch64";
-	# Hardcoded until build is fixed for arm64
-	ARCH="x86_64"
-	# will emulate x86 arch in arm64 machines
-	PLATFORM="--platform=linux/amd64"
+	REGISTRY="--build-arg registry=arm64v8";
+else 
+	REGISTRY="--build-arg registry=docker.io/library"
 fi
 
 
@@ -78,20 +76,25 @@ set -e
 if [[ "$HASH" != "" ]]; then
 	IMGREV="$HASH"
 fi
+RUSTPKGVER="$(node -p "require('./package.json').containerDeps.rust")"
 SERVERPKGVER="$(node -p "require('./package.json').containerDeps.server")"
 FRONTPKGVER="$(node -p "require('./package.json').containerDeps.front")"
+PKGVERARGS="--build-arg RUSTPKGVER=$RUSTPKGVER --build-arg SERVERPKGVER=$SERVERPKGVER --build-arg FRONTPKGVER=$FRONTPKGVER"
 
 echo "building ${MODE}ppbase image"
-docker buildx build . --file ./Dockerfile --target ppbase --tag "${MODE}ppbase:latest" $PLATFORM --build-arg ARCH="$ARCH" $BUILDARGS --output type=docker
+docker buildx build . --file ./Dockerfile --target ppbase --tag "${MODE}ppbase:latest" $REGISTRY --build-arg ARCH="$ARCH" $BUILDARGS --output type=docker
 
 echo "building ${MODE}pprust image"
-docker buildx build . --file ./Dockerfile --target pprust --tag "${MODE}pprust:latest" $PLATFORM --build-arg ARCH="$ARCH" $BUILDARGS --output type=docker
+docker buildx build . --file ./Dockerfile --target pprust --tag "${MODE}pprust:latest" $REGISTRY $PKGVERARGS --build-arg ARCH="$ARCH" $BUILDARGS --output type=docker
+
+echo "building ${MODE}ppserverdeps image"
+docker buildx build . --file ./Dockerfile --target ppserverdeps --tag "${MODE}ppserverdeps:latest" $REGISTRY $PKGVERARGS --build-arg IMGVER=$IMGVER --build-arg IMGREV=$IMGREV --build-arg SERVERPKGVER=$SERVERPKGVER --build-arg CROSSENV="$CROSSENV" $BUILDARGS --output type=docker
 
 echo "building ${MODE}ppserver image"
-docker buildx build . --file ./Dockerfile --target ppserver --tag "${MODE}ppserver:latest" $PLATFORM --build-arg IMGVER=$IMGVER --build-arg IMGREV=$IMGREV --build-arg SERVERPKGVER=$SERVERPKGVER --build-arg CROSSENV="$CROSSENV" $BUILDARGS --output type=docker
+docker buildx build . --file ./Dockerfile --target ppserver --tag "${MODE}ppserver:latest" $REGISTRY $PKGVERARGS --build-arg IMGVER=$IMGVER --build-arg IMGREV=$IMGREV --build-arg SERVERPKGVER=$SERVERPKGVER --build-arg CROSSENV="$CROSSENV" $BUILDARGS --output type=docker
 
 echo "building ${MODE}ppfull image"
-docker buildx build . --file ./Dockerfile --target ppfull --tag "${MODE}ppfull:latest" $PLATFORM --build-arg IMGVER=$IMGVER --build-arg IMGREV=$IMGREV --build-arg SERVERPKGVER=$SERVERPKGVER --build-arg FRONTPKGVER=$FRONTPKGVER --build-arg CROSSENV="$CROSSENV" $BUILDARGS --output type=docker
+docker buildx build . --file ./Dockerfile --target ppfull --tag "${MODE}ppfull:latest" $REGISTRY $PKGVERARGS --build-arg IMGVER=$IMGVER --build-arg IMGREV=$IMGREV --build-arg SERVERPKGVER=$SERVERPKGVER --build-arg FRONTPKGVER=$FRONTPKGVER --build-arg CROSSENV="$CROSSENV" $BUILDARGS --output type=docker
 
 # in non-dev/repo environment, may automatically add extra tags
 if [[ "$MODE" != "" ]]; then

@@ -13,7 +13,6 @@ ENV RUSTUP_HOME=/usr/local/rustup \
 RUN apt-get update && apt-get install -y \
     curl \
     wget \
-    git \
     build-essential \
     librsvg2-dev \
 	libbz2-dev \
@@ -56,6 +55,7 @@ RUN apt-get update && apt-get install -y r-base -y libargtable2-dev \
     && rm -rf /var/lib/apt/lists/ \
     && rm -rf /tmp/downloaded_packages/ /tmp/*.rds
 
+
 RUN mkdir -p /home/root/pp && cd /home/root/pp && mkdir app && mkdir tp && mkdir cache && mkdir tools
 
 RUN if [ "$ARCH" = "x86_64" ]; then \
@@ -75,45 +75,67 @@ RUN if [ "$ARCH" = "x86_64" ]; then \
         exit 1; \
     fi
 
-# Separate rust build so that the compiled code may be copied later
-# in isolation, without including all the rust toolchain in the image
-FROM ppbase AS pprust
+RUN chown -R node:node /home/root/pp
 
-RUN set -eux; \
-    wget https://static.rust-lang.org/rustup/dist/${ARCH}-unknown-linux-gnu/rustup-init; \
-    chmod +x rustup-init; \
-    ./rustup-init -y --no-modify-path --default-toolchain stable; \
-    rm rustup-init; \
-    chmod -R a+w $RUSTUP_HOME $CARGO_HOME; \
-    rustup --version; \
-    cargo --version; \
-    rustc --version; \
-    cd ${CARGO_HOME} && echo "net.git-fetch-with-cli = true" > config.toml; \
-    cargo install sccache \
-    ## clean up
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/
+######################################
+# pp-rust package npm copy since the 
+# rust base image does not have npm
+######################################
 
-WORKDIR /home/root/pp/app
-
-# enable ssh into this stage, for troubleshooting
-CMD ["sleep", "3600"]
-
-#####################
-# Server-only install
-######################
-
-# target for the backend-only SJ package with compiled rust binaries
-FROM pprust AS ppserverdeps
+FROM ppbase AS pprustpkg
 
 WORKDIR /home/root/pp
 COPY tmppack ./tmppack
+
+ARG RUSTPKGVER=2.9.1
+# pull the pp-rust package as a tarball, 
+# since the base rust image in the next stage
+# does not have node or npm
+RUN if [ ! -f "/home/root/pp/tmppack/sjcrh-proteinpaint-rust-$RUSTPKGVER.tgz" ]; then \
+      npm pack @sjcrh/proteinpaint-rust@$RUSTPKGVER; \
+    fi
+
+###########################################
+# Stage for compiling the pp-rust binaries
+###########################################
+
+# Separate rust build so that the compiled code may be copied later
+# in isolation, without including all the rust toolchain in the image
+FROM ${registry}/rust:1-buster AS pprust
+
+WORKDIR /home/root/pp
+# TODO: separate rust cargo dependencies before installing pp-rust, for better build caching
+# USER node
+COPY tmppack ./tmppack
+ARG RUSTPKGVER=2.9.1
+COPY --from=pprustpkg /home/root/pp/tmppack/sjcrh-proteinpaint-rust-${RUSTPKGVER}.tgz /home/root/pp/tmppack/sjcrh-proteinpaint-rust-${RUSTPKGVER}.tgz
+
+RUN tar -xzf /home/root/pp/tmppack/sjcrh-proteinpaint-rust-${RUSTPKGVER}.tgz && \
+    cd package && \
+    cargo build --release && \
+    cd .. && \
+    tar -czf tmppack/sjcrh-proteinpaint-rust-${RUSTPKGVER}.tgz package
+
+CMD ["sleep", "3600"]
+
+######################
+# Server-deps install
+######################
+
+# target for the backend-only SJ package with compiled rust binaries
+FROM ppbase AS ppserverdeps
+
+WORKDIR /home/root/pp
+# TODO: separate npm install dependencies before installing pp packages, for better build caching
+COPY tmppack ./tmppack
+ARG RUSTPKGVER=2.9.1
+COPY --from=pprust /home/root/pp/tmppack/sjcrh-proteinpaint-rust-${RUSTPKGVER}.tgz /home/root/pp/tmppack/sjcrh-proteinpaint-rust-${RUSTPKGVER}.tgz
 
 WORKDIR /home/root/pp/app 
 RUN mkdir active
 # !!! NOTE: after open-sourcing, will only need the @sjcrh registry URL, no token required !!!
 WORKDIR /home/root/pp/app/active
-ARG SERVERPKGVER
+ARG SERVERPKGVER=2.12.1
 RUN if [ -f /home/root/pp/tmppack/sjcrh-proteinpaint-server-${SERVERPKGVER}.tgz ]; then \
       npm install /home/root/pp/tmppack/sjcrh-proteinpaint-server-${SERVERPKGVER}.tgz; \
     else \
@@ -123,14 +145,15 @@ RUN if [ -f /home/root/pp/tmppack/sjcrh-proteinpaint-server-${SERVERPKGVER}.tgz 
 # enable ssh into this stage, for troubleshooting
 CMD ["sleep", "3600"]
 
-#####################
-# Server-only app
-######################
+###########################
+# Server-only app, 
+# no /home/root/pp/tmppack
+###########################
 
 # target for the backend-only SJ server app
 FROM ppbase AS ppserver
 
-LABEL org.opencontainers.image.source="https://github.com/stjude/proteinpaint" \
+LABEL org.opencontainers.image.source="https://github.com/sjcrh/proteinpaint" \
     org.opencontainers.image.revision="$IMGREV" \
     org.opencontainers.image.version="$IMGVER"
 
@@ -148,7 +171,7 @@ CMD ["sh", "-c", "node app-server.js"]
 #################
 
 # target for the full (backend + frontend) SJ package with compiled rust binaries
-FROM pprust AS ppfulldeps
+FROM ppbase AS ppfulldeps
 
 WORKDIR /home/root/pp
 COPY tmppack ./tmppack
@@ -156,7 +179,7 @@ WORKDIR /home/root/pp/app
 COPY --from=ppserver /home/root/pp/app/active /home/root/pp/app/active
 
 WORKDIR /home/root/pp/app/active
-ARG FRONTPKGVER
+ARG FRONTPKGVER=2.12.1
 RUN if [ -f /home/root/pp/tmppack/sjcrh-proteinpaint-front-${FRONTPKGVER}.tgz ]; then \
       npm install /home/root/pp/tmppack/sjcrh-proteinpaint-front-${FRONTPKGVER}.tgz ; \
     else \
@@ -173,7 +196,7 @@ CMD ["sleep", "3600"]
 # target for the full (backend + frontend) SJ app
 FROM ppbase AS ppfull
 
-LABEL org.opencontainers.image.source="https://github.com/stjude/proteinpaint" \
+LABEL org.opencontainers.image.source="https://github.com/sjcrh/proteinpaint" \
     org.opencontainers.image.revision="$IMGREV" \
     org.opencontainers.image.version="$IMGVER"
 

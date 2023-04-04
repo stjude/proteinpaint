@@ -22,6 +22,7 @@ EXPOSED_PORT=$(node -p "require('./serverconfig.json').port || 3000")
 ############
 
 # defaults
+IMAGE_NAME=ppfull:latest
 CONTAINER_NAME=pp
 
 # overrides
@@ -73,5 +74,6 @@ docker run -d \
 	$IMAGE_NAME
 
 echo "^ assigned container ID ^"
+
 
 ./verify.sh $CONTAINER_NAME $HOSTPORT $EXPOSED_PORT

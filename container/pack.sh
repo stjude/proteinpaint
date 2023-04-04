@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -e
+
 # this script:
 # - will pack workspaces 
 # - replace each workspace package.json's dependency versions

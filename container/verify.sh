@@ -81,11 +81,17 @@ fi
 # Hints
 ########
 
+if [[ "$(docker inspect pp -f '{{ .Config.Image }}')" == *server* ]]; then
+  APPURLMESSAGE="Server-only data API at http://localhost:$HOSTPORT (no static html served)"
+else 
+  APPURLMESSAGE="Open the ProteinPaint app at http://localhost:$HOSTPORT/ in you web browser"
+fi
+
 echo -e "\n************************************************************************"
 echo "*"
-echo "* Open the ProteinPaint app at http://localhost:$HOSTPORT in you web browser"
+echo "* $APPURLMESSAGE "
 echo "*"
-echo -e "*************************************************************************"
+echo -e "************************************************************************"
 
 echo -e "\nHints:"
 echo "- inspect logs with 'docker logs $CONTAINER_NAME'"
