@@ -252,8 +252,6 @@ export function setRenderers(self) {
 			const opacity = c.hidden['category'] || c.hidden['shape'] ? 0 : self.settings.opacity
 			return opacity
 		}
-		const showOnly = self.config.groups.find(group => group.showOnly)
-		if (showOnly) return 0
 		const refOpacity = self.settings.showRef ? self.settings.opacity : 0
 		return refOpacity
 	}
