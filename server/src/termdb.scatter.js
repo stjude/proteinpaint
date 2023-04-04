@@ -202,16 +202,12 @@ async function colorAndShapeSamples(refSamples, cohortSamples, data, q) {
 				}
 			} else result = processSample(dbSample, sample, q.colorTW, colorMap, 'category')
 		}
-		if (q.shapeTW) {
-			for (const _sample of result) {
-				const sresult = processSample(dbSample, _sample, q.shapeTW, shapeMap, 'shape')
-				samples.push(...sresult)
-			}
-		} else {
-			sample.shape = 'Ref'
-			samples.push(...result)
-		}
+
+		if (q.shapeTW) processSample(dbSample, sample, q.shapeTW, shapeMap, 'shape')
+		else sample.shape = 'Ref'
+		samples.push(sample)
 	}
+
 	if (q.colorTW && q.colorTW.q.mode !== 'continuous') {
 		let i = 20
 		const scheme = schemeCategory20
@@ -250,14 +246,12 @@ async function colorAndShapeSamples(refSamples, cohortSamples, data, q) {
 	])
 	const shapeLegend = order(shapeMap, q.shapeTW, data.refs)
 	shapeLegend.push(['Ref', { sampleCount: refSamples.length, shape: 0 }])
-
 	return {
 		samples,
 		colorLegend: Object.fromEntries(colorLegend),
 		shapeLegend: Object.fromEntries(shapeLegend)
 	}
 }
-
 function processSample(dbSample, sample, tw, categoryMap, category) {
 	let color = null,
 		value = null
@@ -269,21 +263,23 @@ function processSample(dbSample, sample, tw, categoryMap, category) {
 	if (tw.term.type == 'geneVariant') {
 		const mutations = dbSample?.[tw.term.name]?.values
 		sample.cat_info[category] = []
+
 		for (const mutation of mutations) {
 			const class_info = mclass[mutation.class]
 			value = getCategory(mutation)
 			sample.cat_info[category].push(mutation)
-			if (!categoryMap.has(value))
-				categoryMap.set(value, { color: class_info.color, sampleCount: 1, hasOrigin: 'origin' in mutation })
-			else {
-				const mapValue = categoryMap.get(value)
-				mapValue.sampleCount++
+
+			let mapValue
+			if (!categoryMap.has(value)) {
+				mapValue = { color: class_info.color, sampleCount: 1, hasOrigin: 'origin' in mutation }
+				categoryMap.set(value, mapValue)
+			} else {
+				mapValue = categoryMap.get(value)
+				mapValue.sampleCount = mapValue.sampleCount + 1
 				mapValue.hasOrigin = mapValue.hasOrigin || 'origin' in mutation
 			}
-
-			// TODO mutation.mname is amino acid change. pass mname to sample to be shown in tooltip
 		}
-		assignMutation(mutations, true)
+		assignMutation(true)
 		if (!sample[category]) assignMutation(false)
 		//all hidden, will take any
 		if (!sample[category]) sample[category] = getCategory(mutations[0])
