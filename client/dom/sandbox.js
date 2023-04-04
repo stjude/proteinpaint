@@ -16,16 +16,33 @@ newSandboxDiv
 */
 
 export function renderSandboxFormDiv(holder, genomes) {
-	const inputdiv = holder.append('div').style('margin', '40px 20px 20px 20px')
-	const p = inputdiv.append('p')
+	//Classes for unit testing
+	holder.classed('sjpp-sandbox-form', true)
+	const inputdiv = holder
+		.append('div')
+		.style('margin', '40px 20px 20px 20px')
+		.classed('sjpp-sandbox-form-inputDiv', true)
+	const p = inputdiv.append('p').classed('sjpp-sandbox-form-gselect', true)
 	p.append('span').html('Genome&nbsp;')
 	const gselect = p.append('select')
 	for (const n in genomes) {
 		gselect.append('option').text(n)
 	}
-	const filediv = inputdiv.append('div').style('margin', '20px 0px')
-	const saydiv = holder.append('div').style('margin', '10px 20px')
-	const visualdiv = holder.append('div').style('margin', '20px')
+	//For file select, pathway input, etc.
+	const filediv = inputdiv
+		.append('div')
+		.style('margin', '20px 0px')
+		.classed('sjpp-sandbox-form-fileDiv', true)
+	//For error messages
+	const saydiv = holder
+		.append('div')
+		.style('margin', '10px 20px')
+		.classed('sjpp-sandbox-form-sayDiv', true)
+	//For displaying output
+	const visualdiv = holder
+		.append('div')
+		.style('margin', '20px')
+		.classed('sjpp-sandbox-form-visualDiv', true)
 	return [inputdiv, gselect.node(), filediv, saydiv, visualdiv]
 }
 
