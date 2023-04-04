@@ -23,7 +23,6 @@ export class MatrixControls {
 		const state = this.parent.getState(appState)
 		this.setButtons(state.config.settings.matrix)
 		this.setInputGroups()
-		if (!this.parent.optionalFeatures.includes('zoom')) return
 		this.setZoomInput()
 		this.setDragToggle({
 			holder: this.opts.holder.append('div').style('display', 'inline-block'),
@@ -45,7 +44,7 @@ export class MatrixControls {
 				},
 				{
 					value: 'anno',
-					label: s.controlLabels.samples || `Variables`,
+					label: s.controlLabels.terms || `Variables`,
 					getCount: () => this.parent.termOrder.length,
 					customInputs: this.appendTermInputs
 				},
@@ -325,6 +324,17 @@ export class MatrixControls {
 				zoomCenter: s.zoomCenterPct * d.mainw - d.seriesXoffset
 			})
 		}
+
+		if (this.dragToggleApi) {
+			this.dragToggleApi.update(s.mouseMode ? { mouseMode: s.mouseMode } : {})
+		}
+	}
+
+	getSettings() {
+		// return control settings that are not tracked in the global app state or plot state
+		return {
+			mouseMode: this.dragToggleApi.getSettings().mouseMode
+		}
 	}
 
 	async callback(event, d) {
@@ -554,8 +564,7 @@ export class MatrixControls {
 								zoomLevel,
 								zoomCenterPct: 0.5,
 								zoomIndex: c.totalIndex,
-								zoomGrpIndex: c.grpIndex,
-								mouseMode: 'zoom'
+								zoomGrpIndex: c.grpIndex
 							}
 						}
 					}
@@ -566,7 +575,7 @@ export class MatrixControls {
 
 	setDragToggle(opts = {}) {
 		const defaults = {
-			mode: 'select',
+			mouseMode: 'select',
 			activeBgColor: 'rgb(240, 236, 123)'
 		}
 
@@ -584,12 +593,7 @@ export class MatrixControls {
 					.style('width', '25px')
 					.style('height', '24.5px')
 					.style('background-color', defaults.activeBgColor)
-					.on('click', () => {
-						opts.target.style('cursor', 'crosshair')
-						this.parent.settings.matrix.mouseMode = 'select'
-						instance.dom.selectBtn.style('background-color', instance.opts.activeBgColor)
-						instance.dom.grabBtn.style('background-color', '')
-					}),
+					.on('click', () => setMode('select')),
 
 				grabBtn: opts.holder
 					.append('button')
@@ -597,18 +601,35 @@ export class MatrixControls {
 					.style('display', 'inline-block')
 					.style('width', '25px')
 					.style('height', '24.5px')
-					.on('click', () => {
-						opts.target.style('cursor', 'grab')
-						this.parent.settings.matrix.mouseMode = 'pan'
-						instance.dom.selectBtn.style('background-color', '')
-						instance.dom.grabBtn.style('background-color', instance.opts.activeBgColor)
-					})
+					.on('click', () => setMode('pan'))
 			}
 		}
 
 		//icons.crosshair(instance.dom.selectBtn, { width: 18, height: 18, transform: 'translate(50,50)' })
 		icons.arrowPointer(instance.dom.selectBtn, { width: 14, height: 14, transform: 'translate(50,50)' })
 		icons.grab(instance.dom.grabBtn, { width: 14, height: 14, transform: 'translate(30,50)' })
+
+		const self = this
+		function setMode(m) {
+			instance.opts.mouseMode = m
+			self.parent.settings.matrix.mouseMode = m
+			opts.target.style('cursor', m == 'select' ? 'crosshair' : 'grab')
+			instance.dom.selectBtn.style('background-color', m == 'select' ? instance.opts.activeBgColor : '')
+			instance.dom.grabBtn.style('background-color', m == 'pan' ? instance.opts.activeBgColor : '')
+		}
+
+		// NOTE:
+		this.dragToggleApi = {
+			update(s = {}) {
+				Object.assign(instance.opts, s)
+				setMode(instance.opts.mouseMode)
+			},
+			getSettings() {
+				return {
+					mouseMode: instance.opts.mouseMode
+				}
+			}
+		}
 	}
 
 	setResetInput() {
@@ -619,7 +640,6 @@ export class MatrixControls {
 			.on('click', () => {
 				const s = this.parent.settings.matrix
 				const d = this.parent.dimensions
-				s.mouseMode = 'zoom'
 				this.parent.app.dispatch({
 					type: 'plot_edit',
 					id: this.parent.id,

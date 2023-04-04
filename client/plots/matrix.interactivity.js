@@ -1437,7 +1437,6 @@ function setLabelDragEvents(self, prefix) {
 
 function setZoomPanActions(self) {
 	self.seriesesGMousedown = function(event) {
-		if (!self.optionalFeatures.includes('zoom')) return
 		event.stopPropagation()
 		const startCell = self.getCellByPos(event)
 		if (!startCell) return
@@ -1541,8 +1540,7 @@ function setZoomPanActions(self) {
 					matrix: {
 						zoomCenterPct: 0.5,
 						zoomIndex: c.totalIndex,
-						zoomGrpIndex: c.grpIndex,
-						mouseMode: 'pan'
+						zoomGrpIndex: c.grpIndex
 					}
 				}
 			}
@@ -1620,8 +1618,7 @@ function setZoomPanActions(self) {
 						zoomLevel,
 						zoomCenterPct: zoomLevel < 1 && d.mainw >= d.zoomedMainW ? 0.5 : zoomCenter / d.mainw,
 						zoomIndex,
-						zoomGrpIndex: centerCell.grpIndex,
-						mouseMode: 'select'
+						zoomGrpIndex: centerCell.grpIndex
 					}
 				}
 			}

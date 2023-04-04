@@ -242,7 +242,8 @@ class Matrix {
 			if (this.mayRequireToken()) return
 
 			const prevTranspose = this.settings.transpose
-			Object.assign(this.settings, this.config.settings)
+			// controlsRenderer.getSettings() supplies settings that are not tracked in the global app and plot state
+			Object.assign(this.settings, this.config.settings, this.controlsRenderer.getSettings())
 
 			this.computeStateDiff()
 
@@ -1070,7 +1071,6 @@ export async function getPlotConfig(opts, app) {
 				termLabelOffset: 80,
 				termGrpLabelOffset: 80,
 				duration: 0,
-				mouseMode: 'select',
 				zoomLevel: 1,
 				zoomCenterPct: 0,
 				zoomIndex: 0,
@@ -1112,7 +1112,6 @@ export async function getPlotConfig(opts, app) {
 
 	// harcode these overrides for now
 	config.settings.matrix.duration = 0
-	config.settings.matrix.mouseMode = 'select'
 
 	const promises = []
 	for (const grp of config.termgroups) {
