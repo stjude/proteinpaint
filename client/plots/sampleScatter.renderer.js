@@ -226,7 +226,7 @@ export function setRenderers(self) {
 	self.getColor = function(c) {
 		if (self.config.colorTW?.q.mode == 'continuous' && 'sampleId' in c) return self.colorGenerator(c.category)
 		const category = self.colorLegend.get(c.category)
-		if (self.config.colorTW.term.type == 'geneVariant') {
+		if (self.config.colorTW?.term.type == 'geneVariant') {
 			const mutations = c.cat_info.category
 			const catMutations = mutations.filter(
 				mutation =>
