@@ -953,10 +953,12 @@ output:
 array of objects, each object is one bed item
 */
 async function query_file(q, tkfile, dir, flag_gm, gmisoform) {
+	// if set, content is last bed file line with invalid json string in 4th column, to throw exception
+	let invalidJsonLine
+
 	if (flag_gm) {
 		// query over the gene region, just one region
 		const items = []
-		let errlinecount = 0
 
 		if (q.fileIsBigbed) {
 			const lines = await utils.query_bigbed_by_coord(tkfile, flag_gm.chr, flag_gm.start, flag_gm.stop)
@@ -995,7 +997,7 @@ async function query_file(q, tkfile, dir, flag_gm, gmisoform) {
 						try {
 							j = JSON.parse(l[3])
 						} catch (e) {
-							errlinecount++
+							invalidJsonLine = line
 							return
 						}
 					}
@@ -1021,7 +1023,10 @@ async function query_file(q, tkfile, dir, flag_gm, gmisoform) {
 				}
 			})
 		}
-		return [items]
+
+		if (invalidJsonLine) throw 'Line with invalid JSON: ' + invalidJsonLine
+
+		return [items] // nothing wrong
 	}
 
 	// query over genomic regions
@@ -1063,7 +1068,7 @@ async function query_file(q, tkfile, dir, flag_gm, gmisoform) {
 						try {
 							j = JSON.parse(l[3])
 						} catch (e) {
-							errlinecount++
+							invalidJsonLine = line
 							return
 						}
 					}
@@ -1078,6 +1083,9 @@ async function query_file(q, tkfile, dir, flag_gm, gmisoform) {
 
 		regions.push(itemofthisregion)
 	}
+
+	if (invalidJsonLine) throw 'Line with invalid JSON: ' + invalidJsonLine
+
 	return regions
 }
 
