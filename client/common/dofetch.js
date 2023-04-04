@@ -312,9 +312,11 @@ async function defaultAuthUi(dslabel) {
 
 	const form = mask.append('div').style('opacity', 1)
 	form.append('div').html(`Restricted dataset '${dslabel}'`)
-	//form.append('br')
-	form.append('span').html('Please enter a password ')
+	form.append('span').html('Please enter password ')
+
 	const pwd = form.append('input').attr('type', 'password')
+	pwd.node().focus()
+
 	const btn = form.append('button').html('Submit')
 	return new Promise((resolve, reject) => {
 		function login() {
