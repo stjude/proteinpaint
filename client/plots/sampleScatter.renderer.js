@@ -1,7 +1,7 @@
 import { zoom as d3zoom, zoomIdentity } from 'd3-zoom'
 import { icons as icon_functions } from '#dom/control.icons'
 import { d3lasso } from '#common/lasso'
-import { dt2label, morigin } from '#shared/common'
+import { dt2label, morigin, mclass } from '#shared/common'
 import { rgb } from 'd3-color'
 import { scaleLinear as d3Linear } from 'd3-scale'
 import { axisLeft, axisBottom } from 'd3-axis'
@@ -225,13 +225,30 @@ export function setRenderers(self) {
 
 	self.getColor = function(c) {
 		if (self.config.colorTW?.q.mode == 'continuous' && 'sampleId' in c) return self.colorGenerator(c.category)
-		const color = self.colorLegend.get(c.category).color
-
-		return color
+		const category = self.colorLegend.get(c.category)
+		if (self.config.colorTW.term.type == 'geneVariant') {
+			const mutations = c.cat_info.category
+			const catMutations = mutations.filter(
+				mutation =>
+					mutation.class != 'WT' && mutation.class != 'Blank' && c.category.includes(mclass[mutation.class].label)
+			)
+			if (catMutations.length > 1)
+				return rgb(category.color)
+					.darker()
+					.darker()
+		}
+		return category.color
 	}
 
 	self.getOpacity = function(c) {
 		if ('sampleId' in c) {
+			for (const group of self.config.groups)
+				if (group.showOnly) {
+					for (const sample of group.items)
+						if (c.sampleId == sample.sampleId)
+							return c.hidden['category'] || c.hidden['shape'] ? 0 : self.settings.opacity
+					return 0
+				}
 			const opacity = c.hidden['category'] || c.hidden['shape'] ? 0 : self.settings.opacity
 			return opacity
 		}
@@ -410,6 +427,14 @@ export function setRenderers(self) {
 			.style('margin', '20px')
 			.attr('name', 'sjpp-zoom-out-btn') //For unit tests
 		icon_functions['zoomOut'](zoomOutDiv, { handler: zoomOut })
+		const canSearch = self.cohortSamples.length > 0 && 'sample' in self.cohortSamples[0]
+		if (canSearch) {
+			const searchDiv = toolsDiv
+				.insert('div')
+				.style('display', display)
+				.style('margin', '20px')
+			icon_functions['search'](searchDiv, { handler: e => self.searchSample(e) })
+		}
 		const lassoDiv = toolsDiv
 			.insert('div')
 			.style('display', display)

@@ -222,6 +222,32 @@ export function setInteractivity(self) {
 		})
 	}
 
+	self.searchSample = function(e) {
+		const menu = new Menu()
+		const input = menu.d.append('input').on('change', () => {
+			// ok to not await here, since no returned value is required
+			// and menu.hide() does not need to wait for the dispatch to finish
+			const value = input.node().value
+			const items = []
+			for (const sample of self.cohortSamples)
+				if (sample.sample.toUpperCase().includes(value.toUpperCase())) items.push(sample)
+			if (items.length == 0) {
+				msgDiv.text('No samples found')
+				return
+			}
+			self.config.groups.push({
+				name: `Group ${self.config.groups.length + 1}`,
+				items,
+				index: self.config.groups.length,
+				showOnly: true
+			})
+			self.app.dispatch({ type: 'plot_edit', id: self.id, config: { groups: self.config.groups } })
+			menu.hide()
+		})
+		const msgDiv = menu.d.append('div').style('padding-left', '5px')
+		menu.show(e.clientX, e.clientY, false)
+	}
+
 	self.openSurvivalPlot = async function(term, groups) {
 		const plot_name = self.config.name ? self.config.name : 'Summary scatter'
 		const disabled = !('sample' in groups[0].items[0])
@@ -499,6 +525,14 @@ export function setInteractivity(self) {
 			.text('Add to filter')
 			.on('click', () => {
 				self.addToFilter(group)
+				self.app.dispatch({ type: 'plot_edit', id: self.id, config: { groups: self.config.groups } })
+			})
+		menuDiv
+			.append('div')
+			.attr('class', 'sja_menuoption sja_sharp_border')
+			.text(group.showOnly ? 'Show All' : 'Show Only')
+			.on('click', () => {
+				group.showOnly = !group.showOnly
 				self.app.dispatch({ type: 'plot_edit', id: self.id, config: { groups: self.config.groups } })
 			})
 	}
