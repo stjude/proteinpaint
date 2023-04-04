@@ -238,7 +238,8 @@ export function setInteractivity(self) {
 				//Enter
 				if (group.items.length == 0 || group.items.length == self.cohortSamples.length) msgDiv.text('Invalid group')
 				else {
-					group.fromSearch = false
+					self.config.groups[self.config.groups.length - 1].fromSearch = false
+					self.app.dispatch({ type: 'plot_edit', id: self.id, config: { groups: self.config.groups } })
 					menu.hide()
 				}
 				return
