@@ -223,8 +223,26 @@ export function setInteractivity(self) {
 	}
 
 	self.searchSample = function(e) {
-		const menu = new Menu()
-		const input = menu.d.append('input').on('change', () => {
+		const menu = new Menu({ padding: '5px' })
+		let group
+		const input = menu.d.append('input').on('keyup', event => {
+			if (event.code == 'Escape') {
+				if (group) {
+					self.config.groups.splice(group.index, 1)
+					self.app.dispatch({ type: 'plot_edit', id: self.id, config: { groups: self.config.groups } })
+				}
+				menu.hide()
+				return
+			}
+			if (event.code == 'Enter' && group) {
+				//Enter
+				if (group.items.length == 0 || group.items.length == self.cohortSamples.length) msgDiv.text('Invalid group')
+				else {
+					group.fromSearch = false
+					menu.hide()
+				}
+				return
+			}
 			// ok to not await here, since no returned value is required
 			// and menu.hide() does not need to wait for the dispatch to finish
 			const value = input.node().value
@@ -233,17 +251,23 @@ export function setInteractivity(self) {
 				if (sample.sample.toUpperCase().includes(value.toUpperCase())) items.push(sample)
 			if (items.length == 0) {
 				msgDiv.text('No samples found')
-				return
+			} else msgDiv.text('')
+			if (self.config.groups.length > 0 && self.config.groups[self.config.groups.length - 1].fromSearch) {
+				group = self.config.groups[self.config.groups.length - 1]
+				group.items = items
+			} else {
+				group = {
+					name: `Group ${self.config.groups.length + 1}`,
+					items,
+					index: self.config.groups.length,
+					showOnly: true,
+					fromSearch: true
+				}
+				self.config.groups.push(group)
 			}
-			self.config.groups.push({
-				name: `Group ${self.config.groups.length + 1}`,
-				items,
-				index: self.config.groups.length,
-				showOnly: true
-			})
 			self.app.dispatch({ type: 'plot_edit', id: self.id, config: { groups: self.config.groups } })
-			menu.hide()
 		})
+
 		const msgDiv = menu.d.append('div').style('padding-left', '5px')
 		menu.show(e.clientX, e.clientY, false)
 	}
