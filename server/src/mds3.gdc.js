@@ -481,8 +481,8 @@ async function getGeneCnv4oneCase(opts) {
 		'cnv.start_position',
 		'cnv.end_position',
 		'cnv.cnv_change',
-		'cnv.gene_level_cn'
-		//'cnv.consequence.gene.symbol' // turn on later if gene is needed
+		'cnv.gene_level_cn',
+		'cnv.consequence.gene.symbol' // turn on later if gene is needed
 	]
 	const headers = getheaders(opts)
 	const tmp = await got.post(path.join(apihost, 'cnv_occurrences'), {
@@ -512,11 +512,14 @@ async function getGeneCnv4oneCase(opts) {
 		}
 		if (h.cnv.cnv_change == 'Gain') {
 			m.value = 1
+			//m.class = common.mclass.mclasscnvgain
 		} else if (h.cnv.cnv_change == 'Loss') {
 			m.value = -1
+			//m.class=common.mclass.mclasscnvloss
 		} else {
 			throw 'h.cnv.cnv_change value not Gain or Loss'
 		}
+		if (h.cnv.consequence?.gene?.symbol) m.gene = h.cnv.consequence.gene.symbol
 		cnvs.push(m)
 	}
 	return cnvs
