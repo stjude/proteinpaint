@@ -494,6 +494,10 @@ export const icons = {
 		const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${_opts.width}" height="${_opts.height}" fill="${_opts.color}" class="bi bi-search" viewBox="0 0 16 16">
 		<path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z"/>
 	  </svg>`
+		elem
+			.html(svg)
+			.on('click', opts.handler)
+			.style('cursor', 'pointer')
 	},
 	crosshair: (elem, opts = {}) => {
 		const _opts = { color: 'black', width: 18, height: 18, d: 2 }
@@ -501,7 +505,9 @@ export const icons = {
 		const h = _opts.height
 		const d = _opts.d
 		Object.assign(_opts, opts)
-		const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${_opts.width}" height="${_opts.height}" style='vertical-align: middle'>
+		const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${_opts.width}" height="${
+			_opts.height
+		}" style='vertical-align: middle'>
 		<!--! Font Awesome Pro 6.4.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license (Commercial License) Copyright 2023 Fonticons, Inc. -->
 		<path d="M${w / 2},${d}L${w / 2},${h - d}Z" stroke='${_opts.color}'/>
 		<path d="M${d},${h / 2}L${w - d},${h / 2}Z" stroke='${_opts.color}'/>
