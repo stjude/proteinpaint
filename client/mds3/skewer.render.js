@@ -170,7 +170,7 @@ export function skewer_make(tk, block) {
 	// right-side label
 	const textlab = discg
 		.append('text')
-		.text(d => tk.mnamegetter(d.mlst[0]))
+		.text(d => d.mnameCompact || tk.mnamegetter(d.mlst[0]))
 		.attr('font-size', d => {
 			d._labfontsize = Math.max(12, d.radius * 1.2)
 			return d._labfontsize
@@ -321,7 +321,7 @@ export function skewer_make(tk, block) {
 				cumh += g.pica_fontsize + 1
 				tk.pica.g
 					.append('text')
-					.text(g.mlst[0].mname + (g.occurrence > 1 ? ' x' + g.occurrence : ''))
+					.text((g.mnameCompact || g.mlst[0].mname) + (g.occurrence > 1 ? ' x' + g.occurrence : ''))
 					.attr('font-size', g.pica_fontsize)
 					.each(function() {
 						boxw = Math.max(boxw, this.getBBox().width)
@@ -350,7 +350,7 @@ export function skewer_make(tk, block) {
 					return 'translate(' + hpad + ',' + cumh * (abp ? -1 : 1) + ')'
 				})
 			_g.append('text')
-				.text(g => g.mlst[0].mname)
+				.text(g => g.mnameCompact || g.mlst[0].mname)
 				.attr('font-size', g => g.pica_fontsize)
 				.each(function(g) {
 					g.pica_mlabelwidth = this.getBBox().width

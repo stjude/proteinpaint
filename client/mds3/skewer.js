@@ -71,6 +71,10 @@ else exon<:
 	basepairs are too tiny and will group mutations by AA position
 */
 
+// if the number of mname categories from a skewer exceeds this count, these mnames will be compacted into one group/disc
+// otherwise, each mname will be an individual disc
+const minMnameCount2compact = 10
+
 export function may_render_skewer(data, tk, block) {
 	// update skewer subtrack height to tk.subtk2height.skewer:int
 
@@ -259,16 +263,29 @@ function make_skewer_data(tk, block) {
 }
 
 function mlst2disc(mlst, tk) {
+	/*
+	mlst[] is the complete of data points to be shown in one skewer, here divide them to groups to make discs
+
+	snvindel and svfusion has 3 layers. class & mname combination will result in individual discs in skewer
+	2nd layer is classes for snvindel, and left/right for svfusion, it will have only limited number of categories
+	3rd layer may have too many categories by the presence of data points with distinct mname
+	it will be compacted to reduce number of discs
+	<m.dt> : Map
+	  <m.class> : Map
+	    <m.mname> : mlst[]
+	
+	rest of dt are single-layer:
+	<m.dt> : []
+	*/
 	const k2g = new Map()
 	for (const m of mlst) {
+		if (!Number.isInteger(m.dt)) continue
+
+		if (!k2g.has(m.dt)) k2g.set(m.dt, new Map())
+
 		switch (m.dt) {
 			case dtsnvindel:
-				if (!k2g.has(m.dt)) {
-					k2g.set(m.dt, new Map())
-				}
-				if (!k2g.get(m.dt).has(m.class)) {
-					k2g.get(m.dt).set(m.class, new Map())
-				}
+				if (!k2g.get(m.dt).has(m.class)) k2g.get(m.dt).set(m.class, new Map())
 				const n = m.mname || ''
 				if (
 					!k2g
@@ -289,9 +306,6 @@ function mlst2disc(mlst, tk) {
 				break
 			case dtsv:
 			case dtfusionrna:
-				if (!k2g.has(m.dt)) {
-					k2g.set(m.dt, new Map())
-				}
 				if (!k2g.get(m.dt).has(m.class)) {
 					k2g.get(m.dt).set(m.class, {
 						use5: new Map(),
@@ -349,35 +363,52 @@ function mlst2disc(mlst, tk) {
 				return
 		}
 	}
+
+	// each group corresponds to one disc
 	const groups = []
+
 	for (const [dt, tmp] of k2g) {
 		switch (dt) {
 			case dtsnvindel:
-				for (const t2 of tmp.values()) {
-					for (const mlst of t2.values()) {
+				for (const mname2lst of tmp.values()) {
+					// all the mnames are of the same m.class
+					if (mname2lst.size > minMnameCount2compact) {
+						// too many mname under this class, compact to one single disc
+						const mlst = []
+						for (const l2 of mname2lst.values()) mlst.push(...l2)
 						groups.push({
-							dt: dt,
-							mlst: mlst
+							dt,
+							mlst,
+							mnameCompact: mlst.length + ' variants'
 						})
+					} else {
+						for (const mlst of mname2lst.values()) {
+							groups.push({ dt, mlst })
+						}
 					}
 				}
 				break
 			case dtsv:
 			case dtfusionrna:
 				for (const classset of tmp.values()) {
-					for (const mlst of classset.use5.values()) {
-						groups.push({
-							dt: dt,
-							useNterm: true,
-							mlst: mlst
-						})
+					if (classset.use5.size > minMnameCount2compact) {
+						const mlst = []
+						for (const l2 of classset.use5.values()) mlst.push(...l2)
+						groups.push({ dt, mlst, useNterm: true, mnameCompact: `${mlst.length} ${dt == dtsv ? 'SV' : 'fusion'}s` })
+					} else {
+						for (const mlst of classset.use5.values()) {
+							groups.push({ dt, mlst, useNterm: true })
+						}
 					}
-					for (const mlst of classset.use3.values()) {
-						groups.push({
-							dt: dt,
-							useNterm: false,
-							mlst: mlst
-						})
+
+					if (classset.use3.size > minMnameCount2compact) {
+						const mlst = []
+						for (const l2 of classset.use3.values()) mlst.push(...l2)
+						groups.push({ dt, mlst, useNterm: false, mnameCompact: `${mlst.length} ${dt == dtsv ? 'SV' : 'fusion'}s` })
+					} else {
+						for (const mlst of classset.use3.values()) {
+							groups.push({ dt, mlst, useNterm: false })
+						}
 					}
 				}
 				break
