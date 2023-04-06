@@ -176,7 +176,7 @@ tape('single chart, with overlay', function(test) {
 	async function clickLegendToHideOverlay(barchart) {
 		const legendDiv = barchart.Inner.dom.legendDiv
 		const item = legendDiv
-			.selectAll('.legend-row')
+			.selectAll('.sjpp-htmlLegend')
 			.filter(d => d.dataId == legendDataId)
 			.node()
 		item.dispatchEvent(new Event('click', { bubbles: true }))
