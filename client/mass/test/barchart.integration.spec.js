@@ -313,7 +313,7 @@ tape('series visibility - numeric', function(test) {
 		)
 		// console.log(bar.dom.legendDiv.selectAll('.legend-row').nodes())
 		const foundHiddenLabels = bar.dom.legendDiv
-			.selectAll('.legend-row')
+			.selectAll('.sjpp-htmlLegend')
 			.filter(d => d?.isHidden == true)
 			.nodes()
 
