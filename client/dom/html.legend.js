@@ -151,6 +151,7 @@ export default function htmlLegend(legendDiv, viz = { settings: {}, handlers: {}
 				.style('border', d.border)
 				.html(d => d.svg)
 		} else if (!d.noIcon) {
+			const stroke = d.noEditColor ? color : rgb(color).darker()
 			div
 				.append('div')
 				.style('display', 'inline-block')
@@ -158,7 +159,7 @@ export default function htmlLegend(legendDiv, viz = { settings: {}, handlers: {}
 				.style('min-width', '12px')
 				.style('height', '12px')
 				.style('top', '1px')
-				.style('border', d.border ? d.border : '1px solid ' + rgb(color).darker())
+				.style('border', d.border ? d.border : '1px solid ' + stroke)
 				.style('border-radius', d.shape == 'circle' ? '6px' : '')
 				.style('background-color', d.shape == 'circle' ? '' : color)
 				.style('cursor', 'isHidden' in d ? 'pointer' : 'default')
