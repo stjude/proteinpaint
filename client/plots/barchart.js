@@ -691,7 +691,7 @@ class Barchart {
 			}
 			legendGrps.push({
 				name: `<span style="${headingStyle}">Statistical Significance</span>`,
-				items: [{ text: `* p-value < (0.05 / ${testNum} tests)` }]
+				items: [{ text: `* p-value < (0.05 / ${testNum} tests)`, noEditColor: true }]
 			})
 		}
 
