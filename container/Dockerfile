@@ -121,14 +121,18 @@ RUN if [ -f /home/root/pp/tmppack/sjcrh-proteinpaint-server-${SERVERPKGVER}.tgz 
     fi
 
 # enable ssh into this stage, for troubleshooting
-CMD ["sleep", "3600"]
+CMD ["sh", "-c", "node app-server.js"]
 
 #####################
 # Server-only app
 ######################
 
 # target for the backend-only SJ server app
-FROM ppbase AS ppserver
+
+# TODO: pre-compile pp-rust build for download during postinstall, so that 
+# the smaller ppbase image without the rust toolchain can be used here
+# For now, use pprust in this build stage to support `npm update` with rust binary compilation
+FROM pprust AS ppserver
 
 LABEL org.opencontainers.image.source="https://github.com/stjude/proteinpaint" \
     org.opencontainers.image.revision="$IMGREV" \
@@ -171,7 +175,11 @@ CMD ["sleep", "3600"]
 ############
 
 # target for the full (backend + frontend) SJ app
-FROM ppbase AS ppfull
+
+# TODO: pre-compile pp-rust build for download during postinstall, so that 
+# the smaller ppbase image without the rust toolchain can be used here
+# For now, use pprust in this build stage to support `npm update` with rust binary compilation
+FROM pprust AS ppfull
 
 LABEL org.opencontainers.image.source="https://github.com/stjude/proteinpaint" \
     org.opencontainers.image.revision="$IMGREV" \

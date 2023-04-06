@@ -37,6 +37,8 @@ public/static/*.pdf
 /utils/countbamallele.phased/bin*
 /utils/*/*.bundle.js*
 
+container/public/example*
+
 **/rust/*.lock
 **/rust/target/*
 Cargo.lock

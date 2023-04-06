@@ -1,4 +1,5 @@
 const fs = require('fs')
+const spawnSync = require('child_process').spawnSync
 
 /*if (!fs.existsSync('./serverconfig.json')) {
 	throw `missing serverconfig.json`
@@ -38,7 +39,7 @@ fs.writeFileSync('./serverconfig.json', JSON.stringify(serverconfig, null, '   '
 
 if (serverconfig.releaseTag && serverconfig.releaseTag.server) {
 	console.log('Updating proteinpaint server package ...')
-	spawnSync('npm', ['update', `@sjcrh/proteinpaint-server@${serverconfig.releaseTag.server}`], { encoding: 'utf-8' })
+	spawnSync('npm', ['install', `@sjcrh/proteinpaint-server@${serverconfig.releaseTag.server}`], { encoding: 'utf-8' })
 }
 
 require('@sjcrh/proteinpaint-server')
