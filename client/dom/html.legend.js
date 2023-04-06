@@ -6,7 +6,6 @@ export default function htmlLegend(legendDiv, viz = { settings: {}, handlers: {}
 	const isHidden = {}
 
 	function render(data) {
-		console.log(data)
 		const s = viz.settings
 		legendDiv.selectAll('*').remove()
 		if (data.every(d => Array.isArray(d))) {
@@ -168,7 +167,7 @@ export default function htmlLegend(legendDiv, viz = { settings: {}, handlers: {}
 				.style('vertical-align', d.inset ? 'top' : '')
 				.style('padding', d.inset ? '0 3px' : '')
 				.text(d.inset)
-				.on('click', e => onColorClick(e, color))
+				.on('click', e => onColorClick(e, viz, color))
 		}
 
 		div
@@ -191,7 +190,7 @@ export default function htmlLegend(legendDiv, viz = { settings: {}, handlers: {}
 	return render
 }
 
-function onColorClick(e, color) {
+function onColorClick(e, viz, color) {
 	const rgbColor = rgb(color)
 	const menu = new Menu()
 	const input = menu.d
@@ -200,6 +199,7 @@ function onColorClick(e, color) {
 		.attr('value', rgbColor.formatHex())
 		.on('change', () => {
 			const newColor = input.node().value
+			viz.handlers.legend.onColorClick(e, newColor)
 			menu.hide()
 		})
 	menu.show(e.clientX, e.clientY, false)
