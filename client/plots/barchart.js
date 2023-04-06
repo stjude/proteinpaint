@@ -11,6 +11,7 @@ import { to_svg } from '../src/client'
 import { renderTable } from '../dom/table'
 import { fillTermWrapper } from '../termsetting/termsetting'
 import { getColors } from '#shared/common'
+import { mclass } from '#shared/common'
 
 class Barchart {
 	constructor(opts) {
@@ -526,7 +527,14 @@ class Barchart {
 			? group.color
 			: bin
 			? bin.color
+			: t2.term.type == 'geneVariant'
+			? getMutationColor(result.dataId)
 			: rgb(this.colorScale(result.dataId)).toString() //.replace('rgb(','rgba(').replace(')', ',0.7)')
+
+		function getMutationColor(label) {
+			for (const [key, mc] of Object.entries(mclass)) if (mc.label == label) return mc.color
+			return 'black'
+		}
 	}
 
 	/*
