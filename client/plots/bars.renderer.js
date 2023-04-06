@@ -495,13 +495,15 @@ export default function barsRenderer(barsapp, holder) {
 		g.style('display', d => {
 			return hm.cols.includes(d.colId) ? 'block' : 'none'
 		})
+		const rgbColor = rgb(hm.handlers.series.rectFill(d))
+		const stroke = rgbColor.toString() == rgb('white').toString() ? rgbColor.darker() : rgbColor
 		g.append('rect')
 			.attr('x', d => d.x)
 			.attr('y', d => d.y)
 			.attr('width', d => d.width)
 			.attr('height', d => d.height)
 			.attr('fill', hm.handlers.series.rectFill)
-			.attr('stroke', rgb(hm.handlers.series.rectFill(d)).darker())
+			.attr('stroke', stroke)
 			.attr('shape-rendering', 'crispEdges')
 			.style('opacity', 0)
 			.transition()
