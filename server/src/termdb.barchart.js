@@ -117,10 +117,17 @@ export async function barchart_data(q, ds, tdb) {
 			processGeneVariantSamples(map, bins, data, samplesMap, ds)
 		} else {
 			for (let i = 0; i <= 2; i++) {
+				const q = map.get(i)?.q
 				const term = map.get(i) ? map.get(i).term : null
 				const id = term?.id ? term.id : term?.name
 				if (id && data.refs.byTermId[id]?.bins) bins.push(data.refs.byTermId[id]?.bins)
 				else bins.push([])
+				if (q?.binColored) {
+					for (const bin of bins[i]) {
+						const qbin = q.binColored
+						if (bin.start == qbin.start && bin.stop == qbin.stop) bin.color = qbin.color
+					}
+				}
 				for (const [sampleId, values] of Object.entries(data.samples)) {
 					let item
 					if (samplesMap.get(sampleId)) item = samplesMap.get(sampleId)
@@ -157,7 +164,7 @@ export async function barchart_data(q, ds, tdb) {
 			pj: pj.times
 		}
 	}
-	return { data: pj.tree.results, samples: q.results.lst }
+	return { data: pj.tree.results, samples: q.results.lst, bins }
 }
 
 //used by barchart_data
