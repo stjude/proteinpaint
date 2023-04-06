@@ -328,7 +328,7 @@ tape('series visibility - numeric', function(test) {
 	function triggerHiddenLegendClick(barchart) {
 		numHiddenLegendBeforeClick = barchart.Inner.settings.exclude.cols.length
 		barchart.Inner.dom.legendDiv
-			.selectAll('.legend-row')
+			.selectAll('.sjpp-htmlLegend')
 			.filter(d => d?.isHidden == true)
 			.node()
 			.click()
@@ -367,7 +367,7 @@ tape('series visibility - numeric', function(test) {
 	function testHiddenLegendDisplay(barchart) {
 		test.equal(
 			barchart.Inner.dom.legendDiv
-				.selectAll('.legend-row')
+				.selectAll('.sjpp-htmlLegend')
 				.filter(function() {
 					return this.innerHTML.includes('not exposed')
 				})
