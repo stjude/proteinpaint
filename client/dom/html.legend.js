@@ -191,6 +191,8 @@ export default function htmlLegend(legendDiv, viz = { settings: {}, handlers: {}
 }
 
 function onColorClick(e, viz, color) {
+	const d = event.target.__data__
+	if (d.noEditColor) return
 	const rgbColor = rgb(color)
 	const menu = new Menu()
 	const input = menu.d
