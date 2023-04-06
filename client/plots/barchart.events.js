@@ -242,6 +242,10 @@ function handleColorClick(event, self, color) {
 	const termNum = d.type == 'col' ? 'term' : 'term2'
 	const term = self.config[termNum]
 	if (term.term.values?.[d.dataId]) term.term.values[d.dataId].color = color
+	if (term.term.type == 'geneVariant') {
+		if (!term.term.values) term.term.values = {}
+		term.term.values[d.dataId] = { label: d.dataId, color }
+	}
 	let binColored = null
 	if (self.bins[2].length > 0) {
 		binColored = self.bins[2].find(bin => bin.label == d.dataId)
