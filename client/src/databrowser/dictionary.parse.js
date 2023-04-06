@@ -21,7 +21,6 @@ exports.parseDictionary = function parseDictionary(input) {
 	// process the header line
 	// could have used lines.shift() here, but will want to track actual line numbers later for errors
 	const header = lines[0].split('\t')
-	// console.log(header);
 
 	const term_idIndex = header.findIndex(l => l.toLowerCase().includes('term_id'))
 	const variableIndex = header.findIndex(l => l.toLowerCase().includes('variable')) // term_id col in phenotree
@@ -122,11 +121,9 @@ exports.parseDictionary = function parseDictionary(input) {
 			}
 		}
 		for (const t in terms) terms[t].isleaf = !parentIds.has(terms[t].id)
-		// console.log('dictionary parsing')
 	}
 
 	function parsePhenotree(lines, header) {
-		// console.log(header);
 		/* 
 		Parses phenotree:
 			- Parses tab delim data arranged in cols: levels(n), variable (i.e. term_id), type, and categories (i.e. previous configuration).
@@ -155,7 +152,6 @@ exports.parseDictionary = function parseDictionary(input) {
 		if (!levelColIndexes.length) levelColIndexes.push(variableIndex)
 
 		const additionalAttrIndexes = header.findIndex(l => l.toLowerCase().includes('additional attributes'))
-		// console.log(158,additionalAttrIndexes);
 
 		// caching and/or tracking variables
 		const termNameToId = {}
@@ -198,14 +194,12 @@ exports.parseDictionary = function parseDictionary(input) {
 				}
 
 				const term = parseCategories(cols[typeIndex], cols[categoriesIndex], cols[additionalAttrIndexes], lineNum, name)
-				// console.log(201,term);
 
 				const id = cols[variableIndex] || name
 				if (id in terms) {
 					const orig = terms[id]
 					throw `Error: Multiple config rows for term.id='${id}': lines# ${orig.lineNum} and ${lineNum}`
 				}
-				// console.log(203,term);
 
 				//Create term object
 				terms[id] = {
@@ -240,7 +234,6 @@ exports.parseDictionary = function parseDictionary(input) {
 			//term.ancestry = term.ancestry.map(name => termNameToId[name]).filter(d=>!!d)
 			delete term.ancestry
 		}
-		// console.log('phenotree parsing')
 	}
 	return { terms: Object.values(terms) }
 }
@@ -250,7 +243,6 @@ exports.parseDictionary = function parseDictionary(input) {
  */
 
 function parseCategories(type, catJSON, addAttrJSON, lineNum, varName) {
-	// console.log(253,addAttrJSON == '' ||  addAttrJSON == undefined ? {} : JSON.parse(addAttrJSON).logScale);
 	if (!type) throw `No type provided for variable: ${varName} on line ${lineNum}`
 
 	const term = {
