@@ -1,2 +1,0 @@
-- matrix zoom and pan
-- feature improvement and bug fixes for sampleScatter 
