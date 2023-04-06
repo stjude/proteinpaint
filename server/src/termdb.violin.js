@@ -35,6 +35,7 @@ q = {
       name: str,
       type: str, //categorical vs float
       values: [Object],
+	  additionalAttributes: [Object],
       groupsetting: [Object],
       isleaf: true,
       included_types: [Array],
@@ -60,6 +61,7 @@ export async function trigger_getViolinPlotData(q, res, ds, genome) {
 	if (term.type != 'integer' && term.type != 'float') throw 'term type is not integer/float.'
 
 	const twLst = [{ id: q.termid, term, q: { mode: 'continuous' } }]
+	console.log(63, twLst)
 
 	if (q.divideTw) {
 		if (!('id' in q.divideTw)) {
@@ -75,9 +77,21 @@ export async function trigger_getViolinPlotData(q, res, ds, genome) {
 	const data = await getData({ terms: twLst, filter: q.filter, currentGeneNames: q.currentGeneNames }, ds, genome)
 	if (data.error) throw data.error
 
+	function getBaseLog(x, y) {
+		return Math.log(y) / Math.log(x)
+	}
+
+	for (const [k, v] of Object.entries(data.samples)) {
+		if (term.additionalAttributes?.logScale) {
+			if (v[term.id].key == 0 || v[term.id].value == 0) continue
+			v[term.id].key = getBaseLog(term.additionalAttributes?.logScale, v[term.id].key)
+			v[term.id].value = getBaseLog(term.additionalAttributes?.logScale, v[term.id].value)
+		}
+	}
+
 	if (q.scale) scaleData(q, data, term)
-	
-	const valuesObject = key2values(q, data, term, q.divideTw)
+
+	const valuesObject = key2values(data, term, q.divideTw)
 
 	const result = resultObj(valuesObject, data, q)
 
@@ -142,7 +156,7 @@ function minMax(v, term, minMaxObject) {
 }
 
 // scale sample data
-// divide keys and values by scaling factor
+// divide keys and values by scaling factor - this is important for regression UI when running association tests.
 function scaleData(q, data, term) {
 	if (!q.scale) return
 	const scale = Number(q.scale)
@@ -154,7 +168,7 @@ function scaleData(q, data, term) {
 	}
 }
 
-function key2values(q, data, term, overlayTerm) {
+function key2values(data, term, overlayTerm) {
 	let key2values = new Map()
 	let min = Number.MAX_VALUE,
 		max = -Number.MAX_VALUE
@@ -163,7 +177,6 @@ function key2values(q, data, term, overlayTerm) {
 
 	//create object to store uncomputable values and label
 	const uncomputableValueObj = {}
-
 	for (const [c, v] of Object.entries(data.samples)) {
 		//if there is no value for term then skip that.
 		if (!v[term.id]) continue
@@ -176,8 +189,8 @@ function key2values(q, data, term, overlayTerm) {
 
 			continue
 		}
-		minMax(v, term, minMaxObject)
 
+		minMax(v, term, minMaxObject)
 		if (overlayTerm) {
 			if (!v[overlayTerm.id]) {
 				// if there is no value for q.divideTw then skip this
@@ -323,7 +336,6 @@ function createCanvasImg(q, result) {
 		plot.biggestBin = Math.max(...finalVpBins.bins0.map(b => b.length))
 
 		//generate summary stat values
-		// console.log(309, plot.values)
 		plot.summaryStats = summaryStats(plot.values)
 
 		delete plot.values
