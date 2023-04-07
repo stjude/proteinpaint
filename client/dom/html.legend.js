@@ -181,7 +181,7 @@ export default function htmlLegend(legendDiv, viz = { settings: {}, handlers: {}
 			.style('line-height', s.legendFontSize)
 			.style('vertical-align', d.svg ? 'top' : null)
 			.html(d.text)
-			.on('click', viz.handlers.legend.click)
+			.on('click', viz.handlers.legend?.click)
 
 		if (Object.keys(viz.handlers).length) {
 			div.on('mouseover', viz.handlers.legend.mouseover).on('mouseout', viz.handlers.legend.mouseout)
