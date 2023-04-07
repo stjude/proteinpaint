@@ -191,7 +191,7 @@ export default function violinRenderer(self) {
 
 	function renderScale(t1, t2, settings, isH, svg) {
 		// <g>: holder of numeric axis
-		const g = svg.svgG.append('g')
+		const g = svg.svgG.append('g').style('font-size', '15')
 		// .transition()
 		// .duration(self.opts.mode == 'minimal' ? 0 : 800)
 		// .delay(self.opts.mode == 'minimal' ? 0 : 100)
