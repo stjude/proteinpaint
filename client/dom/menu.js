@@ -22,6 +22,8 @@ arg{}
 		hide*mute value. See notes in constructor
 	clearSelector: STR
 		-clear only specific elems within menu.d, not all of menu.d
+	onHide()
+		- override default hide() with callback
 */
 export class Menu {
 	constructor(arg = {}) {
