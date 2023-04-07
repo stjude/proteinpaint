@@ -138,6 +138,21 @@ export class MatrixControls {
 
 					tables: [
 						{
+							header: ['Zoom', 'Min', 'Max'],
+							rows: [
+								{
+									label: 'Column Width',
+									type: 'number',
+									width: 50,
+									chartType: 'matrix',
+									inputs: [
+										{ settingsKey: 'colwMin', min: 0, max: 24, step: 0.2 },
+										{ settingsKey: 'colwMax', min: 10, max: 40, step: 0.2 }
+									]
+								}
+							]
+						},
+						{
 							header: ['Cells', 'Columns', 'Rows'],
 							rows: [
 								{
@@ -360,7 +375,7 @@ export class MatrixControls {
 		const d = this.parent.dimensions
 		if (this.zoomApi)
 			this.zoomApi.update({
-				value: Number(((100 * Math.min(s.colw * s.zoomLevel, s.maxColwZoomed)) / s.maxColwZoomed).toFixed(1))
+				value: Number(((100 * Math.min(s.colw * s.zoomLevel, s.colwMax)) / s.colwMax).toFixed(1))
 			})
 
 		if (this.svgScrollApi) {
@@ -395,7 +410,6 @@ export class MatrixControls {
 		app.tip.clear()
 
 		for (const t of tables) {
-			console.log(381, t.rows)
 			const table = app.tip.d.append('table')
 			//if (d.customHeaderRows) d.customHeaderRows(parent, table)
 
@@ -611,17 +625,17 @@ export class MatrixControls {
 		this.zoomApi = zoom({
 			holder,
 			settings: {
-				min: s.zoomMin, //Math.max(1, Math.floor((100 * 1) / s.maxColw)),
+				min: (100 * s.colwMin) / s.colwMax, //s.zoomMin, //Math.max(1, Math.floor((100 * 1) / s.colwMax)),
 				increment: s.zoomIncrement,
-				//max: 5,
-				step: s.zoomStep || 5
-				//value: s.colw/s.maxColw * 100,
+				max: 100,
+				step: s.zoomStep || 5,
+				value: ((s.colw / s.colwMax) * 100).toFixed(1)
 			},
 			callback: percentValue => {
 				const p = this.parent
 				const d = p.dimensions
 				const s = p.settings.matrix
-				const zoomLevel = (0.01 * percentValue * s.maxColwZoomed) / s.colw
+				const zoomLevel = (0.01 * percentValue * s.colwMax) / s.colw
 				const c = p.getVisibleCenterCell(0)
 				p.app.dispatch({
 					type: 'plot_edit',
