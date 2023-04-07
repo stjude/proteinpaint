@@ -255,12 +255,12 @@ class Matrix {
 				this.dom.loadingDiv.html('Processing data ...')
 			}
 
-			if (this.stateDiff.nonsettings || this.stateDiff.sorting) {
-				this.setSampleGroups(this.data)
-				this.setTermOrder(this.data)
-				this.setSampleOrder(this.data)
-				this.setSampleCountsByTerm()
-			}
+			//if (this.stateDiff.nonsettings || this.stateDiff.sorting) {
+			this.setSampleGroups(this.data)
+			this.setTermOrder(this.data)
+			this.setSampleOrder(this.data)
+			this.setSampleCountsByTerm()
+			//}
 
 			this.setAutoDimensions()
 			this.setLayout()
