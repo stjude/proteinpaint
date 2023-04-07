@@ -118,7 +118,8 @@ function setRenderers(self) {
 	}
 
 	self.render = function() {
-		self.dom.undoBtn.property('disabled', self.currIndex < 1)
-		self.dom.redoBtn.property('disabled', self.history.length < 2 || self.currIndex >= self.history.length - 1)
+		if (self.dom.undoBtn) self.dom.undoBtn.property('disabled', self.currIndex < 1)
+		if (self.dom.redoBtn)
+			self.dom.redoBtn.property('disabled', self.history.length < 2 || self.currIndex >= self.history.length - 1)
 	}
 }
