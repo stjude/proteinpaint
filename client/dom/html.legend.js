@@ -168,7 +168,7 @@ export default function htmlLegend(legendDiv, viz = { settings: {}, handlers: {}
 				.style('vertical-align', d.inset ? 'top' : '')
 				.style('padding', d.inset ? '0 3px' : '')
 				.text(d.inset)
-				.on('click', e => onColorClick(e, viz, color))
+				.on('click', viz.handlers.legend?.onColorClick && (e => showColorInput(e, viz, color)))
 		}
 
 		div
@@ -191,7 +191,7 @@ export default function htmlLegend(legendDiv, viz = { settings: {}, handlers: {}
 	return render
 }
 
-function onColorClick(e, viz, color) {
+function showColorInput(e, viz, color) {
 	const d = event.target.__data__
 	if (d.noEditColor) return
 	const rgbColor = rgb(color)
