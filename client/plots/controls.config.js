@@ -193,7 +193,6 @@ function setNumberInput(opts) {
 
 	const api = {
 		main(plot) {
-			console.log(plot)
 			for (const settingsKey in self.dom.inputs) {
 				self.dom.inputs[settingsKey].property('value', plot.settings[opts.chartType][settingsKey])
 			}

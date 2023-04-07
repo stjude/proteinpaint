@@ -40,7 +40,7 @@ export class MatrixCluster {
 		this.totalWidth = s.zoomLevel == 1 ? -4 : 0 //4 * Math.max(1, s.colspace)
 
 		for (const xg of this.xGrps) {
-			const dx = d.dx //Math.min(d.dx, s.maxColw + s.colspace)
+			const dx = d.dx //Math.min(d.dx, s.colwMax + s.colspace)
 			const x = xg.prevGrpTotalIndex * dx + s.colgspace * xg.grpIndex + xg.totalHtAdjustments
 			const width = dx * (xg.processedLst || xg.grp.lst).length + xg.grpHtAdjustments
 			this.totalWidth += width + 2 * Math.max(1, s.colspace)

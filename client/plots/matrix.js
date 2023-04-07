@@ -9,12 +9,12 @@ import { scaleLinear, scaleOrdinal } from 'd3-scale'
 import { schemeCategory10 } from 'd3-scale-chromatic'
 import { schemeCategory20 } from '#common/legacy-d3-polyfill'
 import { axisLeft, axisTop, axisRight, axisBottom } from 'd3-axis'
-import { fillTermWrapper } from '../termsetting/termsetting'
 import svgLegend from '#dom/svg.legend'
 import { mclass } from '#shared/common'
 import { Menu } from '#dom/menu'
 import { getSampleSorter, getTermSorter } from './matrix.sort'
 import { dofetch3 } from '../common/dofetch'
+export { getPlotConfig } from './matrix.config'
 
 class Matrix {
 	constructor(opts) {
@@ -400,29 +400,6 @@ class Matrix {
 		}
 	}
 
-	setAutoDimensions() {
-		const m = this.state.config.settings.matrix
-		if (!this.autoDimensions) this.autoDimensions = new Set()
-
-		if (!m.colw) this.autoDimensions.add('colw')
-		else this.autoDimensions.delete('colw')
-		if (!m.rowh) this.autoDimensions.add('rowh')
-		else this.autoDimensions.delete('rowh')
-
-		const s = this.settings.matrix
-		if (this.autoDimensions.has('colw')) {
-			const offset = !s.transpose
-				? s.termLabelOffset + s.termGrpLabelOffset
-				: s.sampleLabelOffset + s.sampleGrpLabelOffset
-			s.colw = Math.min(s.maxColw, Math.round((screen.availWidth - offset - 30) / this.sampleOrder.length))
-			s.colspace = s.zoomLevel * s.colw <= 2 ? 0 : 1
-		}
-
-		if (this.autoDimensions.has('rowh')) {
-			s.rowh = Math.max(5, Math.round(screen.availHeight / this.numTerms))
-		}
-	}
-
 	setSampleGroups(data) {
 		const s = this.settings.matrix
 		const defaultSampleGrp = {
@@ -645,6 +622,30 @@ class Matrix {
 		}
 	}
 
+	setAutoDimensions() {
+		const m = this.state.config.settings.matrix
+		if (!this.autoDimensions) this.autoDimensions = new Set()
+
+		if (!m.colw) this.autoDimensions.add('colw')
+		else this.autoDimensions.delete('colw')
+		if (!m.rowh) this.autoDimensions.add('rowh')
+		else this.autoDimensions.delete('rowh')
+
+		const s = this.settings.matrix
+		if (this.autoDimensions.has('colw')) {
+			const offset = !s.transpose
+				? s.termLabelOffset + s.termGrpLabelOffset
+				: s.sampleLabelOffset + s.sampleGrpLabelOffset
+			const colw = Math.round((document.body.clientWidth - 300 - offset) / this.sampleOrder.length)
+			s.colw = Math.max(s.colwMin, Math.min(colw, s.colwMax)) //; console.log(640, [colw, s.colw, s.colwMin, s.colwMax])
+			s.colspace = s.zoomLevel * s.colw <= 2 ? 0 : 1
+		}
+
+		if (this.autoDimensions.has('rowh')) {
+			s.rowh = Math.max(5, Math.round(screen.availHeight / this.numTerms))
+		}
+	}
+
 	setLabelsAndScales() {
 		const s = this.settings.matrix
 		// only overwrite the sample counts if one or more sample group.lst has been truncated
@@ -746,16 +747,16 @@ class Matrix {
 
 		const yOffset = layout.top.offset + s.margin.top + s.scrollHeight
 		const xOffset = layout.left.offset + s.margin.left
-		const colw = Math.min(s.maxColwZoomed, s.colw * s.zoomLevel)
+		const colw = Math.max(s.colwMin, Math.min(s.colwMax, s.colw * s.zoomLevel))
 		const dx = colw + s.colspace
 		const nx = this[`${col}s`].length
 		const dy = s.rowh + s.rowspace
 		const ny = this[`${row}s`].length
 		const mainwByColDimensions =
-			nx * (Math.min(colw, s.colw) + s.colspace) +
-			(this[`${col}Grps`].length - 1) * s.colgspace +
+			nx * (colw + s.colspace) +
+			this[`${col}Grps`].length * s.colgspace +
 			(this[`${col}s`].slice(-1)[0]?.totalHtAdjustments || 0)
-		const mainwByScreen = document.body.clientWidth - 300
+		const mainwByScreen = document.body.clientWidth - 50 - xOffset
 		const mainw = Math.min(mainwByColDimensions, mainwByScreen)
 
 		const mainh =
@@ -825,7 +826,6 @@ class Matrix {
 
 		this.layout = layout
 		if (!s.zoomCenterPct) {
-			//console.log(837, 'setting s.zoomCenterPct', s.zoomCenterPct)
 			s.zoomCenterPct = 0.5
 			s.zoomIndex = Math.round((s.zoomCenterPct * mainw) / dx)
 			s.zoomGrpIndex = this.sampleOrder[s.zoomIndex].grpIndex
@@ -1012,120 +1012,6 @@ class Matrix {
 export const matrixInit = getCompInit(Matrix)
 // this alias will allow abstracted dynamic imports
 export const componentInit = matrixInit
-
-export async function getPlotConfig(opts, app) {
-	const config = {
-		// data configuration
-		termgroups: [],
-		samplegroups: [],
-		divideBy: null,
-
-		// rendering options
-		settings: {
-			controls: {
-				isOpen: false // control panel is hidden by default
-			},
-			matrix: {
-				useCanvas: window.location.hash?.slice(1) == 'canvas',
-				cellEncoding: '', // can be oncoprint
-				margin: {
-					top: 10,
-					right: 5,
-					bottom: 20,
-					left: 50
-				},
-				// set any dataset-defined sample limits and sort priority, otherwise undefined
-				// put in settings, so that later may be overridden by a user
-				maxSample: 0,
-				sortPriority: undefined,
-				truncatePriority: undefined,
-
-				sampleNameFilter: '',
-				sortSamplesBy: 'selectedTerms',
-				sortSamplesTieBreakers: [{ $id: 'sample', sortSamples: {} /*split: {char: '', index: 0}*/ }],
-				sortTermsBy: 'sampleCount', // or 'as listed'
-				samplecount4gene: true,
-				cellbg: '#ececec',
-				colw: 8,
-				maxColw: 16,
-				maxColwZoomed: 34,
-				colspace: 1,
-				colgspace: 8,
-				collabelpos: 'bottom',
-				collabelvisible: true,
-				colglabelpos: true,
-				collabelgap: 5,
-				collabelpad: 1,
-				rowh: 18,
-				rowspace: 1,
-				rowgspace: 8,
-				rowlabelpos: 'left', // | 'right'
-				rowlabelgap: 5,
-				rowlabelvisible: true,
-				rowlabelpad: 1,
-				grpLabelFontSize: 12,
-				minLabelFontSize: 6,
-				maxLabelFontSize: 16,
-				transpose: false,
-				sampleLabelOffset: 120,
-				sampleGrpLabelOffset: 120,
-				termLabelOffset: 80,
-				termGrpLabelOffset: 80,
-				duration: 0,
-				zoomLevel: 1,
-				zoomCenterPct: 0,
-				zoomIndex: 0,
-				zoomGrpIndex: 0,
-				zoomMin: 0.5,
-				zoomIncrement: 0.5,
-				zoomStep: 10,
-				scrollHeight: 12,
-				controlLabels: {
-					samples: 'Samples',
-					terms: 'Variables'
-				}
-			}
-		}
-	}
-
-	const s = config.settings
-	const fontsize = Math.max(s.matrix.rowh + s.matrix.rowspace - 3 * s.matrix.rowlabelpad, 12)
-
-	s.legend = {
-		ontop: false,
-		lineh: 25,
-		padx: 5,
-		padleft: 0, //150,
-		padright: 20,
-		padbtm: 30,
-		fontsize,
-		iconh: fontsize - 2,
-		iconw: fontsize - 2,
-		hangleft: 1,
-		linesep: false
-	}
-
-	const overrides = app.vocabApi.termdbConfig.matrix || {}
-	copyMerge(config.settings.matrix, overrides.settings)
-
-	// may apply term-specific changes to the default object
-	copyMerge(config, opts)
-
-	// harcode these overrides for now
-	config.settings.matrix.duration = 0
-
-	const promises = []
-	for (const grp of config.termgroups) {
-		for (const tw of grp.lst) {
-			// force the saved session to request the most up-to-data dictionary term data from server
-			if (tw.id) delete tw.term
-			promises.push(fillTermWrapper(tw, app.vocabApi))
-		}
-	}
-	if (config.divideBy) promises.push(fillTermWrapper(config.divideBy, app.vocabApi))
-	await Promise.all(promises)
-	return config
-}
 
 export function makeChartBtnMenu(holder, chartsInstance) {
 	/*
