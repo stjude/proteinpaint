@@ -1,7 +1,7 @@
 import tape from 'tape'
 import * as d3s from 'd3-selection'
 import { Menu } from '#dom/menu'
-import { detectOne } from '../../test/test.helpers.js'
+import { detectStyle } from '../../test/test.helpers.js'
 
 /*************************
  reusable helper functions
@@ -19,6 +19,16 @@ function getHolder() {
 const longText =
 	'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum'
 
+function getTestMenu() {
+	const menu = new Menu()
+	menu.d
+		.append('div')
+		.text('Test')
+		.style('display', 'block')
+
+	return menu
+}
+
 /**************
  test sections
 **************
@@ -27,6 +37,12 @@ new Menu()
 show(), clear(), and hide(), no args
 clear() with arg
 show() with args
+onHide() callback
+showunder()
+showunderoffset()
+fadeout()
+toggle()
+getCustomApi()
 
 */
 
@@ -59,11 +75,7 @@ tape('show(), clear(), and hide(), no args', async test => {
 	test.timeoutAfter(500)
 	//Test basic function collectively to use freely in later tests
 
-	const testMenu = new Menu()
-	testMenu.d
-		.append('div')
-		.text('Test')
-		.style('display', 'block')
+	const testMenu = getTestMenu()
 	testMenu.show()
 
 	let appendedDiv
@@ -107,14 +119,11 @@ tape.skip('clear() with arg', test => {
 tape('show() with args', async test => {
 	test.timeoutAfter(500)
 
-	const testMenu = new Menu()
+	const testMenu = getTestMenu()
 	testMenu.d
 		.style('max-width', '20vw')
 		.style('max-height', '10vh')
 		.style('overflow', 'hidden')
-		.append('div')
-		.text('Test')
-		.style('display', 'block')
 
 	let posNum
 
@@ -168,7 +177,7 @@ tape('show() with args', async test => {
 	test.end()
 })
 
-tape.skip('showunder()', test => {
+tape.skip('onHide() callback', test => {
 	test.timeoutAfter(500)
 
 	// const holder = getHolder()
@@ -178,23 +187,96 @@ tape.skip('showunder()', test => {
 	test.end()
 })
 
-tape.skip('showunderoffset()', test => {
+tape('showunder()', test => {
 	test.timeoutAfter(500)
 
-	// const holder = getHolder()
-	const testMenu = new Menu()
+	const holder = getHolder()
+	const btn = holder.append('button').text('Button')
+	const testMenu = getTestMenu()
 
-	// if (test._ok) holder.remove()
+	const message = 'Should throw error for missing dom arg'
+	try {
+		testMenu.showunder()
+		test.fail(message)
+	} catch (e) {
+		test.pass(`${message}: ${e}`)
+	}
+
+	testMenu.showunder(btn.node())
+
+	const btnP = btn.node().getBoundingClientRect()
+	const menuP = testMenu.dnode.getBoundingClientRect()
+	test.equal(btnP.x, menuP.x, `Should show menu with the same style.left value as test element.`)
+	const correctYvalue = btnP.top + btnP.height + window.scrollY + 5
+	test.equal(
+		Math.round(correctYvalue),
+		Math.round(menuP.y),
+		`Should show menu with the shifted style.top value relative to test element.`
+	)
+
+	if (test._ok) {
+		testMenu.destroy()
+		holder.remove()
+	}
 	test.end()
 })
 
-tape.skip('fadeout()', test => {
+tape('showunderoffset()', test => {
 	test.timeoutAfter(500)
 
-	// const holder = getHolder()
-	const testMenu = new Menu()
+	const holder = getHolder()
+	const btn = holder.append('button').text('Button')
+	const testMenu = getTestMenu()
 
-	// if (test._ok) holder.remove()
+	const message = 'Should throw error for missing dom arg'
+	try {
+		testMenu.showunderoffset()
+		test.fail(message)
+	} catch (e) {
+		test.pass(`${message}: ${e}`)
+	}
+
+	testMenu.showunderoffset(btn.node())
+
+	const btnP = btn.node().getBoundingClientRect()
+	const menuP = testMenu.dnode.getBoundingClientRect()
+
+	test.equal(
+		Math.round(btnP.x + testMenu.offsetX),
+		Math.round(menuP.x),
+		`Should show menu with the style.left value as test element, offset by ${testMenu.offsetX}px.`
+	)
+	const correctYvalue = btnP.top + btnP.height + window.scrollY + 5
+	test.equal(
+		Math.round(correctYvalue + testMenu.offsetY),
+		Math.round(menuP.y),
+		`Should show menu with style.top value relative to test element, offset by ${testMenu.offsetY}px.`
+	)
+
+	if (test._ok) {
+		testMenu.destroy()
+		holder.remove()
+	}
+	test.end()
+})
+
+tape.skip('fadeout()', async test => {
+	test.timeoutAfter(500)
+
+	const testMenu = getTestMenu()
+	testMenu.d.attr('class', 'menu-fadeout-test')
+	testMenu.show()
+	testMenu.fadeout()
+	const faded = await detectStyle({
+		elem: d3s.select('body').node(),
+		selector: '.menu-fadeout-test',
+		style: {
+			display: 'inline-block'
+		}
+	})
+	console.log(faded)
+
+	// testMenu.destroy()
 	test.end()
 })
 
