@@ -321,13 +321,20 @@ export class TermdbVocab extends Vocab {
 		return data
 	}
 
-	async getCohortSampleCount(cohort) {
-		// if dataset does not use subchort, cohortName=null and total number of samples is returned
-		const body = {
-			genome: this.vocab.genome,
-			dslabel: this.vocab.dslabel,
-			getcohortsamplecount: 1,
-			cohort
+	// from termdb/nav
+	async getCohortSampleCount(cohortName) {
+		//if (!cohortName) return
+		const lst = [
+			'genome=' + this.vocab.genome,
+			'dslabel=' + this.vocab.dslabel,
+			'getcohortsamplecount=' + cohortName,
+			'cohortValues=' + cohortName
+		]
+		const data = await dofetch3('termdb?' + lst.join('&'), {}, this.opts.fetchOpts)
+		if (!data) throw `missing data`
+		else if (data.error) throw data.error
+		else {
+			return data[0]?.samplecount
 		}
 		const data = await dofetch3('termdb', { body }, this.opts.fetchOpts)
 		if (!data) throw 'missing data'
