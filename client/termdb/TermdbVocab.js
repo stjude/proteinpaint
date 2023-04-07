@@ -414,6 +414,7 @@ export class TermdbVocab extends Vocab {
 			datasymbol: arg.datasymbol,
 			devicePixelRatio: window.devicePixelRatio,
 			radius: arg.radius,
+			unit: arg.unit,
 			..._body,
 			embedder: window.location.hostname
 		}
