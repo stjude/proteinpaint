@@ -314,7 +314,7 @@ function setTermActions(self) {
 				.append('div')
 				.style('text-align', 'center')
 				.style('margin', '5px')
-				.text(`#samples: ${t.counts.samples} visible, ${t.allCounts.samples - t.counts.samples} hidden`)
+				.text(`#samples: ${t.counts.samples} rendered, ${t.allCounts.samples - t.counts.samples} not rendered`)
 		}
 
 		self.dom.twMenuBar = self.dom.twMenuDiv.append('div').style('text-align', 'center')

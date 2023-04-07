@@ -255,14 +255,14 @@ class Matrix {
 				this.dom.loadingDiv.html('Processing data ...')
 			}
 
-			//if (this.stateDiff.nonsettings || this.stateDiff.sorting) {
-			this.setSampleGroups(this.data)
-			this.setTermOrder(this.data)
-			this.setSampleOrder(this.data)
-			this.setSampleCountsByTerm()
-			//}
+			if (this.stateDiff.nonsettings || this.stateDiff.sorting) {
+				this.setSampleGroups(this.data)
+				this.setTermOrder(this.data)
+				this.setSampleOrder(this.data)
+			}
 
 			this.setAutoDimensions()
+			this.setLabelsAndScales()
 			this.setLayout()
 			this.serieses = this.getSerieses(this.data)
 
@@ -494,8 +494,8 @@ class Matrix {
 					index,
 					prevGrpTotalIndex: total,
 					totalIndex: total + index,
-					totalHtAdjustments: 0,
-					grpHtAdjustments: 0,
+					totalHtAdjustments: 0, // may be required when transposed???
+					grpHtAdjustments: 0, // may be required when transposed???
 					_SAMPLENAME_: data.refs.bySampleId[row.sample],
 					processedLst
 				})
@@ -507,17 +507,13 @@ class Matrix {
 
 	setTermOrder(data) {
 		const s = this.settings.matrix
-		// ht: standard cell dimension for term row or column
-		const ht = s.transpose ? s.colw : s.rowh
 		this.termSorter = getTermSorter(this, s)
 		this.termGroups = JSON.parse(JSON.stringify(this.config.termgroups))
 		this.termOrder = []
 		let totalIndex = 0,
-			visibleGrpIndex = 0,
-			totalHtAdjustments = 0
+			visibleGrpIndex = 0
 		for (const [grpIndex, grp] of this.termGroups.entries()) {
 			const lst = [] // will derive a mutable copy of grp.lst
-			let grpHtAdjustments = 0
 			for (const [index, tw] of grp.lst.entries()) {
 				const counts = { samples: 0, hits: 0 }
 				const countedSamples = new Set()
@@ -551,7 +547,6 @@ class Matrix {
 					}
 				}
 				lst.push({ tw, counts, index })
-				grpHtAdjustments += (tw.settings ? (tw.settings?.barh || 0) + 2 * (tw.settings.gap || 0) : ht) - ht
 			}
 
 			// may override the settings.sortTermsBy with a sorter that is specific to a term group
@@ -589,21 +584,11 @@ class Matrix {
 					processedLst,
 					prevGrpTotalIndex: totalIndex,
 					totalIndex: totalIndex + index,
-					totalHtAdjustments,
-					grpHtAdjustments,
 					ref,
-					counts,
-					label:
-						(t.tw.label || t.tw.term.name) +
-						(s.samplecount4gene && t.tw.term.type.startsWith('gene') ? ` (${counts.samples})` : ''),
-					scale:
-						tw.q?.mode == 'continuous'
-							? scaleLinear()
-									.domain([counts.minval, counts.maxval])
-									.range([1, tw.settings.barh])
-							: null
+					allCounts: counts
+					// note: term label will be assigned after sample counts are known
+					// label: t.tw.label || t.tw.term.name,
 				})
-				totalHtAdjustments += (t.tw.settings ? t.tw.settings.barh + 2 * t.tw.settings.gap : ht) - ht
 			}
 
 			totalIndex += processedLst.length
@@ -660,18 +645,24 @@ class Matrix {
 		}
 	}
 
-	setSampleCountsByTerm() {
+	setLabelsAndScales() {
 		const s = this.settings.matrix
 		// only overwrite the sample counts if one or more sample group.lst has been truncated
-		if (!s.maxSample || this.sampleOrder.length < s.maxSample) return
+		//if (!s.maxSample || this.sampleOrder.length < s.maxSample) return
 		// !!! must REDO the sample counts by term after sorting and applying maxSamples, if applicable
+
+		// ht: standard cell dimension for term row or column
+		const ht = s.transpose ? s.colw : s.rowh
+		let totalHtAdjustments = 0,
+			grpHtAdjustments = 0,
+			currGrpIndex = 0
+
 		for (const t of this.termOrder) {
-			t.allCounts = t.counts
 			const countedSamples = new Set()
 			t.counts = { samples: 0, hits: 0 }
-			for (const s of this.sampleOrder) {
-				if (countedSamples.has(s.row.sample)) continue
-				const anno = s.row[t.tw.$id]
+			for (const sample of this.sampleOrder) {
+				if (countedSamples.has(sample.row.sample)) continue
+				const anno = sample.row[t.tw.$id]
 				if (!anno) continue
 				const { filteredValues, countedValues, renderedValues } = this.classifyValues(
 					anno,
@@ -693,9 +684,10 @@ class Matrix {
 				}
 			}
 
-			t.label =
-				(t.tw.label || t.tw.term.name) +
-				(s.samplecount4gene && t.tw.term.type.startsWith('gene') ? ` (${t.counts.samples})` : '')
+			t.label = t.tw.label || t.tw.term.name
+			if (s.samplecount4gene && t.tw.term.type.startsWith('gene')) {
+				t.label = `${t.label} (${t.counts.samples})`
+			}
 
 			t.scale =
 				t.tw.q?.mode == 'continuous'
@@ -703,6 +695,16 @@ class Matrix {
 							.domain([t.counts.minval, t.counts.maxval])
 							.range([1, t.tw.settings.barh])
 					: null
+
+			t.totalHtAdjustments = totalHtAdjustments
+			t.grpHtAdjustments = grpHtAdjustments
+
+			const adjustment = (t.tw.settings ? t.tw.settings.barh + 2 * t.tw.settings.gap : ht) - ht
+			totalHtAdjustments += adjustment
+			if (currGrpIndex != t.grpIndex) {
+				grpHtAdjustments += adjustment
+				currGrpIndex = t.grpIndex
+			}
 		}
 	}
 
