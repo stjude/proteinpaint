@@ -67,20 +67,6 @@ return an array of sample names passing through the filter
 	return re.map(i => i.sample)
 }
 
-export function get_cohortsamplecount(q, ds) {
-	/*
-must have q.cohortValues string
-return an array of sample names for the given cohort
-*/
-	if (!q.cohortValues) throw `missing q.cohortValues`
-	if (q.cohortValues == 'undefined') q.cohortValues = ''
-	const cohortKey = ds.cohort.termdb.selectCohort?.term.id || 'subcohort'
-	const statement = `SELECT cohort as ${cohortKey}, count as samplecount
-		FROM subcohort_terms
-		WHERE cohort=? and term_id='$ROOT$'`
-	// may cache statement
-	return ds.cohort.db.connection.prepare(statement).all(q.cohortValues)
-}
 export async function get_samplecount(q, ds) {
 	/*
 must have q.filter (somehow it can either be str or {})
@@ -955,12 +941,28 @@ thus less things to worry about...
 		const i2s = new Map(),
 			s2i = new Map()
 		const s = cn.prepare('SELECT * FROM sampleidmap')
+		let totalCount = 0
 		for (const { id, name } of s.all()) {
 			i2s.set(id, name)
 			s2i.set(name, id)
+			totalCount++
 		}
 		q.id2sampleName = id => i2s.get(id)
 		q.sampleName2id = s => s2i.get(s)
+
+		// if sampleidmap table is present, add this method to return sample count for datasets with and without subcohort
+		if (ds.cohort.termdb.selectCohort) {
+			// subcohort is enabled on this ds
+			const s = cn.prepare('SELECT cohort,sample_count from cohorts').all()
+			const h = {}
+			for (const i of s) h[i.cohort] = i.sample_count
+			q.getcohortsamplecount = cohortKey => {
+				if (!cohortKey) return totalCount
+				return h[cohortKey] || 0
+			}
+		} else {
+			q.getcohortsamplecount = () => totalCount
+		}
 	}
 
 	if (tables.has('category2vcfsample')) {
