@@ -1,4 +1,4 @@
-import { dtsnvindel, dtsv, dtfusionrna, dtitd, dtdel, dtnloss, dtcloss } from '#shared/common'
+import { mclass, dtsnvindel, dtsv, dtfusionrna, dtitd, dtdel, dtnloss, dtcloss } from '#shared/common'
 import { skewer_make, settle_glyph, fold_glyph, unfold_glyph, mayHighlightDiskBySsmid } from './skewer.render'
 import { make_datagroup } from './datagroup'
 import { renderNumericMode } from './numericmode'
@@ -370,8 +370,7 @@ function mlst2disc(mlst, tk) {
 	for (const [dt, tmp] of k2g) {
 		switch (dt) {
 			case dtsnvindel:
-				for (const mname2lst of tmp.values()) {
-					// all the mnames are of the same m.class
+				for (const [thisClass, mname2lst] of tmp) {
 					if (mname2lst.size > minMnameCount2compact) {
 						// too many mname under this class, compact to one single disc
 						const mlst = []
@@ -379,7 +378,7 @@ function mlst2disc(mlst, tk) {
 						groups.push({
 							dt,
 							mlst,
-							mnameCompact: mlst.length + ' variants'
+							mnameCompact: mclass[thisClass].label
 						})
 					} else {
 						for (const mlst of mname2lst.values()) {
@@ -394,7 +393,7 @@ function mlst2disc(mlst, tk) {
 					if (classset.use5.size > minMnameCount2compact) {
 						const mlst = []
 						for (const l2 of classset.use5.values()) mlst.push(...l2)
-						groups.push({ dt, mlst, useNterm: true, mnameCompact: `${mlst.length} ${dt == dtsv ? 'SV' : 'fusion'}s` })
+						groups.push({ dt, mlst, useNterm: true, mnameCompact: dt == dtsv ? 'SV' : 'fusion' })
 					} else {
 						for (const mlst of classset.use5.values()) {
 							groups.push({ dt, mlst, useNterm: true })
@@ -404,7 +403,7 @@ function mlst2disc(mlst, tk) {
 					if (classset.use3.size > minMnameCount2compact) {
 						const mlst = []
 						for (const l2 of classset.use3.values()) mlst.push(...l2)
-						groups.push({ dt, mlst, useNterm: false, mnameCompact: `${mlst.length} ${dt == dtsv ? 'SV' : 'fusion'}s` })
+						groups.push({ dt, mlst, useNterm: false, mnameCompact: dt == dtsv ? 'SV' : 'fusion' })
 					} else {
 						for (const mlst of classset.use3.values()) {
 							groups.push({ dt, mlst, useNterm: false })
