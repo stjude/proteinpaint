@@ -67,7 +67,8 @@ export async function init(arg, holder, genomes) {
 	})
 
 	const gdcCohort = getGdcCohort(arg)
-	const genes = await getGenes(arg, gdcCohort, CGConly)
+	console.log(arg, gdcCohort)
+	const genes = (await getGenes(arg, gdcCohort, CGConly)).slice(0, 3)
 
 	const opts = {
 		holder,

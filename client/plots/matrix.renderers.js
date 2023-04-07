@@ -80,7 +80,7 @@ export function setRenderers(self) {
 				if (!window.OffscreenCanvas) canvas.remove()
 			}
 		} else {
-			const rects = g.selectAll('rect').data(series.cells, (cell, i) => cell.sample + ';;' + cell.tw.$id + ';;' + i)
+			const rects = g.selectAll('rect').data(series.cells, cell => cell.sample + ';;' + cell.tw.$id)
 			rects.exit().remove()
 			rects.each(self.renderCell)
 			rects

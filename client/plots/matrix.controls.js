@@ -22,7 +22,6 @@ export class MatrixControls {
 		//this.recover = new Recover({app: opts.app})
 		const state = this.parent.getState(appState)
 		this.setButtons(state.config.settings.matrix)
-		this.setInputGroups()
 		this.setZoomInput()
 		this.setDragToggle({
 			holder: this.opts.holder.append('div').style('display', 'inline-block'),
@@ -38,22 +37,221 @@ export class MatrixControls {
 			.selectAll('button')
 			.data([
 				{
-					value: 'samples',
 					label: s.controlLabels.samples || `Samples`,
-					getCount: () => this.parent.sampleOrder.length
+					getCount: () => this.parent.sampleOrder.length,
+					rows: [
+						{
+							label: 'Sort samples',
+							type: 'radio',
+							chartType: 'matrix',
+							settingsKey: 'sortSamplesBy',
+							options: [{ label: 'as-listed', value: 'asListed' }, { label: 'selected terms', value: 'selectedTerms' }]
+						},
+						{
+							label: 'Maximum #samples',
+							type: 'number',
+							chartType: 'matrix',
+							settingsKey: 'maxSample'
+						},
+						{
+							label: 'Group samples by',
+							type: 'term',
+							chartType: 'matrix',
+							configKey: 'divideBy',
+							vocabApi: this.opts.app.vocabApi,
+							state: {
+								vocab: this.opts.vocab
+								//activeCohort: appState.activeCohort
+							},
+							processInput: tw => {
+								if (tw) fillTermWrapper(tw)
+							}
+						},
+						{
+							label: 'Sample name regex filter',
+							type: 'text',
+							chartType: 'matrix',
+							settingsKey: 'sampleNameFilter'
+						}
+					]
 				},
 				{
-					value: 'anno',
 					label: s.controlLabels.terms || `Variables`,
 					getCount: () => this.parent.termOrder.length,
-					customInputs: this.appendTermInputs
+					customInputs: this.appendTermInputs,
+					rows: [
+						/*{
+							label: 'Terms as columns',
+							boxLabel: '',
+							type: 'checkbox',
+							chartType: 'matrix',
+							settingsKey: 'transpose'
+						},*/
+						{
+							label: 'Display sample counts for gene',
+							boxLabel: '',
+							type: 'checkbox',
+							chartType: 'matrix',
+							settingsKey: 'samplecount4gene'
+						},
+						/*{
+							NOTE: this is only by term group, not global to all rows
+							label: 'Minimum #samples',
+							type: 'number',
+							chartType: 'matrix',
+							settingsKey: 'minNumSamples',
+							title: 'Minimum number of hits for a row to be visible'
+						},*/
+						{
+							label: 'Sort terms',
+							type: 'radio',
+							chartType: 'matrix',
+							settingsKey: 'sortTermsBy',
+							options: [{ label: 'as-listed', value: 'asListed' }, { label: 'by sample count', value: 'sampleCount' }]
+						}
+					]
 				},
-				{ value: 'styles', label: 'Styles' },
-				{ value: 'cols', label: 'Column layout' },
-				{ value: 'rows', label: 'Row layout' },
-				{ value: 'legend', label: 'Legend layout' },
-				//{ label: 'Undo', callback: ()=>this.recover.goto(-1) },
-				//{ label: 'Redo', callback: ()=>this.recover.goto(1) },
+
+				{
+					label: 'Styles',
+					rows: [
+						{
+							label: 'Cell encoding',
+							type: 'radio',
+							chartType: 'matrix',
+							settingsKey: 'cellEncoding',
+							options: [{ label: 'Default', value: '' }, { label: 'Oncoprint', value: 'oncoprint' }]
+						},
+						{
+							label: 'Background color',
+							type: 'color',
+							chartType: 'matrix',
+							settingsKey: 'cellbg'
+						}
+					]
+				},
+
+				// { value: 'cols', label: 'Column layout' },
+				// { value: 'rows', label: 'Row layout' },
+				{
+					label: 'Dimensions',
+
+					tables: [
+						{
+							header: ['Cells', 'Columns', 'Rows'],
+							rows: [
+								{
+									label: 'Width or height',
+									type: 'number',
+									width: 50,
+									chartType: 'matrix',
+									inputs: [
+										{ settingsKey: 'colw', min: 1, max: 24, step: 1 },
+										{ settingsKey: 'rowh', min: 8, max: 30, step: 1 }
+									]
+								},
+								{
+									label: 'Gaps',
+									type: 'number',
+									width: 50,
+									chartType: 'matrix',
+									inputs: [
+										{ settingsKey: 'colspace', min: 0, max: 20, step: 1 },
+										{ settingsKey: 'rowspace', min: 0, max: 20, step: 1 }
+									]
+								},
+								{
+									label: 'Group gaps',
+									type: 'number',
+									width: 50,
+									chartType: 'matrix',
+									inputs: [
+										{ settingsKey: 'colgspace', min: 0, max: 20, step: 1 },
+										{ settingsKey: 'rowgspace', min: 0, max: 20, step: 1 }
+									]
+								}
+							]
+						},
+						{
+							header: ['Labels', 'Columns', 'Rows'],
+							rows: [
+								{
+									label: 'Gaps',
+									type: 'number',
+									width: 50,
+									chartType: 'matrix',
+									inputs: [
+										{ settingsKey: 'collabelgap', min: 0, max: 20, step: 1 },
+										{ settingsKey: 'rowlabelgap', min: 0, max: 20, step: 1 }
+									]
+								}
+							]
+						}
+					]
+				},
+
+				{
+					label: 'Legend layout',
+					rows: [
+						//ontop: false,
+						{
+							label: 'Font size',
+							type: 'number',
+							chartType: 'legend',
+							settingsKey: 'fontsize'
+						},
+						{
+							label: 'Line height',
+							type: 'number',
+							chartType: 'legend',
+							settingsKey: 'lineh'
+						},
+						{
+							label: 'Icon height',
+							type: 'number',
+							chartType: 'legend',
+							settingsKey: 'iconh'
+						},
+						{
+							label: 'Icon width',
+							type: 'number',
+							chartType: 'legend',
+							settingsKey: 'iconw'
+						},
+						{
+							label: 'Left margin',
+							type: 'number',
+							chartType: 'legend',
+							settingsKey: 'padleft'
+						},
+						/*{
+							label: 'Bottom margin',
+							type: 'number',
+							chartType: 'legend',
+							settingsKey: 'padbtm'
+						},*/
+						{
+							label: 'Item left pad',
+							type: 'number',
+							chartType: 'legend',
+							settingsKey: 'padx'
+						},
+						{
+							label: 'Item layout',
+							type: 'checkbox',
+							chartType: 'legend',
+							settingsKey: 'linesep',
+							boxLabel: 'Line separated'
+						},
+						{
+							label: 'Left indent',
+							type: 'number',
+							chartType: 'legend',
+							settingsKey: 'hangleft'
+						}
+					]
+				},
+
 				{
 					label: 'Download SVG',
 					callback: () => to_svg(this.opts.getSvg(), 'matrix', { apply_dom_styles: true })
@@ -69,98 +267,7 @@ export class MatrixControls {
 
 	setInputGroups() {
 		this.inputGroups = {
-			samples: [
-				/*{
-					label: 'Sample as rows',
-					boxLabel: '',
-					type: 'checkbox',
-					chartType: 'matrix',
-					settingsKey: 'transpose'
-				},*/
-				{
-					label: 'Sort samples',
-					type: 'radio',
-					chartType: 'matrix',
-					settingsKey: 'sortSamplesBy',
-					options: [{ label: 'as-listed', value: 'asListed' }, { label: 'selected terms', value: 'selectedTerms' }]
-				},
-				{
-					label: 'Maximum #samples',
-					type: 'number',
-					chartType: 'matrix',
-					settingsKey: 'maxSample'
-				},
-				{
-					label: 'Group samples by',
-					type: 'term',
-					chartType: 'matrix',
-					configKey: 'divideBy',
-					vocabApi: this.opts.app.vocabApi,
-					state: {
-						vocab: this.opts.vocab
-						//activeCohort: appState.activeCohort
-					},
-					processInput: tw => {
-						if (tw) fillTermWrapper(tw)
-					}
-				},
-				{
-					label: 'Sample name regex filter',
-					type: 'text',
-					chartType: 'matrix',
-					settingsKey: 'sampleNameFilter'
-				}
-			],
-
-			anno: [
-				/*{
-					label: 'Terms as columns',
-					boxLabel: '',
-					type: 'checkbox',
-					chartType: 'matrix',
-					settingsKey: 'transpose'
-				},*/
-				{
-					label: 'Display sample counts for gene',
-					boxLabel: '',
-					type: 'checkbox',
-					chartType: 'matrix',
-					settingsKey: 'samplecount4gene'
-				},
-				/*{
-					NOTE: this is only by term group, not global to all rows
-					label: 'Minimum #samples',
-					type: 'number',
-					chartType: 'matrix',
-					settingsKey: 'minNumSamples',
-					title: 'Minimum number of hits for a row to be visible'
-				},*/
-				{
-					label: 'Sort terms',
-					type: 'radio',
-					chartType: 'matrix',
-					settingsKey: 'sortTermsBy',
-					options: [{ label: 'as-listed', value: 'asListed' }, { label: 'by sample count', value: 'sampleCount' }]
-				}
-			],
-
-			styles: [
-				{
-					label: 'Cell encoding',
-					type: 'radio',
-					chartType: 'matrix',
-					settingsKey: 'cellEncoding',
-					options: [{ label: 'Default', value: '' }, { label: 'Oncoprint', value: 'oncoprint' }]
-				},
-				{
-					label: 'Background color',
-					type: 'color',
-					chartType: 'matrix',
-					settingsKey: 'cellbg'
-				}
-			],
-
-			cols: [
+			/*cols: [
 				{
 					label: 'Column width',
 					type: 'number',
@@ -238,66 +345,7 @@ export class MatrixControls {
 					settingsKey: 'rowlabelpos',
 					options: [{ label: 'Rows', value: 'left' }, { label: 'Groups', value: 'right' }]
 				}
-			],
-
-			legend: [
-				//ontop: false,
-				{
-					label: 'Font size',
-					type: 'number',
-					chartType: 'legend',
-					settingsKey: 'fontsize'
-				},
-				{
-					label: 'Line height',
-					type: 'number',
-					chartType: 'legend',
-					settingsKey: 'lineh'
-				},
-				{
-					label: 'Icon height',
-					type: 'number',
-					chartType: 'legend',
-					settingsKey: 'iconh'
-				},
-				{
-					label: 'Icon width',
-					type: 'number',
-					chartType: 'legend',
-					settingsKey: 'iconw'
-				},
-				{
-					label: 'Left margin',
-					type: 'number',
-					chartType: 'legend',
-					settingsKey: 'padleft'
-				},
-				/*{
-					label: 'Bottom margin',
-					type: 'number',
-					chartType: 'legend',
-					settingsKey: 'padbtm'
-				},*/
-				{
-					label: 'Item left pad',
-					type: 'number',
-					chartType: 'legend',
-					settingsKey: 'padx'
-				},
-				{
-					label: 'Item layout',
-					type: 'checkbox',
-					chartType: 'legend',
-					settingsKey: 'linesep',
-					boxLabel: 'Line separated'
-				},
-				{
-					label: 'Left indent',
-					type: 'number',
-					chartType: 'legend',
-					settingsKey: 'hangleft'
-				}
-			]
+			],*/
 		}
 	}
 
@@ -338,30 +386,50 @@ export class MatrixControls {
 	}
 
 	async callback(event, d) {
+		console.log('test', d)
 		const { clientX, clientY } = event
 		const app = this.opts.app
 		const parent = this.opts.parent
-		const table = app.tip.clear().d.append('table')
-		//if (d.customHeaderRows) d.customHeaderRows(parent, table)
+		const tables = d.tables || [d]
 
-		for (const inputConfig of this.inputGroups[d.value]) {
-			const input = await initByInput[inputConfig.type](
-				Object.assign(
-					{},
-					{
-						holder: table.append('tr'),
-						dispatch: app.dispatch,
-						id: parent.id,
-						//instanceNum: this.instanceNum,
-						debug: this.opts.debug,
-						parent
-					},
-					inputConfig
+		app.tip.clear()
+
+		for (const t of tables) {
+			console.log(381, t.rows)
+			const table = app.tip.d.append('table')
+			//if (d.customHeaderRows) d.customHeaderRows(parent, table)
+
+			if (t.header) {
+				table
+					.append('tr')
+					.selectAll('th')
+					.data(t.header)
+					.enter()
+					.append('th')
+					.html(d => d)
+			}
+
+			for (const inputConfig of t.rows) {
+				const input = await initByInput[inputConfig.type](
+					Object.assign(
+						{},
+						{
+							holder: table.append('tr'),
+							dispatch: app.dispatch,
+							id: parent.id,
+							//instanceNum: this.instanceNum,
+							debug: this.opts.debug,
+							parent
+						},
+						inputConfig
+					)
 				)
-			)
-			input.main(parent.config)
+				input.main(parent.config)
+			}
+
+			if (t.customInputs) t.customInputs(this, app, parent, table)
 		}
-		if (d.customInputs) d.customInputs(this, app, parent, table)
+
 		app.tip.showunder(event.target)
 	}
 
