@@ -226,17 +226,6 @@ export function setRenderers(self) {
 	self.getColor = function(c) {
 		if (self.config.colorTW?.q.mode == 'continuous' && 'sampleId' in c) return self.colorGenerator(c.category)
 		const category = self.colorLegend.get(c.category)
-		if (self.config.colorTW?.term.type == 'geneVariant' && 'sampleId' in c) {
-			const mutations = c.cat_info.category
-			const catMutations = mutations.filter(
-				mutation =>
-					mutation.class != 'WT' && mutation.class != 'Blank' && c.category.includes(mclass[mutation.class].label)
-			)
-			if (catMutations.length > 1)
-				return rgb(category.color)
-					.darker()
-					.darker()
-		}
 		return category.color
 	}
 
