@@ -152,35 +152,51 @@ function setNumberInput(opts) {
 				.html(opts.label)
 				.attr('class', 'sja-termdb-config-row-label')
 				.attr('title', opts.title),
-			inputTd: opts.holder.append('td')
+			inputs: {}
 		}
 	}
 
-	self.dom.input = self.dom.inputTd
-		.append('input')
-		.attr('type', 'number')
-		.attr('min', 'min' in opts ? opts.min : null) // verify that null gives the default html input behavior
-		.attr('max', 'max' in opts ? opts.max : null) // same
-		.attr('step', 'step' in opts ? opts.step : null) //step gives the amount by which user can increment
-		.style('width', (opts.width || 100) + 'px')
-		.on('change', () => {
-			const value = Number(self.dom.input.property('value'))
-			opts.dispatch({
-				type: 'plot_edit',
-				id: opts.id,
-				config: {
-					settings: {
-						[opts.chartType]: {
-							[opts.settingsKey]: opts.processInput ? opts.processInput(value) : value
+	if (!opts.inputs)
+		opts.inputs = [
+			{
+				min: opts.min,
+				max: opts.max,
+				step: opts.step,
+				width: opts.width
+			}
+		]
+
+	for (const input of opts.inputs) {
+		const inputTd = opts.holder.append('td')
+		self.dom.inputs[input.settingsKey] = inputTd
+			.append('input')
+			.attr('type', 'number')
+			.attr('min', 'min' in input ? input.min : null) // verify that null gives the default html input behavior
+			.attr('max', 'max' in input ? input.max : null) // same
+			.attr('step', input.step || opts.step || null) //step gives the amount by which user can increment
+			.style('width', (input.width || opts.width || 100) + 'px')
+			.on('change', () => {
+				const value = Number(self.dom.inputs[input.settingsKey].property('value'))
+				opts.dispatch({
+					type: 'plot_edit',
+					id: opts.id,
+					config: {
+						settings: {
+							[opts.chartType]: {
+								[input.settingsKey]: opts.processInput ? opts.processInput(value) : value
+							}
 						}
 					}
-				}
+				})
 			})
-		})
+	}
 
 	const api = {
 		main(plot) {
-			self.dom.input.property('value', plot.settings[opts.chartType][opts.settingsKey])
+			console.log(plot)
+			for (const settingsKey in self.dom.inputs) {
+				self.dom.inputs[settingsKey].property('value', plot.settings[opts.chartType][settingsKey])
+			}
 		}
 	}
 

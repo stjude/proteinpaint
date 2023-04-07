@@ -893,8 +893,9 @@ class Matrix {
 						key,
 						totalIndex,
 						grpIndex,
-						row,
-						siblingCells
+						//row,
+						siblingCells,
+						t
 					}
 
 					// will assign x, y, width, height, fill, label, order, etc
@@ -1045,7 +1046,7 @@ export async function getPlotConfig(opts, app) {
 				sortTermsBy: 'sampleCount', // or 'as listed'
 				samplecount4gene: true,
 				cellbg: '#ececec',
-				colw: 0,
+				colw: 8,
 				maxColw: 16,
 				maxColwZoomed: 34,
 				colspace: 1,
@@ -1061,8 +1062,6 @@ export async function getPlotConfig(opts, app) {
 				rowlabelpos: 'left', // | 'right'
 				rowlabelgap: 5,
 				rowlabelvisible: true,
-				rowglabelpos: true,
-				rowlabelgap: 5,
 				rowlabelpad: 1,
 				grpLabelFontSize: 12,
 				minLabelFontSize: 6,
