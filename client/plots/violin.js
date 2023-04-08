@@ -124,10 +124,7 @@ class ViolinPlot {
 				type: 'radio',
 				chartType: 'violin',
 				settingsKey: 'unit',
-				options: [
-					{ label: 'Linear', value: 'abs' },
-					{ label: 'Log', value: 'log', getDisplayStyle: plot => (plot.term2 ? 'none' : 'inline-block') }
-				]
+				options: [{ label: 'Linear', value: 'abs' }, { label: 'Log', value: 'log' }]
 			})
 		}
 		this.components = {
