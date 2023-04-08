@@ -108,16 +108,16 @@ export async function get_summary_numericcategories(q) {
 	values.push(q.term_id)
 	const keylst = []
 	for (const k in term.values) {
-		keylst.push(k)
-		values.push(k)
+		keylst.push('?')
+		values.push(Number(k))
 	}
 	const sql = `
 		${filter ? 'WITH ' + filter.filters : ''}
 		SELECT count(sample) AS samplecount,value
-		FROM annotations
+		FROM anno_${term.type}
 		WHERE term_id=?
 		${filter ? 'AND sample IN ' + filter.CTEname : ''}
-		AND value IN (${keylst.map(i => '?').join(',')})
+		AND value IN (${keylst.join(',')})
 		GROUP BY value`
 	return q.ds.cohort.db.connection.prepare(sql).all(values)
 }
@@ -209,11 +209,12 @@ works for all attributes, including non-termdb ones
 	if (!q.ds) throw '.ds{} missing'
 	const filter = await getFilterCTEs(q.filter, q.ds)
 	const values = filter ? filter.values.slice() : []
+	const term = q.ds.cohort.termdb.q.termjsonByOneid(q.key)
 	values.push(q.key)
 	const sql = `
 		${filter ? 'WITH ' + filter.filters : ''}
 		SELECT sample, value
-		FROM annotations
+		FROM anno_${term.type}
 		WHERE term_id=?
 		${filter ? ' AND sample IN ' + filter.CTEname : ''}`
 	return q.ds.cohort.db.connection.prepare(sql).all(values)
@@ -254,13 +255,13 @@ q{}
     ${filter ? filter.filters + ',' : ''}
     ${CTE0.sql},
     t1 AS (
-      SELECT sample, CAST(value AS real) as value
-      FROM annotations
+      SELECT sample, value
+      FROM anno_${t1.type}
       WHERE term_id=? ${t1unannovals}
     ),
     t2 AS (
-      SELECT sample, CAST(value AS real) as value
-      FROM annotations
+      SELECT sample, value
+      FROM anno_${t2.type}
       WHERE term_id=? ${t2unannovals}
     )
     SELECT
@@ -603,7 +604,7 @@ function getlabeler(q, i, result) {
 	const term_id = q['term' + i + '_id']
 	if (!term_id) return default_labeler
 	const term = q.ds.cohort.termdb.q.termjsonByOneid(term_id)
-	if (!term_id) return default_labeler
+	if (!term) return default_labeler
 
 	// when there is only term1 and no term0/term2 simplify
 	// the property names to just "key" and "label" with no index
@@ -769,8 +770,8 @@ at a numeric barchart
 	}
 	const excludevalues = term.values ? Object.keys(term.values).filter(key => term.values[key].uncomputable) : []
 	const string = `${filter ? 'WITH ' + filter.filters + ' ' : ''}
-		SELECT CAST(value AS ${term.type == 'integer' ? 'INT' : 'REAL'}) AS value
-		FROM annotations
+		SELECT value
+		FROM anno_${term.type}
 		WHERE
 		${filter ? 'sample IN ' + filter.CTEname + ' AND ' : ''}
 		term_id=?
@@ -846,8 +847,8 @@ export function get_numericMinMaxPct(ds, term, filter, percentiles = []) {
 	const sql = `WITH
 		${filter ? filter.filters + ', ' : ''} 
 		vals AS (
-			SELECT CAST(value AS ${term.type == 'integer' ? 'INT' : 'REAL'}) AS value
-			FROM annotations
+			SELECT value
+			FROM anno_${term.type}
 			WHERE
 			${filter ? 'sample IN ' + filter.CTEname + ' AND ' : ''}
 			term_id=?
@@ -1166,8 +1167,8 @@ thus less things to worry about...
 		}
 	}
 	{
-		const s1 = cn.prepare('SELECT MAX(CAST(value AS INT))  AS v FROM annotations WHERE term_id=?')
-		const s2 = cn.prepare('SELECT MAX(CAST(value AS REAL)) AS v FROM annotations WHERE term_id=?')
+		const s1 = cn.prepare('SELECT MAX(value) AS v FROM anno_integer WHERE term_id=?')
+		const s2 = cn.prepare('SELECT MAX(value) AS v FROM anno_float WHERE term_id=?')
 		const cache = new Map()
 		q.findTermMaxvalue = (id, isint) => {
 			if (cache.has(id)) return cache.get(id)
@@ -1205,17 +1206,26 @@ thus less things to worry about...
 			return [ {sample=str, value=?}, ... ]
 		else, return single value by sample and term
 		*/
-		const s = cn.prepare('SELECT sample,value FROM annotations WHERE term_id=?')
-		const s_sampleInt = cn.prepare('SELECT value FROM annotations WHERE term_id=? AND sample=?')
-		const s_sampleStr = cn.prepare(
-			'SELECT a.value FROM annotations AS a, sampleidmap AS s WHERE a.term_id=? AND a.sample=s.id AND s.name=?'
-		)
+		const s = {
+			categorical: cn.prepare('SELECT value FROM anno_categorical WHERE term_id=?'),
+			integer: cn.prepare('SELECT value FROM anno_integer WHERE term_id=?'),
+			float: cn.prepare('SELECT value FROM anno_float WHERE term_id=?')
+		}
+		const s_sampleInt = {
+			categorical: cn.prepare('SELECT value FROM anno_categorical WHERE term_id=? AND sample=?'),
+			integer: cn.prepare('SELECT value FROM anno_integer WHERE term_id=? AND sample=?'),
+			float: cn.prepare('SELECT value FROM anno_float WHERE term_id=? AND sample=?')
+		}
+		const s_sampleStr = {
+			categorical: cn.prepare('SELECT value FROM anno_categorical a,sampleidmap s WHERE term_id=? AND s.name=?'),
+			integer: cn.prepare('SELECT value FROM anno_integer a,sampleidmap s WHERE term_id=? AND s.name=?'),
+			float: cn.prepare('SELECT value FROM anno_float a, sampleidmap s WHERE term_id=? AND s.name=?')
+		}
 		q.getSample2value = (id, sample = null) => {
-			if (sample) {
-				if (typeof sample == 'string') return s_sampleStr.all(id, sample)
-				return s_sampleInt.all(id, sample)
-			}
-			return s.all(id)
+			const term = q.termjsonByOneid(id)
+			if (!sample) return s[term.type].all(id)
+			if (typeof sample == 'string') return s_sampleStr[term.type].all(id, sample)
+			return s_sampleInt[term.type].all(id, sample)
 		}
 	}
 	if (tables.has('termhtmldef')) {

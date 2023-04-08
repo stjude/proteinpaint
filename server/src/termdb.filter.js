@@ -105,7 +105,7 @@ function get_categorical(tvs, CTEname) {
 			`
 		  ${CTEname} AS (
 				SELECT sample
-				FROM annotations
+				FROM anno_categorical
 				WHERE term_id = ?
 				AND value ${tvs.isnot ? 'NOT' : ''} IN (${tvs.values.map(i => '?').join(', ')})
 			)`
@@ -199,8 +199,6 @@ so here need to allow both string and number as range.value
 	const values = [tvs.term.id]
 	// get term object
 	const term = ds.cohort.termdb.q.termjsonByOneid(tvs.term.id)
-	const cast = 'CAST(value AS ' + (term.type == 'integer' ? 'INT' : 'REAL') + ')'
-
 	const rangeclauses = []
 	let hasactualrange = false // if true, will exclude special categories
 
@@ -217,17 +215,17 @@ so here need to allow both string and number as range.value
 			const lst = []
 			if (!range.startunbounded) {
 				if (range.startinclusive) {
-					lst.push(cast + ' >= ?')
+					lst.push('value >= ?')
 				} else {
-					lst.push(cast + ' > ? ')
+					lst.push('value > ? ')
 				}
 				values.push(range.start)
 			}
 			if (!range.stopunbounded) {
 				if (range.stopinclusive) {
-					lst.push(cast + ' <= ?')
+					lst.push('value <= ?')
 				} else {
-					lst.push(cast + ' < ? ')
+					lst.push('value < ? ')
 				}
 				values.push(range.stop)
 			}
@@ -250,10 +248,10 @@ so here need to allow both string and number as range.value
 			`
 		    ${CTEname} AS (
 				SELECT sample
-				FROM annotations
+				FROM anno_${term.type}
 				WHERE term_id = ?
 				${combinedClauses ? 'AND (' + combinedClauses + ')' : ''}
-				${excludevalues && excludevalues.length ? `AND ${cast} NOT IN (${excludevalues.map(d => '?').join(',')})` : ''}
+				${excludevalues && excludevalues.length ? `AND value NOT IN (${excludevalues.map(d => '?').join(',')})` : ''}
 			)`
 		],
 		values,

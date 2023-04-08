@@ -433,7 +433,7 @@ tape('tvs: Numeric', async test => {
 				callback: filter => {
 					test.deepEqual(
 						filter.lst[0].tvs.ranges.filter(r => 'value' in r && !currentRanges.find(d => d.value === r.value)),
-						[{ value: '0', label: 'Not exposed' }],
+						[{ value: 0, label: 'Not exposed' }],
 						'should add an unannotated value to the tvs.ranges'
 					)
 				},
