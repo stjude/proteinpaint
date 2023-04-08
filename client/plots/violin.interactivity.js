@@ -211,8 +211,6 @@ export function setInteractivity(self) {
 				stopinclusive: true,
 				startunbounded: self.displayLabelClickMenu.called == false ? true : false,
 				stopunbounded: self.displayLabelClickMenu.called == false ? true : false
-				// 	startunbounded: false,
-				// 	stopunbounded: false
 			}
 		]
 	}
@@ -254,7 +252,6 @@ export function setInteractivity(self) {
 				self.createTvsLstRanges(t1, tvslst, rangeStart, rangeStop, 1)
 			}
 		} else self.createTvsLstRanges(t1, tvslst, rangeStart, rangeStop, 0)
-		console.log(249, tvslst)
 		return tvslst
 	}
 }
