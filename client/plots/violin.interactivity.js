@@ -119,7 +119,7 @@ export function setInteractivity(self) {
 	}
 
 	self.listSamples = async function(event, t1, t2, plot, start, end) {
-		const tvslst = getTvsLst(t1, t2, plot, start, end)
+		const tvslst = self.getTvsLst(t1, t2, plot, start, end)
 		const term = t1.q?.mode === 'continuous' ? t1 : t2
 		const filter = {
 			type: 'tvslst',
@@ -193,6 +193,62 @@ export function setInteractivity(self) {
 			}
 		})
 	}
+
+	self.createTvsLstRanges = function(term, tvslst, rangeStart, rangeStop, lstIdx) {
+		createTvsTerm(term, tvslst)
+
+		tvslst.lst[lstIdx].tvs.ranges = [
+			{
+				start: rangeStart,
+				stop: rangeStop,
+				startinclusive: true,
+				stopinclusive: true,
+				startunbounded: self.displayLabelClickMenu.called == false ? true : false,
+				stopunbounded: self.displayLabelClickMenu.called == false ? true : false
+			}
+		]
+	}
+
+	self.getTvsLst = function(t1, t2, plot, rangeStart, rangeStop) {
+		const tvslst = {
+			type: 'tvslst',
+			in: true,
+			join: 'and',
+			lst: []
+		}
+
+		if (t2) {
+			if (t1.term.type === 'categorical') {
+				createTvsLstValues(t1, plot, tvslst, 0)
+				self.createTvsLstRanges(t2, tvslst, rangeStart, rangeStop, 1)
+			} else if (
+				t2.q?.mode === 'continuous' ||
+				((t2.term?.type === 'float' || t2.term?.type === 'integer') && plot.divideTwBins != null)
+			) {
+				createTvsTerm(t2, tvslst)
+				tvslst.lst[0].tvs.ranges = [
+					{
+						start: structuredClone(plot.divideTwBins?.start) || null,
+						stop: structuredClone(plot.divideTwBins?.stop) || null,
+						startinclusive: structuredClone(plot.divideTwBins?.startinclusive) || true,
+						stopinclusive: structuredClone(plot.divideTwBins?.stopinclusive) || false,
+						startunbounded: structuredClone(plot.divideTwBins?.startunbounded)
+							? structuredClone(plot.divideTwBins?.startunbounded)
+							: null,
+						stopunbounded: structuredClone(plot.divideTwBins?.stopunbounded)
+							? structuredClone(plot.divideTwBins?.stopunbounded)
+							: null
+					}
+				]
+				self.createTvsLstRanges(t1, tvslst, rangeStart, rangeStop, 1)
+			} else {
+				createTvsLstValues(t2, plot, tvslst, 0)
+				self.createTvsLstRanges(t1, tvslst, rangeStart, rangeStop, 1)
+			}
+		} else self.createTvsLstRanges(t1, tvslst, rangeStart, rangeStop, 0)
+		console.log(249, tvslst)
+		return tvslst
+	}
 }
 
 function getAddFilterCallback(t1, t2, self, plot, rangeStart, rangeStop) {
@@ -208,7 +264,7 @@ function getAddFilterCallback(t1, t2, self, plot, rangeStart, rangeStop) {
 			createTvsLstValues(t1, plot, tvslst, 0)
 
 			if (self.displayBrushMenu.called === true) {
-				createTvsLstRanges(t2, tvslst, rangeStart, rangeStop, 1)
+				self.createTvsLstRanges(t2, tvslst, rangeStart, rangeStop, 1)
 			}
 		} else if (
 			t2.q?.mode === 'continuous' ||
@@ -230,17 +286,17 @@ function getAddFilterCallback(t1, t2, self, plot, rangeStart, rangeStop) {
 				}
 			]
 			if (self.displayBrushMenu.called === true) {
-				createTvsLstRanges(t1, tvslst, rangeStart, rangeStop, 1)
+				self.createTvsLstRanges(t1, tvslst, rangeStart, rangeStop, 1)
 			}
 		} else {
 			createTvsLstValues(t2, plot, tvslst, 0)
 			if (self.displayBrushMenu.called === true) {
-				createTvsLstRanges(t1, tvslst, rangeStart, rangeStop, 1)
+				self.createTvsLstRanges(t1, tvslst, rangeStart, rangeStop, 1)
 			}
 		}
 	} else {
 		if (self.displayBrushMenu.called === true) {
-			createTvsLstRanges(t1, tvslst, rangeStart, rangeStop, 0)
+			self.createTvsLstRanges(t1, tvslst, rangeStart, rangeStop, 0)
 		}
 	}
 
@@ -275,19 +331,6 @@ function createTvsLstValues(term, plot, tvslst, lstIdx) {
 	]
 }
 
-function createTvsLstRanges(term, tvslst, rangeStart, rangeStop, lstIdx) {
-	createTvsTerm(term, tvslst)
-
-	tvslst.lst[lstIdx].tvs.ranges = [
-		{
-			start: rangeStart,
-			stop: rangeStop,
-			startinclusive: true,
-			stopinclusive: true
-		}
-	]
-}
-
 function createTvsTerm(term, tvslst) {
 	tvslst.lst.push({
 		type: 'tvs',
@@ -295,44 +338,4 @@ function createTvsTerm(term, tvslst) {
 			term: term.term
 		}
 	})
-}
-
-function getTvsLst(t1, t2, plot, rangeStart, rangeStop) {
-	const tvslst = {
-		type: 'tvslst',
-		in: true,
-		join: 'and',
-		lst: []
-	}
-
-	if (t2) {
-		if (t1.term.type === 'categorical') {
-			createTvsLstValues(t1, plot, tvslst, 0)
-			createTvsLstRanges(t2, tvslst, rangeStart, rangeStop, 1)
-		} else if (
-			t2.q?.mode === 'continuous' ||
-			((t2.term?.type === 'float' || t2.term?.type === 'integer') && plot.divideTwBins != null)
-		) {
-			createTvsTerm(t2, tvslst)
-			tvslst.lst[0].tvs.ranges = [
-				{
-					start: structuredClone(plot.divideTwBins?.start) || null,
-					stop: structuredClone(plot.divideTwBins?.stop) || null,
-					startinclusive: structuredClone(plot.divideTwBins?.startinclusive) || true,
-					stopinclusive: structuredClone(plot.divideTwBins?.stopinclusive) || false,
-					startunbounded: structuredClone(plot.divideTwBins?.startunbounded)
-						? structuredClone(plot.divideTwBins?.startunbounded)
-						: null,
-					stopunbounded: structuredClone(plot.divideTwBins?.stopunbounded)
-						? structuredClone(plot.divideTwBins?.stopunbounded)
-						: null
-				}
-			]
-			createTvsLstRanges(t1, tvslst, rangeStart, rangeStop, 1)
-		} else {
-			createTvsLstValues(t2, plot, tvslst, 0)
-			createTvsLstRanges(t1, tvslst, rangeStart, rangeStop, 1)
-		}
-	} else createTvsLstRanges(t1, tvslst, rangeStart, rangeStop, 0)
-	return tvslst
 }
