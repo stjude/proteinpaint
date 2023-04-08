@@ -137,6 +137,7 @@ export function setInteractivity(self) {
 		const data = await self.app.vocabApi.getAnnotatedSampleData(opts)
 		self.displaySampleIds(event, term, data)
 	}
+
 	self.displaySampleIds = function(event, term, data) {
 		self.app.tip.clear()
 		if (!data?.samples) return
@@ -144,9 +145,13 @@ export function setInteractivity(self) {
 		for (const [c, k] of Object.entries(data.samples)) {
 			const sampleIdObj = {}
 			if (data.refs.bySampleId[c]) {
-				if (self.config.term.term.additionalAttributes?.logScale && k[term.$id].value != 0) {
+				if (self.config.settings.violin?.unit === 'log' && k[term.$id].value != 0) {
 					sampleIdObj[data.refs.bySampleId[c]] = roundValue(
-						getBaseLog(self.config.term.term.additionalAttributes?.logScale, k[term.$id].value),
+						getBaseLog(
+							self.config.term.term.additionalAttributes?.logScale ||
+								self.config.term2.term.additionalAttributes?.logScale,
+							k[term.$id].value
+						),
 						2
 					)
 				} else sampleIdObj[data.refs.bySampleId[c]] = k[term.$id].value
