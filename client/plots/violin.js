@@ -118,7 +118,7 @@ class ViolinPlot {
 				}
 			)
 		}
-		if (state.config.term.term.additionalAttributes.logScale) {
+		if (state.config.term.term.additionalAttributes?.logScale) {
 			inputs.push({
 				label: 'Scale',
 				type: 'radio',
