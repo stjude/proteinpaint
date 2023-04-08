@@ -216,8 +216,6 @@ export function setInteractivity(self) {
 				stopinclusive: true,
 				startunbounded: self.displayLabelClickMenu.called == false ? true : false,
 				stopunbounded: self.displayLabelClickMenu.called == false ? true : false
-				// 	startunbounded: false,
-				// 	stopunbounded: false
 			}
 		]
 	}
