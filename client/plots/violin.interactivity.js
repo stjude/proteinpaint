@@ -1,6 +1,8 @@
 import { filterJoin, getFilterItemByTag } from '../filter/filter'
 import { renderTable } from '#dom/table'
 import { to_svg } from '#src/client'
+import { getBaseLog } from '../shared/getBaseLog'
+import roundValue from '../shared/roundValue'
 
 export function setInteractivity(self) {
 	self.download = function() {
@@ -135,7 +137,6 @@ export function setInteractivity(self) {
 		const data = await self.app.vocabApi.getAnnotatedSampleData(opts)
 		self.displaySampleIds(event, term, data)
 	}
-
 	self.displaySampleIds = function(event, term, data) {
 		self.app.tip.clear()
 		if (!data?.samples) return
@@ -143,7 +144,12 @@ export function setInteractivity(self) {
 		for (const [c, k] of Object.entries(data.samples)) {
 			const sampleIdObj = {}
 			if (data.refs.bySampleId[c]) {
-				sampleIdObj[data.refs.bySampleId[c]] = k[term.$id].value
+				if (self.config.term.term.additionalAttributes?.logScale && k[term.$id].value != 0) {
+					sampleIdObj[data.refs.bySampleId[c]] = roundValue(
+						getBaseLog(self.config.term.term.additionalAttributes?.logScale, k[term.$id].value),
+						2
+					)
+				} else sampleIdObj[data.refs.bySampleId[c]] = k[term.$id].value
 			}
 			sampleIdArr.push([{ value: Object.keys(sampleIdObj) }, { value: Object.values(sampleIdObj) }])
 		}
@@ -205,6 +211,8 @@ export function setInteractivity(self) {
 				stopinclusive: true,
 				startunbounded: self.displayLabelClickMenu.called == false ? true : false,
 				stopunbounded: self.displayLabelClickMenu.called == false ? true : false
+				// 	startunbounded: false,
+				// 	stopunbounded: false
 			}
 		]
 	}
