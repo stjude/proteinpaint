@@ -162,33 +162,42 @@ function setNumberInput(opts) {
 				min: opts.min,
 				max: opts.max,
 				step: opts.step,
-				width: opts.width
+				width: opts.width,
+				settingsKey: opts.settingsKey
 			}
 		]
 
 	for (const input of opts.inputs) {
 		const inputTd = opts.holder.append('td')
-		self.dom.inputs[input.settingsKey] = inputTd
-			.append('input')
-			.attr('type', 'number')
-			.attr('min', 'min' in input ? input.min : null) // verify that null gives the default html input behavior
-			.attr('max', 'max' in input ? input.max : null) // same
-			.attr('step', input.step || opts.step || null) //step gives the amount by which user can increment
-			.style('width', (input.width || opts.width || 100) + 'px')
-			.on('change', () => {
-				const value = Number(self.dom.inputs[input.settingsKey].property('value'))
-				opts.dispatch({
-					type: 'plot_edit',
-					id: opts.id,
-					config: {
-						settings: {
-							[opts.chartType]: {
-								[input.settingsKey]: opts.processInput ? opts.processInput(value) : value
+		if (!input.settingsKey) {
+			inputTd
+				.style('text-align', 'center')
+				.style('color', '#999')
+				.style('cursor', 'default')
+				.html(input.label)
+		} else {
+			self.dom.inputs[input.settingsKey] = inputTd
+				.append('input')
+				.attr('type', 'number')
+				.attr('min', 'min' in input ? input.min : null) // verify that null gives the default html input behavior
+				.attr('max', 'max' in input ? input.max : null) // same
+				.attr('step', input.step || opts.step || null) //step gives the amount by which user can increment
+				.style('width', (input.width || opts.width || 100) + 'px')
+				.on('change', () => {
+					const value = Number(self.dom.inputs[input.settingsKey].property('value'))
+					opts.dispatch({
+						type: 'plot_edit',
+						id: opts.id,
+						config: {
+							settings: {
+								[opts.chartType]: {
+									[input.settingsKey]: opts.processInput ? opts.processInput(value) : value
+								}
 							}
 						}
-					}
+					})
 				})
-			})
+		}
 	}
 
 	const api = {
