@@ -632,18 +632,21 @@ class Matrix {
 		else this.autoDimensions.delete('rowh')
 
 		const s = this.settings.matrix
+		this.computedSettings = {}
 		if (this.autoDimensions.has('colw')) {
 			const offset = !s.transpose
 				? s.termLabelOffset + s.termGrpLabelOffset
 				: s.sampleLabelOffset + s.sampleGrpLabelOffset
 			const colw = Math.round((document.body.clientWidth - 300 - offset) / this.sampleOrder.length)
-			s.colw = Math.max(s.colwMin, Math.min(colw, s.colwMax)) //; console.log(640, [colw, s.colw, s.colwMin, s.colwMax])
-			s.colspace = s.zoomLevel * s.colw <= 2 ? 0 : 1
+			this.computedSettings.colw = Math.max(s.colwMin, Math.min(colw, s.colwMax)) //; console.log(640, [colw, s.colw, s.colwMin, s.colwMax])
+			this.computedSettings.colspace = s.zoomLevel * this.computedSettings.colw <= 2 ? 0 : s.colspace || 1
 		}
 
 		if (this.autoDimensions.has('rowh')) {
-			s.rowh = Math.max(5, Math.round(screen.availHeight / this.numTerms))
+			this.computedSettings.rowh = Math.max(5, Math.round(screen.availHeight / this.numTerms))
 		}
+
+		copyMerge(this.settings.matrix, this.computedSettings)
 	}
 
 	setLabelsAndScales() {

@@ -1,4 +1,3 @@
-import { select } from 'd3-selection'
 import { initByInput } from './controls.config'
 import { to_svg } from '../src/client'
 import { fillTermWrapper, termsettingInit } from '../termsetting/termsetting'
@@ -137,7 +136,7 @@ export class MatrixControls {
 					label: 'Dimensions',
 
 					tables: [
-						{
+						/*{
 							header: ['Zoom', 'Min', 'Max'],
 							rows: [
 								{
@@ -151,22 +150,33 @@ export class MatrixControls {
 									]
 								}
 							]
-						},
+						},*/
 						{
 							header: ['Cells', 'Columns', 'Rows'],
 							rows: [
 								{
-									label: 'Width or height',
+									label: 'Row height',
 									type: 'number',
 									width: 50,
 									chartType: 'matrix',
-									inputs: [
-										{ settingsKey: 'colw', min: 1, max: 24, step: 1 },
-										{ settingsKey: 'rowh', min: 8, max: 30, step: 1 }
-									]
+									inputs: [{ label: 'N/A' }, { settingsKey: 'rowh', min: 8, max: 30, step: 1 }]
 								},
 								{
-									label: 'Gaps',
+									label: 'Min col. width',
+									type: 'number',
+									width: 50,
+									chartType: 'matrix',
+									inputs: [{ settingsKey: 'colwMin', min: 0, max: 24, step: 0.2 }, { label: 'N/A' }]
+								},
+								{
+									label: 'Max col. width',
+									type: 'number',
+									width: 50,
+									chartType: 'matrix',
+									inputs: [{ settingsKey: 'colwMax', min: 1, max: 24, step: 0.2 }, { label: 'N/A' }]
+								},
+								{
+									label: 'Spacing',
 									type: 'number',
 									width: 50,
 									chartType: 'matrix',
@@ -176,7 +186,7 @@ export class MatrixControls {
 									]
 								},
 								{
-									label: 'Group gaps',
+									label: 'Group spacing',
 									type: 'number',
 									width: 50,
 									chartType: 'matrix',
@@ -191,7 +201,7 @@ export class MatrixControls {
 							header: ['Labels', 'Columns', 'Rows'],
 							rows: [
 								{
-									label: 'Gaps',
+									label: 'Spacing',
 									type: 'number',
 									width: 50,
 									chartType: 'matrix',
@@ -284,24 +294,6 @@ export class MatrixControls {
 		this.inputGroups = {
 			/*cols: [
 				{
-					label: 'Column width',
-					type: 'number',
-					chartType: 'matrix',
-					settingsKey: 'colw'
-				},
-				{
-					label: 'Column gap',
-					type: 'number',
-					chartType: 'matrix',
-					settingsKey: 'colspace'
-				},
-				{
-					label: 'Group gap',
-					type: 'number',
-					chartType: 'matrix',
-					settingsKey: 'colgspace'
-				},
-				{
 					label: 'Column label pad',
 					type: 'number',
 					chartType: 'matrix',
@@ -323,18 +315,6 @@ export class MatrixControls {
 			],
 
 			rows: [
-				{
-					label: 'Row height',
-					type: 'number',
-					chartType: 'matrix',
-					settingsKey: 'rowh'
-				},
-				{
-					label: 'Row gap',
-					type: 'number',
-					chartType: 'matrix',
-					settingsKey: 'rowspace'
-				},
 				{
 					label: 'Row label pad',
 					type: 'number',
@@ -401,7 +381,6 @@ export class MatrixControls {
 	}
 
 	async callback(event, d) {
-		console.log('test', d)
 		const { clientX, clientY } = event
 		const app = this.opts.app
 		const parent = this.opts.parent
@@ -410,7 +389,7 @@ export class MatrixControls {
 		app.tip.clear()
 
 		for (const t of tables) {
-			const table = app.tip.d.append('table')
+			const table = app.tip.d.append('table').attr('class', 'sjpp-controls-table')
 			//if (d.customHeaderRows) d.customHeaderRows(parent, table)
 
 			if (t.header) {

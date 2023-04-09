@@ -101,6 +101,7 @@ export async function getPlotConfig(opts, app) {
 
 	// harcode these overrides for now
 	config.settings.matrix.duration = 0
+	// force auto-dimensions for colw
 	config.settings.matrix.colw = 0
 
 	const promises = []
