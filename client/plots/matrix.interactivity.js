@@ -445,7 +445,6 @@ function setTermActions(self) {
 		const [tcopy] = self.getSorterTerms(t)
 		const termgroups = self.termGroups
 		termgroups[t.grpIndex].lst[t.lstIndex] = tcopy
-		termgroups[t.grpIndex].sortTermsBy = 'asListed'
 		for (const g of termgroups) {
 			for (const tw of g.lst) {
 				if (!tw.sortSamples) continue
