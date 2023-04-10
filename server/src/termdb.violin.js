@@ -62,6 +62,7 @@ export async function trigger_getViolinPlotData(q, res, ds, genome) {
 	if (term.type != 'integer' && term.type != 'float') throw 'term type is not integer/float.'
 
 	const twLst = [{ id: q.termid, term, q: { mode: 'continuous' } }]
+	console.log(63, twLst)
 
 	if (q.divideTw) {
 		if (!('id' in q.divideTw)) {
@@ -77,8 +78,12 @@ export async function trigger_getViolinPlotData(q, res, ds, genome) {
 	const data = await getData({ terms: twLst, filter: q.filter, currentGeneNames: q.currentGeneNames }, ds, genome)
 	if (data.error) throw data.error
 
+	function getBaseLog(x, y) {
+		return Math.log(y) / Math.log(x)
+	}
+
 	for (const [k, v] of Object.entries(data.samples)) {
-		if (term.additionalAttributes?.logScale && q.unit == 'log') {
+		if (term.additionalAttributes?.logScale) {
 			if (v[term.id].key == 0 || v[term.id].value == 0) continue
 			v[term.id].key = getBaseLog(term.additionalAttributes?.logScale, v[term.id].key)
 			v[term.id].value = getBaseLog(term.additionalAttributes?.logScale, v[term.id].value)
