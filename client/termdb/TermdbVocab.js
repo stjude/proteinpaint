@@ -349,7 +349,7 @@ export class TermdbVocab extends Vocab {
 			if (!Array.isArray(data)) throw 'data is not array'
 			return data
 		}
-		return data[0].samplecount
+		return data.count || 0
 	}
 
 	/*
