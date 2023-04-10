@@ -60,6 +60,7 @@ class Matrix {
 		this.dom = {
 			header: opts.header,
 			holder,
+			contentNode: opts.holder.node().closest('.sjpp-output-sandbox-content'),
 			errdiv,
 			controls,
 			loadingDiv,
@@ -261,8 +262,6 @@ class Matrix {
 				this.setSampleOrder(this.data)
 			}
 
-			this.setAutoDimensions()
-			this.setLabelsAndScales()
 			this.setLayout()
 			this.serieses = this.getSerieses(this.data)
 
@@ -622,7 +621,7 @@ class Matrix {
 		}
 	}
 
-	setAutoDimensions() {
+	setAutoDimensions(xOffset) {
 		const m = this.state.config.settings.matrix
 		if (!this.autoDimensions) this.autoDimensions = new Set()
 
@@ -633,14 +632,15 @@ class Matrix {
 
 		const s = this.settings.matrix
 		this.computedSettings = {}
+		this.availContentWidth = this.dom.contentNode.getBoundingClientRect().width - 66 - s.margin.right - xOffset
 		if (this.autoDimensions.has('colw')) {
 			const offset = !s.transpose
 				? s.termLabelOffset + s.termGrpLabelOffset
 				: s.sampleLabelOffset + s.sampleGrpLabelOffset
-			const colw = Math.round((document.body.clientWidth - 300 - offset) / this.sampleOrder.length)
+			const colw = this.availContentWidth / this.sampleOrder.length
 			this.computedSettings.colw = Math.max(s.colwMin, Math.min(colw, s.colwMax))
-			this.computedSettings.colspace = s.zoomLevel * this.computedSettings.colw <= 2 ? 0 : s.colspace || 1
 		}
+		this.computedSettings.colspace = s.zoomLevel * this.computedSettings.colw < 2 ? 0 : s.colspace
 
 		if (this.autoDimensions.has('rowh')) {
 			this.computedSettings.rowh = Math.max(5, Math.round(screen.availHeight / this.numTerms))
@@ -744,6 +744,10 @@ class Matrix {
 
 		const yOffset = layout.top.offset + s.margin.top + s.scrollHeight
 		const xOffset = layout.left.offset + s.margin.left
+
+		this.setAutoDimensions(xOffset)
+		this.setLabelsAndScales()
+
 		const colw = Math.max(s.colwMin, Math.min(s.colwMax, s.colw * s.zoomLevel))
 		const dx = colw + s.colspace
 		const nx = this[`${col}s`].length
@@ -753,8 +757,7 @@ class Matrix {
 			nx * (colw + s.colspace) +
 			this[`${col}Grps`].length * s.colgspace +
 			(this[`${col}s`].slice(-1)[0]?.totalHtAdjustments || 0)
-		const mainwByScreen = document.body.clientWidth - 50 - xOffset
-		const mainw = Math.min(mainwByColDimensions, mainwByScreen)
+		const mainw = Math.min(mainwByColDimensions, this.availContentWidth)
 
 		const mainh =
 			ny * dy + (this[`${row}Grps`].length - 1) * s.rowgspace + (this[`${row}s`].slice(-1)[0]?.totalHtAdjustments || 0)
@@ -843,7 +846,7 @@ class Matrix {
 			colw,
 			zoomedMainW,
 			seriesXoffset: seriesXoffset > 0 ? 0 : seriesXoffset,
-			maxMainW: Math.max(mainwByColDimensions, mainwByScreen)
+			maxMainW: Math.max(mainwByColDimensions, this.availContentWidth)
 		}
 	}
 

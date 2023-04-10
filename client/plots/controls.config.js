@@ -4,6 +4,7 @@ import { term1uiInit } from './controls.term1'
 import { divideInit } from './controls.divide'
 import { initRadioInputs } from '../dom/radio2'
 import { termsettingInit } from '../termsetting/termsetting'
+import { rgb } from 'd3-color'
 
 // to be used for assigning unique
 // radio button names by object instance
@@ -337,7 +338,8 @@ function setColorInput(opts) {
 
 	const api = {
 		main(plot) {
-			self.dom.input.property('value', plot.settings[opts.chartType][opts.settingsKey])
+			const color = plot.settings[opts.chartType][opts.settingsKey]
+			self.dom.input.property('value', rgb(color).formatHex())
 		}
 	}
 
