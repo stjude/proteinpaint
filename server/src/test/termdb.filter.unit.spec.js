@@ -7,7 +7,7 @@ $ npx tape modules/test/*.spec.js
 const tape = require('tape')
 const getFilterCTEs = require('../termdb.filter').getFilterCTEs
 const tdb = require('./load.testds').init('termdb.test.js')
-const { server_init_db_queries } = require('../termdb.sql')
+const { server_init_db_queries } = require('../termdb.server.init')
 server_init_db_queries(tdb.ds)
 
 tape('\n', function(test) {

@@ -101,7 +101,7 @@ const express = require('express'),
 	validator = require('./validator'),
 	cookieParser = require('cookie-parser'),
 	authApi = require('./auth.js'),
-	{ server_init_db_queries, listDbTables } = require('./termdb.sql'),
+	{ server_init_db_queries, listDbTables } = require('./termdb.server.init'),
 	{ handle_healthcheck_closure } = require('./health'),
 	{ handle_genelookup_closure } = require('./gene'),
 	minimatch = require('minimatch')
@@ -7327,7 +7327,7 @@ async function pp_init() {
 		// termdbs{} is optional
 		if (g.termdbs) {
 			for (const key in g.termdbs) {
-				server_init_db_queries(g.termdbs[key])
+				server_init_db_queries(g.termdbs[key], exports.features)
 				console.log(`${key} initiated as ${genomename}-level termdb`)
 			}
 		}
