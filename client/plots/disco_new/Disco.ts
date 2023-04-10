@@ -1,6 +1,7 @@
 import {getCompInit} from "#rx"
 import {DiscoRenderer} from "#plots/disco_new/DiscoRenderer";
 import {DiscoInteractions} from "#plots/disco_new/DiscoInteractions";
+import  { select }  from 'd3-selection'
 
 export default class Disco {
     private type: string;
