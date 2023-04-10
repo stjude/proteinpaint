@@ -1052,7 +1052,7 @@ export const schemeCategory20 = [
 	'#17becf',
 	'#9edae5'
 ]
-export const schemeCategory2 = ['pink', 'lightBlue']
+export const schemeCategory2 = ['#e75480', 'blue']
 
 export function getColorScheme(number) {
 	if (number > 12) return schemeCategory20

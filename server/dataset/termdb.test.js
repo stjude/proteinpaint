@@ -130,8 +130,8 @@ function copyDataFilesFromRepo2Tp() {
 	const targetDir = path.join(serverconfig.binpath, 'test/tp/files/hg38/TermdbTest')
 	const datadir = path.join(serverconfig.tpmasterdir, 'files/hg38/TermdbTest')
 
-	if (!targetDir.endsWith(datadir) && !fs.existsSync(datadir)) {
-		// TODO detect if ~/data/tp/files/hg38/TermdbTest/ is hardcoded, then delete the folder and redo symlink
+	if (!targetDir.endsWith(datadir)) {
+		if (fs.existsSync(datadir)) fs.unlinkSync(datadir)
 		fs.symlinkSync(targetDir, datadir)
 	}
 }
