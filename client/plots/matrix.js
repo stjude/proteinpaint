@@ -42,7 +42,7 @@ class Matrix {
 		const svg = holder
 			.append('svg')
 			.style('margin', '20px 10px')
-			.style('overflow', 'hidden')
+			.style('overflow', 'visible')
 			.on('mousemove.label', this.svgMousemove)
 			.on('mouseup.label', this.svgMouseup)
 
@@ -472,7 +472,7 @@ class Matrix {
 					prevGrpTotalIndex: total,
 					totalIndex: total + index,
 					totalHtAdjustments: 0, // may be required when transposed???
-					grpHtAdjustments: 0, // may be required when transposed???
+					grpTotals: { htAdjustment: 0 }, // may be required when transposed???
 					_SAMPLENAME_: data.refs.bySampleId[row.sample],
 					processedLst
 				})
@@ -638,7 +638,7 @@ class Matrix {
 				? s.termLabelOffset + s.termGrpLabelOffset
 				: s.sampleLabelOffset + s.sampleGrpLabelOffset
 			const colw = Math.round((document.body.clientWidth - 300 - offset) / this.sampleOrder.length)
-			this.computedSettings.colw = Math.max(s.colwMin, Math.min(colw, s.colwMax)) //; console.log(640, [colw, s.colw, s.colwMin, s.colwMax])
+			this.computedSettings.colw = Math.max(s.colwMin, Math.min(colw, s.colwMax))
 			this.computedSettings.colspace = s.zoomLevel * this.computedSettings.colw <= 2 ? 0 : s.colspace || 1
 		}
 
@@ -651,19 +651,16 @@ class Matrix {
 
 	setLabelsAndScales() {
 		const s = this.settings.matrix
-		// only overwrite the sample counts if one or more sample group.lst has been truncated
-		//if (!s.maxSample || this.sampleOrder.length < s.maxSample) return
-		// !!! must REDO the sample counts by term after sorting and applying maxSamples, if applicable
 
 		// ht: standard cell dimension for term row or column
 		const ht = s.transpose ? s.colw : s.rowh
-		let totalHtAdjustments = 0,
-			grpHtAdjustments = 0,
-			currGrpIndex = 0
+		const grpTotals = {}
+		let totalHtAdjustments = 0
 
 		for (const t of this.termOrder) {
 			const countedSamples = new Set()
 			t.counts = { samples: 0, hits: 0 }
+
 			for (const sample of this.sampleOrder) {
 				if (countedSamples.has(sample.row.sample)) continue
 				const anno = sample.row[t.tw.$id]
@@ -701,14 +698,11 @@ class Matrix {
 					: null
 
 			t.totalHtAdjustments = totalHtAdjustments
-			t.grpHtAdjustments = grpHtAdjustments
-
 			const adjustment = (t.tw.settings ? t.tw.settings.barh + 2 * t.tw.settings.gap : ht) - ht
 			totalHtAdjustments += adjustment
-			if (currGrpIndex != t.grpIndex) {
-				grpHtAdjustments += adjustment
-				currGrpIndex = t.grpIndex
-			}
+			if (!(t.visibleGrpIndex in grpTotals)) grpTotals[t.visibleGrpIndex] = { htAdjustment: 0 }
+			grpTotals[t.visibleGrpIndex].htAdjustment += adjustment
+			t.grpTotals = grpTotals[t.visibleGrpIndex]
 		}
 	}
 

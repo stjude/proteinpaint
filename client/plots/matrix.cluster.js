@@ -42,12 +42,12 @@ export class MatrixCluster {
 		for (const xg of this.xGrps) {
 			const dx = d.dx //Math.min(d.dx, s.colwMax + s.colspace)
 			const x = xg.prevGrpTotalIndex * dx + s.colgspace * xg.grpIndex + xg.totalHtAdjustments
-			const width = dx * (xg.processedLst || xg.grp.lst).length + xg.grpHtAdjustments
+			const width = dx * (xg.processedLst || xg.grp.lst).length + xg.grpTotals.htAdjustment
 			this.totalWidth += width + 2 * Math.max(1, s.colspace)
 
 			for (const yg of this.yGrps) {
 				const y = yg.prevGrpTotalIndex * d.dy + yg.grpIndex * s.rowgspace + yg.totalHtAdjustments
-				const height = d.dy * (yg.processedLst || yg.grp.lst).length + yg.grpHtAdjustments
+				const height = d.dy * (yg.processedLst || yg.grp.lst).length + yg.grpTotals.htAdjustment
 				const offsetX = Math.max(1, s.colspace)
 				const offsetY = Math.max(1, s.rowspace)
 				clusters.push({
