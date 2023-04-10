@@ -46,6 +46,11 @@ exports.getRunPp = function getRunPp(appname = '', defaultArgs = {}, host = 'htt
 		norecover: true
 	}
 
+	if (appname == 'mass') {
+		// do not debounce dispatched changes during testing
+		defaultArgs.debounceInterval = 0
+	}
+
 	// initialize default argument values for all tests
 	// if there is an appname, set it's initial config to defaultArgs
 	if (appname) arg[appname] = defaultArgs
