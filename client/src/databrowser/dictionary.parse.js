@@ -21,7 +21,6 @@ exports.parseDictionary = function parseDictionary(input) {
 	// process the header line
 	// could have used lines.shift() here, but will want to track actual line numbers later for errors
 	const header = lines[0].split('\t')
-	// console.log(header);
 
 	const term_idIndex = header.findIndex(l => l.toLowerCase().includes('term_id'))
 	const variableIndex = header.findIndex(l => l.toLowerCase().includes('variable')) // term_id col in phenotree
@@ -125,7 +124,6 @@ exports.parseDictionary = function parseDictionary(input) {
 	}
 
 	function parsePhenotree(lines, header) {
-		// console.log(header);
 		/* 
 		Parses phenotree:
 			- Parses tab delim data arranged in cols: levels(n), variable (i.e. term_id), type, and categories (i.e. previous configuration).
@@ -196,12 +194,12 @@ exports.parseDictionary = function parseDictionary(input) {
 				}
 
 				const term = parseCategories(cols[typeIndex], cols[categoriesIndex], cols[additionalAttrIndexes], lineNum, name)
+
 				const id = cols[variableIndex] || name
 				if (id in terms) {
 					const orig = terms[id]
 					throw `Error: Multiple config rows for term.id='${id}': lines# ${orig.lineNum} and ${lineNum}`
 				}
-				// console.log(203,term);
 
 				//Create term object
 				terms[id] = {
