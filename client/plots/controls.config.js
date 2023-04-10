@@ -169,6 +169,27 @@ function setNumberInput(opts) {
 		]
 
 	for (const input of opts.inputs) {
+		let dispatchTimer
+		function debouncedDispatch() {
+			if (dispatchTimer) clearTimeout(dispatchTimer)
+			dispatchTimer = setTimeout(dispatchChange, 100)
+		}
+
+		function dispatchChange() {
+			const value = Number(self.dom.inputs[input.settingsKey].property('value'))
+			opts.dispatch({
+				type: 'plot_edit',
+				id: opts.id,
+				config: {
+					settings: {
+						[opts.chartType]: {
+							[input.settingsKey]: opts.processInput ? opts.processInput(value) : value
+						}
+					}
+				}
+			})
+		}
+
 		const inputTd = opts.holder.append('td')
 		if (!input.settingsKey) {
 			inputTd
@@ -184,20 +205,7 @@ function setNumberInput(opts) {
 				.attr('max', 'max' in input ? input.max : null) // same
 				.attr('step', input.step || opts.step || null) //step gives the amount by which user can increment
 				.style('width', (input.width || opts.width || 100) + 'px')
-				.on('change', () => {
-					const value = Number(self.dom.inputs[input.settingsKey].property('value'))
-					opts.dispatch({
-						type: 'plot_edit',
-						id: opts.id,
-						config: {
-							settings: {
-								[opts.chartType]: {
-									[input.settingsKey]: opts.processInput ? opts.processInput(value) : value
-								}
-							}
-						}
-					})
-				})
+				.on('change', debouncedDispatch)
 		}
 	}
 

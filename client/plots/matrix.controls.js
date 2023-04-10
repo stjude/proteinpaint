@@ -166,7 +166,7 @@ export class MatrixControls {
 									type: 'number',
 									width: 50,
 									chartType: 'matrix',
-									inputs: [{ settingsKey: 'colwMin', min: 0, max: 24, step: 0.2 }, { label: 'N/A' }]
+									inputs: [{ settingsKey: 'colwMin', min: 0.1, max: 16, step: 0.2 }, { label: 'N/A' }]
 								},
 								{
 									label: 'Max col. width',

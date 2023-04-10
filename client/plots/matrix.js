@@ -60,7 +60,7 @@ class Matrix {
 		this.dom = {
 			header: opts.header,
 			holder,
-			contentNode: opts.holder.node().closest('.sjpp-output-sandbox-content'),
+			contentNode: opts.holder.node().closest('.sjpp-output-sandbox-content') || opts.holder.node().parentNode,
 			errdiv,
 			controls,
 			loadingDiv,
@@ -632,12 +632,14 @@ class Matrix {
 
 		const s = this.settings.matrix
 		this.computedSettings = {}
-		this.availContentWidth = this.dom.contentNode.getBoundingClientRect().width - 66 - s.margin.right - xOffset
+		// TODO: the additional 65 space should not be hardcoded, but determined based on matrix holder/config
+		this.availContentWidth = this.dom.contentNode.getBoundingClientRect().width - 65 - s.margin.right - xOffset
 		if (this.autoDimensions.has('colw')) {
 			const offset = !s.transpose
 				? s.termLabelOffset + s.termGrpLabelOffset
 				: s.sampleLabelOffset + s.sampleGrpLabelOffset
-			const colw = this.availContentWidth / this.sampleOrder.length
+			// TODO: the additional 80 space should not be hardcoded, but determined on matrix holder/config
+			const colw = (this.availContentWidth - 80) / this.sampleOrder.length
 			this.computedSettings.colw = Math.max(s.colwMin, Math.min(colw, s.colwMax))
 		}
 		this.computedSettings.colspace = s.zoomLevel * this.computedSettings.colw < 2 ? 0 : s.colspace
