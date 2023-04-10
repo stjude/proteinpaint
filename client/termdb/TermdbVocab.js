@@ -332,7 +332,7 @@ export class TermdbVocab extends Vocab {
 		const data = await dofetch3('termdb', { body }, this.opts.fetchOpts)
 		if (!data) throw 'missing data'
 		if (data.error) throw data.error
-		return data.count || 0
+		return data[0]?.samplecount || data.count || 0
 	}
 
 	async getFilteredSampleCount(filterJSON, getSampleLst) {
@@ -349,7 +349,7 @@ export class TermdbVocab extends Vocab {
 			if (!Array.isArray(data)) throw 'data is not array'
 			return data
 		}
-		return data.count || 0
+		return data[0]?.samplecount || data.count || 0
 	}
 
 	/*
