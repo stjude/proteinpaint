@@ -359,7 +359,7 @@ tape.skip('getNestedChartSeriesData()', async test => {
 
 tape('getTdbDataUrl()', async test => {
 	test.timeoutAfter(100)
-	test.plan(12)
+	test.plan(11)
 
 	const termdbVocabApi = await getTermdbVocabApi()
 
@@ -439,14 +439,6 @@ tape('getTdbDataUrl()', async test => {
 	}
 	result = termdbVocabApi.getTdbDataUrl(opts)
 	test.ok(result.includes(`filter=`), 'Should return filter= in URL')
-
-	message = 'Should return scatter plot parameter'
-	opts = {
-		chartType: 'scatter',
-		term: { id: 'agedx', term: termjson['agedx'], q: termjson['agedx'] }
-	}
-	result = termdbVocabApi.getTdbDataUrl(opts)
-	test.ok(result.includes(`scatter=1`), message)
 
 	message = 'Should return cuminc parameter'
 	opts = {

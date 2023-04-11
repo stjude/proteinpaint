@@ -135,7 +135,6 @@ export class TermdbVocab extends Vocab {
     */
 	getTdbDataUrl(opts) {
 		const params = [`embedder=${window.location.hostname}`]
-		if (opts.chartType == 'scatter') params.push('scatter=1')
 		if (opts.chartType == 'cuminc') params.push('getcuminc=1')
 		if (opts.chartType == 'survival') params.push('getsurvival=1')
 

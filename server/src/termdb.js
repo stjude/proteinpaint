@@ -50,7 +50,6 @@ export function handle_request_closure(genomes) {
 			if (q.default_rootterm) return await trigger_rootterm(q, res, tdb)
 			if (q.get_children) return await trigger_children(q, res, tdb)
 			if (q.findterm) return await trigger_findterm(q, res, tdb, ds)
-			if (q.scatter) return await trigger_scatter(q, res, tdb, ds)
 			if (q.getterminfo) return trigger_getterminfo(q, res, tdb)
 			if (q.phewas) {
 				if (q.update) return await phewas.update_image(q, res)
@@ -361,25 +360,6 @@ async function trigger_getconditioncategories(q, res, tdb, ds) {
 		lst: result.lst,
 		orderedLabels: getOrderedLabels(term, bins)
 	})
-}
-
-async function trigger_scatter(q, res, tdb, ds) {
-	q.ds = ds
-	const startTime = +new Date()
-	const t1 = tdb.q.termjsonByOneid(q.term1_id)
-	if (!t1) throw `Invalid term1_id="${q.term1_id}"`
-	if (t1.type != 'float' && t1.type != 'integer') throw `term is not integer/float for scatter data`
-
-	const t2 = tdb.q.termjsonByOneid(q.term2_id)
-	if (!t2) throw `Invalid term1_id="${q.term2_id}"`
-	if (t2.type != 'float' && t2.type != 'integer') throw `term2 is not integer/float for scatter data`
-
-	const rows = await termdbsql.get_rows_by_two_keys(q, t1, t2)
-	const result = {
-		rows
-		//time: +(new Date()) - startTime
-	}
-	res.send(result)
 }
 
 function trigger_getterminfo(q, res, tdb) {
