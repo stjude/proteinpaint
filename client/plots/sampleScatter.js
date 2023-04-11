@@ -110,6 +110,7 @@ class Scatter {
 			)
 		copyMerge(this.settings, this.config.settings.sampleScatter)
 		const reqOpts = this.getDataRequestOpts()
+		if (reqOpts.coordTWs.length == 1) return //To allow removing a term in the controls, though nothing is rendered (summary tab with violin active)
 		this.data = await this.app.vocabApi.getScatterData(reqOpts)
 
 		if (this.data.error) throw this.data.error
