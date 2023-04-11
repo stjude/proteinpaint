@@ -137,7 +137,6 @@ export function setInteractivity(self) {
 		const data = await self.app.vocabApi.getAnnotatedSampleData(opts)
 		self.displaySampleIds(event, term, data)
 	}
-
 	self.displaySampleIds = function(event, term, data) {
 		self.app.tip.clear()
 		if (!data?.samples) return
@@ -217,6 +216,8 @@ export function setInteractivity(self) {
 				stopinclusive: true,
 				startunbounded: self.displayLabelClickMenu.called == false ? true : false,
 				stopunbounded: self.displayLabelClickMenu.called == false ? true : false
+				// 	startunbounded: false,
+				// 	stopunbounded: false
 			}
 		]
 	}
