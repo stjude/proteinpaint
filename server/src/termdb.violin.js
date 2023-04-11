@@ -62,6 +62,7 @@ export async function trigger_getViolinPlotData(q, res, ds, genome) {
 	if (term.type != 'integer' && term.type != 'float') throw 'term type is not integer/float.'
 
 	const twLst = [{ id: q.termid, term, q: { mode: 'continuous' } }]
+	console.log(63, twLst)
 
 	if (q.divideTw) {
 		if (!('id' in q.divideTw)) {
