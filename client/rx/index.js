@@ -299,13 +299,9 @@ export function getAppApi(self) {
 				}
 
 				// expect store.write() to be debounced and handler rapid succession of dispatches
-				numExpectedWrites += 1
 				// replace app.state if there is an action
 				if (action) self.state = await self.store.write(action)
-				numExpectedWrites += -1
-				// rapid succession of dispatched + writes should trigger only one call to app.main(),
-				// where the last of these closely spaced dispatches will be the trigger
-				if (numExpectedWrites != 0) return
+				// TODO: may need to group calls to self.main by action type and plot.id
 				if (self.main) await self.main()
 				const current = { action, appState: self.state }
 				await notifyComponents(self.components, current)

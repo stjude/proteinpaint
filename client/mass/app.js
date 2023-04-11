@@ -84,6 +84,7 @@ class MassApp {
 	async init() {
 		// catch initialization error
 		try {
+			// QUICK FIX: force no debouncer by default
 			const debounceInterval = 'debounceInterval' in this.opts ? this.opts.debounceInterval : 250
 			this.store = await storeInit({ app: this.api, state: this.opts.state, debounceInterval })
 			this.state = await this.store.copyState()
