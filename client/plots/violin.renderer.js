@@ -1,7 +1,7 @@
 import { axisLeft, axisTop } from 'd3-axis'
 import { scaleLinear, scaleOrdinal, scaleLog } from 'd3-scale'
 import { area, curveBumpX, curveBumpY } from 'd3-shape'
-import { schemeCategory10 } from 'd3-scale-chromatic'
+import { getColors } from '#shared/common'
 import { brushX, brushY } from 'd3-brush'
 import { renderTable } from '#dom/table'
 import { Menu } from '../dom/menu'
@@ -10,7 +10,6 @@ import { format } from 'd3-format'
 import { interpolate } from 'd3-interpolate'
 
 export default function violinRenderer(self) {
-	const k2c = scaleOrdinal(schemeCategory10)
 	self.render = function() {
 		const settings = self.config.settings.violin
 		const isH = settings.orientation === 'horizontal'
@@ -30,10 +29,9 @@ export default function violinRenderer(self) {
 				}
 			}
 		}
-
 		//filter out hidden values and only keep plots which are not hidden in term2.q.hiddenvalues
 		self.data.plots = self.data.plots.filter(p => !t2?.q?.hiddenValues?.[p.label || p.seriesId])
-
+		this.k2c = getColors(self.data.plots.length)
 		if (self.legendRenderer) self.legendRenderer(getLegendGrps(self))
 
 		if (self.data.plots.length === 0) {
@@ -286,11 +284,14 @@ export default function violinRenderer(self) {
 				.y(d => svg.axisScale(d.x0))
 				.curve(curveBumpY)
 		}
-
+		const label = plot.label.split(',')[0]
+		const catTerm = self.config.term.q.mode == 'discrete' ? self.config.term : self.config.term2
+		const category = catTerm.term.values ? Object.values(catTerm.term.values).find(o => o.label == label) : null
+		const color = category ? category.color : plot.divideTwBins ? plot.divideTwBins.color : self.k2c(plotIdx)
 		violinG
 			.append('path')
 			.attr('class', 'sjpp-vp-path')
-			.style('fill', self.opts.mode === 'minimal' ? rgb(221, 221, 221) : plot.color ? plot.color : k2c(plotIdx))
+			.style('fill', self.opts.mode === 'minimal' ? rgb(221, 221, 221) : plot.color ? plot.color : color)
 			.style('opacity', 0)
 			// .transition()
 			// .delay(self.opts.mode == 'minimal' ? 0 : 300)
