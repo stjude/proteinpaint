@@ -1,5 +1,5 @@
 const serverconfig = require('./serverconfig.js')
-const { mayComputeTermtypeByCohort } = require('./termdb.sql')
+const { mayComputeTermtypeByCohort } = require('./termdb.server.init')
 
 /*
 the "termdbConfig" object is returned to client side that uses vocabApi
