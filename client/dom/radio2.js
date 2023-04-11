@@ -4,8 +4,8 @@ import { select as d3select, selectAll as d3selectAll } from 'd3-selection'
 export function initRadioInputs(opts) {
 	const divs = opts.holder
 		.selectAll('div')
-		.style('display', 'block')
 		.data(opts.options, d => d.value)
+		.style('display', 'block')
 
 	divs.exit().each(function(d) {
 		d3select(this)

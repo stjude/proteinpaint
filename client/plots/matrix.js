@@ -730,6 +730,7 @@ class Matrix {
 			const d = sides[direction]
 			const Direction = direction[0].toUpperCase() + direction.slice(1)
 			layout[direction] = {
+				prefix: d,
 				data: this[`${d}s`],
 				offset: s[`${d}LabelOffset`],
 				box: this.dom[`${d}LabelG`],
@@ -737,10 +738,6 @@ class Matrix {
 				label: this[`${d}Label`],
 				render: this[`render${Direction}Label`],
 				isGroup: sides[direction].includes('Grp')
-			}
-
-			if (!s.transpose) {
-				if (`${d}Label` == 'sampleLabel' && s.colw < 8) layout[direction].display = 'none'
 			}
 		}
 
@@ -768,6 +765,7 @@ class Matrix {
 			Math.max(colw + s.colspace - 2 * s.collabelpad, s.minLabelFontSize),
 			s.maxLabelFontSize
 		)
+
 		const topFontSize = _t_ == 'Grp' ? s.grpLabelFontSize : colLabelFontSize
 		layout.top.attr = {
 			boxTransform: `translate(${xOffset}, ${yOffset - s.collabelgap})`,
@@ -782,6 +780,7 @@ class Matrix {
 			axisFxn: axisTop
 		}
 		layout.top.box.attr('clip-path', layout.top.isGroup ? `url(#${this.clusterClipId})` : `url(#${this.seriesClipId})`)
+		if (layout.top.prefix == 'sample') layout.top.display = colw >= s.minLabelFontSize ? '' : 'none'
 
 		const btmFontSize = _b_ == 'Grp' ? s.grpLabelFontSize : colLabelFontSize
 		layout.btm.attr = {
@@ -797,6 +796,7 @@ class Matrix {
 			axisFxn: axisBottom
 		}
 		layout.btm.box.attr('clip-path', layout.btm.isGroup ? `url(#${this.clusterClipId})` : `url(#${this.seriesClipId})`)
+		if (layout.btm.prefix == 'sample') layout.btm.display = colw >= s.minLabelFontSize ? '' : 'none'
 
 		const leftFontSize =
 			_l_ == 'Grp' ? s.grpLabelFontSize : Math.max(s.rowh + s.rowspace - 2 * s.rowlabelpad, s.minLabelFontSize)

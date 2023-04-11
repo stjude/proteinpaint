@@ -192,7 +192,10 @@ function setNumberInput(opts) {
 			})
 		}
 
-		const inputTd = opts.holder.append('td')
+		const inputTd = opts.holder
+			.append('td')
+			.attr('colspan', opts.colspan || '')
+			.style('text-align', opts.align || '')
 		if (!input.settingsKey) {
 			inputTd
 				.style('text-align', 'center')
@@ -364,37 +367,61 @@ function setRadioInput(opts) {
 			labelTdb: opts.holder
 				.append('td')
 				.html(opts.label)
-				.attr('class', 'sja-termdb-config-row-label'),
-			inputTd: opts.holder.append('td')
-		}
+				.attr('class', 'sja-termdb-config-row-label')
+		},
+		inputs: {}
 	}
 
-	self.radio = initRadioInputs({
-		name: `pp-control-${opts.settingsKey}-${opts.instanceNum}`,
-		holder: self.dom.inputTd,
-		options: opts.options,
-		listeners: {
-			input(event, d) {
-				opts.dispatch({
-					type: 'plot_edit',
-					id: opts.id,
-					config: {
-						settings: {
-							[opts.chartType]: {
-								[opts.settingsKey]: d.value
+	const inputs = opts.inputs
+		? opts.inputs
+		: [
+				{
+					settingsKey: opts.settingsKey,
+					options: opts.options
+				}
+		  ]
+
+	for (const input of inputs) {
+		self.inputs[input.settingsKey] = initRadioInputs({
+			name: `pp-control-${input.settingsKey}-${opts.instanceNum}`,
+			holder: opts.holder
+				.append('td')
+				.attr('colspan', opts.colspan || '')
+				.style('text-align', opts.align || ''),
+			options: input.options,
+			getDisplayStyle: () => {
+				console.log('test')
+				return 'block'
+			},
+			listeners: {
+				input(event, d) {
+					opts.dispatch({
+						type: 'plot_edit',
+						id: opts.id,
+						config: {
+							settings: {
+								[opts.chartType]: {
+									[input.settingsKey]: d.value
+								}
 							}
 						}
-					}
-				})
+					})
+				}
 			}
-		}
-	})
+		})
+	}
 
 	const api = {
 		main(plot) {
 			self.dom.row.style('table-row')
-			self.radio.main(plot.settings[opts.chartType][opts.settingsKey])
-			self.radio.dom.divs.style('display', d => (d.getDisplayStyle ? d.getDisplayStyle(plot) : 'inline-block'))
+			for (const settingsKey in self.inputs) {
+				const radio = self.inputs[settingsKey]
+				radio.main(plot.settings[opts.chartType][settingsKey])
+				radio.dom.divs.style('display', d =>
+					d.getDisplayStyle ? d.getDisplayStyle(plot) : opts.labelDisplay || 'inline-block'
+				)
+				//radio.dom.labels.style('display', d => opts.labelDisplay || 'span')
+			}
 		}
 	}
 

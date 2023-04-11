@@ -201,13 +201,66 @@ export class MatrixControls {
 							header: ['Labels', 'Columns', 'Rows'],
 							rows: [
 								{
-									label: 'Spacing',
+									label: 'Offset',
 									type: 'number',
 									width: 50,
+									align: 'center',
 									chartType: 'matrix',
 									inputs: [
 										{ settingsKey: 'collabelgap', min: 0, max: 20, step: 1 },
 										{ settingsKey: 'rowlabelgap', min: 0, max: 20, step: 1 }
+									]
+								},
+								{
+									label: 'Spacing',
+									type: 'number',
+									width: 50,
+									align: 'center',
+									chartType: 'matrix',
+									inputs: [
+										{ settingsKey: 'collabelpad', min: 0, max: 20, step: 1 },
+										{ settingsKey: 'rowlabelpad', min: 0, max: 20, step: 1 }
+									]
+								},
+								{
+									label: 'Minimum size',
+									type: 'number',
+									width: 50,
+									align: 'center',
+									colspan: 2,
+									chartType: 'matrix',
+									settingsKey: 'minLabelFontSize',
+									min: 0,
+									max: 24,
+									step: 0.1
+								},
+								{
+									label: 'Maximum size',
+									type: 'number',
+									width: 50,
+									align: 'center',
+									colspan: 2,
+									chartType: 'matrix',
+									settingsKey: 'maxLabelFontSize',
+									min: 0,
+									max: 24,
+									step: 0.1
+								},
+								{
+									label: 'Top or left',
+									type: 'radio',
+									width: 50,
+									chartType: 'matrix',
+									labelDisplay: 'block',
+									inputs: [
+										{
+											settingsKey: 'collabelpos',
+											options: [{ label: 'Columns', value: 'top' }, { label: 'Groups', value: 'bottom' }]
+										},
+										{
+											settingsKey: 'rowlabelpos',
+											options: [{ label: 'Rows', value: 'left' }, { label: 'Groups', value: 'right' }]
+										}
 									]
 								}
 							]
@@ -294,18 +347,6 @@ export class MatrixControls {
 		this.inputGroups = {
 			/*cols: [
 				{
-					label: 'Column label pad',
-					type: 'number',
-					chartType: 'matrix',
-					settingsKey: 'collabelpad'
-				},
-				{
-					label: 'Column label offset',
-					type: 'number',
-					chartType: 'matrix',
-					settingsKey: 'collabelgap'
-				},
-				{
 					label: 'Top labels',
 					type: 'radio',
 					chartType: 'matrix',
@@ -315,18 +356,6 @@ export class MatrixControls {
 			],
 
 			rows: [
-				{
-					label: 'Row label pad',
-					type: 'number',
-					chartType: 'matrix',
-					settingsKey: 'rowlabelpad'
-				},
-				{
-					label: 'Row label offset',
-					type: 'number',
-					chartType: 'matrix',
-					settingsKey: 'rowlabelgap'
-				},
 				{
 					label: 'Group gap',
 					type: 'number',
