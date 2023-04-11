@@ -1,5 +1,6 @@
 const serverconfig = require('./serverconfig')
 const connect_db = require('./utils').connect_db
+const { isUsableTerm } = require('../shared/termdb.usecase')
 
 export function server_init_db_queries(ds) {
 	/*

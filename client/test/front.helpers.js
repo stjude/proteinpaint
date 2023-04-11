@@ -46,7 +46,7 @@ exports.getRunPp = function getRunPp(appname = '', defaultArgs = {}, host = 'htt
 		norecover: true
 	}
 
-	if (appname == 'mass') {
+	if (appname == 'mass' || appname == 'termdb') {
 		// do not debounce dispatched changes during testing
 		defaultArgs.debounceInterval = 0
 	}

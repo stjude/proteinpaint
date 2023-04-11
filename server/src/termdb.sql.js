@@ -5,7 +5,6 @@ const numericSql = require('./termdb.sql.numeric')
 const categoricalSql = require('./termdb.sql.categorical')
 const conditionSql = require('./termdb.sql.condition')
 const sampleLstSql = require('./termdb.sql.samplelst').sampleLstSql
-const isUsableTerm = require('#shared/termdb.usecase').isUsableTerm
 const serverconfig = require('./serverconfig')
 
 /*
