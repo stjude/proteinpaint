@@ -540,7 +540,7 @@ export async function get_term_cte(q, values, index, filter, termWrapper = null)
 	} else if (term.type == 'survival') {
 		CTE = makesql_survival(tablename, term, q, values, filter)
 	} else if (term.type == 'samplelst') {
-		CTE = await sampleLstSql.getCTE(tablename, termWrapper, values)
+		CTE = await sampleLstSql.getCTE(tablename, termWrapper || { term, q: termq }, values)
 	} else {
 		throw 'unknown term type'
 	}
