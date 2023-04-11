@@ -168,7 +168,8 @@ function setNumberInput(opts) {
 			}
 		]
 
-	const debounceTimeout = opts.parent?.app.opts.debounceInterval ? 100 : 0
+	// debounce by default
+	const debounceTimeout = 100 //opts.parent?.app.opts.debounceInterval ? 100 : 0
 	for (const input of opts.inputs) {
 		let dispatchTimer
 		function debouncedDispatch() {
