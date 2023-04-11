@@ -1,5 +1,5 @@
 const path = require('path')
-const { get_term_cte, interpolateSqlValues } = require('./termdb.sql')
+const { get_samples, get_term_cte, interpolateSqlValues } = require('./termdb.sql')
 const { getFilterCTEs } = require('./termdb.filter')
 const lines2R = require('./lines2R')
 const fs = require('fs')
@@ -96,6 +96,8 @@ async function getSampleData(q) {
 	// return early if all samples are filtered out by not having matching dictionary term values
 	if (dictTerms.length && !Object.keys(samples).length) return { samples, refs }
 
+	const sampleFilterSet = await mayGetSampleFilterSet(q, nonDictTerms) // conditionally returns a set of sample ids
+
 	// sample data from all terms are added into samples data
 	for (const tw of nonDictTerms) {
 		// for each non dictionary term type
@@ -116,11 +118,12 @@ async function getSampleData(q) {
 		} else if (tw.term.type == 'snplst' || tw.term.type == 'snplocus') {
 			tw.type = tw.term.type // required by regression code
 
-			// TODO limit to samples from current cohort
 			const _samples = new Map()
-
 			await getSampleData_snplstOrLocus(tw, _samples, true)
+
 			for (const [sampleId, value] of _samples) {
+				if (sampleFilterSet && !sampleFilterSet.has(sampleId)) continue // filter in use and this sample not in filter
+
 				if (!(sampleId in samples)) samples[sampleId] = { sample: sampleId }
 
 				// convert value.id2value Map to an object
@@ -135,6 +138,16 @@ async function getSampleData(q) {
 	}
 
 	return { samples, refs }
+}
+
+async function mayGetSampleFilterSet(q, nonDictTerms) {
+	// if snplst/snplocus term is present, they will need the set of samples passing filter, to only return gt data for those samples
+	if (!nonDictTerms.find(i => i.term.type == 'snplst' || i.term.type == 'snplocus')) {
+		// no such term
+		return
+	}
+	if (!q.filter) return // no filter, allow snplst/snplocus to return data for all samples
+	return new Set(await get_samples(q.filter, q.ds))
 }
 
 function divideTerms(lst) {
