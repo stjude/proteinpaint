@@ -137,6 +137,7 @@ export function setInteractivity(self) {
 		const data = await self.app.vocabApi.getAnnotatedSampleData(opts)
 		self.displaySampleIds(event, term, data)
 	}
+
 	self.displaySampleIds = function(event, term, data) {
 		self.app.tip.clear()
 		if (!data?.samples) return
