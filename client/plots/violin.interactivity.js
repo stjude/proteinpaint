@@ -145,16 +145,17 @@ export function setInteractivity(self) {
 		for (const [c, k] of Object.entries(data.samples)) {
 			const sampleIdObj = {}
 			if (data.refs.bySampleId[c]) {
-				if (self.config.settings.violin?.unit === 'log' && k[term.$id].value != 0) {
-					sampleIdObj[data.refs.bySampleId[c]] = roundValue(
-						getBaseLog(
-							self.config.term.term.additionalAttributes?.logScale ||
-								self.config.term2.term.additionalAttributes?.logScale,
-							k[term.$id].value
-						),
-						2
-					)
-				} else sampleIdObj[data.refs.bySampleId[c]] = k[term.$id].value
+				// if (self.config.settings.violin?.unit === 'log' && k[term.$id].value != 0) {
+				// 	sampleIdObj[data.refs.bySampleId[c]] = roundValue(
+				// 		getBaseLog(
+				// 			self.config.term.term.additionalAttributes?.logScale ||
+				// 				self.config.term2.term.additionalAttributes?.logScale,
+				// 			k[term.$id].value
+				// 		),
+				// 		2
+				// 	)
+				// } else
+				sampleIdObj[data.refs.bySampleId[c]] = k[term.$id].value
 			}
 			sampleIdArr.push([{ value: Object.keys(sampleIdObj) }, { value: Object.values(sampleIdObj) }])
 		}
