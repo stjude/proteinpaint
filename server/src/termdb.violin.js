@@ -78,18 +78,6 @@ export async function trigger_getViolinPlotData(q, res, ds, genome) {
 	const data = await getData({ terms: twLst, filter: q.filter, currentGeneNames: q.currentGeneNames }, ds, genome)
 	if (data.error) throw data.error
 
-	function getBaseLog(x, y) {
-		return Math.log(y) / Math.log(x)
-	}
-
-	for (const [k, v] of Object.entries(data.samples)) {
-		if (term.additionalAttributes?.logScale) {
-			if (v[term.id].key == 0 || v[term.id].value == 0) continue
-			v[term.id].key = getBaseLog(term.additionalAttributes?.logScale, v[term.id].key)
-			v[term.id].value = getBaseLog(term.additionalAttributes?.logScale, v[term.id].value)
-		}
-	}
-
 	// function getBaseLog(x, y) {
 	// 	return Math.log(y) / Math.log(x)
 	// }
