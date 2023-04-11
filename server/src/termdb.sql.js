@@ -18,7 +18,6 @@ get_summary_conditioncategories
 get_numericsummary
 get_rows
 get_rows_by_one_key
-get_rows_by_two_keys
 ********************** INTERNAL
 get_term_cte
 	makesql_oneterm
@@ -213,62 +212,6 @@ works for all attributes, including non-termdb ones
 		FROM anno_${term.type}
 		WHERE term_id=?
 		${filter ? ' AND sample IN ' + filter.CTEname : ''}`
-	return q.ds.cohort.db.connection.prepare(sql).all(values)
-}
-
-export async function get_rows_by_two_keys(q, t1, t2) {
-	/*
-XXX only works for two numeric terms, not for any other types
-
-get all sample and value by one key
-no filter or cte
-works for all attributes, including non-termdb ones
-
-q{}
-  .ds
-  .key
-*/
-	const filter = await getFilterCTEs(q.filter, q.ds)
-	const values = filter ? filter.values.slice() : []
-	const CTE0 = await get_term_cte(q, values, 0)
-	values.push(q.term1_id, q.term2_id)
-
-	const t1excluded = t1.values
-		? Object.keys(t1.values)
-				.filter(i => t1.values[i].uncomputable)
-				.map(Number)
-		: []
-	const t1unannovals = t1excluded.length ? `AND value NOT IN (${t1excluded.join(',')})` : ''
-
-	const t2excluded = t2.values
-		? Object.keys(t2.values)
-				.filter(i => t2.values[i].uncomputable)
-				.map(Number)
-		: []
-	const t2unannovals = t2excluded.length ? `AND value NOT IN (${t2excluded.join(',')})` : ''
-
-	const sql = `WITH
-    ${filter ? filter.filters + ',' : ''}
-    ${CTE0.sql},
-    t1 AS (
-      SELECT sample, value
-      FROM anno_${t1.type}
-      WHERE term_id=? ${t1unannovals}
-    ),
-    t2 AS (
-      SELECT sample, value
-      FROM anno_${t2.type}
-      WHERE term_id=? ${t2unannovals}
-    )
-    SELECT
-      t0.value AS val0,
-      t1.value AS val1, 
-      t2.value AS val2
-    FROM t1
-    JOIN ${CTE0.tablename} t0 ${CTE0.join_on_clause}
-    JOIN t2 ON t2.sample = t1.sample
-    ${filter ? 'WHERE t1.sample in ' + filter.CTEname : ''}`
-
 	return q.ds.cohort.db.connection.prepare(sql).all(values)
 }
 
