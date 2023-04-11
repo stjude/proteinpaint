@@ -1,5 +1,5 @@
 const fs = require('fs')
-const { scaleLinear } = require('d3-scale')
+const { scaleLinear, scaleLog } = require('d3-scale')
 const serverconfig = require('./serverconfig')
 const lines2R = require('./lines2R')
 const path = require('path')
@@ -62,7 +62,6 @@ export async function trigger_getViolinPlotData(q, res, ds, genome) {
 	if (term.type != 'integer' && term.type != 'float') throw 'term type is not integer/float.'
 
 	const twLst = [{ id: q.termid, term, q: { mode: 'continuous' } }]
-	console.log(63, twLst)
 
 	if (q.divideTw) {
 		if (!('id' in q.divideTw)) {
@@ -78,18 +77,16 @@ export async function trigger_getViolinPlotData(q, res, ds, genome) {
 	const data = await getData({ terms: twLst, filter: q.filter, currentGeneNames: q.currentGeneNames }, ds, genome)
 	if (data.error) throw data.error
 
-	function getBaseLog(x, y) {
-		return Math.log(y) / Math.log(x)
-	}
-
-	for (const [k, v] of Object.entries(data.samples)) {
-		if (term.additionalAttributes?.logScale) {
-			if (v[term.id].key == 0 || v[term.id].value == 0) continue
-			v[term.id].key = getBaseLog(term.additionalAttributes?.logScale, v[term.id].key)
-			v[term.id].value = getBaseLog(term.additionalAttributes?.logScale, v[term.id].value)
-		}
-	}
-
+	// function getBaseLog(x, y) {
+	// 	return Math.log(y) / Math.log(x)
+	// }
+	// for (const [k, v] of Object.entries(data.samples)) {
+	// 	if (term.additionalAttributes?.logScale) {
+	// 		if (v[term.id].key == 0 || v[term.id].value == 0) continue
+	// 		v[term.id].key = getBaseLog(term.additionalAttributes?.logScale, v[term.id].key)
+	// 		v[term.id].value = getBaseLog(term.additionalAttributes?.logScale, v[term.id].value)
+	// 	}
+	// }
 	if (q.scale) scaleData(q, data, term)
 
 	const valuesObject = key2values(data, term, q.divideTw)
@@ -99,7 +96,7 @@ export async function trigger_getViolinPlotData(q, res, ds, genome) {
 	// wilcoxon test data to return to client
 	await wilcoxon(q.divideTw, result)
 
-	createCanvasImg(q, result)
+	createCanvasImg(q, result, term)
 
 	res.send(result)
 }
@@ -268,7 +265,7 @@ function resultObj(valuesObject, data, q) {
 	return result
 }
 
-function createCanvasImg(q, result) {
+function createCanvasImg(q, result, term) {
 	// size on x-y for creating circle and ticks
 	if (!q.radius) q.radius = 5
 	// assign defaults as needed
@@ -279,9 +276,16 @@ function createCanvasImg(q, result) {
 
 	const refSize = q.radius * 4
 	//create scale object
-	const axisScale = scaleLinear()
-		.domain([result.min, result.max + result.max / refSize])
-		.range(q.orientation == 'horizontal' ? [0, q.svgw] : [q.svgw, 0])
+	let axisScale
+
+	q.unit === 'log' && term.additionalAttributes?.logScale
+		? (axisScale = scaleLog()
+				.base(term.additionalAttributes?.logScale)
+				.domain([result.min === 0 ? 0.001 : result.min, result.max])
+				.range(q.orientation === 'horizontal' ? [0, q.svgw] : [q.svgw, 0]))
+		: (axisScale = scaleLinear()
+				.domain([result.min, result.max])
+				.range(q.orientation === 'horizontal' ? [0, q.svgw] : [q.svgw, 0]))
 
 	const [width, height] =
 		q.orientation == 'horizontal'
