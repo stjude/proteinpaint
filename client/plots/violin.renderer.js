@@ -1,11 +1,13 @@
 import { axisLeft, axisTop } from 'd3-axis'
-import { scaleLinear, scaleOrdinal } from 'd3-scale'
+import { scaleLinear, scaleOrdinal, scaleLog } from 'd3-scale'
 import { area, curveBumpX, curveBumpY } from 'd3-shape'
 import { schemeCategory10 } from 'd3-scale-chromatic'
 import { brushX, brushY } from 'd3-brush'
 import { renderTable } from '#dom/table'
 import { Menu } from '../dom/menu'
 import { rgb } from 'd3'
+import { format } from 'd3-format'
+import { interpolate } from 'd3-interpolate'
 
 export default function violinRenderer(self) {
 	const k2c = scaleOrdinal(schemeCategory10)
@@ -195,7 +197,12 @@ export default function violinRenderer(self) {
 		// .transition()
 		// .duration(self.opts.mode == 'minimal' ? 0 : 800)
 		// .delay(self.opts.mode == 'minimal' ? 0 : 100)
-		g.call((isH ? axisTop : axisLeft)().scale(svg.axisScale))
+		g.call(
+			(isH ? axisTop : axisLeft)()
+				.scale(svg.axisScale)
+				.tickFormat(format('.2f'))
+			// .ticks(5, format('.2f'))
+		)
 
 		if (self.opts.mode != 'minimal') {
 			let lab
@@ -400,9 +407,18 @@ export default function violinRenderer(self) {
 
 // creates numeric axis
 export function createNumericScale(self, settings, isH) {
-	const axisScale = scaleLinear()
-		.domain([self.data.min, self.data.max + self.data.max / (settings.radius * 4)])
-		.range(isH ? [0, settings.svgw] : [settings.svgw, 0])
+	let axisScale
+	settings.unit === 'log' &&
+	(self.config.term.term.additionalAttributes?.logScale || self.config.term2.term.additionalAttributes?.logScale)
+		? (axisScale = scaleLog()
+				.base(
+					self.config.term.term.additionalAttributes?.logScale || self.config.term2.term.additionalAttributes?.logScale
+				)
+				.domain([self.data.min === 0 ? 0.001 : self.data.min, self.data.max])
+				.range(isH ? [0, settings.svgw] : [settings.svgw, 0])).clamp(true)
+		: (axisScale = scaleLinear()
+				.domain([self.data.min, self.data.max])
+				.range(isH ? [0, settings.svgw] : [settings.svgw, 0]))
 	return axisScale
 }
 
