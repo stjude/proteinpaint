@@ -1,7 +1,7 @@
 import { getUncomputableClause } from './termdb.sql'
 
 export const values = {
-	getCTE(tablename, term, ds, q, values, index) {
+	getCTE(tablename, term, ds, q, values) {
 		values.push(term.id)
 		const uncomputable = getUncomputableClause(term, q)
 		values.push(...uncomputable.values)
@@ -35,7 +35,7 @@ export const groupset = {
 		- a series of "SELECT name, value" statements that are joined by UNION ALL
 		- uncomputable values are not included in the CTE results, EXCEPT IF such values are in a group
 	*/
-	async getCTE(tablename, term, ds, q, values, index, groupset) {
+	async getCTE(tablename, term, ds, q, values, groupset) {
 		if (!groupset.groups) throw `.groups[] missing from a group-set, term.id='${term.id}'`
 
 		const categories = []
