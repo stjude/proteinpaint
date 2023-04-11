@@ -33,7 +33,6 @@ thus less things to worry about...
 
 	if (!tables.has('terms')) throw 'terms table missing'
 	if (!tables.has('ancestry')) throw 'ancestry table missing'
-	if (!tables.has('annotations')) throw 'annotations table missing'
 	if (ds.cohort.termdb.selectCohort && !tables.has('subcohort_terms'))
 		throw 'subcohort_terms table is missing while termdb.selectCohort is enabled'
 
