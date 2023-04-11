@@ -276,6 +276,7 @@ thus less things to worry about...
 				const r = matches || { equals: [], startsWith: [], startsWord: [], includes: [] }
 				const lst = []
 				for (const i of tmp) {
+					if (!i.jsondata) continue
 					const name = i.name.toLowerCase()
 					const j = JSON.parse(i.jsondata)
 					j.id = i.id
