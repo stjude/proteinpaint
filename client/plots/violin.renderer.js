@@ -287,7 +287,7 @@ export default function violinRenderer(self) {
 		}
 		const label = plot.label.split(',')[0]
 		const catTerm = self.config.term.q.mode == 'discrete' ? self.config.term : self.config.term2
-		const category = catTerm.term.values ? Object.values(catTerm.term.values).find(o => o.label == label) : null
+		const category = catTerm?.term.values ? Object.values(catTerm.term.values).find(o => o.label == label) : null
 		const color = category ? category.color : plot.divideTwBins ? plot.divideTwBins.color : self.k2c(plotIdx)
 		violinG
 			.append('path')
