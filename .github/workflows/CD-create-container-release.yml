@@ -97,6 +97,6 @@ jobs:
           git commit -m "$COMMITMSG"          
           git push origin master
           cd container
-          npm publish
+          npm publish --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPMJS_TOKEN }}

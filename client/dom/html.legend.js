@@ -1,4 +1,6 @@
 import { select } from 'd3-selection'
+import { Menu } from '#dom/menu'
+import { rgb } from 'd3-color'
 
 export default function htmlLegend(legendDiv, viz = { settings: {}, handlers: {} }, barDiv) {
 	const isHidden = {}
@@ -149,6 +151,7 @@ export default function htmlLegend(legendDiv, viz = { settings: {}, handlers: {}
 				.style('border', d.border)
 				.html(d => d.svg)
 		} else if (!d.noIcon) {
+			const stroke = d.noEditColor ? color : rgb(color).darker()
 			div
 				.append('div')
 				.style('display', 'inline-block')
@@ -156,7 +159,7 @@ export default function htmlLegend(legendDiv, viz = { settings: {}, handlers: {}
 				.style('min-width', '12px')
 				.style('height', '12px')
 				.style('top', '1px')
-				.style('border', d.border ? d.border : '1px solid ' + color)
+				.style('border', d.border ? d.border : '1px solid ' + stroke)
 				.style('border-radius', d.shape == 'circle' ? '6px' : '')
 				.style('background-color', d.shape == 'circle' ? '' : color)
 				.style('cursor', 'isHidden' in d ? 'pointer' : 'default')
@@ -165,6 +168,7 @@ export default function htmlLegend(legendDiv, viz = { settings: {}, handlers: {}
 				.style('vertical-align', d.inset ? 'top' : '')
 				.style('padding', d.inset ? '0 3px' : '')
 				.text(d.inset)
+				.on('click', viz.handlers.legend?.onColorClick && (e => showColorInput(e, viz, color)))
 		}
 
 		div
@@ -177,14 +181,29 @@ export default function htmlLegend(legendDiv, viz = { settings: {}, handlers: {}
 			.style('line-height', s.legendFontSize)
 			.style('vertical-align', d.svg ? 'top' : null)
 			.html(d.text)
+			.on('click', viz.handlers.legend?.click)
 
 		if (Object.keys(viz.handlers).length) {
-			div
-				.on('click', viz.handlers.legend.click)
-				.on('mouseover', viz.handlers.legend.mouseover)
-				.on('mouseout', viz.handlers.legend.mouseout)
+			div.on('mouseover', viz.handlers.legend.mouseover).on('mouseout', viz.handlers.legend.mouseout)
 		}
 	}
 
 	return render
+}
+
+function showColorInput(e, viz, color) {
+	const d = event.target.__data__
+	if (d.noEditColor) return
+	const rgbColor = rgb(color)
+	const menu = new Menu()
+	const input = menu.d
+		.append('input')
+		.attr('type', 'color')
+		.attr('value', rgbColor.formatHex())
+		.on('change', () => {
+			const newColor = input.node().value
+			viz.handlers.legend.onColorClick(e, newColor)
+			menu.hide()
+		})
+	menu.show(e.clientX, e.clientY, false)
 }

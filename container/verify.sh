@@ -16,7 +16,7 @@ EXPOSED_PORT=$3
 # Monitor server startup
 ##########################
 
-end_time=$((SECONDS+30))
+end_time=$((SECONDS+300))
 
 ENDSTR="Validation succeeded"
 echo "Waiting for server validation ..."

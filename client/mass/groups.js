@@ -80,6 +80,7 @@ class MassGroups {
 	}
 
 	async openSummaryPlot(term, sltw) {
+		// sltw: tw of "samplelst" type
 		const tw = { id: term.id, term }
 		const config = {
 			chartType: 'summary',
@@ -94,9 +95,23 @@ class MassGroups {
 	}
 
 	async openSurvivalPlot(term, sltw) {
+		// sltw: tw of "samplelst" type
 		const tw = { id: term.id, term }
 		const config = {
 			chartType: 'survival',
+			term: tw,
+			term2: sltw
+		}
+		await this.app.dispatch({
+			type: 'plot_create',
+			config
+		})
+	}
+	async openCuminc(term, sltw) {
+		// sltw: tw of "samplelst" type
+		const tw = { id: term.id, term }
+		const config = {
+			chartType: 'cuminc',
 			term: tw,
 			term2: sltw
 		}
@@ -351,13 +366,38 @@ function clickLaunchBtn(self) {
 			.style('float', 'right')
 		opt.on('click', () => {
 			const state = {
-				nav: { header_mode: 'hide_search' },
+				nav: { header_mode: 'hide_search' }, // hiding search will let tree to auto expand all survival terms, based on assumption that a dataset has just a handful of such terms so it's convenient to show'em all at once
 				tree: { usecase: { target: 'survival', detail: 'term' } }
 			}
 			self.showTree(
 				opt,
 				async term => {
 					self.openSurvivalPlot(term, await self.groups2samplelst(groups))
+				},
+				state
+			)
+		})
+	}
+
+	if (self.state.termdbConfig.allowedTermTypes.includes('condition')) {
+		const opt = tip.d
+			.append('div')
+			.attr('class', 'sja_menuoption')
+			.style('border-radius', '0px')
+			.html('Cumulative incidence analysis&nbsp;&nbsp;')
+		opt
+			.insert('div')
+			.html('›')
+			.style('float', 'right')
+		opt.on('click', () => {
+			const state = {
+				// must not hide search, as there can be a lot of condition terms, too many to show all
+				tree: { usecase: { target: 'cuminc', detail: 'term' } }
+			}
+			self.showTree(
+				opt,
+				async term => {
+					self.openCuminc(term, await self.groups2samplelst(groups))
 				},
 				state
 			)

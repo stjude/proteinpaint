@@ -222,6 +222,57 @@ export function setInteractivity(self) {
 		})
 	}
 
+	self.searchSample = function(e) {
+		const menu = new Menu({ padding: '5px' })
+		let group
+		const input = menu.d.append('input').on('keyup', event => {
+			if (event.code == 'Escape') {
+				if (group) {
+					self.config.groups.splice(group.index, 1)
+					self.app.dispatch({ type: 'plot_edit', id: self.id, config: { groups: self.config.groups } })
+				}
+				menu.hide()
+				return
+			}
+			if (event.code == 'Enter' && group) {
+				//Enter
+				if (group.items.length == 0 || group.items.length == self.cohortSamples.length) msgDiv.text('Invalid group')
+				else {
+					self.config.groups[self.config.groups.length - 1].fromSearch = false
+					self.app.dispatch({ type: 'plot_edit', id: self.id, config: { groups: self.config.groups } })
+					menu.hide()
+				}
+				return
+			}
+			// ok to not await here, since no returned value is required
+			// and menu.hide() does not need to wait for the dispatch to finish
+			const value = input.node().value
+			const items = []
+			for (const sample of self.cohortSamples)
+				if (sample.sample.toUpperCase().includes(value.toUpperCase())) items.push(sample)
+			if (items.length == 0) {
+				msgDiv.text('No samples found')
+			} else msgDiv.text('')
+			if (self.config.groups.length > 0 && self.config.groups[self.config.groups.length - 1].fromSearch) {
+				group = self.config.groups[self.config.groups.length - 1]
+				group.items = items
+			} else {
+				group = {
+					name: `Group ${self.config.groups.length + 1}`,
+					items,
+					index: self.config.groups.length,
+					showOnly: true,
+					fromSearch: true
+				}
+				self.config.groups.push(group)
+			}
+			self.app.dispatch({ type: 'plot_edit', id: self.id, config: { groups: self.config.groups } })
+		})
+
+		const msgDiv = menu.d.append('div').style('padding-left', '5px')
+		menu.show(e.clientX, e.clientY, false)
+	}
+
 	self.openSurvivalPlot = async function(term, groups) {
 		const plot_name = self.config.name ? self.config.name : 'Summary scatter'
 		const disabled = !('sample' in groups[0].items[0])
@@ -499,6 +550,14 @@ export function setInteractivity(self) {
 			.text('Add to filter')
 			.on('click', () => {
 				self.addToFilter(group)
+				self.app.dispatch({ type: 'plot_edit', id: self.id, config: { groups: self.config.groups } })
+			})
+		menuDiv
+			.append('div')
+			.attr('class', 'sja_menuoption sja_sharp_border')
+			.text(group.showOnly ? 'Show All' : 'Show Only')
+			.on('click', () => {
+				group.showOnly = !group.showOnly
 				self.app.dispatch({ type: 'plot_edit', id: self.id, config: { groups: self.config.groups } })
 			})
 	}

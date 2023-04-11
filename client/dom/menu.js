@@ -1,7 +1,30 @@
 import { select as d3select } from 'd3-selection'
 import { get_base_zindex } from '#common/globals'
 
-// TODO explain arg
+/*
+arg{}
+---All are optional---
+	parent_menu
+		- define if menu is launched within another menu
+	padding: STR
+		- css value for menu.d.style.padding
+	border: STR
+		- css value for menu.d.style.border
+	offsetX: INT 
+		- default = 20
+		- offset for left position (x = x + offsetX)
+	offsetY: INT
+		- default = 20
+		- offset for top position (y = y + offsetY)
+	hideXmute, hideYmute: INT
+		- default = 0
+		- cancel tip hiding if the cursor's X,Y movement is less than the corresponding 
+		hide*mute value. See notes in constructor
+	clearSelector: STR
+		-clear only specific elems within menu.d, not all of menu.d
+	onHide()
+		- override default hide() with callback
+*/
 export class Menu {
 	constructor(arg = {}) {
 		this.typename = Math.random().toString()
@@ -106,7 +129,10 @@ export class Menu {
 		else this.d.selectAll('*').remove()
 		return this
 	}
-
+	/*
+	 To note: if shift and scroll are true, shift sets x & y.
+	 Set shift to false to use scroll
+	*/
 	show(_x, _y, shift = true, down = true, scroll = true) {
 		let x = _x
 		let y = _y
@@ -245,5 +271,10 @@ export class Menu {
 		const api = Object.create(this)
 		Object.assign(api, overrides)
 		return api
+	}
+
+	destroy() {
+		//For testing to remove completely from the document.body without using d3select()
+		this.d.remove()
 	}
 }

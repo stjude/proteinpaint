@@ -598,8 +598,9 @@ tape('Change symbol and reference size from menu', function(test) {
 		refInput.dispatchEvent(new Event('change'))
 	}
 	function testRefDotSize(scatter) {
-		test.ok(
-			scatter.Inner.settings.refSize == testRefSize,
+		test.equal(
+			scatter.Inner.settings.refSize,
+			testRefSize,
 			`Should change reference dot size to test value = ${testRefSize}`
 		)
 	}

@@ -6,8 +6,9 @@ export function setRenderers(self) {
 		const l = self.layout
 		const d = self.dimensions
 		const duration = self.dom.svg.attr('width') ? s.duration : 0
+		const x = s.zoomLevel <= 1 && d.mainw >= d.zoomedMainW ? 0 : Math.abs(d.seriesXoffset) / d.zoomedMainW
 		self.dom.clipRect
-			.attr('x', s.zoomLevel <= 1 ? 0 : Math.abs(d.seriesXoffset) / d.zoomedMainW)
+			.attr('x', x)
 			.attr('y', 0)
 			.attr('width', Math.min(d.mainw, d.maxMainW) / d.zoomedMainW)
 			.attr('height', 1)
@@ -33,7 +34,7 @@ export function setRenderers(self) {
 			.each(self.renderSeries)
 	}
 
-	self.renderSeries = function(series) {
+	self.renderSeries = async function(series) {
 		const s = self.settings.matrix
 		const d = self.dimensions
 		const g = select(this)
@@ -47,22 +48,39 @@ export function setRenderers(self) {
 		const height = series.y + last?.y + s.rowh
 
 		if (s.useCanvas) {
+			const df = self.stateDiff
+			if (g.selectAll('image').size() && !df.nonsettings && !df.sorting && !df.cellDimensions) return
 			const pxr = 1 //window.devicePixelRatio; console.log(51, 'pixelRatio', pxr)
 			g.selectAll('*').remove()
-			const canvas = self.dom.holder
-				.append('canvas')
-				.attr('width', Math.floor(d.zoomedMainW * pxr) + 'px')
-				.attr('height', Math.floor(self.dimensions.mainh * pxr) + 'px')
-				.style('opacity', 0)
-				.node()
+			const width = Math.floor(d.zoomedMainW * pxr)
+			const height = Math.floor(self.dimensions.mainh * pxr)
+			const canvas = window.OffscreenCanvas
+				? new OffscreenCanvas(width, height)
+				: // TODO: no need to support older browser versions???
+				  self.dom.holder
+						.append('canvas')
+						.attr('width', width + 'px')
+						.attr('height', height + 'px')
+						.style('opacity', 0)
+						.node()
 			const ctx = canvas.getContext('2d')
 			ctx.scale(pxr, pxr)
 			for (const cell of series.cells) self.renderCellWithCanvas(ctx, cell, series, s, d)
-			const img = canvas.toDataURL()
-			g.append('image').attr('xlink:href', img)
-			canvas.remove()
+
+			if (window.OffscreenCanvas) {
+				//const bitmap = canvas.transferToImageBitmap()
+				//g.append('image').node().getContext('bitmaprenderer').transferFromImageBitmap(bitmap)
+				const blob = await canvas.convertToBlob()
+				const reader = new FileReader()
+				reader.addEventListener('load', () => g.append('image').attr('xlink:href', reader.result), false)
+				const dataURL = reader.readAsDataURL(blob)
+			} else {
+				const dataURL = canvas.toDataURL()
+				g.append('image').attr('xlink:href', dataURL)
+				if (!window.OffscreenCanvas) canvas.remove()
+			}
 		} else {
-			const rects = g.selectAll('rect').data(series.cells, (cell, i) => cell.sample + ';;' + cell.tw.$id + ';;' + i)
+			const rects = g.selectAll('rect').data(series.cells, cell => cell.sample + ';;' + cell.tw.$id)
 			rects.exit().remove()
 			rects.each(self.renderCell)
 			rects
@@ -241,7 +259,7 @@ export function setRenderers(self) {
 		d.extraWidth = leftBox.width + rtBox.width + s.margin.left + s.margin.right + s.rowlabelgap * 2
 		d.extraHeight = topBox.height + btmBox.height + s.margin.top + s.margin.bottom + s.collabelgap * 2
 		d.svgw = d.mainw + d.extraWidth
-		d.svgh = d.mainh + d.extraHeight + legendBox.height + 20
+		d.svgh = d.mainh + d.extraHeight + legendBox.height + 20 + s.scrollHeight
 		self.dom.svg
 			.transition()
 			.duration(duration)

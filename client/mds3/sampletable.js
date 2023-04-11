@@ -4,8 +4,6 @@ import { mclass, dtsnvindel, dtsv, dtfusionrna } from '#shared/common'
 import { renderTable } from '#dom/table'
 import { rgb } from 'd3-color'
 import { print_snv, printSvPair } from './itemtable'
-import { getsjcharts } from '../src/getsjcharts'
-import { Menu } from '#dom/menu'
 
 /*
 ********************** EXPORTED
@@ -278,7 +276,6 @@ async function showDtDisco(event, sample, arg, fromTable = false) {
 
 	for (const i of mlst) i.position = i.pos
 
-	const sjcharts = await getsjcharts()
 	const disco_arg = {
 		sampleName: sample.sample_id,
 		data: mlst
@@ -293,16 +290,19 @@ async function showDtDisco(event, sample, arg, fromTable = false) {
 			.style('font-weight', 'bold')
 			.style('margin', '5px')
 
-	const renderer = await sjcharts.dtDisco({
-		chromosomeType: arg.block.genome.name,
-		majorchr: arg.block.genome.majorchr,
-		holderSelector: arg.tk.menutip.d.append('div'),
-		settings: {
-			showControls: false,
-			selectedSamples: []
-		}
-	})
-	renderer.main(disco_arg)
+	const dtDisco = await import('#plots/disco/dt.disco').then(
+		Cls =>
+			new Cls.default({
+				genome: arg.block.genome,
+				holderSelector: arg.tk.menutip.d.append('div'),
+				settings: {
+					showControls: false,
+					selectedSamples: []
+				}
+			})
+	)
+
+	dtDisco.main(disco_arg)
 }
 
 /***********************************************

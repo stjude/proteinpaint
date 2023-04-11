@@ -58,7 +58,7 @@ export function handle_request_closure(genomes) {
 				return await phewas.trigger(q, res, ds)
 			}
 			if (q.gettermdbconfig) return termdbConfig.make(q, res, ds, genome)
-			if (q.getcohortsamplecount) return trigger_getcohortsamplecount(q, res, ds)
+			if (q.getcohortsamplecount) return res.send({ count: ds.cohort.termdb.q.getcohortsamplecount(q.cohort) })
 			if (q.getsamplecount) return res.send(await getSampleCount(q, ds))
 			if (q.getsamples) return await trigger_getsamples(q, res, ds)
 			if (q.getcuminc) return await trigger_getincidence(q, res, ds)
@@ -139,10 +139,6 @@ function trigger_gettermbyid(q, res, tdb) {
 	res.send({
 		term: t ? copy_term(t) : undefined
 	})
-}
-
-function trigger_getcohortsamplecount(q, res, ds) {
-	res.send(termdbsql.get_cohortsamplecount(q, ds))
 }
 
 async function trigger_rootterm(q, res, tdb) {

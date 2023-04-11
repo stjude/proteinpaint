@@ -222,6 +222,7 @@ export function prepStore(self, opts) {
 export function getStoreApi(self) {
 	self.history = []
 	self.currIndex = -1
+	let numPromisedWrites = 0
 	const api = {
 		async write(action) {
 			// avoid calls to inherited methods
@@ -239,7 +240,20 @@ export function getStoreApi(self) {
 			// quick fix?? add custom state properties to the state to trigger special action-related handling
 			// _scope_: 'none' | 'local' | 'global', indicates where this action should be tracked by a history tracker such as a recover component
 			self.state._scope_ = action._scope_
-			return await api.copyState()
+			if (!self.opts.debounceInterval) return api.copyState()
+
+			// track the #
+			numPromisedWrites += 1
+			let decrement = -1
+			return new Promise((resolve, reject) => {
+				const interval = setInterval(() => {
+					numPromisedWrites += decrement
+					decrement = 0
+					if (numPromisedWrites > 0) return
+					clearInterval(interval)
+					resolve(api.copyState())
+				}, self.opts.debounceInterval)
+			})
 		},
 		async copyState() {
 			const stateCopy = self.fromJson(self.toJson(self.state))
@@ -265,19 +279,11 @@ export function prepApp(self, opts) {
 
 export function getAppApi(self) {
 	const middlewares = []
+	let numExpectedWrites = 0
 	const api = {
 		type: self.type,
 		opts: self.opts,
 		async dispatch(action) {
-			/*
-			???
-			to-do:
- 			track dispatched actions and
- 			if there is a pending action (e.g. waiting on server response)
- 			debounce dispatch requests
-			until the pending action is done?
-	 	  ???
- 			*/
 			try {
 				if (middlewares.length) {
 					for (const fxn of middlewares.slice()) {
@@ -291,9 +297,12 @@ export function getAppApi(self) {
 						}
 					}
 				}
-				// replace app.state
+
+				// expect store.write() to be debounced and handler rapid succession of dispatches
+				// replace app.state if there is an action
 				if (action) self.state = await self.store.write(action)
-				// else an empty action should force components to update
+				// TODO: may need to group calls to self.main by action type and plot.id,
+				// in order to debounce correctly
 				if (self.main) await self.main()
 				const current = { action, appState: self.state }
 				await notifyComponents(self.components, current)

@@ -37,6 +37,8 @@ public/static/*.pdf
 /utils/countbamallele.phased/bin*
 /utils/*/*.bundle.js*
 
+container/public/example*
+
 **/rust/*.lock
 **/rust/target/*
 Cargo.lock
@@ -50,7 +52,7 @@ client/test/wpCompileTime.js
 cairo-*/*
 canvas/*
 pixman-*/*
-**/serverconfig.json
+**/serverconfig*.json
 !/server/test/serverconfig.json
 **/server.js*
 !client/rx/server.js

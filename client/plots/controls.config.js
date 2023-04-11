@@ -4,6 +4,7 @@ import { term1uiInit } from './controls.term1'
 import { divideInit } from './controls.divide'
 import { initRadioInputs } from '../dom/radio2'
 import { termsettingInit } from '../termsetting/termsetting'
+import { rgb } from 'd3-color'
 
 // to be used for assigning unique
 // radio button names by object instance
@@ -152,35 +153,72 @@ function setNumberInput(opts) {
 				.html(opts.label)
 				.attr('class', 'sja-termdb-config-row-label')
 				.attr('title', opts.title),
-			inputTd: opts.holder.append('td')
+			inputs: {}
 		}
 	}
 
-	self.dom.input = self.dom.inputTd
-		.append('input')
-		.attr('type', 'number')
-		.attr('min', 'min' in opts ? opts.min : null) // verify that null gives the default html input behavior
-		.attr('max', 'max' in opts ? opts.max : null) // same
-		.attr('step', 'step' in opts ? opts.step : null) //step gives the amount by which user can increment
-		.style('width', (opts.width || 100) + 'px')
-		.on('change', () => {
-			const value = Number(self.dom.input.property('value'))
+	if (!opts.inputs)
+		opts.inputs = [
+			{
+				min: opts.min,
+				max: opts.max,
+				step: opts.step,
+				width: opts.width,
+				settingsKey: opts.settingsKey
+			}
+		]
+
+	// debounce by default
+	const debounceTimeout = 'debounceInterval' in opts.parent?.app.opts ? opts.parent?.app.opts.debounceInterval : 100
+	for (const input of opts.inputs) {
+		let dispatchTimer
+		function debouncedDispatch() {
+			if (dispatchTimer) clearTimeout(dispatchTimer)
+			dispatchTimer = setTimeout(dispatchChange, debounceTimeout)
+		}
+
+		function dispatchChange() {
+			const value = Number(self.dom.inputs[input.settingsKey].property('value'))
 			opts.dispatch({
 				type: 'plot_edit',
 				id: opts.id,
 				config: {
 					settings: {
 						[opts.chartType]: {
-							[opts.settingsKey]: opts.processInput ? opts.processInput(value) : value
+							[input.settingsKey]: opts.processInput ? opts.processInput(value) : value
 						}
 					}
 				}
 			})
-		})
+		}
+
+		const inputTd = opts.holder
+			.append('td')
+			.attr('colspan', opts.colspan || '')
+			.style('text-align', opts.align || '')
+		if (!input.settingsKey) {
+			inputTd
+				.style('text-align', 'center')
+				.style('color', '#999')
+				.style('cursor', 'default')
+				.html(input.label)
+		} else {
+			self.dom.inputs[input.settingsKey] = inputTd
+				.append('input')
+				.attr('type', 'number')
+				.attr('min', 'min' in input ? input.min : null) // verify that null gives the default html input behavior
+				.attr('max', 'max' in input ? input.max : null) // same
+				.attr('step', input.step || opts.step || null) //step gives the amount by which user can increment
+				.style('width', (input.width || opts.width || 100) + 'px')
+				.on('change', debouncedDispatch)
+		}
+	}
 
 	const api = {
 		main(plot) {
-			self.dom.input.property('value', plot.settings[opts.chartType][opts.settingsKey])
+			for (const settingsKey in self.dom.inputs) {
+				self.dom.inputs[settingsKey].property('value', plot.settings[opts.chartType][settingsKey])
+			}
 		}
 	}
 
@@ -313,7 +351,8 @@ function setColorInput(opts) {
 
 	const api = {
 		main(plot) {
-			self.dom.input.property('value', plot.settings[opts.chartType][opts.settingsKey])
+			const color = plot.settings[opts.chartType][opts.settingsKey]
+			self.dom.input.property('value', rgb(color).formatHex())
 		}
 	}
 
@@ -328,37 +367,61 @@ function setRadioInput(opts) {
 			labelTdb: opts.holder
 				.append('td')
 				.html(opts.label)
-				.attr('class', 'sja-termdb-config-row-label'),
-			inputTd: opts.holder.append('td')
-		}
+				.attr('class', 'sja-termdb-config-row-label')
+		},
+		inputs: {}
 	}
 
-	self.radio = initRadioInputs({
-		name: `pp-control-${opts.settingsKey}-${opts.instanceNum}`,
-		holder: self.dom.inputTd,
-		options: opts.options,
-		listeners: {
-			input(event, d) {
-				opts.dispatch({
-					type: 'plot_edit',
-					id: opts.id,
-					config: {
-						settings: {
-							[opts.chartType]: {
-								[opts.settingsKey]: d.value
+	const inputs = opts.inputs
+		? opts.inputs
+		: [
+				{
+					settingsKey: opts.settingsKey,
+					options: opts.options
+				}
+		  ]
+
+	for (const input of inputs) {
+		self.inputs[input.settingsKey] = initRadioInputs({
+			name: `pp-control-${input.settingsKey}-${opts.instanceNum}`,
+			holder: opts.holder
+				.append('td')
+				.attr('colspan', opts.colspan || '')
+				.style('text-align', opts.align || ''),
+			options: input.options,
+			getDisplayStyle: () => {
+				console.log('test')
+				return 'block'
+			},
+			listeners: {
+				input(event, d) {
+					opts.dispatch({
+						type: 'plot_edit',
+						id: opts.id,
+						config: {
+							settings: {
+								[opts.chartType]: {
+									[input.settingsKey]: d.value
+								}
 							}
 						}
-					}
-				})
+					})
+				}
 			}
-		}
-	})
+		})
+	}
 
 	const api = {
 		main(plot) {
 			self.dom.row.style('table-row')
-			self.radio.main(plot.settings[opts.chartType][opts.settingsKey])
-			self.radio.dom.divs.style('display', d => (d.getDisplayStyle ? d.getDisplayStyle(plot) : 'inline-block'))
+			for (const settingsKey in self.inputs) {
+				const radio = self.inputs[settingsKey]
+				radio.main(plot.settings[opts.chartType][settingsKey])
+				radio.dom.divs.style('display', d =>
+					d.getDisplayStyle ? d.getDisplayStyle(plot) : opts.labelDisplay || 'inline-block'
+				)
+				//radio.dom.labels.style('display', d => opts.labelDisplay || 'span')
+			}
 		}
 	}
 

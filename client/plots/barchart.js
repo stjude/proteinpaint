@@ -4,14 +4,14 @@ import barsRenderer from './bars.renderer'
 import htmlLegend from '../dom/html.legend'
 import { select } from 'd3-selection'
 import { scaleOrdinal } from 'd3-scale'
-import { schemeCategory10 } from 'd3-scale-chromatic'
-import { schemeCategory20 } from '#common/legacy-d3-polyfill'
 import { rgb } from 'd3-color'
 import getHandlers from './barchart.events'
 import { controlsInit } from './controls'
 import { to_svg } from '../src/client'
 import { renderTable } from '../dom/table'
 import { fillTermWrapper } from '../termsetting/termsetting'
+import { getColors } from '#shared/common'
+import { mclass } from '#shared/common'
 
 class Barchart {
 	constructor(opts) {
@@ -202,6 +202,7 @@ class Barchart {
 			const results = await this.app.vocabApi.getNestedChartSeriesData(reqOpts)
 			const data = results.data
 			this.samples = results.samples
+			this.bins = results.bins
 			this.toggleLoadingDiv('none')
 			this.app.vocabApi.syncTermData(this.config, data, this.prevConfig)
 			this.currServerData = data
@@ -517,18 +518,23 @@ class Barchart {
 			this.term2toColor[result.dataId] = this.settings.groups[result.dataId].color
 		}
 		if (result.dataId in this.term2toColor) return
-		if (!this.colorScale) {
-			this.colorScale =
-				this.settings.rows && this.settings.rows.length < 11
-					? scaleOrdinal(schemeCategory10)
-					: scaleOrdinal(schemeCategory20)
-		}
+		if (!this.colorScale) this.colorScale = getColors(this.settings.rows.length)
 		const group = this.state.ssid && this.state.ssid.groups && this.state.ssid.groups[result.dataId]
+		const bin = this.bins?.[2]?.find(bin => bin.label == result.dataId)
 		this.term2toColor[result.dataId] = !t2
 			? 'rgb(144, 23, 57)'
 			: group && 'color' in group
 			? group.color
+			: bin
+			? bin.color
+			: t2.term.type == 'geneVariant'
+			? getMutationColor(result.dataId)
 			: rgb(this.colorScale(result.dataId)).toString() //.replace('rgb(','rgba(').replace(')', ',0.7)')
+
+		function getMutationColor(label) {
+			for (const [key, mc] of Object.entries(mclass)) if (mc.label == label) return mc.color
+			return 'black'
+		}
 	}
 
 	/*
@@ -685,7 +691,7 @@ class Barchart {
 			}
 			legendGrps.push({
 				name: `<span style="${headingStyle}">Statistical Significance</span>`,
-				items: [{ text: `* p-value < (0.05 / ${testNum} tests)` }]
+				items: [{ text: `* p-value < (0.05 / ${testNum} tests)`, noEditColor: true }]
 			})
 		}
 

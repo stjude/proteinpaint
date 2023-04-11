@@ -55,7 +55,7 @@ export function setInteractivity(self) {
 		const x2 = event.clientX - rect.x
 		for (const cell of d.cells) {
 			const min = cell.x
-			const max = cell.x + self.dimensions.colw
+			const max = cell.x + self.dimensions.dx
 			if (min < x2 && x2 <= max) return cell
 		}
 		return null
@@ -83,12 +83,32 @@ export function setInteractivity(self) {
 		delete self.clicked
 	}
 
+	self.getVisibleCenterCell = function(dx) {
+		const s = self.settings.matrix
+		const d = self.dimensions
+		const i = Math.round((0.5 * d.mainw - d.seriesXoffset - dx) / d.dx)
+		return self.sampleOrder[i]
+	}
+
 	//setSampleActions(self)
 	setTermActions(self)
 	setTermGroupActions(self)
 	setSampleGroupActions(self)
 	setZoomPanActions(self)
+	setResizeHandler(self)
 }
+
+function setResizeHandler(self) {
+	let resizeId
+	select(window).on(`resize.sjpp-${self.id}`, () => {
+		clearTimeout(resizeId)
+		resizeId = setTimeout(resize, 200)
+	})
+	function resize() {
+		self.main()
+	}
+}
+
 /*
 // TODO: may add drag events for sample labels
 function setSampleActions(self) {
@@ -118,7 +138,7 @@ function setSampleActions(self) {
 				.style('-ms-user-select', 'none')
 				.style('user-select', 'none')
 
-			const label = self.clicked.event.target.closest('.sjpp-matrix-label') //console.log(68, label)
+			const label = self.clicked.event.target.closest('.sjpp-matrix-label')
 			// TODO: use a native or D3 transform accessor
 			const [x, y] = select(label)
 				.attr('transform')
@@ -138,7 +158,7 @@ function setSampleActions(self) {
 				y,
 				clientX: event.clientX,
 				clientY: event.clientY
-			} //; console.log(this.dragged)
+			}
 			self.dragged.clone.selectAll('text').style('fill', 'red')
 		}
 		if (!self.dragged) return
@@ -156,10 +176,8 @@ function setSampleActions(self) {
 			if (self.hovered) {
 				// reposition the dragged row/column
 				const d = self.dragged
-				const t = d.orig.__data__; console.log(t.grpIndex, self.sampleGroups)
+				const t = d.orig.__data__
 				const h = self.hovered
-				// console.log(t, self.config.termgroups)
-				// console.log([99, numRows, t.index, toIndex], self.config.termgroups[t.grpIndex].lst.slice())
 				// NOTE: currently, the rendered order does not have to match the termgroup.lst order
 				// ??? actually resort termgroup.lst to reflect the current term order ???
 				for (const grp of self.sampleGroups) {
@@ -173,7 +191,7 @@ function setSampleActions(self) {
 					})
 				}
 
-				const sample = self.sampleGroups[t.grpIndex].lst.splice(t.index, 1)[0] //if (tw != t.tw) {console.log(tw, t.tw); throw `t????`}
+				const sample = self.sampleGroups[t.grpIndex].lst.splice(t.index, 1)[0]
 				self.config.termgroups[h.grpIndex].lst.splice(h.index, 0, sample)
 
 				self.app.dispatch({
@@ -296,7 +314,7 @@ function setTermActions(self) {
 				.append('div')
 				.style('text-align', 'center')
 				.style('margin', '5px')
-				.text(`#samples: ${t.counts.samples} visible, ${t.allCounts.samples - t.counts.samples} hidden`)
+				.text(`#samples: ${t.counts.samples} rendered, ${t.allCounts.samples - t.counts.samples} not rendered`)
 		}
 
 		self.dom.twMenuBar = self.dom.twMenuDiv.append('div').style('text-align', 'center')
@@ -427,7 +445,6 @@ function setTermActions(self) {
 		const [tcopy] = self.getSorterTerms(t)
 		const termgroups = self.termGroups
 		termgroups[t.grpIndex].lst[t.lstIndex] = tcopy
-		termgroups[t.grpIndex].sortTermsBy = 'asListed'
 		for (const g of termgroups) {
 			for (const tw of g.lst) {
 				if (!tw.sortSamples) continue
@@ -707,7 +724,6 @@ function setTermActions(self) {
 	}
 
 	self.showSortMenu = () => {
-		//console.log(self.termOrder)
 		/* 
 			sort rows and samples by:
 			- #hits 
@@ -1268,6 +1284,31 @@ function setTermGroupActions(self) {
 		})
 		self.dom.tip.hide()
 	}
+	const labelParentSelectors = ['series', 'series-group', 'term', 'term-group']
+		.map(d => `.sjpp-matrix-${d}-label-g`)
+		.join(',')
+	self.enableTextHighlight = event => {
+		select(event.target.closest(labelParentSelectors))
+			.selectAll('.sjpp-matrix-label text')
+			//.selectAll('text')
+			.style('-webkit-user-select', 'auto')
+			.style('-moz-user-select', 'auto')
+			.style('-ms-user-select', 'auto')
+			.style('user-select', 'auto')
+
+		select('body').on('mouseup.sjppMatrixLabelText', self.disableTextHighlight)
+	}
+
+	self.disableTextHighlight = event => {
+		select(event.target.closest(labelParentSelectors))
+			.selectAll('.sjpp-matrix-label text')
+			.style('-webkit-user-select', 'none')
+			.style('-moz-user-select', 'none')
+			.style('-ms-user-select', 'none')
+			.style('user-select', 'none')
+
+		select('body').on('mouseup.sjppMatrixLabelText', null)
+	}
 }
 
 // prefix = "term" | "termGrp"
@@ -1298,7 +1339,7 @@ function setLabelDragEvents(self, prefix) {
 				.style('-ms-user-select', 'none')
 				.style('user-select', 'none')
 
-			const label = self.clicked.event.target.closest('.sjpp-matrix-label') //console.log(68, label)
+			const label = self.clicked.event.target.closest('.sjpp-matrix-label')
 			// TODO: use a native or D3 transform accessor
 			const [x, y] = select(label)
 				.attr('transform')
@@ -1318,7 +1359,7 @@ function setLabelDragEvents(self, prefix) {
 				y,
 				clientX: event.clientX,
 				clientY: event.clientY
-			} //; console.log(this.dragged)
+			}
 			self.dragged.clone.selectAll('text').style('fill', 'red')
 		}
 		if (!self.dragged) return
@@ -1341,11 +1382,9 @@ function setLabelDragEvents(self, prefix) {
 				const h = self.hovered
 
 				if (prefix == 'termGrp') {
-					const grp = self.config.termgroups.splice(t.grpIndex, 1)[0] //if (tw != t.tw) {console.log(tw, t.tw); throw `t????`}
+					const grp = self.config.termgroups.splice(t.grpIndex, 1)[0]
 					self.config.termgroups.splice(h.grpIndex, 0, grp)
 				} else {
-					// console.log(t, self.config.termgroups)
-					// console.log([99, numRows, t.index, toIndex], self.config.termgroups[t.grpIndex].lst.slice())
 					// NOTE: currently, the rendered order does not have to match the termgroup.lst order
 					// ??? actually resort termgroup.lst to reflect the current term order ???
 					for (const grp of self.config.termgroups) {
@@ -1359,7 +1398,7 @@ function setLabelDragEvents(self, prefix) {
 						})
 					}
 
-					const tw = self.config.termgroups[t.grpIndex].lst.splice(t.index, 1)[0] //if (tw != t.tw) {console.log(tw, t.tw); throw `t????`}
+					const tw = self.config.termgroups[t.grpIndex].lst.splice(t.index, 1)[0]
 					self.config.termgroups[h.grpIndex].lst.splice(h.index, 0, t.tw)
 				}
 
@@ -1397,13 +1436,12 @@ function setLabelDragEvents(self, prefix) {
 
 function setZoomPanActions(self) {
 	self.seriesesGMousedown = function(event) {
-		if (!self.optionalFeatures.includes('zoom')) return
 		event.stopPropagation()
 		const startCell = self.getCellByPos(event)
 		if (!startCell) return
 		self.clickedSeriesCell = { event, startCell }
 		if (self.settings.matrix.mouseMode == 'pan') {
-			self.dom.seriesesG.on('mousemove', self.seriesesGdrag).on('mouseup', self.seriesesGcancelDrag)
+			self.seriesesGdragInit()
 		} else {
 			self.zoomPointer = pointer(event, self.dom.seriesesG.node())
 			self.dom.seriesesG.on('mousemove', self.seriesesGoutlineZoom).on('mouseup', self.seriesesGtriggerZoom)
@@ -1419,45 +1457,89 @@ function setZoomPanActions(self) {
 	self.getCellByPos = function(event) {
 		const s = self.settings.matrix
 		const d = self.dimensions
-		if (event.target.tagName == 'rect' && event.target.__data__?.sample) return event.target.__data__
+		if (event.target.tagName == 'rect') {
+			if (event.target.__data__?.sample) return event.target.__data__
+			if (event.target.__data__?.xg) {
+				const visibleWidth = event.clientX - event.target.getBoundingClientRect().x + d.seriesXoffset
+				const i = Math.floor(visibleWidth / d.dx)
+				return self.sampleOrder[i]
+			}
+		}
 		if (event.target.tagName == 'image' && s.useCanvas) {
 			const visibleWidth = event.clientX - event.target.getBoundingClientRect().x + d.seriesXoffset
-			const i = Math.floor(visibleWidth / d.colw)
+			const i = Math.floor(visibleWidth / d.dx)
 			return self.sampleOrder[i]
+		}
+	}
+
+	self.seriesesGdragInit = function() {
+		//self.dom.seriesesG.on('mousemove', self.seriesesGdrag).on('mouseup', self.seriesesGcancelDrag)
+		select('body')
+			.on('mousemove.sjppMatrixDrag', self.seriesesGdrag)
+			.on('mouseup.sjppMatrixDrag', self.seriesesGcancelDrag)
+		const s = self.settings.matrix
+		const d = self.dimensions
+		const c = self.clickedSeriesCell
+		c.dxPad = 20 // to show edge that limits draf, and to "bounce back" on mouseup
+		//const pos = d.seriesXoffset s.zoomCenterPct * d.mainw /// d.mainw
+		c.dxMax = -d.seriesXoffset
+		c.dxMaxPad = c.dxMax + c.dxPad
+		c.dxMin = d.mainw - d.zoomedMainW - d.seriesXoffset
+		c.dxMinPad = c.dxMin - c.dxPad
+		const halfw = 0.5 * d.mainw
+		c.center = {
+			max: halfw + (d.zoomedMainW - d.mainw),
+			min: halfw
 		}
 	}
 
 	self.seriesesGdrag = function(event) {
 		const s = self.settings.matrix
-		const e = self.clickedSeriesCell.event
-		const dx = event.clientX - e.clientX
-		self.clickedSeriesCell.dx = dx
+		const c = self.clickedSeriesCell
 		const d = self.dimensions
-		// should use a function for layout.top.boxTransform(....)
+		const dx = event.clientX - c.event.clientX
+		if (Math.abs(dx) < 1) return
+		if (dx < c.dxMinPad || dx > c.dxMaxPad) return
+		self.clickedSeriesCell.dx = dx
+		self.translateElems(dx, d, s, c)
+	}
+
+	self.translateElems = function(dx, d, s, c) {
 		self.dom.seriesesG.attr('transform', `translate(${d.xOffset + d.seriesXoffset + dx},${d.yOffset})`)
+		self.dom.clipRect.attr(
+			'x',
+			s.zoomLevel == 1 && d.mainw >= d.zoomedMainW ? 0 : Math.abs(d.seriesXoffset + dx) / d.zoomedMainW
+		)
 		self.layout.top.attr.adjustBoxTransform(dx)
 		self.layout.btm.attr.adjustBoxTransform(dx)
-		self.dom.clipRect.attr('x', s.zoomLevel == 1 ? 0 : Math.abs(d.seriesXoffset + dx) / d.zoomedMainW)
+		const computedCenter = s.zoomCenterPct * d.mainw - d.seriesXoffset - dx
+		self.controlsRenderer.svgScrollApi.update({ zoomCenter: computedCenter })
 	}
 
 	self.seriesesGcancelDrag = function(event) {
-		self.dom.seriesesG.on('mousemove', null).on('mouseup', null)
+		select('body')
+			.on('mousemove.sjppMatrixDrag', null)
+			.on('mouseup.sjppMatrixDrag', null)
 		const s = self.settings.matrix
 		const d = self.dimensions
-		const e = self.clickedSeriesCell.event
-		const c = self.clickedSeriesCell.startCell
-		const zoomCenter =
-			c.totalIndex * d.colw + c.grpIndex * s.colgspace + event.clientX - e.clientX + d.colw + d.seriesXoffset
+		const cc = self.clickedSeriesCell
+		const _dx = event.clientX - cc.event.clientX
+		const dx = Math.min(cc.dxMax, Math.max(_dx, cc.dxMin))
+		if (Math.abs(_dx) < 1 || Math.abs(dx) < 1) {
+			self.translateElems(0, d, s, cc)
+			return
+		}
+		self.translateElems(dx, d, s, cc)
+		const c = self.getVisibleCenterCell(dx)
 		self.app.dispatch({
 			type: 'plot_edit',
 			id: self.id,
 			config: {
 				settings: {
 					matrix: {
-						zoomCenterPct: zoomCenter / d.mainw,
+						zoomCenterPct: 0.5,
 						zoomIndex: c.totalIndex,
-						zoomGrpIndex: c.grpIndex,
-						mouseMode: 'pan'
+						zoomGrpIndex: c.grpIndex
 					}
 				}
 			}
@@ -1491,7 +1573,7 @@ function setZoomPanActions(self) {
 			.style('width', self.zoomWidth)
 			.style('height', self.dimensions.mainh)
 
-		self.clickedSeriesCell.endCell = self.getCellByPos(event) // s.useCanvas ? self.getImgCell(event) : event.target.__data__
+		self.clickedSeriesCell.endCell = self.getCellByPos(event)
 	}
 
 	self.seriesesGtriggerZoom = function(event) {
@@ -1524,7 +1606,7 @@ function setZoomPanActions(self) {
 		const zoomIndex = Math.floor(start.totalIndex + Math.abs(c.endCell.totalIndex - c.startCell.totalIndex) / 2)
 		const centerCell = self.sampleOrder[zoomIndex] || self.getImgCell(event)
 		const zoomLevel = d.mainw / self.zoomWidth
-		const zoomCenter = centerCell.totalIndex * d.colw + (centerCell.grpIndex - 1) * s.colgspace + d.seriesXoffset
+		const zoomCenter = centerCell.totalIndex * d.dx + (centerCell.grpIndex - 1) * s.colgspace + d.seriesXoffset
 
 		self.app.dispatch({
 			type: 'plot_edit',
@@ -1533,10 +1615,9 @@ function setZoomPanActions(self) {
 				settings: {
 					matrix: {
 						zoomLevel,
-						zoomCenterPct: zoomLevel < 1 ? 0.5 : zoomCenter / d.mainw,
+						zoomCenterPct: zoomLevel < 1 && d.mainw >= d.zoomedMainW ? 0.5 : zoomCenter / d.mainw,
 						zoomIndex,
-						zoomGrpIndex: centerCell.grpIndex,
-						mouseMode: 'zoom'
+						zoomGrpIndex: centerCell.grpIndex
 					}
 				}
 			}

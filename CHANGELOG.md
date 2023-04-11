@@ -1,6 +1,11 @@
 # Change Log
 
 All notable changes to this project will be documented in this file. 
+## 2.13.0
+
+- matrix zoom and pan
+- feature improvement and bug fixes for sampleScatter 
+ 
 ## 2.12.1
 
 - Switch to npmjs registry for npm publishing.

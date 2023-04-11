@@ -25,6 +25,11 @@ class Recover {
 		this.state = opts.getState || (appState => appState)
 		this.reactsTo = opts.reactsTo || (() => true) // could be undefined
 		this.getState = opts.getState || (appState => appState)
+		// will be used for setTimeout, in case of rapid succession of state changes
+		this.debouncedTrack = () => {
+			this.trackState()
+			this.render()
+		}
 	}
 
 	init() {
@@ -43,8 +48,8 @@ class Recover {
 		// assume that the presence of app.opts.state
 		// indicates testing, no need for history in that case
 		if (!this.isActive) return
-		this.trackState()
-		this.render()
+		if (this.timedTrack) clearTimeout(this.timedTrack)
+		this.timedTrack = setTimeout(this.debouncedTrack, 1000)
 	}
 
 	trackState() {
@@ -113,7 +118,8 @@ function setRenderers(self) {
 	}
 
 	self.render = function() {
-		self.dom.undoBtn.property('disabled', self.currIndex < 1)
-		self.dom.redoBtn.property('disabled', self.history.length < 2 || self.currIndex >= self.history.length - 1)
+		if (self.dom.undoBtn) self.dom.undoBtn.property('disabled', self.currIndex < 1)
+		if (self.dom.redoBtn)
+			self.dom.redoBtn.property('disabled', self.history.length < 2 || self.currIndex >= self.history.length - 1)
 	}
 }

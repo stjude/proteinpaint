@@ -84,7 +84,9 @@ class MassApp {
 	async init() {
 		// catch initialization error
 		try {
-			this.store = await storeInit({ app: this.api, state: this.opts.state })
+			// TODO: may default later to having a debouncer ???
+			const debounceInterval = 'debounceInterval' in this.opts ? this.opts.debounceInterval : 0
+			this.store = await storeInit({ app: this.api, state: this.opts.state, debounceInterval })
 			this.state = await this.store.copyState()
 			this.components = {}
 			if (this.state.nav.header_mode != 'hidden') {

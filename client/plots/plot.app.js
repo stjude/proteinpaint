@@ -96,16 +96,18 @@ class PlotApp {
 			this.store = await storeInit({ app: this.api, state: this.opts.state })
 			this.state = await this.store.copyState()
 			this.components = {
-				recover: await recoverInit({
+				plots: []
+			}
+			if (this.opts.app?.features?.includes('recover'))
+				this.components.recover = await recoverInit({
 					app: this.api,
 					holder: this.dom.recoverControls,
 					// TODO: ???? may limit the tracked state to only the filter, activeCohort ???
 					getState: appState => appState,
 					//reactsTo: action => true, //action.type != 'plot_edit' || action.type == 'app_refresh',
 					maxHistoryLen: 5
-				}),
-				plots: []
-			}
+				})
+
 			await this.api.dispatch()
 		} catch (e) {
 			this.printError(e)

@@ -17,10 +17,10 @@ validate_query_snvindel_byisoform
 	decideSampleId
 validate_query_singleSampleMutation
 	getSingleSampleMutations
+		getGeneCnv4oneCase
 validate_query_snvindel_byisoform_2 // "protein_mutations" graphql, not in use
 validate_query_geneCnv
 	filter2GDCfilter
-validate_query_genecnv // not in use
 querySamples_gdcapi
 	flattenCaseByFields
 	may_add_readdepth
@@ -33,6 +33,7 @@ getheaders
 
 **************** route handlers
 handle_gdc_ssms
+	getSingleSampleMutations
 handle_filter2topGenes
 	get_filter2topGenes
 		mayAddCGC2filter
@@ -351,6 +352,8 @@ function snvindel_addclass(m, consequence) {
 	}
 }
 
+////////////////////////// CNV /////////////////////////////
+
 export function validate_query_geneCnv(ds) {
 	const defaultFields = [
 		'cnv_id',
@@ -466,6 +469,72 @@ export function validate_query_geneCnv(ds) {
 		return filters
 	}
 }
+
+/*
+get genome-wide gene-level cnv data for one case
+opts{}
+	.case_id=str
+*/
+async function getGeneCnv4oneCase(opts) {
+	const fields = [
+		'cnv.chromosome',
+		'cnv.start_position',
+		'cnv.end_position',
+		'cnv.cnv_change',
+		'cnv.gene_level_cn',
+		'cnv.consequence.gene.symbol' // turn on later if gene is needed
+	]
+	const headers = getheaders(opts)
+	const tmp = await got.post(path.join(apihost, 'cnv_occurrences'), {
+		headers,
+		body: JSON.stringify({
+			size: 10000,
+			fields: fields.join(','),
+			filters: getFilter(opts)
+		})
+	})
+	const re = JSON.parse(tmp.body)
+	if (!Array.isArray(re.data.hits)) throw 're.data.hits[] not array'
+	const cnvs = []
+	for (const h of re.data.hits) {
+		if (!h.id) throw '.id missing from cnv hit'
+		if (typeof h.cnv != 'object') throw 'h.cnv{} not object'
+		if (!h.cnv.gene_level_cn) throw 'h.cnv.gene_level_cn not true'
+		if (!Number.isInteger(h.cnv.start_position)) throw 'h.cnv.start_position not integer'
+		if (!Number.isInteger(h.cnv.end_position)) throw 'h.cnv.end_position not integer'
+		if (!h.cnv.chromosome) throw 'h.cnv.chromosome missing'
+		const m = {
+			dt: common.dtcnv,
+			ssm_id: h.id,
+			chr: 'chr' + h.cnv.chromosome,
+			start: h.cnv.start_position,
+			stop: h.cnv.end_position
+		}
+		if (h.cnv.cnv_change == 'Gain') {
+			m.value = 1
+			//m.class = common.mclass.mclasscnvgain
+		} else if (h.cnv.cnv_change == 'Loss') {
+			m.value = -1
+			//m.class=common.mclass.mclasscnvloss
+		} else {
+			throw 'h.cnv.cnv_change value not Gain or Loss'
+		}
+		if (h.cnv.consequence?.gene?.symbol) m.gene = h.cnv.consequence.gene.symbol
+		cnvs.push(m)
+	}
+	return cnvs
+
+	function getFilter(p) {
+		/* p={}
+		.case_id=str
+		*/
+		if (!p.case_id) throw '.case_id missing'
+		const filters = { op: 'and', content: [{ op: 'in', content: { field: 'case.case_id', value: [p.case_id] } }] }
+		return filters
+	}
+}
+
+////////////////////////// CNV ends /////////////////////////////
 
 function getheaders(q) {
 	// q is req.query{}
@@ -666,67 +735,6 @@ function flattenCaseByFields(sample, caseObj, term) {
 		}
 		// advance i and recurse
 		query(next, i + 1)
-	}
-}
-
-// not-in-use!!
-// for old sample-less graphql api
-function validate_query_genecnv(ds) {
-	const api = ds.queries.genecnv.byisoform.gdcapi
-	if (!api.query) throw '.query missing for byisoform.gdcapi'
-	if (typeof api.query != 'string') throw '.query not string for byisoform.gdcapi'
-	if (!api.variables) throw '.variables missing for byisoform.gdcapi'
-	// validate variables
-	ds.queries.genecnv.byisoform.get = async (opts, name) => {
-		// following is project-summarized query
-		// should be replaced by sample-level queries
-		const variables = JSON.parse(JSON.stringify(api.variables))
-		variables.caseAggsFilters.content[2].content.value = [name]
-		variables.cnvGain.content[2].content.value = [name]
-		variables.cnvLoss.content[2].content.value = [name]
-		variables.cnvTestedByGene.content[1].content.value = [name]
-		variables.cnvAll.content[2].content.value = [name]
-		variables.ssmFilters.content[1].content.value = [name]
-		const response = await got.post(apihostGraphql, {
-			headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-			body: JSON.stringify({ query: api.query, variables })
-		})
-		let re
-		try {
-			re = JSON.parse(response.body)
-		} catch (e) {
-			throw 'invalid JSON from GDC'
-		}
-		if (!re.data || !re.data.viewer || !re.data.viewer.explore || !re.data.viewer.explore.cases)
-			throw 'data structure not data.viewer.explore.cases'
-		const project2total = new Map()
-		for (const i of re.data.viewer.explore.cases.cnvTotal.project__project_id.buckets) {
-			project2total.set(i.key, i.doc_count)
-		}
-		const projects = new Map()
-		if (re.data.viewer.explore.cases.gain) {
-			for (const i of re.data.viewer.explore.cases.gain.project__project_id.buckets) {
-				projects.set(i.key, { gain: i.doc_count, loss: 0 })
-			}
-		}
-		if (re.data.viewer.explore.cases.loss) {
-			for (const i of re.data.viewer.explore.cases.loss.project__project_id.buckets) {
-				if (projects.has(i.key)) {
-					projects.get(i.key).loss = i.doc_count
-				} else {
-					projects.set(i.key, { gain: 0, loss: 0 })
-				}
-			}
-		}
-		const lst = []
-		for (const [k, i] of projects) {
-			if (i.gain + i.loss == 0) continue
-			i.label = k
-			i.total = project2total.get(k)
-			lst.push(i)
-		}
-		lst.sort((i, j) => (j.gain + j.loss) / j.total - (i.gain + i.loss) / i.total)
-		return lst
 	}
 }
 
@@ -1303,8 +1311,9 @@ async function getSingleSampleMutations(query, ds, genome) {
 	}
 
 	{
-		// to use cnv segments later
-		//const tmp = await ds.queries.geneCnv.bygene.get(query)
+		// cnv
+		const tmp = await getGeneCnv4oneCase(query)
+		mlst.push(...tmp)
 	}
 
 	return mlst

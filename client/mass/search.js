@@ -2,6 +2,7 @@ import { getCompInit } from '../rx'
 import { select, selectAll } from 'd3-selection'
 import { Menu } from '../dom/menu'
 import { debounce } from 'debounce'
+import { sayerror } from '#dom/error'
 //import { graphable } from '../../common/termutils'
 
 /*

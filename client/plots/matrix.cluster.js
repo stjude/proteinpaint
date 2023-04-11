@@ -40,14 +40,14 @@ export class MatrixCluster {
 		this.totalWidth = s.zoomLevel == 1 ? -4 : 0 //4 * Math.max(1, s.colspace)
 
 		for (const xg of this.xGrps) {
-			const dx = d.dx //Math.min(d.dx, s.maxColw + s.colspace)
+			const dx = d.dx //Math.min(d.dx, s.colwMax + s.colspace)
 			const x = xg.prevGrpTotalIndex * dx + s.colgspace * xg.grpIndex + xg.totalHtAdjustments
-			const width = dx * (xg.processedLst || xg.grp.lst).length + xg.grpHtAdjustments
+			const width = dx * (xg.processedLst || xg.grp.lst).length + xg.grpTotals.htAdjustment
 			this.totalWidth += width + 2 * Math.max(1, s.colspace)
 
 			for (const yg of this.yGrps) {
 				const y = yg.prevGrpTotalIndex * d.dy + yg.grpIndex * s.rowgspace + yg.totalHtAdjustments
-				const height = d.dy * (yg.processedLst || yg.grp.lst).length + yg.grpHtAdjustments
+				const height = d.dy * (yg.processedLst || yg.grp.lst).length + yg.grpTotals.htAdjustment
 				const offsetX = Math.max(1, s.colspace)
 				const offsetY = Math.max(1, s.rowspace)
 				clusters.push({
@@ -71,9 +71,9 @@ function setRenderers(self) {
 		const s = self.settings
 		const d = self.currData.dimensions
 		self.dom.clipRect
-			.attr('x', s.zoomLevel <= 1 ? 0 : Math.abs(d.seriesXoffset) / d.zoomedMainW)
+			.attr('x', s.zoomLevel <= 1 && d.mainw >= d.zoomedMainW ? 0 : Math.abs(d.seriesXoffset) / d.zoomedMainW)
 			.attr('y', 0)
-			.attr('width', d.mainw / this.totalWidth) // d.zoomedMainW)
+			.attr('width', Math.min(d.mainw, d.maxMainW) / this.totalWidth) // d.zoomedMainW)
 			.attr('height', 1)
 
 		renderOutlines(clusters, s, d)

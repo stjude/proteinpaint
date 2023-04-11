@@ -196,7 +196,7 @@ function getSortSamplesByClass(st, self, rows, s) {
 	for (const row of rows) {
 		if (!($id in row)) cls[row.sample] = order.length + 1
 		else {
-			const indices = row[$id].values.map(v => order.indexOf(v.dt)).filter(i => i !== -1)
+			const indices = row[$id].values.map(v => order.indexOf(v.class)).filter(i => i !== -1)
 			cls[row.sample] = indices.length ? Math.min(...indices) : order.length + 1
 			//should samples with mutiple mclass should be sorted after samples with only 1 mclass???
 			//if (indices.length > 1) cls[row.sample] += [...(new Set(indices))].length * 0.05

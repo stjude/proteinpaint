@@ -1,6 +1,7 @@
 import tape from 'tape'
 import { Tabs } from '#dom/toggleButtons'
 import * as d3s from 'd3-selection'
+import { detectGte } from '../../test/test.helpers.js'
 
 /*************************
  reusable helper functions
@@ -13,10 +14,6 @@ function getHolder() {
 		.style('border', '1px solid #aaa')
 		.style('padding', '5px')
 		.style('margin', '5px')
-}
-
-function sleep(ms) {
-	return new Promise(resolve => setTimeout(resolve, ms))
 }
 
 /**************
@@ -62,13 +59,11 @@ tape('Render Tabs, default settings', async test => {
 	await testTabActivity()
 
 	async function testTabActivity() {
-		await sleep(300)
-		const activeBtn = holder.selectAll('.sjpp-active').nodes()
+		const activeBtn = await detectGte({ elem: holder.node(), selector: '.sjpp-active' })
 		test.equal(activeBtn.length, 1, `Should only display one active button`)
 		const tabBtns = holder.selectAll('.sj-toggle-button').nodes()
 		test.equal(tabBtns.length, tabsData.length, `Should display all tabs in tabs array`)
 
-		await sleep(300)
 		tabBtns[1].click()
 		const oldActiveBtn = Object.values(tabBtns[0].classList).some(d => d == 'sjpp-active')
 		const newActiveBtn = Object.values(tabBtns[1].classList).some(d => d == 'sjpp-active')

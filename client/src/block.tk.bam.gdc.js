@@ -563,7 +563,9 @@ export async function bamsliceui({
 		// remaining of this function will be rewritten using block instance
 		// and no longer uses toggle and gene search
 
-		if (data.mlst.length == 0) {
+		const ssmLst = data.mlst.filter(m => m.dt == 1) // for now filter to only ssm, exclude cnv
+
+		if (ssmLst.length == 0) {
 			mutationMsgDiv.text('No mutations from this case.')
 			await temp_renderGeneSearch(ssmGeneDiv.append('div'))
 			return
@@ -574,7 +576,7 @@ export async function bamsliceui({
 		// display toggle between ssm list and gene search
 		const tabs = [
 			{
-				label: data.mlst.length + ' variants',
+				label: ssmLst.length + ' variants',
 				callback: event => {
 					gdc_args.useSsmOrGene = 'ssm'
 				}
@@ -588,7 +590,7 @@ export async function bamsliceui({
 		]
 		new Tabs({ holder: ssmGeneDiv, tabs }).main()
 
-		temp_renderSsmList(tabs[0].contentHolder, data.mlst)
+		temp_renderSsmList(tabs[0].contentHolder, ssmLst)
 		await temp_renderGeneSearch(tabs[1].contentHolder)
 	}
 

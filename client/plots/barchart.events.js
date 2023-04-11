@@ -164,29 +164,8 @@ export default function getHandlers(self) {
 			}
 		},
 		legend: {
-			click: event => {
-				event.stopPropagation()
-				const d = event.target.__data__
-				if (d === undefined) return
-				const termNum = d.type == 'col' ? 'term' : 'term2'
-				const term = self.config[termNum]
-				const isHidden =
-					'isHidden' in d
-						? !d.isHidden
-						: !(term.q && term.q.hiddenValues && term.q.hiddenValues['dataId' in d ? d.dataId : d.id])
-				self.app.dispatch({
-					type: 'plot_edit',
-					id: self.id,
-					config: {
-						[termNum]: {
-							isAtomic: true,
-							id: term.id,
-							term: term.term,
-							q: getUpdatedQfromClick(d, term, isHidden)
-						}
-					}
-				})
-			},
+			onColorClick: (e, color) => handleColorClick(e, self, color),
+			click: e => handleLegendClick(e, self),
 			mouseover: event => {
 				event.stopPropagation()
 				const d = event.target.__data__
@@ -256,7 +235,61 @@ export default function getHandlers(self) {
 	}
 }
 
-function getUpdatedQfromClick(d, term, isHidden = false) {
+function handleColorClick(event, self, color) {
+	event.stopPropagation()
+	const d = event.target.__data__
+	if (d === undefined) return
+	const termNum = d.type == 'col' ? 'term' : 'term2'
+	const term = self.config[termNum]
+	if (term.term.values?.[d.dataId]) term.term.values[d.dataId].color = color
+	if (term.term.type == 'geneVariant') {
+		if (!term.term.values) term.term.values = {}
+		term.term.values[d.dataId] = { label: d.dataId, color }
+	}
+	let binColored = null
+	if (self.bins[2].length > 0) {
+		binColored = self.bins[2].find(bin => bin.label == d.dataId)
+		binColored.color = color
+	}
+	self.app.dispatch({
+		type: 'plot_edit',
+		id: self.id,
+		config: {
+			[termNum]: {
+				isAtomic: true,
+				id: term.id,
+				term: term.term,
+				q: getUpdatedQfromClick(d, term, d.isHidden, binColored)
+			}
+		}
+	})
+}
+
+function handleLegendClick(event, self) {
+	event.stopPropagation()
+	const d = event.target.__data__
+	if (d === undefined) return
+	const termNum = d.type == 'col' ? 'term' : 'term2'
+	const term = self.config[termNum]
+	const isHidden =
+		'isHidden' in d
+			? !d.isHidden
+			: !(term.q && term.q.hiddenValues && term.q.hiddenValues['dataId' in d ? d.dataId : d.id])
+	self.app.dispatch({
+		type: 'plot_edit',
+		id: self.id,
+		config: {
+			[termNum]: {
+				isAtomic: true,
+				id: term.id,
+				term: term.term,
+				q: getUpdatedQfromClick(d, term, isHidden)
+			}
+		}
+	})
+}
+
+function getUpdatedQfromClick(d, term, isHidden = false, binColored = null) {
 	const label = 'id' in d ? d.id : d.type == 'col' ? d.seriesId : d.dataId
 	const valueId = term.term.values && Object.keys(term.term.values).find(id => term.term.values[id].label === label)
 	const id = !valueId ? label : valueId
@@ -264,6 +297,7 @@ function getUpdatedQfromClick(d, term, isHidden = false) {
 	if (!q.hiddenValues) q.hiddenValues = {}
 	if (isHidden) q.hiddenValues[id] = 1
 	else delete q.hiddenValues[id]
+	if (binColored) q.binColored = binColored
 	return q
 }
 
