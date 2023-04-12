@@ -120,7 +120,7 @@ class ViolinPlot {
 		}
 		if (
 			state.config.term.term.additionalAttributes?.logScale ||
-			state.config.term2.term.additionalAttributes?.logScale
+			state.config.term2?.term.additionalAttributes?.logScale
 		) {
 			inputs.push({
 				label: 'Scale',
