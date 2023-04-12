@@ -38,7 +38,7 @@ module.exports = {
 	isMds3: true,
 	cohort: {
 		db: {
-			file: 'files/hg38/TermdbTest/db2'
+			file: 'files/hg38/TermdbTest/db'
 		},
 		termdb: {
 			displaySampleIds: true, // allow to display sample-level data
