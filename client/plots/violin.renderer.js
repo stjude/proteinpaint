@@ -194,15 +194,7 @@ export default function violinRenderer(self) {
 	function renderScale(t1, t2, settings, isH, svg) {
 		// <g>: holder of numeric axis
 		const g = svg.svgG.append('g').style('font-size', '15')
-		// .transition()
-		// .duration(self.opts.mode == 'minimal' ? 0 : 800)
-		// .delay(self.opts.mode == 'minimal' ? 0 : 100)
-		g.call(
-			(isH ? axisTop : axisLeft)()
-				.scale(svg.axisScale)
-				.tickFormat(format('.2f'))
-			// .ticks(5, format('.2f'))
-		)
+		g.call((isH ? axisTop : axisLeft)().scale(svg.axisScale))
 
 		if (self.opts.mode != 'minimal') {
 			let lab
