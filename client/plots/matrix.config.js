@@ -24,7 +24,7 @@ export async function getPlotConfig(opts, app) {
 				},
 				// set any dataset-defined sample limits and sort priority, otherwise undefined
 				// put in settings, so that later may be overridden by a user
-				maxSample: 0,
+				maxSample: 1000,
 				sortPriority: undefined,
 				truncatePriority: undefined,
 
@@ -36,7 +36,7 @@ export async function getPlotConfig(opts, app) {
 				cellbg: '#ececec',
 				colw: 0,
 				colwMin: 0.5,
-				colwMax: 24,
+				colwMax: 18,
 				colspace: 1,
 				colgspace: 8,
 				collabelpos: 'bottom',
@@ -53,7 +53,7 @@ export async function getPlotConfig(opts, app) {
 				rowlabelpad: 1,
 				grpLabelFontSize: 12,
 				minLabelFontSize: 6,
-				maxLabelFontSize: 16,
+				maxLabelFontSize: 14,
 				transpose: false,
 				sampleLabelOffset: 120,
 				sampleGrpLabelOffset: 120,

@@ -282,7 +282,7 @@ class Matrix {
 			this.legendRenderer(this.legendData, {
 				settings: Object.assign(
 					{
-						svgw: Math.max(400, d.visibleW),
+						svgw: Math.max(400, d.mainw + d.xOffset - this.settings.matrix.margin.right),
 						svgh: d.mainh + d.yOffset,
 						dimensions: d
 					},
@@ -949,7 +949,7 @@ class Matrix {
 	}
 
 	termGrpLabel(t) {
-		return t.grp.name || `configure`
+		return t.grp.name || [{ text: '⋮', dx: 3, cls: 'sjpp-exclude-svg-download' }]
 	}
 
 	setLegendData(legendGroups, refs) {

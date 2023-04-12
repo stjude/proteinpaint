@@ -154,13 +154,29 @@ export function setRenderers(self) {
 				text
 					.transition()
 					.duration(textduration)
-					.attr('opacity', side.attr.fontSize < 6 || labelText === 'configure' ? 0 : 1)
+					//.attr('opacity', side.attr.fontSize < 6 || labelText === 'configure' ? 0.1 : 1)
 					.attr('font-size', side.attr.fontSize)
 					.attr('text-anchor', side.attr.labelAnchor)
 					.attr('transform', side.attr.labelTransform)
 					.attr('cursor', 'pointer')
 					.attr(side.attr.textpos.coord, side.attr.textpos.factor * (showContAxis ? 30 : 0))
-					.text(side.label)
+
+				if (!Array.isArray(labelText)) text.text(labelText)
+				else {
+					const tspan = text.selectAll('tspan').data(labelText)
+					tspan.exit().remove()
+					tspan
+						.attr('dx', getTspanDx)
+						.attr('font-size', getTspanFontSize)
+						.text(getTspanText)
+					tspan
+						.enter()
+						.append('tspan')
+						.attr('class', getTspanCls)
+						.attr('dx', getTspanDx)
+						.attr('font-size', getTspanFontSize)
+						.text(getTspanText)
+				}
 
 				text
 					.on('mouseover', labelText === 'configure' ? () => text.attr('opacity', 0.5) : null)
@@ -184,6 +200,19 @@ export function setRenderers(self) {
 						.attr('transform', `translate(${x},${y})`)
 						.call(side.attr.axisFxn(lab.scale.domain(domain)).tickValues(domain))
 				}
+			}
+
+			function getTspanCls(d) {
+				return d.cls
+			}
+			function getTspanDx(d) {
+				return d.dx
+			}
+			function getTspanFontSize(d) {
+				return d.fontSize || side.attr.fontSize
+			}
+			function getTspanText(d) {
+				return d.text
 			}
 		}
 	}
