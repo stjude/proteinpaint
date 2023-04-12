@@ -1146,7 +1146,7 @@ function setTermGroupActions(self) {
 	setLabelDragEvents(self, 'termGrp')
 
 	self.showTermGroupMenu = function(event) {
-		const d = event.target.__data__
+		const d = event.target.tagName.toLowerCase() == 'tspan' ? event.target.parentNode.__data__ : event.target.__data__
 		if (!d) return
 		self.activeLabel = d
 		self.dom.menutop
@@ -1165,7 +1165,7 @@ function setTermGroupActions(self) {
 		self.dom.grpNameInput = labelEditDiv
 			.append('input')
 			.attr('type', 'text')
-			.attr('size', self.activeLabel.grp.name.length + 5)
+			.attr('size', (self.activeLabel.grp.name?.length || 0) + 5)
 			.style('padding', '1px 5px')
 			.style('text-align', 'center')
 			.property('value', self.activeLabel.grp.name)

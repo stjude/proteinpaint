@@ -70,13 +70,13 @@ export class MatrixControls {
 						processInput: tw => {
 							if (tw) fillTermWrapper(tw)
 						}
-					},
-					{
+					}
+					/*{
 						label: 'Sample name regex filter',
 						type: 'text',
 						chartType: 'matrix',
 						settingsKey: 'sampleNameFilter'
-					}
+					}*/
 				]
 			})
 			.html(d => d.label)
@@ -252,7 +252,7 @@ export class MatrixControls {
 								step: 0.1
 							},
 							{
-								label: 'Top or left',
+								label: 'Individual label<br/>position',
 								type: 'radio',
 								width: 50,
 								chartType: 'matrix',
@@ -260,11 +260,11 @@ export class MatrixControls {
 								inputs: [
 									{
 										settingsKey: 'collabelpos',
-										options: [{ label: 'Columns', value: 'top' }, { label: 'Groups', value: 'bottom' }]
+										options: [{ label: 'Top', value: 'top' }, { label: 'Bottom', value: 'bottom' }]
 									},
 									{
 										settingsKey: 'rowlabelpos',
-										options: [{ label: 'Rows', value: 'left' }, { label: 'Groups', value: 'right' }]
+										options: [{ label: 'Left', value: 'left' }, { label: 'Right', value: 'right' }]
 									}
 								]
 							}
@@ -497,7 +497,7 @@ export class MatrixControls {
 		if (parent.config.termgroups.length > 1) {
 			self.addTermGroupSelector(app, parent, table.append('tr'))
 		}
-		self.addDictMenu(app, parent, table.append('tr'))
+		self.addDictMenu(app, parent)
 	}
 
 	addTermGroupSelector(app, parent, tr) {
@@ -610,40 +610,66 @@ export class MatrixControls {
 	}
 
 	async addDictMenu(app, parent, tr) {
-		const td = tr
-			.append('td')
-			.attr('colspan', 2)
-			.style('padding-left', 0)
+		app.tip.clear()
 
-		const pill = await termsettingInit({
-			vocabApi: app.vocabApi,
-			placeholder: 'Select a dictionary term',
-			placeholderIcon: '',
-			holder: td,
-			debug: this.opts.debug,
-			callback: tw => {
-				if (tw && !tw.q) throw 'data.q{} missing from pill callback'
-				parent.config.termgroups[parent.selectedGroup].lst.push(tw)
-				app.dispatch({
-					type: 'plot_edit',
-					id: parent.id,
-					config: {
-						termgroups: parent.config.termgroups
-					}
-				})
-
-				tip.hide()
-				app.tip.hide()
+		const termdb = await import('../termdb/app')
+		termdb.appInit({
+			holder: app.tip.d,
+			vocabApi: this.parent.app.vocabApi,
+			state: {
+				vocab: this.parent.state.vocab,
+				activeCohort: this.parent.activeCohort,
+				nav: {
+					header_mode: 'search_only'
+				},
+				tree: {
+					usecase: { target: 'matrix', detail: 'termgroups' }
+				}
 			},
-			customFillTw(tw) {
-				const term = tw.term
-				if (term.type == 'integer' || term.type == 'float') {
-					// is numeric term, to plot individual values as barchart, must set below
-					tw.q.mode = 'continuous'
-					tw.settings = { barh: 30, gap: 0 } // TODO improve this hardcoded attributes
+			tree: {
+				submit_lst: termlst => {
+					this.submit_lst(termlst)
+					app.tip.hide()
 				}
 			}
 		})
+	}
+
+	async submit_lst(termlst) {
+		const newterms = await Promise.all(
+			termlst.map(async _term => {
+				const term = structuredClone(_term)
+				const tw = 'id' in term ? { id: term.id, term } : { term }
+				await fillTermWrapper(tw)
+				return tw
+			})
+		)
+
+		const s = this.parent.settings.matrix
+		const termgroups = structuredClone(this.parent.config.termgroups)
+		const i = termgroups.findIndex(g => g.name == 'Variables')
+		if (i !== -1) {
+			const grp = termgroups[i]
+			grp.lst.push(...newterms)
+			this.parent.app.dispatch({
+				type: 'plot_nestedEdits',
+				id: this.parent.id,
+				edits: [
+					{
+						nestedKeys: ['termgroups', i, 'lst'],
+						value: grp.lst
+					}
+				]
+			})
+		} else {
+			const grp = { name: 'Variables', lst: newterms }
+			termgroups.unshift(grp)
+			this.parent.app.dispatch({
+				type: 'plot_edit',
+				id: this.parent.id,
+				config: { termgroups }
+			})
+		}
 	}
 
 	setZoomInput() {
