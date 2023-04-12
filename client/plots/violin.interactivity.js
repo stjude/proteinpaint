@@ -1,7 +1,6 @@
 import { filterJoin, getFilterItemByTag } from '../filter/filter'
 import { renderTable } from '#dom/table'
 import { to_svg } from '#src/client'
-import { getBaseLog } from '../shared/getBaseLog'
 import roundValue from '../shared/roundValue'
 
 export function setInteractivity(self) {

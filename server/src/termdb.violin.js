@@ -8,7 +8,6 @@ const { getData } = require('./termdb.matrix')
 const createCanvas = require('canvas').createCanvas
 const { violinBinsObj } = require('../../server/shared/violin.bins')
 const { summaryStats } = require('../../server/shared/descriptive.stats')
-const { getBaseLog } = require('../../server/shared/getBaseLog')
 
 /*
 q = {
