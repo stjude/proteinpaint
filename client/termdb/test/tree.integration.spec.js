@@ -61,19 +61,24 @@ tape('default behavior', function(test) {
 	function testRoot(tree) {
 		test.equal(tree.Inner.dom.holder.selectAll('.termdiv').size(), 5, 'should have 5 root terms')
 	}
-
-	let termbtn1, childdiv1
+	const parentTerm = 'Demographic Variables'
+	let termbtn1, childdiv1, parTermObj
 	function expandTerm1(tree) {
 		const btns = tree.Inner.dom.holder.node().querySelectorAll('.termbtn')
-		termbtn1 = [...btns].find(elem => elem.__data__.name.startsWith('Cancer-related'))
+		termbtn1 = [...btns].find(elem => elem.__data__.name.startsWith(parentTerm))
 		childdiv1 = termbtn1.parentNode.querySelectorAll('.termchilddiv')[0]
 		// click the button of the first term
 		termbtn1.click()
 	}
 
 	function testExpand1(tree) {
+		parTermObj = Object.values(tree.Inner.termsById).find(d => d.name == parentTerm)
 		test.equal(childdiv1.style.display, 'block', 'child DIV of first term is now visible')
-		test.equal(childdiv1.querySelectorAll('.termdiv').length, 2, 'child DIV now contains 2 sub terms')
+		test.equal(
+			childdiv1.querySelectorAll('.termdiv').length,
+			parTermObj.terms.length,
+			'child DIV now contains 2 sub terms'
+		)
 	}
 
 	let childdiv2
@@ -120,8 +125,13 @@ tape('default behavior', function(test) {
 		termbtn2.click()
 	}
 	function testExpandTerm1_child1(tree) {
+		parTermObj = Object.values(tree.Inner.termsById).find(d => d.name == parentTerm)
 		test.equal(childdiv2.style.display, 'block', 'child DIV of second term is now visible')
-		test.equal(childdiv2.querySelectorAll('.termdiv').length, 1, 'child DIV now contains 2 sub terms')
+		test.equal(
+			childdiv2.querySelectorAll('.termdiv').length,
+			parTermObj.terms[0].terms.length,
+			'child DIV now contains 2 sub terms'
+		)
 	}
 
 	function triggerFold(tree) {
@@ -275,7 +285,12 @@ tape('rehydrated from saved state', function(test) {
 			numTreeTerms,
 			`should have ${numTreeTerms} expanded terms`
 		)
-		test.equal(tree.Inner.dom.holder.selectAll('.termbtn').size(), 7, 'should have 7 term toggle buttons')
+		const nonLeafTerms = Object.values(tree.Inner.termsById).filter(d => !d?.isleaf && d.id != 'root')
+		test.equal(
+			tree.Inner.dom.holder.selectAll('.termbtn').size(),
+			nonLeafTerms.length,
+			'should have 7 term toggle buttons'
+		)
 	}
 })
 
