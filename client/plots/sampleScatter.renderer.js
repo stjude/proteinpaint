@@ -225,6 +225,7 @@ export function setRenderers(self) {
 
 	self.getColor = function(c) {
 		if (self.config.colorTW?.q.mode == 'continuous' && 'sampleId' in c) return self.colorGenerator(c.category)
+		if (c.category == 'Default') return self.config.settings.sampleScatter.defaultColor
 		const category = self.colorLegend.get(c.category)
 		return category.color
 	}

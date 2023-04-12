@@ -220,7 +220,7 @@ class Scatter {
 				max: 1
 			}
 		]
-		if (this.opts.parent?.type == 'summary')
+		if (this.opts.parent?.type == 'summary') {
 			inputs.unshift(
 				...[
 					{
@@ -247,6 +247,13 @@ class Scatter {
 					}
 				]
 			)
+			inputs.push({
+				label: 'Default color',
+				type: 'color',
+				chartType: 'sampleScatter',
+				settingsKey: 'defaultColor'
+			})
+		}
 
 		this.components = {
 			controls: await controlsInit({
@@ -342,6 +349,7 @@ export function getDefaultScatterSettings() {
 		axisTitleFontSize: 16,
 		showAxes: true,
 		showRef: true,
-		opacity: 0.8
+		opacity: 0.8,
+		defaultColor: 'rgb(144, 23, 57)'
 	}
 }
