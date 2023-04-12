@@ -584,7 +584,6 @@ tape('tvs: Condition', async test => {
 	const editOpt = menuRows.filter(d => d.action == 'edit').node()
 	const tipd = opts.filter.Inner.dom.termSrcDiv
 
-	// await sleep(100)
 	// --- test common bluepill components ---
 	{
 		test.equal(
@@ -616,7 +615,7 @@ tape('tvs: Condition', async test => {
 		const applyBtn = await detectGte({ target: tipd.node(), selector: '.sjpp_apply_btn' })
 
 		test.equal(applyBtn.length, 1, 'Should have 1 button to apply value change')
-		test.equal(tipd.selectAll("input[name^='select']").size(), 4, 'Should have checkbox for each value')
+		test.equal(tipd.selectAll("input[name^='select']").size(), 5, 'Should have checkbox for each value')
 		test.equal(tipd.selectAll("input[name^='select']:checked").size(), 1, 'Should have 1 box checked for Grade 0')
 	}
 
