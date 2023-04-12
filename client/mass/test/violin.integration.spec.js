@@ -1,8 +1,7 @@
 import tape from 'tape'
 import { getRunPp } from '../../test/front.helpers.js'
 import { fillTermWrapper } from '../../termsetting/termsetting.js'
-import { getFilterItemByTag } from '../../filter/filter.js'
-import { filterJoin } from '../../filter/filter.js'
+import { getFilterItemByTag, filterJoin } from '../../filter/filter.js'
 import { sleep, detectOne, detectGte, whenHidden, whenVisible } from '../../test/test.helpers.js'
 
 /***************** Test Layout *****************:
@@ -14,7 +13,7 @@ import { sleep, detectOne, detectGte, whenHidden, whenVisible } from '../../test
 5.  'test hide option on label clicking'
 6.  'term1 as numeric and term2 numeric'
 7.  'term1 as categorical and term2 numeric'
-8.  'test custom groupsetting from Methylome tSNE'
+8.  'test samplelst term2'
 9.  'test uncomputable categories legend'
 10. 'Load linear regression-violin UI'
 
@@ -576,25 +575,47 @@ tape.skip('term1 as categorical and term2 numeric', function(test) {
 	}
 })
 
-tape.skip('test custom groupsetting from Methylome tSNE', function(test) {
+tape('test samplelst term2', function(test) {
 	test.timeoutAfter(1000)
 	runpp({
 		state: {
-			nav: {
-				header_mode: 'hide_search'
-			},
 			plots: [
 				{
 					chartType: 'summary',
 					childType: 'violin',
 					term: {
 						id: 'agedx',
-						included_types: ['float'],
-						isAtomic: true,
-						isLeaf: true,
-						name: 'Age (years) at Cancer Diagnosis',
 						q: {
 							mode: 'continuous'
+						}
+					},
+					term2: {
+						term: {
+							name: 'test',
+							type: 'samplelst',
+							values: {
+								'Group 1': { key: 'Group 1', label: 'Group 1' },
+								Others: { key: 'Others', label: 'Others' }
+							}
+						},
+						q: {
+							mode: 'discrete',
+							groups: [
+								{
+									name: 'Group 22',
+									in: true,
+									values: [2646, 2800, 2856, 2884, 2954, 2954].map(i => {
+										return { sampleId: i }
+									})
+								},
+								{
+									name: 'Others',
+									in: false,
+									values: [2646, 2800, 2856, 2884, 2954, 2954].map(i => {
+										return { sampleId: i }
+									})
+								}
+							]
 						}
 					}
 				}
@@ -609,44 +630,10 @@ tape.skip('test custom groupsetting from Methylome tSNE', function(test) {
 
 	async function runTests(violin) {
 		violin.on('postRender.test', null)
-		testSamplelst(violin)
-		await sleep(100)
-		//if (test._ok) violin.Inner.app.destroy()
+		test.equal(violin.Inner.data.plots.length, 2, 'Inner.data.plots[] should be array length of 2')
+		// TODO test on sjpp-violinG rendering
+		if (test._ok) violin.Inner.app.destroy()
 		test.end()
-	}
-
-	function testSamplelst(violin) {
-		violin.Inner.app.dispatch({
-			id: violin.Inner.id,
-			type: 'plot_edit',
-			config: {
-				term2: {
-					term: {
-						name: 'Methylome TSNE groups',
-						type: 'samplelst'
-					},
-					q: {
-						mode: 'custom-groupsetting',
-						groups: [
-							{
-								name: 'Group 1',
-								key: 'sample',
-								values: ['2646', '2800', '2856', '2884', '2954', '3150']
-							},
-							{
-								name: 'Others',
-								key: 'sample',
-								in: false,
-								values: ['2646', '2800', '2856', '2884', '2954', '3150']
-							}
-						],
-						isAtomic: true
-					},
-					isAtomic: true
-				}
-			}
-		})
-		test.ok(true, 'Custom groups rendered')
 	}
 })
 
