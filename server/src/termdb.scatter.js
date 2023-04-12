@@ -187,20 +187,18 @@ async function colorAndShapeSamples(refSamples, cohortSamples, data, q) {
 
 	for (const sample of cohortSamples) {
 		const dbSample = data.samples[sample.sampleId.toString()]
-
+		if (!dbSample) {
+			console.log(JSON.stringify(sample) + ' not in the database or filtered')
+			continue
+		}
 		sample.cat_info = {}
 		sample.hidden = {}
-		let result = []
 		if (!q.colorTW) {
 			sample.category = 'Default'
-			result.push(sample)
 		} else {
 			if (q.colorTW?.q?.mode === 'continuous') {
-				if (dbSample) {
-					sample.category = dbSample[q.colorTW.term.id].value
-					result.push(sample)
-				}
-			} else result = processSample(dbSample, sample, q.colorTW, colorMap, 'category')
+				if (dbSample) sample.category = dbSample[q.colorTW.term.id].value
+			} else processSample(dbSample, sample, q.colorTW, colorMap, 'category')
 		}
 
 		if (q.shapeTW) processSample(dbSample, sample, q.shapeTW, shapeMap, 'shape')
@@ -225,8 +223,6 @@ async function colorAndShapeSamples(refSamples, cohortSamples, data, q) {
 			} else if (q.colorTW.term.type != 'geneVariant') value.color = k2c(category)
 		}
 	}
-	//else
-	//sample.value = dbSample.value
 
 	let i = 1
 	for (const [category, value] of shapeMap) {
@@ -253,13 +249,8 @@ async function colorAndShapeSamples(refSamples, cohortSamples, data, q) {
 	}
 }
 function processSample(dbSample, sample, tw, categoryMap, category) {
-	let color = null,
-		value = null
-	if (!dbSample) {
-		console.log(JSON.stringify(sample) + ' not in the database or filtered')
-		return []
-	}
-	const result = []
+	let value = null
+
 	if (tw.term.type == 'geneVariant') {
 		const mutations = dbSample?.[tw.term.name]?.values
 		sample.cat_info[category] = []
@@ -284,7 +275,6 @@ function processSample(dbSample, sample, tw, categoryMap, category) {
 		//all hidden, will take any
 		if (!sample[category]) sample[category] = getCategory(mutations[0])
 		sample.hidden[category] = tw.q.hiddenValues ? sample[category] in tw.q.hiddenValues : false
-		result.push(sample)
 
 		function assignMutation(strict) {
 			for (const [dt, label] of Object.entries(dt2label)) {
@@ -307,10 +297,9 @@ function processSample(dbSample, sample, tw, categoryMap, category) {
 			sample[category] = value.toString()
 			if (!categoryMap.has(value)) categoryMap.set(value, { sampleCount: 1 })
 			else categoryMap.get(value).sampleCount++
-			result.push(sample)
 		}
 	}
-	return result
+	return
 }
 
 function getCategory(mutation) {
