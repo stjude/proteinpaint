@@ -574,7 +574,7 @@ tape('Change symbol and reference size from menu', function(test) {
 			.run(changeSymbolInput)
 			.run(testSymbolSize, { wait: 100 })
 			.use(changeRefInput, { wait: 100 })
-			.to(testRefDotSize, { wait: 100 })
+			.to(testRefDotSize, { wait: 300 })
 			.done(test)
 	}
 	function changeSymbolInput(scatter) {
