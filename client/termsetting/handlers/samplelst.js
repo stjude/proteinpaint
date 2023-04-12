@@ -6,8 +6,8 @@ export function getHandler(self) {
 		showEditMenu(div) {
 			div.selectAll('*').remove()
 			const groups = self.q.groups
-			const keys = Object.keys(self.term.values)
-			for (const [i, group] of groups.entries()) {
+			for (const group of groups) {
+				console.log(group)
 				const groupDiv = div
 					.append('div')
 					.style('display', 'inline-block')
@@ -15,7 +15,7 @@ export function getHandler(self) {
 				const noButtonCallback = (i, node) => {
 					group.values[i].checked = node.checked
 				}
-				const name = group.in ? keys[i] : `${keys[i]} will exclude these samples`
+				const name = group.in ? group.name : `${group.name} will exclude these samples`
 				addTable(groupDiv, name, group, noButtonCallback)
 			}
 			div
