@@ -1,8 +1,14 @@
 const tape = require('tape')
 const d3s = require('d3-selection')
-const { filterInit, filterRxCompInit, getNormalRoot, filterJoin, getFilterItemByTag } = require('../filter')
-const helpers = require('../../test/front.helpers.js')
-const { sleep, detectLst, detectOne } = require('../../test/test.helpers.js')
+const {
+	filterInit,
+	filterRxCompInit,
+	getNormalRoot,
+	filterJoin,
+	getFilterItemByTag,
+	filterPromptInit
+} = require('../filter')
+const { sleep, detectLst, detectOne, testAppInit } = require('../../test/test.helpers.js')
 
 /*********
 the direct functional testing of the component, without the use of runpp()
@@ -162,29 +168,31 @@ function gettvs(id, val = '', overrides = {}) {
  test sections
 **************
 
-*** filterInit ***
-empty filter: visible controls
-1-entry root filter: visible controls
-2-entry root filter: visible controls
-+NEW button interaction
-add-transformer button interaction, 1-pill
-add-transformer button interaction, 2-pill
-pill Edit interaction
-pill Replace interaction
-pill menu-append interaction
-pill Negate interaction
-pill Remove interaction
-group menu-append interaction
-group Negate interaction
-group Remove interaction
-nested filters
-hidden filters
-renderAs: htmlSelect
-getNormalRoot()
-filterJoin()
+ilterInit
+    empty filter: visible controls
+    1-entry root filter: visible controls
+    2-entry root filter: visible controls
+    +NEW button interaction
+    add-transformer button interaction, 1-pill
+    add-transformer button interaction, 2-pill
+    pill Edit interaction
+    pill Replace interaction
+    pill menu-append interaction
+    pill Negate interaction
+    pill Remove interaction
+    group menu-append interaction
+    group Negate interaction
+    group Remove interaction
+    nested filters
+    hidden filters
+    renderAs: htmlSelect
+    getNormalRoot()
+    filterJoin()
 
-*** filterRxCompInit ***
-Rx filter state
+filterRxCompInit
+    Rx filter state
+
+filterPromptInit
 
 */
 
@@ -1683,6 +1691,47 @@ tape('Rx filter state inputs', async test => {
 	} catch (e) {
 		test.pass(`${message}: ${e}`)
 	}
+
+	test.end()
+})
+
+tape('\n', test => {
+	test.pass('-***- filterPromptInit() tests-***-')
+	test.end()
+})
+
+tape.only('filterPromptInit()', async test => {
+	test.timeoutAfter(3000)
+	const holder = getHolder()
+
+	const filterData = {
+		type: 'tvslst',
+		in: true,
+		join: '',
+		lst: [],
+		$id: 'fake'
+	}
+
+	const state = {
+		vocab: {
+			genome: 'hg38-test',
+			dslabel: 'TermdbTest'
+		},
+		termfilter: {
+			filter: filterData
+		}
+	}
+
+	const prompt = await filterPromptInit({
+		holder,
+		app: await testAppInit(state),
+		vocab: state.vocab,
+		callback: () => {
+			console.log(1711)
+		}
+	}).main(filterData)
+
+	console.log(prompt)
 
 	test.end()
 })
