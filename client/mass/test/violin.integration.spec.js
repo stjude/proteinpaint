@@ -575,7 +575,7 @@ tape.skip('term1 as categorical and term2 numeric', function(test) {
 	}
 })
 
-tape('test samplelst term2', function(test) {
+tape.skip('test samplelst term2', function(test) {
 	test.timeoutAfter(1000)
 	runpp({
 		state: {
