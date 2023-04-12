@@ -128,7 +128,7 @@ class Barchart {
 					]
 				},
 				{
-					label: 'Background color',
+					label: 'Default color',
 					type: 'color',
 					chartType: 'barchart',
 					settingsKey: 'barColor'

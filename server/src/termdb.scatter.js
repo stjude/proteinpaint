@@ -143,6 +143,7 @@ export async function trigger_getSampleScatter(req, q, res, ds, genome) {
 			cohortSamples = result[1]
 		}
 		const terms = []
+		if (q.coordTWs) terms.push(...q.coordTWs)
 		if (q.colorTW) terms.push(q.colorTW)
 		if (q.shapeTW) terms.push(q.shapeTW)
 		const data = await getData({ filter: q.filter, terms }, ds, genome)
