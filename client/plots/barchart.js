@@ -126,6 +126,12 @@ class Barchart {
 						{ label: 'Log', value: 'log', getDisplayStyle: plot => (plot.term2 ? 'none' : 'inline-block') },
 						{ label: 'Proportion', value: 'pct', getDisplayStyle: plot => (plot.term2 ? 'inline-block' : 'none') }
 					]
+				},
+				{
+					label: 'Background color',
+					type: 'color',
+					chartType: 'barchart',
+					settingsKey: 'barColor'
 				}
 			]
 			if (this.app.getState().termdbConfig.multipleTestingCorrection) {
@@ -522,7 +528,7 @@ class Barchart {
 		const group = this.state.ssid && this.state.ssid.groups && this.state.ssid.groups[result.dataId]
 		const bin = this.bins?.[2]?.find(bin => bin.label == result.dataId)
 		this.term2toColor[result.dataId] = !t2
-			? 'rgb(144, 23, 57)'
+			? this.config.settings.barchart.barColor
 			: group && 'color' in group
 			? group.color
 			: bin
@@ -891,7 +897,6 @@ function setInteractivity(self) {
 	self.handlers = getHandlers(self)
 
 	self.download = function() {
-		console.log(769)
 		if (!self.state) return
 		// has to be able to handle multichart view
 		const mainGs = []
@@ -978,7 +983,8 @@ export function getDefaultBarSettings(app) {
 		overlay: 'none',
 		divideBy: 'none',
 		rowlabelw: 250,
-		asterisksVisible: app?.getState()?.termdbConfig?.multipleTestingCorrection ? true : false
+		asterisksVisible: app?.getState()?.termdbConfig?.multipleTestingCorrection ? true : false,
+		barColor: 'rgb(144, 23, 57)'
 	}
 }
 
