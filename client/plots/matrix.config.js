@@ -37,7 +37,7 @@ export async function getPlotConfig(opts, app) {
 				samplecount4gene: true,
 				cellbg: '#ececec',
 				colw: 0,
-				colwMin: 0.5,
+				colwMin: 1 / window.devicePixelRatio,
 				colwMax: 18,
 				colspace: 1,
 				colgspace: 8,

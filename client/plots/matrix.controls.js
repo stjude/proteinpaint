@@ -699,7 +699,7 @@ export class MatrixControls {
 		}
 
 		// hardcode to always be in select mode on first render
-		opts.target.style('cursor', 'crosshair')
+		opts.target.style('cursor', 'default')
 
 		const instance = {
 			opts: Object.assign({}, defaults, opts),
@@ -732,7 +732,7 @@ export class MatrixControls {
 		function setMode(m) {
 			instance.opts.mouseMode = m
 			self.parent.settings.matrix.mouseMode = m
-			opts.target.style('cursor', m == 'select' ? 'crosshair' : 'grab')
+			opts.target.style('cursor', m == 'select' ? 'default' : 'grab')
 			instance.dom.selectBtn.style('background-color', m == 'select' ? instance.opts.activeBgColor : '')
 			instance.dom.grabBtn.style('background-color', m == 'pan' ? instance.opts.activeBgColor : '')
 		}

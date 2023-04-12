@@ -8,6 +8,7 @@ export function setInteractivity(self) {
 	self.showCellInfo = function(event) {
 		if (self.activeLabel || self.zoomArea) return
 		if (!(event.target.tagName == 'rect' || event.target.tagName == 'image')) return
+		if (event.target.tagName !== 'rect' && !self.imgBox) self.imgBox = event.target.getBoundingClientRect()
 		const d = event.target.tagName == 'rect' ? event.target.__data__ : self.getImgCell(event)
 		if (!d || !d.term || !d.sample) {
 			self.dom.tip.hide()
@@ -50,19 +51,22 @@ export function setInteractivity(self) {
 	}
 
 	self.getImgCell = function(event) {
-		const d = event.target.__data__
-		const rect = event.target.getBoundingClientRect()
-		const x2 = event.clientX - rect.x
+		//const [x,y] = pointer(event, event.target)
+		const y = event.clientY - self.imgBox.y - event.target.clientTop
+		const d = event.target.__data__.find(series => series.y <= y && y <= series.y + self.dimensions.dy)
+		if (!d) return
+		const x2 = event.clientX - self.imgBox.x - event.target.clientLeft
 		for (const cell of d.cells) {
 			const min = cell.x
 			const max = cell.x + self.dimensions.dx
-			if (min < x2 && x2 <= max) return cell
+			if (min <= x2 && x2 <= max) return cell
 		}
 		return null
 	}
 
 	self.mouseout = function() {
 		if (!self.activeLabel && !self.activeLabel && !self.activeLabel) self.dom.tip.hide()
+		delete self.imgBox
 	}
 
 	self.legendClick = function() {}
