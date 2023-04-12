@@ -45,11 +45,18 @@ EXAMPLES
     Syntax: cd .. && cargo build --release && time cat test.txt | target/release/cluster
     Syntax: cd .. && cargo build --release && time cat iris_test.txt | target/release/cluster
 
+TO DO
+
+Implement parallelization of calculation of dissimilarity matrix using eculidean distance by using in-built parallelization in nalgebra crate using rayon. See this link below:
+
+https://docs.rs/nalgebra/latest/nalgebra/base/par_iter/struct.ParColumnIterMut.html
+
 */
 use colorgrad;
 use json;
 use json::JsonValue;
 use kodama::{linkage, Method};
+use nalgebra::base::dimension::Const;
 use nalgebra::base::dimension::Dyn;
 use nalgebra::base::Matrix;
 use nalgebra::base::VecStorage;
@@ -264,6 +271,18 @@ fn sort_elements(
         //}
         let mut node_coordinates_list = Vec::<NewNodeRelativeCoordinates>::new();
         let mut condensed = euclidean_distance4(coordinates);
+        let column_means = Matrix::column_mean(coordinates);
+        println!("column_means:{:?}", column_means);
+
+        let mut min_mean_value = 100000000000.0;
+        let mut min_mean_value_index = 0;
+        for i in 0..column_means.len() {
+            if column_means[i] < min_mean_value {
+                min_mean_value = column_means[i];
+                min_mean_value_index = i;
+            }
+        }
+
         //println!("condensed:{:?}", condensed);
         let new_now2 = Instant::now();
         println!(
@@ -345,7 +364,8 @@ fn sort_elements(
         //println!("remaining_nodes:{:?}", remaining_nodes);
 
         // Initialize first node from cluster1 of first step, not sure if this is the best place from where to stop
-        let mut current_node = dend.steps()[0].cluster1.clone();
+        //let mut current_node = dend.steps()[0].cluster1.clone();
+        let mut current_node = min_mean_value_index;
 
         let mut num_iter = 0;
         let mut max_length_node_distance = 0; // max-length between all original node and the topmost node
@@ -363,6 +383,7 @@ fn sort_elements(
 
             //println!("distances:{:?}", distances);
             let mut next_node = current_node;
+            let mut degenerate_nodes = Vec::<usize>::new();
             for item in distances {
                 if item.0.le(&NodeIndex::from(coordinates.nrows() as u32 - 1)) == true
                     && item.0.ne(&NodeIndex::from(current_node as u32)) == true
@@ -372,6 +393,11 @@ fn sort_elements(
                     if item.1 < smallest_distance {
                         smallest_distance = item.1;
                         next_node = item.0.index();
+                        degenerate_nodes = vec![]; // Delete all previous degenerate nodes if another node with closer distance is found.
+                    } else if item.1 == smallest_distance {
+                        // If a node with the same distance is found as that in the variable smallest_distance then add both nodes to degenerate_nodes vector
+                        degenerate_nodes.push(next_node);
+                        degenerate_nodes.push(item.0.index());
                     }
                 }
                 if item.0.eq(&NodeIndex::from(
@@ -397,6 +423,10 @@ fn sort_elements(
                         max_length_node_distance = item.1
                     }
                 }
+            }
+
+            if degenerate_nodes.len() > 0 {
+                next_node = closest_degenerate_nodes(current_node, degenerate_nodes, &column_means);
             }
             //println!("next_node:{}", next_node);
             sorted_nodes.push(current_node);
@@ -522,6 +552,25 @@ fn sort_elements(
         panic!("The dissimilarity matrix length cannot be zero");
     }
     (sorted_nodes, node_coordinates_final)
+}
+
+fn closest_degenerate_nodes(
+    current_node: usize,
+    degenerate_nodes: Vec<usize>,
+    //means: &Matrix<f64, Const<1>, Dyn, VecStorage<f64, Const<1>, Dyn>>,
+    means: &Matrix<f64, Dyn, Const<1>, VecStorage<f64, Dyn, Const<1>>>,
+) -> usize {
+    let mean_current_node = means[current_node];
+    let mut closest_node = 0;
+    let mut min_diff = 100000000000000.0;
+    for item in degenerate_nodes {
+        let mean_degenerate_node = means[item];
+        if (mean_degenerate_node - mean_current_node).abs() < min_diff {
+            min_diff = (mean_degenerate_node - mean_current_node).abs();
+            closest_node = item;
+        }
+    }
+    closest_node
 }
 
 fn main() {
