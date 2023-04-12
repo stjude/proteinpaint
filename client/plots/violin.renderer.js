@@ -411,9 +411,6 @@ export function createNumericScale(self, settings, isH) {
 	settings.unit === 'log' &&
 	(self.config.term.term.additionalAttributes?.logScale || self.config.term2?.term.additionalAttributes?.logScale)
 		? (axisScale = scaleLog()
-				.base(
-					self.config.term.term.additionalAttributes?.logScale || self.config.term2?.term.additionalAttributes?.logScale
-				)
 				.domain([self.data.min === 0 ? 0.001 : self.data.min, self.data.max])
 				.range(isH ? [0, settings.svgw] : [settings.svgw, 0])).clamp(true)
 		: (axisScale = scaleLinear()

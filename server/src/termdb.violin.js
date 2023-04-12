@@ -36,7 +36,6 @@ q = {
       name: str,
       type: str, //categorical vs float
       values: [Object],
-	  additionalAttributes: [Object],
       groupsetting: [Object],
       isleaf: true,
       included_types: [Array],
@@ -77,19 +76,9 @@ export async function trigger_getViolinPlotData(q, res, ds, genome) {
 	const data = await getData({ terms: twLst, filter: q.filter, currentGeneNames: q.currentGeneNames }, ds, genome)
 	if (data.error) throw data.error
 
-	// function getBaseLog(x, y) {
-	// 	return Math.log(y) / Math.log(x)
-	// }
-	// for (const [k, v] of Object.entries(data.samples)) {
-	// 	if (term.additionalAttributes?.logScale) {
-	// 		if (v[term.id].key == 0 || v[term.id].value == 0) continue
-	// 		v[term.id].key = getBaseLog(term.additionalAttributes?.logScale, v[term.id].key)
-	// 		v[term.id].value = getBaseLog(term.additionalAttributes?.logScale, v[term.id].value)
-	// 	}
-	// }
 	if (q.scale) scaleData(q, data, term)
 
-	const valuesObject = key2values(data, term, q.divideTw)
+	const valuesObject = divideValues(q, data, term, q.divideTw)
 
 	const result = resultObj(valuesObject, data, q)
 
@@ -146,13 +135,6 @@ function numericBins(overlayTerm, data) {
 	return divideTwBins
 }
 
-function minMax(v, term, minMaxObject) {
-	if (term.type == 'float' || (term.type == 'integer' && v[term.id])) {
-		minMaxObject.min = Math.min(minMaxObject.min, v[term.id]?.value)
-		minMaxObject.max = Math.max(minMaxObject.max, v[term.id]?.value)
-	}
-}
-
 // scale sample data
 // divide keys and values by scaling factor - this is important for regression UI when running association tests.
 function scaleData(q, data, term) {
@@ -166,29 +148,43 @@ function scaleData(q, data, term) {
 	}
 }
 
-function key2values(data, term, overlayTerm) {
-	let key2values = new Map()
-	let min = Number.MAX_VALUE,
-		max = -Number.MAX_VALUE
+function divideValues(q, data, term, overlayTerm) {
+	const useLog = q.unit == 'log'
 
-	let minMaxObject = { min: min, max: max }
+	const key2values = new Map()
+	let min = null,
+		max = null
 
 	//create object to store uncomputable values and label
 	const uncomputableValueObj = {}
+	let skipNonPositiveCount = 0 // if useLog=true, record number of <=0 values skipped
+
 	for (const [c, v] of Object.entries(data.samples)) {
 		//if there is no value for term then skip that.
-		if (!v[term.id]) continue
 
-		if (term.values?.[v[term.id]?.value]?.uncomputable) {
+		const value = v[term.id]?.value // numeric value
+		if (!Number.isFinite(value)) continue
+
+		if (term.values?.[value]?.uncomputable) {
 			//skip these values from rendering in plot but show in legend as uncomputable categories
-			if (!uncomputableValueObj[(term.values?.[v[term.id]?.value].label)])
-				uncomputableValueObj[(term.values?.[v[term.id]?.value].label)] = 1
-			else uncomputableValueObj[(term.values?.[v[term.id]?.value].label)] += 1
-
+			const label = term.values[value].label // label of this uncomputable category
+			uncomputableValueObj[label] = 1 + (uncomputableValueObj[label] || 0)
 			continue
 		}
 
-		minMax(v, term, minMaxObject)
+		if (useLog && value <= 0) {
+			skipNonPositiveCount++
+			continue
+		}
+
+		if (min == null) {
+			min = value
+			max = value
+		} else {
+			min = Math.min(min, value)
+			max = Math.max(max, value)
+		}
+
 		if (overlayTerm) {
 			if (!v[overlayTerm.id]) {
 				// if there is no value for q.divideTw then skip this
@@ -196,13 +192,18 @@ function key2values(data, term, overlayTerm) {
 			}
 
 			if (!key2values.has(v[overlayTerm.id]?.key)) key2values.set(v[overlayTerm.id]?.key, [])
-			key2values.get(v[overlayTerm.id]?.key).push(v[term.id]?.value)
+			key2values.get(v[overlayTerm.id]?.key).push(value)
 		} else {
 			if (!key2values.has('All samples')) key2values.set('All samples', [])
-			key2values.get('All samples').push(v[term.id]?.value)
+			key2values.get('All samples').push(value)
 		}
 	}
-	return { key2values: key2values, minMaxValues: minMaxObject, uncomputableValueObj: sortObj(uncomputableValueObj) }
+	return {
+		key2values,
+		minMaxValues: { min, max },
+		uncomputableValueObj: sortObj(uncomputableValueObj),
+		skipNonPositiveCount
+	}
 }
 
 function sortObj(object) {
@@ -278,14 +279,17 @@ function createCanvasImg(q, result, term) {
 	//create scale object
 	let axisScale
 
-	q.unit === 'log' && term.additionalAttributes?.logScale
-		? (axisScale = scaleLog()
-				.base(term.additionalAttributes?.logScale)
-				.domain([result.min === 0 ? 0.001 : result.min, result.max])
-				.range(q.orientation === 'horizontal' ? [0, q.svgw] : [q.svgw, 0]))
-		: (axisScale = scaleLinear()
-				.domain([result.min, result.max])
-				.range(q.orientation === 'horizontal' ? [0, q.svgw] : [q.svgw, 0]))
+	const useLog = q.unit == 'log'
+
+	if (useLog) {
+		axisScale = scaleLog()
+			.domain([result.min, result.max])
+			.range(q.orientation === 'horizontal' ? [0, q.svgw] : [q.svgw, 0])
+	} else {
+		axisScale = scaleLinear()
+			.domain([result.min, result.max])
+			.range(q.orientation === 'horizontal' ? [0, q.svgw] : [q.svgw, 0])
+	}
 
 	const [width, height] =
 		q.orientation == 'horizontal'

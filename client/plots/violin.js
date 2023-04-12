@@ -7,6 +7,8 @@ import { setInteractivity } from './violin.interactivity'
 
 /*
 when opts.mode = 'minimal', a minimal violin plot will be rendered that will have a single term and minimal features (i.e. no controls, legend, labels, brushing, transitions, etc.)
+
+TODO default to unit=log if term enables
 */
 
 class ViolinPlot {
@@ -115,20 +117,15 @@ class ViolinPlot {
 					step: 0.1,
 					max: 2,
 					min: 0.1
+				},
+				{
+					label: 'Scale',
+					type: 'radio',
+					chartType: 'violin',
+					settingsKey: 'unit',
+					options: [{ label: 'Linear', value: 'abs' }, { label: 'Log', value: 'log' }]
 				}
 			)
-		}
-		if (
-			state.config.term.term.additionalAttributes?.logScale ||
-			state.config.term2?.term.additionalAttributes?.logScale
-		) {
-			inputs.push({
-				label: 'Scale',
-				type: 'radio',
-				chartType: 'violin',
-				settingsKey: 'unit',
-				options: [{ label: 'Linear', value: 'abs' }, { label: 'Log', value: 'log' }]
-			})
 		}
 		this.components = {
 			controls: await controlsInit({
@@ -281,7 +278,7 @@ export function getDefaultViolinSettings(app, overrides = {}) {
 		rightMargin: 50,
 		displaySampleIds: app?.getState()?.termdbConfig?.displaySampleIds ? true : false,
 		lines: [],
-		unit: 'log'
+		unit: 'abs' // abs: absolute scale, log: log scale
 	}
 	return Object.assign(defaults, overrides)
 }
