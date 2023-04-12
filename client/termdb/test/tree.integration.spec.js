@@ -121,7 +121,7 @@ tape('default behavior', function(test) {
 	}
 	function testExpandTerm1_child1(tree) {
 		test.equal(childdiv2.style.display, 'block', 'child DIV of second term is now visible')
-		test.equal(childdiv2.querySelectorAll('.termdiv').length, 2, 'child DIV now contains 2 sub terms')
+		test.equal(childdiv2.querySelectorAll('.termdiv').length, 1, 'child DIV now contains 2 sub terms')
 	}
 
 	function triggerFold(tree) {
@@ -138,7 +138,7 @@ tape('click_term', test => {
 	runpp({
 		tree: {
 			click_term: modifier_callback,
-			disable_terms: ['diaggrp'],
+			disable_terms: ['agedx'],
 			callbacks: {
 				'postRender.test': runTests
 			}
@@ -157,7 +157,7 @@ tape('click_term', test => {
 	let childdiv_term1
 	function expandTerm1(tree) {
 		const divs = tree.Inner.dom.holder.node().querySelectorAll('.termdiv')
-		const term1 = [...divs].find(elem => elem.__data__.name.startsWith('Cancer-related'))
+		const term1 = [...divs].find(elem => elem.__data__.name.startsWith('Demographic Variables'))
 		term1.querySelector('.termbtn').click()
 		childdiv_term1 = term1.querySelector('.termchilddiv')
 	}
@@ -192,7 +192,7 @@ tape('click_term2select_tvs', test => {
 		},
 		tree: {
 			click_term2select_tvs: modifier_callback,
-			disable_terms: ['diaggrp']
+			disable_terms: ['agedx']
 		}
 	})
 
@@ -211,7 +211,7 @@ tape('click_term2select_tvs', test => {
 	let childdiv_term1
 	function expandTerm1(tree) {
 		const divs = tree.Inner.dom.holder.node().querySelectorAll('.termdiv')
-		const term1 = [...divs].find(elem => elem.__data__.name.startsWith('Cancer-related'))
+		const term1 = [...divs].find(elem => elem.__data__.name.startsWith('Demographic Variables'))
 		term1.querySelector('.termbtn').click()
 		childdiv_term1 = term1.querySelector('.termchilddiv')
 	}
@@ -266,7 +266,12 @@ tape('rehydrated from saved state', function(test) {
 	})
 
 	function testDom(tree) {
-		test.equal(tree.Inner.dom.holder.selectAll('.termdiv').size(), 9, 'should have 9 expanded terms')
+		const numTreeTerms = Object.keys(tree.Inner.termsById).length - 1 //exclude {root}
+		test.equal(
+			tree.Inner.dom.holder.selectAll('.termdiv').size(),
+			numTreeTerms,
+			`should have ${numTreeTerms} expanded terms`
+		)
 		test.equal(tree.Inner.dom.holder.selectAll('.termbtn').size(), 7, 'should have 7 term toggle buttons')
 	}
 })
