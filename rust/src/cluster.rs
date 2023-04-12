@@ -396,7 +396,10 @@ fn sort_elements(
                         degenerate_nodes = vec![]; // Delete all previous degenerate nodes if another node with closer distance is found.
                     } else if item.1 == smallest_distance {
                         // If a node with the same distance is found as that in the variable smallest_distance then add both nodes to degenerate_nodes vector
-                        degenerate_nodes.push(next_node);
+                        if degenerate_nodes.len() == 0 {
+                            // Add the first node only if the vector is empty
+                            degenerate_nodes.push(next_node)
+                        }
                         degenerate_nodes.push(item.0.index());
                     }
                 }
