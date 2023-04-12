@@ -7,7 +7,6 @@ export function getHandler(self) {
 			div.selectAll('*').remove()
 			const groups = self.q.groups
 			for (const group of groups) {
-				console.log(group)
 				const groupDiv = div
 					.append('div')
 					.style('display', 'inline-block')
