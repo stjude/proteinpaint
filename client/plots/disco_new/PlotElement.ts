@@ -1,8 +1,8 @@
 class PlotElement {
-    private startAzimuth: number
-    private endAzimuth?: number
-    constructor(startAzimuth: number, endAzimuth?: number) {
-        this.startAzimuth = startAzimuth;
-        this.endAzimuth = endAzimuth;
-    }
+    //Start angle in radians
+    startAngle: number;
+    //End angle in radians
+    endAngle: number;
+
+    radius: number;
 }
