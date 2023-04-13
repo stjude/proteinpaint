@@ -128,10 +128,17 @@ class Barchart {
 					]
 				},
 				{
+					label: 'Color bars',
+					type: 'checkbox',
+					chartType: 'barchart',
+					settingsKey: 'colorBars',
+					boxLabel: 'Yes'
+				},
+				{
 					label: 'Default color',
 					type: 'color',
 					chartType: 'barchart',
-					settingsKey: 'barColor'
+					settingsKey: 'defaultColor'
 				}
 			]
 			if (this.app.getState().termdbConfig.multipleTestingCorrection) {
@@ -219,8 +226,9 @@ class Barchart {
 
 			this.term1toColor = {}
 			this.term2toColor = {} // forget any assigned overlay colors when refreshing a barchart
-			delete this.colorScale
 			this.updateSettings(this.config)
+			this.colorScale = getColors(this.settings.rows.length)
+
 			this.chartsData = this.processData(this.currServerData)
 			this.render()
 		} catch (e) {
@@ -262,7 +270,8 @@ class Barchart {
 			unit: config.settings.barchart.unit,
 			orientation: config.settings.barchart.orientation,
 			asterisksVisible: config.settings.barchart.asterisksVisible,
-			barColor: config.settings.barchart.barColor,
+			defaultColor: config.settings.barchart.defaultColor,
+			colorBars: config.settings.barchart.colorBars,
 			// normalize bar thickness regardless of orientation
 			colw: config.settings.common.barwidth,
 			rowh: config.settings.common.barwidth,
@@ -482,8 +491,10 @@ class Barchart {
 	}
 
 	sortStacking(series, chart, chartsData) {
-		const t1color = this.getPreassignedColor(this.config.term.term, series.seriesId, this.bins?.[1])
-		this.term1toColor[series.seriesId] = t1color || this.settings.barColor
+		if (this.settings.colorBars) {
+			const t1color = this.getPreassignedColor(this.config.term.term, series.seriesId, this.bins?.[1])
+			this.term1toColor[series.seriesId] = t1color || rgb(this.colorScale(series.seriesId)).toString()
+		} else this.term1toColor[series.seriesId] = this.settings.defaultColor
 
 		series.visibleData.sort(this.overlaySorter)
 		let seriesLogTotal = 0
@@ -519,8 +530,7 @@ class Barchart {
 		if (!this.config.term2) return
 
 		// use a predefined term value color if available
-		const t2color = this.getPreassignedColor(this.config.term2, result.dataId, this.bins?.[2])
-		if (!this.colorScale) this.colorScale = getColors(this.settings.rows.length)
+		const t2color = this.getPreassignedColor(this.config.term2.term, result.dataId, this.bins?.[2])
 		this.term2toColor[result.dataId] = t2color || rgb(this.colorScale(result.dataId)).toString()
 	}
 
@@ -985,7 +995,8 @@ export function getDefaultBarSettings(app) {
 		divideBy: 'none',
 		rowlabelw: 250,
 		asterisksVisible: app?.getState()?.termdbConfig?.multipleTestingCorrection ? true : false,
-		barColor: 'rgb(144, 23, 57)'
+		defaultColor: 'rgb(144, 23, 57)',
+		colorBars: true
 	}
 }
 
