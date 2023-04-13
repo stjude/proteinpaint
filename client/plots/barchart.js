@@ -482,9 +482,8 @@ class Barchart {
 	}
 
 	sortStacking(series, chart, chartsData) {
-		const t1color = this.getPreassignedColor(this.config.term, series.seriesId, this.bins?.[2])
+		const t1color = this.getPreassignedColor(this.config.term.term, series.seriesId, this.bins?.[1])
 		this.term1toColor[series.seriesId] = t1color || this.settings.barColor
-		console.log(series.seriesId, this.term1toColor[series.seriesId])
 
 		series.visibleData.sort(this.overlaySorter)
 		let seriesLogTotal = 0
@@ -521,23 +520,16 @@ class Barchart {
 
 		// use a predefined term value color if available
 		const t2color = this.getPreassignedColor(this.config.term2, result.dataId, this.bins?.[2])
-		if (t2color) {
-			this.term2toColor[result.dataId] = t2.term.values[result.dataId]?.color
-			return
-		}
-
 		if (!this.colorScale) this.colorScale = getColors(this.settings.rows.length)
-		return rgb(this.colorScale(result.dataId)).toString()
+		this.term2toColor[result.dataId] = t2color || rgb(this.colorScale(result.dataId)).toString()
 	}
 
 	getPreassignedColor(term, label, bins) {
-		//console.log(532, 'label=', label, term.values)
 		if (!term) return
-		if (label == 'MB,G4') return 'red'
 		if (term.values) {
 			for (const [key, v] of Object.entries(term.values)) {
 				if (!v.color) continue
-				if (!v.label && key === label) return v.color
+				if (key === label) return v.color
 				if (v.label === label) return v.color
 			}
 		}
