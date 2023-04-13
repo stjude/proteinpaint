@@ -1,22 +1,26 @@
 import {getCompInit} from "#rx"
 import {DiscoRenderer} from "#plots/disco_new/DiscoRenderer";
 import {DiscoInteractions} from "#plots/disco_new/DiscoInteractions";
-import  { select }  from 'd3-selection'
+import { StateViewModelMapper } from "./viewmodel/StateViewModelMapper"
 
 export default class Disco {
     private type: string;
     private discoRenderer: DiscoRenderer;
     private discoInteractions: DiscoInteractions;
     private opts: any;
+    private stateViewModelMapper: StateViewModelMapper
 
     constructor(opts: any) {
         this.type = 'Disco'
-        this.discoRenderer = new DiscoRenderer();
-        this.discoInteractions = new DiscoInteractions();
         this.opts = opts
+        this.discoRenderer = new DiscoRenderer()
+        this.discoInteractions = new DiscoInteractions()
+        this.stateViewModelMapper = new StateViewModelMapper()
     }
     async init(appState: any): Promise<void> {
-        const holder = this.opts.holder.append('div').text("Render plot here")
+        const viewModel = this.stateViewModelMapper.map(appState)
+        const holder = this.opts.holder.append('div')
+        this.discoRenderer.render(holder, viewModel)
     }
 }
 

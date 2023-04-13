@@ -507,7 +507,8 @@ async function showDtDiscoNew(event, sample, arg, fromTable = false) {
 
 	const disco_arg = {
 		sampleName: sample.sample_id,
-		data: mlst
+		data: mlst,
+		genome: arg.block.genome
 	}
 	arg.tk.menutip.clear().show(event.clientX, event.clientY)
 	if (!fromTable) {
@@ -527,10 +528,10 @@ async function showDtDiscoNew(event, sample, arg, fromTable = false) {
 
 		const opts = {
 			holder: arg.tk.menutip.d.append('div'),
-			genome: arg.block.genome,
 			state: {
 				genome: gdcGenome,
 				dslabel: gdcDslabel,
+				args: disco_arg,
 				plots: [
 					{
 						chartType: 'Disco',

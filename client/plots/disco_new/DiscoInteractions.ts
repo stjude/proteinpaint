@@ -1,4 +1,2 @@
 export class DiscoInteractions {
-    constructor() {
-    }
 }
