@@ -13,7 +13,7 @@ Phenotree parsing:
 	2. trackMissingTerms
 */
 
-exports.parseDictionary = function parseDictionary(input) {
+export function parseDictionary(input) {
 	// Returns terms array for appInit({state.vocab.terms})
 	const terms = {}
 
