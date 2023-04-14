@@ -512,6 +512,7 @@ function setCheckboxInput(opts) {
 		main(plot) {
 			const value = plot.settings[opts.chartType][opts.settingsKey]
 			self.dom.input.property('checked', opts.processInput ? opts.processInput(value) : value)
+			opts.holder.style('display', opts.getDisplayStyle?.(plot) || 'table-row')
 		}
 	}
 

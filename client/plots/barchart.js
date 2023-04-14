@@ -128,12 +128,13 @@ class Barchart {
 					]
 				},
 				{
-					label: 'Color bars',
-					title: 'May use server-assigned color if available',
+					label: 'Multicolor bars',
+					title: 'Color bars ussign preassigned colors from the dataset or a dynamic color',
 					type: 'checkbox',
 					chartType: 'barchart',
 					settingsKey: 'colorBars',
-					boxLabel: 'Yes'
+					boxLabel: 'Yes',
+					getDisplayStyle: plot => (plot.term2 ? 'none' : 'table-row')
 				},
 				{
 					label: 'Default color',
@@ -143,6 +144,7 @@ class Barchart {
 					getDisplayStyle: plot => (plot.settings.barchart.colorBars ? 'none' : 'table-row')
 				}
 			]
+
 			if (this.app.getState().termdbConfig.multipleTestingCorrection) {
 				// a checkbox to allow users to show or hide asterisks on bars
 				inputs.push({
