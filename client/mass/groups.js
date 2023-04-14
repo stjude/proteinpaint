@@ -40,6 +40,7 @@ class MassGroups {
 	}
 
 	getState(appState) {
+		this.customTerms = appState.customTerms
 		const state = {
 			termfilter: appState.termfilter,
 			groups: rebaseGroupFilter(appState),
@@ -79,48 +80,6 @@ class MassGroups {
 		})
 	}
 
-	async openSummaryPlot(term, sltw) {
-		// sltw: tw of "samplelst" type
-		const tw = { id: term.id, term }
-		const config = {
-			chartType: 'summary',
-			childType: 'barchart',
-			term: tw,
-			term2: sltw
-		}
-		await this.app.dispatch({
-			type: 'plot_create',
-			config
-		})
-	}
-
-	async openSurvivalPlot(term, sltw) {
-		// sltw: tw of "samplelst" type
-		const tw = { id: term.id, term }
-		const config = {
-			chartType: 'survival',
-			term: tw,
-			term2: sltw
-		}
-		await this.app.dispatch({
-			type: 'plot_create',
-			config
-		})
-	}
-	async openCuminc(term, sltw) {
-		// sltw: tw of "samplelst" type
-		const tw = { id: term.id, term }
-		const config = {
-			chartType: 'cuminc',
-			term: tw,
-			term2: sltw
-		}
-		await this.app.dispatch({
-			type: 'plot_create',
-			config
-		})
-	}
-
 	async groups2samplelst(groups) {
 		const samplelstGroups = []
 		for (const g of groups) {
@@ -131,19 +90,28 @@ class MassGroups {
 		}
 		const name = samplelstGroups.length == 1 ? samplelstGroups[0].name : 'Sample groups'
 		const tw = getSamplelstTW(samplelstGroups, name, { disabled: true })
+
+		// TEMP change, to be done elsewhere e.g. in getSamplelstTW()
+		for (const g of tw.q.groups) {
+			tw.term.values[g.name].list = g.values
+			tw.term.values[g.name].inuse = g.inuse
+		}
+
 		return tw
 	}
 
 	updateLaunchButton() {
 		// turn both off by default; selectively turn on
-		this.dom.launchButton.style('display', 'none')
+		this.dom.newTermSpan.style('display', 'none')
 		this.dom.noGroupSelected.style('display', 'none')
 
 		if (this.state.groups.length == 0) return // no groups
 
 		if (this.state.groups.length == 1) {
 			// only one group present, launch button is always on to work on this group
-			this.dom.launchButton.style('display', '').text(`Launch plot with "${this.state.groups[0].name}"`)
+			this.dom.newTermSpan.style('display', '')
+			this.dom.launchButton.text(`Create new variable with "${this.state.groups[0].name}"`)
+			this.dom.newTermNameInput.property('value', this.state.groups[0].name + ' vs others')
 			return
 		}
 
@@ -155,9 +123,29 @@ class MassGroups {
 			return
 		}
 		// at least 1 selected, display button
-		this.dom.launchButton.style('display', '')
-		if (lst.length == 1) return this.dom.launchButton.text(`Launch plot with "${this.state.groups[lst[0]].name}"`)
-		this.dom.launchButton.text(`Launch plot with ${lst.length} groups`)
+		this.dom.newTermSpan.style('display', '')
+		if (lst.length == 1) {
+			// only 1 selected
+			this.dom.launchButton.text(`Create new variable with "${this.state.groups[lst[0]].name}"`)
+			this.dom.newTermNameInput.property('value', this.state.groups[lst[0]].name + ' vs others')
+			return
+		}
+		this.dom.launchButton.text(`Create new variable with ${lst.length} groups`)
+		this.dom.newTermNameInput.property('value', lst.map(i => this.state.groups[i].name).join(' vs '))
+	}
+
+	displayCustomTerms() {
+		this.dom.customTermDiv.select('*').remove()
+		if (this.customTerms.length == 0)
+			return this.dom.customTermDiv.append('div').text('No custom variables. Use above controls to create new ones.')
+		for (const { name, tw } of this.customTerms) {
+			const div = this.dom.customTermDiv.append('div')
+			div
+				.text(name)
+				.attr('class', 'sja_filter_tag_btn')
+				.style('padding', '3px 6px')
+				.style('border-radius', '6px')
+		}
 	}
 }
 
@@ -165,25 +153,39 @@ export const groupsInit = getCompInit(MassGroups)
 
 function initUI(self) {
 	self.dom.filterTableDiv = self.dom.holder.append('div').style('margin-bottom', '10px')
-	//self.dom.filterTable = self.dom.holder.append('table').style('margin-bottom', '10px')
 
-	// bottom row of buttons
+	// row of buttons
 	const btnRow = self.dom.holder.append('div')
 
 	// btn 1: prompt to add new group
 	self.dom.addNewGroupBtnHolder = btnRow.append('span').style('margin-right', '20px')
 
-	// btn 2: launch plot
-	self.dom.launchButton = btnRow
+	// btn 2: patch of controls to create new term
+	self.dom.newTermSpan = btnRow.append('span') // contains "create button" and <input>, so they can toggle on/off together
+	self.dom.launchButton = self.dom.newTermSpan
 		.append('span')
 		.attr('class', 'sja_menuoption')
 		.on('click', () => clickLaunchBtn(self))
+
+	self.dom.newTermSpan
+		.append('span')
+		.style('font-size', '.8em')
+		.style('padding-left', '15px')
+		.text('Name the new variable:')
+	self.dom.newTermNameInput = self.dom.newTermSpan.append('input').attr('type', 'text')
+
 	// msg: none selected
 	self.dom.noGroupSelected = btnRow
 		.append('span')
 		.text('No groups selected')
-		.style('font-size', '.8em')
 		.style('opacity', 0.5)
+
+	// bottom box to list custom terms
+	self.dom.customTermDiv = self.dom.holder
+		.append('div')
+		.style('margin-top', '20px')
+		.style('border', 'solid 1px #eee')
+		.style('padding', '10px')
 }
 
 async function updateUI(self) {
@@ -226,6 +228,7 @@ async function updateUI(self) {
 		// no groups, do not show launch button, hide table
 		self.updateLaunchButton()
 		self.dom.filterTableDiv.style('display', 'none')
+		self.displayCustomTerms()
 		return
 	}
 
@@ -321,88 +324,31 @@ async function updateUI(self) {
 	}
 
 	self.updateLaunchButton()
+
+	self.displayCustomTerms()
 }
 
-function clickLaunchBtn(self) {
-	tip.clear().showunder(self.dom.launchButton.node())
-
+async function clickLaunchBtn(self) {
+	// click button to create samplelst tw
 	// collect groups in use
 	const groups = []
 	for (const i of self.selectedGroupsIdx) {
 		const g = self.state.groups[i]
 		if (g) groups.push(g)
 	}
-	if (groups.length == 0) return tip.d.append('p').text('No groups, should not happen')
 
-	// 1 or more groups are in use, generate menu options to act on them
+	if (groups.length == 0) throw 'No groups, should not happen'
 
-	// option = summary
-	{
-		const opt = tip.d
-			.append('div')
-			.attr('class', 'sja_menuoption')
-			.style('border-radius', '0px')
-			.text('Summarize')
-		opt
-			.insert('div')
-			.html('›')
-			.style('float', 'right')
-		opt.on('click', () => {
-			self.showTree(opt, async term => {
-				self.openSummaryPlot(term, await self.groups2samplelst(groups))
-			})
-		})
-	}
+	const name = self.dom.newTermNameInput.property('value')
 
-	if (self.state.termdbConfig.allowedTermTypes.includes('survival')) {
-		const opt = tip.d
-			.append('div')
-			.attr('class', 'sja_menuoption')
-			.style('border-radius', '0px')
-			.html('Survival analysis&nbsp;&nbsp;')
-		opt
-			.insert('div')
-			.html('›')
-			.style('float', 'right')
-		opt.on('click', () => {
-			const state = {
-				nav: { header_mode: 'hide_search' }, // hiding search will let tree to auto expand all survival terms, based on assumption that a dataset has just a handful of such terms so it's convenient to show'em all at once
-				tree: { usecase: { target: 'survival', detail: 'term' } }
-			}
-			self.showTree(
-				opt,
-				async term => {
-					self.openSurvivalPlot(term, await self.groups2samplelst(groups))
-				},
-				state
-			)
-		})
-	}
+	// 1 or more groups are in use, generate samplelst tw and save it to state
+	const tw = await self.groups2samplelst(groups)
+	tw.term.name = name
 
-	if (self.state.termdbConfig.allowedTermTypes.includes('condition')) {
-		const opt = tip.d
-			.append('div')
-			.attr('class', 'sja_menuoption')
-			.style('border-radius', '0px')
-			.html('Cumulative incidence analysis&nbsp;&nbsp;')
-		opt
-			.insert('div')
-			.html('›')
-			.style('float', 'right')
-		opt.on('click', () => {
-			const state = {
-				// must not hide search, as there can be a lot of condition terms, too many to show all
-				tree: { usecase: { target: 'cuminc', detail: 'term' } }
-			}
-			self.showTree(
-				opt,
-				async term => {
-					self.openCuminc(term, await self.groups2samplelst(groups))
-				},
-				state
-			)
-		})
-	}
+	//await self.app.dispatch({ type:'app_refresh', state:{ customTerms: [...self.customTerms, {name, term: tw.term}]}})
+	self.app.vocabApi.addCustomTerm({ name, term: tw.term })
+
+	self.dom.newTermSpan.style('display', 'none')
 }
 
 /*

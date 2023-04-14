@@ -72,7 +72,7 @@ class TdbNav {
 				}),
 				filter: filterRxCompInit({
 					app: this.app,
-					vocab: this.opts.vocab,
+					vocabApi: this.app.vocabApi,
 					holder: this.dom.subheader.filter.append('div'),
 					hideLabel: this.opts.header_mode === 'with_tabs',
 					emptyLabel: '+Add new filter',

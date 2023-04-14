@@ -1,8 +1,8 @@
-import { getInitFxn, getCompInit, Bus } from '../rx'
+import { getInitFxn, getCompInit, Bus } from '#rx'
 import { select } from 'd3-selection'
-import { Menu } from '../src/client'
+import { Menu } from '#dom/menu'
 import { TVSInit } from './tvs'
-import { vocabInit } from '../termdb/vocabulary'
+import { vocabInit } from '#termdb/vocabulary'
 
 const MENU_OPTION_HIGHLIGHT_COLOR = '#fff'
 
@@ -72,13 +72,19 @@ class Filter {
 	validateOpts(opts) {
 		const o = Object.assign({}, defaults, opts)
 		if (!o.holder) throw '.holder missing'
-		if (!o.vocab) throw '.vocab missing'
 
-		if (o.vocab.dslabel) {
-			if (!o.vocab.genome) throw 'vocab.genome missing'
+		if (o.vocabApi) {
+			this.vocabApi = o.vocabApi
 		} else {
-			if (!o.vocab.terms) throw 'vocab.terms missing'
+			if (!o.vocab) throw '.vocab missing'
+
+			if (o.vocab.dslabel) {
+				if (!o.vocab.genome) throw 'vocab.genome missing'
+			} else {
+				if (!o.vocab.terms) throw 'vocab.terms missing'
+			}
 		}
+
 		if (typeof o.callback != 'function') throw '.callback() is not a function'
 		if (o.getVisibleRoot && typeof o.getVisibleRoot != 'function')
 			throw '.getVisibleRoot() must be a function if set as an option'
@@ -267,10 +273,12 @@ class Filter {
 				genome: state.genome,
 				dslabel: state.dslabel
 			}
-			this.vocabApi = vocabInit({
-				app,
-				state: { vocab }
-			})
+			if (!this.vocabApi) {
+				this.vocabApi = vocabInit({
+					app,
+					state: { vocab }
+				})
+			}
 		}
 
 		this.vocabApi.main()
@@ -1072,10 +1080,10 @@ function setInteractivity(self) {
 
 		const termdb = await import('../termdb/app')
 		termdb.appInit({
+			vocabApi: self.vocabApi,
 			holder: self.dom.termSrcDiv,
 			getCategoriesArguments: self.opts.getCategoriesArguments,
 			state: {
-				vocab: self.opts.vocab,
 				activeCohort: self.activeCohort,
 				termfilter: { filter: rootFilterCopy }
 			},
@@ -1173,10 +1181,10 @@ function setInteractivity(self) {
 
 		const termdb = await import('../termdb/app')
 		termdb.appInit({
+			vocabApi: self.vocabApi,
 			holder: self.dom.termSrcDiv,
 			getCategoriesArguments: self.opts.getCategoriesArguments,
 			state: {
-				vocab: self.opts.vocab,
 				activeCohort: self.activeCohort,
 				header_mode: 'search_only',
 				termfilter: { filter: self.getAdjustedRoot(filter.$id, filter.join) }
