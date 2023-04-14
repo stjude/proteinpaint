@@ -321,12 +321,11 @@ function setTextInput(opts) {
 function setColorInput(opts) {
 	const self = {
 		dom: {
-			row: opts.holder.style('display', 'table-row'),
+			row: opts.holder.style('display', 'table-row').attr('title', opts.title),
 			labelTd: opts.holder
 				.append('td')
 				.html(opts.label)
-				.attr('class', 'sja-termdb-config-row-label')
-				.attr('title', opts.title),
+				.attr('class', 'sja-termdb-config-row-label'),
 			inputTd: opts.holder.append('td')
 		}
 	}
@@ -353,6 +352,7 @@ function setColorInput(opts) {
 		main(plot) {
 			const color = plot.settings[opts.chartType][opts.settingsKey]
 			self.dom.input.property('value', rgb(color).formatHex())
+			opts.holder.style('display', opts.getDisplayStyle?.(plot) || 'table-row')
 		}
 	}
 
@@ -477,7 +477,7 @@ function setDropdownInput(opts) {
 function setCheckboxInput(opts) {
 	const self = {
 		dom: {
-			row: opts.holder.style('display', 'table-row'),
+			row: opts.holder.style('display', 'table-row').attr('title', opts.title),
 			labelTdb: opts.holder
 				.append('td')
 				.html(opts.label)

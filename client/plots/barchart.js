@@ -129,6 +129,7 @@ class Barchart {
 				},
 				{
 					label: 'Color bars',
+					title: 'May use server-assigned color if available',
 					type: 'checkbox',
 					chartType: 'barchart',
 					settingsKey: 'colorBars',
@@ -138,7 +139,8 @@ class Barchart {
 					label: 'Default color',
 					type: 'color',
 					chartType: 'barchart',
-					settingsKey: 'defaultColor'
+					settingsKey: 'defaultColor',
+					getDisplayStyle: plot => (plot.settings.barchart.colorBars ? 'none' : 'table-row')
 				}
 			]
 			if (this.app.getState().termdbConfig.multipleTestingCorrection) {
