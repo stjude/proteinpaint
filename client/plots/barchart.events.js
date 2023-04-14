@@ -3,6 +3,7 @@ import { dofetch3 } from '../common/dofetch'
 import { newpane, export_data } from '../src/client'
 import { filterJoin, getFilterItemByTag, getNormalRoot, findItemByTermId, normalizeProps } from '../filter/filter'
 import { renderTable } from '#dom/table'
+import { rgb } from 'd3-color'
 
 export default function getHandlers(self) {
 	const tip = new Menu({ padding: '5px' })
@@ -124,6 +125,11 @@ export default function getHandlers(self) {
 			},
 			rectFill(d) {
 				return d.color
+			},
+			strokeFill(d) {
+				const rgbColor = rgb(d.color)
+				const stroke = rgbColor.toString() == rgb('white').toString() ? rgbColor.darker() : rgbColor
+				return stroke
 			},
 			click: self.opts.bar_click_override
 				? (event, d) => self.opts.bar_click_override(getTermValues(d, self))
