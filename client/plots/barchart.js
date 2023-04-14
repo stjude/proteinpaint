@@ -996,7 +996,7 @@ export function getDefaultBarSettings(app) {
 		rowlabelw: 250,
 		asterisksVisible: app?.getState()?.termdbConfig?.multipleTestingCorrection ? true : false,
 		defaultColor: 'rgb(144, 23, 57)',
-		colorBars: true
+		colorBars: false
 	}
 }
 
