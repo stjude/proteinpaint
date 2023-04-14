@@ -1,6 +1,6 @@
-import { getCompInit } from '../rx'
+import { getCompInit } from '#rx'
 import { Menu } from '#dom/menu'
-import { getNormalRoot } from '../filter/filter'
+import { getNormalRoot } from '#filter/filter'
 import { select } from 'd3-selection'
 
 class MassCharts {
@@ -308,9 +308,9 @@ function setRenderers(self) {
 
 		const termdb = await import('../termdb/app')
 		termdb.appInit({
+			vocabApi: self.app.vocabApi,
 			holder: self.dom.tip.d.append('div'),
 			state: {
-				vocab: self.state.vocab,
 				activeCohort: self.state.activeCohort,
 				nav: {
 					header_mode: 'search_only'

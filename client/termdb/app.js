@@ -1,4 +1,4 @@
-import { getAppInit, multiInit } from '../rx'
+import { getAppInit, multiInit } from '#rx'
 import { storeInit } from './store'
 import { vocabInit } from './vocabulary'
 import { treeInit } from './tree'
@@ -41,6 +41,8 @@ class TdbApp {
 		const topbar = opts.holder.append('div')
 		this.dom = {
 			holder: opts.holder,
+			treeDiv: opts.holder.append('div'),
+			customTermDiv: opts.holder.append('div').style('margin', '10px'),
 			submitDiv,
 			submitBtn,
 			topbar,
@@ -149,6 +151,7 @@ class TdbApp {
 			this.store = await storeInit({ app: this.api, state: this.opts.state })
 			this.state = await this.store.copyState()
 			await this.setComponents()
+			await this.mayShowCustomTerms()
 			await this.api.dispatch()
 		} catch (e) {
 			this.printError(e)
@@ -173,7 +176,7 @@ class TdbApp {
 				}),
 				tree: treeInit({
 					app: this.api,
-					holder: this.dom.holder.append('div').style('display', 'block'),
+					holder: this.dom.treeDiv,
 					expandAll: header_mode == 'hide_search'
 				})
 			}
@@ -201,6 +204,44 @@ class TdbApp {
 	printError(e) {
 		sayerror(this.dom.errdiv, 'Error: ' + (e.message || e))
 		if (e.stack) console.log(e.stack)
+	}
+
+	async mayShowCustomTerms() {
+		// only run once, upon initiating this tree ui
+		const terms = await this.api.vocabApi.getCustomTerms()
+		if (!Array.isArray(terms) || terms.length == 0) {
+			this.dom.customTermDiv.style('display', 'none')
+			return
+		}
+		// has custom terms, show
+		this.dom.customTermDiv
+			.append('div')
+			.text('CUSTOM VARIABLES')
+			.style('font-size', '.7em')
+		for (const term of terms) {
+			this.dom.customTermDiv
+				.append('div')
+				.style('margin-bottom', '3px')
+				.append('div')
+				.text(term.name)
+				.attr('class', 'sja_filter_tag_btn')
+				.style('padding', '3px 6px')
+				.style('border-radius', '6px')
+				.on('click', () => {
+					if (!this.opts.tree) return // click callbacks are all under tree{}
+					if (this.opts.tree.click_term) {
+						this.opts.tree.click_term(term)
+						return
+					}
+					if (this.opts.tree.click_term2select_tvs) {
+						this.api.dispatch({
+							type: 'submenu_set',
+							submenu: { term: term, type: 'tvs' }
+						})
+						return
+					}
+				})
+		}
 	}
 }
 

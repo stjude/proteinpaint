@@ -1,4 +1,4 @@
-import { dofetch3, isInSession } from '../common/dofetch'
+import { dofetch3, isInSession } from '#common/dofetch'
 
 export class Vocab {
 	constructor(opts) {
@@ -146,5 +146,27 @@ export class Vocab {
 			}
 			return qlst
 		} else return []
+	}
+
+	async addCustomTerm(obj) {
+		// save one custom term
+		// obj = { name:str, term:{} }
+		await this.app.dispatch({
+			type: 'add_customTerm',
+			obj
+		})
+	}
+	async deleteCustomTerm(name) {
+		// delete by name
+		await this.app.dispatch({
+			type: 'delete_customTerm',
+			name
+		})
+	}
+
+	async getCustomTerms() {
+		if (!Array.isArray(this.state.customTerms)) return [] // only mass state has this, here this instance is missing it. do not crash
+		// return list of term{}; do not return whole object
+		return this.state.customTerms.map(i => i.term)
 	}
 }
