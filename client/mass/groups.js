@@ -40,11 +40,11 @@ class MassGroups {
 	}
 
 	getState(appState) {
-		this.customTerms = appState.customTerms
 		const state = {
 			termfilter: appState.termfilter,
 			groups: rebaseGroupFilter(appState),
-			termdbConfig: appState.termdbConfig
+			termdbConfig: appState.termdbConfig,
+			customTerms: appState.customTerms
 		}
 		return state
 	}
@@ -135,16 +135,30 @@ class MassGroups {
 	}
 
 	displayCustomTerms() {
-		this.dom.customTermDiv.select('*').remove()
-		if (this.customTerms.length == 0)
-			return this.dom.customTermDiv.append('div').text('No custom variables. Use above controls to create new ones.')
-		for (const { name, tw } of this.customTerms) {
+		this.dom.customTermDiv.selectAll('*').remove()
+		if (this.state.customTerms.length == 0) {
+			this.dom.customTermDiv
+				.append('div')
+				.text('No custom variables. Use above controls to create new ones.')
+				.style('font-size', '.8em')
+			return
+		}
+		this.dom.customTermDiv
+			.append('div')
+			.style('margin-bottom', '10px')
+			.style('font-size', '.8em')
+			.text('Following custom variables are available in all charts where variables are used. Click one to delete.')
+		for (const { name, tw } of this.state.customTerms) {
 			const div = this.dom.customTermDiv.append('div')
 			div
 				.text(name)
 				.attr('class', 'sja_filter_tag_btn')
 				.style('padding', '3px 6px')
 				.style('border-radius', '6px')
+				.style('margin-right', '5px')
+				.on('click', () => {
+					this.app.vocabApi.deleteCustomTerm(name)
+				})
 		}
 	}
 }
@@ -183,8 +197,8 @@ function initUI(self) {
 	// bottom box to list custom terms
 	self.dom.customTermDiv = self.dom.holder
 		.append('div')
-		.style('margin-top', '20px')
-		.style('border', 'solid 1px #eee')
+		.style('margin', '20px')
+		.style('border-left', 'solid 1px black')
 		.style('padding', '10px')
 }
 
@@ -345,7 +359,6 @@ async function clickLaunchBtn(self) {
 	const tw = await self.groups2samplelst(groups)
 	tw.term.name = name
 
-	//await self.app.dispatch({ type:'app_refresh', state:{ customTerms: [...self.customTerms, {name, term: tw.term}]}})
 	self.app.vocabApi.addCustomTerm({ name, term: tw.term })
 
 	self.dom.newTermSpan.style('display', 'none')
