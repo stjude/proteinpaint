@@ -20,13 +20,15 @@ JSON input fields:
 
 OUTPUT PARAMETERS
 
- 1) sorted_matrix: Plain matrix is printed followed by number of rows and columns
- 2) sorted_col_coordinates: Data for dendrogram in the x-axis. Contains JSON string containing list of traits for each node in the dendrogram.
+ 1) sorted_matrix: Plain matrix is printed followed by number of rows and columns.
+ 2) sorted_col_elements: List of sorted column indexes in the sorted matrix.
+ 3) sorted_col_coordinates: Data for dendrogram in the x-axis. Contains JSON string containing list of traits for each node in the dendrogram.
        node_id: Node ID of the current node.
        node_coordinates: (X,Y) coordinates of the current node.
        child_nodes: ID's of the child node (if it exists). There will be no child node for the original (input) nodes in the dendrogram.
        child_node_coordinates: (X,Y) coordinates of each of the two child nodes (if they exist).
- 3) sorted_row_coordinates: Data for dendrogram in the y-axis. Contains JSON string containing list of traits for each node in the dendrogram.
+ 4) sorted_row_elements: List of sorted row indexes in the sorted matrix.
+ 5) sorted_row_coordinates: Data for dendrogram in the y-axis. Contains JSON string containing list of traits for each node in the dendrogram.
        node_id: Node ID of the current node.
        node_coordinates: (X,Y) coordinates of the current node.
        child_nodes: ID's of the child node (if it exists). There will be no child node for the original (input) nodes in the dendrogram.
@@ -272,7 +274,7 @@ fn sort_elements(
         let mut node_coordinates_list = Vec::<NewNodeRelativeCoordinates>::new();
         let mut condensed = euclidean_distance4(coordinates);
         let column_means = Matrix::column_mean(coordinates);
-        println!("column_means:{:?}", column_means);
+        //println!("column_means:{:?}", column_means);
 
         let mut min_mean_value = 100000000000.0;
         let mut min_mean_value_index = 0;
@@ -714,11 +716,11 @@ fn main() {
                     // possible coordinate pairs.
                     let (sorted_col_elements, sorted_col_coordinates) =
                         sort_elements(&input_matrix, &cluster_method);
-                    //println!("sorted_elements:{:?}", sorted_elements);
+                    println!("sorted_col_elements:{:?}", sorted_col_elements);
 
                     let (sorted_row_elements, sorted_row_coordinates) =
                         sort_elements(&input_matrix.transpose(), &cluster_method);
-                    //println!("sorted_elements2:{:?}", sorted_elements2);
+                    println!("sorted_row_elements:{:?}", sorted_row_elements);
                     let mut sorted_row_names = Vec::<String>::new();
                     let mut sorted_col_names = Vec::<String>::new();
 
