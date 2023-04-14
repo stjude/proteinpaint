@@ -128,19 +128,24 @@ class Barchart {
 					]
 				},
 				{
-					label: 'Color bars',
+					label: 'Multicolor bars',
+					title: 'Colors bars using the colors preassigned if available, otherwise generates a color',
 					type: 'checkbox',
 					chartType: 'barchart',
 					settingsKey: 'colorBars',
-					boxLabel: 'Yes'
+					boxLabel: 'Yes',
+					getDisplayStyle: plot => (plot.term2 ? 'none' : 'table-row')
 				},
 				{
 					label: 'Default color',
+					title: 'Default color for bars when there is no overlay',
 					type: 'color',
 					chartType: 'barchart',
-					settingsKey: 'defaultColor'
+					settingsKey: 'defaultColor',
+					getDisplayStyle: plot => (plot.settings.barchart.colorBars || plot.term2 ? 'none' : 'table-row')
 				}
 			]
+
 			if (this.app.getState().termdbConfig.multipleTestingCorrection) {
 				// a checkbox to allow users to show or hide asterisks on bars
 				inputs.push({
@@ -227,7 +232,7 @@ class Barchart {
 			this.term1toColor = {}
 			this.term2toColor = {} // forget any assigned overlay colors when refreshing a barchart
 			this.updateSettings(this.config)
-			this.colorScale = getColors(this.settings.rows.length)
+			this.colorScale = getColors(this.config.term.term2 ? this.settings.rows.length : this.settings.cols.length)
 
 			this.chartsData = this.processData(this.currServerData)
 			this.render()
@@ -491,10 +496,9 @@ class Barchart {
 	}
 
 	sortStacking(series, chart, chartsData) {
-		if (this.settings.colorBars) {
-			const t1color = this.getPreassignedColor(this.config.term.term, series.seriesId, this.bins?.[1])
-			this.term1toColor[series.seriesId] = t1color || rgb(this.colorScale(series.seriesId)).toString()
-		} else this.term1toColor[series.seriesId] = this.settings.defaultColor
+		this.term1toColor[series.seriesId] = this.settings.colorBars
+			? this.getColor(this.config.term.term, series.seriesId, this.bins?.[1])
+			: this.settings.defaultColor
 
 		series.visibleData.sort(this.overlaySorter)
 		let seriesLogTotal = 0
@@ -528,13 +532,10 @@ class Barchart {
 
 	setTerm2Color(result) {
 		if (!this.config.term2) return
-
-		// use a predefined term value color if available
-		const t2color = this.getPreassignedColor(this.config.term2.term, result.dataId, this.bins?.[2])
-		this.term2toColor[result.dataId] = t2color || rgb(this.colorScale(result.dataId)).toString()
+		this.term2toColor[result.dataId] = this.getColor(this.config.term2.term, result.dataId, this.bins?.[2])
 	}
 
-	getPreassignedColor(term, label, bins) {
+	getColor(term, label, bins) {
 		if (!term) return
 		if (term.values) {
 			for (const [key, v] of Object.entries(term.values)) {
@@ -547,6 +548,8 @@ class Barchart {
 		if (bin?.color) return bin.color
 
 		if (term.type == 'geneVariant') return this.getMutationColor(label)
+
+		return rgb(this.colorScale(label)).toString()
 	}
 
 	// should move this outside of setTerm2Color(),

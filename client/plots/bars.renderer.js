@@ -3,7 +3,6 @@ import { scaleLinear, scaleLog } from 'd3-scale'
 import { axisLeft, axisTop } from 'd3-axis'
 import { format } from 'd3-format'
 import { newpane } from '../src/client.js'
-import { rgb } from 'd3-color'
 
 /*
 arguments: 
