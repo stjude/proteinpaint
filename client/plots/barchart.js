@@ -129,7 +129,7 @@ class Barchart {
 				},
 				{
 					label: 'Multicolor bars',
-					title: 'Color bars ussign preassigned colors from the dataset or a dynamic color',
+					title: 'Color bars ussign preassigned colors from the dataset or a random color',
 					type: 'checkbox',
 					chartType: 'barchart',
 					settingsKey: 'colorBars',
@@ -141,7 +141,7 @@ class Barchart {
 					type: 'color',
 					chartType: 'barchart',
 					settingsKey: 'defaultColor',
-					getDisplayStyle: plot => (plot.settings.barchart.colorBars ? 'none' : 'table-row')
+					getDisplayStyle: plot => (plot.settings.barchart.colorBars || plot.term2 ? 'none' : 'table-row')
 				}
 			]
 
