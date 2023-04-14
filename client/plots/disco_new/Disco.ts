@@ -1,7 +1,7 @@
 import {getCompInit} from "#rx"
-import {DiscoRenderer} from "#plots/disco_new/DiscoRenderer";
-import {DiscoInteractions} from "#plots/disco_new/DiscoInteractions";
-import { StateViewModelMapper } from "./viewmodel/StateViewModelMapper"
+import {DiscoRenderer} from "#plots/disco_new/renderer/DiscoRenderer";
+import {DiscoInteractions} from "#plots/disco_new/viewmodel/DiscoInteractions";
+import { StateViewModelMapper } from "#plots/disco_new/viewmodel/StateViewModelMapper"
 
 export default class Disco {
     private type: string;

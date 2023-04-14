@@ -1,0 +1,3 @@
+class Cnv extends Arc {
+
+}

@@ -1,2 +1,2 @@
-class Ribbon {
+class Ribbon extends Arc{
 }
