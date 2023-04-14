@@ -1,4 +1,4 @@
-import Ring from "../Ring";
+import Ring from "#plots/disco_new/viewmodel/Ring";
 
 export default class ViewModel {
 
@@ -7,9 +7,9 @@ export default class ViewModel {
 
     margin = {left: 5, right: 5, top: 10, bottom: 10}
 
-    rings: Array<Ring>
+    rings: Array<Ring<any>>
 
-    constructor(rings: Array<Ring>) {
+    constructor(rings: Array<Ring<any>>) {
         this.rings = rings
     }
 }

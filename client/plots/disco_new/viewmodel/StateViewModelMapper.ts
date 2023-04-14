@@ -1,15 +1,17 @@
-import Ring from "#plots/disco_new/Ring";
+import Ring from "#plots/disco_new/viewmodel/Ring";
 import ViewModel from "#plots/disco_new/viewmodel/ViewModel";
+import Chromosome from "#plots/disco_new/viewmodel/Chromosome";
 
 export class StateViewModelMapper {
     map(opts: any): ViewModel {
         const chrSizes = opts.args.genome.majorchr
 
-        const chromosomes = {}
+        const chromosomes: Array<Chromosome> = []
         let totalSize = 0
         for (const chr in chrSizes) {
             const key = chr.slice(0, 3) === 'chr' ? chr.slice(3) : chr
-            chromosomes[key] = {chr: key, start: totalSize, size: chrSizes[chr], factor: 1}
+            const chromosome = new Chromosome(key, totalSize, chrSizes[chr],1   )
+            chromosomes.push(chromosome)
             totalSize += chrSizes[chr]
         }
 
