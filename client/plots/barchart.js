@@ -129,7 +129,7 @@ class Barchart {
 				},
 				{
 					label: 'Multicolor bars',
-					title: 'Color bars ussign preassigned colors from the dataset or a random color',
+					title: 'Colors bars ussing the colors preassigned if available, otherwise generates a color',
 					type: 'checkbox',
 					chartType: 'barchart',
 					settingsKey: 'colorBars',
@@ -495,10 +495,9 @@ class Barchart {
 	}
 
 	sortStacking(series, chart, chartsData) {
-		if (this.settings.colorBars) {
-			const t1color = this.getPreassignedColor(this.config.term.term, series.seriesId, this.bins?.[1])
-			this.term1toColor[series.seriesId] = t1color || rgb(this.colorScale(series.seriesId)).toString()
-		} else this.term1toColor[series.seriesId] = this.settings.defaultColor
+		this.term1toColor[series.seriesId] = this.settings.colorBars
+			? this.getColor(this.config.term.term, series.seriesId, this.bins?.[1])
+			: this.settings.defaultColor
 
 		series.visibleData.sort(this.overlaySorter)
 		let seriesLogTotal = 0
@@ -532,13 +531,10 @@ class Barchart {
 
 	setTerm2Color(result) {
 		if (!this.config.term2) return
-
-		// use a predefined term value color if available
-		const t2color = this.getPreassignedColor(this.config.term2.term, result.dataId, this.bins?.[2])
-		this.term2toColor[result.dataId] = t2color || rgb(this.colorScale(result.dataId)).toString()
+		this.term2toColor[result.dataId] = this.getColor(this.config.term2.term, result.dataId, this.bins?.[2])
 	}
 
-	getPreassignedColor(term, label, bins) {
+	getColor(term, label, bins) {
 		if (!term) return
 		if (term.values) {
 			for (const [key, v] of Object.entries(term.values)) {
@@ -551,6 +547,8 @@ class Barchart {
 		if (bin?.color) return bin.color
 
 		if (term.type == 'geneVariant') return this.getMutationColor(label)
+
+		return rgb(this.colorScale(label)).toString()
 	}
 
 	// should move this outside of setTerm2Color(),
