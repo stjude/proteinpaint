@@ -39,7 +39,8 @@ class MassDict {
 			vocab: appState.vocab,
 			activeCohort: appState.activeCohort,
 			termfilter: appState.termfilter,
-			selectdTerms: appState.selectedTerms
+			selectdTerms: appState.selectedTerms,
+			customTerms: appState.customTerms
 		}
 	}
 

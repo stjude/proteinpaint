@@ -129,6 +129,8 @@ function setRenderers(self) {
 				break
 			case 'geneVariant':
 				break
+			case 'samplelst':
+				break
 			default:
 				throw 'unknown term type'
 		}

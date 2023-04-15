@@ -151,7 +151,6 @@ class TdbApp {
 			this.store = await storeInit({ app: this.api, state: this.opts.state })
 			this.state = await this.store.copyState()
 			await this.setComponents()
-			await this.mayShowCustomTerms()
 			await this.api.dispatch()
 		} catch (e) {
 			this.printError(e)
@@ -199,6 +198,8 @@ class TdbApp {
 		this.dom.submitBtn
 			.property('disabled', !n)
 			.text(!n ? 'Search or click term(s)' : `Submit ${n} term${n > 1 ? 's' : ''}`)
+
+		await this.mayShowCustomTerms()
 	}
 
 	printError(e) {
@@ -213,6 +214,7 @@ class TdbApp {
 			this.dom.customTermDiv.style('display', 'none')
 			return
 		}
+		this.dom.customTermDiv.selectAll('*').remove()
 		// has custom terms, show
 		this.dom.customTermDiv
 			.append('div')
