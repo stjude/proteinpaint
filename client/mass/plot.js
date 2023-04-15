@@ -17,6 +17,7 @@ class MassPlot {
 		if (action.type.startsWith('filter')) return true
 		if (action.type.startsWith('cohort')) return true
 		if (action.type == 'app_refresh') return true
+		if (action.type.endsWith('customTerm')) return true
 	}
 
 	getState(appState) {
