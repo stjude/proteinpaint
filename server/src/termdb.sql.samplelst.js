@@ -4,6 +4,8 @@ export const sampleLstSql = {
 			samples,
 			samplesString
 		for (const [i, group] of tw.q.groups.entries()) {
+			// default group.in=true, TODO: put this in fillTW?
+			if (!('in' in group)) group.in = true
 			samples = group.values.map(value => value.sampleId)
 			samplesString = samples.map(() => '?').join(',')
 
