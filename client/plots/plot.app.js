@@ -46,7 +46,7 @@ class PlotApp {
 	constructor(opts) {
 		this.type = 'app'
 		// this will create divs in the correct order
-		const controls = opts.holder.append('div')
+		const controls = opts.holder.append('div').style('white-space', 'nowrap')
 		this.dom = {
 			plotControls: controls.append('div').style('display', 'inline-block'),
 			recoverControls: controls.append('div').style('display', 'inline-block'),

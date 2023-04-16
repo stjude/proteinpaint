@@ -1,12 +1,14 @@
 /*
-	Sorting code are
-
 	priorityKey: string, the settings property to use, 'sortPriority' or 'truncatePriority'
 */
 
 export function getSampleSorter(self, settings, rows, priorityKey = 'sortPriority') {
 	const s = settings
-	const sortPriority = s[priorityKey]
+	const activeOption = s.sortOptions[s.sortSamplesBy]
+	if (!activeOption) {
+		throw `unsupported s.sortSamplesBy='${s.sortSamplesBy}'`
+	}
+
 	if (s.sortSamplesBy == 'asListed') {
 		//no additional logic required
 		return (a, b) => {
@@ -18,14 +20,12 @@ export function getSampleSorter(self, settings, rows, priorityKey = 'sortPriorit
 		}
 	}
 
-	if (s.sortSamplesBy != 'selectedTerms') {
-		throw `unsupported s.sortSamplesBy='${s.sortSamplesBy}'`
-	}
-
 	const selectedTerms = self.termOrder
 		.filter(t => t.tw.sortSamples) // sortSamples property indicates a term is selected
 		.map(t => t.tw)
 		.sort((a, b) => a.sortSamples.priority - b.sortSamples.priority)
+
+	const sortPriority = activeOption.sortPriority
 
 	// always prioritize manually selected terms, if any
 	const sorterTerms = []
@@ -42,7 +42,8 @@ export function getSampleSorter(self, settings, rows, priorityKey = 'sortPriorit
 		}
 	}
 
-	// now apply sort priority as specified in the dataset's termdbconfig, if applicable
+	// now apply sort priority as specified in the
+	// ds.matrix.settings sortPriority, if applicable
 	if (sortPriority) {
 		for (const p of sortPriority) {
 			for (const t of self.termOrder) {
@@ -113,14 +114,13 @@ function getSortSamplesByHits(st, self, rows, s) {
 	const { $id, sortSamples } = st
 	const hits = {}
 	for (const row of rows) {
-		if (!($id in row)) hits[row.sample] = 0
-		else {
+		if (!hits[row.sample]) hits[row.sample] = 0
+		if ($id in row) {
 			const t = self.termOrder.find(t => t.tw.$id === $id)
 			const { countedValues } = getFilteredValues(row[$id], t.tw, t.grp)
 			hits[row.sample] += countedValues.length // ? 1 : 0
 		}
 	}
-
 	return (a, b) => (hits[a.sample] == hits[b.sample] ? 0 : hits[a.sample] > hits[b.sample] ? -1 : 1)
 }
 
@@ -262,4 +262,79 @@ export function getTermSorter(self, s) {
 		if (b.counts.hits !== a.counts.hits) return b.counts.hits - a.counts.hits
 		return a.index - b.index
 	}
+}
+
+export function getSortOptions(termdbConfig) {
+	const sortOptions = {
+		asListed: {
+			label: 'as-listed',
+			value: 'asListed',
+			order: 0
+		},
+		dt: {
+			label: 'by alteration type against sorted genes',
+			value: 'dt',
+			order: 1,
+			sortPriority: [
+				{
+					types: ['geneVariant'],
+					tiebreakers: [
+						{
+							by: 'dt',
+							order: [1, 4, 2]
+						}
+					]
+				}
+			]
+		},
+		class: {
+			label: 'by alteration subtype against sorted genes',
+			value: 'class',
+			order: 2,
+			sortPriority: [
+				{
+					types: ['geneVariant'],
+					tiebreakers: [
+						{
+							by: 'class',
+							order: [
+								'CNV_amp',
+								'CNV_loss',
+								// truncating
+								'F',
+								'N',
+								// indel
+								'D',
+								'I',
+								// point
+								'M',
+								'P',
+								'L',
+								// noncoding
+								'Utr3',
+								'Utr5',
+								'S',
+								'Intron'
+							]
+						}
+					]
+				}
+			]
+		}
+	}
+
+	const sortPriority = termdbConfig?.matrix?.settings?.sortPriority
+	if (sortPriority) {
+		const order = 1
+		Object.values(sortOptions).forEach(d => {
+			if (d.order >= order) d.order += 1
+		})
+		sortOptions.custom = {
+			label: sortPriority.label || 'Custom sort',
+			value: 'custom',
+			order,
+			sortPriority
+		}
+	}
+	return sortOptions
 }
