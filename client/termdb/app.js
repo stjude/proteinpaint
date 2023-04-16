@@ -8,6 +8,7 @@ import { select } from 'd3-selection'
 import { Menu } from '#dom/menu'
 import { sayerror } from '#dom/error'
 import { dofetch3 } from '#common/dofetch'
+import { isUsableTerm } from '#shared/termdb.usecase'
 
 /*
 opts{}
@@ -210,17 +211,23 @@ class TdbApp {
 	async mayShowCustomTerms() {
 		// only run once, upon initiating this tree ui
 		const terms = await this.api.vocabApi.getCustomTerms()
-		if (!Array.isArray(terms) || terms.length == 0) {
-			this.dom.customTermDiv.style('display', 'none')
-			return
+		if (!Array.isArray(terms) || terms.length == 0) return this.dom.customTermDiv.style('display', 'none')
+
+		// filter for display terms with usecase
+		const useTerms = []
+		for (const t of terms) {
+			const uses = isUsableTerm(t, this.state.tree.usecase)
+			if (uses.has('plot')) useTerms.push(t)
 		}
+		if (useTerms.length == 0) return this.dom.customTermDiv.style('display', 'none')
+
+		// has usable terms to display
 		this.dom.customTermDiv.selectAll('*').remove()
-		// has custom terms, show
 		this.dom.customTermDiv
 			.append('div')
 			.text('CUSTOM VARIABLES')
 			.style('font-size', '.7em')
-		for (const term of terms) {
+		for (const term of useTerms) {
 			this.dom.customTermDiv
 				.append('div')
 				.style('margin-bottom', '3px')
