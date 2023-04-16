@@ -1,4 +1,5 @@
 import { copyMerge } from '../rx'
+import { getSortOptions } from './matrix.sort'
 import { fillTermWrapper } from '../termsetting/termsetting'
 
 export async function getPlotConfig(opts, app) {
@@ -29,7 +30,8 @@ export async function getPlotConfig(opts, app) {
 				truncatePriority: undefined,
 
 				sampleNameFilter: '',
-				sortSamplesBy: 'selectedTerms',
+				sortSamplesBy: 'class',
+				sortOptions: getSortOptions(app.vocabApi.termdbConfig),
 				sortSamplesTieBreakers: [{ $id: 'sample', sortSamples: {} /*split: {char: '', index: 0}*/ }],
 				sortTermsBy: 'sampleCount', // or 'as listed'
 				samplecount4gene: true,

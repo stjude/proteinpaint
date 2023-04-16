@@ -15,7 +15,7 @@ export class MatrixControls {
 		this.opts = opts
 		this.parent = opts.parent
 
-		this.opts.holder.style('margin', '10px 10px 20px 10px')
+		this.opts.holder.style('margin', '10px 10px 20px 10px').style('white-space', 'nowrap')
 		const state = this.parent.getState(appState)
 		const s = state.config.settings.matrix
 		this.setSamplesBtn(s)
@@ -49,7 +49,8 @@ export class MatrixControls {
 						type: 'radio',
 						chartType: 'matrix',
 						settingsKey: 'sortSamplesBy',
-						options: [{ label: 'as-listed', value: 'asListed' }, { label: 'selected terms', value: 'selectedTerms' }]
+						options: Object.values(s.sortOptions).sort((a, b) => a.order - b.order),
+						labelDisplay: 'block'
 					},
 					{
 						label: 'Maximum #samples',
