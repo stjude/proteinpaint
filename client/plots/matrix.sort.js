@@ -298,8 +298,6 @@ export function getSortOptions(termdbConfig) {
 						{
 							by: 'class',
 							order: [
-								'CNV_amp',
-								'CNV_loss',
 								// truncating
 								'F',
 								'N',
@@ -310,6 +308,9 @@ export function getSortOptions(termdbConfig) {
 								'M',
 								'P',
 								'L',
+								// copy-number
+								'CNV_loss',
+								'CNV_amp',
 								// noncoding
 								'Utr3',
 								'Utr5',
@@ -330,7 +331,7 @@ export function getSortOptions(termdbConfig) {
 			if (d.order >= order) d.order += 1
 		})
 		sortOptions.custom = {
-			label: sortPriority.label || 'Custom sort',
+			label: sortPriority.label || 'custom sort',
 			value: 'custom',
 			order,
 			sortPriority

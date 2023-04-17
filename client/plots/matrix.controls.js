@@ -37,6 +37,7 @@ export class MatrixControls {
 	}
 
 	setSamplesBtn(s) {
+		const sampleLabel = s.controlLabels.samples.toLowerCase() || 'samples'
 		this.opts.holder
 			.append('button')
 			//.property('disabled', d => d.disabled)
@@ -45,7 +46,7 @@ export class MatrixControls {
 				getCount: () => this.parent.sampleOrder.length,
 				rows: [
 					{
-						label: 'Sort samples',
+						label: `Sort ${sampleLabel}`,
 						type: 'radio',
 						chartType: 'matrix',
 						settingsKey: 'sortSamplesBy',
@@ -53,13 +54,13 @@ export class MatrixControls {
 						labelDisplay: 'block'
 					},
 					{
-						label: 'Maximum #samples',
+						label: `Maximum #${sampleLabel}`,
 						type: 'number',
 						chartType: 'matrix',
 						settingsKey: 'maxSample'
 					},
 					{
-						label: 'Group samples by',
+						label: `Group ${sampleLabel} by`,
 						type: 'term',
 						chartType: 'matrix',
 						configKey: 'divideBy',
@@ -95,6 +96,13 @@ export class MatrixControls {
 				customInputs: this.appendGeneInputs,
 				rows: [
 					{
+						label: 'Display sample counts for gene',
+						boxLabel: '',
+						type: 'checkbox',
+						chartType: 'matrix',
+						settingsKey: 'samplecount4gene'
+					},
+					{
 						label: 'Mutation encoding',
 						type: 'radio',
 						chartType: 'matrix',
@@ -108,13 +116,6 @@ export class MatrixControls {
 						chartType: 'matrix',
 						settingsKey: 'transpose'
 					},*/
-					{
-						label: 'Display sample counts for gene',
-						boxLabel: '',
-						type: 'checkbox',
-						chartType: 'matrix',
-						settingsKey: 'samplecount4gene'
-					},
 					/*{
 						NOTE: this is only by term group, not global to all rows
 						label: 'Minimum #samples',
@@ -164,6 +165,7 @@ export class MatrixControls {
 								label: 'Row height',
 								type: 'number',
 								width: 50,
+								align: 'center',
 								chartType: 'matrix',
 								inputs: [{ label: 'N/A' }, { settingsKey: 'rowh', min: 8, max: 30, step: 1 }]
 							},
@@ -171,6 +173,7 @@ export class MatrixControls {
 								label: 'Min col. width',
 								type: 'number',
 								width: 50,
+								align: 'center',
 								chartType: 'matrix',
 								inputs: [{ settingsKey: 'colwMin', min: 0.1, max: 16, step: 0.2 }, { label: 'N/A' }]
 							},
@@ -178,6 +181,7 @@ export class MatrixControls {
 								label: 'Max col. width',
 								type: 'number',
 								width: 50,
+								align: 'center',
 								chartType: 'matrix',
 								inputs: [{ settingsKey: 'colwMax', min: 1, max: 24, step: 0.2 }, { label: 'N/A' }]
 							},
@@ -185,6 +189,7 @@ export class MatrixControls {
 								label: 'Spacing',
 								type: 'number',
 								width: 50,
+								align: 'center',
 								chartType: 'matrix',
 								inputs: [
 									{ settingsKey: 'colspace', min: 0, max: 20, step: 1 },
@@ -195,6 +200,7 @@ export class MatrixControls {
 								label: 'Group spacing',
 								type: 'number',
 								width: 50,
+								align: 'center',
 								chartType: 'matrix',
 								inputs: [
 									{ settingsKey: 'colgspace', min: 0, max: 20, step: 1 },
@@ -357,38 +363,6 @@ export class MatrixControls {
 			.on('click', () => to_svg(this.opts.getSvg(), 'matrix', { apply_dom_styles: true }))
 	}
 
-	setButtons(s) {
-		this.btns = this.opts.holder
-			.style('margin', '10px 10px 20px 10px')
-			.selectAll('button')
-			.data([
-				{
-					label: 'Styles',
-					rows: [
-						{
-							label: 'Cell encoding',
-							type: 'radio',
-							chartType: 'matrix',
-							settingsKey: 'cellEncoding',
-							options: [{ label: 'Default', value: '' }, { label: 'Oncoprint', value: 'oncoprint' }]
-						},
-						{
-							label: 'Background color',
-							type: 'color',
-							chartType: 'matrix',
-							settingsKey: 'cellbg'
-						}
-					]
-				}
-			])
-			.enter()
-			.append('button')
-			.style('margin', '2px 0')
-			.property('disabled', d => d.disabled)
-			.text(d => d.label)
-			.on('click', (event, d) => (d.callback ? d.callback(event) : this.callback(event, d)))
-	}
-
 	main() {
 		this.btns
 			.text(d => d.label + (d.getCount ? ` (${d.getCount()})` : ''))
@@ -432,10 +406,9 @@ export class MatrixControls {
 
 		app.tip.clear()
 
+		const table = app.tip.d.append('table').attr('class', 'sjpp-controls-table')
 		for (const t of tables) {
-			const table = app.tip.d.append('table').attr('class', 'sjpp-controls-table')
 			//if (d.customHeaderRows) d.customHeaderRows(parent, table)
-
 			if (t.header) {
 				table
 					.append('tr')
