@@ -4,12 +4,22 @@ export class MatrixCluster {
 	constructor(opts) {
 		this.parent = opts.parent
 		const svg = opts.svg
+		this.patternId = `sjpp-matrix-grid-pattern-${this.parent.id}`
+		const pattern = opts.holder
+			.append('defs')
+			.append('pattern')
+			.attr('id', this.patternId)
+			.attr('patternUnits', 'userSpaceOnUse')
+		const patternRect = pattern.append('rect')
+
 		this.dom = {
 			holder: opts.holder.attr('clip-path', `url(#${this.parent.clusterClipId})`),
 			outlines: opts.holder.append('g').attr('class', 'sjpp-matrix-clusteroutlines'),
 			//clusterrowline: opts.holder.insert('g', 'g').attr('class', 'sjpp-matrix-clusterrowline'),
 			//clustercolline: opts.holder.insert('g', 'g').attr('class', 'sjpp-matrix-clustercolline'),
 			clusterbg: opts.holder.insert('g', 'g').attr('class', 'sjpp-matrix-clusterbg'),
+			pattern,
+			patternRect,
 			clipRect: opts.holder
 				.append('clipPath')
 				.attr('id', this.parent.clusterClipId)
@@ -47,7 +57,7 @@ export class MatrixCluster {
 
 			for (const yg of this.yGrps) {
 				const y = yg.prevGrpTotalIndex * d.dy + yg.grpIndex * s.rowgspace + yg.totalHtAdjustments
-				const height = d.dy * (yg.processedLst || yg.grp.lst).length + yg.grpTotals.htAdjustment
+				const height = d.dy * (yg.processedLst || yg.grp.lst).length + yg.grpTotals.htAdjustment - s.rowspace
 				const offsetX = Math.max(1, s.colspace)
 				const offsetY = Math.max(1, s.rowspace)
 				clusters.push({
@@ -76,6 +86,21 @@ function setRenderers(self) {
 			.attr('width', Math.min(d.mainw, d.maxMainW) / this.totalWidth) // d.zoomedMainW)
 			.attr('height', 1)
 
+		self.dom.pattern
+			//.attr('x', 340)
+			//.attr('y', 150)
+			.attr('width', d.colw + s.colspace)
+			.attr('height', s.rowh + s.rowspace)
+
+		self.dom.patternRect
+			.attr('fill', s.cellbg)
+			.attr('x', 0) //s.colspace)
+			.attr('y', 0) //s.rowspace)
+			.attr('width', d.colw) //+ s.colspace)
+			.attr('height', s.rowh) // + s.colspace)
+		//.attr('stroke', s.gridStroke)
+		//.attr('stroke-width', s.colspace)
+
 		renderOutlines(clusters, s, d)
 	}
 
@@ -103,7 +128,7 @@ function setRenderers(self) {
 			.attr('width', cluster.width)
 			.attr('height', cluster.height)
 			.attr('shape-rendering', 'crispEdges')
-			.attr('fill', self.settings.cellbg)
+			.attr('fill', self.settings.showGrid ? `url(#${self.patternId})` : self.settings.cellbg)
 			.attr('stroke', '#ccc') //self.settings.cellbg)
 			.attr('stroke-width', '1px')
 	}
