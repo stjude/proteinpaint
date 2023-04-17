@@ -85,12 +85,12 @@ export function getHandler(self) {
 				}
 				return
 			}
-			console.log(88, data)
+			//console.log(88, data)
 			throw `unknown xxxx q.type='${data.q.type}' for categorical q.mode='${data.q.mode}'`
 		},
 
 		async postMain() {
-			const body = {}
+			const body = self.opts.getBodyParams?.() || {}
 			if (self.term.type == 'condition') {
 				for (const key in self.q) {
 					// detect bar_by_* and value_by_* flags

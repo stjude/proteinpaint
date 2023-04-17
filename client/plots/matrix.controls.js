@@ -71,6 +71,13 @@ export class MatrixControls {
 						},
 						processInput: tw => {
 							if (tw) fillTermWrapper(tw)
+						},
+						getBodyParams: () => {
+							const currentGeneNames = this.parent.termOrder
+								.filter(t => t.tw.term.type === 'geneVariant')
+								.map(t => t.tw.term.name)
+								.sort()
+							return { currentGeneNames }
 						}
 					}
 					/*{
