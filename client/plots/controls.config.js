@@ -192,10 +192,7 @@ function setNumberInput(opts) {
 			})
 		}
 
-		const inputTd = opts.holder
-			.append('td')
-			.attr('colspan', opts.colspan || '')
-			.style('text-align', opts.align || '')
+		const inputTd = opts.holder.append('td').style('text-align', opts.align || '')
 		if (!input.settingsKey) {
 			inputTd
 				.style('color', '#999')
@@ -325,7 +322,10 @@ function setColorInput(opts) {
 				.append('td')
 				.html(opts.label)
 				.attr('class', 'sja-termdb-config-row-label'),
-			inputTd: opts.holder.append('td')
+			inputTd: opts.holder
+				.append('td')
+				.attr('colspan', opts.colspan || '')
+				.style('text-align', opts.align || '')
 		}
 	}
 
@@ -478,7 +478,10 @@ function setCheckboxInput(opts) {
 				.append('td')
 				.html(opts.label)
 				.attr('class', 'sja-termdb-config-row-label'),
-			inputTd: opts.holder.append('td')
+			inputTd: opts.holder
+				.append('td')
+				.attr('colspan', opts.colspan || '')
+				.style('text-align', opts.align || '')
 		}
 	}
 

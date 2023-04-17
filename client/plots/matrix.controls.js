@@ -163,8 +163,38 @@ export class MatrixControls {
 		this.opts.holder
 			.append('button')
 			.datum({
-				label: 'Dimensions',
+				label: 'Cell layout',
 				tables: [
+					{
+						rows: [
+							{
+								label: 'Grid',
+								type: 'checkbox',
+								boxLabel: 'show',
+								chartType: 'matrix',
+								settingsKey: 'showGrid',
+								colspan: 2,
+								align: 'center'
+							},
+							/*{
+								label: 'Grid stroke',
+								type: 'color',
+								chartType: 'matrix',
+								settingsKey: 'gridStroke',
+								colspan: 2,
+								align: 'center',
+								getDisplayStyle: plot => this.parent.settings.matrix.showGrid ? '' : 'none'
+							},*/
+							{
+								label: 'Background color',
+								type: 'color',
+								chartType: 'matrix',
+								settingsKey: 'cellbg',
+								colspan: 2,
+								align: 'center'
+							}
+						]
+					},
 					{
 						header: ['Cells', 'Columns', 'Rows'],
 						rows: [
