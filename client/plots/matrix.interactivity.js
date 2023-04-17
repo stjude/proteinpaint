@@ -430,8 +430,7 @@ function setTermActions(self) {
 				termgroups,
 				settings: {
 					matrix: {
-						sortTermsBy: 'asListed',
-						sortSamplesBy: 'selectedTerms'
+						sortTermsBy: 'asListed'
 					}
 				}
 			}
@@ -458,12 +457,7 @@ function setTermActions(self) {
 			type: 'plot_edit',
 			id: self.opts.id,
 			config: {
-				termgroups,
-				settings: {
-					matrix: {
-						sortSamplesBy: 'selectedTerms'
-					}
-				}
+				termgroups
 			}
 		})
 		self.dom.tip.hide()
@@ -827,10 +821,6 @@ function setTermActions(self) {
 							{
 								nestedKeys: ['termgroups', t.grpIndex, 'lst', t.lstIndex],
 								value: tcopy
-							},
-							{
-								nestedKeys: ['settings', 'matrix', 'sortSamplesBy'],
-								value: 'selectedTerms'
 							}
 						]
 					})

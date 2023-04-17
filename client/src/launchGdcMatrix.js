@@ -67,8 +67,7 @@ export async function init(arg, holder, genomes) {
 	})
 
 	const gdcCohort = getGdcCohort(arg)
-	console.log(arg, gdcCohort)
-	const genes = await getGenes(arg, gdcCohort, CGConly) //.slice(0, 3)
+	const genes = (await getGenes(arg, gdcCohort, CGConly)).slice(0, 3)
 
 	const opts = {
 		holder,
@@ -85,7 +84,7 @@ export async function init(arg, holder, genomes) {
 						matrix: {
 							cellEncoding: 'oncoprint',
 							colw: 2,
-							colspace: 0,
+							colspace: 1,
 							cellbg: 'white'
 						}
 					}
