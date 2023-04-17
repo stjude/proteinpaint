@@ -301,6 +301,7 @@ class Matrix {
 		}
 
 		this.prevState = this.state
+		this.resetInteractions()
 	}
 
 	// track state diff to be able to skip server data request

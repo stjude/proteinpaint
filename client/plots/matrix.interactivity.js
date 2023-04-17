@@ -5,6 +5,16 @@ import { icons } from '../dom/control.icons'
 let inputIndex = 0
 
 export function setInteractivity(self) {
+	self.resetInteractions = function() {
+		if (self.zoomArea) {
+			self.zoomArea.remove()
+			delete self.zoomArea
+			//self.dom.seriesesG.on('mouseup.zoom', null)
+			select('body').on('mouseup.matrixZoom', null)
+		}
+		delete self.clickedSeriesCell
+	}
+
 	self.showCellInfo = function(event) {
 		if (self.activeLabel || self.zoomArea) return
 		if (!(event.target.tagName == 'rect' || event.target.tagName == 'image')) return
@@ -1573,13 +1583,6 @@ function setZoomPanActions(self) {
 	self.seriesesGtriggerZoom = function(event) {
 		event.stopPropagation()
 		self.dom.seriesesG.on('mousemove', null).on('mouseup', null)
-		//const d = event.target.__data__
-		if (self.zoomArea) {
-			self.zoomArea.remove()
-			delete self.zoomArea
-			//self.dom.seriesesG.on('mouseup.zoom', null)
-			select('body').on('mouseup.matrixZoom', null)
-		}
 
 		self.dom.mainG
 			.selectAll('text')
@@ -1617,6 +1620,7 @@ function setZoomPanActions(self) {
 			}
 		})
 
-		delete self.clickedSeriesCell
+		//const d = event.target.__data__
+		self.resetInteractions()
 	}
 }

@@ -11,15 +11,21 @@ export class MatrixCluster {
 			.attr('id', this.patternId)
 			.attr('patternUnits', 'userSpaceOnUse')
 		const patternRect = pattern.append('rect')
+		const patternPath = pattern.append('path')
+		const patternLineV = pattern.append('line')
+		const patternLineH = pattern.append('line')
 
 		this.dom = {
 			holder: opts.holder.attr('clip-path', `url(#${this.parent.clusterClipId})`),
-			outlines: opts.holder.append('g').attr('class', 'sjpp-matrix-clusteroutlines'),
 			//clusterrowline: opts.holder.insert('g', 'g').attr('class', 'sjpp-matrix-clusterrowline'),
 			//clustercolline: opts.holder.insert('g', 'g').attr('class', 'sjpp-matrix-clustercolline'),
 			clusterbg: opts.holder.insert('g', 'g').attr('class', 'sjpp-matrix-clusterbg'),
+			outlines: opts.holder.append('g').attr('class', 'sjpp-matrix-clusteroutlines'),
 			pattern,
 			patternRect,
+			patternPath,
+			patternLineV,
+			patternLineH,
 			clipRect: opts.holder
 				.append('clipPath')
 				.attr('id', this.parent.clusterClipId)
@@ -86,22 +92,90 @@ function setRenderers(self) {
 			.attr('width', Math.min(d.mainw, d.maxMainW) / this.totalWidth) // d.zoomedMainW)
 			.attr('height', 1)
 
+		//const strokeWidth = Math.max(s.colspace, s.rowspace)
+		//const halfStroke = 0.5*strokeWidth
 		self.dom.pattern
-			//.attr('x', 340)
-			//.attr('y', 150)
+			.attr('x', 0) //-halfStroke)
+			.attr('y', 0) //-halfStroke)
 			.attr('width', d.colw + s.colspace)
 			.attr('height', s.rowh + s.rowspace)
 
+		//
 		self.dom.patternRect
 			.attr('fill', s.cellbg)
 			.attr('x', 0) //s.colspace)
 			.attr('y', 0) //s.rowspace)
-			.attr('width', d.colw) //+ s.colspace)
-			.attr('height', s.rowh) // + s.colspace)
-		//.attr('stroke', s.gridStroke)
-		//.attr('stroke-width', s.colspace)
+			.attr('width', d.dx)
+			.attr('height', d.dy)
+			.attr('stroke', 'none')
+			.attr('stroke-width', 0) //s.colspace)
 
-		renderOutlines(clusters, s, d)
+		// const strokeWidth = Math.max(s.colspace, s.rowspace)
+		// self.dom.patternRect
+		// 	.attr('fill', s.cellbg)
+		// 	.attr('x', 0)
+		// 	.attr('y', 0) //s.rowspace)
+		// 	.attr('width', d.colw + strokeWidth)// halfStroke)
+		// 	.attr('height', s.rowh + strokeWidth) //halfStroke)
+		// 	//.attr('stroke', s.gridStroke)
+		// .attr('stroke-width', strokeWidth)
+
+		// because the grid spacing may be different
+		const halfStrokeH = 0.5 * s.rowspace
+		const y = s.rowh + halfStrokeH
+		self.dom.patternLineH
+			.attr('x1', 0)
+			.attr('y1', y)
+			.attr('x2', d.colw + s.colspace)
+			.attr('y2', y)
+			.attr('stroke', s.gridStroke)
+			.attr('stroke-width', s.rowspace)
+
+		const halfStrokeV = 0.5 * s.colspace
+		const x = d.colw + halfStrokeV
+		self.dom.patternLineV
+			.attr('x1', x)
+			.attr('y1', 0)
+			.attr('x2', x)
+			.attr('y2', s.rowh)
+			.attr('stroke', s.gridStroke)
+			.attr('stroke-width', s.colspace)
+
+		renderRects(clusters, self.dom.clusterbg, s, d, { fill: s.cellbg })
+		const fill = s.showGrid ? `url(#${self.patternId})` : 'none'
+		renderRects(clusters, self.dom.outlines, s, d, { fill, stroke: s.gridStroke })
+	}
+
+	function renderRects(clusters, g, s, d, overrides) {
+		g.transition()
+			.duration(g.attr('transform') ? s.duration : 0)
+			.attr('transform', `translate(${d.xOffset + d.seriesXoffset},${d.yOffset})`)
+
+		function renderRect(cluster) {
+			render1Rect.call(this, cluster, Object.assign({}, s, overrides))
+		}
+
+		const rects = g.selectAll('rect').data(clusters, c => c.xg.grp.name + ';;' + c.yg.grp.name)
+		rects.exit().remove()
+		rects.each(renderRect)
+		rects
+			.enter()
+			.append('rect')
+			.each(renderRect)
+	}
+
+	function render1Rect(cluster, s) {
+		const rect = select(this)
+			.transition()
+			.duration('x' in this ? s.duration : 0)
+			.attr('x', cluster.x)
+			.attr('y', cluster.y)
+			.attr('width', cluster.width)
+			.attr('height', cluster.height)
+			.attr('shape-rendering', 'crispEdges')
+			.attr('fill', s.fill || 'none')
+			.attr('stroke', s.stroke || 'none')
+		//.attr('stroke-width', ) // s.colspace)
 	}
 
 	function renderOutlines(clusters, s, d) {
@@ -120,16 +194,17 @@ function setRenderers(self) {
 	}
 
 	function render1Outline(cluster) {
+		const s = self.settings
 		const rect = select(this)
 			.transition()
-			.duration('x' in this ? self.settings.duration : 0)
+			.duration('x' in this ? s.duration : 0)
 			.attr('x', cluster.x)
 			.attr('y', cluster.y)
 			.attr('width', cluster.width)
 			.attr('height', cluster.height)
 			.attr('shape-rendering', 'crispEdges')
-			.attr('fill', self.settings.showGrid ? `url(#${self.patternId})` : self.settings.cellbg)
-			.attr('stroke', '#ccc') //self.settings.cellbg)
-			.attr('stroke-width', '1px')
+			.attr('fill', s.showGrid ? `url(#${self.patternId})` : s.cellbg)
+			.attr('stroke', s.gridStroke) // s.showGrid ? s.gridStroke : 'none')
+			.attr('stroke-width', 1) // s.colspace)
 	}
 }
