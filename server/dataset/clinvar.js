@@ -1,5 +1,6 @@
 module.exports.clinsig = {
-	Uncertain_significance: { color: '#aaa', label: 'Uncertain significance', textcolor: 'white', desc: "A genetic change whose impact on the individual’s cancer risk is not yet known."},
+	Uncertain_significance: { color: '#aaa', label: 'Uncertain significance', textcolor: 'white', desc: "A genetic change whose impact on the individual’s disease risk is not yet known."},
+	Uncertain_risk_allele: { color: '#aaa', label: 'Uncertain risk allele', textcolor: 'white', desc: "A genetic change whose impact on the individual’s disease risk is not yet known."},
 	not_provided: { color: '#ccc', label: 'Not provided' , desc: "Clinical significance for the variant has not been provided by the submitter."},
 	_not_provided: { color: '#ccc', label: 'Not provided', desc: "Clinical significance for the variant has not been provided by the submitter." },
 	Benign: { color: '#43ac6a', label: 'Benign', textcolor: 'white', desc : "The variant is reported to be benign." },
