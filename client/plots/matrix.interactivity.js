@@ -1583,6 +1583,8 @@ function setZoomPanActions(self) {
 	self.seriesesGtriggerZoom = function(event) {
 		event.stopPropagation()
 		self.dom.seriesesG.on('mousemove', null).on('mouseup', null)
+		//const d = event.target.__data__
+		select('body').on('mouseup.matrixZoom', null)
 
 		self.dom.mainG
 			.selectAll('text')
@@ -1597,6 +1599,67 @@ function setZoomPanActions(self) {
 			return
 		}
 
+		if (1 || self.opts.allow2selectSamples) {
+			self.app.tip.clear()
+			self.app.tip.d
+				.selectAll('div')
+				.data([
+					{
+						label: 'Zoom in',
+						callback: self.triggerZoomArea
+					},
+					{
+						label: 'Select samples',
+						callback: () => {
+							const c = self.clickedSeriesCell
+							delete self.clickedSeriesCell
+							const s = self.settings.matrix
+							const d = self.dimensions
+							const start = c.startCell.totalIndex < c.endCell.totalIndex ? c.startCell : c.endCell
+
+							const xy = self.zoomArea
+								.attr('transform')
+								.split('(')[1]
+								.split(')')[0]
+								.split(',')
+								.map(Number)
+							const xMin = xy[0]
+							const xMax = xMin + self.zoomWidth
+							const filter = c => c.x >= xMin && c.x <= xMax
+							const samples = []
+							console.log(1618, [xMin, xMax], self.serier)
+							for (const series of self.serieses) {
+								samples.push(...series.cells.filter(filter).map(c => c.sample))
+							}
+							console.log(1621, samples)
+							self.zoomArea.remove()
+							delete self.zoomArea
+							delete self.clickedSeriesCell
+						}
+					}
+				])
+				.enter()
+				.append('div')
+				.attr('class', 'sja_menuoption')
+				.html(d => d.label)
+				.on('click', event => {
+					self.app.tip.hide()
+					event.target.__data__.callback()
+				})
+
+			self.app.tip.show(event.clientX, event.clientY)
+		} else {
+			self.triggerZoomArea()
+		}
+	}
+
+	self.triggerZoomArea = function() {
+		if (self.zoomArea) {
+			self.zoomArea.remove()
+			delete self.zoomArea
+		}
+		const c = self.clickedSeriesCell
+		delete self.clickedSeriesCell
 		const s = self.settings.matrix
 		const d = self.dimensions
 		const start = c.startCell.totalIndex < c.endCell.totalIndex ? c.startCell : c.endCell
@@ -1619,8 +1682,6 @@ function setZoomPanActions(self) {
 				}
 			}
 		})
-
-		//const d = event.target.__data__
 		self.resetInteractions()
 	}
 }
