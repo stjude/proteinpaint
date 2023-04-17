@@ -198,7 +198,6 @@ function setNumberInput(opts) {
 			.style('text-align', opts.align || '')
 		if (!input.settingsKey) {
 			inputTd
-				.style('text-align', 'center')
 				.style('color', '#999')
 				.style('cursor', 'default')
 				.html(input.label)
@@ -546,6 +545,7 @@ async function setTermInput(opts) {
 		holder: self.dom.inputTd.append('div'),
 		debug: opts.debug,
 		usecase: opts.usecase,
+		getBodyParams: opts.getBodyParams,
 		callback: tw => {
 			// data is object with only one needed attribute: q, never is null
 			if (tw && !tw.q) throw 'data.q{} missing from pill callback'
