@@ -5,27 +5,13 @@ export class MatrixCluster {
 		this.parent = opts.parent
 		const svg = opts.svg
 		this.patternId = `sjpp-matrix-grid-pattern-${this.parent.id}`
-		const pattern = opts.holder
-			.append('defs')
-			.append('pattern')
-			.attr('id', this.patternId)
-			.attr('patternUnits', 'userSpaceOnUse')
-		const patternRect = pattern.append('rect')
-		const patternPath = pattern.append('path')
-		const patternLineV = pattern.append('line')
-		const patternLineH = pattern.append('line')
-
+		this.patternIdSuffix = 0
 		this.dom = {
 			holder: opts.holder.attr('clip-path', `url(#${this.parent.clusterClipId})`),
 			//clusterrowline: opts.holder.insert('g', 'g').attr('class', 'sjpp-matrix-clusterrowline'),
 			//clustercolline: opts.holder.insert('g', 'g').attr('class', 'sjpp-matrix-clustercolline'),
 			clusterbg: opts.holder.insert('g', 'g').attr('class', 'sjpp-matrix-clusterbg'),
 			outlines: opts.holder.append('g').attr('class', 'sjpp-matrix-clusteroutlines'),
-			pattern,
-			patternRect,
-			patternPath,
-			patternLineV,
-			patternLineH,
 			clipRect: opts.holder
 				.append('clipPath')
 				.attr('id', this.parent.clusterClipId)
@@ -58,7 +44,7 @@ export class MatrixCluster {
 		for (const xg of this.xGrps) {
 			const dx = d.dx //Math.min(d.dx, s.colwMax + s.colspace)
 			const x = xg.prevGrpTotalIndex * dx + s.colgspace * xg.grpIndex + xg.totalHtAdjustments
-			const width = dx * (xg.processedLst || xg.grp.lst).length + xg.grpTotals.htAdjustment
+			const width = dx * (xg.processedLst || xg.grp.lst).length + xg.grpTotals.htAdjustment - s.colspace
 			this.totalWidth += width + 2 * Math.max(1, s.colspace)
 
 			for (const yg of this.yGrps) {
@@ -92,38 +78,61 @@ function setRenderers(self) {
 			.attr('width', Math.min(d.mainw, d.maxMainW) / this.totalWidth) // d.zoomedMainW)
 			.attr('height', 1)
 
-		//const strokeWidth = Math.max(s.colspace, s.rowspace)
-		//const halfStroke = 0.5*strokeWidth
-		self.dom.pattern
+		const g = self.dom.outlines.selectAll('g').data(clusters, c => c.xg.grp.name + ';;' + c.yg.grp.name)
+
+		g.exit().remove()
+		g.each(renderCluster)
+		g.enter()
+			.append('g')
+			.each(addCluster)
+	}
+
+	function addCluster(cluster) {
+		const g = select(this)
+		const pattern = g
+			.append('pattern')
+			.attr('id', `${self.patternId}-${self.patternIdSuffix++}`)
+			.attr('patternUnits', 'userSpaceOnUse')
+			.attr('patternContentUnits', 'userSpaceOnUse')
+		pattern.append('line')
+		pattern.append('line')
+		g.append('rect') //.attr('class', 'sjpp-matrix-clusterbg-rect') // background rect
+		g.append('rect') //.attr('class', 'sjpp-matrix-clusterbg-outline') // outline, grid
+		renderCluster.call(this, cluster)
+	}
+
+	function renderCluster(cluster) {
+		const s = self.settings
+		const d = self.parent.dimensions
+		const c = cluster
+		const g = select(this)
+
+		g.transition()
+			.duration(g.attr('transform') ? s.duration : 0)
+			.attr('transform', `translate(${d.xOffset + d.seriesXoffset},${d.yOffset})`)
+
+		const patternId = definePattern(g, s, d, cluster)
+		const rects = g.node().querySelectorAll('rect')
+		render1Rect.call(rects[0], cluster, Object.assign({}, s, { fill: s.cellbg }))
+		const fill = s.showGrid ? `url(#${patternId})` : 'none'
+		render1Rect.call(rects[1], cluster, Object.assign({}, s, { fill, stroke: s.gridStroke }))
+	}
+
+	function definePattern(g, s, d, cluster) {
+		//console.log(cluster)
+		const pattern = g
+			.select('pattern')
 			.attr('x', 0) //-halfStroke)
 			.attr('y', 0) //-halfStroke)
 			.attr('width', d.colw + s.colspace)
 			.attr('height', s.rowh + s.rowspace)
 
-		//
-		self.dom.patternRect
-			.attr('fill', s.cellbg)
-			.attr('x', 0) //s.colspace)
-			.attr('y', 0) //s.rowspace)
-			.attr('width', d.dx)
-			.attr('height', d.dy)
-			.attr('stroke', 'none')
-			.attr('stroke-width', 0) //s.colspace)
-
-		// const strokeWidth = Math.max(s.colspace, s.rowspace)
-		// self.dom.patternRect
-		// 	.attr('fill', s.cellbg)
-		// 	.attr('x', 0)
-		// 	.attr('y', 0) //s.rowspace)
-		// 	.attr('width', d.colw + strokeWidth)// halfStroke)
-		// 	.attr('height', s.rowh + strokeWidth) //halfStroke)
-		// 	//.attr('stroke', s.gridStroke)
-		// .attr('stroke-width', strokeWidth)
-
 		// because the grid spacing may be different
 		const halfStrokeH = 0.5 * s.rowspace
 		const y = s.rowh + halfStrokeH
-		self.dom.patternLineH
+
+		const [patternLineH, patternLineV] = pattern.node().querySelectorAll('line')
+		select(patternLineH)
 			.attr('x1', 0)
 			.attr('y1', y)
 			.attr('x2', d.colw + s.colspace)
@@ -133,7 +142,7 @@ function setRenderers(self) {
 
 		const halfStrokeV = 0.5 * s.colspace
 		const x = d.colw + halfStrokeV
-		self.dom.patternLineV
+		select(patternLineV)
 			.attr('x1', x)
 			.attr('y1', 0)
 			.attr('x2', x)
@@ -141,9 +150,7 @@ function setRenderers(self) {
 			.attr('stroke', s.gridStroke)
 			.attr('stroke-width', s.colspace)
 
-		renderRects(clusters, self.dom.clusterbg, s, d, { fill: s.cellbg })
-		const fill = s.showGrid ? `url(#${self.patternId})` : 'none'
-		renderRects(clusters, self.dom.outlines, s, d, { fill, stroke: s.gridStroke })
+		return pattern.attr('id')
 	}
 
 	function renderRects(clusters, g, s, d, overrides) {
@@ -166,8 +173,9 @@ function setRenderers(self) {
 
 	function render1Rect(cluster, s) {
 		const rect = select(this)
+		rect
 			.transition()
-			.duration('x' in this ? s.duration : 0)
+			.duration(rect.attr('x') ? s.duration : 0)
 			.attr('x', cluster.x)
 			.attr('y', cluster.y)
 			.attr('width', cluster.width)

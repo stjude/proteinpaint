@@ -176,15 +176,15 @@ export class MatrixControls {
 								colspan: 2,
 								align: 'center'
 							},
-							/*{
-								label: 'Grid stroke',
+							{
+								label: 'Outline color',
 								type: 'color',
 								chartType: 'matrix',
 								settingsKey: 'gridStroke',
 								colspan: 2,
-								align: 'center',
-								getDisplayStyle: plot => this.parent.settings.matrix.showGrid ? '' : 'none'
-							},*/
+								align: 'center'
+								//getDisplayStyle: plot => this.parent.settings.matrix.showGrid ? '' : 'none'
+							},
 							{
 								label: 'Background color',
 								type: 'color',
