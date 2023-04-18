@@ -3,7 +3,7 @@ import { setInteractivity } from './matrix.interactivity'
 import { setRenderers } from './matrix.renderers'
 import { MatrixCluster } from './matrix.cluster'
 import { MatrixControls } from './matrix.controls'
-import { setCellProps } from './matrix.cells'
+import { setCellProps, getEmptyCell, maySetEmptyCell } from './matrix.cells'
 import { select } from 'd3-selection'
 import { scaleLinear, scaleOrdinal } from 'd3-scale'
 import { schemeCategory10 } from 'd3-scale-chromatic'
@@ -863,6 +863,8 @@ class Matrix {
 
 		for (const t of this.termOrder) {
 			const $id = t.tw.$id
+			const termid = 'id' in t.tw.term ? t.tw.term.id : t.tw.term.name
+			const emptyGridCells = []
 			const series = {
 				t,
 				tw: t.tw,
@@ -874,10 +876,29 @@ class Matrix {
 				const { totalIndex, grpIndex, row } = so
 				series.x = !s.transpose ? 0 : t.totalIndex * dx + t.visibleGrpIndex * s.colgspace
 
-				if (row[$id]?.filteredValues && !row[$id]?.filteredValues.length) continue
 				const anno = row[$id]
-				if (!anno) continue
-				const termid = 'id' in t.tw.term ? t.tw.term.id : t.tw.term.name
+				const cellTemplate = {
+					s: so,
+					sample: row.sample,
+					_SAMPLENAME_: data.refs.bySampleId[row.sample],
+					tw: t.tw,
+					term: t.tw.term,
+					termid,
+					$id,
+					totalIndex,
+					grpIndex,
+					//row,
+					t
+				}
+
+				if (!anno || !anno.renderedValues?.length) {
+					if (s.showGrid == 'rect') {
+						const cell = getEmptyCell(cellTemplate, s, this.dimensions)
+						series.cells.push(cell)
+					}
+					continue
+				}
+
 				const key = anno.key
 				const values = anno.renderedValues || anno.values || [anno.value]
 				const numRects = s.cellEncoding == 'oncoprint' ? 1 : values.length
@@ -885,21 +906,7 @@ class Matrix {
 				const width = !s.transpose ? colw : colw / values.length
 				const siblingCells = []
 				for (const [i, value] of values.entries()) {
-					const cell = {
-						s: so,
-						sample: row.sample,
-						_SAMPLENAME_: data.refs.bySampleId[row.sample],
-						tw: t.tw,
-						term: t.tw.term,
-						termid,
-						$id,
-						key,
-						totalIndex,
-						grpIndex,
-						//row,
-						siblingCells,
-						t
-					}
+					const cell = Object.assign({ key, siblingCells }, cellTemplate)
 
 					// will assign x, y, width, height, fill, label, order, etc
 					const legend = setCellProps[t.tw.term.type](cell, t.tw, anno, value, s, t, this, width, height, dx, dy, i)
@@ -912,7 +919,13 @@ class Matrix {
 					series.cells.push(cell)
 					siblingCells.push(cell)
 				}
+
+				if (s.showGrid) {
+					const cell = maySetEmptyCell[t.tw.term.type]?.(siblingCells, cellTemplate, s, this.dimensions)
+					if (cell) emptyGridCells.unshift(cell)
+				}
 			}
+			if (emptyGridCells.length) series.cells.unshift(...emptyGridCells)
 			serieses.push(series)
 		}
 

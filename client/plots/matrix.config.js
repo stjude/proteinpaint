@@ -36,7 +36,7 @@ export async function getPlotConfig(opts, app) {
 				sortTermsBy: 'sampleCount', // or 'as listed'
 				samplecount4gene: true,
 				cellbg: '#ececec',
-				showGrid: true,
+				showGrid: '', // false | 'pattern' | 'rect'
 				gridStroke: '#fff',
 				colw: 0,
 				colwMin: 1 / window.devicePixelRatio,

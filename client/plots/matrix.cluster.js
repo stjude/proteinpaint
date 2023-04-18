@@ -78,13 +78,27 @@ function setRenderers(self) {
 			.attr('width', Math.min(d.mainw, d.maxMainW) / this.totalWidth) // d.zoomedMainW)
 			.attr('height', 1)
 
-		const g = self.dom.outlines.selectAll('g').data(clusters, c => c.xg.grp.name + ';;' + c.yg.grp.name)
+		if (s.prevShowGrid != s.showGrid) {
+			self.dom.outlines.selectAll('*').remove()
+		}
 
-		g.exit().remove()
-		g.each(renderCluster)
-		g.enter()
-			.append('g')
-			.each(addCluster)
+		self.dom.outlines
+			.transition()
+			.duration(self.dom.outlines.attr('transform') ? s.duration : 0)
+			.attr('transform', `translate(${d.xOffset + d.seriesXoffset},${d.yOffset})`)
+
+		if (!s.showGrid) {
+			renderOutlines(clusters, s, d)
+		} else if (s.showGrid == 'rect') {
+		} else {
+			const g = self.dom.outlines.selectAll('g').data(clusters, c => c.xg.grp.name + ';;' + c.yg.grp.name)
+			g.exit().remove()
+			g.each(renderCluster)
+			g.enter()
+				.append('g')
+				.each(addCluster)
+		}
+		s.prevShowGrid = s.showGrid
 	}
 
 	function addCluster(cluster) {
@@ -93,7 +107,7 @@ function setRenderers(self) {
 			.append('pattern')
 			.attr('id', `${self.patternId}-${self.patternIdSuffix++}`)
 			.attr('patternUnits', 'userSpaceOnUse')
-			.attr('patternContentUnits', 'userSpaceOnUse')
+			.attr('patternUnits', 'userSpaceOnUse')
 		pattern.append('line')
 		pattern.append('line')
 		g.append('rect') //.attr('class', 'sjpp-matrix-clusterbg-rect') // background rect
@@ -106,10 +120,6 @@ function setRenderers(self) {
 		const d = self.parent.dimensions
 		const c = cluster
 		const g = select(this)
-
-		g.transition()
-			.duration(g.attr('transform') ? s.duration : 0)
-			.attr('transform', `translate(${d.xOffset + d.seriesXoffset},${d.yOffset})`)
 
 		const patternId = definePattern(g, s, d, cluster)
 		const rects = g.node().querySelectorAll('rect')
@@ -187,11 +197,6 @@ function setRenderers(self) {
 	}
 
 	function renderOutlines(clusters, s, d) {
-		self.dom.outlines
-			.transition()
-			.duration(self.dom.outlines.attr('transform') ? s.duration : 0)
-			.attr('transform', `translate(${d.xOffset + d.seriesXoffset},${d.yOffset})`)
-
 		const outlines = self.dom.outlines.selectAll('rect').data(clusters, c => c.xg.grp.name + ';;' + c.yg.grp.name)
 		outlines.exit().remove()
 		outlines.each(render1Outline)
@@ -211,7 +216,7 @@ function setRenderers(self) {
 			.attr('width', cluster.width)
 			.attr('height', cluster.height)
 			.attr('shape-rendering', 'crispEdges')
-			.attr('fill', s.showGrid ? `url(#${self.patternId})` : s.cellbg)
+			.attr('fill', !s.showGrid ? s.cellbg : s.gridStroke)
 			.attr('stroke', s.gridStroke) // s.showGrid ? s.gridStroke : 'none')
 			.attr('stroke-width', 1) // s.colspace)
 	}
