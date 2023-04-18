@@ -245,19 +245,19 @@ mclass[mclasssv] = {
 
 export const mclasscnvgain = 'CNV_amp'
 mclass[mclasscnvgain] = {
-	label: 'Copy number gain',
+	label: 'Copy parseFloat gain',
 	color: '#e9a3c9',
 	dt: dtcnv,
-	desc: 'Copy number gain',
+	desc: 'Copy parseFloat gain',
 	key: mclasscnvgain
 }
 
 export const mclasscnvloss = 'CNV_loss'
 mclass[mclasscnvloss] = {
-	label: 'Copy number loss',
+	label: 'Copy parseFloat loss',
 	color: '#a1d76a',
 	dt: dtcnv,
-	desc: 'Copy number loss',
+	desc: 'Copy parseFloat loss',
 	key: mclasscnvloss
 }
 
@@ -679,7 +679,7 @@ export function spliceeventchangegmexon(gm, evt) {
 			}
 		}
 	} else if (evt.a5ss || evt.a3ss) {
-		// still equal number of exons
+		// still equal parseFloat of exons
 		// adjust the affected exon first, then figure out coding[]
 		const exons = gm.exon.map(e => [e[0], e[1]])
 		const forward = gm.strand == '+'
@@ -775,9 +775,9 @@ export function validate_vcfinfofilter(obj) {
 			// otherwise, numerical value, the style of population frequency filter
 			const lst = []
 			for (const v of set.numericfilter) {
-				if (typeof v == 'number') {
+				if (typeof v == 'parseFloat') {
 					/*
-					just a number, defaults to 'lower-than'
+					just a parseFloat, defaults to 'lower-than'
 					*/
 					lst.push({ side: '<', value: v })
 				} else {
@@ -825,7 +825,7 @@ export function contigNameNoChr(genome, chrlst) {
 	return false
 }
 export function contigNameNoChr2(genome, chrlst) {
-	// returns number of matching chr names that either includes "chr" or not
+	// returns parseFloat of matching chr names that either includes "chr" or not
 	// for detecting if chrlst entirely mismatch with what's in the genome build
 	// TODO replace contigNameNoChr
 	let nochrcount = 0,
@@ -851,7 +851,7 @@ export function contigNameNoChr2(genome, chrlst) {
 
 export function getMax_byiqr(lst, novaluemax) {
 	/*
-	lst: array of numbers
+	lst: array of parseFloats
 	novaluemax: when lst is empty, return this value
 	cutoff value based on IQR to exclude outlier values
 	*/
@@ -1054,12 +1054,46 @@ export const schemeCategory20 = [
 ]
 export const schemeCategory2 = ['#e75480', 'blue']
 
-export function getColorScheme(number) {
-	if (number > 12) return schemeCategory20
-	else if (number > 8) return d3.schemePaired
-	else if (number > 2) return d3.schemeDark2
+export function getColorScheme(parseFloat) {
+	if (parseFloat > 12) return schemeCategory20
+	else if (parseFloat > 8) return d3.schemePaired
+	else if (parseFloat > 2) return d3.schemeDark2
 	else return schemeCategory2
 }
-export function getColors(number) {
-	return d3scale.scaleOrdinal(getColorScheme(number))
+export function getColors(parseFloat) {
+	return d3scale.scaleOrdinal(getColorScheme(parseFloat))
+}
+
+export function parseRange(str) {
+	if (!str) throw 'Empty range'
+	const tokens = str.replace(/\s/g, '').split('x')
+	let start, stop, startinclusive, stopinclusive
+
+	if (tokens[0]) parseRangeToken(tokens[0])
+	if (tokens[1]) parseRangeToken(tokens[1])
+
+	const startunbounded = start === undefined
+	const stopunbounded = stop === undefined
+
+	if (!startunbounded && !stopunbounded && start >= stop) throw 'start must be lower than stop'
+
+	return { start, stop, startinclusive, stopinclusive, startunbounded, stopunbounded }
+
+	function parseRangeToken(range) {
+		const floatExpr = '[+-]?\\d+(\\.\\d+)?'
+
+		if (new RegExp(`^${floatExpr}<$`).test(range) || new RegExp(`^>${floatExpr}$`).test(range)) {
+			start = parseFloat(range.match(floatExpr))
+			startinclusive = false
+		} else if (new RegExp(`^${floatExpr}<=$`).test(range) || new RegExp(`^>=${floatExpr}$`).test(range)) {
+			start = parseFloat(range.match(floatExpr))
+			startinclusive = true
+		} else if (new RegExp(`^${floatExpr}>$`).test(range) || new RegExp(`^<${floatExpr}$`).test(range)) {
+			stop = parseFloat(range.match(floatExpr))
+			stopinclusive = false
+		} else if (new RegExp(`^${floatExpr}>=$`).test(range) || new RegExp(`^<=${floatExpr}$`).test(range)) {
+			stop = parseFloat(range.match(floatExpr))
+			stopinclusive = true
+		} else console.log('Could not parse expression ' + range)
+	}
 }

@@ -3,6 +3,7 @@ import { scaleLinear } from 'd3'
 import { keyupEnter } from '../src/client'
 import { addBrushes, addNewBrush } from './tvs.density'
 import { makeDensityPlot } from './densityplot'
+import { parseRange } from '../shared/common'
 
 /*
 ********************** EXPORTED
@@ -425,12 +426,6 @@ function addRangeTable(self) {
 			.remove()
 	})
 
-	range_divs.each(function(d) {
-		const div = select(this)
-		d.start_text.html(d.range.start)
-		d.stop_text.html(d.range.stop)
-	})
-
 	range_divs
 		.enter()
 		.append('tr')
@@ -474,9 +469,6 @@ function enterRange(self, tr, brush, i) {
 	const range_tr = brush.range_tr
 	const range = brush.range
 	const orig_range = brush.orig
-	const minvalue = self.num_obj.density_data.minvalue
-	const maxvalue = self.num_obj.density_data.maxvalue
-	const svg = self.num_obj.svg
 	const xscale = self.num_obj.xscale
 
 	range_tr
@@ -490,188 +482,31 @@ function enterRange(self, tr, brush, i) {
 
 	brush.equation_td = range_tr.append('td').style('width', '150px')
 
+	const start = range.startunbounded ? '' : range.startinclusive ? `${range.start} <= ` : `${range.start} < `
+
+	const stop = range.stopunbounded ? '' : range.stopinclusive ? ` <= ${range.stop} ` : ` < ${range.stop} `
+
+	const sameRange = JSON.stringify(range) == JSON.stringify(brush.orig)
+
 	brush.start_text = brush.equation_td
 		.append('div')
 		.attr('class', 'start_text')
-		.style('display', 'inline-block')
+		.style('display', sameRange ? 'inline-block' : 'none')
 		.style('font-weight', 'bold')
 		.style('text-align', 'center')
-		.html(range.start)
+		.html(`${start} x ${stop}`)
 
 	brush.start_input = brush.equation_td
 		.append('input')
 		.attr('class', 'start_input')
-		.attr('type', 'number')
 		.style('display', 'none')
-		.style('width', '80px')
+		.style('width', '120px')
 		.style('margin-left', '15px')
 		.attr('value', range.start)
-		.on('keyup', async event => {
-			if (!keyupEnter(event)) return
-			brush.start_input.property('disabled', true)
-			try {
-				if (brush.start_input.node().value < minvalue) throw 'entered value is lower than minimum value'
-				update_input()
-			} catch (e) {
-				window.alert(e)
-			}
-			brush.start_input.property('disabled', false)
-		})
-
-	// select realation for start value
-	brush.start_select = brush.equation_td
-		.append('select')
-		.attr('class', 'start_select')
-		.style('display', 'none')
-		.style('margin-left', '10px')
-		.on('change', () => {
-			// make changes based on start select
-			const new_range = JSON.parse(JSON.stringify(brush.range))
-			const value = brush.start_select.property('value')
-			const brushStopVal = brush.stop_input.node().value
-
-			if (value == 'startunbounded') {
-				range.startunbounded = true
-				new_range.start = minvalue.toFixed(1)
-				brush.start_input.property('disabled', true)
-			} else {
-				delete range.startunbounded
-				new_range.start = brush.start_input.node().value || minvalue.toFixed(1)
-				new_range.stop = brushStopVal || maxvalue.toFixed(1)
-				brush.start_input.property('disabled', false)
-				range.startinclusive = value == 'startinclusive'
-			}
-			if (brushStopVal !== '' && brushStopVal != maxvalue.toFixed(1)) {
-				new_range.stop = brushStopVal
-				delete range.stopunbounded
-			}
+		.on('change', async event => {
+			let str = brush.start_input.node().value
+			const new_range = parseRange(str)
 			brush.elem.call(brush.d3brush).call(brush.d3brush.move, [new_range.start, new_range.stop].map(xscale))
-		})
-
-	brush.start_select
-		.selectAll('option')
-		.data([
-			{
-				label: '&le;',
-				value: 'startinclusive'
-			},
-			{
-				label: '&lt;',
-				value: 'startexclusive'
-			},
-			{
-				label: '&#8734;',
-				value: 'startunbounded'
-			}
-		])
-		.enter()
-		.append('option')
-		.attr('value', d => d.value)
-		.property('selected', d => range[d.value] || (d.value == 'startexclusive' && !range.startinclusive))
-		.html(d => d.label)
-
-	// 'x' and relation symbols
-	brush.start_relation_text = brush.equation_td
-		.append('div')
-		.attr('class', 'start_relation_text')
-		.style('display', 'inline-block')
-		.style('margin-left', '5px')
-		.style('text-align', 'center')
-		.html(range.startunbounded ? ' ' : range.startinclusive ? '&leq;&nbsp;' : '&lt;&nbsp;')
-
-	const x = '<span style="font-family:Times;font-style:italic;">x</span>'
-	brush.equation_td
-		.append('div')
-		.style('display', 'inline-block')
-		.style('margin-left', '5px')
-		.style('text-align', 'center')
-		.html(x)
-
-	brush.stop_relation_text = brush.equation_td
-		.append('div')
-		.attr('class', 'stop_relation_text')
-		.style('display', 'inline-block')
-		.style('margin-left', '5px')
-		.style('text-align', 'center')
-		.html(range.stopunbounded ? ' ' : range.stopinclusive ? '&leq;&nbsp;' : '&lt;&nbsp;')
-
-	// select realation for stop value
-	brush.stop_select = brush.equation_td
-		.append('select')
-		.attr('class', 'stop_select')
-		.style('display', 'none')
-		.style('margin-left', '10px')
-		.on('change', () => {
-			// make changes based on stop select
-			const new_range = JSON.parse(JSON.stringify(brush.range))
-			const value = brush.stop_select.property('value')
-			if (value == 'stopunbounded') {
-				range.stopunbounded = true
-				new_range.stop = maxvalue.toFixed(1)
-				brush.stop_input.property('disabled', true)
-			} else {
-				delete range.stopunbounded
-				new_range.start = brush.start_input.node().value || minvalue.toFixed(1)
-				new_range.stop = brush.stop_input.node().value || maxvalue.toFixed(1)
-				brush.stop_input.property('disabled', false)
-				range.stopinclusive = value == 'stopinclusive'
-			}
-			if (brush.start_input.node().value != minvalue.toFixed(1)) {
-				new_range.start = brush.start_input.node().value
-				delete range.startunbounded
-			}
-			brush.elem.call(brush.d3brush).call(brush.d3brush.move, [new_range.start, new_range.stop].map(xscale))
-		})
-
-	brush.stop_select
-		.selectAll('option')
-		.data([
-			{
-				label: '&le;',
-				value: 'stopinclusive'
-			},
-			{
-				label: '&lt;',
-				value: 'stopexclusive'
-			},
-			{
-				label: '&#8734;',
-				value: 'stopunbounded'
-			}
-		])
-		.enter()
-		.append('option')
-		.attr('value', d => d.value)
-		.property('selected', d => range[d.value] || (d.value == 'stopexclusive' && !range.stopinclusive))
-		.html(d => d.label)
-
-	brush.stop_text = brush.equation_td
-		.append('div')
-		.attr('class', 'stop_text')
-		.style('display', 'inline-block')
-		.style('margin-left', '10px')
-		.style('font-weight', 'bold')
-		.style('text-align', 'center')
-		.html(range.stop)
-
-	brush.stop_input = brush.equation_td
-		.append('input')
-		.attr('class', 'stop_input')
-		.attr('type', 'number')
-		.style('display', 'none')
-		.style('width', '80px')
-		.style('margin-left', '15px')
-		.attr('value', range.stop)
-		.on('keyup', async event => {
-			if (!keyupEnter(event)) return
-			brush.stop_input.property('disabled', true)
-			try {
-				if (+brush.stop_input.node().value > maxvalue) throw 'entered value is higher than maximum value'
-				update_input()
-			} catch (e) {
-				window.alert(e)
-			}
-			brush.stop_input.property('disabled', false)
 		})
 
 	makeRangeButtons(self, brush)
@@ -689,16 +524,6 @@ function enterRange(self, tr, brush, i) {
 			.style('font-style', 'italic')
 			.style('color', '#888')
 			.html('Note: Drag the <b>green rectangle</b> at the end of the plot to select new range')
-	}
-
-	function update_input() {
-		const new_range = JSON.parse(JSON.stringify(brush.range))
-		new_range.start = brush.start_input.node().value ? Number(brush.start_input.node().value) : minvalue
-		new_range.stop = brush.stop_input.node().value ? Number(brush.stop_input.node().value) : maxvalue
-		if (new_range.start != minvalue.toFixed(1)) delete new_range.startunbounded
-		if (new_range.stop != maxvalue.toFixed(1)) delete new_range.stopunbounded
-		// brush.range = new_range
-		brush.elem.call(brush.d3brush).call(brush.d3brush.move, [new_range.start, new_range.stop].map(xscale))
 	}
 }
 
@@ -723,13 +548,8 @@ function makeRangeButtons(self, brush) {
 		.text('edit')
 		.on('click', async () => {
 			brush.start_text.style('display', 'none')
-			brush.stop_text.style('display', 'none')
-			brush.start_relation_text.style('display', 'none')
-			brush.stop_relation_text.style('display', 'none')
+
 			brush.start_input.style('display', 'inline-block')
-			brush.stop_input.style('display', 'inline-block')
-			brush.start_select.style('display', 'inline-block')
-			brush.stop_select.style('display', 'inline-block')
 			brush.edit_btn.style('display', 'none')
 		})
 
@@ -803,25 +623,25 @@ function makeRangeButtons(self, brush) {
 
 	async function apply() {
 		try {
-			const start = Number(brush.start_input.node().value)
-			const stop = Number(brush.stop_input.node().value)
-			if (start != null && stop != null && stop != '' && start >= stop) throw 'start must be lower than stop'
+			const new_range = parseRange(brush.start_input.node().value)
+			const start = new_range.start
+			const stop = new_range.stop
 
-			if (brush.start_input.node().value === '') {
+			if (new_range.startunbounded) {
 				range.startunbounded = true
 				delete range.start
 			} else {
 				delete range.startunbounded
-				range.start = start
-				range.startinclusive = brush.start_select.property('value') === 'startinclusive'
+				range.start = new_range.start
+				range.startinclusive = new_range.startinclusive
 			}
-			if (brush.stop_input.node().value === '') {
+			if (new_range.stopunbounded) {
 				range.stopunbounded = true
 				delete range.stop
 			} else {
 				delete range.stopunbounded
-				range.stop = stop
-				range.stopinclusive = brush.stop_select.property('value') === 'stopinclusive'
+				range.stop = new_range.stop
+				range.stopinclusive = new_range.stopinclusive
 			}
 			const new_tvs = JSON.parse(JSON.stringify(self.tvs))
 			delete new_tvs.groupset_label
