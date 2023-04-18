@@ -780,6 +780,10 @@ fn main() {
                     } else if input_matrix.nrows() != col_names.len() && col_names.len() > 0 {
                         // The col name is compared against row length intentonally. It does not really make much difference as the matrix is later transposed
                         panic!("Col names and col length in matrix are nor equal");
+                    } else if input_matrix.ncols() <= 1 {
+                        panic!("Please input a 2D matrix. The number of cols <= 1");
+                    } else if input_matrix.nrows() <= 1 {
+                        panic!("Please input a 2D matrix. The number of rows <= 1");
                     }
 
                     //println!("input_matrix:{:?}", input_matrix);
