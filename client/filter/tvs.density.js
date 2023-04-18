@@ -83,23 +83,16 @@ function applyBrush(self, elem, brush) {
 			if (range.startunbounded) a_range.start = Number(minvalue.toFixed(1))
 			if (range.stopunbounded) a_range.stop = Number(maxvalue.toFixed(1))
 			const similarRanges = JSON.stringify(range) == JSON.stringify(a_range)
+
+			const start = range.startunbounded ? '' : range.startinclusive ? `${range.start} <= ` : `${range.start} < `
+
+			const stop = range.stopunbounded ? '' : range.stopinclusive ? ` <= ${range.stop} ` : ` < ${range.stop} `
+
 			// update inputs from brush move
 			brush.start_input
 				.style('color', a_range.start == range.start ? '#000' : '#23cba7')
 				.style('display', similarRanges ? 'none' : 'inline-block')
-			brush.start_input.node().value = range.startunbounded ? '' : range.start
-
-			brush.stop_input
-				.style('color', a_range.stop == range.stop ? '#000' : '#23cba7')
-				.style('display', similarRanges ? 'none' : 'inline-block')
-			brush.stop_input.node().value = range.stopunbounded ? '' : range.stop
-
-			brush.start_select
-				.style('display', similarRanges ? 'none' : 'inline-block')
-				.property('selectedIndex', range.startunbounded ? 2 : range.startinclusive ? 0 : 1)
-			brush.stop_select
-				.style('display', similarRanges ? 'none' : 'inline-block')
-				.property('selectedIndex', range.stopunbounded ? 2 : range.stopinclusive ? 0 : 1)
+			brush.start_input.node().value = range.startunbounded ? '' : `${start} x ${stop}`
 
 			//update 'edit', 'apply' and 'reset' buttons based on brush change
 			brush.edit_btn.style(
@@ -111,12 +104,6 @@ function applyBrush(self, elem, brush) {
 				'display',
 				similarRanges || a_range.start === '' || a_range.stop === '' ? 'none' : 'inline-block'
 			)
-
-			// hide start and stop text and relation symbols if brush moved
-			brush.start_text.style('display', !similarRanges ? 'none' : 'inline-block')
-			brush.stop_text.style('display', !similarRanges ? 'none' : 'inline-block')
-			brush.start_relation_text.style('display', !similarRanges ? 'none' : 'inline-block')
-			brush.stop_relation_text.style('display', !similarRanges ? 'none' : 'inline-block')
 
 			// make brush green if changed
 			brush.elem.selectAll('.selection').style('fill', !similarRanges ? '#23cba7' : '#777777')
