@@ -1599,7 +1599,8 @@ function setZoomPanActions(self) {
 			return
 		}
 
-		if (1 || self.opts.allow2selectSamples) {
+		const ss = self.opts.allow2selectSamples
+		if (ss) {
 			self.app.tip.clear()
 			self.app.tip.d
 				.selectAll('div')
@@ -1609,7 +1610,7 @@ function setZoomPanActions(self) {
 						callback: self.triggerZoomArea
 					},
 					{
-						label: 'Select samples',
+						label: ss.buttonText || 'Select samples',
 						callback: () => {
 							const c = self.clickedSeriesCell
 							delete self.clickedSeriesCell
@@ -1627,11 +1628,13 @@ function setZoomPanActions(self) {
 							const xMax = xMin + self.zoomWidth
 							const filter = c => c.x >= xMin && c.x <= xMax
 							const samples = []
-							console.log(1618, [xMin, xMax], self.serier)
 							for (const series of self.serieses) {
 								samples.push(...series.cells.filter(filter).map(c => c.sample))
 							}
-							console.log(1621, samples)
+							ss.callback({
+								samples: samples.map(d => ({ [ss.attributes]: d })),
+								source: 'Selected samples from OncoMatrix'
+							})
 							self.zoomArea.remove()
 							delete self.zoomArea
 							delete self.clickedSeriesCell
@@ -1682,6 +1685,7 @@ function setZoomPanActions(self) {
 				}
 			}
 		})
+
 		self.resetInteractions()
 	}
 }

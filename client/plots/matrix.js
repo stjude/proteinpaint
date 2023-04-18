@@ -262,6 +262,12 @@ class Matrix {
 				this.setSampleOrder(this.data)
 			}
 
+			if (!this.sampleOrder.length) {
+				this.dom.loadingDiv.html('No matching sample data').style('display', '')
+				this.dom.svg.style('display', 'none')
+				return
+			}
+
 			this.setLayout()
 			this.serieses = this.getSerieses(this.data)
 
@@ -269,6 +275,7 @@ class Matrix {
 			this.dom.loadingDiv.html('Rendering ...')
 			this.render()
 			this.dom.loadingDiv.style('display', 'none')
+			this.dom.svg.style('display', '')
 
 			const [xGrps, yGrps] = !this.settings.matrix.transpose ? ['sampleGrps', 'termGrps'] : ['termGrps', 'sampleGrps']
 			const d = this.dimensions

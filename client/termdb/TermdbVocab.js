@@ -679,7 +679,7 @@ export class TermdbVocab extends Vocab {
 			.sort()
 
 		let numResponses = 0
-		if (opts.loadingDiv) opts.loadingDiv.html('Fetching data ...')
+		if (opts.loadingDiv) opts.loadingDiv.html('Updating data ...')
 		// fetch the annotated sample for each term
 		while (termsToUpdate.length) {
 			const tw = termsToUpdate.pop()
@@ -729,13 +729,12 @@ export class TermdbVocab extends Vocab {
 					}
 
 					numResponses++
-					if (opts.loadingDiv)
-						opts.loadingDiv.html(`Fetching data (${numResponses}/${promises.length}): ${tw.term.name}`)
+					if (opts.loadingDiv) opts.loadingDiv.html(`Updating data (${numResponses}/${promises.length}) ...`)
 				})
 			)
 		}
 		try {
-			if (opts.loadingDiv) opts.loadingDiv.html(`Fetching data (0/${promises.length})`)
+			if (opts.loadingDiv) opts.loadingDiv.html(`Updating data (0/${promises.length})`)
 			await Promise.all(promises)
 			if (opts.loadingDiv) opts.loadingDiv.html('')
 		} catch (e) {
@@ -743,6 +742,7 @@ export class TermdbVocab extends Vocab {
 			throw e
 		}
 		try {
+			opts.loadingDiv.html(`Processing data ...`)
 			const dictTerm$ids = opts.terms.filter(tw => !nonDictionaryTermTypes.has(tw.term.type)).map(tw => tw.$id)
 			// const lst = Object.values(samples)
 

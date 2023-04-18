@@ -67,7 +67,7 @@ export async function init(arg, holder, genomes) {
 	})
 
 	const gdcCohort = getGdcCohort(arg)
-	const genes = await getGenes(arg, gdcCohort, CGConly) //.slice(0, 3)
+	const genes = (await getGenes(arg, gdcCohort, CGConly)).slice(0, 5)
 
 	const opts = {
 		holder,
@@ -93,6 +93,9 @@ export async function init(arg, holder, genomes) {
 		},
 		app: {
 			features: ['recover']
+		},
+		matrix: {
+			allow2selectSamples: arg.allow2selectSamples
 		}
 	}
 
@@ -100,11 +103,14 @@ export async function init(arg, holder, genomes) {
 	const matrixApi = plotAppApi.getComponents('plots.0')
 
 	const api = {
-		update: config => {
+		update: arg => {
 			plotAppApi.dispatch({
-				type: 'plot_edit',
-				id: matrixApi.id,
-				config
+				type: 'app_refresh',
+				state: {
+					termfilter: {
+						filter0: arg.filter0
+					}
+				}
 			})
 		}
 	}
