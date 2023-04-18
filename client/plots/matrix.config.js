@@ -109,7 +109,7 @@ export async function getPlotConfig(opts, app) {
 	// force auto-dimensions for colw
 	m.colw = 0
 	// support deprecated sortSamplesBy value from a saved session
-	if (m.sortSamplesBy) m.sortSamplesBy = 'class'
+	if (m.sortSamplesBy === 'selectedSamples') m.sortSamplesBy = 'class'
 
 	const promises = []
 	for (const grp of config.termgroups) {

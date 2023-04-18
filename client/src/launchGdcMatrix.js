@@ -85,7 +85,7 @@ export async function init(arg, holder, genomes) {
 							cellEncoding: 'oncoprint',
 							colw: 2,
 							colspace: 1,
-							cellbg: '#ececec'
+							cellbg: '#eee'
 						}
 					}
 				}

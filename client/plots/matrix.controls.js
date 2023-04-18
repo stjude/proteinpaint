@@ -110,7 +110,7 @@ export class MatrixControls {
 						settingsKey: 'samplecount4gene'
 					},
 					{
-						label: 'Mutation encoding',
+						label: 'Rendering style',
 						type: 'radio',
 						chartType: 'matrix',
 						settingsKey: 'cellEncoding',
@@ -132,7 +132,7 @@ export class MatrixControls {
 						title: 'Minimum number of hits for a row to be visible'
 					},*/
 					{
-						label: 'Sort terms',
+						label: 'Sort genes',
 						type: 'radio',
 						chartType: 'matrix',
 						settingsKey: 'sortTermsBy',
