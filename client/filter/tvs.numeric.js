@@ -267,108 +267,6 @@ function addRangeTableNoDensity(self, tvs) {
 			)
 		})
 
-	// select realation for start value
-	brush.start_select = brush.equation_td
-		.append('select')
-		.attr('class', 'start_select')
-		//.style('height', '18px')
-		.style('margin', '4px 5px')
-		.style('vertical-align', 'top')
-
-	brush.start_select
-		.selectAll('option')
-		.data([
-			{
-				label: '&le;',
-				value: 'startinclusive'
-			},
-			{
-				label: '&lt;',
-				value: 'startexclusive'
-			}
-		])
-		.enter()
-		.append('option')
-		.attr('value', d => d.value)
-		.property('selected', d => range[d.value] || (d.value == 'startexclusive' && !range.startinclusive))
-		.html(d => d.label)
-
-	// 'x' and relation symbols
-	/*brush.start_relation_text = brush.equation_td
-		.append('div')
-		.attr('class', 'start_relation_text')
-		.style('display', 'inline-block')
-		.style('margin-left', '5px')
-		.style('text-align', 'center')
-		.html(range.startunbounded ? ' ' : range.startinclusive ? '&leq;&nbsp;' : '&lt;&nbsp;')*/
-
-	const x = '<span style="font-family:Times;font-style:italic;">x</span>'
-	brush.equation_td
-		.append('div')
-		.style('display', 'inline-block')
-		.style('margin', '3px 5px')
-		.style('text-align', 'center')
-		.style('vertical-align', 'top')
-		.style('font-size', '18px')
-		.html(x)
-
-	/*brush.stop_relation_text = brush.equation_td
-		.append('div')
-		.attr('class', 'stop_relation_text')
-		.style('display', 'inline-block')
-		.style('margin-left', '5px')
-		.style('text-align', 'center')
-		.html(range.stopunbounded ? ' ' : range.stopinclusive ? '&leq;&nbsp;' : '&lt;&nbsp;')*/
-
-	// select realation for stop value
-	brush.stop_select = brush.equation_td
-		.append('select')
-		.attr('class', 'stop_select')
-		//.style('height', '18px')
-		.style('margin', '4px 5px')
-		.style('vertical-align', 'top')
-
-	brush.stop_select
-		.selectAll('option')
-		.data([
-			{
-				label: '&le;',
-				value: 'stopinclusive'
-			},
-			{
-				label: '&lt;',
-				value: 'stopexclusive'
-			}
-		])
-		.enter()
-		.append('option')
-		.attr('value', d => d.value)
-		.property('selected', d => range[d.value] || (d.value == 'stopexclusive' && !range.stopinclusive))
-		.html(d => d.label)
-
-	const stopval = range && 'stop' in range ? range.stop : null
-	brush.stop_input = brush.equation_td
-		.append('input')
-		.attr('class', 'stop_input')
-		.attr('type', 'number')
-		.attr('value', stopval)
-		.attr('min', minval)
-		.attr('max', maxval)
-		.attr('title', 'leave blank for the allowed maximum value')
-		.attr('placeholder', maxsymbol)
-		.style('width', '80px')
-		.style('height', '18px')
-		.style('margin', '3px 5px')
-		.style('vertical-align', 'top')
-		.on('keyup', () => {
-			const textval = brush.stop_input.property('value')
-			const val = textval === '' ? Infinity : Number(textval)
-			brush.stop_input.style(
-				'color',
-				(minval === null || minval <= val) && (maxval === null || maxval >= val) ? '' : '#f00'
-			)
-		})
-
 	brush.apply_btn = tr
 		.append('td')
 		.attr('class', 'sja_filter_tag_btn sjpp_apply_btn')
@@ -504,6 +402,7 @@ function enterRange(self, tr, brush, i) {
 		.on('change', async event => {
 			let str = brush.start_input.node().value
 			const new_range = parseRange(str)
+			updateRange(range, new_range)
 			brush.elem.call(brush.d3brush).call(brush.d3brush.move, [new_range.start, new_range.stop].map(xscale))
 		})
 
@@ -621,25 +520,8 @@ function makeRangeButtons(self, brush) {
 	async function apply() {
 		try {
 			const new_range = parseRange(brush.start_input.node().value)
-			const start = new_range.start
-			const stop = new_range.stop
+			updateRange(range, new_range)
 
-			if (new_range.startunbounded) {
-				range.startunbounded = true
-				delete range.start
-			} else {
-				delete range.startunbounded
-				range.start = new_range.start
-				range.startinclusive = new_range.startinclusive
-			}
-			if (new_range.stopunbounded) {
-				range.stopunbounded = true
-				delete range.stop
-			} else {
-				delete range.stopunbounded
-				range.stop = new_range.stop
-				range.stopinclusive = new_range.stopinclusive
-			}
 			const new_tvs = JSON.parse(JSON.stringify(self.tvs))
 			delete new_tvs.groupset_label
 			// merge overlapping ranges
@@ -655,6 +537,25 @@ function makeRangeButtons(self, brush) {
 		} catch (e) {
 			window.alert(e)
 		}
+	}
+}
+
+function updateRange(range, new_range) {
+	if (new_range.startunbounded) {
+		range.startunbounded = true
+		delete range.start
+	} else {
+		delete range.startunbounded
+		range.start = new_range.start
+		range.startinclusive = new_range.startinclusive
+	}
+	if (new_range.stopunbounded) {
+		range.stopunbounded = true
+		delete range.stop
+	} else {
+		delete range.stopunbounded
+		range.stop = new_range.stop
+		range.stopinclusive = new_range.stopinclusive
 	}
 }
 
