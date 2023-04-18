@@ -20,7 +20,7 @@ export function setInteractivity(self) {
 		if (!(event.target.tagName == 'rect' || event.target.tagName == 'image')) return
 		if (event.target.tagName !== 'rect' && !self.imgBox) self.imgBox = event.target.getBoundingClientRect()
 		const d = event.target.tagName == 'rect' ? event.target.__data__ : self.getImgCell(event)
-		if (!d || !d.term || !d.sample) {
+		if (!d || !d.term || !d.sample || !d.siblingCells?.length) {
 			self.dom.tip.hide()
 			return
 		}

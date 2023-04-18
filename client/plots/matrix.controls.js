@@ -169,12 +169,25 @@ export class MatrixControls {
 						rows: [
 							{
 								label: 'Grid',
-								type: 'checkbox',
-								boxLabel: 'show',
+								type: 'radio',
 								chartType: 'matrix',
 								settingsKey: 'showGrid',
 								colspan: 2,
-								align: 'center'
+								align: 'center',
+								options: [
+									{
+										label: 'hide',
+										value: ''
+									},
+									{
+										label: 'lines',
+										value: 'lines'
+									},
+									{
+										label: 'rect',
+										value: 'rect'
+									}
+								]
 							},
 							{
 								label: 'Outline color',
