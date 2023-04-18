@@ -1,4 +1,5 @@
 const app = require('./app')
+const fs = require('fs')
 const path = require('path')
 const utils = require('./utils')
 const snvindelByRangeGetter_bcf = require('./mds3.init').snvindelByRangeGetter_bcf
@@ -342,7 +343,7 @@ function filter_data(q, result) {
 				server will re-request data, though inefficient
 				so as to calculate the number of samples with mutations in zoomed in region of protein
 				*/
-				if (!q.rglst.find(r => m.chr == r.chr && m.pos >= r.start && m.pos <= r.stop)) {
+				if (!q.rglst.find((r) => m.chr == r.chr && m.pos >= r.start && m.pos <= r.stop)) {
 					// not in any region
 					continue
 				}
@@ -426,10 +427,11 @@ async function geneExpressionClustering(data, q) {
 	const inputData = {
 		matrix: [],
 		row_names: [], // genes
-		col_names: [...sampleSet] // samples
+		col_names: [...sampleSet], // samples
 	}
 
 	// compose "data{}" into a matrix
+	console.log('data:', data)
 	for (const [gene, o] of data) {
 		inputData.row_names.push(gene)
 		const row = []
@@ -439,6 +441,13 @@ async function geneExpressionClustering(data, q) {
 		inputData.matrix.push(row)
 	}
 
-	const result = await run_rust('cluster', inputData)
+	//console.log('inputData:', JSON.stringify(inputData))
+	fs.writeFile('test.txt', JSON.stringify(inputData), function (err) {
+		// For catching input to rust pipeline, in case of an error
+		if (err) return console.log(err)
+	})
+
+	const result = await run_rust('cluster', JSON.stringify(inputData))
+	console.log('result:', result)
 	return result
 }

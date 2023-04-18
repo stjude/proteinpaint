@@ -27,27 +27,21 @@ OUTPUT PARAMETERS
        node_coordinates: (X,Y) coordinates of the current node.
        child_nodes: ID's of the child node (if it exists). There will be no child node for the original (input) nodes in the dendrogram.
        child_node_coordinates: (X,Y) coordinates of each of the two child nodes (if they exist).
- 4) max_col_y_length: This contains the distance of the farthest node from the top node for the dendrogram at the top. This will be useful when rendering the dendrogram on the client side. The ratio of the distance from a node to the top node / max_row_y_length will be the y-coordinate of the point from the top.
- 5) sorted_row_elements: List of sorted row indexes in the sorted matrix.
- 6) sorted_row_coordinates: Data for dendrogram in the y-axis. Contains JSON string containing list of traits for each node in the dendrogram.
+ 4) sorted_row_elements: List of sorted row indexes in the sorted matrix.
+ 5) sorted_row_coordinates: Data for dendrogram in the y-axis. Contains JSON string containing list of traits for each node in the dendrogram.
        node_id: Node ID of the current node.
        node_coordinates: (X,Y) coordinates of the current node.
        child_nodes: ID's of the child node (if it exists). There will be no child node for the original (input) nodes in the dendrogram.
        child_node_coordinates: (X,Y) coordinates of each of the two child nodes (if they exist).
- 7) max_row_y_length: This contains the distance of the farthest node from the top node for the dendrogram in the left. This will be useful when rendering the dendrogram on the client side. The ratio of the distance from a node to the top node / max_row_y_length will be the y-coordinate of the point from the top.
 
 EXAMPLES
- 1) Syntax: cd .. && cargo build --release && json='{"matrix":"[[3,4,5,20];[3,5,6,1];[3,5,6,10]]","row_names":"[row1,row2,row3]","col_names":"[col1,col2,col3,col4]","plot_image":true,"cluster_method":"Average"}' && time echo "$json" | target/release/cluster
+ 1) Syntax: cd .. && cargo build --release && json='{"matrix":[[9.5032,12.2685,8.2919,2.9634,9.2435],[10.5632,9.1719,22.7488,10.2698,31.7872],[0.1035,0.0525,0.0378,0.573,2.0522]],"row_names":["GeneA","GeneB","GeneC"],"col_names":["SampleA","SampleB","SampleC","SampleD","SampleE"],"plot_image":true,"cluster_method":"Average"}' && time echo "$json" | target/release/cluster
 
     Takes 2D matrix, row names and col names using cluster method "Average". In addition to stdout also plots the sorted 2D matrix to 1.png file
 
- 2) Syntax: cd .. && cargo build --release && json='{"matrix":"[[3,4,5,20];[3,5,6,1];[3,5,6,10]]"}' && time echo "$json" | target/release/cluster
+ 2) Syntax: cd .. && cargo build --release && json='{"matrix":[[9.5032,12.2685,8.2919,2.9634,9.2435],[10.5632,9.1719,22.7488,10.2698,31.7872],[0.1035,0.0525,0.0378,0.573,2.0522]],"row_names":["GeneA","GeneB","GeneC"],"col_names":["SampleA","SampleB","SampleC","SampleD","SampleE"]}' && time echo "$json" | target/release/cluster
 
     Only prints sorted 2D matrix to stdout.
-
- 3) Read from file
-    Syntax: cd .. && cargo build --release && time cat test.txt | target/release/cluster
-    Syntax: cd .. && cargo build --release && time cat iris_test.txt | target/release/cluster
 
 TO DO
 
@@ -334,7 +328,7 @@ fn par_euclidean_distance(item1: &Vec<f64>, item2: &Vec<f64>) -> f64 {
 fn sort_elements(
     coordinates: &Matrix<f64, Dyn, Dyn, VecStorage<f64, Dyn, Dyn>>,
     cluster_method: &String,
-) -> (Vec<usize>, Vec<NewNodeRelativeCoordinates>, usize) {
+) -> (Vec<usize>, Vec<NewNodeRelativeCoordinates>) {
     //fn sort_elements(coordinates: &Vec<Vec<f64>>) -> Vec<usize> {
     //fn sort_elements(coordinates: &Vec<Array1<f64>>) -> Vec<usize> {
     let new_now = Instant::now();
@@ -541,8 +535,8 @@ fn sort_elements(
                     new_nodes[new_nodes.len() - 1].node_id as u32,
                 )) == true
                 {
-                    node_y = item.1 as f64;
-                    //println!("item:{:?}", item);
+                    node_y = item.1 as f64 / max_length_node_distance as f64; // Normalizing distance with distance of the farthest node
+                                                                              //println!("item:{:?}", item);
                 }
 
                 //if item.1 > max_length_node_distance {
@@ -615,8 +609,7 @@ fn sort_elements(
                 // If the current node is not an original node, check if any of the child nodes are original nodes. If yes, update the y-coordinate of that original node with max_length_node_distance
                 for node_iter in 0..item.child_nodes.len() {
                     if item.child_nodes[node_iter] < coordinates.nrows() {
-                        item.child_node_coordinates[node_iter].y =
-                            Some(max_length_node_distance as f64);
+                        item.child_node_coordinates[node_iter].y = Some(1.0); // All the original nodes normalized to 1 so that equidistant from the top-most node.
                     }
                 }
             }
@@ -632,11 +625,7 @@ fn sort_elements(
     } else {
         panic!("The dissimilarity matrix length cannot be zero");
     }
-    (
-        sorted_nodes,
-        node_coordinates_final,
-        max_length_node_distance,
-    )
+    (sorted_nodes, node_coordinates_final)
 }
 
 fn closest_degenerate_nodes(
@@ -672,7 +661,8 @@ fn main() {
             let input_json = json::parse(&input);
             match input_json {
                 Ok(json_string) => {
-                    let matrix = &json_string["matrix"].as_str().unwrap(); // JSON key that stores the 2D matrix
+                    //println!("json_string:{:?}", json_string["matrix"]);
+                    let matrix = &json_string["matrix"]; // JSON key that stores the 2D matrix
                     let row_string_search: &JsonValue = &json_string["row_names"];
                     //println!("row_string_search:{}", row_string_search);
                     let mut row_names = Vec::<String>::new();
@@ -740,8 +730,8 @@ fn main() {
                     }
                     //println!("plot_image:{}", plot_image);
 
-                    let input_list: Vec<&str> = matrix.split(";").collect(); // Vector containing list of sequences, the first two containing ref and alt.
-                                                                             //println!("input_list:{:?}", input_list);
+                    //let input_list: Vec<&str> = matrix.split(";").collect(); // Vector containing list of sequences, the first two containing ref and alt.
+                    //println!("input_list:{:?}", input_list);
 
                     let now = Instant::now();
                     // Generating dissimilarity matrix
@@ -749,29 +739,19 @@ fn main() {
                     let mut coordinates_plain = Vec::<f64>::new();
                     //let mut coordinates = Array2::<f64>::new();
                     //let mut coord_array: Vec<Array1<f64>> = vec![];
-                    for i in 0..input_list.len() {
-                        let line = input_list[i]
-                            .replace("[", "")
-                            .replace("]", "")
-                            .replace("\n", "");
-                        //println!("line:{}", line);
-                        let line2: Vec<&str> = line.split(",").collect();
-                        //println!("line2:{:?}", line2);
+                    for i in 0..matrix.len() {
                         let mut matrix_line = Vec::<f64>::new(); // Will generate a single row/column of the matrix
-                        for j in 0..line2.len() {
-                            matrix_line.push(line2[j].parse::<f64>().unwrap());
-                            coordinates_plain.push(line2[j].parse::<f64>().unwrap());
+                        for j in 0..matrix[i].len() {
+                            matrix_line.push(matrix[i][j].as_f64().unwrap());
+                            coordinates_plain.push(matrix[i][j].as_f64().unwrap());
                         }
                         //let matrix_array = Array1::from(matrix_line.clone());
                         //coord_array.push(matrix_array);
                         coordinates.push(matrix_line);
                     }
                     //println!("coord_array:{:?}", coord_array);
-                    let input_matrix = DMatrix::from_vec(
-                        coordinates[0].len(),
-                        coordinates.len(),
-                        coordinates_plain,
-                    );
+                    let input_matrix =
+                        DMatrix::from_vec(matrix[0].len(), matrix.len(), coordinates_plain);
 
                     //println!("input_matrix:{:?}", input_matrix.nrows());
                     if input_matrix.ncols() != row_names.len() && row_names.len() > 0 {
@@ -798,11 +778,11 @@ fn main() {
 
                     // Build our condensed matrix by computinghe dissimilarity between all
                     // possible coordinate pairs.
-                    let (sorted_col_elements, sorted_col_coordinates, max_col_y_length) =
+                    let (sorted_col_elements, sorted_col_coordinates) =
                         sort_elements(&input_matrix, &cluster_method);
                     println!("sorted_col_elements:{:?}", sorted_col_elements);
 
-                    let (sorted_row_elements, sorted_row_coordinates, max_row_y_length) =
+                    let (sorted_row_elements, sorted_row_coordinates) =
                         sort_elements(&input_matrix.transpose(), &cluster_method);
                     println!("sorted_row_elements:{:?}", sorted_row_elements);
                     let mut sorted_row_names = Vec::<String>::new();
@@ -839,7 +819,6 @@ fn main() {
                         &serde_json::to_string(&sorted_matrix_transpose).unwrap()
                     );
 
-                    println!("max_col_y_length:{}", max_col_y_length);
                     let mut sorted_col_coordinates_string = "[".to_string();
                     for i in 0..sorted_col_coordinates.len() {
                         sorted_col_coordinates_string +=
@@ -851,7 +830,6 @@ fn main() {
                     sorted_col_coordinates_string += &"]".to_string();
                     println!("sorted_col_coordinates:{:?}", sorted_col_coordinates_string);
 
-                    println!("max_row_y_length:{}", max_row_y_length);
                     let mut sorted_row_coordinates_string = "[".to_string();
                     for i in 0..sorted_row_coordinates.len() {
                         sorted_row_coordinates_string +=
