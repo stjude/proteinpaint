@@ -27,12 +27,14 @@ OUTPUT PARAMETERS
        node_coordinates: (X,Y) coordinates of the current node.
        child_nodes: ID's of the child node (if it exists). There will be no child node for the original (input) nodes in the dendrogram.
        child_node_coordinates: (X,Y) coordinates of each of the two child nodes (if they exist).
- 4) sorted_row_elements: List of sorted row indexes in the sorted matrix.
- 5) sorted_row_coordinates: Data for dendrogram in the y-axis. Contains JSON string containing list of traits for each node in the dendrogram.
+ 4) max_col_y_length: This contains the distance of the farthest node from the top node for the dendrogram at the top. This will be useful when rendering the dendrogram on the client side. The ratio of the distance from a node to the top node / max_row_y_length will be the y-coordinate of the point from the top.
+ 5) sorted_row_elements: List of sorted row indexes in the sorted matrix.
+ 6) sorted_row_coordinates: Data for dendrogram in the y-axis. Contains JSON string containing list of traits for each node in the dendrogram.
        node_id: Node ID of the current node.
        node_coordinates: (X,Y) coordinates of the current node.
        child_nodes: ID's of the child node (if it exists). There will be no child node for the original (input) nodes in the dendrogram.
        child_node_coordinates: (X,Y) coordinates of each of the two child nodes (if they exist).
+ 7) max_row_y_length: This contains the distance of the farthest node from the top node for the dendrogram in the left. This will be useful when rendering the dendrogram on the client side. The ratio of the distance from a node to the top node / max_row_y_length will be the y-coordinate of the point from the top.
 
 EXAMPLES
  1) Syntax: cd .. && cargo build --release && json='{"matrix":"[[3,4,5,20];[3,5,6,1];[3,5,6,10]]","row_names":"[row1,row2,row3]","col_names":"[col1,col2,col3,col4]","plot_image":true,"cluster_method":"Average"}' && time echo "$json" | target/release/cluster
@@ -63,6 +65,7 @@ use nalgebra::base::dimension::Dyn;
 use nalgebra::base::Matrix;
 use nalgebra::base::VecStorage;
 use nalgebra::DMatrix;
+use serde::ser::{SerializeStruct, Serializer};
 use serde::{Deserialize, Serialize};
 use serde_json;
 use std::env;
@@ -80,26 +83,99 @@ use std::io;
 use std::time::Instant;
 
 #[allow(dead_code)]
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 struct NewNodeInfo {
     node_id: usize,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
     child_nodes: Vec<usize>,
 }
 
 #[allow(dead_code)]
-#[derive(Debug, Copy, Clone, Serialize, Deserialize)]
+#[derive(Debug, Copy, Clone, Deserialize)]
+//#[serde(skip_serializing_if = "Struct::is_empty")]
 struct NodeCoordinate {
+    #[serde(skip_serializing_if = "Option::is_none")]
     x: Option<f64>, // The horizontal position of the node in the dendrogram.
+    #[serde(skip_serializing_if = "Option::is_none")]
     y: Option<f64>, // The y-position stores the relative distance from the last (top most) node in the dendrogram
 }
 
+impl Serialize for NodeCoordinate {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let x = &self.x;
+        let y = &self.y;
+
+        let mut state;
+        if x.is_some() && y.is_some() {
+            state = serializer.serialize_struct("NodeCoordinate", 2)?;
+            state.serialize_field("x", &self.x)?;
+            state.serialize_field("y", &self.y)?;
+        } else {
+            state = serializer.serialize_struct("NodeCoordinate", 0)?;
+        }
+        state.end()
+    }
+}
+
+//impl<'de> Deserialize<'de> for NodeCoordinate {
+//    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+//    where
+//        D: Deserializer<'de>,
+//    {
+//        //enum Field {
+//        //    x,
+//        //    y,
+//        //}
+//
+//        // This part could also be generated independently by:
+//        //
+//        #[derive(Deserialize)]
+//        #[serde(field_identifier)]
+//        enum Field {
+//            x,
+//            y,
+//        }
+//    }
+//}
+
 #[allow(dead_code)]
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 struct NewNodeRelativeCoordinates {
-    node_id: usize,                              // Node ID of the current node.
-    node_coordinates: NodeCoordinate,            // (X,Y) coordinates of the current node.
+    node_id: usize,                   // Node ID of the current node.
+    node_coordinates: NodeCoordinate, // (X,Y) coordinates of the current node.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
     child_nodes: Vec<usize>, // ID's of the child node (if it exists). There will be no child node for the original (input) nodes in the dendrogram.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
     child_node_coordinates: Vec<NodeCoordinate>, // (X,Y) coordinates of each of the two child nodes (if they exist).
+}
+
+impl Serialize for NewNodeRelativeCoordinates {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let child_nodes = &self.child_nodes;
+        let node_id = &self.node_id;
+        let node_coordinates = &self.node_coordinates;
+        let child_node_coordinates = &self.child_node_coordinates;
+
+        let mut state;
+        if child_nodes.len() == 0 {
+            state = serializer.serialize_struct("NewNodeRelativeCoordinates", 2)?;
+            state.serialize_field("node_id", node_id)?;
+            state.serialize_field("node_coordinates", &self.node_coordinates)?;
+        } else {
+            state = serializer.serialize_struct("NewNodeRelativeCoordinates", 4)?;
+            state.serialize_field("node_id", node_id)?;
+            state.serialize_field("child_nodes", child_nodes)?;
+            state.serialize_field("node_coordinates", node_coordinates)?;
+            state.serialize_field("child_node_coordinates", child_node_coordinates)?;
+        }
+        state.end()
+    }
 }
 
 #[allow(dead_code)]
@@ -258,12 +334,13 @@ fn par_euclidean_distance(item1: &Vec<f64>, item2: &Vec<f64>) -> f64 {
 fn sort_elements(
     coordinates: &Matrix<f64, Dyn, Dyn, VecStorage<f64, Dyn, Dyn>>,
     cluster_method: &String,
-) -> (Vec<usize>, Vec<NewNodeRelativeCoordinates>) {
+) -> (Vec<usize>, Vec<NewNodeRelativeCoordinates>, usize) {
     //fn sort_elements(coordinates: &Vec<Vec<f64>>) -> Vec<usize> {
     //fn sort_elements(coordinates: &Vec<Array1<f64>>) -> Vec<usize> {
     let new_now = Instant::now();
     let mut sorted_nodes = Vec::<usize>::new();
     let mut node_coordinates_final = Vec::<NewNodeRelativeCoordinates>::new();
+    let mut max_length_node_distance = 0; // max-length between all original nodes and the topmost node
     if coordinates.len() > 0 {
         //let mut condensed = vec![];
         //for row in 0..coordinates.len() - 1 {
@@ -370,7 +447,6 @@ fn sort_elements(
         let mut current_node = min_mean_value_index;
 
         let mut num_iter = 0;
-        let mut max_length_node_distance = 0; // max-length between all original node and the topmost node
         while remaining_nodes.len() > 0 {
             let mut smallest_distance = 1000000000; // Initialized to very high value
 
@@ -556,7 +632,11 @@ fn sort_elements(
     } else {
         panic!("The dissimilarity matrix length cannot be zero");
     }
-    (sorted_nodes, node_coordinates_final)
+    (
+        sorted_nodes,
+        node_coordinates_final,
+        max_length_node_distance,
+    )
 }
 
 fn closest_degenerate_nodes(
@@ -714,11 +794,11 @@ fn main() {
 
                     // Build our condensed matrix by computinghe dissimilarity between all
                     // possible coordinate pairs.
-                    let (sorted_col_elements, sorted_col_coordinates) =
+                    let (sorted_col_elements, sorted_col_coordinates, max_col_y_length) =
                         sort_elements(&input_matrix, &cluster_method);
                     println!("sorted_col_elements:{:?}", sorted_col_elements);
 
-                    let (sorted_row_elements, sorted_row_coordinates) =
+                    let (sorted_row_elements, sorted_row_coordinates, max_row_y_length) =
                         sort_elements(&input_matrix.transpose(), &cluster_method);
                     println!("sorted_row_elements:{:?}", sorted_row_elements);
                     let mut sorted_row_names = Vec::<String>::new();
@@ -754,6 +834,8 @@ fn main() {
                         "sorted_matrix:{:?}",
                         &serde_json::to_string(&sorted_matrix_transpose).unwrap()
                     );
+
+                    println!("max_col_y_length:{}", max_col_y_length);
                     let mut sorted_col_coordinates_string = "[".to_string();
                     for i in 0..sorted_col_coordinates.len() {
                         sorted_col_coordinates_string +=
@@ -765,6 +847,7 @@ fn main() {
                     sorted_col_coordinates_string += &"]".to_string();
                     println!("sorted_col_coordinates:{:?}", sorted_col_coordinates_string);
 
+                    println!("max_row_y_length:{}", max_row_y_length);
                     let mut sorted_row_coordinates_string = "[".to_string();
                     for i in 0..sorted_row_coordinates.len() {
                         sorted_row_coordinates_string +=
