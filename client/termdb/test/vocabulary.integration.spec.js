@@ -494,23 +494,10 @@ tape.skip('syncTermData()', async test => {
 	let result, config, data
 
 	//Invalid arguments
-	message = `Should throw for missing data`
 	config = { notRealKey: 'Not a real value' }
-	data = { notRealKey: 'Not a real value', refs: ['1'] }
-	// try {
-	result = termdbVocabApi.syncTermData(undefined, undefined)
-	// 	test.fail(message)
-	// } catch (e) {
-	// 	test.pass(`${message}: ${e}`)
-	// }
-	console.log(result)
-	// try {
-	// 	result = termdbVocabApi.syncTermData(undefined, undefined)
-	// 	console.log(result)
-	// 	test.fail(message)
-	// } catch (e) {
-	// 	test.pass(`${message}: ${e}`)
-	// }
+	data = { refs: [1] }
+	result = termdbVocabApi.syncTermData(config, data)
+	test.equal(result, undefined, `Should return 'undefined' for invalid arguments`)
 
 	test.end()
 })
@@ -787,12 +774,12 @@ tape('getCategories()', async test => {
 
 	//Term and body args, no filter arg
 	body = { bar_by_grade: 1, value_by_max_grade: 1 }
-	testTerm = Object.values(termjson).find(d => d.name == 'Arrhythmias')
+	testTerm = termjson['Arrhythmias']
 	termCat = await termdbVocabApi.getCategories(testTerm, '', body)
 	test.equal(
 		termCat.orderedLabels.length,
 		Object.keys(testTerm.values).length,
-		`Should return the same number of categories`
+		`Should return the same number of categories, without filter arg`
 	)
 
 	//Term, filter, and body args
@@ -812,6 +799,11 @@ tape('getCategories()', async test => {
 	}
 	body = { bar_by_grade: 1, value_by_max_grade: 1 }
 	termCat = await termdbVocabApi.getCategories(testTerm, filter, body)
+	test.equal(
+		termCat.orderedLabels.length,
+		Object.keys(testTerm.values).length,
+		`Should return the same number of categories, with filter arg`
+	)
 
 	test.end()
 })
@@ -870,8 +862,8 @@ tape.skip('getTermTypes()', async test => {
 	const termdbVocabApi = await getTermdbVocabApi()
 	let testIds, result
 
-	testIds = 'agedx diaggrp'
-	result = await termdbVocabApi.getTermTypes()
+	testIds = 'agedx'
+	result = await termdbVocabApi.getTermTypes(testIds)
 	console.log(result)
 
 	test.end()

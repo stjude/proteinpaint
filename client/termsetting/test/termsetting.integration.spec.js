@@ -12,7 +12,8 @@ const {
 	detectGte,
 	whenGone,
 	whenHidden,
-	whenVisible
+	whenVisible,
+	testAppInit
 } = require('../../test/test.helpers')
 
 /*********
@@ -1103,5 +1104,66 @@ tape('Custom vocabulary', async test => {
 	)
 
 	opts.pill.Inner.dom.tip.hide()
+	test.end()
+})
+
+tape.only('noTermPromptOptions', async test => {
+	test.timeoutAfter(1000)
+
+	let opts
+
+	opts = await getOpts({
+		tsData: {
+			q: {
+				type: 'values'
+			},
+			noTermPromptOptions: [{ isDictionary: true, text: 'Dictionary' }]
+		}
+	})
+
+	await opts.pill.main(opts.tsData)
+	await opts.pillMenuClick('Dictionary')
+
+	test.end()
+})
+
+tape.skip('Samplelst term', async test => {
+	test.timeoutAfter(1000)
+	const opts = await getOpts({
+		tsData: {
+			term: {
+				name: 'test',
+				type: 'samplelst',
+				values: {
+					'Group 1': { key: 'Group 1', label: 'Group 1' },
+					Others: { key: 'Others', label: 'Others' }
+				}
+			},
+			q: {
+				mode: 'discrete',
+				groups: [
+					{
+						name: 'Group 1',
+						in: true,
+						values: [1, 2, 3]
+					},
+					{
+						name: 'Group 2',
+						in: false,
+						values: [4, 5, 6]
+					}
+				]
+			}
+		}
+	})
+
+	await opts.pill.main(opts.tsData)
+	const tip = opts.pill.Inner.dom.tip.d.node()
+
+	test.end()
+})
+
+tape.skip('geneVariant term', async test => {
+	test.timeoutAfter(1000)
 	test.end()
 })
