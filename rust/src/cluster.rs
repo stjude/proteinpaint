@@ -730,9 +730,6 @@ fn main() {
                     }
                     //println!("plot_image:{}", plot_image);
 
-                    //let input_list: Vec<&str> = matrix.split(";").collect(); // Vector containing list of sequences, the first two containing ref and alt.
-                    //println!("input_list:{:?}", input_list);
-
                     let now = Instant::now();
                     // Generating dissimilarity matrix
                     let mut coordinates: Vec<Vec<f64>> = vec![];
