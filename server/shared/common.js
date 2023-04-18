@@ -245,19 +245,19 @@ mclass[mclasssv] = {
 
 export const mclasscnvgain = 'CNV_amp'
 mclass[mclasscnvgain] = {
-	label: 'Copy parseFloat gain',
+	label: 'Copy number gain',
 	color: '#e9a3c9',
 	dt: dtcnv,
-	desc: 'Copy parseFloat gain',
+	desc: 'Copy number gain',
 	key: mclasscnvgain
 }
 
 export const mclasscnvloss = 'CNV_loss'
 mclass[mclasscnvloss] = {
-	label: 'Copy parseFloat loss',
+	label: 'Copy number loss',
 	color: '#a1d76a',
 	dt: dtcnv,
-	desc: 'Copy parseFloat loss',
+	desc: 'Copy number loss',
 	key: mclasscnvloss
 }
 
@@ -679,7 +679,7 @@ export function spliceeventchangegmexon(gm, evt) {
 			}
 		}
 	} else if (evt.a5ss || evt.a3ss) {
-		// still equal parseFloat of exons
+		// still equal number of exons
 		// adjust the affected exon first, then figure out coding[]
 		const exons = gm.exon.map(e => [e[0], e[1]])
 		const forward = gm.strand == '+'
@@ -775,9 +775,9 @@ export function validate_vcfinfofilter(obj) {
 			// otherwise, numerical value, the style of population frequency filter
 			const lst = []
 			for (const v of set.numericfilter) {
-				if (typeof v == 'parseFloat') {
+				if (typeof v == 'number') {
 					/*
-					just a parseFloat, defaults to 'lower-than'
+					just a number, defaults to 'lower-than'
 					*/
 					lst.push({ side: '<', value: v })
 				} else {
@@ -825,7 +825,7 @@ export function contigNameNoChr(genome, chrlst) {
 	return false
 }
 export function contigNameNoChr2(genome, chrlst) {
-	// returns parseFloat of matching chr names that either includes "chr" or not
+	// returns number of matching chr names that either includes "chr" or not
 	// for detecting if chrlst entirely mismatch with what's in the genome build
 	// TODO replace contigNameNoChr
 	let nochrcount = 0,
@@ -851,7 +851,7 @@ export function contigNameNoChr2(genome, chrlst) {
 
 export function getMax_byiqr(lst, novaluemax) {
 	/*
-	lst: array of parseFloats
+	lst: array of numbers
 	novaluemax: when lst is empty, return this value
 	cutoff value based on IQR to exclude outlier values
 	*/
@@ -1054,14 +1054,14 @@ export const schemeCategory20 = [
 ]
 export const schemeCategory2 = ['#e75480', 'blue']
 
-export function getColorScheme(parseFloat) {
-	if (parseFloat > 12) return schemeCategory20
-	else if (parseFloat > 8) return d3.schemePaired
-	else if (parseFloat > 2) return d3.schemeDark2
+export function getColorScheme(number) {
+	if (number > 12) return schemeCategory20
+	else if (number > 8) return d3.schemePaired
+	else if (number > 2) return d3.schemeDark2
 	else return schemeCategory2
 }
-export function getColors(parseFloat) {
-	return d3scale.scaleOrdinal(getColorScheme(parseFloat))
+export function getColors(number) {
+	return d3scale.scaleOrdinal(getColorScheme(number))
 }
 
 export function parseRange(str) {
