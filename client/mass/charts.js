@@ -78,12 +78,10 @@ function getChartTypeList(self) {
 
 	1. show dictionary tree
 		by calling showTree_select1term() or showTree_selectlst()
-	2. show menu
-		by calling showMenu()
-	3. prep chart
+	2. prep chart
 		by calling prepPlot()
-	4. display chart-specific menu by importing from ../plots/<chartType>.js
-		by calling loadChartSpecificMenu()
+	3. display chart-specific menu by importing from ../plots/<chartType>.js
+		and call the imported function loadChartSpecificMenu()
 
 	.label:
 		text to show in the button
@@ -104,18 +102,9 @@ function getChartTypeList(self) {
 		- dispatch "plot_prep" action to produce a 'initiating' UI of this plot, for user to fill in additional details to launch the plot
 			example: regression, table, scatterplot which requires user to select two terms
 		
-		self.showMenu
-			show a menu
-			each option in chart.menuOptions will have its own clickTo to determine the behavior of clicking on it
-			example: show a menu for the supported types of regression analysis  
-
 	.usecase:{}
 		required for clickTo=tree_select1term
 		provide to termdb app
-
-	.menuOptions:[]
-		required for clickTo=showMenu
-		each menu option will have its own clickTo to determine the behavior of clicking on it
 
 	.config:{}
 		required for clickTo=prepPlot
@@ -137,12 +126,6 @@ function getChartTypeList(self) {
 			clickTo: self.showTree_select1term,
 			usecase: { detail: 'term' }
 		},
-		/*
-		{
-			label: 'Table',
-			clickTo:'prepPlot',
-		},
-		*/
 		{
 			// should only show for official dataset, but not custom
 			label: 'Cumulative Incidence',
@@ -161,37 +144,7 @@ function getChartTypeList(self) {
 			// should only show for official dataset, but not custom
 			label: 'Regression Analysis',
 			chartType: 'regression',
-			clickTo: self.showMenu,
-			menuOptions: [
-				{
-					label: 'Linear',
-					clickTo: self.prepPlot,
-					chartType: 'regression',
-					config: {
-						chartType: 'regression',
-						regressionType: 'linear',
-						independent: []
-					}
-				},
-				{
-					label: 'Logistic',
-					clickTo: self.prepPlot,
-					config: {
-						chartType: 'regression',
-						regressionType: 'logistic',
-						independent: []
-					}
-				},
-				{
-					label: 'Cox',
-					clickTo: self.prepPlot,
-					config: {
-						chartType: 'regression',
-						regressionType: 'cox',
-						independent: []
-					}
-				}
-			]
+			clickTo: self.loadChartSpecificMenu
 		},
 		{
 			label: 'Sample Matrix',
@@ -238,49 +191,6 @@ function setRenderers(self) {
 				self.dom.tip.clear().showunder(this)
 				chart.clickTo(chart)
 			})
-	}
-
-	/*
-		show a menu
-		each option in chart.menuOptions will have its own clickTo 
-		example: show a menu for the supported types of regression analysis  
-	*/
-	self.showMenu = function(chart) {
-		if (!Array.isArray(chart.menuOptions)) throw 'menuOptions is not array'
-		//const holder = chart.withBackBtn ? self.dom.tip.d.append('div') : self.dom.tip.d
-
-		let backBtn
-		if (chart.withBackBtn) {
-			backBtn = self.dom.tip.d
-				.append('button')
-				.style('display', 'none')
-				.style('margin', '5px')
-				.style('padding', '2px')
-				.html('&lt;&lt;Back')
-				.on('click', () => {
-					backBtn.style('display', 'none')
-					self.dom.submenu.remove()
-					delete self.dom.submenu // delete reference
-					menuDiv.style('display', 'block')
-				})
-		}
-
-		const menuDiv = self.dom.tip.d.append('div')
-		for (const opt of chart.menuOptions) {
-			menuDiv
-				.append('div')
-				.attr('class', 'sja_menuoption sja_sharp_border')
-				.text(opt.label)
-				.on('click', () => {
-					if (backBtn) {
-						menuDiv.style('display', 'none')
-						backBtn.style('display', 'block')
-					} else {
-						self.dom.tip.hide()
-					}
-					opt.clickTo(opt)
-				})
-		}
 	}
 
 	/*	
