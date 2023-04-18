@@ -41,6 +41,7 @@ validate_query_snvindel
 validate_query_svfusion
 	svfusionByRangeGetter_file
 validate_query_ld
+validate_query_geneExpression
 validate_query_singleSampleMutation
 validate_variant2samples
 validate_ssm2canonicalisoform
@@ -68,6 +69,7 @@ export async function init(ds, genome, _servconfig, app = null, basepath = null)
 		await validate_query_svfusion(ds, genome)
 		await validate_query_geneCnv(ds, genome)
 		await validate_query_ld(ds, genome)
+		await validate_query_geneExpression(ds, genome)
 		await validate_query_singleSampleMutation(ds, genome)
 
 		validate_variant2samples(ds)
@@ -1065,6 +1067,65 @@ async function validate_query_ld(ds, genome) {
 	if (!q.overlay) throw 'ld.overlay{} missing'
 	if (!q.overlay.color_0) throw 'ld.overlay.color_0 missing'
 	if (!q.overlay.color_1) throw 'ld.overlay.color_1 missing'
+}
+
+async function validate_query_geneExpression(ds, genome) {
+	const q = ds.queries.geneExpression
+	if (!q) return
+
+	if (q.gdcapi) {
+		gdc.validate_query_geneExpression(ds)
+		// .get() added, same behavior as below
+		return
+	}
+
+	if (!q.file) throw '.file missing from queries.geneExpression'
+	q.file = path.join(serverconfig.tpmasterdir, q.file)
+	await utils.validate_tabixfile(q.file)
+	q.nochr = await utils.tabix_is_nochr(q.file, null, genome)
+
+	/*
+	query exp data one gene at a time
+	param{}
+	.genes[{}]
+		.gene=str
+		.chr=str
+		.start=int
+		.stop=int
+	.filterObj{}
+	*/
+	q.get = async param => {
+		let limitSamples
+		{
+			const lst = await mayLimitSamples(param, null, ds)
+			if (lst) limitSamples = new Set(lst.map(i => i.name))
+		}
+
+		const gene2sample2value = new Map() // k: gene symbol, v: { sampleId : value }
+
+		for (const g of param.genes) {
+			// g = {gene/chr/start/stop}
+			gene2sample2value.set(g.gene, {})
+			await utils.get_lines_bigfile({
+				args: [q.file, (q.nochr ? g.chr.replace('chr', '') : g.chr) + ':' + g.start + '-' + g.stop],
+				dir: q.dir,
+				callback: line => {
+					const l = line.split('\t')
+					let j
+					try {
+						j = JSON.parse(l[3])
+					} catch (e) {
+						//console.log('svfusion json err')
+						return
+					}
+					if (j.gene != g.gene) return
+					if (limitSamples && !limitSamples.has(j.sample)) return
+					gene2sample2value.get(g.gene)[j.sample] = j.value
+				}
+			})
+		}
+		return gene2sample2value
+	}
 }
 
 async function validate_query_singleSampleMutation(ds, genome) {

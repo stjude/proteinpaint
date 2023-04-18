@@ -169,6 +169,11 @@ function getChartTypeList(self) {
 			label: 'Genome browser',
 			chartType: 'genomeBrowser',
 			clickTo: self.loadChartSpecificMenu
+		},
+		{
+			label: 'Gene expression',
+			chartType: 'geneExpression',
+			clickTo: self.loadChartSpecificMenu
 		}
 	]
 }

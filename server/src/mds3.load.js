@@ -2,6 +2,7 @@ const app = require('./app')
 const path = require('path')
 const utils = require('./utils')
 const snvindelByRangeGetter_bcf = require('./mds3.init').snvindelByRangeGetter_bcf
+const run_rust = require('@sjcrh/proteinpaint-rust').run_rust
 
 /*
 method good for somatic variants, in skewer and gp queries:
@@ -248,6 +249,18 @@ async function load_driver(q, ds) {
 		return result
 	}
 
+	if (q.geneExpression) {
+		if (!ds.queries.geneExpression) throw 'not supported'
+		const gene2sample2value = await ds.queries.geneExpression.get(q)
+		if (gene2sample2value.size == 0) throw 'no data'
+		if (gene2sample2value.size == 1) {
+			// get data for only 1 gene; may create violin plot
+			return { gene2sample2value }
+		}
+		// have data for multiple genes, run clustering
+		return { clustering: await geneExpressionClustering(gene2sample2value, q) }
+	}
+
 	// other query type
 
 	throw 'do not know what client wants'
@@ -400,4 +413,32 @@ function may_validate_filters(q, ds) {
 	if (q.skewerRim?.type == 'format' || q.formatFilter) {
 		q.addFormatValues = true
 	}
+}
+
+async function geneExpressionClustering(data, q) {
+	// get set of uniq sample names, to generate col_names dimension
+	const sampleSet = new Set()
+	for (const o of data.values()) {
+		// {sampleId: value}
+		for (const s in o) sampleSet.add(s)
+	}
+
+	const inputData = {
+		matrix: [],
+		row_names: [], // genes
+		col_names: [...sampleSet] // samples
+	}
+
+	// compose "data{}" into a matrix
+	for (const [gene, o] of data) {
+		inputData.row_names.push(gene)
+		const row = []
+		for (const s of inputData.col_names) {
+			row.push(o[s] || 0)
+		}
+		inputData.matrix.push(row)
+	}
+
+	const result = await run_rust('cluster', inputData)
+	return result
 }

@@ -439,6 +439,9 @@ but boxplot and scatter are now child types under "summary" plot.
 					supportedChartTypes[cohort].push('genomeBrowser')
 				}
 			}
+			if (ds.queries.geneExpression) {
+				for (const cohort in supportedChartTypes) supportedChartTypes[cohort].push('geneExpression')
+			}
 		}
 
 		return supportedChartTypes
