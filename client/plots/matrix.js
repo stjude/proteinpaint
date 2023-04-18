@@ -920,9 +920,9 @@ class Matrix {
 					siblingCells.push(cell)
 				}
 
-				if (s.showGrid) {
+				if (s.showGrid == 'rect') {
 					const cell = maySetEmptyCell[t.tw.term.type]?.(siblingCells, cellTemplate, s, this.dimensions)
-					if (cell) emptyGridCells.unshift(cell)
+					if (cell) emptyGridCells.push(cell)
 				}
 			}
 			if (emptyGridCells.length) series.cells.unshift(...emptyGridCells)
