@@ -101,10 +101,13 @@ export async function getPlotConfig(opts, app) {
 	// may apply term-specific changes to the default object
 	copyMerge(config, opts)
 
+	const m = config.settings.matrix
 	// harcode these overrides for now
-	config.settings.matrix.duration = 0
+	m.duration = 0
 	// force auto-dimensions for colw
-	config.settings.matrix.colw = 0
+	m.colw = 0
+	// support deprecated sortSamplesBy value from a saved session
+	if (m.sortSamplesBy) m.sortSamplesBy = 'class'
 
 	const promises = []
 	for (const grp of config.termgroups) {
