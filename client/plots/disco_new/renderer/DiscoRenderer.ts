@@ -14,23 +14,16 @@ export class DiscoRenderer implements IRenderer {
 
         const data = ring.elements
 
-        console.log()
-
         const pie = d3.pie<number>()
-            .padAngle(0.005)
-            .value(d => {
-                console.log(d)
-                return d.size
-            })
+            .padAngle(0.002)
+            .value(d => d.size)
             .sort(null);
 
         const arcData = pie(data);
 
-
         const arc = d3.arc<d3.PieArcDatum<number>>()
             .innerRadius(ring.innerRadius)
             .outerRadius(ring.outerRadius);
-
 
         svg.selectAll("path")
             .data(arcData)

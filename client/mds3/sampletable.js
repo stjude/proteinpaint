@@ -532,6 +532,10 @@ async function showDtDiscoNew(event, sample, arg, fromTable = false) {
 				genome: gdcGenome,
 				dslabel: gdcDslabel,
 				args: disco_arg,
+				settings: {
+					showControls: false,
+					selectedSamples: []
+				},
 				plots: [
 					{
 						chartType: 'Disco',

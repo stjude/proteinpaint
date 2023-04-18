@@ -1,5 +1,5 @@
 import Arc from "#plots/disco_new/viewmodel/Arc";
-
+import Ribbon from "#plots/disco_new/viewmodel/Ribbon";
 export default class Ring<T extends Arc> {
     radius: number
     width: number
