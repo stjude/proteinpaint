@@ -355,7 +355,6 @@ function getPj(q, data, tdb, ds) {
 			key: 'key' + i,
 			val: 'val' + i,
 			nval: 'nval' + i,
-			isGenotype: q['term' + i + '_is_genotype'],
 			bins,
 			q: d.q,
 			orderedLabels: getOrderedLabels(d.term, bins, d.q)
@@ -371,12 +370,7 @@ function getPj(q, data, tdb, ds) {
 				// mutates the data row, ok since
 				// rows from db query are unique to request
 				for (const d of terms) {
-					if (d.isGenotype) {
-						const genotype = q.sample2gt.get(row.sample)
-						if (!genotype) return
-						row[d.key] = genotype
-						row[d.val] = genotype
-					} else if (d.term.type == 'condition') {
+					if (d.term.type == 'condition') {
 						row[d.key] = d.q.bar_by_grade && row[d.key] in d.term.values ? d.term.values[row[d.key]].label : row[d.key]
 						row[d.val] = row[d.key]
 					} else if (d.term.type == 'float' || d.term.type == 'integer') {
@@ -514,7 +508,7 @@ export function getOrderedLabels(term, bins, q) {
 function getTermDetails(q, tdb, index) {
 	const termnum_id = 'term' + index + '_id'
 	const termid = q[termnum_id]
-	const term = termid && !q['term' + index + '_is_genotype'] ? tdb.q.termjsonByOneid(termid) : {}
+	const term = q[termid] ? tdb.q.termjsonByOneid(termid) : q[`term${index}`] ? q[`term${index}`] : {}
 	const termIsNumeric = term.type == 'integer' || term.type == 'float'
 	const unannotatedValues = term.values
 		? Object.keys(term.values)

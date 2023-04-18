@@ -4,7 +4,8 @@ export const sampleLstSql = {
 			samples,
 			samplesString
 		for (const [i, group] of tw.q.groups.entries()) {
-			const name = Object.keys(tw.term.values)[i]
+			// default group.in=true, TODO: put this in fillTW?
+			if (!('in' in group)) group.in = true
 			samples = group.values.map(value => value.sampleId)
 			samplesString = samples.map(() => '?').join(',')
 
@@ -14,7 +15,7 @@ export const sampleLstSql = {
 			`
 			if (i != tw.q.groups.length - 1) sql += 'UNION ALL '
 
-			values.push(name, name, ...samples)
+			values.push(group.name, group.name, ...samples)
 		}
 		return { sql: `${tablename} AS (${sql})`, tablename }
 	}

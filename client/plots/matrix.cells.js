@@ -80,6 +80,16 @@ function setGeneVariantCellProps(cell, tw, anno, value, s, t, self, width, heigh
 	return { ref: t.ref, group, value: value.class, entry: { key: value.class, label: cell.label, fill: cell.fill } }
 }
 
+export function getEmptyCell(cellTemplate, s, d) {
+	const cell = Object.assign({}, cellTemplate)
+	cell.fill = s.cellbg
+	cell.height = s.rowh
+	cell.width = d.colw
+	cell.x = cell.totalIndex * d.dx + cell.grpIndex * s.colgspace
+	cell.y = 0
+	return cell
+}
+
 // NOTE: may move these code by term.type to matrix.[categorical|*].js
 // if more term.type specific logic becomes harder to maintain here
 
@@ -100,4 +110,17 @@ export const setCellProps = {
 	   but how - quantitative, categorical, etc? */
 	//survival: setNumericCellProps,
 	geneVariant: setGeneVariantCellProps
+}
+
+export const maySetEmptyCell = {
+	geneVariant: (siblingCells, cellTemplate, s, d) => {
+		if (siblingCells.find(c => c.value.dt == 4)) return
+		const cell = Object.assign({}, cellTemplate)
+		cell.fill = s.cellbg
+		cell.height = s.rowh
+		cell.width = d.colw
+		cell.x = cell.totalIndex * d.dx + cell.grpIndex * s.colgspace
+		cell.y = 0
+		return cell
+	}
 }

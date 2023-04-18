@@ -1,14 +1,15 @@
 import { axisLeft, axisTop } from 'd3-axis'
-import { scaleLinear, scaleOrdinal } from 'd3-scale'
+import { scaleLinear, scaleOrdinal, scaleLog } from 'd3-scale'
 import { area, curveBumpX, curveBumpY } from 'd3-shape'
-import { schemeCategory10 } from 'd3-scale-chromatic'
+import { getColors } from '#shared/common'
 import { brushX, brushY } from 'd3-brush'
 import { renderTable } from '#dom/table'
 import { Menu } from '../dom/menu'
 import { rgb } from 'd3'
+import { format } from 'd3-format'
+import { interpolate } from 'd3-interpolate'
 
 export default function violinRenderer(self) {
-	const k2c = scaleOrdinal(schemeCategory10)
 	self.render = function() {
 		const settings = self.config.settings.violin
 		const isH = settings.orientation === 'horizontal'
@@ -28,10 +29,9 @@ export default function violinRenderer(self) {
 				}
 			}
 		}
-
 		//filter out hidden values and only keep plots which are not hidden in term2.q.hiddenvalues
 		self.data.plots = self.data.plots.filter(p => !t2?.q?.hiddenValues?.[p.label || p.seriesId])
-
+		this.k2c = getColors(self.data.plots.length)
 		if (self.legendRenderer) self.legendRenderer(getLegendGrps(self))
 
 		if (self.data.plots.length === 0) {
@@ -191,10 +191,7 @@ export default function violinRenderer(self) {
 
 	function renderScale(t1, t2, settings, isH, svg) {
 		// <g>: holder of numeric axis
-		const g = svg.svgG.append('g')
-		// .transition()
-		// .duration(self.opts.mode == 'minimal' ? 0 : 800)
-		// .delay(self.opts.mode == 'minimal' ? 0 : 100)
+		const g = svg.svgG.append('g').style('font-size', '15')
 		g.call((isH ? axisTop : axisLeft)().scale(svg.axisScale))
 
 		if (self.opts.mode != 'minimal') {
@@ -287,11 +284,14 @@ export default function violinRenderer(self) {
 				.y(d => svg.axisScale(d.x0))
 				.curve(curveBumpY)
 		}
-
+		const label = plot.label.split(',')[0]
+		const catTerm = self.config.term.q.mode == 'discrete' ? self.config.term : self.config.term2
+		const category = catTerm?.term.values ? Object.values(catTerm.term.values).find(o => o.label == label) : null
+		const color = category?.color ? category.color : plot.divideTwBins ? plot.divideTwBins.color : self.k2c(plotIdx)
 		violinG
 			.append('path')
 			.attr('class', 'sjpp-vp-path')
-			.style('fill', self.opts.mode === 'minimal' ? rgb(221, 221, 221) : plot.color ? plot.color : k2c(plotIdx))
+			.style('fill', self.opts.mode === 'minimal' ? rgb(221, 221, 221) : plot.color ? plot.color : color)
 			.style('opacity', 0)
 			// .transition()
 			// .delay(self.opts.mode == 'minimal' ? 0 : 300)
@@ -400,9 +400,14 @@ export default function violinRenderer(self) {
 
 // creates numeric axis
 export function createNumericScale(self, settings, isH) {
-	const axisScale = scaleLinear()
-		.domain([self.data.min, self.data.max + self.data.max / (settings.radius * 4)])
-		.range(isH ? [0, settings.svgw] : [settings.svgw, 0])
+	let axisScale
+	settings.unit == 'log'
+		? (axisScale = scaleLog()
+				.domain([self.data.min === 0 ? 0.001 : self.data.min, self.data.max])
+				.range(isH ? [0, settings.svgw] : [settings.svgw, 0])).clamp(true)
+		: (axisScale = scaleLinear()
+				.domain([self.data.min, self.data.max])
+				.range(isH ? [0, settings.svgw] : [settings.svgw, 0]))
 	return axisScale
 }
 

@@ -126,8 +126,26 @@ class Barchart {
 						{ label: 'Log', value: 'log', getDisplayStyle: plot => (plot.term2 ? 'none' : 'inline-block') },
 						{ label: 'Proportion', value: 'pct', getDisplayStyle: plot => (plot.term2 ? 'inline-block' : 'none') }
 					]
+				},
+				{
+					label: 'Multicolor bars',
+					title: 'Colors bars using the colors preassigned if available, otherwise generates a color',
+					type: 'checkbox',
+					chartType: 'barchart',
+					settingsKey: 'colorBars',
+					boxLabel: 'Yes',
+					getDisplayStyle: plot => (plot.term2 ? 'none' : 'table-row')
+				},
+				{
+					label: 'Default color',
+					title: 'Default color for bars when there is no overlay',
+					type: 'color',
+					chartType: 'barchart',
+					settingsKey: 'defaultColor',
+					getDisplayStyle: plot => (plot.settings.barchart.colorBars || plot.term2 ? 'none' : 'table-row')
 				}
 			]
+
 			if (this.app.getState().termdbConfig.multipleTestingCorrection) {
 				// a checkbox to allow users to show or hide asterisks on bars
 				inputs.push({
@@ -178,7 +196,6 @@ class Barchart {
 				displaySampleIds: appState.termdbConfig.displaySampleIds && this.app.vocabApi.hasVerifiedToken()
 			}),
 			multipleTestingCorrection: appState.termdbConfig.multipleTestingCorrection,
-			ssid: appState.ssid,
 			bar_click_menu: appState.bar_click_menu || {}
 		}
 	}
@@ -212,9 +229,11 @@ class Barchart {
 				}
 			}
 
+			this.term1toColor = {}
 			this.term2toColor = {} // forget any assigned overlay colors when refreshing a barchart
-			delete this.colorScale
 			this.updateSettings(this.config)
+			this.colorScale = getColors(this.config.term.term2 ? this.settings.cols.length : this.settings.rows.length)
+
 			this.chartsData = this.processData(this.currServerData)
 			this.render()
 		} catch (e) {
@@ -228,7 +247,6 @@ class Barchart {
 		const opts = { term: c.term, filter: this.state.termfilter.filter }
 		if (c.term2) opts.term2 = c.term2
 		if (c.term0) opts.term0 = c.term0
-		if (this.state.ssid) opts.ssid = this.state.ssid
 		return opts
 	}
 
@@ -257,6 +275,8 @@ class Barchart {
 			unit: config.settings.barchart.unit,
 			orientation: config.settings.barchart.orientation,
 			asterisksVisible: config.settings.barchart.asterisksVisible,
+			defaultColor: config.settings.barchart.defaultColor,
+			colorBars: config.settings.barchart.colorBars,
 			// normalize bar thickness regardless of orientation
 			colw: config.settings.common.barwidth,
 			rowh: config.settings.common.barwidth,
@@ -281,9 +301,6 @@ class Barchart {
 		this.settings.numCharts = this.currServerData.charts ? this.currServerData.charts.length : 0
 		if (!config.term2 && this.settings.unit == 'pct') {
 			this.settings.unit = 'abs'
-		}
-		if (this.state.ssid) {
-			this.config.term2 = { term: { id: 'genotype', name: this.state.ssid.mutation_name, isgenotype: true }, q: {} }
 		}
 	}
 
@@ -435,6 +452,7 @@ class Barchart {
 					addlSeriesIds[series.seriesId] += series.visibleTotal
 				}
 				for (const data of series.data) {
+					data.seriesId = series.seriesId
 					if (t1.term.type == 'geneVariant' || t2?.term.type == 'geneVariant') {
 						//when term1 or term2 is a geneVariant term, totalsByDataId: {dataId: {chartId:total, ...}, ...}
 						if (!(data.dataId in this.totalsByDataId)) {
@@ -478,6 +496,10 @@ class Barchart {
 	}
 
 	sortStacking(series, chart, chartsData) {
+		this.term1toColor[series.seriesId] = this.settings.colorBars
+			? this.getColor(this.config.term.term, series.seriesId, this.bins?.[1])
+			: this.settings.defaultColor
+
 		series.visibleData.sort(this.overlaySorter)
 		let seriesLogTotal = 0
 		for (const result of series.visibleData) {
@@ -495,50 +517,57 @@ class Barchart {
 			result.logTotal = Math.log10(result.total)
 			seriesLogTotal += result.logTotal
 			this.setTerm2Color(result)
-			result.color = this.term2toColor[result.dataId]
+			result.color = this.term2toColor[result.dataId] || this.term1toColor[series.seriesId]
 		}
 		if (seriesLogTotal > chart.maxSeriesLogTotal) {
 			chart.maxSeriesLogTotal = seriesLogTotal
 		}
-		// assign color to hidden data
-		// for use in legend
+		// assign color to hidden data for use in legend
 		for (const result of series.data) {
+			if (result.color) continue
 			this.setTerm2Color(result)
-			result.color = this.term2toColor[result.dataId]
+			result.color = this.term2toColor[result.dataId] || this.term1toColor[series.seriesId]
 		}
 	}
 
 	setTerm2Color(result) {
-		const t2 = this.config.term2
-		const t2firstVal = Object.values(t2?.term?.values || {})
-		if (t2 && t2.term.values && t2.term.values[result.dataId]?.color) {
-			this.term2toColor[result.dataId] = t2.term.values[result.dataId]?.color
-		}
-		if (this.settings.groups && result.dataId in this.settings.groups) {
-			this.term2toColor[result.dataId] = this.settings.groups[result.dataId].color
-		}
-		if (result.dataId in this.term2toColor) return
-		if (!this.colorScale) this.colorScale = getColors(this.settings.rows.length)
-		const group = this.state.ssid && this.state.ssid.groups && this.state.ssid.groups[result.dataId]
-		const bin = this.bins?.[2]?.find(bin => bin.label == result.dataId)
-		this.term2toColor[result.dataId] = !t2
-			? 'rgb(144, 23, 57)'
-			: group && 'color' in group
-			? group.color
-			: bin
-			? bin.color
-			: t2.term.type == 'geneVariant'
-			? getMutationColor(result.dataId)
-			: rgb(this.colorScale(result.dataId)).toString() //.replace('rgb(','rgba(').replace(')', ',0.7)')
+		if (!this.config.term2) return
+		this.term2toColor[result.dataId] = this.getColor(this.config.term2.term, result.dataId, this.bins?.[2])
+	}
 
-		function getMutationColor(label) {
-			for (const [key, mc] of Object.entries(mclass)) if (mc.label == label) return mc.color
-			return 'black'
+	getColor(term, label, bins) {
+		if (!term) return
+		if (term.values) {
+			for (const [key, v] of Object.entries(term.values)) {
+				if (!v.color) continue
+				if (key === label) return v.color
+				if (v.label === label) return v.color
+			}
+		}
+		const bin = bins?.find(bin => bin.label == label)
+		if (bin?.color) return bin.color
+
+		if (term.type == 'geneVariant') return this.getMutationColor(label)
+
+		return rgb(this.colorScale(label)).toString()
+	}
+
+	// should move this outside of setTerm2Color(),
+	// otherwise it will get *** recreated on every call *** to setTerm2Color()
+	getMutationColor(label) {
+		// for (const [key, mc] of Object.entries(mclass)) if (mc.label == label) return mc.color
+
+		// key is not used in loop above, can do this instead
+		for (const mc of Object.values(mclass)) if (mc.label === label && mc.color) return mc.color
+
+		// can loop on the object directly
+		for (const key in mclass) {
+			if (mclass[key].label === label && mclass[key].color) return mclass[key].color
 		}
 	}
 
 	/*
-	when term1 or term2 is a geneVariant term, return legendGrps: 
+	  when term1 or term2 is a geneVariant term, return legendGrps: 
 		[ 
 			[
 				{
@@ -548,15 +577,6 @@ class Barchart {
 				...
 			],
 			... 
-		]
-
-	when term1 or term2 is a geneVariant term, legendGrps:
-		[
-			{
-				name: "...", 
-				items: [...]
-			},
-			...
 		]
 	*/
 	getLegendGrps() {
@@ -891,7 +911,6 @@ function setInteractivity(self) {
 	self.handlers = getHandlers(self)
 
 	self.download = function() {
-		console.log(769)
 		if (!self.state) return
 		// has to be able to handle multichart view
 		const mainGs = []
@@ -978,7 +997,9 @@ export function getDefaultBarSettings(app) {
 		overlay: 'none',
 		divideBy: 'none',
 		rowlabelw: 250,
-		asterisksVisible: app?.getState()?.termdbConfig?.multipleTestingCorrection ? true : false
+		asterisksVisible: app?.getState()?.termdbConfig?.multipleTestingCorrection ? true : false,
+		defaultColor: 'rgb(144, 23, 57)',
+		colorBars: false
 	}
 }
 

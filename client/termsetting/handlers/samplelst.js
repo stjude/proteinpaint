@@ -6,8 +6,7 @@ export function getHandler(self) {
 		showEditMenu(div) {
 			div.selectAll('*').remove()
 			const groups = self.q.groups
-			const keys = Object.keys(self.term.values)
-			for (const [i, group] of groups.entries()) {
+			for (const group of groups) {
 				const groupDiv = div
 					.append('div')
 					.style('display', 'inline-block')
@@ -15,7 +14,7 @@ export function getHandler(self) {
 				const noButtonCallback = (i, node) => {
 					group.values[i].checked = node.checked
 				}
-				const name = group.in ? keys[i] : `${keys[i]} will exclude these samples`
+				const name = group.in ? group.name : `${group.name} will exclude these samples`
 				addTable(groupDiv, name, group, noButtonCallback)
 			}
 			div
@@ -64,4 +63,18 @@ function addTable(div, name, group, noButtonCallback) {
 	})
 }
 
-export function fillTW(tw, vocabApi) {}
+export function fillTW(tw, vocabApi) {
+	// quick fix!!
+	if (!tw.q.type) tw.q.type = 'custom-groupsetting'
+	if (!tw.q.groups) tw.q.groups = []
+	if (tw.q.groups.length == 0) {
+		for (const k in tw.term.values) {
+			const v = tw.term.values[k]
+			tw.q.groups.push({
+				name: k,
+				inuse: v.inuse,
+				values: v.list
+			})
+		}
+	}
+}

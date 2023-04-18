@@ -16,7 +16,7 @@ initGDCdictionary
 
 
 - parsing gdc variables and constructing in-memory termdb:
-  HARDCODED LOGIC, does not need any configuration in server/dataset/mds3.gdc.js
+  HARDCODED LOGIC, does not need any configuration in dataset file
 
 - querying list of open-access projects
   also hardcoded logic, not relying on dataset config
@@ -202,14 +202,18 @@ export async function initGDCdictionary(ds) {
 
 		const termLevels = fieldLine.split('.')
 
-		/* for term with multiple levels (all terms should have 2 or more levels)
-		create parent term
+		/*
+		for term with multiple levels (all terms should have 2 or more levels), create parent term
+
 		e.g. for ['case','demographic','age_at_index']
+
 		make two terms, first one is root:
 			{id:'case.demographic',name:''}
+
 		second one is leaf under this root:
 			{id:'case.demographic.age_at_index', parent_id:'case.demographic', type:'float', ...}
 		*/
+
 		for (let i = 1; i < termLevels.length; i++) {
 			const parentId = termLevels.slice(0, i).join('.')
 			const currentId = parentId + '.' + termLevels[i]
@@ -219,13 +223,15 @@ export async function initGDCdictionary(ds) {
 			// so that findTermByName can work
 			const termObj = {
 				id: currentId.toLowerCase(),
-				name: termLevels[i][0].toUpperCase() + termLevels[i].slice(1).replace(/_/g, ' ')
+				name: termLevels[i][0].toUpperCase() + termLevels[i].slice(1).replace(/_/g, ' '),
+				included_types_set: new Set(), // apply to leaf terms, should have its own term.type
+				child_types_set: new Set() // empty for leaf terms
 			}
 
 			if (i == termLevels.length - 1) {
 				// this is a leaf term
 				termObj.isleaf = true
-				// assign type
+				// assign type for leaf term
 				const t = re._mapping[mapping_prefix + '.' + currentId]
 				if (t) {
 					if (t.type == 'keyword') {
@@ -243,6 +249,7 @@ export async function initGDCdictionary(ds) {
 				}
 
 				if (!termObj.type) {
+					// no type assigned, error
 					unknownTermType++
 				}
 
@@ -258,6 +265,21 @@ export async function initGDCdictionary(ds) {
 				*/
 			} else {
 				termObj.parent_id = parentId
+
+				if (termObj.type) {
+					// use this term's type to fill in child_types_set
+					termObj.included_types_set.add(termObj.type)
+					let p = id2term.get(parentId)
+					while (p) {
+						p.included_types_set.add(termObj.type)
+						p.child_types_set.add(termObj.type)
+						if (p.parent_id) {
+							p = id2term.get(p.parent_id)
+						} else {
+							break
+						}
+					}
+				}
 			}
 
 			// if nested
@@ -271,6 +293,11 @@ export async function initGDCdictionary(ds) {
 
 	for (const t of id2term.values()) {
 		if (!t.type) parentCount++
+		// produce required attributes on terms, to be returned from getRootTerms() and getTermChildren()
+		t.included_types = [...t.included_types_set]
+		t.child_types = [...t.child_types_set]
+		delete t.included_types_set
+		delete t.child_types_set
 	}
 
 	console.log(

@@ -36,7 +36,7 @@ function getArgs(_settings = {}) {
 		3: {
 			sample: 3,
 			aaa: {
-				values: [{ dt: 1, class: 'M' }, { dt: 2, class: 'F' }]
+				values: [{ dt: 1, class: 'S' }, { dt: 4, class: 'CNV_loss' }]
 			},
 			ccc: {
 				values: [{ dt: 1, class: 'M' }]
@@ -84,6 +84,7 @@ function getArgs(_settings = {}) {
 	const settings = {
 		matrix: {
 			sortSamplesTieBreakers: [{ $id: 'sample', sortSamples: { by: 'sample' } }],
+			sortOptions: ms.getSortOptions(),
 			..._settings
 		}
 	}
@@ -201,11 +202,11 @@ tape('sortSamplesBy = asListed', test => {
 	test.end()
 })
 
-tape.skip('sortSamplesBy = selectedTerms', test => {
-	const { self, settings, rows } = getArgs({ sortSamplesBy: 'selectedTerms', sortTermsBy: 'hits' })
+tape('sortSamplesBy=dt and un-edited sortPriority', test => {
+	const { self, settings, rows } = getArgs({ sortSamplesBy: 'dt', sortTermsBy: 'hits' })
 	const sorter = ms.getSampleSorter(self, settings, rows)
 	const sampleNames = self.sampleGroups.map(g => g.lst.sort(sorter).map(s => s.sample))
-	test.deepEqual(sampleNames, [[2, 3, 1], [5, 4]], 'should sort the samples by selected terms')
+	test.deepEqual(sampleNames, [[2, 3, 1], [5, 4]], 'should sort the samples by dt-only')
 	test.deepEqual(
 		simpleMatrix(sampleNames, self.termOrder, rows),
 		// prettier-ignore
@@ -219,6 +220,136 @@ tape.skip('sortSamplesBy = selectedTerms', test => {
 	test.end()
 })
 
-tape.skip('sortPriority', test => {
-	// !!! TODO !!!
+tape('sortSamplesBy=dt, edited sortPriority', test => {
+	{
+		const { self, settings, rows } = getArgs({
+			sortSamplesBy: 'dt',
+			sortOptions: {
+				dt: {
+					types: ['geneVariant'],
+					tiebreakers: [
+						{
+							by: 'dt',
+							order: [4, 1]
+						}
+					]
+				}
+			}
+		})
+		const sorter = ms.getSampleSorter(self, settings, rows)
+		const sampleNames = self.sampleGroups.map(g => g.lst.sort(sorter).map(s => s.sample))
+		test.deepEqual(sampleNames, [[3, 2, 1], [5, 4]], 'should sort the samples by the specified order of dt=[4,1]')
+		test.deepEqual(
+			simpleMatrix(sampleNames, self.termOrder, rows),
+			// prettier-ignore
+			[ 
+				[ '3', '2', ' ', '5', ' ' ], 
+				[ ' ', '2', '1', '5', ' ' ], 
+				[ '3', ' ', '1', ' ', '4' ] 
+			],
+			'should sort sample and rows in the expected order'
+		)
+	}
+
+	{
+		const { self, settings, rows } = getArgs({
+			sortSamplesBy: 'dt'
+		})
+		const sorter = ms.getSampleSorter(self, settings, rows)
+		const sampleNames = self.sampleGroups.map(g => g.lst.sort(sorter).map(s => s.sample))
+		test.deepEqual(sampleNames, [[2, 3, 1], [5, 4]], 'should sort the samples by the specified order of dt=[1,4]')
+		test.deepEqual(
+			simpleMatrix(sampleNames, self.termOrder, rows),
+			// prettier-ignore
+			[ 
+				[ '2', '3', ' ', '5', ' ' ], 
+				[ '2', ' ', '1', '5', ' ' ], 
+				[ ' ', '3', '1', ' ', '4' ] 
+			],
+			'should sort sample and rows in the expected order'
+		)
+	}
+
+	test.end()
+})
+
+tape('sortPriority by both dt and class', test => {
+	const { self, settings, rows } = getArgs({
+		sortSamplesBy: 'custom',
+		sortOptions: {
+			custom: {
+				value: 'custom',
+				sortPriority: [
+					{
+						types: ['geneVariant'],
+						tiebreakers: [
+							{
+								by: 'dt',
+								order: [1] // snvindel, cnv,
+								// other dt values will be ordered last
+								// for the sorter to not consider certain dt values,
+								// need to explicitly not use such values for sorting
+								// ignore: [4]
+							},
+							{
+								by: 'class',
+								order: [
+									// truncating
+									'F',
+									'N',
+									// indel
+									'D',
+									'I',
+									// point
+									'M',
+									'P',
+									'L',
+									// noncoding
+									'Utr3',
+									'Utr5',
+									'S',
+									'Intron'
+								]
+							}
+						]
+					},
+					{
+						types: ['geneVariant'],
+						tiebreakers: [
+							{
+								by: 'dt',
+								order: [4] // snvindel, cnv,
+								// other dt values will be ordered last
+								// for the sorter to not consider certain dt values,
+								// need to explicitly not use such values for sorting
+								// ignore: [4]
+							},
+							{
+								by: 'class',
+								order: [
+									// Lou and JZ wanted samples with CNV to be sorted first??
+									'CNV_loss',
+									'CNV_amp'
+								]
+							}
+						]
+					}
+				]
+			}
+		}
+	})
+	const sorter = ms.getSampleSorter(self, settings, rows)
+	const sampleNames = self.sampleGroups.map(g => g.lst.sort(sorter).map(s => s.sample))
+	test.deepEqual(sampleNames, [[2, 3, 1], [5, 4]], 'should sort the samples by dt then value')
+	test.deepEqual(
+		simpleMatrix(sampleNames, self.termOrder, rows),
+		// prettier-ignore
+		[ 
+			[ '2', '3', ' ', '5', ' ' ], 
+			[ '2', ' ', '1', '5', ' ' ], 
+			[ ' ', '3', '1', ' ', '4' ] 
+		],
+		'should sort sample and rows in the expected order'
+	)
+	test.end()
 })

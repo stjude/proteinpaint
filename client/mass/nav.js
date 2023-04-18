@@ -72,7 +72,7 @@ class TdbNav {
 				}),
 				filter: filterRxCompInit({
 					app: this.app,
-					vocab: this.opts.vocab,
+					vocabApi: this.app.vocabApi,
 					holder: this.dom.subheader.filter.append('div'),
 					hideLabel: this.opts.header_mode === 'with_tabs',
 					emptyLabel: '+Add new filter',
@@ -116,6 +116,7 @@ class TdbNav {
 		if (action.type == 'plot_create') return true
 		if (action.type == 'plot_delete') return true
 		if (action.type == 'app_refresh') return true
+		if (action.type.endsWith('_customTerm')) return true
 	}
 
 	getState(appState) {

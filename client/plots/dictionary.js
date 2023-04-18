@@ -1,5 +1,5 @@
-import { getCompInit, copyMerge } from '../rx'
-import { appInit } from '../termdb/app'
+import { getCompInit, copyMerge } from '#rx'
+import { appInit } from '#termdb/app'
 
 class MassDict {
 	constructor(opts) {
@@ -12,6 +12,7 @@ class MassDict {
 
 	async init(appState) {
 		this.tree = await appInit({
+			vocabApi: this.app.vocabApi,
 			holder: this.dom.holder,
 			state: this.getState(appState),
 			tree: {
@@ -38,7 +39,8 @@ class MassDict {
 			vocab: appState.vocab,
 			activeCohort: appState.activeCohort,
 			termfilter: appState.termfilter,
-			selectdTerms: appState.selectedTerms
+			selectdTerms: appState.selectedTerms,
+			customTerms: appState.customTerms
 		}
 	}
 

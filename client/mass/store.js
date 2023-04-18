@@ -42,6 +42,7 @@ const defaultState = {
 		}
 	},
 	groups: [], // element: {name=str, filter={}}, to show in Groups tab
+	customTerms: [], // element: {name=str, term={}}, able to attach more attr to object if needed
 	autoSave: true
 }
 
@@ -343,6 +344,15 @@ TdbStore.prototype.actions = {
 				}
 			}
 		}
+	},
+
+	add_customTerm(action) {
+		this.state.customTerms.push(action.obj)
+	},
+
+	delete_customTerm({ name }) {
+		const i = this.state.customTerms.findIndex(i => i.name == name)
+		if (i != -1) this.state.customTerms.splice(i, 1)
 	}
 }
 

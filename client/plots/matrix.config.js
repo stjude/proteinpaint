@@ -1,4 +1,5 @@
 import { copyMerge } from '../rx'
+import { getSortOptions } from './matrix.sort'
 import { fillTermWrapper } from '../termsetting/termsetting'
 
 export async function getPlotConfig(opts, app) {
@@ -24,19 +25,22 @@ export async function getPlotConfig(opts, app) {
 				},
 				// set any dataset-defined sample limits and sort priority, otherwise undefined
 				// put in settings, so that later may be overridden by a user
-				maxSample: 0,
+				maxSample: 1000,
 				sortPriority: undefined,
 				truncatePriority: undefined,
 
 				sampleNameFilter: '',
-				sortSamplesBy: 'selectedTerms',
+				sortSamplesBy: 'class',
+				sortOptions: getSortOptions(app.vocabApi.termdbConfig),
 				sortSamplesTieBreakers: [{ $id: 'sample', sortSamples: {} /*split: {char: '', index: 0}*/ }],
 				sortTermsBy: 'sampleCount', // or 'as listed'
 				samplecount4gene: true,
 				cellbg: '#ececec',
+				showGrid: '', // false | 'pattern' | 'rect'
+				gridStroke: '#fff',
 				colw: 0,
-				colwMin: 0.5,
-				colwMax: 24,
+				colwMin: 1 / window.devicePixelRatio,
+				colwMax: 18,
 				colspace: 1,
 				colgspace: 8,
 				collabelpos: 'bottom',
@@ -53,7 +57,7 @@ export async function getPlotConfig(opts, app) {
 				rowlabelpad: 1,
 				grpLabelFontSize: 12,
 				minLabelFontSize: 6,
-				maxLabelFontSize: 16,
+				maxLabelFontSize: 14,
 				transpose: false,
 				sampleLabelOffset: 120,
 				sampleGrpLabelOffset: 120,
@@ -99,10 +103,13 @@ export async function getPlotConfig(opts, app) {
 	// may apply term-specific changes to the default object
 	copyMerge(config, opts)
 
+	const m = config.settings.matrix
 	// harcode these overrides for now
-	config.settings.matrix.duration = 0
+	m.duration = 0
 	// force auto-dimensions for colw
-	config.settings.matrix.colw = 0
+	m.colw = 0
+	// support deprecated sortSamplesBy value from a saved session
+	if (m.sortSamplesBy === 'selectedSamples') m.sortSamplesBy = 'class'
 
 	const promises = []
 	for (const grp of config.termgroups) {

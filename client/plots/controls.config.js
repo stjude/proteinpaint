@@ -192,13 +192,9 @@ function setNumberInput(opts) {
 			})
 		}
 
-		const inputTd = opts.holder
-			.append('td')
-			.attr('colspan', opts.colspan || '')
-			.style('text-align', opts.align || '')
+		const inputTd = opts.holder.append('td').style('text-align', opts.align || '')
 		if (!input.settingsKey) {
 			inputTd
-				.style('text-align', 'center')
 				.style('color', '#999')
 				.style('cursor', 'default')
 				.html(input.label)
@@ -321,13 +317,15 @@ function setTextInput(opts) {
 function setColorInput(opts) {
 	const self = {
 		dom: {
-			row: opts.holder.style('display', 'table-row'),
+			row: opts.holder.style('display', 'table-row').attr('title', opts.title),
 			labelTd: opts.holder
 				.append('td')
 				.html(opts.label)
-				.attr('class', 'sja-termdb-config-row-label')
-				.attr('title', opts.title),
-			inputTd: opts.holder.append('td')
+				.attr('class', 'sja-termdb-config-row-label'),
+			inputTd: opts.holder
+				.append('td')
+				.attr('colspan', opts.colspan || '')
+				.style('text-align', opts.align || '')
 		}
 	}
 
@@ -353,6 +351,7 @@ function setColorInput(opts) {
 		main(plot) {
 			const color = plot.settings[opts.chartType][opts.settingsKey]
 			self.dom.input.property('value', rgb(color).formatHex())
+			opts.holder.style('display', opts.getDisplayStyle?.(plot) || 'table-row')
 		}
 	}
 
@@ -389,10 +388,7 @@ function setRadioInput(opts) {
 				.attr('colspan', opts.colspan || '')
 				.style('text-align', opts.align || ''),
 			options: input.options,
-			getDisplayStyle: () => {
-				console.log('test')
-				return 'block'
-			},
+			getDisplayStyle: () => 'block',
 			listeners: {
 				input(event, d) {
 					opts.dispatch({
@@ -477,12 +473,15 @@ function setDropdownInput(opts) {
 function setCheckboxInput(opts) {
 	const self = {
 		dom: {
-			row: opts.holder.style('display', 'table-row'),
+			row: opts.holder.style('display', 'table-row').attr('title', opts.title),
 			labelTdb: opts.holder
 				.append('td')
 				.html(opts.label)
 				.attr('class', 'sja-termdb-config-row-label'),
-			inputTd: opts.holder.append('td')
+			inputTd: opts.holder
+				.append('td')
+				.attr('colspan', opts.colspan || '')
+				.style('text-align', opts.align || '')
 		}
 	}
 
@@ -512,6 +511,7 @@ function setCheckboxInput(opts) {
 		main(plot) {
 			const value = plot.settings[opts.chartType][opts.settingsKey]
 			self.dom.input.property('checked', opts.processInput ? opts.processInput(value) : value)
+			opts.holder.style('display', opts.getDisplayStyle?.(plot) || 'table-row')
 		}
 	}
 
@@ -548,6 +548,7 @@ async function setTermInput(opts) {
 		holder: self.dom.inputTd.append('div'),
 		debug: opts.debug,
 		usecase: opts.usecase,
+		getBodyParams: opts.getBodyParams,
 		callback: tw => {
 			// data is object with only one needed attribute: q, never is null
 			if (tw && !tw.q) throw 'data.q{} missing from pill callback'

@@ -4,7 +4,6 @@ const d3color = require('d3-color')
 const d3s = require('d3-selection')
 const {
 	detectLst,
-	detectOne,
 	detectAttr,
 	detectChildAttr,
 	detectChildStyle,
@@ -574,7 +573,7 @@ tape('Change symbol and reference size from menu', function(test) {
 			.run(changeSymbolInput)
 			.run(testSymbolSize, { wait: 100 })
 			.use(changeRefInput, { wait: 100 })
-			.to(testRefDotSize, { wait: 100 })
+			.to(testRefDotSize, { wait: 300 })
 			.done(test)
 	}
 	function changeSymbolInput(scatter) {
@@ -621,17 +620,10 @@ tape('Change chart width and height from menu', function(test) {
 
 	async function runTests(scatter) {
 		scatter.on('postRender.test', null)
-		// helpers
-		//  .rideInit({ arg: scatter, bus: scatter, eventType: 'postRender.test' })
-		//  .run(changeWidth)
-		//  .use(changeHeight)
-		//  .to(testChartSizeChange)
-		//  .done(test)
 
 		changeWidth(scatter)
 		changeHeight(scatter)
-		await sleep(100)
-		testChartSizeChange(scatter)
+		await testChartSizeChange(scatter)
 
 		if (test._ok) scatter.Inner.app.destroy()
 		test.end()
@@ -654,7 +646,14 @@ tape('Change chart width and height from menu', function(test) {
 		heightInput.dispatchEvent(new Event('change'))
 	}
 
-	function testChartSizeChange(scatter) {
+	async function testChartSizeChange(scatter) {
+		await detectAttr({
+			target: scatter.Inner.dom.holder.node().querySelector('svg'),
+			observe: {
+				attributeFilter: ['height', 'width']
+			},
+			count: 1
+		})
 		test.ok(
 			scatter.Inner.settings.svgw == testWidth,
 			`Chart width = ${scatter.Inner.settings.svgw} should be equal to test width = ${testWidth}`
@@ -677,12 +676,6 @@ tape('Check/uncheck Show axes from menu', function(test) {
 	})
 
 	async function runTests(scatter) {
-		// helpers
-		//  .rideInit({ arg: scatter, bus: scatter, eventType: 'postRender.test' })
-		//  .run(checkAxesBox)
-		//  .run(testAxes)
-		//  .done(test)
-
 		scatter.on('postRender.test', null)
 
 		checkAxesBox(scatter, false)

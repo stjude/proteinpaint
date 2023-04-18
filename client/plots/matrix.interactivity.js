@@ -5,11 +5,22 @@ import { icons } from '../dom/control.icons'
 let inputIndex = 0
 
 export function setInteractivity(self) {
+	self.resetInteractions = function() {
+		if (self.zoomArea) {
+			self.zoomArea.remove()
+			delete self.zoomArea
+			//self.dom.seriesesG.on('mouseup.zoom', null)
+			select('body').on('mouseup.matrixZoom', null)
+		}
+		delete self.clickedSeriesCell
+	}
+
 	self.showCellInfo = function(event) {
 		if (self.activeLabel || self.zoomArea) return
 		if (!(event.target.tagName == 'rect' || event.target.tagName == 'image')) return
+		if (event.target.tagName !== 'rect' && !self.imgBox) self.imgBox = event.target.getBoundingClientRect()
 		const d = event.target.tagName == 'rect' ? event.target.__data__ : self.getImgCell(event)
-		if (!d || !d.term || !d.sample) {
+		if (!d || !d.term || !d.sample || !d.siblingCells?.length) {
 			self.dom.tip.hide()
 			return
 		}
@@ -50,19 +61,22 @@ export function setInteractivity(self) {
 	}
 
 	self.getImgCell = function(event) {
-		const d = event.target.__data__
-		const rect = event.target.getBoundingClientRect()
-		const x2 = event.clientX - rect.x
+		//const [x,y] = pointer(event, event.target)
+		const y = event.clientY - self.imgBox.y - event.target.clientTop
+		const d = event.target.__data__.find(series => series.y <= y && y <= series.y + self.dimensions.dy)
+		if (!d) return
+		const x2 = event.clientX - self.imgBox.x - event.target.clientLeft
 		for (const cell of d.cells) {
 			const min = cell.x
 			const max = cell.x + self.dimensions.dx
-			if (min < x2 && x2 <= max) return cell
+			if (min <= x2 && x2 <= max) return cell
 		}
 		return null
 	}
 
 	self.mouseout = function() {
 		if (!self.activeLabel && !self.activeLabel && !self.activeLabel) self.dom.tip.hide()
+		delete self.imgBox
 	}
 
 	self.legendClick = function() {}
@@ -430,8 +444,7 @@ function setTermActions(self) {
 				termgroups,
 				settings: {
 					matrix: {
-						sortTermsBy: 'asListed',
-						sortSamplesBy: 'selectedTerms'
+						sortTermsBy: 'asListed'
 					}
 				}
 			}
@@ -458,12 +471,7 @@ function setTermActions(self) {
 			type: 'plot_edit',
 			id: self.opts.id,
 			config: {
-				termgroups,
-				settings: {
-					matrix: {
-						sortSamplesBy: 'selectedTerms'
-					}
-				}
+				termgroups
 			}
 		})
 		self.dom.tip.hide()
@@ -827,10 +835,6 @@ function setTermActions(self) {
 							{
 								nestedKeys: ['termgroups', t.grpIndex, 'lst', t.lstIndex],
 								value: tcopy
-							},
-							{
-								nestedKeys: ['settings', 'matrix', 'sortSamplesBy'],
-								value: 'selectedTerms'
 							}
 						]
 					})
@@ -1146,7 +1150,7 @@ function setTermGroupActions(self) {
 	setLabelDragEvents(self, 'termGrp')
 
 	self.showTermGroupMenu = function(event) {
-		const d = event.target.__data__
+		const d = event.target.tagName.toLowerCase() == 'tspan' ? event.target.parentNode.__data__ : event.target.__data__
 		if (!d) return
 		self.activeLabel = d
 		self.dom.menutop
@@ -1165,7 +1169,7 @@ function setTermGroupActions(self) {
 		self.dom.grpNameInput = labelEditDiv
 			.append('input')
 			.attr('type', 'text')
-			.attr('size', self.activeLabel.grp.name.length + 5)
+			.attr('size', (self.activeLabel.grp.name?.length || 0) + 5)
 			.style('padding', '1px 5px')
 			.style('text-align', 'center')
 			.property('value', self.activeLabel.grp.name)
@@ -1579,13 +1583,6 @@ function setZoomPanActions(self) {
 	self.seriesesGtriggerZoom = function(event) {
 		event.stopPropagation()
 		self.dom.seriesesG.on('mousemove', null).on('mouseup', null)
-		//const d = event.target.__data__
-		if (self.zoomArea) {
-			self.zoomArea.remove()
-			delete self.zoomArea
-			//self.dom.seriesesG.on('mouseup.zoom', null)
-			select('body').on('mouseup.matrixZoom', null)
-		}
 
 		self.dom.mainG
 			.selectAll('text')
@@ -1623,6 +1620,7 @@ function setZoomPanActions(self) {
 			}
 		})
 
-		delete self.clickedSeriesCell
+		//const d = event.target.__data__
+		self.resetInteractions()
 	}
 }

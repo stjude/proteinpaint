@@ -13,7 +13,7 @@ Phenotree parsing:
 	2. trackMissingTerms
 */
 
-exports.parseDictionary = function parseDictionary(input) {
+export function parseDictionary(input) {
 	// Returns terms array for appInit({state.vocab.terms})
 	const terms = {}
 
@@ -121,7 +121,6 @@ exports.parseDictionary = function parseDictionary(input) {
 			}
 		}
 		for (const t in terms) terms[t].isleaf = !parentIds.has(terms[t].id)
-		// console.log('dictionary parsing')
 	}
 
 	function parsePhenotree(lines, header) {
@@ -151,6 +150,8 @@ exports.parseDictionary = function parseDictionary(input) {
 		const levelColIndexes = header.map((c, i) => (c.toLowerCase().includes('level_') ? i : -1)).filter(i => i != -1)
 		//If no level cols provided, use key/Variable col as single level. Will print the id as name
 		if (!levelColIndexes.length) levelColIndexes.push(variableIndex)
+
+		const additionalAttrIndexes = header.findIndex(l => l.toLowerCase().includes('additional attributes'))
 
 		// caching and/or tracking variables
 		const termNameToId = {}
@@ -192,7 +193,7 @@ exports.parseDictionary = function parseDictionary(input) {
 					throw `Blank or '-' value detected between levels in line ${lineNum}`
 				}
 
-				const term = parseCategories(cols[typeIndex], cols[categoriesIndex], lineNum, name)
+				const term = parseCategories(cols[typeIndex], cols[categoriesIndex], cols[additionalAttrIndexes], lineNum, name)
 
 				const id = cols[variableIndex] || name
 				if (id in terms) {
@@ -211,7 +212,8 @@ exports.parseDictionary = function parseDictionary(input) {
 					// *** temporary attributes to be deleted later ***
 					ancestry: levelNames.slice(), // to be deleted later, used to fill in missing terms
 					parent_name: levelNames.pop() || null, // will change this later to parent_id
-					lineNum // to be deleted later
+					lineNum, // to be deleted later
+					additionalAttributes: term.attributes
 				}
 				termNameToId[name] = id
 				parentTermNames.add(terms[id].parent_name)
@@ -232,7 +234,6 @@ exports.parseDictionary = function parseDictionary(input) {
 			//term.ancestry = term.ancestry.map(name => termNameToId[name]).filter(d=>!!d)
 			delete term.ancestry
 		}
-		// console.log('phenotree parsing')
 	}
 	return { terms: Object.values(terms) }
 }
@@ -241,12 +242,13 @@ exports.parseDictionary = function parseDictionary(input) {
  **** Parsing Functions for Phenotree ****
  */
 
-function parseCategories(type, catJSON, lineNum, varName) {
+function parseCategories(type, catJSON, addAttrJSON, lineNum, varName) {
 	if (!type) throw `No type provided for variable: ${varName} on line ${lineNum}`
 
 	const term = {
 		type,
-		values: catJSON == '' || catJSON == undefined ? {} : JSON.parse(catJSON)
+		values: catJSON == '' || catJSON == undefined ? {} : JSON.parse(catJSON),
+		attributes: addAttrJSON == '' || addAttrJSON == undefined ? {} : JSON.parse(addAttrJSON)
 	}
 
 	if (term.type == 'integer' || term.type == 'float') {

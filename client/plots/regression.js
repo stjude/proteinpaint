@@ -194,3 +194,35 @@ export function get_defaultQ4fillTW(regressionType, useCase = '') {
 
 	return defaultQ
 }
+
+export function makeChartBtnMenu(holder, chartsInstance) {
+	/*
+	holder: the holder in the tooltip
+	chartsInstance: MassCharts instance
+		termdbConfig is accessible at chartsInstance.state.termdbConfig{}
+		mass option is accessible at chartsInstance.app.opts{}
+	*/
+
+	const lst = [
+		{ label: 'Linear', type: 'linear' },
+		{ label: 'Logistic', type: 'logistic' },
+		{ label: 'Cox', type: 'cox' }
+	]
+
+	for (const { label, type } of lst) {
+		holder
+			.append('div')
+			.attr('class', 'sja_menuoption sja_sharp_border')
+			.text(label)
+			.on('click', () => {
+				chartsInstance.dom.tip.hide()
+				chartsInstance.prepPlot({
+					config: {
+						chartType: 'regression',
+						regressionType: type,
+						independent: []
+					}
+				})
+			})
+	}
+}

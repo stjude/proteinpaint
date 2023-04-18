@@ -675,6 +675,7 @@ export function getSamplelstTW(groups, name = 'groups', groupsetting = {}) {
 		values[group.name] = { key: group.name, label: group.name }
 		samples = getGroupSamples(group)
 		const qgroup = {
+			name: group.name,
 			in: true,
 			values: samples
 		}
@@ -684,6 +685,7 @@ export function getSamplelstTW(groups, name = 'groups', groupsetting = {}) {
 		const name2 = 'Not in ' + groups[0].name
 		values[name2] = { key: name2, label: name2 }
 		qgroups.push({
+			name: name2,
 			in: false,
 			values: samples
 		})

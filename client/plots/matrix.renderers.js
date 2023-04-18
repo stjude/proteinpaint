@@ -18,20 +18,25 @@ export function setRenderers(self) {
 	}
 
 	self.renderSerieses = function(s, l, d, duration) {
-		self.dom.seriesesG
-			.transition()
-			.duration(duration)
-			.attr('transform', `translate(${d.xOffset + d.seriesXoffset},${d.yOffset})`)
+		if (s.useCanvas) {
+			const _g = self.dom.seriesesG.selectAll('g')
+			const g = /*(_g.size() && _g) ||*/ self.dom.seriesesG.append('g').datum(this.serieses)
+			self.renderCanvas(this.serieses, g, d, s, _g, duration)
+		} else {
+			self.dom.seriesesG
+				.transition()
+				.duration(duration)
+				.attr('transform', `translate(${d.xOffset + d.seriesXoffset},${d.yOffset})`)
 
-		const sg = self.dom.seriesesG.selectAll('.sjpp-mass-series-g').data(this.serieses, series => series.tw.$id)
-
-		sg.exit().remove()
-		sg.each(self.renderSeries)
-		sg.enter()
-			.append('g')
-			.attr('class', 'sjpp-mass-series-g')
-			.style('opacity', 0.001)
-			.each(self.renderSeries)
+			const sg = self.dom.seriesesG.selectAll('.sjpp-mass-series-g').data(this.serieses, series => series.tw.$id)
+			sg.exit().remove()
+			sg.each(self.renderSeries)
+			sg.enter()
+				.append('g')
+				.attr('class', 'sjpp-mass-series-g')
+				.style('opacity', 0.001)
+				.each(self.renderSeries)
+		}
 	}
 
 	self.renderSeries = async function(series) {
@@ -47,54 +52,79 @@ export function setRenderers(self) {
 		const last = series.cells[series.cells.length - 1]
 		const height = series.y + last?.y + s.rowh
 
-		if (s.useCanvas) {
-			const df = self.stateDiff
-			if (g.selectAll('image').size() && !df.nonsettings && !df.sorting && !df.cellDimensions) return
-			const pxr = 1 //window.devicePixelRatio; console.log(51, 'pixelRatio', pxr)
-			g.selectAll('*').remove()
-			const width = Math.floor(d.zoomedMainW * pxr)
-			const height = Math.floor(self.dimensions.mainh * pxr)
-			const canvas = window.OffscreenCanvas
-				? new OffscreenCanvas(width, height)
-				: // TODO: no need to support older browser versions???
-				  self.dom.holder
-						.append('canvas')
-						.attr('width', width + 'px')
-						.attr('height', height + 'px')
-						.style('opacity', 0)
-						.node()
-			const ctx = canvas.getContext('2d')
-			ctx.scale(pxr, pxr)
-			for (const cell of series.cells) self.renderCellWithCanvas(ctx, cell, series, s, d)
+		const rects = g.selectAll('rect').data(series.cells, cell => cell.sample + ';;' + cell.tw.$id)
+		rects.exit().remove()
+		rects.each(self.renderCell)
+		rects
+			.enter()
+			.append('rect')
+			.each(self.renderCell)
+	}
 
-			if (window.OffscreenCanvas) {
-				//const bitmap = canvas.transferToImageBitmap()
-				//g.append('image').node().getContext('bitmaprenderer').transferFromImageBitmap(bitmap)
-				const blob = await canvas.convertToBlob()
-				const reader = new FileReader()
-				reader.addEventListener('load', () => g.append('image').attr('xlink:href', reader.result), false)
-				const dataURL = reader.readAsDataURL(blob)
-			} else {
-				const dataURL = canvas.toDataURL()
-				g.append('image').attr('xlink:href', dataURL)
-				if (!window.OffscreenCanvas) canvas.remove()
+	self.renderCanvas = async function(serieses, g, d, s, _g, duration) {
+		const df = self.stateDiff
+		if (g.selectAll('image').size() && !df.nonsettings && !df.sorting && !df.cellDimensions) return
+		const pxr = window.devicePixelRatio
+		// TODO: may not need to remove the image???
+		g.selectAll('*').remove()
+		const width = Math.floor(d.zoomedMainW)
+		const height = Math.floor(self.dimensions.mainh)
+		const canvas = window.OffscreenCanvas
+			? new OffscreenCanvas(width * pxr, height * pxr)
+			: // TODO: no need to support older browser versions???
+			  self.dom.holder
+					.append('canvas')
+					.attr('width', pxr * width + 'px')
+					.attr('height', pxr * height + 'px')
+					.style('opacity', 0)
+					.node()
+		const ctx = canvas.getContext('2d')
+		ctx.imageSmoothingEnabled = false
+		ctx.imageSmoothingQuality = 'high'
+		//ctx.lineWidth = 0.5
+		//ctx.setTransform(pxr, 0, 0, pxr, 0, 0)
+		ctx.scale(pxr, pxr)
+		for (const series of serieses) {
+			for (const cell of series.cells) {
+				self.renderCellWithCanvas(ctx, cell, series, s, d, series.y)
 			}
+		}
+
+		if (window.OffscreenCanvas) {
+			//const bitmap = canvas.transferToImageBitmap()
+			//g.append('image').node().getContext('bitmaprenderer').transferFromImageBitmap(bitmap)
+			//const blob =
+			const reader = new FileReader()
+			reader.addEventListener(
+				'load',
+				() => {
+					// remove a previously rendered image, if applicable, right before replacing it
+					// so that there will be no flicker on update
+					_g?.remove()
+					self.dom.seriesesG
+						.transition()
+						.duration(duration)
+						.attr('transform', `translate(${d.xOffset + d.seriesXoffset},${d.yOffset})`)
+					g.append('image')
+						.attr('xlink:href', reader.result)
+						.attr('width', width)
+						.attr('height', height)
+				},
+				false
+			)
+			const dataURL = reader.readAsDataURL(await canvas.convertToBlob({ quality: 1 }))
 		} else {
-			const rects = g.selectAll('rect').data(series.cells, cell => cell.sample + ';;' + cell.tw.$id)
-			rects.exit().remove()
-			rects.each(self.renderCell)
-			rects
-				.enter()
-				.append('rect')
-				.each(self.renderCell)
+			const dataURL = canvas.toDataURL()
+			g.append('image').attr('xlink:href', dataURL)
+			if (!window.OffscreenCanvas) canvas.remove()
 		}
 	}
 
-	self.renderCellWithCanvas = function(ctx, cell, series, s, d, pxr) {
+	self.renderCellWithCanvas = function(ctx, cell, series, s, d, _y) {
 		if (!cell.fill)
 			cell.fill = cell.$id in self.colorScaleByTermId ? self.colorScaleByTermId[cell.$id](cell.key) : getRectFill(cell)
 		const x = cell.x || 0
-		const y = cell.y || 0
+		const y = _y ? _y + cell.y : cell.y || 0
 		const width = cell.width || d.colw
 		const height = cell.height || s.rowh
 		ctx.fillStyle = cell.fill
@@ -154,13 +184,29 @@ export function setRenderers(self) {
 				text
 					.transition()
 					.duration(textduration)
-					.attr('opacity', side.attr.fontSize < 6 || labelText === 'configure' ? 0 : 1)
+					//.attr('opacity', side.attr.fontSize < 6 || labelText === 'configure' ? 0.1 : 1)
 					.attr('font-size', side.attr.fontSize)
 					.attr('text-anchor', side.attr.labelAnchor)
 					.attr('transform', side.attr.labelTransform)
 					.attr('cursor', 'pointer')
 					.attr(side.attr.textpos.coord, side.attr.textpos.factor * (showContAxis ? 30 : 0))
-					.text(side.label)
+
+				if (!Array.isArray(labelText)) text.text(labelText)
+				else {
+					const tspan = text.selectAll('tspan').data(labelText)
+					tspan.exit().remove()
+					tspan
+						.attr('dx', getTspanDx)
+						.attr('font-size', getTspanFontSize)
+						.text(getTspanText)
+					tspan
+						.enter()
+						.append('tspan')
+						.attr('class', getTspanCls)
+						.attr('dx', getTspanDx)
+						.attr('font-size', getTspanFontSize)
+						.text(getTspanText)
+				}
 
 				text
 					.on('mouseover', labelText === 'configure' ? () => text.attr('opacity', 0.5) : null)
@@ -184,6 +230,19 @@ export function setRenderers(self) {
 						.attr('transform', `translate(${x},${y})`)
 						.call(side.attr.axisFxn(lab.scale.domain(domain)).tickValues(domain))
 				}
+			}
+
+			function getTspanCls(d) {
+				return d.cls
+			}
+			function getTspanDx(d) {
+				return d.dx
+			}
+			function getTspanFontSize(d) {
+				return d.fontSize || side.attr.fontSize
+			}
+			function getTspanText(d) {
+				return d.text
 			}
 		}
 	}

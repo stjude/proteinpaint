@@ -584,7 +584,6 @@ tape('tvs: Condition', async test => {
 	const editOpt = menuRows.filter(d => d.action == 'edit').node()
 	const tipd = opts.filter.Inner.dom.termSrcDiv
 
-	// await sleep(100)
 	// --- test common bluepill components ---
 	{
 		test.equal(
@@ -614,9 +613,14 @@ tape('tvs: Condition', async test => {
 		pill.click()
 		editOpt.click()
 		const applyBtn = await detectGte({ target: tipd.node(), selector: '.sjpp_apply_btn' })
-
+		const body = { bar_by_grade: 1, value_by_max_grade: 1 }
+		const termCat = await opts.filter.Inner.vocabApi.getCategories(opts.filterData.lst[0].tvs.term, '', body)
 		test.equal(applyBtn.length, 1, 'Should have 1 button to apply value change')
-		test.equal(tipd.selectAll("input[name^='select']").size(), 4, 'Should have checkbox for each value')
+		test.equal(
+			tipd.selectAll("input[name^='select']").size(),
+			termCat.lst.length,
+			'Should have checkbox for each value'
+		)
 		test.equal(tipd.selectAll("input[name^='select']:checked").size(), 1, 'Should have 1 box checked for Grade 0')
 	}
 

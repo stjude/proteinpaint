@@ -656,6 +656,12 @@ export function to_svg(svg, name, opts = {}) {
 	if (opts.apply_dom_styles) {
 		opts.svgClone = svg.cloneNode(true)
 		const clone = d3select(opts.svgClone) // make it easier to apply style below
+
+		// TODO: may use opts.excludeSelector instead of harcoded classname?
+		for (const elem of opts.svgClone.querySelectorAll('.sjpp-exclude-svg-download')) {
+			elem.remove()
+		}
+
 		const styles = window.getComputedStyle(svg)
 		for (const s of styles) {
 			clone.style(s, styles.getPropertyValue(s))
@@ -664,6 +670,7 @@ export function to_svg(svg, name, opts = {}) {
 
 	const a = document.createElement('a')
 	document.body.appendChild(a)
+
 	a.addEventListener(
 		'click',
 		function() {

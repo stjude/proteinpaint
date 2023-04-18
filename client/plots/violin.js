@@ -7,6 +7,8 @@ import { setInteractivity } from './violin.interactivity'
 
 /*
 when opts.mode = 'minimal', a minimal violin plot will be rendered that will have a single term and minimal features (i.e. no controls, legend, labels, brushing, transitions, etc.)
+
+TODO default to unit=log if term enables
 */
 
 class ViolinPlot {
@@ -14,7 +16,7 @@ class ViolinPlot {
 		this.type = 'violin'
 	}
 
-	async init() {
+	async init(appState) {
 		const controls = this.opts.holder
 			.append('div')
 			.attr('class', 'sjpp-plot-controls')
@@ -66,63 +68,74 @@ class ViolinPlot {
 				handlers: {}
 			})
 		}
+		await this.setControls(this.getState(appState))
+	}
 
+	async setControls(state) {
+		const inputs = []
 		if (this.opts.mode != 'minimal') {
-			this.components = {
-				controls: await controlsInit({
-					app: this.app,
-					id: this.id,
-					holder: this.dom.controls,
-					inputs: [
-						{
-							type: 'term1',
-							// TODO: when used under the summary chart, this.opts.usecase may replace the usecase here
-							usecase: { target: 'violin', detail: 'term' }
-						},
-						{
-							type: 'overlay',
-							//TODO: when term is numeric use 'overlay' otherwise for categories use 'Divide by'
-							// TODO: when used under the summary chart, this.opts.usecase may replace the usecase here
-							usecase: { target: 'violin', detail: 'term2' }
-						},
-						{
-							label: 'Orientation',
-							type: 'radio',
-							chartType: 'violin',
-							settingsKey: 'orientation',
-							options: [{ label: 'Vertical', value: 'vertical' }, { label: 'Horizontal', value: 'horizontal' }]
-						},
-						{
-							label: 'Data symbol',
-							type: 'radio',
-							chartType: 'violin',
-							settingsKey: 'datasymbol',
-							options: [{ label: 'Ticks', value: 'rug' }, { label: 'Circles', value: 'bean' }]
-						},
-						{
-							label: 'Symbol size',
-							type: 'number',
-							chartType: 'violin',
-							settingsKey: 'radius',
-							step: 1,
-							max: 15,
-							min: 3
-						},
-						{
-							label: 'Stroke width',
-							type: 'number',
-							chartType: 'violin',
-							settingsKey: 'strokeWidth',
-							step: 0.1,
-							max: 2,
-							min: 0.1
-						}
-					]
-				})
-			}
-
-			this.components.controls.on('downloadClick.violin', this.download)
+			inputs.push(
+				{
+					type: 'term1',
+					// TODO: when used under the summary chart, this.opts.usecase may replace the usecase here
+					usecase: { target: 'violin', detail: 'term' }
+				},
+				{
+					type: 'overlay',
+					//TODO: when term is numeric use 'overlay' otherwise for categories use 'Divide by'
+					// TODO: when used under the summary chart, this.opts.usecase may replace the usecase here
+					usecase: { target: 'violin', detail: 'term2' }
+				},
+				{
+					label: 'Orientation',
+					type: 'radio',
+					chartType: 'violin',
+					settingsKey: 'orientation',
+					options: [{ label: 'Vertical', value: 'vertical' }, { label: 'Horizontal', value: 'horizontal' }]
+				},
+				{
+					label: 'Data symbol',
+					type: 'radio',
+					chartType: 'violin',
+					settingsKey: 'datasymbol',
+					options: [{ label: 'Ticks', value: 'rug' }, { label: 'Circles', value: 'bean' }]
+				},
+				{
+					label: 'Symbol size',
+					type: 'number',
+					chartType: 'violin',
+					settingsKey: 'radius',
+					step: 1,
+					max: 15,
+					min: 3
+				},
+				{
+					label: 'Stroke width',
+					type: 'number',
+					chartType: 'violin',
+					settingsKey: 'strokeWidth',
+					step: 0.1,
+					max: 2,
+					min: 0.1
+				},
+				{
+					label: 'Scale',
+					type: 'radio',
+					chartType: 'violin',
+					settingsKey: 'unit',
+					options: [{ label: 'Linear', value: 'abs' }, { label: 'Log', value: 'log' }]
+				}
+			)
 		}
+		this.components = {
+			controls: await controlsInit({
+				app: this.app,
+				id: this.id,
+				holder: this.dom.controls,
+				inputs
+			})
+		}
+		this.components.controls.on('downloadClick.violin', this.download)
 	}
 
 	reactsTo(action) {
@@ -215,7 +228,8 @@ class ViolinPlot {
 			radius: s.radius,
 			strokeWidth: s.strokeWidth,
 			axisHeight: s.axisHeight,
-			rightMargin: s.rightMargin
+			rightMargin: s.rightMargin,
+			unit: s.unit
 		}
 		if (s.plotThickness) arg.plotThickness = s.plotThickness
 
@@ -263,7 +277,8 @@ export function getDefaultViolinSettings(app, overrides = {}) {
 		axisHeight: 60,
 		rightMargin: 50,
 		displaySampleIds: app?.getState()?.termdbConfig?.displaySampleIds ? true : false,
-		lines: []
+		lines: [],
+		unit: 'abs' // abs: absolute scale, log: log scale
 	}
 	return Object.assign(defaults, overrides)
 }

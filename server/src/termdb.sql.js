@@ -18,7 +18,6 @@ get_summary_conditioncategories
 get_numericsummary
 get_rows
 get_rows_by_one_key
-get_rows_by_two_keys
 ********************** INTERNAL
 get_term_cte
 	makesql_oneterm
@@ -216,62 +215,6 @@ works for all attributes, including non-termdb ones
 	return q.ds.cohort.db.connection.prepare(sql).all(values)
 }
 
-export async function get_rows_by_two_keys(q, t1, t2) {
-	/*
-XXX only works for two numeric terms, not for any other types
-
-get all sample and value by one key
-no filter or cte
-works for all attributes, including non-termdb ones
-
-q{}
-  .ds
-  .key
-*/
-	const filter = await getFilterCTEs(q.filter, q.ds)
-	const values = filter ? filter.values.slice() : []
-	const CTE0 = await get_term_cte(q, values, 0)
-	values.push(q.term1_id, q.term2_id)
-
-	const t1excluded = t1.values
-		? Object.keys(t1.values)
-				.filter(i => t1.values[i].uncomputable)
-				.map(Number)
-		: []
-	const t1unannovals = t1excluded.length ? `AND value NOT IN (${t1excluded.join(',')})` : ''
-
-	const t2excluded = t2.values
-		? Object.keys(t2.values)
-				.filter(i => t2.values[i].uncomputable)
-				.map(Number)
-		: []
-	const t2unannovals = t2excluded.length ? `AND value NOT IN (${t2excluded.join(',')})` : ''
-
-	const sql = `WITH
-    ${filter ? filter.filters + ',' : ''}
-    ${CTE0.sql},
-    t1 AS (
-      SELECT sample, value
-      FROM anno_${t1.type}
-      WHERE term_id=? ${t1unannovals}
-    ),
-    t2 AS (
-      SELECT sample, value
-      FROM anno_${t2.type}
-      WHERE term_id=? ${t2unannovals}
-    )
-    SELECT
-      t0.value AS val0,
-      t1.value AS val1, 
-      t2.value AS val2
-    FROM t1
-    JOIN ${CTE0.tablename} t0 ${CTE0.join_on_clause}
-    JOIN t2 ON t2.sample = t1.sample
-    ${filter ? 'WHERE t1.sample in ' + filter.CTEname : ''}`
-
-	return q.ds.cohort.db.connection.prepare(sql).all(values)
-}
-
 export async function get_rows(q, _opts = {}) {
 	/*
 works for only termdb terms; non-termdb attributes will not work
@@ -448,8 +391,6 @@ q{}
 	.term[0,1,2]_id 			// supported parameters for barchart data  
 	.term[0,1,2]_q 				// supported parameters for barchart data
 		the _q{} is managed by termsetting UI
-	.term?_is_genotype 		// supported parameters for barchart data
-		TODO may improve??
 
 values[]
 	string/numeric to replace "?" in CTEs
@@ -458,6 +399,8 @@ index
 	1 for term1, required
 	0 for term0, optional
 	2 for term2, optional
+	index position is dependent on server route
+	index is essential for naming numeric cte tables, for now it's not replaceable by termWrapper{}
 
 filter
 	{} or null
@@ -466,30 +409,33 @@ filter
 
 termWrapper{}
 	.id term.id
-	.term
-	.q
+	.term{}
+	.q{}
+	optional tw object
+	if not provided, the term and q must be present in q{} addressable by the "index" parameter
 
 RETURNS 
 { sql, tablename }
+
+DESIGN
 */
 export async function get_term_cte(q, values, index, filter, termWrapper = null) {
 	const twterm = (termWrapper && termWrapper.term) || q[`term${index}`]
 	const termid = twterm ? twterm.id : q['term' + index + '_id']
-	const term_is_genotype = termWrapper && twterm ? termWrapper.term.is_genotype : q['term' + index + '_is_genotype']
-	if (!(twterm?.type == 'samplelst')) {
+
+	if (twterm?.type != 'samplelst') {
 		// legacy code support: index=1 is assumed to be barchart term
 		// when there is no termWrapper argument
-		if (!termWrapper && index == 1 && !term_is_genotype) {
+		if (!termWrapper && index == 1) {
 			// only term1 is required
-			if (!termid) throw 'missing term id'
-		} else if (!termid || term_is_genotype) {
+			if (!termid) throw 'missing term1 id'
+		} else if (!termid) {
 			// term2 and term0 are optional
 			// no table to query
 			const tablename = 'samplekey_' + index
 			return {
 				tablename,
-				sql: `${tablename} AS (\nSELECT null AS sample, '' as key, '' as value\n)`,
-				join_on_clause: ''
+				sql: `${tablename} AS (\nSELECT null AS sample, '' as key, '' as value\n)`
 			}
 		}
 	}
@@ -503,6 +449,7 @@ export async function get_term_cte(q, values, index, filter, termWrapper = null)
 	}
 
 	const tablename = 'samplekey_' + index
+
 	/*
 		NOTE: all constructed sql/CTE, regardless of term.type, must return 
 		{
@@ -516,20 +463,11 @@ export async function get_term_cte(q, values, index, filter, termWrapper = null)
 		possible if only the bin labels are returned. Similar use cases may be supported
 		later.  
 	*/
-	// index position is dependent on server route
 	// TODO: investigate the utility of 'filter' argument (since get_rows() already performs filtering)
 	let CTE
 	if (term.type == 'categorical') {
 		const groupset = get_active_groupset(term, termq)
-		CTE = await categoricalSql[groupset ? 'groupset' : 'values'].getCTE(
-			tablename,
-			term,
-			q.ds,
-			termq,
-			values,
-			index,
-			groupset
-		)
+		CTE = await categoricalSql[groupset ? 'groupset' : 'values'].getCTE(tablename, term, q.ds, termq, values, groupset)
 	} else if (term.type == 'integer' || term.type == 'float') {
 		const mode = termq.mode == 'spline' ? 'cubicSpline' : termq.mode || 'discrete'
 		// the error is coming from this
@@ -544,7 +482,6 @@ export async function get_term_cte(q, values, index, filter, termWrapper = null)
 	} else {
 		throw 'unknown term type'
 	}
-	if (index != 1) CTE.join_on_clause = `ON t${index}.sample = t1.sample` // will be ignored if no join clause is created by sql constructor
 	return CTE
 }
 
