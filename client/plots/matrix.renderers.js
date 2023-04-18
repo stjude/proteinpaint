@@ -18,16 +18,16 @@ export function setRenderers(self) {
 	}
 
 	self.renderSerieses = function(s, l, d, duration) {
-		self.dom.seriesesG
-			.transition()
-			.duration(duration)
-			.attr('transform', `translate(${d.xOffset + d.seriesXoffset},${d.yOffset})`)
-
 		if (s.useCanvas) {
-			const _g = self.dom.seriesesG.select('g')
+			const _g = self.dom.seriesesG.selectAll('g')
 			const g = /*(_g.size() && _g) ||*/ self.dom.seriesesG.append('g').datum(this.serieses)
-			self.renderCanvas(this.serieses, g, d, s, _g)
+			self.renderCanvas(this.serieses, g, d, s, _g, duration)
 		} else {
+			self.dom.seriesesG
+				.transition()
+				.duration(duration)
+				.attr('transform', `translate(${d.xOffset + d.seriesXoffset},${d.yOffset})`)
+
 			const sg = self.dom.seriesesG.selectAll('.sjpp-mass-series-g').data(this.serieses, series => series.tw.$id)
 			sg.exit().remove()
 			sg.each(self.renderSeries)
@@ -61,7 +61,7 @@ export function setRenderers(self) {
 			.each(self.renderCell)
 	}
 
-	self.renderCanvas = async function(serieses, g, d, s, _g) {
+	self.renderCanvas = async function(serieses, g, d, s, _g, duration) {
 		const df = self.stateDiff
 		if (g.selectAll('image').size() && !df.nonsettings && !df.sorting && !df.cellDimensions) return
 		const pxr = window.devicePixelRatio
@@ -101,6 +101,10 @@ export function setRenderers(self) {
 					// remove a previously rendered image, if applicable, right before replacing it
 					// so that there will be no flicker on update
 					_g?.remove()
+					self.dom.seriesesG
+						.transition()
+						.duration(duration)
+						.attr('transform', `translate(${d.xOffset + d.seriesXoffset},${d.yOffset})`)
 					g.append('image')
 						.attr('xlink:href', reader.result)
 						.attr('width', width)

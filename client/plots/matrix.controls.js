@@ -169,25 +169,32 @@ export class MatrixControls {
 						rows: [
 							{
 								label: 'Grid',
-								type: 'radio',
+								type: 'checkbox',
+								boxLabel: 'show',
+								// v===true means property('checked') and convert to recognized 'rect' value for dispatch
+								// otherwise, compared value to 'rect' to set the current value of the checkbox
+								// note: the non-boolean showGrid values allow keeping the hidden value='pattern' option for benchmark tests
+								processInput: v => (v === true ? 'rect' : v === 'rect'),
 								chartType: 'matrix',
 								settingsKey: 'showGrid',
 								colspan: 2,
-								align: 'center',
-								options: [
-									{
-										label: 'hide',
-										value: ''
-									},
-									{
-										label: 'lines',
-										value: 'lines'
-									},
-									{
-										label: 'rect',
-										value: 'rect'
-									}
-								]
+								align: 'center'
+								// for testing/benchmarking
+								// type: 'radio',
+								// options: [
+								// 	{
+								// 		label: 'hide',
+								// 		value: ''
+								// 	},
+								// 	{
+								// 		label: 'lines',
+								// 		value: 'pattern' // needs debugging for when s.rowh or d.colw does not apply to all rows
+								// 	},
+								// 	{
+								// 		label: 'rect',
+								// 		value: 'rect'
+								// 	}
+								// ]
 							},
 							{
 								label: 'Outline color',

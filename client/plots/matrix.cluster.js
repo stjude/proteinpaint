@@ -78,18 +78,18 @@ function setRenderers(self) {
 			.attr('width', Math.min(d.mainw, d.maxMainW) / this.totalWidth) // d.zoomedMainW)
 			.attr('height', 1)
 
-		if (s.prevShowGrid != s.showGrid) {
-			self.dom.outlines.selectAll('*').remove()
-		}
-
 		self.dom.outlines
 			.transition()
 			.duration(self.dom.outlines.attr('transform') ? s.duration : 0)
 			.attr('transform', `translate(${d.xOffset + d.seriesXoffset},${d.yOffset})`)
 
-		if (!s.showGrid) {
+		if (s.prevShowGrid != s.showGrid) {
+			self.dom.outlines.selectAll('*').remove()
+		}
+
+		if (s.showGrid != 'pattern') {
+			// see function for how s.showGrid = '' | 'rect' is handled
 			renderOutlines(clusters, s, d)
-		} else if (s.showGrid == 'rect') {
 		} else {
 			const g = self.dom.outlines.selectAll('g').data(clusters, c => c.xg.grp.name + ';;' + c.yg.grp.name)
 			g.exit().remove()
@@ -98,9 +98,52 @@ function setRenderers(self) {
 				.append('g')
 				.each(addCluster)
 		}
+
 		s.prevShowGrid = s.showGrid
 	}
 
+	function renderOutlines(clusters, s, d) {
+		const outlines = self.dom.outlines.selectAll('rect').data(clusters, c => c.xg.grp.name + ';;' + c.yg.grp.name)
+		outlines.exit().remove()
+		outlines.each(render1Outline)
+		outlines
+			.enter()
+			.append('rect')
+			.each(render1Outline)
+	}
+
+	function render1Outline(cluster) {
+		const s = self.settings
+		const rect = select(this)
+			.transition()
+			.duration('x' in this ? s.duration : 0)
+			.attr('x', cluster.x)
+			.attr('y', cluster.y)
+			.attr('width', cluster.width)
+			.attr('height', cluster.height)
+			.attr('shape-rendering', 'crispEdges')
+			//
+			// s.showGrid == ''
+			// - means empty cells are not rendered
+			// - the cluster rect fill is set to s.cellbg
+			//
+			// s.showGrid != ''
+			// - equivalent to 'rect' here since 'pattern' is handled in a different function
+			// - sets cluster rect fill=s.gridStroke under cell rects, where the gaps between rects are perceived as lines
+			//
+			.attr('fill', !s.showGrid ? s.cellbg : s.gridStroke)
+			.attr('stroke', s.gridStroke)
+			.attr('stroke-width', 1)
+	}
+
+	/* 
+		render the grid using a repeating pattern as background fill
+		
+		NOTES:
+		- needs debugging for when s.rowh or d.colw does not apply to all rows (inconsistent pattern)
+		- canvas does not save memory using patterns, but svg does
+		- can delete this option once canvas is fully debugged
+	*/
 	function addCluster(cluster) {
 		const g = select(this)
 		const pattern = g
@@ -195,29 +238,5 @@ function setRenderers(self) {
 			.attr('stroke', s.stroke || 'none')
 		//.attr('stroke-width', ) // s.colspace)
 	}
-
-	function renderOutlines(clusters, s, d) {
-		const outlines = self.dom.outlines.selectAll('rect').data(clusters, c => c.xg.grp.name + ';;' + c.yg.grp.name)
-		outlines.exit().remove()
-		outlines.each(render1Outline)
-		outlines
-			.enter()
-			.append('rect')
-			.each(render1Outline)
-	}
-
-	function render1Outline(cluster) {
-		const s = self.settings
-		const rect = select(this)
-			.transition()
-			.duration('x' in this ? s.duration : 0)
-			.attr('x', cluster.x)
-			.attr('y', cluster.y)
-			.attr('width', cluster.width)
-			.attr('height', cluster.height)
-			.attr('shape-rendering', 'crispEdges')
-			.attr('fill', !s.showGrid ? s.cellbg : s.gridStroke)
-			.attr('stroke', s.gridStroke) // s.showGrid ? s.gridStroke : 'none')
-			.attr('stroke-width', 1) // s.colspace)
-	}
+	/* end of grid as pattern */
 }
