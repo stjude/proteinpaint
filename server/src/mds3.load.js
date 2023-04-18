@@ -431,7 +431,7 @@ async function geneExpressionClustering(data, q) {
 	}
 
 	// compose "data{}" into a matrix
-	console.log('data:', data)
+	//console.log('data:', data)
 	for (const [gene, o] of data) {
 		inputData.row_names.push(gene)
 		const row = []
@@ -442,10 +442,10 @@ async function geneExpressionClustering(data, q) {
 	}
 
 	//console.log('inputData:', JSON.stringify(inputData))
-	fs.writeFile('test.txt', JSON.stringify(inputData), function (err) {
-		// For catching input to rust pipeline, in case of an error
-		if (err) return console.log(err)
-	})
+	//fs.writeFile('test.txt', JSON.stringify(inputData), function (err) {
+	//	// For catching input to rust pipeline, in case of an error
+	//	if (err) return console.log(err)
+	//})
 
 	const result = await run_rust('cluster', JSON.stringify(inputData))
 	console.log('result:', result)
