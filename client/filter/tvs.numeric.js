@@ -483,9 +483,7 @@ function enterRange(self, tr, brush, i) {
 	brush.equation_td = range_tr.append('td').style('width', '150px')
 
 	const start = range.startunbounded ? '' : range.startinclusive ? `${range.start} <= ` : `${range.start} < `
-
 	const stop = range.stopunbounded ? '' : range.stopinclusive ? ` <= ${range.stop} ` : ` < ${range.stop} `
-
 	const sameRange = JSON.stringify(range) == JSON.stringify(brush.orig)
 
 	brush.start_text = brush.equation_td
@@ -531,13 +529,13 @@ function makeRangeButtons(self, brush) {
 	const buttons_td = brush.range_tr.append('td')
 	const range = brush.range
 	const orig_range = brush.orig
-	const similarRanges = JSON.stringify(range) == JSON.stringify(brush.orig)
+	const sameRanges = JSON.stringify(range) == JSON.stringify(brush.orig)
 
 	//'edit' button
 	brush.edit_btn = buttons_td
 		.append('td')
 		.attr('class', 'sja_menuoption edit_btn')
-		.style('display', similarRanges || (range.start === '' && range.stop === '') ? 'inline-block' : 'none')
+		.style('display', sameRanges || (range.start === '' && range.stop === '') ? 'inline-block' : 'none')
 		.style('border-radius', '13px')
 		.style('margin', '5px')
 		.style('margin-left', '10px')
@@ -548,7 +546,6 @@ function makeRangeButtons(self, brush) {
 		.text('edit')
 		.on('click', async () => {
 			brush.start_text.style('display', 'none')
-
 			brush.start_input.style('display', 'inline-block')
 			brush.edit_btn.style('display', 'none')
 		})
@@ -557,7 +554,7 @@ function makeRangeButtons(self, brush) {
 	brush.apply_btn = buttons_td
 		.append('td')
 		.attr('class', 'sja_filter_tag_btn sjpp_apply_btn')
-		.style('display', similarRanges || (range.start === '' && range.stop === '') ? 'none' : 'inline-block')
+		.style('display', sameRanges || (range.start === '' && range.stop === '') ? 'none' : 'inline-block')
 		.style('border-radius', '13px')
 		.style('margin', '5px')
 		.style('margin-left', '10px')
@@ -575,7 +572,7 @@ function makeRangeButtons(self, brush) {
 	brush.reset_btn = buttons_td
 		.append('td')
 		.attr('class', 'sja_filter_tag_btn reset_btn')
-		.style('display', similarRanges || (range.start === '' && range.stop === '') ? 'none' : 'inline-block')
+		.style('display', sameRanges || (range.start === '' && range.stop === '') ? 'none' : 'inline-block')
 		.style('border-radius', '13px')
 		.style('margin', '5px')
 		.style('margin-left', '10px')
