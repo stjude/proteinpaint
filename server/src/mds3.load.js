@@ -439,6 +439,6 @@ async function geneExpressionClustering(data, q) {
 		inputData.matrix.push(row)
 	}
 
-	const result = await run_rust('cluster', inputData)
+	const result = await run_rust('cluster', JSON.stringify(inputData))
 	return result
 }
