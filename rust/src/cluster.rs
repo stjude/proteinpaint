@@ -33,6 +33,7 @@ OUTPUT PARAMETERS
        node_coordinates: (X,Y) coordinates of the current node.
        child_nodes: ID's of the child node (if it exists). There will be no child node for the original (input) nodes in the dendrogram.
        child_node_coordinates: (X,Y) coordinates of each of the two child nodes (if they exist).
+ 6) all_original_nodes: This contains list of all descendent original nodes under the current node. This will be empty for the original nodes but will be populated with original node ID in derived nodes. This list will be shown in the UI on clicking a derived node.
 
 EXAMPLES
  1) Syntax: cd .. && cargo build --release && json='{"matrix":[[9.5032,12.2685,8.2919,2.9634,9.2435],[10.5632,9.1719,22.7488,10.2698,31.7872],[0.1035,0.0525,0.0378,0.573,2.0522]],"row_names":["GeneA","GeneB","GeneC"],"col_names":["SampleA","SampleB","SampleC","SampleD","SampleE"],"plot_image":true,"cluster_method":"Average"}' && time echo "$json" | target/release/cluster
@@ -43,7 +44,7 @@ EXAMPLES
 
     Only prints sorted 2D matrix to stdout.
 
-TO DO
+TO DO:
 
 Implement parallelization of calculation of dissimilarity matrix using eculidean distance by using in-built parallelization in nalgebra crate using rayon. See this link below:
 
@@ -114,27 +115,6 @@ impl Serialize for NodeCoordinate {
     }
 }
 
-//impl<'de> Deserialize<'de> for NodeCoordinate {
-//    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-//    where
-//        D: Deserializer<'de>,
-//    {
-//        //enum Field {
-//        //    x,
-//        //    y,
-//        //}
-//
-//        // This part could also be generated independently by:
-//        //
-//        #[derive(Deserialize)]
-//        #[serde(field_identifier)]
-//        enum Field {
-//            x,
-//            y,
-//        }
-//    }
-//}
-
 #[allow(dead_code)]
 #[derive(Debug, Clone, Deserialize)]
 struct NewNodeRelativeCoordinates {
@@ -144,6 +124,7 @@ struct NewNodeRelativeCoordinates {
     child_nodes: Vec<usize>, // ID's of the child node (if it exists). There will be no child node for the original (input) nodes in the dendrogram.
     #[serde(skip_serializing_if = "Vec::is_empty")]
     child_node_coordinates: Vec<NodeCoordinate>, // (X,Y) coordinates of each of the two child nodes (if they exist).
+    all_original_nodes: Vec<usize>, // Contains list of original descendant nodes. To be displayed in UI on clicking a derived node (or line).
 }
 
 impl Serialize for NewNodeRelativeCoordinates {
@@ -155,18 +136,21 @@ impl Serialize for NewNodeRelativeCoordinates {
         let node_id = &self.node_id;
         let node_coordinates = &self.node_coordinates;
         let child_node_coordinates = &self.child_node_coordinates;
+        let all_original_nodes = &self.all_original_nodes;
 
         let mut state;
-        if child_nodes.len() == 0 {
+        if child_nodes.len() == 0 && all_original_nodes.len() == 0 {
+            // This will be true in case of the original nodes
             state = serializer.serialize_struct("NewNodeRelativeCoordinates", 2)?;
             state.serialize_field("node_id", node_id)?;
             state.serialize_field("node_coordinates", &self.node_coordinates)?;
         } else {
-            state = serializer.serialize_struct("NewNodeRelativeCoordinates", 4)?;
+            state = serializer.serialize_struct("NewNodeRelativeCoordinates", 5)?;
             state.serialize_field("node_id", node_id)?;
             state.serialize_field("child_nodes", child_nodes)?;
             state.serialize_field("node_coordinates", node_coordinates)?;
             state.serialize_field("child_node_coordinates", child_node_coordinates)?;
+            state.serialize_field("all_original_nodes", all_original_nodes)?;
         }
         state.end()
     }
@@ -189,24 +173,13 @@ fn euclidean_distance(item1: &Vec<f64>, item2: &Vec<f64>) -> f64 {
 }
 
 fn euclidean_distance4(coordinates: &Matrix<f64, Dyn, Dyn, VecStorage<f64, Dyn, Dyn>>) -> Vec<f64> {
-    // Assuming item1 and item2 have the same length, since they are part of a matrix
-    //println!("nrows:{}", coordinates.nrows());
-    //println!("ncols:{}", coordinates.ncols());
-    //let mut dist: f64 = 0.0;
-    //for i in 0..item1.len() {
-    //    let diff = item1[i] - item2[i];
-    //    dist += diff * diff;
-    //}
-    //dist.sqrt();
-
     let mut condensed = vec![];
     for row in 0..coordinates.nrows() - 1 {
         for col in row + 1..coordinates.nrows() {
             let mut dist: f64 = 0.0;
             //condensed.push(euclidean_distance(&coordinates[row], &coordinates[col]));
             for i in 0..coordinates.ncols() {
-                let diff = coordinates[(row, i)] - coordinates[(col, i)];
-                dist += diff * diff;
+                dist += getsquare(coordinates[(row, i)] - coordinates[(col, i)]);
             }
             condensed.push(dist.sqrt())
         }
@@ -239,10 +212,7 @@ fn euclidean_distance6(coordinates: &Matrix<f64, Dyn, Dyn, VecStorage<f64, Dyn, 
 
             let dist: f64 = (0..coordinates.ncols())
                 .into_par_iter()
-                .map(|i| {
-                    (coordinates[(row, i)] - coordinates[(col, i)])
-                        * (coordinates[(row, i)] - coordinates[(col, i)])
-                })
+                .map(|i| getsquare(coordinates[(row, i)] - coordinates[(col, i)]))
                 .sum();
 
             condensed.push(dist.sqrt())
@@ -252,11 +222,15 @@ fn euclidean_distance6(coordinates: &Matrix<f64, Dyn, Dyn, VecStorage<f64, Dyn, 
     condensed
 }
 
+fn getsquare(num: f64) -> f64 {
+    return num * num;
+}
+
 #[allow(dead_code)]
 fn euclidean_distance5(coordinates: &Matrix<f64, Dyn, Dyn, VecStorage<f64, Dyn, Dyn>>) -> Vec<f64> {
     // Assuming item1 and item2 have the same length, since they are part of a matrix
-    println!("nrows:{}", coordinates.nrows());
-    println!("ncols:{}", coordinates.ncols());
+    //println!("nrows:{}", coordinates.nrows());
+    //println!("ncols:{}", coordinates.ncols());
     //let mut dist: f64 = 0.0;
     //for i in 0..item1.len() {
     //    let diff = item1[i] - item2[i];
@@ -300,28 +274,6 @@ fn euclidean_distance3(
         let diff = item1[i] - item2[i];
         dist += diff * diff;
     }
-    dist.sqrt()
-}
-
-#[allow(dead_code)]
-fn euclidean_distance2(item1: &Vec<f64>, item2: &Vec<f64>) -> f64 {
-    // For now, this is performing worse than single-threaded version
-    // Assuming item1 and item2 have the same length, since they are part of a matrix
-    let dist: f64 = (0..item1.len())
-        .into_iter()
-        .map(|i| (item1[i] - item2[i]) * (item1[i] - item2[i]))
-        .sum();
-    dist.sqrt()
-}
-
-#[allow(dead_code)]
-fn par_euclidean_distance(item1: &Vec<f64>, item2: &Vec<f64>) -> f64 {
-    // For now, this is performing worse than single-threaded version
-    // Assuming item1 and item2 have the same length, since they are part of a matrix
-    let dist: f64 = (0..item1.len())
-        .into_par_iter()
-        .map(|i| (item1[i] - item2[i]) * (item1[i] - item2[i]))
-        .sum();
     dist.sqrt()
 }
 
@@ -492,6 +444,7 @@ fn sort_elements(
                             NodeCoordinate { x: None, y: None },
                             NodeCoordinate { x: None, y: None },
                         ],
+                        all_original_nodes: vec![],
                     });
 
                     if item.1 > max_length_node_distance {
@@ -518,6 +471,7 @@ fn sort_elements(
         //println!("sorted_nodes:{:?}", sorted_nodes);
         for i in 0..new_nodes.len() {
             let current_node = &new_nodes[i];
+            let mut all_original_nodes = Vec::<usize>::new();
             //println!("current_node:{:?}", current_node);
             let distances = dijkstra(
                 &deps,
@@ -553,6 +507,14 @@ fn sort_elements(
                 Some(item) => {
                     child_node1_x = item.node_coordinates.x;
                     child_node1_y = item.node_coordinates.y;
+                    if item.node_id < coordinates.nrows() {
+                        // Select only original nodes and put them in all_original_nodes
+                        all_original_nodes.push(item.node_id)
+                    }
+                    for child_item in &item.all_original_nodes {
+                        // Iterate through the child's all_original_nodes vector and add them to the current vectors all_original_nodes
+                        all_original_nodes.push(*child_item)
+                    }
                 }
                 None => {
                     // Should not happen
@@ -570,6 +532,14 @@ fn sort_elements(
                 Some(item) => {
                     child_node2_x = item.node_coordinates.x;
                     child_node2_y = item.node_coordinates.y;
+                    if item.node_id < coordinates.nrows() {
+                        // Select only original nodes and put them in all_original_nodes
+                        all_original_nodes.push(item.node_id)
+                    }
+                    for child_item in &item.all_original_nodes {
+                        // Iterate through the child's all_original_nodes vector and add them to the current vectors all_original_nodes
+                        all_original_nodes.push(*child_item)
+                    }
                 }
                 None => {
                     // Should not happen
@@ -597,6 +567,7 @@ fn sort_elements(
                         y: child_node2_y,
                     },
                 ],
+                all_original_nodes: all_original_nodes,
             })
         }
 
@@ -604,7 +575,7 @@ fn sort_elements(
         for mut item in node_coordinates_list {
             if item.node_id < coordinates.nrows() {
                 // Check if the current node is an original node. If yes, replace the y-coordinate with the max_length_node_distance
-                item.node_coordinates.y = Some(max_length_node_distance as f64);
+                item.node_coordinates.y = Some(1.0);
             } else {
                 // If the current node is not an original node, check if any of the child nodes are original nodes. If yes, update the y-coordinate of that original node with max_length_node_distance
                 for node_iter in 0..item.child_nodes.len() {
