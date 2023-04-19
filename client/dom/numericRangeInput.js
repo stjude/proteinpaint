@@ -38,8 +38,8 @@ export class NumericRangeInput {
 
 	setRange(range) {
 		if (!range) return
-		const start = 'start' in range ? `${range.start} <=` : 'min' in range ? `${min} <=` : ''
-		const stop = 'stop' in range ? `${range.stop} <=` : 'max' in range ? `${max} <=` : ''
+		const start = 'start' in range ? `${range.start} <=` : 'min' in range ? `${range.min} <=` : ''
+		const stop = 'stop' in range ? `<= ${range.stop}` : 'max' in range ? `<= ${range.max}` : ''
 		this.input.attr('value', `${start} x ${stop}`)
 		this.range = range
 	}
