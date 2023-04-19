@@ -180,6 +180,9 @@ export default class DtDiscoSnv {
 			chord: chord
 		})
 
+		console.log('geneArcs', geneArcs)
+		console.log('geneArcs length', Object.keys(geneArcs).length)
+
 		return geneArcs
 	}
 }

@@ -78,7 +78,11 @@ export default class Labels {
 		const innerRadius = plot.lastRadius //+ s.gene.gap
 		const outerRadius = innerRadius + s.label.width
 
-		this.getTopGenes().forEach(arc => {
+		const topGenes = this.getTopGenes()
+
+		console.log('topGenes', topGenes)
+
+		topGenes.forEach(arc => {
 			const data = arc[0]
 			const g = data.gene
 
