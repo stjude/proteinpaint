@@ -757,7 +757,7 @@ class Matrix {
 		this.setAutoDimensions(xOffset)
 		this.setLabelsAndScales()
 
-		const colw = Math.max(s.colwMin, Math.min(s.colwMax, s.colw * s.zoomLevel))
+		const colw = Math.max(s.colwMin, Math.min(s.colwMax, s.colw * s.zoomLevel, s.renderedWMax))
 		const dx = colw + s.colspace
 		const nx = this[`${col}s`].length
 		const dy = s.rowh + s.rowspace
@@ -843,12 +843,22 @@ class Matrix {
 			s.zoomGrpIndex = this.sampleOrder[s.zoomIndex].grpIndex
 		}
 		// zoomCenter relative to mainw
-		const zoomCenter = s.zoomCenterPct * mainw //console.log(831, 's.zoomIndex=', s.zoomIndex)
-		const centerCellX = s.zoomIndex * dx + s.zoomGrpIndex * s.colgspace //console.log(832, centerCellX)
-		const zoomedMainW = nx * dx + (this[`${col}Grps`].length - 1) * s.colgspace
+		const zoomCenter = s.zoomCenterPct * mainw
+		const centerCellX = s.zoomIndex * dx + s.zoomGrpIndex * s.colgspace
+		const potentialWidth = nx * dx + (this[`${col}Grps`].length - 1) * s.colgspace
+		const zoomedMainW = Math.min(potentialWidth, s.renderedWMax)
 		const seriesXoffset =
-			s.zoomLevel <= 1 && mainw >= zoomedMainW ? 0 : Math.max(zoomCenter - centerCellX, mainw - zoomedMainW)
+			s.zoomLevel <= 1 && mainw >= zoomedMainW ? 0 : Math.max(zoomCenter - centerCellX, mainw - potentialWidth)
+
+		const dw = s.renderedWMax - seriesXoffset
+		const xMin =
+			s.zoomLevel <= 1 && mainw >= zoomedMainW ? 0 : seriesXoffset < -s.renderedWMax ? -s.renderedWMax : seriesXoffset
+		const xMax = s.renderedWMax + xMin
+		console.log(850, potentialWidth, zoomedMainW, s.renderedWMax, mainw, colw, xMin, xMax)
+
 		this.dimensions = {
+			xMin,
+			xMax,
 			dx,
 			dy,
 			xOffset,
@@ -865,9 +875,7 @@ class Matrix {
 	getSerieses(data) {
 		const s = this.settings.matrix
 		const serieses = []
-		const colw = this.dimensions.colw
-		const dx = this.dimensions.dx
-		const dy = this.dimensions.dy
+		const { colw, dx, dy, xMin, xMax } = this.dimensions
 		const legendGroups = {}
 
 		for (const t of this.termOrder) {
@@ -919,6 +927,9 @@ class Matrix {
 
 					// will assign x, y, width, height, fill, label, order, etc
 					const legend = setCellProps[t.tw.term.type](cell, t.tw, anno, value, s, t, this, width, height, dx, dy, i)
+
+					if (cell.x < xMin || cell.x > xMax) continue
+
 					if (legend) {
 						if (!legendGroups[legend.group]) legendGroups[legend.group] = { ref: legend.ref, values: {} }
 						if (!legendGroups[legend.group].values[legend.value])
