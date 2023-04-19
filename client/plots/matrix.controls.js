@@ -430,7 +430,11 @@ export class MatrixControls {
 		const d = this.parent.dimensions
 		if (this.zoomApi)
 			this.zoomApi.update({
-				value: Number(((100 * Math.min(s.colw * s.zoomLevel, s.colwMax)) / s.colwMax).toFixed(1))
+				value: Number(((100 * Math.min(s.colw * s.zoomLevel, s.colwMax)) / s.colwMax).toFixed(1)),
+				min: (100 * s.colwMin) / s.colwMax, //s.zoomMin, //Math.max(1, Math.floor((100 * 1) / s.colwMax)),
+				increment: s.zoomIncrement,
+				max: 100,
+				step: s.zoomStep || 5
 			})
 
 		if (this.svgScrollApi) {
@@ -833,8 +837,9 @@ export class MatrixControls {
 				const s = p.settings.matrix
 				const d = p.dimensions
 				if (eventType == 'move') {
+					//console.log(d.xOffset + d.seriesXoffset - dx, d.yOffset)
+					p.dom.clipRect.attr('x', -d.seriesXoffset + dx)
 					p.dom.seriesesG.attr('transform', `translate(${d.xOffset + d.seriesXoffset - dx},${d.yOffset})`)
-					p.dom.clipRect.attr('x', Math.abs(d.seriesXoffset - dx) / d.zoomedMainW)
 					p.layout.top.attr.adjustBoxTransform(-dx)
 					p.layout.btm.attr.adjustBoxTransform(-dx)
 				} else if (eventType == 'up') {
