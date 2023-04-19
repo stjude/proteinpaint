@@ -235,6 +235,9 @@ function addRangeTableNoDensity(self, tvs) {
 	tr.append('td').html('Range')
 	brush.equation_td = tr.append('td')
 
+	range.min = 'min' in tvs.term ? tvs.term.min : null
+	range.max = 'max' in tvs.term ? tvs.term.max : null
+
 	brush.rangeInput = new NumericRangeInput(brush.equation_td, range, applyRange)
 
 	brush.apply_btn = tr
