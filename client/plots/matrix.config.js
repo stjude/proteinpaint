@@ -40,7 +40,7 @@ export async function getPlotConfig(opts, app) {
 				gridStroke: '#fff',
 				colw: 0,
 				colwMin: 1 / window.devicePixelRatio,
-				colwMax: 18,
+				colwMax: 16,
 				colspace: 1,
 				colgspace: 8,
 				collabelpos: 'bottom',
@@ -71,6 +71,10 @@ export async function getPlotConfig(opts, app) {
 				zoomMin: 0.5,
 				zoomIncrement: 0.5,
 				zoomStep: 10,
+				// renderedWMax should not be exposed as a user-input
+				// 60000 pixels is based on laptop and external monitor tests,
+				// when a canvas dataURL image in a zoomed-in matrix svg stops rendering
+				renderedWMax: 60000 / window.devicePixelRatio,
 				scrollHeight: 12,
 				controlLabels: {
 					samples: 'Samples',
