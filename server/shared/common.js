@@ -1094,6 +1094,6 @@ export function parseRange(str) {
 		} else if (new RegExp(`^${floatExpr}>=$`).test(range) || new RegExp(`^<=${floatExpr}$`).test(range)) {
 			stop = parseFloat(range.match(floatExpr))
 			stopinclusive = true
-		} else throw 'Could not parse expression ' + range
+		} else throw `Could not parse expression '${range}'`
 	}
 }
