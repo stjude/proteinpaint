@@ -7,7 +7,7 @@ export default function discoDefaults(overrides = {}) {
 			svgw: 1300,
 			numSamples: 1,
 			selectedSamples: [],
-			innerRadius: 180,
+			innerRadius: 100,
 			layerScaler: 1,
 			padAngle: 0.01, //0.01, //0.04,
 			defaultGeneAngle: 0.01,

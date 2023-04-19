@@ -77,7 +77,7 @@ export class StateViewModelMapper {
 
         const chromosomes = new Reference(this.settings, chrSizes)
 
-        const rings = [new Ring(this.settings.innerRadius, 30, chromosomes.chromosomes)]
+        const rings = [new Ring(this.settings.innerRadius + 80, 30, chromosomes.chromosomes)]
 
         const data : Array<Data> = this.mapData(opts.args.data, opts.args.sampleName)
 
