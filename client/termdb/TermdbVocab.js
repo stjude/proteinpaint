@@ -656,6 +656,7 @@ export class TermdbVocab extends Vocab {
     */
 	async getAnnotatedSampleData(opts) {
 		// may check against required auth credentials for the server route
+		console.log(this)
 		const headers = this.mayGetAuthHeaders()
 		// unlike scatter and violin, the matrix plot will NOT display anything
 		// if sample names are not allowed to be displayed
@@ -711,7 +712,15 @@ export class TermdbVocab extends Vocab {
 						samplesToShow.add(sampleId)
 						const sample = data.samples[sampleId]
 						if (!(sampleId in samples)) {
-							samples[sampleId] = { sample: sampleId }
+							const s = { sample: sampleId }
+							if (this.termdbConfig.additionalSampleAttributes) {
+								for (const k of this.termdbConfig.additionalSampleAttributes) {
+									if (k in data.samples[sampleId]) {
+										s[k] = data.samples[sampleId][k]
+									}
+								}
+							}
+							samples[sampleId] = s
 						}
 						const row = samples[sampleId]
 						if (idn in sample) {

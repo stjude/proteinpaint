@@ -244,6 +244,13 @@ export async function validate_termdb(ds) {
 		}
 	}
 
+	if (ds.cohort.termdb.additionalSampleAttributes) {
+		if (!Array.isArray(ds.cohort.termdb.additionalSampleAttributes)) throw 'termdb.additionalSampleAttributes not array'
+		for (const k of ds.cohort.termdb.additionalSampleAttributes) {
+			if (typeof k != 'string') throw 'non-str key in termdb.additionalSampleAttributes[]'
+		}
+	}
+
 	//////////////////////////////////////////////////////
 	//
 	// XXX rest is quick fixes taken from mds2.init.js
@@ -1429,6 +1436,15 @@ function mayAdd_mayGetGeneVariantData(ds, genome) {
 				if (!bySampleId.has(s.sample_id)) {
 					bySampleId.set(s.sample_id, { sample: s.sample_id })
 				}
+
+				if (ds.cohort?.termdb?.additionalSampleAttributes) {
+					for (const k of ds.cohort.termdb.additionalSampleAttributes) {
+						if (k in s) {
+							bySampleId.get(s.sample_id)[k] = s[k]
+						}
+					}
+				}
+
 				if (!bySampleId.get(s.sample_id)[tw.term.name]) {
 					bySampleId.get(s.sample_id)[tw.term.name] = { key: tw.term.name, label: tw.term.name, values: [] }
 				}

@@ -113,6 +113,14 @@ async function getSampleData(q) {
 				}
 				if (samples[sampleId]) {
 					samples[sampleId][tw.term.name] = value[tw.term.name]
+
+					if (q.ds.cohort?.termdb?.additionalSampleAttributes) {
+						for (const k of q.ds.cohort?.termdb?.additionalSampleAttributes) {
+							if (k in value) {
+								samples[sampleId][k] = value[k]
+							}
+						}
+					}
 				}
 			}
 		} else if (tw.term.type == 'snplst' || tw.term.type == 'snplocus') {

@@ -56,6 +56,7 @@ export function make(q, res, ds, genome) {
 	if (tdb.coxTimeMsg) c.coxTimeMsg = tdb.coxTimeMsg
 	if (tdb.coxStartTimeMsg) c.coxStartTimeMsg = tdb.coxStartTimeMsg
 	if (tdb.displaySampleIds) c.displaySampleIds = tdb.displaySampleIds
+	if (tdb.additionalSampleAttributes) c.additionalSampleAttributes = tdb.additionalSampleAttributes
 	if (ds.assayAvailability) c.assayAvailability = ds.assayAvailability
 	addRequiredAuth(c, q)
 	addRestrictAncestries(c, tdb)

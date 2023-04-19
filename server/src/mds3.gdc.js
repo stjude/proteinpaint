@@ -193,8 +193,18 @@ export function validate_query_snvindel_byisoform(ds) {
 				/* make simple sample obj for counting, with sample_id
 				only returns total number of unique cases to client
 				*/
+				const s = { sample_id: await decideSampleId(c, ds, opts.useCaseid4sample) }
 
-				m.samples.push({ sample_id: await decideSampleId(c, ds, opts.useCaseid4sample) })
+				if (c.case_id) {
+					/* when case_id is available, pass it on to returned data as "case.case_id"
+					this is used by gdc matrix case selection where case_id (uuid) is needed to build cohort in gdc portal,
+					but the submitter_id cannot be used as it will prevent mds3 gdc filter to work, it only works with uuid
+					see __matrix_case_id__
+					*/
+					s['case.case_id'] = c.case_id
+				}
+
+				m.samples.push(s)
 			}
 			mlst.push(m)
 		}
@@ -1496,12 +1506,20 @@ const isoform2ssm_query1_getvariant = {
 		return f
 	}
 }
+
 // REST: get case details for each ssm, no variant-level info
 const isoform2ssm_query2_getcase = {
 	endpoint: '/ssm_occurrences',
 	size: 100000,
 	fields: [
 		'ssm.ssm_id',
+
+		/* case.case_id is not needed for mds3
+		but is needed for matrix sample selection where the columns are case but not sample
+		see __matrix_case_id__
+		*/
+		'case.case_id',
+
 		'case.submitter_id', // can be used to make sample url link
 		'case.observation.sample.tumor_sample_uuid' // gives aliquot id and convert to submitter id for display
 	],
