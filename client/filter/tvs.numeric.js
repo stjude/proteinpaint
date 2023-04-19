@@ -390,9 +390,12 @@ function enterRange(self, tr, brush, i) {
 		.attr('value', range.start)
 		.on('change', async event => {
 			let str = brush.start_input.node().value
-			const new_range = parseRange(str)
-			updateRange(range, new_range)
-			brush.elem.call(brush.d3brush).call(brush.d3brush.move, [new_range.start, new_range.stop].map(xscale))
+			try {
+				const new_range = parseRange(str)
+				updateRange(range, new_range)
+			} catch (ex) {
+				alert(ex)
+			}
 		})
 
 	makeRangeButtons(self, brush)
