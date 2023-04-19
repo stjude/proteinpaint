@@ -3,6 +3,7 @@ import { init_sampletable } from './sampletable'
 import { get_list_cells } from '#dom/gridutils'
 import { appear } from '#dom/animation'
 import { dofetch3 } from '#common/dofetch'
+import { renderTable } from '#dom/table'
 
 /*
 ********************** EXPORTED
@@ -57,15 +58,10 @@ export async function itemtable(arg) {
 		if (m.dt != dtsnvindel && m.dt != dtfusionrna && m.dt != dtsv) throw 'mlst[] contains unknown dt'
 	}
 
-	const grid = arg.div
-		.append('div')
-		.style('display', 'inline-grid')
-		.style('overflow-y', 'scroll')
-
 	if (arg.mlst.length == 1) {
-		await itemtable_oneItem(arg, grid)
+		await itemtable_oneItem(arg)
 	} else {
-		await itemtable_multiItems(arg, grid)
+		await itemtable_multiItems(arg)
 	}
 
 	mayMoveTipDiv2left(arg)
@@ -101,7 +97,12 @@ function mayMoveTipDiv2left(arg) {
 /*
 display full details (and samples) for one item
 */
-async function itemtable_oneItem(arg, grid) {
+async function itemtable_oneItem(arg) {
+	const grid = arg.div
+		.append('div')
+		.style('display', 'inline-grid')
+		.style('overflow-y', 'scroll')
+
 	grid
 		.style('grid-template-columns', 'auto auto')
 		.style('max-height', '40vw')
@@ -130,48 +131,14 @@ async function itemtable_oneItem(arg, grid) {
 /*
 multiple variants
 show an option for each, click one to run above single-variant code
-grid has optional columns, only the first column is clickable menu option, rest of columns are info only
+mlst table has optional columns, only the first column is clickable menu option, rest of columns are info only
 1. basic info about the variant, as menu option
 2. occurrence if present, as text 
 3. numeric value if used, as text
 */
-async function itemtable_multiItems(arg, grid) {
-	// limit height
-	grid.style('max-height', '40vw')
-	// possible columns
-	const hasOccurrence = arg.mlst.some(i => i.occurrence)
-	// numeric value?
-
-	if (hasOccurrence) {
-		// has more than 1 column
-		grid.style('grid-template-columns', 'auto auto')
-	}
-
-	///////// print all rows
-
-	// header row
-	// header - note
-	grid
-		.append('div')
-		.text('Click a variant to see details')
-		.style('font-size', '.8em')
-		.style('color', '#ccc')
-		.style('position', 'sticky')
-		.style('top', '0px')
-		.style('background', 'white')
-	if (hasOccurrence) {
-		grid
-			.append('div')
-			.text('Occurrence')
-			.style('font-size', '.8em')
-			.style('color', '#ccc')
-			.style('position', 'sticky')
-			.style('top', '0px')
-			.style('background', 'white')
-	}
-
+async function itemtable_multiItems(arg) {
 	// upon clicking an option for a variant
-	// hide grid and display go-back button allowing to go back to grid (all options)
+	// hide tableDiv and display go-back button allowing to go back to tableDiv
 	const goBackButton = arg.div
 		.append('div')
 		.style('margin-bottom', '10px')
@@ -181,23 +148,87 @@ async function itemtable_multiItems(arg, grid) {
 		.html('&#8810; Back to list')
 		.attr('class', 'sja_clbtext')
 		.on('click', () => {
-			grid.style('display', 'inline-grid')
+			tableDiv.style('display', '')
 			goBackButton.style('display', 'none')
 			singleVariantDiv.style('display', 'none')
 		})
 
 	const singleVariantDiv = arg.div.append('div').style('display', 'none')
 
+	///////////////// determine table columns
+	const columns = [{ label: 'Click a variant to see details' }]
+	const hasOccurrence = arg.mlst.some(i => i.occurrence)
+	if (hasOccurrence) {
+		columns.push({ label: 'Occurrence' })
+		// do not sort m by occurrence to show by order of position
+	}
+	// info fields?
+	let infoFields = null
+	if (arg.tk.mds.bcf?.info) {
+		infoFields = []
+		for (const k in arg.tk.mds.bcf.info) {
+			if (arg.tk.mds.bcf.info[k].categories) {
+				infoFields.push(k)
+				columns.push({ label: arg.tk.mds.bcf.info[k].name || k })
+			}
+		}
+		if (infoFields.length == 0) infoFields = null
+	}
+	// numeric value view mode object (that is not occurrence)
+	const numViewMode = arg.tk.skewer.viewModes.find(i => i.inuse && i.type == 'numeric' && i.byAttribute != 'occurrence')
+	if (numViewMode) {
+		columns.push({ label: numViewMode.label })
+	}
+
+	////////////////// generate table rows
+	const rows = [] // one row per m
 	for (const m of arg.mlst) {
+		const row = [{}] // 1st blank cell to print variant button
+		if (hasOccurrence) {
+			row.push({ value: m.occurrence || '' })
+		}
+		if (infoFields) {
+			for (const k of infoFields) {
+				const v = m.info[k]
+				if (v == undefined) {
+					row.push({}) // unannotated
+				} else {
+					const o = arg.tk.mds.bcf.info[k].categories[v]
+					if (o?.color) {
+						row.push({ html: `<span style="background:${o.color}">&nbsp;&nbsp;</span> ${o.label || v}` })
+					} else {
+						row.push({ value: v })
+					}
+				}
+			}
+		}
+		if (numViewMode) {
+			row.push({ value: m[numViewMode.byAttribute] })
+		}
+		rows.push(row)
+	}
+
+	const tableDiv = arg.div.append('div')
+
+	renderTable({
+		div: tableDiv,
+		columns,
+		rows,
+		striped: false,
+		resize: true
+	})
+
+	// print buttons for each m in table
+	for (const [i, m] of arg.mlst.entries()) {
 		// create a menu option, clicking to show this variant by itself
-		const div = grid
+		const div = rows[i][0].__td
 			.append('div')
 			.attr('class', 'sja_menuoption')
 			.on('click', () => {
-				grid.style('display', 'none')
-				goBackButton.style('display', 'block')
+				tableDiv.style('display', 'none')
+				goBackButton.style('display', '')
 				singleVariantDiv
-					.style('display', 'block')
+					.style('display', '')
 					.selectAll('*')
 					.remove()
 				const a2 = Object.assign({}, arg)
@@ -206,8 +237,7 @@ async function itemtable_multiItems(arg, grid) {
 				itemtable(a2)
 			})
 
-		// print variant name
-
+		// print variant name in div
 		if (m.dt == dtsnvindel) {
 			div.append('span').text(arg.tk.mnamegetter(m))
 			div
@@ -232,28 +262,20 @@ async function itemtable_multiItems(arg, grid) {
 		} else {
 			div.text('error: unknown m.dt')
 		}
-
-		// additional columns of this row
-
-		if (hasOccurrence) {
-			grid
-				.append('div')
-				.text(m.occurrence || '')
-				.style('padding', '5px 10px') // same as sja_menuoption
-		}
 	}
 
 	if (!arg.doNotListSample4multim && arg.tk.mds.variant2samples) {
 		const totalOccurrence = arg.mlst.reduce((i, j) => i + (j.occurrence || 0), 0)
 		if (totalOccurrence) {
-			grid
+			arg.div
 				.append('div')
 				.style('margin-top', '10px')
 				.append('span')
 				.attr('class', 'sja_clbtext')
 				.text('List all samples')
-				.on('click', async () => {
-					grid.remove()
+				.on('click', async event => {
+					event.target.remove()
+					tableDiv.remove()
 					await init_sampletable(arg)
 					mayMoveTipDiv2left(arg)
 				})

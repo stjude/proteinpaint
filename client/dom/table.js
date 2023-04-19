@@ -19,14 +19,14 @@ columns = [ {label} ]
 
 rows = [ [] ]
 	each element is an array of cells for a row, with array length must matching columns.length
-	a cell can be single value, or multi value:
+	a cell can be single value, or multi value
+	"__td" is attached to each cell object pointing to <td>, for external code to render interative contents in it
 
 	single value cell: 
 	{
 		url: string, to print in <a> element
 		html: string, to print with .html() d3 method, may be susceptible to attack
 		value: to print with .text() d3 method
-		
 	}
 
 	multi-value cell:
@@ -35,6 +35,7 @@ rows = [ [] ]
 			{url/html/value}, {}, ...
 		]
 	}
+
 
 ******************
 OPTIONAL ARGUMENTS
