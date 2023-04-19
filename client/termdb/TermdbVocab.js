@@ -656,7 +656,6 @@ export class TermdbVocab extends Vocab {
     */
 	async getAnnotatedSampleData(opts) {
 		// may check against required auth credentials for the server route
-		console.log(this)
 		const headers = this.mayGetAuthHeaders()
 		// unlike scatter and violin, the matrix plot will NOT display anything
 		// if sample names are not allowed to be displayed

@@ -1601,6 +1601,7 @@ function setZoomPanActions(self) {
 
 		const ss = self.opts.allow2selectSamples
 		if (ss) {
+			self.dom.tip.hide()
 			self.app.tip.clear()
 			self.app.tip.d
 				.selectAll('div')
@@ -1626,13 +1627,21 @@ function setZoomPanActions(self) {
 								.map(Number)
 							const xMin = xy[0]
 							const xMax = xMin + self.zoomWidth
-							const filter = c => c.x >= xMin && c.x <= xMax
+							const filter = c => c.row && c.x >= xMin && c.x <= xMax
 							const samples = []
 							for (const series of self.serieses) {
-								samples.push(...series.cells.filter(filter).map(c => c.sample))
+								samples.push(
+									...series.cells.filter(filter).map(d => {
+										const obj = {}
+										for (const a of ss.attributes) {
+											obj[a] = d.row[a]
+										}
+										return obj
+									})
+								)
 							}
 							ss.callback({
-								samples: samples.map(d => ({ [ss.attributes]: d })),
+								samples,
 								source: 'Selected samples from OncoMatrix'
 							})
 							self.zoomArea.remove()

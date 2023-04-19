@@ -642,6 +642,8 @@ class Matrix {
 		this.computedSettings = {}
 		// TODO: the additional 65 space should not be hardcoded, but determined based on matrix holder/config
 		this.availContentWidth = this.dom.contentNode.getBoundingClientRect().width - 65 - s.margin.right - xOffset
+		if (this.availContentWidth < 600)
+			this.availContentWidth = window.document.body.clientWidth - 65 - s.margin.right - xOffset
 		if (this.autoDimensions.has('colw')) {
 			const offset = !s.transpose
 				? s.termLabelOffset + s.termGrpLabelOffset
@@ -894,7 +896,7 @@ class Matrix {
 					$id,
 					totalIndex,
 					grpIndex,
-					//row,
+					row,
 					t
 				}
 

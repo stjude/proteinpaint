@@ -67,7 +67,7 @@ export async function init(arg, holder, genomes) {
 	})
 
 	const gdcCohort = getGdcCohort(arg)
-	const genes = (await getGenes(arg, gdcCohort, CGConly)).slice(0, 5)
+	const genes = await getGenes(arg, gdcCohort, CGConly) //.slice(0, 5)
 
 	const opts = {
 		holder,
@@ -95,7 +95,7 @@ export async function init(arg, holder, genomes) {
 			features: ['recover']
 		},
 		matrix: {
-			allow2selectSamples: arg.allow2selectSamples
+			//allow2selectSamples: arg.allow2selectSamples
 		}
 	}
 
