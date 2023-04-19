@@ -3,6 +3,16 @@ import { Tabs } from '#dom/toggleButtons'
 import * as d3s from 'd3-selection'
 import { detectGte } from '../../test/test.helpers.js'
 
+/*
+Tests:
+	Render Tabs, default settings
+	Missing holder
+	Missing tabs array
+	Invalid linePosition
+	Invalid tabsPosition
+	Render Tabs, vertical stack, right border
+ */
+
 /*************************
  reusable helper functions
 **************************/
@@ -34,14 +44,6 @@ const tabsData = [
 
 /**************
  test sections
-
-Render Tabs, default settings
-Missing holder
-Missing tabs array
-Invalid linePosition
-Invalid tabsPosition
-Render Tabs, vertical stack, right border
-
 ***************/
 
 tape('\n', test => {

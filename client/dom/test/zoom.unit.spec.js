@@ -2,8 +2,11 @@ import tape from 'tape'
 import { select } from 'd3-selection'
 import { zoom } from '#dom/zoom'
 
-/*************************
- reusable helper functions
+/*
+Tests:
+	renders the expected elements
+	value synchronization
+ */
 
 /**************
  test sections

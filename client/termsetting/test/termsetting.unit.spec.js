@@ -6,6 +6,11 @@ import { getExample } from '#termdb/test/vocabData'
 const vocab = getExample()
 const vocabApi = vocabInit({ state: { vocab } })
 
+/*
+Tests:
+	fillTermWrapper - continuous term
+ */
+
 /**************
  test sections
 ***************/

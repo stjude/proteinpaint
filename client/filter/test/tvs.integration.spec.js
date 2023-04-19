@@ -13,10 +13,15 @@ const {
 } = require('../../test/test.helpers')
 
 /*********
-the direct functional testing of the component, without the use of runpp()
+Tests: 
+	tvs (common): buttons
+	tvs: Categorical
+	tvs: Numeric
+	tvs: Condition
+	tvs: Cohort + Numeric
+	tvs: unbounded range
 
-run it as:
-$ npx watchify tvs.spec.js -o ../../../public/bin/spec.bundle.js -v
+the direct functional testing of the component, without the use of runpp()
 
 */
 
@@ -88,16 +93,7 @@ function getOpts(_opts = {}) {
 
 /**************
  test sections
-**************
-
-tvs (common): buttons
-tvs: Categorical
-tvs: Numeric
-tvs: Condition
-tvs: Cohort + Numeric
-tvs: unbounded range
-
-*/
+***************/
 
 tape('\n', test => {
 	test.pass('-***- filter/tvs -***-')

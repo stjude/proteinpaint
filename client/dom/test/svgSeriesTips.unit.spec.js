@@ -3,6 +3,10 @@ import { getSeriesTip } from '../svgSeriesTips'
 import { select } from 'd3-selection'
 import { scaleLinear } from 'd3-scale'
 import { Menu } from '#dom/menu'
+/*
+ Tests: 
+	default behavior
+ */
 
 tape('default behavior', test => {
 	const width = 400

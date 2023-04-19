@@ -11,11 +11,34 @@ const {
 const { sleep, detectLst, detectOne, detectGte } = require('../../test/test.helpers.js')
 
 /*********
+Tests:
+	filterInit
+		empty filter: visible controls
+		1-entry root filter: visible controls
+		2-entry root filter: visible controls
+		+NEW button interaction
+		add-transformer button interaction, 1-pill
+		add-transformer button interaction, 2-pill
+		pill Edit interaction
+		pill Replace interaction
+		pill menu-append interaction
+		pill Negate interaction
+		pill Remove interaction
+		group menu-append interaction
+		group Negate interaction
+		group Remove interaction
+		nested filters
+		hidden filters
+		renderAs: htmlSelect
+		getNormalRoot()
+		filterJoin()
+
+	filterRxCompInit
+		Rx filter state
+
+	filterPromptInit
+
 the direct functional testing of the component, without the use of runpp()
-
-run it as:
-$ npx watchify filterControls.spec.js -o ../../../public/bin/spec.bundle.js -v
-
 */
 
 /*************************
@@ -166,35 +189,7 @@ function gettvs(id, val = '', overrides = {}) {
 
 /**************
  test sections
-**************
-
-ilterInit
-    empty filter: visible controls
-    1-entry root filter: visible controls
-    2-entry root filter: visible controls
-    +NEW button interaction
-    add-transformer button interaction, 1-pill
-    add-transformer button interaction, 2-pill
-    pill Edit interaction
-    pill Replace interaction
-    pill menu-append interaction
-    pill Negate interaction
-    pill Remove interaction
-    group menu-append interaction
-    group Negate interaction
-    group Remove interaction
-    nested filters
-    hidden filters
-    renderAs: htmlSelect
-    getNormalRoot()
-    filterJoin()
-
-filterRxCompInit
-    Rx filter state
-
-filterPromptInit
-
-*/
+***************/
 
 tape('\n', test => {
 	test.pass('-***- filter/filter -***-')

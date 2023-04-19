@@ -6,6 +6,29 @@ const { sleep, detectLst, detectOne } = require('../../test/test.helpers.js')
 const getFilterItemByTag = require('../../filter/filter').getFilterItemByTag
 const vocabData = require('../../termdb/test/vocabData')
 
+/*
+Tests:
+	single barchart, categorical bars
+	single chart, with overlay
+	multiple charts
+	series visibility - q.hiddenValue
+	series visibility - numeric
+	series visibility - condition
+	single barchart, filtered
+	click non-group bar to add filter
+	click custom categorical group bar to add filter
+	single chart, genotype overlay
+	numeric exclude range
+	numeric filter - only special value
+	custom vocab: categorical terms with numeric filter
+	custom vocab: numeric terms with categorical filter
+	max number of bins: exceeded
+	no visible series data, no overlay
+	all hidden + with overlay, legend click
+	unhidden chart and legend
+	customized bins
+ */
+
 /*************************
  reusable helper functions
 **************************/
