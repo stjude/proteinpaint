@@ -6,18 +6,14 @@ import { dofetch3 } from '#common/dofetch'
 import { renderTable } from '#dom/table'
 
 /*
-********************** EXPORTED
 itemtable
-
-
-********************** INTERNAL
-itemtable_oneItem
-	table_snvindel
-		table_snvindel_mayInsertNumericValueRow
-		table_snvindel_mayInsertHtmlSections
-		table_snvindel_mayInsertLD
-	table_svfusion
-itemtable_multiItems
+	itemtable_oneItem
+		table_snvindel
+			table_snvindel_mayInsertNumericValueRow
+			table_snvindel_mayInsertHtmlSections
+			table_snvindel_mayInsertLD
+		table_svfusion
+	itemtable_multiItems
 mayMoveTipDiv2left
 add_csqButton
 print_snv
@@ -44,7 +40,7 @@ arg{}
 .tipDiv
 	optional. the menu.d DOM element of the menu; if provided, may try to move it left if table may be too wide and tipDiv is too much to right
 .mlst[]
-	can be of different dt
+	all of the same dt
 .tk
 	.menutip
 	.itemtip
@@ -156,6 +152,7 @@ async function itemtable_multiItems(arg) {
 	const singleVariantDiv = arg.div.append('div').style('display', 'none')
 
 	///////////////// determine table columns
+
 	const columns = [{ label: 'Click a variant to see details' }]
 	const hasOccurrence = arg.mlst.some(i => i.occurrence)
 	if (hasOccurrence) {
@@ -181,6 +178,16 @@ async function itemtable_multiItems(arg) {
 	}
 
 	////////////////// generate table rows
+
+	// sort mlst by position, ".pos" is used for both dt=snvindel and fusion
+	if (arg.block.usegm?.strand == '-') {
+		// using gm and the gene is on reverse strand, sort coord to decending
+		arg.mlst.sort((i, j) => j.pos - i.pos)
+	} else {
+		// sort coord to ascending
+		arg.mlst.sort((i, j) => i.pos - j.pos)
+	}
+
 	const rows = [] // one row per m
 	for (const m of arg.mlst) {
 		const row = [{}] // 1st blank cell to print variant button
