@@ -2,6 +2,13 @@ const tape = require('tape')
 const termjson = require('../../test/testdata/termjson').termjson
 const helpers = require('../../test/front.helpers.js')
 
+/*
+Tests:
+	survival term as term1
+	survival term as term1, with overlay
+	survival term as overlay
+ */
+
 /*************************
  reusable helper functions
 **************************/
@@ -19,13 +26,7 @@ const runpp = helpers.getRunPp('mass', {
 
 /**************
  test sections
-**************
-
-survival term as term1
-survival term as term1, with overlay
-survival term as overlay
-
-*/
+***************/
 tape('\n', function(test) {
 	test.pass('-***- termdb/surv -***-')
 	test.end()

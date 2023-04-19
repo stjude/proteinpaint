@@ -4,6 +4,15 @@ const store = require('../store')
 //const ds = require('@sjcrh/proteinpaint-server/dataset/termdb.test.js')
 const rx = require('../../rx')
 
+/*
+Tests:
+	init errors
+	state: no cohort.termdb.selectCohort
+	state rehydrate: default cohort
+	state rehydrate: activeCohort=1
+	state rehydrate: by cohortFilter
+ */
+
 /*************************
  reusable helper functions
 **************************/
@@ -14,15 +23,7 @@ const runpp = helpers.getRunPp('termdb', {
 
 /**************
  test sections
-**************
-
-init errors
-state: no cohort.termdb.selectCohort
-state rehydrate: default cohort
-state rehydrate: activeCohort=1
-state rehydrate: by cohortFilter
-
-*/
+***************/
 
 tape('\n', function(test) {
 	test.pass('-***- termdb/store -***-')

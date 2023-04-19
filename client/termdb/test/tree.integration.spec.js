@@ -1,6 +1,16 @@
 const tape = require('tape')
 const helpers = require('../../test/front.helpers.js')
 
+/*
+Tests:
+	default behavior
+	click_term
+	click_term2select_tvs
+	rehydrated from saved state
+	error handling
+	usecase
+ */
+
 /*************************
  reusable helper functions
 **************************/
@@ -18,16 +28,7 @@ const runpp = helpers.getRunPp('termdb', {
 
 /**************
  test sections
-**************
-
-default behavior
-click_term
-click_term2select_tvs
-rehydrated from saved state
-error handling
-usecase
-
-*/
+***************/
 
 tape('\n', function(test) {
 	test.pass('-***- termdb/tree -***-')

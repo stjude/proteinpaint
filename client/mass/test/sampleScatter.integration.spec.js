@@ -11,6 +11,22 @@ const {
 	sleep
 } = require('../../test/test.helpers')
 
+/*
+Tests:
+	Render TermdbTest scatter plot and open survival and summary
+	Invalid colorTW.id
+	Invalid colorTW.term
+	Invalid plot name
+	Test legend
+	Create color group
+	Replace color from burger menu
+	Change symbol and reference size from menu
+	Change chart width and height from menu
+	Check/uncheck Show axes from menu
+	Click zoom in, zoom out, and reset buttons
+	Groups and group menus function
+ */
+
 const runpp = helpers.getRunPp('mass', {
 	state: {
 		nav: { activeTab: 1 },

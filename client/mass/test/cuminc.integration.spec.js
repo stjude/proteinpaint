@@ -1,6 +1,15 @@
 const tape = require('tape')
 const helpers = require('../../test/front.helpers.js')
 
+/*
+Tests:
+	basic cuminc
+	term1=Cardiovascular System, filter=ALL
+	term1=Cardiovascular System, term2=agedx
+	hidden uncomputable
+	skipped series
+ */
+
 /*************************
  reusable helper functions
 **************************/
@@ -19,15 +28,8 @@ const runpp = helpers.getRunPp('mass', {
 
 /**************
  test sections
+ ***************/
 
-basic cuminc
-term1=Cardiovascular System, filter=ALL
-term1=Cardiovascular System, term2=agedx
-hidden uncomputable
-skipped series
-
-**************
-*/
 tape('\n', function(test) {
 	test.pass('-***- termdb/cuminc -***-')
 	test.end()

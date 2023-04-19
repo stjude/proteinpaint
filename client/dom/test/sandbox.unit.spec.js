@@ -3,6 +3,15 @@ import * as d3s from 'd3-selection'
 import { newSandboxDiv, renderSandboxFormDiv } from '#dom/sandbox'
 import { detectOne } from '../../test/test.helpers.js'
 
+/*
+Tests:
+	newSandboxDiv(), holder arg only and empty
+	newSandboxDiv(), with opts and content
+	Insert new sandbox at top
+	Expand, collapse, and close buttons
+	renderSandboxFormDiv() 
+*/
+
 /*************************
  reusable helper functions
 **************************/
@@ -24,15 +33,7 @@ function getSandboxOpts(sandbox) {
 
 /**************
  test sections
-**************
-
-newSandboxDiv(), holder arg only and empty
-newSandboxDiv(), with opts and content
-Insert new sandbox at top
-Expand, collapse, and close buttons
-renderSandboxFormDiv()
-
-*/
+***************/
 
 tape('\n', test => {
 	test.pass('-***- dom/sandbox -***-')

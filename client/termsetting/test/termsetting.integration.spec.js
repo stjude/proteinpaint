@@ -15,6 +15,24 @@ const {
 	whenVisible,
 	testAppInit
 } = require('../../test/test.helpers')
+/*
+Tests:
+	menuOptions
+	Reuse option
+	use_bins_less
+	Categorical term
+	Numerical term: range boundaries
+	Numerical term: fixed bins
+	Numerical term: float custom bins
+	Numerical term: toggle menu - 4 options
+	Numerical term: toggle menu - 2 options
+	Numerical term: toggle menu - 1 options
+	Numerical term: integer custom bins
+	Conditional term
+	Custom vocabulary
+	noTermPromptOptions
+
+ */
 
 /*********
 the direct functional testing of the component, without the use of runpp()
@@ -92,22 +110,7 @@ async function getOpts(_opts = {}, genome = 'hg38-test', dslabel = 'TermdbTest')
 
 /**************
  test sections
- **************
- 
-menuOptions
-Reuse option
-use_bins_less
-Categorical term
-Numerical term: range boundaries
-Numerical term: fixed bins
-Numerical term: float custom bins
-Numerical term: toggle menu - 4 options
-Numerical term: toggle menu - 2 options
-Numerical term: toggle menu - 1 options
-Numerical term: integer custom bins
-Conditional term
-Custom vocabulary
- */
+ **************/
 
 tape('\n', test => {
 	test.pass('-***- common/termsetting -***-')

@@ -2,6 +2,16 @@ import tape from 'tape'
 import { renderTable } from '#dom/table'
 import * as d3s from 'd3-selection'
 
+/*
+ Tests: 
+	Render table
+	Missing columns array
+	Missing rows array
+	Missing div
+	Missing and excess row data
+	Return correct rows on button click
+ */
+
 /*************************
  reusable helper functions
 **************************/

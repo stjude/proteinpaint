@@ -1,7 +1,10 @@
 import tape from 'tape'
 import svgLegend from '../svg.legend'
 import { select } from 'd3-selection'
-
+/**
+ Tests: 
+	default behavior
+ */
 tape('default behavior', test => {
 	test.timeoutAfter(100)
 	test.plan(3)

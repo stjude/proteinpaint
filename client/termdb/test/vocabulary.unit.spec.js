@@ -6,6 +6,21 @@ import { FrontendVocab } from '#termdb/FrontendVocab'
 import { testAppInit } from '../../test/test.helpers'
 import { termjson } from '../../test/testdata/termjson'
 
+/*
+Tests:
+	vocabInit
+		getPercentile()
+
+	FrontendVocab
+		getTermdbConfig()
+		getTermChildren()
+		findTerm()
+		getPercentile()
+		getDescrStats()
+		getterm()
+		graphable()
+ */
+
 const vocab = getExample()
 const vocabApi = vocabInit({ state: { vocab } })
 const frontendVocabApi = new FrontendVocab({ state: { vocab } })
@@ -24,20 +39,7 @@ async function getTermdbVocabApi(opts = {}) {
 
 /**************
  test sections
-**************
-
-vocabInit
-	getPercentile()
-
-FrontendVocab
-	getTermdbConfig()
-	getTermChildren()
-	findTerm()
-	getPercentile()
-	getDescrStats()
-	getterm()
-	graphable()
-*/
+***************/
 
 tape('\n', function(test) {
 	test.pass('-***- vocabulary -***-')

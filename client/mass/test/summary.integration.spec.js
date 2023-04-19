@@ -3,6 +3,17 @@ import * as helpers from '../../test/front.helpers.js'
 import { select, selectAll } from 'd3-selection'
 import { detectOne, detectGte } from '../../test/test.helpers.js'
 
+/*
+Tests:
+	Render summary plot, term: "agedx"
+	Barchart tab only, term: "diaggrp"
+	Barchart & violin toggles, term: "diaggrp", term2: "agedx"
+	Barchart & violin toggles, term: "diaggrp", term2: "agedx"
+	Barchart & violin toggles, term: "agedx", term2: "diaggrp"
+	Barchart & violin toggles, term: "agedx", term2: "hrtavg"
+	Overlay continuity, term: "aaclassic_5", term2: "sex"
+ */
+
 /*************************
  reusable helper functions
 **************************/

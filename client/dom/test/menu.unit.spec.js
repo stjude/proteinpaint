@@ -2,6 +2,19 @@ import tape from 'tape'
 import * as d3s from 'd3-selection'
 import { Menu } from '#dom/menu'
 import { detectStyle } from '../../test/test.helpers.js'
+/**
+Tests:
+	new Menu()
+	show(), clear(), and hide(), no args
+	clear() with arg
+	show() with args
+	onHide() callback
+	showunder()
+	showunderoffset()
+	fadeout()
+	toggle()
+	getCustomApi()
+ */
 
 /*************************
  reusable helper functions
@@ -31,20 +44,7 @@ function getTestMenu() {
 
 /**************
  test sections
-**************
-
-new Menu()
-show(), clear(), and hide(), no args
-clear() with arg
-show() with args
-onHide() callback
-showunder()
-showunderoffset()
-fadeout()
-toggle()
-getCustomApi()
-
-*/
+***************/
 
 tape('\n', test => {
 	test.pass('-***- dom/menu -***-')
