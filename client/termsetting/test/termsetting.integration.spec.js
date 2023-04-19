@@ -1107,22 +1107,95 @@ tape('Custom vocabulary', async test => {
 	test.end()
 })
 
-tape.only('noTermPromptOptions', async test => {
+tape('noTermPromptOptions', async test => {
 	test.timeoutAfter(1000)
 
-	let opts
+	let opts, message
+	const testText = 'Custom Label'
 
+	//Test menu with custom label appears
 	opts = await getOpts({
 		tsData: {
 			q: {
 				type: 'values'
 			},
-			noTermPromptOptions: [{ isDictionary: true, text: 'Dictionary' }]
+			noTermPromptOptions: [{ isDictionary: true, text: testText }]
 		}
 	})
 
 	await opts.pill.main(opts.tsData)
-	await opts.pillMenuClick('Dictionary')
+
+	const pill = opts.pill.Inner
+	pill.dom.nopilldiv.node().click()
+
+	test.equal(pill.dom.tip.dnode.innerText, testText, `Should display label = ${testText}`)
+
+	pill.dom.tip.dnode.querySelector('.sja_menuoption').click()
+	const termBtns = await detectGte({ elem: pill.dom.tip.dnode, selector: '.termbtn' })
+	test.ok(termBtns.length > 0, `Should display the dictionary term tree`)
+
+	//Tests for missing arguments
+	message = 'Should throw for missing .noTermPromptOptions array'
+	try {
+		opts = await getOpts({
+			tsData: {
+				q: {
+					type: 'values'
+				},
+				noTermPromptOptions: {}
+			}
+		})
+		await opts.pill.main(opts.tsData)
+		test.fail(message)
+	} catch (e) {
+		test.pass(`${message}: ${e}`)
+	}
+
+	message = 'Should throw for missing .noTermPromptOptions[0].text'
+	try {
+		opts = await getOpts({
+			tsData: {
+				q: {
+					type: 'values'
+				},
+				noTermPromptOptions: [{ isDictionary: true }]
+			}
+		})
+		await opts.pill.main(opts.tsData)
+		test.fail(message)
+	} catch (e) {
+		test.pass(`${message}: ${e}`)
+	}
+
+	message = 'Should throw for missing isDictionary and .termtype'
+	try {
+		opts = await getOpts({
+			tsData: {
+				q: {
+					type: 'values'
+				},
+				noTermPromptOptions: [{ text: testText }]
+			}
+		})
+		await opts.pill.main(opts.tsData)
+		test.fail(message)
+	} catch (e) {
+		test.pass(`${message}: ${e}`)
+	}
+
+	message = 'Should throw for missing .q{}'
+	try {
+		opts = await getOpts({
+			tsData: {
+				q: 'fake',
+				noTermPromptOptions: [{ isDictionary: true, text: testText }]
+			}
+		})
+		await opts.pill.main(opts.tsData)
+		test.fail(message)
+	} catch (e) {
+		test.pass(`${message}: ${e}`)
+	}
 
 	test.end()
 })
