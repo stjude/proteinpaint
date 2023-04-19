@@ -179,14 +179,8 @@ async function itemtable_multiItems(arg) {
 
 	////////////////// generate table rows
 
-	// sort mlst by position, ".pos" is used for both dt=snvindel and fusion
-	if (arg.block.usegm?.strand == '-') {
-		// using gm and the gene is on reverse strand, sort coord to decending
-		arg.mlst.sort((i, j) => j.pos - i.pos)
-	} else {
-		// sort coord to ascending
-		arg.mlst.sort((i, j) => i.pos - j.pos)
-	}
+	// sort mlst by on screen position "__x", common to all dt and irrespective of block strand
+	arg.mlst.sort((i, j) => i.__x - j.__x)
 
 	const rows = [] // one row per m
 	for (const m of arg.mlst) {
