@@ -31,6 +31,8 @@ Tests:
 	Conditional term
 	Custom vocabulary
 	noTermPromptOptions
+	samplelst term
+	geneVariant term
 
  */
 
@@ -1203,43 +1205,107 @@ tape('noTermPromptOptions', async test => {
 	test.end()
 })
 
-tape.skip('Samplelst term', async test => {
+tape('samplelst term', async test => {
 	test.timeoutAfter(1000)
+
 	const opts = await getOpts({
 		tsData: {
 			term: {
-				name: 'test',
+				name: 'Custom Label',
 				type: 'samplelst',
 				values: {
-					'Group 1': { key: 'Group 1', label: 'Group 1' },
-					Others: { key: 'Others', label: 'Others' }
+					'Group 1': {
+						key: 'Group 1',
+						label: 'Test 1',
+						inuse: true,
+						list: [{ sampleId: 1, sample: 1 }, { sampleId: 2, sample: 2 }]
+					},
+					'Group 2': {
+						key: 'Group 2',
+						label: 'Test 2',
+						inuse: false,
+						list: [{ sampleId: 3, sample: 3 }, { sampleId: 4, sample: 4 }, { sampleId: 5, sample: 5 }]
+					},
+					'Group 3': { key: 'Group 3', label: 'Test 3', inuse: false, list: [{ sampleId: 6, sample: 6 }] }
 				}
 			},
 			q: {
-				mode: 'discrete',
+				mode: 'custom-groupsetting',
 				groups: [
 					{
 						name: 'Group 1',
 						in: true,
-						values: [1, 2, 3]
+						values: [{ sampleId: 1, sample: 1 }, { sampleId: 2, sample: 2 }]
 					},
 					{
 						name: 'Group 2',
 						in: false,
-						values: [4, 5, 6]
+						values: [{ sampleId: 3, sample: 3 }, { sampleId: 4, sample: 4 }, { sampleId: 5, sample: 5 }]
+					},
+					{
+						name: 'Group 3',
+						in: false,
+						values: [{ sampleId: 6, sample: 6 }]
 					}
 				]
 			}
 		}
 	})
 
+	//Open group selection menu
 	await opts.pill.main(opts.tsData)
-	const tip = opts.pill.Inner.dom.tip.d.node()
+	const pill = opts.pill.Inner
+	const pillDiv = pill.dom.pilldiv.node().querySelector('.ts_pill')
+	pillDiv.click()
+	await opts.pillMenuClick('Edit')
+
+	//Test if dom elements display properly
+	const tip = pill.dom.tip.dnode
+	const groupDivs = tip.childNodes
+	test.equal(
+		groupDivs.length - 1,
+		Object.keys(opts.tsData.term.values).length,
+		`Should show checkbox selection for each group`
+	)
+
+	let index = 0
+	const missingSamples = []
+	for (const [i, child] of groupDivs.entries()) {
+		if (i === groupDivs.length - 1) continue //Ignore div for apply button
+
+		//Test the rows displaying properly
+		const sampleSelect = child.querySelectorAll('.sjpp_table_item')
+		test.equal(
+			sampleSelect.length - 1,
+			opts.tsData.q.groups[index].values.length,
+			`Should display ${opts.tsData.q.groups[index].values.length} row(s) for ${opts.tsData.q.groups[index].name}`
+		)
+
+		for (const [i, row] of sampleSelect.entries()) {
+			if (i === 0) {
+				test.equal(
+					row.innerText,
+					'Check/Uncheck All',
+					`Should display 'Check/Uncheck All' for ${opts.tsData.q.groups[index].name}`
+				)
+			} else {
+				const findSample = opts.tsData.q.groups[index].values.find(r => r.sample == row.innerText)
+				if (!findSample) missingSamples.push(`sample: ${row.innerText}, group: ${opts.tsData.q.groups[index].name}`)
+			}
+		}
+		++index
+	}
+	//Test all samples appear in table
+	if (missingSamples.length == 0) test.pass(`Should display all sample values for all groups`)
+	else test.fail(`Missing the following samples from group table = ${missingSamples}`)
 
 	test.end()
 })
 
 tape.skip('geneVariant term', async test => {
 	test.timeoutAfter(1000)
+
+	//On hold. A geneVariant term is not in TermdbTest
+
 	test.end()
 })
