@@ -4,6 +4,9 @@ export default class Chromosome extends Arc {
     start: number
     size: number
     factor: number
+
+    posbins: any[]
+
     constructor(key: string, start: number, size: number, factor: number) {
         super();
         this.key = key

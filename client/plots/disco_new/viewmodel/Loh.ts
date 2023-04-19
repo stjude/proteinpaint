@@ -5,4 +5,13 @@ export default class Loh implements Processor {
         return "";
     }
 
+    setGeneArcs(geneArcs: any, alias: any): any {
+    }
+
+    hits(data: any, sample: any, gene: any, cls: any): any {
+    }
+
+    setLayer(plot, sampleName): any {
+    }
+
 }

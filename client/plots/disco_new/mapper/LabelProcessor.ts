@@ -8,4 +8,14 @@ export default class LabelProcessor implements Processor {
         return "";
     }
 
+    setGeneArcs(geneArcs: any, alias: any): any {
+        this.geneArcs = geneArcs
+    }
+
+    hits(data: any, sample: any, gene: any, cls: any): any {
+    }
+
+    setLayer(plot, sampleName): any {
+    }
+
 }
