@@ -229,42 +229,31 @@ function addRangeTableNoDensity(self, tvs) {
 		.html(tvs.term.name)
 
 	const brush = {}
-
 	const table = num_div.append('table')
 	//.style('display', 'inline-block')
-
 	const tr = table.append('tr')
-
 	tr.append('td').html('Range')
-
 	brush.equation_td = tr.append('td')
 
 	const minval = 'min' in tvs.term ? tvs.term.min : null
-	const minsymbol = 'min' in tvs.term ? tvs.term.min : '-ꝏ'
 	const maxval = 'max' in tvs.term ? tvs.term.max : null
-	const maxsymbol = 'max' in tvs.term ? tvs.term.max : 'ꝏ'
-	const startval = range && 'start' in range ? range.start : null
+
+	const start = range && 'start' in range ? `${range.start} <=` : `${minval} <=` || ''
+	const stop = maxval ? `<= ${maxval}` : ''
+
 	brush.start_input = brush.equation_td
 		.append('input')
 		.attr('class', 'start_input')
-		.attr('type', 'number')
-		.attr('value', startval)
-		.attr('min', minval)
-		.attr('max', maxval)
+		.attr('value', `${start} x ${stop}`)
 		.attr('title', `leave blank for the allowed minimum value`)
-		.attr('placeholder', minsymbol)
-		.style('width', '80px')
+		.style('width', '120px')
 		.style('height', '18px')
 		.style('margin', '3px 5px')
 		//.style('font-size', '20px')
 		.style('vertical-align', 'top')
-		.on('keyup', () => {
-			const textval = brush.start_input.property('value')
-			const val = textval === '' ? -Infinity : Number(textval)
-			brush.start_input.style(
-				'color',
-				(minval === null || minval <= val) && (maxval === null || maxval >= val) ? '' : '#f00'
-			)
+		.on('change', () => {
+			const str = brush.start_input.property('value')
+			applyRange(str)
 		})
 
 	brush.apply_btn = tr
@@ -281,31 +270,31 @@ function addRangeTableNoDensity(self, tvs) {
 		.text('apply')
 		.on('click', async () => {
 			self.dom.tip.hide()
-			const start = brush.start_input.property('value')
-			const stop = brush.stop_input.property('value')
-			const range = {
-				start: start === '' ? minval : start,
-				startinclusive: brush.start_select.property('value') === 'startinclusive',
-				startunbounded: start === '' && minval === null,
-				stop: stop === '' ? maxval : stop,
-				stopinclusive: brush.stop_select.property('value') === 'stopinclusive',
-				stopunbounded: stop === '' && maxval === null
-			}
+			const str = brush.start_input.property('value')
+			applyRange(str)
+		})
 
-			let errs = []
+	function applyRange(str) {
+		let errs = []
+		try {
+			const new_range = parseRange(str)
+			updateRange(range, new_range)
 			if (minval !== null && (range.startunbounded || minval > range.start)) {
 				errs.push('Invalid start value < minimum allowed')
 			}
 			if (maxval !== null && (range.stopunbounded || maxval < range.stop)) {
 				errs.push('Invalid stop value > maximum allowed')
 			}
+		} catch (ex) {
+			errs.push(ex)
+		}
 
-			if (errs.length) {
-				alert(errs.join('\n'))
-			} else {
-				self.opts.callback({ term: tvs.term, ranges: [range] })
-			}
-		})
+		if (errs.length) {
+			alert(errs.join('\n'))
+		} else {
+			self.opts.callback({ term: tvs.term, ranges: [range] })
+		}
+	}
 }
 
 function addRangeTable(self) {
