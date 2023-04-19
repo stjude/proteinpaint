@@ -82,7 +82,6 @@ export class StateViewModelMapper {
         const data : Array<Data> = this.mapData(opts.args.data, opts.args.sampleName)
 
         data.forEach(data => {
-
             if (!StateViewModelMapper.dtNums.includes(data.dt)) return
             const alias = data.dt == 1 && this.settings.snv.byClassWidth ? StateViewModelMapper.snvClassLayer[data.class] : StateViewModelMapper.dtAlias[data.dt]
             if (!this.processors[alias]) {
@@ -92,7 +91,6 @@ export class StateViewModelMapper {
             if (!this.hits.classes.includes(cls)) {
                 this.hits.classes.push(cls)
             }
-            //this.labels.track(s[data.dt==1 ? 'snv' : alias], data.gene, response.length, '')
         })
 
         const plot = {
@@ -107,6 +105,7 @@ export class StateViewModelMapper {
             if (!this.processors[alias]) return
             const geneArcs = this.processors[alias].setLayer(plot, plot.sample)
             this.processors.labels.setGeneArcs(geneArcs, alias)
+            this.processors.labels.getTopGenes()
         })
 
         return new ViewModel(rings)
