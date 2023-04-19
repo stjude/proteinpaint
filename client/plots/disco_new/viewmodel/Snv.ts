@@ -28,7 +28,6 @@ export default class Snv implements Processor {
     }
 
     main(data: any): string {
-
         this.hits(data, data.sampleName, data.gene, data.class)
         if (!this.variants[data.sample]) {
             this.variants[data.sample] = []
