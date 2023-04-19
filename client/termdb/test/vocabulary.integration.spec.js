@@ -63,10 +63,12 @@ TermdbVocab
 	findTerm()
 	getTermInfo()
 	getPercentile()
+	getterm()
+	getCategories()
+	getCohortsData()
 	** Comments
 		Tested in FrontendVocab
 			getDescrStats()
-			getterm()
 			graphable()
 
 FrontendVocab
@@ -239,29 +241,7 @@ tape('Missing .state', test => {
 	test.end()
 })
 
-/* TermdbVocab tests 
-
-To test: 
-	mayFillInMissingCatValues
-	getRegressionData
-	syncTermData - only testing here
-	getCohortSampleCount
-	getFilteredSampleCount
-	getViolinPlotData
-	getCategories
-	getNumericUncomputableCategories
-	getConditionCategories
-	validateSnps
-	get_variantFilter
-	getAnnotatedSampleData
-	getTwMinCopy
-	getTermTypes
-	getLDdata
-	getScatterData
-	getCohortsData
-	getMds3queryDetails
-
-*/
+/* TermdbVocab tests */
 tape('\n', function(test) {
 	test.pass('-***- TermdbVocab Tests -***-')
 	test.end()
@@ -353,6 +333,14 @@ tape.skip('getNestedChartSeriesData()', async test => {
 	}
 	result = await termdbVocabApi.getNestedChartSeriesData(opts)
 	console.log(result)
+
+	test.end()
+})
+
+tape.skip('mayFillInMissingCatValues()', async test => {
+	test.timeoutAfter(100)
+
+	const termdbVocabApi = await getTermdbVocabApi()
 
 	test.end()
 })
@@ -498,6 +486,30 @@ tape('getTdbDataUrl()', async test => {
 	}
 })
 
+tape.skip('syncTermData()', async test => {
+	test.timeoutAfter(100)
+
+	const termdbVocabApi = await getTermdbVocabApi()
+
+	let result, config, data
+
+	//Invalid arguments
+	config = { notRealKey: 'Not a real value' }
+	data = { refs: [1] }
+	result = termdbVocabApi.syncTermData(config, data)
+	test.equal(result, undefined, `Should return 'undefined' for invalid arguments`)
+
+	test.end()
+})
+
+tape.skip('getRegressionData()', async test => {
+	test.timeoutAfter(100)
+
+	const termdbVocabApi = await getTermdbVocabApi()
+
+	test.end()
+})
+
 tape('findTerm()', async test => {
 	test.timeoutAfter(500)
 	test.plan(3)
@@ -546,6 +558,30 @@ tape('getTermInfo()', async test => {
 	} catch (e) {
 		test.equal(e, '.getTermInfo: Missing term id', `${message}: ${e}`)
 	}
+
+	test.end()
+})
+
+tape.skip('getCohortSampleCount()', async test => {
+	test.timeoutAfter(100)
+
+	const termdbVocabApi = await getTermdbVocabApi()
+
+	test.end()
+})
+
+tape.skip('getFilteredSampleCount()', async test => {
+	test.timeoutAfter(100)
+
+	const termdbVocabApi = await getTermdbVocabApi()
+
+	test.end()
+})
+
+tape.skip('getViolinPlotData()', async test => {
+	test.timeoutAfter(100)
+
+	const termdbVocabApi = await getTermdbVocabApi()
 
 	test.end()
 })
@@ -644,6 +680,238 @@ tape('getPercentile() - TermdbVocab directly', async test => {
 	}
 	result = await termdbVocabApi.getPercentile(testId, percentile_lst, filter)
 	test.equal(result.values[0], 0.03537315665, 'should get correct 50th percentile with numeric filter')
+})
+
+tape('getterm()', async test => {
+	test.timeoutAfter(100)
+
+	const termdbVocabApi = await getTermdbVocabApi()
+	let testId, result, message
+
+	//Float term
+	testId = 'agedx'
+	result = await termdbVocabApi.getterm(testId)
+	test.equal(typeof result, 'object', 'Should return a term object for float term')
+	test.equal(typeof result.name, 'string', 'Should return string term.name')
+	test.equal(typeof result.type, 'string', 'Should return string term.type')
+	test.ok(!Object.keys(result.values).length, 'Should return an empty term.values object')
+	test.equal(typeof result.bins, 'object', 'Should return a term.bins object')
+
+	//Categorical term
+	testId = 'diaggrp'
+	result = await termdbVocabApi.getterm(testId)
+	test.ok(
+		Object.keys(result.values).length > 0 && !result.samplecount,
+		'Should return term.values for categorical term'
+	)
+
+	//No arguments
+	message = `Should throw for missing id arg`
+	try {
+		await termdbVocabApi.getterm()
+		test.fail(message)
+	} catch (e) {
+		test.pass(`${message}: ${e}`)
+	}
+
+	message = `Should throw for invalid term.id`
+	try {
+		await termdbVocabApi.getterm('aaa')
+		test.fail(message)
+	} catch (e) {
+		test.pass(`${message}: ${e}`)
+	}
+
+	//Missing vocab.dslabel
+	message = `Should throw for missing vocab.dslabel`
+	try {
+		termdbVocabApi.vocab.dslabel = null
+		await termdbVocabApi.getterm(testId)
+		test.fail(message)
+	} catch (e) {
+		test.pass(`${message}: ${e}`)
+	}
+
+	message = `Should throw for invalid dslabel`
+	try {
+		termdbVocabApi.vocab.dslabel = 'aaa'
+		await termdbVocabApi.getterm(testId)
+		test.fail(message)
+	} catch (e) {
+		test.pass(`${message}: ${e}`)
+	}
+
+	//Missing vocab.genome
+	message = `Should throw for missing vocab.genome`
+	try {
+		termdbVocabApi.vocab.dslabel = 'TermdbTest'
+		termdbVocabApi.vocab.genome = null
+		await termdbVocabApi.getterm(testId)
+		test.fail(message)
+	} catch (e) {
+		test.pass(`${message}: ${e}`)
+	}
+
+	message = `Should throw for invalid genome`
+	try {
+		termdbVocabApi.vocab.genome = 'aaa'
+		await termdbVocabApi.getterm(testId)
+		test.fail(message)
+	} catch (e) {
+		test.pass(`${message}: ${e}`)
+	}
+
+	termdbVocabApi.vocab.genome = 'hg38-test' //Reset to avoid problems with other tests
+	test.end()
+})
+
+tape('getCategories()', async test => {
+	test.timeoutAfter(100)
+
+	const termdbVocabApi = await getTermdbVocabApi()
+
+	let testTerm, filter, body, termCat
+
+	//Term and body args, no filter arg
+	body = { bar_by_grade: 1, value_by_max_grade: 1 }
+	testTerm = termjson['Arrhythmias']
+	termCat = await termdbVocabApi.getCategories(testTerm, '', body)
+	test.equal(
+		termCat.orderedLabels.length,
+		Object.keys(testTerm.values).length,
+		`Should return the same number of categories, without filter arg`
+	)
+
+	//Term, filter, and body args
+	filter = {
+		type: 'tvslst',
+		in: true,
+		join: '',
+		lst: [
+			{
+				type: 'tvslst',
+				in: true,
+				join: '',
+				lst: []
+			}
+		],
+		$id: 'fake'
+	}
+	body = { bar_by_grade: 1, value_by_max_grade: 1 }
+	termCat = await termdbVocabApi.getCategories(testTerm, filter, body)
+	test.equal(
+		termCat.orderedLabels.length,
+		Object.keys(testTerm.values).length,
+		`Should return the same number of categories, with filter arg`
+	)
+
+	test.end()
+})
+
+tape.skip('getNumericUncomputableCategories()', async test => {
+	test.timeoutAfter(100)
+
+	const termdbVocabApi = await getTermdbVocabApi()
+
+	test.end()
+})
+
+tape.skip('getConditionCategories()', async test => {
+	test.timeoutAfter(100)
+
+	const termdbVocabApi = await getTermdbVocabApi()
+
+	test.end()
+})
+
+tape.skip('validateSnps()', async test => {
+	test.timeoutAfter(100)
+
+	const termdbVocabApi = await getTermdbVocabApi()
+
+	test.end()
+})
+
+tape.skip('get_variantFilter()', async test => {
+	test.timeoutAfter(100)
+
+	const termdbVocabApi = await getTermdbVocabApi()
+
+	test.end()
+})
+
+tape.skip('getAnnotatedSampleData()', async test => {
+	test.timeoutAfter(100)
+
+	const termdbVocabApi = await getTermdbVocabApi()
+
+	test.end()
+})
+
+tape.skip('getTwMinCopy()', async test => {
+	test.timeoutAfter(100)
+
+	const termdbVocabApi = await getTermdbVocabApi()
+
+	test.end()
+})
+
+tape.skip('getTermTypes()', async test => {
+	test.timeoutAfter(100)
+
+	const termdbVocabApi = await getTermdbVocabApi()
+	let testIds, result
+
+	testIds = 'agedx'
+	result = await termdbVocabApi.getTermTypes(testIds)
+	console.log(result)
+
+	test.end()
+})
+
+tape.skip('getLDdata()', async test => {
+	test.timeoutAfter(100)
+
+	const termdbVocabApi = await getTermdbVocabApi()
+
+	test.end()
+})
+
+tape.skip('getScatterData()', async test => {
+	test.timeoutAfter(100)
+
+	const termdbVocabApi = await getTermdbVocabApi()
+
+	test.end()
+})
+
+tape('getCohortsData()', async test => {
+	test.timeoutAfter(100)
+	test.plan(3)
+
+	const termdbVocabApi = await getTermdbVocabApi()
+	let result
+
+	result = await termdbVocabApi.getCohortsData()
+	test.equal(typeof result.cohorts, 'object', `Should return cohorts array`)
+	test.equal(typeof result.features, 'object', `Should return features array`)
+
+	termdbVocabApi.vocab.dslabel = 'aaa'
+	result = await termdbVocabApi.getCohortsData()
+	test.ok(result.error, `Should return error message in object`)
+
+	termdbVocabApi.vocab.dslabel = state.vocab.dslabel
+
+	test.end()
+})
+
+tape.skip('getMds3queryDetails()', async test => {
+	test.timeoutAfter(100)
+
+	const termdbVocabApi = await getTermdbVocabApi()
+	// console.log(termdbVocabApi)
+
+	test.end()
 })
 
 /* FrontendVocab tests */

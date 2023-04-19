@@ -15,6 +15,10 @@ set_hiddenvalues()
 ********************* Instance methods
 clickNoPillDiv
 showTree
+
+
+opts{}
+
 */
 
 // append the common ID substring,

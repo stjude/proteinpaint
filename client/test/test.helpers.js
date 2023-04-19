@@ -373,8 +373,7 @@ class TestApp {
 		try {
 			this.store = await storeInit({ app: this.api, state: this.opts.state })
 			this.state = await this.store.copyState()
-			/* TODO: create an argument to pass opts.components with the import statement 
-			for a cleaner implementation */
+			if (this.opts.dom) this.dom = this.opts.dom
 			await this.api.dispatch()
 		} catch (e) {
 			if (e.stack) console.log(e.stack)

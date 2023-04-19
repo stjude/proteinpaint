@@ -1,8 +1,14 @@
 const tape = require('tape')
 const d3s = require('d3-selection')
-const { filterInit, filterRxCompInit, getNormalRoot, filterJoin, getFilterItemByTag } = require('../filter')
-const helpers = require('../../test/front.helpers.js')
-const { sleep, detectLst, detectOne } = require('../../test/test.helpers.js')
+const {
+	filterInit,
+	filterRxCompInit,
+	getNormalRoot,
+	filterJoin,
+	getFilterItemByTag,
+	filterPromptInit
+} = require('../filter')
+const { sleep, detectLst, detectOne, detectGte } = require('../../test/test.helpers.js')
 
 /*********
 the direct functional testing of the component, without the use of runpp()
@@ -162,29 +168,31 @@ function gettvs(id, val = '', overrides = {}) {
  test sections
 **************
 
-*** filterInit ***
-empty filter: visible controls
-1-entry root filter: visible controls
-2-entry root filter: visible controls
-+NEW button interaction
-add-transformer button interaction, 1-pill
-add-transformer button interaction, 2-pill
-pill Edit interaction
-pill Replace interaction
-pill menu-append interaction
-pill Negate interaction
-pill Remove interaction
-group menu-append interaction
-group Negate interaction
-group Remove interaction
-nested filters
-hidden filters
-renderAs: htmlSelect
-getNormalRoot()
-filterJoin()
+ilterInit
+    empty filter: visible controls
+    1-entry root filter: visible controls
+    2-entry root filter: visible controls
+    +NEW button interaction
+    add-transformer button interaction, 1-pill
+    add-transformer button interaction, 2-pill
+    pill Edit interaction
+    pill Replace interaction
+    pill menu-append interaction
+    pill Negate interaction
+    pill Remove interaction
+    group menu-append interaction
+    group Negate interaction
+    group Remove interaction
+    nested filters
+    hidden filters
+    renderAs: htmlSelect
+    getNormalRoot()
+    filterJoin()
 
-*** filterRxCompInit ***
-Rx filter state
+filterRxCompInit
+    Rx filter state
+
+filterPromptInit
 
 */
 
@@ -1683,6 +1691,70 @@ tape('Rx filter state inputs', async test => {
 	} catch (e) {
 		test.pass(`${message}: ${e}`)
 	}
+
+	test.end()
+})
+
+tape('\n', test => {
+	test.pass('-***- filterPromptInit() tests-***-')
+	test.end()
+})
+
+tape('filterPromptInit()', async test => {
+	test.timeoutAfter(3000)
+
+	const holder = getHolder()
+	const opts = {
+		//Create opts for filterPrompt
+		filterData: {
+			type: 'tvslst',
+			in: true,
+			join: '',
+			lst: []
+		},
+		vocab: {
+			genome: 'hg38-test',
+			dslabel: 'TermdbTest'
+		},
+		callback(filter) {
+			opts.filterData = filter
+			opts.filterUiRoot = getFilterItemByTag(filter, 'filterUiRoot')
+		}
+	}
+
+	opts.filter = await filterPromptInit({
+		//Attach filter prompt to opts
+		holder,
+		emptyLabel: 'Filter Prompt',
+		vocab: opts.vocab,
+		debug: true,
+		callback: opts.callback
+	})
+
+	await opts.filter.main(opts.filterData)
+	const filter = opts.filter.Inner
+	const btn = filter.dom.holder.select('.sja_new_filter_btn.sja_menuoption').node()
+	btn.click()
+
+	//Click first parent term
+	const parentTerms = await detectGte({ elem: filter.dom.termSrcDiv.node(), selector: '.termbtn' })
+	parentTerms[0].click()
+
+	//Click the first and only leaf term
+	const leafTerm = await detectOne({ elem: filter.dom.termSrcDiv.node(), selector: '.sja_tree_click_term.termlabel' })
+	leafTerm.click()
+
+	//Test all the relevant dom elements are present
+	test.equal(filter.dom.treeTip.dnode.style.display, 'block', `Should display variable selection menu`)
+	const backBtn = await detectOne({ elem: filter.dom.treeTip.dnode, selector: 'span' })
+	test.ok(backBtn.innerText.includes('Back to variable selection'), `Should display back button`)
+	const inputs = await detectGte({ elem: filter.dom.treeTip.dnode, selector: 'input', count: 3 })
+	test.ok(inputs.find(i => i.id == 'checkboxHeader'), `Should display 'Check/Uncheck All' checkbox`)
+	test.ok(inputs.length > 2, `Should show checkbox for at least one variable`)
+
+	backBtn.click()
+	const findTree = filter.dom.termSrcDiv.node().querySelectorAll('.termbtn')
+	test.ok(findTree.length > 1, `Should display tree after clicking back button`)
 
 	test.end()
 })
