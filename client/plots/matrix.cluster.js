@@ -73,7 +73,7 @@ function setRenderers(self) {
 		const s = self.settings
 		const d = self.currData.dimensions
 		self.dom.clipRect
-			.attr('x', s.zoomLevel <= 1 && d.mainw >= d.zoomedMainW ? 0 : Math.abs(d.seriesXoffset) / d.zoomedMainW)
+			.attr('x', (s.zoomLevel <= 1 && d.mainw >= d.zoomedMainW ? -1 : -1 + Math.abs(d.seriesXoffset)) / d.zoomedMainW)
 			.attr('y', 0)
 			.attr('width', Math.min(d.mainw, d.maxMainW) / this.totalWidth) // d.zoomedMainW)
 			.attr('height', 1)

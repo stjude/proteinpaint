@@ -74,7 +74,7 @@ export async function getPlotConfig(opts, app) {
 				// renderedWMax should not be exposed as a user-input
 				// 60000 pixels is based on laptop and external monitor tests,
 				// when a canvas dataURL image in a zoomed-in matrix svg stops rendering
-				renderedWMax: 60000 / window.devicePixelRatio,
+				imgWMax: 60000 / window.devicePixelRatio,
 				scrollHeight: 12,
 				controlLabels: {
 					samples: 'Samples',

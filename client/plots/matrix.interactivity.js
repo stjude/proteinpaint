@@ -65,10 +65,11 @@ export function setInteractivity(self) {
 		const y = event.clientY - self.imgBox.y - event.target.clientTop
 		const d = event.target.__data__.find(series => series.y <= y && y <= series.y + self.dimensions.dy)
 		if (!d) return
-		const x2 = event.clientX - self.imgBox.x - event.target.clientLeft
+		const { xMin, dx } = self.dimensions
+		const x2 = event.clientX - self.imgBox.x - event.target.clientLeft + xMin
 		for (const cell of d.cells) {
 			const min = cell.x
-			const max = cell.x + self.dimensions.dx
+			const max = cell.x + dx
 			if (min <= x2 && x2 <= max) return cell
 		}
 		return null
@@ -1464,14 +1465,14 @@ function setZoomPanActions(self) {
 		if (event.target.tagName == 'rect') {
 			if (event.target.__data__?.sample) return event.target.__data__
 			if (event.target.__data__?.xg) {
-				const visibleWidth = event.clientX - event.target.getBoundingClientRect().x + d.seriesXoffset
+				const width = event.clientX - event.target.getBoundingClientRect().x + d.seriesXoffset
 				const i = Math.floor(visibleWidth / d.dx)
 				return self.sampleOrder[i]
 			}
 		}
 		if (event.target.tagName == 'image' && s.useCanvas) {
-			const visibleWidth = event.clientX - event.target.getBoundingClientRect().x + d.seriesXoffset
-			const i = Math.floor(visibleWidth / d.dx)
+			const width = event.clientX - event.target.getBoundingClientRect().x + d.xMin
+			const i = Math.floor(width / d.dx)
 			return self.sampleOrder[i]
 		}
 	}
@@ -1512,7 +1513,7 @@ function setZoomPanActions(self) {
 		self.dom.seriesesG.attr('transform', `translate(${d.xOffset + d.seriesXoffset + dx},${d.yOffset})`)
 		self.dom.clipRect.attr(
 			'x',
-			s.zoomLevel == 1 && d.mainw >= d.zoomedMainW ? 0 : Math.abs(d.seriesXoffset + dx) / d.zoomedMainW
+			s.zoomLevel == 1 && d.mainw >= d.zoomedMainW ? 0 : -d.seriesXoffset - dx // d.zoomedMainW
 		)
 		self.layout.top.attr.adjustBoxTransform(dx)
 		self.layout.btm.attr.adjustBoxTransform(dx)
@@ -1576,12 +1577,11 @@ function setZoomPanActions(self) {
 			.attr('transform', `translate(${x},0)`)
 			.style('width', self.zoomWidth)
 			.style('height', self.dimensions.mainh)
-
-		self.clickedSeriesCell.endCell = self.getCellByPos(event)
 	}
 
 	self.seriesesGtriggerZoom = function(event) {
 		event.stopPropagation()
+		self.clickedSeriesCell.endCell = self.getCellByPos(event)
 		self.dom.seriesesG.on('mousemove', null).on('mouseup', null)
 		//const d = event.target.__data__
 		select('body').on('mouseup.matrixZoom', null)

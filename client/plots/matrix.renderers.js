@@ -6,13 +6,10 @@ export function setRenderers(self) {
 		const l = self.layout
 		const d = self.dimensions
 		const duration = self.dom.svg.attr('width') ? s.duration : 0
-		const x = s.zoomLevel <= 1 && d.mainw >= d.zoomedMainW ? 0 : Math.abs(d.seriesXoffset) / d.zoomedMainW
-		self.dom.clipRect
-			.attr('x', x)
-			.attr('y', 0)
-			.attr('width', Math.min(d.mainw, d.maxMainW) / d.zoomedMainW)
-			.attr('height', 1)
+		const x = s.zoomLevel <= 1 && d.mainw >= d.zoomedMainW ? 0 : Math.abs(d.seriesXoffset) / d.imgW
 
+		//self.dom.clipG
+		//.attr('transform', `translate(${d.xOffset},0)`)
 		self.renderSerieses(s, l, d, duration)
 		self.renderLabels(s, l, d, duration)
 	}
@@ -23,6 +20,12 @@ export function setRenderers(self) {
 			const g = /*(_g.size() && _g) ||*/ self.dom.seriesesG.append('g').datum(this.serieses)
 			self.renderCanvas(this.serieses, g, d, s, _g, duration)
 		} else {
+			self.dom.clipRect
+				.attr('x', -d.seriesXoffset)
+				.attr('y', 0)
+				.attr('width', d.mainw) //Math.min(d.mainw, d.maxMainW) / d.imgW)
+				.attr('height', d.mainh + 500)
+
 			self.dom.seriesesG
 				.transition()
 				.duration(duration)
@@ -67,8 +70,8 @@ export function setRenderers(self) {
 		const pxr = window.devicePixelRatio
 		// TODO: may not need to remove the image???
 		g.selectAll('*').remove()
-		const width = Math.floor(d.zoomedMainW)
-		const height = Math.floor(self.dimensions.mainh)
+		const width = d.imgW
+		const height = self.dimensions.mainh
 		const canvas = window.OffscreenCanvas
 			? new OffscreenCanvas(width * pxr, height * pxr)
 			: // TODO: no need to support older browser versions???
@@ -101,12 +104,20 @@ export function setRenderers(self) {
 					// remove a previously rendered image, if applicable, right before replacing it
 					// so that there will be no flicker on update
 					_g?.remove()
+					self.dom.clipRect
+						.attr('x', -d.seriesXoffset)
+						.attr('y', 0)
+						.attr('width', d.mainw) //Math.min(d.mainw, d.maxMainW) / d.imgW)
+						.attr('height', d.mainh + 500)
+
 					self.dom.seriesesG
-						.transition()
-						.duration(duration)
+						//.transition()
+						//.duration(duration)
 						.attr('transform', `translate(${d.xOffset + d.seriesXoffset},${d.yOffset})`)
+
 					g.append('image')
 						.attr('xlink:href', reader.result)
+						.attr('x', d.xMin) //d.seriesXoffset + d.xMin) //d.xMin) // + d.xOffset) //d.seriesXoffset - d.xMin)
 						.attr('width', width)
 						.attr('height', height)
 				},
@@ -123,12 +134,21 @@ export function setRenderers(self) {
 	self.renderCellWithCanvas = function(ctx, cell, series, s, d, _y) {
 		if (!cell.fill)
 			cell.fill = cell.$id in self.colorScaleByTermId ? self.colorScaleByTermId[cell.$id](cell.key) : getRectFill(cell)
-		const x = cell.x || 0
+		const x = cell.x ? cell.x - d.xMin : 0
 		const y = _y ? _y + cell.y : cell.y || 0
 		const width = cell.width || d.colw
 		const height = cell.height || s.rowh
 		ctx.fillStyle = cell.fill
 		ctx.fillRect(x, y, width, height)
+
+		/* // lines don't render as well as rects
+		ctx.lineWidth = width
+		ctx.strokeStyle = cell.fill
+		ctx.beginPath()
+		ctx.moveTo(x,y)
+		ctx.lineTo(x,height)
+		ctx.stroke()
+		*/
 	}
 
 	self.renderCell = function(cell) {

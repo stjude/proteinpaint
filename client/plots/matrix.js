@@ -124,11 +124,13 @@ class Matrix {
 			menubody: tip.d.append('div')
 		}
 
-		this.dom.clipRect = svg
+		this.dom.clipG = mainG.append('g')
+
+		this.dom.clipRect = this.dom.clipG
 			.append('clipPath')
 			.attr('id', this.seriesClipId)
-			.attr('clipPathUnits', 'objectBoundingBox')
-			//.attr('clipPathUnits', 'userSpaceOnUse')
+			//.attr('clipPathUnits', 'objectBoundingBox')
+			.attr('clipPathUnits', 'userSpaceOnUse')
 			.append('rect')
 			.attr('display', 'block')
 
@@ -757,7 +759,7 @@ class Matrix {
 		this.setAutoDimensions(xOffset)
 		this.setLabelsAndScales()
 
-		const colw = Math.max(s.colwMin, Math.min(s.colwMax, s.colw * s.zoomLevel, s.renderedWMax))
+		const colw = Math.max(s.colwMin, Math.min(s.colwMax, s.colw * s.zoomLevel))
 		const dx = colw + s.colspace
 		const nx = this[`${col}s`].length
 		const dy = s.rowh + s.rowspace
@@ -845,16 +847,15 @@ class Matrix {
 		// zoomCenter relative to mainw
 		const zoomCenter = s.zoomCenterPct * mainw
 		const centerCellX = s.zoomIndex * dx + s.zoomGrpIndex * s.colgspace
-		const potentialWidth = nx * dx + (this[`${col}Grps`].length - 1) * s.colgspace
-		const zoomedMainW = Math.min(potentialWidth, s.renderedWMax)
+		const zoomedMainW = nx * dx + (this[`${col}Grps`].length - 1) * s.colgspace
 		const seriesXoffset =
-			s.zoomLevel <= 1 && mainw >= zoomedMainW ? 0 : Math.max(zoomCenter - centerCellX, mainw - potentialWidth)
+			s.zoomLevel <= 1 && mainw >= zoomedMainW ? 0 : Math.max(zoomCenter - centerCellX, mainw - zoomedMainW)
 
-		const dw = s.renderedWMax - seriesXoffset
-		const xMin =
-			s.zoomLevel <= 1 && mainw >= zoomedMainW ? 0 : seriesXoffset < -s.renderedWMax ? -s.renderedWMax : seriesXoffset
-		const xMax = s.renderedWMax + xMin
-		console.log(850, potentialWidth, zoomedMainW, s.renderedWMax, mainw, colw, xMin, xMax)
+		const imgW = s.imgWMax > zoomedMainW ? zoomedMainW : s.imgWMax
+		const imgLeftMin = Math.max(0, centerCellX - Math.min(4 * mainw, imgW))
+		const xMin = s.zoomLevel <= 1 && mainw >= zoomedMainW ? 0 : imgLeftMin
+		const xMax = imgW + xMin
+		//console.log({ imgW, mainw, xMin, xMax, seriesXoffset, imgLeftMin, xOffset, centerCellX, zoomedMainW, imgWMax: s.imgWMax })
 
 		this.dimensions = {
 			xMin,
@@ -868,7 +869,8 @@ class Matrix {
 			colw,
 			zoomedMainW,
 			seriesXoffset: seriesXoffset > 0 ? 0 : seriesXoffset,
-			maxMainW: Math.max(mainwByColDimensions, this.availContentWidth)
+			maxMainW: Math.max(mainwByColDimensions, this.availContentWidth),
+			imgW
 		}
 	}
 
@@ -909,7 +911,7 @@ class Matrix {
 				}
 
 				if (!anno || !anno.renderedValues?.length) {
-					if (s.showGrid == 'rect') {
+					if (s.useCanvas || so.grp) {
 						const cell = getEmptyCell(cellTemplate, s, this.dimensions)
 						series.cells.push(cell)
 					}
@@ -928,7 +930,7 @@ class Matrix {
 					// will assign x, y, width, height, fill, label, order, etc
 					const legend = setCellProps[t.tw.term.type](cell, t.tw, anno, value, s, t, this, width, height, dx, dy, i)
 
-					if (cell.x < xMin || cell.x > xMax) continue
+					if (!s.useCanvas && (cell.x + cell.width < xMin || cell.x - cell.width > xMax)) continue
 
 					if (legend) {
 						if (!legendGroups[legend.group]) legendGroups[legend.group] = { ref: legend.ref, values: {} }
