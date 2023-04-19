@@ -10,7 +10,7 @@ addNewBrush() // add new brush either at end (with existing ranges) or in center
 ********************** INTERNAL
 applyBrush() // main function to define and init d3 brushes, 
              // it will handle events such as brush move, drag
-             // and will update input elements attached to brush, e.g. brush.start_input
+             // and will update input elements attached to brush, e.g. brush.rangeInput
 
 */
 
@@ -87,19 +87,10 @@ function applyBrush(self, elem, brush) {
 			const start = range.startunbounded ? '' : range.startinclusive ? `${range.start} <= ` : `${range.start} < `
 
 			const stop = range.stopunbounded ? '' : range.stopinclusive ? ` <= ${range.stop} ` : ` < ${range.stop} `
-
 			// update inputs from brush move
-			brush.start_input
-				.style('color', a_range.start == range.start ? '#000' : '#23cba7')
-				.style('display', similarRanges ? 'none' : 'inline-block')
-			brush.start_input.node().value = range.startunbounded ? '' : `${start} x ${stop}`
+			brush.rangeInput.getInput().style('color', a_range.start == range.start ? '#000' : '#23cba7')
+			brush.rangeInput.getInput().node().value = range.startunbounded ? '' : `${start} x ${stop}`
 
-			//update 'edit', 'apply' and 'reset' buttons based on brush change
-			brush.edit_btn.style(
-				'display',
-				!similarRanges || a_range.start === '' || a_range.stop === '' ? 'none' : 'inline-block'
-			)
-			brush.apply_btn.style('display', similarRanges ? 'none' : 'inline-block')
 			brush.reset_btn.style(
 				'display',
 				similarRanges || a_range.start === '' || a_range.stop === '' ? 'none' : 'inline-block'

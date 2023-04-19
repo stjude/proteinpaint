@@ -3,7 +3,7 @@ import { scaleLinear } from 'd3'
 import { keyupEnter } from '../src/client'
 import { addBrushes, addNewBrush } from './tvs.density'
 import { makeDensityPlot } from './densityplot'
-import { parseRange } from '../shared/common'
+import { NumericRangeInput } from '../dom/numericRangeInput'
 
 /*
 ********************** EXPORTED
@@ -235,26 +235,7 @@ function addRangeTableNoDensity(self, tvs) {
 	tr.append('td').html('Range')
 	brush.equation_td = tr.append('td')
 
-	const minval = 'min' in tvs.term ? tvs.term.min : null
-	const maxval = 'max' in tvs.term ? tvs.term.max : null
-
-	const start = range && 'start' in range ? `${range.start} <=` : `${minval} <=` || ''
-	const stop = maxval ? `<= ${maxval}` : ''
-
-	brush.start_input = brush.equation_td
-		.append('input')
-		.attr('class', 'start_input')
-		.attr('value', `${start} x ${stop}`)
-		.attr('title', `leave blank for the allowed minimum value`)
-		.style('width', '120px')
-		.style('height', '18px')
-		.style('margin', '3px 5px')
-		//.style('font-size', '20px')
-		.style('vertical-align', 'top')
-		.on('change', () => {
-			const str = brush.start_input.property('value')
-			applyRange(str)
-		})
+	brush.rangeInput = new NumericRangeInput(brush.equation_td, range, applyRange)
 
 	brush.apply_btn = tr
 		.append('td')
@@ -269,31 +250,13 @@ function addRangeTableNoDensity(self, tvs) {
 		.style('text-transform', 'uppercase')
 		.text('apply')
 		.on('click', async () => {
-			self.dom.tip.hide()
-			const str = brush.start_input.property('value')
-			applyRange(str)
+			applyRange()
 		})
 
-	function applyRange(str) {
-		let errs = []
-		try {
-			const new_range = parseRange(str)
-			updateRange(range, new_range)
-			if (minval !== null && (range.startunbounded || minval > range.start)) {
-				errs.push('Invalid start value < minimum allowed')
-			}
-			if (maxval !== null && (range.stopunbounded || maxval < range.stop)) {
-				errs.push('Invalid stop value > maximum allowed')
-			}
-		} catch (ex) {
-			errs.push(ex)
-		}
-
-		if (errs.length) {
-			alert(errs.join('\n'))
-		} else {
-			self.opts.callback({ term: tvs.term, ranges: [range] })
-		}
+	function applyRange() {
+		const range = brush.rangeInput.getRange()
+		self.dom.tip.hide()
+		self.opts.callback({ term: tvs.term, ranges: [range] })
 	}
 }
 
@@ -369,34 +332,10 @@ function enterRange(self, tr, brush, i) {
 
 	brush.equation_td = range_tr.append('td').style('width', '150px')
 
-	const start = range.startunbounded ? '' : range.startinclusive ? `${range.start} <= ` : `${range.start} < `
-	const stop = range.stopunbounded ? '' : range.stopinclusive ? ` <= ${range.stop} ` : ` < ${range.stop} `
-	const sameRange = JSON.stringify(range) == JSON.stringify(brush.orig)
-
-	brush.start_text = brush.equation_td
-		.append('div')
-		.attr('class', 'start_text')
-		.style('display', sameRange ? 'inline-block' : 'none')
-		.style('font-weight', 'bold')
-		.style('text-align', 'center')
-		.html(`${start} x ${stop}`)
-
-	brush.start_input = brush.equation_td
-		.append('input')
-		.attr('class', 'start_input')
-		.style('display', 'none')
-		.style('width', '120px')
-		.style('margin-left', '15px')
-		.attr('value', range.start)
-		.on('change', async event => {
-			let str = brush.start_input.node().value
-			try {
-				const new_range = parseRange(str)
-				updateRange(range, new_range)
-			} catch (ex) {
-				alert(ex)
-			}
-		})
+	brush.rangeInput = new NumericRangeInput(brush.equation_td, brush.range, new_range => {
+		console.log(new_range)
+		apply(self, range, new_range)
+	})
 
 	makeRangeButtons(self, brush)
 
@@ -422,30 +361,10 @@ function makeRangeButtons(self, brush) {
 	const orig_range = brush.orig
 	const sameRanges = JSON.stringify(range) == JSON.stringify(brush.orig)
 
-	//'edit' button
-	brush.edit_btn = buttons_td
-		.append('td')
-		.attr('class', 'sja_menuoption edit_btn')
-		.style('display', sameRanges || (range.start === '' && range.stop === '') ? 'inline-block' : 'none')
-		.style('border-radius', '13px')
-		.style('margin', '5px')
-		.style('margin-left', '10px')
-		// .style('padding', '5px 12px')
-		.style('text-align', 'center')
-		.style('font-size', '.8em')
-		.style('text-transform', 'uppercase')
-		.text('edit')
-		.on('click', async () => {
-			brush.start_text.style('display', 'none')
-			brush.start_input.style('display', 'inline-block')
-			brush.edit_btn.style('display', 'none')
-		})
-
 	//'Apply' button
 	brush.apply_btn = buttons_td
 		.append('td')
 		.attr('class', 'sja_filter_tag_btn sjpp_apply_btn')
-		.style('display', sameRanges || (range.start === '' && range.stop === '') ? 'none' : 'inline-block')
 		.style('border-radius', '13px')
 		.style('margin', '5px')
 		.style('margin-left', '10px')
@@ -456,7 +375,7 @@ function makeRangeButtons(self, brush) {
 		.text('apply')
 		.on('click', async () => {
 			self.dom.tip.hide()
-			await apply()
+			await apply(self, range, brush.rangeInput.getRange())
 		})
 
 	//'Reset' button
@@ -508,27 +427,21 @@ function makeRangeButtons(self, brush) {
 				addRangeTable(self)
 			}
 		})
+}
 
-	async function apply() {
-		try {
-			const new_range = parseRange(brush.start_input.node().value)
-			updateRange(range, new_range)
+async function apply(self, range, new_range) {
+	try {
+		updateRange(range, new_range)
 
-			const new_tvs = JSON.parse(JSON.stringify(self.tvs))
-			delete new_tvs.groupset_label
-			// merge overlapping ranges
-			if (self.num_obj.ranges.length > 1) new_tvs.ranges = mergeOverlapRanges(self, range)
-			else new_tvs.ranges[range.index] = range
-			try {
-				validateNumericTvs(new_tvs)
-			} catch (e) {
-				window.alert(e)
-				return
-			}
-			self.opts.callback(new_tvs)
-		} catch (e) {
-			window.alert(e)
-		}
+		const new_tvs = JSON.parse(JSON.stringify(self.tvs))
+		delete new_tvs.groupset_label
+		// merge overlapping ranges
+		if (self.num_obj.ranges.length > 1) new_tvs.ranges = mergeOverlapRanges(self, range)
+		else new_tvs.ranges[range.index] = range
+		validateNumericTvs(new_tvs)
+		self.opts.callback(new_tvs)
+	} catch (e) {
+		window.alert(e)
 	}
 }
 
