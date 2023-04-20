@@ -453,6 +453,13 @@ async function geneExpressionClustering(data, q) {
 	const time2 = new Date()
 	console.log('Time taken to run rust gene clustering script:', time2 - time1, 'ms')
 	//console.log('result:', result)
+
+	/*
+        sorted_sample_elements: List of indices of samples in sorted matrix
+        sorted_gene_elements: List of indices of genes in sorted matrix
+        sorted_gene_coordinates: Information for each node in the sample dendrogram (see details in rust/src/cluster.rs)
+        sorted_sample_coordinates: Information for each node in the gene dendrogram (see details in rust/src/cluster.rs)
+        */
 	let sorted_sample_elements, sorted_gene_elements, sorted_gene_coordinates, sorted_sample_coordinates
 	const rust_output_list = rust_output.split('\n')
 	for (let item of rust_output_list) {
