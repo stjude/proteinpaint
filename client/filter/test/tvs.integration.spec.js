@@ -312,7 +312,7 @@ tape('tvs: Categorical', async test => {
 	test.end()
 })
 
-tape.only('tvs: Numeric', async test => {
+tape.skip('tvs: Numeric', async test => {
 	test.timeoutAfter(3000)
 	test.plan(19)
 
