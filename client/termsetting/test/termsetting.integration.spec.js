@@ -1256,6 +1256,7 @@ tape('samplelst term', async test => {
 	await opts.pill.main(opts.tsData)
 	const pill = opts.pill.Inner
 	const pillDiv = pill.dom.pilldiv.node().querySelector('.ts_pill')
+	test.equal(pillDiv.innerText, opts.tsData.term.name, `Should display custom name for button label`)
 	pillDiv.click()
 	await opts.pillMenuClick('Edit')
 
@@ -1295,7 +1296,7 @@ tape('samplelst term', async test => {
 		}
 		++index
 	}
-	//Test all samples appear in table
+	//Test all samples properly appear in table
 	if (missingSamples.length == 0) test.pass(`Should display all sample values for all groups`)
 	else test.fail(`Missing the following samples from group table = ${missingSamples}`)
 
