@@ -428,6 +428,7 @@ async function geneExpressionClustering(data, q) {
 		matrix: [],
 		row_names: [], // genes
 		col_names: [...sampleSet], // samples
+		plot_image: false, // When true causes cluster.rs to plot the image into a png file (EXPERIMENTAL)
 	}
 
 	// compose "data{}" into a matrix
@@ -447,7 +448,41 @@ async function geneExpressionClustering(data, q) {
 	//	if (err) return console.log(err)
 	//})
 
-	const result = await run_rust('cluster', JSON.stringify(inputData))
-	console.log('result:', result)
-	return result
+	const time1 = new Date()
+	const rust_output = await run_rust('cluster', JSON.stringify(inputData))
+	const time2 = new Date()
+	console.log('Time taken to run rust gene clustering script:', time2 - time1, 'ms')
+	//console.log('result:', result)
+	let sorted_sample_elements, sorted_gene_elements, sorted_gene_coordinates, sorted_sample_coordinates
+	const rust_output_list = rust_output.split('\n')
+	for (let item of rust_output_list) {
+		if (item.includes('sorted_col_elements:')) {
+			sorted_sample_elements = item
+				.replace('sorted_col_elements:', '')
+				.replace('[', '')
+				.replace(']', '')
+				.replace(' ', '')
+				.split(',')
+				.map((i) => parseInt(i))
+		} else if (item.includes('sorted_row_elements:')) {
+			sorted_gene_elements = item
+				.replace('sorted_row_elements:', '')
+				.replace('[', '')
+				.replace(']', '')
+				.replace(' ', '')
+				.split(',')
+				.map((i) => parseInt(i))
+		} else if (item.includes('sorted_col_coordinates:')) {
+			sorted_sample_coordinates = JSON.parse(JSON.parse(item.replace('sorted_col_coordinates:', '')))
+		} else if (item.includes('sorted_row_coordinates:')) {
+			sorted_gene_coordinates = JSON.parse(JSON.parse(item.replace('sorted_row_coordinates:', '')))
+		} else {
+			console.log(item)
+		}
+	}
+	//console.log('sorted_sample_elements:', sorted_sample_elements)
+	//console.log('sorted_sample_coordinates:', sorted_sample_coordinates)
+	//console.log('sorted_gene_elements:', sorted_gene_elements)
+	//console.log('sorted_gene_coordinates:', sorted_gene_coordinates)
+	return { sorted_sample_elements, sorted_sample_coordinates, sorted_gene_elements, sorted_gene_coordinates }
 }
