@@ -73,11 +73,7 @@ function getArgs(_settings = {}) {
 	const tg = [
 		{
 			name: 'Term Group 1',
-			lst: [
-				{ $id: 'aaa', term: terms.aaa, sortSamples: { by: 'hits' } },
-				{ $id: 'bbb', term: terms.bbb, sortSamples: { by: 'hits' } },
-				{ $id: 'ccc', term: terms.ccc, sortSamples: { by: 'hits' } }
-			]
+			lst: [{ $id: 'aaa', term: terms.aaa }, { $id: 'bbb', term: terms.bbb }, { $id: 'ccc', term: terms.ccc }]
 		}
 	]
 
@@ -348,6 +344,25 @@ tape('sortPriority by both dt and class', test => {
 			[ '2', '3', ' ', '5', ' ' ], 
 			[ '2', ' ', '1', '5', ' ' ], 
 			[ ' ', '3', '1', ' ', '4' ] 
+		],
+		'should sort sample and rows in the expected order'
+	)
+	test.end()
+})
+
+tape('sort agains selectedTerms', test => {
+	const { self, settings, rows } = getArgs({ sortSamplesBy: 'dt', sortTermsBy: 'hits' })
+	self.termGroups[0].lst[0].sortSamples = { by: 'hits' }
+	const sorter = ms.getSampleSorter(self, settings, rows)
+	const sampleNames = self.sampleGroups.map(g => g.lst.sort(sorter).map(s => s.sample))
+	test.deepEqual(sampleNames, [[3, 2, 1], [5, 4]], 'should sort the samples by dt-only')
+	test.deepEqual(
+		simpleMatrix(sampleNames, self.termOrder, rows),
+		// prettier-ignore
+		[ 
+			[ '3', '2', ' ', '5', ' ' ], 
+			[ ' ', '2', '1', '5', ' ' ], 
+			[ '3', ' ', '1', ' ', '4' ] 
 		],
 		'should sort sample and rows in the expected order'
 	)

@@ -2,6 +2,7 @@ const glob = require('glob')
 const fs = require('fs')
 const path = require('path')
 const wpCompileTime = path.join(__dirname, '/wpCompileTime')
+const minimatch = require('minimatch')
 
 /*
 	Creates a target file to import matching test spec files.
@@ -34,6 +35,8 @@ if (!fs.existsSync(wpCompileTime)) {
 	fs.writeFileSync(wpCompileTime, '', { encoding: 'utf8' })
 }
 
+const specsCache = {}
+
 exports.writeImportCode = async function writeImportCode(opts, targetFile) {
 	// detect if the targetFile is missing and create as needed
 	if (!fs.existsSync(targetFile)) {
@@ -62,11 +65,19 @@ exports.writeImportCode = async function writeImportCode(opts, targetFile) {
 
 function findMatchingSpecs(opts) {
 	// may assign default patterns
-	const SPECDIR = opts.dir || '**'
+	const SPECDIR = opts.dir ? `**/${opts.dir}` : '**'
 	const SPECNAME = opts.name || '*'
 	const exclude = 'exclude' in opts ? opts.exclude : SPECNAME.includes('_x_.') ? '' : '_x_.'
-	const pattern = path.join(__dirname, `../**/${SPECDIR}/test/${SPECNAME}.spec.js`)
-	const specs = glob.sync(pattern, { cwd: path.join(__dirname, `../**`) }).filter(f => !exclude || !f.includes(exclude))
+	const pattern = path.join(__dirname, `../${SPECDIR}/test/${SPECNAME}.spec.js`)
+	const specs =
+		getFromCache(pattern) ||
+		glob.sync(pattern, { cwd: path.join(__dirname, `../**`) }).filter(f => !exclude || !f.includes(exclude))
+	if (!specsCache[pattern]) specsCache[pattern] = specs
+	if (SPECDIR == '**' && SPECNAME == '*') {
+		// this is a request for all spec files, can cache the results for
+		// all other targeted spec searches, since glob.sync could be slow
+		specsCache['*'] = specs
+	}
 
 	const clientDir = __dirname.replace('client/test', 'client')
 	// sorting preference for running the tests
@@ -88,6 +99,12 @@ function findMatchingSpecs(opts) {
 	}
 }
 exports.findMatchingSpecs = findMatchingSpecs
+
+function getFromCache(pattern) {
+	if (specsCache[pattern]) return specsCache[pattern]
+	// prefer minimatch() against in-memoery cache, which is much faster than glob.sync() against disk
+	return specsCache['*']?.filter(f => minimatch(f, pattern))
+}
 
 function getImportedSpecs(targetFile, format = '') {
 	if (!fs.existsSync(targetFile)) throw `missing '${targetFile}' in getImportedSpecs()`
