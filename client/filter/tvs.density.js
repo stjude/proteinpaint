@@ -84,9 +84,8 @@ function applyBrush(self, elem, brush) {
 			if (range.stopunbounded) a_range.stop = Number(maxvalue.toFixed(1))
 			const similarRanges = JSON.stringify(range) == JSON.stringify(a_range)
 
-			const start = range.startunbounded ? '' : range.startinclusive ? `${range.start} <= ` : `${range.start} < `
-
-			const stop = range.stopunbounded ? '' : range.stopinclusive ? ` <= ${range.stop} ` : ` < ${range.stop} `
+			const start = range.startunbounded ? '' : range.startinclusive ? `${range.start} <=` : `${range.start} <`
+			const stop = range.stopunbounded ? '' : range.stopinclusive ? `<= ${range.stop}` : `< ${range.stop}`
 			// update inputs from brush move
 			brush.rangeInput.getInput().style('color', a_range.start == range.start ? '#000' : '#23cba7')
 			brush.rangeInput.getInput().node().value = range.startunbounded ? '' : `${start} x ${stop}`

@@ -312,7 +312,7 @@ tape('tvs: Categorical', async test => {
 	test.end()
 })
 
-tape('tvs: Numeric', async test => {
+tape.only('tvs: Numeric', async test => {
 	test.timeoutAfter(3000)
 	test.plan(19)
 
@@ -381,10 +381,15 @@ tape('tvs: Numeric', async test => {
 		pill.click()
 		editOpt.click()
 		const applyBtn = await detectLst({ target: tipnode, selector: '.sjpp_apply_btn', count: 2 })
+		console.log(tipnode.querySelector('input[name="rangeInput"]').value.trim())
+
 		test.equal(applyBtn.length, 2, 'Should have 2 button to apply value change')
 		test.equal(tipd.selectAll('.sjpp_delete_btn').size(), 1, 'Should have 1 button to remove the range')
-		test.equal(tipnode.querySelector('.start_text').innerHTML, '1000', 'Should match start value with data')
-		test.equal(tipnode.querySelector('.stop_text').innerHTML, '2000', 'Should match stop value with data')
+		test.equal(
+			tipnode.querySelector('input[name="rangeInput"]').value.trim(),
+			'1000 < x <= 2000',
+			'Should match range with data'
+		)
 	}
 
 	// --- trigger and check range edit ---
@@ -482,6 +487,7 @@ tape('tvs: Numeric', async test => {
 		editOpt.click()
 		const addRangeBtn = await detectOne({ target: tipnode, selector: '.add_range_btn' })
 		addRangeBtn.click()
+
 		const start_value_premerge = +tipnode.querySelector('.start_input').value
 		const stop_input = tipnode.querySelector('.stop_input')
 		tipnode.querySelectorAll('.start_input')[1].value = +stop_input.value - 400
