@@ -1,4 +1,5 @@
 const app = require('./app')
+const fs = require('fs')
 const path = require('path')
 const utils = require('./utils')
 const snvindelByRangeGetter_bcf = require('./mds3.init').snvindelByRangeGetter_bcf
@@ -342,7 +343,7 @@ function filter_data(q, result) {
 				server will re-request data, though inefficient
 				so as to calculate the number of samples with mutations in zoomed in region of protein
 				*/
-				if (!q.rglst.find(r => m.chr == r.chr && m.pos >= r.start && m.pos <= r.stop)) {
+				if (!q.rglst.find((r) => m.chr == r.chr && m.pos >= r.start && m.pos <= r.stop)) {
 					// not in any region
 					continue
 				}
@@ -426,10 +427,12 @@ async function geneExpressionClustering(data, q) {
 	const inputData = {
 		matrix: [],
 		row_names: [], // genes
-		col_names: [...sampleSet] // samples
+		col_names: [...sampleSet], // samples
+		plot_image: false, // When true causes cluster.rs to plot the image into a png file (EXPERIMENTAL)
 	}
 
 	// compose "data{}" into a matrix
+	//console.log('data:', data)
 	for (const [gene, o] of data) {
 		inputData.row_names.push(gene)
 		const row = []
@@ -439,6 +442,54 @@ async function geneExpressionClustering(data, q) {
 		inputData.matrix.push(row)
 	}
 
-	const result = await run_rust('cluster', JSON.stringify(inputData))
-	return result
+	//console.log('inputData:', JSON.stringify(inputData))
+	//fs.writeFile('test.txt', JSON.stringify(inputData), function (err) {
+	//	// For catching input to rust pipeline, in case of an error
+	//	if (err) return console.log(err)
+	//})
+
+	const time1 = new Date()
+	const rust_output = await run_rust('cluster', JSON.stringify(inputData))
+	const time2 = new Date()
+	console.log('Time taken to run rust gene clustering script:', time2 - time1, 'ms')
+	//console.log('result:', result)
+
+	/*
+        sorted_sample_elements: List of indices of samples in sorted matrix
+        sorted_gene_elements: List of indices of genes in sorted matrix
+        sorted_gene_coordinates: Information for each node in the sample dendrogram (see details in rust/src/cluster.rs)
+        sorted_sample_coordinates: Information for each node in the gene dendrogram (see details in rust/src/cluster.rs)
+        */
+	let sorted_sample_elements, sorted_gene_elements, sorted_gene_coordinates, sorted_sample_coordinates
+	const rust_output_list = rust_output.split('\n')
+	for (let item of rust_output_list) {
+		if (item.includes('sorted_col_elements:')) {
+			sorted_sample_elements = item
+				.replace('sorted_col_elements:', '')
+				.replace('[', '')
+				.replace(']', '')
+				.replace(' ', '')
+				.split(',')
+				.map((i) => parseInt(i))
+		} else if (item.includes('sorted_row_elements:')) {
+			sorted_gene_elements = item
+				.replace('sorted_row_elements:', '')
+				.replace('[', '')
+				.replace(']', '')
+				.replace(' ', '')
+				.split(',')
+				.map((i) => parseInt(i))
+		} else if (item.includes('sorted_col_coordinates:')) {
+			sorted_sample_coordinates = JSON.parse(JSON.parse(item.replace('sorted_col_coordinates:', '')))
+		} else if (item.includes('sorted_row_coordinates:')) {
+			sorted_gene_coordinates = JSON.parse(JSON.parse(item.replace('sorted_row_coordinates:', '')))
+		} else {
+			console.log(item)
+		}
+	}
+	//console.log('sorted_sample_elements:', sorted_sample_elements)
+	//console.log('sorted_sample_coordinates:', sorted_sample_coordinates)
+	//console.log('sorted_gene_elements:', sorted_gene_elements)
+	//console.log('sorted_gene_coordinates:', sorted_gene_coordinates)
+	return { sorted_sample_elements, sorted_sample_coordinates, sorted_gene_elements, sorted_gene_coordinates }
 }

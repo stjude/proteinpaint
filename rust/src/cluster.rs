@@ -27,29 +27,24 @@ OUTPUT PARAMETERS
        node_coordinates: (X,Y) coordinates of the current node.
        child_nodes: ID's of the child node (if it exists). There will be no child node for the original (input) nodes in the dendrogram.
        child_node_coordinates: (X,Y) coordinates of each of the two child nodes (if they exist).
- 4) max_col_y_length: This contains the distance of the farthest node from the top node for the dendrogram at the top. This will be useful when rendering the dendrogram on the client side. The ratio of the distance from a node to the top node / max_row_y_length will be the y-coordinate of the point from the top.
- 5) sorted_row_elements: List of sorted row indexes in the sorted matrix.
- 6) sorted_row_coordinates: Data for dendrogram in the y-axis. Contains JSON string containing list of traits for each node in the dendrogram.
+ 4) sorted_row_elements: List of sorted row indexes in the sorted matrix.
+ 5) sorted_row_coordinates: Data for dendrogram in the y-axis. Contains JSON string containing list of traits for each node in the dendrogram.
        node_id: Node ID of the current node.
        node_coordinates: (X,Y) coordinates of the current node.
        child_nodes: ID's of the child node (if it exists). There will be no child node for the original (input) nodes in the dendrogram.
        child_node_coordinates: (X,Y) coordinates of each of the two child nodes (if they exist).
- 7) max_row_y_length: This contains the distance of the farthest node from the top node for the dendrogram in the left. This will be useful when rendering the dendrogram on the client side. The ratio of the distance from a node to the top node / max_row_y_length will be the y-coordinate of the point from the top.
+ 6) all_original_nodes: This contains list of all descendent original nodes under the current node. This will be empty for the original nodes but will be populated with original node ID in derived nodes. This list will be shown in the UI on clicking a derived node.
 
 EXAMPLES
- 1) Syntax: cd .. && cargo build --release && json='{"matrix":"[[3,4,5,20];[3,5,6,1];[3,5,6,10]]","row_names":"[row1,row2,row3]","col_names":"[col1,col2,col3,col4]","plot_image":true,"cluster_method":"Average"}' && time echo "$json" | target/release/cluster
+ 1) Syntax: cd .. && cargo build --release && json='{"matrix":[[9.5032,12.2685,8.2919,2.9634,9.2435],[10.5632,9.1719,22.7488,10.2698,31.7872],[0.1035,0.0525,0.0378,0.573,2.0522]],"row_names":["GeneA","GeneB","GeneC"],"col_names":["SampleA","SampleB","SampleC","SampleD","SampleE"],"plot_image":true,"cluster_method":"Average"}' && time echo "$json" | target/release/cluster
 
     Takes 2D matrix, row names and col names using cluster method "Average". In addition to stdout also plots the sorted 2D matrix to 1.png file
 
- 2) Syntax: cd .. && cargo build --release && json='{"matrix":"[[3,4,5,20];[3,5,6,1];[3,5,6,10]]"}' && time echo "$json" | target/release/cluster
+ 2) Syntax: cd .. && cargo build --release && json='{"matrix":[[9.5032,12.2685,8.2919,2.9634,9.2435],[10.5632,9.1719,22.7488,10.2698,31.7872],[0.1035,0.0525,0.0378,0.573,2.0522]],"row_names":["GeneA","GeneB","GeneC"],"col_names":["SampleA","SampleB","SampleC","SampleD","SampleE"]}' && time echo "$json" | target/release/cluster
 
     Only prints sorted 2D matrix to stdout.
 
- 3) Read from file
-    Syntax: cd .. && cargo build --release && time cat test.txt | target/release/cluster
-    Syntax: cd .. && cargo build --release && time cat iris_test.txt | target/release/cluster
-
-TO DO
+TO DO:
 
 Implement parallelization of calculation of dissimilarity matrix using eculidean distance by using in-built parallelization in nalgebra crate using rayon. See this link below:
 
@@ -120,27 +115,6 @@ impl Serialize for NodeCoordinate {
     }
 }
 
-//impl<'de> Deserialize<'de> for NodeCoordinate {
-//    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-//    where
-//        D: Deserializer<'de>,
-//    {
-//        //enum Field {
-//        //    x,
-//        //    y,
-//        //}
-//
-//        // This part could also be generated independently by:
-//        //
-//        #[derive(Deserialize)]
-//        #[serde(field_identifier)]
-//        enum Field {
-//            x,
-//            y,
-//        }
-//    }
-//}
-
 #[allow(dead_code)]
 #[derive(Debug, Clone, Deserialize)]
 struct NewNodeRelativeCoordinates {
@@ -150,6 +124,7 @@ struct NewNodeRelativeCoordinates {
     child_nodes: Vec<usize>, // ID's of the child node (if it exists). There will be no child node for the original (input) nodes in the dendrogram.
     #[serde(skip_serializing_if = "Vec::is_empty")]
     child_node_coordinates: Vec<NodeCoordinate>, // (X,Y) coordinates of each of the two child nodes (if they exist).
+    all_original_nodes: Vec<usize>, // Contains list of original descendant nodes. To be displayed in UI on clicking a derived node (or line).
 }
 
 impl Serialize for NewNodeRelativeCoordinates {
@@ -161,18 +136,21 @@ impl Serialize for NewNodeRelativeCoordinates {
         let node_id = &self.node_id;
         let node_coordinates = &self.node_coordinates;
         let child_node_coordinates = &self.child_node_coordinates;
+        let all_original_nodes = &self.all_original_nodes;
 
         let mut state;
-        if child_nodes.len() == 0 {
+        if child_nodes.len() == 0 && all_original_nodes.len() == 0 {
+            // This will be true in case of the original nodes
             state = serializer.serialize_struct("NewNodeRelativeCoordinates", 2)?;
             state.serialize_field("node_id", node_id)?;
             state.serialize_field("node_coordinates", &self.node_coordinates)?;
         } else {
-            state = serializer.serialize_struct("NewNodeRelativeCoordinates", 4)?;
+            state = serializer.serialize_struct("NewNodeRelativeCoordinates", 5)?;
             state.serialize_field("node_id", node_id)?;
             state.serialize_field("child_nodes", child_nodes)?;
             state.serialize_field("node_coordinates", node_coordinates)?;
             state.serialize_field("child_node_coordinates", child_node_coordinates)?;
+            state.serialize_field("all_original_nodes", all_original_nodes)?;
         }
         state.end()
     }
@@ -195,24 +173,13 @@ fn euclidean_distance(item1: &Vec<f64>, item2: &Vec<f64>) -> f64 {
 }
 
 fn euclidean_distance4(coordinates: &Matrix<f64, Dyn, Dyn, VecStorage<f64, Dyn, Dyn>>) -> Vec<f64> {
-    // Assuming item1 and item2 have the same length, since they are part of a matrix
-    //println!("nrows:{}", coordinates.nrows());
-    //println!("ncols:{}", coordinates.ncols());
-    //let mut dist: f64 = 0.0;
-    //for i in 0..item1.len() {
-    //    let diff = item1[i] - item2[i];
-    //    dist += diff * diff;
-    //}
-    //dist.sqrt();
-
     let mut condensed = vec![];
     for row in 0..coordinates.nrows() - 1 {
         for col in row + 1..coordinates.nrows() {
             let mut dist: f64 = 0.0;
             //condensed.push(euclidean_distance(&coordinates[row], &coordinates[col]));
             for i in 0..coordinates.ncols() {
-                let diff = coordinates[(row, i)] - coordinates[(col, i)];
-                dist += diff * diff;
+                dist += getsquare(coordinates[(row, i)] - coordinates[(col, i)]);
             }
             condensed.push(dist.sqrt())
         }
@@ -245,10 +212,7 @@ fn euclidean_distance6(coordinates: &Matrix<f64, Dyn, Dyn, VecStorage<f64, Dyn, 
 
             let dist: f64 = (0..coordinates.ncols())
                 .into_par_iter()
-                .map(|i| {
-                    (coordinates[(row, i)] - coordinates[(col, i)])
-                        * (coordinates[(row, i)] - coordinates[(col, i)])
-                })
+                .map(|i| getsquare(coordinates[(row, i)] - coordinates[(col, i)]))
                 .sum();
 
             condensed.push(dist.sqrt())
@@ -258,11 +222,15 @@ fn euclidean_distance6(coordinates: &Matrix<f64, Dyn, Dyn, VecStorage<f64, Dyn, 
     condensed
 }
 
+fn getsquare(num: f64) -> f64 {
+    return num * num;
+}
+
 #[allow(dead_code)]
 fn euclidean_distance5(coordinates: &Matrix<f64, Dyn, Dyn, VecStorage<f64, Dyn, Dyn>>) -> Vec<f64> {
     // Assuming item1 and item2 have the same length, since they are part of a matrix
-    println!("nrows:{}", coordinates.nrows());
-    println!("ncols:{}", coordinates.ncols());
+    //println!("nrows:{}", coordinates.nrows());
+    //println!("ncols:{}", coordinates.ncols());
     //let mut dist: f64 = 0.0;
     //for i in 0..item1.len() {
     //    let diff = item1[i] - item2[i];
@@ -309,32 +277,10 @@ fn euclidean_distance3(
     dist.sqrt()
 }
 
-#[allow(dead_code)]
-fn euclidean_distance2(item1: &Vec<f64>, item2: &Vec<f64>) -> f64 {
-    // For now, this is performing worse than single-threaded version
-    // Assuming item1 and item2 have the same length, since they are part of a matrix
-    let dist: f64 = (0..item1.len())
-        .into_iter()
-        .map(|i| (item1[i] - item2[i]) * (item1[i] - item2[i]))
-        .sum();
-    dist.sqrt()
-}
-
-#[allow(dead_code)]
-fn par_euclidean_distance(item1: &Vec<f64>, item2: &Vec<f64>) -> f64 {
-    // For now, this is performing worse than single-threaded version
-    // Assuming item1 and item2 have the same length, since they are part of a matrix
-    let dist: f64 = (0..item1.len())
-        .into_par_iter()
-        .map(|i| (item1[i] - item2[i]) * (item1[i] - item2[i]))
-        .sum();
-    dist.sqrt()
-}
-
 fn sort_elements(
     coordinates: &Matrix<f64, Dyn, Dyn, VecStorage<f64, Dyn, Dyn>>,
     cluster_method: &String,
-) -> (Vec<usize>, Vec<NewNodeRelativeCoordinates>, usize) {
+) -> (Vec<usize>, Vec<NewNodeRelativeCoordinates>) {
     //fn sort_elements(coordinates: &Vec<Vec<f64>>) -> Vec<usize> {
     //fn sort_elements(coordinates: &Vec<Array1<f64>>) -> Vec<usize> {
     let new_now = Instant::now();
@@ -498,6 +444,7 @@ fn sort_elements(
                             NodeCoordinate { x: None, y: None },
                             NodeCoordinate { x: None, y: None },
                         ],
+                        all_original_nodes: vec![],
                     });
 
                     if item.1 > max_length_node_distance {
@@ -524,6 +471,7 @@ fn sort_elements(
         //println!("sorted_nodes:{:?}", sorted_nodes);
         for i in 0..new_nodes.len() {
             let current_node = &new_nodes[i];
+            let mut all_original_nodes = Vec::<usize>::new();
             //println!("current_node:{:?}", current_node);
             let distances = dijkstra(
                 &deps,
@@ -541,8 +489,8 @@ fn sort_elements(
                     new_nodes[new_nodes.len() - 1].node_id as u32,
                 )) == true
                 {
-                    node_y = item.1 as f64;
-                    //println!("item:{:?}", item);
+                    node_y = item.1 as f64 / max_length_node_distance as f64; // Normalizing distance with distance of the farthest node
+                                                                              //println!("item:{:?}", item);
                 }
 
                 //if item.1 > max_length_node_distance {
@@ -559,6 +507,14 @@ fn sort_elements(
                 Some(item) => {
                     child_node1_x = item.node_coordinates.x;
                     child_node1_y = item.node_coordinates.y;
+                    if item.node_id < coordinates.nrows() {
+                        // Select only original nodes and put them in all_original_nodes
+                        all_original_nodes.push(item.node_id)
+                    }
+                    for child_item in &item.all_original_nodes {
+                        // Iterate through the child's all_original_nodes vector and add them to the current vectors all_original_nodes
+                        all_original_nodes.push(*child_item)
+                    }
                 }
                 None => {
                     // Should not happen
@@ -576,6 +532,14 @@ fn sort_elements(
                 Some(item) => {
                     child_node2_x = item.node_coordinates.x;
                     child_node2_y = item.node_coordinates.y;
+                    if item.node_id < coordinates.nrows() {
+                        // Select only original nodes and put them in all_original_nodes
+                        all_original_nodes.push(item.node_id)
+                    }
+                    for child_item in &item.all_original_nodes {
+                        // Iterate through the child's all_original_nodes vector and add them to the current vectors all_original_nodes
+                        all_original_nodes.push(*child_item)
+                    }
                 }
                 None => {
                     // Should not happen
@@ -603,6 +567,7 @@ fn sort_elements(
                         y: child_node2_y,
                     },
                 ],
+                all_original_nodes: all_original_nodes,
             })
         }
 
@@ -610,13 +575,12 @@ fn sort_elements(
         for mut item in node_coordinates_list {
             if item.node_id < coordinates.nrows() {
                 // Check if the current node is an original node. If yes, replace the y-coordinate with the max_length_node_distance
-                item.node_coordinates.y = Some(max_length_node_distance as f64);
+                item.node_coordinates.y = Some(1.0);
             } else {
                 // If the current node is not an original node, check if any of the child nodes are original nodes. If yes, update the y-coordinate of that original node with max_length_node_distance
                 for node_iter in 0..item.child_nodes.len() {
                     if item.child_nodes[node_iter] < coordinates.nrows() {
-                        item.child_node_coordinates[node_iter].y =
-                            Some(max_length_node_distance as f64);
+                        item.child_node_coordinates[node_iter].y = Some(1.0); // All the original nodes normalized to 1 so that equidistant from the top-most node.
                     }
                 }
             }
@@ -632,11 +596,7 @@ fn sort_elements(
     } else {
         panic!("The dissimilarity matrix length cannot be zero");
     }
-    (
-        sorted_nodes,
-        node_coordinates_final,
-        max_length_node_distance,
-    )
+    (sorted_nodes, node_coordinates_final)
 }
 
 fn closest_degenerate_nodes(
@@ -672,7 +632,8 @@ fn main() {
             let input_json = json::parse(&input);
             match input_json {
                 Ok(json_string) => {
-                    let matrix = &json_string["matrix"].as_str().unwrap(); // JSON key that stores the 2D matrix
+                    //println!("json_string:{:?}", json_string["matrix"]);
+                    let matrix = &json_string["matrix"]; // JSON key that stores the 2D matrix
                     let row_string_search: &JsonValue = &json_string["row_names"];
                     //println!("row_string_search:{}", row_string_search);
                     let mut row_names = Vec::<String>::new();
@@ -740,38 +701,25 @@ fn main() {
                     }
                     //println!("plot_image:{}", plot_image);
 
-                    let input_list: Vec<&str> = matrix.split(";").collect(); // Vector containing list of sequences, the first two containing ref and alt.
-                                                                             //println!("input_list:{:?}", input_list);
-
                     let now = Instant::now();
                     // Generating dissimilarity matrix
                     let mut coordinates: Vec<Vec<f64>> = vec![];
                     let mut coordinates_plain = Vec::<f64>::new();
                     //let mut coordinates = Array2::<f64>::new();
                     //let mut coord_array: Vec<Array1<f64>> = vec![];
-                    for i in 0..input_list.len() {
-                        let line = input_list[i]
-                            .replace("[", "")
-                            .replace("]", "")
-                            .replace("\n", "");
-                        //println!("line:{}", line);
-                        let line2: Vec<&str> = line.split(",").collect();
-                        //println!("line2:{:?}", line2);
+                    for i in 0..matrix.len() {
                         let mut matrix_line = Vec::<f64>::new(); // Will generate a single row/column of the matrix
-                        for j in 0..line2.len() {
-                            matrix_line.push(line2[j].parse::<f64>().unwrap());
-                            coordinates_plain.push(line2[j].parse::<f64>().unwrap());
+                        for j in 0..matrix[i].len() {
+                            matrix_line.push(matrix[i][j].as_f64().unwrap());
+                            coordinates_plain.push(matrix[i][j].as_f64().unwrap());
                         }
                         //let matrix_array = Array1::from(matrix_line.clone());
                         //coord_array.push(matrix_array);
                         coordinates.push(matrix_line);
                     }
                     //println!("coord_array:{:?}", coord_array);
-                    let input_matrix = DMatrix::from_vec(
-                        coordinates[0].len(),
-                        coordinates.len(),
-                        coordinates_plain,
-                    );
+                    let input_matrix =
+                        DMatrix::from_vec(matrix[0].len(), matrix.len(), coordinates_plain);
 
                     //println!("input_matrix:{:?}", input_matrix.nrows());
                     if input_matrix.ncols() != row_names.len() && row_names.len() > 0 {
@@ -798,11 +746,11 @@ fn main() {
 
                     // Build our condensed matrix by computinghe dissimilarity between all
                     // possible coordinate pairs.
-                    let (sorted_col_elements, sorted_col_coordinates, max_col_y_length) =
+                    let (sorted_col_elements, sorted_col_coordinates) =
                         sort_elements(&input_matrix, &cluster_method);
                     println!("sorted_col_elements:{:?}", sorted_col_elements);
 
-                    let (sorted_row_elements, sorted_row_coordinates, max_row_y_length) =
+                    let (sorted_row_elements, sorted_row_coordinates) =
                         sort_elements(&input_matrix.transpose(), &cluster_method);
                     println!("sorted_row_elements:{:?}", sorted_row_elements);
                     let mut sorted_row_names = Vec::<String>::new();
@@ -831,15 +779,7 @@ fn main() {
                     }
                     //println!("sorted_row_names:{:?}", sorted_row_names);
                     //println!("sorted_col_names:{:?}", sorted_col_names);
-                    let sorted_matrix =
-                        sort_matrix(sorted_col_elements, sorted_row_elements, &input_matrix);
-                    let sorted_matrix_transpose = sorted_matrix.transpose();
-                    println!(
-                        "sorted_matrix:{:?}",
-                        &serde_json::to_string(&sorted_matrix_transpose).unwrap()
-                    );
 
-                    println!("max_col_y_length:{}", max_col_y_length);
                     let mut sorted_col_coordinates_string = "[".to_string();
                     for i in 0..sorted_col_coordinates.len() {
                         sorted_col_coordinates_string +=
@@ -851,7 +791,6 @@ fn main() {
                     sorted_col_coordinates_string += &"]".to_string();
                     println!("sorted_col_coordinates:{:?}", sorted_col_coordinates_string);
 
-                    println!("max_row_y_length:{}", max_row_y_length);
                     let mut sorted_row_coordinates_string = "[".to_string();
                     for i in 0..sorted_row_coordinates.len() {
                         sorted_row_coordinates_string +=
@@ -863,6 +802,13 @@ fn main() {
                     sorted_row_coordinates_string += &"]".to_string();
                     println!("sorted_row_coordinates:{:?}", sorted_row_coordinates_string);
                     if plot_image == true {
+                        let sorted_matrix =
+                            sort_matrix(sorted_col_elements, sorted_row_elements, &input_matrix);
+                        let sorted_matrix_transpose = sorted_matrix.transpose();
+                        //println!(
+                        //    "sorted_matrix:{:?}",
+                        //    &serde_json::to_string(&sorted_matrix_transpose).unwrap()
+                        //);
                         let _plot_result = plot_matrix(
                             &sorted_matrix_transpose,
                             sorted_row_names,
