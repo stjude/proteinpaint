@@ -354,7 +354,11 @@ function enterRange(self, tr, brush, i) {
 	async function apply(new_range) {
 		try {
 			updateRange(brush.range, new_range)
-			brush.elem.call(brush.d3brush).call(brush.d3brush.move, [new_range.start, new_range.stop].map(xscale))
+			const minvalue = self.num_obj.density_data.minvalue
+			const maxvalue = self.num_obj.density_data.maxvalue
+			const start = brush.range.start || minvalue
+			const stop = brush.range.stop || maxvalue
+			brush.elem.call(brush.d3brush).call(brush.d3brush.move, [start, stop].map(xscale))
 		} catch (e) {
 			window.alert(e)
 		}
