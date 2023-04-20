@@ -75,6 +75,14 @@ export async function trigger_getViolinPlotData(q, res, ds, genome) {
 	const data = await getData({ terms: twLst, filter: q.filter, currentGeneNames: q.currentGeneNames }, ds, genome)
 	if (data.error) throw data.error
 
+	for (const [k, v] of Object.entries(data.samples)) {
+		if (q.unit === 'log') {
+			if (v[term.id].key == 0 || v[term.id].value == 0) continue
+			v[term.id].key = Math.log2(v[term.id].key)
+			v[term.id].value = Math.log2(v[term.id].value)
+		}
+	}
+
 	if (q.scale) scaleData(q, data, term)
 
 	const valuesObject = divideValues(q, data, term, q.divideTw)
@@ -84,7 +92,7 @@ export async function trigger_getViolinPlotData(q, res, ds, genome) {
 	// wilcoxon test data to return to client
 	await wilcoxon(q.divideTw, result)
 
-	createCanvasImg(q, result, term)
+	createCanvasImg(q, result)
 
 	res.send(result)
 }
@@ -183,6 +191,7 @@ function divideValues(q, data, term, overlayTerm) {
 			min = Math.min(min, value)
 			max = Math.max(max, value)
 		}
+		if (min === 0) min = Math.max(min, value)
 
 		if (overlayTerm) {
 			if (!v[overlayTerm.id]) {
@@ -265,7 +274,7 @@ function resultObj(valuesObject, data, q) {
 	return result
 }
 
-function createCanvasImg(q, result, term) {
+function createCanvasImg(q, result) {
 	// size on x-y for creating circle and ticks
 	if (!q.radius) q.radius = 5
 	// assign defaults as needed
@@ -282,11 +291,12 @@ function createCanvasImg(q, result, term) {
 
 	if (useLog) {
 		axisScale = scaleLog()
-			.domain([result.min, result.max])
+			.base(2)
+			.domain([result.min, result.max + result.max / refSize])
 			.range(q.orientation === 'horizontal' ? [0, q.svgw] : [q.svgw, 0])
 	} else {
 		axisScale = scaleLinear()
-			.domain([result.min, result.max])
+			.domain([result.min, result.max + result.max / refSize])
 			.range(q.orientation === 'horizontal' ? [0, q.svgw] : [q.svgw, 0])
 	}
 
