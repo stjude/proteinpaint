@@ -1,13 +1,11 @@
 import { axisLeft, axisTop } from 'd3-axis'
-import { scaleLinear, scaleOrdinal, scaleLog } from 'd3-scale'
+import { scaleLinear, scaleLog } from 'd3-scale'
 import { area, curveBumpX, curveBumpY } from 'd3-shape'
 import { getColors } from '#shared/common'
 import { brushX, brushY } from 'd3-brush'
 import { renderTable } from '#dom/table'
 import { Menu } from '../dom/menu'
 import { rgb } from 'd3'
-import { format } from 'd3-format'
-import { interpolate } from 'd3-interpolate'
 
 export default function violinRenderer(self) {
 	self.render = function() {
@@ -191,7 +189,8 @@ export default function violinRenderer(self) {
 
 	function renderScale(t1, t2, settings, isH, svg) {
 		// <g>: holder of numeric axis
-		const g = svg.svgG.append('g').style('font-size', '15')
+		const g = svg.svgG.append('g')
+		// .style('font-size', '15')
 		g.call((isH ? axisTop : axisLeft)().scale(svg.axisScale))
 
 		if (self.opts.mode != 'minimal') {
@@ -403,10 +402,11 @@ export function createNumericScale(self, settings, isH) {
 	let axisScale
 	settings.unit == 'log'
 		? (axisScale = scaleLog()
-				.domain([self.data.min === 0 ? 0.001 : self.data.min, self.data.max])
-				.range(isH ? [0, settings.svgw] : [settings.svgw, 0])).clamp(true)
+				.base(2)
+				.domain([self.data.min, self.data.max + self.data.max / (settings.radius * 4)])
+				.range(isH ? [0, settings.svgw] : [settings.svgw, 0]))
 		: (axisScale = scaleLinear()
-				.domain([self.data.min, self.data.max])
+				.domain([self.data.min, self.data.max + self.data.max / (settings.radius * 4)])
 				.range(isH ? [0, settings.svgw] : [settings.svgw, 0]))
 	return axisScale
 }
