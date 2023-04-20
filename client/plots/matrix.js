@@ -257,7 +257,6 @@ class Matrix {
 				this.data = await this.app.vocabApi.getAnnotatedSampleData(reqOpts)
 				this.dom.loadingDiv.html('Processing data ...')
 			}
-			this.calls = 1
 			this.dom.loadingDiv.html('Updating ...').style('display', '')
 
 			if (this.stateDiff.nonsettings || this.stateDiff.sorting) {
@@ -377,20 +376,6 @@ class Matrix {
 					colgspace: c.colgspace
 				}
 			)
-		}
-		if (this.stateDiff.nonsettings) {
-			console.log(deepEqual(prevState.config, currState.config))
-
-			let [o1, o2] = [prevState.config, currState.config]
-			let diff = Object.keys(o2).reduce((diff, key) => {
-				if (o1[key] === o2[key]) return diff
-				return {
-					...diff,
-					[key]: o2[key]
-				}
-			}, {})
-
-			console.log(diff)
 		}
 	}
 
