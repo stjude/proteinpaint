@@ -1088,6 +1088,7 @@ export function makeChartBtnMenu(holder, chartsInstance) {
 				.attr('class', 'sja_menuoption sja_sharp_border')
 				.text(plot.name)
 				.on('click', async () => {
+					chartsInstance.dom.tip.hide()
 					const config = await dofetch3('termdb', {
 						body: {
 							for: 'matrix',
