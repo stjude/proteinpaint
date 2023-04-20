@@ -106,7 +106,9 @@ async function itemtable_oneItem(arg) {
 		// add space between grid and the new table
 		.style('margin-bottom', '10px')
 
-	if (arg.mlst[0].dt == dtsnvindel) {
+	const m = arg.mlst[0]
+
+	if (m.dt == dtsnvindel) {
 		table_snvindel(arg, grid)
 	} else {
 		await table_svfusion(arg, grid)
@@ -118,9 +120,16 @@ async function itemtable_oneItem(arg) {
 	// if there are multiple samples, this <div> won't be used
 	// a new table will be created under arg.div to show sample table
 
-	if (arg.tk.mds.variant2samples && arg.mlst[0].occurrence) {
-		// display samples carrying this variant when conditions are met
-		await init_sampletable(arg)
+	if (arg.tk.mds.variant2samples) {
+		if (m.occurrence) {
+			// has valid occurrence; display samples carrying this variant
+			await init_sampletable(arg)
+		} else {
+			// invalid occurrence; still show row to indicate this
+			const [td1, td2] = get_list_cells(grid)
+			td1.text('Occurrence')
+			td2.text('occurrence' in m ? m.occurrence : '')
+		}
 	}
 }
 
@@ -186,7 +195,7 @@ async function itemtable_multiItems(arg) {
 	for (const m of arg.mlst) {
 		const row = [{}] // 1st blank cell to print variant button
 		if (hasOccurrence) {
-			row.push({ value: m.occurrence || '' })
+			row.push({ value: 'occurrence' in m ? m.occurrence : '' })
 		}
 		if (infoFields) {
 			for (const k of infoFields) {

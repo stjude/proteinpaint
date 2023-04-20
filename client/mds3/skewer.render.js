@@ -79,7 +79,10 @@ export function skewer_make(tk, block) {
 		d.width = 0
 		d.slabelwidth = 0
 		for (const r of d.groups) {
-			if (r.occurrence == 1) {
+			if (r.occurrence <= 1) {
+				/*
+				protect against occurrence=0 or even negative, which can break scale
+				*/
 				r.radius = dotwidth / 2
 			} else {
 				const digc = r.occurrence.toString().length
@@ -254,11 +257,13 @@ export function skewer_make(tk, block) {
 			return d.rim1_startangle
 		})
 	discg
+		.filter(d => d.rim1count > 0)
 		.append('path')
 		.attr('d', rimfunc)
 		.attr('fill', d => tk.color4disc(d.mlst[0]))
 		.attr('class', 'sja_aa_discrim')
 		.attr('fill-opacity', 0)
+
 	const rimfunc2 = d3arc()
 		.innerRadius(d => d.radius + 0.5)
 		.outerRadius(d => d.radius + 0.5 + d.rimwidth)
