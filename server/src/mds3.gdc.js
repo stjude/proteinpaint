@@ -17,7 +17,7 @@ validate_query_snvindel_byisoform
 	decideSampleId
 validate_query_singleSampleMutation
 	getSingleSampleMutations
-		getGeneCnv4oneCase
+		getCnv4oneCase
 validate_query_snvindel_byisoform_2 // "protein_mutations" graphql, not in use
 validate_query_geneCnv
 	filter2GDCfilter
@@ -481,6 +481,7 @@ export function validate_query_geneCnv(ds) {
 }
 
 /*
+not in use
 get genome-wide gene-level cnv data for one case
 opts{}
 	.case_id=str
@@ -540,6 +541,73 @@ async function getGeneCnv4oneCase(opts) {
 		*/
 		if (!p.case_id) throw '.case_id missing'
 		const filters = { op: 'and', content: [{ op: 'in', content: { field: 'case.case_id', value: [p.case_id] } }] }
+		return filters
+	}
+}
+
+/*
+get a text file with genome-wide cnv segment data from one case, and read the file content
+opts{}
+	.case_id=str
+*/
+async function getCnv4oneCase(opts) {
+	const fields = ['cases.samples.sample_type', 'data_type', 'file_id', 'data_format']
+	const headers = getheaders(opts)
+	const tmp = await got.post(path.join(apihost, 'files'), {
+		headers,
+		body: JSON.stringify({
+			size: 10000,
+			fields: fields.join(','),
+			filters: getFilter(opts)
+		})
+	})
+	const re = JSON.parse(tmp.body)
+	if (!Array.isArray(re.data.hits)) throw 're.data.hits[] not array'
+
+	let fileId
+	for (const h of re.data.hits) {
+		console.log(h)
+		if (h.data_format != 'TXT') continue
+		const sample_type = h.cases?.[0].samples?.[0]?.sample_type
+		if (!sample_type) continue
+		if (sample_type.includes('Normal')) continue
+		if (!h.file_id) continue
+		fileId = h.file_id
+		break
+	}
+	if (fileId) {
+		const re = await got(path.join(apihost, 'data') + '/' + fileId, { method: 'GET', headers })
+		const lines = re.body.split('\n')
+		const events = []
+		for (let i = 1; i < lines.length; i++) {
+			const l = lines[i].split('\t')
+			if (l.length != 6) continue
+			const cnv = {
+				dt: common.dtcnv,
+				chr: 'chr' + l[1],
+				start: Number(l[2]),
+				stop: Number(l[3]),
+				value: Number(l[5])
+			}
+			if (Number.isNaN(cnv.start) || Number.isNaN(cnv.stop) || Number.isNaN(cnv.value)) continue
+			events.push(cnv)
+		}
+		return events
+	}
+	return []
+
+	function getFilter(p) {
+		/* p={}
+		.case_id=str
+		*/
+		if (!p.case_id) throw '.case_id missing'
+		const filters = {
+			op: 'and',
+			content: [
+				{ op: 'in', content: { field: 'cases.case_id', value: [p.case_id] } },
+				{ op: '=', content: { field: 'data_type', value: 'Masked Copy Number Segment' } }
+			]
+		}
 		return filters
 	}
 }
@@ -1322,7 +1390,7 @@ async function getSingleSampleMutations(query, ds, genome) {
 
 	{
 		// cnv
-		const tmp = await getGeneCnv4oneCase(query)
+		const tmp = await getCnv4oneCase(query)
 		mlst.push(...tmp)
 	}
 
