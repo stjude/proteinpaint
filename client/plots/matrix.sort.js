@@ -25,13 +25,11 @@ export function getSampleSorter(self, settings, rows, priorityKey = 'sortPriorit
 		.map(t => t.tw)
 		.sort((a, b) => a.sortSamples.priority - b.sortSamples.priority)
 
-	const sortPriority = activeOption.sortPriority
-
 	// always prioritize manually selected terms, if any
-	const sorterTerms = []
-	if (!sortPriority) {
-		sorterTerms.push(...selectedTerms)
-	} else {
+	const sorterTerms = [...selectedTerms]
+
+	const sortPriority = activeOption.sortPriority
+	if (sortPriority) {
 		for (const p of sortPriority) {
 			for (const tw of selectedTerms) {
 				if (!p.types.includes(tw.term.type)) continue
@@ -83,6 +81,7 @@ export function getSampleSorter(self, settings, rows, priorityKey = 'sortPriorit
 	for (const st of sorterTerms) {
 		if (st.$id == 'sample') sampleSorters.push(sortSamplesByName)
 		else if (st.sortSamples.by == 'hits') sampleSorters.push(getSortSamplesByHits(st, self, rows, s))
+		else if (st.term.type != 'geneVariant') sampleSorters.push(getSortSamplesByValues(st, self, rows, s))
 		else if (st.sortSamples.by == 'values') sampleSorters.push(getSortSamplesByValues(st, self, rows, s))
 		else if (st.sortSamples.by == 'dt') sampleSorters.push(getSortSamplesByDt(st, self, rows, s))
 		else if (st.sortSamples.by == 'class') sampleSorters.push(getSortSamplesByClass(st, self, rows, s))
