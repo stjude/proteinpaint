@@ -779,13 +779,6 @@ fn main() {
                     }
                     //println!("sorted_row_names:{:?}", sorted_row_names);
                     //println!("sorted_col_names:{:?}", sorted_col_names);
-                    let sorted_matrix =
-                        sort_matrix(sorted_col_elements, sorted_row_elements, &input_matrix);
-                    let sorted_matrix_transpose = sorted_matrix.transpose();
-                    println!(
-                        "sorted_matrix:{:?}",
-                        &serde_json::to_string(&sorted_matrix_transpose).unwrap()
-                    );
 
                     let mut sorted_col_coordinates_string = "[".to_string();
                     for i in 0..sorted_col_coordinates.len() {
@@ -809,6 +802,13 @@ fn main() {
                     sorted_row_coordinates_string += &"]".to_string();
                     println!("sorted_row_coordinates:{:?}", sorted_row_coordinates_string);
                     if plot_image == true {
+                        let sorted_matrix =
+                            sort_matrix(sorted_col_elements, sorted_row_elements, &input_matrix);
+                        let sorted_matrix_transpose = sorted_matrix.transpose();
+                        //println!(
+                        //    "sorted_matrix:{:?}",
+                        //    &serde_json::to_string(&sorted_matrix_transpose).unwrap()
+                        //);
                         let _plot_result = plot_matrix(
                             &sorted_matrix_transpose,
                             sorted_row_names,
