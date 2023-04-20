@@ -851,11 +851,23 @@ class Matrix {
 		const seriesXoffset =
 			s.zoomLevel <= 1 && mainw >= zoomedMainW ? 0 : Math.max(zoomCenter - centerCellX, mainw - zoomedMainW)
 
-		const imgW = s.imgWMax > zoomedMainW ? zoomedMainW : s.imgWMax
-		const imgLeftMin = Math.max(0, centerCellX - Math.min(4 * mainw, imgW))
+		//
+		// canvas-related dimensions, computed to not exceed an ultrawide, zoomed-in
+		// image width limit that causes the canvas to not render, and also
+		// the possibly narrowed image must be positioned correctly
+		//
+		// for a canvas-generated image, the image is sharper when the image width is not an integer,
+		// so subtract a negligible decimal value to have a numeric real/float width value
+		const imgW = (s.imgWMax > zoomedMainW ? zoomedMainW : s.imgWMax) - 0.000000001
+		const halfImgW = 0.5 * imgW
+		// determine how the canvas image will be offset relative to the center of mainw (the visible width)
+		const unwantedRightOvershoot = Math.max(0, centerCellX + halfImgW - zoomedMainW)
+		const imgLeftMin = Math.max(0, centerCellX - Math.min(halfImgW, imgW) - unwantedRightOvershoot)
+		// canvas cells with x posistions that fall outside of xMin and xMax will not be rendered,
+		// since they will be outside the computed allowed image width
 		const xMin = s.zoomLevel <= 1 && mainw >= zoomedMainW ? 0 : imgLeftMin
 		const xMax = imgW + xMin
-		//console.log({ imgW, mainw, xMin, xMax, seriesXoffset, imgLeftMin, xOffset, centerCellX, zoomedMainW, imgWMax: s.imgWMax })
+		// console.log({ imgW, mainw, xMin, xMax, seriesXoffset, imgLeftMin, xOffset, centerCellX, zoomedMainW, imgWMax: s.imgWMax })
 
 		this.dimensions = {
 			xMin,
@@ -870,7 +882,11 @@ class Matrix {
 			zoomedMainW,
 			seriesXoffset: seriesXoffset > 0 ? 0 : seriesXoffset,
 			maxMainW: Math.max(mainwByColDimensions, this.availContentWidth),
-			imgW
+			imgW,
+			// recompute the resolvable "pixel width", in case the pixel ratio changes
+			// when moving the browser window to a different monitor,
+			// will be used to sharpen canvas shapes that are smaller than this pixel width
+			pxw: 1 / window.devicePixelRatio
 		}
 	}
 

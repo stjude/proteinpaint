@@ -39,7 +39,7 @@ export async function getPlotConfig(opts, app) {
 				showGrid: '', // false | 'pattern' | 'rect'
 				gridStroke: '#fff',
 				colw: 0,
-				colwMin: 1 / window.devicePixelRatio,
+				colwMin: 0.1 / window.devicePixelRatio,
 				colwMax: 16,
 				colspace: 1,
 				colgspace: 8,
@@ -113,7 +113,7 @@ export async function getPlotConfig(opts, app) {
 	// force auto-dimensions for colw
 	m.colw = 0
 	// support deprecated sortSamplesBy value from a saved session
-	if (m.sortSamplesBy === 'selectedSamples') m.sortSamplesBy = 'class'
+	if (m.sortSamplesBy === 'selectedTerms') m.sortSamplesBy = 'class'
 
 	const promises = []
 	for (const grp of config.termgroups) {
