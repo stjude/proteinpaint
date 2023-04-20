@@ -25,6 +25,24 @@ Tests:
 		getterm()
 		getCategories()
 		getCohortsData()
+	******TODO: 
+			getNestedChartSeriesData()
+			mayFillInMissingCatValues()
+			syncTermData()
+			getRegressionData()
+			getCohortSampleCount()
+			getFilteredSampleCount()
+			getViolinPlotData()
+			getNumericUncomputableCategories()
+			getConditionCategories()
+			validateSnps()
+			get_variantFilter()
+			getAnnotatedSampleData()
+			getTwMinCopy()
+			getTermTypes()
+			getLDdata()
+			getScatterData()
+			getMds3queryDetails()
 		** Comments
 			Tested in FrontendVocab
 				getDescrStats()
@@ -910,8 +928,10 @@ tape('getCohortsData()', async test => {
 tape.skip('getMds3queryDetails()', async test => {
 	test.timeoutAfter(100)
 
+	//On hold - need GDC and other datasets for testing
 	const termdbVocabApi = await getTermdbVocabApi()
-	// console.log(termdbVocabApi)
+	const result = await termdbVocabApi.getMds3queryDetails()
+	console.log(result)
 
 	test.end()
 })
