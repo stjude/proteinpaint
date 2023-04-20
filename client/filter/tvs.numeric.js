@@ -291,23 +291,21 @@ function addRangeTable(self) {
 			enterRange(self, this, brush, i)
 		})
 
-	const add_range_btn = num_div.selectAll('.add_range_btn').size()
-		? num_div.select('.add_range_btn')
-		: num_div
-				.append('div')
-				.style('width', '100px')
-				.attr('class', 'add_range_btn sja_menuoption')
-				.style('border-radius', '13px')
-				.style('padding', '7px 6px')
-				.style('margin', '5px')
-				.style('margin-left', '20px')
-				.style('text-align', 'center')
-				.style('font-size', '.8em')
-				.text('Add a Range')
-				.on('click', () => {
-					const callback = () => addRangeTable(self)
-					addNewBrush(self, null, callback)
-				})
+	const add_range_btn = num_div
+		.append('div')
+		.style('width', '100px')
+		.attr('class', 'add_range_btn sja_menuoption')
+		.style('border-radius', '13px')
+		.style('padding', '7px 6px')
+		.style('margin', '5px')
+		.style('margin-left', '20px')
+		.style('text-align', 'center')
+		.style('font-size', '.8em')
+		.text('Add a Range')
+		.on('click', () => {
+			const callback = () => addRangeTable(self)
+			addNewBrush(self, null, callback)
+		})
 
 	add_range_btn.style(
 		'display',
@@ -320,8 +318,6 @@ function addRangeTable(self) {
 function enterRange(self, tr, brush, i) {
 	if (!brush.range_tr) brush.range_tr = select(tr)
 	const range_tr = brush.range_tr
-	const range = brush.range
-	const orig_range = brush.orig
 	const xscale = self.num_obj.xscale
 
 	range_tr
@@ -336,14 +332,12 @@ function enterRange(self, tr, brush, i) {
 	brush.equation_td = range_tr.append('td').style('width', '150px')
 
 	brush.rangeInput = new NumericRangeInput(brush.equation_td, brush.range, new_range => {
-		console.log(new_range)
-		apply(self, range, new_range)
+		apply(new_range)
 	})
 
 	makeRangeButtons(self, brush)
-
 	// note for empty range
-	if (orig_range.start === '' && orig_range.stop === '') {
+	if (i == 0) {
 		self.num_obj.range_table
 			.append('tr')
 			.attr('class', 'note_tr')
@@ -354,97 +348,97 @@ function enterRange(self, tr, brush, i) {
 			.style('margin-left', '20px')
 			.style('font-style', 'italic')
 			.style('color', '#888')
-			.html('Note: Drag the <b>green rectangle</b> at the end of the plot to select new range')
+			.html('Note: Drag the <b>green rectangle</b> to select a range. Overlapping ranges will be merged')
 	}
-}
 
-function makeRangeButtons(self, brush) {
-	const buttons_td = brush.range_tr.append('td')
-	const range = brush.range
-	const orig_range = brush.orig
-	const sameRanges = JSON.stringify(range) == JSON.stringify(brush.orig)
+	async function apply(new_range) {
+		try {
+			updateRange(brush.range, new_range)
+			brush.elem.call(brush.d3brush).call(brush.d3brush.move, [new_range.start, new_range.stop].map(xscale))
+		} catch (e) {
+			window.alert(e)
+		}
+	}
 
-	//'Apply' button
-	brush.apply_btn = buttons_td
-		.append('td')
-		.attr('class', 'sja_filter_tag_btn sjpp_apply_btn')
-		.style('border-radius', '13px')
-		.style('margin', '5px')
-		.style('margin-left', '10px')
-		// .style('padding', '5px 12px')
-		.style('text-align', 'center')
-		.style('font-size', '.8em')
-		.style('text-transform', 'uppercase')
-		.text('apply')
-		.on('click', async () => {
-			self.dom.tip.hide()
-			await apply(self, range, brush.rangeInput.getRange())
-		})
+	function makeRangeButtons(self, brush) {
+		const buttons_td = brush.range_tr.append('td')
+		const range = brush.range
+		const orig_range = brush.orig
+		const sameRanges = JSON.stringify(range) == JSON.stringify(brush.orig)
 
-	//'Reset' button
-	brush.reset_btn = buttons_td
-		.append('td')
-		.attr('class', 'sja_filter_tag_btn reset_btn')
-		.style('display', sameRanges || (range.start === '' && range.stop === '') ? 'none' : 'inline-block')
-		.style('border-radius', '13px')
-		.style('margin', '5px')
-		.style('margin-left', '10px')
-		// .style('padding', '5px 12px')
-		.style('text-align', 'center')
-		.style('font-size', '.8em')
-		.style('text-transform', 'uppercase')
-		.text('reset')
-		.on('click', async () => {
-			self.dom.tip.hide()
-			brush.range = JSON.parse(JSON.stringify(brush.orig))
-			brush.init()
-		})
+		//'Apply' button
+		brush.apply_btn = buttons_td
+			.append('td')
+			.attr('class', 'sja_filter_tag_btn sjpp_apply_btn')
+			.style('border-radius', '13px')
+			.style('margin', '5px')
+			.style('margin-left', '10px')
+			// .style('padding', '5px 12px')
+			.style('text-align', 'center')
+			.style('font-size', '.8em')
+			.style('text-transform', 'uppercase')
+			.text('apply')
+			.on('click', async () => {
+				self.dom.tip.hide()
+				await apply(brush.rangeInput.getRange())
+				const new_tvs = JSON.parse(JSON.stringify(self.tvs))
+				delete new_tvs.groupset_label
+				// merge overlapping ranges
+				if (self.num_obj.ranges.length > 1) new_tvs.ranges = mergeOverlapRanges(self, range)
+				else new_tvs.ranges[range.index] = range
+				validateNumericTvs(new_tvs)
+				self.opts.callback(new_tvs)
+			})
 
-	//'Delete' button
-	buttons_td
-		.append('td')
-		.attr('class', 'sja_filter_tag_btn sjpp_delete_btn')
-		.style(
-			'display',
-			self.tvs.ranges.length == 1 && orig_range.start != '' && orig_range.stop != '' ? 'none' : 'inline-block'
-		)
-		.style('border-radius', '13px')
-		.style('margin', '5px')
-		.style('margin-left', '10px')
-		// .style('padding', '5px 12px')
-		.style('text-align', 'center')
-		.style('font-size', '.8em')
-		.style('text-transform', 'uppercase')
-		.text('Delete')
-		.on('click', async () => {
-			const new_tvs = JSON.parse(JSON.stringify(self.tvs))
-			new_tvs.ranges.splice(range.index, 1)
-			// const deleted_range = self.num_obj.ranges[self.num_obj.ranges.length - 1]
-			// callback only if range have non-empty start and end
-			if (orig_range.start != '' && orig_range.stop != '') self.opts.callback(new_tvs)
-			else {
-				self.num_obj.ranges.pop()
-				self.num_obj.brushes.pop()
-				self.num_obj.num_div.select('.note_tr').remove()
-				addBrushes(self)
-				addRangeTable(self)
-			}
-		})
-}
+		//'Reset' button
+		brush.reset_btn = buttons_td
+			.append('td')
+			.attr('class', 'sja_filter_tag_btn reset_btn')
+			.style('display', sameRanges || (range.start === '' && range.stop === '') ? 'none' : 'inline-block')
+			.style('border-radius', '13px')
+			.style('margin', '5px')
+			.style('margin-left', '10px')
+			// .style('padding', '5px 12px')
+			.style('text-align', 'center')
+			.style('font-size', '.8em')
+			.style('text-transform', 'uppercase')
+			.text('reset')
+			.on('click', async () => {
+				self.dom.tip.hide()
+				brush.range = JSON.parse(JSON.stringify(brush.orig))
+				brush.init()
+			})
 
-async function apply(self, range, new_range) {
-	try {
-		updateRange(range, new_range)
-
-		const new_tvs = JSON.parse(JSON.stringify(self.tvs))
-		delete new_tvs.groupset_label
-		// merge overlapping ranges
-		if (self.num_obj.ranges.length > 1) new_tvs.ranges = mergeOverlapRanges(self, range)
-		else new_tvs.ranges[range.index] = range
-		validateNumericTvs(new_tvs)
-		self.opts.callback(new_tvs)
-	} catch (e) {
-		window.alert(e)
+		//'Delete' button
+		buttons_td
+			.append('td')
+			.attr('class', 'sja_filter_tag_btn sjpp_delete_btn')
+			.style(
+				'display',
+				self.tvs.ranges.length == 1 && orig_range.start != '' && orig_range.stop != '' ? 'none' : 'inline-block'
+			)
+			.style('border-radius', '13px')
+			.style('margin', '5px')
+			.style('margin-left', '10px')
+			// .style('padding', '5px 12px')
+			.style('text-align', 'center')
+			.style('font-size', '.8em')
+			.style('text-transform', 'uppercase')
+			.text('Delete')
+			.on('click', async () => {
+				const new_tvs = JSON.parse(JSON.stringify(self.tvs))
+				new_tvs.ranges.splice(range.index, 1)
+				// const deleted_range = self.num_obj.ranges[self.num_obj.ranges.length - 1]
+				// callback only if range have non-empty start and end
+				if (orig_range.start != '' && orig_range.stop != '') self.opts.callback(new_tvs)
+				else {
+					self.num_obj.ranges.pop()
+					self.num_obj.brushes.pop()
+					self.num_obj.num_div.select('.note_tr').remove()
+					addBrushes(self)
+					addRangeTable(self)
+				}
+			})
 	}
 }
 

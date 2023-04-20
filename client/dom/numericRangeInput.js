@@ -2,9 +2,9 @@ export class NumericRangeInput {
 	constructor(holder, range, callback) {
 		this.input = holder
 			.append('input')
-			.attr('class', 'start_input')
+			.attr('name', 'rangeInput')
 			.attr('title', `leave blank for the allowed minimum value`)
-			.style('width', '120px')
+			.style('width', '180px')
 			.style('margin', '3px 5px')
 			//.style('font-size', '20px')
 			.on('change', () => {
@@ -62,7 +62,7 @@ export class NumericRangeInput {
 		const startunbounded = start === undefined
 		const stopunbounded = stop === undefined
 
-		if (!startunbounded && !stopunbounded && start >= stop) throw 'start must be lower than stop'
+		if (!startunbounded && !stopunbounded && start > stop) throw 'start must be lower than stop'
 
 		return { start, stop, startinclusive, stopinclusive, startunbounded, stopunbounded }
 
@@ -81,6 +81,10 @@ export class NumericRangeInput {
 			} else if (new RegExp(`^${floatExpr}>=$`).test(rangeToken) || new RegExp(`^<=${floatExpr}$`).test(rangeToken)) {
 				stop = parseFloat(rangeToken.match(floatExpr))
 				stopinclusive = true
+			} else if (new RegExp(`^${floatExpr}=$`).test(rangeToken) || new RegExp(`^=${floatExpr}$`).test(rangeToken)) {
+				start = stop = parseFloat(rangeToken.match(floatExpr))
+				stopinclusive = true
+				startinclusive = true
 			} else throw `Could not parse expression '${rangeToken}'`
 		}
 	}
