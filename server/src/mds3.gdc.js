@@ -551,7 +551,7 @@ opts{}
 	.case_id=str
 */
 async function getCnv4oneCase(opts) {
-	const fields = ['cases.samples.sample_type', 'data_type', 'file_id', 'data_format']
+	const fields = ['cases.samples.sample_type', 'data_type', 'file_id', 'data_format', 'experimental_strategy']
 	const headers = getheaders(opts)
 	const tmp = await got.post(path.join(apihost, 'files'), {
 		headers,
@@ -564,20 +564,54 @@ async function getCnv4oneCase(opts) {
 	const re = JSON.parse(tmp.body)
 	if (!Array.isArray(re.data.hits)) throw 're.data.hits[] not array'
 
-	let fileId
+	let snpFile, wgsFile // detect result files from these two assays. if has both, use wgs
+
 	for (const h of re.data.hits) {
-		console.log(h)
 		if (h.data_format != 'TXT') continue
-		const sample_type = h.cases?.[0].samples?.[0]?.sample_type
-		if (!sample_type) continue
-		if (sample_type.includes('Normal')) continue
-		if (!h.file_id) continue
-		fileId = h.file_id
-		break
+
+		if (h.experimental_strategy == 'Genotyping Array') {
+			// is snp array, there're two files for tumor and normal. skip the normal one by sample_tye
+			const sample_type = h.cases?.[0].samples?.[0]?.sample_type
+			if (!sample_type) continue
+			if (sample_type.includes('Normal')) continue
+			if (!h.file_id) continue
+			snpFile = h.file_id
+		} else if (h.experimental_strategy == 'WGS') {
+			// is wgs, no need to check sample_type, the file is usable
+			if (!h.file_id) continue
+			wgsFile = h.file_id
+		} else {
+			// unknown assay
+		}
 	}
-	if (fileId) {
-		const re = await got(path.join(apihost, 'data') + '/' + fileId, { method: 'GET', headers })
+
+	if (wgsFile) {
+		const re = await got(path.join(apihost, 'data') + '/' + wgsFile, { method: 'GET', headers })
 		const lines = re.body.split('\n')
+		// first line is header
+		// GDC_Aliquot	Chromosome	Start	End	Copy_Number	Major_Copy_Number	Minor_Copy_Number
+		const events = []
+		for (let i = 1; i < lines.length; i++) {
+			const l = lines[i].split('\t')
+			if (l.length != 7) continue
+			const cnv = {
+				dt: common.dtcnv,
+				chr: l[1],
+				start: Number(l[2]),
+				stop: Number(l[3]),
+				value: Number(l[4])
+			}
+			if (Number.isNaN(cnv.start) || Number.isNaN(cnv.stop) || Number.isNaN(cnv.value)) continue
+			events.push(cnv)
+		}
+		return events
+	}
+
+	if (snpFile) {
+		const re = await got(path.join(apihost, 'data') + '/' + snpFile, { method: 'GET', headers })
+		const lines = re.body.split('\n')
+		// first line is header
+		// GDC_Aliquot	Chromosome	Start	End	Num_Probes	Segment_Mean
 		const events = []
 		for (let i = 1; i < lines.length; i++) {
 			const l = lines[i].split('\t')
@@ -594,6 +628,8 @@ async function getCnv4oneCase(opts) {
 		}
 		return events
 	}
+
+	// no cnv file found
 	return []
 
 	function getFilter(p) {
@@ -605,7 +641,16 @@ async function getCnv4oneCase(opts) {
 			op: 'and',
 			content: [
 				{ op: 'in', content: { field: 'cases.case_id', value: [p.case_id] } },
-				{ op: '=', content: { field: 'data_type', value: 'Masked Copy Number Segment' } }
+				{
+					op: 'in',
+					content: {
+						field: 'data_type',
+						value: [
+							'Masked Copy Number Segment', // for snp array we only want this type of file
+							'Copy Number Segment' // for wgs we want this type of file
+						]
+					}
+				}
 			]
 		}
 		return filters
