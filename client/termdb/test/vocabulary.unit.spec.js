@@ -1,5 +1,5 @@
 import tape from 'tape'
-import { vocabInit } from '#termdb/vocabulary'
+import { vocabInit, q_to_param, getVocabFromSamplesArray } from '#termdb/vocabulary'
 import { getExample } from '#termdb/test/vocabData'
 import { TermdbVocab } from '#termdb/TermdbVocab'
 import { FrontendVocab } from '#termdb/FrontendVocab'
@@ -10,6 +10,9 @@ import { termjson } from '../../test/testdata/termjson'
 Tests:
 	vocabInit
 		getPercentile()
+		TODO:
+			q_to_param()
+			getVocabFromSamplesArray()
 
 	FrontendVocab
 		getTermdbConfig()
@@ -147,6 +150,16 @@ tape('getPercentile()', async function(test) {
 	}
 	result = await vocabApi.getPercentile('d', percentile_lst, filter)
 	test.equal(result.values[0], 0.35, 'should get correct 50th percentile with numeric filter')
+})
+
+tape.skip('q_to_param()', test => {
+	test.timeoutAfter(100)
+	// test.plan()
+})
+
+tape.skip('getVocabFromSamplesArray()', test => {
+	test.timeoutAfter(100)
+	// test.plan()
 })
 
 /* FrontendVocab tests */
