@@ -1577,11 +1577,12 @@ function setZoomPanActions(self) {
 			.attr('transform', `translate(${x},0)`)
 			.style('width', self.zoomWidth)
 			.style('height', self.dimensions.mainh)
+
+		if (!self.clickedSeriesCell.endCell) self.clickedSeriesCell.endCell = self.getCellByPos(event)
 	}
 
 	self.seriesesGtriggerZoom = function(event) {
 		event.stopPropagation()
-		self.clickedSeriesCell.endCell = self.getCellByPos(event)
 		self.dom.seriesesG.on('mousemove', null).on('mouseup', null)
 		//const d = event.target.__data__
 		select('body').on('mouseup.matrixZoom', null)
@@ -1598,6 +1599,7 @@ function setZoomPanActions(self) {
 			delete self.clickedSeriesCell
 			return
 		}
+		c.endCell = self.getCellByPos(event)
 
 		const ss = self.opts.allow2selectSamples
 		if (ss) {

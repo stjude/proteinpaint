@@ -257,6 +257,8 @@ class Matrix {
 				this.data = await this.app.vocabApi.getAnnotatedSampleData(reqOpts)
 				this.dom.loadingDiv.html('Processing data ...')
 			}
+			this.calls = 1
+			this.dom.loadingDiv.html('Updating ...').style('display', '')
 
 			if (this.stateDiff.nonsettings || this.stateDiff.sorting) {
 				this.setSampleGroups(this.data)
@@ -375,6 +377,20 @@ class Matrix {
 					colgspace: c.colgspace
 				}
 			)
+		}
+		if (this.stateDiff.nonsettings) {
+			console.log(deepEqual(prevState.config, currState.config))
+
+			let [o1, o2] = [prevState.config, currState.config]
+			let diff = Object.keys(o2).reduce((diff, key) => {
+				if (o1[key] === o2[key]) return diff
+				return {
+					...diff,
+					[key]: o2[key]
+				}
+			}, {})
+
+			console.log(diff)
 		}
 	}
 
@@ -641,7 +657,9 @@ class Matrix {
 		else this.autoDimensions.delete('rowh')
 
 		const s = this.settings.matrix
-		this.computedSettings = {}
+		this.computedSettings = {
+			useCanvas: this.sampleOrder.length > m.svgCanvasSwitch
+		}
 		// TODO: the additional 65 space should not be hardcoded, but determined based on matrix holder/config
 		this.availContentWidth = this.dom.contentNode.getBoundingClientRect().width - 65 - s.margin.right - xOffset
 		if (this.availContentWidth < 600)

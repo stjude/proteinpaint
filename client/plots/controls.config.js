@@ -192,7 +192,10 @@ function setNumberInput(opts) {
 			})
 		}
 
-		const inputTd = opts.holder.append('td').style('text-align', opts.align || '')
+		const inputTd = opts.holder
+			.append('td')
+			.style('text-align', opts.align || '')
+			.attr('colspan', opts.colspan || '')
 		if (!input.settingsKey) {
 			inputTd
 				.style('color', '#999')

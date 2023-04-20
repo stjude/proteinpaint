@@ -15,7 +15,7 @@ export async function getPlotConfig(opts, app) {
 				isOpen: false // control panel is hidden by default
 			},
 			matrix: {
-				useCanvas: window.location.hash?.slice(1) == 'canvas',
+				svgCanvasSwitch: 1000, // the number of samples to trigger switching between svg and canvas
 				cellEncoding: '', // can be oncoprint
 				margin: {
 					top: 10,
@@ -114,6 +114,10 @@ export async function getPlotConfig(opts, app) {
 	m.colw = 0
 	// support deprecated sortSamplesBy value from a saved session
 	if (m.sortSamplesBy === 'selectedTerms') m.sortSamplesBy = 'class'
+	// support overrides in localhost
+	if (window.location.hostname == 'localhost') {
+		if (window.location.hash == '#canvas') m.svgCanvasSwitch = 0
+	}
 
 	const promises = []
 	for (const grp of config.termgroups) {

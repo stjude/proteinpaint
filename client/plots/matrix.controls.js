@@ -212,6 +212,18 @@ export class MatrixControls {
 								settingsKey: 'cellbg',
 								colspan: 2,
 								align: 'center'
+							},
+							{
+								label: 'Use canvas when #samples exceeds',
+								type: 'number',
+								chartType: 'matrix',
+								settingsKey: 'svgCanvasSwitch',
+								colspan: 2,
+								align: 'center',
+								width: 60,
+								min: 0,
+								max: 10000,
+								step: 1
 							}
 						]
 					},
