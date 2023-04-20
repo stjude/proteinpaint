@@ -1466,7 +1466,7 @@ function setZoomPanActions(self) {
 			if (event.target.__data__?.sample) return event.target.__data__
 			if (event.target.__data__?.xg) {
 				const width = event.clientX - event.target.getBoundingClientRect().x + d.seriesXoffset
-				const i = Math.floor(visibleWidth / d.dx)
+				const i = Math.floor(width / d.dx)
 				return self.sampleOrder[i]
 			}
 		}

@@ -136,7 +136,7 @@ export function setRenderers(self) {
 			cell.fill = cell.$id in self.colorScaleByTermId ? self.colorScaleByTermId[cell.$id](cell.key) : getRectFill(cell)
 		const x = cell.x ? cell.x - d.xMin : 0
 		const y = _y ? _y + cell.y : cell.y || 0
-		const width = cell.width || d.colw
+		const width = Math.max(d.pxw, cell.width || d.colw)
 		const height = cell.height || s.rowh
 		ctx.fillStyle = cell.fill
 		ctx.fillRect(x, y, width, height)

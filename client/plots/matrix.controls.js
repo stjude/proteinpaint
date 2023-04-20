@@ -850,7 +850,7 @@ export class MatrixControls {
 						config: {
 							settings: {
 								matrix: {
-									zoomCenterPct: s.zoomCenterPct,
+									zoomCenterPct: 0.5,
 									zoomIndex: c.totalIndex,
 									zoomGrpIndex: c.grpIndex
 								}
