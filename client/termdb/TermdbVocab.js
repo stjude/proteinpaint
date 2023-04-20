@@ -750,7 +750,7 @@ export class TermdbVocab extends Vocab {
 			throw e
 		}
 		try {
-			opts.loadingDiv.html(`Processing data ...`)
+			opts.loadingDiv?.html(`Processing data ...`)
 			const dictTerm$ids = opts.terms.filter(tw => !nonDictionaryTermTypes.has(tw.term.type)).map(tw => tw.$id)
 			// const lst = Object.values(samples)
 
