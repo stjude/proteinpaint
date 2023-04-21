@@ -289,6 +289,13 @@ TdbStore.prototype.actions = {
 	},
 
 	filter_replace(action) {
+		if ('filter0' in action) {
+			// quick fix since rx.copyMerge() does not work for filter0,
+			// as used in app_refresh() and dispatched from GDC matrixApi.update()
+			this.state.termfilter.filter0 = action.filter0
+			return
+		}
+
 		const replacementFilter = action.filter ? action.filter : { type: 'tvslst', join: '', in: 1, lst: [] }
 		if (!action.filter.tag) {
 			this.state.termfilter.filter = replacementFilter

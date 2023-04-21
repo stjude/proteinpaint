@@ -67,7 +67,7 @@ export async function init(arg, holder, genomes) {
 	})
 
 	const gdcCohort = getGdcCohort(arg)
-	const genes = await getGenes(arg, gdcCohort, CGConly) //.slice(0, 5)
+	const genes = (await getGenes(arg, gdcCohort, CGConly)).slice(0, 3)
 
 	const opts = {
 		holder,
@@ -105,12 +105,8 @@ export async function init(arg, holder, genomes) {
 	const api = {
 		update: arg => {
 			plotAppApi.dispatch({
-				type: 'app_refresh',
-				state: {
-					termfilter: {
-						filter0: arg.filter0
-					}
-				}
+				type: 'filter_replace',
+				filter0: arg.filter0
 			})
 		}
 	}

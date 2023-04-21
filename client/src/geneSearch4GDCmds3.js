@@ -52,7 +52,7 @@ export async function init(arg, holder, genomes) {
 		)
 
 	// second row, display graph
-	const graphDiv = holder.append('div').attr('class','sja_geneSearch4GDCmds3_blockdiv')
+	const graphDiv = holder.append('div').attr('class', 'sja_geneSearch4GDCmds3_blockdiv')
 
 	const searchOpt = {
 		genome,
@@ -72,9 +72,12 @@ export async function init(arg, holder, genomes) {
 		await arg.geneSearch4GDCmds3.postRender({ tip })
 	}
 
-
-	async function launchView() {
-		if (!coordInput.geneSymbol) throw 'geneSymbol missing'
+	async function launchView(triggeredByInput = true) {
+		if (!coordInput.geneSymbol) {
+			if (triggeredByInput) throw 'geneSymbol missing'
+			// updates of arg.filter0 should still render
+			// return
+		}
 
 		graphDiv.selectAll('*').remove()
 
@@ -107,7 +110,7 @@ export async function init(arg, holder, genomes) {
 		update: _arg => {
 			Object.assign(arg, _arg)
 			arg.isoform = selectedIsoform
-			launchView()
+			launchView(false)
 		}
 	}
 	return api
