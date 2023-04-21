@@ -1485,7 +1485,7 @@ function setZoomPanActions(self) {
 		const s = self.settings.matrix
 		const d = self.dimensions
 		const c = self.clickedSeriesCell
-		c.dxPad = 20 // to show edge that limits draf, and to "bounce back" on mouseup
+		c.dxPad = 20 // to show edge that limits drag, and to "bounce back" on mouseup
 		//const pos = d.seriesXoffset s.zoomCenterPct * d.mainw /// d.mainw
 		c.dxMax = -d.seriesXoffset
 		c.dxMaxPad = c.dxMax + c.dxPad
@@ -1511,10 +1511,6 @@ function setZoomPanActions(self) {
 
 	self.translateElems = function(dx, d, s, c) {
 		self.dom.seriesesG.attr('transform', `translate(${d.xOffset + d.seriesXoffset + dx},${d.yOffset})`)
-		self.dom.clipRect.attr(
-			'x',
-			s.zoomLevel == 1 && d.mainw >= d.zoomedMainW ? 0 : -d.seriesXoffset - dx // d.zoomedMainW
-		)
 		self.layout.top.attr.adjustBoxTransform(dx)
 		self.layout.btm.attr.adjustBoxTransform(dx)
 		const computedCenter = s.zoomCenterPct * d.mainw - d.seriesXoffset - dx

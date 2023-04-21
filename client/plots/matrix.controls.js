@@ -849,9 +849,8 @@ export class MatrixControls {
 				const s = p.settings.matrix
 				const d = p.dimensions
 				if (eventType == 'move') {
-					//console.log(d.xOffset + d.seriesXoffset - dx, d.yOffset)
-					p.dom.clipRect.attr('x', -d.seriesXoffset + dx)
 					p.dom.seriesesG.attr('transform', `translate(${d.xOffset + d.seriesXoffset - dx},${d.yOffset})`)
+					p.clusterRenderer.translateElems(-dx, s, d)
 					p.layout.top.attr.adjustBoxTransform(-dx)
 					p.layout.btm.attr.adjustBoxTransform(-dx)
 				} else if (eventType == 'up') {

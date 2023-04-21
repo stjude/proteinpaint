@@ -1,4 +1,5 @@
 import { getCompInit, copyMerge, deepEqual } from '../rx'
+import { setMatrixDom } from './matrix.dom'
 import { setInteractivity } from './matrix.interactivity'
 import { setRenderers } from './matrix.renderers'
 import { MatrixCluster } from './matrix.cluster'
@@ -11,7 +12,6 @@ import { schemeCategory20 } from '#common/legacy-d3-polyfill'
 import { axisLeft, axisTop, axisRight, axisBottom } from 'd3-axis'
 import svgLegend from '#dom/svg.legend'
 import { mclass } from '#shared/common'
-import { Menu } from '#dom/menu'
 import { getSampleSorter, getTermSorter } from './matrix.sort'
 import { dofetch3 } from '../common/dofetch'
 export { getPlotConfig } from './matrix.config'
@@ -27,117 +27,8 @@ class Matrix {
 
 	async init(appState) {
 		const opts = this.opts
-		const holder = opts.controls ? opts.holder : opts.holder.append('div')
-		holder.style('position', 'relative')
-		const controls = this.opts.controls || holder.append('div')
-		const loadingDiv = holder
-			.append('div')
-			.style('position', 'absolute')
-			.style('top', this.opts.controls ? 0 : '50px')
-			.style('left', '50px')
-		const errdiv = holder
-			.append('div')
-			.attr('class', 'sja_errorbar')
-			.style('display', 'none')
-		const svg = holder
-			.append('svg')
-			.style('margin', '20px 10px')
-			.style('overflow', 'visible')
-			.on('mousemove.label', this.svgMousemove)
-			.on('mouseup.label', this.svgMouseup)
-
-		this.seriesClipId = `sjpp_clip_${this.id}`
-		this.clusterClipId = `sjpp_clip_cluster_${this.id}`
-
-		const mainG = svg
-			.append('g')
-			//.style('overflow', 'hidden')
-			.on('mouseover', this.showCellInfo)
-			.on('mousemove', this.showCellInfo)
-			.on('mouseout', this.mouseout)
-
-		const tip = new Menu({ padding: '5px' })
-		this.dom = {
-			header: opts.header,
-			holder,
-			contentNode: opts.holder.node().closest('.sjpp-output-sandbox-content') || opts.holder.node().parentNode,
-			errdiv,
-			controls,
-			loadingDiv,
-			svg,
-			mainG,
-			sampleGrpLabelG: mainG
-				.append('g')
-				.attr('class', 'sjpp-matrix-series-group-label-g')
-				.on('click', this.showSampleGroupMenu)
-				.on('mousedown.sjppMatrixLabelText', this.enableTextHighlight)
-				.on('mouseup.sjppMatrixLabelText', this.disableTextHighlight),
-			termGrpLabelG: mainG
-				.append('g')
-				.attr('class', 'sjpp-matrix-term-group-label-g')
-				.on('mouseover', this.termGrpLabelMouseover)
-				.on('mouseout', this.termGrpLabelMouseout)
-				.on('mousedown', this.termGrpLabelMousedown)
-				.on('mousemove', this.termGrpLabelMousemove)
-				.on('mouseup', this.termGrpLabelMouseup)
-				.on('mousedown.sjppMatrixLabelText', this.enableTextHighlight)
-				.on('mouseup.sjppMatrixLabelText', this.disableTextHighlight),
-			cluster: mainG
-				.append('g')
-				.attr('class', 'sjpp-matrix-cluster-g')
-				.on('mousedown', this.seriesesGMousedown)
-				.on('mousemove', this.seriesesGMousemove),
-			//.on('mouseup', this.seriesesGMouseup),
-			seriesesG: mainG
-				.append('g')
-				.attr('class', 'sjpp-matrix-serieses-g')
-				.attr('clip-path', `url(#${this.seriesClipId})`)
-				.on('mousedown', this.seriesesGMousedown),
-			//.on('mousemove', this.seriesesGMousemove)
-			//.on('mouseup', this.seriesesGMouseup),
-			sampleLabelG: mainG
-				.append('g')
-				.attr('class', 'sjpp-matrix-series-label-g')
-				.on('mousedown.sjppMatrixLabelText', this.enableTextHighlight)
-				.on('mouseup.sjppMatrixLabelText', this.disableTextHighlight),
-			/* // TODO: sample label drag to move
-				.on('mouseover', this.sampleLabelMouseover)
-				.on('mouseout', this.sampleLabelMouseout)
-				.on('mousedown', this.sampleLabelMousedown)
-				.on('mousemove', this.sampleLabelMousemove)
-				.on('mouseup', this.sampleLabelMouseup)*/
-			termLabelG: mainG
-				.append('g')
-				.attr('class', 'sjpp-matrix-term-label-g')
-				.on('mouseover', this.termLabelMouseover)
-				.on('mouseout', this.termLabelMouseout)
-				.on('mousedown', this.termLabelMousedown)
-				.on('mousemove', this.termLabelMousemove)
-				.on('mouseup', this.termLabelMouseup)
-				.on('mousedown.sjppMatrixLabelText', this.enableTextHighlight)
-				.on('mouseup.sjppMatrixLabelText', this.disableTextHighlight),
-			scroll: mainG.append('g'),
-			//legendDiv: holder.append('div').style('margin', '5px 5px 15px 50px'),
-			legendG: mainG.append('g'),
-			tip,
-			menutop: tip.d.append('div'),
-			menubody: tip.d.append('div')
-		}
-
-		this.dom.clipG = mainG.append('g')
-
-		this.dom.clipRect = this.dom.clipG
-			.append('clipPath')
-			.attr('id', this.seriesClipId)
-			//.attr('clipPathUnits', 'objectBoundingBox')
-			.attr('clipPathUnits', 'userSpaceOnUse')
-			.append('rect')
-			.attr('display', 'block')
-
-		this.dom.tip.onHide = () => {
-			this.lastActiveLabel = this.activeLabel
-			delete this.activeLabel
-		}
+		this.setDom = setMatrixDom
+		this.setDom(opts)
 
 		this.config = appState.plots.find(p => p.id === this.id)
 		this.settings = Object.assign({}, this.config.settings.matrix)
@@ -794,7 +685,6 @@ class Matrix {
 			textpos: { coord: 'y', factor: -1 },
 			axisFxn: axisTop
 		}
-		layout.top.box.attr('clip-path', layout.top.isGroup ? `url(#${this.clusterClipId})` : `url(#${this.seriesClipId})`)
 		if (layout.top.prefix == 'sample') layout.top.display = colw >= s.minLabelFontSize ? '' : 'none'
 
 		const btmFontSize = _b_ == 'Grp' ? s.grpLabelFontSize : colLabelFontSize
@@ -810,7 +700,6 @@ class Matrix {
 			textpos: { coord: 'y', factor: 1 },
 			axisFxn: axisBottom
 		}
-		layout.btm.box.attr('clip-path', layout.btm.isGroup ? `url(#${this.clusterClipId})` : `url(#${this.seriesClipId})`)
 		if (layout.btm.prefix == 'sample') layout.btm.display = colw >= s.minLabelFontSize ? '' : 'none'
 
 		const leftFontSize =
@@ -825,7 +714,6 @@ class Matrix {
 			textpos: { coord: 'x', factor: -1 },
 			axisFxn: axisLeft
 		}
-		layout.left.box.attr('clip-path', '')
 
 		const rtFontSize =
 			_r_ == 'Grp' ? s.grpLabelFontSize : Math.max(s.rowh + s.rowspace - 2 * s.rowlabelpad, s.minLabelFontSize)
@@ -839,7 +727,9 @@ class Matrix {
 			textpos: { coord: 'x', factor: 1 },
 			axisFxn: axisRight
 		}
-		layout.right.box.attr('clip-path', '')
+
+		this.dom.sampleLabelsPG.attr('clip-path', s.transpose ? '' : `url(#${this.seriesClipId})`)
+		this.dom.termLabelsPG.attr('clip-path', s.transpose ? `url(#${this.seriesClipId})` : '')
 
 		this.layout = layout
 		if (!s.zoomCenterPct) {

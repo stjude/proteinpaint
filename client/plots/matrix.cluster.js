@@ -7,18 +7,11 @@ export class MatrixCluster {
 		this.patternId = `sjpp-matrix-grid-pattern-${this.parent.id}`
 		this.patternIdSuffix = 0
 		this.dom = {
-			holder: opts.holder.attr('clip-path', `url(#${this.parent.clusterClipId})`),
+			holder: opts.holder,
 			//clusterrowline: opts.holder.insert('g', 'g').attr('class', 'sjpp-matrix-clusterrowline'),
 			//clustercolline: opts.holder.insert('g', 'g').attr('class', 'sjpp-matrix-clustercolline'),
 			clusterbg: opts.holder.insert('g', 'g').attr('class', 'sjpp-matrix-clusterbg'),
-			outlines: opts.holder.append('g').attr('class', 'sjpp-matrix-clusteroutlines'),
-			clipRect: opts.holder
-				.append('clipPath')
-				.attr('id', this.parent.clusterClipId)
-				.attr('clipPathUnits', 'objectBoundingBox')
-				//.attr('clipPathUnits', 'userSpaceOnUse')
-				.append('rect')
-				.attr('display', 'block')
+			outlines: opts.holder.append('g').attr('class', 'sjpp-matrix-clusteroutlines')
 		}
 		setRenderers(this)
 	}
@@ -72,16 +65,8 @@ function setRenderers(self) {
 	self.render = function(clusters) {
 		const s = self.settings
 		const d = self.currData.dimensions
-		self.dom.clipRect
-			.attr('x', (s.zoomLevel <= 1 && d.mainw >= d.zoomedMainW ? -1 : -1 + Math.abs(d.seriesXoffset)) / d.zoomedMainW)
-			.attr('y', 0)
-			.attr('width', Math.min(d.mainw, d.maxMainW) / this.totalWidth) // d.zoomedMainW)
-			.attr('height', 1)
-
-		self.dom.outlines
-			.transition()
-			.duration(self.dom.outlines.attr('transform') ? s.duration : 0)
-			.attr('transform', `translate(${d.xOffset + d.seriesXoffset},${d.yOffset})`)
+		const duration = self.dom.outlines.attr('transform') ? s.duration : 0
+		self.translateElems(0, s, d, duration)
 
 		if (s.prevShowGrid != s.showGrid) {
 			self.dom.outlines.selectAll('*').remove()
@@ -100,6 +85,11 @@ function setRenderers(self) {
 		}
 
 		s.prevShowGrid = s.showGrid
+	}
+
+	self.translateElems = function(dx, s, d, duration = 0) {
+		const o = !duration ? self.dom.outlines : self.dom.outlines.transition().duration(duration)
+		o.attr('transform', `translate(${d.xOffset + d.seriesXoffset + dx},${d.yOffset})`)
 	}
 
 	function renderOutlines(clusters, s, d) {

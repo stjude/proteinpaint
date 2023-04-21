@@ -8,24 +8,26 @@ export function setRenderers(self) {
 		const duration = self.dom.svg.attr('width') ? s.duration : 0
 		const x = s.zoomLevel <= 1 && d.mainw >= d.zoomedMainW ? 0 : Math.abs(d.seriesXoffset) / d.imgW
 
-		//self.dom.clipG
-		//.attr('transform', `translate(${d.xOffset},0)`)
+		self.dom.clipRect
+			.attr('x', d.xOffset)
+			.attr('y', 0)
+			.attr('width', d.mainw)
+			// add 500 so that the column labels are not clipped
+			.attr('height', d.mainh + 500)
+
 		self.renderSerieses(s, l, d, duration)
 		self.renderLabels(s, l, d, duration)
 	}
 
 	self.renderSerieses = function(s, l, d, duration) {
+		if (self.prevUseCanvas != s.useCanvas) {
+			self.dom.seriesesG.selectAll('g').remove()
+		}
 		if (s.useCanvas) {
 			const _g = self.dom.seriesesG.selectAll('g')
 			const g = /*(_g.size() && _g) ||*/ self.dom.seriesesG.append('g').datum(this.serieses)
 			self.renderCanvas(this.serieses, g, d, s, _g, duration)
 		} else {
-			self.dom.clipRect
-				.attr('x', -d.seriesXoffset)
-				.attr('y', 0)
-				.attr('width', d.mainw) //Math.min(d.mainw, d.maxMainW) / d.imgW)
-				.attr('height', d.mainh + 500)
-
 			self.dom.seriesesG
 				.transition()
 				.duration(duration)
@@ -40,6 +42,7 @@ export function setRenderers(self) {
 				.style('opacity', 0.001)
 				.each(self.renderSeries)
 		}
+		self.prevUseCanvas = s.useCanvas
 	}
 
 	self.renderSeries = async function(series) {
@@ -104,12 +107,6 @@ export function setRenderers(self) {
 					// remove a previously rendered image, if applicable, right before replacing it
 					// so that there will be no flicker on update
 					_g?.remove()
-					self.dom.clipRect
-						.attr('x', -d.seriesXoffset)
-						.attr('y', 0)
-						.attr('width', d.mainw) //Math.min(d.mainw, d.maxMainW) / d.imgW)
-						.attr('height', d.mainh + 500)
-
 					self.dom.seriesesG
 						//.transition()
 						//.duration(duration)
