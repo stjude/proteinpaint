@@ -8,68 +8,69 @@ import { axisLeft, axisBottom } from 'd3-axis'
 
 export function setRenderers(self) {
 	self.render = function() {
-		const data = self.data
-		const chartDiv = self.dom.holder
-		if (chartDiv.selectAll('*').size() > 0) updateCharts()
-		else addCharts()
+		for (const chart of self.charts)
+			if (chart.chartDiv.selectAll('*').size() > 0) self.updateCharts(chart)
+			else self.addCharts(chart)
 		self.dom.holder.on('mouseover', self.mouseover).on('click', self.mouseclick)
+	}
 
-		function addCharts() {
-			const s = self.settings
-			chartDiv.style('opacity', 0)
+	self.addCharts = function(chart) {
+		const s = self.settings
+		chart.chartDiv.style('opacity', 0)
+		chart.svg = chart.chartDiv.append('svg')
+		renderSVG(chart, s, 0)
 
-			self.svg = chartDiv.append('svg')
-			renderSVG(self.svg, chartDiv, s, 0, data)
+		chart.chartDiv
+			.transition()
+			.duration(s.duration)
+			.style('opacity', 1)
+	}
 
-			chartDiv
-				.transition()
-				.duration(s.duration)
-				.style('opacity', 1)
-		}
-
-		function updateCharts() {
-			const s = self.settings
-			chartDiv.transition().duration(s.duration)
-			renderSVG(chartDiv.select('svg'), chartDiv, s, s.duration, data)
-		}
+	self.updateCharts = function(chart) {
+		const s = self.settings
+		chart.chartDiv.transition().duration(s.duration)
+		renderSVG(chart.svg, s, s.duration)
 	}
 
 	self.initAxes = function() {
-		if (self.data.samples.length == 0) return
-		const s0 = self.data.samples[0] //First sample to start reduce comparisons
-		const [xMin, xMax, yMin, yMax] = self.data.samples.reduce(
-			(s, d) => [d.x < s[0] ? d.x : s[0], d.x > s[1] ? d.x : s[1], d.y < s[2] ? d.y : s[2], d.y > s[3] ? d.y : s[3]],
-			[s0.x, s0.x, s0.y, s0.y]
-		)
-		self.xAxisScale = d3Linear()
-			.domain([xMin, xMax])
-			.range([self.axisOffset.x, self.settings.svgw + self.axisOffset.x])
-
-		self.axisBottom = axisBottom(self.xAxisScale)
-		self.yAxisScale = d3Linear()
-			.domain([yMax, yMin])
-			.range([self.axisOffset.y, self.settings.svgh + self.axisOffset.y])
-		self.axisLeft = axisLeft(self.yAxisScale)
-		if (!self.config.gradientColor) self.config.gradientColor = '#008000'
-		self.startColor = rgb(self.config.gradientColor)
-			.brighter()
-			.brighter()
-		self.stopColor = rgb(self.config.gradientColor)
-			.darker()
-			.darker()
-		if (self.config.colorTW?.q.mode === 'continuous') {
-			const [min, max] = self.cohortSamples.reduce(
-				(s, d) => [d.value < s[0] ? d.category : s[0], d.category > s[1] ? d.category : s[1]],
-				[self.cohortSamples[0].category, self.cohortSamples[0].category]
+		for (const chart of self.charts) {
+			if (chart.data.samples.length == 0) return
+			const s0 = chart.data.samples[0] //First sample to start reduce comparisons
+			const [xMin, xMax, yMin, yMax] = chart.data.samples.reduce(
+				(s, d) => [d.x < s[0] ? d.x : s[0], d.x > s[1] ? d.x : s[1], d.y < s[2] ? d.y : s[2], d.y > s[3] ? d.y : s[3]],
+				[s0.x, s0.x, s0.y, s0.y]
 			)
+			chart.xAxisScale = d3Linear()
+				.domain([xMin, xMax])
+				.range([self.axisOffset.x, self.settings.svgw + self.axisOffset.x])
 
-			self.colorGenerator = d3Linear()
-				.domain([min, max])
-				.range([self.startColor, self.stopColor])
+			chart.axisBottom = axisBottom(chart.xAxisScale)
+			chart.yAxisScale = d3Linear()
+				.domain([yMax, yMin])
+				.range([self.axisOffset.y, self.settings.svgh + self.axisOffset.y])
+			chart.axisLeft = axisLeft(chart.yAxisScale)
+			if (!self.config.gradientColor) self.config.gradientColor = '#008000'
+			self.startColor = rgb(self.config.gradientColor)
+				.brighter()
+				.brighter()
+			self.stopColor = rgb(self.config.gradientColor)
+				.darker()
+				.darker()
+			if (self.config.colorTW?.q.mode === 'continuous') {
+				const [min, max] = self.cohortSamples.reduce(
+					(s, d) => [d.value < s[0] ? d.category : s[0], d.category > s[1] ? d.category : s[1]],
+					[chart.cohortSamples[0].category, chart.cohortSamples[0].category]
+				)
+
+				chart.colorGenerator = d3Linear()
+					.domain([min, max])
+					.range([chart.startColor, chart.stopColor])
+			}
 		}
 	}
 
-	function renderSVG(svg, chart, s, duration, data) {
+	function renderSVG(chart, s, duration) {
+		const svg = chart.svg
 		let colorLegends = self.colorLegend.size * 30
 		if (self.colorLegend.get('Ref').sampleCount > 0) colorLegends += 60
 		const legendHeight = Math.max(colorLegends, self.shapeLegend.size * 30) + 100 //legend step and header
@@ -86,8 +87,8 @@ export function setRenderers(self) {
 
 		if (mainG.select('.sjpcb-scatter-series').size() == 0) mainG.append('g').attr('class', 'sjpcb-scatter-series')
 		const serie = mainG.select('.sjpcb-scatter-series')
-		renderSerie(serie, data, s, duration)
-		self.renderLegend(legendG)
+		renderSerie(serie, chart, duration)
+		self.renderLegend(chart, legendG)
 	}
 
 	function getSvgSubElems(svg, chart) {
@@ -196,7 +197,8 @@ export function setRenderers(self) {
 		return [mainG, legendG]
 	}
 
-	function renderSerie(g, data, s, duration) {
+	function renderSerie(g, chart, duration) {
+		const data = chart.data
 		// remove all symbols as there is no data id for privacy
 		//g.selectAll('path').remove()
 
@@ -205,7 +207,7 @@ export function setRenderers(self) {
 		symbols
 			.transition()
 			.duration(duration)
-			.attr('transform', translate)
+			.attr('transform', c => translate(chart, c))
 			.attr('d', c => self.getShape(c))
 			.attr('fill', c => self.getColor(c))
 
@@ -214,7 +216,7 @@ export function setRenderers(self) {
 			.enter()
 			.append('path')
 			/*** you'd need to set the symbol position using translate, instead of previously with cx, cy for a circle ***/
-			.attr('transform', translate)
+			.attr('transform', c => translate(chart, c))
 			.attr('d', c => self.getShape(c))
 			.attr('fill', c => self.getColor(c))
 
@@ -252,8 +254,8 @@ export function setRenderers(self) {
 		return self.symbols[index].size((size * factor) / self.k)()
 	}
 
-	function translate(c) {
-		const transform = `translate(${self.xAxisScale(c.x)},${self.yAxisScale(c.y)})`
+	function translate(chart, c) {
+		const transform = `translate(${chart.xAxisScale(c.x)},${chart.yAxisScale(c.y)})`
 		return transform
 	}
 
@@ -384,120 +386,122 @@ export function setRenderers(self) {
 	}
 
 	self.setTools = function() {
-		const inline = self.config.settings.controls.isOpen
-		const svg = self.svg
-		const toolsDiv = self.dom.toolsDiv.style('background-color', 'white')
-		toolsDiv.selectAll('*').remove()
-		let display = 'block'
-		if (inline) display = 'inline-block'
-		const helpDiv = toolsDiv
-			.insert('div')
-			.style('display', display)
-			.style('margin', '20px')
-			.attr('name', 'sjpp-help-btn') //For unit tests
-		icon_functions['help'](helpDiv, {
-			handler: () => window.open('https://github.com/stjude/proteinpaint/wiki/Scatter-plot', '_blank')
-		})
-
-		const homeDiv = toolsDiv
-			.insert('div')
-			.style('display', display)
-			.style('margin', '20px')
-			.attr('name', 'sjpp-reset-btn') //For unit tests
-		icon_functions['restart'](homeDiv, { handler: resetToIdentity })
-		const zoomInDiv = toolsDiv
-			.insert('div')
-			.style('display', display)
-			.style('margin', '20px')
-			.attr('name', 'sjpp-zoom-in-btn') //For unit tests
-		icon_functions['zoomIn'](zoomInDiv, { handler: zoomIn })
-		const zoomOutDiv = toolsDiv
-			.insert('div')
-			.style('display', display)
-			.style('margin', '20px')
-			.attr('name', 'sjpp-zoom-out-btn') //For unit tests
-		icon_functions['zoomOut'](zoomOutDiv, { handler: zoomOut })
-		const canSearch = self.cohortSamples.length > 0 && 'sample' in self.cohortSamples[0]
-		if (canSearch) {
-			const searchDiv = toolsDiv
+		for (const chart of self.charts) {
+			const inline = self.config.settings.controls.isOpen
+			const svg = chart.svg
+			const toolsDiv = self.dom.toolsDiv.style('background-color', 'white')
+			toolsDiv.selectAll('*').remove()
+			let display = 'block'
+			if (inline) display = 'inline-block'
+			const helpDiv = toolsDiv
 				.insert('div')
 				.style('display', display)
 				.style('margin', '20px')
-			icon_functions['search'](searchDiv, { handler: e => self.searchSample(e) })
-		}
-		const lassoDiv = toolsDiv
-			.insert('div')
-			.style('display', display)
-			.style('margin', '20px')
-		icon_functions['lasso'](lassoDiv, { handler: toggle_lasso, enabled: self.lassoOn })
-		self.dom.groupDiv = toolsDiv
-			.insert('div')
-			.style('display', display)
-			.style('margin', '20px')
+				.attr('name', 'sjpp-help-btn') //For unit tests
+			icon_functions['help'](helpDiv, {
+				handler: () => window.open('https://github.com/stjude/proteinpaint/wiki/Scatter-plot', '_blank')
+			})
 
-		const mainG = svg.select('.sjpcb-scatter-mainG')
-		const seriesG = mainG.select('.sjpcb-scatter-series')
-		const symbols = seriesG.selectAll('path')
-		const axisG = svg.select('.sjpcb-scatter-axis')
-		const xAxisG = axisG.select('.sjpcb-scatter-x-axis')
-		const yAxisG = axisG.select('.sjpcb-scatter-y-axis')
-		const zoom = d3zoom()
-			.scaleExtent([0.5, 10])
-			.on('zoom', handleZoom)
-
-		mainG.call(zoom)
-		const s = self.settings
-		function handleZoom(event) {
-			// create new scale ojects based on event
-			const new_xScale = event.transform.rescaleX(self.xAxisScale)
-			const new_yScale = event.transform.rescaleY(self.yAxisScale)
-
-			xAxisG.call(self.axisBottom.scale(new_xScale))
-			yAxisG.call(self.axisLeft.scale(new_yScale))
-			seriesG.attr('transform', event.transform)
-			self.k = event.transform.scale(1).k
-			//on zoom in the particle size is kept
-			symbols.attr('d', c => self.getShape(c))
-			if (self.lassoOn) self.lasso.selectedItems().attr('d', c => self.getShape(c, 2))
-		}
-
-		function zoomIn() {
-			zoom.scaleBy(mainG.transition().duration(750), 1.5)
-		}
-
-		function zoomOut() {
-			zoom.scaleBy(mainG.transition().duration(750), 0.5)
-		}
-
-		function resetToIdentity() {
-			mainG
-				.transition()
-				.duration(750)
-				.call(zoom.transform, zoomIdentity)
-		}
-
-		self.lasso = d3lasso()
-
-		self.lassoReset()
-
-		function toggle_lasso() {
-			self.lassoOn = !self.lassoOn
-			if (self.lassoOn) {
-				mainG.on('.zoom', null)
-				mainG.call(self.lasso)
-			} else {
-				mainG.on('mousedown.drag', null)
-				self.lasso.items().classed('not_possible', false)
-				self.lasso.items().classed('possible', false)
-				self.lasso
-					.items()
-					.attr('r', self.settings.size)
-					.style('fill-opacity', c => self.getOpacity(c))
-				mainG.call(zoom)
-				self.selectedItems = null
+			const homeDiv = toolsDiv
+				.insert('div')
+				.style('display', display)
+				.style('margin', '20px')
+				.attr('name', 'sjpp-reset-btn') //For unit tests
+			icon_functions['restart'](homeDiv, { handler: resetToIdentity })
+			const zoomInDiv = toolsDiv
+				.insert('div')
+				.style('display', display)
+				.style('margin', '20px')
+				.attr('name', 'sjpp-zoom-in-btn') //For unit tests
+			icon_functions['zoomIn'](zoomInDiv, { handler: zoomIn })
+			const zoomOutDiv = toolsDiv
+				.insert('div')
+				.style('display', display)
+				.style('margin', '20px')
+				.attr('name', 'sjpp-zoom-out-btn') //For unit tests
+			icon_functions['zoomOut'](zoomOutDiv, { handler: zoomOut })
+			const canSearch = chart.cohortSamples.length > 0 && 'sample' in chart.cohortSamples[0]
+			if (canSearch) {
+				const searchDiv = toolsDiv
+					.insert('div')
+					.style('display', display)
+					.style('margin', '20px')
+				icon_functions['search'](searchDiv, { handler: e => self.searchSample(e) })
 			}
-			lassoDiv.select('*').remove()
+			const lassoDiv = toolsDiv
+				.insert('div')
+				.style('display', display)
+				.style('margin', '20px')
 			icon_functions['lasso'](lassoDiv, { handler: toggle_lasso, enabled: self.lassoOn })
+			self.dom.groupDiv = toolsDiv
+				.insert('div')
+				.style('display', display)
+				.style('margin', '20px')
+
+			const mainG = svg.select('.sjpcb-scatter-mainG')
+			const seriesG = mainG.select('.sjpcb-scatter-series')
+			const symbols = seriesG.selectAll('path')
+			const axisG = svg.select('.sjpcb-scatter-axis')
+			const xAxisG = axisG.select('.sjpcb-scatter-x-axis')
+			const yAxisG = axisG.select('.sjpcb-scatter-y-axis')
+			const zoom = d3zoom()
+				.scaleExtent([0.5, 10])
+				.on('zoom', handleZoom)
+
+			mainG.call(zoom)
+			const s = self.settings
+			function handleZoom(event) {
+				// create new scale ojects based on event
+				const new_xScale = event.transform.rescaleX(self.xAxisScale)
+				const new_yScale = event.transform.rescaleY(self.yAxisScale)
+
+				xAxisG.call(self.axisBottom.scale(new_xScale))
+				yAxisG.call(self.axisLeft.scale(new_yScale))
+				seriesG.attr('transform', event.transform)
+				self.k = event.transform.scale(1).k
+				//on zoom in the particle size is kept
+				symbols.attr('d', c => self.getShape(c))
+				if (self.lassoOn) self.lasso.selectedItems().attr('d', c => self.getShape(c, 2))
+			}
+
+			function zoomIn() {
+				zoom.scaleBy(mainG.transition().duration(750), 1.5)
+			}
+
+			function zoomOut() {
+				zoom.scaleBy(mainG.transition().duration(750), 0.5)
+			}
+
+			function resetToIdentity() {
+				mainG
+					.transition()
+					.duration(750)
+					.call(zoom.transform, zoomIdentity)
+			}
+
+			self.lasso = d3lasso()
+
+			self.lassoReset()
+
+			function toggle_lasso() {
+				self.lassoOn = !self.lassoOn
+				if (self.lassoOn) {
+					mainG.on('.zoom', null)
+					mainG.call(self.lasso)
+				} else {
+					mainG.on('mousedown.drag', null)
+					self.lasso.items().classed('not_possible', false)
+					self.lasso.items().classed('possible', false)
+					self.lasso
+						.items()
+						.attr('r', self.settings.size)
+						.style('fill-opacity', c => self.getOpacity(c))
+					mainG.call(zoom)
+					self.selectedItems = null
+				}
+				lassoDiv.select('*').remove()
+				icon_functions['lasso'](lassoDiv, { handler: toggle_lasso, enabled: self.lassoOn })
+			}
 		}
 	}
 
@@ -519,7 +523,7 @@ export function setRenderers(self) {
 			})
 	}
 
-	self.renderLegend = function(legendG) {
+	self.renderLegend = function(chart, legendG) {
 		legendG.selectAll('*').remove()
 		if (!self.config.colorTW) return
 
@@ -530,7 +534,7 @@ export function setRenderers(self) {
 			self.config.colorTW.term.name.length > 25
 				? self.config.colorTW.term.name.slice(0, 25) + '...'
 				: self.config.colorTW.term.name
-		let title = `${name}, n=${self.cohortSamples.length}`
+		let title = `${name}, n=${chart.cohortSamples.length}`
 		const colorRefCategory = self.colorLegend.get('Ref')
 
 		if (self.config.colorTW.term.type == 'geneVariant')
