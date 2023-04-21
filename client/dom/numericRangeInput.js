@@ -9,7 +9,7 @@ export class NumericRangeInput {
 			//.style('font-size', '20px')
 			.on('change', () => {
 				try {
-					this.applyRange()
+					this.parseRange()
 				} catch (ex) {
 					alert(ex)
 					this.setRange()
@@ -23,9 +23,9 @@ export class NumericRangeInput {
 		return this.input
 	}
 
-	applyRange() {
+	parseRange() {
 		const str = this.input.node().value
-		const new_range = this.parseRange(str)
+		const new_range = parseRange(str)
 		if (this.range?.min && (new_range.startunbounded || this.range?.min > new_range.start)) {
 			throw 'Invalid start value < minimum allowed'
 		}
@@ -34,6 +34,7 @@ export class NumericRangeInput {
 		}
 		this.range = new_range
 		this.callback(new_range)
+		return new_range
 	}
 
 	getRange() {
@@ -49,43 +50,41 @@ export class NumericRangeInput {
 		const stop = range.stop ? `<= ${range.stop}` : 'max' in range ? `<= ${range.max}` : ''
 		this.input.node().value = `${start} x ${stop}`
 	}
+}
 
-	parseRange() {
-		const str = this.input.node().value
-		if (!str) throw 'Empty range'
-		const tokens = str.replace(/\s/g, '').split('x')
-		let start, stop, startinclusive, stopinclusive
+export function parseRange(str) {
+	if (!str) throw 'Empty range'
+	const tokens = str.replace(/\s/g, '').split('x')
+	let start, stop, startinclusive, stopinclusive
 
-		if (tokens[0]) parseRangeToken(tokens[0])
-		if (tokens[1]) parseRangeToken(tokens[1])
+	if (tokens[0]) parseRangeToken(tokens[0])
+	if (tokens[1]) parseRangeToken(tokens[1])
 
-		const startunbounded = start === undefined
-		const stopunbounded = stop === undefined
+	const startunbounded = start === undefined
+	const stopunbounded = stop === undefined
 
-		if (!startunbounded && !stopunbounded && start > stop) throw 'start must be lower than stop'
+	if (!startunbounded && !stopunbounded && start > stop) throw 'start must be lower than stop'
+	return { start, stop, startinclusive, stopinclusive, startunbounded, stopunbounded }
 
-		return { start, stop, startinclusive, stopinclusive, startunbounded, stopunbounded }
+	function parseRangeToken(rangeToken) {
+		const floatExpr = '[+-]?\\d+(\\.\\d+)?'
 
-		function parseRangeToken(rangeToken) {
-			const floatExpr = '[+-]?\\d+(\\.\\d+)?'
-
-			if (new RegExp(`^${floatExpr}<$`).test(rangeToken) || new RegExp(`^>${floatExpr}$`).test(rangeToken)) {
-				start = parseFloat(rangeToken.match(floatExpr))
-				startinclusive = false
-			} else if (new RegExp(`^${floatExpr}<=$`).test(rangeToken) || new RegExp(`^>=${floatExpr}$`).test(rangeToken)) {
-				start = parseFloat(rangeToken.match(floatExpr))
-				startinclusive = true
-			} else if (new RegExp(`^${floatExpr}>$`).test(rangeToken) || new RegExp(`^<${floatExpr}$`).test(rangeToken)) {
-				stop = parseFloat(rangeToken.match(floatExpr))
-				stopinclusive = false
-			} else if (new RegExp(`^${floatExpr}>=$`).test(rangeToken) || new RegExp(`^<=${floatExpr}$`).test(rangeToken)) {
-				stop = parseFloat(rangeToken.match(floatExpr))
-				stopinclusive = true
-			} else if (new RegExp(`^${floatExpr}=$`).test(rangeToken) || new RegExp(`^=${floatExpr}$`).test(rangeToken)) {
-				start = stop = parseFloat(rangeToken.match(floatExpr))
-				stopinclusive = true
-				startinclusive = true
-			} else throw `Could not parse expression '${rangeToken}'`
-		}
+		if (new RegExp(`^${floatExpr}<$`).test(rangeToken) || new RegExp(`^>${floatExpr}$`).test(rangeToken)) {
+			start = parseFloat(rangeToken.match(floatExpr))
+			startinclusive = false
+		} else if (new RegExp(`^${floatExpr}<=$`).test(rangeToken) || new RegExp(`^>=${floatExpr}$`).test(rangeToken)) {
+			start = parseFloat(rangeToken.match(floatExpr))
+			startinclusive = true
+		} else if (new RegExp(`^${floatExpr}>$`).test(rangeToken) || new RegExp(`^<${floatExpr}$`).test(rangeToken)) {
+			stop = parseFloat(rangeToken.match(floatExpr))
+			stopinclusive = false
+		} else if (new RegExp(`^${floatExpr}>=$`).test(rangeToken) || new RegExp(`^<=${floatExpr}$`).test(rangeToken)) {
+			stop = parseFloat(rangeToken.match(floatExpr))
+			stopinclusive = true
+		} else if (new RegExp(`^${floatExpr}=$`).test(rangeToken) || new RegExp(`^=${floatExpr}$`).test(rangeToken)) {
+			start = stop = parseFloat(rangeToken.match(floatExpr))
+			stopinclusive = true
+			startinclusive = true
+		} else throw `Could not parse expression '${rangeToken}'`
 	}
 }

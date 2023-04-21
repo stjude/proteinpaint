@@ -253,13 +253,12 @@ function addRangeTableNoDensity(self, tvs) {
 		.style('text-transform', 'uppercase')
 		.text('apply')
 		.on('click', async () => {
-			applyRange()
+			brush.rangeInput.parseRange()
 		})
 
 	function applyRange() {
-		const range = brush.rangeInput.getRange()
 		self.dom.tip.hide()
-		self.opts.callback({ term: tvs.term, ranges: [range] })
+		self.opts.callback({ term: tvs.term, ranges: [brush.rangeInput.getRange()] })
 	}
 }
 
@@ -331,9 +330,7 @@ function enterRange(self, tr, brush, i) {
 
 	brush.equation_td = range_tr.append('td').style('width', '150px')
 
-	brush.rangeInput = new NumericRangeInput(brush.equation_td, brush.range, new_range => {
-		apply(new_range)
-	})
+	brush.rangeInput = new NumericRangeInput(brush.equation_td, brush.range, apply)
 
 	makeRangeButtons(self, brush)
 	// note for empty range
@@ -384,7 +381,7 @@ function enterRange(self, tr, brush, i) {
 			.text('apply')
 			.on('click', async () => {
 				self.dom.tip.hide()
-				await apply(brush.rangeInput.getRange())
+				brush.rangeInput.parseRange()
 				const new_tvs = JSON.parse(JSON.stringify(self.tvs))
 				delete new_tvs.groupset_label
 				// merge overlapping ranges
