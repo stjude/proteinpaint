@@ -12,7 +12,9 @@ Tests:
 		getPercentile()
 		TODO:
 			q_to_param()
-			getVocabFromSamplesArray()
+		** Comments
+			Not testing
+				getVocabFromSamplesArray() - only appears in old mds.scatterplot code which will be obsolete
 
 	FrontendVocab
 		getTermdbConfig()
@@ -152,14 +154,36 @@ tape('getPercentile()', async function(test) {
 	test.equal(result.values[0], 0.35, 'should get correct 50th percentile with numeric filter')
 })
 
-tape.skip('q_to_param()', test => {
+tape('q_to_param()', async test => {
 	test.timeoutAfter(100)
 	// test.plan()
-})
 
-tape.skip('getVocabFromSamplesArray()', test => {
-	test.timeoutAfter(100)
-	// test.plan()
+	let testTerm, testQ, result
+
+	function checkEncoding(str) {
+		return /\%/i.test(str)
+	}
+
+	testTerm = 'aaclassic_5'
+	testQ = {
+		q: termjson[testTerm].bins.default
+	}
+
+	result = await vocabApi.q_to_param(testQ)
+	for (const key of Object.keys(testQ.q)) {
+		if (!result.includes(key)) test.fail(`Missing q.${key} in URL string for term = ${testTerm}`)
+	}
+	test.equal(checkEncoding(result), true, `Should return url for term = ${testTerm}`)
+
+	testTerm = 'Arrhythmias'
+	testQ = {
+		q: termjson[testTerm]
+	}
+	result = await vocabApi.q_to_param(testQ)
+	for (const key of Object.keys(testQ.q)) {
+		if (!result.includes(key)) test.fail(`Missing q.${key} in URL string for term = ${testTerm}`)
+	}
+	test.equal(checkEncoding(result), true, `Should return url for term = ${testTerm}`)
 })
 
 /* FrontendVocab tests */
