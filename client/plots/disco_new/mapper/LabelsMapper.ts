@@ -2,6 +2,7 @@ import Data from "#plots/disco_new/mapper/Data";
 import {StateViewModelMapper} from "#plots/disco_new/mapper/StateViewModelMapper";
 import LabelProcessor from "#plots/disco_new/mapper/LabelProcessor";
 import Reference from "#plots/disco_new/mapper/Reference";
+import Label from "#plots/disco_new/viewmodel/Label";
 
 export default class LabelsMapper {
 
@@ -19,7 +20,8 @@ export default class LabelsMapper {
         this.chromosomes = chromosomes
     }
 
-    map(data: Array<Data>) {
+    map(data: Array<Data>) : Array<Label> {
+        const labels: Array<Label> = []
         data.forEach(data => {
             if (!StateViewModelMapper.dtNums.includes(data.dt)) return
             const alias = data.dt == 1 && this.settings.snv.byClassWidth ? StateViewModelMapper.snvClassLayer[data.class] : StateViewModelMapper.dtAlias[data.dt]
@@ -49,9 +51,7 @@ export default class LabelsMapper {
             this.processors.labels.setGeneArcs(geneArcs, alias)
             const s = this.settings
             if (!s.showLabels) return
-            const chord = []
-            //const minMax = d3extent(Object.values(this.app.hits.byGene))
-            chord["groups"] = []
+
             const innerRadius = plot.lastRadius //+ s.gene.gap
             const outerRadius = innerRadius + s.label.width
             this.processors.labels.getTopGenes().forEach(arc => {
@@ -61,30 +61,30 @@ export default class LabelsMapper {
                     //if (s.clickedChromosome && s.clickedChromosome!=arc.chromosome
                     //&& !this.fusedToGeneInClickedChr.includes(g)) return;
 
-                    const label = data.label ? data.label : g
-                    if (label) {
-                        const d = {
-                            startAngle: data.startAngle, // + padAngle,
-                            endAngle: data.endAngle, // - padAngle,
-                            innerRadius: innerRadius,
-                            outerRadius: outerRadius,
-                            labelRadius: outerRadius + s.label.labelGap * s.layerScaler,
-                            value: 1,
+                    const labelVal = data.label ? data.label : g
+                    if (labelVal) {
+                        const label = new Label(
+                            data.startAngle, // + padAngle,
+                            data.endAngle, // - padAngle,
+                            innerRadius,
+                            outerRadius,
+                            outerRadius + s.label.labelGap * s.layerScaler,
+                            1,
                             // index: i,
-                            label: g, //rowsByGene[g].filter(d=>d.class=='Fuser' || (d.classification && d.classification!='NONE')).length ? g : '',
-                            gene: g,
-                            layerNum: 0,
-                            chromosome: data.chromosome,
-                            class: data.class,
-                            aachange: data.aachange,
-                            d: data,
-                            sample: data.sample,
-                            hits: arc.length,
-                            labelFill: '#aaa'
-                        }
+                            g, //rowsByGene[g].filter(d=>d.class=='Fuser' || (d.classification && d.classification!='NONE')).length ? g : '',
+                            g,
+                            0,
+                            data.chromosome,
+                            data.class,
+                            data.aachange,
+                            data,
+                            data.sample,
+                            arc.length,
+                            '#aaa'
+                        )
 
                         // this.setCountText(d)
-                        chord["groups"].push(d)
+                        labels.push(label)
 
                         if (s.label.colorBy == 'variant-class' && geneArcs[g] && geneArcs[g].variantTypes) {
                             const types = Object.keys(geneArcs[g].variantTypes).sort((a, b) => {
@@ -92,12 +92,13 @@ export default class LabelsMapper {
                             })
                             const mainType = types[0]
                             // d.labelFill = mainType in this.app.mlabel ? this.app.mlabel[mainType].color : '#aaa'
-                            d.labelFill = '#aaa'
+                            // d.labelFill = '#aaa'
                         }
                     }
                 }
             )
-            return chord["groups"]
         })
+
+        return labels.slice(0, 31)
     }
 }
