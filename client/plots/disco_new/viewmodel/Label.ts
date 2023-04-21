@@ -1,5 +1,5 @@
 export default class Label {
-    test: string
+    key: string
     rotation: number
     translation: number
 }

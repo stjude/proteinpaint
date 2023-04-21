@@ -9,12 +9,14 @@ import Loh from "#plots/disco_new/viewmodel/Loh";
 import discoDefaults from "#plots/disco_new/viewmodel/defaults";
 import Reference from "#plots/disco_new/mapper/Reference";
 import Data from "#plots/disco_new/mapper/Data";
+import LabelsMapper from "#plots/disco_new/mapper/LabelsMapper";
+import DataMapper from "#plots/disco_new/mapper/DataMapper";
 
 export class StateViewModelMapper {
 
     private hits = {classes: []} // used in legend
 
-    private static dtNums = [
+    static dtNums = [
         2,
         5,
         4,
@@ -24,7 +26,7 @@ export class StateViewModelMapper {
         'non-exonic'
     ]
 
-    private static dtAlias = {
+    static dtAlias = {
         1: 'snv', //
         2: 'sv', //'fusionrna',
         3: 'geneexpression',
@@ -37,7 +39,7 @@ export class StateViewModelMapper {
         10: 'loh'
     }
 
-    private static snvClassLayer = {
+    static snvClassLayer = {
         M: 'exonic',
         E: 'exonic',
         F: 'exonic',
@@ -58,16 +60,13 @@ export class StateViewModelMapper {
         noncoding: 'non-exonic'
     }
 
-    processorClasses = {
+    static processorClasses = {
         snv: Snv,
         cnv: Cnv,
         sv: Sv,
         loh: Loh
     } //console.log(this.processorClasses)
 
-    private processors = {
-        labels: new LabelProcessor(),
-    }
     private settings: any;
 
     map(opts: any): ViewModel {
@@ -79,67 +78,12 @@ export class StateViewModelMapper {
 
         const rings = [new Ring(this.settings.innerRadius + 80, 30, chromosomes.chromosomes)]
 
-        const data : Array<Data> = this.mapData(opts.args.data, opts.args.sampleName)
+        const data : Array<Data> = new DataMapper().map(opts.args.data, opts.args.sampleName)
 
-        data.forEach(data => {
-            if (!StateViewModelMapper.dtNums.includes(data.dt)) return
-            const alias = data.dt == 1 && this.settings.snv.byClassWidth ? StateViewModelMapper.snvClassLayer[data.class] : StateViewModelMapper.dtAlias[data.dt]
-            if (!this.processors[alias]) {
-                this.processors[alias] = new this.processorClasses[data.dt == 1 ? 'snv' : alias](this.settings, alias, chromosomes)
-            }
-            const cls = this.processors[alias].main(data)
-            if (!this.hits.classes.includes(cls)) {
-                this.hits.classes.push(cls)
-            }
-        })
+        const labelsMapper = new LabelsMapper(this.settings, opts.args.sampleName, chromosomes)
 
-        const plot = {
-            title: '', //sampleName,
-            sample: opts.args.sampleName,
-            lastRadius: this.settings.innerRadius,
-            layers: []
-        }
-
-        StateViewModelMapper.dtNums.forEach(dt => {
-            const alias = dt in StateViewModelMapper.dtAlias ? StateViewModelMapper.dtAlias[dt] : dt
-            if (!this.processors[alias]) return
-            const geneArcs = this.processors[alias].setLayer(plot, plot.sample)
-            this.processors.labels.setGeneArcs(geneArcs, alias)
-            this.processors.labels.getTopGenes()
-        })
+        labelsMapper.map(data)
 
         return new ViewModel(rings)
-    }
-
-
-     mapData(data, sampleName) {
-         const dataArray : Array<Data> = []
-
-         data.forEach(dObject => {
-             const instance = new Data()
-
-             instance.alt = dObject.alt
-             instance.chr = dObject.chr
-             instance.class = dObject.class
-             instance.dt = dObject.dt
-             instance.gene = dObject.gene
-             instance.mname = dObject.mname
-             instance.pos = dObject.pos
-             instance.position = dObject.position
-             instance.ref = dObject.ref
-             instance.sample = sampleName
-             instance.posbins = dObject.posbins
-             instance.poschr = dObject.poschr
-             instance.poslabel = dObject.poslabel
-
-             instance.ssm_id = dObject.ssm_id
-             instance.start = dObject.start
-             instance.stop = dObject.stop
-             instance.value = dObject.value
-
-             dataArray.push(instance)
-         })
-
-         return dataArray
     }
 }
