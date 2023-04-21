@@ -17,7 +17,7 @@ validate_query_snvindel_byisoform
 	decideSampleId
 validate_query_singleSampleMutation
 	getSingleSampleMutations
-		getCnv4oneCase
+		getCnvFusion4oneCase
 validate_query_snvindel_byisoform_2 // "protein_mutations" graphql, not in use
 validate_query_geneCnv
 	filter2GDCfilter
@@ -550,8 +550,15 @@ get a text file with genome-wide cnv segment data from one case, and read the fi
 opts{}
 	.case_id=str
 */
-async function getCnv4oneCase(opts) {
-	const fields = ['cases.samples.sample_type', 'data_type', 'file_id', 'data_format', 'experimental_strategy']
+async function getCnvFusion4oneCase(opts) {
+	const fields = [
+		'cases.samples.sample_type',
+		'data_type',
+		'file_id',
+		'data_format',
+		'experimental_strategy',
+		'analysis.workflow_type'
+	]
 	const headers = getheaders(opts)
 	const tmp = await got.post(path.join(apihost, 'files'), {
 		headers,
@@ -564,33 +571,41 @@ async function getCnv4oneCase(opts) {
 	const re = JSON.parse(tmp.body)
 	if (!Array.isArray(re.data.hits)) throw 're.data.hits[] not array'
 
-	let snpFile, wgsFile // detect result files from these two assays. if has both, use wgs
+	let snpFile, wgsFile, arribaFile // detect result files from accepted assays. if has both, use wgs
 
 	for (const h of re.data.hits) {
-		if (h.data_format != 'TXT') continue
+		if (h.data_format == 'BEDPE') {
+			if (h.experimental_strategy != 'RNA-Seq') continue
+			if (h.analysis?.workflow_type != 'Arriba') continue
+			arribaFile = h.file_id
+			continue
+		}
 
-		if (h.experimental_strategy == 'Genotyping Array') {
-			// is snp array, there're two files for tumor and normal. skip the normal one by sample_tye
-			const sample_type = h.cases?.[0].samples?.[0]?.sample_type
-			if (!sample_type) continue
-			if (sample_type.includes('Normal')) continue
-			if (!h.file_id) continue
-			snpFile = h.file_id
-		} else if (h.experimental_strategy == 'WGS') {
-			// is wgs, no need to check sample_type, the file is usable
-			if (!h.file_id) continue
-			wgsFile = h.file_id
-		} else {
-			// unknown assay
+		if (h.data_format == 'TXT') {
+			if (h.experimental_strategy == 'Genotyping Array') {
+				// is snp array, there're two files for tumor and normal. skip the normal one by sample_tye
+				const sample_type = h.cases?.[0].samples?.[0]?.sample_type
+				if (!sample_type) continue
+				if (sample_type.includes('Normal')) continue
+				snpFile = h.file_id
+				continue
+			}
+			if (h.experimental_strategy == 'WGS') {
+				// is wgs, no need to check sample_type, the file is usable
+				if (!h.file_id) continue
+				wgsFile = h.file_id
+				continue
+			}
 		}
 	}
+
+	const events = [] // collect cnv and fusion events into one array
 
 	if (wgsFile) {
 		const re = await got(path.join(apihost, 'data') + '/' + wgsFile, { method: 'GET', headers })
 		const lines = re.body.split('\n')
 		// first line is header
 		// GDC_Aliquot	Chromosome	Start	End	Copy_Number	Major_Copy_Number	Minor_Copy_Number
-		const events = []
 		for (let i = 1; i < lines.length; i++) {
 			const l = lines[i].split('\t')
 			if (l.length != 7) continue
@@ -601,21 +616,20 @@ async function getCnv4oneCase(opts) {
 				stop: Number(l[3]),
 				value: Number(l[4])
 			}
-			if (Number.isNaN(cnv.start) || Number.isNaN(cnv.stop) || Number.isNaN(cnv.value)) continue
+			if (!cnv.chr || Number.isNaN(cnv.start) || Number.isNaN(cnv.stop) || Number.isNaN(cnv.value)) continue
 			events.push(cnv)
 		}
-		return events
-	}
+	} else if (snpFile) {
+		// only load available snp file if no wgs cnv
 
-	if (snpFile) {
 		const re = await got(path.join(apihost, 'data') + '/' + snpFile, { method: 'GET', headers })
 		const lines = re.body.split('\n')
 		// first line is header
 		// GDC_Aliquot	Chromosome	Start	End	Num_Probes	Segment_Mean
-		const events = []
 		for (let i = 1; i < lines.length; i++) {
 			const l = lines[i].split('\t')
 			if (l.length != 6) continue
+			if (!l[1]) continue
 			const cnv = {
 				dt: common.dtcnv,
 				chr: 'chr' + l[1],
@@ -626,11 +640,33 @@ async function getCnv4oneCase(opts) {
 			if (Number.isNaN(cnv.start) || Number.isNaN(cnv.stop) || Number.isNaN(cnv.value)) continue
 			events.push(cnv)
 		}
-		return events
 	}
 
-	// no cnv file found
-	return []
+	if (arribaFile) {
+		try {
+			const re = await got(path.join(apihost, 'data') + '/' + arribaFile, { method: 'GET', headers })
+			const lines = re.body.split('\n')
+			// first line is header
+			// #chrom1 start1  end1    chrom2  start2  end2    name    score   strand1 strand2 strand1(gene/fusion)    strand2(gene/fusion)    site1   site2   type    direction1      direction2      split_reads1    split_reads2    discordant_mates        coverage1       coverage2       closest_genomic_breakpoint1     closest_genomic_breakpoint2     filters fusion_transcript       reading_frame   peptide_sequence        read_identifiers
+			for (let i = 1; i < lines.length; i++) {
+				const l = lines[i].split('\t')
+				const f = {
+					dt: common.dtfusionrna,
+					chrA: l[0],
+					posA: Number(l[1]),
+					chrB: l[3],
+					posB: Number(l[4])
+				}
+				if (!f.chrA || !f.chrB || Number.isNaN(f.posA) || Number.isNaN(f.posB)) continue
+				parseArribaName(f, l[6])
+				events.push(f)
+			}
+		} catch (e) {
+			// no permission to fusion file
+		}
+	}
+
+	return events
 
 	function getFilter(p) {
 		/* p={}
@@ -647,7 +683,8 @@ async function getCnv4oneCase(opts) {
 						field: 'data_type',
 						value: [
 							'Masked Copy Number Segment', // for snp array we only want this type of file
-							'Copy Number Segment' // for wgs we want this type of file
+							'Copy Number Segment', // for wgs we want this type of file
+							'Transcript Fusion' // fusion
 						]
 					}
 				}
@@ -655,6 +692,21 @@ async function getCnv4oneCase(opts) {
 		}
 		return filters
 	}
+}
+
+function parseArribaName(f, str) {
+	if (!str) return
+	const lst = str.split(',') // first split by ,
+	for (const tmp of lst) {
+		const l2 = tmp.split('--')
+		if (l2.length == 2) {
+			// is A--B name joined
+			f.geneA = l2[0].split('(')[0]
+			f.geneB = l2[1].split('(')[0]
+			return
+		}
+	}
+	// no A--B name; may fix logic later
 }
 
 ////////////////////////// CNV ends /////////////////////////////
@@ -1343,9 +1395,10 @@ function termid2size_filters(p, ds) {
 }
 
 export function validate_query_singleSampleMutation(ds, genome) {
-	ds.queries.singleSampleMutation.get = async case_id => {
+	ds.queries.singleSampleMutation.get = async (case_id, q) => {
 		if (!case_id) throw 'case_id missing'
-		return await getSingleSampleMutations({ case_id }, ds, genome)
+		q.case_id = case_id
+		return await getSingleSampleMutations(q, ds, genome)
 	}
 }
 
@@ -1383,7 +1436,7 @@ async function getSingleSampleMutations(query, ds, genome) {
 	// ssm
 	{
 		const response = await got.post(path.join(apihost, isoform2ssm_query1_getvariant.endpoint), {
-			headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+			headers: getheaders(query),
 			body: JSON.stringify({
 				size: 1000,
 				fields: isoform2ssm_query1_getvariant.fields.join(','),
@@ -1435,7 +1488,7 @@ async function getSingleSampleMutations(query, ds, genome) {
 
 	{
 		// cnv
-		const tmp = await getCnv4oneCase(query)
+		const tmp = await getCnvFusion4oneCase(query)
 		mlst.push(...tmp)
 	}
 

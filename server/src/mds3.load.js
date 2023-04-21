@@ -180,7 +180,7 @@ async function load_driver(q, ds) {
 
 	if (q.singleSampleMutation) {
 		if (!ds.queries.singleSampleMutation?.get) throw 'not supported on this dataset'
-		return { mlst: await ds.queries.singleSampleMutation.get(q.singleSampleMutation) }
+		return { mlst: await ds.queries.singleSampleMutation.get(q.singleSampleMutation, q) }
 	}
 
 	if (q.ssm2canonicalisoform) {
@@ -343,7 +343,7 @@ function filter_data(q, result) {
 				server will re-request data, though inefficient
 				so as to calculate the number of samples with mutations in zoomed in region of protein
 				*/
-				if (!q.rglst.find((r) => m.chr == r.chr && m.pos >= r.start && m.pos <= r.stop)) {
+				if (!q.rglst.find(r => m.chr == r.chr && m.pos >= r.start && m.pos <= r.stop)) {
 					// not in any region
 					continue
 				}
@@ -428,7 +428,7 @@ async function geneExpressionClustering(data, q) {
 		matrix: [],
 		row_names: [], // genes
 		col_names: [...sampleSet], // samples
-		plot_image: false, // When true causes cluster.rs to plot the image into a png file (EXPERIMENTAL)
+		plot_image: false // When true causes cluster.rs to plot the image into a png file (EXPERIMENTAL)
 	}
 
 	// compose "data{}" into a matrix
@@ -470,7 +470,7 @@ async function geneExpressionClustering(data, q) {
 				.replace(']', '')
 				.replace(' ', '')
 				.split(',')
-				.map((i) => parseInt(i))
+				.map(i => parseInt(i))
 		} else if (item.includes('sorted_row_elements:')) {
 			sorted_gene_elements = item
 				.replace('sorted_row_elements:', '')
@@ -478,7 +478,7 @@ async function geneExpressionClustering(data, q) {
 				.replace(']', '')
 				.replace(' ', '')
 				.split(',')
-				.map((i) => parseInt(i))
+				.map(i => parseInt(i))
 		} else if (item.includes('sorted_col_coordinates:')) {
 			sorted_sample_coordinates = JSON.parse(JSON.parse(item.replace('sorted_col_coordinates:', '')))
 		} else if (item.includes('sorted_row_coordinates:')) {
