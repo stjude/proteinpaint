@@ -8,9 +8,14 @@ Tests:
 	basic cuminc
 	term1=Cardiovascular System, filter=ALL
 	term1=Cardiovascular System, term2=agedx
+	term1=Cardiovascular System, term0=sex
 	term1 = Cardiovascular System, term2 = agedx, numeric regular bins
+	term1 = Cardiovascular System, term0 = agedx, numeric regular bins
+	term1 = Cardiovascular System, term2 = agedx, numeric custom bins
+	term1 = Cardiovascular System, term0 = agedx, numeric custom bins
 	hidden uncomputable
 	skipped series
+	term1 = Cardiovascular System, term2 = samplelst
  */
 
 /*************************
@@ -186,6 +191,53 @@ tape('term1=Cardiovascular System, term2=agedx', function(test) {
 	}
 })
 
+tape('term1=Cardiovascular System, term0=sex', test => {
+	test.timeoutAfter(5000)
+	runpp({
+		state: {
+			plots: [
+				{
+					chartType: 'cuminc',
+					term: { id: 'Cardiovascular System' },
+					term0: { id: 'sex' }
+				}
+			]
+		},
+		cuminc: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+
+	async function runTests(cuminc) {
+		cuminc.on('postRender.test', null)
+
+		const cumincDiv = cuminc.Inner.dom.chartsDiv
+		const term0Values = cuminc.Inner.config.term0.term.values
+
+		//Test all dom elements present
+		test.equal(
+			cumincDiv.selectAll('.pp-cuminc-chart').size(),
+			Object.keys(term0Values).length,
+			`Should render ${Object.keys(term0Values).length} cuminc charts`
+		)
+		test.equal(
+			cumincDiv.selectAll('.sjpp-cuminc-atrisk').size(),
+			Object.keys(term0Values).length,
+			`Should render 'Number at risk' tables below chart`
+		)
+
+		const titleNodes = cumincDiv.selectAll('.sjpcb-cuminc-title').nodes()
+		for (const v of Object.values(term0Values)) {
+			if (!titleNodes.find(d => d.innerText == v.label)) test.fail(`Missing title for term0 value = ${v.label}`)
+		}
+
+		if (test._ok) cuminc.Inner.app.destroy()
+		test.end()
+	}
+})
+
 tape('term1 = Cardiovascular System, term2 = agedx, numeric regular bins', test => {
 	test.timeoutAfter(5000)
 
@@ -202,7 +254,6 @@ tape('term1 = Cardiovascular System, term2 = agedx, numeric regular bins', test 
 					},
 					term2: {
 						id: 'agedx',
-						isleaf: true,
 						name: 'Age (years) at Cancer Diagnosis',
 						type: 'float',
 						bins: {
@@ -275,38 +326,63 @@ tape('term1 = Cardiovascular System, term2 = agedx, numeric regular bins', test 
 tape.skip('term1 = Cardiovascular System, term0 = agedx, numeric regular bins', test => {
 	test.timeoutAfter(5000)
 
-	const testBinSize = 5
-	const testStop = 5
 	runpp({
 		state: {
 			plots: [
 				{
 					chartType: 'cuminc',
-					term: {
-						id: 'Cardiovascular System',
-						q: { bar_by_grade: true, value_by_max_grade: true }
-					},
+					term: { id: 'Cardiovascular System' },
 					term0: {
 						id: 'agedx',
-						isleaf: true,
-						name: 'Age (years) at Cancer Diagnosis',
-						type: 'float',
-						bins: {
-							default: {
-								type: 'regular-bin',
-								bin_size: testBinSize,
-								startinclusive: true,
-								first_bin: {
-									startunbounded: true,
-									stop: testStop
-								}
+						term: {
+							type: 'float',
+							bins: {
+								default: {
+									type: 'regular-bin',
+									bin_size: 5,
+									startinclusive: true,
+									first_bin: {
+										startunbounded: true,
+										stop: 5
+									},
+									label_offset: 1
+								},
+								label_offset: 1
 							},
-							label_offset: 1
+							name: 'Age (years) at Cancer Diagnosis',
+							id: 'agedx'
+							// isleaf: true,
+							// values: {},
+							// included_types: [
+							// 	'float'
+							// ],
+							// child_types: []
+						},
+						q: {
+							isAtomic: true,
+							mode: 'discrete',
+							type: 'regular-bin'
+							// type: 'custom-bin',
+							// lst: [
+							// 	{
+							// 		startunbounded: true,
+							// 		stop: 8.164619357749999,
+							// 		stopinclusive: false,
+							// 		label: '<8.164619357749999'
+							// 	},
+							// 	{
+							// 		start: 8.164619357749999,
+							// 		startinclusive: true,
+							// 		stopunbounded: true,
+							// 		label: '≥8.164619357749999'
+							// 	}
+							// ],
+							// hiddenValues: {}
 						}
 					},
 					settings: {
 						controls: {
-							isOpen: true
+							term0: { id: 'agedx', term: termjson['agedx'] }
 						}
 					}
 				}
@@ -347,7 +423,7 @@ tape.skip('term1 = Cardiovascular System, term0 = agedx, numeric regular bins', 
 	}
 })
 
-tape.skip('term1 = Cardiovascular System, term2 = agedx, numeric custom bins', test => {
+tape('term1 = Cardiovascular System, term2 = agedx, numeric custom bins', test => {
 	test.timeoutAfter(10000)
 
 	runpp({
@@ -389,26 +465,135 @@ tape.skip('term1 = Cardiovascular System, term2 = agedx, numeric custom bins', t
 
 	async function runTests(cuminc) {
 		cuminc.on('postRender.test', null)
-		console.log(379, cuminc.Inner)
+		const inner = cuminc.Inner
 
 		//Test data correctly appears
-		test.equal(cuminc.Inner.config.term2.q.type, 'custom-bin', `Should correctly pass 'custom-bin' to config`)
+		test.equal(inner.config.term2.q.type, 'custom-bin', `Should correctly pass 'custom-bin' to config`)
+		const overlayConfig =
+			inner.components.controls.Inner.components.config.Inner.components.overlay.Inner.usedTerms[0].q.lst
+		test.equal(
+			JSON.stringify(inner.config.term2.q.lst),
+			JSON.stringify(overlayConfig),
+			`Should correctly pass the custom list to overlay component`
+		)
 
-		// const newStop = 1
-		// cuminc.Inner.config.term0.q.bin_size = 3
-		// cuminc.Inner.config.term0.q.first_bin.stop = newStop
+		//Test overlay bin changes are applied
+		inner.config.term2.q.lst[2] = { startinclusive: true, stopinclusive: true, start: 12, stop: 15, label: '12 to 15' }
+		inner.config.term2.q.lst.push({ start: 15, startinclusive: false, stopunbounded: true, label: '>15' })
 
-		// await cuminc.Inner.app.dispatch({
-		// 	type: 'plot_edit',
-		// 	id: cuminc.Inner.id,
-		// 	config: cuminc.Inner.config
-		// })
+		await inner.app.dispatch({
+			type: 'plot_edit',
+			id: inner.id,
+			config: inner.config
+		})
 
-		// const findBin = cuminc.Inner.dom.controls.selectAll('.ts_summary_btn.sja_filter_tag_btn').nodes()
-		// test.ok(findBin[1].innerText.endsWith(`=${cuminc.Inner.config.term0.q.bin_size}`), `Should display the correct bin size = ${cuminc.Inner.config.term0.q.bin_size}`)
-		// test.equal(cuminc.Inner.config.term0.q.first_bin.stop, newStop, `Should update first bin stop to ${newStop}`)
+		const findBin = cuminc.Inner.dom.controls.selectAll('.ts_summary_btn.sja_filter_tag_btn').nodes()
+		test.ok(
+			findBin[1].innerText.endsWith(`${inner.config.term2.q.lst.length} bins`),
+			`Should display the correct num of bins = ${inner.config.term2.q.lst.length}`
+		)
 
-		// if (test._ok) cuminc.Inner.app.destroy()
+		if (test._ok) cuminc.Inner.app.destroy()
+		test.end()
+	}
+})
+
+tape('term1 = Cardiovascular System, term0 = agedx, numeric custom bins', test => {
+	test.timeoutAfter(10000)
+
+	runpp({
+		state: {
+			plots: [
+				{
+					chartType: 'cuminc',
+					term: { id: 'Cardiovascular System' },
+					term0: {
+						id: 'agedx',
+						term: {
+							type: 'float',
+							bins: {
+								default: {
+									type: 'regular-bin',
+									bin_size: 5,
+									startinclusive: true,
+									first_bin: {
+										startunbounded: true,
+										stop: 5
+									},
+									label_offset: 1
+								},
+								label_offset: 1
+							},
+							name: 'Age (years) at Cancer Diagnosis',
+							id: 'agedx'
+						},
+						q: {
+							isAtomic: true,
+							mode: 'discrete',
+							type: 'custom-bin',
+							lst: [
+								{
+									startunbounded: true,
+									stop: 12,
+									stopinclusive: false,
+									label: '<12'
+								},
+								{
+									start: 12,
+									startinclusive: true,
+									stopunbounded: true,
+									label: '≥12'
+								}
+							],
+							hiddenValues: {}
+						}
+					},
+					settings: {
+						controls: {
+							isOpen: true
+						}
+					}
+				}
+			]
+		},
+		cuminc: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+
+	async function runTests(cuminc) {
+		cuminc.on('postRender.test', null)
+		const inner = cuminc.Inner
+
+		//Test data correctly appears
+		test.equal(inner.config.term0.q.type, 'custom-bin', `Should correctly pass 'custom-bin' to config`)
+		const divideConfig =
+			inner.components.controls.Inner.components.config.Inner.components.divideBy.Inner.usedTerms[0].q.lst
+		test.equal(
+			JSON.stringify(inner.config.term0.q.lst),
+			JSON.stringify(divideConfig),
+			`Should correctly pass the custom list to overlay component`
+		)
+
+		//Test overlay bin changes are applied
+		inner.config.term0.q.lst[0] = { startunbounded: true, stop: 15, stopinclusive: false, label: '<15' }
+		inner.config.term0.q.lst[1] = { start: 15, startinclusive: false, stopunbounded: true, label: '>15' }
+
+		await inner.app.dispatch({
+			type: 'plot_edit',
+			id: inner.id,
+			config: inner.config
+		})
+
+		const findBin = cuminc.Inner.dom.controls.selectAll('.ts_summary_btn.sja_filter_tag_btn').nodes()
+		test.ok(
+			findBin[1].innerText.endsWith(`${inner.config.term0.q.lst.length} bins`),
+			`Should display the correct num of bins = ${inner.config.term0.q.lst.length}`
+		)
+
+		if (test._ok) cuminc.Inner.app.destroy()
 		test.end()
 	}
 })
@@ -484,6 +669,72 @@ tape('skipped series', function(test) {
 			.select('.pp-cuminc-chartLegends')
 			.selectAll('.pp-cuminc-chartLegends-skipped')
 		test.equal(skippedDivs && skippedDivs.size(), 2, 'should render 2 skipped series')
+
+		if (test._ok) cuminc.Inner.app.destroy()
+		test.end()
+	}
+})
+
+tape.skip('term1 = Cardiovascular System, term2 = samplelst', function(test) {
+	test.timeoutAfter(10000)
+	runpp({
+		state: {
+			plots: [
+				{
+					chartType: 'cuminc',
+					term: {
+						id: 'Cardiovascular System'
+					},
+					term2: {
+						term: {
+							name: 'test',
+							type: 'samplelst',
+							values: {
+								'Group 1': { key: 'Group 1', label: 'Group 1' },
+								Others: { key: 'Others', label: 'Others' }
+							}
+						},
+						q: {
+							mode: 'discrete',
+							groups: [
+								{
+									name: 'Group 1',
+									in: true,
+									values: [1, 2, 3, 4, 5, 6].map(i => {
+										return { sampleId: i }
+									})
+								},
+								{
+									name: 'Others',
+									in: false,
+									values: [1, 2, 3, 4, 5, 6].map(i => {
+										return { sampleId: i }
+									})
+								}
+							]
+						}
+					}
+				}
+			]
+		},
+		cuminc: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+
+	async function runTests(cuminc) {
+		cuminc.on('postRender.test', null)
+
+		const legendRows = cuminc.Inner.dom.chartsDiv
+			.selectAll('.sjpp-cuminc-atrisk text')
+			.nodes()
+			.filter(d => !d.__data__?.tickVal && d.className.animVal != 'sjpp-cuminc-atrisk-title')
+		test.ok(
+			cuminc.Inner.config.term2.term.values[legendRows[0].innerHTML],
+			`Should display custom label in 'Number at risk' table`
+		)
 
 		if (test._ok) cuminc.Inner.app.destroy()
 		test.end()
