@@ -506,54 +506,46 @@ tape('tvs: Numeric', async test => {
 		)
 	}
 
-	// --- test changing to non-inclusive start boundary ---
-	// {
-	// 	pill.click()
-	// 	editOpt.click()
-	// 	const tr = await detectOne({ target: tipnode, selector: '.range_div' })
-	// 	tr.querySelector('.edit_btn').click()
-	// 	const input = tr.querySelector('input[name="rangeInput"]')
-	// 	input.value = 'x>0'
-	// 	//await sleep(100)
-	// 	input.dispatchEvent(enter_event)
-	// 	const valueBtn = await detectChildText({
-	// 		target: filternode,
-	// 		selector: '.value_btn',
-	// 		trigger() {
-	// 			tr.querySelector('.sjpp_apply_btn').click()
-	// 		}
-	// 	})
-	// 	//await sleep(10)
-	// 	test.true(valueBtn[0].innerHTML.includes('&gt; 0'), 'should show a greater than pill value')
-	// }
+	//--- test changing to non-inclusive start boundary ---
+	{
+		pill.click()
+		const tr = await detectOne({ target: tipnode, selector: '.range_div' })
+		const input = tr.querySelector('input[name="rangeInput"]')
+		input.value = 'x>0'
+		//await sleep(100)
+		input.dispatchEvent(enter_event)
+		const valueBtn = await detectChildText({
+			target: filternode,
+			selector: '.value_btn',
+			trigger() {
+				tr.querySelector('.sjpp_apply_btn').click()
+			}
+		})
+		//await sleep(10)
+		test.true(valueBtn[0].innerHTML.includes('&gt; 0'), 'should show a greater than pill value')
+	}
 
-	// --- test changing to inclusive start boundary ---
-	// {
-	// 	pill.click()
-	// 	editOpt.click()
-	// 	const tr1 = await detectOne({ target: tipnode, selector: 'table .range_div' })
-	// 	tr1.querySelector('.edit_btn').click()
-	// 	//await sleep(10)
-	// 	tr1.querySelector('.start_select').value = 'startinclusive'
-	// 	d3s.select(tr1.querySelector('.start_select')).on('change')()
-	// 	//await sleep(100)
-	// 	tr1.querySelector('.start_select').dispatchEvent(enter_event)
+	//--- test changing to inclusive start boundary ---
+	{
+		pill.click()
+		editOpt.click()
+		const tr1 = await detectOne({ target: tipnode, selector: 'table .range_div' })
 
-	// 	const valueBtn = await detectChildText({
-	// 		target: filternode,
-	// 		selector: '.value_btn',
-	// 		trigger() {
-	// 			tr1.querySelector('.sjpp_apply_btn').click()
-	// 		}
-	// 	})
-	// 	test.true(
-	// 		/* HTML entity code does not work in this instance (like in the above .sjpp_apply_btn
-	// 			test) for some reason. Test fails everytime. */
-	// 		// .innerHTML.includes('&ge; 0'),
-	// 		valueBtn[0].innerHTML.includes('≥ 0'),
-	// 		'should show a >= 0 in the pill value'
-	// 	)
-	// }
+		const valueBtn = await detectChildText({
+			target: filternode,
+			selector: '.value_btn',
+			trigger() {
+				tr1.querySelector('.sjpp_apply_btn').click()
+			}
+		})
+		test.true(
+			/* HTML entity code does not work in this instance (like in the above .sjpp_apply_btn
+				test) for some reason. Test fails everytime. */
+			// .innerHTML.includes('&ge; 0'),
+			valueBtn[0].innerHTML.includes('≥ 0'),
+			'should show a >= 0 in the pill value'
+		)
+	}
 
 	test.end()
 })
@@ -614,6 +606,7 @@ tape('tvs: Condition', async test => {
 
 	// --- trigger and check tip menu ---
 	{
+		console.log(pill, editOpt)
 		pill.click()
 		editOpt.click()
 		const applyBtn = await detectGte({ target: tipd.node(), selector: '.sjpp_apply_btn' })
