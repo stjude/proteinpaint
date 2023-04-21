@@ -382,7 +382,6 @@ tape('tvs: Numeric', async test => {
 		pill.click()
 		editOpt.click()
 		const applyBtn = await detectLst({ target: tipnode, selector: '.sjpp_apply_btn', count: 2 })
-		console.log(tipnode.querySelector('input[name="rangeInput"]').value.trim())
 
 		test.equal(applyBtn.length, 2, 'Should have 2 button to apply value change')
 		test.equal(tipd.selectAll('.sjpp_delete_btn').size(), 1, 'Should have 1 button to remove the range')
@@ -606,7 +605,6 @@ tape('tvs: Condition', async test => {
 
 	// --- trigger and check tip menu ---
 	{
-		console.log(pill, editOpt)
 		pill.click()
 		editOpt.click()
 		const applyBtn = await detectGte({ target: tipd.node(), selector: '.sjpp_apply_btn' })
