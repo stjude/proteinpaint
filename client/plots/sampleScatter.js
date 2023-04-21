@@ -111,15 +111,19 @@ class Scatter {
 		copyMerge(this.settings, this.config.settings.sampleScatter)
 		const reqOpts = this.getDataRequestOpts()
 		if (reqOpts.coordTWs.length == 1) return //To allow removing a term in the controls, though nothing is rendered (summary tab with violin active)
-		this.data = await this.app.vocabApi.getScatterData(reqOpts)
+		const data = await this.app.vocabApi.getScatterData(reqOpts)
+		const cohortSamples = data.samples.filter(sample => 'sampleId' in sample)
 
-		if (this.data.error) throw this.data.error
-		if (!Array.isArray(this.data.samples)) throw 'data.samples[] not array'
+		//Creating charts variable to support rendering multiple charts
+		const chartDiv = this.dom.holder
+		const chart = { chartDiv, data, cohortSamples }
+		this.charts = [chart]
+		if (data.error) throw this.data.error
+		if (!Array.isArray(data.samples)) throw 'data.samples[] not array'
 
-		this.colorLegend = new Map(Object.entries(this.data.colorLegend))
-		this.shapeLegend = new Map(Object.entries(this.data.shapeLegend))
+		this.colorLegend = new Map(Object.entries(data.colorLegend))
+		this.shapeLegend = new Map(Object.entries(data.shapeLegend))
 		this.axisOffset = { x: 80, y: 20 }
-		this.cohortSamples = this.data.samples.filter(sample => 'sampleId' in sample)
 
 		this.initAxes()
 		this.render()

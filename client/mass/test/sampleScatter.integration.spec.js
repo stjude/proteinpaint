@@ -176,8 +176,8 @@ tape('Render TermdbTest scatter plot and open survival and summary', function(te
 			const serieG = scatterDiv.select('.sjpcb-scatter-series')
 			const numSymbols = serieG.selectAll('path').size()
 			test.true(
-				numSymbols == scatter.Inner.data.samples.length,
-				`Should be ${scatter.Inner.data.samples.length}. Rendered ${numSymbols} symbols.`
+				numSymbols == scatter.Inner.charts[0].data.samples.length,
+				`Should be ${scatter.Inner.charts[0].data.samples.length}. Rendered ${numSymbols} symbols.`
 			)
 		}
 
