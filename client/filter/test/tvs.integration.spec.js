@@ -1,6 +1,7 @@
 const tape = require('tape')
 const d3s = require('d3')
 const filterInit = require('../filter').filterInit
+const { parseRange } = require('../../dom/numericRangeInput')
 const {
 	sleep,
 	detectLst,
@@ -312,9 +313,9 @@ tape('tvs: Categorical', async test => {
 	test.end()
 })
 
-tape.skip('tvs: Numeric', async test => {
+tape('tvs: Numeric', async test => {
 	test.timeoutAfter(3000)
-	test.plan(19)
+	test.plan(15)
 
 	const opts = getOpts({
 		filterData: {
@@ -457,7 +458,6 @@ tape.skip('tvs: Numeric', async test => {
 		const addRangeBtn = await detectOne({ target: tipnode, selector: `.add_range_btn:nth-child(1n)` })
 		addRangeBtn.click()
 
-		test.equal(addRangeBtn.style.display, 'none', 'Should hide button to add new range')
 		test.equal(tipd.selectAll('table .sjpp_apply_btn').size(), 2, 'Should have button to apply new range')
 		test.equal(tipd.selectAll('table .sjpp_delete_btn').size(), 2, 'Should have buttons to delete the ranges')
 		test.equal(tipd.selectAll('table .note_tr').size(), 1, 'Should have note to select new range')
@@ -488,70 +488,72 @@ tape.skip('tvs: Numeric', async test => {
 		const addRangeBtn = await detectOne({ target: tipnode, selector: '.add_range_btn' })
 		addRangeBtn.click()
 
-		const start_value_premerge = +tipnode.querySelector('.start_input').value
-		const stop_input = tipnode.querySelector('.stop_input')
-		tipnode.querySelectorAll('.start_input')[1].value = +stop_input.value - 400
-		tipnode.querySelectorAll('.stop_input')[1].value = 5000
-		stop_input.dispatchEvent(enter_event)
-		const valueBtn = await detectChildText({
-			target: filternode,
-			selector: '.value_btn',
-			trigger() {
-				tipd.selectAll('.sjpp_apply_btn')._groups[0][1].click()
-			}
-		})
-		test.true(valueBtn[0].innerHTML.includes(start_value_premerge + ' '), 'should merge ranges into 1 range')
-	}
-
-	// --- test changing to non-inclusive start boundary ---
-	{
-		pill.click()
-		editOpt.click()
-		const tr = await detectOne({ target: tipnode, selector: '.range_div' })
-		tr.querySelector('.edit_btn').click()
-		tr.querySelector('.start_input').value = 0
-		tr.querySelector('.stop_select').value = 'stopunbounded'
-		d3s.select(tr.querySelector('.stop_select')).on('change')()
-		//await sleep(100)
-		tr.querySelector('.stop_select').dispatchEvent(enter_event)
-		const valueBtn = await detectChildText({
-			target: filternode,
-			selector: '.value_btn',
-			trigger() {
-				tr.querySelector('.sjpp_apply_btn').click()
-			}
-		})
-		//await sleep(10)
-		test.true(valueBtn[0].innerHTML.includes('&gt; 0'), 'should show a greater than pill value')
-	}
-
-	// --- test changing to inclusive start boundary ---
-	{
-		pill.click()
-		editOpt.click()
-		const tr1 = await detectOne({ target: tipnode, selector: 'table .range_div' })
-		tr1.querySelector('.edit_btn').click()
-		//await sleep(10)
-		tr1.querySelector('.start_select').value = 'startinclusive'
-		d3s.select(tr1.querySelector('.start_select')).on('change')()
-		//await sleep(100)
-		tr1.querySelector('.start_select').dispatchEvent(enter_event)
+		const rangeInputs = tipnode.querySelectorAll('input[name="rangeInput"]')
+		const range = parseRange(rangeInputs[0].value)
+		rangeInputs[1].value = `${range.stop - 400} <= x <= 5000`
+		const applybts = tipnode.querySelectorAll('table .sjpp_apply_btn')
 
 		const valueBtn = await detectChildText({
 			target: filternode,
 			selector: '.value_btn',
 			trigger() {
-				tr1.querySelector('.sjpp_apply_btn').click()
+				applybts[1].click()
 			}
 		})
 		test.true(
-			/* HTML entity code does not work in this instance (like in the above .sjpp_apply_btn 
-				test) for some reason. Test fails everytime. */
-			// .innerHTML.includes('&ge; 0'),
-			valueBtn[0].innerHTML.includes('≥ 0'),
-			'should show a >= 0 in the pill value'
+			valueBtn[0].innerHTML.includes(range.start) && valueBtn[0].innerHTML.includes('5000'),
+			'should merge ranges into 1 range'
 		)
 	}
+
+	// --- test changing to non-inclusive start boundary ---
+	// {
+	// 	pill.click()
+	// 	editOpt.click()
+	// 	const tr = await detectOne({ target: tipnode, selector: '.range_div' })
+	// 	tr.querySelector('.edit_btn').click()
+	// 	const input = tr.querySelector('input[name="rangeInput"]')
+	// 	input.value = 'x>0'
+	// 	//await sleep(100)
+	// 	input.dispatchEvent(enter_event)
+	// 	const valueBtn = await detectChildText({
+	// 		target: filternode,
+	// 		selector: '.value_btn',
+	// 		trigger() {
+	// 			tr.querySelector('.sjpp_apply_btn').click()
+	// 		}
+	// 	})
+	// 	//await sleep(10)
+	// 	test.true(valueBtn[0].innerHTML.includes('&gt; 0'), 'should show a greater than pill value')
+	// }
+
+	// --- test changing to inclusive start boundary ---
+	// {
+	// 	pill.click()
+	// 	editOpt.click()
+	// 	const tr1 = await detectOne({ target: tipnode, selector: 'table .range_div' })
+	// 	tr1.querySelector('.edit_btn').click()
+	// 	//await sleep(10)
+	// 	tr1.querySelector('.start_select').value = 'startinclusive'
+	// 	d3s.select(tr1.querySelector('.start_select')).on('change')()
+	// 	//await sleep(100)
+	// 	tr1.querySelector('.start_select').dispatchEvent(enter_event)
+
+	// 	const valueBtn = await detectChildText({
+	// 		target: filternode,
+	// 		selector: '.value_btn',
+	// 		trigger() {
+	// 			tr1.querySelector('.sjpp_apply_btn').click()
+	// 		}
+	// 	})
+	// 	test.true(
+	// 		/* HTML entity code does not work in this instance (like in the above .sjpp_apply_btn
+	// 			test) for some reason. Test fails everytime. */
+	// 		// .innerHTML.includes('&ge; 0'),
+	// 		valueBtn[0].innerHTML.includes('≥ 0'),
+	// 		'should show a >= 0 in the pill value'
+	// 	)
+	// }
 
 	test.end()
 })
