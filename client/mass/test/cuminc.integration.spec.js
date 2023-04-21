@@ -230,7 +230,7 @@ tape('term1=Cardiovascular System, term0=sex', test => {
 
 		const titleNodes = cumincDiv.selectAll('.sjpcb-cuminc-title').nodes()
 		for (const v of Object.values(term0Values)) {
-			if (!titleNodes.find(d => d.innerText == v.label)) test.fail(`Missing title for term0 value = ${v.label}`)
+			if (!titleNodes.some(d => d.innerText == v.label)) test.fail(`Missing title for term0 value = ${v.label}`)
 		}
 
 		if (test._ok) cuminc.Inner.app.destroy()
@@ -675,8 +675,9 @@ tape('skipped series', function(test) {
 	}
 })
 
-tape.skip('term1 = Cardiovascular System, term2 = samplelst', function(test) {
-	test.timeoutAfter(10000)
+tape('term1 = Cardiovascular System, term2 = samplelst', function(test) {
+	test.timeoutAfter(5000)
+
 	runpp({
 		state: {
 			plots: [
@@ -687,29 +688,41 @@ tape.skip('term1 = Cardiovascular System, term2 = samplelst', function(test) {
 					},
 					term2: {
 						term: {
-							name: 'test',
+							name: 'Samplelst term',
 							type: 'samplelst',
 							values: {
-								'Group 1': { key: 'Group 1', label: 'Group 1' },
-								Others: { key: 'Others', label: 'Others' }
+								'Group 1': {
+									key: 'Group 1',
+									label: 'Test 1',
+									inuse: false,
+									list: [{ sampleId: 1, sample: 1 }, { sampleId: 2, sample: 2 }]
+								},
+								'Group 2': {
+									key: 'Group 2',
+									label: 'Test 2',
+									inuse: false,
+									list: [{ sampleId: 3, sample: 3 }, { sampleId: 4, sample: 4 }, { sampleId: 5, sample: 5 }]
+								},
+								'Group 3': { key: 'Group 3', label: 'Test 3', inuse: false, list: [{ sampleId: 6, sample: 6 }] }
 							}
 						},
 						q: {
-							mode: 'discrete',
+							mode: 'custom-groupsetting',
 							groups: [
 								{
 									name: 'Group 1',
-									in: true,
-									values: [1, 2, 3, 4, 5, 6].map(i => {
-										return { sampleId: i }
-									})
+									in: false,
+									values: [{ sampleId: 1, sample: 1 }, { sampleId: 2, sample: 2 }]
 								},
 								{
-									name: 'Others',
+									name: 'Group 2',
 									in: false,
-									values: [1, 2, 3, 4, 5, 6].map(i => {
-										return { sampleId: i }
-									})
+									values: [{ sampleId: 3, sample: 3 }, { sampleId: 4, sample: 4 }, { sampleId: 5, sample: 5 }]
+								},
+								{
+									name: 'Group 3',
+									in: false,
+									values: [{ sampleId: 6, sample: 6 }]
 								}
 							]
 						}
@@ -727,14 +740,24 @@ tape.skip('term1 = Cardiovascular System, term2 = samplelst', function(test) {
 	async function runTests(cuminc) {
 		cuminc.on('postRender.test', null)
 
-		const legendRows = cuminc.Inner.dom.chartsDiv
+		const valKeys = Object.keys(cuminc.Inner.config.term2.term.values)
+		const uniqueSeriesIds = Array.from(cuminc.Inner.uniqueSeriesIds)
+		test.equal(JSON.stringify(valKeys), JSON.stringify(uniqueSeriesIds), `Should create custom groups`)
+
+		let numGrpLabelFails = 0
+		const numRiskRowLabels = cuminc.Inner.dom.chartsDiv
 			.selectAll('.sjpp-cuminc-atrisk text')
 			.nodes()
 			.filter(d => !d.__data__?.tickVal && d.className.animVal != 'sjpp-cuminc-atrisk-title')
-		test.ok(
-			cuminc.Inner.config.term2.term.values[legendRows[0].innerHTML],
-			`Should display custom label in 'Number at risk' table`
-		)
+
+		for (const grp of Object.values(cuminc.Inner.config.term2.term.values)) {
+			const findGrpLabel = numRiskRowLabels.some(d => d.__data__.seriesId == grp.key && d.innerHTML == grp.label)
+			if (!findGrpLabel) {
+				test.fail(`Missing group in 'Number at risk' table: group = ${grp.key}, label = ${grp.label}`)
+				++numGrpLabelFails
+			}
+		}
+		if (numGrpLabelFails == 0) test.pass(`All custom groups display`)
 
 		if (test._ok) cuminc.Inner.app.destroy()
 		test.end()
