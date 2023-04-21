@@ -10,8 +10,7 @@ import { termjson } from '../../test/testdata/termjson'
 Tests:
 	vocabInit
 		getPercentile()
-		TODO:
-			q_to_param()
+		q_to_param()
 		** Comments
 			Not testing
 				getVocabFromSamplesArray() - only appears in old mds.scatterplot code which will be obsolete
