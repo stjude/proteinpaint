@@ -571,12 +571,13 @@ async function getCnvFusion4oneCase(opts) {
 	const re = JSON.parse(tmp.body)
 	if (!Array.isArray(re.data.hits)) throw 're.data.hits[] not array'
 
-	let snpFile, wgsFile, arribaFile // detect result files from accepted assays. if has both, use wgs
+	let snpFile, wgsFile, arribaFile // detect result files from accepted assays
 
 	for (const h of re.data.hits) {
 		if (h.data_format == 'BEDPE') {
 			if (h.experimental_strategy != 'RNA-Seq') continue
 			if (h.analysis?.workflow_type != 'Arriba') continue
+			if (h.data_type != 'Transcript Fusion') continue
 			arribaFile = h.file_id
 			continue
 		}
@@ -587,12 +588,14 @@ async function getCnvFusion4oneCase(opts) {
 				const sample_type = h.cases?.[0].samples?.[0]?.sample_type
 				if (!sample_type) continue
 				if (sample_type.includes('Normal')) continue
+				if (h.data_type != 'Masked Copy Number Segment') continue
 				snpFile = h.file_id
 				continue
 			}
 			if (h.experimental_strategy == 'WGS') {
 				// is wgs, no need to check sample_type, the file is usable
 				if (!h.file_id) continue
+				if (h.data_type != 'Copy Number Segment') continue
 				wgsFile = h.file_id
 				continue
 			}
@@ -609,15 +612,33 @@ async function getCnvFusion4oneCase(opts) {
 		for (let i = 1; i < lines.length; i++) {
 			const l = lines[i].split('\t')
 			if (l.length != 7) continue
+			const total = Number(l[4]),
+				major = Number(l[5]),
+				minor = Number(l[6])
+			if (Number.isNaN(total) || Number.isNaN(major) || Number.isNaN(minor)) continue
 			const cnv = {
 				dt: common.dtcnv,
 				chr: l[1],
 				start: Number(l[2]),
 				stop: Number(l[3]),
-				value: Number(l[4])
+				value: total
 			}
-			if (!cnv.chr || Number.isNaN(cnv.start) || Number.isNaN(cnv.stop) || Number.isNaN(cnv.value)) continue
+			if (!cnv.chr || Number.isNaN(cnv.start) || Number.isNaN(cnv.stop)) continue
 			events.push(cnv)
+
+			if (total > 0) {
+				// total copy number is >0, detect loh
+				if (major + minor != total) continue // data err?
+				if (major == minor) continue // no loh
+				const loh = {
+					dt: common.dtloh,
+					chr: cnv.chr,
+					start: cnv.start,
+					stop: cnv.stop,
+					segmean: Math.abs(major - minor) / total
+				}
+				events.push(loh)
+			}
 		}
 	} else if (snpFile) {
 		// only load available snp file if no wgs cnv
