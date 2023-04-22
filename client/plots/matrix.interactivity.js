@@ -5,16 +5,6 @@ import { icons } from '../dom/control.icons'
 let inputIndex = 0
 
 export function setInteractivity(self) {
-	self.resetInteractions = function() {
-		if (self.zoomArea) {
-			self.zoomArea.remove()
-			delete self.zoomArea
-			//self.dom.seriesesG.on('mouseup.zoom', null)
-			select('body').on('mouseup.matrixZoom', null)
-		}
-		delete self.clickedSeriesCell
-	}
-
 	self.showCellInfo = function(event) {
 		if (self.activeLabel || self.zoomArea) return
 		if (!(event.target.tagName == 'rect' || event.target.tagName == 'image')) return
@@ -1440,8 +1430,19 @@ function setLabelDragEvents(self, prefix) {
 }
 
 function setZoomPanActions(self) {
+	self.resetInteractions = function() {
+		if (self.zoomArea) {
+			self.zoomArea.remove()
+			delete self.zoomArea
+			//self.dom.seriesesG.on('mouseup.zoom', null)
+			select('body').on('mouseup.matrixZoom', null)
+		}
+		delete self.clickedSeriesCell
+	}
+
 	self.seriesesGMousedown = function(event) {
 		event.stopPropagation()
+		self.resetInteractions()
 		const startCell = self.getCellByPos(event)
 		if (!startCell) return
 		self.clickedSeriesCell = { event, startCell }
@@ -1449,7 +1450,10 @@ function setZoomPanActions(self) {
 			self.seriesesGdragInit()
 		} else {
 			self.zoomPointer = pointer(event, self.dom.seriesesG.node())
-			self.dom.seriesesG.on('mousemove', self.seriesesGoutlineZoom).on('mouseup', self.seriesesGtriggerZoom)
+			self.dom.seriesesG
+				.on('mousemove', self.seriesesGoutlineZoom)
+				.on('mouseup', self.seriesesGtriggerZoom)
+				.on('contextmenu', self.resetInteractions)
 		}
 		self.dom.mainG
 			.selectAll('text')
@@ -1571,8 +1575,8 @@ function setZoomPanActions(self) {
 		self.zoomWidth = Math.abs(dx)
 		self.zoomArea
 			.attr('transform', `translate(${x},0)`)
-			.style('width', self.zoomWidth)
-			.style('height', self.dimensions.mainh)
+			.attr('width', Math.max(0, self.zoomWidth - 2))
+			.attr('height', self.dimensions.mainh)
 
 		if (!self.clickedSeriesCell.endCell) self.clickedSeriesCell.endCell = self.getCellByPos(event)
 	}
@@ -1591,7 +1595,7 @@ function setZoomPanActions(self) {
 			.style('user-select', '')
 
 		const c = self.clickedSeriesCell
-		if (!c.startCell || !c.endCell) {
+		if (!c || !c.startCell || !c.endCell) {
 			delete self.clickedSeriesCell
 			return
 		}

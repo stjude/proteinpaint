@@ -113,14 +113,51 @@ export const setCellProps = {
 }
 
 export const maySetEmptyCell = {
-	geneVariant: (siblingCells, cellTemplate, s, d) => {
-		if (siblingCells.find(c => c.value.dt == 4)) return
+	geneVariant: setVariantEmptyCell,
+	integer: setNumericEmptyCell,
+	float: setNumericEmptyCell,
+	categorical: setDefaultEmptyCell
+}
+
+function setVariantEmptyCell(siblingCells, cellTemplate, s, d) {
+	if (siblingCells.find(c => c.value.dt == 4)) return
+	const cell = Object.assign({}, cellTemplate)
+	cell.fill = s.cellbg
+	cell.height = s.rowh
+	cell.width = d.colw
+	cell.x = cell.totalIndex * d.dx + cell.grpIndex * s.colgspace
+	cell.y = 0
+	return cell
+}
+
+function setNumericEmptyCell(siblingCells, cellTemplate, s, d) {
+	const q = cellTemplate.tw.q
+	if (q.mode != 'continuous') {
+		if (siblingCells.length) return
+		setDefaultEmptyCell(siblingCells, cellTemplate, s, d)
+	} else {
+		if (q?.mode != 'continuous') return
+		const tws = cellTemplate.tw.settings
+		const h = tws ? tws.barh + tws.gap : s.rowh
+		if (cellTemplate.height >= h) return
 		const cell = Object.assign({}, cellTemplate)
 		cell.fill = s.cellbg
-		cell.height = s.rowh
+		cell.height = h || s.rowh
 		cell.width = d.colw
 		cell.x = cell.totalIndex * d.dx + cell.grpIndex * s.colgspace
 		cell.y = 0
 		return cell
 	}
+}
+
+function setDefaultEmptyCell(siblingCells, cellTemplate, s, d) {
+	// assumes that valid value(s) will fill-up the cell
+	if (siblingCells.length) return
+	const cell = Object.assign({}, cellTemplate)
+	cell.fill = s.cellbg
+	cell.height = s.rowh
+	cell.width = d.colw
+	cell.x = cell.totalIndex * d.dx + cell.grpIndex * s.colgspace
+	cell.y = 0
+	return cell
 }

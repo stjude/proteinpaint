@@ -9,9 +9,9 @@ export function setRenderers(self) {
 		const x = s.zoomLevel <= 1 && d.mainw >= d.zoomedMainW ? 0 : Math.abs(d.seriesXoffset) / d.imgW
 
 		self.dom.clipRect
-			.attr('x', d.xOffset)
+			.attr('x', d.xOffset - 1)
 			.attr('y', 0)
-			.attr('width', d.mainw)
+			.attr('width', d.mainw + 1)
 			// add 500 so that the column labels are not clipped
 			.attr('height', d.mainh + 500)
 
@@ -58,7 +58,9 @@ export function setRenderers(self) {
 		const last = series.cells[series.cells.length - 1]
 		const height = series.y + last?.y + s.rowh
 
-		const rects = g.selectAll('rect').data(series.cells, cell => cell.sample + ';;' + cell.tw.$id)
+		const rects = g
+			.selectAll('rect')
+			.data(series.cells, cell => cell.sample + ';;' + cell.tw.$id + ';;' + cell.valueIndex)
 		rects.exit().remove()
 		rects.each(self.renderCell)
 		rects
@@ -97,9 +99,6 @@ export function setRenderers(self) {
 		}
 
 		if (window.OffscreenCanvas) {
-			//const bitmap = canvas.transferToImageBitmap()
-			//g.append('image').node().getContext('bitmaprenderer').transferFromImageBitmap(bitmap)
-			//const blob =
 			const reader = new FileReader()
 			reader.addEventListener(
 				'load',
