@@ -223,7 +223,7 @@ export class MatrixControls {
 								align: 'center'
 							},
 							{
-								label: 'Use canvas when #samples exceeds',
+								label: 'Use canvas if #samples exceeds',
 								type: 'number',
 								chartType: 'matrix',
 								settingsKey: 'svgCanvasSwitch',
@@ -233,6 +233,16 @@ export class MatrixControls {
 								min: 0,
 								max: 10000,
 								step: 1
+							},
+							{
+								label: 'Canvas mininum pixel width',
+								type: 'checkbox',
+								boxLabel: 'apply',
+								chartType: 'matrix',
+								settingsKey: 'useMinPixelWidth',
+								colspan: 2,
+								align: 'center',
+								getDisplayStyle: () => (this.parent.settings.matrix.useCanvas ? '' : 'none')
 							}
 						]
 					},
