@@ -346,6 +346,7 @@ class Matrix {
 	setSampleOrder(data) {
 		const s = this.settings.matrix
 		this.sampleOrder = []
+		this.visibleSampleGrps = new Set()
 		this.sampleSorter = getSampleSorter(this, s, data.lst)
 		this.truncateSorter = s.truncatePriority && getSampleSorter(this, s, data.lst, 'truncatePriority')
 		let total = 0
@@ -379,6 +380,7 @@ class Matrix {
 				})
 			}
 			total += processedLst.length
+			if (processedLst.length) this.visibleSampleGrps.add(grp)
 			if (s.maxSample && total >= s.maxSample) break
 		}
 	}
@@ -536,19 +538,32 @@ class Matrix {
 		this.computedSettings = {
 			useCanvas: this.sampleOrder.length > m.svgCanvasSwitch
 		}
-		// TODO: the additional 65 space should not be hardcoded, but determined based on matrix holder/config
-		this.availContentWidth = this.dom.contentNode.getBoundingClientRect().width - 65 - s.margin.right - xOffset
-		if (this.availContentWidth < 600)
-			this.availContentWidth = window.document.body.clientWidth - 65 - s.margin.right - xOffset
+
+		let boundingWidth = this.dom.contentNode.getBoundingClientRect().width
+		if (boundingWidth < 600) boundingWidth = window.document.body.clientWidth
+
+		const padding = 65
+		// should be estimated based on label-fontsize and longest label
+		// const labelOffset = !s.transpose
+		// 	? s.termLabelOffset + s.termGrpLabelOffset
+		// 	: s.sampleLabelOffset + s.sampleGrpLabelOffset
+
+		this.availContentWidth = boundingWidth - padding - s.margin.right - xOffset //- 0.5*labelOffset
+
 		if (this.autoDimensions.has('colw')) {
-			const offset = !s.transpose
-				? s.termLabelOffset + s.termGrpLabelOffset
-				: s.sampleLabelOffset + s.sampleGrpLabelOffset
-			// TODO: the additional 80 space should not be hardcoded, but determined on matrix holder/config
-			const colw = (this.availContentWidth - 80) / this.sampleOrder.length
-			this.computedSettings.colw = Math.max(s.colwMin, Math.min(colw, s.colwMax))
+			const totalColgspace = s.colgspace * Math.max(0, this.visibleSampleGrps.size - 1)
+			const tentativeGaps = this.sampleOrder.length * s.colspace + totalColgspace
+			const spacedColw = (this.availContentWidth - tentativeGaps) / this.sampleOrder.length
+			const tentativeColw = Math.max(s.colwMin, Math.min(spacedColw, s.colwMax))
+			// detect if using colspace will cause the tentative computed widths to be exceeded
+			if (s.zoomLevel * tentativeColw < 2) {
+				this.computedSettings.colw = (this.availContentWidth - totalColgspace) / this.sampleOrder.length
+				this.computedSettings.colspace = 0
+			} else {
+				this.computedSettings.colw = tentativeColw
+				this.computedSettings.colspace = s.colspace
+			}
 		}
-		this.computedSettings.colspace = s.zoomLevel * this.computedSettings.colw < 2 ? 0 : s.colspace
 
 		if (this.autoDimensions.has('rowh')) {
 			this.computedSettings.rowh = Math.max(5, Math.round(screen.availHeight / this.numTerms))
