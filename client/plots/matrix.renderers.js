@@ -91,7 +91,7 @@ export function setRenderers(self) {
 		ctx.imageSmoothingQuality = 'high'
 		//ctx.lineWidth = 0.5
 		//ctx.setTransform(pxr, 0, 0, pxr, 0, 0)
-		ctx.scale(pxr, pxr)
+		if (window.OffscreenCanvas) ctx.scale(pxr, pxr)
 		for (const series of serieses) {
 			for (const cell of series.cells) {
 				self.renderCellWithCanvas(ctx, cell, series, s, d, series.y)
@@ -121,6 +121,12 @@ export function setRenderers(self) {
 			)
 			const dataURL = reader.readAsDataURL(await canvas.convertToBlob({ quality: 1 }))
 		} else {
+			_g?.remove()
+			self.dom.seriesesG
+				//.transition()
+				//.duration(duration)
+				.attr('transform', `translate(${d.xOffset + d.seriesXoffset},${d.yOffset})`)
+
 			const dataURL = canvas.toDataURL()
 			g.append('image').attr('xlink:href', dataURL)
 			if (!window.OffscreenCanvas) canvas.remove()
