@@ -72,7 +72,7 @@ export function setRenderers(self) {
 	self.renderCanvas = async function(serieses, g, d, s, _g, duration) {
 		const df = self.stateDiff
 		if (g.selectAll('image').size() && !df.nonsettings && !df.sorting && !df.cellDimensions) return
-		const pxr = window.devicePixelRatio
+		const pxr = window.devicePixelRatio <= 1 ? 1 : window.devicePixelRatio
 		// TODO: may not need to remove the image???
 		g.selectAll('*').remove()
 		const width = d.imgW
@@ -82,8 +82,8 @@ export function setRenderers(self) {
 			: // TODO: no need to support older browser versions???
 			  self.dom.holder
 					.append('canvas')
-					.attr('width', pxr * width + 'px')
-					.attr('height', pxr * height + 'px')
+					.attr('width', pxr * width)
+					.attr('height', pxr * height)
 					.style('opacity', 0)
 					.node()
 		const ctx = canvas.getContext('2d')
@@ -91,7 +91,7 @@ export function setRenderers(self) {
 		ctx.imageSmoothingQuality = 'high'
 		//ctx.lineWidth = 0.5
 		//ctx.setTransform(pxr, 0, 0, pxr, 0, 0)
-		if (window.OffscreenCanvas) ctx.scale(pxr, pxr)
+		ctx.scale(pxr, pxr)
 		for (const series of serieses) {
 			for (const cell of series.cells) {
 				self.renderCellWithCanvas(ctx, cell, series, s, d, series.y)
@@ -128,7 +128,11 @@ export function setRenderers(self) {
 				.attr('transform', `translate(${d.xOffset + d.seriesXoffset},${d.yOffset})`)
 
 			const dataURL = canvas.toDataURL()
-			g.append('image').attr('xlink:href', dataURL)
+			const ratio = window.devicePixelRatio * window.devicePixelRatio
+			g.append('image')
+				.attr('width', width)
+				.attr('height', height)
+				.attr('xlink:href', dataURL)
 			if (!window.OffscreenCanvas) canvas.remove()
 		}
 	}
@@ -138,7 +142,7 @@ export function setRenderers(self) {
 			cell.fill = cell.$id in self.colorScaleByTermId ? self.colorScaleByTermId[cell.$id](cell.key) : getRectFill(cell)
 		const x = cell.x ? cell.x - d.xMin : 0
 		const y = _y ? _y + cell.y : cell.y || 0
-		const width = Math.max(d.pxw, cell.width || d.colw)
+		const width = s.useMinPixelWidth ? Math.max(cell.width || d.colw, d.pxw) : cell.width || d.colw
 		const height = cell.height || s.rowh
 		ctx.fillStyle = cell.fill
 		ctx.fillRect(x, y, width, height)
