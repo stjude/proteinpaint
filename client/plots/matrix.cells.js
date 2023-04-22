@@ -138,7 +138,7 @@ function setNumericEmptyCell(siblingCells, cellTemplate, s, d) {
 	} else {
 		if (q?.mode != 'continuous') return
 		const tws = cellTemplate.tw.settings
-		const h = tws ? tws.barh + tws.gap : s.rowh
+		const h = tws ? tws.barh + 2 * tws.gap : s.rowh
 		if (cellTemplate.height >= h) return
 		const cell = Object.assign({}, cellTemplate)
 		cell.fill = s.cellbg
