@@ -38,6 +38,7 @@ export async function getPlotConfig(opts, app) {
 				cellbg: '#ececec',
 				showGrid: '', // false | 'pattern' | 'rect'
 				gridStroke: '#fff',
+				outlineStroke: '#ccc',
 				colw: 0,
 				colwMin: 0.1 / window.devicePixelRatio,
 				colwMax: 16,

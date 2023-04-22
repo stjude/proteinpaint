@@ -200,6 +200,15 @@ export class MatrixControls {
 								label: 'Outline color',
 								type: 'color',
 								chartType: 'matrix',
+								settingsKey: 'outlineStroke',
+								colspan: 2,
+								align: 'center'
+								//getDisplayStyle: plot => this.parent.settings.matrix.showGrid ? '' : 'none'
+							},
+							{
+								label: 'Grid line color',
+								type: 'color',
+								chartType: 'matrix',
 								settingsKey: 'gridStroke',
 								colspan: 2,
 								align: 'center'

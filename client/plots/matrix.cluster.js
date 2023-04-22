@@ -122,7 +122,7 @@ function setRenderers(self) {
 			// - sets cluster rect fill=s.gridStroke under cell rects, where the gaps between rects are perceived as lines
 			//
 			.attr('fill', !s.showGrid ? s.cellbg : s.gridStroke)
-			.attr('stroke', s.gridStroke)
+			.attr('stroke', s.outlineStroke)
 			.attr('stroke-width', 1)
 	}
 

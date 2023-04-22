@@ -835,6 +835,7 @@ class Matrix {
 				const siblingCells = []
 				for (const [i, value] of values.entries()) {
 					const cell = Object.assign({ key, siblingCells }, cellTemplate)
+					cell.valueIndex = i
 
 					// will assign x, y, width, height, fill, label, order, etc
 					const legend = setCellProps[t.tw.term.type](cell, t.tw, anno, value, s, t, this, width, height, dx, dy, i)
