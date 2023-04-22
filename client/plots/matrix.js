@@ -683,7 +683,7 @@ class Matrix {
 			ny * dy + (this[`${row}Grps`].length - 1) * s.rowgspace + (this[`${row}s`].slice(-1)[0]?.totalHtAdjustments || 0)
 
 		const colLabelFontSize = Math.min(
-			Math.max(colw + s.colspace - 2 * s.collabelpad, s.minLabelFontSize),
+			Math.max(colw + s.colspace - 2 * s.collabelpad - s.colspace, s.minLabelFontSize),
 			s.maxLabelFontSize
 		)
 
@@ -718,7 +718,9 @@ class Matrix {
 		if (layout.btm.prefix == 'sample') layout.btm.display = colw >= s.minLabelFontSize ? '' : 'none'
 
 		const leftFontSize =
-			_l_ == 'Grp' ? s.grpLabelFontSize : Math.max(s.rowh + s.rowspace - 2 * s.rowlabelpad, s.minLabelFontSize)
+			_l_ == 'Grp'
+				? s.grpLabelFontSize
+				: Math.max(s.rowh + s.rowspace - 2 * s.rowlabelpad - s.rowspace, s.minLabelFontSize)
 		layout.left.attr = {
 			boxTransform: `translate(${xOffset - s.rowlabelgap}, ${yOffset})`,
 			labelTransform: '',
@@ -766,7 +768,7 @@ class Matrix {
 		//
 		// for a canvas-generated image, the image is sharper when the image width is not an integer,
 		// so subtract a negligible decimal value to have a numeric real/float width value
-		const imgW = (s.imgWMax > zoomedMainW ? zoomedMainW : s.imgWMax) - 0.000000001
+		const imgW = (s.imgWMax > zoomedMainW ? zoomedMainW : s.imgWMax) - 0.0000001
 		const halfImgW = 0.5 * imgW
 		// determine how the canvas image will be offset relative to the center of mainw (the visible width)
 		const unwantedRightOvershoot = Math.max(0, centerCellX + halfImgW - zoomedMainW)
