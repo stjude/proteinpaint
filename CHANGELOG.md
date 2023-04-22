@@ -1,6 +1,18 @@
 # Change Log
 
 All notable changes to this project will be documented in this file. 
+## 2.14.0
+
+- persisted custom terms in termdb-based charts and apps
+- matrix zoom/pan/scrolling, canvas rendering
+- customizable colors for overlays/legends in more charts
+- improved termdb database schema, ETL scripts, and queries
+- prototype dendograms and heatmap using rust
+- reimplement disco plot in proteinpaint
+- log-scale in violin plot
+- more unit and integratin tests, inluding fixes and improvements
+
+ 
 ## 2.13.0
 
 - matrix zoom and pan
