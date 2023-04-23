@@ -175,33 +175,56 @@ function getSortSamplesByValues(st, self, rows, s) {
 function getSortSamplesByDt(st, self, rows, s) {
 	const { $id, sortSamples, term } = st
 	const order = sortSamples.order
-	const dt = {}
-	for (const row of rows) {
-		if (!($id in row)) dt[row.sample] = order.length + 1
+	// benchmark:
+	// - fastest by 100+ ms: using Map and not pre-sorting
+	// - ok: using {} as a tracker and either pre-sorting or not
+	// - slowest: using Map and pre-sorting
+	const dt = new Map()
+	function setSortIndex(row) {
+		if (!($id in row)) dt.set(row.sample, order.length + 1)
 		else {
 			const indices = row[$id].values.map(v => order.indexOf(v.dt)).filter(i => i !== -1)
-			dt[row.sample] = indices.length ? Math.min(...indices) : order.length + 1
-			//should samples with mutiple mclass should be sorted after samples with only 1 mclass???
-			//if (indices.length > 1) dt[row.sample] += [...(new Set(indices))].length * 0.05
+			dt.set(row.sample, indices.length ? Math.min(...indices) : order.length + 1)
 		}
 	}
-	return (a, b) => dt[a.sample] - dt[b.sample]
+
+	return (a, b) => {
+		if (!dt.has(a.sample)) setSortIndex(a)
+		if (!dt.has(b.sample)) setSortIndex(b)
+		return dt.get(a.sample) - dt.get(b.sample)
+	}
+
+	// rows.forEach(setSortIndex)
+	// return (a, b) => dt.get(a.sample) - dt.get(b.sample)
 }
 
 function getSortSamplesByClass(st, self, rows, s) {
 	const { $id, sortSamples } = st
 	const order = sortSamples.order
-	const cls = {}
-	for (const row of rows) {
-		if (!($id in row)) cls[row.sample] = order.length + 1
+	// benchmark:
+	// - fastest by 100+ ms: using Map and not pre-sorting
+	// - ok: using {} as a tracker and either pre-sorting or not
+	// - slowest: using Map and pre-sorting
+	const cls = new Map()
+
+	function setSortIndex(row) {
+		if (!($id in row)) cls.set(row.sample, order.length + 1)
 		else {
 			const indices = row[$id].values.map(v => order.indexOf(v.class)).filter(i => i !== -1)
-			cls[row.sample] = indices.length ? Math.min(...indices) : order.length + 1
-			//should samples with mutiple mclass should be sorted after samples with only 1 mclass???
-			//if (indices.length > 1) cls[row.sample] += [...(new Set(indices))].length * 0.05
+			cls.set(row.sample, indices.length ? Math.min(...indices) : order.length + 1)
+			// samples with multiple mclasses should not impact sorting against samples with only 1 mclass
+			// if (indices.length > 1) dt[row.sample] += [...(new Set(indices))].length * 0.05
 		}
 	}
-	return (a, b) => cls[a.sample] - cls[b.sample]
+
+	return (a, b) => {
+		if (!cls.has(a.sample)) setSortIndex(a)
+		if (!cls.has(b.sample)) setSortIndex(b)
+		return cls.get(a.sample) - cls.get(b.sample)
+	}
+
+	// rows.forEach(setSortIndex)
+	// return (a, b) => cls.get(a.sample) - cls.get(b.sample)
 }
 
 function getFilteredValues(anno, tw, grp) {
