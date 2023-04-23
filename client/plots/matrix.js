@@ -181,14 +181,12 @@ class Matrix {
 			})
 
 			this.legendRenderer(this.legendData, {
-				settings: Object.assign(
-					{
-						svgw: Math.max(400, d.mainw + d.xOffset - this.settings.matrix.margin.right),
-						svgh: d.mainh + d.yOffset,
-						dimensions: d
-					},
-					this.settings.legend
-				)
+				settings: Object.assign({}, this.settings.legend, {
+					svgw: Math.max(400, d.mainw + d.xOffset - this.settings.matrix.margin.right),
+					svgh: d.mainh + d.yOffset,
+					dimensions: d,
+					padleft: this.settings.legend.padleft + d.xOffset
+				})
 			})
 
 			await this.adjustSvgDimensions(prevTranspose)
