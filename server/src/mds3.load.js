@@ -442,12 +442,6 @@ async function geneExpressionClustering(data, q) {
 		inputData.matrix.push(row)
 	}
 
-	//console.log('inputData:', JSON.stringify(inputData))
-	//fs.writeFile('test.txt', JSON.stringify(inputData), function (err) {
-	//	// For catching input to rust pipeline, in case of an error
-	//	if (err) return console.log(err)
-	//})
-
 	const time1 = new Date()
 	const rust_output = await run_rust('cluster', JSON.stringify(inputData))
 	const time2 = new Date()
@@ -470,7 +464,7 @@ async function geneExpressionClustering(data, q) {
 				.replace(']', '')
 				.replace(' ', '')
 				.split(',')
-				.map(i => parseInt(i))
+				.map(Number)
 		} else if (item.includes('sorted_row_elements:')) {
 			sorted_gene_elements = item
 				.replace('sorted_row_elements:', '')
@@ -478,7 +472,7 @@ async function geneExpressionClustering(data, q) {
 				.replace(']', '')
 				.replace(' ', '')
 				.split(',')
-				.map(i => parseInt(i))
+				.map(Number)
 		} else if (item.includes('sorted_col_coordinates:')) {
 			sorted_sample_coordinates = JSON.parse(JSON.parse(item.replace('sorted_col_coordinates:', '')))
 		} else if (item.includes('sorted_row_coordinates:')) {
@@ -487,9 +481,14 @@ async function geneExpressionClustering(data, q) {
 			console.log(item)
 		}
 	}
-	//console.log('sorted_sample_elements:', sorted_sample_elements)
-	//console.log('sorted_sample_coordinates:', sorted_sample_coordinates)
-	//console.log('sorted_gene_elements:', sorted_gene_elements)
-	//console.log('sorted_gene_coordinates:', sorted_gene_coordinates)
-	return { sorted_sample_elements, sorted_sample_coordinates, sorted_gene_elements, sorted_gene_coordinates }
+
+	return {
+		sorted_sample_elements,
+		sorted_sample_coordinates,
+		sorted_gene_elements,
+		sorted_gene_coordinates,
+		geneNameLst: inputData.row_names,
+		sampleNameLst: inputData.col_names,
+		matrix: inputData.matrix
+	}
 }
