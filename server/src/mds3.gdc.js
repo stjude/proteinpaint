@@ -1526,8 +1526,13 @@ export function handle_filter2topGenes(genomes) {
 		try {
 			const genome = genomes[req.query.genome]
 			if (!genome) throw 'invalid genome'
-
-			res.send({ genes: await get_filter2topGenes({ filter: req.query.filter0, CGConly: req.query.CGConly }) })
+			res.send({
+				genes: await get_filter2topGenes({
+					filter: req.query.filter0,
+					CGConly: req.query.CGConly,
+					maxGenes: req.query.maxGenes
+				})
+			})
 		} catch (e) {
 			if (e.stack) console.log(e.stack)
 			res.send({ error: e.message || e })
@@ -1540,13 +1545,13 @@ get_filter2topGenes() and mayAddCGC2filter() are copied to
 /utils/gdc/topSSMgenes.js
 and hosted on https://proteinpaint.stjude.org/GDC/
 */
-async function get_filter2topGenes({ filter, CGConly }) {
+async function get_filter2topGenes({ filter, CGConly, maxGenes }) {
 	if (!filter) throw 'filter missing'
 	if (typeof filter != 'object') throw 'filter not object'
 	const response = await got.post(path.join(apihost, '/analysis/top_mutated_genes_by_project'), {
 		headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
 		body: JSON.stringify({
-			size: 50,
+			size: maxGenes || 50,
 			fields: 'symbol',
 			filters: mayAddCGC2filter(filter, CGConly)
 		})

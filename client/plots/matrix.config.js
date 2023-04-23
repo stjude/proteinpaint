@@ -16,7 +16,7 @@ export async function getPlotConfig(opts, app) {
 			},
 			matrix: {
 				svgCanvasSwitch: 1000, // the number of samples to trigger switching between svg and canvas
-				useMinPixedWidth: false, // canvas may be hazy if false, but more accurately reflects column density
+				useMinPixelWidth: true, // canvas may be hazy if false, but more accurately reflects column density
 				cellEncoding: '', // can be oncoprint
 				margin: {
 					top: 10,

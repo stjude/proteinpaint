@@ -420,7 +420,6 @@ function makeTermdbQueries(ds, id2term) {
 	q.getSupportedChartTypes = () => {
 		// this function is required for server-provided termdbConfig
 		// TODO FIXME if this is needed??
-		console.log('termdb.q.getSupportedChartTypes() called!!!!!!!!!')
 		const supportedChartTypes = {}
 		const numericTypeCount = {}
 		// key: subcohort combinations, comma-joined, as in the subcohort_terms table
