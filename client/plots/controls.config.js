@@ -179,17 +179,20 @@ function setNumberInput(opts) {
 
 		function dispatchChange() {
 			const value = Number(self.dom.inputs[input.settingsKey].property('value'))
-			opts.dispatch({
-				type: 'plot_edit',
-				id: opts.id,
-				config: {
-					settings: {
-						[opts.chartType]: {
-							[input.settingsKey]: opts.processInput ? opts.processInput(value) : value
+			if (opts.callback) opts.callback(value)
+			else {
+				opts.dispatch({
+					type: 'plot_edit',
+					id: opts.id,
+					config: {
+						settings: {
+							[opts.chartType]: {
+								[input.settingsKey]: opts.processInput ? opts.processInput(value) : value
+							}
 						}
 					}
-				}
-			})
+				})
+			}
 		}
 
 		const inputTd = opts.holder
@@ -394,17 +397,21 @@ function setRadioInput(opts) {
 			getDisplayStyle: () => 'block',
 			listeners: {
 				input(event, d) {
-					opts.dispatch({
-						type: 'plot_edit',
-						id: opts.id,
-						config: {
-							settings: {
-								[opts.chartType]: {
-									[input.settingsKey]: d.value
+					if (opts.callback) {
+						opts.callback(d.value)
+					} else {
+						opts.dispatch({
+							type: 'plot_edit',
+							id: opts.id,
+							config: {
+								settings: {
+									[opts.chartType]: {
+										[input.settingsKey]: d.value
+									}
 								}
 							}
-						}
-					})
+						})
+					}
 				}
 			}
 		})

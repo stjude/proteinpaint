@@ -543,13 +543,36 @@ export class MatrixControls {
 		tr.append('td').text(value)
 	}
 
-	appendGeneInputs(self, app, parent, table) {
+	async appendGeneInputs(self, app, parent, table) {
 		tip.clear()
 		if (!parent.selectedGroup) parent.selectedGroup = 0
 		if (parent.config.termgroups.length > 1) {
 			self.addTermGroupSelector(app, parent, table.append('tr'))
 		}
 		self.addGeneSearch(app, parent, table.append('tr'))
+
+		if (parent.opts.customInputs?.genes) {
+			for (const inputConfig of parent.opts.customInputs?.genes) {
+				inputConfig.chartType = 'matrix'
+				const input = await initByInput[inputConfig.type](
+					Object.assign(
+						{},
+						{
+							holder: table.append('tr'),
+							//dispatch: app.dispatch,
+							id: parent.id,
+							//instanceNum: this.instanceNum,
+							debug: self.opts.debug,
+							parent
+						},
+						inputConfig
+					)
+				)
+				input.main(parent.config)
+				//parent.opts.customInputs.genes(table.append('tr').append('td').attr('colspan', 2).style('text-align', 'center'))
+			}
+		}
+
 		if (app.opts.genome?.termdbs) {
 			for (const key in app.opts.genome.termdbs) {
 				self.addMsigdbMenu(app, parent, table.append('tr'), key)

@@ -38,6 +38,7 @@ public/static/*.pdf
 /utils/*/*.bundle.js*
 
 container/public/example*
+container/dataset/*
 
 **/rust/*.lock
 **/rust/target/*

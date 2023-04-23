@@ -36,12 +36,12 @@ matrix API object with following methods; pp react wrapper can call api.update()
 TODO revise to a simpler object
 
 {
-	destroy()
-	getComponents()
-	id:str
 	type:'matrix'
+	id:str
+	getComponents()
 	on()
 	update()
+	destroy()
 }
 */
 
@@ -52,22 +52,13 @@ export async function init(arg, holder, genomes) {
 	const genome = genomes[gdcGenome]
 	if (!genome) throw gdcGenome + ' missing'
 
+	// these options will allow session recovery by an embedder
+	const geneFilter = arg.geneFilter || 'CGC'
+	let CGConly = geneFilter === 'CGC'
+	let maxGenes = arg.maxGenes || 50
 	// per discussion on Dec 6, 2022, restrict to cancer gene census genes by default and allow user to change
-	let CGConly = true
-	make_one_checkbox({
-		holder: holder.append('div'),
-		labeltext: 'Show only Cancer Gene Census genes',
-		checked: CGConly,
-		//divstyle: { display: 'block', margin: '10px 5px', height: '10px', 'margin-left': '6.5px' },
-		callback: async () => {
-			CGConly = !CGConly
-			const genes = await getGenes(arg, gdcCohort, CGConly)
-			api.update({ termgroups: [{ lst: genes }] })
-		}
-	})
-
 	const gdcCohort = getGdcCohort(arg)
-	const genes = (await getGenes(arg, gdcCohort, CGConly)).slice(0, 3)
+	const genes = await getGenes(arg, gdcCohort, CGConly, maxGenes)
 
 	const opts = {
 		holder,
@@ -83,9 +74,10 @@ export async function init(arg, holder, genomes) {
 					settings: {
 						matrix: {
 							cellEncoding: 'oncoprint',
-							colw: 2,
 							colspace: 1,
-							cellbg: '#eee'
+							cellbg: '#eee',
+							geneFilter,
+							maxGenes
 						}
 					}
 				}
@@ -95,7 +87,59 @@ export async function init(arg, holder, genomes) {
 			features: ['recover']
 		},
 		matrix: {
-			//allow2selectSamples: arg.allow2selectSamples
+			//allow2selectSamples: arg.allow2selectSamples,
+			// these will display the inputs together in the Genes menu,
+			// instead of being rendered outside of the matrix holder
+			customInputs: {
+				genes: [
+					{
+						settingsKey: 'geneFilter',
+						type: 'radio',
+						label: 'Gene filter',
+						labelDisplay: 'block',
+						options: [
+							{
+								label: 'Cancer Gene Census genes only',
+								value: 'CGC'
+							},
+							{
+								label: 'None',
+								value: 'none'
+							}
+						],
+						callback: async value => {
+							CGConly = value === 'CGC'
+							const genes = await getGenes(arg, gdcCohort, CGConly, maxGenes)
+							api.update({
+								termgroups: [{ lst: genes }],
+								settings: {
+									matrix: {
+										geneFilter: value
+									}
+								}
+							})
+						}
+					},
+					{
+						label: `Maximum #genes`,
+						type: 'number',
+						chartType: 'matrix',
+						settingsKey: 'maxGenes',
+						callback: async value => {
+							maxGenes = value
+							const genes = await getGenes(arg, gdcCohort, CGConly, maxGenes)
+							api.update({
+								termgroups: [{ lst: genes }],
+								settings: {
+									matrix: {
+										maxGenes
+									}
+								}
+							})
+						}
+					}
+				]
+			}
 		}
 	}
 
@@ -104,10 +148,18 @@ export async function init(arg, holder, genomes) {
 
 	const api = {
 		update: arg => {
-			plotAppApi.dispatch({
-				type: 'filter_replace',
-				filter0: arg.filter0
-			})
+			if ('filter0' in arg) {
+				plotAppApi.dispatch({
+					type: 'filter_replace',
+					filter0: arg.filter0
+				})
+			} else {
+				plotAppApi.dispatch({
+					type: 'plot_edit',
+					id: matrixApi.id,
+					config: arg
+				})
+			}
 		}
 	}
 
@@ -137,7 +189,7 @@ arg={}
 gdcCohort={}
 CGConly=boolean
 */
-async function getGenes(arg, gdcCohort, CGConly) {
+async function getGenes(arg, gdcCohort, CGConly, maxGenes = 50) {
 	if (arg.genes) {
 		// genes are predefined
 		if (!Array.isArray(arg.genes) || arg.genes.length == 0) throw '.genes[] is not non-empty array'
@@ -149,7 +201,11 @@ async function getGenes(arg, gdcCohort, CGConly) {
 	}
 
 	// genes are not predefined. query to get top genes using the current cohort
-	const lst = ['genome=' + gdcGenome, 'filter0=' + encodeURIComponent(JSON.stringify(gdcCohort))]
+	const lst = [
+		'genome=' + gdcGenome,
+		'filter0=' + encodeURIComponent(JSON.stringify(gdcCohort)),
+		'maxGenes=' + maxGenes
+	]
 	if (CGConly) lst.push('CGConly=1')
 	const data = await dofetch3('gdc_filter2topGenes?' + lst.join('&'))
 	if (data.error) throw data.error
