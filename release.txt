@@ -1,0 +1,7 @@
+- fix the matrix zoom outline in firefox
+- fix dom canvas scaling in browsers that do not support OffscreenCanvas
+
+GDC-related
+- move the CGC filter input to the gene control menu
+- label the OncoMatrix undo/redo buttons to address Section 508 errors
+- fix and improve the zoom UI labels to address Section 508 warnings
