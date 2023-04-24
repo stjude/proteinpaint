@@ -1,5 +1,6 @@
 - fix the matrix zoom outline in firefox
 - fix dom canvas scaling in browsers that do not support OffscreenCanvas
+- fix unit and integration tests
 
 GDC-related
 - move the CGC filter input to the gene control menu

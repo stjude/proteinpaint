@@ -8,7 +8,8 @@ export function zoom(opts) {
 		value: 25,
 		step: 10,
 		increment: 1,
-		numberInputWidth: '35px'
+		numberInputWidth: '35px',
+		showJumpBtns: false
 	}
 
 	const settings = Object.assign({}, defaultSettings, opts.settings || {})
@@ -56,17 +57,21 @@ export function zoom(opts) {
 
 	const sliderDiv = opts.holder.append('div').style('display', 'none')
 
-	// TODO: may give an option to render plus/minus 'jump' buttons
-	/*const minusBtn = opts.holder
-		.append('button')
-		.attr('title', 'Zoom in')
-		.style('width', '25px')
-		.html('-')
-		.on('click', () => {
-			const value = Math.max(settings.step * Math.ceil((settings.value - settings.step) / settings.step), settings.min)
-			api.update({ value })
-			opts.callback(value)
-		})*/
+	const minusBtn = !opts.showJumpBtns
+		? null
+		: opts.holder
+				.append('button')
+				.attr('title', 'Zoom in')
+				.style('width', '25px')
+				.html('-')
+				.on('click', () => {
+					const value = Math.max(
+						settings.step * Math.ceil((settings.value - settings.step) / settings.step),
+						settings.min
+					)
+					api.update({ value })
+					opts.callback(value)
+				})
 
 	const slider = sliderDiv
 		.append('input')
@@ -90,16 +95,21 @@ export function zoom(opts) {
 		})
 
 	// TODO: may give an option to render plus/minus 'jump' buttons
-	/*const plusBtn = opts.holder
-		.append('button')
-		.attr('title', 'Zoom out')
-		.style('width', '25px')
-		.html('+')
-		.on('click', () => {
-			const value = Math.min(settings.step * Math.floor((settings.value + settings.step) / settings.step), settings.max)
-			api.update({ value })
-			opts.callback(value)
-		})*/
+	const plusBtn = !opts.showJumpBtns
+		? null
+		: opts.holder
+				.append('button')
+				.attr('title', 'Zoom out')
+				.style('width', '25px')
+				.html('+')
+				.on('click', () => {
+					const value = Math.min(
+						settings.step * Math.floor((settings.value + settings.step) / settings.step),
+						settings.max
+					)
+					api.update({ value })
+					opts.callback(value)
+				})
 
 	sliderDiv
 		.append('span')
@@ -122,8 +132,8 @@ export function zoom(opts) {
 				.attr('min', settings.min)
 				.attr('max', settings.max)
 				.attr('step', settings.increment)
-			//minusBtn.property('disabled', settings.value <= settings.min)
-			//plusBtn.property('disabled', settings.value >= settings.max)
+			minusBtn?.property('disabled', settings.value <= settings.min)
+			plusBtn?.property('disabled', settings.value >= settings.max)
 		}
 	}
 

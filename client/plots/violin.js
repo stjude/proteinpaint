@@ -72,69 +72,68 @@ class ViolinPlot {
 	}
 
 	async setControls(state) {
-		const inputs = []
-		if (this.opts.mode != 'minimal') {
-			inputs.push(
-				{
-					type: 'term1',
-					// TODO: when used under the summary chart, this.opts.usecase may replace the usecase here
-					usecase: { target: 'violin', detail: 'term' }
-				},
-				{
-					type: 'overlay',
-					//TODO: when term is numeric use 'overlay' otherwise for categories use 'Divide by'
-					// TODO: when used under the summary chart, this.opts.usecase may replace the usecase here
-					usecase: { target: 'violin', detail: 'term2' }
-				},
-				{
-					label: 'Orientation',
-					type: 'radio',
-					chartType: 'violin',
-					settingsKey: 'orientation',
-					options: [{ label: 'Vertical', value: 'vertical' }, { label: 'Horizontal', value: 'horizontal' }]
-				},
-				{
-					label: 'Data symbol',
-					type: 'radio',
-					chartType: 'violin',
-					settingsKey: 'datasymbol',
-					options: [{ label: 'Ticks', value: 'rug' }, { label: 'Circles', value: 'bean' }]
-				},
-				{
-					label: 'Symbol size',
-					type: 'number',
-					chartType: 'violin',
-					settingsKey: 'radius',
-					step: 1,
-					max: 15,
-					min: 3
-				},
-				{
-					label: 'Stroke width',
-					type: 'number',
-					chartType: 'violin',
-					settingsKey: 'strokeWidth',
-					step: 0.1,
-					max: 2,
-					min: 0.1
-				},
-				{
-					label: 'Scale',
-					type: 'radio',
-					chartType: 'violin',
-					settingsKey: 'unit',
-					options: [{ label: 'Linear', value: 'abs' }, { label: 'Log', value: 'log' }]
-				}
-			)
-		}
-		this.components = {
-			controls: await controlsInit({
-				app: this.app,
-				id: this.id,
-				holder: this.dom.controls,
-				inputs
-			})
-		}
+		this.components = {}
+		if (this.opts.mode == 'minimal') return
+		const inputs = [
+			{
+				type: 'term1',
+				// TODO: when used under the summary chart, this.opts.usecase may replace the usecase here
+				usecase: { target: 'violin', detail: 'term' }
+			},
+			{
+				type: 'overlay',
+				//TODO: when term is numeric use 'overlay' otherwise for categories use 'Divide by'
+				// TODO: when used under the summary chart, this.opts.usecase may replace the usecase here
+				usecase: { target: 'violin', detail: 'term2' }
+			},
+			{
+				label: 'Orientation',
+				type: 'radio',
+				chartType: 'violin',
+				settingsKey: 'orientation',
+				options: [{ label: 'Vertical', value: 'vertical' }, { label: 'Horizontal', value: 'horizontal' }]
+			},
+			{
+				label: 'Data symbol',
+				type: 'radio',
+				chartType: 'violin',
+				settingsKey: 'datasymbol',
+				options: [{ label: 'Ticks', value: 'rug' }, { label: 'Circles', value: 'bean' }]
+			},
+			{
+				label: 'Symbol size',
+				type: 'number',
+				chartType: 'violin',
+				settingsKey: 'radius',
+				step: 1,
+				max: 15,
+				min: 3
+			},
+			{
+				label: 'Stroke width',
+				type: 'number',
+				chartType: 'violin',
+				settingsKey: 'strokeWidth',
+				step: 0.1,
+				max: 2,
+				min: 0.1
+			},
+			{
+				label: 'Scale',
+				type: 'radio',
+				chartType: 'violin',
+				settingsKey: 'unit',
+				options: [{ label: 'Linear', value: 'abs' }, { label: 'Log', value: 'log' }]
+			}
+		]
+
+		this.components.controls = await controlsInit({
+			app: this.app,
+			id: this.id,
+			holder: this.dom.controls,
+			inputs
+		})
+
 		this.components.controls.on('downloadClick.violin', this.download)
 	}
 

@@ -26,7 +26,7 @@ tape('renders the expected elements', test => {
 		.style('padding', '20px')
 	let currentCallback
 	const callback = value => currentCallback(value)
-	const zoomApi = zoom({ holder, callback, debug: true })
+	const zoomApi = zoom({ holder, callback, debug: true, showJumpBtns: true })
 
 	test.equal([...holder.node().querySelectorAll('button')].length, 2, 'should render two zoom buttons')
 
@@ -47,7 +47,7 @@ tape('value synchronization', test => {
 		.style('padding', '20px')
 	let currentCallback
 	const callback = value => currentCallback(value)
-	const zoomApi = zoom({ holder, callback, debug: true })
+	const zoomApi = zoom({ holder, callback, debug: true, showJumpBtns: true })
 	const Z = zoomApi.Inner
 	{
 		const expectedValue = 33
