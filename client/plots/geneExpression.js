@@ -154,8 +154,8 @@ function plotHeatmap(data, self) {
 		}
 	}
 
-	plotXdendrogram(ctx, obj)
-	console.log(obj)
+	plotDendrogram(ctx, obj)
+	//console.log(obj)
 	{
 		const width = 100,
 			height = 20
@@ -237,6 +237,7 @@ function parseDendrogram(obj) {
 		// convert to on-canvas position
 		n.node_coordinates.x *= obj.d.dFactor
 		n.node_coordinates.y *= obj.d.rowHeight
+		n.node_coordinates.y += obj.d.rowHeight / 2
 
 		obj.xId2coord.set(n.node_id, n.node_coordinates)
 		const v = n.node_coordinates.x
@@ -259,7 +260,7 @@ function parseDendrogram(obj) {
 	}
 	obj.d.yDendrogramHeight = max
 }
-function plotXdendrogram(ctx, obj) {
+function plotDendrogram(ctx, obj) {
 	ctx.strokeStyle = 'black'
 
 	let F = obj.d.yDendrogramHeight + obj.d.yLabHeight // yoffset applied to y coord when plotting x dendrogram

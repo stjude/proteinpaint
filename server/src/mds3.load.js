@@ -477,6 +477,12 @@ async function geneExpressionClustering(data, q) {
 			sorted_sample_coordinates = JSON.parse(JSON.parse(item.replace('sorted_col_coordinates:', '')))
 		} else if (item.includes('sorted_row_coordinates:')) {
 			sorted_gene_coordinates = JSON.parse(JSON.parse(item.replace('sorted_row_coordinates:', '')))
+			// gene dendrogram goes horizontal so must flip x/y
+			for (const n of sorted_gene_coordinates) {
+				const t = n.node_coordinates.x
+				n.node_coordinates.x = n.node_coordinates.y
+				n.node_coordinates.y = t
+			}
 		} else {
 			console.log(item)
 		}
