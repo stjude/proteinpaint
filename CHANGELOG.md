@@ -1,6 +1,18 @@
 # Change Log
 
 All notable changes to this project will be documented in this file. 
+## 2.14.1
+
+- fix the matrix zoom outline in firefox
+- fix dom canvas scaling in browsers that do not support OffscreenCanvas
+- fix unit and integration tests
+
+GDC-related
+- move the CGC filter input to the gene control menu
+- label the OncoMatrix undo/redo buttons to address Section 508 errors
+- fix and improve the zoom UI labels to address Section 508 warnings
+
+ 
 ## 2.14.0
 
 - persisted custom terms in termdb-based charts and apps
