@@ -82,8 +82,8 @@ function applyBrush(self, elem, brush) {
 			const a_range = JSON.parse(JSON.stringify(brush.orig))
 			const min = Number(minvalue.toFixed(1))
 			const max = Number(maxvalue.toFixed(1))
-			range.startunbounded = min == range.start
-			range.stopunbounded = max == range.stop
+			range.startunbounded = min == range.start && range.startinclusive
+			range.stopunbounded = max == range.stop && range.stopinclusive
 			if (range.startunbounded) a_range.start = min
 			if (range.stopunbounded) a_range.stop = max
 			const similarRanges = JSON.stringify(range) == JSON.stringify(a_range)

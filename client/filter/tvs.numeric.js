@@ -387,8 +387,12 @@ function enterRange(self, tr, brush, i) {
 				// merge overlapping ranges
 				if (self.num_obj.ranges.length > 1) new_tvs.ranges = mergeOverlapRanges(self, range)
 				else new_tvs.ranges[range.index] = range
-				validateNumericTvs(new_tvs)
-				self.opts.callback(new_tvs)
+				try {
+					validateNumericTvs(new_tvs)
+					self.opts.callback(new_tvs)
+				} catch (ex) {
+					alert(ex)
+				}
 			})
 
 		//'Reset' button
