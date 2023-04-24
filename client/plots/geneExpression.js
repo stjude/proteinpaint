@@ -1,6 +1,6 @@
 import { getCompInit, copyMerge } from '#rx'
 import { dofetch3 } from '#common/dofetch'
-import { interpolateBrBG } from 'd3-scale-chromatic'
+import { interpolateRgb } from 'd3-interpolate'
 
 class geneExpression {
 	constructor() {
@@ -11,7 +11,8 @@ class geneExpression {
 		this.dom = {
 			holder,
 			controlsDiv: holder.append('div'),
-			canvas: holder.append('canvas')
+			canvas: holder.append('canvas'),
+			colorScaleDiv: holder.append('div')
 		}
 		this.components = {}
 	}
@@ -94,8 +95,11 @@ function plotHeatmap(data, self) {
 	// {geneNameLst,sampleNameLst,matrix,sorted_sample_elements,sorted_gene_elements,sorted_sample_coordinates,sorted_gene_coordinates}
 	const obj = data.clustering
 	obj.d = {
+		minColor: '#0c306b',
+		maxColor: '#ffcc00',
 		dFactor: 100 // times this factor when plotting dendrogram
-	} // record computed dimensions
+	}
+	obj.d.colorScale = interpolateRgb(obj.d.minColor, obj.d.maxColor)
 
 	const ctx = self.dom.canvas.node().getContext('2d')
 
@@ -140,7 +144,7 @@ function plotHeatmap(data, self) {
 		const [min, max] = getMinMax(sampleValues)
 		for (const [colIdx, sampleIdx] of obj.sorted_sample_elements.entries()) {
 			const v = sampleValues[sampleIdx]
-			ctx.fillStyle = interpolateBrBG((v - min) / (max - min))
+			ctx.fillStyle = obj.d.colorScale((v - min) / (max - min))
 			ctx.fillRect(
 				obj.d.xDendrogramHeight + obj.d.xLabHeight + obj.d.colWidth * colIdx,
 				obj.d.yDendrogramHeight + obj.d.yLabHeight + obj.d.rowHeight * rowIdx,
@@ -152,6 +156,31 @@ function plotHeatmap(data, self) {
 
 	plotXdendrogram(ctx, obj)
 	console.log(obj)
+	{
+		const width = 100,
+			height = 20
+		self.dom.colorScaleDiv.append('span').text('Min')
+		const svg = self.dom.colorScaleDiv.append('svg')
+		self.dom.colorScaleDiv.append('span').text('Max')
+		const grad = svg
+			.append('defs')
+			.append('linearGradient')
+			.attr('id', 'grad')
+		grad
+			.append('stop')
+			.attr('offset', '0%')
+			.attr('stop-color', obj.d.minColor)
+		grad
+			.append('stop')
+			.attr('offset', '100%')
+			.attr('stop-color', obj.d.maxColor)
+		svg
+			.append('rect')
+			.attr('width', width)
+			.attr('height', height)
+			.attr('fill', 'url(#grad)')
+		svg.attr('width', width).attr('height', height)
+	}
 }
 function getRowHeight(obj) {
 	const h = 500 / obj.sorted_gene_elements.length
