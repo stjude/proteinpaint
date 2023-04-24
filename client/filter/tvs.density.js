@@ -76,14 +76,15 @@ function applyBrush(self, elem, brush) {
 		.on('brush', function(event, d) {
 			const s = event.selection
 			if (!s) return // not an event triggered by brush dragging
+			const inputRange = brush.rangeInput.getRange()
 			//update temp_ranges
 			range.start = Number(xscale.invert(s[0]).toFixed(1))
 			range.stop = Number(xscale.invert(s[1]).toFixed(1))
 			const a_range = JSON.parse(JSON.stringify(brush.orig))
 			const min = Number(minvalue.toFixed(1))
 			const max = Number(maxvalue.toFixed(1))
-			range.startunbounded = min == range.start && range.startinclusive
-			range.stopunbounded = max == range.stop && range.stopinclusive
+			range.startunbounded = min == range.start && inputRange.startunbounded //Limit by the brush, not by the user
+			range.stopunbounded = max == range.stop && inputRange.stopunbounded
 			if (range.startunbounded) a_range.start = min
 			if (range.stopunbounded) a_range.stop = max
 			const similarRanges = JSON.stringify(range) == JSON.stringify(a_range)
