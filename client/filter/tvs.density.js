@@ -91,9 +91,10 @@ function applyBrush(self, elem, brush) {
 
 			const start = range.startunbounded ? '' : range.startinclusive ? `${range.start} <=` : `${range.start} <`
 			const stop = range.stopunbounded ? '' : range.stopinclusive ? `<= ${range.stop}` : `< ${range.stop}`
+			console.log(range)
 			// update inputs from brush move
 			brush.rangeInput.getInput().style('color', a_range.start == range.start ? '#000' : '#23cba7')
-			brush.rangeInput.getInput().node().value = `${start} x ${stop}`
+			brush.rangeInput.getInput().node().value = range.value ? `x = ${range.value}` : `${start} x ${stop}`
 
 			brush.reset_btn.style(
 				'display',

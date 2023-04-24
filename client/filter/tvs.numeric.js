@@ -353,8 +353,9 @@ function enterRange(self, tr, brush, i) {
 			updateRange(brush.range, new_range)
 			const minvalue = self.num_obj.density_data.minvalue
 			const maxvalue = self.num_obj.density_data.maxvalue
-			const start = brush.range.start || minvalue
-			const stop = brush.range.stop || maxvalue
+
+			const start = new_range.value || new_range.start || minvalue
+			const stop = new_range.value || new_range.stop || maxvalue
 			brush.elem.call(brush.d3brush).call(brush.d3brush.move, [start, stop].map(xscale))
 		} catch (e) {
 			window.alert(e)
@@ -448,6 +449,13 @@ function enterRange(self, tr, brush, i) {
 }
 
 function updateRange(range, new_range) {
+	if (new_range.value) {
+		range.value = new_range.value
+		range.label = new_range.label
+		delete range.start
+		delete range.stop
+		return
+	}
 	if (new_range.startunbounded) {
 		range.startunbounded = true
 		delete range.start

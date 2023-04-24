@@ -48,23 +48,23 @@ export class NumericRangeInput {
 
 		const start = range.start ? `${range.start} <=` : ''
 		const stop = range.stop ? `<= ${range.stop}` : ''
-		this.input.node().value = `${start} x ${stop}`
+		this.input.node().value = range.value ? ` x=${range.value} ` : `${start} x ${stop}`
 	}
 }
 
 export function parseRange(str) {
 	if (!str) throw 'Empty range'
 	const tokens = str.replace(/\s/g, '').split('x')
-	let start, stop, startinclusive, stopinclusive
+	let start, stop, startinclusive, stopinclusive, value
 
 	if (tokens[0]) parseRangeToken(tokens[0])
 	if (tokens[1]) parseRangeToken(tokens[1])
-
+	if (value) return { value, label: `x = ${value}` }
 	const startunbounded = start === undefined
 	const stopunbounded = stop === undefined
 
 	if (!startunbounded && !stopunbounded && start > stop) throw 'start must be lower than stop'
-	return { start, stop, startinclusive, stopinclusive, startunbounded, stopunbounded }
+	return { start, stop, value, startinclusive, stopinclusive, startunbounded, stopunbounded }
 
 	function parseRangeToken(rangeToken) {
 		const floatExpr = '[+-]?\\d+(\\.\\d+)?'
@@ -82,7 +82,7 @@ export function parseRange(str) {
 			stop = parseFloat(rangeToken.match(floatExpr))
 			stopinclusive = true
 		} else if (new RegExp(`^${floatExpr}=$`).test(rangeToken) || new RegExp(`^=${floatExpr}$`).test(rangeToken)) {
-			start = stop = parseFloat(rangeToken.match(floatExpr))
+			value = parseFloat(rangeToken.match(floatExpr))
 			stopinclusive = true
 			startinclusive = true
 		} else throw `Could not parse expression '${rangeToken}'`
