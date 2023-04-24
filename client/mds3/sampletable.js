@@ -92,35 +92,32 @@ export async function displaySampleTable(samples, args) {
 	}
 	if (args.tk.allow2selectSamples) {
 		// this tk allows to select samples; create new opt to display button
-
-		params.buttons = [
-			{
-				text: args.tk.allow2selectSamples.buttonText,
-				callback: sampleIdxLst => {
-					// argument is list of array index of selected samples
-					feedSample2selectCallback(args.tk, args.block, samples, sampleIdxLst)
-					args.tk.itemtip.hide()
-					args.tk.menutip.hide()
-				}
+		params.buttons = args.tk.allow2selectSamples.buttons.map(button => ({
+			text: button.buttonText,
+			callback: sampleIdxLst => {
+				// argument is list of array index of selected samples
+				const tk = feedSample2selectCallback(button, args.block, samples, sampleIdxLst)
+				args.tk.itemtip.hide()
+				args.tk.menutip.hide()
 			}
-		]
+		}))
 	}
 
 	return renderTable(params)
 }
 
-function feedSample2selectCallback(tk, block, samples, sampleIdxLst) {
+function feedSample2selectCallback(button, block, samples, sampleIdxLst) {
 	// map sampleIdxLst to sample attributes that caller wants to pick
 	const pickLst = []
 	for (const i of sampleIdxLst) {
 		const s0 = samples[i]
 		const s1 = {}
-		for (const attr of tk.allow2selectSamples.attributes) {
+		for (const attr of button.attributes) {
 			s1[attr] = s0[attr]
 		}
 		pickLst.push(s1)
 	}
-	tk.allow2selectSamples.callback({ samples: pickLst, source: 'Samples with ' + block2source(block) })
+	button.callback({ samples: pickLst, source: 'Samples with ' + block2source(block), button })
 }
 
 async function make_singleSampleTable(s, arg) {
