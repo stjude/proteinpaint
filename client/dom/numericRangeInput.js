@@ -46,8 +46,8 @@ export class NumericRangeInput {
 		//When an error is thrown the previous range is restored
 		else this.range = range
 
-		const start = range.start ? `${range.start} <=` : 'min' in range ? `${range.min} <=` : ''
-		const stop = range.stop ? `<= ${range.stop}` : 'max' in range ? `<= ${range.max}` : ''
+		const start = range.start ? `${range.start} <=` : ''
+		const stop = range.stop ? `<= ${range.stop}` : ''
 		this.input.node().value = `${start} x ${stop}`
 	}
 }
