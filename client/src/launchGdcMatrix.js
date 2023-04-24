@@ -86,6 +86,10 @@ export async function init(arg, holder, genomes) {
 		app: {
 			features: ['recover']
 		},
+		recover: {
+			undoHtml: 'undo',
+			redoHtml: 'redo'
+		},
 		matrix: {
 			//allow2selectSamples: arg.allow2selectSamples,
 			// these will display the inputs together in the Genes menu,
