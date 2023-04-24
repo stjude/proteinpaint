@@ -58,20 +58,18 @@ class Scatter {
 		const controlsDiv = this.opts.controls
 			? opts.holder
 			: this.opts.holder.append('div').style('display', 'inline-block')
-		const mainDiv = controlsDiv.append('div').style('display', 'inline-block')
+		this.mainDiv = controlsDiv.append('div').style('display', 'inline-block')
 
-		const chartDiv = mainDiv.append('div').style('display', 'inline-block')
-		const legendDiv = mainDiv
+		this.charts = []
+		const legendDiv = this.mainDiv
 			.append('div')
 			.style('display', 'inline-block')
 			.style('float', 'right')
 			.style('margin-left', '100px')
 
-		const holder = chartDiv.insert('div')
-
 		this.dom = {
 			header: this.opts.header,
-			holder,
+			//holder,
 			controls,
 			legendDiv,
 			tip: new Menu({ padding: '5px' }),
@@ -115,9 +113,12 @@ class Scatter {
 		const cohortSamples = data.samples.filter(sample => 'sampleId' in sample)
 
 		//Creating charts variable to support rendering multiple charts
-		const chartDiv = this.dom.holder
-		const chart = { chartDiv, data, cohortSamples }
-		this.charts = [chart]
+		const chartDiv = this.mainDiv.append('div').style('display', 'inline-block')
+		this.charts.push({ chartDiv, data, cohortSamples })
+
+		const chartDiv2 = this.mainDiv.append('div').style('display', 'inline-block')
+		this.charts.push({ chartDiv: chartDiv2, data, cohortSamples })
+
 		if (data.error) throw this.data.error
 		if (!Array.isArray(data.samples)) throw 'data.samples[] not array'
 
@@ -128,7 +129,6 @@ class Scatter {
 		this.initAxes()
 		this.render()
 		this.setTools()
-		this.lassoReset()
 		this.updateGroupsButton()
 		this.dom.tip.hide()
 		this.dom.termstip.hide()
