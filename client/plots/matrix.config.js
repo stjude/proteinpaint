@@ -71,8 +71,8 @@ export async function getPlotConfig(opts, app) {
 				zoomIndex: 0,
 				zoomGrpIndex: 0,
 				zoomMin: 0.5,
-				zoomIncrement: 0.5,
-				zoomStep: 10,
+				zoomIncrement: 0.1,
+				zoomStep: 1,
 				// renderedWMax should not be exposed as a user-input
 				// 60000 pixels is based on laptop and external monitor tests,
 				// when a canvas dataURL image in a zoomed-in matrix svg stops rendering

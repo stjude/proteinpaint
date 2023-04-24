@@ -26,13 +26,11 @@ export class MatrixControls {
 		this.setDownloadBtn(s)
 		this.btns = this.opts.holder.selectAll('button').filter(d => d && d.label)
 
-		//this.setButtons(s)
 		this.setZoomInput()
 		this.setDragToggle({
 			holder: this.opts.holder.append('div').style('display', 'inline-block'),
 			target: this.parent.dom.seriesesG
 		})
-		this.setResetInput()
 		this.setSvgScroll(state)
 	}
 
@@ -452,6 +450,8 @@ export class MatrixControls {
 	}
 
 	main() {
+		this.parent.app.tip.hide()
+
 		this.btns
 			.text(d => d.label + (d.getCount ? ` (${d.getCount()})` : ''))
 			.style('text-decoration', d => (d.active ? 'underline' : ''))
@@ -461,11 +461,11 @@ export class MatrixControls {
 		const d = this.parent.dimensions
 		if (this.zoomApi)
 			this.zoomApi.update({
-				value: Number(((100 * Math.min(s.colw * s.zoomLevel, s.colwMax)) / s.colwMax).toFixed(1)),
-				min: (100 * s.colwMin) / s.colwMax, //s.zoomMin, //Math.max(1, Math.floor((100 * 1) / s.colwMax)),
+				value: s.zoomLevel.toFixed(1),
+				min: s.colwMin / s.colw,
+				max: s.colwMax / s.colw,
 				increment: s.zoomIncrement,
-				max: 100,
-				step: s.zoomStep || 5
+				step: s.zoomStep || 1
 			})
 
 		if (this.svgScrollApi) {
@@ -769,18 +769,21 @@ export class MatrixControls {
 		const s = this.parent.config.settings.matrix
 		this.zoomApi = zoom({
 			holder,
+			title:
+				'Zoom factor relative to the ideal column width, as computed for the number of columns versus available screen width',
+			unit: '',
+			width: '80px',
 			settings: {
-				min: (100 * s.colwMin) / s.colwMax, //s.zoomMin, //Math.max(1, Math.floor((100 * 1) / s.colwMax)),
+				value: 1,
+				min: 0.1, // will be determined once the auto-computed width is determined
+				max: 10, // will be determined once the auto-computed width is determined
 				increment: s.zoomIncrement,
-				max: 100,
-				step: s.zoomStep || 5,
-				value: ((s.colw / s.colwMax) * 100).toFixed(1)
+				step: s.zoomStep || 5
 			},
-			callback: percentValue => {
+			callback: zoomLevel => {
 				const p = this.parent
 				const d = p.dimensions
 				const s = p.settings.matrix
-				const zoomLevel = (0.01 * percentValue * s.colwMax) / s.colw
 				const c = p.getVisibleCenterCell(0)
 				p.app.dispatch({
 					type: 'plot_edit',
@@ -792,6 +795,22 @@ export class MatrixControls {
 								zoomCenterPct: 0.5,
 								zoomIndex: c.totalIndex,
 								zoomGrpIndex: c.grpIndex
+							}
+						}
+					}
+				})
+			},
+			reset: () => {
+				const s = this.parent.settings.matrix
+				const d = this.parent.dimensions
+				this.parent.app.dispatch({
+					type: 'plot_edit',
+					id: this.parent.id,
+					config: {
+						settings: {
+							matrix: {
+								zoomLevel: 1,
+								zoomCenterPct: 0
 							}
 						}
 					}
@@ -857,29 +876,6 @@ export class MatrixControls {
 				}
 			}
 		}
-	}
-
-	setResetInput() {
-		const holder = this.opts.holder.append('div').style('display', 'inline-block') //.style('margin-left', '50px')
-		holder
-			.append('button')
-			.html('Reset')
-			.on('click', () => {
-				const s = this.parent.settings.matrix
-				const d = this.parent.dimensions
-				this.parent.app.dispatch({
-					type: 'plot_edit',
-					id: this.parent.id,
-					config: {
-						settings: {
-							matrix: {
-								zoomLevel: 1,
-								zoomCenterPct: 0
-							}
-						}
-					}
-				})
-			})
 	}
 
 	setSvgScroll(state) {
