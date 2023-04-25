@@ -65,8 +65,10 @@ export async function get_survival(q, ds) {
 			// R errors on empty string series value, so replace with '*' (will reconvert later)
 			let series
 			if (!ot) series = '*'
-			else if ('id' in ot) series = d[ot.id].key
-			else if (ot.type == 'samplelst') {
+			else if ('id' in ot) {
+				if (!(ot.id in d)) continue //This sample is not in any group
+				series = d[ot.id].key
+			} else if (ot.type == 'samplelst') {
 				if (!(ot.name in d)) continue //This sample is not in any group
 				series = d[ot.name].key
 			} else series = getSeriesKey(ot, d)
