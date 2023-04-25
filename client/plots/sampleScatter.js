@@ -61,17 +61,11 @@ class Scatter {
 		this.mainDiv = controlsDiv.append('div').style('display', 'inline-block')
 
 		this.charts = []
-		const legendDiv = this.mainDiv
-			.append('div')
-			.style('display', 'inline-block')
-			.style('float', 'right')
-			.style('margin-left', '100px')
 
 		this.dom = {
 			header: this.opts.header,
 			//holder,
 			controls,
-			legendDiv,
 			tip: new Menu({ padding: '5px' }),
 			tooltip: new Menu({ padding: '5px' }),
 			termstip: new Menu({ padding: '5px', offsetX: 170, offsetY: -34 })
@@ -110,20 +104,14 @@ class Scatter {
 		const reqOpts = this.getDataRequestOpts()
 		if (reqOpts.coordTWs.length == 1) return //To allow removing a term in the controls, though nothing is rendered (summary tab with violin active)
 		const data = await this.app.vocabApi.getScatterData(reqOpts)
-		const cohortSamples = data.samples.filter(sample => 'sampleId' in sample)
+		this.addChart(data)
+		this.addChart(data)
 
 		//Creating charts variable to support rendering multiple charts
-		const chartDiv = this.mainDiv.append('div').style('display', 'inline-block')
-		this.charts.push({ chartDiv, data, cohortSamples })
-
-		const chartDiv2 = this.mainDiv.append('div').style('display', 'inline-block')
-		this.charts.push({ chartDiv: chartDiv2, data, cohortSamples })
 
 		if (data.error) throw this.data.error
 		if (!Array.isArray(data.samples)) throw 'data.samples[] not array'
 
-		this.colorLegend = new Map(Object.entries(data.colorLegend))
-		this.shapeLegend = new Map(Object.entries(data.shapeLegend))
 		this.axisOffset = { x: 80, y: 20 }
 
 		this.initAxes()
@@ -151,6 +139,15 @@ class Scatter {
 		}
 		if (c.shapeTW) opts.shapeTW = c.shapeTW
 		return opts
+	}
+
+	addChart(data) {
+		const chartDiv = this.mainDiv.append('div').style('display', 'inline-block')
+		const cohortSamples = data.samples.filter(sample => 'sampleId' in sample)
+		const colorLegend = new Map(Object.entries(data.colorLegend))
+		const shapeLegend = new Map(Object.entries(data.shapeLegend))
+
+		this.charts.push({ chartDiv, data, cohortSamples, colorLegend, shapeLegend })
 	}
 
 	async setControls() {

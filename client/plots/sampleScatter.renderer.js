@@ -11,7 +11,7 @@ export function setRenderers(self) {
 		for (const chart of self.charts) {
 			if (chart.chartDiv.select('svg').size()) self.updateCharts(chart)
 			else self.addCharts(chart)
-			chart.chartDiv.on('mouseover', self.mouseover).on('click', self.mouseclick)
+			chart.chartDiv.on('mouseover', event => self.mouseover(event, chart)).on('click', self.mouseclick)
 		}
 	}
 
@@ -71,11 +71,10 @@ export function setRenderers(self) {
 	}
 
 	function renderSVG(chart, s) {
-		console.log(chart)
 		const svg = chart.svg
-		let colorLegends = self.colorLegend.size * 30
-		if (self.colorLegend.get('Ref').sampleCount > 0) colorLegends += 60
-		const legendHeight = Math.max(colorLegends, self.shapeLegend.size * 30) + 100 //legend step and header
+		let colorLegends = chart.colorLegend.size * 30
+		if (chart.colorLegend.get('Ref').sampleCount > 0) colorLegends += 60
+		const legendHeight = Math.max(colorLegends, chart.shapeLegend.size * 30) + 100 //legend step and header
 
 		svg
 			.transition()
@@ -84,7 +83,7 @@ export function setRenderers(self) {
 			.attr('height', Math.max(s.svgh + 100, legendHeight)) //leaving some space for top/bottom padding and y axis
 
 		/* eslint-disable */
-		const [mainG, legendG] = getSvgSubElems(svg, chart)
+		const [mainG, legendG] = getSvgSubElems(svg)
 		/* eslint-enable */
 
 		if (mainG.select('.sjpcb-scatter-series').size() == 0) mainG.append('g').attr('class', 'sjpcb-scatter-series')
@@ -93,7 +92,7 @@ export function setRenderers(self) {
 		self.renderLegend(chart, legendG)
 	}
 
-	function getSvgSubElems(svg, chart) {
+	function getSvgSubElems(svg) {
 		let mainG, axisG, xAxis, yAxis, legendG, labelsG, clipRect
 		if (svg.select('.sjpcb-scatter-mainG').size() == 0) {
 			axisG = svg.append('g').attr('class', 'sjpcb-scatter-axis')
@@ -210,8 +209,8 @@ export function setRenderers(self) {
 			.transition()
 			.duration(duration)
 			.attr('transform', c => translate(chart, c))
-			.attr('d', c => self.getShape(c))
-			.attr('fill', c => self.getColor(c))
+			.attr('d', c => self.getShape(chart, c))
+			.attr('fill', c => self.getColor(c, chart))
 
 			.style('fill-opacity', c => self.getOpacity(c))
 		symbols
@@ -219,18 +218,18 @@ export function setRenderers(self) {
 			.append('path')
 			/*** you'd need to set the symbol position using translate, instead of previously with cx, cy for a circle ***/
 			.attr('transform', c => translate(chart, c))
-			.attr('d', c => self.getShape(c))
-			.attr('fill', c => self.getColor(c))
+			.attr('d', c => self.getShape(chart, c))
+			.attr('fill', c => self.getColor(c, chart))
 
 			.style('fill-opacity', c => self.getOpacity(c))
 			.transition()
 			.duration(duration)
 	}
 
-	self.getColor = function(c) {
+	self.getColor = function(c, chart) {
 		if (self.config.colorTW?.q.mode == 'continuous' && 'sampleId' in c) return self.colorGenerator(c.category)
 		if (c.category == 'Default') return self.config.settings.sampleScatter.defaultColor
-		const category = self.colorLegend.get(c.category)
+		const category = chart.colorLegend.get(c.category)
 		return category.color
 	}
 
@@ -250,8 +249,8 @@ export function setRenderers(self) {
 		return refOpacity
 	}
 
-	self.getShape = function(c, factor = 1) {
-		const index = self.shapeLegend.get(c.shape).shape % self.symbols.length
+	self.getShape = function(chart, c, factor = 1) {
+		const index = chart.shapeLegend.get(c.shape).shape % self.symbols.length
 		const size = 'sampleId' in c ? self.settings.size : self.settings.refSize
 		return self.symbols[index].size((size * factor) / self.k)()
 	}
@@ -262,7 +261,6 @@ export function setRenderers(self) {
 	}
 
 	self.lassoReset = chart => {
-		console.log(chart)
 		const mainG = chart.chartDiv.select('.sjpcb-scatter-mainG')
 
 		if (chart.lasso)
@@ -277,7 +275,7 @@ export function setRenderers(self) {
 			if (self.lassoOn) {
 				chart.lasso
 					.items()
-					.attr('d', c => self.getShape(c, 1 / 2))
+					.attr('d', c => self.getShape(chart, c, 1 / 2))
 					.style('fill-opacity', c => (self.getOpacity(c) != 0 ? 0.5 : 0))
 					.classed('not_possible', true)
 					.classed('selected', false)
@@ -290,7 +288,7 @@ export function setRenderers(self) {
 
 				chart.lasso
 					.possibleItems()
-					.attr('d', c => self.getShape(c, 2))
+					.attr('d', c => self.getShape(chart, c, 2))
 					.style('fill-opacity', c => self.getOpacity(c))
 					.classed('not_possible', false)
 					.classed('possible', true)
@@ -298,7 +296,7 @@ export function setRenderers(self) {
 				//Style the not possible dot
 				chart.lasso
 					.notPossibleItems()
-					.attr('d', c => self.getShape(c, 1 / 2))
+					.attr('d', c => self.getShape(chart, c, 1 / 2))
 					.style('fill-opacity', c => (self.getOpacity(c) != 0 ? 0.5 : 0))
 					.classed('not_possible', true)
 					.classed('possible', false)
@@ -316,14 +314,14 @@ export function setRenderers(self) {
 					.classed('possible', false)
 
 				// Style the selected dots
-				chart.lasso.selectedItems().attr('d', c => self.getShape(c, 2))
+				chart.lasso.selectedItems().attr('d', c => self.getShape(chart, c, 2))
 				chart.lasso.items().style('fill-opacity', c => self.getOpacity(c))
 				self.selectedItems = []
 				for (const item of chart.lasso.selectedItems()) {
 					const data = item.__data__
 					if ('sampleId' in data && !(data.hidden['category'] || data.hidden['shape'])) self.selectedItems.push(item)
 				}
-				chart.lasso.notSelectedItems().attr('d', c => self.getShape(c))
+				chart.lasso.notSelectedItems().attr('d', c => self.getShape(chart, c))
 
 				showLassoMenu(dragEnd.sourceEvent)
 			}
@@ -463,8 +461,8 @@ export function setRenderers(self) {
 				seriesG.attr('transform', event.transform)
 				self.k = event.transform.scale(1).k
 				//on zoom in the particle size is kept
-				symbols.attr('d', c => self.getShape(c))
-				if (self.lassoOn) chart.lasso.selectedItems().attr('d', c => self.getShape(c, 2))
+				symbols.attr('d', c => self.getShape(chart, c))
+				if (self.lassoOn) chart.lasso.selectedItems().attr('d', c => self.getShape(chart, c, 2))
 			}
 
 			function zoomIn() {
@@ -538,10 +536,10 @@ export function setRenderers(self) {
 				? self.config.colorTW.term.name.slice(0, 25) + '...'
 				: self.config.colorTW.term.name
 		let title = `${name}, n=${chart.cohortSamples.length}`
-		const colorRefCategory = self.colorLegend.get('Ref')
+		const colorRefCategory = chart.colorLegend.get('Ref')
 
 		if (self.config.colorTW.term.type == 'geneVariant')
-			offsetY = self.renderGeneVariantLegend(chart, 0, legendG, self.config.colorTW, 'category', self.colorLegend)
+			offsetY = self.renderGeneVariantLegend(chart, 0, legendG, self.config.colorTW, 'category', chart.colorLegend)
 		else {
 			const colorG = legendG.append('g')
 			colorG
@@ -601,7 +599,7 @@ export function setRenderers(self) {
 
 				offsetY += step
 			} else {
-				for (const [key, category] of self.colorLegend) {
+				for (const [key, category] of chart.colorLegend) {
 					if (key == 'Ref') continue
 					const color = category.color
 					const count = category.sampleCount
@@ -666,7 +664,7 @@ export function setRenderers(self) {
 			offsetY = 50
 			title = `${self.config.shapeTW.term.name}, n=${chart.cohortSamples.length}`
 			if (self.config.shapeTW.term.type == 'geneVariant')
-				self.renderGeneVariantLegend(chart, offsetX, legendG, self.config.shapeTW, 'shape', self.shapeLegend)
+				self.renderGeneVariantLegend(chart, offsetX, legendG, self.config.shapeTW, 'shape', chart.shapeLegend)
 			else {
 				const shapeG = legendG.append('g')
 				shapeG
@@ -678,7 +676,7 @@ export function setRenderers(self) {
 					.style('font-size', '0.8em')
 
 				const color = 'gray'
-				for (const [key, shape] of self.shapeLegend) {
+				for (const [key, shape] of chart.shapeLegend) {
 					if (key == 'Ref') continue
 					const index = shape.shape % self.symbols.length
 					const symbol = self.symbols[index].size(64)()
