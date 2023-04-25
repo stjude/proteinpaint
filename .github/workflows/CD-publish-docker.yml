@@ -40,8 +40,9 @@ jobs:
         with:
           cache: 'npm'
           node-version: '16'
-          registry-url: 'https://npm.pkg.github.com'
-          scope: '@stjude'
+          registry-url: 'https://registry.npmjs.org'
+          scope: '@sjcrh'
+
       - run: |
           npm ci
           cd container
@@ -51,5 +52,3 @@ jobs:
           docker push ghcr.io/stjude/ppfull:$TAG
           docker push ghcr.io/stjude/ppserver:latest
           docker push ghcr.io/stjude/ppfull:latest
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
