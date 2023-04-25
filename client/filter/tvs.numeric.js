@@ -20,7 +20,7 @@ handler:
 addRangeTableNoDensity() // for terms without desnity table, show brushes but without density_plot on blank svg
 addRangeTable() // add table for existing ranges or start with empty_range with brush in center 
 enterRange() // add row for each range, for existing readonly and for new or edit, show inputs
-makeRangeButtons() // add buttons for EDIT / APPLY / RESET / DELETE 
+makeRangeButtons() // add buttons for  APPLY / DELETE 
 mergeOverlapRanges() // when APPLY is pressed, check if ranges are overlapping, if so, merge them
 showCheckList_numeric() // so checklist of uncomputable values
 validateNumericTvs() // validate tvs before sending it to callback
@@ -159,10 +159,10 @@ async function fillMenu(self, div, tvs) {
 	const ranges = []
 
 	for (const [index, range] of tvs.ranges.entries()) {
-		if (range.value == undefined) {
-			range.index = index
-			ranges.push(range)
-		}
+		//if (range.value == undefined) {
+		range.index = index
+		ranges.push(range)
+		//}
 	}
 
 	const density_plot_opts = {
@@ -189,11 +189,27 @@ async function fillMenu(self, div, tvs) {
 	self.num_obj.brushes = []
 	addBrushes(self)
 	addRangeTable(self)
+	const add_range_btn = self.num_obj.num_div
+		.append('div')
+		.style('width', '100px')
+		.attr('class', 'add_range_btn sja_menuoption')
+		.style('border-radius', '13px')
+		.style('padding', '7px 6px')
+		.style('margin', '5px')
+		.style('margin-left', '20px')
+		.style('text-align', 'center')
+		.style('font-size', '.8em')
+		.text('Add a Range')
+		.on('click', () => {
+			const callback = () => addRangeTable(self)
+			addNewBrush(self, ranges.length ? 'end' : 'center', callback)
+		})
 
 	if (!ranges.length) {
 		const callback = () => addRangeTable(self)
 		addNewBrush(self, 'center', callback)
 	}
+
 	self.num_obj.brushes.forEach(brush => brush.init())
 	await showCheckList_numeric(self, tvs, div)
 }
@@ -264,7 +280,6 @@ function addRangeTableNoDensity(self, tvs) {
 
 function addRangeTable(self) {
 	const num_div = self.num_obj.num_div
-	const ranges = self.num_obj.ranges
 	const brushes = self.num_obj.brushes
 
 	const range_divs = self.num_obj.range_table.selectAll('.range_div').data(brushes) //, d => brushes.indexOf(d))
@@ -289,29 +304,6 @@ function addRangeTable(self) {
 		.each(function(brush, i) {
 			enterRange(self, this, brush, i)
 		})
-
-	const add_range_btn = num_div
-		.append('div')
-		.style('width', '100px')
-		.attr('class', 'add_range_btn sja_menuoption')
-		.style('border-radius', '13px')
-		.style('padding', '7px 6px')
-		.style('margin', '5px')
-		.style('margin-left', '20px')
-		.style('text-align', 'center')
-		.style('font-size', '.8em')
-		.text('Add a Range')
-		.on('click', () => {
-			const callback = () => addRangeTable(self)
-			addNewBrush(self, null, callback)
-		})
-
-	add_range_btn.style(
-		'display',
-		ranges.length && ranges[ranges.length - 1].start === '' && ranges[ranges.length - 1].stop === ''
-			? 'none'
-			: 'inline-block'
-	)
 }
 
 function enterRange(self, tr, brush, i) {
@@ -350,11 +342,14 @@ function enterRange(self, tr, brush, i) {
 
 	async function apply(new_range) {
 		try {
-			updateRange(brush.range, new_range)
+			brush.range = new_range
 			const minvalue = self.num_obj.density_data.minvalue
 			const maxvalue = self.num_obj.density_data.maxvalue
-			const start = brush.range.start || minvalue
-			const stop = brush.range.stop || maxvalue
+
+			const start =
+				new_range.value != undefined ? new_range.value : new_range.start != undefined ? new_range.start : minvalue
+			const stop =
+				new_range.value != undefined ? new_range.value : new_range.stop != undefined ? new_range.stop : maxvalue
 			brush.elem.call(brush.d3brush).call(brush.d3brush.move, [start, stop].map(xscale))
 		} catch (e) {
 			window.alert(e)
@@ -381,12 +376,12 @@ function enterRange(self, tr, brush, i) {
 			.text('apply')
 			.on('click', async () => {
 				self.dom.tip.hide()
-				brush.rangeInput.parseRange()
+				const new_range = brush.rangeInput.parseRange()
 				const new_tvs = JSON.parse(JSON.stringify(self.tvs))
 				delete new_tvs.groupset_label
 				// merge overlapping ranges
-				if (self.num_obj.ranges.length > 1) new_tvs.ranges = mergeOverlapRanges(self, range)
-				else new_tvs.ranges[range.index] = range
+				if (self.num_obj.ranges.length > 1) new_tvs.ranges = mergeOverlapRanges(self, new_range)
+				else new_tvs.ranges[range.index] = new_range
 				try {
 					validateNumericTvs(new_tvs)
 					self.opts.callback(new_tvs)
@@ -395,33 +390,10 @@ function enterRange(self, tr, brush, i) {
 				}
 			})
 
-		//'Reset' button
-		brush.reset_btn = buttons_td
-			.append('td')
-			.attr('class', 'sja_filter_tag_btn reset_btn')
-			.style('display', sameRanges || (range.start === '' && range.stop === '') ? 'none' : 'inline-block')
-			.style('border-radius', '13px')
-			.style('margin', '5px')
-			.style('margin-left', '10px')
-			// .style('padding', '5px 12px')
-			.style('text-align', 'center')
-			.style('font-size', '.8em')
-			.style('text-transform', 'uppercase')
-			.text('reset')
-			.on('click', async () => {
-				self.dom.tip.hide()
-				brush.range = JSON.parse(JSON.stringify(brush.orig))
-				brush.init()
-			})
-
 		//'Delete' button
 		buttons_td
 			.append('td')
 			.attr('class', 'sja_filter_tag_btn sjpp_delete_btn')
-			.style(
-				'display',
-				self.tvs.ranges.length == 1 && orig_range.start != '' && orig_range.stop != '' ? 'none' : 'inline-block'
-			)
 			.style('border-radius', '13px')
 			.style('margin', '5px')
 			.style('margin-left', '10px')
@@ -444,25 +416,6 @@ function enterRange(self, tr, brush, i) {
 					addRangeTable(self)
 				}
 			})
-	}
-}
-
-function updateRange(range, new_range) {
-	if (new_range.startunbounded) {
-		range.startunbounded = true
-		delete range.start
-	} else {
-		delete range.startunbounded
-		range.start = new_range.start
-		range.startinclusive = new_range.startinclusive
-	}
-	if (new_range.stopunbounded) {
-		range.stopunbounded = true
-		delete range.stop
-	} else {
-		delete range.stopunbounded
-		range.stop = new_range.stop
-		range.stopinclusive = new_range.stopinclusive
 	}
 }
 

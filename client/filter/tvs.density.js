@@ -31,7 +31,6 @@ export function addBrushes(self, new_brush_location) {
 		} else {
 			brush = _b
 		}
-
 		// strict equality to not have false positive with start=0
 		if (r.start === '') {
 			if (new_brush_location == 'center') brush.range.start = minvalue + decile * 4
@@ -77,31 +76,24 @@ function applyBrush(self, elem, brush) {
 			const s = event.selection
 			if (!s) return // not an event triggered by brush dragging
 			const inputRange = brush.rangeInput.getRange()
+			if (inputRange.value != undefined) {
+				brush.range = inputRange
+				return
+			}
 			//update temp_ranges
 			range.start = Number(xscale.invert(s[0]).toFixed(1))
 			range.stop = Number(xscale.invert(s[1]).toFixed(1))
-			const a_range = JSON.parse(JSON.stringify(brush.orig))
 			const min = Number(minvalue.toFixed(1))
 			const max = Number(maxvalue.toFixed(1))
 			range.startunbounded = min == range.start && inputRange.startunbounded //Limit by the brush, not by the user
 			range.stopunbounded = max == range.stop && inputRange.stopunbounded
 			if (range.startunbounded) a_range.start = min
 			if (range.stopunbounded) a_range.stop = max
-			const similarRanges = JSON.stringify(range) == JSON.stringify(a_range)
 
 			const start = range.startunbounded ? '' : range.startinclusive ? `${range.start} <=` : `${range.start} <`
 			const stop = range.stopunbounded ? '' : range.stopinclusive ? `<= ${range.stop}` : `< ${range.stop}`
 			// update inputs from brush move
-			brush.rangeInput.getInput().style('color', a_range.start == range.start ? '#000' : '#23cba7')
-			brush.rangeInput.getInput().node().value = `${start} x ${stop}`
-
-			brush.reset_btn.style(
-				'display',
-				similarRanges || a_range.start === '' || a_range.stop === '' ? 'none' : 'inline-block'
-			)
-
-			// make brush green if changed
-			brush.elem.selectAll('.selection').style('fill', !similarRanges ? '#23cba7' : '#777777')
+			brush.rangeInput.getInput().node().value = range.value ? `x = ${range.value}` : `${start} x ${stop}`
 		})
 		.on('end', function() {
 			//diable pointer-event for multiple brushes
@@ -111,7 +103,8 @@ function applyBrush(self, elem, brush) {
 	const brush_start = range.startunbounded ? minvalue : range.start
 	const brush_stop = range.stopunbounded ? maxvalue : range.stop
 	brush.init = () => {
-		brush.elem.call(brush.d3brush).call(brush.d3brush.move, [brush_start, brush_stop].map(xscale))
+		if (range.value == undefined)
+			brush.elem.call(brush.d3brush).call(brush.d3brush.move, [brush_start, brush_stop].map(xscale))
 	}
 
 	if (range.startunbounded) delete range.start
