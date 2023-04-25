@@ -48,8 +48,7 @@ export class NumericRangeInput {
 
 		const start = range.start ? `${range.start} <=` : ''
 		const stop = range.stop ? `<= ${range.stop}` : ''
-		this.input.node().value = range.value ? ` x=${range.value} ` : `${start} x ${stop}`
-
+		this.input.node().value = range.value != undefined ? ` x=${range.value} ` : `${start} x ${stop}`
 	}
 }
 
@@ -60,7 +59,7 @@ export function parseRange(str) {
 
 	if (tokens[0]) parseRangeToken(tokens[0])
 	if (tokens[1]) parseRangeToken(tokens[1])
-	if (value) return { value, label: `x = ${value}` }
+	if (value != undefined) return { value, label: `x = ${value}` }
 	const startunbounded = start === undefined
 	const stopunbounded = stop === undefined
 
