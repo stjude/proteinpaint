@@ -37,7 +37,7 @@ export default class DtDiscoCnv {
 		}
 
 		const minMax = this.minMax[sampleAlias]
-		minMax[cls].push(data.value)
+		minMax[cls].push(this.capValue(data.value))
 	}
 
 	hits(sample, gene, cls) {
