@@ -244,7 +244,7 @@ export class FrontendVocab extends Vocab {
 	}
 
 	async getDescrStats(term_id, filter, settings) {
-		//TODO add in case for settings? should be similar as termdbvocab.
+		//TODO add in case for settings?
 		// for a numeric term, get descriptive statistics
 		// mean, median, standard deviation, min, max
 
