@@ -2,6 +2,9 @@ import { scaleLinear as d3Linear } from 'd3-scale'
 import { extent } from 'd3-array'
 
 export default class DtDiscoCnv {
+	CNV_LOSS_CAPPED = -5
+	CNV_AMP_CAPPED = 5
+
 	constructor(app) {
 		this.app = app
 		this.bySampleGene = {}
@@ -306,14 +309,37 @@ export default class DtDiscoCnv {
 				startAngle: startAngle,
 				endAngle: endAngle,
 				innerRadius: baseline,
-				outerRadius: baseline + gain(data.value),
-				fill: data.class == 'CNV_amp' ? s.cnv.colors[1] : s.cnv.colors[0], //d.fill,
+				outerRadius: baseline + gain(this.capValue(data.value)),
+				fill: this.getColor(s, data.value),
 				fillOpacity: 'fillOpacity' in data ? data.fillOpacity : 1,
 				stroke: 'stroke' in data ? data.stroke : null,
 				gene: '',
 				gain: data.value,
 				class: data.class
 			}
+		}
+	}
+
+	capValue(value) {
+		if (value < this.CNV_LOSS_CAPPED) {
+			return this.CNV_LOSS_CAPPED
+		}
+		if (value > this.CNV_AMP_CAPPED) {
+			return this.CNV_AMP_CAPPED
+		}
+
+		return value
+	}
+
+	getColor(s, value) {
+		if (value < this.CNV_LOSS_CAPPED) {
+			return s.cnv.colors[2]
+		} else if (value < 0) {
+			return s.cnv.colors[0]
+		} else if (value <= this.CNV_AMP_CAPPED) {
+			return s.cnv.colors[1]
+		} else if (value > this.CNV_AMP_CAPPED) {
+			return s.cnv.colors[3]
 		}
 	}
 
