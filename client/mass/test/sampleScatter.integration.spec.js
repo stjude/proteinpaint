@@ -4,10 +4,12 @@ const d3color = require('d3-color')
 const d3s = require('d3-selection')
 const {
 	detectLst,
+	detectStyle,
 	detectAttr,
 	detectChildAttr,
 	detectChildStyle,
 	detectGte,
+	detectOne,
 	sleep
 } = require('../../test/test.helpers')
 
@@ -424,7 +426,6 @@ tape.skip('Create color groups', function(test) {
 
 	async function runTests(scatter) {
 		scatter.on('postRender.test', null)
-		// await sleep(100)
 		await triggerEdit(scatter)
 		// makeGroupsViaUI(scatter)
 		await sleep(100)
@@ -507,7 +508,7 @@ tape.skip('Create color groups', function(test) {
 			selector: 'text[name="sjpp-scatter-legend-label"]',
 			matchAs: '>='
 		})
-		let groups = []
+		const groups = []
 		for (const group of legendLabels) {
 			const label = group.innerHTML.split(',')
 			groups.push({
@@ -529,44 +530,6 @@ tape.skip('Create color groups', function(test) {
 			const mapLeg = scatter.Inner.colorLegend.get(group.label)
 			test.ok(mapLeg.sampleCount == group.samples[0], `Should show matching n = for ${group.label}`)
 		}
-	}
-})
-
-tape('Replace color from burger menu', function(test) {
-	test.timeoutAfter(3000)
-
-	runpp({
-		state: open_state,
-		sampleScatter: {
-			callbacks: { 'postRender.test': runTests }
-		}
-	})
-
-	async function runTests(scatter) {
-		scatter.on('postRender.test', null)
-
-		await sleep(100)
-		triggerReplace(scatter)
-
-		if (test._ok) scatter.Inner.app.destroy()
-		test.end()
-	}
-
-	function triggerReplace(scatter) {
-		scatter.Inner.dom.controls
-			.node()
-			.querySelector('.ts_pill')
-			.click()
-		/*
-        Problematic! menu tooltip renders outside of scatter.Inner.dom/app and current setup
-        does not allow for targeting only the rendered test div. If any test fails, leaving 
-        an rendered mass UI, these tests will fail as well
-        */
-		d3s
-			.selectAll('.sja_sharp_border')
-			.filter(d => d.label == 'Replace')
-			.node()
-			.click()
 	}
 })
 
@@ -703,30 +666,31 @@ tape('Check/uncheck Show axes from menu', function(test) {
 	async function runTests(scatter) {
 		scatter.on('postRender.test', null)
 
-		checkAxesBox(scatter, false)
-		await sleep(100)
-		testAxes(scatter, 1)
-		checkAxesBox(scatter, true)
-		await sleep(100)
-		testAxes(scatter, 0)
+		await testAxes(scatter, false, 1)
+		await testAxes(scatter, true, 0)
 
 		if (test._ok) scatter.Inner.app.destroy()
 		test.end()
 	}
 
-	function checkAxesBox(scatter, bool) {
+	async function testAxes(scatter, bool, num) {
 		const axesCheckbox = scatter.Inner.dom.controls
 			.selectAll('input[type="checkbox"]')
 			.nodes()
 			.find(e => e.checked == bool)
 		axesCheckbox.checked = !bool
-		axesCheckbox.dispatchEvent(new Event('change'))
-	}
 
-	function testAxes(scatter, num) {
-		const axesDiv = scatter.Inner.dom.holder.node().querySelector('.sjpcb-scatter-axis')
-		const axesStyle = getComputedStyle(axesDiv)
-		test.ok(axesStyle.opacity == num, `Should ${num == 1 ? 'show' : 'hide'} axes`)
+		const axesDiv = await detectStyle({
+			target: scatter.Inner.dom.holder.node().querySelector('.sjpcb-scatter-axis'),
+			style: {
+				opactiy: `${num}`
+			},
+			trigger() {
+				axesCheckbox.dispatchEvent(new Event('change'))
+			}
+		})
+		const axesStyle = getComputedStyle(axesDiv[0])
+		test.equal(axesStyle.opacity, `${num}`, `Should ${num == 1 ? 'show' : 'hide'} axes`)
 	}
 })
 
@@ -744,15 +708,6 @@ tape('Click zoom in, zoom out, and reset buttons', function(test) {
 
 	async function runTests(scatter) {
 		scatter.on('postRender.test', null)
-		// helpers
-		//  .rideInit({ arg: scatter, bus: scatter, eventType: 'postRender.test' })
-		//  .run(clickZoomIn)
-		//  .run(testZoomIn, 2000)
-		//  .run(triggerReset)
-		//  .run(testReset, 2000)
-		//  .run(clickZoomOut)
-		//  .run(testZoomOut, 2000)
-		//  .done(test)
 
 		await testZoomIn(scatter)
 		await testReset(scatter)
@@ -840,9 +795,12 @@ tape('Groups and group menus functions', function(test) {
 		}
 
 		for (const [i, group] of scatter.Inner.config.groups.entries()) {
+			//Check all group menus appear on click
 			scatter.Inner.showGroupMenu(new PointerEvent('click'), scatter.Inner.config.groups[i])
-			await sleep(1000)
-			const groupMenuTitleDiv = scatter.Inner.dom.tip.d.selectAll('div[name="sjpp-group-input-div"]').node()
+			const groupMenuTitleDiv = await detectOne({
+				elem: scatter.Inner.dom.tip.dnode,
+				selector: 'div[name="sjpp-group-input-div"]'
+			})
 			test.ok(groupMenuTitleDiv.innerHTML.endsWith(group.name), `Should display ${group.name} menu`)
 
 			scatter.Inner.showTable(group, 0, 0)
@@ -852,7 +810,7 @@ tape('Groups and group menus functions', function(test) {
 
 	function testSampleTable(scatter, i, group) {
 		const samplesRendered = scatter.Inner.dom.tip.d.selectAll('.sjpp_row_wrapper > td:nth-child(3)').nodes()
-		let samples2Check = []
+		const samples2Check = []
 		for (const item of samplesRendered) {
 			samples2Check.push(item.innerHTML)
 		}
@@ -861,7 +819,7 @@ tape('Groups and group menus functions', function(test) {
 		let foundSamples = 0
 		for (const sampleData of scatter.Inner.config.groups[i].items) {
 			if (samples2Check.some(d => d == sampleData.sample)) ++foundSamples
-			else notFound.push(sampleData.sample)
+			else test.fail(`Sample = ${sampleData.sample} is not displayed in sample table`)
 		}
 		test.equal(samples2Check.length, foundSamples, `Should render all samples for ${group.name}`)
 
