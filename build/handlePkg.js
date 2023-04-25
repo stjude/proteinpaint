@@ -4,13 +4,14 @@
 // this is a helper script to filter and reformat a package.json
 //console.log(process.argv)
 const pkg = JSON.parse(process.argv[2])
+const scope = '@sjcrh'
 
 // filter to only this project's workspace dependencies
 for (const ws in pkg) {
 	for (const depType of ['dependencies', 'devDependencies']) {
 		if (!pkg[ws][depType]) continue
 		for (const name in pkg[ws][depType]) {
-			if (!name.startsWith('@stjude')) delete pkg[ws][depType][name]
+			if (!name.startsWith(scope)) delete pkg[ws][depType][name]
 		}
 		if (!Object.keys(pkg[ws][depType]).length) delete pkg[ws][depType]
 	}

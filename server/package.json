@@ -38,7 +38,7 @@
     "webpack-notifier": "^1.15.0"
   },
   "dependencies": {
-    "@sjcrh/proteinpaint-rust": "2.9.0",
+    "@sjcrh/proteinpaint-rust": "2.11.0",
     "better-sqlite3": "^7.5.3",
     "body-parser": "^1.15.2",
     "canvas": "~2.9.3",
