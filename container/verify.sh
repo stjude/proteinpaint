@@ -16,7 +16,7 @@ EXPOSED_PORT=$3
 # Monitor server startup
 ##########################
 
-end_time=$((SECONDS+300))
+end_time=$((SECONDS+480))
 
 ENDSTR="Validation succeeded"
 echo "Waiting for server validation ..."
@@ -31,7 +31,7 @@ while true; do
   fi
   sleep 1
   if (( SECONDS >= end_time )); then
-    echo "Validation failed"
+    echo "Validation timed out"
     exit 1
   fi
 done

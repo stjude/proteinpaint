@@ -1,11 +1,13 @@
 const fs = require('fs')
 const spawnSync = require('child_process').spawnSync
+const path = require('path')
+const serverconfigFile = path.join(__dirname, './serverconfig.json')
 
-/*if (!fs.existsSync('./serverconfig.json')) {
-	throw `missing serverconfig.json`
-}*/
+if (!fs.existsSync(serverconfigFile)) {
+	throw `missing serverconfig.json: did you forget to mount?`
+}
 
-const serverconfig = require('./serverconfig.json')
+const serverconfig = require(serverconfigFile)
 if (!serverconfig.genomes) {
 	serverconfig.genomes = [
 		{
@@ -38,7 +40,7 @@ fs.writeFileSync('./serverconfig.json', JSON.stringify(serverconfig, null, '   '
 
 if (serverconfig.releaseTag) {
 	if (!serverconfig.releaseTag.server || !serverconfig.releaseTag.front) {
-		throw 'If the serverconfig.releaseTag option is used, then both {server, front} must be specified when running the full app.'
+		throw 'Error: If the serverconfig.releaseTag option is used, then both {server, front} must be specified when running the full app.'
 	}
 
 	console.log('Updating proteinpaint server package ...')
