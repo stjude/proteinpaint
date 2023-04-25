@@ -49,6 +49,7 @@ export class NumericRangeInput {
 		const start = range.start ? `${range.start} <=` : ''
 		const stop = range.stop ? `<= ${range.stop}` : ''
 		this.input.node().value = range.value ? ` x=${range.value} ` : `${start} x ${stop}`
+
 	}
 }
 
