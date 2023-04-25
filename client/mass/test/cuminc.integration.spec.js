@@ -574,7 +574,7 @@ tape('term1 = Cardiovascular System, term0 = agedx, numeric custom bins', test =
 		test.equal(
 			JSON.stringify(inner.config.term0.q.lst),
 			JSON.stringify(divideConfig),
-			`Should correctly pass the custom list to overlay component`
+			`Should correctly pass the custom list to divide by component`
 		)
 
 		//Test overlay bin changes are applied
