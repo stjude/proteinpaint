@@ -87,8 +87,6 @@ function applyBrush(self, elem, brush) {
 			const max = Number(maxvalue.toFixed(1))
 			range.startunbounded = min == range.start && inputRange.startunbounded //Limit by the brush, not by the user
 			range.stopunbounded = max == range.stop && inputRange.stopunbounded
-			if (range.startunbounded) a_range.start = min
-			if (range.stopunbounded) a_range.stop = max
 
 			const start = range.startunbounded ? '' : range.startinclusive ? `${range.start} <=` : `${range.start} <`
 			const stop = range.stopunbounded ? '' : range.stopinclusive ? `<= ${range.stop}` : `< ${range.stop}`

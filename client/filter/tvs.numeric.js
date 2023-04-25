@@ -279,7 +279,6 @@ function addRangeTableNoDensity(self, tvs) {
 }
 
 function addRangeTable(self) {
-	const num_div = self.num_obj.num_div
 	const brushes = self.num_obj.brushes
 
 	const range_divs = self.num_obj.range_table.selectAll('.range_div').data(brushes) //, d => brushes.indexOf(d))
@@ -359,8 +358,6 @@ function enterRange(self, tr, brush, i) {
 	function makeRangeButtons(self, brush) {
 		const buttons_td = brush.range_tr.append('td')
 		const range = brush.range
-		const orig_range = brush.orig
-		const sameRanges = JSON.stringify(range) == JSON.stringify(brush.orig)
 
 		//'Apply' button
 		brush.apply_btn = buttons_td
@@ -395,6 +392,7 @@ function enterRange(self, tr, brush, i) {
 			.append('td')
 			.attr('class', 'sja_filter_tag_btn sjpp_delete_btn')
 			.style('border-radius', '13px')
+			.style('display', self.num_obj.ranges.length > 1 ? 'inline-block' : 'none')
 			.style('margin', '5px')
 			.style('margin-left', '10px')
 			// .style('padding', '5px 12px')
@@ -405,16 +403,12 @@ function enterRange(self, tr, brush, i) {
 			.on('click', async () => {
 				const new_tvs = JSON.parse(JSON.stringify(self.tvs))
 				new_tvs.ranges.splice(range.index, 1)
-				// const deleted_range = self.num_obj.ranges[self.num_obj.ranges.length - 1]
-				// callback only if range have non-empty start and end
-				if (orig_range.start != '' && orig_range.stop != '') self.opts.callback(new_tvs)
-				else {
-					self.num_obj.ranges.pop()
-					self.num_obj.brushes.pop()
-					self.num_obj.num_div.select('.note_tr').remove()
-					addBrushes(self)
-					addRangeTable(self)
-				}
+				self.num_obj.ranges.pop()
+				self.num_obj.brushes.pop()
+				self.num_obj.num_div.select('.note_tr').remove()
+				addBrushes(self)
+				addRangeTable(self)
+				self.opts.callback(new_tvs) //Remove the filter if no ranges
 			})
 	}
 }
