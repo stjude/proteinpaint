@@ -279,7 +279,6 @@ function addRangeTableNoDensity(self, tvs) {
 }
 
 function addRangeTable(self) {
-	const num_div = self.num_obj.num_div
 	const brushes = self.num_obj.brushes
 
 	const range_divs = self.num_obj.range_table.selectAll('.range_div').data(brushes) //, d => brushes.indexOf(d))
@@ -359,8 +358,6 @@ function enterRange(self, tr, brush, i) {
 	function makeRangeButtons(self, brush) {
 		const buttons_td = brush.range_tr.append('td')
 		const range = brush.range
-		const orig_range = brush.orig
-		const sameRanges = JSON.stringify(range) == JSON.stringify(brush.orig)
 
 		//'Apply' button
 		brush.apply_btn = buttons_td
@@ -405,10 +402,9 @@ function enterRange(self, tr, brush, i) {
 			.on('click', async () => {
 				const new_tvs = JSON.parse(JSON.stringify(self.tvs))
 				new_tvs.ranges.splice(range.index, 1)
-				// const deleted_range = self.num_obj.ranges[self.num_obj.ranges.length - 1]
-				// callback only if range have non-empty start and end
-				if (orig_range.start != '' && orig_range.stop != '') self.opts.callback(new_tvs)
-				else {
+				if (self.num_obj.ranges.length == 1) {
+					self.opts.callback(null) //Remove the filter if no ranges
+				} else {
 					self.num_obj.ranges.pop()
 					self.num_obj.brushes.pop()
 					self.num_obj.num_div.select('.note_tr').remove()

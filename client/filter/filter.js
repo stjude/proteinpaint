@@ -784,14 +784,18 @@ function setRenderers(self) {
 				debug: self.opts.debug,
 				getCategoriesArguments: self.opts.getCategoriesArguments,
 				callback: tvs => {
+					console.log(tvs)
 					const filterUiRoot = JSON.parse(JSON.stringify(self.filter))
 					const filterCopy = findItem(filterUiRoot, filter.$id)
-					const i = filter.lst.indexOf(item)
-					if (i == -1) return
 					// if tvs already present in the filterCopy just replace it rather than adding new one
+
 					const item_i = filterCopy.lst.findIndex(t => t.$id == item.$id)
+					console.log(item_i)
 					if (item_i == -1) filterCopy.lst[i] = { $id: item.$id, type: 'tvs', tvs }
+					else if (!tvs) filterCopy.lst.splice(item_i, 1)
 					else filterCopy.lst[item_i].tvs = tvs
+
+					console.log(filterCopy)
 					self.refresh(filterUiRoot)
 				}
 			})
