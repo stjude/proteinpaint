@@ -416,9 +416,6 @@ function getLegendGrps(self) {
 	const t1 = self.config.term
 	const t2 = self.config.term2
 	const headingStyle = 'color: #aaa; font-weight: 400'
-	// console.log(419, t1.q.descrStats)
-	// console.log(420, self.data.plots)
-	// console.log(self.data.plots[0].summaryStats.values)
 
 	// descriptive statistics
 	if (t1.q.descrStats) {
