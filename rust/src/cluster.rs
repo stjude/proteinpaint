@@ -83,6 +83,7 @@ struct NewNodeInfo {
     node_id: usize,
     #[serde(skip_serializing_if = "Vec::is_empty")]
     child_nodes: Vec<usize>,
+    height: f64, // Contains the weight of the dissimilarity of that particular step. For original nodes this will just be the height from the top most node
 }
 
 #[allow(dead_code)]
@@ -285,8 +286,7 @@ fn sort_elements(
     //fn sort_elements(coordinates: &Vec<Array1<f64>>) -> Vec<usize> {
     let new_now = Instant::now();
     let mut sorted_nodes = Vec::<usize>::new();
-    let mut node_coordinates_final = Vec::<NewNodeRelativeCoordinates>::new();
-    let mut max_length_node_distance = 0; // max-length between all original nodes and the topmost node
+    let mut node_coordinates_list = Vec::<NewNodeRelativeCoordinates>::new();
     if coordinates.len() > 0 {
         //let mut condensed = vec![];
         //for row in 0..coordinates.len() - 1 {
@@ -294,7 +294,6 @@ fn sort_elements(
         //        condensed.push(euclidean_distance(&coordinates[row], &coordinates[col]));
         //    }
         //}
-        let mut node_coordinates_list = Vec::<NewNodeRelativeCoordinates>::new();
         let mut condensed = euclidean_distance4(coordinates);
         let column_means = Matrix::column_mean(coordinates);
         //println!("column_means:{:?}", column_means);
@@ -350,6 +349,7 @@ fn sort_elements(
 
         //println!("dend.steps().len(){:?}", dend.steps().len());
         let mut new_nodes = Vec::<NewNodeInfo>::new();
+        let mut max_length_node_distance = 0.0; // max-length between all original nodes and the topmost node
         for i in 0..dend.steps().len() {
             let step = &dend.steps()[i];
             //println!("step:{:?}", step);
@@ -364,19 +364,24 @@ fn sort_elements(
             let new_node = NewNodeInfo {
                 node_id: current_cluster_label,
                 child_nodes: vec![step.cluster1, step.cluster2],
+                height: step.dissimilarity,
             };
             new_nodes.push(new_node);
             // Adding edges
             deps.add_edge(
                 NodeIndex::from(step.cluster1 as u32),
                 node3,
-                step.dissimilarity / 2.0,
+                step.dissimilarity,
             );
             deps.add_edge(
                 NodeIndex::from(step.cluster2 as u32),
                 node3,
-                step.dissimilarity / 2.0,
+                step.dissimilarity,
             );
+
+            if i == dend.steps().len() - 1 {
+                max_length_node_distance = step.dissimilarity
+            }
         }
         //println!("Graph:{}", Dot::new(&deps));
         let new_now4 = Instant::now();
@@ -437,7 +442,7 @@ fn sort_elements(
                         node_id: current_node,
                         node_coordinates: NodeCoordinate {
                             x: Some(num_iter as f64),
-                            y: Some(item.1 as f64),
+                            y: Some(1.0),
                         },
                         child_nodes: vec![], // These are the original nodes, so they have no child nodes
                         child_node_coordinates: vec![
@@ -446,10 +451,6 @@ fn sort_elements(
                         ],
                         all_original_nodes: vec![],
                     });
-
-                    if item.1 > max_length_node_distance {
-                        max_length_node_distance = item.1
-                    }
                 }
             }
 
@@ -489,8 +490,10 @@ fn sort_elements(
                     new_nodes[new_nodes.len() - 1].node_id as u32,
                 )) == true
                 {
-                    node_y = item.1 as f64 / max_length_node_distance as f64; // Normalizing distance with distance of the farthest node
-                                                                              //println!("item:{:?}", item);
+                    node_y =
+                        (max_length_node_distance - current_node.height) / max_length_node_distance;
+                    // Normalizing distance with distance of the farthest node
+                    //println!("item:{:?}", item);
                 }
 
                 //if item.1 > max_length_node_distance {
@@ -570,23 +573,6 @@ fn sort_elements(
                 all_original_nodes: all_original_nodes,
             })
         }
-
-        // Update y-coordinates for original nodes
-        for mut item in node_coordinates_list {
-            if item.node_id < coordinates.nrows() {
-                // Check if the current node is an original node. If yes, replace the y-coordinate with the max_length_node_distance
-                item.node_coordinates.y = Some(1.0);
-            } else {
-                // If the current node is not an original node, check if any of the child nodes are original nodes. If yes, update the y-coordinate of that original node with max_length_node_distance
-                for node_iter in 0..item.child_nodes.len() {
-                    if item.child_nodes[node_iter] < coordinates.nrows() {
-                        item.child_node_coordinates[node_iter].y = Some(1.0); // All the original nodes normalized to 1 so that equidistant from the top-most node.
-                    }
-                }
-            }
-
-            node_coordinates_final.push(item)
-        }
         //println!("node_coordinates_final:{:?}", node_coordinates_final);
         let new_now5 = Instant::now();
         println!(
@@ -596,7 +582,7 @@ fn sort_elements(
     } else {
         panic!("The dissimilarity matrix length cannot be zero");
     }
-    (sorted_nodes, node_coordinates_final)
+    (sorted_nodes, node_coordinates_list)
 }
 
 fn closest_degenerate_nodes(
