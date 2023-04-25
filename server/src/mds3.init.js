@@ -621,15 +621,31 @@ export async function snvindelByRangeGetter_bcf(ds, genome) {
 	if (q._tk.file) {
 		await utils.init_one_vcf(q._tk, genome, true) // "true" to indicate file is bcf but not vcf
 	} else if (q._tk.chr2files) {
+		// record stringified sample json array from first chr
+		// same string from other chrs are compared against it to ensure identical list of samples are used in all chr
+		let firstChrSampleJson
+
 		for (const chr in q._tk.chr2files) {
+			// quick fix to only parse chr17 file, delete when all files are ready
+			if (chr != 'chr17') continue
+
 			const tk2 = q._tk.chr2files[chr]
 			// practical issue: we only have a subset of files on local computer so will tolerate missing files for now
 			try {
 				await utils.init_one_vcf(tk2, genome, true) // "true" to indicate file is bcf but not vcf
-				q._tk.samples = tk2.samples
-				q._tk.format = tk2.format
-				q._tk.info = tk2.info
-				q._tk.nochr = tk2.nochr
+				const sampleJson = JSON.stringify(tk2.samples)
+
+				if (firstChrSampleJson) {
+					// this is not the first chr; compare its sample string against the first one
+					if (sampleJson != firstChrSampleJson) throw 'Different samples found in bcf file of ' + chr
+				} else {
+					// this is the first chr
+					firstChrSampleJson = sampleJson
+					q._tk.samples = tk2.samples
+					q._tk.format = tk2.format
+					q._tk.info = tk2.info
+					q._tk.nochr = tk2.nochr
+				}
 			} catch (e) {
 				// ignore
 				console.log('missing file ignored:', tk2.file)
