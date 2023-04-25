@@ -71,7 +71,7 @@ export default function discoDefaults(overrides = {}) {
 				minHits: 1,
 				minHitsForLabel: -1,
 				minHeightRatio: 2,
-				colors: ['#67a9cf', '#D6683C'],
+				colors: ['#67a9cf', '#D6683C', '#00008B', '#8b0000'],
 				mirrorScale: true,
 				showGrid: false,
 				gridNumLevels: 4,
