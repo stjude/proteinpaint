@@ -7,14 +7,14 @@ import { rgb } from 'd3-color'
 import { getSamplelstTW } from '#termsetting/handlers/samplelst'
 
 export function setInteractivity(self) {
-	self.mouseover = function(event) {
+	self.mouseover = function(event, chart) {
 		if (event.target.tagName == 'path' && event.target.__data__) {
 			const s2 = event.target.__data__
 			const displaySample = 'sample' in s2
 			const shrink = self.opts.parent?.type == 'summary' && !displaySample
 			const include = shrink ? dist => dist > 0 && dist < 0.2 : dist => dist < 0.2
 			const overlapSamples = []
-			const samples = self.data.samples.filter(s => {
+			const samples = chart.data.samples.filter(s => {
 				const dist = distance(s.x, s.y, s2.x, s2.y)
 				if (dist == 0) overlapSamples.push(s)
 				return self.getOpacity(s) > 0 && include(dist)
@@ -151,7 +151,7 @@ export function setInteractivity(self) {
 			.attr('class', 'sja_menuoption sja_sharp_border')
 			.text('Show only')
 			.on('click', () => {
-				const map = name == 'colorTW' ? self.colorLegend : self.shapeLegend
+				const map = name == 'colorTW' ? self.colorLegend : chart.shapeLegend
 				for (const mapKey of map.keys()) self.hideCategory(G, tw, mapKey, !mapKey.startsWith(key))
 
 				menu.hide()
@@ -169,7 +169,7 @@ export function setInteractivity(self) {
 			.text('Show all')
 			.on('click', () => {
 				menu.hide()
-				const map = name == 'colorTW' ? self.colorLegend : self.shapeLegend
+				const map = name == 'colorTW' ? self.colorLegend : chart.shapeLegend
 				for (const mapKey of map.keys()) self.hideCategory(G, tw, mapKey, false)
 				const config = {}
 				config[name] = tw
