@@ -628,6 +628,7 @@ async function getCnvFusion4oneCase(opts) {
 
 			if (total > 0) {
 				// total copy number is >0, detect loh
+				/*
 				if (major + minor != total) continue // data err?
 				if (major == minor) continue // no loh
 				const loh = {
@@ -638,6 +639,22 @@ async function getCnvFusion4oneCase(opts) {
 					segmean: Math.abs(major - minor) / total
 				}
 				events.push(loh)
+				*/
+
+				if (minor == 0 && major > 0) {
+					// zhenyu 4/25/23 detect strict one allele loss
+					events.push({
+						dt: common.dtloh,
+						chr: cnv.chr,
+						start: cnv.start,
+						stop: cnv.stop,
+						// hardcode a value for plot to work.
+						// may make "segmean" value optional; if missing, indicates quanlitative event and should plot without color shading
+						// otherwise, the value quantifies allelic imbalance and is plotted with color shading
+						// all loh events in a plot should be uniformlly quanlitative or quantitative
+						segmean: 0.5
+					})
+				}
 			}
 		}
 	} else if (snpFile) {
