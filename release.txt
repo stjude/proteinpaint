@@ -1,5 +1,0 @@
-- fix the expected scope for local workspaces when bumping versions
-- fix the serverconfig detection in the container app scripts
-- cap cnv values in the disco plot
-- use dissimilarity mesaure for computing y-axis of nodes
-- test fixes

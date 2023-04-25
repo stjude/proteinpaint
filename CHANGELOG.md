@@ -1,6 +1,15 @@
 # Change Log
 
 All notable changes to this project will be documented in this file. 
+## 2.14.2
+
+- fix the expected scope for local workspaces when bumping versions
+- fix the serverconfig detection in the container app scripts
+- cap cnv values in the disco plot
+- use dissimilarity mesaure for computing y-axis of nodes
+- test fixes
+
+ 
 ## 2.14.1
 
 - fix the matrix zoom outline in firefox
