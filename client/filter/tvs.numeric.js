@@ -392,6 +392,7 @@ function enterRange(self, tr, brush, i) {
 			.append('td')
 			.attr('class', 'sja_filter_tag_btn sjpp_delete_btn')
 			.style('border-radius', '13px')
+			.style('display', self.num_obj.ranges.length > 1 ? 'inline-block' : 'none')
 			.style('margin', '5px')
 			.style('margin-left', '10px')
 			// .style('padding', '5px 12px')
@@ -402,15 +403,12 @@ function enterRange(self, tr, brush, i) {
 			.on('click', async () => {
 				const new_tvs = JSON.parse(JSON.stringify(self.tvs))
 				new_tvs.ranges.splice(range.index, 1)
-				if (self.num_obj.ranges.length == 1) {
-					self.opts.callback(null) //Remove the filter if no ranges
-				} else {
-					self.num_obj.ranges.pop()
-					self.num_obj.brushes.pop()
-					self.num_obj.num_div.select('.note_tr').remove()
-					addBrushes(self)
-					addRangeTable(self)
-				}
+				self.num_obj.ranges.pop()
+				self.num_obj.brushes.pop()
+				self.num_obj.num_div.select('.note_tr').remove()
+				addBrushes(self)
+				addRangeTable(self)
+				self.opts.callback(new_tvs) //Remove the filter if no ranges
 			})
 	}
 }
