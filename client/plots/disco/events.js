@@ -148,13 +148,15 @@ export default function DtDiscoEvents(viz, VueApp) {
 							color +
 							"'>" +
 							' ' +
+							text +
+							d.mname +
+							'<br/>' +
 							(signature ? signature : cls) +
 							'<br/>' +
-							'chr' +
-							d.poslabel +
-							'<br/>' +
+							d.data.chr +
+							':' +
+							d.data.pos +
 							' ' +
-							text +
 							'</span>'
 					)
 				} else {
