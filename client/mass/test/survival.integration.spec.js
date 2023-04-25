@@ -8,6 +8,7 @@ Tests:
 	survival term as term1
 	survival term as term1, with overlay
 	survival term as overlay
+	survival term as term1, with divide by
 	survival term as term1, term2 = genetic_race, categorical groupsetting
 	survival term as term1, term0 = genetic_race, categorical groupsetting
 	survival term as term1, term2 = agedx, regular bins
@@ -112,6 +113,54 @@ tape('survival term as term1, with overlay', function(test) {
 	}
 })
 
+tape('survival term as term1, with divide by', function(test) {
+	test.timeoutAfter(3000)
+	runpp({
+		state: {
+			plots: [
+				{
+					chartType: 'survival',
+					term: {
+						id: 'efs'
+					},
+					term0: {
+						id: 'sex'
+					}
+				}
+			]
+		},
+		survival: {
+			callbacks: {
+				'postRender.test': runTests
+			}
+		}
+	})
+
+	async function runTests(survival) {
+		const inner = survival.Inner
+		const survivalDiv = inner.dom.chartsDiv
+		const term0Values = inner.state.config.term0.term.values
+
+		//Test all dom elements present
+		const termNum = Object.keys(term0Values).length
+		test.equal(survivalDiv.selectAll('.pp-survival-chart').size(), termNum, `Should render ${termNum} survival charts`)
+
+		test.equal(
+			survivalDiv.selectAll('.sjpp-survival-atrisk').size(),
+			termNum,
+			`Should render 'Number at risk' tables below chart`
+		)
+
+		const titleNodes = survivalDiv.selectAll('.sjpp-survival-title').nodes()
+		for (const v of Object.values(term0Values)) {
+			if (!titleNodes.some(d => d.innerText == v.label)) test.fail(`Missing title for term0 value = ${v.label}`)
+		}
+
+		if (test._ok) survival.Inner.app.destroy()
+		test.end()
+	}
+})
+
 tape('survival term as overlay', function(test) {
 	test.timeoutAfter(3000)
 	runpp({
@@ -207,16 +256,30 @@ tape('survival term as term1, term2 = genetic_race, categorical groupsetting', f
 		test.equal(
 			JSON.stringify(config.term2.q.groupsetting.customset.groups),
 			JSON.stringify(groups),
-			`Should correctly pass groups for term2`
+			`Should correctly pass customset groups for term2`
 		)
 
-		// if (test._ok) survival.Inner.app.destroy()
+		const numOfTerms = Object.keys(inner.term2toColor).length
+		test.equal(
+			inner.dom.chartsDiv.selectAll('.sjpp-survival-series').size(),
+			numOfTerms,
+			`Should render ${numOfTerms} surv series g`
+		)
+
+		const censoredSym = inner.currData.filter(d => d.ncensor)
+		test.equal(
+			inner.dom.chartsDiv.selectAll('.sjpp-survival-censored-x').size(),
+			censoredSym.length,
+			`should render ${censoredSym.length} survival censored symbols`
+		)
+
+		if (test._ok) survival.Inner.app.destroy()
 		test.end()
 	}
 })
 
-tape.skip('survival term as term1, term0 = genetic_race, categorical groupsetting', function(test) {
-	test.timeoutAfter(3000)
+tape('survival term as term1, term0 = genetic_race, categorical groupsetting', function(test) {
+	test.timeoutAfter(10000)
 
 	const groups = [
 		{
@@ -268,14 +331,34 @@ tape.skip('survival term as term1, term0 = genetic_race, categorical groupsettin
 
 		const inner = survival.Inner
 		const config = inner.state.config
+		const term0Values = config.term0.term.values
 
 		test.equal(
-			JSON.stringify(config.term2.q.groupsetting.customset.groups),
+			JSON.stringify(config.term0.q.groupsetting.customset.groups),
 			JSON.stringify(groups),
-			`Should correctly pass groups for term0`
+			`Should correctly pass customset groups for term0`
 		)
 
-		// if (test._ok) survival.Inner.app.destroy()
+		//Test all dom elements present
+		const termNum = inner.serverData.refs.orderedKeys.chart
+		test.equal(
+			inner.dom.chartsDiv.selectAll('.pp-survival-chart').size(),
+			termNum.length,
+			`Should render ${termNum.length} survival charts`
+		)
+
+		test.equal(
+			inner.dom.chartsDiv.selectAll('.sjpp-survival-atrisk').size(),
+			termNum.length,
+			`Should render 'Number at risk' tables below each chart`
+		)
+
+		const titleNodes = inner.dom.chartsDiv.selectAll('.sjpp-survival-title').nodes()
+		termNum.forEach(v => {
+			if (!titleNodes.some(d => d.innerText == v)) test.fail(`Missing title for term0 value = ${v}`)
+		})
+
+		if (test._ok) survival.Inner.app.destroy()
 		test.end()
 	}
 })
