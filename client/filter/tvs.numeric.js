@@ -202,7 +202,7 @@ async function fillMenu(self, div, tvs) {
 		.text('Add a Range')
 		.on('click', () => {
 			const callback = () => addRangeTable(self)
-			addNewBrush(self, null, callback)
+			addNewBrush(self, ranges.length ? 'end' : 'center', callback)
 		})
 
 	if (!ranges.length) {
