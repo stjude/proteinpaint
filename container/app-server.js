@@ -1,11 +1,13 @@
 const fs = require('fs')
 const spawnSync = require('child_process').spawnSync
+const path = require('path')
+const serverconfigFile = path.join(__dirname, './serverconfig.json')
 
-/*if (!fs.existsSync('./serverconfig.json')) {
-	throw `missing serverconfig.json`
-}*/
+if (!fs.existsSync(serverconfigFile)) {
+	throw `missing serverconfig.json: did you forget to mount?`
+}
 
-const serverconfig = require('./serverconfig.json')
+const serverconfig = require(serverconfigFile)
 
 if (!serverconfig.genomes) {
 	serverconfig.genomes = [
