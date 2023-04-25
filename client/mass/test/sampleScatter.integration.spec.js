@@ -637,45 +637,54 @@ tape('Change chart width and height from menu', function(test) {
 	async function runTests(scatter) {
 		scatter.on('postRender.test', null)
 
-		changeWidth(scatter)
-		changeHeight(scatter)
 		await testChartSizeChange(scatter)
 
 		if (test._ok) scatter.Inner.app.destroy()
 		test.end()
 	}
-	function changeWidth(scatter) {
+
+	async function testChartSizeChange(scatter) {
+		//Change chart width
 		const widthInput = scatter.Inner.dom.controls
 			.selectAll('input')
 			.nodes()
 			.find(e => e.value == scatter.Inner.settings.svgw)
 		widthInput.value = testWidth
-		widthInput.dispatchEvent(new Event('change'))
-	}
 
-	function changeHeight(scatter) {
+		//Change chart height
 		const heightInput = scatter.Inner.dom.controls
 			.selectAll('input')
 			.nodes()
 			.find(e => e.value == scatter.Inner.settings.svgh)
 		heightInput.value = testHeight
-		heightInput.dispatchEvent(new Event('change'))
-	}
 
-	async function testChartSizeChange(scatter) {
+		//Detect change in chart height and width
 		await detectAttr({
 			target: scatter.Inner.dom.holder.node().querySelector('svg'),
 			observe: {
 				attributeFilter: ['height', 'width']
 			},
-			count: 1
+			// count: 1,
+			trigger() {
+				widthInput.dispatchEvent(new Event('change'))
+				heightInput.dispatchEvent(new Event('change'))
+			}
+			// matcher(mutations){
+			// 	let foundH, foundW = 0
+			// 	for (const mut of mutations) {
+			// 		if (mut.type == 'width') ++foundW
+			// 		if (mut.type == 'height') ++foundH
+			// 	}
+			// }
 		})
-		test.ok(
-			scatter.Inner.settings.svgw == testWidth,
+		test.equal(
+			scatter.Inner.settings.svgw,
+			testWidth,
 			`Chart width = ${scatter.Inner.settings.svgw} should be equal to test width = ${testWidth}`
 		)
-		test.ok(
-			scatter.Inner.settings.svgh == testHeight,
+		test.equal(
+			scatter.Inner.settings.svgh,
+			testHeight,
 			`Chart height = ${scatter.Inner.settings.svgh} should be equal to test height = ${testHeight}`
 		)
 	}
