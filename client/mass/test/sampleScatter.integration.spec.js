@@ -20,8 +20,7 @@ Tests:
 	Invalid colorTW.term
 	Invalid plot name
 	Test legend
-	Create color group
-	Replace color from burger menu
+	Render color groups
 	Change symbol and reference size from menu
 	Change chart width and height from menu
 	Check/uncheck Show axes from menu
@@ -413,12 +412,44 @@ tape('Test legend', function(test) {
 	}
 })
 
-tape.skip('Create color groups', function(test) {
+tape('Render color groups', function(test) {
 	test.timeoutAfter(3000)
-	test.plan(2)
 
 	runpp({
-		state,
+		state: {
+			plots: [
+				{
+					chartType: 'sampleScatter',
+					colorTW: {
+						id: 'genetic_race',
+						q: {
+							groupsetting: {
+								inuse: true,
+								customset: {
+									groups: [
+										{
+											name: 'non-Asian Ancestry',
+											type: 'values',
+											values: [
+												{ key: 'European Ancestry', label: 'European Ancestry' },
+												{ key: 'African Ancestry', label: 'African Ancestry' },
+												{ key: 'Multi-Ancestry-Admixed', label: 'Multi-Ancestry-Admixed' }
+											]
+										},
+										{
+											name: 'Asian Ancestry',
+											type: 'values',
+											values: [{ key: 'Asian Ancestry', label: 'Asian Ancestry' }]
+										}
+									]
+								}
+							}
+						}
+					},
+					name: 'TermdbTest TSNE'
+				}
+			]
+		},
 		sampleScatter: {
 			callbacks: { 'postRender.test': runTests }
 		}
@@ -426,88 +457,22 @@ tape.skip('Create color groups', function(test) {
 
 	async function runTests(scatter) {
 		scatter.on('postRender.test', null)
-		await triggerEdit(scatter)
-		// makeGroupsViaUI(scatter)
-		await sleep(100)
-		// testGroups(scatter)
 
-		// if (test._ok) scatter.Inner.app.destroy()
+		await testColorLegend(scatter)
+		await changeColorGroups(scatter)
+		await testColorLegend(scatter)
+		// await removeColorGroups(scatter)
+
+		if (test._ok) scatter.Inner.app.destroy()
 		test.end()
 	}
 
-	async function triggerEdit(scatter) {
-		const groups = [
-			{
-				name: 'group 1',
-				items: [],
-				index: 0
-			},
-			{
-				name: 'group 2',
-				items: [],
-				index: 1
-			}
-		]
-		for (const sample of scatter.Inner.data.samples) {
-			if (sample.category === 'Acute lymphoblastic leukemia') groups[0].items.push(sample)
-			else groups[1].items.push(sample)
-		}
-
-		// await scatter.Inner.app.dispatch({
-		//  type: 'plot_edit',
-		//  id: scatter.Inner.id,
-		//  config: { groups }
-		// })
-		await sleep(1000)
-		// scatter.Inner.dom.controls
-		//  .node()
-		//  .querySelector('.ts_pill')
-		//  .click()
-		// /*
-		// Problematic! menu tooltip renders outside of scatter.Inner.dom/app and current setup
-		// does not allow for targeting only the rendered test div. If any test fails, leaving
-		// an rendered mass UI, these tests will fail as well
-		// */
-		// d3s
-		//  .selectAll('.sja_sharp_border')
-		//  .filter(d => d.label == 'Edit')
-		//  .node()
-		//  .click()
-	}
-
-	// function makeGroupsViaUI(scatter) {
-	//  const firstGrpInput = d3s
-	//      .selectAll('.group_edit_div > input')
-	//      .nodes()
-	//      .filter(e => e.value == '1')
-	//  firstGrpInput[0].value = 'Group 1'
-	//  firstGrpInput[0].dispatchEvent(new KeyboardEvent('keyup'))
-
-	//  const secondGrpInput = d3s
-	//      .selectAll('.group_edit_div > input')
-	//      .nodes()
-	//      .filter(e => e.value == '2')
-	//  secondGrpInput[0].value = 'Group 2'
-	//  secondGrpInput[0].dispatchEvent(new KeyboardEvent('keyup'))
-
-	//  const dragDivs = d3s.selectAll('.sjpp-drag-drop-div').nodes()
-	//  const dragItems = d3.selectAll('.sj-drag-item').nodes()
-	//  //First item in list
-	//  dragItems[0].dispatchEvent(new Event('dragstart'))
-	//  //Second drag div
-	//  dragDivs[1].dispatchEvent(new Event('drop'))
-	//  dragItems[0].dispatchEvent(new Event('dragend'))
-
-	//  const applyBtn = d3.selectAll('.sjpp_apply_btn').node()
-	//  applyBtn.dispatchEvent(new Event('click'))
-	// }
-
-	async function testGroups(scatter) {
-		const legendLabels = await detectLst({
+	async function testColorLegend(scatter) {
+		const legendLabels = await detectGte({
 			elem: scatter.Inner.dom.holder.node(),
-			selector: 'text[name="sjpp-scatter-legend-label"]',
-			matchAs: '>='
+			selector: 'text[name="sjpp-scatter-legend-label"]'
 		})
+
 		const groups = []
 		for (const group of legendLabels) {
 			const label = group.innerHTML.split(',')
@@ -516,8 +481,9 @@ tape.skip('Create color groups', function(test) {
 				samples: label[1].match(/[\d\.]+/g)
 			})
 		}
-		test.ok(
-			scatter.Inner.colorLegend.size == groups.length + 1,
+		test.equal(
+			scatter.Inner.colorLegend.size,
+			groups.length + 1,
 			`Legend categories (# = ${groups.length + 1}) should equal size of colorLegend (# = ${
 				scatter.Inner.colorLegend.size
 			}) `
@@ -528,9 +494,50 @@ tape.skip('Create color groups', function(test) {
 	function compareData2DOMLegend(scatter, groups) {
 		for (const group of groups) {
 			const mapLeg = scatter.Inner.colorLegend.get(group.label)
-			test.ok(mapLeg.sampleCount == group.samples[0], `Should show matching n = for ${group.label}`)
+			test.ok(mapLeg, `Should display group custom label = ${group.label} in legend`)
+			test.equal(
+				`${mapLeg.sampleCount}`,
+				group.samples[0],
+				`Should show matching n = ${group.samples[0]} for ${group.label}`
+			)
 		}
 	}
+
+	async function changeColorGroups(scatter) {
+		scatter.Inner.config.colorTW.q.groupsetting.customset = {
+			groups: [
+				{
+					name: 'European Ancestryy',
+					type: 'values',
+					values: [{ key: 'European Ancestry', label: 'European Ancestry' }]
+				},
+				{
+					name: 'non-European Ancestry',
+					type: 'values',
+					values: [
+						{ key: 'Asian Ancestry', label: 'Asian Ancestry' },
+						{ key: 'African Ancestry', label: 'African Ancestry' },
+						{ key: 'Multi-Ancestry-Admixed', label: 'Multi-Ancestry-Admixed' }
+					]
+				}
+			]
+		}
+
+		await scatter.Inner.app.dispatch({
+			type: 'plot_edit',
+			id: scatter.Inner.id,
+			config: scatter.Inner.config
+		})
+	}
+
+	// async function removeColorGroups(scatter) {
+	// 	scatter.Inner.config.colorTW.q.groupsetting = { inuse: false }
+	// 	await scatter.Inner.app.dispatch({
+	// 		type: 'plot_edit',
+	// 		id: scatter.Inner.id,
+	// 		config: scatter.Inner.config
+	// 	})
+	// }
 })
 
 tape('Change symbol and reference size from menu', function(test) {
