@@ -435,14 +435,15 @@ export class TermdbVocab extends Vocab {
 		return await dofetch3('/termdb', { body })
 	}
 
-	async getDescrStats(term_id, filter) {
+	async getDescrStats(term_id, filter, settings) {
 		// for a numeric term, get descriptive statistics
 		// mean, median, standard deviation, min, max
 		const body = {
 			getdescrstats: 1,
 			tid: term_id,
 			genome: this.vocab.genome,
-			dslabel: this.vocab.dslabel
+			dslabel: this.vocab.dslabel,
+			settings
 		}
 		if (filter) {
 			body.filter = getNormalRoot(filter)

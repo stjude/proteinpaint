@@ -208,7 +208,7 @@ class ViolinPlot {
 		if (this.config.term0) terms.push(this.config.term0)
 		for (const t of terms) {
 			if (t.term.type == 'integer' || t.term.type == 'float') {
-				const data = await this.app.vocabApi.getDescrStats(t.id, this.state.termfilter.filter)
+				const data = await this.app.vocabApi.getDescrStats(t.id, this.state.termfilter.filter, this.config.settings)
 				if (data.error) throw data.error
 				t.q.descrStats = data.values
 			}

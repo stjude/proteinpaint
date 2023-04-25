@@ -431,12 +431,17 @@ async function trigger_getdescrstats(q, res, ds) {
 		key: q.tid,
 		filter: q.filter ? (typeof q.filter == 'string' ? JSON.parse(q.filter) : q.filter) : null
 	})
-
 	const values = []
 	for (const { value } of rows) {
 		if (term.values && term.values[value] && term.values[value].uncomputable) {
 			// skip uncomputable values
 			continue
+		}
+		//skip computing for zeros if scale is log.
+		if (q.settings?.violin?.unit === 'log') {
+			if (value === 0) {
+				continue
+			}
 		}
 		values.push(Number(value))
 	}
