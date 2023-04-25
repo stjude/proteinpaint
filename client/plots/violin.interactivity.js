@@ -23,82 +23,76 @@ export function setInteractivity(self) {
 
 	self.displayLabelClickMenu = function(t1, t2, plot, event) {
 		self.displayLabelClickMenu.called = true
-		self.displayMenu(t1, t2, plot, event, null, null)
+		const options = []
+		if (t2) {
+			//disable filtering if only 1 data is present.
+			if (self.data.plots.length > 1) {
+				if (t1.term.type === 'categorical') {
+					options.push({
+						label: `Add filter: ${plot.label.split(',')[0]}`,
+						callback: getAddFilterCallback(t1, t2, self, plot, 'term1')
+					})
+				} else {
+					options.push({
+						label: `Add filter: ${plot.label.split(',')[0]}`,
+						callback: getAddFilterCallback(t1, t2, self, plot, 'term2')
+					})
+				}
+				//On label clicking, display 'Hide' option to hide plot.
+
+				options.push({
+					label: `Hide: ${plot.label}`,
+					callback: () => {
+						const termNum = t2 ? 'term2' : null
+						const term = self.config[termNum]
+						const isHidden = true
+						self.app.dispatch({
+							type: 'plot_edit',
+							id: self.id,
+							config: {
+								[termNum]: {
+									isAtomic: true,
+									id: term.id,
+									term: term.term,
+									q: getUpdatedQfromClick(plot, t2, isHidden)
+								}
+							}
+						})
+					}
+				})
+			}
+		}
+		if (self.config.settings.violin.displaySampleIds && self.state.hasVerifiedToken) {
+			options.push({
+				label: `List samples`,
+				callback: async () => self.listSamples(event, t1, t2, plot, self.data.min, self.data.max * 2)
+			})
+		}
+		self.displayMenu(event, options)
 	}
 
 	self.displayBrushMenu = function(t1, t2, self, plot, selection, scale, isH) {
+		self.displayBrushMenu.called = true
 		const start = isH ? scale.invert(selection[0]) : scale.invert(selection[1])
 		const end = isH ? scale.invert(selection[1]) : scale.invert(selection[0])
-		self.displayBrushMenu.called = true
-		self.displayMenu(t1, t2, plot, event, start, end)
+		const options = []
+		options.push({
+			label: `Add filter: ${start.toFixed(1)} < x < ${end.toFixed(1)}`,
+			callback: getAddFilterCallback(t1, t2, self, plot, start, end)
+		})
+
+		if (self.config.settings.violin.displaySampleIds && self.state.hasVerifiedToken) {
+			options.push({
+				label: `List samples`,
+				callback: async () => self.listSamples(event, t1, t2, plot, start, end)
+			})
+		}
+		self.displayMenu(event, options)
 		// const brushValues = plot.values.filter(i => i > start && i < end)
 	}
 
-	self.displayMenu = function(t1, t2, plot, event, start, end) {
+	self.displayMenu = function(event, options) {
 		self.app.tip.d.selectAll('*').remove()
-
-		const options = []
-
-		if (self.displayLabelClickMenu.called === true) {
-			if (t2) {
-				//disable filtering if only 1 data is present.
-				if (self.data.plots.length > 1) {
-					if (t1.term.type === 'categorical') {
-						options.push({
-							label: `Add filter: ${plot.label.split(',')[0]}`,
-							callback: getAddFilterCallback(t1, t2, self, plot, 'term1')
-						})
-					} else {
-						options.push({
-							label: `Add filter: ${plot.label.split(',')[0]}`,
-							callback: getAddFilterCallback(t1, t2, self, plot, 'term2')
-						})
-					}
-					//On label clicking, display 'Hide' option to hide plot.
-
-					options.push({
-						label: `Hide: ${plot.label}`,
-						callback: () => {
-							const termNum = t2 ? 'term2' : null
-							const term = self.config[termNum]
-							const isHidden = true
-							self.app.dispatch({
-								type: 'plot_edit',
-								id: self.id,
-								config: {
-									[termNum]: {
-										isAtomic: true,
-										id: term.id,
-										term: term.term,
-										q: getUpdatedQfromClick(plot, t2, isHidden)
-									}
-								}
-							})
-						}
-					})
-				}
-			}
-			if (self.config.settings.violin.displaySampleIds && self.state.hasVerifiedToken) {
-				options.push({
-					label: `List samples`,
-					callback: async () => self.listSamples(event, t1, t2, plot, self.data.min, self.data.max * 2)
-				})
-			}
-			self.displayLabelClickMenu.called = false
-		} else if (self.displayBrushMenu.called === true) {
-			options.push({
-				label: `Add filter: ${start.toFixed(1)} < x < ${end.toFixed(1)}`,
-				callback: getAddFilterCallback(t1, t2, self, plot, start, end)
-			})
-
-			if (self.config.settings.violin.displaySampleIds && self.state.hasVerifiedToken) {
-				options.push({
-					label: `List samples`,
-					callback: async () => self.listSamples(event, t1, t2, plot, start, end)
-				})
-			}
-			self.displayBrushMenu.called = false
-		}
 
 		//show menu options for label clicking and brush selection
 		self.app.tip.d
@@ -228,16 +222,12 @@ export function setInteractivity(self) {
 				createTvsTerm(t2, tvslst)
 				tvslst.lst[0].tvs.ranges = [
 					{
-						start: structuredClone(plot.divideTwBins?.start) || null,
-						stop: structuredClone(plot.divideTwBins?.stop) || null,
-						startinclusive: structuredClone(plot.divideTwBins?.startinclusive) || true,
-						stopinclusive: structuredClone(plot.divideTwBins?.stopinclusive) || false,
-						startunbounded: structuredClone(plot.divideTwBins?.startunbounded)
-							? structuredClone(plot.divideTwBins?.startunbounded)
-							: null,
-						stopunbounded: structuredClone(plot.divideTwBins?.stopunbounded)
-							? structuredClone(plot.divideTwBins?.stopunbounded)
-							: null
+						start: plot.divideTwBins?.start || null,
+						stop: plot.divideTwBins?.stop || null,
+						startinclusive: plot.divideTwBins?.startinclusive || true,
+						stopinclusive: plot.divideTwBins?.stopinclusive || false,
+						startunbounded: plot.divideTwBins?.startunbounded ? plot.divideTwBins?.startunbounded : null,
+						stopunbounded: plot.divideTwBins?.stopunbounded ? plot.divideTwBins?.stopunbounded : null
 					}
 				]
 				self.createTvsLstRanges(t1, tvslst, rangeStart, rangeStop, 1)
@@ -272,16 +262,12 @@ function getAddFilterCallback(t1, t2, self, plot, rangeStart, rangeStop) {
 			createTvsTerm(t2, tvslst)
 			tvslst.lst[0].tvs.ranges = [
 				{
-					start: structuredClone(plot.divideTwBins?.start) || null,
-					stop: structuredClone(plot.divideTwBins?.stop) || null,
-					startinclusive: structuredClone(plot.divideTwBins?.startinclusive) || true,
-					stopinclusive: structuredClone(plot.divideTwBins?.stopinclusive) || false,
-					startunbounded: structuredClone(plot.divideTwBins?.startunbounded)
-						? structuredClone(plot.divideTwBins?.startunbounded)
-						: null,
-					stopunbounded: structuredClone(plot.divideTwBins?.stopunbounded)
-						? structuredClone(plot.divideTwBins?.stopunbounded)
-						: null
+					start: plot.divideTwBins?.start || null,
+					stop: plot.divideTwBins?.stop || null,
+					startinclusive: plot.divideTwBins?.startinclusive || true,
+					stopinclusive: plot.divideTwBins?.stopinclusive || false,
+					startunbounded: plot.divideTwBins?.startunbounded ? plot.divideTwBins?.startunbounded : null,
+					stopunbounded: plot.divideTwBins?.stopunbounded ? plot.divideTwBins?.stopunbounded : null
 				}
 			]
 			if (self.displayBrushMenu.called === true) {
@@ -314,7 +300,7 @@ function getUpdatedQfromClick(plot, term, isHidden = false) {
 	const label = plot.label
 	const valueId = term?.term?.values ? term?.term?.values?.[label]?.label : label
 	const id = !valueId ? label : valueId
-	const q = structuredClone(term.q)
+	const q = term.q
 	if (!q.hiddenValues) q.hiddenValues = {}
 	if (isHidden) q.hiddenValues[id] = 1
 	else delete q.hiddenValues[id]

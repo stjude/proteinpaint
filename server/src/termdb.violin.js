@@ -75,13 +75,14 @@ export async function trigger_getViolinPlotData(q, res, ds, genome) {
 	const data = await getData({ terms: twLst, filter: q.filter, currentGeneNames: q.currentGeneNames }, ds, genome)
 	if (data.error) throw data.error
 
-	for (const [k, v] of Object.entries(data.samples)) {
-		if (q.unit === 'log') {
-			if (v[term.id].key == 0 || v[term.id].value == 0) continue
-			v[term.id].key = Math.log2(v[term.id].key)
-			v[term.id].value = Math.log2(v[term.id].value)
-		}
-	}
+	////disable log transformation for now.
+	// for (const [k, v] of Object.entries(data.samples)) {
+	// 	if (q.unit === 'log') {
+	// 		if (v[term.id].key == 0 || v[term.id].value == 0) continue
+	// 		v[term.id].key = Math.log2(v[term.id].key)
+	// 		v[term.id].value = Math.log2(v[term.id].value)
+	// 	}
+	// }
 
 	if (q.scale) scaleData(q, data, term)
 
@@ -191,7 +192,9 @@ function divideValues(q, data, term, overlayTerm) {
 			min = Math.min(min, value)
 			max = Math.max(max, value)
 		}
-		if (min === 0) min = Math.max(min, value)
+		if (useLog === 'log') {
+			if (min === 0) min = Math.max(min, value)
+		}
 
 		if (overlayTerm) {
 			if (!v[overlayTerm.id]) {
@@ -292,7 +295,7 @@ function createCanvasImg(q, result) {
 	if (useLog) {
 		axisScale = scaleLog()
 			.base(2)
-			.domain([result.min, result.max + result.max / refSize])
+			.domain([result.min, result.max + result.max])
 			.range(q.orientation === 'horizontal' ? [0, q.svgw] : [q.svgw, 0])
 	} else {
 		axisScale = scaleLinear()
