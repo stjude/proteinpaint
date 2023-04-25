@@ -7,8 +7,10 @@ export class DiscoRenderer implements IRenderer {
         const svg = holder.append('svg')
             .attr('width', viewModel.width)
             .attr('height', viewModel.height)
-            .append('g')
-            .attr('transform', `translate(${viewModel.width/2},${viewModel.height/2})`);
+
+        const mainG = svg.append('g')
+            .attr('class', "mainG")
+            .attr('transform', `translate(${viewModel.width / 2},${viewModel.height / 2})`);
 
         const ring = viewModel.rings[0]
 
@@ -25,14 +27,16 @@ export class DiscoRenderer implements IRenderer {
             .innerRadius(ring.innerRadius)
             .outerRadius(ring.outerRadius);
 
-        svg.selectAll("path")
+        const arcs = mainG.append("g")
+
+        arcs.selectAll("path")
             .data(arcData)
             .enter()
             .append("path")
             .attr("d", arc)
             .attr("fill", "black")
 
-        svg.selectAll("text")
+        arcs.selectAll("text")
             .data(arcData)
             .enter()
             .append("text")
@@ -45,6 +49,16 @@ export class DiscoRenderer implements IRenderer {
             .attr("text-anchor", "middle")
             .text(d => d.data.key)
             .style("fill", "white")
+
+
+        const labels = mainG.append("g")
+
+        // labels.append("text").attr("x", 0)
+        //     .attr("y", 0)
+        //     .attr("fill", "#000000")
+        //     .attr("font-size", "16")
+        //     .attr("text-anchor", "middle")
+        //     .text("Hello, world!")
     }
 }
 
