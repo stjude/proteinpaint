@@ -403,7 +403,7 @@ export function createNumericScale(self, settings, isH) {
 	settings.unit == 'log'
 		? (axisScale = scaleLog()
 				.base(2)
-				.domain([self.data.min, self.data.max + self.data.max / (settings.radius * 4)])
+				.domain([self.data.min, self.data.max + self.data.max])
 				.range(isH ? [0, settings.svgw] : [settings.svgw, 0]))
 		: (axisScale = scaleLinear()
 				.domain([self.data.min, self.data.max + self.data.max / (settings.radius * 4)])
@@ -416,6 +416,9 @@ function getLegendGrps(self) {
 	const t1 = self.config.term
 	const t2 = self.config.term2
 	const headingStyle = 'color: #aaa; font-weight: 400'
+	// console.log(419, t1.q.descrStats)
+	// console.log(420, self.data.plots)
+	// console.log(self.data.plots[0].summaryStats.values)
 
 	// descriptive statistics
 	if (t1.q.descrStats) {
