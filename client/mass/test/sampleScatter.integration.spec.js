@@ -4,10 +4,12 @@ const d3color = require('d3-color')
 const d3s = require('d3-selection')
 const {
 	detectLst,
+	detectStyle,
 	detectAttr,
 	detectChildAttr,
 	detectChildStyle,
 	detectGte,
+	detectOne,
 	sleep
 } = require('../../test/test.helpers')
 
@@ -18,8 +20,7 @@ Tests:
 	Invalid colorTW.term
 	Invalid plot name
 	Test legend
-	Create color group
-	Replace color from burger menu
+	Render color groups
 	Change symbol and reference size from menu
 	Change chart width and height from menu
 	Check/uncheck Show axes from menu
@@ -411,12 +412,44 @@ tape('Test legend', function(test) {
 	}
 })
 
-tape.skip('Create color groups', function(test) {
+tape('Render color groups', function(test) {
 	test.timeoutAfter(3000)
-	test.plan(2)
 
 	runpp({
-		state,
+		state: {
+			plots: [
+				{
+					chartType: 'sampleScatter',
+					colorTW: {
+						id: 'genetic_race',
+						q: {
+							groupsetting: {
+								inuse: true,
+								customset: {
+									groups: [
+										{
+											name: 'non-Asian Ancestry',
+											type: 'values',
+											values: [
+												{ key: 'European Ancestry', label: 'European Ancestry' },
+												{ key: 'African Ancestry', label: 'African Ancestry' },
+												{ key: 'Multi-Ancestry-Admixed', label: 'Multi-Ancestry-Admixed' }
+											]
+										},
+										{
+											name: 'Asian Ancestry',
+											type: 'values',
+											values: [{ key: 'Asian Ancestry', label: 'Asian Ancestry' }]
+										}
+									]
+								}
+							}
+						}
+					},
+					name: 'TermdbTest TSNE'
+				}
+			]
+		},
 		sampleScatter: {
 			callbacks: { 'postRender.test': runTests }
 		}
@@ -424,90 +457,23 @@ tape.skip('Create color groups', function(test) {
 
 	async function runTests(scatter) {
 		scatter.on('postRender.test', null)
-		// await sleep(100)
-		await triggerEdit(scatter)
-		// makeGroupsViaUI(scatter)
-		await sleep(100)
-		// testGroups(scatter)
 
-		// if (test._ok) scatter.Inner.app.destroy()
+		await testColorLegend(scatter)
+		await changeColorGroups(scatter)
+		await testColorLegend(scatter)
+		// await removeColorGroups(scatter)
+
+		if (test._ok) scatter.Inner.app.destroy()
 		test.end()
 	}
 
-	async function triggerEdit(scatter) {
-		const groups = [
-			{
-				name: 'group 1',
-				items: [],
-				index: 0
-			},
-			{
-				name: 'group 2',
-				items: [],
-				index: 1
-			}
-		]
-		for (const sample of scatter.Inner.data.samples) {
-			if (sample.category === 'Acute lymphoblastic leukemia') groups[0].items.push(sample)
-			else groups[1].items.push(sample)
-		}
-
-		// await scatter.Inner.app.dispatch({
-		//  type: 'plot_edit',
-		//  id: scatter.Inner.id,
-		//  config: { groups }
-		// })
-		await sleep(1000)
-		// scatter.Inner.dom.controls
-		//  .node()
-		//  .querySelector('.ts_pill')
-		//  .click()
-		// /*
-		// Problematic! menu tooltip renders outside of scatter.Inner.dom/app and current setup
-		// does not allow for targeting only the rendered test div. If any test fails, leaving
-		// an rendered mass UI, these tests will fail as well
-		// */
-		// d3s
-		//  .selectAll('.sja_sharp_border')
-		//  .filter(d => d.label == 'Edit')
-		//  .node()
-		//  .click()
-	}
-
-	// function makeGroupsViaUI(scatter) {
-	//  const firstGrpInput = d3s
-	//      .selectAll('.group_edit_div > input')
-	//      .nodes()
-	//      .filter(e => e.value == '1')
-	//  firstGrpInput[0].value = 'Group 1'
-	//  firstGrpInput[0].dispatchEvent(new KeyboardEvent('keyup'))
-
-	//  const secondGrpInput = d3s
-	//      .selectAll('.group_edit_div > input')
-	//      .nodes()
-	//      .filter(e => e.value == '2')
-	//  secondGrpInput[0].value = 'Group 2'
-	//  secondGrpInput[0].dispatchEvent(new KeyboardEvent('keyup'))
-
-	//  const dragDivs = d3s.selectAll('.sjpp-drag-drop-div').nodes()
-	//  const dragItems = d3.selectAll('.sj-drag-item').nodes()
-	//  //First item in list
-	//  dragItems[0].dispatchEvent(new Event('dragstart'))
-	//  //Second drag div
-	//  dragDivs[1].dispatchEvent(new Event('drop'))
-	//  dragItems[0].dispatchEvent(new Event('dragend'))
-
-	//  const applyBtn = d3.selectAll('.sjpp_apply_btn').node()
-	//  applyBtn.dispatchEvent(new Event('click'))
-	// }
-
-	async function testGroups(scatter) {
-		const legendLabels = await detectLst({
+	async function testColorLegend(scatter) {
+		const legendLabels = await detectGte({
 			elem: scatter.Inner.dom.holder.node(),
-			selector: 'text[name="sjpp-scatter-legend-label"]',
-			matchAs: '>='
+			selector: 'text[name="sjpp-scatter-legend-label"]'
 		})
-		let groups = []
+
+		const groups = []
 		for (const group of legendLabels) {
 			const label = group.innerHTML.split(',')
 			groups.push({
@@ -515,8 +481,9 @@ tape.skip('Create color groups', function(test) {
 				samples: label[1].match(/[\d\.]+/g)
 			})
 		}
-		test.ok(
-			scatter.Inner.colorLegend.size == groups.length + 1,
+		test.equal(
+			scatter.Inner.colorLegend.size,
+			groups.length + 1,
 			`Legend categories (# = ${groups.length + 1}) should equal size of colorLegend (# = ${
 				scatter.Inner.colorLegend.size
 			}) `
@@ -527,47 +494,50 @@ tape.skip('Create color groups', function(test) {
 	function compareData2DOMLegend(scatter, groups) {
 		for (const group of groups) {
 			const mapLeg = scatter.Inner.colorLegend.get(group.label)
-			test.ok(mapLeg.sampleCount == group.samples[0], `Should show matching n = for ${group.label}`)
+			test.ok(mapLeg, `Should display group custom label = ${group.label} in legend`)
+			test.equal(
+				`${mapLeg.sampleCount}`,
+				group.samples[0],
+				`Should show matching n = ${group.samples[0]} for ${group.label}`
+			)
 		}
 	}
-})
 
-tape('Replace color from burger menu', function(test) {
-	test.timeoutAfter(3000)
-
-	runpp({
-		state: open_state,
-		sampleScatter: {
-			callbacks: { 'postRender.test': runTests }
+	async function changeColorGroups(scatter) {
+		scatter.Inner.config.colorTW.q.groupsetting.customset = {
+			groups: [
+				{
+					name: 'European Ancestryy',
+					type: 'values',
+					values: [{ key: 'European Ancestry', label: 'European Ancestry' }]
+				},
+				{
+					name: 'non-European Ancestry',
+					type: 'values',
+					values: [
+						{ key: 'Asian Ancestry', label: 'Asian Ancestry' },
+						{ key: 'African Ancestry', label: 'African Ancestry' },
+						{ key: 'Multi-Ancestry-Admixed', label: 'Multi-Ancestry-Admixed' }
+					]
+				}
+			]
 		}
-	})
 
-	async function runTests(scatter) {
-		scatter.on('postRender.test', null)
-
-		await sleep(100)
-		triggerReplace(scatter)
-
-		if (test._ok) scatter.Inner.app.destroy()
-		test.end()
+		await scatter.Inner.app.dispatch({
+			type: 'plot_edit',
+			id: scatter.Inner.id,
+			config: scatter.Inner.config
+		})
 	}
 
-	function triggerReplace(scatter) {
-		scatter.Inner.dom.controls
-			.node()
-			.querySelector('.ts_pill')
-			.click()
-		/*
-        Problematic! menu tooltip renders outside of scatter.Inner.dom/app and current setup
-        does not allow for targeting only the rendered test div. If any test fails, leaving 
-        an rendered mass UI, these tests will fail as well
-        */
-		d3s
-			.selectAll('.sja_sharp_border')
-			.filter(d => d.label == 'Replace')
-			.node()
-			.click()
-	}
+	// async function removeColorGroups(scatter) {
+	// 	scatter.Inner.config.colorTW.q.groupsetting = { inuse: false }
+	// 	await scatter.Inner.app.dispatch({
+	// 		type: 'plot_edit',
+	// 		id: scatter.Inner.id,
+	// 		config: scatter.Inner.config
+	// 	})
+	// }
 })
 
 tape('Change symbol and reference size from menu', function(test) {
@@ -637,45 +607,54 @@ tape('Change chart width and height from menu', function(test) {
 	async function runTests(scatter) {
 		scatter.on('postRender.test', null)
 
-		changeWidth(scatter)
-		changeHeight(scatter)
 		await testChartSizeChange(scatter)
 
 		if (test._ok) scatter.Inner.app.destroy()
 		test.end()
 	}
-	function changeWidth(scatter) {
+
+	async function testChartSizeChange(scatter) {
+		//Change chart width
 		const widthInput = scatter.Inner.dom.controls
 			.selectAll('input')
 			.nodes()
 			.find(e => e.value == scatter.Inner.settings.svgw)
 		widthInput.value = testWidth
-		widthInput.dispatchEvent(new Event('change'))
-	}
 
-	function changeHeight(scatter) {
+		//Change chart height
 		const heightInput = scatter.Inner.dom.controls
 			.selectAll('input')
 			.nodes()
 			.find(e => e.value == scatter.Inner.settings.svgh)
 		heightInput.value = testHeight
-		heightInput.dispatchEvent(new Event('change'))
-	}
 
-	async function testChartSizeChange(scatter) {
+		//Detect change in chart height and width
 		await detectAttr({
 			target: scatter.Inner.dom.holder.node().querySelector('svg'),
 			observe: {
 				attributeFilter: ['height', 'width']
 			},
-			count: 1
+			// count: 1,
+			trigger() {
+				widthInput.dispatchEvent(new Event('change'))
+				heightInput.dispatchEvent(new Event('change'))
+			}
+			// matcher(mutations){
+			// 	let foundH, foundW = 0
+			// 	for (const mut of mutations) {
+			// 		if (mut.type == 'width') ++foundW
+			// 		if (mut.type == 'height') ++foundH
+			// 	}
+			// }
 		})
-		test.ok(
-			scatter.Inner.settings.svgw == testWidth,
+		test.equal(
+			scatter.Inner.settings.svgw,
+			testWidth,
 			`Chart width = ${scatter.Inner.settings.svgw} should be equal to test width = ${testWidth}`
 		)
-		test.ok(
-			scatter.Inner.settings.svgh == testHeight,
+		test.equal(
+			scatter.Inner.settings.svgh,
+			testHeight,
 			`Chart height = ${scatter.Inner.settings.svgh} should be equal to test height = ${testHeight}`
 		)
 	}
@@ -694,30 +673,31 @@ tape('Check/uncheck Show axes from menu', function(test) {
 	async function runTests(scatter) {
 		scatter.on('postRender.test', null)
 
-		checkAxesBox(scatter, false)
-		await sleep(100)
-		testAxes(scatter, 1)
-		checkAxesBox(scatter, true)
-		await sleep(100)
-		testAxes(scatter, 0)
+		await testAxes(scatter, false, 1)
+		await testAxes(scatter, true, 0)
 
 		if (test._ok) scatter.Inner.app.destroy()
 		test.end()
 	}
 
-	function checkAxesBox(scatter, bool) {
+	async function testAxes(scatter, bool, num) {
 		const axesCheckbox = scatter.Inner.dom.controls
 			.selectAll('input[type="checkbox"]')
 			.nodes()
 			.find(e => e.checked == bool)
 		axesCheckbox.checked = !bool
-		axesCheckbox.dispatchEvent(new Event('change'))
-	}
 
-	function testAxes(scatter, num) {
-		const axesDiv = scatter.Inner.dom.holder.node().querySelector('.sjpcb-scatter-axis')
-		const axesStyle = getComputedStyle(axesDiv)
-		test.ok(axesStyle.opacity == num, `Should ${num == 1 ? 'show' : 'hide'} axes`)
+		const axesDiv = await detectStyle({
+			target: scatter.Inner.dom.holder.node().querySelector('.sjpcb-scatter-axis'),
+			style: {
+				opactiy: `${num}`
+			},
+			trigger() {
+				axesCheckbox.dispatchEvent(new Event('change'))
+			}
+		})
+		const axesStyle = getComputedStyle(axesDiv[0])
+		test.equal(axesStyle.opacity, `${num}`, `Should ${num == 1 ? 'show' : 'hide'} axes`)
 	}
 })
 
@@ -735,15 +715,6 @@ tape('Click zoom in, zoom out, and reset buttons', function(test) {
 
 	async function runTests(scatter) {
 		scatter.on('postRender.test', null)
-		// helpers
-		//  .rideInit({ arg: scatter, bus: scatter, eventType: 'postRender.test' })
-		//  .run(clickZoomIn)
-		//  .run(testZoomIn, 2000)
-		//  .run(triggerReset)
-		//  .run(testReset, 2000)
-		//  .run(clickZoomOut)
-		//  .run(testZoomOut, 2000)
-		//  .done(test)
 
 		await testZoomIn(scatter)
 		await testReset(scatter)
@@ -831,9 +802,12 @@ tape('Groups and group menus functions', function(test) {
 		}
 
 		for (const [i, group] of scatter.Inner.config.groups.entries()) {
+			//Check all group menus appear on click
 			scatter.Inner.showGroupMenu(new PointerEvent('click'), scatter.Inner.config.groups[i])
-			await sleep(1000)
-			const groupMenuTitleDiv = scatter.Inner.dom.tip.d.selectAll('div[name="sjpp-group-input-div"]').node()
+			const groupMenuTitleDiv = await detectOne({
+				elem: scatter.Inner.dom.tip.dnode,
+				selector: 'div[name="sjpp-group-input-div"]'
+			})
 			test.ok(groupMenuTitleDiv.innerHTML.endsWith(group.name), `Should display ${group.name} menu`)
 
 			scatter.Inner.showTable(group, 0, 0)
@@ -843,7 +817,7 @@ tape('Groups and group menus functions', function(test) {
 
 	function testSampleTable(scatter, i, group) {
 		const samplesRendered = scatter.Inner.dom.tip.d.selectAll('.sjpp_row_wrapper > td:nth-child(3)').nodes()
-		let samples2Check = []
+		const samples2Check = []
 		for (const item of samplesRendered) {
 			samples2Check.push(item.innerHTML)
 		}
@@ -852,7 +826,7 @@ tape('Groups and group menus functions', function(test) {
 		let foundSamples = 0
 		for (const sampleData of scatter.Inner.config.groups[i].items) {
 			if (samples2Check.some(d => d == sampleData.sample)) ++foundSamples
-			else notFound.push(sampleData.sample)
+			else test.fail(`Sample = ${sampleData.sample} is not displayed in sample table`)
 		}
 		test.equal(samples2Check.length, foundSamples, `Should render all samples for ${group.name}`)
 
