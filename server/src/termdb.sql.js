@@ -52,14 +52,15 @@ return an array of sample names passing through the filter
 	const filter = await getFilterCTEs(qfilter, ds) // if qfilter is blank, it returns null
 
 	const sql = ds.cohort.db.connection.prepare(
-		filter ? `WITH ${filter.filters} SELECT sample FROM ${filter.CTEname}` : 'SELECT id AS sample FROM sampleidmap' // both statements must return sample id as a uniform behavior
+		filter
+			? `WITH ${filter.filters} SELECT sample as id, name FROM ${filter.CTEname} join sampleidmap on sample = sampleidmap.id`
+			: 'SELECT id, name FROM sampleidmap' // both statements must return sample id as a uniform behavior
 	)
 
 	let re
 	if (filter) re = sql.all(filter.values)
 	else re = sql.all()
-
-	return re.map(i => i.sample)
+	return re
 }
 
 export async function get_samplecount(q, ds) {
