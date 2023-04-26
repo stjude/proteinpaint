@@ -1,4 +1,5 @@
 export default class Label {
+    angle: number;
     constructor(
         readonly startAngle: number,
         readonly endAngle: number,
@@ -16,5 +17,6 @@ export default class Label {
         readonly sample: any,
         readonly hits: number,
         readonly labelFill: string) {
+        this.angle = (startAngle + endAngle) / 2
     }
 }

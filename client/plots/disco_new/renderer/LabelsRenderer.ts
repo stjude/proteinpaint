@@ -1,6 +1,6 @@
 import IRenderer from "#plots/disco_new/renderer/IRenderer";
 import ViewModel from "#plots/disco_new/viewmodel/ViewModel";
-import { select } from 'd3-selection'
+import {select} from 'd3-selection'
 import Label from "#plots/disco_new/viewmodel/Label";
 
 export default class LabelsRenderer implements IRenderer {
@@ -17,24 +17,17 @@ export default class LabelsRenderer implements IRenderer {
             .append('g')
             .attr('class', 'group')
             .each((d: Label, i: number, nodes: HTMLDivElement[]) => {
-                select(nodes[i]).append("text").attr('class', 'chord-text')
-                    .each(d=> {
-                        d.angle = (d.startAngle + d.endAngle) / 2
-                    })
+                console.log("data", d)
+                select(nodes[i])
+                    .append("text")
+                    .attr('class', 'chord-text')
                     .attr('dy', '.35em')
-                    .attr('transform', function (d) {
-                        return (
-                            'rotate(' +
-                            ((d.angle * 180) / Math.PI - 90) +
-                            ')' +
-                            'translate(' +
-                            240 +
-                            ')' +
-                            (d.angle > Math.PI ? 'rotate(180)' : '')
-                        )
+                    .attr('transform', (d) => {
+                        return `rotate(${(d.angle * 180) / Math.PI - 90}) translate(240)${d.angle > Math.PI ? 'rotate(180)' : ''}`
+
                     }).style('text-anchor', 'middle')
                     .style('font-size', "12px")
-                    .style('fill', d.labelFill)
+                    .style('fill', d.d.fill)
                     .style('cursor', 'pointer')
                     .text(d.label)
             })
