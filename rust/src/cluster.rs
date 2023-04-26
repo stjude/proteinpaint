@@ -55,7 +55,6 @@ use colorgrad;
 use json;
 use json::JsonValue;
 use kodama::{linkage, Method};
-use nalgebra::base::dimension::Const;
 use nalgebra::base::dimension::Dyn;
 use nalgebra::base::Matrix;
 use nalgebra::base::VecStorage;
@@ -67,24 +66,11 @@ use std::env;
 //use ndarray::Array1;
 use ndarray::ArrayBase;
 use ndarray::OwnedRepr;
-use petgraph::algo::dijkstra;
-//use petgraph::dot::Dot;
-use petgraph::graph::NodeIndex;
-use petgraph::prelude::Graph;
 use plotters::prelude::*;
 use rayon::prelude::*;
 use std::any::type_name;
 use std::io;
 use std::time::Instant;
-
-#[allow(dead_code)]
-#[derive(Debug, Clone, Serialize, Deserialize)]
-struct NewNodeInfo {
-    node_id: usize,
-    #[serde(skip_serializing_if = "Vec::is_empty")]
-    child_nodes: Vec<usize>,
-    height: f64, // Contains the weight of the dissimilarity of that particular step. For original nodes this will just be the height from the top most node
-}
 
 #[allow(dead_code)]
 #[derive(Debug, Copy, Clone, Deserialize)]
@@ -295,17 +281,6 @@ fn sort_elements(
         //    }
         //}
         let mut condensed = euclidean_distance4(coordinates);
-        let column_means = Matrix::column_mean(coordinates);
-        //println!("column_means:{:?}", column_means);
-
-        let mut min_mean_value = 100000000000.0;
-        let mut min_mean_value_index = 0;
-        for i in 0..column_means.len() {
-            if column_means[i] < min_mean_value {
-                min_mean_value = column_means[i];
-                min_mean_value_index = i;
-            }
-        }
 
         //println!("condensed:{:?}", condensed);
         let new_now2 = Instant::now();
@@ -338,270 +313,101 @@ fn sort_elements(
             new_now3.duration_since(new_now2)
         );
 
-        let mut deps = Graph::new_undirected();
-
-        // Adding nodes and edges to graph
-        println!("Number of original nodes:{}", coordinates.nrows());
-        for i in 0..coordinates.nrows() {
-            // Add original nodes to graph
-            deps.add_node(i);
-        }
-
         //println!("dend.steps().len(){:?}", dend.steps().len());
-        let mut new_nodes = Vec::<NewNodeInfo>::new();
-        let mut max_length_node_distance = 0.0; // max-length between all original nodes and the topmost node
+        println!("Number of nodes:{}", coordinates.nrows());
+        let max_length_node_distance = dend.steps()[dend.steps().len() - 1].dissimilarity; // max-length between all original nodes and the topmost node
+                                                                                           //println!("max_length_node_distance:{}", max_length_node_distance);
+        let mut x_axis_iter = 0;
         for i in 0..dend.steps().len() {
             let step = &dend.steps()[i];
-            //println!("step:{:?}", step);
-            let current_cluster_label = coordinates.nrows() + i;
-            //println!("current_cluster_label:{}", current_cluster_label);
-            // Adding nodes
-            //let node1 = deps.add_node(step.cluster1);
-            //let node2 = deps.add_node(step.cluster2);
-            let node3 = deps.add_node(current_cluster_label);
-            //println!("node1:{:?}", node1);
+            println!("step:{:?}", step);
 
-            let new_node = NewNodeInfo {
-                node_id: current_cluster_label,
-                child_nodes: vec![step.cluster1, step.cluster2],
-                height: step.dissimilarity,
-            };
-            new_nodes.push(new_node);
-            // Adding edges
-            deps.add_edge(
-                NodeIndex::from(step.cluster1 as u32),
-                node3,
-                step.dissimilarity,
-            );
-            deps.add_edge(
-                NodeIndex::from(step.cluster2 as u32),
-                node3,
-                step.dissimilarity,
-            );
+            // Find child nodes
 
-            if i == dend.steps().len() - 1 {
-                max_length_node_distance = step.dissimilarity
-            }
-        }
-        //println!("Graph:{}", Dot::new(&deps));
-        let new_now4 = Instant::now();
-        println!(
-            "Time taken to generate graph:{:?}",
-            new_now4.duration_since(new_now3)
-        );
+            // Find all original nodes
 
-        let mut remaining_nodes: Vec<usize> = (0..coordinates.nrows()).collect();
-        //println!("remaining_nodes:{:?}", remaining_nodes);
+            let cluster1_coordinates;
+            let cluster2_coordinates;
+            if step.cluster1 < coordinates.nrows() {
+                // Only fundamental nodes are added
+                cluster1_coordinates = NodeCoordinate {
+                    x: Some(x_axis_iter as f64),
+                    y: Some(1.0),
+                };
+                node_coordinates_list.push(NewNodeRelativeCoordinates {
+                    node_id: step.cluster1,
+                    node_coordinates: NodeCoordinate {
+                        x: Some(x_axis_iter as f64),
+                        y: Some(1.0),
+                    },
+                    child_nodes: vec![],
+                    child_node_coordinates: vec![],
+                    all_original_nodes: vec![],
+                });
 
-        // Initialize first node from cluster1 of first step, not sure if this is the best place from where to stop
-        //let mut current_node = dend.steps()[0].cluster1.clone();
-        let mut current_node = min_mean_value_index;
-
-        let mut num_iter = 0;
-        while remaining_nodes.len() > 0 {
-            let mut smallest_distance = 1000000000; // Initialized to very high value
-
-            //println!("current_node:{}", current_node);
-            let distances = dijkstra(
-                &deps,
-                NodeIndex::from(current_node as u32),
-                None,
-                //Some(NodeIndex::from(node as u32)),
-                |_| 1,
-            );
-
-            //println!("distances:{:?}", distances);
-            let mut next_node = current_node;
-            let mut degenerate_nodes = Vec::<usize>::new();
-            for item in distances {
-                if item.0.le(&NodeIndex::from(coordinates.nrows() as u32 - 1)) == true
-                    && item.0.ne(&NodeIndex::from(current_node as u32)) == true
-                    && sorted_nodes.contains(&item.0.index()) == false
-                {
-                    //println!("item:{:?}", item);
-                    if item.1 < smallest_distance {
-                        smallest_distance = item.1;
-                        next_node = item.0.index();
-                        degenerate_nodes = vec![]; // Delete all previous degenerate nodes if another node with closer distance is found.
-                    } else if item.1 == smallest_distance {
-                        // If a node with the same distance is found as that in the variable smallest_distance then add both nodes to degenerate_nodes vector
-                        if degenerate_nodes.len() == 0 {
-                            // Add the first node only if the vector is empty
-                            degenerate_nodes.push(next_node)
-                        }
-                        degenerate_nodes.push(item.0.index());
-                    }
-                }
-                if item.0.eq(&NodeIndex::from(
-                    new_nodes[new_nodes.len() - 1].node_id as u32,
-                )) == true
-                {
-                    //node_y = item.1;
-                    //println!("item:{:?}", item);
-                    node_coordinates_list.push(NewNodeRelativeCoordinates {
-                        node_id: current_node,
-                        node_coordinates: NodeCoordinate {
-                            x: Some(num_iter as f64),
-                            y: Some(1.0),
-                        },
-                        child_nodes: vec![], // These are the original nodes, so they have no child nodes
-                        child_node_coordinates: vec![
-                            NodeCoordinate { x: None, y: None },
-                            NodeCoordinate { x: None, y: None },
-                        ],
-                        all_original_nodes: vec![],
-                    });
-                }
-            }
-
-            if degenerate_nodes.len() > 0 {
-                next_node = closest_degenerate_nodes(current_node, degenerate_nodes, &column_means);
-            }
-            //println!("next_node:{}", next_node);
-            sorted_nodes.push(current_node);
-            remaining_nodes.remove(
-                remaining_nodes
+                x_axis_iter += 1;
+                sorted_nodes.push(step.cluster1);
+            } else {
+                // If not a fundamental node, then get its x and y coordinate
+                let child1_search_result = node_coordinates_list
                     .iter()
-                    .position(|x| *x == current_node)
-                    .expect(&(current_node.to_string() + " not found")),
-            );
-            current_node = next_node;
-            num_iter += 1;
-            //println!("remaining_nodes:{:?}", remaining_nodes);
-        }
-        //println!("sorted_nodes:{:?}", sorted_nodes);
-        for i in 0..new_nodes.len() {
-            let current_node = &new_nodes[i];
-            let mut all_original_nodes = Vec::<usize>::new();
-            //println!("current_node:{:?}", current_node);
-            let distances = dijkstra(
-                &deps,
-                NodeIndex::from(current_node.node_id as u32),
-                None,
-                //Some(NodeIndex::from(node as u32)),
-                |_| 1,
-            );
-            //println!("distances:{:?}", distances);
-
-            // Computing relative y-coordinate of new node
-            let mut node_y = 0.0;
-            for item in distances {
-                if item.0.eq(&NodeIndex::from(
-                    new_nodes[new_nodes.len() - 1].node_id as u32,
-                )) == true
-                {
-                    node_y =
-                        (max_length_node_distance - current_node.height) / max_length_node_distance;
-                    // Normalizing distance with distance of the farthest node
-                    //println!("item:{:?}", item);
-                }
-
-                //if item.1 > max_length_node_distance {
-                //    max_length_node_distance = item.1
-                //}
+                    .find(|&i| i.node_id == step.cluster1)
+                    .unwrap();
+                //println!("step.cluster1:{}", step.cluster1);
+                //println!("child1_search_result:{:?}", child1_search_result);
+                cluster1_coordinates = child1_search_result.node_coordinates;
             }
 
-            let (child_node1_x, child_node2_x): (Option<f64>, Option<f64>);
-            let (child_node1_y, child_node2_y): (Option<f64>, Option<f64>);
-            let child1_search_result = node_coordinates_list
-                .iter()
-                .find(|&i| i.node_id == current_node.child_nodes[0]);
-            match child1_search_result {
-                Some(item) => {
-                    child_node1_x = item.node_coordinates.x;
-                    child_node1_y = item.node_coordinates.y;
-                    if item.node_id < coordinates.nrows() {
-                        // Select only original nodes and put them in all_original_nodes
-                        all_original_nodes.push(item.node_id)
-                    }
-                    for child_item in &item.all_original_nodes {
-                        // Iterate through the child's all_original_nodes vector and add them to the current vectors all_original_nodes
-                        all_original_nodes.push(*child_item)
-                    }
-                }
-                None => {
-                    // Should not happen
-                    panic!(
-                        "X-coordinate of child node not found:{}",
-                        current_node.child_nodes[0]
-                    );
-                }
+            if step.cluster2 < coordinates.nrows() {
+                // Only fundamental nodes are added
+                cluster2_coordinates = NodeCoordinate {
+                    x: Some(x_axis_iter as f64),
+                    y: Some(1.0),
+                };
+                node_coordinates_list.push(NewNodeRelativeCoordinates {
+                    node_id: step.cluster2,
+                    node_coordinates: NodeCoordinate {
+                        x: Some(x_axis_iter as f64),
+                        y: Some(1.0),
+                    },
+                    child_nodes: vec![],
+                    child_node_coordinates: vec![],
+                    all_original_nodes: vec![],
+                });
+
+                x_axis_iter += 1;
+                sorted_nodes.push(step.cluster2);
+            } else {
+                // If not a fundamental node, then get its x and y coordinate
+                let child2_search_result = node_coordinates_list
+                    .iter()
+                    .find(|&i| i.node_id == step.cluster2)
+                    .unwrap();
+                //println!("step.cluster2:{}", step.cluster2);
+                //println!("child2_search_result:{:?}", child2_search_result);
+                cluster2_coordinates = child2_search_result.node_coordinates;
             }
 
-            let child2_search_result = node_coordinates_list
-                .iter()
-                .find(|&i| i.node_id == current_node.child_nodes[1]);
-            match child2_search_result {
-                Some(item) => {
-                    child_node2_x = item.node_coordinates.x;
-                    child_node2_y = item.node_coordinates.y;
-                    if item.node_id < coordinates.nrows() {
-                        // Select only original nodes and put them in all_original_nodes
-                        all_original_nodes.push(item.node_id)
-                    }
-                    for child_item in &item.all_original_nodes {
-                        // Iterate through the child's all_original_nodes vector and add them to the current vectors all_original_nodes
-                        all_original_nodes.push(*child_item)
-                    }
-                }
-                None => {
-                    // Should not happen
-                    panic!(
-                        "X-coordinate of child node not found:{}",
-                        current_node.child_nodes[1]
-                    );
-                }
-            }
-
+            // New derived node
             node_coordinates_list.push(NewNodeRelativeCoordinates {
-                node_id: current_node.node_id,
+                node_id: coordinates.nrows() + i,
                 node_coordinates: NodeCoordinate {
-                    x: Some((child_node1_x.unwrap() + child_node2_x.unwrap()) / 2.0),
-                    y: Some(node_y),
+                    x: Some(
+                        (cluster1_coordinates.x.unwrap() + cluster2_coordinates.x.unwrap()) / 2.0,
+                    ),
+                    y: Some(
+                        (max_length_node_distance - step.dissimilarity) / max_length_node_distance,
+                    ),
                 },
-                child_nodes: current_node.child_nodes.clone(),
-                child_node_coordinates: vec![
-                    NodeCoordinate {
-                        x: child_node1_x,
-                        y: child_node1_y,
-                    },
-                    NodeCoordinate {
-                        x: child_node2_x,
-                        y: child_node2_y,
-                    },
-                ],
-                all_original_nodes: all_original_nodes,
-            })
+                child_nodes: vec![step.cluster1, step.cluster2],
+                child_node_coordinates: vec![cluster1_coordinates, cluster2_coordinates],
+                all_original_nodes: vec![],
+            });
         }
-        //println!("node_coordinates_final:{:?}", node_coordinates_final);
-        let new_now5 = Instant::now();
-        println!(
-            "Time for sorting nodes:{:?}",
-            new_now5.duration_since(new_now4)
-        );
     } else {
         panic!("The dissimilarity matrix length cannot be zero");
     }
     (sorted_nodes, node_coordinates_list)
-}
-
-fn closest_degenerate_nodes(
-    current_node: usize,
-    degenerate_nodes: Vec<usize>,
-    //means: &Matrix<f64, Const<1>, Dyn, VecStorage<f64, Const<1>, Dyn>>,
-    means: &Matrix<f64, Dyn, Const<1>, VecStorage<f64, Dyn, Const<1>>>,
-) -> usize {
-    let mean_current_node = means[current_node];
-    let mut closest_node = 0;
-    let mut min_diff = 100000000000000.0;
-    for item in degenerate_nodes {
-        let mean_degenerate_node = means[item];
-        if (mean_degenerate_node - mean_current_node).abs() < min_diff {
-            min_diff = (mean_degenerate_node - mean_current_node).abs();
-            closest_node = item;
-        }
-    }
-    closest_node
 }
 
 fn main() {
