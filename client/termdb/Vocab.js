@@ -167,6 +167,6 @@ export class Vocab {
 	async getCustomTerms() {
 		if (!Array.isArray(this.state.customTerms)) return [] // only mass state has this, here this instance is missing it. do not crash
 		// return list of term{}; do not return whole object
-		return this.state.customTerms.map(i => i.term)
+		return this.state.customTerms.map(i => i.tw)
 	}
 }

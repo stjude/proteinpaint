@@ -4,7 +4,7 @@ import { filterInit, getNormalRoot, filterPromptInit, getFilterItemByTag } from 
 import { select } from 'd3-selection'
 import { appInit } from '#termdb/app'
 import { renderTable } from '#dom/table'
-import { getSamplelstTW } from '../plots/sampleScatter.interactivity'
+import { getSamplelstTW } from '#termsetting/handlers/samplelst'
 
 /*
 this
@@ -85,7 +85,11 @@ class MassGroups {
 		for (const g of groups) {
 			const samples = await this.app.vocabApi.getFilteredSampleCount(g.filter, 'list')
 			const items = []
-			for (const sample of samples) items.push({ sampleId: sample.id, sample: sample.name })
+			for (const sample of samples) {
+				const item = { sampleId: sample.id }
+				if ('name' in sample) item.sample = sample.name
+				items.push(item)
+			}
 			samplelstGroups.push({ name: g.name, items })
 		}
 		const name = samplelstGroups.length == 1 ? samplelstGroups[0].name : 'Sample groups'
@@ -359,7 +363,7 @@ async function clickLaunchBtn(self) {
 	const tw = await self.groups2samplelst(groups)
 	tw.term.name = name
 
-	self.app.vocabApi.addCustomTerm({ name, term: tw.term })
+	self.app.vocabApi.addCustomTerm({ name, tw })
 
 	self.dom.newTermSpan.style('display', 'none')
 }

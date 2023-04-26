@@ -237,7 +237,7 @@ function setRenderers(self) {
 					// summary/survival/cuminc all expect config.term{} to be a termsetting object, but not term (which is confusing)
 					// thus convert term into a termwrapper (termsetting obj)
 					// tw.q{} is missing and will be fill in with default settings
-					const tw = { id: term.id, term }
+					const tw = term.q ? term : { id: term.id, term }
 					action.config[chart.usecase.detail] = tw
 					self.dom.tip.hide()
 					self.app.dispatch(action)
