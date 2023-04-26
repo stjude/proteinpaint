@@ -22,9 +22,8 @@ export default class LabelsRenderer implements IRenderer {
                     .append("text")
                     .attr('class', 'chord-text')
                     .attr('dy', '.35em')
-                    .attr('transform', (d) => {
+                    .attr('transform', (d:Label)  => {
                         return `rotate(${(d.angle * 180) / Math.PI - 90}) translate(240)${d.angle > Math.PI ? 'rotate(180)' : ''}`
-
                     }).style('text-anchor', 'middle')
                     .style('font-size', "12px")
                     .style('fill', d.d.fill)
