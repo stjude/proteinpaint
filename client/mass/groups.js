@@ -85,7 +85,7 @@ class MassGroups {
 		for (const g of groups) {
 			const samples = await this.app.vocabApi.getFilteredSampleCount(g.filter, 'list')
 			const items = []
-			for (const sample of samples) items.push({ sampleId: sample })
+			for (const sample of samples) items.push({ sampleId: sample.id, sample: sample.name })
 			samplelstGroups.push({ name: g.name, items })
 		}
 		const name = samplelstGroups.length == 1 ? samplelstGroups[0].name : 'Sample groups'
