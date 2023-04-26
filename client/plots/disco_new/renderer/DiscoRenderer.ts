@@ -21,7 +21,6 @@ export class DiscoRenderer implements IRenderer {
             .attr('class', "mainG")
             .attr('transform', `translate(${viewModel.width / 2},${viewModel.height / 2})`);
 
-
         this.arcRenderer.render(mainG, viewModel)
 
         this.labelsRenderer.render(mainG, viewModel)
