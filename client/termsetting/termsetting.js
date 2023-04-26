@@ -26,6 +26,10 @@ opts{}
 const idSuffix = `_ts_${(+new Date()).toString().slice(-8)}`
 let $id = 0
 
+export function get$id() {
+	return `${$id++}${idSuffix}`
+}
+
 const defaultOpts = {
 	menuOptions: '{edit,reuse}', // ['edit', 'replace', 'save', 'remove'],
 	menuLayout: 'vertical'
@@ -503,7 +507,7 @@ function setInteractivity(self) {
 				click_term: async term => {
 					self.dom.tip.hide()
 
-					const tw = { id: term.id, term, q: { isAtomic: true }, isAtomic: true }
+					const tw = term.q ? term : { id: term.id, term, q: { isAtomic: true }, isAtomic: true }
 					if (self.opts.customFillTw) self.opts.customFillTw(tw)
 					await call_fillTW(tw, self.vocabApi, self.opts.defaultQ4fillTW)
 					// tw is now furbished
@@ -777,7 +781,7 @@ defaultQ{}
 */
 export async function fillTermWrapper(tw, vocabApi, defaultQ) {
 	tw.isAtomic = true
-	if (!tw.$id) tw.$id = `${$id++}${idSuffix}`
+	if (!tw.$id) tw.$id = get$id()
 
 	if (!tw.term) {
 		if (tw.id == undefined || tw.id === '') throw 'missing both .id and .term'
@@ -806,7 +810,7 @@ export async function fillTermWrapper(tw, vocabApi, defaultQ) {
 }
 
 async function call_fillTW(tw, vocabApi, defaultQ) {
-	if (!tw.$id) tw.$id = `${$id++}${idSuffix}`
+	if (!tw.$id) tw.$id = get$id()
 	const t = tw.term.type
 	const type = t == 'float' || t == 'integer' ? 'numeric.toggle' : t
 	let _

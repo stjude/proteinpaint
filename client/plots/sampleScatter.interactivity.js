@@ -4,6 +4,7 @@ import { dofetch3 } from '#common/dofetch'
 import { mclass, morigin, dt2label } from '#shared/common'
 import { Menu } from '#dom/menu'
 import { rgb } from 'd3-color'
+import { getSamplelstTW } from '#termsetting/handlers/samplelst'
 
 export function setInteractivity(self) {
 	self.mouseover = function(event) {
@@ -665,48 +666,4 @@ function distance(x1, y1, x2, y2) {
 	const y = y2 - y1
 	const distance = Math.sqrt(Math.pow(x, 2) + Math.pow(y, 2))
 	return distance
-}
-
-export function getSamplelstTW(groups, name = 'groups', groupsetting = {}) {
-	const values = {}
-	const qgroups = []
-	let samples
-	for (const group of groups) {
-		values[group.name] = { key: group.name, label: group.name }
-		samples = getGroupSamples(group)
-		const qgroup = {
-			name: group.name,
-			in: true,
-			values: samples
-		}
-		qgroups.push(qgroup)
-	}
-	if (groups.length == 1) {
-		const name2 = 'Not in ' + groups[0].name
-		values[name2] = { key: name2, label: name2 }
-		qgroups.push({
-			name: name2,
-			in: false,
-			values: samples
-		})
-	}
-	const tw = {
-		term: { name, type: 'samplelst', values },
-		q: {
-			mode: 'custom-groupsetting',
-			groups: qgroups,
-			groupsetting
-		}
-	}
-	return tw
-
-	function getGroupSamples(group) {
-		const values = []
-		for (const item of group.items) {
-			const value = { sampleId: item.sampleId }
-			if ('sample' in item) value.sample = item.sample
-			values.push(value)
-		}
-		return values
-	}
 }

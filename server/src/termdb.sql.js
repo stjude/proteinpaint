@@ -43,7 +43,7 @@ get_label4key
 
 */
 
-export async function get_samples(qfilter, ds) {
+export async function get_samples(qfilter, ds, canDisplay = false) {
 	/*
 must have qfilter[]
 as the actual query is embedded in qfilter
@@ -60,6 +60,8 @@ return an array of sample names passing through the filter
 	let re
 	if (filter) re = sql.all(filter.values)
 	else re = sql.all()
+	if (canDisplay) return re
+	for (const item of re) delete item.name
 	return re
 }
 

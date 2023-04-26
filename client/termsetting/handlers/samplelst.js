@@ -1,4 +1,4 @@
-import { getPillNameDefault } from '#termsetting'
+import { getPillNameDefault, get$id } from '#termsetting'
 import { renderTable } from '#dom/table'
 
 export function getHandler(self) {
@@ -76,5 +76,51 @@ export function fillTW(tw, vocabApi) {
 				values: v.list
 			})
 		}
+	}
+}
+
+export function getSamplelstTW(groups, name = 'groups', groupsetting = {}) {
+	const values = {}
+	const qgroups = []
+	let samples
+	for (const group of groups) {
+		values[group.name] = { key: group.name, label: group.name }
+		samples = getGroupSamples(group)
+		const qgroup = {
+			name: group.name,
+			in: true,
+			values: samples
+		}
+		qgroups.push(qgroup)
+	}
+	if (groups.length == 1) {
+		const name2 = 'Not in ' + groups[0].name
+		values[name2] = { key: name2, label: name2 }
+		qgroups.push({
+			name: name2,
+			in: false,
+			values: samples
+		})
+	}
+	const $id = get$id()
+	const tw = {
+		$id,
+		term: { $id, name, type: 'samplelst', values },
+		q: {
+			mode: 'custom-groupsetting',
+			groups: qgroups,
+			groupsetting
+		}
+	}
+	return tw
+
+	function getGroupSamples(group) {
+		const values = []
+		for (const item of group.items) {
+			const value = { sampleId: item.sampleId }
+			if ('sample' in item) value.sample = item.sample
+			values.push(value)
+		}
+		return values
 	}
 }
