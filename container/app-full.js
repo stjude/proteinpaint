@@ -44,10 +44,10 @@ if (serverconfig.releaseTag) {
 	}
 
 	console.log('Updating proteinpaint server package ...')
-	spawnSync('npm', ['install', `@sjcrh/proteinpaint-server@${serverconfig.releaseTag.server}`], { encoding: 'utf-8' })
+	spawnSync('npm', ['install', `"@sjcrh/proteinpaint-server@${serverconfig.releaseTag.server}"`], { encoding: 'utf-8' })
 
 	console.log('Updating proteinpaint front package ...')
-	spawnSync('npm', ['install', `@sjcrh/proteinpaint-front@${serverconfig.releaseTag.front}`], { encoding: 'utf-8' })
+	spawnSync('npm', ['install', `"@sjcrh/proteinpaint-front@${serverconfig.releaseTag.front}"`], { encoding: 'utf-8' })
 }
 
 if (!serverconfig.URL) serverconfig.URL = serverconfig.url || '.'

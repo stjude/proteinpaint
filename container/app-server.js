@@ -41,7 +41,7 @@ fs.writeFileSync('./serverconfig.json', JSON.stringify(serverconfig, null, '   '
 
 if (serverconfig.releaseTag && serverconfig.releaseTag.server) {
 	console.log('Updating proteinpaint server package ...')
-	spawnSync('npm', ['install', `@sjcrh/proteinpaint-server@${serverconfig.releaseTag.server}`], { encoding: 'utf-8' })
+	spawnSync('npm', ['install', `"@sjcrh/proteinpaint-server@${serverconfig.releaseTag.server}"`], { encoding: 'utf-8' })
 }
 
 require('@sjcrh/proteinpaint-server')
