@@ -11,7 +11,7 @@ export function setRenderers(self) {
 		self.dom.clipRect
 			.attr('x', d.xOffset - 1)
 			.attr('y', 0)
-			.attr('width', d.mainw + 1)
+			.attr('width', d.mainw + 3)
 			// add 500 so that the column labels are not clipped
 			.attr('height', d.mainh + 500)
 
@@ -328,7 +328,7 @@ export function setRenderers(self) {
 	self.adjustSvgDimensions = async function(prevTranspose) {
 		const s = self.settings.matrix
 		const d = self.dimensions
-		const duration = self.dom.svg.attr('width') ? s.duration : 10
+		const duration = self.dom.svg.attr('width') ? s.duration : 0
 
 		// wait for labels to render; when transposing, must wait for
 		// the label rotation to end before measuring the label height and width

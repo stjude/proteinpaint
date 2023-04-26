@@ -822,7 +822,7 @@ export class MatrixControls {
 	setDragToggle(opts = {}) {
 		const defaults = {
 			mouseMode: 'select',
-			activeBgColor: 'rgb(240, 236, 123)'
+			activeBgColor: 'rgb(255, 255, 255)'
 		}
 
 		// hardcode to always be in select mode on first render
