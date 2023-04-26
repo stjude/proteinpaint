@@ -1,4 +1,6 @@
 export default class Labels {
+	MAX_LABELS_TO_DISPLAY = 97
+
 	constructor(app) {
 		this.app = app
 		this.geneArcs = {}
@@ -63,7 +65,8 @@ export default class Labels {
 		}
 
 		const topGenes = geneLabeledData.filter(d => d.length >= minHits || geneList.includes(d[0].gene))
-		return topGenes
+
+		return topGenes.length > this.MAX_LABELS_TO_DISPLAY ? topGenes.slice(0, this.MAX_LABELS_TO_DISPLAY - 1) : topGenes
 	}
 
 	setLayer(plot, arcs) {
@@ -161,7 +164,6 @@ export default class Labels {
 	}
 
 	setCountText(d) {
-		return 0
 		let counts = {}
 		let mainClsColor
 		for (const key in d.hits) {
