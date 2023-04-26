@@ -1,2 +1,0 @@
-- use a null filter0 for the OncoMatrix
-- use dataset-defined matrix settings in the GDC launcher

@@ -1,6 +1,11 @@
 # Change Log
 
 All notable changes to this project will be documented in this file. 
+## 2.14.3
+
+- use a null filter0 for the OncoMatrix
+- use dataset-defined matrix settings in the GDC launcher
+ 
 ## 2.14.2
 
 - fix the expected scope for local workspaces when bumping versions
