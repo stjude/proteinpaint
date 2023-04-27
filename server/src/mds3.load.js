@@ -460,21 +460,21 @@ async function geneExpressionClustering(data, q) {
         sorted_gene_coordinates: Information for each node in the sample dendrogram (see details in rust/src/cluster.rs)
         sorted_sample_coordinates: Information for each node in the gene dendrogram (see details in rust/src/cluster.rs)
         */
-	let sorted_sample_elements, sorted_gene_elements, sorted_gene_coordinates, sorted_sample_coordinates
+	let colSteps, rowSteps
 	const rust_output_list = rust_output.split('\n')
 	for (let item of rust_output_list) {
-		if (item.includes('Step')) {
-			console.log(item)
-		} else if (item.includes('Column dendrogram') || item.includes('Row dendrogram')) {
-			console.log(item)
+		if (item.includes('colSteps')) {
+			colSteps = JSON.parse(JSON.parse(item.replace('colSteps:', '')))
+		} else if (item.includes('rowSteps')) {
+			rowSteps = JSON.parse(JSON.parse(item.replace('rowSteps:', '')))
 		}
 	}
+	//console.log('colSteps:', colSteps)
+	//console.log('rowSteps:', rowSteps)
 
 	return {
-		sorted_sample_elements,
-		sorted_sample_coordinates,
-		sorted_gene_elements,
-		sorted_gene_coordinates,
+		colSteps,
+		rowSteps,
 		geneNameLst: inputData.row_names,
 		sampleNameLst: inputData.col_names,
 		matrix: inputData.matrix,
