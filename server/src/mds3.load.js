@@ -343,7 +343,7 @@ function filter_data(q, result) {
 				server will re-request data, though inefficient
 				so as to calculate the number of samples with mutations in zoomed in region of protein
 				*/
-				if (!q.rglst.find(r => m.chr == r.chr && m.pos >= r.start && m.pos <= r.stop)) {
+				if (!q.rglst.find((r) => m.chr == r.chr && m.pos >= r.start && m.pos <= r.stop)) {
 					// not in any region
 					continue
 				}
@@ -428,7 +428,7 @@ async function geneExpressionClustering(data, q) {
 		matrix: [],
 		row_names: [], // genes
 		col_names: [...sampleSet], // samples
-		plot_image: false // When true causes cluster.rs to plot the image into a png file (EXPERIMENTAL)
+		plot_image: false, // When true causes cluster.rs to plot the image into a png file (EXPERIMENTAL)
 	}
 
 	// compose "data{}" into a matrix
@@ -441,6 +441,12 @@ async function geneExpressionClustering(data, q) {
 		}
 		inputData.matrix.push(row)
 	}
+
+	//console.log('input_data:', inputData)
+	//fs.writeFile('test.txt', JSON.stringify(inputData), function (err) {
+	//	// For catching input to rust pipeline, in case of an error
+	//	if (err) return console.log(err)
+	//})
 
 	const time1 = new Date()
 	const rust_output = await run_rust('cluster', JSON.stringify(inputData))
@@ -457,33 +463,9 @@ async function geneExpressionClustering(data, q) {
 	let sorted_sample_elements, sorted_gene_elements, sorted_gene_coordinates, sorted_sample_coordinates
 	const rust_output_list = rust_output.split('\n')
 	for (let item of rust_output_list) {
-		if (item.includes('sorted_col_elements:')) {
-			sorted_sample_elements = item
-				.replace('sorted_col_elements:', '')
-				.replace('[', '')
-				.replace(']', '')
-				.replace(' ', '')
-				.split(',')
-				.map(Number)
-		} else if (item.includes('sorted_row_elements:')) {
-			sorted_gene_elements = item
-				.replace('sorted_row_elements:', '')
-				.replace('[', '')
-				.replace(']', '')
-				.replace(' ', '')
-				.split(',')
-				.map(Number)
-		} else if (item.includes('sorted_col_coordinates:')) {
-			sorted_sample_coordinates = JSON.parse(JSON.parse(item.replace('sorted_col_coordinates:', '')))
-		} else if (item.includes('sorted_row_coordinates:')) {
-			sorted_gene_coordinates = JSON.parse(JSON.parse(item.replace('sorted_row_coordinates:', '')))
-			// gene dendrogram goes horizontal so must flip x/y
-			for (const n of sorted_gene_coordinates) {
-				const t = n.node_coordinates.x
-				n.node_coordinates.x = n.node_coordinates.y
-				n.node_coordinates.y = t
-			}
-		} else {
+		if (item.includes('Step')) {
+			console.log(item)
+		} else if (item.includes('Column dendrogram') || item.includes('Row dendrogram')) {
 			console.log(item)
 		}
 	}
@@ -495,6 +477,6 @@ async function geneExpressionClustering(data, q) {
 		sorted_gene_coordinates,
 		geneNameLst: inputData.row_names,
 		sampleNameLst: inputData.col_names,
-		matrix: inputData.matrix
+		matrix: inputData.matrix,
 	}
 }

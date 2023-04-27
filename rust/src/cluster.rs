@@ -454,10 +454,11 @@ fn main() {
 
                     // Build our condensed matrix by computinghe dissimilarity between all
                     // possible coordinate pairs.
+                    println!("Column dendrogram");
                     let (sorted_col_elements, sorted_col_coordinates) =
                         sort_elements(&input_matrix, &cluster_method);
                     //println!("sorted_col_elements:{:?}", sorted_col_elements);
-
+                    println!("Row dendrogram");
                     let (sorted_row_elements, sorted_row_coordinates) =
                         sort_elements(&input_matrix.transpose(), &cluster_method);
                     //println!("sorted_row_elements:{:?}", sorted_row_elements);
