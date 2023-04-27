@@ -59,7 +59,9 @@ jobs:
           node-version: '16'
 
       - name: Install packages
-        run: npm ci
+        run: |
+          npm ci
+          cd rust && npm run build
 
       - name: Copy serverconfig.json to root
         run: |
