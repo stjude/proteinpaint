@@ -365,6 +365,7 @@ tape('survival term as term1, term0 = genetic_race, categorical groupsetting', f
 
 tape('survival term as term1, term2 = agedx, regular bins', function(test) {
 	test.timeoutAfter(3000)
+	test.plan(4)
 
 	const testBinSize = 5
 	const testStop = 5
@@ -425,33 +426,39 @@ tape('survival term as term1, term2 = agedx, regular bins', function(test) {
 			`Should correctly pass q.first_bin.stop = ${testStop} to config`
 		)
 
-		//Test q.bin_size and q.first_bin.stop changes are applied
+		// Test q.bin_size and q.first_bin.stop changes are applied
 		const newStop = 1
-		survival.Inner.state.config.term2.q.bin_size = 3
-		survival.Inner.state.config.term2.q.first_bin.stop = newStop
+		// Create a copy of the state config to modify, otherwise
+		// a dispatch may not propagate to this survival component instance
+		// since the state would just equal itself (nothing has changed so no need to rerender),
+		// whereas a modified copy will not equal the original state
+		const config = structuredClone(survival.Inner.state.config)
+		const expectedCount = 8
 
-		await survival.Inner.app.dispatch({
-			type: 'plot_edit',
-			id: survival.Inner.id,
-			config: survival.Inner.state.config
+		const survCurves = await detectGte({
+			elem: survival.Inner.dom.chartsDiv.node(),
+			selector: '.sjpp-survival-series',
+			count: expectedCount,
+			async trigger() {
+				// this modifies the copy
+				config.term2.q.bin_size = 3
+				config.term2.q.first_bin.stop = newStop
+				survival.Inner.app.dispatch({
+					type: 'plot_edit',
+					id: survival.Inner.id,
+					config
+				})
+			}
 		})
 
-		const findBin = await detectOne({
-			elem: survival.Inner.dom.controls.node(),
-			selector: '.ts_summary_btn.sja_filter_tag_btn'
-		})
-		test.ok(
-			findBin.innerText.endsWith(`=${survival.Inner.state.config.term2.q.bin_size}`),
-			`Should display the correct bin size = ${survival.Inner.state.config.term2.q.bin_size}`
-		)
-		test.equal(survival.Inner.state.config.term2.q.first_bin.stop, newStop, `Should update first bin stop = ${newStop}`)
+		test.equal(survCurves.length, expectedCount, `Should display the correct bin size = ${expectedCount}`)
 
 		if (test._ok) survival.Inner.app.destroy()
 		test.end()
 	}
 })
 
-tape.only('survival term as term1, term2 = agedx, custom bins', function(test) {
+tape('survival term as term1, term2 = agedx, custom bins', function(test) {
 	test.timeoutAfter(3000)
 
 	runpp({
@@ -506,27 +513,30 @@ tape.only('survival term as term1, term2 = agedx, custom bins', function(test) {
 			`Should correctly pass the custom list to overlay component`
 		)
 
+		// Create a copy of the state config to modify, otherwise
+		// a dispatch may not propagate to this survival component instance
+		// since the state would just equal itself (nothing has changed so no need to rerender),
+		// whereas a modified copy will not equal the original state
+		const config2 = structuredClone(config)
+		const expectedCount = 3
+
 		const survCurves = await detectGte({
-			elem: survival.Inner.dom.holder.node(),
+			elem: survival.Inner.dom.chartsDiv.node(),
 			selector: '.sjpp-survival-series',
-			count: 3,
+			count: expectedCount,
 			async trigger() {
 				//Test overlay bin changes are applied
-				config.term2.q.lst[2] = { startinclusive: true, stopinclusive: true, start: 12, stop: 15, label: '12 to 15' }
-				config.term2.q.lst.push({ start: 15, startinclusive: false, stopunbounded: true, label: '>15' })
+				config2.term2.q.lst[2] = { startinclusive: true, stopinclusive: true, start: 12, stop: 15, label: '12 to 15' }
+				config2.term2.q.lst.push({ start: 15, startinclusive: false, stopunbounded: true, label: '>15' })
 				inner.app.dispatch({
 					type: 'plot_edit',
 					id: inner.id,
-					config
+					config: config2
 				})
 			}
 		})
 
-		test.equal(
-			survCurves.length, // findBin.innerText.split(' ').endsWith(`${config.term2.q.lst.length} bins`),
-			config.term2.q.lst.length,
-			`Should display the correct num of bins = ${config.term2.q.lst.length}`
-		)
+		test.equal(survCurves.length, expectedCount, `Should display the correct num of bins = ${expectedCount}`)
 
 		if (test._ok) inner.app.destroy()
 		test.end()
@@ -616,26 +626,35 @@ tape('survival term as term1, term0 = agedx, custom bins', function(test) {
 			`Should correctly pass the custom list to divide by component`
 		)
 
-		//Test overlay bin changes are applied
-		config.term0.q.lst[0] = { startunbounded: true, stop: 15, stopinclusive: false, label: '<15' }
-		config.term0.q.lst[1] = { start: 15, startinclusive: false, stopunbounded: true, label: '>15' }
+		// Create a copy of the state config to modify, otherwise
+		// a dispatch may not propagate to this survival component instance
+		// since the state would just equal itself (nothing has changed so no need to rerender),
+		// whereas a modified copy will not equal the original state
+		const config2 = structuredClone(config)
+		const expectedCount = 3
 
-		await inner.app.dispatch({
-			type: 'plot_edit',
-			id: inner.id,
-			config
+		const survCurves = await detectGte({
+			elem: survival.Inner.dom.chartsDiv.node(),
+			selector: '.sjpp-survival-series',
+			count: expectedCount,
+			async trigger() {
+				//Test overlay bin changes are applied
+				config2.term0.q.lst = [
+					{ startunbounded: true, stop: 5, stopinclusive: false, label: '<5' },
+					{ start: 5, stop: 8, startinclusive: true, stopinclusive: false, label: '5 to <8' },
+					{ start: 8, startinclusive: true, stopunbounded: true, label: '>=8' }
+				]
+
+				await inner.app.dispatch({
+					type: 'plot_edit',
+					id: inner.id,
+					config: config2
+				})
+			}
 		})
+		test.ok(survCurves.length, expectedCount, `Should display the correct num of bins = ${expectedCount}`)
 
-		const findBin = await detectOne({
-			elem: survival.Inner.dom.controls.node(),
-			selector: '.ts_summary_btn.sja_filter_tag_btn'
-		})
-		test.ok(
-			findBin.innerText.endsWith(`${config.term0.q.lst.length} bins`),
-			`Should display the correct num of bins = ${config.term0.q.lst.length}`
-		)
-
-		//if (test._ok) inner.app.destroy()
+		if (test._ok) inner.app.destroy()
 		test.end()
 	}
 })
