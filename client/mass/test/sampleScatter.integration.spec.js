@@ -323,7 +323,7 @@ tape('Invalid plot name', async function(test) {
 	test.end()
 })
 
-tape.only('Test legend', function(test) {
+tape('Test legend', function(test) {
 	test.timeoutAfter(3000)
 	test.plan(2)
 

@@ -28,6 +28,7 @@ export function setRenderers(self) {
 	}
 
 	self.updateCharts = function(chart) {
+		chart.svg = chart.chartDiv.select('svg')
 		const s = self.settings
 		chart.chartDiv.transition().duration(s.duration)
 		renderSVG(chart, s)
@@ -83,20 +84,19 @@ export function setRenderers(self) {
 			.attr('height', Math.max(s.svgh + 100, legendHeight)) //leaving some space for top/bottom padding and y axis
 
 		/* eslint-disable */
-		const [mainG, legendG] = getSvgSubElems(svg)
+		fillSvgSubElems(chart)
 		/* eslint-enable */
 
-		if (mainG.select('.sjpcb-scatter-series').size() == 0) mainG.append('g').attr('class', 'sjpcb-scatter-series')
-		const serie = mainG.select('.sjpcb-scatter-series')
-		renderSerie(serie, chart, s.duration)
-		self.renderLegend(chart, legendG)
+		renderSerie(chart, s.duration)
+		self.renderLegend(chart)
 	}
 
-	function getSvgSubElems(svg) {
-		let mainG, axisG, xAxis, yAxis, legendG, labelsG, clipRect
+	function fillSvgSubElems(chart) {
+		const svg = chart.svg
+		let mainG, axisG, xAxis, yAxis, legendG, labelsG, clipRect, serie
 		if (svg.select('.sjpcb-scatter-mainG').size() == 0) {
-			axisG = svg.append('g').attr('class', 'sjpcb-scatter-axis')
 			mainG = svg.append('g').attr('class', 'sjpcb-scatter-mainG')
+			axisG = svg.append('g').attr('class', 'sjpcb-scatter-axis')
 			labelsG = svg.append('g').attr('class', 'sjpcb-scatter-labelsG')
 			xAxis = axisG
 				.append('g')
@@ -114,6 +114,8 @@ export function setRenderers(self) {
 				.attr('width', self.settings.svgw)
 				.attr('height', self.settings.svgh)
 				.attr('fill', 'white')
+			serie = mainG.append('g').attr('class', 'sjpcb-scatter-series')
+
 			//Adding clip path
 			const id = `${Date.now()}`
 			const idclip = `sjpp_clip_${id}`
@@ -147,6 +149,7 @@ export function setRenderers(self) {
 				.attr('transform', `translate(${self.settings.svgw + self.axisOffset.x + 50}, 0)`)
 		} else {
 			mainG = svg.select('.sjpcb-scatter-mainG')
+			serie = mainG.select('.sjpcb-scatter-series')
 			axisG = svg.select('.sjpcb-scatter-axis')
 			labelsG = svg.select('.sjpcb-scatter-labelsG')
 			xAxis = axisG.select('.sjpcb-scatter-x-axis')
@@ -195,10 +198,13 @@ export function setRenderers(self) {
 				.attr('height', self.settings.svgh + self.axisOffset.y + particleWidth)
 		}
 
-		return [mainG, legendG]
+		chart.mainG = mainG
+		chart.serie = serie
+		chart.legendG = legendG
 	}
 
-	function renderSerie(g, chart, duration) {
+	function renderSerie(chart, duration) {
+		const g = chart.serie
 		const data = chart.data
 		// remove all symbols as there is no data id for privacy
 		//g.selectAll('path').remove()
@@ -524,7 +530,8 @@ export function setRenderers(self) {
 			})
 	}
 
-	self.renderLegend = function(chart, legendG) {
+	self.renderLegend = function(chart) {
+		const legendG = chart.legendG
 		legendG.selectAll('*').remove()
 		if (!self.config.colorTW) return
 
@@ -608,7 +615,7 @@ export function setRenderers(self) {
 					const [circleG, itemG] = addLegendItem(colorG, category, name, offsetX, offsetY, hidden)
 					circleG.on('click', e => self.onColorClick(e, key, category))
 					offsetY += step
-					itemG.on('click', event => self.onLegendClick(legendG, 'colorTW', key, event))
+					itemG.on('click', event => self.onLegendClick(chart, legendG, 'colorTW', key, event))
 				}
 			}
 		}
@@ -702,7 +709,7 @@ export function setRenderers(self) {
 						.attr('alignment-baseline', 'middle')
 						.style('font-size', '0.8em')
 					offsetY += step
-					itemG.on('click', event => self.onLegendClick(legendG, 'shapeTW', key, event))
+					itemG.on('click', event => self.onLegendClick(chart, legendG, 'shapeTW', key, event))
 				}
 			}
 		}
@@ -798,7 +805,7 @@ export function setRenderers(self) {
 					.style('text-decoration', hidden ? 'line-through' : 'none')
 					.text(mkey)
 					.style('font-size', '0.8em')
-					.on('click', event => self.onLegendClick(G, cname == 'shape' ? 'shapeTW' : 'colorTW', key, event))
+					.on('click', event => self.onLegendClick(chart, G, cname == 'shape' ? 'shapeTW' : 'colorTW', key, event))
 
 				const assay = key.split(',')[1]
 				if (key.includes(dtlabel))
