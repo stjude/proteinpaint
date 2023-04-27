@@ -148,9 +148,7 @@ class MassGroups {
 		if (this.state.customTerms.length == 0) {
 			this.dom.customTermDiv
 				.append('div')
-				.text(
-					'No custom variables. Use above controls to create new ones. Custom variables are added to dictionary terms'
-				)
+				.text('No custom variables. Use above controls to create new ones. Custom variables are added to dictionary.')
 				.style('font-size', '.8em')
 			return
 		}
