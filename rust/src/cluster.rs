@@ -59,7 +59,6 @@ use nalgebra::base::dimension::Dyn;
 use nalgebra::base::Matrix;
 use nalgebra::base::VecStorage;
 use nalgebra::DMatrix;
-use serde::ser::{SerializeStruct, Serializer};
 use serde::{Deserialize, Serialize};
 use serde_json;
 use std::env;
@@ -72,6 +71,14 @@ use std::any::type_name;
 use std::io;
 use std::time::Instant;
 
+#[derive(Debug, Copy, Clone, Serialize, Deserialize)]
+struct Steps {
+    cluster1: usize,
+    cluster2: usize,
+    dissimilarity: f64,
+    size: usize,
+}
+
 #[allow(dead_code)]
 #[derive(Debug, Copy, Clone, Deserialize)]
 //#[serde(skip_serializing_if = "Struct::is_empty")]
@@ -80,67 +87,6 @@ struct NodeCoordinate {
     x: Option<f64>, // The horizontal position of the node in the dendrogram.
     #[serde(skip_serializing_if = "Option::is_none")]
     y: Option<f64>, // The y-position stores the relative distance from the last (top most) node in the dendrogram
-}
-
-impl Serialize for NodeCoordinate {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        let x = &self.x;
-        let y = &self.y;
-
-        let mut state;
-        if x.is_some() && y.is_some() {
-            state = serializer.serialize_struct("NodeCoordinate", 2)?;
-            state.serialize_field("x", &self.x)?;
-            state.serialize_field("y", &self.y)?;
-        } else {
-            state = serializer.serialize_struct("NodeCoordinate", 0)?;
-        }
-        state.end()
-    }
-}
-
-#[allow(dead_code)]
-#[derive(Debug, Clone, Deserialize)]
-struct NewNodeRelativeCoordinates {
-    node_id: usize,                   // Node ID of the current node.
-    node_coordinates: NodeCoordinate, // (X,Y) coordinates of the current node.
-    #[serde(skip_serializing_if = "Vec::is_empty")]
-    child_nodes: Vec<usize>, // ID's of the child node (if it exists). There will be no child node for the original (input) nodes in the dendrogram.
-    #[serde(skip_serializing_if = "Vec::is_empty")]
-    child_node_coordinates: Vec<NodeCoordinate>, // (X,Y) coordinates of each of the two child nodes (if they exist).
-    all_original_nodes: Vec<usize>, // Contains list of original descendant nodes. To be displayed in UI on clicking a derived node (or line).
-}
-
-impl Serialize for NewNodeRelativeCoordinates {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        let child_nodes = &self.child_nodes;
-        let node_id = &self.node_id;
-        let node_coordinates = &self.node_coordinates;
-        let child_node_coordinates = &self.child_node_coordinates;
-        let all_original_nodes = &self.all_original_nodes;
-
-        let mut state;
-        if child_nodes.len() == 0 && all_original_nodes.len() == 0 {
-            // This will be true in case of the original nodes
-            state = serializer.serialize_struct("NewNodeRelativeCoordinates", 2)?;
-            state.serialize_field("node_id", node_id)?;
-            state.serialize_field("node_coordinates", &self.node_coordinates)?;
-        } else {
-            state = serializer.serialize_struct("NewNodeRelativeCoordinates", 5)?;
-            state.serialize_field("node_id", node_id)?;
-            state.serialize_field("child_nodes", child_nodes)?;
-            state.serialize_field("node_coordinates", node_coordinates)?;
-            state.serialize_field("child_node_coordinates", child_node_coordinates)?;
-            state.serialize_field("all_original_nodes", all_original_nodes)?;
-        }
-        state.end()
-    }
 }
 
 #[allow(dead_code)]
@@ -267,12 +213,11 @@ fn euclidean_distance3(
 fn sort_elements(
     coordinates: &Matrix<f64, Dyn, Dyn, VecStorage<f64, Dyn, Dyn>>,
     cluster_method: &String,
-) -> (Vec<usize>, Vec<NewNodeRelativeCoordinates>) {
+) -> Vec<Steps> {
     //fn sort_elements(coordinates: &Vec<Vec<f64>>) -> Vec<usize> {
     //fn sort_elements(coordinates: &Vec<Array1<f64>>) -> Vec<usize> {
     let new_now = Instant::now();
-    let sorted_nodes = Vec::<usize>::new();
-    let node_coordinates_list = Vec::<NewNodeRelativeCoordinates>::new();
+    let mut steps_vec = Vec::<Steps>::new();
     if coordinates.len() > 0 {
         //let mut condensed = vec![];
         //for row in 0..coordinates.len() - 1 {
@@ -318,12 +263,17 @@ fn sort_elements(
         //println!("max_length_node_distance:{}", max_length_node_distance);
         for i in 0..dend.steps().len() {
             let step = &dend.steps()[i];
-            println!("step:{:?}", step);
+            steps_vec.push(Steps {
+                cluster1: step.cluster1,
+                cluster2: step.cluster2,
+                dissimilarity: step.dissimilarity,
+                size: step.size,
+            })
         }
     } else {
         panic!("The dissimilarity matrix length cannot be zero");
     }
-    (sorted_nodes, node_coordinates_list)
+    steps_vec
 }
 
 fn main() {
@@ -401,11 +351,11 @@ fn main() {
                     }
                     //println!("cluster_method:{}", cluster_method);
 
-                    let plot_image;
+                    let _plot_image;
                     let plot_image_option = &json_string["plot_image"].as_bool();
                     match plot_image_option {
-                        Some(plot_image_op) => plot_image = plot_image_op.to_owned(),
-                        None => plot_image = false,
+                        Some(plot_image_op) => _plot_image = plot_image_op.to_owned(),
+                        None => _plot_image = false,
                     }
                     //println!("plot_image:{}", plot_image);
 
@@ -454,76 +404,88 @@ fn main() {
 
                     // Build our condensed matrix by computinghe dissimilarity between all
                     // possible coordinate pairs.
-                    println!("Column dendrogram");
-                    let (sorted_col_elements, sorted_col_coordinates) =
-                        sort_elements(&input_matrix, &cluster_method);
-                    //println!("sorted_col_elements:{:?}", sorted_col_elements);
-                    println!("Row dendrogram");
-                    let (sorted_row_elements, sorted_row_coordinates) =
-                        sort_elements(&input_matrix.transpose(), &cluster_method);
-                    //println!("sorted_row_elements:{:?}", sorted_row_elements);
-                    let mut sorted_row_names = Vec::<String>::new();
-                    let mut sorted_col_names = Vec::<String>::new();
-
-                    match row_string_search.as_str() {
-                        Some(_row_string_se) => {
-                            sorted_row_names = sorted_row_elements
-                                .clone()
-                                .into_iter()
-                                .map(|x| row_names[x].clone())
-                                .collect::<Vec<String>>();
-                        }
-                        None => {}
-                    }
-
-                    match col_string_search.as_str() {
-                        Some(_col_string_se) => {
-                            sorted_col_names = sorted_col_elements
-                                .clone()
-                                .into_iter()
-                                .map(|x| col_names[x].clone())
-                                .collect::<Vec<String>>();
-                        }
-                        None => {}
-                    }
-                    //println!("sorted_row_names:{:?}", sorted_row_names);
-                    //println!("sorted_col_names:{:?}", sorted_col_names);
-
-                    let mut sorted_col_coordinates_string = "[".to_string();
-                    for i in 0..sorted_col_coordinates.len() {
-                        sorted_col_coordinates_string +=
-                            &serde_json::to_string(&sorted_col_coordinates[i]).unwrap();
-                        if i != sorted_col_coordinates.len() - 1 {
-                            sorted_col_coordinates_string += &",".to_string();
+                    let col_steps = sort_elements(&input_matrix, &cluster_method);
+                    let mut col_output_string = "[".to_string();
+                    for i in 0..col_steps.len() {
+                        col_output_string += &serde_json::to_string(&col_steps[i]).unwrap();
+                        if i != col_steps.len() - 1 {
+                            col_output_string += &",".to_string();
                         }
                     }
-                    sorted_col_coordinates_string += &"]".to_string();
-                    //println!("sorted_col_coordinates:{:?}", sorted_col_coordinates_string);
-
-                    let mut sorted_row_coordinates_string = "[".to_string();
-                    for i in 0..sorted_row_coordinates.len() {
-                        sorted_row_coordinates_string +=
-                            &serde_json::to_string(&sorted_row_coordinates[i]).unwrap();
-                        if i != sorted_row_coordinates.len() - 1 {
-                            sorted_row_coordinates_string += &",".to_string();
+                    col_output_string += &"]".to_string();
+                    println!("colSteps:{:?}", col_output_string);
+                    let row_steps = sort_elements(&input_matrix.transpose(), &cluster_method);
+                    let mut row_output_string = "[".to_string();
+                    for i in 0..row_steps.len() {
+                        row_output_string += &serde_json::to_string(&row_steps[i]).unwrap();
+                        if i != row_steps.len() - 1 {
+                            row_output_string += &",".to_string();
                         }
                     }
-                    sorted_row_coordinates_string += &"]".to_string();
-                    //println!("sorted_row_coordinates:{:?}", sorted_row_coordinates_string);
-                    if plot_image == true {
-                        let sorted_matrix =
-                            sort_matrix(sorted_col_elements, sorted_row_elements, &input_matrix);
-                        let sorted_matrix_transpose = sorted_matrix.transpose();
-                        //println!(
-                        //    "sorted_matrix:{:?}",
-                        //    &serde_json::to_string(&sorted_matrix_transpose).unwrap()
-                        //);
-                        let _plot_result = plot_matrix(
-                            &sorted_matrix_transpose,
-                            sorted_row_names,
-                            sorted_col_names,
-                        );
-                    }
+                    row_output_string += &"]".to_string();
+                    println!("rowSteps:{:?}", row_output_string);
+                    //let mut sorted_row_names = Vec::<String>::new();
+                    //let mut sorted_col_names = Vec::<String>::new();
+                    //
+                    //match row_string_search.as_str() {
+                    //    Some(_row_string_se) => {
+                    //        sorted_row_names = sorted_row_elements
+                    //            .clone()
+                    //            .into_iter()
+                    //            .map(|x| row_names[x].clone())
+                    //            .collect::<Vec<String>>();
+                    //    }
+                    //    None => {}
+                    //}
+                    //
+                    //match col_string_search.as_str() {
+                    //    Some(_col_string_se) => {
+                    //        sorted_col_names = sorted_col_elements
+                    //            .clone()
+                    //            .into_iter()
+                    //            .map(|x| col_names[x].clone())
+                    //            .collect::<Vec<String>>();
+                    //    }
+                    //    None => {}
+                    //}
+                    ////println!("sorted_row_names:{:?}", sorted_row_names);
+                    ////println!("sorted_col_names:{:?}", sorted_col_names);
+                    //
+                    //let mut sorted_col_coordinates_string = "[".to_string();
+                    //for i in 0..sorted_col_coordinates.len() {
+                    //    sorted_col_coordinates_string +=
+                    //        &serde_json::to_string(&sorted_col_coordinates[i]).unwrap();
+                    //    if i != sorted_col_coordinates.len() - 1 {
+                    //        sorted_col_coordinates_string += &",".to_string();
+                    //    }
+                    //}
+                    //sorted_col_coordinates_string += &"]".to_string();
+                    ////println!("sorted_col_coordinates:{:?}", sorted_col_coordinates_string);
+                    //
+                    //let mut sorted_row_coordinates_string = "[".to_string();
+                    //for i in 0..sorted_row_coordinates.len() {
+                    //    sorted_row_coordinates_string +=
+                    //        &serde_json::to_string(&sorted_row_coordinates[i]).unwrap();
+                    //    if i != sorted_row_coordinates.len() - 1 {
+                    //        sorted_row_coordinates_string += &",".to_string();
+                    //    }
+                    //}
+                    //sorted_row_coordinates_string += &"]".to_string();
+                    ////println!("sorted_row_coordinates:{:?}", sorted_row_coordinates_string);
+                    //if plot_image == true {
+                    //    let sorted_matrix =
+                    //        sort_matrix(sorted_col_elements, sorted_row_elements, &input_matrix);
+                    //    let sorted_matrix_transpose = sorted_matrix.transpose();
+                    //    //println!(
+                    //    //    "sorted_matrix:{:?}",
+                    //    //    &serde_json::to_string(&sorted_matrix_transpose).unwrap()
+                    //    //);
+                    //    let _plot_result = plot_matrix(
+                    //        &sorted_matrix_transpose,
+                    //        sorted_row_names,
+                    //        sorted_col_names,
+                    //    );
+                    //}
                 }
                 Err(error) => println!("Incorrect json: {}", error),
             }
@@ -533,6 +495,7 @@ fn main() {
     }
 }
 
+#[allow(dead_code)]
 fn sort_matrix(
     // Rearranging matrix so as to plot it
     sorted_elements: Vec<usize>,
@@ -559,6 +522,7 @@ fn sort_matrix(
     sorted_array
 }
 
+#[allow(dead_code)]
 fn plot_matrix(
     original_array: &Matrix<f64, Dyn, Dyn, VecStorage<f64, Dyn, Dyn>>,
     sorted_row_names: Vec<String>,
