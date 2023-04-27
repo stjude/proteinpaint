@@ -98,7 +98,6 @@ class TdbApp {
 				// no need to create extra on
 
 				o.tree.click_term_wrapper = async term => {
-					console.log('term', term)
 					// this function wraps user-defined click_term, to encapsulate some logic
 
 					if (this.state.termdbConfig.termMatch2geneSet) {

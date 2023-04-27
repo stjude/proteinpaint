@@ -82,18 +82,23 @@ class MassGroups {
 
 	async groups2samplelst(groups) {
 		const samplelstGroups = []
+		let disabled = true
 		for (const g of groups) {
 			const samples = await this.app.vocabApi.getFilteredSampleCount(g.filter, 'list')
 			const items = []
 			for (const sample of samples) {
 				const item = { sampleId: sample.id }
-				if ('name' in sample) item.sample = sample.name
+				if ('name' in sample) {
+					item.sample = sample.name
+					disabled = false
+				}
 				items.push(item)
 			}
 			samplelstGroups.push({ name: g.name, items })
 		}
+
 		const name = samplelstGroups.length == 1 ? samplelstGroups[0].name : 'Sample groups'
-		const tw = getSamplelstTW(samplelstGroups, name, { disabled: true })
+		const tw = getSamplelstTW(samplelstGroups, name, { disabled })
 
 		// TEMP change, to be done elsewhere e.g. in getSamplelstTW()
 		for (const g of tw.q.groups) {
@@ -114,7 +119,7 @@ class MassGroups {
 		if (this.state.groups.length == 1) {
 			// only one group present, launch button is always on to work on this group
 			this.dom.newTermSpan.style('display', '')
-			this.dom.launchButton.text(`Create new variable with "${this.state.groups[0].name}"`)
+			this.dom.launchButton.text(`Create variable using "${this.state.groups[0].name}"`)
 			this.dom.newTermNameInput.property('value', this.state.groups[0].name + ' vs others')
 			return
 		}
@@ -130,11 +135,11 @@ class MassGroups {
 		this.dom.newTermSpan.style('display', '')
 		if (lst.length == 1) {
 			// only 1 selected
-			this.dom.launchButton.text(`Create new variable with "${this.state.groups[lst[0]].name}"`)
+			this.dom.launchButton.text(`Create  variable using "${this.state.groups[lst[0]].name}"`)
 			this.dom.newTermNameInput.property('value', this.state.groups[lst[0]].name + ' vs others')
 			return
 		}
-		this.dom.launchButton.text(`Create new variable with ${lst.length} groups`)
+		this.dom.launchButton.text(`Create variable using ${lst.length} groups`)
 		this.dom.newTermNameInput.property('value', lst.map(i => this.state.groups[i].name).join(' vs '))
 	}
 
@@ -143,7 +148,9 @@ class MassGroups {
 		if (this.state.customTerms.length == 0) {
 			this.dom.customTermDiv
 				.append('div')
-				.text('No custom variables. Use above controls to create new ones.')
+				.text(
+					'No custom variables. Use above controls to create new ones. Custom variables are added to dictionary terms'
+				)
 				.style('font-size', '.8em')
 			return
 		}
@@ -180,17 +187,16 @@ function initUI(self) {
 
 	// btn 2: patch of controls to create new term
 	self.dom.newTermSpan = btnRow.append('span') // contains "create button" and <input>, so they can toggle on/off together
+	self.dom.newTermSpan
+		.append('span')
+		.style('padding-left', '15px')
+		.text('Add variable:')
+	self.dom.newTermNameInput = self.dom.newTermSpan.append('input').attr('type', 'text')
+
 	self.dom.launchButton = self.dom.newTermSpan
 		.append('span')
 		.attr('class', 'sja_menuoption')
 		.on('click', () => clickLaunchBtn(self))
-
-	self.dom.newTermSpan
-		.append('span')
-		.style('font-size', '.8em')
-		.style('padding-left', '15px')
-		.text('Name the new variable:')
-	self.dom.newTermNameInput = self.dom.newTermSpan.append('input').attr('type', 'text')
 
 	// msg: none selected
 	self.dom.noGroupSelected = btnRow
@@ -216,7 +222,7 @@ async function updateUI(self) {
 	filterPromptInit({
 		holder: self.dom.addNewGroupBtnHolder,
 		vocab: self.app.opts.state.vocab,
-		emptyLabel: 'Add new group',
+		emptyLabel: 'Add group',
 		termdbConfig: self.state.termdbConfig,
 		callback: f => {
 			// create new group

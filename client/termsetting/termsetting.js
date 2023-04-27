@@ -507,7 +507,7 @@ function setInteractivity(self) {
 				click_term: async term => {
 					self.dom.tip.hide()
 
-					const tw = term.q ? term : { id: term.id, term, q: { isAtomic: true }, isAtomic: true }
+					const tw = term.term ? term : { id: term.id, term, q: { isAtomic: true }, isAtomic: true }
 					if (self.opts.customFillTw) self.opts.customFillTw(tw)
 					await call_fillTW(tw, self.vocabApi, self.opts.defaultQ4fillTW)
 					// tw is now furbished
