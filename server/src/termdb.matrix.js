@@ -155,7 +155,7 @@ async function mayGetSampleFilterSet(q, nonDictTerms) {
 		return
 	}
 	if (!q.filter) return // no filter, allow snplst/snplocus to return data for all samples
-	return new Set(await get_samples(q.filter, q.ds))
+	return new Set((await get_samples(q.filter, q.ds)).map(i => i.id))
 }
 
 function divideTerms(lst) {

@@ -337,7 +337,7 @@ function renderSnpEditTable(self, select_alleleType) {
 			.style('padding', '8px')
 
 		// col 2: sample count
-		const sample_count = invalid_snp ? invalid_snp : Object.values(snp.gt2count).reduce((a, b) => a + b)
+		const sample_count = invalid_snp ? invalid_snp : Object.values(snp.gt2count).reduce((a, b) => a + b, 0)
 		tr.append('td')
 			.style('text-align', 'center')
 			.text(sample_count)

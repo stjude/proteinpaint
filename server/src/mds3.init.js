@@ -892,7 +892,9 @@ async function mayLimitSamples(param, allSamples, ds) {
 		return null
 	}
 
-	const filterSamples = await get_samples(filter, ds)
+	// get_samples() return [{id:int}] with possibly duplicated items, deduplicate and return list of integer ids
+	const filterSamples = [...new Set((await get_samples(filter, ds)).map(i => i.id))]
+
 	// filterSamples is the list of samples retrieved from termdb that are matching filter
 	// as allSamples (from bcf etc) may be a subset of what's in termdb
 	// must only use those from allSamples
