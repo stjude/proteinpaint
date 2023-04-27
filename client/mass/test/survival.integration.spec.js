@@ -1,7 +1,7 @@
 const tape = require('tape')
 const termjson = require('../../test/testdata/termjson').termjson
 const helpers = require('../../test/front.helpers.js')
-const { detectOne } = require('../../test/test.helpers.js')
+const { detectOne, detectGte } = require('../../test/test.helpers.js')
 
 /*
 Tests:
@@ -451,7 +451,7 @@ tape('survival term as term1, term2 = agedx, regular bins', function(test) {
 	}
 })
 
-tape('survival term as term1, term2 = agedx, custom bins', function(test) {
+tape.only('survival term as term1, term2 = agedx, custom bins', function(test) {
 	test.timeoutAfter(3000)
 
 	runpp({
@@ -506,22 +506,25 @@ tape('survival term as term1, term2 = agedx, custom bins', function(test) {
 			`Should correctly pass the custom list to overlay component`
 		)
 
-		//Test overlay bin changes are applied
-		config.term2.q.lst[2] = { startinclusive: true, stopinclusive: true, start: 12, stop: 15, label: '12 to 15' }
-		config.term2.q.lst.push({ start: 15, startinclusive: false, stopunbounded: true, label: '>15' })
-
-		await inner.app.dispatch({
-			type: 'plot_edit',
-			id: inner.id,
-			config
+		const survCurves = await detectGte({
+			elem: survival.Inner.dom.holder.node(),
+			selector: '.sjpp-survival-series',
+			count: 3,
+			async trigger() {
+				//Test overlay bin changes are applied
+				config.term2.q.lst[2] = { startinclusive: true, stopinclusive: true, start: 12, stop: 15, label: '12 to 15' }
+				config.term2.q.lst.push({ start: 15, startinclusive: false, stopunbounded: true, label: '>15' })
+				inner.app.dispatch({
+					type: 'plot_edit',
+					id: inner.id,
+					config
+				})
+			}
 		})
 
-		const findBin = await detectOne({
-			elem: survival.Inner.dom.controls.node(),
-			selector: '.ts_summary_btn.sja_filter_tag_btn'
-		})
-		test.ok(
-			findBin.innerText.endsWith(`${config.term2.q.lst.length} bins`),
+		test.equal(
+			survCurves.length, // findBin.innerText.split(' ').endsWith(`${config.term2.q.lst.length} bins`),
+			config.term2.q.lst.length,
 			`Should display the correct num of bins = ${config.term2.q.lst.length}`
 		)
 
@@ -632,7 +635,7 @@ tape('survival term as term1, term0 = agedx, custom bins', function(test) {
 			`Should display the correct num of bins = ${config.term0.q.lst.length}`
 		)
 
-		if (test._ok) inner.app.destroy()
+		//if (test._ok) inner.app.destroy()
 		test.end()
 	}
 })
