@@ -53,13 +53,15 @@ export async function init(arg, holder, genomes) {
 	if (!genome) throw gdcGenome + ' missing'
 
 	// these options will allow session recovery by an embedder
-	const geneFilter = arg.geneFilter || 'CGC'
+	const m = arg.settings?.matrix || {}
+	const geneFilter = m.geneFilter || 'CGC'
 	let CGConly = geneFilter === 'CGC'
-	let maxGenes = arg.settings?.maxGenes || 50
+	let maxGenes = m.maxGenes || 50
 	// per discussion on Dec 6, 2022, restrict to cancer gene census genes by default and allow user to change
 	const gdcCohort = getGdcCohort(arg)
 	const genes = await getGenes(arg, gdcCohort, CGConly, maxGenes)
-
+	const settings = arg.settings || {}
+	settings.matrix.geneFilter = geneFilter
 	const opts = {
 		holder,
 		genome,
@@ -73,7 +75,7 @@ export async function init(arg, holder, genomes) {
 					termgroups: [{ lst: genes }],
 					// moved default settings to gdc.hg38.js termdb.matrix.settings
 					// but can still override in the runpp() argument
-					settings: arg.settings || {}
+					settings
 				}
 			]
 		},

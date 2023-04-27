@@ -1,6 +1,6 @@
 import { initByInput } from './controls.config'
 import { to_svg } from '../src/client'
-import { fillTermWrapper, termsettingInit } from '../termsetting/termsetting'
+import { fillTermWrapper, termsettingInit, get$id } from '../termsetting/termsetting'
 import { addGeneSearchbox } from '#dom/genesearch'
 import { Menu } from '#dom/menu'
 import { zoom } from '#dom/zoom'
@@ -621,8 +621,8 @@ export class MatrixControls {
 				// TODO: see above for input to select which group to add the gene,
 				// right now it assumes the first group; also may use fillTermWrapper
 				const tw = {
+					$id: get$id(),
 					term: {
-						//$id: get$id(),
 						name: coordInput.geneSymbol,
 						type: 'geneVariant'
 					}
@@ -666,7 +666,7 @@ export class MatrixControls {
 							const geneset = term._geneset
 							const tws = geneset.map(d => {
 								const tw = {
-									//$id: get$id(),
+									$id: get$id(),
 									term: {
 										name: d.symbol,
 										type: 'geneVariant'

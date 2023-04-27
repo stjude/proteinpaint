@@ -175,17 +175,24 @@ function getSortSamplesByValues(st, self, rows, s) {
 function getSortSamplesByDt(st, self, rows, s) {
 	const { $id, sortSamples, term } = st
 	const order = sortSamples.order
+	const nextRound = order.length + 1
 	// benchmark:
 	// - fastest by 100+ ms: using Map and not pre-sorting
 	// - ok: using {} as a tracker and either pre-sorting or not
 	// - slowest: using Map and pre-sorting
 	const dt = new Map()
+
 	function setSortIndex(row) {
-		if (!($id in row)) dt.set(row.sample, order.length + 1)
-		else {
-			const indices = row[$id].values.map(v => order.indexOf(v.dt)).filter(i => i !== -1)
-			dt.set(row.sample, indices.length ? Math.min(...indices) : order.length + 1)
+		if (!($id in row)) {
+			dt.set(row.sample, nextRound)
+			return
 		}
+		if (sortSamples.filter && !findMatchingValue(row[$id].values, sortSamples.filter.values)) {
+			dt.set(row.sample, nextRound)
+			return
+		}
+		const indices = row[$id].values.map(v => order.indexOf(v.dt)).filter(i => i !== -1)
+		dt.set(row.sample, indices.length ? Math.min(...indices) : nextRound)
 	}
 
 	return (a, b) => {
@@ -201,6 +208,7 @@ function getSortSamplesByDt(st, self, rows, s) {
 function getSortSamplesByClass(st, self, rows, s) {
 	const { $id, sortSamples } = st
 	const order = sortSamples.order
+	const nextRound = order.length + 1
 	// benchmark:
 	// - fastest by 100+ ms: using Map and not pre-sorting
 	// - ok: using {} as a tracker and either pre-sorting or not
@@ -208,13 +216,18 @@ function getSortSamplesByClass(st, self, rows, s) {
 	const cls = new Map()
 
 	function setSortIndex(row) {
-		if (!($id in row)) cls.set(row.sample, order.length + 1)
-		else {
-			const indices = row[$id].values.map(v => order.indexOf(v.class)).filter(i => i !== -1)
-			cls.set(row.sample, indices.length ? Math.min(...indices) : order.length + 1)
-			// samples with multiple mclasses should not impact sorting against samples with only 1 mclass
-			// if (indices.length > 1) dt[row.sample] += [...(new Set(indices))].length * 0.05
+		if (!($id in row)) {
+			cls.set(row.sample, nextRound)
+			return
 		}
+		if (sortSamples.filter && !findMatchingValue(row[$id].values, sortSamples.filter.values)) {
+			cls.set(row.sample, nextRound)
+			return
+		}
+		const indices = row[$id].values.map(v => order.indexOf(v.class)).filter(i => i !== -1)
+		cls.set(row.sample, indices.length ? Math.min(...indices) : nextRound)
+		// samples with multiple mclasses should not impact sorting against samples with only 1 mclass
+		// if (indices.length > 1) dt[row.sample] += [...(new Set(indices))].length * 0.05
 	}
 
 	return (a, b) => {
@@ -225,6 +238,20 @@ function getSortSamplesByClass(st, self, rows, s) {
 
 	// rows.forEach(setSortIndex)
 	// return (a, b) => cls.get(a.sample) - cls.get(b.sample)
+}
+
+function findMatchingValue(annoValues, filterValues) {
+	for (const v of annoValues) {
+		for (const f of filterValues) {
+			if (
+				(!f.dt || v.dt === f.dt) &&
+				(!f.mclassLst || f.mclassLst.includes(v.class)) &&
+				(!f.origin || v.origin === f.origin)
+			) {
+				return true
+			}
+		}
+	}
 }
 
 function getFilteredValues(anno, tw, grp) {
@@ -292,57 +319,6 @@ export function getSortOptions(termdbConfig) {
 			label: 'as-listed',
 			value: 'asListed',
 			order: 0
-		},
-		dt: {
-			label: 'by alteration type against sorted genes',
-			value: 'dt',
-			order: 1,
-			sortPriority: [
-				{
-					types: ['geneVariant'],
-					tiebreakers: [
-						{
-							by: 'dt',
-							order: [1, 4, 2]
-						}
-					]
-				}
-			]
-		},
-		class: {
-			label: 'by alteration subtype against sorted genes',
-			value: 'class',
-			order: 2,
-			sortPriority: [
-				{
-					types: ['geneVariant'],
-					tiebreakers: [
-						{
-							by: 'class',
-							order: [
-								// truncating
-								'F',
-								'N',
-								// indel
-								'D',
-								'I',
-								// point
-								'M',
-								'P',
-								'L',
-								// copy-number
-								'CNV_loss',
-								'CNV_amp',
-								// noncoding
-								'Utr3',
-								'Utr5',
-								'S',
-								'Intron'
-							]
-						}
-					]
-				}
-			]
 		}
 	}
 
@@ -353,11 +329,72 @@ export function getSortOptions(termdbConfig) {
 			if (d.order >= order) d.order += 1
 		})
 		sortOptions.custom = {
-			label: sortPriority.label || 'custom sort',
+			label: sortPriority.label || 'Custom sort',
 			value: 'custom',
 			order,
 			sortPriority
 		}
+	} else {
+		sortOptions.custom = {
+			label: 'against alteration type',
+			value: 'custom',
+			order: 1,
+			sortPriority: [
+				{
+					types: ['geneVariant'],
+					tiebreakers: [
+						{
+							filter: {
+								values: [{ dt: 1 }]
+							},
+							by: 'class',
+							order: [
+								// copy-number
+								'CNV_amp',
+								'CNV_loss',
+								// truncating
+								'F',
+								'N',
+								// indel
+								'D',
+								'I',
+								// point
+								'M',
+								'P',
+								'L',
+								// noncoding
+								'Utr3',
+								'Utr5',
+								'S',
+								'Intron'
+							]
+						}
+					]
+				},
+				{
+					types: ['geneVariant'],
+					tiebreakers: [
+						{
+							by: 'dt',
+							order: [4] // snvindel, cnv,
+							// other dt values will be ordered last
+							// for the sorter to not consider certain dt values,
+							// need to explicitly not use such values for sorting
+							// ignore: [4]
+						},
+						{
+							by: 'class',
+							order: ['CNV_amp', 'CNV_loss']
+						}
+					]
+				},
+				{
+					types: ['categorical', 'integer', 'float', 'survival'],
+					tiebreakers: [{ by: 'values' }]
+				}
+			]
+		}
 	}
+
 	return sortOptions
 }

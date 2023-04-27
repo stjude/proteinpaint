@@ -26,7 +26,8 @@ export async function getPlotConfig(opts, app) {
 				},
 				// set any dataset-defined sample limits and sort priority, otherwise undefined
 				// put in settings, so that later may be overridden by a user
-				maxSample: 1000,
+				maxGenes: opts.settings.maxGenes || 50,
+				maxSample: opts.settings.maxSample || 1000,
 				sortPriority: undefined,
 				truncatePriority: undefined,
 
@@ -115,7 +116,7 @@ export async function getPlotConfig(opts, app) {
 	// force auto-dimensions for colw
 	m.colw = 0
 	// support deprecated sortSamplesBy value from a saved session
-	if (m.sortSamplesBy === 'selectedTerms') m.sortSamplesBy = 'class'
+	if (['selectTerms', 'class', 'dt', 'hits'].includes(m.sortSamplesBy)) m.sortSamplesBy = 'custom'
 	// support overrides in localhost
 	if (window.location.hostname == 'localhost') {
 		if (window.location.hash == '#canvas') m.svgCanvasSwitch = 0
