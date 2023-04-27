@@ -108,7 +108,7 @@ export function setInteractivity(self) {
 		self.dom.termstip.hide()
 	}
 
-	self.onLegendClick = function(G, name, key, e) {
+	self.onLegendClick = function(chart, G, name, key, e) {
 		const tw = self.config[name]
 		const hidden = tw.q.hiddenValues ? key in tw.q.hiddenValues : false
 		const menu = new Menu({ padding: '5px' })
@@ -151,7 +151,7 @@ export function setInteractivity(self) {
 			.attr('class', 'sja_menuoption sja_sharp_border')
 			.text('Show only')
 			.on('click', () => {
-				const map = name == 'colorTW' ? self.colorLegend : chart.shapeLegend
+				const map = name == 'colorTW' ? chart.colorLegend : chart.shapeLegend
 				for (const mapKey of map.keys()) self.hideCategory(G, tw, mapKey, !mapKey.startsWith(key))
 
 				menu.hide()
@@ -169,7 +169,7 @@ export function setInteractivity(self) {
 			.text('Show all')
 			.on('click', () => {
 				menu.hide()
-				const map = name == 'colorTW' ? self.colorLegend : chart.shapeLegend
+				const map = name == 'colorTW' ? chart.colorLegend : chart.shapeLegend
 				for (const mapKey of map.keys()) self.hideCategory(G, tw, mapKey, false)
 				const config = {}
 				config[name] = tw
