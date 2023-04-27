@@ -271,8 +271,8 @@ fn sort_elements(
     //fn sort_elements(coordinates: &Vec<Vec<f64>>) -> Vec<usize> {
     //fn sort_elements(coordinates: &Vec<Array1<f64>>) -> Vec<usize> {
     let new_now = Instant::now();
-    let mut sorted_nodes = Vec::<usize>::new();
-    let mut node_coordinates_list = Vec::<NewNodeRelativeCoordinates>::new();
+    let sorted_nodes = Vec::<usize>::new();
+    let node_coordinates_list = Vec::<NewNodeRelativeCoordinates>::new();
     if coordinates.len() > 0 {
         //let mut condensed = vec![];
         //for row in 0..coordinates.len() - 1 {
@@ -315,94 +315,10 @@ fn sort_elements(
 
         //println!("dend.steps().len(){:?}", dend.steps().len());
         println!("Number of nodes:{}", coordinates.nrows());
-        let max_length_node_distance = dend.steps()[dend.steps().len() - 1].dissimilarity; // max-length between all original nodes and the topmost node
-                                                                                           //println!("max_length_node_distance:{}", max_length_node_distance);
-        let mut x_axis_iter = 0;
+        //println!("max_length_node_distance:{}", max_length_node_distance);
         for i in 0..dend.steps().len() {
             let step = &dend.steps()[i];
             println!("step:{:?}", step);
-
-            // Find child nodes
-
-            // Find all original nodes
-
-            let cluster1_coordinates;
-            let cluster2_coordinates;
-            if step.cluster1 < coordinates.nrows() {
-                // Only fundamental nodes are added
-                cluster1_coordinates = NodeCoordinate {
-                    x: Some(x_axis_iter as f64),
-                    y: Some(1.0),
-                };
-                node_coordinates_list.push(NewNodeRelativeCoordinates {
-                    node_id: step.cluster1,
-                    node_coordinates: NodeCoordinate {
-                        x: Some(x_axis_iter as f64),
-                        y: Some(1.0),
-                    },
-                    child_nodes: vec![],
-                    child_node_coordinates: vec![],
-                    all_original_nodes: vec![],
-                });
-
-                x_axis_iter += 1;
-                sorted_nodes.push(step.cluster1);
-            } else {
-                // If not a fundamental node, then get its x and y coordinate
-                let child1_search_result = node_coordinates_list
-                    .iter()
-                    .find(|&i| i.node_id == step.cluster1)
-                    .unwrap();
-                //println!("step.cluster1:{}", step.cluster1);
-                //println!("child1_search_result:{:?}", child1_search_result);
-                cluster1_coordinates = child1_search_result.node_coordinates;
-            }
-
-            if step.cluster2 < coordinates.nrows() {
-                // Only fundamental nodes are added
-                cluster2_coordinates = NodeCoordinate {
-                    x: Some(x_axis_iter as f64),
-                    y: Some(1.0),
-                };
-                node_coordinates_list.push(NewNodeRelativeCoordinates {
-                    node_id: step.cluster2,
-                    node_coordinates: NodeCoordinate {
-                        x: Some(x_axis_iter as f64),
-                        y: Some(1.0),
-                    },
-                    child_nodes: vec![],
-                    child_node_coordinates: vec![],
-                    all_original_nodes: vec![],
-                });
-
-                x_axis_iter += 1;
-                sorted_nodes.push(step.cluster2);
-            } else {
-                // If not a fundamental node, then get its x and y coordinate
-                let child2_search_result = node_coordinates_list
-                    .iter()
-                    .find(|&i| i.node_id == step.cluster2)
-                    .unwrap();
-                //println!("step.cluster2:{}", step.cluster2);
-                //println!("child2_search_result:{:?}", child2_search_result);
-                cluster2_coordinates = child2_search_result.node_coordinates;
-            }
-
-            // New derived node
-            node_coordinates_list.push(NewNodeRelativeCoordinates {
-                node_id: coordinates.nrows() + i,
-                node_coordinates: NodeCoordinate {
-                    x: Some(
-                        (cluster1_coordinates.x.unwrap() + cluster2_coordinates.x.unwrap()) / 2.0,
-                    ),
-                    y: Some(
-                        (max_length_node_distance - step.dissimilarity) / max_length_node_distance,
-                    ),
-                },
-                child_nodes: vec![step.cluster1, step.cluster2],
-                child_node_coordinates: vec![cluster1_coordinates, cluster2_coordinates],
-                all_original_nodes: vec![],
-            });
         }
     } else {
         panic!("The dissimilarity matrix length cannot be zero");
@@ -540,11 +456,11 @@ fn main() {
                     // possible coordinate pairs.
                     let (sorted_col_elements, sorted_col_coordinates) =
                         sort_elements(&input_matrix, &cluster_method);
-                    println!("sorted_col_elements:{:?}", sorted_col_elements);
+                    //println!("sorted_col_elements:{:?}", sorted_col_elements);
 
                     let (sorted_row_elements, sorted_row_coordinates) =
                         sort_elements(&input_matrix.transpose(), &cluster_method);
-                    println!("sorted_row_elements:{:?}", sorted_row_elements);
+                    //println!("sorted_row_elements:{:?}", sorted_row_elements);
                     let mut sorted_row_names = Vec::<String>::new();
                     let mut sorted_col_names = Vec::<String>::new();
 
@@ -581,7 +497,7 @@ fn main() {
                         }
                     }
                     sorted_col_coordinates_string += &"]".to_string();
-                    println!("sorted_col_coordinates:{:?}", sorted_col_coordinates_string);
+                    //println!("sorted_col_coordinates:{:?}", sorted_col_coordinates_string);
 
                     let mut sorted_row_coordinates_string = "[".to_string();
                     for i in 0..sorted_row_coordinates.len() {
@@ -592,7 +508,7 @@ fn main() {
                         }
                     }
                     sorted_row_coordinates_string += &"]".to_string();
-                    println!("sorted_row_coordinates:{:?}", sorted_row_coordinates_string);
+                    //println!("sorted_row_coordinates:{:?}", sorted_row_coordinates_string);
                     if plot_image == true {
                         let sorted_matrix =
                             sort_matrix(sorted_col_elements, sorted_row_elements, &input_matrix);
