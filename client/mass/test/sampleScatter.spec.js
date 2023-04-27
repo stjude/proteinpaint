@@ -158,7 +158,7 @@ tape('Render PNET scatter plot', function(test) {
 	})
 
 	async function runTests(scatter) {
-		const scatterDiv = scatter.Inner.dom.holder
+		const scatterDiv = scatter.Inner.charts[0].chartDiv
 		const serieG = scatterDiv.select('.sjpcb-scatter-series')
 
 		testPlot()
@@ -171,8 +171,8 @@ tape('Render PNET scatter plot', function(test) {
 		function testPlot() {
 			const numSymbols = serieG.selectAll('path').size()
 			test.true(
-				numSymbols == scatter.Inner.data.samples.length,
-				`Should be ${scatter.Inner.data.samples.length}. Rendered ${numSymbols} symbols.`
+				numSymbols == scatter.Inner.charts[0].data.samples.length,
+				`Should be ${scatter.Inner.charts[0].data.samples.length}. Rendered ${numSymbols} symbols.`
 			)
 		}
 
@@ -240,7 +240,7 @@ tape('PNET plot + filter + colorTW=gene', function(test) {
 
 	function runTests(scatter) {
 		scatter.on('postRender.test', null)
-		const scatterDiv = scatter.Inner.dom.holder
+		const scatterDiv = scatter.Inner.charts[0].chartDiv
 
 		testPlot()
 
@@ -251,8 +251,8 @@ tape('PNET plot + filter + colorTW=gene', function(test) {
 			const serieG = scatterDiv.select('.sjpcb-scatter-series')
 			const numSymbols = serieG.selectAll('path').size()
 			test.true(
-				numSymbols == scatter.Inner.data.samples.length,
-				`Should be ${scatter.Inner.data.samples.length}. Rendered ${numSymbols} symbols.`
+				numSymbols == scatter.Inner.charts[0].data.samples.length,
+				`Should be ${scatter.Inner.charts[0].data.samples.length}. Rendered ${numSymbols} symbols.`
 			)
 		}
 	}
@@ -313,7 +313,7 @@ tape.skip('Add shape, clicking term and replace by search', function(test) {
 	}
 
 	function testShapeRendering(scatter, term) {
-		const shapeLegend = scatter.Inner.dom.holder
+		const shapeLegend = scatter.Inner.charts[0].chartDiv
 			.selectAll('g')
 			.nodes()
 			.find(c => c?.childNodes[0].innerHTML == term)

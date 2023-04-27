@@ -105,7 +105,6 @@ class Scatter {
 		if (reqOpts.coordTWs.length == 1) return //To allow removing a term in the controls, though nothing is rendered (summary tab with violin active)
 		const data = await this.app.vocabApi.getScatterData(reqOpts)
 		this.addChart(data)
-		this.addChart(data)
 
 		//Creating charts variable to support rendering multiple charts
 

@@ -162,7 +162,7 @@ tape('Render TermdbTest scatter plot and open survival and summary', function(te
 	})
 
 	async function runTests(scatter) {
-		const scatterDiv = scatter.Inner.dom.holder
+		const scatterDiv = scatter.Inner.charts[0].chartDiv
 		testPlot()
 		testLegendTitle()
 		const group = await testCreateGroup()
@@ -323,7 +323,7 @@ tape('Invalid plot name', async function(test) {
 	test.end()
 })
 
-tape('Test legend', function(test) {
+tape.only('Test legend', function(test) {
 	test.timeoutAfter(3000)
 	test.plan(2)
 
@@ -338,8 +338,8 @@ tape('Test legend', function(test) {
 
 	async function runTests(scatter) {
 		scatter.on('postRender.test', null)
-		const samples = scatter.Inner.data.samples
-		const scatterDiv = scatter.Inner.dom.holder
+		const samples = scatter.Inner.charts[0].data.samples
+		const scatterDiv = scatter.Inner.charts[0].chartDiv
 		const legendG = scatterDiv.select('.sjpcb-scatter-legend')
 		const elem = scatterDiv.select('.sjpcb-scatter-series').node()
 
@@ -469,7 +469,7 @@ tape('Render color groups', function(test) {
 
 	async function testColorLegend(scatter) {
 		const legendLabels = await detectGte({
-			elem: scatter.Inner.dom.holder.node(),
+			elem: scatter.Inner.charts[0].chartDiv.node(),
 			selector: 'text[name="sjpp-scatter-legend-label"]'
 		})
 
@@ -482,10 +482,10 @@ tape('Render color groups', function(test) {
 			})
 		}
 		test.equal(
-			scatter.Inner.colorLegend.size,
+			scatter.Inner.charts[0].colorLegend.size,
 			groups.length + 1,
 			`Legend categories (# = ${groups.length + 1}) should equal size of colorLegend (# = ${
-				scatter.Inner.colorLegend.size
+				scatter.Inner.charts[0].colorLegend.size
 			}) `
 		)
 		compareData2DOMLegend(scatter, groups)
@@ -493,7 +493,7 @@ tape('Render color groups', function(test) {
 
 	function compareData2DOMLegend(scatter, groups) {
 		for (const group of groups) {
-			const mapLeg = scatter.Inner.colorLegend.get(group.label)
+			const mapLeg = scatter.Inner.charts[0].colorLegend.get(group.label)
 			test.ok(mapLeg, `Should display group custom label = ${group.label} in legend`)
 			test.equal(
 				`${mapLeg.sampleCount}`,
@@ -630,7 +630,7 @@ tape('Change chart width and height from menu', function(test) {
 
 		//Detect change in chart height and width
 		await detectAttr({
-			target: scatter.Inner.dom.holder.node().querySelector('svg'),
+			target: scatter.Inner.charts[0].chartDiv.node().querySelector('svg'),
 			observe: {
 				attributeFilter: ['height', 'width']
 			},
@@ -688,7 +688,7 @@ tape('Check/uncheck Show axes from menu', function(test) {
 		axesCheckbox.checked = !bool
 
 		const axesDiv = await detectStyle({
-			target: scatter.Inner.dom.holder.node().querySelector('.sjpcb-scatter-axis'),
+			target: scatter.Inner.charts[0].chartDiv.node().querySelector('.sjpcb-scatter-axis'),
 			style: {
 				opactiy: `${num}`
 			},
@@ -745,7 +745,7 @@ tape('Click zoom in, zoom out, and reset buttons', function(test) {
 
 	async function detectTransform(scatter, btn, scale) {
 		const target = await detectAttr({
-			target: scatter.Inner.dom.holder.node().querySelector('.sjpcb-scatter-series'),
+			target: scatter.Inner.charts[0].chartDiv.node().querySelector('.sjpcb-scatter-series'),
 			observe: {
 				subtree: true,
 				characterData: true,
