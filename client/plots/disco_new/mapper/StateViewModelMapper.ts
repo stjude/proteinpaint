@@ -86,7 +86,7 @@ export class StateViewModelMapper {
 
         const chromosomesRing = new Ring(this.settings.innerRadius + 90,this.settings.chr.width, chromosomes.chromosomes)
 
-        const labelsRing = new Ring(this.settings.innerRadius + 90,this.settings.chr.width,  labels)
+        const labelsRing = new Ring(this.settings.innerRadius + 90,this.settings.chr.width,  labels, true)
 
         const rings = new Rings(labelsRing, chromosomesRing)
 

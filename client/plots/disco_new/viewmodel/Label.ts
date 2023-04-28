@@ -29,7 +29,7 @@ export default class Label extends Arc {
         readonly hits: number,
         readonly labelFill: string) {
         super()
-        this.angle = (startAngle + endAngle) / 2
+        this.angle = (this.startAngle + this.endAngle) / 2
         this.ccAngle = this.angle - Math.PI / 2
         this.transform = `rotate(${(this.angle * 180) / Math.PI - 90}) translate(${this.labelRadius})${this.angle > Math.PI ? 'rotate(180)' : ''}`
         this.textAnchor = this.angle > Math.PI ? 'end' : ''
