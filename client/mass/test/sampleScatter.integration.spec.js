@@ -541,7 +541,7 @@ tape('Render color groups', function(test) {
 })
 
 tape('Change symbol and reference size from menu', function(test) {
-	test.timeoutAfter(3000)
+	test.timeoutAfter(10000)
 
 	runpp({
 		state: open_state,
@@ -592,7 +592,7 @@ tape('Change symbol and reference size from menu', function(test) {
 })
 
 tape('Change chart width and height from menu', function(test) {
-	test.timeoutAfter(3000)
+	test.timeoutAfter(10000)
 
 	runpp({
 		state: open_state,

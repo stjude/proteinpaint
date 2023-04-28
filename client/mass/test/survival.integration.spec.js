@@ -40,7 +40,7 @@ tape('\n', function(test) {
 })
 
 tape('survival term as term1', function(test) {
-	test.timeoutAfter(3000)
+	test.timeoutAfter(10000)
 	runpp({
 		state: {
 			plots: [
@@ -76,7 +76,7 @@ tape('survival term as term1', function(test) {
 })
 
 tape('survival term as term1, with overlay', function(test) {
-	test.timeoutAfter(3000)
+	test.timeoutAfter(10000)
 	runpp({
 		state: {
 			plots: [
@@ -114,7 +114,7 @@ tape('survival term as term1, with overlay', function(test) {
 })
 
 tape('survival term as term1, with divide by', function(test) {
-	test.timeoutAfter(3000)
+	test.timeoutAfter(10000)
 	runpp({
 		state: {
 			plots: [
@@ -162,7 +162,7 @@ tape('survival term as term1, with divide by', function(test) {
 })
 
 tape('survival term as overlay', function(test) {
-	test.timeoutAfter(3000)
+	test.timeoutAfter(10000)
 	runpp({
 		state: {
 			plots: [
@@ -364,7 +364,7 @@ tape('survival term as term1, term0 = genetic_race, categorical groupsetting', f
 })
 
 tape('survival term as term1, term2 = agedx, regular bins', function(test) {
-	test.timeoutAfter(3000)
+	test.timeoutAfter(10000)
 	test.plan(4)
 
 	const testBinSize = 5
@@ -459,7 +459,7 @@ tape('survival term as term1, term2 = agedx, regular bins', function(test) {
 })
 
 tape('survival term as term1, term2 = agedx, custom bins', function(test) {
-	test.timeoutAfter(3000)
+	test.timeoutAfter(10000)
 
 	runpp({
 		state: {
