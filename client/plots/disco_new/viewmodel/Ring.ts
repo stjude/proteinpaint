@@ -3,24 +3,18 @@ import Ribbon from "#plots/disco_new/viewmodel/Ribbon";
 import Label from "#plots/disco_new/viewmodel/Label";
 
 export default class Ring<T extends Arc> {
-    radius: number
     width: number
 
     innerRadius: number
     outerRadius: number
 
     elements: Array<T>
-    labels?: Array<Label>
     ribbons?: Array<Ribbon>
 
-    constructor(radius: number, width: number, elements: Array<T>,  labels?: Array<Label>) {
-        this.radius = radius
-
-        const halfOfWidth = width / 2;
-        this.innerRadius = radius - halfOfWidth
-        this.outerRadius = radius + halfOfWidth
+    constructor(innerRadius: number, width: number, elements: Array<T>) {
+        this.innerRadius = innerRadius
+        this.outerRadius = innerRadius + width
 
         this.elements = elements
-        this.labels = labels
     }
 }

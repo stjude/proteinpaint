@@ -37,7 +37,8 @@ export default class LabelsMapper {
         const plot = {
             title: '', //sampleName,
             sample: this.sampleName,
-            lastRadius: this.settings.innerRadius,
+            // TODO calculate this value base on chromosome radius
+            lastRadius: 190,
             layers: []
         }
 

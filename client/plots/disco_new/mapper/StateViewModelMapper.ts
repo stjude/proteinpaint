@@ -12,6 +12,7 @@ import Data from "#plots/disco_new/mapper/Data";
 import LabelsMapper from "#plots/disco_new/mapper/LabelsMapper";
 import DataMapper from "#plots/disco_new/mapper/DataMapper";
 import Label from "#plots/disco_new/viewmodel/Label";
+import Rings from "#plots/disco_new/viewmodel/Rings";
 
 export class StateViewModelMapper {
 
@@ -83,7 +84,13 @@ export class StateViewModelMapper {
 
         const labels: Array<Label> = labelsMapper.map(data)
 
-        const rings = [new Ring(this.settings.innerRadius + 80, 30, chromosomes.chromosomes, labels)]
+        console.log("chromosomes.chromosomes", chromosomes.chromosomes)
+
+        const chromosomesRing = new Ring(this.settings.innerRadius + 90,this.settings.chr.width, chromosomes.chromosomes)
+
+        const labelsRing = new Ring(this.settings.innerRadius + 90,this.settings.chr.width,  labels)
+
+        const rings = new Rings(labelsRing, chromosomesRing)
 
         return new ViewModel(rings)
     }

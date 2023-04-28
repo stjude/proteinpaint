@@ -5,6 +5,4 @@ export default class Arc {
     endAngle: number
     innerRadius: number
     outerRadius: number
-
-    labels: Array<Label>
 }

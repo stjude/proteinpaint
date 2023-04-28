@@ -1,4 +1,6 @@
-export default class Label {
+import Arc from "#plots/disco_new/viewmodel/Arc";
+
+export default class Label extends Arc{
     angle: number;
     constructor(
         readonly startAngle: number,
@@ -17,6 +19,7 @@ export default class Label {
         readonly sample: any,
         readonly hits: number,
         readonly labelFill: string) {
+        super()
         this.angle = (startAngle + endAngle) / 2
     }
 }
