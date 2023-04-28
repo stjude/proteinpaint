@@ -84,8 +84,6 @@ export class StateViewModelMapper {
 
         const labels: Array<Label> = labelsMapper.map(data)
 
-        console.log("chromosomes.chromosomes", chromosomes.chromosomes)
-
         const chromosomesRing = new Ring(this.settings.innerRadius + 90,this.settings.chr.width, chromosomes.chromosomes)
 
         const labelsRing = new Ring(this.settings.innerRadius + 90,this.settings.chr.width,  labels)
