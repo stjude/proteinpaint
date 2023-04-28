@@ -323,9 +323,9 @@ tape('Invalid plot name', async function(test) {
 	test.end()
 })
 
-tape.only('Test legend', function(test) {
+tape('Test legend', function(test) {
 	test.timeoutAfter(3000)
-	test.plan(1)
+	test.plan(2)
 
 	runpp({
 		state,
@@ -340,11 +340,9 @@ tape.only('Test legend', function(test) {
 		scatter.on('postRender.test', null)
 		const samples = scatter.Inner.charts[0].data.samples
 		const scatterDiv = scatter.Inner.charts[0].chartDiv
-		const legendG = scatterDiv.select('.sjpcb-scatter-legend')
-		const elem = scatterDiv.select('.sjpcb-scatter-series').node()
 
-		await testHideCategory(scatter, samples, elem, legendG)
-		//await testChangeColor(scatter, samples, elem)
+		await testHideCategory(scatter, samples)
+		await testChangeColor(scatter, samples)
 		test.end()
 	}
 
@@ -381,14 +379,14 @@ tape.only('Test legend', function(test) {
 		)
 	}
 
-	async function testChangeColor(scatter, samples, elem) {
+	async function testChangeColor(scatter, samples) {
 		const key = 'Wilms tumor'
 		const color = 'blue'
 		const expectedColor = d3color.rgb(color).toString()
 		const expectedNum = samples.filter(s => s.category === key).length
 		const targets = await detectChildAttr({
-			elem,
-			selector: 'path',
+			elem: scatter.Inner.mainDiv.node(),
+			selector: '.sjpcb-scatter-series > path',
 			observe: {
 				attributeFilter: ['fill']
 			},
@@ -662,7 +660,7 @@ tape('Change chart width and height from menu', function(test) {
 	}
 })
 
-tape('Check/uncheck Show axes from menu', function(test) {
+tape.only('Check/uncheck Show axes from menu', function(test) {
 	test.timeoutAfter(4000)
 
 	runpp({
@@ -690,9 +688,9 @@ tape('Check/uncheck Show axes from menu', function(test) {
 		axesCheckbox.checked = !bool
 
 		const axesDiv = await detectStyle({
-			target: scatter.Inner.charts[0].chartDiv.node().querySelector('.sjpcb-scatter-axis'),
+			target: scatter.Inner.mainDiv.node().querySelector('.sjpcb-scatter-axis'),
 			style: {
-				opactiy: `${num}`
+				opacity: `${num}`
 			},
 			trigger() {
 				axesCheckbox.dispatchEvent(new Event('change'))
@@ -747,7 +745,7 @@ tape('Click zoom in, zoom out, and reset buttons', function(test) {
 
 	async function detectTransform(scatter, btn, scale) {
 		const target = await detectAttr({
-			target: scatter.Inner.charts[0].chartDiv.node().querySelector('.sjpcb-scatter-series'),
+			target: scatter.Inner.mainDiv.node().querySelector('.sjpcb-scatter-series'),
 			observe: {
 				subtree: true,
 				characterData: true,

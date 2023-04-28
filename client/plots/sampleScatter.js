@@ -105,7 +105,8 @@ class Scatter {
 		if (reqOpts.coordTWs.length == 1) return //To allow removing a term in the controls, though nothing is rendered (summary tab with violin active)
 		const data = await this.app.vocabApi.getScatterData(reqOpts)
 		this.mainDiv.selectAll('*').remove()
-		this.createChart(data)
+		this.createChart(1, data)
+		//this.createChart(2, data)
 		//Creating charts variable to support rendering multiple charts
 
 		if (data.error) throw this.data.error
@@ -140,13 +141,12 @@ class Scatter {
 		return opts
 	}
 
-	createChart(data) {
-		const chartDiv = this.mainDiv.append('div').style('display', 'inline-block')
+	createChart(id, data) {
 		const cohortSamples = data.samples.filter(sample => 'sampleId' in sample)
 		const colorLegend = new Map(Object.entries(data.colorLegend))
 		const shapeLegend = new Map(Object.entries(data.shapeLegend))
 
-		this.charts.push({ chartDiv, data, cohortSamples, colorLegend, shapeLegend })
+		this.charts.push({ id, data, cohortSamples, colorLegend, shapeLegend })
 	}
 
 	async setControls() {

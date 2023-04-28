@@ -5,19 +5,24 @@ import { dt2label, morigin, mclass } from '#shared/common'
 import { rgb } from 'd3-color'
 import { scaleLinear as d3Linear } from 'd3-scale'
 import { axisLeft, axisBottom } from 'd3-axis'
+import { select } from 'd3-selection'
 
 export function setRenderers(self) {
 	self.render = function() {
-		for (const chart of self.charts) {
-			if (chart.chartDiv.select('svg').size()) self.updateCharts(chart)
-			else self.addCharts(chart)
-			chart.chartDiv.on('mouseover', event => self.mouseover(event, chart)).on('click', self.mouseclick)
-		}
+		const charts = self.mainDiv.selectAll(':scope > div').data(self.charts, c => c?.id)
+		charts.exit().remove()
+		charts.each(self.updateChart)
+		charts
+			.enter()
+			.append('div')
+			.each(self.addChart)
 	}
 
-	self.addCharts = function(chart) {
+	self.addChart = function(chart) {
+		chart.chartDiv = select(this)
 		const s = self.settings
-		chart.chartDiv.style('opacity', 0)
+		chart.chartDiv.style('opacity', 0).style('display', 'inline-block')
+		chart.chartDiv.on('mouseover', event => self.mouseover(event, chart)).on('click', self.mouseclick)
 		chart.svg = chart.chartDiv.append('svg')
 		renderSVG(chart, s, 0)
 
@@ -27,7 +32,7 @@ export function setRenderers(self) {
 			.style('opacity', 1)
 	}
 
-	self.updateCharts = function(chart) {
+	self.updateChart = function(chart) {
 		chart.svg = chart.chartDiv.select('svg')
 		const s = self.settings
 		chart.chartDiv.transition().duration(s.duration)
