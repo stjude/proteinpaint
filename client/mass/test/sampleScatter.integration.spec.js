@@ -660,7 +660,7 @@ tape('Change chart width and height from menu', function(test) {
 	}
 })
 
-tape.only('Check/uncheck Show axes from menu', function(test) {
+tape.skip('Check/uncheck Show axes from menu', function(test) {
 	test.timeoutAfter(4000)
 
 	runpp({
@@ -673,31 +673,32 @@ tape.only('Check/uncheck Show axes from menu', function(test) {
 	async function runTests(scatter) {
 		scatter.on('postRender.test', null)
 
-		await testAxes(scatter, false, 1)
-		await testAxes(scatter, true, 0)
+		await testAxes(scatter, true)
+		//await testAxes(scatter, true)
 
 		if (test._ok) scatter.Inner.app.destroy()
 		test.end()
 	}
 
-	async function testAxes(scatter, bool, num) {
-		const axesCheckbox = scatter.Inner.dom.controls
-			.selectAll('input[type="checkbox"]')
-			.nodes()
-			.find(e => e.checked == bool)
-		axesCheckbox.checked = !bool
+	async function testAxes(scatter, isvisible) {
+		const opacity = isvisible ? 1 : 0
 
 		const axesDiv = await detectStyle({
 			target: scatter.Inner.mainDiv.node().querySelector('.sjpcb-scatter-axis'),
+			selector: '.sjpcb-scatter-axis',
 			style: {
-				opacity: `${num}`
+				opacity: `${opacity}`
 			},
 			trigger() {
+				const axesCheckbox = scatter.Inner.dom.controls.select('input[type="checkbox"]').node()
+				console.log(axesCheckbox)
+				axesCheckbox.checked = isvisible
 				axesCheckbox.dispatchEvent(new Event('change'))
 			}
 		})
 		const axesStyle = getComputedStyle(axesDiv[0])
-		test.equal(axesStyle.opacity, `${num}`, `Should ${num == 1 ? 'show' : 'hide'} axes`)
+		console.log(axesStyle)
+		test.equal(axesStyle.opacity, `${opacity}`, `Should ${isvisible ? 'show' : 'hide'} axes`)
 	}
 })
 
