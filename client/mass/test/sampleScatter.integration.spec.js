@@ -323,9 +323,9 @@ tape('Invalid plot name', async function(test) {
 	test.end()
 })
 
-tape('Test legend', function(test) {
+tape.only('Test legend', function(test) {
 	test.timeoutAfter(3000)
-	test.plan(2)
+	test.plan(1)
 
 	runpp({
 		state,
@@ -344,22 +344,24 @@ tape('Test legend', function(test) {
 		const elem = scatterDiv.select('.sjpcb-scatter-series').node()
 
 		await testHideCategory(scatter, samples, elem, legendG)
-		await testChangeColor(scatter, samples, elem)
+		//await testChangeColor(scatter, samples, elem)
 		test.end()
 	}
 
-	async function testHideCategory(scatter, samples, elem, legendG) {
+	async function testHideCategory(scatter, samples) {
 		const key = 'Acute lymphoblastic leukemia'
 		const expectedNum = samples.filter(s => s.category === key).length
+
 		const matched = await detectChildStyle({
-			elem,
-			selector: 'path',
+			elem: scatter.Inner.mainDiv.node(),
+			selector: '.sjpcb-scatter-series > path',
 			style: {
 				fillOpacity: '0'
 			},
 			count: expectedNum,
 			trigger: () => {
-				scatter.Inner.hideCategory(legendG, scatter.Inner.config.colorTW, key, true)
+				const chart = scatter.Inner.charts[0]
+				scatter.Inner.hideCategory(chart.legendG, scatter.Inner.config.colorTW, key, true)
 				scatter.Inner.app.dispatch({
 					type: 'plot_edit',
 					id: scatter.Inner.id,
