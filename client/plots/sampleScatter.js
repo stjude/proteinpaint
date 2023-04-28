@@ -61,6 +61,7 @@ class Scatter {
 		this.mainDiv = controlsDiv.append('div').style('display', 'inline-block')
 
 		this.charts = []
+		this.axisOffset = { x: 80, y: 20 }
 
 		this.dom = {
 			header: this.opts.header,
@@ -112,9 +113,6 @@ class Scatter {
 		if (data.error) throw this.data.error
 		if (!Array.isArray(data.samples)) throw 'data.samples[] not array'
 
-		this.axisOffset = { x: 80, y: 20 }
-
-		this.initAxes()
 		this.render()
 		this.setTools()
 		this.updateGroupsButton()
@@ -282,7 +280,6 @@ export async function getPlotConfig(opts, app) {
 		if (!opts.term && !opts.term2) settings.showAxes = false
 		const config = {
 			groups: [],
-			gradientColor: '#008000',
 			settings: {
 				controls: {
 					isOpen: false // control panel is hidden by default
