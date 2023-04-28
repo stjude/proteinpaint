@@ -9,28 +9,23 @@ export default class LabelsRenderer implements IRenderer {
 
         const labels = viewModel.rings.labelsRing.elements
 
-        console.log("labels", labels)
         const labelsGroup = labelsG
             .selectAll('.group')
             .data(labels)
             .enter()
             .append('g')
             .attr('class', 'group')
-            .each((d: Label, i: number, nodes: HTMLDivElement[]) => {
-                console.log("data", d)
+            .each((label: Label, i: number, nodes: HTMLDivElement[]) => {
                 select(nodes[i])
                     .append("text")
                     .attr('class', 'chord-text')
                     .attr('dy', '.35em')
-                    .attr('transform', (d:Label)  => {
-                        return `rotate(${(d.angle * 180) / Math.PI - 90}) translate(${d.labelRadius})${d.angle > Math.PI ? 'rotate(180)' : ''}`
-                    }).style('text-anchor', (d: Label) => {
-                    return d.angle > Math.PI ? 'end' : ''
-                })
+                    .attr('transform', label.transform)
+                    .style('text-anchor', label.textAnchor)
                     .style('font-size', "12px")
-                    .style('fill', d.d.fill)
+                    .style('fill', label.d.fill)
                     .style('cursor', 'pointer')
-                    .text(d.label)
+                    .text(label.label)
             })
     }
 }
