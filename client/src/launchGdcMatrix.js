@@ -61,6 +61,7 @@ export async function init(arg, holder, genomes) {
 	const gdcCohort = getGdcCohort(arg)
 	const genes = await getGenes(arg, gdcCohort, CGConly, maxGenes)
 	const settings = arg.settings || {}
+	if (!settings.matrix) settings.matrix = {}
 	settings.matrix.geneFilter = geneFilter
 	const opts = {
 		holder,

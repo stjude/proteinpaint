@@ -26,8 +26,8 @@ export async function getPlotConfig(opts, app) {
 				},
 				// set any dataset-defined sample limits and sort priority, otherwise undefined
 				// put in settings, so that later may be overridden by a user
-				maxGenes: opts.settings.maxGenes || 50,
-				maxSample: opts.settings.maxSample || 1000,
+				maxGenes: opts.settings?.maxGenes || 50,
+				maxSample: opts.settings?.maxSample || 1000,
 				sortPriority: undefined,
 				truncatePriority: undefined,
 
