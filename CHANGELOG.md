@@ -1,6 +1,12 @@
 # Change Log
 
 All notable changes to this project will be documented in this file. 
+## 2.14.4
+
+- support a matrix sort filter for a multi-valued sample, where a non-targeted filter value may be used for sorting
+- fix adding a gene term to the matrix plot, by including a unique termwrapper $id
+- fix failing client-side integration tests
+ 
 ## 2.14.3
 
 - use a null filter0 for the OncoMatrix
