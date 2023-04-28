@@ -38,10 +38,12 @@ altAlleles=[]
 	array of alt alleles from this vcf line
 
 variant={}
+	pos: int
 	following are attached by this function
 	.info{}
 	.mlst[]
 		each element is one m with one ALT allele
+		m = {pos:int, alt:str, ref:str}
 
 info_str=str
 	info field from this vcf line
@@ -76,11 +78,13 @@ export function compute_mclass(tk, refAllele, altAlleles, variant, info_str, ID,
 	}
 
 	variant.mlst = altAlleles.map(i => {
+		const [_p, _r, _a] = correctRefAlt(variant.pos, refAllele, i)
 		const m = {
 			allele_original: i,
-			ref: refAllele,
-			alt: i,
-			type: getVariantType(refAllele, i)
+			ref: _r,
+			alt: _a,
+			pos: _p,
+			type: getVariantType(_r, _a)
 		}
 		if (ID && ID != '.') m.vcf_id = ID
 		return m
@@ -124,4 +128,19 @@ export function compute_mclass(tk, refAllele, altAlleles, variant, info_str, ID,
 			}
 		}
 	}
+}
+
+function correctRefAlt(p, ref, alt) {
+	// for oligos, always trim the last identical base
+	while (ref.length > 1 && alt.length > 1 && ref[ref.length - 1] == alt[alt.length - 1]) {
+		ref = ref.substring(0, ref.length - 1)
+		alt = alt.substring(0, alt.length - 1)
+	}
+	// move position up as long as first positions are equal
+	while (ref.length > 1 && alt.length > 1 && ref[0] == alt[0]) {
+		ref = ref.substring(1)
+		alt = alt.substring(1)
+		p++
+	}
+	return [p, ref, alt]
 }

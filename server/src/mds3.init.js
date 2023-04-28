@@ -781,7 +781,7 @@ export async function snvindelByRangeGetter_bcf(ds, genome) {
 					infoStr = l[5]
 				// [6] is format fields, [7 and on] for samples
 
-				const m0 = {} // temp obj, modified by compute_mclass()
+				const m0 = { pos: pos - 1 } // temp obj, modified by compute_mclass()
 				compute_mclass(q._tk, refallele, altalleles, m0, infoStr, id, param.isoform)
 				// m0.mlst[] is set; each ele is an m{} per ALT
 
@@ -793,7 +793,7 @@ export async function snvindelByRangeGetter_bcf(ds, genome) {
 					if (mayDropMbyInfoFilter(m, param)) continue // m is dropped due to info filter
 
 					m.chr = (q._tk.nochr ? 'chr' : '') + chr
-					m.pos = pos - 1 // bcf pos is 1-based, return 0-based
+					//m.pos = pos - 1 // bcf pos is 1-based, return 0-based
 					m.ssm_id = [m.chr, m.pos, m.ref, m.alt].join(ssmIdFieldsSeparator)
 
 					if (q._tk?.samples?.length) {
