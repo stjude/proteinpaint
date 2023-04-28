@@ -141,11 +141,11 @@ export function setRenderers(self) {
 			self.startGradient = gradient
 				.append('stop')
 				.attr('offset', '0%')
-				.attr('stop-color', chart.startColor)
+				.attr('start-color', chart.startColor)
 			self.stopGradient = gradient
 				.append('stop')
 				.attr('offset', '100%')
-				.attr('stop-color', chart.startColor)
+				.attr('stop-color', chart.stopColor)
 
 			mainG.attr('clip-path', `url(#${idclip})`)
 
@@ -163,9 +163,9 @@ export function setRenderers(self) {
 			legendG = svg.select('.sjpcb-scatter-legend')
 			clipRect = svg.select(`defs > clipPath > rect`)
 		}
-		if (self.axisBottom) {
-			xAxis.call(self.axisBottom)
-			yAxis.call(self.axisLeft)
+		if (chart.axisBottom) {
+			xAxis.call(chart.axisBottom)
+			yAxis.call(chart.axisLeft)
 		}
 		const particleWidth = Math.sqrt(self.settings.size)
 		if (self.settings.showAxes) {
@@ -593,7 +593,7 @@ export function setRenderers(self) {
 								chart.startColor = rgb(self.config.gradientColor[chart.id])
 									.brighter()
 									.brighter()
-								chart.startColor = rgb(self.config.gradientColor[chart.id])
+								chart.stopColor = rgb(self.config.gradientColor[chart.id])
 									.darker()
 									.darker()
 								chart.colorGenerator = d3Linear().range([chart.startColor, chart.stopColor])
