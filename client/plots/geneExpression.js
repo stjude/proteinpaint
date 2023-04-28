@@ -92,8 +92,9 @@ export function makeChartBtnMenu(holder, chartsInstance) {
 }
 
 function plotHeatmap(data, self) {
-	// {geneNameLst,sampleNameLst,matrix,sorted_sample_elements,sorted_gene_elements,sorted_sample_coordinates,sorted_gene_coordinates}
+	// {geneNameLst,sampleNameLst,matrix,sorted_sample_elements,rowIdxLst,sorted_sample_coordinates,sorted_gene_coordinates}
 	const obj = data.clustering
+	console.log(obj)
 	obj.d = {
 		minColor: '#0c306b',
 		maxColor: '#ffcc00',
@@ -106,7 +107,7 @@ function plotHeatmap(data, self) {
 	obj.d.rowHeight = getRowHeight(obj)
 	obj.d.colWidth = getColWidth(obj)
 
-	parseDendrogram(obj)
+	//parseDendrogram(obj)
 	/* set below
 	obj.xId2coord
 	obj.yId2coord
@@ -114,12 +115,42 @@ function plotHeatmap(data, self) {
 	obj.d.yDendrogramHeight
 	*/
 
+	{
+		const r = parseDendrogram2(obj.rowSteps, obj.matrix.length)
+		obj.rowIdxLst = r.idxLst
+		obj.xId2coord = r.id2coord
+		obj.d.xDendrogramHeight = 0
+		for (const n of obj.xId2coord.values()) {
+			obj.d.xDendrogramHeight = Math.max(obj.d.xDendrogramHeight, n.x)
+		}
+		for (const n of obj.xId2coord.values()) {
+			n.x = obj.d.xDendrogramHeight - n.x
+			n.y *= obj.d.rowHeight
+		}
+	}
+	{
+		const r = parseDendrogram2(obj.colSteps, obj.matrix[0].length)
+		obj.colIdxLst = r.idxLst
+		obj.yId2coord = r.id2coord
+		obj.d.yDendrogramHeight = 0
+		for (const n of obj.yId2coord.values()) {
+			const t = n.x
+			n.x = n.y
+			n.y = t
+			obj.d.yDendrogramHeight = Math.max(obj.d.yDendrogramHeight, n.y)
+		}
+		for (const n of obj.yId2coord.values()) {
+			n.y = obj.d.yDendrogramHeight - n.y
+			n.x *= obj.d.colWidth
+		}
+	}
+
 	getLabHeight(ctx, obj)
 	// set obj.d.xLabHeight obj.d.yLabHeight
 
 	self.dom.canvas
-		.attr('width', obj.d.xDendrogramHeight + obj.d.xLabHeight + obj.d.colWidth * obj.sorted_sample_elements.length)
-		.attr('height', obj.d.yDendrogramHeight + obj.d.yLabHeight + obj.d.rowHeight * obj.sorted_gene_elements.length)
+		.attr('width', obj.d.xDendrogramHeight + obj.d.xLabHeight + obj.d.colWidth * obj.colIdxLst.length)
+		.attr('height', obj.d.yDendrogramHeight + obj.d.yLabHeight + obj.d.rowHeight * obj.rowIdxLst.length)
 
 	// plot
 
@@ -128,7 +159,7 @@ function plotHeatmap(data, self) {
 		ctx.font = obj.d.rowHeight + 'px Arial'
 		ctx.textAlign = 'end'
 		ctx.fillStyle = 'black'
-		for (const [rowIdx, geneIdx] of obj.sorted_gene_elements.entries()) {
+		for (const [rowIdx, geneIdx] of obj.rowIdxLst.entries()) {
 			ctx.fillText(
 				obj.geneNameLst[geneIdx],
 				obj.d.xDendrogramHeight + obj.d.xLabHeight,
@@ -138,16 +169,16 @@ function plotHeatmap(data, self) {
 	}
 	// col names are not plotted yet
 
-	for (const [rowIdx, geneIdx] of obj.sorted_gene_elements.entries()) {
-		const sampleValues = obj.matrix[geneIdx] // row of matrix, that are sample values for this gene
+	for (let i = 0; i < obj.rowIdxLst.length; i++) {
+		const sampleValues = obj.matrix[obj.rowIdxLst[i]] // row of matrix, that are sample values for this gene
 		// min/max of this gene, to convert to [0,1] for mapping to color
 		const [min, max] = getMinMax(sampleValues)
-		for (const [colIdx, sampleIdx] of obj.sorted_sample_elements.entries()) {
-			const v = sampleValues[sampleIdx]
+		for (let j = 0; j < obj.colIdxLst.length; j++) {
+			const v = sampleValues[obj.colIdxLst[j]]
 			ctx.fillStyle = obj.d.colorScale((v - min) / (max - min))
 			ctx.fillRect(
-				obj.d.xDendrogramHeight + obj.d.xLabHeight + obj.d.colWidth * colIdx,
-				obj.d.yDendrogramHeight + obj.d.yLabHeight + obj.d.rowHeight * rowIdx,
+				obj.d.xDendrogramHeight + obj.d.xLabHeight + obj.d.colWidth * j,
+				obj.d.yDendrogramHeight + obj.d.yLabHeight + obj.d.rowHeight * i,
 				obj.d.colWidth,
 				obj.d.rowHeight
 			)
@@ -155,7 +186,6 @@ function plotHeatmap(data, self) {
 	}
 
 	plotDendrogram(ctx, obj)
-	//console.log(obj)
 	{
 		const width = 100,
 			height = 20
@@ -183,12 +213,12 @@ function plotHeatmap(data, self) {
 	}
 }
 function getRowHeight(obj) {
-	const h = 500 / obj.sorted_gene_elements.length
+	const h = 500 / obj.matrix.length
 	if (h > 20) return 20
 	return Math.ceil(h)
 }
 function getColWidth(obj) {
-	const w = 2000 / obj.sorted_sample_elements.length
+	const w = 2000 / obj.matrix[0].length
 	if (w > 10) return 10
 	return Math.ceil(w)
 }
@@ -260,17 +290,94 @@ function parseDendrogram(obj) {
 	}
 	obj.d.yDendrogramHeight = max
 }
+
+function parseDendrogram2(steps, leafCount) {
+	const idxLst = [] // list of leaf idx, sorted by steps
+	const id2coord = new Map() // k: node idx, v: {x,y,children[]}
+
+	let currentRowIdx = 0 // cumulative row number, to derive y position of each node
+	const parentHeap = [] // heap of parent nodes, last in, first out
+
+	for (const [i, step] of steps.entries()) {
+		// collect leaf id by the order of appearance in rowSteps[], into rowIdxLst
+		if (step.size == 2) {
+			// both leaf
+
+			idxLst.push(step.cluster1)
+			idxLst.push(step.cluster2)
+
+			const y1 = currentRowIdx++,
+				y2 = currentRowIdx++
+			id2coord.set(step.cluster1, { x: 0, y: y1 })
+			id2coord.set(step.cluster2, { x: 0, y: y2 })
+			// a free parent node is generated with these two leaves, and is cached in the array (it has no id yet)
+			parentHeap.push({
+				x: step.dissimilarity,
+				y: (y1 + y2) / 2,
+				children: [step.cluster1, step.cluster2]
+			})
+			continue
+		}
+
+		// at least one node is parent; may have a leaf
+		// for every parent node, consume one earlier parent from the heap
+
+		let leafId = null,
+			parentId
+		if (step.cluster1 < leafCount) {
+			leafId = step.cluster1
+			if (step.cluster2 < leafCount) throw 'cluster2 also leaf'
+			parentId = step.cluster2
+		} else if (step.cluster2 < leafCount) {
+			leafId = step.cluster2
+			parentId = step.cluster1
+		}
+
+		if (leafId != null) {
+			// this is a link between a parent and a leaf
+			idxLst.push(leafId)
+			const y1 = currentRowIdx++
+			id2coord.set(leafId, { x: 0, y: y1 })
+			if (parentHeap.length == 0) throw 'empty heap, expecting 1'
+			const p = parentHeap.pop()
+			id2coord.set(parentId, p)
+			// generate a new parent
+			parentHeap.push({
+				x: step.dissimilarity,
+				y: (y1 + p.y) / 2,
+				children: [step.cluster1, step.cluster2]
+			})
+			continue
+		}
+
+		// both are parent
+		if (parentHeap.length < 2) throw 'heap has less than 2'
+		const p1 = parentHeap.pop(),
+			p2 = parentHeap.pop()
+		id2coord.set(step.cluster1, p1)
+		id2coord.set(step.cluster2, p2)
+		// generate new parent
+		parentHeap.push({
+			x: step.dissimilarity,
+			y: (p1.y + p2.y) / 2,
+			children: [step.cluster1, step.cluster2]
+		})
+	}
+
+	if (parentHeap.length != 1) throw '1 last parent not in heap'
+	id2coord.set(leafCount * 2, parentHeap[0])
+	return { idxLst, id2coord }
+}
+
 function plotDendrogram(ctx, obj) {
 	ctx.strokeStyle = 'black'
 
 	let F = obj.d.yDendrogramHeight + obj.d.yLabHeight // yoffset applied to y coord when plotting x dendrogram
 
-	for (const n of obj.sorted_gene_coordinates) {
-		if (!n.child_nodes) continue
-		if (n.child_nodes.length != 2) throw 'gene child_nodes length!=2'
-		const nx = n.node_coordinates.x,
-			ny = n.node_coordinates.y
-		const [c1, c2] = n.child_nodes
+	for (const n of obj.xId2coord.values()) {
+		if (!n.children) continue
+		if (n.children.length != 2) throw 'gene child_nodes length!=2'
+		const [c1, c2] = n.children
 		const p1 = obj.xId2coord.get(c1),
 			p2 = obj.xId2coord.get(c2)
 		if (!p1 || !p2) throw 'coord not found for gene child nodes'
@@ -284,14 +391,14 @@ function plotDendrogram(ctx, obj) {
 		*/
 		ctx.beginPath()
 		// h line from n to p1
-		ctx.moveTo(nx, p1.y + F)
+		ctx.moveTo(n.x, p1.y + F)
 		ctx.lineTo(p1.x, p1.y + F)
 		// h line from n to p2
-		ctx.moveTo(nx, p2.y + F)
+		ctx.moveTo(n.x, p2.y + F)
 		ctx.lineTo(p2.x, p2.y + F)
 		// v line through n, from p1 to p2
-		ctx.moveTo(nx, p1.y + F)
-		ctx.lineTo(nx, p2.y + F)
+		ctx.moveTo(n.x, p1.y + F)
+		ctx.lineTo(n.x, p2.y + F)
 		// end
 		ctx.stroke()
 		ctx.closePath()
@@ -299,12 +406,10 @@ function plotDendrogram(ctx, obj) {
 
 	F = obj.d.xDendrogramHeight + obj.d.xLabHeight // xoffset applied to x coord when plotting y dendrogram
 
-	for (const n of obj.sorted_sample_coordinates) {
-		if (!n.child_nodes) continue
-		if (n.child_nodes.length != 2) throw 'child_nodes length!=2'
-		const nx = n.node_coordinates.x,
-			ny = n.node_coordinates.y
-		const [c1, c2] = n.child_nodes
+	for (const n of obj.yId2coord.values()) {
+		if (!n.children) continue
+		if (n.children.length != 2) throw 'child_nodes length!=2'
+		const [c1, c2] = n.children
 		const p1 = obj.yId2coord.get(c1),
 			p2 = obj.yId2coord.get(c2)
 		if (!p1 || !p2) throw 'coord not found for sample child nodes'
@@ -316,14 +421,14 @@ function plotDendrogram(ctx, obj) {
 		*/
 		ctx.beginPath()
 		// v line from n to p1
-		ctx.moveTo(F + p1.x, ny)
+		ctx.moveTo(F + p1.x, n.y)
 		ctx.lineTo(F + p1.x, p1.y)
 		// v line from n to p2
-		ctx.moveTo(F + p2.x, ny)
+		ctx.moveTo(F + p2.x, n.y)
 		ctx.lineTo(F + p2.x, p2.y)
 		// h line through n, from p1 to p2
-		ctx.moveTo(F + p1.x, ny)
-		ctx.lineTo(F + p2.x, ny)
+		ctx.moveTo(F + p1.x, n.y)
+		ctx.lineTo(F + p2.x, n.y)
 		// end
 		ctx.stroke()
 		ctx.closePath()
