@@ -5,7 +5,7 @@ import IRenderer from "#plots/disco_new/renderer/IRenderer";
 export default class ArcRenderer implements IRenderer{
 
     render(holder: any, viewModel: ViewModel) {
-        const ring = viewModel.rings[0]
+        const ring = viewModel.rings.chromosomesRing
 
         const data = ring.elements
 
