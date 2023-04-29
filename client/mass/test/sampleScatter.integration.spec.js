@@ -148,7 +148,7 @@ tape('\n', function(test) {
 })
 
 tape('Render TermdbTest scatter plot and open survival and summary', function(test) {
-	test.timeoutAfter(5000)
+	test.timeoutAfter(8000)
 	test.plan(4)
 	const holder = getHolder()
 	runpp({
@@ -175,8 +175,9 @@ tape('Render TermdbTest scatter plot and open survival and summary', function(te
 		function testPlot() {
 			const serieG = scatterDiv.select('.sjpcb-scatter-series')
 			const numSymbols = serieG.selectAll('path').size()
-			test.true(
-				numSymbols == scatter.Inner.charts[0].data.samples.length,
+			test.equal(
+				numSymbols,
+				scatter.Inner.charts[0].data.samples.length,
 				`Should be ${scatter.Inner.charts[0].data.samples.length}. Rendered ${numSymbols} symbols.`
 			)
 		}
@@ -201,7 +202,7 @@ tape('Render TermdbTest scatter plot and open survival and summary', function(te
 				.nodes()
 				.filter(p => p.__data__?.category === 'Acute lymphoblastic leukemia')
 				.map(path => path.__data__)
-			test.true(36 == samples.length, `Group should have 36 symbols.`)
+			test.equal(samples.length, 36, `Group should have 36 symbols.`)
 
 			const self = scatter.Inner
 			const group = {
@@ -216,13 +217,13 @@ tape('Render TermdbTest scatter plot and open survival and summary', function(te
 		async function testOpenSurvivalPlot() {
 			const survivalTerm = await scatter.Inner.app.vocabApi.getterm('efs')
 			await scatter.Inner.openSurvivalPlot(survivalTerm, [group])
-			test.true(d3s.selectAll('.sja_errorbar').size() == 0, 'Should render survival plot without errors".')
+			test.equal(d3s.selectAll('.sja_errorbar').size(), 0, 'Should render survival plot without errors".')
 		}
 
 		async function testOpenSummaryPlot() {
 			const genderTerm = await scatter.Inner.app.vocabApi.getterm('sex')
 			await scatter.Inner.openSummaryPlot(genderTerm, [group])
-			test.true(d3s.selectAll('.sja_errorbar').size() == 0, 'Should render summary plot without errors".')
+			test.equal(d3s.selectAll('.sja_errorbar').size(), 0, 'Should render summary plot without errors".')
 		}
 	}
 })

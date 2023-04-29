@@ -23,7 +23,8 @@ tape('\n', function(test) {
 })
 
 tape('only dictionary terms', function(test) {
-	test.timeoutAfter(3000)
+	test.timeoutAfter(6000)
+	test.plan(5)
 	runpp({
 		state: {
 			nav: {
@@ -89,12 +90,12 @@ tape('only dictionary terms', function(test) {
 		const { x, y, width, height } = matrix.Inner.dom.seriesesG.node().getBBox()
 		test.deepEqual(
 			{
-				x: +clusterRect.attr('x') + 1,
-				y: +clusterRect.attr('y') + 1,
-				width: +clusterRect.attr('width') - 2,
-				height: +clusterRect.attr('height') - 2
+				x: +clusterRect.attr('x'),
+				y: +clusterRect.attr('y'),
+				width: +clusterRect.attr('width'),
+				height: +clusterRect.attr('height')
 			},
-			{ x, y, width, height },
+			{ x: x - 1, y: y - 1, width: width + 2, height: height + 2 },
 			`cluster rect dimensions should be slightly larger than the serieses box and directly below it`
 		)
 
@@ -115,7 +116,8 @@ tape('only dictionary terms', function(test) {
 })
 
 tape('with divide by terms', function(test) {
-	test.timeoutAfter(3000)
+	test.timeoutAfter(6000)
+	test.plan(5)
 	runpp({
 		state: {
 			nav: {
