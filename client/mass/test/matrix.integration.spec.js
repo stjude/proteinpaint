@@ -23,7 +23,7 @@ tape('\n', function(test) {
 })
 
 tape('only dictionary terms', function(test) {
-	test.timeoutAfter(6000)
+	test.timeoutAfter(5000)
 	test.plan(5)
 	runpp({
 		state: {
@@ -33,7 +33,13 @@ tape('only dictionary terms', function(test) {
 			plots: [
 				{
 					chartType: 'matrix',
-
+					settings: {
+						matrix: {
+							// the matrix autocomputes the colw based on available screen width,
+							// need to set an exact screen width for consistent tests using getBBox()
+							availContentWidth: 1200
+						}
+					},
 					termgroups: [
 						{
 							name: 'Demographics',
@@ -116,7 +122,7 @@ tape('only dictionary terms', function(test) {
 })
 
 tape('with divide by terms', function(test) {
-	test.timeoutAfter(6000)
+	test.timeoutAfter(5000)
 	test.plan(5)
 	runpp({
 		state: {
@@ -126,6 +132,13 @@ tape('with divide by terms', function(test) {
 			plots: [
 				{
 					chartType: 'matrix',
+					settings: {
+						// the matrix autocomputes the colw based on available screen width,
+						// need to set an exact screen width for consistent tests using getBBox()
+						matrix: {
+							availContentWidth: 1200
+						}
+					},
 					divideBy: {
 						id: 'sex'
 					},
@@ -170,8 +183,7 @@ tape('with divide by terms', function(test) {
 		const clusterRects = matrix.Inner.dom.cluster.selectAll('.sjpp-matrix-clusteroutlines rect')
 		const c0 = clusterRects.filter((c, i) => i === 0)
 		const c1 = clusterRects.filter((c, i) => i === 1)
-		//const { x, y, width, height } = matrix.Inner.dom.seriesesG.node().getBBox()
-		const height = 58
+		const { x, y, width, height } = matrix.Inner.dom.seriesesG.node().getBBox()
 		test.deepEqual(
 			{
 				x: +c0.attr('x'),
@@ -179,7 +191,7 @@ tape('with divide by terms', function(test) {
 				width: +c0.attr('width'),
 				height: +c0.attr('height')
 			},
-			{ x: -1, y: -1, width: 596, height },
+			{ x: -1, y: -1, width: 596, height: 58 },
 			`cluster rect dimensions should be slightly larger than the serieses box and directly below it`
 		)
 
@@ -190,7 +202,7 @@ tape('with divide by terms', function(test) {
 				width: +c1.attr('width'),
 				height: +c1.attr('height')
 			},
-			{ x: 602, y: -1, width: 426, height },
+			{ x: 602, y: -1, width: 426, height: 58 },
 			`cluster rect dimensions should be slightly larger than the serieses box and directly below it`
 		)
 		if (test._ok) matrix.Inner.app.destroy()

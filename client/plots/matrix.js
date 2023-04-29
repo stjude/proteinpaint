@@ -537,16 +537,20 @@ class Matrix {
 			useCanvas: this.sampleOrder.length > m.svgCanvasSwitch
 		}
 
-		let boundingWidth = this.dom.contentNode.getBoundingClientRect().width
-		if (boundingWidth < 600) boundingWidth = window.document.body.clientWidth
+		if (s.availContentWidth) {
+			this.availContentWidth = s.availContentWidth
+		} else {
+			let boundingWidth = this.dom.contentNode.getBoundingClientRect().width
+			if (boundingWidth < 600) boundingWidth = window.document.body.clientWidth
 
-		const padding = 65
-		// should be estimated based on label-fontsize and longest label
-		// const labelOffset = !s.transpose
-		// 	? s.termLabelOffset + s.termGrpLabelOffset
-		// 	: s.sampleLabelOffset + s.sampleGrpLabelOffset
+			const padding = 65
+			// should be estimated based on label-fontsize and longest label
+			// const labelOffset = !s.transpose
+			// 	? s.termLabelOffset + s.termGrpLabelOffset
+			// 	: s.sampleLabelOffset + s.sampleGrpLabelOffset
 
-		this.availContentWidth = boundingWidth - padding - s.margin.right - xOffset //- 0.5*labelOffset
+			this.availContentWidth = boundingWidth - padding - s.margin.right - xOffset //- 0.5*labelOffset
+		}
 
 		if (this.autoDimensions.has('colw')) {
 			const totalColgspace = s.colgspace * Math.max(0, this.visibleSampleGrps.size - 1)
