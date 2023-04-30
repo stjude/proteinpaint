@@ -562,6 +562,57 @@ tape('add-transformer button interaction, 2-pill', async test => {
 	test.end()
 })
 
+tape('add-transformer button interaction, NEGATED 2-pill', async test => {
+	test.timeoutAfter(3000)
+	test.plan(6)
+
+	const opts = getOpts({
+		filterData: {
+			type: 'tvslst',
+			in: false,
+			join: 'and',
+			lst: [diaggrp(), agedx()]
+		}
+	})
+
+	await opts.filter.main(opts.filterData)
+	const adder = opts.holder
+		.selectAll('.sja_filter_add_transformer')
+		.filter(function() {
+			return this.style.display !== 'none'
+		})
+		.node()
+	adder.click()
+
+	await sleep(50)
+	test.notEqual(
+		opts.filter.Inner.dom.treeTip.d.node().style.display,
+		'none',
+		'should display the tree menu when clicking the add-transformer button'
+	)
+	test.equal(
+		opts.holder.node().querySelectorAll('.sja_filter_blank_pill').length,
+		1,
+		'should create exactly 1 blank pill when clicking on a two-pill root add-transformer'
+	)
+	test.equal(
+		opts.holder.node().querySelector('.sja_filter_blank_pill').firstChild.innerHTML,
+		'AND',
+		'should correctly label the join label between the potentially subnested root and blank pill'
+	)
+
+	const origFilter = JSON.parse(JSON.stringify(opts.filterData))
+	await addDemographicSexFilter(opts, adder)
+	test.deepEqual(
+		opts.filter.Inner.filter.lst[0].lst.map(t => t.tvs.term.id),
+		origFilter.lst.map(t => t.tvs.term.id),
+		'should subnest the original filter tvslst'
+	)
+	test.equal(opts.filterData.lst[1]?.tvs.term.id, 'sex', 'should append the new term to the re-rooted filter')
+	test.equal(opts.holder.selectAll('.sja_pill_wrapper').size(), 3, 'should display 3 pills')
+	test.end()
+})
+
 tape('pill Edit interaction', async test => {
 	test.timeoutAfter(3000)
 	test.plan(4)

@@ -873,7 +873,9 @@ function setRenderers(self) {
 			// assume that a cohortFilter is always joined via intersection with other filters
 			return self.filter.lst.length == 1 && d == 'and' ? 'inline-block' : 'none'
 		} else {
-			return self.filter && self.filter.lst.length > 0 && self.filter.join !== d ? 'inline-block' : 'none'
+			return self.filter && self.filter.lst.length > 0 && (self.filter.join !== d || !self.filter.in)
+				? 'inline-block'
+				: 'none'
 		}
 	}
 }
@@ -1120,7 +1122,7 @@ function setInteractivity(self) {
 		} else {
 			if (!filterUiRoot.join) filterUiRoot.join = d // 'and' || 'or'
 
-			if (filterUiRoot.join == d) {
+			if (filterUiRoot.join == d && filterUiRoot.in) {
 				if (tvslst.length < 2 || filterUiRoot.join == 'and') {
 					filterUiRoot.lst.push(...tvslst)
 				} else {
