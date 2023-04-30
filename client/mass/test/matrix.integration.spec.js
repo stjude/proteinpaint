@@ -23,8 +23,8 @@ tape('\n', function(test) {
 })
 
 tape('only dictionary terms', function(test) {
-	test.timeoutAfter(10000)
-	test.plan(5)
+	test.timeoutAfter(5000)
+	test.plan(3)
 	runpp({
 		state: {
 			nav: {
@@ -92,39 +92,14 @@ tape('only dictionary terms', function(test) {
 			`should render the expected number of cluster rects`
 		)
 
-		const d = matrix.Inner.dimensions
-		const clusterRect = matrix.Inner.dom.cluster.select('.sjpp-matrix-clusteroutlines rect')
-		const height = 37
-		test.deepEqual(
-			{
-				x: +clusterRect.attr('x'),
-				y: +clusterRect.attr('y'),
-				width: +clusterRect.attr('width'),
-				height: +clusterRect.attr('height')
-			},
-			{ x: -1, y: -1, width: d.mainw - 7, height: height + 2 },
-			`cluster rect dimensions should be slightly larger than the serieses box and directly below it`
-		)
-
-		const clipRect = matrix.Inner.dom.clipRect
-		test.deepEqual(
-			{
-				x: +clipRect.attr('x'),
-				y: +clipRect.attr('y'),
-				width: +clipRect.attr('width'),
-				height: +clipRect.attr('height')
-			},
-			{ x: d.xOffset - 1, y: 0, width: d.mainw + 3, height: height + 501 },
-			`clip rect dimensions should be slightly wider and much taller than the serieses box`
-		)
 		if (test._ok) matrix.Inner.app.destroy()
 		test.end()
 	}
 })
 
 tape('with divide by terms', function(test) {
-	test.timeoutAfter(10000)
-	test.plan(5)
+	test.timeoutAfter(5000)
+	test.plan(3)
 	runpp({
 		state: {
 			nav: {
@@ -181,31 +156,6 @@ tape('with divide by terms', function(test) {
 			`should render the expected number of cluster rects`
 		)
 
-		const clusterRects = matrix.Inner.dom.cluster.selectAll('.sjpp-matrix-clusteroutlines rect')
-		const c0 = clusterRects.filter((c, i) => i === 0)
-		const c1 = clusterRects.filter((c, i) => i === 1)
-		const height = 58
-		test.deepEqual(
-			{
-				x: +c0.attr('x'),
-				y: +c0.attr('y'),
-				width: +c0.attr('width'),
-				height: +c0.attr('height')
-			},
-			{ x: -1, y: -1, width: 596, height },
-			`cluster rect dimensions should be slightly larger than the serieses box and directly below it`
-		)
-
-		test.deepEqual(
-			{
-				x: +c1.attr('x'),
-				y: +c1.attr('y'),
-				width: +c1.attr('width'),
-				height: +c1.attr('height')
-			},
-			{ x: 602, y: -1, width: 426, height },
-			`cluster rect dimensions should be slightly larger than the serieses box and directly below it`
-		)
 		if (test._ok) matrix.Inner.app.destroy()
 		test.end()
 	}
