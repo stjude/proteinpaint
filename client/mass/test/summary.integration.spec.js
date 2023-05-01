@@ -37,7 +37,7 @@ const runpp = helpers.getRunPp('mass', {
 ***************/
 
 tape('\n', function(test) {
-	test.pass('-***- termdb/barchart -***-')
+	test.pass('-***- plots/summary -***-')
 	test.end()
 })
 
