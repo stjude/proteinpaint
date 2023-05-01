@@ -652,7 +652,7 @@ tape('survival term as term1, term0 = agedx, custom bins', function(test) {
 				})
 			}
 		})
-		test.ok(survCurves.length, expectedCount, `Should display the correct num of bins = ${expectedCount}`)
+		test.equal(survCurves.length, expectedCount, `Should display the correct num of bins = ${expectedCount}`)
 
 		if (test._ok) inner.app.destroy()
 		test.end()
