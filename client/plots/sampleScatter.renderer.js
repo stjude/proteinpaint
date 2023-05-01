@@ -10,7 +10,7 @@ import { Menu } from '#dom/menu'
 
 export function setRenderers(self) {
 	self.render = function() {
-		const chartDivs = self.mainDiv.selectAll('.chart').data(self.charts, chart => chart.id)
+		const chartDivs = self.mainDiv.selectAll(':scope > div').data(self.charts, chart => chart.id)
 		chartDivs.exit().remove()
 		chartDivs.each(self.renderChart)
 		chartDivs
@@ -22,10 +22,7 @@ export function setRenderers(self) {
 	self.renderChart = function(chart) {
 		chart.chartDiv = select(this)
 		const s = self.settings
-		chart.chartDiv
-			.style('opacity', 0)
-			.style('display', 'inline-block')
-			.attr('class', 'chart')
+		chart.chartDiv.style('opacity', 0).style('display', 'inline-block')
 		chart.chartDiv.on('mouseover', event => self.mouseover(event, chart)).on('click', self.mouseclick)
 		chart.svg = chart.chartDiv.select('svg').empty() ? chart.chartDiv.append('svg') : chart.chartDiv.select('svg')
 		renderSVG(chart, s, 0)
