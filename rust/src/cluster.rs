@@ -317,7 +317,6 @@ fn sort_elements(
         println!("Number of nodes:{}", coordinates.nrows());
         let max_length_node_distance = dend.steps()[dend.steps().len() - 1].dissimilarity; // max-length between all original nodes and the topmost node
                                                                                            //println!("max_length_node_distance:{}", max_length_node_distance);
-        let mut x_axis_iter = 0;
         for i in 0..dend.steps().len() {
             let step = &dend.steps()[i];
             println!("step:{:?}", step);
@@ -326,26 +325,25 @@ fn sort_elements(
 
             // Find all original nodes
 
-            let cluster1_coordinates;
-            let cluster2_coordinates;
+            let (cluster1_coordinates, cluster2_coordinates);
+            let mut child1_all_original_nodes = vec![];
+            let mut child2_all_original_nodes = vec![];
             if step.cluster1 < coordinates.nrows() {
                 // Only fundamental nodes are added
                 cluster1_coordinates = NodeCoordinate {
-                    x: Some(x_axis_iter as f64),
+                    x: None,
                     y: Some(1.0),
                 };
                 node_coordinates_list.push(NewNodeRelativeCoordinates {
                     node_id: step.cluster1,
                     node_coordinates: NodeCoordinate {
-                        x: Some(x_axis_iter as f64),
+                        x: None,
                         y: Some(1.0),
                     },
                     child_nodes: vec![],
                     child_node_coordinates: vec![],
                     all_original_nodes: vec![],
                 });
-
-                x_axis_iter += 1;
                 sorted_nodes.push(step.cluster1);
             } else {
                 // If not a fundamental node, then get its x and y coordinate
@@ -356,18 +354,19 @@ fn sort_elements(
                 //println!("step.cluster1:{}", step.cluster1);
                 //println!("child1_search_result:{:?}", child1_search_result);
                 cluster1_coordinates = child1_search_result.node_coordinates;
+                child1_all_original_nodes = child1_search_result.all_original_nodes.clone();
             }
 
             if step.cluster2 < coordinates.nrows() {
                 // Only fundamental nodes are added
                 cluster2_coordinates = NodeCoordinate {
-                    x: Some(x_axis_iter as f64),
+                    x: None,
                     y: Some(1.0),
                 };
                 node_coordinates_list.push(NewNodeRelativeCoordinates {
                     node_id: step.cluster2,
                     node_coordinates: NodeCoordinate {
-                        x: Some(x_axis_iter as f64),
+                        x: None,
                         y: Some(1.0),
                     },
                     child_nodes: vec![],
@@ -375,7 +374,6 @@ fn sort_elements(
                     all_original_nodes: vec![],
                 });
 
-                x_axis_iter += 1;
                 sorted_nodes.push(step.cluster2);
             } else {
                 // If not a fundamental node, then get its x and y coordinate
@@ -386,22 +384,39 @@ fn sort_elements(
                 //println!("step.cluster2:{}", step.cluster2);
                 //println!("child2_search_result:{:?}", child2_search_result);
                 cluster2_coordinates = child2_search_result.node_coordinates;
+                child2_all_original_nodes = child2_search_result.all_original_nodes.clone();
             }
 
             // New derived node
+            let mut all_original_nodes = Vec::<usize>::new();
+            if step.cluster1 < coordinates.nrows() {
+                // Select only original nodes and put them in all_original_nodes
+                all_original_nodes.push(step.cluster1)
+            }
+            for child_item in child1_all_original_nodes {
+                // Iterate through the child's all_original_nodes vector and add them to the current vectors all_original_nodes
+                all_original_nodes.push(child_item)
+            }
+            if step.cluster2 < coordinates.nrows() {
+                // Select only original nodes and put them in all_original_nodes
+                all_original_nodes.push(step.cluster2)
+            }
+            for child_item in child2_all_original_nodes {
+                // Iterate through the child's all_original_nodes vector and add them to the current vectors all_original_nodes
+                all_original_nodes.push(child_item)
+            }
+
             node_coordinates_list.push(NewNodeRelativeCoordinates {
                 node_id: coordinates.nrows() + i,
                 node_coordinates: NodeCoordinate {
-                    x: Some(
-                        (cluster1_coordinates.x.unwrap() + cluster2_coordinates.x.unwrap()) / 2.0,
-                    ),
+                    x: None,
                     y: Some(
                         (max_length_node_distance - step.dissimilarity) / max_length_node_distance,
                     ),
                 },
                 child_nodes: vec![step.cluster1, step.cluster2],
                 child_node_coordinates: vec![cluster1_coordinates, cluster2_coordinates],
-                all_original_nodes: vec![],
+                all_original_nodes: all_original_nodes,
             });
         }
     } else {
