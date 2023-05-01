@@ -308,7 +308,7 @@ tape('1-entry root filter: visible controls', async test => {
 
 tape('2-entry root filter: visible controls', async test => {
 	test.timeoutAfter(5000)
-	test.plan(19)
+	test.plan(21)
 	const opts = getOpts({
 		filterData: {
 			type: 'tvslst',
@@ -383,11 +383,9 @@ tape('2-entry root filter: visible controls', async test => {
 
 	const joinOpt = menuRows.filter(d => d.action == 'join')
 	test.equal(joinOpt.style('display'), 'table-row', 'should display a join option')
-	test.equal(
-		joinOpt.node().querySelector('td:nth-child(2)').innerHTML,
-		opts.filterData.join == 'or' ? 'AND' : 'OR',
-		'should correctly label the pill join option'
-	)
+
+	const switchOpt = menuRows.filter(d => d.action == 'switch')
+	test.equal(switchOpt.style('display'), 'none', 'should NOT display a switch option')
 
 	const negateOpt = menuRows.filter(d => d.action == 'negate')
 	test.equal(negateOpt.style('display'), 'table-row', 'should have a pill Negate option')
@@ -412,6 +410,12 @@ tape('2-entry root filter: visible controls', async test => {
 		joinOpt.node().querySelector('td:nth-child(2)').innerHTML,
 		opts.filterData.join.toUpperCase(),
 		'should correctly label the group append option'
+	)
+	test.equal(switchOpt.style('display'), 'table-row', 'should NOT display a switch option')
+	test.equal(
+		switchOpt.node().querySelector('td:nth-child(2)').innerHTML,
+		opts.filterData.join == 'or' ? 'Switch to AND' : 'Switch to OR',
+		'should correctly label the switch option'
 	)
 	test.equal(negateOpt.style('display'), 'table-row', 'should show a group Negate option')
 	test.equal(removeOpt.style('display'), 'table-row', 'should show a group Remove option')
@@ -958,6 +962,42 @@ tape('group Remove interaction', async test => {
 	test.equal(opts.holder.selectAll('.sja_pill_wrapper').size(), 0, `should remove a group's pills when clicked`)
 
 	//document.body.dispatchEvent(new Event('mousedown', { bubbles: true }))
+	test.end()
+})
+
+tape('group Switch join interaction', async test => {
+	test.timeoutAfter(3000)
+	test.plan(2)
+
+	const opts = getOpts({
+		filterData: {
+			type: 'tvslst',
+			in: true,
+			join: 'or',
+			lst: [diaggrp(), gettvs('abc')]
+		}
+	})
+
+	await opts.filter.main(opts.filterData)
+	const joinLabel = opts.filter.Inner.dom.holder.select('.sja_filter_join_label')
+	joinLabel.node().click()
+
+	const tipd = opts.filter.Inner.dom.controlsTip.d
+	const menuRows = tipd.selectAll('tr')
+	const switchOpt = menuRows.filter(d => d.action == 'switch')
+	const expectedLabel = 'Switch to AND'
+	test.equal(
+		switchOpt.select('td:nth-child(2)').text(),
+		expectedLabel,
+		`should display the menu option as ${expectedLabel}`
+	)
+	switchOpt.node().click()
+	await sleep(30)
+	test.equal(
+		opts.filter.Inner.filter.join,
+		'and',
+		`should switch a group's filter.join value after clicking ${expectedLabel}`
+	)
 	test.end()
 })
 
