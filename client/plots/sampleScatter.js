@@ -60,7 +60,6 @@ class Scatter {
 			: this.opts.holder.append('div').style('display', 'inline-block')
 		this.mainDiv = controlsDiv.append('div').style('display', 'inline-block')
 
-		this.charts = []
 		this.axisOffset = { x: 80, y: 20 }
 
 		this.dom = {
@@ -104,10 +103,11 @@ class Scatter {
 		copyMerge(this.settings, this.config.settings.sampleScatter)
 		const reqOpts = this.getDataRequestOpts()
 		if (reqOpts.coordTWs.length == 1) return //To allow removing a term in the controls, though nothing is rendered (summary tab with violin active)
+		this.charts = []
 		const data = await this.app.vocabApi.getScatterData(reqOpts)
 		if (data.error) throw data.error
 		if (!Array.isArray(data.samples)) throw 'data.samples[] not array'
-		this.createChart(1, data)
+		this.createChart('1', data)
 		//this.createChart(2, data)
 		//Creating charts variable to support rendering multiple charts
 
