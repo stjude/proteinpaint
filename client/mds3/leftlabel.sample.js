@@ -270,7 +270,8 @@ function showSummary4oneTerm(termid, div, numbycategory, tk, block) {
 			dslabel: tk.dslabel,
 			filter0: tk.filter0,
 			showCloseLeftlabel: true,
-			filterObj: getNewFilter(tk, newTvs)
+			filterObj: getNewFilter(tk, newTvs),
+			allow2selectSamples: tk.allow2selectSamples
 		}
 		const tk2 = block.block_addtk_template(tkarg)
 		block.tk_load(tk2)
@@ -311,7 +312,8 @@ function showDensity4oneTerm(termid, div, density_data, tk, block) {
 			dslabel: tk.dslabel,
 			filter0: tk.filter0,
 			showCloseLeftlabel: true,
-			filterObj: getNewFilter(tk, tvs)
+			filterObj: getNewFilter(tk, tvs),
+			allow2selectSamples: tk.allow2selectSamples
 		}
 		const tk2 = block.block_addtk_template(tkarg)
 		block.tk_load(tk2)
