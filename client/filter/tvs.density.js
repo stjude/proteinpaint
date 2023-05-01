@@ -90,7 +90,7 @@ function applyBrush(self, elem, brush) {
 			const start = range.startunbounded ? '' : inputRange.startinclusive ? `${range.start} <=` : `${range.start} <`
 			const stop = range.stopunbounded ? '' : inputRange.stopinclusive ? `<= ${range.stop}` : `< ${range.stop}`
 			// update inputs from brush move
-			brush.rangeInput.getInput().node().value = range.value ? `x = ${range.value}` : `${start} x ${stop}`
+			brush.rangeInput.getInput().node().value = `${start} x ${stop}`
 		})
 		.on('end', function() {
 			//diable pointer-event for multiple brushes
