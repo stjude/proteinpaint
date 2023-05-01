@@ -52,8 +52,6 @@ When running your dev server, you can see [marked up README's in the browser](ht
 npm test # tests both frontend and backend code
 ```
 
-See the [documentation](https://docs.google.com/document/d/13efooFofEk5a6cwVXD_Cyh1m6ekqk8zIQqNScYfAVNs/edit#heading=h.5ttjllhwzzy4) for more information.
-
 ## Build
 
 ### Package Release
