@@ -505,6 +505,7 @@ function setRenderers(self) {
 		const menuOptions = [
 			{ action: 'edit', html: ['', 'Edit', '&rsaquo;'], handler: self.editTerm },
 			{ action: 'join', html: ['&#10010;', '', '&rsaquo;'], handler: self.displayTreeMenu },
+			{ action: 'switch', html: ['', 'Switch to', ''], handler: self.switchJoin },
 			{ action: 'negate', html: ['', 'Negate', ''], handler: self.negateClause },
 			{ action: 'remove', html: ['&#10006;', 'Remove', ''], handler: self.removeTransform }
 		]
@@ -920,6 +921,19 @@ function setInteractivity(self) {
 			.select('td:nth-child(2)')
 			.html(grpAction ? filter.join.toUpperCase() : filter.join == 'and' ? 'OR' : 'AND')
 
+		menuRows
+			.filter(d => d.action == 'switch')
+			.style(
+				'display',
+				self.opts.joinWith.length < 2 ||
+					(filter.$id == self.filter.$id && filter.lst.length == 1) ||
+					!cls.includes('_join_')
+					? 'none'
+					: 'table-row'
+			)
+			.select('td:nth-child(2)')
+			.html(d => (filter.join == 'and' ? 'Switch to OR' : 'Switch to AND'))
+
 		self.dom.filterContainer.selectAll('.sja_filter_grp').style('background-color', 'transparent')
 		if (grpAction) {
 			if (cls.includes('join')) elem.parentNode.parentNode.style.backgroundColor = '#ee5'
@@ -931,7 +945,7 @@ function setInteractivity(self) {
 		event.stopPropagation()
 		if (d == self.activeData.menuOpt) return
 		self.activeData.menuOpt = d
-		if (self.activeData.elem.className.includes('join') && d.action !== 'join') {
+		if (self.activeData.elem.className.includes('join') && d.action !== 'join' && d.action != 'switch') {
 			self.activeData.item = self.activeData.filter
 			self.activeData.filter = findParent(self.filter, self.activeData.item)
 		}
@@ -1369,6 +1383,14 @@ function setInteractivity(self) {
 		self.activeData = { item: filter, filter, elem }
 		self.resetBlankPill(d.action)
 		self.displayTreeMenu(elem, d)
+	}
+
+	self.switchJoin = function(event, d) {
+		const filterUiRoot = JSON.parse(JSON.stringify(self.filter))
+		const filterCopy = findItem(filterUiRoot, self.activeData.filter.$id)
+		if (filterCopy.join < 2) return
+		filterCopy.join = filterCopy.join == 'and' ? 'or' : 'and'
+		self.refresh(filterUiRoot)
 	}
 }
 
