@@ -26,12 +26,17 @@ export class NumericRangeInput {
 	parseRange() {
 		const str = this.input.node().value
 		const new_range = parseRange(str)
-		if (this.range?.min && (new_range.startunbounded || this.range?.min > new_range.start)) {
-			throw 'Invalid start value < minimum allowed'
+		if (this.range?.min != undefined) {
+			if (!new_range.startunbounded && this.range?.min > new_range.start) throw 'Invalid start value < minimum allowed'
+			if (!new_range.stopunbounded && this.range?.min >= new_range.stop) throw 'Invalid stop value >= minimum allowed'
 		}
-		if (this.range?.max && (new_range.stopunbounded || this.range?.max < new_range.stop)) {
-			throw 'Invalid stop value > maximum allowed'
+		if (this.range?.max != undefined) {
+			if (!new_range.stopunbounded && this.range?.max < new_range.stop) throw 'Invalid stop value > maximum allowed'
+
+			if (!new_range.startunbounded && new_range.start >= this.range?.max)
+				throw 'Invalid start value >= maximum allowed'
 		}
+
 		this.range = new_range
 		this.callback(new_range)
 		return new_range
@@ -46,8 +51,8 @@ export class NumericRangeInput {
 		//When an error is thrown the previous range is restored
 		else this.range = range
 
-		const start = range.start ? `${range.start} <=` : ''
-		const stop = range.stop ? `<= ${range.stop}` : ''
+		const start = range.start != undefined ? `${range.start} <=` : ''
+		const stop = range.stop != undefined ? `<= ${range.stop}` : ''
 		this.input.node().value = range.value != undefined ? ` x=${range.value} ` : `${start} x ${stop}`
 	}
 }
