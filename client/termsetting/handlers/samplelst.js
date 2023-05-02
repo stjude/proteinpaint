@@ -132,6 +132,7 @@ export function getSamplelstTW(groups, name = 'groups') {
 }
 
 export function showGroupsMenu(event, tw, allowedTermTypes, deleteCallback, app) {
+	const samplelstTW = JSON.parse(JSON.stringify(tw))
 	const parentMenu = new Menu({ padding: '5px' })
 
 	const menuDiv = parentMenu.d.append('div')
@@ -144,37 +145,41 @@ export function showGroupsMenu(event, tw, allowedTermTypes, deleteCallback, app)
 			.append('div')
 			.attr('class', 'sja_menuoption sja_sharp_border')
 			.html('Compare survival&nbsp;&nbsp;›')
-
-		survivalDiv.on('click', async e => {
-			const state = {
-				nav: { header_mode: 'hide_search' },
-				tree: { usecase: { target: 'survival', detail: 'term' } }
-			}
-			showTermsTree(
-				survivalDiv,
-				term => {
-					openSurvivalPlot(term, tw, app)
-				},
-				state,
-				app,
-				parentMenu
-			)
-		})
+			.on('click', e => {
+				const state = {
+					nav: { header_mode: 'hide_search' },
+					tree: { usecase: { target: 'survival', detail: 'term' } }
+				}
+				showTermsTree(
+					survivalDiv,
+					term => {
+						openSurvivalPlot(term, samplelstTW, app)
+					},
+					app,
+					parentMenu,
+					state
+				)
+			})
 	}
-	// const summarizeDiv = menuDiv
-	// 	.append('div')
-	// 	.attr('class', 'sja_menuoption sja_sharp_border')
-	// 	.html('Summarize')
-	// summarizeDiv
-	// 	.insert('div')
-	// 	.html('›')
-	// 	.style('float', 'right')
+	const summarizeDiv = menuDiv
+		.append('div')
+		.attr('class', 'sja_menuoption sja_sharp_border')
+		.html('Summarize')
+	summarizeDiv
+		.insert('div')
+		.html('›')
+		.style('float', 'right')
 
-	// summarizeDiv.on('click', async e => {
-	// 	showTermsTree(summarizeDiv, term => {
-	// 		openSummaryPlot(term, groups)
-	// 	})
-	// })
+	summarizeDiv.on('click', async e => {
+		showTermsTree(
+			summarizeDiv,
+			term => {
+				openSummaryPlot(term, samplelstTW, app)
+			},
+			app,
+			parentMenu
+		)
+	})
 	row = menuDiv
 		.append('div')
 		.attr('class', 'sja_menuoption sja_sharp_border')
@@ -186,11 +191,11 @@ export function showGroupsMenu(event, tw, allowedTermTypes, deleteCallback, app)
 	parentMenu.show(event.clientX, event.clientY)
 }
 
-export async function openSurvivalPlot(term, tw, app, id) {
+export async function openSurvivalPlot(term, term2, app, id) {
 	let config = {
 		chartType: 'survival',
 		term,
-		term2: JSON.parse(JSON.stringify(tw))
+		term2
 	}
 	if (id) config.insertBefore = id
 	await app.dispatch({
@@ -199,7 +204,25 @@ export async function openSurvivalPlot(term, tw, app, id) {
 	})
 }
 
-async function showTermsTree(div, callback, state = { tree: { usecase: { detail: 'term' } } }, app, parentMenu) {
+export async function openSummaryPlot(term, samplelstTW, app, id) {
+	// barchart config.term{} name is confusing, as it is actually a termsetting object, not term
+	// thus convert the given term into a termwrapper
+	// tw.q can be missing and will be filled in with default setting
+	const tw = { id: term.id, term }
+	let config = {
+		chartType: 'summary',
+		childType: 'barchart',
+		term: tw,
+		term2: samplelstTW
+	}
+	if (id) config.insertBefore = id
+	await app.dispatch({
+		type: 'plot_create',
+		config
+	})
+}
+
+export async function showTermsTree(div, callback, app, parentMenu, state = { tree: { usecase: { detail: 'term' } } }) {
 	const menu = new Menu({ padding: '5px', offsetX: 170, offsetY: -34 })
 	menu.showunderoffset(div.node())
 	const termdb = await import('../../termdb/app')

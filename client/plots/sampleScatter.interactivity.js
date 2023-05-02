@@ -4,7 +4,7 @@ import { dofetch3 } from '#common/dofetch'
 import { mclass, morigin, dt2label } from '#shared/common'
 import { Menu } from '#dom/menu'
 import { rgb } from 'd3-color'
-import { getSamplelstTW, openSurvivalPlot } from '#termsetting/handlers/samplelst'
+import { getSamplelstTW, openSurvivalPlot, openSummaryPlot, showTermsTree } from '#termsetting/handlers/samplelst'
 
 export function setInteractivity(self) {
 	self.mouseover = function(event, chart) {
@@ -291,43 +291,6 @@ export function setInteractivity(self) {
 		link.remove()
 	}
 
-	self.openSummaryPlot = async function(term, groups) {
-		// barchart config.term{} name is confusing, as it is actually a termsetting object, not term
-		// thus convert the given term into a termwrapper
-		// tw.q can be missing and will be filled in with default setting
-		const tw = { id: term.id, term }
-		const plot_name = self.config.name ? self.config.name : 'Summary scatter'
-		const config = {
-			chartType: 'summary',
-			childType: 'barchart',
-			term: tw, // self is a termsetting, not a term
-			term2: getSamplelstTW(groups, plot_name + ' groups'),
-			insertBefore: self.id
-		}
-		await self.app.dispatch({
-			type: 'plot_create',
-			config
-		})
-	}
-
-	self.showTermsTree = async function(div, callback, state = { tree: { usecase: { detail: 'term' } } }) {
-		self.dom.termstip.clear()
-		self.dom.termstip.showunderoffset(div.node())
-		const termdb = await import('../termdb/app')
-		termdb.appInit({
-			holder: self.dom.termstip.d,
-			vocabApi: self.app.vocabApi,
-			state,
-			tree: {
-				click_term: term => {
-					callback(term)
-					self.dom.tip.hide()
-					self.dom.termstip.hide()
-				}
-			}
-		})
-	}
-
 	self.getCategoryInfo = function(d, category) {
 		if (!(category in d)) return ''
 		return d[category]
@@ -457,6 +420,9 @@ export function setInteractivity(self) {
 		self.dom.tip.clear()
 		self.dom.tip.show(event.clientX, event.clientY, false, false)
 		const menuDiv = self.dom.tip.d.append('div')
+		const plot_name = self.config.name ? self.config.name : 'Summary scatter'
+		const tw = getSamplelstTW([group], plot_name + ' groups')
+
 		const groupDiv = menuDiv
 			.append('div')
 			.attr('name', 'sjpp-group-input-div')
@@ -500,14 +466,14 @@ export function setInteractivity(self) {
 					nav: { header_mode: 'hide_search' },
 					tree: { usecase: { target: 'survival', detail: 'term' } }
 				}
-				const plot_name = self.config.name ? self.config.name : 'Summary scatter'
-				const tw = getSamplelstTW([group], plot_name + ' groups')
 
-				self.showTermsTree(
+				showTermsTree(
 					survivalDiv,
 					term => {
 						openSurvivalPlot(term, tw, self.app, self.id)
 					},
+					self.app,
+					self.dom.tip,
 					state
 				)
 			})
@@ -522,7 +488,7 @@ export function setInteractivity(self) {
 			.style('float', 'right')
 
 		summarizeDiv.on('click', async e => {
-			self.showTermsTree(summarizeDiv, term => self.openSummaryPlot(term, [group]))
+			showTermsTree(summarizeDiv, term => openSummaryPlot(term, tw), self.app, self.dom.tip)
 		})
 		const deleteDiv = menuDiv
 			.append('div')
@@ -583,6 +549,8 @@ export function setInteractivity(self) {
 		self.dom.tip.clear()
 		self.dom.tip.show(event.clientX, event.clientY)
 		const menuDiv = self.dom.tip.d.append('div')
+		const plot_name = self.config.name ? self.config.name : 'Summary scatter'
+		const tw = getSamplelstTW(self.config.groups, plot_name + ' groups')
 
 		let row = menuDiv.append('div')
 
@@ -615,13 +583,13 @@ export function setInteractivity(self) {
 					nav: { header_mode: 'hide_search' },
 					tree: { usecase: { target: 'survival', detail: 'term' } }
 				}
-				const plot_name = self.config.name ? self.config.name : 'Summary scatter'
-				const tw = getSamplelstTW(self.config.groups, plot_name + ' groups')
-				self.showTermsTree(
+				showTermsTree(
 					survivalDiv,
 					term => {
 						openSurvivalPlot(term, tw, self.app, self.id)
 					},
+					self.app,
+					self.dom.tip,
 					state
 				)
 			})
@@ -636,9 +604,14 @@ export function setInteractivity(self) {
 			.style('float', 'right')
 
 		summarizeDiv.on('click', async e => {
-			self.showTermsTree(summarizeDiv, term => {
-				self.openSummaryPlot(term, self.config.groups)
-			})
+			showTermsTree(
+				summarizeDiv,
+				term => {
+					openSummaryPlot(term, tw, self.app)
+				},
+				self.app,
+				self.dom.tip
+			)
 		})
 		row = menuDiv
 			.append('div')
