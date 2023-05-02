@@ -428,6 +428,7 @@ async function geneExpressionClustering(data, q) {
 		matrix: [],
 		row_names: [], // genes
 		col_names: [...sampleSet], // samples
+		cluster_method: q.clusterMethod,
 		plot_image: false // When true causes cluster.rs to plot the image into a png file (EXPERIMENTAL)
 	}
 

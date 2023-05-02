@@ -406,6 +406,7 @@ function validatePlot(p, vocabApi) {
 			if (!p.colorTW) `plot error: missing the plot color term wrapper for '${p.chartType}'`
 			if (!p.file) `plot error: missing the plot coordinates file for '${p.chartType}'`
 		} else if (p.chartType == 'genomeBrowser') {
+		} else if (p.chartType == 'geneExpression') {
 		} else {
 			validateGenericPlot(p, vocabApi)
 		}

@@ -2,6 +2,12 @@ import { getCompInit, copyMerge } from '#rx'
 import { dofetch3 } from '#common/dofetch'
 import { interpolateRgb } from 'd3-interpolate'
 
+const defaultConfig = {
+	clusterMethod: 'Average'
+}
+
+const clusterMethodLst = ['Single', 'Complete', 'Average', 'Weighted', 'Ward', 'Centroid', 'Median']
+
 class geneExpression {
 	constructor() {
 		this.type = 'geneExpression'
@@ -14,6 +20,7 @@ class geneExpression {
 			canvas: holder.append('canvas'),
 			colorScaleDiv: holder.append('div')
 		}
+		this.makeControls()
 		this.components = {}
 	}
 
@@ -38,15 +45,29 @@ class geneExpression {
 			genome: this.app.opts.state.vocab.genome,
 			dslabel: this.app.opts.state.vocab.dslabel,
 			geneExpression: 1,
-			genes: this.state.config.genes
+			genes: this.state.config.genes,
+			clusterMethod: this.state.config.clusterMethod
 		}
 		return body
+	}
+
+	makeControls() {
+		const s = this.dom.controlsDiv.append('select')
+		for (const n of clusterMethodLst) s.append('option').text(n)
+		this.dom.clusterMethodSelect = s
+		s.on('change', () => {
+			this.app.dispatch({
+				type: 'plot_edit',
+				id: this.id,
+				config: { clusterMethod: clusterMethodLst[s.property('selectedIndex')] }
+			})
+		})
 	}
 }
 
 export async function getPlotConfig(opts, app) {
 	try {
-		const config = {}
+		const config = structuredClone(defaultConfig)
 
 		return copyMerge(config, opts)
 	} catch (e) {
@@ -92,7 +113,9 @@ export function makeChartBtnMenu(holder, chartsInstance) {
 }
 
 function plotHeatmap(data, self) {
-	// {geneNameLst,sampleNameLst,matrix,sorted_sample_elements,rowIdxLst,sorted_sample_coordinates,sorted_gene_coordinates}
+	self.dom.clusterMethodSelect.property('selectedIndex', clusterMethodLst.indexOf(self.state.config.clusterMethod))
+
+	// data={geneNameLst,sampleNameLst,matrix,rowIdxLst,sorted_sample_coordinates,sorted_gene_coordinates}
 	const obj = data.clustering
 	console.log(obj)
 	obj.d = {
@@ -190,31 +213,8 @@ function plotHeatmap(data, self) {
 	}
 
 	plotDendrogram(ctx, obj)
-	{
-		const width = 100,
-			height = 20
-		self.dom.colorScaleDiv.append('span').text('Min')
-		const svg = self.dom.colorScaleDiv.append('svg')
-		self.dom.colorScaleDiv.append('span').text('Max')
-		const grad = svg
-			.append('defs')
-			.append('linearGradient')
-			.attr('id', 'grad')
-		grad
-			.append('stop')
-			.attr('offset', '0%')
-			.attr('stop-color', obj.d.minColor)
-		grad
-			.append('stop')
-			.attr('offset', '100%')
-			.attr('stop-color', obj.d.maxColor)
-		svg
-			.append('rect')
-			.attr('width', width)
-			.attr('height', height)
-			.attr('fill', 'url(#grad)')
-		svg.attr('width', width).attr('height', height)
-	}
+
+	plotHmColorScale(self, obj)
 }
 function getRowHeight(obj) {
 	const h = 500 / obj.matrix.length
@@ -264,6 +264,8 @@ function getMinMax(row) {
 	}
 	return [min, max]
 }
+
+// not in use
 function parseDendrogram(obj) {
 	// if isX=true, collect max y from all nodes; otherwise collect max x
 	obj.xId2coord = new Map()
@@ -438,4 +440,31 @@ function plotDendrogram(ctx, obj) {
 		ctx.stroke()
 		ctx.closePath()
 	}
+}
+
+function plotHmColorScale(self, obj) {
+	self.dom.colorScaleDiv.selectAll('*').remove()
+	const width = 100,
+		height = 20
+	self.dom.colorScaleDiv.append('span').text('Min')
+	const svg = self.dom.colorScaleDiv.append('svg')
+	self.dom.colorScaleDiv.append('span').text('Max')
+	const grad = svg
+		.append('defs')
+		.append('linearGradient')
+		.attr('id', 'grad')
+	grad
+		.append('stop')
+		.attr('offset', '0%')
+		.attr('stop-color', obj.d.minColor)
+	grad
+		.append('stop')
+		.attr('offset', '100%')
+		.attr('stop-color', obj.d.maxColor)
+	svg
+		.append('rect')
+		.attr('width', width)
+		.attr('height', height)
+		.attr('fill', 'url(#grad)')
+	svg.attr('width', width).attr('height', height)
 }
