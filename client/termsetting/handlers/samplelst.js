@@ -107,6 +107,7 @@ export function getSamplelstTW(groups, name = 'groups') {
 	const $id = get$id()
 	const tw = {
 		$id,
+		isAtomic: true,
 		term: { $id, name, type: 'samplelst', values },
 		q: {
 			mode: 'custom-groupsetting',
@@ -189,17 +190,17 @@ export async function openSurvivalPlot(term, tw, app, id) {
 	let config = {
 		chartType: 'survival',
 		term,
-		term2: tw
+		term2: JSON.parse(JSON.stringify(tw))
 	}
 	if (id) config.insertBefore = id
 	await app.dispatch({
 		type: 'plot_create',
-		config: config
+		config
 	})
 }
 
 async function showTermsTree(div, callback, state = { tree: { usecase: { detail: 'term' } } }, app, parentMenu) {
-	const menu = new Menu({ padding: '5px' })
+	const menu = new Menu({ padding: '5px', offsetX: 170, offsetY: -34 })
 	menu.showunderoffset(div.node())
 	const termdb = await import('../../termdb/app')
 	termdb.appInit({
