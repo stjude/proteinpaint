@@ -4,7 +4,7 @@ import { dofetch3 } from '#common/dofetch'
 import { mclass, morigin, dt2label } from '#shared/common'
 import { Menu } from '#dom/menu'
 import { rgb } from 'd3-color'
-import { getSamplelstTW } from '#termsetting/handlers/samplelst'
+import { getSamplelstTW, openSurvivalPlot } from '#termsetting/handlers/samplelst'
 
 export function setInteractivity(self) {
 	self.mouseover = function(event, chart) {
@@ -276,11 +276,10 @@ export function setInteractivity(self) {
 
 	self.openSurvivalPlot = async function(term, groups) {
 		const plot_name = self.config.name ? self.config.name : 'Summary scatter'
-		const disabled = !('sample' in groups[0].items[0])
 		let config = {
 			chartType: 'survival',
 			term,
-			term2: getSamplelstTW(groups, plot_name, { disabled }),
+			term2: getSamplelstTW(groups, plot_name),
 			insertBefore: self.id
 		}
 		await self.app.dispatch({
@@ -312,12 +311,11 @@ export function setInteractivity(self) {
 		// tw.q can be missing and will be filled in with default setting
 		const tw = { id: term.id, term }
 		const plot_name = self.config.name ? self.config.name : 'Summary scatter'
-		const disabled = !('sample' in groups[0].items[0])
 		const config = {
 			chartType: 'summary',
 			childType: 'barchart',
 			term: tw, // self is a termsetting, not a term
-			term2: getSamplelstTW(groups, plot_name + ' groups', { disabled }),
+			term2: getSamplelstTW(groups, plot_name + ' groups'),
 			insertBefore: self.id
 		}
 		await self.app.dispatch({
@@ -516,10 +514,13 @@ export function setInteractivity(self) {
 					nav: { header_mode: 'hide_search' },
 					tree: { usecase: { target: 'survival', detail: 'term' } }
 				}
+				const plot_name = self.config.name ? self.config.name : 'Summary scatter'
+				const tw = getSamplelstTW([group], plot_name)
+
 				self.showTermsTree(
 					survivalDiv,
 					term => {
-						self.openSurvivalPlot(term, [group])
+						openSurvivalPlot(term, [group], self.app, self.id)
 					},
 					state
 				)
@@ -631,7 +632,7 @@ export function setInteractivity(self) {
 				self.showTermsTree(
 					survivalDiv,
 					term => {
-						self.openSurvivalPlot(term, self.config.groups)
+						openSurvivalPlot(term, self.config.groups, self.app, self.id)
 					},
 					state
 				)
