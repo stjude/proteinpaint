@@ -21,7 +21,7 @@ class MassDict {
 						type: 'plot_create',
 						config: {
 							chartType: term.type == 'survival' ? 'survival' : 'summary',
-							term: 'id' in term ? { id: term.id, term } : { term }
+							term: term.term ? term : 'id' in term ? { id: term.id, term } : { term }
 						}
 					})
 
