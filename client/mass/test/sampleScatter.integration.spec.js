@@ -12,6 +12,7 @@ const {
 	detectOne,
 	sleep
 } = require('../../test/test.helpers')
+import { getSamplelstTW, openSurvivalPlot } from '#termsetting/handlers/samplelst'
 
 /*
 Tests:
@@ -216,7 +217,8 @@ tape('Render TermdbTest scatter plot and open survival and summary', function(te
 
 		async function testOpenSurvivalPlot() {
 			const survivalTerm = await scatter.Inner.app.vocabApi.getterm('efs')
-			await scatter.Inner.openSurvivalPlot(survivalTerm, [group])
+			const tw = getSamplelstTW([group])
+			openSurvivalPlot(survivalTerm, tw, scatter.Inner.app)
 			test.equal(d3s.selectAll('.sja_errorbar').size(), 0, 'Should render survival plot without errors".')
 		}
 
