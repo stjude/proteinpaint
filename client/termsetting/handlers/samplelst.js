@@ -186,6 +186,7 @@ export function showGroupsMenu(event, tw, allowedTermTypes, deleteCallback, app)
 		.text('Delete variable')
 		.on('click', event => {
 			deleteCallback()
+			parentMenu.hide()
 		})
 
 	parentMenu.show(event.clientX, event.clientY)
