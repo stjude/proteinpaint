@@ -98,7 +98,8 @@ function plotHeatmap(data, self) {
 	obj.d = {
 		minColor: '#0c306b',
 		maxColor: '#ffcc00',
-		dFactor: 100 // times this factor when plotting dendrogram
+		xDendrogramHeight: 150,
+		yDendrogramHeight: 150
 	}
 	obj.d.colorScale = interpolateRgb(obj.d.minColor, obj.d.maxColor)
 
@@ -108,40 +109,43 @@ function plotHeatmap(data, self) {
 	obj.d.colWidth = getColWidth(obj)
 
 	//parseDendrogram(obj)
-	/* set below
-	obj.xId2coord
-	obj.yId2coord
-	obj.d.xDendrogramHeight
-	obj.d.yDendrogramHeight
-	*/
 
 	{
 		const r = parseDendrogram2(obj.rowSteps, obj.matrix.length)
 		obj.rowIdxLst = r.idxLst
 		obj.xId2coord = r.id2coord
-		obj.d.xDendrogramHeight = 0
+		let max = 0
 		for (const n of obj.xId2coord.values()) {
-			obj.d.xDendrogramHeight = Math.max(obj.d.xDendrogramHeight, n.x)
+			max = Math.max(max, n.x)
 		}
 		for (const n of obj.xId2coord.values()) {
-			n.x = obj.d.xDendrogramHeight - n.x
+			n.x = max - n.x
 			n.y *= obj.d.rowHeight
+			n.y += obj.d.rowHeight / 2
+		}
+		const scale = obj.d.xDendrogramHeight / max
+		for (const n of obj.xId2coord.values()) {
+			n.x *= scale
 		}
 	}
 	{
 		const r = parseDendrogram2(obj.colSteps, obj.matrix[0].length)
 		obj.colIdxLst = r.idxLst
 		obj.yId2coord = r.id2coord
-		obj.d.yDendrogramHeight = 0
+		let max = 0
 		for (const n of obj.yId2coord.values()) {
 			const t = n.x
 			n.x = n.y
 			n.y = t
-			obj.d.yDendrogramHeight = Math.max(obj.d.yDendrogramHeight, n.y)
+			max = Math.max(max, n.y)
 		}
 		for (const n of obj.yId2coord.values()) {
-			n.y = obj.d.yDendrogramHeight - n.y
+			n.y = max - n.y
 			n.x *= obj.d.colWidth
+		}
+		const scale = obj.d.yDendrogramHeight / max
+		for (const n of obj.yId2coord.values()) {
+			n.y *= scale
 		}
 	}
 
@@ -215,6 +219,7 @@ function plotHeatmap(data, self) {
 function getRowHeight(obj) {
 	const h = 500 / obj.matrix.length
 	if (h > 20) return 20
+	if (h < 10) return 10
 	return Math.ceil(h)
 }
 function getColWidth(obj) {

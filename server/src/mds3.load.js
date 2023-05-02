@@ -343,7 +343,7 @@ function filter_data(q, result) {
 				server will re-request data, though inefficient
 				so as to calculate the number of samples with mutations in zoomed in region of protein
 				*/
-				if (!q.rglst.find((r) => m.chr == r.chr && m.pos >= r.start && m.pos <= r.stop)) {
+				if (!q.rglst.find(r => m.chr == r.chr && m.pos >= r.start && m.pos <= r.stop)) {
 					// not in any region
 					continue
 				}
@@ -428,7 +428,7 @@ async function geneExpressionClustering(data, q) {
 		matrix: [],
 		row_names: [], // genes
 		col_names: [...sampleSet], // samples
-		plot_image: false, // When true causes cluster.rs to plot the image into a png file (EXPERIMENTAL)
+		plot_image: false // When true causes cluster.rs to plot the image into a png file (EXPERIMENTAL)
 	}
 
 	// compose "data{}" into a matrix
@@ -439,7 +439,8 @@ async function geneExpressionClustering(data, q) {
 		for (const s of inputData.col_names) {
 			row.push(o[s] || 0)
 		}
-		inputData.matrix.push(row)
+		const row2 = zscore(row)
+		inputData.matrix.push(row2)
 	}
 
 	//console.log('input_data:', inputData)
@@ -477,6 +478,16 @@ async function geneExpressionClustering(data, q) {
 		rowSteps,
 		geneNameLst: inputData.row_names,
 		sampleNameLst: inputData.col_names,
-		matrix: inputData.matrix,
+		matrix: inputData.matrix
 	}
+}
+function zscore(lst) {
+	let total = 0
+	for (const v of lst) total += v
+	const mean = total / lst.length
+	const sd = Math.sqrt(lst.map(x => (x - mean) ** 2).reduce((a, b) => a + b, 0) / (lst.length - 1))
+	if (sd == 0) {
+		return lst
+	}
+	return lst.map(i => (i - mean) / sd)
 }
