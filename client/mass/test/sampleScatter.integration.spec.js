@@ -12,7 +12,7 @@ const {
 	detectOne,
 	sleep
 } = require('../../test/test.helpers')
-import { getSamplelstTW, openSurvivalPlot } from '#termsetting/handlers/samplelst'
+import { getSamplelstTW, openSurvivalPlot, openSummaryPlot } from '#termsetting/handlers/samplelst'
 
 /*
 Tests:
@@ -164,9 +164,12 @@ tape('Render TermdbTest scatter plot and open survival and summary', function(te
 
 	async function runTests(scatter) {
 		const scatterDiv = scatter.Inner.charts[0].chartDiv
+
 		testPlot()
 		testLegendTitle()
 		const group = await testCreateGroup()
+		const tw = getSamplelstTW([group])
+
 		await testOpenSurvivalPlot()
 		await testOpenSummaryPlot()
 
@@ -217,14 +220,13 @@ tape('Render TermdbTest scatter plot and open survival and summary', function(te
 
 		async function testOpenSurvivalPlot() {
 			const survivalTerm = await scatter.Inner.app.vocabApi.getterm('efs')
-			const tw = getSamplelstTW([group])
 			openSurvivalPlot(survivalTerm, tw, scatter.Inner.app)
 			test.equal(d3s.selectAll('.sja_errorbar').size(), 0, 'Should render survival plot without errors".')
 		}
 
 		async function testOpenSummaryPlot() {
 			const genderTerm = await scatter.Inner.app.vocabApi.getterm('sex')
-			await scatter.Inner.openSummaryPlot(genderTerm, [group])
+			openSummaryPlot(genderTerm, tw, scatter.Inner.app)
 			test.equal(d3s.selectAll('.sja_errorbar').size(), 0, 'Should render summary plot without errors".')
 		}
 	}
