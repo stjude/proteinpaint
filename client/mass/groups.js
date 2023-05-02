@@ -4,7 +4,7 @@ import { filterInit, getNormalRoot, filterPromptInit, getFilterItemByTag } from 
 import { select } from 'd3-selection'
 import { appInit } from '#termdb/app'
 import { renderTable } from '#dom/table'
-import { getSamplelstTW } from '#termsetting/handlers/samplelst'
+import { getSamplelstTW, showGroupsMenu } from '#termsetting/handlers/samplelst'
 
 /*
 this
@@ -44,7 +44,8 @@ class MassGroups {
 			termfilter: appState.termfilter,
 			groups: rebaseGroupFilter(appState),
 			termdbConfig: appState.termdbConfig,
-			customTerms: appState.customTerms
+			customTerms: appState.customTerms,
+			allowedTermTypes: appState.termdbConfig.allowedTermTypes
 		}
 		return state
 	}
@@ -82,7 +83,6 @@ class MassGroups {
 
 	async groups2samplelst(groups) {
 		const samplelstGroups = []
-		let disabled = true
 		for (const g of groups) {
 			const samples = await this.app.vocabApi.getFilteredSampleCount(g.filter, 'list')
 			const items = []
@@ -90,7 +90,6 @@ class MassGroups {
 				const item = { sampleId: sample.id }
 				if ('name' in sample) {
 					item.sample = sample.name
-					disabled = false
 				}
 				items.push(item)
 			}
@@ -98,7 +97,7 @@ class MassGroups {
 		}
 
 		const name = samplelstGroups.length == 1 ? samplelstGroups[0].name : 'Sample groups'
-		const tw = getSamplelstTW(samplelstGroups, name, { disabled })
+		const tw = getSamplelstTW(samplelstGroups, name)
 
 		// TEMP change, to be done elsewhere e.g. in getSamplelstTW()
 		for (const g of tw.q.groups) {
@@ -165,8 +164,9 @@ class MassGroups {
 				.style('padding', '3px 6px')
 				.style('border-radius', '6px')
 				.style('margin-right', '5px')
-				.on('click', () => {
-					this.app.vocabApi.deleteCustomTerm(name)
+				.on('click', event => {
+					const deleteCallback = () => this.app.vocabApi.deleteCustomTerm(name)
+					showGroupsMenu(event, tw, this.state.allowedTermTypes, deleteCallback, this.app)
 				})
 		}
 	}

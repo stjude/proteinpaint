@@ -1,5 +1,6 @@
 import { getPillNameDefault, get$id } from '#termsetting'
 import { renderTable } from '#dom/table'
+import { Menu } from '#dom/menu'
 
 export function getHandler(self) {
 	return {
@@ -79,7 +80,8 @@ export function fillTW(tw, vocabApi) {
 	}
 }
 
-export function getSamplelstTW(groups, name = 'groups', groupsetting = {}) {
+export function getSamplelstTW(groups, name = 'groups') {
+	let disabled = true
 	const values = {}
 	const qgroups = []
 	let samples
@@ -109,7 +111,7 @@ export function getSamplelstTW(groups, name = 'groups', groupsetting = {}) {
 		q: {
 			mode: 'custom-groupsetting',
 			groups: qgroups,
-			groupsetting
+			groupsetting: { disabled }
 		}
 	}
 	return tw
@@ -118,9 +120,99 @@ export function getSamplelstTW(groups, name = 'groups', groupsetting = {}) {
 		const values = []
 		for (const item of group.items) {
 			const value = { sampleId: item.sampleId }
-			if ('sample' in item) value.sample = item.sample
+			if ('sample' in item) {
+				disabled = false
+				value.sample = item.sample
+			}
 			values.push(value)
 		}
 		return values
 	}
+}
+
+export function showGroupsMenu(event, tw, allowedTermTypes, deleteCallback, app) {
+	const parentMenu = new Menu({ padding: '5px' })
+
+	const menuDiv = parentMenu.d.append('div')
+
+	let row = menuDiv.append('div')
+
+	//addMatrixMenuItems(menuDiv, groups)
+	if (allowedTermTypes.includes('survival')) {
+		const survivalDiv = menuDiv
+			.append('div')
+			.attr('class', 'sja_menuoption sja_sharp_border')
+			.html('Compare survival&nbsp;&nbsp;›')
+
+		survivalDiv.on('click', async e => {
+			const state = {
+				nav: { header_mode: 'hide_search' },
+				tree: { usecase: { target: 'survival', detail: 'term' } }
+			}
+			showTermsTree(
+				survivalDiv,
+				term => {
+					openSurvivalPlot(term, tw, app)
+				},
+				state,
+				app,
+				parentMenu
+			)
+		})
+	}
+	// const summarizeDiv = menuDiv
+	// 	.append('div')
+	// 	.attr('class', 'sja_menuoption sja_sharp_border')
+	// 	.html('Summarize')
+	// summarizeDiv
+	// 	.insert('div')
+	// 	.html('›')
+	// 	.style('float', 'right')
+
+	// summarizeDiv.on('click', async e => {
+	// 	showTermsTree(summarizeDiv, term => {
+	// 		openSummaryPlot(term, groups)
+	// 	})
+	// })
+	row = menuDiv
+		.append('div')
+		.attr('class', 'sja_menuoption sja_sharp_border')
+		.text('Delete variable')
+		.on('click', event => {
+			deleteCallback()
+		})
+
+	parentMenu.show(event.clientX, event.clientY)
+}
+
+async function openSurvivalPlot(term, tw, app, id) {
+	let config = {
+		chartType: 'survival',
+		term,
+		term2: tw
+	}
+	if (id) config.insertBefore = id
+	console.log(config)
+	await app.dispatch({
+		type: 'plot_create',
+		config: config
+	})
+}
+
+async function showTermsTree(div, callback, state = { tree: { usecase: { detail: 'term' } } }, app, parentMenu) {
+	const menu = new Menu({ padding: '5px' })
+	menu.showunderoffset(div.node())
+	const termdb = await import('../../termdb/app')
+	termdb.appInit({
+		holder: menu.d,
+		vocabApi: app.vocabApi,
+		state,
+		tree: {
+			click_term: term => {
+				callback(term)
+				menu.hide()
+				parentMenu.hide()
+			}
+		}
+	})
 }
