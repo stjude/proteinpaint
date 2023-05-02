@@ -882,6 +882,18 @@ export class TermdbVocab extends Vocab {
 			}
 		})
 	}
+
+	async getMatrixByName(name) {
+		// find a pre-built matrix by name from this dataset
+		return await dofetch3('termdb', {
+			body: {
+				for: 'matrix',
+				getPlotDataByName: name,
+				genome: this.state.vocab.genome,
+				dslabel: this.state.vocab.dslabel
+			}
+		})
+	}
 }
 
 /*

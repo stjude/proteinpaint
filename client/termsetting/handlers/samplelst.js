@@ -250,15 +250,7 @@ export function addMatrixMenuItems(menu, menuDiv, tw, app, state) {
 				.attr('class', 'sja_menuoption sja_sharp_border')
 				.text(plot.name)
 				.on('click', async () => {
-					const config = await dofetch3('termdb', {
-						body: {
-							for: 'matrix',
-							getPlotDataByName: plot.name,
-							genome: state.vocab.genome,
-							dslabel: state.vocab.dslabel
-						}
-					})
-
+					const config = await app.vocabApi.getMatrixByName(plot.name)
 					config.divideBy = tw
 					config.settings.matrix.colw = 0
 					app.dispatch({

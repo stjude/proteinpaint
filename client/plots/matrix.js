@@ -1002,14 +1002,7 @@ export function makeChartBtnMenu(holder, chartsInstance) {
 				.text(plot.name)
 				.on('click', async () => {
 					chartsInstance.dom.tip.hide()
-					const config = await dofetch3('termdb', {
-						body: {
-							for: 'matrix',
-							getPlotDataByName: plot.name,
-							genome: chartsInstance.state.vocab.genome,
-							dslabel: chartsInstance.state.vocab.dslabel
-						}
-					})
+					const config = await chartsInstance.app.vocabApi.getMatrixByName(plot.name)
 					chartsInstance.app.dispatch({
 						type: 'plot_create',
 						config
