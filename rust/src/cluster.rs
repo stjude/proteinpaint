@@ -435,16 +435,16 @@ fn sort_elements(
                 sorted_nodes_list.push(None);
             }
 
-            //let mut unsorted_nodes_list = Vec::<usize>::new(); // This will contain unsorted original nodes. As the x-coordinate of each original node is determined, it is deleted from this list
-            //
-            //let mut num_iter = 0;
-            //for node_id in node_coordinates_list {
-            //    if num_iter == 0 {
-            //        unsorted_nodes_list = node_id.all_original_nodes;
-            //    } else {
-            //    }
-            //    num_iter += 1;
-            //}
+            let mut unsorted_nodes_list = Vec::<usize>::new(); // This will contain unsorted original nodes. As the x-coordinate of each original node is determined, it is deleted from this list
+
+            let mut num_iter = 0;
+            for node_id in &node_coordinates_list {
+                if num_iter == 0 {
+                    unsorted_nodes_list = node_id.all_original_nodes.clone();
+                } else {
+                }
+                num_iter += 1;
+            }
         }
     } else {
         panic!("The dissimilarity matrix length cannot be zero");
