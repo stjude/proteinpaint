@@ -16,12 +16,13 @@ class MassDict {
 			holder: this.dom.holder,
 			state: this.getState(appState),
 			tree: {
-				click_term: term => {
+				click_term: _term => {
+					const term = _term.term || _term
 					this.app.dispatch({
 						type: 'plot_create',
 						config: {
 							chartType: term.type == 'survival' ? 'survival' : 'summary',
-							term: term.term ? term : 'id' in term ? { id: term.id, term } : { term }
+							term: _term.term ? _term : 'id' in term ? { id: term.id, term } : { term }
 						}
 					})
 
