@@ -62,6 +62,7 @@ use nalgebra::DMatrix;
 use serde::ser::{SerializeStruct, Serializer};
 use serde::{Deserialize, Serialize};
 use serde_json;
+use std::cmp::Ordering;
 use std::env;
 //use ndarray::Array1;
 use ndarray::ArrayBase;
@@ -418,6 +419,32 @@ fn sort_elements(
                 child_node_coordinates: vec![cluster1_coordinates, cluster2_coordinates],
                 all_original_nodes: all_original_nodes,
             });
+
+            // Sorting the dendrogram
+
+            // First need to sort the dendrogram according to the node's respective y-coordinate in ascending order, so that the top most nodes get analyzed first.
+
+            node_coordinates_list.as_mut_slice().sort_by(|a, b| {
+                (a.node_coordinates.y)
+                    .partial_cmp(&b.node_coordinates.y)
+                    .unwrap_or(Ordering::Equal)
+            });
+
+            let mut sorted_nodes_list = Vec::<Option<usize>>::new(); // This will finally contain a list of sorted original nodes
+            for _node_id in 0..coordinates.nrows() {
+                sorted_nodes_list.push(None);
+            }
+
+            //let mut unsorted_nodes_list = Vec::<usize>::new(); // This will contain unsorted original nodes. As the x-coordinate of each original node is determined, it is deleted from this list
+            //
+            //let mut num_iter = 0;
+            //for node_id in node_coordinates_list {
+            //    if num_iter == 0 {
+            //        unsorted_nodes_list = node_id.all_original_nodes;
+            //    } else {
+            //    }
+            //    num_iter += 1;
+            //}
         }
     } else {
         panic!("The dissimilarity matrix length cannot be zero");
