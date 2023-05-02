@@ -28,6 +28,8 @@ export default class LabelsRenderer implements IRenderer {
                     .style('cursor', 'pointer')
                     .text(label.label)
 
+                console.log("label", label.line.points)
+
                 g.append('path')
                     .attr('class', 'chord-tick')
                     .datum(label.line.points)
@@ -37,5 +39,46 @@ export default class LabelsRenderer implements IRenderer {
                         .y(point => point.y))
 
             })
+
+        const collisions = viewModel.rings.labelsRing.collisions
+
+
+        labelsGroup.select('.chord-text').each((label: Label, i: number, nodes: HTMLDivElement[]) => {
+            const g = select(nodes[i])
+            if (collisions.some(l => l.label === label.label)) {
+                const g = select(nodes[i])
+
+                g.datum(label)
+                    .transition()
+                    .duration(1000)
+                    .attr('transform', function (d) {
+                        return (
+                            'rotate(' +
+                            ((d.angle * 180) / Math.PI - 90) +
+                            ')' +
+                            'translate(' +
+                            d.labelRadius +
+                            ')' +
+                            (d.angle > Math.PI ? 'rotate(180)' : '')
+                        )
+                    })
+                    .style('text-anchor', function (d) {
+                        return d.angle > Math.PI ? 'end' : ''
+                    })
+
+                g.selectAll('.chord-tick')
+                    //.datum(d.lineData)
+                    .datum(label.line.points)
+                    .transition()
+                    .duration(1000)
+                    .attr(
+                        'd',
+                        line<{ x: number, y: number }>()
+                            .x(point => point.x)
+                            .y(point => point.y)
+                    )
+                    .style('fill', 'none')
+            }
+        })
     }
 }
