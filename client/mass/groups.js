@@ -45,7 +45,9 @@ class MassGroups {
 			groups: rebaseGroupFilter(appState),
 			termdbConfig: appState.termdbConfig,
 			customTerms: appState.customTerms,
-			allowedTermTypes: appState.termdbConfig.allowedTermTypes
+			allowedTermTypes: appState.termdbConfig.allowedTermTypes,
+			matrixplots: appState.termdbConfig.matrixplots,
+			vocab: appState.vocab
 		}
 		return state
 	}
@@ -166,7 +168,7 @@ class MassGroups {
 				.style('margin-right', '5px')
 				.on('click', event => {
 					const deleteCallback = () => this.app.vocabApi.deleteCustomTerm(name)
-					showGroupsMenu(event, tw, this.state.allowedTermTypes, deleteCallback, this.app)
+					showGroupsMenu(event, tw, this.state.allowedTermTypes, deleteCallback, this.app, this.state)
 				})
 		}
 	}

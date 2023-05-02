@@ -104,7 +104,7 @@ export function getSampleSorter(self, settings, rows, priorityKey = 'sortPriorit
 
 function validateSettings(s) {
 	if (!s.sortOptions) s.sortOptions = 'custom'
-	if (['selectTerms', 'class', 'dt', 'hits'].includes(s.sortSamplesBy)) s.sortSamplesBy = 'custom'
+	if (['selectedTerms', 'class', 'dt', 'hits'].includes(s.sortSamplesBy)) s.sortSamplesBy = 'custom'
 }
 
 function sortSamplesByName(a, b) {

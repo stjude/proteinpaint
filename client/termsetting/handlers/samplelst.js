@@ -1,6 +1,7 @@
 import { getPillNameDefault, get$id } from '#termsetting'
 import { renderTable } from '#dom/table'
 import { Menu } from '#dom/menu'
+import { dofetch3 } from '#common/dofetch'
 
 export function getHandler(self) {
 	return {
@@ -131,7 +132,7 @@ export function getSamplelstTW(groups, name = 'groups') {
 	}
 }
 
-export function showGroupsMenu(event, tw, allowedTermTypes, deleteCallback, app) {
+export function showGroupsMenu(event, tw, allowedTermTypes, deleteCallback, app, state) {
 	const samplelstTW = JSON.parse(JSON.stringify(tw))
 	const parentMenu = new Menu({ padding: '5px' })
 
@@ -139,7 +140,7 @@ export function showGroupsMenu(event, tw, allowedTermTypes, deleteCallback, app)
 
 	let row = menuDiv.append('div')
 
-	//addMatrixMenuItems(menuDiv, groups)
+	addMatrixMenuItems(parentMenu, menuDiv, samplelstTW, app, state)
 	if (allowedTermTypes.includes('survival')) {
 		const survivalDiv = menuDiv
 			.append('div')
@@ -239,4 +240,33 @@ export async function showTermsTree(div, callback, app, parentMenu, state = { tr
 			}
 		}
 	})
+}
+
+export function addMatrixMenuItems(menu, menuDiv, tw, app, state) {
+	if (state.matrixplots) {
+		for (const plot of state.matrixplots) {
+			menuDiv
+				.append('div')
+				.attr('class', 'sja_menuoption sja_sharp_border')
+				.text(plot.name)
+				.on('click', async () => {
+					const config = await dofetch3('termdb', {
+						body: {
+							for: 'matrix',
+							getPlotDataByName: plot.name,
+							genome: state.vocab.genome,
+							dslabel: state.vocab.dslabel
+						}
+					})
+
+					config.divideBy = tw
+					config.settings.matrix.colw = 0
+					app.dispatch({
+						type: 'plot_create',
+						config
+					})
+					menu.hide()
+				})
+		}
+	}
 }
