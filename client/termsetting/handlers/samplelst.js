@@ -185,14 +185,13 @@ export function showGroupsMenu(event, tw, allowedTermTypes, deleteCallback, app)
 	parentMenu.show(event.clientX, event.clientY)
 }
 
-async function openSurvivalPlot(term, tw, app, id) {
+export async function openSurvivalPlot(term, tw, app, id) {
 	let config = {
 		chartType: 'survival',
 		term,
 		term2: tw
 	}
 	if (id) config.insertBefore = id
-	console.log(config)
 	await app.dispatch({
 		type: 'plot_create',
 		config: config

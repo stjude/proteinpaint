@@ -274,20 +274,6 @@ export function setInteractivity(self) {
 		menu.show(e.clientX, e.clientY, false)
 	}
 
-	self.openSurvivalPlot = async function(term, groups) {
-		const plot_name = self.config.name ? self.config.name : 'Summary scatter'
-		let config = {
-			chartType: 'survival',
-			term,
-			term2: getSamplelstTW(groups, plot_name),
-			insertBefore: self.id
-		}
-		await self.app.dispatch({
-			type: 'plot_create',
-			config: config
-		})
-	}
-
 	self.downloadSVG = function(svg) {
 		const link = document.createElement('a')
 		// If you don't know the name or want to use
@@ -515,12 +501,12 @@ export function setInteractivity(self) {
 					tree: { usecase: { target: 'survival', detail: 'term' } }
 				}
 				const plot_name = self.config.name ? self.config.name : 'Summary scatter'
-				const tw = getSamplelstTW([group], plot_name)
+				const tw = getSamplelstTW([group], plot_name + ' groups')
 
 				self.showTermsTree(
 					survivalDiv,
 					term => {
-						openSurvivalPlot(term, [group], self.app, self.id)
+						openSurvivalPlot(term, tw, self.app, self.id)
 					},
 					state
 				)
@@ -629,10 +615,12 @@ export function setInteractivity(self) {
 					nav: { header_mode: 'hide_search' },
 					tree: { usecase: { target: 'survival', detail: 'term' } }
 				}
+				const plot_name = self.config.name ? self.config.name : 'Summary scatter'
+				const tw = getSamplelstTW(self.config.groups, plot_name + ' groups')
 				self.showTermsTree(
 					survivalDiv,
 					term => {
-						openSurvivalPlot(term, self.config.groups, self.app, self.id)
+						openSurvivalPlot(term, tw, self.app, self.id)
 					},
 					state
 				)
