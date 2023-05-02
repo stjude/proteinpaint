@@ -4,7 +4,13 @@ import { dofetch3 } from '#common/dofetch'
 import { mclass, morigin, dt2label } from '#shared/common'
 import { Menu } from '#dom/menu'
 import { rgb } from 'd3-color'
-import { getSamplelstTW, openSurvivalPlot, openSummaryPlot, showTermsTree } from '#termsetting/handlers/samplelst'
+import {
+	getSamplelstTW,
+	openSurvivalPlot,
+	openSummaryPlot,
+	showTermsTree,
+	addMatrixMenuItems
+} from '#termsetting/handlers/samplelst'
 
 export function setInteractivity(self) {
 	self.mouseover = function(event, chart) {
@@ -453,7 +459,7 @@ export function setInteractivity(self) {
 				self.dom.tip.hide()
 				self.showTable(group, event.clientX, event.clientY, false)
 			})
-		self.addMatrixMenuItems(menuDiv, [group])
+		addMatrixMenuItems(self.dom.tip, menuDiv, tw, self.app, self.state)
 		if (self.state.allowedTermTypes.includes('survival')) {
 			const survivalDiv = menuDiv
 				.append('div')
@@ -516,35 +522,6 @@ export function setInteractivity(self) {
 			})
 	}
 
-	self.addMatrixMenuItems = function(menuDiv, groups) {
-		if (self.state.matrixplots) {
-			for (const plot of self.state.matrixplots) {
-				menuDiv
-					.append('div')
-					.attr('class', 'sja_menuoption sja_sharp_border')
-					.text(plot.name)
-					.on('click', async () => {
-						const config = await dofetch3('termdb', {
-							body: {
-								for: 'matrix',
-								getPlotDataByName: plot.name,
-								genome: self.state.vocab.genome,
-								dslabel: self.state.vocab.dslabel
-							}
-						})
-
-						config.divideBy = getSamplelstTW(groups)
-						config.settings.matrix.colw = 0
-						self.app.dispatch({
-							type: 'plot_create',
-							config
-						})
-						self.dom.tip.hide()
-					})
-			}
-		}
-	}
-
 	self.showGroupsMenu = function(event) {
 		self.dom.tip.clear()
 		self.dom.tip.show(event.clientX, event.clientY)
@@ -571,7 +548,7 @@ export function setInteractivity(self) {
 				self.showGroupMenu(event, group)
 			})
 		}
-		self.addMatrixMenuItems(menuDiv, self.config.groups)
+		addMatrixMenuItems(self.dom.tip, menuDiv, tw, self.app, self.state)
 		if (self.state.allowedTermTypes.includes('survival')) {
 			const survivalDiv = menuDiv
 				.append('div')

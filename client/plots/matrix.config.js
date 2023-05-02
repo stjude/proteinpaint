@@ -116,7 +116,7 @@ export async function getPlotConfig(opts, app) {
 	// force auto-dimensions for colw
 	m.colw = 0
 	// support deprecated sortSamplesBy value from a saved session
-	if (['selectTerms', 'class', 'dt', 'hits'].includes(m.sortSamplesBy)) m.sortSamplesBy = 'custom'
+	if (['selectedTerms', 'class', 'dt', 'hits'].includes(m.sortSamplesBy)) m.sortSamplesBy = 'custom'
 	// support overrides in localhost
 	if (window.location.hostname == 'localhost') {
 		if (window.location.hash == '#canvas') m.svgCanvasSwitch = 0
