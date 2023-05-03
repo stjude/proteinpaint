@@ -5,12 +5,15 @@ import { detectOne, detectGte } from '../../test/test.helpers.js'
 
 /* 
 Tests:
-    Linear: continuous outcome = "agedx", cat. independent = "sex" + "genetic_race"
+    Linear: continuous outcome = "agedx", cat. independents = "sex" + "genetic_race"
     Linear: continuous outcome = "agedx", continuous independent = "aaclassic_5"
 	Linear: continuous outcome = "agedx", discrete independent = "aaclassic_5"
-	Linear: continuous outcome = "agedx", cubic spline. independent = "aaclassic_5"
+	Linear: continuous outcome = "agedx", cubic spline independent = "aaclassic_5"
 	Logistic: binary outcome = "hrtavg", continuous independent = "agedx"
     Cox: graded outcome = "Arrhythmias", discrete independent = "agedx"
+
+TODO:
+	Test (maybe in unit?) beta and PR functions
 */
 
 /*************************
@@ -49,6 +52,36 @@ async function getData(regression) {
 	return data.resultLst[0].data
 }
 
+function checkTableRow(table, idx, dataArray) {
+	const checkArray = []
+	let issuesFound = 0
+	table[idx].childNodes.forEach(t => {
+		checkArray.push(t.innerText)
+	})
+	dataArray.forEach(d => {
+		if (!checkArray.some(t => t == d)) {
+			++issuesFound
+		}
+	})
+	if (issuesFound === 0) return true
+	else return false
+}
+
+function checkOnlyRowValues(valueNodes, dataArray) {
+	const checkArray = []
+	let issuesFound = 0
+	valueNodes.forEach(t => {
+		checkArray.push(t.innerText)
+	})
+	dataArray.forEach(d => {
+		if (!checkArray.some(t => t == d)) {
+			++issuesFound
+		}
+	})
+	if (issuesFound === 0) return true
+	else return false
+}
+
 /**************
  test sections
 ***************/
@@ -58,9 +91,7 @@ tape('\n', test => {
 	test.end()
 })
 
-//values to test: beta, PR
-
-tape('Linear: continuous outcome = "agedx", cat. independent = "sex" + "genetic_race"', test => {
+tape('Linear: continuous outcome = "agedx", cat. independents = "sex" + "genetic_race"', test => {
 	test.timeoutAfter(5000)
 
 	runpp({
@@ -99,7 +130,7 @@ tape('Linear: continuous outcome = "agedx", cat. independent = "sex" + "genetic_
 		)
 
 		//**** Results ****
-		let table, tableLabel, catTerm
+		let table, tableLabel, results, catTerm
 
 		//Sample size
 		const sampleSizeDiv = regDom.results
@@ -114,72 +145,71 @@ tape('Linear: continuous outcome = "agedx", cat. independent = "sex" + "genetic_
 		//Residual table
 		tableLabel = 'residuals table'
 		table = regDom.results.selectAll('table[name^="sjpp-residuals-table"] tr').nodes()
-		checkTableRow(1, data.residuals.rows, 'residuals results')
+		results = checkTableRow(table, 1, data.residuals.rows)
+		test.equal(results, true, `Should render all residuals data in ${tableLabel}`)
 
 		//Coefficients table
 		tableLabel = 'coefficients table'
 		table = regDom.results.selectAll('div[name^="Coefficients"] table tr').nodes()
-		checkTableRow(0, data.coefficients.header, 'Coefficients header')
-		checkTableRow(1, data.coefficients.intercept, 'Intercept')
+		results = checkTableRow(table, 0, data.coefficients.header)
+		test.equal(results, true, `Should render all coefficient headers in ${tableLabel}`)
+
+		results = checkTableRow(table, 1, data.coefficients.intercept)
+		test.equal(results, true, `Should render all intercept data in ${tableLabel}`)
 
 		catTerm = 'Sex'
 		const checkValues1 = ['Sex\nREF Female', 'Male']
 		data.coefficients.terms.sex.categories[1].forEach(d => checkValues1.push(d))
-		checkTableRow(2, checkValues1, `Term = "${catTerm}"`)
+		results = checkTableRow(table, 2, checkValues1, `Term = "${catTerm}"`)
+		test.equal(results, true, `Should render all ${catTerm} data in ${tableLabel}`)
 
 		catTerm = 'African Ancestry'
 		const checkValues2 = ['Genetically defined race\nREF European Ancestry', catTerm]
 		data.coefficients.terms.genetic_race.categories[catTerm].forEach(d => checkValues2.push(d))
-		checkTableRow(3, checkValues2, `Term = "Genetically defined race, ${catTerm}"`)
+		results = checkTableRow(table, 3, checkValues2, `Term = "Genetically defined race, ${catTerm}"`)
+		test.equal(results, true, `Should render all ${catTerm} data in ${tableLabel}`)
 
 		catTerm = 'Asian Ancestry'
 		const checkValues3 = [catTerm]
 		data.coefficients.terms.genetic_race.categories[catTerm].forEach(d => checkValues3.push(d))
-		checkTableRow(4, checkValues3, `Term = "Genetically defined race, ${catTerm}"`)
+		results = checkTableRow(table, 4, checkValues3, `Term = "Genetically defined race, ${catTerm}"`)
+		test.equal(results, true, `Should render all ${catTerm} data in ${tableLabel}`)
 
 		//Type III Stats
 		tableLabel = 'type3 table'
 		table = regDom.results.selectAll('div[name^="Type III statistics"] table tr').nodes()
-		checkTableRow(0, data.type3.header, 'Type III Stats header')
-		checkTableRow(1, data.type3.intercept, 'Intercept')
+		results = checkTableRow(table, 0, data.type3.header, 'Type III Stats header')
+		test.equal(results, true, `Should render all header data in ${tableLabel}`)
+
+		results = checkTableRow(table, 1, data.type3.intercept, 'Intercept')
+		test.equal(results, true, `Should render all intercept data in ${tableLabel}`)
 
 		catTerm = 'Sex'
 		const checkValues4 = [catTerm]
 		data.type3.terms.sex.forEach(d => checkValues4.push(d))
-		checkTableRow(2, checkValues4, `Term = "${catTerm}"`)
+		results = checkTableRow(table, 2, checkValues4, `Term = "${catTerm}"`)
+		test.equal(results, true, `Should render all ${catTerm} data in ${tableLabel}`)
 
 		catTerm = 'Genetically defined race'
 		const checkValues5 = [catTerm]
 		data.type3.terms.genetic_race.forEach(d => checkValues5.push(d))
-		checkTableRow(3, checkValues5, `Term = "${catTerm}"`)
+		results = checkTableRow(table, 3, checkValues5, `Term = "${catTerm}"`)
+		test.equal(results, true, `Should render all ${catTerm} data in ${tableLabel}`)
 
 		//Other stats
 		tableLabel = 'other summary statistics table'
 		table = regDom.results.selectAll('div[name^="Other summary statistics"] table tr').nodes()
 		for (const [i, header] of data.other.header.entries()) {
-			checkTableRow(i, [header, data.other.rows[i]], `${header}`)
+			results = checkTableRow(table, i, [header, data.other.rows[i]], `${header}`)
+			test.equal(results, true, `Should render all ${header} data in ${tableLabel}`)
 		}
 
-		function checkTableRow(idx, dataArray, label) {
-			const checkArray = []
-			let issueFound = false
-			table[idx].childNodes.forEach(t => {
-				checkArray.push(t.innerText)
-			})
-			dataArray.forEach(d => {
-				if (!checkArray.some(t => t == d)) {
-					issueFound = true
-					test.fail(`${label} value = ${d} not rendered`)
-				}
-			})
-			test.equal(issueFound, false, `Correctly rendered all ${label} data in ${tableLabel}`)
-		}
-
+		if (test.__ok) regression.Inner.app.destroy()
 		test.end()
 	}
 })
 
-tape.only('Linear: continuous outcome = "agedx", continuous independent = "aaclassic_5"', test => {
+tape('Linear: continuous outcome = "agedx", continuous independent = "aaclassic_5"', test => {
 	test.timeoutAfter(3000)
 
 	runpp({
@@ -207,14 +237,42 @@ tape.only('Linear: continuous outcome = "agedx", continuous independent = "aacla
 		const regDom = regression.Inner.dom
 
 		//**** Inputs ****
-		test.ok(regDom.inputs.node().querySelector('#sjpp-vp-violinDiv'), `Should render violin plot for outcome variable`)
+		test.equal(
+			regDom.inputs.selectAll('#sjpp-vp-violinDiv').nodes().length,
+			2,
+			`Should render violin plot for outcome variable`
+		)
 
+		//**** Results ****
+		let tableLabel, table, results
+
+		//Coefficients table
+		tableLabel = 'coefficients table'
+		table = regDom.results.selectAll('div[name^="Coefficients"] table tr').nodes()
+		test.equal(
+			table[2].childNodes[1].innerText,
+			'(continuous)',
+			`Should correctly identify independent term as 'continuous' in ${tableLabel}`
+		)
+
+		const values2check = Array.from(table[2].childNodes).slice(3)
+		results = checkOnlyRowValues(values2check, data.coefficients.terms.aaclassic_5.fields)
+		test.equal(results, true, `Should render all continous 'aaclassic_5' data in ${tableLabel}`)
+
+		//Type III Stats
+		tableLabel = 'type3 table'
+		table = regDom.results.selectAll('div[name^="Type III statistics"] table tr').nodes()
+		const values2check2 = Array.from(table[2].childNodes).slice(1)
+		results = checkOnlyRowValues(values2check2, data.type3.terms.aaclassic_5)
+		test.equal(results, true, `Should render all continous 'aaclassic_5' data in ${tableLabel}`)
+
+		if (test.__ok) regression.Inner.app.destroy()
 		test.end()
 	}
 })
 
-tape.skip('Linear: continuous outcome = "agedx", discrete independent = "aaclassic_5"', test => {
-	test.timeoutAfter(3000)
+tape('Linear: continuous outcome = "agedx", discrete independent = "aaclassic_5"', test => {
+	test.timeoutAfter(5000)
 
 	runpp({
 		state: {
@@ -236,14 +294,44 @@ tape.skip('Linear: continuous outcome = "agedx", discrete independent = "aaclass
 		}
 	})
 
-	function runTests(regression) {
-		console.log(regression.Inner)
+	async function runTests(regression) {
+		const data = await getData(regression)
+		const regDom = regression.Inner.dom
 
+		//**** Results ****
+		let tableLabel, table, results
+
+		//Coefficients table
+		tableLabel = 'coefficients table'
+		table = regDom.results.selectAll('div[name^="Coefficients"] table tr').nodes()
+
+		for (const [i, tr] of table.entries()) {
+			//Test all bin values for independent term
+			if (i < 2 || i == table.length - 1) continue //Skip header, intercept, and bottom scale rows
+			if (i == 2) {
+				//Skip the beginning cell spanning the remain rows
+				results = checkOnlyRowValues(
+					Array.from(tr.childNodes).slice(1),
+					data.coefficients.terms.aaclassic_5.categories[tr.childNodes[1].innerText]
+				)
+				test.equal(results, true, `Should render all ${tr.childNodes[1].innerText} bin data in ${tableLabel}`)
+			} else {
+				results = checkOnlyRowValues(
+					Array.from(tr.childNodes),
+					data.coefficients.terms.aaclassic_5.categories[tr.childNodes[0].innerText]
+				)
+				test.equal(results, true, `Should render all ${tr.childNodes[0].innerText} bin data in ${tableLabel}`)
+			}
+		}
+
+		//TODO: necessary to check all other values?
+
+		if (test.__ok) regression.Inner.app.destroy()
 		test.end()
 	}
 })
 
-tape.skip('Linear: continuous outcome = "agedx", cubic spline. independent = "aaclassic_5"', test => {
+tape('Linear: continuous outcome = "agedx", cubic spline independent = "aaclassic_5"', test => {
 	test.timeoutAfter(3000)
 
 	runpp({
@@ -269,9 +357,53 @@ tape.skip('Linear: continuous outcome = "agedx", cubic spline. independent = "aa
 		}
 	})
 
-	function runTests(regression) {
-		console.log(regression.Inner)
+	async function runTests(regression) {
+		const data = await getData(regression)
+		const regDom = regression.Inner.dom
+		const numOfKnots = regression.Inner.state.config.independent[0].q.knots.length
 
+		//**** Inputs ****
+		const knotLines = regDom.inputs.selectAll('#sjpp-vp-violinDiv .sjpp-vp-line').nodes()
+		test.equal(knotLines.length, numOfKnots, `Should render 3 lines over the independent variable violin plot`)
+
+		//**** Results ****
+		let tableLabel, table, results
+
+		const splinePlot = regDom.results.select('div[name^="Cubic spline plots"] img').node()
+		test.ok(splinePlot, `Should render a cubic spline plot`)
+
+		//Coefficients table
+		tableLabel = 'coefficients table'
+		table = regDom.results.selectAll('div[name^="Coefficients"] table tr').nodes()
+
+		test.equal(
+			Object.keys(data.coefficients.terms.aaclassic_5.categories).length,
+			numOfKnots - 1,
+			`Should pass data for ${numOfKnots - 1} spline functions`
+		)
+
+		for (const [i, tr] of table.entries()) {
+			//Test all splice values for cubic spline term
+			if (i < 2 || i == table.length - 1) continue
+			if (i == 2) {
+				//Skip the beginning cell spanning the remain rows
+				results = checkOnlyRowValues(
+					Array.from(tr.childNodes).slice(1),
+					data.coefficients.terms.aaclassic_5.categories[tr.childNodes[1].innerText]
+				)
+				test.equal(results, true, `Should render all ${tr.childNodes[1].innerText} data in ${tableLabel}`)
+			} else {
+				results = checkOnlyRowValues(
+					Array.from(tr.childNodes),
+					data.coefficients.terms.aaclassic_5.categories[tr.childNodes[0].innerText]
+				)
+				test.equal(results, true, `Should render all ${tr.childNodes[0].innerText} data in ${tableLabel}`)
+			}
+		}
+
+		//TODO: necessary to check all other values?
+
+		if (test.__ok) regression.Inner.app.destroy()
 		test.end()
 	}
 })
@@ -303,6 +435,7 @@ tape.skip('Logistic: binary outcome = "hrtavg", continuous independent = "agedx"
 	function runTests(regression) {
 		console.log(regression.Inner)
 
+		if (test.__ok) regression.Inner.app.destroy()
 		test.end()
 	}
 })
@@ -333,6 +466,7 @@ tape.skip('Cox: graded outcome = "Arrhythmias", discrete independent = "agedx"',
 	function runTests(regression) {
 		console.log(regression.Inner)
 
+		if (test.__ok) regression.Inner.app.destroy()
 		test.end()
 	}
 })
