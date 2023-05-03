@@ -295,9 +295,8 @@ export function setInteractivity(self) {
 		return d[category]
 	}
 
-	self.addToFilter = function(group) {
+	self.addToFilter = function(samplelstTW) {
 		const filterUiRoot = getFilterItemByTag(self.state.termfilter.filter, 'filterUiRoot')
-		const samplelstTW = getSamplelstTW([group])
 		const values = samplelstTW.q.groups[0].values
 		const filter = filterJoin([
 			filterUiRoot,
@@ -465,7 +464,7 @@ export function setInteractivity(self) {
 			.attr('class', 'sja_menuoption sja_sharp_border')
 			.text('Add to filter')
 			.on('click', () => {
-				self.addToFilter(group)
+				self.addToFilter(tw)
 				self.app.dispatch({ type: 'plot_edit', id: self.id, config: { groups: self.config.groups } })
 			})
 		menuDiv
