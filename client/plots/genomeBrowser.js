@@ -317,10 +317,10 @@ class genomeBrowser {
 					this.blockInstance.tk_load(t)
 				}
 				// tk already in block
-				return
+				continue
 			}
 			// tk should be hidden
-			if (tkidx == -1) return
+			if (tkidx == -1) continue
 			// remove
 			this.blockInstance.tk_remove(tkidx)
 		}
