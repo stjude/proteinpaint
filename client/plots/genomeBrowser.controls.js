@@ -39,7 +39,8 @@ class GbControls {
 			testMethodDiv: this.opts.holder.append('div'),
 			// the whole holder has white-space=nowrap (likely from sjpp-output-sandbox-content)
 			// must set white-space=normal to let INFO filter wrap and not to extend beyond holder
-			variantFilterHolder: this.opts.holder.append('div').style('white-space', 'normal')
+			variantFilterHolder: this.opts.holder.append('div').style('white-space', 'normal'),
+			ldButtonDiv: this.opts.holder.append('div')
 		}
 	}
 
@@ -79,6 +80,8 @@ class GbControls {
 				this.makeVariantFilter()
 			}
 		}
+
+		this.makeLDbuttons()
 	}
 
 	async makeVariantFilter() {
@@ -189,6 +192,24 @@ class GbControls {
 			select.append('option').text(m.name)
 		}
 		select.property('selectedIndex', this.state.config.snvindel.details.groupTestMethodsIdx)
+	}
+
+	makeLDbuttons() {
+		if (!this.state.config.ld) return
+		if (this.dom.ldButtonDiv.node().childNodes.length) return // already rendered
+		for (const tk of this.state.config.ld.tracks) {
+			// {file0}
+			this.dom.ldButtonDiv
+				.append('button')
+				.style('margin', '10px')
+				.text(tk.name)
+				.on('click', () => {
+					const t = this.blockInstance.tklst.find(i => i.file == tk.file0)
+					if (t) {
+					} else {
+					}
+				})
+		}
 	}
 }
 

@@ -1292,11 +1292,11 @@ export function showLDlegend(div, colorScale) {
 	grad
 		.append('stop')
 		.attr('offset', '0%')
-		.attr('stop-color', LDcolor0)
+		.attr('stop-color', colorlst[0])
 	grad
 		.append('stop')
 		.attr('offset', '100%')
-		.attr('stop-color', LDcolor1)
+		.attr('stop-color', colorlst[colorlst.length - 1])
 	svg
 		.append('rect')
 		.attr('x', xpad)

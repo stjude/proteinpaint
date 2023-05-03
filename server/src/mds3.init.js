@@ -1085,6 +1085,7 @@ async function validate_query_ld(ds, genome) {
 	for (const k of q.tracks) {
 		if (!k.name) throw 'name missing from one of ld.tracks[]'
 		if (!k.file) throw '.file missing from one of ld.tracks[]'
+		k.file0 = k.file // keep relative path as its needed on client by the ld tk
 		k.file = path.join(serverconfig.tpmasterdir, k.file)
 		await utils.validate_tabixfile(k.file)
 		k.nochr = await utils.tabix_is_nochr(k.file, null, genome)

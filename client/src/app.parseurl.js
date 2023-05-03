@@ -636,6 +636,18 @@ export async function get_tklst(urlp, genomeobj) {
 			}
 		}
 	}
+	if (urlp.has('ldfile')) {
+		const lst = urlp.get('ldfile').split(',')
+		for (let i = 0; i < lst.length; i += 2) {
+			if (lst[i] && lst[i + 1]) {
+				tklst.push({
+					type: client.tkt.ld,
+					name: lst[i],
+					file: lst[i + 1]
+				})
+			}
+		}
+	}
 	if (urlp.has('bigwigfile')) {
 		const lst = urlp.get('bigwigfile').split(',')
 		for (let i = 0; i < lst.length; i += 2) {

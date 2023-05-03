@@ -472,7 +472,8 @@ export const tkt = {
 	mds2: 'mds2', // mds 2nd gen
 	mds3: 'mds3', // 3rd gen
 	bedgraphdot: 'bedgraphdot',
-	bam: 'bam'
+	bam: 'bam',
+	ld: 'ld'
 }
 
 export function validtkt(what) {

@@ -20,6 +20,7 @@ import { appear, disappear } from '#dom/animation'
 // track types
 import { bamfromtemplate, bammaketk, bamload } from './block.tk.bam.adaptor'
 import { pgvfromtemplate, pgvmaketk, pgvload } from './block.tk.pgv.adaptor'
+import { ldfromtemplate, ldmaketk, ldload } from './block.tk.ld.adaptor'
 import { junctionfromtemplate, junctionmaketk, junctionload } from './block.tk.junction.adaptor'
 import { bampilefromtemplate, bampilemaketk, bampileload } from './block.tk.bampile'
 import { bigwigfromtemplate, bigwigmaketk, bigwigload, bigwigloadsubpanel } from './block.tk.bigwig'
@@ -2457,6 +2458,13 @@ seekrange(chr,start,stop) {
 					return
 				}
 				break
+			case client.tkt.ld:
+				const e14 = ldfromtemplate(tk, template)
+				if (e14) {
+					this.error(e14)
+					return
+				}
+				break
 			case client.tkt.bam:
 				const e12 = bamfromtemplate(tk, template)
 				if (e12) {
@@ -2709,6 +2717,9 @@ seekrange(chr,start,stop) {
 				break
 			case client.tkt.pgv:
 				pgvmaketk(tk, this)
+				break
+			case client.tkt.ld:
+				ldmaketk(tk, this)
 				break
 			case client.tkt.bam:
 				bammaketk(tk, this)
@@ -3050,6 +3061,9 @@ seekrange(chr,start,stop) {
 				break
 			case client.tkt.pgv:
 				pgvload(tk, this)
+				break
+			case client.tkt.ld:
+				ldload(tk, this)
 				break
 			case client.tkt.bam:
 				bamload(tk, this)

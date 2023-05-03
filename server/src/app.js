@@ -74,6 +74,7 @@ const express = require('express'),
 	basicAuth = require('express-basic-auth'),
 	termdb = require('./termdb'),
 	handle_tkbigwig = require('./bw').handle_tkbigwig,
+	handle_tkld = require('./ld').handle_tkld,
 	termdbbarsql = require('./termdb.barchart'),
 	bedgraphdot_request_closure = require('./bedgraphdot'),
 	bam_request_closure = require('./bam'),
@@ -295,6 +296,7 @@ app.all(basepath + '/mds3', mds3_request_closure(genomes))
 app.get(basepath + '/tkbampile', bampile_request)
 app.post(basepath + '/dsdata', handle_dsdata) // old official ds, replace by mds
 app.post(basepath + '/tkbigwig', handle_tkbigwig)
+app.post(basepath + '/tkld', handle_tkld(genomes))
 app.get(basepath + '/tabixheader', handle_tabixheader)
 app.post(basepath + '/snp', handle_snp)
 app.get(basepath + '/clinvarVCF', handle_clinvarVCF)
