@@ -68,8 +68,7 @@ class Scatter {
 			//holder,
 			controls,
 			tip: new Menu({ padding: '5px' }),
-			tooltip: new Menu({ padding: '5px' }),
-			termstip: new Menu({ padding: '5px', offsetX: 170, offsetY: -34 })
+			tooltip: new Menu({ padding: '5px' })
 		}
 
 		this.settings = {}
@@ -117,7 +116,6 @@ class Scatter {
 		this.setTools()
 		this.updateGroupsButton()
 		this.dom.tip.hide()
-		this.dom.termstip.hide()
 	}
 
 	// creates an opts object for the vocabApi.someMethod(),
@@ -264,6 +262,11 @@ class Scatter {
 
 		this.components.controls.on('downloadClick.scatter', () => this.downloadSVG(this.svg))
 		this.dom.toolsDiv = this.dom.controls.insert('div')
+	}
+
+	newId() {
+		this.lastId = get$id()
+		return this.lastId
 	}
 }
 

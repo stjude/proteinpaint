@@ -4,7 +4,13 @@ import { dofetch3 } from '#common/dofetch'
 import { mclass, morigin, dt2label } from '#shared/common'
 import { Menu } from '#dom/menu'
 import { rgb } from 'd3-color'
-import { getSamplelstTW, addPlotMenuItem, showTermsTree, addMatrixMenuItems } from '#termsetting/handlers/samplelst'
+import {
+	getSamplelstTW,
+	addPlotMenuItem,
+	showTermsTree,
+	addMatrixMenuItems,
+	openSummaryPlot
+} from '#termsetting/handlers/samplelst'
 
 export function setInteractivity(self) {
 	self.mouseover = function(event, chart) {
@@ -105,7 +111,6 @@ export function setInteractivity(self) {
 
 	self.mouseclick = function() {
 		if (!self.lassoOn) self.dom.tip.hide()
-		self.dom.termstip.hide()
 	}
 
 	self.onLegendClick = function(chart, G, name, key, e) {
@@ -418,7 +423,7 @@ export function setInteractivity(self) {
 
 	self.showGroupMenu = function(event, group) {
 		self.dom.tip.clear()
-		self.dom.tip.show(event.clientX, event.clientY, false, false)
+		self.dom.tip.show(event.clientX, event.clientY, false, true)
 		const menuDiv = self.dom.tip.d.append('div')
 		const plot_name = self.config.name ? self.config.name : 'Summary scatter'
 		const tw = getSamplelstTW([group], plot_name + ' groups')
@@ -500,7 +505,7 @@ export function setInteractivity(self) {
 
 	self.showGroupsMenu = function(event) {
 		self.dom.tip.clear()
-		self.dom.tip.show(event.clientX, event.clientY)
+		self.dom.tip.show(event.clientX, event.clientY, false, true)
 		const menuDiv = self.dom.tip.d.append('div')
 		const plot_name = self.config.name ? self.config.name : 'Summary scatter'
 		const tw = getSamplelstTW(self.config.groups, plot_name + ' groups')
@@ -525,28 +530,12 @@ export function setInteractivity(self) {
 			})
 		}
 		addMatrixMenuItems(self.dom.tip, menuDiv, tw, self.app, self.id, self.state)
-		if (self.state.supportedChartTypes.includes('survival')) {
-			const survivalDiv = menuDiv
-				.append('div')
-				.attr('class', 'sja_menuoption sja_sharp_border')
-				.html('Compare survival&nbsp;&nbsp;›')
+		if (this.state.supportedChartTypes.includes('survival'))
+			addPlotMenuItem('survival', menuDiv, 'Compare survival', self.dom.tip, tw, self.id, this)
 
-			survivalDiv.on('click', async e => {
-				const state = {
-					nav: { header_mode: 'hide_search' },
-					tree: { usecase: { target: 'survival', detail: 'term' } }
-				}
-				showTermsTree(
-					survivalDiv,
-					term => {
-						openSurvivalPlot(term, tw, self.app, self.id)
-					},
-					self.app,
-					self.dom.tip,
-					state
-				)
-			})
-		}
+		if (this.state.supportedChartTypes.includes('cuminc'))
+			addPlotMenuItem('cuminc', menuDiv, 'Compare cumulative incidence', self.dom.tip, tw, self.id, this)
+
 		const summarizeDiv = menuDiv
 			.append('div')
 			.attr('class', 'sja_menuoption sja_sharp_border')

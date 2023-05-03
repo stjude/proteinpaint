@@ -182,8 +182,7 @@ export async function showTermsTree(div, callback, app, parentMenu, state = { tr
 	})
 }
 export function addPlotMenuItem(chartType, div, text, parentMenu, samplelstTW, id, parent) {
-	console.log(parent)
-	div
+	const itemDiv = div
 		.append('div')
 		.attr('class', 'sja_menuoption sja_sharp_border')
 		//.html('Compare survival&nbsp;&nbsp;›')
@@ -192,7 +191,7 @@ export function addPlotMenuItem(chartType, div, text, parentMenu, samplelstTW, i
 			const state = { tree: { usecase: { target: chartType, detail: 'term' } } }
 			if (chartType == 'survival') state.nav = { header_mode: 'hide_search' }
 			showTermsTree(
-				div,
+				itemDiv,
 				term => {
 					openPlot(chartType, term, samplelstTW, parent.app, id, () => parent.newId)
 				},
