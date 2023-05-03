@@ -4,13 +4,7 @@ import { filterInit, getNormalRoot, filterPromptInit, getFilterItemByTag } from 
 import { select } from 'd3-selection'
 import { appInit } from '#termdb/app'
 import { renderTable } from '#dom/table'
-import {
-	getSamplelstTW,
-	addMatrixMenuItems,
-	openSummaryPlot,
-	addPlotMenuItem,
-	showTermsTree
-} from '#termsetting/handlers/samplelst'
+import { getSamplelstTW } from '#termsetting/handlers/samplelst'
 import { get$id } from '../termsetting/termsetting'
 import { getActiveCohortStr } from './charts'
 
@@ -461,4 +455,99 @@ function rebaseGroupFilter(s) {
 		groups.push(g2)
 	}
 	return groups
+}
+
+export async function openPlot(chartType, term, term2, app, id, newId) {
+	let config = {
+		chartType,
+		term,
+		term2
+	}
+	if (id) config.insertBefore = id
+	if (newId) config.id = newId()
+	await app.dispatch({
+		type: 'plot_create',
+		config
+	})
+}
+
+export async function openSummaryPlot(term, samplelstTW, app, id, newId) {
+	// barchart config.term{} name is confusing, as it is actually a termsetting object, not term
+	// thus convert the given term into a termwrapper
+	// tw.q can be missing and will be filled in with default setting
+	const tw = { id: term.id, term }
+	let config = {
+		chartType: 'summary',
+		childType: 'barchart',
+		term: tw,
+		term2: samplelstTW
+	}
+	if (id) config.insertBefore = id
+	if (newId) config.id = newId()
+	await app.dispatch({
+		type: 'plot_create',
+		config
+	})
+}
+
+export async function showTermsTree(div, callback, app, parentMenu, state = { tree: { usecase: { detail: 'term' } } }) {
+	const menu = new Menu({ padding: '5px', offsetX: 170, offsetY: -34 })
+	menu.showunderoffset(div.node())
+	const termdb = await import('../../termdb/app')
+	termdb.appInit({
+		holder: menu.d,
+		vocabApi: app.vocabApi,
+		state,
+		tree: {
+			click_term: term => {
+				callback(term)
+				menu.hide()
+				parentMenu.hide()
+			}
+		}
+	})
+}
+export function addPlotMenuItem(chartType, div, text, parentMenu, samplelstTW, id, parent, openOnTop = false) {
+	const itemDiv = div
+		.append('div')
+		.attr('class', 'sja_menuoption sja_sharp_border')
+		//.html('Compare survival&nbsp;&nbsp;›')
+		.html(`${text}&nbsp;&nbsp;›`)
+		.on('click', e => {
+			const state = { tree: { usecase: { target: chartType, detail: 'term' } } }
+			if (chartType == 'survival') state.nav = { header_mode: 'hide_search' }
+			showTermsTree(
+				itemDiv,
+				term => {
+					openPlot(chartType, term, samplelstTW, parent.app, id, openOnTop ? () => parent.newId : null)
+				},
+				parent.app,
+				parentMenu,
+				state
+			)
+		})
+}
+
+export function addMatrixMenuItems(menu, menuDiv, tw, app, id, state, newId) {
+	if (state.matrixplots) {
+		for (const plot of state.matrixplots) {
+			menuDiv
+				.append('div')
+				.attr('class', 'sja_menuoption sja_sharp_border')
+				.text(plot.name)
+				.on('click', async () => {
+					const config = await app.vocabApi.getMatrixByName(plot.name)
+					config.divideBy = tw
+					config.insertBefore = id
+					config.settings.matrix.colw = 0
+					if (newId) config.id = newId()
+
+					app.dispatch({
+						type: 'plot_create',
+						config
+					})
+					menu.hide()
+				})
+		}
+	}
 }
