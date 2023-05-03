@@ -7,6 +7,7 @@ import { scaleLinear as d3Linear } from 'd3-scale'
 import { axisLeft, axisBottom } from 'd3-axis'
 import { select } from 'd3-selection'
 import { Menu } from '#dom/menu'
+import { getSamplelstTW } from '#termsetting/handlers/samplelst'
 
 export function setRenderers(self) {
 	self.render = function() {
@@ -375,7 +376,8 @@ export function setRenderers(self) {
 						index: self.config.groups.length
 					}
 					self.config.groups.push(group)
-					self.addToFilter(group)
+					const tw = getSamplelstTW([group])
+					self.addToFilter(tw)
 					self.app.dispatch({ type: 'plot_edit', id: self.id, config: { groups: self.config.groups } })
 				})
 		}
