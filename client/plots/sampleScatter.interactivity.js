@@ -459,7 +459,7 @@ export function setInteractivity(self) {
 				self.dom.tip.hide()
 				self.showTable(group, event.clientX, event.clientY, false)
 			})
-		addMatrixMenuItems(self.dom.tip, menuDiv, tw, self.app, self.state)
+		addMatrixMenuItems(self.dom.tip, menuDiv, tw, self.app, self.id, self.state)
 		if (self.state.allowedTermTypes.includes('survival')) {
 			const survivalDiv = menuDiv
 				.append('div')
@@ -548,7 +548,7 @@ export function setInteractivity(self) {
 				self.showGroupMenu(event, group)
 			})
 		}
-		addMatrixMenuItems(self.dom.tip, menuDiv, tw, self.app, self.state)
+		addMatrixMenuItems(self.dom.tip, menuDiv, tw, self.app, self.id, self.state)
 		if (self.state.allowedTermTypes.includes('survival')) {
 			const survivalDiv = menuDiv
 				.append('div')
