@@ -131,9 +131,9 @@ export function getSamplelstTW(groups, name = 'groups') {
 	}
 }
 
-export async function openSurvivalPlot(term, term2, app, id, newId) {
+export async function openPlot(chartType, term, term2, app, id, newId) {
 	let config = {
-		chartType: 'survival',
+		chartType,
 		term,
 		term2
 	}

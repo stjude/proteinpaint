@@ -53,7 +53,7 @@ class MassCharts {
 
 export const chartsInit = getCompInit(MassCharts)
 
-function getActiveCohortStr(appState) {
+export function getActiveCohortStr(appState) {
 	if (appState?.termdbConfig?.selectCohort?.values) {
 		// dataset allows subcohort selection
 		if (!Number.isInteger(appState.activeCohort)) throw 'appState.activeCohort is not integer array index'
