@@ -8,10 +8,11 @@ import {
 	getSamplelstTW,
 	addMatrixMenuItems,
 	openSummaryPlot,
-	openSurvivalPlot,
+	openPlot,
 	showTermsTree
 } from '#termsetting/handlers/samplelst'
 import { get$id } from '../termsetting/termsetting'
+import { getActiveCohortStr } from './charts'
 
 /*
 this
@@ -47,12 +48,14 @@ class MassGroups {
 	}
 
 	getState(appState) {
+		const cohortKey = getActiveCohortStr(appState)
+
 		const state = {
 			termfilter: appState.termfilter,
 			groups: rebaseGroupFilter(appState),
 			termdbConfig: appState.termdbConfig,
 			customTerms: appState.customTerms,
-			allowedTermTypes: appState.termdbConfig.allowedTermTypes,
+			supportedChartTypes: appState.termdbConfig.supportedChartTypes[cohortKey],
 			matrixplots: appState.termdbConfig.matrixplots
 		}
 		return state
@@ -193,27 +196,12 @@ class MassGroups {
 		let row = menuDiv.append('div')
 
 		addMatrixMenuItems(parentMenu, menuDiv, samplelstTW, this.app, id, this.state, () => this.newId)
-		if (this.state.allowedTermTypes.includes('survival')) {
-			const survivalDiv = menuDiv
-				.append('div')
-				.attr('class', 'sja_menuoption sja_sharp_border')
-				.html('Compare survival&nbsp;&nbsp;›')
-				.on('click', e => {
-					const state = {
-						nav: { header_mode: 'hide_search' },
-						tree: { usecase: { target: 'survival', detail: 'term' } }
-					}
-					showTermsTree(
-						survivalDiv,
-						term => {
-							openSurvivalPlot(term, samplelstTW, this.app, id, () => this.newId)
-						},
-						this.app,
-						parentMenu,
-						state
-					)
-				})
-		}
+		if (this.state.supportedChartTypes.includes('survival'))
+			this.addPlotMenuItem('survival', menuDiv, 'Compare survival', parentMenu, samplelstTW, id)
+
+		if (this.state.supportedChartTypes.includes('cuminc'))
+			this.addPlotMenuItem('cuminc', menuDiv, 'Compare cumulative incidence', parentMenu, id)
+
 		const summarizeDiv = menuDiv
 			.append('div')
 			.attr('class', 'sja_menuoption sja_sharp_border')
@@ -243,6 +231,31 @@ class MassGroups {
 			})
 
 		parentMenu.show(event.clientX, event.clientY)
+	}
+
+	addPlotMenuItem(chartType, div, text, parentMenu, samplelstTW, id) {
+		div
+			.append('div')
+			.attr('class', 'sja_menuoption sja_sharp_border')
+			//.html('Compare survival&nbsp;&nbsp;›')
+			.html(`${text}&nbsp;&nbsp;›`)
+			.on('click', e => {
+				let state = { tree: { usecase: { detail: 'term' } } }
+				if (chartType == 'survival')
+					state = {
+						nav: { header_mode: 'hide_search' },
+						tree: { usecase: { target: chartType, detail: 'term' } }
+					}
+				showTermsTree(
+					div,
+					term => {
+						openPlot(chartType, term, samplelstTW, this.app, id, () => this.newId)
+					},
+					this.app,
+					parentMenu,
+					state
+				)
+			})
 	}
 }
 
