@@ -263,11 +263,6 @@ class Scatter {
 		this.components.controls.on('downloadClick.scatter', () => this.downloadSVG(this.svg))
 		this.dom.toolsDiv = this.dom.controls.insert('div')
 	}
-
-	newId() {
-		this.lastId = get$id()
-		return this.lastId
-	}
 }
 
 export async function getPlotConfig(opts, app) {
