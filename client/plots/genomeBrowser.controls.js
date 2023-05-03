@@ -1,5 +1,6 @@
 import { getCompInit } from '#rx'
 import { Menu } from '#dom/menu'
+import { make_one_checkbox } from '#dom/checkbox'
 import { filterInit, getNormalRoot, getFilterItemByTag } from '#filter/filter'
 import { Tabs } from '#dom/toggleButtons'
 import { appInit } from '#termdb/app'
@@ -32,15 +33,66 @@ class GbControls {
 	}
 
 	async init(appState) {
-		this.dom = {
-			// hardcode to 2 groups used by state.config.snvindel.details.groups[]
-			group1div: this.opts.holder.append('div'),
-			group2div: this.opts.holder.append('div'),
-			testMethodDiv: this.opts.holder.append('div'),
+		const plot = appState.plots.find(i => i.id == this.id)
+		if (!plot) throw 'plot not found by id'
+		const tabs = [{ label: 'Variant values', active: true }]
+		if (plot.variantFilter) {
+			tabs.push({ label: 'Variant filter' })
+		}
+		if (plot.ld) {
+			tabs.push({ label: 'LD map' })
+		}
+		// can add other tk set
+
+		const toggles = new Tabs({
+			holder: this.opts.holder
+				.append('div')
+				.style('border-bottom', 'solid 1px #ccc')
+				.style('padding-bottom', '20px'),
+			tabs
+		})
+		toggles.main()
+
+		{
+			// first tab is for variant group setting
+			const div = tabs[0].contentHolder.append('div')
+			this.dom = {
+				// hardcode to 2 groups used by state.config.snvindel.details.groups[]
+				group1div: div.append('div'),
+				group2div: div.append('div'),
+				testMethodDiv: div.append('div')
+			}
+		}
+
+		let tabsIdx = 1 // tabs[] array index, to handle optional tabs
+
+		if (plot.variantFilter) {
 			// the whole holder has white-space=nowrap (likely from sjpp-output-sandbox-content)
 			// must set white-space=normal to let INFO filter wrap and not to extend beyond holder
-			variantFilterHolder: this.opts.holder.append('div').style('white-space', 'normal'),
-			ldButtonDiv: this.opts.holder.append('div')
+			this.dom.variantFilterHolder = tabs[tabsIdx++].contentHolder.append('div').style('white-space', 'normal')
+		}
+		if (plot.ld) {
+			const div = tabs[tabsIdx++].contentHolder.append('div')
+			div
+				.append('div')
+				.text('Show/hide linkage disequilibrium map from an ancestry:')
+				.style('opacity', 0.5)
+			for (const [i, t] of plot.ld.tracks.entries()) {
+				make_one_checkbox({
+					labeltext: t.name,
+					checked: t.shown,
+					holder: div,
+					callback: checked => {
+						const tracks = structuredClone(plot.ld.tracks)
+						tracks[i].shown = checked
+						this.app.dispatch({
+							type: 'plot_edit',
+							id: this.id,
+							config: { ld: { tracks } }
+						})
+					}
+				})
+			}
 		}
 	}
 
@@ -80,31 +132,13 @@ class GbControls {
 				this.makeVariantFilter()
 			}
 		}
-
-		this.makeLDbuttons()
 	}
 
 	async makeVariantFilter() {
-		const handle = this.dom.variantFilterHolder
-			.append('div')
-			.text('VARIANT FILTER [+]')
-			.attr('class', 'sja_clbtext2')
-			.style('margin-top', '5px')
-			.style('font-size', '.9em')
-			.on('click', () => {
-				if (div.style('display') == 'none') {
-					handle.text('VARIANT FILTER [-]')
-					div.style('display', 'block')
-				} else {
-					handle.text('VARIANT FILTER [+]')
-					div.style('display', 'none')
-				}
-			})
-		const div = this.dom.variantFilterHolder.append('div').style('display', 'none')
 		filterInit({
 			joinWith: this.state.config.variantFilter.opts.joinWith,
 			emptyLabel: '+Add Filter',
-			holder: div,
+			holder: this.dom.variantFilterHolder,
 			vocab: { terms: this.state.config.variantFilter.terms },
 			callback: async filter => {
 				await this.app.dispatch({
@@ -192,27 +226,6 @@ class GbControls {
 			select.append('option').text(m.name)
 		}
 		select.property('selectedIndex', this.state.config.snvindel.details.groupTestMethodsIdx)
-	}
-
-	makeLDbuttons() {
-		if (!this.state.config.ld) return
-		this.dom.ldButtonDiv.selectAll('*').remove()
-		for (const [i, tk] of this.state.config.ld.tracks.entries()) {
-			// {file0, shown:boolean}
-			this.dom.ldButtonDiv
-				.append('button')
-				.style('margin', '10px')
-				.text(tk.name + (tk.shown ? ' (Shown)' : ''))
-				.on('click', () => {
-					const tracks = structuredClone(this.state.config.ld.tracks)
-					tracks[i].shown = !tracks[i].shown
-					this.app.dispatch({
-						type: 'plot_edit',
-						id: this.id,
-						config: { ld: { tracks } }
-					})
-				})
-		}
 	}
 }
 

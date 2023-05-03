@@ -79,10 +79,12 @@ class genomeBrowser {
 			tip: new Menu(),
 			holder,
 			errDiv,
+			/*
 			skipMcountWithoutAltDiv: messageRow
 				.append('span')
 				.style('opacity', 0.5)
 				.style('margin-right', '10px'),
+				*/
 			loadingDiv: messageRow.append('span').text('Loading...'),
 			controlsDiv: holder.append('div').style('margin-left', '25px'),
 			blockHolder: holder.append('div')
@@ -109,7 +111,6 @@ class genomeBrowser {
 	}
 
 	async main() {
-		console.log(this)
 		this.dom.loadingDiv.style('display', 'inline')
 		try {
 			if (this.state.config?.snvindel?.details) {
@@ -216,6 +217,7 @@ class genomeBrowser {
 
 		const data = await dofetch3('termdb', { body })
 		if (data.error) throw data.error
+		/*
 		if (data.skipMcountWithoutAlt) {
 			this.dom.skipMcountWithoutAltDiv.text(
 				`${data.skipMcountWithoutAlt} variant${
@@ -225,6 +227,7 @@ class genomeBrowser {
 		} else {
 			this.dom.skipMcountWithoutAltDiv.text('')
 		}
+		*/
 		return data
 	}
 

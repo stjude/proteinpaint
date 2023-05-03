@@ -1285,10 +1285,12 @@ export function showLDlegend(div, colorScale) {
 			),
 		fontsize: 12
 	})
+
+	const id = 'grad' + Math.random()
 	const grad = svg
 		.append('defs')
 		.append('linearGradient')
-		.attr('id', 'grad')
+		.attr('id', id)
 	grad
 		.append('stop')
 		.attr('offset', '0%')
@@ -1303,7 +1305,7 @@ export function showLDlegend(div, colorScale) {
 		.attr('y', axisheight)
 		.attr('width', axiswidth)
 		.attr('height', barheight)
-		.attr('fill', 'url(#grad)')
+		.attr('fill', `url(#${id})`)
 
 	svg.attr('width', xpad * 2 + axiswidth).attr('height', axisheight + barheight)
 }
