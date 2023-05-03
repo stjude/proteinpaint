@@ -275,7 +275,10 @@ function setRenderers(self) {
 	self.newDiv = (label, label2, holder) => {
 		// create div to show a section of the result
 		// label is required, label2 is optional
-		const div = (holder || self.dom.oneSetResultDiv).append('div').style('margin', '20px 0px 10px 0px')
+		const div = (holder || self.dom.oneSetResultDiv)
+			.append('div')
+			.style('margin', '20px 0px 10px 0px')
+			.attr('name', label) //For integration testing
 		const row = div.append('div')
 		row
 			.append('span')
@@ -317,7 +320,10 @@ function setRenderers(self) {
 	self.mayshow_residuals = result => {
 		if (!result.residuals) return
 		const div = self.newDiv(result.residuals.label)
-		const table = div.append('table').style('border-spacing', '8px')
+		const table = div
+			.append('table')
+			.style('border-spacing', '8px')
+			.attr('name', 'sjpp-residuals-table') //For integration tests
 		const tr1 = table.append('tr').style('opacity', 0.4)
 		const tr2 = table.append('tr')
 		for (let i = 0; i < result.residuals.header.length; i++) {
