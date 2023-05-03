@@ -421,7 +421,6 @@ export function setInteractivity(self) {
 		const menuDiv = self.dom.tip.d.append('div')
 		const plot_name = self.config.name ? self.config.name : 'Summary scatter'
 		const tw = getSamplelstTW([group], plot_name + ' groups')
-
 		const groupDiv = menuDiv
 			.append('div')
 			.attr('name', 'sjpp-group-input-div')
@@ -452,25 +451,7 @@ export function setInteractivity(self) {
 				self.dom.tip.hide()
 				self.showTable(group, event.clientX, event.clientY, false)
 			})
-		addMatrixMenuItems(self.dom.tip, menuDiv, tw, self.app, self.id, self.state)
-		if (self.state.supportedChartTypes.includes('survival'))
-			addPlotMenuItem('survival', menuDiv, 'Compare survival', self.dom.tip, tw, self.id, this)
-
-		if (self.state.supportedChartTypes.includes('cuminc'))
-			addPlotMenuItem('cuminc', menuDiv, 'Compare cumulative incidence', self.dom.tip, tw, self.id, this)
-
-		const summarizeDiv = menuDiv
-			.append('div')
-			.attr('class', 'sja_menuoption sja_sharp_border')
-			.html('Summarize')
-		summarizeDiv
-			.insert('div')
-			.html('›')
-			.style('float', 'right')
-
-		summarizeDiv.on('click', async e => {
-			showTermsTree(summarizeDiv, term => openSummaryPlot(term, tw, self.app, self.id), self.app, self.dom.tip)
-		})
+		self.addCommonMenuItems(menuDiv, tw)
 		const deleteDiv = menuDiv
 			.append('div')
 			.attr('class', 'sja_menuoption sja_sharp_border')
@@ -497,32 +478,7 @@ export function setInteractivity(self) {
 			})
 	}
 
-	self.showGroupsMenu = function(event) {
-		self.dom.tip.clear()
-		self.dom.tip.show(event.clientX, event.clientY, false, true)
-		const menuDiv = self.dom.tip.d.append('div')
-		const plot_name = self.config.name ? self.config.name : 'Summary scatter'
-		const tw = getSamplelstTW(self.config.groups, plot_name + ' groups')
-
-		let row = menuDiv.append('div')
-
-		for (const [i, group] of self.config.groups.entries()) {
-			row = menuDiv.append('div').attr('class', 'sja_menuoption sja_sharp_border')
-			row
-				.insert('div')
-				.style('display', 'inline-block')
-				.text(` ${group.name}: ${group.items.length} `)
-
-			row
-				.append('div')
-				.style('display', 'inline-block')
-				.style('float', 'right')
-				.html('&nbsp;&nbsp;›')
-			row.on('click', e => {
-				self.dom.tip.clear().hide()
-				self.showGroupMenu(event, group)
-			})
-		}
+	self.addCommonMenuItems = function(menuDiv, tw) {
 		addMatrixMenuItems(self.dom.tip, menuDiv, tw, self.app, self.id, self.state)
 		if (self.state.supportedChartTypes.includes('survival'))
 			addPlotMenuItem('survival', menuDiv, 'Compare survival', self.dom.tip, tw, self.id, this)
@@ -549,6 +505,34 @@ export function setInteractivity(self) {
 				self.dom.tip
 			)
 		})
+	}
+
+	self.showGroupsMenu = function(event) {
+		self.dom.tip.clear()
+		self.dom.tip.show(event.clientX, event.clientY, false, true)
+		const menuDiv = self.dom.tip.d.append('div')
+		const plot_name = self.config.name ? self.config.name : 'Summary scatter'
+		const tw = getSamplelstTW(self.config.groups, plot_name + ' groups')
+		let row = menuDiv.append('div')
+
+		for (const [i, group] of self.config.groups.entries()) {
+			row = menuDiv.append('div').attr('class', 'sja_menuoption sja_sharp_border')
+			row
+				.insert('div')
+				.style('display', 'inline-block')
+				.text(` ${group.name}: ${group.items.length} `)
+
+			row
+				.append('div')
+				.style('display', 'inline-block')
+				.style('float', 'right')
+				.html('&nbsp;&nbsp;›')
+			row.on('click', e => {
+				self.dom.tip.clear().hide()
+				self.showGroupMenu(event, group)
+			})
+		}
+		self.addCommonMenuItems(menuDiv, tw)
 		row = menuDiv
 			.append('div')
 			.attr('class', 'sja_menuoption sja_sharp_border')
