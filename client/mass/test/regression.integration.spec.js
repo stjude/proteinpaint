@@ -160,47 +160,47 @@ tape('Linear: continuous outcome = "agedx", cat. independents = "sex" + "genetic
 		catTerm = 'Sex'
 		const checkValues1 = ['Sex\nREF Female', 'Male']
 		data.coefficients.terms.sex.categories[1].forEach(d => checkValues1.push(d))
-		results = checkTableRow(table, 2, checkValues1, `Term = "${catTerm}"`)
+		results = checkTableRow(table, 2, checkValues1)
 		test.equal(results, true, `Should render all ${catTerm} data in ${tableLabel}`)
 
 		catTerm = 'African Ancestry'
 		const checkValues2 = ['Genetically defined race\nREF European Ancestry', catTerm]
 		data.coefficients.terms.genetic_race.categories[catTerm].forEach(d => checkValues2.push(d))
-		results = checkTableRow(table, 3, checkValues2, `Term = "Genetically defined race, ${catTerm}"`)
+		results = checkTableRow(table, 3, checkValues2)
 		test.equal(results, true, `Should render all ${catTerm} data in ${tableLabel}`)
 
 		catTerm = 'Asian Ancestry'
 		const checkValues3 = [catTerm]
 		data.coefficients.terms.genetic_race.categories[catTerm].forEach(d => checkValues3.push(d))
-		results = checkTableRow(table, 4, checkValues3, `Term = "Genetically defined race, ${catTerm}"`)
+		results = checkTableRow(table, 4, checkValues3)
 		test.equal(results, true, `Should render all ${catTerm} data in ${tableLabel}`)
 
 		//Type III Stats
 		tableLabel = 'type3 table'
 		table = regDom.results.selectAll('div[name^="Type III statistics"] table tr').nodes()
-		results = checkTableRow(table, 0, data.type3.header, 'Type III Stats header')
+		results = checkTableRow(table, 0, data.type3.header)
 		test.equal(results, true, `Should render all header data in ${tableLabel}`)
 
-		results = checkTableRow(table, 1, data.type3.intercept, 'Intercept')
+		results = checkTableRow(table, 1, data.type3.intercept)
 		test.equal(results, true, `Should render all intercept data in ${tableLabel}`)
 
 		catTerm = 'Sex'
 		const checkValues4 = [catTerm]
 		data.type3.terms.sex.forEach(d => checkValues4.push(d))
-		results = checkTableRow(table, 2, checkValues4, `Term = "${catTerm}"`)
+		results = checkTableRow(table, 2, checkValues4)
 		test.equal(results, true, `Should render all ${catTerm} data in ${tableLabel}`)
 
 		catTerm = 'Genetically defined race'
 		const checkValues5 = [catTerm]
 		data.type3.terms.genetic_race.forEach(d => checkValues5.push(d))
-		results = checkTableRow(table, 3, checkValues5, `Term = "${catTerm}"`)
+		results = checkTableRow(table, 3, checkValues5)
 		test.equal(results, true, `Should render all ${catTerm} data in ${tableLabel}`)
 
 		//Other stats
 		tableLabel = 'other summary statistics table'
 		table = regDom.results.selectAll('div[name^="Other summary statistics"] table tr').nodes()
 		for (const [i, header] of data.other.header.entries()) {
-			results = checkTableRow(table, i, [header, data.other.rows[i]], `${header}`)
+			results = checkTableRow(table, i, [header, data.other.rows[i]])
 			test.equal(results, true, `Should render all ${header} data in ${tableLabel}`)
 		}
 
@@ -309,7 +309,7 @@ tape('Linear: continuous outcome = "agedx", discrete independent = "aaclassic_5"
 			//Test all bin values for independent term
 			if (i < 2 || i == table.length - 1) continue //Skip header, intercept, and bottom scale rows
 			if (i == 2) {
-				//Skip the beginning cell spanning the remain rows
+				//Skip the beginning cell spanning the remaining rows
 				results = checkOnlyRowValues(
 					Array.from(tr.childNodes).slice(1),
 					data.coefficients.terms.aaclassic_5.categories[tr.childNodes[1].innerText]
