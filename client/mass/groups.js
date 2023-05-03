@@ -8,7 +8,7 @@ import {
 	getSamplelstTW,
 	addMatrixMenuItems,
 	openSummaryPlot,
-	openPlot,
+	addPlotMenuItem,
 	showTermsTree
 } from '#termsetting/handlers/samplelst'
 import { get$id } from '../termsetting/termsetting'
@@ -49,7 +49,6 @@ class MassGroups {
 
 	getState(appState) {
 		const cohortKey = getActiveCohortStr(appState)
-
 		const state = {
 			termfilter: appState.termfilter,
 			groups: rebaseGroupFilter(appState),
@@ -197,10 +196,10 @@ class MassGroups {
 
 		addMatrixMenuItems(parentMenu, menuDiv, samplelstTW, this.app, id, this.state, () => this.newId)
 		if (this.state.supportedChartTypes.includes('survival'))
-			this.addPlotMenuItem('survival', menuDiv, 'Compare survival', parentMenu, samplelstTW, id)
+			addPlotMenuItem('survival', menuDiv, 'Compare survival', parentMenu, samplelstTW, id, this)
 
 		if (this.state.supportedChartTypes.includes('cuminc'))
-			this.addPlotMenuItem('cuminc', menuDiv, 'Compare cumulative incidence', parentMenu, id)
+			addPlotMenuItem('cuminc', menuDiv, 'Compare cumulative incidence', parentMenu, samplelstTW, id, this)
 
 		const summarizeDiv = menuDiv
 			.append('div')
@@ -231,27 +230,6 @@ class MassGroups {
 			})
 
 		parentMenu.show(event.clientX, event.clientY)
-	}
-
-	addPlotMenuItem(chartType, div, text, parentMenu, samplelstTW, id) {
-		div
-			.append('div')
-			.attr('class', 'sja_menuoption sja_sharp_border')
-			//.html('Compare survival&nbsp;&nbsp;›')
-			.html(`${text}&nbsp;&nbsp;›`)
-			.on('click', e => {
-				const state = { tree: { usecase: { target: chartType, detail: 'term' } } }
-				if (chartType == 'survival') state.nav = { header_mode: 'hide_search' }
-				showTermsTree(
-					div,
-					term => {
-						openPlot(chartType, term, samplelstTW, this.app, id, () => this.newId)
-					},
-					this.app,
-					parentMenu,
-					state
-				)
-			})
 	}
 }
 
