@@ -12,7 +12,8 @@ const {
 	detectOne,
 	sleep
 } = require('../../test/test.helpers')
-import { getSamplelstTW, openPlot, openSummaryPlot } from '#termsetting/handlers/samplelst'
+import { getSamplelstTW } from '#termsetting/handlers/samplelst'
+import { openSummaryPlot, openPlot } from '../groups'
 
 /*
 Tests:

@@ -1,16 +1,10 @@
 import { filterJoin, getFilterItemByTag } from '#filter'
 import { renderTable } from '#dom/table'
-import { dofetch3 } from '#common/dofetch'
 import { mclass, morigin, dt2label } from '#shared/common'
 import { Menu } from '#dom/menu'
 import { rgb } from 'd3-color'
-import {
-	getSamplelstTW,
-	addPlotMenuItem,
-	showTermsTree,
-	addMatrixMenuItems,
-	openSummaryPlot
-} from '#termsetting/handlers/samplelst'
+import { getSamplelstTW } from '#termsetting/handlers/samplelst'
+import { addPlotMenuItem, showTermsTree, addMatrixMenuItems, openSummaryPlot } from '../mass/groups'
 
 export function setInteractivity(self) {
 	self.mouseover = function(event, chart) {
