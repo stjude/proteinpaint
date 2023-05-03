@@ -63,6 +63,7 @@ export class Cuminc {
 
 	main(data) {
 		this.config = structuredClone(this.state.config)
+		if (this.config.term.term.type != 'condition') throw 'cuminc term is not a condition term'
 		this.settings = this.config.settings.cuminc
 		this.settings.xTitleLabel = 'Years since entry into the cohort' // TODO: do not harcode time unit (see survival.js)
 		this.settings.atRiskVisible = false
@@ -369,6 +370,7 @@ class MassCumInc {
 						' <span style="opacity:.6;font-size:.7em;margin-left:10px;">CUMULATIVE INCIDENCE</span>'
 				)
 
+			if (this.config.term.term.type != 'condition') throw 'cuminc term is not a condition term'
 			this.toggleLoadingDiv()
 			Object.assign(this.settings, this.config.settings)
 			this.settings.defaultHidden = this.getDefaultHidden()
