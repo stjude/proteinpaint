@@ -1,7 +1,6 @@
 import { getPillNameDefault, get$id } from '#termsetting'
 import { renderTable } from '#dom/table'
 import { Menu } from '#dom/menu'
-import { dofetch3 } from '#common/dofetch'
 
 export function getHandler(self) {
 	return {
@@ -132,81 +131,22 @@ export function getSamplelstTW(groups, name = 'groups') {
 	}
 }
 
-export function showGroupsMenu(event, tw, allowedTermTypes, deleteCallback, app, state) {
-	const samplelstTW = JSON.parse(JSON.stringify(tw))
-	const parentMenu = new Menu({ padding: '5px' })
-
-	const menuDiv = parentMenu.d.append('div')
-
-	let row = menuDiv.append('div')
-
-	addMatrixMenuItems(parentMenu, menuDiv, samplelstTW, app, state)
-	if (allowedTermTypes.includes('survival')) {
-		const survivalDiv = menuDiv
-			.append('div')
-			.attr('class', 'sja_menuoption sja_sharp_border')
-			.html('Compare survival&nbsp;&nbsp;›')
-			.on('click', e => {
-				const state = {
-					nav: { header_mode: 'hide_search' },
-					tree: { usecase: { target: 'survival', detail: 'term' } }
-				}
-				showTermsTree(
-					survivalDiv,
-					term => {
-						openSurvivalPlot(term, samplelstTW, app)
-					},
-					app,
-					parentMenu,
-					state
-				)
-			})
-	}
-	const summarizeDiv = menuDiv
-		.append('div')
-		.attr('class', 'sja_menuoption sja_sharp_border')
-		.html('Summarize')
-	summarizeDiv
-		.insert('div')
-		.html('›')
-		.style('float', 'right')
-
-	summarizeDiv.on('click', async e => {
-		showTermsTree(
-			summarizeDiv,
-			term => {
-				openSummaryPlot(term, samplelstTW, app)
-			},
-			app,
-			parentMenu
-		)
-	})
-	row = menuDiv
-		.append('div')
-		.attr('class', 'sja_menuoption sja_sharp_border')
-		.text('Delete variable')
-		.on('click', event => {
-			deleteCallback()
-			parentMenu.hide()
-		})
-
-	parentMenu.show(event.clientX, event.clientY)
-}
-
-export async function openSurvivalPlot(term, term2, app, id) {
+export async function openSurvivalPlot(term, term2, app, id, getNewId) {
 	let config = {
 		chartType: 'survival',
 		term,
 		term2
 	}
 	if (id) config.insertBefore = id
+	if (getNewId) config.id = getNewId()
 	await app.dispatch({
 		type: 'plot_create',
 		config
 	})
 }
 
-export async function openSummaryPlot(term, samplelstTW, app, id) {
+export async function openSummaryPlot(term, samplelstTW, app, id, getNewId) {
+	const newId = get$id()
 	// barchart config.term{} name is confusing, as it is actually a termsetting object, not term
 	// thus convert the given term into a termwrapper
 	// tw.q can be missing and will be filled in with default setting
@@ -215,9 +155,11 @@ export async function openSummaryPlot(term, samplelstTW, app, id) {
 		chartType: 'summary',
 		childType: 'barchart',
 		term: tw,
-		term2: samplelstTW
+		term2: samplelstTW,
+		id: getNewId()
 	}
 	if (id) config.insertBefore = id
+	if (getNewId) config.id = getNewId()
 	await app.dispatch({
 		type: 'plot_create',
 		config
@@ -242,7 +184,7 @@ export async function showTermsTree(div, callback, app, parentMenu, state = { tr
 	})
 }
 
-export function addMatrixMenuItems(menu, menuDiv, tw, app, state) {
+export function addMatrixMenuItems(menu, menuDiv, tw, app, id, state, getNewId) {
 	if (state.matrixplots) {
 		for (const plot of state.matrixplots) {
 			menuDiv
@@ -252,7 +194,10 @@ export function addMatrixMenuItems(menu, menuDiv, tw, app, state) {
 				.on('click', async () => {
 					const config = await app.vocabApi.getMatrixByName(plot.name)
 					config.divideBy = tw
+					config.insertBefore = id
 					config.settings.matrix.colw = 0
+					if (getNewId) config.id = getNewId()
+
 					app.dispatch({
 						type: 'plot_create',
 						config

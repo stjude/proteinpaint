@@ -4,7 +4,14 @@ import { filterInit, getNormalRoot, filterPromptInit, getFilterItemByTag } from 
 import { select } from 'd3-selection'
 import { appInit } from '#termdb/app'
 import { renderTable } from '#dom/table'
-import { getSamplelstTW, showGroupsMenu } from '#termsetting/handlers/samplelst'
+import {
+	getSamplelstTW,
+	addMatrixMenuItems,
+	openSummaryPlot,
+	openSurvivalPlot,
+	showTermsTree
+} from '#termsetting/handlers/samplelst'
+import { get$id } from '../termsetting/termsetting'
 
 /*
 this
@@ -167,9 +174,75 @@ class MassGroups {
 				.style('margin-right', '5px')
 				.on('click', event => {
 					const deleteCallback = () => this.app.vocabApi.deleteCustomTerm(name)
-					showGroupsMenu(event, tw, this.state.allowedTermTypes, deleteCallback, this.app, this.state)
+					this.showGroupsMenu(event, tw, deleteCallback)
 				})
 		}
+	}
+
+	newId() {
+		console.log(this)
+		this.lastId = get$id()
+		return this.lastId
+	}
+
+	showGroupsMenu(event, tw, deleteCallback) {
+		const samplelstTW = JSON.parse(JSON.stringify(tw))
+		const parentMenu = new Menu({ padding: '5px' })
+		const menuDiv = parentMenu.d.append('div')
+		const id = this?.lastId
+		let row = menuDiv.append('div')
+
+		addMatrixMenuItems(parentMenu, menuDiv, samplelstTW, this.app, id, this.state, () => this.newId)
+		if (this.state.allowedTermTypes.includes('survival')) {
+			const survivalDiv = menuDiv
+				.append('div')
+				.attr('class', 'sja_menuoption sja_sharp_border')
+				.html('Compare survival&nbsp;&nbsp;›')
+				.on('click', e => {
+					const state = {
+						nav: { header_mode: 'hide_search' },
+						tree: { usecase: { target: 'survival', detail: 'term' } }
+					}
+					showTermsTree(
+						survivalDiv,
+						term => {
+							openSurvivalPlot(term, samplelstTW, this.app, id, () => this.newId)
+						},
+						this.app,
+						parentMenu,
+						state
+					)
+				})
+		}
+		const summarizeDiv = menuDiv
+			.append('div')
+			.attr('class', 'sja_menuoption sja_sharp_border')
+			.html('Summarize')
+		summarizeDiv
+			.insert('div')
+			.html('›')
+			.style('float', 'right')
+
+		summarizeDiv.on('click', async e => {
+			showTermsTree(
+				summarizeDiv,
+				term => {
+					openSummaryPlot(term, samplelstTW, this.app, id, () => this.newId)
+				},
+				this.app,
+				parentMenu
+			)
+		})
+		row = menuDiv
+			.append('div')
+			.attr('class', 'sja_menuoption sja_sharp_border')
+			.text('Delete variable')
+			.on('click', event => {
+				deleteCallback()
+				parentMenu.hide()
+			})
+
+		parentMenu.show(event.clientX, event.clientY)
 	}
 }
 
