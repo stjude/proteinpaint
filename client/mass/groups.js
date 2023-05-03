@@ -493,7 +493,7 @@ export async function openSummaryPlot(term, samplelstTW, app, id, newId) {
 export async function showTermsTree(div, callback, app, parentMenu, state = { tree: { usecase: { detail: 'term' } } }) {
 	const menu = new Menu({ padding: '5px', offsetX: 170, offsetY: -34 })
 	menu.showunderoffset(div.node())
-	const termdb = await import('../../termdb/app')
+	const termdb = await import('../termdb/app')
 	termdb.appInit({
 		holder: menu.d,
 		vocabApi: app.vocabApi,
