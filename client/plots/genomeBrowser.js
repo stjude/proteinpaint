@@ -109,6 +109,7 @@ class genomeBrowser {
 	}
 
 	async main() {
+		console.log(this)
 		this.dom.loadingDiv.style('display', 'inline')
 		try {
 			if (this.state.config?.snvindel?.details) {
@@ -126,6 +127,7 @@ class genomeBrowser {
 				}
 				await this.launchBlockWithTracks([tk])
 			}
+			this.updateLDtrack()
 		} catch (e) {
 			sayerror(this.dom.errDiv, e.message || e)
 			if (e.stack) console.log(e.stack)
@@ -290,6 +292,35 @@ class genomeBrowser {
 			}
 		}
 		return showLst
+	}
+
+	updateLDtrack() {
+		/* based on ld.tracks[] whether each track is shown, to add/remove ld tracks from blockInstance
+		 */
+		if (!this.state.config.ld) return // no ld tracks
+		if (!this.blockInstance) return // no block, cannot update ld
+		for (const tk of this.state.config.ld.tracks) {
+			const tkidx = this.blockInstance.tklst.findIndex(j => j.file == tk.file0)
+			if (tk.shown) {
+				// tk should be shown
+				if (tkidx == -1) {
+					// tk not in block, add
+					const arg = {
+						type: 'ld',
+						name: tk.name,
+						file: tk.file0
+					}
+					const t = this.blockInstance.block_addtk_template(arg)
+					this.blockInstance.tk_load(t)
+				}
+				// tk already in block
+				return
+			}
+			// tk should be hidden
+			if (tkidx == -1) return
+			// remove
+			this.blockInstance.tk_remove(tkidx)
+		}
 	}
 }
 

@@ -196,18 +196,21 @@ class GbControls {
 
 	makeLDbuttons() {
 		if (!this.state.config.ld) return
-		if (this.dom.ldButtonDiv.node().childNodes.length) return // already rendered
-		for (const tk of this.state.config.ld.tracks) {
-			// {file0}
+		this.dom.ldButtonDiv.selectAll('*').remove()
+		for (const [i, tk] of this.state.config.ld.tracks.entries()) {
+			// {file0, shown:boolean}
 			this.dom.ldButtonDiv
 				.append('button')
 				.style('margin', '10px')
-				.text(tk.name)
+				.text(tk.name + (tk.shown ? ' (Shown)' : ''))
 				.on('click', () => {
-					const t = this.blockInstance.tklst.find(i => i.file == tk.file0)
-					if (t) {
-					} else {
-					}
+					const tracks = structuredClone(this.state.config.ld.tracks)
+					tracks[i].shown = !tracks[i].shown
+					this.app.dispatch({
+						type: 'plot_edit',
+						id: this.id,
+						config: { ld: { tracks } }
+					})
 				})
 		}
 	}
