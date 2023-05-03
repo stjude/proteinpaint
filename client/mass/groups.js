@@ -46,8 +46,7 @@ class MassGroups {
 			termdbConfig: appState.termdbConfig,
 			customTerms: appState.customTerms,
 			allowedTermTypes: appState.termdbConfig.allowedTermTypes,
-			matrixplots: appState.termdbConfig.matrixplots,
-			vocab: appState.vocab
+			matrixplots: appState.termdbConfig.matrixplots
 		}
 		return state
 	}

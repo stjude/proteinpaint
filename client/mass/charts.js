@@ -28,7 +28,7 @@ class MassCharts {
 		// {}, key is cohortstr, value is list of supported chart types under this cohort
 
 		const state = {
-			vocab: appState.vocab,
+			vocab: appState.vocab, // TODO delete it as vocabApi should be used instead
 			activeCohort: appState.activeCohort,
 			termfilter: appState.termfilter,
 			supportedChartTypes: chartTypesByCohort[activeCohortStr] || ['summary'],
