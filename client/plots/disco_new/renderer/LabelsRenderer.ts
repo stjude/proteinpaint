@@ -28,12 +28,11 @@ export default class LabelsRenderer implements IRenderer {
                     .style('cursor', 'pointer')
                     .text(label.label)
 
-                console.log("label", label.line.points)
-
                 g.append('path')
                     .attr('class', 'chord-tick')
                     .datum(label.line.points)
                     .style('stroke', label.d.fill)
+                    .style('fill', 'none')
                     .attr('d', line<{ x: number, y: number }>()
                         .x(point => point.x)
                         .y(point => point.y))
@@ -67,7 +66,6 @@ export default class LabelsRenderer implements IRenderer {
                     })
 
                 g.selectAll('.chord-tick')
-                    //.datum(d.lineData)
                     .datum(label.line.points)
                     .transition()
                     .duration(1000)
@@ -77,7 +75,6 @@ export default class LabelsRenderer implements IRenderer {
                             .x(point => point.x)
                             .y(point => point.y)
                     )
-                    .style('fill', 'none')
             }
         })
     }
