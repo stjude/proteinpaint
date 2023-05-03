@@ -131,22 +131,21 @@ export function getSamplelstTW(groups, name = 'groups') {
 	}
 }
 
-export async function openSurvivalPlot(term, term2, app, id, getNewId) {
+export async function openSurvivalPlot(term, term2, app, id, newId) {
 	let config = {
 		chartType: 'survival',
 		term,
 		term2
 	}
 	if (id) config.insertBefore = id
-	if (getNewId) config.id = getNewId()
+	if (newId) config.id = newId()
 	await app.dispatch({
 		type: 'plot_create',
 		config
 	})
 }
 
-export async function openSummaryPlot(term, samplelstTW, app, id, getNewId) {
-	const newId = get$id()
+export async function openSummaryPlot(term, samplelstTW, app, id, newId) {
 	// barchart config.term{} name is confusing, as it is actually a termsetting object, not term
 	// thus convert the given term into a termwrapper
 	// tw.q can be missing and will be filled in with default setting
@@ -158,7 +157,7 @@ export async function openSummaryPlot(term, samplelstTW, app, id, getNewId) {
 		term2: samplelstTW
 	}
 	if (id) config.insertBefore = id
-	if (getNewId) config.id = getNewId()
+	if (newId) config.id = newId()
 	await app.dispatch({
 		type: 'plot_create',
 		config
@@ -183,7 +182,7 @@ export async function showTermsTree(div, callback, app, parentMenu, state = { tr
 	})
 }
 
-export function addMatrixMenuItems(menu, menuDiv, tw, app, id, state, getNewId) {
+export function addMatrixMenuItems(menu, menuDiv, tw, app, id, state, newId) {
 	if (state.matrixplots) {
 		for (const plot of state.matrixplots) {
 			menuDiv
@@ -195,7 +194,7 @@ export function addMatrixMenuItems(menu, menuDiv, tw, app, id, state, getNewId) 
 					config.divideBy = tw
 					config.insertBefore = id
 					config.settings.matrix.colw = 0
-					if (getNewId) config.id = getNewId()
+					if (newId) config.id = newId()
 
 					app.dispatch({
 						type: 'plot_create',
