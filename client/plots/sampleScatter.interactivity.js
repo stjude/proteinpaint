@@ -459,10 +459,10 @@ export function setInteractivity(self) {
 				self.showTable(group, event.clientX, event.clientY, false)
 			})
 		addMatrixMenuItems(self.dom.tip, menuDiv, tw, self.app, self.id, self.state)
-		if (this.state.supportedChartTypes.includes('survival'))
+		if (self.state.supportedChartTypes.includes('survival'))
 			addPlotMenuItem('survival', menuDiv, 'Compare survival', self.dom.tip, tw, self.id, this)
 
-		if (this.state.supportedChartTypes.includes('cuminc'))
+		if (self.state.supportedChartTypes.includes('cuminc'))
 			addPlotMenuItem('cuminc', menuDiv, 'Compare cumulative incidence', self.dom.tip, tw, self.id, this)
 
 		const summarizeDiv = menuDiv
@@ -530,10 +530,10 @@ export function setInteractivity(self) {
 			})
 		}
 		addMatrixMenuItems(self.dom.tip, menuDiv, tw, self.app, self.id, self.state)
-		if (this.state.supportedChartTypes.includes('survival'))
+		if (self.state.supportedChartTypes.includes('survival'))
 			addPlotMenuItem('survival', menuDiv, 'Compare survival', self.dom.tip, tw, self.id, this)
 
-		if (this.state.supportedChartTypes.includes('cuminc'))
+		if (self.state.supportedChartTypes.includes('cuminc'))
 			addPlotMenuItem('cuminc', menuDiv, 'Compare cumulative incidence', self.dom.tip, tw, self.id, this)
 
 		const summarizeDiv = menuDiv
@@ -549,7 +549,7 @@ export function setInteractivity(self) {
 			showTermsTree(
 				summarizeDiv,
 				term => {
-					openSummaryPlot(term, tw, self.app)
+					openSummaryPlot(term, tw, self.app, self.id)
 				},
 				self.app,
 				self.dom.tip
