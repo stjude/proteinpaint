@@ -475,7 +475,7 @@ export function setInteractivity(self) {
 			.style('float', 'right')
 
 		summarizeDiv.on('click', async e => {
-			showTermsTree(summarizeDiv, term => openSummaryPlot(term, tw, self.app), self.app, self.dom.tip)
+			showTermsTree(summarizeDiv, term => openSummaryPlot(term, tw, self.app, self.id), self.app, self.dom.tip)
 		})
 		const deleteDiv = menuDiv
 			.append('div')

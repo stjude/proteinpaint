@@ -181,7 +181,7 @@ export async function showTermsTree(div, callback, app, parentMenu, state = { tr
 		}
 	})
 }
-export function addPlotMenuItem(chartType, div, text, parentMenu, samplelstTW, id, parent) {
+export function addPlotMenuItem(chartType, div, text, parentMenu, samplelstTW, id, parent, openOnTop = false) {
 	const itemDiv = div
 		.append('div')
 		.attr('class', 'sja_menuoption sja_sharp_border')
@@ -193,7 +193,7 @@ export function addPlotMenuItem(chartType, div, text, parentMenu, samplelstTW, i
 			showTermsTree(
 				itemDiv,
 				term => {
-					openPlot(chartType, term, samplelstTW, parent.app, id, () => parent.newId)
+					openPlot(chartType, term, samplelstTW, parent.app, id, openOnTop ? () => parent.newId : null)
 				},
 				parent.app,
 				parentMenu,

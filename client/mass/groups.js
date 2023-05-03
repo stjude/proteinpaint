@@ -182,7 +182,6 @@ class MassGroups {
 	}
 
 	newId() {
-		console.log(this)
 		this.lastId = get$id()
 		return this.lastId
 	}
@@ -196,10 +195,10 @@ class MassGroups {
 
 		addMatrixMenuItems(parentMenu, menuDiv, samplelstTW, this.app, id, this.state, () => this.newId)
 		if (this.state.supportedChartTypes.includes('survival'))
-			addPlotMenuItem('survival', menuDiv, 'Compare survival', parentMenu, samplelstTW, id, this)
+			addPlotMenuItem('survival', menuDiv, 'Compare survival', parentMenu, samplelstTW, id, this, true)
 
 		if (this.state.supportedChartTypes.includes('cuminc'))
-			addPlotMenuItem('cuminc', menuDiv, 'Compare cumulative incidence', parentMenu, samplelstTW, id, this)
+			addPlotMenuItem('cuminc', menuDiv, 'Compare cumulative incidence', parentMenu, samplelstTW, id, this, true)
 
 		const summarizeDiv = menuDiv
 			.append('div')
