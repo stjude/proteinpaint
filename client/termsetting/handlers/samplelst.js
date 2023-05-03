@@ -155,8 +155,7 @@ export async function openSummaryPlot(term, samplelstTW, app, id, getNewId) {
 		chartType: 'summary',
 		childType: 'barchart',
 		term: tw,
-		term2: samplelstTW,
-		id: getNewId()
+		term2: samplelstTW
 	}
 	if (id) config.insertBefore = id
 	if (getNewId) config.id = getNewId()
