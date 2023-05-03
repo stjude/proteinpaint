@@ -18,6 +18,7 @@ import {
 } from 'd3-shape'
 import { setRenderers } from './sampleScatter.renderer'
 import { setInteractivity } from './sampleScatter.interactivity'
+import { getActiveCohortStr } from '../mass/charts'
 
 /*
 sample object returned by server:
@@ -83,10 +84,11 @@ class Scatter {
 		if (!config) {
 			throw `No plot with id='${this.id}' found. Did you set this.id before this.api = getComponentApi(this)?`
 		}
+		const cohortKey = getActiveCohortStr(appState)
 		return {
 			config,
 			termfilter: appState.termfilter,
-			allowedTermTypes: appState.termdbConfig.allowedTermTypes,
+			supportedChartTypes: appState.termdbConfig.supportedChartTypes[cohortKey],
 			matrixplots: appState.termdbConfig.matrixplots,
 			vocab: appState.vocab
 		}

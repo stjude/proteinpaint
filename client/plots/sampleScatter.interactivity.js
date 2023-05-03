@@ -460,7 +460,7 @@ export function setInteractivity(self) {
 				self.showTable(group, event.clientX, event.clientY, false)
 			})
 		addMatrixMenuItems(self.dom.tip, menuDiv, tw, self.app, self.id, self.state)
-		if (self.state.allowedTermTypes.includes('survival')) {
+		if (self.state.supportedChartTypes.includes('survival')) {
 			const survivalDiv = menuDiv
 				.append('div')
 				.attr('class', 'sja_menuoption sja_sharp_border')
@@ -549,7 +549,7 @@ export function setInteractivity(self) {
 			})
 		}
 		addMatrixMenuItems(self.dom.tip, menuDiv, tw, self.app, self.id, self.state)
-		if (self.state.allowedTermTypes.includes('survival')) {
+		if (self.state.supportedChartTypes.includes('survival')) {
 			const survivalDiv = menuDiv
 				.append('div')
 				.attr('class', 'sja_menuoption sja_sharp_border')
