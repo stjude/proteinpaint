@@ -240,12 +240,8 @@ class MassGroups {
 			//.html('Compare survival&nbsp;&nbsp;›')
 			.html(`${text}&nbsp;&nbsp;›`)
 			.on('click', e => {
-				let state = { tree: { usecase: { detail: 'term' } } }
-				if (chartType == 'survival')
-					state = {
-						nav: { header_mode: 'hide_search' },
-						tree: { usecase: { target: chartType, detail: 'term' } }
-					}
+				const state = { tree: { usecase: { target: chartType, detail: 'term' } } }
+				if (chartType == 'survival') state.nav = { header_mode: 'hide_search' }
 				showTermsTree(
 					div,
 					term => {
