@@ -127,6 +127,7 @@ output:
 }
 */
 export async function trigger_getSampleScatter(req, q, res, ds, genome) {
+	console.log(q.shapeTW)
 	try {
 		let refSamples, cohortSamples
 		if (q.coordTWs.length == 2) {
@@ -187,6 +188,7 @@ async function colorAndShapeSamples(refSamples, cohortSamples, data, q) {
 	const colorMap = new Map()
 	for (const sample of cohortSamples) {
 		const dbSample = data.samples[sample.sampleId.toString()]
+
 		if (!dbSample && q.colorTW) {
 			console.log(JSON.stringify(sample) + ' not in the database or filtered')
 			continue
@@ -291,7 +293,7 @@ function processSample(dbSample, sample, tw, categoryMap, category) {
 			}
 		}
 	} else {
-		value = dbSample?.[tw.id]?.key
+		value = dbSample?.[tw.id || tw.term.name]?.key
 		sample.hidden[category] = tw.q.hiddenValues ? dbSample?.[tw.id]?.key in tw.q.hiddenValues : false
 		if (value) {
 			sample[category] = value.toString()
