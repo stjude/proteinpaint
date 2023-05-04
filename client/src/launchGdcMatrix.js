@@ -108,6 +108,7 @@ export async function init(arg, holder, genomes) {
 								value: 'none'
 							}
 						],
+						styles: { padding: '3px 0' },
 						callback: async value => {
 							CGConly = value === 'CGC'
 							const genes = await getGenes(arg, gdcCohort, CGConly, maxGenes)
@@ -122,7 +123,7 @@ export async function init(arg, holder, genomes) {
 						}
 					},
 					{
-						label: `Maximum #genes`,
+						label: `Maximum # genes`,
 						type: 'number',
 						chartType: 'matrix',
 						settingsKey: 'maxGenes',

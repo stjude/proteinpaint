@@ -386,6 +386,7 @@ function setRadioInput(opts) {
 				}
 		  ]
 
+	const styles = opts.styles || {}
 	for (const input of inputs) {
 		self.inputs[input.settingsKey] = initRadioInputs({
 			name: `pp-control-${input.settingsKey}-${opts.instanceNum}`,
@@ -395,6 +396,7 @@ function setRadioInput(opts) {
 				.style('text-align', opts.align || ''),
 			options: input.options,
 			getDisplayStyle: () => 'block',
+			styles,
 			listeners: {
 				input(event, d) {
 					if (opts.callback) {

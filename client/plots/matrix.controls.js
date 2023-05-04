@@ -52,7 +52,7 @@ export class MatrixControls {
 						labelDisplay: 'block'
 					},
 					{
-						label: `Maximum #${sampleLabel}`,
+						label: `Maximum # ${sampleLabel}`,
 						type: 'number',
 						chartType: 'matrix',
 						settingsKey: 'maxSample'
@@ -112,7 +112,8 @@ export class MatrixControls {
 						type: 'radio',
 						chartType: 'matrix',
 						settingsKey: 'cellEncoding',
-						options: [{ label: 'Default', value: '' }, { label: 'Oncoprint', value: 'oncoprint' }]
+						options: [{ label: 'Default', value: '' }, { label: 'Oncoprint', value: 'oncoprint' }],
+						styles: { padding: 0 }
 					},
 					/*{
 						label: 'Terms as columns',
@@ -123,7 +124,7 @@ export class MatrixControls {
 					},*/
 					/*{
 						NOTE: this is only by term group, not global to all rows
-						label: 'Minimum #samples',
+						label: 'Minimum # samples',
 						type: 'number',
 						chartType: 'matrix',
 						settingsKey: 'minNumSamples',
@@ -134,7 +135,8 @@ export class MatrixControls {
 						type: 'radio',
 						chartType: 'matrix',
 						settingsKey: 'sortTermsBy',
-						options: [{ label: 'as-listed', value: 'asListed' }, { label: 'by sample count', value: 'sampleCount' }]
+						options: [{ label: 'as-listed', value: 'asListed' }, { label: 'by sample count', value: 'sampleCount' }],
+						styles: { padding: 0 }
 					}
 				]
 			})
@@ -221,7 +223,7 @@ export class MatrixControls {
 								align: 'center'
 							},
 							{
-								label: 'Use canvas if #samples exceeds',
+								label: 'Use canvas if # samples exceeds',
 								type: 'number',
 								chartType: 'matrix',
 								settingsKey: 'svgCanvasSwitch',
@@ -453,7 +455,7 @@ export class MatrixControls {
 		this.parent.app.tip.hide()
 
 		this.btns
-			.text(d => d.label + (d.getCount ? ` (${d.getCount()})` : ''))
+			.text(d => (d.getCount ? `${d.getCount()} ` : '') + d.label)
 			.style('text-decoration', d => (d.active ? 'underline' : ''))
 			.style('color', d => (d.active ? '#3a3' : ''))
 
@@ -549,7 +551,6 @@ export class MatrixControls {
 		if (parent.config.termgroups.length > 1) {
 			self.addTermGroupSelector(app, parent, table.append('tr'))
 		}
-		self.addGeneSearch(app, parent, table.append('tr'))
 
 		if (parent.opts.customInputs?.genes) {
 			for (const inputConfig of parent.opts.customInputs?.genes) {
@@ -572,6 +573,8 @@ export class MatrixControls {
 				//parent.opts.customInputs.genes(table.append('tr').append('td').attr('colspan', 2).style('text-align', 'center'))
 			}
 		}
+
+		self.addGeneSearch(app, parent, table.append('tr'))
 
 		if (app.opts.genome?.termdbs) {
 			for (const key in app.opts.genome.termdbs) {
@@ -600,7 +603,7 @@ export class MatrixControls {
 			.append('option')
 			.attr('selected', (d, i) => tg.length < 2 || parent.selectedGroup === i)
 			.attr('value', (d, i) => i)
-			.html((d, i) => d.name || `Unlabeled group #${i + 1}`)
+			.html((d, i) => d.name || `Unlabeled group # ${i + 1}`)
 			.on('change', (d, i) => {
 				parent.selectedGroup = i
 			})
@@ -643,12 +646,16 @@ export class MatrixControls {
 	// should be fine to name this method Msigdb as this is the only eligible geneset db for now
 	addMsigdbMenu(app, parent, tr, termdbKey) {
 		const tdb = app.opts.genome.termdbs[termdbKey]
-
-		const td = tr.append('td').attr('colspan', 2)
-		const span = td
+		const td = tr
+			.append('td')
+			.attr('class', 'sja-termdb-config-row-label')
+			.html('Add a gene group')
+		const span = tr
+			.append('td')
 			.append('span')
 			.style('cursor', 'pointer')
-			.html(`Select an ${tdb.label} gene group`)
+			.style('margin', '3px 5px')
+			.html(`Select from ${tdb.label} &#9660;`)
 			.on('click', async () => {
 				tip.clear()
 				const termdb = await import('../termdb/app')

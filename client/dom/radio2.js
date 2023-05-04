@@ -18,7 +18,7 @@ export function initRadioInputs(opts) {
 		.enter()
 		.append('div')
 		.style('display', 'block')
-		.style('padding', '5px')
+		.style('padding', opts.styles && 'padding' in opts.styles ? opts.styles.padding : '5px')
 		.append('label')
 
 	const inputs = labels
