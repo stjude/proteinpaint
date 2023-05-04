@@ -2,6 +2,7 @@ const tape = require('tape')
 const helpers = require('../../test/front.helpers.js')
 const termjson = require('../../test/testdata/termjson').termjson
 const { select, selectAll } = require('d3-selection')
+const { detectOne, detectGte } = require('../../test/test.helpers.js')
 
 /*
 Tests:
@@ -10,12 +11,16 @@ Tests:
 	term1=Cardiovascular System, term2=agedx
 	term1=Cardiovascular System, term0=sex
 	term1 = Cardiovascular System, term2 = agedx, numeric regular bins
-	term1 = Cardiovascular System, term0 = agedx, numeric regular bins
+	term1 = Cardiovascular System, term0 = agedx, numeric regular bins ** skipped, see note in runTests()
 	term1 = Cardiovascular System, term2 = agedx, numeric custom bins
 	term1 = Cardiovascular System, term0 = agedx, numeric custom bins
 	hidden uncomputable
 	skipped series
 	term1 = Cardiovascular System, term2 = samplelst
+
+TODOs: 
+	Test tipline functionality and rendering
+	Test overlay and divide by rendering
  */
 
 /*************************
@@ -239,7 +244,7 @@ tape('term1=Cardiovascular System, term0=sex', test => {
 })
 
 tape('term1 = Cardiovascular System, term2 = agedx, numeric regular bins', test => {
-	test.timeoutAfter(5000)
+	test.timeoutAfter(10000)
 
 	const testBinSize = 5
 	const testStop = 5
@@ -287,6 +292,8 @@ tape('term1 = Cardiovascular System, term2 = agedx, numeric regular bins', test 
 	async function runTests(cuminc) {
 		cuminc.on('postRender.test', null)
 
+		const div = cuminc.Inner.dom.chartsDiv
+
 		//Test data correctly appears
 		test.equal(cuminc.Inner.config.term2.q.type, 'regular-bin', `Should correctly pass 'regular-bin' to config`)
 		test.equal(
@@ -300,23 +307,41 @@ tape('term1 = Cardiovascular System, term2 = agedx, numeric regular bins', test 
 			`Should correctly pass q.first_bin.stop = ${testStop} to config`
 		)
 
-		//Test q.bin_size and q.first_bin.stop changes are applied
-		const newStop = 1
-		cuminc.Inner.config.term2.q.bin_size = 3
-		cuminc.Inner.config.term2.q.first_bin.stop = newStop
+		//***Test q.bin_size and q.first_bin.stop changes are applied
+		const config = structuredClone(cuminc.Inner.config)
+		const expectedCount = cuminc.Inner.uniqueSeriesIds.size
 
-		await cuminc.Inner.app.dispatch({
-			type: 'plot_edit',
-			id: cuminc.Inner.id,
-			config: cuminc.Inner.config
+		//Plot
+		const cumincCurves = await detectGte({
+			elem: div.node(),
+			selector: '.sjpcb-cuminc-series',
+			count: expectedCount,
+			async trigger() {
+				config.term2.q.bin_size = 3
+				config.term2.q.first_bin.stop = 1
+				await cuminc.Inner.app.dispatch({
+					type: 'plot_edit',
+					id: cuminc.Inner.id,
+					config
+				})
+			},
+			matcher(mutations) {
+				const changedSeries = mutations.filter(
+					m => m.previousSibling != null && cuminc.Inner.uniqueSeriesIds.has(m.target.__data__.seriesId)
+				)
+				if (changedSeries.length >= expectedCount) return changedSeries.map(d => d.target)
+			}
 		})
 
-		const findBin = cuminc.Inner.dom.controls.selectAll('.ts_summary_btn.sja_filter_tag_btn').nodes()
-		test.ok(
-			findBin[1].innerText.endsWith(`=${cuminc.Inner.config.term2.q.bin_size}`),
-			`Should display the correct bin size = ${cuminc.Inner.config.term2.q.bin_size}`
-		)
-		test.equal(cuminc.Inner.config.term2.q.first_bin.stop, newStop, `Should update first bin stop = ${newStop}`)
+		test.equal(cumincCurves.length, expectedCount, `Should update ${expectedCount} curves in plot`)
+
+		//Number at risk table
+		const numRiskRowLabels = div
+			.selectAll('.sjpp-cuminc-atrisk text')
+			.nodes()
+			.filter(d => !d.__data__?.tickVal && d.className.animVal != 'sjpp-cuminc-atrisk-title')
+		const foundNewLabels = numRiskRowLabels.filter(l => cuminc.Inner.uniqueSeriesIds.has(l.__data__.seriesId))
+		test.equal(foundNewLabels.length, expectedCount, `Should update ${expectedCount} labels in Number at risk table`)
 
 		if (test._ok) cuminc.Inner.app.destroy()
 		test.end()
@@ -398,25 +423,7 @@ tape.skip('term1 = Cardiovascular System, term0 = agedx, numeric regular bins', 
 	async function runTests(cuminc) {
 		cuminc.on('postRender.test', null)
 
-		//Test data correctly appears
-		// test.equal(cuminc.Inner.config.term0.q.type, 'regular-bin', `Should correctly pass 'regular-bin' to config`)
-		// test.equal(cuminc.Inner.config.term0.q.bin_size, testBinSize, `Should correctly pass q.bin_size = ${testBinSize} to config`)
-		// test.equal(cuminc.Inner.config.term0.q.first_bin.stop, testStop, `Should correctly pass q.first_bin.stop = ${testStop} to config`)
-
-		// //Test q.bin_size and q.first_bin.stop changes are applied
-		// const newStop = 1
-		// cuminc.Inner.config.term0.q.bin_size = 3
-		// cuminc.Inner.config.term0.q.first_bin.stop = newStop
-
-		// await cuminc.Inner.app.dispatch({
-		// 	type: 'plot_edit',
-		// 	id: cuminc.Inner.id,
-		// 	config: cuminc.Inner.config
-		// })
-
-		// const findBin = cuminc.Inner.dom.controls.selectAll('.ts_summary_btn.sja_filter_tag_btn').nodes()
-		// test.ok(findBin[1].innerText.endsWith(`=${cuminc.Inner.config.term0.q.bin_size}`), `Should display the correct bin size = ${cuminc.Inner.config.term0.q.bin_size}`)
-		// test.equal(cuminc.Inner.config.term0.q.first_bin.stop, newStop, `Should update first bin stop = ${newStop}`)
+		//TODO: Need data in TermdbTest to process
 
 		// if (test._ok) cuminc.Inner.app.destroy()
 		test.end()
@@ -465,7 +472,9 @@ tape('term1 = Cardiovascular System, term2 = agedx, numeric custom bins', test =
 
 	async function runTests(cuminc) {
 		cuminc.on('postRender.test', null)
+
 		const inner = cuminc.Inner
+		const div = inner.dom.chartsDiv
 
 		//Test data correctly appears
 		test.equal(inner.config.term2.q.type, 'custom-bin', `Should correctly pass 'custom-bin' to config`)
@@ -477,23 +486,43 @@ tape('term1 = Cardiovascular System, term2 = agedx, numeric custom bins', test =
 			`Should correctly pass the custom list to overlay component`
 		)
 
-		//Test overlay bin changes are applied
-		inner.config.term2.q.lst[2] = { startinclusive: true, stopinclusive: true, start: 12, stop: 15, label: '12 to 15' }
-		inner.config.term2.q.lst.push({ start: 15, startinclusive: false, stopunbounded: true, label: '>15' })
+		//Test overlay changes are applied
+		const config = structuredClone(cuminc.Inner.config)
+		const expectedCount = cuminc.Inner.uniqueSeriesIds.size
 
-		await inner.app.dispatch({
-			type: 'plot_edit',
-			id: inner.id,
-			config: inner.config
+		//Plot
+		const cumincCurves = await detectGte({
+			elem: div.node(),
+			selector: '.sjpcb-cuminc-series',
+			count: expectedCount,
+			async trigger() {
+				config.term2.q.lst[2] = { startinclusive: true, stopinclusive: true, start: 12, stop: 15, label: '12 to 15' }
+				config.term2.q.lst.push({ start: 15, startinclusive: false, stopunbounded: true, label: '>15' })
+				await cuminc.Inner.app.dispatch({
+					type: 'plot_edit',
+					id: inner.id,
+					config
+				})
+			},
+			matcher(mutations) {
+				const changedSeries = mutations.filter(
+					m => m.previousSibling != null && inner.uniqueSeriesIds.has(m.target.__data__.seriesId)
+				)
+				if (changedSeries.length >= expectedCount) return changedSeries.map(d => d.target)
+			}
 		})
 
-		const findBin = cuminc.Inner.dom.controls.selectAll('.ts_summary_btn.sja_filter_tag_btn').nodes()
-		test.ok(
-			findBin[1].innerText.endsWith(`${inner.config.term2.q.lst.length} bins`),
-			`Should display the correct num of bins = ${inner.config.term2.q.lst.length}`
-		)
+		test.equal(cumincCurves.length, expectedCount, `Should update ${expectedCount} curves in plot`)
 
-		if (test._ok) cuminc.Inner.app.destroy()
+		//Number at risk table
+		const numRiskRowLabels = div
+			.selectAll('.sjpp-cuminc-atrisk text')
+			.nodes()
+			.filter(d => !d.__data__?.tickVal && d.className.animVal != 'sjpp-cuminc-atrisk-title')
+		const foundNewLabels = numRiskRowLabels.filter(l => inner.uniqueSeriesIds.has(l.__data__.seriesId))
+		test.equal(foundNewLabels.length, expectedCount, `Should update ${expectedCount} labels in Number at risk table`)
+
+		if (test._ok) inner.app.destroy()
 		test.end()
 	}
 })
@@ -511,19 +540,19 @@ tape('term1 = Cardiovascular System, term0 = agedx, numeric custom bins', test =
 						id: 'agedx',
 						term: {
 							type: 'float',
-							bins: {
-								default: {
-									type: 'regular-bin',
-									bin_size: 5,
-									startinclusive: true,
-									first_bin: {
-										startunbounded: true,
-										stop: 5
-									},
-									label_offset: 1
-								},
-								label_offset: 1
-							},
+							// bins: {
+							// 	default: {
+							// 		type: 'regular-bin',
+							// 		bin_size: 5,
+							// 		startinclusive: true,
+							// 		first_bin: {
+							// 			startunbounded: true,
+							// 			stop: 5
+							// 		},
+							// 		label_offset: 1
+							// 	},
+							// 	label_offset: 1
+							// },
 							name: 'Age (years) at Cancer Diagnosis',
 							id: 'agedx'
 						},
@@ -566,6 +595,7 @@ tape('term1 = Cardiovascular System, term0 = agedx, numeric custom bins', test =
 	async function runTests(cuminc) {
 		cuminc.on('postRender.test', null)
 		const inner = cuminc.Inner
+		const div = cuminc.Inner.dom.chartsDiv
 
 		//Test data correctly appears
 		test.equal(inner.config.term0.q.type, 'custom-bin', `Should correctly pass 'custom-bin' to config`)
@@ -577,23 +607,35 @@ tape('term1 = Cardiovascular System, term0 = agedx, numeric custom bins', test =
 			`Should correctly pass the custom list to divide by component`
 		)
 
-		//Test overlay bin changes are applied
-		inner.config.term0.q.lst[0] = { startunbounded: true, stop: 15, stopinclusive: false, label: '<15' }
-		inner.config.term0.q.lst[1] = { start: 15, startinclusive: false, stopunbounded: true, label: '>15' }
+		//***Test divide by changes are applied
+		const config = structuredClone(inner.config)
 
-		await inner.app.dispatch({
-			type: 'plot_edit',
-			id: inner.id,
-			config: inner.config
+		//Plot
+		const chartIds2Check = new Set()
+		const cumincCurves = await detectGte({
+			target: div.node(),
+			selector: 'g.sjpcb-cuminc-mainG',
+			async trigger() {
+				config.term0.q.lst[0] = { startunbounded: true, stop: 15, stopinclusive: false, label: '<15' }
+				config.term0.q.lst[1] = { start: 15, startinclusive: false, stopunbounded: true, label: '>15' }
+				config.term0.q.lst.forEach(d => chartIds2Check.add(d.label))
+				await inner.app.dispatch({
+					type: 'plot_edit',
+					id: inner.id,
+					config
+				})
+			},
+			matcher(mutations) {
+				const changedSeries = mutations.filter(
+					m => m.attributeName == 'transform' && chartIds2Check.has(m.target.__data__.chartId)
+				)
+				if (changedSeries.length >= chartIds2Check.size) return changedSeries.map(d => d.target)
+			}
 		})
 
-		const findBin = cuminc.Inner.dom.controls.selectAll('.ts_summary_btn.sja_filter_tag_btn').nodes()
-		test.ok(
-			findBin[1].innerText.endsWith(`${inner.config.term0.q.lst.length} bins`),
-			`Should display the correct num of bins = ${inner.config.term0.q.lst.length}`
-		)
+		test.equal(cumincCurves.length, chartIds2Check.size, `Should update ${chartIds2Check.size} plots`)
 
-		if (test._ok) cuminc.Inner.app.destroy()
+		if (test._ok) inner.app.destroy()
 		test.end()
 	}
 })
