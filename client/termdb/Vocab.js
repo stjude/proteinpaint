@@ -164,6 +164,12 @@ export class Vocab {
 		})
 	}
 
+	async getCustomTerms() {
+		if (!Array.isArray(this.state.customTerms)) return [] // only mass state has this, here this instance is missing it. do not crash
+		// return list of term{}; do not return whole object
+		return this.state.customTerms.map(i => i.tw)
+	}
+
 	async addGroup(obj) {
 		// save one custom term
 		// obj = { name:str, term:{} }
@@ -180,9 +186,9 @@ export class Vocab {
 		})
 	}
 
-	async getCustomTerms() {
-		if (!Array.isArray(this.state.customTerms)) return [] // only mass state has this, here this instance is missing it. do not crash
+	async getGroups() {
+		if (!Array.isArray(this.state.groups)) return [] // only mass state has this, here this instance is missing it. do not crash
 		// return list of term{}; do not return whole object
-		return this.state.customTerms.map(i => i.tw)
+		return this.state.groups
 	}
 }
