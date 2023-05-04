@@ -92,20 +92,36 @@ export const searchInit = getCompInit(TermSearch)
 function setRenderers(self) {
 	self.initUI = state => {
 		self.dom.holder.style('display', self.search && self.search.isVisible == false ? 'none' : 'block')
-		const placeholderDetail = state.allowedTermTypes.includes('geneVariant') ? ' terms or genes' : '...'
+		const placeholderDetail = state.allowedTermTypes.includes('geneVariant') ? ' variables or genes' : '...'
 		self.dom.input = self.dom.holder
 			.style('text-align', 'left')
 			.append('input')
 			.attr('type', 'search')
 			.attr('class', 'tree_search')
 			.attr('placeholder', 'Search' + placeholderDetail)
-			.style('width', '190px')
+			.style('width', '220px')
 			.style('margin', '10px')
 			.style('display', 'block')
 			.on('input', debounce(self.onInput, 300))
 
-		self.dom.resultDiv = self.opts.resultsHolder ? self.opts.resultsHolder : self.dom.holder.append('div')
-		self.dom.resultDiv
+		// a holder to contain two side-by-side divs for genes and dictionary term hits
+		const div0 = (self.opts.resultsHolder || self.dom.holder)
+			.append('div')
+			.style('display', 'inline-grid')
+			.style('grid-template-columns', 'auto auto')
+
+		// left div to show gene hits
+		const div_gene = div0.append('div').style('display', 'inline')
+		// right div to show term hits
+		const div_term = div0.append('div').style('display', 'inline')
+
+		self.dom.resultDiv_genes = div_gene
+			.append('div')
+			.style('border-left', 'solid 1px rgb(133,182,225)')
+			.style('margin', '0px 0px 10px 10px')
+			.style('padding-left', '5px')
+		self.dom.resultDiv_terms = div_term
+			.append('div')
 			.style('border-left', self.opts.resultsHolder ? '' : 'solid 1px rgb(133,182,225)')
 			.style('margin', '0px 0px 10px 10px')
 			.style('padding-left', '5px')
@@ -123,7 +139,7 @@ function setRenderers(self) {
 	}
 	self.noResult = () => {
 		self.clear()
-		self.dom.resultDiv
+		self.dom.resultDiv_terms
 			.append('div')
 			.text('No match')
 			.style('padding', '3px 3px 3px 0px')
@@ -131,18 +147,42 @@ function setRenderers(self) {
 	}
 	self.showTerms = data => {
 		// add disabled terms to opts.disable_terms
-		if (self.opts.disable_terms)
+		if (self.opts.disable_terms) {
 			data.lst.forEach(t => {
 				if (t.disabled) self.opts.disable_terms.push(t.id)
 			})
+		}
 		self.clear()
-		self.dom.resultDiv
-			.append('table')
-			.selectAll()
-			.data(data.lst)
-			.enter()
-			.append('tr')
-			.each(self.showTerm)
+
+		const geneTerms = [],
+			dictTerms = []
+		for (const t of data.lst) {
+			if (t.type == 'geneVariant') {
+				geneTerms.push(t)
+			} else {
+				dictTerms.push(t)
+			}
+		}
+
+		if (geneTerms.length) {
+			self.dom.resultDiv_genes
+				.append('table')
+				.selectAll()
+				.data(geneTerms)
+				.enter()
+				.append('tr')
+				.each(self.showTerm)
+		}
+
+		if (dictTerms.length) {
+			self.dom.resultDiv_terms
+				.append('table')
+				.selectAll()
+				.data(dictTerms)
+				.enter()
+				.append('tr')
+				.each(self.showTerm)
+		}
 	}
 	self.showTerm = function(term) {
 		const tr = select(this)
@@ -232,9 +272,13 @@ function setRenderers(self) {
 			.style('font-size', '.7em')
 	}
 	self.clear = () => {
-		self.dom.resultDiv.selectAll('*').remove()
+		self.dom.resultDiv_genes.selectAll('*').remove()
+		self.dom.resultDiv_terms.selectAll('*').remove()
 	}
+
 	self.renderSelectedNonDictTerms = function() {
+		// this is to show selected genes during multi-selection
+		// FIXME no way to unselect a gene here
 		const lst = self.state.selectedTerms.filter(t => nonDictionaryTermTypes.has(t.type))
 		self.dom.nonDictDiv.style('display', lst.length ? '' : 'none')
 
@@ -266,7 +310,7 @@ function setInteractivity(self) {
 			await self.doSearch(str)
 		} catch (e) {
 			self.clear()
-			sayerror(self.dom.resultDiv, 'Error: ' + (e.message || e))
+			sayerror(self.dom.resultDiv_terms, 'Error: ' + (e.message || e))
 			if (e.stack) console.log(e.stack)
 		}
 	}
