@@ -164,6 +164,22 @@ export class Vocab {
 		})
 	}
 
+	async addGroup(obj) {
+		// save one custom term
+		// obj = { name:str, term:{} }
+		await this.app.dispatch({
+			type: 'add_group',
+			obj
+		})
+	}
+	async deleteGroup(name) {
+		// delete by name
+		await this.app.dispatch({
+			type: 'delete_group',
+			name
+		})
+	}
+
 	async getCustomTerms() {
 		if (!Array.isArray(this.state.customTerms)) return [] // only mass state has this, here this instance is missing it. do not crash
 		// return list of term{}; do not return whole object

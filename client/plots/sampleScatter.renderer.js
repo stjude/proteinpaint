@@ -358,12 +358,19 @@ export function setRenderers(self) {
 				.attr('class', 'sja_menuoption sja_sharp_border')
 				.text('Add to a group')
 				.on('click', () => {
-					self.config.groups.push({
+					const group = {
 						name: `Group ${self.config.groups.length + 1}`,
 						items: self.selectedItems.map(item => item.__data__),
 						index: self.config.groups.length
-					})
+					}
+					self.config.groups.push(group)
 					self.app.dispatch({ type: 'plot_edit', id: self.id, config: { groups: self.config.groups } })
+					const samplelstTW = getSamplelstTW(self.config.groups)
+					const appGroup = {
+						name: group.name,
+						filter: self.getFilter(samplelstTW)
+					}
+					self.app.vocabApi.addGroup(appGroup)
 				})
 			menuDiv
 				.append('div')
