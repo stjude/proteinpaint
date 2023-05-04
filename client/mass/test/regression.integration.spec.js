@@ -130,7 +130,7 @@ tape('Linear: continuous outcome = "agedx", cat. independents = "sex" + "genetic
 		)
 
 		//**** Results ****
-		let table, tableLabel, results, catTerm
+		let table, tableLabel, results, testTerm
 
 		//Sample size
 		const sampleSizeDiv = regDom.results
@@ -153,27 +153,29 @@ tape('Linear: continuous outcome = "agedx", cat. independents = "sex" + "genetic
 		table = regDom.results.selectAll('div[name^="Coefficients"] table tr').nodes()
 		results = checkTableRow(table, 0, data.coefficients.header)
 		test.equal(results, true, `Should render all coefficient headers in ${tableLabel}`)
+		const linearHeaders = data.coefficients.header.filter(d => d === 'Beta' || d === 't value')
+		test.equal(linearHeaders.length, 2, `Should render headers specific to linear regression`)
 
 		results = checkTableRow(table, 1, data.coefficients.intercept)
 		test.equal(results, true, `Should render all intercept data in ${tableLabel}`)
 
-		catTerm = 'Sex'
+		testTerm = 'Sex'
 		const checkValues1 = ['Sex\nREF Female', 'Male']
 		data.coefficients.terms.sex.categories[1].forEach(d => checkValues1.push(d))
 		results = checkTableRow(table, 2, checkValues1)
-		test.equal(results, true, `Should render all ${catTerm} data in ${tableLabel}`)
+		test.equal(results, true, `Should render all ${testTerm} data in ${tableLabel}`)
 
-		catTerm = 'African Ancestry'
-		const checkValues2 = ['Genetically defined race\nREF European Ancestry', catTerm]
-		data.coefficients.terms.genetic_race.categories[catTerm].forEach(d => checkValues2.push(d))
+		testTerm = 'African Ancestry'
+		const checkValues2 = ['Genetically defined race\nREF European Ancestry', testTerm]
+		data.coefficients.terms.genetic_race.categories[testTerm].forEach(d => checkValues2.push(d))
 		results = checkTableRow(table, 3, checkValues2)
-		test.equal(results, true, `Should render all ${catTerm} data in ${tableLabel}`)
+		test.equal(results, true, `Should render all ${testTerm} data in ${tableLabel}`)
 
-		catTerm = 'Asian Ancestry'
-		const checkValues3 = [catTerm]
-		data.coefficients.terms.genetic_race.categories[catTerm].forEach(d => checkValues3.push(d))
+		testTerm = 'Asian Ancestry'
+		const checkValues3 = [testTerm]
+		data.coefficients.terms.genetic_race.categories[testTerm].forEach(d => checkValues3.push(d))
 		results = checkTableRow(table, 4, checkValues3)
-		test.equal(results, true, `Should render all ${catTerm} data in ${tableLabel}`)
+		test.equal(results, true, `Should render all ${testTerm} data in ${tableLabel}`)
 
 		//Type III Stats
 		tableLabel = 'type3 table'
@@ -184,17 +186,17 @@ tape('Linear: continuous outcome = "agedx", cat. independents = "sex" + "genetic
 		results = checkTableRow(table, 1, data.type3.intercept)
 		test.equal(results, true, `Should render all intercept data in ${tableLabel}`)
 
-		catTerm = 'Sex'
-		const checkValues4 = [catTerm]
+		testTerm = 'Sex'
+		const checkValues4 = [testTerm]
 		data.type3.terms.sex.forEach(d => checkValues4.push(d))
 		results = checkTableRow(table, 2, checkValues4)
-		test.equal(results, true, `Should render all ${catTerm} data in ${tableLabel}`)
+		test.equal(results, true, `Should render all ${testTerm} data in ${tableLabel}`)
 
-		catTerm = 'Genetically defined race'
-		const checkValues5 = [catTerm]
+		testTerm = 'Genetically defined race'
+		const checkValues5 = [testTerm]
 		data.type3.terms.genetic_race.forEach(d => checkValues5.push(d))
 		results = checkTableRow(table, 3, checkValues5)
-		test.equal(results, true, `Should render all ${catTerm} data in ${tableLabel}`)
+		test.equal(results, true, `Should render all ${testTerm} data in ${tableLabel}`)
 
 		//Other stats
 		tableLabel = 'other summary statistics table'
@@ -204,7 +206,7 @@ tape('Linear: continuous outcome = "agedx", cat. independents = "sex" + "genetic
 			test.equal(results, true, `Should render all ${header} data in ${tableLabel}`)
 		}
 
-		if (test.__ok) regression.Inner.app.destroy()
+		if (test._ok) regression.Inner.app.destroy()
 		test.end()
 	}
 })
@@ -266,7 +268,7 @@ tape('Linear: continuous outcome = "agedx", continuous independent = "aaclassic_
 		results = checkOnlyRowValues(values2check2, data.type3.terms.aaclassic_5)
 		test.equal(results, true, `Should render all continous 'aaclassic_5' data in ${tableLabel}`)
 
-		if (test.__ok) regression.Inner.app.destroy()
+		if (test._ok) regression.Inner.app.destroy()
 		test.end()
 	}
 })
@@ -326,7 +328,7 @@ tape('Linear: continuous outcome = "agedx", discrete independent = "aaclassic_5"
 
 		//TODO: necessary to check all other values?
 
-		if (test.__ok) regression.Inner.app.destroy()
+		if (test._ok) regression.Inner.app.destroy()
 		test.end()
 	}
 })
@@ -403,12 +405,12 @@ tape('Linear: continuous outcome = "agedx", cubic spline independent = "aaclassi
 
 		//TODO: necessary to check all other values?
 
-		if (test.__ok) regression.Inner.app.destroy()
+		if (test._ok) regression.Inner.app.destroy()
 		test.end()
 	}
 })
 
-tape.skip('Logistic: binary outcome = "hrtavg", continuous independent = "agedx"', test => {
+tape('Logistic: binary outcome = "hrtavg", continuous independent = "agedx"', test => {
 	test.timeoutAfter(3000)
 
 	runpp({
@@ -432,15 +434,74 @@ tape.skip('Logistic: binary outcome = "hrtavg", continuous independent = "agedx"
 		}
 	})
 
-	function runTests(regression) {
-		console.log(regression.Inner)
+	async function runTests(regression) {
+		const data = await getData(regression)
+		const regDom = regression.Inner.dom
 
-		if (test.__ok) regression.Inner.app.destroy()
+		//**** Results ****
+		let tableLabel, table, results, testTerm
+
+		//Sample size
+		const sampleSizeDiv = regDom.results
+			.selectAll('div[name^="Sample size"] span')
+			.nodes()
+			.filter(d => d.innerText == data.sampleSize)
+		test.ok(
+			regDom.results.node().querySelector('div[name^="Sample size"]') && sampleSizeDiv,
+			`Should render "Sample size: ${data.sampleSize}"`
+		)
+
+		//Residual table
+		tableLabel = 'Deviance residuals table'
+		table = regDom.results.selectAll('table[name^="sjpp-residuals-table"] tr').nodes()
+		results = checkTableRow(table, 1, data.residuals.rows)
+		test.equal(results, true, `Should render all residuals data in ${tableLabel}`)
+
+		//Coefficients table
+		tableLabel = 'coefficients table'
+		table = regDom.results.selectAll('div[name^="Coefficients"] table tr').nodes()
+		results = checkTableRow(table, 0, data.coefficients.header)
+		test.equal(results, true, `Should render all coefficient headers in ${tableLabel}`)
+		const logHeaders = data.coefficients.header.filter(d => d === 'Odds ratio' || d === 'Log odds' || d === 'z value')
+		test.equal(logHeaders.length, 3, `Should render headers specific to logistic regression`)
+
+		results = checkTableRow(table, 1, data.coefficients.intercept)
+		test.equal(results, true, `Should render all intercept data in ${tableLabel}`)
+
+		testTerm = 'Age (years) at Cancer Diagnosis'
+		const checkValues1 = [testTerm, '(continuous)']
+		data.coefficients.terms.agedx.fields.forEach(d => checkValues1.push(d))
+		results = checkTableRow(table, 2, checkValues1)
+		test.equal(results, true, `Should render all ${testTerm} data in ${tableLabel}`)
+
+		//Type III Stats
+		tableLabel = 'type3 table'
+		table = regDom.results.selectAll('div[name^="Type III statistics"] table tr').nodes()
+		results = checkTableRow(table, 0, data.type3.header)
+		test.equal(results, true, `Should render all header data in ${tableLabel}`)
+
+		results = checkTableRow(table, 1, data.type3.intercept)
+		test.equal(results, true, `Should render all intercept data in ${tableLabel}`)
+
+		const checkValues2 = [testTerm]
+		data.type3.terms.agedx.forEach(d => checkValues2.push(d))
+		results = checkTableRow(table, 2, checkValues2)
+		test.equal(results, true, `Should render all ${testTerm} data in ${tableLabel}`)
+
+		//Other stats
+		tableLabel = 'other summary statistics table'
+		table = regDom.results.selectAll('div[name^="Other summary statistics"] table tr').nodes()
+		for (const [i, header] of data.other.header.entries()) {
+			results = checkTableRow(table, i, [header, data.other.rows[i]])
+			test.equal(results, true, `Should render all ${header} data in ${tableLabel}`)
+		}
+
+		if (test._ok) regression.Inner.app.destroy()
 		test.end()
 	}
 })
 
-tape.skip('Cox: graded outcome = "Arrhythmias", discrete independent = "agedx"', test => {
+tape('Cox: graded outcome = "Arrhythmias", discrete independent = "agedx"', test => {
 	test.timeoutAfter(3000)
 
 	runpp({
@@ -463,10 +524,84 @@ tape.skip('Cox: graded outcome = "Arrhythmias", discrete independent = "agedx"',
 		}
 	})
 
-	function runTests(regression) {
-		console.log(regression.Inner)
+	async function runTests(regression) {
+		const data = await getData(regression)
+		const regDom = regression.Inner.dom
 
-		if (test.__ok) regression.Inner.app.destroy()
+		//#of events instead of residuals table, no intercept in coefficent, stats test table
+
+		//**** Results ****
+		let tableLabel, table, results, testTerm
+
+		//Sample size
+		const sampleSizeDiv = regDom.results
+			.selectAll('div[name^="Sample size"] span')
+			.nodes()
+			.filter(d => d.innerText == data.sampleSize)
+		test.ok(
+			regDom.results.node().querySelector('div[name^="Sample size"]') && sampleSizeDiv,
+			`Should render "Sample size: ${data.sampleSize}"`
+		)
+
+		//Number of events
+		const numOfEventsDiv = regDom.results
+			.selectAll('div[name^="Number of events"] span')
+			.nodes()
+			.filter(d => d.innerText == data.eventCnt)
+		test.ok(
+			regDom.results.node().querySelector('div[name^="Number of events"]') && numOfEventsDiv,
+			`Should render "Number of events: ${data.eventCnt}"`
+		)
+
+		test.ok(
+			!regDom.results.select('table[name^="sjpp-residuals-table"]').node(),
+			`Should not render residuals table in cox regression`
+		)
+
+		//Coefficients table
+		tableLabel = 'coefficients table'
+		table = regDom.results.selectAll('div[name^="Coefficients"] table tr').nodes()
+		results = checkTableRow(table, 0, data.coefficients.header)
+		test.equal(results, true, `Should render all coefficient headers in ${tableLabel}`)
+		const coxHeaders = data.coefficients.header.filter(d => d === 'HR' || d === 'z')
+		test.equal(coxHeaders.length, 2, `Should render headers specific to cox regression in ${tableLabel}`)
+
+		testTerm = 'Age (years) at Cancer Diagnosis'
+		const checkValues1 = [testTerm, '(continuous)']
+		data.coefficients.terms.agedx.fields.forEach(d => checkValues1.push(d))
+		results = checkTableRow(table, 1, checkValues1)
+		test.equal(results, true, `Should render all ${testTerm} data in ${tableLabel}`)
+
+		//Type III Stats
+		tableLabel = 'type3 table'
+		table = regDom.results.selectAll('div[name^="Type III statistics"] table tr').nodes()
+		results = checkTableRow(table, 0, data.type3.header)
+		test.equal(results, true, `Should render all header data in ${tableLabel}`)
+
+		const checkValues2 = [testTerm]
+		data.type3.terms.agedx.forEach(d => checkValues2.push(d))
+		results = checkTableRow(table, 1, checkValues2)
+		test.equal(results, true, `Should render all ${testTerm} data in ${tableLabel}`)
+
+		//Type III Stats
+		tableLabel = 'Statistical tests table'
+		table = regDom.results.selectAll('div[name^="Statistical tests"] table tr').nodes()
+		results = checkTableRow(table, 0, data.tests.header)
+		test.equal(results, true, `Should render all header data in ${tableLabel}`)
+		for (const [i, row] of data.tests.rows.entries()) {
+			results = checkTableRow(table, i + 1, row)
+			test.equal(results, true, `Should render all ${row} data in ${tableLabel}`)
+		}
+
+		//Other stats
+		tableLabel = 'other summary statistics table'
+		table = regDom.results.selectAll('div[name^="Other summary statistics"] table tr').nodes()
+		for (const [i, header] of data.other.header.entries()) {
+			results = checkTableRow(table, i, [header, data.other.rows[i]])
+			test.equal(results, true, `Should render all ${header} data in ${tableLabel}`)
+		}
+
+		if (test._ok) regression.Inner.app.destroy()
 		test.end()
 	}
 })
