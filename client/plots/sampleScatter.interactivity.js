@@ -297,27 +297,29 @@ export function setInteractivity(self) {
 
 	self.addToFilter = function(samplelstTW) {
 		const filterUiRoot = getFilterItemByTag(self.state.termfilter.filter, 'filterUiRoot')
-		const values = samplelstTW.q.groups[0].values
-		const filter = filterJoin([
-			filterUiRoot,
-			{
-				type: 'tvslst',
-				in: true,
-				join: '',
-				lst: [
-					{
-						type: 'tvs',
-						tvs: { term: samplelstTW.term, values },
-						noEdit: !('sample' in values[0])
-					}
-				]
-			}
-		])
+		const filter = filterJoin([filterUiRoot, self.getFilter(samplelstTW)])
 		filter.tag = 'filterUiRoot'
 		self.app.dispatch({
 			type: 'filter_replace',
 			filter
 		})
+	}
+
+	self.getFilter = function(samplelstTW) {
+		const values = samplelstTW.q.groups[0].values
+		const filter = {
+			type: 'tvslst',
+			in: true,
+			join: '',
+			lst: [
+				{
+					type: 'tvs',
+					tvs: { term: samplelstTW.term, values },
+					noEdit: !('sample' in values[0])
+				}
+			]
+		}
+		return filter
 	}
 
 	self.showTable = function(group, x, y, addGroup) {
@@ -458,6 +460,7 @@ export function setInteractivity(self) {
 			.on('click', e => {
 				self.config.groups.splice(group.index, 1)
 				self.app.dispatch({ type: 'plot_edit', id: self.id, config: { groups: self.config.groups } })
+				self.app.vocabApi.deleteGroup(group.name)
 			})
 		menuDiv
 			.append('div')
@@ -537,6 +540,8 @@ export function setInteractivity(self) {
 			.attr('class', 'sja_menuoption sja_sharp_border')
 			.text('Delete groups')
 			.on('click', event => {
+				for (const group of self.config.groups) self.app.vocabApi.deleteGroup(group.name)
+
 				self.app.dispatch({ type: 'plot_edit', id: self.id, config: { groups: [] } })
 			})
 	}

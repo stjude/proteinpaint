@@ -360,6 +360,15 @@ TdbStore.prototype.actions = {
 	delete_customTerm({ name }) {
 		const i = this.state.customTerms.findIndex(i => i.name == name)
 		if (i != -1) this.state.customTerms.splice(i, 1)
+	},
+
+	add_group(action) {
+		this.state.groups.push(action.obj)
+	},
+
+	delete_group({ name }) {
+		const i = this.state.groups.findIndex(i => i.name == name)
+		if (i != -1) this.state.groups.splice(i, 1)
 	}
 }
 
