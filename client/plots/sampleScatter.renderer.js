@@ -357,7 +357,7 @@ export function setRenderers(self) {
 				.append('div')
 				.attr('class', 'sja_menuoption sja_sharp_border')
 				.text('Add to a group')
-				.on('click', () => {
+				.on('click', async () => {
 					const group = {
 						name: `Group ${self.config.groups.length + 1}`,
 						items: self.selectedItems.map(item => item.__data__),
@@ -370,7 +370,12 @@ export function setRenderers(self) {
 						name: group.name,
 						filter: self.getFilter(samplelstTW)
 					}
-					self.app.vocabApi.addGroup(appGroup)
+					await self.app.vocabApi.addGroup(appGroup)
+					const appGroups = await self.app.vocabApi.getGroups()
+					self.app.dispatch({
+						type: 'app_refresh',
+						state: { groups: appGroups }
+					})
 				})
 			menuDiv
 				.append('div')

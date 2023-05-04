@@ -457,10 +457,15 @@ export function setInteractivity(self) {
 			.append('div')
 			.attr('class', 'sja_menuoption sja_sharp_border')
 			.text(`Delete group`)
-			.on('click', e => {
+			.on('click', async e => {
 				self.config.groups.splice(group.index, 1)
 				self.app.dispatch({ type: 'plot_edit', id: self.id, config: { groups: self.config.groups } })
-				self.app.vocabApi.deleteGroup(group.name)
+				await self.app.vocabApi.deleteGroup(group.name)
+				const appGroups = await self.app.vocabApi.getGroups()
+				self.app.dispatch({
+					type: 'app_refresh',
+					state: { groups: appGroups }
+				})
 			})
 		menuDiv
 			.append('div')
@@ -539,9 +544,13 @@ export function setInteractivity(self) {
 			.append('div')
 			.attr('class', 'sja_menuoption sja_sharp_border')
 			.text('Delete groups')
-			.on('click', event => {
-				for (const group of self.config.groups) self.app.vocabApi.deleteGroup(group.name)
-
+			.on('click', async event => {
+				for (const group of self.config.groups) await self.app.vocabApi.deleteGroup(group.name)
+				const appGroups = await self.app.vocabApi.getGroups()
+				self.app.dispatch({
+					type: 'app_refresh',
+					state: { groups: appGroups }
+				})
 				self.app.dispatch({ type: 'plot_edit', id: self.id, config: { groups: [] } })
 			})
 	}

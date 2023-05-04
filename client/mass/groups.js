@@ -138,7 +138,7 @@ class MassGroups {
 		this.dom.newTermSpan.style('display', '')
 		if (lst.length == 1) {
 			// only 1 selected
-			this.dom.launchButton.text(`Create  variable using "${this.state.groups[lst[0]].name}"`)
+			this.dom.launchButton.text(`Create  variable using "${this.state.groups[lst[0]]?.name}"`)
 			this.dom.newTermNameInput.property('value', this.state.groups[lst[0]].name + ' vs others')
 			return
 		}
