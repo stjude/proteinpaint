@@ -16,6 +16,7 @@ import roundValue from '#shared/roundValue'
 import computePercentile from '../shared/compute.percentile.js'
 import { get_lines_bigfile } from './utils'
 import authApi from './auth'
+import { getResult as geneSearch } from './gene'
 
 /*
 ********************** EXPORTED
@@ -49,7 +50,7 @@ export function handle_request_closure(genomes) {
 			if (q.getconditioncategories) return await trigger_getconditioncategories(q, res, tdb, ds)
 			if (q.default_rootterm) return await trigger_rootterm(q, res, tdb)
 			if (q.get_children) return await trigger_children(q, res, tdb)
-			if (q.findterm) return await trigger_findterm(q, res, tdb, ds)
+			if (q.findterm) return await trigger_findterm(q, res, tdb, ds, genome)
 			if (q.getterminfo) return trigger_getterminfo(q, res, tdb)
 			if (q.phewas) {
 				if (q.update) return await phewas.update_image(q, res)
@@ -174,7 +175,7 @@ do not directly hand over the term object to client; many attr to be kept on ser
 	return t2
 }
 
-async function trigger_findterm(q, res, termdb, ds) {
+async function trigger_findterm(q, res, termdb, ds, genome) {
 	// TODO also search categories
 
 	const matches = { equals: [], startsWith: [], startsWord: [], includes: [] }
@@ -194,9 +195,28 @@ async function trigger_findterm(q, res, termdb, ds) {
 		}
 	}
 
+	const terms = []
+
+	if (ds.queries?.defaultBlock2GeneMode) {
+		/* has queries for genomic data types, search gene from whole genome
+		not checking on presence of queries.snvindel{} as it's used for both wgs/germline and somatic data,
+		for now do not show gene search for wgs data
+		checking on this flag as it's enabled for ds with somatic data
+		*/
+		const re = geneSearch(genome, { input: str })
+		if (Array.isArray(re.hits)) {
+			for (let i = 0; i < 7; i++) {
+				if (!re.hits[i]) break
+				terms.push({ name: re.hits[i], type: 'geneVariant' })
+			}
+		}
+	}
+
 	if (typeof q.cohortStr !== 'string') q.cohortStr = ''
-	const terms_ = await termdb.q.findTermByName(str, limitSearchTermTo, q.cohortStr, q.treeFilter, q.usecase, matches)
-	const terms = terms_.map(copy_term)
+	const _terms = await termdb.q.findTermByName(str, limitSearchTermTo, q.cohortStr, q.treeFilter, q.usecase, matches)
+
+	terms.push(..._terms.map(copy_term))
+
 	const id2ancestors = {}
 	terms.forEach(term => {
 		if (term.type == 'geneVariant') return
