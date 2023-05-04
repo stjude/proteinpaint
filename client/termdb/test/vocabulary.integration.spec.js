@@ -522,10 +522,147 @@ tape.skip('syncTermData()', async test => {
 	test.end()
 })
 
-tape.skip('getRegressionData()', async test => {
-	test.timeoutAfter(100)
+tape('getRegressionData()', async test => {
+	test.timeoutAfter(6000)
 
 	const termdbVocabApi = await getTermdbVocabApi()
+	let results, type
+
+	const opts = {
+		regressionType: 'linear',
+		outcome: {
+			id: 'agedx',
+			isAtomic: true,
+			term: {
+				name: 'Age (years) at Cancer Diagnosis',
+				type: 'float',
+				bins: {
+					default: {
+						type: 'regular-bin',
+						bin_size: 5,
+						startinclusive: true,
+						first_bin: { startunbounded: true, stop: 5 }
+					}
+				}
+			},
+			q: { mode: 'continuous', type: 'regular-bin' }
+		},
+		independent: [
+			{
+				id: 'sex',
+				isAtomic: true,
+				refGrp: '2',
+				term: {
+					groupsetting: { inuse: false },
+					id: 'genetic_race',
+					name: 'Sex',
+					type: 'categorical',
+					values: { 1: { label: 'Male' }, 2: { label: 'Female' } }
+				},
+				q: { mode: 'discrete', type: 'values' }
+			}
+		],
+		filter: {
+			type: 'tvslst',
+			join: 'and',
+			lst: [
+				{
+					type: 'tvslst',
+					in: true,
+					join: 'and',
+					lst: [
+						{
+							tag: 'cohortFilter',
+							type: 'tvs',
+							tvs: {
+								term: { id: 'subcohort', type: 'categorical' },
+								values: [{ key: 'ABC', label: 'ABC' }]
+							}
+						}
+					]
+				}
+			]
+		}
+	}
+
+	//Linear results
+	type = 'linear'
+	results = await termdbVocabApi.getRegressionData(opts)
+	console.log(results)
+	test.equal(
+		typeof results.resultLst[0].data.coefficients,
+		'object',
+		`Should return a data.coeffients object for ${type} regression data`
+	)
+	test.equal(
+		results.resultLst[0].data.eventCnt,
+		null,
+		`Should return a null value for data.eventCnt for ${type} regression data`
+	)
+	test.equal(
+		typeof results.resultLst[0].data.other,
+		'object',
+		`Should return adata.other object for ${type} regression data`
+	)
+	test.equal(
+		typeof results.resultLst[0].data.residuals,
+		'object',
+		`Should return a data.residuals object for ${type} regression data`
+	)
+	test.equal(
+		typeof results.resultLst[0].data.sampleSize,
+		'number',
+		`Should return a string for sample size for ${type} regression data`
+	)
+	test.equal(
+		typeof results.resultLst[0].data.type3,
+		'object',
+		`Should return a data.type3 object for ${type} regression data`
+	)
+
+	//Logistic results
+	type = 'logistic'
+	opts.regressionType = type
+	opts.independent[0] = opts.outcome
+	opts.outcome = {
+		id: 'hrtavg',
+		q: {
+			mode: 'binary',
+			type: 'custom-bin',
+			lst: [
+				{ startunbounded: true, stopinclusive: true, stop: 25, label: '≤25' },
+				{ stopunbounded: true, startinclusive: false, start: 25, label: '>25' }
+			]
+		}
+	}
+	results = await termdbVocabApi.getRegressionData(opts)
+	test.equal(
+		results.resultLst[0].data.eventCnt,
+		null,
+		`Should return a null value for data.eventCnt for ${type} regression data`
+	)
+
+	//Cox results
+	type = 'cox'
+	opts.regressionType = type
+	opts.outcome = {
+		id: 'Arrhythmias',
+		q: {
+			mode: 'cox',
+			bar_by_grade: true,
+			value_by_max_grade: true,
+			timeScale: 'time',
+			breaks: ['2'],
+			groupNames: ['No event / censored', 'Event (grade >= 2)']
+		}
+	}
+	results = await termdbVocabApi.getRegressionData(opts)
+	test.ok(results.resultLst[0].data.eventCnt > 0, `Should return a value for events count for ${type} regression data`)
+	test.equal(
+		typeof results.resultLst[0].data.tests,
+		'object',
+		`Should return a data.tests object for ${type} regression data`
+	)
 
 	test.end()
 })
