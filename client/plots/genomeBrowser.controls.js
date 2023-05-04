@@ -72,19 +72,24 @@ class GbControls {
 			this.dom.variantFilterHolder = tabs[tabsIdx++].contentHolder.append('div').style('white-space', 'normal')
 		}
 		if (plot.ld) {
+			/* (ticky) must duplicate tracks[] and scope it here
+			and use it to preserve the "shown" flag changes via checkboxes
+			when dispatching, commit the tracks[] to state, this ensures the syncing between scoped and state versions
+			*/
+			const tracks = structuredClone(plot.ld.tracks)
+
 			const div = tabs[tabsIdx++].contentHolder.append('div')
 			div
 				.append('div')
 				.text('Show/hide linkage disequilibrium map from an ancestry:')
 				.style('opacity', 0.5)
-			for (const [i, t] of plot.ld.tracks.entries()) {
+			for (const [i, t] of tracks.entries()) {
 				make_one_checkbox({
 					labeltext: t.name,
 					checked: t.shown,
 					holder: div,
-					callback: checked => {
-						const tracks = structuredClone(plot.ld.tracks)
-						tracks[i].shown = checked
+					callback: () => {
+						tracks[i].shown = !tracks[i].shown
 						this.app.dispatch({
 							type: 'plot_edit',
 							id: this.id,
