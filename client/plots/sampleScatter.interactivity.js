@@ -504,6 +504,20 @@ export function setInteractivity(self) {
 				self.dom.tip
 			)
 		})
+		const groupsName =
+			self.config.groups.length == 1
+				? self.config.groups[0].name
+				: self.config.groupsName
+				? self.config.groupsName
+				: 'Scatter groups'
+		menuDiv
+			.append('div')
+			.attr('class', 'sja_menuoption sja_sharp_border')
+			.text(`Create groups variable`)
+			.on('click', event => {
+				self.app.vocabApi.addCustomTerm({ name: groupsName, tw })
+				self.dom.tip.hide()
+			})
 	}
 
 	self.showGroupsMenu = function(event) {
@@ -512,6 +526,29 @@ export function setInteractivity(self) {
 		const menuDiv = self.dom.tip.d.append('div')
 		const plot_name = self.config.name ? self.config.name : 'Summary scatter'
 		const tw = getSamplelstTW(self.config.groups, plot_name + ' groups')
+		const groupsName = self.config.groupsName ? self.config.groupsName : 'Scatter groups'
+
+		const nameDiv = menuDiv
+			.append('div')
+			.html('&nbsp;' + groupsName)
+			.style('font-size', '0.9rem')
+			.on('click', () => {
+				const isEdit = nameDiv.select('input').empty()
+				if (!isEdit) return
+				nameDiv.html('')
+				const input = nameDiv
+					.append('input')
+					.attr('value', groupsName)
+					.on('change', () => {
+						const value = input.node().value
+						if (value) self.config.groupsName = value
+						else input.node().value = groupsName
+						nameDiv.html('&nbsp;' + self.config.groupsName)
+						self.app.dispatch({ type: 'plot_edit', id: self.id, config: { groupsName: self.config.groupsName } })
+					})
+				input.node().focus()
+				input.node().select()
+			})
 		let row = menuDiv.append('div')
 
 		for (const [i, group] of self.config.groups.entries()) {
