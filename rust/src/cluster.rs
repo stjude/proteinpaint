@@ -236,7 +236,9 @@ fn sort_elements(
         //println!("coordinates.len():{:?}", coordinates.len());
 
         let dend;
-        if cluster_method == &"Complete" {
+        if cluster_method == &"Single" {
+            dend = linkage(&mut condensed, coordinates.nrows(), Method::Single);
+        } else if cluster_method == &"Complete" {
             dend = linkage(&mut condensed, coordinates.nrows(), Method::Complete);
         } else if cluster_method == &"Average" {
             dend = linkage(&mut condensed, coordinates.nrows(), Method::Average);
