@@ -127,7 +127,6 @@ output:
 }
 */
 export async function trigger_getSampleScatter(req, q, res, ds, genome) {
-	console.log(q.shapeTW)
 	try {
 		let refSamples, cohortSamples
 		if (q.coordTWs.length == 2) {
