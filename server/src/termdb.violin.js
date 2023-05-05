@@ -8,6 +8,7 @@ const { getData } = require('./termdb.matrix')
 const createCanvas = require('canvas').createCanvas
 const { violinBinsObj } = require('../../server/shared/violin.bins')
 const { summaryStats } = require('../../server/shared/descriptive.stats')
+import roundValue from '../shared/roundValue'
 
 /*
 q = {
@@ -74,15 +75,6 @@ export async function trigger_getViolinPlotData(q, res, ds, genome) {
 
 	const data = await getData({ terms: twLst, filter: q.filter, currentGeneNames: q.currentGeneNames }, ds, genome)
 	if (data.error) throw data.error
-
-	////disable log transformation for now.
-	// for (const [k, v] of Object.entries(data.samples)) {
-	// 	if (q.unit === 'log') {
-	// 		if (v[term.id].key == 0 || v[term.id].value == 0) continue
-	// 		v[term.id].key = Math.log2(v[term.id].key)
-	// 		v[term.id].value = Math.log2(v[term.id].value)
-	// 	}
-	// }
 
 	if (q.scale) scaleData(q, data, term)
 
@@ -163,6 +155,7 @@ function divideValues(q, data, term, overlayTerm) {
 	let min = null,
 		max = null
 
+	console.log(term)
 	//create object to store uncomputable values and label
 	const uncomputableValueObj = {}
 	let skipNonPositiveCount = 0 // if useLog=true, record number of <=0 values skipped
@@ -170,9 +163,11 @@ function divideValues(q, data, term, overlayTerm) {
 	for (const [c, v] of Object.entries(data.samples)) {
 		//if there is no value for term then skip that.
 
-		const value = v[term.id]?.value // numeric value
+		// const value = v[term.id]?.value
+		const value = roundValue(v[term.id]?.value, 1)
 		if (!Number.isFinite(value)) continue
 
+		// console.log(term.values?.[value])
 		if (term.values?.[value]?.uncomputable) {
 			//skip these values from rendering in plot but show in legend as uncomputable categories
 			const label = term.values[value].label // label of this uncomputable category
@@ -192,6 +187,7 @@ function divideValues(q, data, term, overlayTerm) {
 			min = Math.min(min, value)
 			max = Math.max(max, value)
 		}
+
 		if (useLog === 'log') {
 			if (min === 0) min = Math.max(min, value)
 		}
