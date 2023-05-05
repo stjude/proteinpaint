@@ -190,7 +190,16 @@ async function colorAndShapeSamples(refSamples, cohortSamples, data, q) {
 			console.log(JSON.stringify(sample) + ' not in the database or filtered')
 			continue
 		}
-		const divideBy = q.divideByTW ? dbSample[q.divideByTW.term.id || q.divideByTW.term.name].value : 'Default'
+		console.log(dbSample)
+		let divideBy = 'Default'
+		if (q.divideByTW) {
+			if (q.divideByTW.term.type == 'geneVariant')
+				divideBy = getMutation(true, dbSample, q.divideByTW) || getMutation(false, dbSample, q.divideByTW)
+			else {
+				const key = dbSample[q.divideByTW.term.id || q.divideByTW.term.name]?.value
+				divideBy = q.divideByTW.term.values[key]?.label || key
+			}
+		}
 		if (!results[divideBy]) {
 			const samples = refSamples.map(sample => ({ ...sample, category: 'Ref', shape: 'Ref' }))
 			results[divideBy] = { samples, colorMap: {}, shapeMap: {} }
@@ -258,7 +267,20 @@ async function colorAndShapeSamples(refSamples, cohortSamples, data, q) {
 
 function processSample(dbSample, sample, tw, categoryMap, category) {
 	let value = null
+	if (tw.term.type == 'geneVariant') assignGeneVariantValue(dbSample, sample, tw, categoryMap, category)
+	else {
+		value = dbSample?.[tw.id || tw.term.name]?.key
+		sample.hidden[category] = tw.q.hiddenValues ? dbSample?.[tw.id]?.key in tw.q.hiddenValues : false
+		if (value) {
+			sample[category] = value.toString()
+			if (categoryMap[value] == undefined) categoryMap[value] = { sampleCount: 1 }
+			else categoryMap[value].sampleCount++
+		}
+	}
+	return
+}
 
+function assignGeneVariantValue(dbSample, sample, tw, categoryMap, category) {
 	if (tw.term.type == 'geneVariant') {
 		const mutations = dbSample?.[tw.term.name]?.values
 		sample.cat_info[category] = []
@@ -278,36 +300,27 @@ function processSample(dbSample, sample, tw, categoryMap, category) {
 				mapValue.hasOrigin = mapValue.hasOrigin || 'origin' in mutation
 			}
 		}
-		assignMutation(true)
-		if (!sample[category]) assignMutation(false)
+		sample[category] = getMutation(true, dbSample, tw) || getMutation(false, dbSample, tw)
 		//all hidden, will take any
 		if (!sample[category]) sample[category] = getCategory(mutations[0])
 		sample.hidden[category] = tw.q.hiddenValues ? sample[category] in tw.q.hiddenValues : false
-
-		function assignMutation(strict) {
-			for (const [dt, label] of Object.entries(dt2label)) {
-				const mutation = mutations.find(mutation => {
-					const value = getCategory(mutation)
-					const visible = !(tw.q.hiddenValues && value in tw.q.hiddenValues)
-					return mutation.dt == dt && visible
-				})
-				if (!mutation) continue
-				if (strict) if (mutation.class == 'WT' || mutation.class == 'Blank') continue
-				const value = getCategory(mutation)
-				sample[category] = value
-				break //Found a color
-			}
-		}
-	} else {
-		value = dbSample?.[tw.id || tw.term.name]?.key
-		sample.hidden[category] = tw.q.hiddenValues ? dbSample?.[tw.id]?.key in tw.q.hiddenValues : false
-		if (value) {
-			sample[category] = value.toString()
-			if (categoryMap[value] == undefined) categoryMap[value] = { sampleCount: 1 }
-			else categoryMap[value].sampleCount++
-		}
 	}
-	return
+}
+
+function getMutation(strict, dbSample, tw) {
+	const mutations = dbSample?.[tw.term.name]?.values
+
+	for (const [dt, label] of Object.entries(dt2label)) {
+		const mutation = mutations.find(mutation => {
+			const value = getCategory(mutation)
+			const visible = !(tw.q.hiddenValues && value in tw.q.hiddenValues)
+			return mutation.dt == dt && visible
+		})
+		if (!mutation) continue
+		if (strict) if (mutation.class == 'WT' || mutation.class == 'Blank') continue
+		const value = getCategory(mutation)
+		return value
+	}
 }
 
 function getCategory(mutation) {
