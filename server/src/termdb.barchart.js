@@ -508,7 +508,11 @@ export function getOrderedLabels(term, bins, q) {
 function getTermDetails(q, tdb, index) {
 	const termnum_id = 'term' + index + '_id'
 	const termid = q[termnum_id]
-	const term = q[termid] ? tdb.q.termjsonByOneid(termid) : q[`term${index}`] ? q[`term${index}`] : {}
+	let term = {}
+	if (q[termid]) term = tdb.q.termjsonByOneid(termid)
+	else if (termid) term = tdb.q.termjsonByOneid(termid)
+	else if (q[`term${index}`]) term = q[`term${index}`]
+
 	const termIsNumeric = term.type == 'integer' || term.type == 'float'
 	const unannotatedValues = term.values
 		? Object.keys(term.values)
