@@ -180,6 +180,15 @@ export function setRenderers(self) {
 					)
 					.attr('text-anchor', 'middle')
 					.text(self.config.term.term.name)
+				if (self.config.term0)
+					labelsG
+						.append('text')
+						.attr(
+							'transform',
+							`translate(${self.axisOffset.x + self.settings.svgw / 2}, ${self.settings.svgh + self.axisOffset.y + 70})`
+						)
+						.attr('text-anchor', 'middle')
+						.text(chart.id)
 				labelsG
 					.append('text')
 					.attr(
