@@ -93,31 +93,6 @@ class Scatter {
 		}
 	}
 
-	// called in relevant dispatch when reactsTo==true
-	// or current.state != replcament.state
-	async main() {
-		this.config = JSON.parse(JSON.stringify(this.state.config))
-		if (this.dom.header)
-			this.dom.header.html(
-				this.config.name + ` <span style="opacity:.6;font-size:.7em;margin-left:10px;">SCATTER PLOT</span>`
-			)
-		copyMerge(this.settings, this.config.settings.sampleScatter)
-		const reqOpts = this.getDataRequestOpts()
-		if (reqOpts.coordTWs.length == 1) return //To allow removing a term in the controls, though nothing is rendered (summary tab with violin active)
-		this.charts = []
-		const data = await this.app.vocabApi.getScatterData(reqOpts)
-		if (data.error) throw data.error
-		if (!Array.isArray(data.samples)) throw 'data.samples[] not array'
-		this.createChart('1', data)
-		//this.createChart(2, data)
-		//Creating charts variable to support rendering multiple charts
-
-		this.render()
-		this.setTools()
-		this.updateGroupsButton()
-		this.dom.tip.hide()
-	}
-
 	// creates an opts object for the vocabApi.someMethod(),
 	// may need to add a new method to client/termdb/vocabulary.js
 	// for now, just add methods to TermdbVocab,
@@ -134,14 +109,39 @@ class Scatter {
 			coordTWs
 		}
 		if (c.shapeTW) opts.shapeTW = c.shapeTW
+		if (c.divideByTW) opts.divideByTW = c.divideByTW
 		return opts
+	}
+
+	// called in relevant dispatch when reactsTo==true
+	// or current.state != replcament.state
+	async main() {
+		this.config = JSON.parse(JSON.stringify(this.state.config))
+		if (this.dom.header)
+			this.dom.header.html(
+				this.config.name + ` <span style="opacity:.6;font-size:.7em;margin-left:10px;">SCATTER PLOT</span>`
+			)
+		copyMerge(this.settings, this.config.settings.sampleScatter)
+		const reqOpts = this.getDataRequestOpts()
+		if (reqOpts.coordTWs.length == 1) return //To allow removing a term in the controls, though nothing is rendered (summary tab with violin active)
+		this.charts = []
+		const results = await this.app.vocabApi.getScatterData(reqOpts)
+		if (results.error) throw results.error
+		for (const [key, data] of Object.entries(results)) {
+			if (!Array.isArray(data.samples)) throw 'data.samples[] not array'
+			this.createChart(key, data)
+		}
+
+		this.render()
+		this.setTools()
+		this.updateGroupsButton()
+		this.dom.tip.hide()
 	}
 
 	createChart(id, data) {
 		const cohortSamples = data.samples.filter(sample => 'sampleId' in sample)
-		const colorLegend = new Map(Object.entries(data.colorLegend))
-		const shapeLegend = new Map(Object.entries(data.shapeLegend))
-
+		const colorLegend = new Map(data.colorLegend)
+		const shapeLegend = new Map(data.shapeLegend)
 		this.charts.push({ id, data, cohortSamples, colorLegend, shapeLegend })
 	}
 
@@ -166,6 +166,15 @@ class Scatter {
 				usecase: { target: 'sampleScatter', detail: 'shapeTW' },
 				title: 'Categories to assign a shape',
 				label: 'Shape',
+				vocabApi: this.app.vocabApi
+			},
+			{
+				type: 'term',
+				configKey: 'divideByTW',
+				chartType: 'sampleScatter',
+				usecase: { target: 'sampleScatter', detail: 'divideByTW' },
+				title: 'Categories to divide by',
+				label: 'Divide by',
 				vocabApi: this.app.vocabApi
 			},
 
