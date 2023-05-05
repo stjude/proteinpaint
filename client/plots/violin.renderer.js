@@ -6,6 +6,7 @@ import { brushX, brushY } from 'd3-brush'
 import { renderTable } from '#dom/table'
 import { Menu } from '../dom/menu'
 import { rgb } from 'd3'
+import { format as d3format } from 'd3-format'
 
 export default function violinRenderer(self) {
 	self.render = function() {
@@ -191,7 +192,12 @@ export default function violinRenderer(self) {
 		// <g>: holder of numeric axis
 		const g = svg.svgG.append('g')
 		// .style('font-size', '15')
-		g.call((isH ? axisTop : axisLeft)().scale(svg.axisScale))
+		g.call(
+			(isH ? axisTop : axisLeft)()
+				.scale(svg.axisScale)
+				.tickFormat(settings.unit === 'log' ? d3format('.2f') : null)
+				.ticks(4)
+		)
 
 		if (self.opts.mode != 'minimal') {
 			let lab
