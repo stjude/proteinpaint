@@ -146,6 +146,8 @@ export async function trigger_getSampleScatter(req, q, res, ds, genome) {
 		if (q.coordTWs) terms.push(...q.coordTWs)
 		if (q.colorTW) terms.push(q.colorTW)
 		if (q.shapeTW) terms.push(q.shapeTW)
+		if (q.divideByTW) terms.push(q.divideByTW)
+
 		const data = await getData({ filter: q.filter, terms }, ds, genome)
 		if (data.error) throw data.error
 
@@ -181,16 +183,17 @@ async function getSamples(req, ds, plot) {
 }
 
 async function colorAndShapeSamples(refSamples, cohortSamples, data, q) {
-	const samples = refSamples.map(sample => ({ ...sample, category: 'Ref', shape: 'Ref' }))
-
-	const shapeMap = new Map()
-	const colorMap = new Map()
+	const results = {}
 	for (const sample of cohortSamples) {
 		const dbSample = data.samples[sample.sampleId.toString()]
-
 		if (!dbSample && q.colorTW) {
 			console.log(JSON.stringify(sample) + ' not in the database or filtered')
 			continue
+		}
+		const divideBy = q.divideByTW ? dbSample[q.divideByTW.term.id || q.divideByTW.term.name].value : 'Default'
+		if (!results[divideBy]) {
+			const samples = refSamples.map(sample => ({ ...sample, category: 'Ref', shape: 'Ref' }))
+			results[divideBy] = { samples, colorMap: {}, shapeMap: {} }
 		}
 		sample.cat_info = {}
 		sample.hidden = {}
@@ -198,57 +201,58 @@ async function colorAndShapeSamples(refSamples, cohortSamples, data, q) {
 			sample.category = 'Default'
 		} else {
 			if (q.colorTW?.q?.mode === 'continuous') {
-				if (dbSample) sample.category = dbSample[q.colorTW.term.id].value
-			} else processSample(dbSample, sample, q.colorTW, colorMap, 'category')
+				if (dbSample) sample.category = dbSample[q.colorTW.term.id || q.colorTW.term.name].value
+			} else processSample(dbSample, sample, q.colorTW, results[divideBy].colorMap, 'category')
 		}
 
-		if (q.shapeTW) processSample(dbSample, sample, q.shapeTW, shapeMap, 'shape')
+		if (q.shapeTW) processSample(dbSample, sample, q.shapeTW, results[divideBy].shapeMap, 'shape')
 		else sample.shape = 'Ref'
-		samples.push(sample)
+
+		results[divideBy].samples.push(sample)
 	}
 
-	if (q.colorTW && q.colorTW.q.mode !== 'continuous') {
-		let i = 20
-		const scheme = schemeCategory20
-		const k2c = getColors(colorMap.size)
-		for (const [category, value] of colorMap) {
-			const tvalue = q.colorTW.term.values?.[category]
-			if (tvalue && 'color' in tvalue) value.color = tvalue.color
-			else if (data.refs?.byTermId[q.colorTW.term.id]?.bins) {
-				const bin = data.refs.byTermId[q.colorTW.term.id].bins.find(bin => bin.name === category)
-				if (bin) value.color = bin.color
-				else {
-					value.color = scheme[i]
-					i--
-				}
-			} else if (q.colorTW.term.type != 'geneVariant') value.color = k2c(category)
+	for (const [divideBy, result] of Object.entries(results)) {
+		if (q.colorTW && q.colorTW.q.mode !== 'continuous') {
+			let i = 20
+			const scheme = schemeCategory20
+			const colorEntries = Object.entries(result.colorMap)
+			const k2c = getColors(colorEntries.length)
+
+			for (const [category, value] of colorEntries) {
+				const tvalue = q.colorTW.term.values?.[category]
+				if (tvalue && 'color' in tvalue) value.color = tvalue.color
+				else if (data.refs?.byTermId[q.colorTW.term.id]?.bins) {
+					const bin = data.refs.byTermId[q.colorTW.term.id].bins.find(bin => bin.name === category)
+					if (bin) value.color = bin.color
+					else {
+						value.color = scheme[i]
+						i--
+					}
+				} else if (q.colorTW.term.type != 'geneVariant') value.color = k2c(category)
+			}
 		}
-	}
-
-	let i = 1
-	for (const [category, value] of shapeMap) {
-		if (!('shape' in value)) value.shape = i
-		i++
-	}
-
-	const colorLegend = q.colorTW
-		? order(colorMap, q.colorTW, data.refs)
-		: [['Default', { sampleCount: cohortSamples.length, color: 'blue' }]]
-	colorLegend.push([
-		'Ref',
-		{
-			sampleCount: refSamples.length,
-			color: q.colorTW?.term.values?.['Ref'] ? q.colorTW.term.values?.['Ref'].color : refColor
+		let i = 1
+		for (const [category, value] of Object.entries(result.shapeMap)) {
+			if (!('shape' in value)) value.shape = i
+			i++
 		}
-	])
-	const shapeLegend = order(shapeMap, q.shapeTW, data.refs)
-	shapeLegend.push(['Ref', { sampleCount: refSamples.length, shape: 0 }])
-	return {
-		samples,
-		colorLegend: Object.fromEntries(colorLegend),
-		shapeLegend: Object.fromEntries(shapeLegend)
+
+		result.colorLegend = q.colorTW
+			? order(result.colorMap, q.colorTW, data.refs)
+			: [['Default', { sampleCount: cohortSamples.length, color: 'blue' }]]
+		result.colorLegend.push([
+			'Ref',
+			{
+				sampleCount: refSamples.length,
+				color: q.colorTW?.term.values?.['Ref'] ? q.colorTW.term.values?.['Ref'].color : refColor
+			}
+		])
+		result.shapeLegend = order(result.shapeMap, q.shapeTW, data.refs)
+		result.shapeLegend.push(['Ref', { sampleCount: refSamples.length, shape: 0 }])
 	}
+	return results
 }
+
 function processSample(dbSample, sample, tw, categoryMap, category) {
 	let value = null
 
@@ -262,11 +266,11 @@ function processSample(dbSample, sample, tw, categoryMap, category) {
 			sample.cat_info[category].push(mutation)
 
 			let mapValue
-			if (!categoryMap.has(value)) {
+			if (categoryMap[value] == undefined) {
 				mapValue = { color: class_info.color, sampleCount: 1, hasOrigin: 'origin' in mutation }
-				categoryMap.set(value, mapValue)
+				categoryMap[value] = mapValue
 			} else {
-				mapValue = categoryMap.get(value)
+				mapValue = categoryMap[value]
 				mapValue.sampleCount = mapValue.sampleCount + 1
 				mapValue.hasOrigin = mapValue.hasOrigin || 'origin' in mutation
 			}
@@ -296,8 +300,8 @@ function processSample(dbSample, sample, tw, categoryMap, category) {
 		sample.hidden[category] = tw.q.hiddenValues ? dbSample?.[tw.id]?.key in tw.q.hiddenValues : false
 		if (value) {
 			sample[category] = value.toString()
-			if (!categoryMap.has(value)) categoryMap.set(value, { sampleCount: 1 })
-			else categoryMap.get(value).sampleCount++
+			if (categoryMap[value] == undefined) categoryMap[value] = { sampleCount: 1 }
+			else categoryMap[value].sampleCount++
 		}
 	}
 	return
@@ -315,14 +319,14 @@ function order(map, tw, refs) {
 	let entries = []
 	if (!tw || map.size == 0) return entries
 	if (tw.term.type == 'geneVariant') {
-		entries = [...map.entries()]
+		entries = Object.entries(map)
 		entries.sort((a, b) => {
 			if (a[0] < b[0]) return -1
 			if (a[0] > b[0]) return 1
 			return 0
 		})
 	} else if (!refs?.byTermId[tw.term.id]?.bins) {
-		entries = [...map.entries()]
+		entries = Object.entries(map)
 		entries.sort((a, b) => {
 			const v1 = tw.term.values?.[a[0]]
 			if (v1 && 'order' in v1) {
@@ -337,7 +341,7 @@ function order(map, tw, refs) {
 		})
 	} else {
 		const bins = refs.byTermId[tw.term.id].bins
-		for (const bin of bins) if (map.get(bin.name)) entries.push([bin.name, map.get(bin.name)])
+		for (const bin of bins) if (map[bin.name]) entries.push([bin.name, map[bin.name]])
 		//If some category is not defined in the bins, should be added
 		for (const [category, value] of map) if (!entries.some(e => e[0] === category)) entries.push([category, value])
 	}

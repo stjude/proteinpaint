@@ -861,6 +861,8 @@ export class TermdbVocab extends Vocab {
 		}
 		if (opts.colorTW) body.colorTW = opts.colorTW
 		if (opts.shapeTW) body.shapeTW = opts.shapeTW
+		if (opts.divideByTW) body.divideByTW = opts.divideByTW
+
 		return await dofetch3('termdb', { headers, body })
 	}
 
