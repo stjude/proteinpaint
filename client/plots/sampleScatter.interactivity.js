@@ -373,20 +373,20 @@ export function setInteractivity(self) {
 		const tableDiv = self.dom.tip.d.append('div')
 		const buttons = []
 		if (addGroup) {
-			const addGroup = {
+			const addGroupCallback = {
 				text: 'Add to a group',
 				callback: indexes => {
 					const items = []
 					for (const i of indexes) items.push(self.selectedItems[i].__data__)
-					self.config.groups.push({
-						name: group.name,
+					const group = {
+						name: `Group ${self.config.groups.length + 1}`,
 						items,
 						index: self.config.groups.length
-					})
-					self.app.dispatch({ type: 'plot_edit', id: self.id, config: { groups: self.config.groups } })
+					}
+					self.addGroup(group)
 				}
 			}
-			buttons.push(addGroup)
+			buttons.push(addGroupCallback)
 		} else {
 			const deleteSamples = {
 				text: 'Delete samples',
