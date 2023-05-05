@@ -363,19 +363,7 @@ export function setRenderers(self) {
 						items: self.selectedItems.map(item => item.__data__),
 						index: self.config.groups.length
 					}
-					self.config.groups.push(group)
-					self.app.dispatch({ type: 'plot_edit', id: self.id, config: { groups: self.config.groups } })
-					const samplelstTW = getSamplelstTW(self.config.groups)
-					const appGroup = {
-						name: group.name,
-						filter: self.getFilter(samplelstTW)
-					}
-					await self.app.vocabApi.addGroup(appGroup)
-					const appGroups = await self.app.vocabApi.getGroups()
-					self.app.dispatch({
-						type: 'app_refresh',
-						state: { groups: appGroups }
-					})
+					self.addGroup(group)
 				})
 			menuDiv
 				.append('div')
@@ -387,10 +375,9 @@ export function setRenderers(self) {
 						items: self.selectedItems.map(item => item.__data__),
 						index: self.config.groups.length
 					}
-					self.config.groups.push(group)
+					self.addGroup(group)
 					const tw = getSamplelstTW([group])
 					self.addToFilter(tw)
-					self.app.dispatch({ type: 'plot_edit', id: self.id, config: { groups: self.config.groups } })
 				})
 		}
 
@@ -403,6 +390,22 @@ export function setRenderers(self) {
 			mainG.on('mousedown.drag', null)
 			mainG.call(chart.lasso)
 		}
+	}
+
+	self.addGroup = async function(group) {
+		self.config.groups.push(group)
+		self.app.dispatch({ type: 'plot_edit', id: self.id, config: { groups: self.config.groups } })
+		const samplelstTW = getSamplelstTW([group])
+		const appGroup = {
+			name: group.name,
+			filter: self.getFilter(samplelstTW)
+		}
+		await self.app.vocabApi.addGroup(appGroup)
+		const appGroups = await self.app.vocabApi.getGroups()
+		self.app.dispatch({
+			type: 'app_refresh',
+			state: { groups: appGroups }
+		})
 	}
 
 	self.setTools = function() {
