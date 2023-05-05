@@ -349,15 +349,15 @@ class Barchart {
 		// a non-numeric term.id is used directly as seriesId or dataId
 		this.settings.exclude.cols = Object.keys(term.q?.hiddenValues || {})
 			.filter(id => term.q.hiddenValues[id])
-			.map(id =>
-				term.term.type == 'categorical'
+			.map(id => {
+				return term.term.type == 'categorical'
 					? id
-					: this.settings.cols && this.settings.cols.includes(term.term.id)
+					: this.settings.cols?.includes(id)
 					? id
-					: term.term.values && id in term.term.values && 'label' in term.term.values[id]
+					: term.term.values[id]?.label
 					? term.term.values[id].label
 					: id
-			)
+			})
 
 		this.settings.exclude.rows = !term2?.q?.hiddenValues
 			? []
@@ -366,9 +366,9 @@ class Barchart {
 					.map(id =>
 						term2.term.type == 'categorical'
 							? id
-							: this.settings.cols && this.settings.cols.includes(term2.term.id)
+							: this.settings.rows?.includes(id)
 							? id
-							: term2.term.values && id in term2.term.values && 'label' in term2.term.values[id]
+							: term2.term.values[id]?.label
 							? term2.term.values[id].label
 							: id
 					)
