@@ -33,72 +33,7 @@ class GbControls {
 	}
 
 	async init(appState) {
-		const plot = appState.plots.find(i => i.id == this.id)
-		if (!plot) throw 'plot not found by id'
-		const tabs = [{ label: 'Variant values', active: true }]
-		if (plot.variantFilter) {
-			tabs.push({ label: 'Variant filter' })
-		}
-		if (plot.ld) {
-			tabs.push({ label: 'LD map' })
-		}
-		// can add other tk set
-
-		const toggles = new Tabs({
-			holder: this.opts.holder
-				.append('div')
-				.style('border-bottom', 'solid 1px #ccc')
-				.style('padding-bottom', '20px'),
-			tabs
-		})
-		toggles.main()
-
-		{
-			// first tab is for variant group setting
-			const div = tabs[0].contentHolder.append('div')
-			this.dom = {
-				// hardcode to 2 groups used by state.config.snvindel.details.groups[]
-				group1div: div.append('div'),
-				group2div: div.append('div'),
-				testMethodDiv: div.append('div')
-			}
-		}
-
-		let tabsIdx = 1 // tabs[] array index, to handle optional tabs
-
-		if (plot.variantFilter) {
-			// the whole holder has white-space=nowrap (likely from sjpp-output-sandbox-content)
-			// must set white-space=normal to let INFO filter wrap and not to extend beyond holder
-			this.dom.variantFilterHolder = tabs[tabsIdx++].contentHolder.append('div').style('white-space', 'normal')
-		}
-		if (plot.ld) {
-			/* (ticky) must duplicate tracks[] and scope it here
-			and use it to preserve the "shown" flag changes via checkboxes
-			when dispatching, commit the tracks[] to state, this ensures the syncing between scoped and state versions
-			*/
-			const tracks = structuredClone(plot.ld.tracks)
-
-			const div = tabs[tabsIdx++].contentHolder.append('div')
-			div
-				.append('div')
-				.text('Show/hide linkage disequilibrium map from an ancestry:')
-				.style('opacity', 0.5)
-			for (const [i, t] of tracks.entries()) {
-				make_one_checkbox({
-					labeltext: t.name,
-					checked: t.shown,
-					holder: div,
-					callback: () => {
-						tracks[i].shown = !tracks[i].shown
-						this.app.dispatch({
-							type: 'plot_edit',
-							id: this.id,
-							config: { ld: { tracks } }
-						})
-					}
-				})
-			}
-		}
+		this.initUI(this.getState(appState))
 	}
 
 	getState(appState) {
@@ -231,6 +166,93 @@ class GbControls {
 			select.append('option').text(m.name)
 		}
 		select.property('selectedIndex', this.state.config.snvindel.details.groupTestMethodsIdx)
+	}
+
+	initUI(state) {
+		/* everything rendered into this.opts.holder
+		state = {
+		  config: {}
+		  	ld{}
+			snvindel{}
+			variantFilter{}
+		  termdbConfig {}
+		}
+		*/
+
+		this.dom = {}
+
+		// may display a horizontal tab for toggling between differen options
+		const tabs = []
+
+		if (state.config.snvindel?.details) {
+			tabs.push({ label: 'Variant values', active: true })
+		}
+		if (state.config.variantFilter) {
+			tabs.push({ label: 'Variant filter' })
+		}
+		if (state.config.ld) {
+			tabs.push({ label: 'LD map' })
+		}
+		// can add other tk set
+
+		if (tabs.length == 0) {
+			// no content for config ui
+			return
+		}
+
+		const toggles = new Tabs({
+			holder: this.opts.holder
+				.append('div')
+				.style('border-bottom', 'solid 1px #ccc')
+				.style('padding-bottom', '20px'),
+			tabs
+		})
+		toggles.main()
+
+		{
+			// first tab is for variant group setting
+			const div = tabs[0].contentHolder.append('div')
+			// hardcode to 2 groups used by state.config.snvindel.details.groups[]
+			this.dom.group1div = div.append('div')
+			this.dom.group2div = div.append('div')
+			this.dom.testMethodDiv = div.append('div')
+		}
+
+		let tabsIdx = 1 // tabs[] array index, to handle optional tabs
+
+		if (state.config.variantFilter) {
+			// the whole holder has white-space=nowrap (likely from sjpp-output-sandbox-content)
+			// must set white-space=normal to let INFO filter wrap and not to extend beyond holder
+			this.dom.variantFilterHolder = tabs[tabsIdx++].contentHolder.append('div').style('white-space', 'normal')
+		}
+		if (state.config.ld) {
+			/* (ticky) must duplicate tracks[] and scope it here
+			and use it to preserve the "shown" flag changes via checkboxes
+			when dispatching, commit the tracks[] to state, this ensures the syncing between scoped and state versions
+			*/
+			const tracks = structuredClone(state.config.ld.tracks)
+
+			const div = tabs[tabsIdx++].contentHolder.append('div')
+			div
+				.append('div')
+				.text('Show/hide linkage disequilibrium map from an ancestry:')
+				.style('opacity', 0.5)
+			for (const [i, t] of tracks.entries()) {
+				make_one_checkbox({
+					labeltext: t.name,
+					checked: t.shown,
+					holder: div,
+					callback: () => {
+						tracks[i].shown = !tracks[i].shown
+						this.app.dispatch({
+							type: 'plot_edit',
+							id: this.id,
+							config: { ld: { tracks } }
+						})
+					}
+				})
+			}
+		}
 	}
 }
 

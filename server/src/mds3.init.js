@@ -1539,7 +1539,7 @@ function addDataAvailability(dtKey, dt, bySampleId, tname, origin, sampleSet) {
 		}
 	}
 	for (const sid of dt.noSamples) {
-		if (sampleSet && !sampleSet.includes(sid)) continue
+		if (sampleSet && !sampleSet.has(sid)) continue
 		if (!bySampleId.has(sid)) bySampleId.set(sid, { sample: sid })
 		const sampleData = bySampleId.get(sid)
 		if (!(tname in sampleData)) sampleData[tname] = { key: tname, values: [], label: tname }
