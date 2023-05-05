@@ -210,13 +210,16 @@ async function colorAndShapeSamples(refSamples, cohortSamples, data, q) {
 
 		results[divideBy].samples.push(sample)
 	}
+	//To choose a color scheme we pass the max number of categories
+	let max = 0
+	for (const [divideBy, result] of Object.entries(results)) max = Math.max(max, Object.keys(result.colorMap).length)
+	const k2c = getColors(max)
 
 	for (const [divideBy, result] of Object.entries(results)) {
 		if (q.colorTW && q.colorTW.q.mode !== 'continuous') {
 			let i = 20
 			const scheme = schemeCategory20
 			const colorEntries = Object.entries(result.colorMap)
-			const k2c = getColors(colorEntries.length)
 
 			for (const [category, value] of colorEntries) {
 				const tvalue = q.colorTW.term.values?.[category]
@@ -343,7 +346,8 @@ function order(map, tw, refs) {
 		const bins = refs.byTermId[tw.term.id].bins
 		for (const bin of bins) if (map[bin.name]) entries.push([bin.name, map[bin.name]])
 		//If some category is not defined in the bins, should be added
-		for (const [category, value] of map) if (!entries.some(e => e[0] === category)) entries.push([category, value])
+		for (const [category, value] of Object.entries(map))
+			if (!entries.some(e => e[0] === category)) entries.push([category, value])
 	}
 	return entries
 }

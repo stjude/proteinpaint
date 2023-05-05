@@ -109,7 +109,7 @@ class Scatter {
 			coordTWs
 		}
 		if (c.shapeTW) opts.shapeTW = c.shapeTW
-		if (c.divideByTW) opts.divideByTW = c.divideByTW
+		if (c.term0) opts.divideByTW = c.term0
 		return opts
 	}
 
@@ -170,9 +170,9 @@ class Scatter {
 			},
 			{
 				type: 'term',
-				configKey: 'divideByTW',
+				configKey: 'term0',
 				chartType: 'sampleScatter',
-				usecase: { target: 'sampleScatter', detail: 'divideByTW' },
+				usecase: { target: 'sampleScatter', detail: 'term0' },
 				title: 'Categories to divide by',
 				label: 'Divide by',
 				vocabApi: this.app.vocabApi
