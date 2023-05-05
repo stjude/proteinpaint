@@ -107,7 +107,7 @@ export function setInteractivity(self) {
 		if (!self.lassoOn) self.dom.tip.hide()
 	}
 
-	self.onLegendClick = function(chart, G, name, key, e) {
+	self.onLegendClick = function(chart, legendG, name, key, e) {
 		const tw = self.config[name]
 		const hidden = tw.q.hiddenValues ? key in tw.q.hiddenValues : false
 		const menu = new Menu({ padding: '5px' })
@@ -119,7 +119,7 @@ export function setInteractivity(self) {
 				.attr('class', 'sja_menuoption sja_sharp_border')
 				.text('Hide')
 				.on('click', () => {
-					self.hideCategory(G, tw, key, true)
+					self.hideCategory(legendG, tw, key, true)
 					menu.hide()
 					const config = {}
 					config[name] = tw
@@ -135,7 +135,7 @@ export function setInteractivity(self) {
 				.attr('class', 'sja_menuoption sja_sharp_border')
 				.text('Show')
 				.on('click', () => {
-					self.hideCategory(G, tw, key, false)
+					self.hideCategory(legendG, tw, key, false)
 					menu.hide()
 					const config = {}
 					config[name] = tw
@@ -151,7 +151,7 @@ export function setInteractivity(self) {
 			.text('Show only')
 			.on('click', () => {
 				const map = name == 'colorTW' ? chart.colorLegend : chart.shapeLegend
-				for (const mapKey of map.keys()) self.hideCategory(G, tw, mapKey, !mapKey.startsWith(key))
+				for (const mapKey of map.keys()) self.hideCategory(legendG, tw, mapKey, !mapKey.startsWith(key))
 
 				menu.hide()
 				const config = {}
@@ -169,7 +169,7 @@ export function setInteractivity(self) {
 			.on('click', () => {
 				menu.hide()
 				const map = name == 'colorTW' ? chart.colorLegend : chart.shapeLegend
-				for (const mapKey of map.keys()) self.hideCategory(G, tw, mapKey, false)
+				for (const mapKey of map.keys()) self.hideCategory(legendG, tw, mapKey, false)
 				const config = {}
 				config[name] = tw
 				self.app.dispatch({
@@ -181,10 +181,10 @@ export function setInteractivity(self) {
 		menu.show(e.clientX, e.clientY, false)
 	}
 
-	self.hideCategory = function(G, tw, key, hide) {
+	self.hideCategory = function(legendG, tw, key, hide) {
 		if (!tw.q.hiddenValues) tw.q.hiddenValues = {}
 		const value = tw.term.type != 'geneVariant' && tw.term.values[key] ? tw.term.values[key] : { key: key, label: key }
-		const items = G.selectAll(`text[name="sjpp-scatter-legend-label"]`).nodes()
+		const items = legendG.selectAll(`text[name="sjpp-scatter-legend-label"]`).nodes()
 		const itemG = items.find(item => key.startsWith(item.innerHTML))?.parentElement
 
 		if (itemG) itemG.style['text-decoration'] = hide ? 'line-through' : 'none'

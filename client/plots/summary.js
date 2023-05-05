@@ -256,7 +256,13 @@ function setRenderers(self) {
 					getConfig: async () => {
 						const _term = await self.getWrappedTermCopy(self.config?.term, 'continuous')
 						const _term2 = await self.getWrappedTermCopy(self.config?.term2, 'continuous')
-						const config = { childType: 'sampleScatter', term: _term, term2: _term2, groups: [] }
+						let config = {
+							childType: 'sampleScatter',
+							term: _term,
+							term2: _term2,
+							groups: [],
+							term0: self.config.term0
+						}
 						return config
 					},
 					active: false,

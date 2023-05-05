@@ -680,7 +680,7 @@ export function setRenderers(self) {
 			})
 		}
 		if (self.config.shapeTW) {
-			offsetX = 300
+			offsetX = 200
 			offsetY = 50
 			title = `${self.config.shapeTW.term.name}, n=${chart.cohortSamples.length}`
 			if (self.config.shapeTW.term.type == 'geneVariant')
