@@ -1478,6 +1478,7 @@ function mayAdd_mayGetGeneVariantData(ds, genome) {
 
 				// create new m2{} for each mutation in each sample
 
+				console.log(m)
 				const m2 = {
 					gene: tw.term.name,
 					isoform: m.isoform,
@@ -1583,7 +1584,9 @@ async function mayMapGeneName2isoform(term, genome) {
 
 async function getSnvindelByTerm(ds, term, genome, q) {
 	// to keep cohort/session etc
-	const arg = {}
+	const arg = {
+		addFormatValues: true
+	}
 	if (q.filter0) arg.filter0 = q.filter0 // hidden filter
 	if (q.filter) arg.filterObj = q.filter // pp filter, must change key name to "filterObj" to be consistent with mds3 client
 
