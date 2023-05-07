@@ -1408,6 +1408,12 @@ function mayAdd_mayGetGeneVariantData(ds, genome) {
 					mname/class
 					_SAMPLENAME_
 					_SAMPLEID_
+
+	this function is diverging from mds3.load, each becoming specialized
+	1. it returns sample level data points {class/mname/sample/origin}
+	   but the other returns aggregation, with format fields nested inside sample obj
+	   {class/mname/samples[ {sample/formatK2v{origin}} ]}
+	2. this query hardcodes to load geneCnv for showing in gdc matrix, the other does not need it (gdc tk)
 	*/
 	ds.mayGetGeneVariantData = async (tw, q) => {
 		// validate tw
@@ -1453,7 +1459,6 @@ function mayAdd_mayGetGeneVariantData(ds, genome) {
 			}
 
 			for official datasets using a sqlite db that contains integer2string sample mapping, "sample_id" is integer id 
-
 			for gdc dataset not using a sqlite db, no sample integer id is kept on server. "sample_id" is string id
 			*/
 
@@ -1478,7 +1483,6 @@ function mayAdd_mayGetGeneVariantData(ds, genome) {
 
 				// create new m2{} for each mutation in each sample
 
-				console.log(m)
 				const m2 = {
 					gene: tw.term.name,
 					isoform: m.isoform,
@@ -1489,6 +1493,13 @@ function mayAdd_mayGetGeneVariantData(ds, genome) {
 					mname: m.mname,
 					_SAMPLEID_: s.sample_id,
 					_SAMPLENAME_: s.sample_id
+				}
+
+				if (s.formatK2v) {
+					// this sample have format values, flatten those
+					for (const k in s.formatK2v) {
+						m2[k] = s.formatK2v[k]
+					}
 				}
 
 				// can supply dt specific attributes
@@ -1513,21 +1524,21 @@ function mayAdd_mayGetGeneVariantData(ds, genome) {
 async function mayAddDataAvailability(q, ds, bySampleId, tname) {
 	if (!ds.assayAvailability?.byDt) return
 	// get samples passing filter if filter is in use
-	const sampleSet = q.filter ? new Set((await get_samples(q.filter, ds)).map(i => i.id)) : null
+	const sampleFilter = q.filter ? new Set((await get_samples(q.filter, ds)).map(i => i.id)) : null
 	for (const dtKey in ds.assayAvailability.byDt) {
 		const dt = ds.assayAvailability.byDt[dtKey]
 		if (dt.byOrigin) {
 			for (const origin in dt.byOrigin) {
 				const sub_dt = dt.byOrigin[origin]
-				addDataAvailability(dtKey, sub_dt, bySampleId, tname, origin, sampleSet)
+				addDataAvailability(dtKey, sub_dt, bySampleId, tname, origin, sampleFilter)
 			}
-		} else addDataAvailability(dtKey, dt, bySampleId, tname, false, sampleSet)
+		} else addDataAvailability(dtKey, dt, bySampleId, tname, false, sampleFilter)
 	}
 }
 
-function addDataAvailability(dtKey, dt, bySampleId, tname, origin, sampleSet) {
+function addDataAvailability(dtKey, dt, bySampleId, tname, origin, sampleFilter) {
 	for (const sid of dt.yesSamples) {
-		if (sampleSet && !sampleSet.has(sid)) continue
+		if (sampleFilter && !sampleFilter.has(sid)) continue
 		if (!bySampleId.has(sid)) bySampleId.set(sid, { sample: sid })
 		const sampleData = bySampleId.get(sid)
 		if (!(tname in sampleData)) sampleData[tname] = { key: tname, values: [], label: tname }
@@ -1540,7 +1551,7 @@ function addDataAvailability(dtKey, dt, bySampleId, tname, origin, sampleSet) {
 		}
 	}
 	for (const sid of dt.noSamples) {
-		if (sampleSet && !sampleSet.has(sid)) continue
+		if (sampleFilter && !sampleFilter.has(sid)) continue
 		if (!bySampleId.has(sid)) bySampleId.set(sid, { sample: sid })
 		const sampleData = bySampleId.get(sid)
 		if (!(tname in sampleData)) sampleData[tname] = { key: tname, values: [], label: tname }
@@ -1585,10 +1596,10 @@ async function mayMapGeneName2isoform(term, genome) {
 async function getSnvindelByTerm(ds, term, genome, q) {
 	// to keep cohort/session etc
 	const arg = {
-		addFormatValues: true
+		addFormatValues: true,
+		filter0: q.filter0, // hidden filter
+		filterObj: q.filter // pp filter, must change key name to "filterObj" to be consistent with mds3 client
 	}
-	if (q.filter0) arg.filter0 = q.filter0 // hidden filter
-	if (q.filter) arg.filterObj = q.filter // pp filter, must change key name to "filterObj" to be consistent with mds3 client
 
 	if (ds.queries.geneCnv) {
 		// FIXME !!!!!!!!
@@ -1615,9 +1626,11 @@ async function getSnvindelByTerm(ds, term, genome, q) {
 	throw 'unknown queries.snvindel method'
 }
 async function getSvfusionByTerm(ds, term, genome, q) {
-	const arg = {}
-	if (q.filter0) arg.filter0 = q.filter0 // hidden filter
-	if (q.filter) arg.filterObj = q.filter // pp filter, must change key name to "filterObj" to be consistent with mds3 client
+	const arg = {
+		addFormatValues: true,
+		filter0: q.filter0, // hidden filter
+		filterObj: q.filter // pp filter, must change key name to "filterObj" to be consistent with mds3 client
+	}
 	if (ds.queries.svfusion.byrange) {
 		await mayMapGeneName2coord(term, genome)
 		// tw.term.chr/start/stop are set
