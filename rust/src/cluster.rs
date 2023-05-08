@@ -213,11 +213,12 @@ fn euclidean_distance3(
 fn sort_elements(
     coordinates: &Matrix<f64, Dyn, Dyn, VecStorage<f64, Dyn, Dyn>>,
     cluster_method: &String,
-) -> Vec<Steps> {
+) -> (Vec<Steps>, Vec<usize>) {
     //fn sort_elements(coordinates: &Vec<Vec<f64>>) -> Vec<usize> {
     //fn sort_elements(coordinates: &Vec<Array1<f64>>) -> Vec<usize> {
     let new_now = Instant::now();
     let mut steps_vec = Vec::<Steps>::new();
+    let mut sorted_elements = Vec::<usize>::new();
     if coordinates.len() > 0 {
         //let mut condensed = vec![];
         //for row in 0..coordinates.len() - 1 {
@@ -270,12 +271,18 @@ fn sort_elements(
                 cluster2: step.cluster2,
                 dissimilarity: step.dissimilarity,
                 size: step.size,
-            })
+            });
+            if step.cluster1 < coordinates.nrows() {
+                sorted_elements.push(step.cluster1);
+            }
+            if step.cluster2 < coordinates.nrows() {
+                sorted_elements.push(step.cluster2);
+            }
         }
     } else {
         panic!("The dissimilarity matrix length cannot be zero");
     }
-    steps_vec
+    (steps_vec, sorted_elements)
 }
 
 fn main() {
@@ -295,7 +302,7 @@ fn main() {
                     //println!("json_string:{:?}", json_string["matrix"]);
                     let matrix = &json_string["matrix"]; // JSON key that stores the 2D matrix
                     let row_string_search: &JsonValue = &json_string["row_names"];
-                    //println!("row_string_search:{}", row_string_search);
+                    println!("row_string_search:{:?}", row_string_search);
                     let mut row_names = Vec::<String>::new();
                     match row_string_search.as_str() {
                         Some(row_string_se) => {
@@ -308,13 +315,12 @@ fn main() {
                                 .into_iter()
                                 .map(|x| x.to_string())
                                 .collect::<Vec<String>>(); // Row names
+                            println!("row_names:{:?}", row_names);
                         }
                         None => {}
                     }
-                    //println!("row_names:{:?}", row_names);
-
                     let col_string_search: &JsonValue = &json_string["col_names"];
-                    //println!("col_string_search:{}", col_string_search);
+                    println!("col_string_search:{:?}", col_string_search);
                     let mut col_names = Vec::<String>::new();
                     match col_string_search.as_str() {
                         Some(col_string_se) => {
@@ -327,10 +333,10 @@ fn main() {
                                 .into_iter()
                                 .map(|x| x.to_string())
                                 .collect::<Vec<String>>(); // Col names
+                            println!("col_names:{:?}", col_names);
                         }
                         None => {}
                     }
-                    //println!("col_names:{:?}", col_names);
 
                     let mut cluster_method: String = "Complete".to_string();
                     let cluster_method_search: &JsonValue = &json_string["cluster_method"];
@@ -353,11 +359,11 @@ fn main() {
                     }
                     //println!("cluster_method:{}", cluster_method);
 
-                    let _plot_image;
+                    let plot_image;
                     let plot_image_option = &json_string["plot_image"].as_bool();
                     match plot_image_option {
-                        Some(plot_image_op) => _plot_image = plot_image_op.to_owned(),
-                        None => _plot_image = false,
+                        Some(plot_image_op) => plot_image = plot_image_op.to_owned(),
+                        None => plot_image = false,
                     }
                     //println!("plot_image:{}", plot_image);
 
@@ -406,7 +412,8 @@ fn main() {
 
                     // Build our condensed matrix by computinghe dissimilarity between all
                     // possible coordinate pairs.
-                    let col_steps = sort_elements(&input_matrix, &cluster_method);
+                    let (col_steps, sorted_col_elements) =
+                        sort_elements(&input_matrix, &cluster_method);
                     let mut col_output_string = "[".to_string();
                     for i in 0..col_steps.len() {
                         col_output_string += &serde_json::to_string(&col_steps[i]).unwrap();
@@ -416,7 +423,8 @@ fn main() {
                     }
                     col_output_string += &"]".to_string();
                     println!("colSteps:{:?}", col_output_string);
-                    let row_steps = sort_elements(&input_matrix.transpose(), &cluster_method);
+                    let (row_steps, sorted_row_elements) =
+                        sort_elements(&input_matrix.transpose(), &cluster_method);
                     let mut row_output_string = "[".to_string();
                     for i in 0..row_steps.len() {
                         row_output_string += &serde_json::to_string(&row_steps[i]).unwrap();
@@ -428,31 +436,22 @@ fn main() {
                     println!("rowSteps:{:?}", row_output_string);
                     //let mut sorted_row_names = Vec::<String>::new();
                     //let mut sorted_col_names = Vec::<String>::new();
-                    //
-                    //match row_string_search.as_str() {
-                    //    Some(_row_string_se) => {
-                    //        sorted_row_names = sorted_row_elements
-                    //            .clone()
-                    //            .into_iter()
-                    //            .map(|x| row_names[x].clone())
-                    //            .collect::<Vec<String>>();
-                    //    }
-                    //    None => {}
-                    //}
-                    //
-                    //match col_string_search.as_str() {
-                    //    Some(_col_string_se) => {
-                    //        sorted_col_names = sorted_col_elements
-                    //            .clone()
-                    //            .into_iter()
-                    //            .map(|x| col_names[x].clone())
-                    //            .collect::<Vec<String>>();
-                    //    }
-                    //    None => {}
-                    //}
-                    ////println!("sorted_row_names:{:?}", sorted_row_names);
-                    ////println!("sorted_col_names:{:?}", sorted_col_names);
-                    //
+
+                    let sorted_row_names = sorted_row_elements
+                        .clone()
+                        .into_iter()
+                        .map(|x| row_names[x].clone())
+                        .collect::<Vec<String>>();
+
+                    let sorted_col_names = sorted_col_elements
+                        .clone()
+                        .into_iter()
+                        .map(|x| col_names[x].clone())
+                        .collect::<Vec<String>>();
+
+                    println!("sorted_row_names:{:?}", sorted_row_names);
+                    println!("sorted_col_names:{:?}", sorted_col_names);
+
                     //let mut sorted_col_coordinates_string = "[".to_string();
                     //for i in 0..sorted_col_coordinates.len() {
                     //    sorted_col_coordinates_string +=
@@ -474,20 +473,20 @@ fn main() {
                     //}
                     //sorted_row_coordinates_string += &"]".to_string();
                     ////println!("sorted_row_coordinates:{:?}", sorted_row_coordinates_string);
-                    //if plot_image == true {
-                    //    let sorted_matrix =
-                    //        sort_matrix(sorted_col_elements, sorted_row_elements, &input_matrix);
-                    //    let sorted_matrix_transpose = sorted_matrix.transpose();
-                    //    //println!(
-                    //    //    "sorted_matrix:{:?}",
-                    //    //    &serde_json::to_string(&sorted_matrix_transpose).unwrap()
-                    //    //);
-                    //    let _plot_result = plot_matrix(
-                    //        &sorted_matrix_transpose,
-                    //        sorted_row_names,
-                    //        sorted_col_names,
-                    //    );
-                    //}
+                    if plot_image == true {
+                        let sorted_matrix =
+                            sort_matrix(sorted_col_elements, sorted_row_elements, &input_matrix);
+                        let sorted_matrix_transpose = sorted_matrix.transpose();
+                        //println!(
+                        //    "sorted_matrix:{:?}",
+                        //    &serde_json::to_string(&sorted_matrix_transpose).unwrap()
+                        //);
+                        let _plot_result = plot_matrix(
+                            &sorted_matrix_transpose,
+                            sorted_row_names,
+                            sorted_col_names,
+                        );
+                    }
                 }
                 Err(error) => println!("Incorrect json: {}", error),
             }
