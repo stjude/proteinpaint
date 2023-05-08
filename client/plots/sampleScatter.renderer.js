@@ -455,7 +455,7 @@ export function setRenderers(self) {
 					.insert('div')
 					.style('display', display)
 					.style('margin', '20px')
-				icon_functions['search'](searchDiv, { handler: e => self.searchSample(e, chart) })
+				icon_functions['search'](searchDiv, { handler: e => self.searchSample(e) })
 			}
 			const lassoDiv = toolsDiv
 				.insert('div')
@@ -476,8 +476,13 @@ export function setRenderers(self) {
 			const zoom = d3zoom()
 				.scaleExtent([0.5, 10])
 				.on('zoom', handleZoom)
+				.filter(event => {
+					if (event.type === 'wheel') return event.ctrlKey
+					return true
+				})
 
 			mainG.call(zoom)
+
 			const s = self.settings
 			function handleZoom(event) {
 				// create new scale ojects based on event
