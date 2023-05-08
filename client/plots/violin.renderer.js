@@ -198,7 +198,7 @@ export default function violinRenderer(self) {
 		g.call(
 			(isH ? axisTop : axisLeft)()
 				.scale(svg.axisScale)
-				.tickFormat(settings.unit === 'log' ? d3format('.2f') : null)
+				.tickFormat(settings.unit === 'log' ? d3format('.3f') : null)
 				.tickValues(ticks)
 		)
 
