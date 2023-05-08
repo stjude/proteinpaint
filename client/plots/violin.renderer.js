@@ -452,17 +452,33 @@ function getLegendGrps(self) {
 		legendGrps.push({ name, items })
 	}
 
-	if (self.data.uncomputableValueObj != null) {
-		const items = []
-		for (const [k, v] of Object.entries(self.data.uncomputableValueObj)) {
-			items.push({
-				text: `${k}, n = ${v}`,
-				noIcon: true
-			})
+	let name, title
+	if (self.data.uncomputableValueObj) {
+		for (const k in t1.term.values) {
+			if (self.data.uncomputableValueObj[t1.term.values[k].label]) {
+				const items = []
+				items.push({
+					text: `${t1.term.values[k].label}, n = ${self.data.uncomputableValueObj[t1.term.values[k].label]}`,
+					noIcon: true
+				})
+				title = `${t1.term.name}`
+				name = `<span style="${headingStyle}">${title}</span>`
+				legendGrps.push({ name, items })
+			}
 		}
-		const title = t1.q.mode && t1.q.mode === 'continuous' ? `${t1.term.name}` : `${t2.term.name}`
-		const name = `<span style="${headingStyle}">${title}</span>`
-		legendGrps.push({ name, items })
+
+		for (const k in t2.term.values) {
+			if (self.data.uncomputableValueObj[t2.term.values[k].label]) {
+				const items = []
+				items.push({
+					text: `${t2.term.values[k].label}, n = ${self.data.uncomputableValueObj[t2.term.values[k].label]}`,
+					noIcon: true
+				})
+				title = `${t2.term.name}`
+				name = `<span style="${headingStyle}">${title}</span>`
+				legendGrps.push({ name, items })
+			}
+		}
 	}
 
 	if (t2) {
