@@ -447,6 +447,7 @@ async function trigger_getpercentile(q, res, ds) {
 }
 
 async function trigger_getdescrstats(q, res, ds) {
+	// console.log(426, q)
 	const term = ds.cohort.termdb.q.termjsonByOneid(q.tid)
 	if (!term) throw 'invalid termid'
 	if (term.type != 'float' && term.type != 'integer') throw 'not numerical term'
@@ -469,6 +470,7 @@ async function trigger_getdescrstats(q, res, ds) {
 		}
 		values.push(Number(value))
 	}
+	// console.log(443, values)
 
 	// compute statistics
 	// total
