@@ -113,38 +113,21 @@ export function setInteractivity(self) {
 		const menu = new Menu({ padding: '5px' })
 		const div = menu.d.append('div')
 
-		if (!hidden) {
-			div
-				.append('div')
-				.attr('class', 'sja_menuoption sja_sharp_border')
-				.text('Hide')
-				.on('click', () => {
-					self.hideCategory(legendG, tw, key, true)
-					menu.hide()
-					const config = {}
-					config[name] = tw
-					self.app.dispatch({
-						type: 'plot_edit',
-						id: self.id,
-						config
-					})
+		div
+			.append('div')
+			.attr('class', 'sja_menuoption sja_sharp_border')
+			.text(hidden ? 'Show' : 'Hide')
+			.on('click', () => {
+				self.hideCategory(legendG, tw, key, !hidden)
+				menu.hide()
+				const config = {}
+				config[name] = tw
+				self.app.dispatch({
+					type: 'plot_edit',
+					id: self.id,
+					config
 				})
-		} else
-			div
-				.append('div')
-				.attr('class', 'sja_menuoption sja_sharp_border')
-				.text('Show')
-				.on('click', () => {
-					self.hideCategory(legendG, tw, key, false)
-					menu.hide()
-					const config = {}
-					config[name] = tw
-					self.app.dispatch({
-						type: 'plot_edit',
-						id: self.id,
-						config
-					})
-				})
+			})
 		div
 			.append('div')
 			.attr('class', 'sja_menuoption sja_sharp_border')
