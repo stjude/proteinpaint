@@ -418,68 +418,48 @@ export function createNumericScale(self, settings, isH) {
 }
 
 function getLegendGrps(self) {
-	const legendGrps = []
-	const t1 = self.config.term
-	const t2 = self.config.term2
-	const headingStyle = 'color: #aaa; font-weight: 400'
+	const legendGrps = [],
+		t1 = self.config.term,
+		t2 = self.config.term2,
+		headingStyle = 'color: #aaa; font-weight: 400'
+	let title, name
 
-	// descriptive statistics
-	if (t1.q.descrStats) {
-		// term1 has descriptive stats
-		const items = t1.q.descrStats.map(stat => {
-			return {
-				text: `${stat.label}: ${stat.value}`,
-				noIcon: true
-			}
-		})
-		// title of descriptive stats should include the term1 name if term2 is present
-		const title = t2 ? `Descriptive statistics: ${t1.term.name}` : 'Descriptive statistics'
-		const name = `<span style="${headingStyle}">${title}</span>`
-		legendGrps.push({ name, items })
-	}
-	if (t2?.q.descrStats) {
-		// term2 has descriptive stats
-		const items = t2.q.descrStats.map(stat => {
-			return {
-				text: `${stat.label}: ${stat.value}`,
-				noIcon: true
-			}
-		})
-		// title of descriptive stats will include the term2 name
-		// because two terms are present
-		const title = `Descriptive statistics: ${t2.term.name}`
-		const name = `<span style="${headingStyle}">${title}</span>`
-		legendGrps.push({ name, items })
-	}
-
-	let name, title
-	if (self.data.uncomputableValueObj) {
-		for (const k in t1.term.values) {
-			if (self.data.uncomputableValueObj[t1.term.values[k].label]) {
-				const items = []
-				items.push({
-					text: `${t1.term.values[k].label}, n = ${self.data.uncomputableValueObj[t1.term.values[k].label]}`,
+	const addDescriptiveStats = term => {
+		if (term?.q.descrStats) {
+			const items = term.q.descrStats.map(stat => {
+				return {
+					text: `${stat.label}: ${stat.value}`,
 					noIcon: true
-				})
-				title = `${t1.term.name}`
-				name = `<span style="${headingStyle}">${title}</span>`
-				legendGrps.push({ name, items })
-			}
+				}
+			})
+			title = t2 ? `Descriptive statistics: ${term.term.name}` : 'Descriptive statistics'
+			name = `<span style="${headingStyle}">${title}</span>`
+			legendGrps.push({ name, items })
 		}
+	}
 
-		for (const k in t2.term.values) {
-			if (self.data.uncomputableValueObj[t2.term.values[k].label]) {
-				const items = []
-				items.push({
-					text: `${t2.term.values[k].label}, n = ${self.data.uncomputableValueObj[t2.term.values[k].label]}`,
-					noIcon: true
-				})
-				title = `${t2.term.name}`
-				name = `<span style="${headingStyle}">${title}</span>`
-				legendGrps.push({ name, items })
+	addDescriptiveStats(t1)
+	addDescriptiveStats(t2)
+
+	const addUncomputableValues = term => {
+		if (term?.term.values) {
+			for (const k in term.term.values) {
+				if (self.data.uncomputableValueObj[term.term.values[k].label]) {
+					const items = []
+					items.push({
+						text: `${term.term.values[k].label}, n = ${self.data.uncomputableValueObj[term.term.values[k].label]}`,
+						noIcon: true
+					})
+					title = `${term.term.name}`
+					name = `<span style="${headingStyle}">${title}</span>`
+					legendGrps.push({ name, items })
+				}
 			}
 		}
 	}
+
+	addUncomputableValues(t1)
+	addUncomputableValues(t2)
 
 	if (t2) {
 		if (t2.q.hiddenValues && Object.entries(t2.q.hiddenValues).length != 0) {
@@ -492,8 +472,8 @@ function getLegendGrps(self) {
 					hiddenOpacity: 1
 				})
 			}
-			const title = `${t2.term.name}`
-			const name = `<span style="${headingStyle}">${title}</span>`
+			title = `${t2.term.name}`
+			name = `<span style="${headingStyle}">${title}</span>`
 			legendGrps.push({ name, items })
 		}
 	}

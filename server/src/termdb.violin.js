@@ -152,8 +152,8 @@ function divideValues(q, data, term, overlayTerm) {
 	const useLog = q.unit == 'log'
 
 	const key2values = new Map()
-	let min = null,
-		max = null
+	let min = Infinity
+	let max = -Infinity
 
 	//create object to store uncomputable values and label
 	const uncomputableValueObj = {}
@@ -161,7 +161,6 @@ function divideValues(q, data, term, overlayTerm) {
 
 	for (const [c, v] of Object.entries(data.samples)) {
 		//if there is no value for term then skip that.
-		// const value = v[term.id]?.value
 		const value = roundValue(v[term.id]?.value, 1)
 
 		if (!Number.isFinite(value)) continue
@@ -169,7 +168,7 @@ function divideValues(q, data, term, overlayTerm) {
 		if (term.values?.[value]?.uncomputable) {
 			//skip these values from rendering in plot but show in legend as uncomputable categories
 			const label = term.values[value].label // label of this uncomputable category
-			uncomputableValueObj[label] = 1 + (uncomputableValueObj[label] || 0)
+			uncomputableValueObj[label] = (uncomputableValueObj[label] || 0) + 1
 			continue
 		}
 
@@ -178,13 +177,8 @@ function divideValues(q, data, term, overlayTerm) {
 			continue
 		}
 
-		if (min == null) {
-			min = value
-			max = value
-		} else {
-			min = Math.min(min, value)
-			max = Math.max(max, value)
-		}
+		if (min > value) min = value
+		if (max < value) max = value
 
 		if (useLog === 'log') {
 			if (min === 0) min = Math.max(min, value)
@@ -194,7 +188,7 @@ function divideValues(q, data, term, overlayTerm) {
 			if (!v[(overlayTerm?.id)] || overlayTerm.term.values[(v[overlayTerm.id]?.key)]?.uncomputable) {
 				// if there is no value for q.divideTw then skip this
 				const label = overlayTerm.term.values[(v[overlayTerm.id]?.value)]?.label // label of this uncomputable category
-				uncomputableValueObj[label] = 1 + (uncomputableValueObj[label] || 0)
+				uncomputableValueObj[label] = (uncomputableValueObj[label] || 0) + 1
 				continue
 			}
 
