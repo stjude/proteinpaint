@@ -155,7 +155,6 @@ function divideValues(q, data, term, overlayTerm) {
 	let min = Infinity
 	let max = -Infinity
 
-	console.log(term)
 	//create object to store uncomputable values and label
 	const uncomputableValueObj = {}
 	let skipNonPositiveCount = 0 // if useLog=true, record number of <=0 values skipped
@@ -166,7 +165,6 @@ function divideValues(q, data, term, overlayTerm) {
 
 		if (!Number.isFinite(value)) continue
 
-		// console.log(term.values?.[value])
 		if (term.values?.[value]?.uncomputable) {
 			//skip these values from rendering in plot but show in legend as uncomputable categories
 			const label = term.values[value].label // label of this uncomputable category
