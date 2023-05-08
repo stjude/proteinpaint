@@ -185,7 +185,7 @@ export function setRenderers(self) {
 						.append('text')
 						.attr(
 							'transform',
-							`translate(${self.axisOffset.x + self.settings.svgw / 2}, ${self.settings.svgh + self.axisOffset.y + 70})`
+							`translate(${self.axisOffset.x + self.settings.svgw / 2}, ${self.settings.svgh + self.axisOffset.y + 65})`
 						)
 						.attr('text-anchor', 'middle')
 						.text(chart.id)
