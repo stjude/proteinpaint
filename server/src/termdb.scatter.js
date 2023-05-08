@@ -190,13 +190,12 @@ async function colorAndShapeSamples(refSamples, cohortSamples, data, q) {
 			console.log(JSON.stringify(sample) + ' not in the database or filtered')
 			continue
 		}
-		console.log(dbSample)
 		let divideBy = 'Default'
 		if (q.divideByTW) {
 			if (q.divideByTW.term.type == 'geneVariant')
 				divideBy = getMutation(true, dbSample, q.divideByTW) || getMutation(false, dbSample, q.divideByTW)
 			else {
-				const key = dbSample[q.divideByTW.term.id || q.divideByTW.term.name]?.value
+				const key = dbSample[q.divideByTW.term.id || q.divideByTW.term.name]?.key
 				divideBy = q.divideByTW.term.values[key]?.label || key
 			}
 		}

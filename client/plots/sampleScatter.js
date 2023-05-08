@@ -175,7 +175,8 @@ class Scatter {
 				usecase: { target: 'sampleScatter', detail: 'term0' },
 				title: 'Categories to divide by',
 				label: 'Divide by',
-				vocabApi: this.app.vocabApi
+				vocabApi: this.app.vocabApi,
+				numericEditMenuVersion: ['discrete']
 			},
 
 			{
