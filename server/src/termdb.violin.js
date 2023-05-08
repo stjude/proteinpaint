@@ -162,7 +162,6 @@ function divideValues(q, data, term, overlayTerm) {
 	for (const [c, v] of Object.entries(data.samples)) {
 		//if there is no value for term then skip that.
 		const value = roundValue(v[term.id]?.value, 1)
-
 		if (!Number.isFinite(value)) continue
 
 		if (term.values?.[value]?.uncomputable) {
