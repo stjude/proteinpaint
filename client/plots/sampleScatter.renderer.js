@@ -188,7 +188,7 @@ export function setRenderers(self) {
 							`translate(${self.axisOffset.x + self.settings.svgw / 2}, ${self.settings.svgh + self.axisOffset.y + 65})`
 						)
 						.attr('text-anchor', 'middle')
-						.text(chart.id)
+						.text(`${chart.id}, n=${chart.cohortSamples.length}`)
 				labelsG
 					.append('text')
 					.attr(
