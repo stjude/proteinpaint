@@ -56,12 +56,19 @@ tape('Data download with no selected terms', test => {
 
 	function runTests(dataDownload) {
 		const ddDom = dataDownload.Inner.dom
+
 		test.equal(ddDom.terms.node().querySelectorAll('.term_name_btn').length, 0, `Should render no term pills`)
+		test.equal(
+			ddDom.terms.node().querySelectorAll('.sja_filter_tag_btn.add_term_btn').length,
+			1,
+			`Should render 1 'Add variable' button`
+		)
 		test.equal(
 			ddDom.submitNote.node().innerText,
 			`no sample data`,
 			`Should render "no sample data" next to Download button`
 		)
+		test.ok(ddDom.submitBtn.node().disabled, `Should show Download button as disabled`)
 
 		if (test._ok) dataDownload.Inner.app.destroy()
 		test.end()
@@ -91,6 +98,7 @@ tape('Data download with terms selected', test => {
 
 	function runTests(dataDownload) {
 		const ddDom = dataDownload.Inner.dom
+
 		test.equal(
 			ddDom.terms.node().querySelectorAll('.term_name_btn').length,
 			terms.length,
