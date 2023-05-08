@@ -285,7 +285,7 @@ function assignGeneVariantValue(dbSample, sample, tw, categoryMap, category) {
 
 		for (const mutation of mutations) {
 			const class_info = mclass[mutation.class]
-			value = getCategory(mutation)
+			const value = getCategory(mutation)
 			sample.cat_info[category].push(mutation)
 
 			let mapValue
