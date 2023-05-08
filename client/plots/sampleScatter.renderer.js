@@ -458,7 +458,7 @@ export function setRenderers(self) {
 					.insert('div')
 					.style('display', display)
 					.style('margin', '20px')
-				icon_functions['search'](searchDiv, { handler: e => self.searchSample(e) })
+				icon_functions['search'](searchDiv, { handler: e => self.searchSample(e, chart) })
 			}
 			const lassoDiv = toolsDiv
 				.insert('div')
