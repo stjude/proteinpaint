@@ -304,38 +304,16 @@ fn main() {
                     let row_string_search: &JsonValue = &json_string["row_names"];
                     println!("row_string_search:{:?}", row_string_search);
                     let mut row_names = Vec::<String>::new();
-                    match row_string_search.as_str() {
-                        Some(row_string_se) => {
-                            let row_string = row_string_se
-                                .replace("[", "")
-                                .replace("]", "")
-                                .replace("\n", "");
-                            row_names = row_string
-                                .split(",")
-                                .into_iter()
-                                .map(|x| x.to_string())
-                                .collect::<Vec<String>>(); // Row names
-                            println!("row_names:{:?}", row_names);
-                        }
-                        None => {}
+                    for i in 0..row_string_search.len() {
+                        row_names.push(row_string_search[i].to_string())
                     }
+
+                    //println!("row_names:{:?}", row_names);
                     let col_string_search: &JsonValue = &json_string["col_names"];
                     println!("col_string_search:{:?}", col_string_search);
                     let mut col_names = Vec::<String>::new();
-                    match col_string_search.as_str() {
-                        Some(col_string_se) => {
-                            let col_string = col_string_se
-                                .replace("[", "")
-                                .replace("]", "")
-                                .replace("\n", "");
-                            col_names = col_string
-                                .split(",")
-                                .into_iter()
-                                .map(|x| x.to_string())
-                                .collect::<Vec<String>>(); // Col names
-                            println!("col_names:{:?}", col_names);
-                        }
-                        None => {}
+                    for i in 0..col_string_search.len() {
+                        col_names.push(col_string_search[i].to_string())
                     }
 
                     let mut cluster_method: String = "Complete".to_string();
