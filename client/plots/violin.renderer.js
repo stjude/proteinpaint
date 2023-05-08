@@ -192,11 +192,14 @@ export default function violinRenderer(self) {
 		// <g>: holder of numeric axis
 		const g = svg.svgG.append('g')
 		// .style('font-size', '15')
+
+		const ticks = svg.axisScale.ticks(3).filter(tick => tick > 0)
+
 		g.call(
 			(isH ? axisTop : axisLeft)()
 				.scale(svg.axisScale)
 				.tickFormat(settings.unit === 'log' ? d3format('.2f') : null)
-				.ticks(3)
+				.tickValues(ticks)
 		)
 
 		if (self.opts.mode != 'minimal') {

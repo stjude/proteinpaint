@@ -1,6 +1,7 @@
 import { filterJoin, getFilterItemByTag } from '../filter/filter'
 import { renderTable } from '#dom/table'
 import { to_svg } from '#src/client'
+import roundValue from '../../server/shared/roundValue'
 
 export function setInteractivity(self) {
 	self.download = () => {
@@ -137,7 +138,7 @@ export function setInteractivity(self) {
 		for (const [c, k] of Object.entries(data.samples)) {
 			const sampleIdObj = {}
 			if (data.refs.bySampleId[c]) {
-				sampleIdObj[data.refs.bySampleId[c]] = k[term.$id].value
+				sampleIdObj[data.refs.bySampleId[c]] = roundValue(k[term.$id].value, 1)
 			}
 			sampleIdArr.push([{ value: Object.keys(sampleIdObj) }, { value: Object.values(sampleIdObj) }])
 		}

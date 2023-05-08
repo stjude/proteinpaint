@@ -323,18 +323,19 @@ function createCanvasImg(q, result) {
 			? plot.values.forEach(i => {
 					ctx.beginPath()
 					if (q.orientation == 'horizontal') {
-						ctx.moveTo(+axisScale(i), 0)
-						ctx.lineTo(+axisScale(i), scaledRadius * 2)
+						ctx.moveTo(+axisScale(roundValue(i), 1), 0)
+						ctx.lineTo(+axisScale(roundValue(i), 1), scaledRadius * 2)
 					} else {
-						ctx.moveTo(0, +axisScale(i))
-						ctx.lineTo(scaledRadius * 2, +axisScale(i))
+						ctx.moveTo(0, +axisScale(roundValue(i), 1))
+						ctx.lineTo(scaledRadius * 2, +axisScale(roundValue(i), 1))
 					}
 					ctx.stroke()
 			  })
 			: plot.values.forEach(i => {
 					ctx.beginPath()
-					if (q.orientation === 'horizontal') ctx.arc(+axisScale(i), q.radius, scaledRadius, 0, arcEndAngle)
-					else ctx.arc(q.radius, +axisScale(i), scaledRadius, 0, arcEndAngle)
+					if (q.orientation === 'horizontal')
+						ctx.arc(+axisScale(roundValue(i), 1), q.radius, scaledRadius, 0, arcEndAngle)
+					else ctx.arc(q.radius, +axisScale(roundValue(i), 1), scaledRadius, 0, arcEndAngle)
 					ctx.fill()
 					ctx.stroke()
 			  })
