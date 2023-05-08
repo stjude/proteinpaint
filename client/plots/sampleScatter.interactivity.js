@@ -112,7 +112,6 @@ export function setInteractivity(self) {
 		const hidden = tw.q.hiddenValues ? key in tw.q.hiddenValues : false
 		const menu = new Menu({ padding: '5px' })
 		const div = menu.d.append('div')
-
 		div
 			.append('div')
 			.attr('class', 'sja_menuoption sja_sharp_border')

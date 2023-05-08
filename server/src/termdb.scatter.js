@@ -276,7 +276,6 @@ function processSample(dbSample, sample, tw, categoryMap, category) {
 			else categoryMap[value].sampleCount++
 		}
 	}
-	return
 }
 
 function assignGeneVariantValue(dbSample, sample, tw, categoryMap, category) {
