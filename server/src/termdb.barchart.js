@@ -252,12 +252,12 @@ function processGeneVariantSamples(map, bins, data, samplesMap, ds) {
 					item[`key1`] = value1.key
 					item[`val1`] = value1.value
 
-					const byOrigin = ds.assayAvailability?.byDt?.[v1.dt]?.byOrigin
+					const byOrigin = ds.assayAvailability?.byDt?.[v2.dt]?.byOrigin
 					if (byOrigin) {
-						item.key0 = item.val0 = (byOrigin[v1.origin]?.label || v1.origin) + ' ' + dt2label[v1.dt]
+						item.key0 = item.val0 = (byOrigin[v2.origin]?.label || v2.origin) + ' ' + dt2label[v2.dt]
 					} else {
 						// not by origin
-						item.key0 = item.val0 = dt2label[v1.dt]
+						item.key0 = item.val0 = dt2label[v2.dt]
 					}
 
 					item[`key2`] = mclass[v2.class].label
