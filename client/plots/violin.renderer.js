@@ -196,7 +196,7 @@ export default function violinRenderer(self) {
 			(isH ? axisTop : axisLeft)()
 				.scale(svg.axisScale)
 				.tickFormat(settings.unit === 'log' ? d3format('.2f') : null)
-				.ticks(4)
+				.ticks(3)
 		)
 
 		if (self.opts.mode != 'minimal') {
@@ -444,7 +444,7 @@ function getLegendGrps(self) {
 	const addUncomputableValues = term => {
 		if (term?.term.values) {
 			for (const k in term.term.values) {
-				if (self.data.uncomputableValueObj[term.term.values[k].label]) {
+				if (self.data.uncomputableValueObj?.[term.term.values[k]?.label]) {
 					const items = []
 					items.push({
 						text: `${term.term.values[k].label}, n = ${self.data.uncomputableValueObj[term.term.values[k].label]}`,
