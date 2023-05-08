@@ -452,13 +452,13 @@ export function setRenderers(self) {
 				.style('margin', '20px')
 				.attr('name', 'sjpp-zoom-out-btn') //For unit tests
 			icon_functions['zoomOut'](zoomOutDiv, { handler: zoomOut })
-			const canSearch = chart.cohortSamples.length > 0 && 'sample' in chart.cohortSamples[0]
+			const canSearch = chart.cohortSamples.length > 0 && 'sample' in chart.cohortSamples[0] && !self.config.term0
 			if (canSearch) {
 				const searchDiv = toolsDiv
 					.insert('div')
 					.style('display', display)
 					.style('margin', '20px')
-				icon_functions['search'](searchDiv, { handler: e => self.searchSample(e) })
+				icon_functions['search'](searchDiv, { handler: e => self.searchSample(e, chart) })
 			}
 			const lassoDiv = toolsDiv
 				.insert('div')
