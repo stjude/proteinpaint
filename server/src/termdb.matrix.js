@@ -196,12 +196,15 @@ output:
 */
 async function getSampleData_dictionaryTerms(q, termWrappers) {
 	if (!termWrappers.length) return { samples: {}, refs: { byTermId: {} } }
-
+	if (q.ds?.cohort?.db) {
+		// dataset uses server-side sqlite db, must use this method for dictionary terms
+		return await getSampleData_dictionaryTerms_termdb(q, termWrappers)
+	}
 	if (q.ds?.variant2samples?.get) {
-		// call mds3 dataset method
+		// ds is not using sqlite db but has v2s method
 		return await getSampleData_dictionaryTerms_v2s(q, termWrappers)
 	}
-	return await getSampleData_dictionaryTerms_termdb(q, termWrappers)
+	throw 'unknown method for dictionary terms'
 }
 
 export async function getSampleData_dictionaryTerms_termdb(q, termWrappers) {
