@@ -60,8 +60,8 @@ class Scatter {
 			? opts.holder
 			: this.opts.holder.append('div').style('display', 'inline-block')
 		this.mainDiv = controlsDiv.append('div').style('display', 'inline-block')
-
-		this.axisOffset = { x: 80, y: 30 }
+		const offsetX = this.opts.parent?.type == 'summary' ? 80 : 50
+		this.axisOffset = { x: offsetX, y: 30 }
 
 		this.dom = {
 			header: this.opts.header,
@@ -73,6 +73,7 @@ class Scatter {
 
 		this.settings = {}
 		if (this.dom.header) this.dom.header.html('Scatter Plot')
+		console.log(this.opts)
 		await this.setControls()
 		setInteractivity(this)
 		setRenderers(this)

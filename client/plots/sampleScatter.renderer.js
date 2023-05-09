@@ -80,7 +80,7 @@ export function setRenderers(self) {
 		svg
 			.transition()
 			.duration(s.duration)
-			.attr('width', s.svgw + 500)
+			.attr('width', s.svgw + (self.config.shapeTW ? 500 : 300))
 			.attr('height', Math.max(s.svgh + 100, legendHeight)) //leaving some space for top/bottom padding and y axis
 
 		/* eslint-disable */
