@@ -2,6 +2,7 @@ const path = require('path')
 const { merge } = require('webpack-merge')
 const nodeExternals = require('webpack-node-externals')
 const fs = require('fs')
+const TerserPlugin = require('terser-webpack-plugin')
 
 let babelrc
 try {
@@ -67,6 +68,18 @@ module.exports = env => {
 				output: {
 					path: path.join(__dirname, './'),
 					filename: 'server.js'
+				},
+				optimization: {
+					minimizer: [
+						new TerserPlugin({
+							extractComments: false,
+							terserOptions: {
+								format: {
+									comments: false
+								}
+							}
+						})
+					]
 				}
 			})
 

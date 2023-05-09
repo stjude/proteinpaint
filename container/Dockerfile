@@ -145,7 +145,7 @@ COPY --from=ppserverdeps /home/root/pp/app/active /home/root/pp/app/active
 WORKDIR /home/root/pp/app/active
 COPY ./app-server.js ./
 EXPOSE 3000
-CMD ["sh", "-c", "node app-server.js"]
+CMD ["sh", "-c", "node --enable-source-maps app-server.js"]
 # CMD ["sleep", "3600"]
 
 #################
@@ -193,5 +193,5 @@ WORKDIR /home/root/pp/app/active
 COPY ./app-full.js ./
 COPY public ./public
 EXPOSE 3000
-CMD ["sh", "-c", "node app-full.js"]
+CMD ["sh", "-c", "node --enable-source-maps app-full.js"]
 # CMD ["sleep", "3600"]
