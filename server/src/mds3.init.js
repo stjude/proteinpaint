@@ -6,7 +6,16 @@ const { validate_variant2samples } = require('./mds3.variant2samples')
 const utils = require('./utils')
 const compute_mclass = require('./vcf.mclass').compute_mclass
 const serverconfig = require('./serverconfig')
-const { dtsnvindel, dtfusionrna, dtsv, mclassfusionrna, mclasssv } = require('#shared/common')
+const {
+	dtsnvindel,
+	dtfusionrna,
+	dtsv,
+	dtcnv,
+	mclassfusionrna,
+	mclasssv,
+	mclasscnvgain,
+	mclasscnvloss
+} = require('#shared/common')
 const { get_samples } = require('./termdb.sql')
 const { server_init_db_queries } = require('./termdb.server.init')
 const { barchart_data } = require('./termdb.barchart')
@@ -40,6 +49,9 @@ validate_query_snvindel
 	mayValidateSampleHeader
 validate_query_svfusion
 	svfusionByRangeGetter_file
+validate_query_geneCnv
+validate_query_cnv
+	cnvByRangeGetter_file
 validate_query_ld
 validate_query_geneExpression
 validate_query_singleSampleMutation
@@ -49,6 +61,7 @@ mayAdd_refseq2ensembl
 mayAdd_mayGetGeneVariantData
 	getSnvindelByTerm
 	getSvfusionByTerm
+	getCnvByTerm
 		mayMapGeneName2isoform
 		mayMapGeneName2coord
 	mayAddDataAvailability
@@ -70,6 +83,7 @@ export async function init(ds, genome, _servconfig, app = null, basepath = null)
 		await validate_query_snvindel(ds, genome)
 		await validate_query_svfusion(ds, genome)
 		await validate_query_geneCnv(ds, genome)
+		await validate_query_cnv(ds, genome)
 		await validate_query_ld(ds, genome)
 		await validate_query_geneExpression(ds, genome)
 		await validate_query_singleSampleMutation(ds, genome)
@@ -465,6 +479,7 @@ function sort_mclass(set) {
 }
 
 async function validate_query_geneCnv(ds, genome) {
+	// gene-level cnv, compared to .cnv{}
 	const q = ds.queries.geneCnv
 	if (!q) return
 	if (q.bygene) {
@@ -1080,6 +1095,22 @@ async function validate_query_svfusion(ds, genome) {
 	}
 }
 
+async function validate_query_cnv(ds, genome) {
+	// cnv segments, compared to geneCnv
+	const q = ds.queries.cnv
+	if (!q) return
+	if (!q.byrange) throw 'byrange missing from queries.cnv'
+	if (q.byrange) {
+		if (q.byrange.file) {
+			q.byrange.file = path.join(serverconfig.tpmasterdir, q.byrange.file)
+			q.byrange.get = await cnvByRangeGetter_file(ds, genome)
+			mayValidateSampleHeader(ds, q.byrange.samples, 'cnv.byrange')
+		} else {
+			throw 'unknown query method for cnv.byrange'
+		}
+	}
+}
+
 async function validate_query_ld(ds, genome) {
 	const q = ds.queries.ld
 	if (!q) return
@@ -1375,6 +1406,122 @@ export async function svfusionByRangeGetter_file(ds, genome) {
 	}
 }
 
+/*
+getter input:
+.rglst=[ { chr, start, stop} ]
+.tid2value, same as in bcf
+
+getter returns:
+list of cnv events,
+events are partially grouped
+represented as { dt, chr, start,stop,value,samples:[],mattr:{} }
+*/
+export async function cnvByRangeGetter_file(ds, genome) {
+	const q = ds.queries.cnv.byrange
+	if (q.file) {
+		await utils.validate_tabixfile(q.file)
+	} else if (q.url) {
+		q.dir = await utils.cache_index(q.url, q.indexURL)
+	} else {
+		throw 'file and url both missing on cnv.byrange{}'
+	}
+	q.nochr = await utils.tabix_is_nochr(q.file || q.url, null, genome)
+
+	{
+		const lines = await utils.get_header_tabix(q.file)
+		if (!lines[0]) throw 'header line missing from ' + q.file
+		const l = lines[0].split(' ')
+		if (l[0] != '#sample') throw 'header line not starting with #sample: ' + q.file
+		q.samples = l.slice(1).map(i => {
+			return { name: i }
+		})
+	}
+
+	// same parameter as snvindel.byrange.get()
+	return async param => {
+		if (!Array.isArray(param.rglst)) throw 'q.rglst[] is not array'
+		if (param.rglst.length == 0) throw 'q.rglst[] blank array'
+
+		const formatFilter = getFormatFilter(param)
+
+		let limitSamples
+		{
+			const lst = await mayLimitSamples(param, q.samples, ds)
+			if (lst) limitSamples = new Set(lst.map(i => i.name))
+		}
+
+		const cnvs = []
+
+		for (const r of param.rglst) {
+			await utils.get_lines_bigfile({
+				args: [q.file || q.url, (q.nochr ? r.chr.replace('chr', '') : r.chr) + ':' + r.start + '-' + r.stop],
+				dir: q.dir,
+				callback: line => {
+					const l = line.split('\t')
+					let j
+					try {
+						j = JSON.parse(l[3])
+					} catch (e) {
+						//console.log('cnv json err')
+						return
+					}
+					if (j.dt != dtcnv) {
+						//console.log('cnv invalid dt')
+						return
+					}
+
+					if (!Number.isFinite(j.value)) return
+
+					j.start = Number(l[1])
+					j.stop = Number(l[2])
+
+					j.class = j.value > 0 ? mclasscnvgain : mclasscnvloss
+
+					if (param.hiddenmclass && param.hiddenmclass.has(j.class)) return
+
+					if (j.sample && limitSamples) {
+						// to filter sample
+						if (!limitSamples.has(j.sample)) return
+					}
+
+					j.ssm_id = [r.chr, j.start, j.stop, j.value].join(ssmIdFieldsSeparator)
+
+					if (j.sample) {
+						// has sample, prepare the sample obj
+						// if the sample is skipped by format, then the event will be skipped
+
+						// for ds with sampleidmap, j.sample value should be integer
+						// XXX not guarding against file uses non-integer sample values in such case
+
+						const sampleObj = { sample_id: j.sample }
+						if (j.mattr) {
+							// mattr{} has sample-level attributes on this sv event, equivalent to FORMAT
+							if (formatFilter) {
+								// will do the same filtering as snvindel
+								for (const formatKey in formatFilter) {
+									const formatValue = formatKey in j.mattr ? j.mattr[formatKey] : unannotatedKey
+									if (formatFilter[formatKey].has(formatValue)) {
+										// sample is dropped by format filter
+										return
+									}
+								}
+							}
+							if (param.addFormatValues) {
+								// only attach format values when required
+								sampleObj.formatK2v = j.mattr
+							}
+						}
+						delete j.sample
+						j.samples = [sampleObj]
+					}
+					cnvs.push(j)
+				}
+			})
+		}
+		return cnvs
+	}
+}
+
 function mayAdd_mayGetGeneVariantData(ds, genome) {
 	if (!ds.queries.snvindel && !ds.queries.svfusion && !ds.queries.geneCnv) {
 		// no eligible data types
@@ -1434,6 +1581,10 @@ function mayAdd_mayGetGeneVariantData(ds, genome) {
 
 		if (ds.queries.svfusion) {
 			const lst = await getSvfusionByTerm(ds, tw.term, genome, q)
+			mlst.push(...lst)
+		}
+		if (ds.queries.cnv) {
+			const lst = await getCnvByTerm(ds, tw.term, genome, q)
 			mlst.push(...lst)
 		}
 
@@ -1638,6 +1789,20 @@ async function getSvfusionByTerm(ds, term, genome, q) {
 		return await ds.queries.svfusion.byrange.get(arg)
 	}
 	throw 'unknown queries.svfusion method'
+}
+async function getCnvByTerm(ds, term, genome, q) {
+	const arg = {
+		addFormatValues: true,
+		filter0: q.filter0, // hidden filter
+		filterObj: q.filter // pp filter, must change key name to "filterObj" to be consistent with mds3 client
+	}
+	if (ds.queries.cnv.byrange) {
+		await mayMapGeneName2coord(term, genome)
+		// tw.term.chr/start/stop are set
+		arg.rglst = [term]
+		return await ds.queries.cnv.byrange.get(arg)
+	}
+	throw 'unknown queries.cnv method'
 }
 async function getGenecnvByTerm(ds, term, genome, q) {
 	const arg = {
