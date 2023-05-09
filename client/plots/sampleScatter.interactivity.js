@@ -204,7 +204,8 @@ export function setInteractivity(self) {
 		})
 	}
 
-	self.searchSample = function(e, chart) {
+	self.searchSample = function(e) {
+		const chart = self.charts[0]
 		const menu = new Menu({ padding: '5px' })
 		let group
 		const input = menu.d.append('input').on('keyup', event => {
