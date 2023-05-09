@@ -16,7 +16,7 @@
     "reset": "npm install",
     "predev": "if [[ -d ./client ]]; then node ./client/test/import-specs.js name=? && rm -f ../public/bin/*proteinpaint.js; fi",
     "dev": "webpack --config=./webpack.config.js --env NODE_ENV=development --watch --progress --color",
-    "start": "./build/dev/resetBundles.sh && nodemon server/server.js --watch serverconfig.json --watch ./server/server*.js* --watch server/genome --watch server/dataset --watch server/src/test/routes --watch client/test/specHelpers.js",
+    "start": "./build/dev/resetBundles.sh && nodemon --enable-source-maps server/server.js --watch serverconfig.json --watch ./server/server*.js* --watch server/genome --watch server/dataset --watch server/src/test/routes --watch client/test/specHelpers.js",
     "dev1": "trap 'kill %1' INT; webpack --config=./webpack.config.js --env NODE_ENV=development --watch --color & npm start",
     "dev2": "webpack --config=./webpack.config.js --env NODE_ENV=development --watch --color",
     "gdc": "PP_GDC_HOST=https://portal.gdc.cancer.gov/auth/api/v0 npm run dev1",
