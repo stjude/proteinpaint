@@ -202,6 +202,7 @@ async function trigger_findterm(q, res, termdb, ds, genome) {
 		not checking on presence of queries.snvindel{} as it's used for both wgs/germline and somatic data,
 		for now do not show gene search for wgs data
 		checking on this flag as it's enabled for ds with somatic data
+		same logic applied in termdb.config.js
 		*/
 		const re = geneSearch(genome, { input: str })
 		if (Array.isArray(re.hits)) {
