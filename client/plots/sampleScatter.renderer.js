@@ -180,7 +180,7 @@ export function setRenderers(self) {
 					)
 					.attr('text-anchor', 'middle')
 					.text(self.config.term.term.name)
-				if (self.config.term0)
+				if (self.config.term0) {
 					labelsG
 						.append('text')
 						.attr(
@@ -189,6 +189,7 @@ export function setRenderers(self) {
 						)
 						.attr('text-anchor', 'middle')
 						.text(`${chart.id}, n=${chart.cohortSamples.length}`)
+				}
 				labelsG
 					.append('text')
 					.attr(
@@ -205,6 +206,13 @@ export function setRenderers(self) {
 				.attr('y', 0)
 				.attr('width', self.settings.svgw + 2 * particleWidth)
 				.attr('height', self.settings.svgh + self.axisOffset.y + particleWidth)
+			if (self.config.term0)
+				chart.serie
+					.append('text')
+					.style('font-weight', 'bold')
+					.attr('transform', `translate(${self.axisOffset.x + self.settings.svgw / 2}, 30)`)
+					.attr('text-anchor', 'middle')
+					.text(chart.id)
 		}
 	}
 
