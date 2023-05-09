@@ -93,20 +93,20 @@ export function setRenderers(self) {
 
 	function fillSvgSubElems(chart) {
 		const svg = chart.svg
-		let mainG, axisG, xAxis, yAxis, legendG, labelsG, clipRect, serie
+		let axisG, labelsG, clipRect
 		if (svg.select('.sjpcb-scatter-mainG').size() == 0) {
-			mainG = svg.append('g').attr('class', 'sjpcb-scatter-mainG')
+			chart.mainG = svg.append('g').attr('class', 'sjpcb-scatter-mainG')
 			axisG = svg.append('g').attr('class', 'sjpcb-scatter-axis')
 			labelsG = svg.append('g').attr('class', 'sjpcb-scatter-labelsG')
-			xAxis = axisG
+			chart.xAxis = axisG
 				.append('g')
 				.attr('class', 'sjpcb-scatter-x-axis')
 				.attr('transform', `translate(0, ${self.settings.svgh + self.axisOffset.y})`)
-			yAxis = axisG
+			chart.yAxis = axisG
 				.append('g')
 				.attr('class', 'sjpcb-scatter-y-axis')
 				.attr('transform', `translate(${self.axisOffset.x}, 0)`)
-			mainG
+			chart.mainG
 				.append('rect')
 				.attr('class', 'zoom')
 				.attr('x', self.axisOffset.x)
@@ -114,7 +114,7 @@ export function setRenderers(self) {
 				.attr('width', self.settings.svgw)
 				.attr('height', self.settings.svgh)
 				.attr('fill', 'white')
-			serie = mainG.append('g').attr('class', 'sjpcb-scatter-series')
+			chart.serie = chart.mainG.append('g').attr('class', 'sjpcb-scatter-series')
 
 			//Adding clip path
 			const id = `${Date.now()}`
@@ -141,25 +141,25 @@ export function setRenderers(self) {
 				.attr('offset', '100%')
 				.attr('stop-color', chart.stopColor)
 
-			mainG.attr('clip-path', `url(#${idclip})`)
+			chart.mainG.attr('clip-path', `url(#${idclip})`)
 
-			legendG = svg
+			chart.legendG = svg
 				.append('g')
 				.attr('class', 'sjpcb-scatter-legend')
 				.attr('transform', `translate(${self.settings.svgw + self.axisOffset.x + 50}, 0)`)
 		} else {
-			mainG = svg.select('.sjpcb-scatter-mainG')
-			serie = mainG.select('.sjpcb-scatter-series')
+			chart.mainG = svg.select('.sjpcb-scatter-mainG')
+			chart.serie = chart.mainG.select('.sjpcb-scatter-series')
 			axisG = svg.select('.sjpcb-scatter-axis')
 			labelsG = svg.select('.sjpcb-scatter-labelsG')
-			xAxis = axisG.select('.sjpcb-scatter-x-axis')
-			yAxis = axisG.select('.sjpcb-scatter-y-axis')
-			legendG = svg.select('.sjpcb-scatter-legend')
+			chart.xAxis = axisG.select('.sjpcb-scatter-x-axis')
+			chart.yAxis = axisG.select('.sjpcb-scatter-y-axis')
+			chart.legendG = svg.select('.sjpcb-scatter-legend')
 			clipRect = svg.select(`defs > clipPath > rect`)
 		}
 		if (chart.axisBottom) {
-			xAxis.call(chart.axisBottom)
-			yAxis.call(chart.axisLeft)
+			chart.xAxis.call(chart.axisBottom)
+			chart.yAxis.call(chart.axisLeft)
 		}
 		const particleWidth = Math.sqrt(self.settings.size)
 		if (self.settings.showAxes) {
@@ -206,10 +206,6 @@ export function setRenderers(self) {
 				.attr('width', self.settings.svgw + 2 * particleWidth)
 				.attr('height', self.settings.svgh + self.axisOffset.y + particleWidth)
 		}
-
-		chart.mainG = mainG
-		chart.serie = serie
-		chart.legendG = legendG
 	}
 
 	function renderSerie(chart, duration) {
@@ -415,127 +411,125 @@ export function setRenderers(self) {
 	}
 
 	self.setTools = function() {
-		for (const chart of self.charts) {
-			const inline = self.config.settings.controls.isOpen
-			const svg = chart.svg
-			const toolsDiv = self.dom.toolsDiv.style('background-color', 'white')
-			toolsDiv.selectAll('*').remove()
-			let display = 'block'
-			if (inline) display = 'inline-block'
-			const helpDiv = toolsDiv
+		const inline = self.config.settings.controls.isOpen
+		const toolsDiv = self.dom.toolsDiv.style('background-color', 'white')
+		toolsDiv.selectAll('*').remove()
+		let display = 'block'
+		if (inline) display = 'inline-block'
+		const helpDiv = toolsDiv
+			.insert('div')
+			.style('display', display)
+			.style('margin', '20px')
+			.attr('name', 'sjpp-help-btn') //For unit tests
+		icon_functions['help'](helpDiv, {
+			handler: () => window.open('https://github.com/stjude/proteinpaint/wiki/Scatter-plot', '_blank')
+		})
+
+		const homeDiv = toolsDiv
+			.insert('div')
+			.style('display', display)
+			.style('margin', '20px')
+			.attr('name', 'sjpp-reset-btn') //For unit tests
+		icon_functions['restart'](homeDiv, { handler: resetToIdentity })
+		const zoomInDiv = toolsDiv
+			.insert('div')
+			.style('display', display)
+			.style('margin', '20px')
+			.attr('name', 'sjpp-zoom-in-btn') //For unit tests
+		icon_functions['zoomIn'](zoomInDiv, { handler: zoomIn })
+		const zoomOutDiv = toolsDiv
+			.insert('div')
+			.style('display', display)
+			.style('margin', '20px')
+			.attr('name', 'sjpp-zoom-out-btn') //For unit tests
+		icon_functions['zoomOut'](zoomOutDiv, { handler: zoomOut })
+		const canSearch =
+			!self.config.term0 && self.charts[0].cohortSamples.length > 0 && 'sample' in self.charts[0].cohortSamples[0]
+		if (canSearch) {
+			const searchDiv = toolsDiv
 				.insert('div')
 				.style('display', display)
 				.style('margin', '20px')
-				.attr('name', 'sjpp-help-btn') //For unit tests
-			icon_functions['help'](helpDiv, {
-				handler: () => window.open('https://github.com/stjude/proteinpaint/wiki/Scatter-plot', '_blank')
+			icon_functions['search'](searchDiv, { handler: e => self.searchSample(e) })
+		}
+		const lassoDiv = toolsDiv
+			.insert('div')
+			.style('display', display)
+			.style('margin', '20px')
+		icon_functions['lasso'](lassoDiv, { handler: toggle_lasso, enabled: self.lassoOn })
+		self.dom.groupDiv = toolsDiv
+			.insert('div')
+			.style('display', display)
+			.style('margin', '20px')
+
+		const mainG = self.charts[0].mainG
+		const zoom = d3zoom()
+			.scaleExtent([0.5, 10])
+			.on('zoom', handleZoom)
+			.filter(event => {
+				if (event.type === 'wheel') return event.ctrlKey
+				return true
 			})
 
-			const homeDiv = toolsDiv
-				.insert('div')
-				.style('display', display)
-				.style('margin', '20px')
-				.attr('name', 'sjpp-reset-btn') //For unit tests
-			icon_functions['restart'](homeDiv, { handler: resetToIdentity })
-			const zoomInDiv = toolsDiv
-				.insert('div')
-				.style('display', display)
-				.style('margin', '20px')
-				.attr('name', 'sjpp-zoom-in-btn') //For unit tests
-			icon_functions['zoomIn'](zoomInDiv, { handler: zoomIn })
-			const zoomOutDiv = toolsDiv
-				.insert('div')
-				.style('display', display)
-				.style('margin', '20px')
-				.attr('name', 'sjpp-zoom-out-btn') //For unit tests
-			icon_functions['zoomOut'](zoomOutDiv, { handler: zoomOut })
-			const canSearch = chart.cohortSamples.length > 0 && 'sample' in chart.cohortSamples[0] && !self.config.term0
-			if (canSearch) {
-				const searchDiv = toolsDiv
-					.insert('div')
-					.style('display', display)
-					.style('margin', '20px')
-				icon_functions['search'](searchDiv, { handler: e => self.searchSample(e, chart) })
-			}
-			const lassoDiv = toolsDiv
-				.insert('div')
-				.style('display', display)
-				.style('margin', '20px')
-			icon_functions['lasso'](lassoDiv, { handler: toggle_lasso, enabled: self.lassoOn })
-			self.dom.groupDiv = toolsDiv
-				.insert('div')
-				.style('display', display)
-				.style('margin', '20px')
+		mainG.call(zoom)
 
-			const mainG = svg.select('.sjpcb-scatter-mainG')
-			const seriesG = mainG.select('.sjpcb-scatter-series')
-			const symbols = seriesG.selectAll('path')
-			const axisG = svg.select('.sjpcb-scatter-axis')
-			const xAxisG = axisG.select('.sjpcb-scatter-x-axis')
-			const yAxisG = axisG.select('.sjpcb-scatter-y-axis')
-			const zoom = d3zoom()
-				.scaleExtent([0.5, 10])
-				.on('zoom', handleZoom)
-				.filter(event => {
-					if (event.type === 'wheel') return event.ctrlKey
-					return true
-				})
-
-			mainG.call(zoom)
-
-			const s = self.settings
-			function handleZoom(event) {
+		const s = self.settings
+		function handleZoom(event) {
+			for (const chart of self.charts) {
 				// create new scale ojects based on event
 				const new_xScale = event.transform.rescaleX(chart.xAxisScale)
 				const new_yScale = event.transform.rescaleY(chart.yAxisScale)
 
-				xAxisG.call(chart.axisBottom.scale(new_xScale))
-				yAxisG.call(chart.axisLeft.scale(new_yScale))
-				seriesG.attr('transform', event.transform)
+				chart.xAxis.call(chart.axisBottom.scale(new_xScale))
+				chart.yAxis.call(chart.axisLeft.scale(new_yScale))
+				chart.serie.attr('transform', event.transform)
 				self.k = event.transform.scale(1).k
 				//on zoom in the particle size is kept
+				const symbols = chart.serie.selectAll('path')
 				symbols.attr('d', c => self.getShape(chart, c))
 				if (self.lassoOn) chart.lasso.selectedItems().attr('d', c => self.getShape(chart, c, 2))
 			}
+		}
 
-			function zoomIn() {
-				zoom.scaleBy(mainG.transition().duration(750), 1.5)
-			}
+		function zoomIn() {
+			for (const chart of self.charts) zoom.scaleBy(chart.mainG.transition().duration(750), 1.5)
+		}
 
-			function zoomOut() {
-				zoom.scaleBy(mainG.transition().duration(750), 0.5)
-			}
+		function zoomOut() {
+			for (const chart of self.charts) zoom.scaleBy(chart.mainG.transition().duration(750), 0.5)
+		}
 
-			function resetToIdentity() {
-				mainG
+		function resetToIdentity() {
+			for (const chart of self.charts)
+				chart.mainG
 					.transition()
 					.duration(750)
 					.call(zoom.transform, zoomIdentity)
-			}
+		}
 
+		for (const chart of self.charts) {
 			chart.lasso = d3lasso()
-
 			self.lassoReset(chart)
+		}
 
-			function toggle_lasso() {
-				self.lassoOn = !self.lassoOn
-				if (self.lassoOn) {
-					mainG.on('.zoom', null)
-					mainG.call(chart.lasso)
-				} else {
-					mainG.on('mousedown.drag', null)
-					chart.lasso.items().classed('not_possible', false)
-					chart.lasso.items().classed('possible', false)
-					chart.lasso
-						.items()
-						.attr('r', self.settings.size)
-						.style('fill-opacity', c => self.getOpacity(c))
-					mainG.call(zoom)
-					self.selectedItems = null
-				}
-				lassoDiv.select('*').remove()
-				icon_functions['lasso'](lassoDiv, { handler: toggle_lasso, enabled: self.lassoOn })
+		function toggle_lasso() {
+			self.lassoOn = !self.lassoOn
+			if (self.lassoOn) {
+				mainG.on('.zoom', null)
+				mainG.call(chart.lasso)
+			} else {
+				mainG.on('mousedown.drag', null)
+				chart.lasso.items().classed('not_possible', false)
+				chart.lasso.items().classed('possible', false)
+				chart.lasso
+					.items()
+					.attr('r', self.settings.size)
+					.style('fill-opacity', c => self.getOpacity(c))
+				mainG.call(zoom)
+				self.selectedItems = null
 			}
+			lassoDiv.select('*').remove()
+			icon_functions['lasso'](lassoDiv, { handler: toggle_lasso, enabled: self.lassoOn })
 		}
 	}
 
