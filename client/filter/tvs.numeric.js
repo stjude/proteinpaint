@@ -95,21 +95,14 @@ async function fillMenu(self, div, tvs) {
 	const num_parent_div = div.append('div')
 	self.num_obj = {}
 
-	self.num_obj.num_heading = num_parent_div
-		.append('div')
-		.style('display', tvs.term.values ? 'block' : 'none')
-		.style('font-size', '.9em')
-		.style('color', '#888')
-		.html('Numerical Ranges')
-
 	self.num_obj.num_div = num_parent_div
 		.append('div')
 		.attr('class', 'num_div')
 		.style('padding', '5px')
 		.style('color', '#000')
-		.style('border-style', 'solid')
-		.style('border-width', '2px')
-		.style('border-color', '#eee')
+	//.style('border-style', 'solid')
+	//.style('border-width', '2px')
+	//.style('border-color', '#eee')
 
 	self.num_obj.plot_size = {
 		width: 500,
@@ -492,18 +485,10 @@ async function showCheckList_numeric(self, tvs, div) {
 
 	// other categories div	(only appear if unannotated categories present)
 	const unanno_div = div
-		.append('div')
-		.attr('class', 'unannotated_div')
-		.style('margin-top', '10px')
-		.style('font-size', '.9em')
-		.style('color', '#888')
-		.html('Other Categories')
+
 		.append('div')
 		.style('padding', '5px')
 		.style('color', '#000')
-		.style('border-style', 'solid')
-		.style('border-width', '2px')
-		.style('border-color', '#eee')
 
 	// 'Apply' button
 	const callback = indexes => {
