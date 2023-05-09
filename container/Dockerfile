@@ -2,7 +2,8 @@
 # different registry by setting the registry arg at build time.
 ARG registry=docker.io/library
 
-FROM ${registry}/node:16-buster-slim AS ppbase
+# need to manually bump the base version periodically
+FROM ${registry}/node:16.20.0-buster-slim AS ppbase
 ARG ARCH='x86_64'
 ENV ARCH=$ARCH
 

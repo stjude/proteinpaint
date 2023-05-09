@@ -1,0 +1,10 @@
+- pin the base node image version for the Docker build
+- improved gene/variable search result logic and display
+- more migrated disco plot features
+- synchronize scatter groups with mass state.groups
+- prototype sample scatter divide by variable
+- fixed current and added new integration tests: regression, cuminc, search, matrix
+- fixed the ordering of condition terms and added integration tests
+
+GDC-related
+- fix the missing gene isoform error, by allowing empty query result from the gdc genedb
