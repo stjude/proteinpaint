@@ -73,7 +73,6 @@ class Scatter {
 
 		this.settings = {}
 		if (this.dom.header) this.dom.header.html('Scatter Plot')
-		console.log(this.opts)
 		await this.setControls()
 		setInteractivity(this)
 		setRenderers(this)
