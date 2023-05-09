@@ -184,11 +184,11 @@ function divideValues(q, data, term, overlayTerm) {
 		}
 
 		if (overlayTerm) {
-			if (!v[(overlayTerm?.id)] || overlayTerm.term.values[(v[overlayTerm.id]?.key)]?.uncomputable) {
-				// if there is no value for q.divideTw then skip this
+			if (!v[(overlayTerm?.id)]) continue
+			// if there is no value for q.divideTw then skip this
+			if (overlayTerm.term.values[(v[overlayTerm.id]?.key)]?.uncomputable) {
 				const label = overlayTerm.term.values[(v[overlayTerm.id]?.value)]?.label // label of this uncomputable category
 				uncomputableValueObj[label] = (uncomputableValueObj[label] || 0) + 1
-				continue
 			}
 
 			if (!key2values.has(v[overlayTerm.id]?.key)) key2values.set(v[overlayTerm.id]?.key, [])

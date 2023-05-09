@@ -24,7 +24,11 @@ export default function violinRenderer(self) {
 		if (termNum && termNum.term?.values) {
 			for (const [k, v] of Object.entries(termNum.term.values)) {
 				if (v.uncomputable) {
-					if (termNum.q.hiddenValues[k]) delete termNum.q.hiddenValues[k]
+					if (termNum.q.hiddenValues[k]) {
+						let str = `${v.label}, n=${self.data.uncomputableValueObj?.[v.label]}`
+						termNum.q.hiddenValues[str] = 1
+						delete termNum.q.hiddenValues[k]
+					}
 				}
 			}
 		}
@@ -462,7 +466,6 @@ function getLegendGrps(self) {
 	}
 
 	addUncomputableValues(t1)
-	addUncomputableValues(t2)
 
 	if (t2) {
 		if (t2.q.hiddenValues && Object.entries(t2.q.hiddenValues).length != 0) {
