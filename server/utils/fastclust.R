@@ -50,29 +50,46 @@ RowDist <- dist(input$matrix, method = "euclidean") # Transposing the matrix
 print (input$cluster_method)
 RowDend <- hclust(RowDist, method = tolower(input$cluster_method))
 #RowDend <- flashClust(RowDist, method = tolower(input$cluster_method))
-#print (RowDend$order)
-#print ("Merge")
-#print (RowDend$merge)
-#print ("Height")
-#print (RowDend$height)
-#print ("Labels")
-#print (RowDend$labels)
-#print ("Calls")
-#print (RowDend$call)
-#print ("Attributes")
-#attributes(RowDend)
-#print ("methods")
+print (RowDend$order)
+print ("Merge")
+print (RowDend$merge)
+print ("Height")
+print (RowDend$height)
+print ("Labels")
+print (RowDend$labels)
+print ("Calls")
+print (RowDend$call)
+print ("Attributes")
+attributes(RowDend)
+print ("methods")
 #methods(class=class(RowDend))
 RowDendro <- as.dendrogram(RowDend)
 #print ("Attributes as.dendrogram")
 #attributes(RowDendro)
 plot(RowDendro)
 
-node_coordinates <- get_nodes_xy(
+xy <- get_nodes_xy(
   RowDendro,
   type = "rectangle"
 )
-print (node_coordinates)
+print ("node coordinates")
+#print (xy)
+
+for (i in 1:(nrow(xy) - 1)) {
+  arrows(xy[i, 1], xy[i, 2],
+    angle = 17,
+    length = .5,
+    xy[i + 1, 1], xy[i + 1, 2],
+    lty = 1, col = 3, lwd = 1.5
+  )
+}
+points(xy, pch = 19, cex = 4)
+text(xy, labels = 1:nnodes(RowDendro), cex = 1.2, col = "white", adj = c(0.4, 0.4))
+
+
+get_leaves_branches_attr(RowDendro, "lty")
+
+#RowDendro %>% unclass %>% str
 
 # For columns (i.e samples)
 ColumnDist <- dist(t(input$matrix), method = "euclidean") # Transposing the matrix
