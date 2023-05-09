@@ -579,7 +579,7 @@ export function setRenderers(self) {
 				.attr('y', offsetY)
 				.text(chart.id)
 				.style('font-weight', 'bold')
-			offsetY += step
+			offsetY += step + 10
 		}
 		if (self.config.colorTW.term.type == 'geneVariant')
 			offsetY = self.renderGeneVariantLegend(
@@ -724,7 +724,7 @@ export function setRenderers(self) {
 					.text(title)
 					.style('font-weight', 'bold')
 					.style('font-size', '0.8em')
-				offsetY += step
+				offsetY += step + 10
 				const color = 'gray'
 				for (const [key, shape] of chart.shapeLegend) {
 					if (key == 'Ref') continue
