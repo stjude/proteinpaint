@@ -517,19 +517,21 @@ export function setRenderers(self) {
 
 		function toggle_lasso() {
 			self.lassoOn = !self.lassoOn
-			if (self.lassoOn) {
-				mainG.on('.zoom', null)
-				mainG.call(chart.lasso)
-			} else {
-				mainG.on('mousedown.drag', null)
-				chart.lasso.items().classed('not_possible', false)
-				chart.lasso.items().classed('possible', false)
-				chart.lasso
-					.items()
-					.attr('r', self.settings.size)
-					.style('fill-opacity', c => self.getOpacity(c))
-				mainG.call(zoom)
-				self.selectedItems = null
+			for (const chart of self.charts) {
+				if (self.lassoOn) {
+					chart.mainG.on('.zoom', null)
+					chart.mainG.call(chart.lasso)
+				} else {
+					chart.mainG.on('mousedown.drag', null)
+					chart.lasso.items().classed('not_possible', false)
+					chart.lasso.items().classed('possible', false)
+					chart.lasso
+						.items()
+						.attr('r', self.settings.size)
+						.style('fill-opacity', c => self.getOpacity(c))
+					chart.mainG.call(zoom)
+					self.selectedItems = null
+				}
 			}
 			lassoDiv.select('*').remove()
 			icon_functions['lasso'](lassoDiv, { handler: toggle_lasso, enabled: self.lassoOn })
