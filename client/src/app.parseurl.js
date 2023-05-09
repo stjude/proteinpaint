@@ -75,8 +75,8 @@ upon error, throw err message as a string
 	}
 
 	if (urlp.has('termdb')) {
-		const str = urlp.get('termdb')
-		const state = JSON.parse(str)
+		const value = urlp.get('termdb')
+		const state = typeof value === 'string' ? JSON.parse(value) : value
 		const opts = {
 			holder: arg.holder,
 			state
@@ -87,8 +87,8 @@ upon error, throw err message as a string
 	}
 
 	if (urlp.has('mass')) {
-		const str = urlp.get('mass')
-		const state = JSON.parse(str)
+		const value = urlp.get('mass')
+		const state = typeof value === 'string' ? JSON.parse(value) : value
 		const opts = {
 			holder: arg.holder,
 			state
