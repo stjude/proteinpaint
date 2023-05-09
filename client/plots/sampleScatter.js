@@ -61,7 +61,7 @@ class Scatter {
 			: this.opts.holder.append('div').style('display', 'inline-block')
 		this.mainDiv = controlsDiv.append('div').style('display', 'inline-block')
 
-		this.axisOffset = { x: 80, y: 20 }
+		this.axisOffset = { x: 80, y: 30 }
 
 		this.dom = {
 			header: this.opts.header,
