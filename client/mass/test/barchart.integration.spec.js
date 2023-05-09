@@ -319,7 +319,7 @@ tape('series visibility - numeric', function(test) {
 	function runNumericExcludedTests(barchart) {
 		helpers
 			.rideInit({ arg: barchart, bus: barchart, eventType: 'postRender.test' })
-			.run(testHiddenByValues)
+			.run(testHiddenByValuesAndOrder)
 			.use(triggerHiddenLegendClick, { wait: 800 })
 			.to(testRevealedBar, { wait: 100 })
 			.use(triggerMenuClickToHide, { wait: 100 })
@@ -327,7 +327,7 @@ tape('series visibility - numeric', function(test) {
 			.done(test)
 	}
 
-	function testHiddenByValues(barchart) {
+	function testHiddenByValuesAndOrder(barchart) {
 		const bar = barchart.Inner
 		const excluded = bar.settings.exclude.cols
 		test.true(
@@ -344,6 +344,15 @@ tape('series visibility - numeric', function(test) {
 			foundHiddenLabels.length + 1,
 			excluded.length,
 			'should display the correct number of hidden legend labels'
+		)
+
+		const barOrder = [...bar.dom.holder.node().querySelectorAll('.bars-cell-grp')].sort(
+			(a, b) => a.__data__.data[0].y - b.__data__.data[0].y
+		)
+		test.deepEqual(
+			barOrder.map(d => d.__data__.seriesId),
+			['<5000', '5000 to <10000', '10000 to <15000', '15000 to <20000', '20000 to <25000', '≥25000'],
+			'should render the bars in the expected order'
 		)
 	}
 
@@ -401,7 +410,7 @@ tape('series visibility - numeric', function(test) {
 	}
 })
 
-tape('series visibility - condition', function(test) {
+tape('series visibility and order - condition', function(test) {
 	test.timeoutAfter(5000)
 
 	const conditionHiddenValues = { '1: Mild': 1 }
@@ -431,6 +440,14 @@ tape('series visibility - condition', function(test) {
 		const excluded = bar.settings.exclude.cols
 		// exclude "Unknown status" and "1: Mild"
 		test.equal(excluded.length, 1, 'should have the correct number of hidden condition bars by q.hiddenValues')
+		const barOrder = [...bar.dom.holder.node().querySelectorAll('.bars-cell-grp')].sort(
+			(a, b) => a.__data__.data[0].y - b.__data__.data[0].y
+		)
+		test.deepEqual(
+			barOrder.map(d => d.__data__.seriesId),
+			['0: No condition', '2: Moderate', '3: Severe', '4: Life-threatening'],
+			'should render the bars in the expected order'
+		)
 		if (test._ok) bar.app.destroy()
 		test.end()
 	}
@@ -883,48 +900,6 @@ tape.skip('click custom subcondition group bar to add filter', function(test) {
 	}
 })
 */
-
-tape.skip('single chart, genotype overlay', function(test) {
-	test.timeoutAfter(3000)
-
-	runpp({
-		state: {
-			plots: [
-				{
-					chartType: 'barchart',
-					term: { id: 'diaggrp', term: termjson['diaggrp'] },
-					term2: 'genotype'
-				}
-			],
-			ssid: {
-				mutation_name: 'TEST',
-				ssid: 'genotype-test.txt',
-				groups: {
-					Heterozygous: { color: 'red' },
-					'Homozygous reference': { color: 'blue' },
-					'Homozygous alternative': { color: 'green' }
-				}
-			}
-		},
-		barchart: {
-			callbacks: {
-				'postRender.test': testBarCount
-			}
-		}
-	})
-
-	function testBarCount(barchart) {
-		const barDiv = barchart.Inner.dom.barDiv
-		const numBars = barDiv.selectAll('.bars-cell-grp').size()
-		const numOverlays = barDiv.selectAll('.bars-cell').size()
-		const minBars = 5
-		const expectedOverlays = 15
-		test.true(numBars > minBars, `should have more than ${minBars} Diagnosis Group bars`)
-		test.equal(numOverlays, expectedOverlays, `should have a total of ${expectedOverlays} overlays`)
-		if (test._ok) barchart.Inner.app.destroy()
-		test.end()
-	}
-})
 
 tape('numeric exclude range', function(test) {
 	test.timeoutAfter(3000)

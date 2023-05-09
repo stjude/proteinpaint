@@ -1012,7 +1012,7 @@ export async function querySamples_gdcapi(q, twLst, ds, geneTwLst) {
 					throw 'serverside genome obj missing, needed to map gene name to canonical isoform'
 				if (!q.genome?.genedb?.get_gene2canonicalisoform) throw 'gene2canonicalisoform not supported on this genome'
 				const data = q.genome.genedb.get_gene2canonicalisoform.get(tw.term.name)
-				if (!data.isoform) {
+				if (!data?.isoform) {
 					// no isoform found
 					continue
 				}
@@ -1499,7 +1499,7 @@ async function getSingleSampleMutations(query, ds, genome) {
 				continue
 			}
 			const data = genome.genedb.get_gene2canonicalisoform.get(gene)
-			if (!data || !data.isoform) {
+			if (!data?.isoform) {
 				// no canonical isoform
 				continue
 			}

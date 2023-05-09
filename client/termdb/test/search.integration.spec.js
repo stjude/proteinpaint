@@ -68,7 +68,7 @@ tape('term search, default behavior with barchart usecase', function(test) {
 	}
 
 	function testSearchNoResult(search) {
-		const div = search.Inner.dom.resultDiv.select('div').node()
+		const div = search.Inner.dom.resultDiv_terms.select('div').node()
 		test.equal(div.innerHTML, 'No match', 'should show "No match"')
 	}
 
@@ -78,7 +78,7 @@ tape('term search, default behavior with barchart usecase', function(test) {
 
 	let searchResultBtns
 	function testFirstSearch(search) {
-		searchResultBtns = search.Inner.dom.resultDiv.select('table').selectAll('.sja_menuoption')
+		searchResultBtns = search.Inner.dom.resultDiv_terms.select('table').selectAll('.sja_menuoption')
 		test.equal(searchResultBtns.size(), 3, 'search result should show 3 buttons')
 	}
 
@@ -104,7 +104,7 @@ tape('term search, default behavior with barchart usecase', function(test) {
 	}
 
 	function testExcludedTypeResult(search) {
-		const div = search.Inner.dom.resultDiv.select('div').node()
+		const div = search.Inner.dom.resultDiv_terms.select('div').node()
 		test.equal(div?.innerHTML, 'No match', 'should not show excluded types in results')
 	}
 })
@@ -139,9 +139,13 @@ tape('click_term', test => {
 		search.Inner.doSearch('cardio')
 	}
 	function testSearchResult(search) {
-		const disabledlabels = search.Inner.dom.resultDiv.node().getElementsByClassName('sja_tree_click_term_disabled')
+		const disabledlabels = search.Inner.dom.resultDiv_terms
+			.node()
+			.getElementsByClassName('sja_tree_click_term_disabled')
 		test.equal(disabledlabels.length, 1, 'should show 1 disabled term')
-		const buttons = search.Inner.dom.resultDiv.node().getElementsByClassName('sja_filter_tag_btn sja_tree_click_term')
+		const buttons = search.Inner.dom.resultDiv_terms
+			.node()
+			.getElementsByClassName('sja_filter_tag_btn sja_tree_click_term')
 		test.ok(buttons.length > 0, 'should show 1 or more clickable buttons')
 		buttons[0].click()
 	}
@@ -149,7 +153,9 @@ tape('click_term', test => {
 		test.ok(app.vocabApi.graphable(term), 'click_term() called with a graphable term')
 	}
 	function testClearedResults(search) {
-		const buttons = search.Inner.dom.resultDiv.node().getElementsByClassName('sja_filter_tag_btn sja_tree_click_term')
+		const buttons = search.Inner.dom.resultDiv_terms
+			.node()
+			.getElementsByClassName('sja_filter_tag_btn sja_tree_click_term')
 		test.equal(buttons.length, 0, 'should clear search results after a term is clicked')
 		test.equal(search.Inner.dom.input.property('value'), '', 'should clear input text field after a term is clicked')
 	}
@@ -188,7 +194,7 @@ tape('tree.click_term2select_tvs', test => {
 	}
 	let buttons
 	function testSearchResult(search) {
-		buttons = search.Inner.dom.resultDiv.node().getElementsByClassName('sja_filter_tag_btn sja_tree_click_term')
+		buttons = search.Inner.dom.resultDiv_terms.node().getElementsByClassName('sja_filter_tag_btn sja_tree_click_term')
 		test.ok(buttons.length > 0, 'should show 1 or more clickable buttons')
 	}
 	function triggerTvsMenu(search) {

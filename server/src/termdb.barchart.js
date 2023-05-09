@@ -204,9 +204,15 @@ function processGeneVariantSamples(map, bins, data, samplesMap, ds) {
 					const item = { sample: customSampleID, name: ds.sampleId2Name.get(intSampleId) }
 					item[`key1`] = mclass[v1.class].label
 					item[`val1`] = mclass[v1.class].label
-					const wesByOrigin = ds.assayAvailability?.byDt?.['1']?.byOrigin && v1.dt == 1 //whether distinguising germline and somatic WES
-					item[`key0`] = `${wesByOrigin ? (v1.origin == 'G' ? 'Germline ' : 'Somatic ') : ''}${dt2label[v1.dt]}`
-					item[`val0`] = `${wesByOrigin ? (v1.origin == 'G' ? 'Germline ' : 'Somatic ') : ''}${dt2label[v1.dt]}`
+
+					const byOrigin = ds.assayAvailability?.byDt?.[v1.dt]?.byOrigin
+					if (byOrigin) {
+						item.key0 = item.val0 = (byOrigin[v1.origin]?.label || v1.origin) + ' ' + dt2label[v1.dt]
+					} else {
+						// not by origin
+						item.key0 = item.val0 = dt2label[v1.dt]
+					}
+
 					item[`key2`] = values[id2] ? values[id2].key : ''
 					item[`val2`] = values[id2] ? values[id2].value : ''
 					processedValues.push({ value: v1, item })
@@ -245,9 +251,15 @@ function processGeneVariantSamples(map, bins, data, samplesMap, ds) {
 					const item = { sample: customSampleID, name: ds.sampleId2Name.get(intSampleId) }
 					item[`key1`] = value1.key
 					item[`val1`] = value1.value
-					const wesByOrigin = ds.assayAvailability?.byDt?.['1']?.byOrigin && v2.dt == 1 //whether distinguising germline and somatic WES
-					item[`key0`] = `${wesByOrigin ? (v2.origin == 'G' ? 'Germline ' : 'Somatic ') : ''}${dt2label[v2.dt]}`
-					item[`val0`] = `${wesByOrigin ? (v2.origin == 'G' ? 'Germline ' : 'Somatic ') : ''}${dt2label[v2.dt]}`
+
+					const byOrigin = ds.assayAvailability?.byDt?.[v2.dt]?.byOrigin
+					if (byOrigin) {
+						item.key0 = item.val0 = (byOrigin[v2.origin]?.label || v2.origin) + ' ' + dt2label[v2.dt]
+					} else {
+						// not by origin
+						item.key0 = item.val0 = dt2label[v2.dt]
+					}
+
 					item[`key2`] = mclass[v2.class].label
 					item[`val2`] = mclass[v2.class].label
 					processedValues.push({ value: v2, item })
@@ -508,7 +520,11 @@ export function getOrderedLabels(term, bins, q) {
 function getTermDetails(q, tdb, index) {
 	const termnum_id = 'term' + index + '_id'
 	const termid = q[termnum_id]
-	const term = q[termid] ? tdb.q.termjsonByOneid(termid) : q[`term${index}`] ? q[`term${index}`] : {}
+	let term = {}
+	if (q[termid]) term = tdb.q.termjsonByOneid(termid)
+	else if (termid) term = tdb.q.termjsonByOneid(termid)
+	else if (q[`term${index}`]) term = q[`term${index}`]
+
 	const termIsNumeric = term.type == 'integer' || term.type == 'float'
 	const unannotatedValues = term.values
 		? Object.keys(term.values)

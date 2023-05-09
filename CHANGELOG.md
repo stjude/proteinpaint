@@ -1,6 +1,20 @@
 # Change Log
 
 All notable changes to this project will be documented in this file. 
+## 2.15.0
+
+- pin the base node image version for the Docker build
+- improved gene/variable search result logic and display
+- more migrated disco plot features
+- synchronize scatter groups with mass state.groups
+- prototype sample scatter divide by variable
+- fixed current and added new integration tests: regression, cuminc, search, matrix
+- fixed the ordering of condition terms and added integration tests
+
+GDC-related
+- fix the missing gene isoform error, by allowing empty query result from the gdc genedb
+
+ 
 ## 2.14.4
 
 - support a matrix sort filter for a multi-valued sample, where a non-targeted filter value may be used for sorting

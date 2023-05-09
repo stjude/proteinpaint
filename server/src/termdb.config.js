@@ -133,8 +133,10 @@ function getAllowedTermTypes(ds) {
 		for (const t of ds.cohort.termdb.allowedTermTypes) typeSet.add(t)
 	}
 
-	if (ds?.queries?.snvindel) {
-		// an mds3 dataset with snvindel data, add in "geneVariant"
+	if (ds?.queries?.defaultBlock2GeneMode) {
+		// an mds3 dataset showing data in protein mode, add in "geneVariant"
+		// this disables gene from searchable for dataset e.g. sjlife
+		// same logic in trigger_findterm()
 		typeSet.add('geneVariant')
 	}
 

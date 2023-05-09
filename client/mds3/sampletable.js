@@ -184,7 +184,7 @@ async function make_singleSampleTable(s, arg) {
 					.append('div')
 					.style('grid-column', 'span 2')
 					.style('margin-top', '20px')
-				const m = arg.mlst.find(i => i.ssm_id == ssmid)
+				const m = arg.tk.skewer.rawmlst.find(i => i.ssm_id == ssmid)
 				if (m) {
 					// found m object by id, can make a better display
 					if (m.dt == 1) {

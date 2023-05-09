@@ -342,7 +342,7 @@ function read_file(file) {
 	return new Promise((resolve, reject) => {
 		fs.readFile(file, { encoding: 'utf8' }, (err, txt) => {
 			// must use reject in callback, not throw
-			if (err) reject('cannot read file')
+			if (err) reject('cannot read file: ' + file)
 			resolve(txt)
 		})
 	})
