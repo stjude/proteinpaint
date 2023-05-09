@@ -206,13 +206,6 @@ export function setRenderers(self) {
 				.attr('y', 0)
 				.attr('width', self.settings.svgw + 2 * particleWidth)
 				.attr('height', self.settings.svgh + self.axisOffset.y + particleWidth)
-			if (self.config.term0)
-				chart.serie
-					.append('text')
-					.style('font-weight', 'bold')
-					.attr('transform', `translate(${self.axisOffset.x + self.settings.svgw / 2}, 30)`)
-					.attr('text-anchor', 'middle')
-					.text(chart.id)
 		}
 	}
 
@@ -568,26 +561,43 @@ export function setRenderers(self) {
 
 		const step = 25
 		let offsetX = 0
-		let offsetY = 50
+		let offsetY = 25
 		const name =
 			self.config.colorTW.term.name.length > 25
 				? self.config.colorTW.term.name.slice(0, 25) + '...'
 				: self.config.colorTW.term.name
 		let title = `${name}, n=${chart.cohortSamples.length}`
 		const colorRefCategory = chart.colorLegend.get('Ref')
-
+		const colorG = legendG.append('g')
+		if (self.config.term0) {
+			colorG
+				.append('text')
+				.attr('x', 0)
+				.attr('y', offsetY)
+				.text(chart.id)
+				.style('font-weight', 'bold')
+			offsetY += step
+		}
 		if (self.config.colorTW.term.type == 'geneVariant')
-			offsetY = self.renderGeneVariantLegend(chart, 0, legendG, self.config.colorTW, 'category', chart.colorLegend)
+			offsetY = self.renderGeneVariantLegend(
+				chart,
+				offsetX,
+				offsetY,
+				legendG,
+				self.config.colorTW,
+				'category',
+				chart.colorLegend
+			)
 		else {
-			const colorG = legendG.append('g')
 			colorG
 				.append('text')
 				.attr('id', 'legendTitle')
 				.attr('x', offsetX)
-				.attr('y', step)
+				.attr('y', offsetY)
 				.text(title)
 				.style('font-weight', 'bold')
 				.style('font-size', '0.8em')
+			offsetY += step
 
 			if (self.config.colorTW.q.mode === 'continuous') {
 				const [min, max] = chart.colorGenerator.domain()
@@ -637,10 +647,9 @@ export function setRenderers(self) {
 
 				offsetY += step
 			} else {
+				console.log(offsetY)
 				for (const [key, category] of chart.colorLegend) {
 					if (key == 'Ref') continue
-					const color = category.color
-					const count = category.sampleCount
 					const name = key
 					const hidden = self.config.colorTW.q.hiddenValues ? key in self.config.colorTW.q.hiddenValues : false
 					const [circleG, itemG] = addLegendItem(colorG, category, name, offsetX, offsetY, hidden)
@@ -698,21 +707,21 @@ export function setRenderers(self) {
 			})
 		}
 		if (self.config.shapeTW) {
-			offsetX = 200
-			offsetY = 50
+			offsetX = self.config.colorTW.term.type == 'geneVariant' ? 300 : 200
+			offsetY = self.config.term0 ? 50 : 25
 			title = `${self.config.shapeTW.term.name}, n=${chart.cohortSamples.length}`
 			if (self.config.shapeTW.term.type == 'geneVariant')
-				self.renderGeneVariantLegend(chart, offsetX, legendG, self.config.shapeTW, 'shape', chart.shapeLegend)
+				self.renderGeneVariantLegend(chart, offsetX, offsetY, legendG, self.config.shapeTW, 'shape', chart.shapeLegend)
 			else {
 				const shapeG = legendG.append('g')
 				shapeG
 					.append('text')
 					.attr('x', offsetX)
-					.attr('y', step)
+					.attr('y', offsetY)
 					.text(title)
 					.style('font-weight', 'bold')
 					.style('font-size', '0.8em')
-
+				offsetY += step
 				const color = 'gray'
 				for (const [key, shape] of chart.shapeLegend) {
 					if (key == 'Ref') continue
@@ -774,16 +783,15 @@ export function setRenderers(self) {
 		}
 	}
 
-	self.renderGeneVariantLegend = function(chart, offsetX, legendG, tw, cname, map) {
+	self.renderGeneVariantLegend = function(chart, offsetX, offsetY, legendG, tw, cname, map) {
 		const step = 125
-		let offsetY = 25
 		const name = tw.term.name.length > 25 ? tw.term.name.slice(0, 25) + '...' : tw.term.name
 		let title = `${name}, n=${chart.cohortSamples.length}`
 		const G = legendG.append('g')
 		G.append('text')
 			.attr('id', 'legendTitle')
 			.attr('x', offsetX)
-			.attr('y', 25)
+			.attr('y', offsetY)
 			.text(title)
 			.style('font-weight', 'bold')
 			.style('font-size', '0.8em')
