@@ -133,10 +133,8 @@ export function renderTable({
 		parentDiv.style('max-width', maxWidth)
 		parentDiv.style('resize', 'both')
 	} else {
-		parentDiv
-			.style('max-height', maxHeight)
-			.style('max-width', maxWidth)
-			.style('resize', 'horizontal')
+		parentDiv.style('max-height', maxHeight).style('max-width', maxWidth)
+		if (columns.length > 2) parentDiv.style('resize', 'horizontal')
 	}
 	parentDiv.attr('class', 'sjpp_hide_scrollbar')
 

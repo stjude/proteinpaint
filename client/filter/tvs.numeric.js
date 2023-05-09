@@ -329,7 +329,7 @@ function enterRange(self, tr, brush, i) {
 			.style('margin-left', '20px')
 			.style('font-style', 'italic')
 			.style('color', '#888')
-			.html('Note: Drag the <b>green rectangle</b> to select a range. Overlapping ranges will be merged')
+			.html('Note: Drag the rectangle to select a range. Overlapping ranges will be merged')
 	}
 
 	async function apply(new_range) {
@@ -401,7 +401,7 @@ function enterRange(self, tr, brush, i) {
 				self.num_obj.num_div.select('.note_tr').remove()
 				addBrushes(self)
 				addRangeTable(self)
-				self.opts.callback(new_tvs) //Remove the filter if no ranges
+				if (new_tvs.ranges.length) self.opts.callback(new_tvs) //Remove the filter if no ranges
 			})
 	}
 }
