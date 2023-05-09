@@ -8,6 +8,7 @@ const { getData } = require('./termdb.matrix')
 const createCanvas = require('canvas').createCanvas
 const { violinBinsObj } = require('../../server/shared/violin.bins')
 const { summaryStats } = require('../../server/shared/descriptive.stats')
+import roundValue from '../shared/roundValue'
 
 /*
 q = {
@@ -74,15 +75,6 @@ export async function trigger_getViolinPlotData(q, res, ds, genome) {
 
 	const data = await getData({ terms: twLst, filter: q.filter, currentGeneNames: q.currentGeneNames }, ds, genome)
 	if (data.error) throw data.error
-
-	////disable log transformation for now.
-	// for (const [k, v] of Object.entries(data.samples)) {
-	// 	if (q.unit === 'log') {
-	// 		if (v[term.id].key == 0 || v[term.id].value == 0) continue
-	// 		v[term.id].key = Math.log2(v[term.id].key)
-	// 		v[term.id].value = Math.log2(v[term.id].value)
-	// 	}
-	// }
 
 	if (q.scale) scaleData(q, data, term)
 
@@ -160,8 +152,8 @@ function divideValues(q, data, term, overlayTerm) {
 	const useLog = q.unit == 'log'
 
 	const key2values = new Map()
-	let min = null,
-		max = null
+	let min = Infinity
+	let max = -Infinity
 
 	//create object to store uncomputable values and label
 	const uncomputableValueObj = {}
@@ -169,14 +161,13 @@ function divideValues(q, data, term, overlayTerm) {
 
 	for (const [c, v] of Object.entries(data.samples)) {
 		//if there is no value for term then skip that.
-
-		const value = v[term.id]?.value // numeric value
+		const value = roundValue(v[term.id]?.value, 1)
 		if (!Number.isFinite(value)) continue
 
 		if (term.values?.[value]?.uncomputable) {
 			//skip these values from rendering in plot but show in legend as uncomputable categories
 			const label = term.values[value].label // label of this uncomputable category
-			uncomputableValueObj[label] = 1 + (uncomputableValueObj[label] || 0)
+			uncomputableValueObj[label] = (uncomputableValueObj[label] || 0) + 1
 			continue
 		}
 
@@ -185,21 +176,19 @@ function divideValues(q, data, term, overlayTerm) {
 			continue
 		}
 
-		if (min == null) {
-			min = value
-			max = value
-		} else {
-			min = Math.min(min, value)
-			max = Math.max(max, value)
-		}
+		if (min > value) min = value
+		if (max < value) max = value
+
 		if (useLog === 'log') {
 			if (min === 0) min = Math.max(min, value)
 		}
 
 		if (overlayTerm) {
-			if (!v[overlayTerm.id]) {
-				// if there is no value for q.divideTw then skip this
-				continue
+			if (!v[(overlayTerm?.id)]) continue
+			// if there is no value for q.divideTw then skip this
+			if (overlayTerm.term.values[(v[overlayTerm.id]?.key)]?.uncomputable) {
+				const label = overlayTerm.term.values[(v[overlayTerm.id]?.value)]?.label // label of this uncomputable category
+				uncomputableValueObj[label] = (uncomputableValueObj[label] || 0) + 1
 			}
 
 			if (!key2values.has(v[overlayTerm.id]?.key)) key2values.set(v[overlayTerm.id]?.key, [])
@@ -223,12 +212,15 @@ function sortObj(object) {
 
 function sortKey2values(data, key2values, overlayTerm) {
 	const keyOrder = data.refs.byTermId[(overlayTerm?.term?.id)]?.keyOrder
+
 	key2values = new Map(
 		[...key2values].sort(
 			keyOrder
 				? (a, b) => keyOrder.indexOf(a[0]) - keyOrder.indexOf(b[0])
 				: overlayTerm?.term?.type === 'categorical'
 				? (a, b) => b[1].length - a[1].length
+				: overlayTerm?.term?.type === 'condition'
+				? (a, b) => a[0] - b[0]
 				: (a, b) =>
 						a
 							.toString()

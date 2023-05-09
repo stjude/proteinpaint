@@ -1,9 +1,10 @@
 import { filterJoin, getFilterItemByTag } from '../filter/filter'
 import { renderTable } from '#dom/table'
 import { to_svg } from '#src/client'
+import roundValue from '../../server/shared/roundValue'
 
 export function setInteractivity(self) {
-	self.download = function() {
+	self.download = () => {
 		if (!self.state) return
 
 		// has to be able to handle multichart view
@@ -23,49 +24,46 @@ export function setInteractivity(self) {
 
 	self.displayLabelClickMenu = function(t1, t2, plot, event) {
 		self.displayLabelClickMenu.called = true
-		const options = []
-		if (t2) {
-			//disable filtering if only 1 data is present.
-			if (self.data.plots.length > 1) {
-				if (t1.term.type === 'categorical') {
-					options.push({
-						label: `Add filter: ${plot.label.split(',')[0]}`,
-						callback: getAddFilterCallback(t1, t2, self, plot, 'term1')
-					})
-				} else {
-					options.push({
-						label: `Add filter: ${plot.label.split(',')[0]}`,
-						callback: getAddFilterCallback(t1, t2, self, plot, 'term2')
+
+		if (!t2 || self.data.plots.length === 1) {
+			return
+		}
+
+		const label = t1.term.type === 'categorical' ? 'term1' : 'term2'
+		const options = [
+			{
+				label: `Add filter: ${plot.label.split(',')[0]}`,
+				callback: getAddFilterCallback(t1, t2, self, plot, label)
+			},
+			{
+				label: `Hide: ${plot.label}`,
+				callback: () => {
+					const term = self.config[label]
+					const isHidden = true
+
+					self.app.dispatch({
+						type: 'plot_edit',
+						id: self.id,
+						config: {
+							[label]: {
+								isAtomic: true,
+								id: term.id,
+								term: term.term,
+								q: getUpdatedQfromClick(plot, t2, isHidden)
+							}
+						}
 					})
 				}
-				//On label clicking, display 'Hide' option to hide plot.
-
-				options.push({
-					label: `Hide: ${plot.label}`,
-					callback: () => {
-						const termNum = t2 ? 'term2' : null
-						const term = self.config[termNum]
-						const isHidden = true
-						self.app.dispatch({
-							type: 'plot_edit',
-							id: self.id,
-							config: {
-								[termNum]: {
-									isAtomic: true,
-									id: term.id,
-									term: term.term,
-									q: getUpdatedQfromClick(plot, t2, isHidden)
-								}
-							}
-						})
-					}
-				})
 			}
-		}
+		]
+
 		if (self.config.settings.violin.displaySampleIds && self.state.hasVerifiedToken) {
 			options.push({
 				label: `List samples`,
-				callback: async () => self.listSamples(event, t1, t2, plot, self.data.min, self.data.max * 2)
+				callback: async () => {
+					const [start, end] = [self.data.min, self.data.max * 2]
+					await self.listSamples(event, t1, t2, plot, start, end)
+				}
 			})
 		}
 		self.displayMenu(event, options)
@@ -73,13 +71,16 @@ export function setInteractivity(self) {
 
 	self.displayBrushMenu = function(t1, t2, self, plot, selection, scale, isH) {
 		self.displayBrushMenu.called = true
-		const start = isH ? scale.invert(selection[0]) : scale.invert(selection[1])
-		const end = isH ? scale.invert(selection[1]) : scale.invert(selection[0])
-		const options = []
-		options.push({
-			label: `Add filter: ${start.toFixed(1)} < x < ${end.toFixed(1)}`,
-			callback: getAddFilterCallback(t1, t2, self, plot, start, end)
-		})
+		const [start, end] = isH
+			? [scale.invert(selection[0]), scale.invert(selection[1])]
+			: [scale.invert(selection[1]), scale.invert(selection[0])]
+
+		const options = [
+			{
+				label: `Add filter: ${start.toFixed(1)} < x < ${end.toFixed(1)}`,
+				callback: getAddFilterCallback(t1, t2, self, plot, start, end)
+			}
+		]
 
 		if (self.config.settings.violin.displaySampleIds && self.state.hasVerifiedToken) {
 			options.push({
@@ -137,7 +138,7 @@ export function setInteractivity(self) {
 		for (const [c, k] of Object.entries(data.samples)) {
 			const sampleIdObj = {}
 			if (data.refs.bySampleId[c]) {
-				sampleIdObj[data.refs.bySampleId[c]] = k[term.$id].value
+				sampleIdObj[data.refs.bySampleId[c]] = roundValue(k[term.$id].value, 1)
 			}
 			sampleIdArr.push([{ value: Object.keys(sampleIdObj) }, { value: Object.values(sampleIdObj) }])
 		}

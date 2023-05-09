@@ -164,8 +164,10 @@ class ViolinPlot {
 
 	async main() {
 		const c = this.state.config
+
 		if (c.chartType != this.type && c.childType != this.type) return
 		this.config = structuredClone(this.state.config)
+
 		if (this.dom.header)
 			this.dom.header.text(
 				this.config.term.term.name + ` <span style="opacity:.6;font-size:1em;margin-left:10px;">Violin Plot</span>`

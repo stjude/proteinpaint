@@ -6,6 +6,7 @@ import { brushX, brushY } from 'd3-brush'
 import { renderTable } from '#dom/table'
 import { Menu } from '../dom/menu'
 import { rgb } from 'd3'
+import { format as d3format } from 'd3-format'
 
 export default function violinRenderer(self) {
 	self.render = function() {
@@ -23,7 +24,11 @@ export default function violinRenderer(self) {
 		if (termNum && termNum.term?.values) {
 			for (const [k, v] of Object.entries(termNum.term.values)) {
 				if (v.uncomputable) {
-					if (termNum.q.hiddenValues[k]) delete termNum.q.hiddenValues[k]
+					if (termNum.q.hiddenValues[k]) {
+						let str = `${v.label}, n=${self.data.uncomputableValueObj?.[v.label]}`
+						termNum.q.hiddenValues[str] = 1
+						delete termNum.q.hiddenValues[k]
+					}
 				}
 			}
 		}
@@ -191,7 +196,15 @@ export default function violinRenderer(self) {
 		// <g>: holder of numeric axis
 		const g = svg.svgG.append('g')
 		// .style('font-size', '15')
-		g.call((isH ? axisTop : axisLeft)().scale(svg.axisScale))
+
+		const ticks = svg.axisScale.ticks(3).filter(tick => tick > 0)
+
+		g.call(
+			(isH ? axisTop : axisLeft)()
+				.scale(svg.axisScale)
+				.tickFormat(settings.unit === 'log' ? d3format('.3f') : null)
+				.tickValues(ticks)
+		)
 
 		if (self.opts.mode != 'minimal') {
 			let lab
@@ -412,52 +425,47 @@ export function createNumericScale(self, settings, isH) {
 }
 
 function getLegendGrps(self) {
-	const legendGrps = []
-	const t1 = self.config.term
-	const t2 = self.config.term2
-	const headingStyle = 'color: #aaa; font-weight: 400'
+	const legendGrps = [],
+		t1 = self.config.term,
+		t2 = self.config.term2,
+		headingStyle = 'color: #aaa; font-weight: 400'
+	let title, name
 
-	// descriptive statistics
-	if (t1.q.descrStats) {
-		// term1 has descriptive stats
-		const items = t1.q.descrStats.map(stat => {
-			return {
-				text: `${stat.label}: ${stat.value}`,
-				noIcon: true
-			}
-		})
-		// title of descriptive stats should include the term1 name if term2 is present
-		const title = t2 ? `Descriptive statistics: ${t1.term.name}` : 'Descriptive statistics'
-		const name = `<span style="${headingStyle}">${title}</span>`
-		legendGrps.push({ name, items })
-	}
-	if (t2?.q.descrStats) {
-		// term2 has descriptive stats
-		const items = t2.q.descrStats.map(stat => {
-			return {
-				text: `${stat.label}: ${stat.value}`,
-				noIcon: true
-			}
-		})
-		// title of descriptive stats will include the term2 name
-		// because two terms are present
-		const title = `Descriptive statistics: ${t2.term.name}`
-		const name = `<span style="${headingStyle}">${title}</span>`
-		legendGrps.push({ name, items })
-	}
-
-	if (self.data.uncomputableValueObj != null) {
-		const items = []
-		for (const [k, v] of Object.entries(self.data.uncomputableValueObj)) {
-			items.push({
-				text: `${k}, n = ${v}`,
-				noIcon: true
+	const addDescriptiveStats = term => {
+		if (term?.q.descrStats) {
+			const items = term.q.descrStats.map(stat => {
+				return {
+					text: `${stat.label}: ${stat.value}`,
+					noIcon: true
+				}
 			})
+			title = t2 ? `Descriptive statistics: ${term.term.name}` : 'Descriptive statistics'
+			name = `<span style="${headingStyle}">${title}</span>`
+			legendGrps.push({ name, items })
 		}
-		const title = t1.q.mode && t1.q.mode === 'continuous' ? `${t1.term.name}` : `${t2.term.name}`
-		const name = `<span style="${headingStyle}">${title}</span>`
-		legendGrps.push({ name, items })
 	}
+
+	addDescriptiveStats(t1)
+	addDescriptiveStats(t2)
+
+	const addUncomputableValues = term => {
+		if (term?.term.values) {
+			for (const k in term.term.values) {
+				if (self.data.uncomputableValueObj?.[term.term.values[k]?.label]) {
+					const items = []
+					items.push({
+						text: `${term.term.values[k].label}, n = ${self.data.uncomputableValueObj[term.term.values[k].label]}`,
+						noIcon: true
+					})
+					title = `${term.term.name}`
+					name = `<span style="${headingStyle}">${title}</span>`
+					legendGrps.push({ name, items })
+				}
+			}
+		}
+	}
+
+	addUncomputableValues(t1)
 
 	if (t2) {
 		if (t2.q.hiddenValues && Object.entries(t2.q.hiddenValues).length != 0) {
@@ -470,8 +478,8 @@ function getLegendGrps(self) {
 					hiddenOpacity: 1
 				})
 			}
-			const title = `${t2.term.name}`
-			const name = `<span style="${headingStyle}">${title}</span>`
+			title = `${t2.term.name}`
+			name = `<span style="${headingStyle}">${title}</span>`
 			legendGrps.push({ name, items })
 		}
 	}
