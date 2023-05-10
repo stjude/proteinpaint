@@ -69,15 +69,6 @@ export function setRenderers(self) {
 				.domain([min, max])
 				.range([chart.startColor, chart.stopColor])
 		}
-		console.log(self.config.settings.sampleScatter.doLowess)
-		if (self.config.settings.sampleScatter.doLowess) {
-			const coords = []
-			for (const sample of chart.cohortSamples)
-				coords.push({ x: chart.xAxisScale(sample.x), y: chart.yAxisScale(sample.y) })
-			console.log(coords)
-			chart.lowessCurve = await this.app.vocabApi.getLowessCurve({ coords })
-			console.log(chart.lowessCurve)
-		}
 	}
 
 	function renderSVG(chart, s) {
@@ -222,7 +213,6 @@ export function setRenderers(self) {
 	}
 
 	function renderSerie(chart, duration) {
-		console.log(chart.lowessCurve)
 		const g = chart.serie
 		const data = chart.data
 		// remove all symbols as there is no data id for privacy
@@ -248,24 +238,32 @@ export function setRenderers(self) {
 			.style('fill-opacity', c => self.getOpacity(c))
 			.transition()
 			.duration(duration)
+	}
 
-		const lowessSymbols = chart.lowessG.selectAll('path').data(chart.lowessCurve)
-		lowessSymbols.exit().remove()
-		lowessSymbols
-			.transition()
-			.duration(duration)
-			.attr('transform', c => translate(chart, c))
-			.attr('d', self.symbols[0].size(5)())
-			.attr('fill', 'blue')
-		lowessSymbols
-			.enter()
-			.append('path')
-			/*** you'd need to set the symbol position using translate, instead of previously with cx, cy for a circle ***/
-			.attr('transform', c => translate(chart, c))
-			.attr('d', self.symbols[0].size(5)())
-			.attr('fill', 'blue')
-			.transition()
-			.duration(duration)
+	self.renderLowessCurve = async function() {
+		const duration = self.config.settings.sampleScatter.duration
+		for (const chart of self.charts) {
+			const coords = []
+			for (const sample of chart.cohortSamples) coords.push({ x: sample.x, y: sample.y })
+			chart.lowessCurve = await self.app.vocabApi.getLowessCurve({ coords })
+			const lowessSymbols = chart.lowessG.selectAll('path').data(chart.lowessCurve)
+			lowessSymbols.exit().remove()
+			lowessSymbols
+				.transition()
+				.duration(duration)
+				.attr('transform', c => translate(chart, c))
+				.attr('d', self.symbols[0].size(5)())
+				.attr('fill', 'blue')
+			lowessSymbols
+				.enter()
+				.append('path')
+				/*** you'd need to set the symbol position using translate, instead of previously with cx, cy for a circle ***/
+				.attr('transform', c => translate(chart, c))
+				.attr('d', self.symbols[0].size(5)())
+				.attr('fill', 'blue')
+				.transition()
+				.duration(duration)
+		}
 	}
 
 	self.getColor = function(c, chart) {
