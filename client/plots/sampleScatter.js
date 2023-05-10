@@ -10,7 +10,6 @@ import {
 	symbolCross,
 	symbolSquare,
 	symbolWye,
-	symbolAsterisk,
 	symbolDiamond,
 	symbolDiamond2,
 	symbolStar,
@@ -143,15 +142,15 @@ class Scatter {
 		const colorLegend = new Map(data.colorLegend)
 		const shapeLegend = new Map(data.shapeLegend)
 		const chart = { id, data, cohortSamples, colorLegend, shapeLegend }
-		if (this.config.settings.sampleScatter.doLowess) {
-			const X = [],
-				Y = []
-			for (const sample of chart.cohortSamples) {
-				X.push(sample.x)
-				Y.push(sample.y)
-			}
-			chart.lowessCurve = await this.app.vocabApi.getLowessCurve({ coords: { X, Y } })
-		}
+		// if (this.config.settings.sampleScatter.doLowess) {
+		// 	const X = [],
+		// 		Y = []
+		// 	for (const sample of chart.cohortSamples) {
+		// 		X.push(sample.x)
+		// 		Y.push(sample.y)
+		// 	}
+		// 	chart.lowessCurve = await this.app.vocabApi.getLowessCurve({ coords: { X, Y } })
+		// }
 
 		this.charts.push(chart)
 	}
