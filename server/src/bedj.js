@@ -114,7 +114,7 @@ const returngmdata_maxCount = 50 // max number of items to return data to client
 // color for translated codons
 const altcolor = 'rgba(122,103,44,.7)',
 	errcolor = 'red',
-	startcolor = 'rgba(0,255,0,.4)',
+	startcolor = '#edad0c', //'rgba(0,255,0,.4)', // methionine
 	stopcolor = 'rgba(255,0,0,.5)',
 	skippedBpColor = '#ccc'
 
