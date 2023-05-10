@@ -8,6 +8,7 @@ import { axisLeft, axisBottom } from 'd3-axis'
 import { select } from 'd3-selection'
 import { Menu } from '#dom/menu'
 import { getSamplelstTW } from '#termsetting/handlers/samplelst'
+import { regressionLoess } from 'd3-regression'
 
 export function setRenderers(self) {
 	self.render = function() {
@@ -249,8 +250,14 @@ export function setRenderers(self) {
 				chart.lowessG.selectAll('*').remove()
 				continue
 			}
-
-			const lowessSymbols = chart.lowessG.selectAll('path').data(chart.lowessCurve)
+			const regression = regressionLoess()
+				.x(d => d.x)
+				.y(d => d.y)
+				.bandwidth(0.25)
+			const lowessCurve = regression(chart.cohortSamples)
+			const dots = []
+			for (const item of lowessCurve) dots.push({ x: item[0], y: item[1] })
+			const lowessSymbols = chart.lowessG.selectAll('path').data(dots)
 			lowessSymbols.exit().remove()
 
 			lowessSymbols
