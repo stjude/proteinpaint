@@ -136,7 +136,7 @@ class Scatter {
 		this.setTools()
 		this.updateGroupsButton()
 		this.dom.tip.hide()
-		if (this.config.settings.sampleScatter.doLowess) this.renderLowessCurve()
+		this.mayRenderLowessCurve()
 	}
 
 	createChart(id, data) {

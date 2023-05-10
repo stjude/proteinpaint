@@ -240,14 +240,21 @@ export function setRenderers(self) {
 			.duration(duration)
 	}
 
-	self.renderLowessCurve = async function() {
+	self.mayRenderLowessCurve = async function() {
 		const duration = self.config.settings.sampleScatter.duration
 		for (const chart of self.charts) {
+			if (!self.config.settings.sampleScatter.doLowess) {
+				chart.lowessG.selectAll('*').remove()
+				continue
+			}
+
 			const coords = []
 			for (const sample of chart.cohortSamples) coords.push({ x: sample.x, y: sample.y })
 			chart.lowessCurve = await self.app.vocabApi.getLowessCurve({ coords })
+
 			const lowessSymbols = chart.lowessG.selectAll('path').data(chart.lowessCurve)
 			lowessSymbols.exit().remove()
+
 			lowessSymbols
 				.transition()
 				.duration(duration)
