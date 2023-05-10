@@ -57,12 +57,20 @@ export function fillTW(tw, vocabApi) {
 	} else {
 		tw.q.cnvMaxLength = 2000000
 	}
-	if ('cnvMinAbsValue' in tw.q) {
-		// subject to change!
-		if (!Number.isFinite(tw.q.cnvMinAbsValue)) throw 'cnvMinAbsValue is not finite'
-		// <=0 will not filter by absolute value
+	// cutoffs on cnv quantifications, subject to change!
+	if ('cnvGainCutoff' in tw.q) {
+		if (!Number.isFinite(tw.q.cnvGainCutoff)) throw 'cnvGainCutoff is not finite'
+		if (tw.q.cnvGainCutoff < 0) throw 'cnvGainCutoff is not positive'
+		// =0 for no filtering gains
 	} else {
-		tw.q.cnvMinAbsValue = 0.2
+		tw.q.cnvGainCutoff = 0.2
+	}
+	if ('cnvLossCutoff' in tw.q) {
+		if (!Number.isFinite(tw.q.cnvLossCutoff)) throw 'cnvLossCutoff is not finite'
+		if (tw.q.cnvLossCutoff > 0) throw 'cnvLossCutoff is not negative'
+		// =0 for not filtering losses
+	} else {
+		tw.q.cnvLossCutoff = -0.2
 	}
 }
 

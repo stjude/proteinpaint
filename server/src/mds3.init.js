@@ -1445,7 +1445,8 @@ export async function cnvByRangeGetter_file(ds, genome) {
 		if (!Array.isArray(param.rglst)) throw 'q.rglst[] is not array'
 		if (param.rglst.length == 0) throw 'q.rglst[] blank array'
 		if (param.cnvMaxLength && !Number.isInteger(param.cnvMaxLength)) throw 'cnvMaxLength is not integer' // cutoff<=0 is ignored
-		if (param.cnvMinAbsValue && !Number.isFinite(param.cnvMinAbsValue)) throw 'cnvMinAbsValue is not finite'
+		if (param.cnvGainCutoff && !Number.isFinite(param.cnvGainCutoff)) throw 'cnvGainCutoff is not finite'
+		if (param.cnvLossCutoff && !Number.isFinite(param.cnvLossCutoff)) throw 'cnvLossCutoff is not finite'
 
 		const formatFilter = getFormatFilter(param)
 
@@ -1481,7 +1482,8 @@ export async function cnvByRangeGetter_file(ds, genome) {
 
 					if (!Number.isFinite(j.value)) return
 
-					if (j.cnvMinAbsValue && Math.abs(j.value) < j.cnvMinAbsValue) return // value below min cutoff
+					if (j.value > 0 && param.cnvGainCutoff && j.value < param.cnvGainCutoff) return
+					if (j.value < 0 && param.cnvLossCutoff && j.value > param.cnvLossCutoff) return
 
 					j.start = start
 					j.stop = stop
@@ -1810,7 +1812,8 @@ async function getCnvByTw(ds, tw, genome, q) {
 		filter0: q.filter0, // hidden filter
 		filterObj: q.filter, // pp filter, must change key name to "filterObj" to be consistent with mds3 client
 		cnvMaxLength: tw?.q?.cnvMaxLength,
-		cnvMinAbsValue: tw?.q?.cnvMinAbsValue
+		cnvGainCutoff: tw?.q?.cnvGainCutoff,
+		cnvLossCutoff: tw?.q?.cnvLossCutoff
 	}
 	if (ds.queries.cnv.byrange) {
 		await mayMapGeneName2coord(tw.term, genome)
