@@ -717,6 +717,7 @@ tape('Numeric mode custom dataset, with mode change', test => {
 })
 
 tape('Custom dataset with custom variants, NO samples', test => {
+	//In mds3.integration.spec.js
 	test.timeoutAfter(3000)
 	const holder = getHolder()
 
@@ -760,6 +761,7 @@ tape('Custom dataset with custom variants, NO samples', test => {
 })
 
 tape('Custom variants, missing or wrong mclass', test => {
+	//In mds3.integration.spec.js
 	test.timeoutAfter(3000)
 	const holder = getHolder()
 
@@ -801,6 +803,7 @@ tape('Custom variants, missing or wrong mclass', test => {
 })
 
 tape('Custom dataset with custom variants, WITH samples', test => {
+	//In mds3.integration.spec.js
 	test.timeoutAfter(3000)
 	const holder = getHolder()
 
@@ -861,6 +864,7 @@ tape('Custom dataset with custom variants, WITH samples', test => {
 })
 
 tape('Custom data with samples and sample selection', test => {
+	//In mds3.integration.spec.js
 	test.timeoutAfter(3000)
 	const holder = getHolder()
 
