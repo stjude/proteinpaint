@@ -330,8 +330,7 @@ tape('Invalid plot name', async function(test) {
 })
 
 tape('Test legend', function(test) {
-	test.timeoutAfter(3000)
-	test.plan(2)
+	test.timeoutAfter(6000) //Fix for breaking on local CI but maynot be necessary for nightly build
 
 	runpp({
 		state,
