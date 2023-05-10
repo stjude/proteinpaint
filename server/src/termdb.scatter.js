@@ -404,5 +404,5 @@ export async function trigger_getLowessCurve(req, q, res) {
 	result = JSON.parse(result)
 	const lowessCurve = []
 	for (const [i, x] of Object.entries(result.x)) lowessCurve.push({ x, y: result.y[i] })
-	return lowessCurve
+	return res.send(lowessCurve)
 }
