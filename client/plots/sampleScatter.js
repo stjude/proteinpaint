@@ -144,9 +144,13 @@ class Scatter {
 		const shapeLegend = new Map(data.shapeLegend)
 		const chart = { id, data, cohortSamples, colorLegend, shapeLegend }
 		if (this.config.settings.sampleScatter.doLowess) {
-			const coords = []
-			for (const sample of chart.cohortSamples) coords.push({ x: sample.x, y: sample.y })
-			chart.lowessCurve = await this.app.vocabApi.getLowessCurve({ coords })
+			const X = [],
+				Y = []
+			for (const sample of chart.cohortSamples) {
+				X.push(sample.x)
+				Y.push(sample.y)
+			}
+			chart.lowessCurve = await this.app.vocabApi.getLowessCurve({ coords: { X, Y } })
 		}
 
 		this.charts.push(chart)
