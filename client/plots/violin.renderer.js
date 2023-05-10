@@ -429,7 +429,6 @@ function getLegendGrps(self) {
 		t1 = self.config.term,
 		t2 = self.config.term2,
 		headingStyle = 'color: #aaa; font-weight: 400'
-	let title, name
 
 	const addDescriptiveStats = term => {
 		if (term?.q.descrStats) {
@@ -439,8 +438,8 @@ function getLegendGrps(self) {
 					noIcon: true
 				}
 			})
-			title = t2 ? `Descriptive statistics: ${term.term.name}` : 'Descriptive statistics'
-			name = `<span style="${headingStyle}">${title}</span>`
+			const title = t2 ? `Descriptive statistics: ${term.term.name}` : 'Descriptive statistics'
+			const name = `<span style="${headingStyle}">${title}</span>`
 			legendGrps.push({ name, items })
 		}
 	}
@@ -450,17 +449,18 @@ function getLegendGrps(self) {
 
 	const addUncomputableValues = term => {
 		if (term?.term.values) {
+			const items = []
 			for (const k in term.term.values) {
 				if (self.data.uncomputableValueObj?.[term.term.values[k]?.label]) {
-					const items = []
 					items.push({
 						text: `${term.term.values[k].label}, n = ${self.data.uncomputableValueObj[term.term.values[k].label]}`,
 						noIcon: true
 					})
-					title = `${term.term.name}`
-					name = `<span style="${headingStyle}">${title}</span>`
-					legendGrps.push({ name, items })
 				}
+			}
+			if (items.length) {
+				const name = `<span style="${headingStyle}">${term.term.name}</span>`
+				legendGrps.push({ name, items })
 			}
 		}
 	}
@@ -478,8 +478,7 @@ function getLegendGrps(self) {
 					hiddenOpacity: 1
 				})
 			}
-			title = `${t2.term.name}`
-			name = `<span style="${headingStyle}">${title}</span>`
+			const name = `<span style="${headingStyle}">${t2.term.name}</span>`
 			legendGrps.push({ name, items })
 		}
 	}
