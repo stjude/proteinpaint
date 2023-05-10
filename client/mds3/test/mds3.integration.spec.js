@@ -286,6 +286,7 @@ tape('Custom data with samples and sample selection', test => {
 		)
 
 		{
+			//Test variant label left of track
 			const lab = tk.leftlabels.doms.variants
 			test.ok(lab, '"Variants" leftlabel should be displayed')
 			test.equal(
@@ -295,6 +296,7 @@ tape('Custom data with samples and sample selection', test => {
 			)
 		}
 		{
+			//Test sample label left of track
 			const sampleLabel = tk.leftlabels.doms.samples
 			test.ok(sampleLabel, '"Samples" leftlabel should be displayed')
 			test.equal(
@@ -303,11 +305,10 @@ tape('Custom data with samples and sample selection', test => {
 				`Sample leftlabel should print "${custom_variants.length} samples"`
 			)
 
-			// click "samples" leftlabel
 			sampleLabel.node().dispatchEvent(new Event('click'))
 
+			//Test list menu option available
 			const listOpt = await detectOne({
-				//can switch to detectOne if no other option is applied
 				elem: tk.menutip.dnode,
 				selector: '.sja_menuoption'
 			})
