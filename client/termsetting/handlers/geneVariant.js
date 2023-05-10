@@ -42,6 +42,28 @@ let id = 0
 export function fillTW(tw, vocabApi) {
 	if (!('id' in tw)) tw.id = idPrefix + id++
 	if (!tw.term.name && tw.term.isoform) tw.term.name = tw.term.isoform
+
+	{
+		// apply optional ds-level configs for this specific term
+		const c = vocabApi.termdbConfig.customTwQByType?.geneVariant?.[tw.term.name]
+		if (c) Object.assign(tw.q, c)
+	}
+
+	// cnv cutoffs; if the attributes are missing from q{}, add
+	if ('cnvMaxLength' in tw.q) {
+		// has cutoff
+		if (!Number.isInteger(tw.q.cnvMaxLength)) throw 'cnvMaxLength is not integer'
+		// cnvMaxLength value<=0 will not filter by length
+	} else {
+		tw.q.cnvMaxLength = 2000000
+	}
+	if ('cnvMinAbsVaue' in tw.q) {
+		// subject to change!
+		if (!Number.isFinite(tw.q.cnvMinAbsVaue)) throw 'cnvMinAbsVaue is not finite'
+		// <=0 will not filter by absolute value
+	} else {
+		tw.q.cnvMinAbsVaue = 0.2
+	}
 }
 
 function makeEditMenu(self, _div) {

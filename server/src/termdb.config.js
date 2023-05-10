@@ -58,6 +58,7 @@ export function make(q, res, ds, genome) {
 	if (tdb.displaySampleIds) c.displaySampleIds = tdb.displaySampleIds
 	if (tdb.additionalSampleAttributes) c.additionalSampleAttributes = tdb.additionalSampleAttributes
 	if (ds.assayAvailability) c.assayAvailability = ds.assayAvailability
+	if (ds.customTwQByType) c.customTwQByType = ds.customTwQByType
 	addRequiredAuth(c, q)
 	addRestrictAncestries(c, tdb)
 	addScatterplots(c, ds)

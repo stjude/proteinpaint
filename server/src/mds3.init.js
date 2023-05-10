@@ -61,7 +61,7 @@ mayAdd_refseq2ensembl
 mayAdd_mayGetGeneVariantData
 	getSnvindelByTerm
 	getSvfusionByTerm
-	getCnvByTerm
+	getCnvByTw
 		mayMapGeneName2isoform
 		mayMapGeneName2coord
 	mayAddDataAvailability
@@ -1437,10 +1437,15 @@ export async function cnvByRangeGetter_file(ds, genome) {
 		})
 	}
 
-	// same parameter as snvindel.byrange.get()
+	/* extra parameters from snvindel.byrange.get():
+	cnvMaxLength: int
+	cnvMinAbsValue: float
+	*/
 	return async param => {
 		if (!Array.isArray(param.rglst)) throw 'q.rglst[] is not array'
 		if (param.rglst.length == 0) throw 'q.rglst[] blank array'
+		if (param.cnvMaxLength && !Number.isInteger(param.cnvMaxLength)) throw 'cnvMaxLength is not integer' // cutoff<=0 is ignored
+		if (param.cnvMinAbsValue && !Number.isFinite(param.cnvMinAbsValue)) throw 'cnvMinAbsValue is not finite'
 
 		const formatFilter = getFormatFilter(param)
 
@@ -1458,6 +1463,10 @@ export async function cnvByRangeGetter_file(ds, genome) {
 				dir: q.dir,
 				callback: line => {
 					const l = line.split('\t')
+					const start = Number(l[1]) // must always be numbers
+					const stop = Number(l[2])
+					if (param.cnvMaxLength && stop - start >= param.cnvMaxLength) return // segment size too big
+
 					let j
 					try {
 						j = JSON.parse(l[3])
@@ -1472,8 +1481,10 @@ export async function cnvByRangeGetter_file(ds, genome) {
 
 					if (!Number.isFinite(j.value)) return
 
-					j.start = Number(l[1])
-					j.stop = Number(l[2])
+					if (j.cnvMinAbsValue && Math.abs(j.value) < j.cnvMinAbsValue) return // value below min cutoff
+
+					j.start = start
+					j.stop = stop
 
 					j.class = j.value > 0 ? mclasscnvgain : mclasscnvloss
 
@@ -1584,7 +1595,7 @@ function mayAdd_mayGetGeneVariantData(ds, genome) {
 			mlst.push(...lst)
 		}
 		if (ds.queries.cnv) {
-			const lst = await getCnvByTerm(ds, tw.term, genome, q)
+			const lst = await getCnvByTw(ds, tw, genome, q)
 			mlst.push(...lst)
 		}
 
@@ -1790,16 +1801,21 @@ async function getSvfusionByTerm(ds, term, genome, q) {
 	}
 	throw 'unknown queries.svfusion method'
 }
-async function getCnvByTerm(ds, term, genome, q) {
+async function getCnvByTw(ds, tw, genome, q) {
+	/* tw.term.type is "geneVariant"
+	tw.q{} carries optional cutoffs (max length and min value) to filter cnv segments
+	*/
 	const arg = {
 		addFormatValues: true,
 		filter0: q.filter0, // hidden filter
-		filterObj: q.filter // pp filter, must change key name to "filterObj" to be consistent with mds3 client
+		filterObj: q.filter, // pp filter, must change key name to "filterObj" to be consistent with mds3 client
+		cnvMaxLength: tw?.q?.cnvMaxLength,
+		cnvMinAbsValue: tw?.q?.cnvMinAbsValue
 	}
 	if (ds.queries.cnv.byrange) {
-		await mayMapGeneName2coord(term, genome)
+		await mayMapGeneName2coord(tw.term, genome)
 		// tw.term.chr/start/stop are set
-		arg.rglst = [term]
+		arg.rglst = [tw.term]
 		return await ds.queries.cnv.byrange.get(arg)
 	}
 	throw 'unknown queries.cnv method'
