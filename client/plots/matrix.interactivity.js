@@ -33,6 +33,7 @@ export function setInteractivity(self) {
 				const label = v.mname ? `${v.mname} ${c.label}` : c.label
 				const info = []
 				if (v.label && v.label !== c.label) info.push(v.label)
+				if ('value' in v) info.push(`log2r=${v.value}`)
 				if (v.chr) {
 					const pos = v.pos ? `:${v.pos}` : v.start ? `:${v.start}-${v.stop}` : ''
 					info.push(`${v.chr}${pos}`)

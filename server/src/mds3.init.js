@@ -1829,6 +1829,8 @@ function mayAdd_mayGetGeneVariantData(ds, genome) {
 					_SAMPLENAME_: s.sample_id
 				}
 
+				if ('value' in m) m2.value = m.value
+
 				if (s.formatK2v) {
 					// this sample have format values, flatten those
 					for (const k in s.formatK2v) {

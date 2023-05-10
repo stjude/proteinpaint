@@ -51,6 +51,7 @@ function setGeneVariantCellProps(cell, tw, anno, value, s, t, self, width, heigh
 	const values = anno.renderedValues || anno.filteredValues || anno.values || [anno.value]
 	cell.label = value.label || self.mclass[value.class].label
 	const colorFromq = tw.q?.values && tw.q?.values[value.class]?.color
+	// may overriden by a color scale by dt, if applicable below
 	cell.fill = colorFromq || value.color || self.mclass[value.class]?.color
 	cell.class = value.class
 	cell.value = value
@@ -61,6 +62,11 @@ function setGeneVariantCellProps(cell, tw, anno, value, s, t, self, width, heigh
 		cell.width = colw
 		cell.x = cell.totalIndex * dx + cell.grpIndex * s.colgspace
 		cell.y = height * i
+		if (value.dt == 4 && 'value' in value) {
+			value.scaledValue = Math.abs(value.value / (value.value < 0 ? t.counts.maxLoss : t.counts.maxGain))
+			if (value.value > 0) value.scaledValue = 0.9 * value.scaledValue
+			cell.fill = value.value < 0 ? t.scales.loss(value.scaledValue) : t.scales.gain(value.scaledValue)
+		}
 	} else if (value.dt == 1) {
 		const divisor = 3
 		cell.height = s.rowh / divisor
