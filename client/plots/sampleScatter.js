@@ -129,21 +129,26 @@ class Scatter {
 		if (results.error) throw results.error
 		for (const [key, data] of Object.entries(results)) {
 			if (!Array.isArray(data.samples)) throw 'data.samples[] not array'
-			this.createChart(key, data)
+			await this.createChart(key, data)
 		}
 
 		this.render()
 		this.setTools()
 		this.updateGroupsButton()
 		this.dom.tip.hide()
-		this.mayRenderLowessCurve()
 	}
 
-	createChart(id, data) {
+	async createChart(id, data) {
 		const cohortSamples = data.samples.filter(sample => 'sampleId' in sample)
 		const colorLegend = new Map(data.colorLegend)
 		const shapeLegend = new Map(data.shapeLegend)
 		const chart = { id, data, cohortSamples, colorLegend, shapeLegend }
+		if (this.config.settings.sampleScatter.doLowess) {
+			const coords = []
+			for (const sample of chart.cohortSamples) coords.push({ x: sample.x, y: sample.y })
+			chart.lowessCurve = await this.app.vocabApi.getLowessCurve({ coords })
+		}
+
 		this.charts.push(chart)
 	}
 

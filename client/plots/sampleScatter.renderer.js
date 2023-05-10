@@ -115,7 +115,7 @@ export function setRenderers(self) {
 				.attr('height', self.settings.svgh)
 				.attr('fill', 'white')
 			chart.serie = chart.mainG.append('g').attr('class', 'sjpcb-scatter-series')
-			chart.lowessG = chart.mainG.append('g').attr('class', 'sjpcb-scatter-lowess')
+			chart.lowessG = chart.serie.append('g').attr('class', 'sjpcb-scatter-lowess')
 
 			//Adding clip path
 			const id = `${Date.now()}`
@@ -237,6 +237,7 @@ export function setRenderers(self) {
 			.style('fill-opacity', c => self.getOpacity(c))
 			.transition()
 			.duration(duration)
+		self.mayRenderLowessCurve()
 	}
 
 	self.mayRenderLowessCurve = async function() {
@@ -246,10 +247,6 @@ export function setRenderers(self) {
 				chart.lowessG.selectAll('*').remove()
 				continue
 			}
-
-			const coords = []
-			for (const sample of chart.cohortSamples) coords.push({ x: sample.x, y: sample.y })
-			chart.lowessCurve = await self.app.vocabApi.getLowessCurve({ coords })
 
 			const lowessSymbols = chart.lowessG.selectAll('path').data(chart.lowessCurve)
 			lowessSymbols.exit().remove()
