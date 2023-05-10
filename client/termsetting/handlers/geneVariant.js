@@ -57,12 +57,12 @@ export function fillTW(tw, vocabApi) {
 	} else {
 		tw.q.cnvMaxLength = 2000000
 	}
-	if ('cnvMinAbsVaue' in tw.q) {
+	if ('cnvMinAbsValue' in tw.q) {
 		// subject to change!
-		if (!Number.isFinite(tw.q.cnvMinAbsVaue)) throw 'cnvMinAbsVaue is not finite'
+		if (!Number.isFinite(tw.q.cnvMinAbsValue)) throw 'cnvMinAbsValue is not finite'
 		// <=0 will not filter by absolute value
 	} else {
-		tw.q.cnvMinAbsVaue = 0.2
+		tw.q.cnvMinAbsValue = 0.2
 	}
 }
 
