@@ -1457,80 +1457,83 @@ export async function cnvByRangeGetter_file(ds, genome) {
 		}
 
 		const cnvs = []
-
+		const promises = []
 		for (const r of param.rglst) {
-			await utils.get_lines_bigfile({
-				args: [q.file || q.url, (q.nochr ? r.chr.replace('chr', '') : r.chr) + ':' + r.start + '-' + r.stop],
-				dir: q.dir,
-				callback: line => {
-					const l = line.split('\t')
-					const start = Number(l[1]) // must always be numbers
-					const stop = Number(l[2])
-					if (param.cnvMaxLength && stop - start >= param.cnvMaxLength) return // segment size too big
+			promises.push(
+				utils.get_lines_bigfile({
+					args: [q.file || q.url, (q.nochr ? r.chr.replace('chr', '') : r.chr) + ':' + r.start + '-' + r.stop],
+					dir: q.dir,
+					callback: line => {
+						const l = line.split('\t')
+						const start = Number(l[1]) // must always be numbers
+						const stop = Number(l[2])
+						if (param.cnvMaxLength && stop - start >= param.cnvMaxLength) return // segment size too big
 
-					let j
-					try {
-						j = JSON.parse(l[3])
-					} catch (e) {
-						//console.log('cnv json err')
-						return
-					}
-					if (j.dt != dtcnv) {
-						//console.log('cnv invalid dt')
-						return
-					}
+						let j
+						try {
+							j = JSON.parse(l[3])
+						} catch (e) {
+							//console.log('cnv json err')
+							return
+						}
+						if (j.dt != dtcnv) {
+							//console.log('cnv invalid dt')
+							return
+						}
 
-					if (!Number.isFinite(j.value)) return
+						if (!Number.isFinite(j.value)) return
+						if (j.value > 0 && param.cnvGainCutoff && j.value < param.cnvGainCutoff) return
+						if (j.value < 0 && param.cnvLossCutoff && j.value > param.cnvLossCutoff) return
 
-					if (j.value > 0 && param.cnvGainCutoff && j.value < param.cnvGainCutoff) return
-					if (j.value < 0 && param.cnvLossCutoff && j.value > param.cnvLossCutoff) return
 
-					j.start = start
-					j.stop = stop
+						j.start = start
+						j.stop = stop
 
-					j.class = j.value > 0 ? mclasscnvgain : mclasscnvloss
+						j.class = j.value > 0 ? mclasscnvgain : mclasscnvloss
 
-					if (param.hiddenmclass && param.hiddenmclass.has(j.class)) return
+						if (param.hiddenmclass && param.hiddenmclass.has(j.class)) return
 
-					if (j.sample && limitSamples) {
-						// to filter sample
-						if (!limitSamples.has(j.sample)) return
-					}
+						if (j.sample && limitSamples) {
+							// to filter sample
+							if (!limitSamples.has(j.sample)) return
+						}
 
-					j.ssm_id = [r.chr, j.start, j.stop, j.value].join(ssmIdFieldsSeparator)
+						j.ssm_id = [r.chr, j.start, j.stop, j.value].join(ssmIdFieldsSeparator)
 
-					if (j.sample) {
-						// has sample, prepare the sample obj
-						// if the sample is skipped by format, then the event will be skipped
+						if (j.sample) {
+							// has sample, prepare the sample obj
+							// if the sample is skipped by format, then the event will be skipped
 
-						// for ds with sampleidmap, j.sample value should be integer
-						// XXX not guarding against file uses non-integer sample values in such case
+							// for ds with sampleidmap, j.sample value should be integer
+							// XXX not guarding against file uses non-integer sample values in such case
 
-						const sampleObj = { sample_id: j.sample }
-						if (j.mattr) {
-							// mattr{} has sample-level attributes on this sv event, equivalent to FORMAT
-							if (formatFilter) {
-								// will do the same filtering as snvindel
-								for (const formatKey in formatFilter) {
-									const formatValue = formatKey in j.mattr ? j.mattr[formatKey] : unannotatedKey
-									if (formatFilter[formatKey].has(formatValue)) {
-										// sample is dropped by format filter
-										return
+							const sampleObj = { sample_id: j.sample }
+							if (j.mattr) {
+								// mattr{} has sample-level attributes on this sv event, equivalent to FORMAT
+								if (formatFilter) {
+									// will do the same filtering as snvindel
+									for (const formatKey in formatFilter) {
+										const formatValue = formatKey in j.mattr ? j.mattr[formatKey] : unannotatedKey
+										if (formatFilter[formatKey].has(formatValue)) {
+											// sample is dropped by format filter
+											return
+										}
 									}
 								}
+								if (param.addFormatValues) {
+									// only attach format values when required
+									sampleObj.formatK2v = j.mattr
+								}
 							}
-							if (param.addFormatValues) {
-								// only attach format values when required
-								sampleObj.formatK2v = j.mattr
-							}
+							delete j.sample
+							j.samples = [sampleObj]
 						}
-						delete j.sample
-						j.samples = [sampleObj]
+						cnvs.push(j)
 					}
-					cnvs.push(j)
-				}
-			})
+				})
+			)
 		}
+		await Promise.all(promises)
 		return cnvs
 	}
 }
@@ -1653,7 +1656,7 @@ function mayAdd_mayGetGeneVariantData(ds, genome) {
 					dt: m.dt,
 					chr: tw.term.chr,
 					class: m.class,
-					pos: m.pos,
+					pos: m.pos || (m.start ? m.start + '-' + m.stop : ''),
 					mname: m.mname,
 					_SAMPLEID_: s.sample_id,
 					_SAMPLENAME_: s.sample_id

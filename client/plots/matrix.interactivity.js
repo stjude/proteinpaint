@@ -33,7 +33,10 @@ export function setInteractivity(self) {
 				const label = v.mname ? `${v.mname} ${c.label}` : c.label
 				const info = []
 				if (v.label && v.label !== c.label) info.push(v.label)
-				if (v.chr) info.push(`${v.chr}:${v.pos}`)
+				if (v.chr) {
+					const pos = v.pos ? `:${v.pos}` : v.start ? `:${v.start}-${v.stop}` : ''
+					info.push(`${v.chr}${pos}`)
+				}
 				if (v.alt) info.push(`${v.ref}>${v.alt}`)
 
 				const tds = !info.length
