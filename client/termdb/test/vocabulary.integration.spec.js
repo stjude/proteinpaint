@@ -588,7 +588,6 @@ tape('getRegressionData()', async test => {
 	//Linear results
 	type = 'linear'
 	results = await termdbVocabApi.getRegressionData(opts)
-	console.log(results)
 	test.equal(
 		typeof results.resultLst[0].data.coefficients,
 		'object',
