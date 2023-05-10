@@ -45,7 +45,7 @@ export function fillTW(tw, vocabApi) {
 
 	{
 		// apply optional ds-level configs for this specific term
-		const c = vocabApi.termdbConfig.customTwQByType?.geneVariant?.[tw.term.name]
+		const c = vocabApi?.termdbConfig.customTwQByType?.geneVariant?.[tw.term.name]
 		if (c) Object.assign(tw.q, c)
 	}
 
