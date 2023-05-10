@@ -217,11 +217,12 @@ export function setRenderers(self) {
 		// remove all symbols as there is no data id for privacy
 		//g.selectAll('path').remove()
 
-		const symbols = g.selectAll('path').data(data.samples)
+		const symbols = g.selectAll('path[name="serie"]').data(data.samples)
 		symbols.exit().remove()
 		symbols
 			.transition()
 			.duration(duration)
+			.attr('name', 'serie')
 			.attr('transform', c => translate(chart, c))
 			.attr('d', c => self.getShape(chart, c))
 			.attr('fill', c => self.getColor(c, chart))
@@ -229,6 +230,7 @@ export function setRenderers(self) {
 		symbols
 			.enter()
 			.append('path')
+			.attr('name', 'serie')
 			/*** you'd need to set the symbol position using translate, instead of previously with cx, cy for a circle ***/
 			.attr('transform', c => translate(chart, c))
 			.attr('d', c => self.getShape(chart, c))
@@ -308,7 +310,7 @@ export function setRenderers(self) {
 
 		if (chart.lasso)
 			chart.lasso
-				.items(mainG.select('.sjpcb-scatter-series').selectAll('path'))
+				.items(mainG.select('.sjpcb-scatter-series').selectAll('path[name="serie"]'))
 				.targetArea(mainG)
 				.on('start', lasso_start)
 				.on('draw', lasso_draw)
@@ -520,7 +522,7 @@ export function setRenderers(self) {
 				chart.serie.attr('transform', event.transform)
 				self.k = event.transform.scale(1).k
 				//on zoom in the particle size is kept
-				const symbols = chart.serie.selectAll('path')
+				const symbols = chart.serie.selectAll('path[name="serie"')
 				symbols.attr('d', c => self.getShape(chart, c))
 				if (self.lassoOn) chart.lasso.selectedItems().attr('d', c => self.getShape(chart, c, 2))
 			}
