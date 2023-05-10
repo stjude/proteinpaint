@@ -347,7 +347,7 @@ tape('test label clicking, filtering and hovering', function(test) {
 
 		await labelClicking(violin, violinDiv) //test filter on label clicking
 		await testFiltering(violin, violinSettings, violinDivData) //test filtering by providing tvs.lst object
-		testLabelHovering(violin, violinDiv)
+		await testLabelHovering(violin, violinDiv)
 
 		if (test._ok) violin.Inner.app.destroy()
 		test.end()
@@ -423,7 +423,7 @@ tape('test label clicking, filtering and hovering', function(test) {
 		const filterUiRoot = getFilterItemByTag(violin.Inner.state.termfilter.filter, 'filterUiRoot')
 		const filter = filterJoin([filterUiRoot, tvslst])
 		filter.tag = 'filterUiRoot'
-		violin.Inner.app.dispatch({
+		await violin.Inner.app.dispatch({
 			type: 'filter_replace',
 			filter
 		})
@@ -673,24 +673,30 @@ tape('test uncomputable categories legend', function(test) {
 		violin.on('postRender.test', null)
 
 		await testUncomputableCategories(violin, legendDiv)
-
+		if (test._ok) violin.Inner.app.destroy()
 		test.end()
 	}
 
 	async function testUncomputableCategories(violin, legendDiv) {
-		const categories = await detectGte({ elem: legendDiv.node(), selector: '.legend-row', count: 9 })
 		const keys = Object.keys(violin.Inner.data.uncomputableValueObj)
-		const category1 = categories[8].innerText.split(',')[0] + ',' + categories[8].innerText.split(',')[1]
-		const category2 = categories[9].innerText.split(',')[0]
+		const categories = await detectGte({ elem: legendDiv.node(), selector: '.legend-row', count: 9 })
+		const uncomputableLegend = categories.filter(c => keys.find(k => c.__data__.text.startsWith(k)))
+		test.equal(keys.length, uncomputableLegend.length, 'should have the correct number of uncomputable legend entries')
 		test.equal(
-			keys[0],
-			category1,
-			`Uncomputable category '${category1}' rendered with n = ${violin.Inner.data.uncomputableValueObj[category1]}`
+			uncomputableLegend
+				.find(c => c.__data__.text.startsWith(keys[0]))
+				?.__data__.text.split(',')
+				.pop(),
+			' n = ' + violin.Inner.data.uncomputableValueObj[keys[0]],
+			`Uncomputable category '${keys[0]}' rendered with the correct count`
 		)
 		test.equal(
-			keys[1],
-			category2,
-			`Uncomputable category '${category2}' rendered with n = ${violin.Inner.data.uncomputableValueObj[category2]}`
+			uncomputableLegend
+				.find(c => c.__data__.text.startsWith(keys[1]))
+				?.__data__.text.split(',')
+				.pop(),
+			' n = ' + violin.Inner.data.uncomputableValueObj[keys[1]],
+			`Uncomputable category '${keys[1]}' rendered with the correct count`
 		)
 	}
 })
