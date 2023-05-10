@@ -650,7 +650,7 @@ export function setRenderers(self) {
 
 				offsetY += step
 			} else {
-				console.log(offsetY)
+				// console.log(offsetY)
 				for (const [key, category] of chart.colorLegend) {
 					if (key == 'Ref') continue
 					const name = key
