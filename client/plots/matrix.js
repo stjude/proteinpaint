@@ -7,7 +7,7 @@ import { MatrixControls } from './matrix.controls'
 import { setCellProps, getEmptyCell, maySetEmptyCell } from './matrix.cells'
 import { select } from 'd3-selection'
 import { scaleLinear, scaleOrdinal } from 'd3-scale'
-import { schemeCategory10 } from 'd3-scale-chromatic'
+import { schemeCategory10, interpolateReds, interpolateBlues } from 'd3-scale-chromatic'
 import { schemeCategory20 } from '#common/legacy-d3-polyfill'
 import { axisLeft, axisTop, axisRight, axisBottom } from 'd3-axis'
 import svgLegend from '#dom/svg.legend'
@@ -607,6 +607,16 @@ class Matrix {
 						if (!('minval' in t.counts) || t.counts.minval > v) t.counts.minval = v
 						if (!('maxval' in t.counts) || t.counts.maxval < v) t.counts.maxval = v
 					}
+					if (t.tw.term.type == 'geneVariant' && anno.values) {
+						for (const val of anno.values) {
+							if (val.dt != 4 || !('value' in val)) continue
+							const v = val.value
+							const minKey = v < 0 ? 'minLoss' : 'minGain'
+							const maxKey = v < 0 ? 'maxLoss' : 'maxGain'
+							if (!(minKey in t.counts) || t.counts[minKey] > v) t.counts[minKey] = v
+							if (!(maxKey in t.counts) || t.counts[maxKey] < v) t.counts[maxKey] = v
+						}
+					}
 				}
 			}
 
@@ -615,12 +625,16 @@ class Matrix {
 				t.label = `${t.label} (${t.counts.samples})`
 			}
 
-			t.scale =
-				t.tw.q?.mode == 'continuous'
-					? scaleLinear()
-							.domain([t.counts.minval, t.counts.maxval])
-							.range([1, t.tw.settings.barh])
-					: null
+			if (t.tw.q?.mode == 'continuous') {
+				t.scale = scaleLinear()
+					.domain([t.counts.minval, t.counts.maxval])
+					.range([1, t.tw.settings.barh])
+			} else if (t.tw.term.type == 'geneVariant' && 'maxGain' in t.counts) {
+				t.scales = {
+					loss: interpolateBlues,
+					gain: interpolateReds
+				}
+			}
 
 			t.totalHtAdjustments = totalHtAdjustments
 			const adjustment = (t.tw.settings ? t.tw.settings.barh + 2 * t.tw.settings.gap : ht) - ht
