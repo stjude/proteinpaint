@@ -8,7 +8,6 @@ import { axisLeft, axisBottom } from 'd3-axis'
 import { select } from 'd3-selection'
 import { Menu } from '#dom/menu'
 import { getSamplelstTW } from '#termsetting/handlers/samplelst'
-import { symbolCircle } from 'd3-shape'
 
 export function setRenderers(self) {
 	self.render = function() {
@@ -35,7 +34,7 @@ export function setRenderers(self) {
 			.style('opacity', 1)
 	}
 
-	self.initAxes = async function(chart) {
+	self.initAxes = function(chart) {
 		if (chart.data.samples.length == 0) return
 		const s0 = chart.data.samples[0] //First sample to start reduce comparisons
 		const [xMin, xMax, yMin, yMax] = chart.data.samples.reduce(
