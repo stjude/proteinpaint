@@ -8,7 +8,7 @@ import { axisLeft, axisBottom } from 'd3-axis'
 import { select } from 'd3-selection'
 import { Menu } from '#dom/menu'
 import { getSamplelstTW } from '#termsetting/handlers/samplelst'
-import { regressionLoess } from 'd3-regression'
+import { regressionLoess, regressionPoly } from 'd3-regression'
 import { line } from 'd3'
 
 export function setRenderers(self) {
@@ -51,6 +51,9 @@ export function setRenderers(self) {
 		chart.yAxisScale = d3Linear()
 			.domain([yMax, yMin])
 			.range([self.axisOffset.y, self.settings.svgh + self.axisOffset.y])
+
+		;(chart.xScaleMin = chart.xAxisScale(xMin)), (chart.xScaleMax = chart.xAxisScale(xMax))
+
 		chart.axisLeft = axisLeft(chart.yAxisScale)
 		if (!self.config.gradientColor) self.config.gradientColor = {}
 		if (!self.config.gradientColor[chart.id]) self.config.gradientColor[chart.id] = '#008000'
@@ -241,46 +244,44 @@ export function setRenderers(self) {
 			.style('fill-opacity', c => self.getOpacity(c))
 			.transition()
 			.duration(duration)
-		self.mayRenderLowessCurve()
+		self.mayRenderRegression()
 	}
 
-	self.mayRenderLowessCurve = async function() {
+	self.mayRenderRegression = async function() {
 		const duration = self.config.settings.sampleScatter.duration
 		for (const chart of self.charts) {
-			if (!self.config.settings.sampleScatter.doLoess) {
-				chart.lowessG.selectAll('*').remove()
-				continue
+			const regressionType = self.config.settings.sampleScatter.regression
+			chart.lowessG.selectAll('*').remove()
+
+			if (regressionType == 'None') continue
+			let regression
+			const data = []
+			chart.cohortSamples.forEach(c => {
+				data.push({ x: chart.xAxisScale(c.x), y: chart.yAxisScale(c.y) })
+			})
+
+			if (regressionType == 'Loess')
+				regression = regressionLoess()
+					.x(c => c.x)
+					.y(c => c.y)
+					.bandwidth(0.25)
+			else if (regressionType == 'Polynomial') {
+				regression = regressionPoly()
+					.x(c => c.x)
+					.y(c => c.y)
+					.order(3)
 			}
-			const regression = regressionLoess()
-				.x(c => chart.xAxisScale(c.x))
-				.y(c => chart.yAxisScale(c.y))
-				.bandwidth(0.25)
 
 			const l = line()
 				.x(d => d[0])
 				.y(d => d[1])
-			const lowessCurve = regression(chart.cohortSamples)
-			const lowessSymbols = chart.lowessG.selectAll('path').data([lowessCurve])
-			//this will append only one path, with the lowess curve
-			lowessSymbols.exit().remove()
-
-			lowessSymbols
-				.transition()
-				.duration(duration)
-				.attr('d', l)
+			const regressionCurve = regression(data)
+			const regressionPath = chart.lowessG.append('path')
+			regressionPath
+				.attr('d', l(regressionCurve))
 				.attr('stroke', 'blue')
 				.attr('fill', 'none')
 				.style('stroke-width', '2')
-
-			lowessSymbols
-				.enter()
-				.append('path')
-				.attr('d', l)
-				.attr('stroke', 'blue')
-				.attr('fill', 'none')
-				.style('stroke-width', '2')
-				.transition()
-				.duration(duration)
 		}
 	}
 

@@ -142,15 +142,6 @@ class Scatter {
 		const colorLegend = new Map(data.colorLegend)
 		const shapeLegend = new Map(data.shapeLegend)
 		const chart = { id, data, cohortSamples, colorLegend, shapeLegend }
-		// if (this.config.settings.sampleScatter.doLoess) {
-		// 	const X = [],
-		// 		Y = []
-		// 	for (const sample of chart.cohortSamples) {
-		// 		X.push(sample.x)
-		// 		Y.push(sample.y)
-		// 	}
-		// 	chart.lowessCurve = await this.app.vocabApi.getLowessCurve({ coords: { X, Y } })
-		// }
 
 		this.charts.push(chart)
 	}
@@ -236,12 +227,15 @@ class Scatter {
 				max: 1
 			},
 			{
-				boxLabel: 'Yes',
-				label: 'Show loess curve',
-				type: 'checkbox',
+				label: 'Show regression',
+				type: 'dropdown',
 				chartType: 'sampleScatter',
-				settingsKey: 'doLoess',
-				title: `Option to show loess curve`
+				settingsKey: 'regression',
+				options: [
+					{ label: 'None', value: 'None' },
+					{ label: 'Loess', value: 'Loess' },
+					{ label: 'Polynomial', value: 'Polynomial' }
+				]
 			}
 		]
 		if (this.opts.parent?.type == 'summary') {
@@ -371,7 +365,7 @@ export function getDefaultScatterSettings() {
 		svgh: 550,
 		axisTitleFontSize: 16,
 		showAxes: true,
-		doLoess: false,
+		regression: 'None',
 		showRef: true,
 		opacity: 0.8,
 		defaultColor: 'rgb(144, 23, 57)'
