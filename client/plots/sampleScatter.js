@@ -142,7 +142,8 @@ class Scatter {
 		const cohortSamples = data.samples.filter(sample => 'sampleId' in sample)
 		const colorLegend = new Map(data.colorLegend)
 		const shapeLegend = new Map(data.shapeLegend)
-		this.charts.push({ id, data, cohortSamples, colorLegend, shapeLegend })
+		const chart = { id, data, cohortSamples, colorLegend, shapeLegend }
+		this.charts.push(chart)
 	}
 
 	async setControls() {
@@ -224,6 +225,14 @@ class Scatter {
 				title: 'It represents the opacity of the symbols',
 				min: 0,
 				max: 1
+			},
+			{
+				boxLabel: 'Yes',
+				label: 'Show lowess curve',
+				type: 'checkbox',
+				chartType: 'sampleScatter',
+				settingsKey: 'doLowess',
+				title: `Option to show lowess curve`
 			}
 		]
 		if (this.opts.parent?.type == 'summary') {
@@ -353,6 +362,7 @@ export function getDefaultScatterSettings() {
 		svgh: 550,
 		axisTitleFontSize: 16,
 		showAxes: true,
+		doLowess: false,
 		showRef: true,
 		opacity: 0.8,
 		defaultColor: 'rgb(144, 23, 57)'

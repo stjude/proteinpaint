@@ -8,6 +8,7 @@ import { axisLeft, axisBottom } from 'd3-axis'
 import { select } from 'd3-selection'
 import { Menu } from '#dom/menu'
 import { getSamplelstTW } from '#termsetting/handlers/samplelst'
+import { symbolCircle } from 'd3-shape'
 
 export function setRenderers(self) {
 	self.render = function() {
@@ -34,7 +35,7 @@ export function setRenderers(self) {
 			.style('opacity', 1)
 	}
 
-	self.initAxes = function(chart) {
+	self.initAxes = async function(chart) {
 		if (chart.data.samples.length == 0) return
 		const s0 = chart.data.samples[0] //First sample to start reduce comparisons
 		const [xMin, xMax, yMin, yMax] = chart.data.samples.reduce(
@@ -67,6 +68,15 @@ export function setRenderers(self) {
 			chart.colorGenerator = d3Linear()
 				.domain([min, max])
 				.range([chart.startColor, chart.stopColor])
+		}
+		console.log(self.config.settings.sampleScatter.doLowess)
+		if (self.config.settings.sampleScatter.doLowess) {
+			const coords = []
+			for (const sample of chart.cohortSamples)
+				coords.push({ x: chart.xAxisScale(sample.x), y: chart.yAxisScale(sample.y) })
+			console.log(coords)
+			chart.lowessCurve = await this.app.vocabApi.getLowessCurve({ coords })
+			console.log(chart.lowessCurve)
 		}
 	}
 
@@ -115,6 +125,7 @@ export function setRenderers(self) {
 				.attr('height', self.settings.svgh)
 				.attr('fill', 'white')
 			chart.serie = chart.mainG.append('g').attr('class', 'sjpcb-scatter-series')
+			chart.lowessG = chart.mainG.append('g').attr('class', 'sjpcb-scatter-lowess')
 
 			//Adding clip path
 			const id = `${Date.now()}`
@@ -150,6 +161,7 @@ export function setRenderers(self) {
 		} else {
 			chart.mainG = svg.select('.sjpcb-scatter-mainG')
 			chart.serie = chart.mainG.select('.sjpcb-scatter-series')
+			chart.lowessG = chart.mainG.select('.sjpcb-scatter-lowess')
 			axisG = svg.select('.sjpcb-scatter-axis')
 			labelsG = svg.select('.sjpcb-scatter-labelsG')
 			chart.xAxis = axisG.select('.sjpcb-scatter-x-axis')
@@ -210,6 +222,7 @@ export function setRenderers(self) {
 	}
 
 	function renderSerie(chart, duration) {
+		console.log(chart.lowessCurve)
 		const g = chart.serie
 		const data = chart.data
 		// remove all symbols as there is no data id for privacy
@@ -223,7 +236,6 @@ export function setRenderers(self) {
 			.attr('transform', c => translate(chart, c))
 			.attr('d', c => self.getShape(chart, c))
 			.attr('fill', c => self.getColor(c, chart))
-
 			.style('fill-opacity', c => self.getOpacity(c))
 		symbols
 			.enter()
@@ -234,6 +246,24 @@ export function setRenderers(self) {
 			.attr('fill', c => self.getColor(c, chart))
 
 			.style('fill-opacity', c => self.getOpacity(c))
+			.transition()
+			.duration(duration)
+
+		const lowessSymbols = chart.lowessG.selectAll('path').data(chart.lowessCurve)
+		lowessSymbols.exit().remove()
+		lowessSymbols
+			.transition()
+			.duration(duration)
+			.attr('transform', c => translate(chart, c))
+			.attr('d', self.symbols[0].size(5)())
+			.attr('fill', 'blue')
+		lowessSymbols
+			.enter()
+			.append('path')
+			/*** you'd need to set the symbol position using translate, instead of previously with cx, cy for a circle ***/
+			.attr('transform', c => translate(chart, c))
+			.attr('d', self.symbols[0].size(5)())
+			.attr('fill', 'blue')
 			.transition()
 			.duration(duration)
 	}
@@ -650,7 +680,6 @@ export function setRenderers(self) {
 
 				offsetY += step
 			} else {
-				// console.log(offsetY)
 				for (const [key, category] of chart.colorLegend) {
 					if (key == 'Ref') continue
 					const name = key

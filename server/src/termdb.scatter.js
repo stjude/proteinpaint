@@ -7,6 +7,8 @@ import { interpolateSqlValues } from './termdb.sql'
 import { mclass, dt2label, morigin } from '#shared/common'
 import { getFilterCTEs } from './termdb.filter'
 import authApi from './auth'
+import lines2R from './lines2R'
+const write_file = require('./utils').write_file
 
 /*
 works with "canned" scatterplots in a dataset, e.g. data from a text file of tSNE coordinates from a pre-analyzed cohort (contrary to on-the-fly analysis)
@@ -391,4 +393,16 @@ export async function getScatterCoordinates(req, q, ds) {
 
 function isComputable(term, value) {
 	return !term.values?.[value]?.uncomputable
+}
+
+export async function trigger_getLowessCurve(req, q, res) {
+	const data = q.coords
+	const datafile = path.join(serverconfig.cachedir, Math.random().toString() + '.json')
+	console.log(datafile)
+	await write_file(datafile, JSON.stringify(data))
+	let result = await lines2R(path.join(serverconfig.binpath, 'utils/lowess.R'), [], [datafile])
+	result = JSON.parse(result)
+	const lowessCurve = []
+	for (const [i, x] of Object.entries(result.x)) lowessCurve.push({ x, y: result.y[i] })
+	return lowessCurve
 }

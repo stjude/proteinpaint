@@ -8,6 +8,7 @@ const termdbsnp = require('./termdb.snp')
 const getOrderedLabels = require('./termdb.barchart').getOrderedLabels
 const isUsableTerm = require('#shared/termdb.usecase').isUsableTerm
 const trigger_getSampleScatter = require('./termdb.scatter').trigger_getSampleScatter
+const trigger_getLowessCurve = require('./termdb.scatter').trigger_getLowessCurve
 const trigger_getViolinPlotData = require('./termdb.violin').trigger_getViolinPlotData
 const getData = require('./termdb.matrix').getData
 const trigger_getCohortsData = require('./termdb.cohort').trigger_getCohortsData
@@ -69,6 +70,8 @@ export function handle_request_closure(genomes) {
 			if (q.getLDdata) return await LDoverlay(q, ds, res)
 			if (q.genesetByTermId) return trigger_genesetByTermId(q, res, tdb)
 			if (q.getSampleScatter) return await trigger_getSampleScatter(req, q, res, ds, genome)
+			if (q.getLowessCurve) return await trigger_getLowessCurve(req, q, res)
+
 			if (q.getCohortsData) return await trigger_getCohortsData(q, res, ds)
 			if (q.getViolinPlotData) return await trigger_getViolinPlotData(q, res, ds, genome)
 
