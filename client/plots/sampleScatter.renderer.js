@@ -51,7 +51,6 @@ export function setRenderers(self) {
 		chart.yAxisScale = d3Linear()
 			.domain([yMax, yMin])
 			.range([self.axisOffset.y, self.settings.svgh + self.axisOffset.y])
-
 		;(chart.xScaleMin = chart.xAxisScale(xMin)), (chart.xScaleMax = chart.xAxisScale(xMax))
 
 		chart.axisLeft = axisLeft(chart.yAxisScale)
@@ -259,23 +258,32 @@ export function setRenderers(self) {
 			chart.cohortSamples.forEach(c => {
 				data.push({ x: chart.xAxisScale(c.x), y: chart.yAxisScale(c.y) })
 			})
-
-			if (regressionType == 'Loess')
+			let regressionCurve
+			if (regressionType == 'Loess') {
 				regression = regressionLoess()
 					.x(c => c.x)
 					.y(c => c.y)
 					.bandwidth(0.25)
-			else if (regressionType == 'Polynomial') {
+				regressionCurve = regression(data)
+			} else if (regressionType == 'Polynomial') {
 				regression = regressionPoly()
 					.x(c => c.x)
 					.y(c => c.y)
 					.order(3)
+				regressionCurve = regression(data)
+			} else if (regressionType == 'Lowess-R') {
+				const X = [],
+					Y = []
+				for (const sample of data) {
+					X.push(sample.x)
+					Y.push(sample.y)
+				}
+				regressionCurve = await self.app.vocabApi.getLowessCurve({ coords: { X, Y } })
 			}
 
 			const l = line()
 				.x(d => d[0])
 				.y(d => d[1])
-			const regressionCurve = regression(data)
 			const regressionPath = chart.lowessG.append('path')
 			regressionPath
 				.attr('d', l(regressionCurve))

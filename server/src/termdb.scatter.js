@@ -403,6 +403,6 @@ export async function trigger_getLowessCurve(req, q, res) {
 	let result = await lines2R(path.join(serverconfig.binpath, 'utils/lowess.R'), [], [datafile])
 	result = JSON.parse(result)
 	const lowessCurve = []
-	for (const [i, x] of Object.entries(result.x)) lowessCurve.push({ x, y: result.y[i] })
+	for (const [i, x] of Object.entries(result.x)) lowessCurve.push([x, result.y[i]])
 	return res.send(lowessCurve)
 }
