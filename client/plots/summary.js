@@ -356,6 +356,7 @@ export async function getPlotConfig(opts, app) {
 			sampleScatter: getDefaultScatterSettings(app)
 		},
 		mayAdjustConfig(config, edits = {}) {
+			console.log(config)
 			/*
 				when recovering from state:
 				  - mayAdjustConfig should not even run: how to know initial
@@ -363,13 +364,9 @@ export async function getPlotConfig(opts, app) {
 			if (!edits.childType) {
 				if (config.term?.q?.mode == 'continuous' && config.term2?.q?.mode == 'continuous') {
 					config.childType = 'sampleScatter'
-				} else if (config.term?.q?.mode == 'continuous' || config.term2?.q?.mode == 'continuous') {
-					if (config.childType !== 'sampleScatter') config.childType = 'violin'
-					else
-						config.term?.q?.mode == 'continuous'
-							? (config.term2.q.mode = 'continuous')
-							: (config.term.q.mode = 'continuous')
-				} else config.childType = 'barchart'
+				} else if (config.term?.q?.mode == 'continuous' || config.term2?.q?.mode == 'continuous')
+					config.childType = 'violin'
+				else config.childType = 'barchart'
 			}
 		}
 	}
