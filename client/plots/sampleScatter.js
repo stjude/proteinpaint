@@ -234,6 +234,7 @@ class Scatter {
 				options: [
 					{ label: 'None', value: 'None' },
 					{ label: 'Loess', value: 'Loess' },
+					{ label: 'Lowess-R', value: 'Lowess-R' },
 					{ label: 'Polynomial', value: 'Polynomial' }
 				]
 			}
