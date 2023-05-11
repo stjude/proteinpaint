@@ -128,7 +128,7 @@ class Scatter {
 		if (results.error) throw results.error
 		for (const [key, data] of Object.entries(results)) {
 			if (!Array.isArray(data.samples)) throw 'data.samples[] not array'
-			await this.createChart(key, data)
+			this.createChart(key, data)
 		}
 
 		this.render()
@@ -137,7 +137,7 @@ class Scatter {
 		this.dom.tip.hide()
 	}
 
-	async createChart(id, data) {
+	createChart(id, data) {
 		const cohortSamples = data.samples.filter(sample => 'sampleId' in sample)
 		const colorLegend = new Map(data.colorLegend)
 		const shapeLegend = new Map(data.shapeLegend)
