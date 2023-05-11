@@ -576,7 +576,7 @@ class Matrix {
 
 	setLabelsAndScales() {
 		const s = this.settings.matrix
-
+		this.cnvValues = {}
 		// ht: standard cell dimension for term row or column
 		const ht = s.transpose ? s.colw : s.rowh
 		const grpTotals = {}
@@ -613,8 +613,8 @@ class Matrix {
 							const v = val.value
 							const minKey = v < 0 ? 'minLoss' : 'minGain'
 							const maxKey = v < 0 ? 'maxLoss' : 'maxGain'
-							if (!(minKey in t.counts) || t.counts[minKey] > v) t.counts[minKey] = v
-							if (!(maxKey in t.counts) || t.counts[maxKey] < v) t.counts[maxKey] = v
+							if (!(minKey in this.cnvValues) || this.cnvValues[minKey] > v) this.cnvValues[minKey] = v
+							if (!(maxKey in this.cnvValues) || this.cnvValues[maxKey] < v) this.cnvValues[maxKey] = v
 						}
 					}
 				}
@@ -629,7 +629,7 @@ class Matrix {
 				t.scale = scaleLinear()
 					.domain([t.counts.minval, t.counts.maxval])
 					.range([1, t.tw.settings.barh])
-			} else if (t.tw.term.type == 'geneVariant' && 'maxGain' in t.counts) {
+			} else if (t.tw.term.type == 'geneVariant' && 'maxGain' in this.cnvValues) {
 				t.scales = {
 					loss: interpolateBlues,
 					gain: interpolateReds

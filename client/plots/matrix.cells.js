@@ -62,9 +62,9 @@ function setGeneVariantCellProps(cell, tw, anno, value, s, t, self, width, heigh
 		cell.width = colw
 		cell.x = cell.totalIndex * dx + cell.grpIndex * s.colgspace
 		cell.y = height * i
-		if (value.dt == 4 && 'value' in value) {
-			value.scaledValue = Math.abs(value.value / (value.value < 0 ? t.counts.maxLoss : t.counts.maxGain))
-			if (value.value > 0) value.scaledValue = 0.9 * value.scaledValue
+		if (value.dt == 4 && 'value' in value && t.scales) {
+			value.scaledValue =
+				0.9 * Math.abs(value.value / (value.value < 0 ? self.cnvValues.maxLoss : self.cnvValues.maxGain))
 			cell.fill = value.value < 0 ? t.scales.loss(value.scaledValue) : t.scales.gain(value.scaledValue)
 		}
 	} else if (value.dt == 1) {
