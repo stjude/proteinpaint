@@ -356,7 +356,6 @@ export async function getPlotConfig(opts, app) {
 			sampleScatter: getDefaultScatterSettings(app)
 		},
 		mayAdjustConfig(config, edits = {}) {
-			console.log(config)
 			/*
 				when recovering from state:
 				  - mayAdjustConfig should not even run: how to know initial
