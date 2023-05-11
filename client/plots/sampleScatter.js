@@ -142,7 +142,7 @@ class Scatter {
 		const colorLegend = new Map(data.colorLegend)
 		const shapeLegend = new Map(data.shapeLegend)
 		const chart = { id, data, cohortSamples, colorLegend, shapeLegend }
-		// if (this.config.settings.sampleScatter.doLowess) {
+		// if (this.config.settings.sampleScatter.doLoess) {
 		// 	const X = [],
 		// 		Y = []
 		// 	for (const sample of chart.cohortSamples) {
@@ -237,11 +237,11 @@ class Scatter {
 			},
 			{
 				boxLabel: 'Yes',
-				label: 'Show lowess curve',
+				label: 'Show loess curve',
 				type: 'checkbox',
 				chartType: 'sampleScatter',
-				settingsKey: 'doLowess',
-				title: `Option to show lowess curve`
+				settingsKey: 'doLoess',
+				title: `Option to show loess curve`
 			}
 		]
 		if (this.opts.parent?.type == 'summary') {
@@ -371,7 +371,7 @@ export function getDefaultScatterSettings() {
 		svgh: 550,
 		axisTitleFontSize: 16,
 		showAxes: true,
-		doLowess: false,
+		doLoess: false,
 		showRef: true,
 		opacity: 0.8,
 		defaultColor: 'rgb(144, 23, 57)'

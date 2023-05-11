@@ -9,6 +9,7 @@ import { select } from 'd3-selection'
 import { Menu } from '#dom/menu'
 import { getSamplelstTW } from '#termsetting/handlers/samplelst'
 import { regressionLoess } from 'd3-regression'
+import { line } from 'd3'
 
 export function setRenderers(self) {
 	self.render = function() {
@@ -246,33 +247,38 @@ export function setRenderers(self) {
 	self.mayRenderLowessCurve = async function() {
 		const duration = self.config.settings.sampleScatter.duration
 		for (const chart of self.charts) {
-			if (!self.config.settings.sampleScatter.doLowess) {
+			if (!self.config.settings.sampleScatter.doLoess) {
 				chart.lowessG.selectAll('*').remove()
 				continue
 			}
 			const regression = regressionLoess()
-				.x(d => d.x)
-				.y(d => d.y)
+				.x(c => chart.xAxisScale(c.x))
+				.y(c => chart.yAxisScale(c.y))
 				.bandwidth(0.25)
+
+			const l = line()
+				.x(d => d[0])
+				.y(d => d[1])
 			const lowessCurve = regression(chart.cohortSamples)
-			const dots = []
-			for (const item of lowessCurve) dots.push({ x: item[0], y: item[1] })
-			const lowessSymbols = chart.lowessG.selectAll('path').data(dots)
+			const lowessSymbols = chart.lowessG.selectAll('path').data([lowessCurve])
+			//this will append only one path, with the lowess curve
 			lowessSymbols.exit().remove()
 
 			lowessSymbols
 				.transition()
 				.duration(duration)
-				.attr('transform', c => translate(chart, c))
-				.attr('d', self.symbols[0].size(5)())
-				.attr('fill', 'blue')
+				.attr('d', l)
+				.attr('stroke', 'blue')
+				.attr('fill', 'none')
+				.style('stroke-width', '2')
+
 			lowessSymbols
 				.enter()
 				.append('path')
-				/*** you'd need to set the symbol position using translate, instead of previously with cx, cy for a circle ***/
-				.attr('transform', c => translate(chart, c))
-				.attr('d', self.symbols[0].size(5)())
-				.attr('fill', 'blue')
+				.attr('d', l)
+				.attr('stroke', 'blue')
+				.attr('fill', 'none')
+				.style('stroke-width', '2')
 				.transition()
 				.duration(duration)
 		}
