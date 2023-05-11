@@ -1,6 +1,8 @@
 const runproteinpaint = require('#src/app').runproteinpaint
 const serverData = Object.create(null)
 
+exports.runproteinpaint = runproteinpaint
+
 function sleep(ms) {
 	return new Promise(resolve => setTimeout(resolve, ms))
 }
