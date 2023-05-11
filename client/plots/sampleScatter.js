@@ -225,18 +225,6 @@ class Scatter {
 				title: 'It represents the opacity of the symbols',
 				min: 0,
 				max: 1
-			},
-			{
-				label: 'Show regression',
-				type: 'dropdown',
-				chartType: 'sampleScatter',
-				settingsKey: 'regression',
-				options: [
-					{ label: 'None', value: 'None' },
-					{ label: 'Loess', value: 'Loess' },
-					{ label: 'Lowess-R', value: 'Lowess-R' },
-					{ label: 'Polynomial', value: 'Polynomial' }
-				]
 			}
 		]
 		if (this.opts.parent?.type == 'summary') {
@@ -266,6 +254,18 @@ class Scatter {
 					}
 				]
 			)
+			inputs.push({
+				label: 'Show regression',
+				type: 'dropdown',
+				chartType: 'sampleScatter',
+				settingsKey: 'regression',
+				options: [
+					{ label: 'None', value: 'None' },
+					{ label: 'Loess', value: 'Loess' },
+					{ label: 'Lowess-R', value: 'Lowess-R' },
+					{ label: 'Polynomial', value: 'Polynomial' }
+				]
+			})
 			inputs.push({
 				label: 'Default color',
 				type: 'color',
