@@ -1,6 +1,7 @@
 const tape = require('tape')
 const d3s = require('d3-selection')
 const { detectOne, detectGte } = require('../../test/test.helpers')
+const { runproteinpaint } = require('../../test/front.helpers.js')
 
 /*
 Tests:  
