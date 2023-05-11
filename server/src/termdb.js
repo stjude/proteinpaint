@@ -182,22 +182,20 @@ async function trigger_findterm(q, res, termdb, ds, genome) {
 
 	// to allow search to work, must unescape special char, e.g. %20 to space
 	const str = decodeURIComponent(q.findterm).toUpperCase()
-
-	if (ds.mayGetMatchingGeneNames) {
+	const mayUseGeneVariant = isUsableTerm({ type: 'geneVariant' }, q.usecase).has('plot')
+	if (ds.mayGetMatchingGeneNames && mayUseGeneVariant) {
 		// presence of this getter indicates dataset uses text file to supply mutation data
 		// only allow searching for gene names present in the text files
 		// check this first before dict terms is convenient as to showing matching genes for a text-file based dataset that's usually small
 
 		// harcoded gene name length limit to exclude fusion/comma-separated gene names
 		/* TODO: improve the logic for excluding concatenated gene names */
-		if (isUsableTerm({ type: 'geneVariant' }, q.usecase).has('plot')) {
-			await ds.mayGetMatchingGeneNames(matches, str, q)
-		}
+		await ds.mayGetMatchingGeneNames(matches, str, q)
 	}
 
 	const terms = []
 
-	if (ds.queries?.defaultBlock2GeneMode) {
+	if (ds.queries?.defaultBlock2GeneMode && mayUseGeneVariant) {
 		/* has queries for genomic data types, search gene from whole genome
 		not checking on presence of queries.snvindel{} as it's used for both wgs/germline and somatic data,
 		for now do not show gene search for wgs data
