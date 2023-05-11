@@ -3,8 +3,7 @@ import { select, selectAll } from 'd3-selection'
 import { sayerror } from '#dom/error'
 import { debounce } from 'debounce'
 import { root_ID } from './tree'
-import { isUsableTerm } from '#shared/termdb.usecase'
-import { nonDictionaryTermTypes } from '#shared/termdb.usecase'
+import { isUsableTerm, nonDictionaryTermTypes } from '#shared/termdb.usecase'
 /*
 steps:
 user input at <input> will call doSearch()
@@ -92,7 +91,8 @@ export const searchInit = getCompInit(TermSearch)
 function setRenderers(self) {
 	self.initUI = state => {
 		self.dom.holder.style('display', self.search && self.search.isVisible == false ? 'none' : 'block')
-		const placeholderDetail = state.allowedTermTypes.includes('geneVariant') ? ' variables or genes' : '...'
+		const mayUseGeneVariant = isUsableTerm({ type: 'geneVariant' }, state.usecase).has('plot')
+		const placeholderDetail = mayUseGeneVariant ? ' variables or genes' : ' variables'
 		self.dom.input = self.dom.holder
 			.style('text-align', 'left')
 			.append('input')
