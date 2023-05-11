@@ -205,7 +205,6 @@ export function setInteractivity(self) {
 	}
 
 	self.searchSample = function(e) {
-		const chart = self.charts[0]
 		const menu = new Menu({ padding: '5px' })
 		let group
 		const input = menu.d.append('input').on('keyup', event => {
@@ -219,9 +218,11 @@ export function setInteractivity(self) {
 			}
 			if (event.code == 'Enter' && group) {
 				//Enter
-				if (group.items.length == 0 || group.items.length == chart.cohortSamples.length) msgDiv.text('Invalid group')
+				if (group.items.length == 0) msgDiv.text('Invalid group')
 				else {
-					self.config.groups[self.config.groups.length - 1].fromSearch = false
+					const group = self.config.groups[self.config.groups.length - 1]
+					group.fromSearch = false
+					group.showOnly = false
 					self.app.dispatch({ type: 'plot_edit', id: self.id, config: { groups: self.config.groups } })
 					menu.hide()
 				}
@@ -229,10 +230,18 @@ export function setInteractivity(self) {
 			}
 			// ok to not await here, since no returned value is required
 			// and menu.hide() does not need to wait for the dispatch to finish
-			const value = input.node().value
+			const value = input.node().value.toUpperCase()
 			const items = []
-			for (const sample of chart.cohortSamples)
-				if (sample.sample.toUpperCase().includes(value.toUpperCase())) items.push(sample)
+			for (const chart of self.charts)
+				for (const sample of chart.cohortSamples) {
+					console.log(sample)
+					if (
+						sample.sample.toUpperCase().includes(value) ||
+						sample.category?.toUpperCase().includes(value) ||
+						sample.shape?.toUpperCase().includes(value)
+					)
+						items.push(sample)
+				}
 			if (items.length == 0) {
 				msgDiv.text('No samples found')
 			} else msgDiv.text('')
