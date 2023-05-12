@@ -101,11 +101,11 @@ export async function wilcoxon(term, result) {
 	for (let i = 0; i < numPlots; i++) {
 		const { label, values } = result.plots[i]
 		const labelParts = label.split(',')
-		const label1 = labelParts[0]
+		const label1 = labelParts[0].trim()
 		for (let j = i + 1; j < numPlots; j++) {
 			const group1values = values
 			const group2values = result.plots[j].values
-			const label2 = result.plots[j].label.split(',')[0]
+			const label2 = result.plots[j].label.split(',')[0].trim()
 			wilcoxInput[`${label1}, ${label2}`] = { group1values, group2values }
 		}
 	}
@@ -117,7 +117,7 @@ export async function wilcoxon(term, result) {
 
 	for (const [k, v] of Object.entries(JSON.parse(wilcoxOutput))) {
 		const labelParts = k.split(',')
-		result.pvalues.push([{ value: labelParts[0] }, { value: labelParts[1] }, { html: v }])
+		result.pvalues.push([{ value: labelParts[0].trim() }, { value: labelParts[1].trim() }, { html: v }])
 	}
 }
 

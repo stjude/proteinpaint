@@ -51,9 +51,6 @@ export default function violinRenderer(self) {
 			return
 		} else self.dom.violinDiv.select('*').remove()
 
-		//if only one plot is rendered then remove p-value table.
-		if (self.data.plots.length === 1) self.dom.tableHolder.selectAll('.sjpp-tableHolder')._parents[0].remove()
-
 		// append the svg object to the body of the page
 		self.dom.violinDiv.select('.sjpp-violin-plot').remove()
 
@@ -106,6 +103,7 @@ export default function violinRenderer(self) {
 
 	self.renderPvalueTable = function() {
 		self.dom.tableHolder.selectAll('*').remove()
+		if (self.data.plots.length === 1) return
 
 		const t1 = self.config.term
 		const t2 = self.config.term2
