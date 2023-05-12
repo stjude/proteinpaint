@@ -333,7 +333,7 @@ tape('Test legend', function(test) {
 	test.timeoutAfter(6000) //Fix for breaking on local CI but maynot be necessary for nightly build
 
 	runpp({
-		state,
+		state: structuredClone(state),
 		sampleScatter: {
 			callbacks: {
 				'postRender.test': runTests
@@ -549,7 +549,7 @@ tape('Change symbol and reference size from menu', function(test) {
 	test.timeoutAfter(10000)
 
 	runpp({
-		state: open_state,
+		state: structuredClone(open_state),
 		sampleScatter: {
 			callbacks: { 'postRender.test': runTests }
 		}
@@ -600,7 +600,7 @@ tape('Change chart width and height from menu', function(test) {
 	test.timeoutAfter(10000)
 
 	runpp({
-		state: open_state,
+		state: structuredClone(open_state),
 		sampleScatter: {
 			callbacks: { 'postRender.test': runTests }
 		}
@@ -669,7 +669,7 @@ tape('Check/uncheck Show axes from menu', function(test) {
 	test.timeoutAfter(4000)
 
 	runpp({
-		state: open_state,
+		state: structuredClone(open_state),
 		sampleScatter: {
 			callbacks: { 'postRender.test': runTests }
 		}
@@ -708,7 +708,7 @@ tape('Click zoom in, zoom out, and reset buttons', function(test) {
 	test.timeoutAfter(10000)
 
 	runpp({
-		state,
+		state: structuredClone(state),
 		sampleScatter: {
 			callbacks: {
 				'postRender.test': runTests
@@ -774,7 +774,7 @@ tape('Groups and group menus functions', function(test) {
 	test.timeoutAfter(8000)
 
 	runpp({
-		state: groupState,
+		state: structuredClone(groupState),
 		sampleScatter: {
 			callbacks: {
 				'postRender.test': runTests

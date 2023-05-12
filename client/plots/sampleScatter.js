@@ -10,6 +10,7 @@ import {
 	symbolCross,
 	symbolSquare,
 	symbolWye,
+	symbolAsterisk,
 	symbolDiamond,
 	symbolDiamond2,
 	symbolStar,
@@ -141,9 +142,7 @@ class Scatter {
 		const cohortSamples = data.samples.filter(sample => 'sampleId' in sample)
 		const colorLegend = new Map(data.colorLegend)
 		const shapeLegend = new Map(data.shapeLegend)
-		const chart = { id, data, cohortSamples, colorLegend, shapeLegend }
-
-		this.charts.push(chart)
+		this.charts.push({ id, data, cohortSamples, colorLegend, shapeLegend })
 	}
 
 	async setControls() {
@@ -255,18 +254,6 @@ class Scatter {
 				]
 			)
 			inputs.push({
-				label: 'Show regression',
-				type: 'dropdown',
-				chartType: 'sampleScatter',
-				settingsKey: 'regression',
-				options: [
-					{ label: 'None', value: 'None' },
-					{ label: 'Loess', value: 'Loess' },
-					{ label: 'Lowess-R', value: 'Lowess-R' },
-					{ label: 'Polynomial', value: 'Polynomial' }
-				]
-			})
-			inputs.push({
 				label: 'Default color',
 				type: 'color',
 				chartType: 'sampleScatter',
@@ -282,8 +269,8 @@ class Scatter {
 				inputs
 			})
 		}
-
-		this.components.controls.on('downloadClick.scatter', () => this.downloadSVG(this.svg))
+		// TODO: handle multiple chart download when there is a divide by term
+		this.components.controls.on('downloadClick.scatter', () => this.downloadSVG(this.mainDiv.select('svg')))
 		this.dom.toolsDiv = this.dom.controls.insert('div')
 	}
 }
@@ -366,9 +353,9 @@ export function getDefaultScatterSettings() {
 		svgh: 550,
 		axisTitleFontSize: 16,
 		showAxes: true,
-		regression: 'None',
 		showRef: true,
 		opacity: 0.8,
-		defaultColor: 'rgb(144, 23, 57)'
+		defaultColor: 'rgb(144, 23, 57)',
+		regression: 'None'
 	}
 }

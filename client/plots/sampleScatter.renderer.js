@@ -250,9 +250,9 @@ export function setRenderers(self) {
 		const duration = self.config.settings.sampleScatter.duration
 		for (const chart of self.charts) {
 			const regressionType = self.config.settings.sampleScatter.regression
-			chart.lowessG.selectAll('*').remove()
+			if (chart.lowessG) chart.lowessG.selectAll('*').remove()
 
-			if (regressionType == 'None') continue
+			if (!regressionType || regressionType == 'None') continue
 			let regression
 			const data = []
 			chart.cohortSamples.forEach(c => {
@@ -279,6 +279,8 @@ export function setRenderers(self) {
 					Y.push(sample.y)
 				}
 				regressionCurve = await self.app.vocabApi.getLowessCurve({ coords: { X, Y } })
+			} else {
+				throw `unsupported regression type='${regressionType}'`
 			}
 
 			const l = line()
