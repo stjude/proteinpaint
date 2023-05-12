@@ -162,37 +162,48 @@ export function setInteractivity(self) {
 	}
 
 	self.labelHideLegendClicking = function(t2, plot) {
-		self.dom.legendDiv.selectAll('.sjpp-htmlLegend').on('click', event => {
-			event.stopPropagation()
-			const d = event.target.__data__
-			const termNum =
-				t2?.term.type === 'condition' ||
-				t2?.term.type === 'categorical' ||
-				((t2?.term.type === 'float' || t2?.term.type === 'integer') && self.config.term?.q.mode === 'continuous')
-					? 'term2'
-					: 'term'
-			const term = self.config[termNum]
-			if (t2) {
-				for (const key of Object.keys(term?.q?.hiddenValues)) {
-					if (d.text === key) {
-						delete term.q.hiddenValues[key]
-					}
-				}
-				const isHidden = false
-				self.app.dispatch({
-					type: 'plot_edit',
-					id: self.id,
-					config: {
-						[termNum]: {
-							isAtomic: true,
-							id: term.id,
-							term: term.term,
-							q: getUpdatedQfromClick(plot, term, isHidden)
+		self.dom.legendDiv
+			.selectAll('.sjpp-htmlLegend')
+			.on('click', event => {
+				event.stopPropagation()
+				const d = event.target.__data__
+				const termNum =
+					t2?.term.type === 'condition' ||
+					t2?.term.type === 'categorical' ||
+					((t2?.term.type === 'float' || t2?.term.type === 'integer') && self.config.term?.q.mode === 'continuous')
+						? 'term2'
+						: 'term'
+				const term = self.config[termNum]
+				if (t2) {
+					for (const key of Object.keys(term?.q?.hiddenValues)) {
+						if (d.text === key) {
+							delete term.q.hiddenValues[key]
 						}
 					}
-				})
-			}
-		})
+					const isHidden = false
+					self.app.dispatch({
+						type: 'plot_edit',
+						id: self.id,
+						config: {
+							[termNum]: {
+								isAtomic: true,
+								id: term.id,
+								term: term.term,
+								q: getUpdatedQfromClick(plot, term, isHidden)
+							}
+						}
+					})
+				}
+			})
+			.on('mouseover', event => {
+				const q = event.target.__data__
+				if (q === undefined) return
+				if (q.isHidden === true) self.dom.tip.d.html('Click to unhide plot')
+				self.dom.tip.show(event.clientX, event.clientY)
+			})
+			.on('mouseout', function() {
+				self.dom.tip.hide()
+			})
 	}
 
 	self.createTvsLstRanges = function(term, tvslst, rangeStart, rangeStop, lstIdx) {

@@ -110,11 +110,12 @@ export default function violinRenderer(self) {
 		const t1 = self.config.term
 		const t2 = self.config.term2
 
-		if (t2 === undefined || t2 === null) {
+		if (!t2) {
 			// no term2, no table to show
 			self.dom.tableHolder.style('display', 'none')
 			return
 		}
+
 		const termNum =
 			t2?.term.type === 'condition' ||
 			t2?.term.type === 'categorical' ||
@@ -159,7 +160,7 @@ export default function violinRenderer(self) {
 		// render all labels to get max label width
 		let maxLabelSize = 0
 		for (const p of self.data.plots) {
-			const l = svg.append('text').text(p.label)
+			const l = svg.append('text').text(`${p.label}, n=${p.plotValueCount}`)
 			maxLabelSize = Math.max(maxLabelSize, l.node().getBBox().width)
 			l.remove()
 		}
@@ -274,7 +275,7 @@ export default function violinRenderer(self) {
 		const label = violinG
 			.append('text')
 			.classed('sjpp-axislabel', true)
-			.text(plot.label)
+			.text(`${plot.label}, n=${plot.plotValueCount}`)
 			.style('cursor', 'pointer')
 			.on('click', function(event) {
 				if (!event) return
