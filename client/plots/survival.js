@@ -929,7 +929,12 @@ function setInteractivity(self) {
 		upper: 'Upper 95% CI'
 	}
 	self.download = function() {
-		downloadChart(self, 'chartsDiv', '.sjpp-survival-mainG', '.pp-survival-chart', 'Survival_Plot')
+		if (!self.state) return
+		downloadChart(
+			self.dom.chartsDiv.selectAll('.sjpp-survival-mainG'),
+			'Survival_Plot',
+			self.dom.chartsDiv.select('.pp-survival-chart').node()
+		)
 	}
 
 	self.mouseover = function(event) {
