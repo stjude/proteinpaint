@@ -95,20 +95,18 @@ export async function wilcoxon(term, result) {
 	if (!term) {
 		return
 	}
-	const wilcoxInput = {} // { plot.label: {plot.values for term1: [], plot.values for term2: []} }
+	const wilcoxInput = {}
 
-	//if term2 is present then run two loops. the second loop index begins with the index of the first loop.
-	for (let [i, v] of result.plots.entries()) {
-		for (let x = i; x < Object.keys(result.plots).length; x++) {
-			if (x === i) continue
-
-			const group1values = result.plots[i].values,
-				group2values = result.plots[x].values
-
-			wilcoxInput[`${result.plots[i].label.split(',')[0]} , ${result.plots[x].label.split(',')[0]}`] = {
-				group1values,
-				group2values
-			}
+	const numPlots = result.plots.length
+	for (let i = 0; i < numPlots; i++) {
+		const { label, values } = result.plots[i]
+		const labelParts = label.split(',')
+		const label1 = labelParts[0]
+		for (let j = i + 1; j < numPlots; j++) {
+			const group1values = values
+			const group2values = result.plots[j].values
+			const label2 = result.plots[j].label.split(',')[0]
+			wilcoxInput[`${label1}, ${label2}`] = { group1values, group2values }
 		}
 	}
 
@@ -118,7 +116,8 @@ export async function wilcoxon(term, result) {
 	fs.unlink(tmpfile, () => {})
 
 	for (const [k, v] of Object.entries(JSON.parse(wilcoxOutput))) {
-		result.pvalues.push([{ value: k.split(',')[0] }, { value: k.split(',')[1] }, { html: v }])
+		const labelParts = k.split(',')
+		result.pvalues.push([{ value: labelParts[0] }, { value: labelParts[1] }, { html: v }])
 	}
 }
 

@@ -107,6 +107,7 @@ export default function violinRenderer(self) {
 	self.renderPvalueTable = function() {
 		self.dom.tableHolder.selectAll('*').remove()
 
+		const t1 = self.config.term
 		const t2 = self.config.term2
 
 		if (t2 === undefined || t2 === null) {
@@ -114,6 +115,24 @@ export default function violinRenderer(self) {
 			self.dom.tableHolder.style('display', 'none')
 			return
 		}
+		const termNum =
+			t2?.term.type === 'condition' ||
+			t2?.term.type === 'categorical' ||
+			((t2?.term.type === 'float' || t2?.term.type === 'integer') && t1.q.mode === 'continuous')
+				? t2
+				: t1
+
+		//hide p-values for categories that are hidden
+		self.data.pvalues = self.data.pvalues.filter(arr => {
+			for (let i = 0; i < arr.length; i++) {
+				if (typeof arr[i].value === 'string') {
+					if (arr[i].value in termNum.q.hiddenValues) {
+						return false
+					}
+				}
+			}
+			return true
+		})
 
 		self.dom.tableHolder
 			.style('display', 'inline-block')
