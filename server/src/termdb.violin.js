@@ -246,7 +246,7 @@ function resultObj(valuesObject, data, q) {
 	for (const [key, values] of sortKey2values(data, valuesObject.key2values, overlayTerm)) {
 		if (overlayTerm) {
 			result.plots.push({
-				label: (overlayTerm?.term?.values?.[key]?.label || key) + ', n=' + values.length,
+				label: overlayTerm?.term?.values?.[key]?.label || key,
 				values,
 				seriesId: key,
 				plotValueCount: values?.length,
@@ -257,7 +257,7 @@ function resultObj(valuesObject, data, q) {
 			})
 		} else {
 			result.plots.push({
-				label: 'All samples, n=' + values.length,
+				label: 'All samples',
 				values,
 				plotValueCount: values.length
 			})
