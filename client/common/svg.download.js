@@ -1,8 +1,17 @@
 import { select } from 'd3-selection'
 import { to_svg } from '../src/client'
 
-export function downloadChart(self, div, mainG, svgStyle, plotName) {
-	if (!self.state) return
+/*
+	mainGsel      a d3 selection of root g element(s) of svg(s), expected to contain all
+		            the rendered plot elements that can be copied into one svg
+	
+	svgName      the filename to use for the downloaded svg file
+
+	styleParent   optional, the div or svg element to use for computing styles to apply to
+	              the svg, so that the standlone image file would preseve the browser-displayed
+	              svg look/appearance
+*/
+export function downloadChart(mainGsel, svgName, styleParent = null) {
 	// has to be able to handle multichart view
 	const mainGs = []
 	const translate = { x: undefined, y: undefined }
@@ -13,7 +22,7 @@ export function downloadChart(self, div, mainG, svgStyle, plotName) {
 	let prevY = 0,
 		numChartsPerRow = 0
 
-	self.dom[div].selectAll(mainG).each(function() {
+	mainGsel.each(function() {
 		mainGs.push(this)
 		const bbox = this.getBBox()
 		if (bbox.width > maxw) maxw = bbox.width
@@ -37,7 +46,6 @@ export function downloadChart(self, div, mainG, svgStyle, plotName) {
 
 		const title = this.parentNode.parentNode.firstChild
 		const tbox = title.getBoundingClientRect()
-		console.log('what is tbox', tbox)
 		if (tbox.width > maxw) maxw = tbox.width
 		if (tbox.height > tboxh) tboxh = tbox.height
 		titles.push({ text: title.innerText, styles: window.getComputedStyle(title), tbox })
@@ -55,9 +63,11 @@ export function downloadChart(self, div, mainG, svgStyle, plotName) {
 		.attr('width', numChartsPerRow * maxw)
 		.attr('height', Math.floor(mainGs.length / numChartsPerRow) * maxh)
 
-	const svgStyles = window.getComputedStyle(document.querySelector(svgStyle))
-	for (const prop of svgStyles) {
-		if (prop.startsWith('font')) svgSel.style(prop, svgStyles.getPropertyValue(prop))
+	if (styleParent) {
+		const svgStyles = window.getComputedStyle(styleParent)
+		for (const prop of svgStyles) {
+			if (prop.startsWith('font')) svgSel.style(prop, svgStyles.getPropertyValue(prop))
+		}
 	}
 
 	mainGs.forEach((g, i) => {
@@ -65,7 +75,6 @@ export function downloadChart(self, div, mainG, svgStyle, plotName) {
 		const colNum = i % numChartsPerRow
 		const rowNum = Math.floor(i / numChartsPerRow)
 		const corner = { x: colNum * maxw + translate.x + 80, y: rowNum * maxh + translate.y }
-		console.log('what is titles', titles)
 		const title = select(svg)
 			.append('text')
 			.attr('transform', 'translate(' + (corner.x + titles[i].tbox.width / 2 - 100) + ',' + corner.y + ')')
@@ -78,6 +87,5 @@ export function downloadChart(self, div, mainG, svgStyle, plotName) {
 		svg.appendChild(mainG)
 	})
 
-	const svg_name = plotNmae
-	to_svg(svg, svg_name, { apply_dom_styles: true })
+	to_svg(svg, svgName, { apply_dom_styles: true })
 }
