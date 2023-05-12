@@ -45,8 +45,21 @@ export function fillTW(tw, vocabApi) {
 
 	{
 		// apply optional ds-level configs for this specific term
-		const c = vocabApi?.termdbConfig.customTwQByType?.geneVariant?.[tw.term.name]
-		if (c) Object.assign(tw.q, c)
+		const c = vocabApi?.termdbConfig.customTwQByType?.geneVariant
+		if (c) {
+			let d // default q object applicable for this gene
+			if (c.byGene?.[tw.term.name]) {
+				d = c.byGene[tw.term.name]
+			} else if (c.default) {
+				d = c.default
+			}
+			if (d) {
+				// has a default, apply
+				const q = {}
+				Object.assign(q, d, tw.q)
+				tw.q = q
+			}
+		}
 	}
 
 	// cnv cutoffs; if the attributes are missing from q{}, add
