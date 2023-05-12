@@ -1,7 +1,7 @@
 import { select } from 'd3-selection'
 import { to_svg } from '../src/client'
 
-export function downloadChart(self, div, mainG, svgStyle) {
+export function downloadChart(self, div, mainG, svgStyle, plotName) {
 	if (!self.state) return
 	// has to be able to handle multichart view
 	const mainGs = []
@@ -78,7 +78,6 @@ export function downloadChart(self, div, mainG, svgStyle) {
 		svg.appendChild(mainG)
 	})
 
-	//const svg_name = self.config.term.term.name + ' barchart'
-	const svg_name = ' barchart'
+	const svg_name = plotNmae
 	to_svg(svg, svg_name, { apply_dom_styles: true })
 }
