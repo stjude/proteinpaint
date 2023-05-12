@@ -19,23 +19,28 @@ export default function violinRenderer(self) {
 		self.dom.tip = tip
 
 		//termsetting.js 'set_hiddenvalues()' adds uncomputable values from term.values to q.hiddenValues object. Since it will show up on the legend, delete that key-value pair from t2.q.hiddenValues object.
-		//hiddenValues are only subject to term2 when there are more than 1 categories in violin plot so safe to only delete uncomputable values from t2.q.hiddenValues and leave t1.q.hiddenValues as is.
-		const termNum = t2 ? t2 : t1
+		const termNum =
+			t2?.term.type === 'condition' ||
+			t2?.term.type === 'categorical' ||
+			((t2?.term.type === 'float' || t2?.term.type === 'integer') && t1.q.mode === 'continuous')
+				? t2
+				: t1
+
 		if (termNum && termNum.term?.values) {
 			for (const [k, v] of Object.entries(termNum.term.values)) {
 				if (v.uncomputable) {
 					if (termNum.q.hiddenValues[k]) {
-						let str = `${v.label}, n=${self.data.uncomputableValueObj?.[v.label]}`
-						termNum.q.hiddenValues[str] = 1
+						termNum.q.hiddenValues[v.label] = 1
 						delete termNum.q.hiddenValues[k]
 					}
 				}
 			}
 		}
+
 		//filter out hidden values and only keep plots which are not hidden in term2.q.hiddenvalues
-		self.data.plots = self.data.plots.filter(p => !t2?.q?.hiddenValues?.[p.label || p.seriesId])
+		self.data.plots = self.data.plots.filter(p => !termNum?.q?.hiddenValues?.[p.label || p.seriesId])
 		this.k2c = getColors(self.data.plots.length)
-		if (self.legendRenderer) self.legendRenderer(getLegendGrps(self))
+		if (self.legendRenderer) self.legendRenderer(getLegendGrps(termNum, self))
 
 		if (self.data.plots.length === 0) {
 			self.dom.violinDiv.html(
@@ -68,33 +73,33 @@ export default function violinRenderer(self) {
 		const rows = [`<tr><td colspan=2 style='padding:3px; text-align:center'>${d.label.split(',')[0]}</td></tr>`]
 		if (d.summaryStats) {
 			rows.push(`<tr>
-							<td style='padding:3px; color:#aaa'>${d.summaryStats.values.find(x => x.id === 'total').label}</td>
-							<td style='padding:3px; text-align:center'>n=${d.summaryStats.values.find(x => x.id === 'total').value}
-							<tr>
-							<td style='padding:3px; color:#aaa'>${d.summaryStats.values.find(x => x.id === 'min').label}</td>
-							<td style='padding:3px; text-align:center'>${d.summaryStats.values.find(x => x.id === 'min').value}
-							<tr>
-							<td style='padding:3px; color:#aaa'>${d.summaryStats.values.find(x => x.id === 'p25').label}</td>
-							<td style='padding:3px; text-align:center'>${d.summaryStats.values.find(x => x.id === 'p25').value}
-							<tr>
-							<td style='padding:3px; color:#aaa'>${d.summaryStats.values.find(x => x.id === 'mean').label}</td>
-							<td style='padding:3px; text-align:center'>${d.summaryStats.values.find(x => x.id === 'mean').value}
-							<tr>
-							<td style='padding:3px; color:#aaa'>${d.summaryStats.values.find(x => x.id === 'median').label}</td>
-							<td style='padding:3px; text-align:center'>${d.summaryStats.values.find(x => x.id === 'median').value}
-							<tr>
-							<td style='padding:3px; color:#aaa'>${d.summaryStats.values.find(x => x.id === 'p75').label}</td>
-							<td style='padding:3px; text-align:center'>${d.summaryStats.values.find(x => x.id === 'p75').value}
-							<tr>
-							<td style='padding:3px; color:#aaa'>${d.summaryStats.values.find(x => x.id === 'max').label}</td>
-							<td style='padding:3px; text-align:center'>${d.summaryStats.values.find(x => x.id === 'max').value}
-							<tr>
-							<td style='padding:3px; color:#aaa'>${d.summaryStats.values.find(x => x.id === 'variance').label}</td>
-							<td style='padding:3px; text-align:center'>${d.summaryStats.values.find(x => x.id === 'variance').value}
-							<tr>
-							<td style='padding:3px; color:#aaa'>${d.summaryStats.values.find(x => x.id === 'SD').label}</td>
-							<td style='padding:3px; text-align:center'>${d.summaryStats.values.find(x => x.id === 'SD').value}
-							`)
+              <td style='padding:3px; color:#aaa'>${d.summaryStats.values.find(x => x.id === 'total').label}</td>
+              <td style='padding:3px; text-align:center'>n=${d.summaryStats.values.find(x => x.id === 'total').value}
+              <tr>
+              <td style='padding:3px; color:#aaa'>${d.summaryStats.values.find(x => x.id === 'min').label}</td>
+              <td style='padding:3px; text-align:center'>${d.summaryStats.values.find(x => x.id === 'min').value}
+              <tr>
+              <td style='padding:3px; color:#aaa'>${d.summaryStats.values.find(x => x.id === 'p25').label}</td>
+              <td style='padding:3px; text-align:center'>${d.summaryStats.values.find(x => x.id === 'p25').value}
+              <tr>
+              <td style='padding:3px; color:#aaa'>${d.summaryStats.values.find(x => x.id === 'mean').label}</td>
+              <td style='padding:3px; text-align:center'>${d.summaryStats.values.find(x => x.id === 'mean').value}
+              <tr>
+              <td style='padding:3px; color:#aaa'>${d.summaryStats.values.find(x => x.id === 'median').label}</td>
+              <td style='padding:3px; text-align:center'>${d.summaryStats.values.find(x => x.id === 'median').value}
+              <tr>
+              <td style='padding:3px; color:#aaa'>${d.summaryStats.values.find(x => x.id === 'p75').label}</td>
+              <td style='padding:3px; text-align:center'>${d.summaryStats.values.find(x => x.id === 'p75').value}
+              <tr>
+              <td style='padding:3px; color:#aaa'>${d.summaryStats.values.find(x => x.id === 'max').label}</td>
+              <td style='padding:3px; text-align:center'>${d.summaryStats.values.find(x => x.id === 'max').value}
+              <tr>
+              <td style='padding:3px; color:#aaa'>${d.summaryStats.values.find(x => x.id === 'variance').label}</td>
+              <td style='padding:3px; text-align:center'>${d.summaryStats.values.find(x => x.id === 'variance').value}
+              <tr>
+              <td style='padding:3px; color:#aaa'>${d.summaryStats.values.find(x => x.id === 'SD').label}</td>
+              <td style='padding:3px; text-align:center'>${d.summaryStats.values.find(x => x.id === 'SD').value}
+              `)
 		}
 		tip.show(event.clientX, event.clientY).d.html(`<table class='sja_simpletable'>${rows.join('\n')}</table>`)
 	}
@@ -424,63 +429,78 @@ export function createNumericScale(self, settings, isH) {
 	return axisScale
 }
 
-function getLegendGrps(self) {
+function getLegendGrps(termNum, self) {
 	const legendGrps = [],
 		t1 = self.config.term,
 		t2 = self.config.term2,
 		headingStyle = 'color: #aaa; font-weight: 400'
 
-	const addDescriptiveStats = term => {
-		if (term?.q.descrStats) {
-			const items = term.q.descrStats.map(stat => {
-				return {
-					text: `${stat.label}: ${stat.value}`,
-					noIcon: true
-				}
-			})
-			const title = t2 ? `Descriptive statistics: ${term.term.name}` : 'Descriptive statistics'
-			const name = `<span style="${headingStyle}">${title}</span>`
-			legendGrps.push({ name, items })
-		}
-	}
+	addDescriptiveStats(t1, legendGrps, headingStyle)
+	if (t2?.term.type === 'float' || t2?.q.mode === 'continuous' || t2?.term.type === 'integer')
+		addDescriptiveStats(t2, legendGrps, headingStyle)
 
-	addDescriptiveStats(t1)
-	addDescriptiveStats(t2)
-
-	const addUncomputableValues = term => {
-		if (term?.term.values) {
-			const items = []
-			for (const k in term.term.values) {
-				if (self.data.uncomputableValueObj?.[term.term.values[k]?.label]) {
-					items.push({
-						text: `${term.term.values[k].label}, n = ${self.data.uncomputableValueObj[term.term.values[k].label]}`,
-						noIcon: true
-					})
-				}
-			}
-			if (items.length) {
-				const name = `<span style="${headingStyle}">${term.term.name}</span>`
-				legendGrps.push({ name, items })
-			}
-		}
-	}
-
-	addUncomputableValues(t1)
+	addUncomputableValues(
+		t1?.q.mode === 'continuous' && Object.keys(t1?.q.hiddenValues).length > 0
+			? t1
+			: t2?.q.mode === 'continuous' && Object.keys(t2?.q.hiddenValues).length > 0
+			? t2
+			: null,
+		legendGrps,
+		headingStyle,
+		self
+	)
 
 	if (t2) {
-		if (t2.q.hiddenValues && Object.entries(t2.q.hiddenValues).length != 0) {
-			const items = []
-			for (const key of Object.keys(t2.q.hiddenValues)) {
-				items.push({
-					text: `${key}`,
-					noIcon: true,
-					isHidden: true,
-					hiddenOpacity: 1
-				})
-			}
-			const name = `<span style="${headingStyle}">${t2.term.name}</span>`
-			legendGrps.push({ name, items })
+		if (termNum.q.hiddenValues && Object.entries(termNum.q.hiddenValues).length != 0) {
+			addHiddenValues(termNum, legendGrps, headingStyle)
 		}
 	}
 	return legendGrps
+}
+
+function addDescriptiveStats(term, legendGrps, headingStyle) {
+	if (term?.q.descrStats) {
+		const items = term.q.descrStats.map(stat => {
+			return {
+				text: `${stat.label}: ${stat.value}`,
+				noIcon: true
+			}
+		})
+		const title = `Descriptive statistics: ${term.term.name}`
+		const name = `<span style="${headingStyle}">${title}</span>`
+		legendGrps.push({ name, items })
+	}
+}
+
+function addUncomputableValues(term, legendGrps, headingStyle, self) {
+	if (term?.term.values) {
+		const items = []
+		for (const k in term.term.values) {
+			if (self.data.uncomputableValueObj?.[term.term.values[k]?.label]) {
+				items.push({
+					text: `${term.term.values[k].label}, n = ${self.data.uncomputableValueObj[term.term.values[k].label]}`,
+					noIcon: true
+				})
+			}
+		}
+		if (items.length) {
+			const name = `<span style="${headingStyle}">${term.term.name}</span>`
+			legendGrps.push({ name, items })
+		}
+	}
+}
+
+function addHiddenValues(term, legendGrps, headingStyle) {
+	const items = []
+	for (const key of Object.keys(term.q.hiddenValues)) {
+		items.push({
+			text: `${key}`,
+			noIcon: true,
+			isHidden: true,
+			hiddenOpacity: 1
+		})
+	}
+	const title = `${term.term.name}`
+	const name = `<span style="${headingStyle}">${title}</span>`
+	legendGrps.push({ name, items })
 }

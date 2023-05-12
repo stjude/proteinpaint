@@ -250,10 +250,10 @@ class ViolinPlot {
 				// scale the data on the server-side
 				arg.scale = term.q.scale
 			}
-		} else if ((term.term.type == 'float' || term.term.type == 'integer') && term.q.mode == 'continuous') {
+		} else if ((term.term.type === 'float' || term.term.type === 'integer') && term.q.mode === 'continuous') {
 			arg.termid = term.id
 			arg.divideTw = term2
-		} else if ((term2?.term?.type == 'float' || term2?.term?.type == 'integer') && term2.q.mode == 'continuous') {
+		} else if ((term2?.term?.type === 'float' || term2?.term?.type === 'integer') && term2.q.mode === 'continuous') {
 			arg.termid = term2.id
 			arg.divideTw = term
 		} else {

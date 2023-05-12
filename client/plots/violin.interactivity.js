@@ -29,7 +29,7 @@ export function setInteractivity(self) {
 			return
 		}
 
-		const label = t1.term.type === 'categorical' ? 'term1' : 'term2'
+		const label = t1.q.mode === 'continuous' ? 'term2' : 'term'
 		const options = [
 			{
 				label: `Add filter: ${plot.label.split(',')[0]}`,
@@ -39,6 +39,7 @@ export function setInteractivity(self) {
 				label: `Hide: ${plot.label}`,
 				callback: () => {
 					const term = self.config[label]
+
 					const isHidden = true
 
 					self.app.dispatch({
@@ -49,7 +50,7 @@ export function setInteractivity(self) {
 								isAtomic: true,
 								id: term.id,
 								term: term.term,
-								q: getUpdatedQfromClick(plot, t2, isHidden)
+								q: getUpdatedQfromClick(plot, term, isHidden)
 							}
 						}
 					})
@@ -164,14 +165,19 @@ export function setInteractivity(self) {
 		self.dom.legendDiv.selectAll('.sjpp-htmlLegend').on('click', event => {
 			event.stopPropagation()
 			const d = event.target.__data__
+			const termNum =
+				t2?.term.type === 'condition' ||
+				t2?.term.type === 'categorical' ||
+				((t2?.term.type === 'float' || t2?.term.type === 'integer') && self.config.term?.q.mode === 'continuous')
+					? 'term2'
+					: 'term'
+			const term = self.config[termNum]
 			if (t2) {
-				for (const key of Object.keys(t2?.q?.hiddenValues)) {
+				for (const key of Object.keys(term?.q?.hiddenValues)) {
 					if (d.text === key) {
-						delete self.config.term2.q.hiddenValues[key]
+						delete term.q.hiddenValues[key]
 					}
 				}
-				const termNum = self.config.term2 ? 'term2' : null
-				const term = self.config[termNum]
 				const isHidden = false
 				self.app.dispatch({
 					type: 'plot_edit',
@@ -181,7 +187,7 @@ export function setInteractivity(self) {
 							isAtomic: true,
 							id: term.id,
 							term: term.term,
-							q: getUpdatedQfromClick(plot, t2, isHidden)
+							q: getUpdatedQfromClick(plot, term, isHidden)
 						}
 					}
 				})
