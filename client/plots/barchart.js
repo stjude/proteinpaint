@@ -991,15 +991,17 @@ function setInteractivity(self) {
 			.style('opacity', 0)
 		hiddenDiv.node().appendChild(svg)
 
-		if (!self.svgLegendRenderer)
-			self.svgLegendRenderer = svgLegend({
-				holder: svgSel.append('g'),
-				rectFillFxn: d => d.color,
-				iconStroke: '#aaa'
-			})
+		self.svgLegendRenderer = svgLegend({
+			holder: svgSel.append('g'),
+			rectFillFxn: d => d.color,
+			iconStroke: '#aaa'
+		})
 
 		const s = self.settings
-		const svg0 = self.dom.barDiv.select('svg')
+		const svg0 = self.dom.barDiv
+			.select('svg')
+			.node()
+			.getBoundingClientRect()
 		let data = self.getLegendGrps()
 		data.forEach(d => {
 			d.name = d.name.replace(/<[^>]*>?/gm, '')
@@ -1024,18 +1026,19 @@ function setInteractivity(self) {
 					linesep: false
 				},
 				{
-					svgw: self.visibleCharts.length * svg0.attr('width'),
-					svgh: svg0.attr('height'),
+					svgw: self.visibleCharts.length * svg0.width,
+					svgh: svg0.height,
 					dimensions: {
 						xOffset: 50
 					},
-					padleft: s.legendpadleft + 50
+					padleft: 50
 				}
 			)
 		})
 
 		const box = self.dom.legendDiv.node().getBoundingClientRect()
-		select(svg).attr('height', Number(select(svg).attr('height')) + box.height)
+		select(svg).attr('height', svg0.height + box.height + 30)
+		if (box.width > svg0.width) select(svg).attr('width', box.width)
 		hiddenDiv.remove()
 
 		const svg_name = self.config.term.term.name + ' barchart'
