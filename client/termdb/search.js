@@ -105,15 +105,17 @@ function setRenderers(self) {
 			.on('input', debounce(self.onInput, 300))
 
 		// a holder to contain two side-by-side divs for genes and dictionary term hits
-		const div0 = (self.opts.resultsHolder || self.dom.holder)
+		self.dom.resultDiv = (self.opts.resultsHolder || self.dom.holder)
 			.append('div')
-			.style('display', 'inline-grid')
+			.style('display', 'none')
+			//div is hidden when no results to show, since an empty grid holder occupies white space and increase the distance between search box and tree
+			// when showing, turn to "inline-grid", but not "grid", to show up nicely
 			.style('grid-template-columns', 'auto auto')
 
 		// left div to show gene hits
-		const div_gene = div0.append('div').style('display', 'inline')
+		const div_gene = self.dom.resultDiv.append('div')
 		// right div to show term hits
-		const div_term = div0.append('div').style('display', 'inline')
+		const div_term = self.dom.resultDiv.append('div')
 
 		self.dom.resultDiv_genes = div_gene
 			.append('div')
@@ -139,6 +141,7 @@ function setRenderers(self) {
 	}
 	self.noResult = () => {
 		self.clear()
+		self.dom.resultDiv.style('display', 'inline-grid')
 		self.dom.resultDiv_terms
 			.append('div')
 			.text('No match')
@@ -153,6 +156,7 @@ function setRenderers(self) {
 			})
 		}
 		self.clear()
+		self.dom.resultDiv.style('display', 'inline-grid')
 
 		const geneTerms = [],
 			dictTerms = []
@@ -274,6 +278,7 @@ function setRenderers(self) {
 	self.clear = () => {
 		self.dom.resultDiv_genes.selectAll('*').remove()
 		self.dom.resultDiv_terms.selectAll('*').remove()
+		self.dom.resultDiv.style('display', 'none')
 	}
 
 	self.renderSelectedNonDictTerms = function() {
@@ -310,6 +315,7 @@ function setInteractivity(self) {
 			await self.doSearch(str)
 		} catch (e) {
 			self.clear()
+			self.dom.resultDiv.style('display', 'inline-grid')
 			sayerror(self.dom.resultDiv_terms, 'Error: ' + (e.message || e))
 			if (e.stack) console.log(e.stack)
 		}
