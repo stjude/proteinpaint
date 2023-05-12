@@ -46,6 +46,7 @@ class ViolinPlot {
 				.append('div')
 				.classed('sjpp-vp-legend', true)
 				.style('padding-left', '5px'),
+
 			tableHolder: this.opts.holder
 				.append('div')
 				.classed('sjpp-tableHolder', true)
