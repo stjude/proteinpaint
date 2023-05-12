@@ -1035,7 +1035,7 @@ function setInteractivity(self) {
 		})
 
 		const box = self.dom.legendDiv.node().getBoundingClientRect()
-		select(svg).attr('height', select(svg).attr('height') + box.height)
+		select(svg).attr('height', Number(select(svg).attr('height')) + box.height)
 		hiddenDiv.remove()
 
 		const svg_name = self.config.term.term.name + ' barchart'
