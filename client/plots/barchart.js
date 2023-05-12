@@ -2,6 +2,7 @@ import { getCompInit, copyMerge } from '../rx'
 import rendererSettings from './bars.settings'
 import barsRenderer from './bars.renderer'
 import htmlLegend from '../dom/html.legend'
+import svgLegend from '../dom/svg.legend'
 import { select } from 'd3-selection'
 import { scaleOrdinal } from 'd3-scale'
 import { rgb } from 'd3-color'
@@ -956,14 +957,13 @@ function setInteractivity(self) {
 
 		const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
 
-		select(svg)
+		const svgSel = select(svg)
 			.style('display', 'block')
 			.style('opacity', 1)
 			.attr('width', numChartsPerRow * maxw)
 			.attr('height', Math.floor(mainGs.length / numChartsPerRow) * maxh)
 
 		const svgStyles = window.getComputedStyle(document.querySelector('.pp-bars-svg'))
-		const svgSel = select(svg)
 		for (const prop of svgStyles) {
 			if (prop.startsWith('font')) svgSel.style(prop, svgStyles.getPropertyValue(prop))
 		}
@@ -985,8 +985,61 @@ function setInteractivity(self) {
 			svg.appendChild(mainG)
 		})
 
+		// svg + legend must be attached to DOM in order for getBBox() to work within svgLegendRenderer
+		const hiddenDiv = select('body')
+			.append('div')
+			.style('opacity', 0)
+		hiddenDiv.node().appendChild(svg)
+
+		if (!self.svgLegendRenderer)
+			self.svgLegendRenderer = svgLegend({
+				holder: svgSel.append('g'),
+				rectFillFxn: d => d.color,
+				iconStroke: '#aaa'
+			})
+
+		const s = self.settings
+		const svg0 = self.dom.barDiv.select('svg')
+		let data = self.getLegendGrps()
+		data.forEach(d => {
+			d.name = d.name.replace(/<[^>]*>?/gm, '')
+			if (d.items) d.items = d.items.filter(c => !c.isHidden)
+		})
+		data = data.filter(d => d.items.length && !d.name.includes('tatistic'))
+
+		const fontsize = 14
+		self.svgLegendRenderer(data, {
+			settings: Object.assign(
+				{
+					ontop: false,
+					lineh: 25,
+					padx: 5,
+					padleft: 0, //150,
+					padright: 20,
+					padbtm: 30,
+					fontsize,
+					iconh: fontsize - 2,
+					iconw: fontsize - 2,
+					hangleft: 1,
+					linesep: false
+				},
+				{
+					svgw: self.visibleCharts.length * svg0.attr('width'),
+					svgh: svg0.attr('height'),
+					dimensions: {
+						xOffset: 50
+					},
+					padleft: s.legendpadleft + 50
+				}
+			)
+		})
+
+		const box = self.dom.legendDiv.node().getBoundingClientRect()
+		select(svg).attr('height', select(svg).attr('height') + box.height)
+		hiddenDiv.remove()
+
 		const svg_name = self.config.term.term.name + ' barchart'
-		to_svg(svg, svg_name) //,{apply_dom_styles:true})
+		to_svg(svg, svg_name, { apply_dom_styles: true })
 	}
 }
 
