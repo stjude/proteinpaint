@@ -16,6 +16,7 @@ import { Menu } from '#dom/menu'
 import { getSeriesTip } from '#dom/svgSeriesTips'
 import { renderAtRiskG } from '#dom/renderAtRisk'
 import { renderPvalues } from '#dom/renderPvalueTable'
+import { downloadChart } from '#common/svg.download'
 
 class TdbSurvival {
 	constructor(opts) {
@@ -167,8 +168,7 @@ class TdbSurvival {
 					]
 				})
 			}
-
-			this.components.controls.on('downloadClick.survival', () => alert('TODO: data download?'))
+			this.components.controls.on('downloadClick.survival', this.download)
 		}
 	}
 
@@ -485,6 +485,7 @@ function setRenderers(self) {
 			.append('div')
 			.attr('class', 'sjpp-survival-title')
 			.style('display', 'inline-block')
+			.style('width', 'fit-content')
 			.datum(chart)
 			.html(chart => chart.chartId)
 			.style('cursor', 'pointer')
@@ -926,6 +927,9 @@ function setInteractivity(self) {
 		survival: 'Survival',
 		lower: 'Lower 95% CI',
 		upper: 'Upper 95% CI'
+	}
+	self.download = function() {
+		downloadChart(self, 'chartsDiv', '.sjpp-survival-mainG', '.pp-survival-chart')
 	}
 
 	self.mouseover = function(event) {
