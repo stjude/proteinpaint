@@ -178,9 +178,9 @@ export function setRenderers(self) {
 
 			axisG.style('opacity', 1)
 			if (self.config.term) {
-				let term2name = self.config.term.term.name
+				let termName = self.config.term.term.name
 				if (!self.config.colorTW && !self.config.shapeTW && !self.config.term0)
-					term2name = `${term2name}, n=${chart.cohortSamples.length}`
+					termName = `${termName}, n=${chart.cohortSamples.length}`
 
 				labelsG.selectAll('*').remove()
 				labelsG
@@ -190,8 +190,10 @@ export function setRenderers(self) {
 						`translate(${self.axisOffset.x + self.settings.svgw / 2}, ${self.settings.svgh + self.axisOffset.y + 40})`
 					)
 					.attr('text-anchor', 'middle')
-					.text(term2name)
-				if (self.config.term0) {
+					.text(termName)
+				if (self.config.term0 && !self.config.colorTW && !self.config.shapeTW) {
+					const term0Name = `${chart.id}, n=${chart.cohortSamples.length}`
+
 					labelsG
 						.append('text')
 						.attr(
@@ -199,7 +201,7 @@ export function setRenderers(self) {
 							`translate(${self.axisOffset.x + self.settings.svgw / 2}, ${self.settings.svgh + self.axisOffset.y + 65})`
 						)
 						.attr('text-anchor', 'middle')
-						.text(`${chart.id}, n=${chart.cohortSamples.length}`)
+						.text(term0Name)
 				}
 				labelsG
 					.append('text')
