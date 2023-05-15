@@ -25,9 +25,6 @@ this
 		termdbConfig{}
 */
 
-const tip = new Menu({ padding: '0px' })
-const tip2 = new Menu({ padding: '0px' }) // to show tree ui
-
 class MassGroups {
 	constructor(opts = {}) {
 		this.type = 'groups'
@@ -39,6 +36,7 @@ class MassGroups {
 			holder: this.opts.holder.append('div').style('margin', '10px')
 		}
 		initUI(this)
+		this.tip = new Menu({ padding: '5px' })
 	}
 
 	getState(appState) {
@@ -66,23 +64,6 @@ class MassGroups {
 		}
 		const f = getNormalRoot(structuredClone(this.state.termfilter.filter)) // strip tag
 		return f
-	}
-
-	async showTree(div, callback, state = { tree: { usecase: { detail: 'term' } } }) {
-		tip2.clear().showunderoffset(div.node())
-		appInit({
-			holder: tip2.d,
-			vocabApi: this.app.vocabApi,
-			state,
-			tree: {
-				termfilter: this.state.termfilter,
-				click_term: term => {
-					callback(term)
-					tip.hide()
-					tip2.hide()
-				}
-			}
-		})
 	}
 
 	async groups2samplelst(groups) {
@@ -182,17 +163,17 @@ class MassGroups {
 
 	showGroupsMenu(event, tw, deleteCallback) {
 		const samplelstTW = JSON.parse(JSON.stringify(tw))
-		const parentMenu = new Menu({ padding: '5px' })
-		const menuDiv = parentMenu.d.append('div')
+		this.tip.clear()
+		const menuDiv = this.tip.d.append('div')
 		const id = this?.lastId
 		let row = menuDiv.append('div')
 
-		addMatrixMenuItems(parentMenu, menuDiv, samplelstTW, this.app, id, this.state, () => this.newId)
+		addMatrixMenuItems(this.tip, menuDiv, samplelstTW, this.app, id, this.state, () => this.newId)
 		if (this.state.supportedChartTypes.includes('survival'))
-			addPlotMenuItem('survival', menuDiv, 'Compare survival', parentMenu, samplelstTW, id, this, true)
+			addPlotMenuItem('survival', menuDiv, 'Compare survival', this.tip, samplelstTW, id, this, true)
 
 		if (this.state.supportedChartTypes.includes('cuminc'))
-			addPlotMenuItem('cuminc', menuDiv, 'Compare cumulative incidence', parentMenu, samplelstTW, id, this, true)
+			addPlotMenuItem('cuminc', menuDiv, 'Compare cumulative incidence', this.tip, samplelstTW, id, this, true)
 
 		const summarizeDiv = menuDiv
 			.append('div')
@@ -210,7 +191,7 @@ class MassGroups {
 					openSummaryPlot(term, samplelstTW, this.app, id, () => this.newId)
 				},
 				this.app,
-				parentMenu
+				this.tip
 			)
 		})
 		row = menuDiv
@@ -219,10 +200,10 @@ class MassGroups {
 			.text('Delete variable')
 			.on('click', event => {
 				deleteCallback()
-				parentMenu.hide()
+				this.tip.hide()
 			})
 
-		parentMenu.show(event.clientX, event.clientY)
+		this.tip.show(event.clientX, event.clientY)
 	}
 }
 
@@ -262,6 +243,8 @@ function initUI(self) {
 		.style('margin', '20px')
 		.style('border-left', 'solid 1px black')
 		.style('padding', '10px')
+
+	self.dom.holder.on('click', event => tip2.hide())
 }
 
 async function updateUI(self) {
@@ -490,23 +473,23 @@ export async function openSummaryPlot(term, samplelstTW, app, id, newId) {
 	})
 }
 
-export async function showTermsTree(div, callback, app, parentMenu, state = { tree: { usecase: { detail: 'term' } } }) {
-	const menu = new Menu({ padding: '5px', offsetX: 170, offsetY: -34 })
-	menu.showunderoffset(div.node())
+export const tip2 = new Menu({ padding: '5px', offsetX: 170, offsetY: -34 })
+export async function showTermsTree(div, callback, app, tip, state = { tree: { usecase: { detail: 'term' } } }) {
+	tip2.clear().showunderoffset(div.node())
 	appInit({
-		holder: menu.d,
+		holder: tip2.d,
 		vocabApi: app.vocabApi,
 		state,
 		tree: {
 			click_term: term => {
 				callback(term)
-				menu.hide()
-				parentMenu.hide()
+				tip2.hide()
+				tip.hide()
 			}
 		}
 	})
 }
-export function addPlotMenuItem(chartType, div, text, parentMenu, samplelstTW, id, parent, openOnTop = false) {
+export function addPlotMenuItem(chartType, div, text, tip, samplelstTW, id, parent, openOnTop = false) {
 	const itemDiv = div
 		.append('div')
 		.attr('class', 'sja_menuoption sja_sharp_border')
@@ -521,7 +504,7 @@ export function addPlotMenuItem(chartType, div, text, parentMenu, samplelstTW, i
 					openPlot(chartType, term, samplelstTW, parent.app, id, openOnTop ? () => parent.newId : null)
 				},
 				parent.app,
-				parentMenu,
+				tip,
 				state
 			)
 		})

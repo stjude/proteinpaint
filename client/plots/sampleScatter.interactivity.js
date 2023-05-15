@@ -4,7 +4,7 @@ import { mclass, morigin, dt2label } from '#shared/common'
 import { Menu } from '#dom/menu'
 import { rgb } from 'd3-color'
 import { getSamplelstTW } from '#termsetting/handlers/samplelst'
-import { addPlotMenuItem, showTermsTree, addMatrixMenuItems, openSummaryPlot } from '../mass/groups'
+import { addPlotMenuItem, showTermsTree, addMatrixMenuItems, openSummaryPlot, tip2 } from '../mass/groups'
 
 export function setInteractivity(self) {
 	self.mouseover = function(event, chart) {
@@ -105,6 +105,7 @@ export function setInteractivity(self) {
 
 	self.mouseclick = function() {
 		if (!self.lassoOn) self.dom.tip.hide()
+		tip2.hide()
 	}
 
 	self.onLegendClick = function(chart, legendG, name, key, e) {
