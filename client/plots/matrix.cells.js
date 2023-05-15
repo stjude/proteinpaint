@@ -62,11 +62,6 @@ function setGeneVariantCellProps(cell, tw, anno, value, s, t, self, width, heigh
 		cell.width = colw
 		cell.x = cell.totalIndex * dx + cell.grpIndex * s.colgspace
 		cell.y = height * i
-		if (value.dt == 4 && 'value' in value && t.scales) {
-			value.scaledValue =
-				0.9 * Math.abs(value.value / (value.value < 0 ? self.cnvValues.maxLoss : self.cnvValues.maxGain))
-			cell.fill = value.value < 0 ? t.scales.loss(value.scaledValue) : t.scales.gain(value.scaledValue)
-		}
 	} else if (value.dt == 1) {
 		const divisor = 3
 		cell.height = s.rowh / divisor
@@ -82,8 +77,49 @@ function setGeneVariantCellProps(cell, tw, anno, value, s, t, self, width, heigh
 		throw `cannot set cell props for dt='${value.dt}'`
 	}
 
-	const group = tw.legend?.group || 'Mutation Types'
-	return { ref: t.ref, group, value: value.class, entry: { key: value.class, label: cell.label, fill: cell.fill } }
+	// return the corresponding legend item data
+	const order = value.class == 'CNV_loss' ? -2 : value.class.startsWith('CNV_') ? -1 : 0
+	if (value.dt == 4) {
+		if (t.scales && value.class.startsWith('CNV_')) {
+			const max = t.scales.max // value.value < 0 ? self.cnvValues.maxLoss : self.cnvValues.maxGain
+			value.scaledValue = Math.abs(value.value / max)
+			cell.fill = value.value < 0 ? t.scales.loss(value.scaledValue) : t.scales.gain(value.scaledValue)
+
+			return {
+				ref: t.ref,
+				group: 'CNV',
+				value: value.class,
+				order: -1,
+				entry: {
+					key: value.class,
+					label: cell.label,
+					scale: value.class == 'CNV_loss' ? t.scales.loss : t.scales.gain,
+					domain: value.class == 'CNV_loss' ? [max, 0] : [0, max],
+					minLabel: value.class == 'CNV_loss' ? -max : 0,
+					maxLabel: value.class == 'CNV_loss' ? 0 : max,
+					order
+				}
+			}
+		} else {
+			const group = 'CNV'
+			return {
+				ref: t.ref,
+				group,
+				value: value.class,
+				order: -1,
+				entry: { key: value.class, label: cell.label, fill: cell.fill, order }
+			}
+		}
+	} else {
+		const group = tw.legend?.group || 'Mutation Types'
+		return {
+			ref: t.ref,
+			group,
+			value: value.class,
+			order: -2,
+			entry: { key: value.class, label: cell.label, fill: cell.fill, order }
+		}
+	}
 }
 
 export function getEmptyCell(cellTemplate, s, d) {

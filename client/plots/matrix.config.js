@@ -83,7 +83,8 @@ export async function getPlotConfig(opts, app) {
 					samples: 'Samples',
 					sample: 'Sample',
 					terms: 'Variables'
-				}
+				},
+				cnvUnit: 'log2ratio'
 			}
 		}
 	}
