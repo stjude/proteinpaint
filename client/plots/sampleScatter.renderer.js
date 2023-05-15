@@ -26,7 +26,8 @@ export function setRenderers(self) {
 		chart.chartDiv = select(this)
 		const s = self.settings
 		chart.chartDiv.style('opacity', 0).style('display', 'inline-block')
-		chart.chartDiv.on('mouseover', event => self.mouseover(event, chart)).on('click', self.mouseclick)
+		chart.chartDiv.on('mouseover', event => self.mouseover(event, chart))
+
 		chart.svg = chart.chartDiv.select('svg').empty() ? chart.chartDiv.append('svg') : chart.chartDiv.select('svg')
 		renderSVG(chart, s, 0)
 
