@@ -614,6 +614,7 @@ export function setRenderers(self) {
 	self.renderLegend = function(chart) {
 		const legendG = chart.legendG
 		legendG.selectAll('*').remove()
+		if (!self.config.colorTW && !self.config.shapeTW) return
 
 		const step = 25
 		let offsetX = 0
@@ -623,7 +624,7 @@ export function setRenderers(self) {
 
 		const title0 = self.config.term0
 			? `${chart.id}, n=${chart.cohortSamples.length}`
-			: `n=${chart.cohortSamples.length}`
+			: `${chart.cohortSamples.length} samples`
 		colorG
 			.append('text')
 			.attr('x', 0)
