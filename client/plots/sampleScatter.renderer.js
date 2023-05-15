@@ -621,21 +621,18 @@ export function setRenderers(self) {
 		let title
 		const colorG = legendG.append('g')
 
-		if (self.config.term0) {
-			colorG
-				.append('text')
-				.attr('x', 0)
-				.attr('y', offsetY)
-				.text(chart.id)
-				.style('font-weight', 'bold')
-			offsetY += step + 10
-		}
+		const title0 = self.config.term0
+			? `${chart.id}, n=${chart.cohortSamples.length}`
+			: `n=${chart.cohortSamples.length}`
+		colorG
+			.append('text')
+			.attr('x', 0)
+			.attr('y', offsetY)
+			.text(title0)
+			.style('font-weight', 'bold')
+		offsetY += step + 10
 		if (self.config.colorTW) {
-			const name =
-				self.config.colorTW.term.name.length > 20
-					? self.config.colorTW.term.name.slice(0, 20) + '...'
-					: self.config.colorTW.term.name
-			title = `${name}, n=${chart.cohortSamples.length}`
+			title = `${getTitle(self.config.colorTW)}`
 			const colorRefCategory = chart.colorLegend.get('Ref')
 
 			if (self.config.colorTW.term.type == 'geneVariant')
@@ -768,12 +765,8 @@ export function setRenderers(self) {
 		}
 		if (self.config.shapeTW) {
 			offsetX = !self.config.colorTW ? 0 : self.config.colorTW.term.type == 'geneVariant' ? 300 : 200
-			offsetY = self.config.term0 ? 60 : 25
-			const name =
-				self.config.shapeTW.term.name.length > 20
-					? self.config.shapeTW.term.name.slice(0, 20) + '...'
-					: self.config.shapeTW.term.name
-			title = `${name}, n=${chart.cohortSamples.length}`
+			offsetY = 60
+			title = `${getTitle(self.config.shapeTW)}`
 			if (self.config.shapeTW.term.type == 'geneVariant')
 				self.renderGeneVariantLegend(chart, offsetX, offsetY, legendG, self.config.shapeTW, 'shape', chart.shapeLegend)
 			else {
@@ -816,6 +809,12 @@ export function setRenderers(self) {
 					itemG.on('click', event => self.onLegendClick(chart, legendG, 'shapeTW', key, event))
 				}
 			}
+		}
+
+		function getTitle(tw) {
+			let name = tw.term.name
+			if (name.length > 25) name = name.slice(0, 25) + '...'
+			return name
 		}
 
 		function addLegendItem(g, category, name, x, y, hidden = false) {
