@@ -271,6 +271,7 @@ function processSample(dbSample, sample, tw, categoryMap, category) {
 	if (tw.term.type == 'geneVariant') assignGeneVariantValue(dbSample, sample, tw, categoryMap, category)
 	else {
 		value = dbSample?.[tw.id || tw.term.name]?.key
+		if (tw.term.values?.[value]?.label) value = tw.term.values?.[value]?.label
 		sample.hidden[category] = tw.q.hiddenValues ? dbSample?.[tw.id]?.key in tw.q.hiddenValues : false
 		if (value) {
 			sample[category] = value.toString()
