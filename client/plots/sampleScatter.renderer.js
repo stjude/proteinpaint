@@ -636,6 +636,7 @@ export function setRenderers(self) {
 			.attr('x', 0)
 			.attr('y', offsetY)
 			.text(title0)
+			.style('font-size', '0.9em')
 			.style('font-weight', 'bold')
 		offsetY += step + 10
 		if (self.config.colorTW) {
