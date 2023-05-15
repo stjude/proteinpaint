@@ -768,7 +768,7 @@ export function setRenderers(self) {
 		}
 		if (self.config.shapeTW) {
 			offsetX = !self.config.colorTW ? 0 : self.config.colorTW.term.type == 'geneVariant' ? 300 : 200
-			offsetY = self.config.term0 ? 50 : 25
+			offsetY = self.config.term0 ? 60 : 25
 			const name =
 				self.config.shapeTW.term.name.length > 20
 					? self.config.shapeTW.term.name.slice(0, 20) + '...'
