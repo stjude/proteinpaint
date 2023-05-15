@@ -33,7 +33,7 @@ export function setInteractivity(self) {
 				const label = v.mname ? `${v.mname} ${c.label}` : c.label
 				const info = []
 				if (v.label && v.label !== c.label) info.push(v.label)
-				if ('value' in v) info.push(`log2r=${v.value}`)
+				if ('value' in v) info.push(`${self.settings.matrix.cnvUnit}=${v.value}`)
 				if (v.chr) {
 					const pos = v.pos ? `:${v.pos}` : v.start ? `:${v.start}-${v.stop}` : ''
 					info.push(`${v.chr}${pos}`)
@@ -45,7 +45,14 @@ export function setInteractivity(self) {
 					: `<td style='text-align: right'>${label}</td><td>${info.map(i => `<span>${i}</span>`).join(' ')}</td>`
 
 				const color = c.fill == v.color || v.class == 'Blank' ? '' : c.fill
-				rows.push(`<tr style='color: ${color}'>${tds}</tr>`)
+				if (v.dt == 4 && 'value' in v) {
+					const textColor = Math.abs(v.value) < 0.5 ? '#000' : '#fff'
+					rows.push(
+						`<tr style='background-color: ${color}; color: ${textColor}; padding-left: 2px; padding-right: 2px'>${tds}</tr>`
+					)
+				} else {
+					rows.push(`<tr style='color: ${color}'>${tds}</tr>`)
+				}
 			}
 		}
 

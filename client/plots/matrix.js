@@ -185,7 +185,7 @@ class Matrix {
 					svgw: Math.max(400, d.mainw + d.xOffset - this.settings.matrix.margin.right),
 					svgh: d.mainh + d.yOffset,
 					dimensions: d,
-					padleft: this.settings.legend.padleft + d.xOffset
+					padleft: this.settings.legend.padleft //+ d.xOffset
 				})
 			})
 
@@ -629,10 +629,14 @@ class Matrix {
 				t.scale = scaleLinear()
 					.domain([t.counts.minval, t.counts.maxval])
 					.range([1, t.tw.settings.barh])
-			} else if (t.tw.term.type == 'geneVariant' && 'maxGain' in this.cnvValues) {
+			} else if (t.tw.term.type == 'geneVariant' && ('maxLoss' in this.cnvValues || 'maxGain' in this.cnvValues)) {
+				const maxVals = []
+				if ('maxLoss' in this.cnvValues) maxVals.push(this.cnvValues.maxLoss)
+				if ('maxGain' in this.cnvValues) maxVals.push(this.cnvValues.maxGain)
 				t.scales = {
 					loss: interpolateBlues,
-					gain: interpolateReds
+					gain: interpolateReds,
+					max: Math.max(...maxVals)
 				}
 			}
 
@@ -876,9 +880,11 @@ class Matrix {
 					if (!s.useCanvas && (cell.x + cell.width < xMin || cell.x - cell.width > xMax)) continue
 
 					if (legend) {
-						if (!legendGroups[legend.group]) legendGroups[legend.group] = { ref: legend.ref, values: {} }
-						if (!legendGroups[legend.group].values[legend.value])
+						if (!legendGroups[legend.group])
+							legendGroups[legend.group] = { ref: legend.ref, values: {}, order: legend.order }
+						if (!legendGroups[legend.group].values[legend.value]) {
 							legendGroups[legend.group].values[legend.value] = legend.entry
+						}
 					}
 
 					series.cells.push(cell)
@@ -943,6 +949,7 @@ class Matrix {
 				if (!keys.length) continue
 				legendData.unshift({
 					name: 'Mutation Types',
+					order: legend.order,
 					items: keys.map((key, i) => {
 						const item = legend.values[key]
 						return {
@@ -958,35 +965,73 @@ class Matrix {
 				continue
 			}
 
-			const t = this.termOrder.find(t => t.tw.$id == $id || t.tw.legend?.group == $id)
-			const grp = $id
-			const term = t.tw.term
-			const keys = Object.keys(legend.values)
-			const ref = legend.ref
-			if (ref.bins)
-				keys.sort((a, b) => ref.bins.findIndex(bin => bin.name === a) - ref.bins.findIndex(bin => bin.name === b))
-			else if (ref.keyOrder) keys.sort((a, b) => ref.keyOrder.indexOf(a) - ref.keyOrder.indexOf(b))
-
-			if (!this.colorScaleByTermId[grp])
-				this.colorScaleByTermId[grp] =
-					keys.length < 11 ? scaleOrdinal(schemeCategory10) : scaleOrdinal(schemeCategory20)
-
-			legendData.push({
-				name: t.tw.legend?.group || t.tw.label || term.name,
-				items: keys.map((key, i) => {
-					const item = legend.values[key]
-					return {
-						termid: term.id,
-						key,
-						text: item.label,
-						color: item.fill || this.colorScaleByTermId[grp](key),
-						order: i
-					}
+			const keys = Object.keys(legend.values).sort((a, b) => legend.values[a].order - legend.values[b].order)
+			const hasScale = Object.values(legend.values).find(v => v.scale)
+			if (hasScale) {
+				legendData.push({
+					name: $id,
+					order: legend.order,
+					hasScale,
+					items: keys.map((key, i) => {
+						const item = legend.values[key]
+						if (item.scale) {
+							return {
+								termid: $id,
+								key,
+								text: item.label,
+								width: 100,
+								scale: item.scale,
+								domain: item.domain,
+								minLabel: item.minLabel,
+								maxLabel: item.maxLabel,
+								order: 'order' in item ? item.order : i
+							}
+						} else {
+							return {
+								termid: $id,
+								key,
+								text: item.label,
+								color: item.fill || this.colorScaleByTermId[$id](key),
+								order: 'order' in item ? item.order : i
+							}
+						}
+					})
 				})
-			})
+			} else {
+				const t = this.termOrder.find(t => t.tw.$id == $id || t.tw.legend?.group == $id) || {
+					tw: { term: { id: $id, name: $id } }
+				}
+				const grp = $id
+				const term = t.tw.term
+				const ref = legend.ref
+				if (ref.bins)
+					keys.sort((a, b) => ref.bins.findIndex(bin => bin.name === a) - ref.bins.findIndex(bin => bin.name === b))
+				else if (ref.keyOrder) keys.sort((a, b) => ref.keyOrder.indexOf(a) - ref.keyOrder.indexOf(b))
+
+				if (!this.colorScaleByTermId[grp])
+					this.colorScaleByTermId[grp] =
+						keys.length < 11 ? scaleOrdinal(schemeCategory10) : scaleOrdinal(schemeCategory20)
+
+				legendData.push({
+					name: t.tw.legend?.group || t.tw.label || term.name,
+					order: legend.order,
+					items: keys.map((key, i) => {
+						const item = legend.values[key]
+						return {
+							termid: term.id,
+							key,
+							text: item.label,
+							color: t.scale || item.fill || this.colorScaleByTermId[grp](key),
+							order: 'order' in item ? item.order : i
+						}
+					})
+				})
+			}
 		}
 
-		this.legendData = legendData
+		this.legendData = legendData.sort((a, b) =>
+			a.order && b.order ? a.order - b.order : a.order ? -1 : b.order ? 1 : 0
+		)
 	}
 }
 
