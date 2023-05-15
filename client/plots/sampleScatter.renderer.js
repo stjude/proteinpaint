@@ -85,7 +85,7 @@ export function setRenderers(self) {
 		svg
 			.transition()
 			.duration(s.duration)
-			.attr('width', s.svgw + (self.config.shapeTW ? 500 : 300))
+			.attr('width', s.svgw + (self.config.shapeTW ? 600 : 350))
 			.attr('height', Math.max(s.svgh + 100, legendHeight)) //leaving some space for top/bottom padding and y axis
 
 		/* eslint-disable */
@@ -614,18 +614,13 @@ export function setRenderers(self) {
 	self.renderLegend = function(chart) {
 		const legendG = chart.legendG
 		legendG.selectAll('*').remove()
-		if (!self.config.colorTW) return
 
 		const step = 25
 		let offsetX = 0
 		let offsetY = 25
-		const name =
-			self.config.colorTW.term.name.length > 25
-				? self.config.colorTW.term.name.slice(0, 25) + '...'
-				: self.config.colorTW.term.name
-		let title = `${name}, n=${chart.cohortSamples.length}`
-		const colorRefCategory = chart.colorLegend.get('Ref')
+		let title
 		const colorG = legendG.append('g')
+
 		if (self.config.term0) {
 			colorG
 				.append('text')
@@ -635,137 +630,150 @@ export function setRenderers(self) {
 				.style('font-weight', 'bold')
 			offsetY += step + 10
 		}
-		if (self.config.colorTW.term.type == 'geneVariant')
-			offsetY = self.renderGeneVariantLegend(
-				chart,
-				offsetX,
-				offsetY,
-				legendG,
-				self.config.colorTW,
-				'category',
-				chart.colorLegend
-			)
-		else {
-			colorG
-				.append('text')
-				.attr('id', 'legendTitle')
-				.attr('x', offsetX)
-				.attr('y', offsetY)
-				.text(title)
-				.style('font-weight', 'bold')
-				.style('font-size', '0.8em')
-			offsetY += step
+		if (self.config.colorTW) {
+			const name =
+				self.config.colorTW.term.name.length > 20
+					? self.config.colorTW.term.name.slice(0, 20) + '...'
+					: self.config.colorTW.term.name
+			title = `${name}, n=${chart.cohortSamples.length}`
+			const colorRefCategory = chart.colorLegend.get('Ref')
 
-			if (self.config.colorTW.q.mode === 'continuous') {
-				const [min, max] = chart.colorGenerator.domain()
-				const gradientScale = d3Linear()
-					.domain([min, max])
-					.range([0, 130])
-				const axis = axisBottom(gradientScale).ticks(3)
-				const axisG = colorG
-					.append('g')
-					.attr('transform', `translate(0, 70)`)
-					.call(axis)
-
-				const rect = colorG
-					.append('rect')
-					.attr('x', 0)
-					.attr('y', 50)
-					.attr('width', 130)
-					.attr('height', 20)
-					.style('fill', `url(#linear-gradient-${self.id})`)
-					.on('click', e => {
-						const menu = new Menu()
-						const input = menu.d
-							.append('input')
-							.attr('type', 'color')
-							.attr('value', self.config.gradientColor[chart.id])
-							.on('change', () => {
-								self.config.gradientColor[chart.id] = input.node().value
-								chart.startColor = rgb(self.config.gradientColor[chart.id])
-									.brighter()
-									.brighter()
-								chart.stopColor = rgb(self.config.gradientColor[chart.id])
-									.darker()
-									.darker()
-								chart.colorGenerator = d3Linear().range([chart.startColor, chart.stopColor])
-
-								self.startGradient.attr('stop-color', chart.startColor)
-								self.stopGradient.attr('stop-color', chart.stopColor)
-								self.app.dispatch({
-									type: 'plot_edit',
-									id: self.id,
-									config: self.config
-								})
-								menu.hide()
-							})
-						menu.show(e.clientX, e.clientY, false)
-					})
-
+			if (self.config.colorTW.term.type == 'geneVariant')
+				offsetY = self.renderGeneVariantLegend(
+					chart,
+					offsetX,
+					offsetY,
+					legendG,
+					self.config.colorTW,
+					'category',
+					chart.colorLegend
+				)
+			else {
+				colorG
+					.append('text')
+					.attr('id', 'legendTitle')
+					.attr('x', offsetX)
+					.attr('y', offsetY)
+					.text(title)
+					.style('font-weight', 'bold')
+					.style('font-size', '0.8em')
 				offsetY += step
-			} else {
-				for (const [key, category] of chart.colorLegend) {
-					if (key == 'Ref') continue
-					const name = key
-					const hidden = self.config.colorTW.q.hiddenValues ? key in self.config.colorTW.q.hiddenValues : false
-					const [circleG, itemG] = addLegendItem(colorG, category, name, offsetX, offsetY, hidden)
-					circleG.on('click', e => self.onColorClick(e, key, category))
+
+				if (self.config.colorTW.q.mode === 'continuous') {
+					const [min, max] = chart.colorGenerator.domain()
+					const gradientScale = d3Linear()
+						.domain([min, max])
+						.range([0, 130])
+					const axis = axisBottom(gradientScale).ticks(3)
+					const axisG = colorG
+						.append('g')
+						.attr('transform', `translate(0, 70)`)
+						.call(axis)
+
+					const rect = colorG
+						.append('rect')
+						.attr('x', 0)
+						.attr('y', 50)
+						.attr('width', 130)
+						.attr('height', 20)
+						.style('fill', `url(#linear-gradient-${self.id})`)
+						.on('click', e => {
+							const menu = new Menu()
+							const input = menu.d
+								.append('input')
+								.attr('type', 'color')
+								.attr('value', self.config.gradientColor[chart.id])
+								.on('change', () => {
+									self.config.gradientColor[chart.id] = input.node().value
+									chart.startColor = rgb(self.config.gradientColor[chart.id])
+										.brighter()
+										.brighter()
+									chart.stopColor = rgb(self.config.gradientColor[chart.id])
+										.darker()
+										.darker()
+									chart.colorGenerator = d3Linear().range([chart.startColor, chart.stopColor])
+
+									self.startGradient.attr('stop-color', chart.startColor)
+									self.stopGradient.attr('stop-color', chart.stopColor)
+									self.app.dispatch({
+										type: 'plot_edit',
+										id: self.id,
+										config: self.config
+									})
+									menu.hide()
+								})
+							menu.show(e.clientX, e.clientY, false)
+						})
+
 					offsetY += step
-					itemG.on('click', event => self.onLegendClick(chart, legendG, 'colorTW', key, event))
+				} else {
+					for (const [key, category] of chart.colorLegend) {
+						if (key == 'Ref') continue
+						const name = key
+						const hidden = self.config.colorTW.q.hiddenValues ? key in self.config.colorTW.q.hiddenValues : false
+						const [circleG, itemG] = addLegendItem(colorG, category, name, offsetX, offsetY, hidden)
+						circleG.on('click', e => self.onColorClick(e, key, category))
+						offsetY += step
+						itemG.on('click', event => self.onLegendClick(chart, legendG, 'colorTW', key, event))
+					}
 				}
 			}
-		}
-		if (colorRefCategory.sampleCount > 0) {
-			offsetY = offsetY + step
-			const titleG = legendG.append('g')
-			titleG
-				.append('text')
-				.attr('x', offsetX)
-				.attr('y', offsetY)
-				.text('Reference')
-				.style('font-weight', 'bold')
-				.style('font-size', '0.8em')
+			if (colorRefCategory.sampleCount > 0) {
+				offsetY = offsetY + step
+				const titleG = legendG.append('g')
+				titleG
+					.append('text')
+					.attr('x', offsetX)
+					.attr('y', offsetY)
+					.text('Reference')
+					.style('font-weight', 'bold')
+					.style('font-size', '0.8em')
 
-			offsetY = offsetY + step
+				offsetY = offsetY + step
 
-			let symbol = self.symbols[0].size(64)()
-			const refColorG = legendG.append('g')
-			refColorG
-				.append('path')
-				.attr('transform', c => `translate(${offsetX}, ${offsetY})`)
-				.style('fill', colorRefCategory.color)
-				.attr('d', symbol)
-				.style('stroke', rgb(colorRefCategory.color).darker())
+				let symbol = self.symbols[0].size(64)()
+				const refColorG = legendG.append('g')
+				refColorG
+					.append('path')
+					.attr('transform', c => `translate(${offsetX}, ${offsetY})`)
+					.style('fill', colorRefCategory.color)
+					.attr('d', symbol)
+					.style('stroke', rgb(colorRefCategory.color).darker())
 
-			refColorG.on('click', e => self.onColorClick(e, 'Ref', colorRefCategory))
-			const refText = legendG
-				.append('g')
-				.append('text')
-				.attr('x', offsetX + 10)
-				.attr('y', offsetY)
-				.text(`n=${colorRefCategory.sampleCount}`)
-				.style('text-decoration', !self.settings.showRef ? 'line-through' : 'none')
-				.style('font-size', '15px')
-				.attr('alignment-baseline', 'middle')
-				.style('font-size', '0.8em')
+				refColorG.on('click', e => self.onColorClick(e, 'Ref', colorRefCategory))
+				const refText = legendG
+					.append('g')
+					.append('text')
+					.attr('x', offsetX + 10)
+					.attr('y', offsetY)
+					.text(`n=${colorRefCategory.sampleCount}`)
+					.style('text-decoration', !self.settings.showRef ? 'line-through' : 'none')
+					.style('font-size', '15px')
+					.attr('alignment-baseline', 'middle')
+					.style('font-size', '0.8em')
 
-			refText.on('click', () => {
-				refText.style('text-decoration', !self.settings.showRef ? 'none' : 'line-through')
-				self.settings.showRef = !self.settings.showRef
+				refText.on('click', () => {
+					refText.style('text-decoration', !self.settings.showRef ? 'none' : 'line-through')
+					self.settings.showRef = !self.settings.showRef
 
-				self.app.dispatch({
-					type: 'plot_edit',
-					id: self.id,
-					config: {
-						settings: { sampleScatter: self.settings }
-					}
+					self.app.dispatch({
+						type: 'plot_edit',
+						id: self.id,
+						config: {
+							settings: { sampleScatter: self.settings }
+						}
+					})
 				})
-			})
+			}
 		}
 		if (self.config.shapeTW) {
-			offsetX = self.config.colorTW.term.type == 'geneVariant' ? 300 : 200
+			offsetX = !self.config.colorTW ? 0 : self.config.colorTW.term.type == 'geneVariant' ? 300 : 200
 			offsetY = self.config.term0 ? 50 : 25
-			title = `${self.config.shapeTW.term.name}, n=${chart.cohortSamples.length}`
+			const name =
+				self.config.shapeTW.term.name.length > 20
+					? self.config.shapeTW.term.name.slice(0, 20) + '...'
+					: self.config.shapeTW.term.name
+			title = `${name}, n=${chart.cohortSamples.length}`
 			if (self.config.shapeTW.term.type == 'geneVariant')
 				self.renderGeneVariantLegend(chart, offsetX, offsetY, legendG, self.config.shapeTW, 'shape', chart.shapeLegend)
 			else {
