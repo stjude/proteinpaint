@@ -178,6 +178,10 @@ export function setRenderers(self) {
 
 			axisG.style('opacity', 1)
 			if (self.config.term) {
+				let term2name = self.config.term.term.name
+				if (!self.config.colorTW && !self.config.shapeTW && !self.config.term0)
+					term2name = `${term2name}, n=${chart.cohortSamples.length}`
+
 				labelsG.selectAll('*').remove()
 				labelsG
 					.append('text')
@@ -186,7 +190,7 @@ export function setRenderers(self) {
 						`translate(${self.axisOffset.x + self.settings.svgw / 2}, ${self.settings.svgh + self.axisOffset.y + 40})`
 					)
 					.attr('text-anchor', 'middle')
-					.text(self.config.term.term.name)
+					.text(term2name)
 				if (self.config.term0) {
 					labelsG
 						.append('text')
