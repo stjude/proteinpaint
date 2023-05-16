@@ -232,7 +232,7 @@ export function setInteractivity(self) {
 		}
 
 		if (t2) {
-			if (t1.term.type === 'categorical') {
+			if (t1.term.type === 'categorical' || t1.term.type === 'condition') {
 				createTvsLstValues(t1, plot, tvslst, 0)
 				self.createTvsLstRanges(t2, tvslst, rangeStart, rangeStop, 1)
 			} else if (
@@ -269,7 +269,7 @@ function getAddFilterCallback(t1, t2, self, plot, rangeStart, rangeStop) {
 	}
 
 	if (t2) {
-		if (t1.term.type === 'categorical') {
+		if (t1.term.type === 'categorical' || t1.term.type === 'condition') {
 			createTvsLstValues(t1, plot, tvslst, 0)
 
 			if (self.displayBrushMenu.called === true) {
@@ -331,9 +331,12 @@ function createTvsLstValues(term, plot, tvslst, lstIdx) {
 	createTvsTerm(term, tvslst)
 	tvslst.lst[lstIdx].tvs.values = [
 		{
-			key: plot.seriesId
+			key: plot.seriesId,
+			label: plot.label
 		}
 	]
+	if (term.term.type === 'condition') tvslst.lst[lstIdx].tvs.bar_by_grade = term.q.bar_by_grade
+	tvslst.lst[lstIdx].tvs.value_by_max_grade = term.q.value_by_max_grade
 }
 
 function createTvsTerm(term, tvslst) {
