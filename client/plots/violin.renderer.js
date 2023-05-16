@@ -66,39 +66,60 @@ export default function violinRenderer(self) {
 		}
 	}
 
+	// self.displaySummaryStats = function(d, event, tip) {
+	// 	const rows = [`<tr><td colspan=2 style='padding:3px; text-align:center'>${d.label.split(',')[0]}</td></tr>`]
+	// 	if (d.summaryStats) {
+	// 		rows.push(`<tr>
+	//           <td style='padding:3px; color:#aaa'>${d.summaryStats.values.find(x => x.id === 'total').label}</td>
+	//           <td style='padding:3px; text-align:center'>n=${d.summaryStats.values.find(x => x.id === 'total').value}
+	//           <tr>
+	//           <td style='padding:3px; color:#aaa'>${d.summaryStats.values.find(x => x.id === 'min').label}</td>
+	//           <td style='padding:3px; text-align:center'>${d.summaryStats.values.find(x => x.id === 'min').value}
+	//           <tr>
+	//           <td style='padding:3px; color:#aaa'>${d.summaryStats.values.find(x => x.id === 'p25').label}</td>
+	//           <td style='padding:3px; text-align:center'>${d.summaryStats.values.find(x => x.id === 'p25').value}
+	//           <tr>
+	//           <td style='padding:3px; color:#aaa'>${d.summaryStats.values.find(x => x.id === 'mean').label}</td>
+	//           <td style='padding:3px; text-align:center'>${d.summaryStats.values.find(x => x.id === 'mean').value}
+	//           <tr>
+	//           <td style='padding:3px; color:#aaa'>${d.summaryStats.values.find(x => x.id === 'median').label}</td>
+	//           <td style='padding:3px; text-align:center'>${d.summaryStats.values.find(x => x.id === 'median').value}
+	//           <tr>
+	//           <td style='padding:3px; color:#aaa'>${d.summaryStats.values.find(x => x.id === 'p75').label}</td>
+	//           <td style='padding:3px; text-align:center'>${d.summaryStats.values.find(x => x.id === 'p75').value}
+	//           <tr>
+	//           <td style='padding:3px; color:#aaa'>${d.summaryStats.values.find(x => x.id === 'max').label}</td>
+	//           <td style='padding:3px; text-align:center'>${d.summaryStats.values.find(x => x.id === 'max').value}
+	//           <tr>
+	//           <td style='padding:3px; color:#aaa'>${d.summaryStats.values.find(x => x.id === 'variance').label}</td>
+	//           <td style='padding:3px; text-align:center'>${d.summaryStats.values.find(x => x.id === 'variance').value}
+	//           <tr>
+	//           <td style='padding:3px; color:#aaa'>${d.summaryStats.values.find(x => x.id === 'SD').label}</td>
+	//           <td style='padding:3px; text-align:center'>${d.summaryStats.values.find(x => x.id === 'SD').value}
+	//           `)
+	// 	}
+	// 	tip.show(event.clientX, event.clientY).d.html(`<table class='sja_simpletable'>${rows.join('\n')}</table>`)
+	// }
+
 	self.displaySummaryStats = function(d, event, tip) {
-		const rows = [`<tr><td colspan=2 style='padding:3px; text-align:center'>${d.label.split(',')[0]}</td></tr>`]
+		let rows = []
+
 		if (d.summaryStats) {
-			rows.push(`<tr>
-              <td style='padding:3px; color:#aaa'>${d.summaryStats.values.find(x => x.id === 'total').label}</td>
-              <td style='padding:3px; text-align:center'>n=${d.summaryStats.values.find(x => x.id === 'total').value}
-              <tr>
-              <td style='padding:3px; color:#aaa'>${d.summaryStats.values.find(x => x.id === 'min').label}</td>
-              <td style='padding:3px; text-align:center'>${d.summaryStats.values.find(x => x.id === 'min').value}
-              <tr>
-              <td style='padding:3px; color:#aaa'>${d.summaryStats.values.find(x => x.id === 'p25').label}</td>
-              <td style='padding:3px; text-align:center'>${d.summaryStats.values.find(x => x.id === 'p25').value}
-              <tr>
-              <td style='padding:3px; color:#aaa'>${d.summaryStats.values.find(x => x.id === 'mean').label}</td>
-              <td style='padding:3px; text-align:center'>${d.summaryStats.values.find(x => x.id === 'mean').value}
-              <tr>
-              <td style='padding:3px; color:#aaa'>${d.summaryStats.values.find(x => x.id === 'median').label}</td>
-              <td style='padding:3px; text-align:center'>${d.summaryStats.values.find(x => x.id === 'median').value}
-              <tr>
-              <td style='padding:3px; color:#aaa'>${d.summaryStats.values.find(x => x.id === 'p75').label}</td>
-              <td style='padding:3px; text-align:center'>${d.summaryStats.values.find(x => x.id === 'p75').value}
-              <tr>
-              <td style='padding:3px; color:#aaa'>${d.summaryStats.values.find(x => x.id === 'max').label}</td>
-              <td style='padding:3px; text-align:center'>${d.summaryStats.values.find(x => x.id === 'max').value}
-              <tr>
-              <td style='padding:3px; color:#aaa'>${d.summaryStats.values.find(x => x.id === 'variance').label}</td>
-              <td style='padding:3px; text-align:center'>${d.summaryStats.values.find(x => x.id === 'variance').value}
-              <tr>
-              <td style='padding:3px; color:#aaa'>${d.summaryStats.values.find(x => x.id === 'SD').label}</td>
-              <td style='padding:3px; text-align:center'>${d.summaryStats.values.find(x => x.id === 'SD').value}
-              `)
+			const summaryValues = d.summaryStats.values
+
+			rows = [
+				`<tr><td colspan=2 style='padding:3px; text-align:center'>${d.label.split(',')[0]}</td></tr>`,
+				...summaryValues.map(
+					({ id, label, value }) => `<tr>
+					<td style='padding:3px; color:#aaa'>${label}</td>
+					<td style='padding:3px; text-align:center'>${value}</td>
+				</tr>`
+				)
+			]
 		}
-		tip.show(event.clientX, event.clientY).d.html(`<table class='sja_simpletable'>${rows.join('\n')}</table>`)
+
+		const tableHtml = `<table class='sja_simpletable'>${rows.join('')}</table>`
+		tip.show(event.clientX, event.clientY).d.html(tableHtml)
 	}
 
 	self.renderPvalueTable = function() {
