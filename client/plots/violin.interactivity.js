@@ -335,8 +335,10 @@ function createTvsLstValues(term, plot, tvslst, lstIdx) {
 			label: plot.label
 		}
 	]
-	if (term.term.type === 'condition') tvslst.lst[lstIdx].tvs.bar_by_grade = term.q.bar_by_grade
-	tvslst.lst[lstIdx].tvs.value_by_max_grade = term.q.value_by_max_grade
+	if (term.term.type === 'condition') {
+		tvslst.lst[lstIdx].tvs.bar_by_grade = term.q.bar_by_grade
+		tvslst.lst[lstIdx].tvs.value_by_max_grade = term.q.value_by_max_grade
+	}
 }
 
 function createTvsTerm(term, tvslst) {
