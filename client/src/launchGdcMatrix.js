@@ -100,7 +100,7 @@ export async function init(arg, holder, genomes) {
 						labelDisplay: 'block',
 						options: [
 							{
-								label: 'Cancer Gene Census genes only',
+								label: 'Cancer Gene Census only',
 								value: 'CGC'
 							},
 							{
@@ -123,7 +123,7 @@ export async function init(arg, holder, genomes) {
 						}
 					},
 					{
-						label: `Maximum # genes`,
+						label: `Maximum # Genes`,
 						type: 'number',
 						chartType: 'matrix',
 						settingsKey: 'maxGenes',

@@ -35,16 +35,16 @@ export class MatrixControls {
 	}
 
 	setSamplesBtn(s) {
-		const sampleLabel = s.controlLabels.samples.toLowerCase() || 'samples'
+		const l = s.controlLabels
 		this.opts.holder
 			.append('button')
 			//.property('disabled', d => d.disabled)
 			.datum({
-				label: s.controlLabels.samples || `Samples`,
+				label: l.samples || `Samples`,
 				getCount: () => this.parent.sampleOrder.length,
 				rows: [
 					{
-						label: `Sort ${sampleLabel}`,
+						label: `Sort ${l.samples}`,
 						type: 'radio',
 						chartType: 'matrix',
 						settingsKey: 'sortSamplesBy',
@@ -52,13 +52,13 @@ export class MatrixControls {
 						labelDisplay: 'block'
 					},
 					{
-						label: `Maximum # ${sampleLabel}`,
+						label: `Maximum # ${l.samples}`,
 						type: 'number',
 						chartType: 'matrix',
 						settingsKey: 'maxSample'
 					},
 					{
-						label: `Group ${sampleLabel} by`,
+						label: `Group ${l.samples} By`,
 						type: 'term',
 						chartType: 'matrix',
 						configKey: 'divideBy',
@@ -78,12 +78,6 @@ export class MatrixControls {
 							return { currentGeneNames }
 						}
 					}
-					/*{
-						label: 'Sample name regex filter',
-						type: 'text',
-						chartType: 'matrix',
-						settingsKey: 'sampleNameFilter'
-					}*/
 				]
 			})
 			.html(d => d.label)
@@ -92,6 +86,7 @@ export class MatrixControls {
 	}
 
 	setGenesBtn(s) {
+		const l = s.controlLabels
 		this.opts.holder
 			.append('button')
 			//.property('disabled', d => d.disabled)
@@ -101,42 +96,31 @@ export class MatrixControls {
 				customInputs: this.appendGeneInputs,
 				rows: [
 					{
-						label: 'Display sample counts for gene',
+						label: `Display ${l.sample} Counts for Gene`,
 						boxLabel: '',
 						type: 'checkbox',
 						chartType: 'matrix',
 						settingsKey: 'samplecount4gene'
 					},
 					{
-						label: 'Rendering style',
+						label: 'Rendering Style',
+						title: '',
 						type: 'radio',
 						chartType: 'matrix',
 						settingsKey: 'cellEncoding',
-						options: [{ label: 'Default', value: '' }, { label: 'Oncoprint', value: 'oncoprint' }],
-						styles: { padding: 0 }
+						options: [{ label: 'ProteinPaint', value: '' }, { label: 'Oncoprint', value: 'oncoprint' }],
+						styles: { padding: 0, 'padding-right': '10px', margin: 0 }
 					},
-					/*{
-						label: 'Terms as columns',
-						boxLabel: '',
-						type: 'checkbox',
-						chartType: 'matrix',
-						settingsKey: 'transpose'
-					},*/
-					/*{
-						NOTE: this is only by term group, not global to all rows
-						label: 'Minimum # samples',
-						type: 'number',
-						chartType: 'matrix',
-						settingsKey: 'minNumSamples',
-						title: 'Minimum number of hits for a row to be visible'
-					},*/
 					{
-						label: 'Sort genes',
+						label: 'Sort Genes',
 						type: 'radio',
 						chartType: 'matrix',
 						settingsKey: 'sortTermsBy',
-						options: [{ label: 'as-listed', value: 'asListed' }, { label: 'by sample count', value: 'sampleCount' }],
-						styles: { padding: 0 }
+						options: [
+							{ label: 'As Listed', value: 'asListed' },
+							{ label: `By ${l.sample} Count`, value: 'sampleCount' }
+						],
+						styles: { padding: 0, 'padding-right': '10px', margin: 0 }
 					}
 				]
 			})
@@ -160,6 +144,7 @@ export class MatrixControls {
 	}
 
 	setDimensionsBtn(s) {
+		const l = s.controlLabels
 		this.opts.holder
 			.append('button')
 			.datum({
@@ -197,7 +182,7 @@ export class MatrixControls {
 								// ]
 							},
 							{
-								label: 'Outline color',
+								label: 'Outline Color',
 								type: 'color',
 								chartType: 'matrix',
 								settingsKey: 'outlineStroke',
@@ -206,7 +191,7 @@ export class MatrixControls {
 								//getDisplayStyle: plot => this.parent.settings.matrix.showGrid ? '' : 'none'
 							},
 							{
-								label: 'Grid line color',
+								label: 'Grid Line Color',
 								type: 'color',
 								chartType: 'matrix',
 								settingsKey: 'gridStroke',
@@ -215,7 +200,7 @@ export class MatrixControls {
 								//getDisplayStyle: plot => this.parent.settings.matrix.showGrid ? '' : 'none'
 							},
 							{
-								label: 'Background color',
+								label: 'Background Color',
 								type: 'color',
 								chartType: 'matrix',
 								settingsKey: 'cellbg',
@@ -223,7 +208,7 @@ export class MatrixControls {
 								align: 'center'
 							},
 							{
-								label: 'Use canvas if # samples exceeds',
+								label: `Use Canvas If # ${l.sample} Exceeds`,
 								type: 'number',
 								chartType: 'matrix',
 								settingsKey: 'svgCanvasSwitch',
@@ -235,7 +220,7 @@ export class MatrixControls {
 								step: 1
 							},
 							{
-								label: 'Canvas mininum pixel width',
+								label: 'Canvas Min. Pixel Width',
 								type: 'checkbox',
 								boxLabel: 'apply',
 								chartType: 'matrix',
@@ -250,7 +235,7 @@ export class MatrixControls {
 						header: ['Cells', 'Columns', 'Rows'],
 						rows: [
 							{
-								label: 'Row height',
+								label: 'Row Height',
 								type: 'number',
 								width: 50,
 								align: 'center',
@@ -258,7 +243,7 @@ export class MatrixControls {
 								inputs: [{ label: 'N/A' }, { settingsKey: 'rowh', min: 8, max: 30, step: 1 }]
 							},
 							{
-								label: 'Min col. width',
+								label: 'Min Col. Width',
 								type: 'number',
 								width: 50,
 								align: 'center',
@@ -266,7 +251,7 @@ export class MatrixControls {
 								inputs: [{ settingsKey: 'colwMin', min: 0.1, max: 16, step: 0.2 }, { label: 'N/A' }]
 							},
 							{
-								label: 'Max col. width',
+								label: 'Max Col. Width',
 								type: 'number',
 								width: 50,
 								align: 'center',
@@ -323,7 +308,7 @@ export class MatrixControls {
 								]
 							},
 							{
-								label: 'Minimum size',
+								label: 'Minimum Size',
 								type: 'number',
 								width: 50,
 								align: 'center',
@@ -335,7 +320,7 @@ export class MatrixControls {
 								step: 0.1
 							},
 							{
-								label: 'Maximum size',
+								label: 'Maximum Size',
 								type: 'number',
 								width: 50,
 								align: 'center',
@@ -377,35 +362,35 @@ export class MatrixControls {
 			.append('button')
 			.style('margin', '2px 0')
 			.datum({
-				label: 'Legend layout',
+				label: 'Legend Layout',
 				rows: [
 					//ontop: false,
 					{
-						label: 'Font size',
+						label: 'Font Size',
 						type: 'number',
 						chartType: 'legend',
 						settingsKey: 'fontsize'
 					},
 					{
-						label: 'Line height',
+						label: 'Line Height',
 						type: 'number',
 						chartType: 'legend',
 						settingsKey: 'lineh'
 					},
 					{
-						label: 'Icon height',
+						label: 'Icon Height',
 						type: 'number',
 						chartType: 'legend',
 						settingsKey: 'iconh'
 					},
 					{
-						label: 'Icon width',
+						label: 'Icon Width',
 						type: 'number',
 						chartType: 'legend',
 						settingsKey: 'iconw'
 					},
 					{
-						label: 'Left margin',
+						label: 'Left Margin',
 						type: 'number',
 						chartType: 'legend',
 						settingsKey: 'padleft'
@@ -417,20 +402,20 @@ export class MatrixControls {
 						settingsKey: 'padbtm'
 					},*/
 					{
-						label: 'Item left pad',
+						label: 'Item Left Pad',
 						type: 'number',
 						chartType: 'legend',
 						settingsKey: 'padx'
 					},
 					{
-						label: 'Item layout',
+						label: 'Item Layout',
 						type: 'checkbox',
 						chartType: 'legend',
 						settingsKey: 'linesep',
 						boxLabel: 'Line separated'
 					},
 					{
-						label: 'Left indent',
+						label: 'Left Indent',
 						type: 'number',
 						chartType: 'legend',
 						settingsKey: 'hangleft'
@@ -649,7 +634,7 @@ export class MatrixControls {
 		const td = tr
 			.append('td')
 			.attr('class', 'sja-termdb-config-row-label')
-			.html('Add a gene group')
+			.html('Add a Gene Group')
 		const span = tr
 			.append('td')
 			.append('span')

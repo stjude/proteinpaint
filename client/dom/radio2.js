@@ -21,13 +21,21 @@ export function initRadioInputs(opts) {
 		.style('padding', opts.styles && 'padding' in opts.styles ? opts.styles.padding : '5px')
 		.append('label')
 
+	if (opts.styles) {
+		for (const key in opts.styles) {
+			labels.style(key, opts.styles[key])
+		}
+	}
+
 	const inputs = labels
 		.append('input')
 		.attr('type', 'radio')
 		.attr('name', opts.name)
 		.attr('value', d => d.value)
-		.property('checked', opts.isCheckedFxn)
 		.style('vertical-align', 'top')
+		.style('margin-top', '2px')
+		.style('margin-right', 0)
+		.property('checked', opts.isCheckedFxn)
 		.on('input', opts.listeners.input)
 
 	labels

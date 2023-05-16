@@ -81,6 +81,7 @@ export async function getPlotConfig(opts, app) {
 				scrollHeight: 12,
 				controlLabels: {
 					samples: 'Samples',
+					sample: 'Sample',
 					terms: 'Variables'
 				}
 			}
