@@ -3104,6 +3104,13 @@ async function handle_mdssvcnv_vcf(
 				file: path.join(serverconfig.tpmasterdir, tmp)
 			}
 
+			try {
+				await fs.promises.stat(thisvcf.file)
+			} catch (e) {
+				// invalid file
+				return [null, null]
+			}
+
 			// meta and header
 			const mlines = await tabix_getvcfmeta(thisvcf.file)
 
